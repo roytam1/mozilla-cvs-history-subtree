@@ -95,6 +95,9 @@ protected:
   static nsIRDFResource      *kNC_Description;
   static nsIRDFResource      *kWEB_LastCharset;
   static nsIRDFResource      *kNC_Icon;
+  static nsIRDFResource      *kNC_BookmarkAddDate;
+  static nsIRDFResource      *kWEB_LastModifiedDate;
+  static nsIRDFResource      *kWEB_LastVisitDate;
   static nsIRDFLiteral       *kTrueLiteral;
 
   static nsIRDFResource      *kNC_BookmarkCommand_NewBookmark;

@@ -97,11 +97,11 @@
 #define MOZ_SCHEMA_GROUPFLAG      "mozillaGroupFlag"
 #define MOZ_SCHEMA_LASTCHARSET    "mozillaLastCharset"
 #define MOZ_SCHEMA_ICONURL        "mozillaIconURL"
-
-// XXX ToDo schema items
 #define MOZ_SCHEMA_DATEADDED      "mozillaDateAdded"
 #define MOZ_SCHEMA_LASTMOD        "mozillaDateLastMod"
 #define MOZ_SCHEMA_LASTVISIT      "mozillaDateLastVisit"
+
+// XXX ToDo schema items
 #define MOZ_SCHEMA_SEPARATORFLAG  "mozillaSeparatorFlag"
 
 #define NS_LDAPCONNECTION_CONTRACTID   "@mozilla.org/network/ldap-connection;1" 
@@ -135,6 +135,9 @@ nsIRDFResource *nsRemoteBookmarks::kNC_ShortcutURL;
 nsIRDFResource *nsRemoteBookmarks::kNC_Description;
 nsIRDFResource *nsRemoteBookmarks::kWEB_LastCharset;
 nsIRDFResource *nsRemoteBookmarks::kNC_Icon;
+nsIRDFResource *nsRemoteBookmarks::kNC_BookmarkAddDate;
+nsIRDFResource *nsRemoteBookmarks::kWEB_LastModifiedDate;
+nsIRDFResource *nsRemoteBookmarks::kWEB_LastVisitDate;
 nsIRDFLiteral  *nsRemoteBookmarks::kTrueLiteral;
 
 nsIRDFResource *nsRemoteBookmarks::kNC_BookmarkCommand_NewBookmark;
@@ -183,6 +186,9 @@ nsRemoteBookmarks::~nsRemoteBookmarks()
     NS_IF_RELEASE(kNC_Description);
     NS_IF_RELEASE(kWEB_LastCharset);
     NS_IF_RELEASE(kNC_Icon);
+    NS_IF_RELEASE(kNC_BookmarkAddDate);
+    NS_IF_RELEASE(kWEB_LastModifiedDate);
+    NS_IF_RELEASE(kWEB_LastVisitDate);
     NS_IF_RELEASE(kTrueLiteral);
 
     NS_IF_RELEASE(kNC_BookmarkCommand_NewBookmark);
@@ -267,6 +273,9 @@ nsRemoteBookmarks::Init()
     gRDF->GetResource(NC_NAMESPACE_URI "Description",       &kNC_Description);
     gRDF->GetResource(WEB_NAMESPACE_URI "LastCharset",      &kWEB_LastCharset);
 		gRDF->GetResource(NC_NAMESPACE_URI "Icon",              &kNC_Icon);
+		gRDF->GetResource(NC_NAMESPACE_URI "BookmarkAddDate",   &kNC_BookmarkAddDate);
+		gRDF->GetResource(WEB_NAMESPACE_URI "LastModifiedDate", &kWEB_LastModifiedDate);
+		gRDF->GetResource(WEB_NAMESPACE_URI "LastVisitDate",    &kWEB_LastVisitDate);
     gRDF->GetLiteral(NS_LITERAL_STRING("true").get(),       &kTrueLiteral);
 
 		gRDF->GetResource(NC_NAMESPACE_URI "command?cmd=newbookmark",             &kNC_BookmarkCommand_NewBookmark);
@@ -874,6 +883,9 @@ nsRemoteBookmarks::ArcLabelsOut(nsIRDFResource* aSource,
       array->AppendElement(kNC_Description);
       array->AppendElement(kWEB_LastCharset);
       array->AppendElement(kNC_Icon);
+      array->AppendElement(kNC_BookmarkAddDate);
+      array->AppendElement(kWEB_LastModifiedDate);
+      array->AppendElement(kWEB_LastVisitDate);
 
       nsISimpleEnumerator* result = new nsArrayEnumerator(array);
       if (! result)
@@ -1611,6 +1623,7 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
       // check objectclass to determine what we are dealing with
       nsAutoString classStr, urlStr, nameStr, keywordStr, descStr;
       nsAutoString groupFlagStr, lastCharset, iconURLStr;
+      nsAutoString dateAddedStr, lastModStr, lastVisitStr;
 
       GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_OBJ_CLASS, classStr);
       classStr.Trim(" \t");
@@ -1621,10 +1634,10 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         urlStr.Trim(" \t");
         if (urlStr.Length() < 1)
           return(NS_OK);
-        GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_NAME, nameStr);
         GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_KEYWORD, keywordStr);
-        GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_DESCRIPTION, descStr);
         GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_LASTCHARSET, lastCharset);
+        GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_ICONURL, iconURLStr);
+        GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_LASTVISIT, lastVisitStr);
 
         rv = gRDF->GetResource(ldapSearchUrlString.get(), getter_AddRefs(searchRes));
         NS_ENSURE_SUCCESS(rv, rv);
@@ -1637,8 +1650,6 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
       else if (classStr.EqualsIgnoreCase(MOZ_SCHEMA_FOLDER_CLASS))
       {
         // it is a Folder
-        GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_NAME, nameStr);
-        GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_DESCRIPTION, descStr);
         GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_GROUPFLAG, groupFlagStr);
 
         rv = gRDF->GetResource(ldapSearchUrlString.get(), getter_AddRefs(searchRes));
@@ -1651,7 +1662,12 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
       {
         // XXX other types, such as separators?
       }
-      GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_ICONURL, iconURLStr);
+
+      // attributes all bookmark objects may have
+      GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_NAME, nameStr);
+      GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_DESCRIPTION, descStr);
+      GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_DATEADDED, dateAddedStr);
+      GetLDAPMsgAttrValue(aMessage, MOZ_SCHEMA_LASTMOD, lastModStr);
 
       if (!nameStr.IsEmpty())
       {
@@ -1713,6 +1729,48 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         }
       }
 
+      if (!dateAddedStr.IsEmpty())
+      {
+        nsCOMPtr<nsIRDFLiteral> dateAddedLiteral;
+        rv = gRDF->GetLiteral(dateAddedStr.get(), getter_AddRefs(dateAddedLiteral));
+        if (NS_SUCCEEDED(rv))
+        {
+          // XXX fixup date string (from X.208 printable string, ex: "199412161032Z")
+
+          // assert #AddDate
+          rv = mInner->Assert(searchRes, kNC_BookmarkAddDate, dateAddedLiteral, PR_TRUE);
+          NS_ENSURE_SUCCESS(rv, rv);
+        }
+      }
+
+      if (!lastModStr.IsEmpty())
+      {
+        nsCOMPtr<nsIRDFLiteral> lastModLiteral;
+        rv = gRDF->GetLiteral(lastModStr.get(), getter_AddRefs(lastModLiteral));
+        if (NS_SUCCEEDED(rv))
+        {
+          // XXX fixup date string (from X.208 printable string, ex: "199412161032Z")
+
+          // assert #LastModifiedDate
+          rv = mInner->Assert(searchRes, kWEB_LastModifiedDate, lastModLiteral, PR_TRUE);
+          NS_ENSURE_SUCCESS(rv, rv);
+        }
+      }
+
+      if (!lastVisitStr.IsEmpty())
+      {
+        nsCOMPtr<nsIRDFLiteral> lastVisitLiteral;
+        rv = gRDF->GetLiteral(lastVisitStr.get(), getter_AddRefs(lastVisitLiteral));
+        if (NS_SUCCEEDED(rv))
+        {
+          // XXX fixup date string (from X.208 printable string, ex: "199412161032Z")
+
+          // assert #LastVisitDate
+          rv = mInner->Assert(searchRes, kWEB_LastVisitDate, lastVisitLiteral, PR_TRUE);
+          NS_ENSURE_SUCCESS(rv, rv);
+        }
+      }
+
       if (groupFlagStr.EqualsIgnoreCase("TRUE"))
       {
         // assert #FolderGroup
@@ -1725,10 +1783,6 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         rv = mInner->Assert(searchRes, kRDF_type, searchType, PR_TRUE);
         NS_ENSURE_SUCCESS(rv, rv);
       }
-
-      nsCOMPtr<nsIRDFResource> urlRes;
-      rv = gRDF->GetResource(ldapSearchUrlString.get(), getter_AddRefs(urlRes));
-      NS_ENSURE_SUCCESS(rv, rv);
 
       if (searchResLit)
       {
