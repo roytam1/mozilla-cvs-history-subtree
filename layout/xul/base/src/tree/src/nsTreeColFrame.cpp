@@ -176,7 +176,8 @@ nsOutlinerColFrame::AttributeChanged(nsIPresContext* aPresContext,
       mOutliner = do_QueryInterface(boxObject);
     }
 
-    mOutliner->Invalidate();
+    if (mOutliner)
+      mOutliner->Invalidate();
   }
 
   return rv;
