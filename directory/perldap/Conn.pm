@@ -197,7 +197,7 @@ sub printError
 {
   my ($self, $str) = @_;
 
-  $str = "LDAP error: " if ($str eq "");
+  $str = "LDAP error: " unless defined($str);
   ldap_perror($self->{"ld"}, $str);
 }
 
@@ -345,14 +345,8 @@ sub delete
   my ($self, $dn) = @_;
   my $ret = 1;
 
-  if ($dn ne "")
-    {
-      $dn = Mozilla::LDAP::Utils::normalizeDN($dn);
-    }
-  else
-    {
-      $dn = Mozilla::LDAP::Utils::normalizeDN($self->{"dn"});
-    }
+  $dn = $self->{"dn"} unless (defined($dn) && ($dn ne ""));
+  $dn = Mozilla::LDAP::Utils::normalizeDN($dn);
   $ret = ldap_delete_s($self->{"ld"}, $dn) if ($dn ne "");
 
   return ($ret == LDAP_SUCCESS)
@@ -396,8 +390,8 @@ sub modifyRDN
   my (@vals);
   my $ret = 1;
 
-  $del = 1 if ($del eq "");
-  $dn = $self->{"dn"} if ($dn eq "");
+  $del = 1 unless (defined($del) && ($del ne ""));
+  $dn = $self->{"dn"} unless (defined($dn) && ($dn ne ""));
 
   @vals = ldap_explode_dn($dn, 0);
   if (lc($vals[$[]) ne lc($rdn))
