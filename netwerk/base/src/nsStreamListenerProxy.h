@@ -41,10 +41,10 @@ protected:
     nsCOMPtr<nsIChannel>      mChannelToResume;
     PRLock                   *mCLock;
 
-    nsresult                  mListenerStatus;
-
     PRUint32                  mPendingCount;
     PRLock                   *mPLock;
+
+    nsresult                  mListenerStatus;
 };
 
 #endif /* !nsStreamListenerProxy_h__ */

@@ -111,9 +111,9 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(nsInputStreamGuard,
 
 nsStreamListenerProxy::nsStreamListenerProxy()
     : mCLock(nsnull)
-    , mListenerStatus(NS_OK)
     , mPendingCount(0)
     , mPLock(nsnull)
+    , mListenerStatus(NS_OK)
 { }
 
 nsStreamListenerProxy::~nsStreamListenerProxy()
