@@ -1197,14 +1197,15 @@ fun_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 */
         if (JSVAL_IS_OBJECT(fval)) {
             obj = JSVAL_TO_OBJECT(fval);
-            if (!OBJ_GET_CLASS(cx, obj)->convert(cx, obj, JSTYPE_FUNCTION, &fval))
+            if (!OBJ_GET_CLASS(cx, obj)->convert(cx, obj, 
+                                                    JSTYPE_FUNCTION, &fval))
 	        return JS_FALSE;
         }
         if (!JSVAL_IS_FUNCTION(cx, fval)) {
 	    JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
                                  JSMSG_INCOMPATIBLE_PROTO,
                                  "Function", "toString", 
-                                 JS_GetStringBytes(JS_ValueToString(cx, fval)));
+                                 JS_GetTypeName(cx, JS_TypeOfValue(cx, fval)));
             return JS_FALSE;
         }        
     }
