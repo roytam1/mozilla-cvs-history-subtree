@@ -1513,7 +1513,10 @@ function Publish(publishData)
 
   gPublishData.docURI = CreateURIFromPublishData(publishData, true);
   if (!gPublishData.docURI)
+  {
+    AlertWithTitle(GetString("Publish"), GetString("PublishFailed"));
     return false;
+  }
 
   if (gPublishData.publishOtherFiles)
     gPublishData.otherFilesURI = CreateURIFromPublishData(publishData, false);
