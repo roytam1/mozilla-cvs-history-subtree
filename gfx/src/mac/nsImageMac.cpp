@@ -402,6 +402,7 @@ NS_IMETHODIMP nsImageMac::Draw(nsIRenderingContext &aContext, nsDrawingSurface a
           }
 
           ::DisposeGWorld(tempMaskGWorld);
+          free(scaledMaskBits);
         }
         else
         {
@@ -409,6 +410,7 @@ NS_IMETHODIMP nsImageMac::Draw(nsIRenderingContext &aContext, nsDrawingSurface a
         }
 
         ::DisposeGWorld(tempSrcGWorld);
+        free(scaledSrcBits);
       }
       else
       {
