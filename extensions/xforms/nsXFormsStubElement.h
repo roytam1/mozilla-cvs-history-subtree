@@ -36,6 +36,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#ifndef nsXFormsStubElement_h_
+#define nsXFormsStubElement_h_
+
 #include "nsIXTFGenericElement.h"
 #include "nsXFormsElement.h"
 
@@ -49,3 +52,5 @@ class nsXFormsStubElement : public nsXFormsElement,
 
 NS_HIDDEN_(nsresult)
 NS_NewXFormsStubElement(nsIXTFElement **aResult);
+
+#endif
