@@ -170,6 +170,8 @@ public:
     const char *ProxyType() { return mProxyType; }
     PRBool      UsingSSL()  { return mUsingSSL; }
 
+    PRInt32     DefaultPort() { return mUsingSSL ? 443 : 80; }
+
 private:
     nsXPIDLCString     mHost;
     PRInt32            mPort;

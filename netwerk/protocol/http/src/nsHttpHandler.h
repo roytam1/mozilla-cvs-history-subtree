@@ -156,6 +156,8 @@ private:
     PRUint32 CountActiveConnections(nsHttpConnectionInfo *);
     PRUint32 CountIdleConnections(nsHttpConnectionInfo *);
 
+    void     DropConnections(nsVoidArray &);
+
     //
     // Useragent/prefs helper methods
     //

@@ -146,8 +146,12 @@ nsHttpAuthCache::SetCredentials(const char *host,
 nsresult
 nsHttpAuthCache::ClearAll()
 {
-    // XXX need to implement this
-    return NS_ERROR_NOT_IMPLEMENTED;
+    LOG(("nsHttpAuthCache::ClearAll\n"));
+
+    PL_HashTableDestroy(mDB);
+    mDB = 0;
+
+    return NS_OK;
 }
 
 //-----------------------------------------------------------------------------
@@ -197,7 +201,7 @@ nsHttpAuthCache::FreeEntry(void *self, PLHashEntry *he, PRUintn flag)
     }
     else if (flag == HT_FREE_ENTRY) {
         // three wonderful flavors of freeing memory ;-)
-        delete (nsEntry *) he->value;
+        delete (nsEntryList *) he->value;
         PL_strfree((char *) he->key);
         free(he);
     }
@@ -221,27 +225,30 @@ nsEntry::nsEntry(const char *path, const char *realm, const char *creds)
     , mRealm(PL_strdup(realm))
     , mCreds(PL_strdup(creds))
 {
+    LOG(("Creating nsHttpAuthCache::nsEntry @%x\n", this));
 }
 
 nsHttpAuthCache::
 nsEntry::~nsEntry()
 {
-    free(mPath);
-    free(mRealm);
-    free(mCreds);
+    LOG(("Destroying nsHttpAuthCache::nsEntry @%x\n", this));
+
+    PL_strfree(mPath);
+    PL_strfree(mRealm);
+    PL_strfree(mCreds);
 }
 
 void nsHttpAuthCache::
 nsEntry::SetPath(const char *path)
 {
-    free(mPath);
+    PL_strfree(mPath);
     mPath = PL_strdup(path);
 }
 
 void nsHttpAuthCache::
 nsEntry::SetCreds(const char *creds)
 {
-    free(mCreds);
+    PL_strfree(mCreds);
     mCreds = PL_strdup(creds);
 }
 
@@ -252,11 +259,14 @@ nsEntry::SetCreds(const char *creds)
 nsHttpAuthCache::
 nsEntryList::nsEntryList()
 {
+    LOG(("Creating nsHttpAuthCache::nsEntryList @%x\n", this));
 }
 
 nsHttpAuthCache::
 nsEntryList::~nsEntryList()
 {
+    LOG(("Destroying nsHttpAuthCache::nsEntryList @%x\n", this));
+
     PRInt32 i;
     for (i=0; i<mList.Count(); ++i)
         delete (nsEntry *) mList[i];

@@ -146,7 +146,7 @@ nsHttpChannel::Init(nsIURI *uri,
     //
     nsCString hostLine;
     hostLine.Assign(host.get());
-    if (port != -1) {
+    if (port != -1 && port != mConnectionInfo->DefaultPort()) {
         hostLine.Append(':');
         hostLine.AppendInt(port);
     }
@@ -182,10 +182,14 @@ nsHttpChannel::Connect(PRBool firstTime)
         // open a cache entry for this channel...
         rv = OpenCacheEntry(&delayed);
 
-#if defined(PR_LOGGING)
-        if (NS_FAILED(rv))
-            LOG(("OpenCacheEntry failed [rv=%x] not using the cache!\n", rv));
-#endif
+        if (NS_FAILED(rv)) {
+            LOG(("OpenCacheEntry failed [rv=%x]\n", rv));
+            // if this channel is only allowed to pull from the cache, then
+            // we must fail if we were unable to open a cache entry.
+            if (mFromCacheOnly)
+                return mPostID ? NS_ERROR_DOCUMENT_NOT_CACHED : rv;
+            // otherwise, let's just proceed without using the cache.
+        }
  
         if (NS_SUCCEEDED(rv) && delayed)
             return NS_OK;
@@ -200,8 +204,16 @@ nsHttpChannel::Connect(PRBool firstTime)
         NS_ASSERTION(NS_SUCCEEDED(rv), "cache check failed");
 
         // read straight from the cache if possible...
-        if (mCachedContentIsValid)
+        if (mCachedContentIsValid) {
             return ReadFromCache();
+        }
+        else if (mFromCacheOnly) {
+            // The cache no longer contains the requested resource, and we
+            // are not allowed to refetch it, so there's nothing more to do.
+            // If this was a refetch of a POST transaction's resposne, then
+            // this failure indicates that the response is no longer cached.
+            return mPostID ? NS_ERROR_DOCUMENT_NOT_CACHED : NS_BINDING_FAILED;
+        }
     }
 
     // hit the net...
@@ -224,18 +236,23 @@ nsHttpChannel::AsyncAbort(nsresult status)
     nsCOMPtr<nsIProxyObjectManager> mgr;
     nsHttpHandler::get()->GetProxyObjectManager(getter_AddRefs(mgr));
     if (mgr) {
-        nsCOMPtr<nsIStreamListener> listener;
+        nsCOMPtr<nsIRequestObserver> observer;
         mgr->GetProxyForObject(NS_CURRENT_EVENTQ,
                                NS_GET_IID(nsIRequestObserver),
                                mListener,
                                PROXY_ASYNC | PROXY_ALWAYS,
-                               getter_AddRefs(listener));
-        if (listener) {
-            listener->OnStartRequest(this, mListenerContext);
-            listener->OnStopRequest(this, mListenerContext, mStatus);
+                               getter_AddRefs(observer));
+        if (observer) {
+            observer->OnStartRequest(this, mListenerContext);
+            observer->OnStopRequest(this, mListenerContext, mStatus);
         }
     }
     // XXX else, no proxy object manager... what do we do?
+
+    // finally remove ourselves from the load group.
+    if (mLoadGroup)
+        mLoadGroup->RemoveRequest(this, nsnull, status);
+
     return NS_OK;
 }
 
@@ -1635,7 +1652,7 @@ nsHttpChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *context)
     if (NS_FAILED(rv)) {
         LOG(("Connect failed [rv=%x]\n", rv));
 
-        AsyncAbort(mStatus);
+        AsyncAbort(rv);
 
         mListener = 0;
         mListenerContext = 0;
@@ -2073,13 +2090,21 @@ nsHttpChannel::OnCacheEntryAvailable(nsICacheEntryDescriptor *entry,
     LOG(("nsHttpChannel::OnCacheEntryAvailable [this=%x entry=%x "
          "access=%x status=%x]\n", this, entry, access, status));
 
+    // if the channel's already fired onStopRequest, then we should ignore
+    // this event.
+    if (!mIsPending)
+        return NS_OK;
+
+    // otherwise, we have to handle this event.
     if (NS_SUCCEEDED(status)) {
         mCacheEntry = entry;
         mCacheAccess = access;
     }
 
-    nsresult rv = Connect(PR_FALSE); // advance to the next state...
+    // advance to the next state...
+    nsresult rv = Connect(PR_FALSE);
 
+    // a failure from Connect means that we have to abort the channel.
     if (NS_FAILED(rv)) {
         mCacheEntry = 0;
         mCacheAccess = 0;

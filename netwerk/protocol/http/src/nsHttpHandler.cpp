@@ -125,6 +125,17 @@ nsHttpHandler::~nsHttpHandler()
                 nsHttpHandler::PrefsCallback, (void *)this);
     }
 
+    LOG(("dropping active connections...\n"));
+    DropConnections(mActiveConnections);
+
+    LOG(("dropping idle connections...\n"));
+    DropConnections(mIdleConnections);
+
+    if (mAuthCache) {
+        delete mAuthCache;
+        mAuthCache = nsnull;
+    }
+
     mGlobalInstance = nsnull;
 }
 
@@ -185,7 +196,7 @@ nsHttpHandler::Init()
 
     PrefsChanged();
 
-    //mSessionStartTime = NowInSeconds();
+    mSessionStartTime = NowInSeconds();
 
     mAuthCache = new nsHttpAuthCache();
     if (!mAuthCache)
@@ -667,6 +678,18 @@ nsHttpHandler::CountIdleConnections(nsHttpConnectionInfo *ci)
 
     LOG(("found count=%u\n", count));
     return count;
+}
+
+void
+nsHttpHandler::DropConnections(nsVoidArray &connections)
+{
+    nsHttpConnection *conn;
+    PRInt32 i;
+    for (i=0; i<connections.Count(); ++i) {
+        conn = (nsHttpConnection *) connections[i];
+        NS_RELEASE(conn);
+    }
+    connections.Clear();
 }
 
 void
@@ -1569,8 +1592,13 @@ nsHttpHandler::Observe(nsISupports *subject,
                        const PRUnichar *data)
 {
     if (!nsCRT::strcmp(topic, NS_LITERAL_STRING("profile-before-change").get())) {
+        // clear cache of all authentication credentials.
         if (mAuthCache)
             mAuthCache->ClearAll();
+
+        // need to reset the session start time since cache validation may
+        // depend on this value.
+        mSessionStartTime = NowInSeconds();
     }
     return NS_OK;
 }
