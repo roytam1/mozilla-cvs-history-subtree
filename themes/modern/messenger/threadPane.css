@@ -56,6 +56,12 @@ outlinerbody:-moz-outliner-cell-text(unread)
   font-weight: bold;
 }
 
+outlinerbody:-moz-outliner-cell-text(offline)
+{
+  font-style: italic;
+}
+
+
 outlinerbody:-moz-outliner-cell-text(priority-highest)
 {
   color:red;
