@@ -47,6 +47,8 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$ $Name$";
 #include "pki3hack.h"
 #endif
 
+extern const NSSError NSS_ERROR_NOT_FOUND;
+
 NSS_IMPLEMENT nssPKIObject *
 nssPKIObject_Create (
   NSSArena *arenaOpt,
@@ -718,7 +720,8 @@ find_object_in_collection (
 static pkiObjectCollectionNode *
 add_object_instance (
   nssPKIObjectCollection *collection,
-  nssCryptokiObject *instance
+  nssCryptokiObject *instance,
+  PRBool *foundIt
 )
 {
     PRUint32 i;
@@ -732,12 +735,14 @@ add_object_instance (
      * for unique identifier is done.  Here, a match means this exact object
      * instance is already in the collection, and we have nothing to do.
      */
+    *foundIt = PR_FALSE;
     node = find_instance_in_collection(collection, instance);
     if (node) {
 	/* The collection is assumed to take over the instance.  Since we
 	 * are not using it, it must be destroyed.
 	 */
 	nssCryptokiObject_Destroy(instance);
+	*foundIt = PR_TRUE;
 	return node;
     }
     mark = nssArena_Mark(collection->arena);
@@ -796,13 +801,14 @@ nssPKIObjectCollection_AddInstances (
 {
     PRStatus status = PR_SUCCESS;
     PRUint32 i = 0;
+    PRBool foundIt;
     pkiObjectCollectionNode *node;
     if (instances) {
 	for (; *instances; instances++, i++) {
 	    if (numInstances > 0 && i == numInstances) {
 		break;
 	    }
-	    node = add_object_instance(collection, *instances);
+	    node = add_object_instance(collection, *instances, &foundIt);
 	    if (node == NULL) {
 		goto loser;
 	    }
@@ -840,6 +846,7 @@ nssPKIObjectCollection_GetObjects (
     PRUint32 i = 0;
     PRCList *link = PR_NEXT_LINK(&collection->head);
     pkiObjectCollectionNode *node;
+    int error=0;
     while ((i < rvSize) && (link != &collection->head)) {
 	node = (pkiObjectCollectionNode *)link;
 	if (!node->haveObject) {
@@ -849,12 +856,16 @@ nssPKIObjectCollection_GetObjects (
 		link = PR_NEXT_LINK(link);
 		/*remove bogus object from list*/
 		nssPKIObjectCollection_RemoveNode(collection,node);
+		error++;
 		continue;
 	    }
 	    node->haveObject = PR_TRUE;
 	}
 	rvObjects[i++] = nssPKIObject_AddRef(node->object);
 	link = PR_NEXT_LINK(link);
+    }
+    if (!error && *rvObjects == NULL) {
+	nss_SetError(NSS_ERROR_NOT_FOUND);
     }
     return PR_SUCCESS;
 }
@@ -910,7 +921,8 @@ nssPKIObjectCollection_AddInstanceAsObject (
 )
 {
     pkiObjectCollectionNode *node;
-    node = add_object_instance(collection, instance);
+    PRBool foundIt;
+    node = add_object_instance(collection, instance, &foundIt);
     if (node == NULL) {
 	return PR_FAILURE;
     }
@@ -924,11 +936,14 @@ nssPKIObjectCollection_AddInstanceAsObject (
 	node->haveObject = PR_TRUE;
     }
 #ifdef NSS_3_4_CODE
-    else {
+    else if (!foundIt) {
 	/* The instance was added to a pre-existing node.  This
 	 * function is *only* being used for certificates, and having
 	 * multiple instances of certs in 3.X requires updating the
 	 * CERTCertificate.
+	 * But only do it if it was a new instance!!!  If the same instance
+	 * is encountered, we set *foundIt to true.  Detect that here and
+	 * ignore it.
 	 */
 	STAN_ForceCERTCertificateUpdate((NSSCertificate *)node->object);
     }

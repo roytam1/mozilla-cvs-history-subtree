@@ -53,6 +53,8 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$ $Name$";
 #include "secerr.h"
 #endif
 
+extern const NSSError NSS_ERROR_NOT_FOUND;
+
 /* The number of object handles to grab during each call to C_FindObjects */
 #define OBJECT_STACK_SIZE 16
 
@@ -391,7 +393,7 @@ find_objects
   PRStatus *statusOpt
 )
 {
-    CK_RV ckrv;
+    CK_RV ckrv = CKR_OK;
     CK_ULONG count;
     CK_OBJECT_HANDLE *objectHandles;
     CK_OBJECT_HANDLE staticObjects[OBJECT_STACK_SIZE];
@@ -413,6 +415,7 @@ find_objects
 	objectHandles = nss_ZNEWARRAY(NULL, CK_OBJECT_HANDLE, arraySize);
     }
     if (!objectHandles) {
+	ckrv = CKR_HOST_MEMORY;
 	goto loser;
     }
     nssSession_EnterMonitor(session); /* ==== session lock === */
@@ -457,6 +460,7 @@ find_objects
 	}
 	if (!objectHandles) {
 	    nssSession_ExitMonitor(session);
+	    ckrv = CKR_HOST_MEMORY;
 	    goto loser;
 	}
     }
@@ -469,6 +473,7 @@ find_objects
 	objects = create_objects_from_handles(tok, session,
 	                                      objectHandles, numHandles);
     } else {
+	nss_SetError(NSS_ERROR_NOT_FOUND);
 	objects = NULL;
     }
     if (objectHandles && objectHandles != staticObjects) {
@@ -480,7 +485,23 @@ loser:
     if (objectHandles && objectHandles != staticObjects) {
 	nss_ZFreeIf(objectHandles);
     }
-    if (statusOpt) *statusOpt = PR_FAILURE;
+    /*
+     * These errors should be treated the same as if the objects just weren't
+     * found..
+     */
+    if ((ckrv == CKR_ATTRIBUTE_TYPE_INVALID) ||
+	(ckrv == CKR_ATTRIBUTE_VALUE_INVALID) ||
+	(ckrv == CKR_DATA_INVALID) ||
+	(ckrv == CKR_DATA_LEN_RANGE) ||
+	(ckrv == CKR_FUNCTION_NOT_SUPPORTED) ||
+	(ckrv == CKR_TEMPLATE_INCOMPLETE) ||
+	(ckrv == CKR_TEMPLATE_INCONSISTENT)) {
+
+	nss_SetError(NSS_ERROR_NOT_FOUND);
+	if (statusOpt) *statusOpt = PR_SUCCESS;
+    } else {
+	if (statusOpt) *statusOpt = PR_FAILURE;
+    }
     return (nssCryptokiObject **)NULL;
 }
 
@@ -534,6 +555,8 @@ find_objects_by_template
     return objects;
 }
 
+extern const NSSError NSS_ERROR_INVALID_CERTIFICATE;
+
 NSS_IMPLEMENT nssCryptokiObject *
 nssToken_ImportCertificate
 (
@@ -550,6 +573,7 @@ nssToken_ImportCertificate
   PRBool asTokenObject
 )
 {
+    PRStatus status;
     CK_CERTIFICATE_TYPE cert_type;
     CK_ATTRIBUTE_PTR attr;
     CK_ATTRIBUTE cert_tmpl[10];
@@ -590,10 +614,36 @@ nssToken_ImportCertificate
                                                                searchType,
                                                                NULL);
     if (rvObject) {
+	NSSItem existingDER;
 	NSSSlot *slot = nssToken_GetSlot(tok);
 	nssSession *session = nssSlot_CreateSession(slot, NULL, PR_TRUE);
 	if (!session) {
 	    nssCryptokiObject_Destroy(rvObject);
+	    nssSlot_Destroy(slot);
+	    return (nssCryptokiObject *)NULL;
+	}
+	/* Reject any attempt to import a new cert that has the same
+	 * issuer/serial as an existing cert, but does not have the
+	 * same encoding
+	 */
+	NSS_CK_TEMPLATE_START(cert_tmpl, attr, ctsize);
+	NSS_CK_SET_ATTRIBUTE_NULL(attr, CKA_VALUE);
+	NSS_CK_TEMPLATE_FINISH(cert_tmpl, attr, ctsize);
+	status = nssCKObject_GetAttributes(rvObject->handle, 
+	                                   cert_tmpl, ctsize, NULL,
+	                                   session, slot);
+	NSS_CK_ATTRIBUTE_TO_ITEM(cert_tmpl, &existingDER);
+	if (status == PR_SUCCESS) {
+	    if (!nssItem_Equal(encoding, &existingDER, NULL)) {
+		nss_SetError(NSS_ERROR_INVALID_CERTIFICATE);
+		status = PR_FAILURE;
+	    }
+	    nss_ZFreeIf(existingDER.data);
+	}
+	if (status == PR_FAILURE) {
+	    nssCryptokiObject_Destroy(rvObject);
+	    nssSession_Destroy(session);
+	    nssSlot_Destroy(slot);
 	    return (nssCryptokiObject *)NULL;
 	}
 	/* according to PKCS#11, label, ID, issuer, and serial number 

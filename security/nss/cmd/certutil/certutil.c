@@ -242,6 +242,11 @@ GetCertRequest(PRFileDesc *inFile, PRBool ascii)
 		SEC_ASN1_GET(CERT_CertificateRequestTemplate), &signedData.data);
    } while (0);
 
+   if (!rv) {
+   	rv = CERT_VerifySignedDataWithPublicKeyInfo(&signedData, 
+		&certReq->subjectPublicKeyInfo, NULL /* wincx */);
+   }
+
    if (rv) {
        PRErrorCode  perr = PR_GetError();
        fprintf(stderr, "%s: unable to decode DER cert request (%s)\n", progName,
@@ -343,7 +348,8 @@ AddCert(PK11SlotInfo *slot, CERTCertDBHandle *handle, char *name, char *trusts,
 
 static SECStatus
 CertReq(SECKEYPrivateKey *privk, SECKEYPublicKey *pubk, KeyType keyType,
-	CERTName *subject, char *phone, int ascii, PRFileDesc *outFile)
+	CERTName *subject, char *phone, int ascii, const char *emailAddrs,
+        PRFileDesc *outFile)
 {
     CERTSubjectPublicKeyInfo *spki;
     CERTCertificateRequest *cr;
@@ -453,7 +459,7 @@ CertReq(SECKEYPrivateKey *privk, SECKEYPublicKey *pubk, KeyType keyType,
 	    SECU_PrintSystemError(progName, "write error");
 	    return SECFailure;
 	}
-	PR_fprintf(outFile, "%s\n", NS_CERTREQ_TRAILER);
+	PR_fprintf(outFile, "\n%s\n", NS_CERTREQ_TRAILER);
     } else {
 	numBytes = PR_Write(outFile, result.data, result.len);
 	if (numBytes != (int)result.len) {
@@ -533,7 +539,6 @@ printCertCB(CERTCertificate *cert, void *arg)
 static SECStatus
 DumpChain(CERTCertDBHandle *handle, char *name)
 {
-    SECStatus rv;
     CERTCertificate *the_cert;
     CERTCertificateList *chain;
     int i, j;
@@ -563,7 +568,6 @@ static SECStatus
 listCerts(CERTCertDBHandle *handle, char *name, PK11SlotInfo *slot,
           PRBool raw, PRBool ascii, PRFileDesc *outfile, void *pwarg)
 {
-    CERTCertificate *cert;
     SECItem data;
     PRInt32 numBytes;
     SECStatus rv = SECFailure;
@@ -818,7 +822,7 @@ listKeys(PK11SlotInfo *slot, KeyType keyType, void *pwarg)
     SECKEY_DestroyPrivateKeyList(list);
 
     if (count == 0) {
-	SECU_PrintError(progName, "no keys found");
+	fprintf(stderr, "%s: no keys found\n", progName);
 	return SECFailure;
     }
     return SECSuccess;
@@ -909,7 +913,8 @@ Usage(char *progName)
     	progName);
     FPS "\t%s -C [-c issuer-name | -x] -i cert-request-file -o cert-file\n"
 	"\t\t [-m serial-number] [-w warp-months] [-v months-valid]\n"
-        "\t\t [-f pwfile] [-d certdir] [-P dbprefix] [-1] [-2] [-3] [-4] [-5] [-6]\n",
+        "\t\t [-f pwfile] [-d certdir] [-P dbprefix] [-1] [-2] [-3] [-4] [-5]\n"
+	"\t\t [-6] [-7 emailAddrs]\n",
 	progName);
     FPS "\t%s -D -n cert-name [-d certdir] [-P dbprefix]\n", progName);
     FPS "\t%s -E -n cert-name -t trustargs [-d certdir] [-P dbprefix] [-a] [-i input]\n", 
@@ -926,7 +931,7 @@ Usage(char *progName)
 	progName);
     FPS "\t%s -O -n cert-name [-X] [-d certdir] [-P dbprefix]\n", progName);
     FPS "\t%s -R -s subj -o cert-request-file [-d certdir] [-P dbprefix] [-p phone] [-a]\n"
-	"\t\t [-k key-type] [-h token-name] [-f pwfile] [-g key-size]\n",
+	"\t\t [-y emailAddrs] [-k key-type] [-h token-name] [-f pwfile] [-g key-size]\n",
 	progName);
     FPS "\t%s -V -n cert-name -u usage [-b time] [-e] \n"
 	"\t\t[-X] [-d certdir] [-P dbprefix]\n",
@@ -935,7 +940,7 @@ Usage(char *progName)
 	"\t\t [-k key-type] [-h token-name] [-g key-size]\n"
         "\t\t [-m serial-number] [-w warp-months] [-v months-valid]\n"
 	"\t\t [-f pwfile] [-d certdir] [-P dbprefix]\n"
-        "\t\t [-p phone] [-1] [-2] [-3] [-4] [-5] [-6]\n",
+        "\t\t [-p phone] [-1] [-2] [-3] [-4] [-5] [-6] [-7 emailAddrs]\n",
 	progName);
     FPS "\t%s -U [-X] [-d certdir] [-P dbprefix]\n", progName);
     exit(1);
@@ -1228,22 +1233,15 @@ MakeV1Cert(	CERTCertDBHandle *	handle,
 		CERTCertificateRequest *req,
 	    	char *			issuerNickName, 
 		PRBool 			selfsign, 
-		int 			serialNumber,
+		unsigned int 		serialNumber,
 		int 			warpmonths,
                 int                     validitylength)
 {
     CERTCertificate *issuerCert = NULL;
     CERTValidity *validity;
     CERTCertificate *cert = NULL;
-#ifndef NSPR20    
-    PRTime printableTime;
-    int64 now, after;
-#else
     PRExplodedTime printableTime;
     PRTime now, after;
-#endif    
-   
-    
 
     if ( !selfsign ) {
 	issuerCert = CERT_FindCertByNicknameOrEmailAddr(handle, issuerNickName);
@@ -1255,43 +1253,23 @@ MakeV1Cert(	CERTCertDBHandle *	handle,
     }
 
     now = PR_Now();
-#ifndef NSPR20
-    PR_ExplodeGMTTime (&printableTime, now);
-#else    
     PR_ExplodeTime (now, PR_GMTParameters, &printableTime);
-#endif
     if ( warpmonths ) {
-#ifndef	NSPR20    
-	printableTime.tm_mon += warpmonths;
-	now = PR_ImplodeTime (&printableTime, 0, 0);
-	PR_ExplodeGMTTime (&printableTime, now);
-#else
 	printableTime.tm_month += warpmonths;
 	now = PR_ImplodeTime (&printableTime);
 	PR_ExplodeTime (now, PR_GMTParameters, &printableTime);
-#endif
     }
-#ifndef	NSPR20  
-    printableTime.tm_mon += validitylength;  
-    printableTime.tm_mon += 3;
-    after = PR_ImplodeTime (&printableTime, 0, 0);
-
-#else
     printableTime.tm_month += validitylength;
     printableTime.tm_month += 3;
     after = PR_ImplodeTime (&printableTime);
-#endif    
 
     /* note that the time is now in micro-second unit */
     validity = CERT_CreateValidity (now, after);
 
-    if ( selfsign ) {
-	cert = CERT_CreateCertificate
-	    (serialNumber,&(req->subject), validity, req);
-    } else {
-	cert = CERT_CreateCertificate
-	    (serialNumber,&(issuerCert->subject), validity, req);
-    }
+    cert = CERT_CreateCertificate(serialNumber, 
+				  (selfsign ? &req->subject 
+				            : &issuerCert->subject), 
+	                          validity, req);
     
     CERT_DestroyValidity(validity);
     if ( issuerCert ) {
@@ -1560,6 +1538,81 @@ AddNscpCertType (void *extHandle)
     return (CERT_EncodeAndAddBitStrExtension
 	    (extHandle, SEC_OID_NS_CERT_EXT_CERT_TYPE, &bitStringValue,
 	     (buffer[0] == 'y' || buffer[0] == 'Y') ? PR_TRUE : PR_FALSE));
+
+}
+
+
+static SECStatus 
+AddEmailSubjectAlt(void *extHandle, const char *emailAddrs)
+{
+    SECItem item = { 0, NULL, 0 };
+    void *value;
+    CERTGeneralName *emailList = NULL;
+    CERTGeneralName *current;
+    PRCList *prev = NULL;
+    PRArenaPool *arena;
+    const char *cp;
+    char *tbuf;
+    SECStatus rv = SECSuccess;
+
+    arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
+    if (arena == NULL) {
+	return SECFailure;
+    }
+	
+    /*
+     * walk down the comma separated list of email addresses. NOTE: there is
+     * no sanity checks to see if the email address look like email addresses.
+     */
+    for (cp=emailAddrs; cp; cp = PORT_Strchr(cp,',')) {
+	int len;
+	char *end;
+
+	if (*cp == ',') {
+	   cp++;
+	}
+	end = PORT_Strchr(cp,',');
+	len = end ? end-cp : PORT_Strlen(cp);
+	if (len <= 0) {
+	   continue;
+	}
+	tbuf = PORT_ArenaAlloc(arena,len+1);
+	PORT_Memcpy(tbuf,cp,len);
+	tbuf[len] = 0;
+	current = (CERTGeneralName *) PORT_ZAlloc(sizeof(CERTGeneralName));
+	if (!current) {
+	    rv = SECFailure;
+	    break;
+	}
+	if (prev) {
+	    current->l.prev = prev;
+	    prev->next = &(current->l);
+	} else {
+	    emailList = current;
+	}
+	current->type = certRFC822Name;
+	current->name.other.data = (unsigned char *)tbuf;
+	current->name.other.len = PORT_Strlen(tbuf);
+	prev = &(current->l);
+    }
+    if (rv != SECSuccess) {
+	goto loser;
+    }
+    /* no email address */
+    if (!emailList) {
+	/*rv=SECSuccess; We know rv is SECSuccess because of the previous if*/
+	goto done; 
+    }
+    emailList->l.prev = prev;
+    current->l.next = &(emailList->l);
+
+    CERT_EncodeAltNameExtension(arena, emailList, &item);
+    rv = CERT_AddExtension (extHandle, SEC_OID_X509_SUBJECT_ALT_NAME, &item, 
+							PR_FALSE, PR_TRUE);
+done:
+loser:
+    PORT_FreeArena(arena, PR_FALSE);
+    return rv;
 
 }
 
@@ -1896,9 +1949,10 @@ CreateCert(
 	PRFileDesc *outFile, 
 	SECKEYPrivateKey *selfsignprivkey,
 	void 	*pwarg,
-	int     serialNumber, 
+	unsigned int serialNumber, 
 	int     warpmonths,
 	int     validitylength,
+	const char *emailAddrs,
 	PRBool  ascii,
 	PRBool  selfsign,
 	PRBool	keyUsage, 
@@ -1912,7 +1966,6 @@ CreateCert(
     SECItem *	certDER;
     PRArenaPool *arena			= NULL;
     CERTCertificate *subjectCert 	= NULL;
-    /*CERTCertificate *issuerCert 	= NULL;*/
     CERTCertificateRequest *certReq	= NULL;
     SECStatus 	rv 			= SECSuccess;
     SECItem 	reqDER;
@@ -1980,7 +2033,12 @@ CreateCert(
 	    if (rv)
 		break;
 	}
-       
+
+	if (emailAddrs != NULL) {
+	    rv = AddEmailSubjectAlt(extHandle,emailAddrs);
+	    if (rv)
+		break;
+	}
 
 	CERT_FinishExtensions(extHandle);
 
@@ -2039,6 +2097,7 @@ enum {
     opt_AddCRLDistPtsExt,
     opt_AddNSCertTypeExt,
     opt_AddExtKeyUsageExt,
+    opt_ExtendedEmailAddrs,
     opt_ASCIIForIO,
     opt_ValidityTime,
     opt_IssuerName,
@@ -2101,6 +2160,7 @@ static secuCommandFlag certutil_options[] =
 	{ /* opt_AddCRLDistPtsExt    */  '4', PR_FALSE, 0, PR_FALSE },
 	{ /* opt_AddNSCertTypeExt    */  '5', PR_FALSE, 0, PR_FALSE },
 	{ /* opt_AddExtKeyUsageExt   */  '6', PR_FALSE, 0, PR_FALSE },
+	{ /* opt_ExtendedEmailAddrs  */  '7', PR_TRUE,  0, PR_FALSE },
 	{ /* opt_ASCIIForIO          */  'a', PR_FALSE, 0, PR_FALSE },
 	{ /* opt_ValidityTime        */  'b', PR_TRUE,  0, PR_FALSE },
 	{ /* opt_IssuerName          */  'c', PR_TRUE,  0, PR_FALSE },
@@ -2149,7 +2209,7 @@ main(int argc, char **argv)
     char *      name            = NULL;
     int	        keysize	        = DEFAULT_KEY_BITS;
     int         publicExponent  = 0x010001;
-    int         serialNumber    = 0;
+    unsigned int serialNumber   = 0;
     int         warpmonths      = 0;
     int         validitylength  = 0;
     int         commandsEntered = 0;
@@ -2223,12 +2283,13 @@ main(int argc, char **argv)
 
     /*  -m serial number */
     if (certutil.options[opt_SerialNumber].activated) {
-	serialNumber = PORT_Atoi(certutil.options[opt_SerialNumber].arg);
-	if (serialNumber < 0) {
+	int sn = PORT_Atoi(certutil.options[opt_SerialNumber].arg);
+	if (sn < 0) {
 	    PR_fprintf(PR_STDERR, "%s -m:  %s is not a valid serial number.\n",
 	               progName, certutil.options[opt_SerialNumber].arg);
 	    return 255;
 	}
+	serialNumber = sn;
     }
 
     /*  -P certdb name prefix */
@@ -2387,8 +2448,8 @@ main(int argc, char **argv)
          !certutil.options[opt_SerialNumber].activated) {
 	/*  Make a default serial number from the current time.  */
 	PRTime now = PR_Now();
-	serialNumber = LL_L2I(serialNumber, now);
-	if (serialNumber < 0) serialNumber *= -1;
+	LL_USHR(now, now, 19);
+	LL_L2UI(serialNumber, now);
     }
 
     /*  Validation needs the usage to validate for.  */
@@ -2611,6 +2672,7 @@ main(int argc, char **argv)
 	rv = CertReq(privkey, pubkey, keytype, subject,
 	             certutil.options[opt_PhoneNumber].arg,
 	             certutil.options[opt_ASCIIForIO].activated,
+		     certutil.options[opt_ExtendedEmailAddrs].arg,
 		     outFile ? outFile : PR_STDOUT);
 	if (rv) 
 	    goto shutdown;
@@ -2649,6 +2711,7 @@ main(int argc, char **argv)
 	                certutil.options[opt_IssuerName].arg,
 	                inFile, outFile, privkey, &pwdata,
 	                serialNumber, warpmonths, validitylength,
+		        certutil.options[opt_ExtendedEmailAddrs].arg,
 	                certutil.options[opt_ASCIIForIO].activated,
 	                certutil.options[opt_SelfSign].activated,
 	                certutil.options[opt_AddKeyUsageExt].activated,

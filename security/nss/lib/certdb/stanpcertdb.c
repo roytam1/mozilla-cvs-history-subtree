@@ -88,8 +88,15 @@ SEC_DeletePermCertificate(CERTCertificate *cert)
     PRStatus nssrv;
     NSSTrustDomain *td = STAN_GetDefaultTrustDomain();
     NSSCertificate *c = STAN_GetNSSCertificate(cert);
+
+    /* get rid of the token instances */
     nssrv = NSSCertificate_DeleteStoredObject(c, NULL);
-    nssTrustDomain_RemoveCertFromCache(td, c);
+
+    /* get rid of the cache entry */
+    nssTrustDomain_LockCertCache(td);
+    nssTrustDomain_RemoveCertFromCacheLOCKED(td, c);
+    nssTrustDomain_UnlockCertCache(td);
+
     return (nssrv == PR_SUCCESS) ? SECSuccess : SECFailure;
 }
 
@@ -133,6 +140,8 @@ CERT_ChangeCertTrust(CERTCertDBHandle *handle, CERTCertificate *cert,
     return rv;
 }
 
+extern const NSSError NSS_ERROR_INVALID_CERTIFICATE;
+
 SECStatus
 __CERT_AddTempCertToPerm(CERTCertificate *cert, char *nickname,
 		       CERTCertTrust *trust)
@@ -157,7 +166,9 @@ __CERT_AddTempCertToPerm(CERTCertificate *cert, char *nickname,
 	stanNick = nssUTF8_Duplicate((NSSUTF8 *)nickname, c->object.arena);
     }
     /* Delete the temp instance */
-    nssCertificateStore_Remove(context->certStore, c, PR_TRUE);
+    nssCertificateStore_Lock(context->certStore);
+    nssCertificateStore_RemoveCertLOCKED(context->certStore, c);
+    nssCertificateStore_Unlock(context->certStore);
     c->object.cryptoContext = NULL;
     /* Import the perm instance onto the internal token */
     slot = PK11_GetInternalKeySlot();
@@ -174,6 +185,9 @@ __CERT_AddTempCertToPerm(CERTCertificate *cert, char *nickname,
                                               PR_TRUE);
     PK11_FreeSlot(slot);
     if (!permInstance) {
+	if (NSS_GetError() == NSS_ERROR_INVALID_CERTIFICATE) {
+	    PORT_SetError(SEC_ERROR_REUSED_ISSUER_AND_SERIAL);
+	}
 	return SECFailure;
     }
     nssPKIObject_AddInstance(&c->object, permInstance);
@@ -187,7 +201,7 @@ __CERT_AddTempCertToPerm(CERTCertificate *cert, char *nickname,
     cert->istemp = PR_FALSE;
     cert->isperm = PR_TRUE;
     if (!trust) {
-	return PR_SUCCESS;
+	return SECSuccess;
     }
     return (STAN_ChangeCertTrust(cert, trust) == PR_SUCCESS) ? 
 							SECSuccess: SECFailure;
@@ -221,6 +235,16 @@ __CERT_NewTempCertificate(CERTCertDBHandle *handle, SECItem *derCert,
 	    /* Then, see if it is already a perm cert */
 	    c = NSSTrustDomain_FindCertificateByEncodedCertificate(handle, 
 	                                                           &encoding);
+	    /* actually, that search ends up going by issuer/serial,
+	     * so it is still possible to return a cert with the same
+	     * issuer/serial but a different encoding, and we're
+	     * going to reject that
+	     */
+	    if (c && !nssItem_Equal(&c->encoding, &encoding, NULL)) {
+		nssCertificate_Destroy(c);
+		PORT_SetError(SEC_ERROR_REUSED_ISSUER_AND_SERIAL);
+		return NULL;
+	    }
 	}
 	if (c) {
 	    return STAN_GetCERTCertificate(c);
@@ -590,28 +614,6 @@ CERT_DestroyCertificate(CERTCertificate *cert)
         }
 #else
 	if (tmp) {
-	    NSSTrustDomain *td = STAN_GetDefaultTrustDomain();
-	    refCount = (int)tmp->object.refCount;
-	    /* This is a hack.  For 3.4, there are persistent references
-	     * to 4.0 certificates during the lifetime of a cert.  In the
-	     * case of a temp cert, the persistent reference is in the
-	     * cert store of the global crypto context.  For a perm cert,
-	     * the persistent reference is in the cache.  Thus, the last
-	     * external reference is really the penultimate NSS reference.
-	     * When the count drops to two, it is really one, but the
-	     * persistent reference must be explicitly deleted.  In 4.0,
-	     * this ugliness will not appear.  Crypto contexts will remove
-	     * their own cert references, and the cache will have its
-	     * own management code also.
-	     */
-	    if (refCount == 2) {
-		NSSCryptoContext *cc = tmp->object.cryptoContext;
-		if (cc != NULL) {
-		    nssCertificateStore_Remove(cc->certStore, tmp, PR_FALSE);
-		} else {
-		    nssTrustDomain_RemoveCertFromCache(td, tmp);
-		}
-	    }
 	    /* delete the NSSCertificate */
 	    NSSCertificate_Destroy(tmp);
 	} else {
@@ -724,21 +726,14 @@ CERT_GetDBContentVersion(CERTCertDBHandle *handle)
     return 0;
 }
 
-/*
- *
- * Manage S/MIME profiles
- *
- */
-
 SECStatus
-CERT_SaveSMimeProfile(CERTCertificate *cert, SECItem *emailProfile,
-		      SECItem *profileTime)
+certdb_SaveSingleProfile(CERTCertificate *cert, const char *emailAddr, 
+				SECItem *emailProfile, SECItem *profileTime)
 {
     int64 oldtime;
     int64 newtime;
     SECStatus rv = SECFailure;
     PRBool saveit;
-    char *emailAddr;
     SECItem oldprof, oldproftime;
     SECItem *oldProfile = NULL;
     SECItem *oldProfileTime = NULL;
@@ -747,32 +742,6 @@ CERT_SaveSMimeProfile(CERTCertificate *cert, SECItem *emailProfile,
     NSSCryptoContext *cc;
     nssSMIMEProfile *stanProfile = NULL;
     PRBool freeOldProfile = PR_FALSE;
-
-    if (!cert) {
-        return SECFailure;
-    }
-
-    if (cert->slot &&  !PK11_IsInternal(cert->slot)) {
-        /* this cert comes from an external source, we need to add it
-        to the cert db before creating an S/MIME profile */
-        PK11SlotInfo* internalslot = PK11_GetInternalKeySlot();
-        if (!internalslot) {
-            return SECFailure;
-        }
-        rv = PK11_ImportCert(internalslot, cert,
-            CK_INVALID_HANDLE, NULL, PR_FALSE);
-
-        PK11_FreeSlot(internalslot);
-        if (rv != SECSuccess ) {
-            return SECFailure;
-        }
-    }
-
-    emailAddr = cert->emailAddr;
-    
-    if ( emailAddr == NULL ) {
-	goto loser;
-    }
 
     c = STAN_GetNSSCertificate(cert);
     if (!c) return SECFailure;
@@ -787,8 +756,8 @@ CERT_SaveSMimeProfile(CERTCertificate *cert, SECItem *emailProfile,
 	    oldProfileTime = &oldproftime;
 	}
     } else {
-	oldProfile = PK11_FindSMimeProfile(&slot, emailAddr, &cert->derSubject, 
-							&oldProfileTime); 
+	oldProfile = PK11_FindSMimeProfile(&slot, (char *)emailAddr, 
+					&cert->derSubject, &oldProfileTime); 
 	freeOldProfile = PR_TRUE;
     }
 
@@ -871,8 +840,8 @@ CERT_SaveSMimeProfile(CERTCertificate *cert, SECItem *emailProfile,
 		rv = (nssrv == PR_SUCCESS) ? SECSuccess : SECFailure;
 	    }
 	} else {
-	    rv = PK11_SaveSMimeProfile(slot, emailAddr, &cert->derSubject, 
-						emailProfile, profileTime);
+	    rv = PK11_SaveSMimeProfile(slot, (char *)emailAddr, 
+				&cert->derSubject, emailProfile, profileTime);
 	}
     } else {
 	rv = SECSuccess;
@@ -894,6 +863,52 @@ loser:
     
     return(rv);
 }
+
+/*
+ *
+ * Manage S/MIME profiles
+ *
+ */
+
+SECStatus
+CERT_SaveSMimeProfile(CERTCertificate *cert, SECItem *emailProfile,
+		      SECItem *profileTime)
+{
+    const char *emailAddr;
+    SECStatus rv;
+
+    if (!cert) {
+        return SECFailure;
+    }
+
+    if (cert->slot &&  !PK11_IsInternal(cert->slot)) {
+        /* this cert comes from an external source, we need to add it
+        to the cert db before creating an S/MIME profile */
+        PK11SlotInfo* internalslot = PK11_GetInternalKeySlot();
+        if (!internalslot) {
+            return SECFailure;
+        }
+        rv = PK11_ImportCert(internalslot, cert,
+            CK_INVALID_HANDLE, NULL, PR_FALSE);
+
+        PK11_FreeSlot(internalslot);
+        if (rv != SECSuccess ) {
+            return SECFailure;
+        }
+    }
+
+    
+    for (emailAddr = CERT_GetFirstEmailAddress(cert); emailAddr != NULL;
+		emailAddr = CERT_GetNextEmailAddress(cert,emailAddr)) {
+	rv = certdb_SaveSingleProfile(cert,emailAddr,emailProfile,profileTime);
+	if (rv != SECSuccess) {
+	   return SECFailure;
+	}
+    }
+    return SECSuccess;
+
+}
+
 
 SECItem *
 CERT_FindSMimeProfile(CERTCertificate *cert)

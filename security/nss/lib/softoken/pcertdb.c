@@ -61,7 +61,16 @@
 /* forward declaration */
 NSSLOWCERTCertificate *
 nsslowcert_FindCertByDERCertNoLocking(NSSLOWCERTCertDBHandle *handle, SECItem *derCert);
-
+static SECStatus
+nsslowcert_UpdateSMimeProfile(NSSLOWCERTCertDBHandle *dbhandle, 
+	char *emailAddr, SECItem *derSubject, SECItem *emailProfile, 
+							SECItem *profileTime);
+static SECStatus
+nsslowcert_UpdatePermCert(NSSLOWCERTCertDBHandle *dbhandle,
+    NSSLOWCERTCertificate *cert, char *nickname, NSSLOWCERTCertTrust *trust);
+static SECStatus
+nsslowcert_UpdateCrl(NSSLOWCERTCertDBHandle *handle, SECItem *derCrl, 
+			SECItem *crlKey, char *url, PRBool isKRL);
 
 static NSSLOWCERTCertificate *certListHead = NULL;
 static NSSLOWCERTTrust *trustListHead = NULL;
@@ -496,7 +505,10 @@ ReadDBEntry(NSSLOWCERTCertDBHandle *handle, certDBEntryCommon *entry,
 	goto loser;
     }
     buf = (unsigned char *)data.data;
-    if ( buf[0] != (unsigned char)CERT_DB_FILE_VERSION ) {
+    /* version 7 has the same schema, we may be using a v7 db if we openned
+     * the databases readonly. */
+    if (!((buf[0] == (unsigned char)CERT_DB_FILE_VERSION) 
+		|| (buf[0] == (unsigned char) CERT_DB_V7_FILE_VERSION))) {
 	PORT_SetError(SEC_ERROR_BAD_DATABASE);
 	goto loser;
     }
@@ -715,6 +727,7 @@ DecodeDBCertEntry(certDBEntryCert *entry, SECItem *dbentry)
 	lenoff = 3;
 	break;
       case 7:
+      case 8:
 	headerlen = DB_CERT_ENTRY_HEADER_LEN;
 	lenoff = 6;
 	break;
@@ -2110,7 +2123,7 @@ EncodeDBSubjectEntry(certDBEntrySubject *entry, PRArenaPool *arena,
     unsigned int i;
     unsigned char *tmpbuf;
     unsigned int nnlen = 0;
-    unsigned int eaddrlen = 0;
+    unsigned int eaddrslen = 0;
     int keyidoff;
     SECItem *certKeys;
     SECItem *keyIDs;
@@ -2118,15 +2131,18 @@ EncodeDBSubjectEntry(certDBEntrySubject *entry, PRArenaPool *arena,
     if ( entry->nickname ) {
 	nnlen = PORT_Strlen(entry->nickname) + 1;
     }
-    if ( entry->emailAddr ) {
-	eaddrlen = PORT_Strlen(entry->emailAddr) + 1;
+    if ( entry->emailAddrs ) {
+	eaddrslen = 2;
+	for (i=0; i < entry->nemailAddrs; i++) {
+	    eaddrslen += PORT_Strlen(entry->emailAddrs[i]) + 1 + 2;
+	}
     }
-    
+
     ncerts = entry->ncerts;
     
     /* compute the length of the entry */
-    keyidoff = DB_SUBJECT_ENTRY_HEADER_LEN + nnlen + eaddrlen;
-    len = keyidoff + 4 * ncerts;
+    keyidoff = DB_SUBJECT_ENTRY_HEADER_LEN + nnlen ;
+    len = keyidoff + 4 * ncerts + eaddrslen;
     for ( i = 0; i < ncerts; i++ ) {
 	len += entry->certKeys[i].len;
 	len += entry->keyIDs[i].len;
@@ -2150,12 +2166,11 @@ EncodeDBSubjectEntry(certDBEntrySubject *entry, PRArenaPool *arena,
     buf[1] = ncerts & 0xff;
     buf[2] = ( nnlen >> 8 ) & 0xff;
     buf[3] = nnlen & 0xff;
-    buf[4] = ( eaddrlen >> 8 ) & 0xff;
-    buf[5] = eaddrlen & 0xff;
+    /* v7 email field is NULL in v8 */
+    buf[4] = 0;
+    buf[5] = 0;
 
     PORT_Memcpy(&buf[DB_SUBJECT_ENTRY_HEADER_LEN], entry->nickname, nnlen);
-    PORT_Memcpy(&buf[DB_SUBJECT_ENTRY_HEADER_LEN+nnlen], entry->emailAddr,
-		eaddrlen);
     
     for ( i = 0; i < ncerts; i++ ) {
 
@@ -2181,6 +2196,20 @@ EncodeDBSubjectEntry(certDBEntrySubject *entry, PRArenaPool *arena,
 	keyIDs = entry->keyIDs;
 	PORT_Memcpy(tmpbuf, keyIDs[i].data, keyIDs[i].len);
 	tmpbuf = tmpbuf + keyIDs[i].len;
+    }
+
+    if (entry->emailAddrs) {
+	tmpbuf[0] =  (entry->nemailAddrs >> 8) & 0xff;
+	tmpbuf[1] =  entry->nemailAddrs  & 0xff;
+	tmpbuf += 2;
+	for (i=0; i < entry->nemailAddrs; i++) {
+	    int nameLen = PORT_Strlen(entry->emailAddrs[i]) + 1;
+	    tmpbuf[0] =  (nameLen >> 8) & 0xff;
+	    tmpbuf[1] =  nameLen & 0xff;
+	    tmpbuf += 2;
+	    PORT_Memcpy(tmpbuf,entry->emailAddrs[i],nameLen);
+	    tmpbuf +=nameLen;
+	}
     }
 
     PORT_Assert(tmpbuf == &buf[len]);
@@ -2221,10 +2250,12 @@ DecodeDBSubjectEntry(certDBEntrySubject *entry, SECItem *dbentry,
     PRArenaPool *arena;
     unsigned int len, itemlen;
     unsigned char *tmpbuf;
+    unsigned char *end;
     unsigned int i;
     SECStatus rv;
     unsigned int keyidoff;
     unsigned int nnlen, eaddrlen;
+    unsigned int stdlen;
     
     arena = entry->common.arena;
 
@@ -2242,8 +2273,8 @@ DecodeDBSubjectEntry(certDBEntrySubject *entry, SECItem *dbentry,
     entry->ncerts = ncerts = ( ( dbentry->data[0] << 8 ) | dbentry->data[1] );
     nnlen = ( ( dbentry->data[2] << 8 ) | dbentry->data[3] );
     eaddrlen = ( ( dbentry->data[4] << 8 ) | dbentry->data[5] );
-    if ( dbentry->len < ( ncerts * 4 + DB_SUBJECT_ENTRY_HEADER_LEN +
-			 nnlen + eaddrlen) ) {
+    stdlen = ncerts * 4 + DB_SUBJECT_ENTRY_HEADER_LEN + nnlen + eaddrlen;
+    if ( dbentry->len < stdlen) {
 	PORT_SetError(SEC_ERROR_BAD_DATABASE);
 	goto loser;
     }
@@ -2270,18 +2301,26 @@ DecodeDBSubjectEntry(certDBEntrySubject *entry, SECItem *dbentry,
     } else {
 	entry->nickname = NULL;
     }
-    
+
+    /* if we have an old style email entry, there is only one */    
+    entry->nemailAddrs = 0;
     if ( eaddrlen > 1 ) { /* null terminator is stored */
-	entry->emailAddr = (char *)PORT_ArenaAlloc(arena, eaddrlen);
-	if ( entry->emailAddr == NULL ) {
+	entry->emailAddrs = (char **)PORT_ArenaAlloc(arena, sizeof(char *));
+	if ( entry->emailAddrs == NULL ) {
 	    PORT_SetError(SEC_ERROR_NO_MEMORY);
 	    goto loser;
 	}
-	PORT_Memcpy(entry->emailAddr,
+	entry->emailAddrs[0] = (char *)PORT_ArenaAlloc(arena, eaddrlen);
+	if ( entry->emailAddrs[0] == NULL ) {
+	    PORT_SetError(SEC_ERROR_NO_MEMORY);
+	    goto loser;
+	}
+	PORT_Memcpy(entry->emailAddrs[0],
 		    &dbentry->data[DB_SUBJECT_ENTRY_HEADER_LEN+nnlen],
 		    eaddrlen);
+	 entry->nemailAddrs = 1;
     } else {
-	entry->emailAddr = NULL;
+	entry->emailAddrs = NULL;
     }
     
     /* collect the lengths of the certKeys and keyIDs, and total the
@@ -2305,7 +2344,7 @@ DecodeDBSubjectEntry(certDBEntrySubject *entry, SECItem *dbentry,
     }
     
     /* is database entry correct length? */
-    if ( len != dbentry->len ){
+    if ( len > dbentry->len ){
 	PORT_SetError(SEC_ERROR_BAD_DATABASE);
 	goto loser;
     }
@@ -2332,8 +2371,30 @@ DecodeDBSubjectEntry(certDBEntrySubject *entry, SECItem *dbentry,
 	PORT_Memcpy(entry->keyIDs[i].data, tmpbuf, entry->keyIDs[i].len);
 	tmpbuf = &tmpbuf[entry->keyIDs[i].len];
     }
+
+    end = &dbentry->data[dbentry->len];
+    if ((eaddrlen == 0) && (tmpbuf+1 < end)) {
+	/* read in the additional email addresses */
+	entry->nemailAddrs = tmpbuf[0] << 8 | tmpbuf[1];
+	tmpbuf += 2;
+	entry->emailAddrs = (char **)
+		PORT_ArenaAlloc(arena, entry->nemailAddrs * sizeof(char *));
+	if (entry->emailAddrs == NULL) {
+	    PORT_SetError(SEC_ERROR_NO_MEMORY);
+	    goto loser;
+	}
+	for (i=0; i < entry->nemailAddrs; i++) {
+	    int nameLen = tmpbuf[0] << 8 | tmpbuf[1];
+	    entry->emailAddrs[i] = PORT_ArenaAlloc(arena,nameLen);
+	    if (entry->emailAddrs == NULL) {
+	        PORT_SetError(SEC_ERROR_NO_MEMORY);
+	        goto loser;
+	    }
+	    PORT_Memcpy(entry->emailAddrs[i],&tmpbuf[2],nameLen);
+	    tmpbuf += 2 + nameLen;
+	}
+    }
     
-    PORT_Assert(tmpbuf == &dbentry->data[dbentry->len]);
     
     return(SECSuccess);
 
@@ -2381,6 +2442,7 @@ NewDBSubjectEntry(SECItem *derSubject, SECItem *certKey,
     }
     
     entry->ncerts = 1;
+    entry->nemailAddrs = 0;
     /* copy nickname */
     if ( nickname && ( *nickname != '\0' ) ) {
 	nnlen = PORT_Strlen(nickname) + 1;
@@ -2398,21 +2460,24 @@ NewDBSubjectEntry(SECItem *derSubject, SECItem *certKey,
     if ( emailAddr && ( *emailAddr != '\0' ) ) {
 	emailAddr = nsslowcert_FixupEmailAddr(emailAddr);
 	if ( emailAddr == NULL ) {
-	    entry->emailAddr = NULL;
+	    entry->emailAddrs = NULL;
 	    goto loser;
 	}
 	
 	eaddrlen = PORT_Strlen(emailAddr) + 1;
-	entry->emailAddr = (char *)PORT_ArenaAlloc(arena, eaddrlen);
-	if ( entry->emailAddr == NULL ) {
+	entry->emailAddrs = (char **)PORT_ArenaAlloc(arena, sizeof(char *));
+	if ( entry->emailAddrs == NULL ) {
 	    PORT_Free(emailAddr);
 	    goto loser;
 	}
+	entry->emailAddrs[0] = PORT_ArenaStrdup(arena,emailAddr);
+	if (entry->emailAddrs[0]) {
+	    entry->nemailAddrs = 1;
+	} 
 	
-	PORT_Memcpy(entry->emailAddr, emailAddr, eaddrlen);
 	PORT_Free(emailAddr);
     } else {
-	entry->emailAddr = NULL;
+	entry->emailAddrs = NULL;
     }
     
     /* allocate space for certKeys and keyIDs */
@@ -2583,12 +2648,15 @@ loser:
     
 }
 
+typedef enum { nsslowcert_remove, nsslowcert_add } nsslowcertUpdateType;
+
 static SECStatus
-UpdateSubjectWithEmailAddr(NSSLOWCERTCertDBHandle *dbhandle, 
-					SECItem *derSubject, char *emailAddr)
+nsslowcert_UpdateSubjectEmailAddr(NSSLOWCERTCertDBHandle *dbhandle, 
+	SECItem *derSubject, char *emailAddr, nsslowcertUpdateType updateType)
 {
     PRBool save = PR_FALSE, delold = PR_FALSE;
     certDBEntrySubject *entry = NULL;
+    int index = -1, i;
     SECStatus rv;
    
     if (emailAddr) { 
@@ -2596,55 +2664,62 @@ UpdateSubjectWithEmailAddr(NSSLOWCERTCertDBHandle *dbhandle,
 	if (emailAddr == NULL) {
 	    return SECFailure;
 	}
+    } else {
+	return SECSuccess;
     }
 
     entry = ReadDBSubjectEntry(dbhandle,derSubject);    
     if (entry == NULL) {
 	goto loser;
-    }
-    
-    if ( entry->emailAddr ) {
-	if ( (emailAddr == NULL) || 
-		(PORT_Strcmp(entry->emailAddr, emailAddr) != 0) ) {
-	    save = PR_TRUE;
-	    delold = PR_TRUE;
-	}
-    } else if (emailAddr) {
-	save = PR_TRUE;
-    }
+    } 
 
-    if ( delold ) {
-	/* delete the old smime entry, because this cert now has a new
-	 * smime entry pointing to it
-	 */
-	PORT_Assert(save);
-	PORT_Assert(entry->emailAddr != NULL);
-	DeleteDBSMimeEntry(dbhandle, entry->emailAddr);
-    }
-
-    if ( save ) {
-	unsigned int len;
-	
-	PORT_Assert(entry != NULL);
-	if (emailAddr) {
-	    len = PORT_Strlen(emailAddr) + 1;
-	    entry->emailAddr = (char *)PORT_ArenaAlloc(entry->common.arena, len);
-	    if ( entry->emailAddr == NULL ) {
-		goto loser;
+    if ( entry->emailAddrs ) {
+	for (i=0; i < entry->nemailAddrs; i++) {
+	    if (PORT_Strcmp(entry->emailAddrs[i],emailAddr) == 0) {
+		index = i;
 	    }
-	    PORT_Memcpy(entry->emailAddr, emailAddr, len);
-	} else {
-	    entry->emailAddr = NULL;
 	}
-	
-	/* delete the subject entry */
-	DeleteDBSubjectEntry(dbhandle, derSubject);
+    }
 
-	/* write the new one */
-	rv = WriteDBSubjectEntry(dbhandle, entry);
-	if ( rv != SECSuccess ) {
+
+    if (updateType == nsslowcert_remove) {
+	if (index == -1) {
+	    return SECSuccess;
+	}
+
+	entry->nemailAddrs--;
+	for (i=index; i < entry->nemailAddrs; i++) {
+	   entry->emailAddrs[i] = entry->emailAddrs[i+1];
+	}
+    } else {
+	char **newAddrs = NULL;
+	if (index != -1) {
+	    return SECSuccess;
+	}
+	newAddrs = (char **)PORT_ArenaAlloc(entry->common.arena,
+		(entry->nemailAddrs+1)* sizeof(char *));
+	if (!newAddrs) {
 	    goto loser;
 	}
+	for (i=0; i < entry->nemailAddrs; i++) {
+	   newAddrs[i] = entry->emailAddrs[i];
+	}
+	newAddrs[entry->nemailAddrs] = 
+			PORT_ArenaStrdup(entry->common.arena,emailAddr);
+	if (!newAddrs[entry->nemailAddrs]) {
+	   goto loser;
+	}
+	entry->emailAddrs = newAddrs;
+	entry->nemailAddrs++;
+    }
+	
+    /* delete the subject entry */
+    DeleteDBSubjectEntry(dbhandle, derSubject);
+
+    /* write the new one */
+    rv = WriteDBSubjectEntry(dbhandle, entry);
+    if ( rv != SECSuccess ) {
+	    goto loser;
     }
 
     DestroyDBEntry((certDBEntry *)entry);
@@ -2890,9 +2965,11 @@ RemovePermSubjectNode(NSSLOWCERTCertificate *cert)
 	}
     } else {
 	/* no entries left, delete the perm entry in the DB */
-	if ( entry->emailAddr ) {
+	if ( entry->emailAddrs ) {
 	    /* if the subject had an email record, then delete it too */
-	    DeleteDBSMimeEntry(cert->dbhandle, entry->emailAddr);
+	    for (i=0; i < entry->nemailAddrs; i++) {
+		DeleteDBSMimeEntry(cert->dbhandle, entry->emailAddrs[i]);
+	    }
 	}
 	if ( entry->nickname ) {
 	    DeleteDBNicknameEntry(cert->dbhandle, entry->nickname);
@@ -3346,6 +3423,141 @@ loser:
     return(NULL);
 }
 
+/* forward declaration */
+static SECStatus
+UpdateV7DB(NSSLOWCERTCertDBHandle *handle, DB *updatedb);
+
+/*
+ * version 8 uses the same schema as version 7. The only differences are
+ * 1) version 8 db uses the blob shim to store data entries > 32k.
+ * 2) version 8 db sets the db block size to 32k.
+ * both of these are dealt with by the handle.
+ */
+
+static SECStatus
+UpdateV8DB(NSSLOWCERTCertDBHandle *handle, DB *updatedb)
+{
+    return UpdateV7DB(handle,updatedb);
+}
+
+
+/*
+ * we could just blindly sequence through reading key data pairs and writing
+ * them back out, but some cert.db's have gotten quite large and may have some
+ * subtle corruption problems, so instead we cycle through the certs and
+ * CRL's and S/MIME profiles and rebuild our subject lists from those records.
+ */
+static SECStatus
+UpdateV7DB(NSSLOWCERTCertDBHandle *handle, DB *updatedb)
+{
+    DBT key, data;
+    int ret;
+    NSSLOWCERTCertificate *cert;
+    PRBool isKRL = PR_FALSE;
+    certDBEntryType entryType;
+    SECItem dbEntry, dbKey;
+    certDBEntryRevocation crlEntry;
+    certDBEntryCert certEntry;
+    certDBEntrySMime smimeEntry;
+    SECStatus rv;
+
+    ret = (* updatedb->seq)(updatedb, &key, &data, R_FIRST);
+
+    if ( ret ) {
+	return(SECFailure);
+    }
+    
+    do {
+	unsigned char *dataBuf = (unsigned char *)data.data;
+	unsigned char *keyBuf = (unsigned char *)key.data;
+	dbEntry.data = &dataBuf[SEC_DB_ENTRY_HEADER_LEN];
+	dbEntry.len = data.size - SEC_DB_ENTRY_HEADER_LEN;
+ 	entryType = (certDBEntryType) keyBuf[0];
+	dbKey.data = &keyBuf[SEC_DB_KEY_HEADER_LEN];
+	dbKey.len = key.size - SEC_DB_KEY_HEADER_LEN;
+	if ((dbEntry.len <= 0) || (dbKey.len <= 0)) {
+	    continue;
+	}
+
+	switch (entryType) {
+	/* these entries will get regenerated as we read the 
+	 * rest of the data from the database */
+	case certDBEntryTypeVersion:
+	case certDBEntryTypeSubject:
+	case certDBEntryTypeContentVersion:
+	case certDBEntryTypeNickname:
+	/*default: */
+	    break;
+
+	case certDBEntryTypeCert:
+	    /* decode Entry */
+    	    certEntry.common.version = (unsigned int)dataBuf[0];
+	    certEntry.common.type = entryType;
+	    certEntry.common.flags = (unsigned int)dataBuf[2];
+	    rv = DecodeDBCertEntry(&certEntry,&dbEntry);
+	    if (rv != SECSuccess) {
+		break;
+	    }
+	    /* should we check for existing duplicates? */
+	    cert = nsslowcert_DecodeDERCertificate(&certEntry.derCert, 
+						certEntry.nickname);
+	    if (cert) {
+		nsslowcert_UpdatePermCert(handle, cert, certEntry.nickname,
+					 		&certEntry.trust);
+		nsslowcert_DestroyCertificate(cert);
+	    }
+	    /* free any data the decode may have allocated. */
+	    pkcs11_freeStaticData(certEntry.derCert.data, 
+						certEntry.derCertSpace);
+	    pkcs11_freeNickname(certEntry.nickname, certEntry.nicknameSpace);
+	    break;
+
+	case certDBEntryTypeKeyRevocation:
+	    isKRL = PR_TRUE;
+	    /* fall through */
+	case certDBEntryTypeRevocation:
+    	    crlEntry.common.version = (unsigned int)dataBuf[0];
+	    crlEntry.common.type = entryType;
+	    crlEntry.common.flags = (unsigned int)dataBuf[2];
+	    crlEntry.common.arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
+	    if (crlEntry.common.arena == NULL) {
+		break;
+	    }
+	    rv = DecodeDBCrlEntry(&crlEntry,&dbEntry);
+	    if (rv != SECSuccess) {
+		break;
+	    }
+	    nsslowcert_UpdateCrl(handle, &crlEntry.derCrl, &dbKey, 
+						crlEntry.url, isKRL);
+	    /* free data allocated by the decode */
+	    PORT_FreeArena(crlEntry.common.arena, PR_FALSE);
+	    crlEntry.common.arena = NULL;
+	    break;
+
+	case certDBEntryTypeSMimeProfile:
+    	    smimeEntry.common.version = (unsigned int)dataBuf[0];
+	    smimeEntry.common.type = entryType;
+	    smimeEntry.common.flags = (unsigned int)dataBuf[2];
+	    smimeEntry.common.arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
+	    rv = DecodeDBSMimeEntry(&smimeEntry,&dbEntry,(char *)dbKey.data);
+	    /* decode entry */
+	    nsslowcert_UpdateSMimeProfile(handle, smimeEntry.emailAddr,
+		&smimeEntry.subjectName, &smimeEntry.smimeOptions,
+						 &smimeEntry.optionsDate);
+	    PORT_FreeArena(smimeEntry.common.arena, PR_FALSE);
+	    smimeEntry.common.arena = NULL;
+	    break;
+	}
+    } while ( (* updatedb->seq)(updatedb, &key, &data, R_NEXT) == 0 );
+
+    (* updatedb->close)(updatedb);
+
+    /* a database update is a good time to go back and verify the integrity of
+     * the keys and certs */
+    handle->dbVerify = PR_TRUE; 
+    return(SECSuccess);
+}
+
 /*
  * NOTE - Version 6 DB did not go out to the real world in a release,
  * so we can remove this function in a later release.
@@ -3494,13 +3706,19 @@ UpdateV6DB(NSSLOWCERTCertDBHandle *handle, DB *updatedb)
 			goto endloop;
 		    }
 		    
-		    subjectEntry->nickname =
-			(char *)PORT_ArenaAlloc(subjectEntry->common.arena,
+		    subjectEntry->emailAddrs = (char **)
+				PORT_ArenaAlloc(subjectEntry->common.arena,
+						sizeof(char *));
+		    if ( subjectEntry->emailAddrs ) {
+			subjectEntry->emailAddrs[0] =
+			     (char *)PORT_ArenaAlloc(subjectEntry->common.arena,
 						key.size - 1);
-		    if ( subjectEntry->emailAddr ) {
-			PORT_Memcpy(subjectEntry->emailAddr, emailAddr,
+			if ( subjectEntry->emailAddrs[0] ) {
+			    PORT_Memcpy(subjectEntry->emailAddrs[0], emailAddr,
 				    key.size - 1);
-			rv = WriteDBSubjectEntry(handle, subjectEntry);
+			    subjectEntry->nemailAddrs = 1;
+			    rv = WriteDBSubjectEntry(handle, subjectEntry);
+			}
 		    }
 		}
 		
@@ -3600,7 +3818,6 @@ UpdateV4DB(NSSLOWCERTCertDBHandle *handle, DB *updatedb)
 {
     DBT key, data;
     certDBEntryCert *entry, *entry2;
-    SECItem derSubject;
     int ret;
     PRArenaPool *arena = NULL;
     NSSLOWCERTCertificate *cert;
@@ -3620,8 +3837,8 @@ UpdateV4DB(NSSLOWCERTCertDBHandle *handle, DB *updatedb)
 	if ( data.size != 1 ) { /* skip version number */
 
 	    /* decode the old DB entry */
-	    entry = (certDBEntryCert *)DecodeV4DBCertEntry((unsigned char*)data.data, data.size);
-	    derSubject.data = NULL;
+	    entry = (certDBEntryCert *)
+		DecodeV4DBCertEntry((unsigned char*)data.data, data.size);
 	    
 	    if ( entry ) {
 		cert = nsslowcert_DecodeDERCertificate(&entry->derCert, 
@@ -3740,6 +3957,23 @@ nsslowcert_CertNicknameConflict(char *nickname, SECItem *derSubject,
 #define NO_CREATE	(O_RDWR | O_CREAT | O_TRUNC)
 #endif
 
+/*
+ * open an old database that needs to be updated
+ */
+static DB *
+nsslowcert_openolddb(NSSLOWCERTDBNameFunc namecb, void *cbarg, int version)
+{
+    char * tmpname;
+    DB *updatedb = NULL;
+
+    tmpname = (* namecb)(cbarg, version);	/* get v6 db name */
+    if ( tmpname ) {
+	updatedb = dbopen( tmpname, NO_RDONLY, 0600, DB_HASH, 0 );
+	PORT_Free(tmpname);
+    }
+    return updatedb;
+}
+
 static SECStatus
 openNewCertDB(const char *appName, const char *prefix, const char *certdbname, 
     NSSLOWCERTCertDBHandle *handle, NSSLOWCERTDBNameFunc namecb, void *cbarg)
@@ -3748,32 +3982,34 @@ openNewCertDB(const char *appName, const char *prefix, const char *certdbname,
     certDBEntryVersion *versionEntry = NULL;
     DB *updatedb = NULL;
     char *tmpname;
+    int status = RDB_FAIL;
 
     if (appName) {
-	handle->permCertDB=rdbopen( appName, prefix, "cert", NO_CREATE);
+	handle->permCertDB=rdbopen( appName, prefix, "cert", NO_CREATE, &status);
     } else {
-	handle->permCertDB=dbopen(certdbname, NO_CREATE, 0600, DB_HASH, 0);
+	handle->permCertDB=dbsopen(certdbname, NO_CREATE, 0600, DB_HASH, 0);
     }
 
     /* if create fails then we lose */
     if ( handle->permCertDB == 0 ) {
-	return SECFailure;
+	return status == RDB_RETRY ? SECWouldBlock : SECFailure;
     }
 
     rv = db_BeginTransaction(handle->permCertDB);
     if (rv != SECSuccess) {
+	db_InitComplete(handle->permCertDB);
 	return SECFailure;
     }
 
     /* Verify version number; */
 
     if (appName) {
-	updatedb = dbopen(certdbname, NO_RDONLY, 0600, DB_HASH, 0);
+	updatedb = dbsopen(certdbname, NO_RDONLY, 0600, DB_HASH, 0);
 	if (updatedb) {
-	    db_Copy(handle->permCertDB,updatedb);
-	    (*updatedb->close)(updatedb);
+	    rv = UpdateV8DB(handle, updatedb);
 	    db_FinishTransaction(handle->permCertDB,PR_FALSE);
-	    return(SECSuccess);
+	    db_InitComplete(handle->permCertDB);
+	    return(rv);
 	}
     }
 
@@ -3791,45 +4027,43 @@ openNewCertDB(const char *appName, const char *prefix, const char *certdbname,
 	goto loser;
     }
 
+    /* rv must already be Success here because of previous if statement */
     /* try to upgrade old db here */
-    tmpname = (* namecb)(cbarg, 6);	/* get v6 db name */
-    rv = SECSuccess;
-    if ( tmpname ) {
-	updatedb = dbopen( tmpname, NO_RDONLY, 0600, DB_HASH, 0 );
-	PORT_Free(tmpname);
-	if ( updatedb ) {
-	    rv = UpdateV6DB(handle, updatedb);
-	} else { /* no v6 db, so try v5 db */
-	    tmpname = (* namecb)(cbarg, 5);	/* get v5 db name */
-	    if ( tmpname ) {
-		updatedb = dbopen( tmpname, NO_RDONLY, 0600, DB_HASH, 0 );
-		PORT_Free(tmpname);
-		if ( updatedb ) {
-		    rv = UpdateV5DB(handle, updatedb);
-		} else { /* no v5 db, so try v4 db */
-		    /* try to upgrade v4 db */
-		    tmpname = (* namecb)(cbarg, 4);	/* get v4 db name */
-		    if ( tmpname ) {
-			updatedb = dbopen( tmpname, NO_RDONLY, 0600, 
-			                       DB_HASH, 0 );
-			PORT_Free(tmpname);
-			if ( updatedb ) {
-			    /* NES has v5 db's with v4 db names! */
-			    if (isV4DB(updatedb)) {
-				rv = UpdateV4DB(handle, updatedb);
-			    } else {
-				rv = UpdateV5DB(handle, updatedb);
-			    }
-			}
-		    }
-		}
-	    }
-        }
+    if ((updatedb = nsslowcert_openolddb(namecb,cbarg,7)) != NULL) {
+	rv = UpdateV7DB(handle, updatedb);
+    } else if ((updatedb = nsslowcert_openolddb(namecb,cbarg,6)) != NULL) {
+	rv = UpdateV6DB(handle, updatedb);
+    } else if ((updatedb = nsslowcert_openolddb(namecb,cbarg,5)) != NULL) {
+	rv = UpdateV5DB(handle, updatedb);
+    } else if ((updatedb = nsslowcert_openolddb(namecb,cbarg,4)) != NULL) {
+	/* NES has v5 format db's with v4 db names! */
+	if (isV4DB(updatedb)) {
+	    rv = UpdateV4DB(handle,updatedb);
+	} else {
+	    rv = UpdateV5DB(handle,updatedb);
+	}
     }
+
 
 loser:
     db_FinishTransaction(handle->permCertDB,rv != SECSuccess);
+    db_InitComplete(handle->permCertDB);
     return rv;
+}
+
+static int
+nsslowcert_GetVersionNumber( NSSLOWCERTCertDBHandle *handle)
+{
+    certDBEntryVersion *versionEntry = NULL;
+    int version = 0;
+
+    versionEntry = ReadDBVersionEntry(handle); 
+    if ( versionEntry == NULL ) {
+	return 0;
+    }
+    version = versionEntry->common.version;
+    DestroyDBEntry((certDBEntry *)versionEntry);
+    return version;
 }
 
 /*
@@ -3844,7 +4078,7 @@ nsslowcert_OpenPermCertDB(NSSLOWCERTCertDBHandle *handle, PRBool readOnly,
     SECStatus rv;
     int openflags;
     char *certdbname;
-    certDBEntryVersion *versionEntry = NULL;
+    int version = 0;
     
     certdbname = (* namecb)(cbarg, CERT_DB_FILE_VERSION);
     if ( certdbname == NULL ) {
@@ -3857,43 +4091,48 @@ nsslowcert_OpenPermCertDB(NSSLOWCERTCertDBHandle *handle, PRBool readOnly,
      * first open the permanent file based database.
      */
     if (appName) {
-	handle->permCertDB = rdbopen( appName, prefix, "cert", openflags);
+	handle->permCertDB = rdbopen( appName, prefix, "cert", openflags, NULL);
     } else {
-	handle->permCertDB = dbopen( certdbname, openflags, 0600, DB_HASH, 0 );
+	handle->permCertDB = dbsopen( certdbname, openflags, 0600, DB_HASH, 0 );
     }
 
     /* check for correct version number */
     if ( handle->permCertDB ) {
-	versionEntry = ReadDBVersionEntry(handle);
-
-	if ( versionEntry == NULL ) {
-	    /* no version number */
-	    certdb_Close(handle->permCertDB);
-	    handle->permCertDB = 0;
-	} else if ( versionEntry->common.version != CERT_DB_FILE_VERSION ) {
-	    /* wrong version number, can't update in place */
-	    DestroyDBEntry((certDBEntry *)versionEntry);
-	    PORT_Free(certdbname);
-	    return(SECFailure);
-	} else {
-	    DestroyDBEntry((certDBEntry *)versionEntry);
-	    versionEntry = NULL;
+	version = nsslowcert_GetVersionNumber(handle);
+	if ((version != CERT_DB_FILE_VERSION) &&
+		!(appName && version == CERT_DB_V7_FILE_VERSION)) {
+	    goto loser;
 	}
-    }
-
-    /* if first open fails, try to create a new DB */
-    if ( handle->permCertDB == NULL ) {
-
+    } else if ( readOnly ) {
 	/* don't create if readonly */
-	if ( readOnly ) {
-	    goto loser;
-	}
-
+	    /* Try openning a version 7 database */
+	    handle->permCertDB = nsslowcert_openolddb(namecb,cbarg, 7);
+	    if (!handle->permCertDB) {
+		goto loser;
+	    }
+	    if (nsslowcert_GetVersionNumber(handle) != 7) {
+		goto loser;
+	    }
+    } else {
+        /* if first open fails, try to create a new DB */
 	rv = openNewCertDB(appName,prefix,certdbname,handle,namecb,cbarg);
-	if (rv != SECSuccess) {
+	if (rv == SECWouldBlock) {
+	    /* only the rdb version can fail with wouldblock */
+	    handle->permCertDB = 
+			rdbopen( appName, prefix, "cert", openflags, NULL);
+
+	    /* check for correct version number */
+	    if ( !handle->permCertDB ) {
+		goto loser;
+	    }
+	    version = nsslowcert_GetVersionNumber(handle);
+	    if ((version != CERT_DB_FILE_VERSION) &&
+		!(appName && version == CERT_DB_V7_FILE_VERSION)) {
+		goto loser;
+	    }
+	} else if (rv != SECSuccess) {
 	    goto loser;
 	}
-
     }
 
     PORT_Free(certdbname);
@@ -4267,8 +4506,8 @@ done:
 }
 
 
-SECStatus
-nsslowcert_AddPermCert(NSSLOWCERTCertDBHandle *dbhandle,
+static SECStatus
+nsslowcert_UpdatePermCert(NSSLOWCERTCertDBHandle *dbhandle,
     NSSLOWCERTCertificate *cert, char *nickname, NSSLOWCERTCertTrust *trust)
 {
     char *oldnn;
@@ -4276,13 +4515,6 @@ nsslowcert_AddPermCert(NSSLOWCERTCertDBHandle *dbhandle,
     PRBool conflict;
     SECStatus ret;
     SECStatus rv;
-
-    nsslowcert_LockDB(dbhandle);
-    rv = db_BeginTransaction(dbhandle->permCertDB);
-    if (rv != SECSuccess) {
-	nsslowcert_UnlockDB(dbhandle);
-	return SECFailure;
-    }
     
     PORT_Assert(!cert->dbEntry);
 
@@ -4313,6 +4545,28 @@ nsslowcert_AddPermCert(NSSLOWCERTCertDBHandle *dbhandle,
     
     ret = SECSuccess;
 done:
+    return(ret);
+}
+
+SECStatus
+nsslowcert_AddPermCert(NSSLOWCERTCertDBHandle *dbhandle,
+    NSSLOWCERTCertificate *cert, char *nickname, NSSLOWCERTCertTrust *trust)
+{
+    char *oldnn;
+    certDBEntryCert *entry;
+    PRBool conflict;
+    SECStatus ret;
+    SECStatus rv;
+
+    nsslowcert_LockDB(dbhandle);
+    rv = db_BeginTransaction(dbhandle->permCertDB);
+    if (rv != SECSuccess) {
+	nsslowcert_UnlockDB(dbhandle);
+	return SECFailure;
+    }
+
+    ret = nsslowcert_UpdatePermCert(dbhandle, cert, nickname, trust);
+    
     db_FinishTransaction(dbhandle->permCertDB, ret != SECSuccess);
     nsslowcert_UnlockDB(dbhandle);
     return(ret);
@@ -4333,6 +4587,7 @@ nsslowcert_OpenCertDB(NSSLOWCERTCertDBHandle *handle, PRBool readOnly,
     
     handle->dbMon = PZ_NewMonitor(nssILockCertDB);
     PORT_Assert(handle->dbMon != NULL);
+    handle->dbVerify = PR_FALSE;
 
     rv = nsslowcert_OpenPermCertDB(handle, readOnly, appName, prefix, 
 							namecb, cbarg);
@@ -4346,6 +4601,19 @@ loser:
 
     PORT_SetError(SEC_ERROR_BAD_DATABASE);
     return(SECFailure);
+}
+
+PRBool
+nsslowcert_needDBVerify(NSSLOWCERTCertDBHandle *handle)
+{
+    if (!handle) return PR_FALSE;
+    return handle->dbVerify;
+}
+
+void
+nsslowcert_setDBVerify(NSSLOWCERTCertDBHandle *handle, PRBool value)
+{
+    handle->dbVerify = value;
 }
 
 
@@ -4822,18 +5090,14 @@ loser:
 /*
  * replace the existing URL in the data base with a new one
  */
-SECStatus
-nsslowcert_AddCrl(NSSLOWCERTCertDBHandle *handle, SECItem *derCrl, 
+static SECStatus
+nsslowcert_UpdateCrl(NSSLOWCERTCertDBHandle *handle, SECItem *derCrl, 
 			SECItem *crlKey, char *url, PRBool isKRL)
 {
     SECStatus rv = SECFailure;
     certDBEntryRevocation *entry = NULL;
     certDBEntryType crlType = isKRL ? certDBEntryTypeKeyRevocation  
 					: certDBEntryTypeRevocation;
-    rv = db_BeginTransaction(handle->permCertDB);
-    if (rv != SECSuccess) {
-	return SECFailure;
-    }
     DeleteDBCrlEntry(handle, crlKey, crlType);
 
     /* Write the new entry into the data base */
@@ -4847,6 +5111,21 @@ done:
     if (entry) {
 	DestroyDBEntry((certDBEntry *)entry);
     }
+    return rv;
+}
+
+SECStatus
+nsslowcert_AddCrl(NSSLOWCERTCertDBHandle *handle, SECItem *derCrl, 
+			SECItem *crlKey, char *url, PRBool isKRL)
+{
+    SECStatus rv;
+
+    rv = db_BeginTransaction(handle->permCertDB);
+    if (rv != SECSuccess) {
+	return SECFailure;
+    }
+    rv = nsslowcert_UpdateCrl(handle, derCrl, crlKey, url, isKRL);
+
     db_FinishTransaction(handle->permCertDB, rv != SECSuccess);
     return rv;
 }
@@ -4888,17 +5167,14 @@ nsslowcert_hasTrust(NSSLOWCERTCertTrust *trust)
  * email profile from an S/MIME message should be saved.  It can deal with
  * the case when there is no profile.
  */
-SECStatus
-nsslowcert_SaveSMimeProfile(NSSLOWCERTCertDBHandle *dbhandle, char *emailAddr, 
-	SECItem *derSubject, SECItem *emailProfile, SECItem *profileTime)
+static SECStatus
+nsslowcert_UpdateSMimeProfile(NSSLOWCERTCertDBHandle *dbhandle, 
+	char *emailAddr, SECItem *derSubject, SECItem *emailProfile, 
+							SECItem *profileTime)
 {
     certDBEntrySMime *entry = NULL;
     SECStatus rv = SECFailure;;
 
-    rv = db_BeginTransaction(dbhandle->permCertDB);
-    if (rv != SECSuccess) {
-	return SECFailure;
-    }
 
     /* find our existing entry */
     entry = nsslowcert_ReadDBSMimeEntry(dbhandle, emailAddr);
@@ -4906,7 +5182,8 @@ nsslowcert_SaveSMimeProfile(NSSLOWCERTCertDBHandle *dbhandle, char *emailAddr,
     if ( entry ) {
 	/* keep our old db entry consistant for old applications. */
 	if (!SECITEM_ItemsAreEqual(derSubject, &entry->subjectName)) {
-	    UpdateSubjectWithEmailAddr(dbhandle, &entry->subjectName, NULL);
+	    nsslowcert_UpdateSubjectEmailAddr(dbhandle, &entry->subjectName, 
+				emailAddr, nsslowcert_remove);
 	} 
 	DestroyDBEntry((certDBEntry *)entry);
 	entry = NULL;
@@ -4926,7 +5203,8 @@ nsslowcert_SaveSMimeProfile(NSSLOWCERTCertDBHandle *dbhandle, char *emailAddr,
     /* if delete fails, try to write new entry anyway... */
 
     /* link subject entry back here */
-    rv = UpdateSubjectWithEmailAddr(dbhandle, derSubject, emailAddr);
+    rv = nsslowcert_UpdateSubjectEmailAddr(dbhandle, derSubject, emailAddr,
+					nsslowcert_add);
     if ( rv != SECSuccess ) {
 	    nsslowcert_UnlockDB(dbhandle);
 	    goto loser;
@@ -4946,6 +5224,24 @@ loser:
     if ( entry ) {
 	DestroyDBEntry((certDBEntry *)entry);
     }
+    return(rv);
+}
+
+SECStatus
+nsslowcert_SaveSMimeProfile(NSSLOWCERTCertDBHandle *dbhandle, char *emailAddr, 
+	SECItem *derSubject, SECItem *emailProfile, SECItem *profileTime)
+{
+    certDBEntrySMime *entry = NULL;
+    SECStatus rv = SECFailure;;
+
+    rv = db_BeginTransaction(dbhandle->permCertDB);
+    if (rv != SECSuccess) {
+	return SECFailure;
+    }
+
+    rv = nsslowcert_UpdateSMimeProfile(dbhandle, emailAddr, 
+	 derSubject, emailProfile, profileTime);
+    
     db_FinishTransaction(dbhandle->permCertDB, rv != SECSuccess);
     return(rv);
 }

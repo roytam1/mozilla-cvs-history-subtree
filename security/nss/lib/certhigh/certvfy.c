@@ -90,45 +90,78 @@ CERT_CertTimesValid(CERTCertificate *c)
 }
 
 /*
- * verify the signature of a signed data object with the given certificate
+ * verify the signature of a signed data object with the given DER publickey
  */
 SECStatus
-CERT_VerifySignedData(CERTSignedData *sd, CERTCertificate *cert,
-		      int64 t, void *wincx)
+CERT_VerifySignedDataWithPublicKey(CERTSignedData *sd, 
+                                   SECKEYPublicKey *pubKey,
+		                   void *wincx)
 {
-    SECItem sig;
-    SECKEYPublicKey *pubKey = 0;
-    SECStatus rv;
-    SECCertTimeValidity validity;
-    SECOidTag algid;
+    SECStatus        rv;
+    SECOidTag        algid;
+    SECItem          sig;
 
-    /* check the certificate's validity */
-    validity = CERT_CheckCertValidTimes(cert, t, PR_FALSE);
-    if ( validity != secCertTimeValid ) {
-	return(SECFailure);
-    }
-
-    /* get cert's public key */
-    pubKey = CERT_ExtractPublicKey(cert);
-    if ( !pubKey ) {
-	return(SECFailure);
+    if ( !pubKey || !sd ) {
+	PORT_SetError(PR_INVALID_ARGUMENT_ERROR);
+	return SECFailure;
     }
 
     /* check the signature */
     sig = sd->signature;
+    /* convert sig->len from bit counts to byte count. */
     DER_ConvertBitString(&sig);
 
     algid = SECOID_GetAlgorithmTag(&sd->signatureAlgorithm);
     rv = VFY_VerifyData(sd->data.data, sd->data.len, pubKey, &sig,
 			algid, wincx);
 
-    SECKEY_DestroyPublicKey(pubKey);
+    return rv ? SECFailure : SECSuccess;
+}
 
-    if ( rv ) {
-	return(SECFailure);
+/*
+ * verify the signature of a signed data object with the given DER publickey
+ */
+SECStatus
+CERT_VerifySignedDataWithPublicKeyInfo(CERTSignedData *sd, 
+                                       CERTSubjectPublicKeyInfo *pubKeyInfo,
+		                       void *wincx)
+{
+    SECKEYPublicKey *pubKey;
+    SECStatus        rv		= SECFailure;
+
+    /* get cert's public key */
+    pubKey = SECKEY_ExtractPublicKey(pubKeyInfo);
+    if (pubKey) {
+	rv =  CERT_VerifySignedDataWithPublicKey(sd, pubKey, wincx);
+	SECKEY_DestroyPublicKey(pubKey);
+    }
+    return rv;
+}
+
+/*
+ * verify the signature of a signed data object with the given certificate
+ */
+SECStatus
+CERT_VerifySignedData(CERTSignedData *sd, CERTCertificate *cert,
+		      int64 t, void *wincx)
+{
+    SECKEYPublicKey *pubKey = 0;
+    SECStatus        rv     = SECFailure;
+    SECCertTimeValidity validity;
+
+    /* check the certificate's validity */
+    validity = CERT_CheckCertValidTimes(cert, t, PR_FALSE);
+    if ( validity != secCertTimeValid ) {
+	return rv;
     }
 
-    return(SECSuccess);
+    /* get cert's public key */
+    pubKey = CERT_ExtractPublicKey(cert);
+    if (pubKey) {
+	rv =  CERT_VerifySignedDataWithPublicKey(sd, pubKey, wincx);
+	SECKEY_DestroyPublicKey(pubKey);
+    }
+    return rv;
 }
 
 
@@ -388,6 +421,9 @@ loser:
 	    return STAN_GetCERTCertificate(chain[1]); /* return the 2nd */
 	}
     } else {
+	if (chain[0]) {
+	    CERT_DestroyCertificate(cert);
+	}
 	PORT_SetError (SEC_ERROR_UNKNOWN_ISSUER);
     }
     return NULL;

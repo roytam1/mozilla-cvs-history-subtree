@@ -31,6 +31,7 @@
  * GPL.
  */
 
+#include "prprf.h"
 #include "cert.h"
 #include "xconst.h"
 #include "genname.h"
@@ -616,6 +617,116 @@ CERT_RFC1485_EscapeAndQuote(char *dst, int dstlen, char *src, int srclen)
     return SECSuccess;
 }
 
+/* convert an OID to dotted-decimal representation */
+static char *
+get_oid_string
+(
+    SECItem *oid
+)
+{
+    PRUint8 *end;
+    PRUint8 *d;
+    PRUint8 *e;
+    char *a;
+    char *b;
+
+    a = (char *)NULL;
+
+    /* d will point to the next sequence of bytes to decode */
+    d = (PRUint8 *)oid->data;
+    /* end points to one past the legitimate data */
+    end = &d[ oid->len ];
+
+    /*
+     * Check for our pseudo-encoded single-digit OIDs
+     */
+    if( (*d == 0x80) && (2 == oid->len) ) {
+	/* Funky encoding.  The second byte is the number */
+	a = PR_smprintf("%lu", (PRUint32)d[1]);
+	if( (char *)NULL == a ) {
+	    PORT_SetError(SEC_ERROR_NO_MEMORY);
+	    return (char *)NULL;
+	}
+	return a;
+    }
+
+    for( ; d < end; d = &e[1] ) {
+    
+	for( e = d; e < end; e++ ) {
+	    if( 0 == (*e & 0x80) ) {
+		break;
+	    }
+	}
+    
+	if( ((e-d) > 4) || (((e-d) == 4) && (*d & 0x70)) ) {
+	    /* More than a 32-bit number */
+	} else {
+	    PRUint32 n = 0;
+      
+	    switch( e-d ) {
+	    case 4:
+		n |= ((PRUint32)(e[-4] & 0x0f)) << 28;
+	    case 3:
+		n |= ((PRUint32)(e[-3] & 0x7f)) << 21;
+	    case 2:
+		n |= ((PRUint32)(e[-2] & 0x7f)) << 14;
+	    case 1:
+		n |= ((PRUint32)(e[-1] & 0x7f)) <<  7;
+	    case 0:
+		n |= ((PRUint32)(e[-0] & 0x7f))      ;
+	    }
+      
+	    if( (char *)NULL == a ) {
+		/* This is the first number.. decompose it */
+		PRUint32 one = PR_MIN(n/40, 2); /* never > 2 */
+		PRUint32 two = n - one * 40;
+        
+		a = PR_smprintf("%lu.%lu", one, two);
+		if( (char *)NULL == a ) {
+		    PORT_SetError(SEC_ERROR_NO_MEMORY);
+		    return (char *)NULL;
+		}
+	    } else {
+		b = PR_smprintf("%s.%lu", a, n);
+		if( (char *)NULL == b ) {
+		    PR_smprintf_free(a);
+		    PORT_SetError(SEC_ERROR_NO_MEMORY);
+		    return (char *)NULL;
+		}
+        
+		PR_smprintf_free(a);
+		a = b;
+	    }
+	}
+    }
+
+    return a;
+}
+
+/* convert DER-encoded hex to a string */
+static SECItem *
+get_hex_string(SECItem *data)
+{
+    SECItem *rv;
+    unsigned int i, j;
+    static const char hex[] = { "0123456789ABCDEF" };
+
+    /* '#' + 2 chars per octet + terminator */
+    rv = SECITEM_AllocItem(NULL, NULL, data->len*2 + 2);
+    if (!rv) {
+	return NULL;
+    }
+    rv->data[0] = '#';
+    rv->len = 1 + 2 * data->len;
+    for (i=0; i<data->len; i++) {
+	j = data->data[i];
+	rv->data[2*i+1] = hex[j >> 4];
+	rv->data[2*i+2] = hex[j & 15];
+    }
+    rv->data[rv->len] = 0;
+    return rv;
+}
+
 static SECStatus
 AppendAVA(stringBuf *bufp, CERTAVA *ava)
 {
@@ -625,6 +736,7 @@ AppendAVA(stringBuf *bufp, CERTAVA *ava)
     int tag;
     SECStatus rv;
     SECItem *avaValue = NULL;
+    char *unknownTag = NULL;
 
     tag = CERT_GetAVATag(ava);
     switch (tag) {
@@ -673,28 +785,37 @@ AppendAVA(stringBuf *bufp, CERTAVA *ava)
 	maxLen = 256;
 	break;
       default:
-#if 0
-	PORT_SetError(SEC_ERROR_INVALID_AVA);
-	return SECFailure;
-#else
-	rv = AppendStr(bufp, "ERR=Unknown AVA");
-	return rv;
-#endif
+	/* handle unknown attribute types per RFC 2253 */
+	tagName = unknownTag = get_oid_string(&ava->type);
+	maxLen = 256;
+	break;
     }
 
     avaValue = CERT_DecodeAVAValue(&ava->value);
     if(!avaValue) {
-	return SECFailure;
+	/* the attribute value is not recognized, get the hex value */
+	avaValue = get_hex_string(&ava->value);
+	if(!avaValue) {
+	    if (unknownTag) PR_smprintf_free(unknownTag);
+	    return SECFailure;
+	}
     }
 
     /* Check value length */
     if (avaValue->len > maxLen) {
+	if (unknownTag) PR_smprintf_free(unknownTag);
 	PORT_SetError(SEC_ERROR_INVALID_AVA);
 	return SECFailure;
     }
 
     len = PORT_Strlen(tagName);
+    if (len+1 > sizeof(tmpBuf)) {
+	if (unknownTag) PR_smprintf_free(unknownTag);
+	PORT_SetError(SEC_ERROR_OUTPUT_LEN);
+	return SECFailure;
+    }
     PORT_Memcpy(tmpBuf, tagName, len);
+    if (unknownTag) PR_smprintf_free(unknownTag);
     tmpBuf[len++] = '=';
     
     /* escape and quote as necessary */
@@ -912,6 +1033,147 @@ finish:
     return(rawEmailAddr);
 }
 
+static char *
+appendStringToBuf(char *dest, char *src, PRUint32 *pRemaining)
+{
+    PRUint32 len;
+    if (dest && src && src[0] && *pRemaining > (len = PL_strlen(src))) {
+	PRUint32 i;
+	for (i = 0; i < len; ++i)
+	    dest[i] = tolower(src[i]);
+	dest[len] = 0;
+	dest        += len + 1;
+	*pRemaining -= len + 1;
+    }
+    return dest;
+}
+
+static char *
+appendItemToBuf(char *dest, SECItem *src, PRUint32 *pRemaining)
+{
+    if (dest && src && src->data && src->len && src->data[0] && 
+        *pRemaining > src->len + 1 ) {
+	PRUint32 len = src->len;
+	PRUint32 i;
+	for (i = 0; i < len && src->data[i] ; ++i)
+	    dest[i] = tolower(src->data[i]);
+	dest[len] = 0;
+	dest        += len + 1;
+	*pRemaining -= len + 1;
+    }
+    return dest;
+}
+
+/* Returns a pointer to an environment-like string, a series of 
+** null-terminated strings, terminated by a zero-length string.
+** This function is intended to be internal to NSS.
+*/
+char *
+cert_GetCertificateEmailAddresses(CERTCertificate *cert)
+{
+    char *           rawEmailAddr = NULL;
+    char *           addrBuf      = NULL;
+    char *           pBuf         = NULL;
+    PRArenaPool *    tmpArena     = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
+    PRUint32         maxLen       = 0;
+    PRInt32          finalLen     = 0;
+    SECStatus        rv;
+    SECItem          subAltName;
+    
+    if (!tmpArena) 
+    	return addrBuf;
+
+    subAltName.data = NULL;
+    maxLen = cert->derCert.len;
+    PORT_Assert(maxLen);
+    if (!maxLen) 
+	maxLen = 2000;  /* a guess, should never happen */
+
+    pBuf = addrBuf = (char *)PORT_ArenaZAlloc(tmpArena, maxLen + 1);
+    if (!addrBuf) 
+    	goto loser;
+
+    rawEmailAddr = CERT_GetNameElement(tmpArena, &cert->subject,
+				       SEC_OID_PKCS9_EMAIL_ADDRESS);
+    pBuf = appendStringToBuf(pBuf, rawEmailAddr, &maxLen);
+
+    rawEmailAddr = CERT_GetNameElement(tmpArena, &cert->subject, 
+				       SEC_OID_RFC1274_MAIL);
+    pBuf = appendStringToBuf(pBuf, rawEmailAddr, &maxLen);
+
+    rv = CERT_FindCertExtension(cert,  SEC_OID_X509_SUBJECT_ALT_NAME, 
+				&subAltName);
+    if (rv == SECSuccess && subAltName.data) {
+	CERTGeneralName *nameList     = NULL;
+
+	if (!!(nameList = CERT_DecodeAltNameExtension(tmpArena, &subAltName))) {
+	    CERTGeneralName *current = nameList;
+	    do {
+		if (current->type == certDirectoryName) {
+		    rawEmailAddr = CERT_GetNameElement(tmpArena,
+			                       &current->name.directoryName, 
+					       SEC_OID_PKCS9_EMAIL_ADDRESS);
+		    pBuf = appendStringToBuf(pBuf, rawEmailAddr, &maxLen);
+
+		    rawEmailAddr = CERT_GetNameElement(tmpArena,
+					      &current->name.directoryName, 
+					      SEC_OID_RFC1274_MAIL);
+		    pBuf = appendStringToBuf(pBuf, rawEmailAddr, &maxLen);
+		} else if (current->type == certRFC822Name) {
+		    pBuf = appendItemToBuf(pBuf, &current->name.other, &maxLen);
+		}
+		current = cert_get_next_general_name(current);
+	    } while (current != nameList);
+	}
+	SECITEM_FreeItem(&subAltName, PR_FALSE);
+	/* Don't free nameList, it's part of the tmpArena. */
+    }
+    /* now copy superstring to cert's arena */
+    finalLen = (pBuf - addrBuf) + 1;
+    pBuf = PORT_ArenaAlloc(cert->arena, finalLen);
+    if (pBuf) {
+    	PORT_Memcpy(pBuf, addrBuf, finalLen);
+    }
+     
+loser:
+    if (tmpArena)
+	PORT_FreeArena(tmpArena, PR_FALSE);
+
+    return pBuf;
+}
+
+/* returns pointer to storage in cert's arena.  Storage remains valid
+** as long as cert's reference count doesn't go to zero.
+** Caller should strdup or otherwise copy.
+*/
+const char *	/* const so caller won't muck with it. */
+CERT_GetFirstEmailAddress(CERTCertificate * cert)
+{
+    if (cert && cert->emailAddr && cert->emailAddr[0])
+    	return (const char *)cert->emailAddr;
+    return NULL;
+}
+
+/* returns pointer to storage in cert's arena.  Storage remains valid
+** as long as cert's reference count doesn't go to zero.
+** Caller should strdup or otherwise copy.
+*/
+const char *	/* const so caller won't muck with it. */
+CERT_GetNextEmailAddress(CERTCertificate * cert, const char * prev)
+{
+    if (cert && prev && prev[0]) {
+    	PRUint32 len = PL_strlen(prev);
+	prev += len + 1;
+	if (prev && prev[0])
+	    return prev;
+    }
+    return NULL;
+}
+
+/* This is seriously bogus, now that certs store their email addresses in
+** subject Alternative Name extensions. 
+** Returns a string allocated by PORT_StrDup, which the caller must free.
+*/
 char *
 CERT_GetCertEmailAddress(CERTName *name)
 {

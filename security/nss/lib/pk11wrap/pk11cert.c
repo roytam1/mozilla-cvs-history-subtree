@@ -43,6 +43,7 @@
 #include "pkcs11.h"
 #include "pk11func.h"
 #include "cert.h"
+#include "certi.h"
 #include "secitem.h"
 #include "key.h"
 #include "hasht.h"
@@ -69,6 +70,8 @@
 #include "devt.h"
 
 #define PK11_SEARCH_CHUNKSIZE 10
+
+extern const NSSError NSS_ERROR_NOT_FOUND;
 
 CK_OBJECT_HANDLE
 pk11_FindPubKeyByAnyCert(CERTCertificate *cert, PK11SlotInfo **slot, void *wincx);
@@ -439,6 +442,8 @@ static CERTCertificate
 	nssPKIObject_Destroy(pkio);
 	return NULL;
     }
+
+    nssTrustDomain_AddCertsToCache(td, &c, 1);
 
     /* Build the old-fashioned nickname */
     if ((nickptr) && (co->label)) {
@@ -1572,6 +1577,8 @@ PK11_MakeIDFromPubKey(SECItem *pubKeyData) {
     return certCKA_ID;
 }
 
+extern const NSSError NSS_ERROR_INVALID_CERTIFICATE;
+
 /*
  * Write the cert into the token.
  */
@@ -1750,7 +1757,10 @@ done:
 
     if (c->object.cryptoContext) {
 	/* Delete the temp instance */
-	nssCertificateStore_Remove(c->object.cryptoContext->certStore, c, PR_TRUE);
+	NSSCryptoContext *cc = c->object.cryptoContext;
+	nssCertificateStore_Lock(cc->certStore);
+	nssCertificateStore_RemoveCertLOCKED(cc->certStore, c);
+	nssCertificateStore_Unlock(cc->certStore);
 	c->object.cryptoContext = NULL;
 	cert->istemp = PR_FALSE;
 	cert->isperm = PR_TRUE;
@@ -1793,6 +1803,11 @@ done:
 					 emailAddr,
                                          PR_TRUE);
     if (!certobj) {
+	if (NSS_GetError() == NSS_ERROR_INVALID_CERTIFICATE) {
+	    PORT_SetError(SEC_ERROR_REUSED_ISSUER_AND_SERIAL);
+	    SECITEM_FreeItem(keyID,PR_TRUE);
+	    return SECFailure;
+	}
 	goto loser;
     }
     /* add the new instance to the cert, force an update of the
@@ -2139,11 +2154,16 @@ pk11_FindCertObjectByRecipientNew(PK11SlotInfo *slot, NSSCMSRecipient **recipien
 
     for (i=0; (ri = recipientlist[i]) != NULL; i++) {
 	CERTCertificate *cert = NULL;
-	/* XXXXX fixme - not yet implemented! */
-	if (ri->kind == RLSubjKeyID)
-	    continue;
-	cert = PK11_FindCertByIssuerAndSNOnToken(slot, ri->id.issuerAndSN, 
-								pwarg);
+	if (ri->kind == RLSubjKeyID) {
+	    SECItem *derCert = cert_FindDERCertBySubjectKeyID(ri->id.subjectKeyID);
+	    if (derCert) {
+		cert = PK11_FindCertFromDERCertItem(slot, derCert, pwarg);
+		SECITEM_FreeItem(derCert, PR_TRUE);
+	    }
+	} else {
+	    cert = PK11_FindCertByIssuerAndSNOnToken(slot, ri->id.issuerAndSN, 
+						     pwarg);
+	}
 	if (cert) {
 	    /* this isn't our cert */
 	    if ((cert->trust == NULL) ||
@@ -2155,7 +2175,6 @@ pk11_FindCertObjectByRecipientNew(PK11SlotInfo *slot, NSSCMSRecipient **recipien
 	    *rlIndex = i;
 	    return cert;
 	}
-
     }
     *rlIndex = -1;
     return NULL;
@@ -2321,6 +2340,34 @@ loser:
     return NULL;
 }
 
+static SECMODCallOnceType keyIDHashCallOnce;
+
+static SECStatus PR_CALLBACK
+pk11_keyIDHash_populate(void *wincx)
+{
+    CERTCertList     *certList;
+    CERTCertListNode *node = NULL;
+    SECItem           subjKeyID = {siBuffer, NULL, 0};
+
+    certList = PK11_ListCerts(PK11CertListUser, wincx);
+    if (!certList) {
+	return SECFailure;
+    }
+
+    for (node = CERT_LIST_HEAD(certList);
+         !CERT_LIST_END(node, certList);
+         node = CERT_LIST_NEXT(node)) {
+	if (CERT_FindSubjectKeyIDExtension(node->cert, 
+	                                   &subjKeyID) == SECSuccess && 
+	    subjKeyID.data != NULL) {
+	    cert_AddSubjectKeyIDMapping(&subjKeyID, node->cert);
+	    SECITEM_FreeItem(&subjKeyID, PR_FALSE);
+	}
+    }
+    CERT_DestroyCertList(certList);
+    return SECSuccess;
+}
+
 /*
  * This is the new version of the above function for NSS SMIME code
  * this stuff should REALLY be in the SMIME code, but some things in here are not public
@@ -2331,7 +2378,12 @@ PK11_FindCertAndKeyByRecipientListNew(NSSCMSRecipient **recipientlist, void *win
 {
     CERTCertificate *cert;
     NSSCMSRecipient *rl;
+    SECStatus srv;
     int rlIndex;
+
+    srv = SECMOD_CallOnce(&keyIDHashCallOnce, pk11_keyIDHash_populate, wincx);
+    if (srv != SECSuccess)
+	return -1;
 
     cert = pk11_AllFindCertObjectByRecipientNew(recipientlist, wincx, &rlIndex);
     if (!cert) {
@@ -2874,43 +2926,21 @@ CERTCertificate *
 PK11_FindCertFromDERCert(PK11SlotInfo *slot, CERTCertificate *cert,
 								 void *wincx)
 {
-#ifdef NSS_CLASSIC
-    CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
-    CK_ATTRIBUTE theTemplate[] = {
-	{ CKA_VALUE, NULL, 0 },
-	{ CKA_CLASS, NULL, 0 }
-    };
-    /* if you change the array, change the variable below as well */
-    int tsize = sizeof(theTemplate)/sizeof(theTemplate[0]);
-    CK_OBJECT_HANDLE certh;
-    CK_ATTRIBUTE *attrs = theTemplate;
-    SECStatus rv;
+    return PK11_FindCertFromDERCertItem(slot, &cert->derCert, wincx);
+}
 
-    PK11_SETATTRS(attrs, CKA_VALUE, cert->derCert.data, 
-						cert->derCert.len); attrs++;
-    PK11_SETATTRS(attrs, CKA_CLASS, &certClass, sizeof(certClass));
+CERTCertificate *
+PK11_FindCertFromDERCertItem(PK11SlotInfo *slot, SECItem *inDerCert,
+								 void *wincx)
 
-    /*
-     * issue the find
-     */
-    if ( !PK11_IsFriendly(slot)) {
-	rv = PK11_Authenticate(slot, PR_TRUE, wincx);
-	if (rv != SECSuccess) return NULL;
-    }
-
-    certh = pk11_getcerthandle(slot,cert,theTemplate,tsize);
-    if (certh == CK_INVALID_HANDLE) {
-	return NULL;
-    }
-    return PK11_MakeCertFromHandle(slot, certh, NULL);
-#else
+{
     CERTCertificate *rvCert = NULL;
     NSSCertificate *c;
     NSSDER derCert;
     NSSToken *tok;
     NSSTrustDomain *td = STAN_GetDefaultTrustDomain();
     tok = PK11Slot_GetNSSToken(slot);
-    NSSITEM_FROM_SECITEM(&derCert, &cert->derCert);
+    NSSITEM_FROM_SECITEM(&derCert, inDerCert);
     if (!PK11_IsFriendly(slot)) {
 	if (PK11_Authenticate(slot, PR_TRUE, wincx) != SECSuccess) {
 	    PK11_FreeSlot(slot);
@@ -2940,7 +2970,6 @@ PK11_FindCertFromDERCert(PK11SlotInfo *slot, CERTCertificate *cert,
 	rvCert = STAN_GetCERTCertificate(c);
     }
     return rvCert;
-#endif
 } 
 
 /* mcgreer 3.4 -- nobody uses this, ignoring */
@@ -3722,6 +3751,9 @@ loser:
 	crls = nssTrustDomain_FindCRLsBySubject(td, &subject);
     }
     if (!crls) {
+	if (NSS_GetError() == NSS_ERROR_NOT_FOUND) {
+	    PORT_SetError(SEC_ERROR_CRL_NOT_FOUND);
+	}
 	return NULL;
     }
     crl = NULL;
@@ -3734,7 +3766,10 @@ loser:
 	}
     }
     nssCRLArray_Destroy(crls);
-    if (!crl) {
+    if (!crl) { 
+	/* CRL collection was found, but no interesting CRL's were on it.
+	 * Not an error */
+	PORT_SetError(SEC_ERROR_CRL_NOT_FOUND);
 	return NULL;
     }
     *slot = PK11_ReferenceSlot(crl->object.instances[0]->token->pk11slot);
@@ -4116,4 +4151,55 @@ CERTSignedCrl* PK11_ImportCRL(PK11SlotInfo * slot, SECItem *derCRL, char *url,
 	SEC_DestroyCrl (newCrl);
     }
     return (crl);
+}
+
+/*
+ * This code takes the NSPR CallOnce functionality and modifies it so 
+ * that we can pass an argument to our function
+ */
+static struct {
+    PRLock *ml;
+    PRCondVar *cv;
+} mod_init;
+
+void SECMOD_InitCallOnce(void) {
+    mod_init.ml = PR_NewLock();
+    PORT_Assert(NULL != mod_init.ml);
+    mod_init.cv = PR_NewCondVar(mod_init.ml);
+    PORT_Assert(NULL != mod_init.cv);
+}
+
+void SECMOD_CleanupCallOnce()
+{
+    if (mod_init.ml) {
+	PR_DestroyLock(mod_init.ml);
+	mod_init.ml = NULL;
+    }
+    if (mod_init.cv) {
+	PR_DestroyCondVar(mod_init.cv);
+	mod_init.cv = NULL;
+    }
+}
+
+SECStatus SECMOD_CallOnce(SECMODCallOnceType *once,
+                          SECMODCallOnceFN    func,
+                          void               *arg)
+{
+
+    if (!once->initialized) {
+	if (PR_AtomicSet(&once->inProgress, 1) == 0) {
+	    once->status = (PRStatus)(*func)(arg);
+	    PR_Lock(mod_init.ml);
+	    once->initialized = 1;
+	    PR_NotifyAllCondVar(mod_init.cv);
+	    PR_Unlock(mod_init.ml);
+	} else {
+	    PR_Lock(mod_init.ml);
+	    while (!once->initialized) {
+		PR_WaitCondVar(mod_init.cv, PR_INTERVAL_NO_TIMEOUT);
+	    }
+	    PR_Unlock(mod_init.ml);
+	}
+    }
+    return once->status;
 }

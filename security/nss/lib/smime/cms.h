@@ -132,6 +132,12 @@ extern SECStatus
 NSS_CMSEncoder_Update(NSSCMSEncoderContext *p7ecx, const char *data, unsigned long len);
 
 /*
+ * NSS_CMSEncoder_Cancel - stop all encoding
+ */
+extern SECStatus
+NSS_CMSEncoder_Cancel(NSSCMSEncoderContext *p7ecx);
+
+/*
  * NSS_CMSEncoder_Finish - signal the end of data
  *
  * we need to walk down the chain of encoders and the finish them from the innermost out
@@ -852,6 +858,15 @@ NSS_CMSEnvelopedData_Decode_AfterEnd(NSSCMSEnvelopedData *envd);
  */
 extern NSSCMSRecipientInfo *
 NSS_CMSRecipientInfo_Create(NSSCMSMessage *cmsg, CERTCertificate *cert);
+
+extern NSSCMSRecipientInfo *
+NSS_CMSRecipientInfo_CreateWithSubjKeyID(NSSCMSMessage   *cmsg, 
+                                         SECItem         *subjKeyID,
+                                         SECKEYPublicKey *pubKey);
+
+extern NSSCMSRecipientInfo *
+NSS_CMSRecipientInfo_CreateWithSubjKeyIDFromCert(NSSCMSMessage *cmsg, 
+                                                 CERTCertificate *cert);
 
 extern void
 NSS_CMSRecipientInfo_Destroy(NSSCMSRecipientInfo *ri);

@@ -566,6 +566,7 @@ CERTCertificate *
 NSS_CMSSignerInfo_GetSigningCertificate(NSSCMSSignerInfo *signerinfo, CERTCertDBHandle *certdb)
 {
     CERTCertificate *cert;
+    NSSCMSSignerIdentifier *sid;
 
     if (signerinfo->cert != NULL)
 	return signerinfo->cert;
@@ -580,16 +581,13 @@ NSS_CMSSignerInfo_GetSigningCertificate(NSSCMSSignerInfo *signerinfo, CERTCertDB
      * we leave this function -- we let the clean-up of the entire
      * cinfo structure later do the destroy of this cert.
      */
-    switch (signerinfo->signerIdentifier.identifierType) {
+    sid = &signerinfo->signerIdentifier;
+    switch (sid->identifierType) {
     case NSSCMSSignerID_IssuerSN:
-	cert = CERT_FindCertByIssuerAndSN(certdb, signerinfo->signerIdentifier.id.issuerAndSN);
+	cert = CERT_FindCertByIssuerAndSN(certdb, sid->id.issuerAndSN);
 	break;
     case NSSCMSSignerID_SubjectKeyID:
-#if 0 /* not yet implemented */
-	cert = CERT_FindCertBySubjectKeyID(certdb, signerinfo->signerIdentifier.id.subjectKeyID);
-#else
-	cert = NULL;
-#endif
+	cert = CERT_FindCertBySubjectKeyID(certdb, sid->id.subjectKeyID);
 	break;
     default:
 	cert = NULL;
@@ -879,6 +877,7 @@ NSS_SMIMESignerInfo_SaveSMIMEProfile(NSSCMSSignerInfo *signerinfo)
     CERTCertDBHandle *certdb;
     int save_error;
     SECStatus rv;
+    PRBool must_free_cert = PR_FALSE;
 
     certdb = CERT_GetDefaultCertDB();
 
@@ -900,6 +899,7 @@ NSS_SMIMESignerInfo_SaveSMIMEProfile(NSSCMSSignerInfo *signerinfo)
 	cert = NSS_SMIMEUtil_GetCertFromEncryptionKeyPreference(certdb, ekp);
 	if (cert == NULL)
 	    return SECFailure;
+	must_free_cert = PR_TRUE;
     }
 
     if (cert == NULL) {
@@ -915,6 +915,8 @@ NSS_SMIMESignerInfo_SaveSMIMEProfile(NSSCMSSignerInfo *signerinfo)
      * should have already been saved */
 #ifdef notdef
     if (CERT_VerifyCert(certdb, cert, PR_TRUE, certUsageEmailRecipient, PR_Now(), signerinfo->cmsg->pwfn_arg, NULL) != SECSuccess) {
+	if (must_free_cert)
+	    CERT_DestroyCertificate(cert);
 	return SECFailure;
     }
 #endif
@@ -939,6 +941,8 @@ NSS_SMIMESignerInfo_SaveSMIMEProfile(NSSCMSSignerInfo *signerinfo)
     }
 
     rv = CERT_SaveSMimeProfile (cert, profile, utc_stime);
+    if (must_free_cert)
+	CERT_DestroyCertificate(cert);
 
     /*
      * Restore the saved error in case the calls above set a new
