@@ -40,6 +40,7 @@ function nsFileView() {
   this.mFilteredList = [];
   this.mCurrentFilter = ".*";
   this.mSelectionCallback = null;
+  this.mOutliner = null;
 
   if (!gDateService) {
     gDateService = Components.classes[nsScriptableDateFormat_CONTRACTID]
@@ -230,7 +231,7 @@ nsFileView.prototype = {
     // The filter may contain several components, i.e.:
     // *.html; *.htm
     // First separate it into its components
-    filterList = filter.split(/;[ ]*/);
+    var filterList = filter.split(/;[ ]*/);
 
     if (filterList.length == 0) {
       // this shouldn't happen
@@ -244,19 +245,18 @@ nsFileView.prototype = {
     
     for (var i = 1; i < filterList.length; i++) {
       // * becomes .*, and we escape all .'s with \
-      var tmp = filterList[i].replace(/\./g, "\\.");
+      tmp = filterList[i].replace(/\./g, "\\.");
       filterList[i] = tmp.replace(/\*/g, ".*");
       shortestPrefix = shortestPrefix.substr(0, numMatchingChars(shortestPrefix, filterList[i]));
     }
     
-    var filter = shortestPrefix+"(";
+    var filterStr = shortestPrefix+"(";
     var startpos = shortestPrefix.length;
     for (i = 0; i < filterList.length; i++) {
-      filter += filterList[i].substr(shortestPrefix.length) + "|";
+      filterStr += filterList[i].substr(shortestPrefix.length) + "|";
     }
-    filter = new RegExp(filter.substr(0, (filter.length) - 1) + ")");
-    
-    this.mCurrentFilter = filter;
+
+    this.mCurrentFilter = new RegExp(filterStr.substr(0, (filterStr.length) - 1) + ")");
     this.filterFiles();
   },
 
@@ -290,6 +290,8 @@ nsFileView.prototype = {
         this.mSelection.currentIndex <= this.mFilteredList.length - 1) {
       return this.mFilteredList[this.mSelection.currentIndex][0];
     }
+
+    return null;
   }
 }
 
