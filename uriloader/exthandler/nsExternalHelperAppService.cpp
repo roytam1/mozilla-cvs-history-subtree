@@ -918,8 +918,27 @@ NS_IMETHODIMP nsExternalAppHandler::OnStartRequest(nsIRequest *request, nsISuppo
   nsCOMPtr<nsIHttpChannel> httpChannel = do_QueryInterface( aChannel );
   if ( httpChannel ) 
   {
-    // Turn off content encoding conversions.
-    httpChannel->SetApplyConversion( PR_FALSE );
+    NS_NOTREACHED("foo");
+    nsXPIDLCString encoding;
+    rv = httpChannel->GetResponseHeader("Content-Encoding", getter_Copies(encoding));
+    if (NS_SUCCEEDED(rv) && encoding && *encoding)
+    {
+      nsCOMPtr<nsIURI> uri;
+      if (NS_SUCCEEDED(aChannel->GetURI(getter_AddRefs(uri))) && uri)
+      {
+        nsCOMPtr<nsIURL> url( do_QueryInterface(uri) );
+        if (url)
+        {
+          nsXPIDLCString ext;
+          if (NS_SUCCEEDED(url->GetFileExtension(getter_Copies(ext))) &&
+              // Turn off content encoding conversions if file extension indicates
+              // a file that should normally be compressed.
+              ((!PL_strcasecmp(encoding, "deflate") && !PL_strcasecmp(ext, "zip")) ||
+               (!PL_strcasecmp(encoding, "gzip") && !PL_strcasecmp(ext, "gz"))))
+            httpChannel->SetApplyConversion( PR_FALSE );
+        }
+      }
+    }
   }
 
   // now that the temp file is set up, find out if we need to invoke a dialog asking the user what
