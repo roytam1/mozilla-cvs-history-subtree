@@ -81,6 +81,7 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
     private FindDialog           findDialog = null;
     private MenuBar             menuBar;
     private Label          statusLabel;
+    private String currentURL;
 
   private Document       currentDocument = null;
 
@@ -101,6 +102,7 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
     {
 	super(title);
 	creator = Creator;
+    currentURL = url;
 	winNum = winnum;
         System.out.println("constructed with binDir: " + binDir + " url: " + 
                            url);
@@ -511,7 +513,6 @@ public void eventDispatched(WebclientEvent event)
     boolean enabledState;
 
     if (event instanceof DocumentLoadEvent) {
-        String currentURL;
         switch ((int) event.getType()) {
         case ((int) DocumentLoadEvent.START_DOCUMENT_LOAD_EVENT_MASK):
             stopButton.setEnabled(true);
@@ -558,6 +559,16 @@ public void mouseEntered(java.awt.event.MouseEvent e)
         }
         String href = eventProps.getProperty("href");
         if (null != href) {
+            // if it's a relative URL
+            if (null != currentURL && -1 == href.indexOf("://")) {
+                int lastSlashIndex = currentURL.lastIndexOf('/');
+                if (-1 == lastSlashIndex) {
+                    href = currentURL + "/" + href;
+                }
+                else {
+                    href = currentURL.substring(0, lastSlashIndex) + "/"+ href;
+                }
+            }
             System.out.println(href);
             statusLabel.setText(href);
         }
