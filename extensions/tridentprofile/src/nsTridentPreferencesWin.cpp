@@ -539,7 +539,7 @@ typedef HRESULT (WINAPI *PStoreCreateInstancePtr)(IPStore**, DWORD, DWORD, DWORD
 typedef struct {
   PRUnichar* user;
   PRUnichar* pass;
-  char*      host;
+  char*      realm;
 } SIGNONDATA;
 
 // The IEPStore GUID is the registry key under which IE Protected Store data lives. 
@@ -593,8 +593,8 @@ nsTridentPreferencesWin::GetSignonsListFromPStore(IPStore* aPStore, nsVoidArray*
         if (suffix.EqualsIgnoreCase(":StringData")) {
           // :StringData contains the saved data
           const nsAString& key = Substring(itemNameString, 0, itemNameString.Length() - 11);
-          char* host = nsnull;
-          if (KeyIsURI(key, &host)) {
+          char* realm = nsnull;
+          if (KeyIsURI(key, &realm)) {
             // This looks like a URL and could be a password. If it has username and password data, then we'll treat
             // it as one and add it to the password manager
             unsigned char* username = NULL;
@@ -609,7 +609,7 @@ nsTridentPreferencesWin::GetSignonsListFromPStore(IPStore* aPStore, nsVoidArray*
               SIGNONDATA* d = new SIGNONDATA;
               d->user = (PRUnichar*)username;
               d->pass = (PRUnichar*)pass;
-              d->host = host;
+              d->realm = realm;
               aSignonsFound->AppendElement(d);
             }
           }
@@ -621,9 +621,9 @@ nsTridentPreferencesWin::GetSignonsListFromPStore(IPStore* aPStore, nsVoidArray*
 }
 
 PRBool
-nsTridentPreferencesWin::KeyIsURI(const nsAString& aKey, char** aHost)
+nsTridentPreferencesWin::KeyIsURI(const nsAString& aKey, char** aRealm)
 {
-  *aHost = nsnull;
+  *aRealm = nsnull;
 
   nsCOMPtr<nsIURI> uri(do_CreateInstance("@mozilla.org/network/standard-url;1"));
   nsCAutoString keyCStr; keyCStr.AssignWithConversion(aKey);
@@ -634,9 +634,15 @@ nsTridentPreferencesWin::KeyIsURI(const nsAString& aKey, char** aHost)
   for (int i = 0; i < 2; ++i) {
     uri->SchemeIs(schemes[i], &validScheme);
     if (validScheme) {
+      nsCAutoString realm;
+      uri->GetScheme(realm);
+      realm.Append(NS_LITERAL_CSTRING("://"));
+
       nsCAutoString host;
       uri->GetHost(host);
-      *aHost = nsCRT::strdup(host.get());
+      realm.Append(host);
+
+      *aRealm = nsCRT::strdup(realm.get());
       return validScheme;
     }
   }
@@ -667,8 +673,8 @@ nsTridentPreferencesWin::ResolveAndMigrateSignons(IPStore* aPStore, nsVoidArray*
           
           // Assume all keys that are valid URIs are signons, not saved form data, and that 
           // all keys that aren't valid URIs are form field names (containing form data).
-          char* host = nsnull;
-          if (!KeyIsURI(key, &host)) {
+          char* realm = nsnull;
+          if (!KeyIsURI(key, &realm)) {
             // Search the data for a username that matches one of the found signons. 
             EnumerateUsernames(key, (PRUnichar*)data, (count/sizeof(PRUnichar)), aSignonsFound);
           }
@@ -684,7 +690,7 @@ nsTridentPreferencesWin::ResolveAndMigrateSignons(IPStore* aPStore, nsVoidArray*
     for (PRInt32 i = 0; i < signonCount; ++i) {
       SIGNONDATA* sd = (SIGNONDATA*)aSignonsFound->ElementAt(i);
       ::CoTaskMemFree(sd->user);  // |sd->user| is a pointer to the start of a buffer that also contains sd->pass
-      nsCRT::free(sd->host);
+      nsCRT::free(sd->realm);
       delete sd;
     }
   }
@@ -711,8 +717,8 @@ nsTridentPreferencesWin::EnumerateUsernames(const nsAString& aKey, PRUnichar* aD
       if (curr.Equals(sd->user)) {
         // Bingo! Found a username in the saved data for this item. Now, add a Signon.
         nsDependentString usernameStr(sd->user), passStr(sd->pass);
-        nsDependentCString host(sd->host);
-        pwmgr->AddUserFull(host, usernameStr, passStr, aKey, NS_LITERAL_STRING(""));
+        nsDependentCString realm(sd->realm);
+        pwmgr->AddUserFull(realm, usernameStr, passStr, aKey, NS_LITERAL_STRING(""));
       }
     }
 
@@ -773,8 +779,8 @@ nsTridentPreferencesWin::CopyFormData(PRBool aReplace)
         if (suffix.EqualsIgnoreCase(":StringData")) {
           // :StringData contains the saved data
           const nsAString& key = Substring(itemNameString, 0, itemNameString.Length() - 11);
-          char* host = nsnull;
-          if (!KeyIsURI(key, &host))
+          char* realm = nsnull;
+          if (!KeyIsURI(key, &realm))
             AddDataToFormHistory(key, (PRUnichar*)data, count);
         }
       }

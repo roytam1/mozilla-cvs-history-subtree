@@ -68,7 +68,7 @@ private:
   nsresult CopyHistory(PRBool aReplace);
   nsresult CopyFavorites(PRBool aReplace);
 
-  PRBool   KeyIsURI(const nsAString& aKey, char** aHost);
+  PRBool   KeyIsURI(const nsAString& aKey, char** aRealm);
 
   nsresult CopyPasswords(PRBool aReplace);
   nsresult GetSignonsListFromPStore(IPStore* aPStore, nsVoidArray* aSignonsFound);

@@ -700,8 +700,46 @@ nsPasswordManager::OnStateChange(nsIWebProgress* aWebProgress,
         continue;
       }
 
-      form->ResolveName(e->passField, getter_AddRefs(foundNode));
-      temp = do_QueryInterface(foundNode);
+      if (!(e->passField).IsEmpty()) {
+        form->ResolveName(e->passField, getter_AddRefs(foundNode));
+        temp = do_QueryInterface(foundNode);
+      }
+      else {
+        // No password field name was supplied, try to locate one in the form.
+        nsCOMPtr<nsIFormControl> fc(do_QueryInterface(foundNode));
+        PRInt32 index = -1;
+        form->IndexOfControl(fc, &index);
+        if (index >= 0) {
+          PRUint32 count;
+          form->GetElementCount(&count);
+
+          PRUint32 i;
+          temp = nsnull;
+
+          // Search forwards
+          nsCOMPtr<nsIFormControl> passField;
+          for (i = index; i < count; ++i) {
+            form->GetElementAt(i, getter_AddRefs(passField));
+
+            if (passField && passField->GetType() == NS_FORM_INPUT_PASSWORD) {
+              foundNode = passField;
+              temp = do_QueryInterface(foundNode);
+            }
+          }
+
+          if (!temp) {
+            // Search backwards
+            for (i = index; i >= 0; --i) {
+              form->GetElementAt(i, getter_AddRefs(passField));
+
+              if (passField && passField->GetType() == NS_FORM_INPUT_PASSWORD) {
+                foundNode = passField;
+                temp = do_QueryInterface(foundNode);
+              }
+            }
+          }
+        }
+      }
 
       nsAutoString oldPassValue;
 
