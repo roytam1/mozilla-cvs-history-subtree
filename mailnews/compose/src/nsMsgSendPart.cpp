@@ -474,6 +474,7 @@ nsMsgSendPart::Write()
 {
   int     status = 0;
   char    *separator = nsnull;
+  PRBool  needToWriteCRLFAfterEncodedBody  = PR_FALSE;
 
 #define PUSHLEN(str, length)                  \
   do {                            \
@@ -760,6 +761,7 @@ nsMsgSendPart::Write()
   {
     status = MIME_EncoderDestroy(m_encoder_data, PR_FALSE);
     m_encoder_data = nsnull;
+    needToWriteCRLFAfterEncodedBody = !m_parent;
     if (status < 0)
       goto FAIL;
   }
@@ -799,6 +801,8 @@ nsMsgSendPart::Write()
     PUSH("--");
     PUSH(CRLF);
   } 
+  else if (needToWriteCRLFAfterEncodedBody)
+    PUSH(CRLF);
   
 FAIL:
   PR_FREEIF(separator);
