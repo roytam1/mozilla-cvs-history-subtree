@@ -297,7 +297,7 @@ extern double fd_asin __P((double));
 extern double fd_atan __P((double));
 extern double fd_copysign __P((double, double));
 
-#elif defined LINUX
+#elif defined(linux)
 
 #define fd_acosh acosh
 #define fd_asinh asinh
