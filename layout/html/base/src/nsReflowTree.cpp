@@ -194,10 +194,20 @@ nsReflowTree::Node::Iterator::NextChild()
 void
 nsReflowTree::Node::Dump(int depth)
 {
-    fprintf(stderr, "%*s|\n%*s+-- %p", depth, "", depth, "", (void *)mFrame);
+    fprintf(stderr, "%*s|-- %p", depth, "", (void *)mFrame);
     if (IsTarget())
         fprintf(stderr, " (T: %d)", mTargetCount);
-    putc('\n', stderr);
+
+    nsCOMPtr<nsIAtom> typeAtom;
+    mFrame->GetFrameType(getter_AddRefs(typeAtom));
+
+    if (typeAtom) {
+        const PRUnichar *unibuf;
+        typeAtom->GetUnicode(&unibuf);
+        fprintf(stderr, " [%s]\n", NS_LossyConvertUCS2toASCII(unibuf).get());
+    } else {
+        putc('\n', stderr);
+    }
 
     Iterator iter(this);
     Node *child;
