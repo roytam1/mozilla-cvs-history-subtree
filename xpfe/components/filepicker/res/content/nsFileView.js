@@ -99,7 +99,7 @@ nsFileView.prototype = {
 
   /* readonly attribute long rowCount; */
   set rowCount(c) { throw "readonly property"; },
-  get rowCount() { return this.mTotalRows; },
+  get rowCount() { dump("return rowcount: " + this.mTotalRows + "\n"); return this.mTotalRows; },
 
   /* attribute nsIOutlinerSelection selection; */
   set selection(s) { this.mSelection = s; },
@@ -178,6 +178,7 @@ nsFileView.prototype = {
     /* we cache the file size and last modified dates -
        this function must be very fast since it's called
        whenever the cell needs repainted */
+    dump("getCellText("+row+"): dirlist.length="+this.mDirList.length+", files.length="+this.mFilteredFiles.length+"\n");
     var file, isdir = false;
     if (row < this.mDirList.length) {
       isdir = true;
@@ -228,7 +229,7 @@ nsFileView.prototype = {
 
   /* void selectionChanged(); */
   selectionChanged: function() {
-    if (this.mSelectionCallback) {
+    if (this.mSelectionCallback && this.mSelection.currentIndex > 0) {
       var file;
       if (this.mSelection.currentIndex < this.mDirList.length) {
         file = this.mDirList[this.mSelection.currentIndex].file;
@@ -372,11 +373,15 @@ nsFileView.prototype = {
     time = new Date() - time;
     dump("load time: " + time/1000 + " seconds\n");
 
+    this.mFilteredFiles = [];
+
     if (this.mOutliner) {
       var oldRows = this.mTotalRows;
       this.mTotalRows = this.mDirList.length;
       dump("rowCountChanged(0, " + (this.mDirList.length - oldRows) + ")\n");
-      this.mOutliner.rowCountChanged(0, this.mDirList.length - oldRows);
+      if (this.mDirList.length != oldRows) {
+        this.mOutliner.rowCountChanged(0, this.mDirList.length - oldRows);
+      }
       this.mOutliner.invalidate();
     }
 
@@ -420,6 +425,7 @@ nsFileView.prototype = {
     }
 
     this.mCurrentFilter = new RegExp(filterStr.substr(0, (filterStr.length) - 1) + ")");
+    this.mFilteredFiles = [];
 
     if (this.mOutliner) {
       dump("rowCountChanged("+this.mDirList.length+", "+ -(this.mTotalRows - this.mDirList.length) + ")\n");
@@ -433,8 +439,6 @@ nsFileView.prototype = {
   },
 
   filterFiles: function() {
-    this.mFilteredFiles = [];
-
     for(var i = 0; i < this.mFileList.length; i++) {
       var file = this.mFileList[i];
       var fileobj;
