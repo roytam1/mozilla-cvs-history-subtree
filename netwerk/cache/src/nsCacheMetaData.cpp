@@ -44,13 +44,14 @@ nsCacheMetaData::ops =
 
 
 nsCacheMetaData::nsCacheMetaData()
-    : initialized(0)
+    : initialized(PR_FALSE)
 {
 }
 
 nsCacheMetaData::~nsCacheMetaData()
 {
-    PL_DHashTableFinish(&table);
+    if (intialized)
+        PL_DHashTableFinish(&table);
 }
 
 
