@@ -2002,7 +2002,7 @@ nsWindow::OnDragLeave(void)
 
             if (!sourceNode) {
                 // We're leaving a window while doing a drag that was
-                // initiated in a differnt app. End the drag session,
+                // initiated in a different app. End the drag session,
                 // since we're done with it for now (until the user
                 // drags back into mozilla).
                 dragService->EndDragSession();
