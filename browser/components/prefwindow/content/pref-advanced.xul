@@ -26,7 +26,42 @@
       <checkbox id="useTypeAheadFind" label="&useTypeAheadFind.label;"
                 prefstring="accessibility.typeaheadfind"/>
     </expander>
-    <expander id="browsing" label="&browsing.label;" open="true" persist="open" clearhidden="true">
+    <expander id="browsing" label="&browsing.label;" open="true" persist="open"
+              clearhidden="true">
+      <checkbox id="enableAutoImageResizing"
+                label="&enableAutoImageResizing.label;"
+                prefstring="browser.enable_automatic_image_resizing"/>
+      <checkbox id="useAutoScrolling" label="&useAutoScrolling.label;"
+                prefstring="general.autoScroll"/>
+      <checkbox id="useSmoothScrolling" label="&useSmoothScrolling.label;"
+                prefstring="general.smoothScroll"/>
+    </expander>
+
+    <!-- tabbed browsing -->
+    <expander id="tabbedBrowsing" label="&tabbedBrowsing.label;"
+              open="true" persist="open" clearhidden="true">
+#ifdef XP_WIN
+      <!-- windows-only until other platforms' back ends catch up -->
+      <groupbox align="start">
+#else
+      <groupbox align="start" hidden="true">
+#endif
+        <caption label="&openExternalLinksIn.label;"/>
+        <radiogroup id="tabbedExternalLinks"
+                    prefstring="browser.link.open_external">
+          <radio label="&newWindow.label;" value="2"/>
+          <radio label="&newTabInRecentWindow.label;" value="3"/>
+          <radio label="&recentWindowOrTab.label;" value="1"/>
+        </radiogroup>
+      </groupbox>
+      <checkbox id="tabbedOpenForce" label="&forceNewWindowLinks.label;"
+                oncommand="updateWindowLinksBehavior()"/>
+      <radiogroup id="tabbedWindowLinks"
+                  prefstring="browser.link.open_newwindow.ui"
+                  style="margin-left: 23px">
+        <radio label="&sameTabOrWindow.label;" value="1"/>
+        <radio label="&newTab.label;" value="3"/>
+      </radiogroup>
       <checkbox id="hideTabBar" label="&hideTabBar.label;"
                 prefstring="browser.tabs.autoHide"/>
       <checkbox id="loadInBackground" label="&loadInBackground.label;"
@@ -35,14 +70,6 @@
                 prefstring="browser.tabs.loadBookmarksInBackground" reversed="true"/>
       <checkbox id="warnOnClose" label="&warnOnClose.label;"
                 prefstring="browser.tabs.warnOnClose"/>
-      <checkbox id="useAutoScrolling" label="&useAutoScrolling.label;"
-                prefstring="general.autoScroll"/>
-      <checkbox id="useSmoothScrolling" label="&useSmoothScrolling.label;"
-                prefstring="general.smoothScroll"/>
-    </expander>
-    <expander id="multimedia" label="&multimedia.label;" open="true" persist="open" clearhidden="true">
-      <checkbox id="enableAutoImageResizing" label="&enableAutoImageResizing.label;"
-                prefstring="browser.enable_automatic_image_resizing"/>
     </expander>
 
     <expander id="softwareupdate" label="&softwareupdate.label;" 

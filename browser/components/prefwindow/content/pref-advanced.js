@@ -42,6 +42,7 @@ var _elementIDs = ["moveSystemCaret", "hideTabBar", "loadInBackground",
 #ifdef PROVISIONAL_SECURITY_UI
                     "certSelection", "securityOCSPEnabled", "serviceURL", "signingCA",
 #endif
+                    "tabbedExternalLinks", "tabbedWindowLinks",
                     "enableSoftwareInstall", "enableSmartUpdate", 
                     "enableExtensionUpdate"];
 
@@ -54,7 +55,27 @@ const nsISupportsArray = Components.interfaces.nsISupportsArray;
 var certdb;
 var ocspResponders;
 #endif
+
+function onOK()
+{
+  // the .ui pref is only the saved state of the prefs dialog's radio buttons.
+  // the other pref is the real one.
+  try {
+    var prefVal = document.getElementById("tabbedOpenForce").checked ?
+                    document.getElementById("tabbedWindowLinks").value : 2;
+    parent.hPrefWindow.setPref("int", "browser.link.open_newwindow", prefVal);
+  } catch(e) {
+    // never loaded |advanced| pane
+  }
+}
+
 function Startup() {
+  var prefVal = parent.hPrefWindow.getPref("int", "browser.link.open_newwindow",
+                                           false);
+  document.getElementById("tabbedOpenForce").checked = prefVal != 2;
+  updateWindowLinksBehavior();
+  parent.hPrefWindow.registerOKCallbackFunc(onOK);
+
 #ifdef PROVISIONAL_SECURITY_UI
   var ocspEntry;
   var i;
@@ -159,6 +180,17 @@ function openDeviceManager()
   }
 }
 #endif
+
+function updateWindowLinksBehavior() {
+  var radioNodes = document.getElementById("tabbedWindowLinks").childNodes;
+  var ctr;
+  if (document.getElementById("tabbedOpenForce").checked)
+    for (ctr = 0; ctr < radioNodes.length; ++ctr)
+      radioNodes.item(ctr).removeAttribute("disabled");
+  else
+    for (ctr = 0; ctr < radioNodes.length; ++ctr)
+      radioNodes.item(ctr).setAttribute("disabled", "true");
+}
 
 function checkForUpdates()
 {

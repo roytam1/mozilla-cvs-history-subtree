@@ -10,6 +10,7 @@
 <!ENTITY warnOnClose.label            "Warn when closing multiple tabs">
 <!ENTITY useAutoScrolling.label       "Use autoscrolling">
 <!ENTITY useSmoothScrolling.label     "Use smooth scrolling">
+<!-- note multimedia.label is no longer used. it can be removed when convenient between localization freezes. -->
 <!ENTITY multimedia.label             "Multimedia">
 <!ENTITY enableAutoImageResizing.label "Resize large images to fit in the browser window">
 <!ENTITY security.label               "Security">
