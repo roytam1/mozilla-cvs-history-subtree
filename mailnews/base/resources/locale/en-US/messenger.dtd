@@ -51,7 +51,7 @@
 <!ENTITY openMessageMenu.label "Open">
 <!ENTITY openMessageWindowCmd.label "Open Message">
 <!ENTITY openMessageWindowCmd.accesskey "s">
-<!ENTITY openMessageFileCmd.label "Open File">
+<!ENTITY openMessageFileCmd.label "Open File...">
 <!ENTITY openMessageFileCmd.accesskey "O">
 <!ENTITY openAttachmentCmd.label "Attachments">
 <!ENTITY openAttachmentCmd.accesskey "A">
@@ -410,7 +410,8 @@
 <!ENTITY markReadByDateCmd.key "c">
 <!ENTITY markAllReadCmd.label "All Read">
 <!ENTITY markAllReadCmd.accesskey "A">
-<!ENTITY markAllReadCmd.key "m">
+<!ENTITY markAllReadCmd.key "c">
+<!ENTITY markAllReadCmdUnix.key "m">
 <!ENTITY markFlaggedCmd.label "Flag">
 <!ENTITY markFlaggedCmd.accesskey "F">
 <!ENTITY markAsJunkCmd.label "As Junk">

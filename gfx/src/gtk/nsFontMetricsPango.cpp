@@ -49,6 +49,8 @@
 #include "nsRenderingContextGTK.h"
 #include "nsDeviceContextGTK.h"
 
+#include "nsUnicharUtils.h"
+
 #include <pango/pangoxft.h>
 #include <fontconfig/fontconfig.h>
 #include <gdk/gdk.h>
@@ -92,6 +94,12 @@ static const MozPangoLangGroup MozPangoLangGroups[] = {
 
 #define NUM_PANGO_LANG_GROUPS (sizeof (MozPangoLangGroups) / \
                                sizeof (MozPangoLangGroups[0]))
+
+#ifdef DEBUG
+#define DUMP_PRUNICHAR(ustr, ulen) for (PRUint32 llen=0;llen<ulen;llen++) \
+                                      printf("0x%x ", ustr[llen]); \
+                                   printf("\n");
+#endif
 
 // rounding and truncation functions for a Freetype floating point number 
 // (FT26Dot6) stored in a 32bit integer with high 26 bits for the integer
@@ -475,21 +483,28 @@ nsFontMetricsPango::GetWidth(const PRUnichar* aString, PRUint32 aLength,
                              nscoord& aWidth, PRInt32 *aFontID,
                              nsRenderingContextGTK *aContext)
 {
+    nsresult rv = NS_OK;
     PangoLayout *layout = pango_layout_new(mPangoContext);
 
     gchar *text = g_utf16_to_utf8(aString, aLength,
                                   NULL, NULL, NULL);
 
+    if (!text) {
+        aWidth = 0;
+#ifdef DEBUG
+        NS_WARNING("nsFontMetricsPango::GetWidth invalid unicode to follow");
+        DUMP_PRUNICHAR(aString, aLength)
+#endif
+        rv = NS_ERROR_FAILURE;
+        goto loser;
+    }
+
+    gint width, height;
+
     pango_layout_set_text(layout, text, strlen(text));
-
-    int width, height;
-
     pango_layout_get_size(layout, &width, &height);
 
     width /= PANGO_SCALE;
-
-    g_free(text);
-    g_object_unref(layout);
 
     float f;
     f = mDeviceContext->DevUnitsToAppUnits();
@@ -497,7 +512,11 @@ nsFontMetricsPango::GetWidth(const PRUnichar* aString, PRUint32 aLength,
 
     //    printf("GetWidth %d\n", aWidth);
 
-    return NS_OK;
+ loser:
+    g_free(text);
+    g_object_unref(layout);
+
+    return rv;
 }
 
 
@@ -508,10 +527,26 @@ nsFontMetricsPango::GetTextDimensions(const PRUnichar* aString,
                                       PRInt32* aFontID,
                                       nsRenderingContextGTK *aContext)
 {
+    nsresult rv = NS_OK;
+
     PangoLayout *layout = pango_layout_new(mPangoContext);
 
     gchar *text = g_utf16_to_utf8(aString, aLength,
                                   NULL, NULL, NULL);
+
+    if (!text) {
+#ifdef DEBUG
+        NS_WARNING("nsFontMetricsPango::GetTextDimensions invalid unicode to follow");
+        DUMP_PRUNICHAR(aString, aLength)
+#endif
+        aDimensions.width = 0;
+        aDimensions.ascent = 0;
+        aDimensions.descent = 0;
+
+        rv = NS_ERROR_FAILURE;
+        goto loser;
+    }
+        
 
     pango_layout_set_text(layout, text, strlen(text));
 
@@ -525,9 +560,6 @@ nsFontMetricsPango::GetTextDimensions(const PRUnichar* aString,
     PangoRectangle rect;
     pango_layout_line_get_extents(line, NULL, &rect);
 
-    g_free(text);
-    g_object_unref(layout);
-
     float P2T;
     P2T = mDeviceContext->DevUnitsToAppUnits();
 
@@ -538,8 +570,11 @@ nsFontMetricsPango::GetTextDimensions(const PRUnichar* aString,
     //    printf("GetTextDimensions %d %d %d\n", aDimensions.width,
     //aDimensions.ascent, aDimensions.descent);
 
-    return NS_OK;
+ loser:
+    g_free(text);
+    g_object_unref(layout);
 
+    return rv;
 }
 
 nsresult
@@ -600,7 +635,7 @@ nsFontMetricsPango::DrawString(const char *aString, PRUint32 aLength,
     GdkGC *gc = aContext->GetGC();
 
     if (aSpacing && *aSpacing) {
-        DrawStringSlowly(aString, aLength, aSurface->GetDrawable(),
+        DrawStringSlowly(aString, NULL, aLength, aSurface->GetDrawable(),
                          gc, x, y, line, aSpacing);
     }
     else {
@@ -625,15 +660,28 @@ nsFontMetricsPango::DrawString(const PRUnichar* aString, PRUint32 aLength,
                                nsRenderingContextGTK *aContext,
                                nsDrawingSurfaceGTK *aSurface)
 {
+    nsresult rv = NS_OK;
+    int x = aX;
+    int y = aY;
+
+    aContext->UpdateGC();
+    GdkGC *gc = aContext->GetGC();
+
     PangoLayout *layout = pango_layout_new(mPangoContext);
 
     gchar *text = g_utf16_to_utf8(aString, aLength,
                                   NULL, NULL, NULL);
 
-    pango_layout_set_text(layout, text, strlen(text));
+    if (!text) {
+#ifdef DEBUG
+        NS_WARNING("nsFontMetricsPango::DrawString invalid unicode to follow");
+        DUMP_PRUNICHAR(aString, aLength)
+#endif
+        rv = NS_ERROR_FAILURE;
+        goto loser;
+    }
 
-    int x = aX;
-    int y = aY;
+    pango_layout_set_text(layout, text, strlen(text));
 
     aContext->GetTranMatrix()->TransformCoord(&x, &y);
 
@@ -643,11 +691,8 @@ nsFontMetricsPango::DrawString(const PRUnichar* aString, PRUint32 aLength,
     }
     line = pango_layout_get_line(layout, 0);
 
-    aContext->UpdateGC();
-    GdkGC *gc = aContext->GetGC();
-
     if (aSpacing && *aSpacing) {
-        DrawStringSlowly(text, aLength, aSurface->GetDrawable(),
+        DrawStringSlowly(text, aString, aLength, aSurface->GetDrawable(),
                          gc, x, y, line, aSpacing);
     }
     else {
@@ -656,13 +701,15 @@ nsFontMetricsPango::DrawString(const PRUnichar* aString, PRUint32 aLength,
                              line);
     }
 
+ loser:
+
     g_free(text);
     g_object_unref(gc);
     g_object_unref(layout);
 
     //    printf("DrawString\n");
 
-    return NS_OK;
+    return rv;
 }
 
 #ifdef MOZ_MATHML
@@ -682,11 +729,26 @@ nsFontMetricsPango::GetBoundingMetrics(const PRUnichar *aString,
                                        PRInt32 *aFontID,
                                        nsRenderingContextGTK *aContext)
 {
-    printf("GetBoundingMetrics\n");
+    nsresult rv = NS_OK;
     PangoLayout *layout = pango_layout_new(mPangoContext);
 
     gchar *text = g_utf16_to_utf8(aString, aLength,
                                   NULL, NULL, NULL);
+
+    if (!text) {
+#ifdef DEBUG
+        NS_WARNING("nsFontMetricsPango::GetBoundingMetrics invalid unicode to follow");
+        DUMP_PRUNICHAR(aString, aLength)
+        aBoundingMetrics.leftBearing = 0;
+        aBoundingMetrics.rightBearing = 0;
+        aBoundingMetrics.width = 0;
+        aBoundingMetrics.ascent = 0;
+        aBoundingMetrics.descent = 0;
+
+        rv = NS_ERROR_FAILURE;
+        goto loser;
+#endif
+    }
 
     pango_layout_set_text(layout, text, strlen(text));
 
@@ -701,9 +763,6 @@ nsFontMetricsPango::GetBoundingMetrics(const PRUnichar *aString,
     PangoRectangle rect;
     pango_layout_line_get_extents(line, NULL, &rect);
 
-    g_free(text);
-    g_object_unref(layout);
-
     float P2T;
     P2T = mDeviceContext->DevUnitsToAppUnits();
 
@@ -715,7 +774,11 @@ nsFontMetricsPango::GetBoundingMetrics(const PRUnichar *aString,
     aBoundingMetrics.ascent = NSToCoordRound(rect.y / PANGO_SCALE * P2T);
     aBoundingMetrics.descent = NSToCoordRound(rect.height / PANGO_SCALE * P2T);
 
-    return NS_OK;
+ loser:
+    g_free(text);
+    g_object_unref(layout);
+
+    return rv;
 }
 
 #endif /* MOZ_MATHML */
@@ -917,6 +980,7 @@ nsFontMetricsPango::EnumFontCallback(const nsString &aFamily,
 
 void
 nsFontMetricsPango::DrawStringSlowly(const gchar *aText,
+                                     const PRUnichar *aOrigString,
                                      PRUint32 aLength,
                                      GdkDrawable *aDrawable,
                                      GdkGC *aGC, gint aX, gint aY,
@@ -931,8 +995,29 @@ nsFontMetricsPango::DrawStringSlowly(const gchar *aText,
      * We walk the list of glyphs returned in each layout run,
      * matching up the glyphs with the characters in the source text.
      * We use the aSpacing argument to figure out where to place those
-     * glyphs.
+     * glyphs.  It's important to note that since the string we're
+     * working with is in UTF-8 while the spacing argument assumes
+     * that offset will be part of the UTF-16 string.  Logical
+     * attributes in pango are in byte offsets in the UTF-8 string, so
+     * we need to store the offsets based on the UTF-8 string.
      */
+    nscoord *spacing = new nscoord[strlen(aText)];
+
+    if (aOrigString) {
+        gint outpos = 0;
+        gunichar c;
+        gchar outbuf[6];
+        const PRUnichar *curpos = aOrigString;
+
+        for (guint i = 0; i < aLength; i++, curpos++) {
+            spacing[outpos] = aSpacing[i];
+            c = *curpos;
+            outpos += g_unichar_to_utf8(c, outbuf);
+        }
+    }
+    else {
+        memcpy(spacing, aSpacing, (sizeof(nscoord *) * aLength));
+    }
 
     gint curRun = 0;
 
@@ -950,9 +1035,9 @@ nsFontMetricsPango::DrawStringSlowly(const gchar *aText,
                        "some exciting rendering!");
         }
 
-        for (gint i; i < layoutRun->glyphs->num_glyphs; i++) {
-            gint thisOffset = (gint)(aSpacing[layoutRun->glyphs->log_clusters[i]] / app2dev * PANGO_SCALE);
-            layoutRun->glyphs->glyphs[i].geometry.width += thisOffset;
+        for (gint i=0; i < layoutRun->glyphs->num_glyphs; i++) {
+            gint thisOffset = (gint)(spacing[layoutRun->glyphs->log_clusters[i]] * app2dev * PANGO_SCALE);
+            layoutRun->glyphs->glyphs[i].geometry.width = thisOffset;
             tmpOffset += thisOffset;
         }
 
@@ -964,6 +1049,7 @@ nsFontMetricsPango::DrawStringSlowly(const gchar *aText,
         offset += tmpOffset;
     }
 
+    delete[] spacing;
 }
 
 /* static */

@@ -121,7 +121,7 @@
 #include "nsPIDOMWindow.h"
 #include "nsIDOMDocument.h"
 #include "nsICachingChannel.h"
-#include "nsICacheEntryDescriptor.h"
+#include "nsICacheVisitor.h"
 #include "nsIMultiPartChannel.h"
 #include "nsIWyciwygChannel.h"
 
@@ -2125,7 +2125,7 @@ nsDocShell::AddChild(nsIDocShellTreeItem * aChild)
     if (!childAsDocShell)
         return NS_OK;
 
-    // charset and zoom will be inherited in SetupNewViewer()
+    // charset, style-disabling, and zoom will be inherited in SetupNewViewer()
 
     // Now take this document's charset and set the parentCharset field of the 
     // child's DocumentCharsetInfo to it. We'll later use that field, in the 
@@ -3504,8 +3504,8 @@ nsDocShell::GetCurScrollPos(PRInt32 scrollOrientation, PRInt32 * curPos)
 {
     NS_ENSURE_ARG_POINTER(curPos);
 
-    nsCOMPtr<nsIScrollableView> scrollView;
-    NS_ENSURE_SUCCESS(GetRootScrollableView(getter_AddRefs(scrollView)),
+    nsIScrollableView* scrollView;
+    NS_ENSURE_SUCCESS(GetRootScrollableView(&scrollView),
                       NS_ERROR_FAILURE);
     if (!scrollView) {
         return NS_ERROR_FAILURE;
@@ -3532,8 +3532,8 @@ nsDocShell::GetCurScrollPos(PRInt32 scrollOrientation, PRInt32 * curPos)
 NS_IMETHODIMP
 nsDocShell::SetCurScrollPos(PRInt32 scrollOrientation, PRInt32 curPos)
 {
-    nsCOMPtr<nsIScrollableView> scrollView;
-    NS_ENSURE_SUCCESS(GetRootScrollableView(getter_AddRefs(scrollView)),
+    nsIScrollableView* scrollView;
+    NS_ENSURE_SUCCESS(GetRootScrollableView(&scrollView),
                       NS_ERROR_FAILURE);
     if (!scrollView) {
         return NS_ERROR_FAILURE;
@@ -3570,8 +3570,8 @@ nsDocShell::SetCurScrollPos(PRInt32 scrollOrientation, PRInt32 curPos)
 NS_IMETHODIMP
 nsDocShell::SetCurScrollPosEx(PRInt32 curHorizontalPos, PRInt32 curVerticalPos)
 {
-    nsCOMPtr<nsIScrollableView> scrollView;
-    NS_ENSURE_SUCCESS(GetRootScrollableView(getter_AddRefs(scrollView)),
+    nsIScrollableView* scrollView;
+    NS_ENSURE_SUCCESS(GetRootScrollableView(&scrollView),
                       NS_ERROR_FAILURE);
     if (!scrollView) {
         return NS_ERROR_FAILURE;
@@ -3590,8 +3590,8 @@ nsDocShell::GetScrollRange(PRInt32 scrollOrientation,
 {
     NS_ENSURE_ARG_POINTER(minPos && maxPos);
 
-    nsCOMPtr<nsIScrollableView> scrollView;
-    NS_ENSURE_SUCCESS(GetRootScrollableView(getter_AddRefs(scrollView)),
+    nsIScrollableView* scrollView;
+    NS_ENSURE_SUCCESS(GetRootScrollableView(&scrollView),
                       NS_ERROR_FAILURE);
     if (!scrollView) {
         return NS_ERROR_FAILURE;
@@ -3766,8 +3766,8 @@ NS_IMETHODIMP
 nsDocShell::GetScrollbarVisibility(PRBool * verticalVisible,
                                    PRBool * horizontalVisible)
 {
-    nsCOMPtr<nsIScrollableView> scrollView;
-    NS_ENSURE_SUCCESS(GetRootScrollableView(getter_AddRefs(scrollView)),
+    nsIScrollableView* scrollView;
+    NS_ENSURE_SUCCESS(GetRootScrollableView(&scrollView),
                       NS_ERROR_FAILURE);
     if (!scrollView) {
         return NS_ERROR_FAILURE;
@@ -3795,9 +3795,9 @@ nsDocShell::GetScrollbarVisibility(PRBool * verticalVisible,
 NS_IMETHODIMP
 nsDocShell::ScrollByLines(PRInt32 numLines)
 {
-    nsCOMPtr<nsIScrollableView> scrollView;
+    nsIScrollableView* scrollView;
 
-    NS_ENSURE_SUCCESS(GetRootScrollableView(getter_AddRefs(scrollView)),
+    NS_ENSURE_SUCCESS(GetRootScrollableView(&scrollView),
                       NS_ERROR_FAILURE);
     if (!scrollView) {
         return NS_ERROR_FAILURE;
@@ -3811,9 +3811,9 @@ nsDocShell::ScrollByLines(PRInt32 numLines)
 NS_IMETHODIMP
 nsDocShell::ScrollByPages(PRInt32 numPages)
 {
-    nsCOMPtr<nsIScrollableView> scrollView;
+    nsIScrollableView* scrollView;
 
-    NS_ENSURE_SUCCESS(GetRootScrollableView(getter_AddRefs(scrollView)),
+    NS_ENSURE_SUCCESS(GetRootScrollableView(&scrollView),
                       NS_ERROR_FAILURE);
     if (!scrollView) {
         return NS_ERROR_FAILURE;
@@ -4726,6 +4726,7 @@ nsDocShell::SetupNewViewer(nsIContentViewer * aNewViewer)
     PRInt32 hintCharsetSource;
     nsCAutoString prevDocCharset;
     float textZoom;
+    PRBool styleDisabled;
     // |newMUDV| also serves as a flag to set the data from the above vars
     nsCOMPtr<nsIMarkupDocumentViewer> newMUDV;
 
@@ -4763,6 +4764,9 @@ nsDocShell::SetupNewViewer(nsIContentViewer * aNewViewer)
                                   NS_ERROR_FAILURE);
                 NS_ENSURE_SUCCESS(oldMUDV->
                                   GetTextZoom(&textZoom),
+                                  NS_ERROR_FAILURE);
+                NS_ENSURE_SUCCESS(oldMUDV->
+                                  GetAuthorStyleDisabled(&styleDisabled),
                                   NS_ERROR_FAILURE);
                 NS_ENSURE_SUCCESS(oldMUDV->
                                   GetPrevDocCharacterSet(prevDocCharset),
@@ -4893,6 +4897,8 @@ nsDocShell::SetupNewViewer(nsIContentViewer * aNewViewer)
         NS_ENSURE_SUCCESS(newMUDV->SetPrevDocCharacterSet(prevDocCharset),
                           NS_ERROR_FAILURE);
         NS_ENSURE_SUCCESS(newMUDV->SetTextZoom(textZoom),
+                          NS_ERROR_FAILURE);
+        NS_ENSURE_SUCCESS(newMUDV->SetAuthorStyleDisabled(styleDisabled),
                           NS_ERROR_FAILURE);
     }
 
@@ -6366,7 +6372,7 @@ nsDocShell::AddToSessionHistory(nsIURI * aURI,
     }
     if (cacheToken) {
         // Check if the page has expired from cache 
-        nsCOMPtr<nsICacheEntryDescriptor> cacheEntryInfo(do_QueryInterface(cacheToken));
+        nsCOMPtr<nsICacheEntryInfo> cacheEntryInfo(do_QueryInterface(cacheToken));
         if (cacheEntryInfo) {        
             PRUint32 expTime;         
             cacheEntryInfo->GetExpirationTime(&expTime);         

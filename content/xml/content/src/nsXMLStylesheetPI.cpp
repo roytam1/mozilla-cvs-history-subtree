@@ -51,7 +51,7 @@ class nsXMLStylesheetPI : public nsXMLProcessingInstruction,
                           public nsStyleLinkElement
 {
 public:
-  nsXMLStylesheetPI(const nsAString& aData);
+  nsXMLStylesheetPI(const nsAString& aData, nsIDocument *aDocument);
   virtual ~nsXMLStylesheetPI();
 
   // nsISupports
@@ -89,8 +89,10 @@ NS_IMPL_ADDREF_INHERITED(nsXMLStylesheetPI, nsXMLProcessingInstruction)
 NS_IMPL_RELEASE_INHERITED(nsXMLStylesheetPI, nsXMLProcessingInstruction)
 
 
-nsXMLStylesheetPI::nsXMLStylesheetPI(const nsAString& aData) :
-  nsXMLProcessingInstruction(NS_LITERAL_STRING("xml-stylesheet"), aData)
+nsXMLStylesheetPI::nsXMLStylesheetPI(const nsAString& aData,
+                                     nsIDocument *aDocument) :
+  nsXMLProcessingInstruction(NS_LITERAL_STRING("xml-stylesheet"), aData,
+                             aDocument)
 {
 }
 
@@ -104,7 +106,7 @@ void
 nsXMLStylesheetPI::SetDocument(nsIDocument* aDocument, PRBool aDeep,
                                PRBool aCompileEventHandlers)
 {
-  nsCOMPtr<nsIDocument> oldDoc = mDocument;
+  nsCOMPtr<nsIDocument> oldDoc = GetCurrentDoc();
   nsXMLProcessingInstruction::SetDocument(aDocument, aDeep,
                                           aCompileEventHandlers);
 
@@ -130,12 +132,12 @@ nsXMLStylesheetPI::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
   nsAutoString data;
   GetData(data);
 
-  *aReturn = new nsXMLStylesheetPI(data);
-  if (!*aReturn) {
+  nsXMLStylesheetPI *pi = new nsXMLStylesheetPI(data, nsnull);
+  if (!pi) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  NS_ADDREF(*aReturn);
+  NS_ADDREF(*aReturn = pi);
 
   return NS_OK;
 }
@@ -167,9 +169,10 @@ nsXMLStylesheetPI::GetStyleSheetURL(PRBool* aIsInline,
 
   nsIURI *baseURL;
   nsCAutoString charset;
-  if (mDocument) {
-    baseURL = mDocument->GetBaseURI();
-    charset = mDocument->GetDocumentCharacterSet();
+  nsIDocument *document = GetCurrentDoc();
+  if (document) {
+    baseURL = document->GetBaseURI();
+    charset = document->GetDocumentCharacterSet();
   } else {
     baseURL = nsnull;
   }
@@ -233,14 +236,17 @@ nsXMLStylesheetPI::GetStyleSheetInfo(nsAString& aTitle,
 
 nsresult
 NS_NewXMLStylesheetProcessingInstruction(nsIContent** aInstancePtrResult,
-                                         const nsAString& aData)
+                                         const nsAString& aData,
+                                         nsIDocument *aOwnerDocument)
 {
-  *aInstancePtrResult = new nsXMLStylesheetPI(aData);
-  if (!*aInstancePtrResult)
+  *aInstancePtrResult = nsnull;
+  
+  nsCOMPtr<nsIContent> instance = new nsXMLStylesheetPI(aData, nsnull);
+  if (!instance) {
     return NS_ERROR_OUT_OF_MEMORY;
+  }
 
-  NS_ADDREF(*aInstancePtrResult);
+  instance.swap(*aInstancePtrResult);
 
   return NS_OK;
 }
-

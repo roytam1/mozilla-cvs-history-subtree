@@ -89,6 +89,8 @@
 #include "nsIPlatformCharset.h"
 #include "nsIPref.h"
 
+#include "plbase64.h"
+
 nsIRDFResource      *kNC_IEFavoritesRoot;
 nsIRDFResource      *kNC_SystemBookmarksStaticRoot;
 nsIRDFResource      *kNC_Bookmark;
@@ -1624,7 +1626,8 @@ nsBookmarksService::nsBookmarksService() :
     mInner(nsnull),
     mUpdateBatchNest(0),
     mBookmarksAvailable(PR_FALSE),
-    mDirty(PR_FALSE)
+    mDirty(PR_FALSE),
+    mNeedBackupUpdate(PR_FALSE)
 
 #if defined(XP_MAC) || defined(XP_MACOSX)
     ,mIEFavoritesAvailable(PR_FALSE)
@@ -1983,6 +1986,11 @@ nsBookmarksService::FireTimer(nsITimer* aTimer, void* aClosure)
     nsBookmarksService *bmks = NS_STATIC_CAST(nsBookmarksService *, aClosure);
     if (!bmks)  return;
     nsresult            rv;
+
+    if (bmks->mNeedBackupUpdate == PR_TRUE)
+    {
+        bmks->SaveToBackup();
+    }
 
     if ((bmks->mBookmarksAvailable == PR_TRUE) && (bmks->mDirty == PR_TRUE))
     {
@@ -3086,7 +3094,8 @@ nsBookmarksService::IsBookmarkedResource(nsIRDFResource *aSource, PRBool *aIsBoo
 }
 
 NS_IMETHODIMP
-nsBookmarksService::UpdateBookmarkIcon(const char *aURL, const PRUnichar *aIconURL)
+nsBookmarksService::UpdateBookmarkIcon(const char *aURL, const char *aMIMEType,
+                                       const PRUint8* aIconData, const PRUint32 aIconDataLen)
 {
     nsCOMPtr<nsIRDFLiteral> urlLiteral;
     nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUCS2(aURL).get(),
@@ -3098,6 +3107,32 @@ nsBookmarksService::UpdateBookmarkIcon(const char *aURL, const PRUnichar *aIconU
     rv = mInner->GetSources(kNC_URL, urlLiteral, PR_TRUE, getter_AddRefs(bookmarks));
     if (NS_FAILED(rv))
         return rv;
+
+    // base64 encode the icon data, and create a new literal;
+    // or encode data: if it's invalid
+    nsCOMPtr<nsIRDFLiteral> iconDataLiteral;
+    PRBool isInvalidIcon = PR_FALSE;
+    if (aIconData == NULL || aIconDataLen == 0) {
+        isInvalidIcon = PR_TRUE;
+        rv = gRDF->GetLiteral (NS_LITERAL_STRING("data:").get(), getter_AddRefs(iconDataLiteral));
+        if (NS_FAILED(rv)) return rv;
+    } else {
+        PRInt32 len = ((aIconDataLen + 2) / 3) * 4;
+        char *iconDataBase64 = PL_Base64Encode((const char *) aIconData, aIconDataLen, nsnull);
+        if (!iconDataBase64) {
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+
+        nsString dataUri;
+        dataUri += NS_LITERAL_STRING("data:");
+        dataUri += NS_ConvertASCIItoUTF16(aMIMEType);
+        dataUri += NS_LITERAL_STRING(";base64,");
+        dataUri += NS_ConvertASCIItoUTF16(iconDataBase64, len);
+        nsMemory::Free(iconDataBase64);
+
+        rv = gRDF->GetLiteral (dataUri.get(), getter_AddRefs(iconDataLiteral));
+        if (NS_FAILED(rv)) return rv;
+    }
 
     PRBool hasMoreBookmarks = PR_FALSE;
     while (NS_SUCCEEDED(rv = bookmarks->HasMoreElements(&hasMoreBookmarks)) &&
@@ -3115,29 +3150,21 @@ nsBookmarksService::UpdateBookmarkIcon(const char *aURL, const PRUnichar *aIconU
                 (void) mInner->Unassert(bookmark, kNC_Icon, iconNode);
             }
 
-            // create a new literal for the url
-            nsCOMPtr<nsIRDFLiteral> urlLiteral;
-            rv = gRDF->GetLiteral(aIconURL, getter_AddRefs(urlLiteral));
-            if (NS_FAILED(rv))
-                return rv;
+            nsCOMPtr<nsIRDFPropagatableDataSource> propDS = do_QueryInterface(mInner);
+            PRBool oldPropChanges = PR_TRUE;
 
-            if (nsDependentString(aIconURL).Equals(NS_LITERAL_STRING("data:"))) {
-                // if it's just "data:", then don't send notifications, otherwise
-                // things will update with a null icon
-                nsCOMPtr<nsIRDFPropagatableDataSource> propDS = do_QueryInterface(mInner);
-                PRBool oldPropChanges = PR_TRUE;
-                if (propDS) {
-                    (void) propDS->GetPropagateChanges(&oldPropChanges);
-                    (void) propDS->SetPropagateChanges(PR_FALSE);
-                }
-
-                rv = mInner->Assert(bookmark, kNC_Icon, urlLiteral, PR_TRUE);
-
-                if (propDS)
-                    (void) propDS->SetPropagateChanges(oldPropChanges);
-            } else {
-                rv = mInner->Assert(bookmark, kNC_Icon, urlLiteral, PR_TRUE);
+            // if it's just "data:", then don't send notifications, otherwise
+            // things will update with a null icon
+            if (propDS && isInvalidIcon) {
+                (void) propDS->GetPropagateChanges(&oldPropChanges);
+                (void) propDS->SetPropagateChanges(PR_FALSE);
             }
+
+            rv = mInner->Assert(bookmark, kNC_Icon, iconDataLiteral, PR_TRUE);
+
+            if (propDS && isInvalidIcon)
+                (void) propDS->SetPropagateChanges(oldPropChanges);
+
             if (NS_FAILED(rv))
                 return rv;
 
@@ -4245,7 +4272,12 @@ nsBookmarksService::Flush()
         // aren't any bookmarks for us to write out.
         if (NS_FAILED(rv))  return NS_OK;
 
+        if (mNeedBackupUpdate)
+            SaveToBackup();
+
         rv = WriteBookmarks(bookmarksFile, mInner, kNC_BookmarksRoot);
+        if (NS_SUCCEEDED(rv))
+            mNeedBackupUpdate = PR_TRUE;
     }
     return rv;
 }
@@ -4261,11 +4293,88 @@ nsBookmarksService::FlushTo(const char *aURI)
 ////////////////////////////////////////////////////////////////////////
 // Implementation methods
 
+// save a copy of the last bookmarks file, if it exists, to bookmarks.bak
+void
+nsBookmarksService::SaveToBackup()
+{
+    nsresult rv;
+
+    nsCOMPtr<nsIFile> bookmarksFile;
+    rv = GetBookmarksFile(getter_AddRefs(bookmarksFile));
+
+    if (NS_FAILED(rv) || !bookmarksFile)
+        return;
+
+    PRBool exists;
+    bookmarksFile->Exists(&exists);
+
+    if (!exists)
+        return;
+
+    nsCOMPtr<nsIFile> backupFile, parentFolder;
+    bookmarksFile->GetParent(getter_AddRefs(parentFolder));
+    if (parentFolder) {
+        rv = parentFolder->Clone(getter_AddRefs(backupFile));
+        if (NS_FAILED(rv))
+            return;
+
+        rv = backupFile->Append(NS_LITERAL_STRING("bookmarks.bak"));
+        if (NS_FAILED(rv))
+            return;
+
+        rv = backupFile->Remove(PR_FALSE);
+        /* ignore error */
+
+        rv = bookmarksFile->CopyTo(parentFolder, NS_LITERAL_STRING("bookmarks.bak"));
+        if (NS_SUCCEEDED(rv))
+            mNeedBackupUpdate = PR_FALSE;
+    }
+}
+
+// Attempt to restore a truncated or non-existent bookmarks.html file
+// from the backup file generated by the last successful write.
+void
+nsBookmarksService::MaybeRestoreFromBackup(nsIFile* aBookmarkFile, nsIFile* aParentFolder)
+{
+    if (!aBookmarkFile) 
+        return;
+
+    PRBool exists;
+    aBookmarkFile->Exists(&exists);
+    if (exists)
+    {
+        PRInt64 fileSize;
+        aBookmarkFile->GetFileSize(&fileSize);
+        if (fileSize == 0)
+        {
+            aBookmarkFile->Remove(PR_FALSE);
+            exists = PR_FALSE;
+        }
+    }
+    if (!exists) 
+    {
+        nsCOMPtr<nsIFile> backupFile;
+        aParentFolder->Clone(getter_AddRefs(backupFile));
+        if (aParentFolder && backupFile) 
+        {
+            backupFile->Append(NS_LITERAL_STRING("bookmarks.bak"));
+            backupFile->Exists(&exists);
+            if (exists) 
+            {
+                nsAutoString bookmarksFileName;
+                aBookmarkFile->GetLeafName(bookmarksFileName);
+
+                backupFile->CopyTo(aParentFolder, bookmarksFileName);
+            }
+        }
+    }
+}
+
 nsresult
 nsBookmarksService::GetBookmarksFile(nsIFile* *aResult)
 {
     nsresult rv;
-    nsCOMPtr<nsIFile> bookmarksFile;
+    nsCOMPtr<nsIFile> bookmarksFile, parentFolder;
 
     // First we see if the user has set a pref for the location of the 
     // bookmarks file.
@@ -4284,6 +4393,11 @@ nsBookmarksService::GetBookmarksFile(nsIFile* *aResult)
             {
                 *aResult = bookmarksFile;
                 NS_ADDREF(*aResult);
+
+                bookmarksFile->GetParent(getter_AddRefs(parentFolder));
+                if (parentFolder)
+                    MaybeRestoreFromBackup(*aResult, parentFolder);
+
                 return NS_OK;
             }
         }
@@ -4294,6 +4408,10 @@ nsBookmarksService::GetBookmarksFile(nsIFile* *aResult)
     // directory using the magic directory service.
     rv = NS_GetSpecialDirectory(NS_APP_BOOKMARKS_50_FILE, aResult);
     NS_ENSURE_SUCCESS(rv, rv);
+
+    NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(parentFolder));
+    if (parentFolder)
+        MaybeRestoreFromBackup(*aResult, parentFolder);
 
     return NS_OK;
 }

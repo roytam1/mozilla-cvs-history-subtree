@@ -628,6 +628,7 @@ NS_INTERFACE_MAP_BEGIN(nsDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentEvent)
   NS_INTERFACE_MAP_ENTRY(nsIDOM3DocumentEvent)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentStyle)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSDocumentStyle)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentView)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentRange)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentTraversal)
@@ -2308,7 +2309,7 @@ nsDocument::CreateTextNode(const nsAString& aData, nsIDOMText** aReturn)
   *aReturn = nsnull;
 
   nsCOMPtr<nsITextContent> text;
-  nsresult rv = NS_NewTextNode(getter_AddRefs(text));
+  nsresult rv = NS_NewTextNode(getter_AddRefs(text), this);
 
   if (NS_SUCCEEDED(rv)) {
     rv = CallQueryInterface(text, aReturn);
@@ -2330,7 +2331,7 @@ nsDocument::CreateComment(const nsAString& aData, nsIDOMComment** aReturn)
   *aReturn = nsnull;
 
   nsCOMPtr<nsIContent> comment;
-  nsresult rv = NS_NewCommentNode(getter_AddRefs(comment));
+  nsresult rv = NS_NewCommentNode(getter_AddRefs(comment), this);
 
   if (NS_SUCCEEDED(rv)) {
     rv = CallQueryInterface(comment, aReturn);
@@ -2355,7 +2356,7 @@ nsDocument::CreateCDATASection(const nsAString& aData,
     return NS_ERROR_DOM_INVALID_CHARACTER_ERR;
 
   nsCOMPtr<nsIContent> content;
-  nsresult rv = NS_NewXMLCDATASection(getter_AddRefs(content));
+  nsresult rv = NS_NewXMLCDATASection(getter_AddRefs(content), this);
 
   if (NS_SUCCEEDED(rv)) {
     rv = CallQueryInterface(content, aReturn);
@@ -2376,7 +2377,8 @@ nsDocument::CreateProcessingInstruction(const nsAString& aTarget,
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIContent> content;
-  rv = NS_NewXMLProcessingInstruction(getter_AddRefs(content), aTarget, aData);
+  rv = NS_NewXMLProcessingInstruction(getter_AddRefs(content), aTarget, aData,
+                                      this);
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -2550,6 +2552,18 @@ nsDocument::GetStyleSheets(nsIDOMStyleSheetList** aStyleSheets)
   *aStyleSheets = mDOMStyleSheets;
   NS_ADDREF(*aStyleSheets);
 
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDocument::GetPreferredStylesheetSet(nsAString& aStyleTitle)
+{
+  if (mCSSLoader) {
+    mCSSLoader->GetPreferredSheet(aStyleTitle);
+  }
+  else {
+    aStyleTitle.Truncate();
+  }
   return NS_OK;
 }
 
@@ -2918,6 +2932,10 @@ nsDocument::GetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject** aResult)
       contractID += "-listbox";
     else if (tag == nsXULAtoms::scrollbox)
       contractID += "-scrollbox";
+#ifndef MOZ_ENABLE_CAIRO
+    else if (tag == nsXULAtoms::canvas)
+      contractID += "-canvas";
+#endif
   }
   contractID += ";1";
 

@@ -1428,7 +1428,8 @@ nsTextControlFrame::CalculateSizeStandard(nsPresContext*       aPresContext,
   fontMet->GetMaxAdvance(charMaxAdvance);
 
   // Set the width equal to the width in characters
-  aDesiredSize.width = GetCols() * charWidth;
+  PRInt32 cols = GetCols();
+  aDesiredSize.width = cols * charWidth;
 
   // To better match IE, take the maximum character width(in twips) and remove
   // 4 pixels add this on as additional padding(internalPadding). But only do
@@ -1453,6 +1454,17 @@ nsTextControlFrame::CalculateSizeStandard(nsPresContext*       aPresContext,
     // in Full Standards mode, see BRFrame::Reflow and bug 228752.
     if (aPresContext->CompatibilityMode() == eCompatibility_FullStandards) {
       aDesiredSize.width += 1;
+    }
+  }
+
+  // Increment width with cols * letter-spacing.
+  {
+    const nsStyleCoord& lsCoord = GetStyleText()->mLetterSpacing;
+    if (eStyleUnit_Coord == lsCoord.GetUnit()) {
+      nscoord letterSpacing = lsCoord.GetCoordValue();
+      if (letterSpacing != 0) {
+        aDesiredSize.width += cols * letterSpacing;
+      }
     }
   }
 
@@ -1622,12 +1634,12 @@ nsTextControlFrame::CreateAnonymousContent(nsPresContext* aPresContext,
   if (!IsSingleLineTextControl()) {
     // We can't just inherit the overflow because setting visible overflow will
     // crash when the number of lines exceeds the height of the textarea and
-    // setting -moz-hidden-unscrollable overflow (NS_STYLE_OVERFLOW_HIDDEN)
+    // setting -moz-hidden-unscrollable overflow (NS_STYLE_OVERFLOW_CLIP)
     // doesn't paint the caret for some reason.
     const nsStyleDisplay* disp = GetStyleDisplay();
     if (disp->mOverflow != NS_STYLE_OVERFLOW_AUTO &&  // this is the default
         disp->mOverflow != NS_STYLE_OVERFLOW_VISIBLE &&
-        disp->mOverflow != NS_STYLE_OVERFLOW_HIDDEN) {
+        disp->mOverflow != NS_STYLE_OVERFLOW_CLIP) {
       rv = divContent->SetAttr(kNameSpaceID_None, nsHTMLAtoms::style,
                                NS_LITERAL_STRING("overflow: inherit;"),
                                PR_FALSE);

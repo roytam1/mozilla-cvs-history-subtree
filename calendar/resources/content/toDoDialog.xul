@@ -398,6 +398,10 @@
              
             <!-- Repeat -->    
                <vbox>
+                  <label id="repeat-start-warning"
+                         class="warning-text-class"
+                         value="&newtodo.repeatstart.warning;"
+                         collapsed="true"/>
                   <hbox id="repeat-box" align="center">
                      <checkbox id="repeat-checkbox"
                                class="proper-align"
@@ -407,7 +411,7 @@
                      <textbox id="repeat-length-field"
                               class="cursor-pointer"
                               disable-controller="repeat"
-                              value="1"
+                              value=""
                               oninput="repeatLengthKeyDown( this )"/>
                               
                      <menulist crop="none"
@@ -521,31 +525,29 @@
                                disable-controller="repeat"
                                label="&newevent.forever.label;"
                                oncommand="commandUntil()"/>
-                           <hbox>
-                              <radio id="repeat-numberoftimes-radio"
-                                     disable-controller="repeat"
-                                     label="&newevent.numberoftimes.label;"
-                                     oncommand=""/>
-                              <textbox id="repeat-numberoftimes-textbox"
-                                       disable-controller="repeat"/>
-                           </hbox>
-                        <vbox id="repeat-end-box" align="center">
-                            <hbox>
-                                <radio id="repeat-until-radio"
-                                       disable-controller="repeat"
-                                       label="&newevent.until.label;"
-                                       oncommand="commandUntil()"/>
-                                 <spacer id="until-spacer"/>
-                                 <datepicker id="repeat-end-date-picker"
-                                             disable-controller="repeat"
-                                             value=""
-                                             onchange="commandUntil()"/>
-                              </hbox>
-                              <label id="repeat-time-warning"
-                                     class="warning-text-class"
-                                     value="&newevent.recurend.warning;"
-                                     collapsed="true"/>
-                        </vbox>
+                        <hbox>
+                           <radio id="repeat-numberoftimes-radio"
+                                  disable-controller="repeat"
+                                  label="&newevent.numberoftimes.label;"
+                                  oncommand="commandUntil()"/>
+                           <textbox id="repeat-numberoftimes-textbox"
+                                    disable-controller="repeat"/>
+                        </hbox>
+                        <hbox>
+                            <radio id="repeat-until-radio"
+                                   disable-controller="repeat"
+                                   label="&newevent.until.label;"
+                                   oncommand="commandUntil()"/>
+                             <spacer id="until-spacer"/>
+                             <datepicker id="repeat-end-date-picker"
+                                         disable-controller="repeat"
+                                         value=""
+                                         onchange="commandUntil()"/>
+                        </hbox>
+                        <label id="repeat-time-warning"
+                               class="warning-text-class"
+                               value="&newevent.recurend.warning;"
+                               collapsed="true"/>
                      </radiogroup>
                   </hbox>
                     

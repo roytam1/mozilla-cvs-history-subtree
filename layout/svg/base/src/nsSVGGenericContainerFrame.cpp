@@ -42,19 +42,13 @@
 #include "nsISVGChildFrame.h"
 #include "nsISVGContainerFrame.h"
 #include "nsISVGRendererCanvas.h"
-#include "nsWeakReference.h"
-#include "nsISVGValue.h"
-#include "nsISVGValueObserver.h"
 #include "nsISVGOuterSVGFrame.h"
 
 typedef nsContainerFrame nsSVGGenericContainerFrameBase;
 
 class nsSVGGenericContainerFrame : public nsSVGGenericContainerFrameBase,
                                    public nsISVGChildFrame,
-                                   public nsISVGContainerFrame,
-                                   public nsISVGValueObserver,
-                                   public nsSupportsWeakReference
-
+                                   public nsISVGContainerFrame
 {
   friend nsresult
   NS_NewSVGGenericContainerFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
@@ -101,26 +95,22 @@ public:
                                nsIAtom*        aAttribute,
                                PRInt32         aModType);
 
-  // nsISVGValueObserver
-  NS_IMETHOD WillModifySVGObservable(nsISVGValue* observable);
-  NS_IMETHOD DidModifySVGObservable (nsISVGValue* observable);
-
-  // nsISupportsWeakReference
-  // implementation inherited from nsSupportsWeakReference
 
   // nsISVGChildFrame interface:
   NS_IMETHOD Paint(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips);
   NS_IMETHOD GetFrameForPoint(float x, float y, nsIFrame** hit);  
   NS_IMETHOD_(already_AddRefed<nsISVGRendererRegion>) GetCoveredRegion();
   NS_IMETHOD InitialUpdate();
-  NS_IMETHOD NotifyCTMChanged();
+  NS_IMETHOD NotifyCanvasTMChanged();
   NS_IMETHOD NotifyRedrawSuspended();
   NS_IMETHOD NotifyRedrawUnsuspended();
   NS_IMETHOD GetBBox(nsIDOMSVGRect **_retval);
   
   // nsISVGContainerFrame interface:
-  NS_IMETHOD_(nsISVGOuterSVGFrame*) GetOuterSVGFrame();
-
+  nsISVGOuterSVGFrame*GetOuterSVGFrame();
+  already_AddRefed<nsIDOMSVGMatrix> GetCanvasTM();
+  already_AddRefed<nsSVGCoordCtxProvider> GetCoordContextProvider();
+  
 protected:
 };
 
@@ -164,8 +154,6 @@ nsresult nsSVGGenericContainerFrame::Init()
 NS_INTERFACE_MAP_BEGIN(nsSVGGenericContainerFrame)
   NS_INTERFACE_MAP_ENTRY(nsISVGChildFrame)
   NS_INTERFACE_MAP_ENTRY(nsISVGContainerFrame)
-  NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
-  NS_INTERFACE_MAP_ENTRY(nsISVGValueObserver)
 NS_INTERFACE_MAP_END_INHERITING(nsSVGGenericContainerFrameBase)
 
 
@@ -286,30 +274,6 @@ nsSVGGenericContainerFrame::AttributeChanged(nsPresContext* aPresContext,
 
 
 //----------------------------------------------------------------------
-// nsISVGValueObserver methods:
-
-NS_IMETHODIMP
-nsSVGGenericContainerFrame::WillModifySVGObservable(nsISVGValue* observable)
-{
-  return NS_OK;
-}
-
-
-NS_IMETHODIMP
-nsSVGGenericContainerFrame::DidModifySVGObservable(nsISVGValue* observable)
-{
-  for (nsIFrame* kid = mFrames.FirstChild(); kid;
-       kid = kid->GetNextSibling()) {
-    nsISVGChildFrame* SVGFrame=nsnull;
-    kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
-    if (SVGFrame)
-      SVGFrame->NotifyCTMChanged();
-  }  
-  return NS_OK;
-}
-
-
-//----------------------------------------------------------------------
 // nsISVGChildFrame methods
 
 NS_IMETHODIMP
@@ -398,14 +362,14 @@ nsSVGGenericContainerFrame::InitialUpdate()
 }  
 
 NS_IMETHODIMP
-nsSVGGenericContainerFrame::NotifyCTMChanged()
+nsSVGGenericContainerFrame::NotifyCanvasTMChanged()
 {
   for (nsIFrame* kid = mFrames.FirstChild(); kid;
        kid = kid->GetNextSibling()) {
     nsISVGChildFrame* SVGFrame=nsnull;
     kid->QueryInterface(NS_GET_IID(nsISVGChildFrame),(void**)&SVGFrame);
     if (SVGFrame) {
-      SVGFrame->NotifyCTMChanged();
+      SVGFrame->NotifyCanvasTMChanged();
     }
   }
   return NS_OK;
@@ -449,7 +413,7 @@ nsSVGGenericContainerFrame::GetBBox(nsIDOMSVGRect **_retval)
 //----------------------------------------------------------------------
 // nsISVGContainerFrame methods:
 
-NS_IMETHODIMP_(nsISVGOuterSVGFrame *)
+nsISVGOuterSVGFrame *
 nsSVGGenericContainerFrame::GetOuterSVGFrame()
 {
   NS_ASSERTION(mParent, "null parent");
@@ -463,3 +427,34 @@ nsSVGGenericContainerFrame::GetOuterSVGFrame()
 
   return containerFrame->GetOuterSVGFrame();  
 }
+
+already_AddRefed<nsIDOMSVGMatrix>
+nsSVGGenericContainerFrame::GetCanvasTM()
+{
+  NS_ASSERTION(mParent, "null parent");
+  
+  nsISVGContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGContainerFrame), (void**)&containerFrame);
+  if (!containerFrame) {
+    NS_ERROR("invalid container");
+    return nsnull;
+  }
+
+  return containerFrame->GetCanvasTM();  
+}
+
+already_AddRefed<nsSVGCoordCtxProvider>
+nsSVGGenericContainerFrame::GetCoordContextProvider()
+{
+  NS_ASSERTION(mParent, "null parent");
+  
+  nsISVGContainerFrame *containerFrame;
+  mParent->QueryInterface(NS_GET_IID(nsISVGContainerFrame), (void**)&containerFrame);
+  if (!containerFrame) {
+    NS_ERROR("invalid container");
+    return nsnull;
+  }
+
+  return containerFrame->GetCoordContextProvider();  
+}
+

@@ -438,6 +438,7 @@ PRUint32             nsXULPrototypeAttribute::gNumCacheFills;
 
 nsXULElement::nsXULElement()
     : mPrototype(nsnull),
+      mDocument(nsnull),
       mBindingParent(nsnull),
       mSlots(nsnull)
 {
@@ -632,8 +633,9 @@ nsXULElement::GetNodeType(PRUint16* aNodeType)
 NS_IMETHODIMP
 nsXULElement::GetParentNode(nsIDOMNode** aParentNode)
 {
-    if (GetParent()) {
-        return CallQueryInterface(GetParent(), aParentNode);
+    nsIContent *parent = GetParent();
+    if (parent) {
+        return CallQueryInterface(parent, aParentNode);
     }
 
     if (mDocument) {
@@ -704,10 +706,11 @@ nsXULElement::GetLastChild(nsIDOMNode** aLastChild)
 NS_IMETHODIMP
 nsXULElement::GetPreviousSibling(nsIDOMNode** aPreviousSibling)
 {
-    if (GetParent()) {
-        PRInt32 pos = GetParent()->IndexOf(this);
+    nsIContent *parent = GetParent();
+    if (parent) {
+        PRInt32 pos = parent->IndexOf(this);
         if (pos > 0) {
-            nsIContent *prev = GetParent()->GetChildAt(--pos);
+            nsIContent *prev = parent->GetChildAt(--pos);
             if (prev) {
                 nsresult rv = CallQueryInterface(prev, aPreviousSibling);
                 NS_ASSERTION(*aPreviousSibling, "not a DOM node");
@@ -726,10 +729,11 @@ nsXULElement::GetPreviousSibling(nsIDOMNode** aPreviousSibling)
 NS_IMETHODIMP
 nsXULElement::GetNextSibling(nsIDOMNode** aNextSibling)
 {
-    if (GetParent()) {
-        PRInt32 pos = GetParent()->IndexOf(this);
+    nsIContent *parent = GetParent();
+    if (parent) {
+        PRInt32 pos = parent->IndexOf(this);
         if (pos > -1) {
-            nsIContent *next = GetParent()->GetChildAt(++pos);
+            nsIContent *next = parent->GetChildAt(++pos);
             if (next) {
                 nsresult rv = CallQueryInterface(next, aNextSibling);
                 NS_ASSERTION(*aNextSibling, "not a DOM Node");
@@ -767,14 +771,13 @@ nsXULElement::GetAttributes(nsIDOMNamedNodeMap** aAttributes)
 NS_IMETHODIMP
 nsXULElement::GetOwnerDocument(nsIDOMDocument** aOwnerDocument)
 {
-    if (mDocument) {
-        return CallQueryInterface(mDocument, aOwnerDocument);
+    nsIDocument *document = GetOwnerDoc();
+    if (document) {
+        return CallQueryInterface(document, aOwnerDocument);
     }
-    nsIDocument* doc = nsContentUtils::GetDocument(NodeInfo());
-    if (doc) {
-        return CallQueryInterface(doc, aOwnerDocument);
-    }
+
     *aOwnerDocument = nsnull;
+
     return NS_OK;
 }
 
@@ -895,11 +898,11 @@ nsXULElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
         NS_ENSURE_TRUE(mSlots, NS_ERROR_UNEXPECTED);
 
         rv = NS_NewXULElement(getter_AddRefs(result), mSlots->mNodeInfo);
-        if (NS_SUCCEEDED(rv)) {
-            // XXX setting document on nodes not in a document so XBL will bind
-            // and chrome won't break. Make XBL bind to document-less nodes!
-            result->SetDocument(mDocument, PR_TRUE, PR_TRUE);
-        }
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        // XXX setting document on nodes not in a document so XBL will bind
+        // and chrome won't break. Make XBL bind to document-less nodes!
+        result->SetDocument(mDocument, PR_TRUE, PR_TRUE);
     }
 
     // Copy attributes
@@ -1634,7 +1637,7 @@ nsXULElement::SetDocument(nsIDocument* aDocument, PRBool aDeep,
           mListenerManager->SetListenerTarget(nsnull);
         mListenerManager = nsnull;
 
-        nsIContent::SetDocument(aDocument, aDeep, aCompileEventHandlers);
+        mDocument = aDocument;
 
         if (mDocument) {
             // When we SetDocument(), we're either adding an element
@@ -1682,7 +1685,8 @@ nsXULElement::SetDocument(nsIDocument* aDocument, PRBool aDeep,
 void
 nsXULElement::SetParent(nsIContent* aParent)
 {
-    nsIContent::SetParent(aParent);
+    mParentPtrBits = NS_REINTERPRET_CAST(PtrBits, aParent);
+
     if (aParent) {
       nsIContent* bindingPar = aParent->GetBindingParent();
       if (bindingPar)
@@ -1693,7 +1697,8 @@ nsXULElement::SetParent(nsIContent* aParent)
 PRBool
 nsXULElement::IsNativeAnonymous() const
 {
-    return PR_FALSE;
+    // XXX Workaround to prevent code from discovering scrollbars - bug 251197
+    return NodeInfo()->Equals(nsXULAtoms::scrollbar);
 }
 
 void
@@ -2634,7 +2639,7 @@ nsXULElement::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
 
     nsIDOMEvent* domEvent = nsnull;
     if (NS_EVENT_FLAG_INIT & aFlags) {
-        if (aEvent->message == NS_XUL_COMMAND) {
+        if (aEvent->message == NS_XUL_COMMAND && Tag() != nsXULAtoms::command) {
             // See if we have a command elt.  If so, we execute on the command instead
             // of on our content element.
             nsAutoString command;
@@ -2644,7 +2649,9 @@ nsXULElement::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
                 nsCOMPtr<nsIDOMElement> commandElt;
                 domDoc->GetElementById(command, getter_AddRefs(commandElt));
                 nsCOMPtr<nsIContent> commandContent(do_QueryInterface(commandElt));
-                if (commandContent) {
+                if (commandContent &&
+                    commandContent->IsContentOfType(nsIContent::eXUL) &&
+                    commandContent->Tag() == nsXULAtoms::command) {
                     return commandContent->HandleDOMEvent(aPresContext, aEvent, nsnull, NS_EVENT_FLAG_INIT, aEventStatus);
                 }
                 else {

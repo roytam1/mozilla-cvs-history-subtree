@@ -267,7 +267,7 @@ nsWindowsShellService::IsDefaultBrowser(PRBool aStartupCheck, PRBool* aIsDefault
   nsCAutoString exeName;
   if (pathSep) {
     PRInt32 n = pathSep - buf; 
-    exeName = Substring(appPath, n + 1, appPath.Length() - (n - 1));
+    exeName = Substring(appPath, n + 1, appPath.Length() - (n + 1));
   }
   else
     exeName = appPath;
@@ -334,7 +334,7 @@ nsWindowsShellService::SetDefaultBrowser(PRBool aClaimAllTypes, PRBool aForAllUs
   nsCAutoString exeName;
   if (pathSep) {
     PRInt32 n = pathSep - buf; 
-    exeName = Substring(appPath, n + 1, appPath.Length() - (n - 1));
+    exeName = Substring(appPath, n + 1, appPath.Length() - (n + 1));
   }
   else
     exeName = appPath;
@@ -597,7 +597,8 @@ nsWindowsShellService::SetDesktopBackground(nsIDOMElement* aElement,
     if (!request) return rv;
     nsCOMPtr<imgIContainer> container;
     rv = request->GetImage(getter_AddRefs(container));
-    if (!request) return rv;
+    if (!container)
+      return NS_ERROR_FAILURE;
 
     // get the current frame, which holds the image data
     container->GetCurrentFrame(getter_AddRefs(gfxFrame));

@@ -467,7 +467,7 @@ public:
   NS_IMETHOD GetOffsets(PRInt32 &start, PRInt32 &end)const;
 
   virtual void AdjustOffsetsForBidi(PRInt32 start, PRInt32 end);
-
+  
   NS_IMETHOD GetPointFromOffset(nsPresContext*         inPresContext,
                                 nsIRenderingContext*    inRendContext,
                                 PRInt32                 inOffset,
@@ -1274,6 +1274,12 @@ DrawSelectionIterator::IsBeforeOrAfter()
 
 #define TEXT_BLINK_ON        0x80000000
 
+#define TEXT_IS_ONLY_WHITESPACE    0x00100000
+
+#define TEXT_ISNOT_ONLY_WHITESPACE 0x00200000
+
+#define TEXT_WHITESPACE_FLAGS      0x00300000
+
 //----------------------------------------------------------------------
 
 nsresult
@@ -1389,6 +1395,7 @@ nsTextFrame::CharacterDataChanged(nsPresContext* aPresContext,
   if (aAppend) {
     markAllDirty = PR_FALSE;
     nsTextFrame* frame = (nsTextFrame*)GetLastInFlow();
+    frame->mState &= ~TEXT_WHITESPACE_FLAGS;
     frame->mState |= NS_FRAME_IS_DIRTY;
     targetTextFrame = frame;
   }
@@ -1397,6 +1404,7 @@ nsTextFrame::CharacterDataChanged(nsPresContext* aPresContext,
     // Mark this frame and all the next-in-flow frames as dirty
     nsTextFrame*  textFrame = this;
     while (textFrame) {
+      textFrame->mState &= ~TEXT_WHITESPACE_FLAGS;
       textFrame->mState |= NS_FRAME_IS_DIRTY;
 #ifdef IBMBIDI
       void* nextBidiFrame;
@@ -5826,17 +5834,32 @@ nsTextFrame::GetType() const
 /* virtual */ PRBool
 nsTextFrame::IsEmpty()
 {
-    // XXXldb Should this check compatibility mode as well???
+  NS_ASSERTION(!(mState & TEXT_IS_ONLY_WHITESPACE) ||
+               !(mState & TEXT_ISNOT_ONLY_WHITESPACE),
+               "Invalid state");
+  
+  // XXXldb Should this check compatibility mode as well???
   if (GetStyleText()->WhiteSpaceIsSignificant()) {
     return PR_FALSE;
   }
 
+  if (mState & TEXT_ISNOT_ONLY_WHITESPACE) {
+    return PR_FALSE;
+  }
+
+  if (mState & TEXT_IS_ONLY_WHITESPACE) {
+    return PR_TRUE;
+  }
+  
   nsCOMPtr<nsITextContent> textContent( do_QueryInterface(mContent) );
   if (! textContent) {
     NS_NOTREACHED("text frame has no text content");
     return PR_TRUE;
   }
-  return textContent->IsOnlyWhitespace();
+  
+  PRBool isEmpty = textContent->IsOnlyWhitespace();
+  mState |= (isEmpty ? TEXT_IS_ONLY_WHITESPACE : TEXT_ISNOT_ONLY_WHITESPACE);
+  return isEmpty;
 }
 
 #ifdef DEBUG

@@ -44,6 +44,8 @@
 #include "nsContentUtils.h"
 #include "nsUnicharUtils.h"
 #include "nsDOMString.h"
+#include "nsIDocument.h"
+#include "nsIDOMDocument.h"
 
 //----------------------------------------------------------------------
 
@@ -245,6 +247,7 @@ nsDOMAttribute::GetFirstChild(nsIDOMNode** aFirstChild)
       if (NS_FAILED(result)) {
         return result;
       }
+      // XXX We should be setting |this| as the parent of the textnode!
       result = CallQueryInterface(content, &mChild);
     }
     mChild->SetData(value);
@@ -338,18 +341,23 @@ nsDOMAttribute::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 NS_IMETHODIMP
 nsDOMAttribute::GetOwnerDocument(nsIDOMDocument** aOwnerDocument)
 {
-  nsresult result = NS_OK;
+  *aOwnerDocument = nsnull;
+
+  nsresult rv = NS_OK;
   if (mContent) {
-    nsCOMPtr<nsIDOMNode> node = do_QueryInterface(mContent, &result);
-    if (NS_SUCCEEDED(result)) {
-      result = node->GetOwnerDocument(aOwnerDocument);
+    nsCOMPtr<nsIDOMNode> node = do_QueryInterface(mContent, &rv);
+    if (NS_SUCCEEDED(rv)) {
+      rv = node->GetOwnerDocument(aOwnerDocument);
     }
   }
   else {
-    *aOwnerDocument = nsnull;
+    nsIDocument *document = mNodeInfo->GetDocument();
+    if (document) {
+      rv = CallQueryInterface(document, aOwnerDocument);
+    }
   }
 
-  return result;
+  return rv;
 }
 
 NS_IMETHODIMP

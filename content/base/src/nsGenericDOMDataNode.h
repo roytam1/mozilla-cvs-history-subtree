@@ -55,15 +55,14 @@ class nsIDOMText;
 class nsINodeInfo;
 class nsURI;
 
-#define PARENT_BIT_RANGELISTS       ((PtrBits)0x1 << 0)
-#define PARENT_BIT_LISTENERMANAGER  ((PtrBits)0x1 << 1)
+#define PARENT_BIT_RANGELISTS_OR_LISTENERMANAGER ((PtrBits)0x1 << 0)
 
 class nsGenericDOMDataNode : public nsITextContent
 {
 public:
   NS_DECL_ISUPPORTS
 
-  nsGenericDOMDataNode();
+  nsGenericDOMDataNode(nsIDocument *aDocument);
   virtual ~nsGenericDOMDataNode();
 
   // Implementation for nsIDOMNode
@@ -166,8 +165,30 @@ public:
                        const nsAString& aArg);
 
   // Implementation for nsIContent
+  nsIDocument* GetDocument() const;
   virtual void SetDocument(nsIDocument* aDocument, PRBool aDeep,
                            PRBool aCompileEventHandlers);
+  PRBool IsInDoc() const
+  {
+    return !!mDocument;
+  }
+
+  nsIDocument *GetCurrentDoc() const
+  {
+    return mDocument;
+  }
+
+  nsIDocument *GetOwnerDoc() const
+  {
+    if (mDocument) {
+      return mDocument;
+    }
+
+    nsIContent *parent = GetParent();
+
+    return parent ? parent->GetOwnerDoc() : nsnull;
+  }
+
   virtual void SetParent(nsIContent* aParent);
   virtual PRBool IsNativeAnonymous() const;
   virtual void SetNativeAnonymous(PRBool aAnonymous);
@@ -234,6 +255,9 @@ public:
 
   //----------------------------------------
 
+  already_AddRefed<nsITextContent> CloneContent(PRBool aCloneText,
+                                                nsIDocument *aOwnerDocument);
+
 #ifdef DEBUG
   void ToCString(nsAString& aBuf, PRInt32 aOffset, PRInt32 aLen) const;
 #endif
@@ -250,36 +274,38 @@ private:
   void SetBidiStatus();
 
   already_AddRefed<nsIAtom> GetCurrentValueAtom();
-  
+
   void SetHasRangeList(PRBool aHasRangeList)
   {
     if (aHasRangeList) {
-      mParentPtrBits |= PARENT_BIT_RANGELISTS;
+      mParentPtrBits |= PARENT_BIT_RANGELISTS_OR_LISTENERMANAGER;
     } else {
-      mParentPtrBits &= ~PARENT_BIT_RANGELISTS;
+      mParentPtrBits &= ~PARENT_BIT_RANGELISTS_OR_LISTENERMANAGER;
     }
   }
 
   void SetHasEventListenerManager(PRBool aHasRangeList)
   {
     if (aHasRangeList) {
-      mParentPtrBits |= PARENT_BIT_LISTENERMANAGER;
+      mParentPtrBits |= PARENT_BIT_RANGELISTS_OR_LISTENERMANAGER;
     } else {
-      mParentPtrBits &= ~PARENT_BIT_LISTENERMANAGER;
+      mParentPtrBits &= ~PARENT_BIT_RANGELISTS_OR_LISTENERMANAGER;
     }
   }
 
   PRBool HasRangeList() const
   {
-    return (mParentPtrBits & PARENT_BIT_RANGELISTS &&
+    return (mParentPtrBits & PARENT_BIT_RANGELISTS_OR_LISTENERMANAGER &&
             nsGenericElement::sRangeListsHash.ops);
   }
 
   PRBool HasEventListenerManager() const
   {
-    return (mParentPtrBits & PARENT_BIT_LISTENERMANAGER &&
+    return (mParentPtrBits & PARENT_BIT_RANGELISTS_OR_LISTENERMANAGER &&
             nsGenericElement::sEventListenerManagersHash.ops);
   }
+
+  nsIDocument *mDocument;
 };
 
 //----------------------------------------------------------------------

@@ -38,7 +38,7 @@
 #include "nsGenericDOMDataNode.h"
 #include "nsLayoutAtoms.h"
 #include "nsCOMPtr.h"
-
+#include "nsIDocument.h"
 #include "nsContentUtils.h"
 
 
@@ -46,7 +46,7 @@ class nsCommentNode : public nsGenericDOMDataNode,
                       public nsIDOMComment
 {
 public:
-  nsCommentNode();
+  nsCommentNode(nsIDocument *aDocument);
   virtual ~nsCommentNode();
 
   // nsISupports
@@ -73,22 +73,25 @@ public:
   }
 #endif
 
-  // nsITextContent
-  virtual already_AddRefed<nsITextContent> CloneContent(PRBool aCloneText);
+  virtual already_AddRefed<nsITextContent> CloneContent(PRBool aCloneText,
+                                                        nsIDocument *aOwnerDocument);
 };
 
 nsresult
-NS_NewCommentNode(nsIContent** aInstancePtrResult)
+NS_NewCommentNode(nsIContent** aInstancePtrResult, nsIDocument *aOwnerDocument)
 {
-  *aInstancePtrResult = new nsCommentNode();
-  NS_ENSURE_TRUE(*aInstancePtrResult, NS_ERROR_OUT_OF_MEMORY);
+  *aInstancePtrResult = nsnull;
 
-  NS_ADDREF(*aInstancePtrResult);
+  nsCOMPtr<nsIContent> instance = new nsCommentNode(nsnull);
+  NS_ENSURE_TRUE(instance, NS_ERROR_OUT_OF_MEMORY);
+
+  instance.swap(*aInstancePtrResult);
 
   return NS_OK;
 }
 
-nsCommentNode::nsCommentNode()
+nsCommentNode::nsCommentNode(nsIDocument *aDocument)
+  : nsGenericDOMDataNode(aDocument)
 {
 }
 
@@ -146,16 +149,16 @@ nsCommentNode::GetNodeType(PRUint16* aNodeType)
 NS_IMETHODIMP
 nsCommentNode::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 {
-  nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE);
+  nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE, GetOwnerDoc());
   NS_ENSURE_TRUE(textContent, NS_ERROR_OUT_OF_MEMORY);
 
   return CallQueryInterface(textContent, aReturn);
 }
 
 already_AddRefed<nsITextContent>
-nsCommentNode::CloneContent(PRBool aCloneText)
+nsCommentNode::CloneContent(PRBool aCloneText, nsIDocument *aOwnerDocument)
 {
-  nsCommentNode* it = new nsCommentNode();
+  nsCommentNode* it = new nsCommentNode(nsnull);
   if (!it)
     return nsnull;
 
@@ -172,7 +175,7 @@ nsCommentNode::CloneContent(PRBool aCloneText)
 void
 nsCommentNode::List(FILE* out, PRInt32 aIndent) const
 {
-  NS_PRECONDITION(mDocument, "bad content");
+  NS_PRECONDITION(IsInDoc(), "bad content");
 
   PRInt32 indx;
   for (indx = aIndent; --indx >= 0; ) fputs("  ", out);

@@ -113,8 +113,11 @@
 #include "nsScrollPortFrame.h"
 #include "nsXULAtoms.h"
 #include "nsBoxFrame.h"
+#ifdef MOZ_ENABLE_CAIRO
+#include "nsCanvasFrame.h"
+#endif
 
-static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
+static NS_DEFINE_CID(kEventQueueServiceCID,   NS_EVENTQUEUESERVICE_CID);
 
 #include "nsIDOMWindowInternal.h"
 #include "nsIMenuFrame.h"
@@ -146,9 +149,12 @@ static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
 #ifdef MOZ_SVG
 #include "nsSVGAtoms.h"
 #include "nsISVGTextContainerFrame.h"
+#include "nsISVGContainerFrame.h"
 
 nsresult
 NS_NewSVGOuterSVGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+nsresult
+NS_NewSVGInnerSVGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
 nsresult
 NS_NewSVGPolylineFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
 nsresult
@@ -169,13 +175,13 @@ nsresult
 NS_NewSVGForeignObjectFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
 nsresult
 NS_NewSVGPathFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
-extern nsresult
+nsresult
 NS_NewSVGGlyphFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame* parent, nsIFrame** aNewFrame);
-extern nsresult
+nsresult
 NS_NewSVGTextFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
-extern nsresult
+nsresult
 NS_NewSVGTSpanFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame* parent, nsIFrame** aNewFrame);
-extern nsresult
+nsresult
 NS_NewSVGDefsFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
 #endif
 
@@ -296,6 +302,11 @@ NS_NewListBoxScrollPortFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
 
 nsresult
 NS_NewTreeBodyFrame (nsIPresShell* aPresShell, nsIFrame** aNewFrame);
+
+#ifdef MOZ_ENABLE_CAIRO
+nsresult
+NS_NewCanvasXULFrame (nsIPresShell* aPresShell, nsIFrame** aNewFrame);
+#endif
 
 // grid
 nsresult
@@ -1300,6 +1311,14 @@ nsCSSFrameConstructor::nsCSSFrameConstructor(nsIDocument *aDocument)
       nsContentUtils::GetBoolPref("nglayout.debug.enable_xbl_forms");
   }
 
+  // XXXbz this should be in Init() or something!
+  if (!mPendingRestyles.Init()) {
+    // now what?
+  }
+
+  // XXXbz this should be in Init() or something!
+  mEventQueueService = do_GetService(kEventQueueServiceCID);
+  
 #ifdef DEBUG
   static PRBool gFirstTime = PR_TRUE;
   if (gFirstTime) {
@@ -1476,8 +1495,7 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsPresContext*       aPresContext
           rv = NS_NewAttributeContent(aContent, attrNameSpace, attrName,
                                       getter_AddRefs(content));
 
-          // Set aContent as the parent content and set the document
-          // object. This way event handling works
+          // Set aContent as the parent content so that event handling works.
           content->SetParent(aContent);
           content->SetDocument(aDocument, PR_TRUE, PR_TRUE);
           content->SetNativeAnonymous(PR_TRUE);
@@ -1532,17 +1550,16 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsPresContext*       aPresContext
 
     // Create a text content node
     nsIFrame* textFrame = nsnull;
-    nsCOMPtr<nsIContent> textContent = do_CreateInstance(kTextNodeCID);
+    nsCOMPtr<nsITextContent> textContent;
+    NS_NewTextNode(getter_AddRefs(textContent));
     if (textContent) {
       // Set the text
-      nsCOMPtr<nsIDOMCharacterData> domData = do_QueryInterface(textContent);
-      domData->SetData(contentString);
+      textContent->SetText(contentString, PR_TRUE);
 
       if (textPtr)
-        *textPtr = domData;
+        *textPtr = do_QueryInterface(textContent);
   
-      // Set aContent as the parent content and set the document object. This
-      // way event handling works
+      // Set aContent as the parent content so that event handling works.
       textContent->SetParent(aContent);
       textContent->SetDocument(aDocument, PR_TRUE, PR_TRUE);
       textContent->SetNativeAnonymous(PR_TRUE);
@@ -5301,6 +5318,12 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresShell*            aPresShell,
         processChildren = PR_TRUE;
         rv = NS_NewTreeColFrame(aPresShell, &newFrame);
       }
+#ifdef MOZ_ENABLE_CAIRO
+      else if (aTag == nsXULAtoms::canvas) {
+        isReplaced = PR_TRUE;
+        rv = NS_NewCanvasXULFrame(aPresShell, &newFrame);
+      }
+#endif
       // TEXT CONSTRUCTION
       else if (aTag == nsXULAtoms::text || aTag == nsHTMLAtoms::label ||
                aTag == nsXULAtoms::description) {
@@ -6549,7 +6572,7 @@ nsCSSFrameConstructor::IsScrollable(nsPresContext*       aPresContext,
   switch (aDisplay->mOverflow) {
   	case NS_STYLE_OVERFLOW_SCROLL:
   	case NS_STYLE_OVERFLOW_AUTO:
-  	case NS_STYLE_OVERFLOW_SCROLLBARS_NONE:
+  	case NS_STYLE_OVERFLOW_HIDDEN:
   	case NS_STYLE_OVERFLOW_SCROLLBARS_HORIZONTAL:
   	case NS_STYLE_OVERFLOW_SCROLLBARS_VERTICAL:
 	    return PR_TRUE;
@@ -6853,7 +6876,6 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
   PRBool isAbsolutelyPositioned = PR_FALSE;
   PRBool isFixedPositioned = PR_FALSE;
   PRBool forceView = PR_FALSE;
-  PRBool isBlock = PR_FALSE;
   PRBool processChildren = PR_FALSE;
   
   NS_ASSERTION(aTag != nsnull, "null SVG tag");
@@ -6865,20 +6887,27 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
   //nsSVGTableCreator svgTableCreator(aPresShell); // Used to make table views.
  
   if (aTag == nsSVGAtoms::svg) {
-    // See if the element is absolute or fixed positioned. These
-    // properties only apply to outer SVG elements.
-    const nsStyleDisplay* disp = aStyleContext->GetStyleDisplay();
-    if (NS_STYLE_POSITION_ABSOLUTE == disp->mPosition) {
-      isAbsolutelyPositioned = PR_TRUE;
-    }
-    else if (NS_STYLE_POSITION_FIXED == disp->mPosition) {
-      isFixedPositioned = PR_TRUE;
-    }
-    
-    forceView = PR_TRUE;
-    isBlock = PR_TRUE;
+    nsCOMPtr<nsISVGContainerFrame> container = do_QueryInterface(aParentFrame);
     processChildren = PR_TRUE;
-    rv = NS_NewSVGOuterSVGFrame(aPresShell, aContent, &newFrame);
+    if (!container) {
+      // This is the outermost <svg> element.
+      // See if the element is absolute or fixed positioned. These
+      // properties only apply to outer SVG elements.
+      const nsStyleDisplay* disp = aStyleContext->GetStyleDisplay();
+      if (NS_STYLE_POSITION_ABSOLUTE == disp->mPosition) {
+        isAbsolutelyPositioned = PR_TRUE;
+      }
+      else if (NS_STYLE_POSITION_FIXED == disp->mPosition) {
+        isFixedPositioned = PR_TRUE;
+      }
+    
+      forceView = PR_TRUE;
+      rv = NS_NewSVGOuterSVGFrame(aPresShell, aContent, &newFrame);
+    }
+    else {
+      // This is an inner <svg> element
+      rv = NS_NewSVGInnerSVGFrame(aPresShell, aContent, &newFrame);
+    }
   }
   else if (aTag == nsSVGAtoms::g) {
     processChildren = PR_TRUE;
@@ -6961,7 +6990,7 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
       nsFrameItems childItems;
       if (processChildren) {
         rv = ProcessChildren(aPresShell, aPresContext, aState, aContent,
-                             newFrame, PR_TRUE, childItems, isBlock);
+                             newFrame, PR_TRUE, childItems, PR_FALSE);
 
         CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent, newFrame,
                               PR_FALSE, childItems);
@@ -9879,12 +9908,18 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList,
 void
 nsCSSFrameConstructor::RestyleElement(nsPresContext *aPresContext,
                                       nsIContent     *aContent,
-                                      nsIFrame       *aPrimaryFrame)
+                                      nsIFrame       *aPrimaryFrame,
+                                      nsChangeHint   aMinHint)
 {
-  if (aPrimaryFrame) {
+  if (aMinHint & nsChangeHint_ReconstructFrame) {
+    RecreateFramesForContent(aPresContext, aContent);
+  } else if (aPrimaryFrame) {
     nsStyleChangeList changeList;
+    if (aMinHint != NS_STYLE_HINT_NONE) {
+      changeList.AppendChange(aPrimaryFrame, aContent, aMinHint);
+    }
     nsChangeHint frameChange = aPresContext->GetPresShell()->FrameManager()->
-      ComputeStyleChangeFor(aPrimaryFrame, &changeList, NS_STYLE_HINT_NONE);
+      ComputeStyleChangeFor(aPrimaryFrame, &changeList, aMinHint);
 
     if (frameChange & nsChangeHint_ReconstructFrame) {
       RecreateFramesForContent(aPresContext, aContent);
@@ -9917,7 +9952,7 @@ nsCSSFrameConstructor::RestyleLaterSiblings(nsPresContext *aPresContext,
 
     nsIFrame* primaryFrame = nsnull;
     shell->GetPrimaryFrameFor(child, &primaryFrame);
-    RestyleElement(aPresContext, child, primaryFrame);
+    RestyleElement(aPresContext, child, primaryFrame, NS_STYLE_HINT_NONE);
   }
 }
 
@@ -9964,12 +9999,8 @@ nsCSSFrameConstructor::DoContentStateChanged(nsPresContext* aPresContext,
 
       nsReStyleHint rshint = 
         styleSet->HasStateDependentStyle(aPresContext, aContent, aStateMask);
-      if (rshint & eReStyle_Self) {
-        RestyleElement(aPresContext, aContent, primaryFrame);
-      }
-      if (rshint & eReStyle_LaterSiblings) {
-        RestyleLaterSiblings(aPresContext, aContent);
-      }
+      
+      PostRestyleEvent(aContent, rshint, NS_STYLE_HINT_NONE);
     }
   }
 }
@@ -10059,43 +10090,19 @@ nsCSSFrameConstructor::AttributeChanged(nsPresContext* aPresContext,
                                                                   aAttribute,
                                                                   aModType);
 
-  if (reframe) {
-    result = RecreateFramesForContent(aPresContext, aContent);
-  } else if (primaryFrame) {
-    nsStyleChangeList changeList;
-    // put primary frame on list to deal with, re-resolve may update or add next in flows
-    changeList.AppendChange(primaryFrame, aContent, hint);
-
-    // there is an effect, so compute it
-    if (rshint & eReStyle_Self) {
-      hint = frameManager->ComputeStyleChangeFor(primaryFrame, &changeList,
-                                                 hint);
-    }
-
-    // hint is for primary only
-    if (hint & nsChangeHint_ReconstructFrame) {
-      result = RecreateFramesForContent(aPresContext, aContent);
-      changeList.Clear();
-    } else {
-      // let the frame deal with it, since we don't know how to
-      result = primaryFrame->AttributeChanged(aPresContext, aContent,
-                                              aNameSpaceID, aAttribute,
-                                              aModType);
-      // XXXwaterson should probably check for special IB siblings
-      // here, and propagate the AttributeChanged notification to
-      // them, as well. Currently, inline frames don't do anything on
-      // this notification, so it's not that big a deal.
-
-      // handle any children (primary may be on list too)
-      ProcessRestyledFrames(changeList, aPresContext);
-    }
-  } else if (rshint & eReStyle_Self) {
-    result = MaybeRecreateFramesForContent(aPresContext, aContent);
+  
+  // let the frame deal with it now, so we don't have to deal later
+  if (primaryFrame) {
+    result = primaryFrame->AttributeChanged(aPresContext, aContent,
+                                            aNameSpaceID, aAttribute,
+                                            aModType);
+    // XXXwaterson should probably check for special IB siblings
+    // here, and propagate the AttributeChanged notification to
+    // them, as well. Currently, inline frames don't do anything on
+    // this notification, so it's not that big a deal.
   }
 
-  if (rshint & eReStyle_LaterSiblings) {
-    RestyleLaterSiblings(aPresContext, aContent);
-  }
+  PostRestyleEvent(aContent, rshint, hint);
 
   return result;
 }
@@ -10116,6 +10123,13 @@ nsCSSFrameConstructor::WillDestroyFrameTree()
 {
   // Prevent frame tree destruction from being O(N^2)
   mQuoteList.Clear();
+
+  // Cancel all pending reresolves
+  mRestyleEventQueue = nsnull;
+  nsCOMPtr<nsIEventQueue> eventQueue;
+  mEventQueueService->GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
+                                           getter_AddRefs(eventQueue));
+  eventQueue->RevokeEvents(this);
 }
 
 //STATIC
@@ -10164,16 +10178,15 @@ nsCSSFrameConstructor::ConstructAlternateFrame(nsIPresShell*    aPresShell,
   GetAlternateTextFor(aContent, aContent->Tag(), altText);
 
   // Create a text content element for the alternate text
-  nsCOMPtr<nsIContent> altTextContent(do_CreateInstance(kTextNodeCID,&rv));
+  nsCOMPtr<nsITextContent> altTextContent;
+  rv = NS_NewTextNode(getter_AddRefs(altTextContent));
   if (NS_FAILED(rv))
     return rv;
 
   // Set the content's text
-  nsCOMPtr<nsIDOMCharacterData> domData = do_QueryInterface(altTextContent);
-  if (domData)
-    domData->SetData(altText);
+  altTextContent->SetText(altText, PR_TRUE);
   
-  // Set aContent as the parent content and set the document object
+  // Set aContent as the parent content.
   altTextContent->SetParent(aContent);
   altTextContent->SetDocument(mDocument, PR_TRUE, PR_TRUE);
 
@@ -13303,3 +13316,110 @@ nsresult nsCSSFrameConstructor::RemoveFixedItems(nsPresContext* aPresContext,
   return rv;
 }
 
+PR_STATIC_CALLBACK(PLDHashOperator)
+ProcessRestyle(nsISupports* aContent,
+               nsCSSFrameConstructor::RestyleData& aData,
+               void* aPresContext)
+{
+  nsPresContext* context = NS_STATIC_CAST(nsPresContext*, aPresContext);
+  nsIContent* content = NS_STATIC_CAST(nsIContent*, aContent);
+
+  if (!content->GetDocument() ||
+      content->GetDocument() != context->GetDocument()) {
+    // Content node has been removed from our document; nothing else to do here
+    return PL_DHASH_NEXT;
+  }
+  
+  nsIPresShell* shell = context->PresShell();
+
+  nsIFrame* primaryFrame = nsnull;
+  shell->GetPrimaryFrameFor(content, &primaryFrame);
+  if (aData.mRestyleHint & eReStyle_Self) {
+    shell->FrameConstructor()->RestyleElement(context, content, primaryFrame,
+                                              aData.mChangeHint);
+  } else if (aData.mChangeHint != NS_STYLE_HINT_NONE &&
+             (primaryFrame ||
+              (aData.mChangeHint & nsChangeHint_ReconstructFrame))) {
+    // Don't need to recompute style; just apply the hint
+    nsStyleChangeList changeList;
+    changeList.AppendChange(primaryFrame, content, aData.mChangeHint);
+    shell->FrameConstructor()->ProcessRestyledFrames(changeList, context);
+  }
+
+  if (aData.mRestyleHint & eReStyle_LaterSiblings) {
+    shell->FrameConstructor()->RestyleLaterSiblings(context, content);
+  }
+  
+  return PL_DHASH_NEXT;
+}
+
+void
+nsCSSFrameConstructor::ProcessPendingRestyles()
+{
+  NS_PRECONDITION(mDocument, "No document?  Pshaw!\n");
+  nsIPresShell* shell = mDocument->GetShellAt(0);
+  nsPresContext* context = shell->GetPresContext();
+
+  mPendingRestyles.Enumerate(ProcessRestyle, context);
+  mPendingRestyles.Clear();
+}
+
+void
+nsCSSFrameConstructor::PostRestyleEvent(nsIContent* aContent,
+                                        nsReStyleHint aRestyleHint,
+                                        nsChangeHint aMinChangeHint)
+{
+  if (aRestyleHint == 0 && aMinChangeHint == NS_STYLE_HINT_NONE) {
+    // Nothing to do here
+    return;
+  }
+  
+  RestyleData existingData;
+  existingData.mRestyleHint = nsReStyleHint(0);
+  existingData.mChangeHint = NS_STYLE_HINT_NONE;
+
+  mPendingRestyles.Get(aContent, &existingData);
+  existingData.mRestyleHint =
+    nsReStyleHint(existingData.mRestyleHint | aRestyleHint);
+  NS_UpdateHint(existingData.mChangeHint, aMinChangeHint);
+
+  mPendingRestyles.Put(aContent, existingData);
+    
+  nsCOMPtr<nsIEventQueue> eventQueue;
+  mEventQueueService->GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
+                                           getter_AddRefs(eventQueue));
+    
+  if (eventQueue != mRestyleEventQueue) {
+    RestyleEvent* ev = new RestyleEvent(this);
+    if (NS_FAILED(eventQueue->PostEvent(ev))) {
+      PL_DestroyEvent(ev);
+      // XXXbz and what?
+    } else {
+      mRestyleEventQueue = eventQueue;
+    }
+  }
+}
+
+PR_STATIC_CALLBACK(void*)
+HandleRestyleEvent(PLEvent* aEvent)
+{
+  nsCSSFrameConstructor::RestyleEvent* evt =
+    NS_STATIC_CAST(nsCSSFrameConstructor::RestyleEvent*, aEvent);
+  evt->HandleEvent();
+  return nsnull;
+}
+
+PR_STATIC_CALLBACK(void)
+DestroyRestyleEvent(PLEvent* aEvent)
+{
+  delete NS_STATIC_CAST(nsCSSFrameConstructor::RestyleEvent*, aEvent);
+}
+
+nsCSSFrameConstructor::RestyleEvent::RestyleEvent(nsCSSFrameConstructor* aConstructor)
+{
+  NS_PRECONDITION(aConstructor, "Must have a constructor!");
+
+  PL_InitEvent(this, aConstructor,
+               ::HandleRestyleEvent, ::DestroyRestyleEvent);
+}
+  

@@ -889,7 +889,9 @@ NS_IMETHODIMP nsImapMailFolder::CreateClientSubfolderInfo(const char *folderName
     //Now let's create the actual new folder
     rv = AddSubfolderWithPath(folderNameStr, dbFileSpec, getter_AddRefs(child));
     NS_ENSURE_SUCCESS(rv, rv);
-    rv = msgDBService->OpenFolderDB(child, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(unusedDB));
+    rv = msgDBService->OpenMailDBFromFileSpec(dbFileSpec, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(unusedDB));
+   if (rv == NS_MSG_ERROR_FOLDER_SUMMARY_MISSING)
+     rv = NS_OK;
 
     if (NS_SUCCEEDED(rv) && unusedDB)
     {
@@ -5246,18 +5248,29 @@ nsImapMailFolder::FillInFolderProps(nsIMsgImapFolderProps *aFolderProps)
 
 NS_IMETHODIMP nsImapMailFolder::SetAclFlags(PRUint32 aclFlags)
 {
-  nsCOMPtr<nsIDBFolderInfo> dbFolderInfo;
-  nsresult rv = GetDatabase(nsnull);
-
-  m_aclFlags = aclFlags;
-  if (mDatabase)
+  nsresult rv = NS_OK;
+  if (m_aclFlags != aclFlags)
   {
-    rv = mDatabase->GetDBFolderInfo(getter_AddRefs(dbFolderInfo));
-    if (NS_SUCCEEDED(rv) && dbFolderInfo)
-      dbFolderInfo->SetUint32Property("aclFlags", aclFlags);
+    nsCOMPtr<nsIDBFolderInfo> dbFolderInfo;
+    PRBool dbWasOpen = (mDatabase != nsnull);
+    rv = GetDatabase(nsnull);
+
+    m_aclFlags = aclFlags;
+    if (mDatabase)
+    {
+      rv = mDatabase->GetDBFolderInfo(getter_AddRefs(dbFolderInfo));
+      if (NS_SUCCEEDED(rv) && dbFolderInfo)
+        dbFolderInfo->SetUint32Property("aclFlags", aclFlags);
+      // if setting the acl flags caused us to open the db, release the ref
+      // because on startup, we might get acl on all folders,which will
+      // leave a lot of db's open.
+      if (!dbWasOpen)
+      {
+        mDatabase->Close(PR_TRUE /* commit changes */);
+        mDatabase = nsnull;
+      }
+    }
   }
-
-
   return rv;
 }
 
@@ -5271,6 +5284,7 @@ NS_IMETHODIMP nsImapMailFolder::GetAclFlags(PRUint32 *aclFlags)
   if (m_aclFlags == -1) // -1 means invalid value, so get it from db.
   {
     nsCOMPtr<nsIDBFolderInfo> dbFolderInfo;
+    PRBool dbWasOpen = (mDatabase != nsnull);
     rv = GetDatabase(nsnull);
 
     if (mDatabase)
@@ -5280,6 +5294,14 @@ NS_IMETHODIMP nsImapMailFolder::GetAclFlags(PRUint32 *aclFlags)
       {
         rv = dbFolderInfo->GetUint32Property("aclFlags", 0, aclFlags);
         m_aclFlags = *aclFlags;
+      }
+      // if getting the acl flags caused us to open the db, release the ref
+      // because on startup, we might get acl on all folders,which will
+      // leave a lot of db's open.
+      if (!dbWasOpen)
+      {
+        mDatabase->Close(PR_TRUE /* commit changes */);
+        mDatabase = nsnull;
       }
     }
   }

@@ -354,7 +354,21 @@ nsContainerFrame::GetFrameForPointUsing(nsPresContext* aPresContext,
     tmp += originOffset;
 
   while (kid) {
-    rv = kid->GetFrameForPoint(aPresContext, tmp, aWhichLayer, &hit);
+    if (aWhichLayer == NS_FRAME_PAINT_LAYER_ALL) {
+      // Check all layers on this kid before moving on to the next one
+      rv = kid->GetFrameForPoint(aPresContext, tmp,
+                                 NS_FRAME_PAINT_LAYER_FOREGROUND, &hit);
+      if (NS_FAILED(rv) || !hit) {
+        rv = kid->GetFrameForPoint(aPresContext, tmp,
+                                   NS_FRAME_PAINT_LAYER_FLOATS, &hit);
+        if (NS_FAILED(rv) || !hit) {
+          rv = kid->GetFrameForPoint(aPresContext, tmp,
+                                     NS_FRAME_PAINT_LAYER_BACKGROUND, &hit);
+        }
+      }
+    } else {
+      rv = kid->GetFrameForPoint(aPresContext, tmp, aWhichLayer, &hit);
+    }
 
     if (NS_SUCCEEDED(rv) && hit) {
       *aFrame = hit;
@@ -657,7 +671,7 @@ SyncFrameViewGeometryDependentProperties(nsPresContext*  aPresContext,
   //   in the style context...
   PRBool isBlockLevel = display->IsBlockLevel() || (kidState & NS_FRAME_OUT_OF_FLOW);
   PRBool hasClip = display->IsAbsolutelyPositioned() && (display->mClipFlags & NS_STYLE_CLIP_RECT);
-  PRBool hasOverflowClip = isBlockLevel && (display->mOverflow == NS_STYLE_OVERFLOW_HIDDEN);
+  PRBool hasOverflowClip = isBlockLevel && (display->mOverflow == NS_STYLE_OVERFLOW_CLIP);
   if (hasClip || hasOverflowClip) {
     nsSize frameSize = aFrame->GetSize();
     nsRect  clipRect;
@@ -908,7 +922,7 @@ nsContainerFrame::FrameNeedsView(nsIFrame* aFrame)
   // block-level, but we can't trust that the style context 'display' value is
   // set correctly
   if ((display->IsBlockLevel() || display->IsFloating()) &&
-      (display->mOverflow == NS_STYLE_OVERFLOW_HIDDEN)) {
+      (display->mOverflow == NS_STYLE_OVERFLOW_CLIP)) {
     // XXX Check for the frame being a block frame and only force a view
     // in that case, because adding a view for box frames seems to cause
     // problems for XUL...

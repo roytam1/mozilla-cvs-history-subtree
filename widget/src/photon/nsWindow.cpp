@@ -82,7 +82,7 @@ static PhRect_t gConsoleRect;
 static PRBool gConsoleRectValid = PR_FALSE;
 #define QueryVisible( )	{\
 													if( gConsoleRectValid == PR_FALSE ) { \
-															PhWindowQueryVisible( Ph_QUERY_GRAPHICS, 0, 1, &gConsoleRect ); \
+															PhWindowQueryVisible( Ph_QUERY_IG_POINTER, 0, 1, &gConsoleRect ); \
 															gConsoleRectValid = PR_TRUE;\
 															} \
 													}
@@ -274,7 +274,7 @@ NS_METHOD nsWindow::CreateNative( PtWidget_t *parentWidget ) {
   else
   {
     // No border or decorations is the default
-    render_flags = Ph_WM_RENDER_RESIZE;
+    render_flags = 0; // Ph_WM_RENDER_RESIZE;
 
     if( mWindowType != eWindowType_popup ) {
 

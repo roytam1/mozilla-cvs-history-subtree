@@ -207,7 +207,6 @@ protected:
                        nsIDocShellTreeItem** aResult);
 
   // These functions are for mousewheel scrolling
-  nsIScrollableView* GetNearestScrollingView(nsIView* aView);
   nsresult GetParentScrollingView(nsInputEvent* aEvent,
                                   nsPresContext* aPresContext,
                                   nsIFrame* &targetOuterFrame,
@@ -217,8 +216,7 @@ protected:
                         nsInputEvent* aEvent,
                         PRInt32 aNumLines,
                         PRBool aScrollHorizontal,
-                        PRBool aScrollPage,
-                        PRBool aUseTargetFrame);
+                        PRBool aScrollPage);
   void ForceViewUpdate(nsIView* aView);
   void DoScrollHistory(PRInt32 direction);
   void DoScrollTextsize(nsIFrame *aTargetFrame, PRInt32 adjustment);
@@ -238,7 +236,7 @@ protected:
   void FocusElementButNotDocument(nsIContent *aElement);
 
   // Return the location of the caret
-  nsresult GetDocSelectionLocation(nsIContent **startContent, nsIContent **endContent, nsIFrame **startFrame, PRUint32 *startOffset);
+  NS_IMETHOD GetDocSelectionLocation(nsIContent **startContent, nsIContent **endContent, nsIFrame **startFrame, PRUint32 *startOffset);
 
   void GetSelection ( nsIFrame* inFrame, nsPresContext* inPresContext, nsIFrameSelection** outSelection ) ;
 
