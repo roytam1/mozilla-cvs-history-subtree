@@ -25,6 +25,7 @@ SiteName=Internet Account Server
 
 [IP]
 RegCGI=https://reggie.netscape.com/IAS4/reg.cgi
+NetcenterCGI=http://devcore.mcom.com:7272/iiop/UReg2/reg/autoreg
 DNSAddress2=205.217.225.20
 DNSAddress=205.217.225.10
 DomainName=netscape.com
