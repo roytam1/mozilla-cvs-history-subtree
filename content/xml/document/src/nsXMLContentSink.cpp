@@ -403,6 +403,20 @@ nsXMLContentSink::DidBuildModel(PRInt32 aQualityLevel)
 }
 
 NS_IMETHODIMP
+nsXMLContentSink::OnDocumentCreated(nsIDOMDocument* aResultDocument)
+{
+  NS_ENSURE_ARG(aResultDocument);
+
+  nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(mWebShell));
+  nsCOMPtr<nsIContentViewer> contentViewer;
+  docShell->GetContentViewer(getter_AddRefs(contentViewer));
+  if (contentViewer) {
+    contentViewer->SetDOMDocument(aResultDocument);
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsXMLContentSink::OnTransformDone(nsresult aResult,
                                   nsIDOMDocument* aResultDocument)
 {
@@ -484,25 +498,6 @@ nsXMLContentSink::SetupTransformMediator()
 
   nsCOMPtr<nsIDOMDocument> currentDOMDoc(do_QueryInterface(mDocument));
   mXSLTransformMediator->SetSourceContentModel(currentDOMDoc);
-
-  // Create the result document
-  nsCOMPtr<nsIDOMDocument> resultDOMDoc;
-
-  nsCOMPtr<nsIURI> url;
-  mDocument->GetBaseURL(*getter_AddRefs(url));
-
-  nsAutoString emptyStr;
-  rv = NS_NewDOMDocument(getter_AddRefs(resultDOMDoc), emptyStr, emptyStr, nsnull, url);
-  if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(mWebShell));
-  nsCOMPtr<nsIContentViewer> contentViewer;
-  docShell->GetContentViewer(getter_AddRefs(contentViewer));
-  if (contentViewer) {
-    contentViewer->SetDOMDocument(resultDOMDoc);
-  }
-
-  mXSLTransformMediator->SetResultDocument(resultDOMDoc);
   mXSLTransformMediator->SetTransformObserver(this);
 
   return rv;

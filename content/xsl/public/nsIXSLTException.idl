@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -12,17 +12,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is mozilla.org code.
+ * The Original Code is TransforMiiX XSLT Processor.
  *
  * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
+ * Axel Hecht.
  * Portions created by the Initial Developer are Copyright (C) 2002
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Nisheeth Ranjan <nisheeth@netscape.com> (original author)
- *   Peter Van der Beken <peterv@netscape.com>
- *
+ *  Axel Hecht, <axel@pike.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -38,29 +36,18 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+#include "nsIException.idl"
+#include "domstubs.idl"
 
-interface nsIDOMNode;
-interface nsIDOMDocument;
-interface nsITransformObserver;
+[scriptable, uuid(e06dfaea-92d5-47f7-a800-c5f5404d8771)]
+interface nsIXSLTException : nsIException {
+    /*
+     * The node in the stylesheet that triggered the exception.
+     */
+    readonly attribute nsIDOMNode styleNode;
 
-/**
- * This interface should be implemented by any object that wants to
- * transform the content model of the current document before the
- * document is displayed.  One possible implementor of this interface
- * is an XSL processor. 
- */
-
-[scriptable, uuid(3fbff728-2d20-11d3-aef3-00108300ff91)]
-interface nsIDocumentTransformer : nsISupports
-{
-    nsIDOMDocument transformDocument(in nsIDOMNode aSourceDOM,
-                                     in nsIDOMNode aStyleDOM,
-                                     in nsITransformObserver aObserver);
+    /*
+     * The context node, may be null
+     */
+    readonly attribute nsIDOMNode sourceNode;
 };
-
-
-%{ C++
-extern nsresult
-NS_NewDocumentTransformer(nsIDocumentTransformer** aDocTransformer);
-%}

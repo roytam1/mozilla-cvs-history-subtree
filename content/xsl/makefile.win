@@ -21,6 +21,6 @@
 
 DEPTH=..\..
 
-DIRS=document
+DIRS=public document
 
 include <$(DEPTH)\config\rules.mak>

@@ -44,6 +44,7 @@ interface nsIDOMDocument;
 [scriptable, uuid(cce88481-6eb3-11d6-a7f2-8d82cd2af37c)]
 interface nsITransformObserver : nsISupports
 {
+    void onDocumentCreated(in nsIDOMDocument aResultDocument);
     void onTransformDone(in nsresult aResult,
                          in nsIDOMDocument aResultDocument);
 };

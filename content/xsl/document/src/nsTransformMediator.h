@@ -61,7 +61,6 @@ public:
   NS_IMETHOD SetEnabled(PRBool aValue);
   NS_IMETHOD SetSourceContentModel(nsIDOMNode* aSource);  
   NS_IMETHOD SetStyleSheetContentModel(nsIDOMNode* aStyle);
-  NS_IMETHOD SetResultDocument(nsIDOMDocument* aDoc);
   NS_IMETHOD GetResultDocument(nsIDOMDocument** aDoc);
   NS_IMETHOD SetTransformObserver(nsITransformObserver* aObserver);
   NS_IMETHOD SetStyleInvalid(PRBool aInvalid);

@@ -70,7 +70,6 @@ public:
   NS_IMETHOD SetEnabled(PRBool aValue) = 0;
   NS_IMETHOD SetSourceContentModel(nsIDOMNode* aSource) = 0;
   NS_IMETHOD SetStyleSheetContentModel(nsIDOMNode* aStyle) = 0;
-  NS_IMETHOD SetResultDocument(nsIDOMDocument* aDoc) = 0;
   NS_IMETHOD GetResultDocument(nsIDOMDocument** aDoc) = 0;
   NS_IMETHOD SetTransformObserver(nsITransformObserver* aObserver) = 0;
   NS_IMETHOD SetStyleInvalid(PRBool aInvalid) = 0;
