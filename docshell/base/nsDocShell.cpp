@@ -1266,7 +1266,10 @@ nsDocShell::AddChildSHEntry(nsISHEntry * aCloneRef, nsISHEntry * aNewEntry,
     if (currentEntry) {
       nsCOMPtr<nsISHEntry> nextEntry; //(do_CreateInstance(NS_SHENTRY_CONTRACTID));
       //   NS_ENSURE_TRUE(result, NS_ERROR_FAILURE);
-      rv = CloneAndReplace(currentEntry, aCloneRef, aNewEntry,
+      PRUint32 cloneID;
+      if (aCloneRef)
+         aCloneRef->GetID(&cloneID);
+      rv = CloneAndReplace(currentEntry, cloneID, aNewEntry,
                            getter_AddRefs(nextEntry));
       
       if (NS_SUCCEEDED(rv)) {
@@ -4195,19 +4198,19 @@ nsDocShell::CloneAndReplace(nsISHEntry * src, nsISHEntry * cloneRef,
 }
 #else
 NS_IMETHODIMP
-nsDocShell::CloneAndReplace(nsISHEntry * src, nsISHEntry * cloneRef,
-							nsISHEntry * replaceEntry, nsISHEntry ** resultEntry)
+nsDocShell::CloneAndReplace(nsISHEntry * src,
+							PRUint32 aCloneID, nsISHEntry * replaceEntry, nsISHEntry ** resultEntry)
 {
 	nsresult result = NS_OK;
 	NS_ENSURE_ARG_POINTER(resultEntry);
-	if (!src || !replaceEntry || !cloneRef)
+	if (!src || !replaceEntry)
 		return NS_ERROR_FAILURE;
-//    NS_ENSURE_ARG_POINTER(dest, NS_ERROR_FAILURE);
-//	static  PRBool firstTime = PR_TRUE;
-//	static nsISHEntry * rootSHEntry = nsnull;
-    nsISHEntry * dest = (nsISHEntry *) nsnull;
 
-	if (src == cloneRef) {
+	nsISHEntry * dest = (nsISHEntry *) nsnull;
+	PRUint32 srcID;
+	src->GetID(&srcID);
+
+	if (srcID == aCloneID) {
 		// release the original object before assigning a new one.
 	   //NS_RELEASE(dest);
 		
@@ -4221,6 +4224,7 @@ nsDocShell::CloneAndReplace(nsISHEntry * src, nsISHEntry * cloneRef,
 	nsCOMPtr<nsILayoutHistoryState> LHS;
 	PRUnichar * title=nsnull;
 	nsCOMPtr<nsISHEntry> parent;
+	PRUint32 id;
 	result = nsComponentManager::CreateInstance(NS_SHENTRY_CONTRACTID, NULL,
 			NS_GET_IID(nsISHEntry), (void **) &dest);
 	if (!NS_SUCCEEDED(result))
@@ -4232,6 +4236,7 @@ nsDocShell::CloneAndReplace(nsISHEntry * src, nsISHEntry * cloneRef,
 	src->GetLayoutHistoryState(getter_AddRefs(LHS));
 	//XXX Is this correct? parent is a weak ref in nsISHEntry
 	src->GetParent(getter_AddRefs(parent));
+	src->GetID(&id);
 
 	// XXX do we care much about valid values for these uri, title etc....
 	dest->SetURI(uri);
@@ -4239,6 +4244,7 @@ nsDocShell::CloneAndReplace(nsISHEntry * src, nsISHEntry * cloneRef,
 	dest->SetLayoutHistoryState(LHS);
 	dest->SetTitle(title);
 	dest->SetParent(parent);
+	dest->SetID(id);
 	*resultEntry = dest;
 	
 	/*
@@ -4265,7 +4271,7 @@ nsDocShell::CloneAndReplace(nsISHEntry * src, nsISHEntry * cloneRef,
 		nsCOMPtr<nsISHEntry>  destChild;
 		if (!NS_SUCCEEDED(result))
 			return result;
-		result = CloneAndReplace(srcChild, cloneRef, replaceEntry, getter_AddRefs(destChild));
+		result = CloneAndReplace(srcChild, aCloneID, replaceEntry, getter_AddRefs(destChild));
 		if (!NS_SUCCEEDED(result))
 			return result;
 		result = destContainer->AddChild(destChild, i);

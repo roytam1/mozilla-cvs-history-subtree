@@ -753,25 +753,17 @@ NS_METHOD MRJPluginInstance::SetWindow(nsPluginWindow* pluginWindow)
 
 NS_METHOD MRJPluginInstance::HandleEvent(nsPluginEvent* pluginEvent, PRBool* eventHandled)
 {
-	*eventHandled = PR_TRUE;
+    *eventHandled = PR_TRUE;
 
-	if (pluginEvent != NULL) {
-		EventRecord* event = pluginEvent->event;
+    if (pluginEvent != NULL) {
+        EventRecord* event = pluginEvent->event;
 
-		// Check for clipping changes.
-		if (event->what == nsPluginEventType_ClippingChangedEvent) {
-			mContext->setClipping(RgnHandle(event->message));
-			return NS_OK;
-		}
+		// Check for clipping/coordinate changes.
+        if (mContext != NULL && mContext->inspectWindow() && mWindowlessPeer != NULL)
+            mWindowlessPeer->ForceRedraw();
 		
-		// Check for coordinate system changes.
-		// visibilityChanged = mContext->inspectWindow();
-		// assume the browser will generate the correct update events?
-		if (mContext->inspectWindow() && mWindowlessPeer != NULL)
-			mWindowlessPeer->ForceRedraw();
-		
-		if (event->what == nullEvent) {
-			// Give MRJ another quantum of time.
+        if (event->what == nullEvent) {
+            // Give MRJ another quantum of time.
 			mSession->idle(kDefaultJMTime);	// now SpendTime does this.
 
 #if 0			

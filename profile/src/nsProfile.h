@@ -75,7 +75,8 @@ private:
 	nsresult EnsureProfileFileExists(nsIFile *aFile);
 								
 	nsresult CloneProfileDirectorySpec(nsILocalFile **aLocalFile);
-	
+    nsresult AddLevelOfIndirection(nsIFile *aDir);
+
     PRBool mAutomigrate;
     PRBool mOutofDiskSpace;
     PRBool mDiskSpaceErrorQuitCalled;
@@ -99,6 +100,6 @@ public:
 
     nsresult CreateDefaultProfile(void);
     nsresult ShowProfileWizard(void);
-    nsresult PopulateIfEmptyDir(nsILocalFile *profieDir);
+    nsresult PopulateIfEmptyDir(const PRUnichar *profileName, nsILocalFile *profieDir);
 };
 

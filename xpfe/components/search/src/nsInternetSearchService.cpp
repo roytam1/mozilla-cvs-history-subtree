@@ -521,6 +521,8 @@ InternetSearchDataSource::~InternetSearchDataSource (void)
 
 		if (gRDFService)
 		{
+			gRDFService->UnregisterDataSource(this);
+
 			nsServiceManager::ReleaseService(kRDFServiceCID, gRDFService);
 			gRDFService = nsnull;
 		}
@@ -3210,6 +3212,10 @@ InternetSearchDataSource::updateAtom(nsIRDFDataSource *db, nsIRDFResource *src,
 	else
 	{
 		rv = db->Assert(src, prop, newValue, PR_TRUE);
+		if (dirtyFlag != nsnull)
+		{
+		    *dirtyFlag = PR_TRUE;
+		}
 	}
 	return(rv);
 }

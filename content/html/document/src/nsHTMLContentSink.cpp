@@ -4286,7 +4286,7 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
                         // Increment to the next token.
                         if (semiColon > -1) {
                             semiColon++;
-                            PRInt32 semiColon2 = result.FindCharInSet(";,", semiColon);
+                            PRInt32 semiColon2 = result.FindCharInSet(";", semiColon);
                             if (semiColon2 == -1) semiColon2 = result.Length();
                             result.Mid(token, semiColon, semiColon2 - semiColon);
                             semiColon = semiColon2;

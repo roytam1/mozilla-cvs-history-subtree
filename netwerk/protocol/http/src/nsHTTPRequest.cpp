@@ -1190,7 +1190,8 @@ nsHTTPPipelinedRequest::AdvanceToNextRequest()
 
     if (req)
     {
-        mTransport->SetNotificationCallbacks(req->mConnection);
+	if (mTransport)
+            mTransport->SetNotificationCallbacks(req->mConnection);
         NS_RELEASE(req);
     }
 

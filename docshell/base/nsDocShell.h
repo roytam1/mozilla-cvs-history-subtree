@@ -243,8 +243,8 @@ protected:
 #endif 
 //   NS_IMETHOD GetCurrentSHE(PRInt32 aChildOffset, nsISHEntry ** aResult);
    NS_IMETHOD PersistLayoutHistoryState();
-   NS_IMETHOD CloneAndReplace(nsISHEntry * srcEntry, nsISHEntry * aCloneRef,
-							nsISHEntry * areplaceEntry, nsISHEntry **destEntry);
+   NS_IMETHOD CloneAndReplace(nsISHEntry * srcEntry, 
+							PRUint32 aCloneID, nsISHEntry * areplaceEntry, nsISHEntry **destEntry);
    // Global History
    NS_IMETHOD ShouldAddToGlobalHistory(nsIURI* aURI, PRBool* aShouldAdd);
    NS_IMETHOD AddToGlobalHistory(nsIURI* aURI);

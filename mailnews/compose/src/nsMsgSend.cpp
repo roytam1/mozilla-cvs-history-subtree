@@ -3776,9 +3776,8 @@ nsMsgComposeAndSend::MimeDoFCC(nsFileSpec       *input_file,
     return NS_ERROR_INVALID_ARG;
   }
 
+  nsOutputFileStream tempOutfile(*tFileSpec, PR_WRONLY | PR_CREATE_FILE, 00600);
   delete tFileSpec;
-
-  nsOutputFileStream tempOutfile(mCopyFileSpec);
   if (! tempOutfile.is_open()) 
   {	  
     // Need to determine what type of operation failed and set status accordingly. 
@@ -4086,7 +4085,8 @@ nsMsgComposeAndSend::MimeDoFCC(nsFileSpec       *input_file,
   //
   while (! inputFile.eof())
 	{
-    if (!inputFile.readline(ibuffer, ibuffer_size))
+    // check *ibuffer in case that ibuffer isn't big enough
+    if (!inputFile.readline(ibuffer, ibuffer_size) && *ibuffer == 0)
     {
       status = NS_ERROR_FAILURE;
       goto FAIL;

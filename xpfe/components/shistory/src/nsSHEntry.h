@@ -56,13 +56,14 @@ protected:
 private:
    
 	 
-    nsCOMPtr<nsIURI>                mURI;
+	nsCOMPtr<nsIURI>                mURI;
 	nsCOMPtr<nsIDOMDocument>        mDocument;
 	nsString                        mTitle;
 	nsCOMPtr<nsIInputStream>        mPostData;
 	nsCOMPtr<nsILayoutHistoryState> mLayoutHistoryState;
 	nsVoidArray                     mChildren;
-    PRUint32                        mLoadType;
+	PRUint32                        mLoadType;
+	PRUint32                        mID;
 	nsISHEntry *                    mParent;  // weak reference
 };
 
