@@ -2756,11 +2756,7 @@ void nsRenderingContextWin :: SetupFontAndColor(void)
     ::SelectObject(mDC, mCurrFont);
 
     nsFontMetricsWin* metrics = (nsFontMetricsWin*)mFontMetrics;
-    for (PRInt32 i = 0; i < metrics->mLoadedFonts.Count(); ++i) {
-      mCurrFontWin = (nsFontWin*)metrics->mLoadedFonts[i];
-      if (mCurrFontWin->mFont == mCurrFont)
-        break;
-    }
+    mCurrFontWin = metrics->GetFontFor(mCurrFont);
 
     mCurrFontMetrics = mFontMetrics;
   }

@@ -2935,6 +2935,7 @@ nsFontMetricsWin::FindGenericFont(HDC aDC, PRUnichar aChar)
 nsFontWin*
 nsFontMetricsWin::FindFont(HDC aDC, PRUnichar aChar)
 {
+NS_ASSERTION(aChar!=0xF006, "RBS BREAK");
   nsFontWin* font = FindUserDefinedFont(aDC, aChar);
   if (!font) {
     font = FindLocalFont(aDC, aChar);
@@ -2949,6 +2950,19 @@ nsFontMetricsWin::FindFont(HDC aDC, PRUnichar aChar)
     }
   }
   return font;
+}
+
+nsFontWin*
+nsFontMetricsWin::GetFontFor(HFONT aHFONT)
+{
+  int count = mLoadedFonts.Count();
+  for (int i = 0; i < count; ++i) {
+    nsFontWin* font = (nsFontWin*)mLoadedFonts[i];
+    if (font->mFont == aHFONT)
+      return font;
+  }
+  NS_ERROR("Cannot find the font that owns the handle");
+  return nsnull;
 }
 
 static PRBool
@@ -4361,6 +4375,25 @@ nsFontSubset::Load(HDC aDC, nsFontMetricsWinA* aFontMetricsWinA, nsFontWinA* aFo
     return 1;
   }
   return 0;
+}
+
+nsFontWin*
+nsFontMetricsWinA::GetFontFor(HFONT aHFONT)
+{
+  int count = mLoadedFonts.Count();
+  for (int i = 0; i < count; ++i) {
+    nsFontWinA* font = (nsFontWinA*)mLoadedFonts[i];
+    nsFontSubset** subset = font->mSubsets;
+    nsFontSubset** endSubsets = subset + font->mSubsetsCount;
+    while (subset < endSubsets) {
+      if ((*subset)->mFont == aHFONT) {
+        return *subset;
+      }
+      ++subset;
+    }
+  }
+  NS_ERROR("Cannot find the font that owns the handle");
+  return nsnull;
 }
 
 nsFontWin*

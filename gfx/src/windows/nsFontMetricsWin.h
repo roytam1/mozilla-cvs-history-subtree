@@ -211,6 +211,8 @@ public:
   virtual nsFontWin* LoadGlobalFont(HDC aDC, nsGlobalFont* aGlobalFontItem);
   virtual nsFontWin* LoadSubstituteFont(HDC aDC, nsString* aName);
 
+  virtual nsFontWin* GetFontFor(HFONT aHFONT);
+
   nsCOMPtr<nsIAtom>   mLangGroup;
   nsStringArray       mFonts;
   PRUint16            mFontsIndex;
@@ -376,6 +378,8 @@ public:
   virtual nsFontWin* LoadFont(HDC aDC, nsString* aName);
   virtual nsFontWin* LoadGlobalFont(HDC aDC, nsGlobalFont* aGlobalFontItem);
   virtual nsFontWin* LoadSubstituteFont(HDC aDC, nsString* aName);
+
+  virtual nsFontWin* GetFontFor(HFONT aHFONT);
 
   virtual nsresult
   ResolveForwards(HDC                  aDC,
