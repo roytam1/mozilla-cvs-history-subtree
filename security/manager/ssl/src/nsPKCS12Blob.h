@@ -65,7 +65,7 @@ public:
   virtual ~nsPKCS12Blob();
 
   // Set the token to use (default is internal)
-  void SetToken(nsIPK11Token *token);
+  nsresult SetToken(nsIPK11Token *token);
 
   // PKCS#12 Import
   nsresult ImportFromFile(nsILocalFile *file);
