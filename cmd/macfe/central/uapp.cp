@@ -158,6 +158,10 @@
 
 #include "InternetConfig.h"
 #include "il_strm.h"            /* Image Library stream converters. */
+/*	ebb - begin */
+#include "libimg.h"            	/* Image Library Init */
+/*	ebb - end */
+
 #ifdef MOCHA
 //#include "libmocha.h"
 #include "CMochaHacks.h"
@@ -3695,6 +3699,11 @@ void main( void )
 	//		and have System 7 installed
 	ConfirmWeWillRun();
 	RNG_RNGInit();		// This needs to be called before the main loop
+	
+/*	ebb - begin */
+	IL_Init();			// Initialize the Image Library.
+/*	ebb - end */
+
 	ProcessSerialNumber psn;
 	if (NetscapeIsRunning(psn))
 	{
