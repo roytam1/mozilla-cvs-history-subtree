@@ -15,5 +15,7 @@ EXPORTS
 	prldap_get_session_info		@2013
 	prldap_set_socket_info		@2014
 	prldap_get_socket_info		@2015
+	prldap_set_session_option		@2016
+	prldap_get_session_option		@2017
 ; 
 ; end of generated exports list.
