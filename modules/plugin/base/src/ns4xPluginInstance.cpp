@@ -1199,7 +1199,13 @@ NS_IMETHODIMP ns4xPluginInstance :: GetScriptablePeer(void * *aScriptablePeer)
     return NS_ERROR_NULL_POINTER;
 
   *aScriptablePeer = nsnull;
-  return GetValue(nsPluginInstanceVariable_ScriptableInstance, aScriptablePeer);
+  nsresult rv = GetValue(nsPluginInstanceVariable_ScriptableInstance, aScriptablePeer);
+  if (NS_SUCCEEDED(rv) && *aScriptablePeer) {
+    // scriptable plugins should always be cached to avoid the crash in 
+    // XPCWrappedNativeProto::~XPCWrappedNativeProto call from js_GC, bug 148889
+    SetCached(PR_TRUE);
+  }
+  return rv;
 }
 
 
