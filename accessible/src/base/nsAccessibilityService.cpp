@@ -121,7 +121,7 @@ nsAccessibilityService::CreateHTMLBlockAccessible(nsIAccessible* aAccessible, ns
   nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(s));
   //printf("################################## CreateHTMLBlockAccessible\n");
 
-  *_retval = new nsHTMLBlockAccessible(aAccessible, n,wr);
+  *_retval = new nsHTMLBlockAccessible(aAccessible, node,wr);
   if (*_retval) {
     NS_ADDREF(*_retval);
     return NS_OK;
@@ -132,6 +132,7 @@ nsAccessibilityService::CreateHTMLBlockAccessible(nsIAccessible* aAccessible, ns
 NS_IMETHODIMP 
 nsAccessibilityService::CreateHTMLSelectAccessible(nsIAtom* aPopupAtom, nsIDOMNode* node, nsISupports* aPresContext, nsIAccessible **_retval)
 {
+  /*
   nsCOMPtr<nsIContent> n = do_QueryInterface(node);
   NS_ASSERTION(n,"Error non nsIContent passed to accessible factory!!!");
 
@@ -143,12 +144,21 @@ nsAccessibilityService::CreateHTMLSelectAccessible(nsIAtom* aPopupAtom, nsIDOMNo
 
   nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(s));
 
-  *_retval = new nsSelectAccessible(aPopupAtom, nsnull, n, wr);
+  *_retval = new nsSelectAccessible(aPopupAtom, nsnull, node, wr);
   if (*_retval) {
     NS_ADDREF(*_retval);
     return NS_OK;
   } else 
     return NS_ERROR_OUT_OF_MEMORY;
+    */
+
+  *_retval = new nsMutableAccessible(node);
+  if (*_retval) {
+    NS_ADDREF(*_retval);
+    return NS_OK;
+  } else 
+    return NS_ERROR_OUT_OF_MEMORY;
+
 }
 
 /* nsIAccessible createHTMLCheckboxAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
@@ -373,6 +383,8 @@ NS_IMETHODIMP nsAccessibilityService::GetInfo(nsISupports* aFrame, nsIFrame** aR
 
   nsCOMPtr<nsIDocument> document;
   content->GetDocument(*getter_AddRefs(document));
+  if (!document)
+     return NS_ERROR_FAILURE;
 
 #ifdef DEBUG
   PRInt32 shells = document->GetNumberOfShells();

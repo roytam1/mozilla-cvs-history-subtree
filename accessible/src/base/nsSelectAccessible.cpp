@@ -37,6 +37,7 @@
 #include "nsIDOMEventReceiver.h"
 #include "nsReadableUtils.h"
 
+#if 0
 class nsSelectChildAccessible : public nsAccessible,
                                 public nsIDOMMenuListener
 {
@@ -715,3 +716,4 @@ NS_IMETHODIMP nsListChildAccessible::GetAccParent(nsIAccessible **_retval)
     return NS_OK;
 }
 
+#endif

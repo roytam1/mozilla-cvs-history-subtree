@@ -56,8 +56,9 @@ class nsRootAccessible : public nsAccessible,
     virtual nsresult Blur(nsIDOMEvent* aEvent);
 
 protected:
+  virtual void GetBounds(nsRect& aRect);
   virtual nsIFrame* GetFrame();
-  virtual nsIAccessible* CreateNewAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell);
+  virtual nsIAccessible* CreateNewAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell);
 
   // not a com pointer. We don't own the listener
   // it is the callers responsibility to remove the listener

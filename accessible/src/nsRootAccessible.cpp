@@ -31,6 +31,9 @@
 #include "nsIDOMElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsReadableUtils.h"
+#include "nsILink.h"
+#include "nsHTMLFormControlAccessible.h"
+#include "nsHTMLLinkAccessible.h"
 
 NS_INTERFACE_MAP_BEGIN(nsRootAccessible)
   NS_INTERFACE_MAP_ENTRY(nsIAccessibleEventReceiver)
@@ -45,8 +48,11 @@ NS_IMPL_RELEASE_INHERITED(nsRootAccessible, nsAccessible);
 //-----------------------------------------------------
 nsRootAccessible::nsRootAccessible(nsIWeakReference* aShell, nsIFrame* aFrame):nsAccessible(nsnull,nsnull,aShell)
 {
- // mFrame = aFrame;
  mListener = nsnull;
+ nsCOMPtr<nsIPresShell> shell = do_QueryReferent(mPresShell);
+ nsCOMPtr<nsIDocument> document;
+ shell->GetDocument(getter_AddRefs(document));
+ mDOMNode = do_QueryInterface(document);
 }
 
 //-----------------------------------------------------
@@ -79,9 +85,15 @@ nsIFrame* nsRootAccessible::GetFrame()
  // return mFrame;
 }
 
-nsIAccessible* nsRootAccessible::CreateNewAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell)
+void nsRootAccessible::GetBounds(nsRect& aBounds)
 {
-  return new nsHTMLBlockAccessible(aAccessible, aContent, aShell);
+  nsIFrame* frame = GetFrame();
+  frame->GetRect(aBounds);
+}
+
+nsIAccessible* nsRootAccessible::CreateNewAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell)
+{
+  return new nsHTMLBlockAccessible(aAccessible, aNode, aShell);
 }
 
   /* readonly attribute nsIAccessible accParent; */
@@ -177,9 +189,22 @@ nsresult nsRootAccessible::HandleEvent(nsIDOMEvent* aEvent)
      if (!a)
        a = do_QueryInterface(content);
 
-     nsCOMPtr<nsIAccessible> na = CreateNewAccessible(a, content, mPresShell);
+     if (!a) {
+        // is it a link?
+        nsCOMPtr<nsILink> link = do_QueryInterface(content);
+        if (link) {
+           printf("focus link!\n");
+           nsCOMPtr<nsIDOMNode> node = do_QueryInterface(content);
+           if (node)
+              a = new nsHTMLLinkAccessible(shell, node);
+        }
+      }
 
-     mListener->HandleEvent(nsIAccessibleEventListener::EVENT_FOCUS, na);
+     if (a) {
+       nsCOMPtr<nsIDOMNode> node = do_QueryInterface(content); 
+       nsCOMPtr<nsIAccessible> na = CreateNewAccessible(a, node, mPresShell);
+       mListener->HandleEvent(nsIAccessibleEventListener::EVENT_FOCUS, na);
+     }
   }
 
   return NS_OK;

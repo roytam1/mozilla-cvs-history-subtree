@@ -28,6 +28,7 @@
 #include "nsCOMPtr.h"
 #include "nsIAtom.h"
 
+/*
 class nsSelectAccessible : public nsAccessible
 {
 public:
@@ -46,6 +47,6 @@ public:
 
   nsCOMPtr<nsIAtom> mPopupAtom;
 };
-
+*/
 
 #endif

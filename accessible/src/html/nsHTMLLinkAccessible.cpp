@@ -40,6 +40,8 @@ nsLinkableAccessible(aShell, aDomNode)
 /* wstring getAccName (); */
 NS_IMETHODIMP nsHTMLLinkAccessible::GetAccName(PRUnichar **_retval)
 { 
+  if (!mLinkContent)
+    return NS_ERROR_FAILURE;
 
   nsAutoString nameString;
   nsresult rv = AppendFlatStringFromSubtree(mLinkContent, &nameString);

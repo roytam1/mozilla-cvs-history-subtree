@@ -396,3 +396,4 @@ NS_IMETHODIMP nsHTMLTextFieldAccessible::GetAccState(PRUint32 *_retval)
 
   return NS_OK;
 }
+

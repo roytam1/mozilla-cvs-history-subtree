@@ -33,6 +33,9 @@
 #include "nsPIDOMWindow.h"
 #include "nsIDOMElement.h"
 #include "nsIEventStateManager.h"
+#include "nsHTMLFormControlAccessible.h"
+#include "nsILink.h"
+#include "nsHTMLLinkAccessible.h"
 
 // IFrame Helpers
 #include "nsIDocShell.h"
@@ -53,308 +56,558 @@
 static gnsAccessibles = 0;
 #endif
 
+
 class nsFrameTreeWalker {
 public:
-  nsFrameTreeWalker(nsIPresContext* aPresContext, nsAccessible* aOwner);
-  nsIFrame* GetNextSibling(nsIFrame* aFrame);
-  nsIFrame* GetPreviousSibling(nsIFrame* aFrame);
-  nsIFrame* GetParent(nsIFrame* aFrame);
-  nsIFrame* GetFirstChild(nsIFrame* aFrame);
-  nsIFrame* GetLastChild(nsIFrame* aFrame);
-  nsIFrame* GetChildBefore(nsIFrame* aParent, nsIFrame* aChild);
-  PRInt32 GetCount(nsIFrame* aFrame);
+  nsFrameTreeWalker(nsIPresContext* aPresContext, nsIDOMNode* aNode);
+  PRBool GetNextSibling();
+  PRBool GetParent();
+  PRBool GetFirstChild();
+  void GetBounds(nsRect& aBounds);
 
-  static PRBool ShouldSkip(nsIPresContext* aContext, nsIAtom* aList, nsIFrame* aStart, nsIFrame* aNext);
-  static void GetAccessible(nsIPresContext* aContext, nsIFrame* aFrame, nsCOMPtr<nsIAccessible>& aAccessible, nsCOMPtr<nsIContent>& aContent);
+  PRBool IsSameContent();
 
+  void SetNode(nsIDOMNode* node);
+  void InitDepth();
+  nsIFrame* mFrame;
+
+private:
+  nsCOMPtr<nsIDOMNode> mDOMNode;
+  nsCOMPtr<nsIDOMNode> mNodeToFind;
   nsCOMPtr<nsIPresContext> mPresContext;
-  nsCOMPtr<nsIAccessible> mAccessible;
-  nsCOMPtr<nsIContent> mContent;
-  nsAccessible* mOwner;
+  PRInt32 mDepth;
+  PRInt32 mDepthToFind;
 };
 
-nsFrameTreeWalker::nsFrameTreeWalker(nsIPresContext* aPresContext, nsAccessible* aOwner)
+class nsDOMNodeBoundsFinder
 {
-  mPresContext = aPresContext;
-  mOwner = aOwner;
+public:
+  nsDOMNodeBoundsFinder(nsIPresContext* aPresContext, nsIDOMNode* aNode);
+  virtual void GetBounds(nsRect& aBounds);
+
+private:
+  nsCOMPtr<nsIDOMNode> mDOMNode;
+  nsFrameTreeWalker mWalker;
+};
+
+//------ nsAccessibleBoundsFinder -----
+
+nsDOMNodeBoundsFinder::nsDOMNodeBoundsFinder(nsIPresContext* aPresContext, nsIDOMNode* aNode)
+:mWalker(aPresContext, aNode)
+{
+  mDOMNode = aNode;  
+};
+
+void nsDOMNodeBoundsFinder::GetBounds(nsRect& aBounds)
+{
+  // sum up all the child rectangles
+  nsCOMPtr<nsIDOMNode> node = mDOMNode;
+ 
+  mWalker.SetNode(mDOMNode);
+  mWalker.GetBounds(aBounds);
+
+  while(mWalker.GetNextSibling()) 
+  {
+     nsRect rect;
+     mWalker.GetBounds(rect);
+     aBounds.UnionRect(aBounds,rect);
+  }
 }
 
-nsIFrame* nsFrameTreeWalker::GetParent(nsIFrame* aFrame)
+nsFrameTreeWalker::nsFrameTreeWalker(nsIPresContext* aPresContext, nsIDOMNode* aNode)
+{
+  mPresContext = aPresContext;
+  mDOMNode = aNode;
+
+  nsCOMPtr<nsIPresShell> shell;
+  mPresContext->GetShell(getter_AddRefs(shell));
+  nsIFrame* frame = nsnull;
+  nsCOMPtr<nsIContent> content = do_QueryInterface(aNode);
+  shell->GetPrimaryFrameFor(content, &mFrame);
+
+  InitDepth();
+}
+
+void nsFrameTreeWalker::SetNode(nsIDOMNode* aNode)
+{
+  mDOMNode = aNode;
+  mNodeToFind = aNode;
+  mDepthToFind = mDepth;
+}
+
+void nsFrameTreeWalker::InitDepth()
+{
+  nsIFrame* parent = nsnull;
+  mFrame->GetParent(&parent);
+  mDepth = 0;
+
+  while(parent)
+  {
+    parent->GetParent(&parent);
+    mDepth++;
+  }
+}
+
+void nsFrameTreeWalker::GetBounds(nsRect& aBounds)
+{
+  mFrame->GetRect(aBounds);
+}
+
+PRBool nsFrameTreeWalker::GetParent()
 {
   //printf("Get parent\n");
 
   nsIFrame* parent = nsnull;
-  aFrame->GetParent(&parent);
+  mFrame->GetParent(&parent);
 
   // if no parent then we hit the root
   // just return that top frame
   if (!parent) {
-    mAccessible = nsnull;
-    mContent = nsnull;
-    return aFrame;
+    mFrame = nsnull;
+    return PR_FALSE;
   }
 
-  GetAccessible(mPresContext, parent, mAccessible, mContent);
-  if (mAccessible)
-    return parent;
+  mFrame = parent;
+  mDepth--;
   
-  return GetParent(parent);
+  return GetParent();
 }
 
 
-nsIFrame* nsFrameTreeWalker::GetNextSibling(nsIFrame* aFrame)
+PRBool nsFrameTreeWalker::GetNextSibling()
 {
   //printf("Get next\n");
 
   // get next sibling
   nsIFrame* next = nsnull;
-  aFrame->GetNextSibling(&next);
-  nsIAtom* list = nsnull;
-  mOwner->GetListAtomForFrame(aFrame, list);
-
+  mFrame->GetNextSibling(&next);
   
-  // skip any frames with the same content node
-  while(ShouldSkip(mPresContext, list, aFrame, next)) 
-    next->GetNextSibling(&next);
-  
-
   // if failed
   if (!next)
   {
     // if parent has content
     nsIFrame* parent = nsnull;
-    aFrame->GetParent(&parent);
+    mFrame->GetParent(&parent);
     
     // if no parent fail
     if (!parent) {
-      mAccessible = nsnull;
-      mContent = nsnull;
-      return nsnull;
+      mFrame = nsnull;
+      return PR_FALSE;
     }
 
     // fail if we reach a parent that is accessible
-    GetAccessible(mPresContext, parent, mAccessible, mContent);
-    if (mAccessible)
+    mFrame = parent;
+    mDepth--;
+
+    if (mDepth == mDepthToFind)
     {
-      // fail
-      mAccessible = nsnull;
-      mContent = nsnull;
-      return nsnull;
+      if (IsSameContent())
+        return PR_TRUE;
+      else {
+        mFrame = nsnull;
+        return PR_FALSE;
+      }
     } else {
       // next on parent
-      nsIFrame* n = GetNextSibling(parent);
-      if (ShouldSkip(mPresContext, list, aFrame, n))
-        return GetNextSibling(n);
-      else 
-        return n;
+      mFrame = parent;
+      return GetNextSibling();
     }
   }
 
-  // if next has content
-  GetAccessible(mPresContext, next, mAccessible, mContent);
-  if (mAccessible)
-  {
-    // done
-    return next;
-  }
+  mFrame = next;
 
+  // if next has content
+  if (mDepth == mDepthToFind)
+  {
+    if (IsSameContent())
+      return PR_TRUE;
+    else {
+      mFrame = nsnull;
+      return PR_FALSE;
+    }
+  }
+  
   // if next doesn't have node
 
   // call first on next
-  nsIFrame* first = GetFirstChild(next);
-
-  // if found
-  if (first) {
-    if (ShouldSkip(mPresContext, list, aFrame, first))
-      return GetNextSibling(first);
-    else 
-      return first;
-  }
+  mFrame = next;
+  if (GetFirstChild())
+     return PR_TRUE;
 
   // call next on next
-  nsIFrame* n =  GetNextSibling(next);
-  if (ShouldSkip(mPresContext, list, aFrame, next))
-    return GetNextSibling(n);
-  else 
-    return n;
+  mFrame = next;
+  return GetNextSibling();
 }
 
-nsIFrame* nsFrameTreeWalker::GetFirstChild(nsIFrame* aFrame)
+PRBool nsFrameTreeWalker::GetFirstChild()
 {
-
   //printf("Get first\n");
 
   // get first child
   nsIFrame* child = nsnull;
-  nsIAtom* list = nsnull;
-  mOwner->GetListAtomForFrame(aFrame, list);
-  aFrame->FirstChild(mPresContext, list, &child);
+  mFrame->FirstChild(mPresContext, nsnull, &child);
 
   while(child)
-  {
-    // if first has a content node
-    GetAccessible(mPresContext, child, mAccessible, mContent);
-    if (mAccessible)
-    {
-      // done
-      return child;
-    } else {
-      // call first on child
-      nsIFrame* first = GetFirstChild(child);
+  { 
+    mFrame = child;
 
-      // if succeeded
-      if (first)
-      {
-        // return child
-        return first;
+    mDepth++;
+
+    // if the child has a content node done
+    if (mDepth == mDepthToFind)
+    {
+      if (IsSameContent())
+        return PR_TRUE;
+      else {
+        mFrame = nsnull;
+        return PR_FALSE;
       }
-    }
+    } else if (GetFirstChild()) // otherwise try first child
+      return PR_TRUE;
+
+    mDepth--;
 
     // get next sibling
-    nsIFrame* next;
+    nsIFrame* next = nsnull;
     child->GetNextSibling(&next);
 
-    // skip children with duplicate content nodes
-    nsIAtom* list = nsnull;
-    mOwner->GetListAtomForFrame(child, list);
+    child = next;
+  }
 
-    while(ShouldSkip(mPresContext, list, child, next)) 
-      next->GetNextSibling(&next);
+  // fail
+  mFrame = nsnull;
+  mDepth = -1;
+  return PR_FALSE;
+}
+
+PRBool nsFrameTreeWalker::IsSameContent()
+{
+  nsCOMPtr<nsIContent> c;
+  mFrame->GetContent(getter_AddRefs(c));
+  nsCOMPtr<nsIDOMNode> node = do_QueryInterface(c);
+  if (node == mNodeToFind)
+    return PR_TRUE;
+  else
+    return PR_FALSE;
+
+}
+
+//--------------
+
+class nsDOMTreeWalker {
+public:
+  nsDOMTreeWalker(nsIPresContext* aPresContext, nsIDOMNode* aContent);
+  PRBool GetNextSibling();
+  PRBool GetPreviousSibling();
+  PRBool GetParent();
+  PRBool GetFirstChild();
+  PRBool GetLastChild();
+  PRBool GetChildBefore(nsIDOMNode* aParent, nsIDOMNode* aChild);
+  PRInt32 GetCount();
+  nsRect GetBounds();
+  nsIFrame* GetPrimaryFrame();
+
+  PRBool GetAccessible();
+
+  nsCOMPtr<nsIPresContext> mPresContext;
+  nsCOMPtr<nsIAccessible> mAccessible;
+  nsCOMPtr<nsIDOMNode> mDOMNode;
+};
+
+nsDOMTreeWalker::nsDOMTreeWalker(nsIPresContext* aPresContext, nsIDOMNode* aNode)
+{
+  mDOMNode = aNode;
+  mAccessible = nsnull;
+  mPresContext = aPresContext;
+}
+
+nsRect nsDOMTreeWalker::GetBounds()
+{
+  nsRect r(0,0,0,0);
+  nsIFrame* frame = GetPrimaryFrame();
+  if (frame)
+    frame->GetRect(r);
+
+  return r;
+}
+
+nsIFrame* nsDOMTreeWalker::GetPrimaryFrame()
+{
+  nsCOMPtr<nsIPresShell> shell;
+  mPresContext->GetShell(getter_AddRefs(shell));
+  nsIFrame* frame = nsnull;
+  nsCOMPtr<nsIContent> content = do_QueryInterface(mDOMNode);
+  shell->GetPrimaryFrameFor(content, &frame);
+  return frame;
+}
+
+PRBool nsDOMTreeWalker::GetParent()
+{
+  //printf("Get parent\n");
+
+  if (!mDOMNode)
+  {
+    mAccessible = nsnull;
+    return PR_FALSE;
+  }
+
+  nsCOMPtr<nsIDOMNode> parent;
+  mDOMNode->GetParentNode(getter_AddRefs(parent));
+
+  // if no parent then we hit the root
+  // we want to return the accessible outside of us. So walk out of 
+  // the document if we can
+  if (!parent) {
+    /*
+    nsCOMPtr<nsIPresShell> presShell;
+    mPresContext->GetShell(getter_AddRefs(presShell));
+    if (presShell) {
+      nsCOMPtr<nsIPresShell> parentPresShell;
+      nsCOMPtr<nsIContent> content;
+      if (NS_SUCCEEDED(nsAccessible::GetParentPresShellAndContent(presShell,
+                                                    getter_AddRefs(parentPresShell),
+                                                    getter_AddRefs(content)))) {
+       nsIFrame* frame;
+       parentPresShell->GetPrimaryFrameFor(content, &frame);
+       nsCOMPtr<nsIAccessible> accessible(do_QueryInterface(frame));
+        if (!accessible)
+          accessible = do_QueryInterface(content);
+        if (accessible) {
+          nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(parentPresShell));
+          nsCOMPtr<nsIDOMNode> node = do_QueryInterface(content);
+          mAccessible = accessible;
+          mDOMNode = node;
+          return PR_TRUE;
+        }
+      }
+    }
+    */
+
+    mAccessible = nsnull;
+    mDOMNode = nsnull;
+    return PR_FALSE;
+  }
+
+  mDOMNode = parent;
+  if (GetAccessible()) 
+    return PR_TRUE;
+  
+  return GetParent();
+}
+
+
+PRBool nsDOMTreeWalker::GetNextSibling()
+{
+  //printf("Get next\n");
+
+  if (!mDOMNode)
+  {
+    mAccessible = nsnull;
+    return PR_FALSE;
+  }
+
+  // get next sibling
+  nsCOMPtr<nsIDOMNode> next;
+  mDOMNode->GetNextSibling(getter_AddRefs(next));
+  
+  // if failed
+  if (!next)
+  {
+    // if parent has content
+    nsCOMPtr<nsIDOMNode> parent;
+    mDOMNode->GetParentNode(getter_AddRefs(parent));
+    
+    // if no parent fail
+    if (!parent) {
+      mAccessible = nsnull;
+      mDOMNode = nsnull;
+      return PR_FALSE;
+    }
+
+    // fail if we reach a parent that is accessible
+    mDOMNode = parent;
+    if (GetAccessible())
+    {
+      // fail
+      mAccessible = nsnull;
+      mDOMNode = nsnull;
+      return PR_FALSE;
+    } else {
+      // next on parent
+      mDOMNode = parent;
+      return GetNextSibling();
+    }
+  }
+
+  // if next has content
+  mDOMNode = next;
+  if (GetAccessible())
+    return PR_TRUE;
+
+  // if next doesn't have node
+
+  // call first on next
+  mDOMNode = next;
+  if (GetFirstChild())
+     return PR_TRUE;
+
+  // call next on next
+  mDOMNode = next;
+  return GetNextSibling();
+}
+
+PRBool nsDOMTreeWalker::GetFirstChild()
+{
+
+  if (!mDOMNode)
+  {
+    mAccessible = nsnull;
+    return PR_FALSE;
+  }
+
+  //printf("Get first\n");
+
+  // get first child
+  nsCOMPtr<nsIDOMNode> child;
+  mDOMNode->GetFirstChild(getter_AddRefs(child));
+
+  while(child)
+  { 
+    mDOMNode = child;
+    // if the child has a content node done
+    if (GetAccessible())
+      return PR_TRUE;
+    else if (GetFirstChild()) // otherwise try first child
+      return PR_TRUE;
+
+    // get next sibling
+    nsCOMPtr<nsIDOMNode> next;
+    child->GetNextSibling(getter_AddRefs(next));
 
     child = next;
   }
 
   // fail
   mAccessible = nsnull;
-  mContent = nsnull;
-  return nsnull;
+  mDOMNode = nsnull;
+  return PR_FALSE;
 }
 
-nsIFrame* nsFrameTreeWalker::GetChildBefore(nsIFrame* aParent, nsIFrame* aChild)
+PRBool nsDOMTreeWalker::GetChildBefore(nsIDOMNode* aParent, nsIDOMNode* aChild)
 {
-  nsIFrame* child = GetFirstChild(aParent);
 
-  // if the child is not us
-  if (child == aChild) {
+  mDOMNode = aParent;
+
+  if (!mDOMNode)
+  {
     mAccessible = nsnull;
-    mContent = nsnull;
-    return nsnull;
+    return PR_FALSE;
   }
 
-  nsIFrame* prev = child;
-  nsCOMPtr<nsIContent> prevContent = mContent;
+  GetFirstChild();
+
+  // if the child is not us
+  if (mDOMNode == aChild) {
+    mAccessible = nsnull;
+    mDOMNode = nsnull;
+    return PR_FALSE;
+  }
+
+  nsCOMPtr<nsIDOMNode> prev = mDOMNode;
   nsCOMPtr<nsIAccessible> prevAccessible = mAccessible;
 
-  while(child) 
+  while(mDOMNode) 
   {
-    child = GetNextSibling(child);
+    GetNextSibling();
 
-    if (child == aChild)
+    if (mDOMNode == aChild)
       break;
 
-    prev = child;
-    prevContent = mContent;
+    prev = mDOMNode;
     prevAccessible = mAccessible;
   }
 
   mAccessible = prevAccessible;
-  mContent = prevContent;
-  return prev;
+  mDOMNode = prev;
+
+  return PR_TRUE;
 }
 
-nsIFrame* nsFrameTreeWalker::GetPreviousSibling(nsIFrame* aFrame)
+PRBool nsDOMTreeWalker::GetPreviousSibling()
 {
   //printf("Get previous\n");
 
-  nsIFrame* parent = GetParent(aFrame);
+  nsCOMPtr<nsIDOMNode> child = mDOMNode;
+  GetParent();
   
-  return GetChildBefore(parent, aFrame);
+  return GetChildBefore(mDOMNode, child);
 }
 
-nsIFrame* nsFrameTreeWalker::GetLastChild(nsIFrame* aFrame)
+PRBool nsDOMTreeWalker::GetLastChild()
 {
   //printf("Get last\n");
 
-  return GetChildBefore(aFrame, nsnull);
+  return GetChildBefore(mDOMNode, nsnull);
 }
 
-PRInt32 nsFrameTreeWalker::GetCount(nsIFrame* aFrame)
+PRInt32 nsDOMTreeWalker::GetCount()
 {
 
   //printf("Get count\n");
-  nsIFrame* child = GetFirstChild(aFrame);
+
+  nsCOMPtr<nsIDOMNode> node = mDOMNode;
+  nsCOMPtr<nsIAccessible> a = mAccessible;
+
+  GetFirstChild();
 
   PRInt32 count = 0;
-  while(child) 
+  while(mDOMNode) 
   {
     count++;
-    child = GetNextSibling(child);
+    GetNextSibling();
   }
+
+  mDOMNode = node;
+  mAccessible = a;
 
   return count;
 }
 
-void nsFrameTreeWalker::GetAccessible(nsIPresContext* aPresContext, nsIFrame* aFrame, nsCOMPtr<nsIAccessible>& aAccessible, nsCOMPtr<nsIContent>& aContent)
+PRBool nsDOMTreeWalker::GetAccessible()
 {
-  aContent = nsnull;
-  aAccessible = nsnull;
+  mAccessible = nsnull;
 
-  aFrame->GetContent(getter_AddRefs(aContent));
+  nsCOMPtr<nsIContent> content = do_QueryInterface(mDOMNode);
 
-  if (!aContent)
-    return;
-
-#if 1
-  nsCOMPtr<nsIPresShell> shell;
-  aPresContext->GetShell(getter_AddRefs(shell));
-#else
-  nsCOMPtr<nsIDocument> document;
-  aContent->GetDocument(*getter_AddRefs(document));
-  if (!document)
-    return;
-
-  PRInt32 shells = document->GetNumberOfShells();
-  NS_ASSERTION(shells > 0,"Error no shells!");
-  nsIPresShell* shell = document->GetShellAt(0);
-#endif
-  nsIFrame* frame = nsnull;
-  shell->GetPrimaryFrameFor(aContent, &frame);
-
-  if (!frame)
-    return;
-
-  aAccessible = do_QueryInterface(aFrame);
-
-  if (!aAccessible)
-    aAccessible = do_QueryInterface(aContent);
-
- // if (aAccessible)
- //   printf("Found accessible!\n");
-}
-
-PRBool nsFrameTreeWalker::ShouldSkip(nsIPresContext* aContext, nsIAtom* aList, nsIFrame* aStart, nsIFrame* aNext)
-{
-  if (!aStart || !aNext)
+  if (!content)
     return PR_FALSE;
 
-  // is content the same? If so skip it
-  nsCOMPtr<nsIContent> content1;
-  nsCOMPtr<nsIContent> content2;
+  nsIFrame* frame = GetPrimaryFrame();
 
-  aStart->GetContent(getter_AddRefs(content1));
-  aNext->GetContent(getter_AddRefs(content2));
+  if (!frame)
+    return PR_FALSE;
 
-  if (content1 == content2 && content1 != nsnull) {
-    // does it have childen? It it does then don't skip it
-    nsIFrame* child = nsnull;
-    aNext->FirstChild(aContext, aList, &child);
-    if (child)
-      return PR_FALSE;
+  mAccessible = do_QueryInterface(frame);
 
-    return PR_TRUE;
+  if (!mAccessible)
+    mAccessible = do_QueryInterface(mDOMNode);
+
+  if (!mAccessible) {
+    // is it a link?
+    nsCOMPtr<nsILink> link = do_QueryInterface(mDOMNode);
+    if (link) {
+       printf("Found link!\n");
+       nsCOMPtr<nsIPresShell> shell;
+       mPresContext->GetShell(getter_AddRefs(shell));
+       mAccessible = new nsHTMLLinkAccessible(shell, mDOMNode);
+    }
   }
-  
-  return PR_FALSE;
+
+  if (mAccessible)
+    return PR_TRUE;
+  else
+    return PR_FALSE;
+
 }
 
 /*
@@ -364,12 +617,12 @@ PRBool nsFrameTreeWalker::ShouldSkip(nsIPresContext* aContext, nsIAtom* aList, n
 //-----------------------------------------------------
 // construction 
 //-----------------------------------------------------
-nsAccessible::nsAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell)
+nsAccessible::nsAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell)
 {
   NS_INIT_REFCNT();
 
   // get frame and node
-  mContent = aContent;
+  mDOMNode = aNode;
   mAccessible = aAccessible;
   mPresShell = aShell;
      
@@ -402,7 +655,7 @@ nsAccessible::nsAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsI
    }
 #endif
    // get frame and node
-   mContent = aContent;
+   mDOMNode = aNode;
    mAccessible = aAccessible;
    mPresShell = aShell;
 
@@ -445,13 +698,13 @@ nsresult nsAccessible::GetAccParent(nsIPresContext*   aPresContext,
   GetPresContext(context);
 
   if (aPresContext) {
-    nsFrameTreeWalker walker(aPresContext, this); 
+    nsDOMTreeWalker walker(aPresContext, mDOMNode); 
 
     // failed? Lets do some default behavior
-    walker.GetParent(aFrame);
+    walker.GetParent();
 
     // if no content or accessible then we hit the root
-    if (!walker.mContent || !walker.mAccessible)
+    if (!walker.mDOMNode || !walker.mAccessible)
     {
 
       if (aPresContext) {
@@ -470,7 +723,8 @@ nsresult nsAccessible::GetAccParent(nsIPresContext*   aPresContext,
               accessible = do_QueryInterface(content);
             if (accessible) {
               nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(parentPresShell));
-              *aAccParent = CreateNewParentAccessible(accessible, content, wr);
+              nsCOMPtr<nsIDOMNode> node = do_QueryInterface(content);
+              *aAccParent = CreateNewParentAccessible(accessible, node, wr);
               NS_ADDREF(*aAccParent);
               return NS_OK;
             }
@@ -483,7 +737,7 @@ nsresult nsAccessible::GetAccParent(nsIPresContext*   aPresContext,
       return NS_OK;
     }
 
-    *aAccParent = CreateNewParentAccessible(walker.mAccessible, walker.mContent, aPresShell);
+    *aAccParent = CreateNewParentAccessible(walker.mAccessible, walker.mDOMNode, aPresShell);
     NS_ADDREF(*aAccParent);
     return NS_OK;
   }
@@ -519,13 +773,13 @@ NS_IMETHODIMP nsAccessible::GetAccNextSibling(nsIAccessible * *aAccNextSibling)
   GetPresContext(context);
 
   if (context) {
-    nsFrameTreeWalker walker(context, this);
+    nsDOMTreeWalker walker(context, mDOMNode);
 
-    nsIFrame* next = walker.GetNextSibling(GetFrame());
+    walker.GetNextSibling();
   
-    if (next && walker.mAccessible && walker.mContent) 
+    if (walker.mAccessible && walker.mDOMNode) 
     {
-      *aAccNextSibling = CreateNewNextAccessible(walker.mAccessible, walker.mContent, mPresShell);
+      *aAccNextSibling = CreateNewNextAccessible(walker.mAccessible, walker.mDOMNode, mPresShell);
       NS_ADDREF(*aAccNextSibling);
       return NS_OK;
     }
@@ -552,12 +806,12 @@ NS_IMETHODIMP nsAccessible::GetAccPreviousSibling(nsIAccessible * *aAccPreviousS
   GetPresContext(context);
 
   if (context) {
-    nsFrameTreeWalker walker(context, this); 
-    nsIFrame* prev = walker.GetPreviousSibling(GetFrame());
+    nsDOMTreeWalker walker(context, mDOMNode); 
+    walker.GetPreviousSibling();
 
-    if (prev && walker.mAccessible && walker.mContent) 
+    if (walker.mAccessible && walker.mDOMNode) 
     {
-      *aAccPreviousSibling = CreateNewPreviousAccessible(walker.mAccessible, walker.mContent, mPresShell);
+      *aAccPreviousSibling = CreateNewPreviousAccessible(walker.mAccessible, walker.mDOMNode, mPresShell);
       NS_ADDREF(*aAccPreviousSibling);
       return NS_OK;
     }
@@ -584,12 +838,12 @@ NS_IMETHODIMP nsAccessible::GetAccFirstChild(nsIAccessible * *aAccFirstChild)
 
   if (context) {
 
-    nsFrameTreeWalker walker(context, this); 
-    nsIFrame* child = walker.GetFirstChild(GetFrame());
+    nsDOMTreeWalker walker(context, mDOMNode); 
+    walker.GetFirstChild();
 
-    if (child && walker.mAccessible && walker.mContent) 
+    if (walker.mAccessible && walker.mDOMNode) 
     {
-      *aAccFirstChild = CreateNewFirstAccessible(walker.mAccessible, walker.mContent, mPresShell);
+      *aAccFirstChild = CreateNewFirstAccessible(walker.mAccessible, walker.mDOMNode, mPresShell);
       NS_ADDREF(*aAccFirstChild);
       return NS_OK;
     }
@@ -614,12 +868,12 @@ NS_IMETHODIMP nsAccessible::GetAccLastChild(nsIAccessible * *aAccLastChild)
   GetPresContext(context);
 
   if (context) {
-    nsFrameTreeWalker walker(context, this); 
-    nsIFrame* last = walker.GetLastChild(GetFrame());
+    nsDOMTreeWalker walker(context, mDOMNode); 
+    walker.GetLastChild();
 
-    if (last && walker.mAccessible && walker.mContent) 
+    if (walker.mAccessible && walker.mDOMNode) 
     {
-      *aAccLastChild = CreateNewLastAccessible(walker.mAccessible, walker.mContent, mPresShell);
+      *aAccLastChild = CreateNewLastAccessible(walker.mAccessible, walker.mDOMNode, mPresShell);
       NS_ADDREF(*aAccLastChild);
       return NS_OK;
     }
@@ -647,8 +901,8 @@ NS_IMETHODIMP nsAccessible::GetAccChildCount(PRInt32 *aAccChildCount)
   GetPresContext(context);
 
   if (context) {
-    nsFrameTreeWalker walker(context, this); 
-    *aAccChildCount = walker.GetCount(GetFrame());
+    nsDOMTreeWalker walker(context, mDOMNode); 
+    *aAccChildCount = walker.GetCount();
   } else 
     *aAccChildCount = 0;
 
@@ -750,7 +1004,7 @@ NS_IMETHODIMP nsAccessible::GetAccState(PRUint32 *aAccState)
     rv = mAccessible->GetAccState(aAccState);
 
   if (NS_SUCCEEDED(rv) && mFocusController) {
-    nsCOMPtr<nsIDOMElement> focusedElement, currElement(do_QueryInterface(mContent));
+    nsCOMPtr<nsIDOMElement> focusedElement, currElement(do_QueryInterface(mDOMNode));
     mFocusController->GetFocusedElement(getter_AddRefs(focusedElement));
     if (focusedElement == currElement)
       *aAccState |= STATE_FOCUSED;
@@ -1351,19 +1605,9 @@ nsAccessible::CalcOffset(nsIFrame* aFrame,
 
    // sum up all rects of frames with the same content node
   nsIFrame* start = aFrame;
-  nsIFrame* next  = nsnull;
-  start->GetNextSibling(&next);
 
   nsRect r;
-  start->GetRect(r);
-  
-  while (nsFrameTreeWalker::ShouldSkip(aPresContext,nsnull, start, next))
-  {
-    nsRect r2;
-    next->GetRect(r2);
-    r.UnionRect(r,r2);
-    next->GetNextSibling(&next);
-  }
+  GetBounds(r);
 
   nsPoint offset(r.x, r.y);
 
@@ -1403,6 +1647,15 @@ nsAccessible::CalcOffset(nsIFrame* aFrame,
   return NS_OK;
 }
 
+void nsAccessible::GetBounds(nsRect& aBounds)
+{
+  nsCOMPtr<nsIPresContext> presContext;
+  GetPresContext(presContext);
+
+  nsDOMNodeBoundsFinder finder(presContext, mDOMNode);
+  finder.GetBounds(aBounds);
+}
+
   /* void accGetBounds (out long x, out long y, out long width, out long height); */
 NS_IMETHODIMP nsAccessible::AccGetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width, PRInt32 *height)
 {
@@ -1410,13 +1663,9 @@ NS_IMETHODIMP nsAccessible::AccGetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width,
   GetPresContext(presContext);
 
   nsIFrame* frame = GetBoundsFrame();
-
+  
   float t2p;
   presContext->GetTwipsToPixels(&t2p);
-
-  nsIFrame* start = frame;
-  nsIFrame* next  = nsnull;
-  start->GetNextSibling(&next);
 
   nsRect rect;
   nsRect twips;
@@ -1424,22 +1673,21 @@ NS_IMETHODIMP nsAccessible::AccGetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width,
   nsRect orgRectTwips;
   nsRect unionRectTwips;
   nsRect orgRectPixels;
+  nsRect frameRectTwips;
 
-  start->GetRect(orgRectTwips);
+  GetBounds(orgRectTwips);
+  frame->GetRect(frameRectTwips);
+
+  nscoord xdiff = frameRectTwips.x - orgRectTwips.x;
+  nscoord ydiff = frameRectTwips.y - orgRectTwips.y;
+  
   unionRectTwips = orgRectTwips;
 
-  if (presContext && NS_SUCCEEDED(GetAbsoluteFramePosition(presContext, start, twips, rect))) {
-    orgRectPixels = rect;
-    orgRectPixels.x -= NSTwipsToIntPixels(orgRectTwips.x, t2p);
-    orgRectPixels.y -= NSTwipsToIntPixels(orgRectTwips.y, t2p);
-  }
-
-  while (nsFrameTreeWalker::ShouldSkip(presContext, nsnull, start, next))
+  if (presContext && NS_SUCCEEDED(GetAbsoluteFramePosition(presContext, frame, twips, rect))) 
   {
-    nsRect r2;
-    next->GetRect(r2);
-    unionRectTwips.UnionRect(unionRectTwips, r2);
-    next->GetNextSibling(&next);
+    orgRectPixels = rect;
+    orgRectPixels.x -= NSTwipsToIntPixels(orgRectTwips.x + xdiff, t2p);
+    orgRectPixels.y -= NSTwipsToIntPixels(orgRectTwips.y + ydiff, t2p);
   }
 
   nsRect rectPixels;
@@ -1453,7 +1701,6 @@ NS_IMETHODIMP nsAccessible::AccGetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width,
   *y      = rectPixels.y;
   *width  = rectPixels.width;
   *height = rectPixels.height;
-
 
   return NS_OK;
 }
@@ -1469,7 +1716,8 @@ nsIFrame* nsAccessible::GetFrame()
 {
    nsCOMPtr<nsIPresShell> shell = do_QueryReferent(mPresShell);
    nsIFrame* frame = nsnull;
-   shell->GetPrimaryFrameFor(mContent, &frame);
+   nsCOMPtr<nsIContent> content = do_QueryInterface(mDOMNode);
+   shell->GetPrimaryFrameFor(content, &frame);
    return frame;
 }
 
@@ -1483,48 +1731,48 @@ void nsAccessible::GetPresContext(nsCOMPtr<nsIPresContext>& aContext)
     aContext = nsnull;
 }
 
-nsIAccessible* nsAccessible::CreateNewNextAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell)
+nsIAccessible* nsAccessible::CreateNewNextAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell)
 {
-  return CreateNewAccessible(aAccessible, aContent, aShell);
+  return CreateNewAccessible(aAccessible, aNode, aShell);
 }
 
-nsIAccessible* nsAccessible::CreateNewPreviousAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell)
+nsIAccessible* nsAccessible::CreateNewPreviousAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell)
 {
-  return CreateNewAccessible(aAccessible, aContent, aShell);
+  return CreateNewAccessible(aAccessible, aNode, aShell);
 }
 
-nsIAccessible* nsAccessible::CreateNewParentAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell)
+nsIAccessible* nsAccessible::CreateNewParentAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell)
 {
-  return CreateNewAccessible(aAccessible, aContent, aShell);
+  return CreateNewAccessible(aAccessible, aNode, aShell);
 }
 
-nsIAccessible* nsAccessible::CreateNewFirstAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell)
+nsIAccessible* nsAccessible::CreateNewFirstAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell)
 {
-  return CreateNewAccessible(aAccessible, aContent, aShell);
+  return CreateNewAccessible(aAccessible, aNode, aShell);
 }
 
-nsIAccessible* nsAccessible::CreateNewLastAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell)
+nsIAccessible* nsAccessible::CreateNewLastAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell)
 {
-  return CreateNewAccessible(aAccessible, aContent, aShell);
+  return CreateNewAccessible(aAccessible, aNode, aShell);
 }
 
-nsIAccessible* nsAccessible::CreateNewAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell)
+nsIAccessible* nsAccessible::CreateNewAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell)
 {
-  NS_ASSERTION(aAccessible && aContent,"Error not accessible or content");
-  return new nsAccessible(aAccessible, aContent, aShell);
+  NS_ASSERTION(aAccessible && aNode,"Error not accessible or content");
+  return new nsAccessible(aAccessible, aNode, aShell);
 }
 
 // ------- nsHTMLBlockAccessible ------
 
-nsHTMLBlockAccessible::nsHTMLBlockAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell):nsAccessible(aAccessible, aContent, aShell)
+nsHTMLBlockAccessible::nsHTMLBlockAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell):nsAccessible(aAccessible, aNode, aShell)
 {
 
 }
 
-nsIAccessible* nsHTMLBlockAccessible::CreateNewAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell)
+nsIAccessible* nsHTMLBlockAccessible::CreateNewAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWeakReference* aShell)
 {
-  NS_ASSERTION(aAccessible && aContent,"Error not accessible or content");
-  return new nsHTMLBlockAccessible(aAccessible, aContent, aShell);
+  NS_ASSERTION(aAccessible && aNode,"Error not accessible or content");
+  return new nsHTMLBlockAccessible(aAccessible, aNode, aShell);
 }
 
 /* nsIAccessible accGetAt (in long x, in long y); */
