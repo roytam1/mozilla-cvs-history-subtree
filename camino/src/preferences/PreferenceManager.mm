@@ -198,8 +198,10 @@ static BOOL gMadePrefManager;
     // Supply our own directory service provider so we can control where
     // the registry and profiles are located.
     AppDirServiceProvider *provider = new AppDirServiceProvider(nsDependentCString(profileDirName));
-    NS_ASSERTION(provider, "Failed to create AppDirServiceProvider");
-    rv = NS_InitEmbedding(binDir, provider);
+    if (!provider) return NO;
+
+    nsCOMPtr<nsIDirectoryServiceProvider> dirProvider = (nsIDirectoryServiceProvider*)provider;
+    rv = NS_InitEmbedding(binDir, dirProvider);
     if (NS_FAILED(rv)) {
       NSLog(@"Embedding init failed.");
       return NO;
