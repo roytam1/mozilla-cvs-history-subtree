@@ -1567,7 +1567,7 @@ var BookmarksUtils = {
         currentTabInfo = tabsInfo[i];
     }
 
-    openDialog("chrome://browser/content/bookmarks/addBookmark2.xul", "",
+    openDialog("chrome://communicator/content/bookmarks/addBookmark.xul", "",
                "centerscreen,chrome,dialog=yes,resizable=no,dependent",
                currentTabInfo.name, currentTabInfo.url, null,
                currentTabInfo.charset, "addGroup" + (aSelect ? ",group" : ""), tabsInfo);
@@ -1590,7 +1590,7 @@ var BookmarksUtils = {
       title = url;
     }
 
-    openDialog("chrome://browser/content/bookmarks/addBookmark2.xul", "", 
+    openDialog("chrome://communicator/content/bookmarks/addBookmark.xul", "", 
                "centerscreen,chrome,dialog=yes,resizable=no,dependent", title,
                url, null, docCharset);
   }, 
@@ -1598,7 +1598,7 @@ var BookmarksUtils = {
   // should update the caller, aShowDialog is no more necessary
   addBookmark: function (aURL, aTitle, aCharSet, aShowDialog)                   
   {                                                                             
-    openDialog("chrome://browser/content/bookmarks/addBookmark2.xul", "",     
+    openDialog("chrome://communicator/content/bookmarks/addBookmark.xul", "",     
                "centerscreen,chrome,dialog=yes,resizable=no,dependent", aTitle, aURL, null, aCharSet);
   },                                                                          
 

@@ -42,7 +42,7 @@
     <stringbundle id="bundle_brand" src="chrome://global/locale/brand.properties"/>
   </stringbundleset>
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
-  <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarksOverlay.js"/>
+  <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarks.js"/>
   <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bm-props.js"/>
  
   <keyset id="keyset"/>  

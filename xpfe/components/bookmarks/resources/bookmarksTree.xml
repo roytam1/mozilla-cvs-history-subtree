@@ -1010,7 +1010,7 @@
             </treechildren>
           </rule>
         </template>
-        <treecols>
+        <treecols anonid="treecols">
           <treecol id="Name" label="&treecol.name.label;" flex="1" primary="true"
                        class="sortDirectionIndicator" persist="width hidden"
                        sort="rdf:http://home.netscape.com/NC-rdf#Name"
@@ -1026,4 +1026,3 @@
     </implementation>
   </binding>
 </bindings>
-
