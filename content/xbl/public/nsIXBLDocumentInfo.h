@@ -53,6 +53,7 @@ class nsIDocument;
 class nsIScriptContext;
 class nsXBLPrototypeBinding;
 class nsIURI;
+class nsACString;
 
 // {5C4D9674-A2CF-4ddf-9F65-E1806C34D28D}
 #define NS_IXBLDOCUMENTINFO_IID \

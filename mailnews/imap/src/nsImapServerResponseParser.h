@@ -50,6 +50,7 @@ class nsIMAPNamespaceList;
 class nsIMAPBodyShell;
 class nsImapSearchResultIterator;
 class nsImapFlagAndUidState;
+class nsCString;
 
 #include "nsIMAPGenericParser.h"
 

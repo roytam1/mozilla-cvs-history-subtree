@@ -40,6 +40,7 @@
 #define nsIListControlFrame_h___
 
 #include "nsISupports.h"
+class nsAString;
 
 // IID for the nsIImageControlFrame class
 #define NS_ILISTCONTROLFRAME_IID    \

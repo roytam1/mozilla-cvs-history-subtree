@@ -43,8 +43,8 @@
 #include "baseutils.h"
 #include "TxObject.h"
 #include "txXPathNode.h"
-#include "nsStringFwd.h"
 
+class nsAString;
 class nsIAtom;
 
 #ifndef TX_EXE

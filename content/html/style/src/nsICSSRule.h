@@ -43,6 +43,7 @@
 class nsICSSStyleSheet;
 class nsICSSGroupRule;
 class nsIDOMCSSRule;
+class nsAString;
 
 // IID for the nsICSSRule interface {b9791e20-1a04-11d3-805a-006008159b5a}
 #define NS_ICSS_RULE_IID     \

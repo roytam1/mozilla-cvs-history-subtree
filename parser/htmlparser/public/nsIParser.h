@@ -54,7 +54,6 @@
 #include "nsIInputStream.h"
 #include "nsHashtable.h"
 #include "nsVoidArray.h"
-#include "nsStringFwd.h"
 
 #define NS_IPARSER_IID      \
   {0x355cbba0, 0xbf7d,  0x11d1,  \
@@ -67,6 +66,7 @@
 class nsIContentSink;
 class nsIRequestObserver;
 class nsIParserFilter;
+class nsString;
 class nsIURI;
 class nsIChannel;
 

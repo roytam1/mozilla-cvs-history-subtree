@@ -56,6 +56,7 @@ class nsIScriptContext;
 class nsXBLPrototypeBinding;
 class nsVoidArray;
 class nsIURI;
+class nsACString;
 
 // {DDDBAD20-C8DF-11d3-97FB-00400553EEF0}
 #define NS_IXBLBINDING_IID \

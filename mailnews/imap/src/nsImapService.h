@@ -47,9 +47,9 @@
 #include "nsIMsgProtocolInfo.h"
 #include "nsIContentHandler.h"
 #include "nsICacheSession.h"
-#include "nsStringFwd.h"
 
 class nsIImapHostSessionList; 
+class nsCString;
 class nsIImapUrl;
 class nsIMsgFolder;
 class nsIMsgStatusFeedback;

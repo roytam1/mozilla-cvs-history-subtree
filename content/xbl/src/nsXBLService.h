@@ -47,13 +47,13 @@
 #include "jsapi.h"              // nsXBLJSClass derives from JSClass
 #include "jsclist.h"            // nsXBLJSClass derives from JSCList
 #include "nsFixedSizeAllocator.h"
-#include "nsStringFwd.h"
 
 class nsIXBLBinding;
 class nsIXBLDocumentInfo;
 class nsIContent;
 class nsIDocument;
 class nsIAtom;
+class nsString;
 class nsIURI;
 class nsIURL;
 class nsSupportsHashtable;

@@ -39,7 +39,7 @@
 #define nsITextContent_h___
 
 #include "nsIContent.h"
-#include "nsStringFwd.h"
+class nsString;
 class nsTextFragment;
 
 // IID for the nsITextContent interface

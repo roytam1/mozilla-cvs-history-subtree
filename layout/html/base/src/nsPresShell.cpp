@@ -107,7 +107,6 @@
 #include "nsILineIterator.h" // for ScrollFrameIntoView
 #include "nsTimer.h"
 #include "nsWeakPtr.h"
-#include "plhash.h"
 #include "plarena.h"
 #include "nsIObserverService.h" // for reflow observation
 #include "nsIDocShell.h"        // for reflow observation

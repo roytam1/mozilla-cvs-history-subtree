@@ -40,6 +40,7 @@
 #define nsITextControlElement_h___
 
 #include "nsISupports.h"
+class nsAString;
 class nsITextControlFrame;
 
 // IID for the nsITextControl interface

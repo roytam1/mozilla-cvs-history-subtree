@@ -55,8 +55,10 @@
 #define rdfutil_h__
 
 #include "prtypes.h"
-#include "nsStringFwd.h"
 
+class nsACString;
+class nsCString;
+class nsString;
 class nsIURI;
 
 nsresult

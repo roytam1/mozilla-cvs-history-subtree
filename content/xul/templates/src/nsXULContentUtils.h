@@ -47,13 +47,14 @@
 #define nsXULContentUtils_h__
 
 #include "nsISupports.h"
-#include "nsStringFwd.h"
 
 class nsIAtom;
 class nsIContent;
 class nsIDocument;
 class nsIDOMNodeList;
 class nsIRDFNode;
+class nsCString;
+class nsString;
 class nsIRDFResource;
 class nsIRDFLiteral;
 class nsIRDFService;

@@ -40,8 +40,7 @@
 //#define DEBUG_VOIDARRAY 1
 
 #include "nscore.h"
-#include "nsStringFwd.h"
-#include "nsDebug.h"
+#include "nsAString.h"
 
 // Comparator callback function for sorting array values.
 typedef int (* PR_CALLBACK nsVoidArrayComparatorFunc)
@@ -191,6 +190,8 @@ protected:
 };
 
 
+class nsString;
+
 typedef int (* PR_CALLBACK nsStringArrayComparatorFunc)
             (const nsString* aElement1, const nsString* aElement2, void* aData);
 
@@ -242,6 +243,8 @@ private:
   nsStringArray(const nsStringArray& other);
 };
 
+
+class nsCString;
 
 typedef int (* PR_CALLBACK nsCStringArrayComparatorFunc)
             (const nsCString* aElement1, const nsCString* aElement2, void* aData);

@@ -408,12 +408,12 @@ GRE_GetPathFromConfigDir(const char* dirname, char* buffer)
     if (offset != entry->name + strlen(entry->name) - 5)
       continue;
 
-    char *fullPath =
-      PR_smprintf("%s%s%s", dirname, XPCOM_FILE_PATH_SEPARATOR, entry->name);
-    if (fullPath) {
-      found = GRE_GetPathFromConfigFile(fullPath, buffer);
-      PR_smprintf_free(fullPath);
-    }
+    nsEmbedCString fullPath;
+    fullPath += dirname;
+    fullPath += XPCOM_FILE_PATH_SEPARATOR;
+    fullPath += entry->name;
+
+    found = GRE_GetPathFromConfigFile(fullPath.get(), buffer);
   }
 
   PR_CloseDir(dir);

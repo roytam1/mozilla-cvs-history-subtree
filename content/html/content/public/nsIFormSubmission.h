@@ -39,6 +39,8 @@
 #define nsIFormSubmission_h___
 
 #include "nsISupports.h"
+class nsAString;
+class nsACString;
 class nsIURI;
 class nsIInputStream;
 class nsIHTMLContent;

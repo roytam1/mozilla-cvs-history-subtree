@@ -39,9 +39,9 @@
 
 #include "nsIStyleSheet.h"
 #include "nsColor.h"
-#include "nsStringFwd.h"
 
 class nsIAtom;
+class nsString;
 class nsHTMLValue;
 class nsIHTMLMappedAttributes;
 class nsIDocument;

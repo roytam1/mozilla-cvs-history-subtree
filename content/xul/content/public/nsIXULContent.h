@@ -47,10 +47,10 @@
 #define nsIXULContent_h__
 
 #include "nsIXMLContent.h"
-#include "nsStringFwd.h"
 class nsIAtom;
 class nsIRDFCompositeDataSource;
 class nsIXULTemplateBuilder;
+class nsString;
 
 // {39C5ECC0-5C47-11d3-BE36-00104BDE6048}
 #define NS_IXULCONTENT_IID \

@@ -52,6 +52,7 @@ class nsIAtom;
 class nsIPrincipal;
 class nsIStyleSheet;
 class nsIURI;
+class nsString;
 class nsVoidArray;
 class nsXULPrototypeElement;
 class nsIXULDocument;

@@ -41,6 +41,7 @@
 #include "nsISupports.h"
 #include "nsFont.h"
 class nsIPresContext;
+class nsAString;
 class nsIContent;
 class nsIAtom;
 

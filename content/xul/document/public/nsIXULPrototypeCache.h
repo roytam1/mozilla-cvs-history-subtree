@@ -47,11 +47,11 @@
 #define nsIXULPrototypeCache_h__
 
 #include "nsISupports.h"
-#include "nsStringFwd.h"
 class nsICSSStyleSheet;
 class nsIURI;
 class nsIXULPrototypeDocument;
 class nsIXULDocument;
+class nsCString;
 class nsIDocument;
 class nsIXBLDocumentInfo;
 class nsIFastLoadService;

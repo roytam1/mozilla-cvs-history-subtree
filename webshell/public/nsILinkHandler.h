@@ -38,12 +38,12 @@
 #define nsILinkHandler_h___
 
 #include "nsISupports.h"
-#include "nsStringFwd.h"
 
 class nsIInputStream;
 class nsIDocShell;
 class nsIRequest;
 class nsIContent;
+class nsString;
 struct nsGUIEvent;
 
 // Interface ID for nsILinkHandler

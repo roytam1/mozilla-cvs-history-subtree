@@ -44,6 +44,7 @@
 #include "mdb.h"
 
 class nsMsgDatabase;
+class nsCString;
 
 class nsMsgHdr : public nsIMsgDBHdr {
 public:

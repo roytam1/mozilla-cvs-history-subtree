@@ -41,7 +41,11 @@
 
 #include "nsColor.h"
 #include "nsComObsolete.h"
-#include "nsStringFwd.h"
+
+struct nsStr;
+class nsAFlatCString;
+class nsAString;
+class nsACString;
 
 /*
    Declare the enum list using the magic of preprocessing

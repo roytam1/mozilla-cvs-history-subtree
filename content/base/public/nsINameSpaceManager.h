@@ -43,6 +43,7 @@
 #include "nsAString.h"
 
 class nsIAtom;
+class nsString;
 class nsINameSpace;
 class nsIElementFactory;
 

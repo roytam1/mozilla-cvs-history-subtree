@@ -40,7 +40,6 @@
 #define nsISpellChecker_h__
 
 #include "nsISupports.h"
-#include "nsStringFwd.h"
 
 #define NS_SPELLCHECKER_CONTRACTID "@mozilla.org/spellchecker;1"
 
@@ -50,6 +49,7 @@
   { 0x8d, 0xb3, 0x30, 0xfe, 0xe2, 0x9f, 0xe3, 0xd2 } }
 
 class nsITextServicesDocument;
+class nsString;
 class nsStringArray;
 
 /**

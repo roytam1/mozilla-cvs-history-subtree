@@ -51,8 +51,8 @@
 #include "plhash.h"
 #include "nsIContent.h"
 #include "nsFixedSizeAllocator.h"
-#include "nsStringFwd.h"
 
+class nsString;
 class nsISupportsArray;
 
 class nsElementMap

@@ -53,11 +53,11 @@
 #include "nsISecurityPref.h"
 #include "nsIJSContextStack.h"
 #include "nsIObserver.h"
-#include "nsStringFwd.h"
 #include "pldhash.h"
 #include "plstr.h"
 
 class nsIDocShell;
+class nsString;
 class nsIClassInfo;
 class nsIIOService;
 class nsIXPConnect;
