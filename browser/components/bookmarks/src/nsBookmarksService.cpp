@@ -58,6 +58,7 @@
 #include "nsIRDFService.h"
 #include "nsIRDFXMLSerializer.h"
 #include "nsIRDFXMLSource.h"
+#include "nsIRDFPropagatableDataSource.h"
 #include "nsRDFCID.h"
 #include "nsISupportsPrimitives.h"
 #include "rdf.h"
@@ -3119,9 +3120,17 @@ nsBookmarksService::UpdateBookmarkIcon(const char *aURL, const PRUnichar *aIconU
             if (nsDependentString(aIconURL).Equals(NS_LITERAL_STRING("data:"))) {
                 // if it's just "data:", then don't send notifications, otherwise
                 // things will update with a null icon
-                BeginUpdateBatch();
+                nsCOMPtr<nsIRDFPropagatableDataSource> propDS = do_QueryInterface(mInner);
+                PRBool oldPropChanges = PR_TRUE;
+                if (propDS) {
+                    (void) propDS->GetPropagateChanges(&oldPropChanges);
+                    (void) propDS->SetPropagateChanges(PR_FALSE);
+                }
+
                 rv = mInner->Assert(bookmark, kNC_Icon, urlLiteral, PR_TRUE);
-                EndUpdateBatch();
+
+                if (propDS)
+                    (void) propDS->SetPropagateChanges(oldPropChanges);
             } else {
                 rv = mInner->Assert(bookmark, kNC_Icon, urlLiteral, PR_TRUE);
             }
