@@ -9978,7 +9978,7 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList,
     if (frame) {
       nsresult res;
 
-      void* dummy = frame->GetProperty(nsLayoutAtoms::changeListProperty);
+      void* dummy = frame->GetProperty(nsLayoutAtoms::changeListProperty, &res);
 
       if (NS_PROPTABLE_PROP_NOT_THERE == res)
         continue;
