@@ -224,6 +224,7 @@ NS_INTERFACE_MAP_END
 // called on the socket thread
 nsresult
 nsHttpPipeline::OnHeadersAvailable(nsAHttpTransaction *trans,
+                                   nsHttpRequestHead *requestHead,
                                    nsHttpResponseHead *responseHead,
                                    PRBool *reset)
 {
@@ -231,7 +232,7 @@ nsHttpPipeline::OnHeadersAvailable(nsAHttpTransaction *trans,
 
     NS_ASSERTION(mConnection, "no connection");
     // trans has now received its response headers; forward to the real connection
-    return mConnection->OnHeadersAvailable(trans, responseHead, reset);
+    return mConnection->OnHeadersAvailable(trans, requestHead, responseHead, reset);
 }
 
 // called on any thread
