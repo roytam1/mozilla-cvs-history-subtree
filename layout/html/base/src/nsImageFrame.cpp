@@ -246,14 +246,14 @@ NS_IMETHODIMP nsImageFrame::OnStartContainer(nsIImageRequest *request, nsIPresCo
   aPresContext->GetShell(getter_AddRefs(presShell));
 
 
-  gfx_dimension w, h;
+  nscoord w, h;
   image->GetWidth(&w);
   image->GetHeight(&h);
 
   float p2t;
   aPresContext->GetPixelsToTwips(&p2t);
 
-  mIntrinsicSize.SizeTo(GFXCoordToIntRound(w * p2t), GFXCoordToIntRound(h * p2t));
+  mIntrinsicSize.SizeTo(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
 
 
   if (mParent) {
@@ -489,13 +489,13 @@ nsImageFrame::GetDesiredSize(nsIPresContext* aPresContext,
     if (mIntrinsicSize.width != 0) {
       newHeight = mIntrinsicSize.width;
     } else {
-      newHeight = p2t;
+      newHeight = NSIntPixelsToTwips(1, p2t);
     }
   } else {
     // auto size the image
     if (mIntrinsicSize.width == 0 && mIntrinsicSize.height == 0) {
-      newWidth = p2t;
-      newHeight = p2t;
+      newWidth = NSIntPixelsToTwips(1, p2t);
+      newHeight = NSIntPixelsToTwips(1, p2t);
     } else {
       newWidth = mIntrinsicSize.width;
       newHeight = mIntrinsicSize.height;
@@ -518,8 +518,8 @@ nsImageFrame::GetDesiredSize(nsIPresContext* aPresContext,
       img->GetWidth(&w);
       img->GetHeight(&h);
 
-      aDesiredSize.width = GFXCoordToIntRound(w*p2t);
-      aDesiredSize.height = GFXCoordToIntRound(h*p2t);
+      aDesiredSize.width = NSIntPixelsToTwips(w, p2t);
+      aDesiredSize.height = NSIntPixelsToTwips(h, p2t);
     }
   }
 
@@ -532,8 +532,8 @@ nsImageFrame::GetDesiredSize(nsIPresContext* aPresContext,
       img->GetWidth(&w);
       img->GetHeight(&h);
 
-      aDesiredSize.width = GFXCoordToIntRound(w*p2t);
-      aDesiredSize.height = GFXCoordToIntRound(h*p2t);
+      aDesiredSize.width = NSIntPixelsToTwips(w, p2t);
+      aDesiredSize.height = NSIntPixelsToTwips(h, p2t);
     }
   }
 #endif
