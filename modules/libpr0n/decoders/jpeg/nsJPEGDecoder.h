@@ -37,6 +37,8 @@
 
 #include "jpeglib.h"
 
+#include <setjmp.h>
+
 #define NS_JPEGDECODER_CID \
 { /* 5871a422-1dd2-11b2-ab3f-e2e56be5da9c */         \
      0x5871a422,                                     \
