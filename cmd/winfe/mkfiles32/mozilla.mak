@@ -268,6 +268,8 @@ CFLAGS_LIBLAYER_C=      $(CFLAGS_DEFAULT)
 CFLAGS_LIBMISC_C=       $(CFLAGS_DEFAULT)
 CFLAGS_LIBNET_C=        $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/netc.pch" /YX"mkutils.h"
 CFLAGS_LIBNET_CPP=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/netcpp.pch" /YX"mkutils.h"
+CFLAGS_LIBMSG_C=        $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/netc.pch" /YX"mkutils.h"
+CFLAGS_LIBMSG_CPP=      $(CFLAGS_DEFAULT) /I$(DEPTH)\dist\public\addr /Fp"$(OUTDIR)/netcpp.pch" /YX"mkutils.h"
 CFLAGS_LIBPARSE_C=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/pa_parse.pch" /YX"pa_parse.h"
 CFLAGS_XP_C=            $(CFLAGS_DEFAULT)
 CFLAGS_LIBPICS_C=       $(CFLAGS_DEFAULT)
@@ -514,6 +516,7 @@ CINCLUDES= \
     /I$(DEPTH)\lib\libstyle \
     /I$(DEPTH)\lib\liblayer\include \
     /I$(DEPTH)\lib\libnet \
+	/I$(DEPTH)\lib\libmsg \
     /I$(DEPTH)\lib\libcnv \
     /I$(DEPTH)\lib\libi18n \
     /I$(DEPTH)\lib\libparse \
@@ -897,6 +900,87 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libnet\mkutils.c
 	$(DEPTH)\lib\libnet\jsautocf.c
 	$(DEPTH)\lib\libnet\txview.c
+
+!ifdef MOZ_MAIL_NEWS
+	$(DEPTH)\lib\libmsg\ad_strm.c
+	$(DEPTH)\lib\libmsg\addrutil.cpp
+	$(DEPTH)\lib\libmsg\ap_decod.c
+	$(DEPTH)\lib\libmsg\ap_encod.c
+	$(DEPTH)\lib\libmsg\appledbl.c
+	$(DEPTH)\lib\libmsg\bh_strm.c
+	$(DEPTH)\lib\libmsg\biffmast.cpp
+	$(DEPTH)\lib\libmsg\bytearr.cpp
+	$(DEPTH)\lib\libmsg\chngntfy.cpp
+	$(DEPTH)\lib\libmsg\dwordarr.cpp
+	$(DEPTH)\lib\libmsg\filters.cpp
+	$(DEPTH)\lib\libmsg\grec.cpp
+	$(DEPTH)\lib\libmsg\grpinfo.cpp
+	$(DEPTH)\lib\libmsg\hosttbl.cpp
+	$(DEPTH)\lib\libmsg\idarray.cpp
+	$(DEPTH)\lib\libmsg\imaphost.cpp
+	$(DEPTH)\lib\libmsg\imapoff.cpp
+	$(DEPTH)\lib\libmsg\jsmsg.cpp
+	$(DEPTH)\lib\libmsg\listngst.cpp
+	$(DEPTH)\lib\libmsg\m_binhex.c
+	$(DEPTH)\lib\libmsg\maildb.cpp
+	$(DEPTH)\lib\libmsg\mailhdr.cpp
+	$(DEPTH)\lib\libmsg\mhtmlstm.cpp
+	$(DEPTH)\lib\libmsg\msgbg.cpp
+	$(DEPTH)\lib\libmsg\msgbgcln.cpp
+	$(DEPTH)\lib\libmsg\msgccach.cpp
+	$(DEPTH)\lib\libmsg\msgcflds.cpp
+	$(DEPTH)\lib\libmsg\msgcmfld.cpp
+	$(DEPTH)\lib\libmsg\msgcpane.cpp
+	$(DEPTH)\lib\libmsg\msgdb.cpp
+	$(DEPTH)\lib\libmsg\msgdbini.cpp
+	$(DEPTH)\lib\libmsg\msgdbvw.cpp
+	$(DEPTH)\lib\libmsg\msgdlqml.cpp
+	$(DEPTH)\lib\libmsg\msgdwnof.cpp
+	$(DEPTH)\lib\libmsg\msgfcach.cpp
+	$(DEPTH)\lib\libmsg\msgfinfo.cpp
+	$(DEPTH)\lib\libmsg\msgfpane.cpp
+	$(DEPTH)\lib\libmsg\msgglue.cpp
+	$(DEPTH)\lib\libmsg\msghdr.cpp
+	$(DEPTH)\lib\libmsg\msgimap.cpp
+	$(DEPTH)\lib\libmsg\msglpane.cpp
+	$(DEPTH)\lib\libmsg\msglsrch.cpp
+	$(DEPTH)\lib\libmsg\msgmapi.cpp
+	$(DEPTH)\lib\libmsg\msgmast.cpp
+	$(DEPTH)\lib\libmsg\msgmdn.cpp
+	$(DEPTH)\lib\libmsg\msgmpane.cpp
+	$(DEPTH)\lib\libmsg\msgmsrch.cpp
+	$(DEPTH)\lib\libmsg\msgnsrch.cpp
+	$(DEPTH)\lib\libmsg\msgoffnw.cpp
+	$(DEPTH)\lib\libmsg\msgpane.cpp
+	$(DEPTH)\lib\libmsg\msgppane.cpp
+	$(DEPTH)\lib\libmsg\msgprefs.cpp
+	$(DEPTH)\lib\libmsg\msgpurge.cpp
+	$(DEPTH)\lib\libmsg\msgrulet.cpp
+	$(DEPTH)\lib\libmsg\msgsend.cpp
+	$(DEPTH)\lib\libmsg\msgsendp.cpp
+	$(DEPTH)\lib\libmsg\msgspane.cpp
+	$(DEPTH)\lib\libmsg\msgtpane.cpp
+	$(DEPTH)\lib\libmsg\msgundac.cpp
+	$(DEPTH)\lib\libmsg\msgundmg.cpp
+	$(DEPTH)\lib\libmsg\msgurlq.cpp
+	$(DEPTH)\lib\libmsg\msgutils.c
+	$(DEPTH)\lib\libmsg\msgzap.cpp
+	$(DEPTH)\lib\libmsg\newsdb.cpp
+	$(DEPTH)\lib\libmsg\newshdr.cpp
+	$(DEPTH)\lib\libmsg\newshost.cpp
+	$(DEPTH)\lib\libmsg\newspane.cpp
+	$(DEPTH)\lib\libmsg\newsset.cpp
+	$(DEPTH)\lib\libmsg\nwsartst.cpp
+	$(DEPTH)\lib\libmsg\prsembst.cpp
+	$(DEPTH)\lib\libmsg\ptrarray.cpp
+	$(DEPTH)\lib\libmsg\search.cpp
+	$(DEPTH)\lib\libmsg\subline.cpp
+	$(DEPTH)\lib\libmsg\subpane.cpp
+	$(DEPTH)\lib\libmsg\thrdbvw.cpp
+	$(DEPTH)\lib\libmsg\thrhead.cpp
+	$(DEPTH)\lib\libmsg\thrlstst.cpp
+	$(DEPTH)\lib\libmsg\thrnewvw.cpp
+!endif
 
 	$(DEPTH)\lib\libparse\pa_amp.c
 	$(DEPTH)\lib\libparse\pa_hash.c
@@ -2002,6 +2086,7 @@ BATCH_BUILD_1:          \
 	BATCH_LIBLAYER_C                \
 	BATCH_PLUGIN_CPP                \
 	BATCH_LIBNET_CPP                \
+	BATCH_LIBMSG_CPP                \
 	BATCH_LIBDBM_C          \
 	BATCH_LAYOUT_CPP                \
 	BATCH_WINFE_CPP         \
@@ -2014,6 +2099,7 @@ BATCH_BUILD_1:          \
 BATCH_BUILD_2:             \
 	BATCH_LIBMIME_C         \
 	BATCH_LIBNET_C          \
+	BATCH_LIBMSG_C          \
 	BATCH_LIBPARSE_C                \
 	BATCH_LIBMISC_C         \
 	BATCH_LIBSTYLE_C                \
@@ -2451,6 +2537,7 @@ exports:
     -xcopy $(DEPTH)\lib\libjar\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\lib\libparse\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\lib\libnet\*.h $(EXPORTINC) $(XCF)
+	-xcopy $(DEPTH)\lib\libmsg\*.h $(EXPORTINC) $(XCF)
 !ifdef MOZ_LDAP
     -xcopy $(DEPTH)\netsite\ldap\include\*.h $(EXPORTINC) $(XCF)
     -xcopy $(XPDIST)\public\ldap\*.h $(EXPORTINC) $(XCF)

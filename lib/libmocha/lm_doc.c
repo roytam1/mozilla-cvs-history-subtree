@@ -28,6 +28,7 @@
 #include "xp.h"
 #include "lo_ele.h"
 #include "shist.h"
+/* #include "cookies.h" */
 #include "structs.h"            /* for MWContext */
 #include "layout.h"             /* included via -I../layout */
 #include "mkaccess.h"           /* from ../libnet */

@@ -34,6 +34,8 @@
 #include "np.h"
 #include "prefapi.h"
 #include "pa_parse.h"
+/* #include "netcache.h" */
+#include "secnav.h"
 
 #define IL_CLIENT
 #include "libimg.h"             /* Image Library public API. */
