@@ -1,38 +1,35 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape security libraries.
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2001
- * the Initial Developer. All Rights Reserved.
- *
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 2001 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
  * Contributor(s):
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
+ */
 /*
  * The following handles the loading, unloading and management of
  * various PCKS #11 modules
@@ -43,7 +40,6 @@
 #include "seccomon.h"
 #include "secmod.h"
 #include "secmodi.h"
-#include "secmodti.h"
 #include "pki3hack.h"
 #include "secerr.h"
    
@@ -97,7 +93,6 @@ secmod_NewModule(void)
     newMod->moduleDBOnly = PR_FALSE;
     newMod->trustOrder = 0;
     newMod->cipherOrder = 0;
-    newMod->evControlMask = 0;
 #ifdef PKCS11_USE_THREADS
     newMod->refLock = (void *)PZ_NewLock(nssILockRefLock);
     if (newMod->refLock == NULL) {
@@ -164,12 +159,9 @@ pk11_mkModuleSpec(SECMODModule * module)
 {
     char *nss = NULL, *modSpec = NULL, **slotStrings = NULL;
     int slotCount, i, si;
-    SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
 
     /* allocate target slot info strings */
     slotCount = 0;
-
-    SECMOD_GetReadLock(moduleLock);
     if (module->slotCount) {
 	for (i=0; i < module->slotCount; i++) {
 	    if (module->slots[i]->defaultFlags !=0) {
@@ -182,7 +174,6 @@ pk11_mkModuleSpec(SECMODModule * module)
 
     slotStrings = (char **)PORT_ZAlloc(slotCount*sizeof(char *));
     if (slotStrings == NULL) {
-        SECMOD_ReleaseReadLock(moduleLock);
 	goto loser;
     }
 
@@ -213,7 +204,6 @@ pk11_mkModuleSpec(SECMODModule * module)
 	}
     }
 
-    SECMOD_ReleaseReadLock(moduleLock);
     nss = pk11_mkNSS(slotStrings,slotCount,module->internal, module->isFIPS,
 	module->isModuleDB, module->moduleDBOnly, module->isCritical,
 	module->trustOrder,module->cipherOrder,module->ssl[0],module->ssl[1]);
@@ -392,12 +382,8 @@ SECMOD_LoadUserModule(char *modulespec,SECMODModule *parent, PRBool recurse)
 {
     SECStatus rv = SECSuccess;
     SECMODModule * newmod = SECMOD_LoadModule(modulespec, parent, recurse);
-    SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
-
     if (newmod) {
-	SECMOD_GetReadLock(moduleLock);
         rv = STAN_AddModuleToDefaultTrustDomain(newmod);
-	SECMOD_ReleaseReadLock(moduleLock);
         if (SECSuccess != rv) {
             SECMOD_DestroyModule(newmod);
             return NULL;
@@ -414,14 +400,10 @@ SECStatus SECMOD_UnloadUserModule(SECMODModule *mod)
 {
     SECStatus rv = SECSuccess;
     int atype = 0;
-    SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
     if (!mod) {
         return SECFailure;
     }
-
-    SECMOD_GetReadLock(moduleLock);
     rv = STAN_RemoveModuleFromDefaultTrustDomain(mod);
-    SECMOD_ReleaseReadLock(moduleLock);
     if (SECSuccess != rv) {
         return SECFailure;
     }

@@ -797,32 +797,3 @@ PK11_UnlinkGenericObject;
 ;+    local:
 ;+       *;
 ;+};
-;+NSS_3.9.3 { 	# NSS 3.9.3 release
-;+    global:
-PK11_PrivDecryptPKCS1;
-PK11_PubEncryptPKCS1;
-SECMOD_CancelWait;
-SECMOD_HasRemovableSlots;
-SECMOD_UpdateSlotList;
-SECMOD_WaitForAnyTokenEvent;
-;+    local:
-;+       *;
-;+};
-;+NSS_3.10 { 	# NSS 3.10 release
-;+    global:
-CERT_DecodeAltNameExtension;
-CERT_DecodeAuthInfoAccessExtension;
-CERT_DecodeAuthKeyID;
-CERT_DecodeCRLDistributionPoints;
-CERT_DecodeNameConstraintsExtension;
-CERT_DecodePrivKeyUsagePeriodExtension;
-CERT_GetCertificateNames;
-CERT_GetNextGeneralName;
-CERT_GetNextNameConstraint;
-CERT_GetPrevGeneralName;
-CERT_GetPrevNameConstraint;
-HASH_ResultLenByOidTag;
-SECOID_AddEntry;
-;+    local:
-;+       *;
-;+};

@@ -1,39 +1,24 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
- * http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- * 
+/*
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
- * 
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-1999
- * the Initial Developer. All Rights Reserved.
- * 
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
  * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- * 
- * ***** END LICENSE BLOCK ***** */
+ */
 
 /*
  * Extended I/O callback functions for libldap that use
@@ -75,6 +60,7 @@ static void LDAP_CALLBACK prldap_shared_disposehandle( LDAP *ld,
 	struct lextiof_session_private *sessionarg );
 static PRLDAPIOSessionArg *prldap_session_arg_alloc( void );
 static void prldap_session_arg_free( PRLDAPIOSessionArg **prsesspp );
+static PRLDAPIOSocketArg *prldap_socket_arg_alloc( PRLDAPIOSessionArg *sessionarg );
 static void prldap_socket_arg_free( PRLDAPIOSocketArg **prsockpp );
 static void *prldap_safe_realloc( void *ptr, PRUint32 size );
 
@@ -354,8 +340,7 @@ prldap_try_one_address( struct lextiof_socket_private *prsockp,
      * Try to open the TCP connection itself:
      */
     if ( PR_SUCCESS != PR_Connect( prsockp->prsock_prfd, addrp,
-                prldap_timeout2it( timeout, prsockp->prsock_io_max_timeout ))
-                && PR_IN_PROGRESS_ERROR != PR_GetError() ) {
+		prldap_timeout2it( timeout, prsockp->prsock_io_max_timeout ))) {
 	PR_Close( prsockp->prsock_prfd );
 	prsockp->prsock_prfd = NULL;
 	return( -1 );
@@ -592,7 +577,7 @@ prldap_session_arg_from_ld( LDAP *ld, PRLDAPIOSessionArg **sessargpp )
 /*
  * Allocate a socket argument.
  */
-PRLDAPIOSocketArg *
+static PRLDAPIOSocketArg *
 prldap_socket_arg_alloc( PRLDAPIOSessionArg *sessionarg )
 {
     PRLDAPIOSocketArg		*prsockp;
@@ -666,24 +651,3 @@ prldap_get_io_max_timeout( PRLDAPIOSessionArg *prsessp, int *io_max_timeoutp )
 
     return( rc );
 }
-
-/* Check if NSPR layer has been installed for a LDAP session.
- * Simply check whether prldap_connect() I/O function is installed 
- */
-PRBool
-prldap_is_installed( LDAP *ld )
-{
-    struct ldap_x_ext_io_fns iofns;
-
-    /* Retrieve current I/O functions */
-    memset( &iofns, 0, sizeof(iofns));
-    iofns.lextiof_size = LDAP_X_EXTIO_FNS_SIZE;
-    if ( ld == NULL || ldap_get_option( ld, LDAP_X_OPT_EXTIO_FN_PTRS, (void *)&iofns )
-	 != 0 ||  iofns.lextiof_connect != prldap_connect ) 
-    {
-	return( PR_FALSE );
-    }
-    
-    return( PR_TRUE );
-}
-

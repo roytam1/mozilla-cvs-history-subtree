@@ -1,40 +1,24 @@
 # 
-# ***** BEGIN LICENSE BLOCK *****
-# Version: MPL 1.1/GPL 2.0/LGPL 2.1
-# 
-# The contents of this file are subject to the Mozilla Public License Version 
-# 1.1 (the "License"); you may not use this file except in compliance with 
-# the License. You may obtain a copy of the License at 
-# http://www.mozilla.org/MPL/
-# 
-# Software distributed under the License is distributed on an "AS IS" basis,
-# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-# for the specific language governing rights and limitations under the
-# License.
-# 
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
+#  
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+#  
 # The Original Code is Mozilla Communicator client code, released
 # March 31, 1998.
 # 
-# The Initial Developer of the Original Code is
-# Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1998-1999
-# the Initial Developer. All Rights Reserved.
-# 
-# Contributor(s):
-# 
-# Alternatively, the contents of this file may be used under the terms of
-# either of the GNU General Public License Version 2 or later (the "GPL"),
-# or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-# in which case the provisions of the GPL or the LGPL are applicable instead
-# of those above. If you wish to allow use of your version of this file only
-# under the terms of either the GPL or the LGPL, and not to allow others to
-# use your version of this file under the terms of the MPL, indicate your
-# decision by deleting the provisions above and replace them with the notice
-# and other provisions required by the GPL or the LGPL. If you do not delete
-# the provisions above, a recipient may use your version of this file under
-# the terms of any one of the MPL, the GPL or the LGPL.
-# 
-# ***** END LICENSE BLOCK ***** 
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation. Portions created by Netscape are
+# Copyright (C) 1998-1999 Netscape Communications Corporation. All
+# Rights Reserved.
+#
+# Contributor(s): 
+#
 
 MOD_DEPTH	= ../../..
 srcdir		= @srcdir@
@@ -44,13 +28,11 @@ include $(MOD_DEPTH)/config/autoconf.mk
 include $(topsrcdir)/build.mk
 
 INSTALLDIR     = $(DIST)/$(OBJDIR_NAME)/bin
-DIST_LIB_PATH  = $(DIST)/$(RELEASE_OBJDIR_NAME)/lib
 HEADERDIR      = $(MOD_DEPTH)/dist/$(OBJDIR_NAME)
 
 INCLUDES	+= -I$(HEADERDIR)/include \
 		-I$(DIST)/include/obsolete \
 		-I$(DIST)/include/nspr \
-		-I$(DIST)/$(RELEASE_OBJDIR_NAME)/include \
 		-I$(DIST)/include \
 		-I$(DIST)/public/security \
 		-I$(DIST)/public/nss \
@@ -129,9 +111,6 @@ endif
 CLIENT_OBJS = $(LDAPDELETE_OBJ) $(LDAPMODIFY_OBJ) \
 	$(LDAPSEARCH_OBJ) $(LDAPCOMPARE_OBJ) $(LDAPCMP_OBJ) $(LDAPTOOLCOMMON_OBJ)
 
-# For 'clean' target:
-TARGETS=$(BINDIR) $(LIBDIR) $(CLIENT_OBJS)
-
 LDAPDELETE = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapdelete))
 LDAPMODIFY = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapmodify))
 LDAPSEARCH = $(addsuffix $(EXE_SUFFIX), $(addprefix $(BINDIR)/, ldapsearch))
@@ -155,7 +134,7 @@ endif
 ifeq ($(OS_ARCH), SunOS)
 EXTRA_LIBS = -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
-             -L$(DIST)/lib -L$(DIST_LIB_PATH) $(SVRCORE_LINK) \
+             -L$(DIST)/lib $(SVRCORE_LINK) \
 	     $(LDAPTOOLS_NSS_LINK) \
 	     -lthread -lposix4 -lsocket -lnls \
 	     -ldl -lresolv -lgen 
@@ -188,7 +167,7 @@ endif
 ifeq ($(OS_ARCH), OSF1)
 EXTRA_LIBS = -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
-             -L$(DIST)/lib -L$(DIST_LIB_PATH) $(SVRCORE_LINK) \
+             -L$(DIST)/lib $(SVRCORE_LINK) \
 	     $(LDAPTOOLS_NSS_LINK) \
 	     -lcxx -lpthread -lrt -lmach -lexc 
 EXTRA_LIBS += -L$(DIST)/lib $(DYNAMICNSPR)
@@ -197,7 +176,7 @@ endif
 ifeq ($(OS_ARCH), Linux)
 EXTRA_LIBS = -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
-             -L$(DIST)/lib -L$(DIST_LIB_PATH) $(SVRCORE_LINK) \
+             -L$(DIST)/lib $(SVRCORE_LINK) \
 	     $(LDAPTOOLS_NSS_LINK) \
 	     -l$(LBER_LIBNAME) \
 	     -ldl -lresolv -lpthread 
@@ -208,15 +187,15 @@ ifeq ($(OS_ARCH), HP-UX)
 EXTRA_LIBS = -ldld -lm -lpthread -lrt \
 	     -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
-             -L$(DIST)/lib -L$(DIST_LIB_PATH) $(SVRCORE_LINK) \
-	      -l$(LBER_LIBNAME) $(LDAPTOOLS_NSS_LINK)
+             -L$(DIST)/lib $(SVRCORE_LINK) -l$(LBER_LIBNAME) \
+	     $(LDAPTOOLS_NSS_LINK)
 EXTRA_LIBS += -L$(DIST)/lib $(DYNAMICNSPR)
 endif
 
 ifeq ($(OS_ARCH), AIX)
 EXTRA_LIBS = -L$(DIST)/$(OBJDIR_NAME)/lib -l$(LDAP_LIBNAME) \
 	     -l$(LDIF_LIBNAME) -l$(SSLDAP_LIBNAME) -l$(PRLDAP_LIBNAME) \
-             -L$(DIST)/lib -L$(DIST_LIB_PATH) $(SVRCORE_LINK) \
+             -L$(DIST)/lib $(SVRCORE_LINK) \
 	     $(LDAPTOOLS_NSS_LINK) \
 	     -ldl -brtl -lpthreads -lc_r -lm
 EXTRA_LIBS += -L$(DIST)/lib $(DYNAMICNSPR)
@@ -230,19 +209,18 @@ EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) \
 		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
 else
 ifeq ($(OS_ARCH), SunOS)
-ifdef SOLARIS_USE_FORTE6
-SOLARIS_CXX_LIB=Crun
-else
-ifeq ($(OS_RELEASE),5.6)
-SOLARIS_CXX_LIB=C
-else
-SOLARIS_CXX_LIB=Crun
-endif
-endif
-EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) -l$(SOLARIS_CXX_LIB) \
+OS_VERS		:= $(shell uname -r)
+ifeq ($(OS_VERS),5.6)
+EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) -lC \
 		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
 	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
 		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
+else
+EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) -lCrun \
+		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
+	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
+endif
 else
 endif
 EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) \
@@ -259,7 +237,7 @@ include $(topsrcdir)/config/rules.mk
 
 ###########################################################################
 
-all::	$(OBJDEST) linklibnls libdir $(BINS)
+all::	$(BINS) $(OBJDEST) linklibnls libdir $(BINS)
 
 libdir: linklibnls
 ifeq ($(OS_ARCH), WINNT)
@@ -273,7 +251,6 @@ else
 endif
 ifeq ($(COMPS_FROM_OBJDIR), 1)
 ifeq ($(OS_ARCH), WINNT)
-#	Windows, COMPS_FROM_OBJDIR
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/$(PLC_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/$(PLDS_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/$(NSPR_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
@@ -283,7 +260,6 @@ ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/$(SOFTOKN_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 endif
 else
-#	Non-Windows, COMPS_FROM_OBJDIR
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(PLC_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(PLDS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(NSPR_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
@@ -298,7 +274,6 @@ ifeq ($(COPYFREEBL), 1)
 	$(NSINSTALL) $(DIST)/$(OBJDIR_NAME)/lib/lib$(PURE32_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 endif
 else
-#	Windows, !COMPS_FROM_OBJDIR
 ifeq ($(OS_ARCH), WINNT)
 	$(NSINSTALL) $(DIST)/lib/$(PLC_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
 	$(NSINSTALL) $(DIST)/lib/$(PLDS_BASENAME).$(DLL_SUFFIX) $(LIBDIR)
@@ -309,19 +284,18 @@ ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
 	$(NSINSTALL) $(DIST)/lib/$(SOFTOKN_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 endif
 else
-#	Non-Windows, !COMPS_FROM_OBJDIR
-	$(NSINSTALL) $(DIST_LIB_PATH)/lib$(PLC_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
-	$(NSINSTALL) $(DIST_LIB_PATH)/lib$(PLDS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
-	$(NSINSTALL) $(DIST_LIB_PATH)/lib$(NSPR_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
-	$(NSINSTALL) $(DIST_LIB_PATH)/lib$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
-	$(NSINSTALL) $(DIST_LIB_PATH)/lib$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/lib$(PLC_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/lib$(PLDS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/lib$(NSPR_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/lib$(SSL_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/lib$(NSS_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 ifeq ($(NSS_DYNAMIC_SOFTOKN),1)
-	$(NSINSTALL) $(DIST_LIB_PATH)/lib$(SOFTOKN_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/lib$(SOFTOKN_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 endif
 endif
 ifeq ($(COPYFREEBL), 1)
-	$(NSINSTALL) $(DIST_LIB_PATH)/lib$(HYBRID_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
-	$(NSINSTALL) $(DIST_LIB_PATH)/lib$(PURE32_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/lib$(HYBRID_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
+	$(NSINSTALL) $(DIST)/lib/lib$(PURE32_LIBNAME).$(DLL_SUFFIX) $(LIBDIR)
 endif
 endif
 
@@ -340,7 +314,7 @@ ifeq ($(HAVE_LIBNLS), 1)
 # $(NLS_VERSION_FILE)
 	sh ../../build/compver.sh $(LIBNLS_DIR) $(LIBNLS_RELDATE) \
 	$(OBJDIR_NAME) ../../../../dist ldapsdk \
-	$(LIBNLS_RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME) \
+	/share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME) \
 	libnls$(NLS_LIBVERSION) \
 	"include lib conv$(NLS_LIBVERSION) locale$(NLS_LIBVERSION)" \
 	../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/locale$(NLS_LIBVERSION)/index.txt
@@ -381,7 +355,7 @@ $(LDAPCMP):	$(LDAPCMP_OBJ) $(LDAPTOOLCOMMON_OBJ) \
 		$(LDAPTOOLCPPCOMMON_OBJ) $(LDTOOLS_LIBS_DEP)
 	$(LINK_EXE) $(LDAPCMP_OBJ) $(LDAPTOOLCOMMON_OBJ) $(LDAPTOOLCPPCOMMON_OBJ) $(LDTOOLS_LIBS)
 
-$(OBJDEST):	FORCE
+$(OBJDEST):
 	$(NSINSTALL) -D $(OBJDEST)
 	$(NSINSTALL) -D $(BINDIR)
 	$(NSINSTALL) -D $(LIBDIR)

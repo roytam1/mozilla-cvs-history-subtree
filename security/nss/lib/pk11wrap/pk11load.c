@@ -1,38 +1,35 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape security libraries.
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1994-2000
- * the Initial Developer. All Rights Reserved.
- *
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
  * Contributor(s):
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
+ */
 /*
  * The following handles the loading, unloading and management of
  * various PCKS #11 modules
@@ -43,7 +40,6 @@
 #include "prlink.h"
 #include "pk11func.h"
 #include "secmodi.h"
-#include "secmodti.h"
 #include "nssilock.h"
 
 extern void FC_GetFunctionList(void);
@@ -83,47 +79,12 @@ CK_RV PR_CALLBACK secmodUnlockMutext(CK_VOID_PTR mutext) {
 }
 
 static SECMODModuleID  nextModuleID = 1;
-static const CK_C_INITIALIZE_ARGS secmodLockFunctions = {
+static CK_C_INITIALIZE_ARGS secmodLockFunctions = {
     secmodCreateMutext, secmodDestroyMutext, secmodLockMutext, 
     secmodUnlockMutext, CKF_LIBRARY_CANT_CREATE_OS_THREADS|
 	CKF_OS_LOCKING_OK
     ,NULL
 };
-
-/*
- * collect the steps we need to initialize a module in a single function
- */
-SECStatus
-secmod_ModuleInit(SECMODModule *mod)
-{
-    CK_C_INITIALIZE_ARGS moduleArgs;
-    CK_VOID_PTR pInitArgs;
-    CK_RV crv;
-
-    if (mod->isThreadSafe == PR_FALSE) {
-	pInitArgs = NULL;
-    } else if (mod->libraryParams == NULL) {
-	pInitArgs = (void *) &secmodLockFunctions;
-    } else {
-	moduleArgs = secmodLockFunctions;
-	moduleArgs.LibraryParameters = (void *) mod->libraryParams;
-	pInitArgs = &moduleArgs;
-    }
-    crv = PK11_GETTAB(mod)->C_Initialize(pInitArgs);
-    if (crv != CKR_OK) {
-	if (pInitArgs == NULL) {
-	    PORT_SetError(PK11_MapError(crv));
-	    return SECFailure;
-	}
-	mod->isThreadSafe = PR_FALSE;
-    	crv = PK11_GETTAB(mod)->C_Initialize(NULL);
-    	if (crv != CKR_OK)  {
-	    PORT_SetError(PK11_MapError(crv));
-	    return SECFailure;
-	}
-    }
-    return SECSuccess;
-}
 
 /*
  * set the hasRootCerts flags in the module so it can be stored back
@@ -177,7 +138,7 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
     char * full_name;
     CK_INFO info;
     CK_ULONG slotCount = 0;
-    SECStatus rv;
+
 
     if (mod->loaded) return SECSuccess;
 
@@ -262,11 +223,15 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
 #endif
 
     mod->isThreadSafe = PR_TRUE;
-
     /* Now we initialize the module */
-    rv = secmod_ModuleInit(mod);
-    if (rv != SECSuccess) {
-	goto fail;
+    if (mod->libraryParams) {
+	secmodLockFunctions.LibraryParameters = (void *) mod->libraryParams;
+    } else {
+	secmodLockFunctions.LibraryParameters = NULL;
+    }
+    if (PK11_GETTAB(mod)->C_Initialize(&secmodLockFunctions) != CKR_OK) {
+	mod->isThreadSafe = PR_FALSE;
+    	if (PK11_GETTAB(mod)->C_Initialize(NULL) != CKR_OK) goto fail;
     }
 
     /* check the version number */
@@ -288,7 +253,7 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
     if (PK11_GETTAB(mod)->C_GetSlotList(CK_FALSE, NULL, &slotCount) == CKR_OK) {
 	CK_SLOT_ID *slotIDs;
 	int i;
-	CK_RV crv;
+	CK_RV rv;
 
 	mod->slots = (PK11SlotInfo **)PORT_ArenaAlloc(mod->arena,
 					sizeof(PK11SlotInfo *) * slotCount);
@@ -298,8 +263,8 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
 	if (slotIDs == NULL) {
 	    goto fail2;
 	}  
-	crv = PK11_GETTAB(mod)->C_GetSlotList(CK_FALSE, slotIDs, &slotCount);
-	if (crv != CKR_OK) {
+	rv = PK11_GETTAB(mod)->C_GetSlotList(CK_FALSE, slotIDs, &slotCount);
+	if (rv != CKR_OK) {
 	    PORT_Free(slotIDs);
 	    goto fail2;
 	}

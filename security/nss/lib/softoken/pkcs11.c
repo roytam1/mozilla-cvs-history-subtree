@@ -1,40 +1,40 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape security libraries.
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1994-2000
- * the Initial Developer. All Rights Reserved.
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
+ * Portions created by Sun Microsystems, Inc. are Copyright (C) 2003
+ * Sun Microsystems, Inc. All Rights Reserved.
  *
  * Contributor(s):
- *   Dr Stephen Henson <stephen.henson@gemplus.com>
- *   Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ *	Dr Stephen Henson <stephen.henson@gemplus.com>
+ *	Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
+ */
 /*
  * This file implements PKCS 11 on top of our existing security modules
  *
@@ -788,7 +788,6 @@ pk11_handleTrustObject(PK11Session *session,PK11Object *object)
         CK_TRUST clientTrust = CKT_NETSCAPE_TRUST_UNKNOWN;
         CK_TRUST emailTrust = CKT_NETSCAPE_TRUST_UNKNOWN;
         CK_TRUST signTrust = CKT_NETSCAPE_TRUST_UNKNOWN;
-	CK_BBOOL stepUp;
  	NSSLOWCERTCertTrust dbTrust = { 0 };
 	SECStatus rv;
 
@@ -845,14 +844,6 @@ pk11_handleTrustObject(PK11Session *session,PK11Object *object)
 	    }
 	    pk11_FreeAttribute(trust);
 	}
-	stepUp = CK_FALSE;
-	trust = pk11_FindAttribute(object,CKA_TRUST_STEP_UP_APPROVED);
-	if (trust) {
-	    if (trust->attrib.ulValueLen == sizeof(CK_BBOOL)) {
-		stepUp = *(CK_BBOOL*)trust->attrib.pValue;
-	    }
-	    pk11_FreeAttribute(trust);
-	}
 
 	/* preserve certain old fields */
 	if (cert->trust) {
@@ -868,9 +859,6 @@ pk11_handleTrustObject(PK11Session *session,PK11Object *object)
 	dbTrust.sslFlags |= pk11_MapTrust(clientTrust,PR_TRUE);
 	dbTrust.emailFlags |= pk11_MapTrust(emailTrust,PR_FALSE);
 	dbTrust.objectSigningFlags |= pk11_MapTrust(signTrust,PR_FALSE);
-	if (stepUp) {
-	    dbTrust.sslFlags |= CERTDB_GOVT_APPROVED_CA;
-	}
 
 	rv = nsslowcert_ChangeCertTrust(slot->certDB,cert,&dbTrust);
 	object->handle=pk11_mkHandle(slot,&cert->certKey,PK11_TOKEN_TYPE_TRUST);
@@ -2374,17 +2362,17 @@ pk11_SlotFromSessionHandle(CK_SESSION_HANDLE handle)
     return pk11_SlotFromID(nscSlotList[moduleIndex][slotIDIndex]);
 }
  
-static CK_RV
-pk11_RegisterSlot(PK11Slot *slot, int moduleIndex)
+PK11Slot * pk11_NewSlotFromID(CK_SLOT_ID slotID, int moduleIndex)
 {
+    PK11Slot *slot = NULL;
     PLHashEntry *entry;
     int index;
 
-    index = pk11_GetModuleIndex(slot->slotID);
+    index = pk11_GetModuleIndex(slotID);
 
     /* make sure the slotID for this module is valid */
     if (moduleIndex != index) {
-	return CKR_SLOT_ID_INVALID;
+	return NULL;
     }
 
     if (nscSlotList[index] == NULL) {
@@ -2392,7 +2380,7 @@ pk11_RegisterSlot(PK11Slot *slot, int moduleIndex)
 	nscSlotList[index] = (CK_SLOT_ID *)
 		PORT_ZAlloc(nscSlotListSize[index]*sizeof(CK_SLOT_ID));
 	if (nscSlotList[index] == NULL) {
-	    return CKR_HOST_MEMORY;
+	    return NULL;
 	}
     }
     if (nscSlotCount[index] >= nscSlotListSize[index]) {
@@ -2404,7 +2392,7 @@ pk11_RegisterSlot(PK11Slot *slot, int moduleIndex)
 	if (nscSlotList[index] == NULL) {
             nscSlotList[index] = oldNscSlotList;
             nscSlotListSize[index] = oldNscSlotListSize;
-            return CKR_HOST_MEMORY;
+            return NULL;
 	}
     }
 
@@ -2412,18 +2400,24 @@ pk11_RegisterSlot(PK11Slot *slot, int moduleIndex)
 	nscSlotHashTable[index] = PL_NewHashTable(64,pk11_HashNumber,
 				PL_CompareValues, PL_CompareValues, NULL, 0);
 	if (nscSlotHashTable[index] == NULL) {
-	    return CKR_HOST_MEMORY;
+	    return NULL;
 	}
     }
 
-    entry = PL_HashTableAdd(nscSlotHashTable[index],(void *)slot->slotID,slot);
+    slot = (PK11Slot *) PORT_ZAlloc(sizeof(PK11Slot));
+    if (slot == NULL) {
+	return NULL;
+    }
+
+    entry = PL_HashTableAdd(nscSlotHashTable[index],(void *)slotID,slot);
     if (entry == NULL) {
-	return CKR_HOST_MEMORY;
+	PORT_Free(slot);
+	return NULL;
     }
     slot->index = (nscSlotCount[index] & 0x7f) | ((index << 7) & 0x80);
-    nscSlotList[index][nscSlotCount[index]++] = slot->slotID;
+    nscSlotList[index][nscSlotCount[index]++] = slotID;
 
-    return CKR_OK;
+    return slot;
 }
 
 static SECStatus
@@ -2461,9 +2455,6 @@ pk11_DBVerify(PK11Slot *slot)
     return;
 }
 
-/* forward static declaration. */
-static CK_RV pk11_DestroySlotData(PK11Slot *slot);
-
 /*
  * initialize one of the slot structures. figure out which by the ID
  */
@@ -2472,7 +2463,7 @@ PK11_SlotInit(char *configdir,pk11_token_parameters *params, int moduleIndex)
 {
     unsigned int i;
     CK_SLOT_ID slotID = params->slotID;
-    PK11Slot *slot = PORT_ZNew(PK11Slot);
+    PK11Slot *slot = pk11_NewSlotFromID(slotID, moduleIndex);
     PRBool needLogin = !params->noKeyDB;
     CK_RV crv;
 
@@ -2494,40 +2485,47 @@ PK11_SlotInit(char *configdir,pk11_token_parameters *params, int moduleIndex)
 
 #ifdef PKCS11_USE_THREADS
     slot->slotLock = PZ_NewLock(nssILockSession);
-    if (slot->slotLock == NULL)
-	goto mem_loser;
-    slot->sessionLock = PORT_ZNewArray(PZLock *, slot->numSessionLocks);
-    if (slot->sessionLock == NULL)
-	goto mem_loser;
+    if (slot->slotLock == NULL) {
+	return CKR_HOST_MEMORY;
+    }
+    slot->sessionLock = (PZLock **)
+			PORT_ZAlloc(slot->numSessionLocks * sizeof(PZLock *));
+    if (slot->sessionLock == NULL) {
+	return CKR_HOST_MEMORY;
+    }
     for (i=0; i < slot->numSessionLocks; i++) {
         slot->sessionLock[i] = PZ_NewLock(nssILockSession);
-        if (slot->sessionLock[i] == NULL) 
-	    goto mem_loser;
+        if (slot->sessionLock[i] == NULL) return CKR_HOST_MEMORY;
     }
     slot->objectLock = PZ_NewLock(nssILockObject);
-    if (slot->objectLock == NULL) 
-    	goto mem_loser;
+    if (slot->objectLock == NULL) return CKR_HOST_MEMORY;
 #else
     slot->slotLock = NULL;
-    slot->sessionLock = PORT_ZNewArray(PZLock *, slot->numSessionLocks);
-    if (slot->sessionLock == NULL)
-	goto mem_loser;
+    slot->sessionLock = (PZLock **)
+			PORT_ZAlloc(slot->numSessionLocks * sizeof(PZLock *));
+    if (slot->sessionLock == NULL) {
+	return CKR_HOST_MEMORY;
+    }
     for (i=0; i < slot->numSessionLocks; i++) {
         slot->sessionLock[i] = NULL;
     }
     slot->objectLock = NULL;
 #endif
-    slot->head = PORT_ZNewArray(PK11Session *, slot->sessHashSize);
-    if (slot->head == NULL) 
-	goto mem_loser;
-    slot->tokObjects = PORT_ZNewArray(PK11Object *, slot->tokObjHashSize);
-    if (slot->tokObjects == NULL) 
-	goto mem_loser;
+    slot->head = (PK11Session **)
+		PORT_ZAlloc(slot->sessHashSize*sizeof(PK11Session *));
+    if (slot->head == NULL) {
+	return CKR_HOST_MEMORY;
+    }
+    slot->tokObjects = (PK11Object **)
+		PORT_ZAlloc(slot->tokObjHashSize*sizeof(PK11Object *));
+    if (slot->tokObjects == NULL) {
+	return CKR_HOST_MEMORY;
+    }
     slot->tokenHashTable = PL_NewHashTable(64,pk11_HashNumber,PL_CompareValues,
 					SECITEM_HashCompare, NULL, 0);
-    if (slot->tokenHashTable == NULL) 
-	goto mem_loser;
-
+    if (slot->tokenHashTable == NULL) {
+	return CKR_HOST_MEMORY;
+    }
     slot->password = NULL;
     slot->hasTokens = PR_FALSE;
     slot->sessionIDCount = 0;
@@ -2557,7 +2555,8 @@ PK11_SlotInit(char *configdir,pk11_token_parameters *params, int moduleIndex)
 		params->noCertDB, params->noKeyDB, params->forceOpen, 
 						&slot->certDB, &slot->keyDB);
 	if (crv != CKR_OK) {
-	    goto loser;
+	    /* shoutdown slot? */
+	    return crv;
 	}
 
 	if (nsslowcert_needDBVerify(slot->certDB)) {
@@ -2576,17 +2575,7 @@ PK11_SlotInit(char *configdir,pk11_token_parameters *params, int moduleIndex)
 	    slot->minimumPinLen = 1;
 	}
     }
-    crv = pk11_RegisterSlot(slot, moduleIndex);
-    if (crv != CKR_OK) {
-	goto loser;
-    }
     return CKR_OK;
-
-mem_loser:
-    crv = CKR_HOST_MEMORY;
-loser:
-    pk11_DestroySlotData(slot);
-    return crv;
 }
 
 static PRIntn

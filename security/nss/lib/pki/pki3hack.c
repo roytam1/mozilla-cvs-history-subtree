@@ -1,38 +1,35 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/* 
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape security libraries.
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1994-2000
- * the Initial Developer. All Rights Reserved.
- *
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
  * Contributor(s):
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
+ */
 
 #ifdef DEBUG
 static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$ $Name$";
@@ -94,39 +91,12 @@ extern const NSSError NSS_ERROR_ALREADY_INITIALIZED;
 extern const NSSError NSS_ERROR_INTERNAL_ERROR;
 
 NSS_IMPLEMENT PRStatus
-STAN_InitTokenForSlotInfo(NSSTrustDomain *td, PK11SlotInfo *slot)
-{
-    NSSToken *token;
-    if (!td) {
-	td = g_default_trust_domain;
-    }
-    token = nssToken_CreateFromPK11SlotInfo(td, slot);
-    PK11Slot_SetNSSToken(slot, token);
-    NSSRWLock_LockWrite(td->tokensLock);
-    nssList_Add(td->tokenList, token);
-    NSSRWLock_UnlockWrite(td->tokensLock);
-    return PR_SUCCESS;
-}
-
-NSS_IMPLEMENT PRStatus
-STAN_ResetTokenInterator(NSSTrustDomain *td)
-{
-    if (!td) {
-	td = g_default_trust_domain;
-    }
-    NSSRWLock_LockWrite(td->tokensLock);
-    nssListIterator_Destroy(td->tokens);
-    td->tokens = nssList_CreateIterator(td->tokenList);
-    NSSRWLock_UnlockWrite(td->tokensLock);
-    return PR_SUCCESS;
-}
-
-NSS_IMPLEMENT PRStatus
 STAN_LoadDefaultNSS3TrustDomain (
   void
 )
 {
     NSSTrustDomain *td;
+    NSSToken *token;
     SECMODModuleList *mlp;
     SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
     int i;
@@ -140,48 +110,41 @@ STAN_LoadDefaultNSS3TrustDomain (
     if (!td) {
 	return PR_FAILURE;
     }
-    /*
-     * Deadlock warning: we should never acquire the moduleLock while
-     * we hold the tokensLock. We can use the NSSRWLock Rank feature to
-     * guarrentee this. tokensLock have a higher rank than module lock.
-     */
-    SECMOD_GetReadLock(moduleLock);
-    NSSRWLock_LockWrite(td->tokensLock);
     td->tokenList = nssList_Create(td->arena, PR_TRUE);
+    SECMOD_GetReadLock(moduleLock);
     for (mlp = SECMOD_GetDefaultModuleList(); mlp != NULL; mlp=mlp->next) {
 	for (i=0; i < mlp->module->slotCount; i++) {
-	    STAN_InitTokenForSlotInfo(td, mlp->module->slots[i]);
+	    token = nssToken_CreateFromPK11SlotInfo(td, mlp->module->slots[i]);
+	    PK11Slot_SetNSSToken(mlp->module->slots[i], token);
+	    nssList_Add(td->tokenList, token);
 	}
     }
-    td->tokens = nssList_CreateIterator(td->tokenList);
-    NSSRWLock_UnlockWrite(td->tokensLock);
     SECMOD_ReleaseReadLock(moduleLock);
+    td->tokens = nssList_CreateIterator(td->tokenList);
     g_default_trust_domain = td;
     g_default_crypto_context = NSSTrustDomain_CreateCryptoContext(td, NULL);
     return PR_SUCCESS;
 }
 
-/*
- * must be called holding the ModuleListLock (either read or write).
- */
 NSS_IMPLEMENT SECStatus
 STAN_AddModuleToDefaultTrustDomain (
   SECMODModule *module
 )
 {
+    NSSToken *token;
     NSSTrustDomain *td;
     int i;
     td = STAN_GetDefaultTrustDomain();
     for (i=0; i<module->slotCount; i++) {
-	STAN_InitTokenForSlotInfo(td, module->slots[i]);
+	token = nssToken_CreateFromPK11SlotInfo(td, module->slots[i]);
+	PK11Slot_SetNSSToken(module->slots[i], token);
+	nssList_Add(td->tokenList, token);
     }
-    STAN_ResetTokenInterator(td);
+    nssListIterator_Destroy(td->tokens);
+    td->tokens = nssList_CreateIterator(td->tokenList);
     return SECSuccess;
 }
 
-/*
- * must be called holding the ModuleListLock (either read or write).
- */
 NSS_IMPLEMENT SECStatus
 STAN_RemoveModuleFromDefaultTrustDomain (
   SECMODModule *module
@@ -191,7 +154,6 @@ STAN_RemoveModuleFromDefaultTrustDomain (
     NSSTrustDomain *td;
     int i;
     td = STAN_GetDefaultTrustDomain();
-    NSSRWLock_LockWrite(td->tokensLock);
     for (i=0; i<module->slotCount; i++) {
 	token = PK11Slot_GetNSSToken(module->slots[i]);
 	if (token) {
@@ -203,7 +165,6 @@ STAN_RemoveModuleFromDefaultTrustDomain (
     }
     nssListIterator_Destroy(td->tokens);
     td->tokens = nssList_CreateIterator(td->tokenList);
-    NSSRWLock_UnlockWrite(td->tokensLock);
     return SECSuccess;
 }
 
@@ -577,10 +538,6 @@ cert_trust_from_stan_trust(NSSTrust *t, PRArenaPool *arena)
     rvTrust->sslFlags |= client;
     rvTrust->emailFlags = get_nss3trust_from_nss4trust(t->emailProtection);
     rvTrust->objectSigningFlags = get_nss3trust_from_nss4trust(t->codeSigning);
-    /* The cert is a valid step-up cert (in addition to/lieu of trust above */
-    if (t->stepUpApproved) {
-	rvTrust->sslFlags |= CERTDB_GOVT_APPROVED_CA;
-    }
     return rvTrust;
 }
 
@@ -835,23 +792,6 @@ STAN_GetCERTCertificate(NSSCertificate *c)
 {
     return stan_GetCERTCertificate(c, PR_FALSE);
 }
-/*
- * many callers of STAN_GetCERTCertificate() intend that
- * the CERTCertificate returned inherits the reference to the 
- * NSSCertificate. For these callers it's convenient to have 
- * this function 'own' the reference and either return a valid 
- * CERTCertificate structure which inherits the reference or 
- * destroy the reference to NSSCertificate and returns NULL.
- */
-NSS_IMPLEMENT CERTCertificate *
-STAN_GetCERTCertificateOrRelease(NSSCertificate *c)
-{
-    CERTCertificate *nss3cert = stan_GetCERTCertificate(c, PR_FALSE);
-    if (!nss3cert) {
-	nssCertificate_Destroy(c);
-    }
-    return nss3cert;
-}
 
 static nssTrustLevel
 get_stan_trust(unsigned int t, PRBool isClientAuth) 
@@ -1033,8 +973,6 @@ STAN_ChangeCertTrust(CERTCertificate *cc, CERTCertTrust *trust)
     nssTrust->clientAuth = get_stan_trust(trust->sslFlags, PR_TRUE);
     nssTrust->emailProtection = get_stan_trust(trust->emailFlags, PR_FALSE);
     nssTrust->codeSigning = get_stan_trust(trust->objectSigningFlags, PR_FALSE);
-    nssTrust->stepUpApproved = 
-                    (PRBool)(trust->sslFlags & CERTDB_GOVT_APPROVED_CA);
     if (c->object.cryptoContext != NULL) {
 	/* The cert is in a context, set the trust there */
 	NSSCryptoContext *cc = c->object.cryptoContext;
@@ -1051,11 +989,9 @@ STAN_ChangeCertTrust(CERTCertificate *cc, CERTCertTrust *trust)
     tok = stan_GetTrustToken(c);
     moving_object = PR_FALSE;
     if (tok && PK11_IsReadOnly(tok->pk11slot))  {
-	NSSRWLock_LockRead(td->tokensLock);
 	tokens = nssList_CreateIterator(td->tokenList);
 	if (!tokens) {
 	    nssrv = PR_FAILURE;
-	    NSSRWLock_UnlockRead(td->tokensLock);
 	    goto done;
 	}
 	for (tok  = (NSSToken *)nssListIterator_Start(tokens);
@@ -1066,7 +1002,6 @@ STAN_ChangeCertTrust(CERTCertificate *cc, CERTCertTrust *trust)
 	}
 	nssListIterator_Finish(tokens);
 	nssListIterator_Destroy(tokens);
-	NSSRWLock_UnlockRead(td->tokensLock);
 	moving_object = PR_TRUE;
     } 
     if (tok) {
@@ -1101,8 +1036,7 @@ STAN_ChangeCertTrust(CERTCertificate *cc, CERTCertTrust *trust)
 	                                   nssTrust->serverAuth,
 	                                   nssTrust->clientAuth,
 	                                   nssTrust->codeSigning,
-	                                   nssTrust->emailProtection,
-	                                   nssTrust->stepUpApproved, PR_TRUE);
+	                                   nssTrust->emailProtection, PR_TRUE);
 	/* If the selected token can't handle trust, dump the trust on 
 	 * the internal token */
 	if (!newInstance && !PK11_IsInternal(tok->pk11slot)) {
@@ -1132,8 +1066,7 @@ STAN_ChangeCertTrust(CERTCertificate *cc, CERTCertTrust *trust)
 	                                   nssTrust->serverAuth,
 	                                   nssTrust->clientAuth,
 	                                   nssTrust->codeSigning,
-	                                   nssTrust->emailProtection,
-	                                   nssTrust->stepUpApproved, PR_TRUE);
+	                                   nssTrust->emailProtection, PR_TRUE);
 	}
 	if (newInstance) {
 	    nssCryptokiObject_Destroy(newInstance);
