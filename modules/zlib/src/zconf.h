@@ -172,7 +172,9 @@ typedef uLong FAR uLongf;
    typedef Byte     *voidp;
 #endif
 
-#ifndef MOZILLA_CLIENT
+#ifdef MOZILLA_CLIENT
+#include "prtypes.h"
+#else
 /* Compile with -DZLIB_DLL for Windows DLL support */
 #if (defined(_WINDOWS) || defined(WINDOWS)) && defined(ZLIB_DLL)
 #  include <windows.h>
@@ -180,8 +182,9 @@ typedef uLong FAR uLongf;
 #else
 #  define EXPORT
 #endif
-#else
-#include "prtypes.h"
-#endif
+
+#define PR_PUBLIC_API(type) type
+
+#endif /* MOZILLA_CLIENT */
 
 #endif /* _ZCONF_H */

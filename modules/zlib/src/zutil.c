@@ -8,8 +8,11 @@
 #include <stdio.h>
 
 #include "zutil.h"
+
+#ifdef MOZILLA_CLIENT
 #include "prtypes.h"
 #include "prlog.h"
+#endif
 
 struct internal_state      {int dummy;}; /* for buggy compilers */
 
@@ -35,7 +38,7 @@ PR_PUBLIC_API(const char *) zlibVersion()
     return ZLIB_VERSION;
 }
 
-#ifdef DEBUG
+#if defined(DEBUG) && defined(MOZILLA_CLIENT)
 void z_error (m)
     char *m;
 {
