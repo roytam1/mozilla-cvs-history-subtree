@@ -173,8 +173,6 @@ nsDeviceContextSpecWin::nsDeviceContextSpecWin()
   mDriverName    = nsnull;
   mDeviceName    = nsnull;
   mDevMode       = NULL;
-  mGlobalDevMode = NULL;
-  mIsDEVMODEGlobalHandle = PR_FALSE;
 
 }
 
@@ -187,7 +185,6 @@ nsDeviceContextSpecWin::~nsDeviceContextSpecWin()
   SetDeviceName(nsnull);
   SetDriverName(nsnull);
   SetDevMode(NULL);
-  SetGlobalDevMode(NULL);
 
   nsCOMPtr<nsIPrintSettingsWin> psWin(do_QueryInterface(mPrintSettings));
   if (psWin) {
@@ -223,12 +220,14 @@ static PRUnichar * GetDefaultPrinterNameFromGlobalPrinters()
 static nsresult 
 EnumerateNativePrinters(DWORD aWhichPrinters, LPTSTR aPrinterName, PRBool& aIsFound, PRBool& aIsFile)
 {
-  DWORD             dwSizeNeeded;
-  DWORD             dwNumItems;
-  LPPRINTER_INFO_2 lpInfo = NULL;
+  DWORD             dwSizeNeeded = 0;
+  DWORD             dwNumItems   = 0;
+  LPPRINTER_INFO_2  lpInfo        = NULL;
 
   // Get buffer size
-  ::EnumPrinters ( aWhichPrinters, NULL, 2, NULL, 0, &dwSizeNeeded, &dwNumItems );
+  if (::EnumPrinters ( aWhichPrinters, NULL, 2, NULL, 0, &dwSizeNeeded, &dwNumItems )) {
+    return NS_ERROR_FAILURE;
+  }
 
   // allocate memory
   lpInfo = (LPPRINTER_INFO_2)HeapAlloc ( GetProcessHeap (), HEAP_ZERO_MEMORY, dwSizeNeeded );
@@ -237,6 +236,7 @@ EnumerateNativePrinters(DWORD aWhichPrinters, LPTSTR aPrinterName, PRBool& aIsFo
   }
 
   if (::EnumPrinters ( PRINTER_ENUM_LOCAL, NULL, 2, (LPBYTE)lpInfo, dwSizeNeeded, &dwSizeNeeded, &dwNumItems) == 0 ) {
+    ::HeapFree(GetProcessHeap (), 0, lpInfo);
     return NS_OK;
   }
 
@@ -249,7 +249,7 @@ EnumerateNativePrinters(DWORD aWhichPrinters, LPTSTR aPrinterName, PRBool& aIsFo
     }
   }
 
-  HeapFree(GetProcessHeap (), 0, lpInfo);
+  ::HeapFree(GetProcessHeap (), 0, lpInfo);
   return NS_OK;
 }
 
@@ -421,7 +421,11 @@ NS_IMETHODIMP nsDeviceContextSpecWin::Init(nsIWidget* aWidget,
 
         if (!aIsPrintPreview) {
           rv = CheckForPrintToFile(mPrintSettings, deviceName, nsnull);
-          NS_ENSURE_SUCCESS(rv, rv);
+          if (NS_FAILED(rv)) {
+            nsCRT::free(deviceName);
+            nsCRT::free(driverName);
+            return NS_ERROR_FAILURE;
+          }
         }
 
         // clean up
@@ -435,7 +439,7 @@ NS_IMETHODIMP nsDeviceContextSpecWin::Init(nsIWidget* aWidget,
 #endif
         if (deviceName) nsCRT::free(deviceName);
         if (driverName) nsCRT::free(driverName);
-        if (devMode) free(devMode);
+        if (devMode) ::HeapFree(::GetProcessHeap(), 0, devMode);
       }
     }
   } else {
@@ -499,38 +503,20 @@ void nsDeviceContextSpecWin::SetDriverName(char* aDriverName)
 }
 
 //----------------------------------------------------------------------------------
-void nsDeviceContextSpecWin::SetGlobalDevMode(HGLOBAL aHGlobal)
-{
-  if (mGlobalDevMode) {
-    ::GlobalFree(mGlobalDevMode);
-    mGlobalDevMode = NULL;
-  }
-  mGlobalDevMode = aHGlobal;
-  mIsDEVMODEGlobalHandle = PR_TRUE;
-}
-
-//----------------------------------------------------------------------------------
 void nsDeviceContextSpecWin::SetDevMode(LPDEVMODE aDevMode)
 {
-  if (mDevMode) free(mDevMode);
+  if (mDevMode) {
+    ::HeapFree(::GetProcessHeap(), 0, mDevMode);
+  }
 
   mDevMode = aDevMode;
-  mIsDEVMODEGlobalHandle = PR_FALSE;
 }
 
 //------------------------------------------------------------------
 void 
 nsDeviceContextSpecWin::GetDevMode(LPDEVMODE &aDevMode)
 {
-  if (mIsDEVMODEGlobalHandle) {
-    if (mGlobalDevMode) {
-      aDevMode = (DEVMODE *)::GlobalLock(mGlobalDevMode);
-    } else {
-      aDevMode = NULL;
-    }
-  } else {
-    aDevMode = mDevMode;
-  }
+  aDevMode = mDevMode;
 }
 
 //----------------------------------------------------------------------------------
@@ -677,14 +663,15 @@ nsDeviceContextSpecWin::GetDataFromPrinter(const PRUnichar * aName, nsIPrintSett
     dwNeeded = DocumentProperties(gParentWnd, hPrinter, (char*)NS_ConvertUCS2toUTF8(aName).get(), 
                                   NULL, NULL, 0);
 
-    pDevMode = (LPDEVMODE)malloc(dwNeeded);
+    pDevMode = (LPDEVMODE)::HeapAlloc (::GetProcessHeap(), HEAP_ZERO_MEMORY, dwNeeded);
+    if (!pDevMode) return NS_ERROR_FAILURE;
 
     // Get the default DevMode for the printer and modify it for our needs.
     dwRet = DocumentProperties(gParentWnd, hPrinter, (char*)NS_ConvertUCS2toUTF8(aName).get(),
                                pDevMode, NULL, DM_OUT_BUFFER);
 
     if (dwRet != IDOK) {
-       free(pDevMode);
+       ::HeapFree(::GetProcessHeap(), 0, pDevMode);
        ::ClosePrinter(hPrinter);
 #if defined(DEBUG_rods) || defined(DEBUG_dcone)
        printf("***** nsDeviceContextSpecWin::GetDataFromPrinter - DocumentProperties call failed code: %d/0x%x\n", dwRet, dwRet);
@@ -735,7 +722,6 @@ nsDeviceContextSpecWin::SetupPaperInfoFromSettings()
   if (devMode) {
     SetupDevModeFromSettings(devMode, mPrintSettings);
   }
-  UnlockDevMode();
 }
 
 //----------------------------------------------------------------------------------
@@ -865,7 +851,6 @@ nsPrinterEnumeratorWin::InitPrintSettingsFromPrinter(const PRUnichar *aPrinterNa
   if (devmode) {
     nsDeviceContextSpecWin::SetPrintSettingsFromDevMode(aPrintSettings, devmode);
   }
-  devSpecWin->UnlockDevMode();
 
   // Free them, we won't need them for a while
   GlobalPrinters::GetInstance()->FreeGlobalPrinters();
@@ -936,28 +921,31 @@ NS_IMETHODIMP nsPrinterEnumeratorWin::DisplayPropertiesDlg(const PRUnichar *aPri
     LPDEVMODE   pNewDevMode;
     DWORD       dwNeeded, dwRet;
 
-    // Allocate a buffer of the correct size.
+    // Get the buffer correct buffer size
     dwNeeded = ::DocumentProperties(gParentWnd, hPrinter,
                                    (char*)NS_ConvertUCS2toUTF8(aPrinterName).get(), NULL, NULL, 0);
 
-    pNewDevMode = (LPDEVMODE)malloc(dwNeeded);
+    pNewDevMode = (LPDEVMODE)::HeapAlloc (::GetProcessHeap(), HEAP_ZERO_MEMORY, dwNeeded);
+    if (!pNewDevMode) return NS_ERROR_FAILURE;
 
     dwRet = ::DocumentProperties(gParentWnd, hPrinter, (char*)NS_ConvertUCS2toUTF8(aPrinterName).get(), 
                                pNewDevMode, NULL, DM_OUT_BUFFER);
 
     if (dwRet != IDOK) {
-       free(pNewDevMode);
+       ::HeapFree(::GetProcessHeap(), 0, pNewDevMode);
        ::ClosePrinter(hPrinter);
        return NS_ERROR_FAILURE;
     }
 
-    pDevMode = (LPDEVMODE)malloc(dwNeeded);
+    pDevMode = (LPDEVMODE)::HeapAlloc (::GetProcessHeap(), HEAP_ZERO_MEMORY, dwNeeded);
+    if (!pDevMode) return NS_ERROR_FAILURE;
+
     dwRet = ::DocumentProperties(gParentWnd, hPrinter, (char*)NS_ConvertUCS2toUTF8(aPrinterName).get(), 
                                pDevMode, NULL, DM_OUT_BUFFER);
 
     if (dwRet != IDOK) {
-       free(pDevMode);
-       free(pNewDevMode);
+       ::HeapFree(::GetProcessHeap(), 0, pDevMode);
+       ::HeapFree(::GetProcessHeap(), 0, pNewDevMode);
        ::ClosePrinter(hPrinter);
        return NS_ERROR_FAILURE;
     }
@@ -977,8 +965,8 @@ NS_IMETHODIMP nsPrinterEnumeratorWin::DisplayPropertiesDlg(const PRUnichar *aPri
         // Now set the print options from the native Page Setup
         nsDeviceContextSpecWin::SetPrintSettingsFromDevMode(aPrintSettings, pDevMode);
       }
-      free(pDevMode);
-      free(pNewDevMode);
+      ::HeapFree(::GetProcessHeap(), 0, pDevMode);
+      ::HeapFree(::GetProcessHeap(), 0, pNewDevMode);
       rv = NS_OK;
     } else {
       rv = NS_ERROR_OUT_OF_MEMORY;
@@ -987,7 +975,7 @@ NS_IMETHODIMP nsPrinterEnumeratorWin::DisplayPropertiesDlg(const PRUnichar *aPri
     ::ClosePrinter(hPrinter);
 
   } else {
-    rv = NS_ERROR_OUT_OF_MEMORY;
+    rv = NS_ERROR_GFX_PRINTER_NAME_NOT_FOUND;
   }
 
   return rv;
