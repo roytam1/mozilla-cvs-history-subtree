@@ -110,7 +110,15 @@ typedef enum PRTransmitFileFlags {
 
 #endif /* WIN32 */
 
+/*
+** Define PR_AF_INET6 in prcpucfg.h with the same
+** value as AF_INET6 on platforms with IPv6 support.
+** Otherwise define it here.
+*/
+#ifndef PR_AF_INET6
 #define PR_AF_INET6 100
+#endif
+
 /*
 **************************************************************************
 ** A network address
