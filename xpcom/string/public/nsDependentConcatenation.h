@@ -47,34 +47,36 @@
     |GetReadableFragment()|.
    */
 
-template <class CharT>
 class nsPromiseConcatenation
-      : public nsStringTraits<CharT>::abstract_promise_type
+    : public nsAPromiseString
   {
-    typedef typename nsStringTraits<CharT>::abstract_string_type  string_type;
-    typedef string_type::const_iterator                           const_iterator;
+    public:
+      typedef nsPromiseConcatenation        self_type;
+      typedef PRUnichar                     char_type;
+      typedef nsAString                     string_type;
+      typedef string_type::const_iterator   const_iterator;
 
     protected:
-      virtual const CharT* GetReadableFragment( nsReadableFragment<CharT>&, nsFragmentRequest, PRUint32 ) const;
-      virtual       CharT* GetWritableFragment( nsWritableFragment<CharT>&, nsFragmentRequest, PRUint32 ) { return 0; }
+      virtual const char_type* GetReadableFragment( nsReadableFragment<char_type>&, nsFragmentRequest, PRUint32 ) const;
+      virtual       char_type* GetWritableFragment( nsWritableFragment<char_type>&, nsFragmentRequest, PRUint32 ) { return 0; }
 
       enum { kLeftString, kRightString };
 
       int
-      GetCurrentStringFromFragment( const nsReadableFragment<CharT>& aFragment ) const
+      GetCurrentStringFromFragment( const nsReadableFragment<char_type>& aFragment ) const
         {
           return (NS_REINTERPRET_CAST(PRUint32, aFragment.mFragmentIdentifier) & mFragmentIdentifierMask) ? kRightString : kLeftString;
         }
 
       int
-      SetLeftStringInFragment( nsReadableFragment<CharT>& aFragment ) const
+      SetLeftStringInFragment( nsReadableFragment<char_type>& aFragment ) const
         {
           aFragment.mFragmentIdentifier = NS_REINTERPRET_CAST(void*, NS_REINTERPRET_CAST(PRUint32, aFragment.mFragmentIdentifier) & ~mFragmentIdentifierMask);
           return kLeftString;
         }
 
       int
-      SetRightStringInFragment( nsReadableFragment<CharT>& aFragment ) const
+      SetRightStringInFragment( nsReadableFragment<char_type>& aFragment ) const
         {
           aFragment.mFragmentIdentifier = NS_REINTERPRET_CAST(void*, NS_REINTERPRET_CAST(PRUint32, aFragment.mFragmentIdentifier) | mFragmentIdentifierMask);
           return kRightString;
@@ -88,19 +90,19 @@ class nsPromiseConcatenation
           mStrings[kRightString] = &aRightString;
         }
 
-      nsPromiseConcatenation( const nsPromiseConcatenation<CharT>& aLeftString, const string_type& aRightString )
+      nsPromiseConcatenation( const self_type& aLeftString, const string_type& aRightString )
           : mFragmentIdentifierMask(aLeftString.mFragmentIdentifierMask<<1)
         {
           mStrings[kLeftString] = &aLeftString;
           mStrings[kRightString] = &aRightString;
         }
 
-      // nsPromiseConcatenation( const nsPromiseConcatenation<CharT>& ); // auto-generated copy-constructor should be OK
-      // ~nsPromiseConcatenation();                                      // auto-generated destructor OK
+      // nsPromiseConcatenation( const self_type& ); // auto-generated copy-constructor should be OK
+      // ~nsPromiseConcatenation();                  // auto-generated destructor OK
 
     private:
         // NOT TO BE IMPLEMENTED
-      void operator=( const nsPromiseConcatenation<CharT>& );            // we're immutable, you can't assign into a concatenation
+      void operator=( const self_type& );            // we're immutable, you can't assign into a concatenation
 
     public:
 
@@ -108,12 +110,12 @@ class nsPromiseConcatenation
       virtual PRBool Promises( const string_type& ) const;
 //    virtual PRBool PromisesExactly( const string_type& ) const;
 
-//    nsPromiseConcatenation<CharT> operator+( const string_type& rhs ) const;
+//    const self_type operator+( const string_type& rhs ) const;
 
       PRUint32 GetFragmentIdentifierMask() const { return mFragmentIdentifierMask; }
 
     private:
-      void operator+( const nsPromiseConcatenation<CharT>& ); // NOT TO BE IMPLEMENTED
+      void operator+( const self_type& ); // NOT TO BE IMPLEMENTED
         // making this |private| stops you from over parenthesizing concatenation expressions, e.g., |(A+B) + (C+D)|
         //  which would break the algorithm for distributing bits in the fragment identifier
 
@@ -122,123 +124,82 @@ class nsPromiseConcatenation
       PRUint32            mFragmentIdentifierMask;
   };
 
-// NS_DEF_TEMPLATE_STRING_COMPARISON_OPERATORS(nsPromiseConcatenation<CharT>, CharT)
-
-template <class CharT>
-PRUint32
-nsPromiseConcatenation<CharT>::Length() const
+class nsPromiseCConcatenation
+    : public nsAPromiseCString
   {
-    return mStrings[kLeftString]->Length() + mStrings[kRightString]->Length();
-  }
+    public:
+      typedef nsPromiseCConcatenation       self_type;
+      typedef char                          char_type;
+      typedef nsACString                    string_type;
+      typedef string_type::const_iterator   const_iterator;
 
-template <class CharT>
-PRBool
-nsPromiseConcatenation<CharT>::Promises( const string_type& aString ) const
-  {
-    return mStrings[0]->Promises(aString) || mStrings[1]->Promises(aString);
-  }
+    protected:
+      virtual const char_type* GetReadableFragment( nsReadableFragment<char_type>&, nsFragmentRequest, PRUint32 ) const;
+      virtual       char_type* GetWritableFragment( nsWritableFragment<char_type>&, nsFragmentRequest, PRUint32 ) { return 0; }
 
-#if 0
-PRBool
-nsPromiseConcatenation<CharT>::PromisesExactly( const string_type& aString ) const
-  {
-      // Not really like this, test for the empty string, etc
-    return mStrings[0] == &aString && !mStrings[1] || !mStrings[0] && mStrings[1] == &aString;
-  }
-#endif
+      enum { kLeftString, kRightString };
 
-template <class CharT>
-const CharT*
-nsPromiseConcatenation<CharT>::GetReadableFragment( nsReadableFragment<CharT>& aFragment, nsFragmentRequest aRequest, PRUint32 aPosition ) const
-  {
-    int whichString;
+      int
+      GetCurrentStringFromFragment( const nsReadableFragment<char_type>& aFragment ) const
+        {
+          return (NS_REINTERPRET_CAST(PRUint32, aFragment.mFragmentIdentifier) & mFragmentIdentifierMask) ? kRightString : kLeftString;
+        }
 
-      // based on the request, pick which string we will forward the |GetReadableFragment()| call into
+      int
+      SetLeftStringInFragment( nsReadableFragment<char_type>& aFragment ) const
+        {
+          aFragment.mFragmentIdentifier = NS_REINTERPRET_CAST(void*, NS_REINTERPRET_CAST(PRUint32, aFragment.mFragmentIdentifier) & ~mFragmentIdentifierMask);
+          return kLeftString;
+        }
 
-    switch ( aRequest )
-      {
-        case kPrevFragment:
-        case kNextFragment:
-          whichString = GetCurrentStringFromFragment(aFragment);
-          break;
+      int
+      SetRightStringInFragment( nsReadableFragment<char_type>& aFragment ) const
+        {
+          aFragment.mFragmentIdentifier = NS_REINTERPRET_CAST(void*, NS_REINTERPRET_CAST(PRUint32, aFragment.mFragmentIdentifier) | mFragmentIdentifierMask);
+          return kRightString;
+        }
 
-        case kFirstFragment:
-          whichString = SetLeftStringInFragment(aFragment);
-          break;
+    public:
+      nsPromiseCConcatenation( const string_type& aLeftString, const string_type& aRightString, PRUint32 aMask = 1 )
+          : mFragmentIdentifierMask(aMask)
+        {
+          mStrings[kLeftString] = &aLeftString;
+          mStrings[kRightString] = &aRightString;
+        }
 
-        case kLastFragment:
-          whichString = SetRightStringInFragment(aFragment);
-          break;
+      nsPromiseCConcatenation( const self_type& aLeftString, const string_type& aRightString )
+          : mFragmentIdentifierMask(aLeftString.mFragmentIdentifierMask<<1)
+        {
+          mStrings[kLeftString] = &aLeftString;
+          mStrings[kRightString] = &aRightString;
+        }
 
-        case kFragmentAt:
-          PRUint32 leftLength = mStrings[kLeftString]->Length();
-          if ( aPosition < leftLength )
-            whichString = SetLeftStringInFragment(aFragment);
-          else
-            {
-              whichString = SetRightStringInFragment(aFragment);
-              aPosition -= leftLength;
-            }
-          break;
-            
-      }
+      // nsPromiseCConcatenation( const self_type& ); // auto-generated copy-constructor should be OK
+      // ~nsPromiseCConcatenation();                  // auto-generated destructor OK
 
-    const CharT* result;
-    PRBool done;
-    do
-      {
-        done = PR_TRUE;
-        result = mStrings[whichString]->GetReadableFragment(aFragment, aRequest, aPosition);
+    private:
+        // NOT TO BE IMPLEMENTED
+      void operator=( const self_type& );            // we're immutable, you can't assign into a concatenation
 
-        if ( !result )
-          {
-            done = PR_FALSE;
-            if ( aRequest == kNextFragment && whichString == kLeftString )
-              {
-                aRequest = kFirstFragment;
-                whichString = SetRightStringInFragment(aFragment);
-              }
-            else if ( aRequest == kPrevFragment && whichString == kRightString )
-              {
-                aRequest = kLastFragment;
-                whichString = SetLeftStringInFragment(aFragment);
-              }
-            else
-              done = PR_TRUE;
-          }
-      }
-    while ( !done );
-    return result;
-  }
+    public:
 
-#if 0
-template <class CharT>
-inline
-nsPromiseConcatenation<CharT>
-nsPromiseConcatenation<CharT>::operator+( const string_type& rhs ) const
-  {
-    return nsPromiseConcatenation<CharT>(*this, rhs, mFragmentIdentifierMask<<1);
-  }
-#endif
+      virtual PRUint32 Length() const;
+      virtual PRBool Promises( const string_type& ) const;
+//    virtual PRBool PromisesExactly( const string_type& ) const;
 
+//    const self_type operator+( const string_type& rhs ) const;
 
+      PRUint32 GetFragmentIdentifierMask() const { return mFragmentIdentifierMask; }
 
-#ifdef NEED_CPP_DERIVED_TEMPLATE_OPERATORS
+    private:
+      void operator+( const self_type& ); // NOT TO BE IMPLEMENTED
+        // making this |private| stops you from over parenthesizing concatenation expressions, e.g., |(A+B) + (C+D)|
+        //  which would break the algorithm for distributing bits in the fragment identifier
 
-  #define NS_DEF_TEMPLATE_DERIVED_STRING_STRING_OPERATOR_PLUS(_String1T, _String2T) \
-  template <class CharT>                                                 \
-  inline                                                                 \
-  nsPromiseConcatenation<CharT>                                          \
-  operator+( const _String1T<CharT>& lhs, const _String2T<CharT>& rhs )  \
-    {                                                                    \
-      return nsPromiseConcatenation<CharT>(lhs, rhs);                    \
-    }
-
-  NS_DEF_TEMPLATE_DERIVED_STRING_STRING_OPERATOR_PLUS(nsPromiseSubstring, nsPromiseSubstring)
-  NS_DEF_TEMPLATE_DERIVED_STRING_STRING_OPERATOR_PLUS(nsPromiseConcatenation, nsPromiseSubstring)
-
-#endif // NEED_CPP_DERIVED_TEMPLATE_OPERATORS
-
+    private:
+      const string_type*  mStrings[2];
+      PRUint32            mFragmentIdentifierMask;
+  };
 
   /*
     How shall we provide |operator+()|?
@@ -261,57 +222,47 @@ nsPromiseConcatenation<CharT>::operator+( const string_type& rhs ) const
   */
 
 inline
-nsPromiseConcatenation<PRUnichar>
-operator+( const nsPromiseConcatenation<PRUnichar>& lhs, const nsAString& rhs )
+const nsPromiseConcatenation
+operator+( const nsPromiseConcatenation& lhs, const nsAString& rhs )
   {
-    return nsPromiseConcatenation<PRUnichar>(lhs, rhs, lhs.GetFragmentIdentifierMask()<<1);
+    return nsPromiseConcatenation(lhs, rhs, lhs.GetFragmentIdentifierMask()<<1);
   }
 
 inline
-nsPromiseConcatenation<char>
-operator+( const nsPromiseConcatenation<char>& lhs, const nsACString& rhs )
+const nsPromiseCConcatenation
+operator+( const nsPromiseCConcatenation& lhs, const nsACString& rhs )
   {
-    return nsPromiseConcatenation<char>(lhs, rhs, lhs.GetFragmentIdentifierMask()<<1);
+    return nsPromiseCConcatenation(lhs, rhs, lhs.GetFragmentIdentifierMask()<<1);
   }
 
 inline
-nsPromiseConcatenation<PRUnichar>
+const nsPromiseConcatenation
 operator+( const nsAString& lhs, const nsAString& rhs )
   {
-    return nsPromiseConcatenation<PRUnichar>(lhs, rhs);
+    return nsPromiseConcatenation(lhs, rhs);
   }
 
 inline
-nsPromiseConcatenation<char>
+const nsPromiseCConcatenation
 operator+( const nsACString& lhs, const nsACString& rhs )
   {
-    return nsPromiseConcatenation<char>(lhs, rhs);
+    return nsPromiseCConcatenation(lhs, rhs);
   }
 
+#if 0
+inline
+const nsPromiseConcatenation
+nsPromiseConcatenation::operator+( const string_type& rhs ) const
+  {
+    return nsPromiseConcatenation(*this, rhs, mFragmentIdentifierMask<<1);
+  }
 
-
-#ifdef NEED_CPP_DERIVED_TEMPLATE_OPERATORS
-  #define NS_DEF_DERIVED_STRING_STRING_OPERATOR_PLUS(_String1T, _String2T, _CharT) \
-    inline                                                  \
-    nsPromiseConcatenation<_CharT>                          \
-    operator+( const _String1T& lhs, const _String2T& rhs ) \
-      {                                                     \
-        return nsPromiseConcatenation<_CharT>(lhs, rhs);    \
-      }
-
-  #define NS_DEF_DERIVED_STRING_OPERATOR_PLUS(_StringT, _CharT) \
-    NS_DEF_DERIVED_STRING_STRING_OPERATOR_PLUS(_StringT, _StringT, _CharT) \
-    NS_DEF_DERIVED_STRING_STRING_OPERATOR_PLUS(nsPromiseSubstring<_CharT>, _StringT, _CharT) \
-    NS_DEF_DERIVED_STRING_STRING_OPERATOR_PLUS(_StringT, nsPromiseSubstring<_CharT>, _CharT) \
-    NS_DEF_DERIVED_STRING_STRING_OPERATOR_PLUS(nsPromiseConcatenation<_CharT>, _StringT, _CharT)
-
-  #define NS_DEF_2_STRING_STRING_OPERATOR_PLUS(_String1T, _String2T, _CharT)  \
-    NS_DEF_DERIVED_STRING_STRING_OPERATOR_PLUS(_String1T, _String2T, _CharT)  \
-    NS_DEF_DERIVED_STRING_STRING_OPERATOR_PLUS(_String2T, _String1T, _CharT)
-
-#else
-  #define NS_DEF_DERIVED_STRING_OPERATOR_PLUS(_StringT, _CharT)
-  #define NS_DEF_2_STRING_STRING_OPERATOR_PLUS(_String1T, _String2T, _CharT)
+inline
+const nsPromiseCConcatenation
+nsPromiseCConcatenation::operator+( const string_type& rhs ) const
+  {
+    return nsPromiseCConcatenation(*this, rhs, mFragmentIdentifierMask<<1);
+  }
 #endif
 
 
