@@ -35,7 +35,7 @@
 <!ENTITY menuitem.newFolder.label        "New Folder...">
 <!ENTITY menuitem.newFolder.accesskey    "o">
 <!ENTITY menuitem.newSeparator.label     "New Separator">
-<!ENTITY menuitem.newSeparator.accesskey "S">
+<!ENTITY menuitem.newSeparator.accesskey "t">
 <!ENTITY menuitem.import.label         "Import...">
 <!ENTITY menuitem.import.accesskey     "i">
 <!ENTITY menuitem.export.label         "Export...">
