@@ -90,4 +90,4 @@ static components_t components[] =
 
   
 NS_IMPL_MODULE(components)
-  
+NS_IMPL_NSGETMODULE(nsModule)
