@@ -5361,15 +5361,19 @@ PresShell::ReconstructStyleData(PRBool aRebuildRuleTree)
     cssFrameConstructor->ProcessRestyledFrames(changeList, mPresContext);
     changeList.Clear();
 
-    // Clear all undisplayed content in the undisplayed content map.
-    // These cached style contexts will no longer be valid following
-    // a full rule tree reconstruct.
-    frameManager->ClearUndisplayedContentMap();
-
     // Now do a complete re-resolve of our style tree.
     set->BeginRuleTreeReconstruct();
   }
- 
+
+  // Clear all undisplayed content in the undisplayed content map.
+  // These cached style contexts will no longer be valid 
+  // 
+  // HACK? see bug 118014 - this is really being done because some XUL anonymous content
+  // may have been removed but not cleared from the undisplayed map
+  // - this should be removed when bug 136704 is fixed
+  frameManager->ClearUndisplayedContentMap();
+
+  
   PRInt32 frameChange = NS_STYLE_HINT_NONE;
   frameManager->ComputeStyleChangeFor(mPresContext, rootFrame, 
                                       kNameSpaceID_Unknown, nsnull,
