@@ -35,7 +35,7 @@
 #define utilities_h___
 
 #ifdef MSC_VER
-     // diasble long identifier warnings
+// disable long identifier warnings
 #    pragma warning(disable: 4786)
 #endif
 
@@ -57,22 +57,20 @@ namespace JavaScript
         JavaScript::Assert(_reasonStr, __FILE__, __LINE__)
 #   define DEBUG_ONLY(_stmt) _stmt
 #else
-#   define ASSERT(expr)
-#   define NOT_REACHED(reasonStr)
+#   define ASSERT(expr) (void)0
+#   define NOT_REACHED(reasonStr) (void)0
 #   define DEBUG_ONLY(_stmt)
 #endif
 
+
 //
-// Random Crap
+// Mathematics
 //
-//
-    
+
     template<class N> N min(N v1, N v2) {return v1 <= v2 ? v1 : v2;}
     template<class N> N max(N v1, N v2) {return v1 >= v2 ? v1 : v2;}
 
     uint ceilingLog2(uint32 n);
     uint floorLog2(uint32 n);
-
 }
-
 #endif /* utilities_h___ */
