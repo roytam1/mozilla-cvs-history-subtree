@@ -36,15 +36,12 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsTPromiseFlatString.h"
-
-template <class CharT>
 void
-nsTPromiseFlatString<CharT>::Init(const string_base_type& str)
+nsTPromiseFlatString_CharT::Init(const string_base_type& str)
   {
     // we have to manually set this here since we are being called on an
     // unitialized object.
-    mVTable = nsTObsoleteAString<char_type>::sCanonicalVTable;
+    mVTable = nsTObsoleteAString_CharT::sCanonicalVTable;
 
     if (str.IsTerminated())
       {
@@ -59,22 +56,11 @@ nsTPromiseFlatString<CharT>::Init(const string_base_type& str)
   }
 
   // this function is non-inline to minimize codesize
-template <class CharT>
 void
-nsTPromiseFlatString<CharT>::Init(const abstract_string_type& readable)
+nsTPromiseFlatString_CharT::Init(const abstract_string_type& readable)
   {
-    if (readable.mVTable == nsTObsoleteAString<char_type>::sCanonicalVTable)
+    if (readable.mVTable == nsTObsoleteAString_CharT::sCanonicalVTable)
       Init(*readable.AsString());
     else
       Init(readable.ToString());
   }
-
-
-  /**
-   * explicit template instantiation
-   */
-
-template void nsTPromiseFlatString<char>     ::Init( const string_base_type& );
-template void nsTPromiseFlatString<char>     ::Init( const abstract_string_type& );
-template void nsTPromiseFlatString<PRUnichar>::Init( const string_base_type& );
-template void nsTPromiseFlatString<PRUnichar>::Init( const abstract_string_type& );

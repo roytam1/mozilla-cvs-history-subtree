@@ -38,28 +38,15 @@ REQUIRES	= xpcom \
 CPPSRCS			=			\
 		nsPrintfCString.cpp		\
 		nsReadableUtils.cpp		\
-		nsTAString.cpp			\
-		nsTDependentSubstring.cpp	\
-		nsTObsoleteAStringThunk.cpp	\
-		nsTPromiseFlatString.cpp	\
-		nsTString.cpp			\
-		nsTStringBase.cpp		\
-		nsTStringComparator.cpp		\
-		nsTStringTuple.cpp		\
+		nsAString.cpp			\
+		nsDependentSubstring.cpp	\
+		nsObsoleteAStringThunk.cpp	\
+		nsPromiseFlatString.cpp	\
+		nsString.cpp			\
+		nsStringBase.cpp		\
+		nsStringComparator.cpp		\
+		nsStringTuple.cpp		\
 		$(NULL)
-
-#CPPSRCS		=				\
-#		nsASingleFragmentString.cpp	\
-#		nsAString.cpp			\
-#		nsDependentConcatenation.cpp	\
-#		nsDependentSubstring.cpp	\
-#		nsFragmentedString.cpp		\
-#		nsPromiseFlatString.cpp		\
-#		nsSharableString.cpp		\
-#		nsSharedBufferList.cpp		\
-#		nsSlidingString.cpp		\
-#		nsXPIDLString.cpp		\
-#		$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a
 # static lib.

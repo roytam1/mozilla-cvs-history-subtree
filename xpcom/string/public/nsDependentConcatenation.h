@@ -27,8 +27,8 @@
 #ifndef nsDependentConcatenation_h___
 #define nsDependentConcatenation_h___
 
-#ifndef nsTStringTuple_h___
-#include "nsTStringTuple.h"
+#ifndef nsStringTuple_h___
+#include "nsStringTuple.h"
 #endif
 
 #endif /* !defined(nsDependentConcatenation_h___) */

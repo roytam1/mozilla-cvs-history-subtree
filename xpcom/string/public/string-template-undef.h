@@ -36,26 +36,21 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-void
-nsTDependentSubstring_CharT::Rebind( const abstract_string_type& readable, PRUint32 startPos, PRUint32 length )
-  {
-    size_type strLength = readable.GetReadableBuffer((const char_type**) &mData);
-
-    if (startPos > strLength)
-      startPos = strLength;
-
-    mData += startPos;
-    mLength = NS_MIN(length, strLength - startPos);
-  }
-
-void
-nsTDependentSubstring_CharT::Rebind( const string_base_type& str, PRUint32 startPos, PRUint32 length )
-  {
-    size_type strLength = str.Length();
-
-    if (startPos > strLength)
-      startPos = strLength;
-
-    mData = NS_CONST_CAST(char_type*, str.Data()) + startPos;
-    mLength = NS_MIN(length, strLength - startPos);
-  }
+#undef CharT
+#undef CharT_is_PRUnichar
+#undef CharT_is_char
+#undef nsTObsoleteAString_CharT
+#undef nsTObsoleteAStringThunk_CharT
+#undef nsTAString_CharT
+#undef nsTAString_IncompatibleCharT
+#undef nsTString_CharT
+#undef nsTAutoString_CharT
+#undef nsTStringBase_CharT
+#undef nsTStringTuple_CharT
+#undef nsTStringComparator_CharT
+#undef nsTDefaultStringComparator_CharT
+#undef nsTPromiseFlatString_CharT
+#undef nsTDependentString_CharT
+#undef nsTDependentSubstring_CharT
+#undef nsTXPIDLString_CharT
+#undef nsTGetterCopies_CharT

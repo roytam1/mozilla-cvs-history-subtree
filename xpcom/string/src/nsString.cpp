@@ -36,26 +36,39 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-void
-nsTDependentSubstring_CharT::Rebind( const abstract_string_type& readable, PRUint32 startPos, PRUint32 length )
+#include <stdlib.h>
+#include "nsString.h"
+
+template <class CharT> class CBufDescriptorReader {};
+
+NS_SPECIALIZE_TEMPLATE
+class CBufDescriptorReader<char>
   {
-    size_type strLength = readable.GetReadableBuffer((const char_type**) &mData);
+    public:
+      char* read( const CBufDescriptor& desc ) const
+        {
+          NS_ASSERTION(desc.mFlags & CBufDescriptor::F_SINGLE_BYTE, "wrong string type");
+          return desc.mStr;
+        }
+  };
 
-    if (startPos > strLength)
-      startPos = strLength;
-
-    mData += startPos;
-    mLength = NS_MIN(length, strLength - startPos);
-  }
-
-void
-nsTDependentSubstring_CharT::Rebind( const string_base_type& str, PRUint32 startPos, PRUint32 length )
+NS_SPECIALIZE_TEMPLATE
+class CBufDescriptorReader<PRUnichar>
   {
-    size_type strLength = str.Length();
+    public:
+      PRUnichar* read( const CBufDescriptor& desc ) const
+        {
+          NS_ASSERTION(desc.mFlags & CBufDescriptor::F_DOUBLE_BYTE, "wrong string type");
+          return desc.mUStr;
+        }
+  };
 
-    if (startPos > strLength)
-      startPos = strLength;
+  // define nsString
+#include "string-template-def-unichar.h"
+#include "nsTString.cpp"
+#include "string-template-undef.h"
 
-    mData = NS_CONST_CAST(char_type*, str.Data()) + startPos;
-    mLength = NS_MIN(length, strLength - startPos);
-  }
+  // define nsCString
+#include "string-template-def-char.h"
+#include "nsTString.cpp"
+#include "string-template-undef.h"

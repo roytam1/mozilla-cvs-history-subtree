@@ -36,26 +36,30 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-void
-nsTDependentSubstring_CharT::Rebind( const abstract_string_type& readable, PRUint32 startPos, PRUint32 length )
-  {
-    size_type strLength = readable.GetReadableBuffer((const char_type**) &mData);
+#ifndef nsStringBase_h___
+#define nsStringBase_h___
 
-    if (startPos > strLength)
-      startPos = strLength;
+#ifndef nsAString_h___
+#include "nsAString.h"
+#endif
 
-    mData += startPos;
-    mLength = NS_MIN(length, strLength - startPos);
-  }
+static const PRInt32 kNotFound = -1;
 
-void
-nsTDependentSubstring_CharT::Rebind( const string_base_type& str, PRUint32 startPos, PRUint32 length )
-  {
-    size_type strLength = str.Length();
 
-    if (startPos > strLength)
-      startPos = strLength;
+  // declare nsStringBase
+#include "string-template-def-unichar.h"
+#include "nsTStringBase.h"
+#include "string-template-undef.h"
 
-    mData = NS_CONST_CAST(char_type*, str.Data()) + startPos;
-    mLength = NS_MIN(length, strLength - startPos);
-  }
+
+  // declare nsCStringBase
+#include "string-template-def-char.h"
+#include "nsTStringBase.h"
+#include "string-template-undef.h"
+
+
+#ifndef nsStringTuple_h___
+#include "nsStringTuple.h"
+#endif
+
+#endif // !defined(nsStringBase_h___)

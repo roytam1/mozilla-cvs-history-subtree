@@ -36,87 +36,13 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsTObsoleteAString_h___
-#define nsTObsoleteAString_h___
-
-/****************************************************************************
-
-    THIS FILE IS NOT FOR HUMAN CONSUMPTION.  See nsAString instead.
-
- ****************************************************************************/
-
-#ifndef nsStringFwd_h___
-#include "nsStringFwd.h"
-#endif
-
-#ifndef nscore_h___
-#include "nscore.h"
-#endif
-
-
 
   /**
-   * An |nsFragmentRequest| is used to tell |GetReadableFragment| and
-   * |GetWritableFragment| what to do.
-   *
-   * @see GetReadableFragment
-   */
-enum nsFragmentRequest { kPrevFragment, kFirstFragment, kLastFragment, kNextFragment, kFragmentAt };
-
-
-  /**
-   * A |nsReadableFragment| provides |const| access to a contiguous hunk of
-   * string of homogenous units, e.g., bytes (|char|).  This doesn't mean it
-   * represents a flat hunk.  It could be a variable length encoding, for
-   * instance UTF-8.  And the fragment itself need not be zero-terminated.
-   *
-   * An |nsReadableFragment| is the underlying machinery that lets
-   * |nsReadingIterator|s work.
-   *
-   * @see nsReadingIterator
-   * @status FROZEN
-   */
-template <class CharT>
-struct nsTObsoleteReadableFragment
-  {
-    const CharT*  mStart;
-    const CharT*  mEnd;
-    const void*   mFragmentIdentifier;
-
-    nsTObsoleteReadableFragment() : mStart(0), mEnd(0), mFragmentIdentifier(0) {}
-  };
-
-
-  /**
-   * A |nsWritableFragment| provides non-|const| access to a contiguous hunk of
-   * string of homogenous units, e.g., bytes (|char|).  This doesn't mean it
-   * represents a flat hunk.  It could be a variable length encoding, for
-   * instance UTF-8.  And the fragment itself need not be zero-terminated.
-   *
-   * An |nsWritableFragment| is the underlying machinery that lets
-   * |nsWritingIterator|s work.
-   *
-   * @see nsWritingIterator
-   * @status FROZEN
-   */
-template <class CharT>
-struct nsTObsoleteWritableFragment
-  {
-    CharT*    mStart;
-    CharT*    mEnd;
-    void*     mFragmentIdentifier;
-
-    nsTObsoleteWritableFragment() : mStart(0), mEnd(0), mFragmentIdentifier(0) {}
-  };
-
-
-  /**
-   * nsTObsoleteAString : binary compatible with old nsAString vtable
+   * nsTObsoleteAString_CharT : binary compatible with old nsAC?String vtable
    *
    * @status FROZEN
    */
-template <class CharT>
-class NS_COM nsTObsoleteAString
+class NS_COM nsTObsoleteAString_CharT
   {
     public:
       /**
@@ -125,27 +51,78 @@ class NS_COM nsTObsoleteAString
        */
       static const void *sCanonicalVTable;
 
+        /**
+         * An |nsFragmentRequest| is used to tell |GetReadableFragment| and
+         * |GetWritableFragment| what to do.
+         *
+         * @see GetReadableFragment
+         */
+      enum nsFragmentRequest { kPrevFragment, kFirstFragment, kLastFragment, kNextFragment, kFragmentAt };
+
+        /**
+         * A |nsReadableFragment| provides |const| access to a contiguous hunk of
+         * string of homogenous units, e.g., bytes (|char|).  This doesn't mean it
+         * represents a flat hunk.  It could be a variable length encoding, for
+         * instance UTF-8.  And the fragment itself need not be zero-terminated.
+         *
+         * An |nsReadableFragment| is the underlying machinery that lets
+         * |nsReadingIterator|s work.
+         *
+         * @see nsReadingIterator
+         * @status FROZEN
+         */
+      struct nsReadableFragment
+        {
+          const CharT*  mStart;
+          const CharT*  mEnd;
+          const void*   mFragmentIdentifier;
+
+          nsReadableFragment() : mStart(0), mEnd(0), mFragmentIdentifier(0) {}
+        };
+
+
+        /**
+         * A |nsWritableFragment| provides non-|const| access to a contiguous hunk of
+         * string of homogenous units, e.g., bytes (|char|).  This doesn't mean it
+         * represents a flat hunk.  It could be a variable length encoding, for
+         * instance UTF-8.  And the fragment itself need not be zero-terminated.
+         *
+         * An |nsWritableFragment| is the underlying machinery that lets
+         * |nsWritingIterator|s work.
+         *
+         * @see nsWritingIterator
+         * @status FROZEN
+         */
+      struct nsWritableFragment
+        {
+          CharT*    mStart;
+          CharT*    mEnd;
+          void*     mFragmentIdentifier;
+
+          nsWritableFragment() : mStart(0), mEnd(0), mFragmentIdentifier(0) {}
+        };
+
     protected:
 
-      typedef CharT                                    char_type;
+      typedef CharT                                char_type;
 
-      typedef void                                     buffer_handle_type;
-      typedef void                                     shared_buffer_handle_type;
-      typedef nsTObsoleteReadableFragment<char_type>   const_fragment_type;
-      typedef nsTObsoleteWritableFragment<char_type>   fragment_type;
+      typedef void                                 buffer_handle_type;
+      typedef void                                 shared_buffer_handle_type;
+      typedef nsReadableFragment                   const_fragment_type;
+      typedef nsWritableFragment                   fragment_type;
 
-      typedef nsTObsoleteAString<char_type>            self_type;
-      typedef nsTObsoleteAString<char_type>            obsolete_string_type;
+      typedef nsTObsoleteAString_CharT             self_type;
+      typedef nsTObsoleteAString_CharT             obsolete_string_type;
 
-      typedef PRUint32                                 size_type;
-      typedef PRUint32                                 index_type;
+      typedef PRUint32                             size_type;
+      typedef PRUint32                             index_type;
 
     protected:
 
-      friend class nsTAString<char_type>;
-      friend class nsTStringBase<char_type>;
+      friend class nsTAString_CharT;
+      friend class nsTStringBase_CharT;
 
-      virtual ~nsTObsoleteAString() { }
+      virtual ~nsTObsoleteAString_CharT() { }
 
       virtual PRUint32                          GetImplementationFlags() const = 0;
       virtual const        buffer_handle_type*  GetFlatBufferHandle()    const = 0;
@@ -183,10 +160,5 @@ class NS_COM nsTObsoleteAString
       virtual       char_type* GetWritableFragment(       fragment_type&, nsFragmentRequest, PRUint32 = 0 ) = 0;
   };
 
-typedef nsTObsoleteAString<PRUnichar> nsObsoleteAString;
-typedef nsTObsoleteAString<char>      nsObsoleteACString;
-
   // forward declare implementation
-template <class CharT> class nsTObsoleteAStringThunk;
-
-#endif // !defined(nsTObsoleteAString_h___)
+class nsTObsoleteAStringThunk_CharT;

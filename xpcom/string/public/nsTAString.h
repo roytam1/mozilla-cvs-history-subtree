@@ -36,55 +36,32 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsTAString_h___
-#define nsTAString_h___
-
-#ifndef nsStringFwd_h___
-#include "nsStringFwd.h"
-#endif
-
-#ifndef nsStringIterator_h___
-#include "nsStringIterator.h"
-#endif
-
-#ifndef nsTObsoleteAString_h___
-#include "nsTObsoleteAString.h"
-#endif
-
 
   /**
    * The base for string comparators
    */
-template <class CharT>
-class NS_COM nsTStringComparator
+class NS_COM nsTStringComparator_CharT
   {
     public:
       typedef CharT char_type;
 
-      nsTStringComparator() {}
+      nsTStringComparator_CharT() {}
 
       virtual int operator()( const char_type*, const char_type*, PRUint32 length ) const = 0;
       virtual int operator()( char_type, char_type ) const = 0;
   };
 
-template <class CharT>
-class NS_COM nsTDefaultStringComparator
-    : public nsTStringComparator<CharT>
+
+  /**
+   * The default string comparator (case-sensitive comparision)
+   */
+class NS_COM nsTDefaultStringComparator_CharT
+    : public nsTStringComparator_CharT
   {
     public:
       typedef CharT char_type;
 
-      nsTDefaultStringComparator() {}
-
-      virtual int operator()( const char_type*, const char_type*, PRUint32 length ) const;
-      virtual int operator()( char_type, char_type ) const;
-  };
-
-class NS_COM nsCaseInsensitiveCStringComparator
-    : public nsCStringComparator
-  {
-    public:
-      typedef char char_type;
+      nsTDefaultStringComparator_CharT() {}
 
       virtual int operator()( const char_type*, const char_type*, PRUint32 length ) const;
       virtual int operator()( char_type, char_type ) const;
@@ -103,26 +80,25 @@ class NS_COM nsCaseInsensitiveCStringComparator
    * other main abstract classes in the string hierarchy.
    */
 
-template<class CharT>
-class NS_COM nsTAString
+class NS_COM nsTAString_CharT
   {
     public:
 
       typedef CharT                                           char_type;
       typedef nsCharTraits<char_type>                         char_traits;
 
-      typedef typename char_traits::incompatible_char_type    incompatible_char_type;
+      typedef char_traits::incompatible_char_type             incompatible_char_type;
 
-      typedef nsTAString<char_type>                           self_type;
-      typedef nsTAString<char_type>                           abstract_string_type;
-      typedef nsTObsoleteAString<char_type>                   obsolete_string_type;
-      typedef nsTStringBase<char_type>                        string_base_type;
-      typedef nsTStringTuple<char_type>                       string_tuple_type;
+      typedef nsTAString_CharT                                self_type;
+      typedef nsTAString_CharT                                abstract_string_type;
+      typedef nsTObsoleteAString_CharT                        obsolete_string_type;
+      typedef nsTStringBase_CharT                             string_base_type;
+      typedef nsTStringTuple_CharT                            string_tuple_type;
 
       typedef nsReadingIterator<char_type>                    const_iterator;
       typedef nsWritingIterator<char_type>                    iterator;
 
-      typedef nsTStringComparator<char_type>                  comparator_type;
+      typedef nsTStringComparator_CharT                       comparator_type;
 
       typedef PRUint32                                        size_type;
       typedef PRUint32                                        index_type;
@@ -130,7 +106,7 @@ class NS_COM nsTAString
     public:
 
         // this acts like a virtual destructor
-      ~nsTAString();
+      ~nsTAString_CharT();
 
       inline const_iterator& BeginReading( const_iterator& iter ) const
         {
@@ -178,7 +154,7 @@ class NS_COM nsTAString
       PRBool IsTerminated() const;
 
         /**
-         * these are contant time since nsTAString uses flat storage
+         * these are contant time since nsTAString_CharT uses flat storage
          */
       char_type First() const;
       char_type Last() const;
@@ -288,12 +264,13 @@ class NS_COM nsTAString
 
     protected:
 
-      friend class nsTStringTuple<char_type>;
+      friend class nsTStringTuple_CharT;
 
+      // XXX still needed now that these aren't template types??
       // GCC 3.2 erroneously needs these (they are subclasses!)
-      friend class nsTStringBase<char_type>;
-      friend class nsTDependentSubstring<char_type>;
-      friend class nsTPromiseFlatString<char_type>;
+      friend class nsTStringBase_CharT;
+      friend class nsTDependentSubstring_CharT;
+      friend class nsTPromiseFlatString_CharT;
 
         /**
          * the address of our virtual function table.  required for backwards
@@ -310,10 +287,10 @@ class NS_COM nsTAString
       PRUint32    mFlags;
 
         /**
-         * nsTAString must be subclassed before it can be instantiated.
+         * nsTAString_CharT must be subclassed before it can be instantiated.
          */
-      nsTAString(char_type* data, size_type length, PRUint32 flags)
-        : mVTable(nsTObsoleteAString<char_type>::sCanonicalVTable)
+      nsTAString_CharT(char_type* data, size_type length, PRUint32 flags)
+        : mVTable(obsolete_string_type::sCanonicalVTable)
         , mData(data)
         , mLength(length)
         , mFlags(flags)
@@ -324,8 +301,9 @@ class NS_COM nsTAString
          *
          * mData and mLength are intentionally left uninitialized.
          */
-      nsTAString(PRUint32 flags)
-        : mVTable(nsTObsoleteAString<char_type>::sCanonicalVTable)
+      explicit
+      nsTAString_CharT(PRUint32 flags)
+        : mVTable(obsolete_string_type::sCanonicalVTable)
         , mFlags(flags)
         {}
 
@@ -335,8 +313,8 @@ class NS_COM nsTAString
          * this is public to support automatic conversion of tuple to abstract
          * string, which is necessary to support our API.
          */
-      nsTAString(const string_tuple_type& tuple)
-        : mVTable(nsTObsoleteAString<char_type>::sCanonicalVTable)
+      nsTAString_CharT(const string_tuple_type& tuple)
+        : mVTable(obsolete_string_type::sCanonicalVTable)
         , mData(nsnull)
         , mLength(0)
         , mFlags(0)
@@ -345,12 +323,6 @@ class NS_COM nsTAString
         }
 
     protected:
-
-      //nsTAString( const self_type& readable );
-        /*
-        : mVTable(readable.mVTable)
-        {}
-        */
 
         /**
          * get pointer to internal string buffer (may not be null terminated).
@@ -368,12 +340,7 @@ class NS_COM nsTAString
         /**
          * we can be converted to a const nsTStringBase (dependent on this)
          */
-      const string_base_type ToString() const
-        {
-          const char_type* data;
-          size_type length = GetReadableBuffer(&data);
-          return string_base_type(NS_CONST_CAST(char_type*, data), length, 0);
-        }
+      inline const string_base_type ToString() const;
 
     private:
 
@@ -403,57 +370,42 @@ class NS_COM nsTAString
   };
 
 
-template <class CharT>
 NS_COM
-int Compare( const nsTAString<CharT>& lhs, const nsTAString<CharT>& rhs, const nsTStringComparator<CharT>& = nsTDefaultStringComparator<CharT>() );
+int Compare( const nsTAString_CharT& lhs, const nsTAString_CharT& rhs, const nsTStringComparator_CharT& = nsTDefaultStringComparator_CharT() );
 
 
-template <class CharT>
 inline
-PRBool operator!=( const nsTAString<CharT>& lhs, const nsTAString<CharT>& rhs )
+PRBool operator!=( const nsTAString_CharT& lhs, const nsTAString_CharT& rhs )
   {
     return !lhs.Equals(rhs);
   }
 
-template <class CharT>
 inline
-PRBool operator< ( const nsTAString<CharT>& lhs, const nsTAString<CharT>& rhs )
+PRBool operator< ( const nsTAString_CharT& lhs, const nsTAString_CharT& rhs )
   {
     return Compare(lhs, rhs)< 0;
   }
 
-template <class CharT>
 inline
-PRBool operator<=( const nsTAString<CharT>& lhs, const nsTAString<CharT>& rhs )
+PRBool operator<=( const nsTAString_CharT& lhs, const nsTAString_CharT& rhs )
   {
     return Compare(lhs, rhs)<=0;
   }
 
-template <class CharT>
 inline
-PRBool operator==( const nsTAString<CharT>& lhs, const nsTAString<CharT>& rhs )
+PRBool operator==( const nsTAString_CharT& lhs, const nsTAString_CharT& rhs )
   {
     return lhs.Equals(rhs);
   }
 
-template <class CharT>
 inline
-PRBool operator>=( const nsTAString<CharT>& lhs, const nsTAString<CharT>& rhs )
+PRBool operator>=( const nsTAString_CharT& lhs, const nsTAString_CharT& rhs )
   {
     return Compare(lhs, rhs)>=0;
   }
 
-template <class CharT>
 inline
-PRBool operator> ( const nsTAString<CharT>& lhs, const nsTAString<CharT>& rhs )
+PRBool operator> ( const nsTAString_CharT& lhs, const nsTAString_CharT& rhs )
   {
     return Compare(lhs, rhs)> 0;
   }
-
-
-#ifndef nsTStringTuple_h___
-#include "nsTStringTuple.h"
-#endif
-
-
-#endif // !defined(nsTAString_h___)

@@ -36,41 +36,33 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsTStringTuple_h___
-#define nsTStringTuple_h___
-
-#ifndef nsTStringBase_h___
-#include "nsTStringBase.h"
-#endif
-
   /**
-   * nsTStringTuple
+   * nsTStringTuple_CharT
    *
    * Represents a tuple of string fragments.  Built as a recursive binary tree.
    */
-template <class CharT>
-class NS_COM nsTStringTuple
+class NS_COM nsTStringTuple_CharT
   {
     public:
 
-      typedef CharT                                              char_type;
+      typedef CharT                      char_type;
+      typedef nsCharTraits<char_type>    char_traits;
 
-      typedef nsTStringTuple<char_type>                          self_type;
-      typedef nsTStringBase<char_type>                           string_base_type;
-      typedef nsTString<char_type>                               string_type;
+      typedef nsTStringTuple_CharT       self_type;
+      typedef nsTStringBase_CharT        string_base_type;
+      typedef nsTString_CharT            string_type;
+      typedef nsTAString_CharT           abstract_string_type;
 
-      typedef typename string_base_type::abstract_string_type    abstract_string_type;
-      typedef typename string_base_type::char_traits             char_traits;
-      typedef typename string_base_type::size_type               size_type;
+      typedef PRUint32                   size_type;
 
     public:
 
-      nsTStringTuple(const void* a, const void* b)
+      nsTStringTuple_CharT(const void* a, const void* b)
         : mHead(nsnull)
         , mFragA(a)
         , mFragB(b) {}
 
-      nsTStringTuple(const self_type& head, const void* frag)
+      nsTStringTuple_CharT(const self_type& head, const void* frag)
         : mHead(&head)
         , mFragA(nsnull) // this fragment is ignored when head != nsnull
         , mFragB(frag) {}
@@ -93,12 +85,6 @@ class NS_COM nsTStringTuple
          */
       PRBool IsDependentOn(const char_type *start, const char_type *end) const;
 
-        /**
-         * allow automatic flattening (XXX would be better to fix callsites to avoid this)
-         * but, at least our string type uses a shared buffer :)
-         */
-//XXX      operator const string_type() const { return string_type(*this); }
-
     private:
 
       const self_type* mHead;
@@ -106,60 +92,52 @@ class NS_COM nsTStringTuple
       const void*      mFragB;
 
       // type of mFrag? is given by the low-order bit.  if set, the type
-      // is nsTAString, else it is nsTStringBase.
+      // is nsTAString_CharT, else it is nsTStringBase_CharT.
   };
 
 
 #define NS_FLAG_READABLE(_r) ((void*)( ((unsigned long) _r) | 0x1 ))
 
-template <class CharT>
 inline
-const nsTStringTuple<CharT>
-operator+(const nsTStringBase<CharT>& a, const nsTStringBase<CharT>& b)
+const nsTStringTuple_CharT
+operator+(const nsTStringBase_CharT& a, const nsTStringBase_CharT& b)
   {
-    return nsTStringTuple<CharT>(&a, &b);
+    return nsTStringTuple_CharT(&a, &b);
   }
 
-template <class CharT>
 inline
-const nsTStringTuple<CharT>
-operator+(const nsTStringTuple<CharT>& tuple, const nsTStringBase<CharT>& str)
+const nsTStringTuple_CharT
+operator+(const nsTStringTuple_CharT& tuple, const nsTStringBase_CharT& str)
   {
-    return nsTStringTuple<CharT>(tuple, &str);
+    return nsTStringTuple_CharT(tuple, &str);
   }
 
-template <class CharT>
 inline
-const nsTStringTuple<CharT>
-operator+(const nsTAString<CharT>& a, const nsTAString<CharT>& b)
+const nsTStringTuple_CharT
+operator+(const nsTAString_CharT& a, const nsTAString_CharT& b)
   {
-    return nsTStringTuple<CharT>(NS_FLAG_READABLE(&a), NS_FLAG_READABLE(&b));
+    return nsTStringTuple_CharT(NS_FLAG_READABLE(&a), NS_FLAG_READABLE(&b));
   }
 
-template <class CharT>
 inline
-const nsTStringTuple<CharT>
-operator+(const nsTStringTuple<CharT>& tuple, const nsTAString<CharT>& readable)
+const nsTStringTuple_CharT
+operator+(const nsTStringTuple_CharT& tuple, const nsTAString_CharT& readable)
   {
-    return nsTStringTuple<CharT>(tuple, NS_FLAG_READABLE(&readable));
+    return nsTStringTuple_CharT(tuple, NS_FLAG_READABLE(&readable));
   }
 
-template <class CharT>
 inline
-const nsTStringTuple<CharT>
-operator+(const nsTStringBase<CharT>& str, const nsTAString<CharT>& readable)
+const nsTStringTuple_CharT
+operator+(const nsTStringBase_CharT& str, const nsTAString_CharT& readable)
   {
-    return nsTStringTuple<CharT>(&str, NS_FLAG_READABLE(&readable));
+    return nsTStringTuple_CharT(&str, NS_FLAG_READABLE(&readable));
   }
 
-template <class CharT>
 inline
-const nsTStringTuple<CharT>
-operator+(const nsTAString<CharT>& readable, const nsTStringBase<CharT>& str)
+const nsTStringTuple_CharT
+operator+(const nsTAString_CharT& readable, const nsTStringBase_CharT& str)
   {
-    return nsTStringTuple<CharT>(NS_FLAG_READABLE(&readable), &str);
+    return nsTStringTuple_CharT(NS_FLAG_READABLE(&readable), &str);
   }
 
 #undef NS_FLAG_READABLE
-
-#endif // !defined(nsTStringTuple_h___)

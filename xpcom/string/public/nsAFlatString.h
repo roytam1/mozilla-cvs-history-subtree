@@ -26,8 +26,8 @@
 #ifndef nsAFlatString_h___
 #define nsAFlatString_h___
 
-#ifndef nsTString_h___
-#include "nsTString.h"
+#ifndef nsString_h___
+#include "nsString.h"
 #endif
 
 #endif /* !defined(nsAFlatString_h___) */

@@ -36,20 +36,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsTDependentString_h___
-#define nsTDependentString_h___
-
-#ifndef nsTString_h___
-#include "nsTString.h"
-#endif
-
-#ifndef nsDebug_h___
-#include "nsDebug.h"
-#endif
-
 
   /**
-   * nsTDependentString
+   * nsTDependentString_CharT
    *
    * Stores a null-terminated, immutable sequence of characters.
    *
@@ -59,21 +48,20 @@
    * nsTDependentString continues to reference valid memory for the
    * duration of its use.
    */
-template <class CharT>
-class nsTDependentString : public nsTString<CharT>
+class nsTDependentString_CharT : public nsTString_CharT
   {
     public:
 
-      typedef CharT                                         char_type;
+      typedef CharT                                char_type;
 
-      typedef nsTDependentString<char_type>                 self_type;
-      typedef nsTString<char_type>                          string_type;
+      typedef nsTDependentString_CharT             self_type;
+      typedef nsTString_CharT                      string_type;
 
-      typedef typename string_type::char_traits             char_traits;
-      typedef typename string_type::string_base_type        string_base_type;
-      typedef typename string_type::string_tuple_type       string_tuple_type;
-      typedef typename string_type::abstract_string_type    abstract_string_type;
-      typedef typename string_type::size_type               size_type;
+      typedef string_type::char_traits             char_traits;
+      typedef string_type::string_base_type        string_base_type;
+      typedef string_type::string_tuple_type       string_tuple_type;
+      typedef string_type::abstract_string_type    abstract_string_type;
+      typedef string_type::size_type               size_type;
 
     public:
 
@@ -92,27 +80,27 @@ class nsTDependentString : public nsTString<CharT>
          * constructors
          */
 
-      nsTDependentString( const char_type* start, const char_type* end )
+      nsTDependentString_CharT( const char_type* start, const char_type* end )
         : string_type(NS_CONST_CAST(char_type*, start), end - start, F_TERMINATED)
         {
           AssertValid();
         }
 
-      nsTDependentString( const char_type* data, PRUint32 length )
+      nsTDependentString_CharT( const char_type* data, PRUint32 length )
         : string_type(NS_CONST_CAST(char_type*, data), length, F_TERMINATED)
         {
           AssertValid();
         }
 
       explicit
-      nsTDependentString( const char_type* data )
+      nsTDependentString_CharT( const char_type* data )
         : string_type(NS_CONST_CAST(char_type*, data), char_traits::length(data), F_TERMINATED)
         {
           AssertValid();
         }
 
       explicit
-      nsTDependentString( const string_base_type& str )
+      nsTDependentString_CharT( const string_base_type& str )
         : string_type(NS_CONST_CAST(char_type*, str.Data()), str.Length(), F_TERMINATED)
         {
           AssertValid();
@@ -150,8 +138,6 @@ class nsTDependentString : public nsTString<CharT>
     private:
       
       // NOT USED
-      nsTDependentString( const string_tuple_type& );
-      nsTDependentString( const abstract_string_type& );
+      nsTDependentString_CharT( const string_tuple_type& );
+      nsTDependentString_CharT( const abstract_string_type& );
   };
-
-#endif // !defined(nsTDependentString_h___)

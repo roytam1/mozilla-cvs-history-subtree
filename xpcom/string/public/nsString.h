@@ -39,28 +39,243 @@
 #ifndef nsString_h___
 #define nsString_h___
 
-#ifndef nsTString_h___
-#include "nsTString.h"
+
+#ifndef nsStringBase_h___
+#include "nsStringBase.h"
 #endif
 
-#ifndef nsTDependentString_h___
-#include "nsTDependentString.h"
+#ifndef nsDependentSubstring_h___
+#include "nsDependentSubstring.h"
+#endif
+
+#ifndef nsReadableUtils_h___
+#include "nsReadableUtils.h"
+#endif
+
+
+  // enable support for the obsolete string API if not explicitly disabled
+#ifndef MOZ_STRING_WITH_OBSOLETE_API
+#define MOZ_STRING_WITH_OBSOLETE_API 1
+#endif
+
+#if MOZ_STRING_WITH_OBSOLETE_API
+  // radix values for ToInteger/AppendInt
+#define kRadix10        (10)
+#define kRadix16        (16)
+#define kAutoDetect     (100)
+#define kRadixUnknown   (kAutoDetect+1)
+#endif
+
+class CBufDescriptor;
+
+
+  // declare nsString, et. al.
+#include "string-template-def-unichar.h"
+#include "nsTString.h"
+#include "string-template-undef.h"
+
+  // declare nsCString, et. al.
+#include "string-template-def-char.h"
+#include "nsTString.h"
+#include "string-template-undef.h"
+
+
+  /**
+   * CBufDescriptor
+   *
+   * Allows a nsC?AutoString to be configured to use a custom buffer.
+   */
+class CBufDescriptor
+  {
+    public:
+
+      CBufDescriptor(char* aString, PRBool aStackBased, PRUint32 aCapacity, PRInt32 aLength=-1)
+        {
+          mStr = aString;
+          mCapacity = aCapacity;
+          mLength = aLength;
+          mFlags = F_SINGLE_BYTE | (aStackBased ? F_STACK_BASED : 0);
+        }
+
+      CBufDescriptor(const char* aString, PRBool aStackBased, PRUint32 aCapacity, PRInt32 aLength=-1)
+        {
+          mStr = NS_CONST_CAST(char*, aString);
+          mCapacity = aCapacity;
+          mLength = aLength;
+          mFlags = F_SINGLE_BYTE | F_CONST | (aStackBased ? F_STACK_BASED : 0);
+        }
+
+      CBufDescriptor(PRUnichar* aString, PRBool aStackBased, PRUint32 aCapacity, PRInt32 aLength=-1)
+        {
+          mUStr = aString;
+          mCapacity = aCapacity;
+          mLength = aLength;
+          mFlags = F_DOUBLE_BYTE | (aStackBased ? F_STACK_BASED : 0);
+        }
+
+      CBufDescriptor(const PRUnichar* aString, PRBool aStackBased, PRUint32 aCapacity, PRInt32 aLength=-1)
+        {
+          mUStr = NS_CONST_CAST(PRUnichar*, aString);
+          mCapacity = aCapacity;
+          mLength = aLength;
+          mFlags = F_DOUBLE_BYTE | F_CONST | (aStackBased ? F_STACK_BASED : 0);
+        }
+
+      union
+        {
+          char*      mStr;
+          PRUnichar* mUStr;
+        };
+
+      PRUint32  mCapacity;
+      PRInt32   mLength;
+
+      enum
+        {
+          F_CONST       = (1 << 0),
+          F_STACK_BASED = (1 << 1),
+          F_SINGLE_BYTE = (1 << 2),
+          F_DOUBLE_BYTE = (1 << 3)
+        };
+
+      PRUint32  mFlags;
+  };
+
+
+  /**
+   * A helper class that converts a UTF-16 string to ASCII in a lossy manner
+   */
+class NS_LossyConvertUTF16toASCII : public nsCAutoString
+  {
+    public:
+      explicit
+      NS_LossyConvertUTF16toASCII( const PRUnichar* aString )
+        {
+          LossyAppendUTF16toASCII(aString, *this);
+        }
+
+      NS_LossyConvertUTF16toASCII( const PRUnichar* aString, PRUint32 aLength )
+        {
+          LossyCopyUTF16toASCII(nsDependentSubstring(aString, aString + aLength), *this);
+        }
+
+      explicit
+      NS_LossyConvertUTF16toASCII( const nsAString& aString )
+        {
+          LossyCopyUTF16toASCII(aString, *this);
+        }
+
+    private:
+        // NOT TO BE IMPLEMENTED
+      NS_LossyConvertUTF16toASCII( char );
+  };
+
+
+class NS_ConvertASCIItoUTF16 : public nsAutoString
+  {
+    public:
+      explicit
+      NS_ConvertASCIItoUTF16( const char* aCString )
+        {
+          AppendASCIItoUTF16(aCString, *this);
+        }
+
+      NS_ConvertASCIItoUTF16( const char* aCString, PRUint32 aLength )
+        {
+          CopyASCIItoUTF16(nsDependentCSubstring(aCString, aCString + aLength), *this);
+        }
+
+      explicit
+      NS_ConvertASCIItoUTF16( const nsACString& aCString )
+        {
+          CopyASCIItoUTF16(aCString, *this);
+        }
+
+    private:
+        // NOT TO BE IMPLEMENTED
+      NS_ConvertASCIItoUTF16( PRUnichar );
+  };
+
+
+  /**
+   * A helper class that converts a UTF-16 string to UTF-8
+   */
+class NS_ConvertUTF16toUTF8 : public nsCAutoString
+  {
+    public:
+      explicit
+      NS_ConvertUTF16toUTF8( const PRUnichar* aString )
+        {
+          CopyUTF16toUTF8(aString, *this);
+        }
+
+      NS_ConvertUTF16toUTF8( const PRUnichar* aString, PRUint32 aLength )
+        {
+          CopyUTF16toUTF8(nsDependentSubstring(aString, aString + aLength), *this);
+        }
+
+      explicit
+      NS_ConvertUTF16toUTF8( const nsAString& aString )
+        {
+          CopyUTF16toUTF8(aString, *this);
+        }
+
+    private:
+        // NOT TO BE IMPLEMENTED
+      NS_ConvertUTF16toUTF8( char );
+  };
+
+
+class NS_ConvertUTF8toUTF16 : public nsAutoString
+  {
+    public:
+      explicit
+      NS_ConvertUTF8toUTF16( const char* aCString )
+        {
+          CopyUTF8toUTF16(aCString, *this);
+        }
+
+      NS_ConvertUTF8toUTF16( const char* aCString, PRUint32 aLength )
+        {
+          CopyUTF8toUTF16(nsDependentCSubstring(aCString, aCString + aLength), *this);
+        }
+
+      explicit
+      NS_ConvertUTF8toUTF16( const nsACString& aCString )
+        {
+          CopyUTF8toUTF16(aCString, *this);
+        }
+
+    private:
+      NS_ConvertUTF8toUTF16( PRUnichar );
+  };
+
+
+// the following are included/declared for backwards compatibility
+
+typedef NS_ConvertUTF16toUTF8 NS_ConvertUCS2toUTF8;
+typedef NS_LossyConvertUTF16toASCII NS_LossyConvertUCS2toASCII;
+typedef NS_ConvertASCIItoUTF16 NS_ConvertASCIItoUCS2;
+typedef NS_ConvertUTF8toUTF16 NS_ConvertUTF8toUCS2;
+typedef nsAutoString nsVoidableString;
+
+#ifndef nsDependentString_h___
+#include "nsDependentString.h"
 #endif
 
 #ifndef nsLiteralString_h___
 #include "nsLiteralString.h"
 #endif
 
-#ifndef nsTDependentSubstring_h___
-#include "nsTDependentSubstring.h"
+#ifndef nsPromiseFlatString_h___
+#include "nsPromiseFlatString.h"
 #endif
 
-#ifndef nsTPromiseFlatString_h___
-#include "nsTPromiseFlatString.h"
-#endif
-
-// need to include this for compatibility
+// need to include these for backwards compatibility
 #include "nsMemory.h"
+#include <string.h>
+#include <stdio.h>
+#include "plhash.h"
 #include NEW_H
 
 inline PRInt32 MinInt(PRInt32 x, PRInt32 y)

@@ -36,26 +36,20 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-void
-nsTDependentSubstring_CharT::Rebind( const abstract_string_type& readable, PRUint32 startPos, PRUint32 length )
-  {
-    size_type strLength = readable.GetReadableBuffer((const char_type**) &mData);
-
-    if (startPos > strLength)
-      startPos = strLength;
-
-    mData += startPos;
-    mLength = NS_MIN(length, strLength - startPos);
-  }
-
-void
-nsTDependentSubstring_CharT::Rebind( const string_base_type& str, PRUint32 startPos, PRUint32 length )
-  {
-    size_type strLength = str.Length();
-
-    if (startPos > strLength)
-      startPos = strLength;
-
-    mData = NS_CONST_CAST(char_type*, str.Data()) + startPos;
-    mLength = NS_MIN(length, strLength - startPos);
-  }
+#define CharT                               PRUnichar
+#define CharT_is_PRUnichar                  1
+#define nsTObsoleteAString_CharT            nsObsoleteAString
+#define nsTObsoleteAStringThunk_CharT       nsObsoleteAStringThunk
+#define nsTAString_CharT                    nsAString
+#define nsTAString_IncompatibleCharT        nsACString
+#define nsTString_CharT                     nsString
+#define nsTAutoString_CharT                 nsAutoString
+#define nsTStringBase_CharT                 nsStringBase
+#define nsTStringTuple_CharT                nsStringTuple
+#define nsTStringComparator_CharT           nsStringComparator
+#define nsTDefaultStringComparator_CharT    nsDefaultStringComparator
+#define nsTPromiseFlatString_CharT          nsPromiseFlatString
+#define nsTDependentString_CharT            nsDependentString
+#define nsTDependentSubstring_CharT         nsDependentSubstring
+#define nsTXPIDLString_CharT                nsXPIDLString
+#define nsTGetterCopies_CharT               nsGetterCopies

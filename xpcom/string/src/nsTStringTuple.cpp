@@ -36,23 +36,13 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsTStringTuple.h"
-
-#define TO_STRING(_v)                                           \
-    ( (ptrdiff_t(_v) & 0x1)                                     \
-        ? NS_REINTERPRET_CAST(const abstract_string_type*,      \
-            ((unsigned long)_v & ~0x1))->ToString()             \
-        : *NS_REINTERPRET_CAST(const string_base_type*, (_v)) )
-
 
   /**
    * computes the aggregate string length
    */
 
-template <class CharT>
-typename
-nsTStringTuple<CharT>::size_type
-nsTStringTuple<CharT>::Length() const
+nsTStringTuple_CharT::size_type
+nsTStringTuple_CharT::Length() const
   {
     // fragments are enumerated right to left
 
@@ -78,9 +68,8 @@ nsTStringTuple<CharT>::Length() const
    * method.  the string written to |buf| is not null-terminated.
    */
 
-template <class CharT>
 void
-nsTStringTuple<CharT>::WriteTo( char_type *buf, PRUint32 bufLen ) const
+nsTStringTuple_CharT::WriteTo( char_type *buf, PRUint32 bufLen ) const
   {
     // we need to write out data into buf, ending at end.  so our data
     // needs to preceed |end| exactly.  we trust that the buffer was
@@ -109,9 +98,8 @@ nsTStringTuple<CharT>::WriteTo( char_type *buf, PRUint32 bufLen ) const
    * the given char sequence.
    */
 
-template <class CharT>
 PRBool
-nsTStringTuple<CharT>::IsDependentOn( const char_type *start, const char_type *end ) const
+nsTStringTuple_CharT::IsDependentOn( const char_type *start, const char_type *end ) const
   {
     // fragments are enumerated right to left
 
@@ -132,16 +120,3 @@ nsTStringTuple<CharT>::IsDependentOn( const char_type *start, const char_type *e
     }
     return dependent;
   }
-
-
-  /**
-   * explicit template instantiation
-   */
-
-template PRUint32 nsTStringTuple<char>::Length() const;
-template void     nsTStringTuple<char>::WriteTo( char_type *buf, PRUint32 bufLen ) const;
-template PRBool   nsTStringTuple<char>::IsDependentOn( const char_type *start, const char_type *end ) const;
-
-template PRUint32 nsTStringTuple<PRUnichar>::Length() const;
-template void     nsTStringTuple<PRUnichar>::WriteTo( char_type *buf, PRUint32 bufLen ) const;
-template PRBool   nsTStringTuple<PRUnichar>::IsDependentOn( const char_type *start, const char_type *end ) const;

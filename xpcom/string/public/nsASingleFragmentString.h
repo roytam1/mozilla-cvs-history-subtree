@@ -26,8 +26,8 @@
 #ifndef nsASingleFragmentString_h___
 #define nsASingleFragmentString_h___
 
-#ifndef nsTStringBase_h___
-#include "nsTStringBase.h"
+#ifndef nsStringBase_h___
+#include "nsStringBase.h"
 #endif
 
 #endif /* !defined(nsASingleFragmentString_h___) */

@@ -38,8 +38,8 @@
 #ifndef nsPrintfCString_h___
 #define nsPrintfCString_h___
  
-#ifndef nsTString_h___
-#include "nsTString.h"
+#ifndef nsString_h___
+#include "nsString.h"
 #endif
 
 
@@ -67,9 +67,9 @@
    * much more efficiently handled with |NS_LITERAL_[C]STRING| and |nsLiteral[C]String|.
    */
 
-class NS_COM nsPrintfCString : public nsTString<char>
+class NS_COM nsPrintfCString : public nsCString
   {
-    typedef nsTString<char> string_type;
+    typedef nsCString string_type;
 
     enum { kLocalBufferSize=15 };
       // ought to be large enough for most things ... a |long long| needs at most 20 (so you'd better ask)

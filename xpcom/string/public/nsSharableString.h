@@ -27,8 +27,8 @@
 #ifndef nsSharableString_h___
 #define nsSharableString_h___
 
-#ifndef nsTString_h___
-#include "nsTString.h"
+#ifndef nsString_h___
+#include "nsString.h"
 #endif
 
 // need to include this for compatibility

@@ -36,9 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsTAString.h"
-#include "nsTObsoleteAString.h"
-#include "nsTString.h"
 
   /**
    * Some comments on this implementation...
@@ -54,54 +51,17 @@
    */
 
 
-#ifdef _MSC_VER
-
-  /** 
-   * MSVC6 does not support template instantiation of destructors, so we
-   * need to specialize the destructors manually.
-   *
-   * Unfortunately, GCC 2.96 cannot compile this code, so we use the
-   * template instantation approach for non-MSVC compilers.
-   */ 
-  
-NS_SPECIALIZE_TEMPLATE
-nsTAString<char>::~nsTAString()
+nsTAString_CharT::~nsTAString_CharT()
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->ReleaseData();
     else
-      AsObsoleteString()->~nsTObsoleteAString();
-  }
-NS_SPECIALIZE_TEMPLATE
-nsTAString<PRUnichar>::~nsTAString()
-  {
-    if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->ReleaseData();
-    else
-      AsObsoleteString()->~nsTObsoleteAString();
+      AsObsoleteString()->~nsTObsoleteAString_CharT();
   }
 
-#else // !_MSC_VER
 
-template <class CharT>
-nsTAString<CharT>::~nsTAString()
-  {
-    if (mVTable == obsolete_string_type::sCanonicalVTable)
-      AsString()->ReleaseData();
-    else
-      AsObsoleteString()->~nsTObsoleteAString();
-  }
-
-template nsTAString<char>::~nsTAString();
-template nsTAString<PRUnichar>::~nsTAString();
-
-#endif
-
-
-template <class CharT>
-typename
-nsTAString<CharT>::size_type
-nsTAString<CharT>::Length() const
+nsTAString_CharT::size_type
+nsTAString_CharT::Length() const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       return AsString()->Length();
@@ -109,9 +69,8 @@ nsTAString<CharT>::Length() const
     return AsObsoleteString()->Length();
   }
 
-template <class CharT>
 PRBool
-nsTAString<CharT>::Equals( const self_type& readable ) const
+nsTAString_CharT::Equals( const self_type& readable ) const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       return AsString()->Equals(readable);
@@ -119,9 +78,8 @@ nsTAString<CharT>::Equals( const self_type& readable ) const
     return ToString().Equals(readable);
   }
 
-template <class CharT>
 PRBool
-nsTAString<CharT>::Equals( const self_type& readable, const comparator_type& comparator ) const
+nsTAString_CharT::Equals( const self_type& readable, const comparator_type& comparator ) const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       return AsString()->Equals(readable, comparator);
@@ -129,9 +87,8 @@ nsTAString<CharT>::Equals( const self_type& readable, const comparator_type& com
     return ToString().Equals(readable, comparator);
   }
 
-template <class CharT>
 PRBool
-nsTAString<CharT>::Equals( const char_type* data ) const
+nsTAString_CharT::Equals( const char_type* data ) const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       return AsString()->Equals(data);
@@ -139,9 +96,8 @@ nsTAString<CharT>::Equals( const char_type* data ) const
     return ToString().Equals(data);
   }
 
-template <class CharT>
 PRBool
-nsTAString<CharT>::Equals( const char_type* data, const comparator_type& comparator ) const
+nsTAString_CharT::Equals( const char_type* data, const comparator_type& comparator ) const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       return AsString()->Equals(data, comparator);
@@ -149,9 +105,8 @@ nsTAString<CharT>::Equals( const char_type* data, const comparator_type& compara
     return ToString().Equals(data, comparator);
   }
 
-template <class CharT>
 PRBool
-nsTAString<CharT>::IsVoid() const
+nsTAString_CharT::IsVoid() const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       return AsString()->IsVoid();
@@ -159,9 +114,8 @@ nsTAString<CharT>::IsVoid() const
     return AsObsoleteString()->IsVoid();
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::SetIsVoid( PRBool val )
+nsTAString_CharT::SetIsVoid( PRBool val )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->SetIsVoid(val);
@@ -169,9 +123,8 @@ nsTAString<CharT>::SetIsVoid( PRBool val )
       AsObsoleteString()->SetIsVoid(val);
   }
 
-template <class CharT>
 PRBool
-nsTAString<CharT>::IsTerminated() const
+nsTAString_CharT::IsTerminated() const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       return AsString()->IsTerminated();
@@ -179,9 +132,8 @@ nsTAString<CharT>::IsTerminated() const
     return AsObsoleteString()->GetFlatBufferHandle() != nsnull;
   }
 
-template <class CharT>
 CharT
-nsTAString<CharT>::First() const
+nsTAString_CharT::First() const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       return AsString()->First();
@@ -189,9 +141,8 @@ nsTAString<CharT>::First() const
     return ToString().First();
   }
 
-template <class CharT>
 CharT
-nsTAString<CharT>::Last() const
+nsTAString_CharT::Last() const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       return AsString()->Last();
@@ -199,10 +150,8 @@ nsTAString<CharT>::Last() const
     return ToString().Last();
   }
 
-template <class CharT>
-typename
-nsTAString<CharT>::size_type
-nsTAString<CharT>::CountChar( char_type c ) const
+nsTAString_CharT::size_type
+nsTAString_CharT::CountChar( char_type c ) const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       return AsString()->CountChar(c);
@@ -210,9 +159,8 @@ nsTAString<CharT>::CountChar( char_type c ) const
     return ToString().CountChar(c);
   }
 
-template <class CharT>
 PRInt32
-nsTAString<CharT>::FindChar( char_type c, index_type offset ) const
+nsTAString_CharT::FindChar( char_type c, index_type offset ) const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       return AsString()->FindChar(c, offset);
@@ -220,9 +168,8 @@ nsTAString<CharT>::FindChar( char_type c, index_type offset ) const
     return ToString().FindChar(c, offset);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::SetCapacity( size_type size )
+nsTAString_CharT::SetCapacity( size_type size )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->SetCapacity(size);
@@ -230,9 +177,8 @@ nsTAString<CharT>::SetCapacity( size_type size )
       AsObsoleteString()->SetCapacity(size);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::SetLength( size_type size )
+nsTAString_CharT::SetLength( size_type size )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->SetLength(size);
@@ -240,9 +186,8 @@ nsTAString<CharT>::SetLength( size_type size )
       AsObsoleteString()->SetLength(size);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Assign( const self_type& readable )
+nsTAString_CharT::Assign( const self_type& readable )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Assign(readable);
@@ -250,19 +195,17 @@ nsTAString<CharT>::Assign( const self_type& readable )
       AsObsoleteString()->do_AssignFromReadable(*readable.AsObsoleteString());
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Assign( const string_tuple_type& tuple )
+nsTAString_CharT::Assign( const string_tuple_type& tuple )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Assign(tuple);
     else
-      AsObsoleteString()->do_AssignFromReadable(*nsTAutoString<char_type>(tuple).AsObsoleteString());
+      AsObsoleteString()->do_AssignFromReadable(*nsTAutoString_CharT(tuple).AsObsoleteString());
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Assign( const char_type* data )
+nsTAString_CharT::Assign( const char_type* data )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Assign(data);
@@ -270,9 +213,8 @@ nsTAString<CharT>::Assign( const char_type* data )
       AsObsoleteString()->do_AssignFromElementPtr(data);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Assign( const char_type* data, size_type length )
+nsTAString_CharT::Assign( const char_type* data, size_type length )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Assign(data, length);
@@ -280,9 +222,8 @@ nsTAString<CharT>::Assign( const char_type* data, size_type length )
       AsObsoleteString()->do_AssignFromElementPtrLength(data, length);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Assign( char_type c )
+nsTAString_CharT::Assign( char_type c )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Assign(c);
@@ -290,9 +231,8 @@ nsTAString<CharT>::Assign( char_type c )
       AsObsoleteString()->do_AssignFromElement(c);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Append( const self_type& readable )
+nsTAString_CharT::Append( const self_type& readable )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Append(readable);
@@ -300,19 +240,17 @@ nsTAString<CharT>::Append( const self_type& readable )
       AsObsoleteString()->do_AppendFromReadable(*readable.AsObsoleteString());
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Append( const string_tuple_type& tuple )
+nsTAString_CharT::Append( const string_tuple_type& tuple )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Append(tuple);
     else
-      AsObsoleteString()->do_AppendFromReadable(*nsTAutoString<char_type>(tuple).AsObsoleteString());
+      AsObsoleteString()->do_AppendFromReadable(*nsTAutoString_CharT(tuple).AsObsoleteString());
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Append( const char_type* data )
+nsTAString_CharT::Append( const char_type* data )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Append(data);
@@ -320,9 +258,8 @@ nsTAString<CharT>::Append( const char_type* data )
       AsObsoleteString()->do_AppendFromElementPtr(data);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Append( const char_type* data, size_type length )
+nsTAString_CharT::Append( const char_type* data, size_type length )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Append(data, length);
@@ -330,9 +267,8 @@ nsTAString<CharT>::Append( const char_type* data, size_type length )
       AsObsoleteString()->do_AppendFromElementPtrLength(data, length);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Append( char_type c )
+nsTAString_CharT::Append( char_type c )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Append(c);
@@ -340,9 +276,8 @@ nsTAString<CharT>::Append( char_type c )
       AsObsoleteString()->do_AppendFromElement(c);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Insert( const self_type& readable, index_type pos )
+nsTAString_CharT::Insert( const self_type& readable, index_type pos )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Insert(readable, pos);
@@ -350,19 +285,17 @@ nsTAString<CharT>::Insert( const self_type& readable, index_type pos )
       AsObsoleteString()->do_InsertFromReadable(*readable.AsObsoleteString(), pos);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Insert( const string_tuple_type& tuple, index_type pos )
+nsTAString_CharT::Insert( const string_tuple_type& tuple, index_type pos )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Insert(tuple, pos);
     else
-      AsObsoleteString()->do_InsertFromReadable(*nsTAutoString<char_type>(tuple).AsObsoleteString(), pos);
+      AsObsoleteString()->do_InsertFromReadable(*nsTAutoString_CharT(tuple).AsObsoleteString(), pos);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Insert( const char_type* data, index_type pos )
+nsTAString_CharT::Insert( const char_type* data, index_type pos )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Insert(data, pos);
@@ -370,9 +303,8 @@ nsTAString<CharT>::Insert( const char_type* data, index_type pos )
       AsObsoleteString()->do_InsertFromElementPtr(data, pos);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Insert( const char_type* data, index_type pos, size_type length )
+nsTAString_CharT::Insert( const char_type* data, index_type pos, size_type length )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Insert(data, pos, length);
@@ -380,9 +312,8 @@ nsTAString<CharT>::Insert( const char_type* data, index_type pos, size_type leng
       AsObsoleteString()->do_InsertFromElementPtrLength(data, pos, length);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Insert( char_type c, index_type pos )
+nsTAString_CharT::Insert( char_type c, index_type pos )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Insert(c, pos);
@@ -390,9 +321,8 @@ nsTAString<CharT>::Insert( char_type c, index_type pos )
       AsObsoleteString()->do_InsertFromElement(c, pos);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Cut( index_type cutStart, size_type cutLength )
+nsTAString_CharT::Cut( index_type cutStart, size_type cutLength )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Cut(cutStart, cutLength);
@@ -400,9 +330,8 @@ nsTAString<CharT>::Cut( index_type cutStart, size_type cutLength )
       AsObsoleteString()->Cut(cutStart, cutLength);
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Replace( index_type cutStart, size_type cutLength, const self_type& readable )
+nsTAString_CharT::Replace( index_type cutStart, size_type cutLength, const self_type& readable )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Replace(cutStart, cutLength, readable);
@@ -410,20 +339,17 @@ nsTAString<CharT>::Replace( index_type cutStart, size_type cutLength, const self
       AsObsoleteString()->do_ReplaceFromReadable(cutStart, cutLength, *readable.AsObsoleteString());
   }
 
-template <class CharT>
 void
-nsTAString<CharT>::Replace( index_type cutStart, size_type cutLength, const string_tuple_type& tuple )
+nsTAString_CharT::Replace( index_type cutStart, size_type cutLength, const string_tuple_type& tuple )
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       AsString()->Replace(cutStart, cutLength, tuple);
     else
-      AsObsoleteString()->do_ReplaceFromReadable(cutStart, cutLength, *nsTAutoString<char_type>(tuple).AsObsoleteString());
+      AsObsoleteString()->do_ReplaceFromReadable(cutStart, cutLength, *nsTAutoString_CharT(tuple).AsObsoleteString());
   }
 
-template <class CharT>
-typename
-nsTAString<CharT>::size_type
-nsTAString<CharT>::GetReadableBuffer( const char_type **data ) const
+nsTAString_CharT::size_type
+nsTAString_CharT::GetReadableBuffer( const char_type **data ) const
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       {
@@ -432,16 +358,14 @@ nsTAString<CharT>::GetReadableBuffer( const char_type **data ) const
         return str->mLength;
       }
 
-    typename obsolete_string_type::const_fragment_type frag;
-    AsObsoleteString()->GetReadableFragment(frag, kFirstFragment, 0);
+    obsolete_string_type::const_fragment_type frag;
+    AsObsoleteString()->GetReadableFragment(frag, obsolete_string_type::kFirstFragment, 0);
     *data = frag.mStart;
     return (frag.mEnd - frag.mStart);
   }
 
-template <class CharT>
-typename
-nsTAString<CharT>::size_type
-nsTAString<CharT>::GetWritableBuffer(char_type **data)
+nsTAString_CharT::size_type
+nsTAString_CharT::GetWritableBuffer(char_type **data)
   {
     if (mVTable == obsolete_string_type::sCanonicalVTable)
       {
@@ -450,15 +374,14 @@ nsTAString<CharT>::GetWritableBuffer(char_type **data)
         return str->Length();
       }
 
-    typename obsolete_string_type::fragment_type frag;
-    AsObsoleteString()->GetWritableFragment(frag, kFirstFragment, 0);
+    obsolete_string_type::fragment_type frag;
+    AsObsoleteString()->GetWritableFragment(frag, obsolete_string_type::kFirstFragment, 0);
     *data = frag.mStart;
     return (frag.mEnd - frag.mStart);
   }
 
-template <class CharT>
 PRBool
-nsTAString<CharT>::IsDependentOn(const char_type* start, const char_type *end) const
+nsTAString_CharT::IsDependentOn(const char_type* start, const char_type *end) const
   {
       // this is an optimization...
     if (mVTable == obsolete_string_type::sCanonicalVTable)
@@ -466,80 +389,3 @@ nsTAString<CharT>::IsDependentOn(const char_type* start, const char_type *end) c
 
     return ToString().IsDependentOn(start, end);
   }
-
-
-  /**
-   * explicit template instantiation
-   */
-
-template PRUint32  nsTAString<char>::Length() const;
-template PRBool    nsTAString<char>::Equals( const self_type& readable ) const;
-template PRBool    nsTAString<char>::Equals( const self_type& readable, const comparator_type& comparator ) const;
-template PRBool    nsTAString<char>::Equals( const char_type* data ) const;
-template PRBool    nsTAString<char>::Equals( const char_type* data, const comparator_type& comparator ) const;
-template PRBool    nsTAString<char>::IsVoid() const;
-template void      nsTAString<char>::SetIsVoid( PRBool val );
-template PRBool    nsTAString<char>::IsTerminated() const;
-template char      nsTAString<char>::First() const;
-template char      nsTAString<char>::Last() const;
-template PRUint32  nsTAString<char>::CountChar( char_type c ) const;
-template PRInt32   nsTAString<char>::FindChar( char_type c, index_type offset ) const;
-template void      nsTAString<char>::SetCapacity( size_type size );
-template void      nsTAString<char>::SetLength( size_type size );
-template void      nsTAString<char>::Assign( const self_type& readable );
-template void      nsTAString<char>::Assign( const string_tuple_type& tuple );
-template void      nsTAString<char>::Assign( const char_type* data );
-template void      nsTAString<char>::Assign( const char_type* data, size_type length );
-template void      nsTAString<char>::Assign( char_type c );
-template void      nsTAString<char>::Append( const self_type& readable );
-template void      nsTAString<char>::Append( const string_tuple_type& tuple );
-template void      nsTAString<char>::Append( const char_type* data );
-template void      nsTAString<char>::Append( const char_type* data, size_type length );
-template void      nsTAString<char>::Append( char_type c );
-template void      nsTAString<char>::Insert( const self_type& readable, index_type pos );
-template void      nsTAString<char>::Insert( const string_tuple_type& tuple, index_type pos );
-template void      nsTAString<char>::Insert( const char_type* data, index_type pos );
-template void      nsTAString<char>::Insert( const char_type* data, index_type pos, size_type length );
-template void      nsTAString<char>::Insert( char_type c, index_type pos );
-template void      nsTAString<char>::Cut( index_type cutStart, size_type cutLength );
-template void      nsTAString<char>::Replace( index_type cutStart, size_type cutLength, const self_type& readable );
-template void      nsTAString<char>::Replace( index_type cutStart, size_type cutLength, const string_tuple_type& tuple );
-template PRUint32  nsTAString<char>::GetReadableBuffer( const char_type **data ) const;
-template PRUint32  nsTAString<char>::GetWritableBuffer(char_type **data);
-template PRBool    nsTAString<char>::IsDependentOn(const char_type* start, const char_type *end) const;
-
-template PRUint32  nsTAString<PRUnichar>::Length() const;
-template PRBool    nsTAString<PRUnichar>::Equals( const self_type& readable ) const;
-template PRBool    nsTAString<PRUnichar>::Equals( const self_type& readable, const comparator_type& comparator ) const;
-template PRBool    nsTAString<PRUnichar>::Equals( const char_type* data ) const;
-template PRBool    nsTAString<PRUnichar>::Equals( const char_type* data, const comparator_type& comparator ) const;
-template PRBool    nsTAString<PRUnichar>::IsVoid() const;
-template void      nsTAString<PRUnichar>::SetIsVoid( PRBool val );
-template PRBool    nsTAString<PRUnichar>::IsTerminated() const;
-template PRUnichar nsTAString<PRUnichar>::First() const;
-template PRUnichar nsTAString<PRUnichar>::Last() const;
-template PRUint32  nsTAString<PRUnichar>::CountChar( char_type c ) const;
-template PRInt32   nsTAString<PRUnichar>::FindChar( char_type c, index_type offset ) const;
-template void      nsTAString<PRUnichar>::SetCapacity( size_type size );
-template void      nsTAString<PRUnichar>::SetLength( size_type size );
-template void      nsTAString<PRUnichar>::Assign( const self_type& readable );
-template void      nsTAString<PRUnichar>::Assign( const string_tuple_type& tuple );
-template void      nsTAString<PRUnichar>::Assign( const char_type* data );
-template void      nsTAString<PRUnichar>::Assign( const char_type* data, size_type length );
-template void      nsTAString<PRUnichar>::Assign( char_type c );
-template void      nsTAString<PRUnichar>::Append( const self_type& readable );
-template void      nsTAString<PRUnichar>::Append( const string_tuple_type& tuple );
-template void      nsTAString<PRUnichar>::Append( const char_type* data );
-template void      nsTAString<PRUnichar>::Append( const char_type* data, size_type length );
-template void      nsTAString<PRUnichar>::Append( char_type c );
-template void      nsTAString<PRUnichar>::Insert( const self_type& readable, index_type pos );
-template void      nsTAString<PRUnichar>::Insert( const string_tuple_type& tuple, index_type pos );
-template void      nsTAString<PRUnichar>::Insert( const char_type* data, index_type pos );
-template void      nsTAString<PRUnichar>::Insert( const char_type* data, index_type pos, size_type length );
-template void      nsTAString<PRUnichar>::Insert( char_type c, index_type pos );
-template void      nsTAString<PRUnichar>::Cut( index_type cutStart, size_type cutLength );
-template void      nsTAString<PRUnichar>::Replace( index_type cutStart, size_type cutLength, const self_type& readable );
-template void      nsTAString<PRUnichar>::Replace( index_type cutStart, size_type cutLength, const string_tuple_type& tuple );
-template PRUint32  nsTAString<PRUnichar>::GetReadableBuffer( const char_type **data ) const;
-template PRUint32  nsTAString<PRUnichar>::GetWritableBuffer(char_type **data);
-template PRBool    nsTAString<PRUnichar>::IsDependentOn(const char_type* start, const char_type *end) const;

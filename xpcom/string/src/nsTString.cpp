@@ -36,36 +36,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include <stdlib.h>
-#include "nsTString.h"
-
-template <class CharT> class CBufDescriptorReader {};
-
-NS_SPECIALIZE_TEMPLATE
-class CBufDescriptorReader<char>
-  {
-    public:
-      char* read( const CBufDescriptor& desc ) const
-        {
-          NS_ASSERTION(desc.mFlags & CBufDescriptor::F_SINGLE_BYTE, "wrong string type");
-          return desc.mStr;
-        }
-  };
-
-NS_SPECIALIZE_TEMPLATE
-class CBufDescriptorReader<PRUnichar>
-  {
-    public:
-      PRUnichar* read( const CBufDescriptor& desc ) const
-        {
-          NS_ASSERTION(desc.mFlags & CBufDescriptor::F_DOUBLE_BYTE, "wrong string type");
-          return desc.mUStr;
-        }
-  };
-
-template <class CharT>
 void
-nsTAutoString<CharT>::Init( const CBufDescriptor& desc )
+nsTAutoString_CharT::Init( const CBufDescriptor& desc )
   {
     mData = CBufDescriptorReader<CharT>().read(desc);
     mLength = desc.mLength;
@@ -87,11 +59,3 @@ nsTAutoString<CharT>::Init( const CBufDescriptor& desc )
         // mFixedCapacity = 0; // this member will be ignored
       }
   }
-
-
-  /**
-   * explicit template instantiation
-   */
-
-template void nsTAutoString<char>     ::Init( const CBufDescriptor& );
-template void nsTAutoString<PRUnichar>::Init( const CBufDescriptor& );

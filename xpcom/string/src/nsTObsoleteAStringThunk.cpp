@@ -36,33 +36,28 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsTObsoleteAString.h"
-#include "nsTString.h"
 
-extern const void *nsObsoleteAStringThunk_vptr;
-
-template <class CharT>
-class nsTObsoleteAStringThunk : public nsTObsoleteAString<CharT>
+class nsTObsoleteAStringThunk_CharT : public nsTObsoleteAString_CharT
   {
     public:
-      typedef CharT                                                       char_type;
+      typedef CharT                                              char_type;
 
-      typedef nsTObsoleteAString<char_type>                               obsolete_string_type;
+      typedef nsTObsoleteAString_CharT                           obsolete_string_type;
 
-      typedef typename obsolete_string_type::buffer_handle_type           buffer_handle_type;
-      typedef typename obsolete_string_type::shared_buffer_handle_type    shared_buffer_handle_type;
-      typedef typename obsolete_string_type::const_fragment_type          const_fragment_type;
-      typedef typename obsolete_string_type::fragment_type                fragment_type;
-      typedef typename obsolete_string_type::size_type                    size_type;
-      typedef typename obsolete_string_type::index_type                   index_type;
+      typedef obsolete_string_type::buffer_handle_type           buffer_handle_type;
+      typedef obsolete_string_type::shared_buffer_handle_type    shared_buffer_handle_type;
+      typedef obsolete_string_type::const_fragment_type          const_fragment_type;
+      typedef obsolete_string_type::fragment_type                fragment_type;
+      typedef obsolete_string_type::size_type                    size_type;
+      typedef obsolete_string_type::index_type                   index_type;
 
-      typedef nsTObsoleteAStringThunk<char_type>                          self_type; 
-      typedef nsTStringBase<char_type>                                    string_base_type;
-      typedef nsTAString<char_type>                                       abstract_string_type;
+      typedef nsTObsoleteAStringThunk_CharT                      self_type; 
+      typedef nsTStringBase_CharT                                string_base_type;
+      typedef nsTAString_CharT                                   abstract_string_type;
 
     public:
 
-      nsTObsoleteAStringThunk() {}
+      nsTObsoleteAStringThunk_CharT() {}
 
 
         /**
@@ -77,7 +72,7 @@ class nsTObsoleteAStringThunk : public nsTObsoleteAString<CharT>
          * all virtual methods need to be redirected to appropriate nsString methods
          */
 
-      virtual ~nsTObsoleteAStringThunk()
+      virtual ~nsTObsoleteAStringThunk_CharT()
         {
           concrete_self()->ReleaseData();
         }
@@ -238,34 +233,3 @@ class nsTObsoleteAStringThunk : public nsTObsoleteAString<CharT>
           }
       }
 };
-
-
-/**
- * explicit template instantiation should not be necessary given the code below.
- */
-
-
-/**
- * get pointers to canonical vtables...
- */
-
-inline void *operator new(size_t size, const void *loc) { return (void *) loc; }
-
-static const void *
-get_nsTObsoleteAStringThunk_PRUnichar_vptr()
-{
-  const void *result;
-  new (&result) nsTObsoleteAStringThunk<PRUnichar>();
-  return result;
-}
-
-static const void *
-get_nsTObsoleteAStringThunk_char_vptr()
-{
-  const void *result;
-  new (&result) nsTObsoleteAStringThunk<char>();
-  return result;
-}
-
-const void *nsTObsoleteAString<PRUnichar>::sCanonicalVTable = get_nsTObsoleteAStringThunk_PRUnichar_vptr();
-const void *nsTObsoleteAString<char>     ::sCanonicalVTable = get_nsTObsoleteAStringThunk_char_vptr();

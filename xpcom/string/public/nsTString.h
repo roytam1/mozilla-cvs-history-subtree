@@ -36,40 +36,24 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsTString_h___
-#define nsTString_h___
-
-#ifndef nsTStringBase_h___
-#include "nsTStringBase.h"
-#endif
-
-#ifndef nsTDependentSubstring_h___
-#include "nsTDependentSubstring.h"
-#endif
-
-#ifndef nsReadableUtils_h___
-#include "nsReadableUtils.h"
-#endif
-
 
   /**
    * This is the canonical null-terminated string class.  All subclasses
    * promise null-terminated storage.  Instances of this class allocate
    * strings on the heap.
    */
-template <class CharT>
-class nsTString : public nsTStringBase<CharT>
+class nsTString_CharT : public nsTStringBase_CharT
   {
     public:
 
-      typedef CharT                                              char_type;
+      typedef CharT                                     char_type;
 
-      typedef nsTString<char_type>                               self_type;
-      typedef nsTStringBase<char_type>                           string_base_type;
+      typedef nsTString_CharT                           self_type;
+      typedef nsTStringBase_CharT                       string_base_type;
 
-      typedef typename string_base_type::string_tuple_type       string_tuple_type;
-      typedef typename string_base_type::abstract_string_type    abstract_string_type;
-      typedef typename string_base_type::size_type               size_type;
+      typedef string_base_type::string_tuple_type       string_tuple_type;
+      typedef string_base_type::abstract_string_type    abstract_string_type;
+      typedef string_base_type::size_type               size_type;
 
     public:
 
@@ -77,37 +61,37 @@ class nsTString : public nsTStringBase<CharT>
          * constructors
          */
 
-      nsTString()
+      nsTString_CharT()
         : string_base_type() {}
 
       explicit
-      nsTString( char_type c )
+      nsTString_CharT( char_type c )
         : string_base_type()
         {
           Assign(c);
         }
 
       explicit
-      nsTString( const char_type* data, size_type length = size_type(-1) )
+      nsTString_CharT( const char_type* data, size_type length = size_type(-1) )
         : string_base_type()
         {
           Assign(data, length);
         }
 
-      nsTString( const self_type& str )
+      nsTString_CharT( const self_type& str )
         : string_base_type()
         {
           Assign(str);
         }
 
-      nsTString( const string_tuple_type& tuple )
+      nsTString_CharT( const string_tuple_type& tuple )
         : string_base_type()
         {
           Assign(tuple);
         }
 
       explicit
-      nsTString( const abstract_string_type& readable )
+      nsTString_CharT( const abstract_string_type& readable )
         : string_base_type()
         {
           Assign(readable);
@@ -127,99 +111,350 @@ class nsTString : public nsTStringBase<CharT>
           return mData;
         }
 
+
+#if MOZ_STRING_WITH_OBSOLETE_API
+
+
+        /**
+         *  Search for the given substring within this string.
+         *  
+         *  @param   aString is substring to be sought in this
+         *  @param   aIgnoreCase selects case sensitivity
+         *  @param   aOffset tells us where in this string to start searching
+         *  @param   aCount tells us how far from the offset we are to search. Use
+         *           -1 to search the whole string.
+         *  @return  offset in string, or kNotFound
+         */
+
+      PRInt32 Find( const nsCString& aString, PRBool aIgnoreCase=PR_FALSE, PRInt32 aOffset=0, PRInt32 aCount=-1 ) const;
+      PRInt32 Find( const char* aString, PRBool aIgnoreCase=PR_FALSE, PRInt32 aOffset=0, PRInt32 aCount=-1 ) const;
+
+#ifdef CharT_is_PRUnichar
+      PRInt32 Find( const nsAFlatString& aString, PRInt32 aOffset=0, PRInt32 aCount=-1 ) const;
+      PRInt32 Find( const PRUnichar* aString, PRInt32 aOffset=0, PRInt32 aCount=-1 ) const;
+#endif
+
+        
+        /**
+         * This methods scans the string backwards, looking for the given string
+         *
+         * @param   aString is substring to be sought in this
+         * @param   aIgnoreCase tells us whether or not to do caseless compare
+         * @param   aOffset tells us where in this string to start searching.
+         *          Use -1 to search from the end of the string.
+         * @param   aCount tells us how many iterations to make starting at the
+         *          given offset.
+         * @return  offset in string, or kNotFound
+         */
+
+      PRInt32 RFind( const nsCString& aString, PRBool aIgnoreCase=PR_FALSE, PRInt32 aOffset=-1, PRInt32 aCount=-1 ) const;
+      PRInt32 RFind( const char* aCString, PRBool aIgnoreCase=PR_FALSE, PRInt32 aOffset=-1, PRInt32 aCount=-1 ) const;
+
+#ifdef CharT_is_PRUnichar
+      PRInt32 RFind( const nsAFlatString& aString, PRInt32 aOffset=-1, PRInt32 aCount=-1 ) const;
+      PRInt32 RFind( const PRUnichar* aString, PRInt32 aOffset=-1, PRInt32 aCount=-1 ) const;
+#endif
+
+
+        /**
+         *  Search for given char within this string
+         *  
+         *  @param   aChar is the character to search for
+         *  @param   aOffset tells us where in this strig to start searching
+         *  @param   aCount tells us how far from the offset we are to search.
+         *           Use -1 to search the whole string.
+         *  @return  offset in string, or kNotFound
+         */
+
+      // PRInt32 FindChar( PRUnichar aChar, PRInt32 aOffset=0, PRInt32 aCount=-1 ) const;
+      PRInt32 RFindChar( PRUnichar aChar, PRInt32 aOffset=-1, PRInt32 aCount=-1 ) const;
+
+
+        /**
+         * This method searches this string for the first character found in
+         * the given string.
+         *
+         * @param aString contains set of chars to be found
+         * @param aOffset tells us where in this string to start searching
+         *        (counting from left)
+         * @return offset in string, or kNotFound
+         */
+
+      PRInt32 FindCharInSet( const char* aString, PRInt32 aOffset=0 ) const;
+      PRInt32 FindCharInSet( const self_type& aString, PRInt32 aOffset=0 ) const
+        {
+          return FindCharInSet(aString.get(), aOffset);
+        }
+
+#ifdef CharT_is_PRUnichar
+      PRInt32 FindCharInSet( const PRUnichar* aString, PRInt32 aOffset=0 ) const;
+#endif
+
+
+        /**
+         * This method searches this string for the last character found in
+         * the given string.
+         *
+         * @param aString contains set of chars to be found
+         * @param aOffset tells us where in this string to start searching
+         *        (counting from left)
+         * @return offset in string, or kNotFound
+         */
+
+      PRInt32 RFindCharInSet( const char_type* aString, PRInt32 aOffset=-1 ) const;
+      PRInt32 RFindCharInSet( const self_type& aString, PRInt32 aOffset=-1 ) const
+        {
+          return RFindCharInSet(aString.get(), aOffset);
+        }
+
+
+        /**
+         * Compares a given string to this string. 
+         *
+         * @param   aString is the string to be compared
+         * @param   aIgnoreCase tells us how to treat case
+         * @param   aCount tells us how many chars to compare
+         * @return  -1,0,1
+         */
+
+#ifdef CharT_is_char
+      PRInt32 Compare( const char* aString, PRBool aIgnoreCase=PR_FALSE, PRInt32 aCount=-1 ) const;
+#else
+      PRInt32 CompareWithConversion( const char* aString, PRBool aIgnoreCase=PR_FALSE, PRInt32 aCount=-1 ) const;
+#endif
+
+
+        /**
+         * Equality check between given string and this string.
+         *
+         * @param   aString is the string to check
+         * @param   aIgnoreCase tells us how to treat case
+         * @param   aCount tells us how many chars to compare
+         * @return  boolean
+         */
+
+      PRBool EqualsWithConversion( const char* aString, PRBool aIgnoreCase=PR_FALSE, PRInt32 aCount=-1 ) const;
+      PRBool EqualsIgnoreCase( const char* aString, PRInt32 aCount=-1 ) const
+        {
+          return EqualsWithConversion(aString, PR_TRUE, aCount);
+        }
+
+
+#ifdef CharT_is_PRUnichar
+
+        /**
+         *  Determine if given buffer is plain ascii
+         *  
+         *  @param   aBuffer -- if null, then we test *this, otherwise we test given buffer
+         *  @return  TRUE if is all ascii chars or if strlen==0
+         */
+
+      PRBool IsASCII(const PRUnichar* aBuffer=0);
+
+
+        /**
+         *  Determine if given char is a valid space character
+         *  
+         *  @param   aChar is character to be tested
+         *  @return  TRUE if is valid space char
+         */
+
+      static  PRBool IsSpace(PRUnichar ch);
+
+      
+        /**
+         * Copies data from internal buffer onto given char* buffer
+         *
+         * NOTE: This only copies as many chars as will fit in given buffer (clips)
+         * @param aBuf is the buffer where data is stored
+         * @param aBuflength is the max # of chars to move to buffer
+         * @param aOffset is the offset to copy from
+         * @return ptr to given buffer
+         */
+
+      char* ToCString( char* aBuf, PRUint32 aBufLength, PRUint32 aOffset=0 ) const;
+
+#endif // !CharT_is_PRUnichar
+
+        /**
+         * Perform string to float conversion.
+         *
+         * @param   aErrorCode will contain error if one occurs
+         * @return  float rep of string value
+         */
+      float ToFloat( PRInt32* aErrorCode ) const;
+
+
+        /**
+         * Perform string to int conversion.
+         * @param   aErrorCode will contain error if one occurs
+         * @param   aRadix tells us which radix to assume; kAutoDetect tells us to determine the radix for you.
+         * @return  int rep of string value, and possible (out) error code
+         */
+      PRInt32 ToInteger( PRInt32* aErrorCode, PRUint32 aRadix=kRadix10 ) const;
+      
+
+        /**
+         * |Left|, |Mid|, and |Right| are annoying signatures that seem better almost
+         * any _other_ way than they are now.  Consider these alternatives
+         * 
+         * aWritable = aReadable.Left(17);   // ...a member function that returns a |Substring|
+         * aWritable = Left(aReadable, 17);  // ...a global function that returns a |Substring|
+         * Left(aReadable, 17, aWritable);   // ...a global function that does the assignment
+         * 
+         * as opposed to the current signature
+         * 
+         * aReadable.Left(aWritable, 17);    // ...a member function that does the assignment
+         * 
+         * or maybe just stamping them out in favor of |Substring|, they are just duplicate functionality
+         *         
+         * aWritable = Substring(aReadable, 0, 17);
+         */
+
+      size_type Mid( self_type& aResult, PRUint32 aStartPos, PRUint32 aCount ) const;
+
+      size_type Left( self_type& aResult, size_type aCount ) const
+        {
+          return Mid(aResult, 0, aCount);
+        }
+
+      size_type Right( self_type& aResult, size_type aCount ) const
+        {
+          aCount = NS_MIN(mLength, aCount);
+          return Mid(aResult, mLength - aCount, aCount);
+        }
+
+
+        /**
+         * Set a char inside this string at given index
+         *
+         * @param aChar is the char you want to write into this string
+         * @param anIndex is the ofs where you want to write the given char
+         * @return TRUE if successful
+         */
+
+      PRBool SetCharAt( PRUnichar aChar, PRUint32 aIndex );
+
+
+        /**
+         *  These methods are used to remove all occurances of the
+         *  characters found in aSet from this string.
+         *  
+         *  @param  aSet -- characters to be cut from this
+         */
+      void StripChars( const char* aSet );
+
+
+        /**
+         *  This method is used to remove all occurances of aChar from this
+         * string.
+         *  
+         *  @param  aChar -- char to be stripped
+         *  @param  aOffset -- where in this string to start stripping chars
+         */
+         
+      void StripChar( char_type aChar, PRInt32 aOffset=0 );
+
+
+        /**
+         *  This method strips whitespace throughout the string.
+         */
+      void StripWhitespace();
+
+
+        /**
+         *  swaps occurence of 1 string for another
+         */
+
+      void ReplaceChar( char_type aOldChar, char_type aNewChar );
+      void ReplaceChar( const char* aSet, char_type aNewChar );
+      void ReplaceSubstring( const self_type& aTarget, const self_type& aNewValue);
+      void ReplaceSubstring( const char_type* aTarget, const char_type* aNewValue);
+
+
+        /**
+         *  This method trims characters found in aTrimSet from
+         *  either end of the underlying string.
+         *  
+         *  @param   aSet -- contains chars to be trimmed from both ends
+         *  @param   aEliminateLeading
+         *  @param   aEliminateTrailing
+         *  @param   aIgnoreQuotes -- if true, causes surrounding quotes to be ignored
+         *  @return  this
+         */
+      void Trim( const char* aSet, PRBool aEliminateLeading=PR_TRUE, PRBool aEliminateTrailing=PR_TRUE, PRBool aIgnoreQuotes=PR_FALSE );
+
+        /**
+         *  This method strips whitespace from string.
+         *  You can control whether whitespace is yanked from start and end of
+         *  string as well.
+         *  
+         *  @param   aEliminateLeading controls stripping of leading ws
+         *  @param   aEliminateTrailing controls stripping of trailing ws
+         */
+      void CompressWhitespace( PRBool aEliminateLeading=PR_TRUE, PRBool aEliminateTrailing=PR_TRUE );
+
+
+        /**
+         * assign/append/insert with _LOSSY_ conversion
+         */
+
+      void AssignWithConversion( const nsTAString_IncompatibleCharT& aString );
+      void AssignWithConversion( const incompatible_char_type* aData, PRInt32 aLength=-1 );
+
+      void AppendWithConversion( const nsTAString_IncompatibleCharT& aString );
+      void AppendWithConversion( const incompatible_char_type* aData, PRInt32 aLength=-1 );
+
+#ifdef CharT_is_PRUnichar
+      void InsertWithConversion( const incompatible_char_type* aData, PRUint32 aOffset, PRInt32 aCount=-1 );
+#endif
+
+        /**
+         * Append the given integer to this string 
+         */
+
+      void AppendInt( PRInt32 aInteger, PRInt32 aRadix=kRadix10 ); //radix=8,10 or 16
+
+        /**
+         * Append the given float to this string 
+         */
+
+      void AppendFloat( double aFloat );
+
+
+#endif // !MOZ_STRING_WITH_OBSOLETE_API
+
+
     protected:
 
-      nsTString( PRUint32 flags )
+      nsTString_CharT( PRUint32 flags )
         : string_base_type(flags) {}
 
         // allow subclasses to initialize fields directly
-      nsTString( char_type* data, size_type length, PRUint32 flags )
+      nsTString_CharT( char_type* data, size_type length, PRUint32 flags )
         : string_base_type(data, length, flags) {}
-  };
-
-
-  /**
-   * CBufDescriptor
-   *
-   * Allows a nsTAutoString to be configured to use a custom buffer.
-   */
-class CBufDescriptor
-  {
-    public:
-
-      CBufDescriptor(char* aString, PRBool aStackBased, PRUint32 aCapacity, PRInt32 aLength=-1)
-        {
-          mStr = aString;
-          mCapacity = aCapacity;
-          mLength = aLength;
-          mFlags = F_SINGLE_BYTE | (aStackBased ? F_STACK_BASED : 0);
-        }
-
-      CBufDescriptor(const char* aString, PRBool aStackBased, PRUint32 aCapacity, PRInt32 aLength=-1)
-        {
-          mStr = NS_CONST_CAST(char*, aString);
-          mCapacity = aCapacity;
-          mLength = aLength;
-          mFlags = F_SINGLE_BYTE | F_CONST | (aStackBased ? F_STACK_BASED : 0);
-        }
-
-      CBufDescriptor(PRUnichar* aString, PRBool aStackBased, PRUint32 aCapacity, PRInt32 aLength=-1)
-        {
-          mUStr = aString;
-          mCapacity = aCapacity;
-          mLength = aLength;
-          mFlags = F_DOUBLE_BYTE | (aStackBased ? F_STACK_BASED : 0);
-        }
-
-      CBufDescriptor(const PRUnichar* aString, PRBool aStackBased, PRUint32 aCapacity, PRInt32 aLength=-1)
-        {
-          mUStr = NS_CONST_CAST(PRUnichar*, aString);
-          mCapacity = aCapacity;
-          mLength = aLength;
-          mFlags = F_DOUBLE_BYTE | F_CONST | (aStackBased ? F_STACK_BASED : 0);
-        }
-
-      union
-        {
-          char*      mStr;
-          PRUnichar* mUStr;
-        };
-
-      PRUint32  mCapacity;
-      PRInt32   mLength;
-
-      enum
-        {
-          F_CONST       = (1 << 0),
-          F_STACK_BASED = (1 << 1),
-          F_SINGLE_BYTE = (1 << 2),
-          F_DOUBLE_BYTE = (1 << 3)
-        };
-
-      PRUint32  mFlags;
   };
 
 
   /**
    * nsTAutoString
    *
-   * Subclass of nsTString that adds support for stack-based string allocation.
+   * Subclass of nsTString_CharT that adds support for stack-based string allocation.
    * Do not allocate this class on the heap! ;-)
    */
-template <class CharT>
-class nsTAutoString : public nsTString<CharT>
+class nsTAutoString_CharT : public nsTString_CharT
   {
     public:
 
-      typedef CharT                                         char_type;
+      typedef CharT                                char_type;
 
-      typedef nsTAutoString<char_type>                      self_type;
-      typedef nsTString<char_type>                          string_type;
+      typedef nsTAutoString_CharT                  self_type;
+      typedef nsTString_CharT                      string_type;
 
-      typedef typename string_type::string_base_type        string_base_type;
-      typedef typename string_type::string_tuple_type       string_tuple_type;
-      typedef typename string_type::abstract_string_type    abstract_string_type;
-      typedef typename string_type::size_type               size_type;
+      typedef string_type::string_base_type        string_base_type;
+      typedef string_type::string_tuple_type       string_tuple_type;
+      typedef string_type::abstract_string_type    abstract_string_type;
+      typedef string_type::size_type               size_type;
 
     public:
 
@@ -227,54 +462,54 @@ class nsTAutoString : public nsTString<CharT>
          * constructors
          */
 
-      nsTAutoString()
+      nsTAutoString_CharT()
         : string_type(mFixedBuf, 0, F_TERMINATED | F_FIXED), mFixedCapacity(kDefaultStringSize - 1)
         {
           mFixedBuf[0] = char_type(0);
         }
 
       explicit
-      nsTAutoString( char_type c )
+      nsTAutoString_CharT( char_type c )
         : string_type(mFixedBuf, 0, F_TERMINATED | F_FIXED), mFixedCapacity(kDefaultStringSize - 1)
         {
           Assign(c);
         }
 
       explicit
-      nsTAutoString( const char_type* data, size_type length = size_type(-1) )
+      nsTAutoString_CharT( const char_type* data, size_type length = size_type(-1) )
         : string_type(mFixedBuf, 0, F_TERMINATED | F_FIXED), mFixedCapacity(kDefaultStringSize - 1)
         {
           Assign(data, length);
         }
 
-      nsTAutoString( const self_type& str )
+      nsTAutoString_CharT( const self_type& str )
         : string_type(mFixedBuf, 0, F_TERMINATED | F_FIXED), mFixedCapacity(kDefaultStringSize - 1)
         {
           Assign(str);
         }
 
       explicit
-      nsTAutoString( const string_base_type& str )
+      nsTAutoString_CharT( const string_base_type& str )
         : string_type(mFixedBuf, 0, F_TERMINATED | F_FIXED), mFixedCapacity(kDefaultStringSize - 1)
         {
           Assign(str);
         }
 
-      nsTAutoString( const string_tuple_type& tuple )
+      nsTAutoString_CharT( const string_tuple_type& tuple )
         : string_type(mFixedBuf, 0, F_TERMINATED | F_FIXED), mFixedCapacity(kDefaultStringSize - 1)
         {
           Assign(tuple);
         }
 
       explicit
-      nsTAutoString( const abstract_string_type& readable )
+      nsTAutoString_CharT( const abstract_string_type& readable )
         : string_type(mFixedBuf, 0, F_TERMINATED | F_FIXED), mFixedCapacity(kDefaultStringSize - 1)
         {
           Assign(readable);
         }
 
       explicit
-      nsTAutoString( const CBufDescriptor& aBufDesc )
+      nsTAutoString_CharT( const CBufDescriptor& aBufDesc )
         : string_type(PRUint32(F_TERMINATED))
         {
           Init(aBufDesc);
@@ -292,7 +527,7 @@ class nsTAutoString : public nsTString<CharT>
 
     private:
 
-      friend class nsTStringBase<char_type>;
+      friend class nsTStringBase_CharT;
 
       void Init( const CBufDescriptor& aBufDesc );
 
@@ -301,29 +536,28 @@ class nsTAutoString : public nsTString<CharT>
   };
 
 
-template <class CharT>
-class nsTXPIDLString : public nsTString<CharT>
+class nsTXPIDLString_CharT : public nsTString_CharT
   {
     public:
 
-      typedef CharT                        char_type;
+      typedef CharT                                char_type;
 
-      typedef nsTXPIDLString<char_type>    self_type;
-      typedef nsTString<char_type>         string_type;
+      typedef nsTXPIDLString_CharT                 self_type;
+      typedef nsTString_CharT                      string_type;
 
-      typedef typename string_type::string_base_type        string_base_type;
-      typedef typename string_type::string_tuple_type       string_tuple_type;
-      typedef typename string_type::abstract_string_type    abstract_string_type;
-      typedef typename string_type::size_type               size_type;
-      typedef typename string_type::index_type              index_type;
+      typedef string_type::string_base_type        string_base_type;
+      typedef string_type::string_tuple_type       string_tuple_type;
+      typedef string_type::abstract_string_type    abstract_string_type;
+      typedef string_type::size_type               size_type;
+      typedef string_type::index_type              index_type;
 
     public:
 
-      nsTXPIDLString()
+      nsTXPIDLString_CharT()
         : string_type(nsnull, 0, 0) {}
 
         // copy-constructor required to avoid default
-      nsTXPIDLString( const self_type& str )
+      nsTXPIDLString_CharT( const self_type& str )
         : string_type(str) {}
 
         // this case operator is the reason why this class cannot just be a
@@ -348,6 +582,7 @@ class nsTXPIDLString : public nsTString<CharT>
       self_type& operator=( const abstract_string_type& readable )                              { Assign(readable); return *this; }
   };
 
+
   /**
    * getter_Copies support for use with raw string out params:
    *
@@ -355,21 +590,20 @@ class nsTXPIDLString : public nsTString<CharT>
    *    
    *    void some_function()
    *    {
-   *      nsTString<char> blah;
+   *      nsXPIDLCString blah;
    *      GetBlah(getter_Copies(blah));
    *      // ...
    *    }
    */
-template <class CharT>
-class getter_Copies_t
+class nsTGetterCopies_CharT
   {
     public:
       typedef CharT char_type;
 
-      getter_Copies_t(nsTXPIDLString<CharT>& str)
+      nsTGetterCopies_CharT(nsTXPIDLString_CharT& str)
         : mString(str), mData(nsnull) {}
 
-      ~getter_Copies_t()
+      ~nsTGetterCopies_CharT()
         {
           mString.Adopt(mData); // OK if mData is null
         }
@@ -380,132 +614,13 @@ class getter_Copies_t
         }
 
     private:
-      nsTXPIDLString<char_type>& mString;
-      char_type*                 mData;
+      nsTXPIDLString_CharT& mString;
+      char_type*            mData;
   };
 
-template <class CharT>
 inline
-getter_Copies_t<CharT>
-getter_Copies( nsTXPIDLString<CharT>& aString )
+nsTGetterCopies_CharT
+getter_Copies( nsTXPIDLString_CharT& aString )
   {
-    return getter_Copies_t<CharT>(aString);
+    return nsTGetterCopies_CharT(aString);
   }
-
-
-  /**
-   * A helper class that converts a UTF-16 string to ASCII in a lossy manner
-   */
-class NS_COM NS_LossyConvertUTF16toASCII : public nsCAutoString
-  {
-    public:
-      explicit
-      NS_LossyConvertUTF16toASCII( const PRUnichar* aString )
-        {
-          LossyAppendUTF16toASCII(aString, *this);
-        }
-
-      NS_LossyConvertUTF16toASCII( const PRUnichar* aString, PRUint32 aLength )
-        {
-          LossyCopyUTF16toASCII(nsDependentSubstring(aString, aString + aLength), *this);
-        }
-
-      explicit
-      NS_LossyConvertUTF16toASCII( const nsAString& aString )
-        {
-          LossyCopyUTF16toASCII(aString, *this);
-        }
-
-    private:
-        // NOT TO BE IMPLEMENTED
-      NS_LossyConvertUTF16toASCII( char );
-  };
-
-
-class NS_COM NS_ConvertASCIItoUTF16 : public nsAutoString
-  {
-    public:
-      explicit
-      NS_ConvertASCIItoUTF16( const char* aCString )
-        {
-          AppendASCIItoUTF16(aCString, *this);
-        }
-
-      NS_ConvertASCIItoUTF16( const char* aCString, PRUint32 aLength )
-        {
-          CopyASCIItoUTF16(nsDependentCSubstring(aCString, aCString + aLength), *this);
-        }
-
-      explicit
-      NS_ConvertASCIItoUTF16( const nsACString& aCString )
-        {
-          CopyASCIItoUTF16(aCString, *this);
-        }
-
-    private:
-        // NOT TO BE IMPLEMENTED
-      NS_ConvertASCIItoUTF16( PRUnichar );
-  };
-
-
-  /**
-   * A helper class that converts a UTF-16 string to UTF-8
-   */
-class NS_COM NS_ConvertUTF16toUTF8 : public nsCAutoString
-  {
-    public:
-      explicit
-      NS_ConvertUTF16toUTF8( const PRUnichar* aString )
-        {
-          CopyUTF16toUTF8(aString, *this);
-        }
-
-      NS_ConvertUTF16toUTF8( const PRUnichar* aString, PRUint32 aLength )
-        {
-          CopyUTF16toUTF8(nsDependentSubstring(aString, aString + aLength), *this);
-        }
-
-      explicit
-      NS_ConvertUTF16toUTF8( const nsAString& aString )
-        {
-          CopyUTF16toUTF8(aString, *this);
-        }
-
-    private:
-        // NOT TO BE IMPLEMENTED
-      NS_ConvertUTF16toUTF8( char );
-  };
-
-
-class NS_COM NS_ConvertUTF8toUTF16 : public nsAutoString
-  {
-    public:
-      explicit
-      NS_ConvertUTF8toUTF16( const char* aCString )
-        {
-          CopyUTF8toUTF16(aCString, *this);
-        }
-
-      NS_ConvertUTF8toUTF16( const char* aCString, PRUint32 aLength )
-        {
-          CopyUTF8toUTF16(nsDependentCSubstring(aCString, aCString + aLength), *this);
-        }
-
-      explicit
-      NS_ConvertUTF8toUTF16( const nsACString& aCString )
-        {
-          CopyUTF8toUTF16(aCString, *this);
-        }
-
-    private:
-      NS_ConvertUTF8toUTF16( PRUnichar );
-  };
-
-// Backward compatibility
-typedef NS_ConvertUTF16toUTF8 NS_ConvertUCS2toUTF8;
-typedef NS_LossyConvertUTF16toASCII NS_LossyConvertUCS2toASCII;
-typedef NS_ConvertASCIItoUTF16 NS_ConvertASCIItoUCS2;
-typedef NS_ConvertUTF8toUTF16 NS_ConvertUTF8toUCS2;
-typedef nsAutoString nsVoidableString;
-
-#endif // !defined(nsTString_h___)

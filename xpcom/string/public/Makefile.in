@@ -62,6 +62,12 @@ EXPORTS		=				\
 		nsTString.h			\
 		nsTStringBase.h			\
 		nsTStringTuple.h		\
+		nsObsoleteAString.h		\
+		nsStringBase.h			\
+		nsStringTuple.h			\
+		string-template-def-unichar.h	\
+		string-template-def-char.h	\
+		string-template-undef.h		\
 		$(NULL)			
 
 include $(topsrcdir)/config/rules.mk

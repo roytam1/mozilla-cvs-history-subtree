@@ -36,55 +36,56 @@
 
 
   /**
-   * template types:
+   * double-byte (PRUnichar) string types
    */
 
-template <class CharT> class nsTAString;
-template <class CharT> class nsTObsoleteAString;
-template <class CharT> class nsTStringBase;
-template <class CharT> class nsTStringTuple;
-template <class CharT> class nsTString;
-template <class CharT> class nsTAutoString;
-template <class CharT> class nsTDependentString;
-template <class CharT> class nsTDependentSubstring;
-template <class CharT> class nsTPromiseFlatString;
-template <class CharT> class nsTStringComparator;
-template <class CharT> class nsTDefaultStringComparator;
-template <class CharT> class nsTXPIDLString;
+class nsAString;
+class nsObsoleteAString;
+class nsStringBase;
+class nsStringTuple;
+class nsString;
+class nsAutoString;
+class nsDependentString;
+class nsDependentSubstring;
+class nsPromiseFlatString;
+class nsStringComparator;
+class nsDefaultStringComparator;
+class nsXPIDLString;
+
+
+  /**
+   * single-byte (char) string types
+   */
+
+class nsACString;
+class nsObsoleteACString;
+class nsCStringBase;
+class nsCStringTuple;
+class nsCString;
+class nsCAutoString;
+class nsDependentCString;
+class nsDependentCSubstring;
+class nsPromiseFlatCString;
+class nsCStringComparator;
+class nsDefaultCStringComparator;
+class nsXPIDLCString;
+
+
+  /**
+   * typedefs for backwards compatibility
+   */
+
+typedef nsString              nsSharableString;
+typedef nsString              nsAFlatString;
+typedef nsStringBase          nsASingleFragmentString;
+typedef nsStringTuple         nsDependentConcatenation;
+typedef nsDependentSubstring  nsDependentSingleFragmentSubstring;
+
+typedef nsCString             nsSharableCString;
+typedef nsCString             nsAFlatCString;
+typedef nsCStringBase         nsASingleFragmentCString;
+typedef nsCStringTuple        nsDependentCConcatenation;
+typedef nsDependentCSubstring nsDependentSingleFragmentCSubstring;
 
   
-  /**
-   * for everything else, we typedef :-)
-   */
-
-typedef nsTAString<char>                         nsACString;
-typedef nsTStringBase<char>                      nsASingleFragmentCString;
-typedef nsTString<char>                          nsAFlatCString;
-typedef nsTStringTuple<char>                     nsDependentCConcatenation;
-typedef nsTDependentSubstring<char>              nsDependentSingleFragmentCSubstring;
-typedef nsTDependentSubstring<char>              nsDependentCSubstring;
-typedef nsTDependentString<char>                 nsDependentCString;
-typedef nsTPromiseFlatString<char>               nsPromiseFlatCString;
-typedef nsTString<char>                          nsCString;
-typedef nsTAutoString<char>                      nsCAutoString;
-typedef nsTXPIDLString<char>                     nsXPIDLCString;
-typedef nsTString<char>                          nsSharableCString;
-typedef nsTStringComparator<char>                nsCStringComparator;
-typedef nsTDefaultStringComparator<char>         nsDefaultCStringComparator;
-
-typedef nsTAString<PRUnichar>                    nsAString;
-typedef nsTStringBase<PRUnichar>                 nsASingleFragmentString;
-typedef nsTString<PRUnichar>                     nsAFlatString;
-typedef nsTStringTuple<PRUnichar>                nsDependentConcatenation;
-typedef nsTDependentSubstring<PRUnichar>         nsDependentSingleFragmentSubstring;
-typedef nsTDependentSubstring<PRUnichar>         nsDependentSubstring;
-typedef nsTDependentString<PRUnichar>            nsDependentString;
-typedef nsTPromiseFlatString<PRUnichar>          nsPromiseFlatString;
-typedef nsTString<PRUnichar>                     nsString;
-typedef nsTAutoString<PRUnichar>                 nsAutoString;
-typedef nsTXPIDLString<PRUnichar>                nsXPIDLString;
-typedef nsTString<PRUnichar>                     nsSharableString;
-typedef nsTStringComparator<PRUnichar>           nsStringComparator;
-typedef nsTDefaultStringComparator<PRUnichar>    nsDefaultStringComparator;
-
 #endif /* !defined(nsStringFwd_h___) */

@@ -36,26 +36,31 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-void
-nsTDependentSubstring_CharT::Rebind( const abstract_string_type& readable, PRUint32 startPos, PRUint32 length )
-  {
-    size_type strLength = readable.GetReadableBuffer((const char_type**) &mData);
+#ifndef nsObsoleteAString_h___
+#define nsObsoleteAString_h___
 
-    if (startPos > strLength)
-      startPos = strLength;
+/****************************************************************************
 
-    mData += startPos;
-    mLength = NS_MIN(length, strLength - startPos);
-  }
+    THIS FILE IS NOT FOR HUMAN CONSUMPTION.  See nsAString instead.
 
-void
-nsTDependentSubstring_CharT::Rebind( const string_base_type& str, PRUint32 startPos, PRUint32 length )
-  {
-    size_type strLength = str.Length();
+ ****************************************************************************/
 
-    if (startPos > strLength)
-      startPos = strLength;
+#ifndef nsStringFwd_h___
+#include "nsStringFwd.h"
+#endif
 
-    mData = NS_CONST_CAST(char_type*, str.Data()) + startPos;
-    mLength = NS_MIN(length, strLength - startPos);
-  }
+#ifndef nscore_h___
+#include "nscore.h"
+#endif
+
+  // declare nsObsoleteAString
+#include "string-template-def-unichar.h"
+#include "nsTObsoleteAString.h"
+#include "string-template-undef.h"
+
+  // declare nsObsoleteACString
+#include "string-template-def-char.h"
+#include "nsTObsoleteAString.h"
+#include "string-template-undef.h"
+
+#endif // !defined(nsObsoleteAString_h___)

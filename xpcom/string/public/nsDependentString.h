@@ -24,8 +24,22 @@
 #ifndef nsDependentString_h___
 #define nsDependentString_h___
 
-#ifndef nsTDependentString_h___
-#include "nsTDependentString.h"
+#ifndef nsString_h___
+#include "nsString.h"
 #endif
+
+#ifndef nsDebug_h___
+#include "nsDebug.h"
+#endif
+
+  // declare nsDependentString
+#include "string-template-def-unichar.h"
+#include "nsTDependentString.h"
+#include "string-template-undef.h"
+
+  // declare nsDependentCString
+#include "string-template-def-char.h"
+#include "nsTDependentString.h"
+#include "string-template-undef.h"
 
 #endif /* !defined(nsDependentString_h___) */

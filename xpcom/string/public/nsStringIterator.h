@@ -51,8 +51,10 @@ class nsReadingIterator
       typedef const CharT&                reference;
 
     private:
-      friend class nsTAString<CharT>;
-      friend class nsTStringBase<CharT>;
+      friend class nsAString;
+      friend class nsACString;
+      friend class nsStringBase;
+      friend class nsCStringBase;
 
         // unfortunately, the API for nsReadingIterator requires that the
         // iterator know its start and end positions.  this was needed when
@@ -187,8 +189,10 @@ class nsWritingIterator
       typedef CharT&                     reference;
 
     private:
-      friend class nsTAString<CharT>;
-      friend class nsTStringBase<CharT>;
+      friend class nsAString;
+      friend class nsACString;
+      friend class nsStringBase;
+      friend class nsCStringBase;
 
         // unfortunately, the API for nsWritingIterator requires that the
         // iterator know its start and end positions.  this was needed when

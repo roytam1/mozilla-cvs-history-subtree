@@ -35,21 +35,13 @@ REQUIRES	=  \
 		  xpcom \
 		  $(NULL)
 
-CPPSRCS		=				\
-		nsTStringBaseObsolete.cpp	\
+CPPSRCS		=			\
+		nsStringObsolete.cpp	\
 		$(NULL)
-
-#		nsStr.cpp		\
-#		nsString.cpp		\
-#		nsString2.cpp		\
 
 EXPORTS		=			\
 		nsString2.h		\
 		$(NULL)			
-
-#		nsStr.h			\
-#		nsStrShared.h           \
-#		nsString.h		\
 
 # we don't want the shared lib, but we want to force the creation of a
 # static lib.

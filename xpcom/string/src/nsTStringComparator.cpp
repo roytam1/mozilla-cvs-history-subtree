@@ -36,21 +36,15 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include <ctype.h>
-#include "nsTAString.h"
-#include "plstr.h"
-
-
-template <class CharT>
 NS_COM int
-Compare( const nsTAString<CharT>& lhs, const nsTAString<CharT>& rhs, const nsTStringComparator<CharT>& comp )
+Compare( const nsTAString_CharT& lhs, const nsTAString_CharT& rhs, const nsTStringComparator_CharT& comp )
   {
-    typedef typename nsTAString<CharT>::size_type size_type;
+    typedef nsTAString_CharT::size_type size_type;
 
     if ( &lhs == &rhs )
       return 0;
 
-    typename nsTAString<CharT>::const_iterator leftIter, rightIter;
+    nsTAString_CharT::const_iterator leftIter, rightIter;
     lhs.BeginReading(leftIter);
     rhs.BeginReading(rightIter);
 
@@ -72,61 +66,14 @@ Compare( const nsTAString<CharT>& lhs, const nsTAString<CharT>& rhs, const nsTSt
     return result;
   }
 
-template NS_COM int Compare( const nsTAString<char>&      lhs, const nsTAString<char>&      rhs, const nsTStringComparator<char>&      comp );
-template NS_COM int Compare( const nsTAString<PRUnichar>& lhs, const nsTAString<PRUnichar>& rhs, const nsTStringComparator<PRUnichar>& comp );
-
-
-  /**
-   * MSVC cannot handle template instantion of operators :-(
-   */
-
-NS_SPECIALIZE_TEMPLATE
 int
-nsTDefaultStringComparator<char>::operator()( const char_type* lhs, const char_type* rhs, PRUint32 aLength ) const
+nsTDefaultStringComparator_CharT::operator()( const char_type* lhs, const char_type* rhs, PRUint32 aLength ) const
   {
-    return nsCharTraits<char>::compare(lhs, rhs, aLength);
+    return nsCharTraits<CharT>::compare(lhs, rhs, aLength);
   }
 
-NS_SPECIALIZE_TEMPLATE
 int
-nsTDefaultStringComparator<char>::operator()( char_type lhs, char_type rhs) const
+nsTDefaultStringComparator_CharT::operator()( char_type lhs, char_type rhs) const
   {
     return lhs - rhs;
   } 
-
-NS_SPECIALIZE_TEMPLATE
-int
-nsTDefaultStringComparator<PRUnichar>::operator()( const char_type* lhs, const char_type* rhs, PRUint32 aLength ) const
-  {
-    return nsCharTraits<PRUnichar>::compare(lhs, rhs, aLength);
-  }
-
-NS_SPECIALIZE_TEMPLATE
-int
-nsTDefaultStringComparator<PRUnichar>::operator()( char_type lhs, char_type rhs) const
-  {
-    return lhs - rhs;
-  } 
-
-
-int
-nsCaseInsensitiveCStringComparator::operator()( const char_type* lhs, const char_type* rhs, PRUint32 aLength ) const
-  {
-    PRInt32 result=PRInt32(PL_strncasecmp(lhs, rhs, aLength));
-    //Egads. PL_strncasecmp is returning *very* negative numbers.
-    //Some folks expect -1,0,1, so let's temper its enthusiasm.
-    if (result<0) 
-      result=-1;
-    return result;
-  }
-
-int
-nsCaseInsensitiveCStringComparator::operator()( char lhs, char rhs ) const
-  {
-    if (lhs == rhs) return 0;
-    
-    lhs = tolower(lhs);
-    rhs = tolower(rhs);
-
-    return lhs - rhs;
-  }

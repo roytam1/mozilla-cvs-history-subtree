@@ -36,26 +36,40 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-void
-nsTDependentSubstring_CharT::Rebind( const abstract_string_type& readable, PRUint32 startPos, PRUint32 length )
+#include <ctype.h>
+#include "nsAString.h"
+#include "plstr.h"
+
+
+  // define nsStringComparator
+#include "string-template-def-unichar.h"
+#include "nsTStringComparator.cpp"
+#include "string-template-undef.h"
+
+  // define nsCStringComparator
+#include "string-template-def-char.h"
+#include "nsTStringComparator.cpp"
+#include "string-template-undef.h"
+
+
+int
+nsCaseInsensitiveCStringComparator::operator()( const char_type* lhs, const char_type* rhs, PRUint32 aLength ) const
   {
-    size_type strLength = readable.GetReadableBuffer((const char_type**) &mData);
-
-    if (startPos > strLength)
-      startPos = strLength;
-
-    mData += startPos;
-    mLength = NS_MIN(length, strLength - startPos);
+    PRInt32 result=PRInt32(PL_strncasecmp(lhs, rhs, aLength));
+    //Egads. PL_strncasecmp is returning *very* negative numbers.
+    //Some folks expect -1,0,1, so let's temper its enthusiasm.
+    if (result<0) 
+      result=-1;
+    return result;
   }
 
-void
-nsTDependentSubstring_CharT::Rebind( const string_base_type& str, PRUint32 startPos, PRUint32 length )
+int
+nsCaseInsensitiveCStringComparator::operator()( char lhs, char rhs ) const
   {
-    size_type strLength = str.Length();
+    if (lhs == rhs) return 0;
+    
+    lhs = tolower(lhs);
+    rhs = tolower(rhs);
 
-    if (startPos > strLength)
-      startPos = strLength;
-
-    mData = NS_CONST_CAST(char_type*, str.Data()) + startPos;
-    mLength = NS_MIN(length, strLength - startPos);
+    return lhs - rhs;
   }

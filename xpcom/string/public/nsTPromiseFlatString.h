@@ -36,12 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsTPromiseFlatString_h___
-#define nsTPromiseFlatString_h___
-
-#ifndef nsTString_h___
-#include "nsTString.h"
-#endif
 
   /**
    * XXX fix docs XXX
@@ -97,19 +91,18 @@
    * the right thing happens.
    */
 
-template <class CharT>
-class NS_COM nsTPromiseFlatString : public nsTString<CharT>
+class NS_COM nsTPromiseFlatString_CharT : public nsTString_CharT
   {
     public:
 
-      typedef CharT                                              char_type;
+      typedef CharT                                     char_type;
 
-      typedef nsTPromiseFlatString<char_type>                    self_type;
-      typedef nsTString<char_type>                               string_type;
-      typedef nsTStringBase<char_type>                           string_base_type;
+      typedef nsTPromiseFlatString_CharT                self_type;
+      typedef nsTString_CharT                           string_type;
+      typedef nsTStringBase_CharT                       string_base_type;
 
-      typedef typename string_base_type::string_tuple_type       string_tuple_type;
-      typedef typename string_base_type::abstract_string_type    abstract_string_type;
+      typedef string_base_type::string_tuple_type       string_tuple_type;
+      typedef string_base_type::abstract_string_type    abstract_string_type;
 
     private:
 
@@ -122,21 +115,21 @@ class NS_COM nsTPromiseFlatString : public nsTString<CharT>
     public:
 
       explicit
-      nsTPromiseFlatString( const string_base_type& str )
+      nsTPromiseFlatString_CharT( const string_base_type& str )
         : string_type()
         {
           Init(str);
         }
 
       explicit
-      nsTPromiseFlatString( const abstract_string_type& readable )
+      nsTPromiseFlatString_CharT( const abstract_string_type& readable )
         : string_type()
         {
           Init(readable);
         }
 
       explicit
-      nsTPromiseFlatString( const string_tuple_type& tuple )
+      nsTPromiseFlatString_CharT( const string_tuple_type& tuple )
         : string_type()
         {
           // nothing else to do here except assign the value of the tuple
@@ -144,54 +137,3 @@ class NS_COM nsTPromiseFlatString : public nsTString<CharT>
           Assign(tuple);
         }
   };
-
-
-inline
-const nsTPromiseFlatString<PRUnichar>
-PromiseFlatString( const nsTAString<PRUnichar>& str )
-  {
-    return nsTPromiseFlatString<PRUnichar>(str);
-  }
-
-  // e.g., PromiseFlatString(Substring(s))
-inline
-const nsTPromiseFlatString<PRUnichar>
-PromiseFlatString( const nsTStringBase<PRUnichar>& frag )
-  {
-    return nsTPromiseFlatString<PRUnichar>(frag);
-  }
-
-  // e.g., PromiseFlatString(a + b)
-inline
-const nsTPromiseFlatString<PRUnichar>
-PromiseFlatString( const nsTStringTuple<PRUnichar>& tuple )
-  {
-    return nsTPromiseFlatString<PRUnichar>(tuple);
-  }
-
-
-inline
-const nsTPromiseFlatString<char>
-PromiseFlatCString( const nsTAString<char>& str )
-  {
-    return nsTPromiseFlatString<char>(str);
-  }
-
-  // e.g., PromiseFlatString(Substring(s))
-inline
-const nsTPromiseFlatString<char>
-PromiseFlatCString( const nsTStringBase<char>& str )
-  {
-    return nsTPromiseFlatString<char>(str);
-  }
-
-  // e.g., PromiseFlatString(a + b)
-inline
-const nsTPromiseFlatString<char>
-PromiseFlatCString( const nsTStringTuple<char>& tuple )
-  {
-    return nsTPromiseFlatString<char>(tuple);
-  }
-
-
-#endif /* !defined(nsTPromiseFlatString_h___) */

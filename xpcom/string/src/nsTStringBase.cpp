@@ -36,173 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifdef DEBUG
-#define ENABLE_STRING_STATS
-#endif
-
-#ifdef ENABLE_STRING_STATS
-#include <stdio.h>
-#endif
-
-#include <stdlib.h>
-#include "nsTStringBase.h"
-#include "nsTString.h"
-#include "nsTDependentString.h"
-#include "nsMemory.h"
-#include "pratom.h"
-
-// ---------------------------------------------------------------------------
-
-static PRUnichar gNullChar = 0;
-
-const char*      nsCharTraits<char>     ::sEmptyBuffer = (const char*) &gNullChar;
-const PRUnichar* nsCharTraits<PRUnichar>::sEmptyBuffer =               &gNullChar;
-
-// ---------------------------------------------------------------------------
-
-#ifdef ENABLE_STRING_STATS
-class nsStringStats
-  {
-    public:
-      nsStringStats()
-        : mAllocCount(0), mReallocCount(0), mFreeCount(0), mShareCount(0) {}
-
-      ~nsStringStats()
-        {
-          printf("nsStringStats\n");
-          printf(" => mAllocCount: %d\n", mAllocCount);
-          printf(" => mReallocCount: %d\n", mReallocCount);
-          printf(" => mFreeCount: %d\n", mFreeCount);
-          printf(" => mShareCount: %d\n", mShareCount);
-          printf(" => mAdoptCount: %d\n", mAdoptCount);
-          printf(" => mAdoptFreeCount: %d\n", mAdoptFreeCount);
-        }
-
-      PRInt32 mAllocCount;
-      PRInt32 mReallocCount;
-      PRInt32 mFreeCount;
-      PRInt32 mShareCount;
-      PRInt32 mAdoptCount;
-      PRInt32 mAdoptFreeCount;
-  };
-static nsStringStats gStringStats;
-#define STRING_STAT_INCREMENT(_s) PR_AtomicIncrement(&gStringStats.m ## _s ## Count)
-#else
-#define STRING_STAT_INCREMENT(_s)
-#endif
-
-// ---------------------------------------------------------------------------
-
-  /**
-   * This structure preceeds the string buffers "we" allocate.  It may be the
-   * case that nsTStringBase::mData does not point to one of these special
-   * buffers.  The mFlags member variable distinguishes the buffer type.
-   *
-   * When this header is in use, it enables reference counting, and capacity
-   * tracking.  NOTE: A string buffer can be modified only if its reference
-   * count is 1.
-   */
-class nsStringHeader
-  {
-    private:
-
-      PRInt32  mRefCount;
-      PRUint32 mStorageSize;
-
-    public:
-
-      void AddRef()
-        {
-          PR_AtomicIncrement(&mRefCount);
-          STRING_STAT_INCREMENT(Share);
-        }
-
-      void Release()
-        {
-          if (PR_AtomicDecrement(&mRefCount) == 0)
-            {
-              STRING_STAT_INCREMENT(Free);
-              free(this); // we were allocated with |malloc|
-            }
-        }
-
-        /**
-         * Alloc returns a pointer to a new string header with set capacity.
-         */
-      static nsStringHeader* Alloc(size_t size)
-        {
-          STRING_STAT_INCREMENT(Alloc);
-
-          nsStringHeader *hdr =
-              (nsStringHeader *) malloc(sizeof(nsStringHeader) + size);
-          if (hdr)
-            {
-              hdr->mRefCount = 1;
-              hdr->mStorageSize = size;
-            }
-          return hdr;
-        }
-
-      static nsStringHeader* Realloc(nsStringHeader* hdr, size_t size)
-        {
-          STRING_STAT_INCREMENT(Realloc);
-
-          // no point in trying to save ourselves if we hit this assertion
-          NS_ASSERTION(!hdr->IsReadonly(), "|Realloc| attempted on readonly string");
-
-          hdr = (nsStringHeader*) realloc(hdr, sizeof(nsStringHeader) + size);
-          if (hdr)
-            hdr->mStorageSize = size;
-
-          return hdr;
-        }
-
-      static nsStringHeader* FromData(void* data)
-        {
-          return (nsStringHeader*) ( ((char*) data) - sizeof(nsStringHeader) );
-        }
-
-      void* Data() const
-        {
-          return (void*) ( ((char*) this) + sizeof(nsStringHeader) );
-        }
-
-      PRUint32 StorageSize() const
-        {
-          return mStorageSize;
-        }
-
-        /**
-         * Because nsTStringBase allows only single threaded access, if this
-         * method returns FALSE, then the caller can be sure that it has
-         * exclusive access to the nsStringHeader and associated data.
-         * However, if this function returns TRUE, then there is no telling
-         * how many other threads may be accessing this object simultaneously.
-         */
-      PRBool IsReadonly() const
-        {
-          return mRefCount > 1;
-        }
-  };
-
-// ---------------------------------------------------------------------------
-
-inline void
-ReleaseData( void* data, PRUint32 flags )
-  {
-    if (flags & nsTStringBase<char>::F_SHARED)
-      {
-        nsStringHeader::FromData(data)->Release();
-      }
-    else if (flags & nsTStringBase<char>::F_OWNED)
-      {
-        nsMemory::Free(data);
-        STRING_STAT_INCREMENT(AdoptFree);
-      }
-    // otherwise, nothing to do.
-  }
-
-// ---------------------------------------------------------------------------
 
   /**
    * this function is called to prepare mData for writing.  the given capacity
@@ -211,9 +44,8 @@ ReleaseData( void* data, PRUint32 flags )
    * returns the old data and old flags members if mData is newly allocated.
    * the old data must be released by the caller.
    */
-template <class CharT>
 PRBool
-nsTStringBase<CharT>::MutatePrep( size_type capacity, char_type** oldData, PRUint32* oldFlags )
+nsTStringBase_CharT::MutatePrep( size_type capacity, char_type** oldData, PRUint32* oldFlags )
   {
     // initialize to no old data
     *oldData = nsnull;
@@ -295,17 +127,15 @@ nsTStringBase<CharT>::MutatePrep( size_type capacity, char_type** oldData, PRUin
     return PR_TRUE;
   }
 
-template <class CharT>
 void
-nsTStringBase<CharT>::ReleaseData()
+nsTStringBase_CharT::ReleaseData()
   {
     ::ReleaseData(mData, mFlags);
     // mData, mLength, and mFlags are purposefully left dangling
   }
 
-template <class CharT>
 void
-nsTStringBase<CharT>::ReplacePrep( index_type cutStart, size_type cutLen, size_type fragLen )
+nsTStringBase_CharT::ReplacePrep( index_type cutStart, size_type cutLen, size_type fragLen )
   {
     // bound cut length
     cutLen = NS_MIN(cutLen, cutStart + mLength);
@@ -359,10 +189,8 @@ nsTStringBase<CharT>::ReplacePrep( index_type cutStart, size_type cutLen, size_t
     mLength = newLen;
   }
 
-template <class CharT>
-typename
-nsTStringBase<CharT>::size_type
-nsTStringBase<CharT>::Capacity() const
+nsTStringBase_CharT::size_type
+nsTStringBase_CharT::Capacity() const
   {
     size_type capacity;
     if (mFlags & F_SHARED)
@@ -376,7 +204,7 @@ nsTStringBase<CharT>::Capacity() const
       }
     else if (mFlags & F_FIXED)
       {
-        capacity = NS_STATIC_CAST(const nsTAutoString<char_type>*, this)->mFixedCapacity;
+        capacity = NS_STATIC_CAST(const nsTAutoString_CharT*, this)->mFixedCapacity;
       }
     else if (mFlags & F_OWNED)
       {
@@ -394,9 +222,8 @@ nsTStringBase<CharT>::Capacity() const
   }
 
 #if 0
-template <class CharT>
 PRBool
-nsTStringBase<CharT>::EnsureCapacity( size_type capacity, PRBool preserveData )
+nsTStringBase_CharT::EnsureCapacity( size_type capacity, PRBool preserveData )
   {
     size_type curCapacity = Capacity();
 
@@ -474,9 +301,8 @@ nsTStringBase<CharT>::EnsureCapacity( size_type capacity, PRBool preserveData )
   }
 #endif
 
-template <class CharT>
 void
-nsTStringBase<CharT>::EnsureMutable()
+nsTStringBase_CharT::EnsureMutable()
   {
     if (mFlags & F_SHARED)
       {
@@ -491,9 +317,8 @@ nsTStringBase<CharT>::EnsureMutable()
 
 // ---------------------------------------------------------------------------
 
-template <class CharT>
 void
-nsTStringBase<CharT>::Assign( const char_type* data, size_type length )
+nsTStringBase_CharT::Assign( const char_type* data, size_type length )
   {
       // unfortunately, people do pass null sometimes :(
     if (!data)
@@ -516,9 +341,8 @@ nsTStringBase<CharT>::Assign( const char_type* data, size_type length )
     char_traits::copy(mData, data, length);
   }
 
-template <class CharT>
 void
-nsTStringBase<CharT>::Assign( const self_type& str )
+nsTStringBase_CharT::Assign( const self_type& str )
   {
     // |str| could be sharable.  we need to check its flags to know how to
     // deal with it.
@@ -549,9 +373,8 @@ nsTStringBase<CharT>::Assign( const self_type& str )
       }
   }
 
-template <class CharT>
 void
-nsTStringBase<CharT>::Assign( const string_tuple_type& tuple )
+nsTStringBase_CharT::Assign( const string_tuple_type& tuple )
   {
     if (tuple.IsDependentOn(mData, mData + mLength))
       {
@@ -568,21 +391,19 @@ nsTStringBase<CharT>::Assign( const string_tuple_type& tuple )
   }
 
   // this is non-inline to reduce codesize at the callsite
-template <class CharT>
 void
-nsTStringBase<CharT>::Assign( const abstract_string_type& readable )
+nsTStringBase_CharT::Assign( const abstract_string_type& readable )
   {
       // promote to string if possible to take advantage of sharing
-    if (readable.mVTable == nsTObsoleteAString<char_type>::sCanonicalVTable)
+    if (readable.mVTable == nsTObsoleteAString_CharT::sCanonicalVTable)
       Assign(*readable.AsString());
     else
       Assign(readable.ToString());
   }
 
 
-template <class CharT>
 void
-nsTStringBase<CharT>::Adopt( char_type* data, size_type length )
+nsTStringBase_CharT::Adopt( char_type* data, size_type length )
   {
     ::ReleaseData(mData, mFlags);
     mData = data;
@@ -603,16 +424,15 @@ nsTStringBase<CharT>::Adopt( char_type* data, size_type length )
   }
 
 
-template <class CharT>
 void
-nsTStringBase<CharT>::Replace( index_type cutStart, size_type cutLength, const char_type* data, size_type length )
+nsTStringBase_CharT::Replace( index_type cutStart, size_type cutLength, const char_type* data, size_type length )
   {
     if (length == size_type(-1))
       length = char_traits::length(data);
 
     if (IsDependentOn(data, data + length))
       {
-        nsTAutoString<char_type> temp(data, length);
+        nsTAutoString_CharT temp(data, length);
         Replace(cutStart, cutLength, temp);
         return;
       }
@@ -623,13 +443,12 @@ nsTStringBase<CharT>::Replace( index_type cutStart, size_type cutLength, const c
       char_traits::copy(mData + cutStart, data, length);
   }
 
-template <class CharT>
 void
-nsTStringBase<CharT>::Replace( index_type cutStart, size_type cutLength, const string_tuple_type& tuple )
+nsTStringBase_CharT::Replace( index_type cutStart, size_type cutLength, const string_tuple_type& tuple )
   {
     if (tuple.IsDependentOn(mData, mData + mLength))
       {
-        nsTAutoString<char_type> temp(tuple);
+        nsTAutoString_CharT temp(tuple);
         Replace(cutStart, cutLength, temp);
         return;
       }
@@ -642,16 +461,14 @@ nsTStringBase<CharT>::Replace( index_type cutStart, size_type cutLength, const s
       tuple.WriteTo(mData + cutStart, length);
   }
 
-template <class CharT>
 void
-nsTStringBase<CharT>::Replace( index_type cutStart, size_type cutLength, const abstract_string_type& readable )
+nsTStringBase_CharT::Replace( index_type cutStart, size_type cutLength, const abstract_string_type& readable )
   {
     Replace(cutStart, cutLength, readable.ToString());
   }
 
-template <class CharT>
 void
-nsTStringBase<CharT>::SetCapacity( size_type capacity )
+nsTStringBase_CharT::SetCapacity( size_type capacity )
   {
     // capacity does not include room for the terminating null char
 
@@ -682,9 +499,8 @@ nsTStringBase<CharT>::SetCapacity( size_type capacity )
       }
   }
 
-template <class CharT>
 void
-nsTStringBase<CharT>::SetLength( size_type length )
+nsTStringBase_CharT::SetLength( size_type length )
   {
     if (length == 0)
       {
@@ -702,9 +518,8 @@ nsTStringBase<CharT>::SetLength( size_type length )
       }
   }
 
-template <class CharT>
 void
-nsTStringBase<CharT>::SetIsVoid( PRBool val )
+nsTStringBase_CharT::SetIsVoid( PRBool val )
   {
     if (val)
       {
@@ -717,23 +532,20 @@ nsTStringBase<CharT>::SetIsVoid( PRBool val )
       }
   }
 
-template <class CharT>
 PRBool
-nsTStringBase<CharT>::Equals( const self_type& str ) const
+nsTStringBase_CharT::Equals( const self_type& str ) const
   {
     return mLength == str.mLength && char_traits::compare(mData, str.mData, mLength) == 0;
   }
 
-template <class CharT>
 PRBool
-nsTStringBase<CharT>::Equals( const self_type& str, const comparator_type& comp ) const
+nsTStringBase_CharT::Equals( const self_type& str, const comparator_type& comp ) const
   {
     return mLength == str.mLength && comp(mData, str.mData, mLength) == 0;
   }
 
-template <class CharT>
 PRBool
-nsTStringBase<CharT>::Equals( const abstract_string_type& readable ) const
+nsTStringBase_CharT::Equals( const abstract_string_type& readable ) const
   {
     const char_type* data;
     size_type length = readable.GetReadableBuffer(&data);
@@ -741,9 +553,8 @@ nsTStringBase<CharT>::Equals( const abstract_string_type& readable ) const
     return mLength == length && char_traits::compare(mData, data, mLength) == 0;
   }
 
-template <class CharT>
 PRBool
-nsTStringBase<CharT>::Equals( const abstract_string_type& readable, const comparator_type& comp ) const
+nsTStringBase_CharT::Equals( const abstract_string_type& readable, const comparator_type& comp ) const
   {
     const char_type* data;
     size_type length = readable.GetReadableBuffer(&data);
@@ -751,24 +562,20 @@ nsTStringBase<CharT>::Equals( const abstract_string_type& readable, const compar
     return mLength == length && comp(mData, data, mLength) == 0;
   }
 
-template <class CharT>
 PRBool
-nsTStringBase<CharT>::Equals( const char_type* data ) const
+nsTStringBase_CharT::Equals( const char_type* data ) const
   {
-    return Equals(nsTDependentString<char_type>(data));
+    return Equals(nsTDependentString_CharT(data));
   }
 
-template <class CharT>
 PRBool
-nsTStringBase<CharT>::Equals( const char_type* data, const comparator_type& comp ) const
+nsTStringBase_CharT::Equals( const char_type* data, const comparator_type& comp ) const
   {
-    return Equals(nsTDependentString<char_type>(data), comp);
+    return Equals(nsTDependentString_CharT(data), comp);
   }
 
-template <class CharT>
-typename
-nsTStringBase<CharT>::size_type
-nsTStringBase<CharT>::CountChar( char_type c ) const
+nsTStringBase_CharT::size_type
+nsTStringBase_CharT::CountChar( char_type c ) const
   {
     const char_type *start = mData;
     const char_type *end   = mData + mLength;
@@ -776,9 +583,8 @@ nsTStringBase<CharT>::CountChar( char_type c ) const
     return NS_COUNT(start, end, c);
   }
 
-template <class CharT>
 PRInt32
-nsTStringBase<CharT>::FindChar( char_type c, index_type offset ) const
+nsTStringBase_CharT::FindChar( char_type c, index_type offset ) const
   {
     if (offset < mLength)
       {
@@ -788,56 +594,3 @@ nsTStringBase<CharT>::FindChar( char_type c, index_type offset ) const
       }
     return -1;
   }
-
-
-  /**
-   * explicit template instantiation
-   */
-
-template void     nsTStringBase<char>::ReleaseData();
-template PRBool   nsTStringBase<char>::MutatePrep( size_type capacity, char_type** oldData, PRUint32* oldFlags );
-template void     nsTStringBase<char>::ReplacePrep( index_type cutStart, size_type cutLen, size_type fragLen );
-template PRUint32 nsTStringBase<char>::Capacity() const;
-template void     nsTStringBase<char>::EnsureMutable();
-template void     nsTStringBase<char>::Assign( const char_type* data, size_type length );
-template void     nsTStringBase<char>::Assign( const self_type& str );
-template void     nsTStringBase<char>::Assign( const string_tuple_type& tuple );
-template void     nsTStringBase<char>::Assign( const abstract_string_type& readable );
-template void     nsTStringBase<char>::Adopt( char_type* data, size_type length );
-template void     nsTStringBase<char>::Replace( index_type cutStart, size_type cutLength, const char_type* data, size_type length );
-template void     nsTStringBase<char>::Replace( index_type cutStart, size_type cutLength, const string_tuple_type& tuple );
-template void     nsTStringBase<char>::Replace( index_type cutStart, size_type cutLength, const abstract_string_type& readable );
-template void     nsTStringBase<char>::SetLength( size_type length );
-template void     nsTStringBase<char>::SetIsVoid( PRBool val );
-template PRBool   nsTStringBase<char>::Equals( const self_type& ) const;
-template PRBool   nsTStringBase<char>::Equals( const self_type&, const comparator_type& ) const;
-template PRBool   nsTStringBase<char>::Equals( const abstract_string_type& ) const;
-template PRBool   nsTStringBase<char>::Equals( const abstract_string_type&, const comparator_type& ) const;
-template PRBool   nsTStringBase<char>::Equals( const char_type* ) const;
-template PRBool   nsTStringBase<char>::Equals( const char_type*, const comparator_type& ) const;
-template PRUint32 nsTStringBase<char>::CountChar( char_type ) const;
-template PRInt32  nsTStringBase<char>::FindChar( char_type, index_type ) const;
-
-template void     nsTStringBase<PRUnichar>::ReleaseData();
-template PRBool   nsTStringBase<PRUnichar>::MutatePrep( size_type capacity, char_type** oldData, PRUint32* oldFlags );
-template void     nsTStringBase<PRUnichar>::ReplacePrep( index_type cutStart, size_type cutLen, size_type fragLen );
-template PRUint32 nsTStringBase<PRUnichar>::Capacity() const;
-template void     nsTStringBase<PRUnichar>::EnsureMutable();
-template void     nsTStringBase<PRUnichar>::Assign( const char_type* data, size_type length );
-template void     nsTStringBase<PRUnichar>::Assign( const self_type& str );
-template void     nsTStringBase<PRUnichar>::Assign( const string_tuple_type& tuple );
-template void     nsTStringBase<PRUnichar>::Assign( const abstract_string_type& readable );
-template void     nsTStringBase<PRUnichar>::Adopt( char_type* data, size_type length );
-template void     nsTStringBase<PRUnichar>::Replace( index_type cutStart, size_type cutLength, const char_type* data, size_type length );
-template void     nsTStringBase<PRUnichar>::Replace( index_type cutStart, size_type cutLength, const string_tuple_type& tuple );
-template void     nsTStringBase<PRUnichar>::Replace( index_type cutStart, size_type cutLength, const abstract_string_type& readable );
-template void     nsTStringBase<PRUnichar>::SetLength( size_type length );
-template void     nsTStringBase<PRUnichar>::SetIsVoid( PRBool val );
-template PRBool   nsTStringBase<PRUnichar>::Equals( const self_type& ) const;
-template PRBool   nsTStringBase<PRUnichar>::Equals( const self_type&, const comparator_type& ) const;
-template PRBool   nsTStringBase<PRUnichar>::Equals( const abstract_string_type& ) const;
-template PRBool   nsTStringBase<PRUnichar>::Equals( const abstract_string_type&, const comparator_type& ) const;
-template PRBool   nsTStringBase<PRUnichar>::Equals( const char_type* ) const;
-template PRBool   nsTStringBase<PRUnichar>::Equals( const char_type*, const comparator_type& ) const;
-template PRUint32 nsTStringBase<PRUnichar>::CountChar( char_type ) const;
-template PRInt32  nsTStringBase<PRUnichar>::FindChar( char_type, index_type ) const;

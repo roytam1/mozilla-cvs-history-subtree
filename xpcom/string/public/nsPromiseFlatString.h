@@ -24,8 +24,66 @@
 #ifndef nsPromiseFlatString_h___
 #define nsPromiseFlatString_h___
 
-#ifndef nsTPromiseFlatString_h___
-#include "nsTPromiseFlatString.h"
+#ifndef nsString_h___
+#include "nsString.h"
 #endif
+
+  // declare nsPromiseFlatString
+#include "string-template-def-unichar.h"
+#include "nsTPromiseFlatString.h"
+#include "string-template-undef.h"
+
+  // declare nsPromiseFlatCString
+#include "string-template-def-char.h"
+#include "nsTPromiseFlatString.h"
+#include "string-template-undef.h"
+
+
+inline
+const nsPromiseFlatString
+PromiseFlatString( const nsAString& str )
+  {
+    return nsPromiseFlatString(str);
+  }
+
+  // e.g., PromiseFlatString(Substring(s))
+inline
+const nsPromiseFlatString
+PromiseFlatString( const nsStringBase& frag )
+  {
+    return nsPromiseFlatString(frag);
+  }
+
+  // e.g., PromiseFlatString(a + b)
+inline
+const nsPromiseFlatString
+PromiseFlatString( const nsStringTuple& tuple )
+  {
+    return nsPromiseFlatString(tuple);
+  }
+
+
+inline
+const nsPromiseFlatCString
+PromiseFlatCString( const nsACString& str )
+  {
+    return nsPromiseFlatCString(str);
+  }
+
+  // e.g., PromiseFlatCString(Substring(s))
+inline
+const nsPromiseFlatCString
+PromiseFlatCString( const nsCStringBase& frag )
+  {
+    return nsPromiseFlatCString(frag);
+  }
+
+  // e.g., PromiseFlatCString(a + b)
+inline
+const nsPromiseFlatCString
+PromiseFlatCString( const nsCStringTuple& tuple )
+  {
+    return nsPromiseFlatCString(tuple);
+  }
 
 #endif /* !defined(nsPromiseFlatString_h___) */
