@@ -585,7 +585,6 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
 #ifdef DEBUG
   if (gNoisyReflow) {
     nsCAutoString reflow;
-    reflow.Append(nsHTMLReflowState::ReasonToString(aReflowState.reason));
 
     if (aReflowState.reason == eReflowReason_Incremental) {
       nsHTMLReflowCommand *command = aReflowState.path->mReflowCommand;
