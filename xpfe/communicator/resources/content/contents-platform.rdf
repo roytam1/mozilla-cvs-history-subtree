@@ -10,6 +10,7 @@
   <!-- package information -->
 #ifdef MOZ_XUL_APP
   <RDF:Description about="urn:mozilla:package:communicator-platform"
+                   chrome:name="communicator-platform"
                    chrome:platformPackage="true" />
 #else
   <RDF:Description about="urn:mozilla:package:communicator-platform"
