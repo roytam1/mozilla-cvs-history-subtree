@@ -315,14 +315,16 @@ NS_IMETHODIMP nsAbQueryLDAPMessageListener::OnLDAPInit(nsresult aStatus)
         if (NS_FAILED(rv)) {
             return NS_ERROR_FAILURE;
         }
-        const PRUnichar *hostArray[1] = { NS_ConvertASCIItoUCS2(host).get() };
+
+        NS_ConvertASCIItoUCS2 hostTemp(host);
+        const PRUnichar *hostArray[1] = { hostTemp.get() };
 
         // format the hostname into the authprompt text string
         //
         nsXPIDLString authPromptText;
         rv = ldapBundle->FormatStringFromName(
             NS_LITERAL_STRING("authPromptText").get(),
-            hostArray, sizeof(hostArray),
+            hostArray, sizeof(hostArray) / sizeof(const PRUnichar *),
             getter_Copies(authPromptText));
         if (NS_FAILED(rv)) {
             NS_ERROR("nsAbQueryLDAPMessageListener::OnLDAPInit():"
