@@ -41,12 +41,12 @@ public:
      *  Copies the given Node, using the owner Document to create all
      *  necessary new Node(s)
     **/
-   static Node* XMLDOMUtils::copyNode(Node* node, Document* owner);
+   static Node* copyNode(Node* node, Document* owner);
 
     /**
      *  Appends the value of the given Node to the target DOMString
     **/
-   static void XMLDOMUtils::getNodeValue(Node* node, DOMString* target);
+   static void getNodeValue(Node* node, DOMString* target);
 
 
 }; //-- XMLDOMUtils

@@ -414,7 +414,7 @@ public:
     /**
      * Creates a new BasicNodeExpr of the given type
     **/
-    BasicNodeExpr::BasicNodeExpr(NodeExpr::NodeExprType nodeExprType);
+    BasicNodeExpr(NodeExprType nodeExprType);
 
     /**
      * Destroys this BasicNodeExpr
@@ -465,7 +465,7 @@ public:
     virtual void toString(String& dest);
 
 private:
-    NodeExpr::NodeExprType type;
+    NodeExprType type;
 }; //-- BasicNodeExpr
 
 /**
@@ -1314,7 +1314,7 @@ public:
      * @param expr the Expr to add to this PathExpr
      * @param index the index at which to add the given Expr
     **/
-    void PathExpr::addPatternExpr(int index, PatternExpr* expr, short ancestryOp);
+    void addPatternExpr(int index, PatternExpr* expr, short ancestryOp);
 
     /**
      * Adds the PatternExpr to this PathExpr
