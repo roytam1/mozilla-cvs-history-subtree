@@ -145,7 +145,7 @@ nsHTTPCacheListener::OnStartRequest(nsIChannel *aChannel,
         this, NS_SUCCEEDED(channelStatus) ? "" : "CANCELED"));
   
     if (NS_FAILED (channelStatus))      // Canceled http channel
-         return channelStatus;
+         return NS_OK;
 
     return mResponseDataListener -> OnStartRequest (mChannel, aContext);
 }
@@ -166,7 +166,7 @@ nsHTTPCacheListener::OnStopRequest(nsIChannel *aChannel,
           "\tStatus = %x\n", this, aStatus));
 
     if (NS_FAILED (channelStatus))      // Canceled http channel
-        return channelStatus;
+        return NS_OK;
 
 
     //
@@ -193,7 +193,7 @@ nsHTTPCacheListener::OnDataAvailable(nsIChannel *aChannel,
         mChannel -> GetStatus (&channelStatus);
 
     if (NS_FAILED (channelStatus))  // Canceled http channel
-         return channelStatus;
+         return NS_OK;
 
     return mResponseDataListener -> OnDataAvailable(mChannel, 
                                                 aContext,
@@ -288,7 +288,7 @@ nsHTTPServerListener::OnDataAvailable(nsIChannel* channel,
         mChannel -> GetStatus (&channelStatus);
 
     if (NS_FAILED (channelStatus))      // Canceled http channel
-         return channelStatus;
+         return NS_OK;
 
     NS_ASSERTION(i_pStream, "No stream supplied by the transport!");
     nsCOMPtr<nsIBufferInputStream> bufferInStream = 
@@ -561,14 +561,6 @@ nsHTTPServerListener::OnStartRequest (nsIChannel* channel, nsISupports* i_pConte
         NS_RELEASE (req);
     }
 
-    if (mChannel)
-    {
-        mChannel -> GetStatus (&channelStatus);
-
-        if (NS_FAILED (channelStatus))      // Canceled http channel
-            return channelStatus;
-    }
-
     return NS_OK;
 }
 
@@ -584,7 +576,7 @@ nsHTTPServerListener::OnStopRequest (nsIChannel* channel, nsISupports* i_pContex
            ("nsHTTPServerListener::OnStopRequest [this=%x]."
             "\tStatus = %x, mDataReceived=%d\n", this, i_Status, mDataReceived));
 
-    if (NS_SUCCEEDED (i_Status) && !mDataReceived)
+    if (NS_SUCCEEDED (channelStatus) && NS_SUCCEEDED (i_Status) && !mDataReceived)
     {
         // no data has been received from the channel at all - must be due to the fact that the
         // server has dropped the connection on keep-alive

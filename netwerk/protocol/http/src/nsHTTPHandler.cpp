@@ -806,9 +806,6 @@ nsHTTPHandler::~nsHTTPHandler()
     CRTFREEIF (mAcceptEncodings);
 }
 
-static  PRInt32 sTotalRequested = 0;
-static  PRInt32 sTotalReleased  = 0;
-
 nsresult nsHTTPHandler::RequestTransport (nsIURI* i_Uri,
                                          nsHTTPChannel* i_Channel,
                                          PRUint32 bufferSegmentSize,
@@ -829,8 +826,6 @@ nsresult nsHTTPHandler::RequestTransport (nsIURI* i_Uri,
     // Ask the channel for proxy info... since that overrides
     PRBool usingProxy = PR_FALSE;
     i_Channel -> GetUsingProxy (&usingProxy);
-
-    PR_LOG (gHTTPLog, PR_LOG_ALWAYS, ("nsHTTPHandler::RequestTransport (), requested=%d, released=%d,flags=%d\n", ++sTotalRequested, sTotalReleased, flags));
 
     if (usingProxy)
     {
@@ -940,7 +935,6 @@ nsresult nsHTTPHandler::RequestTransport (nsIURI* i_Uri,
                        ("nsHTTPHandler::RequestTransport.""\tAll socket transports are busy."
                         "\tAdding nsHTTPChannel [%x] to pending list.\n",
                         i_Channel));
-                sTotalRequested--;
                 return NS_ERROR_BUSY;
             }
         }
@@ -1002,8 +996,6 @@ nsresult nsHTTPHandler::ReleaseTransport (nsIChannel* i_pTrans, PRUint32 aCapabi
     PRUint32 count = 0, transportsInUseCount = 0;
 
     PRUint32 capabilities = (mCapabilities & aCapabilities);
-
-    PR_LOG (gHTTPLog, PR_LOG_ALWAYS, ("nsHTTPHandler::ReleaseTransport (), requested=%d, released=%d\n", sTotalRequested, ++sTotalReleased));
 
     PR_LOG (gHTTPLog, PR_LOG_ALWAYS, 
            ("nsHTTPHandler::ReleaseTransport."
@@ -1081,7 +1073,7 @@ nsresult nsHTTPHandler::ReleaseTransport (nsIChannel* i_pTrans, PRUint32 aCapabi
         PR_LOG (gHTTPLog, PR_LOG_ALWAYS, ("nsHTTPHandler::ReleaseTransport."
                 "\tRestarting nsHTTPChannel [%x]\n", channel));
         
-        channel->Open();
+        channel -> Open ();
     }
 
     return rv;
@@ -1375,8 +1367,7 @@ nsHTTPHandler::GetPipelinedRequest (nsIHTTPChannel* i_Channel, nsHTTPPipelinedRe
                 if (!commit)
                     break;
             }
-            else
-                NS_RELEASE (pReq);
+            NS_RELEASE (pReq);
         }
     } /* for */
 

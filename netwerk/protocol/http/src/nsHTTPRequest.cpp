@@ -745,7 +745,7 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
     //
     else
     {
-        PR_LOG (gHTTPLog, PR_LOG_ERROR, ("nsHTTPRequest [this=%x]. Error writing request to server." "\tStatus: %x\n", this, iStatus));
+        PR_LOG (gHTTPLog, PR_LOG_ERROR, ("nsHTTPRequest::OnStopRequest () [this=%x]. Error writing request to server." "\tStatus: %x\n", this, iStatus));
         rv = iStatus;
     }
 
@@ -760,11 +760,16 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
             // the pipeline just started - we still can attempt to recover
 
             PRUint32 wasKeptAlive = 0;
+            nsresult channelStatus = NS_OK;
 
             if (trans)
                 trans  -> GetReuseCount (&wasKeptAlive);
 
-            if (wasKeptAlive)
+            req -> mConnection -> GetStatus (&channelStatus);
+
+            PR_LOG (gHTTPLog, PR_LOG_DEBUG, ("nsHTTPRequest::OnStopRequest () [this=%x]. wasKeptAlive=%d, channelStatus=%x\n", this, wasKeptAlive, channelStatus));
+
+            if (wasKeptAlive && NS_SUCCEEDED (channelStatus))
             {
                 mMustCommit = PR_TRUE;
                 mAttempts++;
@@ -784,17 +789,24 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
             }
         }
 
-        if (mTransport)
-        {
-            mHandler   -> ReleaseTransport (mTransport, nsIHTTPProtocolHandler::DONTRECORD_CAPABILITIES);
-            mTransport = null_nsCOMPtr ();
-        }
-
         // Notify the HTTPChannel that the request has finished
+
+        // XXX/ruslan: we need to walk through all the requests !!!!!!!!!!!!!!
+
         nsCOMPtr<nsIStreamListener> consumer;
 
         req -> mConnection -> GetResponseDataListener (getter_AddRefs (consumer));
-        req -> mConnection -> ResponseCompleted (consumer, rv, i_Msg);
+        if (consumer)
+            req -> mConnection -> ResponseCompleted (consumer, rv, i_Msg);
+
+        if (mTransport)
+        {
+            nsIChannel *p = mTransport;
+            mTransport = null_nsCOMPtr ();
+
+            mHandler -> ReleaseTransport (p, nsIHTTPProtocolHandler::DONTRECORD_CAPABILITIES);
+        }
+
     }
  
     NS_IF_RELEASE (req);
@@ -805,6 +817,9 @@ nsHTTPPipelinedRequest::OnStopRequest (nsIChannel* channel, nsISupports* i_Conte
     // mRequestBuffer.Truncate ();
     mPostDataStream = null_nsCOMPtr ();
     mOnStopDone = PR_TRUE;
+
+    if (NS_FAILED (rv) && !mListener)
+        mHandler -> ReleasePipelinedRequest (this);
 
     return rv;
 }
@@ -826,10 +841,22 @@ nsHTTPPipelinedRequest::RestartRequest ()
         if (trans)
             trans  -> GetReuseCount (&wasKeptAlive);
 
+        nsresult channelStatus = NS_OK;
+
+        nsHTTPRequest * req = nsnull;
+        GetCurrentRequest (&req);
+
+        if (req)
+        {
+            if (req -> mConnection)
+                req -> mConnection -> GetStatus (&channelStatus);
+
+            NS_RELEASE (req);
+        }
 
         PR_LOG (gHTTPLog, PR_LOG_DEBUG, ("\nnsHTTPPipelinedRequest::RestartRequest () [this=%x], wasKepAlive=%u, mAttempts=%d, mOnStopDone=%d\n", this, wasKeptAlive, mAttempts, mOnStopDone));
 
-        if (wasKeptAlive && mAttempts == 0)
+        if (wasKeptAlive && mAttempts == 0 && NS_SUCCEEDED (channelStatus))
         {
             rv = NS_OK;
             mListener = nsnull;
