@@ -187,7 +187,8 @@
 // 0.03 changed name, description and mime desc from string to bytes, bug 108246
 // 0.04 added new mime entry point on Mac, bug 113464
 // 0.05 added new entry point check for the default plugin, bug 132430
-static const char *kPluginInfoVersion = "0.05";
+// 0.06 mime entry point on MachO, bug 137535
+static const char *kPluginInfoVersion = "0.06";
 
 ////////////////////////////////////////////////////////////////////////
 // CID's && IID's
@@ -4417,7 +4418,7 @@ public:
     {
       // only show the full path if people have set the pref,
       // the default should not reveal path information (bug 88183)
-#ifdef XP_MAC
+#if defined(XP_MAC) || defined(XP_MACOSX)
       return DoCharsetConversion(mUnicodeDecoder, mPluginTag.mFullPath, aFilename);
 #else
       return DoCharsetConversion(mUnicodeDecoder, mPluginTag.mFileName, aFilename);
@@ -4427,7 +4428,7 @@ public:
     nsFileSpec spec;
     if (mPluginTag.mFullPath)
     {
-#ifndef XP_MAC
+#if !(defined(XP_MAC) || defined(XP_MACOSX))
       NS_ERROR("Only MAC should be using nsPluginTag::mFullPath!");
 #endif
       spec = mPluginTag.mFullPath;

@@ -46,6 +46,8 @@
 
 #include "nsPluginsDir.h"
 #include "prlink.h"
+#include "ns4xPlugin.h"
+#include "nsPluginsDirUtils.h"
 
 #include <Processes.h>
 #include <Folders.h>
@@ -58,6 +60,10 @@
 #include <CFBundle.h>
 #include <CFString.h>
 #include <CodeFragments.h>
+
+typedef NS_4XPLUGIN_CALLBACK(const char *, NP_GETMIMEDESCRIPTION) ();
+typedef NS_4XPLUGIN_CALLBACK(OSErr, BP_GETSUPPORTEDMIMETYPES) (BPSupportedMIMETypes *mimeInfo, UInt32 flags);
+
 
 /*
 ** Returns a CFBundleRef if the FSSpec refers to a Mac OS X bundle directory.
@@ -89,7 +95,9 @@ static OSErr toFSSpec(const nsFileSpec& inFileSpec, FSSpec& outSpec)
 
 PRBool nsPluginsDir::IsPluginFile(const nsFileSpec& fileSpec)
 {
+#ifdef DEBUG
     printf("nsPluginsDir::IsPluginFile:  checking %s\n", fileSpec.GetCString());
+#endif
     // look at file's creator/type and make sure it is a code fragment, etc.
     FSSpec spec;
     OSErr err = toFSSpec(fileSpec, spec);
@@ -100,7 +108,9 @@ PRBool nsPluginsDir::IsPluginFile(const nsFileSpec& fileSpec)
     err = FSpGetFInfo(&spec, &info);
     if (err == noErr && ((info.fdType == 'shlb' && info.fdCreator == 'MOSS') ||
                          info.fdType == 'NSPL')) {
+#ifdef DEBUG
         printf("found plugin '%s'.\n", fileSpec.GetCString());
+#endif
         return PR_TRUE;
     }
 
@@ -118,7 +128,9 @@ PRBool nsPluginsDir::IsPluginFile(const nsFileSpec& fileSpec)
         case 'BRPL':
         case 'IEPL':
         case 'NSPL':
+#ifdef DEBUG
             printf("found bundled plugin '%s'.\n", fileSpec.GetCString());
+#endif
             return PR_TRUE;
         }
     }
@@ -144,7 +156,10 @@ nsresult nsPluginFile::LoadPlugin(PRLibrary* &outLibrary)
     if (!outLibrary) {
         return NS_ERROR_FAILURE;
     }
+#ifdef DEBUG
     printf("[loaded plugin %s]\n", path);
+#endif
+    pLibrary = outLibrary;
     return NS_OK;
 }
 
@@ -157,6 +172,13 @@ static char* p2cstrdup(StringPtr pstr)
         cstr[len] = '\0';
     }
     return cstr;
+}
+
+static char* GetNextPluginStringFromHandle(Handle h, short *index)
+{
+  char *ret = p2cstrdup((unsigned char*)(*h + *index));
+  *index += (ret ? PL_strlen(ret) : 0) + 1;
+  return ret;
 }
 
 static char* GetPluginString(short id, short index)
@@ -206,20 +228,8 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
             // 'STR#', 126, 1 => plugin description.
             info.fDescription = GetPluginString(126, 1);
       
-            // Determine how many  'STR#' resource for all MIME types/extensions.
-            Handle typeList = ::Get1Resource('STR#', 128);
-            if (typeList != NULL) {
-                short stringCount = **(short**)typeList;
-                info.fVariantCount = stringCount / 2;
-                ::ReleaseResource(typeList);
-            }
-
             FSSpec spec;
-            OSErr err = toFSSpec(*this, spec);
-            int variantCount = info.fVariantCount;
-            info.fMimeTypeArray = new char*[variantCount];
-            info.fMimeDescriptionArray = new char*[variantCount];
-            info.fExtensionArray = new char*[variantCount];
+            toFSSpec(*this, spec);
             info.fFileName = p2cstrdup(spec.name);
             info.fFullPath = PL_strdup(this->GetCString());
       
@@ -230,11 +240,77 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
             } else
                 info.fBundle = PR_FALSE;
 
-            short mimeIndex = 1, descriptionIndex = 1;
+            // It's possible that our plugin has 2 special extra entry points that'll give us more
+            // mime type info. Quicktime does this to get around the need of having admin rights
+            // to change mime info in the resource fork. We need to use this info instead of the
+            // resource. See bug 113464.
+            BPSupportedMIMETypes mi = {kBPSupportedMIMETypesStructVers_1, NULL, NULL};
+            if (pLibrary) {
+      
+              // First, check for NP_GetMIMEDescription
+              NP_GETMIMEDESCRIPTION pfnGetMimeDesc = 
+                (NP_GETMIMEDESCRIPTION)PR_FindSymbol(pLibrary, NP_GETMIMEDESCRIPTION_NAME); 
+              if (pfnGetMimeDesc) {
+                nsresult rv = NS_ERROR_FAILURE;
+                rv = ParsePluginMimeDescription(pfnGetMimeDesc(), info);
+                if (NS_SUCCEEDED(rv)) {    // if we could parse the mime types from NP_GetMIMEDescription,
+                  ::CloseResFile(refNum);  // we've got what we need, close the resource, we're done
+                  return rv;
+                }
+              }
+      
+              // Next check for mime info from BP_GetSupportedMIMETypes
+              BP_GETSUPPORTEDMIMETYPES pfnMime = 
+                (BP_GETSUPPORTEDMIMETYPES)PR_FindSymbol(pLibrary, "BP_GetSupportedMIMETypes");
+              if (pfnMime && noErr == pfnMime(&mi, 0) && mi.typeStrings) {        
+                info.fVariantCount = (**(short**)mi.typeStrings) / 2;
+                ::HLock(mi.typeStrings);
+                if (mi.infoStrings)  // it's possible some plugins have infoStrings missing
+                  ::HLock(mi.infoStrings);
+              }
+            }
+            
+            // Last, we couldn't get info from an extra entry point for some reason, 
+            // Lets get info from normal resources
+            if (!info.fVariantCount) {
+              mi.typeStrings = ::Get1Resource('STR#', 128);
+              if (mi.typeStrings) {
+                info.fVariantCount = (**(short**)mi.typeStrings) / 2;
+                ::DetachResource(mi.typeStrings);
+                ::HLock(mi.typeStrings);
+              } else {
+                // Don't add this plugin because no mime types could be found
+                ::CloseResFile(refNum);
+                return NS_ERROR_FAILURE;
+              }
+      
+              mi.infoStrings = ::Get1Resource('STR#', 127);
+              if (mi.infoStrings) {
+                ::DetachResource(mi.infoStrings);
+                ::HLock(mi.infoStrings);
+              }
+            }
+      
+            // fill-in rest of info struct
+            int variantCount = info.fVariantCount;
+            info.fMimeTypeArray      = new char*[variantCount];
+            info.fExtensionArray     = new char*[variantCount];
+            if (mi.infoStrings)
+              info.fMimeDescriptionArray = new char*[variantCount];
+      
+            short mimeIndex = 2, descriptionIndex = 2;
             for (int i = 0; i < variantCount; i++) {
-                info.fMimeTypeArray[i] = GetPluginString(128, mimeIndex++);
-                info.fExtensionArray[i] = GetPluginString(128, mimeIndex++);
-                info.fMimeDescriptionArray[i] = GetPluginString(127, descriptionIndex++);
+              info.fMimeTypeArray[i]          = GetNextPluginStringFromHandle(mi.typeStrings, &mimeIndex);
+              info.fExtensionArray[i]         = GetNextPluginStringFromHandle(mi.typeStrings, &mimeIndex);
+              if (mi.infoStrings)
+                info.fMimeDescriptionArray[i] = GetNextPluginStringFromHandle(mi.infoStrings, &descriptionIndex);
+            }
+      
+            ::HUnlock(mi.typeStrings);
+            ::DisposeHandle(mi.typeStrings);
+            if (mi.infoStrings) {
+              ::HUnlock(mi.infoStrings);      
+              ::DisposeHandle(mi.infoStrings);
             }
         }
     
@@ -246,21 +322,21 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
 nsresult nsPluginFile::FreePluginInfo(nsPluginInfo& info)
 {
     if (info.fPluginInfoSize <= sizeof(nsPluginInfo)) 
+    {
+        delete[] info.fName;
+        delete[] info.fDescription;
+        int variantCount = info.fVariantCount;
+        for (int i = 0; i < variantCount; i++) 
         {
-            delete[] info.fName;
-            delete[] info.fDescription;
-            int variantCount = info.fVariantCount;
-            for (int i = 0; i < variantCount; i++) 
-                {
-                    delete[] info.fMimeTypeArray[i];
-                    delete[] info.fExtensionArray[i];
-                    delete[] info.fMimeDescriptionArray[i];
-                }
-            delete[] info.fMimeTypeArray;
-            delete[] info.fMimeDescriptionArray;
-            delete[] info.fExtensionArray;
-            delete[] info.fFileName;
-            delete[] info.fFullPath;
+            delete[] info.fMimeTypeArray[i];
+            delete[] info.fExtensionArray[i];
+            delete[] info.fMimeDescriptionArray[i];
         }
+        delete[] info.fMimeTypeArray;
+        delete[] info.fMimeDescriptionArray;
+        delete[] info.fExtensionArray;
+        delete[] info.fFileName;
+        delete[] info.fFullPath;
+    }
     return NS_OK;
 }
