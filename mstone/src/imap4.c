@@ -21,6 +21,8 @@
  * Contributor(s):	Dan Christian <robodan@netscape.com>
  *			Marcel DePaolis <marcel@netcape.com>
  *			Mike Blakely
+ *			Sean O'Rourke <sean@sendmail.com>
+ *			Thom O'Connor <thom@sendmail.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License Version 2 or later (the "GPL"), in
@@ -37,6 +39,10 @@
 
 #include "bench.h"
 #include "pish.h"
+#include "idle.h"
+#include "socket.h"
+#include "xalloc.h"
+#include "checksum.h"
 
 typedef struct IMAP_t {
   int	seq_num;	/* IMAP command seq number */
@@ -45,7 +51,11 @@ typedef struct IMAP_t {
 } IMAP;
 
 /* protos */
+#if 0
 static int retrImapMsg(ptcx_t ptcx, SOCKET sock, int seqNum, char *buffer, int msgSize, int maxBytes);
+#else
+static int retrImapMsg(ptcx_t ptcx, SOCKET sock, int seqNum, int msgSize);
+#endif /* 0 */
 static int readImapResponse(ptcx_t ptcx, SOCKET sock, int seqNum, char *buffer, int buflen);
 static int doImapCommandResponse(ptcx_t ptcx, SOCKET sock, int SeqNum, char *cmdand, char *response, int resplen);
 
@@ -72,7 +82,7 @@ typedef struct _doIMAP4_state {
     int		*searchSchedule;
 } doIMAP4_state_t;
 
-/* IMAP flags definitions */
+/* flags definitions */
 #define leaveMailOnServer 0x01
 #define leaveMailUnseen   0x02
 
@@ -88,27 +98,29 @@ ImapParseNameValue (pmail_command_t cmd,
 
     /* find a home for the attr/value */
     if (pishParseNameValue(cmd, name, tok) == 0)
-	;				/* done */
+        ;                               /* done */
     else if (strcmp(name, "leavemailonserver") == 0) {
 	if (atoi(tok) > 0) {
-	    pish->flags |= leaveMailOnServer;
-	} else  { /* turn on if < leavemailunseen */
-	    pish->flags &= ~leaveMailOnServer;
-	}
-	/*D_PRINTF (stderr, "leaveMailOnServer=%d\n", pish->leaveMailOnServer);*/
-    }
+            pish->flags |= leaveMailOnServer;
+	    pish->leaveMailOnServerDist = 
+	        parse_distrib(tok, (value_parser_t)&atof);
+        } else  { /* turn on if < leavemailunseen */
+            pish->flags &= ~leaveMailOnServer;
+        /* D_PRINTF (stderr, "leaveMailOnServer=%d\n", pish->leaveMailOnServer);*/           
+        }
+    }   
     else if (strcmp(name, "leavemailunseen") == 0) {
-	if (atoi(tok) > 0) {
-	    /* leaving mail unseen implies leaving on server */
-	    pish->flags |= leaveMailUnseen | leaveMailOnServer;
-	} else  { /* turn on if < leavemailunseen */
-	    pish->flags &= ~leaveMailUnseen;
-	}
-	/*D_PRINTF (stderr, "leaveMailOnServer=%d\n", pish->leaveMailOnServer);*/
+        if (atoi(tok) > 0) {
+            /* leaving mail unseen implies leaving on server */
+            pish->flags |= leaveMailUnseen | leaveMailOnServer;
+        } else  { /* turn on if < leavemailunseen */
+            pish->flags &= ~leaveMailUnseen;
+        }
+        /*D_PRINTF (stderr, "leaveMailOnServer=%d\n", pish->leaveMailOnServer);*/   
     }
     else {
-	return -1;
-    }
+        return -1;
+    } 
     return 0;
 }
 
@@ -121,11 +133,10 @@ Imap4ParseStart (pmail_command_t cmd,
 		param_list_t *defparm)
 {
     param_list_t	*pp;
-    pish_command_t	*pish = (pish_command_t *)mycalloc
-	(sizeof (pish_command_t));
+    pish_command_t	*pish = XCALLOC(pish_command_t);
+
     cmd->data = pish;
 
-    cmd->loopDelay = 10*60;		/* default 10 min */
     pish->hostInfo.portNum = IMAP4_PORT; /* get default port */
 
     D_PRINTF(stderr, "Imap4 Assign defaults\n");
@@ -162,8 +173,10 @@ Imap4ParseEnd (pmail_command_t cmd,
 
 	if (ImapParseNameValue (cmd, name, tok) < 0) {
 	    /* not a known attr */
-	    D_PRINTF(stderr,"unknown attribute '%s' '%s'\n", name, tok);
-	    returnerr(stderr,"unknown attribute '%s' '%s'\n", name, tok);
+	    D_PRINTF(stderr,"notice: ignoring unknown attribute '%s' '%s'\n",
+		     name, tok);
+	    returnerr(stderr,"notice: ignoring unknown attribute '%s' '%s'\n",
+		      name, tok);
 	}	
     }
 
@@ -209,11 +222,11 @@ Imap4ParseEnd (pmail_command_t cmd,
 void *
 doImap4Start(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 {
-    doIMAP4_state_t	*me = (doIMAP4_state_t *)mycalloc (sizeof (doIMAP4_state_t));
+    doIMAP4_state_t	*me = XCALLOC(doIMAP4_state_t);
     pish_command_t	*pish = (pish_command_t *)cmd->data;
     pish_stats_t	*stats = (pish_stats_t *)ptimer->data;
     int	rc;
-
+    
     if (!me) return NULL;
     me->pIMAP = &me->IMAP_state;
 
@@ -224,6 +237,8 @@ doImap4Start(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 
     me->pIMAP->seq_num = 1;
 
+    ptcx->net_timeout = pish->net_timeout;
+    
     event_start(ptcx, &stats->connect);
     ptcx->sock = connectSocket(ptcx, &pish->hostInfo, "tcp");
     event_stop(ptcx, &stats->connect);
@@ -233,16 +248,37 @@ doImap4Start(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 	    returnerr(debugfile, "IMAP4 Couldn't connect to %s: %s\n",
 		      pish->hostInfo.hostName, neterrstr());
 	}
-	myfree (me);
+	xfree (me);
 	return NULL;
     }
 
     if (gf_abortive_close) {
 	if (set_abortive_close(ptcx->sock) != 0) {
-	    returnerr (debugfile, "SMTP: WARNING: Could not set abortive close\n");
+	    returnerr (debugfile, "IMAP: WARNING: Could not set abortive close\n");
 	}
     }
 
+    /* Sean O'Rourke: add socket "flavors" */
+#ifdef SOCK_SSL
+    if (pish->sslTunnel) {
+	SSL_INIT(ptcx->sock, pish);
+	if (BADSOCKET(ptcx->sock)) {
+	    returnerr(debugfile, "IMAP ERROR: Could not start SSL tunneling\n");
+	    stats->connect.errs++;
+	    xfree (me);
+	    return NULL;
+	}
+    }
+#endif /* SOCK_SSL */
+    
+    LS_INIT(ptcx->sock, pish);
+    if (BADSOCKET(ptcx->sock)) {
+	returnerr(debugfile, "IMAP ERROR: can't initialize socket.\n");
+	stats->connect.errs++;		/* (sort of) */
+	xfree (me);
+	return NULL;
+    }
+    
     /* READ connect response from server */
     event_start(ptcx, &stats->banner);
     rc = readResponse(ptcx, ptcx->sock, me->pIMAP->resp_buffer, sizeof(me->pIMAP->resp_buffer));
@@ -257,6 +293,49 @@ doImap4Start(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 	return NULL;
     }
 
+#ifdef SOCK_SSL
+    if (!pish->useTLS)
+	goto end_tls;
+    
+    /*
+    **  Try to do STARTTLS
+    */
+
+    event_start(ptcx, &stats->cmd);
+    rc = doImapCommandResponse(ptcx, ptcx->sock, ++me->pIMAP->seq_num,
+			       "CAPABILITY" CRLF,
+			       me->pIMAP->resp_buffer,
+			       sizeof(me->pIMAP->resp_buffer));
+    event_stop(ptcx, &stats->cmd);
+    if (rc < 0) {
+	stats->cmd.errs++;
+	goto end_tls;
+    }
+    if (strstr(me->pIMAP->resp_buffer, "STARTTLS")) {
+	SOCKET s = BADSOCKET_VALUE;
+	D_PRINTF(debugfile, "Trying STARTTLS\n");
+	if (doImapCommandResponse(ptcx, ptcx->sock, ++me->pIMAP->seq_num,
+				  "STARTTLS" CRLF,
+				  me->pIMAP->resp_buffer,
+				  sizeof(me->pIMAP->resp_buffer)) >= 0) {
+	    char *p = me->pIMAP->resp_buffer;
+	    while (*p && !isspace(*p++))
+		;
+	    if (strncmp(p, "OK", 2) == 0) {
+		s = ptcx->sock;
+		SSL_INIT(s, pish);
+	    }
+	}
+	if (BADSOCKET(s)) {
+	    D_PRINTF(stderr, "Can't use TLS\n");
+	} else {
+	    ptcx->sock = s;
+	}
+    }
+ end_tls:
+    
+#endif /* SOCK_SSL */
+    
     rc = imapLogin(ptcx, me->pIMAP, ptcx->sock, cmd, ptimer);
     if (rc != 0) {
 	doImap4Exit (ptcx, me);
@@ -270,7 +349,6 @@ doImap4Start(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
     me->currentSearch = me->numSearches = 0;
     if (pish->imapSearchRate) {
 	me->numSearches = imapComputeSearchSchedule(ptcx, cmd, &me->searchSchedule);
-	(void)me->numSearches;		/* ??? */
   	me->timeUntilSearch = me->searchSchedule[me->currentSearch];
     }
 
@@ -297,15 +375,8 @@ doImap4Loop(ptcx_t ptcx,
 	return -1;			/* signal to logout, clean up */
     }
 
-#if 0					/* update for new loop model */
-    rc = selectFolder(ptcx, me->pIMAP, ptcx->sock, "INBOX", ptimer); /* does NOOP */
-    if (rc != 0) {
-	return -1;			/* signal to clean up */
-    }
-#endif
-
     if (me->searchSchedule) {		/* check if it's time to search */
-	me->timeUntilSearch -= cmd->loopDelay;
+	me->timeUntilSearch -= sample(cmd->loopDelay);
 
 	if (me->timeUntilSearch <= 0) {
 	    imapSearchFolder(ptcx, me->pIMAP, ptcx->sock, cmd, ptimer);
@@ -327,6 +398,36 @@ doImap4End(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, void *mystate)
     if (!me) return;
     if (BADSOCKET(ptcx->sock)) return;	/* closed by previous error */
 
+    /* Sean O'Rourke: add ramp-down time: */
+
+#ifdef IMAP_RAMPDOWN
+    while(gf_timeexpired >= EXIT_SOON) {
+	int mystoptime = gt_shutdowntime
+	    + ptcx->threadnum*gt_stopinterval*EXIT_FAST / gn_numthreads;
+	int secsleft = mystoptime - time(0L);
+	if(secsleft > 0)
+	{
+#ifdef PROB_RAMPDOWN
+	    extern value_parser_t d_millitime_atoi;
+	    char dist[64];
+	    int sleepms;
+	    dinst_t* unif;
+	    sprintf(dist, "~unif(0, %ds)", secsleft);
+	    unif = parse_distrib(dist, d_millitime_atoi);
+	    sleepms = sample(unif);
+	    MS_usleep(1000*sleepms);
+#else /* PROB_RAMPDOWN */
+	    /* First threads started are first to terminate: */
+	    MS_sleep((int)(secsleft));
+#endif /* PROB_RAMPDOWN */	    
+	}
+	else
+	{
+	    break;
+	}
+    }
+#endif /* IMAP_RAMPDOWN */
+    
     /* close the folder */
     rc = imapCloseFolder(ptcx, me->pIMAP, ptcx->sock, ptimer);
     if (rc != 0) {
@@ -363,9 +464,9 @@ doImap4Exit (ptcx_t ptcx, doIMAP4_state_t *me)
   ptcx->sock = BADSOCKET_VALUE;
 
   if (me->searchSchedule)
-    myfree(me->searchSchedule);
+    xfree(me->searchSchedule);
 
-  myfree (me);
+  xfree (me);
 }  
 
 static int
@@ -415,19 +516,24 @@ readImapResponse(ptcx_t ptcx, SOCKET sock, int seqNum, char *buffer, int buflen)
 
 /* read from socket until we find <CRLF>.<CRLF> */
 static int
+#if 0
 retrImapMsg(ptcx_t ptcx, SOCKET sock, int seqNum,
 	    char *buffer, int msgSize, int maxBytes)
+#else
+retrImapMsg(ptcx_t ptcx, SOCKET sock, int seqNum, int msgSize)
+#endif
 {    
     int totalbytesread = 0;
     int bytesread;
+    int maxBytes = msgSize + 1024;	/* old semantics */
     char markerSingleLine[20];
     char markerMultiLine[20];
+    char buf[4096];
+    char *bpos = buf;
 
     /* marker to tell us when we've recieved the final line from server */
     sprintf(markerSingleLine, "%d ", seqNum);
     sprintf(markerMultiLine, "\n%d ", seqNum);
-    
-    memset (buffer, 0, maxBytes);
 
     while (totalbytesread < maxBytes)
     {
@@ -436,7 +542,10 @@ retrImapMsg(ptcx_t ptcx, SOCKET sock, int seqNum,
 		break;
 	}
 
-        bytesread = retryRead(ptcx, sock, buffer+totalbytesread, maxBytes-totalbytesread);
+	bytesread = maxBytes - totalbytesread;
+	if (bytesread > sizeof(buf) - (1 + bpos - buf))
+	    bytesread = sizeof(buf) - (1 + bpos - buf);
+        bytesread = retryRead(ptcx, sock, bpos, bytesread);
         if (bytesread <= 0) {
 	    if (gf_timeexpired < EXIT_FAST) {
 		returnerr(debugfile, "retrImapMsg(%d) %s\n", sock, neterrstr());
@@ -446,14 +555,14 @@ retrImapMsg(ptcx_t ptcx, SOCKET sock, int seqNum,
 	
         totalbytesread += bytesread;
 
-	buffer[totalbytesread] = 0;
+	bpos[bytesread] = 0;
 
 	if (totalbytesread > msgSize) {
 	    /* search for end of response */
-	    if (strstr(buffer, markerSingleLine)) {
+	    if (strstr(buf, markerSingleLine)) {
 		break;
 	    }
-	    if (strstr(buffer, markerMultiLine)) {
+	    if (strstr(buf, markerMultiLine)) {
 		break;
 	    }
 	}
@@ -461,9 +570,11 @@ retrImapMsg(ptcx_t ptcx, SOCKET sock, int seqNum,
 		D_PRINTF(debugfile,"Time expired while reading messages - in retrIMAP\n");
 		break;
 	}
+	/* shift message over in buffer */
+	memcpy(buf, bpos + bytesread - sizeof(markerMultiLine),
+	       sizeof(markerMultiLine));
+	bpos = buf + sizeof(markerMultiLine);
     }
-
-    D_PRINTF(debugfile,"buffer=%s\n", buffer);
 
     ptcx->bytesread += totalbytesread;
 
@@ -525,7 +636,26 @@ imapLogin(ptcx_t ptcx,
     gf_imapForceUniqueness = 0;
 
     while (!done) {
-        next_domain = rangeNext(&stats->domainRange, stats->lastDomain);
+#if defined(IMAP_CAPABILITY) && !defined(SOCK_SSL)
+	/*
+	**  don't do this if we tried STARTTLS above, since we already
+	**  did a CAPABILITY there...
+	*/
+	sprintf(command, "%d CAPABILITY" CRLF, ++pIMAP->seq_num);
+	event_start(ptcx, &stats->cmd);
+	ret = doImapCommandResponse(ptcx, sock, pIMAP->seq_num,
+				    command, pIMAP->resp_buffer,
+				    sizeof(pIMAP->resp_buffer));
+	event_stop(ptcx, &stats->cmd);
+	if (ret == -1) {
+	    if (gf_timeexpired < EXIT_FAST) {
+		stats->cmd.errs++;
+	    }
+	    return -1;
+	}	
+#endif /* IMAP_CAPABILITY && ! SOCK_SSL */
+
+	next_domain = rangeNext(&stats->domainRange, stats->lastDomain);
 	stats->lastDomain = next_domain;
         next_login = rangeNext(&stats->loginRange, stats->lastLogin);
 	stats->lastLogin = next_login;
@@ -759,17 +889,51 @@ imapRetrRecentMessages(ptcx_t ptcx,
     char command[MAX_COMMAND_LEN];
     int numBytes = 0;
     long msgSize = 0;
+#if 0
     char *msgBuffer = NULL;
     int msgBufferSize = 0;
+#endif 
     int	rc;
     pish_stats_t	*stats = (pish_stats_t *)ptimer->data;
     pish_command_t	*pish = (pish_command_t *)cmd->data;
+    int leave_on_server;
+
+    char *p, *endp;
+
+    char newmsgs[MAX_RESPONSE_LEN];
+
+    /* if we're told to leave mail on server, do not delete the message */
+    leave_on_server = (int)sample(pish->leaveMailOnServerDist);
 
     if ( numRecent == 0 )
 	return 0;
 
-    /* retr the msgs */
-    for (i = numExists - numRecent + 1; i <= numExists; i++) {
+	/* This actually finds the new messages. */
+    sprintf(command, "%d SEARCH (NEW)" CRLF, ++pIMAP->seq_num);
+    event_start(ptcx, &stats->cmd);
+    rc = doImapCommandResponse(ptcx, sock, pIMAP->seq_num,
+			       command, pIMAP->resp_buffer, 
+			       sizeof(pIMAP->resp_buffer));
+    event_stop (ptcx, &stats->cmd);
+    if (rc == -1)
+	return -1;
+    if((p = strstr(pIMAP->resp_buffer, "SEARCH")) == NULL)
+    {
+	fprintf(stderr, "IMAP: invalid SEARCH response: %s\n",
+		 pIMAP->resp_buffer);
+	return -1;
+    }
+    p += strlen("SEARCH");
+    
+    if((endp = strchr(p, '\n')) != NULL)
+	*endp = 0;
+
+    /* response buffer overwritten by new IMAP commands, so save a copy */
+    strcpy(newmsgs, p);
+    p = newmsgs;
+    
+    for(i = strtol(p, &p, 0); i != 0; i = strtol(p, &p, 0))
+    {
 	/* bail if time is up */
 	if (gf_timeexpired >= EXIT_SOON) {
 	    D_PRINTF(debugfile,"Time expired while reading messages\n");
@@ -781,7 +945,8 @@ imapRetrRecentMessages(ptcx_t ptcx,
 		++pIMAP->seq_num, i, CRLF);
 	event_start(ptcx, &stats->cmd);
 	rc = doImapCommandResponse(ptcx, sock, pIMAP->seq_num,
-				   command, pIMAP->resp_buffer, sizeof(pIMAP->resp_buffer));
+				   command, pIMAP->resp_buffer, 
+				   sizeof(pIMAP->resp_buffer));
 	event_stop (ptcx, &stats->cmd);
 	if (rc == -1) {
 	    if (gf_timeexpired >= EXIT_FAST) break; /* dont fall into error */
@@ -790,22 +955,28 @@ imapRetrRecentMessages(ptcx_t ptcx,
 
 	/* parse the SIZE out of buffer */
 	if (!sscanf(pIMAP->resp_buffer, "* %*d FETCH (RFC822.SIZE %ld)", &msgSize)) {
-	    returnerr(debugfile, "IMAP4 Error parsing size of msg from response, %s: %s\n",
+	    returnerr(debugfile, 
+		      "IMAP4 Error parsing size of msg from response, %s: %s\n",
 		      pIMAP->resp_buffer, neterrstr());
 	    return -1;
 	}
-
-	/* malloc buffer for msg, with room for control (flags) info */
+	
+	/* Sean O'Rourke: we used to allocate a message-size buffer here.  Don't
+           do that, since we don't care about message contents,
+           anyways. */
+#if 0
 	msgBufferSize = msgSize+1024;
-	msgBuffer = (char *) mycalloc(msgBufferSize);
-
+	msgBuffer = (char *) xcalloc(msgBufferSize);
+#endif /* 0 */
 	/* FETCH the msg */
 	sprintf(command, "%d FETCH %d (RFC822)%s", ++pIMAP->seq_num, i, CRLF);
 	event_start(ptcx, &stats->msgread);
 	numBytes = sendCommand(ptcx, sock, command);
 	if (numBytes == -1) {
 	    event_stop(ptcx, &stats->msgread);
-	    myfree(msgBuffer);
+#if 0
+	    xfree(msgBuffer);
+#endif
 	    if (gf_timeexpired >= EXIT_FAST) break; /* dont fall into error */
 	    stats->msgread.errs++;
 	    returnerr(debugfile, "IMAP4 Error sending [%s] command: %s\n",
@@ -814,11 +985,24 @@ imapRetrRecentMessages(ptcx_t ptcx,
 	}
 
 	/* read msg */
+#if 0
 	numBytes = retrImapMsg(ptcx, sock, pIMAP->seq_num,
 			       msgBuffer, msgSize, msgBufferSize);
+#else
+	if (pish->genChecksum == CS_NONE)
+	    numBytes = retrImapMsg(ptcx, sock, pIMAP->seq_num, msgSize);
+	else {
+	    char term[20];
+	    /* XXX: is this actually what's done? */
+	    snprintf(term, sizeof(term), CRLF "%d ", pIMAP->seq_num);
+	    numBytes = cs_retrieve(ptcx, sock, CRLF CRLF, term);
+	}
+#endif
 	event_stop(ptcx, &stats->msgread);
-	if (numBytes <= 0) {
-	    myfree(msgBuffer);
+	if (numBytes < 0) {
+#if 0
+	    xfree(msgBuffer);
+#endif
 	    if (gf_timeexpired >= EXIT_FAST) break; /* dont fall into error */
 	    stats->msgread.errs++;
 	    returnerr(debugfile, "IMAP4 Error retrieving msg %d: %s\n",
@@ -826,7 +1010,24 @@ imapRetrRecentMessages(ptcx_t ptcx,
 	    return -1;
 	}
 
-	myfree(msgBuffer);
+	T_PRINTF(ptcx->logfile, command,
+		 strlen (command), "IMAP4 SendCommand");
+
+#if 0	
+	xfree(msgBuffer);
+#endif
+
+#ifdef MSG_READ_TIME
+	/* wait while "user" reads message */
+	if (pish->msgReadTime) {
+	    int read_time = sample(pish->msgReadTime);
+	    if (read_time > 0) {
+		event_start(ptcx, &ptimer->idle);
+		MS_idle(ptcx, read_time);
+		event_stop(ptcx, &ptimer->idle);
+	    }
+	}
+#endif /* MSG_READ_TIME */
 
 	/* send a NOOP */
 	sprintf(command, "%d NOOP%s",++pIMAP->seq_num, CRLF);
@@ -842,7 +1043,8 @@ imapRetrRecentMessages(ptcx_t ptcx,
 
 	/* if we're told to leave mail on server, do not delete the message */
         if (!(pish->flags & leaveMailUnseen)) {
-	    if (pish->flags & leaveMailOnServer) { /* just mark seen */
+	    if (pish->flags & leaveMailOnServer && /* just mark seen */
+		(leave_on_server > 0)) {
 					/* mark the msg \seen needed??? */
 		sprintf(command, "%d STORE %d +FLAGS (\\SEEN)%s",
 			++pIMAP->seq_num,i, CRLF);
@@ -866,7 +1068,8 @@ imapRetrRecentMessages(ptcx_t ptcx,
 	}
     }
 
-    if (!(pish->flags & leaveMailOnServer)) { /* expunge if we are deleting */
+    if (!(pish->flags & leaveMailOnServer) || /* expunge if we are deleting */
+	 (leave_on_server == 0)) {
 	/* EXPUNGE \deleted messages */
 	sprintf(command, "%d EXPUNGE%s", ++pIMAP->seq_num, CRLF);
 	event_start(ptcx, &stats->cmd);
@@ -918,17 +1121,8 @@ imapComputeSearchSchedule(ptcx_t ptcx, mail_command_t *cmd, int **searchSchedule
 
     D_PRINTF(debugfile,"num searches to perform=%d\n", numSearches);
 	
-    /* malloc the searchSchedule array */
-    *searchSchedule = (int *) mycalloc(numSearches*sizeof(int));
-    D_PRINTF(debugfile,"searchSchedule=%ld\n", *searchSchedule);
+    *searchSchedule = (int *) xcalloc(numSearches*sizeof(int));
 
-    if (!*searchSchedule) {
-	returnerr(debugfile, "IMAP4 Error, could not malloc searchSchedule: %s\n",neterrstr());
-	return 0;
-    } 
-
-    memset(*searchSchedule, 0, numSearches*sizeof(int));
-	
     /* fill in the schedule, ordering the array */
     for (i = 0; i < numSearches; i++) {
 	ran = (RANDOM() % (gt_testtime <= 8*60*60 ? 8*60*60 : gt_testtime));

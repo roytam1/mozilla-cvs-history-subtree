@@ -20,6 +20,8 @@
  * 
  * Contributor(s):	Dan Christian <robodan@netscape.com>
  *			Marcel DePaolis <marcel@netcape.com>
+ *			Sean O'Rourke <sean@sendmail.com>
+ *			Thom O'Connor <thom@sendmail.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License Version 2 or later (the "GPL"), in
@@ -36,6 +38,10 @@
 
 #include "bench.h"
 #include "http-util.h"
+#include "xalloc.h"
+
+/* flags definitions */
+#define leaveMailOnServer 0x01
 
 /*
   these are protocol dependent timers
@@ -81,7 +87,7 @@ typedef struct wmap_command {
     char *	msgdata;	/* cache the file in mem */
 
     /* flag to leave mail on server (dont delete read mail) */
-    int 	leaveMailOnServer;
+    int 	leaveMailOnServerDist;
 
     /* WMAP client http header */
     char *	wmapClientHeader;	/* http header for requests w/ %s=referhost %s=host */
@@ -141,8 +147,7 @@ int
 WmapParseStart(pmail_command_t cmd, char *line, param_list_t *defparm)
 {
     param_list_t	*pp;
-    wmap_command_t	*wmap = (wmap_command_t *)mycalloc
-	(sizeof (wmap_command_t));
+    wmap_command_t	*wmap = XCALLOC(wmap_command_t);
     cmd->data = wmap;
 
     cmd->numLoops = 1;		/* default 1 downloads */
@@ -260,9 +265,9 @@ WmapParseNameValue(pmail_command_t cmd, char *name, char *tok)
     if (cmdParseNameValue(cmd, name, tok))/* generic stuff */
 	;				/* done */
     else if (strcmp(name, "server") == 0)
-	wmap->hostInfo.hostName = mystrdup(tok);
+	wmap->hostInfo.hostName = xstrdup(tok);
     else if (strcmp(name, "loginformat") == 0)
-	wmap->loginFormat = mystrdup(tok);
+	wmap->loginFormat = xstrdup(tok);
     else if (strcmp(name, "firstlogin") == 0)
 	wmap->loginRange.first = atoi(tok);
     else if (strcmp(name, "numlogins") == 0)
@@ -276,9 +281,9 @@ WmapParseNameValue(pmail_command_t cmd, char *name, char *tok)
     else if (strcmp(name, "sequentialdomains") == 0)
 	wmap->domainRange.sequential = atoi(tok);
     else if (strcmp(name, "smtpmailfrom") == 0)
-	wmap->smtpMailFrom = mystrdup(tok);
+	wmap->smtpMailFrom = xstrdup(tok);
     else if (strcmp(name, "addressformat") == 0)
-	wmap->addressFormat = mystrdup(tok);
+	wmap->addressFormat = xstrdup(tok);
     else if (strcmp(name, "firstaddress") == 0)
 	wmap->addressRange.first = atoi(tok);
     else if (strcmp(name, "numaddresses") == 0)
@@ -286,7 +291,7 @@ WmapParseNameValue(pmail_command_t cmd, char *name, char *tok)
     else if (strcmp(name, "sequentialaddresses") == 0)
 	wmap->addressRange.sequential = atoi(tok);
     else if (strcmp(name, "file") == 0)
-	wmap->filename = mystrdup(tok);
+	wmap->filename = xstrdup(tok);
     else if (strcmp(name, "numrecips") == 0)
 	wmap->numRecipients = atoi(tok);
     else if (strcmp(name, "numrecipients") == 0)
@@ -294,17 +299,17 @@ WmapParseNameValue(pmail_command_t cmd, char *name, char *tok)
     else if (strcmp(name, "portnum") == 0)
 	wmap->hostInfo.portNum = atoi(tok);
     else if (strcmp(name, "passwdformat") == 0)
-	wmap->passwdFormat = mystrdup(tok);
+	wmap->passwdFormat = xstrdup(tok);
     else if (strcmp(name, "leavemailonserver") == 0)
-	wmap->leaveMailOnServer = atoi(tok);
+	wmap->leaveMailOnServerDist = atoi(tok);
     else if (strcmp(name, "wmapclientheader") == 0)
-	wmap->wmapClientHeader = mystrdup(tok);
+	wmap->wmapClientHeader = xstrdup(tok);
     else if (strcmp(name, "wmapbannercmds") == 0)
 	stringListAdd(&wmap->wmapBannerCmds, tok);
     else if (strcmp(name, "wmaplogincmd") == 0)
-	wmap->wmapLoginCmd = mystrdup(tok);
+	wmap->wmapLoginCmd = xstrdup(tok);
     else if (strcmp(name, "wmaplogindata") == 0)
-	wmap->wmapLoginData = mystrdup(tok);
+	wmap->wmapLoginData = xstrdup(tok);
     else if (strcmp(name, "wmapinboxcmds") == 0)
 	stringListAdd(&wmap->wmapInboxCmds, tok);
     else if (strcmp(name, "wmapcheckcmds") == 0)
@@ -328,7 +333,7 @@ WmapStatsInit(mail_command_t *cmd, cmd_stats_t *p, int procNum, int threadNum)
     assert (NULL != p);
 
     if (!p->data) {			/* create it  */
-	p->data = mycalloc(sizeof (wmap_stats_t));
+	p->data = XCALLOC(wmap_stats_t);
     } else {				/* zero it */
 	memset(p->data, 0, sizeof (wmap_stats_t));
     }
@@ -590,15 +595,15 @@ wmapLogin(
 	return -1;
     }
     if (me->redirectURL) {		/* clean out old values */
-	free(me->redirectURL);
+	xfree(me->redirectURL);
 	me->redirectURL = NULL;
     }
     if (me->sessionID) {
-	free(me->sessionID);
+	xfree(me->sessionID);
 	me->sessionID = NULL;
     }
     if (me->msgList) {
-	free(me->msgList);
+	xfree(me->msgList);
 	me->msgList = NULL;
     }
 
@@ -616,7 +621,7 @@ wmapLogin(
     }
     /* skip host */
     cp = strchr(cp, '/');
-    me->redirectURL = mystrdup (cp);
+    me->redirectURL = xstrdup (cp);
     assert (NULL != me->redirectURL);
     cp = strchr(me->redirectURL, '\r');
     *cp = '\0';
@@ -635,7 +640,7 @@ wmapLogin(
 	return -1;
     }
 
-    me->sessionID = mystrdup(content);
+    me->sessionID = xstrdup(content);
     assert (NULL != me->sessionID);
 
     D_PRINTF(stderr, "sid=%s\n", me->sessionID);
@@ -759,7 +764,7 @@ wmapLogout(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, doWMAP_state_t
 void *
 doWmapStart(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 {
-    doWMAP_state_t	*me = (doWMAP_state_t *)mycalloc (sizeof (doWMAP_state_t));
+    doWMAP_state_t	*me = XCALLOC(doWMAP_state_t);
     /*wmap_stats_t	*stats = (wmap_stats_t *)ptimer->data;*/
     /*wmap_command_t	*wmap = (wmap_command_t *)cmd->data;*/
     int			rc;
@@ -834,9 +839,8 @@ GetMessageNumbers (
 	    D_PRINTF (stderr, "GetMessageNumber() length=%d\n", me->numMsgs);
 	    if (me->numMsgs > 0) {
 		if (me->msgList)
-		    free (me->msgList);
-		me->msgList = (int *)mycalloc (me->numMsgs * sizeof (int));
-		assert (NULL != me->msgList);
+		    xfree (me->msgList);
+		me->msgList = (int *)xcalloc (me->numMsgs * sizeof (int));
 	    }
 	    *findStr = MSG_ENTRY;	/* now search for each message */
 	} else {			/* got a message string */
@@ -987,14 +991,14 @@ doWmapExit(ptcx_t ptcx, mail_command_t *cmd, doWMAP_state_t *me)
     }
 
     if (me->redirectURL) {
-	free(me->redirectURL);
+	xfree(me->redirectURL);
     }
     if (me->sessionID) {
-	free(me->sessionID);
+	xfree(me->sessionID);
     }
     if (me->msgList) {
-	free (me->msgList);
+	xfree (me->msgList);
     }
 
-    myfree(me);
+    xfree(me);
 }  

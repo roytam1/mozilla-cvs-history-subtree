@@ -21,6 +21,7 @@
  * Contributor(s):	Dan Christian <robodan@netscape.com>
  *			Marcel DePaolis <marcel@netcape.com>
  *			Mike Blakely
+ *			Sean O'Rourke <sean@sendmail.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License Version 2 or later (the "GPL"), in
@@ -37,57 +38,7 @@
   bench.c has all the OS independent utilities.
 */
 #include "bench.h"
-
-/* allocate memory and exit if out of memory */
-void *
-mymalloc(size_t size)
-{
-    void *ptr;
-
-    ptr = malloc(size);
-    if (ptr == NULL)
-	errexit(stderr, "Call to malloc(%d) failed\n", size);
-    return(ptr);
-}
-
-void *
-mycalloc(size_t size)
-{
-    void *retp;
-
-    if ((retp = mymalloc(size)) == NULL)
-	return NULL;
-    memset(retp, 0, size);
-    return(retp);
-}
-
-/* allocate memory and exit if out of memory */
-void *
-myrealloc(void *ptr, size_t size)
-{
-    ptr = realloc(ptr, size);
-    if (ptr == NULL)
-	errexit(stderr, "Call to realloc(%d, %d) failed\n", ptr, size);
-    return(ptr);
-}
-
-void
-myfree(void *ptr)
-{
-    free(ptr);
-}
-
-char *
-mystrdup(const char *cp)
-{
-    char *retcp;
-
-    if ((retcp = (char *)mymalloc(strlen(cp)+1)) == NULL)
-	return NULL;
-    strcpy(retcp, cp);
-
-    return retcp;
-}
+#include "checksum.h"
 
 /*
  * waitReadWrite(int fd, int flags)
@@ -105,21 +56,20 @@ mystrdup(const char *cp)
 #define	CHECK_ALL	0x3
 #define CHECK_FOREVER	0x4
 
-#define waitReadable(fd)	waitReadWrite((fd),CHECK_READ)
-#define waitWriteable(fd)	waitReadWrite((fd),CHECK_WRITE)
-#define waitWriteableForever(fd) waitReadWrite((fd),CHECK_WRITE | CHECK_FOREVER)
+#define waitReadable(fd, t)	waitReadWrite((fd), (t), CHECK_READ)
+#define waitWriteable(fd, t)	waitReadWrite((fd), (t), CHECK_WRITE)
+#define waitWriteableForever(fd) waitReadWrite((fd), -1, CHECK_WRITE | CHECK_FOREVER)
 
 /* Return 1 if bytes readable; 0 if error or time up */
 int
-waitReadWrite(int fd, int flags)
+waitReadWrite(SOCKET s, int timeout, int flags)
 {
 #ifdef _WIN32
     return 0;
 #else
+    int fd = SOCK_FD(s);
     struct pollfd pfd;
-    int timeleft;
     int	ret;
-    int	timeouts = 0;
 
     pfd.fd = fd;
     pfd.events = POLLHUP;
@@ -131,41 +81,28 @@ waitReadWrite(int fd, int flags)
     } else if ((flags & CHECK_ALL) == CHECK_RW) {
 	pfd.events |= (POLLIN | POLLOUT);
     }
-    for (;;) {
-	if (flags & CHECK_FOREVER) {	/* for writing status out */
-	    timeleft = 60;
-	} else {
-	    if (gf_timeexpired >= EXIT_FAST) {
-		D_PRINTF(stderr, "waitReadWrite gf_timeexpired=%d\n",
-			 gf_timeexpired);
-		return 0;
-	    }
-	    timeleft = 5;
+
+    if (flags & CHECK_FOREVER) {
+	timeout = 0;		/* truly forever */
+    } else {
+	if (gf_timeexpired >= EXIT_FAST) {
+	    D_PRINTF(stderr, "waitReadWrite gf_timeexpired=%d\n",
+		     gf_timeexpired);
+	    return 0;
 	}
-
-	/*fprintf(stderr, "poll(%d,%d)\n", fd, timeleft*1000);*/
-	ret = poll(&pfd, 1, timeleft*1000);
-	/*fprintf(stderr, "poll(%d,%d)=%d\n", fd, timeleft*1000, ret);*/
-
-	if (ret == 0) {
-	    if (!(flags & CHECK_FOREVER) && (++timeouts >= 12)) {
-		return 0;		/* time out after 60sec total */
-	    }
-	    continue;
-	}
-
-	if (ret < 0) {
-	    if (errno == EAGAIN || errno == EINTR)
-		continue;
-	    D_PRINTF(stderr, "waitReadWrite error ret=%d\n", ret);
-	    break;
-	}
-
-	return 1;
     }
 
-    /* error */
-    return 0;
+ try_again:
+    ret = poll(&pfd, 1, timeout);
+
+    if (ret < 0) {
+	if (errno == EAGAIN || errno == EINTR)
+	    goto try_again;
+	D_PRINTF(stderr, "waitReadWrite error ret=%d\n", ret);
+	ret = 0;
+    }
+
+    return ret;
 #endif
 }
 
@@ -176,14 +113,14 @@ retryRead(ptcx_t ptcx, SOCKET sock, char *buf, int count)
     int bytesread = 0;
 
     D_PRINTF(debugfile, "retryRead(%d, %d (gf_timeexpired=%d))\n",
-	     sock, count, gf_timeexpired);
+	     SOCK_FD(sock), count, gf_timeexpired);
     while (count) {
 	if (gf_timeexpired >= EXIT_FAST) {
 	    D_PRINTF (debugfile, "retryRead gf_timeexpired\n");
 	    strcpy (ptcx->errMsg, "retryRead:TIMEOUT");
 	    break;
 	}
-	if (0 == waitReadable (sock)) {
+	if (0 == waitReadable (sock, ptcx->net_timeout)) {
 	    D_PRINTF (debugfile, "retryRead waitReadable time/error\n");
 	    strcpy (ptcx->errMsg, "waitReadable TIMEOUT<retryRead");
 	    break;
@@ -195,22 +132,27 @@ retryRead(ptcx_t ptcx, SOCKET sock, char *buf, int count)
 	    if (errno == EAGAIN) {
 		if (bytesread > 0)
 		    break; /* return what we got so far */
-		if (waitReadable(sock)) {
+		if (waitReadable(sock, ptcx->net_timeout)) {
 		    continue;
 		}
 	    }
 	    if (bytesread == 0) {
 		bytesread = -1;
 	    }
-	    sprintf (ptcx->errMsg, "retryRead(sock=%d) IO error", sock);
+	    sprintf (ptcx->errMsg, "retryRead(sock=%d) IO error",
+		     SOCK_FD(sock));
 	    break;
-	}		    
+	}
+	if(ret == 0 && errno == EAGAIN)
+	    continue;
+	    
 	bytesread += ret;
 	buf += ret;
 	count -= ret;
  	break; /* return any good bytes */
     }
-    D_PRINTF(debugfile, "retryRead(%d, %d)=%d\n", sock, count, bytesread);
+    D_PRINTF(debugfile, "retryRead(%d, %d)=%d\n", SOCK_FD(sock),
+	     count, bytesread);
     return bytesread;
 }
 
@@ -220,7 +162,7 @@ retryWrite(ptcx_t ptcx, SOCKET sock, char *buf, int count)
     int ret;
     int byteswritten = 0;
 
-    D_PRINTF(debugfile, "retryWrite(%d, %d)...\n", sock, count);
+    D_PRINTF(debugfile, "retryWrite(%d, %d)...\n", SOCK_FD(sock), count);
     while (count) {
 	if (gf_timeexpired >= EXIT_FAST) {
 	    D_PRINTF (debugfile, "retryWrite gf_timeexpired\n");
@@ -232,7 +174,7 @@ retryWrite(ptcx_t ptcx, SOCKET sock, char *buf, int count)
 	    if (errno == EINTR)
 		continue;
 	    if (errno == EAGAIN) {
-		if (waitWriteable(sock)) {
+		if (waitWriteable(sock, ptcx->net_timeout)) {
 		    continue;
 		}
 	    }
@@ -240,14 +182,16 @@ retryWrite(ptcx_t ptcx, SOCKET sock, char *buf, int count)
 		byteswritten = -1;
 	    }
 	    sprintf (ptcx->errMsg,
-		     "retryWrite(sock=%d, n=%d) IO error", sock, count);
+		     "retryWrite(sock=%d, n=%d) IO error",
+		     SOCK_FD(sock), count);
 	    break;
 	}		    
 	byteswritten += ret;
 	buf += ret;
 	count -= ret;
     }
-    D_PRINTF(debugfile, "retryWrite(%d, ?)=%d\n", sock, byteswritten);
+    D_PRINTF(debugfile, "retryWrite(%d, %d)=%d\n",
+	SOCK_FD(sock), count, byteswritten);
     return byteswritten;
 }
 
@@ -369,9 +313,9 @@ sendOutput(int fd, char *string)
 	    if (errno == EINTR)
 		continue;
             if (errno == EAGAIN) {
-		if (waitWriteableForever(fd))
-		    continue;
-		else
+/*  		if (waitWriteableForever(fd)) */
+/*  		    continue; */
+/*  		else */
 		    returnerr(stderr,
 			      "sendOutput(%d) - Got EAGAIN and fd not ready\n",
 			      fd);	/* has this ever happened? die??? */
@@ -381,35 +325,25 @@ sendOutput(int fd, char *string)
 
 	sentbytes += sent;
 
-#if 0
-	if (gf_timeexpired >= EXIT_FAST) {
-	    D_PRINTF(stderr,"sendOutput() Time expired.\n");
-	    break;
-	}
-#endif
     }
 
     return sentbytes;
 }
 
-/* read from socket until we find <CRLF>.<CRLF> */
+/* read from socket until we find <CRLF>.<CRLF>, throwing it away as
+   we go. */
 int
-retrMsg(ptcx_t ptcx, char *buffer, int maxBytes, SOCKET sock)
+retrMsg(ptcx_t ptcx, SOCKET sock)
 {    
     int totalbytesread = 0;
     int bytesread;
     int sz;
     char garbage[10000], *sp;
+    
+    sp = garbage;
+    sz = sizeof (garbage)-1;
 
-    if (buffer) {
-	sp = buffer;
-	sz = maxBytes-1;
-    } else {
-	sp = garbage;
-	sz = sizeof (garbage)-1;
-    }
-
-    while (!buffer || (totalbytesread < maxBytes)) {
+    while (1) {
 	if (gf_timeexpired >= EXIT_FAST) {
 	    D_PRINTF(debugfile,"Time expired while reading messages - in retrMsg\n");
 	    break;
@@ -439,7 +373,7 @@ retrMsg(ptcx_t ptcx, char *buffer, int maxBytes, SOCKET sock)
 	    return -1;
 	}
 
-	if (!buffer && (totalbytesread > 5)) { /* reset our scratch buffer */
+	if (totalbytesread > 5) { /* reset our scratch buffer */
 	    int i;
 	    char *from, *to;
 					/* shuffle last 5 bytes to start */
@@ -450,7 +384,6 @@ retrMsg(ptcx_t ptcx, char *buffer, int maxBytes, SOCKET sock)
 	    totalbytesread = 5;
 	}
     }
-
 
     return totalbytesread;
 }

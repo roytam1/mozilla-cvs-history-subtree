@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 # The contents of this file are subject to the Netscape Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
@@ -49,6 +49,9 @@ print "Copyright (c) Netscape Communications Corp. 1997-2000\n";
 
 # this parses the command line and config file
 do 'args.pl'|| die "$@\n";
+sub die_system;
+sub warn_system;
+
 parseArgs();			# parse command line
 
 {				# get unique date string
@@ -153,7 +156,7 @@ if ($params{CLIENTCOUNT}) {
     my $softcli = 0;		# how many can we play with
 
     foreach $section (@workload) { # see which are already fixed
-	next unless ($section->{sectionTitle} =~ /CLIENT/o);
+	next unless ($section->{sectionTitle} =~ /CLIENT/i);
 	unless (($section->{PROCESSES}) && ($section->{THREADS})) {
 	    $softcli++;
 	    next;
@@ -175,7 +178,7 @@ if ($params{CLIENTCOUNT}) {
 	    print "Allocating $todo clients over $softcli groups\n";
     if ($softcli) {
 	foreach $section (@workload) {
-	    next unless ($section->{sectionTitle} =~ /CLIENT/o);
+	    next unless ($section->{sectionTitle} =~ /CLIENT/i);
 	    next if (($section->{PROCESSES}) && ($section->{THREADS}));
 	    my $slist = $section->{sectionParams};
 	    $slist =~ s/HOSTS=\s*//; # strip off initial bit
@@ -199,18 +202,41 @@ if ($params{CLIENTCOUNT}) {
 } else {			# figure out the client count
     my $cnt = 0;
     foreach $section (@workload) { # see which are already fixed
-	next unless ($section->{sectionTitle} =~ /CLIENT/o);
-	next unless ($section->{PROCESSES});
+	next unless ($section->{sectionTitle} =~ /CLIENT/i);
+#  	next unless ($section->{PROCESSES});
+	next unless $section->{CLIENTS};
 
+	my $clients = $section->{CLIENTS};
 	my $slist = $section->{sectionParams};
 	$slist =~ s/HOSTS=\s*//; # strip off initial bit
 	my @hlist = split /[\s,]/, $slist;
-	my $hcnt = (1 + $#hlist);
+	my $hcnt = scalar @hlist;
+	
+	$clients /= $hcnt;
+	my $maxp = ($section->{MAXPROCESSES} || 10000);
+	my $maxt = ($section->{MAXTHREADS} || 10000);
+	if ($maxp * $maxt < $clients) {
+	    die <<EOS;
+Too many clients for hosts $section->{sectionParams}:
+clients 	= $section->{CLIENTS}
+maxThreads 	= $section->{MAXTHREADS}
+maxProcesses 	= $section->{MAXPROCESSES}
+EOS
+	}
+	my ($nt, $np);
+	if ($maxt >= $clients) {
+	    $nt = $clients;
+	    $np = 1;
+	} else {
+	    $np = int (($clients / $maxt) + (($clients % $maxt) ? 1 : 0));
+	    $nt = int ($clients / $np);
+	}
 
-	# subtract fixed entries
-	my $tcount = ($section->{THREADS}) ? $section->{THREADS} : 1;
-	$cnt += $tcount * $section->{PROCESSES} * $hcnt;
-	$clientProcCount += $section->{PROCESSES} * $hcnt; # total processes
+	$section->{THREADS} = $nt;
+	$section->{PROCESSES} = $np;
+#  	$section->{CLIENTS} = $np * $nt * $hcnt;
+	$cnt += $nt * $np * $hcnt;
+	$clientProcCount += $np * $hcnt; # total processes
     }
     $params{CLIENTCOUNT} = $cnt;
     die "No clients configured!\n" unless ($cnt > 0);
@@ -258,6 +284,17 @@ writeWorkloadFile ("$resultdir/work.wld", \@workload,
 # Write the complete inclusive version
 writeWorkloadFile ("$resultdir/all.wld", \@workload);
 
+# SEAN: copy the wld.in file to the result directory for later
+# statistics gathering.
+my $wld = $params{WORKLOAD};
+if (-f "$wld.in") {
+    die_system "cp $wld.in $resultdir/wld.in";
+} else {
+    unless ($wld !~ /\.preload_(new|old|touch)$/) {
+	warn "Can't find wld.in file for `$wld'\n" unless -f "$wld.in";
+    }
+}
+
 setConfigDefaults();		# pick up any missing defaults
 
 unless ($#protocolsAll > 0) {
@@ -277,7 +314,7 @@ if ($params{NT}) {		# single client on local host
     pathprint ("Starting clients (errors logged to $resultdir/stderr)\n");
 
     foreach $section (@workload) {
-	next unless ($section->{sectionTitle} =~ /CLIENT/o);
+	next unless ($section->{sectionTitle} =~ /CLIENT/i);
 	my $tcount = ($section->{THREADS}) ? $section->{THREADS} : 1;
 
 
@@ -317,7 +354,7 @@ if ($params{NT}) {		# single client on local host
 	    || die "Couldnt open $stdout for output\n";
 
 	chdir $params{TEMPDIR} || die "Could not cd $params{TEMPDIR}: $!\n";
-	system $preCmd;
+	warn_system $preCmd;
 	close STDOUT;
 	open STDOUT, ">&SAVEOUT";
 	printf "Test done.\n";
@@ -328,7 +365,7 @@ if ($params{NT}) {		# single client on local host
 } else {			# not NT (forking works)
 
     foreach $section (@workload) {	# do pre run commands
-	next unless ($section->{sectionTitle} =~ /PRETEST/o);
+	next unless ($section->{sectionTitle} =~ /PRETEST/i);
 	unless ($section->{COMMAND}) {
 	    print "PreTest with no Command for $section->{sectionParams}\n";
 	    next;
@@ -361,7 +398,7 @@ if ($params{NT}) {		# single client on local host
     }
 
     foreach $section (@workload) { # start monitors
-	next unless ($section->{sectionTitle} =~ /MONITOR/o);
+	next unless ($section->{sectionTitle} =~ /MONITOR/i);
 
 	my $slist = $section->{sectionParams};
 	$slist =~ s/HOSTS=\s*//; # strip off initial bit
@@ -395,7 +432,7 @@ if ($params{NT}) {		# single client on local host
 
     print "Starting clients (errors logged to $resultdir/stderr)\n";
     foreach $section (@workload) {
-	next unless ($section->{sectionTitle} =~ /CLIENT/o);
+	next unless ($section->{sectionTitle} =~ /CLIENT/i);
 	next unless ($section->{PROCESSES}); # unused client
 
 	my $slist = $section->{sectionParams};
@@ -411,6 +448,7 @@ if ($params{NT}) {		# single client on local host
 	}
 	my $preCmd = "./" . (($section->{COMMAND})
 			     ? $section->{COMMAND} : $params{CLIENTCOMMAND});
+	$preCmd .= " -e" unless ($params{NOEVENTS});
 	$preCmd .= " -s -t $params{TIME} -f $params{FREQUENCY}";
 	$preCmd .= " -d" if ($params{DEBUG});
 	$preCmd .= " -r" if ($params{TELEMETRY});
@@ -430,23 +468,38 @@ if ($params{NT}) {		# single client on local host
 	    $preCmd .= " -M $n";
 	}
 	$preCmd = "cd $tempdir; " . $preCmd if ($tempdir);
-	$preCmd .= " -n $pcount";
 	$preCmd =~ s!/!\\!g if ($section->{ARCH} eq "NT4.0");
 	$preCmd =~ s/;/&&/g if ($section->{ARCH} eq "NT4.0");
 
+        my $total_clients = $section->{CLIENTS};
+	my $residue = $total_clients - ($tcount * $pcount);
 	foreach $cli (split /[\s,]/, $slist) {
 	    my $stdout = getClientFilename ($cli, $section);
 	    my $myCmd = $preCmd;
  	    $myCmd .= ($params{USEGROUPS} && $section->{GROUP})
 		? " -H $section->{GROUP}" : " -H $cli";
+	    my $foo = ($params{USEGROUPS} && $section->{GROUP})
+		? $section->{GROUP} : undef;
 
 	    if ($tcount) {
-		$myCmd .= " -N $tcount";
-		printf "Starting %d x %d on $cli\n", $pcount, $tcount;
-		$totalProcs += $pcount * $tcount;
+		my $nt = $tcount;
+		if ($residue > 0) {
+		    ++$nt;
+		    $residue -= $pcount;
+		}
+		$myCmd .= " -n $pcount -N $nt";
+		printf "Starting $pcount x $nt on $cli%s\n", 
+		    $foo?" (group = $foo)":'';
+		$totalProcs += $pcount * $nt;
 	    } else {
-		printf "Starting %d processes on $cli\n", $pcount;
-		$totalProcs += $pcount;
+		my $np = $pcount;
+		if ($residue > 0) {
+		    ++$np;
+		    --$residue;
+		}
+		$myCmd .= " -n $np";
+		printf "Starting $np processes on $foo\n";
+		$totalProcs += $np;
 	    }
 
 	    print STDERR "$cli: $myCmd\n"; # log the actual command
@@ -485,7 +538,7 @@ if ($params{NT}) {		# single client on local host
     }
 
     foreach $section (@workload) {	# do post test commands
-	next unless ($section->{sectionTitle} =~ /POSTTEST/o);
+	next unless ($section->{sectionTitle} =~ /POSTTEST/i);
 	unless ($section->{COMMAND}) {
 	    print "PostTest with no command for $section->{sectionParams}\n";
 	    next;

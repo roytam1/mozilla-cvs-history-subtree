@@ -1,3 +1,22 @@
+2005-02-19  Dan Christian  <robodan@idiom.com>
+
+	* Merge big Sendmail patch see ChangeLog-Sendmail for details
+
+	* src/bench.h (VERSION): Start working toward version 5.0 (now 4.9)
+
+2004-09-07  Dan Christian  <robodan@idiom.com>
+
+	* data/*.msg: Updated with more realistic messages
+
+	* bin/args.pl: Really fix doc link to be relative
+
+	* src/smtp.c (sendSMTPLoop): Handle file lists (random selection)
+	(sendFile): New, send file with option offset and head/tail
+	(SmtpFilePrep): Split a glob pattern to a list
+	(SmtpFileInit): New, split out initial file scan
+
+	* src/bench.c (rangeNext): Get to last value in a random range
+
 2004-06-14  Dan Christian  <robodan@idiom.com>
 
 	* Makefile (VERSION): Bump version to 4.3

@@ -18,6 +18,7 @@
 # 
 # Contributor(s):	Dan Christian <robodan@netscape.com>
 #			Marcel DePaolis <marcel@netcape.com>
+#			Sean O'Rourke <sean@sendmail.com>
 # 
 # Alternatively, the contents of this file may be used under the
 # terms of the GNU Public License (the "GPL"), in which case the
@@ -34,6 +35,10 @@
 # This file deals with the graphs data only
 # Interfaces to gnuplot to generate gifs for HTML inclusion.
 
+do 'util.pl';
+sub warn_system;
+sub die_system;
+
 # Type of images to hold plots (e.g. png, gif, jpeg, svg, tiff, pbm, etc)
 unless ($params{IMAGETYPE}) {
     # Should probe gnuplot and see if it can generate one of:
@@ -46,28 +51,11 @@ unless ($params{IMAGETYPE}) {
 	($params{DEBUG}) &&
 	    print "Asking gnuplot what output types it supports\n";
 
-	my $infile = "$tmpbase/setterm.gpt";
-	open (NEW, ">$infile") ||
-	    die "genPlot: Could not open output $infile: $!";
-	print NEW "set terminal";
-	close (NEW);
-	# Redirect STDIN, and STDERR
-	open SAVEIN, "<STDIN";
-	open STDIN, "<$infile"
-	    || die "Coundn't open $infile for input\n";
-	open SAVEERR, ">&STDERR";
-	open STDERR, ">$outfile"
-	    || die "Couldnt open $outfile for output\n";
-	system $params{GNUPLOT};	# gnuplot < $infile 2> $outfile
-	# Restore STDERR and STDIN
-	close STDERR;
-	open STDERR, ">&SAVEERR";
-	open STDIN, "<SAVEIN";
+	# SEAN: this appears to do what they want:
+	warn_system "echo 'set term' | $params{GNUPLOT} > $outfile";
 
 	open(NEW, "<$outfile") ||
-	    die ": Could not open gnuplot output for parsing ($outfile): $!";
-
-	unlink ($infile);	# clean up
+	    warn ": Could not open gnuplot output for parsing ($outfile): $!";
     }
 
     # now check through the output for terminal types we can use.
@@ -97,7 +85,8 @@ unless ($params{IMAGETYPE}) {
     elsif ($types{"tiff"}) { $params{IMAGETYPE}="tiff"; }
     elsif ($types{"pbm"}) { $params{IMAGETYPE}="pbm"; }
     else {
-	die "Gnuplot doesn't support any good image types.  Check $outfile.\n";
+	warn "Gnuplot doesn't support any good image types.  Check $outfile.\n";
+	$params{IMAGETYPE} = undef;
     }
     # leave the output file around to speed up repeat runs
 }
@@ -255,6 +244,9 @@ sub genPlot {
 	close (DATA);
     }
 
+    # SEAN: don't even try if we aren't generating images:
+    return 0 unless $params{IMAGETYPE};
+
     # Create a script to feed to gnuplot, which creates a .gif graph.
     $runTime = ($endTime - $startTime + 1) * $timeStep;
     unlink("$tmpdir/$name.gpt");
@@ -262,6 +254,7 @@ sub genPlot {
 	|| die "Can't open $tmpdir/$name.gpt:$!";
     
     $gnuplot = $params{GNUPLOT};
+    return 1 unless $gnuplot;
     if ($gnuplot !~ /^\//) {	# if not absolute, adjust for cd $tmpbase
 	$gnuplot = "../../$gnuplot"; # ASSUME $tmpbase is single dir
     }
@@ -299,7 +292,7 @@ plot [0:$runTime] $runlist
     # run script from tmpbase to clean up line labeling
 #    my $olddir=getcwd();
     chdir $tmpdir;
-    system (split (/\s/, $gnuplot), "$name.gpt");
+    warn_system (split (/\s/, $gnuplot), "$name.gpt");
     chdir "../..";
 #    chdir $olddir;
 

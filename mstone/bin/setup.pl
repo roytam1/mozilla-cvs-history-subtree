@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 # The contents of this file are subject to the Netscape Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
@@ -43,6 +43,9 @@ $mode = shift;			# mode must be first
 # this parses the command line for -m machinefile
 # also sets many defaults
 do 'args.pl'|| die $@;
+sub warn_system;
+sub die_system;
+
 parseArgs();			# parse command line
 
 setConfigDefaults();		# setup RSH and RCP
@@ -64,7 +67,7 @@ sub configClients {
     }
 
     foreach $section (@workload) {
-	next unless ($section->{sectionTitle} =~ /CLIENT/o);
+	next unless ($section->{sectionTitle} =~ /CLIENT/i);
 	my $slist = $section->{sectionParams};
 	$slist =~ s/HOSTS=\s*//; # strip off initial bit
 	my $arch = "default OS";
@@ -128,8 +131,7 @@ sub configUserLdif {
 	print "$perlbin -Ibin -- bin/makeusers.pl $mode -w $params{WORKLOAD} -b '$basedn' -o $name $args\n";
 
     print "\nGenerating $name (this can take a while)\n";
-    system "$perlbin -Ibin -- bin/makeusers.pl $mode -w $params{WORKLOAD} -b '$basedn' -o $name $args"
-	|| warn "$@";
+    warn_system "$perlbin -Ibin -- bin/makeusers.pl $mode -w $params{WORKLOAD} -b '$basedn' -o $name $args";
     print "LDIF generation complete.  See $name\n";
     print "\tSee the manual or INSTALL to create users using the LDIF file.\n";
 }
@@ -201,13 +203,14 @@ sub configWorkload {
 # See if license file has been displayed
 if (($mode ne "cleanup") && (! -f ".license" )) {
     fileShow ("LICENSE");
-    print "\nDo you agree to the terms of the license? (yes/no) ";
-    my $ans = <STDIN>;
-    print "\n";
-    unless ($ans =~ /^yes$/i) {
-	print "License not agreed to.\n";
-	exit 0;
-    }
+    # SEAN: blow off annoying agreement message.
+#      print "\nDo you agree to the terms of the license? (yes/no) ";
+#      my $ans = <STDIN>;
+#      print "\n";
+#      unless ($ans =~ /^yes$/i) {
+#  	print "License not agreed to.\n";
+#  	exit 0;
+#      }
     my ($sec, $min, $hour, $mday, $mon, $year) = localtime;
     open (LIC, ">.license");
     printf LIC "%04d$mon$mday$hour$min\n", $year+1900;
@@ -265,7 +268,7 @@ if ($mode eq "timesync") {
     mkdir ("$resultbase", 0775);
     mkdir ("$tmpbase", 0775);
     foreach $section (@workload) {
-	next unless ($section->{sectionTitle} =~ /CLIENT/o);
+	next unless ($section->{sectionTitle} =~ /CLIENT/i);
 	my $slist = $section->{sectionParams};
 	$slist =~ s/HOSTS=\s*//; # strip off initial bit
 	foreach $cli (split /[\s,]/, $slist) {
@@ -281,9 +284,9 @@ if ($mode eq "timesync") {
 	exit 0 if ($mode =~ /cleanup$/);
 	my $clipath = "bin/WINNT4.0/bin/mailclient.exe";
 	print "Copying $clipath and message files to $cli\n";
-	system "copy $clipath $params{TEMPDIR}";
+	die_system "copy $clipath $params{TEMPDIR}";
 	foreach $f (@files) {
-	    system "copy $f $params{TEMPDIR}";
+	    die_system "copy $f $params{TEMPDIR}";
 	}
 	exit 0;			# without perl:fork, no more to do
     }
@@ -291,7 +294,7 @@ if ($mode eq "timesync") {
 
 # iterate over every client in the testbed, complete the cmd and rsh
 foreach $section (@workload) {
-    next unless ($section->{sectionTitle} =~ /CLIENT/o);
+    next unless ($section->{sectionTitle} =~ /CLIENT/i);
     my $slist = $section->{sectionParams};
     $slist =~ s/HOSTS=\s*//; # strip off initial bit
     foreach $cli (split /[\s,]/, $slist) {
@@ -303,17 +306,35 @@ foreach $section (@workload) {
 	} elsif ($params{TEMPDIR}) {
 	    $tempdir = $params{TEMPDIR};
 	}
+
+	my $cliarch = $section->{ARCH};
+
+	# presumed architecture for bin/mailclient on localhost:
+	my $local_arch = `bin/nsarch`;
+	chomp $local_arch;
+
+	# Try to determine arch if it hasn't been explicitly set.
+	if (!$cliarch) {
+	    if ($cli =~ /localhost/) {
+		$cliarch = `bin/nsarch`;
+		chomp $cliarch;
+	    } else {
+		$cliarch = `$rsh $cli sh < bin/nsarch`;
+		chomp $cliarch;
+	    }
+	}
+
 	# most time critical first
 	if ($mode eq "timesync") {
 	    next if ($cli =~ /^localhost$/i); # dont reset our own time
 	    # run all these in parallel to minimize skew
-	    next if ($section->{ARCH} eq "NT4.0");
+	    next if ($cliarch eq "NT4.0");
 	    forkproc ($rsh, $cli, "date $systime");
 	}
 
 	elsif ($mode eq "checktime") {
 	    # run all these in parallel to minimize skew
-	    forkproc ($rsh, $cli, ($section->{ARCH} eq "NT4.0")
+	    forkproc ($rsh, $cli, ($cliarch eq "NT4.0")
 		      ? "time" : "date",
 		      "/dev/null", "$tmpbase/$cli.tim");
 	}
@@ -322,34 +343,60 @@ foreach $section (@workload) {
 	    my ($clibin) = split /\s/, (($section->{COMMAND})
 					? $section->{COMMAND}
 					: $params{CLIENTCOMMAND});
-	    my $clipath = "bin/$clibin";
-	    if ($section->{ARCH}) {
-		if (-x "bin/$section->{ARCH}/bin/$clibin") {
-		    $clipath="bin/$section->{ARCH}/bin/$clibin";
+	    my $clipath = '';	# do nothing by default
+
+	    # Look for architecture-specific binary.
+	    if ($cliarch) {
+
+		# fallback to just os-name if we can't find an exact match.
+		my $approx = $cliarch;
+		$approx =~ s/^(\D+).*/$1/;
+		my $approx_bin = <"bin/${approx}*/bin/$clibin">;
+
+		if (-x "bin/$cliarch/bin/$clibin") {
+		    # exact match.
+		    $clipath = "bin/$cliarch/bin/$clibin";
+		} elsif (-x $approx_bin) {
+		    # approximate match
+		    $clipath = $approx_bin;
+		} elsif ($local_arch =~ /^$approx/) {
+		    # same arch as localhost
+		    $clipath = "bin/mailclient";
 		} else {
-		    print "Requested OS $section->{ARCH} $cli not found. Using default.\n";
+		    print STDERR
+			"Requested OS $cliarch for $cli not found.  ",
+			"Not copying binary.\n";
 		}
+	    } else {
+		# arch not found
+		print STDERR "Cannot determine architecture for $cli.  ",
+		"Not copying binary.\n";
+	    }
+	    # See if we have anything to copy:
+	    if ("$clipath @files" !~ /\S/) {
+		print STDERR "Nothing to copy to $cli.  Skipping.\n";
+		next;
 	    }
 	    my $rdir = ($tempdir) ?  "$tempdir/" : ".";
 	    # chmod so that the remote files can be easily cleaned up
 	    my $rcmd = "chmod g+w @files $clibin; uname -a";
 	    $rcmd = "cd $tempdir; " . $rcmd if ($tempdir);
-	    $rdir =~ s!/!\\!g if ($section->{ARCH} eq "NT4.0");
+	    $rdir =~ s!/!\\!g if ($cliarch eq "NT4.0");
 	    if ($cli =~ /^localhost$/i) {
 		die "TEMPDIR must be set for 'localhost'\n"
 		    unless ($tempdir);
 		die "Invalid local NT copy.  Should never get here.\n"
-		    if ($section->{ARCH} eq "NT4.0"); # should never happen
+		    if ($cliarch eq "NT4.0"); # should never happen
 		print "Copying $clipath and message files to $rdir\n";
-		system ("$cpcmd @msgs $clipath $rdir");
-		system ($rcmd);
+		die_system ("$cpcmd @msgs $clipath $rdir");
+		die_system ($rcmd);
 	    } else {
 		print "$rcp $clipath @msgs $cli:$rdir\n" if ($params{DEBUG});
 		print "Copying $clipath and message files to $cli:$rdir\n";
-		system (split (/\s+/, $rcp), $clipath, @msgs, "$cli:$rdir");
-		next if ($section->{ARCH} eq "NT4.0"); # chmod not valid
+		warn_system (split (/\s+/, $rcp), $clipath, @msgs, "$cli:$rdir");
+		next if ($cliarch eq "NT4.0"); # chmod not valid
 		print "rcmd='$rcmd'\n" if ($params{DEBUG});
-		system (split (/\s+/, $rsh), $cli, $rcmd);
+		die_system (split (/\s+/, $rsh), $cli, $rcmd);
 	    }
 	    print "\n";
 	}
@@ -357,29 +404,29 @@ foreach $section (@workload) {
 	elsif ($mode eq "cleanup") {
 	    if ($params{DEBUG}) {	# get debug files
 		print "Cleaning up debug files on $cli\n";
-		my $rcmd = ($section->{ARCH} eq "NT4.0") ? "DEL" : "$rmcmd";
+		my $rcmd = ($cliarch eq "NT4.0") ? "DEL" : "$rmcmd";
 		$rmcmd .= " mstone-debug.[0-9]*";
 		$rcmd = "cd $tempdir; " . $rcmd if ($tempdir);
-		$rcmd =~ s/;/&&/g if ($section->{ARCH} eq "NT4.0");
+		$rcmd =~ s/;/&&/g if ($cliarch eq "NT4.0");
 		if ($cli =~ /^localhost$/i) {
 		    die "TEMPDIR must be set for 'localhost'\n"
 			unless ($tempdir);
-		    system ($rcmd);
+		    warn_system ($rcmd);
 		} else {
-		    system (split (/\s+/, $rsh), $cli, $rcmd);
+		    warn_system (split (/\s+/, $rsh), $cli, $rcmd);
 		}
 	    } else {
 		print "Cleaning $cli\n";
-		my $rcmd = ($section->{ARCH} eq "NT4.0") ? "DEL" : "$rmcmd";
+		my $rcmd = ($cliarch eq "NT4.0") ? "DEL" : "$rmcmd";
 		$rcmd .= " $clibin @files";
 		$rcmd = "cd $tempdir; " . $rcmd if ($tempdir);
-		$rcmd =~ s/;/&&/g if ($section->{ARCH} eq "NT4.0");
+		$rcmd =~ s/;/&&/g if ($cliarch eq "NT4.0");
 		if ($cli =~ /^localhost$/i) {
 		    die "TEMPDIR must be set for 'localhost'\n"
 			unless ($tempdir);
-		    system ($rcmd);
+		    warn_system ($rcmd);
 		} else {
-		    system (split (/\s+/, $rsh), $cli, $rcmd);
+		    warn_system (split (/\s+/, $rsh), $cli, $rcmd);
 		}
 	    }
 	}
@@ -402,7 +449,7 @@ if (($mode eq "timesync") || ($mode eq "checktime")) {
 if ($mode eq "checktime") {
     print "Time from each client:\n";
     foreach $section (@workload) {
-	next unless ($section->{sectionTitle} =~ /CLIENT/o);
+	next unless ($section->{sectionTitle} =~ /CLIENT/i);
 	my $slist = $section->{sectionParams};
 	$slist =~ s/HOSTS=\s*//; # strip off initial bit
 	foreach $cli (split /[\s,]/, $slist) {

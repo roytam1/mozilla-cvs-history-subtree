@@ -1,0 +1,419 @@
+<html>
+<head><title>Sendmail, Inc. Mstone changes</title></head>
+<body>
+
+<h3>Mstone modifications</h3>
+
+<ol>
+<li><h4>Random Variable Parameters</h4>
+
+In addition to taking on constant values, some parameters can now be
+sampled from probability distributions.  These variables are:
+<ul>
+<li><code>startDelay</code>
+<li><code>idleTime</code>
+<li><code>blockTime</code>
+<li><code>loopDelay</code>
+<li><code>numRecips</code>
+<li><code>size</code>
+<li><code>headers</code>
+<li><code>mime</code>
+<li><code>leaveMailOnServer</code>
+<li><code>bandwidth</code>
+<li><code>latency</code>
+</ul>
+
+<p>
+The following distributions are currently implemented:
+<ul>
+<li>Uniform (~unif(a, b))
+<li>Normal (~normal(a, b))
+<li>Log-Normal (~lognormal(a, b))
+<li>Weibull (~weib(a, b, c))
+<li>Exponential (~exp(a))
+<li>Constant (~const(a))
+<li>Binomial (~binomial(a))
+</ul>
+
+<p>
+Sampled values may also be constrained by a minimum and maximum value.
+This is particularly useful for e.g. the normal and lognormal
+distributions, though over-tight constraints will create a "lump" at
+the end of the generated distribution, and any constraints may change
+the distribution's characteristics (e.g. mean).  To specify
+constraints, do the following:
+
+<h5>getdist</h5>
+
+<p>
+There is also a helper tool called "getdist" in the Sendmail mstone
+distribution. Building getdist:
+
+<pre>
+  file: mstone/src/idle.c
+  # gcc -DTEST_PROB -Dxalloc=malloc -Dxfree=free -lm idle.c
+</pre>
+
+<p>
+Rename the resulting binary to "getdist"
+
+<p>
+<b>Using getdist</b>
+
+<p>
+To run it interactively:
+
+<ol>
+<li>Start up getdist</li>
+<li>Enter the distribution you want to see a sample and mean (ignore warning about 'gets()')</li>
+</ol>
+
+<p>
+Example:
+
+<pre>
+% getdist
+warning: this program uses gets(), which is unsafe.
+~lognormal(3,4.5)
+Samples:
+6.846493
+0.109578
+31.402784
+0.467486
+21.905714
+7.113645
+0.225102
+29.372181
+4.252427
+1.444493
+mean: 29.128932
+</pre>
+
+<p>
+It will only OUTPUT 10 samples as examples but the mean
+is calculated based on 2000 samples by default.  You can specify
+the mean sample size on the command line by giving it a -n option:
+
+<pre>
+% getdist -n 1000000
+</pre>
+
+<p>
+This will calculate the mean based on a sample of 1000000 entries.
+
+<p>
+The above data was calculated with 2M samples.
+
+<p>
+<i>Known Problems</i><BR>
+It appears (anecdotally) that the first set of samples returned by
+getdist are inaccurate. After starting the getdist program interactively,
+it may appear necessary to ignore the first set of output, but that entering
+the distribution again will return a more accurate result.<BR>
+
+<p>
+For example:
+
+<pre>
+# getdist
+~lognormal(10,2)
+Samples:
+670043.575395
+48.842052
+54.039792
+0.460849
+2.152179
+32.534664
+6.163511
+42.827706
+27.806642
+4.966444
+mean:   364.747532
+var:    224352671.855287
+stddev: 14978.406853
+~lognormal(10,2)
+Samples:
+1.842800
+39.760727
+4.798239
+10.722216
+27.052030
+28.923926
+61.504273
+20.743583
+5.373420
+42.195531
+mean:   25.510130
+var:    2674.124997
+stddev: 51.711942
+</pre>
+
+
+<dl>
+  <dt><code>~dist(...) : [min,]</code>
+  <dd>force all sampled values to be >= <code>min</code>
+  <dt><code>~dist(...) : [min,max]</code>
+  <dd>force all sampled values X to be <code>min</code> <= X <= <code>max</code>.
+  <dt><code>~dist(...) : [,max]</code>
+  <dd>force values to be <= <code>max</code>
+</dl>
+
+<li><h4>Parsing Changes</h4>
+
+All of the time-valued test parameters except <code>rampTime</code>
+and <code>time</code> now have millisecond values.  In particular,
+this means that a value of "17" parses to 17
+<strong>milliseconds</strong>, not 17 seconds.  Use "17s" instead.
+<p>
+
+    Size-valued parameters can have units of "k" or "m" to indicate
+kilobytes or megabytes, respectively.
+<p>
+
+    For parameters supporting random-variable values, a value starting
+with "~" will be interpreted as a random variable specification of the
+form "~NAME([ARGS ...])".  Unit suffixes (e.g. "s", and "m") apply to
+random variable parameters as well as constant values.  This implies
+that for unitless parameters, the suffixes corresponding to the random
+variable's units will still be recognized (i.e. the values will be
+multiplied by the appropriate factors).  This is probably best
+considered as a "bug" rather than excercised as a "feature."
+<p>
+
+    <code>blockTime</code>, <code>loopDelay</code>, and
+<code>idleTime</code> now refer to the total amount of time a command
+block, loop, and initialization phase should take, respectively, not
+the amount of time the simulation should stall after completing each
+phase.  For example, if a block takes 2 seconds to complete, and the
+block time is 4 seconds, the client thread will sleep for 2 seconds
+after finishing instead of the full 4.<p>
+
+<code>rampTime</code> is now solely for the benefit of the client
+machines, to control the rate at which threads are started.  The rate
+at which commands from a given protocol are started is now controlled
+by the <code>startDelay</code> variable, which is
+distribution-valued.  Thus the actual command loop now looks like
+this:
+
+<pre>
+wait for startDelay
+start counting idleTime
+start counting blockTime
+execute start function
+wait for remainder of idleTime
+for (1 ... numLoops)
+       	start counting loopDelay
+       	execute loop function
+       	wait for remainder of loopDelay
+execute	end function
+wait for remainder of blockTime
+</pre>
+
+<li><h4>Automatic Message Generation</h4>
+
+Both MIME and text/plain messages can now be generated automatically.
+To enable automatic message generation, set the <code>file</code>
+attribute of an SMTP block to "auto".  The messages will then have at
+least as many headers as the value of the <code>headers</code>
+attribute, have bodies <code>size</code> bytes long, and have
+<code>mime</code> MIME parts.  To generate text/plain messages, set
+<code>mime</code> to zero.
+
+<table border=1 cellpadding=2>
+<tr><th>Attribute</th><th>Description</th></tr>
+
+<tr>
+  <td><code>headers <i>N</i></code></td>
+  <td>(optional; default=5) Each automatically generated message will
+      have <code>min(<i>N</i>, min_hdrs)</code> headers, where
+      <code>min_hdrs</code> is 5 for text/plain, and about 7 for MIME
+      messages.  Additional headers are named
+      "X-generated-header-%d". </td>
+</tr>
+
+<tr>
+  <td><code>size <i>N</i></code></td>
+  <td>(required) Each generated message will have a body be <i>N</i>
+      bytes long.</td>
+</tr>
+
+<tr>
+  <td><code>mime <i>N</i></code></td>
+  <td>Each generated message will have <code>N</code> MIME parts.  If
+      the value of <code>size</code> does not allow <code>N</code> parts,
+      one part is generated.  If <code>N</code> is zero, the message is
+      text/plain.</td>
+</tr>
+
+<tr>
+  <td><code>checksum <i>{yes|no|save}</i></code></td>
+  <td>For SMTP: each generated message will have the MD5 sum of the
+  message body appended to the message unless the value is <i>no</i>.
+  For retrieval protocols, checksums will be verified.  (NOT
+  IMPLEMENTED: if <code>checksum</code> is <i>save</i>, messages with
+  incorrect checksums will be saved to temporary files for later
+  examination.) </td>
+</tr>
+
+</table>
+
+<li><h4>Linespeed Emulation</h4>
+
+SMTP, POP, and IMAP all support a form of linespeed emulation,
+controlled via the <code>latency</code> and <code>bandwidth</code>
+parameters.
+
+<table border=1 cellpadding=2>
+<tr><th>Attribute</th><th>Description</th></tr>
+
+<tr><td><code>latency <i>N</i></code></td>
+<td>Set the network latency to <code>N</code> milliseconds.</td></tr>
+
+<tr><td><code>bandwidth <i>N</i></code></td>
+
+<td>Transfer at most <code>N</code> bytes per second.</td></tr>
+
+</table>
+
+<li><h4>TLS support</h4>
+
+If you have openssl, mstone now supports STARTTLS for SMTP and IMAP,
+and STLS for POP (both old-style and MULTIPOP), as well as SSL
+tunneling.  This support is <strong>not</strong> well-tested, and TLS
+can be a bit tricky to set up, so use at your own risk.  TLS
+introduces several new attributes to the protocol blocks:
+
+<table border=1 cellpadding=2>
+<tr><th>Attribute</th><th>Description</th></tr>
+
+<tr><td><code>sslcert <i>filename</i></code></td>
+<td>Read the client's cert from <i>filename</i>, which should be in
+PEM format. </td></tr>
+
+<tr><td><code>sslkey <i>filename</i></code></td>
+
+<td>Read the client's private key from <i>filename</i>, which should
+be in PEM format.</td></tr>
+
+<tr><td><code>usetls {0|1}</code></td>
+
+<td>Turn STARTTLS/STLS on or off (default: off).  <b>Note</b>:
+<code>starttls</code> and <code>ssltunnel</code> are mutually
+exlcusive.</td></tr>
+
+<tr><td><code>ssltunnel {0|1}</code></td>
+
+<td>Turn SSL tunneling on or off (default: off).</td></tr>
+
+</table>
+
+<li><h4>"Multi-POP" protocol</h4>
+
+<b>Note</b>: multipop, always a band-aid, is hopefully obsoleted by
+the new event-queue execution model.  Though it has not been tested,
+it should be easier, more efficient, and more accurate to use the
+normal POP protocol with events to simulate a large number of users
+with a reasonable number of threads.  Once this has been tested,
+automatically-generated workloads should revert to using POP.
+
+<p>To simulate a large number of concurrently active POP users with
+Mstone's extravagant use of threads, and to simulate a period of
+activity comprised of several POP sessions one can use the MULTIPOP
+protocol to multiplex active users onto a single thread.  The protocol
+has all the same parameters as POP, plus the following:
+
+<table border=1 cellpadding=2>
+<tr><th>Attribute</th><th>Description</th></tr>
+
+<tr><td><code>userSpacing</code></td>
+
+    <td>Total time for each user's session.</td>
+</tr>
+<tr><td><code>usersPerModem</code></td>
+
+    <td>The maximum number of concurrently connected users is limited
+	to <code>users / usersPerModem</code></td>
+</tr>
+</table>
+
+<p>
+
+The protocol functions are substantially different.  Instead of
+simulating a single login-check-logout sequence, a protocol block
+simulates an entire active period for a set of users.  Each user
+checks mail once in the initialization function, once each time the
+loop body is executed, and once more in the protocol conclusion
+function.  
+<p>
+
+<li><h4>"Event-queue" implementation</h4>
+
+<p>
+Unless the "noevents" parameter in the "&lt;config&gt;" section is set to 1,
+or mailclient is not given the "-e" flag, mstone will run in
+"event-queue" mode.  Instead of creating one thread per client, it
+will multiplex clients over a much smaller number of threads.  This is
+intended to increase the tool's scalability.
+
+<p>
+Note that I/O is still synchronous with this model, so the number of
+threads required will approximately equal the maximum number of
+concurrent operations.  Also note that this change does not reduce the
+number of required file descriptors.
+
+<p>
+
+<li><h4>Other Minor Additions</h4>
+
+<ul>
+
+<li>IMAP now has a ramp-down time, enabled by defining
+<code>IMAP_RAMPDOWN</code>.  IMAP threads now exit uniformly between
+the time the test is supposed to be over and the time Mstone starts
+killing them.
+
+<li>Mstone used to always time out connections after 60 seconds.  The
+timeout value can now be configured on a per-block basis via the
+<code>timeout</code> parameter. The value of the timeout parameter must
+be defined in milliseconds, so the following value would mean a timeout
+of one (1) hour:<BR>
+
+&nbsp;&nbsp;&nbsp;timeout 3600000
+
+<li>Simplified client allocation.  It is now possible to specify the
+number of clients in each group by specifying a value for
+<code>clients</code> in each <code>&lt;CLIENT&gt;</code> section and
+<em>not</em> specifying a global <code>clientCount</code> in the
+<code>&lt;CONFIG&gt;</code> section.
+
+</ul>
+
+<li><h4>Bug Fixes</h4>
+
+<ul>
+
+<li>SMTP now ignores debugging output appearing over the connection.
+Before, Mstone would generate an error when talking to
+e.g. <code>sendmail -d64.5</code>.
+
+<li>(now it works...)  The old sequence of IMAP commands used by
+Mstone was incorrect.  Instead of only downloading unread messages, it
+would download all messages received since the start of the session
+each time a new messages was received.  Depending on what you were
+doing, this could have a serious effect on your results.
+
+</ul>
+
+<li><h4>Wish List</h4>
+
+<ul>
+  <li>Scriptable user behavior for POP and IMAP protocols.  While we should
+      probably not go overboard, adding more configuration options to Mstone
+      is probably not the answer.  There is already some support for more
+      complex behaviors in the IMAP code -- we may or may not want to make
+      use of it.  More to the point, wider coverage of the IMAP
+      protocol is vital to QA's use of the tool.
+</ul>
+
+</ol>
+</body></html>

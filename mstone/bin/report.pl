@@ -159,7 +159,7 @@ sub genTextReport {
 	die "Couldn't open $resultstxt: $!";
 
     # Store results as text
-    printf RESULTSTXT "---- Netscape MailStone Results $params{TSTAMP} ----\n";
+    printf RESULTSTXT "---- Mozilla MailStone Results $params{TSTAMP} ----\n";
 
     printf RESULTSTXT "\t\t%s\n", $params{TITLE};
     printf RESULTSTXT "\t\t%s\n", $params{COMMENTS};
@@ -283,7 +283,7 @@ sub genHTMLReportStart {
 <HTML>
 <A NAME=TitleSection>
 <TITLE>
-Netscape MailStone Results $params{TSTAMP}
+Mozilla MailStone Results $params{TSTAMP}
 </TITLE>
 </A>
 <HEAD>
@@ -291,7 +291,7 @@ Netscape MailStone Results $params{TSTAMP}
 <BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#0000FF" VLINK="#FF0000" ALINK="#000088">
 <CENTER>
 <HR NOSHADE WIDTH="100%">
-<H1>Netscape MailStone Results $params{TSTAMP}</H1>
+<H1>Mozilla MailStone Results $params{TSTAMP}</H1>
 <H2>$params{TITLE}</H2>
 <I>$params{COMMENTS}</I>
 <HR WIDTH="100%">
@@ -531,7 +531,7 @@ genHTMLReportStart();
 
 my $graphCount = 0;
 foreach $section (@workload) {
-    next unless ($section->{sectionTitle} =~ /GRAPH/o);
+    next unless ($section->{sectionTitle} =~ /GRAPH/i);
     my $name = $section->{sectionParams};
     $name =~ s/name=\s*//;	# strip off initial bit
     my @varlist = split (/[\s,]+/, $section->{VARIABLES});
@@ -586,7 +586,7 @@ if ($params{ADDGRAPHS}) {	# pick up additional graphs
     my @graphs = ();
     readWorkloadFile ($params{ADDGRAPHS}, \@graphs);
     foreach $section (@graphs) {
-	next unless ($section->{sectionTitle} =~ /GRAPH/o);
+	next unless ($section->{sectionTitle} =~ /GRAPH/i);
 	my $name = $section->{sectionParams};
 	$name =~ s/name=\s*//;	# strip off initial bit
 	my @varlist = split (/[\s,]+/, $section->{VARIABLES});

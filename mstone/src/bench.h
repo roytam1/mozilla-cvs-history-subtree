@@ -22,6 +22,8 @@
  *			Marcel DePaolis <marcel@netcape.com>
  *			Mike Blakely
  *			David Shak
+ *			Sean O'Rourke <sean@sendmail.com>
+ *			Thom O'Connor <thom@sendmail.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License Version 2 or later (the "GPL"), in
@@ -37,6 +39,10 @@
 #ifndef __BENCH_H__ 
 #define __BENCH_H__
 
+#ifdef USE_PTHREADS
+#include <signal.h>
+#include <pthread.h>
+#endif
 #include <stdio.h>
 #include <stdarg.h>
 #include <limits.h>
@@ -55,10 +61,6 @@
 
 #include <errno.h>
 #include <signal.h>
-#ifdef USE_PTHREADS
-#include <sys/signal.h>
-#include <pthread.h>
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -69,14 +71,53 @@
 
 #ifndef _WIN32
 #include <sys/poll.h>
+
+/*
+ * thom@sendmail.com, 2004/06/07
+ * This FREEBSD define prevents building mstone on post-FreeBSD 4.8
+ * so removing it
+ * #ifdef __FREEBSD__
+ * #define poll _thread_sys_poll
+ * #endif
+*/
+
 #include <sys/param.h>
 #include <sys/ipc.h>
 #include <sys/errno.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#ifndef timersub
+/* aix doesn't seem to define this */
+# define timersub(a, b, result)                                                \
+  do {                                                                        \
+    (result)->tv_sec = (a)->tv_sec - (b)->tv_sec;                             \
+    (result)->tv_usec = (a)->tv_usec - (b)->tv_usec;                          \
+    if ((result)->tv_usec < 0) {                                              \
+      --(result)->tv_sec;                                                     \
+      (result)->tv_usec += 1000000;                                           \
+    }                                                                         \
+  } while (0)
+#endif /* timersub */
+#ifndef timeradd
+# define timeradd(a, b, result)                                                \
+  do {                                                                        \
+    (result)->tv_sec = (a)->tv_sec + (b)->tv_sec;                             \
+    (result)->tv_usec = (a)->tv_usec + (b)->tv_usec;                          \
+    if ((result)->tv_usec >= 1000000)                                         \
+      {                                                                       \
+        ++(result)->tv_sec;                                                   \
+        (result)->tv_usec -= 1000000;                                         \
+      }                                                                       \
+  } while (0)
+#endif /* timeradd */
+#ifndef timercmp
+# define timercmp(a, b, CMP)                                                   \
+  (((a)->tv_sec == (b)->tv_sec) ?                                             \
+   ((a)->tv_usec CMP (b)->tv_usec) :                                          \
+   ((a)->tv_sec CMP (b)->tv_sec))
+#endif /* timercmp */
 #include <sys/wait.h>
 #include <stdlib.h>
-#include <sys/time.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -90,6 +131,10 @@
 #endif /* _WIN32 */
 
 #include "sysdep.h"
+
+#include "socket.h"
+#include "idle.h"
+#include "constants.h"
 
 #define USECINSEC	    1000000
 #define MSECINSEC	    1000
@@ -111,8 +156,6 @@
 
 #define MAX_USERNAME_LEN 32
 #define MAX_MAILADDR_LEN 64
-#define MAX_COMMAND_LEN (2*1024)
-#define MAX_RESPONSE_LEN (2*1024)
 #define MAX_ERRORMSG_LEN 256
 #define DATESTAMP_LEN 40
 
@@ -134,6 +177,9 @@
 /* Debug macros */
 #define D_PRINTF  if (gn_debug > 0) d_printf
 #define T_PRINTF if (gn_record_telemetry) t_printf
+
+/* make sure we don't pass NULL's to printf() and friends */
+#define PSTR(X) ((X)?(X):"(null)")
 
 /* 
   Simple keyword indexed string storage
@@ -241,17 +287,24 @@ typedef struct mail_command {
     /* These are protocol independent (client.c) */
     int 	blockID;		/* ID number for each block */
     int 	numLoops;		/* typically messages per connection */
-    int 	idleTime;		/* time to idle before loops */
-    int 	loopDelay;		/* time to idle after each loop */
-    int 	blockTime;		/* time to idle after block */
-    int 	throttle;		/* to simulate ops/sec (BROKEN) */
 
+    /* Sean O'Rourke: added startDelay to simulate arrival rates */
+    dinst_t	*startDelay;
+    dinst_t 	*idleTime;
+    dinst_t 	*loopDelay;
+    dinst_t	*blockTime;
+    
+    /* XXX: not threadsafe! */
+    double 	throttle;		/* throttling factor */
+    int		loopThrottle;		/* loopDelay over/underrun for throttling */
+    double	throttleFactor;		/* multiple by which to change throttle rate */
+    
     void	*data;			/* protocol specific data */
 } mail_command_t;
 
 typedef struct child_context {		/* forked sub processes */
     int		pid;
-    SOCKET	socket;
+    _SOCKET	socket;
 } ccx_t, *pccx_t;
 
 typedef struct thread_context {
@@ -264,7 +317,6 @@ typedef struct thread_context {
     /* local thread context, also read by parent */
     int		blockCount;		/* how many command blocks */
     int		connectCount;		/* how many connections */
-    stats_t	timestat;		/* throttle info */
     cmd_stats_t *cmd_stats;		/* stats for each command */
 
     /* temporary storage (event_start, event_stop) */
@@ -276,8 +328,19 @@ typedef struct thread_context {
     FILE	*dfile;			/* debug file */
     int		logfile;		/* telemetry log file */
 
+#ifdef USE_EVENTS
+    int		ev_loop;		/* loops left for current event */
+    struct timeval ev_next;		/* time to schedule next init */
+    void *	ev_state;		/* client state */
+    mail_command_t * ev_comm;
+    cmd_stats_t * ev_stats;
+
+#endif /* USE_EVENTS */
+
     SOCKET	sock;			/* network connection */
     char	errMsg[MAX_ERRORMSG_LEN]; /* low level error string */
+
+    int		net_timeout;		/* timeout for network ops (msec) */
 } tcx_t;
 
 /* About errMsg:
@@ -299,13 +362,6 @@ typedef struct thread_context {
    The "call trace" starts with '<' as a seperator.
 */
 #define debugfile (ptcx->dfile)
-
-#ifndef MIN
-#define MIN(x,y)	(((x) < (y)) ? (x) : (y))
-#endif
-#ifndef MAX
-#define MAX(x,y)	(((x) >= (y)) ? (x) : (y))
-#endif
 
 /* routines in bench.c */
 extern void event_start(ptcx_t ptcx, event_timer_t *pevent);
@@ -352,16 +408,12 @@ extern const char *gs_eventToTextFormat;
 
 
 /* more routines in bench.c */
-extern void *mymalloc(size_t size);
-extern void *mycalloc(size_t size);
-extern void *myrealloc(void *ptr, size_t size);
-extern void myfree(void *ptr);
-extern char *mystrdup(const char *cp);
 
 extern int timeval_clear(struct timeval *tv);
 extern int timeval_stamp(struct timeval *tv);
 
-extern int waitReadWrite(int fd, int flags);
+/*  extern int waitReadWrite(int fd, int flags); */
+extern int waitReadWrite(SOCKET s, int timeout, int flags);
 extern int retryRead(ptcx_t ptcx, SOCKET sock, char *buf, int count);
 extern int retryWrite(ptcx_t ptcx, SOCKET sock, char *buf, int count);
 
@@ -373,7 +425,7 @@ extern int readResponse(ptcx_t ptcx, SOCKET sock, char *buffer, int buflen);
 extern int sendCommand(ptcx_t ptcx, SOCKET sock, char *command);
 extern int doCommandResponse(ptcx_t ptcx, SOCKET sock, char *command, char *response, int resplen);
 extern int sendOutput(int fd, char *command);
-extern int retrMsg(ptcx_t ptcx, char *buffer, int maxBytes, SOCKET sock);
+extern int retrMsg(ptcx_t ptcx, SOCKET sock);
 extern void trimEndWhite (char *buff);
 unsigned long rangeNext (range_t *, unsigned long );
 void rangeSetFirstLast (range_t *, unsigned long , unsigned long , int );
@@ -412,6 +464,19 @@ extern void *doPop3Start(ptcx_t ptcx, pmail_command_t, cmd_stats_t *);
 extern int doPop3Loop(ptcx_t ptcx, pmail_command_t, cmd_stats_t *, void *);
 extern void doPop3End(ptcx_t ptcx, pmail_command_t, cmd_stats_t *, void *);
 
+/* in multipop.c */
+extern int MPopParseStart (pmail_command_t , char *, param_list_t *);
+extern int MPopParseEnd (pmail_command_t , string_list_t *, param_list_t *);
+extern void *MPopCheckStart(ptcx_t ptcx, pmail_command_t, cmd_stats_t *);
+extern int MPopCheck(ptcx_t ptcx, pmail_command_t, cmd_stats_t *, void *);
+extern void MPopCheckEnd(ptcx_t ptcx, pmail_command_t, cmd_stats_t *, void *);
+
+/* in webmail.c */
+extern int WebmailParseStart (pmail_command_t , char *, param_list_t *);
+extern int WebmailParseEnd (pmail_command_t , string_list_t *, param_list_t *);
+extern void *doWebmailStart(ptcx_t ptcx, pmail_command_t, cmd_stats_t *);
+extern int doWebmailLoop(ptcx_t ptcx, pmail_command_t, cmd_stats_t *, void *);
+extern void doWebmailEnd(ptcx_t ptcx, pmail_command_t, cmd_stats_t *, void *);
 
 /* routines in imap4.c */
 extern int Imap4ParseStart (pmail_command_t , char *, param_list_t *);
@@ -447,6 +512,8 @@ extern char *string_tolower(char *string);
 extern char *string_unquote(char *string);
 extern int cmdParseNameValue (pmail_command_t cmd, char *name, char *tok);
 extern int time_atoi(const char *pstr);
+extern int millitime_atoi(const char *pstr);
+extern double size_atof(const char *);
 extern int load_commands(char *commands);
 extern param_list_t *paramListInit (void);
 /* paramListAdd returns: 1 update existing value, 0 new, -1 out of memory */
@@ -478,7 +545,8 @@ extern int clientLoop(ptcx_t ptcx);
 extern THREAD_RET clientThread(void *);
 extern void clientSummary(ptcx_t ptcxs, int ntcxs, int ii, int outfd);
 extern THREAD_RET summaryThread(void *);
-extern int clientProc(int pnum, SOCKET outfd, unsigned int timeleft, unsigned int thread_stagger_usec);
+/*  extern int clientProc(int pnum, SOCKET outfd, unsigned int timeleft, unsigned int thread_stagger_usec); */
+extern int clientProc(int pnum, int outfd, unsigned int timeleft, unsigned int thread_stagger_usec);
 
 extern void MS_idle(ptcx_t ptcx, int idleSecs);
 extern int resolve_addrs(char *host, char *protocol, struct hostent *host_phe,
@@ -493,7 +561,7 @@ unsigned long get_next_address(ptcx_t ptcx, mail_command_t *comm, cmd_stats_t *p
 #endif
 
 #undef VERSION
-#define VERSION "4.2"
+#define VERSION "4.9"
 #ifdef _DEBUG
 #define MAILCLIENT_VERSION "mailclient (" VERSION " DEBUG built " __DATE__ " " __TIME__ ")"
 #else
@@ -508,7 +576,15 @@ extern int	getopt(int, char *const *, const char *);
 #ifndef __LINUX__
 extern long random(void);
 #endif
-extern void srandom(unsigned);
+#endif
+
+/* miscellaneous */
+
+#ifndef MIN
+#define MIN(x,y)	(((x) < (y)) ? (x) : (y))
+#endif
+#ifndef MAX
+#define MAX(x,y)	(((x) >= (y)) ? (x) : (y))
 #endif
 
 #endif /* !__BENCH_H__ */

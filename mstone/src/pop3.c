@@ -21,6 +21,8 @@
  * Contributor(s):	Dan Christian <robodan@netscape.com>
  *			Marcel DePaolis <marcel@netcape.com>
  *			Mike Blakely
+ *			Sean O'Rourke <sean@sendmail.com>
+ *			Thom O'Connor <thom@sendmail.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License Version 2 or later (the "GPL"), in
@@ -37,6 +39,9 @@
 
 #include "bench.h"
 #include "pish.h"
+#include "socket.h"
+#include "xalloc.h"
+#include "checksum.h"
 
 typedef struct _doPOP3_state {
     int		numMsgs;			/* messages in folder */
@@ -44,7 +49,7 @@ typedef struct _doPOP3_state {
     int		msgCounter;		/* count in download */
 } doPOP3_state_t;
 
-/* POP3 flags definitions */
+/* flags definitions */
 #define leaveMailOnServer 0x01
 
 static void doPop3Exit (ptcx_t ptcx, doPOP3_state_t	*me);
@@ -60,12 +65,15 @@ PopParseNameValue (pmail_command_t cmd,
     /* find a home for the attr/value */
     if (pishParseNameValue(cmd, name, tok) == 0)
 	;				/* done */
-    else if (strcmp(name, "leavemailonserver") == 0)
+    else if (strcmp(name, "leavemailonserver") == 0) {
 	if (atoi(tok) > 0) {
 	    pish->flags |= leaveMailOnServer;
+	    pish->leaveMailOnServerDist =
+	        parse_distrib(tok, (value_parser_t)&atof);
 	} else {
 	    pish->flags &= ~leaveMailOnServer;
 	}
+    }
     else {
 	return -1;
     }
@@ -82,8 +90,7 @@ Pop3ParseStart (pmail_command_t cmd,
 		param_list_t *defparm)
 {
     param_list_t	*pp;
-    pish_command_t	*pish = (pish_command_t *)mycalloc
-	(sizeof (pish_command_t));
+    pish_command_t	*pish = XCALLOC(pish_command_t);
     cmd->data = pish;
 
     cmd->numLoops = 9999;		/* default 9999 downloads */
@@ -172,7 +179,12 @@ doPopCommandResponse(ptcx_t ptcx, SOCKET sock, char *command, char *response, in
     T_PRINTF(ptcx->logfile, command, strlen (command), "POP3 SendCommand");
     rc = doCommandResponse(ptcx, sock, command, response, resplen);
     if (rc == -1)
-	return rc;
+    {
+	trimEndWhite (command);
+	trimEndWhite (response);
+	returnerr(debugfile,"POP3 error command=[%s], response=[%s]\n",
+		  command, response);
+    }
     T_PRINTF(ptcx->logfile, response, strlen(response),
 	     "POP3 ReadResponse");	/* telemetry log. should be lower level */
     /* D_PRINTF(stderr, "POP command=[%s] response=[%s]\n", command, response); */
@@ -243,7 +255,7 @@ popLogin(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, SOCKET sock)
 void *
 doPop3Start(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 {
-    doPOP3_state_t	*me = (doPOP3_state_t *)mycalloc (sizeof (doPOP3_state_t));
+    doPOP3_state_t	*me = XCALLOC (doPOP3_state_t);
     char	respBuffer[MAX_RESPONSE_LEN];
     int		rc;
     int		numBytes;
@@ -256,7 +268,9 @@ doPop3Start(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
     me->numMsgs = 0;
     me->totalMsgLength = 0;
     me->msgCounter = 0;
-  
+
+    ptcx->net_timeout = pish->net_timeout;
+    
     event_start(ptcx, &stats->connect);
     ptcx->sock = connectSocket(ptcx, &pish->hostInfo, "tcp");
     event_stop(ptcx, &stats->connect);
@@ -266,7 +280,7 @@ doPop3Start(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 	    returnerr(debugfile, "POP3 Couldn't connect to %s: %s\n",
 		      pish->hostInfo.hostName, neterrstr());
 	}
-	myfree (me);
+	xfree (me);
 	return NULL;
     }
 
@@ -275,6 +289,13 @@ doPop3Start(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 	    returnerr (debugfile, "POP3: WARNING: Could not set abortive close\n");
 	}
     }
+
+#ifdef SOCK_SSL
+    if (pish->sslTunnel)
+	SSL_INIT(ptcx->sock, pish);
+#endif /* SOCK_SSL */
+    
+    LS_INIT(ptcx->sock, pish);
 
     /* READ connect response from server */
     event_start(ptcx, &stats->banner);
@@ -290,6 +311,43 @@ doPop3Start(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 	return NULL;
     }
 
+#ifdef SOCK_SSL
+
+    if (!pish->useTLS)
+	goto end_tls;
+    /*
+    **  Try TLS
+    */
+
+    event_start(ptcx, &stats->cmd);
+    rc = doPopCommandResponse(ptcx, ptcx->sock, "CAPA" CRLF, respBuffer,
+			     sizeof(respBuffer));
+    event_stop(ptcx, &stats->cmd);
+    if (rc < 0) {
+	stats->cmd.errs++;
+	goto end_tls;
+    }
+    if (strstr(respBuffer, "STLS") != NULL) {
+	SOCKET s = BADSOCKET_VALUE;
+	D_PRINTF(debugfile, "trying STLS\n");
+	event_start(ptcx, &stats->cmd);
+	if (doPopCommandResponse(ptcx, ptcx->sock, "STLS" CRLF, respBuffer,
+				 sizeof(respBuffer) >= 0)) {
+	    s = ptcx->sock;
+	    SSL_INIT(s, pish);
+	}
+	event_stop(ptcx, &stats->cmd);
+	if (BADSOCKET(s)) {
+	    D_PRINTF(stderr, "STLS failed\n");
+	    stats->cmd.errs++;
+	} else {
+	    ptcx->sock = s;
+	}
+    }
+ end_tls:
+    
+#endif /* SOCK_SSL */
+    
     /*
    * LOGIN
    */
@@ -299,7 +357,20 @@ doPop3Start(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 	doPop3Exit (ptcx, me);
 	return NULL;
     }
-
+#ifdef POP_UIDL
+    /* send an UIDL */
+    sprintf(command, "UIDL" CRLF);
+    event_start(ptcx, &stats->cmd);
+    rc = doPopCommandResponse(ptcx, ptcx->sock, command, respBuffer, sizeof(respBuffer));
+    event_stop(ptcx, &stats->cmd);
+    if (rc == -1) {
+	if (gf_timeexpired < EXIT_FAST) {
+	    stats->cmd.errs++;
+	}
+	doPop3Exit (ptcx, me);
+	return NULL;
+    }
+#endif /* POP_UIDL */
     /* send a STAT */
     sprintf(command, "STAT%s", CRLF);
     event_start(ptcx, &stats->cmd);
@@ -338,6 +409,7 @@ doPop3Loop(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, void *mystate)
     int		rc, numBytes;
     pish_stats_t	*stats = (pish_stats_t *)ptimer->data;
     pish_command_t	*pish = (pish_command_t *)cmd->data;
+    int leave_on_server;
 
     if (me->msgCounter >= me->numMsgs) return -1; /* done, close */
 
@@ -358,10 +430,14 @@ doPop3Loop(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, void *mystate)
     }
 
     /* read msg */
-    numBytes = retrMsg(ptcx, NULL, 0 , ptcx->sock);
+    if (pish->genChecksum == CS_NONE)
+	numBytes = retrMsg(ptcx, ptcx->sock);
+    else
+	numBytes = cs_retrieve(ptcx, ptcx->sock, CRLF CRLF, CRLF "." CRLF);
+
     event_stop(ptcx, &stats->msgread);
 
-    if (numBytes <= 0) {
+    if (numBytes < 0) {
 	if (gf_timeexpired < EXIT_FAST) {
 	    stats->msgread.errs++;
 	    returnerr(debugfile,"POP3 Error retrieving msg %d: %s\n",
@@ -371,8 +447,10 @@ doPop3Loop(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, void *mystate)
 	return -1;
     }
 
-      /* if we're not told to leave mail on server, delete the message */
-    if (!(pish->flags & leaveMailOnServer)) {
+    /* if we're not told to leave mail on server, delete the message */
+     leave_on_server = (int)sample(pish->leaveMailOnServerDist);
+    if (!(pish->flags & leaveMailOnServer) ||
+	 (leave_on_server == 0)) {
 	/* send the DELE command */
 	sprintf(command, "DELE %d%s", me->msgCounter, CRLF);
 	event_start(ptcx, &stats->cmd);
@@ -421,5 +499,5 @@ doPop3Exit (ptcx_t ptcx, doPOP3_state_t	*me)
     NETCLOSE(ptcx->sock);
   ptcx->sock = BADSOCKET_VALUE;
 
-  myfree (me);
+  xfree (me);
 }  

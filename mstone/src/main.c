@@ -20,6 +20,7 @@
  * 
  * Contributor(s):	Dan Christian <robodan@netscape.com>
  *			Marcel DePaolis <marcel@netcape.com>
+ *			Sean O'Rourke <sean@sendmail.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License Version 2 or later (the "GPL"), in
@@ -37,18 +38,21 @@
 */
 
 #include "bench.h"
+#include "xalloc.h"
 
 /* really globalize variables */
 volatile int gf_timeexpired = 0;
 time_t	gt_testtime = 0;		/* time of test, in seconds */
 time_t	gt_startedtime = 0;		/* when we started */
 volatile time_t	gt_shutdowntime = 0;	/* startedtime + testtime */
-time_t	gt_stopinterval = 0;	/* MAX (ramptime/5, 10) */
-time_t	gt_aborttime = 0;		/* startedtime + testtime + ramptime*/
+time_t	gt_stopinterval = 0;		/* MAX (ramptime/5, 10) */
+time_t	gt_aborttime = 0;		/* startedtime + testtime + ramptime */
 
+#ifdef USE_EVENTS
+int	gf_use_events = 0;
+#endif
 int	gn_record_telemetry = 0;
 int     gn_total_weight = 0;
-int	gn_client_throttle = 0;
 int	gn_maxerrorcnt = 0;
 int	gn_maxBlockCnt = 0;
 int	gn_numprocs = 0;
@@ -77,13 +81,37 @@ protocol_t	g_protocols[] = {	/* array of protocol information */
      pishStatsUpdate,
      pishStatsOutput,
     },
-    {
+    { /* Old POP -- 1 thread == 1 user */
      "POP3",
      Pop3ParseStart,
      Pop3ParseEnd,
      doPop3Start,
      doPop3Loop,
      doPop3End,
+     pishStatsFormat,
+     pishStatsInit,
+     pishStatsUpdate,
+     pishStatsOutput,
+    },
+    { /* new POP -- 1 thread == N users */
+     "MULTIPOP",
+     MPopParseStart,
+     MPopParseEnd,
+     MPopCheckStart,
+     MPopCheck,
+     MPopCheckEnd,
+     pishStatsFormat,
+     pishStatsInit,
+     pishStatsUpdate,
+     pishStatsOutput,
+    },
+    { /* mailspinner / SMMS webmail */
+     "WEB",
+     WebmailParseStart,
+     WebmailParseEnd,
+     doWebmailStart,
+     doWebmailLoop,
+     doWebmailEnd,
      pishStatsFormat,
      pishStatsInit,
      pishStatsUpdate,
@@ -151,8 +179,7 @@ usage(const char *progname)
     fprintf(stderr, "Usage: %s [options] -n <clients> -t <time> <-s | -u <commandFile>>\n\n", 
 			progname);
     fprintf(stderr, "  required parameters:\n");
-    fprintf(stderr, "    -n numprocs      number of clients processes to run [1-%d]\n",
-	      MAXPROCSPERNODE);
+    fprintf(stderr, "    -n numprocs      number of clients processes to run\n");
     fprintf(stderr, "    -t testtime      test duration (mins) or #[hmsd]\n");
     fprintf(stderr, "    -s               use stdin for commands\n");
     fprintf(stderr, "    -u commandlist   file for commands\n\n");
@@ -161,11 +188,13 @@ usage(const char *progname)
     fprintf(stderr, "    -h               help - this message\n\n");
     fprintf(stderr, "    -H name          hostname for parsing HOSTS=\n");
     fprintf(stderr, "    -A               use abortive close\n");
-    fprintf(stderr, "    -T opsperhour    client throttle\n");
     fprintf(stderr, "    -f summpersec    frequency to send summary results\n");
     fprintf(stderr, "    -d               debug\n");
     fprintf(stderr, "    -D datestamp     assign a datestamp\n");
     fprintf(stderr, "    -N numthreads    number of clients threads per process\n");
+#ifdef USE_EVENTS
+    fprintf(stderr, "    -e               use event-queue model\n");
+#endif /* USE_EVENTS */
     fprintf(stderr, "    -m maxErrorCnt   threshold to force test abort\n");
     fprintf(stderr, "    -M maxBlockCnt   number of blocks to run\n");
     fprintf(stderr, "    -R ramptime      test rampup time (secs)\n");
@@ -186,22 +215,23 @@ parseArgs(int argc, char **argv)
      */
 
     while((getoptch = 
-	getopt(argc,argv,"hf:H:T:t:u:c:m:M:n:N:R:D:Adrsv")) != EOF)
+	getopt(argc,argv,"hf:H:t:u:c:m:M:n:N:R:D:Adrsve")) != EOF)
     {
         switch(getoptch)
         {
+#ifdef USE_EVENTS
+	case 'e':
+	    gf_use_events = 1;
+	    break;
+#endif
 	case 'h':
 	    usage(argv[0]);
 	    break;
 	case 'H':			/* name for parsing */
-	    gs_parsename = mystrdup(optarg);
+	    gs_parsename = xstrdup(optarg);
 	    break;
 	case 'A':
 	    gf_abortive_close = 1;
-	    break;
-	case 'T':
-	    /* client throttles to ops/hour */
-	    gn_client_throttle = atoi(optarg);
 	    break;
 	case 'f':
 	    /* feedback frequency in seconds */
@@ -226,7 +256,7 @@ parseArgs(int argc, char **argv)
 	    gn_numthreads = atoi(optarg);
 	    break;
 	case 'u':
-	    commandsfilename = mystrdup(optarg);
+	    commandsfilename = xstrdup(optarg);
 	    break;
 	case 's':
 	    f_usestdin = 1;
@@ -302,8 +332,7 @@ resolve_addrs(char *host,
 	phe = gethostbyname(host);
 #endif
 
-	if (phe == NULL)
-	{
+	if (phe == NULL) {
 	    D_PRINTF(stderr, "Gethostbyname failed: %s", neterrstr() );
 	    return(returnerr(stderr,"Can't get %s host entry\n", host));
 	}
@@ -318,38 +347,38 @@ resolve_addrs(char *host,
     ppe = getprotobyname(protocol);
 #endif
 
-    if (ppe == 0)
-    {
+    if (ppe == 0) {
 	D_PRINTF(stderr, "protobyname returned %d\n",	ppe );
 	return(returnerr(stderr,"Can't get %s protocol entry\n",protocol));
     }
     memcpy(proto_ppe, ppe, sizeof(struct protoent));
 
-    /* D_PRINTF(stderr, "Protocol number %d\n", ppe->p_proto ); */
-
     /* Use protocol to choose a socket type */
     if (strcmp(protocol,"udp") == 0)
-    {
 	*type = SOCK_DGRAM;
-    }
     else
-    {
 	*type = SOCK_STREAM;
-	/* D_PRINTF(stderr, "Choosing SOCK_STREAM %d type %d %s\n",  
-	    SOCK_STREAM, *type, neterrstr() ); */
-    }
 
     return 0;
 }
 
 /* connect to a socket given the hostname and protocol */
+
+/*
+**   XXX Sean O'Rourke: Note that this is used both for client connections to
+**   the mailhost and for the communication channels between the
+**   parent mailstone and its children.  But it calls sock_open() at
+**   the end, and returns a SOCKET (e.g. with possible linespeed, SSL,
+**   etc.).  Just extract the fd (with SOCK_FD()) for non-simulation use.
+*/
+
 SOCKET
 connectSocket(ptcx_t ptcx,
 	    resolved_addr_t *hostInfo,
 	    char *protocol)
 {
     struct sockaddr_in sin;  	/* an Internet endpoint address */
-    SOCKET 	s;              /* socket descriptor */
+    _SOCKET 	s;              /* socket descriptor */
     int 		type;           /* socket type */
     short 	proto;
     int 		returnval;	/* temporary return value */
@@ -360,10 +389,8 @@ connectSocket(ptcx_t ptcx,
 
     sin.sin_family = AF_INET;
     memset((char *)&sin, 0, sizeof(sin));
-    D_PRINTF(debugfile, "Zeroed address structure\n" );
 
     sin.sin_port = htons(hostInfo->portNum);
-    D_PRINTF(debugfile, "Set port number %d\n", hostInfo->portNum);
 
     /* check if we've resolved this already */
     if ((hostInfo) && (hostInfo->resolved)) {
@@ -379,8 +406,9 @@ connectSocket(ptcx_t ptcx,
 
 	if (resolve_addrs(hostInfo->hostName, "tcp",
 			  &host_phe, &host_ppe, &host_addr, &host_type)) {
-	    return returnerr(debugfile,"Can't resolve hostname %s in get()\n",
+	    (void) returnerr(debugfile,"Can't resolve hostname %s in get()\n",
 			     hostInfo->hostName);
+	    return BADSOCKET_VALUE;
 	}
 	sin.sin_addr.S_ADDR = host_addr;
 	sin.sin_family = PF_INET;
@@ -390,47 +418,41 @@ connectSocket(ptcx_t ptcx,
 
     /* Allocate a socket */
     s = socket(PF_INET, type, proto);
-  
-    if (BADSOCKET(s))
-    {
+    if (_BADSOCKET(s)) {
+	int save_errno = errno;
 	D_PRINTF(debugfile, "Can't create socket: %s\n",neterrstr() );
+	_NETCLOSE(s);
+	errno = save_errno;
 	return BADSOCKET_VALUE;
     }
   
     /* Connect the socket */
-    D_PRINTF(debugfile, "Trying to connect %d with size %d\n",
-	     s, sizeof(sin));
-    D_PRINTF(debugfile, "Address is family %d, port %d, addr %s\n", 
-	     sin.sin_family, ntohs(sin.sin_port),
-	     safe_inet_ntoa(sin.sin_addr, ntoa_buf) );
-  
+    D_PRINTF(debugfile, "Connecting %d to %s:%d\n",
+	     s, safe_inet_ntoa(sin.sin_addr, ntoa_buf), ntohs(sin.sin_port));
     returnval = connect(s, (struct sockaddr *)&sin, sizeof(sin));
 
     if (returnval < 0) {
 	int err = GET_ERROR;  /* preserve the error code */
 
 	D_PRINTF(debugfile, "Can't connect: %s\n", neterrstr() );
-	NETCLOSE(s);
+	_NETCLOSE(s);
 
 	SET_ERROR(err);
 	return BADSOCKET_VALUE;
     }
 
-    /* all done, returning socket descriptor */
-    D_PRINTF(debugfile, "Returning %d from connectSocket call\n", s );
-    return(s);
-
+    return sock_open(s);
 } /* END connectSocket() */
 
 int
 set_abortive_close(SOCKET sock)
 {
     struct linger linger_opt;
-
+    int _sock = SOCK_FD(sock);
     linger_opt.l_onoff = 1;
     linger_opt.l_linger = 0;
 
-    if (setsockopt(sock, SOL_SOCKET, SO_LINGER,
+    if (setsockopt(_sock, SOL_SOCKET, SO_LINGER,
 		   (char *) &linger_opt, sizeof(linger_opt)) < 0) {
 	returnerr(stderr, "Couldn't set SO_LINGER = 0\n");
 	return -1;
@@ -467,7 +489,7 @@ initializeCommands(char *cfilename)
     while (!feof(cfile)) {		/* read file in to char array */
 	if ((cbuflen + CMDBUF_INCR + 1) > cbufalloced) { /* grow array */
 	    cbufalloced += CMDBUF_INCR;
-	    cbuf = (char *)myrealloc(cbuf, cbufalloced+1);
+	    cbuf = (char *)xrealloc(cbuf, cbufalloced+1);
 	    cbuf[cbuflen] = '\0';
 	}
 	ret = fread(cbuf+cbuflen, 1, CMDBUF_INCR, cfile);
@@ -486,8 +508,6 @@ initializeCommands(char *cfilename)
     if (cfile != stdin)
 	fclose(cfile);
 
-    /*  D_PRINTF(stderr, "Got commands len=%d:\n%s\n", cbuflen, cbuf); */
-
     /* Read commands into structure, make sure we have all req arguments */
     if ((gn_total_weight = load_commands(cbuf)) < 0) {
 	D_PRINTF(stderr, "could not load %s\n", cfilename);
@@ -497,6 +517,7 @@ initializeCommands(char *cfilename)
 	D_PRINTF(stderr, "No commands found for this host in %s\n", cfilename);
 	errexit(stderr, "No command for current host in command file\n");
     }
+    xfree(cbuf);
 }
 
 int
@@ -512,14 +533,13 @@ readwriteStream(int ii, int fdin, int fdout)
     /* structured as a while() for future nonblocking style */
     while (toread) {
 	errno = 0;
-	res = NETREAD(fdin, buf, sizeof(buf)-1);
+	res = _NETREAD(fdin, buf, sizeof(buf)-1);
 	D_PRINTF(stderr, "read %d bytes from client %d\n", res, ii);
 	if (res == 0) {
 	    return -1; /* EOF unless O_NDELAY */
 	} else if (res < 0) {
-	    if (errno == EINTR || errno == EINTR) {
+	    if (errno == EAGAIN || errno == EINTR)
 		return 0; /* go back to the poll loop to service others */
-	    }
 
 	    fprintf(stderr, "readwriteStream(%d,%d,%d) error reading: errno=%d: %s\n",
 		    ii, fdin, fdout, errno, strerror(errno));
@@ -532,7 +552,6 @@ readwriteStream(int ii, int fdin, int fdout)
 	    cp = buf;
 	    towrite = res;
 	    buf[towrite] = '\0';
-	    /*D_PRINTF(stderr, "writing %d bytes to %d [%s]\n", towrite, fdout, buf);*/
 	    D_PRINTF(stderr, "writing %d bytes to %d\n", towrite, fdout);
 	    while (towrite) {
 		res = write(fdout, cp, towrite);
@@ -579,9 +598,9 @@ readwriteChildren(pccx_t pccxs)
      * Wait for all children to exit.
      */
     nfds=0;
-    pfds = (struct pollfd *)mycalloc(sizeof(struct pollfd)*gn_numprocs);
+    pfds = (struct pollfd *)xcalloc(sizeof(struct pollfd)*gn_numprocs);
     for (ii=0; ii < gn_numprocs; ++ii) {
-	if (pccxs[ii].socket != -1) {
+	if (pccxs[ii].socket != _BADSOCKET_VALUE) {
 	    pfds[nfds].fd = pccxs[ii].socket;
 	    ++nfds;
 	}
@@ -602,9 +621,9 @@ readwriteChildren(pccx_t pccxs)
 	    pfds[ii].revents = 0;
 	}
 
-	D_PRINTF(stderr, "entering poll(nfds=%d)\n", nfds);
 	ret = poll(pfds, nfds, 5*1000);
-	D_PRINTF(stderr, "back from poll, ret=%d\n", ret);
+	D_PRINTF(stderr, "back from poll, nfds = %d, ret=%d\n",
+		 nfds, ret);
 
 	if (ret == 0)
 	    continue;
@@ -626,9 +645,8 @@ readwriteChildren(pccx_t pccxs)
 	    }
 
 	    if (pfds[ii].revents & POLLIN) {
-		if (readwriteStream(ii, pfds[ii].fd, 1) == -1) {
+		if (readwriteStream(ii, pfds[ii].fd, 1) == -1)
 		    closethisfd = 1;
-		}
 	    } else if (pfds[ii].revents & (POLLHUP | POLLERR | POLLNVAL)) {
 		if (pfds[ii].revents & POLLHUP)
 		    D_PRINTF(stderr, "POLLHUP for stdout fd=%d for client=%d!\n",
@@ -639,7 +657,7 @@ readwriteChildren(pccx_t pccxs)
 	    if (closethisfd) {
 		D_PRINTF(stderr, "closing for slot=%d fd=%d nfds=%d\n",
 			 ii, pfds[ii].fd, nfds);
-		NETCLOSE(pfds[ii].fd);
+		_NETCLOSE(pfds[ii].fd);
 
 		--nfds;	/* shrink poll array */
 		/* NOTE: this re-orders the array */
@@ -658,7 +676,7 @@ readwriteChildren(pccx_t pccxs)
 		  nfds, time(0L), gt_shutdowntime);
 	for (ii = 0; ii < nfds; ++ii) {	/* close socket to make clients die */
 	    D_PRINTF(stderr, "closing for slot=%d fd=%d\n", ii, pfds[ii].fd);
-	    NETCLOSE(pfds[ii].fd);
+	    _NETCLOSE(pfds[ii].fd);
 	}
     }
     return 0;
@@ -670,7 +688,7 @@ readwriteChildren(pccx_t pccxs)
 THREAD_RET
 launchChild(void *targ)
 {
-    SOCKET	clientsock;
+    _SOCKET	clientsock;
     struct sockaddr_in saddr; /* server address */
     struct linger linger_opt;
     unsigned int testtimeleft;
@@ -680,18 +698,17 @@ launchChild(void *targ)
 
     gn_myPID = getpid();
     if (ramptime) {
-	/* comvert to microseconds */
+	/* convert to microseconds */
 	if (gn_numthreads > 0) {
 	    /* force intermediate result to double to avoid overflow */
-	    thread_stagger_usec =  (unsigned int)((ramptime * (double)USECINSEC) / gn_numthreads);
+	    thread_stagger_usec = (unsigned int)((ramptime * (double)USECINSEC) / gn_numthreads);
 	} else {
 	    thread_stagger_usec = 0;
 	}
     }
 
-    if ((clientsock=socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    if ((clientsock=socket(AF_INET, SOCK_STREAM, 0)) == -1)
 	errexit(stderr, "child socket(): %s\n", neterrstr());
-    }
 
     memset(&saddr, 0, sizeof(saddr));
     saddr.sin_addr.S_ADDR = inet_addr("127.0.0.1");
@@ -699,7 +716,7 @@ launchChild(void *targ)
     saddr.sin_port = listenport;
 
     if (connect(clientsock, (struct sockaddr *)&saddr, sizeof(saddr)) == -1) {
-	NETCLOSE(clientsock);
+	_NETCLOSE(clientsock);
 	errexit(stderr, "child connect(): %s\n", neterrstr());
     }
 #if 1
@@ -707,7 +724,7 @@ launchChild(void *targ)
     linger_opt.l_linger = 60;
 
     if (setsockopt(clientsock, SOL_SOCKET, SO_LINGER, (char *) &linger_opt, sizeof(linger_opt)) < 0) {
-	NETCLOSE(clientsock);
+	_NETCLOSE(clientsock);
 	errexit(stderr, "child setsockopt(): %s\n", neterrstr());
     }
 #endif
@@ -744,7 +761,7 @@ launchChild(void *targ)
     }
 	    
     D_PRINTF(stderr, "child %d: closing logging socket\n", pnum);
-    NETCLOSE(clientsock);
+    _NETCLOSE(clientsock);
 
 #ifndef _WIN32
     return((void *)ret);
@@ -768,20 +785,26 @@ waitChildren(void)
 	    if (errno == ECHILD) {
 		break;			/* none left.  finished */
 	    }
-	    if (errno == EINTR) {	/* alarm went off */
+	    else if (errno == EINTR) {	/* alarm went off */
 		if (time(0L) > (gt_aborttime+(EXIT_FAST*gt_stopinterval))) {
 		    d_printf (stderr,
 			      "WARNING: Aborting wait for children!\n");
 		    break;
 		}
 	    }
+	    else {
+		d_printf(stderr, "WARNING: wait(): %s\n", strerror(errno));
+		break;
+	    }
 	}
-	if (WIFSIGNALED (status)) {	/* show error exits */
-	    d_printf (stderr, "Client pid %d died with signal %d\n",
-		     pid, WTERMSIG(status));
-	} else {
-	    D_PRINTF(stderr, "Client pid %d: status: %d errno=%d: %s\n",
-		     pid, status, errno, strerror(errno));
+	else {
+	    if (WIFSIGNALED (status)) {	/* show error exits */
+		d_printf (stderr, "Client pid %d died with signal %d\n",
+			  pid, WTERMSIG(status));
+	    } else {
+		D_PRINTF(stderr, "Client pid %d: status: %d errno=%d: %s\n",
+			 pid, status, errno, strerror(errno));
+	    }
 	}
     }
 #endif /* !_WIN32 */
@@ -801,10 +824,16 @@ main(int argc, char *argv[])
     int		ret;
     int		pid=0;
     pccx_t	pccxs; /* client process contexts */
-    SOCKET	serversock;
+    _SOCKET	serversock;
     struct sockaddr_in saddr; /* server address */
     struct sockaddr_in caddr; /* client address */
-    int		addr_len;
+    /* XXX: Loathe AIX */
+#ifdef __AIX__
+# define SOCKLEN_T	unsigned long
+#else
+# define SOCKLEN_T	int
+#endif
+    SOCKLEN_T		addr_len;
     char ntoabuf[SIZEOF_NTOABUF];
 
 #ifdef _WIN32
@@ -821,6 +850,10 @@ main(int argc, char *argv[])
 #endif /* _WIN32 */
 
     gn_myPID = getpid();
+
+    /* XXX: random seed should probably also be settable on command line. */
+    srand48(time(0) ^ gn_myPID);
+    
     gethostname(gs_thishostname, sizeof(gs_thishostname)-1);
 
     memset(mailmaster, 0, sizeof(mailmaster));
@@ -856,8 +889,8 @@ main(int argc, char *argv[])
        usage(argv[0]);
     }
 
-    if (gn_numprocs > MAXPROCSPERNODE || gn_numprocs < 1) {
-	returnerr(stderr, "Number of clients must be between 1 and %d\n", MAXPROCSPERNODE);
+    if (gn_numprocs < 1) {
+	returnerr(stderr, "Number of clients must be between >= 1\n");
 	usage(argv[0]);
     }
 
@@ -878,35 +911,32 @@ main(int argc, char *argv[])
     gt_aborttime = gt_shutdowntime + gt_stopinterval*2*EXIT_FASTEST;
 
 
-    if ((pccxs = (pccx_t)mycalloc(sizeof(ccx_t) * gn_numprocs)) == NULL) {
-	errexit(stderr, "error mycalloc() pccxs\n");
-    }
+    pccxs = (pccx_t)xcalloc(sizeof(ccx_t) * gn_numprocs);
 
     D_PRINTF(stderr, "preparing serversock\n");
 
-    if ((serversock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    if ((serversock = socket(AF_INET, SOCK_STREAM, 0)) == -1)
 	errexit(stderr, "socket() error: %s\n", neterrstr());
-    }
 
     memset(&saddr, 0, sizeof(saddr));
-    /*saddr.sin_addr.S_ADDR = htonl(INADDR_ANY);*/
+
     saddr.sin_addr.S_ADDR = inet_addr("127.0.0.1");
     saddr.sin_family = AF_INET;
     saddr.sin_port = 0;
 
     if (bind(serversock, (struct sockaddr *)&saddr, sizeof(saddr)) == -1) {
-	NETCLOSE(serversock);
+	_NETCLOSE(serversock);
 	errexit(stderr, "bind() error: %s\n", neterrstr());
     }
 
     if (listen(serversock, 512) == -1) {
-	NETCLOSE(serversock);
+	_NETCLOSE(serversock);
 	errexit(stderr, "listen() error: %s\n", neterrstr());
     }
 
     addr_len = sizeof(saddr);
     if (getsockname(serversock, (struct sockaddr *)&saddr, &addr_len) == -1) {
-	NETCLOSE(serversock);
+	_NETCLOSE(serversock);
 	errexit(stderr, "getsockname() error: %s\n", neterrstr());
     }
 

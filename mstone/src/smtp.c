@@ -21,6 +21,8 @@
  * Contributor(s):	Dan Christian <robodan@netscape.com>
  *			Marcel DePaolis <marcel@netcape.com>
  *			Mike Blakely
+ *			Sean O'Rourke <sean@sendmail.com>
+ *			Thom O'Connor <thom@sendmail.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License Version 2 or later (the "GPL"), in
@@ -35,8 +37,11 @@
  */
 /* SMTP protocol tests */
  
+#include <ctype.h>
 #include "bench.h"
 #include "pish.h"
+#include "generate.h"
+#include "xalloc.h"
 #include <glob.h>			/* for glob, globfree */
 
 #define MAXCOMMANDLEN	256		/* parse buffer length */
@@ -60,6 +65,7 @@ typedef struct {
 #define useEHLO 0x01			/* use EHLO instead of HELO */
 #define useAUTHLOGIN 0x02	  /* use AUTH LOGIN to authenticate */
 #define useAUTHPLAIN 0x04	  /* use AUTH PLAIN to authenticate */
+#define useLMTP 0x08			/* use LMTP instead of SMTP */
 
 static void doSMTPExit  (ptcx_t ptcx, doSMTP_state_t	*me);
 
@@ -102,7 +108,7 @@ SmtpFileInit (pmail_command_t cmd,	/* command being checked */
     /* We don't really need much of the file, but it warms up the
      * cache.  Limit at 1Mb */
     msgsize = MIN (statbuf.st_size, 1024*1024);
-    msgdata = (char *) mycalloc(msgsize+strlen(MSG_TRAILER)+1);
+    msgdata = (char *) xcalloc(msgsize+strlen(MSG_TRAILER)+1);
 
     if ((bytesRead = read(fd, msgdata, msgsize)) <= 0) {
 	close(fd);
@@ -136,7 +142,7 @@ SmtpFileInit (pmail_command_t cmd,	/* command being checked */
 	    cp += strlen(PROTO_MAIL_FROM);
 	    cp2 = strchr(cp, '\n');
 	    off = cp2 - cp;
-	    fileEntry->msgMailFrom = (char *) mycalloc(off+1);
+	    fileEntry->msgMailFrom = (char *) xcalloc(off+1);
 	    memcpy(fileEntry->msgMailFrom, cp, off);
 	    fileEntry->msgMailFrom[off] = 0;
 	    D_PRINTF(stderr, "got PROTO_MAIL_FROM:%s\n",
@@ -157,7 +163,7 @@ SmtpFileInit (pmail_command_t cmd,	/* command being checked */
     }
 
 
-    myfree (msgdata);
+    xfree (msgdata);
     close(fd);
     return 0;
 }
@@ -184,10 +190,10 @@ SmtpFilePrep (pmail_command_t cmd,	/* command being checked */
     pish->fileCount = globs.gl_pathc;
     D_PRINTF (stderr, "SmtpFilePrep: filePattern='%s' entries=%d\n",
 	      pish->filePattern, pish->fileCount);
-    pish->files = mycalloc (pish->fileCount * sizeof (smtp_file_t));
+    pish->files = xcalloc (pish->fileCount * sizeof (smtp_file_t));
     fileEntry = pish->files;
     for (ii = 0; ii < pish->fileCount; ++ii, ++fileEntry) {
-	fileEntry->filename = mystrdup (globs.gl_pathv[ii]);
+	fileEntry->filename = xstrdup (globs.gl_pathv[ii]);
 	if (SmtpFileInit (cmd, defparm, fileEntry) < 0) {
 	    globfree (&globs);
 	    return -1;
@@ -360,8 +366,7 @@ SmtpParseStart (pmail_command_t cmd,
 		param_list_t *defparm)
 {
     param_list_t	*pp;
-    pish_command_t	*pish = (pish_command_t *)mycalloc
-	(sizeof (pish_command_t));
+    pish_command_t	*pish = XCALLOC(pish_command_t);
     cmd->data = pish;
 
     cmd->numLoops = 1;		/* default 1 message */
@@ -369,9 +374,8 @@ SmtpParseStart (pmail_command_t cmd,
 
     D_PRINTF(stderr, "Smtp Assign defaults\n");
     /* Fill in defaults first, ignore defaults we dont use */
-    for (pp = defparm; pp; pp = pp->next) {
+    for (pp = defparm; pp; pp = pp->next)
 	(void)pishParseNameValue (cmd, pp->name, pp->value);
-    }
 
     return 1;
 }
@@ -385,6 +389,9 @@ SmtpParseEnd (pmail_command_t cmd,
 		param_list_t *defparm)
 {
     string_list_t	*sp;
+    int                 fd;
+    int                 bytesRead;
+    struct stat         statbuf;
     pish_command_t	*pish = (pish_command_t *)cmd->data;
 
     /* Now parse section lines */
@@ -413,8 +420,8 @@ SmtpParseEnd (pmail_command_t cmd,
     }
 
     if (!pish->loginFormat) {
-	D_PRINTF(stderr,"missing loginFormat for command");
-	return returnerr(stderr,"missing loginFormat for command\n");
+	D_PRINTF(stderr,"missing loginFormat for SMTP");
+	return returnerr(stderr,"missing loginFormat for SMTP\n");
     }
 
     if (!pish->passwdFormat) {
@@ -429,8 +436,53 @@ SmtpParseEnd (pmail_command_t cmd,
 
     /* check for required attrs */
     if (!pish->filePattern) {
-	D_PRINTF(stderr,"missing file for SMTP command");
-	return returnerr(stderr,"missing file for SMTP command\n");
+	D_PRINTF(stderr,"missing file/generator for SMTP command");
+	return returnerr(stderr,"missing file/generator for SMTP command\n");
+    }
+
+  #ifdef AUTOGEN
+    if(strcmp(pish->filePattern, "auto") == 0) {
+       /* automatically generate messages */
+       pish->filePattern = NULL;
+       gen_init();
+    }
+  #endif
+    else {
+       /* read the contents of file into struct */
+       memset(&statbuf, 0, sizeof(statbuf));
+       if (stat(pish->filename, &statbuf) != 0) {
+          return returnerr(stderr,"Couldn't stat file %s: errno=%d: %s\n",
+                           pish->filename, errno, strerror(errno));
+       }
+
+       /* open file */
+       if ((fd = open(pish->filename, O_RDONLY)) <= 0) {
+           return returnerr(stderr, "Cannot open file %s: errno=%d: %s\n",
+                            pish->filename, errno, strerror(errno));
+       }
+          
+       /* read into loaded_comm_list */
+       pish->msgsize = statbuf.st_size;
+       pish->msgdata = (char *) xcalloc(pish->msgsize+strlen(MSG_TRAILER)+1);
+
+       if ((bytesRead = read(fd, pish->msgdata, pish->msgsize)) <= 0) {
+           close(fd);
+           return returnerr(stderr, "Cannot read file %s: errno=%d: %s\n",
+                            pish->filename, errno, strerror(errno));
+       }
+
+       if (bytesRead != pish->msgsize) {
+           returnerr(stderr, "Error reading file %s, got %d expected %d\n",
+                     pish->filename, bytesRead, pish->msgsize);
+           close(fd);
+           return -1;
+       }
+
+       pish->msgdata[pish->msgsize] = 0;
+
+       strcat(pish->msgdata, MSG_TRAILER);
+
+       close(fd);
     }
 
     SmtpFilePrep (cmd, defparm);
@@ -456,6 +508,8 @@ SmtpParseEnd (pmail_command_t cmd,
     return 1;
 }
 
+extern double d_millitime_atoi(char*);
+
 /* ====================================================================== 
    These routine will become protcol specific.
    Since SMTP is the most complex, they are here for now.
@@ -465,6 +519,7 @@ SmtpParseEnd (pmail_command_t cmd,
   TRANSITION: handles all the old names-fields for POP, IMAP, SMTP, HTTP
   This goes away when commands have protocol extensible fields
  */
+
 int
 pishParseNameValue (pmail_command_t cmd,
 		    char *name,
@@ -477,13 +532,13 @@ pishParseNameValue (pmail_command_t cmd,
     if (cmdParseNameValue(cmd, name, tok))
 	;				/* done */
     else if (strcmp(name, "server") == 0)
-	pish->hostInfo.hostName = mystrdup (tok);
+	pish->hostInfo.hostName = xstrdup (tok);
     else if (strcmp(name, "smtpmailfrom") == 0)
-	pish->smtpMailFrom = mystrdup (tok);
+	pish->smtpMailFrom = xstrdup (tok);
     else if (strcmp(name, "loginformat") == 0)
-	pish->loginFormat = mystrdup (tok);
+	pish->loginFormat = xstrdup (tok);
     else if (strcmp(name, "addressformat") == 0)
-	pish->addressFormat = mystrdup (tok);
+	pish->addressFormat = xstrdup (tok);
     else if (strcmp(name, "firstlogin") == 0)
 	pish->loginRange.first = atoi(tok);
     else if (strcmp(name, "numlogins") == 0)
@@ -504,25 +559,43 @@ pishParseNameValue (pmail_command_t cmd,
 	pish->addressRange.sequential = atoi(tok);
     else if (strcmp(name, "portnum") == 0)
 	pish->hostInfo.portNum = atoi(tok);
-    else if (strcmp(name, "numrecips") == 0)
-	pish->numRecipients = atoi(tok);
-    else if (strcmp(name, "numrecipients") == 0)
-	pish->numRecipients = atoi(tok);
+    else if ((strcmp(name, "numrecips") == 0)
+	   || (strcmp(name, "numrecipients") == 0))
+	pish->numRecipients = parse_distrib(tok, (value_parser_t)&atof);
     else if (strcmp(name, "file") == 0)
-	pish->filePattern = mystrdup (tok);
+	pish->filename = xstrdup (tok);
+ 
+    /* Sean O'Rourke: parse Multi-pop attr's */
+    else if(strcmp(name, "percentactive") == 0)
+      pish->percentActive = atof(tok)/100.0;
+    else if(strcmp(name, "userspacing") == 0)
+      pish->userSpacing
+         = parse_distrib(tok, (value_parser_t)&d_millitime_atoi);
+    else if (strcmp(name, "droprate") == 0)
+      pish->dropRate = parse_distrib(tok, (value_parser_t)&atof);
+    else if (strcmp(name, "msgreadtime") == 0)
+      pish->msgReadTime
+         = parse_distrib(tok, (value_parser_t)&d_millitime_atoi);
     else if (strcmp(name, "passwdformat") == 0)
-	pish->passwdFormat = mystrdup (tok);
+	pish->passwdFormat = xstrdup (tok);
     else if (strcmp(name, "searchfolder") == 0)
-	pish->imapSearchFolder = mystrdup (tok);
+	pish->imapSearchFolder = xstrdup (tok);
     else if (strcmp(name, "searchpattern") == 0)
-	pish->imapSearchPattern = mystrdup (tok);
+	pish->imapSearchPattern = xstrdup (tok);
     else if (strcmp(name, "searchrate") == 0)
 	pish->imapSearchRate = atoi(tok);
+    else if (strcmp(name, "timeout") == 0)
+        pish->net_timeout = millitime_atoi(tok);
     else if (strcmp(name, "useehlo") == 0)
-	if (atoi(tok)) {
+	if (atoi(tok) == 1) {
 	    pish->flags |= useEHLO;
+	    pish->flags &= ~useLMTP;
+	}
+	else if (atoi(tok) == 2) {
+	    pish->flags |= useLMTP;
 	} else {
 	    pish->flags &= ~useEHLO;
+	    pish->flags &= ~useLMTP;
 	}
     else if (strcmp(name, "useauthlogin") == 0)
 	if (atoi(tok) > 0) {
@@ -536,6 +609,54 @@ pishParseNameValue (pmail_command_t cmd,
 	} else {
 	    pish->flags &= ~useAUTHPLAIN;
 	}
+
+  #ifdef AUTOGEN
+    /* Sean O'Rourke: added auto-generated messages */
+    else if (strcmp(name, "size") == 0)
+        pish->genSize = parse_distrib(tok, (value_parser_t)&size_atof);
+    else if (strcmp(name, "headers") == 0)
+        pish->genHdrs = parse_distrib(tok, (value_parser_t)&atof);
+    else if (strcmp(name, "mime") == 0)
+        pish->genMime = parse_distrib(tok, (value_parser_t)&atof);
+  # ifdef GEN_CHECKSUM
+    else if (strcmp(name, "checksum") == 0) {
+        if (tolower(*tok) == 'n')
+            pish->genChecksum = CS_NONE;
+        else if (tolower(*tok) == 'y' || atoi(tok) != 0) {
+            fprintf(stderr, "Generating checksums.\n");
+            pish->genChecksum = CS_CHECK;
+        } else if (tolower(*tok) == 's')
+            pish->genChecksum = CS_SAVE_BAD;
+        else {
+            fprintf(stderr, "Unrecognized checksum option `%s'\n", tok);
+            return -1;
+        }
+    }
+  # else /* GEN_CHECKSUM */
+    pish->genChecksum = CS_NONE;
+  # endif /* GEN_CHECKSUM */
+  #endif /* AUTOGEN */
+  #ifdef SOCK_LINESPEED
+    else if (strcmp(name, "latency") == 0)
+        pish->latency = parse_distrib(tok, &d_millitime_atoi);
+    else if (strcmp(name, "bandwidth") == 0)
+        pish->bandwidth = parse_distrib(tok, (value_parser_t)&size_atof);
+  #endif /* SOCK_LINESPEED */
+  #ifdef SOCK_SSL
+    else if (strcmp(name, "sslcert") == 0)
+        pish->cert = xstrdup(tok);
+    else if (strcmp(name, "sslkey") == 0)
+        pish->key = xstrdup(tok);
+     /* NOTE: starttls and ssltunnel are mutually exclusive */
+    else if (strcmp(name, "starttls") == 0) {
+        if ((pish->useTLS = atoi(tok)))
+            pish->sslTunnel = 0;
+    } else if (strcmp(name, "ssltunnel") == 0) {
+        if ((pish->sslTunnel = atoi(tok)))
+            pish->useTLS = 0;
+    }
+  #endif /* SOCK_SSL */
+
     else {
 	return -1;
     }
@@ -549,7 +670,7 @@ pishStatsInit(mail_command_t *cmd, cmd_stats_t *p, int procNum, int threadNum)
     assert (NULL != p);
 
     if (!p->data) {			/* create it  */
-	p->data = mycalloc (sizeof (pish_stats_t));
+	p->data = XCALLOC (pish_stats_t);
     } else {				/* zero it */
 	memset (p->data, 0, sizeof (pish_stats_t));
     }
@@ -706,27 +827,60 @@ isSmtpResponseOK(char * s)
     return 0;
 }
 
+static int
+isSmtpResponse(char *s)
+{
+    return(isdigit(s[0]) && isdigit(s[1]) && isdigit(s[2]) && (s[3] == ' '));
+}
+
+/*
+**  Sean O'Rourke: changed this to ignore SMTP debugging output.  also changed
+**  to differentiate between I/O errors and 4xx/5xx codes.
+**
+**	Returns:
+**		0 -- no error, 2xx/3xx status code
+**		-1 -- I/O error
+**		-2 -- 4xx/5xx status code
+*/
+
 int
 doSmtpCommandResponse(ptcx_t ptcx, SOCKET sock, char *command, char *response, int resplen)
 {
     int rc;
 
     T_PRINTF(ptcx->logfile, command, strlen (command), "SMTP SendCommand");
-    rc = doCommandResponse(ptcx, sock, command, response, resplen);
-    if (rc == -1)
-	return rc;
-    T_PRINTF(ptcx->logfile, response, strlen(response),
-	     "SMTP ReadResponse");	/* telemetry log. should be lower level */
-    /* D_PRINTF(stderr, "SMTP command=[%s] response=[%s]\n", command, response); */
-    if (!isSmtpResponseOK(response)) {
-	if (gf_timeexpired < EXIT_FAST) {
-	    /* dont modify command (in case it could be re-tried) */
-	    trimEndWhite (response);	/* clean up for printing */
-	    strcpy (ptcx->errMsg, "SmtpCommandResponse: got SMTP error response");
-	}
+/*     rc = doCommandResponse(ptcx, sock, command, response, resplen); */
+    if ((rc = sendCommand(ptcx, sock, command)) == -1) {
+	strcat (ptcx->errMsg, "<doCommandResponse");
 	return -1;
     }
-    return 0;
+
+    for(;;) {
+	/* read server response line */
+	if ((rc = readResponse(ptcx, sock, response, resplen)) <= 0) {
+	    strcat (ptcx->errMsg, "<doCommandResponse");
+	    return -1;
+	}
+	
+	T_PRINTF(ptcx->logfile, response, strlen(response),
+		 "SMTP ReadResponse");	/* telemetry log. should be lower level */
+    /* D_PRINTF(stderr, "SMTP command=[%s] response=[%s]\n", command, response); */
+	if (isSmtpResponse(response)) {
+	    if(!isSmtpResponseOK(response)) {
+		if (gf_timeexpired < EXIT_FAST) {
+		    /* dont modify command (in case it could be re-tried) */
+		    trimEndWhite (response);	/* clean up for printing */
+		    strcpy (ptcx->errMsg, 
+			    "SmtpCommandResponse: got SMTP error response");
+		}
+		return -2;
+	    }
+	    return 0;
+	}
+	return -1;			/* invalid response. */
+    }
+    /* not reached */
+    return -1;
 }
 
 static const char basis_64[] =
@@ -810,13 +964,13 @@ smtpAuthPlain(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, SOCKET sock
     event_start(ptcx, &stats->cmd);
     rc = doSmtpCommandResponse(ptcx, sock, command, respBuffer, sizeof(respBuffer));
     event_stop(ptcx, &stats->cmd);
-    if (rc == -1) {
+    if (rc < 0) {
 	if (gf_timeexpired < EXIT_FAST) {
 	    stats->login.errs++;
 	    strcat (ptcx->errMsg, "<SmtpLogin: failure sending AUTH PLAIN");
 	    trimEndWhite (command);
 	    returnerr(debugfile, "%s command=[%.99s] response=[%.99s]\n", /* ??? */
-		      ptcx->errMsg, command, respBuffer);
+		      PSTR(ptcx->errMsg), command, respBuffer);
 	}
 	return -1;
     }
@@ -838,7 +992,7 @@ smtpAuthPlain(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, SOCKET sock
     if (str_to_base64(auth_msg, auth_msg_len, base64_buf, sizeof(base64_buf)) == -1) {
 	stats->login.errs++;
 	strcpy (ptcx->errMsg, "SmtpLogin: Internal error encoding user");
-	returnerr(debugfile, "%s [%.199s]\n", ptcx->errMsg, mailUser); /* ??? */
+	returnerr(debugfile, "%s [%.199s]\n", PSTR(ptcx->errMsg), mailUser); /* ??? */
 	return -1;
     }
     sprintf(command, "%s%s", base64_buf, CRLF);
@@ -846,11 +1000,11 @@ smtpAuthPlain(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, SOCKET sock
     event_start(ptcx, &stats->login);
     rc = doSmtpCommandResponse(ptcx, sock, command, respBuffer, sizeof(respBuffer));
     event_stop(ptcx, &stats->login);
-    if (rc == -1) {
+    if (rc < 0) {
 	if (gf_timeexpired < EXIT_FAST) {
 	    stats->login.errs++;
 	    strcat (ptcx->errMsg, "<SmtpLogin: failure sending auth message");
-	    returnerr(debugfile,"%s [%.199s]\n", ptcx->errMsg, mailUser); /* ??? */
+	    returnerr(debugfile,"%s [%.199s]\n", PSTR(ptcx->errMsg), mailUser); /* ??? */
 	}
 	return -1;
     }
@@ -890,7 +1044,7 @@ smtpAuthLogin(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, SOCKET sock
     event_start(ptcx, &stats->cmd);
     rc = doSmtpCommandResponse(ptcx, sock, command, respBuffer, sizeof(respBuffer));
     event_stop(ptcx, &stats->cmd);
-    if (rc == -1) {
+    if (rc < 0) {
 	if (gf_timeexpired < EXIT_FAST) {
 	    stats->login.errs++;
 	    strcat (ptcx->errMsg, "<SmtpLogin: failure sending AUTH LOGIN");
@@ -915,7 +1069,7 @@ smtpAuthLogin(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, SOCKET sock
     event_start(ptcx, &stats->cmd);
     rc = doSmtpCommandResponse(ptcx, sock, command, respBuffer, sizeof(respBuffer));
     event_stop(ptcx, &stats->cmd);
-    if (rc == -1) {
+    if (rc < 0) {
 	if (gf_timeexpired < EXIT_FAST) {
 	    stats->login.errs++;
 	    strcat (ptcx->errMsg, "<SmtpLogin: failure sending user");
@@ -938,7 +1092,7 @@ smtpAuthLogin(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, SOCKET sock
     event_start(ptcx, &stats->login);
     rc = doSmtpCommandResponse(ptcx, sock, command, respBuffer, sizeof(respBuffer));
     event_stop(ptcx, &stats->login);
-    if (rc == -1) {
+    if (rc < 0) {
 	if (gf_timeexpired < EXIT_FAST) {
 	    stats->login.errs++;
 	    strcat (ptcx->errMsg, "<SmtpLogin: failure sending password");
@@ -953,20 +1107,55 @@ smtpAuthLogin(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, SOCKET sock
     return 0;
 }
 
+#ifdef SOCK_SSL
+
+static SOCKET
+starttls(ptcx_t ptcx, mail_command_t *cmd, SOCKET sock)
+{
+    char	resp[MAX_RESPONSE_LEN];
+
+    int ret = doSmtpCommandResponse(ptcx, sock, "STARTTLS" CRLF,
+				    resp, sizeof(resp));
+    switch (ret)
+    {
+    case -2:
+	returnerr(debugfile, "STARTTLS: %.99s\n", resp);
+	return sock;
+    case -1:
+	returnerr(debugfile, "STARTTLS: %.99s\n", resp);
+	return BADSOCKET_VALUE;
+    case 0:
+	/* Initialize SSL */
+	SSL_INIT(sock, (pish_command_t*)cmd->data);
+	return sock;
+    };
+    /* not reached */
+    return BADSOCKET_VALUE;
+}
+
+#endif /* SOCK_SSL */
+
 /* Entry point for running tests */
 void *
 sendSMTPStart(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 {
-    doSMTP_state_t	*me = (doSMTP_state_t *)mycalloc (sizeof (doSMTP_state_t));
+    doSMTP_state_t	*me = XCALLOC (doSMTP_state_t);
     char	respBuffer[MAX_RESPONSE_LEN];
-    char	command[MAXCOMMANDLEN];
+    char	command[MAX_COMMAND_LEN];
     int		numBytes;
     int		rc;
-    pish_command_t	*pish = (pish_command_t *)cmd->data;
-    pish_stats_t	*stats = (pish_stats_t *)ptimer->data;
+    pish_command_t	*pish;
+    pish_stats_t	*stats;
 
-    if (!me) return NULL;
+    assert(ptcx != NULL);
+    assert(cmd != NULL);
+    assert(ptimer != NULL);
+    assert(cmd->data != NULL);
+    assert(ptimer->data != NULL);
 
+    pish = (pish_command_t *)cmd->data;
+    stats = (pish_stats_t *)ptimer->data;
+    ptcx->net_timeout = pish->net_timeout;
 
     event_start(ptcx, &stats->connect);
     ptcx->sock = connectSocket(ptcx, &pish->hostInfo, "tcp");
@@ -977,7 +1166,7 @@ sendSMTPStart(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 	    returnerr(debugfile, "%s SMTP Couldn't connect to %s: %s\n",
 		      ptcx->errMsg, pish->hostInfo.hostName, neterrstr());
 	}
-	myfree (me);
+	xfree (me);
 	return NULL;
     }
 
@@ -987,50 +1176,141 @@ sendSMTPStart(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 	}
     }
 
+  #ifdef SOCK_SSL
+    if (pish->sslTunnel)
+        SSL_INIT(ptcx->sock, pish);
+  #endif /* SOCK_SSL */
+ 
+    LS_INIT(ptcx->sock, pish);
+
     /* READ connect response from server */
     event_start(ptcx, &stats->banner);
-    numBytes = readResponse(ptcx, ptcx->sock, respBuffer, sizeof(respBuffer));
-    event_stop(ptcx, &stats->banner);
-    if (numBytes <= 0) {
-	if (gf_timeexpired < EXIT_FAST) {
-	    stats->banner.errs++;
-	    returnerr(debugfile,"%s SMTP Error reading banner: %s\n",
-		      ptcx->errMsg, neterrstr());
-	}
-	doSMTPExit (ptcx, me);
-	return NULL;
-    }
-    if (isSmtpResponseOK(respBuffer) == 0) {
-	if (gf_timeexpired < EXIT_FAST) {
-	    stats->banner.errs++;
-	    returnerr(debugfile, "%s Got SMTP ERROR response [%.99s]\n",
-		      ptcx->errMsg, respBuffer);
-	}
-	doSMTPExit (ptcx, me);
-	return NULL;
-    }
-    D_PRINTF(debugfile,"read connect response\n");
+    /* Sean O'Rourke: change to handle milter debugging stuff. */
+    for(;;) {
+        /* read server response line */
+        numBytes = readResponse(ptcx,
+                                ptcx->sock,
+                                respBuffer,
+                                sizeof(respBuffer));
+        if (numBytes <= 0) {
+            if (gf_timeexpired < EXIT_FAST) {
+                stats->banner.errs++;
+                returnerr(debugfile,"%s SMTP Error reading banner: %s\n",
+                          ptcx->errMsg, neterrstr());
+            }
+            event_stop(ptcx, &stats->banner);
+            doSMTPExit (ptcx, me);
+            return NULL;
+        }
 
-
-    if (pish->flags & useEHLO) {
-	/* send extended EHLO */
-	sprintf(command, "EHLO %s" CRLF, gs_thishostname);
-    } else {
-	/* send normal HELO */
-	sprintf(command, "HELO %s" CRLF, gs_thishostname);
+        if (isSmtpResponse(respBuffer)) {
+            event_stop(ptcx, &stats->banner);
+            if (isSmtpResponseOK(respBuffer) == 0) {
+                if (gf_timeexpired < EXIT_FAST) {
+                    stats->banner.errs++;
+                    returnerr(debugfile, "%s Got SMTP ERROR response [%.99s]\n",
+                              ptcx->errMsg, respBuffer);
+                }
+                doSMTPExit (ptcx, me);
+                return NULL;
+            }
+            D_PRINTF(debugfile,"read connect response\n");
+            break;
+        }
     }
+
     event_start(ptcx, &stats->cmd);
-    rc = doSmtpCommandResponse(ptcx, ptcx->sock, command, respBuffer, sizeof(respBuffer));
+    /* LMTP addition */
+    if (pish->flags & useLMTP) {
+	int len = 0;
+	char *resp = respBuffer;
+	/* send extended LHLO directly to lmtp*/
+	sprintf(command, "LHLO %s" CRLF, gs_thishostname);
+	T_PRINTF(ptcx->logfile, command, strlen (command), "SMTP SendCommand");
+	if ((rc = sendCommand(ptcx, ptcx->sock, command)) < 0)
+	    goto end_helo;
+	*respBuffer = '\0';
+	while ((rc = retryRead(ptcx, ptcx->sock, respBuffer + len, sizeof(respBuffer) - len)) > 0) {
+	    /* Sean O'Rourke: handle multi-line response to LHLO */
+	    len += rc;
+	    if (respBuffer[len-1] != '\n')
+	        continue;
+            resp = respBuffer + len - 2;
+            while (resp > respBuffer && *resp != '\n')
+                resp--;
+            if (resp > respBuffer)
+                resp++;
+
+            if (isSmtpResponse(resp))
+                break;
+            else {
+                D_PRINTF(debugfile, "lhlo: no response in `%s'\n", respBuffer);
+                strcpy(respBuffer, resp);
+                len = strlen(resp);
+            }
+        }
+        T_PRINTF(ptcx->logfile, resp, strlen (resp),
+                 "SMTP response");
+        if (rc > 0) {
+            if (isSmtpResponseOK(resp))
+                rc = 0;
+            else
+                rc = -1;
+        }
+    }
+    else if (pish->flags & useEHLO) {
+        int len = 0;
+        char *resp = respBuffer;
+        /* send extended EHLO */
+        sprintf(command, "EHLO %s" CRLF, gs_thishostname);
+        T_PRINTF(ptcx->logfile, command, strlen (command), "SMTP SendCommand");
+        if ((rc = sendCommand(ptcx, ptcx->sock, command)) < 0)
+            goto end_helo;
+        *respBuffer = '\0';
+        while ((rc = retryRead(ptcx, ptcx->sock, respBuffer + len, sizeof(respBuffer) - len)) > 0) {
+            /* Sean O'Rourke: handle multi-line response to EHLO */
+            len += rc;
+            if (respBuffer[len-1] != '\n')
+                continue;
+            resp = respBuffer + len - 2;
+            while (resp > respBuffer && *resp != '\n')
+                resp--;
+            if (resp > respBuffer)
+                resp++;
+
+            if (isSmtpResponse(resp))
+                break;
+            else {
+                D_PRINTF(debugfile, "ehlo: no response in `%s'\n", respBuffer);
+                strcpy(respBuffer, resp);
+                len = strlen(resp);
+            }
+        }
+        T_PRINTF(ptcx->logfile, resp, strlen (resp),
+                 "SMTP response");
+        if (rc > 0) {
+            if (isSmtpResponseOK(resp))
+                rc = 0;
+            else
+                rc = -1;
+        }
+    }
+    else {
+        /* send normal HELO */
+        sprintf(command, "HELO %s" CRLF, gs_thishostname);
+        rc = doSmtpCommandResponse(ptcx, ptcx->sock, command, respBuffer, sizeof(respBuffer));
+    }
+ end_helo:
     event_stop(ptcx, &stats->cmd);
-    if (rc == -1) {
-	if (gf_timeexpired < EXIT_FAST) {
-	    stats->cmd.errs++;
-	    trimEndWhite (command);
-	    returnerr(debugfile, "%s SMTP HELO/EHLO [%.99s] ERROR reading response [%.99s]\n",
-		      ptcx->errMsg, command, respBuffer);
-	}
-	doSMTPExit (ptcx, me);
-	return NULL;
+    if (rc < 0) {
+        if (gf_timeexpired < EXIT_FAST) {
+            stats->cmd.errs++;
+            trimEndWhite (command);
+            returnerr(debugfile, "%s SMTP/LMTP HELO/EHLO/LHLO [%.99s] ERROR reading response [%.99s]\n",
+                      ptcx->errMsg, command, respBuffer);
+        }
+        doSMTPExit (ptcx, me);
+        return NULL;
     }
 
     if (pish->flags & useAUTHPLAIN) {
@@ -1055,6 +1335,28 @@ sendSMTPStart(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 	}
     }
 
+#ifdef SOCK_SSL
+    
+    if (!pish->useTLS)
+	goto end_tls;
+    
+    D_PRINTF(debugfile, "Looking for STARTTLS\n");
+    if (strstr(respBuffer, "STARTTLS") != NULL) {
+	SOCKET newsock;
+	D_PRINTF(debugfile, "trying STARTTLS\n");
+	event_start(ptcx, &stats->cmd);
+	newsock = starttls(ptcx, cmd, ptcx->sock);
+	event_stop(ptcx, &stats->cmd);
+	if (BADSOCKET(newsock)) {
+	    D_PRINTF(stderr, "STARTTLS failed\n");
+	    stats->cmd.errs++;
+	} else {
+	    ptcx->sock = newsock;
+	}
+    }
+ end_tls:
+    
+#endif /* SOCK_SSL */
     return me;
 }
 
@@ -1071,10 +1373,17 @@ sendSMTPLoop(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, void *mystat
     int	rc, jj;
     long		addressNum;
     long		domainNum;
-    int		numBytes;
+    int			numBytes;
+    int			numRecips;
     pish_stats_t	*stats = (pish_stats_t *)ptimer->data;
     pish_command_t	*pish = (pish_command_t *)cmd->data;
     smtp_file_t	*fileEntry;
+
+    assert(ptcx != NULL);
+    assert(cmd != NULL);
+    assert(ptimer != NULL);
+    assert(mystate != NULL);
+    assert(ptimer->data != NULL);
 
     /* send MAIL FROM:<username> */
     if (pish->fileCount > 1) {		/* randomly pick file */
@@ -1094,19 +1403,45 @@ sendSMTPLoop(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, void *mystat
     event_start(ptcx, &stats->cmd);
     rc = doSmtpCommandResponse(ptcx, ptcx->sock, command, respBuffer, sizeof(respBuffer));
     event_stop(ptcx, &stats->cmd);
-    if (rc == -1) {
+    if (rc < 0) {
 	if (gf_timeexpired < EXIT_FAST) {
 	    stats->cmd.errs++;
 	    trimEndWhite (command);
 	    returnerr(debugfile, "%s SMTP FROM [%.99s], ERROR reading [%.99s] response [%.99s]\n",
-		      ptcx->errMsg, command, respBuffer);
+		      PSTR(ptcx->errMsg), command, respBuffer);
 	}
 	doSMTPExit (ptcx, me);
 	return -1;
     }
 
     /* send RCPT TO:<username> for each recipient */
-    for (jj = 0; jj < pish->numRecipients; jj++) {
+    numRecips = (int)rint(sample(pish->numRecipients));
+    if (numRecips == 0) {
+        /*
+        **  XXX: make sure we don't have zero-recipient messages.
+        **  We could just set numRecips to 1, but this screws up the
+        **  mean on our distribution.  Try doing an SMTP RSET instead.
+        */
+        fprintf(stderr, "RSET for 0-recipient message\n");
+        sprintf(command, "RSET%s", CRLF);
+        event_start(ptcx, &stats->cmd);
+        rc = doSmtpCommandResponse(ptcx, ptcx->sock, command, respBuffer, sizeof(respBuffer));
+        event_stop(ptcx, &stats->cmd);
+        if (rc < 0) {
+            if (gf_timeexpired < EXIT_FAST) {
+                stats->cmd.errs++;
+                trimEndWhite (command);
+                returnerr(debugfile,
+                          "RSET [%.99s], ERROR reading response [%.99s]\n",
+                          ptcx->errMsg, respBuffer);
+            }             
+            doSMTPExit (ptcx, me);
+            return -1;
+        }   
+        return 0;
+    }
+
+    for (jj = 0; jj < numRecips; jj++) {
 	/* generate a random recipient (but with an account on the server) */
 
 	domainNum = rangeNext (&stats->domainRange, stats->lastDomain);
@@ -1120,24 +1455,28 @@ sendSMTPLoop(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, void *mystat
 	event_start(ptcx, &stats->cmd);
 	rc = doSmtpCommandResponse(ptcx, ptcx->sock, command, respBuffer, sizeof(respBuffer));
 	event_stop(ptcx, &stats->cmd);
-	if (rc == -1) {
+	if (rc < 0) {
 	    if (gf_timeexpired < EXIT_FAST) {
 		stats->cmd.errs++;
 		trimEndWhite (command);
-		returnerr(debugfile, "%s SMTP RCPT [%.99s], ERROR reading [%.99s] response [%.99s]\n",
+		returnerr(debugfile, "%s SMTP RCPT [%.99s], ERROR response [%.99s]\n",
 			  ptcx->errMsg, command, respBuffer);
 	    }
+	    /*
+	    **  XXX: we always give up here.  Should probably check
+	    **  for 4xx and try next recipient.
+	    */
 	    doSMTPExit (ptcx, me);
 	    return -1;
 	}
     }
 
     /* send DATA */
-    event_start(ptcx, &stats->cmd);
     sprintf(command, "DATA%s", CRLF);
+    event_start(ptcx, &stats->cmd);
+    rc = doSmtpCommandResponse(ptcx, ptcx->sock, command, respBuffer, sizeof(respBuffer));
     event_stop(ptcx, &stats->cmd);
-    if (doSmtpCommandResponse(ptcx, ptcx->sock, command, respBuffer, sizeof(respBuffer)) == -1 ||
-	respBuffer[0] != '3') {
+    if (rc == -1 || respBuffer[0] != '3') {
 	if (gf_timeexpired < EXIT_FAST) {
 	    stats->cmd.errs++;
 	    returnerr(debugfile, "%s SMTP DATA ERROR, response [%.99s]\n",
@@ -1151,10 +1490,15 @@ sendSMTPLoop(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, void *mystat
 
     /* send message */
     event_start(ptcx, &stats->msgwrite);
-    numBytes = sendFile(ptcx, ptcx->sock,
+    if (pish->filename)
+       numBytes = sendFile(ptcx, ptcx->sock,
 			NULL,
 			fileEntry->filename, fileEntry->offset,
 			MSG_TRAILER);
+  #ifdef AUTOGEN
+    else
+       numBytes = generateMessage(ptcx, pish);
+  #endif
     if (numBytes == -1) {
 	event_stop(ptcx, &stats->msgwrite);
 	if (gf_timeexpired < EXIT_FAST) {
@@ -1185,11 +1529,19 @@ void
 sendSMTPEnd(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, void *mystate)
 {
     doSMTP_state_t	*me = (doSMTP_state_t *)mystate;
-    char	command[MAXCOMMANDLEN];
+    char	command[MAX_COMMAND_LEN];
     char	respBuffer[MAX_RESPONSE_LEN];
     int	rc;
-    pish_stats_t	*stats = (pish_stats_t *)ptimer->data;
+    pish_stats_t	*stats;
 
+    
+    assert(ptcx != NULL);
+    assert(cmd != NULL);
+    assert(ptimer != NULL);
+    assert(mystate != NULL);
+    assert(ptimer->data != NULL);
+
+    stats = (pish_stats_t *)ptimer->data;
     if (BADSOCKET(ptcx->sock)) return;	/* closed by previous error */
 
     /* send QUIT */
@@ -1197,7 +1549,7 @@ sendSMTPEnd(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer, void *mystate
     event_start(ptcx, &stats->logout);
     rc = doSmtpCommandResponse(ptcx, ptcx->sock, command, respBuffer, sizeof(respBuffer));
     event_stop(ptcx, &stats->logout);
-    if (rc == -1) {
+    if (rc < 0) {
 	if (gf_timeexpired < EXIT_FAST) {
 	    stats->logout.errs++;
 	    returnerr(debugfile, "%s SMTP QUIT ERROR, response [%.99s]\n",
@@ -1214,5 +1566,5 @@ doSMTPExit  (ptcx_t ptcx, doSMTP_state_t	*me)
     NETCLOSE(ptcx->sock);
   ptcx->sock = BADSOCKET_VALUE;
 
-  myfree (me);
+  xfree (me);
 }  

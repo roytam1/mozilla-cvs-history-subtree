@@ -20,6 +20,7 @@
  * 
  * Contributor(s):	Dan Christian <robodan@netscape.com>
  *			Marcel DePaolis <marcel@netcape.com>
+ *			Sean O'Rourke <sean@sendmail.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License Version 2 or later (the "GPL"), in
@@ -131,6 +132,7 @@ HttpReadResponse(
 
     D_PRINTF(stderr, "HttpReadResponse()\n");
 
+    /* Sean O'Rourke: this is not correct */
     findStr = HTTP_CONTENT_LENGTH;
     searchStart = buffer;
     memset(buffer, 0, buflen);		/* DEBUG */

@@ -3,6 +3,20 @@
 # Define a flag for include-at-most-once
 INCLUDED_CONFIG_MK = 1
 
+# Mstone features to choose at compile-time:
+# See doc/mstone_changes.html for details.
+AUTOGEN = 1			# automatic body generation
+IMAP_RAMPDOWN = 1		# ramp-down time for IMAP
+SOCK_LINESPEED = 1		# (primitive) linespeed limitation
+# SOCK_SSL = 1			# SSL/TLS and STARTTLS
+SSL_INCLUDE = /usr/include/openssl
+SSL_LIBS = /usr/lib/openssl
+
+# MSG_READ_TIME = 1		# delay after message retrieval
+USE_EVENTS = 1			# use event-queue model -- less threads
+GEN_CHECKSUM = 1		# try to verify message integrity
+DYNAMIC_THROTTLE = 1		# throttle preload dynamically
+
 # These normally get overridden on the command line from ../Makefile
 # This is the default build type
 BUILD_VARIANT	= release
@@ -31,7 +45,7 @@ endif
 
 # setup OS specific compilers and options
 
-CC		= cc
+CC		= gcc
 AR		= ar
 INCLUDES	= -I$(OBJDIR)
 REL_OS_CFLAGS	= -O
@@ -42,7 +56,7 @@ LIBS		= -lm
 OBJ_SUFFIX	= o
 LIB_SUFFIX	= a
 EXE_SUFFIX	=
-ECHO		= /bin/echo
+ECHO		= echo
 
 ifeq ($(OS_ARCH), WINNT)
 	CC	= cl
@@ -57,8 +71,8 @@ ifeq ($(OS_ARCH), WINNT)
 	DLL_SUFFIX = .dll
 	EXE_SUFFIX = .exe
 	PERL_OS = MSWin32-x86
-	# build perl manually, install to c:\perl.  Then build everything else
-	#  cd win32 && nmake && nmake install
+# build perl manually, install to c:\perl.  Then build everything else
+#  cd win32 && nmake && nmake install
 	PERL5_IMPORT	= c:/perl/$(PERL_REV)/
 	PERL_FILES = $(PERL_DIR)/Artistic
 	PERL_BIN_FILES = \
@@ -71,18 +85,18 @@ ifeq ($(OS_ARCH), IRIX64)
 	ARCH	= IRIX
 endif
 ifeq ($(OS_ARCH), IRIX)
-	# MIPSpro Compilers: Version 7.2.1
+# MIPSpro Compilers: Version 7.2.1
 	CC	= /usr/bin/cc -n32
 	REL_OS_CFLAGS = -fullwarn
 	DBG_OS_CFLAGS = -fullwarn
 	OSDEFS	= -D__IRIX__ -DHAVE_SELECT_H -DHAVE_WAIT_H -DUSE_PTHREADS -DUSE_LRAND48
 	LIBS	= -lm -lpthread
-	# OS specific flags for perl Configure
+# OS specific flags for perl Configure
 	PERL_OS_CONFIGURE = -Dnm=/usr/bin/nm -Dar=/usr/bin/ar
 	PERL_OS = IP27-irix
 endif
 ifeq ($(OS_ARCH), OSF1)
-	# DEC C V5.6-071 on Digital UNIX V4.0(D) (Rev. 878)
+# DEC C V5.6-071 on Digital UNIX V4.0(D) (Rev. 878)
 	CC	= /usr/bin/cc
 	REL_OS_CFLAGS = -warnprotos -verbose -newc -std1 -pthread -w0 -readonly_strings
 	DBG_OS_CFLAGS = -warnprotos -verbose -newc -std1 -pthread -w0 -readonly_strings
@@ -91,16 +105,18 @@ ifeq ($(OS_ARCH), OSF1)
 	PERL_OS = alpha-dec_osf
 endif
 ifeq ($(OS_ARCH), AIX)
-	CC	= /usr/bin/xlc_r
-	REL_OS_CFLAGS = -qro -qroconst -qfullpath -qsrcmsg #-qflag=I:W
-	DBG_OS_CFLAGS = -qro -qroconst -g -qfullpath -qsrcmsg #-qflag=I:W
+	CC	= xlc
+#	REL_OS_CFLAGS = -O -Wall 
+#	DBG_OS_CFLAGS = -g -Wall
+	REL_OS_CFLAGS = -lpthread -qro -qroconst -qfullpath -qsrcmsg #-qflag=I:W
+	DBG_OS_CFLAGS = -lpthread -qro -qroconst -g -qfullpath -qsrcmsg #-qflag=I:W
 	OSDEFS	= -D__AIX__ -DHAVE_SELECT_H -D_THREAD_SAFE -DUSE_PTHREADS -DUSE_LRAND48_R
 	LIBS	= -lm #-lpthread
 	PERL_OS = aix
 endif
 ifeq ($(OS_ARCH), HP-UX)
 	CC	= /usr/bin/cc
-	# old flags: -Ae +DA1.0 +ESlit
+# old flags: -Ae +DA1.0 +ESlit
 	REL_OS_CFLAGS = +DAportable +DS2.0 -Ae +ESlit
 	DBG_OS_CFLAGS = +Z +DAportable +DS2.0 -g -Ae +ESlit
 	OSDEFS	= -D__HPUX__ -DUSE_PTHREADS -DUSE_LRAND48
@@ -108,44 +124,96 @@ ifeq ($(OS_ARCH), HP-UX)
 	PERL_OS = PA-RISC2.0
 endif
 ifeq ($(OS_ARCH), SunOS)
-	# Sun Workshop Compilers 5.0
+# Sun Workshop Compilers 5.0
 #	CC	= /tools/ns/workshop-5.0/bin/cc
-	REL_OS_CFLAGS = -mt -xstrconst -v -O
-	DBG_OS_CFLAGS = -mt -xstrconst -v -g -xs
+##	REL_OS_CFLAGS = -mt -xstrconst -v -O
+##	DBG_OS_CFLAGS = -mt -xstrconst -v -g -xs
+
+        ## use GCC and install openssl
+	REL_OS_CFLAGS =   -O3
+	DBG_OS_CFLAGS =   -g
 	OSDEFS	= -D__SOLARIS__ -DHAVE_SELECT_H -DHAVE_WAIT_H \
 	 -DXP_UNIX -D_REENTRANT \
 	 -DUSE_PTHREADS -DUSE_GETHOSTBYNAME_R -DUSE_GETPROTOBYNAME_R -DUSE_LRAND48
-	LIBS    = -lm -lnsl -lsocket -lpthread
+	LIBS    = -lm -lnsl -lsocket -lposix4 -lpthread
+
 	PERL_OS = sun4-solaris
 endif
 ifeq ($(OS_ARCH), Linux)
-	# Linux 2.1 kernels and above
+# Linux 2.1 kernels and above
 	CC	= /usr/bin/gcc   # gcc 2.7.2.3
-	REL_OS_CFLAGS = -O -g -Wall
-	DBG_OS_CFLAGS = -O1 -g -Wall
+	REL_OS_CFLAGS = -O -Wall 
+	DBG_OS_CFLAGS = -g -Wall
 	OSDEFS	= -D__LINUX__ -DHAVE_SELECT_H -DHAVE_WAIT_H -DUSE_PTHREADS -DUSE_LRAND48
-	LIBS	= -lm -lpthread
-	# Must explicitly enable interpretation of \n
-	# works for /bin/echo, sh:echo, or pdksh:echo. NOT tcsh:echo
+	LIBS	= -lm -pthread
+# Must explicitly enable interpretation of \n
+# works for /bin/echo, sh:echo, or pdksh:echo. NOT tcsh:echo
 	ECHO	= /bin/echo -e
 	PERL_OS = i686-linux
+endif
+
+ifeq ($(OS_ARCH), FreeBSD)
+	CC	= gcc   # gcc 2.7.2.3
+	REL_OS_CFLAGS = -O -Wall 
+	DBG_OS_CFLAGS = -g -Wall
+	OSDEFS	= -D__FREEBSD__ -DHAVE_SELECT_H -DUSE_PTHREADS -DUSE_LRAND48
+	LIBS	= -lm -pthread
+# Must explicitly enable interpretation of \n
+# works for /bin/echo, sh:echo, or pdksh:echo. NOT tcsh:echo
+	ECHO	= /bin/echo -e
+	PERL_OS = i686-freebsd
 endif
 
 # pull in any OS extra config, if available
 -include $(topsrcdir)/config/$(OS_ARCH)/config.mk
 
 ifeq ($(BUILD_TYPE), DEBUG)
-	OS_CFLAGS = $(DBG_OS_CFLAGS) -D_DEBUG
+	OS_CFLAGS = $(DBG_OS_CFLAGS) -D_DEBUG -DDIRECT_OUT
 	OS_LINKFLAGS = $(DBG_OS_LINKFLAGS)
 else
 	OS_CFLAGS = $(REL_OS_CFLAGS)
 	OS_LINKFLAGS = $(REL_OS_CFLAGS)
 endif
 
+# Features:
+# FEATURE_DEFINES=-DDIRECT_OUT
+# FEATURE_LIBS=
+# FEATURE_INCLUDES=
+ifdef SOCK_SSL
+	FEATURE_DEFINES += -DSOCK_SSL
+	FEATURE_LIBS += -L$(SSL_LIBS) -lssl -lcrypto
+	FEATURE_INCLUDES += -I$(SSL_INCLUDE)
+endif
+ifdef AUTOGEN
+	FEATURE_DEFINES += -DAUTOGEN
+ifdef GEN_CHECKSUM
+		FEATURE_DEFINES += -DGEN_CHECKSUM=1
+		FEATURE_SRCS += checksum.c md5.c
+endif
+endif
+ifdef IMAP_RAMPDOWN
+	FEATURE_DEFINES += -DIMAP_RAMPDOWN
+endif
+ifdef DYNAMIC_THROTTLE
+	FEATURE_DEFINES += -DDYNAMIC_THROTTLE
+endif
+ifdef SOCK_LINESPEED
+	FEATURE_DEFINES += -DSOCK_LINESPEED
+endif
+ifdef MSG_READ_TIME
+	FEATURE_DEFINES += -DMSG_READ_TIME
+endif
+ifdef USE_EVENTS
+	FEATURE_DEFINES += -DUSE_EVENTS
+	FEATURE_SRCS += event.c
+endif
+
 CPPFLAGS	= 
 CFLAGS		= $(OS_CFLAGS)
 ###DEFINES		= -DHAVE_CONFIG_H $(OSDEFS)
-DEFINES		= $(OSDEFS)
+DEFINES		= $(OSDEFS) $(FEATURE_DEFINES)
+LIBS		+= $(FEATURE_LIBS)
+INCLUDES	+= $(FEATURE_INCLUDES)
 LDFLAGS         =
 
 CP		= cp

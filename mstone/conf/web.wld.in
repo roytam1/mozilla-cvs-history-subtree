@@ -1,0 +1,33 @@
+-- NOT READY! --
+
+test:
+	length:			?
+	users:			?
+	percent active:		?
+
+server:
+	hostname:		server goes here
+	addressFormat:		smuser%ld@
+	firstAddress:		0
+	loginFormat:		smuser%ld@
+	firstLogin:		0
+	passwdFormat:		twang
+
+clients:
+	smtp:			...
+	web:			...
+
+message:
+	size: 			~lognormal(3k,4.5)
+	recipients:		~lognormal(1,1.5)
+	mime:			30 %
+
+user:
+	messages per day: 	5
+	read messages:	  	50
+	protocol:	  	web
+	check interval:	  	30s
+	connection type:	latency = 0; bandwidth = 56k
+	keep:		  	95%
+	activity:		30 m each 24h
+	drop rate:		50%

@@ -1,0 +1,51 @@
+-- test size --
+
+test:
+	length:			90m
+	users:			** Number of users here ***
+	percent active:		10
+
+	comments:		Auto-generated ISP workload.
+
+-- mail server configuration --
+
+server:
+	hostname:		** SERVER **
+
+# defaults -- 
+#	 addressFormat:		smuser%ld@
+#	 firstAddress:		0
+#	 loginFormat:		smuser%ld@
+#	 firstLogin:		0
+#	 passwdFormat:		twang
+#
+
+-- test client configuration --
+
+clients:
+	smtp:			** SMTP clients here **
+	pop:			** POP clients go here **
+
+# defaults are `rsh' and `rcp'
+#	rsh:			rsh
+#	rcp:			rcp
+
+-- Do not edit between here and the `__END__' marker
+
+message:
+	size: 			~lognormal(3k,4.5)
+	recipients:		~lognormal(1,1.5)	: [1, ]
+	mime:			30 %
+
+user:
+	messages per day: 	5
+	read messages:	  	0
+	protocol:	  	POP
+	check interval:	  	~unif(5m, 8m)
+	connection type:	latency = 0; bandwidth = 56k
+	keep:		  	5%
+	activity:		30 m each 24 h
+	drop rate:		0.5%
+
+__END__
+# other things (e.g. <monitor> sections) can go here...

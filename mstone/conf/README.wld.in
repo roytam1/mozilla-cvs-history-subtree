@@ -1,0 +1,271 @@
+I.   Format
+II.  Workload Configuration Sections
+III. Report Generation Sections
+
+---------
+I. Format
+---------
+
+The config-file format is very free-form -- for example, this text is
+skipped as a "comment" because it doesn't look like anything else.  A
+section always starts with a line ending in a colon.  Everything up to
+the next section, end-of-file, or `__END__' is part of the current
+section.
+
+Name/value pairs within a section are pairs starting with whitespace,
+and separated by a colon followed by whitespace.  So you can write
+something like this
+
+#	hello there:		     mister foo
+
+and it will be ignored.  Had the '#' before the "hello" not been
+there, the attribute name would have been `hello there' and its value
+would have been `mister foo'.  Leading and trailing whitespace is
+skipped, but internal whitespace is perfectly OK.  Note that the
+"comment" character doesn't have to be a '#', but can be anything you
+want (except whitespace).
+
+Leading whitespace also denotes continued values.  So
+
+	foo:				blah blah
+    and some more words which are part of foo's value.
+
+creates a variable named 'foo' with this value (including the \n) -- 
+"blah blah
+and some more words which are part of foo's value."
+
+Finally, anything after '__END__' on a line by itself gets inserted
+literally into each .wld file.  This is the place to put <monitor>
+sections.
+
+--------------------------
+II. Workload Configuration
+--------------------------
+
+Parameters with no default are required.
+
+Messages
+--------
+
+Message attributes are defined in the `message' section.  
+
+Parameter	Default		Description
+---------	-------		-----------
+size				size distribution (including headers).
+recipients		    	number of recipients
+headers		~unif(10, 30)	number of headers
+line length	60		line length
+mime	 	0		number of MIME parts
+
+Users
+-----
+
+User behavior parameters are described in the `user' section.
+
+Parameter	Default		Description
+---------	-------		-----------
+messages per day
+protocol			mail read
+activity			`DURATION each TIME' or `START - STOP'
+check interval			how often user checks mail when active
+read messages	0		number of old msgs each user has
+read time	0		how long user takes to `read' a message
+keep		0		proportion of messages kept on server
+connection type <unlimited>	`latency = X ; bandwidth = X'
+drop rate	0		proportion of connections dropped before logout
+
+Delivery
+--------
+
+Delivery parameters are described in the `delivery' section.
+
+Parameter		Default		Description
+---------		-------		-----------
+messages per connection	1		messages sent per SMTP session
+percent remote		0		% mail going to remote host (sink)
+connection type		<unlimited>	
+fluctuation		<uniform>	`START - END = X % ; ...'
+
+Test
+----
+
+The `test' section configures the number of users, the time of day to
+be simulated, etc.
+
+Parameter		Default		Description
+---------		-------		-----------
+start					time of day to start sim
+end					end time of day.
+length					duration.  Either length or end 
+					must be specified.
+users					total user base
+percent active				percentage of total user base active
+					during test period
+messages per second			messages per second to delivery for
+					SMTP-only simulation.  Either
+					`messages per second' or `users'
+					and `percent active' must be
+					specified.
+comments		<nothing>	notes on test.
+preparer		Anonymous	Name to use on reports.
+date			<ctime(3)>
+configuration		<nothing>	Configuration name for report.
+
+Environment Configuration
+-------------------------
+
+Several sections describe the test environment:
+
+Sink
+----
+
+The `sink' section describes the remote mail sink.
+
+Parameter		Default		Description
+---------		-------		-----------
+addressFormat		smuser%ld@	Like addressFormat, but used to 
+					generate remote addresses.
+					`hostname' will be appended if it
+					ends in `@'.
+hostname				host on which SMTP sink lives.  Used
+					for remote delivery.
+
+Server
+------
+
+The `server' section describes the mail server to be sized:
+
+Parameter		Default		Description
+---------		-------		-----------
+smtp port		25
+pop port		110
+imap port		143
+web port		1066
+
+hostname				Mail server
+
+addressFormat		smuser%ld@	Passed to
+					sprintf(recipient, addressFormat,
+					        userNum, domainNum).  If
+					addressFormat ends in `@', `server'
+					is automatically appended.
+loginFormat		smuser%ld@	Same as addressFormat, but used to
+					generate usernames.
+passwdFormat		twang		passed to sprintf(passwd, passwdFormat,
+						          userNum, domainNum).
+firstAddress		0		first userNum for addresses
+firstLogin		0		first userNum for logins
+smtpMailFrom		$USER@$HOST	sending address on test mail.
+
+name					Printable server name for reports.
+hardware				Brief hardware description.
+software				Brief software description.
+
+Clients
+-------
+
+The `clients' section describes test client configuration.
+
+Parameter		Default		Description
+---------		-------		-----------
+smtp			localhost	client machines for SMTP
+imap			localhost	for IMAP
+pop			localhost	for POP3
+web			localhost	for WEBMAIL
+
+rsh			rsh		rsh program to start remote clients
+rcp			rcp		rcp program to distribute files
+command			mailclient	program to run to start clients
+
+cert file				file containing SSL certificate
+key file				file containing SSL key
+
+Ugly Mstone details
+-------------------
+
+The `mstone' section controls low-level details of how the workload
+description is translated into mstone terms.  The parameters make some
+assumptions about the size of both the test clients and the server, so
+they may have to be tweaked.  For small- to mid-size configurations,
+the defaults should work.
+
+Parameter		Default		Description
+---------		-------		-----------
+preload rate		5		msgs/sec to deliver during preload.
+preload per connection	100		messages per SMTP session
+preload delivery time	750		msec expected message delivery time.
+					used to control throttling.
+preload throttle	500		msec faster/slower than expected at
+					which to throttle
+throttleFactor		1.1		factor by which to increase/decrease
+					delivery rate when throttling
+
+read rate		40		msgs/sec to read when aging old
+					messages.
+read clients		5		test clients to use for aging
+read protocol		(user:protocol)	protocol to age messages (e.g. imap)
+
+rampTime		0		test rampup time
+smtp connection time	10s
+pop user spacing	10s		MULTIPOP: time between users
+pop connections per client 10		MULTIPOP: connections per client
+no event queues		false		use 1 thread per client
+max threads per proc	250
+clientCount		10000		artificial global clientCount
+
+----------------------
+III. Report Generation
+----------------------
+
+There are several additional configuration sections to provide
+additional information for sizing reports.  The code is in
+`lib/{sizing,hardware}_defaults.pm'.
+
+QoS Constraints
+---------------
+
+Quality of Service constraints are specified in the `qos' section.
+See reports/qos.in for an example.  The qos section can have any
+number of members.  The name of each member is a description which
+will appear in the sizing report.  The value is a block of perl code
+which should return a pair of values when evaluated in a context where
+`$run' is a reference to a hash containing data on the test run to be
+evaluated.  The first value is a value corresponding to this
+constraint which will be printed in the report.  The second is true if
+the run passed this constraint.
+
+Hardware
+--------
+
+The `machine' section describes the hardware under test.  Unlike
+previous, simple sections, it containts nested values (as hash refs).
+
+Parameter		Description
+---------		-----------
+
+processors
+	speed
+	cache
+
+network
+
+storage
+	controllers
+	disks
+		type
+		speed
+		model
+		timing
+OS
+	parameters
+	disks
+	logging
+
+Software
+--------
+
+The `software' section describes the software under test.  If multiple
+types of software are in use, multiple software sections should be
+specified.  The only default parameter for software is the `name'.
+Other parameters should describe configuration information, version,
+etc.

@@ -20,6 +20,7 @@
  * 
  * Contributor(s):	Dan Christian <robodan@netscape.com>
  *			Marcel DePaolis <marcel@netcape.com>
+ *			Sean O'Rourke <sean@sendmail.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License Version 2 or later (the "GPL"), in
@@ -41,6 +42,7 @@
  */
 
 #include "bench.h"
+#include "xalloc.h"
 
 static int	StartedThreads = 0;   /* counter semaphore for children */
 static int	FinishedThreads = 0;   /* counter semaphore for children */
@@ -59,13 +61,14 @@ static int	FinishedThreads = 0;   /* counter semaphore for children */
   We dont check for signals because the only signal expected is test end
  */
 void
-MS_idle(ptcx_t ptcx, int idleSecs)
+MS_idle(ptcx_t ptcx, int idleMillis)
 {
     int secsLeft = 0;
 
     secsLeft = gt_shutdowntime - time(0L);
 
-    D_PRINTF(debugfile, "secsLeft=%d, idleSecs=%d\n", secsLeft, idleSecs);
+    D_PRINTF(debugfile, "secsLeft=%d, idleSecs=%d\n",
+	     secsLeft, idleMillis/1000);
 
     if (secsLeft <= 0) {			/* time is up, start exiting */
 	if (gf_timeexpired < EXIT_SOON)
@@ -73,40 +76,32 @@ MS_idle(ptcx_t ptcx, int idleSecs)
 	return;
     }
 
-    if (idleSecs > secsLeft)  idleSecs = secsLeft;
-    if (idleSecs <= 0) return;
-
-    MS_sleep(idleSecs);
-}
-
-/* used by POP, SMTP, IMAP4 methods */
-void
-throttle(ptcx_t ptcx, mail_command_t *comm, cmd_stats_t *timer )
-{
-
-    int           chokeSecs = 0;
-    struct timeval exittime;
-
-    /* check if we need to throttle this puppy */
-    if (comm->throttle <= 0)
+    if (idleMillis/1000 > secsLeft)
+	idleMillis = secsLeft*1000;
+    
+    if (idleMillis <= 0)
 	return;
 
-    /* we probably have not reached NETCLOSE yet, so we do not
-       know what timer->exittime is */
-    timeval_stamp(&exittime);
+    MS_usleep(idleMillis*1000);
+}
 
-    /* time to sleep = throttle - (exittime - entertime) */ 
-    chokeSecs = comm->throttle - ( exittime.tv_sec - ptcx->starttime.tv_sec );
+/*
+**  DELAY -- calculate delay time
+**
+**	Delay for the rest of the time the block was supposed to take,
+**	_or_ for the full delay time if we have run over.
+*/
 
-
-    /* if chokeSecs is negative, don't bother sleeping */
-    if (chokeSecs > 0) {
-	d_printf(debugfile, "throttle=%d, chokeSecs=%d\n",
-		 comm->throttle, chokeSecs);
-	MS_idle(ptcx, chokeSecs);
-    }
-
-} /* end throttle */
+static int
+delay(delay, start_time)
+	int delay;
+	int start_time;
+{
+	int cmd_time = (time(0) - start_time)*1000;
+	if (delay >= cmd_time)
+		delay -= cmd_time;
+	return delay;
+}
 
 /* 
  * Perform the given command block
@@ -124,10 +119,13 @@ do_command(ptcx_t ptcx,			/* thread state */
     cmd_stats_t *cmd_stats =  &(ptcx->cmd_stats[commNum]);
     int cnt, cntEnd;			/* loop counters */
     void *state = NULL;
+    int loop_delay, block_time;		/* Sean O'Rourke: added */
+    int block_start;
 
     cntEnd = comm->numLoops+1; /* transfer count +1 */
-    D_PRINTF(debugfile, "do_command start t=%lu commNum=%d cntEnd=%d\n",
-	     time(0L), commNum, cntEnd);
+    block_start = (int)time(0);
+    D_PRINTF(debugfile, "do_command start t=%d commNum=%d cntEnd=%d\n",
+	     block_start, commNum, cntEnd);
 
     /* Start and End are special loop cases to make summations easier */
     for (cnt = 0; cnt <= cntEnd; cnt++) { 
@@ -143,49 +141,78 @@ do_command(ptcx_t ptcx,			/* thread state */
 		 time(0L), cnt, cntEnd);
 
 	if (0 == cnt) {			/* first time */
+	    int idle_time;
+	    if ((idle_time = sample(comm->startDelay)) > 0) {
+		int real_start = gt_startedtime + idle_time / 1000;
+		if (real_start > block_start) {
+		    MS_idle(ptcx, (real_start - block_start)*1000);
+		    block_start = real_start;
+		}
+	    }
 	    cmd_stats->totalcommands++; /* track command blocks trys */
 	    state = (*(comm->proto->cmdStart)) (ptcx, comm, cmd_stats);
 	    if (NULL == state) {
 		D_PRINTF(debugfile, "do_command Start returned NULL\n");
 		break;
 	    }
-	    if (comm->idleTime && (gf_timeexpired < EXIT_SOON)) {
-		D_PRINTF(debugfile,"do_command delay %d after Setup\n",
-			 comm->idleTime);
-		event_start(ptcx, &cmd_stats->idle);
-		MS_idle(ptcx, comm->idleTime);
-		event_stop(ptcx, &cmd_stats->idle);
-	    }
-	}
-	else if ((cntEnd == cnt) && comm->proto->cmdEnd) { /* last */
+	    idle_time = sample(comm->idleTime);
+	    
+	    if (idle_time && (gf_timeexpired < EXIT_SOON)) {
+		idle_time -= (time(0) - block_start)*1000;
+		if(idle_time > 0) {
+			D_PRINTF(debugfile,"do_command delay %d after Setup\n",
+				 idle_time);
+			event_start(ptcx, &cmd_stats->idle);
+			MS_idle(ptcx, idle_time);
+			event_stop(ptcx, &cmd_stats->idle);
+		} else {
+			D_PRINTF(debugfile,
+				 "Warning: behind %d msec for start\n",
+				 -idle_time);
+		}
+	    }  
+	} else if ((cntEnd == cnt) && comm->proto->cmdEnd) { /* last */
 	    (*(comm->proto->cmdEnd)) (ptcx, comm, cmd_stats, state);
 	    break;			/* done with loop */
 	}
 	else if (comm->proto->cmdLoop) { /* do transfers */
 	    int rc;
+	    int loop_start = time(0);
 	    rc = (*(comm->proto->cmdLoop)) (ptcx, comm, cmd_stats, state);
 	    if (rc < 0) {
 		D_PRINTF(debugfile, "do_command Loop returned error/done\n");
 		cnt = cntEnd -1;	/* end loop */
 	    }
 					/* do loopDelay even if error/done */
-	    if (comm->loopDelay && (gf_timeexpired < EXIT_SOON)) {
-		D_PRINTF(debugfile,"do_command delay %d in loop\n",
-			 comm->loopDelay);
-		event_start(ptcx, &cmd_stats->idle);
-		MS_idle(ptcx, comm->loopDelay);
-		event_stop(ptcx, &cmd_stats->idle);
+
+	    loop_delay = sample(comm->loopDelay);
+	    
+	    if (loop_delay > 0 && (gf_timeexpired < EXIT_SOON)) {
+		    loop_delay = delay(loop_delay, loop_start);
+		    if(loop_delay > 0) {
+			    D_PRINTF(debugfile,"do_command delay %d in loop\n",
+				     loop_delay);
+			    event_start(ptcx, &cmd_stats->idle);
+			    MS_idle(ptcx, loop_delay);
+			    event_stop(ptcx, &cmd_stats->idle);
+		    }
 	    }
 	}
     }
 
+    block_time = sample(comm->blockTime);
+
+    /* XXX: semantic change: blockTime now includes command time. */
     /* do blockTime even if we hit an error connecting */
-    if (comm->blockTime && (gf_timeexpired < EXIT_SOON)) {
-	D_PRINTF(debugfile,"do_command delay %d after Block\n",
-		 comm->blockTime);
-	event_start(ptcx, &cmd_stats->idle);
-	MS_idle(ptcx, comm->blockTime);
-	event_stop(ptcx, &cmd_stats->idle);
+    if ((block_time > 0) && (gf_timeexpired < EXIT_SOON)) {
+	block_time = delay(block_time, block_start);
+	if(block_time > 0) {
+		D_PRINTF(debugfile,"do_command delay %d after Block\n",
+			 block_time);
+		event_start(ptcx, &cmd_stats->idle);
+		MS_idle(ptcx, block_time);
+		event_stop(ptcx, &cmd_stats->idle);
+	}
     }
     D_PRINTF(debugfile, "do_command end t=%lu commNum=%d cntEdn=%d\n",
 	     time(0L), commNum, cntEnd);
@@ -214,8 +241,6 @@ clientInit(ptcx_t ptcx)
 	}
 	ptcx->dfile = fopen(debug_file_name, "w+");
 	if (ptcx->dfile == NULL) {
-	    /*returnerr(stderr, "Can't open debug file\n");
-	      return -1;*/
 	    gn_debug = 0;
 	    d_printf (stderr, "Can't open debug file.  Debug mode disabled\n");
 	}
@@ -237,10 +262,6 @@ clientInit(ptcx_t ptcx)
     /* Initialize random number generator */
     SRANDOM(ptcx->random_seed);
     D_PRINTF(debugfile, "Random seed: 0x%08x\n", ptcx->random_seed );
-
-    stats_init(&ptcx->timestat);
-
-    ptcx->timestat.total_num_of_commands = gn_number_of_commands;
 
     return 0;
 }
@@ -285,7 +306,6 @@ clientLoop(ptcx_t ptcx)
 			 ran_number, gn_total_weight);
 		comm_index--;
 	    }
-	    /*D_PRINTF(debugfile, "Final page index %d\n", comm_index );*/
 	}
 
 	/* run the command */
@@ -303,24 +323,6 @@ clientLoop(ptcx_t ptcx)
 	    break;
 	}
 
-	/* throttle code mikeb@netscape.com 
-	 * keeps client from going faster than client_throttle
-	 * operations per minute 
-	 */
-	if (gn_client_throttle &&
-	    (ptcx->timestat.endtime.tv_sec > ptcx->timestat.starttime.tv_sec)) {
-	    timeval_stamp(&(ptcx->timestat.endtime));
-	    while ( 60 * ptcx->connectCount / 
-		    (ptcx->timestat.endtime.tv_sec - ptcx->timestat.starttime.tv_sec)
-		    > gn_client_throttle ) {
-		D_PRINTF(debugfile, "%.2f > %d, throttling\n",
-			 ( 60 * ptcx->connectCount /
-			   (ptcx->timestat.endtime.tv_sec - ptcx->timestat.starttime.tv_sec) ),
-			 gn_client_throttle);
-		/* sleep a little */
-		MS_usleep( 100 );
-	    } /* end while too fast */
-	}
     } /* END while blockCount */
 
     return 0;
@@ -339,7 +341,6 @@ clientThread(void *targ)
     char	timeStamp[DATESTAMP_LEN];
     int		ret = 0;
     tcx_t	*ptcx = (ptcx_t)targ;
-    /*char	buf[256];*/
 
     if (clientInit(ptcx)) {		/* should never fail */
 #ifdef USE_PTHREADS
@@ -350,10 +351,6 @@ clientThread(void *targ)
 	return;
 #endif
     }
-
-    /*sprintf(buf, "NOTICE: client process=%d thread=%d started\n",
-      ptcx->processnum, ptcx->threadnum);
-      sendOutput(ptcx->ofd, buf);*/
 
     if (gn_debug) {
 	/* write current time to debug file */
@@ -369,15 +366,13 @@ clientThread(void *targ)
     /* Tell parent we're ready */
     InterlockedIncrement(&StartedThreads);
 #else
-    ++StartedThreads;			/* thread safe??? */
+    ++StartedThreads;			/* thread safe??? -- no, it's not. */
 #endif /* _WIN32 */
     
-    timeval_stamp(&(ptcx->timestat.starttime));
     D_PRINTF(debugfile, "entering clientLoop\n");
 
     ret = clientLoop(ptcx);		/* do the work */
 
-    timeval_stamp(&(ptcx->timestat.endtime));
     D_PRINTF(debugfile, "Test run complete\n" );
 
     /* write current time to debug file */
@@ -401,15 +396,11 @@ clientThread(void *targ)
 	}
     }
 
-    /*sprintf(buf, "NOTICE: client process=%d thread=%d ending\n",
-      ptcx->processnum, ptcx->threadnum);
-      sendOutput(ptcx->ofd, buf);*/
-
 #ifdef _WIN32
     /* tell parent we're done */
     InterlockedIncrement(&FinishedThreads);
 #else  /* _WIN32 */
-    ++FinishedThreads;			/* thread safe??? */
+    ++FinishedThreads;			/* thread safe??? -- once again, no */
 #ifdef USE_PTHREADS
     if (ptcx->threadnum >= 0)
 	pthread_exit((void *)((ret << 16) | ptcx->threadnum));
@@ -645,7 +636,7 @@ summaryThread(void *targ)
 {
     ptcx_t	ptcxs = (ptcx_t)targ; /* thread contexts */
 
-    D_PRINTF(stderr, "summaryThread starting...\n");
+    D_PRINTF(stderr, "summaryThread starting (ptcxs = 0x%x)...\n", ptcxs);
 
     /* client threads running...dump periodic stats */
     while (gn_feedback_secs && (gf_timeexpired < EXIT_FAST)) {
@@ -677,8 +668,7 @@ initTcx(ptcx_t ptcx, int ofd, int pnum, int tnum)
     ptcx->processnum = pnum;
     ptcx->threadnum = tnum;
     ptcx->random_seed = (tnum << 16) + getpid();
-    ptcx->cmd_stats =
-	(cmd_stats_t *)mycalloc(sizeof(cmd_stats_t)*gn_number_of_commands);
+    ptcx->cmd_stats = xcalloc(gn_number_of_commands * sizeof(struct cmd_stats));
 
 					/* do PROTO specific init */
     for (kk = 0; kk < gn_number_of_commands; ++kk) {
@@ -694,7 +684,7 @@ void
 destroyTcx(ptcx_t ptcx)
 {
     if (ptcx->cmd_stats) {
-	free(ptcx->cmd_stats);
+	xfree(ptcx->cmd_stats);
 	ptcx->cmd_stats = 0;
     }
 }
@@ -720,8 +710,16 @@ beginShutdown (void)
    start threads (if possible/needed) with proper rampup delays
    wait for threads to end
  */
+
+#ifdef USE_EVENTS
+extern int gf_use_events;
+int ev_clientProc(int pnum, int outfd,
+		  unsigned int testtime,
+		  unsigned int thread_stagger_usec);
+#endif
+
 int
-clientProc(int pnum, SOCKET outfd,
+clientProc(int pnum, int outfd,
 	   unsigned int testtime,
 	   unsigned int thread_stagger_usec)
 {
@@ -731,6 +729,10 @@ clientProc(int pnum, SOCKET outfd,
     THREAD_ID summary_tid;
     int status;
 
+#ifdef USE_EVENTS
+    if (gf_use_events)
+	return ev_clientProc(pnum, outfd, testtime, thread_stagger_usec);
+#endif
 
     bailtime = gt_shutdowntime;
 
@@ -752,20 +754,18 @@ clientProc(int pnum, SOCKET outfd,
 
 #if defined(USE_PTHREADS) || defined(_WIN32)
     if (gn_numthreads > 0) {
-	ptcxs = (ptcx_t)mycalloc(sizeof(tcx_t) * gn_numthreads);
+	ptcxs = (ptcx_t)xcalloc(sizeof(tcx_t) * gn_numthreads);
 
 	for (tnum = 0; tnum < gn_numthreads; ++tnum) {
 	    initTcx(&ptcxs[tnum], outfd, pnum, tnum);
 	}
 
-	/*fprintf(stderr, "launching summary\n");*/
-	if ((ret=sysdep_thread_create(&summary_tid, summaryThread,
-				      (void *)ptcxs)) != 0) {
+	if ((ret = sysdep_thread_create(&summary_tid, summaryThread,
+					(void *)ptcxs)) != 0) {
 	    returnerr(stderr, "client %d: summary thread create failed ret=%d errno=%d: %s\n",
 		      pnum, ret, errno, strerror(errno));
 	    ptcxs[tnum].tid = 0;
 	}
-	/*fprintf(stderr, "summary should be running...\n");*/
 
 	for (tnum = 0; tnum < gn_numthreads; ++tnum) {
 	    if (gf_timeexpired)
@@ -823,7 +823,8 @@ clientProc(int pnum, SOCKET outfd,
 		returnerr (stderr, "Forcing sockets closed.\n");
 		/* close all client sockets, to force calls to exit */
 		for (tnum = 0; tnum < gn_numthreads; ++tnum) {
-		    if (BADSOCKET(ptcxs[tnum].sock)) continue;
+		    if (BADSOCKET(ptcxs[tnum].sock))
+			continue;
 		    D_PRINTF (stderr, "Closing sock=%d tnum=%d\n",
 			      ptcxs[tnum].sock, tnum);
 		    set_abortive_close(ptcxs[tnum].sock);
@@ -832,9 +833,8 @@ clientProc(int pnum, SOCKET outfd,
 		returnerr (stderr, "Forced socket close complete.\n");
 		break;
 	    }
-	    MS_sleep(1);
-	}
-
+  	    MS_sleep(1);
+	}	
 
 	D_PRINTF (stderr, "Shutdown timeexpired=%d\n", gf_timeexpired);
 	if (gf_timeexpired < EXIT_FAST)	{
@@ -873,7 +873,7 @@ clientProc(int pnum, SOCKET outfd,
 #endif /* USE_PTHREADS || _WIN32*/
     {				/* thread un-available or 0 */
 	gn_numthreads = 1;
-	ptcxs = (ptcx_t)mycalloc(sizeof(tcx_t) * gn_numthreads);
+	ptcxs = (ptcx_t)xcalloc(sizeof(tcx_t) * gn_numthreads);
 
 	initTcx(&ptcxs[0], outfd, pnum, -1);
 
@@ -891,12 +891,216 @@ clientProc(int pnum, SOCKET outfd,
     clientTimeSummary(ptcxs, gn_numthreads, pnum, outfd);
     clientBlockSummary(ptcxs, gn_numthreads, pnum, outfd);
 
-#if 0
-    for (tnum = 0; tnum < gn_numthreads; ++tnum) { /* extra reporting */
-	D_PRINTF(stderr, "client %d: thread %d stats\n", pnum, tnum);
-	clientStats(&ptcxs[tnum]);
+    for (tnum = 0; tnum < gn_numthreads; ++tnum) { /* clean up */
+	D_PRINTF(stderr, "client %d: thread %d destroyed\n", pnum, tnum);
+	destroyTcx(&ptcxs[tnum]);
     }
-#endif
+
+    D_PRINTF(stderr, "child: %d done\n", pnum);
+    return 0;
+}
+
+#ifdef USE_EVENTS
+/* version of clientProc which uses event queue */
+
+/*********************************************************************
+Things to note:
+
+The idleTime counter is hopefully correct, but it's a bit tricky --
+one event will start the timer, and the next is expected to stop it.
+The invariant is that either ptcx->ev_stats->idle will be NULL or will
+be started at the beginning of each event function.
+
+startDelay is strange in that it is sampled from a block that is never
+executed.  However, this block is not counted when figuring
+statistics, so it won't mess with the results.
+*********************************************************************/
+
+#define get_loop_throttle(X) ((X)->throttle)
+#define get_block_throttle(X) ((X)->throttle)
+
+static void
+update_dynamic_throttle(ptcx_t ptcx, mail_command_t * cmd,
+			struct timeval * expected)
+{
+    struct timeval now;
+    int elapsed;
+
+    if (cmd->loopThrottle == 0 || cmd->throttleFactor == 1)
+	return;
+    
+    assert(cmd->throttleFactor != 0);
+    gettimeofday(&now, NULL);
+    timersub(&now, expected, &now);
+    elapsed = now.tv_usec / 1000 + now.tv_sec * 1000;
+    if (elapsed > cmd->loopThrottle) {
+	cmd->throttle *= cmd->throttleFactor;
+	D_PRINTF(stderr, "Throttling back %s.  New rate = %g\n",
+		 cmd->proto->name, cmd->throttle);
+    } else if (elapsed < - cmd->loopThrottle) {
+	cmd->throttle /= cmd->throttleFactor;
+	D_PRINTF(stderr, "Throttling up %s.  New rate = %g\n",
+		 cmd->proto->name, cmd->throttle);
+    } else {
+	D_PRINTF(stderr,
+		 "Not throttling %s (elapsed = %d, throttle = %d).  Rate = %g\n",
+		 cmd->proto->name, elapsed, cmd->loopThrottle, cmd->throttle);
+    }
+}
+
+#include "event.h"
+ev_queue_t g_eq;
+
+static int ev_clientThread(void * );
+static void ev_clientDone(void * );
+static void client_init(void *arg);
+static void client_loop(void *arg);
+
+int
+ev_clientProc(int pnum, int outfd,
+	      unsigned int testtime,
+	      unsigned int thread_stagger_usec)
+{
+    int tnum;
+    int ret;
+    ptcx_t	ptcxs; /* thread contexts */
+    THREAD_ID summary_tid;
+    int status;
+
+
+    bailtime = gt_shutdowntime;
+
+    returnerr(stderr, "Child starting\n"); /* get our pid and time printed */
+    D_PRINTF(stderr, "ev_clientProc(%d, %d, %d) starting\n",
+	     pnum, testtime, thread_stagger_usec);
+
+    if (testtime <= 0) {		/* never happens, checked in main.c */
+	D_PRINTF (stderr, "ABORTING testtime=%d\n", testtime);
+	return 0;
+    }
+
+    setup_signal_handlers ();
+
+    alarm(testtime);			/* promptly notice test end */
+
+    D_PRINTF(stderr, "ev_clientProc: outputting summary fmts\n");
+    clientSummaryFormat (pnum, outfd);
+
+    if (gn_numthreads > 0) {
+	ptcxs = (ptcx_t)xcalloc(sizeof(tcx_t) * gn_numthreads);
+
+	D_PRINTF(stderr, "ev_client: initializing tcx's at 0x%x\n", ptcxs);
+	for (tnum = 0; tnum < gn_numthreads; ++tnum) {
+	    initTcx(&ptcxs[tnum], outfd, pnum, tnum);
+	}
+
+	/* initialize our event queue */
+	g_eq = ev_queue_create(NULL);
+	D_PRINTF(stderr, "ev_clientProc: created event queue\n");
+	if (g_eq == NULL) {
+	    returnerr(stderr, "client %d: can't create event queue.\n", pnum);
+	    return -1;
+	}
+	
+	D_PRINTF(stderr, "ev_client: creating summary thread\n");
+	if ((ret = sysdep_thread_create(&summary_tid, summaryThread,
+					(void *)ptcxs)) != 0) {
+	    returnerr(stderr, "client %d: summary thread create failed ret=%d errno=%d: %s\n",
+		      pnum, ret, errno, strerror(errno));
+	    ptcxs[tnum].tid = 0;
+	}
+
+	for (tnum = 0; tnum < gn_numthreads; ++tnum) {
+	    if (gf_timeexpired)
+		break;
+
+	    /* sleep between each client thread we try to start */
+	    if (tnum && thread_stagger_usec) {
+		MS_usleep(thread_stagger_usec);
+		if (gf_timeexpired)
+		    break;
+	    }
+
+	    D_PRINTF(stderr, "client %d: pseudo-thread %d testtime %d\n",
+		     pnum, tnum, testtime);
+
+	    if (ev_clientThread((void*)&ptcxs[tnum]) < 0) {
+		returnerr(stderr,
+			  "client %d: pseudo-thread %d create() failed\n");
+		ptcxs[tnum].tid = 0;
+	    }
+	}
+
+	/* Wait for all threads to exit or overtime */
+	while (FinishedThreads < StartedThreads) {
+	    int tm = time(0);
+	    if (tm > bailtime) {
+		++gf_timeexpired;
+		bailtime += gt_stopinterval;
+		if (gf_timeexpired >= EXIT_FAST) {
+		    returnerr (stderr, "Client signaling exit, started=%d finished=%d timeexpired=%d\n",
+			       StartedThreads, FinishedThreads, gf_timeexpired);
+		    kill (0, SIGALRM);	/* wake children */
+		}
+		if (ev_queue_destroy(g_eq, gt_stopinterval * 1000) == 0)
+		    break;
+	    }
+	    if (gf_timeexpired >= EXIT_FASTEST) {
+		returnerr (stderr, "Forcing sockets closed.\n");
+		/* close all client sockets, to force calls to exit */
+		for (tnum = 0; tnum < gn_numthreads; ++tnum) {
+		    if (BADSOCKET(ptcxs[tnum].sock))
+			continue;
+		    D_PRINTF (stderr, "Closing sock=%d tnum=%d\n",
+			      ptcxs[tnum].sock, tnum);
+		    set_abortive_close(ptcxs[tnum].sock);
+		    NETCLOSE(ptcxs[tnum].sock);
+		}
+		returnerr (stderr, "Forced socket close complete.\n");
+		break;
+	    }
+  	    MS_sleep(1);
+	}
+
+	D_PRINTF (stderr, "Shutdown timeexpired=%d\n", gf_timeexpired);
+	if (gf_timeexpired < EXIT_FAST)	{
+	    gf_timeexpired = EXIT_FAST; /* signal summary thread to exit */
+	    returnerr (stderr, "Clean child shutdown\n");
+	} else if (gf_timeexpired >=  EXIT_FASTEST) {
+	    returnerr (stderr, "Forced child shutdown\n");
+	} else {
+	    returnerr (stderr, "Accellerated child shutdown\n");
+	}
+
+	D_PRINTF(stderr, "client %d: joining summary thread\n", pnum);
+	if ((ret=sysdep_thread_join(summary_tid, &status)) != 0) {
+	    returnerr(stderr,
+		      "client %d: summary thread join failed ret=%d errno=%d: %s\n",
+		      pnum, ret, errno, strerror(errno));
+	}
+	/* do a summary now in case we hang in joins (needed?) */
+	D_PRINTF(stderr, "client %d: pre-join clientTimeSummary\n", pnum);
+	clientTimeSummary(ptcxs, gn_numthreads, pnum, outfd);
+
+    } else {				/* thread un-available or 0 */
+	gn_numthreads = 1;
+	ptcxs = (ptcx_t)xcalloc(sizeof(tcx_t) * gn_numthreads);
+
+	initTcx(&ptcxs[0], outfd, pnum, -1);
+
+	D_PRINTF(stderr, "client %d: testtime: %d\n", pnum);
+
+	/* set initial data point */
+	D_PRINTF(stderr, "client %d: initial clientTimeSummary\n", 0);
+	clientTimeSummary(ptcxs, gn_numthreads, pnum, outfd);
+
+	clientThread(&ptcxs[0]);
+    }
+
+    /* final time summary feedback */
+    D_PRINTF(stderr, "client %d: final summaries\n", 0);
+    clientTimeSummary(ptcxs, gn_numthreads, pnum, outfd);
+    clientBlockSummary(ptcxs, gn_numthreads, pnum, outfd);
 
     for (tnum = 0; tnum < gn_numthreads; ++tnum) { /* clean up */
 	D_PRINTF(stderr, "client %d: thread %d destroyed\n", pnum, tnum);
@@ -906,3 +1110,282 @@ clientProc(int pnum, SOCKET outfd,
     D_PRINTF(stderr, "child: %d done\n", pnum);
     return 0;
 }
+
+static int
+choose_cmd()
+{
+    int comm_index = 0;
+    if (gn_number_of_commands > 1) {
+	int ran_number;
+	/* Handle the weighted distribution of commands */
+	ran_number = (RANDOM() % gn_total_weight);
+	
+	/* loop through pages, find correct one 
+	 * while ran_number is positive, decrement it
+	 * by the weight of the current page
+	 * example: ran_number is 5, pages have weights of 10 and 10
+	 *          first iteration comm_index = 0, ran_number = -5
+	 *          iteration halted, comm_index = 0
+	 */
+	comm_index = -1;
+	while (ran_number >= 0) {
+	    comm_index++;
+	    ran_number -= g_loaded_comm_list[comm_index].weight;
+	} 
+    }
+    return comm_index;
+}
+
+static int
+ev_clientThread(void *targ)
+{
+    time_t	currentTime;
+    struct tm	*tmptm;
+    char	timeStamp[DATESTAMP_LEN];
+    tcx_t	*ptcx = (ptcx_t)targ;
+
+    if (clientInit(ptcx)) {		/* should never fail */
+	return -1;
+    }
+
+    if (gn_debug) {
+	/* write current time to debug file */
+	time(&currentTime);
+	tmptm = localtime(&currentTime); 
+	strftime(timeStamp, DATESTAMP_LEN, "%Y%m%d%H%M%S", tmptm);
+	D_PRINTF(debugfile, "Time Stamp: %s\n", timeStamp);
+	D_PRINTF(debugfile, "mailstone run dateStamp=%s\n", gs_dateStamp);
+    }
+
+    ++StartedThreads;
+    
+    ptcx->blockCount = 0;
+
+    ptcx->ev_stats = NULL;		/* don't update stats in client_init */
+    client_init(ptcx);
+    
+    return 0;
+}
+
+static void
+ev_clientDone(void *targ)
+{
+    time_t	currentTime;
+    struct tm	*tmptm;
+    char	timeStamp[DATESTAMP_LEN];
+    tcx_t	*ptcx = (ptcx_t)targ;
+    
+    /* count outstanding idle time */
+    if (ptcx->ev_stats != NULL)
+	event_stop(ptcx, &ptcx->ev_stats->idle);
+
+    D_PRINTF(debugfile, "Test run complete\n" );
+
+    /* write current time to debug file */
+    time(&currentTime);
+    tmptm = localtime(&currentTime); 
+    strftime(timeStamp, DATESTAMP_LEN, "%Y%m%d%H%M%S", tmptm);
+    D_PRINTF(debugfile, "Time Stamp: %s\n", timeStamp);
+
+    if (gn_record_telemetry && (ptcx->logfile > 0)) {
+	close(ptcx->logfile);
+	ptcx->logfile = -1;
+    }
+
+    D_PRINTF(debugfile, "client exiting.\n" );
+
+    if (gn_debug && ptcx->dfile) {
+	fflush(ptcx->dfile);
+	if (ptcx->dfile != stderr) {
+	    fclose(ptcx->dfile);
+	    ptcx->dfile = stderr;
+	}
+    }
+
+    ++FinishedThreads;
+}
+
+void
+add_msec(struct timeval * tv, int ms)
+{
+    tv->tv_sec += ms / 1000;
+    tv->tv_usec += 1000 * (ms % 1000);
+    if (tv->tv_usec >= 1000000) {
+	tv->tv_sec++;
+	tv->tv_usec -= 1000000;
+    }
+}
+
+/*
+**  client_init -- perform an init action.
+**
+**	Note:
+**		Test run completion cannot be signaled by closing the
+**		event queue, since a "nice" shutdown still demands
+**		various logout actions.
+*/
+
+static void client_init2(void * );
+
+static void
+client_init(void *arg)
+{
+    ptcx_t ptcx	 = (ptcx_t)arg;
+    cmd_stats_t * old_stats = ptcx->ev_stats;
+    int comm_index;
+
+    if (gf_timeexpired >= EXIT_SOON) {
+	/* do something here? */
+	fprintf(stderr, "client_init(): after test-end.\n");
+	++FinishedThreads;
+	return;
+    }
+
+    comm_index = choose_cmd();
+    ptcx->ev_comm = &g_loaded_comm_list[comm_index];
+    ptcx->ev_stats =  &(ptcx->cmd_stats[comm_index]);
+    
+    /* Figure out when to do second half of client_init() */
+    if (old_stats == NULL) {
+	/* first time => use startDelay */
+	int start_delay = sample(ptcx->ev_comm->startDelay);
+	if (start_delay < 0) {
+	    fprintf(stderr, "eek: start-delay < 0\n");
+	    start_delay = 0;
+	}
+	if (ev_after(g_eq, start_delay, client_init2, (void*)ptcx) < 0)
+	    /* error */;
+    } else {
+	/* do protocol-independent statistics */
+	++ptcx->connectCount;
+	++ptcx->blockCount;
+	event_stop(ptcx, &old_stats->idle);
+	client_init2((void*)ptcx);
+    }
+}
+
+/*
+**  client_init2 -- second half of client_init()
+*/
+
+static void
+client_init2(void * arg)
+{
+    ptcx_t ptcx	 = (ptcx_t)arg;
+    struct timeval next;
+
+    /*
+    **  figure out when we should do the next action and next block,
+    **  but don't actually schedule them until we finish the current
+    **  one.  This guarantees that actions are always performed in
+    **  order.
+    */
+
+    ptcx->ev_stats->totalcommands++; /* track command blocks trys */
+    
+    gettimeofday(&next, NULL);
+    ptcx->ev_next.tv_sec = next.tv_sec;
+    ptcx->ev_next.tv_usec = next.tv_usec;
+    ptcx->ev_loop = ptcx->ev_comm->numLoops;
+    
+    /* time for next block */
+    add_msec(&ptcx->ev_next, (get_block_throttle(ptcx->ev_comm)
+ 			      * sample(ptcx->ev_comm->blockTime)));
+
+    /* time for next unit of work in this block */
+    add_msec(&next, sample(ptcx->ev_comm->idleTime));
+
+    /* run the init function, and schedule the first loop (or end) */
+    ptcx->ev_state = (*(ptcx->ev_comm->proto->cmdStart)) (ptcx, ptcx->ev_comm,
+							  ptcx->ev_stats);
+
+    if (ptcx->ev_state == NULL) {
+	D_PRINTF(stderr, "do_command Start failed\n");
+	event_start(ptcx, &ptcx->ev_stats->idle);
+	ev_at(g_eq, &ptcx->ev_next, client_init, (void*)ptcx);
+	return;
+    }
+
+    /* check to see if we've scheduled enough blocks */
+    if (gn_maxBlockCnt && (ptcx->blockCount >= gn_maxBlockCnt)) {
+	D_PRINTF (debugfile, "Saw enough loops %d, exiting\n",
+		  ptcx->blockCount);
+	beginShutdown ();		/* indicate early exit */
+    }
+
+    event_start(ptcx, &ptcx->ev_stats->idle);
+    ev_at(g_eq, &next, client_loop, (void*)ptcx);
+}
+
+static void
+client_loop(void *arg)
+{
+    ptcx_t ptcx = (ptcx_t)arg;
+    
+    assert(ptcx);
+    assert(ptcx->ev_comm);
+    assert(ptcx->ev_comm->proto);
+
+    event_stop(ptcx, &ptcx->ev_stats->idle);
+
+    /* check for rude shutdown: */
+    if (gf_timeexpired >= EXIT_FAST) {
+	fprintf(stderr, "%s: forced shutdown.\n", ptcx->ev_comm->proto->name);
+	ev_clientDone(arg);
+	return;
+    }
+    
+    if (ptcx->ev_loop == 0) {
+	/* run end function */
+	if (ptcx->ev_comm->proto->cmdEnd)
+	    (*(ptcx->ev_comm->proto->cmdEnd))(ptcx, ptcx->ev_comm,
+					      ptcx->ev_stats, ptcx->ev_state);
+
+	if (gf_timeexpired >= EXIT_SOON) {
+	    fprintf(stderr, "%s: finished.\n", ptcx->ev_comm->proto->name);
+	    ev_clientDone(arg);
+	    return;
+	}
+	/* schedule next item */
+	event_start(ptcx, &ptcx->ev_stats->idle);
+	ev_at(g_eq, &ptcx->ev_next, client_init, arg);
+    } else {
+	/* run loop function */
+	struct timeval next;
+	int ret = 0;
+
+	assert (ptcx->ev_comm);
+	assert (ptcx->ev_stats);
+	assert (ptcx->ev_state);
+
+	gettimeofday(&next, NULL);
+	add_msec(&next, get_loop_throttle(ptcx->ev_comm) * sample(ptcx->ev_comm->loopDelay));
+	if (ptcx->ev_comm->proto->cmdLoop)
+	    ret = (*(ptcx->ev_comm->proto->cmdLoop))(ptcx,
+						     ptcx->ev_comm,
+						     ptcx->ev_stats,
+						     ptcx->ev_state);
+
+	if (gf_timeexpired >= EXIT_FAST) {
+	    fprintf(stderr, "%s: forced shutdown.",
+		    ptcx->ev_comm->proto->name);
+	    ev_clientDone(arg);
+	    return;
+	}
+	
+	if (gf_timeexpired >= EXIT_SOON || ret != 0) {
+	    fprintf(stderr, "%s: finishing (%d remaining loops).\n",
+		    ptcx->ev_comm->proto->name, ptcx->ev_loop);
+	    ptcx->ev_loop = 0;		/* do end function */
+	}
+	else {
+	    ptcx->ev_loop--;		/* do next loop (or end) */
+	    /* only update throttling if loop succeeded */
+	    update_dynamic_throttle(ptcx, ptcx->ev_comm, &next);
+	}
+	event_start(ptcx, &ptcx->ev_stats->idle);
+	ev_at(g_eq, &next, client_loop, arg);
+    }
+}
+
+#endif /* USE_EVENTS */

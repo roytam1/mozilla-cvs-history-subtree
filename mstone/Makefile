@@ -101,14 +101,14 @@ pkg-share-files:: mkpkgdirs
 	(cd $(PKGDIR); [ ! -f cleanup ] || rm -f cleanup; ln -s mstone cleanup)
 	(cd $(PKGDIR); [ ! -f checktime ] || rm -f checktime; ln -s mstone checktime)
 	(cd $(PKGDIR); [ ! -f timesync ] || rm -f timesync; ln -s mstone timesync)
-	$(CP) nsarch bin/*.pl $(PKGDIR)/bin
-	$(CP) conf/*.wld conf/*.wld.in conf/*.html $(PKGDIR)/conf
-	$(CP) data/*.msg $(PKGDIR)/data
-	$(CP) doc/*.html doc/*.gif $(PKGDIR)/doc
-	$(CP) INSTALL $(PKGDIR)
-	$(CP) README $(PKGDIR)
-	$(CP) ChangeLog $(PKGDIR)
-	$(CP) LICENSE $(PKGDIR)
+	-$(CP) nsarch bin/*.pl $(PKGDIR)/bin
+	-$(CP) conf/*.wld conf/*.wld.in conf/*.html $(PKGDIR)/conf
+	-$(CP) data/*.msg $(PKGDIR)/data
+	-$(CP) doc/*.html doc/*.gif $(PKGDIR)/doc
+	-$(CP) INSTALL $(PKGDIR)
+	-$(CP) README $(PKGDIR)
+	-$(CP) ChangeLog $(PKGDIR)
+	-$(CP) LICENSE $(PKGDIR)
 
 # split out OS specific file so that combined packaging possible (set PKGDIR)
 pkg-arch-files-gd::	 $(PKGDIR)/gd $(OBJDIR)/gd/libgd.a

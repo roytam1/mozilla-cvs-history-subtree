@@ -123,7 +123,7 @@ Mailstone Utility
 This document describes how to use Mailstone 4.1 for capacity planning and testing on Netscape Messaging Server and other mail servers. </P></A>
 <A NAME="1017268">
 This document contains the following sections: </P></A>
-<ul><P><A NAME="1011972"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="stone.htm#1011979">About the Mailstone Utility</a> </FONT></LI></A><A NAME="1036539"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="stone.htm#1022848">Installing Mailstone</a> </FONT></LI></A><BR><A NAME="1036546"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="stone.htm#1024558">Setting Up Mailstone Tests</a> </FONT></LI></A><BR><A NAME="1037932"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="stone.htm#1061767">Synchronizing Client Machines</a> </FONT></LI></A><BR><A NAME="1036553"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="stone.htm#1049983">Running Mailstone</a> </FONT></LI></A><BR><A NAME="1036567"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="stone.htm#1061822">Reviewing Test Results</a> </FONT></LI></A><BR><A NAME="1062165"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="stone.htm#1061888">Detailed Protocol Test Steps</a></FONT></LI></A><BR><A NAME="1036574"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="stone.htm#1043075">Removing Mailstone</a> </FONT></LI></A><BR></ul><BR></TD></TR><TR> <TD BGCOLOR="#9999CC"><A HREF="#top"><IMG SRC="up.gif" BORDER=0></A><A NAME="About the Mailstone Utility"></A><A NAME="1011979"><FONT FACE="Palatino, Serif" SIZE="+2" COLOR="white"> <B>About the Mailstone Utility</B></FONT></A></TD></TR><TR><TD><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" Size=-1><A NAME="1011982">
+<ul><P><A NAME="1011972"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="#1011979">About the Mailstone Utility</a> </FONT></LI></A><A NAME="1036539"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="#1022848">Installing Mailstone</a> </FONT></LI></A><BR><A NAME="1036546"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="#1024558">Setting Up Mailstone Tests</a> </FONT></LI></A><BR><A NAME="1037932"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="#1061767">Synchronizing Client Machines</a> </FONT></LI></A><BR><A NAME="1036553"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="#1049983">Running Mailstone</a> </FONT></LI></A><BR><A NAME="1036567"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="#1061822">Reviewing Test Results</a> </FONT></LI></A><BR><A NAME="1062165"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="#1061888">Detailed Protocol Test Steps</a></FONT></LI></A><BR><A NAME="1036574"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><a href="#1043075">Removing Mailstone</a> </FONT></LI></A><BR></ul><BR></TD></TR><TR> <TD BGCOLOR="#9999CC"><A HREF="#top"><IMG SRC="up.gif" BORDER=0></A><A NAME="About the Mailstone Utility"></A><A NAME="1011979"><FONT FACE="Palatino, Serif" SIZE="+2" COLOR="white"> <B>About the Mailstone Utility</B></FONT></A></TD></TR><TR><TD><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" Size=-1><A NAME="1011982">
 The Mailstone utility is a stress-testing tool that system administrators can use to determine Netscape Messaging Server capacity by testing how the server performs under load. You can use Mailstone on all Unix platforms supported by Netscape Messaging Server and also on Windows NT. </P></A>
 <A NAME="1023527">
 Mailstone can also be used to similarly test and compare other mail servers that support SMTP, POP, and IMAP protocols. </P></A>
@@ -136,7 +136,7 @@ Mailstone measures both throughput and response time of the mail server being te
 <A NAME="1023254">
 Mailstone is run on a client machine (referred to as <em>testmaster</em> in these instructions). </P></A>
 <ul><P><A NAME="1030719"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif">In Unix environments, the test can be configured to include additional client machines (referred to as <I>testclients</I> in these instructions). These additional clients can be any supported Unix machine. The testmaster machine can also function as a testclient machine.</FONT></LI></A><P><A NAME="1030720"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif">In NT environments, Mailstone runs only on the single testmaster machine which acts as both testmaster and testclient. </FONT></LI></A></ul><A NAME="1030721">
-The Mailstone testbed consists of the testmaster machine, any testclient machines, the Messaging Server to be tested, plus the network configuration and Directory Server. (See <a href="stone.htm#1044600">Figure 0.1</a>.) </P></A>
+The Mailstone testbed consists of the testmaster machine, any testclient machines, the Messaging Server to be tested, plus the network configuration and Directory Server. (See <a href="#1044600">Figure 0.1</a>.) </P></A>
 <A NAME="1044600">
 <P><B>Figure 0.1	 Mailstone Testbed (Unix environment)<p><img src="stone01.gif"> 
 </B></P>
@@ -159,7 +159,7 @@ When Mailstone is run on the testmaster machine using the <FONT FACE="courier, c
 <BR></TD></TR><TR> <TD BGCOLOR="#9999CC"><A HREF="#top"><IMG SRC="up.gif" BORDER=0></A><A NAME="Installing Mailstone"></A><A NAME="1022848"><FONT FACE="Palatino, Serif" SIZE="+2" COLOR="white"> <B>Installing Mailstone</B></FONT></A></TD></TR><TR><TD><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" Size=-1><A NAME="1038215">
 You can install Mailstone at the same time as Messaging Server by choosing Mailstone as one of the Messaging Server components to be installed. See your Messaging Server installation instructions for details on how to do this. The Mailstone software that is installed at the same time as Messaging Server is a version for the same operating system used by Messaging Server. </P></A>
 <A NAME="1038216">
-The instructions in this section describe how to install an all-platforms version of Mailstone separate from a Messaging Server installation. This Mailstone version can be used to test Messaging Server or any other Mailstone-compatible email server. (If you initially install Mailstone as part of Messaging Server installation and later want to install the all-platforms version of Mailstone, see <a href="stone.htm#1038301">Reinstalling Mailstone</a>.)</P></A>
+The instructions in this section describe how to install an all-platforms version of Mailstone separate from a Messaging Server installation. This Mailstone version can be used to test Messaging Server or any other Mailstone-compatible email server. (If you initially install Mailstone as part of Messaging Server installation and later want to install the all-platforms version of Mailstone, see <a href="#1038301">Reinstalling Mailstone</a>.)</P></A>
 <A NAME="1023635">
 To transfer, extract, and install the all-platforms version of the Mailstone archive files follow these steps:</P></A>
 <ol>
@@ -214,11 +214,11 @@ The extraction process creates the required Mailstone files and places them in a
 <FONT FACE="courier, courier new, monospace">mailstone</FONT> directory and associated subdirectories. 
 
 </A></P><P><A NAME="1024217">
-See <a href="stone.htm#1091108">Table 0.2</a> for a description of the main Mailstone files. 
+See <a href="#1091108">Table 0.2</a> for a description of the main Mailstone files. 
 
 </A></P></ol>
 <A NAME="1023544">
-Once Mailstone is installed, you set up (configure) each test as described in <a href="stone.htm#1024558">Setting Up Mailstone Tests</a> and then run the <FONT FACE="courier, courier new, monospace">mstone</FONT> program as described in <a href="stone.htm#1061767">Synchronizing Client Machines</a>. </P></A>
+Once Mailstone is installed, you set up (configure) each test as described in <a href="#1024558">Setting Up Mailstone Tests</a> and then run the <FONT FACE="courier, courier new, monospace">mstone</FONT> program as described in <a href="#1061767">Synchronizing Client Machines</a>. </P></A>
 <A NAME="Reinstalling Mailstone"></A><A NAME="1038301"><FONT FACE="Palatino, Serif" SIZE="+2" COLOR="black"> <B>
 Reinstalling Mailstone</B></FONT></A><P>
 <A NAME="1038302">
@@ -286,7 +286,7 @@ numbering will be used in the password).
 </a>
 
 <P><a name="1091567">
-<B><FONT FACE="ARIAL"><LI></FONT></B>Answer <FONT FACE="courier, courier new, monospace">yes</FONT> to view the new configuration file. Make any additional changes to <FONT FACE="courier, courier new, monospace">conf/general.html </FONT>with a text editor. See <a href="stone.htm#1026185">Configuring Test Execution</a> for details about adding clients and controlling test execution. To re-run the simple configuration editor, run <FONT FACE="courier, courier new, monospace">setup config</FONT>.</LI>
+<B><FONT FACE="ARIAL"><LI></FONT></B>Answer <FONT FACE="courier, courier new, monospace">yes</FONT> to view the new configuration file. Make any additional changes to <FONT FACE="courier, courier new, monospace">conf/general.html </FONT>with a text editor. See <a href="#1026185">Configuring Test Execution</a> for details about adding clients and controlling test execution. To re-run the simple configuration editor, run <FONT FACE="courier, courier new, monospace">setup config</FONT>.</LI>
 </a>
 
 <P><a name="1048808">
@@ -294,7 +294,7 @@ numbering will be used in the password).
 </a>
 
 <P><A NAME="1048811">
-By default, this file is named <FONT FACE="courier, courier new, monospace">conf/general.html</FONT>. See <a href="stone.htm#1026893">System Data File 
+By default, this file is named <FONT FACE="courier, courier new, monospace">conf/general.html</FONT>. See <a href="#1026893">System Data File 
 (general.html)</a>.
 
 </A></P><P><a name="1044171">
@@ -311,7 +311,7 @@ you must still run <FONT FACE="courier, courier new, monospace">setup</FONT> bec
 machine.) 
 
 </A></P><P><a name="1044150">
-<B><FONT FACE="ARIAL"><LI></FONT></B>Important. If you are using more than one testclient machine, run <FONT FACE="courier, courier new, monospace">checktime</FONT> as described in <a href="stone.htm#1061767">Synchronizing Client Machines</a> to verify that the system clocks are within 2 seconds of each other.</LI>
+<B><FONT FACE="ARIAL"><LI></FONT></B>Important. If you are using more than one testclient machine, run <FONT FACE="courier, courier new, monospace">checktime</FONT> as described in <a href="#1061767">Synchronizing Client Machines</a> to verify that the system clocks are within 2 seconds of each other.</LI>
 </a>
 
 </ol>
@@ -323,7 +323,7 @@ Establishing the Test User Base</B></FONT></A><P>
 In order to test a messaging server, you need to create a set of test users. During set up, you created an LDIF file that will create these users in the Directory Server used by Netscape Messaging Server. If you are testing another kind of mail server, you will have to use other means to create these accounts.</P></A>
 <A NAME="1049331">
 You then add the test LDIF file's entries to your directory. You can use either of the following to update the LDAP Directory from the <FONT FACE="courier, courier new, monospace">conf/mailhost.ldif</FONT> file:</P></A>
-<ul><P><A NAME="1049332"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Database Manager</B>. The Netscape Directory Server provides a Database Manager that can be used to update the LDAP Directory as described in <a href="stone.htm#1049342">Adding Test Users with Database Manager</a>. </FONT></LI></A><P><A NAME="1049336"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>ldapmodify</B>. You can also use the <FONT FACE="courier, courier new, monospace">ldapmodify</FONT> command-line utility to update the LDAP Directory as described in <a href="stone.htm#1070712">Adding Test Users with ldapmodify</a>.</FONT></LI></A><P><A NAME="1049504"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Edit the database</B>. (Experts only) You can export the current database, append the new entries, and then import the new version. This is the fastest method and makes adding millions of users practical.</FONT></LI></A></ul><A NAME="1049340">
+<ul><P><A NAME="1049332"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Database Manager</B>. The Netscape Directory Server provides a Database Manager that can be used to update the LDAP Directory as described in <a href="#1049342">Adding Test Users with Database Manager</a>. </FONT></LI></A><P><A NAME="1049336"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>ldapmodify</B>. You can also use the <FONT FACE="courier, courier new, monospace">ldapmodify</FONT> command-line utility to update the LDAP Directory as described in <a href="#1070712">Adding Test Users with ldapmodify</a>.</FONT></LI></A><P><A NAME="1049504"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Edit the database</B>. (Experts only) You can export the current database, append the new entries, and then import the new version. This is the fastest method and makes adding millions of users practical.</FONT></LI></A></ul><A NAME="1049340">
 <B>Caution:</B> You should backup the Directory Server before making any changes. </P></A>
 <A NAME="Adding Test Users with Database Manager"></A><A NAME="1049342"><FONT FACE="Palatino, Serif"  SIZE="-1" COLOR="black"> <B>
 Adding Test Users with Database Manager</B></FONT></A><P>
@@ -385,7 +385,7 @@ not to overwrite any other entries.
 
 </ol>
 <A NAME="1070734">
-See <a href="stone.htm#1048564">Appendix</a> for steps for adding users under Directory 3.x or using <FONT FACE="courier, courier new, monospace">ldapmodify</FONT>.</P></A>
+See <a href="#1048564">Appendix</a> for steps for adding users under Directory 3.x or using <FONT FACE="courier, courier new, monospace">ldapmodify</FONT>.</P></A>
 <A NAME="Synchronizing Client Machines"></A><A NAME="1061767"><FONT FACE="Palatino, Serif" SIZE="+2" COLOR="black"> <B>
 Synchronizing Client Machines</B></FONT></A><P>
 <A NAME="1061768">
@@ -410,7 +410,7 @@ To run a Mailstone test:</P></A>
 </a>
 
 <P><a name="1049988">
-<B><FONT FACE="ARIAL"><LI></FONT></B>If you have additional testclient machines in a Unix environment, synchronize them as described in <a href="stone.htm#1061767">Synchronizing Client Machines</a>.</LI>
+<B><FONT FACE="ARIAL"><LI></FONT></B>If you have additional testclient machines in a Unix environment, synchronize them as described in <a href="#1061767">Synchronizing Client Machines</a>.</LI>
 </a>
 
 <P><a name="1049997">
@@ -436,7 +436,7 @@ You can specify command line options as needed. Running <FONT FACE="courier, cou
 <A NAME="1050153">
 Options specified on the command line override any corresponding configuration parameters in a configuration file. For example, if the configuration file sets the test run time to two hours, but you only want to make a brief trial run of 10 minutes to make sure that the configuration is correct, you would enter this:</P></A>
 <pre><A NAME="1050003"><FONT FACE="courier, courier new, monospace">mstone popsmtp -t 10m</FONT></A><P></pre><A NAME="1050007">
-<a href="stone.htm#1050011">Table 0.1</a> describes the command line options you can use with the <FONT FACE="courier, courier new, monospace">mstone</FONT> command. </P></A>
+<a href="#1050011">Table 0.1</a> describes the command line options you can use with the <FONT FACE="courier, courier new, monospace">mstone</FONT> command. </P></A>
 <A NAME="1050070">
 <TABLE BORDER=1 cellpadding=4 cellspacing=3><CAPTION></caption><p><A NAME="mstone command line options
 "></A><A NAME="1050011"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Table 0.1 mstone command line options
@@ -576,7 +576,7 @@ Mailstone displays the results of a test run as an HTML page named <FONT FACE="c
 <A NAME="1061826">
 An HTML-formatted index of all test runs is created and maintained in the <FONT FACE="courier, courier new, monospace">results/index.html</FONT> file. This file contains live links to the <FONT FACE="courier, courier new, monospace">results.html</FONT> files from every test run. </P></A>
 <A NAME="1061830">
-The top portion of a typical results file is shown in <a href="stone.htm#1061835">Figure 0.2</a>. (Your results will vary depending on how you configured your test run.)</P></A>
+The top portion of a typical results file is shown in <a href="#1061835">Figure 0.2</a>. (Your results will vary depending on how you configured your test run.)</P></A>
 <A NAME="1061835">
 <P><B>Figure 0.2	 Example Mailstone test result page (top portion)<p><img src="stone02.gif">
 </B></P>
@@ -595,7 +595,7 @@ The number of successful operations is <B>tries</B> minus <B>errors</B>.</P></A>
 Note that actual precision of the time values depends on the precision of the system clock and on statistical sampling. The times are displayed in seconds unless other units are shown.</P></A>
 <A NAME="About the Report Rows"></A><A NAME="1070800"><FONT FACE="Palatino, Serif" SIZE="+1" COLOR="black"> <B>
 About the Report Rows</B></FONT></A><P><A NAME="1070760">
-Each row in the report is a timer for a specific aspect of the protocol test. The one exception is "Total", which is a sum of the other timers. Details of how each timer is used in each protocol are found in <a href="stone.htm#1061888">Detailed Protocol Test Steps</a>. Here is the current list of possible timers: </P></A>
+Each row in the report is a timer for a specific aspect of the protocol test. The one exception is "Total", which is a sum of the other timers. Details of how each timer is used in each protocol are found in <a href="#1061888">Detailed Protocol Test Steps</a>. Here is the current list of possible timers: </P></A>
 <ul><P><A NAME="1087448"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Total</B>. The total timer contains a sum of all the other timers.</FONT></LI></A><P><A NAME="1070761"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Connect</B>. The connect timer is the establishment of the TCP connection to the server. </FONT></LI></A><P><A NAME="1070762"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Banner</B>. The banner timer includes the message sent from the server when a connection is established.</FONT></LI></A><P><A NAME="1070763"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Login</B>. The login timer includes sending the user ID and password and having it verified.</FONT></LI></A><P><A NAME="1070764"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Command</B>. The command timer records all other protocol exchanges between the client and server.</FONT></LI></A><P><A NAME="1070765"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Submit</B>. The submit timer records message data sent to the server.</FONT></LI></A><P><A NAME="1070766"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Retrieve</B>. The retrieve timer records messages received from the server.</FONT></LI></A><P><A NAME="1070767"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Headers</B>. The headers timer records non-message HTML pages received from the server.</FONT></LI></A><P><A NAME="1070768"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Logout</B>. The logout timer records normally closed connections.</FONT></LI></A><P><A NAME="1070769"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Idle</B>. The idle timer records time that the client spent sleeping between requests to the server.</FONT></LI></A></ul><A NAME="1070771">
 Some stages may be bypasses depending on the protocol and workload. For example, the SMTP protocol will only do a "Login" if <FONT FACE="courier, courier new, monospace">useEHLO</FONT> and <FONT FACE="courier, courier new, monospace">useAuthLogin</FONT> are enabled and the server supports AUTHLOGIN.</P></A>
 <A NAME="1062123">
@@ -613,7 +613,7 @@ If advanced customization of test reporting is needed, import the <FONT FACE="co
 Further graphing can be done by importing the <FONT FACE="courier, courier new, monospace">results/</FONT>timestamp<FONT FACE="courier, courier new, monospace">/time-*.csv</FONT> files into a spreadsheet. Each file contains the sum of all client's timers over the duration of the test for one protocol.</P></A>
 <A NAME="Additional Details"></A><A NAME="1070847"><FONT FACE="Palatino, Serif" SIZE="+1" COLOR="black"> <B>
 Additional Details</B></FONT></A><P><A NAME="1070779">
-At the end of the <FONT FACE="courier, courier new, monospace">results.html</FONT> file under the heading "Details" is a description of the test environment. This is the text you specified in the system data file (<FONT FACE="courier, courier new, monospace">conf/general.html</FONT>). This allows you to capture all the configuration that is beyond the scope of Mailstone, but critical to what you are testing. Typical information to document includes: software version, operating system version, hardware capacities, network configuration, disk organization, caching configuration, and so on. A simple description is shown in <a href="stone.htm#1070787">Figure 0.3</a>.</P></A>
+At the end of the <FONT FACE="courier, courier new, monospace">results.html</FONT> file under the heading "Details" is a description of the test environment. This is the text you specified in the system data file (<FONT FACE="courier, courier new, monospace">conf/general.html</FONT>). This allows you to capture all the configuration that is beyond the scope of Mailstone, but critical to what you are testing. Typical information to document includes: software version, operating system version, hardware capacities, network configuration, disk organization, caching configuration, and so on. A simple description is shown in <a href="#1070787">Figure 0.3</a>.</P></A>
 <A NAME="1070787">
 <P><B>Figure 0.3	 Example Mailstone test results page (test description)<p><img src="stone03.gif">
 </B></P>
@@ -622,7 +622,7 @@ Test and Configuration Files</B></FONT></A><P>
 <A NAME="1049847">
 Mailstone files are stored in a directory named <FONT FACE="courier, courier new, monospace">mailstone</FONT> with several subdirectories. All programs must be run from the <FONT FACE="courier, courier new, monospace">mailstone</FONT> directory. These directories are created when the Mailstone files are extracted with <FONT FACE="courier, courier new, monospace">tar</FONT> (Unix) or are <FONT FACE="courier, courier new, monospace">unzip</FONT> (NT). File names are the same for both Unix and NT platforms, except that in some cases NT files have filename extensions such as <FONT FACE="courier, courier new, monospace">.exe</FONT> or <FONT FACE="courier, courier new, monospace">.bat</FONT>. </P></A>
 <A NAME="1049851">
-The main Mailstone files are listed in <a href="stone.htm#1091108">Table 0.2</a> (ancillary files are not listed). </P></A>
+The main Mailstone files are listed in <a href="#1091108">Table 0.2</a> (ancillary files are not listed). </P></A>
 <A NAME="1090940">
 <TABLE BORDER=1 cellpadding=4 cellspacing=3><CAPTION></caption><p><A NAME="Important Mailstone Files
 "></A><A NAME="1091108"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Table 0.2 Important Mailstone Files
@@ -630,7 +630,7 @@ The main Mailstone files are listed in <a href="stone.htm#1091108">Table 0.2</a>
 <tr><td valign=top><A NAME="1091116"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1><FONT FACE="courier, courier new, monospace">mstone
 </FONT></FONT></A><BR></td>
 <td valign=top><A NAME="1091118"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1>The command script that you run to perform a Mailstone test 
-as described in <a href="stone.htm#1061767">Synchronizing Client Machines</a>. 
+as described in <a href="#1061767">Synchronizing Client Machines</a>. 
 </FONT></A><BR></td>
 </tr>
 
@@ -668,7 +668,7 @@ Mailstone.
 the correct version of Mailstone software and the specified test 
 messages to the  <FONT FACE="courier, courier new, monospace">/var/tmp</FONT> directories in Unix environments 
 or the <FONT FACE="courier, courier new, monospace">%TEMP%</FONT> directory in NT environments. See 
-<a href="stone.htm#1061767">Synchronizing Client Machines</a>.
+<a href="#1061767">Synchronizing Client Machines</a>.
 </FONT></A><BR></td>
 </tr>
 
@@ -676,7 +676,7 @@ or the <FONT FACE="courier, courier new, monospace">%TEMP%</FONT> directory in N
 </FONT></FONT></A><BR></td>
 <td valign=top><A NAME="1091148"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1>A utility that checks the current system time on all machines 
 that are part of the test. (Unix environments only). See 
-<a href="stone.htm#1061767">Synchronizing Client Machines</a>.
+<a href="#1061767">Synchronizing Client Machines</a>.
 </FONT></A><BR></td>
 </tr>
 
@@ -684,7 +684,7 @@ that are part of the test. (Unix environments only). See
 </FONT></FONT></A><BR></td>
 <td valign=top><A NAME="1091155"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1>A utility the synchronizes the system time on all machines that 
 are part of the test. (Unix environments only). See 
-<a href="stone.htm#1061767">Synchronizing Client Machines</a>.
+<a href="#1061767">Synchronizing Client Machines</a>.
 </FONT></A><BR></td>
 </tr>
 
@@ -692,14 +692,14 @@ are part of the test. (Unix environments only). See
 </FONT></FONT></A><BR></td>
 <td valign=top><A NAME="1091162"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1>The system data file that describes the system configuration. 
 The contents of <FONT FACE="courier, courier new, monospace">general.html</FONT> are appended to the test 
-result output. See <a href="stone.htm#1026893">System Data File (general.html)</a>. 
+result output. See <a href="#1026893">System Data File (general.html)</a>. 
 </FONT></A><BR></td>
 </tr>
 
 <tr><td valign=top><A NAME="1091167"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1><FONT FACE="courier, courier new, monospace">conf/general.wld
 </FONT></FONT></A><BR></td>
 <td valign=top><A NAME="1091169"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1>The general configuration file you use to specify configuration 
-parameters for the test as a whole. See <a href="stone.htm#1035278">General Configuration 
+parameters for the test as a whole. See <a href="#1035278">General Configuration 
 File (general.wld)</a>.
 </FONT></A><BR></td>
 </tr>
@@ -707,7 +707,7 @@ File (general.wld)</a>.
 <tr><td valign=top><A NAME="1091186"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1><FONT FACE="courier, courier new, monospace">conf/*.wld
 </FONT></FONT></A><BR></td>
 <td valign=top><A NAME="1091188"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1>The workload configuration files you use to specify tests. See 
-<a href="stone.htm#1025634">Workload Configuration File (testname.wld)</a>. 
+<a href="#1025634">Workload Configuration File (testname.wld)</a>. 
 </FONT></A><BR></td>
 </tr>
 
@@ -720,7 +720,7 @@ File (general.wld)</a>.
 <tr><td valign=top><A NAME="1091197"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1><FONT FACE="courier, courier new, monospace">data/*.msg
 </FONT></FONT></A><BR></td>
 <td valign=top><A NAME="1091199"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1>The "filler" message bodies that Mailstone uses when it sends 
-messages during testing. See <a href="stone.htm#1071397">Test Messages</a>. 
+messages during testing. See <a href="#1071397">Test Messages</a>. 
 </FONT></A><BR></td>
 </tr>
 
@@ -742,7 +742,7 @@ All the details of test execution are performed on the `testmaster' machine. The
 Configuration files can include other configuration files using <br><FONT FACE="courier, courier new, monospace">&lt;include conf/</FONT><I><FONT FACE="courier, courier new, monospace">filename</FONT></I><FONT FACE="courier, courier new, monospace">.wld&gt;</FONT>. This allows all the general configuration information to be kept in one file and not to have to be repeated in each test workload. A section must be completely contained in a single file.</P></A>
 <A NAME="1030837">
 There are different kinds of configuration files:</P></A>
-<ul><P><A NAME="1030883"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>General</B>. The general configuration file specifies parameters that apply to all your Mailstone tests. Each test includes <FONT FACE="courier, courier new, monospace">conf/general.wld</FONT> to define common parameters. The mailstone utilities <FONT FACE="courier, courier new, monospace">setup</FONT>, <FONT FACE="courier, courier new, monospace">cleanup</FONT>, <FONT FACE="courier, courier new, monospace">checktime</FONT>, and <FONT FACE="courier, courier new, monospace">timesync</FONT> also read <FONT FACE="courier, courier new, monospace">conf/general.wld</FONT> for test client machines and test account information. See <a href="stone.htm#1035278">General Configuration File (general.wld)</a>. </FONT></LI></A><P><A NAME="1031229"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Workload</B>. The workload configuration file specifies the protocols to be tested, the attributes for each protocol, and the test messages to be used. By default, workload configuration files use the filename extension <FONT FACE="courier, courier new, monospace">.wld</FONT>. Mailstone provides sample workload files for different kinds of tests:  <FONT FACE="courier, courier new, monospace">imap.wld</FONT>, <FONT FACE="courier, courier new, monospace">pop.wld</FONT>, <FONT FACE="courier, courier new, monospace">smtp.wld</FONT>, <FONT FACE="courier, courier new, monospace">popimapsmtp.wld</FONT>, and <FONT FACE="courier, courier new, monospace">popsmtp.wld</FONT>. See <a href="stone.htm#1025634">Workload Configuration File (testname.wld)</a>. </FONT></LI></A><P><A NAME="1048879"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>System Data</B>. The system data file specifies any information that you wish to have appended to test results. By default, this file is named <FONT FACE="courier, courier new, monospace">general.html</FONT>. See <a href="stone.htm#1026893">System Data File (general.html)</a>. </FONT></LI></A></ul><A NAME="Specifying Times in Configuration Files"></A><A NAME="1040549"><FONT FACE="Palatino, Serif"  SIZE="-1" COLOR="black"> <B>
+<ul><P><A NAME="1030883"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>General</B>. The general configuration file specifies parameters that apply to all your Mailstone tests. Each test includes <FONT FACE="courier, courier new, monospace">conf/general.wld</FONT> to define common parameters. The mailstone utilities <FONT FACE="courier, courier new, monospace">setup</FONT>, <FONT FACE="courier, courier new, monospace">cleanup</FONT>, <FONT FACE="courier, courier new, monospace">checktime</FONT>, and <FONT FACE="courier, courier new, monospace">timesync</FONT> also read <FONT FACE="courier, courier new, monospace">conf/general.wld</FONT> for test client machines and test account information. See <a href="#1035278">General Configuration File (general.wld)</a>. </FONT></LI></A><P><A NAME="1031229"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Workload</B>. The workload configuration file specifies the protocols to be tested, the attributes for each protocol, and the test messages to be used. By default, workload configuration files use the filename extension <FONT FACE="courier, courier new, monospace">.wld</FONT>. Mailstone provides sample workload files for different kinds of tests:  <FONT FACE="courier, courier new, monospace">imap.wld</FONT>, <FONT FACE="courier, courier new, monospace">pop.wld</FONT>, <FONT FACE="courier, courier new, monospace">smtp.wld</FONT>, <FONT FACE="courier, courier new, monospace">popimapsmtp.wld</FONT>, and <FONT FACE="courier, courier new, monospace">popsmtp.wld</FONT>. See <a href="#1025634">Workload Configuration File (testname.wld)</a>. </FONT></LI></A><P><A NAME="1048879"><LI><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>System Data</B>. The system data file specifies any information that you wish to have appended to test results. By default, this file is named <FONT FACE="courier, courier new, monospace">general.html</FONT>. See <a href="#1026893">System Data File (general.html)</a>. </FONT></LI></A></ul><A NAME="Specifying Times in Configuration Files"></A><A NAME="1040549"><FONT FACE="Palatino, Serif"  SIZE="-1" COLOR="black"> <B>
 Specifying Times in Configuration Files</B></FONT></A><P>
 <A NAME="1040550">
 Times are specified in configuration commands (or on the command line) by a number followed by one of these time unit designations:</P></A>
@@ -783,7 +783,7 @@ There is a general CONFIG section in <FONT FACE="courier, courier new, monospace
 <A NAME="1070898">
 Every parameter in CONFIG can be overridden from the command line using either a predefined switch, or an <I><FONT FACE="courier, courier new, monospace">ATTRIBUTE=value</FONT></I> definition. For example: <FONT FACE="courier, courier new, monospace">mstone pop -b `Initialize store'</FONT> would run the pop test with a title (banner) of `Initialize store'.</P></A>
 <A NAME="1070909">
-<a href="stone.htm#1070913">Table 0.3</a> describes the various attributes you can use in the CONFIG section. </P></A>
+<a href="#1070913">Table 0.3</a> describes the various attributes you can use in the CONFIG section. </P></A>
 <A NAME="1070964">
 <TABLE BORDER=1 cellpadding=4 cellspacing=3><CAPTION></caption><p><A NAME="CONFIG section attributes
 "></A><A NAME="1070913"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Table 0.3 CONFIG section attributes
@@ -883,7 +883,7 @@ The example below shows two machines that should always run identical loads. The
 <pre><A NAME="1087175"><FONT FACE="courier, courier new, monospace">&lt;CLIENT HOSTS=client1,client2&gt;<br>    arch          SunOS5.6<br>    maxThreads   500<br>    maxClients   2000<br>&lt;/CLIENT&gt;</FONT></A><P></pre><A NAME="1071076">
 Note that on NT, only one process is allowed. If the testmaster is running on NT, then only <FONT FACE="courier, courier new, monospace">localhost</FONT> is allowed as a CLIENT.</P></A>
 <A NAME="1087204">
-<a href="stone.htm#1071356">Table 0.4</a> describes the various attributes you can use in the CLIENT section. </P></A>
+<a href="#1071356">Table 0.4</a> describes the various attributes you can use in the CLIENT section. </P></A>
 <A NAME="1071395">
 <TABLE BORDER=1 cellpadding=4 cellspacing=3><CAPTION></caption><p><A NAME="CLIENT section attributes
 "></A><A NAME="1071356"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Table 0.4 CLIENT section attributes
@@ -955,7 +955,7 @@ The PRETEST section defines commands to be run before the test starts. This is o
 <A NAME="1071434">
 The results of PRETEST will be linked to the final report.</P></A>
 <A NAME="1071439">
-<a href="stone.htm#1071442">Table 0.5</a> describes the various attributes you can use in the PRETEST section. </P></A>
+<a href="#1071442">Table 0.5</a> describes the various attributes you can use in the PRETEST section. </P></A>
 <A NAME="1071481">
 <TABLE BORDER=1 cellpadding=4 cellspacing=3><CAPTION></caption><p><A NAME="PRETEST section attributes
 "></A><A NAME="1071442"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Table 0.5 PRETEST section attributes
@@ -983,7 +983,7 @@ The POSTTEST section defines commands to be run after the test ends. This is oft
 <A NAME="1071544">
 The results of POSTTEST will be linked to the final report.</P></A>
 <A NAME="1071548">
-<a href="stone.htm#1071551">Table 0.6</a> describes the various attributes you can use in the POSTTEST section. </P></A>
+<a href="#1071551">Table 0.6</a> describes the various attributes you can use in the POSTTEST section. </P></A>
 <A NAME="1071566">
 <TABLE BORDER=1 cellpadding=4 cellspacing=3><CAPTION></caption><p><A NAME="POSTTEST section attributes
 "></A><A NAME="1071551"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Table 0.6 POSTTEST section attributes
@@ -1013,7 +1013,7 @@ The results of MONITOR will be linked to the final report.</P></A>
 <A NAME="1087152">
 On NT, any MONITOR sections will be ignored.</P></A>
 <A NAME="1071588">
-<a href="stone.htm#1071591">Table 0.7</a> describes the various attributes you can use in the PRETEST section. </P></A>
+<a href="#1071591">Table 0.7</a> describes the various attributes you can use in the PRETEST section. </P></A>
 <A NAME="1071606">
 <TABLE BORDER=1 cellpadding=4 cellspacing=3><CAPTION></caption><p><A NAME="PRETEST section attributes
 "></A><A NAME="1071591"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Table 0.7 PRETEST section attributes
@@ -1048,7 +1048,7 @@ The GRAPH section defines each graph to be generated for the final report. If no
 <A NAME="1071767">
 In addition to the protocol timers, there is an internally generated "timer" called "connections". This contains the current server connection count, taking into account connects, logouts, and errors. To graph this timer, specify a variable of "connection".</P></A>
 <A NAME="1071649">
-<a href="stone.htm#1071652">Table 0.8</a> describes the various attributes you can use in the GRAPH section. </P></A>
+<a href="#1071652">Table 0.8</a> describes the various attributes you can use in the GRAPH section. </P></A>
 <A NAME="1071667">
 <TABLE BORDER=1 cellpadding=4 cellspacing=3><CAPTION></caption><p><A NAME="GRAPH section attributes
 "></A><A NAME="1071652"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Table 0.8 GRAPH section attributes
@@ -1102,7 +1102,7 @@ This top level loop is use to run the protocol tests:</P></A>
 <pre><A NAME="1087687"><FONT FACE="courier, courier new, monospace">Select a section using a random number and the <I><FONT FACE="courier, courier new, monospace">weight</FONT></I> of each section.</FONT></A><P></pre><pre><A NAME="1087689"><FONT FACE="courier, courier new, monospace">Run the protocol initialization.</FONT></A><P></pre><pre><A NAME="1087690"><FONT FACE="courier, courier new, monospace">IDLE for <I><FONT FACE="courier, courier new, monospace">idleTime</FONT></I>.</FONT></A><P></pre><pre><A NAME="1087691"><FONT FACE="courier, courier new, monospace">Repeat this part <I><FONT FACE="courier, courier new, monospace">numLoops</FONT></I> times (or until test ends)<br>{</FONT></A><P></pre><pre><A NAME="1087692"><FONT FACE="courier, courier new, monospace">   Run the protocol loop body.</FONT></A><P></pre><pre><A NAME="1087700"><FONT FACE="courier, courier new, monospace">   IDLE for <I><FONT FACE="courier, courier new, monospace">loopDelay</FONT></I></FONT></A><P></pre><pre><A NAME="1087701"><FONT FACE="courier, courier new, monospace">}</FONT></A><P></pre><pre><A NAME="1087702"><FONT FACE="courier, courier new, monospace">Run the protocol conclusion.</FONT></A><P></pre><pre><A NAME="1087703"><FONT FACE="courier, courier new, monospace">IDLE for <I><FONT FACE="courier, courier new, monospace">blockTime</FONT></I></FONT></A><P></pre><A NAME="1087728">
 Note that an error will cause the section to be aborted and the connection closed. However, the final IDLE for <I><FONT FACE="courier, courier new, monospace">blockTime</FONT></I> will still be performed. If the test time is up, then all IDLE calls will return immediately and no more loops will be performed.</P></A>
 <A NAME="1079583">
-<a href="stone.htm#1079587">Table 0.9</a> describes attributes that all protocol sections support.</P></A>
+<a href="#1079587">Table 0.9</a> describes attributes that all protocol sections support.</P></A>
 <A NAME="1079638">
 <TABLE BORDER=1 cellpadding=4 cellspacing=3><CAPTION></caption><p><A NAME="General protocol section attributes
 "></A><A NAME="1079587"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Table 0.9 General protocol section attributes
@@ -1145,7 +1145,7 @@ checks. Defaults to 0.
 <tr><td valign=top><A NAME="1079624"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1><FONT FACE="courier, courier new, monospace">numLoops </FONT><I><FONT FACE="courier, courier new, monospace">N
 </FONT></I></FONT></A><BR></td>
 <td valign=top><A NAME="1079626"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1>Specifies the number of loops to perform before closing the 
-connection. See <a href="stone.htm#1061888">Detailed Protocol Test Steps</a> for what is 
+connection. See <a href="#1061888">Detailed Protocol Test Steps</a> for what is 
 done in each loop. Defaults to 1.
 </FONT></A><BR></td>
 </tr>
@@ -1153,7 +1153,7 @@ done in each loop. Defaults to 1.
 <tr><td valign=top><A NAME="1079632"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1><FONT FACE="courier, courier new, monospace">weight </FONT><I><FONT FACE="courier, courier new, monospace">N
 </FONT></I></FONT></A><BR></td>
 <td valign=top><A NAME="1079634"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif" SIZE=-1>Specifies the relative frequency of Mailstone running that 
-command. See <a href="stone.htm#1087645">Weights in Configuration Files</a> for details. 
+command. See <a href="#1087645">Weights in Configuration Files</a> for details. 
 Defaults to 100.
 </FONT></A><BR></td>
 </tr>
@@ -1190,7 +1190,7 @@ IMAP4 Protocol Steps</B></FONT></A><P>
 <A NAME="1088121">
 The IMAP protocol stores mail on the mail server and allows message management without downloading the whole message. Clients are usually connected for long periods of time and periodically check for new messages.</P></A>
 <A NAME="1066064">
-<a href="stone.htm#1066068">Table 0.10</a> describes the various attributes you can use in the IMAP section. </P></A>
+<a href="#1066068">Table 0.10</a> describes the various attributes you can use in the IMAP section. </P></A>
 <A NAME="1066222">
 <TABLE BORDER=1 cellpadding=4 cellspacing=3><CAPTION></caption><p><A NAME="IMAP section attributes
 "></A><A NAME="1066068"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Table 0.10 IMAP section attributes
@@ -1290,7 +1290,7 @@ POP3 protocol steps:</B></FONT></A><P>
 <A NAME="1062228">
 The POP protocol transfers messages to the client for viewing and storage. The client connects long enough to download (and usually delete) messages and then disconnects.</P></A>
 <A NAME="1066455">
-<a href="stone.htm#1066459">Table 0.11</a> describes the various attributes you can use in the POP3 section. </P></A>
+<a href="#1066459">Table 0.11</a> describes the various attributes you can use in the POP3 section. </P></A>
 <A NAME="1066514">
 <TABLE BORDER=1 cellpadding=4 cellspacing=3><CAPTION></caption><p><A NAME="POP3 section attributes
 "></A><A NAME="1066459"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Table 0.11 POP3 section attributes
@@ -1380,7 +1380,7 @@ SMTP Protocol Steps</B></FONT></A><P>
 <A NAME="1087293">
 The SMTP protocol provides reliable message transfer. The mail server looks at the message addresses and either delivers the mail locally or sends it to another SMTP server. Each SMTP connection can deliver multiple messages, each of which can have multiple addresses.</P></A>
 <A NAME="1087297">
-<a href="stone.htm#1087301">Table 0.12</a> describes the various attributes you can use in the SMTP section. </P></A>
+<a href="#1087301">Table 0.12</a> describes the various attributes you can use in the SMTP section. </P></A>
 <A NAME="1087380">
 <TABLE BORDER=1 cellpadding=4 cellspacing=3><CAPTION></caption><p><A NAME="SMTP section attributes
 "></A><A NAME="1087301"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Table 0.12 SMTP section attributes
@@ -1532,7 +1532,7 @@ Many parameters for WMAP can occur multiple times. Each occurrence is added to a
 <A NAME="1087682">
 The WMAP protocol requires special handling of connection termination. Since WMAP is based on HTTP, the connection may be dropped and re-established arbitrarily. This will show up as a connection error and then an additional connection. Repeat connection failures or any other kind of error will cause the block to abort.</P></A>
 <A NAME="1066610">
-<a href="stone.htm#1066614">Table 0.13</a> describes the various attributes you can use in the WMAP section. </P></A>
+<a href="#1066614">Table 0.13</a> describes the various attributes you can use in the WMAP section. </P></A>
 <A NAME="1066669">
 <TABLE BORDER=1 cellpadding=4 cellspacing=3><CAPTION></caption><p><A NAME="WMAP section attributes
 "></A><A NAME="1066614"><FONT FACE="PrimaSans BT, Verdana, Sans-Serif"><B>Table 0.13 WMAP section attributes

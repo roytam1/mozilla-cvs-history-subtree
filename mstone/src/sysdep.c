@@ -21,6 +21,7 @@
  * Contributor(s):	Dan Christian <robodan@netscape.com>
  *			Marcel DePaolis <marcel@netcape.com>
  *			Mike Blakely
+ *			Sean O'Rourke <sean@sendmail.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License Version 2 or later (the "GPL"), in
@@ -66,12 +67,11 @@ void sock_cleanup(void) {
 }
 #endif /* _WIN32 */
 
-/* neither sleep or usleep re-start if interrupted */
 void
 MS_sleep(unsigned int secs)
 {
 #ifdef _WIN32
-  Sleep(secs * 1000);
+  Sleep(secs*1000);
 #else
   struct timeval sleeptime;
 
@@ -79,8 +79,7 @@ MS_sleep(unsigned int secs)
 
   sleeptime.tv_sec  = secs;
   sleeptime.tv_usec = 0;
-  if (select( (int)NULL, (fd_set *)NULL, (fd_set *)NULL, (fd_set *)NULL, 
-	      &sleeptime ) < 0) {
+  if (select(0, NULL, NULL, NULL, &sleeptime) < 0) {
       D_PRINTF (stderr, "MS_sleep %lu returned early\n", secs);
   }
 #endif
@@ -196,11 +195,15 @@ sysdep_thread_join(THREAD_ID id, int *pstatus)
 
 #define MAX_TRYFDS (64*1024)
 
+/*
+**  Sean O'Rourke TODO: try to guess how much of each resource we need, and
+**  warn if we cannot get at least that much.
+*/
+
 void
 crank_limits(void)
 {
     struct rlimit rlim;
-    int cur_lim;
     int rc;
 
 #ifdef __OSF1__
@@ -214,6 +217,31 @@ crank_limits(void)
 
     D_PRINTF(stderr, "attempting to increase our hard limit (up to %d)\n", MAX_TRYFDS);
 
+    /* Sean O'Rourke: simpler rlimit bump, courtesy of proxy */
+    rlim.rlim_max = RLIM_INFINITY;
+    rlim.rlim_cur = RLIM_INFINITY;
+    rc = setrlimit(RLIMIT_NOFILE, &rlim);
+    (void) getrlimit(RLIMIT_NOFILE, &rlim);
+    if (rc < 0) {
+	D_PRINTF (stderr, "setrlimit(RLIMIT_NOFILE): %s\n",
+		  strerror(errno));
+    }
+    D_PRINTF (stderr, "limited to %d files\n", rlim.rlim_cur);
+
+    /* Sean O'Rourke: also bump nprocs, since procs == threads on linux */
+    rlim.rlim_max = RLIM_INFINITY;
+    rlim.rlim_cur = RLIM_INFINITY;
+#ifdef __LINUX__
+    rc = setrlimit(RLIMIT_NPROC, &rlim);
+    (void) getrlimit(RLIMIT_NPROC, &rlim);
+    if (rc < 0) {
+	D_PRINTF (stderr, "setrlimit(RLIMIT_NPROC): %s\n",
+		  strerror(errno));
+    }
+    D_PRINTF (stderr, "limited to %d procs\n", rlim.rlim_cur);
+#endif /* __AIX__ */
+#if 0
+    /* Sean O'Rourke XXX: why were they going through these contortions? */
     rc = getrlimit(RLIMIT_NOFILE, &rlim);
     if (rc == -1) {
 	returnerr(stderr, "getrlimit()");
@@ -254,6 +282,7 @@ crank_limits(void)
 	D_PRINTF (stderr, "RLIMIT_NOFILE = %d.  max processes/threads ~ %d\n",
 		   rlim.rlim_cur, rlim.rlim_cur-10);
     }
+#endif /* 0 */
 }
 
 static void
@@ -323,10 +352,10 @@ setup_signal_handlers(void)
 
     }
 #else
-    sigset(SIGALRM, alarmHandler);
-    sigset(SIGHUP, hupHandler);
-    sigset(SIGTERM, hupHandler);
-    sigset(SIGPIPE, nullHandler);
+    signal(SIGALRM, alarmHandler);
+    signal(SIGHUP, hupHandler);
+    signal(SIGTERM, hupHandler);
+    signal(SIGPIPE, nullHandler);
 #endif
 }
 

@@ -1,0 +1,36 @@
+<default>
+  addressFormat           smuser%ld@** DOMAIN **
+  loginFormat             smuser%ld@** DOMAIN **
+  passwdFormat            twang
+  server                  ** SERVER **
+</default>
+
+<smtp HOSTS=smtp>
+  blockTime               0
+  file                    auto
+  firstAddress            0
+  headers                 ~unif(10, 30)
+  mime                    ~binomial(0.3)
+  numAddresses            1000
+  numLoops                1
+  numRecips               ~lognormal(1,2)	: [1, ]
+  size                    ~lognormal(4k,4.5)
+  smtpMailFrom            sender0@** DOMAIN **
+  useEHLO                 2
+  portNum                 2003
+</smtp>
+
+<client HOSTS=localhost>
+  clients                 50
+  group                   smtp
+</client>
+<config>
+  comments                lmtp delivery
+  rampTime                0
+  time                    5m
+  title                   lmtp delivery - IMAP
+  useGroups               1
+</config>
+
+# other things (e.g. <monitor> sections) can go here...
+

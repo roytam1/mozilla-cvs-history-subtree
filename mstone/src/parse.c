@@ -20,6 +20,7 @@
  * 
  * Contributor(s):	Dan Christian <robodan@netscape.com>
  *			Marcel DePaolis <marcel@netcape.com>
+ *			Sean O'Rourke <sean@sendmail.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License Version 2 or later (the "GPL"), in
@@ -38,6 +39,7 @@
  */
 
 #include "bench.h"
+#include "xalloc.h"
 
 /* global variables */
 param_list_t	*g_default_params;	/* list of default values */
@@ -57,6 +59,43 @@ protocol_get (char *name)
 	    return pp;
     }
     return NULL;
+}
+
+/*
+**  SIZE_ATOF(tok) -- convert a string Nx to bytes
+**
+**  x is 'm' for megabytes, 'k' for kilobytes, or 'b' for bytes
+*/
+double
+size_atof(tok)
+    const char *tok;
+{
+    char *endptr;
+    double ret;
+    if(*tok == '\0')
+    {
+	fprintf(stderr, "Empty value in size_atof.\n");
+	exit(-1);
+    }
+    ret = strtod(tok, &endptr);
+    while(*endptr && isspace(*endptr))
+	endptr++;
+    switch(*endptr)
+    {
+    case 'b': case 'B':
+    case '\0':
+	break;
+    case 'k': case 'K':
+	ret *= 1024;
+	break;
+    case 'M': case 'm':
+	ret *= 1024 * 1024;
+	break;
+    default:
+	fprintf(stderr, "Invalid size specifier '%s'\n", endptr);
+	exit(-1);
+    };
+    return ret;
 }
 
 /*
@@ -97,6 +136,46 @@ time_atoi(const char *pstr)
     return ret;
 }
 
+/*
+  converts a string of the form #x to milliseconds
+  where x can be a unit specifier of
+  d or D	days
+  h or H	hours
+  m or M	minutes
+  s or S	seconds
+  the default is seconds
+*/
+int
+millitime_atoi(const char *pstr)
+{
+    int ret=0;
+    int len = strlen(pstr);
+
+    if (!pstr[0]) return 0;
+    switch (pstr[len-1]) {
+    case 'd': /* days */
+    case 'D':
+	ret = 24 * 60 * 60 * 1000 * atoi(pstr);
+	break;
+    case 'h': /* hours */
+    case 'H':
+	ret = 60 * 60 * 1000 * atoi(pstr);
+	break;
+    case 'm': /* minutes */
+    case 'M':
+	ret = 60 * 1000 * atoi(pstr);
+	break;
+    case 's': /* seconds */
+    case 'S':
+	ret = 1000 * atoi(pstr);
+	break;
+    default:
+	ret = atoi(pstr);
+	break;
+    }
+    return ret;
+}
+
 /* 
   Simple keyword indexed string storage
   This kind of thing has been invented many times.  Once more with gusto!
@@ -104,7 +183,7 @@ time_atoi(const char *pstr)
 param_list_t *
 paramListInit (void)
 {
-    param_list_t *np = (param_list_t *)mycalloc (sizeof (param_list_t));
+    param_list_t *np = XCALLOC (struct param_list);
     return np;
 }
 
@@ -120,32 +199,26 @@ paramListAdd (param_list_t *list,
     assert (name != NULL);
     assert (value != NULL);
 
-    if (NULL == list->name) {		/* first one special case */
-	list->name = mystrdup (name);
-	if (NULL == list->name) return -1; /* out of memory */
-	list->value = mystrdup (value);
-	if (NULL == list->value) return -1; /* out of memory */
+    if (list->name == NULL) {		/* first one special case */
+	list->name = xstrdup (name);
+	list->value = xstrdup (value);
 	return 0;
     }
 	
     for (pl = list; pl->next; pl = pl->next) {
-	if (0 == strcmp (pl->name, name)) {
+	if (strcmp (pl->name, name) == 0) {
 	    found = 1;
 	    break;
 	}
     }
     if (found) {
-	free (pl->value);
-	pl->value = mystrdup (value);
-	if (NULL == pl->value) return -1; /* out of memory */
+	xfree (pl->value);
+	pl->value = xstrdup (value);
 	return 1;
     } else {
-	param_list_t *np = (param_list_t *)mycalloc (sizeof (param_list_t));
-	if (NULL == np) return -1; /* out of memory */
-	np->name = mystrdup (name);
-	if (NULL == np->name) return -1; /* out of memory */
-	np->value = mystrdup (value);
-	if (NULL == np->value) return -1; /* out of memory */
+	param_list_t *np = XCALLOC (struct param_list);
+	np->name = xstrdup (name);
+	np->value = xstrdup (value);
 	pl->next = np;
 	return 0;
     }
@@ -161,7 +234,7 @@ paramListGet (param_list_t *list,
     assert (name != NULL);
 
     for (pl = list; pl->next; pl = pl->next) {
-	if (0 == strcmp (pl->name, name)) {
+	if (strcmp (pl->name, name) == 0) {
 	    return pl->value;
 	}
     }
@@ -175,9 +248,11 @@ paramListGet (param_list_t *list,
 string_list_t *
 stringListInit (const char *value)
 {
-    string_list_t *np = (string_list_t *)mycalloc (sizeof (string_list_t));
+    string_list_t *np = XCALLOC (struct string_list);
     if (value)
-	np->value = mystrdup (value);		/* This can be NULL */
+	np->value = xstrdup (value);		/* This can be NULL */
+    else
+	np->value = NULL;
     return np;
 }
 
@@ -190,8 +265,8 @@ stringListFree (string_list_t *list)
     for (pl = list; pl; pl = next) {
 	next = pl->next;
 	if (pl->value)
-	    free (pl->value);
-	free (pl);
+	    xfree (pl->value);
+	xfree (pl);
     }
 }
 
@@ -205,22 +280,29 @@ stringListAdd (string_list_t *list,
     assert (list != NULL);
     assert (value != NULL);
 
-    if (NULL == list->value) {		/* first one special case */
-	list->value = mystrdup (value);
-	if (NULL == list->value) return -1; /* out of memory */
+    if (list->value == NULL) {		/* first one special case */
+	list->value = xstrdup (value);
 	return 0;
     }
 
     for (pl = list; pl->next; pl = pl->next)
 	; /* skip to end */
-    np = (string_list_t *)mycalloc (sizeof (string_list_t));
-    if (NULL == np)
-	return -1;			/* out of memory */
-    np->value = mystrdup (value);
-    if (NULL == np->value)
-	return -1;			/* out of memory */
+    np = XCALLOC (struct string_list);
+
+    np->value = xstrdup (value);
+
     pl->next = np;
     return 0;
+}
+
+void dump_sl(string_list_t *l)
+{
+    while (l)
+    {
+	fprintf(stderr, "`%s', ", l->value);
+	l = l->next;
+    }
+    fprintf(stderr, "NULL\n");
 }
 
 /* return non 0 if whitespace */
@@ -322,6 +404,13 @@ check_hostname_attribute (const char *line)
     return 0;
 }
 
+double
+d_millitime_atoi(str)
+    char *str;
+{
+    return (double)millitime_atoi(str);
+}
+
 /*
   Protocol independent parsing
 */
@@ -332,20 +421,27 @@ cmdParseNameValue (pmail_command_t cmd,
 {
     if (strcmp(name, "numloops") == 0)
 	cmd->numLoops = atoi(tok);
-    else if (strcmp(name, "throttle") == 0)
-	cmd->throttle = atoi(tok);
     else if (strcmp(name, "weight") == 0)
 	cmd->weight = atoi(tok);
+    /* Sean O'Rourke: added startdelay */
+    else if (strcmp(name, "startdelay") == 0)
+	cmd->startDelay = parse_distrib(tok, &d_millitime_atoi);
     else if (strcmp(name, "idletime") == 0)
-	cmd->idleTime = time_atoi(tok);
+	cmd->idleTime = parse_distrib(tok, &d_millitime_atoi);
     else if (strcmp(name, "blockid") == 0)
 	cmd->blockID = time_atoi(tok);
     else if (strcmp(name, "blocktime") == 0)
-	cmd->blockTime = time_atoi(tok);
+	cmd->blockTime = parse_distrib(tok, &d_millitime_atoi);
     else if (strcmp(name, "loopdelay") == 0)
-	cmd->loopDelay = time_atoi(tok);
-    else if (strcmp(name, "checkmailinterval") == 0)	/* BACK COMPAT */
-	cmd->loopDelay = time_atoi(tok);
+	cmd->loopDelay = parse_distrib(tok, &d_millitime_atoi);
+    else if (strcmp(name, "checkmailinterval") == 0)
+	cmd->loopDelay = parse_distrib(tok, &d_millitime_atoi);
+#ifdef DYNAMIC_THROTTLE
+    else if (strcmp(name, "loopthrottle") == 0)
+	cmd->loopThrottle = millitime_atoi(tok);
+    else if (strcmp(name, "throttlefactor") == 0)
+	cmd->throttleFactor = atof(tok);
+#endif /* DYNAMIC_THROTTLE */
     else
 	return 0;			/* no match */
 
@@ -482,6 +578,7 @@ load_commands(char *commands)
     int	    commIndex = 0;
     int    inCommand = 0;	/* 0 none, -1 ignore, 1 default, 2 other */
     string_list_t	*param_list = NULL;
+    int i;
 
     g_default_params = paramListInit (); /* create default section list */
 
@@ -491,7 +588,19 @@ load_commands(char *commands)
     paramListAdd (g_default_params, "numlogins", "1");
     paramListAdd (g_default_params, "numaddresses", "1");
     paramListAdd (g_default_params, "weight", "100");
+#ifdef SOCK_LINESPEED
+    paramListAdd (g_default_params, "latency", "0");
+    paramListAdd (g_default_params, "bandwidth", "0");
+#endif
+#ifdef AUTOGEN
+    paramListAdd (g_default_params, "size", "0");
+    paramListAdd (g_default_params, "headers", "5");
+    paramListAdd (g_default_params, "mime", "0");
+#endif
+    paramListAdd (g_default_params, "throttlefactor", "1.05");
 
+    paramListAdd (g_default_params, "timeout", "60s");
+    
     gn_number_of_commands = count_num_commands(commands);
     D_PRINTF(stderr, "number_of_commands = %d\n", gn_number_of_commands);
     if (gn_number_of_commands <= 0) {	/* no mail msgs - exit */
@@ -500,9 +609,12 @@ load_commands(char *commands)
 
     /* allocate structure to hold command list (command filename weight) */
     g_loaded_comm_list = 
-      (mail_command_t *) mycalloc(gn_number_of_commands
-				  * sizeof(mail_command_t));
-
+      (mail_command_t *) xcalloc(gn_number_of_commands * sizeof(mail_command_t));
+    /* put in "internal" defaults */
+    for (i = 0; i < gn_number_of_commands; i++) {
+	g_loaded_comm_list[i].throttle = 1; /* dynamic throttle rate */
+    }
+    
     while (NULL
 	   != (cmdptr = get_line_from_buffer (cmdptr, line, &lineNumber, 0))) {
 

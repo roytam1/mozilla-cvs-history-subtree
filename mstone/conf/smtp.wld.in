@@ -1,0 +1,33 @@
+-- test size --
+
+test:
+	length:			90m
+	users:			100
+	messages per second:	** Delivery Rate **
+
+	comments:		Auto-generated SMTP-only workload
+
+-- server configuration --
+
+server:
+	hostname:		** SERVER **
+# 	  addressFormat:		smuser%ld@
+# 	  firstAddress:		0
+# 	  loginFormat:		smuser%ld@
+# 	  firstLogin:		0
+# 	  passwdFormat:		twang
+
+-- client configuration --
+
+clients:
+	smtp:			** SMTP clients **
+
+-- Do not edit between here and the `__END__' marker --
+
+message:
+	size: 			~lognormal(3k,4.5)
+	recipients:		~lognormal(1,1.5)	: [1, ]
+	mime:			30 %
+
+__END__
+# other things (e.g. <monitor> sections) can go here...

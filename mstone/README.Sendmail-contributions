@@ -1,0 +1,16 @@
+Under the terms of the Mozilla Public License, Version 1.1, granted
+by Mozilla, Sendmail Inc. is contributing the following Source Code
+changes to the Mozilla mstone source repository.
+
+Sendmail, Inc. is making available these source code modifications
+according to the Distribution Obligations as listed in section 3
+of the Mozilla Public License, Version 1.1
+
+The changes provided herein are described in the included files:
+
+  README.Sendmail-mstone_changes.html
+  ChangeLog-Sendmail
+
+All modifications are derived, directly or indirectly, from the original
+code as provided by Mozilla.
+

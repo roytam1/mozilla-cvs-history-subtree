@@ -1,0 +1,53 @@
+test:
+	start:			8 AM
+	length:			1h
+	users:			** Number of users here ***
+
+	percent active:		100
+
+	comments:		auto-generated Corporate workload.
+
+-- mail server configuration --
+
+server:
+	hostname:		** SERVER **
+
+# defaults given below --
+#	addressFormat:		smuser%ld@
+#	loginFormat:		smuser%ld@
+#	passwdFormat:		twang
+
+-- test client configuration --
+
+clients:
+	smtp:			** SMTP clients here **
+	imap:			** IMAP clients here **
+
+# defaults are `rsh' and `rcp'
+#	rsh:			ssh
+#	rcp:			scp
+
+-- Don't edit between here and the `__END__' marker --
+
+mstone:
+	rampTime:		30s
+
+message:
+	size: 			~lognormal(4k,4.5)
+	recipients:		~lognormal(1,2)		: [1, ]
+	mime:			~binomial(0.3)
+
+delivery:
+	fluctuation: 		8 AM - 4 PM = 90%
+
+user:
+	messages per day: 	50
+	read messages:	  	50
+	protocol:	  	IMAP
+	check interval:	  	~unif(5m, 8m)
+	connection type:  	latency = 0; bandwidth = 56k
+	keep:		  	100%
+	activity: 		8 AM - 4 PM; arrival rate = ~normal(20m, 10m) 
+
+__END__
+# your monitor sections go here...

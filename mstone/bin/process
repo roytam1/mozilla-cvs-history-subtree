@@ -1,4 +1,5 @@
-# The contents of this file are subject to the Netscape Public
+#!/bin/sh
+# The conZtents of this file are subject to the Netscape Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
 # the License at http://www.mozilla.org/NPL/
@@ -13,7 +14,7 @@
 # 
 # The Initial Developer of the Original Code is Netscape
 # Communications Corporation. Portions created by Netscape are
-# Copyright (C) 1997-2000 Netscape Communications Corporation. All
+# Copyright (C) 1999-2000 Netscape Communications Corporation. All
 # Rights Reserved.
 # 
 # Contributor(s):	Dan Christian <robodan@netscape.com>
@@ -31,34 +32,39 @@
 # file under either the NPL or the GPL.
 #####################################################
 
-# This file does argument processing, file IO, and other utility routines
+# re-process a data run
+# by default, use the most recent one
+# Usage: process
+# or
+# Usage: process TIMESTAMP [args...]
+# or
+# Usage: process results/TIMESTAMP [args...]
 
-# Where the online docs live
-#$mailstoneURL =
-#    "http://home.netscape.com/eng/server/messaging/4.1/mailston/stone.htm";
-#$mailstoneURL =
-#    "http://lxr.mozilla.org/mozilla/source/mstone/doc/MailStone.html";
-#$mailstoneURL =
-#    "http://docs.iplanet.com/docs/manuals/messaging/nms415/mailstone/stone.htm"
-$mailstoneURL = "doc/MailStone.html";
+if [ ! -x perl/bin/perl -o ! -f .license ] ; then # see if setup was ever run
+   echo "Critical files are missing.  Run setup."
+   exit 2;
+fi
 
-# Subdirs for results (each under a timestamp dir).  Should just hardwire.
-$tmpbase = "tmp";
-$resultbase = "results";
+if [ $# -lt 1 ] ; then		# do most recent run
+	# since the directories are time stamps with fixed fields,
+	#  alphabetical order is also time order
+	dir=`ls -d results/[0-9]*.[0-9]* | tail -1`
+else				# use specified run
+	if  [ -d results/$1 ] ; then	#  timestamp
+ 	    dir=results/$1
+	    shift
+	elif  [ -d $1 ] ; then	# results/timestamp
+ 	    dir=$1
+	    shift
+	fi
+fi
 
-# This holds everything about the test and system configuration
-@workload = ();
-# Setup the special CONFIG section
-$params{"sectionTitle"} = "CONFIG";
-$params{"sectionParams"} = "";
-$params{"lineList"} = ();
-push @workload, \%params;
-
-# Get the lists discribing the data we process
-do 'protoconf.pl' || die "$@\n";
-
-%includedFiles = ();		# array of included files
-
-do 'util.pl' || die "$@\n";
-
-return 1;
+if [ -n "$dir" ] ; then
+	if  [ -f $dir/all.wld ] ; then	# unified workload file
+		perl/bin/perl -Ibin -- bin/process.pl -w $dir/all.wld "$@"
+	else			# BACK COMPATIBILITY form
+		perl/bin/perl -Ibin -- bin/process.pl -c $dir/config.cfg "$@"
+	fi
+else				# pass in whatever they gave us
+	perl/bin/perl -Ibin -- bin/process.pl "$@"
+fi

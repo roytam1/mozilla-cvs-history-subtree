@@ -20,6 +20,7 @@
  * 
  * Contributor(s):	Dan Christian <robodan@netscape.com>
  *			Marcel DePaolis <marcel@netcape.com>
+ *			Sean O'Rourke <sean@sendmail.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License Version 2 or later (the "GPL"), in
@@ -36,6 +37,7 @@
 
 #include "bench.h"
 #include "http-util.h"
+#include "xalloc.h"
 
 #define MAX_HTTP_RESPONSE_LEN (2*1024)	/* size of sliding buffer */
 
@@ -84,8 +86,7 @@ HttpParseStart (pmail_command_t cmd,
 		param_list_t *defparm)
 {
     param_list_t	*pp;
-    http_command_t	*mycmd = (http_command_t *)mycalloc
-	(sizeof (http_command_t));
+    http_command_t	*mycmd = XCALLOC(struct http_command);
     cmd->data = mycmd;
 
     cmd->numLoops = 1;		/* default 1 downloads */
@@ -171,11 +172,11 @@ HttpParseNameValue (pmail_command_t cmd,
     if (cmdParseNameValue(cmd, name, tok))
 	;				/* done */
     else if (strcmp(name, "server") == 0)
-	mycmd->hostInfo.hostName = mystrdup (tok);
+	mycmd->hostInfo.hostName = xstrdup (tok);
     else if (strcmp(name, "portnum") == 0)
 	mycmd->hostInfo.portNum = atoi(tok);
     else if (strcmp(name, "httpcommand") == 0)
-	mycmd->httpCommand = mystrdup (tok);
+	mycmd->httpCommand = xstrdup (tok);
     /*stringListAdd(&mycmd->getFirstCmds, tok);*/
     else {
 	return -1;
@@ -190,7 +191,7 @@ HttpStatsInit(mail_command_t *cmd, cmd_stats_t *p, int procNum, int threadNum)
     assert (NULL != p);
 
     if (!p->data) {			/* create it  */
-	p->data = mycalloc (sizeof (http_stats_t));
+	p->data = XCALLOC(struct http_stats);
     } else {				/* zero it */
 	memset (p->data, 0, sizeof (http_stats_t));
     }
@@ -300,7 +301,7 @@ HttpStatsFormat (protocol_t *pp,
 void *
 doHttpStart(ptcx_t ptcx, mail_command_t *cmd, cmd_stats_t *ptimer)
 {
-    doHTTP_state_t	*me = (doHTTP_state_t *)mycalloc (sizeof (doHTTP_state_t));
+    doHTTP_state_t	*me = XCALLOC(doHTTP_state_t);
     http_stats_t	*stats = (http_stats_t *)ptimer->data;
     http_command_t	*mycmd = (http_command_t *)cmd->data;
 
@@ -401,5 +402,5 @@ doHttpExit (ptcx_t ptcx, doHTTP_state_t	*me)
     NETCLOSE(ptcx->sock);
   ptcx->sock = BADSOCKET_VALUE;
 
-  myfree (me);
+  xfree (me);
 }  

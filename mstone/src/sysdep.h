@@ -22,6 +22,7 @@
  *			Marcel DePaolis <marcel@netcape.com>
  *			Mike Blakely
  *			David Shak
+ *			Sean O'Rourke <sean@sendmail.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License Version 2 or later (the "GPL"), in
@@ -75,13 +76,13 @@
 
 /* encapsulation of minor UNIX/WIN NT differences */
 #ifdef _WIN32
-#define NETREAD(sock, buf, len)  	recv(sock, buf, len, 0)
-#define NETWRITE(sock, buf, len) 	send(sock, buf, len, 0)
-#define NETCLOSE(sock)     		closesocket(sock)
+#define _NETREAD(sock, buf, len)  	recv(sock, buf, len, 0)
+#define _NETWRITE(sock, buf, len) 	send(sock, buf, len, 0)
+#define _NETCLOSE(sock)     		closesocket(sock)
 #define OUTPUT_WRITE(sock, buf, len) 	write(sock, buf, len)
-#define	BADSOCKET(sock)			((sock) == INVALID_SOCKET)
-#define	BADSOCKET_ERRNO(sock)		BADSOCKET(sock)
-#define	BADSOCKET_VALUE			INVALID_SOCKET
+#define	_BADSOCKET(sock)		((sock) == INVALID_SOCKET)
+#define	_BADSOCKET_ERRNO(sock)		BADSOCKET(sock)
+#define	_BADSOCKET_VALUE		INVALID_SOCKET
 #define S_ADDR				S_un.S_addr
 #define	GET_ERROR			WSAGetLastError()
 #define	SET_ERROR(err)			WSASetLastError(err)
@@ -112,13 +113,13 @@ extern void sock_cleanup(void);
 
 #define strnicmp(s1,s2,n)	strncasecmp(s1,s2,n)
 
-#define NETREAD(sock, buf, len)		read(sock, buf, len)
-#define NETWRITE(sock, buf, len)	write(sock, buf, len)
-#define	NETCLOSE(sock)			close(sock)
+#define _NETREAD(sock, buf, len)	read(sock, buf, len)
+#define _NETWRITE(sock, buf, len)	write(sock, buf, len)
+#define	_NETCLOSE(sock)			close(sock)
 #define OUTPUT_WRITE(sock, buf, len)	write(sock, buf, len)
-#define BADSOCKET(sock)			((sock) < 0)
-#define BADSOCKET_ERRNO(sock)		(BADSOCKET(sock) || errno)
-#define	BADSOCKET_VALUE			(-1)
+#define _BADSOCKET(sock)		((sock) < 0)
+#define _BADSOCKET_ERRNO(sock)		(BADSOCKET(sock) || errno)
+#define	_BADSOCKET_VALUE		(-1)
 #define S_ADDR				s_addr
 #define	GET_ERROR			errno
 #define	SET_ERROR(err)			(errno = (err))
@@ -149,12 +150,26 @@ extern long osf_lrand48_r(void);
 #define	FILENAME_SIZE			1024
 #define HAVE_VPRINTF			1
 
-typedef int				SOCKET;
+typedef int				_SOCKET;
+
+#if 0
+typedef _SOCKET		SOCKET;
+#define NETREAD 	_NETREAD
+#define NETWRITE	_NETWRITE
+#define NETCLOSE	_NETCLOSE
+#define BADSOCKET	_BADSOCKET
+#define BADSOCKET_ERRNO	_BADSOCKET_ERRNO
+#define BADSOCKET_VALUE _BADSOCKET_VALUE
+#define INIT_SOCKET(sock, host) (sock)
+#define SOCK_FD(s)	(s)
+#endif /* 0 (was !LINESPEED) */
+
 #define min(a,b)			(((a) < (b)) ? a : b)
 #define max(a,b)			(((a) > (b)) ? a : b)
 
 #define THREAD_RET void *
 #ifdef USE_PTHREADS
+#include <pthread.h>
 #define THREAD_ID	pthread_t
 #else
 #define THREAD_ID	int

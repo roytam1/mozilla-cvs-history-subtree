@@ -48,11 +48,11 @@ run_nsarch() {
 
     OUROS=`bin/nsarch`
     # deal with new versions of OS falling back to versions we have
-    if [ ! -d bin/$OUROS ] ; then
+    if [ ! -d build/$OUROS ] ; then
 	shortos=`echo $OUROS | sed -e 's/[0-9].*//'`
-	near=`ls -d bin/*/bin | grep $shortos`
+	near=`ls build | grep $shortos`
 	if [ -n "$near" ] ; then
-	  near=`echo $near | cut -f2 -d'/'`
+	  near=`echo $near | cut -f2 -d' '`
 	  echo "No support for $OUROS, using $near"
 	  OUROS=$near
 	else
@@ -85,7 +85,7 @@ setup_perl() {
 # Get the default version of mailclient
 setup_mailclient() {
     [ -n "$OUROS" ] || run_nsarch $1
-    (cd bin; ln -s $OUROS/bin/mailclient ./ )
+    (cd bin; ln -s ../build/$OUROS/mailclient ./ )
 }
 
 # setup_file source_dir directory filename

@@ -1,0 +1,86 @@
+2005-02-03  Thom O'Connor <thom@sendmail.com>
+
+        * Merge Mozilla mstone HEAD with Sendmail,Inc. modifications. In
+          particular, this included some hand-waving around the bitwise
+          operators "leaveMailOnServer" in the Mozilla branch and the
+          dinst_t struct pish->leaveMailOnServerDist.
+
+2005-01-25  Thom O'Connor <thom@sendmail.com>
+
+        * Fix comments, properly attribute Sean O'Rourke's contributions.
+
+2004-09-21  Thom O'Connor <thom@sendmail.com>
+
+	* Modified config/config.mk to build SSL version of mailclient.
+
+2004-06-07  Thom O'Connor <thom@sendmail.com>
+
+	* Remove _thread_sys_poll defininition for poll in FreeBSD builds
+	(bench.h).
+
+2001-04-27  Sean O'Rourke  <sean@sendmail.com>
+
+	* distributions can now be truncated.  This is used to prevent
+	0-recipient messages, and could be used to prevent enormous
+	messages.
+
+	* throttling: Preload workloads use some additional mstone magic
+	to throttle delivery rate based on server responsiveness.  This is
+	still in the experimental phase, and may change.
+
+	* fix for parsing bug exposed by distribution truncation notation.
+	
+2001-03-10    Sean O'Rourke <sean@sendmail.com>
+
+	* clients: Fixed up code for specifying client counts on a
+	per-host or per-group basis.  This eliminates the need to force
+	the mozilla distribution code to do one's bidding.
+
+	* smtpsink.pl: Very basic threaded perl SMTP sink.  This may go
+	away to be replaced by the sink from smtpslam.  Needs much better
+	statistics.
+
+2001-02-24    Sean O'Rourke <sean@sendmail.com>
+
+	* checksums added.  See {checksum,md5}.{c,h}.  Auto-generated
+	messages can currently have checksums computed over the body, and
+	pop and multipop retrieval will verify the sum.
+
+2001-02-21    Sean O'Rourke <sean@sendmail.com>
+
+	* MIME generation changed to generate deep messages rather than
+	  several parts.  This should be a better test of MIME parsers,
+	  forcing them to save more state.
+
+2001-02-18    Sean O'Rourke <sean@sendmail.com>
+
+	* mstone_changes.html: update SSL documentation.
+
+	* wld, defaults.pm: divide the ever-expanding "config" section
+	  into more descriptive subparts: clients, server, sink, mstone.
+
+	* report: now in bin directory, where it should be.
+
+2001-02-17    Sean O'Rourke <sean@sendmail.com>
+
+	* client.c, main.c, parse.c: removed old throttling code, as it
+	  wasn't being used.
+	
+	* ALL: General code cleanup.
+	
+	* sysdep.c: simplified rlimit-bumping code, added increase for
+	  RLIM_NPROC, as threads are procs on some systems.
+
+	* imap4.c: removed silliness of malloc()ing a buffer the size of
+	  the entire message every time we retrieve a message.
+
+	* xalloc.c, xalloc.h: consolidated memory allocation so everyone
+	  handles OOM the same way (for now, dump core).
+
+	* constants.h: various assumptions and limits, were in bench.h.
+
+	* events: added event-queue model to reduce thread requirements.
+	  Eventually, it would be nice for a consultant to be able to run
+	  this off a laptop to test a small- to medium-sized box.  For
+	  now, at least, configuration remains the same.  This doesn't
+	  work on NT.  Oh, well.

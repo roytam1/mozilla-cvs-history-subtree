@@ -19,7 +19,9 @@
  * Rights Reserved.
  * 
  * Contributor(s):	Dan Christian <robodan@netscape.com>
- #			Marcel DePaolis <marcel@netcape.com>
+ *			Marcel DePaolis <marcel@netcape.com>
+ *			Sean O'Rourke <sean@sendmail.com>
+ *			Thom O'Connor <thom@sendmail.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU Public License Version 2 or later (the "GPL"), in
@@ -33,6 +35,8 @@
  * under either the NPL or the GPL.
  */
 
+#ifndef _pish_h
+#define _pish_h
 /* these are protocol dependent timers for Pop, Imap, Smtp, Http*/
 typedef struct pish_stats {
     event_timer_t	connect;
@@ -65,23 +69,76 @@ typedef struct pish_command {
 
     char *	passwdFormat;
 
+    int         net_timeout;            /* timeout for network ops */
+
     long	flags;			/* protocol specific flags */
 
     /* SMTP command attrs */
     char *	addressFormat;
     range_t	addressRange;		/* address range for all threads */
 
-    int 	numRecipients;	/* recpients per message */
     char *	smtpMailFrom;		/* default from address */
     char *	filePattern;		/* filename pattern */
     int		fileCount;		/* number of files */
     void *	files;			/* array of file info */
+    char *      filename;
+    dinst_t   *numRecipients; /* recpients per message */
+  #ifdef AUTOGEN
+    /* Sean O'Rourke: added auto-generation */
+    dinst_t   *genSize;       /* message size */
+    dinst_t   *genHdrs;       /* total number of headers */
+    dinst_t   *genMime;       /* 0 => text/plain, else N-part MIME */
+
+    enum {                    /* what to do with checksums */
+      CS_NONE,                /* don't do checksums */
+      CS_CHECK,               /* report discrepancies */
+      CS_SAVE_BAD             /* save messages which fail */
+    }                 genChecksum;
+  #endif
+  #ifdef SOCK_LINESPEED         /* bandwidth-limitation */
+    dinst_t   *latency;
+    dinst_t   *bandwidth;
+  #endif
+  #ifdef SOCK_SSL                       /* SSL/TLS support */
+    char      *cert;
+    char      *key;
+    int       useTLS;
+    int       sslTunnel;
+  #endif
+    int         msgsize;        /* message size without trailing CRLF.CRLF */
+    char *      msgdata;        /* cache the file in mem */
+
+    /* POP/IMAP flag to leave mail on server */
+    dinst_t     *leaveMailOnServerDist;
+
+    /* time to read each message */
+    dinst_t   *msgReadTime;
+
+    /* Multi-POP vars */
+    double    percentActive;          /* users concurrently active */
+    dinst_t   *userSpacing;           /* time alloted for each connection */
+    dinst_t   *dropRate;              /* fraction of connections dropped */
 
     /* IMAP command attrs */
     char *	imapSearchFolder;
     char *	imapSearchPattern;
     int 	imapSearchRate;
+
+    /* Webmail stuff */
+    char              *webBase;          /* base for all web url's */
+    string_list_t     *webLoginPages;    /* sequence of pages after login */
+    /* login format, given to printf(fmt, username, passwd) */
+    char              *webLoginFormat;
+    /* format to read message, given to printf(fmt, msgnum) */
+    char              *webMsgRead;
+    /* delete format, given to printf(fmt, list_of_msgs) */
+    char              *webDeleteFormat;
+    char              *webExpunge;       /* expunge URL */
+    char              *webLogout;        /* logout page */
+    char              *webIndex;         /* index page */
 } pish_command_t;
 
 					/* TRANSITION functions */
 extern int pishParseNameValue (pmail_command_t cmd, char *name, char *tok);
+
+#endif /* _pish_h */

@@ -47,7 +47,9 @@ STONE		= $(OBJDIR)/mailclient$(EXE_SUFFIX)
 
 STONESRCS	= bench.c client.c errexit.c main.c \
 		parse.c sysdep.c timefunc.c \
-		http-util.c http.c imap4.c pop3.c smtp.c wmap.c 
+		http-util.c http.c imap4.c pop3.c smtp.c wmap.c \
+		idle.c generate.c socket.c multipop.c webmail.c \
+		xalloc.c sb.c $(FEATURE_SRCS)
 
 STONEOBJS	= $(addprefix $(OBJDIR)/, $(STONESRCS:.c=.$(OBJ_SUFFIX)) )
 
@@ -59,25 +61,25 @@ $(OBJDIR):
 
 $(STONE): $(STONEOBJS) Makefile
 	@$(ECHO) "\n===== [`date`] making $(STONE)...\n"
-	$(COMPILE) $(STONEOBJS) $(LIBPATH) $(LIBS) $(OS_LINKFLAGS) -o $(STONE)
+	$(COMPILE) $(STONEOBJS) $(LIBS) $(OS_LINKFLAGS) -o $(STONE)
 
 $(OBJDIR)/bench.$(OBJ_SUFFIX): bench.c bench.h sysdep.h Makefile
 
-$(OBJDIR)/client.$(OBJ_SUFFIX): client.c bench.h sysdep.h Makefile
+$(OBJDIR)/client.$(OBJ_SUFFIX): client.c bench.h sysdep.h idle.h Makefile
 
 $(OBJDIR)/errexit.$(OBJ_SUFFIX): errexit.c bench.h sysdep.h Makefile
 
 $(OBJDIR)/http.$(OBJ_SUFFIX): http.c bench.h sysdep.h http-util.h Makefile
 
-$(OBJDIR)/imap4.$(OBJ_SUFFIX): imap4.c bench.h pish.h sysdep.h Makefile
+$(OBJDIR)/imap4.$(OBJ_SUFFIX): imap4.c bench.h pish.h sysdep.h idle.h Makefile
 
 $(OBJDIR)/main.$(OBJ_SUFFIX): main.c bench.h sysdep.h Makefile
 
-$(OBJDIR)/parse.$(OBJ_SUFFIX): parse.c bench.h sysdep.h Makefile
+$(OBJDIR)/parse.$(OBJ_SUFFIX): parse.c bench.h sysdep.h Makefile generate.h
 
 $(OBJDIR)/pop3.$(OBJ_SUFFIX): pop3.c bench.h pish.h sysdep.h Makefile
 
-$(OBJDIR)/smtp.$(OBJ_SUFFIX): smtp.c bench.h pish.h sysdep.h Makefile
+$(OBJDIR)/smtp.$(OBJ_SUFFIX): smtp.c bench.h pish.h sysdep.h Makefile generate.h
 
 $(OBJDIR)/stats.$(OBJ_SUFFIX): stats.c bench.h sysdep.h Makefile
 
@@ -88,6 +90,24 @@ $(OBJDIR)/timefunc.$(OBJ_SUFFIX): timefunc.c bench.h sysdep.h Makefile
 $(OBJDIR)/wmap.$(OBJ_SUFFIX): wmap.c bench.h sysdep.h Makefile http-util.h
 
 $(OBJDIR)/http-util.$(OBJ_SUFFIX): http-util.c bench.h sysdep.h Makefile http-util.h
+
+$(OBJDIR)/idle.$(OBJ_SUFFIX): idle.c idle.h bench.h Makefile
+
+$(OBJDIR)/generate.$(OBJ_SUFFIX): generate.c generate.h bench.h idle.h Makefile
+
+$(OBJDIR)/socket.$(OBJ_SUFFIX): socket.c socket.h sysdep.h Makefile
+
+$(OBJDIR)/multipop.$(OBJ_SUFFIX): multipop.c bench.h pish.h sysdep.h Makefile
+
+$(OBJDIR)/webmail.$(OBJ_SUFFIX): webmail.c bench.h pish.h sysdep.h Makefile
+
+$(OBJDIR)/event.$(OBJ_SUFFIX): event.c event.h Makefile
+
+$(OBJDIR)/checksum.$(OBJ_SUFFIX): checksum.c checksum.h Makefile
+
+$(OBJDIR)/sb.$(OBJ_SUFFIX): sb.c sb.h Makefile
+
+$(OBJDIR)/md5.$(OBJ_SUFFIX): md5.c md5.h Makefile
 
 # currently broken.  See ../Makefile for packaging
 install: all

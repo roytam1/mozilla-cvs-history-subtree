@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 # The contents of this file are subject to the Netscape Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
@@ -73,7 +73,7 @@ MailStone Results
 <BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#0000FF" VLINK="#FF0000" ALINK="#000088">
 <A HREF=$mailstoneURL>Mailstone documentation</A><BR>
 <TABLE BORDER=2>
-<CAPTION> Netscape MailStone Results Index </CAPTION>
+<CAPTION> Mozilla MailStone Results Index </CAPTION>
 <TR>
 <TH>Run</TH> <TH>Testname</TH> <TH> Title </TH>
     <TH>Duration</TH> <TH>Clients</TH> <TH>Details</TH> <TH>Error log</TH> 

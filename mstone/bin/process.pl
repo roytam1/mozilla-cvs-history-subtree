@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 # The contents of this file are subject to the Netscape Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
@@ -159,7 +159,7 @@ sub readClientCSV {
 	}
 
 	foreach $section (@workload) { # find thread count for this client
-	    next unless ($section->{sectionTitle} =~ /CLIENT/o);
+	    next unless ($section->{sectionTitle} =~ /CLIENT/i);
 	    next unless ($section->{sectionParams} =~ /$cli/);
 	    #print "Process $cli has threads $section->{THREADS}\n";
 	    $reportingClients += ($section->{THREADS})
@@ -267,7 +267,7 @@ sub loadCSV {
     return 0 unless ($reportingClients > 0);
 
     foreach $section (@workload) {
-	next unless ($section->{sectionTitle} =~ /CLIENT/o);
+	next unless ($section->{sectionTitle} =~ /CLIENT/i);
 	my $slist = $section->{sectionParams};
 	$slist =~ s/HOSTS=\s*//; # strip off initial bit
 	my @hlist = split /[\s,]/, $slist;
@@ -322,7 +322,7 @@ my $doFull = 1;			# re-processing is currently broken
 #      $doFull = 1;
 #  } else {			# see if any source is newer than csv
 #      foreach $section (@workload) {
-#  	next unless ($section->{sectionTitle} =~ /CLIENT/o);
+#  	next unless ($section->{sectionTitle} =~ /CLIENT/i);
 #  	my $slist = $section->{sectionParams};
 #  	$slist =~ s/HOSTS=\s*//; # strip off initial bit
 #  	foreach $cli (split /[\s,]/, $slist) {
