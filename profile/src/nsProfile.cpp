@@ -1359,14 +1359,14 @@ NS_IMETHODIMP nsProfile::StartApprunner(const PRUnichar* profileName)
 
     // flush the stringbundle cache first
 #if defined(DEBUG_tao)
-    printf("\n--> nsProfile::LoadDefaultProfileDir: FlushBundles() \n");
+    printf("\n--> nsProfile::StartApprunner: FlushBundles() \n");
 #endif
     nsCOMPtr<nsIStringBundleService> bundleService =
         do_GetService(kStringBundleServiceCID, &rv);
 
     if (NS_SUCCEEDED(rv)) {
         rv = bundleService->FlushBundles();
-        if (NS_FAILED(rv)) return rv;
+        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to flush bundle cache");
     }
 
     gProfileDataAccess->SetCurrentProfile(profileName);
