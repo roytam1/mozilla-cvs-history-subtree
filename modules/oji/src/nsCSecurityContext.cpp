@@ -67,9 +67,9 @@ NS_METHOD
 nsCSecurityContext::Implies(const char* target, const char* action, PRBool *bAllowedAccess)
 {
     //TODO: for test purpose only. Remove this stuff.
-    *bAllowedAccess = PR_TRUE;
-    if(1)
-     return NS_OK;
+    //*bAllowedAccess = PR_TRUE;
+    //if(1)
+     //return NS_OK;
 
     if(m_pJStoJavaFrame == NULL)
     {
