@@ -762,6 +762,7 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
   PRUnichar     *aName = nsnull;
   nsString      tProtLine;
   PRInt32       phoneCount = 1;
+  PRInt32       defaultEmail = 0;
   PRBool        foundPhone = PR_FALSE;
   const char    *phoneType;
 
@@ -800,6 +801,14 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
                                             nsCaseInsensitiveStringComparator()))
         continue;
 
+      // Remember what type of email address we have.
+      if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kPriEmailColumn, strlen(kPriEmailColumn)))
+        defaultEmail = 1;
+      else
+      if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, k2ndEmailColumn, strlen(k2ndEmailColumn)))
+        if (! defaultEmail)
+          defaultEmail= 2;
+        
       // Reset this flag...
       foundPhone = PR_FALSE;
       // If this is a phone number, we have to special case this because
@@ -864,6 +873,15 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
 
   if (!tProtLine.IsEmpty())
   {
+    // Set default email (1/2 = 1st/2nd "Other email" in the aol Edit Contact dialog.
+    if (defaultEmail != 0)
+    {
+      aName = (defaultEmail == 1) ? ToNewUnicode(NS_LITERAL_STRING("1")) : ToNewUnicode(NS_LITERAL_STRING("2"));
+      tProtLine.Append(NS_LITERAL_STRING("&") + NS_LITERAL_STRING("default_email") + NS_LITERAL_STRING("="));
+      AddValueToProtocolLine(aName, tProtLine);
+      PR_FREEIF(aName);
+    }
+
     // Now, check if this is that flag for the plain text email selection...if so,
     // then tack this information on as well...
     PRUint32 format = nsIAbPreferMailFormat::unknown;
