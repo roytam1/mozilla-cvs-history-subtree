@@ -106,7 +106,7 @@ XFE_PropertyTabView* XFE_PropertySheetView::addTab(int tabNameId)
   return tab;
 }/* XFE_PropertySheetView::addTab */
 
-void XFE_PropertySheetView::addTab(XFE_PropertyTabView* tabb, XP_Bool show)
+void XFE_PropertySheetView::addTab(XFE_PropertyTabView* tab, XP_Bool show)
 {
   addView(tab);
   if (show) tab->show();
