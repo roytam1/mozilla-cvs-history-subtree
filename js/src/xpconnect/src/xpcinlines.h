@@ -744,6 +744,24 @@ void DoPostScriptEvaluated(JSContext* cx, JSExceptionState* state)
     }
 }
 
+// It turns out that some errors may be not worth reporting. So, this
+// function is factored out to manage that.
+inline JSBool IsReportableErrorCode(nsresult code)
+{
+    if(NS_SUCCEEDED(code))
+        return JS_FALSE;
+
+    switch(code)
+    {
+        // Error codes that we don't want to report as errors...
+        // These generally indicate bad interface design AFAIC. 
+        case NS_ERROR_FACTORY_REGISTER_AGAIN:
+        case NS_BASE_STREAM_WOULD_BLOCK:
+            return JS_FALSE;
+    }
+    return JS_TRUE;
+}
+
 /***************************************************************************/
 
 #endif /* xpcinlines_h___ */
