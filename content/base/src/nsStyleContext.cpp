@@ -109,11 +109,11 @@ public:
 
 #ifdef DEBUG
   virtual void DumpRegressionData(nsIPresContext* aPresContext, FILE* out, PRInt32 aIndent);
-#endif
 
-  virtual void  List(FILE* out, PRInt32 aIndent);
+  virtual void List(FILE* out, PRInt32 aIndent);
 
   virtual void SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize);
+#endif
 
 protected:
   void AppendChild(nsStyleContext* aChild);
@@ -851,6 +851,7 @@ nsStyleContext::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint,PRBo
   return NS_OK;
 }
 
+#ifdef DEBUG
 void nsStyleContext::List(FILE* out, PRInt32 aIndent)
 {
   // Indent
@@ -860,7 +861,7 @@ void nsStyleContext::List(FILE* out, PRInt32 aIndent)
   if (nsnull != mPseudoTag) {
     nsAutoString  buffer;
     mPseudoTag->ToString(buffer);
-    fputs(buffer, out);
+    fputs(NS_LossyConvertUCS2toASCII(buffer).get(), out);
     fputs(" ", out);
   }
   
@@ -944,7 +945,6 @@ void nsStyleContext::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)
   }
 }
 
-#ifdef DEBUG
 static void IndentBy(FILE* out, PRInt32 aIndent) {
   while (--aIndent >= 0) fputs("  ", out);
 }

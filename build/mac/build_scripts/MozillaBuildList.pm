@@ -571,6 +571,7 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:xpcom:threads:MANIFEST_IDL",                     "$distdirectory:idl:");
     InstallFromManifest(":mozilla:xpcom:components:MANIFEST_IDL",                  "$distdirectory:idl:");
 
+    InstallFromManifest(":mozilla:xpcom:build:MANIFEST",                           "$distdirectory:xpcom:");
     InstallFromManifest(":mozilla:xpcom:glue:MANIFEST",                            "$distdirectory:xpcom:");
     InstallFromManifest(":mozilla:xpcom:base:MANIFEST",                            "$distdirectory:xpcom:");
     InstallFromManifest(":mozilla:xpcom:components:MANIFEST",                      "$distdirectory:xpcom:");
@@ -1535,6 +1536,7 @@ sub BuildBrowserUtilsProjects()
     BuildOneProject(":mozilla:extensions:cookie:macbuild:cookie.mcp",           "Cookie$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:extensions:wallet:macbuild:wallet.mcp",           "Wallet$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:extensions:wallet:macbuild:walletviewers.mcp",    "WalletViewers$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
+    BuildOneProject(":mozilla:extensions:universalchardet:macbuild:Universalchardet.mcp", "Universalchardet$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
 
     BuildOneProject(":mozilla:rdf:chrome:build:chrome.mcp",                     "ChomeRegistry$D.$S", 1, $main::ALIAS_SYM_FILES, 1);
     
