@@ -168,6 +168,10 @@ typedef struct _XfeManagerPart
 	Cardinal			num_layable_children;	/* Num layable children	*/
 	XfeLinked			layable_children;		/* Layable children		*/
 
+	/* Debug resources */
+#ifdef DEBUG
+	Boolean				debug_trace;			/* Trace / debug		*/
+#endif
 
 	/* Private Data Members */
 	int					config_flags;			/* Require Geometry		*/
@@ -549,6 +553,17 @@ _XfeManagerGetLayableChildrenInfo	(Widget			w,
 #define _XfemNumLayableChildren(w) \
 (((XfeManagerWidget) (w))->xfe_manager . num_layable_children)
 /*----------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------*/
+/*																		*/
+/* Access to debug resources											*/
+/*																		*/
+/*----------------------------------------------------------------------*/
+#ifdef DEBUG
+#define _XfemDebugTrace(w) \
+(((XfeManagerWidget) (w))->xfe_manager . debug_trace)
+/*----------------------------------------------------------------------*/
+#endif
 
 /*----------------------------------------------------------------------*/
 /*																		*/

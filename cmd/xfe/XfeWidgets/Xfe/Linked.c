@@ -458,8 +458,8 @@ XfeLinkedFind(XfeLinked			list,
 }
 /*----------------------------------------------------------------------*/
 /* extern */ XfeLinkNode
-XfeLinkedFindItem(XfeLinked	list,
-					  XtPointer		item)
+XfeLinkedFindItem(XfeLinked		list,
+				  XtPointer		item)
 {
 	XfeLinkNode node;
 
@@ -484,9 +484,9 @@ XfeLinkedFindItem(XfeLinked	list,
 /*																		*/
 /*----------------------------------------------------------------------*/
 /* extern */ void
-XfeLinkedApply(XfeLinked			list,
-				   XfeLinkedApplyProc	proc,
-				   XtPointer				data)
+XfeLinkedApply(XfeLinked				list,
+			   XfeLinkedApplyProc		proc,
+			   XtPointer				data)
 {
 	XfeLinkNode node;
 
