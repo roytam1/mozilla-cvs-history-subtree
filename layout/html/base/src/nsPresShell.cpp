@@ -1425,6 +1425,8 @@ PresShell::AlreadyInQueue(nsIReflowCommand* aReflowCommand)
   nsIFrame* targetFrame;
   PRBool inQueue = PR_FALSE;
 
+  return PR_FALSE;  // Turn off coalescing of reflow commands
+
   if (NS_SUCCEEDED(aReflowCommand->GetTarget(targetFrame))) {
     // Iterate over the reflow commands and compare the targeted frames.
     for (i = 0; i < n; i++) {
@@ -2063,7 +2065,7 @@ PresShell::ContentAppended(nsIDocument *aDocument,
 
   RAPTOR_STOPWATCH_DEBUGTRACE(("Stop: Frame Creation: PresShell::ContentAppended(), this=%p\n", this));
   NS_STOP_STOPWATCH(mFrameCreationWatch)
-  ExitReflowLock(PR_TRUE, PR_FALSE);
+  ExitReflowLock(PR_TRUE, PR_TRUE);
   return rv;
 }
 
@@ -2076,7 +2078,7 @@ PresShell::ContentInserted(nsIDocument* aDocument,
   EnterReflowLock();
   nsresult  rv = mStyleSet->ContentInserted(mPresContext, aContainer, aChild, aIndexInContainer);
   VERIFY_STYLE_TREE;
-  ExitReflowLock(PR_TRUE, PR_FALSE);
+  ExitReflowLock(PR_TRUE, PR_TRUE);
   return rv;
 }
 
