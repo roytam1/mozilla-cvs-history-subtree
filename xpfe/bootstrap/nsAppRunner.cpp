@@ -899,21 +899,11 @@ static nsresult InitializeProfileService(nsICmdLineService *cmdLineArgs)
         nsCOMPtr<nsIProfileInternal> profileMgr(do_GetService(NS_PROFILE_CONTRACTID, &rv));
         NS_ASSERTION(NS_SUCCEEDED(rv), "failed to get profile manager");
         if (NS_FAILED(rv)) return rv;
-
-        nsCOMPtr<nsINativeAppSupport> nativeApp;
-        PRBool serverMode = PR_FALSE;
-        GetNativeAppSupport(getter_AddRefs(nativeApp));
-        if (nativeApp)
-            nativeApp->GetIsServerMode(&serverMode);
             
         // If we are in server mode, profile mgr cannot show UI
-        rv = profileMgr->StartupWithArgs(cmdLineArgs, !serverMode);
+        rv = profileMgr->StartupWithArgs(cmdLineArgs, !IsAppInServerMode());
         NS_ASSERTION(NS_SUCCEEDED(rv), "StartupWithArgs failed\n");
-        if (serverMode && rv == NS_ERROR_PROFILE_REQUIRES_INTERACTION) {
-            nativeApp->SetNeedsProfileUI(PR_TRUE);
-            rv = NS_OK;
-        } 
-        else if (NS_FAILED(rv)) return rv;
+        if (NS_FAILED(rv)) return rv;
 
         // if we get here, and we don't have a current profile, return a failure so we will exit
         // this can happen, if the user hits Cancel or Exit in the profile manager dialogs

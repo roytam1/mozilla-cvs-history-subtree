@@ -1357,34 +1357,18 @@ nsNativeAppSupportWin::GetCmdLineArgs( LPBYTE request, nsICmdLineService **aResu
 nsresult
 nsNativeAppSupportWin::EnsureProfile(nsICmdLineService* args)
 {
-  nsresult rv = NS_OK;  
-  nsCOMPtr<nsIAppShellService> appShell = do_GetService( "@mozilla.org/appshell/appShellService;1", &rv );
-  if (NS_FAILED(rv)) return rv;
-  nsCOMPtr<nsINativeAppSupport> nativeApp;
-  rv = appShell->GetNativeAppSupport(getter_AddRefs(nativeApp));
-  if (NS_FAILED(rv)) return rv;
-  PRBool needsProfileUI;
-  rv = nativeApp->GetNeedsProfileUI(&needsProfileUI);
-  if (NS_FAILED(rv)) return rv; 
-
+  nsresult rv;  
   nsCOMPtr<nsIProfileInternal> profileMgr(do_GetService(NS_PROFILE_CONTRACTID, &rv));
   if (NS_FAILED(rv)) return rv;
  
-  if (needsProfileUI) {
-    // We need profile UI because we started in
-    // server mode and could not show it then.
-    rv = profileMgr->StartupWithArgs(args, PR_TRUE);
-    if (NS_FAILED(rv)) return rv;
-    nativeApp->SetNeedsProfileUI(PR_FALSE);
-  }
-  else {
-    // Even if not started in server mode, ensure
-    // that we have a profile. We can hit this case
-    // if somebody double-clicks the app twice.
-    PRBool haveProfile = PR_FALSE;
-    (void)profileMgr->IsCurrentProfileAvailable(&haveProfile);
-    if (!haveProfile) return NS_ERROR_FAILURE;
-  }
+  // Ensure that we have a profile. We can hit this case
+  // if somebody double-clicks the app twice. Without this
+  // check, we would open a browser window while the profile
+  // selection dialog is showing.
+  PRBool haveProfile = PR_FALSE;
+  (void)profileMgr->IsCurrentProfileAvailable(&haveProfile);
+  if (!haveProfile) return NS_ERROR_FAILURE;
+
   return NS_OK;
 }
 
