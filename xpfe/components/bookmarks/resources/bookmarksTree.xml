@@ -850,7 +850,9 @@
             <rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
               <treechildren>
                 <treeitem uri="rdf:*">
-                  <treerow properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type separator"/>
+                  <treerow properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type separator">
+                    <treecell properties="separator"/>
+                  </treerow>
                 </treeitem>
               </treechildren>
             </rule>
@@ -958,7 +960,9 @@
           <rule rdf:type="http://home.netscape.com/NC-rdf#BookmarkSeparator">
             <treechildren>
               <treeitem uri="rdf:*">
-                <treerow properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type separator" />
+                <treerow properties="rdf:http://www.w3.org/1999/02/22-rdf-syntax-ns#type separator">
+                  <treecell properties="separator"/>
+                </treerow>
               </treeitem>
             </treechildren>
           </rule>

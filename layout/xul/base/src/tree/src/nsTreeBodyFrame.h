@@ -294,7 +294,8 @@ public:
                      const nsRect&        aCellRect,
                      nsIPresContext*      aPresContext,
                      nsIRenderingContext& aRenderingContext,
-                     const nsRect&        aDirtyRect);
+                     const nsRect&        aDirtyRect,
+                     nscoord&             aCurrX);
 
   // This method paints the twisty inside a cell in the primary column of an tree.
   nsresult PaintTwisty(PRInt32              aRowIndex,

@@ -2266,6 +2266,29 @@ nsTreeBodyFrame::PaintRow(PRInt32              aRowIndex,
   if (isSeparator) {
     // The row is a separator. Paint only a double horizontal line.
 
+    PRInt32 level;
+    mView->GetLevel(aRowIndex, &level);
+    if (level) {
+      // Find the primary cell.
+      nscoord currX = rowRect.x;
+      nsTreeColumn* currCol;
+      for (currCol = mColumns; currCol && currX < mInnerBox.x+mInnerBox.width;
+           currCol = currCol->GetNext()) {
+        if (currCol->IsPrimary()) {
+          nsRect cellRect(currX, rowRect.y, currCol->GetWidth(), rowRect.height);
+          PRInt32 overflow = cellRect.x+cellRect.width-(mInnerBox.x+mInnerBox.width);
+          if (overflow > 0)
+            cellRect.width -= overflow;
+          nsRect dirtyRect;
+          if (dirtyRect.IntersectRect(aDirtyRect, cellRect))
+            PaintCell(aRowIndex, currCol, cellRect, aPresContext, aRenderingContext, aDirtyRect, currX); 
+          break;
+        }
+        currX += currCol->GetWidth();
+      }
+      rowRect.x = currX - 16;
+    }
+
     // Resolve style for the separator.
     nsStyleContext* separatorContext = GetPseudoStyleContext(nsCSSAnonBoxes::moztreeseparator);
     PRBool useTheme = PR_FALSE;
@@ -2318,8 +2341,9 @@ nsTreeBodyFrame::PaintRow(PRInt32              aRowIndex,
       if (overflow > 0)
         cellRect.width -= overflow;
       nsRect dirtyRect;
+      nscoord dummy;
       if (dirtyRect.IntersectRect(aDirtyRect, cellRect))
-        PaintCell(aRowIndex, currCol, cellRect, aPresContext, aRenderingContext, aDirtyRect); 
+        PaintCell(aRowIndex, currCol, cellRect, aPresContext, aRenderingContext, aDirtyRect, dummy); 
       currX += currCol->GetWidth();
     }
   }
@@ -2333,7 +2357,8 @@ nsTreeBodyFrame::PaintCell(PRInt32              aRowIndex,
                            const nsRect&        aCellRect,
                            nsIPresContext*      aPresContext,
                            nsIRenderingContext& aRenderingContext,
-                           const nsRect&        aDirtyRect)
+                           const nsRect&        aDirtyRect,
+                           nscoord&             aCurrX)
 {
   if (aCellRect.width == 0)
     return NS_OK; // Don't paint cells in hidden columns.
@@ -2503,6 +2528,8 @@ nsTreeBodyFrame::PaintCell(PRInt32              aRowIndex,
       }
     }
   }
+
+  aCurrX = currX;
 
   return NS_OK;
 }
