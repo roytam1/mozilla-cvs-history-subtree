@@ -42,7 +42,8 @@
 #include "nsString.h"
 #include "nsFileStream.h"
 
-extern PRInt32 CKutil_GetLine(nsInputFileStream& strm, nsString& aLine);
+extern PRInt32 CKutil_GetLine(nsInputFileStream& strm, char *aBuf, PRInt32 sz,
+                              PRInt32& next, PRInt32& count, nsString& aLine);
 extern PRUnichar* CKutil_Localize(const PRUnichar *genericString);
 extern nsresult CKutil_ProfileDirectory(nsFileSpec& dirSpec);
 extern char * CKutil_StrAllocCopy(char *&destination, const char *source);
