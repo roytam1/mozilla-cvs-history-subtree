@@ -62,7 +62,7 @@ const String XPathNames::CEILING_FN              = "ceiling";
 const String XPathNames::FLOOR_FN                = "floor";
 // OG-
 //Marina M. boolean function lang
-const String XPathNames::LANG_FN				 = "lang";
+const String XPathNames::LANG_FN                 = "lang";
 
 //-- internal XSL processor functions
 const String XPathNames::ERROR_FN                = "error";
