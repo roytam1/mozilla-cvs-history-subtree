@@ -201,24 +201,18 @@ function FolderProperties(name, uri)
 
 function MsgToggleMessagePane()
 {
-	//OnClickThreadAndMessagePaneSplitter is based on the value before the splitter is toggled.
-	OnClickThreadAndMessagePaneSplitterGrippy();
-  MsgToggleSplitter("threadpane-splitter");
-}
-
-function MsgToggleFolderPane()
-{
-    MsgToggleSplitter("sidebarsplitter");
-}
-
-function MsgToggleSplitter(id)
-{
-    var splitter = document.getElementById(id);
-    var state = splitter.getAttribute("state");
-    if (state == "collapsed")
-        splitter.setAttribute("state", null);
-    else
-        splitter.setAttribute("state", "collapsed")
+  var splitter = GetThreadAndMessagePaneSplitter();
+  var messagePane = GetMessagePane();
+  if (splitter.hidden) {
+    splitter.hidden = false;
+    if (splitter.getAttribute("state") != "collapsed") {
+      messagePane.collapsed = false;
+    }
+  } else {
+    splitter.hidden = true;
+    messagePane.collapsed = true;
+  }
+  OnMouseUpThreadAndMessagePaneSplitter();
 }
 
 
