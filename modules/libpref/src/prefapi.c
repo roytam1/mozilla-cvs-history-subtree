@@ -121,7 +121,11 @@ pref_FreeEntry(void *pool, PRHashEntry *he, uint flag)
 	}
 
     if (flag == HT_FREE_ENTRY) {
+#ifdef XP_OS2_VACPP
+		XP_FREEIF(he->key);
+#else
 		XP_FREEIF((void *)he->key);
+#endif
         XP_FREE(he);
 	}
 }
@@ -2080,7 +2084,7 @@ pref_ErrorReporter(JSContext *cx, const char *message,
 /* Platform specific alert messages */
 void pref_Alert(char* msg)
 {
-#if defined(XP_MAC) || defined(XP_UNIX) || defined(XP_OS2)
+#if defined(XP_MAC) || defined(XP_UNIX)
 #if defined(XP_UNIX)
     if ( getenv("NO_PREF_SPAM") == NULL )
 #endif
@@ -2088,6 +2092,8 @@ void pref_Alert(char* msg)
 #endif
 #if defined (XP_WIN)
 		MessageBox (NULL, msg, "Netscape -- JS Preference Warning", MB_OK);
+#elif defined(XP_OS2)
+      WinMessageBox (HWND_DESKTOP, NULL, msg, "Netscape -- JS Preference Warning", 0, MB_WARNING | MB_OK | MB_APPLMODAL | MB_MOVEABLE);
 #endif
 }
 
