@@ -117,7 +117,7 @@ nsTSubstring_CharT::MutatePrep( size_type capacity, char_type** oldData, PRUint3
     *oldFlags = mFlags;
 
     mData = newData;
-    mFlags = (F_TERMINATED | F_SHARED);
+    mFlags = F_TERMINATED | F_SHARED;
 
     // mLength does not change
 
@@ -240,7 +240,7 @@ nsTSubstring_CharT::EnsureMutable()
 void
 nsTSubstring_CharT::Assign( const char_type* data, size_type length )
   {
-      // unfortunately, people do pass null sometimes :(
+      // unfortunately, some callers pass null :-(
     if (!data)
       {
         Truncate();
@@ -281,10 +281,15 @@ nsTSubstring_CharT::Assign( const self_type& str )
 
         mData = str.mData;
         mLength = str.mLength;
-        mFlags = (F_TERMINATED | F_SHARED);
+        mFlags = F_TERMINATED | F_SHARED;
 
         // get an owning reference to the mData
         nsStringHeader::FromData(mData)->AddRef();
+      }
+    else if (str.mFlags & F_VOIDED)
+      {
+        // inherit the F_VOIDED attribute
+        SetIsVoid(PR_TRUE);
       }
     else
       {
@@ -325,21 +330,22 @@ nsTSubstring_CharT::Assign( const abstract_string_type& readable )
 void
 nsTSubstring_CharT::Adopt( char_type* data, size_type length )
   {
-    ::ReleaseData(mData, mFlags);
-    mData = data;
-    if (mData)
+    if (data)
       {
+        ::ReleaseData(mData, mFlags);
+
         if (length == size_type(-1))
           length = char_traits::length(data);
+
+        mData = data;
         mLength = length;
-        mFlags = (F_TERMINATED | F_OWNED);
+        mFlags = F_TERMINATED | F_OWNED;
 
         STRING_STAT_INCREMENT(Adopt);
       }
     else
       {
-        mLength = 0;
-        mFlags = 0;
+        SetIsVoid(PR_TRUE);
       }
   }
 

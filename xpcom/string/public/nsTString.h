@@ -525,6 +525,13 @@ class nsTAutoString_CharT : public nsTString_CharT
   };
 
 
+  /**
+   * nsTXPIDLString extends nsTString such that:
+   *
+   *   (1) mData can be null
+   *   (2) objects of this type can be automatically cast to |const CharT*|
+   *   (3) getter_Copies method is supported to adopt data
+   */
 class nsTXPIDLString_CharT : public nsTString_CharT
   {
     public:
@@ -534,11 +541,20 @@ class nsTXPIDLString_CharT : public nsTString_CharT
     public:
 
       nsTXPIDLString_CharT()
-        : string_type(nsnull, 0, 0) {}
+        : string_type(NS_CONST_CAST(char_type*, char_traits::sEmptyBuffer), 0, F_TERMINATED | F_VOIDED) {}
 
         // copy-constructor required to avoid default
       nsTXPIDLString_CharT( const self_type& str )
-        : string_type(str) {}
+        : string_type(NS_CONST_CAST(char_type*, char_traits::sEmptyBuffer), 0, F_TERMINATED | F_VOIDED)
+        {
+          Assign(str);
+        }
+
+        // return nsnull if we are voided
+      const char_type* get() const
+        {
+          return (mFlags & F_VOIDED) ? nsnull : mData;
+        }
 
         // this case operator is the reason why this class cannot just be a
         // typedef for nsTString

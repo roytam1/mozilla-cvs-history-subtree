@@ -362,6 +362,6 @@ class nsTSubstring_CharT : public nsTAString_CharT
           F_VOIDED     = 1 << 1,  // IsVoid returns true
           F_SHARED     = 1 << 2,  // mData[0] is prefixed with additional fields
           F_OWNED      = 1 << 3,  // mData is owned by this class
-          F_FIXED      = 1 << 4   // mData is pointing at nsTAutoString::mFixedBuf
+          F_FIXED      = 1 << 4   // mData is pointing at a fixed-size writable buffer
         };
   };

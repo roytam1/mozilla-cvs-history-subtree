@@ -298,7 +298,7 @@ class nsTAString_CharT
         /**
          * optional ctor for use by subclasses.
          *
-         * mData and mLength are intentionally left uninitialized.
+         * NOTE: mData and mLength are intentionally left uninitialized.
          */
       explicit
       nsTAString_CharT(PRUint32 flags)

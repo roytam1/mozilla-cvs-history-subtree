@@ -37,6 +37,7 @@
 
 #include <stdio.h>
 #include "nsString.h"
+#include "nsCRT.h"
 
 void test_assign_helper(const nsACString& in, nsACString &_retval)
   {
@@ -256,6 +257,56 @@ PRBool test_concat_2()
     return PR_FALSE;
   }
 
+PRBool test_xpidl_string()
+  {
+    nsXPIDLCString a, b;
+    a = b;
+    if (a != b)
+      return PR_FALSE;
+
+    a.Adopt(0);
+    if (a != b)
+      return PR_FALSE;
+
+    a.Append("foopy");
+    a.Assign(b);
+    if (a != b)
+      return PR_FALSE;
+
+    a.Insert("", 0);
+    a.Assign(b);
+    if (a != b)
+      return PR_FALSE;
+
+    const char text[] = "hello world";
+    *getter_Copies(a) = nsCRT::strdup(text);
+    if (strcmp(a, text) != 0)
+      return PR_FALSE;
+
+    b = a;
+    if (strcmp(a, b) != 0)
+      return PR_FALSE;
+
+    a.Adopt(0);
+    nsACString::const_iterator begin, end;
+    a.BeginReading(begin);
+    a.EndReading(end);
+    char *r = ToNewCString(Substring(begin, end));
+    if (strcmp(r, "") != 0)
+      return PR_FALSE;
+    nsMemory::Free(r);
+
+    a.Adopt(0);
+    if (a != (const char*) 0)
+      return PR_FALSE;
+
+    PRInt32 index = a.FindCharInSet("xyz");
+    if (index != kNotFound)
+      return PR_FALSE;
+
+    return PR_TRUE;
+  }
+
 //----
 
 typedef PRBool (*TestFunc)();
@@ -284,6 +335,7 @@ tests[] =
     { "test_cbufdesc", test_cbufdesc },
     { "test_concat", test_concat },
     { "test_concat_2", test_concat_2 },
+    { "test_xpidl_string", test_xpidl_string },
     { nsnull, nsnull }
   };
 
