@@ -1090,7 +1090,11 @@ net_CallExitRoutine(Net_GetUrlExitFunc *exit_routine,
     /* byrd:  plugin specific stuff, where we've added our own exit routine:  */
 	if ((URL_s->owner_data != NULL) && 
 		(URL_s->owner_id == 0x0000BAC0)){
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 			NPL_URLExit(URL_s,status,window_id);
+#endif
 	}
 
 	if ( exit_routine != NULL ) {
@@ -2105,7 +2109,11 @@ NET_GetURL (URL_Struct *URL_s,
 #if defined(XP_WIN) || defined(XP_MAC) || defined(XP_OS2)
 	   FE_UseExternalProtocolModule(window_id, output_format, URL_s, exit_routine) ||
 #endif
+#ifdef MOZ_NGLAYOUT
+     0)
+#else
 	   NPL_HandleURL(window_id, output_format, URL_s, exit_routine))
+#endif
       {
 		/* don't call the exit routine since the
 		 * External protocol module will call it
@@ -2356,7 +2364,11 @@ NET_GetURL (URL_Struct *URL_s,
 	#if defined(XP_WIN) || defined(XP_MAC)
 		   FE_UseExternalProtocolModule(window_id, output_format, URL_s, exit_routine) ||
 	#endif
+#ifdef MOZ_NGLAYOUT
+       0)
+#else
 		   NPL_HandleURL(window_id, output_format, URL_s, exit_routine))
+#endif
 	      {
 			/* don't call the exit routine since the
 			 * External protocol module will call it
