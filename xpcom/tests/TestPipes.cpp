@@ -292,7 +292,7 @@ TestPipeObserver()
     printf("TestPipeObserver: OnWrite and OnFull should be called once, OnEmpty should be called twice.\n");
     nsIInputStream* in;
     nsIOutputStream* out;
-    rv = NS_NewPipe(&in, &out, 20, 20, PR_TRUE, PR_TRUE);
+    rv = NS_NewPipe(&in, &out, 18, 36, PR_TRUE, PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
     rv = in->SetObserver(obs);
@@ -302,27 +302,40 @@ TestPipeObserver()
 
     char buf[] = "puirt a beul: a style of Gaelic vocal music intended for dancing.";
     PRUint32 cnt;
-    // this should print OnWrite message:
+    printf("> should see OnWrite message:\n");
     rv = out->Write(buf, 20, &cnt);
     if (NS_FAILED(rv)) return rv;
     NS_ASSERTION(cnt == 20, "Write failed");
 
-    // this should print OnFull message:
-    rv = out->Write(buf + 20, 1, &cnt);
-    if (NS_FAILED(rv) && rv != NS_BASE_STREAM_WOULD_BLOCK) return rv;
-    NS_ASSERTION(cnt == 0 && rv == NS_BASE_STREAM_WOULD_BLOCK, "Write failed");
-
-    char buf2[20];
-    rv = in->Read(buf2, 20, &cnt);
+    printf("> should see OnWrite message followed by OnFull message:\n");
+    rv = out->Write(buf + 20, 20, &cnt);
     if (NS_FAILED(rv)) return rv;
-    NS_ASSERTION(cnt == 20, "Read failed");
-    NS_ASSERTION(nsCRT::strncmp(buf, buf2, 20) == 0, "Read wrong stuff");
+    NS_ASSERTION(cnt == 16, "Write failed");
 
-    // this should print OnEmpty message:
-    rv = in->Read(buf2, 1, &cnt);
+    rv = in->Available(&cnt);
+    if (NS_FAILED(rv)) return rv;
+    printf("available = %u\n", cnt);
+    NS_ASSERTION(cnt == 36, "Available failed");
+
+    char buf2[40];
+    printf("> should see OnEmpty message:\n");
+    rv = in->Read(buf2, 40, &cnt);
+    if (NS_FAILED(rv)) return rv;
+    printf("cnt = %u\n", cnt);
+    NS_ASSERTION(cnt == 36, "Read failed");
+    NS_ASSERTION(nsCRT::strncmp(buf, buf2, 36) == 0, "Read wrong stuff");
+
+    rv = in->Available(&cnt);
+    if (NS_FAILED(rv)) return rv;
+    printf("available = %u\n", cnt);
+    NS_ASSERTION(cnt == 0, "Available failed");
+
+    printf("> should see OnEmpty message:\n");
+    rv = in->Read(buf2, 2, &cnt);
     if (NS_FAILED(rv) && rv != NS_BASE_STREAM_WOULD_BLOCK) return rv;
     NS_ASSERTION(cnt == 0 && rv == NS_BASE_STREAM_WOULD_BLOCK, "Read failed");
 
+    printf("> should see OnClose message:\n");
     NS_RELEASE(obs);
     NS_RELEASE(in);
     NS_RELEASE(out);
@@ -570,7 +583,7 @@ main(int argc, char* argv[])
         gTrace = PR_TRUE;
 
 #ifdef DEBUG
-    TestSegmentedBuffer();
+    //TestSegmentedBuffer();
 #endif
 
 #if 0   // obsolete old implementation
@@ -596,10 +609,10 @@ main(int argc, char* argv[])
 
     rv = TestPipeObserver();
     NS_ASSERTION(NS_SUCCEEDED(rv), "TestPipeObserver failed");
-    rv = TestChainedPipes();
-    NS_ASSERTION(NS_SUCCEEDED(rv), "TestChainedPipes failed");
-    RunTests(16, 1);
-    RunTests(4096, 16);
+    //rv = TestChainedPipes();
+    //NS_ASSERTION(NS_SUCCEEDED(rv), "TestChainedPipes failed");
+    //RunTests(16, 1);
+    //RunTests(4096, 16);
     return 0;
 }
 

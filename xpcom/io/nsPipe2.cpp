@@ -256,6 +256,8 @@ nsPipe::GetReadSegment(PRUint32 segmentLogicalOffset,
             NS_ASSERTION(i == 0, "read cursor not in first segment");
         }
         if (segStart <= mWriteCursor && mWriteCursor < segEnd) {
+            if (mReadLimit == segEnd)
+                mReadLimit = mWriteCursor;
             segEnd = mWriteCursor;
             NS_ASSERTION(i == segCount - 1, "write cursor not in last segment");
         }
@@ -403,6 +405,10 @@ nsPipe::nsPipeInputStream::ReadSegments(nsWriteSegmentFun writer,
             if (NS_FAILED(rv) && rv != NS_BASE_STREAM_WOULD_BLOCK)
                 goto done;
             NS_ASSERTION(writeCount <= readBufferLen, "writer returned bad writeCount");
+#ifdef DEBUG
+            if (writeCount > 0 && rv == NS_BASE_STREAM_WOULD_BLOCK)
+                NS_WARNING("Invalid writer implementation: cannot write data and return WOULD_BLOCK");
+#endif
             readBuffer += writeCount;
             readBufferLen -= writeCount;
             *readCount += writeCount;
