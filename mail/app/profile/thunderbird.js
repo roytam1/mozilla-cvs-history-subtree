@@ -69,6 +69,9 @@ pref("mailnews.hints_and_tips.url","chrome://messenger-region/locale/region.prop
 pref("compose.throbber.url","chrome://messenger-region/locale/region.properties");
 pref("addressbook.throbber.url","chrome://messenger-region/locale/region.properties");
 
+// thunderbird shows size in KB instead of lines by default
+pref("news.show_size_in_lines", false);
+
 /////////////////////////////////////////////////////////////////
 // End seamonkey suite mailnews.js pref overrides
 ///////////////////////////////////////////////////////////////// 
