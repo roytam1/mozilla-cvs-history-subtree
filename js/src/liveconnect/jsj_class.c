@@ -432,6 +432,10 @@ jsj_ReleaseJavaClassDescriptor(JSContext *cx, JNIEnv *jEnv, JavaClassDescriptor 
 #endif
 }
 
+#ifdef JSJ_THREADSAFE
+static PRMonitor *java_reflect_monitor = NULL;
+#endif
+
 static JSBool
 reflect_java_methods_and_fields(JSContext *cx,
                                 JNIEnv *jEnv,
@@ -439,17 +443,29 @@ reflect_java_methods_and_fields(JSContext *cx,
                                 JSBool reflect_statics_only)
 {
     JavaMemberDescriptor *member_descriptor;
+    JSBool success;
 
-    /* THREADSAFETY */
-    if (reflect_statics_only)
+    success = JS_TRUE;  /* optimism */
+
+#ifdef JSJ_THREAD_SAFE
+    PR_EnterMonitor(java_reflect_monitor);
+#endif
+
+    /* See if we raced with another thread to reflect members of this class */
+    if (reflect_statics_only) {
+        if (class_descriptor->static_members_reflected)
+            goto done;
         class_descriptor->static_members_reflected = JS_TRUE;
-    else
+    } else {
+        if (class_descriptor->instance_members_reflected)
+            goto done;
         class_descriptor->instance_members_reflected = JS_TRUE;
+    }
     
     if (!jsj_ReflectJavaMethods(cx, jEnv, class_descriptor, reflect_statics_only))
-        return JS_FALSE;
+        goto error;
     if (!jsj_ReflectJavaFields(cx, jEnv, class_descriptor, reflect_statics_only))
-        return JS_FALSE;
+        goto error;
 
     if (reflect_statics_only) {
         member_descriptor = class_descriptor->static_members;
@@ -464,7 +480,16 @@ reflect_java_methods_and_fields(JSContext *cx,
             member_descriptor = member_descriptor->next;
         }
     }
-    return JS_TRUE;
+
+done:
+#ifdef JSJ_THREAD_SAFE
+    PR_ExitMonitor(java_reflect_monitor);
+#endif
+    return success;
+
+error:
+    success = JS_FALSE;
+    goto done;
 }
 
 JavaMemberDescriptor *
@@ -631,5 +656,11 @@ jsj_InitJavaClassReflectionsTable()
 
     if (!java_class_reflections)
         return JS_FALSE;
+
+#ifdef JSJ_THREADSAFE
+    java_reflect_monitor =
+            (struct PRMonitor *) PR_NewNamedMonitor("java_reflect_monitor");
+#endif
+    
     return JS_TRUE;
 }

@@ -32,7 +32,7 @@
 #include "jsj_private.h"      /* LiveConnect internals */
 #include "jsj_hash.h"         /* Hash table with Java object as key */
 
-#ifdef JS_THREADSAFE
+#ifdef JSJ_THREADSAFE
 #include "prmon.h"
 #endif
 
@@ -52,7 +52,7 @@
  */
 static JSJHashTable *java_obj_reflections = NULL;
 
-#ifdef JS_THREADSAFE
+#ifdef JSJ_THREADSAFE
 static PRMonitor *java_obj_reflections_monitor = NULL;
 #endif
 
@@ -65,7 +65,7 @@ init_java_obj_reflections_table(void)
     if (!java_obj_reflections)
         return JS_FALSE;
 
-#ifdef JS_THREADSAFE
+#ifdef JSJ_THREADSAFE
     java_obj_reflections_monitor = 
 	(struct PRMonitor *) PR_NewNamedMonitor("java_obj_reflections");
     if (!java_obj_reflections_monitor) {
@@ -94,7 +94,7 @@ jsj_WrapJavaObject(JSContext *cx,
 
     hash_code = jsj_HashJavaObject((void*)java_obj, (void*)jEnv);
 
-#ifdef JS_THREADSAFE
+#ifdef JSJ_THREADSAFE
     PR_EnterMonitor(java_obj_reflections_monitor);
 #endif
     
@@ -147,7 +147,7 @@ jsj_WrapJavaObject(JSContext *cx,
     } 
 
 done:
-#ifdef JS_THREADSAFE
+#ifdef JSJ_THREADSAFE
         PR_ExitMonitor(java_obj_reflections_monitor);
 #endif
         
@@ -168,7 +168,7 @@ remove_java_obj_reflection_from_hashtable(jobject java_obj, JNIEnv *jEnv)
 
     hash_code = jsj_HashJavaObject((void*)java_obj, (void*)jEnv);
 
-#ifdef JS_THREADSAFE
+#ifdef JSJ_THREADSAFE
     PR_EnterMonitor(java_obj_reflections_monitor);
 #endif
 
@@ -180,7 +180,7 @@ remove_java_obj_reflection_from_hashtable(jobject java_obj, JNIEnv *jEnv)
     if (he)
         JSJ_HashTableRawRemove(java_obj_reflections, hep, he, (void*)jEnv);
 
-#ifdef JS_THREADSAFE
+#ifdef JSJ_THREADSAFE
     PR_ExitMonitor(java_obj_reflections_monitor);
 #endif
 }
@@ -586,7 +586,7 @@ no_such_field:
 static JSBool
 JavaObject_lookupProperty(JSContext *cx, JSObject *obj, jsid id,
                          JSObject **objp, JSProperty **propp
-#if defined JS_THREADSAFE && defined DEBUG
+#if defined JSJ_THREADSAFE && defined DEBUG
                             , const char *file, uintN line
 #endif
                             )

@@ -449,6 +449,13 @@ JSJ_ConnectToJavaVM(SystemJavaVM *java_vm_arg, void* initargs)
         JSJ_DisconnectFromJavaVM(jsjava_vm);
         return NULL;
     }
+   
+#ifdef JSJ_THREADSAFE
+    if (jsjava_vm_list == NULL) {
+        thread_list_monitor =
+            (struct PRMonitor *) PR_NewNamedMonitor("thread_list_monitor");
+    }
+#endif JSJ_THREADSAFE
 
     /* Put this VM on the list of all created VMs */
     jsjava_vm->next = jsjava_vm_list;
@@ -556,11 +563,22 @@ JSJ_DisconnectFromJavaVM(JSJavaVM *jsjava_vm)
         }
     }
     JS_ASSERT(j);
+
+#ifdef JSJ_THREADSAFE
+    if (jsjava_vm_list == NULL) {
+        PR_DestroyMonitor(thread_list_monitor);
+        thread_list_monitor = NULL;
+    }
+#endif JSJ_THREADSAFE
     
     free(jsjava_vm);
 }
 
 static JSJavaThreadState *thread_list = NULL;
+
+#ifdef JSJ_THREADSAFE
+static PRMonitor *thread_list_monitor = NULL;
+#endif
 
 static JSJavaThreadState *
 new_jsjava_thread_state(JSJavaVM *jsjava_vm, const char *thread_name, JNIEnv *jEnv)
@@ -577,9 +595,16 @@ new_jsjava_thread_state(JSJavaVM *jsjava_vm, const char *thread_name, JNIEnv *jE
     if (thread_name)
         jsj_env->name = strdup(thread_name);
 
-    /* THREADSAFETY - need to protect against races */
+#ifdef JSJ_THREAD_SAFE
+    PR_EnterMonitor(thread_list_monitor);
+#endif
+
     jsj_env->next = thread_list;
     thread_list = jsj_env;
+
+#ifdef JSJ_THREAD_SAFE
+    PR_ExitMonitor(thread_list_monitor);
+#endif
 
     return jsj_env;
 }
@@ -590,21 +615,29 @@ find_jsjava_thread(JNIEnv *jEnv)
     JSJavaThreadState *e, **p, *jsj_env;
     jsj_env = NULL;
 
-    /* THREADSAFETY - need to protect against races in manipulating the thread list */
-
     /* Search for the thread state among the list of all created
        LiveConnect threads */
     for (p = &thread_list; (e = *p) != NULL; p = &(e->next)) {
         if (e->jEnv == jEnv) {
             jsj_env = e;
-            *p = jsj_env->next;
             break;
         }
     }
 
     /* Move a found thread to head of list for faster search next time. */
-    if (jsj_env)
-        thread_list = jsj_env;
+    if (jsj_env && p != &thread_list) {
+#ifdef JSJ_THREAD_SAFE
+        PR_EnterMonitor(thread_list_monitor);
+#endif
+        /* First, check to make sure list hasn't mutated since we searched */
+        if (*p == jsj_env) {
+            *p = jsj_env->next;
+            thread_list = jsj_env;
+        }
+#ifdef JSJ_THREAD_SAFE
+        PR_ExitMonitor(thread_list_monitor);
+#endif
+    }
     
     return jsj_env;
 }
@@ -725,13 +758,20 @@ JSJ_DetachCurrentThreadFromJava(JSJavaThreadState *jsj_env)
     /* Destroy the LiveConnect execution environment passed in */
     jsj_ClearPendingJSErrors(jsj_env);
 
-    /* THREADSAFETY - need to protect against races */
+#ifdef JSJ_THREADSAFE
+    PR_EnterMonitor(thread_list_monitor);
+#endif JSJ_THREADSAFE
+
     for (p = &thread_list; (e = *p) != NULL; p = &(e->next)) {
         if (e == jsj_env) {
             *p = jsj_env->next;
             break;
         }
     }
+
+#ifdef JSJ_THREADSAFE
+    PR_ExitMonitor(thread_list_monitor);
+#endif JSJ_THREADSAFE
 
     free(jsj_env);
     return JS_TRUE;

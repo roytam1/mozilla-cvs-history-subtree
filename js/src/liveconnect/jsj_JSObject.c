@@ -68,13 +68,13 @@ struct CapturedJSError {
  */
 static JSHashTable *js_obj_reflections = NULL;
 
-#ifdef JS_THREADSAFE
+#ifdef JSJ_THREADSAFE
 /*
  * Used to protect the js_obj_reflections hashtable from simultaneous
  * read/write or * write/write access.
  */
 static PRMonitor *js_obj_reflections_monitor = NULL;
-#endif  /* JS_THREADSAFE */
+#endif  /* JSJ_THREADSAFE */
 #endif  /* PRESERVE_JSOBJECT_IDENTITY */
 
 JSBool
@@ -90,13 +90,13 @@ jsj_init_js_obj_reflections_table()
     if (!js_obj_reflections)
         return JS_FALSE;
 
-#ifdef JS_THREADSAFE
+#ifdef JSJ_THREADSAFE
     js_obj_reflections_monitor = PR_NewNamedMonitor("js_obj_reflections");
     if (!js_obj_reflections_monitor) {
         JS_HashTableDestroy(js_obj_reflections);
         return JS_FALSE;
     }
-#endif  /* JS_THREADSAFE */
+#endif  /* JSJ_THREADSAFE */
 #endif  /* PRESERVE_JSOBJECT_IDENTITY */
 
     return JS_TRUE;
@@ -121,7 +121,7 @@ jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
 
     java_wrapper_obj = NULL;
 
-#ifdef JS_THREADSAFE
+#ifdef JSJ_THREADSAFE
     PR_EnterMonitor(js_obj_reflections_monitor);
 #endif
 
@@ -183,7 +183,7 @@ jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
     /* (*jEnv)->DeleteLocalRef(jEnv, java_wrapper_obj); */
 
 done:
-#ifdef JS_THREADSAFE
+#ifdef JSJ_THREADSAFE
         PR_ExitMonitor(js_obj_reflections_monitor);
 #endif
         
@@ -201,7 +201,7 @@ jsj_remove_js_obj_reflection_from_hashtable(JSContext *cx, JSObject *js_obj)
     JSHashEntry *he, **hep;
     JSBool success = JS_FALSE;
 
-#ifdef JS_THREADSAFE
+#ifdef JSJ_THREADSAFE
     PR_EnterMonitor(js_obj_reflections_monitor);
 #endif
 
@@ -218,7 +218,7 @@ jsj_remove_js_obj_reflection_from_hashtable(JSContext *cx, JSObject *js_obj)
         JS_HashTableRawRemove(js_obj_reflections, hep, he);
     }
 
-#ifdef JS_THREADSAFE
+#ifdef JSJ_THREADSAFE
     PR_ExitMonitor(js_obj_reflections_monitor);
 #endif
 

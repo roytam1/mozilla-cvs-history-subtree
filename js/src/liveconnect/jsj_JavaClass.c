@@ -263,7 +263,7 @@ JavaClass_finalize(JSContext *cx, JSObject *obj)
 static JSBool
 JavaClass_lookupProperty(JSContext *cx, JSObject *obj, jsid id,
                          JSObject **objp, JSProperty **propp
-#if defined JS_THREADSAFE && defined DEBUG
+#if defined JSJ_THREADSAFE && defined DEBUG
                             , const char *file, uintN line
 #endif
                             )
@@ -461,7 +461,7 @@ JavaClass_hasInstance(JSContext *cx, JSObject *obj, jsval candidate_jsval,
     if (!JSVAL_IS_OBJECT(candidate_jsval))
         goto done;
     candidate_obj = JSVAL_TO_OBJECT(candidate_jsval);
-#ifdef JS_THREADSAFE
+#ifdef JSJ_THREADSAFE
     js_class = JS_GetClass(cx, candidate_obj);
 #else
     js_class = JS_GetClass(candidate_obj);

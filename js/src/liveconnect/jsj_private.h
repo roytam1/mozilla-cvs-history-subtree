@@ -44,6 +44,20 @@
 #include "jsapi.h"           /* JavaScript engine API */
 #include "jsjava.h"          /* LiveConnect public API */
 
+/*
+ * OJI provides its own reentrancy-inhibiting monitors in the enter_js()
+ * and exit_js() callbacks, so it does not need redundant thread-safety code.
+ */
+#if defined(OJI) && !defined(JSJ_INHIBIT_THREADSAFE)
+#    define JSJ_INHIBIT_THREADSAFE
+#endif
+
+/* If JS is thread-safe, so is LiveConnect, unless overridden */
+#ifndef JSJ_THREADSAFE
+#    if defined(JS_THREADSAFE) && !defined(JSJ_INHIBIT_THREADSAFE)
+#        define JSJ_THREADSAFE
+#    endif
+#endif
 
 /*************************** Type Declarations ******************************/
 

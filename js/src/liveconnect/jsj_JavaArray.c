@@ -209,7 +209,7 @@ JavaArray_setPropertyById(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 static JSBool
 JavaArray_lookupProperty(JSContext *cx, JSObject *obj, jsid id,
                          JSObject **objp, JSProperty **propp
-#if defined JS_THREADSAFE && defined DEBUG
+#if defined JSJ_THREADSAFE && defined DEBUG
                             , const char *file, uintN line
 #endif
                             )
