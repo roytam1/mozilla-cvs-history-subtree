@@ -479,10 +479,10 @@ NS_IMETHODIMP nsView :: SynchWidgetSizePosition()
       gfx_dimension height = mBounds.height;
 
       nsRect bounds;
-      mWindow->GetBounds(bounds);
+      mWindow->GetBounds(&bounds.x, &bounds.y, &bounds.width, &bounds.height);
 
       if (bounds.width != width || bounds.height != bounds.height) {
-        printf("%d) Resize(%d,%d)\n", this, width, height);
+        printf("%p) Resize(%f,%f)\n", this, width, height);
         mWindow->Resize(width,height, PR_TRUE);
       }
 
@@ -494,17 +494,17 @@ NS_IMETHODIMP nsView :: SynchWidgetSizePosition()
       gfx_coord parx = 0, pary = 0;
       nsCOMPtr<nsIWindow> pwidget;
 
-      GetOffsetFromWidget(&parx, &pary, pwidget);
+      GetOffsetFromWidget(&parx, &pary, getter_AddRefs(pwidget));
       pwidget = nsnull;
 
       gfx_coord x = mBounds.x + parx;
       gfx_coord y = mBounds.y + pary;
 
       nsRect bounds;
-      mWindow->GetBounds(bounds);
+      mWindow->GetBounds(&bounds.x, &bounds.y, &bounds.width, &bounds.height);
       
       if (bounds.x != x || bounds.y != y) {
-         printf("%d) Move(%d,%d)\n", this, x, y);
+         printf("%p) Move(%f,%f)\n", this, x, y);
          mWindow->Move(x,y);
       }
 
@@ -576,7 +576,6 @@ NS_IMETHODIMP nsView :: SetDimensions(gfx_coord width, gfx_coord height, PRBool 
 
     mWindow->Resize(width, height, aPaint);
 
-    NS_RELEASE(dx);
   }
 
   return NS_OK;
@@ -908,6 +907,7 @@ NS_IMETHODIMP nsView :: CreateWidget(const char *contractid)
 {
   nsresult rv;
   mWindow = do_CreateInstance(contractid, &rv);
+  mWindow->SetClientData((void*)this);
   if (NS_SUCCEEDED(rv));
   {
     nsCOMPtr<nsIWindow> parent;
@@ -931,8 +931,6 @@ NS_IMETHODIMP nsView :: CreateWidget(const char *contractid)
 
   GetVisibility(vis);
   SetVisibility(vis);
-
-  NS_RELEASE(dx);
 
   return NS_OK;
 }
@@ -964,21 +962,6 @@ NS_IMETHODIMP nsView::HasWidget(PRBool *aHasWidget) const
 	return NS_OK;
 }
 
-//
-// internal window creation functions
-//
-nsresult nsView :: LoadWidget(const nsCID &aClassIID)
-{
-  nsresult rv = nsComponentManager::CreateInstance(aClassIID, nsnull, NS_GET_IID(nsIWindow), (void**)&mWindow);
-
-  if (NS_OK == rv) {
-    // Set the widget's client data
-    mWindow->SetClientData((void*)this);
-  }
-
-  return rv;
-}
-
 NS_IMETHODIMP nsView::List(FILE* out, PRInt32 aIndent) const
 {
   PRInt32 i;
@@ -992,13 +975,13 @@ NS_IMETHODIMP nsView::List(FILE* out, PRInt32 aIndent) const
 
     mWindow->GetClientBounds(windowBounds);
 
-    mWindow->GetBounds(nonclientBounds);
+    mWindow->GetBounds(&nonclientBounds.x, &nonclientBounds.y, &nonclientBounds.width, &nonclientBounds.height);
 
     nsrefcnt widgetRefCnt = mWindow->AddRef() - 1;
 
     mWindow->Release();
 
-    fprintf(out, "(widget=%p[%d] pos={%d,%d,%d,%d}) ",
+    fprintf(out, "(widget=%p[%d] pos={%f,%f,%f,%f}) ",
             mWindow, widgetRefCnt,
             nonclientBounds.x, nonclientBounds.y,
             windowBounds.width, windowBounds.height);
@@ -1006,7 +989,7 @@ NS_IMETHODIMP nsView::List(FILE* out, PRInt32 aIndent) const
 #endif
   nsRect brect;
   GetBounds(brect);
-  fprintf(out, "{%d,%d,%d,%d}",
+  fprintf(out, "{%f,%f,%f,%f}",
           brect.x, brect.y, brect.width, brect.height);
   PRBool  hasTransparency;
   HasTransparency(hasTransparency);
@@ -1068,9 +1051,9 @@ NS_IMETHODIMP nsView :: GetOffsetFromWidget(gfx_coord *aDx, gfx_coord *aDy, nsIW
   }
 
   
-  if (*nsnull == aWidget) {
-       // The root view doesn't have a widget
-       // but maybe the view manager does.
+  if (!*aWidget) {
+    // The root view doesn't have a widget
+    // but maybe the view manager does.
     nsCOMPtr<nsIViewManager> vm;
     GetViewManager(*getter_AddRefs(vm));
     vm->GetWidget(aWidget);

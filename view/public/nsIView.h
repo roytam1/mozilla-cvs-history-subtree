@@ -406,7 +406,7 @@ public:
    * @param aDy out parameter for y offset
    * @return widget (if there is one) closest to view
    */
-  NS_IMETHOD  GetOffsetFromWidget(gfx_coord *aDx, gfx_coord *aDy, nsIWindow *aWindow) = 0;
+  NS_IMETHOD  GetOffsetFromWidget(gfx_coord *aDx, gfx_coord *aDy, nsIWindow **aWindow) = 0;
 
   /**
    * Gets the dirty region associated with this view. Used by the view
