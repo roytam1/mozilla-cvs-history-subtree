@@ -389,8 +389,8 @@ txStylesheet* TX_CompileStylesheet(nsIDOMNode* aNode)
     nsCAutoString baseURI;
     uri->GetSpec(baseURI);
 
-    txStylesheetCompiler compiler(NS_STATIC_CAST(const nsAString&,
-                                                 NS_ConvertUTF8toUCS2(baseURI)));
+    NS_ConvertUTF8toUCS2 base(baseURI);
+    txStylesheetCompiler compiler(base);
 
     handleNode(document, compiler);
     compiler.doneLoading();
