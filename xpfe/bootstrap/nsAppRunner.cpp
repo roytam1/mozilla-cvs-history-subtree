@@ -65,7 +65,7 @@
 #include "nsIWindowWatcher.h"
 #include "nsProcess.h"
 
-#include "..\..\xpinstall\cleanup\InstallCleanupDefines.h"
+#include "InstallCleanupDefines.h"
 
 // Interfaces Needed
 #include "nsIXULWindow.h"
