@@ -25,7 +25,11 @@ function ThreadPaneOnClick(event)
     // we are already handling marking as read and flagging
     // in nsMsgDBView.cpp
     // so all we need to worry about here is double clicks
-	if (event.detail == 2) {
+    //
+    // we get in here for clicks on the "outlinercol" (headers)
+    // and the "scrollbarbutton" (scrollbar buttons)
+    // we don't want those events to cause a "double click"
+	if (event.originalTarget.localName == "outlinerbody" && event.detail == 2) {
 		ThreadPaneDoubleClick();
 	}
 }
