@@ -157,13 +157,6 @@ mozSanitizingHTMLSerializer::Flush(nsAString& aStr)
   return NS_OK;
 }
 
-NS_IMETHODIMP
-mozSanitizingHTMLSerializer::AppendDocumentStart(nsIDOMDocument *aDocument,
-                                                 nsAString& aStr)
-{
-  return NS_OK;
-}
-
 void
 mozSanitizingHTMLSerializer::Write(const nsAString& aString)
 {
@@ -393,9 +386,8 @@ NS_IMETHODIMP
 mozSanitizingHTMLSerializer::SetDocumentCharset(nsAString& aCharset)
 {
   // No idea, if this works - it isn't invoked by |TestOutput|.
-  Write(NS_LITERAL_STRING("\n<meta http-equiv=\"Context-Type\" content=\"text/html; charset=")
-        /* Danger: breaking the line within the string literal, like
-           "foo"\n"bar", breaks win32! */
+  Write(NS_LITERAL_STRING("\n<meta http-equiv=\"Context-Type\" "
+                          "content=\"text/html; charset=")
         + aCharset + NS_LITERAL_STRING("\">\n"));
   return NS_OK;
 }
@@ -714,11 +706,6 @@ mozSanitizingHTMLSerializer::IsAllowedAttribute(nsHTMLTag aTag,
 nsresult
 mozSanitizingHTMLSerializer::ParsePrefs(const nsAString& aPref)
 {
-  nsCOMPtr<nsIParserService> parserService;
-  nsresult rv = GetParserService(getter_AddRefs(parserService));
-  if (NS_FAILED(rv))
-    return rv;
-
   char* pref = ToNewCString(aPref);
 #ifdef DEBUG_BenB
   printf("pref: -%s-\n", pref);
@@ -825,7 +812,7 @@ mozSanitizingHTMLSerializer::ParseTagPref(const nsCAutoString& tagpref)
 #ifdef DEBUG_BenB
       printf(" Processing attr -%s-\n", iAttr);
 #endif
-      attr_bag->Set(iAttr, 0);
+      attr_bag->Define(iAttr, 0);
     }
 
     nsIProperties* attr_bag_raw = attr_bag;

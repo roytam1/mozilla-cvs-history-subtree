@@ -1,0 +1,15 @@
+Index: threadPane.js
+===================================================================
+RCS file: /cvsroot/mozilla/mailnews/base/resources/content/threadPane.js,v
+retrieving revision 1.46.2.1
+diff -u -r1.46.2.1 threadPane.js
+--- threadPane.js	10 Apr 2002 03:03:30 -0000	1.46.2.1
++++ threadPane.js	6 May 2002 06:13:37 -0000
+@@ -79,7 +79,6 @@
+ 
+   displayMessageChanged : function(aFolder, aSubject)
+   {
+-    setTitleFromFolder(aFolder, aSubject);
+     gHaveLoadedMessage = true;
+   },
+ 
