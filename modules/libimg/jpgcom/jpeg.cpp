@@ -65,7 +65,11 @@ PR_END_EXTERN_C
 #define MAX_JPEG_MARKER_LENGTH  (((PRUint32)1 << 16) - 1)
 
 int il_debug;
-PRLogModuleInfo *il_log_module = NULL;
+#include "nslog.h"
+
+NS_IMPL_LOG(IMGLIBLog)
+#define PRINTF NS_LOG_PRINTF(IMGLIBLog)
+#define FLUSH  NS_LOG_FLUSH(IMGLIBLog)
 
 /*
  * States that the jpeg decoder might be in
