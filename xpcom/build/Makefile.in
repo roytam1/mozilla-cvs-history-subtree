@@ -56,10 +56,7 @@ SHARED_LIBRARY_LIBS =			 \
 	$(DIST)/lib/libxpcomcomponents_s.a	 \
 	$(DIST)/lib/libxpcomthreads_s.a	 \
 	$(DIST)/lib/libxpcomproxy_s.a	 \
-	$(DIST)/lib/libxptcall.a	 \
-	$(DIST)/lib/libxptinfo.a	 \
-	$(DIST)/lib/libxpt.a		 \
-	$(DIST)/lib/libxptcmd.a		 \
+	$(DIST)/lib/libxpcomxptcmd_s.a	 \
 	$(DIST)/lib/libreg.a		 \
 	$(NULL)
 

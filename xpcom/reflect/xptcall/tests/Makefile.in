@@ -48,8 +48,7 @@ LIBS		= 		\
 
 include $(topsrcdir)/config/rules.mk
 
-# INCLUDES	+= -I$(PUBLIC)/xpcom -I$(PUBLIC)/js -I$(PUBLIC)/xptcall \
-#                -I$(PUBLIC)/xptinfo -I$(PUBLIC)/libxpt -I$(PUBLIC)/raptor
+# INCLUDES	+= -I$(PUBLIC)/xpcom -I$(PUBLIC)/js -I$(PUBLIC)/raptor
 
 #$(PROGS): $(OBJS)
 #	@$(MAKE_OBJDIR)

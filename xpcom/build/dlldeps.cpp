@@ -75,4 +75,6 @@ void XXXNeverCalled()
 #endif
     XPTC_InvokeByIndex(NULL, 0, 0, NULL);
     NS_NewFileSpec(NULL);
+    nsXPTCStubBase* stub = NULL;
+    stub->Stub22();
 }

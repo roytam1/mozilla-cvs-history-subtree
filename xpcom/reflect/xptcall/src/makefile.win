@@ -26,10 +26,8 @@ LIBRARY_NAME = xpcomxptcall_s
 
 DEFINES=-DWIN32_LEAN_AND_MEAN -DEXPORT_XPTC_API
 
-OBJS=					\
-	.\$(OBJDIR)\xptcall.obj	\
-	.\md\win32\$(OBJDIR)\xptcinvoke.obj	\
-	.\md\win32\$(OBJDIR)\xptcstubs.obj	\
+OBJS=                           \
+	.\$(OBJDIR)\xptcall.obj \
 	$(NULL)
 
 EXPORTS =					\

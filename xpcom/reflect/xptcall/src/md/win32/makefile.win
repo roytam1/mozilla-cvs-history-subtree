@@ -29,7 +29,7 @@ LCFLAGS = \
         $(DEFINES) \
         $(NULL)
 
-LIBRARY_NAME = xptcmd
+LIBRARY_NAME = xpcomxptcmd_s
 
 OBJS=					\
 	.\$(OBJDIR)\xptcinvoke.obj	\
@@ -38,4 +38,8 @@ OBJS=					\
 
 include <$(DEPTH)\config\rules.mak>
 
-install:: $(LIBRARY)
+libs:: $(LIBRARY)
+	$(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
+
+clobber::
+        rm -f $(DIST)\lib\$(LIBRARY_NAME).lib

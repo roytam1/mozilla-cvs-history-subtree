@@ -56,6 +56,7 @@ LLIBS =                                \
         $(DIST)\lib\xpcomthreads_s.lib \
         $(DIST)\lib\xpcomxpt_s.lib     \
 	$(DIST)\lib\xpcomxptcall_s.lib \
+	$(DIST)\lib\xpcomxptcmd_s.lib  \
         $(DIST)\lib\xpcomxptinfo_s.lib \
         $(DIST)\lib\xpcomproxy_s.lib   \
 	$(DIST)\lib\libreg32.lib       \

@@ -25,7 +25,7 @@ include $(topsrcdir)/config/config.mk
 
 CFLAGS		+= -DEXPORT_XPTC_API
 
-LIBRARY_NAME	= xptcmd
+LIBRARY_NAME	= xpcomxptcmd_s
 MODULE		= xpcom
 
 CPPSRCS		= \
