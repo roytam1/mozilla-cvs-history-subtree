@@ -21,6 +21,7 @@
  * Designed and implemented by Lou Montulli '94
  * Additions/Changes by Judson Valeski, Gagan Saksena 1997
  */
+
 #include "rosetta.h"
 #include "xp.h"
 #include "netutils.h"
@@ -43,7 +44,7 @@
 #include "netcache.h"
 #include "mkautocf.h"
 #include "secnav.h"
-#include "ssl.h"
+#include HG23929
 #include "jscookie.h"
 #include "prefapi.h"
 #include "libi18n.h"
@@ -144,7 +145,7 @@ typedef struct _HTTPConnection {
     PRFileDesc *sock;           /* socket */
     XP_Bool busy;           /* is the connection in use already? */
     XP_Bool prev_cache;     /* did this connection come from the cache? */
-    XP_Bool secure;         /* is it a secure connection? */
+    HG23298
 } HTTPConnection;
 
 typedef enum {
@@ -452,36 +453,11 @@ PRIVATE int
 net_start_http_connect(ActiveEntry * ce)
 {
     HTTPConData * cd = (HTTPConData *)ce->con_data;
-	Bool use_security=FALSE;
+	HG29898
 	int def_port;
 
 	def_port = DEF_HTTP_PORT;
-	if(ce->protocol == SECURE_HTTP_TYPE_URL)
-	  {
-
-		if(CD_PROXY_SERVER)
-		  {
-			CD_USE_PROXY_TUNNEL = TRUE;
-			CD_PROXY_TUNNEL_SETUP_DONE = FALSE;
-
-			TRACEMSG(("HTTP: Using proxy tunnel"));
-
-			/* put in code to check for using a proxy tunnel
-			 * if we need to use proxy tunnel set the options
-			 * on the next two lines
-			 *
-			 * use_security = TRUE;
-			 * def_port = DEF_HTTPS_PORT;
-			 * 
-			 * @@@@@
-			 */
-		  }
-		else
-		  {
-			use_security = TRUE;
-			def_port = DEF_HTTPS_PORT;
-		  }
-	  }
+	HG22201
 
     /* if proxy_server is non NULL then use the string as a host:port
      * when a proxy server is used a connection is made to the proxy
@@ -498,7 +474,7 @@ net_start_http_connect(ActiveEntry * ce)
 									  "HTTP", 
 									  def_port, 
 									  &cd->connection->sock, 
-									  use_security, 
+									  HG38738 
 									  &CD_TCP_CON_DATA, 
 									  CE_WINDOW_ID, 
 									  &CE_URL_S->error_msg,
@@ -512,7 +488,7 @@ net_start_http_connect(ActiveEntry * ce)
 									  "HTTP", 
 									  def_port, 
 							          &cd->connection->sock, 
-									  use_security,  
+									  HG02873  
 									  &CD_TCP_CON_DATA, 
 									  CE_WINDOW_ID, 
 									  &CE_URL_S->error_msg,
@@ -565,6 +541,7 @@ net_start_http_connect(ActiveEntry * ce)
 				}
 #endif	/* MOZILLA_CLIENT */
 		  }
+		HG93288
 
 		if(CE_STATUS == MK_UNABLE_TO_CONNECT && CD_PROXY_SERVER)
 		  {
@@ -613,10 +590,7 @@ net_finish_http_connect(ActiveEntry * ce)
     int def_port;
 
     def_port = DEF_HTTP_PORT;
-    if(ce->protocol == SECURE_HTTP_TYPE_URL)
-      {
-        def_port = DEF_HTTPS_PORT;
-      }
+    HG92892
 
     /* if proxy_server is non NULL then use the string as a host:port
      * when a proxy server is used a connection is made to the proxy
@@ -647,7 +621,7 @@ net_finish_http_connect(ActiveEntry * ce)
 									  &CE_URL_S->error_msg);
       }
 
-
+	HG21090
     if (CE_STATUS < 0)
       {
 		if(CE_STATUS == MK_UNABLE_TO_LOCATE_HOST 
@@ -768,7 +742,7 @@ net_send_proxy_tunnel_request (ActiveEntry *ce)
 	  }
 
 	StrAllocCat(command, " "VERSION_STRING"\n");
-    
+    HG20092
 	/*
 	 * Check if proxy is requiring authorization.
 	 * If NULL, not necessary, or the proxy will return 407 to
@@ -802,7 +776,7 @@ net_send_proxy_tunnel_request (ActiveEntry *ce)
 
 	TRACEMSG(("Tx: %s", command));
 
-	SSL_SetSockPeerID(cd->connection->sock, command);
+	HG82300
     CE_STATUS = NET_HTTPNetWrite(cd->connection->sock, command, PL_strlen(command));
 
 	PR_Free(command);
@@ -1021,6 +995,7 @@ net_build_http_request (URL_Struct * URL_s,
 	 */
 	switch(URL_s->method)
 	  {
+		HG29398
 		case URL_MKDIR_METHOD:
 #define MKDIR_WORD "MKDIR "
         	BlockAllocCopy(*command, MKDIR_WORD, 5);
@@ -1572,11 +1547,11 @@ net_send_http_request (ActiveEntry *ce)
 		|| CE_URL_S->method == URL_PUT_METHOD) {
         CD_POSTING = YES;
 #ifdef MOZILLA_CLIENT
-		SECNAV_Posting(cd->connection->sock);
+		HG92871
 #endif /* MOZILLA_CLIENT */
 	} else if (CE_URL_S->method == URL_HEAD_METHOD) {
 #ifdef MOZILLA_CLIENT
-		SECNAV_HTTPHead(cd->connection->sock);
+		HG82772
 #endif /* MOZILLA_CLIENT */
 	}
 	
@@ -1718,7 +1693,7 @@ net_http_send_post_data (ActiveEntry *ce)
          which is the current file being uploaded. */      
       add_crlf = CE_URL_S->add_crlf[n];
     }
-
+	HG83273
     /* returns 0 on done and negative on error
      * positive if it needs to continue.
      */
@@ -1841,7 +1816,7 @@ net_parse_http_mime_headers (ActiveEntry *ce)
 			 *
 			 * now we need to give the file descriptor
 			 * to the xxx library and let it initiate
-			 * a secure connection
+			 * a connection
 			 * after that we need to send a normal
 			 * http request
 			 *
@@ -2013,48 +1988,10 @@ net_parse_first_http_line (ActiveEntry *ce)
 		  }
 	  }
 
-	/* this is where kipp says that I can finally query
-     * for the security data.  We can't do it after the
-	 * connect since the handshake isn't done yet...
-	 */
-    /* clear existing data
-     */
-    PR_FREEIF(CE_URL_S->sec_info);
-    ce->URL_s->sec_info = SECNAV_SSLSocketStatus(cd->connection->sock,
-                                                 &ce->URL_s->security_on);
+	HG21899
 
 #ifdef MOZILLA_CLIENT
-	if ( ce->URL_s->redirect_sec_info &&
-		( ! (CD_USE_PROXY_TUNNEL && !CD_PROXY_TUNNEL_SETUP_DONE) ) ) {
-		/* don't do the redirect check when talking to the proxy,
-		 * wait for it to come through here a second time, when
-		 * we are really using xxx to talk to the real server.
-		 */
-
-		PRBool compare;
-		
-		compare = SECNAV_CompareCertsForRedirection(ce->URL_s->sec_info,
-                                                    ce->URL_s->redirect_sec_info);
-
-		/* now that we are done with the redirecting info destroy it */
-        PR_Free(ce->URL_s->redirect_sec_info);
-        ce->URL_s->redirect_sec_info = NULL;
-		
-		if ( compare != PR_TRUE ) {
-			/* certs are different */
-		
-			do_redirect = (Bool)SECNAV_SecurityDialog(CE_WINDOW_ID, 
-										SD_REDIRECTION_TO_SECURE_SITE);
-			if ( !do_redirect ) {
-				/* stop connection here!! */
-				CE_URL_S->error_msg = 0; /* XXX - is this right? */
-
-				/* return TCP error
-				 */
-				return MK_TCP_READ_ERROR;
-			}
-		}
-	}
+	HG19088
 #endif /* MOZILLA_CLIENT */
 	
 	/* CE_STATUS greater than 0 
@@ -2326,16 +2263,14 @@ net_parse_first_http_line (ActiveEntry *ce)
                          * don't do if this is coming from history
                          * don't do this if about to redirect
                          */
-                        if(CE_URL_S->security_on
+                        if(HG82773
                             && (CE_FORMAT_OUT == FO_CACHE_AND_PRESENT 
 								|| CE_FORMAT_OUT == FO_PRESENT)
                             && !CE_URL_S->history_num)
                           {
                             History_entry * h = SHIST_GetCurrent(&CE_WINDOW_ID->hist);
                     
-                            if(!h || !h->security_on)
-                                SECNAV_SecurityDialog(CE_WINDOW_ID, 
-													  SD_ENTERING_SECURE_SPACE);
+                            HG03903
                           }
 #endif /* MOZILLA_CLIENT */
 
@@ -2697,20 +2632,8 @@ net_setup_http_stream(ActiveEntry * ce)
 		} /* End URL_s->dontAllowDiffHostRedirect */
 
         if(CE_FORMAT_OUT == FO_CACHE_AND_PRESENT) {
-			if(NET_IsURLSecure(CE_URL_S->address)) { /* current URL is secure*/
-				if(NET_IsURLSecure(CE_URL_S->redirecting_url)) {
-					/* new URL is secure */
-					/* save the cert of the guy doing the redirect */
-					ce->URL_s->redirect_sec_info =
-                        SECNAV_CopySSLSocketStatus(ce->URL_s->sec_info);
-                        
-				} else { /* new URL is not secure */
-					/* ask the user to confirm */
-					do_redirect = (Bool)SECNAV_SecurityDialog(CE_WINDOW_ID, 
-													SD_REDIRECTION_TO_INSECURE_DOC);
-				}
+			HG10877
 			}
-          }
 
         /* OK, now we've got the redirection URL stored
          * in redirecting_url.
@@ -2764,39 +2687,7 @@ net_setup_http_stream(ActiveEntry * ce)
 	  }
 
 #ifdef MOZILLA_CLIENT
-    /* check to see if we just now entered a secure space
-     *
-     * don't do if this is coming from history
-     * don't do this if about to redirect
-     */
-    if(CE_URL_S->security_on
-		&& (CE_FORMAT_OUT == FO_CACHE_AND_PRESENT || CE_FORMAT_OUT == FO_PRESENT)
-        && !CE_URL_S->history_num)
-      {
-        History_entry * h = SHIST_GetCurrent(&CE_WINDOW_ID->hist);
-		XP_Bool warn = FALSE;
-		
-		if (h == NULL) {
-			/* Deal with frames.  If the window doesn't have history,
-			 * then it is a new window or a new frame cell.
-			 */
-			if ( ce->window_id->grid_parent != NULL ) {
-				h = SHIST_GetCurrent(&ce->window_id->grid_parent->hist);
-				if ( !h->security_on ) {
-					/* parent frame is not secure */
-					warn = TRUE;
-				}
-			} else {
-				/* no parent frame - this is a top level window */
-				warn = TRUE;
-			}
-		} else if ( !h->security_on ) {
-			warn = TRUE;
-		}
-		if ( warn ) {
-			SECNAV_SecurityDialog(CE_WINDOW_ID, SD_ENTERING_SECURE_SPACE);
-		}
-      }
+     HG22087
 #endif /* MOZILLA_CLIENT */
 
     /* set a default content type if one wasn't given 
@@ -3220,7 +3111,7 @@ net_HTTPLoad (ActiveEntry * ce)
 {
     /* get memory for Connection Data */
     HTTPConData * cd = PR_NEW(HTTPConData);
-	XP_Bool url_is_secure = FALSE;
+ 	HG21092
 	char *use_host;
 
     ce->con_data = cd;
@@ -3264,8 +3155,7 @@ net_HTTPLoad (ActiveEntry * ce)
 	else
 	  {
 		use_host = NET_ParseURL(ce->URL_s->address, GET_HOST_PART);
-		if(!PL_strncasecmp(ce->URL_s->address, "https:", 6))
-			url_is_secure = TRUE;
+ 		HG09309
 	  }
 
 	if(!use_host)
@@ -3335,12 +3225,10 @@ net_HTTPLoad (ActiveEntry * ce)
                   != NULL)
               {
                 /* if the hostnames match up exactly 
-			     * and security matches up.
 			     * and the connection
                  * is not busy at the moment then reuse this connection.
                  */
-                if(!PL_strcmp(tmp_con->hostname, use_host)
-                   && url_is_secure == tmp_con->secure
+                if(HG29802
                    && !tmp_con->busy)
                   {
                     cd->connection = tmp_con;
@@ -3400,7 +3288,7 @@ net_HTTPLoad (ActiveEntry * ce)
   
         StrAllocCopy(cd->connection->hostname, use_host);
   
-        cd->connection->secure = url_is_secure;
+        HG93882
   
         cd->connection->prev_cache = FALSE;  /* this wasn't from the cache */
   
@@ -3874,8 +3762,7 @@ NET_InitHTTPProtocol(void)
 	http_proto_impl.cleanup = net_CleanupHTTP;
 
 	NET_RegisterProtocolImplementation(&http_proto_impl, HTTP_TYPE_URL);
-	NET_RegisterProtocolImplementation(&http_proto_impl, SECURE_HTTP_TYPE_URL);
-
+	HG93898
 }
 
 #ifdef PROFILE

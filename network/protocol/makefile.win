@@ -38,6 +38,17 @@ DIRS= \
 	js \
 	marimba \
 !endif
+!ifdef MOZ_MAIL_NEWS 
+	imap4 \
+	pop3 \
+	smtp \
+	nntp \
+	callback \
+	mailbox \
+!endif
+!ifdef MOZ_LDAP
+	ldap \
+!endif
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak> 

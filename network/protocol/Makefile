@@ -34,5 +34,20 @@ DIRS += \
 	$(NULL)
 endif
 
+ifdef MOZ_LDAP
+DIRS += LDAP
+endif
+
+ifdef MOZ_MAIL_NEWS
+DIRS += \
+	callback \
+	mailbox \
+	imap4 \
+	smtp \
+	nntp \
+	pop3 \
+	$(NULL)
+endif
+
 include $(DEPTH)/config/rules.mk
 
