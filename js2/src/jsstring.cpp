@@ -123,7 +123,7 @@ static JSValue String_split(Context *cx, const JSValue& thisValue, JSValue *argv
     if (limitV.isUndefined())
         lim = toUInt32(two32minus1);
     else
-        lim = toUInt32(limitV.toUInt32(cx).f64);
+        lim = (uint32)(limitV.toUInt32(cx).f64);
 
     uint32 s = S.string->size();
     uint32 p = 0;
@@ -197,7 +197,7 @@ static JSValue String_charAt(Context *cx, const JSValue& thisValue, JSValue *arg
 
     uint32 pos = 0;
     if (argc > 0)
-        pos = toUInt32(argv[0].toInt32(cx).f64);
+        pos = (uint32)(argv[0].toInt32(cx).f64);
 
     if ((pos < 0) || (pos >= str->size()))
         return JSValue(new String());       // have an empty string kValue somewhere?
@@ -213,7 +213,7 @@ static JSValue String_charCodeAt(Context *cx, const JSValue& thisValue, JSValue 
 
     uint32 pos = 0;
     if (argc > 0)
-        pos = toUInt32(argv[0].toInt32(cx).f64);
+        pos = (uint32)(argv[0].toInt32(cx).f64);
 
     if ((pos < 0) || (pos >= str->size()))
         return kNaNValue;

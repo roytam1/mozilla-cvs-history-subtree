@@ -234,7 +234,6 @@ void JSObject::defineGetterMethod(Context *cx, const String &name, AttributeStmt
 }
 void JSObject::defineSetterMethod(Context *cx, const String &name, AttributeStmtNode *attr, JSFunction *f)
 {
-    JSType *type = Object_Type; // XXX should it be the 0'th argument type?
     NamespaceList *names = cx->buildNamespaceList(attr);
     PropertyIterator i;
     if (hasProperty(name, names, Read, &i)) {
@@ -445,7 +444,7 @@ void JSArrayInstance::getProperty(Context *cx, const String &name, NamespaceList
 void JSArrayInstance::setProperty(Context *cx, const String &name, NamespaceList *names, const JSValue &v)
 {
     if (name.compare(widenCString("length")) == 0) {
-        uint32 newLength = toUInt32(v.toUInt32(cx).f64);
+        uint32 newLength = (uint32)(v.toUInt32(cx).f64);
         if (newLength != v.toNumber(cx).f64)
             cx->reportError(Exception::rangeError, "out of range value for length"); 
         
@@ -467,7 +466,7 @@ void JSArrayInstance::setProperty(Context *cx, const String &name, NamespaceList
         JSValue v_int = v.toUInt32(cx);
         if ((v_int.f64 != two32minus1) && (v_int.toString(cx).string->compare(name) == 0)) {
             if (v_int.f64 >= mLength)
-                mLength = toUInt32(v_int.f64) + 1;
+                mLength = (uint32)(v_int.f64) + 1;
         }
     }
 }
@@ -1304,7 +1303,7 @@ void Context::setAttributeValue(AttributeStmtNode *s)
     attributeValue->getProperty(this, widenCString("trueFlags"), (NamespaceList *)(NULL));
     JSValue flags = popValue();
     ASSERT(flags.isNumber());
-    s->attributeFlags = toUInt32(flags.f64);
+    s->attributeFlags = (uint32)(flags.f64);
     s->attributeValue = attributeValue;
 }
 

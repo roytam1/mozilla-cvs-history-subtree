@@ -1283,22 +1283,22 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     a1.object->getProperty(this, widenCString("trueFlags"), NULL);
                     JSValue f = popValue();
                     ASSERT(f.isNumber());
-                    uint32 a1TrueFlags = toUInt32(f.f64);
+                    uint32 a1TrueFlags = (uint32)(f.f64);
 
                     a1.object->getProperty(this, widenCString("falseFlags"), NULL);
                     f = popValue();
                     ASSERT(f.isNumber());
-                    uint32 a1FalseFlags = toUInt32(f.f64);
+                    uint32 a1FalseFlags = (uint32)(f.f64);
 
                     a2.object->getProperty(this, widenCString("trueFlags"), NULL);
                     f = popValue();
                     ASSERT(f.isNumber());
-                    uint32 a2TrueFlags = toUInt32(f.f64);
+                    uint32 a2TrueFlags = (uint32)(f.f64);
 
                     a2.object->getProperty(this, widenCString("falseFlags"), NULL);
                     f = popValue();
                     ASSERT(f.isNumber());
-                    uint32 a2FalseFlags = toUInt32(f.f64);
+                    uint32 a2FalseFlags = (uint32)(f.f64);
 
                     if ((a1TrueFlags & a2FalseFlags) != 0)
                         reportError(Exception::semanticError, "Mismatched attributes"); // XXX could supply more detail
@@ -1500,14 +1500,14 @@ static JSValue integerShiftLeft(Context *cx, const JSValue& /*thisValue*/, JSVal
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
-    return JSValue((float64)( (int32)(r1.f64) << ( toUInt32(r2.f64) & 0x1F)) );
+    return JSValue((float64)( (int32)(r1.f64) << ( (uint32)(r2.f64) & 0x1F)) );
 }
 
 static JSValue objectShiftLeft(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
-    return JSValue((float64)( (int32)(r1.toInt32(cx).f64) << ( toUInt32(r2.toUInt32(cx).f64) & 0x1F)) );
+    return JSValue((float64)( (int32)(r1.toInt32(cx).f64) << ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
 }
 
 
@@ -1516,14 +1516,14 @@ static JSValue integerShiftRight(Context *cx, const JSValue& /*thisValue*/, JSVa
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
-    return JSValue((float64) ( (int32)(r1.f64) >> ( toUInt32(r2.f64) & 0x1F)) );
+    return JSValue((float64) ( (int32)(r1.f64) >> ( (uint32)(r2.f64) & 0x1F)) );
 }
 
 static JSValue objectShiftRight(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
-    return JSValue((float64) ( (int32)(r1.toInt32(cx).f64) >> ( toUInt32(r2.toUInt32(cx).f64) & 0x1F)) );
+    return JSValue((float64) ( (int32)(r1.toInt32(cx).f64) >> ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
 }
 
 
@@ -1532,14 +1532,14 @@ static JSValue integerUShiftRight(Context *cx, const JSValue& /*thisValue*/, JSV
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
-    return JSValue((float64) ( (uint32)(r1.f64) >> ( toUInt32(r2.f64) & 0x1F)) );
+    return JSValue((float64) ( (uint32)(r1.f64) >> ( (uint32)(r2.f64) & 0x1F)) );
 }
 
 static JSValue objectUShiftRight(Context *cx, const JSValue& /*thisValue*/, JSValue *argv, uint32 /*argc*/)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
-    return JSValue((float64) ( (uint32)(r1.toUInt32(cx).f64) >> ( toUInt32(r2.toUInt32(cx).f64) & 0x1F)) );
+    return JSValue((float64) ( (uint32)(r1.toUInt32(cx).f64) >> ( (uint32)(r2.toUInt32(cx).f64) & 0x1F)) );
 }
 
 

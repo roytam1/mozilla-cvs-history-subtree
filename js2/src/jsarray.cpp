@@ -63,7 +63,7 @@ JSValue Array_Constructor(Context *cx, const JSValue& thisValue, JSValue *argv, 
     JSArrayInstance *arrInst = (JSArrayInstance *)thisObj;
     if (argc > 0) {
         if (argc == 1) {
-            arrInst->mLength = toUInt32(argv[0].toNumber(cx).f64);
+            arrInst->mLength = (uint32)(argv[0].toNumber(cx).f64);
         }
         else {
             arrInst->mLength = argc;
@@ -211,7 +211,7 @@ static JSValue Array_join(Context *cx, const JSValue& thisValue, JSValue *argv, 
 
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
-    uint32 length = toUInt32(result.toUInt32(cx).f64);    
+    uint32 length = (uint32)(result.toUInt32(cx).f64);    
 
     const String *separator;
     if (argc == 0)
@@ -246,7 +246,7 @@ static JSValue Array_reverse(Context *cx, const JSValue& thisValue, JSValue * /*
 
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
-    uint32 length = toUInt32(result.toUInt32(cx).f64);    
+    uint32 length = (uint32)(result.toUInt32(cx).f64);    
 
     uint32 halfway = length / 2;
 
@@ -293,7 +293,7 @@ static JSValue Array_shift(Context *cx, const JSValue& thisValue, JSValue * /*ar
 
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
-    uint32 length = toUInt32(result.toUInt32(cx).f64);    
+    uint32 length = (uint32)(result.toUInt32(cx).f64);    
 
     if (length == 0) {
         thisObj->setProperty(cx, widenCString("length"), CURRENT_ATTR, result);
@@ -333,7 +333,7 @@ static JSValue Array_slice(Context *cx, const JSValue& thisValue, JSValue *argv,
 
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
-    uint32 length = toUInt32(result.toUInt32(cx).f64);    
+    uint32 length = (uint32)(result.toUInt32(cx).f64);    
 
     int32 start, end;
     if (argc < 1) 
@@ -396,7 +396,7 @@ static JSValue Array_splice(Context *cx, const JSValue& thisValue, JSValue *argv
         JSObject *thisObj = thisValue.object;
         thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
         JSValue result = cx->popValue();
-        uint32 length = toUInt32(result.toUInt32(cx).f64);    
+        uint32 length = (uint32)(result.toUInt32(cx).f64);    
 
         JSArrayInstance *A = (JSArrayInstance *)Array_Type->newInstance(cx);
 
@@ -481,7 +481,7 @@ static JSValue Array_unshift(Context *cx, const JSValue& thisValue, JSValue *arg
     JSObject *thisObj = thisValue.object;
     thisObj->getProperty(cx, widenCString("length"), CURRENT_ATTR);
     JSValue result = cx->popValue();
-    uint32 length = toUInt32(result.toUInt32(cx).f64);
+    uint32 length = (uint32)(result.toUInt32(cx).f64);
     uint32 k;
 
     for (k = length; k > 0; k--) {
