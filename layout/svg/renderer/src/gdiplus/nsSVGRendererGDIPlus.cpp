@@ -52,13 +52,18 @@ using namespace Gdiplus;
 #include "nsSVGGDIPlusCanvas.h"
 #include "nsSVGGDIPlusRegion.h"
 
+void NS_InitSVGGDIPlusGlyphMetricsGlobals();
+void NS_FreeSVGGDIPlusGlyphMetricsGlobals();
+
+////////////////////////////////////////////////////////////////////////
 class nsSVGRendererGDIPlus : public nsISVGRenderer
 {
 protected:
   friend nsresult NS_NewSVGRendererGDIPlus(nsISVGRenderer** aResult);
-
+  friend void NS_InitSVGRendererGDIPlusGlobals();
+  friend void NS_FreeSVGRendererGDIPlusGlobals();
+  
   nsSVGRendererGDIPlus();
-  virtual ~nsSVGRendererGDIPlus();
 
 public:
   // nsISupports interface
@@ -66,24 +71,28 @@ public:
 
   // nsISVGRenderer interface
   NS_DECL_NSISVGRENDERER
-
 private:
-  ULONG_PTR gdiplusToken;
-  GdiplusStartupOutput gdiplusStartupOutput;
+  static PRBool sGdiplusStarted;
+  static ULONG_PTR sGdiplusToken;
+  static GdiplusStartupOutput sGdiplusStartupOutput;
+
 };
 
 //----------------------------------------------------------------------
-// construction/destruction
+// implementation:
+
+PRBool nsSVGRendererGDIPlus::sGdiplusStarted = PR_FALSE;
+ULONG_PTR nsSVGRendererGDIPlus::sGdiplusToken;
+GdiplusStartupOutput nsSVGRendererGDIPlus::sGdiplusStartupOutput;
+
 
 nsSVGRendererGDIPlus::nsSVGRendererGDIPlus()
 {
-  GdiplusStartupInput gdiplusStartupInput;
-  GdiplusStartup(&gdiplusToken, &gdiplusStartupInput,&gdiplusStartupOutput);
-}
-
-nsSVGRendererGDIPlus::~nsSVGRendererGDIPlus()
-{
-  GdiplusShutdown(gdiplusToken);
+  if (!sGdiplusStarted) {
+    GdiplusStartupInput gdiplusStartupInput;
+    GdiplusStartup(&sGdiplusToken, &gdiplusStartupInput,&sGdiplusStartupOutput);
+    sGdiplusStarted = PR_TRUE;
+  }
 }
 
 nsresult
@@ -100,6 +109,22 @@ NS_NewSVGRendererGDIPlus(nsISVGRenderer** aResult)
   NS_ADDREF(result);
   *aResult = result;
   return NS_OK;
+}
+
+void NS_InitSVGRendererGDIPlusGlobals()
+{
+  NS_InitSVGGDIPlusGlyphMetricsGlobals();
+  
+  // initialize gdi+ lazily in nsSVGRendererGDIPlus CTOR
+}
+
+void NS_FreeSVGRendererGDIPlusGlobals()
+{
+  NS_FreeSVGGDIPlusGlyphMetricsGlobals();
+  
+  if (nsSVGRendererGDIPlus::sGdiplusStarted) {
+    GdiplusShutdown(nsSVGRendererGDIPlus::sGdiplusToken);
+  }
 }
 
 //----------------------------------------------------------------------

@@ -48,7 +48,6 @@ using namespace Gdiplus;
 #include "nsISVGGlyphMetricsSource.h"
 #include "nsPromiseFlatString.h"
 #include "nsFont.h"
-#include "nsIFontMetrics.h"
 #include "nsIPresContext.h"
 #include "nsDeviceContextWin.h"
 #include "nsISVGGDIPlusGlyphMetrics.h"
@@ -58,6 +57,7 @@ using namespace Gdiplus;
 #include "nsIDOMSVGRect.h"
 #include "nsSVGTypeCIDs.h"
 #include "nsIComponentManager.h"
+#include "nsDataHashtable.h"
 
 ////////////////////////////////////////////////////////////////////////
 // nsWindowsDC helper class
@@ -103,6 +103,8 @@ class nsSVGGDIPlusGlyphMetrics : public nsISVGGDIPlusGlyphMetrics
 protected:
   friend nsresult NS_NewSVGGDIPlusGlyphMetrics(nsISVGRendererGlyphMetrics **result,
                                                nsISVGGlyphMetricsSource *src);
+  friend void NS_InitSVGGDIPlusGlyphMetricsGlobals();
+  friend void NS_FreeSVGGDIPlusGlyphMetricsGlobals();
   nsSVGGDIPlusGlyphMetrics(nsISVGGlyphMetricsSource *src);
   ~nsSVGGDIPlusGlyphMetrics();
 public:
@@ -125,17 +127,22 @@ protected:
   void GetGlobalTransform(Matrix *matrix);
   void PrepareGraphics(Graphics &g);
   float GetPixelScale();
-  
-private:
+
+private:  
   PRBool mRectNeedsUpdate;
   RectF mRect;
   Font *mFont;
   nsCOMPtr<nsISVGGlyphMetricsSource> mSource;
   
+public:
+  static nsDataHashtable<nsStringHashKey,nsDependentString*> sFontAliases;
 };
 
 //----------------------------------------------------------------------
 // implementation:
+
+nsDataHashtable<nsStringHashKey,nsDependentString*>
+nsSVGGDIPlusGlyphMetrics::sFontAliases;
 
 nsSVGGDIPlusGlyphMetrics::nsSVGGDIPlusGlyphMetrics(nsISVGGlyphMetricsSource *src)
     : mRectNeedsUpdate(PR_TRUE), mFont(nsnull), mSource(src)
@@ -156,6 +163,30 @@ NS_NewSVGGDIPlusGlyphMetrics(nsISVGRendererGlyphMetrics **result,
   
   NS_ADDREF(*result);
   return NS_OK;
+}
+
+void NS_InitSVGGDIPlusGlyphMetricsGlobals()
+{
+  NS_ASSERTION(!nsSVGGDIPlusGlyphMetrics::sFontAliases.IsInitialized(),
+               "already initialized");
+  nsSVGGDIPlusGlyphMetrics::sFontAliases.Init(3);
+
+  static NS_NAMED_LITERAL_STRING(arial, "arial");
+  nsSVGGDIPlusGlyphMetrics::sFontAliases.Put(NS_LITERAL_STRING("helvetica"),
+                                             &arial);
+
+  static NS_NAMED_LITERAL_STRING(courier, "courier new");
+  nsSVGGDIPlusGlyphMetrics::sFontAliases.Put(NS_LITERAL_STRING("courier"),
+                                             &courier);
+
+  static NS_NAMED_LITERAL_STRING(times, "times new roman");
+  nsSVGGDIPlusGlyphMetrics::sFontAliases.Put(NS_LITERAL_STRING("times"),
+                                             &times);
+}
+
+void NS_FreeSVGGDIPlusGlyphMetricsGlobals()
+{
+  nsSVGGDIPlusGlyphMetrics::sFontAliases.Clear();
 }
 
 //----------------------------------------------------------------------
@@ -181,7 +212,7 @@ nsSVGGDIPlusGlyphMetrics::GetBaselineOffset(PRUint16 baselineIdentifier, float *
     NS_ERROR("no font");
     return NS_ERROR_FAILURE;
   }
-  NS_ASSERTION(GetFont()->GetUnit()==UnitWorld, "font unit is not in world units");
+  NS_ASSERTION(GetFont()->GetUnit()==UnitPixel, "font unit is not in world units");
 
   switch (baselineIdentifier) {
     case BASELINE_TEXT_BEFORE_EDGE:
@@ -418,6 +449,60 @@ nsSVGGDIPlusGlyphMetrics::GetTextRenderingHint()
   }
 }
 
+// helper function used in
+// nsSVGGDIPlusGlyphMetrics::InitializeFontInfo() to construct a gdi+
+// fontfamily object
+static PRBool FindFontFamily(const nsString& aFamily, PRBool aGeneric, void *aData)
+{
+  PRBool retval = PR_TRUE;
+  
+#ifdef DEBUG
+//   printf("trying to instantiate font %s, generic=%d\n", NS_ConvertUCS2toUTF8(aFamily).get(),
+//          aGeneric);
+#endif
+  
+  FontFamily *family = nsnull;
+  if (!aGeneric)
+    family = new FontFamily(aFamily.get());
+  else {
+    PRUint8 id;
+    nsFont::GetGenericID(aFamily, &id);
+    switch (id) {
+      case kGenericFont_serif:
+        family = FontFamily::GenericSerif()->Clone();
+        break;
+      case kGenericFont_monospace:
+        family = FontFamily::GenericMonospace()->Clone();
+        break;
+      case kGenericFont_sans_serif:
+      default:
+        family = FontFamily::GenericSansSerif()->Clone();
+        break;
+    }
+  }
+
+  if (family->IsAvailable()) {
+    retval = PR_FALSE; // break
+    *(FontFamily**)aData = family;
+  }
+  else {
+    delete family;
+    
+    //try alias if there is one:
+    nsDependentString *alias = nsnull;
+    nsAutoString canonical_name(aFamily);
+    ToLowerCase(canonical_name);
+    nsSVGGDIPlusGlyphMetrics::sFontAliases.Get(canonical_name, &alias);
+    if (alias) {
+      // XXX this might cause a stack-overflow if there are cyclic
+      // aliases in sFontAliases
+      retval = FindFontFamily(nsString(*alias), PR_FALSE, aData);
+    }
+  }
+
+  return retval;
+}
+
 void
 nsSVGGDIPlusGlyphMetrics::InitializeFontInfo()
 {
@@ -429,34 +514,44 @@ nsSVGGDIPlusGlyphMetrics::InitializeFontInfo()
     NS_ERROR("null prescontext");
     return;
   }
+
+  float pxPerTwips;
+  presContext->GetTwipsToPixels(&pxPerTwips);
+  pxPerTwips/=GetPixelScale();
   
-  nsFontHandle fonthandle;
-  {
-    nsFont font;
-    mSource->GetFont(&font);
+  nsFont font;
+  mSource->GetFont(&font);
 
-#ifdef DEBUG
-//    printf("font.name=%s\n", NS_ConvertUCS2toUTF8(font.name).get());
-#endif
+  FontFamily *pFamily = nsnull;
+  font.EnumerateFamilies(FindFontFamily, (void*)&pFamily);
+  NS_ASSERTION(pFamily, "couldn't create family");
 
-    // XXX The size of the font is in device units. Since we are going
-    // to use the font in a logical pixel coordinate system with dev
-    // unit = pixel*scale, we need to devide the size by scale:
-    font.size/=GetPixelScale();
-
-    nsCOMPtr<nsIFontMetrics> metrics;
-
-    presContext->GetMetricsFor(font, getter_AddRefs(metrics));
-    if (!metrics) {
-      NS_ERROR("could not get fontmetrics");
-      return;
-    }
-    
-    metrics->GetFontHandle(fonthandle);
+  int style = FontStyleRegular;
+  if (font.style == NS_FONT_STYLE_ITALIC) style |= FontStyleItalic;
+  if (font.weight % 100 == 0) { // absolute case
+    if (font.weight >= 600) style |= FontStyleBold;
+  }
+  else if (font.weight % 100 < 50) { // relative 'bolder' case
+    style |= FontStyleBold;
   }
 
-  mFont = new Font(nsWindowsDC(presContext), (HFONT)fonthandle);
+  if (font.decorations & NS_FONT_DECORATION_UNDERLINE) style |= FontStyleUnderline;
+  if (font.decorations & NS_FONT_DECORATION_LINE_THROUGH) style |= FontStyleStrikeout;
+  
+  mFont = new Font(pFamily, font.size*pxPerTwips, style, UnitPixel); 
   NS_ASSERTION(mFont->IsAvailable(),"font not available");
+  delete pFamily;
+  pFamily = nsnull;
+  
+#ifdef DEBUG
+//   {
+//     FontFamily fontFamily;
+//     mFont->GetFamily(&fontFamily);
+//     WCHAR familyName[100];
+//     fontFamily.GetFamilyName(familyName);
+//     printf("font loaded: "); printf(NS_ConvertUCS2toUTF8(familyName).get()); printf("\n");
+//   }
+#endif
 }
 
 void

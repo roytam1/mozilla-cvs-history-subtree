@@ -78,7 +78,7 @@ svg {
      correctly when given a relative width/height: */
   display: block;
 
-  font-family: Helvetica;
+  font-family: sans-serif;
 }
 
 svg:not(:root) {

@@ -180,6 +180,10 @@ NS_NewXULTreeBuilder(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 #include "nsSVGTypeCIDs.h"
 #include "nsISVGRenderer.h"
 #include "nsSVGRect.h"
+#ifdef MOZ_SVG_RENDERER_GDIPLUS
+void NS_InitSVGRendererGDIPlusGlobals();
+void NS_FreeSVGRendererGDIPlusGlobals();
+#endif
 #endif
 
 // jst says, ``we need this to avoid holding on to XPConnect past its
@@ -247,6 +251,9 @@ Initialize(nsIModule* aSelf)
 
 #ifdef MOZ_SVG
   nsSVGAtoms::AddRefAtoms();
+#ifdef MOZ_SVG_RENDERER_GDIPLUS
+  NS_InitSVGRendererGDIPlusGlobals();
+#endif
 #endif
 
 #ifdef DEBUG
@@ -310,6 +317,12 @@ Shutdown(nsIModule* aSelf)
 
 #ifdef MOZ_MATHML
   nsMathMLOperators::ReleaseTable();
+#endif
+
+#ifdef MOZ_SVG
+#ifdef MOZ_SVG_RENDERER_GDIPLUS
+  NS_FreeSVGRendererGDIPlusGlobals();
+#endif
 #endif
 
   nsCSSFrameConstructor::ReleaseGlobals();
