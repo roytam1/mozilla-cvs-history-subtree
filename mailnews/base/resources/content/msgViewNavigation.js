@@ -96,7 +96,7 @@ function ScrollToFirstNewMessage()
 			var topElement = document.getElementById(topLevelURI);
 			if(topElement)
 			{
-				msgNavigationService.OpenTreeitemAndDescendants(topElement);
+//				msgNavigationService.OpenTreeitemAndDescendants(topElement);
 			}
 
 		}

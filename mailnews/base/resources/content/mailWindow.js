@@ -21,7 +21,6 @@
  //This file stores variables common to mail windows
 var messengerContractID        = "@mozilla.org/messenger;1";
 var statusFeedbackContractID   = "@mozilla.org/messenger/statusfeedback;1";
-var messageViewContractID      = "@mozilla.org/messenger/messageview;1";
 var mailSessionContractID      = "@mozilla.org/messenger/services/session;1";
 var secureUIContractID         = "@mozilla.org/secure_browser_ui;1";
 
@@ -32,7 +31,6 @@ var msgWindowContractID		   = "@mozilla.org/messenger/msgwindow;1";
 var messenger;
 var pref;
 var statusFeedback;
-var messageView;
 var msgWindow;
 
 var msgComposeService;
@@ -127,9 +125,6 @@ function CreateMailWindowGlobals()
   }
 
 	window.MsgWindowCommands = new nsMsgWindowCommands();
-	//Create message view object
-	messageView = Components.classes[messageViewContractID].createInstance();
-	messageView = messageView.QueryInterface(Components.interfaces.nsIMessageView);
 
 	//Create message window object
 	msgWindow = Components.classes[msgWindowContractID].createInstance();
@@ -162,7 +157,6 @@ function CreateMailWindowGlobals()
 function InitMsgWindow()
 {
 	msgWindow.statusFeedback = statusFeedback;
-	msgWindow.messageView = messageView;
 	msgWindow.msgHeaderSink = messageHeaderSink;
 	msgWindow.SetDOMWindow(window);
 	mailSession.AddMsgWindow(msgWindow);

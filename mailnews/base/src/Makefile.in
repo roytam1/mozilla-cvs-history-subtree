@@ -52,10 +52,8 @@ CPPSRCS		= \
 		nsMsgFolderCacheElement.cpp \
 		nsMsgFolderCompactor.cpp \
 		nsMsgStatusFeedback.cpp \
-		nsMessageView.cpp \
 		nsMsgWindow.cpp \
 		nsMessengerMigrator.cpp \
-		nsMsgViewNavigationService.cpp \
 		nsMsgServiceProvider.cpp	\
 		nsSubscribeDataSource.cpp	\
 		nsSubscribableServer.cpp \
@@ -87,10 +85,8 @@ EXPORTS		= \
 		nsCopyMessageStreamListener.h \
 		nsMsgCopyService.h \
 		nsMsgStatusFeedback.h \
-		nsMessageView.h \
 		nsMsgWindow.h \
 		nsMessengerMigrator.h \
-		nsMsgViewNavigationService.h \
 		nsMsgServiceProvider.h \
 		nsSubscribeDataSource.h \
 		nsSubscribableServer.h \

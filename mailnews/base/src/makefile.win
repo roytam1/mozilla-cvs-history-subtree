@@ -85,10 +85,8 @@ CPP_OBJS=									\
 	.\$(OBJDIR)\nsMsgNotificationManager.obj \
 	.\$(OBJDIR)\nsMsgCopyService.obj		\
 	.\$(OBJDIR)\nsMsgStatusFeedback.obj		\
-	.\$(OBJDIR)\nsMessageView.obj		\
 	.\$(OBJDIR)\nsMsgWindow.obj \
 	.\$(OBJDIR)\nsMessengerMigrator.obj \
-	.\$(OBJDIR)\nsMsgViewNavigationService.obj \
 	.\$(OBJDIR)\nsMsgServiceProvider.obj	\
 	.\$(OBJDIR)\nsSubscribeDataSource.obj	\
 	.\$(OBJDIR)\nsSubscribableServer.obj \

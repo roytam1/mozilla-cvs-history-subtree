@@ -266,17 +266,6 @@
   {0x8a, 0xc5, 0x0, 0x60, 0xb0, 0xfc, 0x4, 0xd2} }
 
 //
-//nsMessageView
-//
-#define NS_MESSAGEVIEW_CONTRACTID \
-	"@mozilla.org/messenger/messageview;1"
-
-/* 4E03B3A6-624A-11d3-8AD4-0060B0FC04D2*/
-#define NS_MESSAGEVIEW_CID \
-{ 0x4e03b3a6, 0x624a, 0x11d3, \
-  { 0x8a, 0xd4, 0x0, 0x60, 0xb0, 0xfc, 0x4, 0xd2}}
-
-//
 //nsMsgWindow
 //
 #define NS_MSGWINDOW_CONTRACTID \
@@ -305,19 +294,6 @@
 
 #define NS_MESSAGE_IMAP_CONTRACTID \
   NS_RDF_RESOURCE_FACTORY_CONTRACTID_PREFIX "imap_message"
-
-
-
-//
-//nsMsgViewNavigationService
-//
-#define NS_MSGVIEWNAVIGATIONSERVICE_CONTRACTID \
-	"@mozilla.org/messenger/msgviewnavigationservice;1"
-
-/* 60D34FB4-D031-11d3-8B2E-0060B0FC04D2*/
-#define NS_MSGVIEWNAVIGATIONSERVICE_CID \
-{ 0x60d34fb4, 0xd031, 0x11d3, \
-  { 0x8b, 0x2e, 0x0, 0x60, 0xb0, 0xfc, 0x4, 0xd2}}
 
 //
 // Print Engine...

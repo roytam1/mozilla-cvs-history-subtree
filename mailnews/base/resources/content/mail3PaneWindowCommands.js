@@ -152,8 +152,8 @@ var ThreadPaneController =
 				if ( threadTree )
 				{
 					//if we're threaded we need to expand everything before selecting all
-					if(messageView.showThreads)
-						ExpandOrCollapseThreads(true);
+//					if(messageView.showThreads)
+//						ExpandOrCollapseThreads(true);
 					threadTree.selectAll();
 					if ( threadTree.selectedItems && threadTree.selectedItems.length != 1 )
 						ClearMessagePane();
@@ -318,7 +318,9 @@ var DefaultController =
 				break;
 			case "cmd_expandAllThreads":
 			case "cmd_collapseAllThreads":
-				return messageView.showThreads;
+      // ### fix me
+        return false;
+//				return messageView.showThreads;
 				break;
 			case "cmd_nextFlaggedMsg":
 			case "cmd_previousFlaggedMsg":
@@ -439,7 +441,7 @@ var DefaultController =
 				MsgViewAllMsgs();
 				break;
 			case "cmd_viewUnreadMsgs":
-				MsgViewUnreadMsg();
+				SwitchView("cmd_viewUnreadMsgs");
 				break;
 			case "cmd_undo":
 				messenger.Undo(msgWindow);
@@ -899,13 +901,13 @@ function MsgViewAllMsgs()
 {
 	//dump("MsgViewAllMsgs\n");
 
-	if(messageView)
+	if(gDBView)
 	{
-		messageView.viewType = nsMsgViewType.eShowAll;
+		gDBView.viewType = nsMsgViewType.eShowAllThreads;
 
         var folder = GetSelectedFolder();
         if(folder) {
-            folder.setAttribute("viewType", messageView.viewType);
+            folder.setAttribute("viewType", nsMsgViewType.eShowAllThreads);
         }
 	}
 	RefreshThreadTreeView();
@@ -915,17 +917,17 @@ function MsgViewUnreadMsg()
 {
 	//dump("MsgViewUnreadMsgs\n");
 
-	if(messageView)
+	SwitchView("cmd_viewUnreadMsgs");
+	if(gDBView)
 	{
-		messageView.viewType = nsMsgViewType.eShowUnread;
+		gDBView.viewType = nsMsgViewType.eShowThreadsWithUnread;
 
         var folder = GetSelectedFolder();
         if(folder) {
-            folder.setAttribute("viewType", messageView.viewType);
+            folder.setAttribute("viewType", nsMsgViewType.eShowThreadsWithUnread);
         }
 	}
 
-	RefreshThreadTreeView();
 }
 
 

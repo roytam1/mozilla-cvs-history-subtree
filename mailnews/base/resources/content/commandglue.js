@@ -299,7 +299,8 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
 
   // now create the db view, which will sort it.
 
-  CreateDBView(newFolder, isThreaded, viewType, sortID, sortDirection);
+  // this will be replaced with CreateDBView when we get rid of the old view type.
+  CreateDBViewWithOldViewType(newFolder, isThreaded, viewType, sortID, sortDirection);
   // that should have initialized gDBView, now re-root the thread pane
   var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
   if (outlinerView)
@@ -316,9 +317,48 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
 
   SetUpToolbarButtons(uri);
 
-  msgNavigationService.EnsureDocumentIsLoaded(document);
-
   UpdateStatusMessageCounts(newFolder);
+}
+
+function SwitchView(command)
+{
+  gDBView = null; // close existing view.
+  var viewFlags = gCurViewFlags;
+  switch(command)
+  {
+    case "cmd_viewUnreadMsgs":
+
+      viewFlags = viewFlags | nsMsgViewFlagsType.kUnreadOnly;
+      CreateDBView(msgWindow.openFolder, true, nsMsgViewType.eShowAllThreads, nsMsgViewFlagsType.kOutlineDisplay, 
+            nsMsgViewSortType.byThread, nsMsgViewSortOrder.ascending);
+    break;
+    case "cmd_viewAllMsgs":
+      viewFlags = viewFlags & ~nsMsgViewFlagsType.kUnreadOnly;
+      CreateDBView(msgWindow.openFolder, true, nsMsgViewType.eShowAllThreads, nsMsgViewFlagsType.kOutlineDisplay, 
+            nsMsgViewSortType.byThread, nsMsgViewSortOrder.ascending);
+    break;
+    case "cmd_viewThreadsWithUnread":
+      CreateDBView(msgWindow.openFolder, true, nsMsgViewType.eShowThreadsWithUnread, nsMsgViewFlagsType.kOutlineDisplay, 
+            nsMsgViewSortType.byThread, nsMsgViewSortOrder.ascending);
+
+    break;
+    case "cmd_viewWatchedThreadsWithUnread":
+      CreateDBView(msgWindow.openFolder, true, nsMsgViewType.eShowWatchedThreadsWithUnread, nsMsgViewFlagsType.kOutlineDisplay, 
+            nsMsgViewSortType.byThread, nsMsgViewSortOrder.ascending);
+   break;
+    case "cmd_viewKilledThreads":
+    break;
+  }
+
+  // that should have initialized gDBView, now re-root the thread pane
+  var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
+  if (outlinerView)
+  {     
+    var outliner = GetThreadOutliner();
+    outliner.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject).view = outlinerView; 
+    dump('set outliner view\n');
+  }
+
 }
 
 function SetSentFolderColumns(isSentFolder)
@@ -510,25 +550,35 @@ var nsMsgViewFlagsType = Components.interfaces.nsMsgViewFlagsType;
 var nsMsgViewCommandType = Components.interfaces.nsMsgViewCommandType;
 
 var gDBView = null;
+var gCurViewFlags;
 
-function CreateDBView(msgFolder, isThreaded, viewType, sortKey, sortDirection)
+function CreateDBViewWithOldViewType(msgFolder, isThreaded, viewType, sortKey, sortDirection)
 {
-    dump("XXX CreateDBView(" + msgFolder + "," + isThreaded + "," + viewType + "," + sortKey + "," + sortDirection + ")\n");
+  var dbViewType = ConvertViewType(viewType);
+  var viewFlags;
+    if (isThreaded) 
+      viewFlags = nsMsgViewFlagsType.kOutlineDisplay;
+    else   
+      viewFlags = nsMsgViewFlagsType.kFlatDisplay;
+  CreateDBView(msgFolder, isThreaded, dbViewType, viewFlags, sortKey, sortDirection);
+}
+
+function CreateDBView(msgFolder, viewType, viewFlags, sortKey, sortDirection)
+{
+    dump("XXX CreateDBView(" + msgFolder + "," + viewType + "," + viewFlags + "," + sortKey + "," + sortDirection + ")\n");
 
     var dbviewContractId = "@mozilla.org/messenger/msgdbview;1?type=";
 
     // eventually, we will not be using nsMsgViewType.eShow*, but for now
     // this will help us mirror the thread pane
-    var dbViewType = ConvertViewType(viewType);
-    switch (dbViewType) {
-        case nsMsgViewType.eShowUnread:
+    switch (viewType) {
+        case nsMsgViewType.eShowThreadsWithUnread:
             dbviewContractId += "threadswithunread";
             break;
-        case nsMsgViewType.eShowWatched:
+        case nsMsgViewType.eShowWatchedThreadsWithUnread:
             dbviewContractId += "watchedthreadswithunread";
             break;
-        case nsMsgViewType.eShowAll:
-        case nsMsgViewType.eShowRead:
+        case nsMsgViewType.eShowAllThreads:
         default:
             dbviewContractId += "threaded";
             break;
@@ -540,14 +590,7 @@ function CreateDBView(msgFolder, isThreaded, viewType, sortKey, sortDirection)
     var sortType = ConvertSortKey(sortKey);
     var sortOrder = ConvertSortDirection(sortDirection)
 
-    var viewFlags;
-    if (isThreaded) {
-        viewFlags = nsMsgViewFlagsType.kOutlineDisplay;
-    }
-    else {  
-        viewFlags = nsMsgViewFlagsType.kFlatDisplay;
-    }
-
+    gCurViewFlags = viewFlags;
     var count = new Object;
     gDBView.init(messenger, msgWindow);
     gDBView.open(msgFolder, sortType, sortOrder, viewFlags, count);
@@ -867,7 +910,7 @@ function IsSpecialFolder(msgFolder, specialFolderNames)
 function ConvertViewType(viewType)
 {
     if (!viewType || (viewType == "")) {
-        return nsMsgViewType.eShowAll;
+        return nsMsgViewType.eShowAllThreads;
     }
     else {
         return viewType;
@@ -877,15 +920,12 @@ function ConvertViewType(viewType)
 
 function SetViewType(viewType)
 {
-    if(messageView)
-    {
-        messageView.viewType = ConvertViewType(viewType);
-    }
 }
 
 function ShowThreads(showThreads)
 {
 	//dump('in showthreads\n');
+  /*
 	if(messageView)
 	{
 		messageView.showThreads = showThreads;
@@ -902,7 +942,7 @@ function ShowThreads(showThreads)
 			}
 		}
 	}
-    
+*/    
     var viewFlags;
     if (showThreads) {
         viewFlags = nsMsgViewFlagsType.kOutlineDisplay;
@@ -911,56 +951,6 @@ function ShowThreads(showThreads)
         viewFlags = nsMsgViewFlagsType.kFlatDisplay;
     }
     SetViewFlags(viewFlags);
-}
-
-
-function GetNextMessageAfterDelete(messages)
-{
-/*
-	var count = messages.length;
-
-	var curMessage = messages[0];
-	var nextMessage = null;
-	var tree = GetThreadTree();
-
-	//search forward
-	while(curMessage)
-	{
-		nextMessage = msgNavigationService.FindNextMessage(navigateAny, tree, curMessage, RDF, document, false, messageView.showThreads);
-		if(nextMessage)
-		{
-			if(nextMessage.getAttribute("selected") != "true")
-			{
-				break;
-			}
-		}
-		curMessage = nextMessage;
-	}
-	//if no nextmessage then search backwards
-	if(!nextMessage)
-	{
-
-		curMessage = messages[0];
-		nextMessage = null;
-		//search forward
-		while(curMessage)
-		{
-			nextMessage = msgNavigationService.FindPreviousMessage(navigateAny, tree, curMessage, RDF, document, false, messageView.showThreads);
-			if(nextMessage)
-			{
-				if(nextMessage.getAttribute("selected") != "true")
-				{
-					break;
-				}
-			}
-			curMessage = nextMessage;
-		}
-
-
-
-	}
-	return nextMessage;
-*/
 }
 
 

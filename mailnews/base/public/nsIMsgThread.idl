@@ -53,5 +53,4 @@ interface nsIMsgThread : nsISupports {
   nsISimpleEnumerator EnumerateMessages(in nsMsgKey parent);
   nsISimpleEnumerator EnumerateUnreadMessages(in nsMsgKey parent);
 
-  boolean hasMessagesOfType(in nsMsgKey parent, in unsigned long viewType);
 };

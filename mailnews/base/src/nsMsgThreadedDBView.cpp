@@ -192,13 +192,7 @@ nsresult nsMsgThreadedDBView::ListThreadIds(nsMsgKey *startMsg, PRBool unreadOnl
 	}
 	else
 	{
-    PRUint32 viewType;
-    if ((m_viewFlags & nsMsgViewFlagsType::kUnreadOnly) == 0)
-      viewType = nsMsgViewType::eShowAll;
-    else
-      viewType = nsMsgViewType::eShowUnread;
-
-    rv = m_db->EnumerateThreads(viewType, getter_AddRefs(m_threadEnumerator));
+    rv = m_db->EnumerateThreads(getter_AddRefs(m_threadEnumerator));
     NS_ENSURE_SUCCESS(rv, rv);
 	}
 

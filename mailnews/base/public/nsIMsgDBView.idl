@@ -46,6 +46,15 @@ interface nsMsgViewSortOrder
 	const nsMsgViewSortOrderValue descending = 2;
 };
 
+typedef long nsMsgViewTypeValue;
+
+[scriptable, uuid(dac950b0-1dd1-11b2-be06-d4c2003a6927)]
+interface nsMsgViewType {
+    const nsMsgViewTypeValue eShowAllThreads = 0;
+    const nsMsgViewTypeValue eShowThreadsWithUnread = 2;
+    const nsMsgViewTypeValue eShowWatchedThreadsWithUnread = 3;
+};
+
 [scriptable, uuid(64852276-1dd2-11b2-8103-afe12002c053)]
 interface nsMsgViewFlagsType
 {

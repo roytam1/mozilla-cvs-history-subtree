@@ -74,12 +74,12 @@ function InitViewMessagesMenu()
     var allMenuItem = document.getElementById("viewAllMessagesMenuItem");
     var hidden = allMenuItem.getAttribute("hidden") == "true";
     if(allMenuItem && !hidden)
-        allMenuItem.setAttribute("checked", messageView.viewType == nsMsgViewType.eShowAll);
+        allMenuItem.setAttribute("checked", gDBView.viewType == nsMsgViewType.eShowAllThreads);
 
     var unreadMenuItem = document.getElementById("viewUnreadMessagesMenuItem");
     hidden = unreadMenuItem.getAttribute("hidden") == "true";
     if(unreadMenuItem && !hidden)
-        unreadMenuItem.setAttribute("checked", messageView.viewType == nsMsgViewType.eShowUnread);
+        unreadMenuItem.setAttribute("checked", gDBView.viewType == nsMsgViewType.eShowThreadsWithUnread);
 
 }
 

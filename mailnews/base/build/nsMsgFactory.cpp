@@ -70,10 +70,8 @@
 #include "nsMsgFilterService.h"
 #include "nsMsgFilterDataSource.h"
 #include "nsMsgFilterDelegateFactory.h"
-#include "nsMessageView.h"
 #include "nsMsgWindow.h"
 #include "nsMessage.h"
-#include "nsMsgViewNavigationService.h"
 
 #include "nsMsgServiceProvider.h"
 #include "nsSubscribeDataSource.h"
@@ -115,10 +113,8 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsCopyMessageStreamListener)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgCopyService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgFolderCache)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgStatusFeedback)
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessageView,Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgWindow,Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMessage)
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgViewNavigationService,Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgServiceProviderService, Init);
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsSubscribeDataSource, Init);
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsSubscribableServer, Init);
@@ -254,10 +250,6 @@ static nsModuleComponentInfo gComponents[] = {
       NS_MSGSTATUSFEEDBACK_CONTRACTID,
       nsMsgStatusFeedbackConstructor,
     },
-    { "Mail/News MessageView", NS_MESSAGEVIEW_CID,
-      NS_MESSAGEVIEW_CONTRACTID,
-      nsMessageViewConstructor,
-    },
     { "Mail/News MsgWindow", NS_MSGWINDOW_CID,
       NS_MSGWINDOW_CONTRACTID,
       nsMsgWindowConstructor,
@@ -273,10 +265,6 @@ static nsModuleComponentInfo gComponents[] = {
     { "Message Resource", NS_MESSAGE_CID,
       NS_MESSAGE_NEWS_CONTRACTID,
       nsMessageConstructor,
-    },
-    { "Mail/News Message Navigation Service", NS_MSGVIEWNAVIGATIONSERVICE_CID,
-      NS_MSGVIEWNAVIGATIONSERVICE_CONTRACTID,
-      nsMsgViewNavigationServiceConstructor,
     },
     { "Mail/News Print Engine", NS_MSG_PRINTENGINE_CID,
       NS_MSGPRINTENGINE_CONTRACTID,

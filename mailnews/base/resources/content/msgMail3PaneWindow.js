@@ -22,7 +22,6 @@
 
 
 var showPerformance = false;
-var msgNavigationService;
 
 var gFolderTree; 
 var gThreadTree;
@@ -131,8 +130,7 @@ var folderListener = {
                         if (gNextMessageAfterLoad) {
                             gNextMessageAfterLoad = false;
 
-                            GoNextMessage(nsMsgNavigationType.nextUnreadMessage, true);
-				            msgNavigationService.EnsureDocumentIsLoaded(document);
+             // should scroll to new here.
                             PositionThreadPane();
                         }
 					}
@@ -145,8 +143,6 @@ var folderListener = {
 				  if(showPerformance) {
 				    beforeScrollToNew = new Date();
                   }
-				  msgNavigationService.EnsureDocumentIsLoaded(document);
-
 				  ScrollToFirstNewMessage();
 
 				  if(showPerformance) {
@@ -197,7 +193,6 @@ function HandleDeleteOrMoveMsgCompleted(folder)
 	var threadTree = GetThreadTree();
 //	if(IsCurrentLoadedFolder(folder)) ### rewrite/implement this
 //	{
-		msgNavigationService.EnsureDocumentIsLoaded(document);
 		if(gNextMessageViewIndexAfterDelete != -1)
 		{
       var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
@@ -224,7 +219,7 @@ function HandleDeleteOrMoveMsgCompleted(folder)
 		else
 		{
 			var tree = GetThreadTree();
-			var topmost = msgNavigationService.FindFirstMessage(tree);
+//			var topmost = msgNavigationService.FindFirstMessage(tree);
 			if(!topmost)
 				ClearMessagePane()
 		}
@@ -358,8 +353,6 @@ function OnUnloadMessenger()
 
 function Create3PaneGlobals()
 {
-	msgNavigationService = Components.classes['@mozilla.org/messenger/msgviewnavigationservice;1'].getService();
-	msgNavigationService= msgNavigationService.QueryInterface(Components.interfaces.nsIMsgViewNavigationService);
 }
 
 
@@ -438,7 +431,6 @@ function loadStartFolder(initialUri)
                 startFolderUri = resource.Value;
             }
         }
-        msgNavigationService.EnsureDocumentIsLoaded(document);
 
         var startFolder = document.getElementById(startFolderUri);
 

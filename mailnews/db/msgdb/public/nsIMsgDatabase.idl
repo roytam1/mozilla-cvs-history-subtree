@@ -111,8 +111,7 @@ interface  nsIMsgDatabase : nsIDBChangeAnnouncer {
   [noscript] void ListAllKeys(in nsMsgKeyArrayRef outputKeys);
 
   nsISimpleEnumerator EnumerateMessages();
-  boolean hasMessagesOfType(in unsigned long viewType);
-  nsISimpleEnumerator EnumerateThreads(in unsigned long viewType);
+  nsISimpleEnumerator EnumerateThreads();
   boolean hasThreads();
 
   nsIMsgThread GetThreadContainingMsgHdr(in nsIMsgDBHdr msgHdr) ;
