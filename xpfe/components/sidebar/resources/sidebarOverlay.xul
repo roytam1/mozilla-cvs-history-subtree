@@ -12,7 +12,7 @@
 
   <!-- Overlay the sidebar panels -->
   <box id="sidebar-box" align="vertical" persist="hidden width">
-    <splitter id="title-box" collapse="after"
+    <splitter id="title-box" collapse="after" persist="state"
       onclick="sidebarOpenClosePanel(this)">
       <html:div class="panel-bar">
         &sidebar.panels.label;
@@ -29,23 +29,21 @@
       ref="urn:sidebar:current-panel-list">
       <template>
         <rule>
-          <!--<box uri="rdf:*" align="vertical" flex="100%">-->
           <splitter class="panel-bar" uri="rdf:*"
-            collapse="after" resizeafter="grow">
+            collapse="after" resizeafter="grow" persist="state">
             <titledbutton value="rdf:http://home.netscape.com/NC-rdf#title"
               class="panel-bar plain"/>
             <spring flex="100%"/>
             <titledbutton class="borderless show-hide"
               onclick="sidebarOpenClosePanel(this.parentNode)"/>
           </splitter>
-          <html:iframe class="panel-frame" uri="rdf:*"
+          <html:iframe class="panel-frame" uri="rdf:*" persist="height"
            src="rdf:http://home.netscape.com/NC-rdf#content"/>
-          <!--</box>-->
         </rule>
       </template>
     </box>
 
-    <splitter id="alerts-splitter" class="panel-bar"
+    <splitter id="alerts-splitter" class="panel-bar" persist="state"
       collapse="after" chromeclass="extrachrome"
       onclick="sidebarOpenClosePanel(this)"> 
       <html:div class="panel-bar">
@@ -53,7 +51,8 @@
       </html:div>
     </splitter>
 
-    <box id="alerts-panel" align="vertical" chromeclass="extrachrome">
+    <box id="alerts-panel" align="vertical" chromeclass="extrachrome"
+      persist="height">
       <html:div flex="1">
         <tree id="flash-tree"
           ref="NC:FlashRoot"
