@@ -245,7 +245,7 @@ struct nsHTMLReflowState {
 
   // Initialize a <b>root</b> reflow state with a rendering context to
   // use for measuring things.
-  nsHTMLReflowState(nsPresContext*          aPresContext,
+  nsHTMLReflowState(nsPresContext*           aPresContext,
                     nsIFrame*                aFrame,
                     nsIRenderingContext*     aRenderingContext,
                     const nsSize&            aAvailableSpace);
@@ -253,23 +253,15 @@ struct nsHTMLReflowState {
   // Initialize a reflow state for a child frames reflow. Some state
   // is copied from the parent reflow state; the remaining state is
   // computed. 
-  nsHTMLReflowState(nsPresContext*          aPresContext,
+  nsHTMLReflowState(nsPresContext*           aPresContext,
                     const nsHTMLReflowState& aParentReflowState,
                     nsIFrame*                aFrame,
                     const nsSize&            aAvailableSpace,
-                    nsReflowReason           aReason, 
                     PRBool                   aInit = PR_TRUE);
-
-  // Same as the previous except that the reason is taken from the
-  // parent's reflow state.
-  nsHTMLReflowState(nsPresContext*          aPresContext,
-                    const nsHTMLReflowState& aParentReflowState,
-                    nsIFrame*                aFrame,
-                    const nsSize&            aAvailableSpace);
 
   // Used when you want to override the default containing block
   // width and height. Used by absolute positioning code
-  nsHTMLReflowState(nsPresContext*          aPresContext,
+  nsHTMLReflowState(nsPresContext*           aPresContext,
                     const nsHTMLReflowState& aParentReflowState,
                     nsIFrame*                aFrame,
                     const nsSize&            aAvailableSpace,

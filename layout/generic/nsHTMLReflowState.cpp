@@ -121,23 +121,12 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*          aPresContext,
                                      const nsHTMLReflowState& aParentReflowState,
                                      nsIFrame*                aFrame,
                                      const nsSize&            aAvailableSpace,
-                                     nsReflowReason           aReason,
                                      PRBool                   aInit)
   : mReflowDepth(aParentReflowState.mReflowDepth + 1),
     mFlags(aParentReflowState.mFlags)
 {
   parentReflowState = &aParentReflowState;
   frame = aFrame;
-  reason = aReason;
-  if (reason == eReflowReason_Incremental) {
-    // If the child frame isn't along the reflow path, then convert
-    // the incremental reflow to a dirty reflow.
-    path = aParentReflowState.path->GetSubtreeFor(aFrame);
-    if (! path)
-      reason = eReflowReason_Dirty;
-  }
-  else
-    path = nsnull;
 
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
@@ -162,53 +151,6 @@ nsHTMLReflowState::nsHTMLReflowState(nsPresContext*          aPresContext,
 #ifdef IBMBIDI
   mFlags.mVisualBidiFormControl = (aParentReflowState.mFlags.mVisualBidiFormControl) ?
                                   PR_TRUE : IsBidiFormControl(aPresContext);
-  mRightEdge = aParentReflowState.mRightEdge;
-#endif // IBMBIDI
-}
-
-// Same as the previous except that the reason is taken from the
-// parent's reflow state.
-nsHTMLReflowState::nsHTMLReflowState(nsPresContext*          aPresContext,
-                                     const nsHTMLReflowState& aParentReflowState,
-                                     nsIFrame*                aFrame,
-                                     const nsSize&            aAvailableSpace)
-  : mReflowDepth(aParentReflowState.mReflowDepth + 1),
-    mFlags(aParentReflowState.mFlags)
-{
-  parentReflowState = &aParentReflowState;
-  frame = aFrame;
-  reason = aParentReflowState.reason;
-  if (reason == eReflowReason_Incremental) {
-    // If the child frame isn't along the reflow path, then convert
-    // the incremental reflow to a dirty reflow.
-    path = aParentReflowState.path->GetSubtreeFor(aFrame);
-    if (! path)
-      reason = eReflowReason_Dirty;
-  }
-  else
-    path = nsnull;
-
-  availableWidth = aAvailableSpace.width;
-  availableHeight = aAvailableSpace.height;
-
-  rendContext = aParentReflowState.rendContext;
-  mSpaceManager = aParentReflowState.mSpaceManager;
-  mLineLayout = aParentReflowState.mLineLayout;
-  mFlags.mIsTopOfPage = aParentReflowState.mFlags.mIsTopOfPage;
-  mFlags.mNextInFlowUntouched = aParentReflowState.mFlags.mNextInFlowUntouched &&
-    CheckNextInFlowParenthood(aFrame, aParentReflowState.frame);
-  mFlags.mHasClearance = PR_FALSE;
-  mDiscoveredClearance = nsnull;
-  mPercentHeightObserver = (aParentReflowState.mPercentHeightObserver && 
-                            aParentReflowState.mPercentHeightObserver->NeedsToObserve(*this)) 
-                           ? aParentReflowState.mPercentHeightObserver : nsnull;
-  mPercentHeightReflowInitiator = aParentReflowState.mPercentHeightReflowInitiator;
-
-  Init(aPresContext);
-
-#ifdef IBMBIDI
-  mFlags.mVisualBidiFormControl = (aParentReflowState.mFlags.mVisualBidiFormControl) ?
-                                   PR_TRUE : IsBidiFormControl(aPresContext);
   mRightEdge = aParentReflowState.mRightEdge;
 #endif // IBMBIDI
 }
