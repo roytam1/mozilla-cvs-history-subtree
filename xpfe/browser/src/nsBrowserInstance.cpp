@@ -808,60 +808,6 @@ nsBrowserInstance::Copy()
   return NS_OK;
 }
 
-NS_IMETHODIMP    
-nsBrowserInstance::Find()
-{
-    nsresult rv = NS_OK;
-    PRBool   found = PR_FALSE;
-    
-    // Get find component.
-    nsCOMPtr <nsIFindComponent> finder = do_GetService(NS_IFINDCOMPONENT_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) return rv;
-    if (!finder) return NS_ERROR_FAILURE;
-
-    // get the window to search
-    nsCOMPtr<nsIDOMWindowInternal>  windowToSearch;  
-    GetFocussedContentWindow(getter_AddRefs(windowToSearch));
-    
-    // Make sure we've initialized searching for this document.
-    rv = InitializeSearch(windowToSearch, finder);
-    if (NS_FAILED(rv)) return rv;
-
-    // Perform find via find component.
-    if (mSearchContext) {
-        rv = finder->Find( mSearchContext, &found );
-    }
-
-    return rv;
-}
-
-NS_IMETHODIMP    
-nsBrowserInstance::FindNext()
-{
-    nsresult rv = NS_OK;
-    PRBool   found = PR_FALSE;
-
-    // Get find component.
-    nsCOMPtr <nsIFindComponent> finder = do_GetService(NS_IFINDCOMPONENT_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) return rv;
-    if (!finder) return NS_ERROR_FAILURE;
-
-    // get the window to search
-    nsCOMPtr<nsIDOMWindowInternal>  windowToSearch;  
-    GetFocussedContentWindow(getter_AddRefs(windowToSearch));
-
-    // Make sure we've initialized searching for this document.
-    rv = InitializeSearch(windowToSearch, finder);
-    if (NS_FAILED(rv)) return rv;
-
-    // Perform find via find component.
-    if (mSearchContext) {
-        rv = finder->FindNext(mSearchContext, &found );
-    }
-
-    return rv;
-}
-
 //*****************************************************************************
 //    nsBrowserInstance: nsIURIContentListener
 //*****************************************************************************
@@ -925,6 +871,8 @@ nsBrowserInstance::IsPreferred(const char * aContentType,
        || nsCRT::strcasecmp(aContentType, "application/vnd.mozilla.xul+xml") == 0
        || nsCRT::strcasecmp(aContentType, "text/rdf") == 0 
        || nsCRT::strcasecmp(aContentType, "text/xml") == 0
+       || nsCRT::strcasecmp(aContentType, "application/xml") == 0
+       || nsCRT::strcasecmp(aContentType, "application/xhtml+xml") == 0
        || nsCRT::strcasecmp(aContentType, "text/css") == 0
        || nsCRT::strcasecmp(aContentType, "image/gif") == 0
        || nsCRT::strcasecmp(aContentType, "image/jpeg") == 0
@@ -990,25 +938,6 @@ nsBrowserInstance::SetLoadCookie(nsISupports * aLoadCookie)
   return NS_OK;
 }
 
-//*****************************************************************************
-// nsBrowserInstance: Helpers
-//*****************************************************************************
-
-nsresult
-nsBrowserInstance::InitializeSearch(nsIDOMWindowInternal* windowToSearch, nsIFindComponent *finder)
-{
-    nsresult rv = NS_OK;
-
-    if (!finder) return NS_ERROR_NULL_POINTER;
-    if (!windowToSearch) return NS_ERROR_NULL_POINTER;
-    
-    if (!mSearchContext )
-        rv = finder->CreateContext(windowToSearch, nsnull, getter_AddRefs(mSearchContext));
-    else
-        rv = finder->ResetContext(mSearchContext, windowToSearch, nsnull);
-    
-    return rv;
-}
 
 ////////////////////////////////////////////////////////////////////////
 // browserCntHandler is a content handler component that registers
@@ -1237,6 +1166,16 @@ static nsModuleComponentInfo components[] = {
   { "Browser Content Handler",
     NS_BROWSERCONTENTHANDLER_CID,
     NS_CONTENT_HANDLER_CONTRACTID_PREFIX"text/xml", 
+    nsBrowserContentHandlerConstructor 
+  },
+  { "Browser Content Handler",
+    NS_BROWSERCONTENTHANDLER_CID,
+    NS_CONTENT_HANDLER_CONTRACTID_PREFIX"application/xml", 
+    nsBrowserContentHandlerConstructor 
+  },
+  { "Browser Content Handler",
+    NS_BROWSERCONTENTHANDLER_CID,
+    NS_CONTENT_HANDLER_CONTRACTID_PREFIX"application/xhtml+xml", 
     nsBrowserContentHandlerConstructor 
   },
   { "Browser Content Handler",
