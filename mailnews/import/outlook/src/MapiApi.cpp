@@ -622,10 +622,20 @@ void CMapiApi::ListProperties( LPMAPIPROP lpProp, BOOL getValues)
 		MAPI_TRACE0( "    Unable to retrieve property list\n");
 		return;
 	}
+  ULONG count = 0;
+  LPMAPINAMEID FAR * lppPropNames;
+  SPropTagArray		tagArray;
+  LPSPropTagArray lpTagArray = &tagArray;
+  tagArray.cValues = (ULONG)1;
 	nsCString	desc;
 	for (ULONG i = 0; i < pArray->cValues; i++) {
 		GetPropTagName( pArray->aulPropTag[i], desc);
 		if (getValues) {
+      tagArray.aulPropTag[0] = pArray->aulPropTag[i];
+      hr = lpProp->GetNamesFromIDs(&lpTagArray, nsnull, 0, &count, &lppPropNames);  
+      if (hr == S_OK)
+        MAPIFreeBuffer(lppPropNames);
+
 			LPSPropValue pVal = GetMapiProperty( lpProp, pArray->aulPropTag[i]);
 			if (pVal) {
 				desc += ", ";
@@ -637,6 +647,31 @@ void CMapiApi::ListProperties( LPMAPIPROP lpProp, BOOL getValues)
 	}
 
 	MAPIFreeBuffer( pArray);
+}
+
+ULONG CMapiApi::GetEmailPropertyTag(LPMAPIPROP lpProp, LONG nameID)
+{
+static GUID emailGUID = {
+   0x00062004, 0x0000, 0x0000, 0xc0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x46
+};
+
+  MAPINAMEID mapiNameID;
+  mapiNameID.lpguid = &emailGUID;
+  mapiNameID.ulKind = MNID_ID;
+  mapiNameID.Kind.lID = nameID;
+
+  LPMAPINAMEID lpMapiNames = &mapiNameID;
+  LPSPropTagArray lpMailTagArray = nsnull;
+
+  HRESULT result = lpProp->GetIDsFromNames(1L, &lpMapiNames, 0, &lpMailTagArray);
+  if (result == S_OK)
+  {
+    ULONG lTag = lpMailTagArray->aulPropTag[0];
+    MAPIFreeBuffer(lpMailTagArray);
+    return lTag;
+  }
+  else
+    return 0L;
 }
 
 BOOL CMapiApi::HandleHierarchyItem( ULONG oType, ULONG cb, LPENTRYID pEntry)
