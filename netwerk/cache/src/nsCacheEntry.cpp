@@ -408,14 +408,15 @@ nsCacheEntryHashTable::ops =
 
 
 nsCacheEntryHashTable::nsCacheEntryHashTable()
-    : initialized(0)
+    : initialized(PR_FALSE)
 {
 }
 
 
 nsCacheEntryHashTable::~nsCacheEntryHashTable()
 {
-    PL_DHashTableFinish(&table);
+    if (initialized)
+        PL_DHashTableFinish(&table);
 }
 
 
