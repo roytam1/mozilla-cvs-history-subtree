@@ -1102,7 +1102,6 @@ CERT_GetCertEmailAddress(CERTName *name)
     return(emailAddr);
 }
 
-/* The return value must be freed with PORT_Free. */
 char *
 CERT_GetCommonName(CERTName *name)
 {

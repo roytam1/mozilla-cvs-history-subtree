@@ -733,7 +733,6 @@ extern const char * CERT_GetFirstEmailAddress(CERTCertificate * cert);
 extern const char * CERT_GetNextEmailAddress(CERTCertificate * cert, 
                                              const char * prev);
 
-/* The return value must be freed with PORT_Free. */
 extern char *CERT_GetCommonName(CERTName *name);
 
 extern char *CERT_GetCountryName(CERTName *name);
