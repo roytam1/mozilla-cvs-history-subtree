@@ -366,7 +366,11 @@ static NSArray* sToolbarDefaults = nil;
     }
 
     // Get our saved dimensions.
+    NSRect oldFrame = [[self window] frame];
     [[self window] setFrameUsingName: NavigatorWindowFrameSaveName];
+    
+    if (NSEqualSizes(oldFrame.size, [[self window] frame].size))
+      mustResizeChrome = YES;
     
     if (mModalSession)
       [NSApp stopModal];
