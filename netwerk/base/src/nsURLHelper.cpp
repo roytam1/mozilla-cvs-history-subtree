@@ -255,7 +255,6 @@ CoaleseDirs(char* io_Path)
 NS_NET void 
 ToLowerCase(char* str)
 {
-#ifdef UNDEF
     if (str) {
         char* lstr = str;
         PRInt8 shift = 'a' - 'A';
@@ -266,5 +265,4 @@ ToLowerCase(char* str)
                 *(lstr) = *(lstr) + shift;
         }
     }
-#endif
 }
