@@ -10,3 +10,6 @@ dist/bin/@DLLP@xpistub@DLLS@
 
 [gecko-support]
 dist/bin/defaults/pref/xpinstall.js
+
+[xpfe-browser-xpi gre-xpi]
+dist/bin/xpicleanup@BINS@
