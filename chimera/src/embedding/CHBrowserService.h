@@ -50,6 +50,7 @@
 extern NSString* TermEmbeddingNotificationName;   // someone called TermEmbedding
 extern NSString* XPCOMShutDownNotificationName;   // XPCOM is about to shut down
 
+class nsModuleComponentInfo;
 
 class CHBrowserService :  public nsIWindowCreator,
                           public nsIFactory, 
@@ -67,6 +68,12 @@ public:
   static nsresult InitEmbedding();
   static void TermEmbedding();
   static void BrowserClosed();
+
+  // Call to override Gecko components with ones implemented by the
+  // embedding application. Some examples are security dialogs, password
+  // manager, and Necko prompts. This can be called at any time after
+  // XPCOM has been initialized.
+  static void RegisterAppComponents(const nsModuleComponentInfo* inComponents, const int inNumComponents);
   
   static void SetAlertController(nsAlertController* aController);
   static nsAlertController* GetAlertController();

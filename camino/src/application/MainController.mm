@@ -56,12 +56,15 @@
 #include "nsIPref.h"
 #include "nsIChromeRegistry.h"
 #include "nsIObserverService.h"
+#include "nsIGenericFactory.h"
 
 #ifdef _BUILD_STATIC_BIN
 #include "nsStaticComponent.h"
 nsresult PR_CALLBACK
 app_getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
 #endif
+
+extern nsModuleComponentInfo* gAppComponents;     // These are defined in AppComponents.mm
 
 static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 
@@ -124,6 +127,9 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 #endif
   // initialize if we haven't already.
   [self preferenceManager];
+  
+  // register our app components with the embed layer
+  CHBrowserService::RegisterAppComponents(gAppComponents, sizeof(gAppComponents) / sizeof(gAppComponents[0]));
 
   // don't open a new browser window if we already have one
   // (for example, from an GetURL Apple Event)

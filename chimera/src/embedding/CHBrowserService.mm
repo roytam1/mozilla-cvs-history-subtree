@@ -59,10 +59,6 @@ CHBrowserService* CHBrowserService::sSingleton = nsnull;
 PRUint32 CHBrowserService::sNumBrowsers = 0;
 PRBool CHBrowserService::sCanTerminate = PR_FALSE;
 
-// This method should return a nsModuleComponentInfo array of
-// application-provided XPCOM components to register.  The implementation
-// is in AppComponents.mm.
-extern const nsModuleComponentInfo* GetAppModuleComponentInfo(int* outNumComponents);
 
 // CHBrowserService implementation
 CHBrowserService::CHBrowserService()
@@ -104,31 +100,11 @@ CHBrowserService::InitEmbedding()
     return NS_ERROR_FAILURE;
   watcher->SetWindowCreator(sSingleton);
 
-  // Register application-provided Gecko components.  This includes our security dialog implementation.
-
-  int numComponents;
-  const nsModuleComponentInfo* componentInfo = GetAppModuleComponentInfo(&numComponents);
-  nsresult rv;
-  for (int i = 0; i < numComponents; ++i) {
-    nsCOMPtr<nsIGenericFactory> componentFactory;
-    rv = NS_NewGenericFactory(getter_AddRefs(componentFactory), &(componentInfo[i]));
-    if (NS_FAILED(rv)) {
-      NS_ASSERTION(PR_FALSE, "Unable to create factory for component");
-      continue;
-    }
-
-    rv = cr->RegisterFactory(componentInfo[i].mCID,
-                             componentInfo[i].mDescription,
-                             componentInfo[i].mContractID,
-                             componentFactory);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "Unable to register factory for component");
-  }
-
   // replace the external helper app dialog with our own
   #define NS_HELPERAPPLAUNCHERDIALOG_CID \
           {0xf68578eb, 0x6ec2, 0x4169, {0xae, 0x19, 0x8c, 0x62, 0x43, 0xf0, 0xab, 0xe1}}
   static NS_DEFINE_CID(kHelperDlgCID, NS_HELPERAPPLAUNCHERDIALOG_CID);
-  rv = cr->RegisterFactory(kHelperDlgCID, NS_IHELPERAPPLAUNCHERDLG_CLASSNAME, NS_IHELPERAPPLAUNCHERDLG_CONTRACTID,
+  nsresult rv = cr->RegisterFactory(kHelperDlgCID, NS_IHELPERAPPLAUNCHERDLG_CLASSNAME, NS_IHELPERAPPLAUNCHERDLG_CONTRACTID,
                             sSingleton);
   
   // replace the downloader with our own which does not rely on the xpfe downlaod manager
@@ -288,3 +264,34 @@ CHBrowserService::ShowProgressDialog(nsIHelperAppLauncher *aLauncher, nsISupport
   NSLog(@"CHBrowserService::ShowProgressDialog");
   return NS_OK;
 }
+
+
+//
+// RegisterAppComponents
+//
+// Register application-provided Gecko components.
+//
+void
+CHBrowserService::RegisterAppComponents(const nsModuleComponentInfo* inComponents, const int inNumComponents)
+{
+  nsCOMPtr<nsIComponentRegistrar> cr;
+  NS_GetComponentRegistrar(getter_AddRefs(cr));
+  if ( !cr )
+    return;
+
+  for (int i = 0; i < inNumComponents; ++i) {
+    nsCOMPtr<nsIGenericFactory> componentFactory;
+    nsresult rv = NS_NewGenericFactory(getter_AddRefs(componentFactory), &(inComponents[i]));
+    if (NS_FAILED(rv)) {
+      NS_ASSERTION(PR_FALSE, "Unable to create factory for component");
+      continue;
+    }
+
+    rv = cr->RegisterFactory(inComponents[i].mCID,
+                             inComponents[i].mDescription,
+                             inComponents[i].mContractID,
+                             componentFactory);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Unable to register factory for component");
+  }
+}
+

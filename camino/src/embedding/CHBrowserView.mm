@@ -61,13 +61,12 @@
 #include "nsISHistory.h"
 #include "nsIHistoryEntry.h"
 #include "nsISHEntry.h"
+#include "nsIWebBrowserFind.h"
 #include "nsNetUtil.h"
 #include "SaveHeaderSniffer.h"
 
-#import "BrowserWrapper.h"
 #import "CHBrowserView.h"
 
-#import "FindDlgController.h"
 #import "CHBrowserService.h"
 #import "CHBrowserListener.h"
 
