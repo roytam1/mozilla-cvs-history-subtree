@@ -215,11 +215,11 @@ function HandleDeleteOrMoveMsgCompleted(folder)
           gNextMessageViewIndexAfterDelete = -1;
       }
       outlinerSelection.clearSelection(); /* clear selection in either case  */
-      if (gNextMessageViewIndexAfterDelete != -1)
+      if (gNextMessageViewIndexAfterDelete != -1) {
         outlinerSelection.select(gNextMessageViewIndexAfterDelete);
+        EnsureRowInThreadOutlinerIsVisible(gNextMessageViewIndexAfterDelete); 
+      }
 			gNextMessageViewIndexAfterDelete = -1;
-//			if(threadTree)
-//				threadTree.ensureElementIsVisible(nextMessage);
 		}
 /*
 		//if there's nothing to select then see if the tree has any messages.
