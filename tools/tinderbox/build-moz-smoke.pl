@@ -188,7 +188,6 @@ sub SetupEnv {
 	} else {
 	    # This is utterly lame....
 	    if ( $ENV{'HOST'} eq 'fugu' ) {
-		$ENV{'LD_LIBRARY_PATH'} = '/tools/ns/workshop/lib:/usrlocal/lib:' . $ENV{'LD_LIBRARY_PATH'};
 		$ENV{'PATH'} = '/tools/ns/workshop/bin:/usrlocal/bin:' . $ENV{'PATH'};
 		$ConfigureArgs .= '--disable-debug --enable-optimize';
 		$ConfigureEnvArgs = 'CC=cc CXX=CC';
