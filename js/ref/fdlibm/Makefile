@@ -79,9 +79,12 @@ OS_CPUARCH      := $(shell uname -m)
 ifeq ($(OS_CPUARCH),i86pc)
 OS_RELEASE      := $(shell uname -r)_$(OS_CPUARCH)
 else
+ifeq ($(OS_ARCH),AIX)
+OS_RELEASE      := $(shell uname -v).$(shell uname -r)
+else
 OS_RELEASE      := $(shell uname -r)
 endif
-
+endif
 
 # Virtually all Linux versions are identical.
 # Any distinctions are handled in linux.h
