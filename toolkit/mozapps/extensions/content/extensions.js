@@ -526,10 +526,11 @@ function buildContextMenu(aEvent)
     menuitemToHide.hidden = true;
   }
   else {
-    var canEnable = gExtensionsViewController.isCommandEnabled("cmd_enable");
     var enableMenu = document.getElementById("menuitem_enable_clone");
     if (gExtensionsView.selected.getAttribute("compatible") == "false" ||
         gExtensionsView.selected.disabled) 
+      // don't let the user activate incompatible themes, but show a (disabled) Enable
+      // menuitem to give visual feedback; it's disabled because cmd_enable returns false
       enableMenu.hidden = false;
     else {
       enableMenu.hidden = true;
@@ -649,13 +650,19 @@ var gExtensionsViewController = {
     case "cmd_close":
       return true;
     case "cmd_useTheme":
-      return selectedItem && !selectedItem.disabled && gCurrentTheme != selectedItem.getAttribute("internalName");
+      return selectedItem &&
+             !selectedItem.disabled &&
+             selectedItem.getAttribute("toBeUninstalled") != "true" &&
+             gCurrentTheme != selectedItem.getAttribute("internalName");
     case "cmd_options":
-      return selectedItem && !selectedItem.disabled && selectedItem.getAttribute("optionsURL") != "";
+      return selectedItem &&
+             !selectedItem.disabled &&
+             selectedItem.getAttribute("toBeUninstalled") != "true" &&
+             selectedItem.getAttribute("optionsURL") != "";
     case "cmd_about":
       return !selectedItem || (selectedItem.disabled ? selectedItem.getAttribute("aboutURL") == "" : true);
     case "cmd_homepage":
-      return (selectedItem && selectedItem.getAttribute("homepageURL") != "");
+      return selectedItem && selectedItem.getAttribute("homepageURL") != "";
     case "cmd_uninstall":
       if (gWindowState != "extensions") {
         // uninstall is only available if the selected item isn't the 
@@ -663,20 +670,31 @@ var gExtensionsViewController = {
         return (selectedItem && 
                 selectedItem.getAttribute("internalName") != KEY_DEFAULT_THEME);
       }
-      return selectedItem && selectedItem.getAttribute("locked") != "true";
+      return selectedItem &&
+             selectedItem.getAttribute("toBeUninstalled") != "true" &&
+             selectedItem.getAttribute("locked") != "true";
     case "cmd_update":
-      return true;
+      return !selectedItem ||
+             (selectedItem &&
+              selectedItem.getAttribute("toBeUninstalled") != "true" &&
+              selectedItem.getAttribute("toBeInstalled") != "true");
     case "cmd_reallyEnable":
+    // controls whether to show Enable or Disable in extensions' context menu
       return selectedItem && 
              selectedItem.disabled && 
              !gExtensionManager.inSafeMode;
     case "cmd_enable":
+    //controls wheter the Enable/Disable menuitem is enabled
       return selectedItem && 
              selectedItem.disabled && 
              !gExtensionManager.inSafeMode && 
+             selectedItem.getAttribute("toBeUninstalled") != "true" &&
              selectedItem.getAttribute("compatible") != "false";
     case "cmd_disable":
-      return selectedItem && selectedItem.getAttribute("locked") != "true" && !selectedItem.disabled;
+      return selectedItem &&
+             !selectedItem.disabled &&
+             selectedItem.getAttribute("toBeUninstalled") != "true" &&
+             selectedItem.getAttribute("locked") != "true";
     case "cmd_movetop":
       return (gExtensionsView.children[0] != selectedItem);
     case "cmd_moveup":
