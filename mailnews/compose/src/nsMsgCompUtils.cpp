@@ -20,7 +20,7 @@
 #include "nsIPref.h"
 #include "prmem.h"
 #include "nsMsgSend.h"
-#include "nsINetService.h"
+#include "nsIIOService.h"
 #include "nsMailHeaders.h"
 #include "nsMsgI18N.h"
 #include "nsMsgCompPrefs.h"
@@ -30,12 +30,13 @@
 #include "nsMsgNewsCID.h"
 #include "nsMimeTypes.h"
 #include "nsMsgComposeStringBundle.h"
+#include "nsXPIDLString.h"
 
-static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID); 
+static NS_DEFINE_CID(kPrefCID, NS_PREF_CID); 
 static NS_DEFINE_CID(kMsgHeaderParserCID, NS_MSGHEADERPARSER_CID); 
 static NS_DEFINE_CID(kMimeURLUtilsCID, NS_IMIME_URLUTILS_CID);
 static NS_DEFINE_CID(kNntpServiceCID, NS_NNTPSERVICE_CID);
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 //
 // Hopefully, someone will write and XP call like this eventually!
@@ -552,26 +553,25 @@ mime_generate_headers (nsMsgCompFields *fields,
 	}
 
 
-  NS_WITH_SERVICE(nsINetService, pNetService, kNetServiceCID, &rv); 
+	NS_WITH_SERVICE(nsIIOService, pNetService, kIOServiceCID, &rv); 
 	if (NS_SUCCEEDED(rv) && pNetService)
 	{
-		nsString aNSStr;
-		char* sCStr;
+		PRUnichar * appInfo = nsnull;
 
-		pNetService->GetAppCodeName(aNSStr);
-		sCStr = aNSStr.ToNewCString();
-		if (sCStr) {
+		pNetService->GetAppCodeName(&appInfo);
+		if (appInfo) {
 			// PUSH_STRING ("X-Mailer: ");  // To be more standards compliant
 			PUSH_STRING ("User-Agent: ");  
-			PUSH_STRING(sCStr);
-			delete [] sCStr;
+			// mscott....this is wrong!!!
+			printf("fix me in nsMsgCompUtils line 557");
+			PUSH_STRING((char *) appInfo);
+			nsCRT::free(appInfo);
 
-			pNetService->GetAppVersion(aNSStr);
-			sCStr = aNSStr.ToNewCString();
-			if (sCStr) {
+			pNetService->GetAppVersion(&appInfo);
+			if (appInfo) {
 				PUSH_STRING (" ");
-				PUSH_STRING(sCStr);
-				delete [] sCStr;
+				PUSH_STRING((char *) appInfo);
+				nsCRT::free(appInfo);
 			}
 			PUSH_NEWLINE ();
 		}
@@ -1717,22 +1717,20 @@ nsMsgMIMEGenerateMailtoFormPostHeaders (const char *old_post_url,
 
   if (!subject_p)
 	{
-		char* sAppName = nsnull;
 		nsresult rv = NS_OK;
-		NS_WITH_SERVICE(nsINetService, pNetService, kNetServiceCID, &rv); 
-
+	
+		PRUnichar * sAppName = nsnull;
+		NS_WITH_SERVICE(nsIIOService, pNetService, kIOServiceCID, &rv); 
 		if (NS_SUCCEEDED(rv) && pNetService)
-		{
-			nsString aNSStr;
+			pNetService->GetAppCodeName(&sAppName);
 
-			pNetService->GetAppCodeName(aNSStr);
-			sAppName = aNSStr.ToNewCString();
-		}
 	  /* If the URL didn't provide a subject, we will. */
 	  StrAllocCat (extra_headers, "Subject: Form posted from ");
 	  NS_ASSERTION (sAppName, "null AppCodeName");
-	  StrAllocCat (extra_headers, sAppName);
+	  // mscott -- this cast is wrong!!!!
+	  StrAllocCat (extra_headers, (char *) sAppName);
 	  StrAllocCat (extra_headers, CRLF);
+	  nsCRT::free(sAppName);
 	}
 
   /* Note: the `encrypt', `sign', and `body' parameters are currently
@@ -1837,12 +1835,16 @@ msg_pick_real_name (nsMsgAttachmentHandler *attachment, const char *charset)
   NS_WITH_SERVICE(nsIPref, prefs, kPrefCID, &rv); 
   const char *s, *s2;
   char *s3;
-  const char *url;
+  nsXPIDLCString url;
 
   if (attachment->m_real_name)
   	return;
 
-  attachment->mURL->GetSpec(&url);
+  // mscott --> WARNING....there's a lot of url parsing going on in this method
+  // this should all be scratched and we should ask for the specific parts from the
+  // url itself..no need to parse the url spec, it's already been done! Use calls like
+  // GetPath, GetQuery, etc.
+  attachment->mURL->GetSpec(getter_Copies(url));
 
   /* Perhaps the MIME parser knows a better name than the URL itself?
 	 This can happen when one attaches a MIME part from one message
@@ -1856,9 +1858,7 @@ msg_pick_real_name (nsMsgAttachmentHandler *attachment, const char *charset)
   // RICHIE attachment->m_real_name =	MimeGuessURLContentName(x, url);
   attachment->m_real_name = nsnull;  
   if (attachment->m_real_name)
-  {
   	return;
-  }
 
   /* Otherwise, extract a name from the URL. */
 
@@ -1871,9 +1871,7 @@ msg_pick_real_name (nsMsgAttachmentHandler *attachment, const char *charset)
 	  !PL_strncasecmp (url, "snews:", 6) ||
 	  !PL_strncasecmp (url, "IMAP:", 5) ||
 	  !PL_strncasecmp (url, "mailbox:", 8))
-  {
   	return;
-  }
 
   /* Take the part of the file name after the last / or \ */
   s2 = PL_strrchr (s, '/');
@@ -2000,19 +1998,14 @@ msg_pick_real_name (nsMsgAttachmentHandler *attachment, const char *charset)
 
 // Utility to create a nsIURI object...
 nsresult 
-nsMsgNewURL(nsIURI** aInstancePtrResult, const nsString& aSpec)
+nsMsgNewURL(nsIURI** aInstancePtrResult, const char * aSpec)
 {  
+  nsresult rv = NS_OK;
   if (nsnull == aInstancePtrResult) 
     return NS_ERROR_NULL_POINTER;
-  
-  nsINetService *inet = nsnull;
-  nsresult rv = nsServiceManager::GetService(kNetServiceCID, nsCOMTypeInfo<nsINetService>::GetIID(),
-                                             (nsISupports **)&inet);
-  if (rv != NS_OK) 
-    return rv;
-
-  rv = inet->CreateURL(aInstancePtrResult, aSpec, nsnull, nsnull, nsnull);
-  nsServiceManager::ReleaseService(kNetServiceCID, inet);
+  NS_WITH_SERVICE(nsIIOService, pNetService, kIOServiceCID, &rv); 
+  if (NS_SUCCEEDED(rv) && pNetService)
+	rv = pNetService->NewURI(aSpec, nsnull, aInstancePtrResult);
   return rv;
 }
 
