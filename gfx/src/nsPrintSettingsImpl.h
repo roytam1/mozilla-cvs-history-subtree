@@ -23,6 +23,7 @@
 #ifndef nsPrintSettingsImpl_h__
 #define nsPrintSettingsImpl_h__
 
+#include "nsComObsolete.h"
 #include "nsIPrintSettings.h"  
 #include "nsMargin.h"  
 #include "nsString.h"

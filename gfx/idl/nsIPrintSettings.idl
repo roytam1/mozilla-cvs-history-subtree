@@ -44,7 +44,6 @@
 
 %{ C++
 #include "nsMargin.h"
-#include "nsFont.h"
 %}
 
 /**
