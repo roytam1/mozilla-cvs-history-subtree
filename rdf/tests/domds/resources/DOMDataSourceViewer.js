@@ -43,8 +43,7 @@ function refreshTree() {
     var win = window.frames["srcdoc"];
     domds.SetWindow(win);
 
-    var treeframe = window.frames["treeframe"];
-    var tree = treeframe.document.getElementById("dataSourceTree");
+    var tree = document.getElementById("dataSourceTree");
     tree.setAttribute("ref","NC:DOMRoot");
 }
 
