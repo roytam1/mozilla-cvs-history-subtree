@@ -68,3 +68,25 @@
 #subscribetree {
   margin: 0px 0px 0px 0px !important;
 }
+/* ::::: statusbar adjustments :::::: */
+
+statusbarpanel,
+#component-bar,
+.progressmeter-statusbar {
+  border: none !important;
+}
+
+/* for search */
+
+outlinerbody:-moz-outliner-image(nameCol, nntp) {
+ list-style-image: url("chrome://messenger/skin/icons/folder-newsgroup.gif");
+}
+
+outlinerbody:-moz-outliner-image(subscribedCol) {
+  list-style-image: url("chrome://messenger/skin/icons/dot.gif");
+}
+
+outlinerbody:-moz-outliner-image(subscribedCol, subscribed) {
+  list-style-image: url("chrome://messenger/skin/icons/check.gif");
+}
+

@@ -42,10 +42,6 @@ outlinerbody:-moz-outliner-cell-text(unread) {
   font-weight: bold;
 }
 
-outlinerbody:-moz-outliner-cell-text(offline) {
-  font-style: italic;
-}
-
 /* on a collapsed thread, if the top level message is read, but the thread has
  * unread children, underline the text.  4.x mac did this, very slick 
  */
@@ -121,6 +117,8 @@ outlinercol.readColumnHeader {
 
 outlinerbody:-moz-outliner-image(unreadButtonColHeader) {
   list-style-image: url("chrome://messenger/skin/icons/readcol-read.gif");
+  padding-left: 0px;
+  padding-right: 4px;
 }
 
 outlinerbody:-moz-outliner-image(unreadButtonColHeader, unread) {
@@ -135,6 +133,8 @@ outlinercol.flagColumnHeader {
 
 outlinerbody:-moz-outliner-image(flaggedCol) {
   list-style-image: url("chrome://messenger/skin/icons/readcol-read.gif");
+  padding-left: 0px;
+  padding-right: 4px;
 }
 
 outlinerbody:-moz-outliner-image(flaggedCol, flagged) {

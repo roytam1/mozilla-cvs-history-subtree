@@ -32,6 +32,7 @@
 menu, 
 menuitem {
   list-style-image: none;
+  color: #000000;
   font: menu;
   vertical-align: middle;
 }
@@ -153,10 +154,14 @@ popup > menuitem[menuactive="true"] {
 /* ::::: menu/menuitems in menulist popups ::::: */
 
 .menulist-menupopup > menuitem,
-menulist > menupopup > menuitem {
+menulist > menupopup > menuitem,
+.menulist-menupopup > menu,
+menulist > menupopup > menu {
   padding-right: 12px;
   padding-top: 1px;
   padding-bottom: 1px;
+  max-width: none;
+  font: message-box;
 }
     
 /* ..... selected state ..... */
