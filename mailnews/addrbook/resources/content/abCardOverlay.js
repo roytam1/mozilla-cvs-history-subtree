@@ -154,14 +154,16 @@ function OnLoadEditCard()
                                                            [ displayName ]);
 }
 
-// XXX is this used by the commercial tree?  if not, remove it.  if so, fix it, and then remove it.
+// this is used by people who extend the ab card dialog
+// like Netscape does for screenname
 function RegisterSaveListener(func)
 {
   var length = gOnSaveListeners.length;
   gOnSaveListeners[length] = func;
 }
 
-// XXX is this used by the commercial tree?  if not, remove it.  if so, fix it, and then remove it.
+// this is used by people who extend the ab card dialog
+// like Netscape does for screenname
 function NotifySaveListeners()
 {
   for ( var i = 0; i < gOnSaveListeners.length; i++ )
@@ -219,6 +221,8 @@ function NewCardOKButton()
       var directory = GetDirectoryFromURI(uri);
       directory.addCard(editCard.card);
 
+      // XXX fix me, editCard.card needs to be a mdbcard for
+      // saving screenname to work.
       NotifySaveListeners();
     }
   }
