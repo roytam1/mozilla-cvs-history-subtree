@@ -414,6 +414,8 @@ NetContextImpl::GetURL (ilIURL *aURL,
 URLImpl::URLImpl()
 {
     NS_INIT_REFCNT();
+    mReader = NULL;
+    mURLS = NULL;
 }
 
 URLImpl::URLImpl(URL_Struct *urls)
