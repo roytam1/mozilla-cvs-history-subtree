@@ -1111,20 +1111,8 @@ nsThemeInstaller.prototype = {
     // tricked into installing an incompatible theme...
     this._themeID = this._em.canInstallItem(themeMetadata);
     if (isNaN(parseInt(this._themeID))) {
-      // Create a logger to log install operations for uninstall
-      this._writer = new nsInstallLogWriter(this._themeID, aIsProfile);
-      this._writer.open();
-      
       var canInstall = true;
 
-      // Insert the theme into the theme list. 
-      this._extensionDS.insertForthcomingItem(this._themeID, nsIUpdateItem.TYPE_THEME, 
-                                              aIsProfile);
-
-      // Add metadata for the extension to the global extension metadata set
-      this._extensionDS.addItemMetadata(this._themeID, nsIUpdateItem.TYPE_THEME,
-                                        themeMetadata, aIsProfile);
-    
       // Copy the file to its final location
       var destinationDir = getDir(extDirKey, 
                                   [DIR_EXTENSIONS, this._themeID, DIR_CHROME]);
@@ -1133,7 +1121,6 @@ nsThemeInstaller.prototype = {
       if (destinationFile.exists())
         destinationFile.remove(false);
       aJARFile.copyTo(destinationDir, aJARFile.leafName);
-      this._writer.addFile(destinationFile.QueryInterface(Components.interfaces.nsILocalFile));
 
       var nameArc = rdf.GetResource(CHROME_NS("name"));
       var ctr = Components.classes["@mozilla.org/rdf/container;1"]
@@ -1166,25 +1153,43 @@ nsThemeInstaller.prototype = {
             uri.spec = fileURL;
             var url = uri.QueryInterface(Components.interfaces.nsIURL);
             showMalformedError(url.fileName);
+            
+            destinationFile.remove(false);
+            destinationDir.remove(true);
+            this._em._cleanDirs();
+            
             canInstall = false;
           }
 
           if (canInstall) {
             name = name.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
+
+            // Create a logger to log install operations for uninstall
+            this._writer = new nsInstallLogWriter(this._themeID, aIsProfile);
+            this._writer.open();
             this._writer.installSkin(name, aIsProfile);
           }
         }
       }
 
       if (canInstall) {
+        this._writer.addFile(destinationFile.QueryInterface(Components.interfaces.nsILocalFile));
+        this._writer.close();
+
         // Use the Chrome Registry API to install the theme there
         var filePath = "jar:" + getURLSpecFromFile(destinationFile) + "!/";      
         var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
                           .getService(Components.interfaces.nsIXULChromeRegistry);
         cr.installSkin(filePath, aIsProfile, false);
+
+        // Insert the theme into the theme list. 
+        this._extensionDS.insertForthcomingItem(this._themeID, nsIUpdateItem.TYPE_THEME, 
+                                                aIsProfile);
+
+        // Add metadata for the extension to the global extension metadata set
+        this._extensionDS.addItemMetadata(this._themeID, nsIUpdateItem.TYPE_THEME,
+                                          themeMetadata, aIsProfile);
       }
-    
-      this._writer.close();
       
       this._extensionDS.doneInstallingTheme(this._themeID);
     }
@@ -3099,8 +3104,10 @@ nsExtensionsDataSource.prototype = {
     var theme = this._getResourceForItem(aThemeID);
     var iconURLArc = this._emR("iconURL");
     var iconURL = this.GetTarget(theme, iconURLArc, true);
-    for (var i = 0; i < this._observers.length; ++i)
-      this._observers[i].onAssert(this, theme, iconURLArc, iconURL);
+    if (theme, iconURLArc, iconURL) {
+      for (var i = 0; i < this._observers.length; ++i)
+        this._observers[i].onAssert(this, theme, iconURLArc, iconURL);
+    }
   },
   
   uninstallTheme: function (aThemeID)
@@ -3345,6 +3352,9 @@ nsExtensionsDataSource.prototype = {
   
   GetTarget: function (aSource, aProperty, aTruthValue)
   {
+    if (!aSource)
+      return null;
+      
     if (aProperty.EqualsNode(this._emR("iconURL"))) {
       var itemType = getItemType(aSource.Value);
       if (itemType == nsIUpdateItem.TYPE_EXTENSION) {
@@ -3447,6 +3457,8 @@ nsExtensionsDataSource.prototype = {
   
   HasAssertion: function (aSource, aProperty, aTarget, aTruthValue)
   {
+    if (!aSource || !aProperty || !aTarget)
+      return false;
     return this._composite.HasAssertion(aSource, aProperty, aTarget, aTruthValue);
   },
   
