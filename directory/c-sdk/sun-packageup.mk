@@ -20,7 +20,7 @@
 # Contributor(s): 
 #
 
-CSDKVERSION = 5.06
+CSDKVERSION = 5.07
 FROMDIR = /share/builds/components/ldapsdk50/v$(CSDKVERSION)
 TODIR	= /u/svbld/mhein/ldapcsdk-$(CSDKVERSION)
 BUILDUNIXDIRS = AIX4.3_DBG.OBJ AIX4.3_OPT.OBJ HP-UXB.11.00_64_DBG.OBJ \
