@@ -45,26 +45,27 @@
 class txPatternParser : public ExprParser
 {
 public:
-    txPatternParser()
-    {
-    }
-
-    ~txPatternParser()
-    {
-    }
-
-    txPattern* createPattern(const String& aPattern,
-                             txIParseContext* aContext,
-                             ProcessorState* aPs);
+    static txPattern* createPattern(const String& aPattern,
+                                    txIParseContext* aContext,
+                                    ProcessorState* aPs);
 protected:
-    nsresult createUnionPattern(ExprLexer& aLexer, txPattern*& aPattern);
-    nsresult createLocPathPattern(ExprLexer& aLexer, txPattern*& aPattern);
-    nsresult createIdPattern(ExprLexer& aLexer, txPattern*& aPattern);
-    nsresult createKeyPattern(ExprLexer& aLexer, txPattern*& aPattern);
-    nsresult createStepPattern(ExprLexer& aLexer, txPattern*& aPattern);
-
-private:
-    ProcessorState* mProcessorState;
+    static nsresult createUnionPattern(ExprLexer& aLexer,
+                                       txIParseContext* aContext,
+                                       ProcessorState* aPs,
+                                       txPattern*& aPattern);
+    static nsresult createLocPathPattern(ExprLexer& aLexer,
+                                         txIParseContext* aContext,
+                                         ProcessorState* aPs,
+                                         txPattern*& aPattern);
+    static nsresult createIdPattern(ExprLexer& aLexer,
+                                    txPattern*& aPattern);
+    static nsresult createKeyPattern(ExprLexer& aLexer,
+                                     txIParseContext* aContext,
+                                     ProcessorState* aPs,
+                                     txPattern*& aPattern);
+    static nsresult createStepPattern(ExprLexer& aLexer,
+                                      txIParseContext* aContext,
+                                      txPattern*& aPattern);
 };
 
 #endif // TX_PATTERNPARSER_H

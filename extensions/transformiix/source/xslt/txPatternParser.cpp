@@ -45,13 +45,9 @@ txPattern* txPatternParser::createPattern(const String& aPattern,
                                           txIParseContext* aContext,
                                           ProcessorState* aPs)
 {
-    mContext = aContext;
-    mProcessorState = aPs;
     txPattern* pattern = 0;
     ExprLexer lexer(aPattern);
-    nsresult rv = createUnionPattern(lexer, pattern);
-    mContext = 0;
-    mProcessorState = 0;
+    nsresult rv = createUnionPattern(lexer, aContext, aPs, pattern);
     if (NS_FAILED(rv)) {
         // XXX error report parsing error
         return 0;
@@ -60,12 +56,14 @@ txPattern* txPatternParser::createPattern(const String& aPattern,
 }
 
 nsresult txPatternParser::createUnionPattern(ExprLexer& aLexer,
+                                             txIParseContext* aContext,
+                                             ProcessorState* aPs,
                                              txPattern*& aPattern)
 {
     nsresult rv = NS_OK;
     txPattern* locPath = 0;
 
-    rv = createLocPathPattern(aLexer, locPath);
+    rv = createLocPathPattern(aLexer, aContext, aPs, locPath);
     if (NS_FAILED(rv))
         return rv;
 
@@ -96,7 +94,7 @@ nsresult txPatternParser::createUnionPattern(ExprLexer& aLexer,
 
     aLexer.nextToken();
     do {
-        rv = createLocPathPattern(aLexer, locPath);
+        rv = createLocPathPattern(aLexer, aContext, aPs, locPath);
         if (NS_FAILED(rv)) {
             delete unionPattern;
             return rv;
@@ -122,6 +120,8 @@ nsresult txPatternParser::createUnionPattern(ExprLexer& aLexer,
 }
 
 nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
+                                               txIParseContext* aContext,
+                                               ProcessorState* aPs,
                                                txPattern*& aPattern)
 {
     nsresult rv = NS_OK;
@@ -154,7 +154,7 @@ nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
                     rv = createIdPattern(aLexer, stepPattern);
                 }
                 else if (txXSLTAtoms::key == nameAtom) {
-                    rv = createKeyPattern(aLexer, stepPattern);
+                    rv = createKeyPattern(aLexer, aContext, aPs, stepPattern);
                 }
                 TX_IF_RELEASE_ATOM(nameAtom);
                 if (NS_FAILED(rv))
@@ -165,7 +165,7 @@ nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
             break;
     }
     if (!stepPattern) {
-        rv = createStepPattern(aLexer, stepPattern);
+        rv = createStepPattern(aLexer, aContext, stepPattern);
         if (NS_FAILED(rv))
             return rv;
     }
@@ -210,7 +210,7 @@ nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
     while (Token::PARENT_OP == type || Token::ANCESTOR_OP == type) {
         isChild = Token::PARENT_OP == type;
         aLexer.nextToken();
-        rv = createStepPattern(aLexer, stepPattern);
+        rv = createStepPattern(aLexer, aContext, stepPattern);
         if (NS_FAILED(rv)) {
             delete pathPattern;
             return rv;
@@ -244,6 +244,8 @@ nsresult txPatternParser::createIdPattern(ExprLexer& aLexer,
 }
 
 nsresult txPatternParser::createKeyPattern(ExprLexer& aLexer,
+                                           txIParseContext* aContext,
+                                           ProcessorState* aPs,
                                            txPattern*& aPattern)
 {
     nsresult rv = NS_OK;
@@ -258,11 +260,12 @@ nsresult txPatternParser::createKeyPattern(ExprLexer& aLexer,
     const String& value = aLexer.nextToken()->value;
     if (Token::R_PAREN != aLexer.nextToken()->type)
         return NS_ERROR_XPATH_PARSE_FAILED;
-    aPattern  = new txKeyPattern(mProcessorState, key, value);
+    aPattern  = new txKeyPattern(aPs, key, value);
     return aPattern ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 nsresult txPatternParser::createStepPattern(ExprLexer& aLexer,
+                                            txIParseContext* aContext,
                                             txPattern*& aPattern)
 {
     nsresult rv = NS_OK;
@@ -292,7 +295,7 @@ nsresult txPatternParser::createStepPattern(ExprLexer& aLexer,
         // resolve QName
         txAtom *prefix, *lName;
         PRInt32 nspace;
-        rv = resolveQName(tok->value, prefix, lName, nspace);
+        rv = resolveQName(tok->value, prefix, aContext, lName, nspace);
         if (NS_FAILED(rv)) {
             // XXX error report namespace resolve failed
             return rv;
@@ -326,7 +329,7 @@ nsresult txPatternParser::createStepPattern(ExprLexer& aLexer,
         return NS_ERROR_OUT_OF_MEMORY;
     }
     nodeTest = 0;
-    if (!parsePredicates(step, aLexer)) {
+    if (!parsePredicates(step, aLexer, aContext)) {
         delete step;
         return NS_ERROR_XPATH_PARSE_FAILED;
     }

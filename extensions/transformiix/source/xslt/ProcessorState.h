@@ -416,7 +416,6 @@ private:
     Document*      xslDocument;
     Document*      resultDocument;
     Stack          variableSets;
-    txPatternParser exprParser;
 
     /**
      * Returns the closest xml:space value for the given node

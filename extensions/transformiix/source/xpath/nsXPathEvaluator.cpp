@@ -46,6 +46,7 @@
 #include "nsXPathResult.h"
 #include "ProcessorState.h"
 #include "nsContentCID.h"
+#include "ExprParser.h"
 
 NS_IMPL_ADDREF(nsXPathEvaluator)
 NS_IMPL_RELEASE(nsXPathEvaluator)
@@ -71,7 +72,7 @@ nsXPathEvaluator::CreateExpression(const nsAString & aExpression,
 {
     String expressionString(PromiseFlatString(aExpression).get());
     parseContextImpl pContext(aResolver);
-    Expr* expression = mParser.createExpr(expressionString, &pContext);
+    Expr* expression = ExprParser::createExpr(expressionString, &pContext);
     if (!expression)
         return NS_ERROR_DOM_INVALID_EXPRESSION_ERR;
 

@@ -41,7 +41,6 @@
 #define nsXPathEvaluator_h__
 
 #include "nsIDOMXPathEvaluator.h"
-#include "ExprParser.h"
 #include "txIXPathContext.h"
 #include "nsINameSpaceManager.h"
 
@@ -61,8 +60,6 @@ public:
     NS_DECL_NSIDOMXPATHEVALUATOR
 
 private:
-    ExprParser mParser;
-
     // txIParseContext implementation
     class parseContextImpl : public txIParseContext
     {

@@ -201,7 +201,7 @@ void ProcessorState::addTemplate(Element* aXslTemplate,
 
     // Get the pattern
     txPSParseContext context(this, aXslTemplate);
-    txPattern* pattern = exprParser.createPattern(match, &context, this);
+    txPattern* pattern = txPatternParser::createPattern(match, &context, this);
     #ifdef TX_PATTERN_DEBUG
     String foo;
     pattern->toString(foo);
@@ -512,7 +512,7 @@ Expr* ProcessorState::getExpr(Element* aElem, ExprAttr aAttr)
         return 0;
 
     txPSParseContext pContext(this, aElem);
-    expr = exprParser.createExpr(attr, &pContext);
+    expr = ExprParser::createExpr(attr, &pContext);
 
     if (!expr) {
         String err = "Error in parsing XPath expression: ";
@@ -551,7 +551,7 @@ txPattern* ProcessorState::getPattern(Element* aElem, PatternAttr aAttr)
 
     
     txPSParseContext pContext(this, aElem);
-    pattern = exprParser.createPattern(attr, &pContext, this);
+    pattern = txPatternParser::createPattern(attr, &pContext, this);
 
     if (!pattern) {
         String err = "Error in parsing pattern: ";
@@ -614,7 +614,7 @@ void ProcessorState::processAttrValueTemplate(const String& aAttValue,
     aResult.clear();
     txPSParseContext pContext(this, aContext);
     AttributeValueTemplate* avt =
-        exprParser.createAttributeValueTemplate(aAttValue, &pContext);
+        ExprParser::createAttributeValueTemplate(aAttValue, &pContext);
 
     if (!avt) {
         // shortcut, this is just a regular string
@@ -698,12 +698,12 @@ MBool ProcessorState::addKey(Element* aKeyElem)
     txPSParseContext pContext(this, aKeyElem);
     String attrVal;
     if (aKeyElem->getAttr(txXSLTAtoms::match, kNameSpaceID_None, attrVal)) {
-        match = exprParser.createPattern(attrVal, &pContext, this);
+        match = txPatternParser::createPattern(attrVal, &pContext, this);
     }
     Expr* use = 0;
     attrVal.clear();
     if (aKeyElem->getAttr(txXSLTAtoms::use, kNameSpaceID_None, attrVal)) {
-        use = exprParser.createExpr(attrVal, &pContext);
+        use = ExprParser::createExpr(attrVal, &pContext);
     }
     if (!match || !use || !xslKey->addKey(match, use)) {
         delete match;
