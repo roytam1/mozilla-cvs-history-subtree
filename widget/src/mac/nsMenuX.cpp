@@ -105,7 +105,7 @@ nsMenuX::nsMenuX()
     :   mNumMenuItems(0), mParent(nsnull), mManager(nsnull),
         mMacMenuID(0), mMacMenuHandle(nsnull), mHelpMenuOSItemsCount(0),
         mIsHelpMenu(PR_FALSE), mIsEnabled(PR_TRUE), mDestroyHandlerCalled(PR_FALSE),
-        mNeedsRebuild(PR_TRUE), mConstructed(PR_FALSE)
+        mNeedsRebuild(PR_TRUE), mConstructed(PR_FALSE), mVisible(PR_TRUE)
 {
   NS_INIT_REFCNT();
 
@@ -164,6 +164,12 @@ nsMenuX::Create(nsISupports * aParent, const nsAReadableString &aLabel, const ns
 
   SetLabel(aLabel);
   SetAccessKey(aAccessKey);
+
+  nsAutoString hiddenValue, collapsedValue;
+  mMenuContent->GetAttr(kNameSpaceID_None, nsWidgetAtoms::hidden, hiddenValue);
+  mMenuContent->GetAttr(kNameSpaceID_None, nsWidgetAtoms::collapsed, collapsedValue);
+  if ( hiddenValue == NS_LITERAL_STRING("true") || collapsedValue == NS_LITERAL_STRING("true") )
+    mVisible = PR_FALSE;
 
   return NS_OK;
 }
@@ -1267,50 +1273,56 @@ nsMenuX::GetMenuPopupContent(nsIContent** aResult)
 } // GetMenuPopupContent
 
 
-nsresult
-nsMenuX::GetNextVisibleMenu(nsIMenu** outNextVisibleMenu)
+//
+// CountVisibleBefore
+//
+// Determines how many menus are visible among the siblings that are before me.
+// It doesn't matter if I am visible.
+//
+nsresult 
+nsMenuX :: CountVisibleBefore ( PRUint32* outVisibleBefore )
 {
-  *outNextVisibleMenu = nsnull;
+  NS_ASSERTION ( outVisibleBefore, "bad index param" );
   
   nsCOMPtr<nsIMenuBar> menubarParent = do_QueryInterface(mParent);
   if (!menubarParent) return NS_ERROR_FAILURE;
 
-  PRUint32    numMenus;
+  PRUint32 numMenus = 0;
   menubarParent->GetMenuCount(numMenus);
   
-  PRBool      gotThisMenu = PR_FALSE;
-  PRUint32    thisMenuIndex;
-  // Find this menu
-  for (PRUint32 i = 0; i < numMenus; i ++)
-  {
-    nsCOMPtr<nsIMenu> thisMenu;
-    menubarParent->GetMenuAt(i, *getter_AddRefs(thisMenu));
-    if (!thisMenu) continue;
+  // Find this menu among the children of my parent menubar
+  PRBool gotThisMenu = PR_FALSE;
+  *outVisibleBefore = 0;
+  for ( PRUint32 i = 0; i < numMenus; ++i ) {
+    nsCOMPtr<nsIMenu> currMenu;
+    menubarParent->GetMenuAt(i, *getter_AddRefs(currMenu));
     
-    if (gotThisMenu) {  // we're looking for the next visible
-      nsCOMPtr<nsIContent> menuContent;
-      thisMenu->GetMenuContent(getter_AddRefs(menuContent));
+    // we found ourselves, break out
+    if ( currMenu == NS_STATIC_CAST(nsIMenu*, this) ) {
+      gotThisMenu = PR_TRUE;
+      break;
+    }
       
-      nsAutoString hiddenValue, collapsedValue;
-      menuContent->GetAttr(kNameSpaceID_None, nsWidgetAtoms::hidden, hiddenValue);
-      menuContent->GetAttr(kNameSpaceID_None, nsWidgetAtoms::collapsed, collapsedValue);
-      if ( hiddenValue != NS_LITERAL_STRING("true") && collapsedValue != NS_LITERAL_STRING("true"))
-      {
-        NS_IF_ADDREF(*outNextVisibleMenu = thisMenu);
-        break;
+    // check the current menu to see if it is visible (not hidden, not collapsed). If
+    // it is, count it.
+    if (currMenu) {
+      nsCOMPtr<nsIContent> menuContent;
+      currMenu->GetMenuContent(getter_AddRefs(menuContent));
+      if ( menuContent ) {
+        nsAutoString hiddenValue, collapsedValue;
+        menuContent->GetAttr(kNameSpaceID_None, nsWidgetAtoms::hidden, hiddenValue);
+        menuContent->GetAttr(kNameSpaceID_None, nsWidgetAtoms::collapsed, collapsedValue);
+        if ( hiddenValue != NS_LITERAL_STRING("true") && collapsedValue != NS_LITERAL_STRING("true"))
+          ++(*outVisibleBefore);
       }
+    }
     
-    }
-    else {   // we're still looking for this
-      if (thisMenu.get() == (nsIMenu *)this) {
-        gotThisMenu = PR_TRUE;
-        thisMenuIndex = i;
-      }
-    }
-  }
+  } // for each menu
 
-  return NS_OK;
-}
+  return gotThisMenu ? NS_OK : NS_ERROR_FAILURE;
+
+} // CountVisibleBefore
+
 
 #pragma mark -
 
@@ -1367,35 +1379,47 @@ nsMenuX::AttributeChanged(nsIDocument *aDocument, PRInt32 aNameSpaceID, nsIAtom 
       nsAutoString hiddenValue, collapsedValue;
       mMenuContent->GetAttr(kNameSpaceID_None, nsWidgetAtoms::hidden, hiddenValue);
       mMenuContent->GetAttr(kNameSpaceID_None, nsWidgetAtoms::collapsed, collapsedValue);
-      if (hiddenValue == NS_LITERAL_STRING("true") || collapsedValue == NS_LITERAL_STRING("true")) {
-        // hide this menu
-        NS_ASSERTION(PR_FALSE, "nsMenuX::AttributeChanged: WRITE HIDE CODE.");
-      }
-      else
-      {
-        // Need to get the menuID of the next visible menu
-        SInt16  nextMenuID = -1;    // default to the submenu case
         
-        if (menubarParent) // this is a top-level menu
-        {
-          nsCOMPtr<nsIMenu> nextVisibleMenu;
-          GetNextVisibleMenu(getter_AddRefs(nextVisibleMenu));
-          
-          if (nextVisibleMenu)
-          {
-            MenuHandle   nextHandle;
-            nextVisibleMenu->GetNativeData((void **)&nextHandle);
-	        nextMenuID = (nextHandle) ? ::GetMenuID(nextHandle) : mMacMenuID + 1;
-          }
-          else
-          {
-             nextMenuID = mMacMenuID + 1;
+      if (hiddenValue == NS_LITERAL_STRING("true") || collapsedValue == NS_LITERAL_STRING("true")) {
+        if ( menubarParent && mVisible ) {
+          PRUint32 indexToRemove = 0;
+          if ( NS_SUCCEEDED(CountVisibleBefore(&indexToRemove)) ) {
+            MenuRef menubar = nsnull;
+            menubarParent->GetNativeData ( (void*)menubar );
+            if ( menubar ) {
+              ::SetMenuItemHierarchicalMenu(menubar, indexToRemove + 1, nsnull);
+              ::DeleteMenuItem(menubar, indexToRemove + 1);
+              mVisible = PR_FALSE;
+            }
           }
         }
-        
-        // show this menu
-        NS_ASSERTION(PR_FALSE, "nsMenuX::AttributeChanged: WRITE SHOW CODE.");
+        else {
+          // show this submenu
+          NS_ASSERTION(PR_FALSE, "nsMenuX::AttributeChanged: WRITE SHOW CODE FOR SUBMENU.");
+        }
       }
+      else {
+        if ( menubarParent && !mVisible ) {
+          PRUint32 indexToInsert = 0;
+          if ( NS_SUCCEEDED(CountVisibleBefore(&indexToInsert)) ) {
+            MenuRef menubar = nsnull;
+            menubarParent->GetNativeData ( (void*)menubar );
+            if ( menubar ) {
+              // Shove this menu into its rightful place in the menubar. It doesn't matter
+              // what title we pass to InsertMenuItem() because when we stuff the actual menu
+              // handle in, the correct title goes with it.
+              ::InsertMenuItem(menubar, "\pPlaceholder", indexToInsert + 1);              // +1 because macos is 1-based
+              ::SetMenuItemHierarchicalMenu(menubar, indexToInsert + 2, mMacMenuHandle);  // +2 because menu is now in list
+              mVisible = PR_TRUE;
+            }
+          }
+        }
+        else {
+          // show this submenu
+          NS_ASSERTION(PR_FALSE, "nsMenuX::AttributeChanged: WRITE SHOW CODE FOR SUBMENU.");
+        }
+      }
+
       if (menubarParent) {
         ::DrawMenuBar();
       }
