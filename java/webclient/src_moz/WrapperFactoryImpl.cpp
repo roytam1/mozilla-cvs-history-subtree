@@ -43,6 +43,7 @@ const char *gImplementedInterfaces[] = {
         "webclient.History",
         "webclient.EventRegistration",
         "webclient.Bookmarks",
+        "webclient.Preferences",
         nsnull
         };
 

@@ -39,6 +39,7 @@
 #include <jni.h>
 // JNI Headers
 #include "BookmarksImpl.h"
+#include "PreferencesImpl.h"
 #include "CurrentPageImpl.h"
 #include "HistoryImpl.h"
 #include "ISupportsPeer.h"
@@ -111,6 +112,10 @@ void (* nativeProcessEvents) (JNIEnv *, jobject, jint);
 // from BookmarksImpl.h
 jint (* nativeGetBookmarks) (JNIEnv *, jobject, jint);
 jint (* nativeNewRDFNode)  (JNIEnv *, jobject, jint, jstring, jboolean);
+// from PreferencesImpl.h
+void (* nativeSetUnicharPref) (JNIEnv *env, jobject obj, jstring, jstring);
+void (* nativeSetIntPref) (JNIEnv *env, jobject obj, jstring, jint);
+void (* nativeSetBoolPref) (JNIEnv *env, jobject obj, jstring, jboolean);
 // from CurrentPageImpl.h
 void (* nativeCopyCurrentSelectionToSystemClipboard) (JNIEnv *, jobject, jint);
 void (* nativeFindInPage) (JNIEnv *, jobject, jint, jstring, jboolean, jboolean);
@@ -152,8 +157,7 @@ jint (* nativeNextElement) (JNIEnv *, jobject, jint, jint);
 jint (* nativeGetChildAt) (JNIEnv *, jobject, jint, jint, jint);
 jint (* nativeGetChildCount) (JNIEnv *, jobject, jint, jint);
 jint (* nativeGetIndex) (JNIEnv *, jobject, jint, jint, jint);
-void (* nativeInsertElementAt) (JNIEnv *, jobject, jint, jint, jint, jobject, jint);
-jint (* nativeNewFolder) (JNIEnv *, jobject, jint, jint, jobject);
+void (* nativeInsertElementAt) (JNIEnv *, jobject, jint, jint, jint, jint);
 jboolean (* nativeIsContainer) (JNIEnv *, jobject, jint, jint);
 jboolean (* nativeIsLeaf) (JNIEnv *, jobject, jint, jint);
 jstring (* nativeToString) (JNIEnv *, jobject, jint, jint);
@@ -231,12 +235,8 @@ void locateBrowserControlStubFunctions(void * dll) {
   if (!nativeGetIndex) {
     printf("got dlsym error %s\n", dlerror());
   }
-  nativeInsertElementAt = (void (*) (JNIEnv *, jobject, jint, jint, jint, jobject, jint)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_RDFTreeNode_nativeInsertElementAt");
+  nativeInsertElementAt = (void (*) (JNIEnv *, jobject, jint, jint, jint, jint)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_RDFTreeNode_nativeInsertElementAt");
   if (!nativeInsertElementAt) {
-    printf("got dlsym error %s\n", dlerror());
-  }
-  nativeNewFolder = (jint (*) (JNIEnv *, jobject, jint, jint, jobject)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_RDFTreeNode_nativeNewFolder");
-  if (!nativeNewFolder) {
     printf("got dlsym error %s\n", dlerror());
   }
   nativeIsContainer = (jboolean (*) (JNIEnv *, jobject, jint, jint)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_RDFTreeNode_nativeIsContainer");
@@ -394,6 +394,18 @@ void locateBrowserControlStubFunctions(void * dll) {
   if (!nativeNewRDFNode) {
     printf("got dlsym error %s\n", dlerror());
   }
+  nativeSetUnicharPref = (void (*) (JNIEnv *env, jobject obj, jstring, jstring)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PrefrencesImpl_nativeSetUnicharPref");
+  if (!nativeSetUnicharPref) {
+      printf("got dlsym error %s\n", dlerror());
+  }
+  nativeSetIntPref = (void (*) (JNIEnv *env, jobject obj, jstring, jint)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PrefrencesImpl_nativeSetIntPref");
+  if (!nativeSetIntPref) {
+      printf("got dlsym error %s\n", dlerror());
+  }
+  nativeSetBoolPref = (void (*) (JNIEnv *env, jobject obj, jstring, jboolean)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_PrefrencesImpl_nativeSetBoolPref");
+  if (!nativeSetBoolPref) {
+      printf("got dlsym error %s\n", dlerror());
+  }
 
   nativeAddListener = (void (*) (JNIEnv *, jobject, jint, jobject, jstring)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_NativeEventThread_nativeAddListener");
   if (!nativeAddListener) {
@@ -503,6 +515,30 @@ JNIEXPORT jint JNICALL Java_org_mozilla_webclient_wrapper_1native_BookmarksImpl_
   return (* nativeNewRDFNode) (env, obj, webShellPtr, url, isFolder);
 }
 
+// PreferencesImpl.h
+
+JNIEXPORT void JNICALL 
+Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetUnicharPref
+(JNIEnv *env, jobject obj, jstring prefName, jstring prefValue)
+{
+    (* nativeSetUnicharPref) (env, obj, prefName, prefValue);
+}
+
+
+JNIEXPORT void JNICALL 
+Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetIntPref
+(JNIEnv *env, jobject obj, jstring prefName, jint prefValue)
+{
+    (* nativeSetIntPref) (env, obj, prefName, prefValue);
+}
+
+
+JNIEXPORT void JNICALL 
+Java_org_mozilla_webclient_wrapper_1native_PreferencesImpl_nativeSetBoolPref
+(JNIEnv *env, jobject obj, jstring prefName, jboolean prefValue)
+{
+    (* nativeSetBoolPref) (env, obj, prefName, prefValue);
+}
 
 // CurrentPageImpl
 /*
@@ -891,20 +927,9 @@ Java_org_mozilla_webclient_wrapper_1native_RDFTreeNode_nativeGetIndex
 JNIEXPORT void JNICALL 
 Java_org_mozilla_webclient_wrapper_1native_RDFTreeNode_nativeInsertElementAt
 (JNIEnv *env, jobject obj, jint webShellPtr, jint parentRDFNode, 
- jint childRDFNode, jobject childProps, jint childIndex) {
+ jint childRDFNode, jint childIndex) {
   (* nativeInsertElementAt) (env, obj, webShellPtr, parentRDFNode, 
-                             childRDFNode, childProps, childIndex);
-}
-
-/*
- * Class:     org_mozilla_webclient_wrapper_0005fnative_RDFTreeNode
- * Method:    nativeNewFolder
- * Signature: (III)V
- */
-JNIEXPORT jint JNICALL 
-Java_org_mozilla_webclient_wrapper_1native_RDFTreeNode_nativeNewFolder
-(JNIEnv *env, jobject obj, jint webShellPtr, jint parentRDFNode, jobject childProps) {
-    return (* nativeNewFolder) (env, obj, webShellPtr, parentRDFNode, childProps);
+                             childRDFNode, childIndex);
 }
 
 /*

@@ -61,6 +61,7 @@ CPPSRCS = \
 	wsRDFObserver.cpp \
 	WindowControlImpl.cpp \
 	WindowControlActionEvents.cpp \
+	PreferencesImpl.cpp \
 	WrapperFactoryImpl.cpp \
 	motif/MotifBrowserControlCanvas.cpp \
 	motif/gtkmozilla.cpp \

@@ -76,6 +76,7 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
     private Navigation navigation = null;
 	private CurrentPage	    currentPage;
 	private History	        history;
+    private static Preferences     prefs;
 	private Bookmarks	    bookmarks;
     private BookmarksFrame bookmarksFrame = null;
 	private TreeModel	    bookmarksTree;
@@ -295,6 +296,11 @@ private UniversalDialog           uniDialog = null;
                 browserControl.queryInterface(BrowserControl.CURRENT_PAGE_NAME);
             history = (History)
                 browserControl.queryInterface(BrowserControl.HISTORY_NAME);
+            prefs = (Preferences)
+                browserControl.queryInterface(BrowserControl.PREFERENCES_NAME);
+            prefs.setPref("network.cookie.warnAboutCookies", "true");
+            prefs.setPref("browser.cache.disk_cache_size", "0");
+            //prefs.setPref("network.proxy.http", "webcache-mpk.eng.sun.com");
             
         }
 		catch (Exception e) {

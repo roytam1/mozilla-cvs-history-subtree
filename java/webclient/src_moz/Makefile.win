@@ -51,6 +51,7 @@ OBJS =                              \
     .\$(OBJDIR)\RDFTreeNode.obj  \
     .\$(OBJDIR)\RDFActionEvents.obj  \
     .\$(OBJDIR)\wsRDFObserver.obj  \
+    .\$(OBJDIR)\PreferencesImpl.obj  \
     .\$(OBJDIR)\ISupportsPeer.obj  \
     $(NULL)
 

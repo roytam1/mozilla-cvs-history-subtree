@@ -140,6 +140,10 @@ public Object newImpl(String interfaceName,
             result = new BookmarksImpl(this, browserControl);
             return result;
         }
+        if (BrowserControl.PREFERENCES_NAME == interfaceName) {
+            result = new PreferencesImpl(this, browserControl);
+            return result;
+        }
     }
 
     return result;
