@@ -4,6 +4,12 @@ menubar
     background-color      : threedface;
   }
 
+/* remove this for PR2. menubar is buggy */
+menubar > toolbargrippy
+  {
+    display               : none;
+  }
+
 menu, menuitem  
   {
 	  vertical-align        : middle;
