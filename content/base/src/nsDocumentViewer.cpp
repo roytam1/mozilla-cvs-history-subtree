@@ -761,11 +761,6 @@ DocumentViewerImpl::PrintContent(nsIWebShell  *aParent,nsIDeviceContext *aDConte
 
     cx->Init(aDContext);
 
-    nsCompatibility mode;
-    mPresContext->GetCompatibilityMode(&mode);
-    cx->SetCompatibilityMode(mode);
-    cx->SetContainer(aParent);
-    
     CreateStyleSet(mDocument, getter_AddRefs(ss));
 
     nsCOMPtr<nsIPresShell> ps;
@@ -803,6 +798,11 @@ DocumentViewerImpl::PrintContent(nsIWebShell  *aParent,nsIDeviceContext *aDConte
 
     ps->Init(mDocument, cx, vm, ss);
 
+    nsCompatibility mode;
+    mPresContext->GetCompatibilityMode(&mode);
+    cx->SetCompatibilityMode(mode);
+    cx->SetContainer(aParent);
+    
     //lay it out...
     ps->InitialReflow(width, height);
 
