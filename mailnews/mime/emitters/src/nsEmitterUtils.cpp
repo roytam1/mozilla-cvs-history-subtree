@@ -141,14 +141,17 @@ MimeGetStringByNameREAL(const char *aHeaderName)
   {
     nsILocale   *locale = nsnull;
     nsIStringBundle* sBundle = nsnull;
-    res = sBundleService->CreateBundle(pURI, locale, &sBundle);
+    res = sBundleService->CreateBundle(propertyURL, locale, &sBundle);
     if (NS_FAILED(res)) 
     {
       return nsnull;
     }
 
     nsAutoString v("");
-    res = sBundle->GetStringFromName(nsString(aHeaderName), v);
+	PRUnichar * ptrv;
+	nsString uniStr(aHeaderName);
+	res = sBundle->GetStringFromName(uniStr.GetUnicode(), &ptrv);
+	v = ptrv;
     if (NS_FAILED(res)) 
       return nsnull;
 
