@@ -304,13 +304,23 @@ nsSVGForeignObjectFrame::Reflow(nsIPresContext*          aPresContext,
   // transform x,y,width,height according to the current ctm:
   // XXX we're ignoring rotation at the moment
 
+  // (x, y): (left, top) -> (center_x, center_y)
+  x+=width/2.0;
+  y+=height/2.0;
+  // (x, y): (cx, cy) -> (cx', cy')
   TransformPoint(x, y);
-  
+
+  // transform the unit base vectors:
   float e1x = 1, e1y = 0, e2x = 0, e2y = 1;
   TransformVector(e1x, e1y);
   TransformVector(e2x, e2y);
+  // and adopt their new scales for (w, h):
   width  *= (float)sqrt(e1x*e1x + e1y*e1y);
   height *= (float)sqrt(e2x*e2x + e2y*e2y);
+
+  // (x,y): (c_x', c_y') -> (left', top')
+  x-=width/2.0;
+  y-=height/2.0;
   
   // move ourselves to (x,y):
   MoveTo(aPresContext, (nscoord) (x*twipsPerPx), (nscoord) (y*twipsPerPx));
@@ -652,7 +662,7 @@ void nsSVGForeignObjectFrame::TransformVector(float& x, float& y)
   // XXX This is crazy. What we really want is
   // nsIDOMSVGMatrix::TransformVector(x,y);
   
-  float x0,y0;
+  float x0=0.0f, y0=0.0f;
   TransformPoint(x0, y0);
   TransformPoint(x,y);
   x -= x0;
