@@ -1196,6 +1196,12 @@ endif
 
 %: SCCS/s.%
 
+# Use default rule for creating directories
+ifneq (,$(MAKE_DIRS))
+$(MAKE_DIRS):
+	@if test ! -d $@; then rm -rf $@ && $(MKINSTALLDIRS) $@; fi
+endif
+
 ###############################################################################
 # Update Makefiles
 ###############################################################################
@@ -1813,9 +1819,6 @@ endif # COMPILER_DEPEND
 #   builds (-jN). If this were done in the LOOP_OVER_DIRS macro, two
 #   processes could simultaneously try to create the same directory.
 #
-$(MDDEPDIR):
-	@if test ! -d $@; then echo Creating $@; rm -rf $@; mkdir $@; else true; fi
-
 ifneq (,$(LIB_OBJS)$(OBJS))
 MDDEPEND_FILES		:= $(strip $(wildcard $(MDDEPDIR)/*.pp))
 
