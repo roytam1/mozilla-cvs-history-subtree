@@ -3406,7 +3406,7 @@ nsHTMLDocument::ResolveName(const nsAReadableString& aName,
 
   nsIContent *e = NS_STATIC_CAST(nsIContent *, mIdHashTable.Get(&key));
 
-  if (e) {
+  if (e && e != ELEMENT_NOT_IN_TABLE) {
     nsCOMPtr<nsIAtom> tag;
     e->GetTag(*getter_AddRefs(tag));
 
