@@ -55,6 +55,11 @@ REQUIRES	= parse style js layer applet nspr security dbm img util jtools edtplug
 
 include $(DEPTH)/config/config.mk
 
+ifdef PRIVACY_FEATURES
+REQUIRES	+= misc
+EXPORTS		+= laylayer.h
+endif
+
 ifdef EDITOR
 CSRCS		+= layedit.c \
 		  layfree.c \
