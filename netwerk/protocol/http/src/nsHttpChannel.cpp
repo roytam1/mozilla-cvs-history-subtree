@@ -64,6 +64,7 @@ nsHttpChannel::nsHttpChannel()
     , mTriedCredentialsFromPrehost(PR_FALSE)
     , mFromCacheOnly(PR_FALSE)
     , mCachedContentIsValid(PR_FALSE)
+	, mCheckForCacheReusability(PR_FALSE)
 {
     LOG(("Creating nsHttpChannel @%x\n", this));
 
@@ -493,7 +494,7 @@ nsHttpChannel::ProcessNotModified()
     // merge any new headers with the cached response headers
     rv = mCachedResponseHead->UpdateHeaders(mResponseHead->Headers());
     if (NS_FAILED(rv)) return rv;
-
+    
     // update the cached response head
     nsCAutoString head;
     mCachedResponseHead->Flatten(head, PR_TRUE);
@@ -582,6 +583,7 @@ nsHttpChannel::OpenCacheEntry(PRBool *delayed)
     else
         accessRequested = nsICache::ACCESS_READ_WRITE; // normal browsing
 
+
     // we'll try to synchronously open the cache entry... however, it may be
     // in use and not yet validated, in which case we'll try asynchronously
     // opening the cache entry.
@@ -598,6 +600,13 @@ nsHttpChannel::OpenCacheEntry(PRBool *delayed)
         mCacheEntry->GetAccessGranted(&mCacheAccess);
         LOG(("got cache entry [access=%x]\n", mCacheAccess));
     }
+
+	// if the client was willing to contact the server (rw) 
+	// and the cache is giving us a readonly then we need to 
+	// check for the special case of mini-validation before reusing
+	// the cached copy.
+	if (accessRequested > mCacheAccess)
+		mCheckForCacheReusability = PR_TRUE;
     return rv;
 }
 
@@ -704,7 +713,8 @@ nsHttpChannel::CheckCache()
     buf.Adopt(0);
 
     // If we were only granted read access, then assume the entry is valid.
-    if (mCacheAccess == nsICache::ACCESS_READ) {
+	// only if mCheckForCacheReusability is not set...
+    if ((mCacheAccess == nsICache::ACCESS_READ) && !mCheckForCacheReusability) {
         mCachedContentIsValid = PR_TRUE;
         return NS_OK;
     }
@@ -727,6 +737,18 @@ nsHttpChannel::CheckCache()
     }
 
     PRBool doValidation = PR_FALSE;
+	PRBool usableCacheEntry = PR_TRUE;
+    // The cached entry may have a pragma no-cache case as well-- if so then 
+    // mCachedContentIsValid is false and so return...
+    // TODO later on expand to cache-control headers as well.
+    const char * val = mCachedResponseHead->PeekHeader(nsHttp::Pragma);
+    if (val && PL_strcasestr(val, "no-cache")) {
+        LOG(("Not using the cached version becuz of 'pragma: no-cache'\n"));
+		// if this entry has to be validated then per pragma no cache rules just mark it as doomed.
+        doValidation = PR_FALSE;
+		usableCacheEntry = PR_FALSE;
+        goto end;
+    }
 
     // Be optimistic: assume that we won't need to do validation
     mRequestHead.SetHeader(nsHttp::If_Modified_Since, nsnull);
@@ -798,7 +820,21 @@ nsHttpChannel::CheckCache()
     }
 
 end:
-    mCachedContentIsValid = !doValidation;
+	// content is valid iff we have been asked to validate (with an original request
+	// from the client as rw
+	if (!mCheckForCacheReusability)
+		mCachedContentIsValid = !doValidation;
+
+	// blow away the entry if its not to be reused 
+	// usableCacheEntry = No Pragma: no-cache
+	if (mCheckForCacheReusability && (mCacheAccess & nsICache::ACCESS_READ) && !usableCacheEntry)
+	{
+		CloseCacheEntry(NS_ERROR_ABORT);
+		PRBool delayed = PR_FALSE;
+		mCacheAccess |= nsICache::ACCESS_WRITE; // so that we can modify it. 
+		OpenCacheEntry(&delayed); //ignored really
+		return NS_OK;
+	}
 
     if (doValidation) {
         const char *val;
@@ -877,7 +913,8 @@ nsHttpChannel::CloseCacheEntry(nsresult status)
     if (mCacheEntry) {
         LOG(("nsHttpChannel::CloseCacheEntry [this=%x status=%x]", this, status));
 
-        if (NS_FAILED(status) && (mCacheAccess & nsICache::ACCESS_WRITE)) {
+		// we should be able to doom even if we don't have write access...
+        if (NS_FAILED(status) /*&& (mCacheAccess & nsICache::ACCESS_WRITE) */) {
             LOG(("dooming cache entry!!"));
             rv = mCacheEntry->Doom();
         }
@@ -920,10 +957,19 @@ nsHttpChannel::InitCacheEntry()
 
     // The no-store directive within the 'Cache-Control:' header indicates
     // that we should not store the response in a persistent cache
+    // and so does the no-cache
     val = mResponseHead->PeekHeader(nsHttp::Cache_Control);
-    if (val && PL_strcasestr(val, "no-store")) {
+    if (val && (PL_strcasestr(val, "no-store") || 
+                PL_strcasestr(val, "no-cache"))) {
         mLoadFlags |= INHIBIT_PERSISTENT_CACHING;
         LOG(("Inhibiting persistent caching because of \"%s\"\n", val));
+    }
+
+    // also do the same for pragma: no-cache...
+    val = mResponseHead->PeekHeader(nsHttp::Pragma);
+    if (val && PL_strcasestr(val, "no-cache")) {
+        mLoadFlags |= INHIBIT_PERSISTENT_CACHING;
+        LOG(("Inhibiting persistent caching because of Pragma:no-cache\n"));
     }
 
     // Store secure data in memory only
@@ -2014,6 +2060,38 @@ nsHttpChannel::SetResponseHeader(const char *header, const char *value)
     if (NS_SUCCEEDED(rv))
         rv = nsHttpHandler::get()->OnExamineResponse(this);
     return rv;
+}
+
+NS_IMETHODIMP
+nsHttpChannel::SetEquivHeader(const char *header, const char *value)
+{
+    NS_ASSERTION(mResponseHead, "Can't call SetEquivHeader this early!");
+    if (!mResponseHead)
+        return NS_ERROR_NOT_AVAILABLE;
+    NS_ENSURE_ARG_POINTER(header && value);
+
+    // cacheentry should be there... 
+    NS_ENSURE_TRUE(mCacheEntry, NS_ERROR_UNEXPECTED);
+
+    // since we already have sent the headers notifications (OnExamineResponse)
+    // and to play it safe we would only accept a handful of headers here.
+    nsHttpAtom atom = nsHttp::ResolveAtom(header);
+    if (!atom)
+        return NS_ERROR_NOT_AVAILABLE;
+
+    if (atom == nsHttp::Pragma || atom == nsHttp::Cache_Control) {
+        // Store the additional header
+        (void)mResponseHead->SetHeader(atom, value);
+        // We need to update the metadata associated with the cacheentry
+        nsCAutoString head;
+        mResponseHead->Flatten(head, PR_TRUE);
+        return mCacheEntry->SetMetaDataElement("response-head", head.get());
+    }
+
+#if defined(DEBUG_gagan) || defined(DEBUG_darin)
+    else NS_ASSERTION(0, "nsHttpChannel::SetEquivHeader called with an unhandled header!");
+#endif
+    return NS_OK; // silently ignore the rest...
 }
 
 NS_IMETHODIMP
