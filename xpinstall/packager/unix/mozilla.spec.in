@@ -24,22 +24,50 @@ PACKAGE_LISTING
 
 %install
 export NSDISTMODE=copy
-make
+
+if [ -x /usr/bin/getconf ] ; then
+    NRPROC=$(/usr/bin/getconf _NPROCESSORS_ONLN)
+    if [ $NRPROC -eq 0 ] ; then
+        NRPROC=1
+    fi
+else
+    NRPROC=1
+fi
+
+sh -c '( make export ; make libs MAKE="make -j $NRPROC" ; make install )'
 
 PACKAGE_INSTALL
 
 # Make sure that we overwrite the mozilla installed with ours.
-cp %{SOURCE1} $RPM_BUILD_ROOT/%{prefix}/bin/
+cp %{SOURCE1} $RPM_BUILD_ROOT/%{prefix}/bin/mozilla
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
+%post install
+/sbin/ldconfig
+
+%postun install
+/sbin/ldconfig
+
+%post browser
+/sbin/ldconfig
+MOZILLA_FIVE_HOME=/usr/lib/mozilla %{prefix}/bin/regxpcom
+
+%postun browser
+/sbin/ldconfig
+rm -f %{prefix}/lib/mozilla/component.reg
+
+%post mail
+/sbin/ldconfig
+MOZILLA_FIVE_HOME=/usr/lib/mozilla %{prefix}/bin/regxpcom
+
+%postun mail
+/sbin/ldconfig
+MOZILLA_FIVE_HOME=/usr/lib/mozilla %{prefix}/bin/regxpcom
+
 FILE_LISTING
 
-%files install
 
-%{prefix}/lib/mozilla/chrome
-%{prefix}/lib/mozilla/res
-%{prefix}/lib/mozilla/defaults
 
 

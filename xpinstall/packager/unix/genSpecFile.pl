@@ -61,12 +61,20 @@ sub print_package_desc
   my $default_desc = { 'browser' => 'Mozilla browser',
 		       'installer' => 'Mozilla XP installer',
 		       'mail' => 'Mozilla Mail/News' };
+  my $default_prereq  = { 'browser' => 'mozilla-install',
+			  'mail' => 'mozilla-browser' };
+
   
   foreach $this_key (keys %{$modules})
   {
     $retval .= '%package ' . $this_key . "\n";
     $retval .= 'Summary: mozilla-' . $this_key . "\n";
     $retval .= "Group: Mozilla\n";
+    if ($default_prereq->{$this_key})
+    {
+      $retval .= 'PreReq: ' . $default_prereq->{$this_key} . "\n";
+    }
+
   }
 
   foreach $this_key (keys %{$modules})
@@ -122,7 +130,7 @@ sub print_package_list
       }
       elsif ($dirname = is_res_wildcard($this_item)) {
 	$this_item = strip_bin($this_item);
-	$retval .= '%{prefix}/share/mozilla/' . $dirname . "/\n";
+	$retval .= '%{prefix}/share/mozilla/res/' . $dirname . "/\n";
       }
       elsif (is_res($this_item)) {
 	$this_item = strip_bin($this_item);
@@ -146,6 +154,14 @@ sub print_package_list
       else {
 	print STDERR "Warning: print_package_list $this_item is not valid\n";
       }
+    }
+    # hack to get the /usr/share files into the right package
+    if ($this_key eq "install")
+    {
+      $retval .= '%{prefix}/lib/mozilla/chrome'   . "\n";
+      $retval .= '%{prefix}/lib/mozilla/res'      . "\n";
+      $retval .= '%{prefix}/lib/mozilla/defaults' . "\n";
+      
     }
   }
   return $retval;
