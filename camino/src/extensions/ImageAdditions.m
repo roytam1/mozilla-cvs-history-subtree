@@ -39,7 +39,9 @@
 #import <Cocoa/Cocoa.h>
 
 @implementation NSImage (ImageAdditions)
-- (void) drawFlippedInRect:(NSRect) rect operation:(NSCompositingOperation) op fraction:(float) delta {
+
+- (void) drawFlippedInRect:(NSRect) rect operation:(NSCompositingOperation) op fraction:(float) delta
+{
 	CGContextRef context;
 
 	context = [[NSGraphicsContext currentContext] graphicsPort];
@@ -52,7 +54,8 @@
 	} CGContextRestoreGState( context );
 }
 
-- (void) drawFlippedInRect:(NSRect) rect operation:(NSCompositingOperation) op {
+- (void) drawFlippedInRect:(NSRect) rect operation:(NSCompositingOperation) op
+{
     [self drawFlippedInRect:rect operation:op fraction:1.0];
 }
 
@@ -66,7 +69,7 @@
     
     [self lockFocus];
     [[NSGraphicsContext currentContext] setImageInterpolation:NSImageInterpolationHigh];
-    [badge dissolveToPoint:NSMakePoint([self size].width - [badge size].width,0) fraction:alpha];
+    [badge dissolveToPoint:NSMakePoint([self size].width - [badge size].width, 0.0) fraction:alpha];
     [self unlockFocus];
 }
 
