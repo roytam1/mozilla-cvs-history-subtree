@@ -33,7 +33,7 @@
 #include "Stack.h"
 #include "ErrorObserver.h"
 #include "NamedMap.h"
-#include "ExprParser.h"
+#include "txPatternParser.h"
 #include "Expr.h"
 #include "StringList.h"
 #include "txOutputFormat.h"
@@ -420,7 +420,7 @@ private:
     Document*      xslDocument;
     Document*      resultDocument;
     Stack          variableSets;
-    ExprParser     exprParser;
+    txPatternParser exprParser;
 
     /**
      * Returns the closest xml:space value for the given node

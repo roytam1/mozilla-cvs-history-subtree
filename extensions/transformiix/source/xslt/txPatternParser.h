@@ -16,7 +16,7 @@
  *
  * The Initial Developer of the Original Code is
  * Axel Hecht.
- * Portions created by the Initial Developer are Copyright (C) 2001
+ * Portions created by the Initial Developer are Copyright (C) 2002
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -36,59 +36,29 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __TX_I_XPATH_CONTEXT
-#define __TX_I_XPATH_CONTEXT
+#ifndef TX_PATTERNPARSER_H
+#define TX_PATTERNPARSER_H
 
-#include "Expr.h"
-#include "txError.h"
+#include "txXSLTPatterns.h"
+#include "ExprParser.h"
 
-class txIParseContext
+class txPatternParser : public ExprParser
 {
 public:
-    virtual ~txIParseContext()
+    txPatternParser()
     {
     }
-    virtual nsresult resolveNamespacePrefix(txAtom* aPrefix, PRInt32& aID) = 0;
-    virtual nsresult resolveFunctionCall(txAtom* aName, PRInt32 aID,
-                                         FunctionCall*& aFunction) = 0;
-    virtual void receiveError(const String& aMsg, nsresult aRes) = 0;
-};
 
-class txIMatchContext
-{
-public:
-    virtual ~txIMatchContext()
+    ~txPatternParser()
     {
     }
-    virtual nsresult getVariable(PRInt32 aNamespace, txAtom* aLName,
-                                 ExprResult*& aResult) = 0;
-    virtual MBool isStripSpaceAllowed(Node* aNode) = 0;
-    virtual void receiveError(const String& aMsg, nsresult aRes) = 0;
+
+    txPattern* createPattern(const String& aPattern,
+                             txIParseContext* aContext);
+protected:
+    nsresult createUnionPattern(ExprLexer& aLexer, txPattern*& aPattern);
+    nsresult createLocPathPattern(ExprLexer& aLexer, txPattern*& aPattern);
+    nsresult createStepPattern(ExprLexer& aLexer, txPattern*& aPattern);
 };
 
-#define TX_DECL_MATCH_CONTEXT \
-    nsresult getVariable(PRInt32 aNamespace, txAtom* aLName, \
-                         ExprResult*& aResult); \
-    MBool isStripSpaceAllowed(Node* aNode); \
-    void receiveError(const String& aMsg, nsresult aRes)
-
-class txIEvalContext : public txIMatchContext
-{
-public:
-    virtual ~txIEvalContext()
-    {
-    }
-    virtual Node* getContextNode() = 0;
-    virtual PRUint32 size() = 0;
-    virtual PRUint32 position() = 0;
-    virtual NodeSet* getContextNodeSet() = 0;
-};
-
-#define TX_DECL_EVAL_CONTEXT \
-    TX_DECL_MATCH_CONTEXT; \
-    Node* getContextNode(); \
-    PRUint32 size(); \
-    PRUint32 position(); \
-    NodeSet* getContextNodeSet()
-
-#endif // __TX_I_XPATH_CONTEXT
+#endif // TX_PATTERNPARSER_H

@@ -36,59 +36,88 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __TX_I_XPATH_CONTEXT
-#define __TX_I_XPATH_CONTEXT
+#ifndef TX_XSLT_PATTERNS_H
+#define TX_XSLT_PATTERNS_H
 
 #include "Expr.h"
-#include "txError.h"
 
-class txIParseContext
+class txUnionPattern : public txPattern
 {
 public:
-    virtual ~txIParseContext()
+    txUnionPattern()
     {
     }
-    virtual nsresult resolveNamespacePrefix(txAtom* aPrefix, PRInt32& aID) = 0;
-    virtual nsresult resolveFunctionCall(txAtom* aName, PRInt32 aID,
-                                         FunctionCall*& aFunction) = 0;
-    virtual void receiveError(const String& aMsg, nsresult aRes) = 0;
+
+    ~txUnionPattern();
+
+    nsresult addPattern(txPattern* aPattern);
+
+    TX_DECL_PATTERN2;
+
+private:
+    txList mLocPathPatterns;
 };
 
-class txIMatchContext
+class txLocPathPattern : public txPattern
 {
 public:
-    virtual ~txIMatchContext()
+    txLocPathPattern()
     {
     }
-    virtual nsresult getVariable(PRInt32 aNamespace, txAtom* aLName,
-                                 ExprResult*& aResult) = 0;
-    virtual MBool isStripSpaceAllowed(Node* aNode) = 0;
-    virtual void receiveError(const String& aMsg, nsresult aRes) = 0;
+
+    ~txLocPathPattern();
+
+    nsresult addStep(txPattern* aPattern, MBool isChild);
+
+    TX_DECL_PATTERN;
+
+private:
+    class Step {
+    public:
+        Step(txPattern* aPattern, MBool aIsChild)
+            : pattern(aPattern), isChild(aIsChild)
+        {
+        }
+
+        ~Step()
+        {
+            delete pattern;
+        }
+
+        txPattern* pattern;
+        MBool isChild;
+    };
+
+    txList mSteps;
 };
 
-#define TX_DECL_MATCH_CONTEXT \
-    nsresult getVariable(PRInt32 aNamespace, txAtom* aLName, \
-                         ExprResult*& aResult); \
-    MBool isStripSpaceAllowed(Node* aNode); \
-    void receiveError(const String& aMsg, nsresult aRes)
-
-class txIEvalContext : public txIMatchContext
+class txRootPattern : public txPattern
 {
 public:
-    virtual ~txIEvalContext()
+    txRootPattern()
     {
     }
-    virtual Node* getContextNode() = 0;
-    virtual PRUint32 size() = 0;
-    virtual PRUint32 position() = 0;
-    virtual NodeSet* getContextNodeSet() = 0;
+
+    ~txRootPattern();
+
+    TX_DECL_PATTERN;
 };
 
-#define TX_DECL_EVAL_CONTEXT \
-    TX_DECL_MATCH_CONTEXT; \
-    Node* getContextNode(); \
-    PRUint32 size(); \
-    PRUint32 position(); \
-    NodeSet* getContextNodeSet()
+class txStepPattern : public PredicateList, public txPattern
+{
+public:
+    txStepPattern(txNodeTest* aNodeTest, MBool isAttr)
+        :mNodeTest(aNodeTest), mIsAttr(isAttr)
+    {
+    }
 
-#endif // __TX_I_XPATH_CONTEXT
+    ~txStepPattern();
+
+    TX_DECL_PATTERN;
+
+private:
+    txNodeTest* mNodeTest;
+    MBool mIsAttr;
+};
+
+#endif // TX_XSLT_PATTERNS_H

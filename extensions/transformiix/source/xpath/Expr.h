@@ -70,7 +70,9 @@ public:
     /**
      * Virtual destructor, important for subclasses
     **/
-    virtual ~Expr();
+    virtual ~Expr()
+    {
+    }
 
     /**
      * Evaluates this Expr based on the given context node and processor state
@@ -139,7 +141,7 @@ public:
     void toString(String& aDest)
 #define TX_DECL_PATTERN2 \
     TX_DECL_PATTERN; \
-    nsresult getSimplePatterns(txList aList)
+    nsresult getSimplePatterns(txList &aList)
 
 #define TX_DECL_EXPR_PATTERN \
     ExprResult* evaluate(txIEvalContext* aContext); \

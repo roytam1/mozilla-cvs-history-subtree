@@ -85,7 +85,7 @@ MBool txNodeTypeTest::matches(Node* aNode, txIMatchContext* aContext)
  * Returns the NodeSet of nodes matching this name test with
  * the XPathParent being the given Node.
  */
-nsresult txNameTest::evalStep(Node* aNode, txIMatchContext* aContext,
+nsresult txNodeTypeTest::evalStep(Node* aNode, txIMatchContext* aContext,
                               NodeSet* aResult)
 {
     Node* child = aNode->getFirstChild();

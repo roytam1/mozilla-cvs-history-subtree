@@ -53,7 +53,6 @@ public:
     ~ExprParser();
 
     Expr* createExpr(const String& aExpression, txIParseContext* aContext);
-    txPattern* createPattern(const String& aPattern, txIParseContext* aContext);
 
     /**
      * Creates an Attribute Value Template using the given value
@@ -62,7 +61,7 @@ public:
         (const String& attValue, txIParseContext* aContext);
 
 
-private:
+protected:
     txIParseContext* mContext;
 
     Expr*          createBinaryExpr   (Expr* left, Expr* right, Token* op);

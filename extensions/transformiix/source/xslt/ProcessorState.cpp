@@ -978,7 +978,7 @@ nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
        return NS_OK;
    }
    if (CHECK_FN(current)) {
-       aFunction = new CurrentFunctionCall();
+       aFunction = new CurrentFunctionCall(this);
        return NS_OK;
    }
    if (CHECK_FN(unparsedEntityUri)) {

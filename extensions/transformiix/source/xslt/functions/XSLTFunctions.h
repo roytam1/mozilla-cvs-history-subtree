@@ -236,12 +236,15 @@ public:
     /**
      * Creates a new current() function call
     **/
-    CurrentFunctionCall();
+    CurrentFunctionCall(ProcessorState* aPs);
 
     /**
      * Virtual function from FunctionCall
     **/
     ExprResult* evaluate(txIEvalContext* aContext);
+
+private:
+    ProcessorState* mPs;
 };
 
 /**

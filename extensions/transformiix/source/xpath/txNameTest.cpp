@@ -128,7 +128,7 @@ ExprResult* txNameTest::evaluate(txIEvalContext* aContext)
     evalStep(aContext->getContextNode(), aContext, result);
     return result;
 }
-          
+
 /*
  * Returns the String representation of this txNodeTest.
  * @param aDest the String to use when creating the string representation.

@@ -179,20 +179,6 @@ Expr* ExprParser::createExpr(const String& aExpression,
     return expr;
 } //-- createExpr
 
-txPattern* ExprParser::createPattern(const String& aPattern,
-                                     txIParseContext* aContext)
-{
-    mContext = aContext;
-    txPattern* pattern = 0;
-    ExprLexer lexer(aPattern);
-    #if 0
-    XXX TODO Implement Pattern Parser
-    Pattern* pattern = createUnionExpr(lexer);
-    #endif
-    mContext = 0;
-    return pattern;
-} //-- createPatternExpr
-
   //--------------------/
  //- Private Methods -/
 //-------------------/

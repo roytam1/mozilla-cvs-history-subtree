@@ -8,8 +8,8 @@
 /**
  * Creates a new current function call
 **/
-CurrentFunctionCall::CurrentFunctionCall() :
-        FunctionCall(CURRENT_FN)
+CurrentFunctionCall::CurrentFunctionCall(ProcessorState* aPs) 
+    : FunctionCall(CURRENT_FN), mPs(aPs)
 {
 }
 
@@ -20,6 +20,7 @@ CurrentFunctionCall::CurrentFunctionCall() :
  */
 ExprResult* CurrentFunctionCall::evaluate(txIEvalContext* aContext)
 {
+    // mPs->getEvalContext()->getContextNode()
     return new NodeSet();
 }
 
