@@ -461,6 +461,8 @@ extern void il_scour_container(il_container *ic);
 extern void il_adjust_cache_fullness(int32 bytes);
 extern PRBool il_add_client(IL_GroupContext *img_cx, il_container *ic,
                             IL_ImageReq *image_req, int is_view_image);
+extern PRBool il_delete_client(il_container *ic, IL_ImageReq *image_req);
+
 extern void il_reduce_image_cache_size_to(uint32 new_size);
 
 
