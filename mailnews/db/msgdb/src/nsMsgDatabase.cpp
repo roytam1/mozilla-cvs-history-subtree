@@ -2029,6 +2029,44 @@ nsresult nsMsgDatabase::RowCellColumnToMime2DecodedString(nsIMdbRow *row, mdb_to
 	return err;
 }
 
+nsresult nsMsgDatabase::GetCollationKeyGenerator()
+{
+	nsresult err = NS_OK;
+	if (!m_collationKeyGenerator)
+	{
+		nsCOMPtr <nsILocale> locale; 
+		nsString localeName; 
+
+		// get a locale factory 
+		nsILocaleFactory*	localeFactory;
+		err = nsComponentManager::FindFactory(kLocaleFactoryCID, (nsIFactory**) &localeFactory); 
+		if (NS_SUCCEEDED(err) && localeFactory)
+		{
+			// do this for a new db if no UI to be provided for locale selection 
+			err = localeFactory->GetApplicationLocale(getter_AddRefs(locale)); 
+
+			if (locale)
+			{
+				// or generate a locale from a stored locale name ("en_US", "fr_FR") 
+				//err = localeFactory->NewLocale(&localeName, &locale); 
+
+				nsCOMPtr <nsICollationFactory> f;
+
+				err = nsComponentManager::CreateInstance(kCollationFactoryCID, NULL,
+										  kICollationFactoryIID, getter_AddRefs(f)); 
+				if (NS_SUCCEEDED(err) && f)
+				{
+					// get a collation interface instance 
+					err = f->CreateCollation(locale, getter_AddRefs(m_collationKeyGenerator));
+
+				}
+			}
+			NS_RELEASE(localeFactory);
+		}
+	}
+	return err;
+}
+
 nsresult nsMsgDatabase::RowCellColumnToCollationKey(nsIMdbRow *row, mdb_token columnToken, nsString &resultStr)
 {
 	nsString nakedString;
@@ -2037,44 +2075,10 @@ nsresult nsMsgDatabase::RowCellColumnToCollationKey(nsIMdbRow *row, mdb_token co
 	err = RowCellColumnToMime2DecodedString(row, columnToken, nakedString);
 	if (NS_SUCCEEDED(err))
 	{
-		nsILocaleFactory* localeFactory; 
-		nsILocale* locale; 
-		nsString localeName; 
-
-		// get a locale factory 
-		err = nsComponentManager::FindFactory(kLocaleFactoryCID, (nsIFactory**)&localeFactory); 
-		if (NS_SUCCEEDED(err) && localeFactory)
+		err = GetCollationKeyGenerator();
+		if (NS_SUCCEEDED(err) && m_collationKeyGenerator)
 		{
-			// do this for a new db if no UI to be provided for locale selection 
-			err = localeFactory->GetApplicationLocale(&locale); 
-
-			// or generate a locale from a stored locale name ("en_US", "fr_FR") 
-			//err = localeFactory->NewLocale(&localeName, &locale); 
-
-			// release locale factory
-			NS_RELEASE(localeFactory);
-
-			nsICollationFactory *f;
-
-			err = nsComponentManager::CreateInstance(kCollationFactoryCID, NULL,
-									  kICollationFactoryIID, (void**) &f); 
-			if (NS_SUCCEEDED(err) && f)
-			{
-				nsICollation *inst;
-
-				// get a collation interface instance 
-				err = f->CreateCollation(locale, &inst);
-
-				// release locale, collation factory
-				NS_RELEASE(locale);
-				NS_RELEASE(f);
-
-				if (NS_SUCCEEDED(err) && inst)
-				{
-					err = inst->CreateSortKey( kCollationCaseInSensitive, nakedString, resultStr) ;
-					NS_RELEASE(inst);
-				}
-			}
+			err = m_collationKeyGenerator->CreateSortKey( kCollationCaseInSensitive, nakedString, resultStr) ;
  		}
 	}
 	return err;
