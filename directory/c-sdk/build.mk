@@ -156,10 +156,12 @@ NSSB_LIBNAME	=libnssb$(NLS_LIBVERSION).$(LIB_SUFFIX)
 endif
 
 # as used in clients/tools/Makefile.client
-LIBNLS_INCLUDES_LOC = /h/tortoise/export/share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
-LIBNLS_LIB_LOC	    = /h/tortoise/export/share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
-#LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
-#LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
+# temporary location for Linux 7.1 build
+#LIBNLS_INCLUDES_LOC = /h/tortoise/export/share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
+#LIBNLS_LIB_LOC	    = /h/tortoise/export/share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
+# regular location
+LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
 LIBNLS_DIR	    = ../../../../../dist/libnls$(NLS_LIBVERSION)
 ifeq ($(OS_ARCH), WINNT)
 LIBNLS_INCLUDES =../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/include
