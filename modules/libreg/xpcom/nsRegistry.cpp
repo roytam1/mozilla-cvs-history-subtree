@@ -48,8 +48,10 @@ struct nsRegistry : public nsIRegistry {
     NS_IMETHOD SetIntArray( Key baseKey, const char *path, const int32 *value, uint32 len );
 
     NS_IMETHOD AddSubtree( Key baseKey, const char *path, Key *result );
+	NS_IMETHOD AddSubtreeRaw( Key baseKey, const char *path, Key *result );
     NS_IMETHOD RemoveSubtree( Key baseKey, const char *path );
     NS_IMETHOD GetSubtree( Key baseKey, const char *path, Key *result );
+	NS_IMETHOD GetSubtreeRaw( Key baseKey, const char *path, Key *result );
 
     NS_IMETHOD EnumerateSubtrees( Key baseKey, nsIEnumerator **result );
     NS_IMETHOD EnumerateAllSubtrees( Key baseKey, nsIEnumerator **result );
@@ -523,7 +525,8 @@ NS_IMETHODIMP nsRegistry::GetBytes( Key baseKey, const char *path, void **result
             // Make sure the entry is bytes.
             if( type == Bytes ) {
                 // Get bytes from registry into result field.
-                mErr = NR_RegGetEntry( mReg,(RKEY)baseKey,(char*)path, result, len );
+				*result = PR_Malloc(*len);
+                mErr = NR_RegGetEntry( mReg,(RKEY)baseKey,(char*)path, *result, len );
                 // Convert status.
                 rv = regerr2nsresult( mErr );
             } else {
@@ -630,6 +633,19 @@ NS_IMETHODIMP nsRegistry::AddSubtree( Key baseKey, const char *path, Key *result
     return rv;
 }
 
+/*-------------------------- nsRegistry::AddSubtreeRaw--------------------------
+| Add a new registry subkey with the specified name, using NR_RegAddKeyRaw     |
+------------------------------------------------------------------------------*/
+NS_IMETHODIMP nsRegistry::AddSubtreeRaw( Key baseKey, const char *path, Key *result ) {
+    nsresult rv = NS_OK;
+    // Add the subkey.
+    mErr = NR_RegAddKeyRaw( mReg,(RKEY)baseKey,(char*)path,(RKEY*)result );
+    // Convert result.
+    rv = regerr2nsresult( mErr );
+    return rv;
+}
+
+
 /*------------------------- nsRegistry::RemoveSubtree --------------------------
 | Deletes the subtree at a given location using NR_RegDeleteKey.               |
 ------------------------------------------------------------------------------*/
@@ -659,6 +675,25 @@ NS_IMETHODIMP nsRegistry::GetSubtree( Key baseKey, const char *path, Key *result
     }
     return rv;
 }
+
+/*-------------------------- nsRegistry::GetSubtreeRaw--------------------------
+| Returns a nsIRegistry::Key(RKEY) for a given key/path.  The key is           |
+| obtained using NR_RegGetKeyRaw.                                              |
+------------------------------------------------------------------------------*/
+NS_IMETHODIMP nsRegistry::GetSubtreeRaw( Key baseKey, const char *path, Key *result ) {
+    nsresult rv = NS_OK;
+    // Make sure we have a place for the result.
+    if( result ) {
+        // Get key.
+        mErr = NR_RegGetKeyRaw( mReg,(RKEY)baseKey,(char*)path,(RKEY*)result );
+        // Convert result.
+        rv = regerr2nsresult( mErr );
+    } else {
+        rv = NS_ERROR_NULL_POINTER;
+    }
+    return rv;
+}
+
 
 /*----------------------- nsRegistry::EnumerateSubtrees ------------------------
 | Allocate a nsRegSubtreeEnumerator object and return it to the caller.        |

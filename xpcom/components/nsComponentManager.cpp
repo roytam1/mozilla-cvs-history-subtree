@@ -20,6 +20,10 @@
 #include "nsIServiceManager.h"
 #include <stdlib.h>
 
+// XXX Temporay bootstrap hack
+extern "C" NS_EXPORT nsresult
+NS_RegistryGetFactory(nsISupports* servMgr, nsIFactory** aFactory);
+
 #ifndef XP_MAC
 // including this on mac causes odd link errors in static initialization
 // stuff that we (pinkerton & scc) don't yet understand. If you want to
@@ -140,8 +144,57 @@ nsFactoryEntry::Init(nsHashtable* dllCollection,
 // nsComponentManagerImpl
 ////////////////////////////////////////////////////////////////////////////////
 
+class autoFree
+	
+{
+public:
+	autoFree(void *Ptr=NULL)
+	: mPtr(Ptr)
+	{
+	}
+	
+	~autoFree()
+	{
+		if(mPtr)
+			PR_Free(mPtr);
+	}
+	void Set(void *Ptr)
+	{
+		if(mPtr)
+			mPtr=Ptr;
+		mPtr=Ptr;
+	}
+private:
+	void *mPtr;
+
+};
+
+
+class autoFreeArr
+	
+{
+public:
+	autoFreeArr(void *Ptr=NULL)
+	: mPtr(Ptr)
+	{
+	}
+	
+	~autoFreeArr()
+	{
+		delete []mPtr;
+	}
+	void Set(void *Ptr)
+	{
+		delete []mPtr;
+		mPtr=Ptr;
+	}
+private:
+	void *mPtr;
+
+};
+
 nsComponentManagerImpl::nsComponentManagerImpl()
-    : mFactories(NULL), mProgIDs(NULL), mMon(NULL), mDllStore(NULL)
+    : mFactories(NULL), mProgIDs(NULL), mMon(NULL), mDllStore(NULL), mRegistry(NULL)
 {
     NS_INIT_REFCNT();
 }
@@ -168,6 +221,35 @@ nsresult nsComponentManagerImpl::Init(void)
         if (mDllStore == NULL)
             return NS_ERROR_OUT_OF_MEMORY;
     }
+
+	if(mRegistry==NULL) {
+		
+		nsIFactory *registryFactory = NULL;
+		nsresult rv;
+
+		nsIServiceManager *srvMgr;
+
+		rv = nsServiceManager::GetGlobalServiceManager(&srvMgr);
+		if(!NS_SUCCEEDED(rv))
+		{
+			// XXX
+			return NS_ERROR_OUT_OF_MEMORY;
+		}
+		rv = NS_RegistryGetFactory(srvMgr, &registryFactory);
+		if (NS_SUCCEEDED(rv))
+		{
+			NS_DEFINE_IID(kRegistryIID, NS_IREGISTRY_IID);
+			rv = registryFactory->CreateInstance(NULL, kRegistryIID,(void **)&mRegistry);
+			if (!NS_SUCCEEDED(rv))
+			{
+				// FAIL
+				// XXX
+				return NS_ERROR_OUT_OF_MEMORY;
+			}
+
+			NS_RELEASE(registryFactory);
+		}
+	}
 
 #ifdef NS_DEBUG
     if (nsComponentManagerLog == NULL) {
@@ -217,7 +299,7 @@ nsresult nsComponentManagerImpl::Init(void)
     // No error checking on the following because the program
     // can work perfectly well even if no registry is available.
 
-    NR_StartupRegistry();
+	mRegistry->Open(); // XXX Default Reg ?
 
     // Check the version of registry. Nuke old versions.
     PlatformVersionCheck();
@@ -236,6 +318,8 @@ nsComponentManagerImpl::~nsComponentManagerImpl()
         PR_DestroyMonitor(mMon);
     if (mDllStore)
         delete mDllStore;
+	if(mRegistry)
+		delete mRegistry;
 }
 
 NS_IMPL_ISUPPORTS(nsComponentManagerImpl, nsIComponentManager::GetIID());
@@ -247,52 +331,59 @@ NS_IMPL_ISUPPORTS(nsComponentManagerImpl, nsIComponentManager::GetIID());
 #ifdef USE_NSREG
 #define USE_REGISTRY
 
+
 /*
  * PlatformDeleteKey()
  *
  * Deletes a key sub tree entirely.
  */
 nsresult
-nsComponentManagerImpl::PlatformDeleteKey(HREG hreg, RKEY rootkey, const char *keyname)
+nsComponentManagerImpl::PlatformDeleteKey(nsIRegistry::Key Key, const char *keyname)
 {
-    RKEY key;
-    char subkeyname[MAXREGPATHLEN+1];
-    int n = sizeof(subkeyname);
-    REGENUM state = 0;
+	PR_ASSERT(mRegistry);
+    
+	nsresult Res;
+	nsIRegistry::Key curKey;
+    Res = mRegistry->GetSubtreeRaw(Key,(char *)keyname,&curKey);
+	if(!NS_SUCCEEDED(Res))
+		return NS_ERROR_FAILURE;
 
-    REGERR rerr = REGERR_OK;
-
-    REGERR err = NR_RegGetKeyRaw(hreg, rootkey, (char *)keyname, &key);
-    if (err != REGERR_OK)
-        return (err);
-
+#if 0
     // Now recurse through and delete all keys under hierarchy
 	
-    subkeyname[0] = '\0';
-    while (NR_RegEnumSubkeys(hreg, key, &state, subkeyname, n, REGENUM_NORMAL) == REGERR_OK)
+	nsIEnumerator *Enum;
+	nsresult DelErr=NS_OK;
+	Res = EnumerateAllSubtrees(curKey,&Enum);
+
+	while(!Enum->IsDone())
     {
+		Enum->CurrentItem();
+
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
                ("nsRepository: ...deleting registry entry for %s", subkeyname));
 
-        rerr = PlatformDeleteKey(hreg, key, subkeyname);
 
-        if (rerr != REGERR_OK)
+        DelErr = PlatformDeleteKey(curKey,Enum-> subkeyname);
+
+        if(!NS_SUCCESS(DelErr))
         {
+			Enum->Release();
             break;
         }
+		Enum->Release();
     }
 
     // If success in deleting all subkeys, delete this key too
-    if (rerr == REGERR_OK)
+    if (DelErr == NS_OK)
     {
-        err = NR_RegDeleteKeyRaw(hreg, rootkey, (char *)keyname);
+        Res = mRegistry->DeleteSubtreeRaw(Kkey, (char *)keyname);
     }
     else
     {
-        err = rerr;
+        Res = DelErr;
     }
-
-    return (err);
+#endif //0
+    return (Res);
 }
 
 /**
@@ -304,55 +395,128 @@ nsComponentManagerImpl::PlatformDeleteKey(HREG hreg, RKEY rootkey, const char *k
 nsresult
 nsComponentManagerImpl::PlatformVersionCheck()
 {
-    HREG hreg;
-    REGERR err = NR_RegOpen(NULL, &hreg);
-	
-    if (err != REGERR_OK)
-    {
-        return NS_ERROR_FAILURE;
-    }
-	
-    RKEY xpcomKey;
-    if (NR_RegAddKey(hreg, ROOTKEY_COMMON, "Software/Netscape/XPCOM", &xpcomKey) != REGERR_OK)
-    {
-        NR_RegClose(hreg);
-        return NS_ERROR_FAILURE;
-    }
-	
-    char buf[MAXREGNAMELEN];
-    uint32 len = sizeof(buf);
-    buf[0] = '\0';
+    
+	nsIRegistry::Key xpcomKey;
 
-    err = NR_RegGetEntryString(hreg, xpcomKey, "VersionString", buf, len);
+	nsresult Res;
+	Res = mRegistry->AddSubtree(nsIRegistry::Common, "Software/Netscape/XPCOM", &xpcomKey);
+		
+    if (!NS_SUCCEEDED(Res))
+    {        
+        return NS_ERROR_FAILURE;
+    }
+	
+    char *buf;	
+    nsresult err = mRegistry->GetString(xpcomKey, "VersionString", &buf);
+	autoFree bufAutoFree(buf);
 
     // If there is a version mismatch or no version string, we got an old registry.
     // Delete the old repository hierarchies and recreate version string
-    if (err != REGERR_OK || PL_strcmp(buf, NS_XPCOM_COMPONENT_MANAGER_VERSION_STRING))
+    if (err != NS_OK || PL_strcmp(buf, NS_XPCOM_COMPONENT_MANAGER_VERSION_STRING))
     {
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
                ("nsComponentManager: Registry version mismatch (%s vs %s). Nuking xpcom "
                 "registry hierarchy.", buf, NS_XPCOM_COMPONENT_MANAGER_VERSION_STRING));
 
         // Delete the XPCOM and CLSID hierarchy
-        RKEY akey;
-        NR_RegGetKey(hreg, ROOTKEY_COMMON, "Software/Netscape", &akey);
-        PlatformDeleteKey(hreg, akey, "XPCOM");
-        NR_RegGetKey(hreg, ROOTKEY_COMMON, "Classes", &akey);
-        PlatformDeleteKey(hreg, akey, "CLSID");
+		nsIRegistry::Key netscapeKey;
+
+		Res = mRegistry->GetSubtree(nsIRegistry::Common,"Software/Netscape", &netscapeKey);
+        if(!NS_SUCCEEDED(Res))
+		{
+			PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+               ("nsComponentManager: Failed To Get Subtree (Software/Netscape)"));
+			return NS_ERROR_FAILURE;
+		}
+
+		Res = PlatformDeleteKey(netscapeKey,"XPCOM");
+		if(!NS_SUCCEEDED(Res))
+		{
+			PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+               ("nsComponentManager: Failed To Nuke Subtree (Software/Netscape/XPCOM)"));
+			return NS_ERROR_FAILURE;
+		}
+
+		Res = mRegistry->GetSubtree(nsIRegistry::Common,"Classes", &netscapeKey);
+        if(!NS_SUCCEEDED(Res))
+		{
+			PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+               ("nsComponentManager: Failed To Get Subtree (Classes)"));
+			return NS_ERROR_FAILURE;
+		}
+
+		Res = PlatformDeleteKey(netscapeKey,"CLSID");
+		if(!NS_SUCCEEDED(Res))
+		{
+			PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+               ("nsComponentManager: Failed To Nuke Subtree (Classes/CLSID)"));
+			return NS_ERROR_FAILURE;
+		}
         
         // Recreate XPCOM and CLSID keys
-        NR_RegAddKey(hreg, ROOTKEY_COMMON, "Software/Netscape/XPCOM", &xpcomKey);
-        NR_RegAddKey(hreg, ROOTKEY_COMMON, "Classes/CLSID", NULL);
+		Res = mRegistry->AddSubtree(nsIRegistry::Common,"Software/Netscape/XPCOM", &xpcomKey);
+        if(!NS_SUCCEEDED(Res))
+		{
+			PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+               ("nsComponentManager: Failed To Add Subtree (Software/Netscape/XPCOM)"));
+			   return NS_ERROR_FAILURE;
 
-        NR_RegSetEntryString(hreg, xpcomKey, "VersionString", NS_XPCOM_COMPONENT_MANAGER_VERSION_STRING);
+		}
+
+		Res = mRegistry->AddSubtree(nsIRegistry::Common,"Classes/CLSID", NULL);
+		if(!NS_SUCCEEDED(Res))
+		{
+			PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+               ("nsComponentManager: Failed To Add Subtree (Classes/CLSID)"));
+			return NS_ERROR_FAILURE;
+
+		}
+
+		Res = mRegistry->SetString(xpcomKey,"VersionString", NS_XPCOM_COMPONENT_MANAGER_VERSION_STRING);
+		if(!NS_SUCCEEDED(Res))
+		{
+			PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
+				("nsComponentManager: Failed To Set String (Version) Under (Software/Netscape/XPCOM)"));
+			return NS_ERROR_FAILURE;
+		}
+
     }
-    else {
+    else 
+	{
         PR_LOG(nsComponentManagerLog, PR_LOG_ALWAYS,
                ("nsComponentManager: platformVersionCheck() passed."));
     }
 
-    NR_RegClose(hreg);
     return NS_OK;
+}
+
+
+void
+nsComponentManagerImpl::GetTimeStampFileSize(nsIRegistry::Key Key,PRTime *lastModifiedTime,PRUint32 *fileSize)
+{
+	PR_ASSERT(lastModifiedTime);
+	PR_ASSERT(fileSize);
+
+	nsresult Res;
+	PRTime *lastModPtr;
+	uint32 Size=sizeof(PRTime);
+	Res = mRegistry->GetBytes(Key,"LastModTimeStamp",(void **)&lastModPtr,&Size);
+    if(NS_SUCCEEDED(Res))
+	{
+		*lastModifiedTime=*lastModPtr;
+		PR_Free(lastModPtr);
+	}
+	
+    
+	PRUint32 *fileSizePtr;
+	Size = sizeof(PRUint32);
+	Res = mRegistry->GetBytes(Key,"FileSize",(void **)&fileSizePtr,&Size);
+    if(NS_SUCCEEDED(Res))
+	{
+		*fileSize = *fileSizePtr;
+		PR_Free(fileSizePtr);		   
+	}
+    
 }
 
 /**
@@ -365,43 +529,37 @@ nsComponentManagerImpl::PlatformVersionCheck()
 nsresult
 nsComponentManagerImpl::PlatformCreateDll(const char *fullname, nsDll* *result)
 {
-    HREG hreg;
-    REGERR err = NR_RegOpen(NULL, &hreg);
-	
-    if (err != REGERR_OK) {
-        return NS_ERROR_FAILURE;
-    }
-	
-    RKEY xpcomKey;
-    if (NR_RegAddKey(hreg, ROOTKEY_COMMON, "Software/Netscape/XPCOM", &xpcomKey) != REGERR_OK)
-    {
-        NR_RegClose(hreg);
-        return NS_ERROR_FAILURE;
-    }
-	
-    RKEY key;
-    err = NR_RegGetKeyRaw(hreg, xpcomKey, (char *)fullname, &key);
-    if (err != REGERR_OK)
-    {
-        NR_RegClose(hreg);
+	PR_ASSERT(mRegistry!=NULL);
+
+	nsIRegistry::Key xpcomKey;
+	nsresult Res;
+	Res = mRegistry->AddSubtree(nsIRegistry::Common, "Software/Netscape/XPCOM", &xpcomKey);
+    if (!NS_SUCCEEDED(Res))
+    {        
         return NS_ERROR_FAILURE;
     }
 
-    PRTime lastModTime = LL_ZERO;
-    PRUint32 fileSize = 0;
-    uint32 n = sizeof(lastModTime);
-    NR_RegGetEntry(hreg, key, "LastModTimeStamp", &lastModTime, &n);
-    n = sizeof(fileSize);
-    NR_RegGetEntry(hreg, key, "FileSize", &fileSize, &n);
+	nsIRegistry::Key fullnameKey;
 
+	// XXX Cast!
+    Res = mRegistry->GetSubtreeRaw(xpcomKey,(char *)fullname,&fullnameKey);
+	if(!NS_SUCCEEDED(Res))
+    {        
+        return NS_ERROR_FAILURE;
+    }
+	
+    PRTime lastModTime=LL_ZERO;
+    PRUint32 fileSize=0;
+
+	GetTimeStampFileSize(fullnameKey,&lastModTime,&fileSize);
+
+	
     nsDll *dll = new nsDll(fullname, lastModTime, fileSize);
     if (dll == NULL)
     {
-        NR_RegClose(hreg);
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    NR_RegClose(hreg);
     *result = dll;
     return NS_OK;
 }
@@ -416,268 +574,300 @@ nsComponentManagerImpl::PlatformCreateDll(const char *fullname, nsDll* *result)
 nsresult
 nsComponentManagerImpl::PlatformMarkNoComponents(nsDll *dll)
 {
-    HREG hreg;
-    REGERR err = NR_RegOpen(NULL, &hreg);
-	
-    if (err != REGERR_OK)
-    {
-        return NS_ERROR_FAILURE;
-    }
-	
+	PR_ASSERT(mRegistry!=NULL);
+    
     // XXX Gross. LongLongs dont have a serialization format. This makes
     // XXX the registry non-xp. Someone beat on the nspr people to get
     // XXX a longlong serialization function please!
-    RKEY xpcomKey;
-    if (NR_RegAddKey(hreg, ROOTKEY_COMMON, "Software/Netscape/XPCOM", &xpcomKey) != REGERR_OK)
-    {
-        NR_RegClose(hreg);
+
+	nsIRegistry::Key xpcomKey;
+	nsresult Res;
+	Res = mRegistry->AddSubtree(nsIRegistry::Common, "Software/Netscape/XPCOM", &xpcomKey);
+    if (!NS_SUCCEEDED(Res))
+    {        
         return NS_ERROR_FAILURE;
     }
-	
-    RKEY key;
-    err = NR_RegAddKeyRaw(hreg, xpcomKey, (char *)dll->GetFullPath(), &key);
-	
-    if (err != REGERR_OK)
+
+	nsIRegistry::Key dllPathKey;
+	Res = mRegistry->AddSubtreeRaw(xpcomKey,(char *)dll->GetFullPath(),&dllPathKey);    
+    if(!NS_SUCCEEDED(Res))
     {
-        NR_RegClose(hreg);
         return NS_ERROR_FAILURE;
     }
 	
     PRTime lastModTime = dll->GetLastModifiedTime();
     PRUint32 fileSize = dll->GetSize();
 
-    NR_RegSetEntry(hreg, key, "LastModTimeStamp", REGTYPE_ENTRY_BYTES,
-                   &lastModTime, sizeof(lastModTime));
-    NR_RegSetEntry(hreg, key, "FileSize",  REGTYPE_ENTRY_BYTES,
-                   &fileSize, sizeof(fileSize));
-	
+	Res = mRegistry->SetBytes(dllPathKey,"LastModTimeStamp",&lastModTime, sizeof(lastModTime));
+	if(!NS_SUCCEEDED(Res))
+	{
+		// XXX Log
+	}
+
+	Res = mRegistry->SetBytes(dllPathKey,"LastModTimeStamp",&fileSize, sizeof(fileSize));
+	if(!NS_SUCCEEDED(Res))
+	{
+		// XXX Log
+	}
+
     char *ncomponentsString = "0";
-	
-    NR_RegSetEntryString(hreg, key, "ComponentsCount",
-                         ncomponentsString);
-	
-    NR_RegClose(hreg);
+
+	Res = mRegistry->SetString(dllPathKey,"ComponentsCount",ncomponentsString);
+	if(!NS_SUCCEEDED(Res))
+	{
+		// XXX Log
+	}
+  
     return NS_OK;
 }
 
 nsresult
 nsComponentManagerImpl::PlatformRegister(QuickRegisterData* regd, nsDll *dll)
 {
-    HREG hreg;
     // Preconditions
     PR_ASSERT(regd != NULL);
     PR_ASSERT(regd->CIDString != NULL);
     PR_ASSERT(dll != NULL);
+	PR_ASSERT(mRegistry!=NULL);
 
-    REGERR err = NR_RegOpen(NULL, &hreg);
-
-    if (err != REGERR_OK)
-    {
+	nsIRegistry::Key classesKey;
+	nsresult Res;
+	Res = mRegistry->AddSubtree(nsIRegistry::Common, "Classes", &classesKey);
+    if (!NS_SUCCEEDED(Res))
+    {        
         return NS_ERROR_FAILURE;
     }
 
-    RKEY classesKey;
-    if (NR_RegAddKey(hreg, ROOTKEY_COMMON, "Classes", &classesKey) != REGERR_OK)
-    {
-        NR_RegClose(hreg);
-        return NS_ERROR_FAILURE;
-    }
+	nsIRegistry::Key clsIDkey;
 
-    RKEY key;
-    NR_RegAddKey(hreg, classesKey, "CLSID", &key);
-    NR_RegAddKeyRaw(hreg, key, (char *)regd->CIDString, &key);
+	// XXX Check error ?
+	Res = mRegistry->AddSubtree(classesKey,"CLSID",&clsIDkey);
 
-    NR_RegSetEntryString(hreg, key, "ClassName", (char *)regd->className);
+	nsIRegistry::Key IDkey;
+	// XXX Check error ?
+	Res = mRegistry->AddSubtreeRaw(clsIDkey,(char *)regd->CIDString,&IDkey);
+
+
+	// XXX Check error ?
+	Res = mRegistry->SetString(IDkey,"ClassName", (char *)regd->className);
+
     if (regd->progID)
-        NR_RegSetEntryString(hreg, key, "ProgID", (char *)(regd->progID));
+	{
+		// XXX Check error ?
+		Res = mRegistry->SetString(IDkey,"ProgID", (char *)(regd->progID));        
+	}
     char *libName = (char *)dll->GetFullPath();
-    NR_RegSetEntryString(hreg, key, "InprocServer", libName);
+	
+	// XXX Check error ?
+	Res = mRegistry->SetString(IDkey,"InprocServer", libName);
+    
 
     if (regd->progID)
     {
-        NR_RegAddKeyRaw(hreg, classesKey, (char *)regd->progID, &key);
-        NR_RegSetEntryString(hreg, key, "CLSID", (char *)regd->CIDString);
+		nsIRegistry::Key progIDKey;
+		Res = mRegistry->AddSubtreeRaw(classesKey,(char *)regd->progID, &progIDKey);
+        Res = mRegistry->SetString(progIDKey,"CLSID", (char *)regd->CIDString);
     }
 
     // XXX Gross. LongLongs dont have a serialization format. This makes
     // XXX the registry non-xp. Someone beat on the nspr people to get
     // XXX a longlong serialization function please!
-    RKEY xpcomKey;
-    if (NR_RegAddKey(hreg, ROOTKEY_COMMON, "Software/Netscape/XPCOM", &xpcomKey) != REGERR_OK)
+    nsIRegistry::Key xpcomKey;
+	Res = mRegistry->AddSubtree(nsIRegistry::Common,"Software/Netscape/XPCOM", &xpcomKey);
+	if(!NS_SUCCEEDED(Res))
     {
-        NR_RegClose(hreg);
         // This aint a fatal error. It causes autoregistration to fail
         // and hence the dll would be registered again the next time
         // we startup. Let us run with it.
         return NS_OK;
     }
 
-    NR_RegAddKeyRaw(hreg, xpcomKey, (char *)dll->GetFullPath(), &key);
+	nsIRegistry::Key dllPathKey;
+	Res = mRegistry->AddSubtreeRaw(xpcomKey,(char *)dll->GetFullPath(), &dllPathKey);
 
     PRTime lastModTime = dll->GetLastModifiedTime();
     PRUint32 fileSize = dll->GetSize();
 
-    NR_RegSetEntry(hreg, key, "LastModTimeStamp", REGTYPE_ENTRY_BYTES,
-                   &lastModTime, sizeof(lastModTime));
-    NR_RegSetEntry(hreg, key, "FileSize",  REGTYPE_ENTRY_BYTES,
-                   &fileSize, sizeof(fileSize));
+	Res = mRegistry->SetBytes(dllPathKey,"LastModTimeStamp",&lastModTime, sizeof(lastModTime));
+    
+	Res = mRegistry->SetBytes(dllPathKey,"FileSize", &fileSize, sizeof(fileSize));                                     
 
     unsigned int nComponents = 0;
-    char buf[MAXREGNAMELEN];
-    uint32 len = sizeof(buf);
+    char *Buf;
 
-    if (NR_RegGetEntryString(hreg, key, "ComponentsCount", buf, len) == REGERR_OK)
-    {
-        nComponents = atoi(buf);
-    }
+	Res = mRegistry->GetString(dllPathKey,"ComponentsCount",&Buf);
+	if(!NS_SUCCEEDED(Res))
+	{
+		return Res;
+	}
+    
+	autoFree bufAutoFree(Buf);    
+    nComponents = atoi(Buf);
+    
     nComponents++;
-    PR_snprintf(buf, sizeof(buf), "%d", nComponents);
-    NR_RegSetEntryString(hreg, key, "ComponentsCount", buf);
-	
-    NR_RegClose(hreg);
-    return err;
+	// XXX Null-term OK here ?
+    PR_snprintf(Buf, PL_strlen(Buf), "%d", nComponents);
+	Res = mRegistry->SetString(dllPathKey,"ComponentsCount", Buf);
+    return NS_OK;
 }
 
 nsresult
 nsComponentManagerImpl::PlatformUnregister(QuickRegisterData* regd, const char *aLibrary)
 {  
-    HREG hreg;
-    REGERR err = NR_RegOpen(NULL, &hreg);
+	PR_ASSERT(mRegistry!=NULL);
 
-    if (err != REGERR_OK)
-    {
+   	nsIRegistry::Key classesKey;
+	nsresult Res;
+	Res = mRegistry->AddSubtree(nsIRegistry::Common, "Classes", &classesKey);
+    if (!NS_SUCCEEDED(Res))
+    {        
         return NS_ERROR_FAILURE;
     }
 
-    RKEY classesKey;
-    if (NR_RegAddKey(hreg, ROOTKEY_COMMON, "Classes", &classesKey) != REGERR_OK)
-    {
-        NR_RegClose(hreg);
-        return NS_ERROR_FAILURE;
-    }
+	nsIRegistry::Key clsIDKey;
+	Res = mRegistry->AddSubtree(classesKey,"CLSID",&clsIDKey);
+    
+	if(!NS_SUCCEEDED(Res))
+	{
+		return NS_ERROR_FAILURE;
+	}
 	
-    RKEY key;
-    NR_RegAddKey(hreg, classesKey, "CLSID", &key);
-    RKEY cidKey;
-    NR_RegAddKeyRaw(hreg, key, (char *)regd->CIDString, &cidKey);
-    char progID[MAXREGNAMELEN];
-    uint32 plen = sizeof(progID);
-    if (NR_RegGetEntryString(hreg, cidKey, "ProgID", progID, plen) == REGERR_OK)
+	nsIRegistry::Key cidKey;
+
+	Res = mRegistry->AddSubtreeRaw(clsIDKey,(char *)regd->CIDString, &cidKey);
+
+    char *progID;
+    
+	Res = mRegistry->GetString(cidKey,"ProgID",&progID);
+    if(NS_SUCCEEDED(Res))
     {
-        NR_RegDeleteKey(hreg, classesKey, progID);
+		autoFree porgIDAutoFree(progID);
+		// XXX xlassesKey or cidKey or clsIDKey ?
+		mRegistry->RemoveSubtree(classesKey,progID);
     }
 
-    NR_RegDeleteKey(hreg, key, (char *)regd->CIDString);
+	mRegistry->RemoveSubtree(clsIDKey,(char *)regd->CIDString);
 	
-    RKEY xpcomKey;
-    if (NR_RegAddKey(hreg, ROOTKEY_COMMON, "Software/Netscape/XPCOM", &xpcomKey) != REGERR_OK)
+    nsIRegistry::Key xpcomKey;
+	Res = mRegistry->AddSubtree(nsIRegistry::Common,"Software/Netscape/XPCOM", &xpcomKey);
+	if(!NS_SUCCEEDED(Res))
     {
-        NR_RegClose(hreg);
+		// XXX Really OK ?
         // This aint a fatal error. It causes autoregistration to fail
         // and hence the dll would be registered again the next time
         // we startup. Let us run with it.
         return NS_OK;
     }
 
-    NR_RegGetKeyRaw(hreg, xpcomKey, (char *)aLibrary, &key);
+
+	nsIRegistry::Key libKey;
+	Res = mRegistry->GetSubtreeRaw(xpcomKey,(char *)aLibrary, &libKey);
+    
+	if(!NS_SUCCEEDED(Res))
+	{
+		return NS_ERROR_FAILURE;
+	}
 
     // We need to reduce the ComponentCount by 1.
     // If the ComponentCount hits 0, delete the entire key.
     int nComponents = 0;
-    char buf[MAXREGNAMELEN];
-    uint32 len = sizeof(buf);
+    char *Buf;;
 
-    if (NR_RegGetEntryString(hreg, key, "ComponentsCount", buf, len) == REGERR_OK)
+	Res = mRegistry->GetString(libKey,"ComponentsCount",&Buf);
+	if(!NS_SUCCEEDED(Res))
+	{
+		return NS_ERROR_FAILURE;
+	}
+
+	autoFree bufAutoFree(Buf);
+    
+    nComponents = atoi(Buf);
+    nComponents--;
+    
+	if (nComponents <= 0)
     {
-        nComponents = atoi(buf);
-        nComponents--;
-    }
-    if (nComponents <= 0)
-    {
-        NR_RegDeleteKey(hreg, key, (char *)aLibrary);
+		Res = mRegistry->RemoveSubtree(libKey,(char *)aLibrary);
     }
     else
     {
-        PR_snprintf(buf, sizeof(buf), "%d", nComponents);
-        NR_RegSetEntryString(hreg, key, "ComponentsCount", buf);		
+        PR_snprintf(Buf,PL_strlen(Buf), "%d", nComponents);
+		mRegistry->SetString(libKey,"ComponentsCount", Buf);
     }
 
-    NR_RegClose(hreg);
     return NS_OK;
 }
 
 nsresult
 nsComponentManagerImpl::PlatformFind(const nsCID &aCID, nsFactoryEntry* *result)
 {
-    nsresult rv;
-    HREG hreg;
-    REGERR err = NR_RegOpen(NULL, &hreg);
+	PR_ASSERT(mRegistry!=NULL);
 
-    if (err != REGERR_OK) {
+   	nsIRegistry::Key classesKey;
+	nsresult Res;
+	Res = mRegistry->AddSubtree(nsIRegistry::Common, "Classes", &classesKey);
+    if (!NS_SUCCEEDED(Res))
+    {        
         return NS_ERROR_FAILURE;
     }
 
-    RKEY classesKey;
-    if (NR_RegAddKey(hreg, ROOTKEY_COMMON, "Classes", &classesKey) != REGERR_OK)
-    {
-        NR_RegClose(hreg);
-        return NS_ERROR_FAILURE;
-    }
+	nsIRegistry::Key clsIDKey;
+	Res = mRegistry->AddSubtree(classesKey,"CLSID",&clsIDKey);
+    
+	if(!NS_SUCCEEDED(Res))
+	{
+		return NS_ERROR_FAILURE;
+	}
 
-    RKEY key;
-    NR_RegAddKey(hreg, classesKey, "CLSID", &key);
-	
     nsFactoryEntry *res = NULL;
 	
-    RKEY cidKey;
+	
     char *cidString = aCID.ToString();
-    err = NR_RegGetKeyRaw(hreg, key, cidString, &cidKey);
+	nsIRegistry::Key cidKey;
+	Res = mRegistry->GetSubtreeRaw(clsIDKey,cidString,&cidKey);
     delete [] cidString;
 
-    if (err != REGERR_OK)
+    if (!NS_SUCCEEDED(Res))
     {
-        NR_RegClose(hreg);
         return NS_ERROR_FAILURE;
     }
-
-    // Get the library name, modifiedtime and size
-    PRTime lastModTime = LL_ZERO;
-    PRUint32 fileSize = 0;
-
-    char library[MAXREGNAMELEN];
-    uint32 len = sizeof(library);
-    err = NR_RegGetEntryString(hreg, cidKey, "InprocServer", library, len);
-    if (err != REGERR_OK)
+    
+    char *library;
+    
+	Res = mRegistry->GetString(cidKey,"InprocServer",&library);
+    
+    if (!NS_SUCCEEDED(Res))
     {
         // Registry inconsistent. No File name for CLSID.
-        NR_RegClose(hreg);
         return NS_ERROR_FAILURE;
     }
+	autoFree libAutoFree(library);
 
     // XXX Gross. LongLongs dont have a serialization format. This makes
     // XXX the registry non-xp. Someone beat on the nspr people to get
     // XXX a longlong serialization function please!
-    RKEY xpcomKey;
-    if (NR_RegAddKey(hreg, ROOTKEY_COMMON, "Software/Netscape/XPCOM", &xpcomKey) == REGERR_OK)
+	nsIRegistry::Key xpcomKey;
+	Res = mRegistry->AddSubtree(xpcomKey,"Software/Netscape/XPCOM",&xpcomKey);
+
+	// Get the library name, modifiedtime and size
+    PRTime lastModTime = LL_ZERO;
+    PRUint32 fileSize = 0;
+
+    if (NS_SUCCEEDED(Res))
     {
-        if (NR_RegGetKeyRaw(hreg, xpcomKey, library, &key) == REGERR_OK)
+		nsIRegistry::Key key;
+		Res = mRegistry->GetSubtreeRaw(xpcomKey,library,&key);
+        if (NS_SUCCEEDED(Res))
         {
-            uint32 n = sizeof(lastModTime);
-            NR_RegGetEntry(hreg, key, "LastModTimeStamp", &lastModTime, &n);
-            PR_ASSERT(n == sizeof(lastModTime));
-            n = sizeof(fileSize);
-            NR_RegGetEntry(hreg, key, "FileSize", &fileSize, &n);
-            PR_ASSERT(n == sizeof(fileSize));
+			GetTimeStampFileSize(key,&lastModTime,&fileSize);			
         }
     }
 
+	nsresult rv;
     res = new nsFactoryEntry;
     if (res == NULL)
         return NS_ERROR_OUT_OF_MEMORY;
     rv = res->Init(mDllStore, aCID, library, lastModTime, fileSize);
     if (NS_FAILED(rv)) return rv;
-
-    NR_RegClose(hreg);
 
     *result = res;
     return NS_OK;
@@ -686,123 +876,90 @@ nsComponentManagerImpl::PlatformFind(const nsCID &aCID, nsFactoryEntry* *result)
 nsresult
 nsComponentManagerImpl::PlatformProgIDToCLSID(const char *aProgID, nsCID *aClass) 
 {
-    HREG hreg;
-    nsresult res = NS_ERROR_FAILURE;
+	PR_ASSERT(aClass != NULL);
+	PR_ASSERT(mRegistry);
 
-    PR_ASSERT(aClass != NULL);
+	nsIRegistry::Key classesKey;
+	nsresult Res;
+	Res = mRegistry->AddSubtree(nsIRegistry::Common, "Classes", &classesKey);
+    if (!NS_SUCCEEDED(Res))
+    {        
+        return NS_ERROR_FAILURE;
+    }
 	
-    REGERR err = NR_RegOpen(NULL, &hreg);
-    if (err != REGERR_OK)
+	nsIRegistry::Key progIDKey;
+	Res = mRegistry->GetSubtreeRaw(classesKey,(char *)aProgID,&progIDKey);
+    if(!NS_SUCCEEDED(Res))
     {
         return NS_ERROR_FAILURE;
     }
 
-    RKEY classesKey;
-    if (NR_RegAddKey(hreg, ROOTKEY_COMMON, "Classes", &classesKey) != REGERR_OK)
+    char *cidString;
+	Res = mRegistry->GetString(progIDKey,"CLSID",&cidString);
+    
+    if(!NS_SUCCEEDED(Res))
     {
-        NR_RegClose(hreg);
         return NS_ERROR_FAILURE;
     }
-
-    RKEY key;
-    err = NR_RegGetKeyRaw(hreg, classesKey, (char *)aProgID, &key);
-    if (err != REGERR_OK)
-    {
-        NR_RegClose(hreg);
-        return NS_ERROR_FAILURE;
-    }
-
-    char cidString[MAXREGNAMELEN];
-    err = NR_RegGetEntryString(hreg, key, "CLSID", cidString, MAXREGNAMELEN);
-    if (err != REGERR_OK)
-    {
-        NR_RegClose(hreg);
-        return NS_ERROR_FAILURE;
-    }
-
-    NR_RegClose(hreg);
+	autoFree cidAutoFree(cidString);
 
     if (!(aClass->Parse(cidString)))
     {
         return NS_ERROR_FAILURE;
     }
-    res = NS_OK;
-    return res;
+
+    return NS_OK;
 }
 
 nsresult
 nsComponentManagerImpl::PlatformCLSIDToProgID(nsCID *aClass,
                                               char* *aClassName, char* *aProgID)
 {
-    HREG hreg;
-    char* classnameString;
-    char* progidString;
-    nsresult res = NS_ERROR_FAILURE;
-
-    char* cidStr = aClass->ToString();
 	
-    PR_ASSERT(aClass != NULL);
-	
-    REGERR err = NR_RegOpen(NULL, &hreg);
-    if (err != REGERR_OK)
-    {
-        res = NS_ERROR_FAILURE;
-        goto done1;
+	PR_ASSERT(aClass);
+	PR_ASSERT(mRegistry);	
+
+   	nsIRegistry::Key classesKey;
+	nsresult Res;
+	Res = mRegistry->AddSubtree(nsIRegistry::Common, "Classes", &classesKey);
+    if (!NS_SUCCEEDED(Res))
+    {        
+        return NS_ERROR_FAILURE;
     }
 
-    RKEY classesKey;
-    if (NR_RegAddKey(hreg, ROOTKEY_COMMON, "Classes", &classesKey) != REGERR_OK)
-    {
-        res = NS_ERROR_FAILURE;
-        goto done2;
-    }
+	char* cidStr = aClass->ToString();
+	nsIRegistry::Key cidKey;
+	Res = mRegistry->GetSubtreeRaw(classesKey,cidStr,&cidKey);
 
-    RKEY key;
-    err = NR_RegGetKeyRaw(hreg, classesKey, cidStr, &key);
-    if (err != REGERR_OK)
+    if(!NS_SUCCEEDED(Res))
     {
-        res = NS_ERROR_FAILURE;
-        goto done2;
+        return NS_ERROR_FAILURE;
     }
+	autoFreeArr cidStrAutoFree(cidStr);
 
-    classnameString = new char[MAXREGNAMELEN];
-    if (classnameString == NULL) {
-        res = NS_ERROR_OUT_OF_MEMORY;
-        goto done2;
+	char* classnameString;
+
+	Res = mRegistry->GetString(cidKey,"ClassName",&classnameString);
+    if(!NS_SUCCEEDED(Res))
+	{     
+        return NS_ERROR_FAILURE;
+
     }
-    err = NR_RegGetEntryString(hreg, key, "ClassName", classnameString, MAXREGNAMELEN);
-    if (err != REGERR_OK)
-    {
-        delete[] classnameString;
-        res = NS_ERROR_FAILURE;
-        goto done2;
-    }
+	autoFree classnameAutoFree(classnameString);
     *aClassName = classnameString;
 
-    progidString = new char[MAXREGNAMELEN];
-    if (progidString == NULL) {
-        delete[] classnameString;
-        res = NS_ERROR_OUT_OF_MEMORY;
-        goto done2;
-    }
-    err = NR_RegGetEntryString(hreg, key, "ProgID", progidString, MAXREGNAMELEN);
-    if (err != REGERR_OK)
-    {
-        delete[] progidString;
-        delete[] classnameString;
-        res = NS_ERROR_FAILURE;
-        goto done2;
+	char* progidString;
+    
+	Res = mRegistry->GetString(cidKey,"ProgID",&progidString);
+    
+    if (!NS_SUCCEEDED(Res))
+    {        
+        return NS_ERROR_FAILURE;        
     }
 
     *aProgID = progidString; 
-    res = NS_OK;
+    return NS_OK;
 
- done2:	
-    NR_RegClose(hreg);
- done1:
-    delete[] cidStr;
-
-    return res;
 }
 
 #endif // USE_NSREG
