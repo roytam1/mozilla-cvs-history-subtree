@@ -9918,7 +9918,7 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList,
                                              nsIPresContext* aPresContext)
 {
   PRInt32 count = aChangeList.Count();
-  while (0 <= --count) {
+  while (0 < count--) {
     nsIFrame* frame;
     nsIContent* content;
     PRInt32 hint;
@@ -9929,7 +9929,6 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList,
         break;
       case NS_STYLE_HINT_FRAMECHANGE:
         RecreateFramesForContent(aPresContext, content);
-        count = 0; //force early exit from the loop
         break;
       case NS_STYLE_HINT_REFLOW:
         StyleChangeReflow(aPresContext, frame, nsnull);
