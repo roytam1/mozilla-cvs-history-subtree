@@ -193,6 +193,10 @@ realclean clobber_all::
 	rm -rf $(wildcard *.OBJ *.OBJD) dist $(ALL_TRASH)
 	+$(LOOP_OVER_DIRS)
 
+distclean::
+	rm -rf $(wildcard *.OBJ *.OBJD) dist $(ALL_TRASH) $(DIST_GARBAGE)
+	+$(LOOP_OVER_DIRS)
+
 release:: export
 ifdef RELEASE_BINS
 	@echo "Copying executable programs and scripts to release directory"
