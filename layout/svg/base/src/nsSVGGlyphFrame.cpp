@@ -54,6 +54,7 @@
 #include "prdtoa.h"
 #include "nsIDOMSVGRect.h"
 #include "nsILookAndFeel.h"
+#include "nsTextFragment.h"
 
 typedef nsFrame nsSVGGlyphFrameBase;
 
@@ -133,7 +134,7 @@ public:
   NS_IMETHOD_(void) NotifyGlyphFragmentTreeUnsuspended();
   
 protected:
-  void UpdateGeometry(PRUint32 flags);
+  void UpdateGeometry(PRUint32 flags, PRBool bRedraw=PR_TRUE);
   void UpdateMetrics(PRUint32 flags);
   void UpdateFragmentTree();
   nsISVGOuterSVGFrame *GetOuterSVGFrame();
@@ -272,7 +273,26 @@ nsSVGGlyphFrame::SetSelected(nsIPresContext* aPresContext,
 #if defined(DEBUG) && defined(SVG_DEBUG_SELECTION)
   printf("nsSVGGlyphFrame(%p)::SetSelected()\n", this);
 #endif
-  return nsSVGGlyphFrameBase::SetSelected(aPresContext, aRange, aSelected, aSpread); 
+//  return nsSVGGlyphFrameBase::SetSelected(aPresContext, aRange, aSelected, aSpread);
+
+  // check whether style allows selection
+  PRBool  selectable;
+  IsSelectable(&selectable, nsnull);
+  if (!selectable)
+    return NS_OK;
+  
+  nsFrameState  frameState;
+  GetFrameState(&frameState);
+  if ( aSelected ){
+    frameState |=  NS_FRAME_SELECTED_CONTENT;
+  }
+  else
+    frameState &= ~NS_FRAME_SELECTED_CONTENT;
+  SetFrameState(frameState);
+
+  UpdateGeometry(nsISVGRendererGlyphGeometry::UPDATEMASK_HIGHLIGHT, PR_FALSE);  
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -658,41 +678,155 @@ nsSVGGlyphFrame::GetHasHighlight(PRBool *aHasHighlight)
   return NS_OK;
 }
 
+
+// Utilities for converting from indices in the uncompressed content
+// element strings to compressed frame string and back:
+int CompressIndex(int index, const nsTextFragment*fragment)
+{
+  int ci=0;
+  if (fragment->Is2b()) {
+    const PRUnichar *data=fragment->Get2b();
+    while(*data && index) {
+      if (XP_IS_SPACE_W(*data)){
+        do {
+          ++data;
+          --index;
+        }while(XP_IS_SPACE_W(*data) && index);
+      }
+      else {
+        ++data;
+        --index;
+      }
+      ++ci;
+    }
+  }
+  else {
+    const char *data=fragment->Get1b();
+    while(*data && index) {
+      if (XP_IS_SPACE_W(*data)){
+        do {
+          ++data;
+          --index;
+        }while(XP_IS_SPACE_W(*data) && index);
+      }
+      else {
+        ++data;
+        --index;
+      }
+      ++ci;
+    }
+  }
+    
+  return ci;
+}
+
+int UncompressIndex(int index, PRBool bRightAffinity, const nsTextFragment*fragment)
+{
+  // XXX
+  return index;
+}
+
 /* [noscript] void getHighlight (out unsigned long charnum, out unsigned long nchars, out nscolor foreground, out nscolor background); */
 NS_IMETHODIMP
 nsSVGGlyphFrame::GetHighlight(PRUint32 *charnum, PRUint32 *nchars, nscolor *foreground, nscolor *background)
 {
   *foreground = NS_RGB(255,255,255);
   *background = NS_RGB(0,0,0); 
+  *charnum=0;
+  *nchars=0;
 
     PRBool hasHighlight;
   GetHasHighlight(&hasHighlight);
 
   if (!hasHighlight) {
     NS_ERROR("nsSVGGlyphFrame::GetHighlight() called by renderer when there is no highlight");
-    *charnum=0;
-    *nchars=0;
     return NS_ERROR_FAILURE;
   }
 
-  // XXX get selection range:
-  *charnum=0;
-  *nchars=mCharacterData.Length();
-
-  // XXX get colors from selection:
-  
   nsCOMPtr<nsIPresContext> presContext;
   GetPresContext(getter_AddRefs(presContext));
   NS_ASSERTION(presContext, "no prescontext");
+
+  nsCOMPtr<nsITextContent> tc = do_QueryInterface(mContent);
+  NS_ASSERTION(tc, "no textcontent interface");
+
+  // The selection ranges are relative to the uncompressed text in
+  // the content element. We'll need the text fragment:
+  const nsTextFragment*fragment=nsnull;
+  tc->GetText(&fragment);
+  NS_ASSERTION(fragment, "null text fragment");
+
+  
+  // get the selection details 
+  SelectionDetails *details = nsnull;
+  {
+    nsCOMPtr<nsIFrameSelection> frameSelection;
+    {
+      nsCOMPtr<nsISelectionController> controller;
+      GetSelectionController(presContext, getter_AddRefs(controller));
+      
+      if (!controller) {
+        NS_ERROR("no selection controller");
+        return NS_ERROR_FAILURE;
+      }
+      frameSelection = do_QueryInterface(controller);
+    }
+    if (!frameSelection) {
+      nsCOMPtr<nsIPresShell> shell;
+      presContext->GetShell(getter_AddRefs(shell));
+      NS_ASSERTION(shell, "no presshell");
+      shell->GetFrameSelection(getter_AddRefs(frameSelection));
+    }
+    if (!frameSelection) {
+      NS_ERROR("no frameselection interface");
+      return NS_ERROR_FAILURE;
+    }
+
+    PRInt32 length;
+    tc->GetTextLength(&length);
     
-  nsCOMPtr<nsILookAndFeel> look;
-  presContext->GetLookAndFeel(getter_AddRefs(look));
-  NS_ASSERTION(look, "no LookAndFeel");
-  if (look) {
-    look->GetColor(nsILookAndFeel::eColor_TextSelectBackground, *background);
-    look->GetColor(nsILookAndFeel::eColor_TextSelectForeground, *foreground);
+    frameSelection->LookUpSelection(mContent, 0, length,
+                                    &details, PR_FALSE);
   }
+
+#if defined(DEBUG) && defined(SVG_DEBUG_SELECTION)
+  {
+    SelectionDetails *dp = details;
+    printf("nsSVGGlyphFrame(%p)::GetHighlight() [\n", this);
+    while (dp) {
+      printf("selection detail: %d(%d)->%d(%d) type %d\n",
+             dp->mStart, CompressIndex(dp->mStart, fragment),
+             dp->mEnd, CompressIndex(dp->mEnd, fragment),
+             dp->mType);
+      dp = dp->mNext;
+    }
+    printf("]\n");
+      
+  }
+#endif
+  
+  if (details) {
+    NS_ASSERTION(details->mNext==nsnull, "can't do multiple selection ranges");
+
+    *charnum=CompressIndex(details->mStart, fragment);
+    *nchars=CompressIndex(details->mEnd, fragment)-*charnum;  
     
+    nsCOMPtr<nsILookAndFeel> look;
+    presContext->GetLookAndFeel(getter_AddRefs(look));
+    NS_ASSERTION(look, "no LookAndFeel");
+    if (look) {
+      look->GetColor(nsILookAndFeel::eColor_TextSelectBackground, *background);
+      look->GetColor(nsILookAndFeel::eColor_TextSelectForeground, *foreground);
+    }
+
+    SelectionDetails *dp = details;
+    while ((dp=details->mNext) != nsnull) {
+      delete details;
+      details = dp;
+    }
+    delete details;
+  }
+  
   return NS_OK;
 }
 
@@ -858,7 +992,7 @@ nsSVGGlyphFrame::NotifyGlyphFragmentTreeUnsuspended()
 //----------------------------------------------------------------------
 //
 
-void nsSVGGlyphFrame::UpdateGeometry(PRUint32 flags)
+void nsSVGGlyphFrame::UpdateGeometry(PRUint32 flags, PRBool bRedraw)
 {
   mGeometryUpdateFlags |= flags;
   
@@ -876,7 +1010,7 @@ void nsSVGGlyphFrame::UpdateGeometry(PRUint32 flags)
     nsCOMPtr<nsISVGRendererRegion> dirty_region;
     mGeometry->Update(mGeometryUpdateFlags, getter_AddRefs(dirty_region));
     if (dirty_region)
-      outerSVGFrame->InvalidateRegion(dirty_region, PR_TRUE);
+      outerSVGFrame->InvalidateRegion(dirty_region, bRedraw);
     mGeometryUpdateFlags = 0;
   }  
 }

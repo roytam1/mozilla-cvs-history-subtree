@@ -374,7 +374,7 @@ nsSVGGDIPlusGlyphGeometry::Render(nsISVGRendererCanvas *canvas)
 
       SolidBrush brush(Color((BYTE)(opacity*255), NS_GET_R(color), NS_GET_G(color), NS_GET_B(color)));
 
-      if (sections.IsOnlySection()) {
+      if (sections.IsOnlySection() && !sections.IsHighlighted()) {
         // this is the 'normal' case
         gdiplusCanvas->GetGraphics()->FillPath(&brush, mStroke);
       }
