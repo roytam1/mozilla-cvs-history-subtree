@@ -85,12 +85,12 @@
 #include "nsAppFileLocationProvider.h"
 
 #if defined(XP_MAC)
-#define COMPONENT_REGISTRY_NAME NS_LITERAL_CSTRING("Component Registry")
 #define COMPONENT_DIRECTORY     NS_LITERAL_CSTRING("Components")
 #else
-#define COMPONENT_REGISTRY_NAME NS_LITERAL_CSTRING("component.reg")
 #define COMPONENT_DIRECTORY     NS_LITERAL_CSTRING("components")
 #endif 
+
+#define COMPONENT_REGISTRY_NAME NS_LITERAL_CSTRING("compreg.dat")
 
 #if defined(XP_MAC)
 #define APP_REGISTRY_NAME "Application Registry"
@@ -826,8 +826,11 @@ nsDirectoryService::GetFile(const char *prop, PRBool *persistent, nsIFile **_ret
     else if (inAtom == nsDirectoryService::sComponentRegistry)
     {
         rv = GetCurrentProcessDirectory(getter_AddRefs(localFile));
-        if (localFile)
-    		localFile->AppendNative(COMPONENT_REGISTRY_NAME);           
+        if (localFile) {
+            rv = localFile->AppendNative(COMPONENT_DIRECTORY);           
+            if (NS_SUCCEEDED(rv))
+                rv = localFile->AppendNative(COMPONENT_REGISTRY_NAME);
+        }
     }
     else if (inAtom == nsDirectoryService::sGRE_Directory)
     {
