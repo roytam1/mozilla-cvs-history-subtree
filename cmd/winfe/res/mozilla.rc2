@@ -223,8 +223,8 @@ END
 //   animation only shows up when the animation is resting.  The second through
 //   last frame loop while the application is busy.
 //
-IDB_ANIMSMALL_0			BITMAP	DISCARDABLE		"res\\16wina~1.bmp"
-IDB_ANIM_0				BITMAP	DISCARDABLE		"res\\32wina~1.bmp"
+IDB_ANIMSMALL_0			BITMAP	DISCARDABLE		"res\\16winanim.bmp"
+IDB_ANIM_0				BITMAP	DISCARDABLE		"res\\32winanim.bmp"
 
 #ifndef MOZ_COMMUNICATOR_NAME
 IDB_PREVIEWSPLASH       BITMAP  DISCARDABLE     "res\\annoy.bmp"
