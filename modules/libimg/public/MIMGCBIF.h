@@ -81,6 +81,32 @@ EXTERN_C const JMCInterfaceID IMGCBIF_ID = { 0x38775d44, 0x23525963, 0x7f76557d,
 #define IMGCBIF_GetIconDimensions(self, a, b, c, d)	\
 	(((self)->vtable->GetIconDimensions)(self, IMGCBIF_GetIconDimensions_op, a, b, c, d))
 
+/*	ebb - begin */
+#define IMGCBIF_OpenICCProfileFromMem(self, a, b)	\
+	(((self)->vtable->OpenICCProfileFromMem)(self, IMGCBIF_OpenICCProfileFromMem_op, a, b))
+	
+#define IMGCBIF_OpenICCProfileFromDisk(self, a, b)	\
+	(((self)->vtable->OpenICCProfileFromDisk)(self, IMGCBIF_OpenICCProfileFromDisk_op, a, b))
+
+#define IMGCBIF_CloneICCProfileRef(self, a, b)	\
+	(((self)->vtable->CloneICCProfileRef)(self, IMGCBIF_CloneICCProfileRef_op, a, b))
+	
+#define IMGCBIF_CloseICCProfileRef(self, a, b)	\
+	(((self)->vtable->CloseICCProfileRef)(self, IMGCBIF_CloseICCProfileRef_op, a, b))
+	
+#define IMGCBIF_SetupICCColorMatching(self, a, b, c)	\
+	(((self)->vtable->SetupICCColorMatching)(self, IMGCBIF_SetupICCColorMatching_op, a, b, c))
+
+#define IMGCBIF_ColorMatchRGBPixels(self, a, b, c, d)	\
+	(((self)->vtable->ColorMatchRGBPixels)(self, IMGCBIF_ColorMatchRGBPixels_op, a, b, c, d))
+
+#define IMGCBIF_DisposeICCColorMatching(self, a, b)	\
+	(((self)->vtable->DisposeICCColorMatching)(self, IMGCBIF_DisposeICCColorMatching_op, a, b))
+
+#define IMGCBIF_IsColorSyncAvailable(self, a)	\
+	(((self)->vtable->IsColorSyncAvailable)(self, IMGCBIF_IsColorSyncAvailable_op, a))
+/*	ebb - end */
+
 /*******************************************************************************
  * IMGCBIF Interface
  ******************************************************************************/
@@ -108,6 +134,16 @@ struct IMGCBIFInterface {
 	void	(*DisplayPixmap)(struct IMGCBIF* self, jint op, void* a, IL_Pixmap* b, IL_Pixmap* c, jint d, jint e, jint f, jint g, jint h, jint i, jint j, jint k);
 	void	(*DisplayIcon)(struct IMGCBIF* self, jint op, void* a, jint b, jint c, jint d);
 	void	(*GetIconDimensions)(struct IMGCBIF* self, jint op, void* a, int* b, int* c, jint d);
+/*	ebb - begin */
+	void*	(*OpenICCProfileFromMem)(struct IMGCBIF* self, jint op, void* a, unsigned char* b);
+	void*	(*OpenICCProfileFromDisk)(struct IMGCBIF* self, jint op, void* a, char* b);
+	void	(*CloneICCProfileRef)(struct IMGCBIF* self, jint op, void* a, void* b);
+	void	(*CloseICCProfileRef)(struct IMGCBIF* self, jint op, void* a, void* b);
+	void*	(*SetupICCColorMatching)(struct IMGCBIF* self, jint op, void* a, void* b, void* c);
+	void	(*ColorMatchRGBPixels)(struct IMGCBIF* self, jint op, void* a, void* b, const uint8* c, int d);
+	void	(*DisposeICCColorMatching)(struct IMGCBIF* self, jint op, void* a, void* b);
+	jbool	(*IsColorSyncAvailable)(struct IMGCBIF* self, jint op, void* a);
+/*	ebb - end */
 };
 
 /*******************************************************************************
@@ -129,7 +165,17 @@ typedef enum IMGCBIFOperations {
 	IMGCBIF_DestroyPixmap_op,
 	IMGCBIF_DisplayPixmap_op,
 	IMGCBIF_DisplayIcon_op,
-	IMGCBIF_GetIconDimensions_op
+	IMGCBIF_GetIconDimensions_op,
+/*	ebb - begin (also comma above) */
+	IMGCBIF_OpenICCProfileFromMem_op,
+	IMGCBIF_OpenICCProfileFromDisk_op,
+	IMGCBIF_CloneICCProfileRef_op,
+	IMGCBIF_CloseICCProfileRef_op,
+	IMGCBIF_SetupICCColorMatching_op,
+	IMGCBIF_ColorMatchRGBPixels_op,
+	IMGCBIF_DisposeICCColorMatching_op,
+	IMGCBIF_IsColorSyncAvailable_op
+/*	ebb - end */
 } IMGCBIFOperations;
 
 /*******************************************************************************
@@ -235,6 +281,31 @@ _IMGCBIF_DisplayIcon(struct IMGCBIF* self, jint op, void* a, jint b, jint c, jin
 extern JMC_PUBLIC_API(void)
 _IMGCBIF_GetIconDimensions(struct IMGCBIF* self, jint op, void* a, int* b, int* c, jint d);
 
+/*	ebb - begin */
+extern JMC_PUBLIC_API(void*)
+_IMGCBIF_OpenICCProfileFromMem(struct IMGCBIF* self, jint op, void* a, unsigned char* b);
+
+extern JMC_PUBLIC_API(void*)
+_IMGCBIF_OpenICCProfileFromDisk(struct IMGCBIF* self, jint op, void* a, char* b);
+
+extern JMC_PUBLIC_API(void)
+_IMGCBIF_CloneICCProfileRef(struct IMGCBIF* self, jint op, void* a, void* b);
+
+extern JMC_PUBLIC_API(void)
+_IMGCBIF_CloseICCProfileRef(struct IMGCBIF* self, jint op, void* a, void* b);
+
+extern JMC_PUBLIC_API(void*)
+_IMGCBIF_SetupICCColorMatching(struct IMGCBIF* self, jint op, void* a, void* b, void* c);
+
+extern JMC_PUBLIC_API(void)
+_IMGCBIF_ColorMatchRGBPixels(struct IMGCBIF* self, jint op, void* a, void* b, const uint8* c, int d);
+
+extern JMC_PUBLIC_API(void)
+_IMGCBIF_DisposeICCColorMatching(struct IMGCBIF* self, jint op, void* a, void* b);
+
+extern JMC_PUBLIC_API(jbool)
+_IMGCBIF_IsColorSyncAvailable(struct IMGCBIF* self, jint op, void* a);
+/*	ebb - end */
 /*******************************************************************************
  * Factory Operations
  ******************************************************************************/
