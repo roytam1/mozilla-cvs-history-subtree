@@ -328,19 +328,17 @@ nsDirectoryService::Set(const char* prop, nsISupports* value)
 }
 
 NS_IMETHODIMP
-nsDirectoryService::Has(const char *prop, const nsIID & uuid, nsISupports *value, PRBool *_retval)
+nsDirectoryService::Has(const char *prop, PRBool *_retval)
 {
     *_retval = PR_FALSE;
-
-    nsresult rv = Get(prop, uuid, (void**)&value);
+    nsCOMPtr<nsIFile> value;
+    nsresult rv = Get(prop, NS_GET_IID(nsIFile), getter_AddRefs(value));
     if (NS_FAILED(rv)) 
         return rv;
     
     if (value)
     {
-        *_retval = PR_FALSE;
-         NS_RELEASE(value);
-         return NS_OK;
+        *_retval = PR_TRUE;
     }
     
     return rv;
