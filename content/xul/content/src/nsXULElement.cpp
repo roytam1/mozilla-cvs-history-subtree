@@ -123,7 +123,6 @@
 #include "nsXULAtoms.h"
 #include "nsITreeBoxObject.h"
 #include "nsContentUtils.h"
-#include "nsIXPConnect.h"
 #include "nsGenericElement.h"
 
 #include "nsMutationEvent.h"
