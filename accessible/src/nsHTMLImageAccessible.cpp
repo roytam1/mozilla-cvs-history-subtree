@@ -33,7 +33,6 @@
 #include "imgIRequest.h"
 #include "imgIContainer.h"
 #include "nsIImageFrame.h"
-#include "nsIImageRequest.h"
 
 // --- image -----
 
