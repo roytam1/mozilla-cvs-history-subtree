@@ -49,6 +49,9 @@ public:
   virtual PRBool StreamCreated(ilIURL *urls, int type)=0;
   
   virtual PRBool IsMulti()=0;
+/*	ebb - begin */
+  virtual void*	GetContainer()=0;
+/*	ebb - end */
 };
 
 #endif
