@@ -4175,8 +4175,7 @@ nsDocShell::CloneAndReplace(nsISHEntry * src, nsISHEntry * cloneRef,
 //    NS_ENSURE_ARG_POINTER(dest, NS_ERROR_FAILURE);
 //	static  PRBool firstTime = PR_TRUE;
 //	static nsISHEntry * rootSHEntry = nsnull;
-    nsISHEntry * dest = *resultEntry;
-	dest = (nsISHEntry *) nsnull;
+    nsISHEntry * dest = (nsISHEntry *) nsnull;
 
 	if (src == cloneRef) {
 		// release the original object before assigning a new one.
@@ -4212,8 +4211,6 @@ nsDocShell::CloneAndReplace(nsISHEntry * src, nsISHEntry * cloneRef,
 	dest->SetParent(parent);
 	*resultEntry = dest;
 	
-	}
-	*resultEntry = dest;
 	/*
 	if (firstTime) {
 		// Save the root of the hierarchy in the result parameter
@@ -4246,6 +4243,7 @@ nsDocShell::CloneAndReplace(nsISHEntry * src, nsISHEntry * cloneRef,
 			return result;
 	}
 
+	}
     
 	return result;
 
