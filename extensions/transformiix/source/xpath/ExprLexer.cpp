@@ -367,9 +367,6 @@ MBool ExprLexer::matchDelimiter(UNICODE_CHAR ch) {
         case VERT_BAR:
             tokenType = Token::UNION_OP;
             break;
-        case ASTERIX:
-            tokenType = Token::WILD_CARD;
-            break;
         case AT_SIGN:
             tokenType = Token::AT_SIGN;
             break;
@@ -669,7 +666,8 @@ void ExprLexer::parse(const String& pattern) {
                         case Token::NULL_TOKEN:
                         case Token::L_PAREN:
                         case Token::L_BRACKET:
-                            matchDelimiter(ch);
+                            tokenBuffer.append(ch);
+                            //matchDelimiter(ch);
                             break;
                         default:
                             if ( isOperatorToken(prevToken) ) {

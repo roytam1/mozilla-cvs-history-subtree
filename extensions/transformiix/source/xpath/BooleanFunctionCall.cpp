@@ -72,7 +72,7 @@ BooleanFunctionCall::BooleanFunctionCall(short type) : FunctionCall()
 **/
 ExprResult* BooleanFunctionCall::evaluate(Node* context, ContextState* cs) {
 
-    BooleanResult* result = new BooleanResult();
+    MBool result = MB_FALSE;
     ListIterator* iter = params.iterator();
     int argc = params.getLength();
     Expr* param = 0;
@@ -84,7 +84,7 @@ ExprResult* BooleanFunctionCall::evaluate(Node* context, ContextState* cs) {
             if ( requireParams(1,1,cs) ) {
                 param = (Expr*)iter->next();
                 ExprResult* exprResult = param->evaluate(context, cs);
-                result->setValue(exprResult->booleanValue());
+                result = exprResult->booleanValue();
                 delete exprResult;
             }
             break;
@@ -95,25 +95,24 @@ ExprResult* BooleanFunctionCall::evaluate(Node* context, ContextState* cs) {
                 lang = ((Element*)context)->getAttribute(LANG_ATTR);
                 arg1.toUpperCase(); // case-insensitive comparison
                 lang.toUpperCase();
-                result->setValue((MBool)(lang.indexOf(arg1) == 0));
+                result = (MBool)(lang.indexOf(arg1) == 0);
             }
             break;
         case TX_NOT :
             if ( requireParams(1,1,cs) ) {
                 param = (Expr*)iter->next();
                 ExprResult* exprResult = param->evaluate(context, cs);
-                result->setValue(!exprResult->booleanValue());
+                result = (MBool)(!exprResult->booleanValue());
                 delete exprResult;
             }
             break;
         case TX_TRUE :
-            result->setValue(MB_TRUE);
+            result = MB_TRUE;
             break;
         default:
-            result->setValue(MB_FALSE);
             break;
     }
     delete iter;
-    return result;
+    return new BooleanResult(result);
 } //-- evaluate
 

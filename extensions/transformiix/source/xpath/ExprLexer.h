@@ -69,7 +69,6 @@ public:
         R_BRACKET,
         COMMA,
         FUNCTION_NAME,
-        WILD_CARD,
         AT_SIGN,
         VAR_REFERENCE,
         PARENT_NODE,
