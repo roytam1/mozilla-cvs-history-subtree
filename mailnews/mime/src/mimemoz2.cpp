@@ -1896,7 +1896,8 @@ ResetChannelCharset(MimeObject *obj)
       char *ptr = PL_strstr(ct, "charset="); 
       if (ptr)
       {
-        msd->channel->SetContentType(obj->content_type);
+        // First, setup the channel!
+        msd->channel->SetContentType(ct); 
 
         // Second, if this is a Save As operation, then we need to convert
         // to override the output charset!

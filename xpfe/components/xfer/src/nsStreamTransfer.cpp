@@ -35,10 +35,6 @@
 #include "nsIAllocator.h"
 #include "nsIFileStream.h"
 
-#include "nsCExternalHandlerService.h"
-#include "nsIMIMEService.h"
-#include "nsMimeTypes.h"
-
 // {BEBA91C0-070F-11d3-8068-00600811A9C3}
 #define NS_STREAMTRANSFER_CID \
     { 0xbeba91c0, 0x70f, 0x11d3, { 0x80, 0x68, 0x0, 0x60, 0x8, 0x11, 0xa9, 0xc3 } }
@@ -88,15 +84,10 @@ nsStreamTransfer::SelectFileAndTransferLocation( nsIChannel *aChannel, nsIDOMWin
     nsCOMPtr<nsIURI> uri;
     nsresult rv = aChannel->GetURI( getter_AddRefs( uri ) );
     if (NS_FAILED(rv)) return rv;
-    
-    nsXPIDLCString contentType;
 
-    nsCOMPtr<nsIMIMEService> MIMEService (do_GetService(NS_MIMESERVICE_CONTRACTID, &rv));
-    if (NS_FAILED(rv)) return rv;
-    rv = MIMEService->GetTypeFromURI(uri, getter_Copies(contentType));
-    if (NS_FAILED(rv)) {
-        contentType = UNKNOWN_CONTENT_TYPE;
-    }
+    // Content type comes straight from channel.
+    nsXPIDLCString contentType;
+    aChannel->GetContentType( getter_Copies( contentType ) );
     
     // Suggested name derived from content-disposition response header.
     nsCAutoString suggestedName;

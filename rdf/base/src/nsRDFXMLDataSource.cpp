@@ -602,10 +602,6 @@ rdf_BlockingParse(nsIURI* aURL, nsIStreamListener* aConsumer)
     // Null LoadGroup ?
     rv = NS_OpenURI(getter_AddRefs(channel), aURL, nsnull);
     if (NS_FAILED(rv)) return rv;
-
-    //xx dougt - what request do we really have here?  I probably broke blocking RDF parsing.
-    nsCOMPtr<nsIRequest> request = do_QueryInterface(channel);
-
     nsIInputStream* in;
     PRUint32 sourceOffset = 0;
     rv = channel->Open(&in);
@@ -620,6 +616,8 @@ rdf_BlockingParse(nsIURI* aURL, nsIStreamListener* aConsumer)
     ProxyStream* proxy = new ProxyStream();
     if (! proxy)
         goto done;
+
+    nsCOMPtr<nsIRequest> request = do_QueryInterface(channel);
 
     aConsumer->OnStartRequest(request, nsnull);
     while (PR_TRUE) {

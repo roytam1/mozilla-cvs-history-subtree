@@ -16,7 +16,7 @@ nsIRequest.idl
 nsISocketTransportService.idl
 nsIStreamIO.idl
 nsIStreamListener.idl
-nsIStreamContentInfo.idl
+nsITransport.idl
 nsIStreamLoader.idl
 nsIDownloader.idl
 nsIStreamObserver.idl

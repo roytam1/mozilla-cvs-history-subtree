@@ -197,7 +197,6 @@ nsURLFetcher::FireURLRequest(nsIURI *aURL, nsOutputFileStream *fOut,
   nsCOMPtr<nsIChannel> channel;
   rv = service->NewChannelFromURI(aURL, getter_AddRefs(channel));
   if (NS_FAILED(rv)) return rv;
-  nsCOMPtr<nsIRequest> request;
   rv = channel->AsyncOpen(this, nsnull);
   if (NS_FAILED(rv)) return rv;
 

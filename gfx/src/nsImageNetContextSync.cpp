@@ -212,22 +212,25 @@ ImageNetContextSyncImpl::GetURL(ilIURL*  aURL,
     if (NS_FAILED(rv)) 
         return -1;
 
-    char* aContentType;
-    rv = channel->Open( &stream);
-    if (NS_FAILED(rv)) return -1;
+    char* aContentType = NULL;
     rv = channel->GetContentType(&aContentType); //nsCRT alloc's str
-    if (NS_FAILED(rv)) return -1;
+    if (NS_FAILED(rv)) {
+        if(aContentType){
+            nsCRT::free(aContentType);
+        }
+    }
 
     if (!aContentType) {
         aContentType = nsCRT::strdup("unknown");        
     }
-    else if(nsCRT::strlen(aContentType) > 50){
+    if(nsCRT::strlen(aContentType) > 50){
         //somethings wrong. mimetype string shouldn't be this big.
         //protect us from the user.
         nsCRT::free(aContentType);
         aContentType = nsCRT::strdup("unknown"); 
     } 
-
+    
+    rv = channel->Open( &stream);
     NS_RELEASE(channel);
     if (NS_SUCCEEDED(rv)) {
 

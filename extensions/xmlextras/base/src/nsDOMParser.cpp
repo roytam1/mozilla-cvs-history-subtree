@@ -82,8 +82,9 @@ nsDOMParserChannel::~nsDOMParserChannel()
 {
 }
 
-NS_IMPL_ISUPPORTS1(nsDOMParserChannel, 
-                   nsIChannel)
+NS_IMPL_ISUPPORTS2(nsDOMParserChannel, 
+                   nsIChannel,
+                   nsIRequest)
 
 /* boolean isPending (); */
 NS_IMETHODIMP nsDOMParserChannel::GetName(PRUnichar* *result)

@@ -156,18 +156,18 @@ nsXmlRpcClient.prototype = {
         if (channel.contentType != 'text/xml') {
             this._status = Components.results.NS_ERROR_FAILURE;
             this._errorMsg = 'Server returned unexpected content-type ' +
-                contentInfo.contentType;
+                channel.contentType;
             this._inProgress = false;
             throw Components.Exception('Server returned unexpected ' +
-                'content-type ' + contentInfo.contentType);
+                'content-type ' + channel.contentType);
         }
 
         debug('Viable response. Let\'s parse!');
-        debug('Content length = ' + contentInfo.contentLength);
+        debug('Content length = ' + channel.contentLength);
         
         try {
             this._parseResponse(toScriptableStream(inStr),
-                contentInfo.contentLength);
+                channel.contentLength);
             debug('Parse finished');
             debug('Fault? ' + this._fault);
             debug('Result? ' + this._result);
@@ -220,7 +220,7 @@ nsXmlRpcClient.prototype = {
         var chann = this._getChannel(requestBody);
 
         // And...... call!
-        chann.asyncRead(this, context);
+        chann.asyncOpen(this, context);
     },
 
     // Return a HTTP channel ready for POSTing.

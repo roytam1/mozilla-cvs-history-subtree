@@ -82,7 +82,7 @@ Contributor(s): Pete Collins, Doug Turner, Brendan Eich, Warren Harris
 /****************** Globals **********************/
 
 const FilePath    = new Components.Constructor( "@mozilla.org/file/local;1", "nsILocalFile", "initWithPath");
-const FileChannel = new Components.Constructor( "@mozilla.org/network/local-file-;1", "nsIFileChannel" );
+const FileChannel = new Components.Constructor( "@mozilla.org/network/local-file-channel;1", "nsIFileChannel" );
 const InputStream = new Components.Constructor( "@mozilla.org/scriptableinputstream;1", "nsIScriptableInputStream" );
 
 const READ        = 0x01;     // 1

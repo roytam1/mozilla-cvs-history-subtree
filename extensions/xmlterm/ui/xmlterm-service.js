@@ -292,7 +292,6 @@ BogusChannel.prototype.loadGroup = null;
 BogusChannel.prototype.notificationCallbacks = null;
 BogusChannel.prototype.securityInfo = null;
 BogusChannel.prototype.shouldCache = false;
-BogusChannel.prototype.parent = null;
 
 BogusChannel.prototype.open =
 BogusChannel.prototype.asyncOpen =
@@ -302,15 +301,9 @@ function ()
 }
 
 BogusChannel.prototype.asyncOpen =
-function (observer, ctxt, transferOffset, transferCount)
+function (observer, ctxt)
 {
     observer.onStartRequest (this, ctxt);
-}
-
-BogusChannel.prototype.asyncRead =
-function (listener, ctxt, transferOffset, transferCount)
-{
-    return listener.onStartRequest (this, ctxt);
 }
 
 /* nsIRequest */
