@@ -48,6 +48,11 @@
 
 static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
 #endif
+
+
+#ifndef TRANSFRMX_URIUTILS_H
+#define TRANSFRMX_URIUTILS_H
+
 /**
  * A utility class for URI handling
  * Not yet finished, only handles file URI at this point
@@ -125,3 +130,5 @@ private:
 
 }; //-- URIUtils
 
+/* */
+#endif
