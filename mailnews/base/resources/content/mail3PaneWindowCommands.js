@@ -323,11 +323,13 @@ var DefaultController =
 				return IsFindEnabled();
 				break;
 			case "cmd_expandAllThreads":
-                gDBView.getCommandStatus(nsMsgViewCommandType.expandAll, enabled, checkStatus);
+                if (gDBView)
+                    gDBView.getCommandStatus(nsMsgViewCommandType.expandAll, enabled, checkStatus);
                 return enabled.value;
 				break;
 			case "cmd_collapseAllThreads":
-                gDBView.getCommandStatus(nsMsgViewCommandType.collapseAll, enabled, checkStatus);
+                if (gDBView)
+                    gDBView.getCommandStatus(nsMsgViewCommandType.collapseAll, enabled, checkStatus);
                 return enabled.value;
 				break;
 			case "cmd_nextFlaggedMsg":
