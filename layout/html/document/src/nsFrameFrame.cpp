@@ -1097,10 +1097,13 @@ nsHTMLFrameInnerFrame::CreateDocShell(nsIPresContext* aPresContext)
       if (isContent) {
         nsCOMPtr<nsIDocShellTreeOwner> parentTreeOwner;
         parentAsItem->GetTreeOwner(getter_AddRefs(parentTreeOwner));
-        if(parentTreeOwner)
-          parentTreeOwner->ContentShellAdded(docShellAsItem, 
-            value.EqualsIgnoreCase("content-primary") ? PR_TRUE : PR_FALSE, 
-            value.get());
+        if(parentTreeOwner) {
+          PRBool is_primary = parentType == nsIDocShellTreeItem::typeChrome &&
+                              value.Equals(NS_LITERAL_STRING("content-primary"));
+
+          parentTreeOwner->ContentShellAdded(docShellAsItem, is_primary,
+                                             value.get());
+        }
       }
       // connect the container...
       nsCOMPtr<nsIWebShell> webShell(do_QueryInterface(mSubShell));
