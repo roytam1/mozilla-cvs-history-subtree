@@ -120,9 +120,10 @@ nsresult nsDiskCacheMap::Write(nsIOutputStream* output)
 {
     nsresult rv;
     PRUint32 count;
+    int b;
     
     // swap all of the active records.
-    for (int b = 1; b < kBucketsPerTable; ++b) {
+    for (b = 1; b < kBucketsPerTable; ++b) {
         nsDiskCacheBucket& bucket = mBuckets[b];
         for (int r = 0; r < kRecordsPerBucket; ++r) {
             nsDiskCacheRecord* record = &bucket.mRecords[r];
@@ -136,7 +137,7 @@ nsresult nsDiskCacheMap::Write(nsIOutputStream* output)
     rv = output->Write((char*)&mBuckets, sizeof(mBuckets), &count);
 
     // unswap all of the active records.
-    for (int b = 1; b < kBucketsPerTable; ++b) {
+    for (b = 1; b < kBucketsPerTable; ++b) {
         nsDiskCacheBucket& bucket = mBuckets[b];
         for (int r = 0; r < kRecordsPerBucket; ++r) {
             nsDiskCacheRecord* record = &bucket.mRecords[r];
