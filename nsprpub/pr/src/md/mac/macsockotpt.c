@@ -58,9 +58,6 @@ static pascal void  RawEndpointNotifierRoutine(void * contextPtr, OTEventCode co
 
 static PRBool GetState(PRFileDesc *fd, PRBool *readReady, PRBool *writeReady, PRBool *exceptReady);
 
-void
-WakeUpNotifiedThread(PRThread *thread, OTResult result);
-
 extern void WaitOnThisThread(PRThread *thread, PRIntervalTime timeout);
 extern void DoneWaitingOnThisThread(PRThread *thread);
 
@@ -270,7 +267,7 @@ static void PrepareForAsyncCompletion(PRThread * thread, PRInt32 osfd)
 }
 
 
-void
+static void
 WakeUpNotifiedThread(PRThread *thread, OTResult result)
 {
     _PRCPU *      cpu      = _PR_MD_CURRENT_CPU(); 
@@ -1725,39 +1722,37 @@ static PRInt32 CheckPollDescs(PRPollDesc *pds, PRIntn npds)
 
                 pd->out_flags = 0;  /* pre-condition */
                 bottomFD = PR_GetIdentitiesLayer(pd->fd, PR_NSPR_IO_LAYER);
-                /* bottomFD can be NULL for pollable sockets */
-                if (bottomFD)
-                {
-                    if (_PR_FILEDESC_OPEN == bottomFD->secret->state)
+                PR_ASSERT(NULL != bottomFD);
+                	
+            if (bottomFD && (_PR_FILEDESC_OPEN == bottomFD->secret->state))
+            {
+                    if (GetState(bottomFD, &readReady, &writeReady, &exceptReady))
                     {
-                        if (GetState(bottomFD, &readReady, &writeReady, &exceptReady))
+                        if (readReady)
                         {
-                            if (readReady)
-                            {
-                                if (in_flags_read & PR_POLL_READ)
-                                    pd->out_flags |= PR_POLL_READ;
-                                if (in_flags_write & PR_POLL_READ)
-                                    pd->out_flags |= PR_POLL_WRITE;
-                            }
-                            if (writeReady)
-                            {
-                                if (in_flags_read & PR_POLL_WRITE)
-                                    pd->out_flags |= PR_POLL_READ;
-                                if (in_flags_write & PR_POLL_WRITE)
-                                    pd->out_flags |= PR_POLL_WRITE;
-                            }
-                            if (exceptReady && (pd->in_flags & PR_POLL_EXCEPT))
-                            {
-                                pd->out_flags |= PR_POLL_EXCEPT;
-                            }
-                            if (0 != pd->out_flags) ready++;
+                            if (in_flags_read & PR_POLL_READ)
+                                pd->out_flags |= PR_POLL_READ;
+                            if (in_flags_write & PR_POLL_READ)
+                                pd->out_flags |= PR_POLL_WRITE;
                         }
+                        if (writeReady)
+                        {
+                            if (in_flags_read & PR_POLL_WRITE)
+                                pd->out_flags |= PR_POLL_READ;
+                            if (in_flags_write & PR_POLL_WRITE)
+                                pd->out_flags |= PR_POLL_WRITE;
+                        }
+                        if (exceptReady && (pd->in_flags & PR_POLL_EXCEPT))
+                        {
+                            pd->out_flags |= PR_POLL_EXCEPT;
+                        }
+                        if (0 != pd->out_flags) ready++;
                     }
-                    else    /* bad state */
-                    {
-                        ready += 1;  /* this will cause an abrupt return */
-                        pd->out_flags = PR_POLL_NVAL;  /* bogii */
-                    }
+                }
+            else    /* bad state */
+                {
+                    ready += 1;  /* this will cause an abrupt return */
+                    pd->out_flags = PR_POLL_NVAL;  /* bogii */
                 }
             }
         }
@@ -1776,6 +1771,7 @@ static void SetDescPollThread(PRPollDesc *pds, PRIntn npds, PRThread* thread)
         if (pd->fd)
         { 
             PRFileDesc *bottomFD = PR_GetIdentitiesLayer(pd->fd, PR_NSPR_IO_LAYER);
+            PR_ASSERT(NULL != bottomFD);
             if (bottomFD && (_PR_FILEDESC_OPEN == bottomFD->secret->state))
             {
                 bottomFD->secret->md.poll.thread = thread;

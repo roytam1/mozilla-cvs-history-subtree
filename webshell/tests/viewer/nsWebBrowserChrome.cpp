@@ -36,7 +36,6 @@
 #include "nsIWebProgress.h"
 #include "nsIChannel.h"
 #include "nsIURI.h"
-#include "nsIDOMWindow.h"
 
 // CIDs
 
@@ -382,19 +381,7 @@ NS_IMETHODIMP nsWebBrowserChrome::OnLocationChange(nsIWebProgress* aWebProgress,
    if(aURI)
       aURI->GetSpec(getter_Copies(spec));
 
-   PRBool isSubFrameLoad = PR_FALSE; // Is this a subframe load
-   if (aWebProgress) {
-     nsCOMPtr<nsIDOMWindow>  domWindow;
-     nsCOMPtr<nsIDOMWindow>  topDomWindow;
-     aWebProgress->GetDOMWindow(getter_AddRefs(domWindow));
-     if (domWindow) { // Get root domWindow
-       domWindow->GetTop(getter_AddRefs(topDomWindow));
-     }
-     if (domWindow != topDomWindow)
-       isSubFrameLoad = PR_TRUE;
-   }
-
-   if(mBrowserWindow->mLocation && !isSubFrameLoad)
+   if(mBrowserWindow->mLocation)
       {
       PRUint32 size;
       nsAutoString tmp; tmp.AssignWithConversion(spec);

@@ -98,12 +98,10 @@ nsFocusController::SetFocusedElement(nsIDOMElement* aElement)
 {
   mCurrentElement = aElement;
 
-  if (!mSuppressFocus) {
-    // Need to update focus commands when focus switches from
-    // an element to no element, so don't test mCurrentElement
-    // before updating.
-    UpdateCommands(NS_LITERAL_STRING("focus"));
-  }
+  // Need to update focus commands when focus switches from
+  // an element to no element, so don't test mCurrentElement
+  // before updating.
+  UpdateCommands(NS_LITERAL_STRING("focus"));
   return NS_OK;
 }
 
