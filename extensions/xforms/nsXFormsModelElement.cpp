@@ -73,10 +73,6 @@
 #include "nsISchema.h"
 #include "nsAutoPtr.h"
 
-#ifdef DEBUG_beaufour
-#include "nsIDOMSerializer.h"
-#endif
-
 //------------------------------------------------------------------------------
 
 // Helper function for using XPath to locate an <xsd:schema> element by
@@ -449,20 +445,6 @@ nsXFormsModelElement::Revalidate()
 {
 #ifdef DEBUG
   printf("nsXFormsModelElement::Revalidate()\n");
-#endif
-
-#ifdef DEBUG_beaufour
-  // Dump instance document to stdout
-  nsresult rv;
-  nsCOMPtr<nsIDOMSerializer> serializer(do_CreateInstance(NS_XMLSERIALIZER_CONTRACTID, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  // TODO: Should use SerializeToStream and write directly to stdout...
-  nsAutoString instanceString;
-  rv = serializer->SerializeToString(mInstanceDocument, instanceString);
-  NS_ENSURE_SUCCESS(rv, rv);
-  
-  printf("Instance data:\n%s\n", NS_ConvertUCS2toUTF8(instanceString).get());
 #endif
 
   return NS_OK;
