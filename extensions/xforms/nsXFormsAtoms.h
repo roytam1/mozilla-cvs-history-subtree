@@ -60,6 +60,7 @@ class nsXFormsAtoms
   static NS_HIDDEN_(nsIAtom *) method;
   static NS_HIDDEN_(nsIAtom *) replace;
   static NS_HIDDEN_(nsIAtom *) separator;
+  static NS_HIDDEN_(nsIAtom *) mediaType;
 
   static NS_HIDDEN_(void) InitAtoms();
 

@@ -63,10 +63,12 @@
 #include "nsIDOMXPathEvaluator.h"
 #include "nsIDOMXPathNSResolver.h"
 #include "nsIDOMXPathExpression.h"
+#include "nsIDOMSerializer.h"
 #include "nsComponentManagerUtils.h"
 #include "nsIWebNavigation.h"
 #include "nsIStringStream.h"
 #include "nsIInputStream.h"
+#include "nsIStorageStream.h"
 #include "nsIMultiplexInputStream.h"
 #include "nsIMIMEInputStream.h"
 #include "nsINameSpaceManager.h"
@@ -371,7 +373,8 @@ nsXFormsSubmissionElement::Submit()
   // 1. ensure that we are not currently processing a xforms-submit on our model
 
 
-  // 2. get selected node from the instance data (use xpath, gives us node iterator)
+  // 2. get selected node from the instance data (use xpath, gives us node
+  //    iterator)
   nsCOMPtr<nsIDOMNode> data;
   if (NS_FAILED(GetSelectedInstanceData(getter_AddRefs(data))) || !data)
   {
@@ -396,8 +399,9 @@ nsXFormsSubmissionElement::Submit()
   }
 
   nsCOMPtr<nsIInputStream> stream;
-  nsCAutoString uri;
-  if (NS_FAILED(SerializeData(data, format, uri, getter_AddRefs(stream))))
+  nsCAutoString uri, contentType;
+  if (NS_FAILED(SerializeData(data, format, uri, getter_AddRefs(stream),
+                              contentType)))
   {
     NS_WARNING("failed to serialize data");
     return;
@@ -406,7 +410,7 @@ nsXFormsSubmissionElement::Submit()
 
   // 5. dispatch network request
   
-  if (NS_FAILED(SendData(format, uri, stream)))
+  if (NS_FAILED(SendData(format, uri, stream, contentType)))
   {
     NS_WARNING("failed to send data");
     return;
@@ -528,8 +532,11 @@ nsXFormsSubmissionElement::GetDefaultInstanceData(nsIDOMNode **result)
 }
 
 nsresult
-nsXFormsSubmissionElement::SerializeData(nsIDOMNode *data, PRUint32 format,
-                                         nsCString &uri, nsIInputStream **stream)
+nsXFormsSubmissionElement::SerializeData(nsIDOMNode *data,
+                                         PRUint32 format,
+                                         nsCString &uri,
+                                         nsIInputStream **stream,
+                                         nsCString &contentType)
 {
   // initialize uri to the given action
   nsAutoString action;
@@ -545,16 +552,16 @@ nsXFormsSubmissionElement::SerializeData(nsIDOMNode *data, PRUint32 format,
   //  o The serialized form data is appended to the URI.
 
   if (format & ENCODING_XML)
-    return SerializeDataXML(data, format, stream);
+    return SerializeDataXML(data, format, stream, contentType);
 
   if (format & ENCODING_URL)
-    return SerializeDataURLEncoded(data, format, uri, stream);
+    return SerializeDataURLEncoded(data, format, uri, stream, contentType);
 
   if (format & ENCODING_MULTIPART_RELATED)
-    return SerializeDataMultipartRelated(data, format, stream);
+    return SerializeDataMultipartRelated(data, format, stream, contentType);
 
   if (format & ENCODING_MULTIPART_FORM_DATA)
-    return SerializeDataMultipartFormData(data, format, stream);
+    return SerializeDataMultipartFormData(data, format, stream, contentType);
 
   NS_WARNING("unsupported submission encoding");
   return NS_ERROR_UNEXPECTED;
@@ -563,17 +570,53 @@ nsXFormsSubmissionElement::SerializeData(nsIDOMNode *data, PRUint32 format,
 nsresult
 nsXFormsSubmissionElement::SerializeDataXML(nsIDOMNode *data,
                                             PRUint32 format,
-                                            nsIInputStream **stream)
+                                            nsIInputStream **stream,
+                                            nsCString &contentType)
 {
-  NS_WARNING("not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
+  nsAutoString mediaType;
+  mContent->GetAttr(kNameSpaceID_None, nsXFormsAtoms::mediaType, mediaType);
+  if (mediaType.IsEmpty())
+    contentType.AssignLiteral("application/xml");
+  else
+    CopyUTF16toUTF8(mediaType, contentType);
+
+  nsCOMPtr<nsIStorageStream> storage;
+  NS_NewStorageStream(4096, PR_UINT32_MAX, getter_AddRefs(storage));
+  NS_ENSURE_TRUE(storage, NS_ERROR_OUT_OF_MEMORY);
+
+  nsCOMPtr<nsIOutputStream> sink;
+  storage->GetOutputStream(0, getter_AddRefs(sink));
+  NS_ENSURE_TRUE(sink, NS_ERROR_OUT_OF_MEMORY);
+
+  nsCOMPtr<nsIDOMSerializer> serializer =
+      do_GetService("@mozilla.org/xmlextras/xmlserializer;1");
+  NS_ENSURE_TRUE(serializer, NS_ERROR_UNEXPECTED);
+
+  // XXX might this be a property of the instance document?
+  NS_NAMED_LITERAL_CSTRING(charset, "UTF-8");
+
+  nsCOMPtr<nsIDOMDocument> doc;
+  data->GetOwnerDocument(getter_AddRefs(doc));
+  NS_ENSURE_TRUE(doc, NS_ERROR_UNEXPECTED);
+
+  // XXX we need to clone the document and possibly modify it before serializing
+  
+  nsresult rv = serializer->SerializeToStream(doc, sink, charset);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // close the output stream, so that the input stream will not return
+  // NS_BASE_STREAM_WOULD_BLOCK when it reaches end-of-stream.
+  sink->Close();
+
+  return storage->NewInputStream(0, stream);
 }
 
 nsresult
 nsXFormsSubmissionElement::SerializeDataURLEncoded(nsIDOMNode *data,
                                                    PRUint32 format,
                                                    nsCString &uri,
-                                                   nsIInputStream **stream)
+                                                   nsIInputStream **stream,
+                                                   nsCString &contentType)
 {
   nsCAutoString separator;
   {
@@ -599,27 +642,18 @@ nsXFormsSubmissionElement::SerializeDataURLEncoded(nsIDOMNode *data,
     AppendURLEncodedData(data, separator, uri);
 
     *stream = nsnull;
+    contentType.Truncate();
   }
   else if (format & METHOD_POST)
   {
     nsCAutoString buf;
     AppendURLEncodedData(data, separator, buf);
 
-    nsCOMPtr<nsIInputStream> postBody;
-
     // make new stream
-    NS_NewCStringInputStream(getter_AddRefs(postBody), buf);
-    NS_ENSURE_TRUE(postBody, NS_ERROR_UNEXPECTED);
+    NS_NewCStringInputStream(stream, buf);
+    NS_ENSURE_TRUE(*stream, NS_ERROR_UNEXPECTED);
 
-    nsCOMPtr<nsIMIMEInputStream> mimeStream =
-        do_CreateInstance("@mozilla.org/network/mime-input-stream;1");
-    NS_ENSURE_TRUE(postBody, NS_ERROR_UNEXPECTED);
-
-    mimeStream->AddHeader("Content-Type", "application/x-www-form-urlencoded");
-    mimeStream->SetAddContentLength(PR_TRUE);
-    mimeStream->SetData(postBody);
-
-    NS_ADDREF(*stream = mimeStream);
+    contentType.AssignLiteral("application/x-www-form-urlencoded");
   }
   else
   {
@@ -703,8 +737,11 @@ nsXFormsSubmissionElement::AppendURLEncodedData(nsIDOMNode *data,
 nsresult
 nsXFormsSubmissionElement::SerializeDataMultipartRelated(nsIDOMNode *data,
                                                          PRUint32 format,
-                                                         nsIInputStream **stream)
+                                                         nsIInputStream **stream,
+                                                         nsCString &contentType)
 {
+  contentType.AssignLiteral("multipart/related"); // XXX boundary=xxx; type=yyy; start=zzz
+
   NS_WARNING("not implemented");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -712,7 +749,8 @@ nsXFormsSubmissionElement::SerializeDataMultipartRelated(nsIDOMNode *data,
 nsresult
 nsXFormsSubmissionElement::SerializeDataMultipartFormData(nsIDOMNode *data,
                                                           PRUint32 format,
-                                                          nsIInputStream **stream)
+                                                          nsIInputStream **stream,
+                                                          nsCString &contentType)
 {
   NS_ASSERTION(format & METHOD_POST, "unexpected submission method");
 
@@ -749,17 +787,9 @@ nsXFormsSubmissionElement::SerializeDataMultipartFormData(nsIDOMNode *data,
   rv = AppendPostDataChunk(postDataChunk, multiStream);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIMIMEInputStream> mimeStream =
-      do_CreateInstance("@mozilla.org/network/mime-input-stream;1");
-  NS_ENSURE_TRUE(mimeStream, NS_ERROR_UNEXPECTED);
+  contentType = NS_LITERAL_CSTRING("multipart/form-data; boundary=") + boundary;
 
-  nsCAutoString contentType =
-      NS_LITERAL_CSTRING("multipart/form-data; boundary=") + boundary;
-  mimeStream->AddHeader("Content-Type", contentType.get());
-  mimeStream->SetAddContentLength(PR_TRUE);
-  mimeStream->SetData(multiStream);
-
-  NS_ADDREF(*stream = mimeStream);
+  NS_ADDREF(*stream = multiStream);
   return NS_OK;
 }
 
@@ -799,89 +829,60 @@ nsXFormsSubmissionElement::AppendMultipartFormData(nsIDOMNode *data,
 
     LOG(("    appending data for <%s>\n", NS_ConvertUTF16toUTF8(localName).get()));
 
-    nsCOMPtr<nsIInputStream> dataStream;
-    nsCAutoString encName, encValue, filename, contentType, charset;
-
     PRUint32 encType;
     rv = GetElementEncodingType(data, &encType);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = GetElementMediaType(data, encType, contentType);
+    nsCAutoString contentType;
+    rv = GetElementContentType(data, encType, contentType);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // XXX looks like we only really need to care if we have a xsd:anyURI type
-    switch (encType)
-    {
-      case ELEMENT_ENCTYPE_URI:
-        break;
-      // for these types, we assume that the data is already encoded.
-      // this assumption is based on section 8.1.6 of the xforms spec.
-      case ELEMENT_ENCTYPE_BASE64:
-      case ELEMENT_ENCTYPE_HEX:
-      default:
-        // XXX UTF-8 ok?
-        CopyUTF16toUTF8(localName, encName);
-        encName.Adopt(nsLinebreakConverter::ConvertLineBreaks(encName.get(),
-                      nsLinebreakConverter::eLinebreakAny,
-                      nsLinebreakConverter::eLinebreakNet));
-        CopyUTF16toUTF8(value, encValue);
-        encValue.Adopt(nsLinebreakConverter::ConvertLineBreaks(encValue.get(),
-                       nsLinebreakConverter::eLinebreakAny,
-                       nsLinebreakConverter::eLinebreakNet));
-        break;
-    }
-
-    // specify UTF-8 encoding for all string encodings
-    if (encType == ELEMENT_ENCTYPE_STRING)
-      charset.AssignLiteral("UTF-8");
+    NS_ConvertUTF16toUTF8 encName(localName);
+    encName.Adopt(nsLinebreakConverter::ConvertLineBreaks(encName.get(),
+                  nsLinebreakConverter::eLinebreakAny,
+                  nsLinebreakConverter::eLinebreakNet));
 
     postDataChunk += NS_LITERAL_CSTRING("--") + boundary
                   +  NS_LITERAL_CSTRING("\r\nContent-Disposition: form-data; name=\"")
                   +  encName + NS_LITERAL_CSTRING("\"");
 
-    if (!filename.IsEmpty())
-      postDataChunk += NS_LITERAL_CSTRING("; filename=\"")
-                    +  filename
-                    +  NS_LITERAL_CSTRING("\"");
-
-    postDataChunk += NS_LITERAL_CSTRING("\r\n")
-                  +  NS_LITERAL_CSTRING("Content-Type: ") + contentType;
-
-    if (!charset.IsEmpty())
-      postDataChunk += NS_LITERAL_CSTRING("; charset=") + charset;
-  
-    postDataChunk += NS_LITERAL_CSTRING("\r\n");
-
-    if (encType != ELEMENT_ENCTYPE_URI)
+    if (encType == ELEMENT_ENCTYPE_URI)
     {
-      postDataChunk += encValue + NS_LITERAL_CSTRING("\r\n");
+      nsCAutoString filename;
+      GetElementFilename(data, filename);
+      if (!filename.IsEmpty())
+        postDataChunk += NS_LITERAL_CSTRING("; filename=\"")
+                      +  filename + NS_LITERAL_CSTRING("\"");
     }
-    else
+
+    postDataChunk += NS_LITERAL_CSTRING("\r\nContent-Type: ")
+                  +  contentType + NS_LITERAL_CSTRING("\r\n");
+
+    if (encType == ELEMENT_ENCTYPE_URI)
     {
       AppendPostDataChunk(postDataChunk, multiStream);
 
-      // 'value' contains a URI reference (restrict to file:// -- XXX is this correct?)
-
-      // XXX what about relative URIs?
-
-      nsCOMPtr<nsIURI> uri;
-      NS_NewURI(getter_AddRefs(uri), value);
-      NS_ENSURE_TRUE(uri, NS_ERROR_UNEXPECTED);
-
-      nsCOMPtr<nsIFileURL> fileURL = do_QueryInterface(uri);
-      NS_ENSURE_TRUE(fileURL, NS_ERROR_UNEXPECTED);
-
-      nsCOMPtr<nsIFile> file;
-      fileURL->GetFile(getter_AddRefs(file));
-      NS_ENSURE_TRUE(file, NS_ERROR_UNEXPECTED);
-
+      // 'value' contains an absolute URI reference
       nsCOMPtr<nsIInputStream> fileStream;
-      NS_NewLocalFileInputStream(getter_AddRefs(fileStream), file);
-      NS_ENSURE_TRUE(fileStream, NS_ERROR_UNEXPECTED);
+      rv = CreateFileStream(value, getter_AddRefs(fileStream));
+      NS_ENSURE_SUCCESS(rv, rv);
 
       multiStream->AppendStream(fileStream);
 
       postDataChunk += NS_LITERAL_CSTRING("\r\n");
+    }
+    else
+    {
+      // for base64binary and hexBinary types, we assume that the data is
+      // already encoded.  this assumption is based on section 8.1.6 of the
+      // xforms spec.
+
+      // XXX UTF-8 ok?
+      NS_ConvertUTF16toUTF8 encValue(value);
+      encValue.Adopt(nsLinebreakConverter::ConvertLineBreaks(encValue.get(),
+                     nsLinebreakConverter::eLinebreakAny,
+                     nsLinebreakConverter::eLinebreakNet));
+      postDataChunk += encValue + NS_LITERAL_CSTRING("\r\n");
     }
   }
   else
@@ -956,26 +957,61 @@ nsXFormsSubmissionElement::GetElementEncodingType(nsIDOMNode *node, PRUint32 *en
 }
 
 nsresult
-nsXFormsSubmissionElement::GetElementMediaType(nsIDOMNode *node,
-                                               PRUint32 encType,
-                                               nsCString &result)
+nsXFormsSubmissionElement::GetElementContentType(nsIDOMNode *node,
+                                                 PRUint32 encType,
+                                                 nsCString &contentType)
 {
   switch (encType)
   {
     case ELEMENT_ENCTYPE_STRING:
-      result.AssignLiteral("text/plain");
+      // XXX assume UTF-8 for all strings -- is this correct?
+      contentType.AssignLiteral("text/plain; charset=UTF-8");
       break;
     default:
-      result.AssignLiteral("application/octet-stream");
+      // XXX perhaps <upload> should set a property on the content node for us?
+      contentType.AssignLiteral("application/octet-stream");
       break;
   }
   return NS_OK;
 }
 
+void
+nsXFormsSubmissionElement::GetElementFilename(nsIDOMNode *node,
+                                              nsCString &filename)
+{
+  // XXX perhaps <upload> should set a property on the content node for us?
+}
+
+nsresult
+nsXFormsSubmissionElement::CreateFileStream(const nsString &absURI,
+                                            nsIInputStream **result)
+{
+  nsCOMPtr<nsIURI> uri;
+  NS_NewURI(getter_AddRefs(uri), absURI);
+  NS_ENSURE_TRUE(uri, NS_ERROR_UNEXPECTED);
+
+  // restrict to file:// -- XXX is this correct?
+  PRBool schemeIsFile = PR_FALSE;
+  uri->SchemeIs("file", &schemeIsFile);
+  NS_ENSURE_TRUE(schemeIsFile, NS_ERROR_UNEXPECTED);
+
+  // NOTE: QI to nsIFileURL just means that the URL corresponds to a 
+  // local file resource, which is not restricted to file://
+  nsCOMPtr<nsIFileURL> fileURL = do_QueryInterface(uri);
+  NS_ENSURE_TRUE(fileURL, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsIFile> file;
+  fileURL->GetFile(getter_AddRefs(file));
+  NS_ENSURE_TRUE(file, NS_ERROR_UNEXPECTED);
+
+  return NS_NewLocalFileInputStream(result, file);
+}
+
 nsresult
 nsXFormsSubmissionElement::SendData(PRUint32 format,
                                     const nsCString &uri,
-                                    nsIInputStream *stream)
+                                    nsIInputStream *stream,
+                                    const nsCString &contentType)
 {
   LOG(("+++ sending to uri=%s [stream=%p]\n", uri.get(), (void*) stream));
 
@@ -988,6 +1024,31 @@ nsXFormsSubmissionElement::SendData(PRUint32 format,
   {
     NS_WARNING("replace != 'all' not implemented");
     return NS_ERROR_NOT_IMPLEMENTED;
+  }
+
+  // XXX HACK HACK - wrap with mime stream if we are doing a POST
+  if (format & METHOD_POST)
+  {
+    nsCOMPtr<nsIMIMEInputStream> mimeStream =
+        do_CreateInstance("@mozilla.org/network/mime-input-stream;1");
+    NS_ENSURE_TRUE(mimeStream, NS_ERROR_UNEXPECTED);
+
+    mimeStream->AddHeader("Content-Type", contentType.get());
+    mimeStream->SetAddContentLength(PR_TRUE);
+    mimeStream->SetData(stream);
+
+    stream->Release();
+    NS_ADDREF(stream = mimeStream);
+  }
+
+  // wrap the entire upload stream in a buffered input stream, so that
+  // it can be read in large chunks.
+  // XXX necko should probably do this (or something like this) for us.
+  nsCOMPtr<nsIInputStream> bufferedStream;
+  if (stream)
+  {
+    NS_NewBufferedInputStream(getter_AddRefs(bufferedStream), stream, 4096);
+    NS_ENSURE_TRUE(bufferedStream, NS_ERROR_UNEXPECTED);
   }
 
   nsIDocument *doc = mContent->GetDocument();
@@ -1003,17 +1064,6 @@ nsXFormsSubmissionElement::SendData(PRUint32 format,
   //     see bug 263084.
 
   NS_ConvertASCIItoUTF16 temp(uri); // XXX hack
-
-  // wrap the entire upload stream in a buffered input stream, so that
-  // it can be read in large chunks.
-  // XXX necko should probably do this (or something like this) for us.
-  nsCOMPtr<nsIInputStream> bufferedStream;
-  if (stream)
-  {
-    NS_NewBufferedInputStream(getter_AddRefs(bufferedStream), stream, 4096);
-    NS_ENSURE_TRUE(bufferedStream, NS_ERROR_UNEXPECTED);
-  }
-
   return webNav->LoadURI(temp.get(), nsIWebNavigation::LOAD_FLAGS_NONE,
                          doc->GetDocumentURI(), bufferedStream, nsnull);
 }

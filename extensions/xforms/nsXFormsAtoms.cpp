@@ -58,6 +58,7 @@ nsIAtom *nsXFormsAtoms::action;
 nsIAtom *nsXFormsAtoms::method;
 nsIAtom *nsXFormsAtoms::replace;
 nsIAtom *nsXFormsAtoms::separator;
+nsIAtom *nsXFormsAtoms::mediaType;
 
 const nsStaticAtom nsXFormsAtoms::Atoms_info[] = {
   { "schema",            &nsXFormsAtoms::schema },
@@ -78,7 +79,8 @@ const nsStaticAtom nsXFormsAtoms::Atoms_info[] = {
   { "action",            &nsXFormsAtoms::action },
   { "method",            &nsXFormsAtoms::method },
   { "replace",           &nsXFormsAtoms::replace },
-  { "separator",         &nsXFormsAtoms::separator }
+  { "separator",         &nsXFormsAtoms::separator },
+  { "mediaType",         &nsXFormsAtoms::mediaType }
 };
 
 void
