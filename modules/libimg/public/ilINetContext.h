@@ -45,6 +45,12 @@ public:
   virtual ilIURL* CreateURL(const char *aUrl, 
 			    NET_ReloadMethod aReloadMethod)=0;
 
+/* ebb - begin */
+  virtual PRBool FindURLInCache(ilIURL *aUrl)=0;
+  
+  virtual MWContext *GetMWContext()=0;
+/* ebb - end */
+  
   virtual PRBool IsLocalFileURL(char *aAddress)=0;
 
   virtual PRBool IsURLInMemCache(ilIURL *aUrl)=0;
