@@ -293,7 +293,7 @@ ipcTransport::SpawnDaemon()
     nsresult rv;
     nsCOMPtr<nsIFile> file;
 
-    rv = NS_GetSpecialDirectory(NS_XPCOM_CURRENT_PROCESS_DIR, getter_AddRefs(file));
+    rv = NS_GetSpecialDirectory(NS_GRE_DIR, getter_AddRefs(file));
     if (NS_FAILED(rv)) return rv;
 
     rv = file->AppendNative(NS_LITERAL_CSTRING(IPC_DAEMON_APP_NAME));
