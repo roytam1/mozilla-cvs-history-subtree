@@ -50,7 +50,7 @@ $inXpiUrl             = "ftp://not.needed.com/because/the/xpi/files/will/be/loca
 
 $seiFileNameGeneric   = "nsinstall.exe";
 $seiFileNameSpecific  = "mozilla-win32-installer.exe";
-$userAgent            = "5.0b1 (en)";
+$userAgent            = "5.0b2 (en)";
 
 # Check for existance of staging path
 if(!(-e "$inStagePath"))
