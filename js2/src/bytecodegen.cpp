@@ -530,14 +530,14 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                 if (static_cg.hasContent()) {
                     // build a function to be invoked 
                     // when the class is loaded
-                    f = new JSFunction(m_cx, Void_Type, 0);
+                    f = new JSFunction(m_cx, Void_Type, 0, mScopeChain);
                     f->mByteCode = new ByteCodeModule(&static_cg);
                 }
                 thisClass->setStaticInitializer(m_cx, f);
                 f = NULL;
                 if (bcg.hasContent()) {
                     // execute this function now to form the initial instance
-                    f = new JSFunction(m_cx, Void_Type, 0);
+                    f = new JSFunction(m_cx, Void_Type, 0, mScopeChain);
                     f->mByteCode = new ByteCodeModule(&bcg);
                 }
                 thisClass->setInstanceInitializer(m_cx, f);
@@ -579,7 +579,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
     case StmtNode::Function:
         {
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
-            bool isConstructor = hasAttribute(f->attributes, mScopeChain->ConstructorKeyWord);
+            bool isConstructor = hasAttribute(f->attributes, m_cx->ConstructorKeyWord);
             JSFunction *fnc = f->mFunction;    
 
             if (f->function.name->getKind() == ExprNode::identifier) {

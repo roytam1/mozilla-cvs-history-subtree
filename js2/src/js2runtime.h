@@ -108,8 +108,8 @@ static const double two31 = 2147483648.0;
     extern JSArrayType *Array_Type;
     extern JSType *Unit_Type;
 
-    bool hasAttribute(AttributeList* identifiers, Token::Kind tokenKind);
-    bool hasAttribute(AttributeList* identifiers, const StringAtom &name);
+    bool hasAttribute(AttributeList* identifiers, Token::Kind tokenKind, IdentifierExprNode **attrArg = NULL);
+    bool hasAttribute(AttributeList* identifiers, const StringAtom &name, IdentifierExprNode **attrArg = NULL);
 
     String *numberToString(float64 number);
     float64 stringToNumber(const String *string);
@@ -284,7 +284,7 @@ static const double two31 = 2147483648.0;
         virtual void emitTypeOf(ByteCodeGen *bcg);
     };
 
-    // a getter/setter function from an activation (XXX is this even legal?)
+    // a getter/setter function from an activation
     // the function is known directly
     class AccessorReference : public Reference {
     public:
@@ -1141,7 +1141,9 @@ static const double two31 = 2147483648.0;
                         mModule(NULL), 
                         mArgCount(0) { }
 
-        Activation(Context *cx, JSValue *locals, JSValue *stack, uint32 stackTop,
+        Activation(Context *cx, JSValue *locals, 
+                        JSValue *stack, uint32 stackTop,
+                        ScopeChain *scopeChain,
                         uint32 argBase, JSValue curThis,
                         uint8 *pc, 
                         ByteCodeModule *module, 
@@ -1150,6 +1152,7 @@ static const double two31 = 2147483648.0;
                         mLocals(locals), 
                         mStack(stack), 
                         mStackTop(stackTop),
+                        mScopeChain(scopeChain),
                         mArgumentBase(argBase), 
                         mThis(curThis), 
                         mPC(pc), 
@@ -1162,6 +1165,7 @@ static const double two31 = 2147483648.0;
         JSValue *mLocals;
         JSValue *mStack;
         uint32 mStackTop;
+        ScopeChain *mScopeChain;
         uint32 mArgumentBase;
         JSValue mThis;
         uint8 *mPC;
@@ -1202,67 +1206,16 @@ static const double two31 = 2147483648.0;
     };
 
 
-//    class ParameterBarrel;
-
-    class JSFunction : public JSObject {
-    public:
-        typedef JSValue (NativeCode)(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
-
-        JSFunction(Context *cx, JSType *resultType, uint32 argCount, bool isConstructor = false) 
-                    : mByteCode(NULL), 
-                        mCode(NULL), 
-                        mResultType(resultType), 
-                        mParameterBarrel(NULL),
-                        mActivation(cx),
-                        mExpectedArgs(argCount)
-
-        {
-        }
-        
-        JSFunction(Context *cx, NativeCode *code, JSType *resultType) 
-                    : mByteCode(NULL), 
-                        mCode(code), 
-                        mResultType(resultType), 
-                        mParameterBarrel(NULL),
-                        mActivation(cx),
-                        mExpectedArgs(0)
-        {
-        }
-
-        bool isNative() { return (mCode != NULL); }
-
-        ByteCodeModule *mByteCode;
-        NativeCode *mCode;
-        JSType *mResultType;
-        ParameterBarrel *mParameterBarrel;
-        Activation mActivation;
-        uint32 mExpectedArgs;
-
-        JSValue getThisValue() { return kNullValue; } 
-        
-    
-    };
-
     
     
     class ScopeChain {
     public:
 
         ScopeChain(Context *cx, World &world) :
-              VirtualKeyWord(world.identifiers["virtual"]),
-              ConstructorKeyWord(world.identifiers["constructor"]),
-              OperatorKeyWord(world.identifiers["operator"]),
-              FixedKeyWord(world.identifiers["fixed"]),
-              DynamicKeyWord(world.identifiers["dynamic"]),
               m_cx(cx)
         {
         }
 
-        StringAtom& VirtualKeyWord; 
-        StringAtom& ConstructorKeyWord; 
-        StringAtom& OperatorKeyWord; 
-        StringAtom& FixedKeyWord;
-        StringAtom& DynamicKeyWord;
         Context *m_cx;
 
         std::vector<JSObject *> mScopeStack;
@@ -1441,6 +1394,55 @@ static const double two31 = 2147483648.0;
 
     };
 
+
+    class JSFunction : public JSObject {
+    public:
+        typedef JSValue (NativeCode)(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc);
+
+        JSFunction(Context *cx, JSType *resultType,
+                         uint32 argCount, ScopeChain *scopeChain,
+                         bool isConstructor = false) 
+
+                    : mByteCode(NULL), 
+                        mCode(NULL), 
+                        mResultType(resultType), 
+                        mParameterBarrel(NULL),
+                        mActivation(cx),
+                        mExpectedArgs(argCount),
+                        mScopeChain(NULL)
+        {
+            if (scopeChain) {
+                mScopeChain = new ScopeChain(*scopeChain);
+            }
+        }
+        
+        JSFunction(Context *cx, NativeCode *code, JSType *resultType) 
+                    : mByteCode(NULL), 
+                        mCode(code), 
+                        mResultType(resultType), 
+                        mParameterBarrel(NULL),
+                        mActivation(cx),
+                        mExpectedArgs(0),
+                        mScopeChain(NULL)
+        {
+        }
+
+        bool isNative() { return (mCode != NULL); }
+
+        ByteCodeModule *mByteCode;
+        NativeCode *mCode;
+        JSType *mResultType;
+        ParameterBarrel *mParameterBarrel;
+        Activation mActivation;
+        uint32 mExpectedArgs;
+
+        ScopeChain *mScopeChain;
+
+        JSValue getThisValue() { return kNullValue; }         
+    
+    };
+
+
     // This is for binary operators, it collects together the operand
     // types and the function pointer for the given operand. See also
     // Context::initOperators where the default operators are set up.
@@ -1509,7 +1511,15 @@ static const double two31 = 2147483648.0;
               mWorld(world),
               mScopeChain(NULL),
               mArena(a),
-              mDebugFlag(false)
+              mDebugFlag(false),
+
+              VirtualKeyWord(world.identifiers["virtual"]),
+              ConstructorKeyWord(world.identifiers["constructor"]),
+              OperatorKeyWord(world.identifiers["operator"]),
+              FixedKeyWord(world.identifiers["fixed"]),
+              DynamicKeyWord(world.identifiers["dynamic"]),
+              ExtendKeyWord(world.identifiers["extend"])
+
         {
             mScopeChain = new ScopeChain(this, mWorld);
             if (Object_Type == NULL) {                
@@ -1520,6 +1530,13 @@ static const double two31 = 2147483648.0;
             }
             initOperators();
         }
+
+        StringAtom& VirtualKeyWord; 
+        StringAtom& ConstructorKeyWord; 
+        StringAtom& OperatorKeyWord; 
+        StringAtom& FixedKeyWord;
+        StringAtom& DynamicKeyWord;
+        StringAtom& ExtendKeyWord;
 
         void initBuiltins();
         void initClass(JSType *type, JSType *super, ClassDef *cdef, PrototypeFunctions *pdef);

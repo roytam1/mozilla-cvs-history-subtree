@@ -73,7 +73,7 @@ JSType *Void_Type;
 JSType *Unit_Type;
 JSArrayType *Array_Type;
 
-bool hasAttribute(AttributeList* attrs, Token::Kind tokenKind)
+bool hasAttribute(AttributeList* attrs, Token::Kind tokenKind, IdentifierExprNode **attrArg)
 {
     while (attrs) {
         if (attrs->expr->getKind() == ExprNode::identifier) {
@@ -86,8 +86,14 @@ bool hasAttribute(AttributeList* attrs, Token::Kind tokenKind)
                 InvokeExprNode *i = static_cast<InvokeExprNode *>(attrs->expr);        
                 ASSERT(i->op->getKind() == ExprNode::identifier);
                 const StringAtom& name = (static_cast<IdentifierExprNode *>(i->op))->name;
-                if (name.tokenKind == tokenKind)
+                if (name.tokenKind == tokenKind) {
+                    if (attrArg) {
+                        ExprPairList *p = i->pairs;
+                        ASSERT(p && p->value->getKind() == ExprNode::identifier);
+                        *attrArg = static_cast<IdentifierExprNode *>(p->value);
+                    }
                     return true;
+                }
             }
             else
                 ASSERT(false);
@@ -96,7 +102,7 @@ bool hasAttribute(AttributeList* attrs, Token::Kind tokenKind)
     return false;
 }
 
-bool hasAttribute(AttributeList* attrs, const StringAtom &name)
+bool hasAttribute(AttributeList* attrs, const StringAtom &name, IdentifierExprNode **attrArg)
 {
     while (attrs) {
         if (attrs->expr->getKind() == ExprNode::identifier) {
@@ -113,8 +119,14 @@ bool hasAttribute(AttributeList* attrs, const StringAtom &name)
                 InvokeExprNode *i = static_cast<InvokeExprNode *>(attrs->expr);        
                 ASSERT(i->op->getKind() == ExprNode::identifier);
                 const StringAtom& idname = (static_cast<IdentifierExprNode *>(i->op))->name;
-                if (idname == name)
+                if (idname == name) {
+                    if (attrArg) {
+                        ExprPairList *p = i->pairs;
+                        ASSERT(p && p->value->getKind() == ExprNode::identifier);
+                        *attrArg = static_cast<IdentifierExprNode *>(p->value);
+                    }
                     return true;
+                }
             }
             else
                 ASSERT(false);
@@ -354,10 +366,11 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
     else {
         // have to lie about the argCount since the Return sequence expects to 
         // consume the arguments AND the target pointer from the stack.
-        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop, 
+        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop, mScopeChain,
                                                 mArgumentBase, mThis, mPC, mCurModule, 1));
         mCurModule = target->mByteCode;
         mArgumentBase = stackSize() - 2;
+        mScopeChain = target->mScopeChain;
         return true;
     }
 }
@@ -549,6 +562,15 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             //
                             target = targetValue->type->getDefaultConstructor();
                             mThis = kNullValue;
+
+                            // XXX this isn't right, it's only a call to the constructor
+                            // for some built-ins. For user-types its a cast from the 
+                            // operand type - a runtime error if the types aren't related
+
+                            // For various built-ins it can be a call to the 
+                            // constructor: Array(2), or a conversion: String(2)
+
+                            ASSERT("More work needed");
                         }
                         else
                             throw Exception(Exception::referenceError, "Not a function");
@@ -565,9 +587,11 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             pushValue(kUndefinedValue);
                             cleanUp++;
                         }
-                        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop, 
+                        mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop,
+                                                                    mScopeChain,
                                                                     mArgumentBase, oldThis,
                                                                     pc, mCurModule, cleanUp));
+                        mScopeChain = target->mScopeChain;
                         mCurModule = target->mByteCode;
                         pc = mCurModule->mCodeBase;
                         endPC = mCurModule->mCodeBase + mCurModule->mLength;
@@ -600,6 +624,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     mLocals = prev->mLocals;
                     mArgumentBase = prev->mArgumentBase;
                     mThis = prev->mThis;
+                    mScopeChain = prev->mScopeChain;
                     resizeStack(stackSize() - (prev->mArgCount + 1));
                 }
                 break;
@@ -619,6 +644,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     mLocals = prev->mLocals;
                     mArgumentBase = prev->mArgumentBase;
                     mThis = prev->mThis;
+                    mScopeChain = prev->mScopeChain;
                     resizeStack(stackSize() - (prev->mArgCount + 1));
                     pushValue(result);
                 }
@@ -871,6 +897,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             // would normally expect to clean the function pointer
                             // off the stack as well.
                             mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop, 
+                                                                    mScopeChain,
                                                                     mArgumentBase, mThis,
                                                                     pc, mCurModule, 0));
                             mCurModule = target->mByteCode;
@@ -1003,6 +1030,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                             cleanUp++;
                         }
                         mActivationStack.push(new Activation(this, mLocals, mStack, mStackTop,
+                                                                    mScopeChain,
                                                                     mArgumentBase, oldThis,
                                                                     pc, mCurModule, cleanUp));
                         mCurModule = target->mByteCode;
@@ -1253,9 +1281,9 @@ void ScopeChain::collectNames(StmtNode *p)
             IdentifierExprNode *className = static_cast<IdentifierExprNode*>(classStmt->name);
             const StringAtom& name = className->name;
             JSType *thisClass = new JSType(m_cx, name, NULL);
-            if (hasAttribute(classStmt->attributes, FixedKeyWord))
+            if (hasAttribute(classStmt->attributes, m_cx->FixedKeyWord))
                 thisClass->mIsDynamic = false;
-            if (hasAttribute(classStmt->attributes, DynamicKeyWord))
+            if (hasAttribute(classStmt->attributes, m_cx->DynamicKeyWord))
                 thisClass->mIsDynamic = true;
 
             defineVariable(name, classStmt->attributes, Type_Type, JSValue(thisClass));
@@ -1330,88 +1358,82 @@ void ScopeChain::collectNames(StmtNode *p)
         {
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
             bool isStatic = hasAttribute(f->attributes, Token::Static);
-            bool isConstructor = hasAttribute(f->attributes, ConstructorKeyWord);
-            bool isOperator = hasAttribute(f->attributes, OperatorKeyWord);
-            JSFunction *fnc = new JSFunction(m_cx, NULL, m_cx->getParameterCount(f->function));
+            bool isConstructor = hasAttribute(f->attributes, m_cx->ConstructorKeyWord);
+            bool isOperator = hasAttribute(f->attributes, m_cx->OperatorKeyWord);
+            JSFunction *fnc = new JSFunction(m_cx, NULL, m_cx->getParameterCount(f->function), this);
             f->mFunction = fnc;
 
             if (isOperator) {
                 // no need to do anything yet, all operators are 'pre-declared'
             }
             else {
-
-            /* 
-                if (hasAttribute(f->attributes, ExtendKeyWord)) {
-                    // get the argument to the attribute?
-                    // it's a class name, so now this function becomes
-                    // a method in that class. Seems like the class would
-                    // have to be known at this point?
-                    JSType *extendedClass = mScopeChain->extractType( <extend attribute argument> );
-                    
-                      // sort of want to fall into the code below, but use 'extendedClass' instead
-                      // of whatever the topClass will turn out to be.
-                    if (extendedClass->mClassName.compare(name) == 0))
-                        isConstructor = true;
-                    if (isConstructor)
-                        extendedClass->defineConstructor(name, f->attributes, NULL, fnc);
-                    else {
-                        switch (f->function.prefix) {
-                        case FunctionName::Get:
-                            if (isStatic)
-                                extendedClass->defineStaticGetterMethod(name, f->attributes, NULL, fnc);
-                            else
-                                extendedClass->defineGetterMethod(name, f->attributes, NULL, fnc);
-                            break;
-                        case FunctionName::Set:
-                            if (isStatic)
-                                extendedClass->defineStaticSetterMethod(name, f->attributes, NULL, fnc);
-                            else
-                                extendedClass->defineSetterMethod(name, f->attributes, NULL, fnc);
-                            break;
-                        case FunctionName::normal:
-                            if (isStatic)
-                                extendedClass->defineStaticMethod(name, f->attributes, NULL, fnc);
-                            else
-                                extendedClass->defineMethod(name, f->attributes, NULL, fnc);
-                            break;
-                        default:
-                            NOT_REACHED("unexpected prefix");
-                            break;
-                        }
-                    }
-                    
-                    
-                }
-            */
                 if (f->function.name->getKind() == ExprNode::identifier) {
                     const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
-                    if (topClass() && (topClass()->mClassName.compare(name) == 0))
-                        isConstructor = true;
-                    if (isConstructor)
-                        defineConstructor(name, f->attributes, NULL, fnc);
+                    IdentifierExprNode *extendArg;
+                    if (hasAttribute(f->attributes, m_cx->ExtendKeyWord, &extendArg)) {
+                        JSType *extendedClass = extractType(extendArg);
+                    
+                          // sort of want to fall into the code below, but use 'extendedClass' instead
+                          // of whatever the topClass will turn out to be.
+                        if (extendedClass->mClassName.compare(name) == 0)
+                            isConstructor = true;       // can you add constructors?
+                        if (isConstructor)
+                            extendedClass->defineConstructor(name, f->attributes, NULL, fnc);
+                        else {
+                            switch (f->function.prefix) {
+                            case FunctionName::Get:
+                                if (isStatic)
+                                    extendedClass->defineStaticGetterMethod(name, f->attributes, NULL, fnc);
+                                else
+                                    extendedClass->defineGetterMethod(name, f->attributes, NULL, fnc);
+                                break;
+                            case FunctionName::Set:
+                                if (isStatic)
+                                    extendedClass->defineStaticSetterMethod(name, f->attributes, NULL, fnc);
+                                else
+                                    extendedClass->defineSetterMethod(name, f->attributes, NULL, fnc);
+                                break;
+                            case FunctionName::normal:
+                                if (isStatic)
+                                    extendedClass->defineStaticMethod(name, f->attributes, NULL, fnc);
+                                else
+                                    extendedClass->defineMethod(name, f->attributes, NULL, fnc);
+                                break;
+                            default:
+                                NOT_REACHED("unexpected prefix");
+                                break;
+                            }
+                        }                    
+                    }
                     else {
-                        switch (f->function.prefix) {
-                        case FunctionName::Get:
-                            if (isStatic)
-                                defineStaticGetterMethod(name, f->attributes, NULL, fnc);
-                            else
-                                defineGetterMethod(name, f->attributes, NULL, fnc);
-                            break;
-                        case FunctionName::Set:
-                            if (isStatic)
-                                defineStaticSetterMethod(name, f->attributes, NULL, fnc);
-                            else
-                                defineSetterMethod(name, f->attributes, NULL, fnc);
-                            break;
-                        case FunctionName::normal:
-                            if (isStatic)
-                                defineStaticMethod(name, f->attributes, NULL, fnc);
-                            else
-                                defineMethod(name, f->attributes, NULL, fnc);
-                            break;
-                        default:
-                            NOT_REACHED("unexpected prefix");
-                            break;
+                        if (topClass() && (topClass()->mClassName.compare(name) == 0))
+                            isConstructor = true;
+                        if (isConstructor)
+                            defineConstructor(name, f->attributes, NULL, fnc);
+                        else {
+                            switch (f->function.prefix) {
+                            case FunctionName::Get:
+                                if (isStatic)
+                                    defineStaticGetterMethod(name, f->attributes, NULL, fnc);
+                                else
+                                    defineGetterMethod(name, f->attributes, NULL, fnc);
+                                break;
+                            case FunctionName::Set:
+                                if (isStatic)
+                                    defineStaticSetterMethod(name, f->attributes, NULL, fnc);
+                                else
+                                    defineSetterMethod(name, f->attributes, NULL, fnc);
+                                break;
+                            case FunctionName::normal:
+                                if (isStatic)
+                                    defineStaticMethod(name, f->attributes, NULL, fnc);
+                                else
+                                    defineMethod(name, f->attributes, NULL, fnc);
+                                break;
+                            default:
+                                NOT_REACHED("unexpected prefix");
+                                break;
+                            }
                         }
                     }
                 }
@@ -1440,10 +1462,13 @@ void JSType::completeClass(Context *cx, ScopeChain *scopeChain, JSType *super)
 
     // if none exists, build a default constructor that calls 'super()'
     if (mStatics && getDefaultConstructor() == NULL) {
-        JSFunction *fnc = new JSFunction(cx, Object_Type, 0);
+        JSFunction *fnc = new JSFunction(cx, Object_Type, 0, scopeChain);
         ByteCodeGen bcg(cx, scopeChain);
 
         if (mSuperType && mSuperType->getDefaultConstructor()) {
+            bcg.addOp(LoadTypeOp);
+            bcg.addPointer(this);
+            bcg.addOp(NewThisOp);
             bcg.addOp(LoadThisOp);
             bcg.addOp(LoadFunctionOp);
             bcg.addPointer(mSuperType->getDefaultConstructor());
@@ -1575,8 +1600,8 @@ void Context::buildRuntimeForStmt(StmtNode *p)
         {
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
 //            bool isStatic = hasAttribute(f->attributes, Token::Static);
-//            bool isConstructor = hasAttribute(f->attributes, mScopeChain->ConstructorKeyWord);
-            bool isOperator = hasAttribute(f->attributes, mScopeChain->OperatorKeyWord);
+//            bool isConstructor = hasAttribute(f->attributes, ConstructorKeyWord);
+            bool isOperator = hasAttribute(f->attributes, OperatorKeyWord);
             JSType *resultType = mScopeChain->extractType(f->function.resultType);
             JSFunction *fnc = f->mFunction;
             fnc->mResultType = resultType;
@@ -1600,10 +1625,6 @@ void Context::buildRuntimeForStmt(StmtNode *p)
 /*
             bool isExtender = false;                
             if (hasAttribute(f->attributes, ExtendKeyWord)) {
-                // get the argument to the attribute?
-                // it's a class name, so now this function becomes
-                // a method in that class. Seems like the class would
-                // have to be known at this point?
                 JSType *extendedClass = mScopeChain->extractType( <extend attribute argument> );
                 mScopeChain->addScope(extendedClass->mStatics);
                 mScopeChain->addScope(extendedClass);
