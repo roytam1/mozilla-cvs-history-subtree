@@ -168,10 +168,13 @@ static PRUintn gToolkitTLSIndex = 0;
 // Called periodically to process PLEvents from the queue on the current thread
 //
 
+#define MAX_PROCESS_EVENT_CALLS        20
+
 //#define DEBUG_EVENT_TIMING
 
-#define TIMED_EVENT_PROCESSING
+//#define TIMED_EVENT_PROCESSING
 #define MAX_PLEVENT_TIME_MILLISECONDS  500
+
 
 - (void)eventTimer:(NSTimer *)theTimer
 {
@@ -200,7 +203,7 @@ static PRUintn gToolkitTLSIndex = 0;
 #else
     // the old way; process events 20 times. Can suck CPU, and make the app
     // unresponsive
-    for (PRInt32 i = 0; i < 20; i  ++)
+    for (PRInt32 i = 0; i < MAX_PROCESS_EVENT_CALLS; i ++)
     {
       PRBool pendingEvents = PR_FALSE;
       mMainThreadEventQueue->PendingEvents(&pendingEvents);
@@ -209,7 +212,6 @@ static PRUintn gToolkitTLSIndex = 0;
       mMainThreadEventQueue->ProcessPendingEvents();
     } 
 #endif
-
   }
 
 #ifdef DEBUG_EVENT_TIMING
