@@ -32,53 +32,44 @@
 //
 //Construct an Attribute object using the specified name and document owner
 //
-Attr::Attr(const String& name, Document* owner):
-      NodeDefinition(Node::ATTRIBUTE_NODE, name, NULL_STRING, owner)
+Attr::Attr(const nsAString& name, Document* owner):
+      NodeDefinition(Node::ATTRIBUTE_NODE, name, nsString(), owner)
 {
-  specified = MB_FALSE;
-
-  int idx = nodeName.indexOf(':');
+  int idx = nodeName.FindChar(':');
   if (idx == kNotFound) {
-    mLocalName = TX_GET_ATOM(nodeName);
+    mLocalName = do_GetAtom(nodeName);
     if (mLocalName == txXMLAtoms::xmlns)
       mNamespaceID = kNameSpaceID_XMLNS;
     else
       mNamespaceID = kNameSpaceID_None;
   }
   else {
-    String tmp;
-    nodeName.subString(idx + 1, tmp);
-    mLocalName = TX_GET_ATOM(tmp);
+    mLocalName = do_GetAtom(Substring(nodeName, idx + 1,
+                                      nodeName.Length() - (idx + 1)));
     // namespace handling has to be handled late, the attribute must
     // be added to the tree to resolve the prefix, unless it's
     // xmlns or xml, try to do that here
-    String prefix;
-    nodeName.subString(0, idx, prefix);
-    txAtom* prefixAtom = TX_GET_ATOM(prefix);
+    nsCOMPtr<nsIAtom> prefixAtom = do_GetAtom(Substring(nodeName, 0, idx));
     if (prefixAtom == txXMLAtoms::xmlns)
       mNamespaceID = kNameSpaceID_XMLNS;
     else if (prefixAtom == txXMLAtoms::xml)
       mNamespaceID = kNameSpaceID_XML;
     else
       mNamespaceID = kNameSpaceID_Unknown;
-    TX_IF_RELEASE_ATOM(prefixAtom);
   }
 }
 
-Attr::Attr(const String& aNamespaceURI,
-           const String& aName,
+Attr::Attr(const nsAString& aNamespaceURI,
+           const nsAString& aName,
            Document* aOwner) :
-    NodeDefinition(Node::ATTRIBUTE_NODE, aName, NULL_STRING, aOwner)
+    NodeDefinition(Node::ATTRIBUTE_NODE, aName, nsString(), aOwner)
 {
- if (aNamespaceURI.isEmpty())
+ if (aNamespaceURI.IsEmpty())
     mNamespaceID = kNameSpaceID_None;
   else
     mNamespaceID = txNamespaceManager::getNamespaceID(aNamespaceURI);
 
-  specified = MB_TRUE;
-  String localPart;
-  XMLUtils::getLocalPart(nodeName, localPart);
-  mLocalName = TX_GET_ATOM(localPart);
+  XMLUtils::getLocalPart(nodeName, getter_AddRefs(mLocalName));
 }
 
 //
@@ -86,117 +77,37 @@ Attr::Attr(const String& aNamespaceURI,
 //
 Attr::~Attr()
 {
-  TX_IF_RELEASE_ATOM(mLocalName);
+}
+
+void Attr::setNodeValue(const nsAString& aValue)
+{
+  nodeValue = aValue;
+}
+
+nsresult Attr::getNodeValue(nsAString& aValue)
+{
+  aValue = nodeValue;
+  return NS_OK;
 }
 
 //
-//Retrieve the name of the attribute from the nodeName data member
+//Not implemented anymore, return null as an error.
 //
-const String& Attr::getName() const
+Node* Attr::appendChild(Node* newChild)
 {
-  return nodeName;
-}
-
-//
-//Retrieve the specified flag
-//
-MBool Attr::getSpecified() const
-{
-  return specified;
-}
-
-//
-//Retrieve the value of the attribute.  This is a comma-deliminated string
-//representation of the Attribute's children.
-//
-const String& Attr::getValue()
-{
-  nodeValue = NULL_STRING;
-
-  Node* child = getFirstChild();
-  while (child) {
-    if (child->getNodeType() != Node::ENTITY_REFERENCE_NODE) {
-        nodeValue.append(child->getNodeValue());
-        child = child->getNextSibling();
-        if (child)
-          nodeValue.append(",");
-    } else {
-      child = child->getNextSibling();
-    }
-  }
-  return nodeValue;
-}
-
-//
-//Create a new Text node and add it to the Attribute's list of children.  Also
-//set the Specified flag to true.
-//
-void Attr::setValue(const String& newValue)
-{
-  NodeDefinition::DeleteChildren();
-
-  appendChild(getOwnerDocument()->createTextNode(newValue));
-
-  specified = MB_TRUE;
-}
-
-
-//
-//Override the set node value member function to create a new TEXT node with
-//the String and to add it as the Attribute's child.
-//    NOTE:  Not currently impemented, just execute the default setNodeValue
-//
-void Attr::setNodeValue(const String& nodeValue)
-{
-  setValue(nodeValue);
-}
-
-//
-//Return a String represening the value of this node.  If the value is an
-//Entity Reference then return the value of the reference.  Otherwise, it is a
-//simple conversion of the text value.
-//    NOTE: Not currently implemented, just execute the default getNodeValue
-//
-const String& Attr::getNodeValue()
-{
-  return getValue();
-}
-
-
-//
-//First check to see if the new node is an allowable child for an Attr.  If it
-//is, call NodeDefinition's implementation of Insert Before.  If not, return
-//null as an error.
-//
-Node* Attr::insertBefore(Node* newChild, Node* refChild)
-{
-  Node* returnVal = NULL;
-
-  switch (newChild->getNodeType())
-    {
-      case Node::TEXT_NODE :
-      case Node::ENTITY_REFERENCE_NODE:
-        returnVal = NodeDefinition::insertBefore(newChild, refChild);
-
-        if (returnVal)
-          specified = MB_TRUE;
-        break;
-      default:
-        returnVal = NULL;
-    }
-
-  return returnVal;
+  NS_ASSERTION(0, "not implemented");
+  return nsnull;
 }
 
 //
 //Return the attributes local (unprefixed) name atom.
 //
-MBool Attr::getLocalName(txAtom** aLocalName)
+MBool Attr::getLocalName(nsIAtom** aLocalName)
 {
   if (!aLocalName)
     return MB_FALSE;
   *aLocalName = mLocalName;
-  TX_ADDREF_ATOM(*aLocalName);
+  NS_ADDREF(*aLocalName);
   return MB_TRUE;
 }
 
@@ -210,12 +121,12 @@ PRInt32 Attr::getNamespaceID()
   if (mNamespaceID >= 0)
     return mNamespaceID;
 
-  int idx = nodeName.indexOf(':');
-  String prefix;
-  nodeName.subString(0, idx, prefix);
-  txAtom* prefixAtom = TX_GET_ATOM(prefix);
-  mNamespaceID = lookupNamespaceID(prefixAtom);
-  TX_IF_RELEASE_ATOM(prefixAtom);
+  mNamespaceID = kNameSpaceID_None;
+  PRInt32 idx = nodeName.FindChar(':');
+  if (idx != kNotFound) {
+    nsCOMPtr<nsIAtom> prefixAtom = do_GetAtom(Substring(nodeName, 0, idx));
+    mNamespaceID = lookupNamespaceID(prefixAtom);
+  }
   return mNamespaceID;
 }
 

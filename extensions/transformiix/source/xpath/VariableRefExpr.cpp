@@ -35,15 +35,13 @@
 /**
  * Creates a VariableRefExpr with the given variable name
 **/
-VariableRefExpr::VariableRefExpr(txAtom* aPrefix, txAtom* aLocalName,
+VariableRefExpr::VariableRefExpr(nsIAtom* aPrefix, nsIAtom* aLocalName,
                                  PRInt32 aNSID)
     : mPrefix(aPrefix), mLocalName(aLocalName), mNamespace(aNSID)
 {
     NS_ASSERTION(mLocalName, "VariableRefExpr without local name?");
     if (mPrefix == txXMLAtoms::_empty)
         mPrefix = 0;
-    TX_IF_ADDREF_ATOM(mPrefix);
-    TX_IF_ADDREF_ATOM(mLocalName);
 }
 
 /*
@@ -51,8 +49,6 @@ VariableRefExpr::VariableRefExpr(txAtom* aPrefix, txAtom* aLocalName,
  */
 VariableRefExpr::~VariableRefExpr()
 {
-    TX_IF_RELEASE_ATOM(mPrefix);
-    TX_IF_RELEASE_ATOM(mLocalName);
 }
 
 /**
@@ -68,7 +64,7 @@ ExprResult* VariableRefExpr::evaluate(txIEvalContext* aContext)
     nsresult rv = aContext->getVariable(mNamespace, mLocalName, exprResult);
     if (NS_FAILED(rv)) {
       // XXX report error, undefined variable
-      return new StringResult("error");
+      return new StringResult(NS_LITERAL_STRING("error"));
     }
     return exprResult->clone();
 }
@@ -81,16 +77,16 @@ ExprResult* VariableRefExpr::evaluate(txIEvalContext* aContext)
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void VariableRefExpr::toString(String& aDest)
+void VariableRefExpr::toString(nsAString& aDest)
 {
-    aDest.append('$');
+    aDest.Append(PRUnichar('$'));
     if (mPrefix) {
-        String prefix;
-        TX_GET_ATOM_STRING(mPrefix, prefix);
-        aDest.append(prefix);
-        aDest.append(':');
+        nsAutoString prefix;
+        mPrefix->ToString(prefix);
+        aDest.Append(prefix);
+        aDest.Append(PRUnichar(':'));
     }
-    String lname;
-    TX_GET_ATOM_STRING(mLocalName, lname);
-    aDest.append(lname);
+    nsAutoString lname;
+    mLocalName->ToString(lname);
+    aDest.Append(lname);
 } //-- toString

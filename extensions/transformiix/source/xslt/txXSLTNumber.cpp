@@ -40,7 +40,6 @@
 #include "txAtoms.h"
 #include "primitives.h"
 #include <math.h>
-#include "Names.h"
 #include "Expr.h"
 #include "ExprResult.h"
 #include "txXSLTPatterns.h"
@@ -50,30 +49,30 @@ nsresult txXSLTNumber::createNumber(Expr* aValueExpr, txPattern* aCountPattern,
                                     txPattern* aFromPattern, LevelType aLevel,
                                     Expr* aGroupSize, Expr* aGroupSeparator,
                                     Expr* aFormat, txIEvalContext* aContext,
-                                    String& aResult)
+                                    nsAString& aResult)
 {
-    aResult.clear();
+    aResult.Truncate();
     nsresult rv = NS_OK;
 
     // Parse format
     txList counters;
-    String head, tail;
+    nsAutoString head, tail;
     rv = getCounters(aGroupSize, aGroupSeparator, aFormat, aContext, counters,
                      head, tail);
     NS_ENSURE_SUCCESS(rv, rv);
     
     // Create list of values to format
     txList values;
-    String valueString;
+    nsAutoString valueString;
     rv = getValueList(aValueExpr, aCountPattern, aFromPattern, aLevel,
                       aContext, values, valueString);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    if (valueString.length()) {
+    if (!valueString.IsEmpty()) {
         // XXX Xalan and XSLT2 says this, but XSLT1 says otherwise
         aResult = head;
-        aResult.append(valueString);
-        aResult.append(tail);
+        aResult.Append(valueString);
+        aResult.Append(tail);
         return NS_OK;
     }
 
@@ -91,14 +90,14 @@ nsresult txXSLTNumber::createNumber(Expr* aValueExpr, txPattern* aCountPattern,
         }
 
         if (!first) {
-            aResult.append(counter->mSeparator);
+            aResult.Append(counter->mSeparator);
         }
 
         counter->appendNumber(value, aResult);
         first = MB_FALSE;
     }
     
-    aResult.append(tail);
+    aResult.Append(tail);
     
     txListIterator iter(&counters);
     while (iter.hasNext()) {
@@ -112,9 +111,9 @@ nsresult
 txXSLTNumber::getValueList(Expr* aValueExpr, txPattern* aCountPattern,
                            txPattern* aFromPattern, LevelType aLevel,
                            txIEvalContext* aContext, txList& aValues,
-                           String& aValueString)
+                           nsAString& aValueString)
 {
-    aValueString.clear();
+    aValueString.Truncate();
     
     // If the value attribute exists then use that
     if (aValueExpr) {
@@ -149,12 +148,11 @@ txXSLTNumber::getValueList(Expr* aValueExpr, txPattern* aCountPattern,
         switch (currNode->getNodeType()) {
             case Node::ELEMENT_NODE:
             {
-                txAtom* localName = 0;
-                currNode->getLocalName(&localName);
+                nsCOMPtr<nsIAtom> localName;
+                currNode->getLocalName(getter_AddRefs(localName));
                 nodeTest = new txNameTest(0, localName,
                                           currNode->getNamespaceID(),
                                           Node::ELEMENT_NODE);
-                TX_IF_RELEASE_ATOM(localName);
                 break;
             }
             case Node::TEXT_NODE:
@@ -167,8 +165,11 @@ txXSLTNumber::getValueList(Expr* aValueExpr, txPattern* aCountPattern,
             {
                 txNodeTypeTest* typeTest;
                 typeTest = new txNodeTypeTest(txNodeTypeTest::PI_TYPE);
-                if (typeTest)
-                    typeTest->setNodeName(currNode->getNodeName());
+                if (typeTest) {
+                    nsAutoString nodeName;
+                    currNode->getNodeName(nodeName);
+                    typeTest->setNodeName(nodeName);
+                }
                 nodeTest = typeTest;
                 break;
             }
@@ -307,20 +308,21 @@ txXSLTNumber::getValueList(Expr* aValueExpr, txPattern* aCountPattern,
 nsresult
 txXSLTNumber::getCounters(Expr* aGroupSize, Expr* aGroupSeparator,
                           Expr* aFormat, txIEvalContext* aContext,
-                          txList& aCounters, String& aHead, String& aTail)
+                          txList& aCounters, nsAString& aHead,
+                          nsAString& aTail)
 {
-    aHead.clear();
-    aTail.clear();
+    aHead.Truncate();
+    aTail.Truncate();
     
     nsresult rv = NS_OK;
 
-    String groupSeparator;
+    nsAutoString groupSeparator;
     PRInt32 groupSize = 0;
     if (aGroupSize && aGroupSeparator) {
         ExprResult* sizeRes = aGroupSize->evaluate(aContext);
         NS_ENSURE_TRUE(sizeRes, NS_ERROR_FAILURE);
         
-        String sizeStr;
+        nsAutoString sizeStr;
         sizeRes->stringValue(sizeStr);
         delete sizeRes;
 
@@ -337,7 +339,7 @@ txXSLTNumber::getCounters(Expr* aGroupSize, Expr* aGroupSeparator,
         delete sepRes;
     }
 
-    String format;
+    nsAutoString format;
     if (aFormat) {
         ExprResult* formatRes = aFormat->evaluate(aContext);
         NS_ENSURE_TRUE(formatRes, NS_ERROR_FAILURE);
@@ -345,25 +347,25 @@ txXSLTNumber::getCounters(Expr* aGroupSize, Expr* aGroupSeparator,
         formatRes->stringValue(format);
         delete formatRes;
     }
-    PRUint32 formatLen = format.length();
+    PRUint32 formatLen = format.Length();
     PRUint32 formatPos = 0;
-    UNICODE_CHAR ch = 0;
+    PRUnichar ch = 0;
     
     // start with header
     while (formatPos < formatLen &&
-           !isAlphaNumeric(ch = format.charAt(formatPos))) {
-        aHead.append(ch);
+           !isAlphaNumeric(ch = format.CharAt(formatPos))) {
+        aHead.Append(ch);
         ++formatPos;
     }
     
     // If there are no formatting tokens we need to create a default one.
     if (formatPos == formatLen) {
         txFormattedCounter* defaultCounter;
-        rv = txFormattedCounter::getCounterFor(String("1"), groupSize,
+        rv = txFormattedCounter::getCounterFor(NS_LITERAL_STRING("1"), groupSize,
                                                groupSeparator, defaultCounter);
         NS_ENSURE_SUCCESS(rv, rv);
         
-        defaultCounter->mSeparator = String(".");
+        defaultCounter->mSeparator = NS_LITERAL_STRING(".");
         rv = aCounters.add(defaultCounter);
         if (NS_FAILED(rv)) {
             // XXX ErrorReport: out of memory
@@ -375,19 +377,19 @@ txXSLTNumber::getCounters(Expr* aGroupSize, Expr* aGroupSeparator,
     }
 
     while (formatPos < formatLen) {
-        String sepToken;
+        nsAutoString sepToken;
         // parse separator token
         if (!aCounters.getLength()) {
             // Set the first counters separator to default value so that if
             // there is only one formatting token and we're formatting a
             // value-list longer then one we use the default separator. This
             // won't be used when formatting the first value anyway.
-            sepToken = String(".");
+            sepToken = NS_LITERAL_STRING(".");
         }
         else {
             while (formatPos < formatLen &&
-                   !isAlphaNumeric(ch = format.charAt(formatPos))) {
-                sepToken.append(ch);
+                   !isAlphaNumeric(ch = format.CharAt(formatPos))) {
+                sepToken.Append(ch);
                 ++formatPos;
             }
         }
@@ -399,10 +401,10 @@ txXSLTNumber::getCounters(Expr* aGroupSize, Expr* aGroupSeparator,
         }
 
         // parse formatting token
-        String numToken;
+        nsAutoString numToken;
         while (formatPos < formatLen &&
-               isAlphaNumeric(ch = format.charAt(formatPos))) {
-            numToken.append(ch);
+               isAlphaNumeric(ch = format.CharAt(formatPos))) {
+            numToken.Append(ch);
             ++formatPos;
         }
         
@@ -473,7 +475,7 @@ txXSLTNumber::getPrevInDocumentOrder(Node* aNode)
 #define TX_MATCH_CHAR(ch, a) if (ch < a) return MB_FALSE; \
     if (ch == a) return MB_TRUE
 
-MBool txXSLTNumber::isAlphaNumeric(UNICODE_CHAR ch)
+MBool txXSLTNumber::isAlphaNumeric(PRUnichar ch)
 {
     TX_CHAR_RANGE(ch, 0x0030, 0x0039);
     TX_CHAR_RANGE(ch, 0x0041, 0x005A);

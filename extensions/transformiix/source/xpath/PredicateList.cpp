@@ -107,14 +107,14 @@ MBool PredicateList::isEmpty()
     return (MBool)(predicates.getLength() == 0);
 } // isEmpty
 
-void PredicateList::toString(String& dest)
+void PredicateList::toString(nsAString& dest)
 {
     txListIterator iter(&predicates);
     while (iter.hasNext()) {
         Expr* expr = (Expr*) iter.next();
-        dest.append("[");
+        dest.Append(PRUnichar('['));
         expr->toString(dest);
-        dest.append("]");
+        dest.Append(PRUnichar(']'));
     }
 } // toString
 

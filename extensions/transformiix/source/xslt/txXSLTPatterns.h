@@ -69,7 +69,7 @@ public:
      * other #toString() methods for Patterns.
      * @return the String representation of this Pattern.
      */
-    virtual void toString(String& aDest) = 0;
+    virtual void toString(nsAString& aDest) = 0;
 
     /*
      * Adds the simple Patterns to the List.
@@ -85,7 +85,7 @@ public:
 #define TX_DECL_PATTERN \
     MBool matches(Node* aNode, txIMatchContext* aContext); \
     double getDefaultPriority(); \
-    void toString(String& aDest)
+    void toString(nsAString& aDest)
 #define TX_DECL_PATTERN2 \
     TX_DECL_PATTERN; \
     nsresult getSimplePatterns(txList &aList)
@@ -159,25 +159,21 @@ private:
 class txIdPattern : public txPattern
 {
 public:
-    txIdPattern(const String& aString);
+    txIdPattern(const nsAString& aString);
 
     ~txIdPattern();
 
     TX_DECL_PATTERN;
 
 private:
-#ifdef TX_EXE
-    String mIds;
-#else
-    nsAutoString mIds;
-#endif
+    nsString mIds;
 };
 
 class txKeyPattern : public txPattern
 {
 public:
-    txKeyPattern(txAtom* aPrefix, txAtom* aLocalName,
-                 PRInt32 aNSID, const String& aValue)
+    txKeyPattern(nsIAtom* aPrefix, nsIAtom* aLocalName,
+                 PRInt32 aNSID, const nsAString& aValue)
         : mName(aNSID, aLocalName), mPrefix(aPrefix), mValue(aValue)
     {
     }
@@ -188,8 +184,8 @@ public:
 
 private:
     txExpandedName mName;
-    txAtom* mPrefix;
-    String mValue;
+    nsIAtom* mPrefix;
+    nsString mValue;
 };
 
 class txStepPattern : public PredicateList, public txPattern

@@ -30,18 +30,18 @@
 //
 
 #include "dom.h"
-#include "txAtom.h"
+#include "nsIAtom.h"
 
 //
 //Construct a text object with the specified document owner and data
 //
-ProcessingInstruction::ProcessingInstruction(const String& theTarget,
-                                             const String& theData,
+ProcessingInstruction::ProcessingInstruction(const nsAString& theTarget,
+                                             const nsAString& theData,
                                              Document* owner) :
                        NodeDefinition(Node::PROCESSING_INSTRUCTION_NODE,
                                       theTarget, theData, owner)
 {
-  mLocalName = TX_GET_ATOM(nodeName);
+  mLocalName = do_GetAtom(nodeName);
 }
 
 //
@@ -49,65 +49,18 @@ ProcessingInstruction::ProcessingInstruction(const String& theTarget,
 //
 ProcessingInstruction::~ProcessingInstruction()
 {
-  TX_IF_RELEASE_ATOM(mLocalName);
 }
-
-//
-//Return the Target of the processing instruction.  This is simply the
-//nodeName.
-//
-const String& ProcessingInstruction::getTarget() const
-{
-  return nodeName;
-}
-
-//
-//Return the Data of the processing instruction.  This is simply the value
-//of the node, "nodeValue"
-//
-const String& ProcessingInstruction::getData() const
-{
-  return nodeValue;
-}
-
-//
-//Set the Data element of the processing instruction.
-void ProcessingInstruction::setData(const String& theData)
-{
-  nodeValue = theData;
-}
-
 
 //
 //ProcessingInstruction nodes can not have any children, so just return null
 //from all child manipulation functions.
 //
 
-Node* ProcessingInstruction::insertBefore(Node* newChild, Node* refChild)
-{
-  return NULL;
-}
-
-Node* ProcessingInstruction::replaceChild(Node* newChild, Node* oldChild)
-{
-  return NULL;
-}
-
-Node* ProcessingInstruction::removeChild(Node* oldChild)
-{
-  return NULL;
-}
-
-Node* ProcessingInstruction::appendChild(Node* newChild)
-{
-  return NULL;
-}
-
-MBool ProcessingInstruction::getLocalName(txAtom** aLocalName)
+MBool ProcessingInstruction::getLocalName(nsIAtom** aLocalName)
 {
   if (!aLocalName)
     return MB_FALSE;
   *aLocalName = mLocalName;
-  TX_ADDREF_ATOM(*aLocalName);
+  NS_ADDREF(*aLocalName);
   return MB_TRUE;
 }

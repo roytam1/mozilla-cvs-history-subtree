@@ -30,29 +30,54 @@
 //
 
 #include "dom.h"
-#include "ArrayList.h"
+#include "nsVoidArray.h"
 #include "txURIUtils.h"
 #include "txAtoms.h"
 #include <string.h>
 
-NodeDefinition::NodeDefinition(NodeType type, const String& name,
-                               const String& value, Document* owner)
+NodeDefinition::NodeDefinition(NodeType type, const nsAString& name,
+                               const nsAString& value, Document* owner)
 {
-
   nodeName = name;
-  nodeValue = value;
-  nodeType = type;
+  Init(type, value, owner);
+}
 
-  parentNode = NULL;
-  previousSibling = NULL;
-  nextSibling = NULL;;
-  firstChild = NULL;
-  lastChild = NULL;
-
-  ownerDocument = owner;
-  length = 0;
-
-  mOrderInfo = 0;
+NodeDefinition::NodeDefinition(NodeType aType, const nsAString& aValue,
+                               Document* aOwner)
+{
+  switch (aType)
+  {
+    case CDATA_SECTION_NODE:
+    {
+      nodeName = NS_LITERAL_STRING("#cdata-section");
+      break;
+    }
+    case COMMENT_NODE:
+    {
+      nodeName = NS_LITERAL_STRING("#comment");
+      break;
+    }
+    case DOCUMENT_NODE:
+    {
+      nodeName = NS_LITERAL_STRING("#document");
+      break;
+    }
+    case DOCUMENT_FRAGMENT_NODE:
+    {
+      nodeName = NS_LITERAL_STRING("#document-fragment");
+      break;
+    }
+    case TEXT_NODE:
+    {
+      nodeName = NS_LITERAL_STRING("#text");
+      break;
+    }
+    default:
+    {
+      break;
+    }
+  }
+  Init(aType, aValue, aOwner);
 }
 
 //
@@ -62,6 +87,25 @@ NodeDefinition::~NodeDefinition()
 {
   DeleteChildren();
   delete mOrderInfo;
+}
+
+void
+NodeDefinition::Init(NodeType aType, const nsAString& aValue,
+                     Document* aOwner)
+{
+  nodeType = aType;
+  nodeValue = aValue;
+  ownerDocument = aOwner;
+
+  parentNode = nsnull;
+  previousSibling = nsnull;
+  nextSibling = nsnull;;
+  firstChild = nsnull;
+  lastChild = nsnull;
+
+  length = 0;
+
+  mOrderInfo = 0;
 }
 
 //
@@ -80,18 +124,20 @@ void NodeDefinition::DeleteChildren()
     }
 
   length = 0;
-  firstChild = NULL;
-  lastChild = NULL;
+  firstChild = nsnull;
+  lastChild = nsnull;
 }
 
-const String& NodeDefinition::getNodeName() const
+nsresult NodeDefinition::getNodeName(nsAString& aName) const
 {
-  return nodeName;
+  aName = nodeName;
+  return NS_OK;
 }
 
-const String& NodeDefinition::getNodeValue()
+nsresult NodeDefinition::getNodeValue(nsAString& aValue)
 {
-  return nodeValue;
+  aValue = nodeValue;
+  return NS_OK;
 }
 
 unsigned short NodeDefinition::getNodeType() const
@@ -102,11 +148,6 @@ unsigned short NodeDefinition::getNodeType() const
 Node* NodeDefinition::getParentNode() const
 {
   return parentNode;
-}
-
-NodeList* NodeDefinition::getChildNodes()
-{
-  return this;
 }
 
 Node* NodeDefinition::getFirstChild() const
@@ -152,7 +193,7 @@ Node* NodeDefinition::item(PRUint32 index)
       return pSelectNode;
     }
 
-  return NULL;
+  return nsnull;
 }
 
 PRUint32 NodeDefinition::getLength()
@@ -160,197 +201,72 @@ PRUint32 NodeDefinition::getLength()
   return length;
 }
 
-void NodeDefinition::setNodeValue(const String& newNodeValue)
+void NodeDefinition::setNodeValue(const nsAString& newNodeValue)
 {
   nodeValue = newNodeValue;
 }
 
-//
-//Insert the "newChild" node before the "refChild" node.  Return a pointer to
-//the inserted child.  If the node to insert is a document fragment, then
-//insert each child of the document fragment, and return the document fragment
-//which should be empty if all the inserts suceeded.
-//This function's responsibility is to check for and handle document fragments
-//vs. plain nodes.
-//     *** NOTE: Need to check the document types before inserting.
-//
-//               The decision to return the possibly empty document fragment
-//               was an implementation choice.  The spec did not dictate what
-//               whould occur.
-//
-Node* NodeDefinition::insertBefore(Node* newChild,
-                                   Node* refChild)
-{
-  NodeDefinition* pCurrentNode = NULL;
-  NodeDefinition* pNextNode = NULL;
-
-  //Convert to a NodeDefinition Pointer
-  NodeDefinition* pNewChild = (NodeDefinition*)newChild;
-  NodeDefinition* pRefChild = (NodeDefinition*)refChild;
-
-  //Check to see if the reference node is a child of this node
-  if ((refChild != NULL) && (pRefChild->parentNode != this))
-    return NULL;
-
-  if (newChild->getNodeType() == Node::DOCUMENT_FRAGMENT_NODE)
-    {
-      pCurrentNode = pNewChild->firstChild;
-      while (pCurrentNode)
-        {
-          pNextNode = pCurrentNode->nextSibling;
-          pCurrentNode = (NodeDefinition*)pNewChild->removeChild(pCurrentNode);
-          implInsertBefore(pCurrentNode, pRefChild);
-          pCurrentNode = pNextNode;
-        }
-      return newChild;
-    }
-  else
-    return implInsertBefore(pNewChild, pRefChild);
-}
-
-//
-//The code that actually insert one node before another.
-//
-Node* NodeDefinition::implInsertBefore(NodeDefinition* pNewChild,
-                                       NodeDefinition* pRefChild)
-{
-  //Remove the "newChild" if it is already a child of this node
-  if (pNewChild->parentNode == this)
-    pNewChild = (NodeDefinition*)removeChild(pNewChild);
-
-  //The new child should not be a child of any other node
-  if ((pNewChild->previousSibling == NULL) &&
-      (pNewChild->nextSibling == NULL) &&
-      (pNewChild->parentNode == NULL))
-      {
-        if (pRefChild == NULL)
-          {
-            //Append
-            pNewChild->previousSibling = lastChild;
-
-            if (lastChild)
-              lastChild->nextSibling = pNewChild;
-
-            lastChild = pNewChild;
-          }
-        else
-          {
-            //Insert before the reference node
-            if (pRefChild->previousSibling)
-              pRefChild->previousSibling->nextSibling = pNewChild;
-            pNewChild->nextSibling = pRefChild;
-            pNewChild->previousSibling = pRefChild->previousSibling;
-            pRefChild->previousSibling = pNewChild;
-          }
-
-        pNewChild->parentNode = this;
-
-        if (pNewChild->previousSibling == NULL)
-            firstChild = pNewChild;
-
-        length++;
-
-        return pNewChild;
-      }
-
-  return NULL;
-}
-
-
-//
-//Replace "oldChild" with "newChild".  Return the replaced node, or NULL
-//otherwise.
-//    *** NOTE:  Need to check that the documents match ***
-//
-Node* NodeDefinition::replaceChild(Node* newChild,
-                                         Node* oldChild)
-{
-  NodeDefinition* pOldChild = (NodeDefinition*)oldChild;
-  NodeDefinition* pNextSibling = NULL;
-
-  //If the newChild is replacing itself then we don't need to do anything
-  if (pOldChild == newChild)
-      return pOldChild;
-
-  //If "oldChild" is a child of this node, remove it from the list.
-  pOldChild = (NodeDefinition*)removeChild(oldChild);
-
-  //If the removal was successful... Else, return null
-  if (pOldChild)
-    {
-      //Try to insert the new node before the old node's next sibling.  If
-      //successful, just returned the replaced child.  If not succesful,
-      //reinsert the old node, and return NULL.
-      pNextSibling = pOldChild->nextSibling;
-      if (!insertBefore(newChild, pNextSibling))
-        {
-        insertBefore(pOldChild, pNextSibling);
-        pOldChild = NULL;
-        }
-    }
-
-  return pOldChild;
-}
-
-//
-//Remove the specified "oldChild" from this node's children.  First make sure
-//the specified node is a child of this node.  Return the removed node, NULL
-//otherwise.
-//
-Node* NodeDefinition::removeChild(Node* oldChild)
-{
-  NodeDefinition* pOldChild = (NodeDefinition*)oldChild;
-
-  //If "oldChild" is a child of this node, adjust pointers to remove it, and
-  //clear "oldChild"'s sibling and parent pointers.
-  if (pOldChild->parentNode == this)
-    {
-      if (pOldChild != firstChild)
-        pOldChild->previousSibling->nextSibling = pOldChild->nextSibling;
-      else
-        firstChild = pOldChild->nextSibling;
-
-      if (pOldChild != lastChild)
-        pOldChild->nextSibling->previousSibling = pOldChild->previousSibling;
-      else
-        lastChild = pOldChild->previousSibling;
-
-      pOldChild->nextSibling = NULL;
-      pOldChild->previousSibling = NULL;
-      pOldChild->parentNode = NULL;
-
-      length--;
-
-      return pOldChild;
-    }
-
-  return NULL;
-}
-
-//
-//Append a new child node.  First make sure the new child is not already a
-//child of another node.  Return the appended node.
-//  *** NOTE *** Need to eventually check to make sure the documents match ***
-//
 Node* NodeDefinition::appendChild(Node* newChild)
 {
-  return insertBefore(newChild, NULL);
+  return nsnull;
 }
 
-Node* NodeDefinition::cloneNode(MBool deep, Node* dest)
+NodeDefinition* NodeDefinition::implAppendChild(NodeDefinition* newChild)
 {
-    return 0;
+  // The new child should not be a child of any other node
+  if (!newChild->previousSibling && !newChild->nextSibling &&
+      !newChild->parentNode)
+    {
+      newChild->previousSibling = lastChild;
+
+      if (lastChild)
+        lastChild->nextSibling = newChild;
+
+      lastChild = newChild;
+
+      newChild->parentNode = this;
+
+      if (!newChild->previousSibling)
+        firstChild = newChild;
+
+      ++length;
+
+      return newChild;
+    }
+
+  return nsnull;
+}
+
+NodeDefinition* NodeDefinition::implRemoveChild(NodeDefinition* oldChild)
+{
+  if (oldChild != firstChild)
+    oldChild->previousSibling->nextSibling = oldChild->nextSibling;
+  else
+    firstChild = oldChild->nextSibling;
+
+  if (oldChild != lastChild)
+    oldChild->nextSibling->previousSibling = oldChild->previousSibling;
+  else
+    lastChild = oldChild->previousSibling;
+
+  oldChild->nextSibling = nsnull;
+  oldChild->previousSibling = nsnull;
+  oldChild->parentNode = nsnull;
+
+  --length;
+
+  return oldChild;
 }
 
 MBool NodeDefinition::hasChildNodes() const
 {
-  if (firstChild != NULL)
+  if (firstChild)
     return MB_TRUE;
   else
     return MB_FALSE;
 }
 
-MBool NodeDefinition::getLocalName(txAtom** aLocalName)
+MBool NodeDefinition::getLocalName(nsIAtom** aLocalName)
 {
   if (!aLocalName)
     return MB_FALSE;
@@ -358,9 +274,9 @@ MBool NodeDefinition::getLocalName(txAtom** aLocalName)
   return MB_TRUE;
 }
 
-const String& NodeDefinition::getNamespaceURI()
+nsresult NodeDefinition::getNamespaceURI(nsAString& aNSURI)
 {
-  return txNamespaceManager::getNamespaceURI(getNamespaceID());
+  return txNamespaceManager::getNamespaceURI(getNamespaceID(), aNSURI);
 }
 
 PRInt32 NodeDefinition::getNamespaceID()
@@ -374,7 +290,7 @@ PRInt32 NodeDefinition::getNamespaceID()
 //
 // @return namespace associated with prefix
 //
-PRInt32 NodeDefinition::lookupNamespaceID(txAtom* aPrefix)
+PRInt32 NodeDefinition::lookupNamespaceID(nsIAtom* aPrefix)
 {
   // this is http://www.w3.org/2000/xmlns/,
   // ID = kNameSpaceID_XMLNS, see txNamespaceManager::Init
@@ -389,28 +305,29 @@ PRInt32 NodeDefinition::lookupNamespaceID(txAtom* aPrefix)
   if (node->getNodeType() != Node::ELEMENT_NODE)
     node = node->getXPathParent();
 
-  String name("xmlns:");
+  nsAutoString name(NS_LITERAL_STRING("xmlns:"));
   if (aPrefix && (aPrefix != txXMLAtoms::_empty)) {
       //  We have a prefix, search for xmlns:prefix attributes.
-      String prefixString;
-      TX_GET_ATOM_STRING(aPrefix, prefixString);
-      name.append(prefixString);
+      nsAutoString prefixString;
+      aPrefix->ToString(prefixString);
+      name.Append(prefixString);
   }
   else {
       // No prefix, look up the default namespace by searching for xmlns
       // attributes. Remove the trailing :, set length to 5 (xmlns).
-      name.truncate(5);
+      name.Truncate(5);
   }
   Attr* xmlns;
   while (node && node->getNodeType() == Node::ELEMENT_NODE) {
-    String nsURI;
     if ((xmlns = ((Element*)node)->getAttributeNode(name))) {
       /*
        * xmlns:foo = "" makes "" a valid URI, so get that.
        * xmlns = "" resolves to 0 (null Namespace) (caught above)
        * in Element::getNamespaceID()
        */
-      return txNamespaceManager::getNamespaceID(xmlns->getValue());
+      nsAutoString nsURI;
+      xmlns->getNodeValue(nsURI);
+      return txNamespaceManager::getNamespaceID(nsURI);
     }
     node = node->getXPathParent();
   }
@@ -430,23 +347,23 @@ Node* NodeDefinition::getXPathParent()
 //
 // @return base URI for the node
 //
-String NodeDefinition::getBaseURI()
+nsresult NodeDefinition::getBaseURI(nsAString& aURI)
 {
   Node* node = this;
-  ArrayList baseUrls;
-  String url;
-  String attValue;
+  nsStringArray baseUrls;
+  nsAutoString url;
 
   while (node) {
     switch (node->getNodeType()) {
       case Node::ELEMENT_NODE :
         if (((Element*)node)->getAttr(txXMLAtoms::base, kNameSpaceID_XML,
-                                      attValue))
-          baseUrls.add(new String(attValue));
+                                      url))
+          baseUrls.AppendString(url);
         break;
 
       case Node::DOCUMENT_NODE :
-        baseUrls.add(new String(((Document*)node)->getBaseURI()));
+        node->getBaseURI(url);
+        baseUrls.AppendString(url);
         break;
     
       default:
@@ -455,19 +372,18 @@ String NodeDefinition::getBaseURI()
     node = node->getParentNode();
   }
 
-  if (baseUrls.size()) {
-    url = *((String*)baseUrls.get(baseUrls.size()-1));
+  PRInt32 count = baseUrls.Count();
+  if (count) {
+    baseUrls.StringAt(--count, aURI);
 
-    for (int i=baseUrls.size()-2;i>=0;i--) {
-      String dest;
-      URIUtils::resolveHref(*(String*)baseUrls.get(i), url, dest);
-      url = dest;
+    while (count > 0) {
+      nsAutoString dest;
+      URIUtils::resolveHref(*baseUrls[--count], aURI, dest);
+      aURI = dest;
     }
   }
-
-  baseUrls.clear(MB_TRUE);
   
-  return url;
+  return NS_OK;
 } // getBaseURI
 
 /*

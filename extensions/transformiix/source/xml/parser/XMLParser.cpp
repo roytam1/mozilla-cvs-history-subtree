@@ -29,9 +29,9 @@
  *
  * Marina Mechtcheriakova, mmarina@mindspring.com
  *    -- UNICODE fix in method startElement, changed  casting of 
- *       char* to DOM_CHAR* to use the proper String constructor, 
+ *       char* to PRUnichar* to use the proper String constructor, 
  *       see method startElement
- *    -- Removed a number of castings of XML_Char to DOM_CHAR since they
+ *    -- Removed a number of castings of XML_Char to PRUnichar since they
  *       were not working on Windows properly
  *
  */
@@ -65,9 +65,9 @@ XMLParser::~XMLParser()
     //-- clean up
 } //-- ~XMLParser
 
-Document* XMLParser::getDocumentFromURI(const String& href,
+Document* XMLParser::getDocumentFromURI(const nsAString& href,
                                         Document* aLoader,
-                                        String& errMsg)
+                                        nsAString& errMsg)
 {
 #ifndef TX_EXE
     nsCOMPtr<nsIURI> documentURI;
@@ -91,10 +91,10 @@ Document* XMLParser::getDocumentFromURI(const String& href,
     NS_ENSURE_SUCCESS(rv, 0);
     rv = loader->LoadDocument(channel, loaderUri, getter_AddRefs(theDocument));
     if (NS_FAILED(rv) || !theDocument) {
-        errMsg.append("Document load of ");
-        errMsg.append(href);
-        errMsg.append(" failed.");
-        return NULL;
+        errMsg.Append(NS_LITERAL_STRING("Document load of "));
+        errMsg.Append(href);
+        errMsg.Append(NS_LITERAL_STRING(" failed."));
+        return nsnull;
     }
 
     return new Document(theDocument);
@@ -107,7 +107,7 @@ Document* XMLParser::getDocumentFromURI(const String& href,
         delete xslInput;
     }
     if (!resultDoc) {
-        errMsg.append(getErrorString());
+        errMsg.Append(getErrorString());
     }
     return resultDoc;
 #endif
@@ -130,18 +130,18 @@ void commentHandler(void *userData, const XML_Char *s);
  *  Parses the given input stream and returns a DOM Document.
  *  A NULL pointer will be returned if errors occurred
 **/
-Document* XMLParser::parse(istream& inputStream, const String& uri)
+Document* XMLParser::parse(istream& inputStream, const nsAString& uri)
 {
   const int bufferSize = 1000;
 
   char buf[bufferSize];
   int done;
-  errorString.clear();
+  errorString.Truncate();
   if ( !inputStream ) {
-    errorString.append("unable to parse xml: invalid or unopen stream encountered.");
-    return NULL;
+    errorString.Append(NS_LITERAL_STRING("unable to parse xml: invalid or unopen stream encountered."));
+    return nsnull;
   }
-  XML_Parser parser = XML_ParserCreate(NULL);
+  XML_Parser parser = XML_ParserCreate(nsnull);
   ParserState ps;
   ps.document = new Document();
   ps.document->documentBaseURI = uri;
@@ -159,12 +159,12 @@ Document* XMLParser::parse(istream& inputStream, const String& uri)
 
       if (!XML_Parse(parser, buf, inputStream.gcount(), done))
         {
-          errorString.append(XML_ErrorString(XML_GetErrorCode(parser)));
-          errorString.append(" at line ");
-          errorString.append(XML_GetCurrentLineNumber(parser));
+          errorString.AppendWithConversion(XML_ErrorString(XML_GetErrorCode(parser)));
+          errorString.Append(NS_LITERAL_STRING(" at line "));
+          errorString.AppendInt(XML_GetCurrentLineNumber(parser));
           done = MB_TRUE;
           delete ps.document;
-          ps.document = NULL;
+          ps.document = nsnull;
         }
     } while (!done);
     inputStream.clear();
@@ -178,7 +178,7 @@ Document* XMLParser::parse(istream& inputStream, const String& uri)
   return ps.document;
 }
 
-const String& XMLParser::getErrorString()
+const nsAString& XMLParser::getErrorString()
 {
   return errorString;
 }
@@ -186,24 +186,23 @@ const String& XMLParser::getErrorString()
 
 int startElement(void *userData, const XML_Char *name, const XML_Char **atts)
 {
-  ParserState* ps = (ParserState*)userData;
-  Element* newElement;
-  XML_Char** theAtts = (XML_Char**)atts;
+    ParserState* ps = (ParserState*)userData;
+    Element* newElement;
+    XML_Char** theAtts = (XML_Char**)atts;
 
-  String nodeName((UNICODE_CHAR *)name);
-  newElement = ps->document->createElement(nodeName);
+    newElement =
+        ps->document->createElement(nsDependentString((const PRUnichar*)name));
 
-  while (*theAtts)
-    {
-      String attName((UNICODE_CHAR *)*theAtts++);
-      String attValue((UNICODE_CHAR *)*theAtts++);
-      newElement->setAttribute(attName, attValue);
+    while (*theAtts) {
+        nsDependentString attName((const PRUnichar*)*theAtts++);
+        nsDependentString attValue((const PRUnichar*)*theAtts++);
+        newElement->setAttribute(attName, attValue);
     }
 
     ps->currentNode->appendChild(newElement);
     ps->currentNode = newElement;
 
-  return XML_ERROR_NONE;
+    return XML_ERROR_NONE;
 } //-- startElement
 
 int endElement(void *userData, const XML_Char* name)
@@ -217,32 +216,37 @@ int endElement(void *userData, const XML_Char* name)
 void charData(void* userData, const XML_Char* s, int len)
 {
     ParserState* ps = (ParserState*)userData;
-    String data((UNICODE_CHAR*)s, len);
     Node* prevSib = ps->currentNode->getLastChild();
-    if (prevSib && prevSib->getNodeType()==Node::TEXT_NODE){
-      ((CharacterData*)prevSib)->appendData(data);
+    if (prevSib && prevSib->getNodeType() == Node::TEXT_NODE){
+        ((NodeDefinition*)prevSib)->appendData((const PRUnichar*)s, len);
     } else {
-      ps->currentNode->appendChild(ps->document->createTextNode(data));
-    };
+        // s is not null-terminated so we use Substring here.
+        Node* node =
+            ps->document->createTextNode(Substring((const PRUnichar*)s,
+                                                   (const PRUnichar*)s + len));
+        ps->currentNode->appendChild(node);
+    }
 } //-- charData
 
 void commentHandler(void* userData, const XML_Char* s)
 {
     ParserState* ps = (ParserState*)userData;
-    String data((UNICODE_CHAR*)s);
-    ps->currentNode->appendChild(ps->document->createComment(data));
+    Node* node =
+        ps->document->createComment(nsDependentString((const PRUnichar*)s));
+    ps->currentNode->appendChild(node);
 } //-- commentHandler
 
 /**
  * Handles ProcessingInstructions
 **/
-int piHandler(void *userData, const XML_Char *target, const XML_Char *data) {
+int piHandler(void *userData, const XML_Char *target, const XML_Char *data)
+{
     ParserState* ps = (ParserState*)userData;
-    String targetStr((UNICODE_CHAR *)target);
-    String dataStr((UNICODE_CHAR *)data);
 
-    ps->currentNode->appendChild(
-        ps->document->createProcessingInstruction(targetStr, dataStr));
+    ProcessingInstruction* node =
+        ps->document->createProcessingInstruction(nsDependentString((const PRUnichar*)target),
+                                                  nsDependentString((const PRUnichar*)data));
+    ps->currentNode->appendChild(node);
 
     return XML_ERROR_NONE;
 } //-- piHandler

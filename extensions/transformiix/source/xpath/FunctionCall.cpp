@@ -25,18 +25,18 @@
 
 #include "Expr.h"
 #include "ExprResult.h"
-#include "txAtom.h"
+#include "nsIAtom.h"
 #include "txIXPathContext.h"
 
 /**
  * This class represents a FunctionCall as defined by the XSL Working Draft
 **/
 
-const String FunctionCall::INVALID_PARAM_COUNT(
-        "invalid number of parameters for function: ");
+const nsString FunctionCall::INVALID_PARAM_COUNT(
+        NS_LITERAL_STRING("invalid number of parameters for function: "));
 
-const String FunctionCall::INVALID_PARAM_VALUE(
-        "invalid parameter value for function: ");
+const nsString FunctionCall::INVALID_PARAM_VALUE(
+        NS_LITERAL_STRING("invalid parameter value for function: "));
 
 FunctionCall::FunctionCall()
 {
@@ -73,7 +73,7 @@ nsresult FunctionCall::addParam(Expr* aExpr)
  * The value is appended to the given destination String
  */
 void FunctionCall::evaluateToString(Expr* aExpr, txIEvalContext* aContext,
-                                    String& aDest)
+                                    nsAString& aDest)
 {
     NS_ASSERTION(aExpr, "missing expression");
     ExprResult* exprResult = aExpr->evaluate(aContext);
@@ -126,8 +126,7 @@ NodeSet* FunctionCall::evaluateToNodeSet(Expr* aExpr, txIEvalContext* aContext)
         return 0;
 
     if (exprResult->getResultType() != ExprResult::NODESET) {
-        String err("NodeSet expected as argument");
-        aContext->receiveError(err, NS_ERROR_XPATH_INVALID_ARG);
+        aContext->receiveError(NS_LITERAL_STRING("NodeSet expected as argument"), NS_ERROR_XPATH_INVALID_ARG);
         delete exprResult;
         return 0;
     }
@@ -144,7 +143,7 @@ MBool FunctionCall::requireParams (int paramCountMin,
 {
     int argc = params.getLength();
     if ((argc < paramCountMin) || (argc > paramCountMax)) {
-        String err(INVALID_PARAM_COUNT);
+        nsAutoString err(INVALID_PARAM_COUNT);
         toString(err);
         aContext->receiveError(err, NS_ERROR_XPATH_INVALID_ARG);
         return MB_FALSE;
@@ -159,7 +158,7 @@ MBool FunctionCall::requireParams(int paramCountMin, txIEvalContext* aContext)
 {
     int argc = params.getLength();
     if (argc < paramCountMin) {
-        String err(INVALID_PARAM_COUNT);
+        nsAutoString err(INVALID_PARAM_COUNT);
         toString(err);
         aContext->receiveError(err, NS_ERROR_XPATH_INVALID_ARG);
         return MB_FALSE;
@@ -175,29 +174,27 @@ MBool FunctionCall::requireParams(int paramCountMin, txIEvalContext* aContext)
  * other #toString() methods for Expressions.
  * @return the String representation of this NodeExpr.
 **/
-void FunctionCall::toString(String& aDest)
+void FunctionCall::toString(nsAString& aDest)
 {
-    txAtom* functionNameAtom = 0;
-    String functionName;
-    if (!NS_SUCCEEDED(getNameAtom(&functionNameAtom)) ||
-        !TX_GET_ATOM_STRING(functionNameAtom, functionName)) {
+    nsCOMPtr<nsIAtom> functionNameAtom;
+    nsAutoString functionName;
+    if (NS_FAILED(getNameAtom(getter_AddRefs(functionNameAtom))) ||
+        NS_FAILED(functionNameAtom->ToString(functionName))) {
         NS_ASSERTION(0, "Can't get function name.");
-        TX_IF_RELEASE_ATOM(functionNameAtom);
         return;
     }
-    TX_RELEASE_ATOM(functionNameAtom);
 
-    aDest.append(functionName);
-    aDest.append('(');
+    aDest.Append(functionName);
+    aDest.Append(PRUnichar('('));
     txListIterator iter(&params);
     MBool addComma = MB_FALSE;
     while (iter.hasNext()) {
         if (addComma) {
-            aDest.append(',');
+            aDest.Append(PRUnichar(','));
         }
         addComma = MB_TRUE;
         Expr* expr = (Expr*)iter.next();
         expr->toString(aDest);
     }
-    aDest.append(')');
+    aDest.Append(PRUnichar(')'));
 }

@@ -24,25 +24,24 @@
  */
 
 #include "Expr.h"
-#include "txAtom.h"
+#include "nsIAtom.h"
 #include "txIXPathContext.h"
 
 /*
  * Creates a new txNodeTypeTest of the given type
  */
 txNodeTypeTest::txNodeTypeTest(NodeType aNodeType)
-    : mNodeType(aNodeType), mNodeName(0)
+    : mNodeType(aNodeType)
 {
 }
 
 txNodeTypeTest::~txNodeTypeTest()
 {
-    TX_IF_RELEASE_ATOM(mNodeName);
 }
 
-void txNodeTypeTest::setNodeName(const String& aName)
+void txNodeTypeTest::setNodeName(const nsAString& aName)
 {
-    mNodeName = TX_GET_ATOM(aName);
+    mNodeName = do_GetAtom(aName);
 }
 
 /*
@@ -64,13 +63,10 @@ MBool txNodeTypeTest::matches(Node* aNode, txIMatchContext* aContext)
                    !aContext->isStripSpaceAllowed(aNode);
         case PI_TYPE:
             if (type == Node::PROCESSING_INSTRUCTION_NODE) {
-                txAtom* localName = 0;
-                MBool result;
-                result = !mNodeName ||
-                         (aNode->getLocalName(&localName) &&
-                          localName == mNodeName);
-                TX_IF_RELEASE_ATOM(localName);
-                return result;
+                nsCOMPtr<nsIAtom> localName;
+                return !mNodeName ||
+                        (aNode->getLocalName(getter_AddRefs(localName)) &&
+                         localName == mNodeName);
             }
             return MB_FALSE;
         case NODE_TYPE:
@@ -94,28 +90,28 @@ double txNodeTypeTest::getDefaultPriority()
  * @param aDest the String to use when creating the string representation.
  *              The string representation will be appended to the string.
  */
-void txNodeTypeTest::toString(String& aDest)
+void txNodeTypeTest::toString(nsAString& aDest)
 {
     switch (mNodeType) {
         case COMMENT_TYPE:
-            aDest.append("comment()");
+            aDest.Append(NS_LITERAL_STRING("comment()"));
             break;
         case TEXT_TYPE:
-            aDest.append("text()");
+            aDest.Append(NS_LITERAL_STRING("text()"));
             break;
         case PI_TYPE:
-            aDest.append("processing-instruction(");
+            aDest.Append(NS_LITERAL_STRING("processing-instruction("));
             if (mNodeName) {
-                String str;
-                TX_GET_ATOM_STRING(mNodeName, str);
-                aDest.append('\'');
-                aDest.append(str);
-                aDest.append('\'');
+                nsAutoString str;
+                mNodeName->ToString(str);
+                aDest.Append(PRUnichar('\''));
+                aDest.Append(str);
+                aDest.Append(PRUnichar('\''));
             }
-            aDest.append(')');
+            aDest.Append(PRUnichar(')'));
             break;
         case NODE_TYPE:
-            aDest.append("node()");
+            aDest.Append(NS_LITERAL_STRING("node()"));
             break;
     }
 }

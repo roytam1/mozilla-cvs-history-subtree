@@ -56,7 +56,7 @@ PRUint32 txForwardContext::position()
     return (PRUint32)(pos+1);
 }
 
-nsresult txForwardContext::getVariable(PRInt32 aNamespace, txAtom* aLName,
+nsresult txForwardContext::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
                                  ExprResult*& aResult)
 {
     NS_ASSERTION(mInner, "mInner is null!!!");
@@ -69,12 +69,12 @@ MBool txForwardContext::isStripSpaceAllowed(Node* aNode)
     return mInner->isStripSpaceAllowed(aNode);
 }
 
-void txForwardContext::receiveError(const String& aMsg, nsresult aRes)
+void txForwardContext::receiveError(const nsAString& aMsg, nsresult aRes)
 {
     NS_ASSERTION(mInner, "mInner is null!!!");
 #ifdef DEBUG
-    String error("forwarded error: ");
-    error.append(aMsg);
+    nsAutoString error(NS_LITERAL_STRING("forwarded error: "));
+    error.Append(aMsg);
     mInner->receiveError(error, aRes);
 #else
     mInner->receiveError(aMsg, aRes);

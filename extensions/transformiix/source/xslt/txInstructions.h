@@ -44,6 +44,7 @@
 #include "nsCOMPtr.h"
 #include "TxObject.h"
 #include "nsIAtom.h"
+#include "nsString.h"
 #include "XMLUtils.h"
 
 class Expr;
@@ -115,11 +116,11 @@ public:
 class txTextInstruction : public txInstruction
 {
 public:
-    txTextInstruction(const String& aStr, PRBool aDOE);
+    txTextInstruction(const nsAString& aStr, PRBool aDOE);
 
     TX_DECL_TXINSTRUCTION
 
-    String mStr;
+    nsString mStr;
     PRBool mDOE;
 };
 
@@ -138,10 +139,10 @@ public:
 class txRecursionCheckpointStart : public txInstruction
 {
 public:
-    txRecursionCheckpointStart(const String& aName);
+    txRecursionCheckpointStart(const nsAString& aName);
     TX_DECL_TXINSTRUCTION
     
-    String mName;
+    nsString mName;
 };
 
 class txRecursionCheckpointEnd : public txInstruction

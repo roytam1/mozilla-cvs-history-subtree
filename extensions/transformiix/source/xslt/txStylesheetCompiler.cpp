@@ -46,22 +46,23 @@
 #include "txToplevelItems.h"
 #include "ExprParser.h"
 #include "txPatternParser.h"
+#include "txStringUtils.h"
 #include "XSLTFunctions.h"
 
-txStylesheetCompiler::txStylesheetCompiler(const String& aBaseURI)
+txStylesheetCompiler::txStylesheetCompiler(const nsAString& aBaseURI)
     : mState(aBaseURI, nsnull)
 {
 }
 
-txStylesheetCompiler::txStylesheetCompiler(const String& aBaseURI,
+txStylesheetCompiler::txStylesheetCompiler(const nsAString& aBaseURI,
                                            txStylesheetCompiler* aParent)
     : mState(aBaseURI, aParent->mState.mStylesheet)
 {
 }
 
 nsresult
-txStylesheetCompiler::startElement(PRInt32 aNamespaceID, txAtom* aLocalName,
-                                   txAtom* aPrefix,
+txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
+                                   nsIAtom* aPrefix,
                                    txStylesheetAttr* aAttributes,
                                    PRInt32 aAttrCount)
 {
@@ -97,10 +98,10 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, txAtom* aLocalName,
             rv = ensureNewElementContext();
             NS_ENSURE_SUCCESS(rv, rv);
 
-            if (attr->mValue.isEqual(String("preserve"))) {
+            if (TX_StringEqualsAtom(attr->mValue, txXMLAtoms::preserve)) {
                 mState.mElementContext->mPreserveWhitespace = MB_TRUE;
             }
-            else if (attr->mValue.isEqual(String("default"))) {
+            else if (TX_StringEqualsAtom(attr->mValue, txXMLAtoms::_default)) {
                 mState.mElementContext->mPreserveWhitespace = MB_FALSE;
             }
             else {
@@ -111,11 +112,11 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, txAtom* aLocalName,
         // xml:base
         if (attr->mNamespaceID == kNameSpaceID_XML &&
             attr->mLocalName == txXMLAtoms::base &&
-            !attr->mValue.isEmpty()) {
+            !attr->mValue.IsEmpty()) {
             rv = ensureNewElementContext();
             NS_ENSURE_SUCCESS(rv, rv);
             
-            String uri;
+            nsAutoString uri;
             URIUtils::resolveHref(attr->mValue, mState.mElementContext->mBaseURI, uri);
             mState.mElementContext->mBaseURI = uri;
         }
@@ -134,7 +135,7 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, txAtom* aLocalName,
 
             txTokenizer tok(attr->mValue);
             while (tok.hasMoreTokens()) {
-                String prefix;
+                nsAutoString prefix;
                 tok.nextToken(prefix);
                 PRInt32 namespaceID = mState.mElementContext->
                     mMappings.lookupNamespaceWithDefault(prefix);
@@ -159,7 +160,7 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, txAtom* aLocalName,
             rv = ensureNewElementContext();
             NS_ENSURE_SUCCESS(rv, rv);
 
-            if (attr->mValue.isEqual(String("1.0"))) {
+            if (attr->mValue.Equals(NS_LITERAL_STRING("1.0"))) {
                 mState.mElementContext->mForwardsCompatibleParsing = MB_FALSE;
             }
             else {
@@ -220,9 +221,9 @@ txStylesheetCompiler::endElement()
 }
 
 nsresult
-txStylesheetCompiler::characters(const String& aStr)
+txStylesheetCompiler::characters(const nsAString& aStr)
 {
-    mCharacters.append(aStr);
+    mCharacters.Append(aStr);
 
     return NS_OK;
 }
@@ -240,7 +241,7 @@ txStylesheetCompiler::flushCharacters()
 {
     // bail if we don't have any characters, or if it is ignorable whitespace
     // we might want to do the whitespace-stripping in the handler instead
-    if (mCharacters.isEmpty()) {
+    if (mCharacters.IsEmpty()) {
         return NS_OK;
     }
 
@@ -252,7 +253,7 @@ txStylesheetCompiler::flushCharacters()
 
     NS_ENSURE_SUCCESS(rv, rv);
 
-    mCharacters.clear();
+    mCharacters.Truncate();
 
     return NS_OK;
 }
@@ -286,7 +287,7 @@ txStylesheetCompiler::ensureNewElementContext()
  */
 
 
-txStylesheetCompilerState::txStylesheetCompilerState(const String& aBaseURI,
+txStylesheetCompilerState::txStylesheetCompilerState(const nsAString& aBaseURI,
                                                      txStylesheet* aStylesheet)
     : mStylesheet(aStylesheet),
       mToplevelIterator(nsnull)
@@ -435,7 +436,7 @@ txStylesheetCompilerState::addInstruction(txInstruction* aInstruction)
 }
 
 nsresult
-txStylesheetCompilerState::parsePattern(const String& aPattern,
+txStylesheetCompilerState::parsePattern(const nsAFlatString& aPattern,
                                         txPattern** aResult)
 {
     *aResult = txPatternParser::createPattern(aPattern, this);
@@ -445,7 +446,8 @@ txStylesheetCompilerState::parsePattern(const String& aPattern,
 }
 
 nsresult
-txStylesheetCompilerState::parseExpr(const String& aExpr, Expr** aResult)
+txStylesheetCompilerState::parseExpr(const nsAFlatString& aExpr,
+                                     Expr** aResult)
 {
     *aResult = ExprParser::createExpr(aExpr, this);
     NS_ENSURE_TRUE(*aResult, NS_ERROR_XPATH_PARSE_FAILURE);
@@ -454,7 +456,7 @@ txStylesheetCompilerState::parseExpr(const String& aExpr, Expr** aResult)
 }
 
 nsresult
-txStylesheetCompilerState::parseAVT(const String& aExpr, Expr** aResult)
+txStylesheetCompilerState::parseAVT(const nsAFlatString& aExpr, Expr** aResult)
 {
     *aResult = ExprParser::createAttributeValueTemplate(aExpr, this);
     NS_ENSURE_TRUE(*aResult, NS_ERROR_XPATH_PARSE_FAILURE);
@@ -463,7 +465,7 @@ txStylesheetCompilerState::parseAVT(const String& aExpr, Expr** aResult)
 }
 
 nsresult
-txStylesheetCompilerState::parseQName(const String& aQName,
+txStylesheetCompilerState::parseQName(const nsAString& aQName,
                                       txExpandedName& aExName,
                                       MBool aUseDefault)
 {
@@ -472,7 +474,7 @@ txStylesheetCompilerState::parseQName(const String& aQName,
 
 
 nsresult
-txStylesheetCompilerState::resolveNamespacePrefix(txAtom* aPrefix,
+txStylesheetCompilerState::resolveNamespacePrefix(nsIAtom* aPrefix,
                                                   PRInt32& aID)
 {
 #ifdef DEBUG
@@ -488,7 +490,7 @@ txStylesheetCompilerState::resolveNamespacePrefix(txAtom* aPrefix,
 }
 
 nsresult
-txStylesheetCompilerState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
+txStylesheetCompilerState::resolveFunctionCall(nsIAtom* aName, PRInt32 aID,
                                                FunctionCall*& aFunction)
 {
    aFunction = nsnull;
@@ -556,7 +558,7 @@ txStylesheetCompilerState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
 }
 
 void
-txStylesheetCompilerState::receiveError(const String& aMsg, nsresult aRes)
+txStylesheetCompilerState::receiveError(const nsAString& aMsg, nsresult aRes)
 {
     // XXX implement me
 }

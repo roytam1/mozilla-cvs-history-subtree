@@ -33,7 +33,7 @@
 #define MITREXSL_EXPRPARSER_H
 
 #include "baseutils.h"
-#include "txAtom.h"
+#include "nsIAtom.h"
 #include "txError.h"
 
 class AttributeValueTemplate;
@@ -42,7 +42,6 @@ class ExprLexer;
 class FunctionCall;
 class LocationStep;
 class PredicateList;
-class String;
 class Token;
 class txIParseContext;
 class txNodeTypeTest;
@@ -51,14 +50,14 @@ class ExprParser
 {
 public:
 
-    static Expr* createExpr(const String& aExpression,
+    static Expr* createExpr(const nsAFlatString& aExpression,
                             txIParseContext* aContext);
 
     /**
      * Creates an Attribute Value Template using the given value
     **/
-    static Expr* createAttributeValueTemplate
-        (const String& attValue, txIParseContext* aContext);
+    static AttributeValueTemplate* createAttributeValueTemplate
+        (const nsAFlatString& attValue, txIParseContext* aContext);
 
 
 protected:
@@ -83,9 +82,9 @@ protected:
      * Resolve a QName, given the mContext parse context.
      * Returns prefix and localName as well as namespace ID
     **/
-    static nsresult resolveQName(const String& aQName, txAtom*& aPrefix,
+    static nsresult resolveQName(const nsAString& aQName, nsIAtom*& aPrefix,
                                  txIParseContext* aContext,
-                                 txAtom*& aLocalName, PRInt32& aNamespace);
+                                 nsIAtom*& aLocalName, PRInt32& aNamespace);
 
     /**
      * Using the given lexer, parses the tokens if they represent a

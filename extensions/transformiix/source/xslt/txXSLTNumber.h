@@ -40,8 +40,8 @@
 #define TRANSFRMX_TXXSLTNUMBER_H
 
 #include "txError.h"
-#include "TxString.h"
 #include "List.h"
+#include "nsString.h"
 
 class Expr;
 class Node;
@@ -61,17 +61,18 @@ public:
                                  txPattern* aFromPattern, LevelType aLevel,
                                  Expr* aGroupSize, Expr* aGroupSeparator,
                                  Expr* aFormat, txIEvalContext* aContext,
-                                 String& aResult);
+                                 nsAString& aResult);
 
 private:
     static nsresult getValueList(Expr* aValueExpr, txPattern* aCountPattern,
                                  txPattern* aFromPattern, LevelType aLevel,
                                  txIEvalContext* aContext, txList& aValues,
-                                 String& aValueString);
+                                 nsAString& aValueString);
 
     static nsresult getCounters(Expr* aGroupSize, Expr* aGroupSeparator,
                                 Expr* aFormat, txIEvalContext* aContext,
-                                txList& aCounters, String& aHead, String& aTail);
+                                txList& aCounters, nsAString& aHead,
+                                nsAString& aTail);
 
     static PRInt32 getSiblingCount(Node* aNode, txPattern* aCountPattern,
                                    txIMatchContext* aContext);
@@ -87,13 +88,13 @@ public:
     {
     }
     
-    virtual void appendNumber(PRInt32 aNumber, String& aDest) = 0;
+    virtual void appendNumber(PRInt32 aNumber, nsAString& aDest) = 0;
 
-    static nsresult getCounterFor(const String& aToken, int aGroupSize,
-                                  const String& aGroupSeparator,
+    static nsresult getCounterFor(const nsAFlatString& aToken, int aGroupSize,
+                                  const nsAString& aGroupSeparator,
                                   txFormattedCounter*& aCounter);
     
-    String mSeparator;
+    nsString mSeparator;
 };
 
 #endif //TRANSFRMX_TXXSLTNUMBER_H

@@ -29,7 +29,6 @@
 
 #include "Expr.h"
 #include "NodeSet.h"
-#include "TxString.h"
 #include "XMLDOMUtils.h"
 
   //------------------/
@@ -67,7 +66,7 @@ MBool RelationalExpr::compareResults(ExprResult* left, ExprResult* right) {
 
         NodeSet* nodeSet = (NodeSet*)left;
         for ( int i = 0; i < nodeSet->size(); i++) {
-                String str;
+                nsAutoString str;
                 Node* node = nodeSet->get(i);
                 XMLDOMUtils::getNodeValue(node, str);
                 StringResult strResult(str);
@@ -84,7 +83,7 @@ MBool RelationalExpr::compareResults(ExprResult* left, ExprResult* right) {
 
         NodeSet* nodeSet = (NodeSet*)right;
         for ( int i = 0; i < nodeSet->size(); i++) {
-                String str;
+                nsAutoString str;
                 Node* node = nodeSet->get(i);
                 XMLDOMUtils::getNodeValue(node, str);
                 StringResult strResult(str);
@@ -114,11 +113,11 @@ MBool RelationalExpr::compareResults(ExprResult* left, ExprResult* right) {
 #endif
             }
             else {
-                String lStr;
+                nsAutoString lStr;
                 left->stringValue(lStr);
-                String rStr;
+                nsAutoString rStr;
                 right->stringValue(rStr);
-                result = !lStr.isEqual(rStr);
+                result = !lStr.Equals(rStr);
             }
         }
         else if ( op == EQUAL) {
@@ -141,11 +140,11 @@ MBool RelationalExpr::compareResults(ExprResult* left, ExprResult* right) {
 #endif
             }
             else {
-                String lStr;
+                nsAutoString lStr;
                 left->stringValue(lStr);
-                String rStr;
+                nsAutoString rStr;
                 right->stringValue(rStr);
-                result = lStr.isEqual(rStr);
+                result = lStr.Equals(rStr);
             }
 
         }
@@ -237,34 +236,34 @@ ExprResult* RelationalExpr::evaluate(txIEvalContext* aContext)
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void RelationalExpr::toString(String& str) {
+void RelationalExpr::toString(nsAString& str) {
 
     if ( leftExpr ) leftExpr->toString(str);
-    else str.append("null");
+    else str.Append(NS_LITERAL_STRING("null"));
 
     switch ( op ) {
         case NOT_EQUAL:
-            str.append("!=");
+            str.Append(NS_LITERAL_STRING("!="));
             break;
         case LESS_THAN:
-            str.append("<");
+            str.Append(PRUnichar('<'));
             break;
         case LESS_OR_EQUAL:
-            str.append("<=");
+            str.Append(NS_LITERAL_STRING("<="));
             break;
         case GREATER_THAN :
-            str.append(">");
+            str.Append(PRUnichar('>'));
             break;
         case GREATER_OR_EQUAL:
-            str.append(">=");
+            str.Append(NS_LITERAL_STRING(">="));
             break;
         default:
-            str.append("=");
+            str.Append(PRUnichar('='));
             break;
     }
 
     if ( rightExpr ) rightExpr->toString(str);
-    else str.append("null");
+    else str.Append(NS_LITERAL_STRING("null"));
 
 } //-- toString
 

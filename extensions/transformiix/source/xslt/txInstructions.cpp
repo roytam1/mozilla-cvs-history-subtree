@@ -38,7 +38,6 @@
 
 #include "txInstructions.h"
 #include "txError.h"
-#include "TxString.h"
 #include "Expr.h"
 #include "ExprResult.h"
 #include "txStylesheet.h"
@@ -55,13 +54,13 @@ txStartLREElement::txStartLREElement(PRInt32 aNamespaceID,
 nsresult txStartLREElement::execute(txExecutionState& aEs)
 {
     // We should atomize the resulthandler
-    String nodeName;
+    nsAutoString nodeName;
     if (mPrefix) {
         mPrefix->ToString(nodeName);
-        String localName;
-        nodeName.append(':');
+        nsAutoString localName;
+        nodeName.Append(PRUnichar(':'));
         mLocalName->ToString(localName);
-        nodeName.append(localName);
+        nodeName.Append(localName);
     }
     else {
         mLocalName->ToString(nodeName);
@@ -81,7 +80,7 @@ nsresult txStartLREElement::execute(txExecutionState& aEs)
 nsresult txEndLREElement::execute(txExecutionState& aEs)
 {
     PRInt32 namespaceID = aEs.popInt();
-    String nodeName;
+    nsAutoString nodeName;
     aEs.popString(nodeName);
 
     aEs.mResultHandler->endElement(nodeName, namespaceID);
@@ -121,11 +120,11 @@ nsresult txLREAttribute::execute(txExecutionState& aEs)
     ExprResult* exprRes = mValue->evaluate(aEs.getEvalContext());
     NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
 
-    String value;
+    nsAutoString value;
     exprRes->stringValue(value);
     delete exprRes;
 
-    aEs.mResultHandler->attribute(String(nodeName), mNamespaceID, value);
+    aEs.mResultHandler->attribute(nodeName, mNamespaceID, value);
 
     return NS_OK;
 }
@@ -146,7 +145,7 @@ nsresult txInsertAttrSet::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
-txTextInstruction::txTextInstruction(const String& aStr, PRBool aDOE)
+txTextInstruction::txTextInstruction(const nsAString& aStr, PRBool aDOE)
     : mStr(aStr),
       mDOE(aDOE)
 {
@@ -174,14 +173,15 @@ nsresult txValueOfInstruction::execute(txExecutionState& aEs)
     ExprResult* exprRes = mExpr->evaluate(aEs.getEvalContext());
     NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
 
-    String value;
+    nsAutoString value;
     exprRes->stringValue(value);
     delete exprRes;
 
     aEs.mResultHandler->characters(value, mDOE);
+    return NS_OK;
 }
 
-txRecursionCheckpointStart::txRecursionCheckpointStart(const String& aName)
+txRecursionCheckpointStart::txRecursionCheckpointStart(const nsAString& aName)
     : mName(aName)
 {
 }

@@ -42,6 +42,7 @@
 #include "txInstructions.h"
 #include "txAtoms.h"
 #include "primitives.h"
+#include "txStringUtils.h"
 #include "txStylesheet.h"
 #include "txToplevelItems.h"
 
@@ -95,23 +96,23 @@ getStyleAttr(txStylesheetAttr* aAttributes,
  * Standard handlers
  */
 nsresult
-txFnTextIgnore(const String& aStr, txStylesheetCompilerState& aState)
+txFnTextIgnore(const nsAString& aStr, txStylesheetCompilerState& aState)
 {
     return NS_OK;
 }
 
 nsresult
-txFnTextError(const String& aStr, txStylesheetCompilerState& aState)
+txFnTextError(const nsAString& aStr, txStylesheetCompilerState& aState)
 {
-    TX_RETURN_IF_WHITESPACE(aStr, aState);
+    TX_RETURN_IF_WHITESPACE(PromiseFlatString(aStr), aState);
 
     return NS_ERROR_XSLT_PARSE_FAILURE;
 }
 
 nsresult
 txFnStartElementIgnore(PRInt32 aNamespaceID,
-                       txAtom* aLocalName,
-                       txAtom* aPrefix,
+                       nsIAtom* aLocalName,
+                       nsIAtom* aPrefix,
                        txStylesheetAttr* aAttributes,
                        PRInt32 aAttrCount,
                        txStylesheetCompilerState& aState)
@@ -127,8 +128,8 @@ txFnEndElementIgnore(txStylesheetCompilerState& aState)
 
 nsresult
 txFnStartElementSetIgnore(PRInt32 aNamespaceID,
-                          txAtom* aLocalName,
-                          txAtom* aPrefix,
+                          nsIAtom* aLocalName,
+                          nsIAtom* aPrefix,
                           txStylesheetAttr* aAttributes,
                           PRInt32 aAttrCount,
                           txStylesheetCompilerState& aState)
@@ -145,8 +146,8 @@ txFnEndElementSetIgnore(txStylesheetCompilerState& aState)
 
 nsresult
 txFnStartElementError(PRInt32 aNamespaceID,
-                      txAtom* aLocalName,
-                      txAtom* aPrefix,
+                      nsIAtom* aLocalName,
+                      nsIAtom* aPrefix,
                       txStylesheetAttr* aAttributes,
                       PRInt32 aAttrCount,
                       txStylesheetCompilerState& aState)
@@ -167,8 +168,8 @@ txFnEndElementError(txStylesheetCompilerState& aState)
  */
 nsresult
 txFnStartStylesheet(PRInt32 aNamespaceID,
-                    txAtom* aLocalName,
-                    txAtom* aPrefix,
+                    nsIAtom* aLocalName,
+                    nsIAtom* aPrefix,
                     txStylesheetAttr* aAttributes,
                     PRInt32 aAttrCount,
                     txStylesheetCompilerState& aState)
@@ -193,8 +194,8 @@ txFnEndStylesheet(txStylesheetCompilerState& aState)
  */
 nsresult
 txFnStartOtherTop(PRInt32 aNamespaceID,
-                  txAtom* aLocalName,
-                  txAtom* aPrefix,
+                  nsIAtom* aLocalName,
+                  nsIAtom* aPrefix,
                   txStylesheetAttr* aAttributes,
                   PRInt32 aAttrCount,
                   txStylesheetCompilerState& aState)
@@ -216,8 +217,8 @@ txFnEndOtherTop(txStylesheetCompilerState& aState)
 
 nsresult
 txFnStartTemplate(PRInt32 aNamespaceID,
-                  txAtom* aLocalName,
-                  txAtom* aPrefix,
+                  nsIAtom* aLocalName,
+                  nsIAtom* aPrefix,
                   txStylesheetAttr* aAttributes,
                   PRInt32 aAttrCount,
                   txStylesheetCompilerState& aState)
@@ -283,8 +284,8 @@ txFnEndTemplate(txStylesheetCompilerState& aState)
 
 nsresult
 txFnStartKey(PRInt32 aNamespaceID,
-             txAtom* aLocalName,
-             txAtom* aPrefix,
+             nsIAtom* aLocalName,
+             nsIAtom* aPrefix,
              txStylesheetAttr* aAttributes,
              PRInt32 aAttrCount,
              txStylesheetCompilerState& aState)
@@ -345,8 +346,8 @@ txFnEndKey(txStylesheetCompilerState& aState)
 // LRE
 nsresult
 txFnStartLRE(PRInt32 aNamespaceID,
-             txAtom* aLocalName,
-             txAtom* aPrefix,
+             nsIAtom* aLocalName,
+             nsIAtom* aPrefix,
              txStylesheetAttr* aAttributes,
              PRInt32 aAttrCount,
              txStylesheetCompilerState& aState)
@@ -367,7 +368,7 @@ txFnStartLRE(PRInt32 aNamespaceID,
     if (attr) {
         txTokenizer tok(attr->mValue);
         while (tok.hasMoreTokens()) {
-            String qname;
+            nsAutoString qname;
             tok.nextToken(qname);
 
             txExpandedName name;
@@ -421,9 +422,9 @@ txFnEndLRE(txStylesheetCompilerState& aState)
 }
 
 nsresult
-txFnText(const String& aStr, txStylesheetCompilerState& aState)
+txFnText(const nsAString& aStr, txStylesheetCompilerState& aState)
 {
-    TX_RETURN_IF_WHITESPACE(aStr, aState);
+    TX_RETURN_IF_WHITESPACE(PromiseFlatString(aStr), aState);
 
     txInstruction* instr = new txTextInstruction(aStr, MB_FALSE);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
@@ -437,8 +438,8 @@ txFnText(const String& aStr, txStylesheetCompilerState& aState)
 // xsl:text
 nsresult
 txFnStartText(PRInt32 aNamespaceID,
-              txAtom* aLocalName,
-              txAtom* aPrefix,
+              nsIAtom* aLocalName,
+              nsIAtom* aPrefix,
               txStylesheetAttr* aAttributes,
               PRInt32 aAttrCount,
               txStylesheetCompilerState& aState)
@@ -448,10 +449,11 @@ txFnStartText(PRInt32 aNamespaceID,
     NS_ASSERTION(!aState.mDOE, "nested d-o-e elements should not happen");
 
     if ((attr = getStyleAttr(aAttributes, aAttrCount, txXSLTAtoms::disableOutputEscaping))) {
-        if (attr->mValue.isEqual(String("yes"))) {
+        if (TX_StringEqualsAtom(attr->mValue, txXSLTAtoms::yes)) {
             aState.mDOE = MB_TRUE;
         }
-        else if (!attr->mValue.isEqual(String("no")) && !aState.fcp()) {
+        else if (!TX_StringEqualsAtom(attr->mValue, txXSLTAtoms::no) &&
+                 !aState.fcp()) {
             return NS_ERROR_XSLT_PARSE_FAILURE;
         }
     }
@@ -468,7 +470,7 @@ txFnEndText(txStylesheetCompilerState& aState)
 }
 
 nsresult
-txFnTextText(const String& aStr, txStylesheetCompilerState& aState)
+txFnTextText(const nsAString& aStr, txStylesheetCompilerState& aState)
 {
     txInstruction* instr = new txTextInstruction(aStr, aState.mDOE);
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
@@ -482,8 +484,8 @@ txFnTextText(const String& aStr, txStylesheetCompilerState& aState)
 // xsl:value-of
 nsresult
 txFnStartValueOf(PRInt32 aNamespaceID,
-                 txAtom* aLocalName,
-                 txAtom* aPrefix,
+                 nsIAtom* aLocalName,
+                 nsIAtom* aPrefix,
                  txStylesheetAttr* aAttributes,
                  PRInt32 aAttrCount,
                  txStylesheetCompilerState& aState)
@@ -494,10 +496,11 @@ txFnStartValueOf(PRInt32 aNamespaceID,
 
     if ((attr = getStyleAttr(aAttributes, aAttrCount,
                              txXSLTAtoms::disableOutputEscaping))) {
-        if (attr->mValue.isEqual(String("yes"))) {
+        if (TX_StringEqualsAtom(attr->mValue, txXSLTAtoms::yes)) {
             doe = MB_TRUE;
         }
-        else if (!attr->mValue.isEqual(String("no")) && !aState.fcp()) {
+        else if (!TX_StringEqualsAtom(attr->mValue, txXSLTAtoms::no) &&
+                 !aState.fcp()) {
             return NS_ERROR_XSLT_PARSE_FAILURE;
         }
     }
@@ -613,9 +616,8 @@ txHandlerTable::init(txHandlerTableData* aTableData)
 
     txElementHandler* handler = aTableData->mHandlers;
     while (handler->mLocalName) {
-        txAtom* nameAtom = TX_GET_ATOM(String(handler->mLocalName));
+        nsCOMPtr<nsIAtom> nameAtom = do_GetAtom(handler->mLocalName);
         txExpandedName name(handler->mNamespaceID, nameAtom);
-        TX_IF_RELEASE_ATOM(nameAtom);
         // XXX this sucks
         rv = mHandlers.add(name, (TxObject*)handler);
         NS_ENSURE_SUCCESS(rv, rv);
@@ -626,7 +628,7 @@ txHandlerTable::init(txHandlerTableData* aTableData)
 }
 
 txElementHandler*
-txHandlerTable::find(PRInt32 aNamespaceID, txAtom* aLocalName)
+txHandlerTable::find(PRInt32 aNamespaceID, nsIAtom* aLocalName)
 {
     txExpandedName name(aNamespaceID, aLocalName);
     txElementHandler* handler = (txElementHandler*)mHandlers.get(name);

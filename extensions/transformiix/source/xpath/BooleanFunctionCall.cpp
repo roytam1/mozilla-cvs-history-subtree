@@ -31,6 +31,8 @@
 #include "FunctionLib.h"
 #include "txAtoms.h"
 #include "txIXPathContext.h"
+#include "nsReadableUtils.h"
+#include "txStringUtils.h"
 
 /**
  * Creates a default BooleanFunctionCall, which always evaluates to False
@@ -55,7 +57,7 @@ ExprResult* BooleanFunctionCall::evaluate(txIEvalContext* aContext)
         case TX_BOOLEAN:
         {
             if (!requireParams(1, 1, aContext))
-                return new StringResult("error");
+                return new StringResult(NS_LITERAL_STRING("error"));
 
             return new BooleanResult(evaluateToBoolean((Expr*)iter.next(),
                                                        aContext));
@@ -63,9 +65,9 @@ ExprResult* BooleanFunctionCall::evaluate(txIEvalContext* aContext)
         case TX_LANG:
         {
             if (!requireParams(1, 1, aContext))
-                return new StringResult("error");
+                return new StringResult(NS_LITERAL_STRING("error"));
 
-            String lang;
+            nsAutoString lang;
             Node* node = aContext->getContextNode();
             while (node) {
                 if (node->getNodeType() == Node::ELEMENT_NODE) {
@@ -79,13 +81,12 @@ ExprResult* BooleanFunctionCall::evaluate(txIEvalContext* aContext)
 
             MBool result = MB_FALSE;
             if (node) {
-                String arg;
+                nsAutoString arg;
                 evaluateToString((Expr*)iter.next(), aContext, arg);
-                arg.toUpperCase(); // case-insensitive comparison
-                lang.toUpperCase();
-                result = lang.indexOf(arg) == 0 &&
-                         (lang.length() == arg.length() ||
-                          lang.charAt(arg.length()) == '-');
+                result = arg.Equals(Substring(lang, 0, arg.Length()),
+                                    txCaseInsensitiveStringComparator()) &&
+                         (lang.Length() == arg.Length() ||
+                          lang.CharAt(arg.Length()) == '-');
             }
 
             return new BooleanResult(result);
@@ -93,7 +94,7 @@ ExprResult* BooleanFunctionCall::evaluate(txIEvalContext* aContext)
         case TX_NOT:
         {
             if (!requireParams(1, 1, aContext))
-                return new StringResult("error");
+                return new StringResult(NS_LITERAL_STRING("error"));
 
             return new BooleanResult(!evaluateToBoolean((Expr*)iter.next(),
                                                         aContext));
@@ -101,25 +102,25 @@ ExprResult* BooleanFunctionCall::evaluate(txIEvalContext* aContext)
         case TX_TRUE:
         {
             if (!requireParams(0, 0, aContext))
-                return new StringResult("error");
+                return new StringResult(NS_LITERAL_STRING("error"));
 
             return new BooleanResult(MB_TRUE);
         }
         case TX_FALSE:
         {
             if (!requireParams(0, 0, aContext))
-                return new StringResult("error");
+                return new StringResult(NS_LITERAL_STRING("error"));
 
             return new BooleanResult(MB_FALSE);
         }
     }
 
-    String err("Internal error");
-    aContext->receiveError(err, NS_ERROR_UNEXPECTED);
-    return new StringResult("error");
+    aContext->receiveError(NS_LITERAL_STRING("Internal error"),
+                           NS_ERROR_UNEXPECTED);
+    return new StringResult(NS_LITERAL_STRING("error"));
 }
 
-nsresult BooleanFunctionCall::getNameAtom(txAtom** aAtom)
+nsresult BooleanFunctionCall::getNameAtom(nsIAtom** aAtom)
 {
     switch (mType) {
         case TX_BOOLEAN:
@@ -153,6 +154,6 @@ nsresult BooleanFunctionCall::getNameAtom(txAtom** aAtom)
             return NS_ERROR_FAILURE;
         }
     }
-    TX_ADDREF_ATOM(*aAtom);
+    NS_ADDREF(*aAtom);
     return NS_OK;
 }

@@ -40,7 +40,6 @@
 #define TRANSFRMX_HTML_OUTPUT_H
 
 #include "txXMLOutput.h"
-#include "Map.h"
 #include "Stack.h"
 
 class txHTMLOutput : public txXMLOutput
@@ -49,6 +48,12 @@ public:
     txHTMLOutput(txOutputFormat* aFormat, ostream* aOut);
     ~txHTMLOutput();
 
+    /**
+     * Init/release table with shorthands.
+     */
+    static nsresult init();
+    static void shutdown();
+
     /*
      * Signals to receive the start of an attribute.
      *
@@ -56,9 +61,9 @@ public:
      * @param aNsID the namespace ID of the attribute
      * @param aValue the value of the attribute
      */
-    void attribute(const String& aName,
+    void attribute(const nsAString& aName,
                    const PRInt32 aNsID,
-                   const String& aValue);
+                   const nsAString& aValue);
 
     /*
      * Signals to receive characters.
@@ -66,7 +71,7 @@ public:
      * @param aData the characters to receive
      * @param aDOE disable output escaping for these characters
      */
-    void characters(const String& aData, PRBool aDOE);
+    void characters(const nsAString& aData, PRBool aDOE);
 
     /*
      * Signals to receive the end of an element.
@@ -74,7 +79,7 @@ public:
      * @param aName the name of the element
      * @param aNsID the namespace ID of the element
      */
-    void endElement(const String& aName,
+    void endElement(const nsAString& aName,
                     const PRInt32 aNsID);
 
     /*
@@ -83,8 +88,8 @@ public:
      * @param aTarget the target of the processing instruction
      * @param aData the data of the processing instruction
      */
-    void processingInstruction(const String& aTarget,
-                               const String& aData);
+    void processingInstruction(const nsAString& aTarget,
+                               const nsAString& aData);
 
     /*
      * Signals the start of a document.
@@ -97,16 +102,14 @@ public:
      * @param aName the name of the element
      * @param aNsID the namespace ID of the element
      */
-    void startElement(const String& aName,
+    void startElement(const nsAString& aName,
                       const PRInt32 aNsID);
 
 private:
     void closeStartTag(MBool aUseEmptyElementShorthand);
-    MBool isShorthandElement(const String& aName);
-    MBool isShorthandAttribute(const String& aLocalName);
+    MBool isShorthandElement(const nsAString& aName);
+    MBool isShorthandAttribute(const nsAString& aLocalName);
 
-    Map mHTMLEmptyTags;
-    Map mHTMLEmptyAttributes;
     Stack mCurrentElements;
 };
 

@@ -38,11 +38,11 @@
 
 #include "txPatternParser.h"
 #include "ExprLexer.h"
-#include "Names.h"
 #include "txAtoms.h"
+#include "txStringUtils.h"
 #include "txXSLTPatterns.h"
 
-txPattern* txPatternParser::createPattern(const String& aPattern,
+txPattern* txPatternParser::createPattern(const nsAFlatString& aPattern,
                                           txIParseContext* aContext)
 {
     txPattern* pattern = 0;
@@ -148,15 +148,13 @@ nsresult txPatternParser::createLocPathPattern(ExprLexer& aLexer,
         case Token::FUNCTION_NAME:
             // id(Literal) or key(Literal, Literal)
             {
-                String& name = aLexer.nextToken()->value;
-                txAtom* nameAtom = TX_GET_ATOM(name);
+                nsCOMPtr<nsIAtom> nameAtom = do_GetAtom(aLexer.nextToken()->value);
                 if (nameAtom == txXPathAtoms::id) {
                     rv = createIdPattern(aLexer, stepPattern);
                 }
                 else if (nameAtom == txXSLTAtoms::key) {
                     rv = createKeyPattern(aLexer, aContext, stepPattern);
                 }
-                TX_IF_RELEASE_ATOM(nameAtom);
                 if (NS_FAILED(rv))
                     return rv;
             }
@@ -235,7 +233,7 @@ nsresult txPatternParser::createIdPattern(ExprLexer& aLexer,
     if (aLexer.nextToken()->type != Token::L_PAREN && 
         aLexer.peek()->type != Token::LITERAL)
         return NS_ERROR_XPATH_PARSE_FAILED;
-    const String& value = aLexer.nextToken()->value;
+    const nsString& value = aLexer.nextToken()->value;
     if (aLexer.nextToken()->type != Token::R_PAREN)
         return NS_ERROR_XPATH_PARSE_FAILED;
     aPattern  = new txIdPattern(value);
@@ -250,25 +248,24 @@ nsresult txPatternParser::createKeyPattern(ExprLexer& aLexer,
     if (aLexer.nextToken()->type != Token::L_PAREN && 
         aLexer.peek()->type != Token::LITERAL)
         return NS_ERROR_XPATH_PARSE_FAILED;
-    const String& key = aLexer.nextToken()->value;
+    const nsString& key = aLexer.nextToken()->value;
     if (aLexer.nextToken()->type != Token::COMMA && 
         aLexer.peek()->type != Token::LITERAL)
         return NS_ERROR_XPATH_PARSE_FAILED;
-    const String& value = aLexer.nextToken()->value;
+    const nsString& value = aLexer.nextToken()->value;
     if (aLexer.nextToken()->type != Token::R_PAREN)
         return NS_ERROR_XPATH_PARSE_FAILED;
 
     if (!XMLUtils::isValidQName(key))
         return NS_ERROR_XPATH_PARSE_FAILED;
-    txAtom *prefix = 0, *localName = 0;
+    nsCOMPtr<nsIAtom> prefix, localName;
     PRInt32 namespaceID;
-    nsresult rv = resolveQName(key, prefix, aContext, localName, namespaceID);
+    nsresult rv = resolveQName(key, *getter_AddRefs(prefix), aContext,
+                               *getter_AddRefs(localName), namespaceID);
     if (NS_FAILED(rv))
         return rv;
 
     aPattern  = new txKeyPattern(prefix, localName, namespaceID, value);
-    TX_IF_RELEASE_ATOM(prefix);
-    TX_RELEASE_ATOM(localName);
 
     return aPattern ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
@@ -281,10 +278,10 @@ nsresult txPatternParser::createStepPattern(ExprLexer& aLexer,
     MBool isAttr = MB_FALSE;
     Token* tok = aLexer.peek();
     if (tok->type == Token::AXIS_IDENTIFIER) {
-        if (ATTRIBUTE_AXIS.isEqual(tok->value)) {
+        if (TX_StringEqualsAtom(tok->value, txXPathAtoms::attribute)) {
             isAttr = MB_TRUE;
         }
-        else if (!CHILD_AXIS.isEqual(tok->value)) {
+        else if (!TX_StringEqualsAtom(tok->value, txXPathAtoms::child)) {
             // all done already for CHILD_AXIS, for all others
             // XXX report unexpected axis error
             return NS_ERROR_XPATH_PARSE_FAILED;
@@ -300,9 +297,10 @@ nsresult txPatternParser::createStepPattern(ExprLexer& aLexer,
     txNodeTest* nodeTest = 0;
     if (tok->type == Token::CNAME) {
         // resolve QName
-        txAtom *prefix, *lName;
+        nsCOMPtr<nsIAtom> prefix, lName;
         PRInt32 nspace;
-        rv = resolveQName(tok->value, prefix, aContext, lName, nspace);
+        rv = resolveQName(tok->value, *getter_AddRefs(prefix), aContext,
+                          *getter_AddRefs(lName), nspace);
         if (NS_FAILED(rv)) {
             // XXX error report namespace resolve failed
             return rv;
@@ -315,8 +313,6 @@ nsresult txPatternParser::createStepPattern(ExprLexer& aLexer,
             nodeTest = new txNameTest(prefix, lName, nspace,
                                       Node::ELEMENT_NODE);
         }
-        TX_IF_RELEASE_ATOM(prefix);
-        TX_IF_RELEASE_ATOM(lName);
         if (!nodeTest) {
             return NS_ERROR_OUT_OF_MEMORY;
         }

@@ -61,11 +61,11 @@ ExprResult* NumberFunctionCall::evaluate(txIEvalContext* aContext)
 
     if (mType == NUMBER) {
         if (!requireParams(0, 1, aContext))
-            return new StringResult("error");
+            return new StringResult(NS_LITERAL_STRING("error"));
     }
     else {
         if (!requireParams(1, 1, aContext))
-            return new StringResult("error");
+            return new StringResult(NS_LITERAL_STRING("error"));
     }
 
     switch (mType) {
@@ -107,12 +107,12 @@ ExprResult* NumberFunctionCall::evaluate(txIEvalContext* aContext)
             nodes = evaluateToNodeSet((Expr*)iter.next(), aContext);
 
             if (!nodes)
-                return new StringResult("error");
+                return new StringResult(NS_LITERAL_STRING("error"));
 
             double res = 0;
             int i;
             for (i = 0; i < nodes->size(); i++) {
-                String resultStr;
+                nsAutoString resultStr;
                 XMLDOMUtils::getNodeValue(nodes->get(i), resultStr);
                 res += Double::toDouble(resultStr);
             }
@@ -127,18 +127,18 @@ ExprResult* NumberFunctionCall::evaluate(txIEvalContext* aContext)
                     evaluateToNumber((Expr*)iter.next(), aContext));
             }
 
-            String resultStr;
+            nsAutoString resultStr;
             XMLDOMUtils::getNodeValue(aContext->getContextNode(), resultStr);
             return new NumberResult(Double::toDouble(resultStr));
         }
     }
 
-    String err("Internal error");
-    aContext->receiveError(err, NS_ERROR_UNEXPECTED);
-    return new StringResult("error");
+    aContext->receiveError(NS_LITERAL_STRING("Internal error"),
+                           NS_ERROR_UNEXPECTED);
+    return new StringResult(NS_LITERAL_STRING("error"));
 }
 
-nsresult NumberFunctionCall::getNameAtom(txAtom** aAtom)
+nsresult NumberFunctionCall::getNameAtom(nsIAtom** aAtom)
 {
     switch (mType) {
         case NUMBER:
@@ -172,6 +172,6 @@ nsresult NumberFunctionCall::getNameAtom(txAtom** aAtom)
             return NS_ERROR_FAILURE;
         }
     }
-    TX_ADDREF_ATOM(*aAtom);
+    NS_ADDREF(*aAtom);
     return NS_OK;
 }

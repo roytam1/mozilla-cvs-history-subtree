@@ -150,7 +150,7 @@ private:
  */
 class txNameTestItem {
 public:
-    txNameTestItem(txAtom* aLocalName, PRInt32 aNSID, MBool stripSpace)
+    txNameTestItem(nsIAtom* aLocalName, PRInt32 aNSID, MBool stripSpace)
         : mNameTest(0, aLocalName, aNSID, Node::ELEMENT_NODE),
           mStrips(stripSpace)
     {

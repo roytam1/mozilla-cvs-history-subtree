@@ -164,7 +164,8 @@ public:
         return txToplevelItem::stripSpace;
     }
 
-    addNameTest(txAtom* aLocalName, PRInt32 aNSID, MBool stripSpace);
+// XXXXXXXX
+//    addNameTest(nsIAtom* aLocalName, PRInt32 aNSID, MBool stripSpace);
 
 private:
     txList mNameTestItems;

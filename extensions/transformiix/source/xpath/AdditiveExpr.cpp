@@ -94,21 +94,21 @@ ExprResult* AdditiveExpr::evaluate(txIEvalContext* aContext)
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void AdditiveExpr::toString(String& str) {
+void AdditiveExpr::toString(nsAString& str) {
 
     if ( leftExpr ) leftExpr->toString(str);
-    else str.append("null");
+    else str.Append(NS_LITERAL_STRING("null"));
 
     switch ( op ) {
         case SUBTRACTION:
-            str.append(" - ");
+            str.Append(NS_LITERAL_STRING(" - "));
             break;
         default:
-            str.append(" + ");
+            str.Append(NS_LITERAL_STRING(" + "));
             break;
     }
     if ( rightExpr ) rightExpr->toString(str);
-    else str.append("null");
+    else str.Append(NS_LITERAL_STRING("null"));
 
 } //-- toString
 

@@ -27,7 +27,7 @@
 #include "txAtoms.h"
 #include "txIXPathContext.h"
 
-txNameTest::txNameTest(txAtom* aPrefix, txAtom* aLocalName, PRInt32 aNSID,
+txNameTest::txNameTest(nsIAtom* aPrefix, nsIAtom* aLocalName, PRInt32 aNSID,
                        Node::NodeType aNodeType)
     :mPrefix(aPrefix), mLocalName(aLocalName), mNamespace(aNSID),
      mNodeType(aNodeType)
@@ -35,14 +35,10 @@ txNameTest::txNameTest(txAtom* aPrefix, txAtom* aLocalName, PRInt32 aNSID,
     if (aPrefix == txXMLAtoms::_empty)
         mPrefix = 0;
     NS_ASSERTION(aLocalName, "txNameTest without a local name?");
-    TX_IF_ADDREF_ATOM(mPrefix);
-    TX_IF_ADDREF_ATOM(mLocalName);
 }
 
 txNameTest::~txNameTest()
 {
-    TX_IF_RELEASE_ATOM(mPrefix);
-    TX_IF_RELEASE_ATOM(mLocalName);
 }
 
 /*
@@ -66,12 +62,9 @@ MBool txNameTest::matches(Node* aNode, txIMatchContext* aContext)
         return MB_TRUE;
 
     // Compare local-names
-    txAtom* localName;
-    aNode->getLocalName(&localName);
-    MBool result = localName == mLocalName;
-    TX_IF_RELEASE_ATOM(localName);
-
-    return result;
+    nsCOMPtr<nsIAtom> localName;
+    aNode->getLocalName(getter_AddRefs(localName));
+    return localName == mLocalName;
 }
 
 /*
@@ -92,15 +85,15 @@ double txNameTest::getDefaultPriority()
  * @param aDest the String to use when creating the string representation.
  *              The string representation will be appended to the string.
  */
-void txNameTest::toString(String& aDest)
+void txNameTest::toString(nsAString& aDest)
 {
     if (mPrefix) {
-        String prefix;
-        TX_GET_ATOM_STRING(mPrefix, prefix);
-        aDest.append(prefix);
-        aDest.append(':');
+        const PRUnichar* prefix;
+        mPrefix->GetUnicode(&prefix);
+        aDest.Append(nsDependentString(prefix));
+        aDest.Append(PRUnichar(':'));
     }
-    String localName;
-    TX_GET_ATOM_STRING(mLocalName, localName);
-    aDest.append(localName);
+    const PRUnichar* localName;
+    mLocalName->GetUnicode(&localName);
+    aDest.Append(nsDependentString(localName));
 }

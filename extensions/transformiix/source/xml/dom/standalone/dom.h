@@ -39,39 +39,20 @@
 #endif
 
 #include "List.h"
-#include "TxString.h"
+#include "nsIAtom.h"
 #include "baseutils.h"
-
-#ifndef NULL
-typedef 0 NULL;
-#endif
-
-typedef UNICODE_CHAR DOM_CHAR;
+#include "nsString.h"
+#include "nsVoidArray.h"
 
 #define kTxNsNodeIndexOffset 0x00000000;
 #define kTxAttrIndexOffset 0x40000000;
 #define kTxChildIndexOffset 0x80000000;
 
-class NodeList;
 class NamedNodeMap;
 class Document;
 class Element;
 class Attr;
-class Text;
-class Comment;
-class CDATASection;
 class ProcessingInstruction;
-class EntityReference;
-class DocumentType;
-
-class txAtom;
-
-/*
- * NULL string for use by Element::getAttribute() for when the attribute
- * specified by "name" does not exist, and therefore shoud be "NULL".
- * Used in txNamespaceManager as well.
- */
-const String NULL_STRING;
 
 #define kNameSpaceID_Unknown -1
 #define kNameSpaceID_None     0
@@ -80,22 +61,6 @@ const String NULL_STRING;
 #define kNameSpaceID_XML      2
 // kNameSpaceID_XSLT is 6 for module, see nsINameSpaceManager.h
 #define kNameSpaceID_XSLT     3
-
-//
-//Definition and Implementation the DOMImplementation class
-//
-class DOMImplementation
-{
-  public:
-    DOMImplementation();
-    ~DOMImplementation();
-
-    MBool hasFeature(String feature, const String& version) const;
-
-  private:
-    String implFeature;
-    String implVersion;
-};
 
 //
 // Abstract Class defining the interface for a Node.  See NodeDefinition below
@@ -124,11 +89,10 @@ class Node : public TxObject
     virtual ~Node() {}
 
     //Read functions
-    virtual const String& getNodeName() const = 0;
-    virtual const String& getNodeValue() = 0;
+    virtual nsresult getNodeName(nsAString& aName) const = 0;
+    virtual nsresult getNodeValue(nsAString& aValue) = 0;
     virtual unsigned short getNodeType() const = 0;
     virtual Node* getParentNode() const = 0;
-    virtual NodeList* getChildNodes() = 0;
     virtual Node* getFirstChild() const = 0;
     virtual Node* getLastChild() const = 0;
     virtual Node* getPreviousSibling() const = 0;
@@ -137,27 +101,23 @@ class Node : public TxObject
     virtual Document* getOwnerDocument() const = 0;
 
     //Write functions
-    virtual void setNodeValue(const String& nodeValue) = 0;
+    virtual void setNodeValue(const nsAString& nodeValue) = 0;
 
     //Node manipulation functions
-    virtual Node* insertBefore(Node* newChild, Node* refChild) = 0;
-    virtual Node* replaceChild(Node* newChild, Node* oldChild) = 0;
-    virtual Node* removeChild(Node* oldChild) = 0;
     virtual Node* appendChild(Node* newChild) = 0;
-    virtual Node* cloneNode(MBool deep, Node* dest) = 0;
 
     virtual MBool hasChildNodes() const = 0;
     
     //From DOM3 26-Jan-2001 WD
-    virtual String getBaseURI() = 0;
+    virtual nsresult getBaseURI(nsAString& aURI) = 0;
 
     //Introduced in DOM2
-    virtual const String& getNamespaceURI() = 0;
+    virtual nsresult getNamespaceURI(nsAString& aNSURI) = 0;
 
     //txXPathNode functions
-    virtual MBool getLocalName(txAtom** aLocalName) = 0;
+    virtual MBool getLocalName(nsIAtom** aLocalName) = 0;
     virtual PRInt32 getNamespaceID() = 0;
-    virtual PRInt32 lookupNamespaceID(txAtom* aPrefix) = 0;
+    virtual PRInt32 lookupNamespaceID(nsIAtom* aPrefix) = 0;
     virtual Node* getXPathParent() = 0;
     virtual PRInt32 compareDocumentPosition(Node* aOther) = 0;
 };
@@ -221,12 +181,12 @@ class NamedNodeMap : public NodeListDefinition
     NamedNodeMap();
     virtual ~NamedNodeMap();
 
-    Node* getNamedItem(const String& name);
+    Node* getNamedItem(const nsAString& name);
     virtual Node* setNamedItem(Node* arg);
-    virtual Node* removeNamedItem(const String& name);
+    virtual Node* removeNamedItem(const nsAString& name);
 
   private:
-    NodeListDefinition::ListItem* findListItemByName(const String& name);
+    NodeListDefinition::ListItem* findListItemByName(const nsAString& name);
 };
 
 //
@@ -244,7 +204,7 @@ class AttrMap : public NamedNodeMap
     virtual ~AttrMap();
 
     Node* setNamedItem(Node* arg);
-    Node* removeNamedItem(const String& name);
+    Node* removeNamedItem(const nsAString& name);
     void clear();
 
   private:
@@ -260,16 +220,13 @@ class AttrMap : public NamedNodeMap
 class NodeDefinition : public Node, public NodeList
 {
   public:
-    NodeDefinition(NodeType type, const String& name,
-                   const String& value, Document* owner);
     virtual ~NodeDefinition();      //Destructor, delete all children of node
 
     //Read functions
-    const String& getNodeName() const;
-    virtual const String& getNodeValue();
+    nsresult getNodeName(nsAString& aName) const;
+    nsresult getNodeValue(nsAString& aValue);
     unsigned short getNodeType() const;
     Node* getParentNode() const;
-    NodeList* getChildNodes();
     Node* getFirstChild() const;
     Node* getLastChild() const;
     Node* getPreviousSibling() const;
@@ -278,27 +235,23 @@ class NodeDefinition : public Node, public NodeList
     Document* getOwnerDocument() const;
 
     //Write functions
-    virtual void setNodeValue(const String& nodeValue);
+    virtual void setNodeValue(const nsAString& nodeValue);
 
     //Child node manipulation functions
-    virtual Node* insertBefore(Node* newChild, Node* refChild);
-    virtual Node* replaceChild(Node* newChild, Node* oldChild);
-    virtual Node* removeChild(Node* oldChild);
     virtual Node* appendChild(Node* newChild);
-    Node* cloneNode(MBool deep, Node* dest);
 
     MBool hasChildNodes() const;
     
     //From DOM3 26-Jan-2001 WD
-    virtual String getBaseURI();
+    virtual nsresult getBaseURI(nsAString& aURI);
 
     //Introduced in DOM2
-    const String& getNamespaceURI();
+    nsresult getNamespaceURI(nsAString& aNSURI);
 
     //txXPathNode functions
-    virtual MBool getLocalName(txAtom** aLocalName);
+    virtual MBool getLocalName(nsIAtom** aLocalName);
     virtual PRInt32 getNamespaceID();
-    virtual PRInt32 lookupNamespaceID(txAtom*);
+    virtual PRInt32 lookupNamespaceID(nsIAtom*);
     virtual Node* getXPathParent();
     virtual PRInt32 compareDocumentPosition(Node* aOther);
 
@@ -306,17 +259,33 @@ class NodeDefinition : public Node, public NodeList
     Node* item(PRUint32 index);
     PRUint32 getLength();
 
+    //Only to be used from XMLParser
+    void appendData(const PRUnichar* aData, int aLength)
+    {
+      nodeValue.Append(aData, aLength);
+    };
+
   protected:
+    friend class Document;
+    NodeDefinition(NodeType type, const nsAString& name,
+                   const nsAString& value, Document* owner);
+    NodeDefinition(NodeType aType, const nsAString& aValue,
+                   Document* aOwner);
+
     //Name, value, and attributes for this node.  Available to derrived
     //classes, since those derrived classes have a better idea how to use them,
     //than the generic node does.
-    String nodeName;
-    String nodeValue;
+    nsString nodeName;
+    nsString nodeValue;
+
+    NodeDefinition* implAppendChild(NodeDefinition* newChild);
+    NodeDefinition* implRemoveChild(NodeDefinition* oldChild);
 
     void DeleteChildren();
 
-    Node* implInsertBefore(NodeDefinition* newChild, NodeDefinition* refChild);
   private:
+    void Init(NodeType aType, const nsAString& aValue, Document* aOwner);
+
     //Type of node this is
     NodeType nodeType;
 
@@ -355,11 +324,36 @@ class NodeDefinition : public Node, public NodeList
 class DocumentFragment : public NodeDefinition
 {
   public:
-    DocumentFragment(const String& name, const String& value, Document* owner);
+    Node* appendChild(Node* newChild)
+    {
+      switch (newChild->getNodeType())
+        {
+          case Node::ELEMENT_NODE :
+          case Node::TEXT_NODE :
+          case Node::COMMENT_NODE :
+          case Node::PROCESSING_INSTRUCTION_NODE :
+            {
+              // Remove the "newChild" if it is already a child of this node
+              NodeDefinition* pNewChild = (NodeDefinition*)newChild;
+              if (pNewChild->getParentNode() == this)
+                pNewChild = implRemoveChild(pNewChild);
 
-    //Override insertBefore to limit Elements to having only certain nodes as
-    //children
-    Node* insertBefore(Node* newChild, Node* refChild);
+              return implAppendChild(pNewChild);
+            }
+
+          default:
+            break;
+        }
+
+      return nsnull;
+    };
+
+  private:
+    friend class Document;
+    DocumentFragment(Document* aOwner) :
+      NodeDefinition(Node::DOCUMENT_FRAGMENT_NODE, nsString(), aOwner)
+    {
+    };
 };
 
 //
@@ -368,52 +362,42 @@ class DocumentFragment : public NodeDefinition
 class Document : public NodeDefinition
 {
   public:
-    Document(DocumentType* theDoctype = NULL);
+    Document();
 
     Element* getDocumentElement();
-    DocumentType* getDoctype();
-    const DOMImplementation& getImplementation();
 
     //Factory functions for various node types
-    DocumentFragment* createDocumentFragment();
-    Element* createElement(const String& tagName);
-    Attr* createAttribute(const String& name);
-    Text* createTextNode(const String& theData);
-    Comment* createComment(const String& theData);
-    CDATASection* createCDATASection(const String& theData);
-    ProcessingInstruction* createProcessingInstruction(const String& target,
-                                                       const String& data);
-    EntityReference* createEntityReference(const String& name);
+    Node* createComment(const nsAString& aData);
+    Node* createDocumentFragment();
+    ProcessingInstruction* createProcessingInstruction(const nsAString& aTarget,
+                                                       const nsAString& aData);
+    Node* createTextNode(const nsAString& theData);
 
-    //Override functions to enforce the One Element rule for documents, as well
-    //as limit documents to certain types of nodes.
-    Node* insertBefore(Node* newChild, Node* refChild);
-    Node* replaceChild(Node* newChild, Node* oldChild);
-    Node* removeChild(Node* oldChild);
+    Element* createElement(const nsAString& tagName);
+    Attr* createAttribute(const nsAString& name);
 
     // Introduced in DOM Level 2
-    Element* createElementNS(const String& aNamespaceURI,
-                             const String& aTagName);
+    Element* createElementNS(const nsAString& aNamespaceURI,
+                             const nsAString& aTagName);
+    Attr* createAttributeNS(const nsAString& aNamespaceURI,
+                            const nsAString& aName);
+    Element* getElementById(const nsAString& aID);
 
-    Attr* createAttributeNS(const String& aNamespaceURI,
-                            const String& aName);
-
-    Element* getElementById(const String aID);
+    // Node manipulation functions
+    Node* appendChild(Node* newChild);
 
     //Override to return documentBaseURI
-    String getBaseURI();
+    nsresult getBaseURI(nsAString& aURI);
 
-    PRInt32 namespaceURIToID(const String& aNamespaceURI);
-    void namespaceIDToURI(PRInt32 aNamespaceID, String& aNamespaceURI);
+    PRInt32 namespaceURIToID(const nsAString& aNamespaceURI);
+    void namespaceIDToURI(PRInt32 aNamespaceID, nsAString& aNamespaceURI);
 
   private:
     Element* documentElement;
-    DocumentType* doctype;
-    DOMImplementation implementation;
 
     // This class is friend to be able to set the documentBaseURI
     friend class XMLParser;
-    String documentBaseURI;
+    nsString documentBaseURI;
 };
 
 //
@@ -422,38 +406,32 @@ class Document : public NodeDefinition
 class Element : public NodeDefinition
 {
   public:
-    Element(const String& tagName, Document* owner);
-    Element(const String& aNamespaceURI, const String& aTagName,
-            Document* aOwner);
     virtual ~Element();
 
-    //Override insertBefore to limit Elements to having only certain nodes as
-    //children
-    Node* insertBefore(Node* newChild, Node* refChild);
-
-    const String& getTagName();
     NamedNodeMap* getAttributes();
-    const String& getAttribute(const String& name);
-    void setAttribute(const String& name, const String& value);
-    void setAttributeNS(const String& aNamespaceURI,
-                        const String& aName,
-                        const String& aValue);
-    void removeAttribute(const String& name);
-    Attr* getAttributeNode(const String& name);
-    Attr* setAttributeNode(Attr* newAttr);
-    Attr* removeAttributeNode(Attr* oldAttr);
-    NodeList* getElementsByTagName(const String& name);
-    void normalize();
+    void setAttribute(const nsAString& name, const nsAString& value);
+    void setAttributeNS(const nsAString& aNamespaceURI,
+                        const nsAString& aName,
+                        const nsAString& aValue);
+    Attr* getAttributeNode(const nsAString& name);
+
+    // Node manipulation functions
+    Node* appendChild(Node* newChild);
 
     //txXPathNode functions override
-    MBool getLocalName(txAtom** aLocalName);
+    MBool getLocalName(nsIAtom** aLocalName);
     PRInt32 getNamespaceID();
-    MBool getAttr(txAtom* aLocalName, PRInt32 aNSID, String& aValue);
-    MBool hasAttr(txAtom* aLocalName, PRInt32 aNSID);
+    MBool getAttr(nsIAtom* aLocalName, PRInt32 aNSID, nsAString& aValue);
+    MBool hasAttr(nsIAtom* aLocalName, PRInt32 aNSID);
 
   private:
+    friend class Document;
+    Element(const nsAString& tagName, Document* owner);
+    Element(const nsAString& aNamespaceURI, const nsAString& aTagName,
+            Document* aOwner);
+
     AttrMap mAttributes;
-    txAtom* mLocalName;
+    nsCOMPtr<nsIAtom> mLocalName;
     PRInt32 mNamespaceID;
 };
 
@@ -464,120 +442,36 @@ class Element : public NodeDefinition
 //
 class Attr : public NodeDefinition
 {
-    // These need to be friend to be able to update the ownerElement
-    friend class AttrMap;
-    friend class Element;
   public:
-    Attr(const String& name, Document* owner);
-    Attr(const String& aNamespaceURI, const String& aName,
-         Document* aOwner);
     virtual ~Attr();
-
-    const String& getName() const;
-    MBool getSpecified() const;
-    const String& getValue();
-    void setValue(const String& newValue);
 
     //Override the set and get member functions for a node's value to create a
     //new TEXT node when set, and to interpret its children when read.
-    void setNodeValue(const String& nodeValue);
-    const String& getNodeValue();
+    void setNodeValue(const nsAString& aValue);
+    nsresult getNodeValue(nsAString& aValue);
 
-    //Override insertBefore to limit Attr to having only certain nodes as
-    //children
-    Node* insertBefore(Node* newChild, Node* refChild);
+    // Node manipulation functions
+    Node* appendChild(Node* newChild);
 
     //txXPathNode functions override
-    MBool getLocalName(txAtom** aLocalName);
+    MBool getLocalName(nsIAtom** aLocalName);
     PRInt32 getNamespaceID();
     Node* getXPathParent();
 
   private:
+    friend class Document;
+    Attr(const nsAString& name, Document* owner);
+    Attr(const nsAString& aNamespaceURI, const nsAString& aName,
+         Document* aOwner);
+
+    // These need to be friend to be able to update the ownerElement
+    friend class AttrMap;
+    friend class Element;
+
     Element* ownerElement;
 
-    MBool specified;
-    txAtom* mLocalName;
+    nsCOMPtr<nsIAtom> mLocalName;
     PRInt32 mNamespaceID;
-};
-
-//
-//Definition and Implementation of CharacterData.  This class mearly provides
-//the interface and some default implementation.  It is not intended to be
-//instantiated by users of the DOM
-//
-class CharacterData : public NodeDefinition
-{
-  public:
-    const String& getData() const;
-    void setData(const String& source);
-    PRUint32 getLength() const;
-
-    String& substringData(PRUint32 offset, PRUint32 count, String& dest);
-    void appendData(const String& arg);
-    void insertData(PRUint32 offset, const String& arg);
-    void deleteData(PRUint32 offset, PRUint32 count);
-    void replaceData(PRUint32 offset, PRUint32 count, const String& arg);
-
-  protected:
-    CharacterData(NodeType type, const String& name,
-                   const String& value, Document* owner);
-};
-
-//
-//Definition and Implementation of a Text node.  The bulk of the functionality
-//comes from CharacterData and NodeDefinition.
-//
-class Text : public CharacterData
-{
-  public:
-    Text(const String& theData, Document* owner);
-
-    Text* splitText(PRUint32 offset);
-
-    //Override "child manipulation" function since Text Nodes can not have
-    //any children.
-    Node* insertBefore(Node* newChild, Node* refChild);
-    Node* replaceChild(Node* newChild, Node* oldChild);
-    Node* removeChild(Node* oldChild);
-    Node* appendChild(Node* newChild);
-
-  protected:
-    Text(NodeType type, const String& name, const String& value,
-         Document* owner);
-};
-
-//
-//Definition and Implementation of a Comment node.  All of the functionality is
-//inherrited from CharacterData and NodeDefinition.
-//
-class Comment : public CharacterData
-{
-  public:
-    Comment(const String& theData, Document* owner);
-
-    //Override "child manipulation" function since Comment Nodes can not have
-    //any children.
-    Node* insertBefore(Node* newChild, Node* refChild);
-    Node* replaceChild(Node* newChild, Node* oldChild);
-    Node* removeChild(Node* oldChild);
-    Node* appendChild(Node* newChild);
-};
-
-//
-//Definition and Implementation of a CDATASection node.  All of the
-//functionality is inherrited from Text, CharacterData, and NodeDefinition
-//
-class CDATASection : public Text
-{
-  public:
-    CDATASection(const String& theData, Document* owner);
-
-    //Override "child manipulation" function since CDATASection Nodes can not
-    //have any children.
-    Node* insertBefore(Node* newChild, Node* refChild);
-    Node* replaceChild(Node* newChild, Node* oldChild);
-    Node* removeChild(Node* oldChild);
-    Node* appendChild(Node* newChild);
 };
 
 //
@@ -591,152 +485,51 @@ class CDATASection : public Text
 class ProcessingInstruction : public NodeDefinition
 {
   public:
-    ProcessingInstruction(const String& theTarget, const String& theData,
-                          Document* owner);
     ~ProcessingInstruction();
 
-    const String& getTarget() const;
-    const String& getData() const;
-
-    void setData(const String& theData);
-
-    //Override "child manipulation" function since ProcessingInstruction Nodes
-    //can not have any children.
-    Node* insertBefore(Node* newChild, Node* refChild);
-    Node* replaceChild(Node* newChild, Node* oldChild);
-    Node* removeChild(Node* oldChild);
-    Node* appendChild(Node* newChild);
-
     //txXPathNode functions override
-    MBool getLocalName(txAtom** aLocalName);
+    MBool getLocalName(nsIAtom** aLocalName);
 
   private:
-    txAtom* mLocalName;
-};
+    friend class Document;
+    ProcessingInstruction(const nsAString& theTarget, const nsAString& theData,
+                          Document* owner);
 
-//
-//Definition and Implementation of a Notation.  Most functionality
-//is inherrited from NodeDefinition.
-//
-class Notation : public NodeDefinition
-{
-  public:
-    Notation(const String& name, const String& pubID,
-             const String& sysID);
-
-    const String& getPublicId() const;
-    const String& getSystemId() const;
-
-    //Override "child manipulation" function since Notation Nodes
-    //can not have any children.
-    Node* insertBefore(Node* newChild, Node* refChild);
-    Node* replaceChild(Node* newChild, Node* oldChild);
-    Node* removeChild(Node* oldChild);
-    Node* appendChild(Node* newChild);
-
-  private:
-    String publicId;
-    String systemId;
-};
-
-//
-//Definition and Implementation of an Entity
-//
-class Entity : public NodeDefinition
-{
-  public:
-    Entity(const String& name, const String& pubID,
-           const String& sysID, const String& notName);
-
-    const String& getPublicId() const;
-    const String& getSystemId() const;
-    const String& getNotationName() const;
-
-    //Override insertBefore to limit Entity to having only certain nodes as
-    //children
-    Node* insertBefore(Node* newChild, Node* refChild);
-
-  private:
-    String publicId;
-    String systemId;
-    String notationName;
-};
-
-//
-//Definition and Implementation of an EntityReference
-//
-class EntityReference : public NodeDefinition
-{
-  public:
-    EntityReference(const String& name, Document* owner);
-
-    //Override insertBefore to limit EntityReference to having only certain
-    //nodes as children
-    Node* insertBefore(Node* newChild, Node* refChild);
-};
-
-//
-//Definition and Implementation of the DocumentType
-//
-class DocumentType : public NodeDefinition
-{
-  public:
-    DocumentType(const String& name, NamedNodeMap* theEntities,
-                 NamedNodeMap* theNotations);
-    ~DocumentType();
-
-    NamedNodeMap* getEntities();
-    NamedNodeMap* getNotations();
-
-    //Override "child manipulation" function since Notation Nodes
-    //can not have any children.
-    Node* insertBefore(Node* newChild, Node* refChild);
-    Node* replaceChild(Node* newChild, Node* oldChild);
-    Node* removeChild(Node* oldChild);
-    Node* appendChild(Node* newChild);
-
-  private:
-    NamedNodeMap* entities;
-    NamedNodeMap* notations;
+    nsCOMPtr<nsIAtom> mLocalName;
 };
 
 class txNamespaceManager
 {
 public:
-    static PRInt32 getNamespaceID(const String& aURI)
+    static PRInt32 getNamespaceID(const nsAString& aURI)
     {
         if (!mNamespaces && !init())
             return kNameSpaceID_Unknown;
-        txListIterator nameIter(mNamespaces);
-        PRInt32 id=0;
-        String* uri;
-        while (nameIter.hasNext()) {
-            uri = (String*)nameIter.next();
-            id++;
-            if (uri->isEqual(aURI))
-                return id;
+
+        PRInt32 id = mNamespaces->IndexOf(aURI);
+        if (id != -1) {
+            return id + 1;
         }
-        uri = new String(aURI);
-        NS_ASSERTION(uri, "Out of memory, namespaces are getting lost");
-        if (!uri)
+
+        if (!mNamespaces->AppendString(aURI)) {
+            NS_ASSERTION(0, "Out of memory, namespaces are getting lost");
             return kNameSpaceID_Unknown;
-        mNamespaces->add(uri);
-        id++;
-        return id;
+        }
+
+        return mNamespaces->Count();
     }
 
-    static const String& getNamespaceURI(const PRInt32 aID)
+    static nsresult getNamespaceURI(const PRInt32 aID, nsAString& aNSURI)
     {
         // empty namespace, and errors
-        if (aID <= 0)
-            return NULL_STRING;
-        if (!mNamespaces && !init())
-            return NULL_STRING;
-        txListIterator nameIter(mNamespaces);
-        String* aURI = (String*)nameIter.advance(aID);
-        if (aURI)
-            return *aURI;
-        return NULL_STRING;
+        aNSURI.Truncate();
+        if (aID <= 0 || (!mNamespaces && !init()) ||
+            aID > mNamespaces->Count()) {
+            return NS_OK;
+        }
+
+        aNSURI = *mNamespaces->StringAt(aID - 1);
+        return NS_OK;
     }
 
     static MBool init()
@@ -745,7 +538,7 @@ public:
                      "called without matching shutdown()");
         if (mNamespaces)
             return MB_TRUE;
-        mNamespaces = new txList();
+        mNamespaces = new nsStringArray();
         if (!mNamespaces)
             return MB_FALSE;
         /*
@@ -754,27 +547,14 @@ public:
          * xmlns prefix is 1, mapped to http://www.w3.org/2000/xmlns/
          * xml prefix is 2, mapped to http://www.w3.org/XML/1998/namespace
          */
-        String* XMLNSUri = new String("http://www.w3.org/2000/xmlns/");
-        if (!XMLNSUri) {
+        if (!mNamespaces->AppendString(NS_LITERAL_STRING("http://www.w3.org/2000/xmlns/")) ||
+            !mNamespaces->AppendString(NS_LITERAL_STRING("http://www.w3.org/XML/1998/namespace")) ||
+            !mNamespaces->AppendString(NS_LITERAL_STRING("http://www.w3.org/1999/XSL/Transform"))) {
             delete mNamespaces;
             mNamespaces = 0;
             return MB_FALSE;
         }
-        mNamespaces->add(XMLNSUri);
-        String* XMLUri = new String("http://www.w3.org/XML/1998/namespace");
-        if (!XMLUri) {
-            delete mNamespaces;
-            mNamespaces = 0;
-            return MB_FALSE;
-        }
-        mNamespaces->add(XMLUri);
-        String* XSLTUri = new String("http://www.w3.org/1999/XSL/Transform");
-        if (!XSLTUri) {
-            delete mNamespaces;
-            mNamespaces = 0;
-            return MB_FALSE;
-        }
-        mNamespaces->add(XSLTUri);
+
         return MB_TRUE;
     }
 
@@ -783,18 +563,15 @@ public:
         NS_ASSERTION(mNamespaces, "called without matching init()");
         if (!mNamespaces)
             return;
-        txListIterator iter(mNamespaces);
-        while (iter.hasNext())
-            delete (String*)iter.next();
         delete mNamespaces;
-        mNamespaces = NULL;
+        mNamespaces = nsnull;
     }
 
 private:
-    static txList* mNamespaces;
+    static nsStringArray* mNamespaces;
 };
 
 #define TX_IMPL_DOM_STATICS \
-    txList* txNamespaceManager::mNamespaces = 0
+    nsStringArray* txNamespaceManager::mNamespaces = 0
 
 #endif

@@ -73,9 +73,9 @@ nsXPathEvaluator::CreateExpression(const nsAString & aExpression,
                                    nsIDOMXPathNSResolver *aResolver,
                                    nsIDOMXPathExpression **aResult)
 {
-    String expressionString(aExpression);
     ParseContextImpl pContext(aResolver);
-    Expr* expression = ExprParser::createExpr(expressionString, &pContext);
+    Expr* expression = ExprParser::createExpr(PromiseFlatString(aExpression),
+                                              &pContext);
     if (!expression)
         return NS_ERROR_DOM_INVALID_EXPRESSION_ERR;
 
@@ -129,7 +129,7 @@ nsXPathEvaluator::Evaluate(const nsAString & aExpression,
  */
 
 nsresult nsXPathEvaluator::ParseContextImpl::resolveNamespacePrefix
-    (txAtom* aPrefix, PRInt32& aID)
+    (nsIAtom* aPrefix, PRInt32& aID)
 {
     nsAutoString prefix;
     if (aPrefix) {
@@ -155,15 +155,15 @@ nsresult nsXPathEvaluator::ParseContextImpl::resolveNamespacePrefix
     return gTxNameSpaceManager->RegisterNameSpace(ns, aID);
 }
 
-nsresult nsXPathEvaluator::ParseContextImpl::resolveFunctionCall(txAtom* aName,
+nsresult nsXPathEvaluator::ParseContextImpl::resolveFunctionCall(nsIAtom* aName,
                                                                  PRInt32 aID,
                                                                  FunctionCall*& aFn)
 {
     return NS_ERROR_XPATH_PARSE_FAILED;
 }
 
-void nsXPathEvaluator::ParseContextImpl::receiveError(const String& aMsg,
-                                                       nsresult aRes)
+void nsXPathEvaluator::ParseContextImpl::receiveError(const nsAString& aMsg,
+                                                      nsresult aRes)
 {
     mLastError = aRes;
     // forward aMsg to console service?

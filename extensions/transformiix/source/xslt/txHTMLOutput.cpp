@@ -37,136 +37,172 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "txHTMLOutput.h"
+#include "nsCOMArray.h"
+#include "nsStaticNameTable.h"
 #include "txAtoms.h"
 #include "txOutputFormat.h"
+#include "txStringUtils.h"
 #include "XMLUtils.h"
+
+#define EMPTY_ELEMENTS_COUNT 13
+const char* kHTMLEmptyTags[] =
+{
+    "area",
+    "base",
+    "basefont",
+    "br",
+    "col",
+    "frame",
+    "hr",
+    "img",
+    "input",
+    "isindex",
+    "link",
+    "meta",
+    "param"
+};
+
+#define SHORTHAND_ATTR_COUNT 12
+const char* kHTMLEmptyAttributes[] =
+{
+    "checked",
+    "compact",
+    "declare",
+    "defer",
+    "disabled",
+    "ismap",
+    "multiple",
+    "noresize",
+    "noshade",
+    "nowrap",
+    "readonly",
+    "selected"
+};
+
+struct txEmptyAttributesMaps
+{
+    typedef nsCOMArray<nsIAtom> EmptyAttrBag;
+    EmptyAttrBag mMaps[SHORTHAND_ATTR_COUNT];
+};
+
+static PRInt32 gTableRefCount;
+static nsStaticCaseInsensitiveNameTable* gHTMLEmptyTagsTable;
+static nsStaticCaseInsensitiveNameTable* gHTMLEmptyAttributesTable;
+static txEmptyAttributesMaps* gHTMLEmptyAttributesMaps;
+
+/* static */
+nsresult
+txHTMLOutput::init()
+{
+    if (0 == gTableRefCount++) {
+        NS_ASSERTION(!gHTMLEmptyTagsTable, "pre existing array!");
+        gHTMLEmptyTagsTable = new nsStaticCaseInsensitiveNameTable();
+        if (!gHTMLEmptyTagsTable) {
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+
+        gHTMLEmptyTagsTable->Init(kHTMLEmptyTags, EMPTY_ELEMENTS_COUNT);
+
+        NS_ASSERTION(!gHTMLEmptyAttributesTable, "pre existing array!");
+        gHTMLEmptyAttributesTable = new nsStaticCaseInsensitiveNameTable();
+        if (!gHTMLEmptyAttributesTable) {
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+
+        gHTMLEmptyAttributesTable->Init(kHTMLEmptyAttributes,
+                                        SHORTHAND_ATTR_COUNT);
+
+        NS_ASSERTION(!gHTMLEmptyAttributesMaps, "pre existing map!");
+        gHTMLEmptyAttributesMaps = new txEmptyAttributesMaps();
+        if (!gHTMLEmptyAttributesMaps) {
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+
+        // checked
+        gHTMLEmptyAttributesMaps->mMaps[0].AppendObject(txHTMLAtoms::input);
+
+        // compact
+        gHTMLEmptyAttributesMaps->mMaps[1].AppendObject(txHTMLAtoms::dir);
+        gHTMLEmptyAttributesMaps->mMaps[1].AppendObject(txHTMLAtoms::dl);
+        gHTMLEmptyAttributesMaps->mMaps[1].AppendObject(txHTMLAtoms::menu);
+        gHTMLEmptyAttributesMaps->mMaps[1].AppendObject(txHTMLAtoms::ol);
+        gHTMLEmptyAttributesMaps->mMaps[1].AppendObject(txHTMLAtoms::ul);
+
+        // declare
+        gHTMLEmptyAttributesMaps->mMaps[2].AppendObject(txHTMLAtoms::object);
+
+        // defer
+        gHTMLEmptyAttributesMaps->mMaps[3].AppendObject(txHTMLAtoms::script);
+
+        // disabled
+        gHTMLEmptyAttributesMaps->mMaps[4].AppendObject(txHTMLAtoms::button);
+        gHTMLEmptyAttributesMaps->mMaps[4].AppendObject(txHTMLAtoms::input);
+        gHTMLEmptyAttributesMaps->mMaps[4].AppendObject(txHTMLAtoms::optgroup);
+        gHTMLEmptyAttributesMaps->mMaps[4].AppendObject(txHTMLAtoms::option);
+        gHTMLEmptyAttributesMaps->mMaps[4].AppendObject(txHTMLAtoms::select);
+        gHTMLEmptyAttributesMaps->mMaps[4].AppendObject(txHTMLAtoms::textarea);
+
+        // ismap
+        gHTMLEmptyAttributesMaps->mMaps[5].AppendObject(txHTMLAtoms::img);
+        gHTMLEmptyAttributesMaps->mMaps[5].AppendObject(txHTMLAtoms::input);
+
+        // multiple
+        gHTMLEmptyAttributesMaps->mMaps[6].AppendObject(txHTMLAtoms::select);
+
+        // noresize
+        gHTMLEmptyAttributesMaps->mMaps[7].AppendObject(txHTMLAtoms::frame);
+
+        // noshade
+        gHTMLEmptyAttributesMaps->mMaps[8].AppendObject(txHTMLAtoms::hr);
+
+        // nowrap
+        gHTMLEmptyAttributesMaps->mMaps[9].AppendObject(txHTMLAtoms::td);
+        gHTMLEmptyAttributesMaps->mMaps[9].AppendObject(txHTMLAtoms::th);
+
+        // readonly
+        gHTMLEmptyAttributesMaps->mMaps[10].AppendObject(txHTMLAtoms::input);
+        gHTMLEmptyAttributesMaps->mMaps[10].AppendObject(txHTMLAtoms::textarea);
+
+        // selected
+        gHTMLEmptyAttributesMaps->mMaps[11].AppendObject(txHTMLAtoms::option);
+    }
+
+    return NS_OK;
+}
+
+/* static */
+void
+txHTMLOutput::shutdown()
+{
+    if (0 == --gTableRefCount) {
+        if (gHTMLEmptyTagsTable) {
+            delete gHTMLEmptyTagsTable;
+            gHTMLEmptyTagsTable = nsnull;
+        }
+         if (gHTMLEmptyAttributesTable) {
+            delete gHTMLEmptyAttributesTable;
+            gHTMLEmptyAttributesTable = nsnull;
+        }
+        if (gHTMLEmptyAttributesMaps) {
+            delete gHTMLEmptyAttributesMaps;
+            gHTMLEmptyAttributesMaps = nsnull;
+        }
+   }
+}
 
 txHTMLOutput::txHTMLOutput(txOutputFormat* aFormat, ostream* aOut)
     : txXMLOutput(aFormat, aOut)
 {
-    mUseEmptyElementShorthand = MB_FALSE;
-
-    mHTMLEmptyTags.setOwnership(Map::eOwnsNone);
-    mHTMLEmptyTags.put(txHTMLAtoms::area, txHTMLAtoms::area);
-    mHTMLEmptyTags.put(txHTMLAtoms::base, txHTMLAtoms::base);
-    mHTMLEmptyTags.put(txHTMLAtoms::basefont, txHTMLAtoms::basefont);
-    mHTMLEmptyTags.put(txHTMLAtoms::br, txHTMLAtoms::br);
-    mHTMLEmptyTags.put(txHTMLAtoms::col, txHTMLAtoms::col);
-    mHTMLEmptyTags.put(txHTMLAtoms::frame, txHTMLAtoms::frame);
-    mHTMLEmptyTags.put(txHTMLAtoms::hr, txHTMLAtoms::hr);    
-    mHTMLEmptyTags.put(txHTMLAtoms::img, txHTMLAtoms::img);
-    mHTMLEmptyTags.put(txHTMLAtoms::input, txHTMLAtoms::input);
-    mHTMLEmptyTags.put(txHTMLAtoms::isindex, txHTMLAtoms::isindex);
-    mHTMLEmptyTags.put(txHTMLAtoms::link, txHTMLAtoms::link);
-    mHTMLEmptyTags.put(txHTMLAtoms::meta, txHTMLAtoms::meta);
-    mHTMLEmptyTags.put(txHTMLAtoms::param, txHTMLAtoms::param);
-
-    mHTMLEmptyAttributes.setOwnership(Map::eOwnsItems);
-
-    // checked
-    txList* elementList = new List;
-    if (!elementList)
-        return;
-    elementList->add(txHTMLAtoms::input);
-    mHTMLEmptyAttributes.put(txHTMLAtoms::checked, elementList);
-
-    // compact
-    elementList = new List;
-    if (!elementList)
-        return;
-    elementList->add(txHTMLAtoms::dir);
-    elementList->add(txHTMLAtoms::dl);
-    elementList->add(txHTMLAtoms::menu);
-    elementList->add(txHTMLAtoms::ol);
-    elementList->add(txHTMLAtoms::ul);
-    mHTMLEmptyAttributes.put(txHTMLAtoms::compact, elementList);
-
-    // declare
-    elementList = new List;
-    if (!elementList)
-        return;
-    elementList->add(txHTMLAtoms::object);
-    mHTMLEmptyAttributes.put(txHTMLAtoms::declare, elementList);
-
-    // defer
-    elementList = new List;
-    if (!elementList)
-        return;
-    elementList->add(txHTMLAtoms::script);
-    mHTMLEmptyAttributes.put(txHTMLAtoms::defer, elementList);
-
-    // disabled
-    elementList = new List;
-    if (!elementList)
-        return;
-    elementList->add(txHTMLAtoms::button);
-    elementList->add(txHTMLAtoms::input);
-    elementList->add(txHTMLAtoms::optgroup);
-    elementList->add(txHTMLAtoms::option);
-    elementList->add(txHTMLAtoms::select);
-    elementList->add(txHTMLAtoms::textarea);
-    mHTMLEmptyAttributes.put(txHTMLAtoms::disabled, elementList);
-
-    // ismap
-    elementList = new List;
-    if (!elementList)
-        return;
-    elementList->add(txHTMLAtoms::img);
-    elementList->add(txHTMLAtoms::input);
-    mHTMLEmptyAttributes.put(txHTMLAtoms::ismap, elementList);
-
-    // multiple
-    elementList = new List;
-    if (!elementList)
-        return;
-    elementList->add(txHTMLAtoms::select);
-    mHTMLEmptyAttributes.put(txHTMLAtoms::multiple, elementList);
-
-    // noresize
-    elementList = new List;
-    if (!elementList)
-        return;
-    elementList->add(txHTMLAtoms::frame);
-    mHTMLEmptyAttributes.put(txHTMLAtoms::noresize, elementList);
-
-    // noshade
-    elementList = new List;
-    if (!elementList)
-        return;
-    elementList->add(txHTMLAtoms::hr);
-    mHTMLEmptyAttributes.put(txHTMLAtoms::noshade, elementList);
-
-    // nowrap
-    elementList = new List;
-    if (!elementList)
-        return;
-    elementList->add(txHTMLAtoms::td);
-    elementList->add(txHTMLAtoms::th);
-    mHTMLEmptyAttributes.put(txHTMLAtoms::nowrap, elementList);
-
-    // readonly
-    elementList = new List;
-    if (!elementList)
-        return;
-    elementList->add(txHTMLAtoms::input);
-    elementList->add(txHTMLAtoms::textarea);
-    mHTMLEmptyAttributes.put(txHTMLAtoms::readonly, elementList);
-
-    // selected
-    elementList = new List;
-    if (!elementList)
-        return;
-    elementList->add(txHTMLAtoms::option);
-    mHTMLEmptyAttributes.put(txHTMLAtoms::selected, elementList);
+    mUseEmptyElementShorthand = PR_FALSE;
 }
 
 txHTMLOutput::~txHTMLOutput()
 {
 }
 
-void txHTMLOutput::attribute(const String& aName,
+void txHTMLOutput::attribute(const nsAString& aName,
                              const PRInt32 aNsID,
-                             const String& aValue)
+                             const nsAString& aValue)
 {
     if (!mStartTagOpen)
         // XXX Signal this? (can't add attributes after element closed)
@@ -174,13 +210,13 @@ void txHTMLOutput::attribute(const String& aName,
 
     MBool shortHand = MB_FALSE;
     if (aNsID == kNameSpaceID_None) {
-        String localPart;
-        XMLUtils::getLocalPart(aName, localPart);
+        const nsAString& localPart = XMLUtils::getLocalPart(aName);
         shortHand = isShorthandAttribute(localPart);
-        if (shortHand && localPart.isEqualIgnoreCase(aValue)) {
+        if (shortHand &&
+            localPart.Equals(aValue, txCaseInsensitiveStringComparator())) {
             txListIterator iter(&mAttributes);
             txAttribute* setAtt = 0;
-            txAtom* localName = TX_GET_ATOM(localPart);
+            nsCOMPtr<nsIAtom> localName = do_GetAtom(localPart);
             txExpandedName att(aNsID, localName);
             while ((setAtt = (txAttribute*)iter.next())) {
                  if (setAtt->mName == att) {
@@ -189,18 +225,17 @@ void txHTMLOutput::attribute(const String& aName,
                  }
             }
             if (!setAtt) {
-                setAtt = new txAttribute(aNsID, localName, String());
+                setAtt = new txAttribute(aNsID, localName, nsString());
                 setAtt->mShorthand = MB_TRUE;
                 mAttributes.add(setAtt);
             }
-            TX_IF_RELEASE_ATOM(localName);
         }
     }
     if (!shortHand)
         txXMLOutput::attribute(aName, aNsID, aValue);
 }
 
-void txHTMLOutput::characters(const String& aData, PRBool aDOE)
+void txHTMLOutput::characters(const nsAString& aData, PRBool aDOE)
 {
     if (aDOE) {
         closeStartTag(MB_FALSE);
@@ -223,10 +258,11 @@ void txHTMLOutput::characters(const String& aData, PRBool aDOE)
     }
 }
 
-void txHTMLOutput::endElement(const String& aName,
+void txHTMLOutput::endElement(const nsAString& aName,
                               const PRInt32 aNsID)
 {
-    if ((aNsID == kNameSpaceID_None) && isShorthandElement(aName) &&
+    const nsAString& localPart = XMLUtils::getLocalPart(aName);
+    if ((aNsID == kNameSpaceID_None) && isShorthandElement(localPart) &&
         mStartTagOpen) {
         MBool newLine = (mOutputFormat.mIndent == eTrue) &&
                         mAfterEndTag;
@@ -243,14 +279,19 @@ void txHTMLOutput::endElement(const String& aName,
     delete (txExpandedName*)mCurrentElements.pop();
 }
 
-void txHTMLOutput::processingInstruction(const String& aTarget, const String& aData)
+void txHTMLOutput::processingInstruction(const nsAString& aTarget,
+                                         const nsAString& aData)
 {
     closeStartTag(MB_FALSE);
     if (mOutputFormat.mIndent == eTrue) {
         for (PRUint32 i = 0; i < mIndentLevel; i++)
             *mOut << ' ';
     }
-    *mOut << PI_START << aTarget << SPACE << aData << R_ANGLE_BRACKET;
+    *mOut << PI_START;
+    printUTF8Chars(aTarget);
+    *mOut << SPACE;
+    printUTF8Chars(aData);
+    *mOut << R_ANGLE_BRACKET;
     if (mOutputFormat.mIndent == eTrue)
         *mOut << endl;
 }
@@ -264,23 +305,22 @@ void txHTMLOutput::startDocument()
     *mOut << DOCTYPE_END << endl;
 }
 
-void txHTMLOutput::startElement(const String& aName,
+void txHTMLOutput::startElement(const nsAString& aName,
                                 const PRInt32 aNsID)
 {
     txXMLOutput::startElement(aName, aNsID);
 
-    txAtom* localAtom;
+    nsCOMPtr<nsIAtom> localAtom;
     if (aNsID == kNameSpaceID_None) {
-        String localName(aName);
-        localName.toLowerCase();
-        localAtom = TX_GET_ATOM(localName);
+        nsAutoString localName;
+        TX_ToLowerCase(aName, localName);
+        localAtom = do_GetAtom(localName);
     }
     else {
-        localAtom = TX_GET_ATOM(aName);
+        localAtom = do_GetAtom(aName);
     }
     NS_ASSERTION(localAtom, "Can't get atom");
     txExpandedName* currentElement = new txExpandedName(aNsID, localAtom);
-    TX_IF_RELEASE_ATOM(localAtom);
     NS_ASSERTION(currentElement, "Can't create currentElement");
     if (currentElement)
         mCurrentElements.push(currentElement);
@@ -299,38 +339,30 @@ void txHTMLOutput::closeStartTag(MBool aUseEmptyElementShorthand)
                 *mOut << ' ';
         }
         *mOut << LT << "meta http-equiv=" << QUOTE << "Content-Type" << QUOTE;
-        *mOut << " content=" << QUOTE << mOutputFormat.mMediaType << ";";
-        *mOut << " charset=" << mOutputFormat.mEncoding << QUOTE << GT;
+        *mOut << " content=" << QUOTE;
+        printUTF8Chars(mOutputFormat.mMediaType);
+        *mOut << "; charset=";
+        printUTF8Chars(mOutputFormat.mEncoding);
+        *mOut << QUOTE << GT;
     }
     else {
         txXMLOutput::closeStartTag(aUseEmptyElementShorthand);
     }
 }
 
-MBool txHTMLOutput::isShorthandElement(const String& aName)
+MBool txHTMLOutput::isShorthandElement(const nsAString& aLocalName)
 {
-    String localName;
-    XMLUtils::getLocalPart(aName, localName);
-    localName.toLowerCase();
-    txAtom* localAtom = TX_GET_ATOM(localName);
-    if (localAtom && mHTMLEmptyTags.get(localAtom))
-        return MB_TRUE;
-    return MB_FALSE;
+    return (gHTMLEmptyTagsTable->Lookup(aLocalName) !=
+            nsStaticCaseInsensitiveNameTable::NOT_FOUND);
 }
 
-MBool txHTMLOutput::isShorthandAttribute(const String& aLocalName)
+MBool txHTMLOutput::isShorthandAttribute(const nsAString& aLocalName)
 {
-    String localName(aLocalName);
-    localName.toLowerCase();
-    txAtom* localAtom = TX_GET_ATOM(localName);
-    txList* elements = (txList*)mHTMLEmptyAttributes.get(localAtom);
-    if (localAtom && (elements)) {
-        txExpandedName* currentElement = (txExpandedName*)mCurrentElements.peek();
-        txListIterator iter(elements);
-        while (iter.hasNext()) {
-             if ((txAtom*)iter.next() == currentElement->mLocalName)
-                 return MB_TRUE;
-        }
+    PRInt32 index = gHTMLEmptyTagsTable->Lookup(aLocalName);
+    if (index == nsStaticCaseInsensitiveNameTable::NOT_FOUND) {
+        return PR_FALSE;
     }
-    return MB_FALSE;
+
+    txExpandedName* currentElement = (txExpandedName*)mCurrentElements.peek();
+    return (gHTMLEmptyAttributesMaps->mMaps[index].IndexOf(currentElement->mLocalName) > -1);
 }

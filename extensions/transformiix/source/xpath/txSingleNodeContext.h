@@ -40,6 +40,7 @@
 #define __TX_XPATH_SINGLENODE_CONTEXT
 
 #include "txIXPathContext.h"
+#include "nsLiteralString.h"
 
 class txSingleNodeContext : public txIEvalContext
 {
@@ -53,7 +54,7 @@ public:
     ~txSingleNodeContext()
     {}
 
-    nsresult getVariable(PRInt32 aNamespace, txAtom* aLName,
+    nsresult getVariable(PRInt32 aNamespace, nsIAtom* aLName,
                          ExprResult*& aResult)
     {
         NS_ASSERTION(mInner, "mInner is null!!!");
@@ -66,13 +67,12 @@ public:
         return mInner->isStripSpaceAllowed(aNode);
     }
 
-    void receiveError(const String& aMsg, nsresult aRes)
+    void receiveError(const nsAString& aMsg, nsresult aRes)
     {
         NS_ASSERTION(mInner, "mInner is null!!!");
 #ifdef DEBUG
-        String error("forwarded error: ");
-        error.append(aMsg);
-        mInner->receiveError(error, aRes);
+        mInner->receiveError(NS_LITERAL_STRING("forwarded error: ") + aMsg,
+                             aRes);
 #else
         mInner->receiveError(aMsg, aRes);
 #endif

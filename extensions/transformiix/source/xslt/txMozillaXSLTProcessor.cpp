@@ -45,7 +45,6 @@
 #include "nsIDOMClassInfo.h"
 #include "nsIScriptLoader.h"
 #include "nsNetUtil.h"
-#include "ProcessorState.h"
 #include "txMozillaTextOutput.h"
 #include "txMozillaXMLOutput.h"
 #include "txSingleNodeContext.h"
@@ -53,7 +52,6 @@
 #include "XMLUtils.h"
 #include "txUnknownHandler.h"
 #include "nsIHTMLDocument.h"
-#include "XSLTProcessor.h"
 
 /**
  * Output Handler Factories
@@ -61,12 +59,11 @@
 class txToDocHandlerFactory : public txIOutputHandlerFactory
 {
 public:
-    txToDocHandlerFactory(ProcessorState* aPs,
-                          nsIDOMDocument* aSourceDocument,
+    txToDocHandlerFactory(nsIDOMDocument* aSourceDocument,
                           nsIDOMDocument* aResultDocument,
                           nsITransformObserver* aObserver)
-        : mPs(aPs), mSourceDocument(aSourceDocument),
-          mResultDocument(aResultDocument), mObserver(aObserver)
+        : mSourceDocument(aSourceDocument), mResultDocument(aResultDocument),
+          mObserver(aObserver)
     {
     }
 
@@ -77,7 +74,6 @@ public:
     TX_DECL_TXIOUTPUTHANDLERFACTORY;
 
 private:
-    ProcessorState* mPs;
     nsCOMPtr<nsIDOMDocument> mSourceDocument;
     nsCOMPtr<nsIDOMDocument> mResultDocument;
     nsCOMPtr<nsITransformObserver> mObserver;
@@ -110,13 +106,14 @@ txToDocHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
         case eMethodNotSet:
         case eXMLOutput:
         {
-            // XXX *aHandler = new txUnknownHandler(mPs);
+            *aHandler = new txUnknownHandler(mPs);
             break;
         }
 
         case eHTMLOutput:
         {
-            *aHandler = new txMozillaXMLOutput(String(), kNameSpaceID_None,
+            *aHandler = new txMozillaXMLOutput(nsString(),
+                                               kNameSpaceID_None,
                                                aFormat, mSourceDocument,
                                                mResultDocument, mObserver);
             break;
@@ -136,7 +133,7 @@ txToDocHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
 
 nsresult
 txToDocHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
-                                         const String& aName,
+                                         const nsAString& aName,
                                          PRInt32 aNsID,
                                          txIOutputXMLEventHandler** aHandler)
 {
@@ -210,7 +207,7 @@ txToFragmentHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
 
 nsresult
 txToFragmentHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
-                                              const String& aName,
+                                              const nsAString& aName,
                                               PRInt32 aNsID,
                                               txIOutputXMLEventHandler** aHandler)
 {
@@ -723,7 +720,7 @@ txVariable::Convert(nsIVariant *aValue, ExprResult** aResult)
         case nsIDataType::VTYPE_CSTRING:
         case nsIDataType::VTYPE_ASTRING:
         {
-            String value;
+            nsAutoString value;
             nsresult rv = aValue->GetAsAString(value);
             NS_ENSURE_SUCCESS(rv, rv);
 

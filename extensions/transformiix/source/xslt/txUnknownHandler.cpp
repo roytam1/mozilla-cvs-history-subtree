@@ -85,7 +85,7 @@ void txUnknownHandler::characters(const nsAString& aData, PRBool aDOE)
     addTransaction(transaction);
 }
 
-void txUnknownHandler::comment(const String& aData)
+void txUnknownHandler::comment(const nsAString& aData)
 {
     txOneStringTransaction* transaction =
         new txOneStringTransaction(txOutputTransaction::eCommentTransaction,

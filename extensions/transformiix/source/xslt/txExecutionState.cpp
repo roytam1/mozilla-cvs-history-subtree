@@ -96,7 +96,7 @@ txExecutionState::end()
 
 
 nsresult
-txExecutionState::getVariable(PRInt32 aNamespace, txAtom* aLName,
+txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
                               ExprResult*& aResult)
 {
     // XXX implement me
@@ -111,7 +111,7 @@ txExecutionState::isStripSpaceAllowed(Node* aNode)
 }
 
 void
-txExecutionState::receiveError(const String& aMsg, nsresult aRes)
+txExecutionState::receiveError(const nsAString& aMsg, nsresult aRes)
 {
     // XXX implement me
 }

@@ -85,9 +85,9 @@
 
 class txAttribute {
 public:
-    txAttribute(PRInt32 aNsID, txAtom* aLocalName, const String& aValue);
+    txAttribute(PRInt32 aNsID, nsIAtom* aLocalName, const nsAString& aValue);
     txExpandedName mName;
-    String mValue;
+    nsString mValue;
     MBool mShorthand;
 };
 
@@ -106,9 +106,9 @@ public:
      * @param aNsID the namespace ID of the attribute
      * @param aValue the value of the attribute
      */
-    virtual void attribute(const String& aName,
+    virtual void attribute(const nsAString& aName,
                            const PRInt32 aNsID,
-                           const String& aValue);
+                           const nsAString& aValue);
 
     /*
      * Signals to receive characters.
@@ -116,21 +116,21 @@ public:
      * @param aData the characters to receive
      * @param aDOE disable output escaping for these characters
      */
-    virtual void characters(const String& aData, PRBool aDOE);
+    virtual void characters(const nsAString& aData, PRBool aDOE);
 
     /*
      * Signals to receive characters that don't need output escaping.
      *
      * @param aData the characters to receive
      */
-    virtual void charactersNoOutputEscaping(const String& aData);
+    virtual void charactersNoOutputEscaping(const nsAString& aData);
 
     /*
      * Signals to receive data that should be treated as a comment.
      *
      * @param data the comment data to receive
      */
-    void comment(const String& aData);
+    void comment(const nsAString& aData);
 
     /*
      * Signals the end of a document. It is an error to call
@@ -144,7 +144,7 @@ public:
      * @param aName the name of the element
      * @param aNsID the namespace ID of the element
      */
-    virtual void endElement(const String& aName,
+    virtual void endElement(const nsAString& aName,
                             const PRInt32 aNsID);
 
     /**
@@ -165,8 +165,8 @@ public:
      * @param aTarget the target of the processing instruction
      * @param aData the data of the processing instruction
      */
-    virtual void processingInstruction(const String& aTarget,
-                                       const String& aData);
+    virtual void processingInstruction(const nsAString& aTarget,
+                                       const nsAString& aData);
 
     /*
      * Signals the start of a document.
@@ -179,14 +179,15 @@ public:
      * @param aName the name of the element
      * @param aNsID the namespace ID of the element
      */
-    virtual void startElement(const String& aName,
+    virtual void startElement(const nsAString& aName,
                               const PRInt32 aNsID);
 
 protected:
     virtual void closeStartTag(MBool aUseEmptyElementShorthand);
-    void printUTF8Char(DOM_CHAR& ch);
-    void printUTF8Chars(const String& aData);
-    void printWithXMLEntities(const String& aData, MBool aAttribute = MB_FALSE);
+    void printUTF8Char(PRUnichar& ch);
+    void printUTF8Chars(const nsAString& aData);
+    void printWithXMLEntities(const nsAString& aData,
+                              MBool aAttribute = MB_FALSE);
 
     ostream* mOut;
     txOutputFormat mOutputFormat;
@@ -200,7 +201,7 @@ protected:
     Stack mCDATASections;
 
 private:
-    DOM_CHAR mBuffer[4];
+    PRUnichar mBuffer[4];
 };
 
 #endif

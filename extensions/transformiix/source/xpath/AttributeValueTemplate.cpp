@@ -62,7 +62,7 @@ void AttributeValueTemplate::addExpr(Expr* expr) {
 ExprResult* AttributeValueTemplate::evaluate(txIEvalContext* aContext)
 {
     txListIterator iter(&expressions);
-    String result;
+    nsAutoString result;
     while (iter.hasNext()) {
         Expr* expr = (Expr*)iter.next();
         ExprResult* exprResult = expr->evaluate(aContext);
@@ -80,13 +80,13 @@ ExprResult* AttributeValueTemplate::evaluate(txIEvalContext* aContext)
 * other #toString() methods for Expressions.
 * @return the String representation of this Expr.
 **/
-void AttributeValueTemplate::toString(String& str) {
+void AttributeValueTemplate::toString(nsAString& str) {
     txListIterator iter(&expressions);
     while (iter.hasNext()) {
-        str.append('{');
+        str.Append(PRUnichar('{'));
         Expr* expr = (Expr*)iter.next();
         expr->toString(str);
-        str.append('}');
+        str.Append(PRUnichar('}'));
     }
 } //-- toString
 

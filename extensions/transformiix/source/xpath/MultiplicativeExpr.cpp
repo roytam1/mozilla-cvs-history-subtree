@@ -129,24 +129,24 @@ ExprResult* MultiplicativeExpr::evaluate(txIEvalContext* aContext)
  * other #toString() methods for Expressions.
  * @return the String representation of this Expr.
 **/
-void MultiplicativeExpr::toString(String& str) {
+void MultiplicativeExpr::toString(nsAString& str) {
 
     if ( leftExpr ) leftExpr->toString(str);
-    else str.append("null");
+    else str.Append(NS_LITERAL_STRING("null"));
 
     switch ( op ) {
         case DIVIDE:
-            str.append(" div ");
+            str.Append(NS_LITERAL_STRING(" div "));
             break;
         case MODULUS:
-            str.append(" mod ");
+            str.Append(NS_LITERAL_STRING(" mod "));
             break;
         default:
-            str.append(" * ");
+            str.Append(NS_LITERAL_STRING(" * "));
             break;
     }
     if ( rightExpr ) rightExpr->toString(str);
-    else str.append("null");
+    else str.Append(NS_LITERAL_STRING("null"));
 
 } //-- toString
 

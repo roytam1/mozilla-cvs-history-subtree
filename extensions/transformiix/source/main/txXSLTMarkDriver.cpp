@@ -44,6 +44,7 @@
  */
 
 #include "txStandaloneXSLTProcessor.h"
+#include "nsXPCOM.h"
 #include "xmExternalDriver.hpp"
 
 class txDriverProcessor : public txStandaloneXSLTProcessor,
@@ -57,13 +58,13 @@ public:
     int loadStylesheet (char * filename)
     {
         delete mXSL;
-        mXSL = parsePath(String(filename), mObserver);
+        mXSL = parsePath(nsDependentCString(filename), mObserver);
         return mXSL ? 0 : 1;
     }
     int setInputDocument (char * filename)
     {
         delete mXML;
-        mXML = parsePath(String(filename), mObserver);
+        mXML = parsePath(nsDependentCString(filename), mObserver);
         return mXML ? 0 : 1;
     }
     int openOutput (char * outputFilename)
@@ -111,9 +112,11 @@ private:
 int main (int argc, char ** argv)
 {
     txDriverProcessor driver;
+    NS_InitXPCOM2(nsnull, nsnull, nsnull);
     if (!txDriverProcessor::txInit())
         return 1;
     driver.main (argc, argv);
     txDriverProcessor::txShutdown();
+    NS_ShutdownXPCOM(nsnull);
     return 0;
 }

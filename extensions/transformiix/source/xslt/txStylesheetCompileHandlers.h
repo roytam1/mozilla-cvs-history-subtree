@@ -47,13 +47,13 @@ struct txStylesheetAttr;
 class txStylesheetCompilerState;
 
 typedef nsresult (*HandleStartFn) (PRInt32 aNamespaceID,
-                                   txAtom* aLocalName,
-                                   txAtom* aPrefix,
+                                   nsIAtom* aLocalName,
+                                   nsIAtom* aPrefix,
                                    txStylesheetAttr* aAttributes,
                                    PRInt32 aAttrCount,
                                    txStylesheetCompilerState& aState);
 typedef nsresult (*HandleEndFn)   (txStylesheetCompilerState& aState);
-typedef nsresult (*HandleTextFn)  (const String& aStr,
+typedef nsresult (*HandleTextFn)  (const nsAString& aStr,
                                    txStylesheetCompilerState& aState);
 
 struct txElementHandler {
@@ -75,7 +75,7 @@ class txHandlerTable
 public:
     txHandlerTable();
     nsresult init(txHandlerTableData* aTableData);
-    txElementHandler* find(PRInt32 aNamespaceID, txAtom* aLocalName);
+    txElementHandler* find(PRInt32 aNamespaceID, nsIAtom* aLocalName);
     
     HandleTextFn mTextHandler;
     txElementHandler* mLREHandler;

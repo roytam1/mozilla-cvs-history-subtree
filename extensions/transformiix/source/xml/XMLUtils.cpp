@@ -30,32 +30,31 @@
  */
 
 #include "XMLUtils.h"
+#include "nsString.h"
 #include "txAtoms.h"
+#include "txStringUtils.h"
 
-nsresult txExpandedName::init(const String& aQName,
+nsresult txExpandedName::init(const nsAString& aQName,
                               txNamespaceMap& aResolver,
                               MBool aUseDefault)
 {
-    if (!XMLUtils::isValidQName(aQName))
+    if (!XMLUtils::isValidQName(PromiseFlatString(aQName)))
         return NS_ERROR_FAILURE;
 
-    PRInt32 idx = aQName.indexOf(':');
+    PRInt32 idx = aQName.FindChar(':');
     if (idx != kNotFound) {
-        String localName, prefixStr;
-        aQName.subString(0, (PRUint32)idx, prefixStr);
-        txAtom* prefix = TX_GET_ATOM(prefixStr);
+        nsCOMPtr<nsIAtom> prefix =
+            do_GetAtom(Substring(aQName, 0, (PRUint32)idx));
         PRInt32 namespaceID = aResolver.lookupNamespace(prefix);
         if (namespaceID == kNameSpaceID_Unknown)
             return NS_ERROR_FAILURE;
         mNamespaceID = namespaceID;
 
-        aQName.subString((PRUint32)idx + 1, localName);
-        TX_IF_RELEASE_ATOM(mLocalName);
-        mLocalName = TX_GET_ATOM(localName);
+        mLocalName = do_GetAtom(Substring(aQName, (PRUint32)idx + 1,
+                                          aQName.Length() - (idx + 1)));
     }
     else {
-        TX_IF_RELEASE_ATOM(mLocalName);
-        mLocalName = TX_GET_ATOM(aQName);
+        mLocalName = do_GetAtom(aQName);
         if (aUseDefault)
             mNamespaceID = aResolver.lookupNamespace(0);
         else
@@ -68,52 +67,51 @@ nsresult txExpandedName::init(const String& aQName,
  //- Implementation of XMLUtils -/
 //------------------------------/
 
-void XMLUtils::getPrefix(const String& src, String& dest)
+void XMLUtils::getPrefix(const nsAString& src, nsIAtom** dest)
 {
     // Anything preceding ':' is the namespace part of the name
-    PRInt32 idx = src.indexOf(':');
+    PRInt32 idx = src.FindChar(':');
     if (idx == kNotFound) {
+        *dest = nsnull;
         return;
     }
-    // Use a temporary String to prevent any chars in dest
-    // from being lost.
+
     NS_ASSERTION(idx > 0, "This QName looks invalid.");
-    String tmp;
-    src.subString(0, (PRUint32)idx, tmp);
-    dest.append(tmp);
+    *dest = NS_NewAtom(Substring(src, 0, idx));
 }
 
-void XMLUtils::getLocalPart(const String& src, String& dest)
+const nsDependentSubstring XMLUtils::getLocalPart(const nsAString& src)
 {
     // Anything after ':' is the local part of the name
-    PRInt32 idx = src.indexOf(':');
+    PRInt32 idx = src.FindChar(':');
     if (idx == kNotFound) {
-        dest.append(src);
-        return;
+        return Substring(src, 0, src.Length());
     }
-    // Use a temporary String to prevent any chars in dest
-    // from being lost.
+
     NS_ASSERTION(idx > 0, "This QName looks invalid.");
-    String tmp;
-    src.subString((PRUint32)idx + 1, tmp);
-    dest.append(tmp);
+    return Substring(src, idx + 1, src.Length() - (idx + 1));
 }
 
-MBool XMLUtils::isValidQName(const String& aName)
+void XMLUtils::getLocalPart(const nsAString& src, nsIAtom** dest)
 {
-    if (aName.isEmpty()) {
+    *dest = NS_NewAtom(getLocalPart(src));
+}
+
+MBool XMLUtils::isValidQName(const nsAFlatString& aName)
+{
+    if (aName.IsEmpty()) {
         return MB_FALSE;
     }
 
-    if (!isLetter(aName.charAt(0))) {
+    if (!isLetter(aName.CharAt(0))) {
         return MB_FALSE;
     }
 
-    PRUint32 size = aName.length();
+    PRUint32 size = aName.Length();
     PRUint32 i;
     MBool foundColon = MB_FALSE;
     for (i = 1; i < size; ++i) {
-        UNICODE_CHAR character = aName.charAt(i);
+        PRUnichar character = aName.CharAt(i);
         if (character == ':') {
             foundColon = MB_TRUE;
             ++i;
@@ -128,11 +126,11 @@ MBool XMLUtils::isValidQName(const String& aName)
         // a valid QName.
         return !foundColon;
     }
-    if (!isLetter(aName.charAt(i))) {
+    if (!isLetter(aName.CharAt(i))) {
         return MB_FALSE;
     }
     for (++i; i < size; ++i) {
-        if (!isNCNameChar(aName.charAt(i))) {
+        if (!isNCNameChar(aName.CharAt(i))) {
             return MB_FALSE;
         }
     }
@@ -141,37 +139,48 @@ MBool XMLUtils::isValidQName(const String& aName)
 
 /**
  * Returns true if the given string has only whitespace characters
-**/
-MBool XMLUtils::isWhitespace(const String& aText)
+ */
+PRBool XMLUtils::isWhitespace(const nsAFlatString& aText)
 {
-    PRUint32 size = aText.length();
-    PRUint32 i;
-    for (i = 0; i < size; ++i) {
-        if (!isWhitespace(aText.charAt(i))) {
-            return MB_FALSE;
+    nsAFlatString::const_char_iterator start, end;
+    aText.BeginReading(start);
+    aText.EndReading(end);
+    for ( ; start != end; ++start) {
+        if (!isWhitespace(*start)) {
+            return PR_FALSE;
         }
     }
-    return MB_TRUE;
+    return PR_TRUE;
+}
+
+/**
+ * Returns true if the given node's value has only whitespace characters
+ */
+PRBool XMLUtils::isWhitespace(Node* aNode)
+{
+    nsAutoString text;
+    aNode->getNodeValue(text);
+    return isWhitespace(text);
 }
 
 /**
  * Normalizes the value of a XML processing instruction
 **/
-void XMLUtils::normalizePIValue(String& piValue)
+void XMLUtils::normalizePIValue(nsAString& piValue)
 {
-    String origValue(piValue);
-    PRUint32 origLength = origValue.length();
+    nsAutoString origValue(piValue);
+    PRUint32 origLength = origValue.Length();
     PRUint32 conversionLoop = 0;
-    UNICODE_CHAR prevCh = 0;
-    piValue.clear();
+    PRUnichar prevCh = 0;
+    piValue.Truncate();
 
     while (conversionLoop < origLength) {
-        UNICODE_CHAR ch = origValue.charAt(conversionLoop);
+        PRUnichar ch = origValue.CharAt(conversionLoop);
         switch (ch) {
             case '>':
             {
                 if (prevCh == '?') {
-                    piValue.append(' ');
+                    piValue.Append(PRUnichar(' '));
                 }
                 break;
             }
@@ -180,7 +189,7 @@ void XMLUtils::normalizePIValue(String& piValue)
                 break;
             }
         }
-        piValue.append(ch);
+        piValue.Append(ch);
         prevCh = ch;
         ++conversionLoop;
     }
@@ -195,19 +204,16 @@ MBool XMLUtils::getXMLSpacePreserve(Node* aNode)
 {
     NS_ASSERTION(aNode, "Calling preserveXMLSpace with NULL node!");
 
-    String value;
+    nsAutoString value;
     Node* parent = aNode;
     while (parent) {
         if (parent->getNodeType() == Node::ELEMENT_NODE) {
             Element* elem = (Element*)parent;
             if (elem->getAttr(txXMLAtoms::space, kNameSpaceID_XML, value)) {
-                txAtom* val = TX_GET_ATOM(value);
-                if (val == txXMLAtoms::preserve) {
-                    TX_IF_RELEASE_ATOM(val);
+                if (TX_StringEqualsAtom(value, txXMLAtoms::preserve)) {
                     return MB_TRUE;
                 }
-                if (val == txXMLAtoms::_default) {
-                    TX_IF_RELEASE_ATOM(val);
+                if (TX_StringEqualsAtom(value, txXMLAtoms::_default)) {
                     return MB_FALSE;
                 }
             }
@@ -223,7 +229,7 @@ MBool XMLUtils::getXMLSpacePreserve(Node* aNode)
 #define TX_MATCH_CHAR(ch, a) if (ch < a) return MB_FALSE; \
     if (ch == a) return MB_TRUE
 
-MBool XMLUtils::isDigit(UNICODE_CHAR ch)
+MBool XMLUtils::isDigit(PRUnichar ch)
 {
     TX_CHAR_RANGE(ch, 0x0030, 0x0039);  /* '0'-'9' */
     TX_CHAR_RANGE(ch, 0x0660, 0x0669);
@@ -243,7 +249,7 @@ MBool XMLUtils::isDigit(UNICODE_CHAR ch)
     return MB_FALSE;
 }
 
-MBool XMLUtils::isLetter(UNICODE_CHAR ch)
+MBool XMLUtils::isLetter(PRUnichar ch)
 {
 /* Letter = BaseChar | Ideographic; and _ */
     TX_CHAR_RANGE(ch, 0x0041, 0x005A);
@@ -455,7 +461,7 @@ MBool XMLUtils::isLetter(UNICODE_CHAR ch)
     return MB_FALSE;
 }
 
-MBool XMLUtils::isNCNameChar(UNICODE_CHAR ch)
+MBool XMLUtils::isNCNameChar(PRUnichar ch)
 {
 /* NCNameChar = Letter | Digit | '.' | '-' | '_'  | 
    CombiningChar | Extender */

@@ -38,7 +38,6 @@
 
 #include "txXSLTNumber.h"
 #include "primitives.h"
-#include "Names.h"
 
 class txDecimalCounter : public txFormattedCounter {
 public:
@@ -47,26 +46,26 @@ public:
     }
     
     txDecimalCounter(PRInt32 aMinLength, PRInt32 aGroupSize,
-                     const String& mGroupSeparator);
+                     const nsAString& mGroupSeparator);
     
-    virtual void appendNumber(PRInt32 aNumber, String& aDest);
+    virtual void appendNumber(PRInt32 aNumber, nsAString& aDest);
 
 private:
     PRInt32 mMinLength;
     PRInt32 mGroupSize;
-    String mGroupSeparator;
+    nsString mGroupSeparator;
 };
 
 class txAlphaCounter : public txFormattedCounter {
 public:
-    txAlphaCounter(UNICODE_CHAR aOffset) : mOffset(aOffset)
+    txAlphaCounter(PRUnichar aOffset) : mOffset(aOffset)
     {
     }
 
-    virtual void appendNumber(PRInt32 aNumber, String& aDest);
+    virtual void appendNumber(PRInt32 aNumber, nsAString& aDest);
     
 private:
-    UNICODE_CHAR mOffset;
+    PRUnichar mOffset;
 };
 
 class txRomanCounter : public txFormattedCounter {
@@ -75,7 +74,7 @@ public:
     {
     }
 
-    void appendNumber(PRInt32 aNumber, String& aDest);
+    void appendNumber(PRInt32 aNumber, nsAString& aDest);
 
 private:
     PRInt32 mTableOffset;
@@ -83,16 +82,17 @@ private:
 
 
 nsresult
-txFormattedCounter::getCounterFor(const String& aToken, PRInt32 aGroupSize,
-                                  const String& aGroupSeparator,
+txFormattedCounter::getCounterFor(const nsAFlatString& aToken,
+                                  PRInt32 aGroupSize,
+                                  const nsAString& aGroupSeparator,
                                   txFormattedCounter*& aCounter)
 {
-    PRInt32 length = aToken.length();
+    PRInt32 length = aToken.Length();
     NS_ASSERTION(length, "getting counter for empty token");
     aCounter = 0;
     
     if (length == 1) {
-        UNICODE_CHAR ch = aToken.charAt(0);
+        PRUnichar ch = aToken.CharAt(0);
         switch (ch) {
 
             case 'i':
@@ -108,7 +108,8 @@ txFormattedCounter::getCounterFor(const String& aToken, PRInt32 aGroupSize,
             case '1':
             default:
                 // if we don't recognize the token then use "1"
-                aCounter = new txDecimalCounter(1, aGroupSize, aGroupSeparator);
+                aCounter = new txDecimalCounter(1, aGroupSize,
+                                                aGroupSeparator);
                 break;
         }
         return aCounter ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
@@ -117,10 +118,10 @@ txFormattedCounter::getCounterFor(const String& aToken, PRInt32 aGroupSize,
     // for now, the only multi-char token we support are decimals
     PRInt32 i;
     for (i = 0; i < length-1; ++i) {
-        if (aToken.charAt(i) != '0')
+        if (aToken.CharAt(i) != '0')
             break;
     }
-    if (i == length-1 && aToken.charAt(i) == '1') {
+    if (i == length-1 && aToken.CharAt(i) == '1') {
         aCounter = new txDecimalCounter(length, aGroupSize, aGroupSeparator);
     }
     else {
@@ -133,7 +134,7 @@ txFormattedCounter::getCounterFor(const String& aToken, PRInt32 aGroupSize,
 
 
 txDecimalCounter::txDecimalCounter(PRInt32 aMinLength, PRInt32 aGroupSize,
-                                   const String& aGroupSeparator)
+                                   const nsAString& aGroupSeparator)
     : mMinLength(aMinLength), mGroupSize(aGroupSize),
       mGroupSeparator(aGroupSeparator)
 {
@@ -142,12 +143,10 @@ txDecimalCounter::txDecimalCounter(PRInt32 aMinLength, PRInt32 aGroupSize,
     }
 }
 
-void txDecimalCounter::appendNumber(PRInt32 aNumber, String& aDest)
+void txDecimalCounter::appendNumber(PRInt32 aNumber, nsAString& aDest)
 {
-    String num;
-
     const PRInt32 bufsize = 10; //must be able to fit an PRInt32
-    UNICODE_CHAR buf[bufsize];
+    PRUnichar buf[bufsize];
     PRInt32 pos = bufsize;
     while (aNumber > 0) {
         PRInt32 ch = aNumber % 10;
@@ -167,26 +166,26 @@ void txDecimalCounter::appendNumber(PRInt32 aNumber, String& aDest)
     // pos will always be zero 
     PRInt32 extraPos = mMinLength;
     while (extraPos > bufsize) {
-        aDest.append('0');
+        aDest.Append(PRUnichar('0'));
         --extraPos;
         if (extraPos % mGroupSize == 0) {
-            aDest.append(mGroupSeparator);
+            aDest.Append(mGroupSeparator);
         }
     }
 
     // copy string to buffer
     if (mGroupSize >= bufsize - pos) {
         // no grouping will occur
-        aDest.append(buf + pos, (PRUint32)(bufsize - pos));
+        aDest.Append(buf + pos, (PRUint32)(bufsize - pos));
     }
     else {
         // append chars up to first grouping separator
         PRInt32 len = ((bufsize - pos - 1) % mGroupSize) + 1;
-        aDest.append(buf + pos, len);
+        aDest.Append(buf + pos, len);
         pos += len;
         while (bufsize - pos > 0) {
-            aDest.append(mGroupSeparator);
-            aDest.append(buf + pos, mGroupSize);
+            aDest.Append(mGroupSeparator);
+            aDest.Append(buf + pos, mGroupSize);
             pos += mGroupSize;
         }
         NS_ASSERTION(bufsize == pos, "error while grouping");
@@ -194,11 +193,9 @@ void txDecimalCounter::appendNumber(PRInt32 aNumber, String& aDest)
 }
 
 
-void txAlphaCounter::appendNumber(PRInt32 aNumber, String& aDest)
+void txAlphaCounter::appendNumber(PRInt32 aNumber, nsAString& aDest)
 {
-    String num;
-
-    UNICODE_CHAR buf[11];
+    PRUnichar buf[11];
     buf[11] = 0;
     PRInt32 pos = 11;
     while (aNumber > 0) {
@@ -208,7 +205,7 @@ void txAlphaCounter::appendNumber(PRInt32 aNumber, String& aDest)
         buf[--pos] = ch + mOffset;
     }
     
-    aDest.append(buf + pos, (PRUint32)(11 - pos));
+    aDest.Append(buf + pos, (PRUint32)(11 - pos));
 }
 
 
@@ -220,7 +217,7 @@ const char* kTxRomanNumbers[] =
      "", "X", "XX", "XXX", "XL", "L", "LX", "LXX", "LXXX", "XC",
      "", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"};
 
-void txRomanCounter::appendNumber(PRInt32 aNumber, String& aDest)
+void txRomanCounter::appendNumber(PRInt32 aNumber, nsAString& aDest)
 {
     // Numbers bigger then 3999 can't be done in roman
     if (aNumber >= 4000) {
@@ -229,7 +226,7 @@ void txRomanCounter::appendNumber(PRInt32 aNumber, String& aDest)
     }
 
     while (aNumber >= 1000) {
-        aDest.append(!mTableOffset ? 'm' : 'M');
+        aDest.Append(!mTableOffset ? PRUnichar('m') : PRUnichar('M'));
         aNumber -= 1000;
     }
 
@@ -238,14 +235,14 @@ void txRomanCounter::appendNumber(PRInt32 aNumber, String& aDest)
     // Hundreds
     posValue = aNumber / 100;
     aNumber %= 100;
-    aDest.append(NS_ConvertASCIItoUCS2(kTxRomanNumbers[posValue +
+    aDest.Append(NS_ConvertASCIItoUCS2(kTxRomanNumbers[posValue +
                                                        mTableOffset]));
     // Tens
     posValue = aNumber / 10;
     aNumber %= 10;
-    aDest.append(NS_ConvertASCIItoUCS2(kTxRomanNumbers[10 + posValue +
+    aDest.Append(NS_ConvertASCIItoUCS2(kTxRomanNumbers[10 + posValue +
                                                        mTableOffset]));
     // Ones
-    aDest.append(NS_ConvertASCIItoUCS2(kTxRomanNumbers[20 + aNumber +
+    aDest.Append(NS_ConvertASCIItoUCS2(kTxRomanNumbers[20 + aNumber +
                                                        mTableOffset]));
 }

@@ -40,7 +40,6 @@
 #include "txNodeSetContext.h"
 #include "txForwardContext.h"
 #include "XSLTFunctions.h"
-#include "ProcessorState.h"
 #ifndef TX_EXE
 #include "nsReadableUtils.h"
 #include "nsIContent.h"
@@ -135,20 +134,20 @@ nsresult txUnionPattern::getSimplePatterns(txList& aList)
  * destination String, to allow cascading calls to other
  * toString() methods for mLocPathPatterns.
  */
-void txUnionPattern::toString(String& aDest)
+void txUnionPattern::toString(nsAString& aDest)
 {
 #ifdef DEBUG
-    aDest.append("txUnionPattern{");
+    aDest.Append(NS_LITERAL_STRING("txUnionPattern{"));
 #endif
     txListIterator iter(&mLocPathPatterns);
     if (iter.hasNext())
         ((txPattern*)iter.next())->toString(aDest);
     while (iter.hasNext()) {
-        aDest.append(" | ");
+        aDest.Append(NS_LITERAL_STRING(" | "));
         ((txPattern*)iter.next())->toString(aDest);
     }
 #ifdef DEBUG
-    aDest.append("}");
+    aDest.Append(PRUnichar('}'));
 #endif
 } // toString
 
@@ -255,11 +254,11 @@ double txLocPathPattern::getDefaultPriority()
     return ((Step*)mSteps.get(0))->pattern->getDefaultPriority();
 }
 
-void txLocPathPattern::toString(String& aDest)
+void txLocPathPattern::toString(nsAString& aDest)
 {
     txListIterator iter(&mSteps);
 #ifdef DEBUG
-    aDest.append("txLocPathPattern{");
+    aDest.Append(NS_LITERAL_STRING("txLocPathPattern{"));
 #endif
     Step* step;
     step = (Step*)iter.next();
@@ -268,13 +267,13 @@ void txLocPathPattern::toString(String& aDest)
     }
     while ((step = (Step*)iter.next())) {
         if (step->isChild)
-            aDest.append("/");
+            aDest.Append(PRUnichar('/'));
         else
-            aDest.append("//");
+            aDest.Append(NS_LITERAL_STRING("//"));
         step->pattern->toString(aDest);
     }
 #ifdef DEBUG
-    aDest.append("}");
+    aDest.Append(PRUnichar('}'));
 #endif
 } // txLocPathPattern::toString
 
@@ -298,15 +297,15 @@ double txRootPattern::getDefaultPriority()
     return 0.5;
 }
 
-void txRootPattern::toString(String& aDest)
+void txRootPattern::toString(nsAString& aDest)
 {
 #ifdef DEBUG
-    aDest.append("txRootPattern{");
+    aDest.Append(NS_LITERAL_STRING("txRootPattern{"));
 #endif
     if (mSerialize)
-        aDest.append("/");
+        aDest.Append(PRUnichar('/'));
 #ifdef DEBUG
-    aDest.append("}");
+    aDest.Append(PRUnichar('}'));
 #endif
 }
 
@@ -318,15 +317,14 @@ void txRootPattern::toString(String& aDest)
  * This looks like the id() function, but may only have LITERALs as
  * argument.
  */
-txIdPattern::txIdPattern(const String& aString)
+txIdPattern::txIdPattern(const nsAString& aString)
 {
 #ifdef TX_EXE
     mIds = aString;
 #else
-    const nsString& ids = aString.getConstNSString();
     nsAString::const_iterator pos, begin, end;
-    ids.BeginReading(begin);
-    ids.EndReading(end);
+    aString.BeginReading(begin);
+    aString.EndReading(end);
     pos = begin;
     while (pos != end) {
         while (pos != end && XMLUtils::isWhitespace(*pos))
@@ -403,20 +401,16 @@ double txIdPattern::getDefaultPriority()
     return 0.5;
 }
 
-void txIdPattern::toString(String& aDest)
+void txIdPattern::toString(nsAString& aDest)
 {
 #ifdef DEBUG
-    aDest.append("txIdPattern{");
+    aDest.Append(NS_LITERAL_STRING("txIdPattern{"));
 #endif
-    aDest.append("id('");
-#ifdef TX_EXE
-    aDest.append(mIds);
-#else
-    aDest.getNSString().Append(mIds);
-#endif
-    aDest.append("')");
+    aDest.Append(NS_LITERAL_STRING("id('"));
+    aDest.Append(mIds);
+    aDest.Append(NS_LITERAL_STRING("')"));
 #ifdef DEBUG
-    aDest.append("}");
+    aDest.Append(PRUnichar('}'));
 #endif
 }
 
@@ -454,25 +448,25 @@ double txKeyPattern::getDefaultPriority()
     return 0.5;
 }
 
-void txKeyPattern::toString(String& aDest)
+void txKeyPattern::toString(nsAString& aDest)
 {
 #ifdef DEBUG
-    aDest.append("txKeyPattern{");
+    aDest.Append(NS_LITERAL_STRING("txKeyPattern{"));
 #endif
-    aDest.append("key('");
-    String tmp;
+    aDest.Append(NS_LITERAL_STRING("key('"));
+    nsAutoString tmp;
     if (mPrefix) {
-        TX_GET_ATOM_STRING(mPrefix, tmp);
-        aDest.append(tmp);
-        aDest.append(':');
+        mPrefix->ToString(tmp);
+        aDest.Append(tmp);
+        aDest.Append(PRUnichar(':'));
     }
-    TX_GET_ATOM_STRING(mName.mLocalName, tmp);
-    aDest.append(tmp);
-    aDest.append(", ");
-    aDest.append(mValue);
-    aDest.append("')");
+    mName.mLocalName->ToString(tmp);
+    aDest.Append(tmp);
+    aDest.Append(NS_LITERAL_STRING(", "));
+    aDest.Append(mValue);
+    aDest.Append(NS_LITERAL_STRING("')"));
 #ifdef DEBUG
-    aDest.append("}");
+    aDest.Append(PRUnichar('}'));
 #endif
 }
 
@@ -604,18 +598,18 @@ double txStepPattern::getDefaultPriority()
     return 0.5;
 }
 
-void txStepPattern::toString(String& aDest)
+void txStepPattern::toString(nsAString& aDest)
 {
 #ifdef DEBUG
-    aDest.append("txStepPattern{");
+    aDest.Append(NS_LITERAL_STRING("txStepPattern{"));
 #endif
     if (mIsAttr)
-        aDest.append("@");
+        aDest.Append(PRUnichar('@'));
     if (mNodeTest)
         mNodeTest->toString(aDest);
 
     PredicateList::toString(aDest);
 #ifdef DEBUG
-    aDest.append("}");
+    aDest.Append(PRUnichar('}'));
 #endif
 }
