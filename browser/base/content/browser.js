@@ -1379,7 +1379,7 @@ function delayedStartup()
   }
 #endif
 
-  var updatePanel = document.getElementById("updates");
+  var updatePanel = document.getElementById("softwareupdate");
   try {
     updatePanel.init();
   }
