@@ -29,9 +29,14 @@
 
 package Mozilla::LDAP::Conn;
 
-use Mozilla::LDAP::Utils;
-use Mozilla::LDAP::API qw(/.+/);
-use Mozilla::LDAP::Entry;
+use Mozilla::LDAP::Utils 1.3 ();
+use Mozilla::LDAP::API 1.3 qw(/.+/);
+use Mozilla::LDAP::Entry 1.3 ();
+
+use strict;
+use vars qw($VERSION);
+
+$VERSION = "1.3";
 
 
 #############################################################################
@@ -106,7 +111,7 @@ sub DESTROY
 sub init
 {
   my $self = shift;
-  my $ret, $ld;
+  my ($ret, $ld);
 
   if (defined($self->{"certdb"}) && ($self->{"certdb"} ne ""))
     {
@@ -135,11 +140,11 @@ sub init
 #
 sub newEntry
 {
-  my %entry = {};
+  my (%entry);
   my $obj;
 
-  tie %entry, Mozilla::LDAP::Entry;
-  $obj = bless \%entry, Mozilla::LDAP::Entry;
+  tie %entry, 'Mozilla::LDAP::Entry';
+  $obj = bless \%entry, 'Mozilla::LDAP::Entry';
   $obj->{"_self_obj_"} = $obj;
 
   return $obj;
@@ -229,7 +234,7 @@ sub printError
 sub search
 {
   my ($self, $basedn, $scope, $filter, $attrsonly, @attrs) = @_;
-  my $resv, $entry;
+  my ($resv, $entry);
   my $res = \$resv;
 
   $scope = Mozilla::LDAP::Utils::str2Scope($scope);
@@ -251,8 +256,10 @@ sub search
     }
   else
     {
-      if (! ldap_search_s($self->{"ld"}, $basedn, $scope, $filter, \@attrs,
-			  $attrsonly, $res))
+      if (! ldap_search_s($self->{"ld"}, $basedn, $scope, $filter,
+			  defined(\@attrs) ? \@attrs : 0,
+			  defined($attrsonly) ? $attrsonly : 0,
+			  defined($res) ? $res : 0))
 	{
 	  $self->{"ldres"} = $res;
 	  $self->{"ldfe"} = 1;
@@ -270,7 +277,7 @@ sub search
 sub searchURL
 {
   my ($self, $url, $attrsonly) = @_;
-  my $resv, $entry;
+  my ($resv, $entry);
   my $res = \$resv;
 
   if (defined($self->{"ldres"}))
@@ -279,7 +286,9 @@ sub searchURL
       undef $self->{"ldres"};
     }
       
-  if (! ldap_url_search_s($self->{"ld"}, $url, $attrsonly, $res))
+  if (! ldap_url_search_s($self->{"ld"}, $url,
+			  defined($attrsonly) ? $attrsonly : 0,
+			  defined($res) ? $res : 0))
     {
       $self->{"ldres"} = $res;
       $self->{"ldfe"} = 1;
@@ -298,11 +307,11 @@ sub nextEntry
 {
   my $self = shift;
   my (%entry, @ocorder, @vals);
-  my $attr, $lcattr, $obj, $ldentry, $berv, $dn, $count;
+  my ($attr, $lcattr, $obj, $ldentry, $berv, $dn, $count);
   my $ber = \$berv;
 
   # I use the object directly, to avoid setting the "change" flags
-  $obj = tie %entry, Mozilla::LDAP::Entry;
+  $obj = tie %entry, 'Mozilla::LDAP::Entry';
 
   $self->{"dn"} = "";
   if ($self->{"ldfe"} == 1)
@@ -338,7 +347,7 @@ sub nextEntry
   $self->{"dn"} = $dn;
 
   $attr = ldap_first_attribute($self->{"ld"}, $self->{"ldentry"}, $ber);
-  return (bless \%entry, Mozilla::LDAP::Entry) unless $attr;
+  return (bless \%entry, 'Mozilla::LDAP::Entry') unless $attr;
 
   $lcattr = lc $attr;
   @vals = ldap_get_values_len($self->{"ld"}, $self->{"ldentry"}, $attr);
@@ -362,7 +371,7 @@ sub nextEntry
 
   ldap_ber_free($ber, 0) if $ber;
 
-  return bless \%entry, Mozilla::LDAP::Entry;
+  return bless \%entry, 'Mozilla::LDAP::Entry';
 }
 
 # This is deprecated...
@@ -393,7 +402,7 @@ sub delete
   my $ret = 1;
   my $dn = $id;
 
-  if (ref($id) eq "Mozilla::LDAP::Entry")
+  if (ref($id) eq 'Mozilla::LDAP::Entry')
     {
       $dn = $id->getDN();
     }
@@ -416,11 +425,11 @@ sub add
 {
   my ($self, $entry) = @_;
   my (%ent);
-  my $ref, $key, $val;
+  my ($ref, $key, $val);
   my ($ret, $gotcha) = (1, 0);
 
   $ref = ref($entry);
-  if ($ref eq "Mozilla::LDAP::Entry")
+  if ($ref eq 'Mozilla::LDAP::Entry')
     {
       foreach $key (@{$entry->{"_oc_order_"}})
 	{
@@ -430,7 +439,7 @@ sub add
 	  $entry->attrClean($key);
 	}
     }
-  elsif  ($ref eq "HASH")
+  elsif  ($ref eq 'HASH')
     {
       foreach $key (keys(%{$entry}))
 	{
@@ -478,7 +487,7 @@ sub modifyRDN
 	{
 	  shift(@vals);
 	  unshift(@vals, ($rdn));
-	  $ld->{"dn"} = join(@vals);
+	  $self->{"dn"} = join(@vals);
 	}
     }
 
@@ -494,7 +503,7 @@ sub update
 {
   my ($self, $entry) = @_;
   my (@vals, @arr, %mod, %new);
-  my $key, $val;
+  my ($key, $val);
   my $ret = 1;
   local $_;
 
@@ -504,7 +513,8 @@ sub update
 
       if (defined($entry->{"_${key}_modified_"}))
 	{
-	  @vals = @{$entry->{$key}};
+	  undef @vals;
+	  @vals = @{$entry->{$key}} if defined($entry->{$key});
 	  if ($#vals == $[)
 	    {
 	      $mod{$key} = { "rb", [$vals[$[]] };
@@ -547,6 +557,8 @@ sub update
   # This is here for debug purposes only...
   if ($main::LDAP_DEBUG)
     {
+      my $op;
+
       foreach $key (@arr)
 	{
 	  print "Working on $key\n";
