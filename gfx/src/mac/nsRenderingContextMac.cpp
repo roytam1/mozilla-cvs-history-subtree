@@ -1503,14 +1503,14 @@ NS_IMETHODIMP nsRenderingContextMac::DrawImage(nsIImageContainer *aImage, const 
 
 
   // XXX this is ugly.
-  nsPoint2 pt;
-  nsRect2 sr;
+  nsPoint pt;
+  nsRect sr;
 
-	pt = *aDestPoint;
-  mTranMatrix->Transform(&pt.x, &pt.y);
+  pt = *aDestPoint;
+  mTranMatrix->TransformCoord(&pt.x, &pt.y);
 
   sr = *aSrcRect;
-  mTranMatrix->Transform(&sr.x, &sr.y, &sr.width, &sr.height);
+  mTranMatrix->TransformCoord(&sr.x, &sr.y, &sr.width, &sr.height);
 
   sr.x = aSrcRect->x;
   sr.y = aSrcRect->y;
