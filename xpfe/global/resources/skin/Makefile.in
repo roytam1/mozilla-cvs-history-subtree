@@ -91,6 +91,7 @@ EXPORT_RESOURCE_CONTENT = \
 		$(srcdir)/toolbar-begincap.gif \
 		$(srcdir)/toolbar-endcap.gif \
 		$(srcdir)/n-box.gif \
+		$(srcdir)/search.gif \
 		$(NULL)
 
 EXPORT_CHROME	= $(srcdir)/xul.css
