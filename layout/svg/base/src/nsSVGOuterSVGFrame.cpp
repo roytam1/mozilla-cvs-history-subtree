@@ -908,7 +908,6 @@ nsSVGOuterSVGFrame::InvalidateRegion(nsISVGRendererRegion* region, PRBool bRedra
   // just ignore invalidates if painting is suppressed by the shell
   PRBool suppressed = PR_FALSE;
   mPresShell->IsPaintingSuppressed(&suppressed);
-  NS_ASSERTION(!suppressed, "invalidation during suppression (benign)");
   if (suppressed) return NS_OK;
   
   nsCOMPtr<nsIPresContext> presCtx;
