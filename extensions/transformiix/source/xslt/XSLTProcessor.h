@@ -325,6 +325,15 @@ private:
     void processAttrValueTemplate
         (const String& attValue, String& result, Node* context, ProcessorState* ps);
 
+    /**
+     * Processes the children of the specified element using the given context node
+     * and ProcessorState
+     * @param node the context node
+     * @param xslElement the template to be processed. Must be != NULL
+     * @param ps the current ProcessorState
+    **/
+    void processChildren(Node* node, Element* xslElement, ProcessorState* ps);
+
     void processTemplate(Node* node, Node* xslTemplate, ProcessorState* ps, NamedMap* actualParams = NULL);
     void processTemplateParams(Node* xslTemplate, Node* context, ProcessorState* ps, NamedMap* actualParams);
 

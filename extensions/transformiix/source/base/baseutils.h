@@ -38,6 +38,20 @@ typedef int Int32;
 typedef unsigned int UInt32;
 #endif
 
+#ifdef TX_EXE
+
+#ifdef  DEBUG
+#define NS_ASSERTION(_cond, _msg)                                \
+if(!(_cond)) {                                                   \
+  cerr << "ASSERTION (" << #_cond << ") " << _msg << endl;       \
+  cerr << "on line " << __LINE__ << " in " << __FILE__ << endl;  \
+}
+#else
+#define NS_ASSERTION(_cond, _msg) {}
+#endif
+
+#endif //TX_EXE
+
 typedef Int32 MBool;
 
 #define MB_TRUE  (MBool)1
