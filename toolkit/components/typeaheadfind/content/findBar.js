@@ -429,6 +429,10 @@ function onBrowserKeyUp(evt)
 function onFindBarKeyPress(evt)
 {
   if (evt.keyCode == KeyEvent.DOM_VK_RETURN) {
+    var findString = document.getElementById("find-field");
+    if (!findString.value)
+      return;
+      
     if (evt.ctrlKey) {
       document.getElementById("highlight").click();
       return;
