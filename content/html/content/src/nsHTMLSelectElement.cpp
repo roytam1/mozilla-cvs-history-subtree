@@ -42,7 +42,7 @@
 #include "nsGenericDOMHTMLCollection.h"
 #include "nsISelectElement.h"
 #include "nsISelectControlFrame.h"
-#include "nsIDOMNSHTMLOptionCollection.h"
+#include "nsIDOMNSHTMLOptionCollectn.h"
 
 // PresState
 #include "nsISupportsArray.h"

@@ -75,7 +75,7 @@
 
 // HTMLOptionCollection includes
 #include "nsIDOMHTMLOptionElement.h"
-#include "nsIDOMNSHTMLOptionCollection.h"
+#include "nsIDOMNSHTMLOptionCollectn.h"
 
 // Event related includes
 #include "nsIEventListenerManager.h"
