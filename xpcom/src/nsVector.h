@@ -22,7 +22,7 @@
 #include "plvector.h"
 #include "nsCom.h"
 
-class NS_COM nsVector : public PLVector {
+class nsVector : public PLVector {
 public:
 // Construction
     nsVector(PRUint32 initialSize = 0, PRInt32 initialGrowBy = 0) {
