@@ -29,7 +29,7 @@ s none usr/include/mps/64=sparcv9
 d none usr/include/mps/sparcv9 0755 root bin
 d none usr/include/mps/sparcv9/private 0755 root bin
 f none usr/include/mps/sparcv9/private/pprio.h 0644 root bin
-f none usr/include/mps/sparcv9/private/pprthred.h 0644 root
+f none usr/include/mps/sparcv9/private/pprthred.h 0644 root bin
 f none usr/include/mps/sparcv9/private/prpriv.h 0644 root bin
 d none usr/include/mps/sparcv9/obsolete 0755 root bin
 f none usr/include/mps/sparcv9/obsolete/pralarm.h 0644 root bin
