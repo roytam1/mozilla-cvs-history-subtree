@@ -59,7 +59,7 @@ CPP_OBJS=.\$(OBJDIR)\brpref.obj .\$(OBJDIR)\pages.obj \
 LINCS=-I$(XPDIST)\public\dllcom -I$(XPDIST)\public\winprefs \
     -I$(XPDIST)\public\pref -I$(XPDIST)\public\dbm \
     -I$(XPDIST)\public\nspr -I$(XPDIST)\public\js \
-    -I$(XPDIST)\public\nspr -I$(XPDIST)\public\libreg
+    -I$(XPDIST)\public\libreg
 !endif
 
 !include "$(DEPTH)\config\rules.mak"
