@@ -73,6 +73,7 @@ public:
     void                    setCacheCapacity(PRUint32 capacity);
     PRUint32                getCacheCapacity();
     PRUint32                getCacheSize();
+    PRUint32                getEntryCount();
 
     nsresult getFileForKey(const char* key, PRBool meta, PRUint32 generation, nsIFile ** result);
     nsresult getFileForDiskCacheEntry(nsDiskCacheEntry * diskEntry, PRBool meta, nsIFile ** result);
