@@ -715,7 +715,7 @@ const gPopupBlockerObserver = {
         else
           message = bundle_browser.getFormattedString("popupWarning", [brandShortName]);
         gBrowser.showMessage(gBrowser.selectedBrowser, "chrome://browser/skin/Info.png", 
-                             message, "", null, null, "blockedPopupOptions", "top");
+                             message, "", null, null, "blockedPopupOptions", "top", false);
       }
     }
     else
@@ -946,7 +946,7 @@ const gXPInstallObserver = {
           var buttonString = browserBundle.getString("xpinstallDisabledWarningButton");
           getBrowser().showMessage(browser, iconURL, messageString, buttonString, 
                                    null, "xpinstall-install-edit-prefs",
-                                   null, "top");
+                                   null, "top", false);
         }
         else {            
           var messageString = browserBundle.getFormattedString(messageKey, [brandShortName, host]);
@@ -954,7 +954,7 @@ const gXPInstallObserver = {
           var webNav = shell.QueryInterface(Components.interfaces.nsIWebNavigation);
           getBrowser().showMessage(browser, iconURL, messageString, buttonString, 
                                    shell, "xpinstall-install-edit-permissions",
-                                   null, "top");
+                                   null, "top", false);
         }
       }
       break;
@@ -5902,7 +5902,7 @@ missingPluginInstaller.prototype.newMissingPlugin = function(aEvent){
 
   tabbrowser.showMessage(browser, iconURL, messageString, buttonString, 
                                     "", "missing-plugin",
-                                    null, "top");
+                                    null, "top", true);
 
   aEvent.preventDefault();
 }
