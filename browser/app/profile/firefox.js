@@ -56,6 +56,7 @@ pref("app.id", "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}");
 pref("app.version", 
 #expand __APP_VERSION__
 );
+pref("app.extensions.version", "0.9");
 pref("app.build_id", 
 #expand __BUILD_ID__
 );
@@ -173,6 +174,8 @@ pref("javascript.options.showInConsole",    false);
 pref("privacy.popups.policy",               1);
 pref("privacy.popups.usecustom",            true);
 pref("privacy.popups.firstTime",            true);
+pref("privacy.popups.showBrowserMessage",   true);
+
 
 pref("network.protocols.useSystemDefaults", false); // set to true if user links should use system default handlers
 pref("network.cookie.cookieBehavior",       0); // cookies enabled

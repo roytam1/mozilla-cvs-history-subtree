@@ -337,3 +337,8 @@
 <!ENTITY highlight.label "Highlight">
 <!ENTITY highlight.tooltip "Highlight all occurrences of the phrase">
 
+<!ENTITY allowPopups.accesskey "A">
+<!ENTITY editPopupSettings.label "Edit Popup Blocker Options...">
+<!ENTITY editPopupSettings.accesskey "E">
+<!ENTITY dontShowMessage.accesskey "D">
+

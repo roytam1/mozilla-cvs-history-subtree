@@ -166,53 +166,54 @@
         </body>
       </method>
 
-      <method name="getMessageAtIndex">
-        <parameter name="aIndex"/>
-        <body>
-          <![CDATA[
-            return this.mPanelContainer.childNodes[aIndex].firstChild;
-          ]]>
-        </body>
-      </method>
-      
       <method name="getMessageForBrowser">
         <parameter name="aBrowser"/>
+        <parameter name="aTopBottom"/>
         <body>
           <![CDATA[
-            return aBrowser.previousSibling;
+            return aBrowser[aTopBottom == "top" ? "previousSibling" : "nextSibling"];
           ]]>
         </body>
       </method>
       
       <method name="showMessage">
-        <parameter name="aIndex"/>
+        <parameter name="aBrowser"/>
         <parameter name="aIconURL"/>
         <parameter name="aMessage"/>
         <parameter name="aButtonLabel"/>
         <parameter name="aURI"/>
         <parameter name="aSource"/>
+        <parameter name="aPopup"/>
+        <parameter name="aTopBottom"/>
         <body>
           <![CDATA[
-            var message = this.getMessageAtIndex(aIndex);
+            var message = this.getMessageForBrowser(aBrowser, aTopBottom);
             message.image = aIconURL;
             message.text = aMessage;
             message.buttonText = aButtonLabel;
             message.hidden = false;
-            message.source = aSource;
+            if (aSource)
+              message.source = aSource;
+            else if (aPopup)
+              message.popup = aPopup;
             message.uri = aURI;
             
-            var browser = this.getBrowserAtIndex(aIndex);
-            browser.isShowingMessage = true;
+            aBrowser.isShowingMessage = true;
           ]]>
         </body>
       </method>
-      
-      <method name="hideMessageForBrowser">
+            
+      <method name="hideMessage">
         <parameter name="aBrowser"/>
+        <parameter name="aTopBottom"/>
         <body>
           <![CDATA[
-            var message = this.getMessageForBrowser(aBrowser);
-            message.hidden = true;
+            if (aTopBottom != "both")
+              this.getMessageForBrowser(aBrowser, aTopBottom).hidden = true;
+            else {
+              this.getMessageForBrowser(aBrowser, "top").hidden = true;
+              this.getMessageForBrowser(aBrowser, "bottom").hidden = true;
+            }
           ]]>
         </body>
       </method>
@@ -230,6 +231,7 @@
             mBrowser: aBrowser,
             mBlank: aStartsBlank,
             mIcon: "", 
+            mLastURI: null,
 
             onProgressChange : function (aWebProgress, aRequest,
                                          aCurSelfProgress, aMaxSelfProgress,
@@ -311,8 +313,6 @@
                   var p = this.mTabBrowser.mProgressListeners[i];
                   if (p)
                     p.onLocationChange(aWebProgress, aRequest, aLocation);
-                  if (this.mBrowser.isShowingMessage)
-                    this.mTabBrowser.hideMessageForBrowser(this.mBrowser);
                 }
               }
             },
@@ -813,7 +813,7 @@
             var message = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
                                                    "browsermessage"); 
             message.hidden = true;
-            message.type = aType;
+            message.setAttribute("type", aType);
             return message;
           ]]>
         </body>

@@ -61,7 +61,6 @@ const FIND_LINKS = 2;
 var gRDF = null;
 var gGlobalHistory = null;
 var gURIFixup = null;
-var gReportButton = null;
 var gPageThemeButton = null;
 var gLivemarksButton = null;
 var gCharsetMenu = null;
@@ -516,24 +515,6 @@ function UpdateBackForwardButtons()
   }
 }
 
-function UpdatePageReport(event)
-{
-  if (!gReportButton)
-    gReportButton = document.getElementById("page-report-button");
-
-  if (gBrowser.mCurrentBrowser.pageReport) {
-    gReportButton.setAttribute("blocked", "true");
-    if (gPrefService && gPrefService.getBoolPref("privacy.popups.firstTime")) {
-      displayPageReportFirstTime();
-
-      // Now set the pref.
-      gPrefService.setBoolPref("privacy.popups.firstTime", "false");
-    }
-  }
-  else
-    gReportButton.removeAttribute("blocked");
-}
-
 #ifdef MOZ_ENABLE_XREMOTE
 const gTabOpenObserver = {
   observe: function(subject, topic, data)
@@ -556,6 +537,189 @@ const gSessionHistoryObserver = {
     backCommand.setAttribute("disabled", "true");
     var fwdCommand = document.getElementById("Browser:Forward");
     fwdCommand.setAttribute("disabled", "true");
+  }
+};
+
+const gPopupBlockerObserver = {
+  _reportButton: null,
+  _kIPM: Components.interfaces.nsIPermissionManager,
+  
+  onUpdatePageReport: function ()
+  {
+    if (!this._reportButton) 
+      this._reportButton = document.getElementById("page-report-button");
+    
+    if (gBrowser.selectedBrowser.pageReport) {
+      this._reportButton.setAttribute("blocked", "true");
+      if (gPrefService.getBoolPref("privacy.popups.showBrowserMessage")) {
+        var bundle_browser = document.getElementById("bundle_browser");
+        var brandBundle = document.getElementById("bundle_brand");
+        var brandShortName = brandBundle.getString("brandShortName");
+        var message;
+        var popupCount = gBrowser.selectedBrowser.pageReport.length;
+        if (popupCount > 1) 
+          message = bundle_browser.getFormattedString("popupWarningMultiple", [brandShortName, popupCount]);
+        else
+          message = bundle_browser.getFormattedString("popupWarning", [brandShortName]);
+        gBrowser.showMessage(gBrowser.selectedBrowser, "chrome://browser/skin/Info.png", 
+                            message, "", null, null, "blockedPopupOptions", "top");
+      }
+    }
+    else
+      this._reportButton.removeAttribute("blocked");
+  },
+  
+  toggleAllowPopupsForSite: function (aEvent)
+  {
+    var currentURI = gBrowser.selectedBrowser.webNavigation.currentURI;
+    var pm = Components.classes["@mozilla.org/permissionmanager;1"]
+                       .getService(this._kIPM);
+    var shouldBlock = aEvent.target.getAttribute("block") == "true";
+    var perm = shouldBlock ? this._kIPM.DENY_ACTION : this._kIPM.ALLOW_ACTION;
+    pm.add(currentURI, "popup", perm);
+    
+    gBrowser.hideMessage(gBrowser.selectedBrowser, "top");
+  },
+  
+  fillPopupList: function (aEvent)
+  {
+    var bundle_browser = document.getElementById("bundle_browser");
+    // XXXben - rather than using |currentURI| here, which breaks down on multi-framed sites
+    //          we should really walk the pageReport and create a list of "allow for <host>"
+    //          menuitems for the common subset of hosts present in the report, this will
+    //          make us frame-safe.
+    var uri = gBrowser.selectedBrowser.webNavigation.currentURI;
+    var blockedPopupAllowSite = document.getElementById("blockedPopupAllowSite");
+    try {
+      blockedPopupAllowSite.removeAttribute("hidden");
+      
+      var pm = Components.classes["@mozilla.org/permissionmanager;1"]
+                        .getService(this._kIPM);
+      if (pm.testPermission(uri, "popup") == this._kIPM.ALLOW_ACTION) {
+        // Offer an item to block popups for this site, if a whitelist entry exists
+        // already for it.
+        var blockString = bundle_browser.getFormattedString("popupBlock", [uri.host]);
+        blockedPopupAllowSite.setAttribute("label", blockString);
+        blockedPopupAllowSite.setAttribute("block", "true");
+      }
+      else {
+        // Offer an item to allow popups for this site
+        var allowString = bundle_browser.getFormattedString("popupAllow", [uri.host]);
+        blockedPopupAllowSite.setAttribute("label", allowString);
+        blockedPopupAllowSite.removeAttribute("block");
+      }
+    }
+    catch (e) {
+      dump("*** e = " + e + "\n");
+      blockedPopupAllowSite.setAttribute("hidden", "true");
+    }
+    
+    var item = aEvent.target.lastChild;
+    while (item && item.getAttribute("observes") != "blockedPopupsSeparator") {
+      var next = item.previousSibling;
+      item.parentNode.removeChild(item);
+      item = next;
+    }
+    var pageReport = gBrowser.selectedBrowser.pageReport;
+    if (pageReport && pageReport.length > 0) {
+      var blockedPopupsSeparator = document.getElementById("blockedPopupsSeparator");
+      blockedPopupsSeparator.removeAttribute("hidden");
+      for (var i = 0; i < pageReport.length; ++i) {
+        var menuitem = document.createElement("menuitem");
+        var label = bundle_browser.getFormattedString("popupShowPopupPrefix", 
+                                                      [pageReport[i].popupWindowURI.spec]);
+        menuitem.setAttribute("label", label);
+        menuitem.setAttribute("requestingWindowURI", pageReport[i].requestingWindowURI.spec);
+        menuitem.setAttribute("popupWindowURI", pageReport[i].popupWindowURI.spec);
+        menuitem.setAttribute("popupWindowFeatures", pageReport[i].popupWindowFeatures);
+        menuitem.setAttribute("oncommand", "gPopupBlockerObserver.showBlockedPopup(event);");
+        aEvent.target.appendChild(menuitem);
+      }
+    }
+    else {
+      var blockedPopupsSeparator = document.getElementById("blockedPopupsSeparator");
+      blockedPopupsSeparator.setAttribute("hidden", "true");
+    }
+        
+    var blockedPopupDontShowMessage = document.getElementById("blockedPopupDontShowMessage");
+    var showMessage = gPrefService.getBoolPref("privacy.popups.showBrowserMessage");
+    blockedPopupDontShowMessage.setAttribute("checked", !showMessage);
+    if (aEvent.target.localName == "popup")
+      blockedPopupDontShowMessage.setAttribute("label", bundle_browser.getString("popupWarningDontShowFromMessage"));
+    else
+      blockedPopupDontShowMessage.setAttribute("label", bundle_browser.getString("popupWarningDontShowFromStatusbar"));
+  },
+  
+  _findChildShell: function (aDocShell, aSoughtURI)
+  {
+    var webNav = aDocShell.QueryInterface(Components.interfaces.nsIWebNavigation);
+    if (webNav.currentURI.spec == aSoughtURI.spec)
+      return aDocShell;
+      
+    var node = aDocShell.QueryInterface(Components.interfaces.nsIDocShellTreeNode);
+    for (var i = 0; i < node.childCount; ++i) {
+      var docShell = node.getChildAt(i);
+      docShell = this._findChildShell(docShell, aSoughtURI);
+      if (docShell)
+        return docShell;
+    }
+    return null;
+  },
+
+  showBlockedPopup: function (aEvent)
+  {
+    var requestingWindowURI = Components.classes["@mozilla.org/network/standard-url;1"]
+                                        .createInstance(Components.interfaces.nsIURI);
+    requestingWindowURI.spec = aEvent.target.getAttribute("requestingWindowURI");
+    var popupWindowURI = aEvent.target.getAttribute("popupWindowURI");
+    var features = aEvent.target.getAttribute("popupWindowFeatures");
+    
+    var shell = this._findChildShell(gBrowser.selectedBrowser.docShell, 
+                                     requestingWindowURI);
+    if (shell) {
+      var ifr = shell.QueryInterface(Components.interfaces.nsIInterfaceRequestor);
+      var dwi = ifr.getInterface(Components.interfaces.nsIDOMWindowInternal);
+      // XXXben - nsIDOMPopupBlockedEvent needs to store target, too!
+      dwi.open(popupWindowURI, "", features);
+    }
+  },
+  
+  editPopupSettings: function ()
+  {
+    var host = "";
+    try {
+      var uri = gBrowser.selectedBrowser.webNavigation.currentURI;
+      host = uri.host;
+    }
+    catch (e) { } 
+    var params = { blockVisible: false, 
+                   allowVisible: true, 
+                   prefilledHost: host, 
+                   permissionType: "popup" };
+    window.openDialog("chrome://browser/content/cookieviewer/CookieExceptions.xul?permission=popup",
+                      "_blank", "chrome,modal,resizable=yes", params);
+  },
+  
+  dontShowMessage: function ()
+  {
+    var showMessage = gPrefService.getBoolPref("privacy.popups.showBrowserMessage");
+    var firstTime = gPrefService.getBoolPref("privacy.popups.firstTime");
+    
+    // If the info message is showing at the top of the window, and the user has never 
+    // hidden the message before, show an info box telling the user where the info
+    // will be displayed. 
+    if (showMessage && firstTime)
+      this._displayPageReportFirstTime();
+
+    gPrefService.setBoolPref("privacy.popups.showBrowserMessage", !showMessage);
+
+    gBrowser.hideMessage(gBrowser.selectedBrowser, "top");
+  },
+
+  _displayPageReportFirstTime: function ()
+  {
+    window.openDialog("chrome://browser/content/pageReportFirstTime.xul", "_blank",
+                      "dependent");
   }
 };
 
@@ -607,8 +771,9 @@ const gXPInstallObserver = {
           var messageString = browserBundle.formatStringFromName(messageKey, params, params.length);
           var buttonString = browserBundle.GetStringFromName(buttonKey);
           var webNav = shell.QueryInterface(Components.interfaces.nsIWebNavigation);
-          tabbrowser.showMessage(i, iconURL, messageString, buttonString, 
-                                 webNav.currentURI, "xpinstall-install-edit-permissions");
+          tabbrowser.showMessage(browser, iconURL, messageString, buttonString, 
+                                 webNav.currentURI, "xpinstall-install-edit-permissions",
+                                 null, "top");
         }
       }
       break;
@@ -622,7 +787,7 @@ const gXPInstallObserver = {
                         "_blank", "chrome,modal,resizable=yes", params);
       
       var tabbrowser = getBrowser();
-      tabbrowser.hideMessageForBrowser(tabbrowser.selectedBrowser);
+      tabbrowser.hideMessage(tabbrowser.selectedBrowser, "top");
       break;
     }
   }
@@ -739,7 +904,7 @@ function prepareForStartup()
   gURLBar = document.getElementById("urlbar");  
   gNavigatorBundle = document.getElementById("bundle_browser");
   gProgressMeterPanel = document.getElementById("statusbar-progresspanel");
-  gBrowser.addEventListener("DOMUpdatePageReport", UpdatePageReport, false);
+  gBrowser.addEventListener("DOMUpdatePageReport", gPopupBlockerObserver.onUpdatePageReport, false);
   gBrowser.addEventListener("DOMLinkAdded", livemarkOnLinkAdded, false);
 
   var webNavigation;
@@ -2697,6 +2862,7 @@ nsBrowserStatusHandler.prototype =
   overLink : "",
   startTime : 0,
   statusText: "",
+  lastURI: null,
 
   statusTimeoutInEffect : false,
 
@@ -2734,6 +2900,7 @@ nsBrowserStatusHandler.prototype =
     this.securityButton  = null;
     this.urlBar          = null;
     this.statusText      = null;
+    this.lastURI         = null;
   },
 
   setJSStatus : function(status)
@@ -2884,13 +3051,26 @@ nsBrowserStatusHandler.prototype =
 
   onLocationChange : function(aWebProgress, aRequest, aLocation)
   {
-    // If we're *in* tabbrowsing mode, tabbrowser's status handler does this. 
-    // If we have not entered tabbrowsing mode, this is the only location change
-    // method that gets called. 
-    if (!getBrowser().mTabbedMode) {
-      var tabbrowser = getBrowser();
-      tabbrowser.hideMessageForBrowser(tabbrowser.selectedBrowser);
+    // This code here does not compare uris exactly when determining
+    // whether or not the message should be hidden since the message
+    // may be prematurely hidden when an install is invoked by a click
+    // on a link that looks like this:
+    //
+    // <a href="#" onclick="return install();">Install Foo</a>
+    //
+    // - which fires a onLocationChange message to uri + '#'...
+    if (this.lastURI) {
+      var oldSpec = this.lastURI.spec;
+      oldSpec = oldSpec.substr(0, oldSpec.indexOf("#"));
+      var newSpec = aLocation.spec;
+      newSpec = newSpec.substr(0, newSpec.indexOf("#"));
+      if (newSpec == oldSpec) {
+        var tabbrowser = getBrowser();
+        tabbrowser.hideMessage(tabbrowser.selectedBrowser, "both");
+      }
     }
+    
+    this.lastURI = aLocation;
 
     this.setOverLink("", null);
 
@@ -2978,6 +3158,7 @@ nsBrowserStatusHandler.prototype =
 
   startDocumentLoad : function(aRequest)
   {
+    dump("*** SDL\n");
     // Reset so we can see if the user typed between the document load
     // starting and the location changing.
     getBrowser().userTypedValue = null;
@@ -3060,18 +3241,6 @@ function displaySecurityInfo()
 {
     window.openDialog("chrome://browser/content/pageInfo.xul", "_blank",
                       "dialog=no", null, "securityTab");
-}
-
-function displayPageReportFirstTime()
-{
-    window.openDialog("chrome://browser/content/pageReportFirstTime.xul", "_blank",
-                      "dependent");
-}
-
-function displayPageReport()
-{
-    window.openDialog("chrome://browser/content/pageReport.xul", "_blank",
-                      "dialog,modal,resizable");
 }
 
 function nsBrowserContentListener(toplevelWindow, contentWindow)

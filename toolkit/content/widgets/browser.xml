@@ -421,8 +421,10 @@
               this.updatePageReport(); 
             }
 
-            // The "" is a hack to force a convert to string to defeat the "liveness" of the .location property.
-            this.pageReport.push(evt.target.location + "");
+            var obj = { requestingWindowURI: evt.requestingWindowURI,
+                        popupWindowURI: evt.popupWindowURI,
+                        popupWindowFeatures: evt.popupWindowFeatures };
+            this.pageReport.push(obj);
           ]]> 
         </body>
       </method>
@@ -842,6 +844,19 @@
       <field name="source">
         "";
       </field>
+      <property name="popup">
+        <setter>
+          <![CDATA[
+            this.setAttribute("popup", val);
+            return val;
+          ]]>
+        </setter>
+        <getter>
+          <![CDATA[
+            return this._buttonElement.getAttribute("popup");
+          ]]>
+        </getter>
+      </property>
 
       <field name="_textElement">
         document.getAnonymousElementByAttribute(this, "anonid", "messageText");
@@ -877,7 +892,10 @@
         </getter>
         <setter>
           <![CDATA[
-            this._buttonElement.setAttribute("label", val);
+            if (val != "") 
+              this._buttonElement.setAttribute("label", val);
+            else
+              this._buttonElement.hidden = true;
             return val;
           ]]>        
         </setter>
@@ -888,7 +906,8 @@
         if (event.originalTarget.getAttribute("anonid") == "messageButton") {
           var os = Components.classes["@mozilla.org/observer-service;1"]
                              .getService(Components.interfaces.nsIObserverService);
-          os.notifyObservers(this.uri, this.source, "");
+          var subject = this.uri ? this.uri : null;
+          os.notifyObservers(subject, this.source, "");
         }
       </handler>
     </handlers>

@@ -725,50 +725,48 @@ statusbarpanel#statusbar-display {
 }
 
 #security-button {
-  display: none;
+  list-style-image: none;
+  width: 20px;
 }
 
 #security-button[level="high"] {
   list-style-image: url("chrome://browser/skin/Secure.png");
-  display: -moz-box;
 }
 
 #security-button[level="low"] {
   list-style-image: url("chrome://browser/skin/Secure.png");
-  display: -moz-box;
 }
 
 #security-button[level="broken"] {
   list-style-image: url("chrome://browser/skin/Security-broken.png");
-  display: -moz-box;
 }
 
 #page-report-button {
-  display: none;
+  list-style-image: none;
+  width: 20px;
 }
 
 #page-report-button[blocked] {
-  display: -moz-box;
   list-style-image: url("chrome://browser/skin/Info.png");
-  padding: 0px 3px 0px 3px;
+  padding: 0px 3px 0px 3px; 
 }
 
 #page-theme-button {
-  display: none;
+  list-style-image: none;
+  width: 20px;
 }
 
 #page-theme-button[themes] {
-  display: -moz-box;
   list-style-image: url("chrome://browser/skin/page-themes.png");
   padding: 0px 3px 0px 3px;
 }
 
 #livemark-button {
-  display: none;
+  list-style-image: none;
+  width: 20px;
 }
 
 #livemark-button[livemarks] {
-  display: -moz-box;
   list-style-image: url("chrome://browser/skin/page-livemarks.png");
   padding: 0px 3px 0px 3px;
 }

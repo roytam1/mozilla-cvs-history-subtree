@@ -163,6 +163,20 @@
                  type="checkbox" group="sidebar" sidebarurl="chrome://browser/content/web-panels.xul"
                  oncommand="toggleSidebar('viewWebPanelsSidebar');"/>
 
+    <!-- popup blocking menu items -->
+    <broadcaster id="blockedPopupAllowSite" 
+                 accesskey="&allowPopups.accesskey;" 
+                 oncommand="gPopupBlockerObserver.toggleAllowPopupsForSite(event);"/>
+    <broadcaster id="blockedPopupEditSettings" 
+                 label="&editPopupSettings.label;" 
+                 accesskey="&editPopupSettings.accesskey;" 
+                 oncommand="gPopupBlockerObserver.editPopupSettings();"/>
+    <broadcaster id="blockedPopupDontShowMessage" 
+                 accesskey="&dontShowMessage.accesskey;" 
+                 type="checkbox"
+                 oncommand="gPopupBlockerObserver.dontShowMessage();"/>
+    <broadcaster id="blockedPopupsSeparator"/>
+
   </broadcasterset>
 
   <keyset id="mainKeyset">
