@@ -74,9 +74,9 @@ class nsISupportsArray;
 class nsIStringBundleService;
 class nsIStringBundle;
 class nsIStyleSheet;
-class nsIEditorController;
 class nsIDOMEventReceiver;
 class nsIDOMEventListener;
+class nsIController;
 class nsISpellChecker;
 class nsInterfaceState;
 class nsIHTMLEditor;
@@ -144,7 +144,7 @@ class nsEditorShell :   public nsIEditorShell,
     nsresult        TransferDocumentStateListeners();
     nsresult        RemoveOneProperty(const nsString& aProp, const nsString& aAttr);
     nsresult        DoFind(PRBool aFindNext);
-    // To allow executing JavaScript commands from C++ via nsIEditorController interface
+    // To allow executing JavaScript commands from C++ via nsIController interface
     nsresult        DoControllerCommand(const char* aCommand);
 
     void            Alert(const nsString& aTitle, const nsString& aMsg);
@@ -211,8 +211,8 @@ class nsEditorShell :   public nsIEditorShell,
     nsEditorParserObserver  *mParserObserver;       // we hold the owning ref to this.
     nsInterfaceState        *mStateMaintainer;      // we hold the owning ref to this.
 
-    nsIEditorController     *mEditorController;     // temporary weak ref to the editor controller
-    nsIEditorController     *mComposerController;   // temporary weak ref to the nsComposerController
+    nsIController           *mEditorController;     // temporary weak ref to the editor controller
+    nsIController           *mComposerController;   // temporary weak ref to the nsComposerController
     nsIDocShell             *mDocShell;              // weak reference
 
     // The webshell that contains the document being edited.
