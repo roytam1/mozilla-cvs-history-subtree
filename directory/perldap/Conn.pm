@@ -62,19 +62,28 @@ sub new
     {
       my ($host, $port, $binddn, $bindpasswd, $certdb, $authmeth) = @_;
 
-      $self->{"host"} = $host;
-      $self->{"port"} = $port;
-      $self->{"binddn"} = $binddn;
-      $self->{"bindpasswd"} = $bindpasswd;
-      $self->{"certdb"} = $certdb;
+      $self->{"host"} = $host if defined($host);
+      $self->{"port"} = $port if defined($port);
+      $self->{"binddn"} = $binddn if defined($binddn);
+      $self->{"bindpasswd"} = $bindpasswd if defined($bindpasswd);
+      $self->{"certdb"} = $certdb if defined($certdb);
     }
 
+  # Anonymous bind is the default...
   $self->{"binddn"} = "" unless defined($self->{"binddn"});
   $self->{"bindpasswd"} = "" unless defined($self->{"bindpasswd"});
 
+  # Find an appropriate default port number if not specified.
   if (!defined($self->{"port"}) || ($self->{"port"} eq ""))
     {
-      $self->{"port"} = (($self->{"certdb"} ne "") ? LDAPS_PORT : LDAP_PORT);
+      if (defined($self->{"certdb"}) && ($self->{"certdb"} ne ""))
+	{
+	  $self->{"port"} = LDAPS_PORT;
+	}
+      else
+	{
+	  $self->{"port"} = LDAP_PORT;
+	}
     }
   bless $self, $class;
 
@@ -104,6 +113,9 @@ sub init
 {
   my ($self) = shift;
   my ($ret, $ld);
+
+  return 0 unless (defined($self->{"host"}));
+  return 0 unless (defined($self->{"port"}));
 
   if (defined($self->{"certdb"}) && ($self->{"certdb"} ne ""))
     {
