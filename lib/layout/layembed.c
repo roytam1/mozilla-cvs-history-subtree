@@ -337,10 +337,10 @@ lo_FormatEmbedObject(MWContext* context, lo_DocState* state,
 		}
 		
 		/* Lop off the "clsid:" prefix from the CLASSID attribute */
-		if (XP_STRNCASECMP(embed->attributes.values[classidIndex], "clsid:", 6) == 0)
+		if (XP_STRNCASECMP(embed->value_list[classidIndex], "clsid:", 6) == 0)
 		{
-			char* classID = &(embed->attributes.values[classidIndex][6]);
-			XP_MEMMOVE(embed->attributes.values[classidIndex], classID,
+			char* classID = &(embed->value_list[classidIndex][6]);
+			XP_MEMMOVE(embed->value_list[classidIndex], classID,
 					   (XP_STRLEN(classID) + 1) * sizeof(char));
 		}
 	}
