@@ -143,6 +143,9 @@ important that a module or method doesn't work without it). The oustanding
     <LI><B>Conn.pm</B>: Bug fix for case sensitivity on searches for
     specific attributes. <B><I>[leif, fixed 09/03]</I></B>
 
+    <LI><B>Conn.pm</B>: Case is not preserved in modifyRDN().
+    <B><I>[leif, fixed 09/11]</I></B>
+
     <LI><B>Makefile.PL</B>: Change all "reads" from STDIN to explictly use
     <STDIN>. This is necessary so the user can give extra command line
     arguments to pass to MakeMaker. We might want to consider a major
