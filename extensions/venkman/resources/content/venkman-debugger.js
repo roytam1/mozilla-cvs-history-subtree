@@ -44,7 +44,7 @@ const jsdIScript          = Components.interfaces.jsdIScript;
 const jsdIStackFrame      = Components.interfaces.jsdIStackFrame;
 const jsdIFilter          = Components.interfaces.jsdIFilter;
 
-const COLLECT_PROFILE_DATA = jsdIDebuggerService.COLLECT_PROFILE_DATA;
+const COLLECT_PROFILE_DATA  = jsdIDebuggerService.COLLECT_PROFILE_DATA;
 
 const PCMAP_SOURCETEXT    = jsdIScript.PCMAP_SOURCETEXT;
 const PCMAP_PRETTYPRINT   = jsdIScript.PCMAP_PRETTYPRINT;
@@ -88,13 +88,12 @@ function initDebugger()
     console.jsds.on();
     console.executionHook = { onExecute: jsdExecutionHook };
     console.errorHook = { onError: jsdErrorHook };
-    console.scriptHook = { onScriptCreated: jsdScriptCreated,
-                           onScriptDestroyed: jsdScriptDestroyed };
+    console.callHook = { onCall: jsdCallHook };
+    
     console.jsds.breakpointHook = console.executionHook;
     console.jsds.debuggerHook = console.executionHook;
     console.jsds.debugHook = console.executionHook;
     console.jsds.errorHook = console.errorHook;
-    console.jsds.scriptHook = console.scriptHook;
     console.jsds.flags = jsdIDebuggerService.ENABLE_NATIVE_FRAMES;
 
     console.chromeFilter = {
@@ -133,7 +132,9 @@ function initDebugger()
     console.throwMode = TMODE_IGNORE;
     console.errorMode = EMODE_IGNORE;
     
-    console.jsds.enumerateScripts({ enumerateScript: jsdScriptCreated });
+    var enumer = { enumerateScript: console.scriptHook.onScriptCreated };
+    console.jsds.scriptHook = console.scriptHook;
+    console.jsds.enumerateScripts(enumer);
 
     dd ("} initDebugger");
 }
@@ -154,6 +155,69 @@ function detachDebugger()
     console.jsds.clearFilters();
     if (!console.jsds.initAtStartup)
         console.jsds.off();
+}
+
+console.scriptHook = new Object();
+
+console.scriptHook.onScriptCreated =
+function sh_created (jsdScript)
+{
+    try
+    {
+        jsdScriptCreated(jsdScript);
+    }
+    catch (ex)
+    {
+        dd ("caught " + ex + " while creating script.");
+    }
+}
+
+console.scriptHook.onScriptDestroyed =
+function sh_destroyed (jsdScript)
+{
+    try
+    {
+        jsdScriptDestroyed(jsdScript);
+    }
+    catch (ex)
+    {
+        dd ("caught " + ex + " while destroying script.");
+    }
+}
+    
+function jsdScriptCreated (jsdScript)
+{
+    var url = jsdScript.fileName;
+    var manager;
+    
+    if (!(url in console.scriptManagers))
+    {
+        manager = console.scriptManagers[url] = new ScriptManager(url);
+        //dispatchCommand (console.coManagerCreated, { scriptManager: manager });
+    }
+    else
+    {
+        manager = console.scriptManagers[url];
+    }
+
+    manager.onScriptCreated(jsdScript);
+}
+
+function jsdScriptDestroyed (jsdScript)
+{
+    if (!(jsdScript.tag in console.scriptWrappers))
+        return;
+    
+    var scriptWrapper = console.scriptWrappers[jsdScript.tag];
+    scriptWrapper.scriptManager.onScriptInvalidated(scriptWrapper);
+    
+    if (scriptWrapper.scriptManager.instances.length == 0 && 
+        scriptWrapper.scriptManager.transientCount == 0)
+    {
+        delete console.scriptManagers[scriptWrapper.scriptManager.url];
+        //dispatchCommand (console.coManagerDestroyed,
+        //                 { scriptManager: scriptWrapper.scriptManager });
+    }
 }
 
 function jsdExecutionHook (frame, type, rv)
@@ -275,38 +339,6 @@ function jsdErrorHook (message, fileName, line, pos, flags, exception)
     return true;
 }
 
-function jsdScriptCreated (jsdScript)
-{
-    var url = jsdScript.fileName;
-    var manager;
-    
-    if (!(url in console.scriptManagers))
-    {
-        manager = console.scriptManagers[url] = new ScriptManager(url);
-        //dispatchCommand (console.coManagerCreated, { scriptManager: manager });
-    }
-    else
-    {
-        manager = console.scriptManagers[url];
-    }
-    
-    manager.onScriptCreated(jsdScript);
-}
-
-function jsdScriptDestroyed (jsdScript)
-{
-    var scriptWrapper = console.scriptWrappers[jsdScript.tag];
-    scriptWrapper.scriptManager.onScriptInvalidated(scriptWrapper);
-    
-    if (scriptWrapper.scriptManager.instances.length == 0 && 
-        scriptWrapper.scriptManager.transientCount == 0)
-    {
-        delete console.scriptManagers[scriptWrapper.scriptManager.url];
-        //dispatchCommand (console.coManagerDestroyed,
-        //                 { scriptManager: scriptWrapper.scriptManager });
-    }
-}
-
 function ScriptManager (url)
 {
     this.url = url;
@@ -319,12 +351,13 @@ ScriptManager.prototype.onScriptCreated =
 function smgr_created (jsdScript)
 {
     var instance;
+
+    if (!jsdScript.isValid)
+        dd ("************************* invalid script created!");
     
-    if (this.instances.length == 0 ||
-        this.instances[this.instances.length - 1].isSealed)
+    if (this.instances.length == 0 || jsdScript.functionName)
     {
-        /* first instance of this file, or most recent instance is already
-         * sealed. */
+        //dd ("instance created for " + jsdScript.fileName);
         instance = new ScriptInstance(this);
         this.instances.push(instance);
         dispatchCommand (console.coInstanceCreated,
@@ -337,30 +370,27 @@ function smgr_created (jsdScript)
 
     var scriptWrapper = new ScriptWrapper(jsdScript);
     scriptWrapper.scriptManager = this;
-
     console.scriptWrappers[jsdScript.tag] = scriptWrapper;
+    scriptWrapper.scriptInstance = instance;
 
-    if (instance.isSealed)
+    if (!instance.isSealed)
     {
-        ++this.transients;
-        this.transients[tag] = scriptWrapper;
-        scriptWrapper.scriptInstance = null;
-        scriptWrapper.functionName = MSG_VAL_EVSCRIPT;
-        dd ("transient created");
-        //dispatch ("hook-transient-script", { scriptWrapper: scriptWrapper });
+        instance.onScriptCreated (scriptWrapper);
     }
     else
     {
-        scriptWrapper.scriptInstance = instance;
-        instance.onScriptCreated (scriptWrapper);
-    }
-
-    //dispatch ("hook-script-created", { scriptWrapper: scriptWrapper });
+        ++this.transientCount;
+        this.transients[jsdScript.tag] = scriptWrapper;
+        scriptWrapper.functionName = MSG_VAL_EVSCRIPT;
+        //dispatch ("hook-transient-script", { scriptWrapper: scriptWrapper });
+    }    
 }
 
 ScriptManager.prototype.onScriptInvalidated =
 function smgr_invalidated (scriptWrapper)
 {
+    //dd ("script invalidated");
+    
     delete console.scriptWrappers[scriptWrapper.tag];
     if (scriptWrapper.tag in this.transients)
     {
@@ -370,6 +400,7 @@ function smgr_invalidated (scriptWrapper)
     }
     else
     {
+        //dd ("invalidating instance");
         scriptWrapper.scriptInstance.onScriptInvalidated(scriptWrapper);
         //dispatch ("hook-script-invalidated", { scriptWrapper: scriptWrapper });
 
@@ -488,15 +519,6 @@ function smgr_clear (line)
     dispatch ("hook-fbreak-clear", { fbreak: fbreak });
 }
 
-function FutureBreakpoint (url, lineNumber)
-{
-    this.url = url;
-    this.lineNumber = lineNumber;
-    this.enabled = true;
-    this.scriptText = null;
-    this.childrenBP = new Object;
-}
-
 function ScriptInstance (manager)
 {
     this.scriptManager = manager;
@@ -536,6 +558,8 @@ function si_created (scriptWrapper)
 ScriptInstance.prototype.onScriptInvalidated =
 function si_invalidated (scriptWrapper)
 {
+    //dd ("script invalidated");
+    scriptWrapper.clearBreakpoints();
     --this.scriptCount;
 }
 
@@ -554,8 +578,11 @@ function si_linemap()
     if (!this._lineMapInited)
     {
         for (var i in this.functions)
-            this.functions[i].addToLineMap(this._lineMap);
-
+        {
+            if (this.functions[i].jsdScript.isValid)
+                this.functions[i].addToLineMap(this._lineMap);
+        }
+        
         for (var fbp in console.fbreaks)
         {
             var fbreak = console.fbreaks[fbp];
@@ -654,24 +681,21 @@ function si_guessnames ()
     var pattern = new RegExp (console.prefs["guessPattern"]);
     var scanText;
     
-    function getSourceContext (center)
+    function getSourceContext (end)
     {
-        var startLine = center - context;
+        var startLine = end - context;
         if (startLine < 0)
             startLine = 0;
 
-        var text;
+        var text = "";
         
         for (i = startLine; i <= targetLine; ++i)
             text += String(sourceLines[i]);
     
         var pos = text.lastIndexOf ("function");
-        if (pos == -1)
-            pos = text.lastIndexOf ("get");
-        if (pos == -1)
-            pos = text.lastIndexOf ("set");
         if (pos != -1)
             text = text.substring(0, pos);
+
         return text;
     };
         
@@ -787,6 +811,13 @@ function sw_setbp (pc, parentBP)
     this.jsdScript.setBreakpoint (pc);    
 }
 
+ScriptWrapper.prototype.clearBreakpoints =
+function sw_clearbps ()
+{
+    for (b in this.breaks)
+        this.clearBreakpoint(this.breaks[b].pc);
+}
+
 ScriptWrapper.prototype.clearBreakpoint =
 function sw_clearbp (pc)
 {
@@ -844,6 +875,25 @@ function sw_addmap (lineMap)
         var line = jsdScript.pcToLine(this.breaks[i].pc, PCMAP_SOURCETEXT);
         arrayOrFlag (lineMap, line - 1, LINE_BREAK);
     }
+}
+
+function getScriptWrapper(jsdScript)
+{
+    var tag = jsdScript.tag;
+    if (tag in console.scriptWrappers)
+        return console.scriptWrappers[tag];
+
+    dd ("Can't find a wrapper for " + formatScript(jsdScript));
+    return null;
+}
+
+function FutureBreakpoint (url, lineNumber)
+{
+    this.url = url;
+    this.lineNumber = lineNumber;
+    this.enabled = true;
+    this.scriptText = null;
+    this.childrenBP = new Object;
 }
 
 function isURLFiltered (url)
@@ -925,14 +975,20 @@ function debugTrap (frame, type, rv)
         console.frames.push(frame);
     
     console.trapType = type;
+    
     window.focus();
     window.getAttention();
 
-    console.jsds.enterNestedEventLoop({onNest: eventLoopNested}); 
+    try
+    {    
+        console.jsds.enterNestedEventLoop({onNest: eventLoopNested}); 
+    }
+    catch (ex)
+    {
+        dd ("caught " + ex + " while nested");
+    }
     
-    /* execution pauses here until someone calls 
-     * console.dbg.exitNestedEventLoop() 
-     */
+    /* execution pauses here until someone calls exitNestedEventLoop() */
 
     clearCurrentFrame();
     delete console.frames;
@@ -940,8 +996,6 @@ function debugTrap (frame, type, rv)
     rv.value = (0 in $) ? $[0] : null;
     $ = new Array();
     
-    console.onDebugContinue();
-
     dispatch ("hook-debug-continue");
 
     if (tn)
@@ -952,6 +1006,22 @@ function debugTrap (frame, type, rv)
 
 function eventLoopNested ()
 {
+    function paintHack ()
+    {
+        /* when stopping at a timeout, we don't repaint correctly.
+         * by jamming a character into this hidden text box, we can force
+         * a repaint.
+         */
+        var textbox = document.getElementById("paint-hack");
+        textbox.value = " ";
+        textbox.value = "";
+    };
+    
+    setTimeout (paintHack, 500);
+    setTimeout (paintHack, 1000);
+    setTimeout (paintHack, 1500);
+    setTimeout (paintHack, 2000);
+    setTimeout (paintHack, 2500);
     dispatch ("hook-debug-stop");
 }
 
@@ -1176,25 +1246,16 @@ function displayProperties (v)
     for (var i in p.value) display(formatProperty (p.value[i]));
 }
 
-function displaySource (url, line, contextLines)
+function displaySourceContext (sourceText, line, contextLines)
 {
     function onSourceLoaded (status)
     {
         if (status == Components.results.NS_OK)
-            displaySource (url, line, contextLines);
+            displaySourceContext (sourceText, line, contextLines);
     }
-    
-    var scriptWrapper = console.scripts[url];
- 
-    if (!rec)
-    {
-        display (getMsg(MSN_ERR_NO_SCRIPT, url), MT_ERROR);
-        return;
-    }
-    
-    var sourceText = rec.sourceText;
     
     if (sourceText.isLoaded)
+    {
         for (var i = line - contextLines; i <= line + contextLines; ++i)
         {
             if (i > 0 && i < sourceText.lines.length)
@@ -1204,33 +1265,53 @@ function displaySource (url, line, contextLines)
                          i == line ? MT_STEP : MT_SOURCE);
             }
         }
+    }
     else
     {
         sourceText.loadSource (onSourceLoaded);
     }
 }
     
-function displayFrame (f, idx, showSource)
+function displayFrame (jsdFrame, idx, showHeader, sourceContext)
 {
-    if (!f)
-        throw new BadMojo (ERR_REQUIRED_PARAM, "f");
-
     if (typeof idx == "undefined")
     {
         for (idx = 0; idx < console.frames.length; ++idx)
-            if (f == console.frames[idx])
+            if (jsdFrame == console.frames[idx])
                 break;
     
         if (idx >= console.frames.length)
             idx = MSG_VAL_UNKNOWN;
     }
-    
-    if (typeof idx == "number")
-        idx = "#" + idx;
-    
-    display(idx + ": " + formatFrame (f));
-    if (!f.isNative && f.script.fileName && showSource)
-            displaySource (f.script.fileName, f.line, 2);
+
+    if (typeof showHeader == "undefined")
+        showHeader = true;
+
+    if (typeof sourceContext == "undefined")
+        sourceContext = null;
+
+    display(getMsg(MSN_FMT_FRAME_LINE, [idx, formatFrame(jsdFrame)]));
+
+    if (!jsdFrame.isNative && sourceContext != null)
+    {
+        var jsdScript = jsdFrame.script;
+        var scriptWrapper = getScriptWrapper(jsdScript);
+
+        if (!ASSERT(scriptWrapper, "Couldn't get a script wrapper"))
+            return;
+        if (console.prefs["prettyprint"] && jsdScript.isValid)
+        {
+            displaySourceContext (scriptWrapper.sourceText,
+                                  jsdScript.pcToLine(jsdFrame.pc,
+                                                     PCMAP_PRETTYPRINT),
+                                  sourceContext);
+        }
+        else
+        {
+            displaySourceContext (scriptWrapper.scriptInstance.sourceText,
+                                  jsdFrame.line, sourceContext);
+        }
+    }
 }
 
 function getBreakpoint (fileName, line)

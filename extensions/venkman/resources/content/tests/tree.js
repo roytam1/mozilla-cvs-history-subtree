@@ -43,7 +43,7 @@ function SampleRecord (name, gender)
     this.gender = gender;
 }
 
-SampleRecord.prototype = new XULTreeRecord(sampleTree.share);
+SampleRecord.prototype = new XULTreeViewRecord(sampleTree.share);
 
 sampleTree.childData.appendChild (new SampleRecord ("vinnie", "male"));
 var betty = new SampleRecord ("betty", "female");

@@ -61,7 +61,7 @@ function initPrefs()
     console.addPref ("prettyprint", false);
     console.addPref ("guessContext", 5);
     console.addPref ("guessPattern", "(\\w+)\\s*[:=]\\s*$");
-
+    
     var list = console.prefs.prefBranch.getChildList("extensions.venkman.", {});
     for (var p in list)
     {

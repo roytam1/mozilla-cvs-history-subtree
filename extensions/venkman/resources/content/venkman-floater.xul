@@ -53,6 +53,9 @@
   persist="width height screenX screenY" title="&MainWindow.title;"
   windowtype="mozapp:venkman:floater">
 
+  <script>
+    var DEBUG = true;
+  </script>
   <script src="chrome://venkman/content/venkman-utils.js"/>
   <script>
     <![CDATA[

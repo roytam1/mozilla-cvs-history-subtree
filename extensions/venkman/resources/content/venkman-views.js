@@ -96,7 +96,7 @@ function syncTreeView (treeContent, treeView, cb)
         }
         else
         {
-            dd ("trying to sync " + treeContent.getAttribute("id") + " AGAIN");
+            //dd ("trying to sync " + treeContent.getAttribute("id") + " AGAIN");
             setTimeout (tryAgain, 500);
         }
     };
@@ -199,7 +199,7 @@ function bv_hide()
     syncTreeView (getChildById(this.currentContent, "break-tree"), null);
 }
 
-console.views.breaks.onSelect =
+console.views.breaks.onDblClick =
 function bv_sel (e)
 {
     var rowIndex = this.tree.selection.currentIndex;
@@ -213,7 +213,7 @@ function bv_sel (e)
     }
 
     if (row instanceof BPRecord)
-        dispatch ("find-bp", {breakpointRec: row});
+        dispatch ("find-bp", {breakpoint: row.breakInstance});
 }
 
 console.views.breaks.getContext =
@@ -298,6 +298,197 @@ console.views.locals.viewId = "locals";
 console.views.locals.init =
 function lv_init ()
 {
+    /* max number of properties the "scope" or "this" object can have before
+     * we stop auto-opening the tree node. */
+    console.addPref("localsView.autoOpenMax", 25);
+    /* max number of functions to keep open/close states for. */
+    console.addPref("localsView.savedStatesMax", 20);
+    this.jsdFrame = null;
+    this.savedStates = new Object();
+    this.stateTags = new Array();
+}
+
+console.views.locals.clear =
+function lv_clear ()
+{
+    while (this.childData.childData.length)
+        this.childData.removeChildAtIndex(0);
+}
+
+console.views.locals.changeFrame =
+function lv_renit (jsdFrame)
+{
+    this.clear();
+    
+    if (!jsdFrame)
+    {
+        delete this.jsdFrame;
+        return;
+    }
+    
+    this.jsdFrame = jsdFrame;
+    var tag = jsdFrame.script.tag;
+    var state;
+    if (tag in this.savedStates)
+        state = this.savedStates[tag];
+    
+    if (jsdFrame.scope)
+    {
+        this.scopeRecord = new ValueRecord (jsdFrame.scope, MSG_VAL_SCOPE, "");
+        if (!state && jsdFrame.scope.propertyCount <
+            console.prefs["localsView.autoOpenMax"])
+        {
+            this.scopeRecord.open();
+        }
+        
+    }
+    else
+    {
+        this.scopeRecord = new XTLabelRecord ("locals:col-0", MSV_VAL_SCOPE,
+                                              ["locals:col-1", "locals:col-2",
+                                               "locals:col-3"]);
+        this.scopeRecord.property = ValueRecord.prototype.atomObject;
+    }
+    
+    if (jsdFrame.thisValue)
+    {
+        this.thisRecord = new ValueRecord (jsdFrame.thisValue, MSG_VAL_THIS, "");
+        if (!state && jsdFrame.thisValue.propertyCount < 
+            console.prefs["localsView.autoOpenMax"])
+        {
+            this.scopeRecord.open();
+        }
+    }    
+    else
+    {
+        this.thisRecord = new XTLabelRecord ("locals:col-0", MSV_VAL_THIS,
+                                             ["locals:col-1", "locals:col-2",
+                                              "locals:col-3"]);
+        this.thisRecord.property = ValueRecord.prototype.atomObject;
+    }
+
+    this.childData.appendChild(this.scopeRecord);
+    this.childData.appendChild(this.thisRecord);
+
+    if (state)
+        this.restoreState(state);
+}
+
+console.views.locals.restoreState =
+function lv_restore (state)
+{
+    function restoreBranch (target, source)
+    {
+        for (var i in source)
+        {
+            if (typeof source[i] == "object")
+            {
+                var name = source[i].name;
+                var len = target.length;
+                for (var j = 0; j < len; ++j)
+                {
+                    if (target[j]._colValues["col-0"] == name &&
+                        "childData" in target[j])
+                    {
+                        //dd ("opening " + name);
+                        target[j].open();
+                        restoreBranch (target[j].childData, source[i]);
+                        break;
+                    }
+                }
+            }
+        }
+    };
+    
+    this.freeze();
+    if ("scopeState" in state)
+    {
+        this.scopeRecord.open();
+        restoreBranch (this.scopeRecord.childData, state.scopeState);
+    }
+    if ("thisState" in state)
+    {
+        this.thisRecord.open();
+        restoreBranch (this.thisRecord.childData, state.thisState);
+    }
+    this.thaw();
+    this.scrollTo (state.firstVisible, -1);
+}
+
+function showState()
+{
+    dd(dumpObjectTree(console.views.locals.savedStates[console.frames[0].script.tag], 2));
+}
+
+console.views.locals.saveState =
+function sv_save ()
+{
+    if (!ASSERT(this.jsdFrame, "no frame"))
+        return;
+        
+    function saveBranch (target, source)
+    {
+        var len = source.length;
+        for (var i = 0; i < len; ++i)
+        {
+            if (source[i].isContainerOpen)
+            {
+                target[i] = new Object();
+                target[i].name = source[i]._colValues["col-0"];
+                saveBranch (target[i], source[i].childData);
+            }
+        }
+    };
+
+    var tag = this.jsdFrame.script.tag;    
+
+    if (!tag in this.savedStates &&
+        this.stateTags.length == console.prefs["localsView.maxSavedStates"])
+    {
+        delete this.savedStates[this.stateTags.shift()];
+        this.stateTags.push(tag);
+    }
+        
+    var state = this.savedStates[tag] = new Object();
+    if (this.tree)
+        state.firstVisible = this.tree.getFirstVisibleRow() + 1;
+    else
+        state.firstVisible = 1;
+
+    if (this.scopeRecord.isContainerOpen)
+    {
+        state.scopeState = { name: "scope" };
+        saveBranch (state.scopeState, this.scopeRecord.childData);
+    }
+    
+    if (this.thisRecord.isContainerOpen)
+    {
+        state.thisState = { name: "this" };
+        saveBranch (state.thisState, this.thisRecord.childData);
+    }
+    
+    //dd ("saved as\n" + dumpObjectTree(this.savedState, 10));
+}
+
+console.views.locals.hooks = new Object()
+
+console.views.locals.hooks["hook-debug-stop"] =
+function lv_hookDebugStop (e)
+{
+    console.views.locals.changeFrame(console.frames[0]);
+}
+
+console.views.locals.hooks["find-frame"] =
+function lv_hookDebugStop (e)
+{
+    console.views.locals.changeFrame(console.frames[e.frameIndex]);
+}
+
+console.views.locals.hooks["hook-debug-continue"] =
+function lv_hookDebugStop (e)
+{
+    console.views.locals.saveState();
+    console.views.locals.clear();
 }
 
 console.views.locals.onShow =
@@ -310,6 +501,31 @@ console.views.locals.onHide =
 function lv_hide ()
 {
     syncTreeView (getChildById(this.currentContent, "locals-tree"), null);
+}
+
+console.views.locals.onDblClick =
+function lv_dblclick ()
+{
+    dd ("locals double click");
+}
+
+console.views.locals.getCellProperties =
+function lv_cellprops (index, colID, properties)
+{
+    if (colID != "locals:col-0")
+        return null;
+    
+    var row = this.childData.locateChildByVisualRow(index);
+    if (row)
+    {
+        if ("getProperties" in row)
+            return row.getProperties (properties);
+
+        if (row.property)
+            return properties.AppendElement (row.property);
+    }
+
+    return null;
 }
 
 console.views.locals.refresh =
@@ -365,40 +581,50 @@ console.views.scripts.hooks = new Object();
 console.views.scripts.hooks["chrome-filter"] =
 function scv_hookChromeFilter(e)
 {
-    console.views.scripts.freeze();
-    for (var container in console.scripts)
+    var scriptsView = console.views.scripts;
+    var nodes = scriptsView.childData;
+    scriptsView.freeze();
+
+    dd ("e.toggle is " + e.toggle);
+                
+    for (var m in console.scriptManagers)
     {
-        if (console.scripts[container].fileName.indexOf("chrome:") == 0)
+        if (console.scriptManagers[m].url.search(/^chrome:/) == -1)
+            continue;
+        
+        for (var i in console.scriptManagers[m].instances)
         {
-            var rec = console.scripts[container];
-            var scriptList = console.views.scripts.childData;
-            if (e.toggle)
+            var instance = console.scriptManagers[m].instances[i];
+            if ("scriptInstanceRecord" in instance)
             {
-                /* filter is on, remove chrome file from scripts view */
-                if ("parentRecord" in rec)
+                var rec = instance.scriptInstanceRecord;
+                
+                if (e.toggle)
                 {
-                    //dd ("remove index " + rec.childIndex + ", " +
-                    //    rec.fileName);
-                    scriptList.removeChildAtIndex(rec.childIndex);
+                    if (!ASSERT("parentRecord" in rec, "Record for " +
+                                console.scriptManagers[m].url + 
+                                " is already removed"))
+                    {
+                        continue;
+                    }
+                    /* filter is on, remove chrome file from scripts view */
+                    dd ("removing " + console.scriptManagers[m].url + 
+                        " kid at " + rec.childIndex);
+                    nodes.removeChildAtIndex(rec.childIndex);
                 }
                 else
-                    dd ("record already seems to out of the tree");
-            }
-            else
-            {
-                /* filter is off, add chrome file to scripts view */
-                if (!("parentRecord" in rec))
                 {
+                    if ("parentRecord" in rec)
+                        continue;
                     //dd ("cmdChromeFilter: append " +
                     //    tov_formatRecord(rec, ""));
-                    scriptList.appendChild(rec);
+                    nodes.appendChild(rec);
                 }
-                else
-                    dd ("record already seems to be in the tree");
             }
         }
     }
-    console.views.scripts.thaw();
+
+    scriptsView.thaw();
 }
 
 console.views.scripts.hooks["hook-break-set"] =
@@ -434,8 +660,17 @@ function sch_hookGuessComplete(e)
 console.views.scripts.hooks["hook-script-instance-sealed"] =
 function scv_hookScriptInstanceSealed (e)
 {
+    dd ("instance sealed: " + e.scriptInstance.url);
+    
     var scr = new ScriptInstanceRecord (e.scriptInstance);
     e.scriptInstance.scriptInstanceRecord = scr;
+
+    if (console.prefs["enableChromeFilter"] &&
+        e.scriptInstance.url.search(/^chrome:/) == 0)
+    {
+        return;
+    }
+    
     console.views.scripts.childData.appendChild(scr);
 }
 
@@ -456,13 +691,13 @@ function scv_hookScriptInstanceDestroyed (e)
 console.views.scripts.hooks["hook-window-opened"] =
 function scv_hookWindowOpen (e)
 {
-    console.views.scripts.freeze();
+    //console.views.scripts.freeze();
 }
 
 console.views.scripts.hooks["hook-window-loaded"] =
 function scv_hookWindowOpen (e)
 {
-    console.views.scripts.thaw();
+    //console.views.scripts.thaw();
 }
 
 console.views.scripts.onShow =
@@ -485,7 +720,6 @@ function scv_dblclick (e)
     
     if (rowIndex == -1)
         return;
-
 
     if (rowIndex == -1 || rowIndex > scriptsView.rowCount)
     {
@@ -518,13 +752,13 @@ function scv_click (e)
         var prop;
         switch (colID.value)
         {
-            case "col=0":
+            case "scripts:col-0":
                 prop = "functionName";
                 break;
-            case "col-1":
+            case "scripts:col-1":
                 prop = "baseLineNumber";
                 break;
-            case "col-2":
+            case "scripts:col-2":
                 prop = "lineExtent";
                 break;
         }
@@ -780,7 +1014,7 @@ function ss_show ()
     var sessionView = this;
     function tryAgain ()
     {
-        dd ("session view trying again...");
+        //dd ("session view trying again...");
         sessionView.onShow();
     };
 
@@ -1022,8 +1256,6 @@ console.views.stack.viewId = "stack";
 console.views.stack.init =
 function skv_init()
 {
-    this.atomFrame = console.atomService.getAtom("item-frame");
-
 }
 
 console.views.stack.hooks = new Object();
@@ -1043,11 +1275,26 @@ function skv_hookDebugStop (e)
 console.views.stack.hooks["hook-debug-continue"] =
 function skv_hookDebugCont (e)
 {
-    while (console.views.stack.childData.length)
+    while (console.views.stack.childData.childData.length)
         console.views.stack.childData.removeChildAtIndex(0);
 }
 
-console.views.stack.hooks["frame"] =
+console.views.stack.hooks["hook-guess-complete"] =
+function skv_hookGuessComplete(e)
+{
+    var frameRecs = console.views.stack.childData.childData;
+    
+    for (var i = 0; i < frameRecs.length; ++i)
+    {
+        if (!frameRecs[i].jsdFrame.isNative)
+            frameRecs[i].functionName = frameRecs[i].scriptWrapper.functionName;
+    }
+
+    if (console.views.stack.tree)
+        console.views.stack.tree.invalidate();
+}
+
+console.views.stack.hooks["find-frame"] =
 function skv_hookFrame (e)
 {
     if (e.frameIndex && console.views.stack.tree)
@@ -1069,31 +1316,16 @@ function skv_hide()
     syncTreeView (getChildById(this.currentContent, "stack-tree"), null);
 }
 
-console.views.stack.onSelect =
-function skv_select (e)
+console.views.stack.onDblClick =
+function skv_select (row)
 {
-    var stackView = console.views.stack;
-    var rowIndex = stackView.selection.currentIndex;
-
+    var rowIndex = console.views.stack.tree.selection.currentIndex;
+    
     if (rowIndex == -1)
         return;
 
-    if (rowIndex == -1 || rowIndex > stackView.rowCount)
-        return;
-    var row =
-        stackView.childData.locateChildByVisualRow(rowIndex);
-    if (!row)
-    {
-        ASSERT (0, "bogus row index " + rowIndex);
-        return;
-    }
-
-    var source;
-    
-    if (row instanceof FrameRecord)
-    {
-        dispatch ("frame", {frameIndex: row.childIndex});
-    }
+    if (rowIndex >= 0 && rowIndex < console.frames.length)
+        dispatch ("frame", { frameIndex: rowIndex });
 }
 
 console.views.stack.getContext =
@@ -1137,10 +1369,16 @@ function sv_getcx(cx)
 console.views.stack.getCellProperties =
 function sv_cellprops (index, colID, properties)
 {
-    if (colID == "stack:col-0")
+    if (colID != "stack:col-0")
+        return;
+
+    var row = this.childData.locateChildByVisualRow(index);
+    if (row)
     {
-        if (this.childData.locateChildByVisualRow(index))
-            properties.AppendElement (this.atomFrame);
+        if ("getProperties" in row)
+            row.getProperties (properties);
+        else if (row.property)
+            properties.AppendElement (row.property);
     }
 
     return;
@@ -1201,21 +1439,43 @@ console.views.source.hooks["hook-display-sourcetext"] =
 console.views.source.hooks["hook-display-sourcetext-soft"] =
 function sv_hookDisplay (e)
 {
-    console.views.source.details = e.details;
-    console.views.source.displaySourceText(e.sourceText, Boolean(e.startLine));
-    if (console.views.source.tree)
+    var sourceView = console.views.source;
+    sourceView.details = e.details;
+    sourceView.displaySourceText(e.sourceText, Boolean(e.targetLine));
+    sourceView.rangeStart = e.rangeStart - 1;
+    sourceView.rangeEnd   = e.rangeEnd - 1;
+    var targetLine;
+    if (e.targetLine == null)
+        targetLine = sourceView.rangeStart;
+    else
+        targetLine = e.targetLine - 1;
+    
+    if (sourceView.tree)
     {
-        if (e.startLine && e.command.name == "hook-display-sourcetext-soft")
-            console.views.source.softScrollTo (e.startLine);
+        if (e.targetLine && e.command.name == "hook-display-sourcetext-soft")
+        {
+            sourceView.softScrollTo (targetLine);
+        }
+        else if (sourceView.rangeEnd && 
+                 (targetLine > e.rangeStart && targetLine <= e.rangeEnd) ||
+                 (e.rangeStart == e.rangeEnd))
+        {
+            /* if there is a range, and the target is in the range,
+             * scroll target to the center */
+            sourceView.scrollTo (targetLine, 0);
+        }
         else
-            console.views.source.scrollTo (e.startLine - 2, -1);
+        {
+            /* otherwise scroll near the top */
+            sourceView.scrollTo (targetLine - 2, -1);
+        }
     }
     else
     {
         var url = e.sourceText.url;
-        if (!(url in console.views.source.savedState))
-            console.views.source.savedState[url] = new Object();
-        console.views.source.savedState[url].topLine = e.startLine;
+        if (!(url in sourceView.savedState))
+            sourceView.savedState[url] = new Object();
+        sourceView.savedState[url].topLine = targetLine;
     }   
 }
 
@@ -1226,6 +1486,12 @@ console.views.source.hooks["hook-source-load-complete"] =
 function sv_hookLoadComplete (e)
 {
     console.views.source.syncTreeView();
+}
+
+console.views.source.hooks["pprint"] =
+function sv_hookLoadComplete (e)
+{
+    console.views.source.prettyPrint = e.toggle;
 }
 
 console.views.source.onShow =
@@ -1316,7 +1582,7 @@ function sv_sync(skipScrollRestore)
             state = this.savedState[url];
         else
         {
-            dd ("making new state");
+            //dd ("making new state");
             state = this.savedState[url] = new Object();
         }
 
@@ -1408,11 +1674,10 @@ function sv_lscroll (line)
     var last = this.tree.getLastVisibleRow();
     var fuzz = 2;
     if (line < (first + fuzz) || line > (last - fuzz))
-        this.scrollTo (line, 0);
+        this.scrollTo (line - 2, -1);
     else
         this.tree.invalidate(); /* invalidate to show the new currentLine if
-                                     * we don't have to scroll. */
-
+                                 * we don't have to scroll. */
 }    
 
 /**
@@ -1488,11 +1753,13 @@ function sv_getcx(cx)
 console.views.source.getRowProperties =
 function sv_rowprops (row, properties)
 {
+    var prettyPrint = console.prefs["prettyprint"];
+    
     if ("frames" in console)
-     {
-        if (((!this.prettyPrint && row == console.stopLine - 1) ||
-             (this.prettyPrint && row == console.pp_stopLine - 1)) &&
-            console.stopFile == this.childData.fileName && this.details)
+    {
+        if (((!prettyPrint && row == console.stopLine - 1) ||
+             (prettyPrint && row == console.pp_stopLine - 1)) &&
+            console.stopFile == this.childData.url)
         {
             properties.AppendElement(this.atomCurrent);
         }
@@ -1525,33 +1792,27 @@ function sv_cellprops (row, colID, properties)
         }
     }
     
-    if ("highlightStart" in console)
+    if (this.rangeEnd != null)
     {
-        var atom;
-        if (row == console.highlightStart)
+        if (row == this.rangeStart)
         {
-            atom = this.atomHighlightStart;
+            properties.AppendElement(this.atomHighlightStart);
         }
-        else if (row == console.highlightEnd)
+        else if (row == this.rangeEnd)
         {
-            atom = this.atomHighlightEnd;
+            properties.AppendElement(this.atomHighlightEnd);
         }
-        else if (row > console.highlightStart && row < console.highlightEnd)
+        else if (row > this.rangeStart && row < this.rangeEnd)
         {
-            atom = this.atomHighlightRange;
-        }
-        
-        if (atom && console.highlightURL == this.childData.url)
-        {
-            properties.AppendElement(atom);
-        }
+            properties.AppendElement(this.atomHighlightRange);
+        }        
     }
 
     if ("frames" in console)
     {
         if (((!this.prettyPrint && row == console.stopLine - 1) ||
              (this.prettyPrint && row == console.pp_stopLine - 1)) &&
-            console.stopFile == this.childData.fileName)
+            console.stopFile == this.childData.url)
         {
             properties.AppendElement(this.atomCurrent);
         }
@@ -1653,6 +1914,12 @@ function wv_refresh()
     this.tree.invalidate();
 }
 
+console.views.watches.onDblClick =
+function wv_dblclick ()
+{
+    dd ("locals double click");
+}
+
 /*******************************************************************************
  * Windows View
  *******************************************************************************/
@@ -1708,6 +1975,24 @@ function winv_cellprops (index, colID, properties)
     return;
 }
 
+console.views.windows.onDblClick =
+function winv_dblclick ()
+{
+    var rowIndex = this.tree.selection.currentIndex;
+    if (rowIndex == -1 || rowIndex > this.rowCount)
+        return;
+    var row = this.childData.locateChildByVisualRow(rowIndex);
+    if (!row)
+    {
+        ASSERT (0, "bogus row index " + rowIndex);
+        return;
+    }
+
+    if ("url" in row)
+        dispatch ("find-url", { url: row.url });
+                  
+}
+
 console.views.windows.getContext =
 function winv_getcx(cx)
 {
@@ -1752,9 +2037,10 @@ function winv_getcx(cx)
 console.views.windows.locateChildByWindow =
 function winv_find (win)
 {
-    for (var i = 0; i < this.childData.length; ++i)
+    var children = this.childData.childData;
+    for (var i = 0; i < children.length; ++i)
     {
-        var child = this.childData[i];
+        var child = children[i];
         if (child.window == win)
             return child;
     }
@@ -1791,65 +2077,4 @@ function formatBranch (rec, indent)
         if (rec.childData[i].childData)
             formatBranch(rec.childData[i], indent + "  ");
     }
-}
-
-if (0) 
-{
-    
-console.stackView.restoreState =
-function sv_restore ()
-{
-    function restoreBranch (target, source)
-    {
-        for (var i in source)
-        {
-            if (typeof source[i] == "object")
-            {
-                var name = source[i].name;
-                var len = target.length;
-                for (var j = 0; j < len; ++j)
-                {
-                    if (target[j]._colValues["col-0"] == name &&
-                        "childData" in target[j])
-                    {
-                        //dd ("opening " + name);
-                        target[j].open();
-                        restoreBranch (target[j].childData, source[i]);
-                    }
-                }
-            }
-        }
-    }
-
-    if ("savedState" in this) {
-        this.freeze();
-        restoreBranch (this.stack.childData, this.savedState);
-        this.thaw();
-        this.scrollTo (this.savedState.firstVisible, -1);
-    }
-}
-
-console.stackView.saveState =
-function sv_save ()
-{
-    function saveBranch (target, source)
-    {
-        var len = source.length;
-        for (var i = 0; i < len; ++i)
-        {
-            if (source[i].isContainerOpen)
-            {
-                target[i] = new Object();
-                target[i].name = source[i]._colValues["col-0"];
-                saveBranch (target[i], source[i].childData);
-            }
-        }
-    }
-        
-    this.savedState = new Object();
-    this.savedState.firstVisible = this.tree.getFirstVisibleRow() + 1;
-    saveBranch (this.savedState, this.stack.childData);
-    //dd ("saved as\n" + dumpObjectTree(this.savedState, 10));
-}
-    
 }

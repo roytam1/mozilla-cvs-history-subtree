@@ -327,21 +327,36 @@ function cmgr_hook (commandName, func, id, before)
     
     if (before)
     {
+        if (!("beforeHookNames" in command))
+            command.beforeHookNames = new Array();
         if (!("beforeHooks" in command))
             command.beforeHooks = new Object();
+        if (id in command.beforeHooks)
+        {
+            arrayRemoveAt(command.beforeHookNames,
+                          command.beforeHooks[id][id + "_hookIndex"]);
+        }
         command.beforeHooks[id] = func;
+        command.beforeHookNames.push(id);
     }
     else
     {
+        if (!("afterHookNames" in command))
+            command.afterHookNames = new Array();
         if (!("afterHooks" in command))
             command.afterHooks = new Object();
+        func[id + "_hookIndex"] = command.afterHookNames.length
         command.afterHooks[id] = func;
+        command.afterHookNames.push(id);
     }
 }
 
 CommandManager.prototype.addHooks =
 function cmgr_hooks (hooks, prefix)
 {
+    if (!prefix)
+        prefix = "";
+    
     for (var h in hooks)
     {
         this.addHook(h, hooks[h], prefix + ":" + h, 
@@ -356,16 +371,29 @@ function cmgr_unhook (commandName, id, before)
 
     if (before)
     {
+        arrayRemoveAt(command.beforeHookNames,
+                      command.beforeHooks[id][id + "_hookIndex"]);
+        delete command.beforeHooks[id][id + "_hookIndex"];
         delete command.beforeHooks[id];
         if (keys(command.beforeHooks).length == 0)
+        {
+            delete command.beforeHookNames;
             delete command.beforeHooks;
+        }
     }
     else
     {
+        arrayRemoveAt(command.afterHookNames,
+                      command.afterHooks[id][id + "_hookIndex"]);
+        delete command.afterHooks[id][id + "_hookIndex"];
         delete command.afterHooks[id];
-        if (keys(command.afterHooks).length == 0)
+        if (command.afterHookNames.length == 0)
+        {
+            delete command.afterHookNames;
             delete command.afterHooks;
+        }
     }
+
 }
 
 /**
@@ -928,7 +956,7 @@ function at_alias (list, type)
  * Parses an integer, stores result in |e[name]|.
  */
 CommandManager.prototype.argTypes["int"] =
-function parse_number (e, name)
+function parse_int (e, name)
 {
     var ary = e.unparsedData.match (/(\d+)(?:\s+(.*))?$/);
     if (!ary)
@@ -946,7 +974,7 @@ function parse_number (e, name)
  * Stores result in |e[name]|.
  */
 CommandManager.prototype.argTypes["word"] =
-function parse_number (e, name)
+function parse_word (e, name)
 {
     var ary = e.unparsedData.match (/(\S+)(?:\s+(.*))?$/);
     if (!ary)
@@ -965,7 +993,7 @@ function parse_number (e, name)
  * Stores result in |e[name]|.
  */
 CommandManager.prototype.argTypes["state"] =
-function parse_number (e, name)
+function parse_state (e, name)
 {
     var ary =
         e.unparsedData.match (/(true|on|yes|1|false|off|no|0)(?:\s+(.*))?$/i);
@@ -989,7 +1017,7 @@ function parse_number (e, name)
  * Stores result in |e[name]|.
  */
 CommandManager.prototype.argTypes["toggle"] =
-function parse_number (e, name)
+function parse_toggle (e, name)
 {
     var ary = e.unparsedData.match
         (/(toggle|true|on|yes|1|false|off|no|0)(?:\s+(.*))?$/i);
@@ -1014,7 +1042,7 @@ function parse_number (e, name)
  * Stores result in |e[name]|.
  */
 CommandManager.prototype.argTypes["rest"] =
-function parse_number (e, name)
+function parse_rest (e, name)
 {
     e[name] = e.unparsedData;
     e.unparsedData = "";

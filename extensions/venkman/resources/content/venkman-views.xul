@@ -49,12 +49,12 @@
     <floatingview id="breaks" title="&Break.label;" flex="1"
       splitter-collapse="after" default-container="view-container-1">
       <vbox id="break-view-content" flex="1">
-        <tree flex="1" id="break-tree" persist="height"
-          ondblclick="">
+        <tree flex="1" id="break-tree" persist="height" hidecolumnpicker="true"
+          ondblclick="console.views.breaks.onDblClick(event);">
 
           <treecols>
-            <treecol id="breaks:col-0" label="&BreakCol0.label;" primary="true"
-              flex="5" persist="hidden width"/>
+            <treecol id="breaks:col-0" label="&BreakCol0.label;"
+              primary="true" flex="5" persist="hidden width"/>
             <splitter class="tree-splitter"/>
             <treecol id="breaks:col-1" flex="1" label="&BreakCol1.label;"
               persist="hidden width"/>
@@ -72,7 +72,8 @@
     <floatingview id="locals" title="&Locals.label;" flex="1"
       splitter-collapse="after" default-container="view-container-1">
       <vbox id="locals-view-content" flex="1">
-        <tree flex="1" id="locals-tree" persist="height">
+        <tree flex="1" id="locals-tree" persist="height"
+          ondblclick="console.views.locals.onDblClick(event);">
 
           <treecols>
             <treecol id="locals:col-0" label="&LocalsCol0.header;" primary="true"
@@ -163,7 +164,8 @@
     <floatingview id="stack" title="&Stack.label;" flex="1"
       splitter-collapse="after" default-container="view-container-3">
       <vbox id="stack-view-content" flex="1">
-        <tree flex="2" id="stack-tree" persist="width">
+        <tree flex="2" id="stack-tree" persist="width"
+          ondblclick="console.views.stack.onDblClick(event);">
 
           <treecols>
             <treecol id="stack:col-0" flex="1" persist="hidden width"
@@ -185,7 +187,8 @@
     <floatingview id="watches" title="&Watch.label;" flex="1"
      splitter-collapse="after" default-container="view-container-1">
       <vbox id="watch-view-content" flex="1">
-        <tree flex="1" id="watch-tree" persist="height">
+        <tree flex="1" id="watch-tree" persist="height"
+          ondblclick="console.views.watches.onDblClick(event);">
 
           <treecols>
             <treecol id="watches:col-0" flex="1" persist="hidden width"
@@ -212,7 +215,9 @@
     <floatingview id="windows" title="&Windows.label;" flex="1"
       splitter-collapse="after" default-container="view-container-1">
       <vbox id="windows-view-content" flex="1">
-        <tree flex="1" id="windows-tree" persist="height">
+        <tree flex="1" id="windows-tree" persist="height"
+          ondblclick="console.views.windows.onDblClick(event);"
+          hidecolumnpicker="true">
 
           <treecols>
             <treecol id="windows:col-0" label="&WindowsCol0.label;"

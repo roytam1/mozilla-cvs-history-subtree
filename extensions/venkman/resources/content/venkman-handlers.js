@@ -71,19 +71,19 @@ function destroyHandlers()
     }
 }
 
-console.onWindowOpen =
+console.onWindowOpen = 
 function con_winopen (win)
 {
     if ("ChromeWindow" in win && win instanceof win.ChromeWindow &&
         (win.location.href == "about:blank" || win.location.href == ""))
     {
-        setTimeout (con_winopen, 100, win);
+        setTimeout (con_winopen, 0, win);
         return;
-    }
-    
-    //dd ("window opened: " + win); // + ", " + getInterfaces(win));
-    dispatch ("hook-window-opened", {window: win});
+    }   
+
+    dd ("window opened: " + win + " ``" + win.location + "''");
     console.hookedWindows.push(win);
+    dispatch ("hook-window-opened", {window: win});
     win.addEventListener ("load", console.onWindowLoad, false);
     win.addEventListener ("unload", console.onWindowUnload, false);
     //console.scriptsView.freeze();
@@ -99,18 +99,19 @@ console.onWindowUnload =
 function con_winunload (e)
 {
     dispatch ("hook-window-unloaded", {event: e});
+    //    dd (dumpObjectTree(e));
 }
 
 console.onWindowClose =
 function con_winclose (win)
 {
-    //dd ("window closed: " + win);
+    dd ("window closed: " + win + " ``" + win.location + "''");
     if (win.location.href != "chrome://venkman/content/venkman.xul")
     {
-        var idx = arrayIndexOf(console.hookedWindows, win);
-        ASSERT (idx != -1,
-                "WARNING: Can't find hooked window for closed window.");
-        arrayRemoveAt(console.hookedWindows, idx);
+        var i = arrayIndexOf(console.hookedWindows, win);
+        ASSERT (i != console.hookedWindows.length,
+                "WARNING: Can't find hook window for closed window " + i + ".");
+        arrayRemoveAt(console.hookedWindows, i);
         dispatch ("hook-window-closed", {window: win});
     }
     //console.scriptsView.freeze();

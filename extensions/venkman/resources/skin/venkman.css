@@ -39,6 +39,12 @@ floatingview {
     -moz-binding: url(chrome://venkman/content/venkman-bindings.xml#floatingview);
 }
 
+treecol[hideheader="true"] {
+  -moz-appearance: none;
+  border: none;
+  padding: 0;
+}
+
 #session-output-iframe {
     margin: 0px 5px 0px 5px;
     border: thin silver inset;
@@ -378,7 +384,7 @@ treechildren:-moz-tree-image(item-xml, item-has-bp) {
 }
 
 treechildren:-moz-tree-image(item-frame) {
-    list-style-image: url("chrome://venkman/skin/images/frame.png");
+    list-style-image: url("chrome://venkman/skin/images/value-frame.png");
 }
 
 treechildren:-moz-tree-image(item-void) {

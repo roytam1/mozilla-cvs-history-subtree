@@ -132,7 +132,10 @@
       <!-- Debug toolbar -->
       <toolbar class="toolbar-primary chromeclass-toolbar" id="maintoolbar-outer"
         grippytooltiptext="&DebugBar.tooltip;">
-        <hbox id="maintoolbar"/>
+        <hbox id="maintoolbar">
+        </hbox>
+        <textbox id="paint-hack"
+          style="border: none; background: none; height: 0px; width: 0px"/>
       </toolbar>
 
     </toolbox>  

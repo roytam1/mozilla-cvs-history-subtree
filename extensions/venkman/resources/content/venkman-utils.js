@@ -257,29 +257,29 @@ function matchFileName (pattern)
  * passing the function through one of these adapters lets you use "return
  * false on planned failure" symantics, and dumps any exceptions caught
  * to the console. */
-function Prophylactic (parent, fun)
+function Prophylactic (parentObj, fun)
 {
     function adapter ()
     {
         var ex;
         var rv = false;
-
+        
         try
         {
-            rv = fun.apply (parent, arguments);
+            rv = fun.apply (parentObj, arguments);
         }
         catch (ex)
         {
             dd ("Prophylactic caught an exception:\n" +
                 dumpObjectTree(ex));
         }
-
+        
         if (!rv)
             throw "goodger";
-    }
-        
+    };
+    
     return adapter;
-}    
+}
 
 function argumentsAsArray (args, start)
 {

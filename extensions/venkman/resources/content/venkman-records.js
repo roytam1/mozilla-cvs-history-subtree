@@ -43,6 +43,9 @@ function initRecords()
 
     FileRecord.prototype.property           = atomsvc.getAtom("item-file");
 
+    FrameRecord.prototype.property    = atomsvc.getAtom("item-frame");
+    FrameRecord.prototype.atomCurrent = atomsvc.getAtom("current-frame-flag");
+
     ValueRecord.prototype.atomVoid     = atomsvc.getAtom("item-void");
     ValueRecord.prototype.atomNull     = atomsvc.getAtom("item-null");
     ValueRecord.prototype.atomBool     = atomsvc.getAtom("item-bool");
@@ -97,16 +100,17 @@ function FrameRecord (jsdFrame)
         throw new BadMojo (ERR_INVALID_PARAM, "value");
 
     this.setColumnPropertyName ("col-0", "functionName");
-    this.setColumnPropertyName ("col-2", "location");
+    this.setColumnPropertyName ("col-1", "location");
+
+    this.functionName = jsdFrame.functionName;
+    this.scriptWrapper = getScriptWrapper(jsdFrame.script);
 
     if (!jsdFrame.isNative)
     {
-        this.location = jsdFrame.script.fileName;
-        var tag = jsdFrame.script.tag;        
-        if (!tag in console.scriptWrappers)
-            this.functionName = jsdScript.functionName;
-        else
-            this.functionName = console.scriptWrappers[tag].functionName;
+        this.location = getMsg(MSN_FMT_FRAME_LOCATION,
+                               [getFileFromPath(jsdFrame.script.fileName),
+                                jsdFrame.line, jsdFrame.pc]);
+        this.functionName = this.scriptWrapper.functionName;
     }
     else
     {
@@ -131,9 +135,12 @@ function WindowRecord (win, baseURL)
 
     this.window = win;
     this.url = win.location.href;
-    if (this.url.search(/^\w+:/) == -1 && "url")
+    if (this.url.search(/^\w+:/) == -1)
     {
-        this.url = baseURL + url;
+        if (this.url[0] == "/")
+            this.url = win.location.host + this.url;
+        else
+            this.url = baseURL + this.url;
         this.baseURL = baseURL;
     }
     else
@@ -175,30 +182,30 @@ function FileContainerRecord (windowRecord)
     function files() { return MSG_FILES_REC; }
     function none() { return ""; }
     this.setColumnPropertyName ("col-0", files);
-    this.reserveChildren();
-    this.resolveChildren(windowRecord);
+    this.windowRecord = windowRecord;
+    this.reserveChildren(true);
 }
 
 FileContainerRecord.prototype =
     new XULTreeViewRecord(console.views.windows.share);
 
-FileContainerRecord.prototype.resolveChildren =
-function fcr_getkids (windowRecord)
+FileContainerRecord.prototype.onPreOpen =
+function fcr_getkids ()
 {
-    if ("parentRecord" in this)
+    if (!("parentRecord" in this))
         return;
     
     this.childData = new Array();
-    var doc = windowRecord.window.document;
+    var doc = this.windowRecord.window.document;
     var nodeList = doc.getElementsByTagName("script");
-    
+    dd (nodeList.length + "nodes");
     for (var i = 0; i < nodeList.length; ++i)
     {
         var url = nodeList.item(i).getAttribute("src");
         if (url)
         {
             if (url.search(/^\w+:/) == -1)
-                url = getPathFromURL (windowRecord.url) + url;
+                url = getPathFromURL (this.windowRecord.url) + url;
             this.appendChild(new FileRecord(url));
         }
     }
@@ -244,7 +251,7 @@ function ScriptInstanceRecord(scriptInstance)
     this.scriptInstance = scriptInstance;
 
     this.shortName = getFileFromPath(this.url);
-    ary = this.shortName.match (/\.(js|html|xul|xml)$/i);
+    var ary = this.shortName.match (/\.(js|html|xul|xml)$/i);
     if (ary)
     {
         switch (ary[1].toLowerCase())

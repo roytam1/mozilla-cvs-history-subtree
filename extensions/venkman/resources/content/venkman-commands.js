@@ -564,17 +564,26 @@ function cmdFinish (e)
     
     console._stepOverLevel = 1;
     setStopState(false);
-    console.jsds.functionHook = console._callHook;
+    console.jsds.functionHook = console.callHook;
     disableDebugCommands()
     console.jsds.exitNestedEventLoop();
     return true;
 }
 
 function cmdFindBp (e)
-{    
-    return dispatch ("find-url", {url: e.breakpointRec.fileName,
-                                  rangeStart: e.breakpointRec.line,
-                                  rangeEnd: e.breakpointRec.line});
+{
+    if ("scriptWrapper" in e.breakpoint)
+    {
+        dispatch ("find-script",
+                  { scriptWrapper: e.breakpoint.scriptWrapper, 
+                    targetPc: e.breakpoint.pc });
+    }
+    else
+    {
+        dispatch ("find-url", {url: e.breakpoint.url,
+                               rangeStart: e.breakpoint.lineNumber,
+                               rangeEnd: e.breakpoint.lineNumber});
+    }
 }
 
 function cmdFindCreatorOrCtor (e)
@@ -627,35 +636,49 @@ function cmdFindFrame (e)
         return true;
     
     var scriptWrapper = console.scriptWrappers[jsdFrame.script.tag]
-    return dispatch ("find-script", { scriptWrapper: scriptWrapper });
+    return dispatch ("find-script",
+                     { scriptWrapper: scriptWrapper, targetPc: jsdFrame.pc });
 }
 
 function cmdFindScript (e)
 {
     var jsdScript = e.scriptWrapper.jsdScript;
-    var rv;
-
+    var targetLine = 1;
+    var rv, params;
+    
     if (jsdScript.isValid && console.prefs["prettyprint"])
     {
-        delete console.highlightFile;
-        delete console.highlightStart;
-        delete console.highlightEnd;
+        if (e.targetPc != null && jsdScript.isValid)
+            targetLine = jsdScript.pcToLine(e.targetPc, PCMAP_PRETTYPRINT);
+        
         console.currentDetails = e.scriptWrapper;
-        dispatch ("hook-display-sourcetext",
-                  { sourceText: e.scriptWrapper.sourceText, startLine: 1,
-                    details: e.scriptWrapper });
+
+        params = {
+            sourceText: e.scriptWrapper.sourceText,
+            rangeStart: null,
+            rangeEnd:   null,
+            targetLine: targetLine,
+            details: e.scriptWrapper
+        };
+        dispatch ("hook-display-sourcetext-soft", params);
         rv = jsdScript.fileName;
     }
     else
     {
-        var params = {
+        if (e.targetPc != null && jsdScript.isValid)
+            targetLine = jsdScript.pcToLine(e.targetPc, PCMAP_SOURCETEXT);
+        else
+            targetLine = jsdScript.baseLineNumber;
+
+        params = {
             sourceText: e.scriptWrapper.scriptInstance.sourceText,
             rangeStart: jsdScript.baseLineNumber,
             rangeEnd: jsdScript.baseLineNumber + 
                       jsdScript.lineExtent - 1,
+            targetLine: targetLine,
             details: e.scriptWrapper
         };
-        rv = dispatch("find-sourcetext", params);
+        rv = dispatch("find-sourcetext-soft", params);
     }
 
     return rv;
@@ -674,8 +697,10 @@ function cmdFindSourceText (e)
         
         var params = {
             sourceText: e.sourceText,
-            startLine: e.rangeStart,
-            details: e.details
+            rangeStart: e.rangeStart,
+            rangeEnd: e.rangeEnd,
+            targetLine: (e.targetLine != null) ? e.targetLine : e.rangeStart,
+            details:    e.details
         };
         
         if (e.command.name.indexOf("soft") != -1)
@@ -684,21 +709,6 @@ function cmdFindSourceText (e)
             dispatch ("hook-display-sourcetext", params);
     };
 
-    var line = 0;
-    console.highlightURL = e.sourceText.url;
-    
-    delete console.highlightStart;
-    delete console.highlightEnd;
-    if ("rangeStart" in e && e.rangeStart != null)
-    {
-        line = e.rangeStart;
-        if (e.rangeEnd != null)
-        {
-            console.highlightStart = e.rangeStart - 1;
-            console.highlightEnd = e.rangeEnd - 1;
-        }
-    }    
-    
     console.currentSourceText = e.sourceText;
     console.currentDetails = e.details;
     
@@ -749,6 +759,7 @@ function cmdFindURL (e)
         sourceText: sourceText,
         rangeStart: e.rangeStart,
         rangeEnd: e.rangeEnd,
+        targetLine: e.targetLine,
         details: e.details
     };
 
@@ -779,7 +790,7 @@ function cmdFrame (e)
     else    
         e.frameIndex = getCurrentFrameIndex();
 
-    dispatch ("find-frame", {frameIndex: e.frameIndex});
+    dispatch ("find-frame", { frameIndex: e.frameIndex });
     return true;
 }
 
@@ -929,7 +940,7 @@ function cmdMoveView (e)
     if (!("originalParent" in e.viewContent) && e.viewContent.parentNode)
     {
         /* Record the original parent for this content, if we haven't already. */
-        dd ("recording original parent");
+        //dd ("recording original parent");
         e.viewContent.originalParent = e.viewContent.parentNode;
     }
     
@@ -947,7 +958,7 @@ function cmdMoveView (e)
         {
             /* We're moving to a different window, put the previous content
              * back in its DOM. */
-            dd ("going to new document, append to original parent");
+            //dd ("going to new document, append to original parent");
             originalParent.appendChild(view.currentContent);
         }
 
@@ -956,7 +967,7 @@ function cmdMoveView (e)
     }
     else if (e.viewContent.parentNode)
     {
-        dd ("removing from original parent");
+        //dd ("removing from original parent");
         e.viewContent.parentNode.removeChild(e.viewContent);
     }
     
@@ -989,7 +1000,7 @@ function cmdNext ()
 {
     console._stepOverLevel = 0;
     dispatch ("step");
-    console.jsds.functionHook = console._callHook;
+    console.jsds.functionHook = console.callHook;
     return true;
 }
 
@@ -1121,8 +1132,6 @@ function cmdReload()
 {
     function cb(status)
     {
-        dispatch ("hook-reload-source-complete",
-                  {sourceText: console.currentSourceText, status: status});
         enableReloadCommand();
     }
         

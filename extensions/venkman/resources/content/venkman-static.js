@@ -67,7 +67,7 @@ const LINE_FBREAK    = 0x04;
 
 var console = new Object();
 
-console.version = "0.8.5";
+console.version = "0.9.0";
 
 /* |this|less functions */
 
@@ -76,7 +76,7 @@ function setStopState(state)
     var tb = document.getElementById("maintoolbar-stop");
     if (state)
     {
-        console.jsds.interruptHook = console._executionHook;
+        console.jsds.interruptHook = console.executionHook;
         tb.setAttribute("willStop", "true");
     }
     else
@@ -158,12 +158,7 @@ function displayUsageError (e, details)
 function dispatch (text, e, flags)
 {
     if (!e)
-    {
-        if (typeof CommandManager.cx == "object")
-            e = CommandManager.cx;
-        else
-            e = new Object();
-    }
+        e = new Object();
 
     if (!("inputData" in e))
         e.inputData = "";
@@ -175,6 +170,7 @@ function dispatch (text, e, flags)
     
     /* list matching commands */
     ary = console.commandManager.list (e.commandText, flags);
+    var rv = null;
     var i;
     
     switch (ary.length)
@@ -186,7 +182,6 @@ function dispatch (text, e, flags)
             
         case 1:
             /* one match, good for you */
-            var rv;
             var ex;
             try
             {
@@ -210,19 +205,40 @@ function dispatch (text, e, flags)
                              [e.commandText, ary.length, str]), MT_ERROR);
     }
 
-    return null;
+    return rv;
 }
 
 function dispatchCommand (command, e, flags)
 {
-    if (!e)
+    function callHooks (command, isBefore)
     {
-        if (typeof CommandManager.cx == "object")
-            e = CommandManager.cx;
+        var names, hooks;
+        
+        if (isBefore)
+        {
+            names = command.beforeHookNames;
+            hooks = command.beforeHooks;
+        }
         else
-            e = new Object();
-    }
+        {
+            names = command.afterHookNames;
+            hooks = command.afterHooks;
+        }
 
+        var len = names.length;
+        
+        for (var i = 0; i < len; ++i)
+        {
+            var name = names[i];
+            if ("dbgDispatch" in console && console.dbgDispatch)
+            {
+                dd ("calling " + (isBefore ? "before" : "after") + 
+                    " hook " + name);
+            }
+            hooks[name](e);
+        }
+    };
+    
     e.command = command;
 
     if ((e.command.flags & CMD_NEED_STACK) &&
@@ -236,7 +252,7 @@ function dispatchCommand (command, e, flags)
     if (!e.command.enabled)
     {
         /* disabled command */
-        display (getMsg(MSG_ERR_DISABLED, e.command.name),
+        display (getMsg(MSN_ERR_DISABLED, e.command.name),
                  MT_ERROR);
         return null;
     }
@@ -244,10 +260,7 @@ function dispatchCommand (command, e, flags)
     var h, i;
     
     if ("beforeHooks" in e.command)
-    {
-        for (h in e.command.beforeHooks)
-            e.command.beforeHooks[h](e);
-    }
+        callHooks (e.command, true);
     
     if (typeof e.command.func == "function")
     {
@@ -271,7 +284,7 @@ function dispatchCommand (command, e, flags)
                     else if (name != ":")
                         str += " ?" + name;
                 }
-                dd ("dispatching command ``" + e.command.name + str + "''");
+                dd (">>> " + e.command.name + str + " <<<");
                 e.returnValue = e.command.func(e);
                 /* set console.lastEvent *after* dispatching, so the dispatched
                  * function actually get's a chance to see the last event. */
@@ -292,7 +305,7 @@ function dispatchCommand (command, e, flags)
         {
             commandList[i] = stringTrim(commandList[i]);
             if (i == 1)
-                dispatch (commandList[i] + " " + e.inputData, e, flags);
+                dispatch (commandList[i] + " " + e.inputData, null, flags);
             else
                 dispatch (commandList[i], null, flags);
         }
@@ -305,12 +318,9 @@ function dispatchCommand (command, e, flags)
     }
 
     if ("afterHooks" in e.command)
-    {
-        for (h in e.command.afterHooks)
-            e.command.afterHooks[h](e);
-    }
+        callHooks (e.command, false);
 
-    return e;
+    return ("returnValue" in e) ? e.returnValue : null;
 }
 
 function feedback(e, message, msgtype)
@@ -409,11 +419,14 @@ function init()
         Components.classes[WW_CTRID].getService(nsIWindowWatcher);
 
     console.debuggerWindow = getBaseWindowFromWindow(window);
-    console.floatingWindows = new Array();
-    
+    console.floatingWindows = new Array();    
+
     initMsgs();
     initPrefs();
     initCommands();
+
+    console.commandManager.addHooks (console.hooks);
+
     initMainMenus();
     initViews();
     initRecords();
@@ -423,8 +436,8 @@ function init()
     /* save a reference to this to make calls to display() slightly faster. */
     console.coDisplayHook = 
         console.commandManager.commands["hook-session-display"];
-
-    console.commandManager.addHooks (console.hooks);
+    console.coFindScript = 
+        console.commandManager.commands["find-script"];
 
     disableDebugCommands();
     
@@ -452,12 +465,17 @@ function init()
     dispatch("commands");
     dispatch("help");
 
-    dispatch ("toggle-view session");
     dispatch ("toggle-view windows");
-    dispatch ("toggle-view source");
-    dispatch ("toggle-view watches");
-    dispatch ("toggle-view scripts");
     dispatch ("toggle-view breaks");
+    dispatch ("toggle-view locals");
+    dispatch ("toggle-view watches");
+
+    dispatch ("toggle-view source");
+    dispatch ("toggle-view scripts");
+
+    dispatch ("toggle-view session");
+    dispatch ("toggle-view stack");
+
     dispatch ("pprint", { toggle: console.prefs["prettyprint"] });
               
     dispatch ("hook-venkman-started");
@@ -471,24 +489,6 @@ function destroy ()
 }
 
 console.hooks = new Object();
-
-console.hooks["frame"] =
-function hookFrame (e)
-{
-    if (e.frameIndex)
-    {
-        var jsdFrame = console.frames[e.frameIndex];
-        if (jsdFrame.isNative)
-            return;
-        
-        dispatch ("find-url-soft", {url: jsdFrame.script.fileName,
-                  rangeStart: jsdFrame.script.baseLineNumber,
-                  rangeEnd:   jsdFrame.script.baseLineNumber + 
-                              jsdFrame.script.lineExtent - 1,
-                  lineNumber: jsdFrame.line, 
-                  details:    jsdFrame.script});
-    }
-}
 
 console.hooks["hook-script-instance-sealed"] =
 function hookScriptSealed (e)
@@ -506,21 +506,25 @@ function hookScriptSealed (e)
 console.hooks["hook-debug-stop"] =
 function hookDebugStop (e)
 {
-    var frame = setCurrentFrameByIndex(0);
+    var jsdFrame = setCurrentFrameByIndex(0);
     var type = console.trapType;
 
     //var frameRec = console.stackView.stack.childData[0];
     //console.pushStatus (getMsg(MSN_STATUS_STOPPED, [frameRec.functionName,
     //                                                frameRec.location]));
-    if (type != jsdIExecutionHook.TYPE_INTERRUPTED ||
-        console._lastStackDepth != console.frames.length)
+    var showHeader = (type != jsdIExecutionHook.TYPE_INTERRUPTED ||
+                      console._lastStackDepth != console.frames.length);
+    var sourceContext = (type == jsdIExecutionHook.TYPE_INTERRUPTED) ? 0 : 2
+        
+    displayFrame (jsdFrame, 0, showHeader, sourceContext);    
+
+    var scriptWrapper = getScriptWrapper(jsdFrame.script);
+    if (scriptWrapper)
     {
-        display (formatFrame(frame));
+        dispatchCommand (console.coFindScript,
+                         { scriptWrapper: scriptWrapper, targetPc: jsdFrame.pc })
     }
 
-    displaySource (frame.script.fileName, frame.line, 
-                   (type == jsdIExecutionHook.TYPE_INTERRUPTED) ? 0 : 2);
-    
     console._lastStackDepth = console.frames.length;
 
     enableDebugCommands()
@@ -533,8 +537,8 @@ function hookQueryExit (e)
     {
         if (confirm(MSG_QUERY_CLOSE))
         {
-            console.__exitAfterContinue__ = true;
             dispatch ("cont");
+            console.__exitAfterContinue__ = true;
         }
         e.returnValue = false;
     }
@@ -956,6 +960,8 @@ function st_reloadsrc (cb)
 SourceText.prototype.onSourceLoaded =
 function st_oncomplete (data, url, status)
 {
+    dd ("source loaded " + url + ", " + status);
+    
     var sourceText = this;
     
     function callall (status)
@@ -1031,13 +1037,15 @@ function st_loadsrc (cb)
     {
         /* if we're in the process of loading, make a note of the callback, and
          * return. */
-        this.loadCallbacks.push (cb);
+        if (typeof cb == "function")
+            this.loadCallbacks.push (cb);
         return;
     }
     else
         this.loadCallbacks = new Array();
 
-    this.loadCallbacks.push (cb);
+    if (typeof cb == "function")
+        this.loadCallbacks.push (cb);
     this.isLoading = true;    
     
     var ex;
@@ -1046,7 +1054,6 @@ function st_loadsrc (cb)
     try
     {
         src = loadURLNow(url);
-        onComplete (src, url, Components.results.NS_OK);
         delete this.isLoading;
     }
     catch (ex)
@@ -1054,14 +1061,19 @@ function st_loadsrc (cb)
         /* if we can't load it now, try to load it later */
         try
         {
+            dd ("trying async");
             loadURLAsync (url, { onComplete: onComplete });
+            return;
         }
         catch (ex)
         {
             display (getMsg(MSN_ERR_SOURCE_LOAD_FAILED, [url, ex]), MT_ERROR);
             onComplete (src, url, Components.results.NS_ERROR_FAILURE);
+            return;
         }
     }
+
+    onComplete (src, url, Components.results.NS_OK);
 }
 
 function PPSourceText (scriptWrapper)
