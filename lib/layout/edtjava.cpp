@@ -482,7 +482,7 @@ struct PreCloseCallbackHook {
     void* hook;
 };
 
-#ifndef XP_OS2
+#ifndef XP_OS2_VACPP
 static 
 #else
 extern "OPTLINK"

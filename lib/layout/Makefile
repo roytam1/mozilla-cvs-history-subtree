@@ -80,7 +80,7 @@ endif
 
 include $(DEPTH)/config/rules.mk
 
-ifneq ($(OS_ARCH),OS2)
+ifndef XP_OS2_VACPP
 $(OBJDIR)/laymocha.o: laymocha.c
 	@$(MAKE_OBJDIR)
 	$(CC) -o $@ -c $(CFLAGS) -I$(DEPTH)/mocha/include $<
