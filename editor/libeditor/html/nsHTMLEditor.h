@@ -49,6 +49,7 @@
 #include "nsITableEditor.h"
 #include "nsIEditorMailSupport.h"
 #include "nsIEditorStyleSheets.h"
+#include "nsIDocumentObserver.h"
 
 #include "nsEditor.h"
 #include "nsIDOMElement.h"
@@ -384,6 +385,8 @@ public:
                                 PRInt32 *outOffset = 0);
 
   /* ------------ Overrides of nsEditor interface methods -------------- */
+  
+  nsresult EndUpdateViewBatch();
 
   /** prepare the editor for use */
   NS_IMETHOD Init(nsIDOMDocument *aDoc, nsIPresShell *aPresShell,  nsIContent *aRoot, nsISelectionController *aSelCon, PRUint32 aFlags);
@@ -892,7 +895,6 @@ protected:
   nsCOMPtr<nsIDOMElement> mResizedObject;
 
   nsCOMPtr<nsIDOMEventListener>  mMouseMotionListenerP;
-  nsCOMPtr<nsIDOMEventListener>  mMutationListenerP;
   nsCOMPtr<nsISelectionListener> mSelectionListenerP;
   nsCOMPtr<nsIDOMEventListener>  mResizeEventListenerP;
 

@@ -126,107 +126,6 @@ ResizerSelectionListener::NotifySelectionChanged(nsIDOMDocument *, nsISelection 
 }
 
 // ==================================================================
-// ResizerMutationListener
-// ==================================================================
-
-NS_IMPL_ADDREF(ResizerMutationListener)
-
-NS_IMPL_RELEASE(ResizerMutationListener)
-
-ResizerMutationListener::ResizerMutationListener(nsIHTMLEditor * aEditor):
-  mEditor(aEditor)
-{
-  NS_INIT_ISUPPORTS();
-}
-
-ResizerMutationListener::~ResizerMutationListener() 
-{
-}
-
-NS_IMETHODIMP
-ResizerMutationListener::SubtreeModified(nsIDOMEvent* aMutationEvent)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-ResizerMutationListener::NodeInserted(nsIDOMEvent* aMutationEvent)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-ResizerMutationListener::NodeRemoved(nsIDOMEvent* aMutationEvent)
-{
-  nsCOMPtr<nsIHTMLObjectResizer> imageResizer = do_QueryInterface(mEditor);
-  nsCOMPtr<nsIDOMEventTarget> target;
-  nsresult res = aMutationEvent->GetTarget(getter_AddRefs(target));
-  if (NS_FAILED(res)) return res;
-  if (!target) return NS_ERROR_NULL_POINTER;
-  nsCOMPtr<nsIDOMElement> targetElement = do_QueryInterface(target);
-  nsCOMPtr<nsIDOMElement> resizedElt;
-  imageResizer->GetResizedObject(getter_AddRefs(resizedElt));
-  if (resizedElt == targetElement)
-    return imageResizer->HideResizers();
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-ResizerMutationListener::NodeRemovedFromDocument(nsIDOMEvent* aMutationEvent)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-ResizerMutationListener::NodeInsertedIntoDocument(nsIDOMEvent* aMutationEvent)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-ResizerMutationListener::AttrModified(nsIDOMEvent* aMutationEvent) 
-{
-  nsCOMPtr<nsIHTMLObjectResizer> imageResizer = do_QueryInterface(mEditor);
-  nsCOMPtr<nsIDOMElement> elt;
-  imageResizer->GetResizedObject(getter_AddRefs(elt));
-  PRInt32 w, h;
-  nsCOMPtr<nsIDOMNSHTMLElement> nsElement = do_QueryInterface(elt);
-  if (!nsElement) {return NS_ERROR_NULL_POINTER; }
-
-  // let's get the size of the resized object
-  nsElement->GetOffsetWidth(&w);
-  nsElement->GetOffsetHeight(&h);
-
-  // and let's get the last size we dealt with
-  PRInt32 objectW, objectH;
-  imageResizer->GetResizedObjectSize(&objectW, &objectH);
-
-  // if the sizes are different, let's refresh the resizers
-  if (w != objectW || h != objectH)
-    imageResizer->RefreshResizers();
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-ResizerMutationListener::CharacterDataModified(nsIDOMEvent* aMutationEvent)
-{
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-ResizerMutationListener::HandleEvent(nsIDOMEvent* aMouseEvent)
-{
-  return NS_OK;
-}
-
-NS_INTERFACE_MAP_BEGIN(ResizerMutationListener)
-  NS_INTERFACE_MAP_ENTRY(nsISupports)
-  NS_INTERFACE_MAP_ENTRY(nsIDOMEventListener)
-  NS_INTERFACE_MAP_ENTRY(nsIDOMMutationListener)
-NS_INTERFACE_MAP_END
-
-// ==================================================================
 // ResizerMouseMotionListener
 // ==================================================================
 
@@ -545,18 +444,6 @@ nsHTMLEditor::ShowResizers(nsIDOMElement *aResizedElement)
     ps->RecreateFramesFor(content);
   }
 
-  // listen to attribute changes on the resized object
-  mMutationListenerP = new ResizerMutationListener(this);
-  nsCOMPtr<nsIDOMEventReceiver> erP = do_QueryInterface(mResizedObject);
-  res = erP->AddEventListener(NS_LITERAL_STRING("DOMAttrModified"), mMutationListenerP, PR_FALSE);
-  NS_ASSERTION(NS_SUCCEEDED(res), "failed to register DOMAttrModified event listener");
-
-  nsCOMPtr<nsIDOMNode> parentNode;
-  res = mResizedObject->GetParentNode(getter_AddRefs(parentNode));
-  erP = do_QueryInterface(parentNode);
-  res = erP->AddEventListener(NS_LITERAL_STRING("DOMNodeRemoved"), mMutationListenerP, PR_FALSE);
-  NS_ASSERTION(NS_SUCCEEDED(res), "failed to register NodeRemoved event listener");
-
   // and listen to the "resize" event on the window
   // first, get the script global object from the document...
   nsCOMPtr<nsIScriptGlobalObject> global;
@@ -604,81 +491,70 @@ nsHTMLEditor::HideResizers(void)
   nsCOMPtr<nsIContent> content = do_QueryInterface(mTopLeftHandle);
   if (content) {
     docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
-    mTopLeftHandle = nsnull;
   }
+  mTopLeftHandle = nsnull;
 
   content = do_QueryInterface(mTopHandle);
   if (content) {
     docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
-    mTopHandle = nsnull;
   }
+  mTopHandle = nsnull;
 
   content = do_QueryInterface(mTopRightHandle);
   if (content) {
     docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
-    mTopRightHandle = nsnull;
   }
+  mTopRightHandle = nsnull;
 
   content = do_QueryInterface(mLeftHandle);
   if (content) {
     docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
-    mLeftHandle = nsnull;
   }
+  mLeftHandle = nsnull;
 
   content = do_QueryInterface(mRightHandle);
   if (content) {
     docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
-    mRightHandle = nsnull;
   }
+  mRightHandle = nsnull;
 
   content = do_QueryInterface(mBottomLeftHandle);
   if (content) {
     docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
-    mBottomLeftHandle = nsnull;
   }
+  mBottomLeftHandle = nsnull;
 
   content = do_QueryInterface(mBottomHandle);
   if (content) {
     docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
-    mBottomHandle = nsnull;
   }
+  mBottomHandle = nsnull;
 
   content = do_QueryInterface(mBottomRightHandle);
   if (content) {
     docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
-    mBottomRightHandle = nsnull;
   }
+  mBottomRightHandle = nsnull;
 
   content = do_QueryInterface(mResizingShadow);
   if (content) {
     docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
-    mResizingShadow = nsnull;
   }
+  mResizingShadow = nsnull;
 
   content = do_QueryInterface(mResizingInfo);
   if (content) {
     docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
-    mResizingInfo = nsnull;
   }
+  mResizingInfo = nsnull;
 
   // don't forget to remove the listeners !
 
-  nsCOMPtr<nsIDOMEventReceiver> erP = do_QueryInterface(mResizedObject);
-  res = erP->RemoveEventListener(NS_LITERAL_STRING("DOMAttrModified"), mMutationListenerP, PR_FALSE);
-  NS_ASSERTION(NS_SUCCEEDED(res), "failed to remove AttrModified mutation event listener");
-
-  nsCOMPtr<nsIDOMNode> parentNode;
-  res = mResizedObject->GetParentNode(getter_AddRefs(parentNode));
-  erP = do_QueryInterface(parentNode);
-  res = erP->RemoveEventListener(NS_LITERAL_STRING("DOMNodeRemoved"), mMutationListenerP, PR_FALSE);
-  NS_ASSERTION(NS_SUCCEEDED(res), "failed to remove NodeRemoved event listener");
-
-  mMutationListenerP = nsnull;
-
+  nsCOMPtr<nsIDOMEventReceiver> erP;
   res = GetDOMEventReceiver(getter_AddRefs(erP));
-  if (NS_SUCCEEDED(res))
+  if (NS_SUCCEEDED(res) && erP && mMouseMotionListenerP)
   {
-    res = erP->RemoveEventListenerByIID(mMouseMotionListenerP, NS_GET_IID(nsIDOMMouseMotionListener));
+    res = erP->RemoveEventListener(NS_LITERAL_STRING("mousemove"), mMouseMotionListenerP, PR_TRUE);
     NS_ASSERTION(NS_SUCCEEDED(res), "failed to remove mouse motion listener");
   }
   mMouseMotionListenerP = nsnull;
@@ -693,8 +569,11 @@ nsHTMLEditor::HideResizers(void)
   if (!global) { return NS_ERROR_NULL_POINTER; }
 
   nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(global);
-  res = target->RemoveEventListener(NS_LITERAL_STRING("resize"), mResizeEventListenerP, PR_FALSE);
-  NS_ASSERTION(NS_SUCCEEDED(res), "failed to remove resize event listener");
+  if (target && mResizeEventListenerP) {
+    res = target->RemoveEventListener(NS_LITERAL_STRING("resize"), mResizeEventListenerP, PR_FALSE);
+    NS_ASSERTION(NS_SUCCEEDED(res), "failed to remove resize event listener");
+  }
+  mResizeEventListenerP = nsnull;
 
   mIsShowingResizeHandles = PR_FALSE;
   mResizedObject = nsnull;
@@ -705,8 +584,10 @@ nsHTMLEditor::HideResizers(void)
 void
 nsHTMLEditor::HideShadowAndInfo()
 {
-  mResizingShadow->SetAttribute(NS_LITERAL_STRING("class"), NS_LITERAL_STRING("hidden"));
-  mResizingInfo->SetAttribute(NS_LITERAL_STRING("class"), NS_LITERAL_STRING("hidden"));
+  if (mResizingShadow)
+    mResizingShadow->SetAttribute(NS_LITERAL_STRING("class"), NS_LITERAL_STRING("hidden"));
+  if (mResizingInfo)
+    mResizingInfo->SetAttribute(NS_LITERAL_STRING("class"), NS_LITERAL_STRING("hidden"));
 }
 
 nsresult
@@ -757,9 +638,9 @@ nsHTMLEditor::StartResizing(nsIDOMElement *aHandle)
 
   nsCOMPtr<nsIDOMEventReceiver> erP;
   nsresult result = GetDOMEventReceiver(getter_AddRefs(erP));
-  if (NS_SUCCEEDED(result))
+  if (NS_SUCCEEDED(result) && erP)
   {
-    result = erP->AddEventListenerByIID(mMouseMotionListenerP, NS_GET_IID(nsIDOMMouseMotionListener));
+    result = erP->AddEventListener(NS_LITERAL_STRING("mousemove"), mMouseMotionListenerP, PR_TRUE);
     NS_ASSERTION(NS_SUCCEEDED(result), "failed to register mouse motion listener");
   }
   else
@@ -1042,10 +923,6 @@ nsHTMLEditor::SetFinalSize(PRInt32 aX, PRInt32 aY)
   PRBool useCSS;
   GetIsCSSEnabled(&useCSS);
 
-  // let's remove the DOMMutationEvent listener for the moment
-  nsCOMPtr<nsIDOMEventReceiver> erP = do_QueryInterface(mResizedObject);
-  erP->RemoveEventListener(NS_LITERAL_STRING("DOMAttrModified"), mMutationListenerP, PR_FALSE);
-
   // we want one transaction only from a user's point of view
   nsAutoEditBatch batchIt(this);
 
@@ -1098,7 +975,6 @@ nsHTMLEditor::SetFinalSize(PRInt32 aX, PRInt32 aY)
                                     PR_FALSE);
   }
   RefreshResizers();
-  erP->AddEventListener(NS_LITERAL_STRING("DOMAttrModified"), mMutationListenerP, PR_FALSE);
 }
 
 NS_IMETHODIMP
@@ -1126,16 +1002,30 @@ nsHTMLEditor::CheckResizingState(nsISelection *aSelection)
     if (NS_FAILED(res)) return res;
 
     if (rangeCount == 1) {
-      nsCOMPtr<nsIDOMElement> focusElement;
-      res = GetSelectedElement(NS_LITERAL_STRING(""), getter_AddRefs(focusElement));
+      nsCOMPtr<nsIDOMRange> range;
+      res = aSelection->GetRangeAt(0, getter_AddRefs(range));
       if (NS_FAILED(res)) return res;
-      if (focusElement)
-        focusNode = do_QueryInterface(focusElement);
-      else {
-        nsCOMPtr<nsIDOMRange> range;
-        res = aSelection->GetRangeAt(0, getter_AddRefs(range));
+      if (!range) return NS_ERROR_NULL_POINTER;
+
+      nsCOMPtr<nsIDOMNode> startContainer, endContainer;
+      res = range->GetStartContainer(getter_AddRefs(startContainer));
+      if (NS_FAILED(res)) return res;
+      res = range->GetEndContainer(getter_AddRefs(endContainer));
+      if (NS_FAILED(res)) return res;
+      PRInt32 startOffset, endOffset;
+      res = range->GetStartOffset(&startOffset);
+      if (NS_FAILED(res)) return res;
+      res = range->GetEndOffset(&endOffset);
+      if (NS_FAILED(res)) return res;
+
+      nsCOMPtr<nsIDOMElement> focusElement;
+      if (startContainer == endContainer && startOffset + 1 == endOffset) {
+        res = GetSelectedElement(NS_LITERAL_STRING(""), getter_AddRefs(focusElement));
         if (NS_FAILED(res)) return res;
-        if (!range) return NS_ERROR_NULL_POINTER;
+        if (focusElement)
+          focusNode = do_QueryInterface(focusElement);
+      }
+      if (!focusNode) {
         res = range->GetCommonAncestorContainer(getter_AddRefs(focusNode));
         if (NS_FAILED(res)) return res;
       }
@@ -1222,6 +1112,8 @@ nsHTMLEditor::CheckResizingState(nsISelection *aSelection)
   if (mIsShowingResizeHandles) {
     // we were showing resizers but the selection is not an image any longer
     res = HideResizers();
+    // just in case we were resizing... (bug 195412)
+    mIsResizing = PR_FALSE;
     if (NS_FAILED(res)) return res;
     // paranoia...
     // mIsResizing = PR_FALSE;
