@@ -56,9 +56,7 @@
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 #include "nsPrimitiveHelpers.h"
-#ifndef XP_MACOSX
 #include "nsILocalFileMac.h"
-#endif
 #include "nsWatchTask.h"
 
 // rjc
@@ -74,6 +72,7 @@
 #include "nsPoint.h"
 #include "nsIWidget.h"
 #include "nsCarbonHelpers.h"
+#include "nsGfxUtils.h"
 
 #include "nsIXULContent.h"
 #include "nsIDOMElement.h"
@@ -213,6 +212,15 @@ nsDragService :: ComputeGlobalRectFromFrame ( nsIDOMNode* aDOMNode, Rect & outSc
 NS_IMETHODIMP
 nsDragService :: InvokeDragSession (nsIDOMNode *aDOMNode, nsISupportsArray * aTransferableArray, nsIScriptableRegion * aDragRgn, PRUint32 aActionType)
 {
+#ifdef MOZ_WIDGET_COCOA
+  nsGraphicsUtils::SetPortToKnownGoodPort();
+  GrafPtr port;
+  GDHandle handle;
+  ::GetGWorld(&port, &handle);
+  if (!IsValidPort(port))
+  return NS_ERROR_FAILURE;
+#endif
+
   ::InitCursor();
   nsBaseDragService::InvokeDragSession ( aDOMNode, aTransferableArray, aDragRgn, aActionType );
   
@@ -307,6 +315,15 @@ nsDragService :: BuildDragRegion ( nsIScriptableRegion* inRegion, nsIDOMNode* in
   if ( inRegion )
     inRegion->GetRegion(getter_AddRefs(geckoRegion));
     
+#ifdef MOZ_WIDGET_COCOA
+  nsGraphicsUtils::SetPortToKnownGoodPort();
+  GrafPtr port;
+  GDHandle handle;
+  ::GetGWorld(&port, &handle);
+  if (!IsValidPort(port))
+  return NS_ERROR_FAILURE;
+#endif
+
   // create the drag region. Pull out the native mac region from the nsIRegion we're
   // given, copy it, inset it one pixel, and subtract them so we're left with just an
   // outline. Too bad we can't do this with gfx api's.
@@ -518,11 +535,9 @@ printf("looking for data in type %s, mac flavor %ld\n", NS_STATIC_CAST(const cha
 	      // we have a HFSFlavor struct in |dataBuff|. Create an nsLocalFileMac object.
 	      HFSFlavor* fileData = NS_REINTERPRET_CAST(HFSFlavor*, dataBuff);
 	      NS_ASSERTION ( sizeof(HFSFlavor) == dataSize, "Ooops, we realy don't have a HFSFlavor" );
-#ifndef XP_MACOSX
 	      nsCOMPtr<nsILocalFileMac> file;
 	      if ( NS_SUCCEEDED(NS_NewLocalFileWithFSSpec(&fileData->fileSpec, PR_TRUE, getter_AddRefs(file))) )
 	        genericDataWrapper = do_QueryInterface(file);
-#endif
 	    }
 	    else {
           // we probably have some form of text. The DOM only wants LF, so convert k
