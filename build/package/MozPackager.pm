@@ -41,6 +41,16 @@ use File::Spec;
 
 package MozPackager;
 
+# this is a wrapper around File::Spec->catfile that splits on '/'
+# and rejoins the path
+sub joinfile {
+    return File::Spec->catfile(map(split('/', $_), @_));
+}
+
+sub joindir {
+    return File::Spec->catdir(map(split('/', $_), @_));
+}
+
 # level 0, no progress
 # level 1, basic "parsing file blah"
 # level 2, more detail
@@ -331,7 +341,7 @@ sub _checkFile {
     # 2 == ignore
     $MozParser::missingFiles == 2 && return;
 
-    my $pfile = File::Spec->catfile(split('/', $fileName));
+    my $pfile = MozPackager::joinfile($fileName);
 
     (my $fExists = -f $pfile) && return;
 
@@ -368,7 +378,9 @@ sub mergeTo {
     # XXXbsmedberg : this will not work in cross-compile environments,
     # but I'm not sure anyone cares
     my $linkCommand = File::Spec->catfile("dist", "bin", "xpt_link");
-    system ($linkCommand, $mergeOut, map(File::Spec->catfile(split('/', $_)), keys %{$parser->{'xptfiles'}})) &&
+
+    MozStage::Utils::ensureDirs($mergeOut);
+    system ($linkCommand, $mergeOut, map(MozPackager::joinfile($_), keys %{$parser->{'xptfiles'}})) &&
         die("xpt_link failed: code ". ($? >> 8));
 }
 
@@ -428,6 +440,85 @@ sub _commandFunc {
     $parser->_addFile($parser->{"touchFile"}, $args[0], $filename);
 }
 
+# preprocesses into the destination path
+# !preprocess destpath options-and-files
+package MozParser::Preprocess;
+
+# stageDir may be "" to indicate testing only
+sub add {
+    my ($parser, $preprocessor, $stageDir) = @_;
+
+    $parser->addCommand("preprocess", \&_commandFunc);
+    $parser->{'preprocessor'} = ($ENV{'PERL'} ? $ENV{'PERL'} : "perl") .' '. $preprocessor;
+    $parser->{'stageDir'} = $stageDir;
+}
+
+sub _commandFunc {
+    my ($parser, $args, $file, $filename) = @_;
+
+    print "args = $args\n";
+
+    my @args = split ' ', $args;
+    scalar(@args) >= 2 || die("At $filename, line $.: Insufficient number of arguments to !preprocess '$args'");
+
+    my $mappedResult = MozPackager::joinfile($parser->{'stageDir'},
+                                             $parser->findMapping($args[0], $filename));
+    $mappedResult =~ s|\\|\\\\|g;
+    
+    my $escapedArgs = join(' ', @args[1 .. scalar(@args)-1]);
+    $escapedArgs =~ s|\\|\\\\|g;
+
+    if ($parser->{'stageDir'}) {
+        MozStage::Utils::ensureDirs($mappedResult);
+        my $command = "$parser->{'preprocessor'} $escapedArgs > $mappedResult";
+        MozPackager::_verbosePrint(2, "Running $command");
+
+        system $command;
+        die("At $filename, line $.: error during preprocessing, args $escapedArgs, code ". ($? >>8)) if ($? >>8);
+    }
+}
+
+package MozParser::Optional;
+
+sub add {
+    my ($parser) = @_;
+
+    $parser->addCommand('optional', \&_commandFunc);
+}
+
+sub _commandFunc {
+    my ($parser, $args, $file, $filename) = @_;
+
+    my @args = split ' ', $args;
+
+    $args[1] = $args[0] if (scalar(@args) == 1);
+    scalar(@args) == 2 || die("At $filename, line $.: bad arguments to !optional flag!");
+
+    # now we read the comment (if any) for a not-found file
+    my $comment = "";
+    my $bang = "";
+    while (read($file, $bang, 2) == 2) {
+        # is this a continuation line?
+        if ($bang ne '!=') {
+            # reset the filepos back two chars
+            seek($file, -2, 1);
+            last;
+        }
+
+        $comment .= <$file>;
+    }
+
+    $comment .= "\n";
+
+    if (! -e MozPackager::joinfile($args[0])) {
+        if ($MozParser::missingFiles < 2) {
+            warn($comment);
+        }
+    } else {
+        $parser->_addFile($args[0], $args[1]);
+    }
+}
+
 package MozStage::Utils;
 
 use File::Copy;
@@ -438,13 +529,8 @@ my $cansymlink = eval {symlink('', ''); 1; };
 # instead of a symlink
 $MozStage::forceCopy = 0;
 
-# this performs a symlink if possible on this system, otherwise
-# peforms a regular "copy". It creates the directory structure if
-# necessary.
-sub symCopy {
-    my ($from, $to) = @_;
-
-    MozPackager::_verbosePrint(1, "Copying $from\t to $to");
+sub ensureDirs {
+    my ($to) = @_;
 
     my ($volume, $dirs, $file) = File::Spec->splitpath($to);
     my @dirs = File::Spec->splitdir($dirs);
@@ -457,6 +543,17 @@ sub symCopy {
         mkdir $dirname if (! -e $dirname);
         ++$i;
     }
+}
+
+# this performs a symlink if possible on this system, otherwise
+# peforms a regular "copy". It creates the directory structure if
+# necessary.
+sub symCopy {
+    my ($from, $to) = @_;
+
+    MozPackager::_verbosePrint(1, "Copying $from\t to $to");
+
+    ensureDirs($to);
 
     if ($cansymlink && !$MozStage::forceCopy) {
         # $from is relative to the current (objdir) directory, so we need to
@@ -481,8 +578,8 @@ sub stage {
     my ($fileHash, $destDir) = @_;
 
     for my $dest (keys %$fileHash) {
-        my $from = File::Spec->catfile(          split('/', $fileHash->{$dest}));
-        my $to   = File::Spec->catfile($destDir, split('/', $dest));
+        my $from = MozPackager::joinfile($fileHash->{$dest});
+        my $to   = MozPackager::joinfile($destDir, $dest);
         MozStage::Utils::symCopy($from, $to);
     }
 }

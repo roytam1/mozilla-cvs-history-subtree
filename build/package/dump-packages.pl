@@ -48,6 +48,8 @@ foreach my $package (keys %MozPackages::packages) {
     my $parser = new MozParser;
     MozParser::XPTDist::add($parser);
     MozParser::Touch::add($parser, File::Spec->catfile("dist", "dummy.file"));
+    MozParser::Optional::add($parser);
+    MozParser::Preprocess::add($parser, "", "");
     $parser->addMapping("dist/bin", "bin");
     $parser->addMapping("dist/lib", "lib");
     $parser->addMapping("dist/include", "include");

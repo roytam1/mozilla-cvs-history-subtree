@@ -13,11 +13,11 @@ my $xptMergeFile = "";
 my @handlers;
 my $stageDir = "";
 my %mappings;
+my $preprocessor = "";
 
 # xxxbsmedberg: need usage()
 
 # package names are specified after all options
-# names in the form ^package-name are removed from the stage
 
 GetOptions("objdir|o=s"           => \$objdir,
            "package-list|l=s"     => \$packageList,
@@ -28,8 +28,9 @@ GetOptions("objdir|o=s"           => \$objdir,
            "command-handlers|c=s" => \@handlers,
            "xpt-merge-file|x=s"   => \$xptMergeFile,
            "stage-directory|s=s"  => \$stageDir,
-           "mapping|m=s"          => \%mappingsm,
-           "force-copy|f"         => \$MozStage::forceCopy);
+           "mapping|m=s"          => \%mappings,
+           "force-copy|f"         => \$MozStage::forceCopy,
+           "preprocessor|p=s"     => \$preprocessor);
 
 @handlers = split(/,/,join(',',@handlers));
 
@@ -56,43 +57,40 @@ system "rm -rf $stageDir" ||
 $MozParser::missingFiles = 2 if $ignoreMissing;
 $MozParser::missingFiles = 1 if $warnMissing;
 
-my @packages;
-my @unpackages;
-
 MozPackages::parsePackageList($packageList);
 
+my @packages;
 foreach my $package (@ARGV) {
-    if ($package =~ s/^\^//) {
-        push @unpackages, MozPackages::getPackagesFor($package);
-        next;
-    }
-
     push @packages, MozPackages::getPackagesFor($package);
     $xptMergeFile = "dist/bin/components/$package.xpt" if !$xptMergeFile;
 }
 
 my $parser = new MozParser;
-my $unparser = new MozParser;
-
 my $xptMerge = 0;
 
 HANDLER: foreach my $handler (@handlers) {
     if ($handler eq "xptmerge") {
         MozParser::XPTMerge::add($parser);
-        MozParser::XPTMerge::add($unparser);
         $xptMerge = 1;
         next HANDLER;
     }
     if ($handler eq "xptdist") {
         MozParser::XPTDist::add($parser);
-        MozParser::XPTDist::add($unparser);
         next HANDLER;
     }
     if ($handler eq "touch") {
         my $dummyFile = File::Spec->catfile("dist", "dummy-file");
         system ("touch", $dummyFile);
         MozParser::Touch::add($parser, $dummyFile);
-        MozParser::Touch::add($unparser, $dummyFile);
+        next HANDLER;
+    }
+    if ($handler eq "preprocess") {
+        die("--preprocessor not specified on command line.") if (!$preprocessor);
+        MozParser::Preprocess::add($parser, $preprocessor, $stageDir);
+        next HANDLER;
+    }
+    if ($handler eq "optional") {
+        MozParser::Optional::add($parser);
         next HANDLER;
     }
     die("Unrecognized command-handler $handler");
@@ -100,26 +98,13 @@ HANDLER: foreach my $handler (@handlers) {
 
 foreach my $mapping (keys %mappings) {
     $parser->addMapping($mapping, $mappings{$mapping});
-    $unparser->addMapping($mapping, $mappings{$mapping});
 }
 
 my $files = $parser->parse($packagesDir, @packages);
-my $unfiles = $unparser->parse($packagesDir, @unpackages);
-
-foreach $distfile (keys %$files) {
-    if (exists $unfiles->{$distfile}) {
-        if ($files->{$distfile} ne $unfiles->{$distfile}) {
-            warn ("Dist/undist mismatch for file $distfile.\nDist = $files->{$distfile}\nUndist = $unfiles->{$distfile}");
-        }
-        delete $files->{$distfile};
-    }
-}
 
 MozStage::stage($files, $stageDir);
 
 if ($xptMerge) {
-    MozParser::XPTMerge::removeFiles($parser, $unparser);
-
     $xptMergeFile = File::Spec->catfile($stageDir, split('/', $parser->findMapping($xptMergeFile)));
     MozParser::XPTMerge::mergeTo($parser, $xptMergeFile);
 }
