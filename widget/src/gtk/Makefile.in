@@ -78,6 +78,10 @@ else
 EXTRA_DSO_LDOPTS += $(TK_LIBS)
 endif
 
+EXPORTS         = gdksuperwin.h \
+		  gtkmozarea.h \
+		  gtkmozbox.h
+
 include $(topsrcdir)/config/rules.mk
 
 ifndef MOZ_MONOLITHIC_TOOLKIT
