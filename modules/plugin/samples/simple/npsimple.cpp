@@ -45,7 +45,8 @@
 #include "nsIServiceManager.h"
 #include "nsISupports.h"
 #include "nsIFactory.h"
-#include "nsString.h"
+#include "nsIRegistry.h"
+#include "nsMemory.h"
 #include "simpleCID.h"
 
 #include "nsISimplePluginInstance.h"
@@ -528,14 +529,52 @@ NSCanUnload(nsISupports* serviceMgr)
     return gPluginObjectCount == 1 && !gPluginLocked;
 }
 
+
+static nsresult
+RegisterPluginInfo(nsIComponentManager* aComponentManager)
+{
+    nsresult rv;
+
+    static NS_DEFINE_CID(kRegistryCID, NS_REGISTRY_CID);
+
+    nsIRegistry* registry;
+    rv = aComponentManager->CreateInstance(kRegistryCID, nsnull, NS_GET_IID(nsIRegistry),
+                                           (void**) &registry);
+
+    if (NS_SUCCEEDED(rv)) {
+        rv = registry->OpenWellKnownRegistry(nsIRegistry::ApplicationComponentRegistry);
+
+        if (NS_SUCCEEDED(rv)) {
+            static const char kSimpleKey[] = "software/plugins/simple";
+
+            nsRegistryKey simple;
+            rv = registry->AddSubtree(nsIRegistry::Common, kSimpleKey, &simple);
+
+            if (NS_SUCCEEDED(rv)) {
+                char* cid = kSimplePluginCID.ToString();
+                if (cid) {
+                    registry->SetStringUTF8(simple, "cid", cid);
+                    nsMemory::Free(cid);
+                }
+
+                registry->SetStringUTF8(simple, "name", PLUGIN_NAME);
+                registry->SetStringUTF8(simple, "description", PLUGIN_DESCRIPTION);
+                registry->SetStringUTF8(simple, "mimetypes", PLUGIN_MIME_TYPE);
+                registry->SetStringUTF8(simple, "mimedescriptions", "Simple Sample Plugin-in");
+                registry->SetStringUTF8(simple, "extenstions", "smp");
+            }
+        }
+
+        NS_RELEASE(registry);
+    }
+
+    return rv;
+}
+
 extern "C" NS_EXPORT nsresult 
 NSRegisterSelf(nsISupports *aServMgr, const char *path)
 {
     nsresult rv = NS_OK;
-
-    char buf[255];    // todo: use a const
-
-    nsCString progID(NS_INLINE_PLUGIN_PROGID_PREFIX);
 
     // We will use the service manager to obtain the component
     // manager, which will enable us to register a component
@@ -563,12 +602,13 @@ NSRegisterSelf(nsISupports *aServMgr, const char *path)
 
     // Note the text string, we can access the hello component with just this
     // string without knowing the CID
+    static const char kInlinePluginProgID[] = NS_INLINE_PLUGIN_PROGID_PREFIX PLUGIN_MIME_TYPE;
 
-    progID += PLUGIN_MIME_TYPE;
-    progID.ToCString(buf, 255);     // todo: need to use a const
-
-    rv = cm->RegisterComponent(kSimplePluginCID, g_desc, buf,
+    rv = cm->RegisterComponent(kSimplePluginCID, g_desc, kInlinePluginProgID,
 		path, PR_TRUE, PR_TRUE);
+
+    if (NS_SUCCEEDED(rv))
+        rv = RegisterPluginInfo(cm);
 
     sm->ReleaseService(kComponentManagerCID, cm);
 
@@ -579,6 +619,43 @@ NSRegisterSelf(nsISupports *aServMgr, const char *path)
 #endif
 
 	return rv;
+}
+
+static nsresult
+UnregisterPluginInfo(nsIComponentManager* aComponentManager)
+{
+    nsresult rv;
+
+    static NS_DEFINE_CID(kRegistryCID, NS_REGISTRY_CID);
+
+    nsIRegistry* registry;
+    rv = aComponentManager->CreateInstance(kRegistryCID, nsnull, NS_GET_IID(nsIRegistry),
+                                           (void**) &registry);
+
+    if (NS_SUCCEEDED(rv)) {
+        rv = registry->OpenWellKnownRegistry(nsIRegistry::ApplicationComponentRegistry);
+
+        if (NS_SUCCEEDED(rv)) {
+            static const char kPluginsKey[] = "plugins";
+
+            nsRegistryKey plugins;
+            rv = registry->GetSubtree(nsIRegistry::Common, kPluginsKey, &plugins);
+
+            if (NS_SUCCEEDED(rv)) {
+                static const char kSimpleKey[] = "simple";
+
+                nsRegistryKey simple;
+                rv = registry->GetSubtree(plugins, kSimpleKey, &simple);
+
+                if (NS_SUCCEEDED(rv)) {
+                    rv = registry->RemoveSubtree(plugins, kSimpleKey);
+                }
+            }
+        }
+        NS_RELEASE(registry);
+    }
+
+    return rv;
 }
 
 extern "C" NS_EXPORT nsresult 
