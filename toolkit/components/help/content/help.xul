@@ -357,9 +357,7 @@
                         iframes intended to hold (html) content -->
                     <browser context="contentAreaContextMenu"
                         type="content-primary" id="help-content"
-                        src="about:blank" flex="1"
-                        ondraggesture="nsDragAndDrop.startDrag(event,
-                            contentAreaDNDObserver);"/>
+                        src="about:blank" flex="1"/>
                 </hbox>
             </vbox>
         </hbox>
