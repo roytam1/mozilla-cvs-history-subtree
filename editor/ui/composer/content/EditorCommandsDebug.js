@@ -424,3 +424,126 @@ function PrintTxnList(txnList, prefixStr)
   }
 }
 
+
+function TestCommandParams()
+{
+  dump("Making command params\n");
+    
+  var params = Components.classes["@mozilla.org/embedcomp/command-params;1"].createInstance();
+  params = params.QueryInterface(Components.interfaces.nsICommandParams);
+  
+  params.setBooleanValue("testbool", true);    
+  params.setLongValue("testlong", 42);
+  params.setStringValue("teststring", "foopy");
+
+  dump("Getting bool " + params.getBooleanValue("testbool") + "\n");
+  dump("Getting long " + params.getLongValue("testlong") + "\n");
+  dump("Getting string " + params.getStringValue("teststring") + "\n");
+
+  dump("Iterating: (" + params.hasMoreElements() + ")\n");
+  
+  while (params.hasMoreElements())
+  {
+    var thisArg = params.getNext();
+    dump("Found arg " + thisArg + " with type " + params.getValueType(thisArg) + "\n");
+  }
+
+  dump("Iterating again: (" + params.hasMoreElements() + ")\n");
+  params.first();
+  
+  while (params.hasMoreElements())
+  {
+    var thisArg = params.getNext();
+    dump("Found arg " + thisArg + " with type " + params.getValueType(thisArg) + "\n");
+  }
+  
+  dump("Removing testlong\n");
+  params.removeValue("testlong");
+  
+  dump("Iterating again: (" + params.hasMoreElements() + ")\n");
+  params.first();
+  
+  while (params.hasMoreElements())
+  {
+    var thisArg = params.getNext();
+    dump("Found arg " + thisArg + " with type " + params.getValueType(thisArg) + "\n");
+  }
+  
+
+  dump("Done\n");
+}
+
+
+
+//--------------------------------------------------
+function EnumerateNamedGroup(cmdGroup, groupName)
+{
+  dump("Commands in group " + groupName + "\n");
+  var groupEnum = cmdGroup.getEnumeratorForGroup(groupName);
+  while (groupEnum.hasMoreElements())
+  {
+    var   thisGroup = groupEnum.getNext();
+    var   groupString = thisGroup.QueryInterface(Components.interfaces.nsISupportsWString);
+    
+    dump("  Got group " + groupString + "\n");
+  }
+  dump("Done iterating commands\n");
+}
+
+
+//--------------------------------------------------
+function EnumerateGroups(cmdGroup)
+{
+  dump("Start iterating command groups\n");
+  var groupEnum = cmdGroup.getGroupsEnumerator();
+  while (groupEnum.hasMoreElements())
+  {
+    var   thisGroup = groupEnum.getNext();
+    var   groupString = thisGroup.QueryInterface(Components.interfaces.nsISupportsWString);
+    
+    dump("  Got group " + groupString + "\n");
+    EnumerateNamedGroup(cmdGroup, groupString);
+  }
+  dump("Done iterating command groups\n");
+
+}
+
+function TestCommandGroup()
+{
+  dump("Testing command group\n");
+
+  var cmdGroup = Components.classes["@mozilla.org/embedcomp/controller-command-group;1"].createInstance();
+  cmdGroup = cmdGroup.QueryInterface(Components.interfaces.nsIControllerCommandGroup);
+  
+  if (!cmdGroup)
+  {
+    dump("Failed to create command group\n");
+    return;
+  }
+  
+  // test enumeration while empty
+  EnumerateGroups(cmdGroup);
+  
+  cmdGroup.addCommandToGroup("cmd_listProperties", "composerMenuItems");
+  cmdGroup.addCommandToGroup("cmd_pageProperties", "composerMenuItems");
+  cmdGroup.addCommandToGroup("cmd_colorProperties", "composerMenuItems");
+  cmdGroup.addCommandToGroup("cmd_link",          "composerMenuItems");
+  cmdGroup.addCommandToGroup("cmd_anchor",        "composerMenuItems");
+  cmdGroup.addCommandToGroup("cmd_image",         "composerMenuItems");
+
+  cmdGroup.addCommandToGroup("cmd_save",         "composerSaveMenuItems");
+  cmdGroup.addCommandToGroup("cmd_saveAs",         "composerSaveMenuItems");
+  cmdGroup.addCommandToGroup("cmd_exportToText",   "composerSaveMenuItems");
+  cmdGroup.addCommandToGroup("cmd_saveAsCharset",  "composerSaveMenuItems");
+
+  cmdGroup.addCommandToGroup("cmd_undo",   "composerEditMenuItems");
+  cmdGroup.addCommandToGroup("cmd_redo",   "composerEditMenuItems");
+  cmdGroup.addCommandToGroup("cmd_cut",    "composerEditMenuItems");
+  cmdGroup.addCommandToGroup("cmd_copy",   "composerEditMenuItems");
+  cmdGroup.addCommandToGroup("cmd_paste",  "composerEditMenuItems");
+  cmdGroup.addCommandToGroup("cmd_delete", "composerEditMenuItems");
+
+  EnumerateGroups(cmdGroup);
+}
+
+
