@@ -16,9 +16,6 @@
  * Reserved.
  */
 
-README_PLEASE:
-DON'T USE THIS IDL UNTIL NECKO LANDS!!!!
-
 #include "nsISupports.idl"
 #include "nsrootidl.idl"
 #include "nsIFileSpec.idl"
@@ -26,12 +23,6 @@ DON'T USE THIS IDL UNTIL NECKO LANDS!!!!
 
 interface nsIURI;
 interface nsIStreamListener;
-
-%{C++
-#include "nsIRUL.h"
-#include "nsIStreamListener.h"
-%}
-
 
 [scriptable, uuid(D01D7B59-DCCD-11d2-A411-00805F613C79)]
 interface nsIMimeEmitter : nsISupports{

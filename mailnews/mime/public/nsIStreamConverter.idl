@@ -20,17 +20,9 @@
 #include "nsrootidl.idl"
 #include "nsIFileSpec.idl"
 #include "nsIOutputStream.idl"
-
-READ_THIS:
-THIS INTERFACE IS ALL DONE AS SOON AS SOMEONE DEFINES nsIStreamListener 
-IN IDL!
-
 #include "nsIStreamListener.idl"
 
-
 %{C++
-#include "nsIStreamListener.h"
-
 // {588595CB-2012-11d3-8EF0-00A024A7D144}
 #define NS_STREAM_CONVERTER_CID  \
     { 0x588595cb, 0x2012, 0x11d3,   \
