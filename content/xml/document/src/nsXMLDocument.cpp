@@ -212,7 +212,8 @@ NS_INTERFACE_MAP_BEGIN(nsXMLDocument)
   NS_INTERFACE_MAP_ENTRY(nsIHTMLContentContainer)
   NS_INTERFACE_MAP_ENTRY(nsIInterfaceRequestor)
   NS_INTERFACE_MAP_ENTRY(nsIHttpEventSink)
-  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(Document)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMXMLDocument)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(XMLDocument)
 NS_INTERFACE_MAP_END_INHERITING(nsDocument)
 
 
@@ -1003,29 +1004,6 @@ nsXMLDocument::SetDefaultStylesheets(nsIURI* aUrl)
   }
 
   return result;
-}
-
-NS_IMETHODIMP 
-nsXMLDocument::SetTitle(const PRUnichar *aTitle)
-{
-  // Pass on to any interested containers
-  PRInt32 i, n = mPresShells.Count();
-  for (i = 0; i < n; i++) {
-    nsIPresShell* shell = (nsIPresShell*) mPresShells.ElementAt(i);
-    nsCOMPtr<nsIPresContext> cx;
-    shell->GetPresContext(getter_AddRefs(cx));
-    nsCOMPtr<nsISupports> container;
-    if (NS_OK == cx->GetContainer(getter_AddRefs(container))) {
-      if (container) {
-        nsCOMPtr<nsIBaseWindow> docShell(do_QueryInterface(container));
-        if(docShell) {
-          docShell->SetTitle(aTitle);
-        }
-      }
-    }
-  }
-
-  return NS_OK;
 }
 
 NS_IMETHODIMP 

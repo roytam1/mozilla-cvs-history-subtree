@@ -41,6 +41,7 @@
 #include "nsIContent.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
+#include "nsIDOMXMLDocument.h"
 #include "nsIDOMNSDocument.h"
 #include "nsIDOMEvent.h"
 #include "nsIDOMKeyEvent.h"
@@ -180,6 +181,7 @@
 #include "nsIDOMNSHTMLFormElement.h"
 #include "nsIDOMHTMLFrameElement.h"
 #include "nsIDOMHTMLFrameSetElement.h"
+#include "nsIDOMNSHTMLFrameElement.h"
 #include "nsIDOMHTMLHRElement.h"
 #include "nsIDOMHTMLHeadElement.h"
 #include "nsIDOMHTMLHeadingElement.h"
@@ -409,7 +411,7 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
 
   // Core classes
-  NS_DEFINE_CLASSINFO_DATA(Document, nsDocumentSH,
+  NS_DEFINE_CLASSINFO_DATA(XMLDocument, nsDocumentSH,
                            NODE_SCRIPTABLE_FLAGS |
                            nsIXPCScriptable::WANT_ENUMERATE)
   NS_DEFINE_CLASSINFO_DATA(DocumentType, nsNodeSH,
@@ -1093,8 +1095,9 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMScreen)
   DOM_CLASSINFO_MAP_END
 
-  DOM_CLASSINFO_MAP_BEGIN(Document, nsIDOMDocument)
+  DOM_CLASSINFO_MAP_BEGIN(XMLDocument, nsIDOMDocument)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocument)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMXMLDocument)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSDocument)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentEvent)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMDocumentStyle)
@@ -1305,6 +1308,7 @@ nsDOMClassInfo::Init()
 
   DOM_CLASSINFO_MAP_BEGIN(HTMLFrameElement, nsIDOMHTMLFrameElement)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLFrameElement)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSHTMLFrameElement)
     DOM_CLASSINFO_GENERIC_HTML_MAP_ENTRIES
   DOM_CLASSINFO_MAP_END
 
@@ -1335,6 +1339,7 @@ nsDOMClassInfo::Init()
 
   DOM_CLASSINFO_MAP_BEGIN(HTMLIFrameElement, nsIDOMHTMLIFrameElement)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMHTMLIFrameElement)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMNSHTMLFrameElement)
     DOM_CLASSINFO_GENERIC_HTML_MAP_ENTRIES
   DOM_CLASSINFO_MAP_END
 
@@ -2259,6 +2264,7 @@ nsDOMClassInfo::Enumerate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     // Let XPConnect know that the access was not granted.
     *_retval = PR_FALSE;
   }
+
   return NS_OK;
 }
 
@@ -2650,7 +2656,7 @@ nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   nsresult rv = NS_OK;
 
   if (needsSecurityCheck(cx, wrapper)) {
-    doCheckReadAccess(cx, obj, id, wrapper);
+    rv = doCheckReadAccess(cx, obj, id, wrapper);
 
     if (NS_FAILED(rv)) {
       // Security check failed. The security manager set a JS

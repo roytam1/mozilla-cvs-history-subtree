@@ -23,9 +23,18 @@ DEPTH=..\..\..\..
 
 LIBRARY_NAME=layoutsvgbase_s 
 MODULE=layout 
+REQUIRES    = xpcom \
+              widget \
+			  content \
+			  gfx \
+			  string \
+			  locale \
+			  dom \
+			  pref \
+			  view \
+              $(NULL)
 
-DEFINES= -D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN 
-
+DEFINES=-D_IMPL_NS_HTML -DWIN32_LEAN_AND_MEAN
 
 CPP_OBJS=					                 \
   .\$(OBJDIR)\nsSVGBPathBuilder.obj          \
