@@ -35,56 +35,420 @@
 # 
 # ***** END LICENSE BLOCK *****
 
-# Much of this code is inherited from other parts of the source repository. 
-# For definitive histories, use bonsai to search for:
-#
-# mozilla/toolkit/mozapps/downloads/content/pref-downloads.js
-# mozilla/toolkit/mozapps/downloads/content/pref-downloads.xul
-# mozilla/toolkit/mozapps/downloads/content/helperApps.js
-# mozilla/toolkit/mozapps/downloads/content/editAction.js
-# mozilla/toolkit/mozapps/downloads/content/editAction.xul
-#                 ( for 2003- modifications)
-#
-# and a similar structure under:
-#
-# mozilla/xpfe/components/prefwindow
-#                 ( for pre 2003 modifications)
-#
+const kPluginHandlerContractID = "@mozilla.org/content/plugin/document-loader-factory;1";
+const kDisabledPluginTypesPref = "plugin.disable_full_page_plugin_for_types";
+const kShowPluginsInList = "browser.download.show_plugins_in_list";
+const kHideTypesWithoutExtensions = "browser.download.hide_plugins_without_extensions";
+const kRootTypePrefix = "urn:mimetype:";
 
-var gDownloadActionsDialog = {  
-  _helperApps   : null,
-  _handlersList : null,
+function FileAction ()
+{
+}
+FileAction.prototype = {
+  type        : "",
+  extension   : "",
+  hasExtension: true,
+  smallIcon   : "",
+  bigIcon     : "",
+  typeName    : "",
+  action      : "",
+  id          : "",
+  pluginAvailable     : false,
+  pluginEnabled       : false,
+  handledOnlyByPlugin : false
+};
+
+
+///////////////////////////////////////////////////////////////////////////////
+// MIME Types Datasource RDF Utils
+function NC_URI(aProperty)
+{
+  return "http://home.netscape.com/NC-rdf#" + aProperty;
+}
+
+function MIME_URI(aType)
+{
+  return "urn:mimetype:" + aType;
+}
+
+function HANDLER_URI(aHandler)
+{
+  return "urn:mimetype:handler:" + aHandler;
+}
+
+function APP_URI(aType)
+{
+  return "urn:mimetype:externalApplication:" + aType;
+}
+
+var gDownloadActionsWindow = {  
+  _tree         : null,
   _editButton   : null,
   _removeButton : null,
+  _actions      : [],
+  _plugins      : {},
+  _bundle       : null,
+  _pref         : Components.classes["@mozilla.org/preferences-service;1"]
+                            .getService(Components.interfaces.nsIPrefBranch),
+  _mimeSvc      : Components.classes["@mozilla.org/uriloader/external-helper-app-service;1"]
+                            .getService(Components.interfaces.nsIMIMEService),
+
+  _excludingPlugins           : false,
+  _excludingMissingExtensions : false,
   
   init: function ()
   {
+    var pbi = this._pref.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
+    pbi.addObserver(kShowPluginsInList, this, false);
+    pbi.addObserver(kHideTypesWithoutExtensions, this, false);
+    
     // Initialize the File Type list
-    this._helperApps = new HelperApps();
+    this._bundle = document.getElementById("bundlePreferences");
+    this._tree = document.getElementById("fileHandlersList");
+    this._loadPluginData();
+    this._loadMIMERegistryData();
+    this._view._rowCount = this._actions.length;
+
+    // Determine any exclusions being applied - e.g. don't show types for which
+    // only a plugin handler exists, don't show types lacking extensions, etc. 
+    this._updateExclusions();    
+    this._tree.treeBoxObject.view = this._view;    
     
-    this._handlersList = document.getElementById("fileHandlersList");
-    this._handlersList.database.AddDataSource(this._helperApps);
-    this._handlersList.setAttribute("ref", "urn:mimetypes");
-  
+    var indexToSelect = parseInt(this._tree.getAttribute("lastSelected"));
+    if (indexToSelect < this._tree.view.rowCount)
+      this._tree.view.selection.select(indexToSelect);
+    this._tree.focus();
+    
     (this._editButton = document.getElementById("editFileHandler")).disabled = true;
-    (this._removeButton = document.getElementById("removeFileHandler")).disabled = true;
+    (this._removeButton = document.getElementById("removeFileHandler")).disabled = true;    
+  },
+  
+  uninit: function ()
+  {
+    var pbi = this._pref.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
+    pbi.removeObserver(kShowPluginsInList, this);
+    pbi.removeObserver(kHideTypesWithoutExtensions, this);
+  },
+  
+  observe: function (aSubject, aTopic, aData)
+  {
+    if (aTopic == "nsPref:changed" &&
+        (aData == kShowPluginsInList || aData == kHideTypesWithoutExtensions)) {
+      this._updateExclusions();
+      this._tree.treeBoxObject.invalidate();    
+    }
+  },
+  
+  _updateExclusions: function ()
+  {
+    this._excludingPlugins = !this._pref.getBoolPref(kShowPluginsInList);
+    this._excludingMissingExtensions = this._pref.getBoolPref(kHideTypesWithoutExtensions);    
+    this._view._exclusionSet = [].concat(this._actions);
+    var usingExclusionSet = false;
+    if (this._excludingMissingExtensions) {
+      usingExclusionSet = true;
+      for (var i = 0; i < this._view._exclusionSet.length;) {
+        if (!this._view._exclusionSet[i].hasExtension)
+          this._view._exclusionSet.splice(i, 1);
+        else
+          ++i;
+      }
+    }
+    if (this._excludingPlugins) {
+      usingExclusionSet = true;
+      for (i = 0; i < this._view._exclusionSet.length;) {
+        if (this._view._exclusionSet[i].handledOnlyByPlugin)
+          this._view._exclusionSet.splice(i, 1);
+        else
+          ++i        
+      }      
+    }
+    this._view._rowCount = 0;
+    this._tree.treeBoxObject.rowCountChanged(0, -this._view._rowCount);
+    if (usingExclusionSet) {
+      this._view._usingExclusionSet = true;
+      this._view._rowCount = this._view._exclusionSet.length;
+    }
+    else {
+      this._view._usingExclusionSet = false;
+      this._view._rowCount = this._view._filtered ? this._view._filterSet.length 
+                                                  : this._actions.length;
+    }
+    this._tree.treeBoxObject.rowCountChanged(0, this._view._rowCount);
+  },
+  
+  _loadPluginData: function ()
+  {
+    // Read enabled plugin type information from the category manager
+    var disabled = "";
+    if (this._pref.prefHasUserValue(kDisabledPluginTypesPref)) 
+      disabled = this._pref.getCharPref(kDisabledPluginTypesPref);
     
-    var indexToSelect = parseInt(this._handlersList.getAttribute("lastSelected"));
-    if (this._handlersList.view)
-      this._handlersList.view.selection.select(indexToSelect);
-    this._handlersList.focus();
+    for (var i = 0; i < navigator.plugins.length; ++i) {
+      var plugin = navigator.plugins[i];
+      for (var j = 0; j < plugin.length; ++j) {
+        var actionName = this._bundle.getFormattedString("openWith", [plugin.name])
+        var type = plugin[j].type;
+        var action = this._createAction(type, actionName, true, 
+                                        disabled.indexOf(type) == -1);
+        this._plugins[action.type] = action;
+        action.handledOnlyByPlugin = true;
+      }
+    }
+  },
+
+  _createAction: function (aMIMEType, aActionName, aPluginAvailable, aPluginEnabled)
+  {
+    var newAction = !(aMIMEType in this._plugins);
+    var action = newAction ? new FileAction() : this._plugins[aMIMEType];
+    action.type = aMIMEType;
+    var info = this._mimeSvc.getFromTypeAndExtension(action.type, null);
+    
+    // File Extension
+    try {
+      action.extension = info.primaryExtension;
+    }
+    catch (e) {
+      action.extension = this._bundle.getString("extensionNone");
+      action.hasExtension = false;
+    }
+    
+    // Large and Small Icon
+    try {
+      action.smallIcon = "moz-icon://goat." + info.primaryExtension + "?size=16";
+      action.bigIcon = "moz-icon://goat." + info.primaryExtension;
+    }
+    catch (e) {
+      action.smallIcon = "moz-icon://goat?size=16&contentType=" + info.MIMEType;
+      action.bigIcon = "moz-icon://goat?contentType=" + info.MIMEType;
+    }
+
+    // Pretty Type Name
+    if (info.description == "") {
+      try {
+        action.typeName = this._bundle.getFormattedString("fileEnding", [info.primaryExtension.toUpperCase()]);
+      }
+      catch (e) { 
+        // Wow, this sucks, just show the MIME type as a last ditch effort to display
+        // the type of file that this is. 
+        action.typeName = info.MIMEType;
+      }
+    }
+    else
+      action.typeName = info.description;
+
+    // Pretty Action Name
+    action.action = aActionName;
+
+    action.id = MIME_URI(action.type);
+    action.pluginAvailable = aPluginAvailable;
+    action.pluginEnabled = aPluginEnabled;
+    
+    if (newAction)
+      this._actions.push(action);
+    return action;
+  },
+  
+  _loadMIMEDS: function ()
+  {
+    var fileLocator = Components.classes["@mozilla.org/file/directory_service;1"]
+                                .getService(Components.interfaces.nsIProperties);
+    
+    var file = fileLocator.get("UMimTyp", Components.interfaces.nsIFile);
+
+    var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                              .getService(Components.interfaces.nsIIOService);
+    var fileHandler = ioService.getProtocolHandler("file")
+                               .QueryInterface(Components.interfaces.nsIFileProtocolHandler);
+    this._mimeDS = this._rdf.GetDataSourceBlocking(fileHandler.getURLSpecFromFile(file));
+  },
+  
+  _getLiteralValue: function (aResource, aProperty)
+  {
+    var property = this._rdf.GetResource(NC_URI(aProperty));
+    var value = this._mimeDS.GetTarget(aResource, property, true);
+    if (value)
+      return value.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
+    return "";
+  },
+  
+  _getChildResource: function (aResource, aProperty)
+  {
+    var property = this._rdf.GetResource(NC_URI(aProperty));
+    return this._mimeDS.GetTarget(aResource, property, true);
+  },
+  
+  _getDisplayNameForFile: function (aFile)
+  {
+#ifdef XP_WIN
+    var lfw = aFile.QueryInterface(Components.interfaces.nsILocalFileWin);
+    return lfw.getVersionInfoField("FileDescription"); 
+#else
+    // XXXben - Read the bundle name on OS X.
+    var ios = Components.classes["@mozilla.org/network/io-service;1"]
+                        .getService(Components.interfaces.nsIIOService);
+    var url = ios.newFileURI(aFile).QueryInterface(Components.interfaces.nsIURL);
+    return url.fileName;
+#endif
+  },  
+  
+  _loadMIMERegistryData: function ()
+  {
+    this._rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"]
+                          .getService(Components.interfaces.nsIRDFService);
+    this._loadMIMEDS();                          
+                          
+    var root = this._rdf.GetResource("urn:mimetypes:root");
+    var container = Components.classes["@mozilla.org/rdf/container;1"]
+                              .createInstance(Components.interfaces.nsIRDFContainer);
+    container.Init(this._mimeDS, root);
+    
+    var elements = container.GetElements();
+    while (elements.hasMoreElements()) {
+      var type = elements.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+      var editable = this._getLiteralValue(type, "editable") == "true";
+      if (!editable)
+        continue;
+      
+      var handler = this._getChildResource(type, "handlerProp");
+      var alwaysAsk = this._getLiteralValue(handler, "alwaysAsk") == "true";
+      if (alwaysAsk)
+        continue;
+      var saveToDisk = this._getLiteralValue(handler, "saveToDisk") == "true";
+      var useSystemDefault = this._getLiteralValue(handler, "useSystemDefault") == "true";
+      var externalApp = this._getChildResource(handler, "externalApplication");
+      var externalAppPath = this._getLiteralValue(externalApp, "path");
+      
+      var mimeType = this._getLiteralValue(type, "value");
+      var typeInfo = this._mimeSvc.getFromTypeAndExtension(mimeType, null);
+
+      // Determine the pretty name of the associated action.
+      var actionName = "";
+      if (saveToDisk) {
+        // Save the file to disk
+        actionName = this._bundle.getString("saveToDisk");
+      }
+      else if (useSystemDefault) {
+        // Use the System Default handler
+        actionName = this._bundle.getFormattedString("openWith", [typeInfo.defaultDescription]);
+      }
+      else {
+        // Custom Handler
+        var file = Components.classes["@mozilla.org/file/local;1"]
+                             .createInstance(Components.interfaces.nsILocalFile);
+        file.initWithPath(externalAppPath);
+        actionName = this._bundle.getFormattedString("openWith", [this._getDisplayNameForFile(file)]);
+      }
+      
+      var pluginAvailable = mimeType in this._plugins && this._plugins[mimeType].pluginAvailable;
+      var pluginEnabled = pluginAvailable && this._plugins[mimeType].pluginEnabled;
+      var action = this._createAction(mimeType, actionName, pluginAvailable, pluginEnabled);
+      action.handledOnlyByPlugin = false;
+    }
+  },
+  
+  _view: {
+    _filtered           : false,
+    _filterSet          : [],
+    _usingExclusionSet  : false,
+    _exclusionSet       : [],
+    _filterValue        : "",
+
+    _rowCount: 0,
+    get rowCount() 
+    { 
+      return this._rowCount; 
+    },
+    
+    get activeCollection ()
+    {
+      return this._filtered ? this._filterSet 
+                            : this._usingExclusionSet ? this._exclusionSet 
+                                                      : gDownloadActionsWindow._actions;
+    },
+    
+    getCellText: function (aIndex, aColumn)
+    {
+      switch (aColumn.id) {
+      case "fileExtension":
+        return this.activeCollection[aIndex].extension.toUpperCase();
+      case "fileType":
+        return this.activeCollection[aIndex].typeName;
+      case "fileMIMEType":
+        return this.activeCollection[aIndex].type;
+      case "fileHandler":
+        return this.activeCollection[aIndex].action;
+      }
+      return "";
+    },
+    getImageSrc: function (aIndex, aColumn) 
+    {
+      if (aColumn.id == "fileExtension") 
+        return this.activeCollection[aIndex].smallIcon;
+      return "";
+    },
+    _selection: null, 
+    get selection () { return this._selection; },
+    set selection (val) { this._selection = val; return val; },
+    getRowProperties: function (aIndex, aProperties) {},
+    getCellProperties: function (aIndex, aColumn, aProperties) {},
+    getColumnProperties: function (aColumn, aProperties) {},
+    isContainer: function (aIndex) { return false; },
+    isContainerOpen: function (aIndex) { return false; },
+    isContainerEmpty: function (aIndex) { return false; },
+    isSeparator: function (aIndex) { return false; },
+    isSorted: function (aIndex) { return false; },
+    canDrop: function (aIndex, aOrientation) { return false; },
+    drop: function (aIndex, aOrientation) {},
+    getParentIndex: function (aIndex) { return -1; },
+    hasNextSibling: function (aParentIndex, aIndex) { return false; },
+    getLevel: function (aIndex) { return 0; },
+    getProgressMode: function (aIndex, aColumn) {},    
+    getCellValue: function (aIndex, aColumn) {},
+    setTree: function (aTree) {},    
+    toggleOpenState: function (aIndex) { },
+    cycleHeader: function (aColumn) {},    
+    selectionChanged: function () {},    
+    cycleCell: function (aIndex, aColumn) {},    
+    isEditable: function (aIndex, aColumn) { return false; },
+    setCellValue: function (aIndex, aColumn, aValue) {},    
+    setCellText: function (aIndex, aColumn, aValue) {},    
+    performAction: function (aAction) {},  
+    performActionOnRow: function (aAction, aIndex) {},    
+    performActionOnCell: function (aAction, aindex, aColumn) {}
+  },
+
+  removeFileHandler: function ()
+  {
+  },
+  
+  editFileHandler: function ()
+  {
+    var selection = this._tree.view.selection; 
+    
+    try {    
+      var cv = this._tree.contentView;
+      var item = cv.getItemAtIndex(selection.currentIndex);
+      var itemResource = gRDF.GetResource(item.id);
+      openDialog("chrome://browser/content/preferences/changeaction.xul", 
+                "_blank", "modal,centerscreen", itemResource);
+    }
+    catch (e) { }
   },
   
   onSelectionChanged: function ()
   {
-    var selection = this._handlersList.view.selection; 
+    if (this._tree.view.rowCount == 0)
+      return;
+      
+    var selection = this._tree.view.selection; 
     var selected = selection.count;
-    this._removeButton.disabled = selected == 0;
-    this._editButton.disabled = selected != 1;
+    // this._removeButton.disabled = selected == 0;
+    // this._editButton.disabled = selected != 1;
     
     var canRemove = true;
     
-    var cv = this._handlersList.contentView;
+    var cv = this._tree.contentView;
     if (!cv)
       return;
     var rangeCount = selection.getRangeCount();
@@ -96,106 +460,56 @@ var gDownloadActionsDialog = {
       for (var j = min.value; j <= max.value; ++j) {
         if (!setLastSelected) {
           // Set the last selected index to the first item in the selection
-          this._handlersList.setAttribute("lastSelected", j);
+          this._tree.setAttribute("lastSelected", j);
           setLastSelected = true;
         }
-        var item = cv.getItemAtIndex(j);
+        /*
         var editable = this._helperApps.getLiteralValue(item.id, "editable") == "true";
         var handleInternal = this._helperApps.getLiteralValue(item.id, "handleInternal");
         
         if (!editable || handleInternal) 
           canRemove = false;
+        */
       }
     }
     
     if (!canRemove) {
-      this._removeButton.disabled = true;
-      this._editButton.disabled = true;
-    }
-  },
-
-  removeFileHandler: function ()
-  {
-    const nsIPS = Components.interfaces.nsIPromptService;
-    var ps = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
-                       .getService(nsIPS);
-    
-    var bundleUCT = document.getElementById("bundleUCT");
-    var title = bundleUCT.getString("removeActions");
-    var msg = bundleUCT.getString("removeActionsMsg");
-
-    var buttons = (nsIPS.BUTTON_TITLE_YES * nsIPS.BUTTON_POS_0) + (nsIPS.BUTTON_TITLE_NO * nsIPS.BUTTON_POS_1);
-
-    if (ps.confirmEx(window, title, msg, buttons, "", "", "", "", { }) == 1) 
-      return;
-    
-    var c = Components.classes["@mozilla.org/rdf/container;1"].createInstance(Components.interfaces.nsIRDFContainer);
-    c.Init(this._helperApps, gRDF.GetResource("urn:mimetypes:root"));
-    
-    var cv = this._handlersList.contentView;
-    var selection = this._handlersList.view.selection; 
-    var rangeCount = selection.getRangeCount();
-    var min = { }, max = { };
-    
-    var lastAdjacent = -1;
-    for (var i = 0; i < rangeCount; ++i) {
-      selection.getRangeAt(i, min, max);
-      
-      if (i == (rangeCount - 1)) { 
-        if (min.value >= (this._handlersList.view.rowCount - selection.count)) 
-          lastAdjacent = min.value - 1;
-        else
-          lastAdjacent = min.value;
-      }
-      
-      for (var j = max.value; j >= min.value; --j) {
-        var item = cv.getItemAtIndex(j);
-        var itemResource = gRDF.GetResource(item.id);
-        c.RemoveElement(itemResource, j == min.value);
-        
-        this._cleanResource(itemResource);
-      }
-    }
-
-    if (lastAdjacent != -1) {
-      selection.select(lastAdjacent);
-      this._handlersList.focus();
-    }
-    
-    this._helperApps.flush();
-  },
-  
-  _cleanResource: function (aResource)
-  {
-    var handlerProp = this._helperApps.GetTarget(aResource, this._helperApps._handlerPropArc, true);
-    if (handlerProp) {
-      var extApp = this._helperApps.GetTarget(handlerProp, this._helperApps._externalAppArc, true);
-      if (extApp)
-        this._disconnect(extApp);
-      this._disconnect(handlerProp);
-    }
-    this._disconnect(aResource);
-  },
-
-  disconnect: function (aResource)
-  {
-    var arcs = this._helperApps.ArcLabelsOut(aResource);
-    while (arcs.hasMoreElements()) {
-      var arc = arcs.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
-      var val = this._helperApps.GetTarget(aResource, arc, true);
-      this._helperApps.Unassert(aResource, arc, val, true);
+      // this._removeButton.disabled = true;
+      // this._editButton.disabled = true;
     }
   },
   
-  editFileHandler: function ()
+  _lastSortProperty : "",
+  _lastSortAscending: false,
+  sort: function (aProperty) 
   {
-    var selection = this._handlersList.view.selection; 
-    
-    var cv = this._handlersList.contentView;
-    var item = cv.getItemAtIndex(selection.currentIndex);
-    var itemResource = gRDF.GetResource(item.id);
-    openDialog("chrome://browser/content/preferences/changeaction.xul", 
-               "_blank", "modal,centerscreen", itemResource);
-  }
+    var ascending = (aProperty == this._lastSortProperty) ? !this._lastSortAscending : true;
+    function sortByProperty(a, b) 
+    {
+      return a[aProperty].toLowerCase().localeCompare(b[aProperty].toLowerCase());
+    }
+    function sortByExtension(a, b)
+    {
+      if (!a.hasExtension && b.hasExtension)
+        return 1;
+      if (!b.hasExtension && a.hasExtension)
+        return -1;
+      return a.extension.toLowerCase().localeCompare(b.extension.toLowerCase());
+    }
+    // Sort the Filtered List, if in Filtered mode
+    if (!this._view._filtered) { 
+      this._view.activeCollection.sort(aProperty == "extension" ? sortByExtension : sortByProperty);
+      if (!ascending)
+        this._view.activeCollection.reverse();
+    }
+
+    this._view.selection.clearSelection();
+    this._view.selection.select(0);
+    this._tree.treeBoxObject.invalidate();
+    this._tree.treeBoxObject.ensureRowIsVisible(0);
+
+    this._lastSortAscending = ascending;
+    this._lastSortProperty = aProperty;
+  }  
 };
 

@@ -46,94 +46,53 @@
   %downloadactionsDTD;
 ]>
 
-<window id="DownloadActionsDialog" class="windowDialog"
+<window id="DownloadActionsWindow" class="windowDialog"
         windowtype="Preferences:DownloadActions"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-        onload="gDownloadActionsDialog.init();"
-        title="&downloadactionsDialog.title;"
+        onload="gDownloadActionsWindow.init();"
+        onunload="gDownloadActionsWindow.uninit();"
+        title="&downloadactionsWindow.title;"
         width="480" height="310" persist="width height screenX screenY">
 
-  <script type="application/x-javascript" src="chrome://browser/content/preferences/helperapplications.js"/>
   <script type="application/x-javascript" src="chrome://browser/content/preferences/downloadactions.js"/>
 
-  <stringbundle id="bundleUCT" src="chrome://mozapps/locale/downloads/unknownContentType.properties"/>
+  <stringbundle id="bundlePreferences" src="chrome://browser/locale/preferences/preferences.properties"/>
 
   <keyset>
     <key key="&windowClose.key;" modifiers="accel" oncommand="window.close();"/>
   </keyset>
   
-  <!-- XXX it's really lame that I'm using a content backed tree here rather
-            than one built with treebuilder but for some reason treebuilder is
-            throwing "can't do open ended queries like that!" assertions for
-            no discernible reason -->
+  <hbox align="center">
+    <label accesskey="&filter.accesskey;" control="filter">&filter.label;</label>
+    <textbox id="filter" flex="1" oninput="gCookiesWindow.onFilterInput();" 
+             onkeypress="gDownloadActionsWindow.onFilterKeyPress(event);"/>
+    <button id="clearFilter" label="&clear.label;" accesskey="&clear.accesskey;" 
+            oncommand="gDownloadActionsWindow.clearFilter();" disabled="true"/>
+  </hbox>
   <tree id="fileHandlersList" flex="1" class="contentPane"
-        datasources="rdf:null" lastSelected="0" persist="lastSelected"
-        onselect="gDownloadActionsDialog.onSelectionChanged();"
-        ondblclick="gDownloadActionsDialog.editFileHandler();">
-    <template>
-      <rule>
-        <conditions>
-          <content uri="?uri"/>
-          <member container="?uri" child="?type"/>
-          <triple subject="?type" 
-                  predicate="http://home.netscape.com/NC-rdf#FileHandleAuto"
-                  object="true"/>
-          <triple subject="?type" 
-                  predicate="http://home.netscape.com/NC-rdf#FileType"
-                  object="?file-type"/>
-          <triple subject="?type" 
-                  predicate="http://home.netscape.com/NC-rdf#FileMIMEType"
-                  object="?file-mime-type"/>
-          <triple subject="?type" 
-                  predicate="http://home.netscape.com/NC-rdf#FileHandler"
-                  object="?file-handler"/>
-          <triple subject="?type" 
-                  predicate="http://home.netscape.com/NC-rdf#FileIcon"
-                  object="?file-icon"/>
-        </conditions>
-        <bindings>
-          <binding subject="?type"
-                  predicate="http://home.netscape.com/NC-rdf#FileExtension"
-                  object="?file-extension"/>
-        </bindings>
-        <action>
-          <treechildren class="extensionChildren">
-            <treeitem uri="?type">
-              <treerow>
-                <treecell label="?file-extension" src="?file-icon"/>
-                <treecell label="?file-type"/>
-                <treecell label="?file-mime-type"/>
-                <treecell label="?file-handler"/>
-              </treerow>
-            </treeitem>
-          </treechildren>
-        </action>
-      </rule>
-    </template>
-
+        lastSelected="0" persist="lastSelected"
+        onselect="gDownloadActionsWindow.onSelectionChanged();"
+        ondblclick="gDownloadActionsWindow.editFileHandler();">
+    <treechildren id="extensionChildren"/>
     <treecols>
       <treecol id="fileExtension" ignoreincolumnpicker="true" fiex="true"
                 class="sortDirectionIndicator" persist="width"
-                sort="rdf:http://home.netscape.com/NC-rdf#FileExtension"
-                sortActive="true" sortDirection="none"
-                label="&fileExtensionColumn.label;" accesskey="&fileExtensionColumn.accesskey;"/>
+                label="&fileExtensionColumn.label;" accesskey="&fileExtensionColumn.accesskey;"
+                onclick="gDownloadActionsWindow.sort('extension');"/>
       <treecol id="fileType" flex="1"
                 class="sortDirectionIndicator" persist="width"
-                sort="rdf:http://home.netscape.com/NC-rdf#FileType"
-                sortActive="false" sortDirection="none"
-                label="&fileTypeColumn.label;" accesskey="&fileTypeColumn.accesskey;"/>
+                label="&fileTypeColumn.label;" accesskey="&fileTypeColumn.accesskey;"
+                onclick="gDownloadActionsWindow.sort('typeName');"/>
       <splitter class="tree-splitter" />
       <treecol id="fileMIMEType" flex="1" hidden="true"
                 class="sortDirectionIndicator" persist="width"
-                sort="rdf:http://home.netscape.com/NC-rdf#FileMIMEType"
-                sortActive="false" sortDirection="none"
-                label="&fileMIMETypeColumn.label;" accesskey="&fileMIMETypeColumn.accesskey;"/>
+                label="&fileMIMETypeColumn.label;" accesskey="&fileMIMETypeColumn.accesskey;"
+                onclick="gDownloadActionsWindow.sort('type');"/>
       <splitter class="tree-splitter" />
       <treecol id="fileHandler" flex="1"
                 class="sortDirectionIndicator" persist="width"
-                sort="rdf:http://home.netscape.com/NC-rdf#FileHandler"
-                sortActive="false" sortDirection="none"
-                label="&fileHandlerColumn.label;" accesskey="&fileHandlerColumn.accesskey;"/>
+                label="&fileHandlerColumn.label;" accesskey="&fileHandlerColumn.accesskey;"
+                onclick="gDownloadActionsWindow.sort('action');"/>                
     </treecols>
   </tree>
   <separator class="thin"/>
@@ -141,10 +100,10 @@
     <hbox flex="1" class="actionButtons">
       <button id="removeFileHandler"
               label="&remove.label;" accesskey="&remove.accesskey;"
-              oncommand="gDownloadActionsDialog.removeFileHandler();"/>
+              oncommand="gDownloadActionsWindow.removeFileHandler();"/>
       <button id="editFileHandler"
               label="&edit.label;" accesskey="&edit.accesskey;"
-              oncommand="gDownloadActionsDialog.editFileHandler();"/>
+              oncommand="gDownloadActionsWindow.editFileHandler();"/>
     </hbox>
     <resizer dir="bottomright"/>
   </hbox>

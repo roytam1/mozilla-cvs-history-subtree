@@ -167,7 +167,7 @@ filefield[disabled="true"] .fileFieldIcon {
   width: 5em; 
 }
 
-.extensionChildren::-moz-tree-image(fileExtension) {
+#extensionChildren::-moz-tree-image(fileExtension) {
   margin: 0px 5px 0px 0px;
 }
 

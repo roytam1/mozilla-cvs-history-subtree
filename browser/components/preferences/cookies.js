@@ -685,7 +685,6 @@ var gCookiesWindow = {
   
   _lastSortProperty : "",
   _lastSortAscending: false,
-  
   sort: function (aProperty) 
   {
     var ascending = (aProperty == this._lastSortProperty) ? !this._lastSortAscending : true;

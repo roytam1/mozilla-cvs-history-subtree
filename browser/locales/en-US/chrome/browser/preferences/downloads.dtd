@@ -11,7 +11,7 @@
 <!ENTITY closeWhenDone.label          "Close the Download Manager when all downloads are complete">
 
 <!ENTITY fileTypes.label              "Download Actions">
-<!ENTITY configureActions.label       "Configure Actions...">
-<!ENTITY configureActions.accesskey   "C">
+<!ENTITY configureActions.label       "View &amp; Edit Actions...">
+<!ENTITY configureActions.accesskey   "V">
 <!ENTITY fileTypesDescription.label   "&brandShortName; can automatically download or open files of certain types.">
 

@@ -39,6 +39,7 @@ var gRDF;
 
 const kPluginHandlerContractID = "@mozilla.org/content/plugin/document-loader-factory;1";
 const kDisabledPluginTypesPref = "plugin.disable_full_page_plugin_for_types";
+const kRootTypePrefix = "urn:mimetype:";
 
 ///////////////////////////////////////////////////////////////////////////////
 // MIME Types DataSource Wrapper
@@ -239,12 +240,18 @@ HelperApps.prototype = {
   
   _isRootTypeResource: function (aResource) {
     aResource = aResource.QueryInterface(Components.interfaces.nsIRDFResource);  
-    const kRootTypePrefix = "urn:mimetype:";
     return (aResource.Value.substr(0, kRootTypePrefix.length) == kRootTypePrefix);
+  },
+  
+  _getTypeFromResource: function (aResource) {
+    var value = aResource.Value;
+    return value.substr(kRootTypePrefix.length, value.length);
   },
   
   getMIMEInfo: function (aResource) {
     var types = this._inner.GetTarget(aResource, this._valueArc, true);
+    var mimeSvc = Components.classes["@mozilla.org/uriloader/external-helper-app-service;1"]
+                            .getService(Components.interfaces.nsIMIMEService);
     if (types) {
       types = types.QueryInterface(Components.interfaces.nsIRDFLiteral);
       types = types.Value.split(", ");
@@ -252,8 +259,12 @@ HelperApps.prototype = {
       // We're using helper app service as our MIME Service here because the helper app service
       // talks to OS Specific hooks that on some platforms (MacOS X) are required to get a 
       // fully populated MIME Info object. Thus it is this object that we return. 
-      mimeSvc = Components.classes["@mozilla.org/uriloader/external-helper-app-service;1"].getService(Components.interfaces.nsIMIMEService);
       return mimeSvc.getFromTypeAndExtension(types[0], null);
+    }
+    else {
+      var type = this._getTypeFromResource(aResource);
+      if (type in this._availableTypes && this._availableTypes[type].pluginAvailable)
+        return mimeSvc.getFromTypeAndExtension(type, null);
     }
     
     return null;
@@ -263,13 +274,16 @@ HelperApps.prototype = {
     if (this._isRootTypeResource(aSource)) {
       var typeInfo = this.getMIMEInfo(aSource);
       if (typeInfo) {
+        dump("*** " + aSource.Value + " p = " + aProperty.Value + "\n");
         var bundleUCT = document.getElementById("bundleUCT");
         if (aProperty.EqualsNode(this._handleAutoArc)) {
           var handler = this.GetTarget(aSource, this._handlerPropArc, true);
           if (handler) {
+            dump("*** hashandler\n");
             handler = handler.QueryInterface(Components.interfaces.nsIRDFResource);
             return gRDF.GetLiteral(!(this.getLiteralValue(handler.Value, "alwaysAsk") == "true"));
           }
+          dump("*** nohandler\n");
           return gRDF.GetLiteral("true");
         }
         else if (aProperty.EqualsNode(this._fileTypeArc)) {
@@ -348,7 +362,7 @@ HelperApps.prototype = {
             return gRDF.GetLiteral(typeInfo.primaryExtension.toUpperCase());
           }
           catch (e) { }
-          return gRDF.GetLiteral("");
+          return gRDF.GetLiteral(bundleUCT.getString("extensionNone"));
         }
         else if (aProperty.EqualsNode(this._fileExtensionsArc)) {
           var extns = typeInfo.getFileExtensions();
@@ -429,6 +443,16 @@ HelperApps.prototype = {
           handler = handler.QueryInterface(Components.interfaces.nsIRDFResource);
           return !(this.getLiteralValue(handler.Value, "alwaysAsk") == "true");
         }
+        else {
+          // If there is no handler, at check to see if this type is handled
+          // by a full-page plugin, and that that full page plugin mode is
+          // enabled...
+          var type = this._getTypeFromResource(aSource);
+          if (type in this._availableTypes && 
+              this._availableTypes[type].pluginAvailable && 
+              type != "*" && type != "none")
+            return true;
+        } 
       }
     }
     return this._inner.HasAssertion(aSource, aProperty, aTarget, aTruthValue);
