@@ -73,15 +73,15 @@ public:
 
   // nsINativeKeyBindings
   virtual NS_HIDDEN_(PRBool) KeyDown(const nsNativeKeyEvent& aEvent,
-                                     DoCommandCallback aCallback,
+                                     doCommandCallback aCallback,
                                      void *aCallbackData);
 
   virtual NS_HIDDEN_(PRBool) KeyPress(const nsNativeKeyEvent& aEvent,
-                                      DoCommandCallback aCallback,
+                                      doCommandCallback aCallback,
                                       void *aCallbackData);
 
   virtual NS_HIDDEN_(PRBool) KeyUp(const nsNativeKeyEvent& aEvent,
-                                   DoCommandCallback aCallback,
+                                   doCommandCallback aCallback,
                                    void *aCallbackData);
 
 private:

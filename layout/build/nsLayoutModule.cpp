@@ -131,6 +131,7 @@
 #include "nsImageLoadingContent.h"
 #include "nsStyleSet.h"
 #include "nsImageFrame.h"
+#include "nsTextControlFrame.h"
 
 // view stuff
 #include "nsViewsCID.h"
@@ -414,6 +415,7 @@ Shutdown(nsIModule* aSelf)
 
   GlobalWindowImpl::ShutDown();
   nsDOMClassInfo::ShutDown();
+  nsTextControlFrame::ShutDown();
 }
 
 #ifdef NS_DEBUG

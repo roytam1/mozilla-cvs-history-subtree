@@ -60,20 +60,20 @@ struct nsNativeKeyEvent
 class nsINativeKeyBindings : public nsISupports
 {
  public:
-  typedef void (*DoCommandCallback)(const char *, void*);
+  typedef void (*doCommandCallback)(const char *, void*);
 
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_INATIVEKEYBINDINGS_IID)
 
   virtual NS_HIDDEN_(PRBool) KeyDown(const nsNativeKeyEvent& aEvent,
-                                     DoCommandCallback aCallback,
+                                     doCommandCallback aCallback,
                                      void *aCallbackData) = 0;
 
   virtual NS_HIDDEN_(PRBool) KeyPress(const nsNativeKeyEvent& aEvent,
-                                      DoCommandCallback aCallback,
+                                      doCommandCallback aCallback,
                                       void *aCallbackData) = 0;
 
   virtual NS_HIDDEN_(PRBool) KeyUp(const nsNativeKeyEvent& aEvent,
-                                   DoCommandCallback aCallback,
+                                   doCommandCallback aCallback,
                                    void *aCallbackData) = 0;
 };
 
