@@ -1244,7 +1244,6 @@ function multilineInputMode (state)
 
 function focusInput ()
 {
-    dd (getStackTrace());
     client.input.focus();
 }
 
@@ -1563,7 +1562,7 @@ function getTabForObject (source, create)
         tb.setAttribute ("onclick", "onTabClick('" + id + "');");
         tb.setAttribute ("crop", "right");
         
-        tb.setAttribute ("class", "tabs-bottom view-button");
+        tb.setAttribute ("class", "tab-bottom view-button");
         tb.setAttribute ("id", id);
         tb.setAttribute ("state", "normal");
 
