@@ -616,7 +616,7 @@ function mircReverseColor (text, containerTag, data)
 
     var tempColor = ("currFgColor" in data ? data.currFgColor : "01");
 
-    if (data.currBgColor)
+    if ("currBgColor" in data)
         data.currFgColor = data.currBgColor;
     else
         data.currFgColor = "00";
