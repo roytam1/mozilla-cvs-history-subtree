@@ -646,7 +646,7 @@ PRStatus _MD_CloseFileMap(PRFileMap *fmap)
  ***********************************************************************
  */
 
-#if defined(_M_IX86) || defined(_X86_)
+#if defined(_M_IX86) || defined(_X86_) && !defined(__MINGW32__)
 
 #pragma warning(disable: 4035)
 PRInt32 _PR_MD_ATOMIC_INCREMENT(PRInt32 *val)
