@@ -540,8 +540,7 @@ nsresult nsBrowserInstance::GetContentWindow(nsIDOMWindowInternal** outDOMWindow
   mDOMWindow->GetContent(getter_AddRefs(contentWindow));
 
   if (contentWindow) {
-    return contentWindow->QueryInterface(NS_GET_IID(nsIDOMWindowInternal),
-                                         (void **)outDOMWindow);
+    return CallQueryInterface(contentWindow, outDOMWindow);
   }
 
   return NS_OK;
@@ -578,8 +577,7 @@ nsresult nsBrowserInstance::GetFocussedContentWindow(nsIDOMWindowInternal** outF
     return GetContentWindow(outFocussedWindow);   // default to content window
 
   if (focussedWindow) {
-    return focussedWindow->QueryInterface(NS_GET_IID(nsIDOMWindowInternal),
-                                          (void **)outFocussedWindow);
+    return CallQueryInterface(focussedWindow, outFocussedWindow);
   }
 
   return NS_OK;

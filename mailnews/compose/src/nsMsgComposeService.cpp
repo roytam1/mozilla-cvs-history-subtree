@@ -111,9 +111,6 @@ static nsresult openWindow( const char *chrome, nsIMsgComposeParams *params )
   {
     rv = appShell->GetHiddenDOMWindow(getter_AddRefs(hiddenWindow));
 
-    nsCOMPtr<nsIDOMWindowInternalEx> win(do_QueryInterface(hiddenWindow));
-    NS_ENSURE_TRUE(win, NS_ERROR_FAILURE);
-
     if (NS_SUCCEEDED(rv))
     {
       nsCOMPtr<nsIDOMWindow> newWindow;
@@ -124,10 +121,10 @@ static nsresult openWindow( const char *chrome, nsIMsgComposeParams *params )
       ifptr->SetData(params);
       ifptr->SetDataIID(&NS_GET_IID(nsIMsgComposeParams));
 
-      rv = win->OpenDialog(NS_ConvertASCIItoUCS2(chrome),
-                           NS_LITERAL_STRING("_blank"),
-                           NS_LITERAL_STRING("chrome,dialog=no,all"),
-                           ifptr, getter_AddRefs(newWindow));
+      rv = hiddenWindow->OpenDialog(NS_ConvertASCIItoUCS2(chrome),
+                                    NS_LITERAL_STRING("_blank"),
+                                    NS_LITERAL_STRING("chrome,dialog=no,all"),
+                                    ifptr, getter_AddRefs(newWindow));
     }
   }
 

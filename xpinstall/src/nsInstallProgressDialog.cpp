@@ -40,6 +40,7 @@
 #include "nsIURL.h"
 #include "nsPIXPIManagerCallbacks.h"
 #include "nsISupportsArray.h"
+#include "nsISupportsPrimitives.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID( kAppShellServiceCID, NS_APPSHELL_SERVICE_CID );
@@ -154,23 +155,34 @@ nsInstallProgressDialog::Open(nsIDialogParamBlock* ioParamBlock)
   rv = appShell->GetHiddenDOMWindow( getter_AddRefs(hiddenWindow) );
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIDOMWindowInternalEx> win(do_QueryInterface(hiddenWindow));
-  NS_ENSURE_TRUE(win, NS_ERROR_FAILURE);
-
   nsCOMPtr<nsISupportsArray> array;
 
   rv = NS_NewISupportsArray(getter_AddRefs(array));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  array->AppendElement(ioParamBlock);
-  array->AppendElement(mManager);
+  nsCOMPtr<nsISupportsInterfacePointer> ifptr =
+    do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  ifptr->SetData(ioParamBlock);
+  ifptr->SetDataIID(&NS_GET_IID(nsIDialogParamBlock));
+
+  array->AppendElement(ifptr);
+
+  ifptr = do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  ifptr->SetData(mManager);
+  ifptr->SetDataIID(&NS_GET_IID(nsPIXPIManagerCallbacks));
+
+  array->AppendElement(ifptr);
 
   nsCOMPtr<nsIDOMWindow> newWin;
 
-  rv = win->OpenDialog(NS_LITERAL_STRING("chrome://communicator/content/xpinstall/xpistatus.xul"),
-                       NS_LITERAL_STRING("_blank"),
-                       NS_LITERAL_STRING("chrome,centered,titlebar,resizable"),
-                       array, getter_AddRefs( newWin ));
+  rv = hiddenWindow->OpenDialog(NS_LITERAL_STRING("chrome://communicator/content/xpinstall/xpistatus.xul"),
+                                NS_LITERAL_STRING("_blank"),
+                                NS_LITERAL_STRING("chrome,centered,titlebar,resizable"),
+                                array, getter_AddRefs( newWin ));
 
   mWindow = do_QueryInterface(newWin);
 

@@ -38,6 +38,8 @@
 #include "nsIStringBundle.h"
 #include "nsIFilePicker.h"
 #include "nsIPref.h"
+#include "nsISupportsArray.h"
+#include "nsISupportsPrimitives.h"
 
 static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 #define HELPERAPP_DIALOG_URL       "chrome://global/locale/helperAppLauncher.properties"
@@ -127,75 +129,48 @@ nsUnknownContentTypeHandler::HandleUnknownContentType( nsIRequest *request,
     }
 
     if ( NS_SUCCEEDED( rv ) && channel && aContentType && aWindow ) {
-        // Open "Unknown content type" dialog.
-        // We pass in the channel, the content type, and the content disposition.
-        // Note that the "parent" browser window will be window.opener within the
-        // new dialog.
+      // Open "Unknown content type" dialog.
+      // We pass in the channel, the content type, and the content
+      // disposition.
+      // Note that the "parent" browser window will be window.opener
+      // within the new dialog.
     
-        // Get JS context from parent window.
-        nsCOMPtr<nsIScriptGlobalObject> sgo = do_QueryInterface( aWindow, &rv );
-        if ( NS_SUCCEEDED( rv ) && sgo ) {
-            nsCOMPtr<nsIScriptContext> context;
-            sgo->GetContext( getter_AddRefs( context ) );
-            if ( context ) {
-                JSContext *jsContext = (JSContext*)context->GetNativeContext();
-                if ( jsContext ) {
-                  /*
-                    void *stackPtr;
-                    jsval *argv = JS_PushArguments( jsContext,
-                                                    &stackPtr,
-                                                    "sss%ipss",
-                                                    "chrome://global/content/unknownContent.xul",
-                                                    "_blank",
-                                                    "chrome,titlebar",
-                                                    (const nsIID*)(&NS_GET_IID(nsIChannel)),
-                                                    (nsISupports*)channel.get(),
-                                                    aContentType,
-                                                    contentDisp.get() );
-                    if ( argv ) {
-                        nsCOMPtr<nsIDOMWindowInternal> newWindow;
+      nsCOMPtr<nsISupportsArray> array;
+      rv = NS_NewISupportsArray(getter_AddRefs(array));
+      NS_ENSURE_SUCCESS(rv, rv);
 
+      nsCOMPtr<nsISupportsInterfacePointer> ifptr =
+        do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
 
+      ifptr->SetData(channel);
+      ifptr->SetDataIID(&NS_GET_IID(nsIChannel));
 
+      array->AppendElement(ifptr);
 
+      nsCOMPtr<nsISupportsString> str =
+        do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
 
-                        //                        rv = aWindow->OpenDialog( jsContext, argv, 6, getter_AddRefs( newWindow ) );
+      str->SetData(aContentType);
 
+      array->AppendElement(str);
 
+      str = do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
 
-                        if ( NS_FAILED( rv ) ) {
-                            DEBUG_PRINTF( PR_STDOUT, "%s %d: OpenDialog failed, rv=0x%08X\n",
-                                          (char*)__FILE__, (int)__LINE__, (int)rv );
-                        }
-                        JS_PopArguments( jsContext, stackPtr );
-                    } else {
-                        DEBUG_PRINTF( PR_STDOUT, "%s %d: JS_PushArguments failed\n",
-                                      (char*)__FILE__, (int)__LINE__ );
-                        rv = NS_ERROR_FAILURE;
-                    }
-                  */
+      str->SetData(contentDisp);
 
+      array->AppendElement(str);
 
+      nsCOMPtr<nsIDOMWindow> newWindow;
 
-                } else {
-                    DEBUG_PRINTF( PR_STDOUT, "%s %d: GetNativeContext failed\n",
-                                  (char*)__FILE__, (int)__LINE__ );
-                    rv = NS_ERROR_FAILURE;
-                }
-            } else {
-                DEBUG_PRINTF( PR_STDOUT, "%s %d: GetContext failed\n",
-                              (char*)__FILE__, (int)__LINE__ );
-                rv = NS_ERROR_FAILURE;
-            }
-        } else {
-            DEBUG_PRINTF( PR_STDOUT, "%s %d: QueryInterface (for nsIScriptGlobalObject) failed, rv=0x%08X\n",
-                          (char*)__FILE__, (int)__LINE__, (int)rv );
-        }
-    } else {
-        // If no error recorded so far, set one now.
-        if ( NS_SUCCEEDED( rv ) ) {
-            rv = NS_ERROR_NULL_POINTER;
-        }
+      rv = aWindow->OpenDialog(NS_LITERAL_STRING("chrome://global/content/unknownContent.xul"),
+                               NS_LITERAL_STRING("_blank"),
+                               NS_LITERAL_STRING("chrome,titlebar"),
+                               array, getter_AddRefs(newWindow));
+
+      NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "Error opening window");
     }
 
     return rv;
@@ -203,117 +178,57 @@ nsUnknownContentTypeHandler::HandleUnknownContentType( nsIRequest *request,
 
 NS_IMETHODIMP
 nsUnknownContentTypeHandler::ShowProgressDialog(nsIHelperAppLauncher *aLauncher, nsISupports *aContext ) {
-    nsresult rv = NS_ERROR_FAILURE;
+  nsresult rv = NS_ERROR_FAILURE;
 
-    // Get parent window (from context).
-    nsCOMPtr<nsIDOMWindowInternal> parent( do_GetInterface( aContext ) );
-    if ( parent ) {
-        // Get JS context from parent window.
-        nsCOMPtr<nsIScriptGlobalObject> sgo = do_QueryInterface( parent, &rv );
-        if ( NS_SUCCEEDED( rv ) && sgo ) {
-            nsCOMPtr<nsIScriptContext> context;
-            sgo->GetContext( getter_AddRefs( context ) );
-            if ( context ) {
-              /*
+  // Get parent window (from context).
+  nsCOMPtr<nsIDOMWindowInternal> parent( do_GetInterface( aContext ) );
+  if ( parent ) {
+    nsCOMPtr<nsISupportsInterfacePointer> ifptr =
+      do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
 
+    ifptr->SetData(aLauncher);
+    ifptr->SetDataIID(&NS_GET_IID(nsIHelperAppLauncher));
 
-                // Get native context.
-                JSContext *jsContext = (JSContext*)context->GetNativeContext();
-                if ( jsContext ) {
-                    // Set up window.arguments[0]...
-                    void *stackPtr;
-                    jsval *argv = JS_PushArguments( jsContext,
-                                                    &stackPtr,
-                                                    "sss%ip",
-                                                    "chrome://global/content/helperAppDldProgress.xul",
-                                                    "_blank",
-                                                    "chrome,titlebar,minimizable",
-                                                    (const nsIID*)(&NS_GET_IID(nsIHelperAppLauncher)),
-                                                    (nsISupports*)aLauncher );
-                    if ( argv ) {
-                        // Open the dialog.
-                        nsCOMPtr<nsIDOMWindowInternal> dialog;
+    // Open the dialog.
+    nsCOMPtr<nsIDOMWindow> dialog;
 
+    rv = parent->OpenDialog(NS_LITERAL_STRING("chrome://global/content/helperAppDldProgress.xul"),
+                            NS_LITERAL_STRING("_blank"),
+                            NS_LITERAL_STRING("chrome,titlebar,minimizable"),
+                            ifptr, getter_AddRefs(dialog));
+  }
 
-
-
-
-                        //                        rv = parent->OpenDialog( jsContext, argv, 4, getter_AddRefs( dialog ) );
-
-
-
-
-                        // Pop arguments.
-                        JS_PopArguments( jsContext, stackPtr );
-                    }
-                }
-              */
-
-
-            }
-        }
-    }
-    return rv;
+  return rv;
 }
 
 // Show the helper app launch confirmation dialog as instructed.
 NS_IMETHODIMP
-nsUnknownContentTypeHandler::Show( nsIHelperAppLauncher *aLauncher, nsISupports *aContext ) {
-    nsresult rv = NS_ERROR_FAILURE;
+nsUnknownContentTypeHandler::Show( nsIHelperAppLauncher *aLauncher,
+                                   nsISupports *aContext )
+{
+  nsresult rv = NS_ERROR_FAILURE;
 
-    // Get parent window (from context).
-    nsCOMPtr<nsIDOMWindowInternal> parent( do_GetInterface( aContext ) );
-    if ( parent ) {
-        // Get JS context from parent window.
-        nsCOMPtr<nsIScriptGlobalObject> sgo = do_QueryInterface( parent, &rv );
-        if ( NS_SUCCEEDED( rv ) && sgo ) {
-            nsCOMPtr<nsIScriptContext> context;
-            sgo->GetContext( getter_AddRefs( context ) );
-            if ( context ) {
-                // Get native context.
-                JSContext *jsContext = (JSContext*)context->GetNativeContext();
-                if ( jsContext ) {
-                  /*
+  // Get parent window (from context).
+  nsCOMPtr<nsIDOMWindowInternal> parent( do_GetInterface( aContext ) );
+  if ( parent ) {
+    nsCOMPtr<nsISupportsInterfacePointer> ifptr =
+      do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
 
+    ifptr->SetData(aLauncher);
+    ifptr->SetDataIID(&NS_GET_IID(nsIHelperAppLauncher));
 
-                    // Set up window.arguments[0]...
-                    void *stackPtr;
-                    jsval *argv = JS_PushArguments( jsContext,
-                                                    &stackPtr,
-                                                    "sss%ip",
-                                                    "chrome://global/content/helperAppLauncher.xul",
-                                                    "_blank",
-                                                    "chrome,titlebar",
-                                                    (const nsIID*)(&NS_GET_IID(nsIHelperAppLauncher)),
-                                                    (nsISupports*)aLauncher );
-                    if ( argv ) {
-                        // Open the dialog.
-                        nsCOMPtr<nsIDOMWindowInternal> dialog;
+    // Open the dialog.
+    nsCOMPtr<nsIDOMWindow> dialog;
 
+    rv = parent->OpenDialog(NS_LITERAL_STRING("chrome://global/content/helperAppLauncher.xul"),
+                            NS_LITERAL_STRING("_blank"),
+                            NS_LITERAL_STRING("chrome,titlebar"),
+                            ifptr, getter_AddRefs(dialog));
+  }
 
-
-
-
-                        //                        rv = parent->OpenDialog( jsContext, argv, 4, getter_AddRefs( dialog ) );
-
-
-
-
-                        // Pop arguments.
-                        JS_PopArguments( jsContext, stackPtr );
-                    }
-
-
-
-                  */
-
-
-
-                }
-            }
-        }
-    }
-    return rv;
+  return rv;
 }
 
 // prompt the user for a file name to save the unknown content to as instructed

@@ -1955,7 +1955,7 @@ nsProfile::ShowProfileWizard(void)
 {
     nsresult rv = NS_OK;
     PRBool hasParentWindow = PR_FALSE;
-    nsCOMPtr<nsIDOMWindowInternalEx> PMDOMWindow;
+    nsCOMPtr<nsIDOMWindowInternal> PMDOMWindow;
 
     // Get the window mediator
     NS_WITH_SERVICE(nsIWindowMediator, windowMediator, kWindowMediatorCID, &rv);

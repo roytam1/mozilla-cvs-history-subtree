@@ -71,11 +71,10 @@
 #include "nsIPref.h"
 #include "nsINewsDownloadDialogArgs.h"
 
-#include "nsIScriptGlobalObjectOwner.h"
+#include "nsISupportsPrimitives.h"
+#include "nsIInterfaceRequestor.h"
 #include "nsIMsgWindow.h"
-#include "nsIScriptGlobalObject.h"
 #include "nsIDocShell.h"
-#include "nsIScriptContext.h"
 
 static NS_DEFINE_CID(kCNewsDB, NS_NEWSDB_CID);
 
@@ -152,32 +151,24 @@ openWindow(nsIMsgWindow *aMsgWindow, const char *chromeURL,
 
 	nsCOMPtr<nsIDocShell> docShell;
 	rv = aMsgWindow->GetRootDocShell(getter_AddRefs(docShell));
-    if (NS_FAILED(rv)) return rv;
-	NS_ENSURE_TRUE(docShell, NS_ERROR_FAILURE);
+    if (NS_FAILED(rv))
+        return rv;
 
-   	nsCOMPtr<nsIScriptGlobalObjectOwner> globalObjectOwner(do_QueryInterface(docShell));
-	NS_ENSURE_TRUE(globalObjectOwner, NS_ERROR_FAILURE);
-
-	nsCOMPtr<nsIScriptGlobalObject> globalObject;
-	globalObjectOwner->GetScriptGlobalObject(getter_AddRefs(globalObject));
-	NS_ENSURE_TRUE(globalObject, NS_ERROR_FAILURE);
-
-	nsCOMPtr<nsIDOMWindowInternalEx> parentWindow =
-        do_QueryInterface(globalObject);
+   	nsCOMPtr<nsIDOMWindowInternal> parentWindow(do_GetInterface(docShell));
 	NS_ENSURE_TRUE(parentWindow, NS_ERROR_FAILURE);
 
-    nsCOMPtr<nsIDOMWindow> dialogWindow;
-    nsCOMPtr<nsISupportsArray> array;
-
-    rv = NS_NewISupportsArray(getter_AddRefs(array));
+    nsCOMPtr<nsISupportsInterfacePointer> ifptr =
+        do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    array->AppendElement(param);
+    ifptr->SetData(param);
+    ifptr->SetDataIID(&NS_GET_IID(nsINewsDownloadDialogArgs));
 
+    nsCOMPtr<nsIDOMWindow> dialogWindow;
     rv = parentWindow->OpenDialog(NS_ConvertASCIItoUCS2(chromeURL),
                                   NS_LITERAL_STRING("_blank"),
                                   NS_LITERAL_STRING("chrome,modal,titlebar"),
-                                  array, getter_AddRefs(dialogWindow));
+                                  ifptr, getter_AddRefs(dialogWindow));
 
     return rv;
 }       

@@ -109,14 +109,8 @@ static nsresult openWindow( const PRUnichar *chrome, const PRUnichar *args )
   if ( NS_SUCCEEDED( rv ) ) {
     rv = appShell->GetHiddenDOMWindow(getter_AddRefs(hiddenWindow));
 
-    nsCOMPtr<nsIDOMWindowInternalEx> win(do_QueryInterface(hiddenWindow));
-
-    if ( NS_SUCCEEDED( rv ) && win ) {
+    if ( NS_SUCCEEDED( rv ) && hiddenWindow ) {
       nsCOMPtr<nsIDOMWindow> newWindow;
-      nsCOMPtr<nsISupportsArray> array;
-
-      rv = NS_NewISupportsArray(getter_AddRefs(array));
-      NS_ENSURE_SUCCESS(rv, rv);
 
       nsCOMPtr<nsISupportsWString> str =
         do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID, &rv);
@@ -124,12 +118,10 @@ static nsresult openWindow( const PRUnichar *chrome, const PRUnichar *args )
 
       str->SetData(args);
 
-      array->AppendElement(str);
-
-      rv = win->OpenDialog(nsLiteralString(chrome),
-                           NS_LITERAL_STRING("_blank"),
-                           NS_LITERAL_STRING("chrome,dialog=no,all"),
-                           array, getter_AddRefs(newWindow));
+      rv = hiddenWindow->OpenDialog(nsLiteralString(chrome),
+                                    NS_LITERAL_STRING("_blank"),
+                                    NS_LITERAL_STRING("chrome,dialog=no,all"),
+                                    str, getter_AddRefs(newWindow));
     }
   }
 

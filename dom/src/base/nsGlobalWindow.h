@@ -80,7 +80,7 @@ class nsIDocShellLoadInfo;
 //*****************************************************************************
 
 class GlobalWindowImpl : public nsIScriptGlobalObject,
-                         public nsIDOMWindowInternalEx,
+                         public nsIDOMWindowInternal,
                          public nsIDOMJSWindow,
                          public nsIScriptObjectPrincipal,
                          public nsIDOMEventReceiver,
@@ -114,9 +114,6 @@ public:
 
   // nsIDOMWindowInternal
   NS_DECL_NSIDOMWINDOWINTERNAL
-
-  // nsIDOMWindowInternalEx
-  NS_DECL_NSIDOMWINDOWINTERNALEX
 
   // nsIDOMJSWindow
   NS_DECL_NSIDOMJSWINDOW

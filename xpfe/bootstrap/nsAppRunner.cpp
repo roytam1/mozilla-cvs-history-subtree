@@ -234,27 +234,20 @@ static nsresult OpenWindow(const char *urlstr, const PRUnichar *args)
   nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
   rv = appShellService->GetHiddenDOMWindow(getter_AddRefs(hiddenWindow));
 
-  nsCOMPtr<nsIDOMWindowInternalEx> win(do_QueryInterface(hiddenWindow));
+  nsCOMPtr<nsIDOMWindowInternal> win(do_QueryInterface(hiddenWindow));
 
   if (NS_SUCCEEDED(rv) && win) {
-    nsCOMPtr<nsISupportsArray> array;
-
-    rv = NS_NewISupportsArray(getter_AddRefs(array));
-    NS_ENSURE_SUCCESS(rv, rv);
-
     nsCOMPtr<nsISupportsWString> str =
       do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
     str->SetData(args);
 
-    array->AppendElement(str);
-
     nsCOMPtr<nsIDOMWindow> newWindow;
     rv = win->OpenDialog(NS_ConvertASCIItoUCS2(urlstr),
                          NS_LITERAL_STRING("_blank"),
                          NS_LITERAL_STRING("chrome,dialog=no,all"),
-                         array, getter_AddRefs( newWindow ) );
+                         str, getter_AddRefs( newWindow ) );
   }
 
   return rv;

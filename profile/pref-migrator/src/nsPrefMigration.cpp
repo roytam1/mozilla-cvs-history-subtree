@@ -469,7 +469,7 @@ nsPrefMigration::ShowSpaceDialog(PRInt32 *choice)
     if (NS_FAILED(rv)) return rv;
 
     // Now convert the DocShell to an nsIDOMWindowInternal
-    nsCOMPtr<nsIDOMWindowInternalEx> PMDOMWindow(do_GetInterface(docShell));
+    nsCOMPtr<nsIDOMWindowInternal> PMDOMWindow(do_GetInterface(docShell));
     if (!PMDOMWindow) return NS_ERROR_FAILURE;
 
     // Get the script global object for the window

@@ -428,10 +428,9 @@ nsCommonDialogs::DoDialog(nsIDOMWindowInternal* inParent,
                           nsIDialogParamBlock *ioParamBlock,
                           const char *inChromeURL)
 {
-    nsCOMPtr<nsIDOMWindowInternalEx> win(do_QueryInterface(inParent));
     nsresult rv = NS_ERROR_NULL_POINTER;
 
-    if ( win && ioParamBlock &&inChromeURL ) {
+    if ( inParent && ioParamBlock &&inChromeURL ) {
         nsCOMPtr<nsISupportsInterfacePointer> ifptr =
             do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
         NS_ENSURE_SUCCESS(rv, rv);
@@ -440,10 +439,10 @@ nsCommonDialogs::DoDialog(nsIDOMWindowInternal* inParent,
         ifptr->SetDataIID(&NS_GET_IID(nsIDialogParamBlock));
 
         nsCOMPtr<nsIDOMWindow> newWindow;
-        rv = win->OpenDialog(NS_ConvertASCIItoUCS2(inChromeURL),
-                             NS_LITERAL_STRING("_blank"),
-                             NS_LITERAL_STRING("centerscreen,chrome,modal,titlebar"),
-                             ifptr, getter_AddRefs(newWindow) );
+        rv = inParent->OpenDialog(NS_ConvertASCIItoUCS2(inChromeURL),
+                                  NS_LITERAL_STRING("_blank"),
+                                  NS_LITERAL_STRING("centerscreen,chrome,modal,titlebar"),
+                                  ifptr, getter_AddRefs(newWindow) );
     }
 
     return rv;

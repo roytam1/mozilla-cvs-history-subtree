@@ -464,9 +464,7 @@ OpenDialogWithArg(nsIDOMWindowInternal *parent, nsISearchContext *arg,
 {
   nsresult rv = NS_OK;
 
-  nsCOMPtr<nsIDOMWindowInternalEx> win(do_QueryInterface(parent));
-
-  if (win && arg && url) {
+  if (parent && arg && url) {
     nsCOMPtr<nsISupportsInterfacePointer> ifptr =
       do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -475,10 +473,10 @@ OpenDialogWithArg(nsIDOMWindowInternal *parent, nsISearchContext *arg,
     ifptr->SetDataIID(&NS_GET_IID(nsISearchContext));
 
     nsCOMPtr<nsIDOMWindow> newWindow;
-    rv = win->OpenDialog(NS_ConvertASCIItoUCS2(url),
-                         NS_LITERAL_STRING("_blank"),
-                         NS_LITERAL_STRING("chrome,resizable=no,dependent=yes"),
-                         ifptr, getter_AddRefs(newWindow));
+    rv = parent->OpenDialog(NS_ConvertASCIItoUCS2(url),
+                            NS_LITERAL_STRING("_blank"),
+                            NS_LITERAL_STRING("chrome,resizable=no,dependent=yes"),
+                            ifptr, getter_AddRefs(newWindow));
   }
 
   return rv;

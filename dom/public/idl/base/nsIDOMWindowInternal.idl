@@ -128,20 +128,19 @@ interface nsIDOMWindowInternal : nsIDOMWindow
 
   [noscript] nsIDOMWindow   open(in DOMString url, in DOMString name,
                                  in DOMString options);
+  // This method works like open except that aExtraArgument gets
+  // converted into the array window.arguments in JS, if
+  // aExtraArgument is a nsISupportsArray then the individual items in
+  // the array are inserted into window.arguments, and primitive
+  // nsISupports (nsISupportsPrimitives) types are converted to native
+  // JS types when possible.
+  [noscript] nsIDOMWindow   openDialog(in DOMString url, in DOMString name,
+                                       in DOMString options,
+                                       in nsISupports aExtraArgument);
   void                      close();
 
   void                      updateCommands(in DOMString action);
 
   DOMString                 escape(in DOMString str);
   DOMString                 unescape(in DOMString str);
-};
-
-[scriptable, uuid(8aefcae2-1dd2-11b2-8967-a710b365f144)]
-interface nsIDOMWindowInternalEx : nsIDOMWindowInternal
-{
-  // This method is subject to change so *don't* use it unless you're
-  // prepared to change your code when this method changes.
-  [noscript] nsIDOMWindow   openDialog(in DOMString url, in DOMString name,
-                                       in DOMString options,
-                                       in nsISupports aExtraArgument);
 };

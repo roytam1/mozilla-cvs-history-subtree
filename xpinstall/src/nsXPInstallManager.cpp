@@ -61,6 +61,7 @@
 #include "nsIAppShellComponentImpl.h"
 #include "nsICommonDialogs.h"
 #include "nsIScriptGlobalObject.h"
+#include "nsISupportsPrimitives.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID );
@@ -262,7 +263,7 @@ PRBool nsXPInstallManager::ConfirmInstall(nsIScriptGlobalObject* aGlobalObject, 
     nsresult rv = NS_OK;
     PRBool result = PR_FALSE;
 
-    nsCOMPtr<nsIDOMWindowInternalEx> parentWindow =
+    nsCOMPtr<nsIDOMWindowInternal> parentWindow =
         do_QueryInterface(aGlobalObject);
 
     if (parentWindow)
@@ -270,13 +271,17 @@ PRBool nsXPInstallManager::ConfirmInstall(nsIScriptGlobalObject* aGlobalObject, 
         nsCOMPtr<nsIDOMWindow> newWindow;
         nsCOMPtr<nsISupportsArray> array;
 
-        rv = NS_NewISupportsArray(getter_AddRefs(array));
+        nsCOMPtr<nsISupportsInterfacePointer> ifptr =
+            do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
         NS_ENSURE_SUCCESS(rv, rv);
+
+        ifptr->SetData(ioParamBlock);
+        ifptr->SetDataIID(&NS_GET_IID(nsIDialogParamBlock));
 
         rv = parentWindow->OpenDialog(NS_LITERAL_STRING("chrome://communicator/content/xpinstall/institems.xul"),
                                       NS_LITERAL_STRING("_blank"),
                                       NS_LITERAL_STRING("chrome,modal,titlebar,resizable"),
-                                      array, getter_AddRefs( newWindow));
+                                      ifptr, getter_AddRefs( newWindow));
 
         if (NS_SUCCEEDED(rv))
         {

@@ -1042,14 +1042,7 @@ nsNativeAppSupportWin::OpenWindow( const char*urlstr, const char *args )
 
   rv = appShellService->GetHiddenDOMWindow( getter_AddRefs( hiddenWindow ) );
 
-  nsCOMPtr<nsIDOMWindowInternalEx> win(do_QueryInterface(hiddenWindow));
-
-  if ( NS_SUCCEEDED( rv ) && win ) {
-    nsCOMPtr<nsISupportsArray> array;
-
-    rv = NS_NewISupportsArray(getter_AddRefs(array));
-    NS_ENSURE_SUCCESS(rv, rv);
-
+  if ( NS_SUCCEEDED( rv ) && hiddenWindow ) {
     nsCOMPtr<nsISupportsString> str =
       do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -1057,10 +1050,10 @@ nsNativeAppSupportWin::OpenWindow( const char*urlstr, const char *args )
     str->SetData(args);
 
     nsCOMPtr<nsIDOMWindow> newWindow;
-    rv = win->OpenDialog(NS_ConvertASCIItoUCS2(urlstr),
-                         NS_LITERAL_STRING("_blank"),
-                         NS_LITERAL_STRING("chrome,dialog=no,all"),
-                         array, getter_AddRefs( newWindow ) );
+    rv = hiddenWindow->OpenDialog(NS_ConvertASCIItoUCS2(urlstr),
+                                  NS_LITERAL_STRING("_blank"),
+                                  NS_LITERAL_STRING("chrome,dialog=no,all"),
+                                  str, getter_AddRefs( newWindow ) );
   }
 
   return rv;
