@@ -305,7 +305,7 @@ nsFileStream::~nsFileStream()
     Close();
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsFileStream, nsISeekableStream);
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsFileStream, nsISeekableStream)
 
 nsresult
 nsFileStream::Close()
@@ -350,7 +350,7 @@ nsFileStream::Tell(PRUint32 *result)
 NS_IMPL_ISUPPORTS_INHERITED2(nsFileInputStream, 
                              nsFileStream,
                              nsIInputStream,
-                             nsIFileInputStream);
+                             nsIFileInputStream)
 
 NS_METHOD
 nsFileInputStream::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
@@ -460,10 +460,11 @@ nsFileInputStream::SetObserver(nsIInputStreamObserver * aObserver)
 ////////////////////////////////////////////////////////////////////////////////
 // nsFileOutputStream
 
-NS_IMPL_ISUPPORTS_INHERITED2(nsFileOutputStream, 
+NS_IMPL_ISUPPORTS_INHERITED3(nsFileOutputStream, 
                              nsFileStream,
                              nsIOutputStream,
-                             nsIFileOutputStream);
+                             nsIFileOutputStream,
+                             nsISeekableOutputStream)
  
 NS_METHOD
 nsFileOutputStream::Create(nsISupports *aOuter, REFNSIID aIID, void **aResult)
@@ -489,7 +490,7 @@ nsFileOutputStream::Init(nsIFile* file, PRInt32 ioFlags, PRInt32 perm)
     nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(file, &rv);
     if (NS_FAILED(rv)) return rv;
     if (ioFlags == -1)
-        ioFlags = PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE;
+        ioFlags = PR_RDWR | PR_CREATE_FILE | PR_TRUNCATE;
     if (perm <= 0)
         perm = 0664;
     return localFile->OpenNSPRFileDesc(ioFlags, perm, &mFD);
@@ -567,6 +568,23 @@ nsFileOutputStream::SetObserver(nsIOutputStreamObserver * aObserver)
 {
     NS_NOTREACHED("SetObserver");
     return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsFileOutputStream::Fill(char * buf, PRUint32 count, PRUint32 *result)
+{
+    if (mFD == nsnull)
+        return NS_BASE_STREAM_CLOSED;
+
+    PRInt32 cnt = PR_Read(mFD, buf, count);
+    if (cnt == -1) {
+        return NS_ErrorAccordingToNSPR();
+    }
+    if (PR_Seek(mFD, -cnt, PR_SEEK_CUR) == -1) {
+        return NS_ErrorAccordingToNSPR();
+    }
+    *result = cnt;
+    return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

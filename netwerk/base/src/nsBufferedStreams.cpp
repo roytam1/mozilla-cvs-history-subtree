@@ -201,11 +201,12 @@ nsBufferedInputStream::Read(char * buf, PRUint32 count, PRUint32 *result)
         }
         else {
             rv = Fill();
-            if (NS_FAILED(rv)) break;
+            if (NS_FAILED(rv) || mFillPoint == mCursor)
+                break;
         }
     }
     *result = read;
-    return (read > 0 || rv == NS_BASE_STREAM_CLOSED) ? NS_OK : rv;
+    return (read > 0) ? NS_OK : rv;
 }
 
 NS_IMETHODIMP
@@ -226,10 +227,11 @@ nsBufferedInputStream::ReadSegments(nsWriteSegmentFun writer, void * closure, PR
         }
         else {
             rv = Fill();
-            if (NS_FAILED(rv)) break;
+            if (NS_FAILED(rv) || mFillPoint == mCursor)
+                break;
         }
     }
-    return (*result > 0 || rv == NS_BASE_STREAM_CLOSED) ? NS_OK : rv;
+    return (*result > 0) ? NS_OK : rv;
 }
 
 NS_IMETHODIMP
@@ -273,7 +275,7 @@ nsBufferedInputStream::Fill()
     if (NS_FAILED(rv)) return rv;
 
     mFillPoint += amt;
-    return amt > 0 ? NS_OK : NS_BASE_STREAM_CLOSED;
+    return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -337,12 +339,42 @@ nsBufferedOutputStream::Write(const char *buf, PRUint32 count, PRUint32 *result)
             mCursor += amt;
         }
         else {
+            NS_ASSERTION(mCursor, "looping in nsBufferedOutputStream::Write!");
             rv = Flush();
             if (NS_FAILED(rv)) break;
         }
     }
     *result = written;
     return (written > 0) ? NS_OK : rv;
+}
+
+NS_IMETHODIMP
+nsBufferedOutputStream::Fill()
+{
+    nsCOMPtr<nsISeekableOutputStream> sos(do_QueryInterface(mStream));
+    if (!sos) {
+        // XXXbe not OK!  Seek back and write less than a buffer case fails!
+        return NS_OK;
+    }
+
+    nsresult rv;
+    PRUint32 rem = mFillPoint - mCursor;
+    if (rem > 0) {
+        // slide the remainder down to the start of the buffer
+        // |<------------->|<--rem-->|<--->|
+        // b               c         f     s
+        nsCRT::memcpy(mBuffer, mBuffer + mCursor, rem);
+    }
+    mBufferStartOffset += mCursor;
+    mFillPoint = rem;
+    mCursor = 0;
+
+    PRUint32 amt;
+    rv = sos->Fill(mBuffer + mFillPoint, mBufferSize - mFillPoint, &amt);
+    if (NS_FAILED(rv)) return rv;
+
+    mFillPoint += amt;
+    return NS_OK;
 }
 
 NS_IMETHODIMP

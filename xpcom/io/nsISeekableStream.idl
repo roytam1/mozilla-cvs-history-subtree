@@ -33,3 +33,9 @@ interface nsISeekableStream : nsISupports
     void seek(in PRInt32 whence, in PRInt32 offset);
     PRUint32 tell();
 };
+
+[uuid(ac3fa453-e173-4044-b827-62d6e45346c6)]
+interface nsISeekableOutputStream : nsISupports
+{
+    unsigned long fill(in charPtr buf, in unsigned long count);
+};
