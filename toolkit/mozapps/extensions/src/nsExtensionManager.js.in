@@ -1347,36 +1347,40 @@ nsExtensionManager.prototype = {
       if (wasInSafeModeFile.exists()) {
         // Clean up after we were in safe mode
         var win = this._showProgressWindow();
-        this._ensureDS();
-        
-        // Retrieve the skin that was selected prior to entering safe mode
-        // and select it. 
-        var pref = Components.classes["@mozilla.org/preferences-service;1"]
-                             .getService(Components.interfaces.nsIPrefBranch);
-        var lastSelectedSkin = KEY_DEFAULT_THEME;
         try {
-          lastSelectedSkin = pref.getCharPref(PREF_EM_LAST_SELECTED_SKIN);
-          pref.clearUserPref(PREF_EM_LAST_SELECTED_SKIN);
-        } 
-        catch (e) { }
-        var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
-                           .getService(Components.interfaces.nsIXULChromeRegistry);
-        cr.selectSkin(lastSelectedSkin, true);
-        
-        // Walk the list of extensions and re-activate overlays for packages 
-        // that aren't disabled.
-        var items = this._ds.getItemsWithFlagUnset("disabled", nsIUpdateItem.TYPE_EXTENSION);
-        for (var i = 0; i < items.length; ++i)
-          this._finalizeEnableDisable(items[i], false);
+          this._ensureDS();
           
-        wasInSafeModeFile.remove(false);
-        
-        this._writeDefaults(true);
-        try {
-          this._writeDefaults(false);
+          // Retrieve the skin that was selected prior to entering safe mode
+          // and select it. 
+          var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                              .getService(Components.interfaces.nsIPrefBranch);
+          var lastSelectedSkin = KEY_DEFAULT_THEME;
+          try {
+            lastSelectedSkin = pref.getCharPref(PREF_EM_LAST_SELECTED_SKIN);
+            pref.clearUserPref(PREF_EM_LAST_SELECTED_SKIN);
+          } 
+          catch (e) { }
+          var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
+                            .getService(Components.interfaces.nsIXULChromeRegistry);
+          cr.selectSkin(lastSelectedSkin, true);
+          
+          // Walk the list of extensions and re-activate overlays for packages 
+          // that aren't disabled.
+          var items = this._ds.getItemsWithFlagUnset("disabled", nsIUpdateItem.TYPE_EXTENSION);
+          for (var i = 0; i < items.length; ++i)
+            this._finalizeEnableDisable(items[i], false);
+            
+          wasInSafeModeFile.remove(false);
+          
+          this._writeDefaults(true);
+          try {
+            this._writeDefaults(false);
+          }
+          catch (e) { }
         }
-        catch (e) { }
-
+        catch (e) {
+          dump("*** nsExtensionManager::start - failure, catching exception so finalize window can close\n");
+        }
         win.close();
         
         needsRestart = true;
@@ -1387,46 +1391,49 @@ nsExtensionManager.prototype = {
     }
     else {
       var win = this._showProgressWindow();
-    
-      // Enter safe mode
-      this._ensureDS();
+      try {    
+        // Enter safe mode
+        this._ensureDS();
 
-      // Save the current theme (assumed to be the theme that styles the global
-      // package) and re-select the default theme ("classic/1.0")
-      var pref = Components.classes["@mozilla.org/preferences-service;1"]
-                           .getService(Components.interfaces.nsIPrefBranch);
-      var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
-                         .getService(Components.interfaces.nsIXULChromeRegistry);
-      if (!pref.prefHasUserValue(PREF_EM_LAST_SELECTED_SKIN)) {
-        pref.setCharPref(PREF_EM_LAST_SELECTED_SKIN,  
-                         cr.getSelectedSkin("global"));
-        cr.selectSkin(KEY_DEFAULT_THEME, true);
-      }
+        // Save the current theme (assumed to be the theme that styles the global
+        // package) and re-select the default theme ("classic/1.0")
+        var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                            .getService(Components.interfaces.nsIPrefBranch);
+        var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
+                          .getService(Components.interfaces.nsIXULChromeRegistry);
+        if (!pref.prefHasUserValue(PREF_EM_LAST_SELECTED_SKIN)) {
+          pref.setCharPref(PREF_EM_LAST_SELECTED_SKIN,  
+                          cr.getSelectedSkin("global"));
+          cr.selectSkin(KEY_DEFAULT_THEME, true);
+        }
 
-      var items = this._ds.getItemList(null, nsIUpdateItem.TYPE_EXTENSION, {});
-      for (var i = 0; i < items.length; ++i)
-        this._finalizeEnableDisable(items[i].id, true);
+        var items = this._ds.getItemList(null, nsIUpdateItem.TYPE_EXTENSION, {});
+        for (var i = 0; i < items.length; ++i)
+          this._finalizeEnableDisable(items[i].id, true);
+          
+        this._ds.safeMode = true;
         
-      this._ds.safeMode = true;
-      
-      this._writeDefaults(true);
-      try {
-        this._writeDefaults(false);
-      }
-      catch (e) { }
+        this._writeDefaults(true);
+        try {
+          this._writeDefaults(false);
+        }
+        catch (e) { }
 
-      needsRestart = true;
+        needsRestart = true;
 
-      var wasInSafeModeFile = getFile(KEY_PROFILEDIR, [DIR_EXTENSIONS, FILE_WASINSAFEMODE]);
-      if (!wasInSafeModeFile.exists())
-        wasInSafeModeFile.create(Components.interfaces.nsIFile.NORMAL_FILE_TYPE, 0644);
-      else {
-        // If the "Safe Mode" file already exists, then we are in the second launch of an
-        // app launched with -safe-mode and so we don't want to provoke any further
-        // restarts or re-create the file, just continue starting normally.
-        needsRestart = false;
+        var wasInSafeModeFile = getFile(KEY_PROFILEDIR, [DIR_EXTENSIONS, FILE_WASINSAFEMODE]);
+        if (!wasInSafeModeFile.exists())
+          wasInSafeModeFile.create(Components.interfaces.nsIFile.NORMAL_FILE_TYPE, 0644);
+        else {
+          // If the "Safe Mode" file already exists, then we are in the second launch of an
+          // app launched with -safe-mode and so we don't want to provoke any further
+          // restarts or re-create the file, just continue starting normally.
+          needsRestart = false;
+        }
       }
-        
+      catch (e) {
+        dump("*** nsExtensionManager::start - (safe mode) failure, catching exception so finalize window can close\n");
+      }
       win.close();
       
     }
@@ -1515,27 +1522,32 @@ nsExtensionManager.prototype = {
                          .getService(Components.interfaces.nsIPrefBranch);
     if (!pref.prefHasUserValue(PREF_EM_DISABLEDOBSOLETE) || !pref.getBoolPref(PREF_EM_DISABLEDOBSOLETE)) {
       var win = this._showProgressWindow();
-      var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"]
-                          .getService(Components.interfaces.nsIRDFService);
-      var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
-                         .getService(Components.interfaces.nsIXULChromeRegistry);
-      var crDS = rdf.GetDataSource("rdf:chrome");
-      var disabled = false;
-      var sources = crDS.GetSources(rdf.GetResource(CHROME_NS("extension")), rdf.GetLiteral("true"), true);
-      while (sources.hasMoreElements()) {
-        disabled = true;
-        
-        var source = sources.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
-        var name = crDS.GetTarget(source, rdf.GetResource(CHROME_NS("name")), true);
-        if (name) {
-          name = name.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
-          cr.setAllowOverlaysForPackage(name, false);
+      try {
+        var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"]
+                            .getService(Components.interfaces.nsIRDFService);
+        var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
+                          .getService(Components.interfaces.nsIXULChromeRegistry);
+        var crDS = rdf.GetDataSource("rdf:chrome");
+        var disabled = false;
+        var sources = crDS.GetSources(rdf.GetResource(CHROME_NS("extension")), rdf.GetLiteral("true"), true);
+        while (sources.hasMoreElements()) {
+          disabled = true;
+          
+          var source = sources.getNext().QueryInterface(Components.interfaces.nsIRDFResource);
+          var name = crDS.GetTarget(source, rdf.GetResource(CHROME_NS("name")), true);
+          if (name) {
+            name = name.QueryInterface(Components.interfaces.nsIRDFLiteral).Value;
+            cr.setAllowOverlaysForPackage(name, false);
+          }
         }
-      }
 
-      // Re-select the default theme to prevent any incompatibilities with old-style
-      // themes.
-      cr.selectSkin(KEY_DEFAULT_THEME, true);
+        // Re-select the default theme to prevent any incompatibilities with old-style
+        // themes.
+        cr.selectSkin(KEY_DEFAULT_THEME, true);
+      }
+      catch (e) {
+        dump("*** nsExtensionManager::_disableObsoleteExtensions - failure, catching exception so finalize window can close\n");
+      }
       win.close();
       
       if (disabled) {
@@ -1606,47 +1618,51 @@ nsExtensionManager.prototype = {
   {
     var win = this._showProgressWindow();
   
-    // An existing autoreg file is an indication that something major has 
-    // happened to the extensions datasource (install/uninstall/enable/disable)
-    // and as such we must load it now and see what needs to happen.
-    this._ensureDS();
-    
-    // Look for items that need to be installed
-    var items = this._ds.getItemsWithFlagSet("toBeInstalled");
-    for (var i = 0; i < items.length; ++i)
-      this._finalizeInstall(items[i]);
+    try {
+      // An existing autoreg file is an indication that something major has 
+      // happened to the extensions datasource (install/uninstall/enable/disable)
+      // and as such we must load it now and see what needs to happen.
+      this._ensureDS();
+      
+      // Look for items that need to be installed
+      var items = this._ds.getItemsWithFlagSet("toBeInstalled");
+      for (var i = 0; i < items.length; ++i)
+        this._finalizeInstall(items[i]);
 
-    // If there were any install operations, we need to restart (again!) after 
-    // the component files have been properly installed are registered...
-    var needsRestart = items.length > 0;
-    
-    // Look for extensions that need to be enabled
-    items = this._ds.getItemsWithFlagSet("toBeEnabled");
-    for (var i = 0; i < items.length; ++i)
-      this._finalizeEnableDisable(items[i], false);
-    
-    // Look for extensions that need to be disabled
-    items = this._ds.getItemsWithFlagSet("toBeDisabled");
-    for (var i = 0; i < items.length; ++i)
-      this._finalizeEnableDisable(items[i], true);
-    
-    // Look for extensions that need to be removed
-    items = this._ds.getItemsWithFlagSet("toBeUninstalled");
-    for (var i = 0; i < items.length; ++i)
-      this._finalizeUninstall(items[i]);
+      // If there were any install operations, we need to restart (again!) after 
+      // the component files have been properly installed are registered...
+      var needsRestart = items.length > 0;
       
-    // Clean up any helper objects
-    delete this._extInstaller;
-    delete this._extUninstaller;
-    delete this._extEnabler;
-    
-    if (!needsRestart) {
-      // If no additional restart is required, it implies that there are
-      // no new components that need registering so we can inform the app
-      // not to do any extra startup checking next time round.    
-      this._writeCompatibilityManifest(false);
+      // Look for extensions that need to be enabled
+      items = this._ds.getItemsWithFlagSet("toBeEnabled");
+      for (var i = 0; i < items.length; ++i)
+        this._finalizeEnableDisable(items[i], false);
+      
+      // Look for extensions that need to be disabled
+      items = this._ds.getItemsWithFlagSet("toBeDisabled");
+      for (var i = 0; i < items.length; ++i)
+        this._finalizeEnableDisable(items[i], true);
+      
+      // Look for extensions that need to be removed
+      items = this._ds.getItemsWithFlagSet("toBeUninstalled");
+      for (var i = 0; i < items.length; ++i)
+        this._finalizeUninstall(items[i]);
+        
+      // Clean up any helper objects
+      delete this._extInstaller;
+      delete this._extUninstaller;
+      delete this._extEnabler;
+      
+      if (!needsRestart) {
+        // If no additional restart is required, it implies that there are
+        // no new components that need registering so we can inform the app
+        // not to do any extra startup checking next time round.    
+        this._writeCompatibilityManifest(false);
+      }
     }
-      
+    catch (e) {
+      dump("*** nsExtensionManager::_finishOperations - failure, catching exception so finalize window can close\n");
+    }
     win.close();
     
     return needsRestart;
