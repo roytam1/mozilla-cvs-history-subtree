@@ -1,3 +1,21 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
+ *
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
+ */
+
 #include "nsCOMPtr.h" 
 #include "msgCore.h"
 #include "nsMsgBaseCID.h"
@@ -5,12 +23,7 @@
 #include "nsMsgCompCID.h"
 
 #include <stdio.h>
-#ifdef XP_PC
-#include <windows.h>
-#endif
-
-#include "nsCOMPtr.h"
-
+#include "nsIIOService.h"
 #include "nsIComponentManager.h" 
 #include "nsMsgCompCID.h"
 #include "nsIMsgCompose.h"
@@ -27,7 +40,6 @@
 #include "nsIGenericFactory.h"
 #include "nsIWebShellWindow.h"
 
-#include "nsINetService.h"
 #include "nsIComponentManager.h"
 #include "nsString.h"
 
@@ -46,7 +58,6 @@
 #include "nsICharsetConverterManager.h"
 
 #ifdef XP_PC
-#define NETLIB_DLL "netlib.dll"
 #define XPCOM_DLL  "xpcom32.dll"
 #define PREF_DLL   "xppref32.dll"
 #define APPSHELL_DLL "nsappshell.dll"
@@ -56,7 +67,6 @@
 #ifdef XP_MAC
 #include "nsMacRepository.h"
 #else
-#define NETLIB_DLL "libnetlib"MOZ_DLL_SUFFIX
 #define XPCOM_DLL  "libxpcom"MOZ_DLL_SUFFIX
 #define PREF_DLL   "libpref"MOZ_DLL_SUFFIX
 #define APPCORES_DLL  "libappcores"MOZ_DLL_SUFFIX
@@ -74,7 +84,6 @@
 // Define keys for all of the interfaces we are going to require for this test
 /////////////////////////////////////////////////////////////////////////////////
 
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kSmtpServiceCID, NS_SMTPSERVICE_CID);
 static NS_DEFINE_CID(kFileLocatorCID, NS_FILELOCATOR_CID);
@@ -93,6 +102,7 @@ static NS_DEFINE_CID(kAppShellServiceCID, NS_APPSHELL_SERVICE_CID);
 static NS_DEFINE_IID(kIAppShellServiceIID,       NS_IAPPSHELL_SERVICE_IID);
 static NS_DEFINE_CID(kGenericFactoryCID,    NS_GENERICFACTORY_CID);
 static NS_DEFINE_CID(kAllocatorCID,  NS_ALLOCATOR_CID);
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 // I18N
 static NS_DEFINE_CID(charsetCID,  CONV_CID);
@@ -133,21 +143,17 @@ nsresult OnIdentityCheck()
 	return result;
 }
 
-// Utility to create a nsIURL object...
+// Utility to create a nsIURI object...
 nsresult 
-nsMsgNewURL(nsIURI** aInstancePtrResult, const nsString& aSpec)
+nsMsgNewURL(nsIURI** aInstancePtrResult, const char * aSpec)
 {  
+  nsresult rv = NS_OK;
   if (nsnull == aInstancePtrResult) 
     return NS_ERROR_NULL_POINTER;
   
-  nsINetService *inet = nsnull;
-  nsresult rv = nsServiceManager::GetService(kNetServiceCID, nsCOMTypeInfo<nsINetService>::GetIID(),
-                                             (nsISupports **)&inet);
-  if (rv != NS_OK) 
-    return rv;
-
-  rv = inet->CreateURL(aInstancePtrResult, aSpec, nsnull, nsnull, nsnull);
-  nsServiceManager::ReleaseService(kNetServiceCID, inet);
+  NS_WITH_SERVICE(nsIIOService, pNetService, kIOServiceCID, &rv); 
+  if (NS_SUCCEEDED(rv) && pNetService)
+	rv = pNetService->NewURI(aSpec, nsnull, aInstancePtrResult);
   return rv;
 }
 
@@ -162,7 +168,7 @@ GetAttachments(void)
   if (!attachments)
     return NULL;
   
-  nsMsgNewURL(&url, nsString("file://C:/boxster.jpg"));
+  nsMsgNewURL(&url, "file://C:/boxster.jpg");
 
   nsCRT::memset(attachments, 0, sizeof(nsMsgAttachedFile) * attachCount);
   attachments[0].orig_url = url;
@@ -185,7 +191,7 @@ GetRemoteAttachments()
 
   nsCRT::memset(attachments, 0, sizeof(nsMsgAttachmentData) * attachCount);
 
-  nsMsgNewURL(&url, nsString("http://www.netscape.com"));
+  nsMsgNewURL(&url,"http://www.netscape.com");
   NS_ADDREF(url);
   attachments[0].url = url; // The URL to attach. This should be 0 to signify "end of list".
 
@@ -208,11 +214,11 @@ GetRemoteAttachments()
   (void)attachments[0].description;	    // If you put a string here, it will show up as the Content-Description header.  
                                   // This can be any explanatory text; it's not a file name.						 
 
-  nsMsgNewURL(&url, nsString("http://www.pennatech.com"));
+  nsMsgNewURL(&url,"http://www.pennatech.com");
   NS_ADDREF(url);
   attachments[1].url = url; // The URL to attach. This should be 0 to signify "end of list".
 
-  nsMsgNewURL(&url, nsString("file:///C|/boxster.jpg"));
+  nsMsgNewURL(&url,"file:///C|/boxster.jpg");
   NS_ADDREF(url);
   attachments[2].url = url; // The URL to attach. This should be 0 to signify "end of list".
 
@@ -262,9 +268,6 @@ SetupRegistry(void)
     printf("ERROR at GetService() code=0x%x.\n",res);
     return NS_ERROR_FAILURE;
   }
-
-  // netlib
-  nsComponentManager::RegisterComponent(kNetServiceCID,     NULL, NULL, NETLIB_DLL,  PR_FALSE, PR_FALSE);
   
   // xpcom
   nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL, NULL, XPCOM_DLL,  PR_FALSE, PR_FALSE);
@@ -322,7 +325,6 @@ int main(int argc, char *argv[])
   //nsIAppShellService* appShell = nsnull;
 
 
-  nsComponentManager::RegisterComponent(kNetServiceCID, NULL, NULL, NETLIB_DLL, PR_FALSE, PR_FALSE);
 	nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
 	nsComponentManager::RegisterComponent(kEventQueueCID, NULL, NULL, XPCOM_DLL, PR_FALSE, PR_FALSE);
 	nsComponentManager::RegisterComponent(kPrefCID, nsnull, nsnull, PREF_DLL, PR_TRUE, PR_TRUE);
