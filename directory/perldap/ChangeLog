@@ -1,4 +1,14 @@
+1998-12-16  Leif Hedstrom  <leif@netscape.com>
+
+	* Entry.pm (isAttr): New method, to make sure an attribute name
+	really is a valid LDAP attribute.
+	(FIRSTKEY): Now we'll handle each() and keys() properly, whooohoo!
+	(NEXTKEY): Dito.
+
 1998-12-15  Leif Hedstrom  <leif@netscape.com>
+
+	* Entry.pm (isDeleted): Added new method, almost identical to isModified().
+	(EXISTS): New method, to implement the EXISTS functionality.
 
 	* API.xs (RET_CPP): Test for NULL pointers, bug #1387.
 	(RET_BVPP): Dito.
