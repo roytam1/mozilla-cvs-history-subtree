@@ -56,6 +56,7 @@ nsRenderingContextMac::nsRenderingContextMac()
 
 	mP2T						= 1.0f;
 	mContext					= nsnull ;
+  mSaveDevice       = nsnull;
 
 	mSavePort					= nsnull;
 	mFrontSurface				= new nsDrawingSurfaceMac();
@@ -81,7 +82,7 @@ nsRenderingContextMac::~nsRenderingContextMac()
 	// restore stuff
 	NS_IF_RELEASE(mContext);
 	if (mSavePort) {
-		::SetPort(mSavePort);
+		::SetGWorld(mSavePort, mSaveDevice);
 		::SetOrigin(mSavePortRect.left, mSavePortRect.top);
 	}
 
@@ -189,9 +190,9 @@ void nsRenderingContextMac::SelectDrawingSurface(nsDrawingSurfaceMac* aSurface, 
 		return;
 
 	if (!mSavePort) {
-		::GetPort(&mSavePort);
+		::GetGWorld(&mSavePort, &mSaveDevice);
 		if (mSavePort)
-			::GetPortBounds(mSavePort, &mSavePortRect);
+			::GetPortBounds((GrafPtr)mSavePort, &mSavePortRect);
 	}
 	
 	// if surface is changing, be extra conservative about graphic state changes.
