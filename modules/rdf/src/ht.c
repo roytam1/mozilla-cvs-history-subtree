@@ -7271,35 +7271,32 @@ HT_LaunchURL(HT_Pane pane, char *url, MWContext *context)
 				view = HT_GetViewType(pane, HT_VIEW_SEARCH);
 			}
 		}
-		if (pane != NULL)
+		if ((pane != NULL) && (parent != NULL))
 		{
-			if (parent != NULL)
+			if (startsWith("ftp://", resourceID(u)))
 			{
-				if (startsWith("ftp://", resourceID(u)))
+				if (!RDF_HasAssertion(pane->db, gNavCenter->RDF_FTP,
+					gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles,
+					RDF_RESOURCE_TYPE, PR_TRUE))
 				{
-					if (!RDF_HasAssertion(pane->db, gNavCenter->RDF_FTP,
+					gAutoOpenPane = pane;
+					RDF_Assert(pane->db, gNavCenter->RDF_FTP,
 						gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles,
-						RDF_RESOURCE_TYPE, PR_TRUE))
-					{
-						gAutoOpenPane = pane;
-						RDF_Assert(pane->db, gNavCenter->RDF_FTP,
-							gCoreVocab->RDF_parent, gNavCenter->RDF_LocalFiles,
-							RDF_RESOURCE_TYPE);
-						gAutoOpenPane = NULL;
-					}
+						RDF_RESOURCE_TYPE);
+					gAutoOpenPane = NULL;
 				}
-				gAutoOpenPane = pane;
-				RDF_Assert(pane->db, u, gCoreVocab->RDF_parent,
-					parent, RDF_RESOURCE_TYPE);
-				gAutoOpenPane = NULL;
-				htSetBookmarkAddDateToNow(u);
-
-				if (view != NULL)
-				{
-					HT_SetSelectedView (pane, view);
-				}
-				retVal = PR_TRUE;
 			}
+			gAutoOpenPane = pane;
+			RDF_Assert(pane->db, u, gCoreVocab->RDF_parent,
+				parent, RDF_RESOURCE_TYPE);
+			gAutoOpenPane = NULL;
+			htSetBookmarkAddDateToNow(u);
+
+			if (view != NULL)
+			{
+				HT_SetSelectedView (pane, view);
+			}
+			retVal = PR_TRUE;
 		}
 		else if ((isShortcut == PR_TRUE) && (context != NULL))
 		{
