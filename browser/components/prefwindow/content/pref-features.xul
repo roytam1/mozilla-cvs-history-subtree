@@ -91,7 +91,7 @@
           </vbox>
           <vbox>
             <button label="&exceptions.label;"
-                    permissiontype="popup" oncommand="showExceptions(event);"
+                    permissiontype="image" oncommand="showExceptions(event);"
                     id="manageImages" prefstring="pref.advanced.images.disable_button.view_image"/>
           </vbox>
         </row>
