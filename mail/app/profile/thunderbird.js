@@ -56,7 +56,7 @@ pref("app.extensions.version", "0.7");
 pref("mail.biff.animate_dock_icon", false);
 #endif
 
-pref("update.app.enabled", true);
+pref("update.app.enabled", true);               // Whether or not app updates are enabled
 pref("update.app.url", "chrome://mozapps/locale/update/update.properties");
 pref("update.app.updatesAvailable", false);
 pref("update.app.updateVersion", "");
@@ -82,8 +82,10 @@ pref("update.app.lastUpdateDate", 0);           // UTC offset when last App upda
                                                 // performed. 
 pref("update.interval", 3600000);               // Check each of the above intervals 
                                                 // every 60 mins
-pref("update.showSlidingNotification", false);   // Windows-only slide-up taskbar 
+pref("update.showSlidingNotification", false);  // Windows-only slide-up taskbar 
                                                 // notification.
+pref("update.app.performed", false);            // Whether or not an update has been 
+                                                // performed this session. 
 
 // These prefs relate to the number and severity of updates available. This is a 
 // cache that the browser notification mechanism uses to determine if it should show
