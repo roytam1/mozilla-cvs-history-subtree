@@ -1012,6 +1012,7 @@ static nsModuleComponentInfo components[] = {
   { "Browser Content Handler",
     NS_BROWSERCONTENTHANDLER_CID,
     NS_CONTENT_HANDLER_CONTRACTID_PREFIX"image/svg+xml",
+    nsBrowserContentHandlerConstructor
   },
 #endif
   { "Browser Content Handler",
