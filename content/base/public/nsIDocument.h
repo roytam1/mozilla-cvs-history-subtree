@@ -89,8 +89,8 @@ class nsIHTMLCSSStyleSheet;
 
 // IID for the nsIDocument interface
 #define NS_IDOCUMENT_IID      \
-{ 0xa492d7cf, 0x1777, 0x4c7a, \
-  {0xaa, 0x8f, 0x94, 0x08, 0x28, 0x05, 0x55, 0xc9} }
+{ 0x3000c2a4, 0xf7f1, 0x4636, \
+  {0x9c, 0x6e, 0xd5, 0x38, 0x1b, 0xf0, 0x18, 0x8a} }
 
 // The base value for the content ID counter.
 // This counter is used by the document to 
@@ -582,6 +582,16 @@ public:
 
   virtual PRBool IsScriptEnabled() = 0;
 
+  // Get the security info (i.e. SSL state etc) that the document got
+  // from the channel/document that created the content of the
+  // document.
+  //
+  // @see nsIChannel
+  nsISupports *GetSecurityInfo()
+  {
+    return mSecurityInfo;
+  }
+
 protected:
   nsString mDocumentTitle;
   nsCOMPtr<nsIURI> mDocumentURI;
@@ -613,6 +623,9 @@ protected:
 
   nsXPIDLCString mContentLanguage;
   nsCString mContentType;
+
+  // The document's security info
+  nsCOMPtr<nsISupports> mSecurityInfo;
 };
 
 
