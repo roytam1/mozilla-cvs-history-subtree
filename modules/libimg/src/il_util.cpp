@@ -23,16 +23,9 @@
  */
 
 
-#ifdef STANDALONE_IMAGE_LIB
 #include "xpcompat.h"
-#else
-#include "xp_mcom.h"            /* XP definitions and types. */
-#endif
 #include "ntypes.h"             /* typedefs for commonly used Netscape data
                                    structures. */
-#ifndef STANDALONE_IMAGE_LIB
-#include "xp_core.h"
-#endif
 #include "prtypes.h"
 #include "prmem.h"
 

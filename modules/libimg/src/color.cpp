@@ -840,12 +840,10 @@ il_setup_color_space_converter(il_container *ic)
     case IL_GreyToPseudo:
     case IL_PseudoToPseudo:
 
-#ifdef STANDALONE_IMAGE_LIB
         if (src_color_space == img_color_space) {
             ic->converter = NULL;
             return PR_TRUE;
         } else
-#endif
         /* Resolve dither_mode if necessary. */
         if (dither_mode == IL_Auto) {
             int num_colors = src_color_space->cmap.num_colors;
