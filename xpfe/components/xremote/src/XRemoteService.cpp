@@ -55,6 +55,7 @@
 #include <nsCExternalHandlerService.h>
 #include <nsIExternalProtocolService.h>
 #include <nsIProfile.h>
+#include <nsICmdLineHandler.h>
 
 NS_DEFINE_CID(kWindowCID, NS_WINDOW_CID);
 
@@ -988,11 +989,23 @@ XRemoteService::XfeDoCommand(nsCString &aArgument,
 
   // open a new browser window
   else if (aArgument.EqualsIgnoreCase("openbrowser")) {
+    // Get the browser URL and the default start page URL.
+    nsCOMPtr<nsICmdLineHandler> browserHandler =
+        do_GetService("@mozilla.org/commandlinehandler/general-startup;1?type=browser");
+
+    if (!browserHandler)
+        return NS_ERROR_FAILURE;
+
     nsXPIDLCString browserLocation;
-    GetBrowserLocation(getter_Copies(browserLocation));
+    browserHandler->GetChromeUrlForTask(getter_Copies(browserLocation));
     if (!browserLocation)
       return NS_ERROR_FAILURE;
-    
+
+    nsXPIDLString startPage;
+    browserHandler->GetDefaultArgs(getter_Copies(startPage));
+
+    arg->SetData(startPage);
+
     nsCOMPtr<nsIDOMWindow> newWindow;
     rv = OpenChromeWindow(0, browserLocation, "chrome,all,dialog=no",
                           arg, getter_AddRefs(newWindow));
