@@ -2924,7 +2924,7 @@ nsCSSStyleDeclSH::GetStringAt(nsISupports *aNative, PRInt32 aIndex,
     return NS_ERROR_DOM_INDEX_SIZE_ERR;
   }
 
-  nsCOMPtr<nsIDOMMediaList> style_decl(do_QueryInterface(aNative));
+  nsCOMPtr<nsIDOMCSSStyleDeclaration> style_decl(do_QueryInterface(aNative));
 
   return style_decl->Item(PRUint32(aNative), aResult);
 }
