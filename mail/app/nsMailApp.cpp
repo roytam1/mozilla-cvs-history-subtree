@@ -37,23 +37,22 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsXULAppAPI.h"
-#include "nsISoftwareUpdate.h"
 #ifdef XP_WIN
 #include <windows.h>
+#include <stdlib.h>
 #endif
+
+static const nsXREAppData kAppData = {
+  "Thunderbird",
+  APP_VERSION,
+  "Copyright (c) 2004 mozilla.org",
+  PR_FALSE
+};
 
 int main(int argc, char* argv[])
 {
-  nsXREAppData appData;
-  appData.SetSplashEnabled(PR_FALSE);
-  appData.SetProductName(NS_LITERAL_CSTRING("Thunderbird"));
-  appData.SetUseStartupPrefs(PR_TRUE);
-  return xre_main(argc, argv, appData);
+  return xre_main(argc, argv, &kAppData);
 }
-
-#if defined(MOZ_WIDGET_GTK) || defined(MOZ_WIDGET_GTK2)
-char* splash_xpm[] = {0};
-#endif
 
 #if defined( XP_WIN ) && defined( WIN32 ) && !defined(__GNUC__)
 // We need WinMain in order to not be a console app.  This function is

@@ -1,4 +1,5 @@
 const kIMig = Components.interfaces.nsIBrowserProfileMigrator;
+const kIPStartup = Components.interfaces.nsIProfileStartup;
 const kProfileMigratorContractIDPrefix = "@mozilla.org/profile/migrator;1?app=browser&type=";
 
 var MigrationWizard = {
@@ -7,7 +8,7 @@ var MigrationWizard = {
   _selectedProfile: null,       // Selected Profile name to import from
   _wiz: null,
   _migrator: null,
-  _autoMigrate: false,
+  _autoMigrate: null,
 
   init: function ()
   {
@@ -22,7 +23,7 @@ var MigrationWizard = {
     if ("arguments" in window) {
       this._source = window.arguments[0];
       this._migrator = window.arguments[1].QueryInterface(kIMig);
-      this._autoMigrate = true;
+      this._autoMigrate = window.arguments[2].QueryInterface(kIPStartup);
       
       // Advance past the first page
       this._wiz.advance();

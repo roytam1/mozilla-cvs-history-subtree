@@ -98,6 +98,8 @@ MOZ_WINCONSOLE = 0
 endif
 endif
 
+NSDISTMODE = copy
+
 include $(topsrcdir)/config/config.mk
 ifndef BUILD_STATIC_LIBS
 

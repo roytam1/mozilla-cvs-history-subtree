@@ -184,6 +184,11 @@ interface nsINativeAppSupport : nsISupports {
 
     // Server mode.
     attribute boolean isServerMode;
+
+    // NOTE: for new-toolkit apps using the semi-single-profile model,
+    // we use shouldShowUI to control whether we should respond to DDE
+    // requests. This is a total hack, but it means we don't have to fork
+    // this interface. This hack is for the 1.7 branch only.
     attribute boolean shouldShowUI;
     void startServerMode();
 

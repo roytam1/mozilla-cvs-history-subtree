@@ -84,12 +84,15 @@ nsSeamonkeyProfileMigrator::~nsSeamonkeyProfileMigrator()
 // nsIBrowserProfileMigrator
 
 NS_IMETHODIMP
-nsSeamonkeyProfileMigrator::Migrate(PRUint16 aItems, PRBool aReplace, const PRUnichar* aProfile)
+nsSeamonkeyProfileMigrator::Migrate(PRUint16 aItems, nsIProfileStartup* aStartup, const PRUnichar* aProfile)
 {
   nsresult rv = NS_OK;
+  PRBool aReplace = aStartup ? PR_TRUE : PR_FALSE;
 
-  if (!mTargetProfile) 
-    GetTargetProfile(aProfile, aReplace);
+  if (!mTargetProfile) {
+    GetProfilePath(aStartup, mTargetProfile);
+    if (!mTargetProfile) return NS_ERROR_FAILURE;
+  }
   if (!mSourceProfile)
     GetSourceProfile(aProfile);
 

@@ -52,6 +52,7 @@
 #include "nsIPermissionManager.h"
 #include "nsIPrefLocalizedString.h"
 #include "nsIPrefService.h"
+#include "nsIProfileMigrator.h"
 #include "nsIProperties.h"
 #include "nsIRDFContainer.h"
 #include "nsIRDFService.h"
@@ -115,9 +116,15 @@ nsOperaProfileMigrator::~nsOperaProfileMigrator()
 }
 
 NS_IMETHODIMP
-nsOperaProfileMigrator::Migrate(PRUint16 aItems, PRBool aReplace, const PRUnichar* aProfile)
+nsOperaProfileMigrator::Migrate(PRUint16 aItems, nsIProfileStartup* aStartup, const PRUnichar* aProfile)
 {
   nsresult rv = NS_OK;
+  PRBool aReplace = aStartup ? PR_TRUE : PR_FALSE;
+
+  if (aStartup) {
+    rv = aStartup->DoStartup();
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
 
   if (!mOperaProfile)
     GetOperaProfile(aProfile, getter_AddRefs(mOperaProfile));

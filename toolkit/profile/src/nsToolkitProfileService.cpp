@@ -46,9 +46,6 @@
 #ifdef XP_BEOS
 #include <Path.h>
 #endif
-#ifdef XP_MACOSX
-#include <CFURL.h>
-#endif
 #ifdef XP_UNIX
 #include <unistd.h>
 #endif
@@ -58,6 +55,11 @@
 #include "nsIFactory.h"
 #include "nsILocalFile.h"
 #include "nsISimpleEnumerator.h"
+
+#ifdef XP_MACOSX
+#include <CFURL.h>
+#include "nsILocalFileMac.h"
+#endif
 
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsXULAppAPI.h"
@@ -432,7 +434,7 @@ nsToolkitProfileService::GetAppDataDir(nsILocalFile* *aResult)
     nsCOMPtr<nsILocalFileMac> dirFileMac = do_QueryInterface(dirFile);
     NS_ENSURE_TRUE(dirFileMac, NS_ERROR_UNEXPECTED);
 
-    rv = dirFileMac->InitWithFSRef(fsRef);
+    rv = dirFileMac->InitWithFSRef(&fsRef);
     NS_ENSURE_SUCCESS(rv, rv);
 
     rv = dirFileMac->AppendNative(nsDependentCString(gAppData->appName));
@@ -855,7 +857,7 @@ NS_GetFileFromPath(const char *aPath, nsILocalFile* *aResult)
     if (pathLen > MAXPATHLEN)
         return NS_ERROR_INVALID_ARG;
 
-    CFURL *fullPath =
+    CFURLRef fullPath =
         CFURLCreateFromFileSystemRepresentation(NULL, aPath, pathLen, true);
     if (!fullPath)
         return NS_ERROR_FAILURE;
