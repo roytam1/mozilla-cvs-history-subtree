@@ -116,12 +116,16 @@ function Startup()
   gName.value = window.arguments[0];
   gName.select();
   gName.focus();
-  gKeyword.value = window.arguments[7];
+  gSuggestedKeyword = window.arguments[7];
   gKeywordRequired = window.arguments[8];
-  if (!window.arguments[7] && !gKeywordRequired)
+  if (!gSuggestedKeyword && !gKeywordRequired) {
     gKeywordRow.hidden = true;
-  if (gKeywordRequired)
-    gRequiredFields.push(gKeyword);
+  } else {
+    if (gSuggestedKeyword)
+      gKeyword.value = gSuggestedKeyword;
+    if (gKeywordRequired)
+      gRequiredFields.push(gKeyword);
+  }
   onFieldInput();
   gSelectedFolder = RDF.GetResource(gMenulist.selectedItem.id);
   gExpander.setAttribute("tooltiptext", gExpander.getAttribute("tooltiptextdown"));
