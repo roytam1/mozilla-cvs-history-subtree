@@ -71,9 +71,9 @@
 
 // define default product directory
 #if defined(XP_WIN) || defined(XP_MAC) || defined(XP_OS2) || defined(XP_BEOS)
-#define DEFAULT_PRODUCT_DIR NS_LITERAL_CSTRING("Mozilla")
+#define DEFAULT_PRODUCT_DIR NS_LITERAL_CSTRING("mozmail")
 #elif defined (XP_UNIX)
-#define DEFAULT_PRODUCT_DIR NS_LITERAL_CSTRING(".mozilla")
+#define DEFAULT_PRODUCT_DIR NS_LITERAL_CSTRING(".mozmail")
 #endif
 
 // Locally defined keys used by nsAppDirectoryEnumerator
