@@ -75,7 +75,7 @@ nsPNGDecoder::~nsPNGDecoder()
 NS_IMETHODIMP nsPNGDecoder::Init(imgILoad *aLoad)
 {
 #if defined(PNG_UNKNOWN_CHUNKS_SUPPORTED)
-  static const png_byte unused_chunks[]=
+  static png_byte unused_chunks[]=
        { 98,  75,  71,  68, '\0',   /* bKGD */
          99,  72,  82,  77, '\0',   /* cHRM */
         104,  73,  83,  84, '\0',   /* hIST */
