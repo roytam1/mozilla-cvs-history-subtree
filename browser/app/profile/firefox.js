@@ -123,9 +123,9 @@ pref("keyword.URL", "http://www.google.com/search?btnI=I%27m+Feeling+Lucky&ie=UT
 
 pref("general.skins.selectedSkin", "classic/1.0");
 pref("general.useragent.vendor", "Firefox");
-pref("general.useragent.vendorSub", "1.0RC2");
-//#expand __APP_VERSION__
-//);
+pref("general.useragent.vendorSub", 
+#expand __APP_VERSION__
+);
 
 pref("general.smoothScroll", false);
 #ifdef XP_UNIX
