@@ -29,7 +29,7 @@
 
 package Mozilla::LDAP::Conn;
 
-use Mozilla::LDAP::Utils qw(:all);
+use Mozilla::LDAP::Utils;
 use Mozilla::LDAP::API qw(/.+/);
 use Mozilla::LDAP::Entry;
 
@@ -183,7 +183,7 @@ sub search
   my $entry;
   my $res = \$resv;
 
-  $scope = str2Scope($scope);
+  $scope = Mozilla::LDAP::Utils::str2Scope($scope);
   $filter = "(objectclass=*)" if ($filter =~ /^ALL$/i);
 
   ldap_msgfree($self->{ldres}) if defined($self->{ldres});
