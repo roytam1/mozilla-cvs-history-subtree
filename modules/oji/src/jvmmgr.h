@@ -162,6 +162,7 @@ protected:
     // Instance Variables:
     nsIPluginTagInfo2*  fPluginTagInfo;
     char*               fSimulatedCodebase;
+    char*               fSimulatedCode;
 };
 
 ////////////////////////////////////////////////////////////////////////////////

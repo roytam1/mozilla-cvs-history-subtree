@@ -469,7 +469,7 @@ nsJVMMgr::AddToClassPathRecursively(const char* dirPath)
 ////////////////////////////////////////////////////////////////////////////////
 
 nsJVMPluginTagInfo::nsJVMPluginTagInfo(nsISupports* outer, nsIPluginTagInfo2* info)
-    : fSimulatedCodebase(NULL), fPluginTagInfo(info)
+    : fPluginTagInfo(info), fSimulatedCodebase(NULL), fSimulatedCode(NULL)
 {
     NS_INIT_AGGREGATED(outer);
 }
@@ -478,6 +478,9 @@ nsJVMPluginTagInfo::~nsJVMPluginTagInfo(void)
 {
     if (fSimulatedCodebase)
         PL_strfree(fSimulatedCodebase);
+
+    if (fSimulatedCode)
+        PL_strfree(fSimulatedCode);
 }
 
 NS_IMPL_AGGREGATED(nsJVMPluginTagInfo);
@@ -496,10 +499,48 @@ nsJVMPluginTagInfo::AggregatedQueryInterface(const nsIID& aIID, void** aInstance
     return NS_NOINTERFACE;
 }
 
+
+static void
+oji_StandardizeCodeAttribute(char* buf)
+{
+    // strip off the ".class" suffix
+    char* cp;
+
+    if ((cp = PL_strrstr(buf, ".class")) != NULL)
+        *cp = '\0';
+
+    // Convert '/' to '.'
+    cp = buf;
+    while ((*cp) != '\0') {
+        if ((*cp) == '/')
+            (*cp) = '.';
+
+        ++cp;
+    }
+}
+
 NS_METHOD_(const char *) 
 nsJVMPluginTagInfo::GetCode(void)
 {
-    return fPluginTagInfo->GetAttribute("code");
+    if (fSimulatedCode)
+        return fSimulatedCode;
+
+    const char* code = fPluginTagInfo->GetAttribute("code");
+    if (code) {
+        fSimulatedCode = PL_strdup(code);
+        oji_StandardizeCodeAttribute(fSimulatedCode);
+        return fSimulatedCode;
+    }
+
+    const char* classid = fPluginTagInfo->GetAttribute("classid");
+    if (classid && PL_strncasecmp(classid, "java:", 5) == 0) {
+        fSimulatedCode = PL_strdup(classid + 5); // skip "java:"
+        oji_StandardizeCodeAttribute(fSimulatedCode);
+        return fSimulatedCode;
+    }
+
+    // XXX what about "javaprogram:" and "javabean:"?
+    return NULL;
 }
 
 NS_METHOD_(const char *) 
