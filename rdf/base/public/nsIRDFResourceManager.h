@@ -30,6 +30,11 @@ class nsIRDFResource;
  * An RDF resource manager. This should be a singleton object, obtained
  * from the <tt>nsServiceManager</tt>.
  */
+
+// XXX This interface should be subsumed by a nsIRDFService interface
+// that includes some of the utility methods that are contained in
+// mozilla/rdf/base/src/rdfutil.h.
+
 class nsIRDFResourceManager : public nsISupports {
 public:
     /**
@@ -53,18 +58,18 @@ public:
     /**
      * Get the data source corresponding to the uri
      */ 
-    NS_IMETHOD GetDataSource(const char* uri, nsIRDFDataSource** dataSource);
+    NS_IMETHOD GetDataSource(const char* uri, nsIRDFDataSource** dataSource) = 0;
 
     /**
      * Get the database corresponding to the uri sequence
      */ 
-    NS_IMETHOD GetDatabase(const char** uri, nsIRDFDataBase** dataBase);
+    NS_IMETHOD GetDatabase(const char** uri, nsIRDFDataBase** dataBase) = 0;
 
     /**
      * Get the database aggregating all the stuff that Navigator sees as a default,
      * including a per window store.
      */ 
-    NS_IMETHOD GetBrowserDatabase(nsIRDFDataBase** dataBase);
+    NS_IMETHOD GetBrowserDatabase(nsIRDFDataBase** dataBase) = 0;
 
 };
 
