@@ -20,6 +20,7 @@
  * Contributor(s):
  *  Robert Ginda, rginda@ndcico.com, original author
  *  Chiaki Koufugata chiaki@mozilla.gr.jp UI i18n 
+ *  Samuel Sieb, samuel@sieb.net, MIRC color code, munger menu, and various
  */
 
 if (DEBUG)
@@ -150,6 +151,7 @@ function initStatic()
     setMenuCheck ("menu-dmessages",
                   client.eventPump.getHook ("event-tracer").enabled);
     setMenuCheck ("menu-munger-global", !client.munger.enabled);
+    setMenuCheck ("menu-colors", client.enableColors);
 
     setupMungerMenu(client.munger);
 
@@ -346,6 +348,13 @@ function initHost(obj)
                         "chatzilla-teletype");
     obj.munger.addRule ("underline", /(?:\s|^)(\_[^_,.()]*\_)(?:[\s.,]|$)/,
                         "chatzilla-underline");
+    obj.munger.addRule (".mirc-colors", /(\x03(\d{1,2}|)(,\d{1,2}|))/,
+                         mircChangeColor);
+    obj.munger.addRule (".mirc-bold", /(\x02)/, mircToggleBold);
+    obj.munger.addRule (".mirc-underline", /(\x1f)/, mircToggleUnder);
+    obj.munger.addRule (".mirc-color-reset", /(\x0f)/, mircResetColor);
+    obj.munger.addRule (".mirc-reverse", /(\x16)/, mircReverseColor);
+    obj.munger.addRule ("ctrl-char", /([\x01-\x1f])/, showCtrlChar);
     obj.munger.addRule ("word-hyphenator",
                         new RegExp ("(\\S{" + client.MAX_WORD_DISPLAY + ",})"),
                         insertHyphenatedWord);
@@ -509,6 +518,101 @@ function insertSmiley (emoticon, containerTag)
     
 }
 
+function mircChangeColor (colorInfo, containerTag, data)
+{
+    if (!client.enableColors)
+        return;
+
+    var ary = colorInfo.match (/.(\d{1,2}|)(,(\d{1,2})|)/);
+
+    var fgColor = ary[1];
+    if (fgColor > 16)
+        fgColor &= 16;
+    switch (fgColor.length)
+    {
+        case 1:
+            data.currFgColor = "0" + fgColor;
+            break;
+        case 2:
+            data.currFgColor = fgColor;
+            break;
+    }
+    if (fgColor == 1)
+        delete data.currFgColor;
+    if (ary.length >= 4)
+    {
+        bgColor = ary[3];
+        if (bgColor > 16)
+            bgColor &= 16;
+        if (bgColor.length == 1)
+            data.currBgColor = "0" + bgColor;
+        else
+            data.currBgColor = bgColor;
+        if (bgColor == 0)
+            delete data.currBgColor;
+    }
+    data.hasColorInfo = true;
+}
+
+function mircToggleBold (colorInfo, containerTag, data)
+{
+    if (!client.enableColors)
+        return;
+
+    data.isBold = !data.isBold;
+    data.hasColorInfo = true;
+}
+
+function mircToggleUnder (colorInfo, containerTag, data)
+{
+    if (!client.enableColors)
+        return;
+
+    data.isUnderline = !data.isUnderline;
+    data.hasColorInfo = true;
+}
+
+function mircResetColor (text, containerTag, data)
+{
+    if (!client.enableColors || !data.hasColorInfo)
+        return;
+
+    delete data.currFgColor;
+    delete data.currBgColor;
+    delete data.isBold;
+    delete data.isUnder;
+    delete data.hasColorInfo;
+}
+
+function mircReverseColor (text, containerTag, data)
+{
+    if (!client.enableColors)
+        return;
+
+    var tempColor = data.currFgColor;
+    if (data.currBgColor)
+        data.currFgColor = data.currBgColor;
+    else
+        data.currFgColor = "00";
+    if (tempColor)
+        data.currBgColor = tempColor;
+    else
+        data.currBgColor = "01";
+    data.hasColorInfo = true;
+}
+
+function showCtrlChar(c, containerTag)
+{
+    var span = document.createElementNS ("http://www.w3.org/1999/xhtml",
+                                         "html:span");
+    span.setAttribute ("class", "chatzilla-control-char");
+    var ctrlStr = c.charCodeAt(0).toString(16);
+    if (ctrlStr.length < 2)
+        ctrlStr = "0" + ctrlStr;
+    span.appendChild (document.createTextNode ("0x" + ctrlStr));
+    containerTag.appendChild (span);
+}
+
 function insertHyphenatedWord (longWord, containerTag)
 {
     var wordParts = splitLongWord (longWord, client.MAX_WORD_DISPLAY);
@@ -517,10 +621,9 @@ function insertHyphenatedWord (longWord, containerTag)
         containerTag.appendChild (document.createTextNode (wordParts[i]));
         if (i != wordParts.length)
         {
-            var img = document.createElementNS ("http://www.w3.org/1999/xhtml",
-                                                "html:img");
-            img.setAttribute ("style", "border: none; width: 0px; height: 0px;");
-            containerTag.appendChild (img);
+            var wbr = document.createElementNS ("http://www.w3.org/1999/xhtml",
+                                                "html:wbr");
+            containerTag.appendChild (wbr);
         }
     }
 }
@@ -833,15 +936,18 @@ function setupMungerMenu(munger)
     var menu = document.getElementById("menu-munger");
     for (var entry in munger.entries)
     {
-        var menuitem = document.createElement("menuitem");
-        menuitem.setAttribute ("label", munger.entries[entry].description);
-        menuitem.setAttribute ("id", "menu-munger-" + entry);
-        menuitem.setAttribute ("type", "checkbox");
-        if (munger.entries[entry].enabled)
-            menuitem.setAttribute ("checked", "true");
-        menuitem.setAttribute ("oncommand", "onToggleMungerEntry('" + 
-                               entry + "');");
-        menu.appendChild(menuitem);
+        if (entry[0] != ".")
+        {
+            var menuitem = document.createElement("menuitem");
+            menuitem.setAttribute ("label", munger.entries[entry].description);
+            menuitem.setAttribute ("id", "menu-munger-" + entry);
+            menuitem.setAttribute ("type", "checkbox");
+            if (munger.entries[entry].enabled)
+                menuitem.setAttribute ("checked", "true");
+            menuitem.setAttribute ("oncommand", "onToggleMungerEntry('" + 
+                                   entry + "');");
+            menu.appendChild(menuitem);
+        }
     }
 }
     
