@@ -98,6 +98,11 @@
               oncommand="gPermissionManager.onPermissionDeleted();"/>
       <button id="removeAllPermissions" label="&removeallpermissions.label;" 
               oncommand="gPermissionManager.onAllPermissionsDeleted();"/>
+      <spacer flex="1"/>
+#ifndef XP_MACOSX
+      <button oncommand="close();"
+              label="&button.close.label;" accesskey="&button.close.accesskey;"/>
+#endif
     </hbox>
     <resizer dir="bottomright"/>
   </hbox>

@@ -35,14 +35,25 @@
 # ***** END LICENSE BLOCK *****
 
 var gPrivacyPane = {
+  _inited: false,
+  tabSelectionChanged: function (event)
+  {
+    if (event.target.localName != "tabpanels" || !this._inited)
+      return;
+    var privacyPrefs = document.getElementById("privacyPrefs");
+    var preference = document.getElementById("browser.preferences.privacy.selectedTabIndex");
+    preference.valueFromPreferences = privacyPrefs.selectedIndex;
+  },
+  
   _sanitizer: null,
   init: function ()
   {
-    var itemList = document.getElementById("itemList");
-    var lastSelected = 0;
-    if (itemList.hasAttribute("lastSelected"))
-      lastSelected = parseInt(itemList.getAttribute("lastSelected"));
-    itemList.selectedIndex = lastSelected;
+    this._inited = true;
+    var privacyPrefs = document.getElementById("privacyPrefs");
+    var preference = document.getElementById("browser.preferences.privacy.selectedTabIndex");
+    if (preference.valueFromPreferences === null)
+      return;
+    privacyPrefs.selectedIndex = preference.valueFromPreferences;
     
     // Update the clear buttons
     if (!this._sanitizer)
@@ -69,7 +80,8 @@ var gPrivacyPane = {
     for (var i = 0; i < buttonCount; ++i)
       buttons[i].disabled = !this._sanitizer.canClearItem(buttons[i].getAttribute("item"));
   },
-    
+
+#if 0
   onItemSelect: function ()
   {
     var itemList = document.getElementById("itemList");
@@ -78,7 +90,7 @@ var gPrivacyPane = {
     itemList.setAttribute("lastSelected", itemList.selectedIndex);
     document.persist("itemList", "lastSelected");
   },
-  
+#endif
   showSanitizeSettings: function ()
   {
     document.documentElement.openSubDialog("chrome://browser/content/preferences/sanitize.xul",

@@ -35,15 +35,24 @@
 # ***** END LICENSE BLOCK *****
 
 var gAdvancedPane = {
+  _inited: false,
   init: function ()
   {
+    this._inited = true;
+    var advancedPrefs = document.getElementById("advancedPrefs");
+    var preference = document.getElementById("browser.preferences.advanced.selectedTabIndex");
+    if (preference.value === null)
+      return;
+    advancedPrefs.selectedIndex = preference.value;
   },
   
-  updateSelectedTab: function ()
+  tabSelectionChanged: function ()
   {
+    if (!this._inited)
+      return;
     var advancedPrefs = document.getElementById("advancedPrefs");
-    advancedPrefs.setAttribute("selectedIndex", advancedPrefs.selectedIndex);
-    document.persist("advancedPrefs", "selectedIndex");
+    var preference = document.getElementById("browser.preferences.advanced.selectedTabIndex");
+    preference.valueFromPreferences = advancedPrefs.selectedIndex;
   },
   
   updateButtons: function (aButtonID, aPreferenceID)
@@ -105,39 +114,6 @@ var gAdvancedPane = {
     return undefined;
   },
   
-  _lastForceLinksMode: 3,
-  writeWindowLinksBehavior: function ()
-  {
-    var tabbedOpenForce = document.getElementById("tabbedOpenForce");
-    if (!tabbedOpenForce.checked) 
-      return 2;
-    
-    var tabbedWindowLinks = document.getElementById("tabbedWindowLinks");
-    this._lastForceLinksMode = parseInt(tabbedWindowLinks.value)
-    return this._lastForceLinksMode;
-  },
-  
-  readForceLinks: function ()
-  {
-    var preference = document.getElementById("browser.link.open_newwindow");
-    var tabbedWindowLinks = document.getElementById("tabbedWindowLinks");
-    tabbedWindowLinks.disabled = preference.value == 2;
-    return preference.value != 2;
-  },
-  
-  readForceLinksMode: function ()
-  {
-    var preference = document.getElementById("browser.link.open_newwindow");
-    return preference.value != 2 ? preference.value : this._lastForceLinksMode;
-  },
-  
-  updateWindowLinksBehavior: function ()
-  {
-    var preference = document.getElementById("app.update.autoInstallEnabled");
-    
-    return undefined;
-  },
-  
   checkForUpdates: function (aType)
   {
     var updates = Components.classes["@mozilla.org/updates/update-service;1"]
@@ -151,6 +127,6 @@ var gAdvancedPane = {
   {
     document.documentElement.openSubDialog("chrome://browser/content/preferences/languages.xul",
                                            "", null);  
-  },
+  }
 };
 

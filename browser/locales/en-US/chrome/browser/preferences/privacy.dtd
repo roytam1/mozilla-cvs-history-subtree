@@ -5,7 +5,7 @@
 
 <!ENTITY  privacy.label               "Privacy">
 
-<!ENTITY  itemHistory.label           "Browsing History">
+<!ENTITY  itemHistory.label           "History">
 <!ENTITY  rememberPages.label         "Remember visited pages for the last">
 <!ENTITY  rememberPages.accesskey     "R">
 <!ENTITY  rememberDays.label          "days">
@@ -19,10 +19,11 @@
 <!ENTITY  clearFormData.label         "Clear Saved Form Data Now">
 <!ENTITY  clearFormData.accesskey     "F">
 
-<!ENTITY  itemPasswords.label         "Saved Passwords">
+<!ENTITY  itemPasswords.label         "Passwords">
 <!ENTITY  savedPasswords.intro        "&brandShortName; can remember login information for web pages so that you do not need to re-enter your login details every time you visit.">
 <!ENTITY  enablePasswords.label       "Remember Passwords">
 <!ENTITY  enablePasswords.accesskey   "P">
+<!ENTITY  masterPassword.intro        "When set, the Master Password protects all your passwords - but you must enter it once per session.">
 <!ENTITY  setMasterPassword.label     "Master Password">
 <!ENTITY  setMasterPassword.accesskey "M">
 <!ENTITY  viewPasswords.label         "View Saved Passwords">

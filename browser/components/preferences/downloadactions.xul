@@ -112,6 +112,11 @@
       <button id="editFileHandler"
               label="&edit.label;" accesskey="&edit.accesskey;"
               oncommand="gDownloadActionsWindow.editFileHandler();"/>
+      <spacer flex="1"/>
+#ifndef XP_MACOSX
+      <button oncommand="close();"
+              label="&button.close.label;" accesskey="&button.close.accesskey;"/>
+#endif
     </hbox>
     <resizer dir="bottomright"/>
   </hbox>

@@ -56,6 +56,9 @@
       <preference id="network.cookie.blockFutureCookies"  name="network.cookie.blockFutureCookies"  type="bool"/>
       <preference id="network.cookie.lifetimePolicy"      name="network.cookie.lifetimePolicy"      type="int"/>
       <preference id="browser.cache.disk.capacity"        name="browser.cache.disk.capacity"        type="int"/>
+      <preference id="browser.preferences.privacy.selectedTabIndex"
+                  name="browser.preferences.privacy.selectedTabIndex"
+                  type="int"/>
     </preferences>
     
     <stringbundle id="bundlePreferences" src="chrome://browser/locale/preferences/preferences.properties"/>
@@ -65,6 +68,154 @@
 
     <description>&privacy.intro;</description>
     <separator class="thin"/>
+    <tabbox id="privacyPrefs" flex="1"
+            onselect="gPrivacyPane.tabSelectionChanged(event);">
+      <tabs>
+        <tab label="&itemHistory.label;"/>
+        <tab label="&itemFormData.label;"/>
+        <tab label="&itemPasswords.label;"/>
+        <tab label="&itemDownloads.label;"/>
+        <tab label="&itemCookies.label;"/>
+        <tab label="&itemCache.label;"/>
+      </tabs>
+      <tabpanels flex="1">
+        <tabpanel orient="vertical">
+          <hbox align="center">
+            <label control="historyDays" accesskey="&rememberPages.accesskey;">&rememberPages.label;</label>
+            <textbox id="historyDays" size="2" preference="browser.history_expire_days"/>
+            <label>&rememberDays.label;</label>
+          </hbox>
+          <separator flex="1"/>
+          <hbox pack="end">
+            <button label="&clearHistory.label;" accesskey="&clearHistory.accesskey;"
+                    oncommand="gPrivacyPane.clear(this);" item="history"/>
+          </hbox>
+        </tabpanel>
+        <tabpanel orient="vertical">
+          <description>&savedFormData.intro;</description>
+          <vbox align="start">
+            <checkbox id="saveFormHistory" preference="browser.formfill.enable"
+                      label="&enableFormFill.label;" accesskey="&enableFormFill.accesskey;"/>
+          </vbox>
+          <separator flex="1"/>
+          <hbox pack="end">
+            <button label="&clearFormData.label;" accesskey="&clearFormData.accesskey;"
+                    oncommand="gPrivacyPane.clear(this);" item="formdata"/>
+          </hbox>
+        </tabpanel>
+        <tabpanel orient="vertical">
+          <description>&savedPasswords.intro;</description>
+          <hbox>
+            <checkbox id="savePasswords" 
+                      label="&enablePasswords.label;" accesskey="&enablePasswords.accesskey;"
+                      preference="signon.rememberSignons"/>
+          </hbox>
+          <separator/>
+          <hbox align="center">
+            <description flex="1">&masterPassword.intro;</description>
+            <!-- XXXben - check for keychain access use -->
+            <button id="setMasterPassword" 
+                    label="&setMasterPassword.label;" accesskey="&setMasterPassword.accesskey;"
+                    oncommand="gPrivacyPane.changeMasterPassword();"/>
+          </hbox>
+          <separator flex="1"/>
+          <hbox>
+            <button label="&viewPasswords.label;" accesskey="&viewPasswords.accesskey;"
+                    oncommand="gPrivacyPane.viewPasswords();"/>
+          </hbox>
+        </tabpanel>
+        <tabpanel orient="vertical">
+          <description>&downloadManager.intro;</description>
+          <separator class="thin"/>
+          <hbox align="center">
+            <label accesskey="&downloadsRetentionPolicy.accesskey;" 
+                   control="downloadsRetentionPolicy">&downloadsRetentionPolicy.label;</label> 
+            <menulist id="downloadsRetentionPolicy" 
+                      preference="browser.download.manager.retention">
+              <menupopup>
+                <menuitem value="0" label="&downloadsRemoveImmediately.label;"/>
+                <menuitem value="1" label="&downloadsRemoveExit.label;"/>
+                <menuitem value="2" label="&downloadsRemoveManually.label;"/>
+              </menupopup>
+            </menulist>
+          </hbox>
+          <separator flex="1"/>
+          <hbox>
+            <button label="&viewDownloads.label;" accesskey="&viewDownloads.accesskey;"
+                    oncommand="gPrivacyPane.viewDownloads();"/>
+            <spring flex="1"/>
+            <button label="&clearDownloads.label;" accesskey="&clearDownloads.accesskey;"
+                    oncommand="gPrivacyPane.clear(this);" item="downloads"/>
+          </hbox>
+        </tabpanel>
+        <tabpanel orient="vertical">
+          <!-- Cookies are considered a distinct "privacy" item because they are 
+              created without user interaction, unlike Software Installation, 
+              Popup and Image whitelists -->
+          <vbox>
+            <description>&cookies.intro;</description>
+            <hbox>
+              <checkbox id="enableCookies" preference="network.cookie.cookieBehavior"
+                        label="&enableCookies.label;" accesskey="&enableCookies.accesskey;"
+                        onpreferenceread="return gPrivacyPane.readEnableCookiesPref();"
+                        onpreferencewrite="return gPrivacyPane.writeEnableCookiesPref();"/>
+              <button id="cookieExceptions" oncommand="gPrivacyPane.viewCookieExceptions();"
+                      label="&exceptions.label;" accesskey="&cookieExceptions.accesskey;"/>
+            </hbox>
+            <vbox align="start">
+              <checkbox id="enableCookiesForOriginating" class="indent"
+                        label="&enableCookiesForOriginating.label;"
+                        accesskey="&enableCookiesForOriginating.accesskey;"
+                        preference="network.cookie.cookieBehavior"
+                        onpreferenceread="return gPrivacyPane.readEnableRestrictedPref();"
+                        onpreferencewrite="return gPrivacyPane.writeEnableCookiesPref();"/>
+              <checkbox id="enableCookiesNotRemoved" class="indent"
+                        label="&enableCookiesNotRemoved.label;"
+                        accesskey="&enableCookiesNotRemoved.accesskey;"
+                        preference="network.cookie.blockFutureCookies"/>
+              <separator class="thin"/>
+              <hbox align="center" class="indent">
+                <label control="networkCookieLifetime" 
+                       accesskey="&keepCookies.accesskey;">&keepCookies.label;</label>
+                <menulist id="networkCookieLifetime" 
+                          preference="network.cookie.lifetimePolicy">
+                  <menupopup>
+                    <menuitem value="0" label="&acceptNormally.label;"/>
+                    <menuitem value="2" label="&acceptForSession.label;"/>
+                    <menuitem value="1" label="&askAboutCookies.label;"/>
+                  </menupopup>
+                </menulist>
+              </hbox>
+            </vbox>
+          </vbox>
+          <separator flex="1"/>
+          <separator/>
+          <hbox>
+            <button label="&viewCookies.label;" accesskey="&viewCookies.accesskey;"
+                    oncommand="gPrivacyPane.viewCookies();"/>
+            <spring flex="1"/>
+            <button label="&clearCookies.label;" accesskey="&clearCookies.accesskey;"
+                    oncommand="gPrivacyPane.clear(this);" item="cookies"/>
+          </hbox>
+        </tabpanel>
+        <tabpanel orient="vertical">
+          <description>&cache.intro;</description>
+          <hbox align="center">
+            <label accesskey="&cacheUseUpTo.accesskey;" control="cacheSize">&cacheUseUpTo.label;</label>
+            <textbox id="cacheSize" size="2" preference="browser.cache.disk.capacity"
+                     onpreferenceread="return gPrivacyPane.readCacheSizePref();"
+                     onpreferencewrite="return gPrivacyPane.writeCacheSizePref();"/>
+            <label>&cacheSize.label;</label>
+          </hbox>
+          <separator flex="1"/>
+          <hbox pack="end">
+            <button label="&clearCache.label;" accesskey="&clearCache.accesskey;"
+                    oncommand="gPrivacyPane.clear(this);" item="cache"/>
+          </hbox>
+        </tabpanel>
+      </tabpanels>
+    </tabbox>    
+#if 0
     <hbox>
       <listbox id="itemList" seltype="single"
                onselect="gPrivacyPane.onItemSelect();"
@@ -215,13 +366,13 @@
         </groupbox>
       </deck>
     </hbox>
+#endif
     <separator class="thin"/>
     <hbox align="center">
       <button label="&sanitizeSettings.label;" accesskey="&sanitizeSettings.accesskey;"
               oncommand="gPrivacyPane.showSanitizeSettings();"/>
       <description flex="1">&sanitize.intro;</description>
     </hbox>
-    <separator/>
     <separator/>
   </prefpane>
 

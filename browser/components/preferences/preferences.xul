@@ -79,6 +79,8 @@
               src="chrome://browser/content/preferences/privacy.xul"/>
     <prefpane id="paneContent" label="&paneContent.title;"
               src="chrome://browser/content/preferences/content.xul"/>
+    <prefpane id="paneTabs" label="&paneTabs.title;"
+              src="chrome://browser/content/preferences/tabs.xul"/>
     <prefpane id="paneDownloads" label="&paneDownloads.title;"
               src="chrome://browser/content/preferences/downloads.xul"/>
     <prefpane id="paneAdvanced" label="&paneAdvanced.title;"

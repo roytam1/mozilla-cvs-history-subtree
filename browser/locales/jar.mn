@@ -51,6 +51,7 @@
     locale/browser/preferences/preferences.properties (@AB_CD@/chrome/browser/preferences/preferences.properties)
     locale/browser/preferences/privacy.dtd            (@AB_CD@/chrome/browser/preferences/privacy.dtd)
     locale/browser/preferences/sanitize.dtd           (@AB_CD@/chrome/browser/preferences/sanitize.dtd)
+    locale/browser/preferences/tabs.dtd               (@AB_CD@/chrome/browser/preferences/tabs.dtd)
     locale/browser/pref/addPopup.properties        (@AB_CD@/chrome/browser/pref/addPopup.properties)
     locale/browser/pref/plugins.dtd                (@AB_CD@/chrome/browser/pref/plugins.dtd)
     locale/browser/pref/pref.dtd                   (@AB_CD@/chrome/browser/pref/pref.dtd)

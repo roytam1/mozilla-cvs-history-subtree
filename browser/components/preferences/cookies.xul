@@ -132,6 +132,11 @@
       <button id="removeAllCookies" disabled="true" 
               label="&button.removeallcookies.label;" accesskey="&button.removeallcookies.accesskey;"
               oncommand="gCookiesWindow.deleteAllCookies();"/>
+      <spacer flex="1"/>
+#ifndef XP_MACOSX
+      <button oncommand="close();"
+              label="&button.close.label;" accesskey="&button.close.accesskey;"/>
+#endif
     </hbox>
     <resizer dir="bottomright"/>
   </hbox>

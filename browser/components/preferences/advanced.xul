@@ -55,11 +55,6 @@
                   type="bool"/>
       <preference id="general.autoScroll"              name="general.autoScroll"              type="bool"/>
       <preference id="general.smoothScroll"            name="general.smoothScroll"            type="bool"/>
-      <preference id="browser.link.open_external"      name="browser.link.open_external"      type="int"/>
-      <preference id="browser.link.open_newwindow"     name="browser.link.open_newwindow"     type="int"/>
-      <preference id="browser.tabs.autoHide"           name="browser.tabs.autoHide"           type="bool"/>
-      <preference id="browser.tabs.loadInBackground"   name="browser.tabs.loadInBackground"   type="bool"/>
-      <preference id="browser.tabs.warnOnClose"        name="browser.tabs.warnOnClose"        type="bool"/>
       <preference id="app.update.autoUpdateEnabled"    name="app.update.autoUpdateEnabled"    type="bool"/>
       <preference id="app.update.autoInstallEnabled"   name="app.update.autoInstallEnabled"   type="bool"/>
       <preference id="app.update.autoInstallMode"      name="app.update.autoInstallMode"      type="int"/>
@@ -70,14 +65,18 @@
       <preference id="security.enable_ssl3"            name="security.enable_ssl3"            type="bool"/>
       <preference id="security.enable_tls"             name="security.enable_tls"             type="bool"/>
       <preference id="security.default_personal_cert"  name="security.default_personal_cert"  type="string"/>
+      
+      <preference id="browser.preferences.advanced.selectedTabIndex"
+                  name="browser.preferences.advanced.selectedTabIndex"
+                  type="int"/>
     </preferences>
     
     <script type="application/x-javascript" src="chrome://browser/content/preferences/advanced.js"/>
 
-    <tabbox id="advancedPrefs" flex="1" persist="selectedIndex">
-      <tabs onselect="gAdvancedPane.updateSelectedTab();">
+    <tabbox id="advancedPrefs" flex="1"
+            onselect="gAdvancedPane.tabSelectionChanged();">
+      <tabs>
         <tab label="&generalTab.label;"/>
-        <tab label="&tabsTab.label;"/>
         <tab label="&updateTab.label;"/>
         <tab label="&securityTab.label;"/>
       </tabs>
@@ -109,36 +108,6 @@
                       oncommand="gAdvancedPane.showLanguages();"/>
             </hbox>
           </groupbox>
-        </tabpanel>
-        <tabpanel orient="vertical">
-          <groupbox align="start">
-            <caption label="&openExternalLinksIn.label;"/>
-            <radiogroup id="tabbedExternalLinks"
-                        preference="browser.link.open_external">
-              <radio label="&newWindow.label;" value="2"/>
-              <radio label="&newTabInRecentWindow.label;" value="3"/>
-              <radio label="&recentWindowOrTab.label;" value="1"/>
-            </radiogroup>
-          </groupbox>
-          <vbox align="start">
-            <checkbox id="tabbedOpenForce" label="&forceNewWindowLinks.label;"
-                      preference="browser.link.open_newwindow"
-                      onpreferencewrite="return gAdvancedPane.writeWindowLinksBehavior();"
-                      onpreferenceread="return gAdvancedPane.readForceLinks();"/>
-            <radiogroup id="tabbedWindowLinks" class="indent"
-                        preference="browser.link.open_newwindow"
-                        onpreferencewrite="return gAdvancedPane.writeWindowLinksBehavior();"
-                        onpreferenceread="return gAdvancedPane.readForceLinksMode();">
-              <radio label="&sameTabOrWindow.label;" value="1"/>
-              <radio label="&newTab.label;" value="3"/>
-            </radiogroup>
-            <checkbox id="hideTabBar" label="&hideTabBar.label;"
-                      preference="browser.tabs.autoHide"/>
-            <checkbox id="loadInBackground" label="&loadInBackground.label;"
-                      preference="browser.tabs.loadInBackground" reversed="true"/>
-            <checkbox id="warnOnClose" label="&warnOnClose.label;"
-                      preference="browser.tabs.warnOnClose"/>
-          </vbox>
         </tabpanel>
         <tabpanel orient="vertical">
           <vbox>
