@@ -1,0 +1,43 @@
+# ac = Options for 'configure' (same as command-line options).
+# mk = Options for client.mk.
+
+#build
+#mk_add_options MOZ_CVS_FLAGS="-q -z 6 -d :pserver:mozilla.BenB%bucksch.org@cvs.mozilla.org:/cvsroot"
+mk_add_options MOZ_MAKE_FLAGS=-j4
+
+#config
+#ac_add_options --enable-homedir=.beonex - broken?
+
+#tune
+mk_add_options MOZILLA_OFFICIAL=1
+mk_add_options BUILD_OFFICIAL=1
+ac_add_options --disable-tests
+ac_add_options --enable-optimize=-O2
+ac_add_options --disable-debug
+ac_add_options --disable-dtd-debug
+ac_add_options --enable-strip
+ac_add_options --enable-strip-libs
+ac_add_options --enable-elf-dynstr-gc
+#export CPPFLAGS="-fomit-frame-pointer" - that crashes Mozilla at startup!
+#export CPPFLAGS="-O3 -funroll-loops -fexpensive-optimizations -fstrength-reduce -fschedule-insns2 -frerun-cse-after-loop -fthread-jumps -fcse-follow-jumps -fcse-skip-blocks" - check
+#export CFLAGS="-mcpu=pentiumpro -march=pentium"
+export CPPFLAGS="-mcpu=pentiumpro -march=pentiumpro"
+export CFLAGS=$CPPFLAGS
+export CXXFLAGS=$CPPFLAGS
+
+#system
+ac_add_options --without-system-nspr
+ac_add_options --with-system-zlib
+ac_add_options --with-system-png
+ac_add_options --with-system-jpeg
+
+#extras
+ac_add_options --enable-crypto
+#ac_add_options --enable-ldap-experimental
+#ac_add_options --with-extensions= -- see configure
+#ac_add_options --with-java-supplement -- allows Mozilla components written in Java
+#ac_add_options --enable-ipv6
+ac_add_options --enable-mathml
+#ac_add_options --enable-svg - not stable yet
+#ac_add_options --enable-zlib - necessary?
+ac_add_options --disable-jsd
