@@ -1340,7 +1340,7 @@ void StartIMAPConnection(TNavigatorImapConnection *imapConnection)
                 "IMAP4",
                 (HG26227 IMAP4_PORT),
                 &ce->socket,
-                HG27326,
+                HG27327,
                 imapConnection->GetTCPConData(),
                 ce->window_id,
                 &ce->URL_s->error_msg,
@@ -1397,7 +1397,7 @@ void FinishIMAPConnection(void *blockingConnectionVoid,
 		
     ce->status = NET_FinishConnect(ce->URL_s->address,
                 "IMAP4",
-                (HG72523 IMAP4_PORT),
+                (HG72524 IMAP4_PORT),
                 &ce->socket,
                 imapConnection->GetTCPConData(),
                 ce->window_id,
@@ -1430,7 +1430,7 @@ void FinishIMAPConnection(void *blockingConnectionVoid,
 		NET_TotalNumberOfOpenConnections--;
 		NET_ClearConnectSelect(ce->window_id, ce->socket);
 		TRACEMSG(("Closing and clearing socket ce->socket: %d", ce->socket));
-		net_graceful_shutdown(ce->socket, HG73653);
+		net_graceful_shutdown(ce->socket, HG73654);
 		PR_Close(ce->socket);
         ce->socket = NULL;
         imapConnection->SetIOSocket(ce->socket);

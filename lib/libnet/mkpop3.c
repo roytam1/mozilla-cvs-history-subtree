@@ -23,6 +23,7 @@
  */
 
 /* Please leave outside of ifdef for windows precompiled headers */
+#include "rosetta.h"
 #include "mkutils.h"
 
 /* A more guaranteed way of making sure that we never get duplicate messages
@@ -52,7 +53,7 @@ and change the POP3_QUIT_RESPONSE state to flush the newly committed deletes. */
 #include "msgcom.h"
 #include "msgnet.h"
 #include "secnav.h"
-#include "ssl.h"
+#include HG09438
 
 #include "xp_error.h"
 #include "xpgetstr.h"

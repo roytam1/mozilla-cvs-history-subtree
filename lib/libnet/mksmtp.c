@@ -37,7 +37,7 @@
 #include "xp_time.h"
 #include "xp_thrmo.h"
 #include "merrors.h"
-#include "ssl.h"
+#include HG23535
 #include "imap.h"
 
 #include "xp_error.h"
@@ -1047,12 +1047,13 @@ HG61365
 
 		   One additional parameter is allowed, which does not correspond
 		   to a visible field: "newshost".  This is the NNTP host (and port)
-		   to connect to if newsgroups are specified.  If the value of this
-		   field ends in "/secure", then SSL will be used.
+		   to connect to if newsgroups are specified.  
 
 		   Each parameter may appear only once, but the order doesn't
 		   matter.  All values must be URL-encoded.
 		 */
+		HG27655
+
 		char *parms = NET_ParseURL (CE_URL_S->address, GET_SEARCH_PART);
 		char *rest = parms;
 		char *from = 0;						/* internal only */
@@ -1239,11 +1240,7 @@ HG61365
 		  {
 			char *prefix = "news://";
 			char *slash = XP_STRRCHR (newshost, '/');
-			if (slash && !strcasecomp (slash, "/secure"))
-			  {
-				*slash = 0;
-				prefix = "snews://";
-			  }
+			HG83763
 			newspost_url = (char *) XP_ALLOC (XP_STRLEN (prefix) +
 											  XP_STRLEN (newshost) + 10);
 			if (newspost_url)
@@ -1255,12 +1252,7 @@ HG61365
 		  }
 		else
 		  {
-			XP_Bool newsServerIsSecure = FALSE;
-			PREF_GetBoolPref("news.server_is_secure", &newsServerIsSecure);
-
-			if (newsServerIsSecure)
-				newspost_url = XP_STRDUP("snews:");
-			else
+			HG35353
 				newspost_url = XP_STRDUP ("news:");
 		  }
 
@@ -1310,7 +1302,7 @@ HG61365
 /*
 	We have connected to the mail relay and the type of authorization/login required
 	has been established. Before we actually send our name and password check
-	and see if we should or must turn the connection to secure mode.
+	and see if we should or must turn the connection to safer mode.
 */
 
 PRIVATE int

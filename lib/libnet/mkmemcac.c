@@ -1869,7 +1869,7 @@ PUT_PART(buffer);
 		  }
 		TABLE_BOTTOM;
 
-		HG27326
+		HG27328
 
 		XP_STRCPY(buffer, "\n<P>\n");
 		PUT_PART(buffer);
