@@ -114,14 +114,6 @@ extern const char * gBinDir; // defined in WrapperFactoryImpl.cpp
 #endif // XP_PC
 
 //
-// Functions to hook into mozilla
-// 
-
-extern "C" void NS_SetupRegistry();
-extern nsresult NS_AutoregisterComponents();
-
-
-//
 // Local functions
 //
 
@@ -455,7 +447,6 @@ void DoMozInitialization(WebShellInitContext * initContext)
         // It is vitally important to call NS_InitEmbedding before calling
         // anything else.
         NS_InitEmbedding(pathFile, nsnull);
-        //        NS_SetupRegistry();
         rv = NS_GetGlobalComponentManager(&gComponentManager);
         if (NS_FAILED(rv)) {
             ::util_ThrowExceptionToJava(env, "NS_GetGlobalComponentManager() failed.");
@@ -471,8 +462,6 @@ void DoMozInitialization(WebShellInitContext * initContext)
         gComponentManager->RegisterComponentLib(kSHistoryCID, nsnull, 
                                                 nsnull, APPSHELL_DLL, 
                                                 PR_FALSE, PR_FALSE);
-        NS_AutoregisterComponents();
-
         // handle the profile manager nonsense
         nsCOMPtr<nsICmdLineService> cmdLine =do_GetService(kCmdLineServiceCID);
         nsCOMPtr<nsIProfile> profile = do_GetService(NS_PROFILE_CONTRACTID);

@@ -54,7 +54,6 @@ CPPSRCS = \
 	RDFTreeNode.cpp \
 	WindowControlImpl.cpp \
 	WrapperFactoryImpl.cpp \
-	nsSetupRegistry.cpp \
 	motif/MotifBrowserControlCanvas.cpp \
 	motif/gtkmozilla.cpp \
 	$(NULL)
@@ -104,14 +103,7 @@ PACKAGE_LIB=$(PACKAGE_DIR)/lib
 PACKAGE_EXAMPLE=$(PACKAGE_DIR)/example
 endif # PACKAGE_BUILD
 
-export:: linkSetupRegistry
-
-linkSetupRegistry:
-	rm -f nsSetupRegistry.cpp
-	ln -s $(DEPTH)/xpfe/bootstrap/nsSetupRegistry.cpp .
-
 clobber_all::
-	rm -f nsSetupRegistry.cpp
 
 buildRunems:
 ifeq ($(BAL_INTERFACE),)
