@@ -230,6 +230,7 @@ nsChildView::nsChildView() : nsBaseWidget() , nsDeleteObserved(this)
   SetForegroundColor(NS_RGB(0, 0, 0));
 
   mPluginPort = nsnull;
+  mVisRgn = nsnull;
 
   AcceptFocusOnClick(PR_TRUE);
 }
@@ -261,6 +262,12 @@ nsChildView::~nsChildView()
   NS_IF_RELEASE(mFontMetrics);
   
   delete mPluginPort;
+
+  if (mVisRgn)
+  {
+    DisposeRgn(mVisRgn);
+    mVisRgn = nsnull;
+  }
 }
 
 NS_IMPL_ISUPPORTS_INHERITED2(nsChildView, nsBaseWidget, nsIKBStateControl, nsIEventSink);
@@ -492,17 +499,14 @@ void* nsChildView::GetNativeData(PRUint32 aDataType)
       
     case NS_NATIVE_REGION:
     {
-#if 1
-      //FIXME - this will leak.
-      RgnHandle visRgn = ::NewRgn();
+      if (!mVisRgn)
+        mVisRgn = ::NewRgn();
       GrafPtr port = GetQuickDrawPort();
       //printf("asked for visrgn, port is %d\n", port);
       //QDDebugPrintPortInfo(port);
-      if (port)
-        ::GetPortVisibleRegion(GetQuickDrawPort(), visRgn);
-      retVal = (void*)visRgn;
-      //retVal = (void*)mVisRegion;
-#endif
+      if (port && mVisRgn)
+        ::GetPortVisibleRegion(GetQuickDrawPort(), mVisRgn);
+      retVal = (void*)mVisRgn;
       break;
     }
       
@@ -2377,8 +2381,7 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
 - (nsRect)sendCompositionEvent:(PRInt32) aEventType;
 {
 #ifdef DEBUG_IME
-  NSLog(@"****in sendCompositionEvent \n");
-  NSLog(@" type = %d\n", (aEventType);
+  NSLog(@"****in sendCompositionEvent; type = %d\n", aEventType);
 #endif
 
   // static void init_composition_event( *aEvent, int aType)
@@ -2400,9 +2403,8 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
 - (void)sendTextEvent:(PRUnichar*) aBuffer attributedString:(NSAttributedString*) aString  selectedRange:(NSRange)selRange
 {
 #ifdef DEBUG_IME
-  NSLog(@"****in sendTextEvent \n");
+  NSLog(@"****in sendTextEvent; string = %@\n", aString);
   NSLog(@" selRange = %d, %d\n", selRange.location, selRange.length);
-  NSLog(@" string = %@\n", aString;
 #endif
 
   nsTextEvent textEvent;
@@ -2428,10 +2430,9 @@ static void convertCocoaEventToMacEvent(NSEvent* cocoaEvent, EventRecord& macEve
 - (void)insertText:(id)insertString;
 {
 #if DEBUG_IME
-  NSLog(@"****in insertText\n");
+  NSLog(@"****in insertText: %@\n", insertString);
   NSLog(@" markedRange   = %d, %d\n", mMarkedRange.location, mMarkedRange.length);
   NSLog(@" selectedRange = %d, %d\n", mSelectedRange.location, mSelectedRange.length);
-  NSLog(@" insertString %@ \n", insertString);
 #endif
 
   if ( ! [insertString isKindOfClass:[NSAttributedString class]])
