@@ -64,6 +64,6 @@ pref("chimera.enable_plugins", true);
 
 // Identify Chimera in the UA string
 pref("general.useragent.vendor", "Chimera");
-pref("general.useragent.vendorSub", "0.6");
+pref("general.useragent.vendorSub", "0.6+");
 
 pref("network.dir.generate_html", true);
