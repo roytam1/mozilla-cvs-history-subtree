@@ -231,7 +231,6 @@ nsresult nsImapUrl::ParseUrl()
 	if (NS_SUCCEEDED(rv) && imapPartOfUrl)
 	{
 		ParseImapPart(imapPartOfUrl);
-		m_file = PL_strdup(imapPartOfUrl);
 		nsCRT::free(imapPartOfUrl);
 	}
 	nsXPIDLCString host;
