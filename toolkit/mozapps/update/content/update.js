@@ -984,6 +984,19 @@ var gRestartPage = {
 #endif
 
     document.documentElement.getButton("finish").focus();
+
+    // Create a re-reg chrome marker to tell the Chrome Registry to rebuild the
+    // Chrome Reg Datasource and overlayinfo directory on the next start since 
+    // we've upgraded in-place (and thus chrome.rdf's mtime is newer than the
+    // installed-chrome.txt file that was installed by the update process since
+    // chrome.rdf was flushed when the browser started, AFTER installed-chrome.txt
+    // was created.
+    var fileLocator = Components.classes["@mozilla.org/file/directory_service;1"]
+                                .getService(Components.interfaces.nsIProperties);
+    var file = fileLocator.get("AChrom", Components.interfaces.nsIFile);
+    file.append(".reregchrome");
+    if (!file.exists())
+      file.create(Components.interfaces.nsIFile.FILE_TYPE, 0644);
   }
 };
 

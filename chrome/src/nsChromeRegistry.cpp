@@ -2685,8 +2685,20 @@ nsChromeRegistry::CheckForNewChrome()
   nsInt64 listFileDate;
   (void)listFile->GetLastModifiedTime(&listFileDate.mValue);
 
-  if (listFileDate < chromeDate)
+  nsCOMPtr<nsILocalFile> reregFile;
+  rv = directoryService->Get(NS_APP_CHROME_DIR, NS_GET_IID(nsILocalFile), getter_AddRefs(reregFile));
+  if (NS_FAILED(rv))
+    return rv;
+  reregFile->Append(NS_LITERAL_STRING(".reregchrome"));
+
+  PRBool exists = PR_FALSE;
+  reregFile->Exists(&exists);
+
+  if (!exists && listFileDate < chromeDate)
     return NS_OK;
+
+  if (exists) 
+    reregFile->Remove(PR_FALSE);
 
   PRFileDesc *file;
   rv = listFile->OpenNSPRFileDesc(PR_RDONLY, 0, &file);
