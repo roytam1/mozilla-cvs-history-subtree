@@ -1587,7 +1587,12 @@ txXSLTProcessor::startElement(const String& aName,
                 format->mMethod = eXMLOutput;
             }
             mOutputHandler = aPs->getProcessorHelper()->getOutputHandler(format->mMethod);
+            if (!mOutputHandler) {
+                // XXX Error
+                return;
+            }
             mOutputHandler->setOutputFormat(format);
+            mResultHandler = mOutputHandler;
         }
         mHaveDocumentElement = MB_TRUE;
     }

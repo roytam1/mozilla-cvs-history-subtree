@@ -120,9 +120,8 @@ public:
     void logMessage(const String& aMessage);
     Document* createRTFDocument(txOutputMethod aMethod);
 
-    nsCOMPtr<txIMozillaXMLEventHandler> mMozillaOutputHandler;
-
 private:
+    nsCOMPtr<txIMozillaXMLEventHandler> mMozillaOutputHandler;
     nsCOMPtr<nsIDOMDocument> mSourceDocument;
     nsWeakPtr mObserver;
 };
