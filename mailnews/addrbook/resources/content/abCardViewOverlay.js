@@ -181,23 +181,25 @@ function DisplayCardViewPane(card)
     // email1 and display name always hidden when a mailing list.
     cvSetVisible(data.cvEmail1Box, false);
     cvSetVisible(data.cvDisplayName, false);
-    visible = HandleLink(data.cvListName, card.displayName, data.cvListNameBox, "mailto:") || visible;
+
+    visible = HandleLink(data.cvListName, card.displayName, data.cvListNameBox, "mailto:" + escape(GenerateAddressFromCard(card))) || visible;
   }
   else { 
     // listname always hidden if not a mailing list
     cvSetVisible(data.cvListNameBox, false);
     cvSetNodeWithLabel(data.cvDisplayName, zDisplayName, card.displayName);
-        visible = HandleLink(data.cvEmail1, card.primaryEmail, data.cvEmail1Box, "mailto:") || visible;
+    visible = HandleLink(data.cvEmail1, card.primaryEmail, data.cvEmail1Box, "mailto:" + card.primaryEmail) || visible;
   }
-        visible = HandleLink(data.cvEmail2, card.secondEmail, data.cvEmail2Box, "mailto:") || visible;
 
-	// Home section
-	visible = cvSetNode(data.cvHomeAddress, card.homeAddress);
-	visible = cvSetNode(data.cvHomeAddress2, card.homeAddress2) || visible;
-	visible = cvSetCityStateZip(data.cvHomeCityStZip, card.homeCity, card.homeState, card.homeZipCode) || visible;
-	visible = cvSetNode(data.cvHomeCountry, card.homeCountry) || visible;
+  visible = HandleLink(data.cvEmail2, card.secondEmail, data.cvEmail2Box, "mailto:" + card.secondEmail) || visible;
 
-  visible = HandleLink(data.cvHomeWebPage, card.webPage2, data.cvHomeWebPageBox, "") || visible;
+  // Home section
+  visible = cvSetNode(data.cvHomeAddress, card.homeAddress);
+  visible = cvSetNode(data.cvHomeAddress2, card.homeAddress2) || visible;
+  visible = cvSetCityStateZip(data.cvHomeCityStZip, card.homeCity, card.homeState, card.homeZipCode) || visible;
+  visible = cvSetNode(data.cvHomeCountry, card.homeCountry) || visible;
+
+  visible = HandleLink(data.cvHomeWebPage, card.webPage2, data.cvHomeWebPageBox, card.webPage2) || visible;
 
 	cvSetVisible(data.cvhHome, visible);
 	cvSetVisible(data.cvbHome, visible);
@@ -253,7 +255,7 @@ function DisplayCardViewPane(card)
 	visible = cvSetCityStateZip(data.cvWorkCityStZip, card.workCity, card.workState, card.workZipCode) || visible;
 	visible = cvSetNode(data.cvWorkCountry, card.workCountry) || visible;
 
-        visible = HandleLink(data.cvWorkWebPage, card.webPage1, data.cvWorkWebPageBox, "") || visible;
+        visible = HandleLink(data.cvWorkWebPage, card.webPage1, data.cvWorkWebPageBox, card.webPage1) || visible;
 
 	cvSetVisible(data.cvhWork, visible);
 	cvSetVisible(data.cvbWork, visible);
@@ -326,11 +328,11 @@ function cvSetVisible(node, visible)
 		node.setAttribute("collapsed", "true");
 }
 
-function HandleLink(node, value, box, prefix)
+function HandleLink(node, value, box, link)
 {
   var visible = cvSetNode(node, value);
   if (visible)
-    node.setAttribute('href', prefix + value);
+    node.setAttribute('href', link);
   cvSetVisible(box, visible);
 
   return visible;
