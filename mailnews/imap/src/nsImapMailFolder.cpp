@@ -3904,6 +3904,19 @@ nsImapMailFolder::OnStopRunningUrl(nsIURI *aUrl, nsresult aExitCode)
             break;
         case nsIImapUrl::nsImapRenameFolder:
             break;
+        case nsIImapUrl::nsImapDeleteAllMsgs:
+            if (NS_SUCCEEDED(aExitCode))
+            {
+              if (folderOpen)
+                UpdateFolder(aWindow);
+              else
+              {
+                ChangeNumPendingTotalMessages(-mNumPendingTotalMessages);
+                ChangeNumPendingUnread(-mNumPendingUnreadMessages);
+              }
+
+            }
+            break;
         default:
             break;
         }
