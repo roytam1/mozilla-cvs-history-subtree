@@ -1369,7 +1369,8 @@ nsHTMLInputElement::HandleDOMEvent(nsIPresContext* aPresContext,
                                                 aDOMEvent, aFlags,
                                                 aEventStatus);
 
-  if (aEvent->message == NS_FORM_INPUT) {
+  if (aEvent->message == NS_FORM_INPUT &&
+      !(aFlags & NS_EVENT_FLAG_SYSTEM_EVENT)) {
     if (mForm) {
       mForm->FireFormInputEvent();
     }
