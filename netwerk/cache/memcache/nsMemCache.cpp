@@ -320,13 +320,6 @@ nsMemCache::GetCapacity(PRUint32 *aCapacity)
 }
 
 NS_IMETHODIMP
-nsMemCache::SetCapacity(PRUint32 aCapacity)
-{
-    mCapacity = aCapacity;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
 nsMemCache::GetStorageInUse(PRUint32 *aStorageInUse)
 {
     NS_ENSURE_ARG(aStorageInUse);
