@@ -1,5 +1,19 @@
 1999-03-22  Leif Hedstrom  <leif@netscape.com>
 
+	* Conn.pm: Cleanup in use statements, and "use strict".
+	(search): Avoid warnings of uninitialized variables.
+	(searchURL): Dito.
+	(modifyRDN): Bugfix, we did not update the appropriate DN in the
+	self object (very minor...).
+
+	* Entry.pm: Cleanup in use statements, and "use strict".
+	(BEGIN): Added this initializer, to use the new LDIF module.
+	(STORE): Fixed bug where we would not ignore the internal instance
+	variables properly.
+
+	* Utils.pm: Cleanup in all use statements, and "use strict". Also
+	enforces the VERSION control feature.
+
 	* Merged v1.2.1 to devel-branch-1_3.
 
 1999-03-21  Leif Hedstrom  <leif@netscape.com>
