@@ -456,7 +456,12 @@ void
 nsTSubstring_CharT::SetLength( size_type length )
   {
     SetCapacity(length);
-    mLength = length;
+    
+    if (length != 0 && length != mLength)
+      {
+        mLength = length;
+        mData[mLength] = char_type(0);
+      }
   }
 
 void
