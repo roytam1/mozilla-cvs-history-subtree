@@ -808,8 +808,6 @@ PRBool IsLoosePI(nsString& aBuffer,PRInt32 anOffset,PRInt32 aCount) {
  */
 static 
 void DetermineParseMode(nsString& aBuffer,nsDTDMode& aParseMode,eParserDocType& aDocType,const nsString& aMimeType) {
-  const char* theModeStr= PR_GetEnv("PARSE_MODE");
-
   aParseMode=eDTDMode_quirks;
   aDocType=eHTML3Text;
 
