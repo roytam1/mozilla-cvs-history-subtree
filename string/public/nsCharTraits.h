@@ -39,9 +39,6 @@
 #include "nsStringIteratorUtils.h"
 #endif
 
-class nsAString;
-class nsACString;
-
 #ifdef HAVE_CPP_BOOL
   typedef bool nsCharTraits_bool;
 #else
@@ -465,7 +462,6 @@ struct nsCharTraits<wchar_t>
 #endif
   };
 #endif
-
 
 template <class InputIterator>
 struct nsCharSourceTraits

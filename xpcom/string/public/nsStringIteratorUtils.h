@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /*
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -23,10 +24,6 @@
 #ifndef nsStringIteratorUtils_h___
 #define nsStringIteratorUtils_h___
 
-#ifndef nsStringIterator_h___
-#include "nsStringIterator.h"
-#endif
-
 template <class Iterator>
 inline
 PRBool
@@ -35,6 +32,7 @@ SameFragment( const Iterator& lhs, const Iterator& rhs )
     return lhs.fragment().mStart == rhs.fragment().mStart;
   }
 
+template <class CharT> class nsReadingIterator;
 
   // NOTE: need to break iterators out into their own file (as with many classes here), need
   //  these routines, but can't currently |#include "nsReadableUtils.h"|, this hack is bad

@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /*
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -30,12 +31,14 @@ nsAFlatString::GetReadableFragment( nsReadableFragment<PRUnichar>& aFragment, ns
         case kFirstFragment:
         case kLastFragment:
         case kFragmentAt:
-          const nsBufferHandle<PRUnichar>* buffer = GetBufferHandle();
-          NS_ASSERTION(buffer != 0, "buffer != 0");
+          {
+            const nsBufferHandle<PRUnichar>* buffer = GetBufferHandle();
+            NS_ASSERTION(buffer, "trouble: no buffer!");
 
-          aFragment.mEnd = buffer->DataEnd();
-          return (aFragment.mStart = buffer->DataStart()) + aOffset;
-        
+            aFragment.mEnd = buffer->DataEnd();
+            return (aFragment.mStart = buffer->DataStart()) + aOffset;
+          }
+
         case kPrevFragment:
         case kNextFragment:
         default:
@@ -51,12 +54,14 @@ nsAFlatString::GetWritableFragment( nsWritableFragment<PRUnichar>& aFragment, ns
         case kFirstFragment:
         case kLastFragment:
         case kFragmentAt:
-          nsBufferHandle<PRUnichar>* buffer = NS_CONST_CAST(nsBufferHandle<PRUnichar>*, GetBufferHandle());
-          NS_ASSERTION(buffer != 0, "buffer != 0");
+          {
+            nsBufferHandle<PRUnichar>* buffer = NS_CONST_CAST(nsBufferHandle<PRUnichar>*, GetBufferHandle());
+            NS_ASSERTION(buffer, "trouble: no buffer!");
 
-          aFragment.mEnd = buffer->DataEnd();
-          return (aFragment.mStart = buffer->DataStart()) + aOffset;
-        
+            aFragment.mEnd = buffer->DataEnd();
+            return (aFragment.mStart = buffer->DataStart()) + aOffset;
+          }
+
         case kPrevFragment:
         case kNextFragment:
         default:
@@ -72,12 +77,14 @@ nsAFlatCString::GetReadableFragment( nsReadableFragment<char>& aFragment, nsFrag
         case kFirstFragment:
         case kLastFragment:
         case kFragmentAt:
-          const nsBufferHandle<char>* buffer = GetBufferHandle();
-          NS_ASSERTION(buffer != 0, "buffer != 0");
+          {
+            const nsBufferHandle<char>* buffer = GetBufferHandle();
+            NS_ASSERTION(buffer, "trouble: no buffer!");
 
-          aFragment.mEnd = buffer->DataEnd();
-          return (aFragment.mStart = buffer->DataStart()) + aOffset;
-        
+            aFragment.mEnd = buffer->DataEnd();
+            return (aFragment.mStart = buffer->DataStart()) + aOffset;
+          }
+
         case kPrevFragment:
         case kNextFragment:
         default:
@@ -93,12 +100,14 @@ nsAFlatCString::GetWritableFragment( nsWritableFragment<char>& aFragment, nsFrag
         case kFirstFragment:
         case kLastFragment:
         case kFragmentAt:
-          nsBufferHandle<char>* buffer = NS_CONST_CAST(nsBufferHandle<char>*, GetBufferHandle());
-          NS_ASSERTION(buffer != 0, "buffer != 0");
+          {
+            nsBufferHandle<char>* buffer = NS_CONST_CAST(nsBufferHandle<char>*, GetBufferHandle());
+            NS_ASSERTION(buffer, "trouble: no buffer!");
 
-          aFragment.mEnd = buffer->DataEnd();
-          return (aFragment.mStart = buffer->DataStart()) + aOffset;
-        
+            aFragment.mEnd = buffer->DataEnd();
+            return (aFragment.mStart = buffer->DataStart()) + aOffset;
+          }
+
         case kPrevFragment:
         case kNextFragment:
         default:

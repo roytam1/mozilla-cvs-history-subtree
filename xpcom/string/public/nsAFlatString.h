@@ -1,3 +1,4 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /*
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -20,6 +21,8 @@
  *   Scott Collins <scc@mozilla.org> (original author)
  */
 
+/* nsAFlatString.h --- */
+
 #ifndef nsAFlatString_h___
 #define nsAFlatString_h___
 
@@ -36,7 +39,7 @@ class NS_COM nsAFlatString
       PRUnichar  operator[]( PRUint32 i ) const { return get()[ i ]; }
       PRUnichar  CharAt( PRUint32 ) const;
 
-      virtual PRUint32 Length() const           { return GetBufferHandle()->DataLength(); }
+      virtual PRUint32 Length() const           { return PRUint32(GetBufferHandle()->DataLength()); }
 
     protected:
       virtual const PRUnichar* GetReadableFragment( nsReadableFragment<PRUnichar>&, nsFragmentRequest, PRUint32 ) const;
@@ -52,7 +55,7 @@ class NS_COM nsAFlatCString
       char  operator[]( PRUint32 i ) const      { return get()[ i ]; }
       char  CharAt( PRUint32 ) const;
 
-      virtual PRUint32 Length() const           { return GetBufferHandle()->DataLength(); }
+      virtual PRUint32 Length() const           { return PRUint32(GetBufferHandle()->DataLength()); }
 
     protected:
       virtual const char* GetReadableFragment( nsReadableFragment<char>&, nsFragmentRequest, PRUint32 ) const;
