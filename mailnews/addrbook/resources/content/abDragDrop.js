@@ -110,18 +110,32 @@ var abDirTreeObserver = {
       else {
         result = targetURI.split(srcURI);
         if (result != targetURI) {
-          /// target directory is a mailing list on src directory, no need to copy card
+          // target directory is a mailing list on src directory, no need to copy card
           needToCopyCard = false;
         }
       }
 
+      // if we still think we have to copy the card,
+      // check if srcURI and targetURI are lists on same directory
       if (needToCopyCard) {
+        /*
+          turn "moz-abmdbdirectory://abook.mab/MailList6"
+          into ["moz-abmdbdirectory:","","abook.mab","MailList6"]
+          and then if the length of the array is 4, and the first
+          element is "moz-abmdbdirectory:", and the first 3 elements
+          are the same, we know that both URIs are mailing lists
+          and both are on the same directory
+         */
         var targetArr = targetURI.split("/");
         var srcArr = srcURI.split("/");
-        dump("targetArr = " + targetArr + "\n");
-        dump("srcArr = " + srcArr + "\n");
-        // check if srcURI and targetURI are lists on same directory
-        // needToCopyCard = false;
+        if (srcArr.length == targetArr.length && srcArr.length == 4) {
+          if (srcArr[0] == "moz-abmdbdirectory:" &&
+              srcArr[0] == targetArr[0] &&
+              srcArr[1] == targetArr[1] &&
+              srcArr[2] == targetArr[2]) {
+            needToCopyCard = false;
+          }
+        }
       }
 
       for (var i=0;i<numrows;i++) {
