@@ -247,33 +247,35 @@ NS_IMETHODIMP nsAppleFileDecoder::Write(const char *buffer, PRUint32 bufferSize,
         break;
       
       case parseEntries :
-        if (!m_entries)
         {
-          m_entries = new ap_entry[m_headers.entriesCount];
           if (!m_entries)
-            return NS_ERROR_OUT_OF_MEMORY;
-        }
-        PRUint32 entriesSize = sizeof(ap_entry) * m_headers.entriesCount;
-        dataCount = entriesSize - m_dataBufferLength;
-        if (dataCount > bufferSize)
-          dataCount = bufferSize;
-        memcpy(&m_dataBuffer[m_dataBufferLength], buffPtr, dataCount);
-        m_dataBufferLength += dataCount;
-
-        if (m_dataBufferLength == entriesSize)
-        {
-          for (i = 0; i < m_headers.entriesCount; i ++)
           {
-            memcpy(&m_entries[i], &m_dataBuffer[i * sizeof(ap_entry)], sizeof(ap_entry));
-            if (m_headers.magic == APPLEDOUBLE_MAGIC)
-            {
-              PRUint32 offset = m_entries[i].offset + m_entries[i].length;
-              if (offset > m_dataForkOffset)
-                m_dataForkOffset = offset;
-            }
+            m_entries = new ap_entry[m_headers.entriesCount];
+            if (!m_entries)
+              return NS_ERROR_OUT_OF_MEMORY;
           }
-          m_headerOk = PR_TRUE;          
-          m_state = parseLookupPart;
+          PRUint32 entriesSize = sizeof(ap_entry) * m_headers.entriesCount;
+          dataCount = entriesSize - m_dataBufferLength;
+          if (dataCount > bufferSize)
+            dataCount = bufferSize;
+          memcpy(&m_dataBuffer[m_dataBufferLength], buffPtr, dataCount);
+          m_dataBufferLength += dataCount;
+  
+          if (m_dataBufferLength == entriesSize)
+          {
+            for (i = 0; i < m_headers.entriesCount; i ++)
+            {
+              memcpy(&m_entries[i], &m_dataBuffer[i * sizeof(ap_entry)], sizeof(ap_entry));
+              if (m_headers.magic == APPLEDOUBLE_MAGIC)
+              {
+                PRUint32 offset = m_entries[i].offset + m_entries[i].length;
+                if (offset > m_dataForkOffset)
+                  m_dataForkOffset = offset;
+              }
+            }
+            m_headerOk = PR_TRUE;          
+            m_state = parseLookupPart;
+          }
         }
         break;
       
@@ -382,22 +384,24 @@ NS_IMETHODIMP nsAppleFileDecoder::Write(const char *buffer, PRUint32 bufferSize,
         break;
       
       case parseResourceFork :
-        dataCount = m_currentPartLength - m_currentPartCount;
-        if (dataCount > bufferSize)
-          dataCount = bufferSize;
-        else
-          m_state = parseLookupPart;
-        
-        if (m_rfRefNum == -1)
         {
-          if (noErr != FSpOpenRF(&m_fsFileSpec, fsWrPerm, &m_rfRefNum))
-            return NS_ERROR_FAILURE;
+          dataCount = m_currentPartLength - m_currentPartCount;
+          if (dataCount > bufferSize)
+            dataCount = bufferSize;
+          else
+            m_state = parseLookupPart;
+          
+          if (m_rfRefNum == -1)
+          {
+            if (noErr != FSpOpenRF(&m_fsFileSpec, fsWrPerm, &m_rfRefNum))
+              return NS_ERROR_FAILURE;
+          }
+          
+          long count = dataCount;
+          if (noErr != FSWrite(m_rfRefNum, &count, buffPtr) || count != dataCount)
+              return NS_ERROR_FAILURE;
+          m_totalResourceForkWritten += dataCount;
         }
-        
-        long count = dataCount;
-        if (noErr != FSWrite(m_rfRefNum, &count, buffPtr) || count != dataCount)
-            return NS_ERROR_FAILURE;
-        m_totalResourceForkWritten += dataCount;
         break;
       
       case parseWriteThrough :
