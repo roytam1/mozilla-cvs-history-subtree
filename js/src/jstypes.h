@@ -138,8 +138,8 @@
 #define JS_PUBLIC_DATA(t)   JS_IMPORT_DATA(t)
 #endif
 
-#define JS_FRIEND_API(t)    JS_EXPORT_API(t)
-#define JS_FRIEND_DATA(t)   JS_EXPORT_DATA(t)
+#define JS_FRIEND_API(t)    JS_PUBLIC_API(t)
+#define JS_FRIEND_DATA(t)   JS_PUBLIC_DATA(t)
 
 #ifdef _WIN32
 #   define JS_INLINE __inline
