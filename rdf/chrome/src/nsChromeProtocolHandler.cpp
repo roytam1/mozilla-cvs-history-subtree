@@ -63,6 +63,7 @@
 #include "nsIServiceManager.h"
 #include "nsIStandardURL.h"
 #include "nsIStreamListener.h"
+#include "nsITimelineService.h"
 #include "nsIXULPrototypeCache.h"
 #include "nsIXULPrototypeDocument.h"
 #include "nsNetCID.h"
@@ -587,6 +588,8 @@ NS_IMETHODIMP
 nsChromeProtocolHandler::NewChannel(nsIURI* aURI,
                                     nsIChannel* *aResult)
 {
+    NS_TIMELINE_MARK_FUNCTION("nsChromeProtocolHandler::NewChannel");
+
     nsresult rv;
     nsCOMPtr<nsIChannel> result;
 
