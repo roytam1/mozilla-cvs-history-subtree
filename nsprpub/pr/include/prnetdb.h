@@ -357,28 +357,6 @@ NSPR_API(PRStatus) PR_GetProtoByNumber(
     PRInt32 protocolnumber, char* buffer, PRInt32 bufsize, PRProtoEnt* result);
 
 /***********************************************************************
-** FUNCTION:	
-** DESCRIPTION:	PR_SetIPv6Enable()
-**  Enable IPv6 capability on a platform that supports the architecture.
-**
-**  Note: IPv6 must first be enabled for the host platform. If it is not,
-**        the function will always return PR_FAILURE on any attempt to
-**        change the setting.
-**
-** INPUTS:
-**  PRBool itIs
-**                      Assign it a value of PR_TRUE to turn on IPv6
-**                      addressing, PR_FALSE to turn it off.
-** RETURN:
-**  PRStatus            PR_SUCCESS if the IPv6 is enabled for this particular
-**                      host. Otherwise it will return failure and GetError()
-**                      will confirm the result by indicating that the
-**                      protocol is not supported
-**                      (PR_PROTOCOL_NOT_SUPPORTED_ERROR) 
-***********************************************************************/
-NSPR_API(PRStatus) PR_SetIPv6Enable(PRBool itIs);
-
-/***********************************************************************
 ** FUNCTIONS: PR_ntohs, PR_ntohl, PR_ntohll, PR_htons, PR_htonl, PR_htonll
 **
 ** DESCRIPTION: API entries for the common byte ordering routines.
