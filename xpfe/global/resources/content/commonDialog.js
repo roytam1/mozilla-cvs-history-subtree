@@ -167,7 +167,6 @@ function commonDialogOnLoad()
       break;
     }
   }
-  setTimeout(sizeToContent, 0); // XXX bug 92635
 }
 
 function setCheckbox(aChkMsg, aChkValue)
