@@ -3347,7 +3347,8 @@ nsresult nsMsgDBView::GetLongField(nsIMsgDBHdr *msgHdr, nsMsgViewSortTypeValue s
     case nsMsgViewSortType::byDate:
       // when sorting threads by date, we want the date of the newest msg
       // in the thread
-      if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
+      if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay 
+        && ! (m_viewFlags & nsMsgViewFlagsType::kGroupBySort))
       {
         nsCOMPtr <nsIMsgThread> thread;
         rv = m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(thread));
