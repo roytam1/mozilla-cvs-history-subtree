@@ -21,6 +21,7 @@ DEPTH=..\..
 
 EXPORTS = \
 	nsCOMPtr.h		\
+        nsCOMCString.h          \
 	nsAgg.h			\
 	nsCom.h			\
 	nsDebug.h		\
