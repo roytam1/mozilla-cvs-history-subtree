@@ -45,6 +45,10 @@ static NS_DEFINE_CID(kDateTimeFormatCID,    NS_DATETIMEFORMAT_CID);
 
 nsrefcnt nsMsgDBView::gInstanceCount	= 0;
 nsIAtom * nsMsgDBView::kUnreadMsgAtom	= nsnull;
+nsIAtom * nsMsgDBView::kHighestPriorityAtom	= nsnull;
+nsIAtom * nsMsgDBView::kHighPriorityAtom	= nsnull;
+nsIAtom * nsMsgDBView::kLowestPriorityAtom	= nsnull;
+nsIAtom * nsMsgDBView::kLowPriorityAtom	= nsnull;
 
 NS_IMPL_ADDREF(nsMsgDBView)
 NS_IMPL_RELEASE(nsMsgDBView)
@@ -69,6 +73,11 @@ nsMsgDBView::nsMsgDBView()
   if (gInstanceCount == 0) 
   {
     kUnreadMsgAtom = NS_NewAtom("unread");
+
+    kHighestPriorityAtom = NS_NewAtom("priority-highest");
+    kHighPriorityAtom = NS_NewAtom("priority-high");
+    kLowestPriorityAtom = NS_NewAtom("priority-lowest");
+    kLowPriorityAtom = NS_NewAtom("priority-low");
   }
   
   gInstanceCount++;
@@ -83,6 +92,10 @@ nsMsgDBView::~nsMsgDBView()
   if (gInstanceCount <= 0) 
   {
     NS_IF_RELEASE(kUnreadMsgAtom);
+    NS_IF_RELEASE(kHighestPriorityAtom);
+    NS_IF_RELEASE(kHighPriorityAtom);
+    NS_IF_RELEASE(kLowestPriorityAtom);
+    NS_IF_RELEASE(kLowPriorityAtom);
   }
 }
 
@@ -182,6 +195,38 @@ nsresult nsMsgDBView::FetchSize(nsIMsgHdr * aHdr, PRUnichar ** aSizeString)
   return NS_OK;
 }
 
+nsresult nsMsgDBView::FetchPriority(nsIMsgHdr *aHdr, PRUnichar ** aPriorityString)
+{
+  // mscott --> fix me and turn me into string bundle calls
+  nsMsgPriorityValue priority = nsMsgPriority::notSet;
+  nsAutoString priorityString;
+  aHdr->GetPriority(&priority);
+  switch (priority)
+  {
+  case nsMsgPriority::highest:
+    priorityString = NS_LITERAL_STRING("Highest");
+    break;
+  case nsMsgPriority::high:
+    priorityString = NS_LITERAL_STRING("High");
+    break;
+  case nsMsgPriority::low:
+    priorityString = NS_LITERAL_STRING("Low");
+    break;
+  case nsMsgPriority::lowest:
+    priorityString = NS_LITERAL_STRING("Lowest");
+    break;
+  case nsMsgPriority::normal:
+    priorityString = NS_LITERAL_STRING("Normal");
+    break;
+  default:
+    break;
+  }
+
+  if (!priorityString.IsEmpty())
+    *aPriorityString = priorityString.ToNewUnicode();
+
+  return NS_OK;
+}
 
 // call this AFTER calling ::Sort.
 nsresult nsMsgDBView::UpdateSortUI(nsIDOMElement * aNewSortColumn)
@@ -379,15 +424,55 @@ NS_IMETHODIMP nsMsgDBView::GetColumnProperties(const PRUnichar *colID, nsIDOMEle
 }
 
 
-NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 row, const PRUnichar *colID, nsISupportsArray *properties)
+NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, const PRUnichar *colID, nsISupportsArray *properties)
 {
   // this is where we tell the outliner to apply styles to a particular row
   // i.e. if the row is an unread message...
+  nsMsgKey key = m_keys.GetAt(aRow);
+  nsCOMPtr <nsIMsgDBHdr> msgHdr;
+  nsresult rv = NS_OK;
 
-  char    flags = m_flags.GetAt(row);
+  if (key == m_cachedMsgKey)
+    msgHdr = m_cachedHdr;
+  else
+  {
+    GetMsgHdrForViewIndex(aRow, getter_AddRefs(msgHdr));
+    if (NS_SUCCEEDED(rv))
+    {
+      m_cachedHdr = msgHdr;
+      m_cachedMsgKey = key;
+    }
+    else
+      return rv;
+  }
+
+  char    flags = m_flags.GetAt(aRow);
   if (!(flags & MSG_FLAG_READ))
     properties->AppendElement(kUnreadMsgAtom);  
 
+  if (colID[0] == 'p') // for the priority column, add special styles....
+  {
+    nsMsgPriorityValue priority;
+    msgHdr->GetPriority(&priority);
+    switch (priority)
+    {
+    case nsMsgPriority::highest:
+      properties->AppendElement(kHighestPriorityAtom);  
+      break;
+    case nsMsgPriority::high:
+      properties->AppendElement(kHighPriorityAtom);  
+      break;
+    case nsMsgPriority::low:
+      properties->AppendElement(kLowPriorityAtom);  
+      break;
+    case nsMsgPriority::lowest:
+      properties->AppendElement(kLowestPriorityAtom);  
+      break;
+    default:
+      break;
+    }
+  }
+      
   return NS_OK;
 }
 
@@ -478,6 +563,9 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
   case 'd':  // date
     rv = FetchDate(msgHdr, aValue);
     break;
+  case 'p': // priority
+    rv = FetchPriority(msgHdr, aValue);
+    break;
   case 't':   // threaded mode (this is temporary...it's how we are faking 
     if (m_viewFlags & nsMsgViewFlagsType::kThreadedDisplay)
     {
@@ -560,6 +648,10 @@ NS_IMETHODIMP nsMsgDBView::CycleHeader(const PRUnichar * aColID, nsIDOMElement *
 
   case 'd':  // date
     sortType = nsMsgViewSortType::byDate;
+    performSort = PR_TRUE;
+    break;
+  case 'p': // priority
+    sortType = nsMsgViewSortType::byPriority;
     performSort = PR_TRUE;
     break;
   case 't': // thread column

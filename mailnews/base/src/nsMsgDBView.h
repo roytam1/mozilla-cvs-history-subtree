@@ -72,6 +72,11 @@ protected:
   // atoms used for styling the view. we're going to have a lot of
   // these so i'm going to make them static.
   static nsIAtom* kUnreadMsgAtom;
+  static nsIAtom* kHighestPriorityAtom;
+  static nsIAtom* kHighPriorityAtom;
+  static nsIAtom* kLowestPriorityAtom;
+  static nsIAtom* kLowPriorityAtom;
+
 
   nsCOMPtr<nsIOutlinerBoxObject> mOutliner;
   nsCOMPtr<nsIOutlinerSelection> mOutlinerSelection;
@@ -79,6 +84,7 @@ protected:
   nsresult FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString);
   nsresult FetchStatus(PRUint32 aFlags, PRUnichar ** aStatusString);
   nsresult FetchSize(nsIMsgHdr * aHdr, PRUnichar ** aSizeString);
+  nsresult FetchPriority(nsIMsgHdr *aHdr, PRUnichar ** aPriorityString);
   nsresult CycleThreadedColumn(nsIDOMElement * aElement);
 
   // toggles ascending/descending or adds the sort attribute
