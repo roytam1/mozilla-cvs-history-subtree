@@ -263,14 +263,14 @@ public class CurrentPageTest extends WebclientTestCase implements ClipboardOwner
 	}
 
 	currentPage.resetFind();
-	currentPage.findInPage("one", true, false);
+	assertTrue(currentPage.find("one", true, false));
 
 	selection = currentPage.getSelection();
 	assertTrue(-1 != selection.toString().indexOf("one"));
 
 	Thread.currentThread().sleep(1000);
 
-	currentPage.findNextInPage();
+	assertTrue(currentPage.findNext());
 		   
 	selection = currentPage.getSelection();
 	assertTrue(-1 != selection.toString().indexOf("one"));
