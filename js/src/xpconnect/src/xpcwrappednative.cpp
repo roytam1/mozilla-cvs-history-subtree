@@ -48,7 +48,10 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
 
     nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
     if(!identity)
+    {
+        NS_ERROR("This XPCOM object fails in QueryInterface to nsISupports!");
         return nsnull;
+    }
 
     XPCWrappedNative* wrapper;
 
