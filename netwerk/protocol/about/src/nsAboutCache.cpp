@@ -273,21 +273,27 @@ nsAboutCache::VisitDevice(const char *deviceID,
 
 NS_IMETHODIMP
 nsAboutCache::VisitEntry(const char *deviceID,
-                         const char *clientID,
                          nsICacheEntryInfo *entryInfo,
                          PRBool *visitNext)
 {
-    PRUint32 bytesWritten;
-    nsXPIDLCString str;
+    nsresult        rv;
+    PRUint32        bytesWritten;
+    nsXPIDLCString  key;
+    nsXPIDLCString  clientID;
+    
 
-    entryInfo->GetKey(getter_Copies(str));
+    rv = entryInfo->GetKey(getter_Copies(key));
+    if (NS_FAILED(rv))  return rv;
+
+    rv = entryInfo->GetClientID(getter_Copies(clientID));
+    if (NS_FAILED(rv))  return rv;
 
     // Generate a about:cache-entry URL for this entry...
     nsCAutoString url;
     url += NS_LITERAL_CSTRING("about:cache-entry?client=");
     url += clientID;
     url += NS_LITERAL_CSTRING("&key=");
-    url += str; // key
+    url += key; // key
 
     // Entry start...
     mBuffer.Assign("<p>\n");
@@ -298,14 +304,13 @@ nsAboutCache::VisitEntry(const char *deviceID,
     mBuffer.Append("<a href=\"");
     mBuffer.Append(url);
     mBuffer.Append("\">");
-    mBuffer.Append(str);
+    mBuffer.Append(key);
     mBuffer.Append("</a><br>\n");
 
     // Client
     mBuffer.Append("<tt>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                      "&nbsp;Client: </tt>");
-    entryInfo->GetClientID(getter_Copies(str));
-    mBuffer.Append(str);
+    mBuffer.Append(clientID);
     mBuffer.Append("<br>\n");
 
     // Content length

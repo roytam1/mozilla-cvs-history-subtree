@@ -25,6 +25,7 @@
 #include "nsDiskCacheDevice.h"
 #include "nsDiskCacheEntry.h"
 #include "nsCacheService.h"
+#include "nsCache.h"
 
 #include "nsIFileTransportService.h"
 #include "nsITransport.h"
@@ -458,7 +459,7 @@ public:
     {
         nsresult rv = mMetaDataFile.Read(input);
         if (NS_FAILED(rv)) return rv;
-        return nsCacheService::ClientID(nsLiteralCString(mMetaDataFile.mKey), getter_Copies(mClientID));
+        return ClientIDFromCacheKey(nsLiteralCString(mMetaDataFile.mKey), getter_Copies(mClientID));
     }
     
     const char* ClientID() { return mClientID; }
@@ -480,7 +481,7 @@ NS_IMETHODIMP nsDiskCacheEntryInfo::GetClientID(char ** clientID)
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetKey(char ** clientKey)
 {
     NS_ENSURE_ARG_POINTER(clientKey);
-    return nsCacheService::ClientKey(nsLiteralCString(mMetaDataFile.mKey), clientKey);
+    return ClientKeyFromCacheKey(nsLiteralCString(mMetaDataFile.mKey), clientKey);
 }
 
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetFetchCount(PRInt32 *aFetchCount)
@@ -934,8 +935,9 @@ nsresult nsDiskCacheDevice::visitEntries(nsICacheVisitor * visitor)
             
             // tell the visitor about this entry.
             PRBool keepGoing;
-            rv = visitor->VisitEntry(DISK_CACHE_DEVICE_ID, entryInfo->ClientID(),
-                                     entryInfo, &keepGoing);
+//          rv = visitor->VisitEntry(DISK_CACHE_DEVICE_ID, entryInfo->ClientID(),
+//                                   entryInfo, &keepGoing);
+            rv = visitor->VisitEntry(DISK_CACHE_DEVICE_ID, entryInfo, &keepGoing);
             if (NS_FAILED(rv)) return rv;
             if (!keepGoing) break;
         }

@@ -41,7 +41,9 @@ class nsCacheMetaData;
 class nsCacheRequest;
 class nsCacheEntryDescriptor;
 
-
+/******************************************************************************
+* nsCacheEntry
+*******************************************************************************/
 class nsCacheEntry : public PRCList
 {
 public:
@@ -210,6 +212,31 @@ private:
 };
 
 
+/******************************************************************************
+* nsCacheEntryInfo
+*******************************************************************************/
+class nsCacheEntryInfo : public nsICacheEntryInfo {
+public:
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSICACHEENTRYINFO
+
+    nsCacheEntryInfo(nsCacheEntry* entry)
+        :   mCacheEntry(entry)
+    {
+        NS_INIT_ISUPPORTS();
+    }
+
+    virtual ~nsCacheEntryInfo() {}
+    void    DetachEntry(void) { mCacheEntry = nsnull; }
+    
+private:
+    nsCacheEntry * mCacheEntry;
+};
+
+
+/******************************************************************************
+* nsCacheEntryHashTable
+*******************************************************************************/
 typedef struct {
     PLDHashNumber  keyHash;
     nsCacheEntry  *cacheEntry;

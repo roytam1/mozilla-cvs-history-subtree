@@ -38,9 +38,9 @@
 class nsCacheRequest;
 
 
-/**
+/******************************************************************************
  *  nsCacheService
- */
+ ******************************************************************************/
 
 class nsCacheService : public nsICacheService, public nsIObserver
 {
@@ -171,17 +171,5 @@ private:
     PRUint32                mDeactivatedUnboundEntries;
 };
 
-
-/**
- * Cache Service Utility Functions
- */
-
-// time conversion utils from nsCachedNetData.cpp
-
-          // Convert PRTime to unix-style time_t, i.e. seconds since the epoch
-PRUint32  ConvertPRTimeToSeconds(PRTime time64);
-
-          // Convert unix-style time_t, i.e. seconds since the epoch, to PRTime
-PRTime    ConvertSecondsToPRTime(PRUint32 seconds);
 
 #endif // _nsCacheService_h_

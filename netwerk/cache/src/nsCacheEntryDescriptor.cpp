@@ -22,6 +22,7 @@
  */
 
 #include "nsICache.h"
+#include "nsCache.h"
 #include "nsCacheService.h"
 #include "nsCacheEntryDescriptor.h"
 #include "nsCacheEntry.h"
@@ -74,7 +75,7 @@ nsCacheEntryDescriptor::GetClientID(char ** result)
     NS_ENSURE_ARG_POINTER(result);
     if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
 
-    return nsCacheService::ClientID(*(mCacheEntry->Key()), result);
+    return ClientIDFromCacheKey(*(mCacheEntry->Key()), result);
 }
 
 
@@ -84,7 +85,7 @@ nsCacheEntryDescriptor::GetKey(char ** result)
     NS_ENSURE_ARG_POINTER(result);
     if (!mCacheEntry)  return NS_ERROR_NOT_AVAILABLE;
 
-    return nsCacheService::ClientKey(*(mCacheEntry->Key()), result);
+    return ClientKeyFromCacheKey(*(mCacheEntry->Key()), result);
 
 #if 0
     nsCString * key;

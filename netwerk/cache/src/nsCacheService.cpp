@@ -22,21 +22,21 @@
  */
 
 
+#include "nsCache.h"
 #include "nsCacheService.h"
+#include "nsCacheRequest.h"
 #include "nsCacheEntry.h"
 #include "nsCacheEntryDescriptor.h"
 #include "nsCacheDevice.h"
-#include "nsCacheRequest.h"
-#include "nsMemoryCacheDevice.h"
 #include "nsDiskCacheDevice.h"
+#include "nsMemoryCacheDevice.h"
+#include "nsICacheVisitor.h"
+
 #include "nsAutoLock.h"
-#include "nsVoidArray.h"
 #include "nsIEventQueueService.h"
 #include "nsIEventQueue.h"
 #include "nsProxiedService.h"
-#include "nsICacheVisitor.h"
 #include "nsIObserverService.h"
-#include "nsReadableUtils.h"
 
 static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kProxyObjectManagerCID, NS_PROXYEVENT_MANAGER_CID);
@@ -418,7 +418,7 @@ nsCacheService::ActivateEntry(nsCacheRequest * request,
     if (entry &&
         ((request->AccessRequested() == nsICache::ACCESS_WRITE) ||
          (entry->mExpirationTime &&
-          entry->mExpirationTime < ConvertPRTimeToSeconds(PR_Now()) &&
+          entry->mExpirationTime < SecondsFromPRTime(PR_Now()) &&
           request->WillDoomEntriesIfExpired())))
     {
         // this is FORCE-WRITE request or the entry has expired
@@ -559,54 +559,6 @@ nsCacheService::DoomEntry_Locked(nsCacheEntry * entry)
 }
 
 
-nsresult
-nsCacheService::ClientID(const nsAReadableCString&  key, char ** result)
-{
-    nsresult  rv = NS_OK;
-    *result = nsnull;
-
-    nsReadingIterator<char> colon;
-    key.BeginReading(colon);
-        
-    nsReadingIterator<char> start;
-    key.BeginReading(start);
-        
-    nsReadingIterator<char> end;
-    key.EndReading(end);
-        
-    if (FindCharInReadable(':', colon, end)) {
-        *result = ToNewCString( Substring(start, colon));
-        if (!*result) rv = NS_ERROR_OUT_OF_MEMORY;
-    } else {
-        NS_ASSERTION(PR_FALSE, "FindCharInRead failed to find ':'");
-        rv = NS_ERROR_UNEXPECTED;
-    }
-    return rv;
-}
-
-
-nsresult
-nsCacheService::ClientKey(const nsAReadableCString& key, char ** result)
-{
-    nsresult  rv = NS_OK;
-    *result = nsnull;
-
-    nsReadingIterator<char> start;
-    key.BeginReading(start);
-        
-    nsReadingIterator<char> end;
-    key.EndReading(end);
-        
-    if (FindCharInReadable(':', start, end)) {
-        ++start;  // advance past clientID ':' delimiter
-        *result = ToNewCString( Substring(start, end));
-        if (!*result) rv = NS_ERROR_OUT_OF_MEMORY;
-    } else {
-        NS_ASSERTION(PR_FALSE, "FindCharInRead failed to find ':'");
-        rv = NS_ERROR_UNEXPECTED;
-    }
-    return rv;
-}
 
 
 nsresult
@@ -841,30 +793,3 @@ NS_IMETHODIMP nsCacheService::Observe(nsISupports *aSubject, const PRUnichar *aT
     return Shutdown();
 }
 
-
-/**
- * Cache Service Utility Functions
- */
-
-// time conversion utils from nsCachedNetData.cpp
-// Convert PRTime to unix-style time_t, i.e. seconds since the epoch
-PRUint32
-ConvertPRTimeToSeconds(PRTime time64)
-{
-    double fpTime;
-    LL_L2D(fpTime, time64);
-    return (PRUint32)(fpTime * 1e-6 + 0.5);
-}
-
-
-// Convert unix-style time_t, i.e. seconds since the epoch, to PRTime
-PRTime
-ConvertSecondsToPRTime(PRUint32 seconds)
-{
-    PRInt64 t64;
-    LL_I2L(t64, seconds);
-    PRInt64 mil;
-    LL_I2L(mil, 1000000);
-    LL_MUL(t64, t64, mil);
-    return t64;
-}
