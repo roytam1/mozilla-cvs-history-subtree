@@ -28,13 +28,16 @@
  */
 
 #include "prtypes.h"
-#include "nsCOMPtr.h"
+#include "pldhash.h"
+
 #include "nsBinaryStream.h"
+#include "nsCOMPtr.h"
 #include "nsDebug.h"
 #include "nsID.h"
 #include "nsMemory.h"
 #include "nsVoidArray.h"
-#include "pldhash.h"
+
+#include "nsISeekableStream.h"
 
 /**
  * FastLoad file Object ID (OID) is an identifier for multiply and cyclicly
@@ -139,6 +142,32 @@ struct nsFastLoadSharpObjectInfo {
     PRUint16    mWeakRefCnt;
 };
 
+// Specialize nsVoidArray to avoid gratuitous string copying, yet not leak.
+class NS_COM nsFastLoadDependencyArray : public nsVoidArray {
+  public:
+    ~nsFastLoadDependencyArray() {
+        for (PRInt32 i = 0, n = Count(); i < n; i++)
+            nsMemory::Free(ElementAt(i));
+    }
+
+    /**
+     * Append aFileName to this dependency array.  Hand off the memory at
+     * aFileName if aCopy is false, otherwise clone it with nsMemory.
+     */
+    PRBool AppendDependency(const char* aFileName, PRBool aCopy = PR_TRUE) {
+        char* s = NS_CONST_CAST(char*, aFileName);
+        if (aCopy) {
+            s = NS_REINTERPRET_CAST(char*,
+                                    nsMemory::Clone(s, strlen(s)+1));
+            if (!s) return PR_FALSE;
+        }
+        PRBool ok = AppendElement(s);
+        if (!ok && aCopy)
+            nsMemory::Free(s);
+        return ok;
+    }
+};
+
 /**
  * Inherit from the concrete class nsBinaryInputStream, which inherits from
  * abstract nsIObjectInputStream but does not implement its direct method.
@@ -155,6 +184,8 @@ class NS_COM nsFastLoadFileReader
     }
 
     virtual ~nsFastLoadFileReader() { }
+
+    PRUint32 GetChecksum() { return mHeader.mChecksum; }
 
   private:
     // nsISupports methods
@@ -225,36 +256,9 @@ class NS_COM nsFastLoadFileReader
         // object offset and refcnt information.
         nsFastLoadSharpObjectEntry* mSharpObjectMap;
 
-        // Specialize nsVoidArray to avoid gratuitous string copying while still
-        // ensuring cleanup.
-        class NS_COM nsDependencyArray : public nsVoidArray {
-          public:
-            ~nsDependencyArray() {
-                for (PRInt32 i = 0, n = Count(); i < n; i++)
-                    nsMemory::Free(ElementAt(i));
-            }
-
-            /**
-             * Append aFileName to this dependency array.  Hand off the memory
-             * at aFileName if aCopy is false, otherwise clone it with nsMemory.
-             */
-            PRBool AppendDependency(const char* aFileName, PRBool aCopy) {
-                char* s = NS_CONST_CAST(char*, aFileName);
-                if (aCopy) {
-                    s = NS_REINTERPRET_CAST(char*,
-                                            nsMemory::Clone(s, strlen(s)+1));
-                    if (!s) return PR_FALSE;
-                }
-                PRBool ok = AppendElement(s);
-                if (!ok && aCopy)
-                    nsMemory::Free(s);
-                return ok;
-            }
-        };
-
         // List of source filename dependencies that should trigger regeneration
         // of the FastLoad file.
-        nsDependencyArray mDependencies;
+        nsFastLoadDependencyArray mDependencies;
     };
 
     nsresult ReadFooter(nsFastLoadFooter *aFooter);
@@ -294,6 +298,17 @@ class NS_COM nsFastLoadFileWriter
             PL_DHashTableFinish(&mIDMap);
         if (mObjectMap.ops)
             PL_DHashTableFinish(&mObjectMap);
+    }
+
+    PRUint32 GetDependencyCount() { return PRUint32(mDependencies.Count()); }
+
+    const char* GetDependency(PRUint32 i) {
+        return NS_REINTERPRET_CAST(const char*,
+                                   mDependencies.ElementAt(PRInt32(i)));
+    }
+
+    PRBool AppendDependency(const char* aFileName) {
+        return mDependencies.AppendDependency(aFileName);
     }
 
   private:
@@ -341,6 +356,8 @@ class NS_COM nsFastLoadFileWriter
   protected:
     PLDHashTable mIDMap;
     PLDHashTable mObjectMap;
+
+    nsFastLoadDependencyArray mDependencies;
 };
 
 NS_COM nsresult

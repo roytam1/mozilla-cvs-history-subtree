@@ -28,6 +28,7 @@
 #include "nsAutoLock.h"
 #include "nsCOMPtr.h"
 #include "nsCRT.h"
+#include "nsFastLoadFile.h"
 #include "nsFastLoadPtr.h"
 
 #include "nsIComponentManager.h"
@@ -69,15 +70,12 @@ nsFastLoadService::nsFastLoadService()
 nsFastLoadService::~nsFastLoadService()
 {
     gFastLoadService_ = nsnull;
-
-    if (mLock)
-        PR_DestroyLock(mLock);
-
     if (mFastLoadPtrMap)
         PL_DHashTableDestroy(mFastLoadPtrMap);
+    if (mLock)
+        PR_DestroyLock(mLock);
 }
 
-#if 0
 NS_IMETHODIMP
 nsFastLoadService::Init()
 {
@@ -87,6 +85,75 @@ nsFastLoadService::Init()
     return NS_OK;
 }
 
+NS_IMETHODIMP
+nsFastLoadService::SetInputStream(nsIInputStream* aSrcStream,
+                                  PRUint32 *aCheckSum)
+{
+    nsresult rv;
+
+    rv = NS_NewFastLoadFileReader(getter_AddRefs(mObjectInputStream),
+                                  aSrcStream);
+    if (NS_FAILED(rv)) return rv;
+
+    mObjectOutputStream = nsnull;
+
+    nsIObjectInputStream* stream = mObjectInputStream.get();
+    nsFastLoadFileReader* reader = NS_STATIC_CAST(nsFastLoadFileReader*,
+                                                  stream);
+    *aCheckSum = reader->GetChecksum();
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFastLoadService::SetOutputStream(nsIOutputStream* aDestStream)
+{
+    nsresult rv;
+
+    rv = NS_NewFastLoadFileWriter(getter_AddRefs(mObjectOutputStream),
+                                  aDestStream);
+    if (NS_FAILED(rv)) return rv;
+
+    mObjectInputStream = nsnull;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFastLoadService::AppendDependency(const char* aFileName)
+{
+    if (!mObjectOutputStream)
+        return NS_OK;
+
+    nsIObjectOutputStream* stream = mObjectOutputStream.get();
+    nsFastLoadFileWriter* writer = NS_STATIC_CAST(nsFastLoadFileWriter*,
+                                                  stream);
+    if (!writer->AppendDependency(aFileName))
+        return NS_ERROR_OUT_OF_MEMORY;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsFastLoadService::MaxDependencyModifiedTime(PRTime *aTime)
+{
+    *aTime = LL_ZERO;
+    if (!mObjectOutputStream)
+        return NS_OK;
+
+    nsIObjectOutputStream* stream = mObjectOutputStream.get();
+    nsFastLoadFileWriter* writer = NS_STATIC_CAST(nsFastLoadFileWriter*,
+                                                  stream);
+
+    for (PRUint32 i = 0, n = writer->GetDependencyCount(); i < n; i++) {
+        PRFileInfo info;
+        if (PR_GetFileInfo(writer->GetDependency(i), &info) == PR_SUCCESS &&
+            LL_CMP(*aTime, <, info.modifyTime)) {
+            *aTime = info.modifyTime;
+        }
+    }
+
+    return NS_OK;
+}
+
+#if 0
 NS_IMETHODIMP
 nsFastLoadService::Open(const char* aFileName, PRBool *aReading)
 {
@@ -150,66 +217,6 @@ nsFastLoadService::Open(const char* aFileName, PRBool *aReading)
 
     return NS_OK;
 }
-
-NS_IMETHODIMP
-nsFastLoadService::Close()
-{
-    nsAutoLock lock(mLock);
-
-    if (mFD) {
-        PR_Close(mFD);
-        mFD = nsnull;
-    }
-
-    if (mFastLoadPtrMap) {
-        PL_DHashTableDestroy(mFastLoadPtrMap);
-        mFastLoadPtrMap = nsnull;
-    }
-
-    mFooter.Clear();
-
-    mObjectInputStream = nsnull;
-    mObjectOutputStream = nsnull;
-}
-
-NS_IMETHODIMP
-nsFastLoadService::AddDependency(const char* aFileName)
-{
-    return mFooter.AddDependency(aFileName);
-}
-
-nsresult
-nsFastLoadFooter::AddDependency(const char* aFileName)
-{
-    if (!mDependencies) {
-        mDependencies = new nsCStringArray();
-        if (!mDependencies)
-            return NS_ERROR_OUT_OF_MEMORY;
-    }
-
-    if (!mDependencies->AppendCString(aFileName))
-        return NS_ERROR_FAILURE;
-    return NS_OK;
-}
-
-PRTime
-nsFastLoadFooter::MaxDependencyModifyTime()
-{
-    PRTime maxTime = LL_ZERO;
-
-    if (mDependencies) {
-        PRInt32 count = mDependencies->Count();
-        for (PRInt32 i = 0; i < count; i++) {
-            PRFileInfo info;
-            if (PR_GetFileInfo(mDependencies[i], &info) == PR_SUCCESS &&
-                LL_CMP(maxTime, <, info.modifyTime)) {
-                maxTime = info.modifyTime;
-            }
-        }
-    }
-
-    return maxTime;
-}
 #endif
 
 struct nsFastLoadPtrEntry : public PLDHashEntryHdr {
@@ -224,7 +231,7 @@ nsFastLoadService::GetFastLoadReferent(nsISupports* *aPtrAddr)
                  "aPtrAddr doesn't point to null nsFastLoadPtr<T>::mRawAddr?");
 
     nsAutoLock lock(mLock);
-    if (!mObjectInputStream)
+    if (!mFastLoadPtrMap || !mObjectInputStream)
         return NS_OK;
 
     nsFastLoadPtrEntry* entry =
@@ -270,13 +277,23 @@ nsFastLoadService::ReadFastLoadPtr(nsIObjectInputStream* aInputStream,
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(aInputStream));
-    PRUint32 thisOffset;
+    if (!seekable)
+        return NS_ERROR_FAILURE;
 
+    PRUint32 thisOffset;
     rv = seekable->Tell(&thisOffset);
     if (NS_FAILED(rv)) return rv;
 
     rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, nextOffset);
     if (NS_FAILED(rv)) return rv;
+
+    if (!mFastLoadPtrMap) {
+        mFastLoadPtrMap = PL_NewDHashTable(PL_DHashGetStubOps(), this,
+                                           sizeof(nsFastLoadPtrEntry),
+                                           PL_DHASH_MIN_SIZE);
+        if (!mFastLoadPtrMap)
+            return NS_ERROR_OUT_OF_MEMORY;
+    }
 
     nsFastLoadPtrEntry* entry =
         NS_STATIC_CAST(nsFastLoadPtrEntry*,
@@ -299,11 +316,13 @@ nsFastLoadService::WriteFastLoadPtr(nsIObjectOutputStream* aOutputStream,
         return NS_ERROR_UNEXPECTED;
 
     nsresult rv;
-    nsAutoLock lock(mLock);
+    nsAutoLock lock(mLock);     // serialize writes to aOutputStream
 
     nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(aOutputStream));
-    PRUint32 saveOffset, nextOffset;
+    if (!seekable)
+        return NS_ERROR_FAILURE;
 
+    PRUint32 saveOffset;
     rv = seekable->Tell(&saveOffset);
     if (NS_FAILED(rv)) return rv;
 
@@ -313,6 +332,7 @@ nsFastLoadService::WriteFastLoadPtr(nsIObjectOutputStream* aOutputStream,
     rv = aOutputStream->WriteObject(aObject, aCID, PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
+    PRUint32 nextOffset;
     rv = seekable->Tell(&nextOffset);
     if (NS_FAILED(rv)) return rv;
 

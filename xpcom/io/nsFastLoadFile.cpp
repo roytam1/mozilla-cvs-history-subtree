@@ -230,9 +230,22 @@ nsFastLoadFileReader::Open()
     rv = ReadHeader(&mHeader);
     if (NS_FAILED(rv)) return rv;
 
+    if (mHeader.mVersion != MFL_FILE_VERSION_0)
+        return NS_ERROR_FAILURE;
+
     PRUint32 dataOffset;
     rv = seekable->Tell(&dataOffset);
     if (NS_FAILED(rv)) return rv;
+
+    rv = seekable->Seek(nsISeekableStream::NS_SEEK_END, 0);
+    if (NS_FAILED(rv)) return rv;
+
+    PRUint32 fileSize;
+    rv = seekable->Tell(&fileSize);
+    if (NS_FAILED(rv)) return rv;
+
+    if (fileSize != mHeader.mFileSize)
+        return NS_ERROR_FAILURE;
 
     rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
                         PRInt32(mHeader.mFooterOffset));
@@ -366,8 +379,6 @@ NS_NewFastLoadFileReader(nsIObjectInputStream* *aResult,
     nsresult rv = reader->Open();
     if (NS_FAILED(rv))
         return rv;
-
-    // XXXbe checksum, size check, etc.
 
     *aResult = stream;
     NS_ADDREF(*aResult);
@@ -616,9 +627,15 @@ nsFastLoadFileWriter::WriteFooter()
     delete infovec;
     if (NS_FAILED(rv)) return rv;
 
-    // XXXbe need an interface for adding dependencies
-    rv = Write32(0);         // mNumDependencies
+    count = mDependencies.Count();
+    rv = Write32(count);
     if (NS_FAILED(rv)) return rv;
+
+    for (i = 0; i < count; i++) {
+        rv = WriteStringZ(NS_REINTERPRET_CAST(const char*,
+                                              mDependencies.ElementAt(PRInt32(i))));
+        if (NS_FAILED(rv)) return rv;
+    }
 
     return NS_OK;
 }

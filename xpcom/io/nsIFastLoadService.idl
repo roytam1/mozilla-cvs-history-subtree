@@ -23,34 +23,22 @@
 #include "nsISupports.idl"
 #include "nsrootidl.idl"
 
+interface nsIInputStream;
+interface nsIOutputStream;
 interface nsIObjectInputStream;
 interface nsIObjectOutputStream;
-
-%{C++
-#define NS_FAST_LOAD_SERVICE_CID \
-    {0xc943093c,0xac94,0x4bee,{0x84,0x0b,0x8b,0x5a,0x6e,0x31,0x4f,0xa7}}
-
-#define NS_FAST_LOAD_SERVICE_CONTRACTID \
-    "@mozilla.org/fast-load-service;1"
-%}
 
 [scriptable, uuid(759e475e-0c23-4dbf-b1b8-78c9369e3072)]
 interface nsIFastLoadService : nsISupports
 {
-    /**
-     */
-    PRBool open(in string aFileName);
+    void init();
 
-    /**
-     */
-    void close();
+    PRUint32 setInputStream(in nsIInputStream aSrcStream);
+    void     setOutputStream(in nsIOutputStream aDestStream);
 
-    /**
-     */
-    void addDependency(in string aFileName);
+    void   appendDependency(in string aFileName);
+    PRTime maxDependencyModifiedTime();
 
-    /**
-     */
     [noscript] void getFastLoadReferent(inout nsISupports aPtr);
 
     [noscript] void readFastLoadPtr(in nsIObjectInputStream aInputStream,
@@ -59,8 +47,12 @@ interface nsIFastLoadService : nsISupports
     [noscript] void writeFastLoadPtr(in nsIObjectOutputStream aOutputStream,
                                      in nsISupports aPtr,
                                      in nsCIDRef aCID);
+};
 
 %{C++
-    NS_DEFINE_STATIC_CID_ACCESSOR(NS_FAST_LOAD_SERVICE_CID);
+#define NS_FAST_LOAD_SERVICE_CID \
+    {0xc943093c,0xac94,0x4bee,{0x84,0x0b,0x8b,0x5a,0x6e,0x31,0x4f,0xa7}}
+
+#define NS_FAST_LOAD_SERVICE_CONTRACTID \
+    "@mozilla.org/fast-load-service;1"
 %}
-};
