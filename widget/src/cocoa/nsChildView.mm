@@ -123,16 +123,6 @@ static void blinkRgn(RgnHandle rgn);
 
 #pragma mark -
 
-static void SetSafePort()
-{
-  static CGrafPtr sSafePort = NULL;
-  if (!sSafePort)
-    sSafePort = ::CreateNewPort();
-  
-  if (sSafePort)
-    SetPort(sSafePort);
-}
-
 //
 // Convenience routines to go from a gecko rect to cocoa NSRects and back
 //
@@ -2251,7 +2241,8 @@ nsChildView::Idle()
 - (void) dealloc
 {
   [super dealloc];    // this sets the current port to _savePort
-  SetSafePort();
+  SetPort(NULL);      // this is safe on OS X; it will set the port to
+                      // an empty fallback port.
 }
 
 
@@ -2326,12 +2317,6 @@ nsChildView::Idle()
 {
   if (mGeckoChild && !newWindow)
     mGeckoChild->RemovedFromWindow();
-    
-  if ([self window] && !newWindow)
-  {
-    WindowRef nativeWindow = windowToWindowRef([self window]);
-    _savePort = ::GetWindowPort(nativeWindow);
-  }
 }
 
 - (void)viewDidMoveToWindow
