@@ -76,6 +76,7 @@ namespace ByteCode {
         InvokeOp,               // <argCount> <thisflag>         <function> <args>  --> [<result>]
 
         GetTypeOp,              //                     <object> --> <type of object>
+        CastOp,                 //                     <type> <object> --> <object>
 
         DoUnaryOp,              // <operation>         <object> --> <result>
         DoOperatorOp,           // <operation>         <object> <object> --> <result>
@@ -251,6 +252,8 @@ namespace ByteCode {
         
         std::vector<Label> mLabelList;
         std::vector<uint32> mLabelStack;
+
+        IdentifierList *mNamespaceList;
 
         bool hasContent()
         {

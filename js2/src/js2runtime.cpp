@@ -49,6 +49,8 @@
 
 #include "fdlibm_ns.h"
 
+// this is the IdentifierList passed to the name lookup routines
+#define CURRENT_ATTR    (NULL)
 
 namespace JavaScript {    
 namespace JS2Runtime {
@@ -65,6 +67,7 @@ JSStringType *String_Type;
 JSType *Boolean_Type;
 JSType *Type_Type;
 JSType *Void_Type;
+JSType *Unit_Type;
 JSArrayType *Array_Type;
 
 bool hasAttribute(const IdentifierList* identifiers, Token::Kind tokenKind)
@@ -82,6 +85,10 @@ bool hasAttribute(const IdentifierList* identifiers, const StringAtom &name)
     while (identifiers) {
         if (identifiers->name == name)
             return true;
+        else
+            // look up the name in the scopechain to see if it's a const definition
+            // whose value we can access.
+            // 
         identifiers = identifiers->next;
     }
     return false;
@@ -1205,6 +1212,7 @@ void ScopeChain::collectNames(StmtNode *p)
             FunctionStmtNode *f = static_cast<FunctionStmtNode *>(p);
             JSFunction *fnc = new JSFunction(m_cx, NULL, m_cx->getParameterCount(f->function));
             f->mFunction = fnc;
+
             bool isStatic = hasAttribute(f->attributes, Token::Static);
             bool isConstructor = hasAttribute(f->attributes, ConstructorKeyWord);
             bool isOperator = hasAttribute(f->attributes, OperatorKeyWord);
@@ -1212,6 +1220,50 @@ void ScopeChain::collectNames(StmtNode *p)
                 // no need to do anything yet, all operators are 'pre-declared'
             }
             else {
+
+            /* 
+                if (hasAttribute(f->attributes, ExtendKeyWord)) {
+                    // get the argument to the attribute?
+                    // it's a class name, so now this function becomes
+                    // a method in that class. Seems like the class would
+                    // have to be known at this point?
+                    JSType *extendedClass = mScopeChain->extractType( <extend attribute argument> );
+                    
+                      // sort of want to fall into the code below, but use 'extendedClass' instead
+                      // of whatever the topClass will turn out to be.
+                    if (extendedClass->mClassName.compare(name) == 0))
+                        isConstructor = true;
+                    if (isConstructor)
+                        extendedClass->defineConstructor(name, f->attributes, NULL, fnc);
+                    else {
+                        switch (f->function.prefix) {
+                        case FunctionName::Get:
+                            if (isStatic)
+                                extendedClass->defineStaticGetterMethod(name, f->attributes, NULL, fnc);
+                            else
+                                extendedClass->defineGetterMethod(name, f->attributes, NULL, fnc);
+                            break;
+                        case FunctionName::Set:
+                            if (isStatic)
+                                extendedClass->defineStaticSetterMethod(name, f->attributes, NULL, fnc);
+                            else
+                                extendedClass->defineSetterMethod(name, f->attributes, NULL, fnc);
+                            break;
+                        case FunctionName::normal:
+                            if (isStatic)
+                                extendedClass->defineStaticMethod(name, f->attributes, NULL, fnc);
+                            else
+                                extendedClass->defineMethod(name, f->attributes, NULL, fnc);
+                            break;
+                        default:
+                            NOT_REACHED("unexpected prefix");
+                            break;
+                        }
+                    }
+                    
+                    
+                }
+            */
                 if (f->function.name->getKind() == ExprNode::identifier) {
                     const StringAtom& name = (static_cast<IdentifierExprNode *>(f->function.name))->name;
                     if (topClass() && (topClass()->mClassName.compare(name) == 0))
@@ -1244,7 +1296,14 @@ void ScopeChain::collectNames(StmtNode *p)
                         }
                     }
                 }
+                else
+                    NOT_REACHED("implement me - qualified function name");
             }
+        }
+        break;
+    case StmtNode::Namespace:
+        {
+            // ok, so it's a namespace.
         }
         break;
     default:
@@ -1400,6 +1459,21 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                                    getParameterType(f->function, 1), fnc);
             }
 
+            // if it's an extending function, rediscover the extended class
+            // and push the class scope onto the scope chain
+/*
+            bool isExtender = false;                
+            if (hasAttribute(f->attributes, ExtendKeyWord)) {
+                // get the argument to the attribute?
+                // it's a class name, so now this function becomes
+                // a method in that class. Seems like the class would
+                // have to be known at this point?
+                JSType *extendedClass = mScopeChain->extractType( <extend attribute argument> );
+                mScopeChain->addScope(extendedClass->mStatics);
+                mScopeChain->addScope(extendedClass);
+            }
+*/            
+
             fnc->mParameterBarrel = new ParameterBarrel(this);
             mScopeChain->addScope(fnc->mParameterBarrel);
             VariableBinding *v = f->function.parameters;
@@ -1416,6 +1490,14 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             buildRuntimeForStmt(f->function.body);
             mScopeChain->popScope();
             mScopeChain->popScope();
+
+/*
+            if (isExtender) {   // blow off the extended class's scope
+                mScopeChain->popScope();
+                mScopeChain->popScope();
+            }
+*/
+
 
         }
         break;
@@ -1450,6 +1532,11 @@ void Context::buildRuntimeForStmt(StmtNode *p)
             mScopeChain->popScope();
             mScopeChain->popScope();
         }        
+        break;
+    case StmtNode::Namespace:
+        {
+            // do anything ?
+        }
         break;
     default:
         break;
@@ -2554,6 +2641,7 @@ void Context::initBuiltins()
         { "Array",      Array_Constructor   },
         { "Boolean",    Boolean_Constructor },
         { "Void",       NULL                },
+        { "Unit",       NULL                },
     };
 
     Object_Type  = new JSType(this, widenCString(builtInClasses[0].name), NULL);
@@ -2562,6 +2650,7 @@ void Context::initBuiltins()
     Array_Type   = new JSArrayType(this, widenCString(builtInClasses[3].name), Object_Type);
     Boolean_Type = new JSType(this, widenCString(builtInClasses[4].name), Object_Type);
     Void_Type    = new JSType(this, widenCString(builtInClasses[5].name), Object_Type);
+    Unit_Type    = new JSType(this, widenCString(builtInClasses[6].name), Object_Type);
 
     ProtoFunDef objectProtos[] = 
     {
@@ -2660,6 +2749,8 @@ void Context::initBuiltins()
                                     NULL, Number_Type, JSValue(f));
     }
     
+
+
 }
 
 

@@ -45,6 +45,9 @@
 
 #include <string.h>
 
+// this is the IdentifierList passed to the name lookup routines
+#define CURRENT_ATTR    mNamespaceList
+
 namespace JavaScript {    
 namespace JS2Runtime {
 
@@ -976,7 +979,28 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             setLabel(finishedLabel);
         }
         break;
+    case StmtNode::Use:
+        {
+            UseStmtNode *u = static_cast<UseStmtNode *>(p);
+            ExprList *eList = u->exprs;
+            while (eList) {
+                ExprNode *e = eList->expr;
+                if (e->getKind() == ExprNode::identifier) {
+                    IdentifierList *id = new(m_cx->mArena) IdentifierList(static_cast<IdentifierExprNode *>(e)->name);
+                    id->next = CURRENT_ATTR;
+                }
+                else
+                    NOT_REACHED("implement me");
+                eList = eList->next;
+            }
 
+        }
+        break;
+    case StmtNode::Namespace:
+        {
+            // do anything at bytecodegen?
+        }
+        break;
     default:
         NOT_REACHED("Not Implemented Yet");
     }
@@ -1628,6 +1652,17 @@ BinaryOpEquals:
             InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
             Reference *ref = genReference(i->op, Read);
 
+            // if the reference is the name of a type, then this
+            // is a cast of the argument to that type.
+            //if (ref->isTypeName()) {
+            //    addByte(LoadTypeOp);
+            //    addPointer(ref->getType());
+            //    ASSERT(i->pairs);
+            //    genExpr(i->pairs);
+            //    ASSERT(i->pairs->next == NULL);
+            //    addByte(CastOp);
+            //}
+
             if (ref->isConstructor()) {
                 addByte(NewInstanceOp);
                 addByte(PopOp);     // don't need type anymore
@@ -1732,6 +1767,27 @@ BinaryOpEquals:
             addByte(AtOp);
         }
         break;
+    case ExprNode::numUnit:
+        {
+            // turn the unit string into a function call into the
+            // Unit package, passing the number literal arguments
+            // Requires winding up a new lexer/parser chunk. For
+            // now we'll handle single units only
+            NumUnitExprNode *n = static_cast<NumUnitExprNode *>(p);
+
+            addByte(LoadTypeOp);
+            addPointer(Unit_Type);
+            addByte(GetInvokePropertyOp);
+            addStringRef(n->str);
+            addByte(LoadConstantNumberOp);
+            addNumberRef(n->num);
+            addByte(LoadConstantStringOp);
+            addStringRef(n->numStr);
+            addByte(InvokeOp);
+            addLong(2);
+            addByte(NoThis);
+        }
+        break;
     default:
         NOT_REACHED("Not Implemented Yet");
     }
@@ -1804,6 +1860,14 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
     case InvokeOp:
         f << "Invoke " << bcm.getLong(i + 1) << " " << bcm.mCodeBase[i + 5] << "\n";
         i += 6;
+        break;
+    case GetTypeOp:
+        f << "GetType\n";
+        i++;
+        break;
+    case CastOp:
+        f << "Cast\n";
+        i++;
         break;
     case DoUnaryOp:
         f << "DoUnary " << bcm.mCodeBase[i + 1] << "\n";

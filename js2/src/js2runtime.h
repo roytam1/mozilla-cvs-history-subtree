@@ -59,7 +59,6 @@ namespace JS2Runtime {
     using namespace ByteCode;
 
 
-#define CURRENT_ATTR    (NULL)
 
 #ifdef IS_LITTLE_ENDIAN
 #define JSDOUBLE_HI32(x)        (((uint32 *)&(x))[1])
@@ -110,6 +109,7 @@ static const double two31 = 2147483648.0;
     extern JSType *Boolean_Type;
     extern JSType *Void_Type;
     extern JSArrayType *Array_Type;
+    extern JSType *Unit_Type;
 
     bool hasAttribute(const IdentifierList* identifiers, Token::Kind tokenKind);
     bool hasAttribute(const IdentifierList* identifiers, const StringAtom &name);
@@ -252,8 +252,6 @@ static const double two31 = 2147483648.0;
     } Operator;
     
     
-
-    class Context;
 
    
 
@@ -1450,10 +1448,11 @@ static const double two31 = 2147483648.0;
             JSFunction::NativeCode *defCon;
         };
 
-        Context(JSObject *global, World &world) 
+        Context(JSObject *global, World &world, Arena &a) 
             : mGlobal(global), 
               mWorld(world),
               mScopeChain(NULL),
+              mArena(a),
               mDebugFlag(false)
         {
             mScopeChain = new ScopeChain(this, mWorld);
@@ -1498,6 +1497,7 @@ static const double two31 = 2147483648.0;
         JSObject *mGlobal;
         World &mWorld;
         ScopeChain *mScopeChain;
+        Arena &mArena;
         bool mDebugFlag;
 
         // the currently executing 'function'

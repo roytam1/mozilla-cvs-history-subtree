@@ -71,7 +71,7 @@ using namespace JavaScript::JS2Runtime;
 JavaScript::World world;
 JavaScript::Arena a;
 JSObject globalObject;
-Context cx(&globalObject, world);
+Context cx(&globalObject, world, a);
 
 namespace JavaScript {
 namespace Shell {
