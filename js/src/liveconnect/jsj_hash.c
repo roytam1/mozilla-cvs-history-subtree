@@ -31,9 +31,9 @@
 
 #include "jsj_hash.h"
 #include "jstypes.h"
-/* Removed by JSIFY: #    include "prlog.h" */
-#include "jsutil.h" /* Added by JSIFY */
-#    include "jsbit.h"
+#include "jsutil.h"
+#include "jsbit.h"
+
 
 /* Compute the number of buckets in ht */
 #define NBUCKETS(ht)    (1 << (JSJ_HASH_BITS - (ht)->shift))

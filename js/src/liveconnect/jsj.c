@@ -150,6 +150,7 @@ jfieldID njJSException_wrappedException;        /* netscape.javascript.JSExcepti
             (*jEnv)->GetMethodID(jEnv, class, #method, signature);           \
     }                                                                        \
     if (class##_##mvar == 0) {                                               \
+            (*jEnv)->ExceptionClear(jEnv);                                   \
         report_java_initialization_error(jEnv,                               \
                "Can't get mid for " #qualified_class "." #method "()");      \
         return JS_FALSE;                                                     \
@@ -175,6 +176,7 @@ jfieldID njJSException_wrappedException;        /* netscape.javascript.JSExcepti
         class##_##field = (*jEnv)->GetFieldID(jEnv, class, #field, signature);\
     }                                                                        \
     if (class##_##field == 0) {                                              \
+            (*jEnv)->ExceptionClear(jEnv);                                   \
         report_java_initialization_error(jEnv,                               \
                 "Can't get fid for " #qualified_class "." #field);           \
         return JS_FALSE;                                                     \
@@ -197,6 +199,7 @@ jfieldID njJSException_wrappedException;        /* netscape.javascript.JSExcepti
         class##_##field =                                                    \
             (*jEnv)->GetStatic##type##Field(jEnv, class, field_id);          \
         if (class##_##field == 0) {                                          \
+            (*jEnv)->ExceptionClear(jEnv);                                   \
             report_java_initialization_error(jEnv,                           \
                 "Can't read static field " #qualified_class "." #field);     \
             return JS_FALSE;                                                 \
@@ -281,6 +284,8 @@ JSObject_RegisterNativeMethods(JNIEnv* jEnv)
 
     static JNINativeMethod nativeMethods[] = {
         {"initClass", "()V", (void*)&Java_netscape_javascript_JSObject_initClass},
+
+#ifndef OJI
         {"getMember", "(Ljava/lang/String;)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_getMember},
         {"getSlot", "(I)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_getSlot},
         {"setMember", "(Ljava/lang/String;Ljava/lang/Object;)V", (void*)&Java_netscape_javascript_JSObject_setMember},
@@ -293,6 +298,8 @@ JSObject_RegisterNativeMethods(JNIEnv* jEnv)
         {"getWindow", "(Ljava/applet/Applet;)Lnetscape/javascript/JSObject;", (void*)&Java_netscape_javascript_JSObject_getWindow},
         {"finalize", "()V", (void*)&Java_netscape_javascript_JSObject_finalize},
         {"equals", "(Ljava/lang/Object;)Z", (void*)&Java_netscape_javascript_JSObject_equals}
+#endif  /* !OJI */
+
     };
     (*jEnv)->RegisterNatives(jEnv, njJSObject, nativeMethods, sizeof(nativeMethods) / sizeof(JNINativeMethod));
     if ((*jEnv)->ExceptionOccurred(jEnv)) {
@@ -319,17 +326,23 @@ init_netscape_java_classes(JSJavaVM *jsjava_vm, JNIEnv *jEnv)
     JSObject_RegisterNativeMethods(jEnv);
 #endif
 
+#ifndef OJI
     LOAD_CONSTRUCTOR(netscape.javascript.JSObject,
                                             JSObject,           "(I)V",                         njJSObject);
+#endif
     LOAD_CONSTRUCTOR(netscape.javascript.JSException,
                                             JSException,        "(Ljava/lang/String;Ljava/lang/String;ILjava/lang/String;I)V",
-    /* Load second constructor for wrapping JS exception objects inside JSExceptions */                                                                                            njJSException);
+                                                                                                njJSException);
+
+    /* Load second constructor for wrapping JS exception objects inside JSExceptions */
     _LOAD_METHOD(netscape.javascript.JSException,<init>,
                  JSException_wrap, "(ILjava/lang/Object;)V",        
-                 njJSException, JS_FALSE)
+                 njJSException, JS_FALSE);
 
+#ifndef OJI
     LOAD_FIELDID(netscape.javascript.JSObject,  
                                             internal,           "I",                            njJSObject);
+#endif
     LOAD_FIELDID(netscape.javascript.JSException,  
                                             lineno,             "I",                            njJSException);
     LOAD_FIELDID(netscape.javascript.JSException,  

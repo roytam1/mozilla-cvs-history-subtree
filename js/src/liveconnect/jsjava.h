@@ -98,7 +98,7 @@ typedef struct JSJCallbacks {
         
     /* An interim callback function until the LiveConnect security story is
        straightened out.  This function pointer can be set to NULL. */
-    JSPrincipals *      (*get_JSPrincipals_from_java_caller)(JNIEnv *jEnv, JSContext *pJSContext);
+    JSPrincipals *      (*get_JSPrincipals_from_java_caller)(JNIEnv *jEnv, JSContext *pJSContext, void **pNSIPrincipaArray, int numPrincipals, void *pNSISecurityContext);
     
     /* The following two callbacks sandwich any JS evaluation performed
        from Java.   They may be used to implement concurrency constraints, e.g.
@@ -106,7 +106,11 @@ typedef struct JSJCallbacks {
        browser embedding, these are used to maintain the run-to-completion
        semantics of JavaScript.  It is acceptable for either function pointer
        to be NULL. */
+#ifdef OJI
+    JSBool	        (*enter_js_from_java)(JNIEnv *jEnv, char **errp,  void **pNSIPrincipaArray, int numPrincipals, void *pNSISecurityContext);
+#else
     JSBool	        (*enter_js_from_java)(JNIEnv *jEnv, char **errp);
+#endif
     void	        (*exit_js)(JNIEnv *jEnv);
 
     /* Most LiveConnect errors are signaled by calling JS_ReportError(), but in
@@ -265,4 +269,5 @@ JS_EXPORT_API(JSBool)
 JSJ_ConvertJavaObjectToJSValue(JSContext *cx, jobject java_obj, jsval *vp);
 
 JS_END_EXTERN_C
+
 #endif  /* _JSJAVA_H */

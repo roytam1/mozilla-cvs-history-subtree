@@ -31,13 +31,12 @@
 
 #include "jstypes.h"
 
-/* NSPR1 compatibility definitions */
 #   include "jsprf.h"
 #   include "jsutil.h"
 #   include "jshash.h"
 
 #ifdef XP_MAC
-#    include "jsosdep.h"
+#include "macstdlibextras.h"  /* for strdup() */
 #endif
 
 #include "jsj_hash.h"        /* Hash tables */
@@ -194,6 +193,22 @@ struct JSJavaThreadState {
     JSJavaThreadState * next;           /* next thread state among all created threads */
 };
 
+struct JavaToJSSavedState {
+	JSErrorReporter error_reporter;
+	JSJavaThreadState* java_jsj_env;
+};
+typedef struct JavaToJSSavedState JavaToJSSavedState;
+
+
+/* This object provides is the "anchor" by which netscape.javscript.JSObject
+   objects hold a reference to native JSObjects. */
+struct JSObjectHandle {
+    JSObject *js_obj;
+    JSContext *cx;      /* Creating context, needed for finalization */
+};
+typedef struct JSObjectHandle JSObjectHandle;
+
+
 /******************************** Globals ***********************************/
 
 extern JSJCallbacks *JSJ_callbacks;
@@ -323,7 +338,9 @@ jsj_ConvertJavaObjectToJSBoolean(JSContext *cx, JNIEnv *jEnv,
                                  jobject java_obj, jsval *vp);
 extern JSJavaThreadState *
 jsj_enter_js(JNIEnv *jEnv, jobject java_wrapper_obj,
-             JSContext **cxp, JSObject **js_objp, JSErrorReporter *old_error_reporterp);
+         JSContext **cxp, JSObject **js_objp, JSErrorReporter *old_error_reporterp, 
+         void **pNSIPrincipaArray, int numPrincipals, void *pNSISecurityContext);
+
 extern JSBool
 jsj_exit_js(JSContext *cx, JSJavaThreadState *jsj_env, JSErrorReporter old_error_reporterp);
 

@@ -32,6 +32,9 @@
 #include "jsj_private.h"      /* LiveConnect internals */
 #include "jsj_hash.h"         /* Hash table with Java object as key */
 
+#ifdef JS_THREADSAFE
+#include "prmon.h"
+#endif
 
 /*
  * This is a hash table that maps from Java objects to JS objects.
@@ -63,7 +66,8 @@ init_java_obj_reflections_table(void)
         return JS_FALSE;
 
 #ifdef JS_THREADSAFE
-    java_obj_reflections_monitor = PR_NewNamedMonitor("java_obj_reflections");
+    java_obj_reflections_monitor = 
+	(struct PRMonitor *) PR_NewNamedMonitor("java_obj_reflections");
     if (!java_obj_reflections_monitor) {
         JS_HashTableDestroy(java_obj_reflections);
         return JS_FALSE;

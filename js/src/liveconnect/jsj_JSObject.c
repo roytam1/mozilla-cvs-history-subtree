@@ -146,8 +146,15 @@ jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
 
     /* No existing reflection found, so create a new Java object that wraps
        the JavaScript object by storing its address in a private integer field. */
+#ifndef OJI
     java_wrapper_obj =
         (*jEnv)->NewObject(jEnv, njJSObject, njJSObject_JSObject, (jint)js_obj);
+#else
+    if (JSJ_callbacks->get_java_wrapper != NULL) {
+        java_wrapper_obj = JSJ_callbacks->get_java_wrapper(jEnv, (jint)handle);
+    }
+#endif /*! OJI */
+
     if (!java_wrapper_obj) {
         jsj_UnexpectedJavaError(cx, jEnv, "Couldn't create new instance of "
                                           "netscape.javascript.JSObject");
@@ -220,12 +227,6 @@ jsj_remove_js_obj_reflection_from_hashtable(JSContext *cx, JSObject *js_obj)
 
 #else /* !PRESERVE_JSOBJECT_IDENTITY */
 
-/* This object provides is the "anchor" by which netscape.javscript.JSObject
-   objects hold a reference to native JSObjects. */
-typedef struct JSObjectHandle {
-    JSObject *js_obj;   /* A JS root is held on this object */
-    JSContext *cx;      /* Creating context, needed for finalization */
-} JSObjectHandle;
 
 /*
  * The caller must call DeleteLocalRef() on the returned object when no more
@@ -247,8 +248,14 @@ jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
 
     /* Create a new Java object that wraps the JavaScript object by storing its
        address in a private integer field. */
+#ifndef OJI
     java_wrapper_obj =
         (*jEnv)->NewObject(jEnv, njJSObject, njJSObject_JSObject, (jint)handle);
+#else
+    if (JSJ_callbacks->get_java_wrapper != NULL) {
+        java_wrapper_obj = JSJ_callbacks->get_java_wrapper(jEnv, (jint)handle);
+    }
+#endif /*! OJI */
     if (!java_wrapper_obj) {
         jsj_UnexpectedJavaError(cx, jEnv, "Couldn't create new instance of "
                                           "netscape.javascript.JSObject");
@@ -432,21 +439,13 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
          * error_as_exception condition, since JSTYPE_LIMIT isn't used for
          * much elsewhere. Should we add another JSTYPE specifically 
          * for errors? - coop 11/06/1998 */
-        primitive_type = JS_TypeOfValue(jsj_env->cx, pending_exception);
+        primitive_type = JS_TypeOfValue(cx, pending_exception);
         
-#if JS_HAS_ERROR_EXCEPTIONS
-        if (primitive_type == JSTYPE_OBJECT) {
-            js_obj = JSVAL_TO_OBJECT(pending_exception);
-            if (OBJ_GET_CLASS(jsj_env->cx, js_obj) == &js_ExceptionClass) 
-                primitive_type = JSTYPE_LIMIT;
-        }
-#endif
-
         /* Convert jsval exception to a java object and then use it to
            create an instance of JSException. */ 
         if (!jsj_ConvertJSValueToJavaObject(cx, jEnv, 
                                             pending_exception, 
-                                            jsj_get_jlObject_descriptor(jsj_env->cx, jEnv),
+                                            jsj_get_jlObject_descriptor(cx, jEnv),
                                             &dummy_cost, &java_obj, 
                                             &is_local_refp))
             goto done;
@@ -465,7 +464,7 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
             jsj_LogError("Couldn't throw JSException\n");
             goto done;
         }    
-        JS_ClearPendingException(jsj_env->cx);
+        JS_ClearPendingException(cx);
         return;
     }
     
@@ -648,7 +647,8 @@ done:
 
 JSJavaThreadState *
 jsj_enter_js(JNIEnv *jEnv, jobject java_wrapper_obj,
-             JSContext **cxp, JSObject **js_objp, JSErrorReporter *old_error_reporterp)
+             JSContext **cxp, JSObject **js_objp, JSErrorReporter *old_error_reporterp,
+             void **pNSIPrincipaArray, int numPrincipals, void *pNSISecurityContext)
 {
     JSContext *cx;
     char *err_msg;
@@ -660,7 +660,11 @@ jsj_enter_js(JNIEnv *jEnv, jobject java_wrapper_obj,
 
     /* Invoke callback, presumably used to implement concurrency constraints */
     if (JSJ_callbacks->enter_js_from_java) {
+#ifdef OJI
+        if (!JSJ_callbacks->enter_js_from_java(jEnv, &err_msg, pNSIPrincipaArray, numPrincipals, pNSISecurityContext))
+#else
         if (!JSJ_callbacks->enter_js_from_java(jEnv, &err_msg))
+#endif
             goto entry_failure;
     }
 
@@ -816,7 +820,7 @@ Java_netscape_javascript_JSObject_getMember(JNIEnv *jEnv,
     jboolean is_copy;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter, NULL, 0, NULL);
     if (!jsj_env)
         return NULL;
 
@@ -871,7 +875,7 @@ Java_netscape_javascript_JSObject_getSlot(JNIEnv *jEnv,
     jobject member;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter, NULL, 0, NULL);
     if (!jsj_env)
         return NULL;
     
@@ -909,7 +913,7 @@ Java_netscape_javascript_JSObject_setMember(JNIEnv *jEnv,
     jboolean is_copy;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter, NULL, 0, NULL);
     if (!jsj_env)
         return;
     
@@ -956,7 +960,7 @@ Java_netscape_javascript_JSObject_setSlot(JNIEnv *jEnv,
     JSErrorReporter saved_reporter;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter, NULL, 0, NULL);
     if (!jsj_env)
         return;
     
@@ -987,7 +991,7 @@ Java_netscape_javascript_JSObject_removeMember(JNIEnv *jEnv,
     jboolean is_copy;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter, NULL, 0, NULL);
     if (!jsj_env)
         return;
     
@@ -1036,7 +1040,7 @@ Java_netscape_javascript_JSObject_call(JNIEnv *jEnv, jobject java_wrapper_obj,
     jobject result;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter, NULL, 0, NULL);
     if (!jsj_env)
         return NULL;
     
@@ -1125,7 +1129,7 @@ Java_netscape_javascript_JSObject_eval(JNIEnv *jEnv,
     jobject result;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter, NULL, 0, NULL);
     if (!jsj_env)
         return NULL;
     
@@ -1148,7 +1152,7 @@ Java_netscape_javascript_JSObject_eval(JNIEnv *jEnv,
     /* Set up security stuff */
     principals = NULL;
     if (JSJ_callbacks->get_JSPrincipals_from_java_caller)
-        principals = JSJ_callbacks->get_JSPrincipals_from_java_caller(jEnv, cx);
+        principals = JSJ_callbacks->get_JSPrincipals_from_java_caller(jEnv, cx, NULL, 0, NULL);
     codebase = principals ? principals->codebase : NULL;
 
     /* Have the JS engine evaluate the unicode string */
@@ -1187,7 +1191,7 @@ Java_netscape_javascript_JSObject_toString(JNIEnv *jEnv,
     JSErrorReporter saved_reporter;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, java_wrapper_obj, &cx, &js_obj, &saved_reporter, NULL, 0, NULL);
     if (!jsj_env)
         return NULL;
     
@@ -1224,7 +1228,7 @@ Java_netscape_javascript_JSObject_getWindow(JNIEnv *jEnv,
     jobject java_obj;
     JSJavaThreadState *jsj_env;
     
-    jsj_env = jsj_enter_js(jEnv, NULL, &cx, NULL, &saved_reporter);
+    jsj_env = jsj_enter_js(jEnv, NULL, &cx, NULL, &saved_reporter, NULL, 0, NULL);
     if (!jsj_env)
         return NULL;
     
