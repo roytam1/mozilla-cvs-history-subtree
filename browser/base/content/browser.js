@@ -118,6 +118,19 @@ function loadEventHandlers(event)
     updatePageTheme();
     updatePageLivemarks();
   }
+
+  // some event handlers want to be told what the original browser is
+  var targetBrowser = null;
+  if (gBrowser.mTabbedMode) {
+    var targetBrowserIndex = gBrowser.getBrowserIndexForDocument(event.originalTarget);
+    if (targetBrowserIndex == -1)
+      return;
+    targetBrowser = gBrowser.getBrowserAtIndex(targetBrowserIndex);
+  } else {
+    targetBrowser = gBrowser.mCurrentBrowser;
+  }
+
+  updatePageFavIcon(targetBrowser);
 }
 
 /**
@@ -141,18 +154,6 @@ function UpdateBookmarksLastVisitedDate(event)
   if (url) {
     // if the URL is bookmarked, update its "Last Visited" date
     BMSVC.updateLastVisitedDate(url, _content.document.characterSet);
-  }
-}
-
-function HandleBookmarkIcon(iconURL, addFlag)
-{
-  var url = getWebNavigation().currentURI.spec
-  if (url) {
-    // update URL with new icon reference
-    if (addFlag)
-      BMSVC.updateBookmarkIcon(url, iconURL);
-    else
-      BMSVC.removeBookmarkIcon(url, iconURL);
   }
 }
 
@@ -2152,24 +2153,35 @@ function SetPageProxyState(aState, aURI)
 
   gProxyButton.setAttribute("pageproxystate", aState);
 
+  var theBrowser = gBrowser.mCurrentBrowser;
   if (aState == "valid") {
     gLastValidURLStr = gURLBar.value;
     gURLBar.addEventListener("input", UpdatePageProxyState, false);
     if (gBrowser.shouldLoadFavIcon(aURI)) {
-      var favStr = gBrowser.buildFavIconString(aURI);
-      if (favStr != gProxyFavIcon.src) {
-        gBrowser.loadFavIcon(aURI, "src", gProxyFavIcon);
-        gProxyDeck.selectedIndex = 0;
+      // only attempt to load the generic favicon url (/favicon.ico) if
+      // we didn't find a specific <link>'d one
+      if (theBrowser.mFavIconURL == null) {
+        var favStr = gBrowser.buildFavIconString(aURI);
+        if (favStr != gProxyFavIcon.src) {
+          gBrowser.loadFavIcon(aURI, "src", gProxyFavIcon);
+          gProxyDeck.selectedIndex = 0;
+        }
+        else {
+          gProxyDeck.selectedIndex = 1;
+        }
+        // store what we think is the current favicon
+        theBrowser.mFavIconURL = favStr;
       }
-      else gProxyDeck.selectedIndex = 1;
     }
     else {
       gProxyDeck.selectedIndex = 0;
       gProxyFavIcon.removeAttribute("src");
+      theBrowser.mFavIconURL = null;
     }
   } else if (aState == "invalid") {
     gURLBar.removeEventListener("input", UpdatePageProxyState, false);
     gProxyDeck.selectedIndex = 0;
+    theBrowser.mFavIconURL = null;
   }
 }
 
@@ -3069,13 +3081,15 @@ nsBrowserStatusHandler.prototype =
     }
   },
 
-  onLinkIconAvailable : function(aHref) 
+  onLinkIconAvailable : function(aBrowser, aHref) 
   {
-    var browser = getBrowser()
-    if (gProxyFavIcon) {
-      if (browser.userTypedValue === null)
-        gProxyFavIcon.setAttribute("src", aHref);
+    if (gProxyFavIcon &&
+        gBrowser.mCurrentBrowser == aBrowser &&
+        getBrowser().userTypedValue === null) {
+      gProxyFavIcon.setAttribute("src", aHref);
     }
+
+    aBrowser.mFavIconURL = aHref;
   },
 
   onProgressChange : function (aWebProgress, aRequest,
@@ -3219,7 +3233,10 @@ nsBrowserStatusHandler.prototype =
       var findField = document.getElementById("find-field");
       if (findField)
         setTimeout(function() { findField.value = browser.findString; }, 0, findField, browser); 
-      
+
+      // reset any favicon set for the browser
+      browser.mFavIconURL = null;
+
       //XXXBlake don't we have to reinit this.urlBar, etc.
       //         when the toolbar changes?
       var userTypedValue = browser.userTypedValue;
@@ -5503,3 +5520,9 @@ function livemarkAddMark(wincontent, data) {
   BookmarksUtils.addLivemark(wincontent.document.baseURI, data, title);
 }
 
+function updatePageFavIcon(aBrowser) {
+  if (aBrowser.mFavIconURL != null) {
+    var url = aBrowser.currentURI.spec;
+    BookmarksUtils.loadFavIcon(url, aBrowser.mFavIconURL);
+  }
+}

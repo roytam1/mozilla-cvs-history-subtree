@@ -73,6 +73,10 @@ var kDSContractID;
 var kDSIID;
 var DS;
 
+var kIOContractID;
+var kIOIID;
+var IOSVC;
+
 // should be moved in a separate file
 function initServices()
 {
@@ -113,6 +117,9 @@ function initServices()
   kDSIID            = Components.interfaces.nsIDragService;
   DS                = Components.classes[kDSContractID].getService(kDSIID);
 
+  kIOContractID     = "@mozilla.org/network/io-service;1";
+  kIOIID            = Components.interfaces.nsIIOService;
+  IOSVC             = Components.classes[kIOContractID].getService(kIOIID);
 }
 
 function initBMService()
@@ -1433,6 +1440,23 @@ var BookmarksUtils = {
     openDialog("chrome://browser/content/bookmarks/addBookmark2.xul", "",
                "centerscreen,chrome,dialog,resizable,dependent", aTitle, aURL, null, null,
                null, null, false, null, null, null, aFeedURL);
+  },
+ 
+  loadFavIcon: function (aURL, aFavIconURL) {
+    var urlLiteral = RDF.GetLiteral(aURL);
+    // don't do anything if this URI isn't bookmarked
+    var bmResource = BMSVC.GetSource(RDF.GetResource(NC_NS+"URL"), urlLiteral, true);
+    if (!bmResource)
+      return;
+ 
+    // don't do anything if there's already a data: url set
+    var oldIcon = BMDS.GetTarget(bmResource, RDF.GetResource(NC_NS+"Icon"), true);
+    if (oldIcon && (oldIcon.QueryInterface(kRDFLITIID).Value.substring(0,5) == "data:"))
+      return;
+ 
+    var chan = IOSVC.newChannel(aFavIconURL, null, null);
+    var listener = new bookmarksFavIconLoadListener (aURL, aFavIconURL, chan);
+    chan.asyncOpen(listener, null);
   }
 }
 
@@ -1691,6 +1715,58 @@ var BookmarkEditMenuTxnListener =
       transactionLabel = BookmarksUtils.getLocaleString("cmd_bm_"+action+"_redo")
     }
     node.setAttribute("label", transactionLabel);
+  }
+}
+
+// favicon loaders
+
+function bookmarksFavIconLoadListener(uri, faviconurl, channel) {
+  this.mURI = uri;
+  this.mFavIconURL = faviconurl;
+  this.mCountRead = 0;
+  this.mChannel = channel;
+}
+
+bookmarksFavIconLoadListener.prototype = {
+  mURI : null,
+  mFavIconURL : null,
+  mCountRead : null,
+  mChannel : null,
+  mBytes : "",
+  mStream : null,
+
+  QueryInterface: function (iid) {
+    if (!iid.equals(Components.interfaces.nsIRequestObserver) &&
+        !iid.equals(Components.interfaces.nsISupports) &&
+        !iid.equals(Components.interfaces.nsIStreamListener)) {
+      throw Components.results.NS_ERROR_NO_INTERFACE;
+    }
+    return this;
+  },
+
+  onStartRequest : function (aRequest, aContext) {
+    this.mStream = Components.classes['@mozilla.org/binaryinputstream;1'].createInstance(Components.interfaces.nsIBinaryInputStream);
+  },
+
+  onStopRequest : function (aRequest, aContext, aStatusCode) {
+    var httpChannel = this.mChannel.QueryInterface(Components.interfaces.nsIHttpChannel);
+    if ((httpChannel && httpChannel.requestSucceeded) &&
+        Components.isSuccessCode(aStatusCode) &&
+        this.mCountRead > 0)
+    {
+      // build a data URL for the favicon
+      var dataurl = "data:" + this.mChannel.contentType + ";base64," + btoa(this.mBytes);
+      BMSVC.updateBookmarkIcon(this.mURI, dataurl);
+    }
+  },
+
+  onDataAvailable : function (aRequest, aContext, aInputStream, aOffset, aCount) {
+    // we could get a different aInputStream, so we don't save this;
+    // it's unlikely we'll get more than one onDataAvailable for a
+    // favicon anyway
+    this.mStream.setInputStream(aInputStream);
+    this.mBytes += this.mStream.readBytes(aCount);
+    this.mCountRead += aCount;
   }
 }
 
