@@ -61,6 +61,7 @@
 #include "nsIAtom.h"
 #include "nsVoidArray.h"
 #include "nsISupportsArray.h"
+#include "nsCOMArray.h"
 #include "nsColor.h"
 #include "nsStyleConsts.h"
 #include "nsLayoutAtoms.h"
@@ -69,8 +70,10 @@
 #include "nsINameSpace.h"
 #include "nsThemeConstants.h"
 #include "nsContentErrors.h"
+#include "nsUnitConversion.h"
 
 #include "prprf.h"
+#include "math.h"
 
 // XXX TODO:
 // - rework aErrorCode stuff: switch over to nsresult
@@ -148,10 +151,6 @@ public:
   virtual ~CSSParserImpl();
 
   NS_DECL_ISUPPORTS
-
-  NS_IMETHOD Init(nsICSSStyleSheet* aSheet);
-
-  NS_IMETHOD GetInfoMask(PRUint32& aResult);
 
   NS_IMETHOD SetStyleSheet(nsICSSStyleSheet* aSheet);
 
@@ -309,6 +308,11 @@ protected:
   PRBool ParseColor(PRInt32& aErrorCode, nsCSSValue& aValue);
   PRBool ParseColorComponent(PRInt32& aErrorCode, PRUint8& aComponent,
                              PRInt32& aType, char aStop);
+  // ParseHSLColor parses everything starting with the opening '(' up through
+  // and including the aStop char.
+  PRBool ParseHSLColor(PRInt32& aErrorCode, nscolor& aColor, char aStop);
+  // ParseColorOpacity will enforce that the color ends with a ')' after the opacity
+  PRBool ParseColorOpacity(PRInt32& aErrorCode, PRUint8& aOpacity);
   PRBool ParseEnum(PRInt32& aErrorCode, nsCSSValue& aValue, const PRInt32 aKeywordTable[]);
   PRInt32 SearchKeywordTable(nsCSSKeyword aKeyword, const PRInt32 aTable[]);
   PRBool ParseVariant(PRInt32& aErrorCode, nsCSSValue& aValue,
@@ -323,37 +327,57 @@ protected:
   PRBool TranslateDimension(PRInt32& aErrorCode, nsCSSValue& aValue, PRInt32 aVariantMask,
                             float aNumber, const nsString& aUnit);
 
+  void SetParsingCompoundProperty(PRBool aBool) {
+    mParsingCompoundProperty = aBool;
+  }
+  PRBool IsParsingCompoundProperty(void) {
+    return mParsingCompoundProperty;
+  }
+
   // Current token. The value is valid after calling GetToken
   nsCSSToken mToken;
 
-  // After an UngetToken is done this flag is true. The next call to
-  // GetToken clears the flag.
-  PRBool mHavePushBack;
-
+  // Our scanner.  We own this and are responsible for deallocating it.
   nsCSSScanner* mScanner;
-  nsIURI* mURL;
-  nsICSSStyleSheet* mSheet;
+
+  // The URI to be used as a base for relative URIs.
+  nsCOMPtr<nsIURI> mURL;
+
+  // The sheet we're parsing into
+  nsCOMPtr<nsICSSStyleSheet> mSheet;
+
+  // Used for @import rules
   nsICSSLoader* mChildLoader; // not ref counted, it owns us
 
+  // Sheet section we're in.  This is used to enforce correct ordering of the
+  // various rule types (eg the fact that a @charset rule must come before
+  // anything else).
   enum nsCSSSection { 
     eCSSSection_Charset, 
     eCSSSection_Import, 
     eCSSSection_NameSpace,
     eCSSSection_General 
   };
-
   nsCSSSection  mSection;
 
-  PRBool  mNavQuirkMode;
-  PRBool  mCaseSensitive;
+  nsCOMPtr<nsINameSpace> mNameSpace;
 
-  nsINameSpace* mNameSpace;
+  // After an UngetToken is done this flag is true. The next call to
+  // GetToken clears the flag.
+  PRPackedBool mHavePushBack;
 
-  nsISupportsArray* mGroupStack;
+  // True if we are in quirks mode; false in standards or almost standards mode
+  PRPackedBool  mNavQuirkMode;
 
-  PRBool  mParsingCompoundProperty;
-  void    SetParsingCompoundProperty(PRBool aBool) {mParsingCompoundProperty = aBool;};
-  PRBool  IsParsingCompoundProperty(void) {return mParsingCompoundProperty;};
+  // True if tagnames and attributes are case-sensitive
+  PRPackedBool  mCaseSensitive;
+
+  // This flag is set when parsing a non-box shorthand; it's used to not apply
+  // some quirks during shorthand parsing
+  PRPackedBool  mParsingCompoundProperty;
+
+  // Stack of rule groups; used for @media and such.
+  nsCOMArray<nsICSSGroupRule> mGroupStack;
 };
 
 PR_STATIC_CALLBACK(void) AppendRuleToArray(nsICSSRule* aRule, void* aArray)
@@ -423,48 +447,20 @@ static void ReportUnexpectedToken(nsCSSScanner *sc,
 
 CSSParserImpl::CSSParserImpl()
   : mToken(),
-    mHavePushBack(PR_FALSE),
     mScanner(nsnull),
-    mURL(nsnull),
-    mSheet(nsnull),
     mChildLoader(nsnull),
     mSection(eCSSSection_Charset),
+    mHavePushBack(PR_FALSE),
     mNavQuirkMode(PR_FALSE),
     mCaseSensitive(PR_FALSE),
-    mNameSpace(nsnull),
-    mGroupStack(nsnull),
     mParsingCompoundProperty(PR_FALSE)
 {
-}
-
-NS_IMETHODIMP
-CSSParserImpl::Init(nsICSSStyleSheet* aSheet)
-{
-  NS_IF_RELEASE(mGroupStack);
-  NS_IF_RELEASE(mNameSpace);
-  NS_IF_RELEASE(mSheet);
-  mSheet = aSheet;
-  if (mSheet) {
-    NS_ADDREF(aSheet);
-    mSheet->GetNameSpace(mNameSpace);
-  }
-  return NS_OK;
 }
 
 NS_IMPL_ISUPPORTS1(CSSParserImpl, nsICSSParser)
 
 CSSParserImpl::~CSSParserImpl()
 {
-  NS_IF_RELEASE(mGroupStack);
-  NS_IF_RELEASE(mNameSpace);
-  NS_IF_RELEASE(mSheet);
-}
-
-NS_IMETHODIMP
-CSSParserImpl::GetInfoMask(PRUint32& aResult)
-{
-  aResult = NS_CSS_GETINFO_CSS1 | NS_CSS_GETINFO_CSSP;
-  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -477,12 +473,9 @@ CSSParserImpl::SetStyleSheet(nsICSSStyleSheet* aSheet)
 
   if (aSheet != mSheet) {
     // Switch to using the new sheet
-    NS_IF_RELEASE(mGroupStack);
-    NS_IF_RELEASE(mNameSpace);
-    NS_IF_RELEASE(mSheet);
+    mGroupStack.Clear();
     mSheet = aSheet;
-    NS_ADDREF(mSheet);
-    mSheet->GetNameSpace(mNameSpace);
+    mSheet->GetNameSpace(*getter_AddRefs(mNameSpace));
   }
 
   return NS_OK;
@@ -519,9 +512,7 @@ CSSParserImpl::InitScanner(nsIUnicharInputStream* aInput, nsIURI* aURI)
     return NS_ERROR_OUT_OF_MEMORY;
   }
   mScanner->Init(aInput, aURI);
-  NS_IF_RELEASE(mURL);
   mURL = aURI;
-  NS_IF_ADDREF(mURL);
 
   mHavePushBack = PR_FALSE;
 
@@ -535,7 +526,7 @@ CSSParserImpl::ReleaseScanner(void)
     delete mScanner;
     mScanner = nsnull;
   }
-  NS_IF_RELEASE(mURL);
+  mURL = nsnull;
   return NS_OK;
 }
 
@@ -548,7 +539,7 @@ CSSParserImpl::Parse(nsIUnicharInputStream* aInput,
   NS_ASSERTION(nsnull != aInputURL, "need base URL");
 
   if (! mSheet) {
-    NS_NewCSSStyleSheet(&mSheet, aInputURL);
+    NS_NewCSSStyleSheet(getter_AddRefs(mSheet), aInputURL);
   }
 #ifdef DEBUG
   else {
@@ -1327,8 +1318,7 @@ PRBool CSSParserImpl::ProcessNameSpace(PRInt32& aErrorCode, const nsString& aPre
   NS_NewCSSNameSpaceRule(getter_AddRefs(rule), prefix, aURLSpec);
   if (rule) {
     (*aAppendFunc)(rule, aData);
-    NS_IF_RELEASE(mNameSpace);
-    mSheet->GetNameSpace(mNameSpace);
+    mSheet->GetNameSpace(*getter_AddRefs(mNameSpace));
   }
 
   return result;
@@ -1428,37 +1418,25 @@ void CSSParserImpl::SkipRuleSet(PRInt32& aErrorCode)
 
 PRBool CSSParserImpl::PushGroup(nsICSSGroupRule* aRule)
 {
-  if (! mGroupStack) {
-    NS_NewISupportsArray(&mGroupStack);
-  }
-  if (mGroupStack) {
-    mGroupStack->AppendElement(aRule);
+  if (mGroupStack.AppendObject(aRule))
     return PR_TRUE;
-  }
+
   return PR_FALSE;
 }
 
 void CSSParserImpl::PopGroup(void)
 {
-  if (mGroupStack) {
-    PRUint32 count;
-    mGroupStack->Count(&count);
-    if (0 < count) {
-      mGroupStack->RemoveElementAt(count - 1);
-    }
+  PRInt32 count = mGroupStack.Count();
+  if (0 < count) {
+    mGroupStack.RemoveObjectAt(count - 1);
   }
 }
 
 void CSSParserImpl::AppendRule(nsICSSRule* aRule)
 {
-  PRUint32 count = 0;
-  if (mGroupStack) {
-    mGroupStack->Count(&count);
-  }
+  PRInt32 count = mGroupStack.Count();
   if (0 < count) {
-    nsICSSGroupRule* group = (nsICSSGroupRule*)mGroupStack->ElementAt(count - 1);
-    group->AppendStyleRule(aRule);
-    NS_RELEASE(group);
+    mGroupStack[count - 1]->AppendStyleRule(aRule);
   }
   else {
     mSheet->AppendStyleRule(aRule);
@@ -2483,7 +2461,6 @@ PRBool CSSParserImpl::ParseColor(PRInt32& aErrorCode, nsCSSValue& aValue)
     return PR_FALSE;
   }
 
-
   nsCSSToken* tk = &mToken;
   nscolor rgba;
   switch (tk->mType) {
@@ -2520,11 +2497,46 @@ PRBool CSSParserImpl::ParseColor(PRInt32& aErrorCode, nsCSSValue& aValue)
             ParseColorComponent(aErrorCode, r, type, ',') &&
             ParseColorComponent(aErrorCode, g, type, ',') &&
             ParseColorComponent(aErrorCode, b, type, ')')) {
-          rgba = NS_RGB(r,g,b);
-          aValue.SetColorValue(rgba);
+          aValue.SetColorValue(NS_RGB(r,g,b));
           return PR_TRUE;
         }
         return PR_FALSE;  // already pushed back
+      }
+      else if (mToken.mIdent.EqualsIgnoreCase("-moz-rgba")) {
+        // rgba ( component , component , component , opacity )
+        PRUint8 r, g, b, a;
+        PRInt32 type = COLOR_TYPE_UNKNOWN;
+        if (ExpectSymbol(aErrorCode, '(', PR_FALSE) && // this won't fail
+            ParseColorComponent(aErrorCode, r, type, ',') &&
+            ParseColorComponent(aErrorCode, g, type, ',') &&
+            ParseColorComponent(aErrorCode, b, type, ',') &&
+            ParseColorOpacity(aErrorCode, a)) {
+          aValue.SetColorValue(NS_RGBA(r, g, b, a));
+          return PR_TRUE;
+        }
+        return PR_FALSE;  // already pushed back
+      }
+      else if (mToken.mIdent.EqualsIgnoreCase("-moz-hsl")) {
+        // hsl ( hue , saturation , lightness )
+        // "hue" is a number, "saturation" and "lightness" are percentages.
+        if (ParseHSLColor(aErrorCode, rgba, ')')) {
+          aValue.SetColorValue(rgba);
+          return PR_TRUE;
+        }
+        return PR_FALSE;
+      }
+      else if (mToken.mIdent.EqualsIgnoreCase("-moz-hsla")) {
+        // hsla ( hue , saturation , lightness , opacity )
+        // "hue" is a number, "saturation" and "lightness" are percentages,
+        // "opacity" is a number.
+        PRUint8 a;
+        if (ParseHSLColor(aErrorCode, rgba, ',') &&
+            ParseColorOpacity(aErrorCode, a)) {
+          aValue.SetColorValue(NS_RGBA(NS_GET_R(rgba), NS_GET_G(rgba),
+                                       NS_GET_B(rgba), a));
+          return PR_TRUE;
+        }
+        return PR_FALSE;
       }
       break;
     default:
@@ -2656,10 +2668,119 @@ PRBool CSSParserImpl::ParseColorComponent(PRInt32& aErrorCode,
   PRUnichar stopString[2];
   stopString[0] = PRUnichar(aStop);
   stopString[1] = PRUnichar(0);
-  REPORT_UNEXPECTED_TOKEN(NS_LITERAL_STRING("Expected ") +
+  REPORT_UNEXPECTED_TOKEN(NS_LITERAL_STRING("Expected '") +
                           nsDependentString(stopString, 1) +
-                          NS_LITERAL_STRING(" but found"));
+                          NS_LITERAL_STRING("' but found"));
   return PR_FALSE;
+}
+
+
+PRBool CSSParserImpl::ParseHSLColor(PRInt32& aErrorCode, nscolor& aColor,
+                                    char aStop)
+{
+  float h, s, l;
+  if (!ExpectSymbol(aErrorCode, '(', PR_FALSE)) {
+    NS_ERROR("How did this get to be a function token?");
+    return PR_FALSE;
+  }
+
+  // Get the hue
+  if (!GetToken(aErrorCode, PR_TRUE)) {
+    REPORT_UNEXPECTED_EOF(NS_LITERAL_STRING("hue"));
+    return PR_FALSE;
+  }
+  if (mToken.mType != eCSSToken_Number) {
+    REPORT_UNEXPECTED_TOKEN(
+      NS_LITERAL_STRING("Expected a number but found"));
+    UngetToken();
+    return PR_FALSE;
+  }
+  h = mToken.mNumber;
+  h /= 360.0f;
+  // hue values are wraparound
+  h = h - floor(h);
+  
+  if (!ExpectSymbol(aErrorCode, ',', PR_TRUE)) {
+    REPORT_UNEXPECTED_TOKEN(NS_LITERAL_STRING("Expected ',' but found"));
+    return PR_FALSE;
+  }
+  
+  // Get the saturation
+  if (!GetToken(aErrorCode, PR_TRUE)) {
+    REPORT_UNEXPECTED_EOF(NS_LITERAL_STRING("saturation"));
+    return PR_FALSE;
+  }
+  if (mToken.mType != eCSSToken_Percentage) {
+    REPORT_UNEXPECTED_TOKEN(
+      NS_LITERAL_STRING("Expected a percentage but found"));
+    UngetToken();
+    return PR_FALSE;
+  }
+  s = mToken.mNumber;
+  if (s < 0.0f) s = 0.0f;
+  if (s > 1.0f) s = 1.0f;
+  
+  if (!ExpectSymbol(aErrorCode, ',', PR_TRUE)) {
+    REPORT_UNEXPECTED_TOKEN(NS_LITERAL_STRING("Expected ',' but found"));
+    return PR_FALSE;
+  }
+
+  // Get the lightness
+  if (!GetToken(aErrorCode, PR_TRUE)) {
+    REPORT_UNEXPECTED_EOF(NS_LITERAL_STRING("lightness"));
+    return PR_FALSE;
+  }
+  if (mToken.mType != eCSSToken_Percentage) {
+    REPORT_UNEXPECTED_TOKEN(
+      NS_LITERAL_STRING("Expected a percentage but found"));
+    UngetToken();
+    return PR_FALSE;
+  }
+  l = mToken.mNumber;
+  if (l < 0.0f) l = 0.0f;
+  if (l > 1.0f) l = 1.0f;
+        
+  if (ExpectSymbol(aErrorCode, aStop, PR_TRUE)) {
+    aColor = NS_HSL2RGB(h, s, l);
+    return PR_TRUE;
+  }
+  
+  PRUnichar stopString[2];
+  stopString[0] = PRUnichar(aStop);
+  stopString[1] = PRUnichar(0);
+  REPORT_UNEXPECTED_TOKEN(NS_LITERAL_STRING("Expected '") +
+                          nsDependentString(stopString, 1) +
+                          NS_LITERAL_STRING("' but found"));
+  return PR_FALSE;
+}
+ 
+ 
+PRBool CSSParserImpl::ParseColorOpacity(PRInt32& aErrorCode, PRUint8& aOpacity)
+{
+  if (!GetToken(aErrorCode, PR_TRUE)) {
+    REPORT_UNEXPECTED_EOF(NS_LITERAL_STRING("opacity in color value"));
+    return PR_FALSE;
+  }
+
+  if (mToken.mType != eCSSToken_Number) {
+    REPORT_UNEXPECTED_TOKEN(
+      NS_LITERAL_STRING("Expected a number but found"));
+    UngetToken();
+    return PR_FALSE;
+  }
+
+  PRUint32 value = (PRUint32)NSToIntRound(mToken.mNumber*255);
+
+  if (!ExpectSymbol(aErrorCode, ')', PR_TRUE)) {
+    REPORT_UNEXPECTED_TOKEN(NS_LITERAL_STRING("Expected ')' but found"));
+    return PR_FALSE;
+  }
+  
+  if (value < 0) value = 0;
+  if (value > 255) value = 255;
+  aOpacity = (PRUint8)value;
+
+  return PR_TRUE;
 }
 
 #ifdef INCLUDE_XUL
@@ -3124,7 +3245,10 @@ PRBool CSSParserImpl::ParseVariant(PRInt32& aErrorCode, nsCSSValue& aValue,
     		(eCSSToken_ID == tk->mType) || 
         (eCSSToken_Ident == tk->mType) ||
         ((eCSSToken_Function == tk->mType) && 
-         (tk->mIdent.EqualsIgnoreCase("rgb")))) {
+         (tk->mIdent.EqualsIgnoreCase("rgb") ||
+          tk->mIdent.EqualsIgnoreCase("-moz-hsl") ||
+          tk->mIdent.EqualsIgnoreCase("-moz-rgba") ||
+          tk->mIdent.EqualsIgnoreCase("-moz-hsla")))) {
       // Put token back so that parse color can get it
       UngetToken();
       if (ParseColor(aErrorCode, aValue)) {
@@ -3346,7 +3470,7 @@ PRBool CSSParserImpl::ParseURL(PRInt32& aErrorCode, nsCSSValue& aValue)
       // the style sheet.
       // XXX editors won't like this - too bad for now
       nsAutoString absURL;
-      if (nsnull != mURL && css_RequiresAbsoluteURI(tk->mIdent)) {
+      if (mURL && css_RequiresAbsoluteURI(tk->mIdent)) {
         nsresult rv;
         rv = NS_MakeAbsoluteURI(absURL, tk->mIdent, mURL);
         if (NS_FAILED(rv)) {
@@ -4017,7 +4141,9 @@ PRBool CSSParserImpl::ParseSingleValueProperty(PRInt32& aErrorCode,
     return ParseVariant(aErrorCode, aValue, VARIANT_AHK,
                         nsCSSProps::kTableLayoutKTable);
   case eCSSProperty_text_align:
-    return ParseVariant(aErrorCode, aValue, VARIANT_HK | VARIANT_STRING,
+    // When we support aligning on a string, we can parse text-align
+    // as a string....
+    return ParseVariant(aErrorCode, aValue, VARIANT_HK /* | VARIANT_STRING */,
                         nsCSSProps::kTextAlignKTable);
   case eCSSProperty_text_decoration:
     return ParseTextDecoration(aErrorCode, aValue);
