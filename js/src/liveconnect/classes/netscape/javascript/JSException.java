@@ -24,11 +24,12 @@ package netscape.javascript;
  */
 
 public
-class JSException extends Exception {
+class JSException extends RuntimeException {
     String filename;
     int lineno;
     String source;
     int tokenIndex;
+    Object wrappedException;
 
     /**
      * Constructs a JSException without a detail message.
@@ -56,6 +57,14 @@ class JSException extends Exception {
     }
 
     /**
+     * Constructs a JSException with a wrapped JavaScript exception object.
+     */
+    public JSException(Object wrappedException) {
+	super();
+	this.wrappedException = wrappedException;
+    }
+    
+    /**
      * Constructs a JSException with a detail message and all the
      * other info that usually comes with a JavaScript error.
      * @param s the detail message
@@ -68,5 +77,13 @@ class JSException extends Exception {
         this.source = source;
         this.tokenIndex = tokenIndex;
     }
+
+    /**
+     * Instance method getWrappedException.
+     */
+    public Object getWrappedException() {
+	return wrappedException;
+    }
+
 }
 
