@@ -83,7 +83,7 @@
 #define HG65243
 #define HG00282
 #define HG02872
-#define HG65241
+#define HG65241	,FALSE, FALSE
 #define HG73530
 #define HG72523
 #define HG09275
@@ -117,7 +117,7 @@
 #define HG93873
 #define HG54897
 #define HG96484
-#define HG15448
+#define HG15448	,FALSE, FALSE
 #define HG83336
 #define HG63531	0
 #define HG73653 0
