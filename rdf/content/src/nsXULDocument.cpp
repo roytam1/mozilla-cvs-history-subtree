@@ -19,9 +19,8 @@
 
 /*
 
-  An implementation for the nsIRDFDocument interface. This
-  implementation serves as the basis for generating an NGLayout
-  content model.
+  An implementation for the XUL document. This implementation serves
+  as the basis for generating an NGLayout content model.
 
   To Do
   -----
@@ -49,6 +48,7 @@
 // Note the ALPHABETICAL ORDERING
 #include "nsCOMPtr.h"
 #include "nsDOMCID.h"
+#include "nsElementMap.h"
 #include "nsIArena.h"
 #include "nsICSSParser.h"
 #include "nsICSSStyleSheet.h"
@@ -70,6 +70,7 @@
 #include "nsIHTMLCSSStyleSheet.h"
 #include "nsIHTMLContent.h"
 #include "nsIHTMLContentContainer.h"
+#include "nsIHTMLElementFactory.h"
 #include "nsIHTMLStyleSheet.h"
 #include "nsICSSLoader.h"
 #include "nsIJSScriptObject.h"
@@ -84,7 +85,6 @@
 #include "nsIRDFContainerUtils.h"
 #include "nsIRDFContentModelBuilder.h"
 #include "nsIRDFDataSource.h"
-#include "nsIRDFDocument.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFRemoteDataSource.h"
 #include "nsIRDFService.h"
@@ -101,16 +101,13 @@
 #include "nsISupportsArray.h"
 #include "nsITextContent.h"
 #include "nsIURL.h"
-#ifdef NECKO
 #include "nsNeckoUtil.h"
 #include "nsILoadGroup.h"
-#else
-#include "nsIURLGroup.h"
-#endif // NECKO
 #include "nsIWebShell.h"
 #include "nsIXMLContent.h"
 #include "nsIXULChildDocument.h"
 #include "nsIXULContentSink.h"
+#include "nsIXULDocument.h"
 #include "nsIXULParentDocument.h"
 #include "nsLayoutCID.h"
 #include "nsParserCIID.h"
@@ -143,43 +140,10 @@
 
 ////////////////////////////////////////////////////////////////////////
 
-static NS_DEFINE_IID(kICSSParserIID,              NS_ICSS_PARSER_IID); // XXX grr..
-static NS_DEFINE_IID(kIContentIID,                NS_ICONTENT_IID);
-static NS_DEFINE_IID(kIDTDIID,                    NS_IDTD_IID);
-static NS_DEFINE_IID(kIDOMScriptObjectFactoryIID, NS_IDOM_SCRIPT_OBJECT_FACTORY_IID);
-static NS_DEFINE_IID(kIPrivateDOMEventIID,        NS_IPRIVATEDOMEVENT_IID);
-static NS_DEFINE_IID(kIDocumentIID,               NS_IDOCUMENT_IID);
-static NS_DEFINE_IID(kIHTMLContentContainerIID,   NS_IHTMLCONTENTCONTAINER_IID);
-static NS_DEFINE_IID(kIHTMLStyleSheetIID,         NS_IHTML_STYLE_SHEET_IID);
-static NS_DEFINE_IID(kIHTMLCSSStyleSheetIID,      NS_IHTML_CSS_STYLE_SHEET_IID);
-static NS_DEFINE_IID(kICSSLoaderIID,              NS_ICSS_LOADER_IID);
-static NS_DEFINE_IID(kIJSScriptObjectIID,         NS_IJSSCRIPTOBJECT_IID);
-static NS_DEFINE_IID(kINameSpaceManagerIID,       NS_INAMESPACEMANAGER_IID);
-static NS_DEFINE_IID(kIParserIID,                 NS_IPARSER_IID);
-static NS_DEFINE_IID(kIPresShellIID,              NS_IPRESSHELL_IID);
-static NS_DEFINE_IID(kIRDFCompositeDataSourceIID, NS_IRDFCOMPOSITEDATASOURCE_IID);
-static NS_DEFINE_IID(kIRDFContentModelBuilderIID, NS_IRDFCONTENTMODELBUILDER_IID);
-static NS_DEFINE_IID(kIRDFDataSourceIID,          NS_IRDFDATASOURCE_IID);
-static NS_DEFINE_IID(kIRDFDocumentIID,            NS_IRDFDOCUMENT_IID);
-static NS_DEFINE_IID(kIRDFLiteralIID,             NS_IRDFLITERAL_IID);
-static NS_DEFINE_IID(kIRDFResourceIID,            NS_IRDFRESOURCE_IID);
-static NS_DEFINE_IID(kIRDFServiceIID,             NS_IRDFSERVICE_IID);
-static NS_DEFINE_IID(kIScriptObjectOwnerIID,      NS_ISCRIPTOBJECTOWNER_IID);
-static NS_DEFINE_IID(kIDOMSelectionIID,           NS_IDOMSELECTION_IID);
-static NS_DEFINE_IID(kIDOMEventCapturerIID,       NS_IDOMEVENTCAPTURER_IID);
-static NS_DEFINE_IID(kIDOMEventReceiverIID,       NS_IDOMEVENTRECEIVER_IID);
-static NS_DEFINE_IID(kIDOMEventTargetIID,         NS_IDOMEVENTTARGET_IID);
-static NS_DEFINE_IID(kIStreamListenerIID,         NS_ISTREAMLISTENER_IID);
-static NS_DEFINE_IID(kIStreamObserverIID,         NS_ISTREAMOBSERVER_IID);
-static NS_DEFINE_IID(kISupportsIID,               NS_ISUPPORTS_IID);
-static NS_DEFINE_IID(kIWebShellIID,               NS_IWEB_SHELL_IID);
-static NS_DEFINE_IID(kIXMLDocumentIID,            NS_IXMLDOCUMENT_IID);
-static NS_DEFINE_IID(kIXULContentSinkIID,         NS_IXULCONTENTSINK_IID);
-static NS_DEFINE_IID(kIEventListenerManagerIID,   NS_IEVENTLISTENERMANAGER_IID);
-
-static NS_DEFINE_CID(kEventListenerManagerCID, NS_EVENTLISTENERMANAGER_CID);
+static NS_DEFINE_CID(kEventListenerManagerCID,   NS_EVENTLISTENERMANAGER_CID);
 static NS_DEFINE_CID(kCSSParserCID,              NS_CSSPARSER_CID);
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
+static NS_DEFINE_CID(kHTMLElementFactoryCID,     NS_HTML_ELEMENT_FACTORY_CID);
 static NS_DEFINE_CID(kHTMLStyleSheetCID,         NS_HTMLSTYLESHEET_CID);
 static NS_DEFINE_CID(kHTMLCSSStyleSheetCID,      NS_HTML_CSS_STYLESHEET_CID);
 static NS_DEFINE_CID(kCSSLoaderCID,              NS_CSS_LOADER_CID);
@@ -192,311 +156,30 @@ static NS_DEFINE_CID(kLocalStoreCID,             NS_LOCALSTORE_CID);
 static NS_DEFINE_CID(kRDFContainerUtilsCID,      NS_RDFCONTAINERUTILS_CID);
 static NS_DEFINE_CID(kRDFServiceCID,             NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFXMLDataSourceCID,       NS_RDFXMLDATASOURCE_CID);
-static NS_DEFINE_CID(kRDFXULBuilderCID,          NS_RDFXULBUILDER_CID);
 static NS_DEFINE_CID(kTextNodeCID,               NS_TEXTNODE_CID);
 static NS_DEFINE_CID(kWellFormedDTDCID,          NS_WELLFORMEDDTD_CID);
 static NS_DEFINE_CID(kXULContentSinkCID,         NS_XULCONTENTSINK_CID);
 static NS_DEFINE_CID(kXULContentUtilsCID,        NS_XULCONTENTUTILS_CID);
+static NS_DEFINE_CID(kXULCommandDispatcherCID,   NS_XULCOMMANDDISPATCHER_CID);
+static NS_DEFINE_CID(kLWBrkCID,                  NS_LWBRK_CID);
 
-static NS_DEFINE_CID(kXULCommandDispatcherCID, NS_XULCOMMANDDISPATCHER_CID);
-static NS_DEFINE_IID(kIXULCommandDispatcherIID, NS_IXULCOMMANDDISPATCHER_IID);
-static NS_DEFINE_IID(kLWBrkCID, NS_LWBRK_CID);
-static NS_DEFINE_IID(kILineBreakerFactoryIID, NS_ILINEBREAKERFACTORY_IID);
-static NS_DEFINE_IID(kIWordBreakerFactoryIID, NS_IWORDBREAKERFACTORY_IID);
+static NS_DEFINE_IID(kIParserIID, NS_IPARSER_IID); // no comment
 
 ////////////////////////////////////////////////////////////////////////
 // Standard vocabulary items
 
 #define XUL_NAMESPACE_URI "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
 
-static PRLogModuleInfo* gMapLog;
 static PRLogModuleInfo* gXULLog;
 
 ////////////////////////////////////////////////////////////////////////
 // nsElementMap
 
-class nsElementMap
-{
-private:
-    PLHashTable* mResources;
-
-    class ContentListItem {
-    public:
-        ContentListItem(nsIContent* aContent)
-            : mNext(nsnull), mContent(aContent) {}
-
-        ContentListItem* mNext;
-        nsIContent*      mContent;
-    };
-
-    static PLHashNumber
-    HashPointer(const void* key)
-    {
-        return (PLHashNumber) key;
-    }
-
-    static PRIntn
-    ReleaseContentList(PLHashEntry* aHashEntry, PRIntn aIndex, void* aClosure);
-
-public:
-    nsElementMap(void);
-    virtual ~nsElementMap();
-
-    nsresult
-    Add(nsIRDFResource* aResource, nsIContent* aContent);
-
-    nsresult
-    Remove(nsIRDFResource* aResource, nsIContent* aContent);
-
-    nsresult
-    Find(nsIRDFResource* aResource, nsISupportsArray* aResults);
-
-    typedef PRIntn (*nsElementMapEnumerator)(nsIRDFResource* aResource,
-                                             nsIContent* aElement,
-                                             void* aClosure);
-    nsresult
-    Enumerate(nsElementMapEnumerator aEnumerator, void* aClosure);
-
-private:
-    struct EnumerateClosure {
-        nsElementMapEnumerator mEnumerator;
-        void*                  mClosure;
-    };
-        
-    static PRIntn
-    EnumerateImpl(PLHashEntry* aHashEntry, PRIntn aIndex, void* aClosure);
-};
-
-
-nsElementMap::nsElementMap()
-{
-    // Create a table for mapping RDF resources to elements in the
-    // content tree.
-    static PRInt32 kInitialResourceTableSize = 1023;
-    if ((mResources = PL_NewHashTable(kInitialResourceTableSize,
-                                      HashPointer,
-                                      PL_CompareValues,
-                                      PL_CompareValues,
-                                      nsnull,
-                                      nsnull)) == nsnull) {
-        NS_ERROR("could not create hash table for resources");
-    }
-}
-
-nsElementMap::~nsElementMap()
-{
-    if (mResources) {
-        PL_HashTableEnumerateEntries(mResources, ReleaseContentList, nsnull);
-        PL_HashTableDestroy(mResources);
-    }
-}
-
-
-PRIntn
-nsElementMap::ReleaseContentList(PLHashEntry* aHashEntry, PRIntn aIndex, void* aClosure)
-{
-    nsIRDFResource* resource =
-        NS_REINTERPRET_CAST(nsIRDFResource*, NS_CONST_CAST(void*, aHashEntry->key));
-
-    NS_RELEASE(resource);
-        
-    ContentListItem* head =
-        NS_REINTERPRET_CAST(ContentListItem*, aHashEntry->value);
-
-    while (head) {
-        ContentListItem* doomed = head;
-        head = head->mNext;
-        delete doomed;
-    }
-
-    return HT_ENUMERATE_NEXT;
-}
-
-
-nsresult
-nsElementMap::Add(nsIRDFResource* aResource, nsIContent* aContent)
-{
-    NS_PRECONDITION(mResources != nsnull, "not initialized");
-    if (! mResources)
-        return NS_ERROR_NOT_INITIALIZED;
-
-#ifdef PR_LOGGING
-    if (PR_LOG_TEST(gMapLog, PR_LOG_ALWAYS)) {
-        nsXPIDLCString uri;
-        aResource->GetValue( getter_Copies(uri) );
-        PR_LOG(gMapLog, PR_LOG_ALWAYS,
-               ("xulelemap(%p) add    [%p] <-- %s\n",
-                this, aContent, (const char*) uri));
-    }
-#endif
-
-    ContentListItem* head =
-        (ContentListItem*) PL_HashTableLookup(mResources, aResource);
-
-    if (! head) {
-        head = new ContentListItem(aContent);
-        if (! head)
-            return NS_ERROR_OUT_OF_MEMORY;
-
-        PL_HashTableAdd(mResources, aResource, head);
-        NS_ADDREF(aResource);
-        NS_ADDREF(aContent);
-    }
-    else {
-        while (1) {
-            if (head->mContent == aContent) {
-                // This can happen if an element that was created via
-                // frame construction code is then "appended" to the
-                // content model with aNotify == PR_TRUE. If you see
-                // this warning, it's an indication that you're
-                // unnecessarily notifying the frame system, and
-                // potentially causing unnecessary reflow.
-                //NS_WARNING("element was already in the map");
-                return NS_OK;
-            }
-            if (! head->mNext)
-                break;
-
-            head = head->mNext;
-        }
-
-        head->mNext = new ContentListItem(aContent);
-        if (! head->mNext)
-            return NS_ERROR_OUT_OF_MEMORY;
-        NS_ADDREF(aContent);
-    }
-
-    return NS_OK;
-}
-
-
-nsresult
-nsElementMap::Remove(nsIRDFResource* aResource, nsIContent* aContent)
-{
-    NS_PRECONDITION(mResources != nsnull, "not initialized");
-    if (! mResources)
-        return NS_ERROR_NOT_INITIALIZED;
-
-#ifdef PR_LOGGING
-    if (PR_LOG_TEST(gMapLog, PR_LOG_ALWAYS)) {
-        nsXPIDLCString uri;
-        aResource->GetValue( getter_Copies(uri) );
-        PR_LOG(gMapLog, PR_LOG_ALWAYS,
-               ("xulelemap(%p) remove [%p] <-- %s\n",
-                this, aContent, (const char*) uri));
-    }
-#endif
-
-    ContentListItem* head =
-        (ContentListItem*) PL_HashTableLookup(mResources, aResource);
-
-    if (head) {
-        if (head->mContent == aContent) {
-            NS_RELEASE(aContent);
-            ContentListItem* newHead = head->mNext;
-            if (newHead) {
-                PL_HashTableAdd(mResources, aResource, newHead);
-            }
-            else {
-                // It was the last reference in the table
-                PL_HashTableRemove(mResources, aResource);
-                NS_RELEASE(aResource);
-            }
-            delete head;
-            return NS_OK;
-        }
-        else {
-            ContentListItem* doomed = head->mNext;
-            while (doomed) {
-                if (doomed->mContent == aContent) {
-                    head->mNext = doomed->mNext;
-                    NS_RELEASE(aContent);
-                    delete doomed;
-                    return NS_OK;
-                }
-                head = doomed;
-                doomed = doomed->mNext;
-            }
-        }
-    }
-
-    // XXX Don't comment out this assert: if you get here,
-    // something has gone dreadfully, horribly
-    // wrong. Curse. Scream. File a bug against
-    // waterson@netscape.com.
-    NS_ERROR("attempt to remove an element that was never added");
-    return NS_ERROR_ILLEGAL_VALUE;
-}
-
-
-
-nsresult
-nsElementMap::Find(nsIRDFResource* aResource, nsISupportsArray* aResults)
-{
-    NS_PRECONDITION(mResources != nsnull, "not initialized");
-    if (! mResources)
-        return NS_ERROR_NOT_INITIALIZED;
-
-    aResults->Clear();
-    ContentListItem* head =
-        (ContentListItem*) PL_HashTableLookup(mResources, aResource);
-
-    while (head) {
-        aResults->AppendElement(head->mContent);
-        head = head->mNext;
-    }
-    return NS_OK;
-}
-
-nsresult
-nsElementMap::Enumerate(nsElementMapEnumerator aEnumerator, void* aClosure)
-{
-    EnumerateClosure closure = { aEnumerator, aClosure };
-    PL_HashTableEnumerateEntries(mResources, EnumerateImpl, &closure);
-    return NS_OK;
-}
-
-
-PRIntn
-nsElementMap::EnumerateImpl(PLHashEntry* aHashEntry, PRIntn aIndex, void* aClosure)
-{
-    EnumerateClosure* closure = NS_REINTERPRET_CAST(EnumerateClosure*, aClosure);
-
-    nsIRDFResource* resource =
-        NS_REINTERPRET_CAST(nsIRDFResource*, NS_CONST_CAST(void*, aHashEntry->key));
-
-    ContentListItem** link = 
-        NS_REINTERPRET_CAST(ContentListItem**, &aHashEntry->value);
-
-    ContentListItem* item = *link;
-
-    while (item) {
-        PRIntn result = (*closure->mEnumerator)(resource, item->mContent, closure->mClosure);
-
-        if (result == HT_ENUMERATE_REMOVE) {
-            NS_RELEASE(item->mContent);
-            *link = item->mNext;
-
-            if ((! *link) && (link == NS_REINTERPRET_CAST(ContentListItem**, &aHashEntry->value))) {
-                NS_RELEASE(resource);
-                return HT_ENUMERATE_REMOVE;
-            }
-        }
-        else {
-            link = &item->mNext;
-        }
-
-        item = item->mNext;
-    }
-
-    return HT_ENUMERATE_NEXT;
-}
-
 ////////////////////////////////////////////////////////////////////////
 // XULDocumentImpl
 
 class XULDocumentImpl : public nsIDocument,
-                        public nsIRDFDocument,
+                        public nsIXULDocument,
                         public nsIStreamLoadableDocument,
                         public nsIDOMXULDocument,
                         public nsIDOMNSDocument,
@@ -692,18 +375,17 @@ public:
     NS_IMETHOD SetTransformMediator(nsITransformMediator* aMediator);
 #endif
 
-    // nsIRDFDocument interface
+    // nsIXULDocument interface
     NS_IMETHOD SetRootResource(nsIRDFResource* resource);
     NS_IMETHOD SplitProperty(nsIRDFResource* aResource,
                              PRInt32* aNameSpaceID,
                              nsIAtom** aTag);
 
-    NS_IMETHOD AddElementForResource(nsIRDFResource* aResource, nsIContent* aElement);
-    NS_IMETHOD RemoveElementForResource(nsIRDFResource* aResource, nsIContent* aElement);
-    NS_IMETHOD GetElementsForResource(nsIRDFResource* aResource, nsISupportsArray* aElements);
+    NS_IMETHOD AddElementForID(const nsString& aID, nsIContent* aElement);
+    NS_IMETHOD RemoveElementForID(const nsString& aID, nsIContent* aElement);
+    NS_IMETHOD GetElementsForID(const nsString& aID, nsISupportsArray* aElements);
     NS_IMETHOD CreateContents(nsIContent* aElement);
     NS_IMETHOD AddContentModelBuilder(nsIRDFContentModelBuilder* aBuilder);
-    NS_IMETHOD GetDocumentDataSource(nsIRDFDataSource** aDatasource);
     NS_IMETHOD GetForm(nsIDOMHTMLFormElement** aForm);
     NS_IMETHOD SetForm(nsIDOMHTMLFormElement* aForm);
     NS_IMETHOD AddForwardObserverDecl(nsIDOMElement* aListener,
@@ -819,7 +501,7 @@ public:
     RemoveElementFromMap(nsIContent* aElement);
 
     static PRIntn
-    RemoveElementsFromMapByContent(nsIRDFResource* aResource,
+    RemoveElementsFromMapByContent(const nsString& aID,
                                    nsIContent* aElement,
                                    void* aClosure);
 
@@ -842,16 +524,15 @@ public:
     void SetDocumentURLAndGroup(nsIURI* anURL);
     void SetIsPopup(PRBool isPopup) { mIsPopup = isPopup; };
 
+    nsresult CreateElement(PRInt32 aNameSpaceID,
+                           nsIAtom* aTag,
+                           nsIContent** aResult);
+
 protected:
-		nsresult PrepareToLoad( nsCOMPtr<nsIParser>* created_parser,
-		                        nsIContentViewerContainer* aContainer,
-		                        const char* aCommand,
-#ifdef NECKO
-                            nsIChannel* aChannel, nsILoadGroup* aLoadGroup
-#else
-                            nsIURI* aOptionalURL = 0
-#endif
-                            );
+    nsresult PrepareToLoad(nsCOMPtr<nsIParser>* created_parser,
+                           nsIContentViewerContainer* aContainer,
+                           const char* aCommand,
+                           nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
 
 protected:
     // pseudo constants
@@ -871,6 +552,7 @@ protected:
     static nsIAtom** kIdentityAttrs[];
 
     static nsIRDFService* gRDFService;
+    static nsIHTMLElementFactory* gHTMLElementFactory;
 
     static nsINameSpaceManager* gNameSpaceManager;
     static PRInt32 kNameSpaceID_XUL;
@@ -881,9 +563,6 @@ protected:
     FindContent(const nsIContent* aStartNode,
                 const nsIContent* aTest1,
                 const nsIContent* aTest2) const;
-
-    nsresult
-    AddNamedDataSource(const char* uri);
 
     nsresult
     Persist(nsIContent* aElement, PRInt32 aNameSpaceID, nsIAtom* aAttribute);
@@ -918,11 +597,9 @@ protected:
     nsCOMPtr<nsIHTMLStyleSheet>       mAttrStyleSheet;    // [OWNER] 
     nsCOMPtr<nsIHTMLCSSStyleSheet>    mInlineStyleSheet;  // [OWNER]
     nsCOMPtr<nsICSSLoader>            mCSSLoader;         // [OWNER]
-    nsElementMap               mResources;
+    nsElementMap               mElementMap;
     nsCOMPtr<nsISupportsArray> mBuilders;        // [OWNER] of array, elements shouldn't own this, but they do
-    nsCOMPtr<nsIRDFContentModelBuilder> mXULBuilder;     // [OWNER] 
-    nsCOMPtr<nsIRDFDataSource>          mLocalStore;     // [OWNER] 
-    nsCOMPtr<nsIRDFDataSource>          mDocumentDataSource;  // [OWNER] 
+    nsCOMPtr<nsIRDFDataSource>          mLocalStore;
     nsCOMPtr<nsILineBreaker>            mLineBreaker;    // [OWNER] 
     nsCOMPtr<nsIWordBreaker>            mWordBreaker;    // [OWNER] 
     nsIContentViewerContainer* mContentViewerContainer;  // [WEAK] it owns me! (indirectly)
@@ -943,14 +620,14 @@ protected:
     ForwardObserverDecl* mForwardObserverDecls;
     PRBool mForwardObserverDeclsResolved;
 
-      // The following are pointers into the content model which provide access to
-      // the objects triggering either a popup or a tooltip. These are marked as
-      // [OWNER] only because someone could, through DOM calls, delete the object from the
-      // content model while the popup/tooltip was visible. If we didn't have a reference
-      // to it, the object would go away and we'd be left pointing to garbage. This
-      // does not introduce cycles into the ownership model because this is still
-      // parent/child ownership. Just wanted the reader to know hyatt and I had thought about
-      // this (pinkerton).
+    // The following are pointers into the content model which provide access to
+    // the objects triggering either a popup or a tooltip. These are marked as
+    // [OWNER] only because someone could, through DOM calls, delete the object from the
+    // content model while the popup/tooltip was visible. If we didn't have a reference
+    // to it, the object would go away and we'd be left pointing to garbage. This
+    // does not introduce cycles into the ownership model because this is still
+    // parent/child ownership. Just wanted the reader to know hyatt and I had thought about
+    // this (pinkerton).
     nsCOMPtr<nsIDOMNode>    mPopupNode;            // [OWNER] element triggering the popup
     nsCOMPtr<nsIDOMNode>    mTooltipNode;          // [OWNER] element triggering the tooltip
 };
@@ -969,6 +646,7 @@ nsIAtom* XULDocumentImpl::kTargetsAtom;
 nsIAtom* XULDocumentImpl::kTemplateAtom;
 
 nsIRDFService* XULDocumentImpl::gRDFService;
+nsIHTMLElementFactory* XULDocumentImpl::gHTMLElementFactory;
 
 nsINameSpaceManager* XULDocumentImpl::gNameSpaceManager;
 PRInt32 XULDocumentImpl::kNameSpaceID_XUL;
@@ -992,15 +670,19 @@ XULDocumentImpl::XULDocumentImpl(void)
 {
     NS_INIT_REFCNT();
 
+    // XXX Anything that can fail should be moved into separate
+    // initialization routine.
     nsresult rv;
 
+#if 0
     // construct a selection object
-/*    if (NS_FAILED(rv = nsComponentManager::CreateInstance(kRangeListCID,
+    if (NS_FAILED(rv = nsComponentManager::CreateInstance(kRangeListCID,
                                                     nsnull,
                                                     kIDOMSelectionIID,
                                                     (void**) &mSelection))) {
         NS_ERROR("unable to create DOM selection");
-    }*/
+    }
+#endif
 
     if (gRefCnt++ == 0) {
         kCommandUpdaterAtom             = NS_NewAtom("commandupdater");
@@ -1017,10 +699,17 @@ XULDocumentImpl::XULDocumentImpl(void)
         // Keep the RDF service cached in a member variable to make using
         // it a bit less painful
         rv = nsServiceManager::GetService(kRDFServiceCID,
-                                          kIRDFServiceIID,
+                                          NS_GET_IID(nsIRDFService),
                                           (nsISupports**) &gRDFService);
 
         NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get RDF Service");
+
+        rv = nsComponentManager::CreateInstance(kHTMLElementFactoryCID,
+                                                nsnull,
+                                                NS_GET_IID(nsIHTMLElementFactory),
+                                                (void**) &gHTMLElementFactory);
+
+        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get HTML element factory");
 
         rv = nsServiceManager::GetService(kNameSpaceManagerCID,
                                           nsCOMTypeInfo<nsINameSpaceManager>::GetIID(),
@@ -1038,9 +727,6 @@ static const char kXULNameSpaceURI[] = XUL_NAMESPACE_URI;
     }
 
 #ifdef PR_LOGGING
-    if (! gMapLog)
-        gMapLog = PR_NewLogModule("nsXULDocumentElementMap");
-
     if (! gXULLog)
         gXULLog = PR_NewLogModule("nsXULDocument");
 #endif
@@ -1140,6 +826,8 @@ XULDocumentImpl::~XULDocumentImpl()
             gRDFService = nsnull;
         }
 
+        NS_IF_RELEASE(gHTMLElementFactory);
+
         if (gXULUtils) {
             nsServiceManager::ReleaseService(kXULContentUtilsCID, gXULUtils);
             gXULUtils = nsnull;
@@ -1149,7 +837,7 @@ XULDocumentImpl::~XULDocumentImpl()
 
 
 nsresult
-NS_NewXULDocument(nsIRDFDocument** result)
+NS_NewXULDocument(nsIXULDocument** result)
 {
     NS_PRECONDITION(result != nsnull, "null ptr");
     if (! result)
@@ -1182,8 +870,8 @@ XULDocumentImpl::QueryInterface(REFNSIID iid, void** result)
         return NS_ERROR_NULL_POINTER;
 
     *result = nsnull;
-    if (iid.Equals(kIDocumentIID) ||
-        iid.Equals(kISupportsIID)) {
+    if (iid.Equals(NS_GET_IID(nsIDocument)) ||
+        iid.Equals(NS_GET_IID(nsISupports))) {
         *result = NS_STATIC_CAST(nsIDocument*, this);
     }
     else if (iid.Equals(nsIXULParentDocument::GetIID())) {
@@ -1192,9 +880,9 @@ XULDocumentImpl::QueryInterface(REFNSIID iid, void** result)
     else if (iid.Equals(nsIXULChildDocument::GetIID())) {
         *result = NS_STATIC_CAST(nsIXULChildDocument*, this);
     }
-    else if (iid.Equals(kIRDFDocumentIID) ||
-             iid.Equals(kIXMLDocumentIID)) {
-        *result = NS_STATIC_CAST(nsIRDFDocument*, this);
+    else if (iid.Equals(NS_GET_IID(nsIXULDocument)) ||
+             iid.Equals(NS_GET_IID(nsIXMLDocument))) {
+        *result = NS_STATIC_CAST(nsIXULDocument*, this);
     }
     else if (iid.Equals(nsIDOMXULDocument::GetIID()) ||
              iid.Equals(nsIDOMDocument::GetIID()) ||
@@ -1204,22 +892,22 @@ XULDocumentImpl::QueryInterface(REFNSIID iid, void** result)
     else if (iid.Equals(nsIDOMNSDocument::GetIID())) {
         *result = NS_STATIC_CAST(nsIDOMNSDocument*, this);
     }
-    else if (iid.Equals(kIJSScriptObjectIID)) {
+    else if (iid.Equals(NS_GET_IID(nsIJSScriptObject))) {
         *result = NS_STATIC_CAST(nsIJSScriptObject*, this);
     }
-    else if (iid.Equals(kIScriptObjectOwnerIID)) {
+    else if (iid.Equals(NS_GET_IID(nsIScriptObjectOwner))) {
         *result = NS_STATIC_CAST(nsIScriptObjectOwner*, this);
     }
-    else if (iid.Equals(kIHTMLContentContainerIID)) {
+    else if (iid.Equals(NS_GET_IID(nsIHTMLContentContainer))) {
         *result = NS_STATIC_CAST(nsIHTMLContentContainer*, this);
     }
-    else if (iid.Equals(kIDOMEventReceiverIID)) {
+    else if (iid.Equals(NS_GET_IID(nsIDOMEventReceiver))) {
         *result = NS_STATIC_CAST(nsIDOMEventReceiver*, this);
     }
-    else if (iid.Equals(kIDOMEventTargetIID)) {
+    else if (iid.Equals(NS_GET_IID(nsIDOMEventTarget))) {
         *result = NS_STATIC_CAST(nsIDOMEventTarget*, this);
     }
-    else if (iid.Equals(kIDOMEventCapturerIID)) {
+    else if (iid.Equals(NS_GET_IID(nsIDOMEventCapturer))) {
         *result = NS_STATIC_CAST(nsIDOMEventCapturer*, this);
     }
     else if (iid.Equals(nsIStreamLoadableDocument::GetIID())) {
@@ -1258,70 +946,42 @@ XULDocumentImpl::GetContentType(nsString& aContentType) const
 static
 nsresult
 generate_RDF_seed( nsString* result, nsIURI* aOptionalURL )
-	{
-		nsresult status = NS_OK;
+{
+    nsresult status = NS_OK;
 
-		if ( aOptionalURL )
-			{
-#ifdef NECKO
-                char* s = 0;
-#else
-				const char* s = 0;
-#endif
-                status = aOptionalURL->GetSpec(&s);
-				if ( NS_SUCCEEDED(status) ) {
-					(*result) = s;      // copied by nsString
-#ifdef NECKO
-                    nsCRT::free(s);
-#endif
-                }
-			}
-		else
-			{
-				static int unique_per_session_index = 0;
+    if (aOptionalURL) {
+        char* s = 0;
+        status = aOptionalURL->GetSpec(&s);
+        if ( NS_SUCCEEDED(status) ) {
+            (*result) = s;      // copied by nsString
+            nsCRT::free(s);
+        }
+    }
+    else {
+        static int unique_per_session_index = 0;
 
-				result->Append("x-anonymous-xul://");
-				result->Append(PRInt32(++unique_per_session_index), /*base*/ 10);
-			}
+        result->Append("x-anonymous-xul://");
+        result->Append(PRInt32(++unique_per_session_index), /*base*/ 10);
+    }
 
-		return status;
-	}
+    return status;
+}
 
 nsresult
-XULDocumentImpl::PrepareToLoad( nsCOMPtr<nsIParser>* created_parser,
-                                nsIContentViewerContainer* aContainer,
-                                const char* aCommand,
-#ifdef NECKO
-                                nsIChannel* aChannel, nsILoadGroup* aLoadGroup
-#else
-                                nsIURI* aOptionalURL
-#endif
-                                )
+XULDocumentImpl::PrepareToLoad(nsCOMPtr<nsIParser>* created_parser,
+                               nsIContentViewerContainer* aContainer,
+                               const char* aCommand,
+                               nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
 {
     nsCOMPtr<nsIURI> syntheticURL;
-#ifdef NECKO
-		if ( aChannel )
-      (void)aChannel->GetURI(getter_AddRefs(syntheticURL));
-#else
-    if ( aOptionalURL )
-        syntheticURL = dont_QueryInterface(aOptionalURL);
-#endif
-    else
-        {
-            nsAutoString seedString;
-            generate_RDF_seed(&seedString, 0);
-#ifndef NECKO
-            NS_NewURL(getter_AddRefs(syntheticURL), seedString);
-#else
-            NS_NewURI(getter_AddRefs(syntheticURL), seedString);
-#endif // NECKO
-        }
-
-#if 0
-    NS_ASSERTION(aURL != nsnull, "null ptr");
-    if (! aURL)
-        return NS_ERROR_NULL_POINTER;
-#endif
+    if ( aChannel ) {
+        (void)aChannel->GetURI(getter_AddRefs(syntheticURL));
+    }
+    else {
+        nsAutoString seedString;
+        generate_RDF_seed(&seedString, 0);
+        NS_NewURI(getter_AddRefs(syntheticURL), seedString);
+    }
 
     if (aContainer && aContainer != mContentViewerContainer)
         mContentViewerContainer = aContainer;
@@ -1337,46 +997,23 @@ XULDocumentImpl::PrepareToLoad( nsCOMPtr<nsIParser>* created_parser,
     mDocumentPrincipal = do_QueryInterface(owner);
     if (NS_FAILED(rv)) return rv;
 
-#ifdef NECKO
     mDocumentLoadGroup = getter_AddRefs(NS_GetWeakReference(aLoadGroup));
-#else
-    syntheticURL->GetLoadGroup(getter_AddRefs(mDocumentLoadGroup));
-#endif
 
     SetDocumentURLAndGroup(syntheticURL);
 
     rv = PrepareStyleSheets(syntheticURL);
     if (NS_FAILED(rv)) return rv;
 
-    // Create the composite data source and builder, but only do this
-    // if we're not a XUL fragment. XUL fragments get "imported"
-    // directly into the parent document's datasource.
-    if (mParentContentSink == nsnull) {
-        // Create a "scratch" in-memory data store to associate with the
-        // document to be a catch-all for any doc-specific info that we
-        // need to store (e.g., current sort order, etc.)
-        //
-        // XXX This needs to be cloned across windows, and the final
-        // instance needs to be flushed to disk. It may be that this is
-        // really an RDFXML data source...
-        rv = nsComponentManager::CreateInstance(kRDFInMemoryDataSourceCID,
-                                                nsnull,
-                                                kIRDFDataSourceIID,
-                                                getter_AddRefs(mDocumentDataSource));
-        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create XUL datasource");
-        if (NS_FAILED(rv)) return rv;
-    }
-
     // Create a XUL content sink, a parser, and kick off the load.
     nsCOMPtr<nsIXULContentSink> sink;
     rv = nsComponentManager::CreateInstance(kXULContentSinkCID,
                                             nsnull,
-                                            kIXULContentSinkIID,
+                                            NS_GET_IID(nsIXULContentSink),
                                             getter_AddRefs(sink));
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create XUL content sink");
     if (NS_FAILED(rv)) return rv;
 
-    rv = sink->Init(this, mDocumentDataSource);
+    rv = sink->Init(this);
     NS_ASSERTION(NS_SUCCEEDED(rv), "Unable to initialize datasource sink");
     if (NS_FAILED(rv)) return rv;
 
@@ -1391,7 +1028,7 @@ XULDocumentImpl::PrepareToLoad( nsCOMPtr<nsIParser>* created_parser,
     nsCOMPtr<nsIDTD> dtd;
     rv = nsComponentManager::CreateInstance(kWellFormedDTDCID,
                                             nsnull,
-                                            kIDTDIID,
+                                            NS_GET_IID(nsIDTD),
                                             getter_AddRefs(dtd));
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to construct DTD");
     if (NS_FAILED(rv)) return rv;
@@ -1427,7 +1064,7 @@ XULDocumentImpl::PrepareStyleSheets(nsIURI* anURL)
     nsCOMPtr<nsIHTMLStyleSheet> sheet;
     if (NS_SUCCEEDED(rv = nsComponentManager::CreateInstance(kHTMLStyleSheetCID,
                                                        nsnull,
-                                                       kIHTMLStyleSheetIID,
+                                                       NS_GET_IID(nsIHTMLStyleSheet),
                                                        getter_AddRefs(sheet)))) {
         if (NS_SUCCEEDED(rv = sheet->Init(anURL, this))) {
             mAttrStyleSheet = sheet;
@@ -1445,7 +1082,7 @@ XULDocumentImpl::PrepareStyleSheets(nsIURI* anURL)
     nsIHTMLCSSStyleSheet* inlineSheet;
     if (NS_SUCCEEDED(rv = nsComponentManager::CreateInstance(kHTMLCSSStyleSheetCID,
                                                        nsnull,
-                                                       kIHTMLCSSStyleSheetIID,
+                                                       NS_GET_IID(nsIHTMLCSSStyleSheet),
                                                        (void**)&inlineSheet))) {
         if (NS_SUCCEEDED(rv = inlineSheet->Init(anURL, this))) {
             mInlineStyleSheet = dont_QueryInterface(inlineSheet);
@@ -1601,7 +1238,7 @@ XULDocumentImpl::GetLineBreaker(nsILineBreaker** aResult)
      nsILineBreakerFactory *lf;
      nsresult result;
      result = nsServiceManager::GetService(kLWBrkCID,
-                                          kILineBreakerFactoryIID,
+                                          NS_GET_IID(nsILineBreakerFactory),
                                           (nsISupports **)&lf);
      if (NS_SUCCEEDED(result)) {
       nsILineBreaker *lb = nsnull ;
@@ -1632,7 +1269,7 @@ XULDocumentImpl::GetWordBreaker(nsIWordBreaker** aResult)
      nsIWordBreakerFactory *lf;
      nsresult result;
      result = nsServiceManager::GetService(kLWBrkCID,
-                                          kIWordBreakerFactoryIID,
+                                          NS_GET_IID(nsIWordBreakerFactory),
                                           (nsISupports **)&lf);
      if (NS_SUCCEEDED(result)) {
       nsIWordBreaker *lb = nsnull ;
@@ -1685,7 +1322,7 @@ XULDocumentImpl::CreateShell(nsIPresContext* aContext,
     nsIPresShell* shell;
     if (NS_FAILED(rv = nsComponentManager::CreateInstance(kPresShellCID,
                                                     nsnull,
-                                                    kIPresShellIID,
+                                                    NS_GET_IID(nsIPresShell),
                                                     (void**) &shell)))
         return rv;
 
@@ -1965,7 +1602,7 @@ XULDocumentImpl::GetCSSLoader(nsICSSLoader*& aLoader)
   if (! mCSSLoader) {
     result = nsComponentManager::CreateInstance(kCSSLoaderCID,
                                                 nsnull,
-                                                kICSSLoaderIID,
+                                                NS_GET_IID(nsICSSLoader),
                                                 (void**)&mCSSLoader);
     if (NS_SUCCEEDED(result)) {
       result = mCSSLoader->Init(this);
@@ -2045,75 +1682,21 @@ XULDocumentImpl::EndLoad()
     // the main document datasource and the local store. Only do this
     // if we are a bona-fide top-level XUL document; (mParentContentSink !=
     // nsnull) implies we are a XUL overlay.
-    if (mParentContentSink == nsnull) {
-        //NS_PRECONDITION(mRootResource != nsnull, "no root resource");
-        if (! mRootResource)
-            return NS_ERROR_UNEXPECTED;
+    NS_PRECONDITION(mParentContentSink == nsnull, "trying to notify an overlay");
+    if (mParentContentSink)
+        return NS_ERROR_UNEXPECTED;
 
-        nsresult rv;
+    nsresult rv;
 
-        nsCOMPtr<nsIRDFCompositeDataSource> db;
-        rv = nsComponentManager::CreateInstance(kRDFCompositeDataSourceCID,
-                                                nsnull,
-                                                kIRDFCompositeDataSourceIID,
-                                                (void**) getter_AddRefs(db));
+    // Do any initial hookup that needs to happen.
+    rv = ResolveForwardObserverDecls();
+    if (NS_FAILED(rv)) return rv;
 
-        NS_ASSERTION(NS_SUCCEEDED(rv), "couldn't create composite datasource");
-        if (NS_FAILED(rv)) return rv;
-
-        // Create a XUL content model builder
-        rv = nsComponentManager::CreateInstance(kRDFXULBuilderCID,
-                                                nsnull,
-                                                kIRDFContentModelBuilderIID,
-                                                getter_AddRefs(mXULBuilder));
-
-        NS_ASSERTION(NS_SUCCEEDED(rv), "couldn't create XUL builder");
-        if (NS_FAILED(rv)) return rv;
-
-        rv = mXULBuilder->SetDataBase(db);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "couldn't set builder's db");
-        if (NS_FAILED(rv)) return rv;
-
-        mBuilders = nsnull; // release content model builders.
-        rv = AddContentModelBuilder(mXULBuilder);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "could't add XUL builder");
-        if (NS_FAILED(rv)) return rv;
-
-        // Add the local store to the composite datasource. It's first
-        // so that any local annotations will over-ride default values
-        // from the document. Note that we may not be able to get a
-        // local store if we don't yet have a profile.
-        rv = gRDFService->GetDataSource("rdf:local-store", getter_AddRefs(mLocalStore));
-
-        if (NS_SUCCEEDED(rv)) {
-            rv = db->AddDataSource(mLocalStore);
-            NS_ASSERTION(NS_SUCCEEDED(rv), "couldn't add local data source to db");
-            if (NS_FAILED(rv)) return rv;
-        }
-
-        // Add the main document datasource to the content model builder
-        rv = db->AddDataSource(mDocumentDataSource);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "unable to add XUL datasource to db");
-        if (NS_FAILED(rv)) return rv;
-
-        // Now create the root content for the document.
-        rv = mXULBuilder->CreateRootContent(mRootResource);
-        if (NS_FAILED(rv)) return rv;
-
-        NS_POSTCONDITION(mRootContent != nsnull, "unable to create root content");
-        if (! mRootContent)
-            return NS_ERROR_UNEXPECTED;
-
-        // Do any initial hookup that needs to happen.
-        rv = ResolveForwardObserverDecls();
-        if (NS_FAILED(rv)) return rv;
-
-        // XXX Because we are now doing this, maybe we can remove all
-        // the code from the RDFXULBuilderImpl that adds and removes
-        // elements from the element map?
-        rv = AddSubtreeToDocument(mRootContent);
-        if (NS_FAILED(rv)) return rv;
-    }
+    // XXX Because we are now doing this, maybe we can remove all
+    // the code from the RDFXULBuilderImpl that adds and removes
+    // elements from the element map?
+    rv = AddSubtreeToDocument(mRootContent);
+    if (NS_FAILED(rv)) return rv;
 
     StartLayout();
 
@@ -2121,7 +1704,7 @@ XULDocumentImpl::EndLoad()
         nsIDocumentObserver* observer = (nsIDocumentObserver*) mObservers[i];
         observer->EndLoad(this);
         if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
-          i--;
+            i--;
         }
     }
 
@@ -2171,7 +1754,7 @@ XULDocumentImpl::AttributeChanged(nsIContent* aElement,
     if (nameSpaceID == kNameSpaceID_HTML) {
         if ((aAttribute == kIdAtom) || (aAttribute == kRefAtom)) {
 
-            rv = mResources.Enumerate(RemoveElementsFromMapByContent, aElement);
+            rv = mElementMap.Enumerate(RemoveElementsFromMapByContent, aElement);
             if (NS_FAILED(rv)) return rv;
 
             // That'll have removed _both_ the 'ref' and 'id' entries from
@@ -2684,7 +2267,7 @@ XULDocumentImpl::HandleDOMEvent(nsIPresContext& aPresContext,
       //Okay, so someone in the DOM loop (a listener, JS object) still has a ref to the DOM Event but
       //the internal data hasn't been malloc'd.  Force a copy of the data here so the DOM Event is still valid.
         nsIPrivateDOMEvent *privateEvent;
-        if (NS_OK == (*aDOMEvent)->QueryInterface(kIPrivateDOMEventIID, (void**)&privateEvent)) {
+        if (NS_OK == (*aDOMEvent)->QueryInterface(NS_GET_IID(nsIPrivateDOMEvent), (void**)&privateEvent)) {
           privateEvent->DuplicatePrivateData();
           NS_RELEASE(privateEvent);
         }
@@ -2716,7 +2299,7 @@ XULDocumentImpl::SetTransformMediator(nsITransformMediator* aMediator)
 #endif
 
 ////////////////////////////////////////////////////////////////////////
-// nsIRDFDocument interface
+// nsIXULDocument interface
 
 NS_IMETHODIMP
 XULDocumentImpl::SetRootResource(nsIRDFResource* aResource)
@@ -2818,45 +2401,37 @@ XULDocumentImpl::SplitProperty(nsIRDFResource* aProperty,
 
 
 NS_IMETHODIMP
-XULDocumentImpl::AddElementForResource(nsIRDFResource* aResource, nsIContent* aElement)
+XULDocumentImpl::AddElementForID(const nsString& aID, nsIContent* aElement)
 {
-    NS_PRECONDITION(aResource != nsnull, "null ptr");
-    if (! aResource)
-        return NS_ERROR_NULL_POINTER;
-
     NS_PRECONDITION(aElement != nsnull, "null ptr");
     if (! aElement)
         return NS_ERROR_NULL_POINTER;
 
-    mResources.Add(aResource, aElement);
+    mElementMap.Add(aID, aElement);
     return NS_OK;
 }
 
 
 NS_IMETHODIMP
-XULDocumentImpl::RemoveElementForResource(nsIRDFResource* aResource, nsIContent* aElement)
+XULDocumentImpl::RemoveElementForID(const nsString& aID, nsIContent* aElement)
 {
-    NS_PRECONDITION(aResource != nsnull, "null ptr");
-    if (! aResource)
-        return NS_ERROR_NULL_POINTER;
-
     NS_PRECONDITION(aElement != nsnull, "null ptr");
     if (! aElement)
         return NS_ERROR_NULL_POINTER;
 
-    mResources.Remove(aResource, aElement);
+    mElementMap.Remove(aID, aElement);
     return NS_OK;
 }
 
 
 NS_IMETHODIMP
-XULDocumentImpl::GetElementsForResource(nsIRDFResource* aResource, nsISupportsArray* aElements)
+XULDocumentImpl::GetElementsForID(const nsString& aID, nsISupportsArray* aElements)
 {
     NS_PRECONDITION(aElements != nsnull, "null ptr");
     if (! aElements)
         return NS_ERROR_NULL_POINTER;
 
-    mResources.Find(aResource, aElements);
+    mElementMap.Find(aID, aElements);
     return NS_OK;
 }
 
@@ -2912,15 +2487,6 @@ XULDocumentImpl::AddContentModelBuilder(nsIRDFContentModelBuilder* aBuilder)
 
     return mBuilders->AppendElement(aBuilder) ? NS_OK : NS_ERROR_FAILURE;
 }
-
-NS_IMETHODIMP
-XULDocumentImpl::GetDocumentDataSource(nsIRDFDataSource** aDataSource)
-{
-    *aDataSource = mDocumentDataSource;
-    NS_IF_ADDREF(*aDataSource);
-    return NS_OK;
-}
-
 
 
 NS_IMETHODIMP
@@ -3077,7 +2643,7 @@ XULDocumentImpl::CreateElement(const nsString& aTagName, nsIDOMElement** aReturn
     }
 
     nsCOMPtr<nsIContent> result;
-    rv = mXULBuilder->CreateElement(nameSpaceID, name, nsnull, getter_AddRefs(result));
+    rv = CreateElement(nameSpaceID, name, getter_AddRefs(result));
     if (NS_FAILED(rv)) return rv;
 
     // get the DOM interface
@@ -3363,7 +2929,7 @@ XULDocumentImpl::CreateElementWithNameSpace(const nsString& aTagName,
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsIContent> result;
-    rv = mXULBuilder->CreateElement(nameSpaceID, name, nsnull, getter_AddRefs(result));
+    rv = CreateElement(nameSpaceID, name, getter_AddRefs(result));
     if (NS_FAILED(rv)) return rv;
 
     // get the DOM interface
@@ -3430,15 +2996,12 @@ XULDocumentImpl::GetElementById(const nsString& aId, nsIDOMElement** aReturn)
 {
     nsresult rv;
 
-    nsCOMPtr<nsIRDFResource> resource;
-    rv = gXULUtils->MakeElementResource(this, aId, getter_AddRefs(resource));
-    if (NS_FAILED(rv)) return rv;
-
+    // XXX Pool?
     nsCOMPtr<nsISupportsArray> elements;
     rv = NS_NewISupportsArray(getter_AddRefs(elements));
     if (NS_FAILED(rv)) return rv;
 
-    rv = GetElementsForResource(resource, elements);
+    rv = GetElementsForID(aId, elements);
     if (NS_FAILED(rv)) return rv;
 
     PRUint32 cnt = 0;
@@ -3582,10 +3145,7 @@ XULDocumentImpl::AddElementToMap(nsIContent* aElement)
             if (NS_FAILED(rv)) return rv;
 
             if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
-                nsCOMPtr<nsIRDFResource> resource;
-                rv = gXULUtils->MakeElementResource(this, value, getter_AddRefs(resource));
-
-                rv = mResources.Add(resource, aElement);
+                rv = mElementMap.Add(value, aElement);
                 if (NS_FAILED(rv)) return rv;
             }
         }
@@ -3613,10 +3173,7 @@ XULDocumentImpl::RemoveElementFromMap(nsIContent* aElement)
             if (NS_FAILED(rv)) return rv;
 
             if (rv == NS_CONTENT_ATTR_HAS_VALUE) {
-                nsCOMPtr<nsIRDFResource> resource;
-                rv = gXULUtils->MakeElementResource(this, value, getter_AddRefs(resource));
-
-                rv = mResources.Remove(resource, aElement);
+                rv = mElementMap.Remove(value, aElement);
                 if (NS_FAILED(rv)) return rv;
             }
         }
@@ -3627,7 +3184,7 @@ XULDocumentImpl::RemoveElementFromMap(nsIContent* aElement)
 
 
 PRIntn
-XULDocumentImpl::RemoveElementsFromMapByContent(nsIRDFResource* aResource,
+XULDocumentImpl::RemoveElementsFromMapByContent(const nsString& aID,
                                                 nsIContent* aElement,
                                                 void* aClosure)
 {
@@ -3711,35 +3268,6 @@ XULDocumentImpl::CreatePopupDocument(nsIContent* aPopupElement, nsIDocument** aR
         }
     }
 
-    // We don't share builders, but we do share the DB that the current
-    // XUL builder has.
-    // Create a XUL content model builder
-    rv = nsComponentManager::CreateInstance(kRDFXULBuilderCID,
-                                                nsnull,
-                                                kIRDFContentModelBuilderIID,
-                                                (void**) &(popupDoc->mXULBuilder));
-
-    if (NS_FAILED(rv)) {
-        NS_ERROR("couldn't create XUL builder");
-        return rv;
-    }
-
-    nsCOMPtr<nsIRDFCompositeDataSource> db;
-    mXULBuilder->GetDataBase(getter_AddRefs(db));
-    if (NS_FAILED(rv = popupDoc->mXULBuilder->SetDataBase(db))) {
-        NS_ERROR("couldn't set builder's db");
-        return rv;
-    }
-
-    if (NS_FAILED(rv = popupDoc->AddContentModelBuilder(popupDoc->mXULBuilder))) {
-        NS_ERROR("could't add XUL builder");
-        return rv;
-    }
-
-    // We share the same data sources
-    popupDoc->mLocalStore = mLocalStore;
-    popupDoc->mDocumentDataSource = mDocumentDataSource;
-
     // We share the same namespace manager
     popupDoc->mNameSpaceManager = mNameSpaceManager;
 
@@ -3760,7 +3288,8 @@ XULDocumentImpl::CreatePopupDocument(nsIContent* aPopupElement, nsIDocument** aR
     if (NS_FAILED(rv)) return rv;
 
     // Tell the builder to create its root from this resrouce.
-    popupDoc->mXULBuilder->CreateRootContent(rootResource);
+    // XXXwaterson whee!
+    //popupDoc->mXULBuilder->CreateRootContent(rootResource);
 
     // Now the popup will happily use its own XUL builder to churn out nodal
     // clones of the popup content.  They will get their own event handlers
@@ -4042,7 +3571,7 @@ XULDocumentImpl::GetProperty(JSContext *aContext, jsval aID, jsval *aVp)
             mScriptContextOwner->GetScriptGlobalObject(&global);
             if (nsnull != global) {
                 nsIJSScriptObject *window;
-                if (NS_OK == global->QueryInterface(kIJSScriptObjectIID, (void **)&window)) {
+                if (NS_OK == global->QueryInterface(NS_GET_IID(nsIJSScriptObject), (void **)&window)) {
                     result = window->GetProperty(aContext, aID, aVp);
                     NS_RELEASE(window);
                 }
@@ -4223,36 +3752,6 @@ XULDocumentImpl::FindContent(const nsIContent* aStartNode,
 
 
 nsresult
-XULDocumentImpl::AddNamedDataSource(const char* uri)
-{
-    NS_PRECONDITION(mXULBuilder != nsnull, "not initialized");
-    if (! mXULBuilder)
-        return NS_ERROR_NOT_INITIALIZED;
-
-    nsresult rv;
-    nsCOMPtr<nsIRDFDataSource> ds;
-
-    if (NS_FAILED(rv = gRDFService->GetDataSource(uri, getter_AddRefs(ds)))) {
-        NS_ERROR("unable to get named datasource");
-        return rv;
-    }
-
-    nsCOMPtr<nsIRDFCompositeDataSource> db;
-    if (NS_FAILED(rv = mXULBuilder->GetDataBase(getter_AddRefs(db)))) {
-        NS_ERROR("unable to get XUL db");
-        return rv;
-    }
-
-    if (NS_FAILED(rv = db->AddDataSource(ds))) {
-        NS_ERROR("unable to add named data source to XUL db");
-        return rv;
-    }
-
-    return NS_OK;
-}
-
-
-nsresult
 XULDocumentImpl::Init(void)
 {
     nsresult rv;
@@ -4263,7 +3762,7 @@ XULDocumentImpl::Init(void)
     // Create a namespace manager so we can manage tags
     if (NS_FAILED(rv = nsComponentManager::CreateInstance(kNameSpaceManagerCID,
                                                     nsnull,
-                                                    kINameSpaceManagerIID,
+                                                    NS_GET_IID(nsINameSpaceManager),
                                                     getter_AddRefs(mNameSpaceManager))))
         return rv;
 
@@ -4271,7 +3770,7 @@ XULDocumentImpl::Init(void)
     nsCOMPtr<nsIXULCommandDispatcher> commandDis;
     if (NS_FAILED(rv = nsComponentManager::CreateInstance(kXULCommandDispatcherCID,
                                                     nsnull,
-                                                    kIXULCommandDispatcherIID,
+                                                    NS_GET_IID(nsIXULCommandDispatcher),
                                                     getter_AddRefs(commandDis)))) {
         NS_ERROR("unable to create a focus tracker");
         return rv;
@@ -4294,10 +3793,7 @@ XULDocumentImpl::Init(void)
 nsresult
 XULDocumentImpl::StartLayout(void)
 {
-	if (mParentContentSink)
-      return NS_OK; // Overlays rely on the master document for layout
-
-    NS_ASSERTION(mRootContent != nsnull, "Error in XUL file. Love to tell ya where if only I knew.");
+    NS_PRECONDITION(mRootContent != nsnull, "Error in XUL file. Love to tell ya where if only I knew.");
     if (!mRootContent)
       return NS_ERROR_UNEXPECTED;
     
@@ -4678,7 +4174,7 @@ XULDocumentImpl::GetListenerManager(nsIEventListenerManager** aResult)
         nsresult rv;
         rv = nsComponentManager::CreateInstance(kEventListenerManagerCID,
                                                 nsnull,
-                                                kIEventListenerManagerIID,
+                                                NS_GET_IID(nsIEventListenerManager),
                                                 getter_AddRefs(mListenerManager));
 
         if (NS_FAILED(rv)) return rv;
@@ -4693,7 +4189,7 @@ XULDocumentImpl::GetNewListenerManager(nsIEventListenerManager **aResult)
 {
     return nsComponentManager::CreateInstance(kEventListenerManagerCID,
                                         nsnull,
-                                        kIEventListenerManagerIID,
+                                        NS_GET_IID(nsIEventListenerManager),
                                         (void**) aResult);
 }
 
@@ -4869,3 +4365,36 @@ XULDocumentImpl::RebuildWidgetItem(nsIContent* aElement)
 }
 
 
+nsresult
+XULDocumentImpl::CreateElement(PRInt32 aNameSpaceID,
+                               nsIAtom* aTag,
+                               nsIContent** aResult)
+{
+    nsresult rv;
+    nsCOMPtr<nsIContent> result;
+
+    if (aNameSpaceID == kNameSpaceID_HTML) {
+        nsCOMPtr<nsIHTMLContent> element;
+        const PRUnichar *tagName;
+        aTag->GetUnicode(&tagName);
+
+        rv = gHTMLElementFactory->CreateInstanceByTag(tagName, getter_AddRefs(element));
+        if (NS_FAILED(rv)) return rv;
+
+        result = do_QueryInterface(element);
+        if (! result)
+            return NS_ERROR_UNEXPECTED;
+    }
+    else {
+        rv = NS_NewRDFElement(aNameSpaceID, aTag, getter_AddRefs(result));
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    rv = result->SetDocument(this, PR_FALSE);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "unable to set element's document");
+    if (NS_FAILED(rv)) return rv;
+
+    *aResult = result;
+    NS_ADDREF(*aResult);
+    return NS_OK;
+}
