@@ -40,7 +40,7 @@ extern int MK_OUT_OF_MEMORY;
 
 /* xp_string defines */
 extern int SU_LOW_DISK_SPACE_WARNING;
-extern int SU_NOT_A_ENOUGH_SPACE;
+extern int SU_NOT_ENOUGH_SPACE;
 extern int SU_NOT_A_JAR_FILE;
 extern int SU_SECURITY_CHECK;
 extern int SU_INSTALL_FILE_HEADER;
@@ -368,7 +368,7 @@ void su_NetExitProc(URL_Struct* url, int result, MWContext * context)
 		
 		if (context)
 		{
-			FE_Alert(context, XP_GetString(SU_NOT_A_ENOUGH_SPACE));
+			FE_Alert(context, XP_GetString(SU_NOT_ENOUGH_SPACE));
 		}
 		PR_ExitMonitor(su_monitor);
 	} 
@@ -789,7 +789,7 @@ void su_HandleCompleteJavaScript (su_DownloadStream* realStream)
 /*	
 	if (result != 0)
 	{
-		PR_snprintf(s, 255, XP_GetString(SU_NOT_A_ENOUGH_SPACE), installerJarName);
+		PR_snprintf(s, 255, XP_GetString(SU_NOT_ENOUGH_SPACE), installerJarName);
 		FE_Alert(realStream->fContext, s);
 		result = su_DiskSpaceError;
 		goto fail;
@@ -910,7 +910,7 @@ void su_HandleCompleteJavaScript (su_DownloadStream* realStream)
 	
 	if (result == ZIG_ERR_DISK)
 	{
-		PR_snprintf(s, 255, XP_GetString(SU_NOT_A_ENOUGH_SPACE), installerJarName);
+		PR_snprintf(s, 255, XP_GetString(SU_NOT_ENOUGH_SPACE), installerJarName);
 		FE_Alert(realStream->fContext, s);
 		result = su_DiskSpaceError;
 		goto fail;
