@@ -34,6 +34,8 @@
 #include "nsIOutlinerBoxObject.h"
 #include "nsVoidArray.h"
 #include "nsIMsgFolder.h"
+#include "nsIDateTimeFormat.h"
+#include "nsIMsgHeaderParser.h"
 
 enum eFieldType {
     kString,
@@ -62,8 +64,10 @@ public:
 
 protected:
 
-  // mscott: talk to hyatt about making this  a weak reference?
   nsCOMPtr<nsIOutlinerBoxObject> mOutliner;
+  nsresult FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aAuthorString);
+  nsresult FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString);
+
 
   // routines used in building up view
   virtual PRBool WantsThisThread(nsIMsgThread * thread);
@@ -167,6 +171,10 @@ protected:
   nsMsgViewSortTypeValue  m_sortType;
   nsMsgViewSortOrderValue m_sortOrder;
   nsMsgViewFlagsTypeValue m_viewFlags;
+
+  // I18N date formater service which we'll want to cache locally.
+  nsCOMPtr<nsIDateTimeFormat> mDateFormater;
+  nsCOMPtr<nsIMsgHeaderParser> mHeaderParser;
 };
 
 

@@ -36,8 +36,12 @@
 #include "nsImapCore.h"
 
 #include "nsIDOMElement.h"
+#include "nsDateTimeFormatCID.h"
+#include "nsMsgMimeCID.h"
 
 /* Implementation file */
+
+static NS_DEFINE_CID(kDateTimeFormatCID,    NS_DATETIMEFORMAT_CID);
 
 NS_IMPL_ADDREF(nsMsgDBView)
 NS_IMPL_RELEASE(nsMsgDBView)
@@ -66,8 +70,64 @@ nsMsgDBView::~nsMsgDBView()
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// nsIOutlinerView Implementation Methods
+// nsIOutlinerView Implementation Methods (and helper methods)
 ///////////////////////////////////////////////////////////////////////////
+
+nsresult nsMsgDBView::FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aSenderString)
+{
+  nsXPIDLString unparsedAuthor;
+  if (!mHeaderParser)
+    mHeaderParser = do_CreateInstance(NS_MAILNEWS_MIME_HEADER_PARSER_CONTRACTID);
+
+  nsresult rv = aHdr->GetMime2DecodedAuthor(getter_Copies(unparsedAuthor));
+  // *sigh* how sad, we need to convert our beautiful unicode string to utf8 
+  // so we can extract the name part of the address...then convert it back to 
+  // unicode again.
+  if (mHeaderParser)
+  {
+    nsXPIDLCString name;
+    rv = mHeaderParser->ExtractHeaderAddressName("UTF-8", NS_ConvertUCS2toUTF8(unparsedAuthor), getter_Copies(name));
+    if (NS_SUCCEEDED(rv) && (const char*)name)
+    {
+      *aSenderString = nsCRT::strdup(NS_ConvertUTF8toUCS2(name));
+      return NS_OK;
+    }
+  }
+
+  // if we got here then just return the original string
+  *aSenderString = nsCRT::strdup(unparsedAuthor);
+  return NS_OK;
+}
+
+// in case we want to play around with the date string, I've broken it out into
+// a separate routine. 
+nsresult nsMsgDBView::FetchDate(nsIMsgHdr * aHdr, PRUnichar ** aDateString)
+{
+  PRTime dateOfMsg;
+  nsAutoString formattedDateString;
+
+  if (!mDateFormater)
+    mDateFormater = do_CreateInstance(kDateTimeFormatCID);
+
+  NS_ENSURE_TRUE(mDateFormater, NS_ERROR_FAILURE);
+
+  nsresult rv = aHdr->GetDate(&dateOfMsg);
+  // for now, the outline widget doesn't crop yet so don't add
+  // the time to the string, it makes the date column take up 
+  // too much space. I'm taking the time out just until we can 
+  // crop.
+  if (NS_SUCCEEDED(rv))
+    rv = mDateFormater->FormatPRTime(nsnull /* nsILocale* locale */,
+                                      kDateFormatShort,
+                                      kTimeFormatNone /* kTimeFormatSeconds */,
+                                      PRTime(dateOfMsg),
+                                      formattedDateString);
+
+  if (NS_SUCCEEDED(rv))
+    *aDateString = formattedDateString.ToNewUnicode();
+  
+  return rv;
+}
 
 NS_IMETHODIMP nsMsgDBView::GetRowCount(PRInt32 *aRowCount)
 {
@@ -142,10 +202,11 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
   case 's':
     if (aColID[1] == 'u') // subject
       rv = msgHdr->GetMime2DecodedSubject(aValue);
-    else
-      rv = msgHdr->GetMime2DecodedAuthor(aValue);
+    else // sender
+      rv = FetchAuthor(msgHdr, aValue);
     break;
   case 'd':  // date
+    rv = FetchDate(msgHdr, aValue);
     break;
   default:
     break;
