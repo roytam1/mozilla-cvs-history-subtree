@@ -1385,6 +1385,8 @@ htSetBookmarkAddDateToNow(RDF_Resource r)
 #ifdef	XP_MAC
 			time->tm_year += 4;
 			strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_MACDATE),time);
+#elif	XP_UNIX
+			strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_MACDATE),time);
 #else
 			strftime(buffer,sizeof(buffer),XP_GetString(RDF_HTML_WINDATE),time);
 #endif
@@ -3077,7 +3079,7 @@ HT_ContainerSupportsNaturalOrderSort(HT_Resource container)
 		if (container->view->sortToken == NULL)
 		{
 			if ((container->node == RDFUtil_GetQuickFileFolder()) ||
-		        	(container->node == RDFUtil_GetPTFolder()))
+				(container->node == RDFUtil_GetPTFolder()))
 			{
 				naturalOrder = PR_TRUE;
 			}
