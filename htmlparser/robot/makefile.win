@@ -22,6 +22,7 @@
 
 
 MAKE_OBJ_TYPE	= DLL
+LIBRARY_NAME = DebugRobot
 LIBNAME = .\$(OBJDIR)\DebugRobot
 DLL = $(LIBNAME).dll
 
@@ -53,9 +54,12 @@ LINCS=-I$(XPDIST)\public\xpcom -I$(XPDIST)\public\raptor  -I$(XPDIST)\public\net
 
 include <$(DEPTH)\config\rules.mak>
 
-install:: $(DLL)
-	$(MAKE_INSTALL) $(LIBNAME).$(DLL_SUFFIX) $(DIST)\bin
+install:: $(DLL) $(LIBRARY)
+        $(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
+	$(MAKE_INSTALL) $(DLL) $(DIST)\bin
 
 clobber::
-        rm -r $(DIST)\bin $(LIBNAME).$(DLL_SUFFIX)
+        rm -f $(DIST)\lib\$(LIBRARY)
+        rm -f $(DIST)\bin\$(DLL)
+
 
