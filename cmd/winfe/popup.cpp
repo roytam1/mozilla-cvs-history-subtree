@@ -289,6 +289,9 @@ BOOL CNetscapeView::AddSaveItemsToPopup(CMenu * pMenu, LO_Element * pElement, CL
 	    pMenu->AppendMenu(MF_ENABLED, ID_POPUP_SAVELINKCONTENTS,
 		                  szLoadString(IDS_POPUP_SAVELINKCONTENTS));
 
+#ifdef MOZ_NGLAYOUT
+    XP_ASSERT(0);
+#else
 	if(bImage && pElement && pElement->type == LO_IMAGE)
 	{
 		LO_ImageStruct *pImage = (LO_ImageStruct *)pElement;
@@ -313,9 +316,6 @@ BOOL CNetscapeView::AddSaveItemsToPopup(CMenu * pMenu, LO_Element * pElement, CL
 		}
 
 	} else {
-#ifdef MOZ_NGLAYOUT
-    XP_ASSERT(0);
-#else
         LO_ImageStruct *pLOImage;
         CL_Layer *parent_layer;
         char *layer_name;
@@ -338,14 +338,17 @@ BOOL CNetscapeView::AddSaveItemsToPopup(CMenu * pMenu, LO_Element * pElement, CL
             PA_UNLOCK(pLOImage->image_url);
             // Do your stuff here.
         }
-#endif
 	}
+#endif
 
 	return (bLink || bImage || bAddSeparator);
   }
 
 void CNetscapeView::AddBrowserItemsToPopup(CMenu * pMenu, LO_Element * pElement, CL_Layer *layer)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	CString imageURL = GetImageHref(pElement);
 	Bool bImage = !imageURL.IsEmpty();
 
@@ -371,9 +374,6 @@ void CNetscapeView::AddBrowserItemsToPopup(CMenu * pMenu, LO_Element * pElement,
 		}
 
 	} else {
-#ifdef MOZ_NGLAYOUT
-  XP_ASSERT(0);
-#else
 		// this is the case for saving backdrop image.
         LO_ImageStruct *pLOImage;
         CL_Layer *parent_layer;
@@ -396,7 +396,6 @@ void CNetscapeView::AddBrowserItemsToPopup(CMenu * pMenu, LO_Element * pElement,
             PA_UNLOCK(pLOImage->image_url);
             // Do your stuff here.
         }		
-#endif /* MOZ_NGLAYOUT */
 	}
 
 	MWContext *pContext = GetContext()->GetContext();
@@ -420,6 +419,7 @@ void CNetscapeView::AddBrowserItemsToPopup(CMenu * pMenu, LO_Element * pElement,
 	pMenu->AppendMenu((SHIST_GetCurrent(&(pContext->hist)) != NULL) ? MF_ENABLED : MF_GRAYED,
 					   ID_POPUP_MAILTO, szLoadString(IDS_POPUP_SENDPAGE));
 
+#endif /* MOZ_NGLAYOUT */
 }
 
 void CNetscapeView::AddNavigateItemsToPopup(CMenu *pMenu, LO_Element * pElement, CL_Layer *layer)

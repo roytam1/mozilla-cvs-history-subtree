@@ -638,9 +638,7 @@ void CWinCX::DestroyContext()   {
 
 
 void CWinCX::OnDeactivateEmbedCX()  {
-#ifdef MOZ_NGLAYOUT
-  XP_ASSERT(0);
-#else
+#ifndef MOZ_NGLAYOUT
     CGenericView *pView = GetView();
     if(pView != NULL && m_pSelected != NULL) {
 		//	Obtain the plugin structure.

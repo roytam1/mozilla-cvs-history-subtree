@@ -393,7 +393,9 @@ LINK_LIBS= \
 !ifdef MOZ_JAVA
     $(DIST)\lib\libnsc32.lib \
 !endif
+!ifndef MOZ_NGLAYOUT
     $(DIST)\lib\img32.lib \
+!endif
 !ifdef JAVA_OR_OJI      # XXX remove later
     $(DIST)\lib\jmc.lib \
 !endif

@@ -177,6 +177,9 @@ void CAbstractCX::DestroyContext()	{
         //	We are now destroyed, set a member to let us know.
 	    m_bDestroyed = TRUE;
 
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 		if(m_pImageGroupContext)   {
 			IL_RemoveGroupObserver(m_pImageGroupContext, ImageGroupObserver, (void*)GetContext());
 			IL_DestroyGroupContext(m_pImageGroupContext);
@@ -187,6 +190,7 @@ void CAbstractCX::DestroyContext()	{
             IL_ReleaseColorSpace(m_pXPCX->color_space);
             m_pXPCX->color_space = NULL;
         }
+#endif /* MOZ_NGLAYOUT */
             
 	    //	Remove ourselves from the XP context list.
         //  Must be done before call to mocha, or lists in

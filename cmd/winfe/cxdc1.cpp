@@ -224,6 +224,10 @@ GetBitCount(BITMAP &bmp)
 
 BOOL CDCCX::CanWriteBitmapFile(LO_ImageStruct* pLOImage)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+  return FALSE;
+#else
 	ASSERT(pLOImage);
     if(!pLOImage)  {
         return(FALSE);
@@ -235,10 +239,14 @@ BOOL CDCCX::CanWriteBitmapFile(LO_ImageStruct* pLOImage)
 
 	// We can't do anything if we don't have all the image bits
 	return imageinfo && imageinfo->hBitmap;
+#endif /* MOZ_NGLAYOUT */
 }
 
 HANDLE CDCCX::WriteBitmapToMemory(	IL_ImageReq *image_req, LO_Color* bg)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	IL_Pixmap *pImage = IL_GetImagePixmap(image_req);
 	IL_Pixmap *pMask = IL_GetMaskPixmap(image_req);
 
@@ -397,12 +405,16 @@ HANDLE CDCCX::WriteBitmapToMemory(	IL_ImageReq *image_req, LO_Color* bg)
 		return (hDib);
 
 	}
+#endif /* MOZ_NGLAYOUT */
 	return (0);
 }
 
 
 BOOL CDCCX::WriteBitmapFile(LPCSTR lpszFileName, LO_ImageStruct* pLOImage)
 {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	ASSERT(pLOImage);
 
     if(!pLOImage)  {
@@ -608,6 +620,7 @@ BOOL CDCCX::WriteBitmapFile(LPCSTR lpszFileName, LO_ImageStruct* pLOImage)
 		free(lpBmi);
 		return TRUE;
 	}
+#endif /* MOZ_NGLAYOUT */
 	return FALSE;
 }
 
@@ -888,6 +901,9 @@ CDCCX::InitPalette(HDC hdc)
 }
 HPALETTE CDCCX::CreateColorPalette(HDC hdc, IL_IRGB& transparentColor, int bitsPerPixel)
 {
+#ifdef MOZ_NGLAYOUT
+  return 0;
+#else
 	HPALETTE hPal;
     //	Set up the per-context palette.
     //	This is per-window since not everything goes to the screen, and therefore
@@ -899,6 +915,7 @@ HPALETTE CDCCX::CreateColorPalette(HDC hdc, IL_IRGB& transparentColor, int bitsP
 	IL_DestroyColorMap (defaultColorMap);
 
 	return hPal;
+#endif /* MOZ_NGLAYOUT */
 }
 
 
@@ -1256,11 +1273,15 @@ static void replaceColorSpace(NI_Pixmap* pImage, NI_ColorSpace* curColorSpace, i
 	ASSERT(color_space->pixmap_depth  < 32);
 	if (color_space->pixmap_depth == 1)
 		return;
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
  	if ((color_space->pixmap_depth <= 8) || (devicePixmap < color_space->pixmap_depth)) {
 		IL_ReleaseColorSpace(color_space);
 		IL_AddRefToColorSpace(curColorSpace);
 		imageHeader->color_space = curColorSpace;
 	}
+#endif /* MOZ_NGLAYOUT */
 }
 
 

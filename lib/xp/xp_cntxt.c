@@ -502,11 +502,11 @@ void XP_InterruptContext(MWContext * context)
 		XP_InterruptContext(child);
 
 	NET_InterruptWindow(context);
-    if (context->img_cx)
-        IL_InterruptContext(context->img_cx);
 #ifdef MOZ_NGLAYOUT
   XP_ASSERT(0);
 #else
+    if (context->img_cx)
+        IL_InterruptContext(context->img_cx);
 	ET_InterruptContext(context);
 #endif /* MOZ_NGLAYOUT */
 }

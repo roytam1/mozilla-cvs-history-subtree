@@ -128,7 +128,9 @@ NET_StreamClass *external_viewer_disk_stream(int iFormatOut, void *pDataObj, URL
 NET_StreamClass *ContextSaveStream(int iFormatOut, void *pDataObj, URL_Struct *pUrlData, MWContext *pContext);
 NET_StreamClass *nfe_OleStream(int iFormatOut, void *pDataObj, URL_Struct *pUrlData, MWContext *pContext);
 NET_StreamClass *EmbedStream(int iFormatOut, void *pDataObj, URL_Struct *pUrlData, MWContext *pContext);
+#ifndef MOZ_NGLAYOUT
 NET_StreamClass *IL_ViewStream(int iFormatOut, void *pDataObj, URL_Struct *pUrlData, MWContext *pContext);
+#endif /* MOZ_NGLAYOUT */
 };
 
 extern "C" int il_debug;
@@ -928,7 +930,7 @@ BOOL CNetscapeApp::InitInstance()
     else
 	m_bUseLockedPrefs = FALSE;
 
-#ifdef MOZ_NGLAYOUT
+#ifndef MOZ_NGLAYOUT
     // Frame creation may cause the loading of the home page so register
     // all of the parser and network functions first
     static PA_InitData parser_data;
@@ -1144,12 +1146,12 @@ BOOL CNetscapeApp::InitInstance()
     NET_RegisterContentTypeConverter(TEXT_MDL, FO_PRINT, NULL, INTL_ConvCharCode);
     NET_RegisterContentTypeConverter(TEXT_PLAIN, FO_PRINT, NULL, NET_PlainTextConverter);
     NET_RegisterContentTypeConverter(UNKNOWN_CONTENT_TYPE, FO_PRINT, NULL, NET_PlainTextConverter);
-#ifdef MOZ_NGLAYOUT
+#ifndef MOZ_NGLAYOUT
     NET_RegisterContentTypeConverter(INTERNAL_PARSER, FO_PRINT, (void *)&parser_data, PA_BeginParseMDL);
-#endif /* MOZ_NGLAYOUT */
     NET_RegisterContentTypeConverter(IMAGE_GIF, FO_PRINT, NULL, IL_ViewStream);
     NET_RegisterContentTypeConverter(IMAGE_XBM, FO_PRINT, NULL, IL_ViewStream);
     NET_RegisterContentTypeConverter(IMAGE_JPG, FO_PRINT, NULL, IL_ViewStream);
+#endif /* MOZ_NGLAYOUT */
 
     // Don't handle printing cases if we can't format it.
 //    NET_RegisterContentTypeConverter(cp_wild, FO_PRINT, NULL, null_stream);
@@ -2030,8 +2032,10 @@ int CNetscapeApp::ExitInstance()
 #endif /* MOZ_LOC_INDEP */
 	SHUTDOWN_np();
 
+#ifndef MOZ_NGLAYOUT
     //  Unload any remaining images.
     IL_Shutdown();
+#endif /* MOZ_NGLAYOUT */
 
     // shut down exchange if enabled
     FEU_CloseMapiLibrary();

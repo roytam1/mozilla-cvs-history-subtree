@@ -165,8 +165,10 @@ CDCCX::~CDCCX()	{
 		m_pDocument->OnCloseDocument();
 	}
 
+#ifndef MOZ_NGLAYOUT
 	if (curColorSpace)
 		IL_ReleaseColorSpace(curColorSpace);
+#endif /* MOZ_NGLAYOUT */
 }
 
 void CDCCX::DestroyContext()	{
@@ -256,6 +258,7 @@ void CDCCX::EndDraw()
 }
 
 
+// Perhaps remove this entirely from NGLAYOUT build
 void CDCCX::Initialize(BOOL bOwnDC, RECT *pRect, BOOL bInitialPalette, BOOL bNewMemDC)	{
 	//	First thing, we need to create a document
 	//		if no one has bothered assigning us one.
@@ -302,6 +305,7 @@ void CDCCX::Initialize(BOOL bOwnDC, RECT *pRect, BOOL bInitialPalette, BOOL bNew
     ::SetStretchBltMode(hdc, COLORONCOLOR);
 #endif
 
+#ifndef MOZ_NGLAYOUT
 	JMCException* exc = NULL;
 	IMGCB* imageLibObj = IMGCBFactory_Create(&exc);
 
@@ -465,6 +469,7 @@ void CDCCX::Initialize(BOOL bOwnDC, RECT *pRect, BOOL bInitialPalette, BOOL bNew
 			m_pImageDC = CXDC(parentContext)->m_pImageDC; 
 		}
 	}
+#endif /* MOZ_NGLAYOUT */
 	GetContext()->XpixelsPerPoint = ((double)GetDeviceCaps (GetAttribDC(), LOGPIXELSX)) / 72.0 ;
 	GetContext()->YpixelsPerPoint = ((double)GetDeviceCaps (GetAttribDC(), LOGPIXELSY)) / 72.0 ;
 

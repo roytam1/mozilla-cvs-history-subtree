@@ -1476,6 +1476,9 @@ fe_ChangeFileType(NET_cdataStruct *pcdata, LPCSTR lpszMimeType, int nHowToHandle
     if (pHelperApp->how_handle != nHowToHandle) {
         pHelperApp->how_handle = nHowToHandle;
 
+#ifdef MOZ_NGLAYOUT
+    XP_ASSERT(0);
+#else
         if (pcdata->ci.type) {
             // Almost everything is stored in the registry now except for
             // the special types that Netscape can handle internally
@@ -1509,6 +1512,7 @@ fe_ChangeFileType(NET_cdataStruct *pcdata, LPCSTR lpszMimeType, int nHowToHandle
 				}
 			}
 		}
+#endif /* MOZ_NGLAYOUT */
 
 		// Make sure we don't leave old Netscape specific information lying around. Note that
 		// for types that Netscape can handle internally it's assumed we're handling it unless
