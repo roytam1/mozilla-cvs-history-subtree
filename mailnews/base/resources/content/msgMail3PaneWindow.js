@@ -184,6 +184,27 @@ var folderListener = {
            }
          }
        } 
+       else if (eventType == "ImapHdrDownloaded") {
+         if (folder) {
+           var imapFolder = folder.QueryInterface(Components.interfaces.nsIMsgImapMailFolder);
+           if (imapFolder) {
+            var hdrParser = imapFolder.hdrParser;
+            if (hdrParser) {
+              var msgHdr = hdrParser.GetNewMsgHdr();
+              if (msgHdr)
+              {
+                var hdrs = hdrParser.headers;
+                if (hdrs && hdrs.indexOf("X-attachment-size:") > 0) {
+                  msgHdr.OrFlags(0x10000000);  // 0x10000000 is MSG_FLAG_ATTACHMENT
+                }
+                if (hdrs && hdrs.indexOf("X-image-size:") > 0) {
+                  msgHdr.setStringProperty("imageSize", "1");
+                }
+              }
+            }
+           }
+         }
+       }
        else if (eventType == "DeleteOrMoveMsgCompleted") {
          HandleDeleteOrMoveMsgCompleted(folder);
        }     
