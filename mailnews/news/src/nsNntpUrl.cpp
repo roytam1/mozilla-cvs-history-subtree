@@ -266,15 +266,11 @@ nsresult nsNntpUrl::GetMsgFolder(nsIMsgFolder **msgFolder)
     return NS_ERROR_FAILURE;
    }
 
-#ifdef DEBUG_seth
-   printf("XXX mOriginalSpec = %s\n", mOriginalSpec.get());
-   // should we find first "?" and cut?
-#endif
-
    nsCOMPtr <nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
    NS_ENSURE_SUCCESS(rv,rv);
 
    nsMsgKey msgKey;
+   // XXX should we find the first "?" in the mOriginalSpec, cut there, and pass that in?
    rv = nntpService->DecomposeNewsURI(mOriginalSpec.get(), msgFolder, &msgKey);
    NS_ENSURE_SUCCESS(rv,rv);
    return NS_OK;
