@@ -3319,6 +3319,9 @@ lm_DefineWindowProps(JSContext *cx, MochaDecoder *decoder)
            lm_InitRectClass(decoder) &&
            lm_InitImageClass(decoder) &&
            lm_InitAnchorClass(decoder) &&
+#ifdef DOM
+		   lm_InitSpanClass(decoder) &&
+#endif
            lm_InitInputClasses(decoder) &&
            lm_DefinePkcs11(decoder));
 }

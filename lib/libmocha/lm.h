@@ -71,6 +71,10 @@ extern char lm_embeds_str[];            /* "embeds" */
 extern char lm_plugins_str[];           /* "plugins" */
 extern char lm_images_str[];            /* "images" */
 extern char lm_layers_str[];            /* "layers" */
+#ifdef DOM
+extern char lm_spans_str[];				/* "spans" */
+#endif
+
 extern char lm_location_str[];          /* "location" */
 extern char lm_navigator_str[];         /* "navigator" */
 extern char lm_netcaster_str[];         /* "netcaster" */
@@ -326,6 +330,9 @@ typedef struct JSDocument {
     JSObject            *embeds;
     JSObject	        *images;
     JSObject	        *layers;
+#ifdef DOM
+	JSObject	        *spans;
+#endif
 } JSDocument;
 
 #define URL_NOT_INDEXED ((uint32)-1)
@@ -500,6 +507,11 @@ lm_InitImageClass(MochaDecoder *decoder);
 
 extern JSBool
 lm_InitAnchorClass(MochaDecoder *decoder);
+
+#ifdef DOM
+extern JSBool
+lm_InitSpanClass(MochaDecoder *decoder);
+#endif
 
 extern JSBool
 lm_InitLayerClass(MochaDecoder *decoder);

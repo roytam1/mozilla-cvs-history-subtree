@@ -794,6 +794,11 @@ lo_InitDocState(lo_DocState *state, MWContext *context,
 	state->old_break_pos = -1;
 	state->old_break_width = 0;
 
+#ifdef DOM
+	state->current_span = NULL;
+	state->in_span = FALSE;
+#endif
+
 	state->current_named_anchor = NULL;
 	state->current_anchor = NULL;
 
