@@ -2334,6 +2334,27 @@ nsHTMLExternalObjSH::GetPluginInstance(nsIXPConnectWrappedNative *wrapper,
   return objectFrame->GetPluginInstance(*_result);
 }
 
+// Check if proto is already in obj's prototype chain.
+
+static PRBool
+IsObjInProtoChain(JSContext *cx, JSObject *obj, JSObject *proto)
+{
+  JSObject *o = obj;
+
+  while (o) {
+    JSObject *p = ::JS_GetPrototype(cx, o);
+
+    if (p == proto) {
+      return PR_TRUE;
+    }
+
+    o = p;
+  }
+
+  return PR_FALSE;
+}
+
+
 // Note that this PostCreate() method is not called only by XPConnect when
 // it creates wrappers, nsObjectFrame also calls this method when a
 // plugin is loaded if the embed/object element is already wrapped to
@@ -2345,12 +2366,12 @@ nsHTMLExternalObjSH::PostCreate(nsIXPConnectWrappedNative *wrapper,
                                 JSContext *cx, JSObject *obj)
 {
   nsresult rv = nsElementSH::PostCreate(wrapper, cx, obj);
-  NS_ENSURE_TRUE(rv, rv);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIPluginInstance> pi;
 
   rv = GetPluginInstance(wrapper, getter_AddRefs(pi));
-  NS_ENSURE_TRUE(rv, rv);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   if (!pi) {
     // No plugin around for this object.
@@ -2361,7 +2382,24 @@ nsHTMLExternalObjSH::PostCreate(nsIXPConnectWrappedNative *wrapper,
   JSObject *pi_obj = nsnull; // XPConnect-wrapped peer object, when we get it.
   JSObject *pi_proto = nsnull; // 'pi.__proto__'
 
-  GetPluginJSObject(cx, obj, pi, &pi_obj, &pi_proto);
+  rv = GetPluginJSObject(cx, obj, pi, &pi_obj, &pi_proto);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!pi_obj || !pi_proto) {
+    // Didn't get a plugin instance JSObject, nothing we can do then.
+
+    return NS_OK;
+  }
+
+  if (IsObjInProtoChain(cx, obj, pi_obj)) {
+    // We must have re-enterd ::PostCreate() from nsObjectFrame()
+    // (through the FlushPendingNotifications() call in
+    // GetPluginInstance()), this means that we've already done what
+    // we're about to do in this function so we can just return here.
+
+    return NS_OK;
+  }
+
 
   // If we got an xpconnect-wrapped plugin object, set obj's
   // prototype's prototype to the scriptable plugin.
@@ -2373,12 +2411,12 @@ nsHTMLExternalObjSH::PostCreate(nsIXPConnectWrappedNative *wrapper,
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Set 'this.__proto__' to pi
-  if (!JS_SetPrototype(cx, obj, pi_obj)) {
+  if (!::JS_SetPrototype(cx, obj, pi_obj)) {
     return NS_ERROR_UNEXPECTED;
   }
 
   // Set 'pi.__proto__.__proto__' to the original 'this.__proto__'
-  if (!JS_SetPrototype(cx, pi_proto, my_proto)) {
+  if (!::JS_SetPrototype(cx, pi_proto, my_proto)) {
     return NS_ERROR_UNEXPECTED;
   }
 
@@ -2540,12 +2578,11 @@ nsHTMLPluginObjElementSH::NewResolve(nsIXPConnectWrappedNative *wrapper,
       dont_AddRef(XPTI_GetInterfaceInfoManager());
     NS_ENSURE_TRUE(iim, NS_ERROR_UNEXPECTED);
 
-    nsIID* iid;
+    nsIID* iid = nsnull;
 
     nsresult rv = iim->GetIIDForName(cstring, &iid);
-    NS_ENSURE_SUCCESS(rv, rv);
 
-    if (iid) {
+    if (NS_SUCCEEDED(rv) && iid) {
       nsCOMPtr<nsIPluginInstance> pi;
 
       GetPluginInstance(wrapper, getter_AddRefs(pi));
