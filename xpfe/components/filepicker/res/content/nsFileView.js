@@ -182,8 +182,10 @@ nsFileView.prototype = {
     if (row < this.mDirList.length) {
       isdir = true;
       file = this.mDirList[row];
-    } else {
+    } else if ((row - this.mDirList.length) < this.mFilteredFiles.length) {
       file = this.mFilteredFiles[row - this.mDirList.length];
+    } else {
+      return "";
     }
 
     if (colID == "FilenameColumn") {
