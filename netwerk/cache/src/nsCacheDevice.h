@@ -42,6 +42,7 @@ public:
     virtual ~nsCacheDevice() {}
 
     virtual nsresult Init() = 0;
+    virtual nsresult Shutdown() = 0;
 
     virtual const char *   GetDeviceID(void) = 0;
     virtual nsCacheEntry * FindEntry( nsCString * key ) = 0;
