@@ -17,3 +17,4 @@ mktrace.h
 mkpadpac.h
 mkmarimb.h
 mkparse.h
+mkimap4.h
