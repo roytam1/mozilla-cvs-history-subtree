@@ -389,7 +389,7 @@ nsXFormsUtils::EvaluateNodeBinding(nsIDOMElement      *aElement,
                                    nsIDOMXPathResult **aResult)
 {
   if (!aElement || !aModel || !aResult) {
-    return nsnull;
+    return NS_OK;
   }
 
   *aModel = nsnull;

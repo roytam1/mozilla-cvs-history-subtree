@@ -270,23 +270,18 @@ nsXFormsSwitchElement::Process()
   mModelID.Truncate();
   nsCOMPtr<nsIDOMNode> modelNode;
   nsCOMPtr<nsIDOMXPathResult> result;
-  nsresult rv =
-    nsXFormsUtils::EvaluateNodeBinding(mElement,
-                                       nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
-                                       NS_LITERAL_STRING("ref"),
-                                       EmptyString(),
-                                       nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE,
-                                       getter_AddRefs(modelNode),
-                                       getter_AddRefs(result));
-
-  NS_ENSURE_SUCCESS(rv, rv);
+  nsXFormsUtils::EvaluateNodeBinding(mElement,
+                                     nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
+                                     NS_LITERAL_STRING("ref"),
+                                     EmptyString(),
+                                     nsIDOMXPathResult::FIRST_ORDERED_NODE_TYPE,
+                                     getter_AddRefs(modelNode),
+                                     getter_AddRefs(result));
 
   nsCOMPtr<nsIModelElementPrivate> model = do_QueryInterface(modelNode);
 
   if (model)
     model->AddFormControl(this);
-
-  NS_ENSURE_TRUE(result, NS_ERROR_FAILURE);
 
   // Get model ID
   nsCOMPtr<nsIDOMElement> modelElement = do_QueryInterface(modelNode);
@@ -294,10 +289,11 @@ nsXFormsSwitchElement::Process()
   modelElement->GetAttribute(NS_LITERAL_STRING("id"), mModelID);
 
   // Get context node, if any  
-  nsCOMPtr<nsIDOMNode> singleNode;
-  result->GetSingleNodeValue(getter_AddRefs(singleNode));
-  mContextNode = do_QueryInterface(singleNode);
-  NS_ENSURE_TRUE(mContextNode, NS_ERROR_FAILURE);
+  if (result) {
+    nsCOMPtr<nsIDOMNode> singleNode;
+    result->GetSingleNodeValue(getter_AddRefs(singleNode));
+    mContextNode = do_QueryInterface(singleNode);
+  }
 
   return NS_OK;
 }
