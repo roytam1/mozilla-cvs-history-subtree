@@ -406,7 +406,7 @@ LINK_LIBS= \
 	$(DIST)\lib\mnrc32.lib \
 !endif
 !ifdef MOZ_CALENDAR
-    $(DIST)\lib\jul3240.lib \
+    $(DIST)\lib\cal3240.lib \
     $(DIST)\lib\nsfmt3230.lib \
     $(DIST)\lib\nsuni3230.lib \
     $(DIST)\lib\nscnv3230.lib \
@@ -559,7 +559,7 @@ CDISTINCLUDES1= \
 	/I$(XPDIST)\public\net \
 !endif
 !ifdef MOZ_CALENDAR
-	/I$(XPDIST)\public\julian \
+	/I$(XPDIST)\public\calendar \
 !endif
 #!ifdef EDITOR
 !ifdef MOZ_JAVA
@@ -1460,8 +1460,8 @@ install:    \
 !ENDIF
 !endif
 !ifdef MOZ_CALENDAR
-!IF EXIST($(DIST)\bin\jul3240.dll)
-	    $(OUTDIR)\jul3240.dll    \
+!IF EXIST($(DIST)\bin\cal3240.dll)
+	    $(OUTDIR)\cal3240.dll    \
 !ENDIF
 !IF EXIST($(DIST)\bin\nsfmt3230.dll)
 	   $(OUTDIR)\nsfmt3230.dll    \
@@ -1882,8 +1882,8 @@ $(OUTDIR)\nsinit.exe: $(DIST)\bin\nsinit.exe
 !ENDIF
 
 !if defined(MOZ_CALENDAR)
-$(OUTDIR)\jul3240.dll:   $(DIST)\bin\jul3240.dll
-    @IF EXIST $(DIST)\bin\jul3240.dll copy $(DIST)\bin\jul3240.dll $(OUTDIR)\jul3240.dll
+$(OUTDIR)\cal3240.dll:   $(DIST)\bin\cal3240.dll
+    @IF EXIST $(DIST)\bin\cal3240.dll copy $(DIST)\bin\cal3240.dll $(OUTDIR)\cal3240.dll
 $(OUTDIR)\nsfmt3230.dll:   $(DIST)\bin\nsfmt3230.dll
     @IF EXIST $(DIST)\bin\nsfmt3230.dll copy $(DIST)\bin\nsfmt3230.dll $(OUTDIR)\nsfmt3230.dll
 $(OUTDIR)\nsuni3230.dll:   $(DIST)\bin\nsuni3230.dll
@@ -2152,7 +2152,7 @@ BUILD_SOURCE: $(OBJ_FILES)
 	$(DIST)\lib\mnrc16.lib +
 !endif
 !ifdef MOZ_CALENDAR
-    $(DIST)\lib\jul3240.lib +
+    $(DIST)\lib\cal3240.lib +
     $(DIST)\lib\nsfmt3230.lib +
     $(DIST)\lib\nsuni3230.lib +
     $(DIST)\lib\nscnv3230.lib +
@@ -2503,7 +2503,7 @@ exports:
     -xcopy $(DEPTH)\jpeg\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\lib\libcnv\*.h $(EXPORTINC) $(XCF)
 !if defined(MOZ_CALENDAR)
-    -xcopy $(DIST)\public\julian\*.h $(EXPORTINC) $(XCF)
+    -xcopy $(DIST)\public\calendar\*.h $(EXPORTINC) $(XCF)
 !endif
 
 pure:
@@ -2560,7 +2560,7 @@ ns.zip:
 		mnrc32.dll		\
 		xpstrdll.dll		\
 		js3240.dll		\
-		jul3240.dll		\
+		cal3240.dll		\
 		nsfmt3230.dll   \
 		nsuni3230.dll	\
 		nscnv3230.dll	\
