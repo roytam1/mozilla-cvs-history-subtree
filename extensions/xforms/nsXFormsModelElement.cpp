@@ -829,7 +829,8 @@ nsXFormsModelElement::ProcessBind(nsIDOMXPathEvaluator *aEvaluator,
   nsXFormsMDGSet set;
   nsCOMPtr<nsIDOMNode> node;
   PRInt32 contextPosition = 1;
-  for (PRUint32 snapItem = 0; snapItem < snapLen; ++snapItem) {
+  PRUint32 snapItem;
+  for (snapItem = 0; snapItem < snapLen; ++snapItem) {
     rv = result->SnapshotItem(snapItem, getter_AddRefs(node));
     NS_ENSURE_SUCCESS(rv, rv);
     
