@@ -504,10 +504,18 @@ void DoMozInitialization(WebShellInitContext * initContext)
             ::util_ThrowExceptionToJava(env, "Can't get the profile manager.");
             return;
         }
-        char *argv[1];
+        char *argv[3];
         argv[0] = strdup(gBinDir);
-        rv = cmdLine->Initialize(1, argv);
+        // PENDING(edburns): fix for 70656.  Really we should have a way
+        // for the embedding app to specify which profile to use.  
+        argv[1] = strdup("-p");
+        argv[2] = strdup("default");
+        printf("debug: edburns: argv[1]: %s argv[2]: %s\n", argv[1],
+               argv[2]);
+        rv = cmdLine->Initialize(3, argv);
         nsCRT::free(argv[0]);
+        nsCRT::free(argv[1]);
+        nsCRT::free(argv[2]);
         if (NS_FAILED(rv)) {
             ::util_ThrowExceptionToJava(env, "Can't initialize nsICmdLineService.");
             return;

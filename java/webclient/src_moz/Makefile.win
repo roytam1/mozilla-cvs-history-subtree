@@ -150,9 +150,9 @@ buildRunems:
 !else
 	@echo +++ Creating Commercial Package. Use runem.bat to run the test browser.
 	rm -f runem_win_commercial.bat
-	@echo if not exist ..\..\webclient.dll copy ..\lib\webclient.dll ..\.. >> runem_win_commercial.bat
-	@echo if not exist ..\..\components\javadom.dll copy ..\lib\javadom.dll ..\..\components >> runem_win_commercial.bat
-	@echo if not exist ..\..\components\javadomjni.dll copy ..\lib\javadomjni.dll ..\.. >> runem_win_commercial.bat
+	@echo copy ..\lib\webclient.dll ..\.. >> runem_win_commercial.bat
+	@echo copy ..\lib\javadom.dll ..\..\components >> runem_win_commercial.bat
+	@echo copy ..\lib\javadomjni.dll ..\.. >> runem_win_commercial.bat
 	@echo set CLASSPATH=..\lib\Webclient.jar>> runem_win_commercial.bat
 	@echo $(PERL) .\runem.pl org.mozilla.webclient.test.EmbeddedMozilla $(DEPTH) %1% >> runem_win_commercial.bat
 	-mkdir $(PACKAGE_EXAMPLE)
@@ -170,7 +170,7 @@ buildRunems:
 	chmod 775  $(PACKAGE_EXAMPLE)\runem.bat
 	cp -f $(DEPTH)\java\webclient\src_moz\install_win32.js $(DIST)\install.js
 	cd $(DIST)
-	zip -r $(DLLNAME)_$(PACKAGE_VER).xpi install.js javadev
+	zip -r $(DLLNAME)_$(PACKAGE_VER)_win32.xpi install.js javadev
 !endif
 !endif
 
