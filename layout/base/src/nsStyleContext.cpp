@@ -50,7 +50,6 @@
 #include "nsISizeOfHandler.h"
 #include "nsIPresShell.h"
 #include "nslog.h"
-#undef fprintf
 
 #ifdef NOISY_DEBUG
 NS_IMPL_LOG_ENABLED(nsStyleContextLog)

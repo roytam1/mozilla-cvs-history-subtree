@@ -28,7 +28,6 @@
 #include "nsIStyleContext.h"
 #include "nsLayoutAtoms.h"
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsPlaceholderFrameLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsPlaceholderFrameLog, args)

@@ -140,7 +140,6 @@
 #include "nsDST.h"
 
 #include "nslog.h"
-#undef fprintf
 #undef PR_NewLogModule
 #undef PRLogModuleInfo
 

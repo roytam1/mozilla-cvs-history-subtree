@@ -66,7 +66,6 @@
 #include "nsIPref.h"
 #include "nsIServiceManager.h"
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsTextFrameLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsTextFrameLog, args)

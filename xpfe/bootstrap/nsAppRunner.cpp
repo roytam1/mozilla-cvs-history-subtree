@@ -76,8 +76,6 @@
 #endif
 
 #include "nslog.h"
-#undef printf
-#undef fprintf
 
 NS_IMPL_LOG(nsAppRunnerLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsAppRunnerLog, args)

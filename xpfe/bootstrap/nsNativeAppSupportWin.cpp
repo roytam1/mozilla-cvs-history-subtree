@@ -38,7 +38,6 @@
 #include <io.h>
 #include <fcntl.h>
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsNativeAppSupportWinLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsNativeAppSupportWinLog, args)

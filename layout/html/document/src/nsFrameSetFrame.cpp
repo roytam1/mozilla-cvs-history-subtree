@@ -48,7 +48,6 @@
 #include "nsWidgetsCID.h"
 #include "nsIComponentManager.h"
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsFrameSetFrameLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsFrameSetFrameLog, args)

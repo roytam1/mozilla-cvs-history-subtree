@@ -42,7 +42,6 @@
 #include "nsLayoutAtoms.h"
 #include "nsIViewManager.h"
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsContainerFrameLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsContainerFrameLog, args)

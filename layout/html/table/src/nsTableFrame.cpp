@@ -61,7 +61,6 @@
 #include "nsHTMLReflowCommand.h"
 #include "nsIFrameManager.h"
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsTableFrameLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsTableFrameLog, args)

@@ -26,7 +26,6 @@
 #include "nsLineLayout.h"
 #include "prprf.h"
 #include "nslog.h"
-#undef fprintf
 
 #ifdef VERY_NOISY_REFLOW
 NS_IMPL_LOG_ENABLED(nsLineBoxLog)

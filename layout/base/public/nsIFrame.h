@@ -36,7 +36,6 @@
 #endif
 #include "nslog.h"
 #undef PRLogModuleInfo
-#undef fprintf
 
 /**
  * New rules of reflow:

@@ -34,7 +34,6 @@
 #include "nsISizeOfHandler.h"
 #include "nsDOMAttributeMap.h"
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsXMLDocumentTypeLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsXMLDocumentTypeLog, args)

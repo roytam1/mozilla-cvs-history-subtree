@@ -42,7 +42,6 @@ static PRInt32 gNumWidgets;
 #endif
 
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsBaseWidgetLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsBaseWidgetLog, args)

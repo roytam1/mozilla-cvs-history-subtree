@@ -57,7 +57,6 @@
 #endif
 
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG_ENABLED(TRACE)
 #define PRINTF(args) NS_LOG_PRINTF(TRACE, args)

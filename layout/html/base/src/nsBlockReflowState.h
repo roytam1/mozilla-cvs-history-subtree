@@ -58,7 +58,6 @@
 #include "prenv.h"
 #include "plstr.h"
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsBlockFrameLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsBlockFrameLog, args)

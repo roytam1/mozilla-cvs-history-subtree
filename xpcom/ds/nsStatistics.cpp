@@ -24,7 +24,6 @@
 #include "nsTraceRefcnt.h" // for NS_MeanAndStdDev
 #include "plhash.h"
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsStatisticsLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsStatisticsLog, args)

@@ -92,7 +92,6 @@
 #include "nsHTMLContentSinkStream.h"
 #include "nsLayoutCID.h"
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsGenericHTMLElementLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsGenericHTMLElementLog, args)

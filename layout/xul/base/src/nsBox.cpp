@@ -42,7 +42,6 @@
 #include "nsIDOMNamedNodeMap.h"
 #include "nsIDOMAttr.h"
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsBoxLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsBoxLog, args)

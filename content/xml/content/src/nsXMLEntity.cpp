@@ -32,7 +32,6 @@
 #include "nsString.h"
 #include "nsIXMLContent.h"
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsXMLEntityLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsXMLEntityLog, args)

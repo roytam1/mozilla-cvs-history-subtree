@@ -68,7 +68,6 @@
 #include "nslog.h"
 #undef PRLogModuleInfo
 #undef PR_NewLogModule
-#undef fprintf
 
 NS_IMPL_LOG(nsFrameLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsFrameLog, args)

@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include "plstr.h"
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsFrameUtilLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsFrameUtilLog, args)

@@ -40,7 +40,6 @@
 
 #include "nsNetUtil.h"
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsXMLProcessingInstructionLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsXMLProcessingInstructionLog, args)

@@ -38,7 +38,6 @@
 #endif
 #include "prsystem.h"
 #include "nslog.h"
-#undef fprintf
 
 NS_IMPL_LOG(nsDnsServiceLog)
 #define PRINTF(args) NS_LOG_PRINTF(nsDnsServiceLog, args)
