@@ -68,7 +68,7 @@ nsPrintSettingsX::nsPrintSettingsX() :
 /** ---------------------------------------------------
  */
 nsPrintSettingsX::nsPrintSettingsX(const nsPrintSettingsX& src) :
-  nsPrintSettings(aPS),
+  nsPrintSettings(src),
   mPageFormat(kPMNoPageFormat),
   mPrintSettings(kPMNoPrintSettings)
 {
