@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 34;
+	objectVersion = 38;
 	objects = {
 		089C1669FE841209C02AAC07 = {
 			buildStyles = (
@@ -73,8 +73,8 @@
 			productName = MRJPlugin;
 			productReference = 4F9091AB011F3BD104CA0E50;
 			productSettingsXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<!DOCTYPE plist SYSTEM \"file://localhost/System/Library/DTDs/PropertyList.dtd\">
-<plist version=\"0.9\">
+<!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+<plist version=\"1.0\">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
@@ -104,7 +104,7 @@
 			files = (
 			);
 			isa = PBXHeadersBuildPhase;
-			name = Headers;
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		089C1675FE841209C02AAC07 = {
 			buildActionMask = 2147483647;
@@ -112,7 +112,7 @@
 				089C1680FE841241C02AAC07,
 			);
 			isa = PBXResourcesBuildPhase;
-			name = "Bundle Resources";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		089C1676FE841209C02AAC07 = {
 			buildActionMask = 2147483647;
@@ -129,7 +129,7 @@
 				F5DC13AA0299D38E01403EB6,
 			);
 			isa = PBXSourcesBuildPhase;
-			name = Sources;
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		089C1677FE841209C02AAC07 = {
 			buildActionMask = 2147483647;
@@ -140,7 +140,7 @@
 				F51A400D0299CD65012FC976,
 			);
 			isa = PBXFrameworksBuildPhase;
-			name = "Frameworks & Libraries";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		089C1679FE841209C02AAC07 = {
 			buildActionMask = 2147483647;
@@ -149,7 +149,7 @@
 				F59D147002AC308301000104,
 			);
 			isa = PBXRezBuildPhase;
-			name = "ResourceManager Resources";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		089C167CFE841241C02AAC07 = {
 			children = (
@@ -225,7 +225,7 @@
 		19C28FB4FE9D528D11CA2CBB = {
 			children = (
 				4F9091AB011F3BD104CA0E50,
-				F59D147402AC39EF01000104,
+				F5C6DEE70369C37D01A80168,
 			);
 			isa = PBXGroup;
 			name = Products;
@@ -462,11 +462,6 @@
 			path = Resources/Makefile;
 			refType = 2;
 		};
-		F59D147402AC39EF01000104 = {
-			isa = PBXLibraryReference;
-			path = MRJPlugin.jar;
-			refType = 3;
-		};
 		F59D147502AC39EF01000104 = {
 			buildPhases = (
 				F59D147602AC39EF01000104,
@@ -493,7 +488,7 @@
 			name = MRJPlugin.jar;
 			productInstallPath = /usr/local/lib;
 			productName = MRJPlugin.jar;
-			productReference = F59D147402AC39EF01000104;
+			productReference = F5C6DEE70369C37D01A80168;
 			shouldUseHeadermap = 0;
 		};
 		F59D147602AC39EF01000104 = {
@@ -501,7 +496,7 @@
 			files = (
 			);
 			isa = PBXHeadersBuildPhase;
-			name = Headers;
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F59D147702AC39EF01000104 = {
 			buildActionMask = 2147483647;
@@ -518,21 +513,21 @@
 				F59D148F02AC3AF001000104,
 			);
 			isa = PBXSourcesBuildPhase;
-			name = Sources;
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F59D147802AC39EF01000104 = {
 			buildActionMask = 2147483647;
 			files = (
 			);
 			isa = PBXFrameworksBuildPhase;
-			name = "Frameworks & Libraries";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F59D147902AC39EF01000104 = {
 			buildActionMask = 2147483647;
 			files = (
 			);
 			isa = PBXRezBuildPhase;
-			name = "ResourceManager Resources";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F59D147A02AC3A1E01000104 = {
 			isa = PBXFileReference;
@@ -683,12 +678,6 @@
 			isa = PBXTargetDependency;
 			target = F59D147502AC39EF01000104;
 		};
-		F59D149202AC3C1401000104 = {
-			fileRef = F59D147402AC39EF01000104;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
 		F5BFB5E8029AD01B01000102 = {
 			buildActionMask = 2147483647;
 			dstPath = "";
@@ -696,10 +685,10 @@
 			files = (
 				F5BFB5F0029AD0D101000102,
 				F5BFB5EE029AD0B901000102,
-				F59D149202AC3C1401000104,
+				F5C6DEE80369C37D01A80168,
 			);
 			isa = PBXCopyFilesBuildPhase;
-			name = "Copy Files";
+			runOnlyForDeploymentPostprocessing = 0;
 		};
 		F5BFB5E9029AD0B901000102 = {
 			isa = PBXFileReference;
@@ -731,6 +720,18 @@
 			isa = PBXGroup;
 			name = Misc;
 			refType = 4;
+		};
+		F5C6DEE70369C37D01A80168 = {
+			includeInIndex = 0;
+			isa = PBXZipArchiveReference;
+			path = MRJPlugin.jar;
+			refType = 3;
+		};
+		F5C6DEE80369C37D01A80168 = {
+			fileRef = F5C6DEE70369C37D01A80168;
+			isa = PBXBuildFile;
+			settings = {
+			};
 		};
 		F5DC13A50299D19A01403EB6 = {
 			isa = PBXFileReference;
