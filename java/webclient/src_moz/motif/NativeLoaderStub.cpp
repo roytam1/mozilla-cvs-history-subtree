@@ -123,8 +123,6 @@ void (* nativeCopyCurrentSelectionToSystemClipboard) (JNIEnv *, jobject, jint);
 void (* nativeFindInPage) (JNIEnv *, jobject, jint, jstring, jboolean, jboolean);
 void (* nativeFindNextInPage) (JNIEnv *, jobject, jint);
 jstring (* nativeGetCurrentURL) (JNIEnv *, jobject, jint);
-jstring (* nativeGetSource) (JNIEnv *, jobject);
-jbyteArray (* nativeGetSourceBytes) (JNIEnv *, jobject, jint, jboolean);
 void (* nativeResetFind) (JNIEnv *, jobject, jint);
 void (* nativeSelectAll) (JNIEnv *, jobject, jint);
 jobject (* nativeGetDOM) (JNIEnv *, jobject, jint);
@@ -371,14 +369,6 @@ void locateBrowserControlStubFunctions(void * dll) {
   if (!nativeGetCurrentURL) {
     printf("got dlsym error %s\n", dlerror());
   }
-  nativeGetSource = (jstring (*) (JNIEnv *, jobject)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_CurrentPageImpl_nativeGetSource");
-  if (!nativeGetSource) {
-    printf("got dlsym error %s\n", dlerror());
-  }
-  nativeGetSourceBytes = (jbyteArray (*) (JNIEnv *, jobject, jint, jboolean)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_CurrentPageImpl_nativeGetSourceBytes");
-  if (!nativeGetSourceBytes) {
-    printf("got dlsym error %s\n", dlerror());
-  }
   nativeResetFind = (void (*) (JNIEnv *, jobject, jint)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_CurrentPageImpl_nativeResetFind");
   if (!nativeResetFind) {
     printf("got dlsym error %s\n", dlerror());
@@ -611,26 +601,6 @@ JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPageImp
 JNIEXPORT jstring JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPageImpl_nativeGetCurrentURL
 (JNIEnv *env, jobject obj, jint webShellPtr) {
   return (* nativeGetCurrentURL) (env, obj, webShellPtr);
-}
-
-/*
- * Class:     org_mozilla_webclient_wrapper_0005fnative_CurrentPageImpl
- * Method:    nativeGetSource
- * Signature: ()Ljava/lang/String;
- */
-JNIEXPORT jstring JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPageImpl_nativeGetSource
-(JNIEnv * env, jobject obj) {
-  return (* nativeGetSource) (env, obj);
-}
-
-/*
- * Class:     org_mozilla_webclient_wrapper_0005fnative_CurrentPageImpl
- * Method:    nativeGetSourceBytes
- * Signature: ()[B
- */
-JNIEXPORT jbyteArray JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPageImpl_nativeGetSourceBytes
-(JNIEnv * env, jobject obj, jint webShellPtr, jboolean mode) {
-  return (* nativeGetSourceBytes) (env, obj, webShellPtr, mode);
 }
 
 /*
