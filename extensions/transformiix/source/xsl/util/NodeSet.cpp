@@ -24,6 +24,9 @@
  * Larry Fitzpatrick, OpenText, lef@opentext.com
  *    -- moved initialization of DEFAULT_SIZE from NodeSet.h to here
  *
+ * Olivier Gerardin, ogerardin@vo.lu
+ *    -- fixed numberValue()
+ *
  * $Id$
  */
 
@@ -327,7 +330,14 @@ MBool NodeSet::booleanValue() {
  * @return the Number value
 **/
 double NodeSet::numberValue() {
-    return 0.0;
+  // OG+
+  // As per the XPath spec, the number value of a node-set is the number value
+  // of its string value.
+  String str;
+  stringValue(str);
+  Double dbl(str);
+  return dbl.doubleValue();
+  // OG-
 } //-- numberValue
 
 /**
