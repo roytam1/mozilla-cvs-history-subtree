@@ -38,6 +38,7 @@
 
 #import <Foundation/Foundation.h>
 #import <Appkit/Appkit.h>
+#import "ExtendedOutlineView.h"
 
 class nsIRDFDataSource;
 class nsIRDFContainer;
@@ -65,7 +66,7 @@ class nsIRDFService;
     nsIRDFResource* 		mRootResource;
     nsIRDFService* 			mRDFService;
 
-    IBOutlet id mOutlineView;	
+    IBOutlet ExtendedOutlineView* mOutlineView;	
 
     NSMutableDictionary*	mDictionary;
 }

@@ -44,6 +44,8 @@
 #include "nsIRDFService.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFResource.h"
+#include "nsIBrowserHistory.h"
+#include "nsIServiceManager.h"
 
 #include "nsXPIDLString.h"
 #include "nsString.h"
@@ -139,6 +141,7 @@ HistoryDataSourceObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
   
     [mOutlineView setTarget: self];
     [mOutlineView setDoubleAction: @selector(openHistoryItem:)];
+    [mOutlineView setDeleteAction: @selector(deleteHistoryItems:)];
   
     mObserver = new HistoryDataSourceObserver(mOutlineView);
     if ( mObserver ) {
@@ -236,32 +239,53 @@ HistoryDataSourceObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
       return;
     }
     
-    nsCOMPtr<nsIRDFResource> propertyResource;
-    mRDFService->GetResource("http://home.netscape.com/NC-rdf#URL", getter_AddRefs(propertyResource));
+    nsXPIDLString urlLiteral;
+    [self getPropertyString:@"http://home.netscape.com/NC-rdf#URL" forItem:item result:getter_Copies(urlLiteral)];
     
-    nsCOMPtr<nsIRDFResource> resource = dont_AddRef([item resource]);
-            
-    nsCOMPtr<nsIRDFNode> valueNode;
-    mDataSource->GetTarget(resource, propertyResource, PR_TRUE, getter_AddRefs(valueNode));
-    if (!valueNode) {
-#if DEBUG
-        NSLog(@"ValueNode is null in openHistoryItem");
-#endif
-        return;
-    }
-    
-    nsCOMPtr<nsIRDFLiteral> valueLiteral(do_QueryInterface(valueNode));
-    if (!valueLiteral)
-        return;
-    
-    nsXPIDLString literalValue;
-    valueLiteral->GetValue(getter_Copies(literalValue));
-
     // get uri
-    NSString* url = [NSString stringWith_nsAString: literalValue];
+    NSString* url = [NSString stringWith_nsAString: urlLiteral];
     [[mBrowserWindowController getBrowserWrapper] loadURI: url referrer: nil flags: NSLoadFlagsNone activate:YES];
 }
 
+
+//
+// deleteHistoryItems:
+//
+// Called when user hits backspace with the history view selected. Walks the selection
+// removing the selected items from the global history in batch-mode, then reloads
+// the outline.
+//
+-(IBAction)deleteHistoryItems: (id)aSender
+{
+  int index = [mOutlineView selectedRow];
+  if (index == -1)
+    return;
+
+  // if the user selected a bunch of rows, we want to clear the selection since when
+  // those rows are deleted, the tree will try to keep the same # of rows selected and
+  // it will look really odd. If just 1 row was selected, we keep it around so the user
+  // can keep quickly deleting one row at a time.
+  BOOL clearSelectionWhenDone = [mOutlineView numberOfSelectedRows] > 1;
+  
+  nsCOMPtr<nsIBrowserHistory> history = do_GetService("@mozilla.org/browser/global-history;1");
+  if ( history ) {
+    history->StartBatchUpdate();
+    NSEnumerator* rowEnum = [mOutlineView selectedRowEnumerator];
+    for ( NSNumber* currIndex = [rowEnum nextObject]; currIndex; currIndex = [rowEnum nextObject]) {
+      index = [currIndex intValue];
+      RDFOutlineViewItem* item = [mOutlineView itemAtRow: index];
+      if (![mOutlineView isExpandable: item]) {
+        nsXPIDLString urlLiteral;
+        [self getPropertyString:@"http://home.netscape.com/NC-rdf#URL" forItem:item result:getter_Copies(urlLiteral)];
+        history->RemovePage(NS_ConvertUCS2toUTF8(urlLiteral).get());
+      }
+    }
+    history->EndBatchUpdate();
+    if ( clearSelectionWhenDone )
+      [mOutlineView deselectAll:self];
+    [mOutlineView reloadData];     // necessary or the outline is really horked
+  }
+}
 
 //
 // outlineView:tooltipForString

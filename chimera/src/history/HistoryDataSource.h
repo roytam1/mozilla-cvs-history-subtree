@@ -60,5 +60,6 @@ class HistoryDataSourceObserver;
 -(void) disableObserver;
 
 -(IBAction)openHistoryItem: (id)aSender;
+-(IBAction)deleteHistoryItems: (id)aSender;
 
 @end
