@@ -519,7 +519,21 @@ sub setDefaultRebindProc
   die "No LDAP connection"
     unless defined($self->{ld});
 
- Ldapc::ldap_set_default_rebind_proc($self->{"ld"}, $dn, $pswd, $auth);
+  ldap_set_default_rebind_proc($self->{"ld"}, $dn, $pswd, $auth);
+}
+
+
+#############################################################################
+# Do a simple authentication, so that we can rebind as another user.
+#
+sub simpleAuth
+{
+  my ($self, $dn, $pswd) = @_;
+  my $ret;
+
+  $ret = ldap_simple_bind_s($self->{"ld"}, $dn, $pswd);
+
+  return ($ret == LDAP_SUCCESS);
 }
 
 
@@ -901,6 +915,26 @@ B<search> or B<entry>.
 
 Add a new entry to the LDAP server. Make sure you use the B<new> method
 for the Mozilla::LDAP::Entry object, to create a proper entry.
+
+=item B<simpleAuth>
+This method will rebind the LDAP connection using new credentials (i.e. a
+new user-DN and password). To rebind "anonymously", just don't pass a DN
+and password, and it will default to binding as the unprivleged user. For
+example:
+
+    $user = "leif";
+    $password = "secret";
+    $conn = new Mozilla::LDAP::Conn($host, $port);	# Anonymous bind
+    die "Could't connect to LDAP server $host" unless $conn;
+
+    $entry = $conn->search($root, $scope, "(uid=$user)", 0, (uid));
+    exit (-1) unless $entry;
+
+    $ret = $conn->simpleAuth($entry->getDN(), $password);
+    exit (-1) unless $ret;
+
+    $ret = $conn->simpleAuth();		# Bind as anon again.
+
 
 =item B<close>
 
