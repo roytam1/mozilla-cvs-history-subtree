@@ -29,6 +29,7 @@
 #include <stdio.h>
 
 #include "nsINetDataCache.h"
+#include "nsINetDataDiskCache.h"
 #include "nsINetDataCacheRecord.h"
 #include "nsMemCacheCID.h"
 // file cache include
@@ -730,10 +731,11 @@ main(int argc, char* argv[])
       return -1 ;
     }
 
-    nsCOMPtr<nsINetDataCache> cache;
 
     rv = NS_AutoregisterComponents();
     NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't register XPCOM components");
+
+    nsCOMPtr<nsINetDataCache> cache;
 
     if (PL_strcasecmp(argv[1], "-m") == 0) {
         rv = nsComponentManager::CreateInstance(kMemCacheCID, nsnull,
@@ -741,13 +743,20 @@ main(int argc, char* argv[])
                                             getter_AddRefs(cache));
         NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't create memory cache factory");
     } else if (PL_strcasecmp(argv[1], "-f") == 0) {
-        // initialize pref
-        initPref() ;
+
+        nsCOMPtr<nsINetDataDiskCache> diskcache ;
 
         rv = nsComponentManager::CreateInstance(kDiskCacheCID, nsnull,
-                                            NS_GET_IID(nsINetDataCache),
-                                             getter_AddRefs(cache));
+                                            NS_GET_IID(nsINetDataDiskCache),
+                                             getter_AddRefs(diskcache));
         NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't create disk cache factory") ;
+        
+        nsCOMPtr<nsIFileSpec> folder ;
+        NS_NewFileSpec(getter_AddRefs(folder)) ;
+        folder->SetUnixStyleFilePath("/tmp") ;
+        diskcache->SetDiskCacheFolder(folder) ;
+
+        cache = diskcache ;
 
     } else {
       printf("  %s -f to test filecache\n", argv[0]) ;
