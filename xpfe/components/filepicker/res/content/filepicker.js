@@ -145,7 +145,7 @@ function filepickerLoad() {
 
   gotoDirectory(sfile);
   var outliner = document.getElementById("directoryOutliner");
-  outliner.boxObject.QueryInterface(nsIOutlinerBoxObject).view = outlinerView;
+  outliner.outlinerBoxObject.view = outlinerView;
 
   doEnabling();
   textInput.focus();
