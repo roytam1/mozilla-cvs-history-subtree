@@ -2214,6 +2214,140 @@ nsSoftwareUpdate::BadRegName(char* regName)
     return PR_FALSE;
 }
 
+static JSClass stringObject = {
+    "global", 0,
+    JS_PropertyStub, JS_PropertyStub, JS_PropertyStub, JS_PropertyStub,
+    JS_EnumerateStub, JS_ResolveStub, JS_ConvertStub, JS_FinalizeStub
+};
 
+JSObject*  
+nsSoftwareUpdate::LoadStringObject(const char* filename)
+{
+	int err = 0;
+	XP_File fp;
+	XP_StatStruct stats;
+	long fileLength;
+    
+    JSObject  *stringObj = NULL;
+    MWContext *cx;
+
+    /* XXX FIX: We should use the context passed into nsSoftwareUpdate via the env var! dft */
+    cx = XP_FindContextOfType(NULL, MWContextJava);
+
+
+    stringObj = JS_NewObject(cx->mocha_context, &stringObject, NULL, NULL);
+    if (stringObj == NULL) return NULL;
+
+    /* Now lets open of the file and read it into a buffer */
+
+	stats.st_size = 0;
+	if ( stat(filename, (struct stat *) &stats) == -1 )
+		return NULL;
+
+	fileLength = stats.st_size;
+	if (fileLength <= 1)
+		return NULL;
+	
+    fp = XP_FileOpen(filename, xpURL, "r");
+
+	if (fp) 
+    {	
+
+		char* readBuf = (char *) XP_ALLOC(fileLength * sizeof(char) + 1);
+		char* buffPtr;
+        char* buffEnd;
+        char* valuePtr;
+        char* tempPtr;
+
+        if (readBuf) 
+        {
+			fileLength = XP_FileRead(readBuf, fileLength, fp);
+            readBuf[fileLength+1] = 0;
+
+            buffPtr = readBuf;
+            buffEnd = readBuf + fileLength;
+
+            while (buffPtr < buffEnd)
+            {
+                
+                /* Loop until we come across a interesting char */
+                if (XP_IS_SPACE(*buffPtr))
+                {
+                    buffPtr++;
+                }
+                else
+                {
+                    /* cool we got something.  lets find its value, and then add it to the js object */
+                    valuePtr = XP_STRCHR(buffPtr, '=');
+                    if (valuePtr != NULL)
+                    {
+                        /* lets check to see if we hit a new line prior to this = */
+                    	tempPtr = XP_STRCHR(buffPtr, '\n');
+                    	
+                    	
+                   		if (tempPtr == NULL || tempPtr > valuePtr)
+                    	{
+                            *valuePtr = 0;  /* null out the last char    */
+                            valuePtr++;     /* point it pass the = sign  */
+                       
+                            /* Make sure that the Value is nullified. */
+                            tempPtr = XP_STRCHR(valuePtr, CR);
+                            if (tempPtr)
+                            {
+                                tempPtr = 0;
+                            }
+                            else
+                            {
+                                /* EOF? */
+                            }
+                        
+                            /* we found both the name and value, lets add it! */
+
+                            JS_DefineProperty(  cx->mocha_context, 
+                                                stringObj, 
+                                                buffPtr, 
+                                                valuePtr?STRING_TO_JSVAL(JS_NewStringCopyZ(cx->mocha_context, valuePtr)):JSVAL_VOID,
+		                                        NULL, 
+                                                NULL, 
+                                                JSPROP_ENUMERATE | JSPROP_READONLY);
+                        
+                            /* set the buffPtr to the end of the value so that we can restart this loop */
+                            if (tempPtr)
+                            {
+                                buffPtr= ++tempPtr;
+                            }
+                        }
+                        else
+                        {
+                            /* we hit a return before hitting the =.  Lets adjust the buffPtr, and continue */
+	                     	buffPtr = XP_STRCHR(buffPtr, '\n');
+	                     	if (buffPtr != NULL)	
+	                     	{
+	                     		buffPtr++;
+	                     	}
+
+                        }
+
+                    }
+                    else
+                    {
+                        /* the resource file does look right - Line without an = */
+                        /* what do we do? - lets just break*/
+                        break; 
+                    }
+                }
+            }
+
+            XP_FREEIF(readBuf);
+		}
+		XP_FileClose(fp);
+    }
+    else
+    {
+        return NULL;
+    }
+    
+	return stringObj;
+}
 
 PR_END_EXTERN_C
