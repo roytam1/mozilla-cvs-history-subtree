@@ -39,6 +39,7 @@ REQUIRES	= xpcom \
 		  docshell \
 		  uriloader \
 		  msgbase \
+      msgbaseutil \
 		  intl \
 		  addrbook \
 		  mork \
