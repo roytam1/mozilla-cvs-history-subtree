@@ -1,5 +1,9 @@
 1999-03-22  Leif Hedstrom  <leif@netscape.com>
 
+	* Entry.pm: Removed all _self_obj_ stuff...
+
+	* Conn.pm: Dito.
+
 	* Conn.pm: Cleanup in use statements, and "use strict".
 	(search): Avoid warnings of uninitialized variables.
 	(searchURL): Dito.
@@ -14,7 +18,7 @@
 	* Utils.pm: Cleanup in all use statements, and "use strict". Also
 	enforces the VERSION control feature.
 
-	* Merged v1.2.1 to devel-branch-1_3.
+	* Merged v1.2.1 to devel-branch-1_3, and tagged v1.3.1.
 
 1999-03-21  Leif Hedstrom  <leif@netscape.com>
 
