@@ -168,7 +168,7 @@ class nsEditorShell :   public nsIEditorShell,
     // helper methods which is called each time a document (or frame) finishes
     // loading.
     nsresult        EndDocumentLoad(nsIDOMWindow *aDOMWindow,
-                                    nsIChannel *aChannel,
+                                    nsIRequest *request,
                                     nsresult aStatus);
 
     // Check a preference and call NormalizeTable if pref is true

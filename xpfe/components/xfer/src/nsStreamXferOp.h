@@ -82,6 +82,7 @@ public:
     NS_DECL_NSISTREAMOBSERVER
 
 private:
+    nsCOMPtr<nsIRequest>      mRequest;
     nsCOMPtr<nsIChannel>      mInputChannel;
     nsCOMPtr<nsIChannel>      mOutputChannel;
     nsCOMPtr<nsIOutputStream> mOutputStream;

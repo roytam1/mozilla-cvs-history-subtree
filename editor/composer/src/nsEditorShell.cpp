@@ -53,6 +53,7 @@
 #include "nsIURI.h"
 #include "nsCURILoader.h"
 #include "nsNetUtil.h"
+#include "nsIStreamContentInfo.h"
 
 #include "nsIScriptGlobalObject.h"
 #include "nsIWebNavigation.h"
@@ -4873,7 +4874,7 @@ NS_IMETHODIMP nsEditorShell::GetProtocolHandler(nsIURI *aURI, nsIProtocolHandler
 }
 
 /* void doContent (in string aContentType, in nsURILoadCommand aCommand, in string aWindowTarget, in nsIChannel aOpenedChannel, out nsIStreamListener aContentHandler, out boolean aAbortProcess); */
-NS_IMETHODIMP nsEditorShell::DoContent(const char *aContentType, nsURILoadCommand aCommand, const char *aWindowTarget, nsIChannel *aOpenedChannel, nsIStreamListener **aContentHandler, PRBool *aAbortProcess)
+NS_IMETHODIMP nsEditorShell::DoContent(const char *aContentType, nsURILoadCommand aCommand, const char *aWindowTarget, nsIRequest *request, nsIStreamListener **aContentHandler, PRBool *aAbortProcess)
 {
   NS_ENSURE_ARG_POINTER(aContentHandler);
   NS_ENSURE_ARG_POINTER(aAbortProcess);
@@ -5129,7 +5130,7 @@ nsEditorShell::OnStateChange(nsIWebProgress *aProgress,
       // Document level notification...
       if (aStateFlags & nsIWebProgressListener::STATE_IS_DOCUMENT)
       {
-        (void) EndDocumentLoad(domWindow, channel, aStatus);
+        (void) EndDocumentLoad(domWindow, aRequest, aStatus);
       }
       // Page level notification...
       if (aStateFlags & nsIWebProgressListener::STATE_IS_NETWORK)
@@ -5282,7 +5283,7 @@ nsresult nsEditorShell::StartDocumentLoad(nsIDOMWindow *aDOMWindow)
 // Called when each document, or sub-document (ie. frame) has finished
 // loading...
 nsresult nsEditorShell::EndDocumentLoad(nsIDOMWindow *aDOMWindow,
-                                        nsIChannel* aChannel,
+                                        nsIRequest* request,
                                         nsresult aStatus)
 {
   // for pages with charsets, this gets called the first time with a 
@@ -5299,10 +5300,14 @@ nsresult nsEditorShell::EndDocumentLoad(nsIDOMWindow *aDOMWindow,
     refreshURI->CancelRefreshURITimers();
 
   // Is this a MIME type we can handle?
-  if (aChannel)
+  if (request)
   {
+    nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
+    if (!contentInfo)
+        return NS_ERROR_FAILURE;
+
     char  *contentType;
-    aChannel->GetContentType(&contentType);
+    contentInfo->GetContentType(&contentType);
     if (contentType)
     {
       if ( (nsCRT::strcmp(contentType, "text/html") != 0) &&

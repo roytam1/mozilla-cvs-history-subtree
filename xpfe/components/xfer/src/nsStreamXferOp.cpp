@@ -39,6 +39,7 @@
 #include "nsIOutputStream.h"
 #include "nsNetUtil.h"
 #include "nsILocalFile.h"
+#include "nsIStreamContentInfo.h"
 
 #include "prprf.h"
 
@@ -179,7 +180,7 @@ nsStreamXferOp::Start( void ) {
                 if ( NS_SUCCEEDED( rv ) ) {
 #ifdef USE_ASYNC_READ
                     // Read the input channel (with ourself as the listener).
-                    rv = mInputChannel->AsyncRead(this, nsnull);
+                    rv = mInputChannel->AsyncRead(this, nsnull, 0, -1, getter_AddRefs(mRequest));
                     if ( NS_FAILED( rv ) ) {
                         this->OnError( kOpAsyncRead, rv );
                     }
@@ -194,7 +195,7 @@ nsStreamXferOp::Start( void ) {
 
                     // get the input stream from the channel.
                     nsCOMPtr<nsIInputStream> inStream;
-                    rv = mInputChannel->OpenInputStream(getter_AddRefs(inStream));
+                    rv = mInputChannel->OpenInputStream(0, -1, getter_AddRefs(inStream));
                     if (NS_FAILED(rv)) {
                         this->OnError(0, rv);
                         return rv;
@@ -202,7 +203,8 @@ nsStreamXferOp::Start( void ) {
 
                     // hand the output channel our input stream. it will take care
                     // of reading data from the stream and writing it to disk.
-                    rv = mOutputChannel->AsyncWrite(inStream, NS_STATIC_CAST(nsIStreamObserver*,this), nsnull);
+                    rv = mOutputChannel->AsyncWrite(inStream, NS_STATIC_CAST(nsIStreamObserver*,this), nsnull, 
+                                                    0, -1, getter_AddRefs(mRequest));
                     if ( NS_FAILED( rv ) ) {
                         this->OnError( kOpAsyncWrite, rv );
                     }
@@ -242,7 +244,8 @@ nsStreamXferOp::Stop( void ) {
         nsCOMPtr<nsIChannel> channel = mInputChannel;
         mInputChannel = 0;
         // Now cancel it.
-        rv = channel->Cancel(NS_BINDING_ABORTED);
+        if (mRequest)
+            rv = mRequest->Cancel(NS_BINDING_ABORTED);
         if ( NS_FAILED( rv ) ) {
             this->OnError( kOpInputCancel, rv );
         }
@@ -271,17 +274,17 @@ nsStreamXferOp::Stop( void ) {
 //
 // We also open the output stream at this point.
 NS_IMETHODIMP
-nsStreamXferOp::OnStartRequest(nsIChannel* channel, nsISupports* aContext) {
+nsStreamXferOp::OnStartRequest(nsIRequest *request, nsISupports* aContext) {
     nsresult rv = NS_OK;
 
 #ifdef DEBUG_law
-    DEBUG_PRINTF( PR_STDOUT, "nsStreamXferOp::OnStartRequest; channel=0x%08X, context=0x%08X\n",
-                  (int)(void*)channel, (int)(void*)aContext );
+    DEBUG_PRINTF( PR_STDOUT, "nsStreamXferOp::OnStartRequest; request=0x%08X, context=0x%08X\n",
+                  (int)(void*)request, (int)(void*)aContext );
 #endif
 
 #ifdef USE_ASYNC_READ
     // Open output stream.
-    rv = mOutputChannel->OpenOutputStream( getter_AddRefs( mOutputStream ) );
+    rv = mOutputChannel->OpenOutputStream(0, -1, getter_AddRefs( mOutputStream ) );
 
     if ( NS_FAILED( rv ) ) {
         // Give up all hope.
@@ -296,7 +299,7 @@ nsStreamXferOp::OnStartRequest(nsIChannel* channel, nsISupports* aContext) {
 #ifdef USE_ASYNC_READ
 // Process the data by writing it to the output channel.
 NS_IMETHODIMP
-nsStreamXferOp::OnDataAvailable( nsIChannel     *channel,
+nsStreamXferOp::OnDataAvailable( nsIRequest*    request,
                                  nsISupports    *aContext,
                                  nsIInputStream *aIStream,
                                  PRUint32        offset,
@@ -344,11 +347,13 @@ nsStreamXferOp::OnDataAvailable( nsIChannel     *channel,
     } else {
         // Fake OnProgress.
         mBytesProcessed += aLength;
-        if ( mContentLength == 0 && channel ) {
+        if ( mContentLength == 0 && request ) {
             // Get content length from input channel.
-            channel->GetContentLength( &mContentLength );
+            nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
+            if (!contentInfo) return NS_ERROR_FAILURE;
+            contentInfo->GetContentLength( &mContentLength );
         }
-        this->OnProgress( mOutputChannel, 0, mBytesProcessed, mContentLength );
+        this->OnProgress( request, 0, mBytesProcessed, mContentLength );
     }
 
     return rv;
@@ -368,13 +373,15 @@ nsStreamXferOp::GetInterface(const nsIID &anIID, void **aResult ) {
 // expected.
 //
 NS_IMETHODIMP
-nsStreamXferOp::OnProgress(nsIChannel* channel, nsISupports* aContext,
+nsStreamXferOp::OnProgress(nsIRequest *request, nsISupports* aContext,
                                      PRUint32 aProgress, PRUint32 aProgressMax) {
     nsresult rv = NS_OK;
 
     if (mContentLength < 1) {
-        NS_ASSERTION(channel, "should have a channel");
-        rv = channel->GetContentLength(&mContentLength);
+        NS_ASSERTION(request, "should have a request");
+        nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(request);
+        if (!contentInfo) return NS_ERROR_FAILURE;
+        rv = contentInfo->GetContentLength(&mContentLength);
         if (NS_FAILED(rv)) return rv;
     }
 
@@ -397,7 +404,7 @@ nsStreamXferOp::OnProgress(nsIChannel* channel, nsISupports* aContext,
 // "subject", the topic is the component contractid (plus ";onStatus"), and
 // the data is the status text.
 NS_IMETHODIMP
-nsStreamXferOp::OnStatus( nsIChannel      *channel,
+nsStreamXferOp::OnStatus( nsIRequest      *request,
                           nsISupports     *aContext,
                           nsresult        aStatus,
                           const PRUnichar *aStatusArg) {
@@ -424,7 +431,7 @@ nsStreamXferOp::OnStatus( nsIChannel      *channel,
 
 // This is called when the end of input is reached on the input channel.
 NS_IMETHODIMP
-nsStreamXferOp::OnStopRequest( nsIChannel      *channel,
+nsStreamXferOp::OnStopRequest( nsIRequest      *request,
                                nsISupports     *aContext,
                                nsresult         aStatus,
                                const PRUnichar *aMsg ) {

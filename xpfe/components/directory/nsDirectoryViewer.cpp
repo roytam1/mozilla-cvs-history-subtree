@@ -300,7 +300,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS2(nsHTTPIndexParser, nsIStreamListener, nsIStreamObs
 
 
 NS_IMETHODIMP
-nsHTTPIndexParser::OnStartRequest(nsIChannel* aChannel, nsISupports* aContext)
+nsHTTPIndexParser::OnStartRequest(nsIRequest *request, nsISupports* aContext)
 {
   nsresult rv;
 
@@ -357,6 +357,9 @@ nsHTTPIndexParser::OnStartRequest(nsIChannel* aChannel, nsISupports* aContext)
       return NS_ERROR_FAILURE;
   }  
 
+  nsCOMPtr<nsIChannel> aChannel;
+  request->GetParent(getter_AddRefs(aChannel));
+
   // Save off some information about the stream we're about to parse.
   nsCOMPtr<nsIURI> mDirectoryURI;
   rv = aChannel->GetURI(getter_AddRefs(mDirectoryURI));
@@ -387,7 +390,7 @@ nsHTTPIndexParser::OnStartRequest(nsIChannel* aChannel, nsISupports* aContext)
 
 
 NS_IMETHODIMP
-nsHTTPIndexParser::OnStopRequest(nsIChannel* aChannel,
+nsHTTPIndexParser::OnStopRequest(nsIRequest *request,
                                  nsISupports* aContext,
                                  nsresult aStatus,
                                  const PRUnichar* aErrorMsg)
@@ -426,7 +429,7 @@ nsHTTPIndexParser::OnStopRequest(nsIChannel* aChannel,
 
 
 NS_IMETHODIMP
-nsHTTPIndexParser::OnDataAvailable(nsIChannel* aChannel,
+nsHTTPIndexParser::OnDataAvailable(nsIRequest *request,
                                    nsISupports* aContext,
                                    nsIInputStream* aStream,
                                    PRUint32 aSourceOffset,
@@ -1326,7 +1329,8 @@ nsHTTPIndex::FireTimer(nsITimer* aTimer, void* aClosure)
         		}
         		if (NS_SUCCEEDED(rv) && (listener))
         		{
-					rv = channel->AsyncRead(listener, aSource);
+                    nsCOMPtr<nsIRequest> request;
+					rv = channel->AsyncRead(listener, aSource, 0, -1, getter_AddRefs(request));
         		}
             }
         }
@@ -1695,7 +1699,8 @@ nsDirectoryViewerFactory::CreateInstance(const char *aCommand,
                                aDocViewerResult);
   if (NS_FAILED(rv)) return rv;
 
-  rv = channel->AsyncRead(listener, nsnull);
+  nsCOMPtr<nsIRequest> request;
+  rv = channel->AsyncRead(listener, nsnull, 0, -1, getter_AddRefs(request));
   if (NS_FAILED(rv)) return rv;
 
   // Create an HTTPIndex object so that we can stuff it into the script context
