@@ -610,11 +610,6 @@ This package can be retrieved from a number of places, including:
     http://www.mozilla.org/directory/
     Your local CPAN server
 
-=head1 AUTHOR INFORMATION
-
-Address bug reports and comments to the Netscape DevEdge newsgroups at:
-nntps://secnews.netscape.com/netscape.dev.directory.
-
 =head1 CREDITS
 
 Most of this code was developed by Leif Hedstrom, Netscape Communications
