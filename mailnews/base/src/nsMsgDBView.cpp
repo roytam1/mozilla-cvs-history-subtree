@@ -512,7 +512,6 @@ nsresult nsMsgDBView::FetchAuthor(nsIMsgHdr * aHdr, PRUnichar ** aSenderString)
      char    *addresses;
      rv = mHeaderParser->ParseHeaderAddresses("UTF-8", NS_ConvertUCS2toUTF8(unparsedAuthor).get(), &names, &addresses, &numAddresses);
      if (NS_SUCCEEDED(rv)) {
-       //printf("%d %s %s\n", numAddresses, names, addresses);
        *aSenderString = nsCRT::strdup(NS_ConvertUTF8toUCS2(addresses).get());
      }
      PR_FREEIF(addresses);
