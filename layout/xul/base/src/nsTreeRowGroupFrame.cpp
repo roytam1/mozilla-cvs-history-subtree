@@ -56,10 +56,12 @@ nsTreeRowGroupFrame::~nsTreeRowGroupFrame()
 {
 }
 
-PRBool nsTreeRowGroupFrame::IsFlexible()
+/*
+PRBool nsTreeRowGroupFrame::RowGroupReceivesExcessSpace()
 {
-  // Only row groups are flexible.
+  // Only row groups do.
   const nsStyleDisplay *display=nsnull;
   GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)display));
   return (display->mDisplay == NS_STYLE_DISPLAY_TABLE_ROW_GROUP);
 }
+*/

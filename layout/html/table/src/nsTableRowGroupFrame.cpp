@@ -1081,7 +1081,8 @@ nsTableRowGroupFrame::Reflow(nsIPresContext&          aPresContext,
     }
 
     // See if all the frames fit
-    if (aDesiredSize.height > aReflowState.availableHeight) {
+    if (aDesiredSize.height > aReflowState.availableHeight && 
+        !tableFrame->RowGroupsShouldBeConstrained()) {
       // Nope, find a place to split the row group
       SplitRowGroup(aPresContext, aDesiredSize, aReflowState, tableFrame, aStatus);
     }

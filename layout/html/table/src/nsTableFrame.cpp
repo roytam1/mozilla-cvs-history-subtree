@@ -4335,7 +4335,7 @@ nscoord nsTableFrame::ComputeDesiredHeight(nsIPresContext& aPresContext,
         const nsStyleDisplay *rowGroupDisplay;
         rowGroupFrame->GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)rowGroupDisplay));
         if (PR_TRUE==IsRowGroup(rowGroupDisplay->mDisplay) &&
-            ((nsTableRowGroupFrame*)rowGroupFrame)->IsFlexible())
+            ((nsTableRowGroupFrame*)rowGroupFrame)->RowGroupReceivesExcessSpace())
         { 
           ((nsTableRowGroupFrame*)rowGroupFrame)->GetHeightOfRows(sumOfRowHeights);
         }
@@ -4349,7 +4349,7 @@ nscoord nsTableFrame::ComputeDesiredHeight(nsIPresContext& aPresContext,
         const nsStyleDisplay *rowGroupDisplay;
         rowGroupFrame->GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)rowGroupDisplay));
         if (PR_TRUE==IsRowGroup(rowGroupDisplay->mDisplay)) {
-          if (((nsTableRowGroupFrame*)rowGroupFrame)->IsFlexible())
+          if (((nsTableRowGroupFrame*)rowGroupFrame)->RowGroupReceivesExcessSpace())
           {
             nscoord excessForGroup = 0;
             DistributeSpaceToRows(aPresContext, aReflowState, rowGroupFrame, sumOfRowHeights, 

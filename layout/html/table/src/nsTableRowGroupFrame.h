@@ -129,7 +129,7 @@ public:
    */
   NS_METHOD GetHeightOfRows(nscoord& aResult);
   
-  virtual PRBool IsFlexible() { return PR_FALSE; }
+  virtual PRBool RowGroupReceivesExcessSpace() { return PR_TRUE; }
 
 protected:
 

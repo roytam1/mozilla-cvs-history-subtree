@@ -31,7 +31,7 @@ protected:
   nsTreeRowGroupFrame();
   virtual ~nsTreeRowGroupFrame();
 
-  PRBool IsFlexible();
+  virtual PRBool RowGroupReceivesExcessSpace() { return PR_FALSE; };
 
 protected: // Data Members
 
