@@ -63,7 +63,6 @@ public:
 protected:
 
     PRUint32         mNumEntries;
-    PRUint32         mCapacity;    // Memory capacity, in bytes
     PRUint32         mOccupancy;   // Memory used, in bytes
     PRBool           mEnabled;     // If false, bypass mem cache
 

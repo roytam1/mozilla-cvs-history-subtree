@@ -40,7 +40,7 @@
 PRInt32 nsMemCache::gRecordSerialNumber = 0;
 
 nsMemCache::nsMemCache()
-    : mNumEntries(0), mCapacity(0), mOccupancy(0), mEnabled(PR_TRUE),
+    : mNumEntries(0), mOccupancy(0), mEnabled(PR_TRUE),
       mHashTable(0)
 {
     NS_INIT_REFCNT();
@@ -239,7 +239,7 @@ HashEntryConverter(nsHashKey *aKey, void *aValue,
 
     // Hash table keys that index cache entries by their record ID
     // shouldn't be enumerated.
-    if ((opaqueKey->GetKeyLength() == sizeof PRInt32)) {
+    if ((opaqueKey->GetKeyLength() == sizeof(PRInt32))) {
 
 #ifdef DEBUG
         PRInt32 recordID;
@@ -279,14 +279,6 @@ NS_IMETHODIMP
 nsMemCache::SetNextCache(nsINetDataCache* aNextCache)
 {
     mNextCache = aNextCache;
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsMemCache::GetCapacity(PRUint32 *aCapacity)
-{
-    NS_ENSURE_ARG(aCapacity);
-    *aCapacity = mCapacity;
     return NS_OK;
 }
 
