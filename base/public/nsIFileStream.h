@@ -20,64 +20,108 @@
 
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
+#include "prio.h"
 
 class nsFileSpec;
+
+/* a6cf90e8-15b3-11d2-932e-00805f8add32 */
+#define NS_IFILE_IID \
+{ 0xa6cf90e8, 0x15b3, 0x11d2, \
+    {0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32} }
+
+//========================================================================================
+class nsIFile
+// Represents a file, and supports Open, Tell etc.
+//========================================================================================
+: public nsISupports
+{
+public:
+    static const nsIID& IID() { static nsIID iid = NS_IFILE_IID; return iid; }
+	NS_IMETHOD                         Open(
+                                           const nsFileSpec& inFile,
+                                           int nsprMode,
+                                           PRIntn accessMode) = 0;
+                                           // Note: Open() is only needed after
+                                           // an explicit Close().  All file streams
+                                           // are automatically opened on construction.
+    NS_IMETHOD                         Seek(PRSeekWhence whence, PRInt32 offset) = 0;
+    NS_IMETHOD                         GetIsOpen(PRBool* outOpen) = 0;
+    NS_IMETHOD                         Tell(PRIntn* outWhere) = 0;
+}; // class nsIFile
 
 /* a6cf90e6-15b3-11d2-932e-00805f8add32 */
 #define NS_IFILEINPUTSTREAM_IID \
 { 0xa6cf90e6, 0x15b3, 0x11d2, \
     {0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32} }
     
+//========================================================================================
+class nsIFileInputStream
+// These are additional file-specific methods that files have, above what
+// nsIInputStream supports.  The current implementation supports both
+// interfaces.
+//========================================================================================
+: public nsISupports
+{
+public:
+    static const nsIID& IID() { static nsIID iid = NS_IFILEINPUTSTREAM_IID; return iid; }
+}; // class nsIFileInputStream
+
 /* a6cf90e7-15b3-11d2-932e-00805f8add32 */
 #define NS_IFILEOUTPUTSTREAM_IID \
 { 0xa6cf90e7, 0x15b3, 0x11d2, \
     {0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32} }
 
 //========================================================================================
-class nsIFileInputStream : public nsIInputStream
+class nsIFileOutputStream
+// These are additional file-specific methods that files have, above what
+// nsIOutputStream supports.  The current implementation supports both
+// interfaces.
 //========================================================================================
+: public nsISupports
 {
-	// File-specific methods need to be added here - that's why I didn't just
-	// provide special factory methods for file streams that
-	// would merely return nsIInputStream.
-}; // class nsIFileInputStream
-
-//========================================================================================
-class nsIFileOutputStream : public nsIOutputStream
-//========================================================================================
-{
-	// File-specific methods need to be added here - that's why I didn't just
-	// provide special factory methods for file streams that
-	// would merely return nsIOutputStream.
+public:
+    static const nsIID& IID() { static nsIID iid = NS_IFILEOUTPUTSTREAM_IID; return iid; }
+    NS_IMETHOD                         Flush() = 0;
+                                           // Forces a write to disk.
 }; // class nsIFileOutputStream
 
-
 //----------------------------------------------------------------------------------------
-extern "C" NS_BASE nsresult NS_NewInputConsoleStream(
-    nsIFileInputStream** aInstancePtrResult);
-    // Factory method to get an nsInputStream from the console.
-
-//----------------------------------------------------------------------------------------
-extern "C" NS_BASE nsresult NS_NewInputFileStream(
-    nsIFileInputStream** aInstancePtrResult,
-    const nsFileSpec& inFile,
-    PRInt32 nsprMode /*Default = PR_RDONLY*/,
-    PRInt32 accessMode /*Default = 0700 (octal)*/);
-    // Factory method to get an nsInputStream from a file
-    // (see nsFileStream.h for more info on the parameters).
+NS_BASE nsresult NS_NewTypicalInputFileStream(
+    nsISupports** aStreamResult,
+    const nsFileSpec& inFile
+    /*Default nsprMode == PR_RDONLY*/
+    /*Default accessmode = 0700 (octal)*/);
+// Factory method to get an nsInputStream from a file, using most common options
 
 //----------------------------------------------------------------------------------------
 extern "C" NS_BASE nsresult NS_NewOutputConsoleStream(
-    nsIFileOutputStream** aInstancePtrResult);
+    nsISupports** aStreamResult);
     // Factory method to get an nsOutputStream to the console.
 
 //----------------------------------------------------------------------------------------
-extern "C" NS_BASE nsresult NS_NewOutputFileStream(
-    nsIFileOutputStream** aInstancePtrResult,
+extern "C" NS_BASE nsresult NS_NewTypicalOutputFileStream(
+    nsISupports** aStreamResult, // will implement all the above interfaces
+    const nsFileSpec& inFile
+    /*default nsprMode= (PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE)*/
+    /*Default accessMode= 0700 (octal)*/);
+    // Factory method to get an nsOutputStream to a file - most common case.
+
+//----------------------------------------------------------------------------------------
+extern "C" NS_BASE nsresult NS_NewTypicalIOFileStream(
+    nsISupports** aStreamResult, // will implement all the above interfaces
+    const nsFileSpec& inFile
+    /*default nsprMode = (PR_RDWR | PR_CREATE_FILE)*/
+    /*Default accessMode = 0700 (octal)*/);
+    // Factory method to get an object that implements both nsIInputStream
+    // and nsIOutputStream, associated with a single file.
+
+//----------------------------------------------------------------------------------------
+extern "C" NS_BASE nsresult NS_NewIOFileStream(
+    nsISupports** aStreamResult, // will implement all the above interfaces
     const nsFileSpec& inFile,
-    PRInt32 nsprMode /*default = (PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE)*/,
-    PRInt32 accessMode /*Default = 0700 (octal)*/);
-    // Factory method to get an nsOutputStream to a file.
-    // (see nsFileStream.h for more info on the parameters).
+    PRInt32 nsprMode,
+    PRInt32 accessMode);
+    // Factory method to get an object that implements both nsIInputStream
+    // and nsIOutputStream, associated with a single file.
 
 #endif /* nsIFileStream_h___ */

@@ -15,10 +15,11 @@
  * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
-#include <stdio.h>
-#include "string.h"
+
 #include "nsFileSpec.h"
 #include "nsFileStream.h"
+
+//#include "string.h"
 
 struct FilesTest
 {
@@ -48,7 +49,7 @@ struct FilesTest
 	void Failed();
 	void Inspect();
 		
-	nsOutputFileStream mConsole;
+	nsOutputConsoleStream mConsole;
 };
 
 //----------------------------------------------------------------------------------------
@@ -66,7 +67,8 @@ void FilesTest::Banner(const char* bannerString)
 void FilesTest::Passed()
 //----------------------------------------------------------------------------------------
 {
-	mConsole << "Test passed." << nsEndl;
+	((nsOutputStream&)mConsole) << "Test passed.";
+	mConsole << nsEndl;
 }
 
 //----------------------------------------------------------------------------------------

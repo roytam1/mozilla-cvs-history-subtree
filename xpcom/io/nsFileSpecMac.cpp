@@ -550,14 +550,16 @@ nsFileSpec::nsFileSpec(const nsFilePath& inPath)
 	*this = inPath.GetFileSpec();
 }
 
+#if DEBUG
 //----------------------------------------------------------------------------------------
-nsBasicOutStream& operator << (nsBasicOutStream& s, const nsFileSpec& spec)
+nsOutputStream& operator << (nsOutputStream& s, const nsFileSpec& spec)
 //----------------------------------------------------------------------------------------
 {
 	s << spec.mSpec.vRefNum << ", " << spec.mSpec.parID << ", \"";
 	s.write((const char*)&spec.mSpec.name[1], spec.mSpec.name[0]);
 	return s << "\"";	
-} // nsOutputFileStream& operator << (nsOutputFileStream&, const nsFileSpec&)
+} // nsOutputStream& operator << (nsOutputStream&, const nsFileSpec&)
+#endif
 
 //----------------------------------------------------------------------------------------
 void nsFileSpec::operator = (const char* inString)

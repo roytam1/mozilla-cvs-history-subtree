@@ -367,12 +367,14 @@ void nsFileURL::operator = (const nsFileSpec& inOther)
 #endif
 } // nsFileURL::operator =
 
+#if DEBUG
 //----------------------------------------------------------------------------------------
-nsBasicOutStream& operator << (nsBasicOutStream& s, const nsFileURL& url)
+nsOutputStream& operator << (nsOutputStream& s, const nsFileURL& url)
 //----------------------------------------------------------------------------------------
 {
     return (s << url.mURL);
 }
+#endif
 
 //========================================================================================
 //                                nsFilePath implementation
@@ -661,14 +663,16 @@ void nsFileSpec::operator = (const char* inString)
 }
 #endif //XP_UNIX
 
+#if DEBUG
 #if (defined(XP_UNIX) || defined(XP_PC))
 //----------------------------------------------------------------------------------------
-nsBasicOutStream& operator << (nsBasicOutStream& s, const nsFileSpec& spec)
+nsOutputStream& operator << (nsOutputStream& s, const nsFileSpec& spec)
 //----------------------------------------------------------------------------------------
 {
     return (s << (const char*)spec.mPath);
 }
 #endif // DEBUG && XP_UNIX
+#endif
 
 //----------------------------------------------------------------------------------------
 nsFileSpec nsFileSpec::operator + (const char* inRelativePath) const
@@ -759,7 +763,7 @@ void nsPersistentFileDescriptor::SetData(const void* inData, PRInt32 inSize)
 #define MAX_PERSISTENT_DATA_SIZE 1000
 
 //----------------------------------------------------------------------------------------
-nsBasicInStream& operator >> (nsBasicInStream& s, nsPersistentFileDescriptor& d)
+nsInputStream& operator >> (nsInputStream& s, nsPersistentFileDescriptor& d)
 // reads the data from a file
 //----------------------------------------------------------------------------------------
 {
@@ -768,19 +772,19 @@ nsBasicInStream& operator >> (nsBasicInStream& s, nsPersistentFileDescriptor& d)
 	PRInt32 bytesRead = 8;
 	bytesRead = s.read(bigBuffer, bytesRead);
 	if (bytesRead != 8)
-		return s;
+		return (nsInputFileStream&)s;
 	bigBuffer[8] = '\0';
 	sscanf(bigBuffer, "%lx", &bytesRead);
 	if (bytesRead > MAX_PERSISTENT_DATA_SIZE)
-		return s; // preposterous.
+		return (nsInputFileStream&)s; // preposterous.
 	// Now we know how many bytes to read, do it.
 	s.read(bigBuffer, bytesRead);
 	d.SetData(bigBuffer, bytesRead);
-	return s;
+	return (nsInputFileStream&)s;
 }
 
 //----------------------------------------------------------------------------------------
-nsBasicOutStream& operator << (nsBasicOutStream& s, const nsPersistentFileDescriptor& d)
+nsOutputStream& operator << (nsOutputStream& s, const nsPersistentFileDescriptor& d)
 // writes the data to a file
 //----------------------------------------------------------------------------------------
 {

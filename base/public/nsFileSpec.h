@@ -157,8 +157,10 @@ class nsPersistentFileDescriptor; // Used for storage across program launches.
 #define kFileURLPrefix "file://"
 #define kFileURLPrefixLength (7)
 
-class nsBasicOutStream;
-class nsBasicInStream;
+class nsOutputStream;
+class nsInputStream;
+class nsOutputFileStream;
+class nsInputFileStream;
 
 //========================================================================================
 // Conversion of native file errors to nsresult values. These are really only for use
@@ -228,9 +230,12 @@ class NS_BASE nsFileSpec
         PRBool                  Valid() const { return NS_SUCCEEDED(Error()); }
         nsresult                Error() const { return mError; }
 
-        friend                  NS_BASE nsBasicOutStream& operator << (
-                                    nsBasicOutStream& s,
-                                    const nsFileSpec& spec);
+#if DEBUG
+        friend                  NS_BASE nsOutputStream& operator << (
+                                    nsOutputStream& s,
+                                    const nsFileSpec& spec); // THIS IS FOR DEBUGGING ONLY.
+                                        // see PersistentFileDescriptor for the real deal.
+#endif
 
         //--------------------------------------------------
         // Queries and path algebra.  These do not modify the disk.
@@ -322,8 +327,8 @@ class NS_BASE nsFileURL
         void                    operator = (const nsFilePath& inOther);
         void                    operator = (const nsFileSpec& inOther);
 
-        friend                  NS_BASE nsBasicOutStream& operator << (
-                                     nsBasicOutStream& s, const nsFileURL& spec);
+        friend                  NS_BASE nsOutputStream& operator << (
+                                     nsOutputStream& s, const nsFileURL& spec);
 
 #ifdef XP_MAC
                                 // Accessor to allow quick assignment to a mFileSpec
@@ -402,9 +407,9 @@ class NS_BASE nsPersistentFileDescriptor
                                 nsPersistentFileDescriptor(const nsFileSpec& inPath);
         void					operator = (const nsFileSpec& inPath);
         
-    	friend NS_BASE nsBasicInStream& operator >> (nsBasicInStream&, nsPersistentFileDescriptor&);
+    	friend NS_BASE nsInputStream& operator >> (nsInputStream&, nsPersistentFileDescriptor&);
     		// reads the data from a file
-    	friend NS_BASE nsBasicOutStream& operator << (nsBasicOutStream&, const nsPersistentFileDescriptor&);
+    	friend NS_BASE nsOutputStream& operator << (nsOutputStream&, const nsPersistentFileDescriptor&);
     	    // writes the data to a file
         friend class nsFileSpec;
 
