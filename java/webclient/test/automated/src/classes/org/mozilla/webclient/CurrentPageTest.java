@@ -268,16 +268,35 @@ public class CurrentPageTest extends WebclientTestCase implements ClipboardOwner
 	selection = currentPage.getSelection();
 	assertTrue(-1 != selection.toString().indexOf("one"));
 
-	Thread.currentThread().sleep(1000);
-
 	assertTrue(currentPage.findNext());
 		   
 	selection = currentPage.getSelection();
 	assertTrue(-1 != selection.toString().indexOf("one"));
+
+	assertTrue(currentPage.findNext());
+
+	assertTrue(!currentPage.findNext());
+
+	assertTrue(currentPage.find("one", false, false));
+	assertTrue(currentPage.findNext());
+
+	assertTrue(currentPage.find("three", true, false));
+	selection = currentPage.getSelection();
+	assertTrue(-1 != selection.toString().indexOf("Three"));
+	assertTrue(currentPage.findNext());
+	selection = currentPage.getSelection();
+	assertTrue(-1 != selection.toString().indexOf("Three"));
+	assertTrue(currentPage.findNext());
+	selection = currentPage.getSelection();
+	assertTrue(-1 != selection.toString().indexOf("three"));
+
+	assertTrue(currentPage.find("Three", false, true));
+	selection = currentPage.getSelection();
+	assertTrue(-1 != selection.toString().indexOf("Three"));
+	assertTrue(currentPage.findNext());
+	selection = currentPage.getSelection();
+	assertTrue(-1 != selection.toString().indexOf("Three"));
 	
-
-	Thread.currentThread().sleep(2000);
-
 	frame.setVisible(false);
 	BrowserControlFactory.deleteBrowserControl(firstBrowserControl);
     }
