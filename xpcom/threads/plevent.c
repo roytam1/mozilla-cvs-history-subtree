@@ -1028,6 +1028,7 @@ int CALLBACK LibMain( HINSTANCE hInst, WORD wDataSeg,
 ** Initialization routine for the NSPR DLL...
 */
 
+#ifndef MOZ_STATIC_COMPONENT_LIBS
 BOOL WINAPI DllMain (HINSTANCE hDLL, DWORD dwReason, LPVOID lpReserved)
 {
   switch (dwReason)
@@ -1049,6 +1050,8 @@ BOOL WINAPI DllMain (HINSTANCE hDLL, DWORD dwReason, LPVOID lpReserved)
 
     return TRUE;
 }
+#endif
+
 #endif
 
 
