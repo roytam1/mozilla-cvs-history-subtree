@@ -55,11 +55,13 @@ sub new
   my $initialReturn = $args{"conn"}->search($args{"base"},
 					    "base",
 					    "objectclass=*");
-
-my @attributeArray = $initialReturn->getValues("attributetypes");
+  
+  my @attributeArray = $initialReturn->getValues("attributetypes");
   foreach (@attributeArray)  {
     $attr = new Mozilla::LDAP::Schema::Attribute($_);
-  }
+    print $attr->name();
+    
+}
   $objclass = new Mozilla::LDAP::Schema::ObjectClass();
   
   
@@ -102,6 +104,42 @@ sub new
   
   return $self;
 }  
+
+sub oid
+{
+  my $self = shift; 
+  if(@_) {
+    $self->{'oid'} = shift;
+  }
+  $self->{'oid'}; 
+}
+
+sub name
+{
+  my $self = shift; 
+  if(@_) {
+    $self->{'name'} = shift;
+  }
+  $self->{'name'}; 
+}
+
+sub description
+{
+  my $self = shift; 
+  if(@_) {
+    $self->{'description'} = shift;
+  }
+  $self->{'description'}; 
+}
+
+sub syntax
+{
+  my $self = shift; 
+  if(@_) {
+    $self->{'syntax'} = shift;
+  }
+  $self->{'syntax'}; 
+}
 
 package Mozilla::LDAP::Schema::ObjectClass;
 
