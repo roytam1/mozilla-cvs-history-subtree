@@ -46,7 +46,7 @@
 
 dialog { 
   padding: 8px 10px 10px 8px;
-  background-color: #FFFCF7;
+  background-color: #FFFBF7;
 }
 
 /* ::::: dialog buttons ::::: */
@@ -97,3 +97,4 @@ dialogheader {
 .header-large > .dialogheader-description {
   margin-left: 12px !important;
 }
+
