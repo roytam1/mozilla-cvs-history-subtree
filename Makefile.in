@@ -138,4 +138,4 @@ endif
 
 install::
 	echo "Hacking taskoverlay to include xmlterm"
-	(cd dist/bin; ./menuhack)
+	(cd dist/bin; $(PERL) menuhack)
