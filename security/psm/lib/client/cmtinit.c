@@ -31,13 +31,15 @@
  * may use your version of this file under either the MPL or the
  * GPL.
  */
-#if defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_BEOS)
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/stat.h>
+#ifndef XP_BEOS
 #include <netinet/tcp.h>
+#endif
 #else
 #ifdef XP_MAC
 #include <Events.h> // for WaitNextEvent
@@ -56,7 +58,7 @@
 
 #if defined(XP_UNIX) || defined(XP_BEOS)
 #define DIRECTORY_SEPARATOR '/'
-#elif defined(WIN32) || defined(XP_OS2)
+#elif defined WIN32
 #define DIRECTORY_SEPARATOR '\\'
 #elif defined XP_MAC
 #define DIRECTORY_SEPARATOR ':'
@@ -84,7 +86,7 @@ getCurrWorkDir(char *buf, int maxLen)
 {
 #if defined WIN32
     return _getcwd(buf, maxLen);
-#elif defined XP_UNIX
+#elif defined(XP_UNIX) || defined(XP_BEOS)
     return getcwd(buf, maxLen);
 #else
     return NULL;
@@ -96,7 +98,7 @@ setWorkingDir(char *path)
 {
 #if defined WIN32
     _chdir(path);
-#elif defined XP_UNIX
+#elif defined(XP_UNIX) || defined(XP_BEOS)
     chdir(path);
 #else
     return;
@@ -141,7 +143,7 @@ launch_psm(char *executable)
     return CMTSuccess;
  loser:
     return CMTFailure;
-#elif defined XP_UNIX
+#elif defined(XP_UNIX) || defined(XP_BEOS)
     sprintf(command,"./%s &", executable);
     if (system(command) == -1) {
         goto loser;
@@ -228,7 +230,7 @@ PCMT_CONTROL CMT_EstablishControlConnection(char            *inPath,
             break;
         }
     }
-#elif defined XP_UNIX
+#elif defined(XP_UNIX) || defined(XP_BEOS)
     i = 0;
     while (i<1000) {
         i += sleep(10);

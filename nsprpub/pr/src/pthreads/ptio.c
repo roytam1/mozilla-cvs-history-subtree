@@ -23,11 +23,6 @@
 
 #if defined(_PR_PTHREADS)
 
-#if defined(OSF1) || defined(HPUX)
-/* set fd limit for select(), before including system header files */
-#define FD_SETSIZE (16 * 1024)
-#endif
-
 #include <pthread.h>
 #include <string.h>  /* for memset() */
 #include <sys/types.h>
@@ -195,11 +190,6 @@ static PRBool IsValidNetAddrLen(const PRNetAddr *addr, PRInt32 addr_len)
  * might hang up before an interrupt is noticed.
  */
 #define PT_DEFAULT_POLL_MSEC 5000
-#if defined(OSF1) || defined(HPUX)
-#define PT_DEFAULT_SELECT_SEC (PT_DEFAULT_POLL_MSEC/PR_MSEC_PER_SEC)
-#define PT_DEFAULT_SELECT_USEC							\
-		((PT_DEFAULT_POLL_MSEC % PR_MSEC_PER_SEC) * PR_USEC_PER_MSEC)
-#endif
 
 /*
  * pt_SockLen is the type for the length of a socket address
@@ -314,151 +304,6 @@ PR_IMPLEMENT(void) PT_FPrintStats(PRFileDesc *debug_out, const char *msg)
 
 #endif  /* DEBUG */
 
-#if defined(OSF1) || defined(HPUX)
-/*
- * OSF1 and HPUX report the POLLHUP event for a socket when the
- * shutdown(SHUT_WR) operation is called for the remote end, even though
- * the socket is still writeable. Use select(), instead of poll(), to
- * workaround this problem.
- */
-static void pt_poll_now_with_select(pt_Continuation *op)
-{
-    PRInt32 msecs;
-	fd_set rd, wr, *rdp, *wrp;
-	struct timeval tv;
-	PRIntervalTime epoch, now, elapsed, remaining;
-    PRThread *self = PR_GetCurrentThread();
-    
-	PR_ASSERT(PR_INTERVAL_NO_WAIT != op->timeout);
-	PR_ASSERT(op->arg1.osfd < FD_SETSIZE);
-
-    switch (op->timeout) {
-        case PR_INTERVAL_NO_TIMEOUT:
-			tv.tv_sec = PT_DEFAULT_SELECT_SEC;
-			tv.tv_usec = PT_DEFAULT_SELECT_USEC;
-			do
-			{
-				PRIntn rv;
-
-				if (op->event & POLLIN) {
-					FD_ZERO(&rd);
-					FD_SET(op->arg1.osfd, &rd);
-					rdp = &rd;
-				} else
-					rdp = NULL;
-				if (op->event & POLLOUT) {
-					FD_ZERO(&wr);
-					FD_SET(op->arg1.osfd, &wr);
-					wrp = &wr;
-				} else
-					wrp = NULL;
-
-				rv = select(op->arg1.osfd + 1, rdp, wrp, NULL, &tv);
-
-				if (self->state & PT_THREAD_ABORTED)
-				{
-					self->state &= ~PT_THREAD_ABORTED;
-					op->result.code = -1;
-					op->syserrno = EINTR;
-					op->status = pt_continuation_done;
-					return;
-				}
-
-				if ((-1 == rv) && ((errno == EINTR) || (errno == EAGAIN)))
-					continue; /* go around the loop again */
-
-				if (rv > 0)
-				{
-					PRInt16 revents = 0;
-
-					if ((op->event & POLLIN) && FD_ISSET(op->arg1.osfd, &rd))
-						revents |= POLLIN;
-					if ((op->event & POLLOUT) && FD_ISSET(op->arg1.osfd, &wr))
-						revents |= POLLOUT;
-						
-					if (op->function(op, revents))
-						op->status = pt_continuation_done;
-				} else if (rv == -1) {
-					op->result.code = -1;
-					op->syserrno = errno;
-					op->status = pt_continuation_done;
-				}
-				/* else, select timed out */
-			} while (pt_continuation_done != op->status);
-			break;
-        default:
-            now = epoch = PR_IntervalNow();
-            remaining = op->timeout;
-			do
-			{
-				PRIntn rv;
-
-				if (op->event & POLLIN) {
-					FD_ZERO(&rd);
-					FD_SET(op->arg1.osfd, &rd);
-					rdp = &rd;
-				} else
-					rdp = NULL;
-				if (op->event & POLLOUT) {
-					FD_ZERO(&wr);
-					FD_SET(op->arg1.osfd, &wr);
-					wrp = &wr;
-				} else
-					wrp = NULL;
-
-    			msecs = (PRInt32)PR_IntervalToMilliseconds(remaining);
-				if (msecs > PT_DEFAULT_POLL_MSEC)
-					msecs = PT_DEFAULT_POLL_MSEC;
-				tv.tv_sec = msecs/PR_MSEC_PER_SEC;
-				tv.tv_usec = (msecs % PR_MSEC_PER_SEC) * PR_USEC_PER_MSEC;
-				rv = select(op->arg1.osfd + 1, rdp, wrp, NULL, &tv);
-
-				if (self->state & PT_THREAD_ABORTED)
-				{
-					self->state &= ~PT_THREAD_ABORTED;
-					op->result.code = -1;
-					op->syserrno = EINTR;
-					op->status = pt_continuation_done;
-					return;
-				}
-
-				if (rv > 0) {
-					PRInt16 revents = 0;
-
-					if ((op->event & POLLIN) && FD_ISSET(op->arg1.osfd, &rd))
-						revents |= POLLIN;
-					if ((op->event & POLLOUT) && FD_ISSET(op->arg1.osfd, &wr))
-						revents |= POLLOUT;
-						
-					if (op->function(op, revents))
-						op->status = pt_continuation_done;
-
-				} else if ((rv == 0) ||
-						((errno == EINTR) || (errno == EAGAIN))) {
-					if (rv == 0)	/* select timed out */
-						now += PR_MillisecondsToInterval(msecs);
-					else
-						now = PR_IntervalNow();
-					elapsed = (PRIntervalTime) (now - epoch);
-					if (elapsed >= op->timeout) {
-						op->result.code = -1;
-						op->syserrno = ETIMEDOUT;
-						op->status = pt_continuation_done;
-					} else
-						remaining = op->timeout - elapsed;
-				} else {
-					op->result.code = -1;
-					op->syserrno = errno;
-					op->status = pt_continuation_done;
-				}
-			} while (pt_continuation_done != op->status);
-            break;
-    }
-
-}  /* pt_poll_now_with_select */
-
-#endif	/* OSF1  || HPUX */
-
 static void pt_poll_now(pt_Continuation *op)
 {
     PRInt32 msecs;
@@ -466,15 +311,6 @@ static void pt_poll_now(pt_Continuation *op)
     PRThread *self = PR_GetCurrentThread();
     
 	PR_ASSERT(PR_INTERVAL_NO_WAIT != op->timeout);
-#if defined (OSF1) || defined(HPUX)
-	/*
- 	 * If the fd is small enough call the select-based poll operation
-	 */
-	if (op->arg1.osfd < FD_SETSIZE) {
-		pt_poll_now_with_select(op);
-		return;
-	}
-#endif
 
     switch (op->timeout) {
         case PR_INTERVAL_NO_TIMEOUT:
@@ -658,12 +494,8 @@ static PRBool pt_recv_cont(pt_Continuation *op, PRInt16 revents)
      * error we continue is EWOULDBLOCK|EAGAIN.
      */
 #if defined(SOLARIS)
-    if (0 == op->arg4.flags)
-        op->result.code = read(
-            op->arg1.osfd, op->arg2.buffer, op->arg3.amount);
-    else
-        op->result.code = recv(
-            op->arg1.osfd, op->arg2.buffer, op->arg3.amount, op->arg4.flags);
+    op->result.code = read(
+        op->arg1.osfd, op->arg2.buffer, op->arg3.amount);
 #else
     op->result.code = recv(
         op->arg1.osfd, op->arg2.buffer, op->arg3.amount, op->arg4.flags);
@@ -677,9 +509,6 @@ static PRBool pt_recv_cont(pt_Continuation *op, PRInt16 revents)
 static PRBool pt_send_cont(pt_Continuation *op, PRInt16 revents)
 {
     PRIntn bytes;
-#if defined(SOLARIS)
-    PRInt32 tmp_amount = op->arg3.amount;
-#endif
     /*
      * We want to write the entire amount out, no matter how many
      * tries it takes. Keep advancing the buffer and the decrementing
@@ -688,29 +517,12 @@ static PRBool pt_send_cont(pt_Continuation *op, PRInt16 revents)
      * error).
      */
 #if defined(SOLARIS)
-retry:
-    bytes = write(op->arg1.osfd, op->arg2.buffer, tmp_amount);
+    bytes = write(op->arg1.osfd, op->arg2.buffer, op->arg3.amount);
 #else
     bytes = send(
         op->arg1.osfd, op->arg2.buffer, op->arg3.amount, op->arg4.flags);
 #endif
     op->syserrno = errno;
-
-#if defined(SOLARIS)
-    /*
-     * The write system call has been reported to return the ERANGE error
-     * on occasion. Try to write in smaller chunks to workaround this bug.
-     */
-    if ((bytes == -1) && (op->syserrno == ERANGE))
-    {
-        if (tmp_amount > 1)
-        {
-            tmp_amount = tmp_amount/2;  /* half the bytes */
-            goto retry;
-        }
-    }
-#endif
-
     if (bytes >= 0)  /* this is progress */
     {
         char *bp = (char*)op->arg2.buffer;
@@ -1528,28 +1340,15 @@ static PRInt32 pt_Recv(
     PRIntn flags, PRIntervalTime timeout)
 {
     PRInt32 syserrno, bytes = -1;
-    PRIntn osflags;
-
-    if (0 == flags)
-        osflags = 0;
-    else if (PR_MSG_PEEK == flags)
-        osflags = MSG_PEEK;
-    else
-    {
-        PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
-        return bytes;
-    }
 
     if (pt_TestAbort()) return bytes;
 
     /* recv() is a much slower call on pre-2.6 Solaris than read(). */
 #if defined(SOLARIS)
-    if (0 == osflags)
-        bytes = read(fd->secret->md.osfd, buf, amount);
-    else
-        bytes = recv(fd->secret->md.osfd, buf, amount, osflags);
+    PR_ASSERT(0 == flags);
+    bytes = read(fd->secret->md.osfd, buf, amount);
 #else
-    bytes = recv(fd->secret->md.osfd, buf, amount, osflags);
+    bytes = recv(fd->secret->md.osfd, buf, amount, flags);
 #endif
     syserrno = errno;
 
@@ -1563,7 +1362,7 @@ static PRInt32 pt_Recv(
             op.arg1.osfd = fd->secret->md.osfd;
             op.arg2.buffer = buf;
             op.arg3.amount = amount;
-            op.arg4.flags = osflags;
+            op.arg4.flags = flags;
             op.timeout = timeout;
             op.function = pt_recv_cont;
             op.event = POLLIN | POLLPRI;
@@ -1587,9 +1386,6 @@ static PRInt32 pt_Send(
 {
     PRInt32 syserrno, bytes = -1;
     PRBool fNeedContinue = PR_FALSE;
-#if defined(SOLARIS)
-	PRInt32 tmp_amount = amount;
-#endif
 
     /*
      * Under HP-UX DCE threads, pthread.h includes dce/cma_ux.h,
@@ -1613,27 +1409,11 @@ static PRInt32 pt_Send(
      */
 #if defined(SOLARIS)
     PR_ASSERT(0 == flags);
-retry:
-    bytes = write(fd->secret->md.osfd, PT_SENDBUF_CAST buf, tmp_amount);
+    bytes = write(fd->secret->md.osfd, PT_SENDBUF_CAST buf, amount);
 #else
     bytes = send(fd->secret->md.osfd, PT_SENDBUF_CAST buf, amount, flags);
 #endif
     syserrno = errno;
-
-#if defined(SOLARIS)
-    /*
-     * The write system call has been reported to return the ERANGE error
-     * on occasion. Try to write in smaller chunks to workaround this bug.
-     */
-    if ((bytes == -1) && (syserrno == ERANGE))
-    {
-        if (tmp_amount > 1)
-        {
-            tmp_amount = tmp_amount/2;  /* half the bytes */
-            goto retry;
-        }
-    }
-#endif
 
     if ( (bytes >= 0) && (bytes < amount) && (!fd->secret->nonblocking) )
     {
@@ -1835,7 +1615,7 @@ static PRInt32 pt_AIXDispatchSendFile(PRFileDesc *sd, PRSendFileData *sfd,
     if (pt_aix_sendfile_fptr) {
         return pt_AIXSendFile(sd, sfd, flags, timeout);
     } else {
-        return PR_EmulateSendFile(sd, sfd, flags, timeout);
+        return _PR_UnixSendFile(sd, sfd, flags, timeout);
     }
 }
 #endif /* !HAVE_SEND_FILE */
@@ -2083,15 +1863,15 @@ static PRInt32 pt_SendFile(
 	 * NSPR_AIX_SEND_FILE_USE_DISABLED to 1.
 	 */
 	if (_pr_aix_send_file_use_disabled)
-		return(PR_EmulateSendFile(sd, sfd, flags, timeout));
+		return(_PR_UnixSendFile(sd, sfd, flags, timeout));
 	else
     	return(pt_AIXSendFile(sd, sfd, flags, timeout));
 #else
-	return(PR_EmulateSendFile(sd, sfd, flags, timeout));
+	return(_PR_UnixSendFile(sd, sfd, flags, timeout));
     /* return(pt_AIXDispatchSendFile(sd, sfd, flags, timeout));*/
 #endif /* HAVE_SEND_FILE */
 #else
-	return(PR_EmulateSendFile(sd, sfd, flags, timeout));
+	return(_PR_UnixSendFile(sd, sfd, flags, timeout));
 #endif
 }
 
@@ -2112,11 +1892,17 @@ static PRInt32 pt_TransmitFile(
 	return(pt_SendFile(sd, &sfd, flags, timeout));
 }  /* pt_TransmitFile */
 
+/*
+ * XXX: When IPv6 is running, we need to see if this code works
+ * with a PRNetAddr structure that supports both IPv4 and IPv6.
+ */
 static PRInt32 pt_AcceptRead(
     PRFileDesc *sd, PRFileDesc **nd, PRNetAddr **raddr,
     void *buf, PRInt32 amount, PRIntervalTime timeout)
 {
     PRInt32 rv = -1;
+    PRNetAddr remote;
+    PRFileDesc *accepted = NULL;
 
     if (pt_TestAbort()) return rv;
     /* The socket must be in blocking mode. */
@@ -2126,7 +1912,25 @@ static PRInt32 pt_AcceptRead(
         return rv;
     }
 
-    rv = PR_EmulateAcceptRead(sd, nd, raddr, buf, amount, timeout);
+    /*
+    ** The timeout does not apply to the accept portion of the
+    ** operation - it waits indefinitely.
+    */
+    accepted = PR_Accept(sd, &remote, PR_INTERVAL_NO_TIMEOUT);
+    if (NULL == accepted) return rv;
+
+    rv = PR_Recv(accepted, buf, amount, 0, timeout);
+    if (rv >= 0)
+    {
+        /* copy the new info out where caller can see it */
+        PRPtrdiff aligned = (PRPtrdiff)buf + amount + sizeof(void*) - 1;
+        *raddr = (PRNetAddr*)(aligned & ~(sizeof(void*) - 1));
+        memcpy(*raddr, &remote, PR_NETADDR_SIZE(&remote));
+        *nd = accepted;
+        return rv;
+    }
+
+    PR_Close(accepted);
     return rv;
 }  /* pt_AcceptRead */
 
@@ -3094,7 +2898,7 @@ PR_IMPLEMENT(PRDir*) PR_OpenDir(const char *name)
     return dir;
 }  /* PR_OpenDir */
 
-static PRInt32 _pr_poll_with_poll(
+PR_IMPLEMENT(PRInt32) PR_Poll(
     PRPollDesc *pds, PRIntn npds, PRIntervalTime timeout)
 {
     PRInt32 ready = 0;
@@ -3331,299 +3135,7 @@ retry:
     }
     return ready;
 
-} /* _pr_poll_with_poll */
-
-#if defined(OSF1) || defined(HPUX)
-/*
- * OSF1 and HPUX report the POLLHUP event for a socket when the
- * shutdown(SHUT_WR) operation is called for the remote end, even though
- * the socket is still writeable. Use select(), instead of poll(), to
- * workaround this problem.
- */
-static PRInt32 _pr_poll_with_select(
-    PRPollDesc *pds, PRIntn npds, PRIntervalTime timeout)
-{
-    PRInt32 ready = 0;
-    /*
-     * For restarting select() if it is interrupted by a signal.
-     * We use these variables to figure out how much time has
-     * elapsed and how much of the timeout still remains.
-     */
-    PRIntervalTime start, elapsed, remaining;
-
-    if (pt_TestAbort()) return -1;
-
-    if (0 == npds) PR_Sleep(timeout);
-    else
-    {
-#define STACK_POLL_DESC_COUNT 4
-        int stack_syspollfd[STACK_POLL_DESC_COUNT];
-        int *syspollfd;
-		fd_set rd, wr, ex, *rdp = NULL, *wrp = NULL, *exp = NULL;
-		struct timeval tv, *tvp;
-        PRIntn index, msecs, maxfd = 0;
-
-        if (npds <= STACK_POLL_DESC_COUNT)
-        {
-            syspollfd = stack_syspollfd;
-        }
-        else
-        {
-            syspollfd = (int *)PR_MALLOC(npds * sizeof(int));
-            if (NULL == syspollfd)
-            {
-                PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
-                return -1;
-            }
-        }
-		FD_ZERO(&rd);
-		FD_ZERO(&wr);
-		FD_ZERO(&ex);
-
-        for (index = 0; index < npds; ++index)
-        {
-            PRInt16 in_flags_read = 0, in_flags_write = 0;
-            PRInt16 out_flags_read = 0, out_flags_write = 0;
-
-            if ((NULL != pds[index].fd) && (0 != pds[index].in_flags))
-            {
-                if (pds[index].in_flags & PR_POLL_READ)
-                {
-                    in_flags_read = (pds[index].fd->methods->poll)(
-                        pds[index].fd,
-                        pds[index].in_flags & ~PR_POLL_WRITE,
-                        &out_flags_read);
-                }
-                if (pds[index].in_flags & PR_POLL_WRITE)
-                {
-                    in_flags_write = (pds[index].fd->methods->poll)(
-                        pds[index].fd,
-                        pds[index].in_flags & ~PR_POLL_READ,
-                        &out_flags_write);
-                }
-                if ((0 != (in_flags_read & out_flags_read))
-                || (0 != (in_flags_write & out_flags_write)))
-                {
-                    /* this one is ready right now */
-                    if (0 == ready)
-                    {
-                        /*
-                         * We will return without calling the system
-                         * poll function.  So zero the out_flags
-                         * fields of all the poll descriptors before
-                         * this one.
-                         */
-                        int i;
-                        for (i = 0; i < index; i++)
-                        {
-                            pds[i].out_flags = 0;
-                        }
-                    }
-                    ready += 1;
-                    pds[index].out_flags = out_flags_read | out_flags_write;
-                }
-                else
-                {
-                    /* now locate the NSPR layer at the bottom of the stack */
-                    PRFileDesc *bottom = PR_GetIdentitiesLayer(
-                        pds[index].fd, PR_NSPR_IO_LAYER);
-                    PR_ASSERT(NULL != bottom);  /* what to do about that? */
-                    pds[index].out_flags = 0;  /* pre-condition */
-                    if ((NULL != bottom)
-                    && (_PR_FILEDESC_OPEN == bottom->secret->state))
-                    {
-                        if (0 == ready)
-                        {
-                            syspollfd[index] = bottom->secret->md.osfd;
-                            if (in_flags_read & PR_POLL_READ)
-                            {
-                                pds[index].out_flags |=
-                                    _PR_POLL_READ_SYS_READ;
-								FD_SET(bottom->secret->md.osfd, &rd);
-								rdp = &rd;
-                            }
-                            if (in_flags_read & PR_POLL_WRITE)
-                            {
-                                pds[index].out_flags |=
-                                    _PR_POLL_READ_SYS_WRITE;
-								FD_SET(bottom->secret->md.osfd, &wr);
-								wrp = &wr;
-                            }
-                            if (in_flags_write & PR_POLL_READ)
-                            {
-                                pds[index].out_flags |=
-                                    _PR_POLL_WRITE_SYS_READ;
-								FD_SET(bottom->secret->md.osfd, &rd);
-								rdp = &rd;
-                            }
-                            if (in_flags_write & PR_POLL_WRITE)
-                            {
-                                pds[index].out_flags |=
-                                    _PR_POLL_WRITE_SYS_WRITE;
-								FD_SET(bottom->secret->md.osfd, &wr);
-								wrp = &wr;
-                            }
-                            if (pds[index].in_flags & PR_POLL_EXCEPT) {
-								FD_SET(bottom->secret->md.osfd, &ex);
-								exp = &ex;
-							}
-							if ((syspollfd[index] > maxfd) &&
-									(pds[index].out_flags ||
-									(pds[index].in_flags & PR_POLL_EXCEPT)))
-								maxfd = syspollfd[index];
-                        }
-                    }
-                    else
-                    {
-                        if (0 == ready)
-                        {
-                            int i;
-                            for (i = 0; i < index; i++)
-                            {
-                                pds[i].out_flags = 0;
-                            }
-                        }
-                        ready += 1;  /* this will cause an abrupt return */
-                        pds[index].out_flags = PR_POLL_NVAL;  /* bogii */
-                    }
-                }
-            }
-        }
-        if (0 == ready)
-        {
-			if ((maxfd + 1) > FD_SETSIZE) {
-				/*
-				 * maxfd too large to be used with select, fall back to
-				 * calling poll
-				 */
-				if (syspollfd != stack_syspollfd)
-					PR_DELETE(syspollfd);
-				return(_pr_poll_with_poll(pds, npds, timeout));
-			}
-            switch (timeout)
-            {
-            case PR_INTERVAL_NO_WAIT:
-				tv.tv_sec = 0;
-				tv.tv_usec = 0;
-				tvp = &tv;
-				break;
-            case PR_INTERVAL_NO_TIMEOUT:
-				tvp = NULL;
-				break;
-            default:
-                msecs = PR_IntervalToMilliseconds(timeout);
-				tv.tv_sec = msecs/PR_MSEC_PER_SEC;
-				tv.tv_usec = (msecs % PR_MSEC_PER_SEC) * PR_USEC_PER_MSEC;
-				tvp = &tv;
-                start = PR_IntervalNow();
-            }
-
-retry:
-            ready = select(maxfd + 1, rdp, wrp, exp, tvp);
-            if (-1 == ready)
-            {
-                PRIntn oserror = errno;
-
-                if ((EINTR == oserror) || (EAGAIN == oserror))
-                {
-                    if (timeout == PR_INTERVAL_NO_TIMEOUT)
-                        goto retry;
-                    else if (timeout == PR_INTERVAL_NO_WAIT)
-                        ready = 0;  /* don't retry, just time out */
-                    else
-                    {
-                        elapsed = (PRIntervalTime) (PR_IntervalNow()
-                                - start);
-                        if (elapsed > timeout)
-                            ready = 0;  /* timed out */
-                        else
-                        {
-                            remaining = timeout - elapsed;
-                            msecs = PR_IntervalToMilliseconds(remaining);
-							tv.tv_sec = msecs/PR_MSEC_PER_SEC;
-							tv.tv_usec = (msecs % PR_MSEC_PER_SEC) *
-													PR_USEC_PER_MSEC;
-                            goto retry;
-                        }
-                    }
-                } else if (EBADF == oserror)
-                {
-					/* find all the bad fds */
-					ready = 0;
-                	for (index = 0; index < npds; ++index)
-					{
-                    	pds[index].out_flags = 0;
-            			if ((NULL != pds[index].fd) &&
-											(0 != pds[index].in_flags))
-						{
-							if (fcntl(syspollfd[index], F_GETFL, 0) == -1)
-							{
-                    			pds[index].out_flags = PR_POLL_NVAL;
-								ready++;
-							}
-						}
-					}
-                } else 
-                    _PR_MD_MAP_SELECT_ERROR(oserror);
-            }
-            else if (ready > 0)
-            {
-                for (index = 0; index < npds; ++index)
-                {
-                    PRInt16 out_flags = 0;
-                    if ((NULL != pds[index].fd) && (0 != pds[index].in_flags))
-                    {
-						if (FD_ISSET(syspollfd[index], &rd))
-						{
-							if (pds[index].out_flags
-							& _PR_POLL_READ_SYS_READ)
-							{
-								out_flags |= PR_POLL_READ;
-							}
-							if (pds[index].out_flags
-							& _PR_POLL_WRITE_SYS_READ)
-							{
-								out_flags |= PR_POLL_WRITE;
-							}
-						}
-						if (FD_ISSET(syspollfd[index], &wr))
-						{
-							if (pds[index].out_flags
-							& _PR_POLL_READ_SYS_WRITE)
-							{
-								out_flags |= PR_POLL_READ;
-							}
-							if (pds[index].out_flags
-							& _PR_POLL_WRITE_SYS_WRITE)
-							{
-								out_flags |= PR_POLL_WRITE;
-							}
-						}
-						if (FD_ISSET(syspollfd[index], &ex))
-							out_flags |= PR_POLL_EXCEPT;
-                    }
-                    pds[index].out_flags = out_flags;
-                }
-            }
-        }
-
-        if (syspollfd != stack_syspollfd)
-            PR_DELETE(syspollfd);
-    }
-    return ready;
-
-} /* _pr_poll_with_select */
-#endif	/* OSF1 || HPUX */
-
-PR_IMPLEMENT(PRInt32) PR_Poll(
-    PRPollDesc *pds, PRIntn npds, PRIntervalTime timeout)
-{
-#if defined(OSF1) || defined(HPUX)
-	return(_pr_poll_with_select(pds, npds, timeout));
-#else
-	return(_pr_poll_with_poll(pds, npds, timeout));
-#endif
-}
+} /* PR_Poll */
 
 PR_IMPLEMENT(PRDirEntry*) PR_ReadDir(PRDir *dir, PRDirFlags flags)
 {

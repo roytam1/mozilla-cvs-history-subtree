@@ -120,8 +120,6 @@ else
 	SUF = LL
 endif
 
-GARBAGE += $(TINC)
-
 $(TINC):
 	@$(MAKE_OBJDIR)
 	@$(ECHO) '#define _BUILD_STRING "$(SH_DATE)"' > $(TINC)

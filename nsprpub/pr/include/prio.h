@@ -449,7 +449,6 @@ NSPR_API(PRFileDesc*) PR_GetSpecialFD(PRSpecialFD id);
  **************************************************************************
  */
 
-#define PR_IO_LAYER_HEAD (PRDescIdentity)-3
 #define PR_INVALID_IO_LAYER (PRDescIdentity)-1
 #define PR_TOP_IO_LAYER (PRDescIdentity)-2
 #define PR_NSPR_IO_LAYER (PRDescIdentity)0
@@ -480,22 +479,6 @@ NSPR_API(const PRIOMethods *) PR_GetDefaultIOMethods(void);
  */
 NSPR_API(PRFileDesc*) PR_CreateIOLayerStub(
     PRDescIdentity ident, const PRIOMethods *methods);
-
-/*
- **************************************************************************
- * Creating a layer
- *
- * A new stack may be created by calling PR_CreateIOLayer(). The
- * file descriptor returned will point to the top of the stack, which has
- * the layer 'fd' as the topmost layer.
- * 
- * NOTE: This function creates a new style stack, which has a fixed, dummy
- * header. The old style stack, created by a call to PR_PushIOLayer,
- * results in modifying contents of the top layer of the stack, when
- * pushing and popping layers of the stack.
- **************************************************************************
- */
-NSPR_API(PRFileDesc*) PR_CreateIOLayer(PRFileDesc* fd);
 
 /*
  **************************************************************************
@@ -1343,7 +1326,7 @@ NSPR_API(PRStatus)    PR_Shutdown(PRFileDesc *fd, PRShutdownHow how);
  *     PRInt32 amount
  *       the size of 'buf' (in bytes)
  *     PRIntn flags
- *       must be zero or PR_MSG_PEEK.
+ *        (OBSOLETE - must always be zero)
  *     PRIntervalTime timeout
  *       Time limit for completion of the receive operation.
  * OUTPUTS:
@@ -1355,8 +1338,6 @@ NSPR_API(PRStatus)    PR_Shutdown(PRFileDesc *fd, PRShutdownHow how);
  *         by calling PR_GetError().
  **************************************************************************
  */
-
-#define PR_MSG_PEEK 0x2
 
 NSPR_API(PRInt32)    PR_Recv(PRFileDesc *fd, void *buf, PRInt32 amount,
                 PRIntn flags, PRIntervalTime timeout);
@@ -1750,15 +1731,9 @@ NSPR_API(PRFileMap *) PR_CreateFileMap(
     PRInt64 size,
     PRFileMapProtect prot);
 
-/*
- * return the alignment (in bytes) of the offset argument to PR_MemMap
- */
-NSPR_API(PRInt32) PR_GetMemMapAlignment(void);
-
 NSPR_API(void *) PR_MemMap(
     PRFileMap *fmap,
-    PROffset64 offset,  /* must be aligned and sized according to the
-                         * return value of PR_GetMemMapAlignment() */
+    PROffset64 offset,  /* must be aligned and sized to whole pages */
     PRUint32 len);
 
 NSPR_API(PRStatus) PR_MemUnmap(void *addr, PRUint32 len);

@@ -31,7 +31,7 @@
  * may use your version of this file under either the MPL or the
  * GPL.
  */
-#if defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_BEOS)
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -347,7 +347,7 @@ CMTStatus CMT_ReceiveMessage(PCMT_CONTROL control, CMTItem * response)
     CMTMessageHeader header;
     CMUint32 numread, rv;
 
-    /* Get the message header */
+    /* Get the obscured message header */
     numread = CMT_ReadThisMany(control, control->sock, 
                             (void *)&header, sizeof(CMTMessageHeader));
     if (numread != sizeof(CMTMessageHeader)) {

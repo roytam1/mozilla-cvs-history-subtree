@@ -665,14 +665,6 @@ PRStatus _MD_CreateFileMap(PRFileMap *fmap, PRInt64 size)
     }
     return PR_SUCCESS;
 }
-
-PRInt32 _MD_GetMemMapAlignment(void)
-{
-    SYSTEM_INFO info;
-    GetSystemInfo(&info);
-    return info.dwAllocationGranularity;
-}
-
 #include "prlog.h"
 extern PRLogModuleInfo *_pr_shma_lm;
 void * _MD_MemMap(
@@ -801,9 +793,9 @@ PRInt32 _PR_MD_ATOMIC_ADD(PRInt32 *intp, PRInt32 val)
     {
         mov ecx, intp
         mov eax, val
-        mov edx, eax
+        mov ebx, val
         lock xadd dword ptr [ecx], eax
-        add eax, edx
+        add eax, ebx
     }
 #endif /* __GNUC__ */
 }

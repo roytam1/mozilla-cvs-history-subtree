@@ -1163,15 +1163,6 @@ PR_FindSymbol(PRLibrary *lib, const char *raw_name)
     return f;
 }
 
-/*
-** Return the address of the function 'raw_name' in the library 'lib'
-*/
-PR_IMPLEMENT(PRFuncPtr) 
-PR_FindFunctionSymbol(PRLibrary *lib, const char *raw_name)
-{
-    return ((PRFuncPtr) PR_FindSymbol(lib, raw_name));
-}
-
 PR_IMPLEMENT(void*) 
 PR_FindSymbolAndLibrary(const char *raw_name, PRLibrary* *lib)
 {
@@ -1221,12 +1212,6 @@ PR_FindSymbolAndLibrary(const char *raw_name, PRLibrary* *lib)
 
     PR_ExitMonitor(pr_linker_lock);
     return f;
-}
-
-PR_IMPLEMENT(PRFuncPtr) 
-PR_FindFunctionSymbolAndLibrary(const char *raw_name, PRLibrary* *lib)
-{
-    return ((PRFuncPtr) PR_FindSymbolAndLibrary(raw_name, lib));
 }
 
 /*

@@ -50,11 +50,6 @@ PR_IMPLEMENT(PRFileMap *) PR_CreateFileMap(
     }
 }
 
-PR_IMPLEMENT(PRInt32) PR_GetMemMapAlignment(void)
-{
-    return _PR_MD_GET_MEM_MAP_ALIGNMENT();
-}
-
 PR_IMPLEMENT(void *) PR_MemMap(
     PRFileMap *fmap,
     PROffset64 offset,

@@ -68,9 +68,6 @@
 #define _PR_GLOBAL_THREADS_ONLY
 #define _PR_BTHREADS
 #define _PR_NEED_FAKE_POLL
-#define _PR_HAVE_PEEK_BUFFER
-#define _PR_PEEK_BUFFER_MAX (16 * 1024)
-#define _PR_FD_NEED_EMULATE_MSG_PEEK(fd) 1
 
 /* Define threading functions and objects as native BeOS */
 struct _MDThread {
@@ -359,7 +356,6 @@ struct protoent* getprotobynumber(int number);
 /* Memory mapped file I/O */
 
 #define _MD_CREATE_FILE_MAP _MD_create_file_map
-#define _MD_GET_MEM_MAP_ALIGNMENT _MD_get_mem_map_alignment
 #define _MD_MEM_MAP _MD_mem_map
 #define _MD_MEM_UNMAP _MD_mem_unmap
 #define _MD_CLOSE_FILE_MAP _MD_close_file_map
@@ -553,7 +549,6 @@ NSPR_API(void) _MD_free_segment(PRSegment *seg);
 /* Memory mapped file I/O */
 
 NSPR_API(PRStatus) _MD_create_file_map(PRFileMap *fmap, PRInt64 size);
-NSPR_API(PRInt32) _MD_get_mem_map_alignment(void);
 NSPR_API(void *) _MD_mem_map(PRFileMap *fmap, PRInt64 offset, PRUint32 len);
 NSPR_API(PRStatus) _MD_mem_unmap(void *addr, PRUint32 size);
 NSPR_API(PRStatus) _MD_close_file_map(PRFileMap *fmap);

@@ -39,7 +39,6 @@ endif
 CSRCS =             \
 	accept.c		\
 	acceptread.c	\
-	acceptreademu.c	\
 	addrstr.c		\
 	affinity.c		\
 	alarm.c			\
@@ -70,7 +69,6 @@ CSRCS =             \
 	initclk.c		\
 	inrval.c		\
 	instrumt.c      \
-	intrio.c        \
 	intrupt.c       \
 	io_timeout.c    \
 	ioconthr.c      \
@@ -97,7 +95,6 @@ CSRCS =             \
 	nonblock.c		\
 	ntioto.c        \
 	ntoh.c			\
-	obsints.c		\
 	op_2long.c      \
 	op_excl.c		\
 	op_filnf.c		\
@@ -106,7 +103,6 @@ CSRCS =             \
 	op_nofil.c		\
 	openfile.c		\
 	parent.c    	\
-	peek.c    		\
 	perf.c    		\
 	pipeping.c		\
 	pipepong.c		\
@@ -118,7 +114,6 @@ CSRCS =             \
 	prftest.c		\
 	prftest1.c		\
 	prftest2.c		\
-	primblok.c		\
 	priotest.c		\
 	provider.c		\
 	prpoll.c		\
@@ -130,7 +125,6 @@ CSRCS =             \
 	selct_nm.c	    \
 	selct_to.c	    \
 	select2.c  		\
-	selintr.c  		\
 	sem.c 	  		\
 	sema.c 	  		\
 	semaerr.c 		\

@@ -32,7 +32,7 @@
  * GPL.
  */
 #include "cmtcmn.h"
-#if defined(XP_UNIX) || defined(XP_BEOS) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_BEOS)
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>

@@ -50,10 +50,6 @@
 #define _PR_HAVE_ATOMIC_OPS
 #define _PR_HAVE_ATOMIC_CAS
 #define PR_HAVE_WIN32_NAMED_SHARED_MEMORY
-#define _PR_HAVE_PEEK_BUFFER
-#define _PR_PEEK_BUFFER_MAX (32 * 1024)
-#define _PR_FD_NEED_EMULATE_MSG_PEEK(fd) \
-    (!(fd)->secret->nonblocking && !(fd)->secret->inheritable)
 
 /* --- Common User-Thread/Native-Thread Definitions --------------------- */
 
@@ -517,9 +513,6 @@ struct _MDFileMap {
 
 extern PRStatus _MD_CreateFileMap(struct PRFileMap *fmap, PRInt64 size);
 #define _MD_CREATE_FILE_MAP _MD_CreateFileMap
-
-extern PRInt32 _MD_GetMemMapAlignment(void);
-#define _MD_GET_MEM_MAP_ALIGNMENT _MD_GetMemMapAlignment
 
 extern void * _MD_MemMap(struct PRFileMap *fmap, PRInt64 offset,
         PRUint32 len);
