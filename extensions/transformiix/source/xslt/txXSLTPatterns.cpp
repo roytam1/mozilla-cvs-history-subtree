@@ -363,8 +363,7 @@ MBool txIdPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext)
     if (!content) {
         return MB_FALSE;
     }
-    nsCOMPtr<nsINodeInfo> ni;
-    content->GetNodeInfo(getter_AddRefs(ni));
+    nsINodeInfo* ni = content->GetNodeInfo();
     if (!ni) {
         return MB_FALSE;
     }
@@ -504,23 +503,13 @@ MBool txStepPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext
     nsresult rv = aContext->recycler()->getNodeSet(getter_AddRefs(nodes));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    if (mIsAttr) {
-        PRBool hasAttr = walker.moveToFirstAttribute();
-        while (hasAttr) {
-            if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
-                nodes->append(walker.getCurrentPosition());
-            }
-            hasAttr = walker.moveToNextSibling();
+    PRBool hasNext = mIsAttr ? walker.moveToFirstAttribute() :
+                               walker.moveToFirstChild();
+    while (hasNext) {
+        if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
+            nodes->append(walker.getCurrentPosition());
         }
-    }
-    else {
-        PRBool hasChild = walker.moveToFirstChild();
-        while (hasChild) {
-            if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
-                nodes->append(walker.getCurrentPosition());
-            }
-            hasChild = walker.moveToNextSibling();
-        }
+        hasNext = walker.moveToNextSibling();
     }
 
     txListIterator iter(&predicates);

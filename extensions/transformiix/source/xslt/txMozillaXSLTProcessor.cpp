@@ -305,7 +305,7 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
                                          nsnull);
     es.mOutputHandlerFactory = &handlerFactory;
 
-    es.init(*sourceNode.get(), &mVariables);
+    es.init(*sourceNode, &mVariables);
 
     // Process root of XML source document
     rv = txXSLTProcessor::execute(es);
@@ -362,7 +362,7 @@ txMozillaXSLTProcessor::DoTransform()
                                          mObserver);
     es.mOutputHandlerFactory = &handlerFactory;
 
-    es.init(*sourceNode.get(), &mVariables);
+    es.init(*sourceNode, &mVariables);
 
     // Process root of XML source document
     nsresult rv = txXSLTProcessor::execute(es);
@@ -448,7 +448,7 @@ txMozillaXSLTProcessor::TransformToDocument(nsIDOMNode *aSource,
                                          nsnull);
     es.mOutputHandlerFactory = &handlerFactory;
 
-    es.init(*sourceNode.get(), &mVariables);
+    es.init(*sourceNode, &mVariables);
 
     // Process root of XML source document
     rv = txXSLTProcessor::execute(es);
@@ -493,7 +493,7 @@ txMozillaXSLTProcessor::TransformToFragment(nsIDOMNode *aSource,
     txToFragmentHandlerFactory handlerFactory(*aResult);
     es.mOutputHandlerFactory = &handlerFactory;
 
-    es.init(*sourceNode.get(), &mVariables);
+    es.init(*sourceNode, &mVariables);
 
     // Process root of XML source document
     rv = txXSLTProcessor::execute(es);

@@ -52,21 +52,6 @@
 extern nsINameSpaceManager* gTxNameSpaceManager;
 #endif
 
-/*
-struct txXPathNodeFilter
-{
-    enum {
-        ELEMENT_NODE = 0,
-        ATTRIBUTE_NODE = 1,
-        PROCESSING_INSTRUCTION_NODE = 2,
-        TEXT_NODE = 4,
-        CDATA_SECTION_NODE = 8,
-        DOCUMENT_FRAGMENT_NODE = 16,
-        DOCUMENT_NODE = 32
-    }
-}
-*/
-
 #ifdef TX_EXE
 typedef Node txXPathNodeType;
 #else
@@ -97,24 +82,14 @@ private:
 
     NodeDefinition* mInner;
 #else
-    txXPathNode(nsCOMPtr<nsIDocument>& aDocument) : mDocument(nsnull),
-                                                    mIndex(eDocument)
+    txXPathNode(nsIDocument* aDocument) : mDocument(aDocument),
+                                          mIndex(eDocument)
     {
-        aDocument.swap(mDocument);
-        NS_ASSERTION(mDocument, "You need to pass in a document!");
     }
-    txXPathNode(nsCOMPtr<nsIContent>& aContent) : mContent(nsnull),
-                                                  mIndex(eContent)
-    {
-        aContent.swap(mContent);
-        NS_ASSERTION(mContent, "You need to pass in a content!");
-    }
-    txXPathNode(nsCOMPtr<nsIContent>& aContent, PRInt32 aIndex)
-        : mContent(nsnull),
+    txXPathNode(nsIContent* aContent, PRUint32 aIndex = eContent)
+        : mContent(aContent),
           mIndex(aIndex)
     {
-        aContent.swap(mContent);
-        NS_ASSERTION(mContent, "You need to pass in a content!");
     }
     txXPathNode(const txXPathNode& aNode);
 
@@ -131,19 +106,19 @@ private:
     };
     PRBool isAttribute() const
     {
-        return mIndex >= 0;
+        return mIndex != eDocument && mIndex != eContent;
     };
 
     enum PositionType
     {
-        eDocument = -2,
-        eContent = -1
+        eDocument = (PRUint32)-2,
+        eContent = (PRUint32)-1
     };
     union {
         nsIDocument* mDocument;        // eDocument
         nsIContent* mContent;          // eContent, eAttribute
     };
-    PRInt32 mIndex;
+    PRUint32 mIndex;
 #endif
 };
 

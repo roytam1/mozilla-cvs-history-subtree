@@ -80,9 +80,9 @@ txParseDocumentFromURI(const nsAString& aHref, const nsAString& aReferrer,
     nsresult rv = NS_NewURI(getter_AddRefs(documentURI), aHref);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    nsCOMPtr<nsIDOMDocument> theDocument;
     nsCOMPtr<nsIDocument> loaderDocument;
     txXPathNativeNode::getDocument(aLoader, getter_AddRefs(loaderDocument));
+
     nsCOMPtr<nsILoadGroup> loadGroup;
     nsCOMPtr<nsIURI> loaderUri;
     loaderDocument->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
@@ -93,6 +93,7 @@ txParseDocumentFromURI(const nsAString& aHref, const nsAString& aReferrer,
     rv = NS_NewChannel(getter_AddRefs(channel), documentURI, nsnull,
                        loadGroup);
     NS_ENSURE_SUCCESS(rv, rv);
+
     nsCOMPtr<nsIHttpChannel> http = do_QueryInterface(channel);
     if (http) {
         nsCOMPtr<nsIURI> refUri;
@@ -106,10 +107,15 @@ txParseDocumentFromURI(const nsAString& aHref, const nsAString& aReferrer,
 
 
     }
+
     nsCOMPtr<nsISyncLoadDOMService> loader =
       do_GetService("@mozilla.org/content/syncload-dom-service;1", &rv);
     NS_ENSURE_SUCCESS(rv, rv);
-    rv = loader->LoadDocumentAsXML(channel, loaderUri, getter_AddRefs(theDocument));
+
+    // Raw pointer, we want the resulting txXPathNode to hold a reference to
+    // the document.
+    nsIDOMDocument* theDocument = nsnull;
+    rv = loader->LoadDocumentAsXML(channel, loaderUri, &theDocument);
     if (NS_FAILED(rv) || !theDocument) {
         aErrMsg.Append(NS_LITERAL_STRING("Document load of ") + 
                        aHref + NS_LITERAL_STRING(" failed."));
@@ -118,8 +124,10 @@ txParseDocumentFromURI(const nsAString& aHref, const nsAString& aReferrer,
 
     *aResult = txXPathNativeNode::createXPathNode(theDocument);
     if (!*aResult) {
+        NS_RELEASE(theDocument);
         return NS_ERROR_FAILURE;
     }
+
     return NS_OK;
 #else
     istream* xslInput = URIUtils::getInputStream(aHref, aErrMsg);

@@ -51,22 +51,22 @@ class nsIAtom;
 #else
 #include "nsVoidArray.h"
 
-class txInt32Array : public nsVoidArray
+class txUint32Array : public nsVoidArray
 {
 public:
-    PRBool AppendValue(PRInt32 aValue)
+    PRBool AppendValue(PRUint32 aValue)
     {
         return InsertElementAt(NS_INT32_TO_PTR(aValue), Count());
     }
-    PRBool RemoveValueAt(PRInt32 aIndex)
+    PRBool RemoveValueAt(PRUint32 aIndex)
     {
         return RemoveElementsAt(aIndex, 1);
     }
-    PRBool RemoveValuesAt(PRInt32 aIndex, PRInt32 aCount)
+    PRBool RemoveValuesAt(PRUint32 aIndex, PRInt32 aCount)
     {
         return RemoveElementsAt(aIndex, aCount);
     }
-    PRInt32 ValueAt(PRInt32 aIndex) const
+    PRInt32 ValueAt(PRUint32 aIndex) const
     {
         return NS_PTR_TO_INT32(ElementAt(aIndex));
     }
@@ -126,11 +126,14 @@ private:
     txXPathNode mPosition;
     PRUint32 mLevel;
 #else
+    void moveToLastDescendant(nsIContent* aDescendant,
+                              PRUint32 aDescendantIndex);
     PRBool moveToSibling(PRBool aForward);
+    PRBool moveToValidAttribute(PRUint32 aStartIndex);
 
     txXPathNode mPosition;
-    PRInt32 mCurrentIndex;
-    nsAutoPtr<txInt32Array> mDescendants;
+    PRUint32 mCurrentIndex;
+    nsAutoPtr<txUint32Array> mDescendants;
 #endif
 };
 
@@ -148,7 +151,6 @@ public:
     static PRInt32 getNamespaceID(const txXPathNode& aNode);
     static void getNamespaceURI(const txXPathNode& aNode, nsAString& aURI);
     static PRUint16 getNodeType(const txXPathNode& aNode);
-    //static PRBool isNodeOfType(const txXPathNode& aNode, PRUint16 aType);
     static txXPathNode* cloneNode(const txXPathNode& aNode);
     static void getNodeValue(const txXPathNode& aNode, nsAString& aResult);
     static PRBool isWhitespace(const txXPathNode& aNode);
@@ -159,7 +161,7 @@ public:
     static txXPathNode* getElementById(const txXPathNode& aDocument,
                                          const nsAString& aID);
     static nsresult getXSLTId(const txXPathNode& aNode, nsAString& aResult);
-    static void destroy(txXPathNode* aNode);
+    static void release(txXPathNode* aNode);
     static void getBaseURI(const txXPathNode& aNode, nsAString& aURI);
     static PRIntn comparePosition(const txXPathNode& aNode,
                                   const txXPathNode& aOtherNode);
@@ -179,11 +181,11 @@ class txXPathNativeNode
 public:
     static txXPathNode* createXPathNode(nsIDOMNode* aNode);
     static txXPathNode* createXPathNode(nsIDOMDocument* aDocument);
-    static txXPathNode* createXPathNode(nsIContent* aContent);
     static nsresult getNode(const txXPathNode& aNode, nsIDOMNode** aResult);
     static nsresult getContent(const txXPathNode& aNode, nsIContent** aResult);
     static nsresult getDocument(const txXPathNode& aNode, nsIDocument** aResult);
 };
+
 #endif
 
 inline const txXPathNode&
@@ -260,9 +262,13 @@ txXPathNodeUtils::getHashKey(const txXPathNode& aNode)
 
 /* static */
 inline void
-txXPathNodeUtils::destroy(txXPathNode* aNode)
+txXPathNodeUtils::release(txXPathNode* aNode)
 {
-    delete aNode;
+#ifdef TX_EXE
+    delete aNode->mInner;
+#else
+    NS_RELEASE(aNode->mDocument);
+#endif
 }
 
 #endif /* txXPathTreeWalker_h__ */

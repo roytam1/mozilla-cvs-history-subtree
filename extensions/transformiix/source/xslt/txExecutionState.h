@@ -47,7 +47,8 @@
 #include "nsVoidArray.h"
 #include "txIXPathContext.h"
 #include "txVariableMap.h"
-#include "nsDoubleHashtable.h"
+#include "nsTHashtable.h"
+#include "nsHashKeys.h"
 #include "txKey.h"
 #include "txStylesheet.h"
 
@@ -55,28 +56,31 @@ class txInstruction;
 class txIOutputHandlerFactory;
 class txExpandedNameMap;
 
-
-class txLoadedDocumentEntry : public PLDHashStringEntry {
+class txLoadedDocumentEntry : public nsStringHashKey
+{
 public:
-    txLoadedDocumentEntry(const void* aKey) : PLDHashStringEntry(aKey)
+    txLoadedDocumentEntry(KeyTypePointer aStr) : nsStringHashKey(aStr)
+    {
+    }
+    txLoadedDocumentEntry(const txLoadedDocumentEntry& aToCopy)
+        : nsStringHashKey(aToCopy)
     {
     }
     ~txLoadedDocumentEntry()
     {
-        txXPathNodeUtils::destroy(mDocument);
+        if (mDocument) {
+            txXPathNodeUtils::release(mDocument);
+        }
     }
-    txXPathNode* mDocument;
+
+    nsAutoPtr<txXPathNode> mDocument;
 };
 
-DECL_DHASH_WRAPPER(txLoadedDocumentsBase, txLoadedDocumentEntry, nsAString&)
-
-class txLoadedDocumentsHash : public txLoadedDocumentsBase
+class txLoadedDocumentsHash : public nsTHashtable<txLoadedDocumentEntry>
 {
 public:
     ~txLoadedDocumentsHash();
     nsresult init(txXPathNode* aSourceDocument);
-    void Add(txXPathNode* aDocument);
-    txXPathNode* Get(const nsAString& aURI);
 
 private:
     friend class txExecutionState;
@@ -123,7 +127,8 @@ public:
     // state-getting functions
     txIEvalContext* getEvalContext();
     txExpandedNameMap* getParamMap();
-    txXPathNode* retrieveDocument(const nsAString& uri, const nsAString& baseUri);
+    const txXPathNode* retrieveDocument(const nsAString& uri,
+                                        const nsAString& baseUri);
     nsresult getKeyNodes(const txExpandedName& aKeyName,
                          const txXPathNode& aDocument,
                          const nsAString& aKeyValue, PRBool aIndexIfNotFound,

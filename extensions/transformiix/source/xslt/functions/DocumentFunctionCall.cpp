@@ -115,7 +115,7 @@ DocumentFunctionCall::evaluate(txIEvalContext* aContext,
                 // the baseUri of node itself
                 txXPathNodeUtils::getBaseURI(node, baseURI);
             }
-            txXPathNode* loadNode = es->retrieveDocument(uriStr, baseURI);
+            const txXPathNode* loadNode = es->retrieveDocument(uriStr, baseURI);
             if (loadNode) {
                 nodeSet->add(*loadNode);
             }
@@ -131,7 +131,7 @@ DocumentFunctionCall::evaluate(txIEvalContext* aContext,
     nsAutoString uriStr;
     exprResult1->stringValue(uriStr);
     const nsAString* base = baseURISet ? &baseURI : &mBaseURI;
-    txXPathNode* loadNode = es->retrieveDocument(uriStr, *base);
+    const txXPathNode* loadNode = es->retrieveDocument(uriStr, *base);
     if (loadNode) {
         nodeSet->add(*loadNode);
     }
