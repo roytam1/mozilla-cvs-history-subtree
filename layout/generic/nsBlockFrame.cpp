@@ -558,8 +558,9 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
 #error "Handle floats"
   // XXX Don't forget floats.  They're the hard part.
 
+  PRInt32 lineNumber = 0;
   for (line_iterator line = begin_lines(), line_end = end_lines();
-       line != line_end; ++line)
+       line != line_end; ++line, ++lineNumber)
   {
     nscoord line_pref, line_min;
     if (line->IsBlock()) {
@@ -567,16 +568,52 @@ nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
                      line->mFirstChild, nsLayoutUtils::MIN_WIDTH);
       line_pref = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                       line->mFirstChild, nsLayoutUtils::PREF_WIDTH);
-    } else {
+    //} else if ((line == begin_lines() || !line.prev()->IsLineWrapped())) {
+    } else if (!line->IsEmpty()) {
       // This may not be the best way of doing things, but it's the
       // easiest way given the current code.  We'll say that the frame
       // needs reflow for completeness, but this shouldn't ever lead to
       // additional reflow.
 
-      // XXX WRITE ME
-      // Refactor nsLineLayout::VerticalAlignLine's computation of
-      // maxElementWidth into something else.
-#error "write me"
+      // XXX GET RID OF AS MANY OF THESE AS POSSIBLE
+      // XXX MOVE THEM OUTSIDE THE LOOP!
+      nsHTMLReflowState rs;
+      nsBlockReflowState brs;
+      nsSpaceManager sm;
+
+      nsLineLayout ll(GetPresContext(), &sm, &rs, PR_TRUE);
+      ll.Init(&brs, brs.mMinLineHeight, lineNumber);
+      ll.BeginLineReflow(0, 0, NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE,
+                         PR_FALSE, PR_FALSE);
+
+      // XXX Unfortunately we need to know this before reflowing the first
+      // inline frame in the line. FIX ME.
+      if ((0 == ll.GetLineNumber()) &&
+          (NS_BLOCK_HAS_FIRST_LETTER_STYLE & mState)) {
+        aLineLayout.SetFirstLetterStyleOK(PR_TRUE);
+      }
+      nsIFrame *frame = line->mFirstChild;
+      for (PRInt32 i = 0; i < aLine->GetChildCount();
+           i++, frame = frame->GetNextSibling()) {
+        nsReflowStatus frameReflowStatus;
+        PRBool         pushedFrame;
+        nsresult rv = aLineLayout.ReflowFrame(aFrame, frameReflowStatus,
+                                               nsnull, pushedFrame);
+        if (NS_FAILED(rv)) {
+          return rv;
+        }
+      }
+
+      line_min = ll.GetLineMaxElementWidth(line);
+      line_pref = line->mBounds.XMost();
+
+      // Mark the line as dirty since we've put in into a fake state.
+      // The FrameNeedsReflow call should usually (always?) be a no-op.
+      line->MarkDirty();
+      GetPresContext()->PresShell()->FrameNeedsReflow(this, eResize);
+    } else {
+      line_pref = 0;
+      line_min = 0;
     }
     if (line_min > min_result)
       min_result = line_min;
