@@ -3796,7 +3796,8 @@ nsFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
   nsPoint point;
   point.x = aPos->mDesiredX;
   point.y = 0;
-  switch (aPos->mAmount){
+  switch (aPos->mAmount)
+  {
   case eSelectCharacter : case eSelectWord:
     {
       if (mContent)
@@ -3804,9 +3805,14 @@ nsFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
         nsCOMPtr<nsIContent> newContent;
         PRInt32 newOffset;
         result = mContent->GetParent(*getter_AddRefs(newContent));
-        if (newContent){
+        if (newContent)
+        {
+          PRBool selectable = PR_FALSE;
+          nsIFrame *currentFrame;
+
           aPos->mResultContent = newContent;
           result = newContent->IndexOf(mContent, newOffset);
+
           if (aPos->mStartOffset < 0)//start at "end"
             aPos->mStartOffset = newOffset + 1;
           if (NS_FAILED(result)) 
@@ -3816,12 +3822,17 @@ nsFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
           if ((aPos->mDirection == eDirNext && newOffset < aPos->mStartOffset) || //need to go to next one
               (aPos->mDirection == eDirPrevious && newOffset >= aPos->mStartOffset))
           {
-            result = GetFrameFromDirection(aPresContext, aPos);
+            currentFrame = this;
+            if (aPos->mDirection == eDirNext) //make sure this is the last leaf so we truely end up on the next frame.
+              GetLastLeaf(aPresContext, &currentFrame);
+            if (!currentFrame)
+              return NS_ERROR_FAILURE;
+            result = GetFrameFromDirection(currentFrame, aPresContext, aPos);
             if (NS_FAILED(result))
               return result;
-					  PRBool selectable = PR_FALSE;
-					  if (aPos->mResultFrame)
-  					  aPos->mResultFrame->IsSelectable(&selectable, nsnull);
+            //re-use selectable boolean for the next frame. its not needed any more
+            if (aPos->mResultFrame)
+              aPos->mResultFrame->IsSelectable(&selectable, nsnull);
             if (NS_FAILED(result) || !aPos->mResultFrame || !selectable)
             {
               return result?result:NS_ERROR_FAILURE;
@@ -3830,6 +3841,66 @@ nsFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
           }
           else
           {
+            //we need to "skip this frame" if the moz_user_select:all style is present
+            //check for the style
+            PRUint8 selectStyle;
+            IsSelectable(&selectable, &selectStyle);
+            //now check for user_select_all. its its set then start at the respective edge of this content
+            //to make sure we go over
+            if ( selectStyle == NS_STYLE_USER_SELECT_ALL )
+            {
+              //get parent frame until we no longer have this style
+              //then grab the content and set the offsets accordingly
+              nsIFrame *parentFrame = this;
+              PRUint8 parentStyle;
+            
+              do 
+              {
+                currentFrame = parentFrame;
+                currentFrame->GetParent(&parentFrame);
+                if (parentFrame)
+                  parentFrame->IsSelectable(&selectable, &parentStyle);
+              }
+              while (parentFrame && (parentStyle == NS_STYLE_USER_SELECT_ALL));
+              if (parentFrame)
+              {
+                nsCOMPtr<nsIContent> parentContent;
+                currentFrame->GetContent(getter_AddRefs(newContent));
+
+                if (newContent)
+                {
+                  result = newContent->GetParent(*getter_AddRefs(parentContent));
+                  if (NS_SUCCEEDED(result) && parentContent)
+                  {
+                    if (NS_SUCCEEDED(parentContent->IndexOf(newContent, newOffset)))
+                    {
+                      if (aPos->mDirection == eDirNext)
+                      {
+                        newOffset ++;
+                        parentContent->ChildAt(newOffset, *getter_AddRefs(newContent));
+                        if (newContent)
+                        {
+                          aPos->mPreferLeft = nsIFrameSelection::HINTLEFT;
+                          newOffset = 0;
+                        }
+                        else
+                        {
+                          aPos->mPreferLeft = nsIFrameSelection::HINTRIGHT; //skip it to the end
+                          newContent = parentContent;
+                        }
+                      }
+                      else //previous
+                      {
+                        newContent = parentContent;
+                      }
+                      aPos->mResultContent = newContent;
+                      aPos->mContentOffset = newOffset;
+                    }
+                  }
+                }
+              }
+
+            }
             if (aPos->mDirection == eDirNext)
               aPos->mContentOffset = newOffset +1;
             else
@@ -4119,12 +4190,14 @@ nsFrame::GetLineNumber(nsIFrame *aFrame)
 //this will use the nsFrameTraversal as the default peek method.
 //this should change to use geometry and also look to ALL the child lists
 //we need to set up line information to make sure we dont jump across line boundaries
-NS_IMETHODIMP
-nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
+nsresult
+nsFrame::GetFrameFromDirection(nsIFrame *aCurrentFrame, nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
 {
-  nsIFrame *blockFrame = this;
+  nsIFrame *blockFrame = aCurrentFrame;
   nsIFrame *thisBlock;
   PRInt32   thisLine;
+  nsCOMPtr<nsIContent> thisContent;
+  aCurrentFrame->GetContent(getter_AddRefs(thisContent));
   nsCOMPtr<nsILineIteratorNavigator> it; 
   nsresult result = NS_ERROR_FAILURE;
   while (NS_FAILED(result) && blockFrame)
@@ -4143,7 +4216,7 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
   if (NS_FAILED(result))
     return result;
 
-  nsIFrame *traversedFrame = this;
+  nsIFrame *traversedFrame = aCurrentFrame;
 
   nsIFrame *firstFrame;
   nsIFrame *lastFrame;
@@ -4176,7 +4249,7 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
     if (aPos->mDirection == eDirNext)
     {
       nsCOMPtr<nsILineIteratorNavigator> tempLi; 
-      if (NS_SUCCEEDED(QueryInterface(NS_GET_IID(nsILineIteratorNavigator),getter_AddRefs(tempLi))))
+      if (NS_SUCCEEDED(aCurrentFrame->QueryInterface(NS_GET_IID(nsILineIteratorNavigator),getter_AddRefs(tempLi))))
       {
         thisLine++;
         result = it->GetLine(thisLine, &firstFrame, &lineFrameCount,nonUsedRect,
@@ -4210,16 +4283,16 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
   //END LINE DATA CODE
   if 
 #ifndef IBMBIDI  // jumping lines in RTL paragraphs
-      ((aPos->mDirection == eDirNext && lastFrame == this)
-       ||(aPos->mDirection == eDirPrevious && firstFrame == this))
+      ((aPos->mDirection == eDirNext && lastFrame == aCurrentFrame)
+       ||(aPos->mDirection == eDirPrevious && firstFrame == aCurrentFrame))
 #else
       (((lineIsRTL) &&
-        ((aPos->mDirection == eDirNext && firstFrame == this)
-         ||(aPos->mDirection == eDirPrevious && lastFrame == this)))
+        ((aPos->mDirection == eDirNext && firstFrame == aCurrentFrame)
+         ||(aPos->mDirection == eDirPrevious && lastFrame == aCurrentFrame)))
        ||
        ((!lineIsRTL) &&
-        ((aPos->mDirection == eDirNext && lastFrame == this)
-         ||(aPos->mDirection == eDirPrevious && firstFrame == this))))
+        ((aPos->mDirection == eDirNext && lastFrame == aCurrentFrame)
+         ||(aPos->mDirection == eDirPrevious && firstFrame == aCurrentFrame))))
 #endif
   {
     if (aPos->mJumpLines != PR_TRUE)
@@ -4295,7 +4368,7 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
   newFrame = (nsIFrame *)isupports;
   nsIContent *content = nsnull;
   newFrame->GetContent(&content); 
-  if (!lineJump && (content == mContent))
+  if (!lineJump && (content == thisContent))
   {
     //we will continue if this is NOT a text node. 
     //in the case of a text node since that does not mean we are stuck. it could mean a change in style for
@@ -4307,7 +4380,7 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
       continue;  //we should NOT be getting stuck on the same piece of content on the same line. skip to next line.
   }
   newFrame->GetRect(testRect);
-  if (testRect.IsEmpty()) { // this must be a non-renderable frame creatd at the end of the line by Bidi reordering
+  if (lineIsReordered && testRect.IsEmpty()) { // this must be a non-renderable frame creatd at the end of the line by Bidi reordering
     lineJump = PR_TRUE;
     aPos->mAmount = eSelectNoAmount;
   }
@@ -4387,7 +4460,7 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
     aPos->mStartOffset = -1;
 #ifdef IBMBIDI
   PRUint8 oldLevel, newLevel, baseLevel;
-  GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**)&oldLevel, sizeof(oldLevel));
+  aCurrentFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**)&oldLevel, sizeof(oldLevel));
   newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**)&newLevel, sizeof(newLevel));
   newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::baseLevel, (void**)&baseLevel, sizeof(baseLevel));
   if (newLevel & 1) // The new frame is RTL, go to the other end
