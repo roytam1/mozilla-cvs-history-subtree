@@ -5,6 +5,7 @@
 CacheStubs.h
 nsBkgThread.h
 nsCacheBkgThd.h
+nsCacheFileStream.h
 nsCacheIterator.h
 nsCacheManager.h
 nsCacheModule.h
@@ -12,7 +13,6 @@ nsCacheObject.h
 nsCachePref.h
 nsDiskModule.h
 nsEnumeration.h
-nsFileStream.h
 nsHash.h
 nsIterator.h
 nsMemCacheObject.h
