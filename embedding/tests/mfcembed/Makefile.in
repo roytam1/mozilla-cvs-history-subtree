@@ -89,6 +89,7 @@ LIBS		= \
 		$(EXTRA_DSO_LIBS) \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
+		$(MOZ_JS_LIBS) \
 		$(NULL)
 
 ifneq ($(OS_TARGET),WINCE)

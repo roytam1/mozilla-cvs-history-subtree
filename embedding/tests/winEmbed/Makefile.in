@@ -68,6 +68,7 @@ LIBS		= \
 		$(EXTRA_DSO_LIBS) \
 		$(XPCOM_LIBS) \
 		$(NSPR_LIBS) \
+		$(MOZ_JS_LIBS) \
 		$(NULL)
 
 ifneq ($(OS_TARGET),WINCE)
@@ -79,7 +80,7 @@ OS_LIBS		+= \
 		$(NULL)
 else
 OS_LIBS		+= \
-        wince_console.lib \
+		wince_console.lib \
 		$(NULL)
 endif # WINCE
 
