@@ -16,6 +16,10 @@
 #include "nsMimeTypes.h"
 #include "nsIX509Cert.h"
 #include "nsIX509CertDB.h"
+#include "nsMsgBaseCID.h"
+#include "nsIMsgHeaderParser.h"
+
+static NS_DEFINE_CID(kMsgHeaderParserCID, NS_MSGHEADERPARSER_CID); 
 
 #define MIME_MULTIPART_SIGNED_BLURB "test"
 #define MIME_SMIME_ENCRYPTED_CONTENT_DESCRIPTION "test"
@@ -650,10 +654,13 @@ mime_crypto_hack_certs(mime_crypto_closure *state, const char *recipients,
   int status = 0;
   char *all_mailboxes = 0, *mailboxes = 0, *mailbox_list = 0;
   const char *mailbox = 0;
-  int count = 0;
+  PRUint32 count = 0;
   PRUint32 numCerts;
   nsCOMPtr<nsIX509CertDB> certdb = do_GetService(NS_X509CERTDB_CONTRACTID);
-
+  nsCOMPtr<nsIMsgHeaderParser>  pHeader;
+  nsresult res = nsComponentManager::CreateInstance(kMsgHeaderParserCID, 
+                                                     NULL, NS_GET_IID(nsIMsgHeaderParser), 
+                                                     (void **) getter_AddRefs(pHeader)); 
   PRBool no_clearsigning_p = PR_FALSE;
 
   PR_ASSERT(encrypt_p || sign_p);
@@ -671,12 +678,12 @@ mime_crypto_hack_certs(mime_crypto_closure *state, const char *recipients,
 	  }
   }
 
-  all_mailboxes = ExtractRFC822AddressMailboxes(recipients);
-  RemoveDuplicateAddresses(all_mailboxes, 0, PR_FALSE /*removeAliasesToMe*/, &mailboxes);
+  pHeader->ExtractHeaderAddressMailboxes(nsnull,recipients, &all_mailboxes);
+  pHeader->RemoveDuplicateAddresses(nsnull, all_mailboxes, 0, PR_FALSE /*removeAliasesToMe*/, &mailboxes);
   PR_FREEIF(all_mailboxes);
 
   if (mailboxes)
-	count = ParseRFC822Addresses (mailboxes, 0, &mailbox_list);
+	  pHeader->ParseHeaderAddresses (nsnull, mailboxes, 0, &mailbox_list, &count);
   PR_FREEIF(mailboxes);
   if (count < 0) return count;
 
