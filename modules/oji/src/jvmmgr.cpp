@@ -978,9 +978,15 @@ NS_METHOD
 nsJVMPluginTagInfo::GetMayScript(PRBool *result)
 {
     const char* attr;
+    *result = PR_FALSE;
+
     nsresult err = fPluginTagInfo->GetAttribute("mayscript", &attr);
     if (err) return err;
-    *result = (err == NS_OK);
+
+    if (PL_strcasecmp(attr, "true") == 0)
+    {
+       *result = PR_TRUE;
+    }
     return NS_OK;
 }
 
