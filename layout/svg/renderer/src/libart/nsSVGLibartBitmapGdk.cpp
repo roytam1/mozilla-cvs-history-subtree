@@ -108,8 +108,6 @@ nsSVGLibartBitmapGdk::Init(nsIRenderingContext* ctx,
   
   mBuffer = gdk_pixbuf_new(GDK_COLORSPACE_RGB, FALSE, 8, rect.width, rect.height);
 
-  printf("nsSVGLibartBitmapGdk::Init [Created new pixbuf (%d,%d,%d,%d)]\n", rect.x, rect.y, rect.width, rect.height);
-  
   return NS_OK;
 }
 
