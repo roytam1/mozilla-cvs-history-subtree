@@ -83,8 +83,11 @@ dnl Set the minimum version of toolkit libs used by mozilla
 dnl ========================================================
 GLIB_VERSION=1.2.0
 GTK_VERSION=1.2.0
+GDK_PIXBUF_VERSION=0.8.0
 LIBIDL_VERSION=0.6.3
 PERL_VERSION=5.004
+QT_VERSION=2.2.0
+QT_VERSION_NUM=220
 
 dnl Set various checks
 dnl ========================================================
@@ -963,6 +966,7 @@ alpha*-*-osf*)
     DLL_SUFFIX=".dylib"
     DSO_LDOPTS='-compatibility_version 1 -current_version 1'
     AC_DEFINE(NO_X11)
+    AC_DEFINE(DARWIN)
     AC_DEFINE(RHAPSODY)
     AC_DEFINE(TARGET_CARBON)
     AC_DEFINE(TARGET_API_MAC_CARBON)
@@ -1102,6 +1106,19 @@ then
     AC_CHECK_LIB(Xinerama, XineramaIsActive, [MOZ_XINERAMA_LIBS="-lXinerama"],,
         $XLIBS $XEXT_LIBS)
     AC_CHECK_HEADER(X11/extensions/Xinerama.h)
+
+    dnl ========================================================
+    dnl =
+    dnl = Check for XIE
+    dnl =
+    dnl ========================================================
+    AC_CHECK_LIB(XIE, XieFloGeometry, [MOZ_XIE_LIBS="-lXIE"],,
+        $XLIBS $XEXT_LIBS)
+    AC_CHECK_HEADER(X11/extensions/XIElib.h)
+
+    if test "$MOZ_XIE_LIBS"; then
+        HAVE_XIE=1
+    fi
 
 	LDFLAGS="$_SAVE_LDFLAGS"
 
@@ -1290,10 +1307,23 @@ then
 	])
 fi
 
+HAVE_GDK_PIXBUF=
+MOZ_GDK_PIXBUF_CFLAGS=
+MOZ_GDK_PIXBUF_LIBS=
+
 if test "$MOZ_ENABLE_GTK"
 then
     AM_PATH_GTK($GTK_VERSION,,
       AC_MSG_ERROR(Test for GTK failed.))
+
+
+    AM_PATH_GDK_PIXBUF($GDK_PIXBUF_VERSION,
+      [HAVE_GDK_PIXBUF=1],)
+
+    if test "$HAVE_GDK_PIXBUF"; then
+        MOZ_GDK_PIXBUF_CFLAGS=$GDK_PIXBUF_CFLAGS
+        MOZ_GDK_PIXBUF_LIBS=$GDK_PIXBUF_LIBS
+    fi
 
 dnl ========================================================
 dnl =							   =
@@ -1623,9 +1653,7 @@ then
 	[ QTDIR=$withval],
 	[ QTDIR="/usr"])
 
-	AC_MSG_CHECKING(for Qt insanity)
-
-    QT_CFLAGS="-I${QTDIR}/include/qt"
+    QT_CFLAGS="-I${QTDIR}/include -DQT_GENUINE_STR"
     QT_LIBS="-L/usr/X11R6/lib -L${QTDIR}/lib -lqt -lXext -lX11"
 dnl    AM_PATH_QT($QT_VERSION,,
 dnl      AC_MSG_ERROR(Test for QT failed.))
@@ -1652,6 +1680,32 @@ dnl      AC_MSG_ERROR(Test for QT failed.))
     fi
 
     MOZ_QT_CFLAGS=$QT_CFLAGS
+
+    AC_LANG_CPLUSPLUS
+
+    _SAVE_CXXFLAGS=$CXXFLAGS
+    _SAVE_LIBS=$LIBS
+
+    CXXFLAGS="$CXXFLAGS $QT_CFLAGS"
+    LIBS="$LIBS $QT_LIBS"
+    
+    AC_MSG_CHECKING(Qt - version >= $QT_VERSION)
+    AC_TRY_COMPILE([#include <qglobal.h>],
+    [
+        #if (QT_VERSION < $QT_VERSION_NUM)
+            #error  "QT_VERSION too old"
+        #endif
+        exit(0);
+    ],result="yes",result="no")
+
+    AC_MSG_RESULT("$result")
+    if test "$result" = "no"; then
+       AC_MSG_ERROR([Qt Mozilla requires at least version $QT_VERSION of Qt])
+    fi
+    CXXFLAGS=$_SAVE_CXXFLAGS
+    LIBS=$_SAVE_LIBS
+
+    AC_LANG_C
 fi
 dnl ========================================================
 dnl = 													   =
@@ -1723,6 +1777,12 @@ AC_SUBST(MOZ_ENABLE_XPRINT)
 AC_SUBST(MOZ_QT_CFLAGS)
 AC_SUBST(MOZ_QT_LDFLAGS)
 AC_SUBST(MOZ_DEFAULT_TOOLKIT)
+
+AC_SUBST(HAVE_GDK_PIXBUF)
+AC_SUBST(MOZ_GDK_PIXBUF_CFLAGS)
+AC_SUBST(MOZ_GDK_PIXBUF_LIBS)
+AC_SUBST(HAVE_XIE)
+AC_SUBST(MOZ_XIE_LIBS)
 
 AC_SUBST(MOZ_XINERAMA_LIBS)
 AC_SUBST(MOZ_ENABLE_XINERAMA)
@@ -2051,12 +2111,7 @@ if test ! "$GNU_CXX"; then
 
     case $target in
     *-solaris*)
-	dnl The C++ compiler in Workshop 5.0+ uses standard iostreams by
-	dnl default. -library=iostream will force use of classic iostreams.
-	dnl We need -liostream to be inserted before the standard C++ library
-	dnl (which isn't -lC on Workshop5+, but is dnl a set of libraries).
-	CXX="$CXX -library=iostream"
-	LIBS="-liostream -lCrun $LIBS"
+	LIBS="-lCrun $LIBS"
 	;;
     *-aix*)
 	AC_CHECK_LIB(C_r, demangle)
@@ -2393,6 +2448,23 @@ dnl ========================================================
 AC_PROG_GCC_TRADITIONAL
 AC_FUNC_MEMCMP
 AC_CHECK_FUNCS(random qsort strerror lchown fchmod snprintf localtime_r statvfs memmove usleep rint)
+AC_CHECK_HEADERS(gnu/libc-version.h)
+AC_CHECK_FUNCS(nl_langinfo)
+
+AC_CACHE_CHECK(
+    [for gnu_get_libc_version()],
+    ac_cv_func_gnu_get_libc_version,
+    [AC_TRY_LINK([
+        #ifdef HAVE_GNU_LIBC_VERSION_H
+        #include <gnu/libc-version.h>
+        #endif
+        ],
+        [const char *glibc_version = gnu_get_libc_version();],
+        [ac_cv_func_gnu_get_libc_version=yes 
+            AC_DEFINE(HAVE_GNU_GET_LIBC_VERSION)],
+        [ac_cv_func_gnu_get_libc_version=no] 
+        )]
+    )
 
 AC_MSG_CHECKING(how to call gettimeofday)
 AC_CACHE_VAL(ac_cv_gettimeofday_args,
@@ -3854,13 +3926,15 @@ if test "$MOZ_NEW_CACHE" = "1"; then
 fi
 AC_SUBST(MOZ_NEW_CACHE)
 
-dnl New image library is not yet enabled by default.  This is a temporary
-dnl option for testing
-MOZ_ARG_ENABLE_BOOL(libpr0n,
-[  --enable-libpr0n        Enable new image library],
-  USE_IMG2=1
-  AC_DEFINE(USE_IMG2))
-
+dnl libpr0n on by default
+USE_IMG2=1
+dnl Turn off the new image library.  Soon to go away.
+MOZ_ARG_DISABLE_BOOL(libpr0n,
+[  --disable-libpr0n       Disable new imagelib],
+   USE_IMG2=)
+if test "$USE_IMG2" = "1"; then
+  AC_DEFINE(USE_IMG2)
+fi
 AC_SUBST(USE_IMG2)
 
 dnl ========================================================
@@ -4507,7 +4581,7 @@ unset MAKEFILES
 unset CONFIG_FILES
 
 if test -z "$MOZ_NATIVE_NSPR"; then
-  ac_configure_args="$_SUBDIR_CONFIG_ARGS --prefix=$MOZ_BUILD_ROOT/dist"
+  ac_configure_args="$_SUBDIR_CONFIG_ARGS --with-dist-prefix=$MOZ_BUILD_ROOT/dist"
   AC_OUTPUT_SUBDIRS(nsprpub)
 fi
 
