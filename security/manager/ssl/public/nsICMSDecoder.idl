@@ -1,0 +1,103 @@
+/* 
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 2001 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s):
+ *   Terry Hayes <thayes@netscape.com>
+ */
+
+#include "nsISupports.idl"
+
+%{ C++
+typedef void (*NSSCMSContentCallback)(void *arg, const char *buf, unsigned long len);
+%}
+
+native NSSCMSContentCallback(NSSCMSContentCallback);
+[ptr] native UnsignedCharPtr(unsigned char);
+
+[uuid(a31a3028-ae28-11d5-ba4b-00108303b117)]
+interface nsIHash : nsISupports
+{
+  const short HASH_AlgNULL = 0;
+  const short HASH_AlgMD2  = 1;
+  const short HASH_AlgMD5  = 2;
+  const short HASH_AlgSHA1 = 3;
+  const unsigned long MD2_LEN  = 16;
+  const unsigned long MD5_LEN  = 16;
+  const unsigned long SHA1_LEN = 20;
+  const unsigned long MAX_HASH_LEN = SHA1_LEN;  
+
+  unsigned long resultLen(in short aAlg);
+  void create(in short aAlg);
+  void begin();
+  void update(in UnsignedCharPtr aBuf, in  unsigned long aLen);
+  void end(in UnsignedCharPtr aHash, out unsigned long aLen, in unsigned long aMaxLen);
+};
+
+/**
+ * nsICMSMessage
+ *  Interface to a CMS Message
+ */
+[uuid(a4557478-ae16-11d5-ba4b-00108303b117)]
+interface nsICMSMessage : nsISupports
+{
+  void contentIsSigned(out boolean aSigned);
+  void contentIsEncrypted(out boolean aEncrypted);
+  void getSignerCommonName(out string aName);
+  void getSignerEmailAddress(out string aEmail);
+  void verifySignature();
+  void verifyDetachedSignature();
+  void CreateEncrypted();
+  void CreateSigned();
+};
+
+/**
+ * nsICMSDecoder
+ *  Interface to decode an CMS message
+ */
+[uuid(65244a06-a342-11d5-ba47-00108303b117)]
+interface nsICMSDecoder : nsISupports
+{
+  void start(in NSSCMSContentCallback cb, in voidPtr arg);
+  void update(in string aBuf, in long aLen);
+  void finish(out nsICMSMessage msg);
+};
+
+/**
+ * nsICMSDecoder
+ *  Interface to decode an CMS message
+ */
+[uuid(a15789aa-8903-462b-81e9-4aa2cff4d5cb)]
+interface nsICMSEncoder : nsISupports
+{
+  void start();
+  void update(in string aBuf, in long aLen);
+  void finish();
+  void encode(in nsICMSMessage aMsg);
+};
+
+/**
+ * NS_CMSMESSAGE_CONTRACTID - contract id of a class that
+ *   implements nsICMSMessage
+ */
+%{C++
+#define NS_CMSDECODER_CONTRACTID "@mozilla.org/nsCMSDecoder;1"
+#define NS_CMSENCODER_CONTRACTID "@mozilla.org/nsCMSEncoder;1"
+
+#define NS_CMSMESSAGE_CONTRACTID "@mozilla.org/nsCMSMessage;1"
+#define NS_HASH_CONTRACTID "@mozilla.org/nsHash;1"
+%}

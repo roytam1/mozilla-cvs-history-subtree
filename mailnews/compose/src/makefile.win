@@ -85,6 +85,7 @@ CPP_OBJS=   .\$(OBJDIR)\nsMsgCompFields.obj \
             .\$(OBJDIR)\nsSmtpServer.obj \
             .\$(OBJDIR)\nsSmtpDataSource.obj \
 						.\$(OBJDIR)\nsSmtpDelegateFactory.obj \
+						.\$(OBJDIR)\composec.obj \
             $(NULL)
 
 

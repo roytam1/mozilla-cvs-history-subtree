@@ -209,6 +209,9 @@ interface nsIMsgSend : nsISupports
     /* Disable UI notification (alert message) */
     void setGUINotificationState(in PRBool aEnableFlag);
     
+    /* Crypto */
+    void BeginCryptoEncapsulation();
+
     /* retreive the last send process report*/
     readonly attribute nsIMsgSendReport sendReport; 
     
@@ -243,5 +246,7 @@ interface nsIMsgSend : nsISupports
 	[noscript] attribute nsIRequest runningRequest;
 
     [noscript] attribute nsresult status;
+
+    [noscript] attribute voidPtr cryptoclosure;
 
 };

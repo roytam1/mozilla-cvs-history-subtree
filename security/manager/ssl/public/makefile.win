@@ -60,6 +60,8 @@ XPIDLSRCS= \
     .\nsISSLStatus.idl \
     .\nsICertOutliner.idl \
     .\nsIKeygenThread.idl \
+    .\nsICMSMessage.idl \
+    .\nsICMSDecoder.idl \
     $(NULL)
 
 

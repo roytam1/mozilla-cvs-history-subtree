@@ -105,6 +105,9 @@ OBJS=											\
 		.\$(OBJDIR)\nsMimeHeaders.obj		\
 # XP-COM BRIDGES
 		.\$(OBJDIR)\comi18n.obj				\
+		.\$(OBJDIR)\mimecryp.obj		\
+		.\$(OBJDIR)\mimecms.obj			\
+		.\$(OBJDIR)\mimemcms.obj		\
 		$(NULL)
 
 
