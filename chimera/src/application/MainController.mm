@@ -45,6 +45,7 @@
 #import "BrowserWindowController.h"
 #import "BookmarksMenu.h"
 #import "BookmarksService.h"
+#import "BookmarkInfoController.h";
 #import "CHBrowserService.h"
 #import "AboutBox.h"
 #import "UserDefaults.h"
@@ -222,6 +223,9 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   
   // Cancel outstanding site icon loads
   [[RemoteDataProvider sharedRemoteDataProvider] cancelOutstandingRequests];
+  
+  // make sure the info window is closed
+  [BookmarkInfoController closeBookmarkInfoController];
   
   BookmarksManager* bmManager = [BookmarksManager sharedBookmarksManagerDontAlloc];
   if (bmManager)

@@ -53,6 +53,12 @@ static BookmarkInfoController *sharedBookmarkInfoController = nil;
   return sharedBookmarkInfoController;
 }
 
++ (void)closeBookmarkInfoController
+{
+  if (sharedBookmarkInfoController)
+    [sharedBookmarkInfoController close];
+}
+
 - (id)initWithWindowNibName:(NSString *)windowNibName
 {
   if ((self = [super initWithWindowNibName:@"BookmarkInfoPanel"]))

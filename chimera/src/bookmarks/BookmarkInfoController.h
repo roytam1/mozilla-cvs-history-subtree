@@ -44,6 +44,7 @@
 }
 
 + (id)sharedBookmarkInfoController;
++ (void)closeBookmarkInfoController;
 
 -(void)setBookmark:(BookmarkItem*)aBookmark;
 -(BookmarkItem*)bookmark;
