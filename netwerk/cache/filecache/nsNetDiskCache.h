@@ -1,4 +1,5 @@
-/*
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -20,7 +21,13 @@
  *                 Carl Wong <carl.wong@intel.com>
  */
 
-// FUR - Add overall description comment here
+/*
+ * This file is part of filecache implementation.
+ *
+ * nsNetDiskCache is the main disk cache module that will create 
+ * the cache database, and then store and retrieve nsDiskCacheRecord 
+ * objects from it. It also contains some basic error recovery procedure.
+ */
 
 #ifndef __gen_nsNetDiskCache_h__
 #define __gen_nsNetDiskCache_h__
@@ -54,11 +61,12 @@ class nsNetDiskCache : public nsINetDataDiskCache {
 
   NS_IMETHOD InitDB(void) ;
   NS_IMETHOD CreateDir(nsIFileSpec* dir_spec) ;
-  NS_IMETHOD UpdateInfo(void) ;
+  NS_IMETHOD GetSpecialEntry(void) ;
+  NS_IMETHOD SetSpecialEntry(void) ;
 
   NS_IMETHOD RenameCacheSubDirs(void) ;
   NS_IMETHOD DBRecovery(void) ;
-  NS_IMETHOD RemoveDirs(PRUint32 aNum) ;
+  NS_IMETHOD RemoveFolder(nsFileSpec aFolder) ;
 
   private:
 
@@ -72,11 +80,12 @@ class nsNetDiskCache : public nsINetDataDiskCache {
   PRUint32                          m_StorageInUse ;
   nsIDBAccessor*                    m_DB ;
 
-  // this is used to indicate a db corruption
-  PRInt32                           m_BaseDirNum ;
+  // this is used to indicate a db corruption 
+  PRBool                            m_DBCorrupted ;
 
   friend class nsDiskCacheRecord ;
   friend class nsDiskCacheRecordChannel ;
+  friend class nsDBEnumerator ;
 } ;
 
 #endif /* __gen_nsNetDiskCache_h__ */
