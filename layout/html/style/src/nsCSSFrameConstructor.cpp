@@ -1260,11 +1260,13 @@ GetChildListNameFor(nsIPresContext* aPresContext,
 //----------------------------------------------------------------------
 
 nsCSSFrameConstructor::nsCSSFrameConstructor(nsIDocument *aDocument)
-  : mDocument(aDocument),
-    mInitialContainingBlock(nsnull),
-    mFixedContainingBlock(nsnull),
-    mDocElementContainingBlock(nsnull),
-    mGfxScrollFrame(nsnull)
+  : mDocument(aDocument)
+  , mInitialContainingBlock(nsnull)
+  , mFixedContainingBlock(nsnull)
+  , mDocElementContainingBlock(nsnull)
+  , mGfxScrollFrame(nsnull)
+  , mUpdateCount(0)
+  , mQuotesDirty(PR_FALSE)
 {
   if (!gGotXBLFormPrefs) {
     gGotXBLFormPrefs = PR_TRUE;
@@ -1339,6 +1341,13 @@ nsIXBLService * nsCSSFrameConstructor::GetXBLService()
   return gXBLService;
 }
 
+void
+nsCSSFrameConstructor::GeneratedContentFrameRemoved(nsIFrame* aFrame)
+{
+  if (mQuoteList.DestroyNodesFor(aFrame))
+    QuotesDirty();
+}
+
 nsresult
 nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContext,
                                                nsIDocument*          aDocument,
@@ -1350,6 +1359,9 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContex
                                                nsIFrame**            aFrame)
 {
   *aFrame = nsnull;  // initialize OUT parameter
+
+  // The QuoteList needs the content attached to the frame.
+  nsCOMPtr<nsIDOMCharacterData>* textPtr = nsnull;
 
   // Get the content value
   const nsStyleContentData &data = aStyleContent->ContentAt(aContentIndex);
@@ -1473,36 +1485,27 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContex
   
     case eStyleContentType_OpenQuote:
     case eStyleContentType_CloseQuote:
+    case eStyleContentType_NoOpenQuote:
+    case eStyleContentType_NoCloseQuote:
       {
-        const nsStyleQuotes* quotes = aStyleContext->GetStyleQuotes();
-        PRUint32  quotesCount = quotes->QuotesCount();
-        if (quotesCount > 0) {
-          nsAutoString  openQuote, closeQuote;
-  
-          // If the depth is greater than the number of pairs, the last pair
-          // is repeated
-          PRUint32  quoteDepth = 0;  // XXX really track the nested quotes...
-          if (quoteDepth > quotesCount) {
-            quoteDepth = quotesCount - 1;
-          }
-          quotes->GetQuotesAt(quoteDepth, openQuote, closeQuote);
-          if (eStyleContentType_OpenQuote == type) {
-            contentString = openQuote;
-          } else {
-            contentString = closeQuote;
-          }
-  
-        } else {
-          // XXX Don't assume default. Only use what is in 'quotes' property
-          contentString.Assign(PRUnichar('\"'));
-        }
+        nsQuoteListNode* node =
+          new nsQuoteListNode(type, aParentFrame, aContentIndex);
+        if (!node)
+          return NS_ERROR_OUT_OF_MEMORY;
+        mQuoteList.Insert(node);
+        if (!mQuoteList.IsLast(node))
+          QuotesDirty();
+
+        // Don't generate a text node or any text for 'no-open-quote' and
+        // 'no-close-quote'.
+        if (node->IsHiddenQuote())
+          return NS_OK;
+
+        textPtr = &node->mText; // Delayed storage of text node.
+        contentString = *node->Text();
       }
       break;
   
-    case eStyleContentType_NoOpenQuote:
-    case eStyleContentType_NoCloseQuote:
-      // XXX Adjust quote depth...
-      return NS_OK;
     } // switch
   
 
@@ -1512,8 +1515,10 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContex
     if (textContent) {
       // Set the text
       nsCOMPtr<nsIDOMCharacterData> domData = do_QueryInterface(textContent);
-      if (domData)
-        domData->SetData(contentString);
+      domData->SetData(contentString);
+
+      if (textPtr)
+        *textPtr = domData;
   
       // Set aContent as the parent content and set the document object. This
       // way event handling works
@@ -3231,6 +3236,80 @@ nsCSSFrameConstructor::ConstructDocElementTableFrame(nsIPresShell*        aPresS
 }
 
 /**
+ * This checks the root element and the HTML BODY, if any, for an "overflow" property
+ * that should be applied to the viewport. If one is found then we return the
+ * element that we took the overflow from (which should then be treated as
+ * "overflow:visible"), and we store the overflow style in the prescontext.
+ * @param aDocElement is mDocument->GetRootContent()
+ * @param aIsScrollable if nonnull, is set to indicate whether scrolling is desired
+ * on the viewport at all
+ */
+nsIContent*
+nsCSSFrameConstructor::PropagateScrollToViewport(nsIPresContext* aPresContext)
+{
+  // Set default
+  aPresContext->SetViewportOverflowOverride(NS_STYLE_OVERFLOW_AUTO);
+
+  // We never mess with the viewport scroll state
+  // when printing or in print preview
+  if (aPresContext->IsPaginated()) {
+    return nsnull;
+  }
+
+  nsIContent* docElement = mDocument->GetRootContent();
+
+  // Check the style on the document root element
+  nsStyleSet *styleSet = aPresContext->PresShell()->StyleSet();
+  nsRefPtr<nsStyleContext> styleContext;
+  styleContext = styleSet->ResolveStyleFor(docElement, nsnull);
+  if (!styleContext) {
+    return nsnull;
+  }
+  const nsStyleDisplay* display = styleContext->GetStyleDisplay();
+  if (display->mOverflow != NS_STYLE_OVERFLOW_VISIBLE) {
+    aPresContext->SetViewportOverflowOverride(display->mOverflow);
+    // tell caller we stole the overflow style from the root element
+    return docElement;
+  }
+  
+  // Don't look in the BODY for non-HTML documents or HTML documents
+  // with non-HTML roots
+  // XXX this should be earlier; we shouldn't even look at the document root
+  // for non-HTML documents. Fix this once we support explicit CSS styling
+  // of the viewport
+  // XXX what about XHTML?
+  nsCOMPtr<nsIDOMHTMLDocument> htmlDoc(do_QueryInterface(mDocument));
+  if (!htmlDoc || !docElement->IsContentOfType(nsIContent::eHTML)) {
+    return nsnull;
+  }
+  
+  nsCOMPtr<nsIDOMHTMLElement> body;
+  htmlDoc->GetBody(getter_AddRefs(body));
+  nsCOMPtr<nsIContent> bodyElement = do_QueryInterface(body);
+  
+  if (!bodyElement ||
+      !bodyElement->GetNodeInfo()->Equals(nsHTMLAtoms::body)) {
+    // The body is not a <body> tag, it's a <frameset>.
+    return nsnull;
+  }
+
+  nsRefPtr<nsStyleContext> bodyContext;
+  bodyContext = styleSet->ResolveStyleFor(bodyElement, styleContext);
+  if (!bodyContext) {
+    return nsnull;
+  }
+
+  display = bodyContext->GetStyleDisplay();
+  if (display->mOverflow != NS_STYLE_OVERFLOW_VISIBLE) {
+    aPresContext->SetViewportOverflowOverride(display->mOverflow);
+    // tell caller we stole the overflow style from the body element
+    return bodyElement;
+  }
+
+  return nsnull;
+}
+
+/**
  * New one
  */
 nsresult
@@ -3331,13 +3410,19 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
 
   // --------- IF SCROLLABLE WRAP IN SCROLLFRAME --------
 
-  PRBool isScrollable = IsScrollable(aPresContext, display);
-  nsCOMPtr<nsIPrintPreviewContext> printPreviewContext(do_QueryInterface(aPresContext));
+  PRBool propagatedScrollToViewport =
+    PropagateScrollToViewport(aPresContext) == aDocElement;
+
+  // The document root should not be scrollable in any paginated context,
+  // even in print preview.
+  PRBool isScrollable = IsScrollable(aPresContext, display)
+    && !aPresContext->IsPaginated()
+    && !propagatedScrollToViewport;
 
   nsIFrame* scrollFrame = nsnull;
 
   // build a scrollframe
-  if ((!aPresContext->IsPaginated() || printPreviewContext) && isScrollable) {
+  if (isScrollable) {
     nsIFrame* newScrollFrame = nsnull;
     nsRefPtr<nsStyleContext> newContext;
 
@@ -3428,7 +3513,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
     InitAndRestoreFrame(aPresContext, aState, aDocElement, 
                         aParentFrame, styleContext, nsnull, contentFrame);
   }
-  
+
   // set the primary frame
   aState.mFrameManager->SetPrimaryFrameFor(aDocElement, contentFrame);
 
@@ -3675,55 +3760,11 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
     }
   }
 
-  // if scrolling is still supported, check for the style data on the HTML and BODY
-  // NOTE: the docElement in HTML will have a BODY child, and we have to check for
-  //       no scrolling on that element as well as the docElement. Outside of HTML,
-  //       we will not check the children of the docElement
-  if (isScrollable) {
-    NS_ASSERTION(!isXUL, "XUL documents should never be scrollable - see above");
-
-    // see if the style is overflow: hidden, first on the document element
-    nsRefPtr<nsStyleContext> styleContext;
-    styleContext = styleSet->ResolveStyleFor(aDocElement, nsnull);
-    if (styleContext) {
-      const nsStyleDisplay* display = styleContext->GetStyleDisplay();
-      if (display->mOverflow == NS_STYLE_OVERFLOW_HIDDEN || 
-          display->mOverflow == NS_STYLE_OVERFLOW_SCROLLBARS_NONE) {
-        isScrollable = PR_FALSE;
-      }
-    }
-    
-    // if still scrollable, check the BODY element, but only if we are in an HTML document
-    if (isScrollable && isHTML) {
-      nsCOMPtr<nsIDOMHTMLDocument> htmlDoc(do_QueryInterface(mDocument));
-      nsCOMPtr<nsIContent> bodyElement;
-
-      if (htmlDoc) {
-        nsCOMPtr<nsIDOMHTMLElement> body;
-        htmlDoc->GetBody(getter_AddRefs(body));
-
-        bodyElement = do_QueryInterface(body);
-
-        if (bodyElement &&
-            !bodyElement->GetNodeInfo()->Equals(nsHTMLAtoms::body)) {
-          // The body is not a <body> tag, it's a <frameset>.
-          bodyElement = nsnull;
-        }
-      }
-
-      if (bodyElement) {
-        nsRefPtr<nsStyleContext> bodyContext;
-        bodyContext = styleSet->ResolveStyleFor(bodyElement, styleContext);
-        if (bodyContext) {
-          const nsStyleDisplay* display = bodyContext->GetStyleDisplay();
-          if (display->mOverflow == NS_STYLE_OVERFLOW_HIDDEN || 
-              display->mOverflow == NS_STYLE_OVERFLOW_SCROLLBARS_NONE) {
-            isScrollable = PR_FALSE;
-          }
-        }
-      }
-    }
-  }
+  // We no longer need to do overflow propagation here. It's taken care of
+  // when we construct frames for the element whose overflow might be
+  // propagated
+  NS_ASSERTION(!isScrollable || !isXUL,
+               "XUL documents should never be scrollable - see above");
 
   nsIFrame* newFrame = rootFrame;
   nsRefPtr<nsStyleContext> rootPseudoStyle;
@@ -3753,7 +3794,13 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
                                                      nsCSSAnonBoxes::viewportScroll,
                                                      viewportPseudoStyle);
 
-
+      // Note that the viewport scrollframe is always built with
+      // overflow:auto style. This forces nsGfxScrollFrame to create
+      // anonymous content for both scrollbars. This is necessary even
+      // if the HTML or BODY elements are overriding the viewport
+      // scroll style to 'hidden' --- dynamic style changes might put
+      // scrollbars back on the viewport and we don't want to have to
+      // reframe the viewport to create the scrollbar content.
       nsIFrame* newScrollableFrame = nsnull;
 
       newFrame = nsnull;
@@ -6028,12 +6075,23 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
     }
   }
 
+  // If this is "body", try propagating its scroll style to the viewport
+  // Note that we need to do this even if the body is NOT scrollable;
+  // it might have dynamically changed from scrollable to not scrollable,
+  // and that might need to be propagated.
+  PRBool propagatedScrollToViewport = PR_FALSE;
+  if (aContent->GetNodeInfo()->Equals(nsHTMLAtoms::body)) {
+    propagatedScrollToViewport =
+      PropagateScrollToViewport(aPresContext) == aContent;
+  }
+
   // If the frame is a block-level frame and is scrollable, then wrap it
   // in a scroll frame.
   // XXX Ignore tables for the time being
   if (aDisplay->IsBlockLevel() &&
       aDisplay->mDisplay != NS_STYLE_DISPLAY_TABLE &&
-      IsScrollable(aPresContext, aDisplay)) {
+      IsScrollable(aPresContext, aDisplay) &&
+      !propagatedScrollToViewport) {
 
     if (!pseudoParent && !aState.mPseudoFrames.IsEmpty()) { // process pending pseudo frames
       ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems); 
@@ -8757,7 +8815,7 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
                                        nsIContent*            aChild,
                                        PRInt32                aIndexInContainer,
                                        nsILayoutHistoryState* aFrameState,
-                                       PRBool                 aInContentReplaced)
+                                       PRBool                 aInReinsertContent)
 {
   // XXXldb Do we need to re-resolve style to handle the CSS2 + combinator and
   // the :empty pseudo-class?
@@ -8882,7 +8940,7 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
       : FindNextAnonymousSibling(shell, mDocument, aContainer, aChild);
   }
 
-  PRBool handleSpecialFrame = IsFrameSpecial(parentFrame) && !aInContentReplaced;
+  PRBool handleSpecialFrame = IsFrameSpecial(parentFrame) && !aInReinsertContent;
 
   // Now, find the geometric parent so that we can handle
   // continuations properly. Use the prev sibling if we have it;
@@ -8912,7 +8970,7 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
   }
 
   // If the frame we are manipulating is a special frame then see if we need to reframe 
-  // NOTE: if we are in ContentReplaced, then don't reframe as we are already doing just that!
+  // NOTE: if we are in ReinsertContent, then don't reframe as we are already doing just that!
   if (handleSpecialFrame) {
     // a special inline frame has propagated some of its children upward to be children 
     // of the block and those frames may need to move around. Sometimes we may need to reframe
@@ -8997,8 +9055,7 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
         }
 #endif
         if (parentContainer) {
-          PRInt32 ix = parentContainer->IndexOf(blockContent);
-          ContentReplaced(aPresContext, parentContainer, blockContent, blockContent, ix);
+          ReinsertContent(aPresContext, parentContainer, blockContent);
         }
         else {
           // XXX uh oh. the block that needs reworking has no parent...
@@ -9116,19 +9173,18 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext*        aPresContext,
 }
 
 nsresult
-nsCSSFrameConstructor::ContentReplaced(nsIPresContext* aPresContext,
+nsCSSFrameConstructor::ReinsertContent(nsIPresContext* aPresContext,
                                        nsIContent*     aContainer,
-                                       nsIContent*     aOldChild,
-                                       nsIContent*     aNewChild,
-                                       PRInt32         aIndexInContainer)
+                                       nsIContent*     aChild)
 {
+  PRInt32 ix = aContainer->IndexOf(aChild);
   // XXX For now, do a brute force remove and insert.
   nsresult res = ContentRemoved(aPresContext, aContainer, 
-                                aOldChild, aIndexInContainer, PR_TRUE);
+                                aChild, ix, PR_TRUE);
 
   if (NS_SUCCEEDED(res)) {
     res = ContentInserted(aPresContext, aContainer,  nsnull,
-                          aNewChild, aIndexInContainer, nsnull, PR_TRUE);
+                          aChild, ix, nsnull, PR_TRUE);
   }
 
   return res;
@@ -9332,7 +9388,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
                                       nsIContent*     aContainer,
                                       nsIContent*     aChild,
                                       PRInt32         aIndexInContainer,
-                                      PRBool          aInContentReplaced)
+                                      PRBool          aInReinsertContent)
 {
   // XXXldb Do we need to re-resolve style to handle the CSS2 + combinator and
   // the :empty pseudo-class?
@@ -9395,9 +9451,9 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
     // If the frame we are manipulating is a special frame then do
     // something different instead of just inserting newly created
     // frames.
-    // NOTE: if we are in ContentReplaced, 
+    // NOTE: if we are in ReinsertContent, 
     //       then do not reframe as we are already doing just that!
-    if (IsFrameSpecial(childFrame) && !aInContentReplaced) {
+    if (IsFrameSpecial(childFrame) && !aInReinsertContent) {
       // We are pretty harsh here (and definitely not optimal) -- we
       // wipe out the entire containing block and recreate it from
       // scratch. The reason is that because we know that a special
@@ -9853,7 +9909,7 @@ nsCSSFrameConstructor::CharacterDataChanged(nsIPresContext* aPresContext,
     // first-letter text but isn't currently).
     //
     // To deal with both of these we make a simple change: map a
-    // CharacterDataChanged into a ContentReplaced when we are changing text
+    // CharacterDataChanged into a ReinsertContent when we are changing text
     // that is part of a first-letter situation.
     PRBool doCharacterDataChanged = PR_TRUE;
     nsCOMPtr<nsITextContent> textContent(do_QueryInterface(aContent));
@@ -9871,10 +9927,8 @@ nsCSSFrameConstructor::CharacterDataChanged(nsIPresContext* aPresContext,
           // repair the blocks frame structure properly.
           nsCOMPtr<nsIContent> container = aContent->GetParent();
           if (container) {
-            PRInt32 ix = container->IndexOf(aContent);
             doCharacterDataChanged = PR_FALSE;
-            rv = ContentReplaced(aPresContext, container,
-                                 aContent, aContent, ix);
+            rv = ReinsertContent(aPresContext, container, aContent);
           }
         }
       }
@@ -10195,6 +10249,24 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
   }
 
   return result;
+}
+
+void
+nsCSSFrameConstructor::EndUpdate()
+{
+  if (--mUpdateCount == 0) {
+    if (mQuotesDirty) {
+      mQuoteList.RecalcAll();
+      mQuotesDirty = PR_FALSE;
+    }
+  }
+}
+
+void
+nsCSSFrameConstructor::WillDestroyFrameTree()
+{
+  // Prevent frame tree destruction from being O(N^2)
+  mQuoteList.Clear();
 }
 
 //STATIC
@@ -13038,8 +13110,7 @@ nsCSSFrameConstructor::WipeContainingBlock(nsIPresContext* aPresContext,
       }
 #endif
       if (parentContainer) {
-        PRInt32 ix = parentContainer->IndexOf(aBlockContent);
-        ContentReplaced(aPresContext, parentContainer, aBlockContent, aBlockContent, ix);
+        ReinsertContent(aPresContext, parentContainer, aBlockContent);
       }
       else {
         NS_ERROR("uh oh. the block we need to reframe has no parent!");
@@ -13360,8 +13431,7 @@ nsCSSFrameConstructor::ReframeContainingBlock(nsIPresContext* aPresContext, nsIF
                  NS_STATIC_CAST(void*, parentContainer));
         }
 #endif
-        PRInt32 ix = parentContainer->IndexOf(blockContent);
-        return ContentReplaced(aPresContext, parentContainer, blockContent, blockContent, ix);
+        return ReinsertContent(aPresContext, parentContainer, blockContent);
       }
     }
   }

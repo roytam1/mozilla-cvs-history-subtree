@@ -2336,7 +2336,7 @@ dnl Checks for library functions.
 dnl ========================================================
 AC_PROG_GCC_TRADITIONAL
 AC_FUNC_MEMCMP
-AC_CHECK_FUNCS(random strerror lchown fchmod snprintf statvfs memmove rint)
+AC_CHECK_FUNCS(random strerror lchown fchmod snprintf statvfs memmove rint stat64 lstat64)
 AC_CHECK_FUNCS(nl_langinfo flockfile getpagesize)
 
 dnl localtime_r and strtok_r are only present on MacOS version 10.2 and higher
@@ -3193,7 +3193,6 @@ gtk2)
 
 xlib)
 	MOZ_ENABLE_XLIB=1
-    MOZ_ENABLE_XREMOTE=1
 	TK_CFLAGS='$(MOZ_XLIB_CFLAGS)'
 	TK_LIBS='$(MOZ_XLIB_LDFLAGS)'
 	AC_DEFINE(MOZ_WIDGET_XLIB)
@@ -3406,18 +3405,24 @@ AC_SUBST(MOZ_ENABLE_FREETYPE2)
 dnl ========================================================
 dnl = Xft
 dnl ========================================================
-MOZ_ARG_ENABLE_BOOL(xft,
-[  --enable-xft            Enable Xft support ],
-    MOZ_ENABLE_XFT=1,
-    MOZ_ENABLE_XFT= )
+if test "$MOZ_ENABLE_GTK2"; then
+    MOZ_ENABLE_XFT=1
+fi
+
+MOZ_ARG_DISABLE_BOOL(xft,
+[  --disable-xft           Disable Xft support ],
+    MOZ_ENABLE_XFT=,
+    MOZ_ENABLE_XFT=1)
+
+if test "$MOZ_ENABLE_XFT" && test -z "$MOZ_ENABLE_GTK2"; then
+    AC_MSG_ERROR([Cannot enable XFT support for non-GTK2 toolkits.])
+fi
 
 if test "$MOZ_ENABLE_XFT"
 then
     AC_DEFINE(MOZ_ENABLE_XFT)
     PKG_CHECK_MODULES(MOZ_XFT, xft)
-    if test "$MOZ_ENABLE_GTK2"; then
-        PKG_CHECK_MODULES(_PANGOCHK, pango >= 1.1.0)
-    fi
+    PKG_CHECK_MODULES(_PANGOCHK, pango >= 1.1.0)
 fi
 
 AC_SUBST(MOZ_ENABLE_XFT)
@@ -3701,7 +3706,7 @@ dnl ========================================================
 
 MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help p3p pref transformiix venkman inspector irc universalchardet typeaheadfind webservices spellcheck gnomevfs negotiateauth"
 
-MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm datetime finger cview layout-debug tasks"
+MOZ_EXTENSIONS_ALL="$MOZ_EXTENSIONS_DEFAULT xmlterm datetime finger cview layout-debug tasks sql"
 
 MOZ_ARG_ENABLE_STRING(extensions,
 [  --enable-extensions     Enable extensions],

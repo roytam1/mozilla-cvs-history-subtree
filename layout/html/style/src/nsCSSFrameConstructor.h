@@ -40,6 +40,7 @@
 #include "nsCOMPtr.h"
 #include "nsILayoutHistoryState.h"
 #include "nsIXBLService.h"
+#include "nsQuoteList.h"
 
 class nsIDocument;
 struct nsFrameItems;
@@ -101,19 +102,13 @@ public:
                            nsIContent*            aChild,
                            PRInt32                aIndexInContainer,
                            nsILayoutHistoryState* aFrameState,
-                           PRBool                 aInContentReplaced);
-
-  nsresult ContentReplaced(nsIPresContext* aPresContext,
-                           nsIContent*     aContainer,
-                           nsIContent*     aOldChild,
-                           nsIContent*     aNewChild,
-                           PRInt32         aIndexInContainer);
+                           PRBool                 aInReinsertContent);
 
   nsresult ContentRemoved(nsIPresContext* aPresContext,
                           nsIContent*     aContainer,
                           nsIContent*     aChild,
                           PRInt32         aIndexInContainer,
-                          PRBool          aInContentReplaced);
+                          PRBool          aInReinsertContent);
 
   nsresult CharacterDataChanged(nsIPresContext* aPresContext,
                                 nsIContent*     aContent,
@@ -124,11 +119,18 @@ public:
                                 nsIContent*     aContent2,
                                 PRInt32         aStateMask);
 
+  void GeneratedContentFrameRemoved(nsIFrame* aFrame);
+
   nsresult AttributeChanged(nsIPresContext* aPresContext,
                             nsIContent*     aContent,
                             PRInt32         aNameSpaceID,
                             nsIAtom*        aAttribute,
                             PRInt32         aModType);
+
+  void BeginUpdate() { ++mUpdateCount; }
+  void EndUpdate();
+
+  void WillDestroyFrameTree();
 
   nsresult ProcessRestyledFrames(nsStyleChangeList& aRestyleArray, 
                                  nsIPresContext*    aPresContext);
@@ -173,7 +175,11 @@ public:
                                          nsIFrame*              aRemovedFrame,
                                          nsILayoutHistoryState* aFrameState);
 
-protected:
+private:
+
+  nsresult ReinsertContent(nsIPresContext* aPresContext,
+                           nsIContent*     aContainer,
+                           nsIContent*     aChild);
 
   nsresult ConstructPageFrame(nsIPresShell*   aPresShell, 
                               nsIPresContext* aPresContext,
@@ -679,6 +685,7 @@ protected:
   nsIFrame* GetFloatContainingBlock(nsIPresContext* aPresContext,
                                     nsIFrame*       aFrame);
 
+  nsIContent* PropagateScrollToViewport(nsIPresContext* aPresContext);
 
   // Build a scroll frame: 
   //  Calls BeginBuildingScrollFrame, InitAndRestoreFrame, and then FinishBuildingScrollFrame
@@ -1028,13 +1035,24 @@ protected:
                         PRUint8                aSiblingDisplay,
                         nsIContent&            aContent,
                         PRUint8&               aDisplay);
-protected:
+
+  void QuotesDirty() {
+    if (mUpdateCount != 0)
+      mQuotesDirty = PR_TRUE;
+    else
+      mQuoteList.RecalcAll();
+  }
+
+private:
   nsIDocument*        mDocument;
 
   nsIFrame*           mInitialContainingBlock;
   nsIFrame*           mFixedContainingBlock;
   nsIFrame*           mDocElementContainingBlock;
   nsIFrame*           mGfxScrollFrame;
+  nsQuoteList         mQuoteList;
+  PRUint16            mUpdateCount;
+  PRPackedBool        mQuotesDirty;
 
   nsCOMPtr<nsILayoutHistoryState> mTempFrameTreeState;
 
