@@ -95,10 +95,6 @@ PRInt32 IsFileLocal(HANDLE hFile);
 
 static PRInt32 _md_MakeNonblock(HANDLE);
 
-/* The _nt_use_async flag is used to prevent nspr from using any async io.
- * this is a temporary hack.  Don't learn to rely on it.
- */
-static int _nt_use_async = 1;
 PRInt32 _nt_nonblock_accept(PRFileDesc *fd, struct sockaddr_in *addr, int *len, PRIntervalTime);
 PRInt32 _nt_nonblock_recv(PRFileDesc *fd, char *buf, int len, PRIntervalTime);
 PRInt32 _nt_nonblock_send(PRFileDesc *fd, char *buf, int len, PRIntervalTime);
@@ -1143,7 +1139,7 @@ _PR_MD_CONNECT(PRFileDesc *fd, const PRNetAddr *addr, PRUint32 addrlen,
     PRThread *cThread;
     struct connect_data_s cd;
 
-    if (!_nt_use_async || fd->secret->nonblocking) {
+    if (fd->secret->nonblocking) {
         PRInt32 rv;
         fd_set wd;
         struct timeval tv, *tvp;
@@ -1310,7 +1306,7 @@ _PR_MD_FAST_ACCEPT(PRFileDesc *fd, PRNetAddr *raddr, PRUint32 *rlen,
     PRUint32 llen, err;
     int rv;
 
-    if (!_nt_use_async || fd->secret->nonblocking || fd->secret->inheritable) {
+    if (fd->secret->nonblocking || fd->secret->inheritable) {
         if (!fd->secret->md.io_model_committed) {
             rv = _md_MakeNonblock((HANDLE)osfd);
             PR_ASSERT(0 != rv);
@@ -1322,7 +1318,7 @@ _PR_MD_FAST_ACCEPT(PRFileDesc *fd, PRNetAddr *raddr, PRUint32 *rlen,
          * the listening socket.
          */
         accept_sock = _nt_nonblock_accept(fd, (struct sockaddr_in *)raddr, rlen, timeout);
-        if (_nt_use_async && !fd->secret->nonblocking) {
+        if (!fd->secret->nonblocking) {
             u_long zero = 0;
 
             rv = ioctlsocket(accept_sock, FIONBIO, &zero);
@@ -1456,21 +1452,6 @@ _PR_MD_FAST_ACCEPT_READ(PRFileDesc *sd, PRInt32 *newSock, PRNetAddr **raddr,
     int rv;
     PRBool isConnected;
     PRBool madeCallback = PR_FALSE;
-
-    if (!_nt_use_async) {
-        PRFileDesc *nd;
-        bytes = _PR_EmulateAcceptRead(sd, &nd, raddr, buf, amount, timeout);
-        if (bytes != -1) {
-            /*
-             * This part is the same as SocketClose(nd), except
-             * that we don't close the osfd.
-             */
-            PR_ASSERT(nd->secret->state == _PR_FILEDESC_OPEN);
-            *newSock = nd->secret->md.osfd;
-            PR_FreeFileDesc(nd);
-        }
-        return bytes;
-    }
 
     if (me->io_suspended) {
         PR_SetError(PR_INVALID_STATE_ERROR, 0);
@@ -1636,15 +1617,6 @@ _PR_MD_SENDFILE(PRFileDesc *sock, PRSendFileData *sfd,
     PRInt32 tflags;
     int rv, err;
 
-    if (!_nt_use_async) {
-        if (!sock->secret->md.io_model_committed) {
-            rv = _md_MakeNonblock((HANDLE)sock->secret->md.osfd);
-            PR_ASSERT(0 != rv);
-            sock->secret->md.io_model_committed = PR_TRUE;
-        }
-        return _PR_EmulateSendFile(sock, sfd, flags, timeout);
-    }
-
     if (me->io_suspended) {
         PR_SetError(PR_INVALID_STATE_ERROR, 0);
         return -1;
@@ -1751,7 +1723,7 @@ _PR_MD_RECV(PRFileDesc *fd, void *buf, PRInt32 amount, PRIntn flags,
     int bytes;
     int rv, err;
 
-    if (!_nt_use_async || fd->secret->nonblocking || fd->secret->inheritable) {
+    if (fd->secret->nonblocking || fd->secret->inheritable) {
         if (!fd->secret->md.io_model_committed) {
             rv = _md_MakeNonblock((HANDLE)osfd);
             PR_ASSERT(0 != rv);
@@ -1850,7 +1822,7 @@ _PR_MD_SEND(PRFileDesc *fd, const void *buf, PRInt32 amount, PRIntn flags,
     int bytes;
     int rv, err;
 
-    if (!_nt_use_async || fd->secret->nonblocking || fd->secret->inheritable) {
+    if (fd->secret->nonblocking || fd->secret->inheritable) {
         if (!fd->secret->md.io_model_committed) {
             rv = _md_MakeNonblock((HANDLE)osfd);
             PR_ASSERT(0 != rv);
@@ -1948,7 +1920,7 @@ _PR_MD_SENDTO(PRFileDesc *fd, const void *buf, PRInt32 amount, PRIntn flags,
         PR_ASSERT(0 != rv);
         fd->secret->md.io_model_committed = PR_TRUE;
     }
-    if (_nt_use_async && !fd->secret->nonblocking && !fd->secret->inheritable)
+    if (!fd->secret->nonblocking && !fd->secret->inheritable)
         return pt_SendTo(osfd, buf, amount, flags, addr, addrlen, timeout);
     else
         return _nt_nonblock_sendto(fd, buf, amount, (struct sockaddr *)addr, addrlen, timeout);
@@ -1966,7 +1938,7 @@ _PR_MD_RECVFROM(PRFileDesc *fd, void *buf, PRInt32 amount, PRIntn flags,
         PR_ASSERT(0 != rv);
         fd->secret->md.io_model_committed = PR_TRUE;
     }
-    if (_nt_use_async && !fd->secret->nonblocking && !fd->secret->inheritable)
+    if (!fd->secret->nonblocking && !fd->secret->inheritable)
         return pt_RecvFrom(osfd, buf, amount, flags, addr, addrlen, timeout);
     else
         return _nt_nonblock_recvfrom(fd, buf, amount, (struct sockaddr *)addr, addrlen, timeout);
@@ -1981,7 +1953,7 @@ _PR_MD_WRITEV(PRFileDesc *fd, const PRIOVec *iov, PRInt32 iov_size, PRIntervalTi
     int sent = 0;
     int rv;
 
-    if (!_nt_use_async || fd->secret->nonblocking || fd->secret->inheritable) {
+    if (fd->secret->nonblocking || fd->secret->inheritable) {
         if (!fd->secret->md.io_model_committed) {
             rv = _md_MakeNonblock((HANDLE)osfd);
             PR_ASSERT(0 != rv);
@@ -2131,79 +2103,40 @@ _PR_MD_OPEN(const char *name, PRIntn osflags, PRIntn mode)
     
     if (osflags & PR_SYNC) flag6 = FILE_FLAG_WRITE_THROUGH;
  
-    if (_nt_use_async)
-    {
-        if (osflags & PR_RDONLY || osflags & PR_RDWR) access |= GENERIC_READ;
-        if (osflags & PR_WRONLY || osflags & PR_RDWR) access |= GENERIC_WRITE;
+    if (osflags & PR_RDONLY || osflags & PR_RDWR) access |= GENERIC_READ;
+    if (osflags & PR_WRONLY || osflags & PR_RDWR) access |= GENERIC_WRITE;
 
-        if ( osflags & PR_CREATE_FILE && osflags & PR_EXCL )
-            flags = CREATE_NEW;
-        else if (osflags & PR_CREATE_FILE)
-            flags = (0 != (osflags & PR_TRUNCATE)) ? CREATE_ALWAYS : OPEN_ALWAYS;
-        else if (osflags & PR_TRUNCATE) flags = TRUNCATE_EXISTING;
-        else flags = OPEN_EXISTING;
+    if ( osflags & PR_CREATE_FILE && osflags & PR_EXCL )
+        flags = CREATE_NEW;
+    else if (osflags & PR_CREATE_FILE)
+        flags = (0 != (osflags & PR_TRUNCATE)) ? CREATE_ALWAYS : OPEN_ALWAYS;
+    else if (osflags & PR_TRUNCATE) flags = TRUNCATE_EXISTING;
+    else flags = OPEN_EXISTING;
 
-        
-        flag6 |= FILE_FLAG_OVERLAPPED;
 
-        file = CreateFile(name, 
-                          access, 
-                          FILE_SHARE_READ|FILE_SHARE_WRITE,
-                          NULL,
-                          flags, 
-                          flag6,
-                          NULL);
-        if (file == INVALID_HANDLE_VALUE) {
-            _PR_MD_MAP_OPEN_ERROR(GetLastError());
+    flag6 |= FILE_FLAG_OVERLAPPED;
+
+    file = CreateFile(name, 
+                      access, 
+                      FILE_SHARE_READ|FILE_SHARE_WRITE,
+                      NULL,
+                      flags, 
+                      flag6,
+                      NULL);
+    if (file == INVALID_HANDLE_VALUE) {
+        _PR_MD_MAP_OPEN_ERROR(GetLastError());
+        return -1;
+    }
+
+    if (osflags & PR_APPEND) {
+        if ( SetFilePointer(file, 0, 0, FILE_END) == 0xFFFFFFFF ) {
+            _PR_MD_MAP_LSEEK_ERROR(GetLastError());
+            CloseHandle(file);
             return -1;
         }
-
-        if (osflags & PR_APPEND) {
-            if ( SetFilePointer(file, 0, 0, FILE_END) == 0xFFFFFFFF ) {
-                _PR_MD_MAP_LSEEK_ERROR(GetLastError());
-                CloseHandle(file);
-                return -1;
-            }
-        }
-
-        return (PRInt32)file;
     }
-    else
-    {
-   
-        if (osflags & PR_RDONLY || osflags & PR_RDWR)
-            access |= GENERIC_READ;
-        if (osflags & PR_WRONLY || osflags & PR_RDWR)
-            access |= GENERIC_WRITE;
 
-        if ( osflags & PR_CREATE_FILE && osflags & PR_EXCL )
-            flags = CREATE_NEW;
-        else if (osflags & PR_CREATE_FILE) {
-            if (osflags & PR_TRUNCATE)
-                flags = CREATE_ALWAYS;
-            else
-                flags = OPEN_ALWAYS;
-        } else {
-            if (osflags & PR_TRUNCATE)
-                flags = TRUNCATE_EXISTING;
-            else
-                flags = OPEN_EXISTING;
-        }
-
-        file = CreateFile(name,
-                          access,
-                          FILE_SHARE_READ|FILE_SHARE_WRITE,
-                          NULL,
-                          flags,
-                          flag6,
-                          NULL);
-        if (file == INVALID_HANDLE_VALUE) {
-            _PR_MD_MAP_OPEN_ERROR(GetLastError());
-            return -1; 
-        }
-
-        return (PRInt32)file;
-    }
+    return (PRInt32)file;
 }
 
 PRInt32
@@ -2218,6 +2151,21 @@ _PR_MD_OPEN_FILE(const char *name, PRIntn osflags, PRIntn mode)
     PSECURITY_DESCRIPTOR pSD = NULL;
     PACL pACL = NULL;
 
+    if (osflags & PR_SYNC) flag6 = FILE_FLAG_WRITE_THROUGH;
+ 
+    if (osflags & PR_RDONLY || osflags & PR_RDWR) access |= GENERIC_READ;
+    if (osflags & PR_WRONLY || osflags & PR_RDWR) access |= GENERIC_WRITE;
+
+    if ( osflags & PR_CREATE_FILE && osflags & PR_EXCL )
+        flags = CREATE_NEW;
+    else if (osflags & PR_CREATE_FILE)
+        flags = (0 != (osflags & PR_TRUNCATE)) ? CREATE_ALWAYS : OPEN_ALWAYS;
+    else if (osflags & PR_TRUNCATE) flags = TRUNCATE_EXISTING;
+    else flags = OPEN_EXISTING;
+
+
+    flag6 |= FILE_FLAG_OVERLAPPED;
+
     if (osflags & PR_CREATE_FILE) {
         if (_PR_NT_MakeSecurityDescriptorACL(mode, fileAccessTable,
                 &pSD, &pACL) == PR_SUCCESS) {
@@ -2227,82 +2175,29 @@ _PR_MD_OPEN_FILE(const char *name, PRIntn osflags, PRIntn mode)
             lpSA = &sa;
         }
     }
-    
-    if (osflags & PR_SYNC) flag6 = FILE_FLAG_WRITE_THROUGH;
- 
-    if (_nt_use_async)
-    {
-        if (osflags & PR_RDONLY || osflags & PR_RDWR) access |= GENERIC_READ;
-        if (osflags & PR_WRONLY || osflags & PR_RDWR) access |= GENERIC_WRITE;
-
-        if ( osflags & PR_CREATE_FILE && osflags & PR_EXCL )
-            flags = CREATE_NEW;
-        else if (osflags & PR_CREATE_FILE)
-            flags = (0 != (osflags & PR_TRUNCATE)) ? CREATE_ALWAYS : OPEN_ALWAYS;
-        else if (osflags & PR_TRUNCATE) flags = TRUNCATE_EXISTING;
-        else flags = OPEN_EXISTING;
-
-        
-        flag6 |= FILE_FLAG_OVERLAPPED;
-
-        file = CreateFile(name, 
-                          access, 
-                          FILE_SHARE_READ|FILE_SHARE_WRITE,
-                          lpSA,
-                          flags, 
-                          flag6,
-                          NULL);
-        if (file == INVALID_HANDLE_VALUE) {
-            _PR_MD_MAP_OPEN_ERROR(GetLastError());
-            return -1;
-        }
-
-        if (osflags & PR_APPEND) {
-            if ( SetFilePointer(file, 0, 0, FILE_END) == 0xFFFFFFFF ) {
-                _PR_MD_MAP_LSEEK_ERROR(GetLastError());
-                CloseHandle(file);
-                return -1;
-            }
-        }
-    }
-    else
-    {
-   
-        if (osflags & PR_RDONLY || osflags & PR_RDWR)
-            access |= GENERIC_READ;
-        if (osflags & PR_WRONLY || osflags & PR_RDWR)
-            access |= GENERIC_WRITE;
-
-        if ( osflags & PR_CREATE_FILE && osflags & PR_EXCL )
-            flags = CREATE_NEW;
-        else if (osflags & PR_CREATE_FILE) {
-            if (osflags & PR_TRUNCATE)
-                flags = CREATE_ALWAYS;
-            else
-                flags = OPEN_ALWAYS;
-        } else {
-            if (osflags & PR_TRUNCATE)
-                flags = TRUNCATE_EXISTING;
-            else
-                flags = OPEN_EXISTING;
-        }
-
-        file = CreateFile(name,
-                          access,
-                          FILE_SHARE_READ|FILE_SHARE_WRITE,
-                          &sa,
-                          flags,
-                          flag6,
-                          NULL);
-        if (file == INVALID_HANDLE_VALUE) {
-            _PR_MD_MAP_OPEN_ERROR(GetLastError());
-            return -1; 
-        }
-    }
-
+    file = CreateFile(name, 
+                      access, 
+                      FILE_SHARE_READ|FILE_SHARE_WRITE,
+                      lpSA,
+                      flags, 
+                      flag6,
+                      NULL);
     if (lpSA != NULL) {
         _PR_NT_FreeSecurityDescriptorACL(pSD, pACL);
     }
+    if (file == INVALID_HANDLE_VALUE) {
+        _PR_MD_MAP_OPEN_ERROR(GetLastError());
+        return -1;
+    }
+
+    if (osflags & PR_APPEND) {
+        if ( SetFilePointer(file, 0, 0, FILE_END) == 0xFFFFFFFF ) {
+            _PR_MD_MAP_LSEEK_ERROR(GetLastError());
+            CloseHandle(file);
+            return -1;
+        }
+    }
+
     return (PRInt32)file;
 }
 
@@ -2315,7 +2210,7 @@ _PR_MD_READ(PRFileDesc *fd, void *buf, PRInt32 len)
     LONG hiOffset = 0;
     LONG loOffset;
 
-    if (_nt_use_async && !fd->secret->md.sync_file_io) {
+    if (!fd->secret->md.sync_file_io) {
         PRThread *me = _PR_MD_CURRENT_THREAD();
 
         if (me->io_suspended) {
@@ -2466,7 +2361,7 @@ _PR_MD_WRITE(PRFileDesc *fd, void *buf, PRInt32 len)
     LONG hiOffset = 0;
     LONG loOffset;
 
-    if (_nt_use_async && !fd->secret->md.sync_file_io) {
+    if (!fd->secret->md.sync_file_io) {
         PRThread *me = _PR_MD_CURRENT_THREAD();
 
         if (me->io_suspended) {
@@ -2713,62 +2608,50 @@ PRInt32
 _PR_MD_CLOSE(PRInt32 osfd, PRBool socket)
 {
     PRInt32 rv;
-    if (_nt_use_async) {
-        PRThread *me = _PR_MD_CURRENT_THREAD();
+    PRThread *me = _PR_MD_CURRENT_THREAD();
 
-        if (socket)  {
-            rv = closesocket((SOCKET)osfd);
-			if (rv < 0)
-				_PR_MD_MAP_CLOSE_ERROR(WSAGetLastError());
-        } else {
-            rv = CloseHandle((HANDLE)osfd)?0:-1;
-			if (rv < 0)
-				_PR_MD_MAP_CLOSE_ERROR(GetLastError());
-		}
+    if (socket)  {
+        rv = closesocket((SOCKET)osfd);
+        if (rv < 0)
+            _PR_MD_MAP_CLOSE_ERROR(WSAGetLastError());
+    } else {
+        rv = CloseHandle((HANDLE)osfd)?0:-1;
+        if (rv < 0)
+            _PR_MD_MAP_CLOSE_ERROR(GetLastError());
+    }
 
-        if (rv == 0 && me->io_suspended) {
-            if (me->io_fd == osfd) {
-                PRBool fWait;
+    if (rv == 0 && me->io_suspended) {
+        if (me->io_fd == osfd) {
+            PRBool fWait;
 
-                _PR_THREAD_LOCK(me);
-                me->state = _PR_IO_WAIT;
-                /* The IO could have completed on another thread just after
-                 * calling closesocket while the io_suspended flag was true.  
-                 * So we now grab the lock to do a safe check on io_pending to
-                 * see if we need to wait or not.
-                 */
-                fWait = me->io_pending;
-                me->io_suspended = PR_FALSE;
-                me->md.interrupt_disabled = PR_TRUE;
-                _PR_THREAD_UNLOCK(me);
+            _PR_THREAD_LOCK(me);
+            me->state = _PR_IO_WAIT;
+            /* The IO could have completed on another thread just after
+             * calling closesocket while the io_suspended flag was true.  
+             * So we now grab the lock to do a safe check on io_pending to
+             * see if we need to wait or not.
+             */
+            fWait = me->io_pending;
+            me->io_suspended = PR_FALSE;
+            me->md.interrupt_disabled = PR_TRUE;
+            _PR_THREAD_UNLOCK(me);
 
-                if (fWait)
-                    _NT_IO_WAIT(me, PR_INTERVAL_NO_TIMEOUT);
-                PR_ASSERT(me->io_suspended ==  PR_FALSE);
-                PR_ASSERT(me->io_pending ==  PR_FALSE);
-				/*
-				 * I/O operation is no longer pending; the thread can now
-				 * run on any cpu
-				 */
-                _PR_THREAD_LOCK(me);
-                me->md.interrupt_disabled = PR_FALSE;
-				me->md.thr_bound_cpu = NULL;
-                me->io_suspended = PR_FALSE;
-                me->io_pending = PR_FALSE;
-                me->state = _PR_RUNNING;
-                _PR_THREAD_UNLOCK(me);
-            }
+            if (fWait)
+                _NT_IO_WAIT(me, PR_INTERVAL_NO_TIMEOUT);
+            PR_ASSERT(me->io_suspended ==  PR_FALSE);
+            PR_ASSERT(me->io_pending ==  PR_FALSE);
+            /*
+             * I/O operation is no longer pending; the thread can now
+             * run on any cpu
+             */
+            _PR_THREAD_LOCK(me);
+            me->md.interrupt_disabled = PR_FALSE;
+            me->md.thr_bound_cpu = NULL;
+            me->io_suspended = PR_FALSE;
+            me->io_pending = PR_FALSE;
+            me->state = _PR_RUNNING;
+            _PR_THREAD_UNLOCK(me);
         }
-    } else { 
-        if (socket) {
-            rv = closesocket((SOCKET)osfd);
-			if (rv == -1)
-				_PR_MD_MAP_CLOSE_ERROR(WSAGetLastError());
-        } else {
-            rv = CloseHandle((HANDLE)osfd)?0:-1;
-			if (rv == -1)
-				_PR_MD_MAP_CLOSE_ERROR(GetLastError());
-		}
     }
     return rv;
 }
@@ -3821,11 +3704,6 @@ PRInt32 IsFileLocal(HANDLE hFile)
    return _PR_REMOTE_FILE;
 }
 #endif /* _NEED_351_FILE_LOCKING_HACK */
-
-PR_IMPLEMENT(void) PR_NT_UseNonblock()
-{
-    _nt_use_async = 0;
-}
 
 PR_IMPLEMENT(PRStatus) PR_NT_CancelIo(PRFileDesc *fd)
 {
