@@ -416,8 +416,7 @@ LINK_LIBS= \
  $(RAPTOR_DIST)\lib\raptorbase.lib	\
  $(RAPTOR_DIST)\lib\raptorgfx.lib	\
  $(RAPTOR_DIST)\lib\raptorhtml.lib	\
- $(RAPTOR_DIST)\lib\util.lib        \
- $(RAPTOR_DIST)\lib\jsdom.lib       \
+ $(RAPTOR_DIST)\lib\raptorweb.lib	\
 !endif
 !if "$(WINOS)" == "WIN95"
     $(DIST)\lib\xpcom$(MOZ_BITS).lib
@@ -1799,7 +1798,7 @@ install:    \
 !IF EXIST($(DIST)\bin\libreg$(MOZ_BITS).dll)
 	    $(OUTDIR)\libreg$(MOZ_BITS).dll    \
 !ENDIF
-### Copy Raptor DLLs
+### Copy Raptor DLLs and resources
 !ifdef MOZ_RAPTOR
 !IF EXIST($(RAPTOR_DIST)\bin\raptorbase.dll)
 	    $(OUTDIR)\raptorbase.dll    \
@@ -1816,6 +1815,15 @@ install:    \
 !IF EXIST($(RAPTOR_DIST)\bin\raptorhtmlpars.dll)
 	    $(OUTDIR)\raptorhtmlpars.dll    \
 !ENDIF
+!IF EXIST($(RAPTOR_DIST)\bin\raptorhtmlpars.dll)
+	    $(OUTDIR)\raptorwidget.dll    \
+!ENDIF
+!IF EXIST($(RAPTOR_DIST)\bin\raptorhtmlpars.dll)
+	    $(OUTDIR)\raptorgfxwin.dll    \
+!ENDIF
+!IF EXIST($(RAPTOR_DIST)\bin\raptorhtmlpars.dll)
+	    $(OUTDIR)\raptorview.dll    \
+!ENDIF
 !IF EXIST($(RAPTOR_DIST)\bin\jsdom.dll)
 	    $(OUTDIR)\jsdom.dll    \
 !ENDIF
@@ -1824,6 +1832,9 @@ install:    \
 !ENDIF
 !IF EXIST($(RAPTOR_DIST)\bin\netlib.dll)
 	    $(OUTDIR)\netlib.dll    \
+!ENDIF
+!IF EXIST($(RAPTOR_DIST)\bin\res)
+	    $(OUTDIR)\res    \
 !ENDIF
 !else
 ### End Raptor DLLs
@@ -2131,7 +2142,7 @@ $(OUTDIR)\mnrc$(MOZ_BITS).dll:   $(DIST)\bin\mnrc$(MOZ_BITS).dll
 $(OUTDIR)\xpstrdll.dll:   $(DIST)\bin\xpstrdll.dll
     @IF EXIST $(DIST)\bin\$(@F) copy $(DIST)\bin\$(@F) $@
 
-### Copy Raptor dlls
+### Copy Raptor dlls and resources
 !ifdef MOZ_RAPTOR
 $(OUTDIR)\raptorbase.dll:   $(RAPTOR_DIST)\bin\raptorbase.dll
     @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
@@ -2143,11 +2154,21 @@ $(OUTDIR)\raptorweb.dll:   $(RAPTOR_DIST)\bin\raptorweb.dll
     @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
 $(OUTDIR)\raptorhtmlpars.dll:   $(RAPTOR_DIST)\bin\raptorhtmlpars.dll
     @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
+$(OUTDIR)\raptorwidget.dll:   $(RAPTOR_DIST)\bin\raptorwidget.dll
+    @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
+$(OUTDIR)\raptorgfxwin.dll:   $(RAPTOR_DIST)\bin\raptorgfxwin.dll
+    @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
+$(OUTDIR)\raptorview.dll:   $(RAPTOR_DIST)\bin\raptorview.dll
+    @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
 $(OUTDIR)\jsdom.dll:   $(RAPTOR_DIST)\bin\jsdom.dll
     @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
 $(OUTDIR)\img$(MOZ_BITS)$(VERSION_NUMBER).dll:   $(RAPTOR_DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll
     @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
 $(OUTDIR)\netlib.dll:   $(RAPTOR_DIST)\bin\netlib.dll
+    @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
+$(OUTDIR)\res:   $(RAPTOR_DIST)\bin\res
+	-mkdir $(OUTDIR)\res
+	-xcopy /s $(RAPTOR_DIST)\bin\res $(OUTDIR)\res
     @IF EXIST $(RAPTOR_DIST)\bin\$(@F) copy $(RAPTOR_DIST)\bin\$(@F) $@
 !endif
 
