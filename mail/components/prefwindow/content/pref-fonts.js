@@ -451,7 +451,7 @@ function saveFontPrefs()
                     try
                       {
                         // ClearUserPref throws an exception...
-                        pref.ClearUserPref( fontPrefString );
+                        pref.clearUserPref( fontPrefString );
                       }
                     catch(e)
                       {
