@@ -40,4 +40,4 @@ MOD_NAME = nspr20
 MOD_VERSION = 4
 MOD_MINOR = 1
 MOD_PATCH = 6
-MOD_BETA = beta
+MOD_BETA = rtm
