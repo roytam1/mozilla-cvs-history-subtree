@@ -293,7 +293,7 @@ nsMacWindow::~nsMacWindow()
   	  PhantomScrollbarData* data = 
   	    NS_REINTERPRET_CAST(PhantomScrollbarData*, ::GetControlReference(mPhantomScrollbar));
   	  delete data;
-  	  ::SetControlReference(mPhantomScrollbar, (long)OL);
+  	  ::SetControlReference(mPhantomScrollbar, (long)0L);
   	}
   	
 		if (mWindowMadeHere)
