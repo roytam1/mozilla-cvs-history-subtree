@@ -19,7 +19,8 @@ canvasElement.mergeTemplate(XTFXMLVisual);
 canvasElement.addProtoObj("_buildVisualContent",
   function(builder) {
     builder.setElementNamespace(SVG_NS);
-    this._svg = builder.beginElement("svg");
+    builder.beginElement("svg");
+    this._svg = builder.current;
       builder.attribs({height:"1000px", width:"1000px"});
       builder.beginElement("rect");
         builder.attribs({style:"fill:#ddeeff;", width:"100%", height:"100%"});        
