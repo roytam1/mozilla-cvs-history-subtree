@@ -40,6 +40,7 @@
 #include "nsIMsgCompFields.h"
 #include "nsMsgCompCID.h"
 #include "nsIStreamConverter.h"
+#include "nsIMsgComposeService.h"
 
 //
 // Header strings...
@@ -59,15 +60,18 @@ int                 mime_decompose_file_output_fn ( char *buf, PRInt32 size, voi
 int                 mime_decompose_file_close_fn ( void *stream_closure );
 extern int          MimeHeaders_build_heads_list(MimeHeaders *hdrs);
 
+// CID's
+static NS_DEFINE_CID(kCMsgComposeServiceCID,  NS_MSGCOMPOSESERVICE_CID);       
+
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
 // THIS SHOULD ALL MOVE TO ANOTHER FILE AFTER LANDING!
 ////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////
 // Define CIDs...
-static NS_DEFINE_CID(kIOServiceCID,         NS_IOSERVICE_CID);
-static NS_DEFINE_CID(kMsgCompFieldsCID,     NS_MSGCOMPFIELDS_CID); 
-static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
+static NS_DEFINE_CID(kIOServiceCID,           NS_IOSERVICE_CID);
+static NS_DEFINE_CID(kMsgCompFieldsCID,       NS_MSGCOMPFIELDS_CID); 
+static NS_DEFINE_CID(kPrefCID,                NS_PREF_CID);
 
 // Utility to create a nsIURI object...
 nsresult 
@@ -106,8 +110,6 @@ GetTheTempDirectoryOnTheSystem(void)
   else
     GetWindowsDirectory(retPath, TPATH_LEN);
 #endif 
-
-  // RICHIE - should do something better here!
 
 #if defined(XP_UNIX) || defined(XP_BEOS)
   char *tPath = getenv("TMPDIR");
@@ -200,6 +202,25 @@ typedef enum {
 	nsMsg_LAST_BOOL_HEADER_MASK			// last boolean header mask; must be the last one 
 										            // DON'T remove.
 } nsMsgBoolHeaderSet;
+
+nsresult
+CreateTheComposeWindow(nsIMsgCompFields     *compFields,
+                       nsMsgAttachmentData  *remoteAttachments)
+{
+nsresult rv;
+
+printf("RICHIE: Need to do something with the attachment data!!!!\n");
+
+  NS_WITH_SERVICE(nsIMsgComposeService, msgComposeService, kCMsgComposeServiceCID, &rv); 
+  if ((NS_FAILED(rv)) || (!msgComposeService))
+    return rv; 
+  
+  rv = msgComposeService->OpenComposeWindowWithCompFields(
+                        nsString2("chrome://messengercompose/content/").GetUnicode(),
+                        MSGCOMP_TYPE_New,
+                        compFields);
+  return rv;
+}
 
 nsIMsgCompFields * 
 CreateCompositionFields(const char *from,
@@ -336,7 +357,7 @@ mime_free_attachments ( nsMsgAttachedFile *attachments, int count )
   for ( i = 0; i < count; i++, cur++ ) 
   {
 	  if ( cur->orig_url )
-      delete cur->orig_url;
+      NS_RELEASE(cur->orig_url);
 
 	  PR_FREEIF ( cur->type );
 	  PR_FREEIF ( cur->encoding );
@@ -353,24 +374,22 @@ mime_free_attachments ( nsMsgAttachedFile *attachments, int count )
   PR_FREEIF( attachments );
 }
 
-static int
-mime_draft_process_attachments (struct mime_draft_data *mdd 
-                                /*RICHIE - this is the compose window we created , 
-                                nsIMsgCompose *aMsgCompose */)
+static nsMsgAttachmentData *
+mime_draft_process_attachments(mime_draft_data *mdd) 
 {
-  struct nsMsgAttachmentData  *attachData = NULL, *tmp = NULL;
-  struct nsMsgAttachedFile    *tmpFile = NULL;
+  nsMsgAttachmentData         *attachData = NULL, *tmp = NULL;
+  nsMsgAttachedFile           *tmpFile = NULL;
   int                         i;
   PRInt32                     cleanupCount = 0;
 
   PR_ASSERT ( mdd->attachments_count && mdd->attachments );
 
   if ( !mdd->attachments || !mdd->attachments_count )
-  	return -1;
+  	return nsnull;
 
   attachData = (nsMsgAttachmentData *) PR_MALLOC( ( (mdd->attachments_count+1) * sizeof (nsMsgAttachmentData) ) );
   if ( !attachData ) 
-    return MIME_OUT_OF_MEMORY;
+    return nsnull;
 
   nsCRT::memset ( attachData, 0, (mdd->attachments_count+1) * sizeof (nsMsgAttachmentData) );
 
@@ -401,6 +420,7 @@ mime_draft_process_attachments (struct mime_draft_data *mdd
         goto FAIL; 
       }
 
+      NS_ADDREF(tmp->url);
 	    if (!tmp->real_name)
   	    mime_SACopy ( &(tmp->real_name), tmpSpec );
 	  }
@@ -436,20 +456,12 @@ printf("ATTACHMENT %d: Description = %s\n", i, tmpFile->description);
 	  }
   }
 
-  // RICHIE
-  // This is where we have created attachments and we need to do something with this data
-  //
-  printf("Do something with the attachments we have created!!!!\nProbably attach them to a new composition window.\n");
-  // aMsgCompose->SetAttachments(cpane, attachData, mdd->attachments, mdd->attachments_count );
-
-  PR_Free (attachData);
-
-  return 0;
+  return (attachData);
 
 FAIL:
   mime_free_attach_data (attachData, cleanupCount);
   PR_FREEIF(attachData);
-  return -1;
+  return nsnull;
 }
 
 static void 
@@ -1090,9 +1102,18 @@ mime_parse_stream_complete (nsMIMESession *stream)
       mdd->stream = 0;
     }
   }
+
+  //
+  // Now, process the attachments that we have gathered from the message
+  // on disk
+  //
+  nsMsgAttachmentData     *newAttachData = nsnull;
+  if (mdd && (mdd->attachments_count > 0))
+    newAttachData = mime_draft_process_attachments(mdd);
   
-  /* time to bring up the compose windows with all the info gathered */
-  
+  //
+  // time to bring up the compose windows with all the info gathered 
+  //
   if ( mdd->headers )
   {
     subj = MimeHeaders_get(mdd->headers, HEADER_SUBJECT,  PR_FALSE, PR_FALSE);
@@ -1135,15 +1156,18 @@ mime_parse_stream_complete (nsMIMESession *stream)
       mime_intl_mimepart_2_str(&foll, mdd->mailcharset);
       mime_intl_mimepart_2_str(&host, mdd->mailcharset);
       
-      if (host) {
+      if (host) 
+      {
         char *secure = NULL;
         
         secure = PL_strcasestr(host, "secure");
-        if (secure) {
+        if (secure) 
+        {
           *secure = 0;
           news_host = PR_smprintf ("snews://%s", host);
         }
-        else {
+        else 
+        {
           news_host = PR_smprintf ("news://%s", host);
         }
       }
@@ -1249,44 +1273,44 @@ mime_parse_stream_complete (nsMIMESession *stream)
       } // end if (messageBody)
       
       //
-      // RICHIE - at this point, we need to create a message compose window or editor
-      // window via XP-COM with the information that we have retrieved from the message store.
+      // At this point, we need to create a message compose window or editor
+      // window via XP-COM with the information that we have retrieved from 
+      // the message store.
       //
       if (mdd->format_out == nsMimeOutput::nsMimeMessageEditorTemplate)
+      {
         printf("RICHIE: Time to create the EDITOR with this template - HAS a body!!!!\n");
+      }
       else
-        printf("RICHIE: Time to create the composition window WITH a body!!!!\n");
-      // msgCompWindow = CreateCompositionWindow (fields, body, editorType);
+      {
+#ifdef NS_DEBUG
+        printf("Time to create the composition window WITH a body!!!!\n");
+#endif
+        CreateTheComposeWindow(fields, newAttachData);
+      }
       
       PR_FREEIF(body);
-printf("RICHIE: I'm not cleanup up here!\n");
-// SHERRY      mime_free_attachments (mdd->messageBody, 1);
+      mime_free_attachments (mdd->messageBody, 1);
     }
     else
     {
       //
-      // RICHIE - at this point, we need to create a message compose window via
+      // At this point, we need to create a message compose window via
       // XP-COM with the information that we have retrieved from the message store.
       //
       if (mdd->format_out == nsMimeOutput::nsMimeMessageEditorTemplate)
+      {
         printf("RICHIE: Time to create the EDITOR with this template - NO body!!!!\n");
+        CreateTheComposeWindow(fields, newAttachData);
+      }
       else
-        printf("RICHIE: Time to create the composition window WITHOUT a body!!!!\n");
-      // msgCompWindow = CreateCompositionPane (fields, nsnull, editorType);
-    }
-    
-    // RICHIE 
-    // At this point, check to see if we have a composition window up and running 
-    // and if so, we will do various things to it.
-    // if (msgCompWindow)
-    if (PR_TRUE)
-    {
-      printf("RICHIE: Do stuff with the compose window we just created!\n");
-      // clear the message body in case someone stored the signature string in it 
-      // msgCompWindow->MSG_SetCompBody("");
-      // if (lineWidth > 0)
-      //  msgCompWindow->SetLineWidth(lineWidth);      
-    }
+      {
+#ifdef NS_DEBUG
+        printf("Time to create the composition window WITHOUT a body!!!!\n");
+#endif
+        CreateTheComposeWindow(fields, newAttachData);
+      }
+    }    
   }
   else
   {
@@ -1295,30 +1319,19 @@ printf("RICHIE: I'm not cleanup up here!\n");
                                       GetMailXlateionPreference(), 
                                       GetMailSigningPreference());
     if (fields)
-      //
-      // RICHIE - at this point, we need to create a message compose window via
-      // XP-COM with the information that we have retrieved from the message store.
-      //
-      printf("RICHIE: Time to create the composition window WITHOUT a body!!!!\n");
-      // msgCompWindow = CreateCompositionPane (fields, nsnull, nsMsgDefault);
-  }
-  
-  // RICHIE - tag the attachments if we have any
-  printf("RICHIE: tag the attachments if we have any\n");
-  // if ( (msgCompWindow) && (mdd) && (mdd->attachments_count > 0) )
-  if ( (PR_TRUE) && (mdd) && (mdd->attachments_count > 0) )
-  {
-    if ( mdd->attachments_count) 
-      mime_draft_process_attachments (mdd /* RICHIE , msgCompWindow */);
+      CreateTheComposeWindow(fields, newAttachData);
   }
   
   if ( mdd->headers )
     MimeHeaders_free ( mdd->headers );
 
-  // RICHIE - I don't think we should be freeing this if we already
-  //          gave this to the compose window...
-  // if (mdd->attachments)
-  //  PR_FREEIF ( mdd->attachments );
+  // 
+  // Free the original attachment structure...
+  //
+  if (mdd->attachments)
+    mime_free_attachments( mdd->attachments, mdd->attachments_count );
+
+  PR_FREEIF(mdd);
   
   if (fields)
     NS_RELEASE(fields);
@@ -1524,6 +1537,7 @@ mime_decompose_file_init_fn ( void *stream_closure, MimeHeaders *headers )
         *cp1 = 0;
 
       nsMimeNewURI(&(newAttachment->orig_url), cp);
+      NS_ADDREF(newAttachment->orig_url);
       PR_FREEIF(workURLSpec);
       workURLSpec = PL_strdup(cp);
       PR_FREEIF(parm_value);
@@ -1752,7 +1766,7 @@ mime_bridge_create_draft_stream(
 	 that wasn't xlated for them doesn't work.  We have to dexlate it
 	 before sending it.
    */
-// SHERRY  mdd->options->dexlate_p = PR_TRUE;
+// RICHIE  mdd->options->dexlate_p = PR_TRUE;
 #endif /* FO_MAIL_MESSAGE_TO */
 
   obj = mime_new ( (MimeObjectClass *) &mimeMessageClass, (MimeHeaders *) NULL, MESSAGE_RFC822 );
