@@ -24,7 +24,6 @@ EXPORTS	= \
         nsIDOMNodeObserver.h            \
         nsIDOMXULDocument.h             \
         nsIDOMXULElement.h              \
-        nsIRDFContent.h                 \
         nsIRDFContentModelBuilder.h     \
         nsIRDFDocument.h                \
 	$(NULL)

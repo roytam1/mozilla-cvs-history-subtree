@@ -51,7 +51,6 @@
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
 #include "nsIRDFCompositeDataSource.h"
-#include "nsIRDFContent.h"
 #include "nsIRDFContentModelBuilder.h"
 #include "nsIRDFCursor.h"
 #include "nsIRDFDataSource.h"
@@ -465,10 +464,10 @@ public:
     // nsIRDFDocument interface
     NS_IMETHOD SetRootResource(nsIRDFResource* resource);
     NS_IMETHOD SplitProperty(nsIRDFResource* aResource, PRInt32* aNameSpaceID, nsIAtom** aTag);
-    NS_IMETHOD AddElementForResource(nsIRDFResource* aResource, nsIRDFContent* aElement);
-    NS_IMETHOD RemoveElementForResource(nsIRDFResource* aResource, nsIRDFContent* aElement);
+    NS_IMETHOD AddElementForResource(nsIRDFResource* aResource, nsIContent* aElement);
+    NS_IMETHOD RemoveElementForResource(nsIRDFResource* aResource, nsIContent* aElement);
     NS_IMETHOD GetElementsForResource(nsIRDFResource* aResource, nsISupportsArray* aElements);
-    NS_IMETHOD CreateContents(nsIRDFContent* aElement);
+    NS_IMETHOD CreateContents(nsIContent* aElement);
     NS_IMETHOD AddContentModelBuilder(nsIRDFContentModelBuilder* aBuilder);
 
     // nsIDOMDocument interface
@@ -1766,7 +1765,7 @@ XULDocumentImpl::SplitProperty(nsIRDFResource* aProperty,
 
 
 NS_IMETHODIMP
-XULDocumentImpl::AddElementForResource(nsIRDFResource* aResource, nsIRDFContent* aElement)
+XULDocumentImpl::AddElementForResource(nsIRDFResource* aResource, nsIContent* aElement)
 {
     NS_PRECONDITION(aResource != nsnull, "null ptr");
     if (! aResource)
@@ -1782,7 +1781,7 @@ XULDocumentImpl::AddElementForResource(nsIRDFResource* aResource, nsIRDFContent*
 
 
 NS_IMETHODIMP
-XULDocumentImpl::RemoveElementForResource(nsIRDFResource* aResource, nsIRDFContent* aElement)
+XULDocumentImpl::RemoveElementForResource(nsIRDFResource* aResource, nsIContent* aElement)
 {
     NS_PRECONDITION(aResource != nsnull, "null ptr");
     if (! aResource)
@@ -1810,7 +1809,7 @@ XULDocumentImpl::GetElementsForResource(nsIRDFResource* aResource, nsISupportsAr
 
 
 NS_IMETHODIMP
-XULDocumentImpl::CreateContents(nsIRDFContent* aElement)
+XULDocumentImpl::CreateContents(nsIContent* aElement)
 {
     NS_PRECONDITION(aElement != nsnull, "null ptr");
     if (! aElement)
