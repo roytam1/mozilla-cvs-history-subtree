@@ -596,3 +596,10 @@ CMTMessageTemplate HTMLCertInfoRequestTemplate[] =
     { CMT_DT_INT, offsetof(HTMLCertInfoRequest, showIssuer) },
     { CMT_DT_END }
 };
+
+CMTMessageTemplate EncryptRequestTemplate[] =
+{
+  { CMT_DT_ITEM, offsetof(EncryptRequestMessage, keyid) },
+  { CMT_DT_ITEM, offsetof(EncryptRequestMessage, data) },
+  { CMT_DT_END }
+};

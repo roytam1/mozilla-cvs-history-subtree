@@ -594,4 +594,21 @@ typedef struct HTMLCertInfoRequest {
 
 extern CMTMessageTemplate HTMLCertInfoRequestTemplate[];
 
+typedef struct EncryptRequestMessage
+{
+  CMTItem keyid;  /* May have length 0 for default */
+  CMTItem data;
+} EncryptRequestMessage;
+
+extern CMTMessageTemplate EncryptRequestTemplate[];
+
+typedef struct SingleItemMessage EncryptReplyMessage;
+#define EncryptReplyTemplate SingleItemMessageTemplate
+
+typedef struct SingleItemMessage DecryptRequestMessage;
+#define DecryptRequestTemplate SingleItemMessageTemplate
+
+typedef struct SingleItemMessage DecryptReplyMessage;
+#define DecryptReplyTemplate SingleItemMessageTemplate
+
 #endif /* __MESSAGES_H__ */
