@@ -218,7 +218,7 @@ nsProtocolProxyService::PrefsChanged(const char* pref) {
     {
         rv = mPrefs->CopyCharPref("network.proxy.autoconfig_url", 
                                   getter_Copies(tempString));
-        if (NS_SUCCEEDED(rv)) {
+        if (NS_SUCCEEDED(rv) && nsCRT::strlen(tempString) > 0) {
             mPACURL = nsCRT::strdup(tempString);
 
             // create pac js component
