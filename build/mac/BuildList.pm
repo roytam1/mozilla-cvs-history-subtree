@@ -122,34 +122,34 @@ sub BuildMozilla()
 		
 		if ( $main::MOZ_MEDIUM == 1 || $main::MOZ_DARK == 1 )
 			{
-				BuildProject(":cmd:macfe:Composer:build:Composer.mcp",						"Composer$D.o");
+				BuildProject(":mozilla:cmd:macfe:Composer:build:Composer.mcp",						"Composer$D.o");
 
 				if ( $main::MOZ_DARK == 1 )
 					{
-						BuildProject(":lib:libmsg:macbuild:MsgLib.mcp",								"MsgLib$D.o");
-						BuildProject(":cmd:macfe:MailNews:build:MailNews.mcp",						"MailNews$D.o");
-						BuildProject(":directory:c-sdk:ldap:libraries:macintosh:LDAPClient.mcp",	"LDAPClient$D.o");
+						BuildProject(":mozilla:lib:libmsg:macbuild:MsgLib.mcp",								"MsgLib$D.o");
+						BuildProject(":mozilla:cmd:macfe:MailNews:build:MailNews.mcp",						"MailNews$D.o");
+						BuildProject(":mozilla:directory:c-sdk:ldap:libraries:macintosh:LDAPClient.mcp",	"LDAPClient$D.o");
 					}
 				else
 					{
-						BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"MsgLib$D.o");
-						BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"MailNews$D.o");
-						BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"LDAPClient$D.o");
+						BuildProject(":mozilla:cmd:macfe:projects:dummies:MakeDummies.mcp",				"MsgLib$D.o");
+						BuildProject(":mozilla:cmd:macfe:projects:dummies:MakeDummies.mcp",				"MailNews$D.o");
+						BuildProject(":mozilla:cmd:macfe:projects:dummies:MakeDummies.mcp",				"LDAPClient$D.o");
 					}
 
 				# Build the appropriate resources target
-				BuildProject(":cmd:macfe:projects:client:Client.mcp", 						"Moz_Resources");
+				BuildProject(":mozilla:cmd:macfe:projects:client:Client.mcp", 						"Moz_Resources");
 			}
 		else
 			{
 				# Build a project with dummy targets to make stub libraries
-				BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"Composer$D.o");
-				BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"MsgLib$D.o");
-				BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"MailNews$D.o");
-				BuildProject("cmd:macfe:projects:dummies:MakeDummies.mcp",				"LDAPClient$D.o");
+				BuildProject(":mozilla:cmd:macfe:projects:dummies:MakeDummies.mcp",				"Composer$D.o");
+				BuildProject(":mozilla:cmd:macfe:projects:dummies:MakeDummies.mcp",				"MsgLib$D.o");
+				BuildProject(":mozilla:cmd:macfe:projects:dummies:MakeDummies.mcp",				"MailNews$D.o");
+				BuildProject(":mozilla:cmd:macfe:projects:dummies:MakeDummies.mcp",				"LDAPClient$D.o");
 				
 				# Build the appropriate resources target
-				BuildProject(":cmd:macfe:projects:client:Client.mcp", 						"Nav_Resources");
+				BuildProject(":mozilla:cmd:macfe:projects:client:Client.mcp", 						"Nav_Resources");
 			}
 		
 		BuildProject(":mozilla:cmd:macfe:projects:client:Client.mcp", 								"Client$D");
