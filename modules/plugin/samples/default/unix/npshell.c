@@ -124,6 +124,7 @@ NPP_New(NPMIMEType pluginType,
     This->type = dupMimeType(pluginType);
     This->instance = instance;
     This->pluginsPageUrl = NULL;
+    This->exists = FALSE;
 
     /* Parse argument list passed to plugin instance */
     /* We are interested in these arguments
@@ -220,8 +221,10 @@ NPP_SetWindow(NPP instance, NPWindow* window)
     This->visual = ws_info->visual;
     This->depth = ws_info->depth;
     This->colormap = ws_info->colormap;
-    This->exists = FALSE;
-    makeWidget(This);
+    if (This->exists != TRUE) {
+        This->exists = FALSE;
+        makeWidget(This);
+    }
 
     }
     return NPERR_NO_ERROR;
