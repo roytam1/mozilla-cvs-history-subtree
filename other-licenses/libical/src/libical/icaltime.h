@@ -33,16 +33,16 @@
 
 /* An opaque struct representing a timezone. We declare this here to avoid
    a circular dependancy. */
-#ifndef ICALTIMEONE_DEFINED
-#define ICALTIMEONE_DEFINED
+#ifndef ICALTIMEZONE_DEFINED
+#define ICALTIMEZONE_DEFINED
 typedef struct _icaltimezone		icaltimezone;
 #endif
 
-/* icaltime_span is returned by icalcomponent_get_span() */
+/** icaltime_span is returned by icalcomponent_get_span() */
 struct icaltime_span {
-	time_t start; /* in UTC */
-	time_t end; /* in UTC */
-	int is_busy; /* 1->busy time, 0-> free time */
+	time_t start;   /**< in UTC */
+	time_t end;     /**< in UTC */
+	int is_busy;    /**< 1->busy time, 0-> free time */
 };
 
 
