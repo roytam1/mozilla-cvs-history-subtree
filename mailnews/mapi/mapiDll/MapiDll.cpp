@@ -449,7 +449,7 @@ ULONG FAR PASCAL MAPIFreeBuffer(LPVOID pv)
     return SUCCESS_SUCCESS;
 }
 
-ULONG FAR PASCAL MAPIGetNetscapeVersion()
+ULONG FAR PASCAL GetMapiDllVersion()
 {
     return 94;
 }

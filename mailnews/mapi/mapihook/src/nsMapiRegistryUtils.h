@@ -58,6 +58,10 @@ static PRBool isSmartDll();
 nsresult SetRegistryKey(HKEY baseKey, const char * keyName, 
                         const char * valueName, char * value);
 
+// Deletes the registry key for base/keyname/valuename
+nsresult DeleteRegistryValue(HKEY baseKey, const char * keyName, 
+                        const char * valueName);
+
 // Gets the current regiistry setting for the key.
 nsCString GetRegistryKey(HKEY baseKey, const char * keyName, 
                          const char * valueName);

@@ -153,6 +153,22 @@ nsresult SetRegistryKey(HKEY baseKey, const char * keyName,
     return result;
 }
 
+nsresult DeleteRegistryValue(HKEY baseKey, const char * keyName, 
+                        const char * valueName)
+{
+    nsresult result = NS_ERROR_FAILURE;
+    HKEY   key;
+    LONG   rc = ::RegOpenKey(baseKey, keyName, &key);
+  
+    if (rc == ERROR_SUCCESS) {
+        rc = ::RegDeleteValue(key, valueName);
+        if (rc == ERROR_SUCCESS)
+            result = NS_OK;
+        ::RegCloseKey(key);
+    }
+    return result;
+}
+
 nsCString GetRegistryKey(HKEY baseKey, const char * keyName, 
                          const char * valueName)
 {
@@ -402,10 +418,9 @@ nsresult RestoreBackedUpMapiDll()
     if (NS_SUCCEEDED(rv) && bExist)
         rv = pPreviousMapiFile->MoveTo(nsnull, "Mapi32.dll");
     if (NS_SUCCEEDED(rv))
-        rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+        DeleteRegistryValue(HKEY_LOCAL_MACHINE,
                             "Software\\Mozilla\\Desktop", 
-                            "Mapi_backup_dll", 
-                            "");
+                            "Mapi_backup_dll");
     return rv;
 }
 
@@ -539,9 +554,7 @@ nsresult unsetDefaultMailClient() {
                                 "", (char *)userAppName.get());
     }
     else {
-       LONG rc = RegDeleteValue(HKEY_CURRENT_USER, "Software\\Clients\\Mail");
-       if (rc == ERROR_SUCCESS)
-           rv = NS_ERROR_FAILURE;
+        DeleteRegistryValue(HKEY_CURRENT_USER, "Software\\Clients\\Mail", "");
     }
     if (NS_SUCCEEDED(rv)) {
         rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 

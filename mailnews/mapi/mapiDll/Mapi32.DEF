@@ -50,5 +50,5 @@ EXPORTS
         MAPIDetails
         MAPIResolveName
         MAPIFreeBuffer
-        MAPIGetNetscapeVersion
+        GetMapiDllVersion
 
