@@ -22,6 +22,8 @@
  */
 #include "primpl.h"
 
+extern APIRET (* APIENTRY QueryThreadContext)(OS2TID, ULONG, PCONTEXTRECORD);
+
 PRWord *_MD_HomeGCRegisters(PRThread *t, int isCurrent, int *np) 
 {
     CONTEXTRECORD context;

@@ -249,10 +249,10 @@ ButtonCreateInfo gBtnToolbarInfo[] = {
 {2,  23, 21, PR_FALSE, kForwardCmd,  "Forward", "Move forward to next document in history list", "TB_Forward.gif", "TB_Forward.gif", "TB_Forward_dis.gif",  "TB_Forward_mo.gif"},
 {2,  23, 21, PR_TRUE,  kReloadCmd,   "Reload",  "Reload the current page",       "TB_Reload.gif",  "TB_Reload.gif",  "TB_Reload.gif",     "TB_Reload_mo.gif"},
 {2,  23, 21, PR_TRUE,  kHomeCmd,   "Home",  "Go to the Home page",         "TB_Home.gif",  "TB_Home.gif",  "TB_Home.gif",     "TB_Home_mo.gif"},
-{2,  23, 21, PR_TRUE,  kSearchCmd,   "Search",  "Search the internet for information", "TB_Search.gif",  "TB_Search.gif",  "TB_Search.gif",     "TB_Search_mo.gif"},
-{2,  23, 21, PR_TRUE,  kNetscapeCmd, "Netscape","Go to your personal start page",    "TB_Netscape.gif","TB_Netscape.gif","TB_Netscape.gif",   "TB_Netscape_mo.gif"},
-{2,  23, 21, PR_TRUE,  kPrintCmd,  "Print",   "Print this page",           "TB_Print.gif",   "TB_Print.gif",   "TB_Print.gif",    "TB_Print_mo.gif"},
-{2,  23, 21, PR_TRUE,  kSecureCmd,   "Security","Show security information",       "TB_Secure.gif",   "TB_Secure.gif", "TB_Secure.gif",     "TB_Secure_mo.gif"},
+{2,  23, 21, PR_FALSE, kSearchCmd,   "Search",  "Search the internet for information", "TB_Search.gif",  "TB_Search.gif",  "TB_Search.gif",     "TB_Search_mo.gif"},
+{2,  23, 21, PR_FALSE, kNetscapeCmd, "Netscape","Go to your personal start page",    "TB_Netscape.gif","TB_Netscape.gif","TB_Netscape.gif",   "TB_Netscape_mo.gif"},
+{2,  23, 21, PR_FALSE, kPrintCmd,  "Print",   "Print this page",           "TB_Print.gif",   "TB_Print.gif",   "TB_Print.gif",    "TB_Print_mo.gif"},
+{2,  23, 21, PR_FALSE, kSecureCmd,   "Security","Show security information",       "TB_Secure.gif",   "TB_Secure.gif", "TB_Secure.gif",     "TB_Secure_mo.gif"},
 {2,  23, 21, PR_FALSE, kStopCmd,   "Stop",  "Stop the current transfer",       "TB_Stop.gif",  "TB_Stop.gif",  "TB_Stop_dis.gif",   "TB_Stop_mo.gif"},
 {0,   0,  0, PR_FALSE, 0, NULL, NULL, NULL, NULL, NULL}
 };
@@ -275,17 +275,21 @@ ButtonCreateInfo gMiniAppsDialogInfo[] = {
 };
 
 ButtonCreateInfo gPersonalToolbarInfo[] = {
-{10, 18, 18, PR_TRUE, kPersonalCmd,  "Phone Book", "http://phonebook/",      "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif"},
-{2,  18, 18, PR_TRUE, kPersonalCmd+1,  "Stocks",   "http://quicken.excite.com/", "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif"},
+{10, 18, 18, PR_TRUE, kPersonalCmd,  "People", "http://home.netscape.com/netcenter/whitepages.html?cp=xpviewerDR1",      "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif"},
+{2,  18, 18, PR_TRUE, kPersonalCmd+1,  "Stocks",   "http://personalfinance.netscape.com/finance/", "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif"},
 {2,  18, 18, PR_TRUE, kPersonalCmd+2,  "Weather",  "http://www.weather.com",   "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif"},
-{2,  18, 18, PR_TRUE, kPersonalCmd+3,  "Sports",   "http://cnnsi.com/",      "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif"},
-{2,  18, 18, PR_TRUE, kPersonalCmd+4,  "News",     "http://www.cnn.com/",    "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif"},
-{2,  18, 18, PR_TRUE, kPersonalCmd+5,  "IMDB",     "www.imdb.com",         "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif"},
+{2,  18, 18, PR_TRUE, kPersonalCmd+3,  "Sports",   "http://excite.netscape.com/sports/",      "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif"},
+{2,  18, 18, PR_TRUE, kPersonalCmd+4,  "News",     "http://home.netscape.com/news/index.html?cp=xpviewerDR1",    "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif"},
+{2,  18, 18, PR_TRUE, kPersonalCmd+5,  "IMDB",     "http://us.imdb.com/Title?You%27ve+Got+Mail+(1998)",         "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif",  "TB_PersonalIcon.gif"},
 {0,   0,  0, PR_FALSE, 0, NULL, NULL, NULL, NULL, NULL}
 };
 
-char * gPersonalURLS[] = {"http://phonebook/", "http://quicken.excite.com/", "http://www.weather.com", 
-              "http://cnnsi.com/", "http://www.cnn.com/", "www.imdb.com"};
+char * gPersonalURLS[] = { "http://home.netscape.com/netcenter/whitepages.html?cp=xpviewerDR1",
+                           "http://personalfinance.netscape.com/finance/",
+                           "http://excite.netscape.com/weather/", 
+                           "http://excite.netscape.com/sports/",
+                           "http://home.netscape.com/news/index.html?cp=xpviewerDR1",
+                           "http://us.imdb.com/Title?You%27ve+Got+Mail+(1998)"};
 
 //////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////
@@ -1604,7 +1608,7 @@ nsBrowserWindow::CreateToolBar(PRInt32 aWidth)
                       r, nsnull, &font, baseURL,
                       "TB_Bookmarks.gif", "TB_Bookmarks.gif", "TB_Bookmarks.gif", "TB_Bookmarks_mo.gif",
                       30, 18)) {
-    AddToolbarItem(mURLToolbar, 10, PR_TRUE, mBookmarksWidget);
+    AddToolbarItem(mURLToolbar, 10, PR_FALSE, mBookmarksWidget);
 	  mBookmarksWidget->SetBackgroundColor(widgetBGColor);
     mBookmarks->SetCommand(kBookmarksCmd);
     mBookmarks->SetRollOverDesc("Bookmarks functions");
@@ -1687,7 +1691,7 @@ nsBrowserWindow::CreateToolBar(PRInt32 aWidth)
                       r, nsnull, &font, baseURL,
                       "TB_WhatsRelated.gif", "TB_WhatsRelated.gif", "TB_WhatsRelated.gif", "TB_WhatsRelated_mo.gif",
                       27, 16)) {
-    AddToolbarItem(mURLToolbar, 2, PR_TRUE, mWhatsRelatedWidget);
+    AddToolbarItem(mURLToolbar, 2, PR_FALSE, mWhatsRelatedWidget);
 	  mWhatsRelatedWidget->SetBackgroundColor(widgetBGColor);
     mWhatsRelated->SetCommand(kWhatsRelatedCmd);
     mWhatsRelated->SetRollOverDesc("View the \"What's Related\" list");
@@ -3387,7 +3391,7 @@ void CreateBrowserMenus(nsIMenuBar * aMenuBar)
   CreateMenuItem(samplesMenu, buf, VIEWER_DEMO0+i);
   }
 
-  CreateMenuItem(fileMenu, "Top 100 Sites", VIEWER_TOP100);
+  CreateMenuItem(fileMenu, "Test Sites", VIEWER_TOP100);
 
 #ifdef NOT_YET
   nsIMenu * printMenu = CreateMenu(fileMenu, "Print Preview", 'P');

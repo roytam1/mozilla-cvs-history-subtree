@@ -26,14 +26,6 @@
 #include <windows.h>
 #endif
 
-#if defined(XP_OS2)
-#define INCL_DOSFILEMGR
-#include <os2.h>
-#ifdef XP_OS2_EMX
-#include <getopt.h>
-#endif /* XP_OS2_EMX */
-#endif /* XP_OS2 */
-
 static int _debug_on = 0;
 
 #ifdef XP_MAC
@@ -76,11 +68,7 @@ typedef struct File_Rdwr_Param {
 } File_Rdwr_Param;
 
 #ifdef XP_PC
-#ifdef XP_OS2
-char *TEST_DIR = "prdir";
-#else
 char *TEST_DIR = "C:\\temp\\prdir";
-#endif
 char *FILE_NAME = "pr_testfile";
 char *HIDDEN_FILE_NAME = "hidden_pr_testfile";
 #else
@@ -503,7 +491,7 @@ HANDLE hfile;
 		}
         PR_Close(fd_file);
 	}
-#if defined(XP_UNIX) || defined(XP_MAC) || (defined(XP_PC) && defined(WIN32)) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_MAC) || (defined(XP_PC) && defined(WIN32))
 	/*
 	 * Create a hidden file - a platform-dependent operation
 	 */
@@ -586,16 +574,6 @@ HANDLE hfile;
 	}
 	CloseHandle(hfile);
 						
-#elif defined(OS2)
-	DPRINTF(("Creating hidden test file %s\n",pathname));
-	fd_file = PR_Open(pathname, PR_RDWR | PR_CREATE_FILE, (int)FILE_HIDDEN);
-
-	if (fd_file == NULL) {
-		printf("testfile failed to create/open hidden file %s [%d, %d]\n",
-				pathname, PR_GetError(), PR_GetOSError());
-		return -1;
-	}
-	PR_Close(fd_file);
 #endif	/* XP _UNIX || XP_MAC*/
 
 #endif	/* XP_UNIX || XP_MAC ||(XP_PC && WIN32) */
@@ -620,7 +598,7 @@ HANDLE hfile;
 	 * List all files, including hidden files
 	 */
 	DPRINTF(("Listing all files in directory %s\n",TEST_DIR));
-#if defined(XP_UNIX) || defined(XP_MAC) || (defined(XP_PC) && defined(WIN32)) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_MAC) || (defined(XP_PC) && defined(WIN32))
 	num_files = FILES_IN_DIR + 1;
 #else
 	num_files = FILES_IN_DIR;
@@ -656,7 +634,7 @@ HANDLE hfile;
 
     PR_CloseDir(fd_dir);
 
-#if defined(XP_UNIX) || defined(XP_MAC) || (defined(XP_PC) && defined(WIN32)) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_MAC) || (defined(XP_PC) && defined(WIN32))
 
 	/*
 	 * List all files, except hidden files
@@ -774,12 +752,12 @@ HANDLE hfile;
 
 int main(int argc, char **argv)
 {
-#if defined(XP_UNIX) || defined(XP_OS2_EMX)
+#ifdef XP_UNIX
         int opt;
         extern char *optarg;
 	extern int optind;
 #endif
-#if defined(XP_UNIX) || defined(XP_OS2_EMX)
+#ifdef XP_UNIX
         while ((opt = getopt(argc, argv, "d")) != EOF) {
                 switch(opt) {
                         case 'd':

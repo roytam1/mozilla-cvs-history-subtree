@@ -21,13 +21,6 @@
 
 include $(MOD_DEPTH)/config/UNIX.mk
 
-ifeq (86,$(findstring 86,$(OS_TEST)))
-CPU_ARCH		= x86
-else
-CPU_ARCH		= mips
-endif
-CPU_ARCH_TAG		= _$(CPU_ARCH)
-
 # use gcc -tf-
 NS_USE_GCC		= 1
 
@@ -37,14 +30,8 @@ CC			= gcc
 COMPILER_TAG		= _gcc
 CCC			= g++
 AS			= $(CC) -x assembler-with-cpp
-ifeq ($(CPU_ARCH),mips)
 LD			= gld
-endif
-ODD_CFLAGS		= -Wall -Wno-format
-ifeq ($(CPU_ARCH),mips)
-# The -pipe flag only seems to work on the mips version of SINIX.
-ODD_CFLAGS		+= -pipe
-endif
+ODD_CFLAGS		= -pipe -Wall -Wno-format
 ifdef BUILD_OPT
 OPTIMIZER		= -O
 #OPTIMIZER		= -O6
@@ -74,6 +61,8 @@ ODD_CFLAGS		+= -DSVR4 -DSNI -DRELIANTUNIX -Dsinix -DHAVE_SVID_GETTOD
 ifeq ($(OS_RELEASE),5.43)
 ODD_CFLAGS		+= -DIP_MULTICAST
 endif
+
+CPU_ARCH		= mips
 
 RANLIB			= /bin/true
 

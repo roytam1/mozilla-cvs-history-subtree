@@ -94,10 +94,6 @@ RHAPSODY_CSRCS = \
 	rhapsody.c \
 	$(NULL)
 
-NEXTSTEP_CSRCS = \
-	nextstep.c \
-	$(NULL)
-
 NEC_CSRCS = \
 	nec.c \
 	$(NULL)
@@ -116,10 +112,6 @@ SCOOS_CSRCS = \
 
 DGUX_CSRCS = \
 	dgux.c \
-	$(NULL)
-
-QNX_CSRCS = \
-	qnx.c \
 	$(NULL)
 
 ifeq ($(PTHREADS_USER),1)
@@ -171,9 +163,6 @@ endif
 ifeq ($(OS_ARCH),Rhapsody)
 CSRCS += $(RHAPSODY_CSRCS)
 endif
-ifeq ($(OS_ARCH),NEXTSTEP)
-CSRCS += $(NEXTSTEP_CSRCS)
-endif
 ifeq ($(OS_ARCH),NEC)
 CSRCS += $(NEC_CSRCS)
 endif
@@ -188,9 +177,6 @@ CSRCS += $(SCOOS_CSRCS)
 endif
 ifeq ($(OS_ARCH),DGUX)
 CSRCS += $(DGUX_CSRCS)
-endif
-ifeq ($(OS_ARCH),QNX)
-CSRCS += $(QNX_CSRCS)
 endif
 
 #
@@ -230,7 +216,7 @@ endif
 TARGETS		= $(OBJS)
 
 ifeq ($(OS_ARCH),AIX)
-ifeq (,$(filter-out 3.2 4.1,$(OS_RELEASE)))
+ifneq ($(OS_RELEASE),4.2)
 ifneq ($(USE_PTHREADS), 1)
 #TARGETS		+= $(OBJDIR)/aixwrap.$(OBJ_SUFFIX)
 endif
@@ -256,7 +242,7 @@ include $(MOD_DEPTH)/config/rules.mk
 
 export:: $(TARGETS)
 #ifeq ($(OS_ARCH),AIX)
-#ifeq (,$(filter-out 3.2 4.1,$(OS_RELEASE)))
+#ifneq ($(OS_RELEASE),4.2)
 #ifneq ($(USE_PTHREADS), 1)
 #	$(INSTALL) -m 444 $(OBJDIR)/aixwrap.$(OBJ_SUFFIX) $(DIST)/lib
 #endif

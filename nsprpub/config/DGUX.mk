@@ -16,30 +16,32 @@
 #
 
 #
-# Config stuff for BSDI Unix for x86.
+# Config stuff for Data General DG/UX
+#
+# Initial DG/UX port by Marc Fraioli <fraioli@dg-rtp.dg.com>
 #
 
 include $(MOD_DEPTH)/config/UNIX.mk
 
-#CC		= gcc -Wall -Wno-format
-#CCC		= g++
-CC		= shlicc2
-CCC		= shlicc2
-RANLIB		= ranlib
+CC		= gcc
+CCC		= g++
 
-DEFINES		+= -D_PR_LOCAL_THREADS_ONLY
-OS_CFLAGS	= -DBSDI -DHAVE_STRERROR -D__386BSD__ -DNEED_BSDREGEX -Di386
-OS_LIBS		= -lcompat -ldl
+RANLIB		= true
 
-ifeq ($(OS_RELEASE),2.1)
-OS_CFLAGS	+= -DBSDI_2 -D_PR_TIMESPEC_HAS_TS_SEC
-endif
+DEFINES		+= -D_PR_LOCAL_THREADS_ONLY 
+OS_CFLAGS	= -DSVR4 -DSYSV -DDGUX -D_DGUX_SOURCE -D_POSIX4A_DRAFT6_SOURCE 
 
-G++INCLUDES	= -I/usr/include/g++
+MKSHLIB		= $(LD) $(DSO_LDOPTS)
+DSO_LDOPTS	= -G 
 
 CPU_ARCH	= x86
+ARCH		= dgux
 
 NOSUCHFILE	= /no-such-file
 
-MKSHLIB		= $(LD) $(DSO_LDOPTS)
-DSO_LDOPTS	= -r
+ifdef BUILD_OPT
+OPTIMIZER	= -O2
+else
+# -g would produce a huge executable.
+OPTIMIZER	=
+endif

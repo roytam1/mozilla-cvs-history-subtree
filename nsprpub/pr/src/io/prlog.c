@@ -52,7 +52,7 @@ static PRLock *_pr_logLock;
 
 #endif
 
-#if defined(XP_PC) && !defined(XP_OS2_VACPP)
+#ifdef XP_PC
 #define strcasecmp stricmp
 #define strncasecmp strnicmp
 #endif
@@ -196,7 +196,7 @@ void _PR_InitLog(void)
                     }
                     lm = lm->next;
                 }
-                if (( PR_FALSE == skip_modcheck) && (NULL == lm)) {
+                if (NULL == lm) {
 #ifdef XP_PC
                     char* str = PR_smprintf("Unrecognized NSPR_LOG_MODULE: %s=%d\n",
                                             module, level);

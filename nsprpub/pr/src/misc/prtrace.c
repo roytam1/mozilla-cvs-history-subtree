@@ -907,8 +907,6 @@ PR_IMPLEMENT(PRIntn)
 **
 */
 
-/* Some compilers don't like an empty compilation unit. */
-static int dummy = 0;
 #endif /* defined(FORCE_NSPR_TRACE) */
 
 /* end prtrace.c */

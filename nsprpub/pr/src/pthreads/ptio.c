@@ -1445,23 +1445,11 @@ static PRStatus pt_Connect(
     PRFileDesc *fd, const PRNetAddr *addr, PRIntervalTime timeout)
 {
     PRIntn rv = -1, syserrno;
-    pt_SockLen addr_len;
-#ifdef _PR_HAVE_SOCKADDR_LEN
-    PRNetAddr addrCopy;
-#endif
+    PRSize addr_len = PR_NETADDR_SIZE(addr);
 
     if (pt_TestAbort()) return PR_FAILURE;
 
-    PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
-    addr_len = PR_NETADDR_SIZE(addr);
-#ifdef _PR_HAVE_SOCKADDR_LEN
-    addrCopy = *addr;
-    ((struct sockaddr*)&addrCopy)->sa_len = addr_len;
-    ((struct sockaddr*)&addrCopy)->sa_family = addr->raw.family;
-    rv = connect(fd->secret->md.osfd, (struct sockaddr*)&addrCopy, addr_len);
-#else
     rv = connect(fd->secret->md.osfd, (struct sockaddr*)addr, addr_len);
-#endif
     syserrno = errno;
     if ((-1 == rv) && (EINPROGRESS == syserrno) && (!fd->secret->nonblocking))
     {
@@ -1470,11 +1458,7 @@ static PRStatus pt_Connect(
         {
             pt_Continuation op;
             op.arg1.osfd = fd->secret->md.osfd;
-#ifdef _PR_HAVE_SOCKADDR_LEN
-            op.arg2.buffer = (void*)&addrCopy;
-#else
             op.arg2.buffer = (void*)addr;
-#endif
             op.arg3.amount = addr_len;
             op.timeout = timeout;
             op.function = pt_connect_cont;
@@ -1556,10 +1540,13 @@ static PRFileDesc* pt_Accept(
         }
     }
 #ifdef _PR_HAVE_SOCKADDR_LEN
-    /* ignore the sa_len field of struct sockaddr */
+    /* mask off the first byte of struct sockaddr (the length field) */
     if (addr)
     {
-        addr->raw.family = ((struct sockaddr*)addr)->sa_family;
+        *((unsigned char *) addr) = 0;
+#ifdef IS_LITTLE_ENDIAN
+        addr->raw.family = ntohs(addr->raw.family);
+#endif
     }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
     newfd = pt_SetMethods(osfd, PR_DESC_SOCKET_TCP);
@@ -1580,10 +1567,6 @@ static PRStatus pt_Bind(PRFileDesc *fd, const PRNetAddr *addr)
 {
     PRIntn rv;
     PRInt32 one = 1;
-    pt_SockLen addr_len;
-#ifdef _PR_HAVE_SOCKADDR_LEN
-    PRNetAddr addrCopy;
-#endif
 
     if (pt_TestAbort()) return PR_FAILURE;
 
@@ -1610,15 +1593,7 @@ static PRStatus pt_Bind(PRFileDesc *fd, const PRNetAddr *addr)
         }
     }
 
-    addr_len = PR_NETADDR_SIZE(addr);
-#ifdef _PR_HAVE_SOCKADDR_LEN
-    addrCopy = *addr;
-    ((struct sockaddr*)&addrCopy)->sa_len = addr_len;
-    ((struct sockaddr*)&addrCopy)->sa_family = addr->raw.family;
-    rv = bind(fd->secret->md.osfd, (struct sockaddr*)&addrCopy, addr_len);
-#else
-    rv = bind(fd->secret->md.osfd, (struct sockaddr*)addr, addr_len);
-#endif
+    rv = bind(fd->secret->md.osfd, (struct sockaddr*)addr, PR_NETADDR_SIZE(addr));
 
     if (rv == -1) {
         pt_MapError(_PR_MD_MAP_BIND_ERROR, errno);
@@ -1787,27 +1762,13 @@ static PRInt32 pt_SendTo(
 {
     PRInt32 syserrno, bytes = -1;
     PRBool fNeedContinue = PR_FALSE;
-    pt_SockLen addr_len;
-#ifdef _PR_HAVE_SOCKADDR_LEN
-    PRNetAddr addrCopy;
-#endif
 
     if (pt_TestAbort()) return bytes;
 
     PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
-    addr_len = PR_NETADDR_SIZE(addr);
-#ifdef _PR_HAVE_SOCKADDR_LEN
-    addrCopy = *addr;
-    ((struct sockaddr*)&addrCopy)->sa_len = addr_len;
-    ((struct sockaddr*)&addrCopy)->sa_family = addr->raw.family;
     bytes = sendto(
         fd->secret->md.osfd, buf, amount, flags,
-        (struct sockaddr*)&addrCopy, addr_len);
-#else
-    bytes = sendto(
-        fd->secret->md.osfd, buf, amount, flags,
-        (struct sockaddr*)addr, addr_len);
-#endif
+        (struct sockaddr*)addr, PR_NETADDR_SIZE(addr));
     syserrno = errno;
     if ( (bytes == -1) && (syserrno == EWOULDBLOCK || syserrno == EAGAIN)
         && (!fd->secret->nonblocking) )
@@ -1822,11 +1783,7 @@ static PRInt32 pt_SendTo(
         op.arg2.buffer = (void*)buf;
         op.arg3.amount = amount;
         op.arg4.flags = flags;
-#ifdef _PR_HAVE_SOCKADDR_LEN
-        op.arg5.addr = (PRNetAddr*)&addrCopy;
-#else
         op.arg5.addr = (PRNetAddr*)addr;
-#endif
         op.timeout = timeout;
         op.result.code = 0;  /* initialize the number sent */
         op.function = pt_sendto_cont;
@@ -1877,10 +1834,13 @@ static PRInt32 pt_RecvFrom(PRFileDesc *fd, void *buf, PRInt32 amount,
 #ifdef _PR_HAVE_SOCKADDR_LEN
     if (bytes >= 0)
     {
-        /* ignore the sa_len field of struct sockaddr */
+        /* mask off the first byte of struct sockaddr (the length field) */
         if (addr)
         {
-            addr->raw.family = ((struct sockaddr*)addr)->sa_family;
+            *((unsigned char *) addr) = 0;
+#ifdef IS_LITTLE_ENDIAN
+            addr->raw.family = ntohs(addr->raw.family);
+#endif
         }
     }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
@@ -2056,10 +2016,13 @@ static PRStatus pt_GetSockName(PRFileDesc *fd, PRNetAddr *addr)
         return PR_FAILURE;
     } else {
 #ifdef _PR_HAVE_SOCKADDR_LEN
-        /* ignore the sa_len field of struct sockaddr */
+        /* mask off the first byte of struct sockaddr (the length field) */
         if (addr)
         {
-            addr->raw.family = ((struct sockaddr*)addr)->sa_family;
+            *((unsigned char *) addr) = 0;
+#ifdef IS_LITTLE_ENDIAN
+            addr->raw.family = ntohs(addr->raw.family);
+#endif
         }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
         PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
@@ -2083,10 +2046,13 @@ static PRStatus pt_GetPeerName(PRFileDesc *fd, PRNetAddr *addr)
         return PR_FAILURE;
     } else {
 #ifdef _PR_HAVE_SOCKADDR_LEN
-        /* ignore the sa_len field of struct sockaddr */
+        /* mask off the first byte of struct sockaddr (the length field) */
         if (addr)
         {
-            addr->raw.family = ((struct sockaddr*)addr)->sa_family;
+            *((unsigned char *) addr) = 0;
+#ifdef IS_LITTLE_ENDIAN
+            addr->raw.family = ntohs(addr->raw.family);
+#endif
         }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
         PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);

@@ -133,15 +133,6 @@ CSRCS =             \
 	xnotify.c       \
 	$(NULL)
 
-ifeq ($(OS_TARGET),OS2)
-CSRCS +=            \
-	servr_uu.c		\
-	sleep.c			\
-	stat.c		    \
-	yield.c         \
-	$(NULL)
-endif
-
 ifeq ($(OS_ARCH), WINNT)
 PROG_SUFFIX = .exe
 else
@@ -166,13 +157,9 @@ ifeq ($(OS_TARGET), WIN16)
   LIBPLC= $(DIST)/lib/plc$(MOD_VERSION).lib
 else
 ifeq ($(OS_TARGET), OS2)
-ifdef XP_OS2_VACPP
-  LDOPTS =
+  LDOPTS = -NOE -DEBUG -nologo -PMTYPE:VIO
   LIBPR = $(DIST)/lib/nspr$(MOD_VERSION).lib
   LIBPLC= $(DIST)/lib/plc$(MOD_VERSION).lib
-else
-  LDOPTS = -Zlinker /PM:VIO
-endif
 else
   LDOPTS = -NOLOGO -DEBUG -DEBUGTYPE:CV -INCREMENTAL:NO
   LIBPR = $(DIST)/lib/libnspr$(MOD_VERSION).$(LIB_SUFFIX)
@@ -212,7 +199,7 @@ ifeq ($(OS_ARCH), OSF1)
     endif
 # I haven't figured out how to pass -rpath to cc on OSF1 V3.2, so
 # we do static linking.
-    ifeq (,$(filter-out V2.0 V3.2,$(OS_RELEASE)))
+    ifeq ($(OS_RELEASE), V3.2)
         LIBPR = $(DIST)/lib/libnspr$(MOD_VERSION).a
         LIBPLC = $(DIST)/lib/libplc$(MOD_VERSION).a
         EXTRA_LIBS = -lc_r
@@ -294,12 +281,6 @@ ifeq ($(OS_ARCH), NCR)
     export LD_RUN_PATH = $(PWD)/$(DIST)/lib
 endif
 
-ifeq ($(OS_ARCH), NEXTSTEP)
-# balazs.pataki@sztaki.hu: linkage is done in a different pass in the `tests'
-# modeul, so we have to pass the `-posix' flag by "hand" to `ld'
-LDOPTS += -posix
-endif
-
 ifeq ($(OS_ARCH), NEWS-OS)
 # This hardcodes in the executable programs the directory to find
 # libnspr.so etc. at program startup.  Equivalent to the -R or -rpath 
@@ -351,9 +332,7 @@ LDOPTS += -Xlinker -R $(PWD)/$(DIST)/lib
 endif
 
 ifeq ($(OS_ARCH),BSD_OS)
-ifneq ($(OS_RELEASE),1.1)
 EXTRA_LIBS = -ldl
-endif
 endif
 
 ifeq ($(USE_PTHREADS),1)
@@ -438,7 +417,7 @@ ifeq ($(OS_TARGET),WIN16)
 	wlink @w16link.
 else
 ifeq ($(OS_TARGET),OS2)
-	$(LINK) $(EXEFLAGS) $(LDOPTS) $< $(LIBPLC) $(LIBPR) $(OS_LIBS) $(EXTRA_LIBS)
+	$(LINK) $(LDOPTS) $< $(LIBPLC) $(LIBPR) so32dll.lib tcp32dll.lib -MAP:$(@:.exe=.map) -out:$@
 else
 	link $(LDOPTS) $< $(LIBPLC) $(LIBPR) wsock32.lib -out:$@
 endif

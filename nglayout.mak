@@ -52,7 +52,11 @@ W32LOBJS = $(OBJS: .= +-.)
 !if defined(MOZ_DATE)
 CVSCO = cvs -q co -P -D "$(MOZ_DATE)"
 !else
+!if defined(MOZ_BRANCH)
+CVSCO = cvs -q co -P -r $(MOZ_BRANCH)
+!else
 CVSCO = cvs -q co -P
+!endif
 !endif
 
 CVSCO_TAG = cvs -q co -P
@@ -68,9 +72,15 @@ XPCOM_BRANCH =
 CVSCO_LIBPREF = $(CVSCO)
 CVSCO_PLUGIN = $(CVSCO)
 !else
+!if defined(MOZ_BRANCH)
+# CVS commands to pull the appropriate branch versions
+CVSCO_LIBPREF = $(CVSCO)
+CVSCO_PLUGIN = $(CVSCO)
+!else
 # CVS commands to pull the appropriate branch versions
 CVSCO_LIBPREF = $(CVSCO) -A
 CVSCO_PLUGIN = $(CVSCO) -A
+!endif
 !endif
 
 CVSCO_XPCOM = $(CVSCO)

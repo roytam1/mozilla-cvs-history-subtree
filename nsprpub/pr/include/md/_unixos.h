@@ -27,7 +27,7 @@
  * Linux: FD_SETSIZE is defined in /usr/include/sys/select.h and should
  * not be redefined.
  */
-#if !defined(LINUX) && !defined(RHAPSODY) && !defined(NEXTSTEP)
+#if !defined(LINUX) && !defined(RHAPSODY)
 #ifndef FD_SETSIZE
 #define FD_SETSIZE  4096
 #endif
@@ -144,12 +144,7 @@ extern void _MD_unix_init_running_cpu(struct _PRCPU *cpu);
 ** work - it just means that we don't really have a functional
 ** redzone.
 */
-#include <sys/mman.h>
-#ifndef PROT_NONE
-#define PROT_NONE 0x0
-#endif
-
-#if defined(DEBUG) && !defined(RHAPSODY) && !defined(NEXTSTEP)
+#if defined(DEBUG) && !defined(RHAPSODY)
 #if !defined(SOLARIS)	
 #include <string.h>  /* for memset() */
 #define _MD_INIT_STACK(ts,REDZONE)					\
@@ -466,7 +461,7 @@ extern PRStatus _MD_CloseFileMap(struct PRFileMap *fmap);
 #define GETTIMEOFDAY(tp) gettimeofday((tp), NULL)
 #endif
 
-#if defined(_PR_PTHREADS) && !defined(_PR_POLL_AVAILABLE)
+#if defined(LINUX) && defined(_PR_PTHREADS) && !(__GLIBC__ >= 2)
 #define _PR_NEED_FAKE_POLL
 #endif
 
@@ -568,6 +563,7 @@ struct _MD_IOVector
     _MD_Mmap64 _mmap64;
     _MD_Stat64 _stat64;
     _MD_Fstat64 _fstat64;
+    _MD_Lockf64 _lockf64;
     _MD_Lseek64 _lseek64;
 };
 extern struct _MD_IOVector _md_iovector;

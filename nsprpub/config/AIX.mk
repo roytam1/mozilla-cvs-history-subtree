@@ -33,15 +33,8 @@ endif
 
 #
 # There are three implementation strategies available on AIX:
-# pthreads, classic, and pthreads-user.
-#
-# On AIX 3.2, classic nspr is the default (and only) implementation
-# strategy.  On AIX 4.1 and later, the default is pthreads.
+# pthreads, classic, and pthreads-user.  The default is pthreads.
 # 
-ifeq ($(OS_RELEASE),3.2)
-CLASSIC_NSPR = 1
-endif
-
 ifeq ($(CLASSIC_NSPR),1)
 	PTHREADS_USER =
 	USE_PTHREADS =
@@ -64,35 +57,18 @@ else
 CC		= xlC_r
 CCC		= xlC_r
 endif
-OS_CFLAGS	= -qro -qroconst
 
 CPU_ARCH	= rs6000
 
 RANLIB		= ranlib
 
-OS_CFLAGS 	+= -DAIX -DSYSV
+OS_CFLAGS 	= -qro -qroconst -DAIX -DSYSV
 ifeq ($(CC),xlC_r)
 OS_CFLAGS 	+= -qarch=com
 endif
 
-ifneq ($(OS_RELEASE),3.2)
-OS_CFLAGS	+= -DAIX_HAVE_ATOMIC_OP_H -DAIX_TIMERS
-endif
-
-ifeq (,$(filter-out 3.2 4.1,$(OS_RELEASE)))
-ifndef USE_PTHREADS
-OS_CFLAGS	+= -DAIX_RENAME_SELECT
-endif
-endif
-
-ifeq (,$(filter-out 3.2 4.1,$(OS_RELEASE)))
-OS_CFLAGS	+= -D_PR_NO_LARGE_FILES
-else
-OS_CFLAGS	+= -D_PR_HAVE_OFF64_T
-endif
-
 ifeq ($(OS_RELEASE),4.1)
-OS_CFLAGS	+= -DAIX4_1
+OS_CFLAGS	+= -DAIX4_1 -D_PR_NO_LARGE_FILES
 else
 DSO_LDOPTS	= -brtl -bM:SRE -bnoentry -bexpall
 MKSHLIB		= $(LD) $(DSO_LDOPTS)
@@ -107,6 +83,7 @@ ifeq (,$(filter-out 4.2 4.3,$(OS_RELEASE)))
 ifneq ($(CLASSIC_NSPR),1)
 OS_CFLAGS	+= -DHAVE_POINTER_LOCALTIME_R
 endif
+OS_CFLAGS	+= -D_PR_HAVE_OFF64_T
 endif
 
 #
@@ -115,7 +92,7 @@ endif
 # calls to select to call "aix". Once that is done we then can
 # link that .o with a .o built in nspr which implements the system call.
 #
-ifneq (,$(filter-out 3.2 4.1,$(OS_RELEASE)))
+ifneq ($(OS_RELEASE),4.1)
 AIX_LINK_OPTS	= -brtl -bnso -berok
 else
 AIX_LINK_OPTS	= -bnso -berok

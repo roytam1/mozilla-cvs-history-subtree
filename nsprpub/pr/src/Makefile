@@ -75,7 +75,7 @@ endif
 # On AIX, we override malloc in non-pthread versions.  On AIX 4.2 or
 # above, this requires that we use the rtl-enabled version of libc.a.
 ifeq ($(OS_ARCH),AIX)
-ifneq (,$(filter-out 3.2 4.1,$(OS_RELEASE)))
+ifneq ($(OS_RELEASE),4.1)
 ifneq ($(USE_PTHREADS),1)
 BUILD_AIX_RTL_LIBC = 1
 AIX_RTL_LIBC	= $(OBJDIR)/libc.a
@@ -131,7 +131,7 @@ endif
 
 ifeq ($(OS_ARCH),WINNT)
 ifeq ($(OS_TARGET),OS2)
-# We define this in os2.mk.
+OS_LIBS		= so32dll.lib tcp32dll.lib
 else
 ifneq ($(OS_TARGET),WIN16)
 OS_LIBS		= wsock32.lib winmm.lib
@@ -257,7 +257,7 @@ OBJS +=	md/windows/$(OBJDIR)/w95io.$(OBJ_SUFFIX) \
 	md/windows/$(OBJDIR)/w32poll.$(OBJ_SUFFIX)	\
 	md/windows/$(OBJDIR)/w95dllmain.$(OBJ_SUFFIX)
 else
-ifeq ($(OS_TARGET),OS2)
+ifeq ($(OS_TARGET), OS2)
 OBJS +=	md/os2/$(OBJDIR)/os2io.$(OBJ_SUFFIX) \
 	md/os2/$(OBJDIR)/os2sock.$(OBJ_SUFFIX) \
 	md/os2/$(OBJDIR)/os2thred.$(OBJ_SUFFIX) \
@@ -292,7 +292,9 @@ else
 	MD_DIR = md/unix/$(OBJDIR)
 	include md/unix/objs.mk
 endif
+
 endif
+
 LIBRARY_NAME = nspr
 LIBRARY_VERSION = $(MOD_VERSION)
 
@@ -311,21 +313,13 @@ endif
 ECHO = echo
 INCLUDES = -I$(DIST)/include
 TINC = $(OBJDIR)/_pr_bld.h
-ifeq ($(OS_TARGET),OS2)
-PROD = nspr$(MOD_VERSION).$(DLL_SUFFIX)
-else
 PROD = libnspr$(MOD_VERSION).$(DLL_SUFFIX)
-endif
 NOW = $(MOD_DEPTH)/config/$(OBJDIR)/now
 SH_DATE = $(shell date)
 SH_NOW = $(shell $(NOW))
 
 ifeq ($(OS_ARCH), WINNT)
-ifeq ($(OS_TARGET),OS2)
-        SUF =
-else
 	SUF = i64
-endif
 else
 	SUF = LL
 endif
@@ -335,19 +329,13 @@ $(TINC):
 	@$(ECHO) '#define _BUILD_STRING "$(SH_DATE)"' > $(TINC)
 	@if test ! -z "$(SH_NOW)"; then \
 	    $(ECHO) '#define _BUILD_TIME $(SH_NOW)$(SUF)' >> $(TINC); \
-	else \
-	    true; \
 	fi
 	@$(ECHO) '#define _PRODUCTION "$(PROD)"' >> $(TINC)
 
 
 $(OBJDIR)/prvrsion.$(OBJ_SUFFIX): $(TINC)
 ifeq ($(OS_ARCH), WINNT)
-ifdef XP_OS2_EMX
-	$(CC) -o $@ -c $(CFLAGS) -I$(OBJDIR) prvrsion.c
-else
 	$(CC) -Fo$@ -c $(CFLAGS) -I$(OBJDIR) prvrsion.c
-endif
 else
 	$(CC) -o $@ -c $(CFLAGS) -I$(OBJDIR) prvrsion.c
 endif

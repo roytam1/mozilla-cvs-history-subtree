@@ -82,7 +82,9 @@ static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 nsViewerApp::nsViewerApp()
 {
   char * text = PR_GetEnv("NGLAYOUT_HOME");
-  mStartURL = text ? text : "http://home.netscape.com/eng/mozilla/5.0/DR1/hello.html";
+
+  mStartURL = text ? text : "http://developer.netscape.com/software/communicator/ngl/index.html";
+
   mDelay = 1;
   mRepeatCount = 1;
   mNumSamples = 10;
@@ -652,6 +654,7 @@ extern "C" NS_EXPORT int DebugRobot(
   int imax, char * verify_dir,
   void (*yieldProc)(const char *));
 
+#ifdef MOZ_DEBUG
 void yieldProc(const char * str)
 {
   // Process messages
@@ -668,6 +671,7 @@ void yieldProc(const char * str)
     }
   }
 }
+#endif // MOZ_DEBUG
 #endif
 
 
@@ -898,8 +902,8 @@ nsViewerApp::CreateRobot(nsBrowserWindow* aWindow)
 static nsBrowserWindow* gWinData;
 static int gTop100Pointer = 0;
 static char * gTop100List[] = {
-   "http://www.yahoo.com",
    "http://www.netscape.com",
+   "http://www.yahoo.com",
    "http://www.microsoft.com",
    "http://www.excite.com",
    "http://www.mckinley.com",
@@ -1139,7 +1143,7 @@ PRBool CreateSiteDialog(nsIWidget * aParent)
     if (mSiteDialog && NS_OK == mSiteDialog->QueryInterface(kIWidgetIID,(void**)&widget))
     {
       widget->Create(aParent, rect, HandleSiteEvent, NULL);
-      mSiteDialog->SetLabel("Top 100 Site Walker");
+      mSiteDialog->SetLabel("Test Sites Walker");
     }
     //mSiteDialog->SetClientData(this);
 
@@ -1232,6 +1236,7 @@ static void DestroyConsole()
   }
 }
 
+#ifdef MOZ_DEBUG
 static void ShowConsole(nsBrowserWindow* aWindow)
 {
     HWND hWnd = (HWND)aWindow->mWindow->GetNativeData(NS_NATIVE_WIDGET);
@@ -1266,12 +1271,13 @@ static void ShowConsole(nsBrowserWindow* aWindow)
       }
     }
 }
+#endif // MOZ_DEBUG
 #endif
 
 NS_IMETHODIMP
 nsViewerApp::CreateJSConsole(nsBrowserWindow* aWindow)
 {
-#ifdef XP_PC
+#if defined( XP_PC ) && defined( MOZ_DEBUG )
   if (nsnull == gConsole) {
     ShowConsole(aWindow);
   }
