@@ -30,7 +30,7 @@
 #include "nsStyleConsts.h"
 #include "nsIPresContext.h"
 #include "nsIHTMLAttributes.h"
-
+#include "nsIRuleNode.h"
 
 class nsHTMLLIElement : public nsGenericHTMLContainerElement,
                         public nsIDOMHTMLLIElement
@@ -62,7 +62,7 @@ public:
                                nsAWritableString& aResult) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const;
 };
@@ -211,22 +211,22 @@ nsHTMLLIElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
+MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
+                      nsRuleData* aData)
 {
-  if (nsnull != aAttributes) {
-    nsHTMLValue value;
+  if (!aAttributes || !aData || !aData->mListData)
+    return;
 
+  if (aData->mListData->mType.GetUnit() == eCSSUnit_Null) {
+    nsHTMLValue value;
+    
     // type: enum
     aAttributes->GetAttribute(nsHTMLAtoms::type, value);
-    if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      nsMutableStyleList list(aContext);
-      list->mListStyleType = value.GetIntValue();
-    }
+    if (value.GetUnit() == eHTMLUnit_Enumerated)
+      aData->mListData->mType = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
   }
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
+
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 NS_IMETHODIMP
@@ -246,11 +246,11 @@ nsHTMLLIElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 
 
 NS_IMETHODIMP
-nsHTMLLIElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLLIElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                               nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
-  aMapFunc = &MapAttributesInto;
+  aMapRuleFunc = &MapAttributesIntoRule;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

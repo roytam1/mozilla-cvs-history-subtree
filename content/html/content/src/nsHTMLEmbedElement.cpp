@@ -56,7 +56,7 @@ public:
                                nsAWritableString& aResult) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const;
 };
@@ -99,13 +99,11 @@ nsHTMLEmbedElement::~nsHTMLEmbedElement()
 NS_IMPL_ADDREF_INHERITED(nsHTMLEmbedElement, nsGenericElement);
 NS_IMPL_RELEASE_INHERITED(nsHTMLEmbedElement, nsGenericElement);
 
-
 // XPConnect interface list for nsHTMLEmbedElement
 NS_CLASSINFO_MAP_BEGIN(HTMLEmbedElement)
   NS_CLASSINFO_MAP_ENTRY(nsIDOMHTMLEmbedElement)
   NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetGenericHTMLElementIIDs)
 NS_CLASSINFO_MAP_END
-
 
 // QueryInterface implementation for nsHTMLEmbedElement
 NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLEmbedElement,
@@ -113,7 +111,6 @@ NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLEmbedElement,
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLEmbedElement)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLEmbedElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
-
 
 nsresult
 nsHTMLEmbedElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
@@ -180,18 +177,17 @@ nsHTMLEmbedElement::AttributeToString(nsIAtom* aAttribute,
 }
 
 static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
+MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
+                      nsRuleData* aData)
 {
-  nsGenericHTMLElement::MapImageAlignAttributeInto(aAttributes, aContext,
-                                                   aPresContext);
-  nsGenericHTMLElement::MapImageAttributesInto(aAttributes, aContext,
-                                               aPresContext);
-  nsGenericHTMLElement::MapImageBorderAttributeInto(aAttributes, aContext,
-                                                    aPresContext, nsnull);
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
+  if (!aData)
+    return;
+
+  nsGenericHTMLElement::MapImageBorderAttributeInto(aAttributes, aData);
+  nsGenericHTMLElement::MapImageMarginAttributeInto(aAttributes, aData);
+  nsGenericHTMLElement::MapImagePositionAttributeInto(aAttributes, aData);
+  nsGenericHTMLElement::MapAlignAttributeInto(aAttributes, aData);
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 NS_IMETHODIMP
@@ -213,11 +209,11 @@ nsHTMLEmbedElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 
 
 NS_IMETHODIMP
-nsHTMLEmbedElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLEmbedElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                  nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
-  aMapFunc = &MapAttributesInto;
+  aMapRuleFunc = &MapAttributesIntoRule;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

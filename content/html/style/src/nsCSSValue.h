@@ -78,6 +78,9 @@ enum nsCSSUnit {
   // Screen relative measure
   eCSSUnit_Pixel        = 900,    // (float)
 
+  // Proportional Unit (for columns in tables)
+  eCSSUnit_Proportional = 950, 
+
   // Angular units
   eCSSUnit_Degree       = 1000,    // (float) 360 per circle
   eCSSUnit_Grad         = 1001,    // (float) 400 per circle
@@ -122,11 +125,11 @@ public:
 
   nsCSSUnit GetUnit(void) const { return mUnit; };
   PRBool    IsLengthUnit(void) const
-    { return PRBool((eCSSUnit_Inch <= mUnit) && (mUnit <= eCSSUnit_Pixel)); }
+    { return PRBool((eCSSUnit_Inch <= mUnit) && (mUnit <= eCSSUnit_Proportional)); }
   PRBool    IsFixedLengthUnit(void) const  
     { return PRBool((eCSSUnit_Inch <= mUnit) && (mUnit <= eCSSUnit_Cicero)); }
   PRBool    IsRelativeLengthUnit(void) const  
-    { return PRBool((eCSSUnit_EM <= mUnit) && (mUnit <= eCSSUnit_Pixel)); }
+    { return PRBool((eCSSUnit_EM <= mUnit) && (mUnit <= eCSSUnit_Proportional)); }
   PRBool    IsAngularUnit(void) const  
     { return PRBool((eCSSUnit_Degree <= mUnit) && (mUnit <= eCSSUnit_Radian)); }
   PRBool    IsFrequencyUnit(void) const  

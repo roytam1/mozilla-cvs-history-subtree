@@ -134,6 +134,8 @@ public:
   NS_IMETHOD  GetFontHandle(nsFontHandle &aHandle);
   NS_IMETHOD  GetAveCharWidth(nscoord &aAveCharWidth);
 
+  virtual nsresult   GetASCIITextWidth(HDC aDC, const char* aStart, PRInt32 aNumChars, float aP2T, nscoord& aTextWidth);
+
   virtual nsresult   GetSpaceWidth(nscoord &aSpaceWidth);
   virtual nsFontWin* FindGlobalFont(HDC aDC, PRUnichar aChar);
   virtual nsFontWin* FindGenericFont(HDC aDC, PRUnichar aChar);
@@ -155,6 +157,8 @@ public:
   PRUint16            mLoadedFontsCount;
 
   PRInt32             mIndexOfSubstituteFont;
+
+  nscoord             mMeasuredChars[256];
 
   nsStringArray       mFonts;
   PRUint16            mFontsIndex;

@@ -1663,9 +1663,10 @@ nsRenderingContextWin::GetWidth(const char *aString,
         metrics->GetSpaceWidth(twWidth);
 
       } else {
-        SIZE  size;
-        ::GetTextExtentPoint32(mDC, &aString[start], numChars, &size);
-        twWidth = NSToCoordRound(float(size.cx) * mP2T);
+        metrics->GetASCIITextWidth(mDC, &aString[start], numChars, mP2T, twWidth);
+        //SIZE  size;
+        //::GetTextExtentPoint32(mDC, &aString[start], numChars, &size);
+        //twWidth = NSToCoordRound(float(size.cx) * mP2T);
       }
 
       // See if the text fits
@@ -1716,9 +1717,10 @@ nsRenderingContextWin::GetWidth(const char *aString,
             metrics->GetSpaceWidth(twWidth);
 
           } else {
-            SIZE  size;
-            ::GetTextExtentPoint32(mDC, &aString[start], numChars, &size);
-            twWidth = NSToCoordRound(float(size.cx) * mP2T);
+            metrics->GetASCIITextWidth(mDC, &aString[start], numChars, mP2T, twWidth);
+          //  SIZE  size;
+           // ::GetTextExtentPoint32(mDC, &aString[start], numChars, &size);
+           // twWidth = NSToCoordRound(float(size.cx) * mP2T);
           }
 
           width -= twWidth;

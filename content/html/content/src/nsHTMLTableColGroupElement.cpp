@@ -30,7 +30,7 @@
 #include "nsIMutableStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsIPresContext.h"
-
+#include "nsIRuleNode.h"
 
 class nsHTMLTableColGroupElement : public nsGenericHTMLContainerElement,
                                    public nsIDOMHTMLTableColElement
@@ -60,7 +60,7 @@ public:
   NS_IMETHOD AttributeToString(nsIAtom* aAttribute,
                                const nsHTMLValue& aValue,
                                nsAWritableString& aResult) const;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc, 
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
@@ -233,76 +233,61 @@ nsHTMLTableColGroupElement::AttributeToString(nsIAtom* aAttribute,
                                                           aResult);
 }
 
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
+static 
+void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleData* aData)
 {
-  NS_PRECONDITION(nsnull!=aContext, "bad style context arg");
-  NS_PRECONDITION(nsnull!=aPresContext, "bad presentation context arg");
+  if (!aAttributes || !aData)
+    return;
 
-  if (nsnull != aAttributes) {
-    nsHTMLValue value;
-
+  nsHTMLValue value;
+  
+  if (aData->mPositionData && aData->mPositionData->mWidth.GetUnit() == eCSSUnit_Null) {
     // width
     aAttributes->GetAttribute(nsHTMLAtoms::width, value);
-
     if (value.GetUnit() != eHTMLUnit_Null) {
-      nsMutableStylePosition position(aContext);
       switch (value.GetUnit()) {
-      case eHTMLUnit_Percent:
-        position->mWidth.SetPercentValue(value.GetPercentValue());
+      case eHTMLUnit_Percent: {
+        nsCSSValue val; val.SetPercentValue(value.GetPercentValue());
+        aData->mPositionData->mWidth = val;
         break;
-
-      case eHTMLUnit_Pixel:
-        float p2t;
-        aPresContext->GetScaledPixelsToTwips(&p2t);
-        position->mWidth.SetCoordValue(NSIntPixelsToTwips(value.GetPixelValue(), p2t));
+      }
+      case eHTMLUnit_Pixel: {
+        nsCSSValue val((float)value.GetPixelValue(), eCSSUnit_Pixel);
+        aData->mPositionData->mWidth = val;
         break;
-      
-      case eHTMLUnit_Proportional:
-        position->mWidth.SetIntValue(value.GetIntValue(),
-                                     eStyleUnit_Proportional);
-
+      }
+      case eHTMLUnit_Proportional: {
+        nsCSSValue val((float)value.GetIntValue(), eCSSUnit_Proportional);
+        aData->mPositionData->mWidth = val;
         break;
+      }
       default:
         break;
       }
     }
-
-    PRUint8      newTextAlign;
-    nsStyleCoord newVerticalAlign;
-    PRBool       changedTextAlign = PR_FALSE;
-    PRBool       changedVerticalAlign = PR_FALSE;
-
-    // align: enum
-    aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-    if (value.GetUnit() == eHTMLUnit_Enumerated) 
-    {
-      newTextAlign = value.GetIntValue();
-      changedTextAlign = PR_TRUE;
-    }
-    
-    // valign: enum
-    aAttributes->GetAttribute(nsHTMLAtoms::valign, value);
-    if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      newVerticalAlign.SetIntValue(value.GetIntValue(), eStyleUnit_Enumerated);
-      changedVerticalAlign = PR_TRUE;
-    }
-
-    if (changedTextAlign || changedVerticalAlign) {
-      nsMutableStyleText text(aContext);
-      if (changedTextAlign) {
-        text->mTextAlign = newTextAlign;
+  }
+  else if (aData->mTextData) {
+    if (aData->mSID == eStyleStruct_Text) {
+      if (aData->mTextData->mTextAlign.GetUnit() == eCSSUnit_Null) {
+        // align: enum
+        nsHTMLValue value;
+        aAttributes->GetAttribute(nsHTMLAtoms::align, value);
+        if (value.GetUnit() == eHTMLUnit_Enumerated)
+          aData->mTextData->mTextAlign = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
       }
-      if (changedVerticalAlign) {
-        text->mVerticalAlign = newVerticalAlign;
+    }
+    else {
+      if (aData->mTextData->mVerticalAlign.GetUnit() == eCSSUnit_Null) {
+        // valign: enum
+        nsHTMLValue value;
+        aAttributes->GetAttribute(nsHTMLAtoms::valign, value);
+        if (value.GetUnit() == eHTMLUnit_Enumerated) 
+          aData->mTextData->mVerticalAlign = nsCSSValue(value.GetIntValue(), eCSSUnit_Enumerated);
       }
     }
   }
 
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 NS_IMETHODIMP
@@ -323,11 +308,11 @@ nsHTMLTableColGroupElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 
 
 NS_IMETHODIMP
-nsHTMLTableColGroupElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLTableColGroupElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                          nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
-  aMapFunc = &MapAttributesInto;
+  aMapRuleFunc = &MapAttributesIntoRule;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

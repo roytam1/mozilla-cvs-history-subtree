@@ -169,11 +169,6 @@ nsFormFrame::~nsFormFrame()
 
 NS_METHOD nsFormFrame::DidSetStyleContext(nsIPresContext* aPresContext)
 {
-  // we can't yet support anything but display:block on a form, 
-  // so make sure that the display is block
-  nsMutableStyleDisplay displayData(mStyleContext);
-  displayData->mDisplay = NS_STYLE_DISPLAY_BLOCK;
-
   return NS_OK;
 }
 

@@ -30,7 +30,7 @@
 #include "nsStyleConsts.h"
 #include "nsIPresContext.h"
 #include "nsIHTMLAttributes.h"
-
+#include "nsIRuleNode.h"
 
 class nsHTMLTableCaptionElement :  public nsGenericHTMLContainerElement,
                                    public nsIDOMHTMLTableCaptionElement
@@ -60,7 +60,7 @@ public:
   NS_IMETHOD AttributeToString(nsIAtom* aAttribute,
                                const nsHTMLValue& aValue,
                                nsAWritableString& aResult) const;
-  NS_IMETHOD GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc, 
+  NS_IMETHOD GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                           nsMapAttributesFunc& aMapFunc) const;
   NS_IMETHOD GetMappedAttributeImpact(const nsIAtom* aAttribute,
                                       PRInt32& aHint) const;
@@ -191,24 +191,22 @@ nsHTMLTableCaptionElement::AttributeToString(nsIAtom* aAttribute,
   return nsGenericHTMLElement::AttributeToString(aAttribute, aValue, aResult);
 }
 
-static void
-MapAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
-                  nsIMutableStyleContext* aContext,
-                  nsIPresContext* aPresContext)
+static 
+void MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes, nsRuleData* aData)
 {
-  if (nsnull != aAttributes) {
+  if (!aAttributes || !aData || aData->mSID != eStyleStruct_TableBorder || !aData->mTableData)
+    return;
+
+  if (aData->mTableData->mCaptionSide.GetUnit() == eCSSUnit_Null) {
     nsHTMLValue value;
     aAttributes->GetAttribute(nsHTMLAtoms::align, value);
-
     if (value.GetUnit() == eHTMLUnit_Enumerated) {
-      PRUint8 align = value.GetIntValue();
-      nsMutableStyleTable tableStyle(aContext);
-      tableStyle->mCaptionSide = align;
+      nsCSSValue val(value.GetIntValue(), eCSSUnit_Enumerated);
+      aData->mTableData->mCaptionSide = val;
     }
   }
 
-  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aContext,
-                                                aPresContext);
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aData);
 }
 
 NS_IMETHODIMP
@@ -228,11 +226,11 @@ nsHTMLTableCaptionElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
 
 
 NS_IMETHODIMP
-nsHTMLTableCaptionElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
+nsHTMLTableCaptionElement::GetAttributeMappingFunctions(nsMapRuleToAttributesFunc& aMapRuleFunc,
                                                         nsMapAttributesFunc& aMapFunc) const
 {
-  aFontMapFunc = nsnull;
-  aMapFunc = &MapAttributesInto;
+  aMapRuleFunc = &MapAttributesIntoRule;
+  aMapFunc = nsnull;
   return NS_OK;
 }
 

@@ -920,12 +920,9 @@ nsBlockReflowState::PlaceFloater(nsFloaterCache* aFloaterCache,
 
   // Get the type of floater
   const nsStyleDisplay* floaterDisplay;
-  const nsStylePosition* floaterPosition;
   floater->GetStyleData(eStyleStruct_Display,
                         (const nsStyleStruct*&)floaterDisplay);
-  floater->GetStyleData(eStyleStruct_Position,
-                        (const nsStyleStruct*&)floaterPosition);
-
+  
   // See if the floater should clear any preceeding floaters...
   if (NS_STYLE_CLEAR_NONE != floaterDisplay->mBreakType) {
     ClearFloaters(mY, floaterDisplay->mBreakType);
@@ -1044,7 +1041,7 @@ nsBlockReflowState::PlaceFloater(nsFloaterCache* aFloaterCache,
   nscoord y = borderPadding.top + aFloaterCache->mMargins.top + region.y;
 
   // If floater is relatively positioned, factor that in as well
-  if (NS_STYLE_POSITION_RELATIVE == floaterPosition->mPosition) {
+  if (NS_STYLE_POSITION_RELATIVE == floaterDisplay->mPosition) {
     x += aFloaterCache->mOffsets.left;
     y += aFloaterCache->mOffsets.top;
   }
