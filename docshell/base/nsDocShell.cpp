@@ -731,7 +731,7 @@ nsDocShell::LoadURI(nsIURI * aURI,
             flags |= INTERNAL_LOAD_FLAGS_INHERIT_OWNER;
 
         if (!sendReferrer)
-            flags |= INTERNAL_LOAD_FLAGS_NO_REFERRER;
+            flags |= INTERNAL_LOAD_FLAGS_DONT_SEND_REFERRER;
 
         rv = InternalLoad(aURI,
                           referrer,
@@ -5472,7 +5472,7 @@ nsDocShell::InternalLoad(nsIURI * aURI,
     mLSHE = aSHEntry;
 
     rv = DoURILoad(aURI, aReferrer,
-                   !(aFlags & INTERNAL_LOAD_FLAGS_NO_REFERRER),
+                   !(aFlags & INTERNAL_LOAD_FLAGS_DONT_SEND_REFERRER),
                    owner, aTypeHint, aPostData, aHeadersData, aFirstParty,
                    aDocShell, aRequest);
 
