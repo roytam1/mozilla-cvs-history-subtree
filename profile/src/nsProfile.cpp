@@ -298,6 +298,7 @@ NS_INTERFACE_MAP_BEGIN(nsProfile)
     NS_INTERFACE_MAP_ENTRY(nsIProfile)
     NS_INTERFACE_MAP_ENTRY(nsIProfileInternal)
     NS_INTERFACE_MAP_ENTRY(nsIProfileChangeStatus)
+    NS_INTERFACE_MAP_ENTRY(nsIProfileSharing)
 NS_INTERFACE_MAP_END
 
 /*
