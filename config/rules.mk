@@ -1507,10 +1507,13 @@ endif
 ################################################################################
 # Common rules for generating .h & .xpt
 #
+_SUB_MODULE_XPIDLSRCS = $(foreach m,$(XPIDLSRCS_SUB_MODULES),$m_module_xpidlsrcs)
+
+ifneq ($(XPIDLSRCS)$(SDK_XPIDLSRCS)$(_SUB_MODULE_XPIDLSRCS),)
+GARBAGE_DIRS		+= $(XPIDL_GEN_DIR)
+endif
 
 ifneq ($(XPIDLSRCS)$(SDK_XPIDLSRCS),)
-
-GARBAGE_DIRS		+= $(XPIDL_GEN_DIR)
 
 ifndef XPIDL_MODULE
 XPIDL_MODULE		= $(MODULE)
@@ -1571,7 +1574,7 @@ endif # XPIDLSRCS || SDK_XPIDLSRCS
 #
 ifneq ($(XPIDLSRCS)$(SDK_XPIDLSRCS),)
 # export .idl files to $(IDL_DIR)
-export:: $(XPIDLSRCS) $(SDK_XPIDLSRCS) $(IDL_DIR)
+process_xpidlsrcs export:: $(XPIDLSRCS) $(SDK_XPIDLSRCS) $(IDL_DIR)
 ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $^
 endif
@@ -1597,7 +1600,7 @@ endif # XPIDLSRCS || SDK_XPIDLSRCS
 
 ifneq ($(XPIDLSRCS)$(SDK_XPIDLSRCS),)
 
-export:: $(_GEN_XPIDL_HEADERS) $(PUBLIC)
+process_xpidlsrcs export:: $(_GEN_XPIDL_HEADERS) $(PUBLIC)
 ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $^
 	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC)/.headerlist $(notdir $(filter-out $(PUBLIC),$^))
@@ -1616,7 +1619,7 @@ ifndef NO_DIST_INSTALL
 endif
 endif # SDK_XPIDLSRCS
 
-libs:: $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt
+process_xpidlsrcs libs:: $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt
 ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt $(DIST)/bin/$(COMPONENTS_PATH)
 endif
@@ -1632,6 +1635,20 @@ endif # NO_INSTALL
 endif # NO_GEN_XPT
 
 endif # XPIDLSRCS || SDK_XPIDLSRCS
+
+################################################################################
+# Process xpidlsrcs that belong to another module
+#
+export:: $(foreach m,$(EXPORTS_SUB_MODULES),$m_module_exports) $(_SUB_MODULE_XPIDLSRCS)
+
+%_module_exports::
+ifndef NO_DIST_INSTALL
+	$(INSTALL) $(IFLAGS1) $($(*F)_EXPORTS) $(PUBLIC:/$(MODULE)=/$(*F))
+	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC:/$(MODULE)=/$(*F))/.headerlist $(notdir $($(*F)_EXPORTS))
+endif
+
+%_module_xpidlsrcs:
+	$(MAKE) -e XPIDLSRCS="$($(*)_XPIDLSRCS)" XPIDL_MODULE="$(*)" MODULE=$(if $($(*)_MODULE),$($(*)_MODULE),$(MODULE)) process_xpidlsrcs
 
 ################################################################################
 # Copy each element of EXTRA_COMPONENTS to $(DIST)/bin/components
