@@ -419,17 +419,10 @@ nsresult nsMsgDBView::ExpandAll()
 
 nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded)
 {
-	int				numListed = 0;
 	char			flags = m_flags[index];
 	nsMsgKey		firstIdInThread, startMsg = nsMsgKey_None;
 	nsresult		rv = NS_OK;
-	nsMsgViewIndex	firstInsertIndex = index + 1;
-	nsMsgViewIndex	insertIndex = firstInsertIndex;
-	uint32			numExpanded = 0;
-	nsMsgKeyArray			tempIDArray;
-	nsUInt32Array		tempFlagArray;
-	nsUint8Array		tempLevelArray;
-	nsUint8Array		unreadLevelArray;
+	PRUint32			numExpanded = 0;
 
 	NS_ASSERTION(flags & MSG_FLAG_ELIDED, "can't expand an already expanded thread");
 	flags &= ~MSG_FLAG_ELIDED;
@@ -439,57 +432,33 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 
 	firstIdInThread = m_keys[index];
 	nsCOMPtr <nsIMsgDBHdr> msgHdr;
+  nsCOMPtr <nsIMsgThread> pThread;
     m_db->GetMsgHdrForKey(firstIdInThread, getter_AddRefs(msgHdr));
 	if (msgHdr == nsnull)
 	{
 		NS_ASSERTION(PR_FALSE, "couldn't find message to expand");
 		return NS_MSG_MESSAGE_NOT_FOUND;
 	}
+  rv = m_db->GetThreadContainingMsgHdr(msgHdr, getter_AddRefs(pThread));
 	m_flags[index] = flags;
   NoteChange(index, 1, nsMsgViewNotificationCode::changed);
-	do
+	if (m_viewFlags & kUnreadOnly)
 	{
-		const int listChunk = 200;
-		nsMsgKey	listIDs[listChunk];
-		char		listFlags[listChunk];
-		char		listLevels[listChunk];
+//		if (flags & MSG_FLAG_READ)
+//			unreadLevelArray.Add(0);	// keep top level hdr in thread, even though read.
+    nsMsgKey threadId;
+    msgHdr->GetThreadId(&threadId);
 #ifdef HAVE_PORT
-		if (m_viewFlags & kUnreadOnly)
-		{
-			if (flags & MSG_FLAG_READ)
-				unreadLevelArray.Add(0);	// keep top level hdr in thread, even though read.
-      nsMsgKey threadId;
-      msgHdr->GetThreadId(&threadId);
-			rv = m_db->ListUnreadIdsInThread(threadId,  &startMsg, unreadLevelArray, 
-											listChunk, listIDs, listFlags, listLevels, &numListed);
-		}
-		else
-			rv = m_db->ListIdsInThread(msgHdr,  &startMsg, listChunk, 
-											listIDs, listFlags, listLevels, &numListed);
+		rv = m_db->ListUnreadIdsInThread(pThread,  &startMsg, unreadLevelArray, 
+										listChunk, listIDs, listFlags, listLevels, &numExpanded);
 #endif
-		// Don't add thread to view, it's already in.
-		for (int i = 0; i < numListed; i++)
-		{
-			if (listIDs[i] != firstIdInThread)
-			{
-				tempIDArray.Add(listIDs[i]);
-				tempFlagArray.Add(listFlags[i]);
-				tempLevelArray.Add(listLevels[i]);
-				insertIndex++;
-			}
-		}
-		if (numListed < listChunk || startMsg == nsMsgKey_None)
-			break;
 	}
-	while (NS_SUCCEEDED(rv));
-	numExpanded = (insertIndex - firstInsertIndex);
+	else
+		rv = ListIdsInThread(pThread,  index, &numExpanded);
 
-	NoteStartChange(firstInsertIndex, numExpanded, nsMsgViewNotificationCode::insertOrDelete);
+	NoteStartChange(index, numExpanded, nsMsgViewNotificationCode::insertOrDelete);
 
-	m_keys.InsertAt(firstInsertIndex, &tempIDArray);
-	m_flags.InsertAt(firstInsertIndex, &tempFlagArray);
-  m_levels.InsertAt(firstInsertIndex, &tempLevelArray);
-	NoteEndChange(firstInsertIndex, numExpanded, nsMsgViewNotificationCode::insertOrDelete);
+	NoteEndChange(index, numExpanded, nsMsgViewNotificationCode::insertOrDelete);
 	if (pNumExpanded != nsnull)
 		*pNumExpanded = numExpanded;
 	return rv;
@@ -498,6 +467,48 @@ nsresult nsMsgDBView::ExpandByIndex(nsMsgViewIndex index, PRUint32 *pNumExpanded
 PRBool nsMsgDBView::WantsThisThread(nsIMsgThread * /*threadHdr*/)
 {
   return PR_TRUE; // default is to want all threads.
+}
+
+nsresult	nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex viewIndex, PRUint32 *pNumListed)
+{
+  NS_ENSURE_ARG(threadHdr);
+	// these children ids should be in thread order.
+	PRUint32 i;
+
+	*pNumListed = 0;
+
+  PRUint32 numChildren;
+  threadHdr->GetNumChildren(&numChildren);
+	for (i = 0; i < numChildren; i++)
+	{
+		nsCOMPtr <nsIMsgDBHdr> msgHdr;
+    threadHdr->GetChildHdrAt(i, getter_AddRefs(msgHdr));
+		if (msgHdr != nsnull)
+		{
+      nsMsgKey msgKey;
+      PRUint32 msgFlags, newFlags;
+      msgHdr->GetMessageKey(&msgKey);
+      msgHdr->GetFlags(&msgFlags);
+			PRBool isRead = PR_FALSE;
+			m_db->IsRead(msgKey, &isRead);
+			// just make sure flag is right in db.
+			m_db->MarkHdrRead(msgHdr, isRead, nsnull);
+//				if (isRead)
+//					msgHdr->m_flags |= kIsRead;
+//				else
+//					msgHdr->m_flags &= ~kIsRead;
+			m_keys.InsertAt(viewIndex, msgKey);
+      // ### TODO - how about hasChildren flag?
+			m_flags.InsertAt(viewIndex, msgFlags & ~MSG_VIEW_FLAGS);
+			m_levels.InsertAt(viewIndex, 1); // ### TODO this is going to be tricky - might use enumerators
+			// turn off thread or elided bit if they got turned on (maybe from new only view?)
+			if (i > 0)	
+				msgHdr->AndFlags(~(MSG_VIEW_FLAG_ISTHREAD | MSG_FLAG_ELIDED), &newFlags);
+			(*pNumListed)++;
+      viewIndex++;
+		}
+	}
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsMsgDBView::OnKeyChange(nsMsgKey aKeyChanged, PRUint32 aOldFlags, 

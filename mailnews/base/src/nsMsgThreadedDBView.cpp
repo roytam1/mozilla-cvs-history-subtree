@@ -25,6 +25,7 @@
 #include "nsIMsgHdr.h"
 #include "nsIMsgThread.h"
 
+// "imap://bienvenu@nsmail-1/INBOX"
 // chrome://messenger/content/dbviewtest.xul
 nsMsgThreadedDBView::nsMsgThreadedDBView()
 {
@@ -231,6 +232,8 @@ nsresult nsMsgThreadedDBView::ListThreadIds(nsMsgKey *startMsg, PRBool unreadOnl
       rv = m_threadEnumerator->GetNext(getter_AddRefs(supports));
       threadHdr = do_QueryInterface(supports);
 		}
+    if (numListed >= numToList)
+      break;
 	}
 
 	if (threadHdr != NULL)
@@ -279,9 +282,13 @@ nsresult nsMsgThreadedDBView::InitSort(nsMsgViewSortTypeValue sortType, nsMsgVie
 		m_sortType = nsMsgViewSortType::byThread;
 //		m_db->SetSortInfo(m_sortType, sortOrder);
 	}
+  // by default, the unread only view should have all threads expanded.
 	if ((m_viewFlags & kUnreadOnly) && m_sortType == nsMsgViewSortType::byThread)
 		ExpandAll();
 	m_sortValid = PR_TRUE;
+  if (sortType != sortType != nsMsgViewSortType::byThread)
+    ExpandAll(); // for now, expand all and do a flat sort.
+
 	Sort(sortType, sortOrder);
 	if (sortType != nsMsgViewSortType::byThread)	// forget prev view, since it has everything expanded.
 		ClearPrevIdArray();

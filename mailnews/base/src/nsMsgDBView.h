@@ -71,6 +71,7 @@ protected:
   nsresult ReverseSort();
   nsresult ReverseThreads();
 
+  nsresult	ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex viewIndex, PRUint32 *pNumListed);
 	PRInt32	  GetSize(void) {return(m_keys.GetSize());}
 
   // notification api's
