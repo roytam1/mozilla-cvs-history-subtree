@@ -53,11 +53,9 @@
 #include "timing.h"
 
 #include "xp_error.h"
-#include "mkhttp.h"
 
 #if defined(SMOOTH_PROGRESS)
-#include "nsITransferObserver.h"
-#include "nsHTTPTransfer.h"
+#include "progress.h"
 #endif
 
 /* for XP_GetString() */
@@ -121,6 +119,102 @@ PUBLIC char * FE_UsersFromField=0;    /* User's name/email address not used yet 
 PRIVATE XP_List * http_connection_list=0;
 PRIVATE IdentifyMeEnum http_identification_method = DoNotIdentifyMe;
 PRIVATE Bool sendRefererHeader=TRUE;
+
+/* definitions of state for the state machine design
+ */
+typedef enum {
+    HTTP_START_CONNECT,
+    HTTP_FINISH_CONNECT,
+    HTTP_SEND_PROXY_TUNNEL_REQUEST,
+    HTTP_BEGIN_UPLOAD_FILE,
+    HTTP_SEND_REQUEST,
+    HTTP_SEND_POST_DATA,
+    HTTP_PARSE_FIRST_LINE,
+    HTTP_PARSE_MIME_HEADERS,
+    HTTP_SETUP_STREAM,
+    HTTP_BEGIN_PUSH_PARTIAL_CACHE_FILE,
+    HTTP_PUSH_PARTIAL_CACHE_FILE,
+    HTTP_PULL_DATA,
+    HTTP_DONE,
+    HTTP_ERROR_DONE,
+    HG93634
+    HTTP_FREE
+} StatesEnum;
+
+/* structure to hold data about a tcp connection
+ * to a news host
+ */
+typedef struct _HTTPConnection {
+    char   *hostname;       /* hostname string (may contain :port) */
+    PRFileDesc *sock;       /* socket */
+    XP_Bool busy;           /* is the connection in use already? */
+    XP_Bool prev_cache;     /* did this connection come from the cache? */
+    XP_Bool secure;         /* is it a secure connection? */
+    XP_Bool doNotSendConHdr;
+} HTTPConnection;
+
+typedef enum {
+    POINT_NINE,
+    ONE_POINT_O,
+    ONE_POINT_ONE
+} HTTP_Version;
+
+/* structure to hold data pertaining to the active state of
+ * a transfer in progress.
+ *
+ */
+typedef struct _HTTPConData {
+    StatesEnum  next_state;       /* the next state or action to be taken */
+    char *      proxy_server;     /* name of proxy server if any */
+    char *      proxy_conf;       /* proxy config ptr from proxy autoconfig */
+    char *      line_buffer;      /* temporary string storage */
+    char *      server_headers;   /* headers from the server for 
+                                   * the proxy client */
+    char *      orig_host;        /* if the host gets modified
+                                   * for my "netscape" -> "www.netscape.com"
+                                   * hack, the original host gets put here */
+    XP_File     partial_cache_fp;
+    int32       partial_needed;   /* the part missing from the cache */
+
+    int32       total_size_of_files_to_post;
+    int32       total_amt_written;
+
+    int32       line_buffer_size; /* current size of the line buffer */
+  
+    HTTPConnection *connection;   /* struct to hold info about connection */
+
+    NET_StreamClass * stream; /* The output stream */
+    Bool     pause_for_read;   /* Pause now for next read? */
+    Bool     send_http1;       /* should we send http/1.1? */
+    Bool     acting_as_proxy;  /* are we acting as a proxy? */
+    Bool     server_busy_retry; /* should we retry the get? */
+    Bool     posting;          /* are we posting? */
+    Bool     doing_redirect;   /* are we redirecting? */
+    Bool     save_redirect_method;   /* don't change METHOD when redirecting */
+    Bool     sent_authorization;     /* did we send auth with the request? */
+    Bool     sent_proxy_auth;    /* did we send proxy auth with the req? */
+    Bool     authorization_required; /* did we get a 401 auth return code? */
+    Bool     proxy_auth_required;    /* did we get a 407 auth return code? */
+    Bool     destroy_graph_progress; /* destroy graph progress? */
+    Bool     destroy_file_upload_progress_dialog;  
+    HTTP_Version  protocol_version;       /* .9 1.0 or 1.1 */ 
+    int32    original_content_length; /* the content length at the time of
+                                       * calling graph progress */
+    TCP_ConData *tcp_con_data;  /* Data pointer for tcp connect state machine */
+    Bool         use_proxy_tunnel;          /* should we use a proxy tunnel? */
+    Bool         proxy_tunnel_setup_done;   /* is setup done */
+    Bool         use_copy_from_cache;    /* did we get a 304? */
+    Bool         displayed_some_data;    /* have we displayed any data? */
+    Bool         save_connection;        /* save this connection for reuse? */
+    Bool         partial_cache_file;
+    Bool         reuse_stream;
+    Bool         connection_is_valid;
+#ifdef XP_WIN
+    Bool         calling_netlib_all_the_time;  /* is SetCallNetlibAllTheTime set? */
+#endif
+    void        *write_post_data_data;   /* a data object 
+                                          * for the WritePostData function */
+} HTTPConData;
 
 
 #if 0
@@ -794,14 +888,16 @@ net_begin_upload_file (ActiveEntry *ce)
     return MK_UNABLE_TO_LOCATE_FILE;
     }
 
-#if !defined(SMOOTH_PROGRESS)    
   status_msg = PR_smprintf("Uploading file %s", filename);
   if(status_msg)
     {
+#if defined(SMOOTH_PROGRESS)
+    PM_Status(ce->window_id, ce->URL_s, status_msg);
+#else
     NET_Progress(ce->window_id, status_msg);
+#endif
     PR_Free(status_msg);
     }   
-#endif /* !defined(SMOOTH_PROGRESS) */
 
 /*#ifdef EDITOR
    FE_SaveDialogSetFilename(ce->window_id, filename);
@@ -1557,20 +1653,22 @@ net_send_http_request (ActiveEntry *ce)
      * cd->pause_for_read = TRUE;
      */
 
-#if !defined(SMOOTH_PROGRESS)
     {
         char * nonProxyHost = NET_ParseURL(ce->URL_s->address, GET_HOST_PART);
         if (nonProxyHost) {
             char* msg = PR_smprintf(XP_GetString(XP_PROGRESS_WAIT_REPLY),
                             nonProxyHost);
             if (msg) {
+#if defined(SMOOTH_PROGRESS)
+                PM_Status(ce->window_id, ce->URL_s, msg);
+#else
                 NET_Progress(ce->window_id, msg);
+#endif
                 PR_Free(msg);
             }
             PR_Free(nonProxyHost);
         }
     }
-#endif /* !defined(SMOOTH_PROGRESS) */
 
     return STATUS(ce->status);
 } /* end of net_send_http_request */
@@ -1634,20 +1732,22 @@ net_http_send_post_data (ActiveEntry *ce)
         NET_SetReadSelect(ce->window_id, cd->connection->sock);
     ce->con_sock = NULL;
 
-#if !defined(SMOOTH_PROGRESS)
     {
       char * nonProxyHost = NET_ParseURL(ce->URL_s->address, GET_HOST_PART);
       if (nonProxyHost) {
         char* msg = PR_smprintf(XP_GetString(XP_PROGRESS_WAIT_REPLY),
                     nonProxyHost);
         if (msg) {
+#if defined(SMOOTH_PROGRESS)
+          PM_Status(ce->window_id, ce->URL_s, msg);
+#else
           NET_Progress(ce->window_id, msg);
+#endif
           PR_Free(msg);
         }
         PR_Free(nonProxyHost);
       }
     }
-#endif /* !defined(SMOOTH_PROGRESS) */
 
       cd->next_state = HTTP_PARSE_FIRST_LINE;
         return(0);
@@ -1655,7 +1755,12 @@ net_http_send_post_data (ActiveEntry *ce)
   else if(cd->total_size_of_files_to_post && ce->status > 0)
     {
       cd->total_amt_written += ce->status;
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+      PM_Progress(ce->window_id,
+                  ce->URL_s,
+                  cd->total_amt_written,
+                  cd->total_size_of_files_to_post);
+#else
         FE_GraphProgress(ce->window_id, 
              ce->URL_s, 
              cd->total_amt_written, 
@@ -1663,7 +1768,7 @@ net_http_send_post_data (ActiveEntry *ce)
              cd->total_size_of_files_to_post);
     FE_SetProgressBarPercent(ce->window_id, 
         cd->total_amt_written*100/cd->total_size_of_files_to_post);
-#endif /* !defined(SMOOTH_PROGRESS) */
+#endif
     }
 
 
@@ -2691,13 +2796,18 @@ net_setup_http_stream(ActiveEntry * ce) {
         cd->use_copy_from_cache = FALSE;
 
     } else {
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+        PM_Progress(ce->window_id,
+                    ce->URL_s,
+                    0,
+                    cd->original_content_length);
+#else
         /* start the graph progress indicator */
         FE_GraphProgressInit(ce->window_id, 
             ce->URL_s, 
             cd->original_content_length);
         cd->destroy_graph_progress = TRUE;  /* we will need to destroy it */
-#endif /* !defined(SMOOTH_PROGRESS) */
+#endif
 
         cd->next_state = HTTP_PULL_DATA;
 
@@ -2708,20 +2818,22 @@ net_setup_http_stream(ActiveEntry * ce) {
             cd->displayed_some_data = TRUE;
         }
 
-#if !defined(SMOOTH_PROGRESS)
         { /* open brace1 */
         char * nonProxyHost = NET_ParseURL(ce->URL_s->address, GET_HOST_PART);
         if (nonProxyHost) {
             char* msg = PR_smprintf(XP_GetString(XP_PROGRESS_TRANSFER_DATA),
                         nonProxyHost);
             if (msg) {
+#if defined(SMOOTH_PROGRESS)
+                PM_Status(ce->window_id, ce->URL_s, msg);
+#else
                 NET_Progress(ce->window_id, msg);
+#endif
                 PR_Free(msg);
             }
             PR_Free(nonProxyHost);
         }
         } /* close brace1 */
-#endif /* !defined(SMOOTH_PROGRESS) */
 
         /* Push though buffered data */
         if(cd->line_buffer_size)
@@ -2732,13 +2844,18 @@ net_setup_http_stream(ActiveEntry * ce) {
             (*cd->stream->is_write_ready)(cd->stream);
             ce->status = PUTBLOCK(cd->line_buffer, cd->line_buffer_size);
             ce->bytes_received = cd->line_buffer_size;
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+            PM_Progress(ce->window_id,
+                        ce->URL_s,
+                        ce->bytes_received, 
+                        cd->original_content_length);
+#else
             FE_GraphProgress(ce->window_id, 
                   ce->URL_s, 
                   ce->bytes_received, 
                   cd->line_buffer_size, 
                   cd->original_content_length);
-#endif /* !defined(SMOOTH_PROGRESS) */
+#endif
             cd->displayed_some_data = TRUE;
         }
     }
@@ -2920,13 +3037,18 @@ net_pull_http_data(ActiveEntry * ce)
     if(ce->status > 0)
       {
         ce->bytes_received += ce->status;
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+        PM_Progress(ce->window_id,
+                    ce->URL_s,
+                    ce->bytes_received,
+                    cd->original_content_length);
+#else
         FE_GraphProgress(ce->window_id, 
              ce->URL_s, 
              ce->bytes_received, 
              ce->status, 
              cd->original_content_length);
-#endif /* !defined(SMOOTH_PROGRESS) */
+#endif
 
         ce->status = PUTBLOCK(NET_Socket_Buffer, ce->status); /* ALEKS */
     cd->displayed_some_data = TRUE;
@@ -3075,7 +3197,12 @@ net_HTTPLoad (ActiveEntry * ce)
                xpFileToPost))
         cd->total_size_of_files_to_post += stat_entry.st_size;
 
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+      PM_Progress(ce->window_id,
+                  ce->URL_s,
+                  0,
+                  cd->total_size_of_files_to_post);
+#else
     /* start the graph progress indicator
      */
       FE_GraphProgressInit(ce->window_id, 
@@ -3083,7 +3210,7 @@ net_HTTPLoad (ActiveEntry * ce)
                cd->total_size_of_files_to_post);
                                                     
     cd->destroy_graph_progress = TRUE;  /* we will need to destroy it */
-#endif /* !defined(SMOOTH_PROGRESS) */
+#endif
                                                                            
 #ifdef EDITOR
     /* Don't show the dialog if the data is being delivered to a plug-in */
@@ -3244,21 +3371,6 @@ net_HTTPLoad (ActiveEntry * ce)
 
   PR_Free(use_host);
 
-#if defined(SMOOTH_PROGRESS)
-    if (ce->window_id && ce->window_id->progressManager) {
-        nsHTTPTransfer* transfer = new nsHTTPTransfer(ce);
-        if (transfer) {
-            cd->transfer = transfer;
-            transfer->AddRef();
-
-            nsITransferObserver* observer = ce->window_id->progressManager;
-            observer->NotifyBegin(transfer);
-
-            transfer->SetState(TransferState_Running);
-        }
-    }
-#endif
-
     return STATUS (net_ProcessHTTP(ce));
 }
 
@@ -3367,9 +3479,9 @@ HG51096
             }
 
 #if defined(SMOOTH_PROGRESS)
-            if (cd->transfer)
-                cd->transfer->SetState(TransferState_Complete);
-#endif /* defined(SMOOTH_PROGRESS) */
+            /* XXX what to do if redirected to cache? */
+            PM_StopBinding(ce->window_id, ce->URL_s, 0, NULL);
+#endif
 
             cd->next_state = HTTP_FREE;
             break;
@@ -3445,9 +3557,8 @@ HG51096
             }
 
 #if defined(SMOOTH_PROGRESS)
-            if (cd->transfer)
-                cd->transfer->SetState(TransferState_Error);
-#endif /* defined(SMOOTH_PROGRESS) */
+            PM_StopBinding(ce->window_id, ce->URL_s, -1, NULL);
+#endif
 
             break; /* HTTP_ERROR_DONE */
         
@@ -3476,18 +3587,13 @@ HG51096
                 ce->URL_s->post_data_is_file = FALSE;
             }
 
-#if defined(SMOOTH_PROGRESS)
-            if (cd->transfer) {
-                cd->transfer->Release();
-                cd->transfer = NULL;
-            }
-#else /* !defined(SMOOTH_PROGRESS) */
+#if !defined(SMOOTH_PROGRESS)
             if(cd->destroy_graph_progress)
                 FE_GraphProgressDestroy(ce->window_id,
                     ce->URL_s, 
                     cd->original_content_length,
                     ce->bytes_received);
-#endif /* !defined(SMOoTH_PROGRESS) */
+#endif
       
             PR_FREEIF(cd->line_buffer);
             PR_Free(cd->stream); /* don't forget the stream */
@@ -3526,9 +3632,11 @@ HG51096
                     && !cd->posting) {
                 /* Could be a HTTP 0/1 compability problem. */
                 TRACEMSG(("HTTP: Read error trying again with HTTP0 request."));
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+                PM_Status(ce->window_id, ce->URL_s, XP_GetString(XP_PROGRESS_TRYAGAIN));
+#else
                 NET_Progress (ce->window_id, XP_GetString(XP_PROGRESS_TRYAGAIN));
-#endif /* !defined(SMOOTH_PROGRESS) */
+#endif
 
                 NET_ClearReadSelect(ce->window_id, cd->connection->sock);
                 NET_ClearConnectSelect(ce->window_id, cd->connection->sock);

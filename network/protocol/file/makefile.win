@@ -40,17 +40,11 @@ LLIBS=  \
 MISCDEP=$(LLIBS)
 OBJS=   \
 	.\$(OBJDIR)\mkfile.obj		\
-!ifdef MOZ_SMOOTH_PROGRESS
-        .\$(OBJDIR)\nsFileTransfer.obj  \
-!endif
 	$(NULL)
 
 
 CPPSRCS =	\
 	mkfile.cpp	        \
-!ifdef MOZ_SMOOTH_PROGRESS
-        nsFileTransfer.cpp      \
-!endif
 	$(NULL)
 
 

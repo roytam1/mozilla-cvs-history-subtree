@@ -53,8 +53,7 @@ IL_Type(const char *buf, int32 len);
 #include "prefapi.h"
 
 #if defined(SMOOTH_PROGRESS)
-#include "nsFileTransfer.h"
-#include "nsITransferObserver.h"
+#include "progress.h"
 #endif
 
 /* for XP_GetString() */
@@ -81,6 +80,27 @@ extern int XP_H1_DIRECTORY_LISTING;
 extern int XP_UPTO_HIGHER_LEVEL_DIRECTORY;
 extern int XP_TITLE_DIRECTORY_OF_ETC;
 
+/* states of the machine
+ */
+typedef enum {
+	NET_CHECK_FILE_TYPE,
+	NET_DELETE_FILE,
+	NET_MOVE_FILE,
+	NET_PUT_FILE,
+	NET_MAKE_DIRECTORY,
+	NET_FILE_SETUP_STREAM,
+	NET_OPEN_FILE,
+	NET_SETUP_FILE_STREAM,
+	NET_OPEN_DIRECTORY,
+	NET_READ_FILE_CHUNK,
+	NET_READ_DIRECTORY_CHUNK,
+	NET_BEGIN_PRINT_DIRECTORY,
+	NET_PRINT_DIRECTORY,
+	NET_FILE_DONE,
+	NET_FILE_ERROR_DONE,
+	NET_FILE_FREE
+} net_FileStates;
+
 /* forward decl */
 PRIVATE int32 net_ProcessFile (ActiveEntry * cur_entry);
 
@@ -90,6 +110,25 @@ PRIVATE int32 net_ProcessFile (ActiveEntry * cur_entry);
 #define URL_BYTERANGE_METHOD
 
 #define DIR_STRUCT struct dirent
+
+typedef struct _FILEConData {
+    XP_File           file_ptr;
+    XP_Dir            dir_ptr;
+    net_FileStates    next_state;
+    NET_StreamClass * stream;
+    char            * filename;
+    Bool           is_dir;
+    SortStruct      * sort_base;
+    Bool           pause_for_read;
+    Bool           is_cache_file;
+	Bool		   calling_netlib_all_the_time;
+    Bool destroy_graph_progress;  /* do we need to destroy graph progress? */
+    int32   original_content_length; /* the content length at the time of
+                                      * calling graph progress
+                                      */
+	char             * byterange_string; 
+	int32              range_length;  /* the length of the current byte range */
+} FILEConData;
 
 #define CD_FILE_PTR       connection_data->file_ptr
 #define CD_DIR_PTR        connection_data->dir_ptr
@@ -469,10 +508,14 @@ net_open_file (ActiveEntry * cur_entry)
         	return(MK_UNABLE_TO_OPEN_FILE);
 	  }
 
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+    PM_Status(cur_entry->window_id,
+              cur_entry->URL_s,
+              XP_GetString(XP_PROGRESS_READFILE));
+#else
     if (!CE_URL_S->load_background)
         NET_Progress(CE_WINDOW_ID, XP_GetString(XP_PROGRESS_READFILE));
-#endif /* !defined(SMOOTH_PROGRESS) */
+#endif
 
     /* CE_SOCK = XP_Fileno(CD_FILE_PTR); */
 	CE_SOCK = NULL;
@@ -489,7 +532,12 @@ net_open_file (ActiveEntry * cur_entry)
 
 	CD_NEXT_STATE = NET_SETUP_FILE_STREAM;
 
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+    PM_Progress(cur_entry->window_id,
+                cur_entry->URL_s,
+                0,
+                cur_entry->URL_s->content_length);
+#else /* !defined(SMOOTH_PROGRESS) */
     if (!CE_URL_S->load_background) {
         FE_GraphProgressInit(CE_WINDOW_ID, CE_URL_S, CE_URL_S->content_length);
         CD_DESTROY_GRAPH_PROGRESS = TRUE;  /* we will need to destroy it */
@@ -528,9 +576,13 @@ net_setup_file_stream (ActiveEntry * cur_entry)
         if(!count)
           {
             NET_ClearFileReadSelect(CE_WINDOW_ID, XP_Fileno(CD_FILE_PTR));
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+            PM_Status(cur_entry->window_id,
+                      cur_entry->URL_s,
+                      XP_GetString(XP_PROGRESS_FILEZEROLENGTH));
+#else
             NET_Progress(CE_WINDOW_ID, XP_GetString(XP_PROGRESS_FILEZEROLENGTH));
-#endif /* !defined(SMOOTH_PROGRESS) */
+#endif
             XP_FileClose(CD_FILE_PTR);
 			CE_SOCK = NULL;
             CD_FILE_PTR = 0;
@@ -777,11 +829,20 @@ net_open_directory (ActiveEntry * cur_entry)
 
     CD_IS_DIR = TRUE;
 
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+    PM_Progress(cur_entry->window_id,
+                cur_entry->URL_s,
+                0,
+                cur_entry->URL_s->content_length);
+
+    PM_Status(cur_entry->window_id,
+              cur_entry->URL_s,
+              XP_GetString(XP_PROGRESS_READDIR));
+#else
     FE_GraphProgressInit(CE_WINDOW_ID, CE_URL_S, CE_URL_S->content_length);
     CD_DESTROY_GRAPH_PROGRESS = TRUE;  /* we will need to destroy it */
     NET_Progress(CE_WINDOW_ID, XP_GetString(XP_PROGRESS_READDIR));
-#endif /* !defined(SMOOTH_PROGRESS) */
+#endif
     CD_ORIGINAL_CONTENT_LENGTH = CE_URL_S->content_length;
 
     /* make sure the last character isn't a slash
@@ -827,10 +888,14 @@ net_read_file_chunk(ActiveEntry * cur_entry)
 			cur_entry->save_stream = CD_STREAM;
 			CD_STREAM = NULL;
 			NET_ClearFileReadSelect(CE_WINDOW_ID, XP_Fileno(CD_FILE_PTR));
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+            PM_Status(cur_entry->window_id,
+                      cur_entry->URL_s,
+                      XP_GetString(XP_PROGRESS_FILEDONE));
+#else
             if (!CE_URL_S->load_background)
                 NET_Progress(CE_WINDOW_ID, XP_GetString(XP_PROGRESS_FILEDONE));
-#endif /* !defined(SMOOTH_PROGRESS) */
+#endif
         	XP_FileClose(CD_FILE_PTR);
 			CE_SOCK = NULL;
         	CD_FILE_PTR = 0;
@@ -842,18 +907,26 @@ net_read_file_chunk(ActiveEntry * cur_entry)
 			/* go get more byte ranges */
 			COMPLETE_STREAM;
 			CD_NEXT_STATE = NET_SETUP_FILE_STREAM;
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+            PM_Status(cur_entry->window_id,
+                      cur_entry->URL_s,
+                      XP_GetString(XP_READING_SEGMENT));
+#else
             if (!CE_URL_S->load_background)
                 NET_Progress(CE_WINDOW_ID, XP_GetString( XP_READING_SEGMENT ) );
-#endif /* !defined(SMOOTH_PROGRESS) */
+#endif
 			return(0);
 		  }
 
 		NET_ClearFileReadSelect(CE_WINDOW_ID, XP_Fileno(CD_FILE_PTR));
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+        PM_Status(cur_entry->window_id,
+                  cur_entry->URL_s,
+                  XP_GetString(XP_PROGRESS_FILEDONE));
+#else
         if (!CE_URL_S->load_background)
             NET_Progress(CE_WINDOW_ID, XP_GetString(XP_PROGRESS_FILEDONE));
-#endif /* !defined(SMOOTH_PROGRESS) */
+#endif
         XP_FileClose(CD_FILE_PTR);
 		CE_SOCK = NULL;
         CD_FILE_PTR = 0;
@@ -865,12 +938,16 @@ net_read_file_chunk(ActiveEntry * cur_entry)
 
     CE_STATUS = PUTB(NET_Socket_Buffer, count);
 
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+    PM_Progress(cur_entry->window_id,
+                cur_entry->URL_s,
+                cur_entry->bytes_received,
+                cur_entry->URL_s->content_length);
+#else
     if (!CE_URL_S->load_background)
         FE_GraphProgress(CE_WINDOW_ID, CE_URL_S, CE_BYTES_RECEIVED, count,
                          CE_URL_S->content_length);
-#endif /* !defined(SMOOTH_PROGRESS) */
-
+#endif
     CD_PAUSE_FOR_READ = TRUE;
 
     return(CE_STATUS);
@@ -949,9 +1026,13 @@ net_read_directory_chunk (ActiveEntry * cur_entry)
 
 	PR_FREEIF(full_path);
 
-#if !defined(SMOOTH_PROGRESS)
+#if defined(SMOOTH_PROGRESS)
+    PM_Status(cur_entry->window_id,
+              cur_entry->URL_s,
+              XP_GetString(XP_PROGRESS_DIRDONE));
+#else
     NET_Progress(CE_WINDOW_ID, XP_GetString(XP_PROGRESS_DIRDONE));
-#endif /* !defined(SMOOTH_PROGRESS) */
+#endif
 
     XP_CloseDir(CD_DIR_PTR);
     CD_DIR_PTR = 0;
@@ -1168,21 +1249,6 @@ net_FileLoad (ActiveEntry * cur_entry)
 
    	CD_NEXT_STATE = NET_CHECK_FILE_TYPE;
 
-#if defined(SMOOTH_PROGRESS)
-    if (cur_entry->window_id && cur_entry->window_id->progressManager) {
-        nsFileTransfer* transfer = new nsFileTransfer(cur_entry);
-        if (transfer) {
-            connection_data->transfer = transfer;
-            transfer->AddRef();
-
-            nsITransferObserver* observer = cur_entry->window_id->progressManager;
-            observer->NotifyBegin(transfer);
-
-            transfer->SetState(TransferState_Running);
-        }
-    }
-#endif
-
 	return(net_ProcessFile(cur_entry));
 }
 
@@ -1272,8 +1338,7 @@ net_ProcessFile (ActiveEntry * cur_entry)
     			if(CD_STREAM)
                		COMPLETE_STREAM;
 #if defined(SMOOTH_PROGRESS)
-                if (connection_data->transfer)
-                    connection_data->transfer->SetState(TransferState_Complete);
+                PM_StopBinding(cur_entry->window_id, cur_entry->URL_s, 0, NULL);
 #endif
                 CD_NEXT_STATE = NET_FILE_FREE;
                 break;
@@ -1291,8 +1356,7 @@ net_ProcessFile (ActiveEntry * cur_entry)
 				  }
                 CD_NEXT_STATE = NET_FILE_FREE;
 #if defined(SMOOTH_PROGRESS)
-                if (connection_data->transfer)
-                    connection_data->transfer->SetState(TransferState_Error);
+                PM_StopBinding(cur_entry->window_id, cur_entry->URL_s, -1, NULL);
 #endif
                 break;
     
@@ -1303,18 +1367,13 @@ net_ProcessFile (ActiveEntry * cur_entry)
                    connection_data->calling_netlib_all_the_time = FALSE;
 				}
 
-#if defined(SMOOTH_PROGRESS)
-                if (connection_data->transfer) {
-                    connection_data->transfer->Release();
-                    connection_data->transfer = NULL;
-                }
-#else /* !defined(SMOOTH_PROGRESS) */
+#if !defined(SMOOTH_PROGRESS)
 				if(CD_DESTROY_GRAPH_PROGRESS)
                     FE_GraphProgressDestroy(CE_WINDOW_ID,
                                             CE_URL_S,
                                             CD_ORIGINAL_CONTENT_LENGTH,
 											CE_BYTES_RECEIVED);
-#endif /* !defined(SMOOTH_PROGRESS) */
+#endif
 
 				PR_Free(CD_FILENAME);
 				PR_FREEIF(CD_STREAM);

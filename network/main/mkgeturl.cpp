@@ -152,7 +152,7 @@ void net_ReleaseContext(MWContext *context);
 #include "timing.h"
 
 #if defined(SMOOTH_PROGRESS)
-#include "nsITransferObserver.h"
+#include "progress.h"
 #endif
 
 /* for XP_GetString() */
@@ -2074,9 +2074,7 @@ NET_GetURL (URL_Struct *URL_s,
 	}
 
 #if defined(SMOOTH_PROGRESS)
-    if (window_id->progressManager) {
-        window_id->progressManager->Add(URL_s->address);
-    }
+    PM_StartBinding(window_id, URL_s);
 #endif
 
 	/* put a limit on the total number of active urls

@@ -41,9 +41,6 @@ MISCDEP=$(LLIBS)
 OBJS=   \
 	.\$(OBJDIR)\mkhttp.obj		\
 	.\$(OBJDIR)\mkaccess.obj        \
-!ifdef MOZ_SMOOTH_PROGRESS
-        .\$(OBJDIR)\nsHTTPTransfer.obj  \
-!endif
 	$(NULL)
 
 CSRCS =	\
@@ -52,9 +49,6 @@ CSRCS =	\
 
 CPPSRCS = \
         mkhttp.cpp                      \
-!ifdef MOZ_SMOOTH_PROGRESS
-        nsHTTPTransfer.cpp              \
-!endif
         $(NULL)
 
 
