@@ -30,6 +30,7 @@
 #include "nsMsgKeyArray.h"
 #include "nsUint8Array.h"
 #include "nsIDBChangeListener.h"
+#include "nsIOutlinerView.h"
 #include "nsVoidArray.h"
 
 enum eFieldType {
@@ -46,7 +47,7 @@ enum eFieldType {
 // I think this will be an abstract implementation class.
 // The classes that implement the outliner support will probably
 // inherit from this class.
-class nsMsgDBView : public nsIMsgDBView, public nsIDBChangeListener
+class nsMsgDBView : public nsIMsgDBView, public nsIDBChangeListener, public nsIOutlinerView
 {
 public:
   nsMsgDBView();
@@ -55,6 +56,8 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIMSGDBVIEW
   NS_DECL_NSIDBCHANGELISTENER
+  NS_DECL_NSIOUTLINERVIEW
+
 protected:
   // routines used in building up view
   PRBool WantsThisThread(nsIMsgThread * thread);

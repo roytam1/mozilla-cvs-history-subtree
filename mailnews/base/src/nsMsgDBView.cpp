@@ -35,7 +35,15 @@
 
 /* Implementation file */
 
-NS_IMPL_ISUPPORTS2(nsMsgDBView, nsIMsgDBView, nsIDBChangeListener)
+NS_IMPL_ADDREF(nsMsgDBView)
+NS_IMPL_RELEASE(nsMsgDBView)
+
+NS_INTERFACE_MAP_BEGIN(nsMsgDBView)
+   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIMsgDBView)
+   NS_INTERFACE_MAP_ENTRY(nsIMsgDBView)
+   NS_INTERFACE_MAP_ENTRY(nsIDBChangeListener)
+   NS_INTERFACE_MAP_ENTRY(nsIOutlinerView)
+NS_INTERFACE_MAP_END
 
 nsMsgDBView::nsMsgDBView()
 {
@@ -52,6 +60,95 @@ nsMsgDBView::~nsMsgDBView()
   if (m_db)
 	  m_db->RemoveListener(this);
 }
+
+///////////////////////////////////////////////////////////////////////////
+// nsIOutlinerView Implementation Methods
+///////////////////////////////////////////////////////////////////////////
+
+NS_IMETHODIMP nsMsgDBView::GetRowCount(PRInt32 *aRowCount)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgDBView::GetSelection(nsIOutlinerSelection * *aSelection)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsMsgDBView::SetSelection(nsIOutlinerSelection * aSelection)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgDBView::GetRowProperties(PRInt32 index, nsISupportsArray *properties)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 row, const PRUnichar *colID, nsISupportsArray *properties)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgDBView::IsContainer(PRInt32 index, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgDBView::IsContainerOpen(PRInt32 index, PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgDBView::GetLevel(PRInt32 index, PRInt32 *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 row, const PRUnichar *colID, PRUnichar **_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgDBView::SetOutliner(nsIOutlinerBoxObject *outliner)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgDBView::ToggleOpenState(PRInt32 index)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgDBView::CycleHeader(nsIDOMElement *elt)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, const PRUnichar *colID)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgDBView::PerformAction(const PRUnichar *action)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgDBView::PerformActionOnRow(const PRUnichar *action, PRInt32 row)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsMsgDBView::PerformActionOnCell(const PRUnichar *action, PRInt32 row, const PRUnichar *colID)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
+
+///////////////////////////////////////////////////////////////////////////
+// end nsIOutlinerView Implementation Methods
+///////////////////////////////////////////////////////////////////////////
 
 NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder, nsMsgViewFlagsTypeValue viewFlags, PRInt32 *pCount)
 {
