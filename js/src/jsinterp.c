@@ -289,6 +289,13 @@ static JSClass prop_iterator_class = {
         }                                                                     \
     JS_END_MACRO
 
+#define FETCH_OBJECT(cx, n, v, obj)                                           \
+    JS_BEGIN_MACRO                                                            \
+        v = FETCH_OPND(n);                                                    \
+        VALUE_TO_OBJECT(cx, v, obj);                                          \
+        STORE_OPND(n, OBJECT_TO_JSVAL(obj));                                  \
+    JS_END_MACRO
+
 #if JS_BUG_VOID_TOSTRING
 #define CHECK_VOID_TOSTRING(cx, v)                                            \
     if (JSVAL_IS_VOID(v)) {                                                   \
@@ -526,9 +533,9 @@ SetFunctionSlot(JSContext *cx, JSObject *obj, JSPropertyOp setter, jsid id,
     for (sprop = SCOPE_LAST_PROP(scope); sprop; sprop = sprop->parent) {
         if (sprop->setter == setter && (uintN) sprop->shortid == slot) {
             if (sprop->attrs & JSPROP_SHARED) {
-                sprop = js_ChangeScopePropertyAttrs(cx, scope, sprop,
-                                                    0, ~JSPROP_SHARED,
-                                                    sprop->getter, setter);
+                sprop = js_ChangeNativePropertyAttrs(cx, obj, sprop,
+                                                     0, ~JSPROP_SHARED,
+                                                     sprop->getter, setter);
                 if (!sprop) {
                     ok = JS_FALSE;
                 } else {
@@ -540,7 +547,7 @@ SetFunctionSlot(JSContext *cx, JSObject *obj, JSPropertyOp setter, jsid id,
             break;
         }
     }
-    JS_UNLOCK_SCOPE(cx, scope);
+    JS_UNLOCK_OBJ(cx, obj);
     return ok;
 }
 
@@ -753,7 +760,8 @@ js_Invoke(JSContext *cx, uintN argc, uintN flags)
                      * the small number of words not already allocated as part
                      * of the caller's operand stack.
                      */
-                    JS_ArenaCountAllocation(pool, (jsuword)sp - a->avail);
+                    JS_ArenaCountAllocation(&cx->stackPool,
+                                            (jsuword)sp - a->avail);
                     a->avail = (jsuword)sp;
                 }
             }
@@ -1031,7 +1039,7 @@ js_InternalInvoke(JSContext *cx, JSObject *obj, jsval fval, uintN flags,
     PUSH(OBJECT_TO_JSVAL(obj));
     for (i = 0; i < argc; i++)
         PUSH(argv[i]);
-    fp->sp = sp;
+    SAVE_SP(fp);
     ok = js_Invoke(cx, argc, flags | JSINVOKE_INTERNAL);
     if (ok) {
         RESTORE_SP(fp);
@@ -1510,7 +1518,7 @@ js_Interpret(JSContext *cx, jsval *result)
                 SAVE_SP(fp);
                 for (n = -nuses; n < 0; n++) {
                     str = js_DecompileValueGenerator(cx, n, sp[n], NULL);
-                    if (str != NULL) {
+                    if (str) {
                         fprintf(tracefp, "%s %s",
                                 (n == -nuses) ? "  inputs:" : ",",
                                 JS_GetStringBytes(str));
@@ -1580,8 +1588,7 @@ js_Interpret(JSContext *cx, jsval *result)
             break;
 
           case JSOP_ENTERWITH:
-            rval = FETCH_OPND(-1);
-            VALUE_TO_OBJECT(cx, rval, obj);
+            FETCH_OBJECT(cx, -1, rval, obj);
             withobj = js_NewObject(cx, &js_WithClass, obj, fp->scopeChain);
             if (!withobj)
                 goto out;
@@ -2025,6 +2032,8 @@ js_Interpret(JSContext *cx, jsval *result)
               default:
                 /* Convert lval to a non-null object containing id. */
                 VALUE_TO_OBJECT(cx, lval, obj);
+                if (i + 1 < 0)
+                    STORE_OPND(i + 1, OBJECT_TO_JSVAL(obj));
 
                 /* Set the variable obj[id] to refer to rval. */
                 fp->flags |= JSFRAME_ASSIGNING;
@@ -2059,9 +2068,8 @@ js_Interpret(JSContext *cx, jsval *result)
 
 #define PROPERTY_OP(n, call)                                                  \
     JS_BEGIN_MACRO                                                            \
-        /* Pop the left part and resolve it to a non-null object. */          \
-        lval = FETCH_OPND(n);                                                 \
-        VALUE_TO_OBJECT(cx, lval, obj);                                       \
+        /* Fetch the left part and resolve it to a non-null object. */        \
+        FETCH_OBJECT(cx, n, lval, obj);                                       \
                                                                               \
         /* Get or set the property, set ok false if error, true if success. */\
         SAVE_SP(fp);                                                          \
@@ -2679,6 +2687,7 @@ js_Interpret(JSContext *cx, jsval *result)
 
             OBJ_DROP_PROPERTY(cx, obj2, prop);
             lval = OBJECT_TO_JSVAL(obj);
+            i = 0;
             goto do_incop;
 
           case JSOP_INCPROP:
@@ -2687,18 +2696,22 @@ js_Interpret(JSContext *cx, jsval *result)
           case JSOP_PROPDEC:
             atom = GET_ATOM(cx, script, pc);
             id   = (jsid)atom;
-            lval = POP_OPND();
+            lval = FETCH_OPND(-1);
+            i = -1;
             goto do_incop;
 
           case JSOP_INCELEM:
           case JSOP_DECELEM:
           case JSOP_ELEMINC:
           case JSOP_ELEMDEC:
-            POP_ELEMENT_ID(id);
-            lval = POP_OPND();
+            FETCH_ELEMENT_ID(-1, id);
+            lval = FETCH_OPND(-2);
+            i = -2;
 
           do_incop:
             VALUE_TO_OBJECT(cx, lval, obj);
+            if (i < 0)
+                STORE_OPND(i, OBJECT_TO_JSVAL(obj));
 
             /* The operand must contain a number. */
             SAVE_SP(fp);
@@ -2748,9 +2761,12 @@ js_Interpret(JSContext *cx, jsval *result)
                 NONINT_INCREMENT_OP();
             }
 
+            fp->flags |= JSFRAME_ASSIGNING;
             CACHED_SET(OBJ_SET_PROPERTY(cx, obj, id, &rval));
+            fp->flags &= ~JSFRAME_ASSIGNING;
             if (!ok)
                 goto out;
+            sp += i;
             PUSH_OPND(rtmp);
             break;
 
@@ -2760,7 +2776,7 @@ js_Interpret(JSContext *cx, jsval *result)
  * loop created by the JS_BEGIN/END_MACRO brackets.
  */
 #define FAST_INCREMENT_OP(SLOT,COUNT,BASE,PRE,OP,MINMAX)                      \
-    slot = (uintN)SLOT;                                                       \
+    slot = SLOT;                                                              \
     JS_ASSERT(slot < fp->fun->COUNT);                                         \
     vp = fp->BASE + slot;                                                     \
     rval = *vp;                                                               \
@@ -2836,8 +2852,7 @@ js_Interpret(JSContext *cx, jsval *result)
           case JSOP_ENUMELEM:
             /* Funky: the value to set is under the [obj, id] pair. */
             FETCH_ELEMENT_ID(-1, id);
-            lval = FETCH_OPND(-2);
-            VALUE_TO_OBJECT(cx, lval, obj);
+            FETCH_OBJECT(cx, -2, lval, obj);
             rval = FETCH_OPND(-3);
             SAVE_SP(fp);
             ok = OBJ_SET_PROPERTY(cx, obj, id, &rval);
@@ -3878,24 +3893,23 @@ js_Interpret(JSContext *cx, jsval *result)
               case JSOP_SETPROP:
                 atom = GET_ATOM(cx, script, pc);
                 id   = (jsid)atom;
+                rval = FETCH_OPND(-1);
                 i = -1;
-                rval = FETCH_OPND(i);
                 goto gs_pop_lval;
 
               case JSOP_SETELEM:
                 rval = FETCH_OPND(-1);
+                FETCH_ELEMENT_ID(-2, id);
                 i = -2;
-                FETCH_ELEMENT_ID(i, id);
               gs_pop_lval:
-                lval = FETCH_OPND(i-1);
-                VALUE_TO_OBJECT(cx, lval, obj);
+                FETCH_OBJECT(cx, i - 1, lval, obj);
                 break;
 
 #if JS_HAS_INITIALIZERS
               case JSOP_INITPROP:
                 JS_ASSERT(sp - fp->spbase >= 2);
+                rval = FETCH_OPND(-1);
                 i = -1;
-                rval = FETCH_OPND(i);
                 atom = GET_ATOM(cx, script, pc);
                 id   = (jsid)atom;
                 goto gs_get_lval;
@@ -3903,8 +3917,8 @@ js_Interpret(JSContext *cx, jsval *result)
               case JSOP_INITELEM:
                 JS_ASSERT(sp - fp->spbase >= 3);
                 rval = FETCH_OPND(-1);
+                FETCH_ELEMENT_ID(-2, id);
                 i = -2;
-                FETCH_ELEMENT_ID(i, id);
               gs_get_lval:
                 lval = FETCH_OPND(i-1);
                 JS_ASSERT(JSVAL_IS_OBJECT(lval));
@@ -4111,16 +4125,16 @@ js_Interpret(JSContext *cx, jsval *result)
             goto out;
 
           case JSOP_INITCATCHVAR:
-            /* Pop the property's value into rval. */
+            /* Load the value into rval, while keeping it live on stack. */
             JS_ASSERT(sp - fp->spbase >= 2);
-            rval = POP_OPND();
+            rval = FETCH_OPND(-1);
 
             /* Get the immediate catch variable name into id. */
             atom = GET_ATOM(cx, script, pc);
             id   = (jsid)atom;
 
             /* Find the object being initialized at top of stack. */
-            lval = FETCH_OPND(-1);
+            lval = FETCH_OPND(-2);
             JS_ASSERT(JSVAL_IS_OBJECT(lval));
             obj = JSVAL_TO_OBJECT(lval);
 
@@ -4130,6 +4144,9 @@ js_Interpret(JSContext *cx, jsval *result)
                                      JSPROP_PERMANENT, NULL);
             if (!ok)
                 goto out;
+
+            /* Now that we're done with rval, pop it. */
+            sp--;
             break;
 #endif /* JS_HAS_EXCEPTIONS */
 
