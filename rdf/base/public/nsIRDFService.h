@@ -28,8 +28,19 @@ class nsIRDFResource;
 class nsIRDFResourceFactory;
 
 /**
- * The RDF service interface. This should be a singleton object, obtained
- * from the <tt>nsServiceManager</tt>.
+
+  The RDF service interface. This is a singleton object, and should be
+  obtained from the <tt>nsServiceManager</tt>.
+
+  XXX I'm not particularly happy with the current APIs for named data
+  sources. The idea is that you want "rdf:bookmarks" to always map to
+  the "bookmarks" data store. The thing that bothers me now is that
+  the implementation has to pre-load all of the data sources: that
+  means you need to parse the bookmarks file, read the history, etc.,
+  rather than doing this on-demand. With a little thought, it may be
+  able to enormously improve these APIs so that pre-loading data
+  sources is unnecessary.
+
  */
 
 class nsIRDFService : public nsISupports {
