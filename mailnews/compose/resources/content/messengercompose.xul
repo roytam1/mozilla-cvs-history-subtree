@@ -28,9 +28,9 @@
 <?xml-stylesheet href="chrome://messenger/skin/folderMenus.css" type="text/css"?> 
 <?xml-stylesheet href="chrome://editor/skin/editorFormatToolbar.css" type="text/css"?> 
 <?xml-stylesheet href="chrome://messenger/skin/addressingWidget.css" type="text/css"?>
+<?xml-stylesheet href="chrome://communicator/skin/tasksOverlay.css" type="text/css"?> 
 
 <?xul-overlay href="chrome://global/content/charsetOverlay.xul"?>
-<?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
 
 <?xul-overlay href="chrome://messenger/content/messengercompose/addressingWidgetOverlay.xul"?>
@@ -131,6 +131,10 @@
   <command id="cmd_outputFormat" oncommand="OutputFormatMenuSelect(event.target)"/>
   <command id="cmd_quoteMessage" oncommand="goDoCommand('cmd_quoteMessage')"/>
   <command id="cmd_insert"/>
+
+  <!-- Tools menu --> 
+  <command id="Tasks:Mail" oncommand="toMessengerWindow();"/>
+  <command id="Tasks:AddressBook" oncommand="toAddressBook();"/>
 </commandset>
 
 <broadcasterset id="composeBroadcasters">
@@ -166,6 +170,10 @@
   <!-- Options Menu -->
   <!-- key id="key_selectAddresses" xulkey="true" key="&selectAddressCmd.key;" command="cmd_selectAddress"/ -->
   <key id="key_checkspelling"  key="&checkSpellingCmd.key;" command="cmd_spelling"  modifiers="accel"/>
+
+   <!-- Tools Menu -->
+  <key id="key_mail"  key="&messengerCmd.commandkey;" command="Tasks:Mail" modifiers="accel"/>
+  <key id="key_addressbook"  key="&addressBookCmd.commandkey;" command="Tasks:AddressBook" modifiers="accel"/>
   
   <!-- Tab/F6 Keys -->
   <key keycode="VK_TAB" oncommand="SwitchElementFocus(event);" modifiers="control"/>
@@ -377,9 +385,13 @@
           <menuitem label="&attachVCardCmd.label;" disabled="true" accesskey="&attachVCardCmd.accesskey;" oncommand="AttachVCard()"/-->     
         </menupopup>
       </menu>
-      <!--menu id="debugMenu"/-->
-      <menu id="tasksMenu"/>
-      <menu id="windowMenu"/>
+
+      <menu id="tasksMenu" label="&tasksMenu.label;" accesskey="&tasksMenu.accesskey;">
+          <menupopup id="taskPopup">
+            <menuitem accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail" id="tasksMenuMail" class="menuitem-iconic icon-mail16 menu-iconic"/>
+            <menuitem label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook" id="tasksMenuAddressBook" class="menuitem-iconic icon-addressbook16 menu-iconic"/>
+          </menupopup>
+      </menu>
     </menubar>
    </toolbaritem>
   </toolbar>

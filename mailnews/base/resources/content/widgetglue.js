@@ -265,6 +265,10 @@ function GetResourceFromUri(uri)
     return resource;
 }  
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// XXX: TO DO: These methods will all move to mailCore.js when we move to our new toolkit
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
 function CustomizeMailToolbar(id)
 {
   // Disable the toolbar context menu items
@@ -304,3 +308,52 @@ function onViewToolbarCommand(id, aEvent)
   toolbar.collapsed = aEvent.originalTarget.getAttribute("checked") != "true";
   document.persist(id, "collapsed");
 }
+
+function toJavaScriptConsole()
+{
+    toOpenWindowByType("global:console", "chrome://global/content/console.xul");
+}
+
+const nsIWindowMediator = Components.interfaces.nsIWindowMediator;
+
+function toOpenWindowByType( inType, uri )
+{
+	var windowManager = Components.classes['@mozilla.org/appshell/window-mediator;1'].getService();
+
+	var	windowManagerInterface = windowManager.QueryInterface(nsIWindowMediator);
+
+	var topWindow = windowManagerInterface.getMostRecentWindow( inType );
+	
+	if ( topWindow )
+		topWindow.focus();
+	else
+		window.open(uri, "_blank", "chrome,extrachrome,menubar,resizable,scrollbars,status,toolbar");
+}
+
+function toMessengerWindow()
+{
+  var pref = Components.classes["@mozilla.org/preferences-service;1"]
+                       .getService(Components.interfaces.nsIPrefBranch);
+  var windowDoc = "chrome://messenger/content/messenger.xul";
+  try
+  {
+    var layoutType = pref.getIntPref("mail.pane_config");
+    windowDoc = !layoutType ? "chrome://messenger/content/messenger.xul" : 
+                              "chrome://messenger/content/mail3PaneWindowVertLayout.xul";
+   }
+   catch(ex)
+   {
+   }    
+   
+   toOpenWindowByType("mail:3pane", windowDoc);
+}
+    
+function toAddressBook() 
+{
+  toOpenWindowByType("mail:addressbook", "chrome://messenger/content/addressbook/addressbook.xul");
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// XXX: End of methods to move to mailCore.js when we move to our new toolkit
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+

@@ -21,6 +21,7 @@ Rights Reserved.
 -->
 
 <?xml-stylesheet href="chrome://messenger/skin/folderMenus.css" type="text/css"?>
+<?xml-stylesheet href="chrome://communicator/skin/tasksOverlay.css" type="text/css"?> 
 
 <?xul-overlay href="chrome://global/content/charsetOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/viewZoomOverlay.xul"?>
@@ -107,6 +108,7 @@ Rights Reserved.
   <command id="cmd_pageSetup"/>
   <command id="cmd_search" oncommand="goDoCommand('cmd_search')" disabled="true"/>
 </commandset>
+
 <commandset id="mailViewMenuItems"
             commandupdater="true"
             events="create-menu-view"
@@ -269,6 +271,8 @@ Rights Reserved.
 
 <commandset id="tasksCommands">
   <command id="cmd_searchMsgs" oncommand="MsgSearchMessages();"/>
+  <command id="Tasks:Mail" oncommand="toMessengerWindow();"/>
+  <command id="Tasks:AddressBook" oncommand="toAddressBook();"/>
 </commandset>
 
 <keyset id="mailKeys">
@@ -338,7 +342,9 @@ Rights Reserved.
   <key id="key_label5" charcode="&labelCmd5.key;"  oncommand="goDoCommand('cmd_label5')"/>
 
   <key id="key_searchMail" key="&searchMailCmd.key;" command="cmd_searchMsgs" modifiers="accel, shift"/>
-
+  
+  <key id="key_mail"  key="&messengerCmd.commandkey;" command="Tasks:Mail" modifiers="accel"/>
+  <key id="key_addressbook"  key="&addressBookCmd.commandkey;" command="Tasks:AddressBook" modifiers="accel"/>
 </keyset>
 
   <popup id="threadPaneContext" onpopupshowing="return fillThreadPaneContextMenu();"
@@ -1415,8 +1421,11 @@ Rights Reserved.
         </menupopup>
         </menu>
 
-        <menu id="tasksMenu">
-        <menupopup id="taskPopup">
+      <menu id="tasksMenu" label="&tasksMenu.label;" accesskey="&tasksMenu.accesskey;">
+      <menupopup id="taskPopup">
+        <menuitem accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail" id="tasksMenuMail" class="menuitem-iconic icon-mail16 menu-iconic"/>
+        <menuitem label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook" id="tasksMenuAddressBook" class="menuitem-iconic icon-addressbook16 menu-iconic"/>
+        <menuseparator />  
         <menuitem label="&searchMailCmd.label;" 
                   key="key_searchMail" 
                   accesskey="&searchMailCmd.accesskey;" 
@@ -1447,41 +1456,19 @@ Rights Reserved.
                   accesskey="&importCmd.accesskey;" 
                   oncommand="toImport();"/>
         <menuseparator/>
+        <menuitem label="&javaScriptConsoleCmd.label;" accesskey="&javaScriptConsoleCmd.accesskey;" oncommand="toJavaScriptConsole();"/>
         </menupopup>
         </menu>
-        <menu id="windowMenu"/>
       </menubar>
      </toolbaritem>
    </toolbar>
 
     <toolbarpalette id="MailToolbarPalette">
-      <toolbarbutton type="menu-button" id="button-getmsg" 
+      <toolbarbutton id="button-getmsg" 
                      class="toolbarbutton-1"
                      label="&getMsgButton.label;"
-                     sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
-                     sortDirection="ascending"
                      tooltiptext="&getMsgButton.tooltip;" 
-                     observes="button_getNewMessages" datasources="rdf:msgaccountmanager rdf:mailnewsfolders" 
-                     oncommand="goDoCommand('cmd_getNewMessages')" 
-                     containment="http://home.netscape.com/NC-rdf#child" 
-                     ref="msgaccounts:/">
-          <menupopup onpopupshowing="getMsgToolbarMenu_init()">
-              <menuitem label="&getAllNewMsgCmd.label;" 
-                        observes="cmd_getMsgsForAuthAccounts"/>
-              <menuseparator/>
-          </menupopup>
-          <template>
-              <rule nc:IsServer="true" nc:CanGetMessages="true">
-                  <menupopup>
-                      <menuitem uri="..." 
-                                value="..." 
-                                label="rdf:http://home.netscape.com/NC-rdf#Name"
-                                oncommand="MsgGetMessagesForAccount(event);"/>
-                  </menupopup>
-              </rule>
-          </template>
-          <menupopup/>
-      </toolbarbutton>
+                     oncommand="goDoCommand('cmd_getNewMessages')"/>
       <toolbarbutton id="button-newmsg" class="toolbarbutton-1" label="&newMsgButton.label;" tooltiptext="&newMsgButton.tooltip;" oncommand="MsgNewMessage(event)"/>
 
       <toolbarbutton id="button-reply" class="toolbarbutton-1" label="&replyButton.label;" tooltiptext="&replyButton.tooltip;" observes="button_reply" oncommand="MsgReplyMessage(event)"/>

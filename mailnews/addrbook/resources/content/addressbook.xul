@@ -23,9 +23,9 @@ Contributor(s):
 --> 
 
 <?xml-stylesheet href="chrome://messenger/skin/addressbook/addressbook.css" type="text/css"?> 
+<?xml-stylesheet href="chrome://communicator/skin/tasksOverlay.css" type="text/css"?> 
 
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
-<?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/contentAreaContextOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/addressbook/abDirTreeOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/addressbook/abResultsPaneOverlay.xul"?>
@@ -91,7 +91,8 @@ Contributor(s):
     <command id="cmd_cut"/>
     <command id="cmd_selectAll"/>
     <command id="cmd_swapFirstNameLastName" oncommand="AbSwapFirstNameLastName()"/>
-    <commandset id="tasksCommands"/>
+    <command id="Tasks:Mail" oncommand="toMessengerWindow();"/>
+    <command id="Tasks:AddressBook" oncommand="toAddressBook();"/>
 </commandset>
 
 <broadcasterset id="abBroadcasters">
@@ -129,6 +130,9 @@ Contributor(s):
   <key keycode="VK_F6" oncommand="SwitchPaneFocus(event);" modifiers="control"/>
   <key keycode="VK_F6" oncommand="SwitchPaneFocus(event);" modifiers="shift"/>
   <key keycode="VK_F6" oncommand="SwitchPaneFocus(event);"/>
+
+  <key id="key_mail"  key="&messengerCmd.commandkey;" command="Tasks:Mail" modifiers="accel"/>
+  <key id="key_addressbook"  key="&addressBookCmd.commandkey;" command="Tasks:AddressBook" modifiers="accel"/>
 </keyset>
 
 <toolbox id="ab-toolbox" class="toolbox-top" mode="icons">
@@ -298,20 +302,19 @@ Contributor(s):
                 </menu>
             </menupopup>
         </menu>       
-        <menu id="tasksMenu">
+        <menu id="tasksMenu" label="&tasksMenu.label;" accesskey="&tasksMenu.accesskey;">
           <menupopup id="taskPopup">
+            <menuitem accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail" id="tasksMenuMail" class="menuitem-iconic icon-mail16 menu-iconic"/>
+            <menuitem label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook" id="tasksMenuAddressBook" class="menuitem-iconic icon-addressbook16 menu-iconic"/>
+            <menuseparator />  
             <menuitem label="&searchAddressesCmd.label;" 
                       accesskey="&searchAddressesCmd.accesskey;"
                       id="menu_search_addresses" 
                       oncommand="onAdvancedAbSearch();"/>
             <menuitem label="&importCmd.label;" accesskey="&importCmd.accesskey;" oncommand="toImport()"/>
             <menuitem label="&exportCmd.label;" accesskey="&exportCmd.accesskey;" oncommand="AbExport()"/>
-            <menuseparator/>
           </menupopup>
         </menu>
-
-        <menu id="windowMenu"/>
-        <spacer flex="1"/>
     </menubar>
    </toolbaritem>
   </toolbar>
