@@ -30,15 +30,6 @@ dist/bin/libfreebl_hybrid_3@DLLS@
 != dist/bin/shlibsign -v -i %dist/bin/libfreebl_hybrid_3@DLLS@% ;
 #endif
 
-[psm]
-dist/bin/components/@DLLP@pipboot@DLLS@
-!xpt dist/bin/components/pipboot.xpt
-dist/bin/components/@DLLP@pipnss@DLLS@
-!xpt dist/bin/components/pipnss.xpt
-
-[psm-support]
-dist/bin/chrome/pipnss.jar
-
 [unpackaged-files]
 dist/bin/shlibsign@BINS@
 !optional dist/bin/mangle@BINS@
