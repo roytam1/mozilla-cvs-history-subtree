@@ -125,6 +125,9 @@ nsDOMAttributeMap::SetNamedItem(nsIDOMNode *aNode, nsIDOMNode **aReturn)
   *aReturn = nsnull;
 
   if (mContent) {
+    // XXX should check same-origin between mContent and aNode however
+    // nsContentUtils::CheckSameOrigin can't deal with attributenodes yet
+    
     nsCOMPtr<nsIDOMAttr> attribute(do_QueryInterface(aNode));
 
     if (!attribute) {
@@ -335,6 +338,9 @@ nsDOMAttributeMap::SetNamedItemNS(nsIDOMNode* aArg, nsIDOMNode** aReturn)
   *aReturn = nsnull;
 
   if (mContent) {
+    // XXX should check same-origin between mContent and aNode however
+    // nsContentUtils::CheckSameOrigin can't deal with attributenodes yet
+
     nsCOMPtr<nsIDOMAttr> attribute(do_QueryInterface(aArg));
 
     if (!attribute) {

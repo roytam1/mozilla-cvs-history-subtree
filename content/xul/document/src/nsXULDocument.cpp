@@ -1806,6 +1806,18 @@ nsXULDocument::AddBroadcastListenerFor(nsIDOMElement* aBroadcaster,
                                        nsIDOMElement* aListener,
                                        const nsAString& aAttr)
 {
+    nsresult rv = nsContentUtils::CheckSameOrigin(this, aBroadcaster);
+
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+
+    rv = nsContentUtils::CheckSameOrigin(this, aListener);
+
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+
     static PLDHashTableOps gOps = {
         PL_DHashAllocTable,
         PL_DHashFreeTable,
@@ -3063,6 +3075,12 @@ nsXULDocument::CreateTreeWalker(nsIDOMNode *aRoot,
                                 PRBool aEntityReferenceExpansion,
                                 nsIDOMTreeWalker **_retval)
 {
+  *_retval = nsnull;
+
+  nsresult rv = nsContentUtils::CheckSameOrigin(this, aRoot);
+  if(NS_FAILED(rv))
+    return rv;
+
   return NS_NewTreeWalker(aRoot,
                           aWhatToShow,
                           aFilter,
@@ -3218,6 +3236,11 @@ NS_IMETHODIMP
 nsXULDocument::AddBinding(nsIDOMElement* aContent,
                           const nsAString& aURL)
 {
+  nsresult rv = nsContentUtils::CheckSameOrigin(this, aContent);
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+
   nsCOMPtr<nsIBindingManager> bm;
   GetBindingManager(getter_AddRefs(bm));
   nsCOMPtr<nsIContent> content(do_QueryInterface(aContent));

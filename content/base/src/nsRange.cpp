@@ -1149,6 +1149,10 @@ nsresult nsRange::GetCommonAncestorContainer(nsIDOMNode** aCommonParent)
 
 nsresult nsRange::SetStart(nsIDOMNode* aParent, PRInt32 aOffset)
 {
+  if (!nsContentUtils::CanCallerAccess(aParent)) {
+    return NS_ERROR_DOM_SECURITY_ERR;
+  }
+
   if(IsDetached())
     return NS_ERROR_DOM_INVALID_STATE_ERR;
 
@@ -1177,6 +1181,10 @@ nsresult nsRange::SetStart(nsIDOMNode* aParent, PRInt32 aOffset)
 
 nsresult nsRange::SetStartBefore(nsIDOMNode* aSibling)
 {
+  if (!nsContentUtils::CanCallerAccess(aSibling)) {
+    return NS_ERROR_DOM_SECURITY_ERR;
+  }
+
   if(IsDetached())
     return NS_ERROR_DOM_INVALID_STATE_ERR;
   if (nsnull == aSibling)// Not the correct one to throw, but spec doesn't say what is
@@ -1191,6 +1199,10 @@ nsresult nsRange::SetStartBefore(nsIDOMNode* aSibling)
 
 nsresult nsRange::SetStartAfter(nsIDOMNode* aSibling)
 {
+  if (!nsContentUtils::CanCallerAccess(aSibling)) {
+    return NS_ERROR_DOM_SECURITY_ERR;
+  }
+
   if(IsDetached())
     return NS_ERROR_DOM_INVALID_STATE_ERR;
   if (nsnull == aSibling)// Not the correct one to throw, but spec doesn't say what is
@@ -1205,6 +1217,10 @@ nsresult nsRange::SetStartAfter(nsIDOMNode* aSibling)
 
 nsresult nsRange::SetEnd(nsIDOMNode* aParent, PRInt32 aOffset)
 {
+  if (!nsContentUtils::CanCallerAccess(aParent)) {
+    return NS_ERROR_DOM_SECURITY_ERR;
+  }
+
   if(IsDetached())
     return NS_ERROR_DOM_INVALID_STATE_ERR;
 
@@ -1233,6 +1249,10 @@ nsresult nsRange::SetEnd(nsIDOMNode* aParent, PRInt32 aOffset)
 
 nsresult nsRange::SetEndBefore(nsIDOMNode* aSibling)
 {
+  if (!nsContentUtils::CanCallerAccess(aSibling)) {
+    return NS_ERROR_DOM_SECURITY_ERR;
+  }
+
   if(IsDetached())
     return NS_ERROR_DOM_INVALID_STATE_ERR;
   if (nsnull == aSibling)// Not the correct one to throw, but spec doesn't say what is
@@ -1247,6 +1267,10 @@ nsresult nsRange::SetEndBefore(nsIDOMNode* aSibling)
 
 nsresult nsRange::SetEndAfter(nsIDOMNode* aSibling)
 {
+  if (!nsContentUtils::CanCallerAccess(aSibling)) {
+    return NS_ERROR_DOM_SECURITY_ERR;
+  }
+
   if(IsDetached())
     return NS_ERROR_DOM_INVALID_STATE_ERR;
   if (nsnull == aSibling)// Not the correct one to throw, but spec doesn't say what is
@@ -1280,6 +1304,10 @@ nsresult nsRange::Unposition()
 
 nsresult nsRange::SelectNode(nsIDOMNode* aN)
 {
+  if (!nsContentUtils::CanCallerAccess(aN)) {
+    return NS_ERROR_DOM_SECURITY_ERR;
+  }
+
   if(IsDetached())
     return NS_ERROR_DOM_INVALID_STATE_ERR;
 
@@ -1328,6 +1356,10 @@ nsresult nsRange::SelectNode(nsIDOMNode* aN)
 
 nsresult nsRange::SelectNodeContents(nsIDOMNode* aN)
 {
+  if (!nsContentUtils::CanCallerAccess(aN)) {
+    return NS_ERROR_DOM_SECURITY_ERR;
+  }
+
   if(IsDetached())
     return NS_ERROR_DOM_INVALID_STATE_ERR;
   NS_ENSURE_ARG_POINTER(aN);
@@ -2195,6 +2227,10 @@ nsresult nsRange::CloneRange(nsIDOMRange** aReturn)
 
 nsresult nsRange::InsertNode(nsIDOMNode* aN)
 {
+  if (!nsContentUtils::CanCallerAccess(aN)) {
+    return NS_ERROR_DOM_SECURITY_ERR;
+  }
+
   if(IsDetached())
     return NS_ERROR_DOM_INVALID_STATE_ERR;
 
@@ -2247,6 +2283,10 @@ nsresult nsRange::InsertNode(nsIDOMNode* aN)
 
 nsresult nsRange::SurroundContents(nsIDOMNode* aN)
 {
+  if (!nsContentUtils::CanCallerAccess(aN)) {
+    return NS_ERROR_DOM_SECURITY_ERR;
+  }
+
   if(IsDetached())
     return NS_ERROR_DOM_INVALID_STATE_ERR;
 

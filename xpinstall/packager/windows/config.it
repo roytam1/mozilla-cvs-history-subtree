@@ -528,7 +528,7 @@ Decrypt Name Value=FALSE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT51
+OS=NT5
 
 [Component Navigator-Windows Registry1]
 Root Key=HKEY_LOCAL_MACHINE
@@ -542,7 +542,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT51
+OS=NT5
 
 [Component Navigator-Windows Registry2]
 Root Key=HKEY_LOCAL_MACHINE
@@ -556,7 +556,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT51
+OS=NT5
 
 [Component Navigator-Windows Registry3]
 Root Key=HKEY_LOCAL_MACHINE
@@ -570,7 +570,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT51
+OS=NT5
 
 [Component Navigator-Windows Registry4]
 Root Key=HKEY_LOCAL_MACHINE
@@ -584,7 +584,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT51
+OS=NT5
 
 
 
@@ -611,7 +611,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT51
+OS=NT5
 
 [Component MailNews-Windows Registry1]
 Root Key=HKEY_LOCAL_MACHINE
@@ -625,7 +625,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT51
+OS=NT5
 
 [Component MailNews-Windows Registry2]
 Root Key=HKEY_LOCAL_MACHINE
@@ -639,7 +639,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT51
+OS=NT5
 
 [Component MailNews-Windows Registry3]
 Root Key=HKEY_LOCAL_MACHINE
@@ -653,7 +653,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT51
+OS=NT5
 
 [Component MailNews-Windows Registry4]
 Root Key=HKEY_LOCAL_MACHINE
@@ -667,7 +667,7 @@ Decrypt Name Value=TRUE
 Overwrite Key=TRUE
 Overwrite Name=TRUE
 Timing=post archive
-OS=NT51
+OS=NT5
 
 
 

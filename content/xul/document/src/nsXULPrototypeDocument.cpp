@@ -148,6 +148,8 @@ public:
 
     NS_IMETHOD AwaitLoadDone(nsIXULDocument* aDocument, PRBool* aResult);
     NS_IMETHOD NotifyLoadDone();
+    
+    NS_IMETHOD GetNodeInfoManager(nsINodeInfoManager** aNodeInfoManager);
 
     // nsIScriptGlobalObjectOwner methods
     NS_DECL_NSISCRIPTGLOBALOBJECTOWNER
@@ -165,6 +167,8 @@ protected:
 
     PRPackedBool mLoaded;
     nsCOMPtr<nsICollection> mPrototypeWaiters;
+
+    nsCOMPtr<nsINodeInfoManager> mNodeInfoManager;
 
     nsXULPrototypeDocument();
     virtual ~nsXULPrototypeDocument();
@@ -231,10 +235,19 @@ nsXULPrototypeDocument::Init()
     nsresult rv;
 
     rv = NS_NewISupportsArray(getter_AddRefs(mStyleSheetReferences));
-    if (NS_FAILED(rv)) return rv;
+    NS_ENSURE_SUCCESS(rv, rv);
 
     rv = NS_NewISupportsArray(getter_AddRefs(mOverlayReferences));
-    if (NS_FAILED(rv)) return rv;
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    mNodeInfoManager = do_CreateInstance(NS_NODEINFOMANAGER_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsINameSpaceManager> nsmgr;
+    rv = NS_NewNameSpaceManager(getter_AddRefs(nsmgr));
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = mNodeInfoManager->Init(nsnull, nsmgr);
+    NS_ENSURE_SUCCESS(rv, rv);
 
     return NS_OK;
 }
@@ -354,7 +367,17 @@ nsXULPrototypeDocument::GetURI(nsIURI** aResult)
 NS_IMETHODIMP
 nsXULPrototypeDocument::SetURI(nsIURI* aURI)
 {
-    mURI = dont_QueryInterface(aURI);
+    NS_ASSERTION(!mURI, "Can't change the uri of a xul prototype document");
+    if (mURI)
+        return NS_ERROR_ALREADY_INITIALIZED;
+
+    mURI = aURI;
+    if (!mDocumentPrincipal) {
+        // If the document doesn't have a principal yet we'll force the creation of one
+        // so that mNodeInfoManager properly gets one.
+        nsCOMPtr<nsIPrincipal> principal;
+        GetDocumentPrincipal(getter_AddRefs(principal));
+    }
     return NS_OK;
 }
 
@@ -440,6 +463,7 @@ nsXULPrototypeDocument::SetHeaderData(nsIAtom* aField, const nsAString& aData)
 NS_IMETHODIMP
 nsXULPrototypeDocument::GetDocumentPrincipal(nsIPrincipal** aResult)
 {
+    NS_PRECONDITION(mNodeInfoManager, "missing nodeInfoManager");
     if (!mDocumentPrincipal) {
         nsresult rv;
         nsCOMPtr<nsIScriptSecurityManager> securityManager = 
@@ -448,10 +472,17 @@ nsXULPrototypeDocument::GetDocumentPrincipal(nsIPrincipal** aResult)
         if (NS_FAILED(rv))
             return NS_ERROR_FAILURE;
 
-        rv = securityManager->GetCodebasePrincipal(mURI, getter_AddRefs(mDocumentPrincipal));
+        // XXX This should be handled by the security manager, see bug 160042
+        PRBool isChrome = PR_FALSE;
+        if (NS_SUCCEEDED(mURI->SchemeIs("chrome", &isChrome)) && isChrome)
+            rv = securityManager->GetSystemPrincipal(getter_AddRefs(mDocumentPrincipal));
+        else
+            rv = securityManager->GetCodebasePrincipal(mURI, getter_AddRefs(mDocumentPrincipal));
 
         if (NS_FAILED(rv))
             return NS_ERROR_FAILURE;
+
+        mNodeInfoManager->SetDocumentPrincipal(mDocumentPrincipal);
     }
 
     *aResult = mDocumentPrincipal;
@@ -463,10 +494,19 @@ nsXULPrototypeDocument::GetDocumentPrincipal(nsIPrincipal** aResult)
 NS_IMETHODIMP
 nsXULPrototypeDocument::SetDocumentPrincipal(nsIPrincipal* aPrincipal)
 {
+    NS_PRECONDITION(mNodeInfoManager, "missing nodeInfoManager");
     mDocumentPrincipal = aPrincipal;
+    mNodeInfoManager->SetDocumentPrincipal(aPrincipal);
     return NS_OK;
 }
 
+NS_IMETHODIMP
+nsXULPrototypeDocument::GetNodeInfoManager(nsINodeInfoManager** aNodeInfoManager)
+{
+    *aNodeInfoManager = mNodeInfoManager;
+    NS_IF_ADDREF(*aNodeInfoManager);
+    return NS_OK;
+}
 
 
 NS_IMETHODIMP

@@ -17,4 +17,4 @@
 <!ENTITY prefEnablePipelining.accesskey      "P">
 <!ENTITY prefEnablePipeliningProxy.accesskey "I">
 <!ENTITY prefPara                            "HTTP connections may be fine-tuned using these options to enhance either performance or compatibility. Some proxy servers, for example, are known to require HTTP/1.0 (see the release notes for details).">
-<!ENTITY prefPipeWarning                     "WARNING: pipelining is an experimental feature, designed to improve page-load performance, that is unfortunately not well supported by some web servers and proxies.">
+<!ENTITY prefPipeWarning                     "WARNING: Pipelining may improve page-load performance but is not fully supported by some web and proxy servers. This feature is for advanced users only.">

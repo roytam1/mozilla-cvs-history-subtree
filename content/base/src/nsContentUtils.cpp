@@ -47,6 +47,10 @@
 #include "nsIDocument.h"
 #include "nsINodeInfo.h"
 #include "nsReadableUtils.h"
+#include "nsIDOMDocument.h"
+#include "nsIURI.h"
+#include "nsIScriptSecurityManager.h"
+#include "nsDOMError.h"
 
 #include "nsIJSContextStack.h"
 #include "nsIDocShell.h"
@@ -56,6 +60,7 @@ static const char *sJSStackContractID = "@mozilla.org/js/xpc/ContextStack;1";
 
 nsIDOMScriptObjectFactory *nsContentUtils::sDOMScriptObjectFactory = nsnull;
 nsIXPConnect *nsContentUtils::sXPConnect = nsnull;
+nsIScriptSecurityManager *nsContentUtils::sSecurityManager = nsnull;
 
 // static
 nsresult
@@ -67,6 +72,13 @@ nsContentUtils::Init()
                                              nsIXPConnect::GetIID(),
                                              (nsISupports **)&sXPConnect);
   NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = nsServiceManager::GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID,
+                                    nsIScriptSecurityManager::GetIID(),
+                                    (nsISupports **)&sSecurityManager);
+  if (NS_FAILED(rv)) {
+    sSecurityManager = nsnull;
+  }
 
   return rv;
 }
@@ -326,6 +338,7 @@ nsContentUtils::Shutdown()
 {
   NS_IF_RELEASE(sDOMScriptObjectFactory);
   NS_IF_RELEASE(sXPConnect);
+  NS_IF_RELEASE(sSecurityManager);
 }
 
 // static
@@ -346,6 +359,229 @@ nsContentUtils::GetClassInfoInstance(nsDOMClassInfoID aID)
   }
 
   return sDOMScriptObjectFactory->GetClassInfoInstance(aID);
+}
+
+/**
+ * Checks whether two nodes come from the same origin. aTrustedNode is
+ * considered 'safe' in that a user can operate on it and that it isn't
+ * a js-object that implements nsIDOMNode.
+ * Never call this function with the first node provided by script, it
+ * must always be known to be a 'real' node!
+ */
+// static
+nsresult
+nsContentUtils::CheckSameOrigin(nsIDOMNode *aTrustedNode,
+                                nsIDOMNode *aUnTrustedNode)
+{
+  NS_PRECONDITION(aTrustedNode, "There must be a trusted node");
+
+  /*
+   * Get hold of each node's document or principal
+   */
+
+  // In most cases this is a document, so lets try that first
+  nsCOMPtr<nsIDocument> trustedDoc = do_QueryInterface(aTrustedNode);
+  nsCOMPtr<nsIPrincipal> trustedPrincipal;
+
+  if (!trustedDoc) {
+#ifdef DEBUG
+    nsCOMPtr<nsIContent> trustCont = do_QueryInterface(aTrustedNode);
+    NS_ASSERTION(trustCont,
+                 "aTrustedNode is neither nsIContent nor nsIDocument!");
+#endif
+    nsCOMPtr<nsIDOMDocument> domDoc;
+    aTrustedNode->GetOwnerDocument(getter_AddRefs(domDoc));
+    if (!domDoc) {
+      // In theory this should never happen. But since theory and reality are
+      // different for XUL elements we'll try to get the principal from the
+      // nsINodeInfoManager.
+
+      nsCOMPtr<nsIContent> cont = do_QueryInterface(aTrustedNode);
+      NS_ENSURE_TRUE(cont, NS_ERROR_UNEXPECTED);
+      
+      nsCOMPtr<nsINodeInfo> ni;
+      cont->GetNodeInfo(*getter_AddRefs(ni));
+      NS_ENSURE_TRUE(ni, NS_ERROR_UNEXPECTED);
+      
+      ni->GetDocumentPrincipal(getter_AddRefs(trustedPrincipal));
+      
+      if (!trustedPrincipal) {
+        // Can't get principal of aTrustedNode so we can't check security
+        // against it
+
+        return NS_ERROR_UNEXPECTED;
+      }
+    }
+    else {
+      trustedDoc = do_QueryInterface(domDoc);
+      NS_ASSERTION(trustedDoc, "QI to nsIDocument failed");
+    }
+  }
+
+
+  // For performance reasons it's important to try to QI the node to
+  // nsIContent before trying to QI to nsIDocument since a QI miss on
+  // a node is potentially expensive.
+  nsCOMPtr<nsIContent> content = do_QueryInterface(aUnTrustedNode);
+
+  nsCOMPtr<nsIDocument> unTrustedDoc;
+  nsCOMPtr<nsIPrincipal> unTrustedPrincipal;
+
+  if (!content) {
+    unTrustedDoc = do_QueryInterface(aUnTrustedNode);
+
+    if (!unTrustedDoc) {
+      // aUnTrustedNode is neither a nsIContent nor an nsIDocument, something
+      // weird is going on...
+
+      NS_ERROR("aUnTrustedNode is neither an nsIContent nor an nsIDocument!");
+
+      return NS_ERROR_UNEXPECTED;
+    }
+  }
+  else {
+    nsCOMPtr<nsIDOMDocument> domDoc;
+    aUnTrustedNode->GetOwnerDocument(getter_AddRefs(domDoc));
+    if (!domDoc) {
+      // if we can't get a doc then lets try to get principal through nodeinfo
+      // manager
+      nsCOMPtr<nsINodeInfo> ni;
+      content->GetNodeInfo(*getter_AddRefs(ni));
+      if (!ni) {
+        // we can't get to the principal so we'll give up and give the caller
+        // access
+
+        return NS_OK;
+      }
+      
+      ni->GetDocumentPrincipal(getter_AddRefs(unTrustedPrincipal));
+
+      if (!unTrustedPrincipal) {
+        // we can't get to the principal so we'll give up and give the caller access
+
+        return NS_OK;
+      }
+    }
+    else {
+      unTrustedDoc = do_QueryInterface(domDoc);
+      NS_ASSERTION(unTrustedDoc, "QI to nsIDocument failed");
+    }
+  }
+
+  /*
+   * Compare the principals
+   */
+
+  // If they are in the same document then everything is just fine
+  if (trustedDoc == unTrustedDoc && trustedDoc)
+    return NS_OK;
+
+  if (!trustedPrincipal) {
+    trustedDoc->GetPrincipal(getter_AddRefs(trustedPrincipal));
+    if (!trustedPrincipal) {
+      // If the trusted node doesn't have a principal we can't check security against it
+
+      return NS_ERROR_DOM_SECURITY_ERR;
+    }
+  }
+
+  if (!unTrustedPrincipal) {
+    unTrustedDoc->GetPrincipal(getter_AddRefs(unTrustedPrincipal));
+    if (!unTrustedDoc) {
+      // We can't get hold of the principal for this node. This should happen
+      // very rarely, like for textnodes out of the tree and <option>s created
+      // using 'new Option'.
+      // If we didn't allow access to nodes like this you wouldn't be able to
+      // insert these nodes into a document.
+
+      return NS_OK;
+    }
+  }
+
+  // If there isn't a security manager it is probably because it is not
+  // installed so we don't care about security anyway
+  if (!sSecurityManager) {
+    return NS_OK;
+  }
+
+  return sSecurityManager->CheckSameOriginPrincipal(trustedPrincipal,
+                                                    unTrustedPrincipal);
+}
+
+// static
+PRBool
+nsContentUtils::CanCallerAccess(nsIDOMNode *aNode)
+{
+  if (!sSecurityManager) {
+    // No security manager available, let any calls go through...
+
+    return PR_TRUE;
+  }
+
+  nsCOMPtr<nsIPrincipal> subjectPrincipal;
+  sSecurityManager->GetSubjectPrincipal(getter_AddRefs(subjectPrincipal));
+
+  if (!subjectPrincipal) {
+    // we're running as system, grant access to the node.
+
+    return PR_TRUE;
+  }
+
+  // Make sure that this is a real node. We do this by first QI'ing to
+  // nsIContent (which is important performance wise) and if that QI
+  // fails we QI to nsIDocument. If both those QI's fail we won't let
+  // the caller access this unknown node.
+  nsCOMPtr<nsIPrincipal> principal;
+  nsCOMPtr<nsIContent> content(do_QueryInterface(aNode));
+
+  if (!content) {
+    nsCOMPtr<nsIDocument> doc = do_QueryInterface(aNode);
+
+    if (!doc) {
+      // aNode is neither a nsIContent nor an nsIDocument, something
+      // weird is going on...
+
+      NS_ERROR("aNode is neither an nsIContent nor an nsIDocument!");
+
+      return PR_FALSE;
+    }
+    doc->GetPrincipal(getter_AddRefs(principal));
+  }
+  else {
+    nsCOMPtr<nsIDOMDocument> domDoc;
+    aNode->GetOwnerDocument(getter_AddRefs(domDoc));
+    if (!domDoc) {
+      nsCOMPtr<nsINodeInfo> ni;
+      content->GetNodeInfo(*getter_AddRefs(ni));
+      if (!ni) {
+        // aNode is not part of a document, let any caller access it.
+
+        return PR_TRUE;
+      }
+      
+      ni->GetDocumentPrincipal(getter_AddRefs(principal));
+    }
+    else {
+      nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc);
+      NS_ASSERTION(doc, "QI to nsIDocument failed");
+      doc->GetPrincipal(getter_AddRefs(principal));
+    }
+  }
+
+  if (!principal) {
+    // We can't get hold of the principal for this node. This should happen
+    // very rarely, like for textnodes out of the tree and <option>s created
+    // using 'new Option'.
+    // If we didn't allow access to nodes like this you wouldn't be able to
+    // insert these nodes into a document.
+
+    return PR_TRUE;
+  }
+
+  nsresult rv = sSecurityManager->CheckSameOriginPrincipal(subjectPrincipal,
+                                                           principal);
+
+  return NS_SUCCEEDED(rv);
 }
 
 // static
@@ -525,34 +761,17 @@ nsContentUtils::ReparentContentWrapper(nsIContent *aContent,
 PRBool
 nsContentUtils::IsCallerChrome()
 {
-  nsCOMPtr<nsIDocShell> docShell;
-  nsCOMPtr<nsIThreadJSContextStack> stack(do_GetService(sJSStackContractID));
-
-  if (stack) {
-    JSContext *cx = nsnull;
-    stack->Peek(&cx);
-
-    if (cx) {
-      nsCOMPtr<nsIScriptGlobalObject> sgo;
-      nsContentUtils::GetDynamicScriptGlobal(cx, getter_AddRefs(sgo));
-
-      if (sgo) {
-        sgo->GetDocShell(getter_AddRefs(docShell));
-      }
-    }
+  if (!sSecurityManager) {
+    return NS_OK;
   }
 
-  nsCOMPtr<nsIDocShellTreeItem> item(do_QueryInterface(docShell));
-  if (item) {
-    PRInt32 callerType = nsIDocShellTreeItem::typeChrome;
-    item->GetItemType(&callerType);
-
-    if (callerType != nsIDocShellTreeItem::typeChrome) {
-      return PR_FALSE;
-    }
+  PRBool is_caller_chrome = PR_FALSE;
+  nsresult rv = sSecurityManager->SubjectPrincipalIsSystem(&is_caller_chrome);
+  if (NS_FAILED(rv)) {
+    return PR_FALSE;
   }
 
-  return PR_TRUE;
+  return is_caller_chrome;
 }
 
 inline PRBool

@@ -256,12 +256,16 @@ nsInvalidateEvent::nsInvalidateEvent(nsViewManager* aViewManager)
 void
 nsViewManager::PostInvalidateEvent()
 {
-  if (!mPendingInvalidateEvent) {
+  nsCOMPtr<nsIEventQueue> eventQueue;
+  mEventQueueService->GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
+                                           getter_AddRefs(eventQueue));
+  
+  NS_ASSERTION(nsnull != eventQueue, "Event queue is null");
+
+  if (eventQueue != mInvalidateEventQueue) {
     nsInvalidateEvent* ev = new nsInvalidateEvent(this);
-    NS_ASSERTION(nsnull != ev,"InvalidateEvent is null");
-    NS_ASSERTION(nsnull != mEventQueue,"Event queue is null");
-    mEventQueue->PostEvent(ev);
-    mPendingInvalidateEvent = PR_TRUE;
+    eventQueue->PostEvent(ev);
+    mInvalidateEventQueue = eventQueue;
   }
 }
 
@@ -303,18 +307,17 @@ nsViewManager::nsViewManager()
   mDefaultBackgroundColor = NS_RGBA(0, 0, 0, 0);
   mAllowDoubleBuffering = PR_TRUE; 
   mHasPendingInvalidates = PR_FALSE;
-  mPendingInvalidateEvent = PR_FALSE;
   mRecursiveRefreshPending = PR_FALSE;
 }
 
 nsViewManager::~nsViewManager()
 {
-  // Revoke pending invalidate events
-  if (mPendingInvalidateEvent) {
-    NS_ASSERTION(nsnull != mEventQueue,"Event queue is null"); 
-    mPendingInvalidateEvent = PR_FALSE;
-    mEventQueue->RevokeEvents(this);
-  }
+  nsCOMPtr<nsIEventQueue> eventQueue;
+  mEventQueueService->GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
+                                           getter_AddRefs(eventQueue));
+  NS_ASSERTION(nsnull != eventQueue, "Event queue is null"); 
+  eventQueue->RevokeEvents(this);
+  mInvalidateEventQueue = nsnull;  
 
   NS_IF_RELEASE(mRootWindow);
 
@@ -445,8 +448,6 @@ nsViewManager::CreateRegion(nsIRegion* *result)
 // holds a reference to us.
 NS_IMETHODIMP nsViewManager::Init(nsIDeviceContext* aContext)
 {
-  nsresult rv;
-
   NS_PRECONDITION(nsnull != aContext, "null ptr");
 
   if (nsnull == aContext) {
@@ -475,18 +476,12 @@ NS_IMETHODIMP nsViewManager::Init(nsIDeviceContext* aContext)
   CreateRegion(&mOpaqueRgn);
   CreateRegion(&mTmpRgn);
   
-  if (nsnull == mEventQueue) {
-    // Cache the event queue of the current UI thread
-    nsCOMPtr<nsIEventQueueService> eventService = 
-      do_GetService(kEventQueueServiceCID, &rv);
-    if (NS_SUCCEEDED(rv) && (nsnull != eventService)) {                  // XXX this implies that the UI is the current thread.
-      rv = eventService->GetThreadEventQueue(NS_CURRENT_THREAD, getter_AddRefs(mEventQueue));
-    }
-
-    NS_ASSERTION(nsnull != mEventQueue, "event queue is null");
+  if (nsnull == mEventQueueService) {
+    mEventQueueService = do_GetService(kEventQueueServiceCID);
+    NS_ASSERTION(mEventQueueService, "couldn't get event queue service");
   }
   
-  return rv;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsViewManager::GetRootView(nsIView *&aView)
@@ -3891,7 +3886,7 @@ nsViewManager::FlushPendingInvalidates()
 nsresult
 nsViewManager::ProcessInvalidateEvent() {
   FlushPendingInvalidates();
-  mPendingInvalidateEvent = PR_FALSE;
+  mInvalidateEventQueue = nsnull;
   return NS_OK;
 }
 

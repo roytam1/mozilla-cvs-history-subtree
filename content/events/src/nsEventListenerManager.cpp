@@ -1122,6 +1122,99 @@ nsEventListenerManager::CompileEventHandlerInternal(nsIScriptContext *aContext,
   return result;
 }
 
+void
+nsCxPusher::Push(nsISupports *aCurrentTarget)
+{
+  if (mScx) {
+    NS_ERROR("Whaaa! No double pushing with nsCxPusher::Push()!");
+
+    return;
+  }
+
+  nsCOMPtr<nsIScriptGlobalObject> sgo;
+  nsCOMPtr<nsIContent> content(do_QueryInterface(aCurrentTarget));
+  nsCOMPtr<nsIDocument> document;
+
+  if (content) {
+    content->GetDocument(*getter_AddRefs(document));
+  }
+
+  if (!document) {
+    document = do_QueryInterface(aCurrentTarget);
+  }
+
+  if (document) {
+    document->GetScriptGlobalObject(getter_AddRefs(sgo));
+  }
+
+  if (!document && !sgo) {
+    sgo = do_QueryInterface(aCurrentTarget);
+  }
+
+  JSContext *cx = nsnull;
+
+  if (sgo) {
+    sgo->GetContext(getter_AddRefs(mScx));
+
+    if (mScx) {
+      cx = (JSContext *)mScx->GetNativeContext();
+    }
+  }
+
+  if (cx) {
+    if (!mStack) {
+      mStack = do_GetService("@mozilla.org/js/xpc/ContextStack;1");
+    }
+
+    if (mStack) {
+      JSContext *current = nsnull;
+      mStack->Peek(&current);
+
+      if (current) {
+        // If there's a context on the stack, that means that a script
+        // is running at the moment.
+
+        mScriptIsRunning = PR_TRUE;
+      }
+
+      mStack->Push(cx);
+    }
+  } else {
+    // If there's no native context in the script context it must be
+    // in the process or being torn down. We don't want to notify the
+    // script context about scripts having been evaluated in such a
+    // case, so null out mScx.
+
+    mScx = nsnull;
+  }
+}
+
+void
+nsCxPusher::Pop()
+{
+  if (!mScx || !mStack) {
+    mScx = nsnull;
+
+    NS_ASSERTION(!mScriptIsRunning, "Huh, this can't be happening, "
+                 "mScriptIsRunning can't be set here!");
+
+    return;
+  }
+
+  JSContext *unused;
+  mStack->Pop(&unused);
+
+  if (!mScriptIsRunning) {
+    // No JS is running, but executing the event handler might have
+    // caused some JS to run. Tell the script context that it's done.
+
+    mScx->ScriptEvaluated(PR_TRUE);
+  }
+
+  mScx = nsnull;
+  mScriptIsRunning = PR_FALSE;
+}
+
 nsresult
 nsEventListenerManager::HandleEventSubType(nsListenerStruct* aListenerStruct,
                                            nsIDOMEvent* aDOMEvent,
@@ -1169,66 +1262,15 @@ nsEventListenerManager::HandleEventSubType(nsListenerStruct* aListenerStruct,
     }
   }
 
-  nsCOMPtr<nsIScriptGlobalObject> sgo;
-  nsCOMPtr<nsIContent> content(do_QueryInterface(aCurrentTarget));
-  nsCOMPtr<nsIDocument> document;
-
-  if (content) {
-    content->GetDocument(*getter_AddRefs(document));
-  }
-
-  if (!document) {
-    document = do_QueryInterface(aCurrentTarget);
-  }
-
-  if (document) {
-    document->GetScriptGlobalObject(getter_AddRefs(sgo));
-  }
-
-  if (!sgo) {
-    sgo = do_QueryInterface(aCurrentTarget);
-  }
-
-  nsCOMPtr<nsIScriptContext> scx;
-  JSContext *cx = nsnull;
-
-  if (sgo) {
-    sgo->GetContext(getter_AddRefs(scx));
-
-    if (scx) {
-      cx = (JSContext *)scx->GetNativeContext();
-    }
-  }
-
-  nsCOMPtr<nsIJSContextStack> stack;
-  JSContext *current_cx = nsnull;
-
-  if (cx) {
-    stack = do_GetService("@mozilla.org/js/xpc/ContextStack;1");
-
-    if (stack) {
-      stack->Peek(&current_cx);
-
-      stack->Push(cx);
-    }
-  }
+  // nsCxPusher will automatically push and pop the current cx onto the
+  // context stack
+  nsCxPusher pusher(aCurrentTarget);
 
   if (NS_SUCCEEDED(result)) {
     nsCOMPtr<nsIPrivateDOMEvent> aPrivDOMEvent(do_QueryInterface(aDOMEvent));
     aPrivDOMEvent->SetCurrentTarget(aCurrentTarget);
     result = aListenerStruct->mListener->HandleEvent(aDOMEvent);
     aPrivDOMEvent->SetCurrentTarget(nsnull);
-  }
-
-  if (cx && stack) {
-    stack->Pop(&cx);
-
-    if (!current_cx) {
-      // No JS is running, but executing the event handler might have
-      // caused some JS to run. Tell the script context that it's done.
-
-      scx->ScriptEvaluated(PR_TRUE);
-    }
   }
 
   return result;

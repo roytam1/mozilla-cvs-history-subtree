@@ -31,6 +31,12 @@ MODULE = transformiix
 REQUIRES	= string \
 		  xpcom \
 		  necko \
+		  dom \
+		  caps \
+		  xpconnect \
+		  js \
+		  content \
+		  widget \
 		  $(NULL)
 endif
 
