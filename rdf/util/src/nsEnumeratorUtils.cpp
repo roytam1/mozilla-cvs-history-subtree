@@ -104,3 +104,83 @@ nsSingletonEnumerator::GetNext(nsISupports** aResult)
     *aResult = mValue;
     return NS_OK;
 }
+
+
+////////////////////////////////////////////////////////////////////////
+
+
+nsAdapterEnumerator::nsAdapterEnumerator(nsIEnumerator* aEnum)
+    : mEnum(aEnum), mCurrent(nsnull), mStarted(PR_FALSE)
+{
+    NS_INIT_REFCNT();
+    NS_ADDREF(mEnum);
+}
+
+
+nsAdapterEnumerator::~nsAdapterEnumerator()
+{
+    NS_RELEASE(mEnum);
+    NS_IF_RELEASE(mCurrent);
+}
+
+
+NS_IMPL_ISUPPORTS(nsAdapterEnumerator, nsIRDFEnumerator::GetIID());
+
+
+NS_IMETHODIMP
+nsAdapterEnumerator::HasMoreElements(PRBool* aResult)
+{
+    nsresult rv;
+
+    if (mCurrent) {
+        *aResult = PR_TRUE;
+        return NS_OK;
+    }
+
+    if (! mStarted) {
+        mStarted = PR_TRUE;
+        rv = mEnum->First();
+        if (rv == NS_OK) {
+            mEnum->CurrentItem(&mCurrent);
+            *aResult = PR_TRUE;
+        }
+        else {
+            *aResult = PR_FALSE;
+        }
+    }
+    else {
+        *aResult = PR_FALSE;
+
+        rv = mEnum->IsDone();
+        if (rv != NS_OK) {
+            // We're not done. Advance to the next one.
+            rv = mEnum->Next();
+            if (rv == NS_OK) {
+                mEnum->CurrentItem(&mCurrent);
+                *aResult = PR_TRUE;
+            }
+        }
+    }
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsAdapterEnumerator::GetNext(nsISupports** aResult)
+{
+    nsresult rv;
+
+    PRBool hasMore;
+    rv = HasMoreElements(&hasMore);
+    if (NS_FAILED(rv)) return rv;
+
+    if (! hasMore)
+        return NS_ERROR_UNEXPECTED;
+
+    // No need to addref, we "transfer" the ownership to the caller.
+    *aResult = mCurrent;
+    mCurrent = nsnull;
+    return NS_OK;
+}
+
+

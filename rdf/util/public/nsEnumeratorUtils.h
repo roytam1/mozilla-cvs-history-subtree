@@ -63,4 +63,24 @@ protected:
 
 ////////////////////////////////////////////////////////////////////////////////
 
+class NS_RDF nsAdapterEnumerator : public nsIRDFEnumerator
+{
+public:
+    NS_DECL_ISUPPORTS
+
+    // nsIRDFEnumerator methods
+    NS_IMETHOD HasMoreElements(PRBool* aResult);
+    NS_IMETHOD GetNext(nsISupports** aResult);
+
+    nsAdapterEnumerator(nsIEnumerator* aEnum);
+    virtual ~nsAdapterEnumerator();
+
+protected:
+    nsIEnumerator* mEnum;
+    nsISupports*   mCurrent;
+    PRBool mStarted;
+};
+
+////////////////////////////////////////////////////////////////////////
+
 #endif /* nsRDFCursorUtils_h__ */
