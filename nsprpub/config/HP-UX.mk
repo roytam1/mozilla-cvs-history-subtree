@@ -57,6 +57,14 @@ CPU_ARCH		= hppa
 OS_CFLAGS		+= $(DSO_CFLAGS) -DHPUX -D$(CPU_ARCH) -D_HPUX_SOURCE
 
 #
+# OSF1 and HPUX report the POLLHUP event for a socket when the
+# shutdown(SHUT_WR) operation is called for the remote end, even though
+# the socket is still writeable. Use select(), instead of poll(), to
+# workaround this problem.
+#
+OS_CFLAGS		+= -D_PR_POLL_WITH_SELECT -D_USE_BIG_FDS
+
+#
 # The header netdb.h on HP-UX 9 does not declare h_errno.
 # On 10.10 and 10.20, netdb.h declares h_errno only if
 # _XOPEN_SOURCE_EXTENDED is defined.  So we need to declare
