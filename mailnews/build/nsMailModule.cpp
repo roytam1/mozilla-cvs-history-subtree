@@ -341,6 +341,7 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMessengerOSXIntegration, Init)
 #endif
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMessengerContentHandler)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsMsgContentPolicy, Init)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgCookiePolicy)
 
 ////////////////////////////////////////////////////////////////////////////////
 // addrbook factories
@@ -806,6 +807,11 @@ static const nsModuleComponentInfo gComponents[] = {
        NS_MSGCONTENTPOLICY_CONTRACTID,
        nsMsgContentPolicyConstructor,
        RegisterContentPolicy, UnregisterContentPolicy },
+	  { "mail cookie policy enforcer",
+	    NS_MSGCOOKIEPOLICY_CID,
+	    NS_COOKIEPERMISSION_CONTRACTID,
+	    nsMsgCookiePolicyConstructor
+	  },
     
     ////////////////////////////////////////////////////////////////////////////////
     // addrbook components
