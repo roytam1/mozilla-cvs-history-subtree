@@ -716,6 +716,9 @@ public:
     PRBool GetApplicationDir(nsILocalFile** aDir);
     PRBool GetCloneOfManifestDir(nsILocalFile** aDir);
 
+    void   GetSearchPath(nsISupportsArray** aSearchPath)
+        {NS_ADDREF(*aSearchPath = mSearchPath);}
+
     static PRLock* GetResolveLock(xptiInterfaceInfoManager* self = nsnull) 
         {if(!self && !(self = GetInterfaceInfoManagerNoAddRef())) 
             return nsnull;
@@ -786,7 +789,6 @@ private:
     PRLock*                     mAutoRegLock;
     nsCOMPtr<nsILocalFile>      mManifestDir;
     nsCOMPtr<nsISupportsArray>  mSearchPath;
-
 };
 
 /***************************************************************************/
