@@ -25,7 +25,7 @@
 
     <!-- Front End Integration Hooks (used by Theme Manager)-->
     <!-- XXXben - preprocess this file to use different info for mac version -->
-    <em:creator>Keving Gerich and Stephen Horlander</em:creator>
+    <em:creator>Gerich and Horlander</em:creator>
     <em:contributor>Mozilla Contributors</em:contributor>
 
     <em:internalName>classic/1.0</em:internalName>
