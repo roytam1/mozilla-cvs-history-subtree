@@ -3299,6 +3299,10 @@ nsBrowserStatusHandler.prototype =
     var browser = getBrowser().selectedBrowser;
     var findField = document.getElementById("find-field");
     if (aWebProgress.DOMWindow == content) {      
+      // The document loaded correctly, clear the value if we should
+      if (browser.userTypedClear)
+        browser.userTypedValue = null;
+
       if (findField)
         setTimeout(function() { findField.value = browser.findString; }, 0, findField, browser); 
 
@@ -3379,9 +3383,12 @@ nsBrowserStatusHandler.prototype =
 
   startDocumentLoad : function(aRequest)
   {
-    // Reset so we can see if the user typed between the document load
-    // starting and the location changing.
-    getBrowser().userTypedValue = null;
+    // It's okay to clear what the user typed when we start
+    // loading a document. If the user types, this flag gets
+    // set to false, if the document load ends without an
+    // onLocationChange, this flag also gets set to false
+    // (so we keep it while switching tabs after failed load
+    getBrowser().userTypedClear = true;
 
     // clear out livemark data
     gBrowser.mCurrentBrowser.livemarkLinks = null;
@@ -3398,6 +3405,10 @@ nsBrowserStatusHandler.prototype =
 
   endDocumentLoad : function(aRequest, aStatus)
   {
+    // The document is done loading, it's okay to clear
+    // the value again.
+    getBrowser().userTypedClear = false;
+
     const nsIChannel = Components.interfaces.nsIChannel;
     var urlStr = aRequest.QueryInterface(nsIChannel).originalURI.spec;
 
@@ -5155,6 +5166,14 @@ function stylesheetSwitchAll(frameset, title) {
 
 function updatePageTheme(evt)
 {
+  // XXX - Accessing window._content.document can generate an
+  // onLocationChange for the current tab, this can cause the url
+  // bar to be cleared. Prevent that happening by setting the clear
+  // state to false for the duration of this function.
+  var browser = getBrowser().selectedBrowser;
+  var userTypedClear = browser.userTypedClear;
+  browser.userTypedClear = false;
+
   if (!gPageThemeButton)
     gPageThemeButton = document.getElementById("page-theme-button");
 
@@ -5180,6 +5199,9 @@ function updatePageTheme(evt)
   }
   else
     gPageThemeButton.removeAttribute("themes");
+
+  // Restore clear state
+  browser.userTypedClear = userTypedClear;
 }
 /* End of the Page Theme functions */
 
