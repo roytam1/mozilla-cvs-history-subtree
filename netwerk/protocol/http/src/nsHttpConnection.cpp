@@ -268,16 +268,21 @@ nsHttpConnection::CreateTransport()
             do_GetService(kSocketTransportServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    // XXX need to set socket type(s)
+    const char *socketType = nsnull;
+    if (mConnectionInfo->UsingSSL())
+        socketType = "ssl";
+
+    // XXX need to add support for socks here
 
     nsCOMPtr<nsITransport> transport;
-    rv = sts->CreateTransport(mConnectionInfo->Host(),
-                              mConnectionInfo->Port(),
-                              mConnectionInfo->ProxyHost(),
-                              mConnectionInfo->ProxyPort(),
-                              NS_HTTP_SEGMENT_SIZE,
-                              NS_HTTP_BUFFER_SIZE,
-                              getter_AddRefs(transport));
+    rv = sts->CreateTransportOfType(socketType,
+                                    mConnectionInfo->Host(),
+                                    mConnectionInfo->Port(),
+                                    mConnectionInfo->ProxyHost(),
+                                    mConnectionInfo->ProxyPort(),
+                                    NS_HTTP_SEGMENT_SIZE,
+                                    NS_HTTP_BUFFER_SIZE,
+                                    getter_AddRefs(transport));
     if (NS_FAILED(rv)) return rv;
 
     // QI for the nsISocketTransport iface
