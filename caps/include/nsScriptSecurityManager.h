@@ -313,8 +313,9 @@ private:
                             void** aCachedClassPolicy);
 
     nsresult
-    CheckSameOrigin(JSContext* aCx, nsIPrincipal* aSubject, 
-                    nsIPrincipal* aObject, PRUint32 aAction);
+    CheckSameOriginInternal(nsIPrincipal* aSubject, 
+                            nsIPrincipal* aObject, PRUint32 aAction,
+                            PRBool checkForPrivileges);
     
     PRInt32 
     GetSecurityLevel(nsIPrincipal *principal,

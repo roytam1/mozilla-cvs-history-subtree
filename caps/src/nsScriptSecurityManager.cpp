@@ -341,6 +341,45 @@ nsScriptSecurityManager::CheckConnect(JSContext* cx,
                                    nsnull, aClassName, STRING_TO_JSVAL(propertyName), nsnull);
 }
 
+NS_IMETHODIMP
+nsScriptSecurityManager::CheckSameOrigin(JSContext* cx,
+                                         nsIURI* aTargetURI)
+{
+    nsresult rv;
+
+    // Get a context if necessary
+    if (!cx)
+    {
+        cx = GetCurrentJSContext();
+        if (!cx)
+            return NS_OK; // No JS context, so allow access
+    }
+
+    // Get a principal from the context
+    nsCOMPtr<nsIPrincipal> sourcePrincipal;
+    rv = GetSubjectPrincipal(cx, getter_AddRefs(sourcePrincipal));
+    if (NS_FAILED(rv))
+        return rv;
+
+    PRBool equals;
+    if (!sourcePrincipal ||
+        (NS_SUCCEEDED(sourcePrincipal->Equals(mSystemPrincipal, &equals))
+                     && equals))
+        // We have native code or the system principal, so allow access
+        return NS_OK;
+
+    // Create a principal from the target URI
+    // XXX factor out the Equals function so this isn't necessary
+    nsCOMPtr<nsIPrincipal> targetPrincipal;
+    rv = GetCodebasePrincipal(aTargetURI, getter_AddRefs(targetPrincipal));
+    if (NS_FAILED(rv))
+        return rv;
+
+    // Compare origins
+    return CheckSameOriginInternal(sourcePrincipal, targetPrincipal,
+                                   0, PR_FALSE /* do not check for privileges */);
+}
+
 nsresult
 nsScriptSecurityManager::CheckPropertyAccessImpl(PRUint32 aAction,
                                                  nsIXPCNativeCallContext* aCallContext,
@@ -467,9 +506,8 @@ nsScriptSecurityManager::CheckPropertyAccessImpl(PRUint32 aAction,
                     NS_ERROR("CheckPropertyAccessImpl called without a target object or URL");
                     return NS_ERROR_FAILURE;
                 }
-                rv = CheckSameOrigin(
-                       cx, subjectPrincipal, objectPrincipal,
-                       aAction == nsIXPCSecurityManager::ACCESS_SET_PROPERTY);
+                rv = CheckSameOriginInternal(subjectPrincipal, objectPrincipal,
+                       aAction, PR_TRUE /* check for privileges */);
                 break;
             }
         default:
@@ -581,8 +619,10 @@ nsScriptSecurityManager::CheckPropertyAccessImpl(PRUint32 aAction,
 }
 
 nsresult
-nsScriptSecurityManager::CheckSameOrigin(JSContext *aCx, nsIPrincipal* aSubject,
-                                         nsIPrincipal* aObject, PRUint32 aAction)
+nsScriptSecurityManager::CheckSameOriginInternal(nsIPrincipal* aSubject,
+                                                 nsIPrincipal* aObject,
+                                                 PRUint32 aAction,
+                                                 PRBool checkForPrivileges)
 {
     /*
     ** Get origin of subject and object and compare.
@@ -608,18 +648,21 @@ nsScriptSecurityManager::CheckSameOrigin(JSContext *aCx, nsIPrincipal* aSubject,
             return NS_OK;
     }
 
-    /*
-    ** If we failed the origin tests it still might be the case that we
-    ** are a signed script and have permissions to do this operation.
-    ** Check for that here
-    */
-    PRBool capabilityEnabled = PR_FALSE;
-    const char* cap = aAction == nsIXPCSecurityManager::ACCESS_SET_PROPERTY ?
-                      "UniversalBrowserWrite" : "UniversalBrowserRead";
-    if (NS_FAILED(IsCapabilityEnabled(cap, &capabilityEnabled)))
-        return NS_ERROR_FAILURE;
-    if (capabilityEnabled)
-        return NS_OK;
+    if (checkForPrivileges)
+    {
+       /*
+        * If we failed the origin tests it still might be the case that we
+        * are a signed script and have permissions to do this operation.
+        * Check for that here.
+        */
+        PRBool capabilityEnabled = PR_FALSE;
+        const char* cap = aAction == nsIXPCSecurityManager::ACCESS_SET_PROPERTY ?
+                          "UniversalBrowserWrite" : "UniversalBrowserRead";
+        if (NS_FAILED(IsCapabilityEnabled(cap, &capabilityEnabled)))
+            return NS_ERROR_FAILURE;
+        if (capabilityEnabled)
+            return NS_OK;
+    }
 
     /*
     ** Access tests failed, so now report error.
