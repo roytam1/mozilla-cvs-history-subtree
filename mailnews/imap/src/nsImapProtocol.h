@@ -23,8 +23,6 @@
 #include "nsIImapUrl.h"
 
 #include "nsIStreamListener.h"
-#include "nsITransport.h"
-
 #include "nsIOutputStream.h"
 #include "nsImapCore.h"
 #include "nsString2.h"
@@ -53,6 +51,7 @@ class nsIWebShell;
 
 #define IMAP_RECEIVED_GREETING		0x00000001  /* should we pause for the next read */
 #define IMAP_FIRST_PASS_IN_THREAD   0x00000002  /* entering thread for the first time? */
+#define	IMAP_CONNECTION_IS_OPEN		0x00000004  /* is the connection currently open? */
 
 class nsImapProtocol : public nsIImapProtocol
 {
@@ -79,25 +78,13 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////
 	// we suppport the nsIStreamListener interface 
 	////////////////////////////////////////////////////////////////////////////////////////
-
-	// mscott; I don't think we need to worry about this yet so I'll leave it stubbed out for now
-	NS_IMETHOD GetBindInfo(nsIURI* aURL, nsStreamBindingInfo* aInfo) { return NS_OK;} ;
 	
 	// Whenever data arrives from the connection, core netlib notifies the protocol by calling
 	// OnDataAvailable. We then read and process the incoming data from the input stream. 
-	NS_IMETHOD OnDataAvailable(nsIURI* aURL, nsIInputStream *aIStream, PRUint32 aLength);
-
-	NS_IMETHOD OnStartRequest(nsIURI* aURL, const char *aContentType);
-
+	NS_IMETHOD OnDataAvailable(nsIChannel * aChannel, nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count);
+	NS_IMETHOD OnStartRequest(nsIChannel * aChannel,nsISupports *ctxt);
 	// stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-	NS_IMETHOD OnStopRequest(nsIURI* aURL, nsresult aStatus, const PRUnichar* aMsg);
-
-	// Ideally, a protocol should only have to support the stream listener methods covered above. 
-	// However, we don't have this nsIStreamListenerLite interface defined yet. Until then, we are using
-	// nsIStreamListener so we need to add stubs for the heavy weight stuff we don't want to use.
-
-	NS_IMETHOD OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax) { return NS_OK;}
-	NS_IMETHOD OnStatus(nsIURI* aURL, const PRUnichar* aMsg) { return NS_OK;}
+	NS_IMETHOD OnStopRequest(nsIChannel * aChannel,nsISupports *ctxt, nsresult aStatus, const PRUnichar *aMsg);
 
 	// This is evil, I guess, but this is used by libmsg to tell a running imap url
 	// about headers it should download to update a local database.
@@ -285,10 +272,9 @@ private:
     PRUint32        m_curReadIndex;  // current read index
 
 	// Ouput stream for writing commands to the socket
-	nsCOMPtr<nsITransport>	  m_transport; 
-	nsCOMPtr<nsIInputStream>  m_inputStream;	// this is the stream netlib writes data into for us to read.
-	nsCOMPtr<nsIOutputStream> m_outputStream;   // this will be obtained from the transport interface
-	nsCOMPtr<nsIStreamListener> m_outputConsumer; // this will be obtained from the transport interface
+	nsCOMPtr<nsIChannel>		m_channel; 
+	nsCOMPtr<nsIOutputStream>	m_outputStream;   // this will be obtained from the transport interface
+	nsCOMPtr<nsIInputStream>    m_inputStream;
 
 	nsCOMPtr<nsIWebShell>	  m_displayConsumer; // if we are displaying an article this is the rfc-822 display sink...
 
