@@ -321,6 +321,11 @@ nsSVGForeignObjectFrame::Reflow(nsIPresContext*          aPresContext,
                                      aReflowState,
                                      this,
                                      availableSpace);
+
+  // XXX Not sure the dirty-state should be cleared here. We should
+  // re-examine how the reflow is driven from nsSVGOuterSVGFrame. I
+  // think we're missing a call to DidReflow somewhere ?
+  mState &= ~NS_FRAME_IS_DIRTY;
   
   // leverage our base class' reflow function to do all the work:
   return nsSVGForeignObjectFrameBase::Reflow(aPresContext, aDesiredSize,

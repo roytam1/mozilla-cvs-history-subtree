@@ -185,7 +185,7 @@ nsSVGOuterSVGFrame::nsSVGOuterSVGFrame()
 nsSVGOuterSVGFrame::~nsSVGOuterSVGFrame()
 {
 #ifdef DEBUG
-  printf("~nsSVGOuterSVGFrame %p\n", this);
+//  printf("~nsSVGOuterSVGFrame %p\n", this);
 #endif
 
   nsCOMPtr<nsIDOMSVGSVGElement> svgElement = do_QueryInterface(mContent);
@@ -287,6 +287,49 @@ nsSVGOuterSVGFrame::Reflow(nsIPresContext*          aPresContext,
                            const nsHTMLReflowState& aReflowState,
                            nsReflowStatus&          aStatus)
 {
+  // check whether this reflow request is targeted at us or a child
+  // frame (e.g. a foreignObject):
+  nsIFrame* target;
+  if (aReflowState.reflowCommand) {
+    aReflowState.reflowCommand->GetTarget(target);
+    if (target != this) {
+      // the actual target of this reflow is one of our child
+      // frames. Since SVG as such doesn't use reflow, this will
+      // probably be the child of a <foreignObject>. Some HTML|XUL
+      // content frames target reflow events at themselves when they
+      // need to be redrawn in response to e.g. a style change. For
+      // correct visual updating, we must make sure the reflow reaches
+      // its intended target:
+      nsIFrame* nextFrame;
+      // Get the next frame in the reflow chain
+      aReflowState.reflowCommand->GetNext(nextFrame);
+      
+      NS_ASSERTION(nextFrame, "no reflow target");
+      if (nextFrame != nsnull)
+      {
+        // There is another frame in the chain- reflow it        
+        // Since it is an svg frame (probably an nsSVGForeignObjectFrame),
+        // we might as well pass in our aDesiredSize and aReflowState
+        // objects - they are ignored by svg frames:
+        nextFrame->Reflow (aPresContext,
+                           aDesiredSize,
+                           aReflowState,
+                           aStatus);
+      }
+
+      // XXX do we really have to return our metrics although we're
+      // not affected by the reflow? Is there a way of telling our
+      // parent that we don't want anything changed?
+      aDesiredSize.width  = mRect.width;
+      aDesiredSize.height = mRect.height;
+      aDesiredSize.ascent = aDesiredSize.height;
+      aDesiredSize.descent = 0;
+      
+      aStatus = NS_FRAME_COMPLETE;
+      return NS_OK;
+    }
+  }
+  
   //  SVG CR 20001102: When the SVG content is embedded inline within
   //  a containing document, and that document is styled using CSS,
   //  then if there are CSS positioning properties specified on the
@@ -444,11 +487,11 @@ nsSVGOuterSVGFrame::DidReflow(nsIPresContext*   aPresContext,
   viewport->SetHeight(mRect.height * pxPerTwips);
 
 #ifdef DEBUG
-  printf("reflowed nsSVGOuterSVGFrame viewport: (%f, %f, %f, %f)\n",
-         origin.x * pxPerTwips,
-         origin.y * pxPerTwips,
-         mRect.width  * pxPerTwips,
-         mRect.height * pxPerTwips);
+//  printf("reflowed nsSVGOuterSVGFrame viewport: (%f, %f, %f, %f)\n",
+//         origin.x * pxPerTwips,
+//         origin.y * pxPerTwips,
+//         mRect.width  * pxPerTwips,
+//         mRect.height * pxPerTwips);
 #endif
   
   return NS_OK;
@@ -657,15 +700,15 @@ nsSVGOuterSVGFrame::AttributeChanged(nsIPresContext* aPresContext,
                                      PRInt32         aHint)
 {
 #ifdef DEBUG
-  {
-    printf("** nsSVGOuterSVGFrame::AttributeChanged(");
-    nsAutoString str;
-    aAttribute->ToString(str);
-    nsCAutoString cstr;
-    cstr.AssignWithConversion(str);
-    printf(cstr.get());
-    printf(", hint:%d)\n",aHint);
-  }
+//  {
+//    printf("** nsSVGOuterSVGFrame::AttributeChanged(");
+//    nsAutoString str;
+//    aAttribute->ToString(str);
+//    nsCAutoString cstr;
+//    cstr.AssignWithConversion(str);
+//    printf(cstr.get());
+//    printf(", hint:%d)\n",aHint);
+//  }
 #endif
   return NS_OK;
 }
