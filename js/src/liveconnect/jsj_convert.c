@@ -135,12 +135,7 @@ jsj_ConvertJSValueToJavaObject(JSContext *cx, JNIEnv *jEnv, jsval v, JavaSignatu
                 return JS_TRUE;
             }
             
-#ifdef LIVECONNECT_IMPROVEMENTS
-            /* Don't allow wrapped Java objects to be converted to strings */
-            goto conversion_error;
-#else
             /* Fall through, to attempt conversion to a Java string */
-#endif
             
         } else if (JS_InstanceOf(cx, js_obj, &JavaClass_class, 0)) {
             /* We're dealing with the reflection of a Java class */
@@ -199,9 +194,7 @@ jsj_ConvertJSValueToJavaObject(JSContext *cx, JNIEnv *jEnv, jsval v, JavaSignatu
                     return JS_FALSE;
                 }
             }
-#ifdef LIVECONNECT_IMPROVEMENTS
-            (*cost)++;
-#endif
+
             return JS_TRUE;
         }
         /* Fall through, to attempt conversion to a java.lang.String ... */
@@ -223,9 +216,7 @@ jsj_ConvertJSValueToJavaObject(JSContext *cx, JNIEnv *jEnv, jsval v, JavaSignatu
                     return JS_FALSE;
                 }
             }
-#ifdef LIVECONNECT_IMPROVEMENTS
-            (*cost)++;
-#endif
+
             return JS_TRUE;
         }
         /* Fall through, to attempt conversion to a java.lang.String ... */
@@ -233,9 +224,6 @@ jsj_ConvertJSValueToJavaObject(JSContext *cx, JNIEnv *jEnv, jsval v, JavaSignatu
     
     /* If no other conversion is possible, see if the target type is java.lang.String */
     if ((*jEnv)->IsAssignableFrom(jEnv, jlString, target_java_class)) {
-#ifdef LIVECONNECT_IMPROVEMENTS
-        JSBool is_string = JSVAL_IS_STRING(v);
-#endif
         
         /* Convert to JS string, if necessary, and then to a Java Unicode string */
         jsstr = JS_ValueToString(cx, v);
@@ -248,10 +236,7 @@ jsj_ConvertJSValueToJavaObject(JSContext *cx, JNIEnv *jEnv, jsval v, JavaSignatu
                     return JS_FALSE;
                 }
             }
-#ifdef LIVECONNECT_IMPROVEMENTS
-            if (!is_string)
-                (*cost)++;
-#endif
+
             return JS_TRUE;
         }
     }
@@ -277,10 +262,10 @@ conversion_error:
     if (!JSVAL_IS_NUMBER(v)) {                                           \
         if (!JS_ConvertValue(cx, v, JSTYPE_NUMBER, &v))                  \
             goto conversion_error;                                       \
-	/* We allow conversion from NaN numbers to integral types, but */\
-	/* not when the NaN results from conversion of a non-number*/    \
-	if (JSVAL_IS_DOUBLE(v) && JSDOUBLE_IS_NaN(*JSVAL_TO_DOUBLE(v)))  \
-	    goto conversion_error;					 \
+        /* We allow conversion from NaN numbers to integral types, but */\
+        /* not when the NaN results from conversion of a non-number*/    \
+        if (JSVAL_IS_DOUBLE(v) && JSDOUBLE_IS_NaN(*JSVAL_TO_DOUBLE(v)))  \
+            goto conversion_error;                                       \
         (*cost)++;                                                       \
     }                                                                    \
     {                                                                    \
@@ -355,11 +340,11 @@ static jlong jdouble_to_jlong(jdouble dvalue)
 if (!JSVAL_IS_NUMBER(jsvalue)) {                                         \
         if (!JS_ConvertValue(cx, jsvalue, JSTYPE_NUMBER, &jsvalue))      \
         goto conversion_error;                                           \
-	                                                                 \
-	/* We allow conversion from NaN numbers to integral types, but */\
-	/* not when the NaN results from conversion of a non-number*/    \
-	if (JSVAL_IS_DOUBLE(v) && JSDOUBLE_IS_NaN(*JSVAL_TO_DOUBLE(v)))  \
-	    goto conversion_error;					 \
+                                                                         \
+        /* We allow conversion from NaN numbers to integral types, but */\
+        /* not when the NaN results from conversion of a non-number*/    \
+        if (JSVAL_IS_DOUBLE(v) && JSDOUBLE_IS_NaN(*JSVAL_TO_DOUBLE(v)))  \
+            goto conversion_error;                                       \
     (*cost)++;                                                           \
     }                                                                    \
     {                                                                    \
@@ -413,11 +398,12 @@ if (!JSVAL_IS_NUMBER(jsvalue)) {                                         \
  * reporter is called with an appropriate message.
  */  
 JSBool
-jsj_ConvertJSValueToJavaValue(JSContext *cx, JNIEnv *jEnv, jsval v,
+jsj_ConvertJSValueToJavaValue(JSContext *cx, JNIEnv *jEnv, jsval v_arg,
                               JavaSignature *signature,
                               int *cost, jvalue *java_value, JSBool *is_local_refp)
 {
     JavaSignatureChar type;
+    jsval v;
     JSBool success = JS_FALSE;
 
     /* Initialize to default case, in which no new Java object is
@@ -426,13 +412,14 @@ jsj_ConvertJSValueToJavaValue(JSContext *cx, JNIEnv *jEnv, jsval v,
     *is_local_refp = JS_FALSE;   
     
     type = signature->type;
+    v = v_arg;
     switch (type) {
     case JAVA_SIGNATURE_BOOLEAN:
         if (!JSVAL_IS_BOOLEAN(v)) {
             if (!JS_ConvertValue(cx, v, JSTYPE_BOOLEAN, &v))
                 goto conversion_error;
-	    if (JSVAL_IS_VOID(v))
-		goto conversion_error;
+            if (JSVAL_IS_VOID(v))
+                goto conversion_error;
             (*cost)++;
         }
         if (java_value)
@@ -523,14 +510,14 @@ conversion_error:
         JSString *jsstr;
 
         jsval_string = NULL;
-        jsstr = JS_ValueToString(cx, v);
+        jsstr = JS_ValueToString(cx, v_arg);
         if (jsstr)
             jsval_string = JS_GetStringBytes(jsstr);
         if (!jsval_string)
             jsval_string = "";
         
         JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                    JSJMSG_CANT_CONVERT_JS, jsval_string, signature->name);
+                             JSJMSG_CANT_CONVERT_JS, jsval_string, signature->name);
         return JS_FALSE;
     }
     return success;
@@ -590,35 +577,43 @@ jsj_ConvertJavaObjectToJSString(JSContext *cx,
     JSString *js_str;
     jstring java_str;
     jmethodID toString;
+    jclass java_class;
     
     /* Create a Java string, unless java_obj is already a java.lang.String */
     if ((*jEnv)->IsInstanceOf(jEnv, java_obj, jlString)) {
-        java_str = java_obj;
-    } else {
-        jclass java_class;
 
-        java_class = class_descriptor->java_class;
-        toString = (*jEnv)->GetMethodID(jEnv, java_class, "toString",
-                                        "()Ljava/lang/String;");
-        if (!toString) {
-            /* All Java objects have a toString method */
-            jsj_UnexpectedJavaError(cx, jEnv, "No toString() method for class %s!",
-                                    class_descriptor->name);
+        /* Extract Unicode from java.lang.String instance and convert to JS string */
+        js_str = jsj_ConvertJavaStringToJSString(cx, jEnv, java_obj);
+        if (!js_str)
             return JS_FALSE;
-        }
-        java_str = (*jEnv)->CallObjectMethod(jEnv, java_obj, toString);
-        if (!java_str) {
-            jsj_ReportJavaError(cx, jEnv, "toString() method failed");
-            return JS_FALSE;
-        }
+        *vp = STRING_TO_JSVAL(js_str);
+        return JS_TRUE;
     }
-
+    
+    java_class = class_descriptor->java_class;
+    toString = (*jEnv)->GetMethodID(jEnv, java_class, "toString",
+        "()Ljava/lang/String;");
+    if (!toString) {
+        /* All Java objects have a toString method */
+        jsj_UnexpectedJavaError(cx, jEnv, "No toString() method for class %s!",
+            class_descriptor->name);
+        return JS_FALSE;
+    }
+    java_str = (*jEnv)->CallObjectMethod(jEnv, java_obj, toString);
+    if (!java_str) {
+        jsj_ReportJavaError(cx, jEnv, "toString() method failed");
+        return JS_FALSE;
+    }
+    
     /* Extract Unicode from java.lang.String instance and convert to JS string */
     js_str = jsj_ConvertJavaStringToJSString(cx, jEnv, java_str);
-    if (!js_str)
+    if (!js_str) {
+        (*jEnv)->DeleteLocalRef(jEnv, java_str);
         return JS_FALSE;
+    }
 
     *vp = STRING_TO_JSVAL(js_str);
+    (*jEnv)->DeleteLocalRef(jEnv, java_str);
     return JS_TRUE;
 }
 
@@ -734,23 +729,24 @@ jsj_ConvertJavaObjectToJSValue(JSContext *cx, JNIEnv *jEnv,
 #endif
         JS_ASSERT(js_obj);
         if (!js_obj)
-            return JS_FALSE;
+            goto error;
         *vp = OBJECT_TO_JSVAL(js_obj);
-        return JS_TRUE;
+        goto done;
      }
-
-    /*
-     * Instances of java.lang.String are wrapped so we can call methods on
-     * them, but they convert to a JS string if used in a string context.
-     */
-    /* TODO - let's get rid of this annoying "feature" */
 
     /* otherwise, wrap it inside a JavaObject */
     js_obj = jsj_WrapJavaObject(cx, jEnv, java_obj, java_class);
     if (!js_obj)
-        return JS_FALSE;
+        goto error;
     *vp = OBJECT_TO_JSVAL(js_obj);
+
+done:
+    (*jEnv)->DeleteLocalRef(jEnv, java_class);
     return JS_TRUE;
+
+error:
+    (*jEnv)->DeleteLocalRef(jEnv, java_class);
+    return JS_FALSE;
 }
 
 /*
