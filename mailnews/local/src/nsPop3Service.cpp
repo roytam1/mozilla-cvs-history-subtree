@@ -18,10 +18,6 @@
 
 #include "msgCore.h"    // precompiled header...
 
-#ifdef XP_PC
-#include <windows.h>    // for InterlockedIncrement
-#endif
-
 #include "nsPop3Service.h"
 #include "nsIMsgIncomingServer.h"
 #include "nsIPop3IncomingServer.h"
@@ -30,9 +26,12 @@
 #include "nsPop3Sink.h"
 #include "nsPop3Protocol.h"
 #include "nsCOMPtr.h"
+#include "nsMsgLocalCID.h"
 
 #define POP3_PORT 110 // The IANA port for Pop3
+
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
+static NS_DEFINE_CID(kPop3UrlCID, NS_POP3URL_CID);
 
 nsPop3Service::nsPop3Service()
 {
@@ -83,7 +82,7 @@ NS_IMETHODIMP nsPop3Service::CheckForNewMail(nsIUrlListener * aUrlListener,
 	if (NS_SUCCEEDED(rv) && popServer && hostname)
 	{
         // now construct a pop3 url...
-        char * urlSpec = PR_smprintf("pop3://%s?check", hostname);
+        char * urlSpec = PR_smprintf("pop3://%s:%d?check", hostname, POP3_PORT);
         rv = BuildPop3Url(urlSpec, inbox, popServer, aUrlListener, getter_AddRefs(url));
         PR_FREEIF(urlSpec);
 		if (hostname) PL_strfree(hostname);
@@ -123,7 +122,7 @@ nsresult nsPop3Service::GetNewMail(nsIUrlListener * aUrlListener,
 	if (NS_SUCCEEDED(rv) && popServer)
 	{
         // now construct a pop3 url...
-        char * urlSpec = PR_smprintf("pop3://%s", popHost);
+        char * urlSpec = PR_smprintf("pop3://%s:%d", popHost, POP3_PORT);
         rv = BuildPop3Url(urlSpec, nsnull, popServer, aUrlListener, getter_AddRefs(url));
         PR_FREEIF(urlSpec);
 	}
@@ -149,8 +148,6 @@ nsresult nsPop3Service::BuildPop3Url(char * urlSpec,
 									 nsIUrlListener * aUrlListener,
                                      nsIURI ** aUrl)
 {
-	nsresult rv = NS_OK;
-	// create a sink to run the url with
 	nsPop3Sink * pop3Sink = new nsPop3Sink();
 	if (pop3Sink)
 	{
@@ -159,21 +156,29 @@ nsresult nsPop3Service::BuildPop3Url(char * urlSpec,
 	}
 
 	// now create a pop3 url and a protocol instance to run the url....
-	nsPop3URL * pop3Url = new nsPop3URL();
+	nsCOMPtr<nsIPop3URL> pop3Url;
+	nsresult rv = nsComponentManager::CreateInstance(kPop3UrlCID,
+                                            nsnull,
+                                            nsCOMTypeInfo<nsIPop3URL>::GetIID(),
+                                            getter_AddRefs(pop3Url));
 	if (pop3Url)
 	{
 		pop3Url->SetPop3Sink(pop3Sink);
-		pop3Url->SetSpec(urlSpec);
+		if (aUrlListener)
+		{
+			nsCOMPtr<nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(pop3Url);
+			if (mailnewsurl)
+				mailnewsurl->RegisterListener(aUrlListener);
+		}
+
+
+		if (aUrl)
+		{
+			rv = pop3Url->QueryInterface(nsCOMTypeInfo<nsIURI>::GetIID(), (void **) aUrl);
+			if (*aUrl)
+				(*aUrl)->SetSpec(urlSpec);
+		}
 	}
-
-	// does the caller want to listen to the url?
-	if (aUrlListener)
-		pop3Url->RegisterListener(aUrlListener);
-
-	if (aUrl)
-		rv = pop3Url->QueryInterface(nsIURI::GetIID(), (void **) aUrl);
-	else  // hmmm delete is protected...what can we do here? no one has a ref cnt on the object...
-		NS_IF_RELEASE(pop3Url);
 
 	return rv;
 }
