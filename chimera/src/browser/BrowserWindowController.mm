@@ -90,6 +90,8 @@ static NSString *ThrobberToolbarItemIdentifier = @"Throbber Toolbar Item";
 static NSString *SearchToolbarItemIdentifier = @"Search Toolbar Item";
 static NSString *ViewSourceToolbarItemIdentifier = @"View Source Toolbar Item";
 static NSString *BookmarkToolbarItemIdentifier = @"Bookmark Toolbar Item";
+static NSString *TextBiggerToolbarItemIdentifier = @"Text Bigger Toolbar Item";
+static NSString *TextSmallerToolbarItemIdentifier = @"Text Smaller Toolbar Item";
 
 
 static NSString *NavigatorWindowFrameSaveName = @"NavigatorWindow";
@@ -561,6 +563,8 @@ static NSArray* sToolbarDefaults = nil;
                                         PrintToolbarItemIdentifier,
                                         ViewSourceToolbarItemIdentifier,
                                         BookmarkToolbarItemIdentifier,
+                                        TextBiggerToolbarItemIdentifier,
+                                        TextSmallerToolbarItemIdentifier,
                                         NSToolbarCustomizeToolbarItemIdentifier,
                                         NSToolbarFlexibleSpaceItemIdentifier,
                                         NSToolbarSpaceItemIdentifier,
@@ -702,6 +706,20 @@ static NSArray* sToolbarDefaults = nil;
         [toolbarItem setImage:[NSImage imageNamed:@"add_to_bookmark.tif"]];
         [toolbarItem setTarget:self];
         [toolbarItem setAction:@selector(bookmarkPage:)];
+    } else if ( [itemIdent isEqual:TextBiggerToolbarItemIdentifier] ) {
+        [toolbarItem setLabel:NSLocalizedString(@"BigText",@"Enlarge Text")];
+        [toolbarItem setPaletteLabel:NSLocalizedString(@"BigText",@"Enlarge Text")];
+        [toolbarItem setToolTip:NSLocalizedString(@"BigTextToolTip",@"Enlarge the text on this page")];
+        [toolbarItem setImage:[NSImage imageNamed:@"textBigger.tif"]];
+        [toolbarItem setTarget:self];
+        [toolbarItem setAction:@selector(biggerTextSize)];
+    } else if ( [itemIdent isEqual:TextSmallerToolbarItemIdentifier] ) {
+        [toolbarItem setLabel:NSLocalizedString(@"SmallText",@"Shrink Text")];
+        [toolbarItem setPaletteLabel:NSLocalizedString(@"SmallText",@"Shrink Text")];
+        [toolbarItem setToolTip:NSLocalizedString(@"SmallTextToolTip",@"Shrink the text on this page")];
+        [toolbarItem setImage:[NSImage imageNamed:@"textSmaller.tif"]];
+        [toolbarItem setTarget:self];
+        [toolbarItem setAction:@selector(smallerTextSize)];
     } else {
         toolbarItem = nil;
     }
@@ -714,7 +732,7 @@ static NSArray* sToolbarDefaults = nil;
 {
   // Check the action and see if it matches.
   SEL action = [theItem action];
-  //NSLog(@"Validating toolbar item %@ with selector %s", [theItem label], action);
+//  NSLog(@"Validating toolbar item %@ with selector %s", [theItem label], action);
   if (action == @selector(back:))
     return [[mBrowserView getBrowserView] canGoBack];
   else if (action == @selector(forward:))
@@ -724,7 +742,9 @@ static NSArray* sToolbarDefaults = nil;
   else if (action == @selector(stop:))
     return [mBrowserView isBusy];
   else if (action == @selector(bookmarkPage:))
-    return ![[[[self getBrowserWrapper] getBrowserView] getCurrentURI] isEqualToString:@"about:blank"];
+    return ![[self getBrowserWrapper] isEmpty];
+  else if (action == @selector(biggerTextSize) || action == @selector(smallerTextSize))
+    return ![[self getBrowserWrapper] isEmpty];
   else
     return YES;
 }
@@ -1422,6 +1442,7 @@ static NSArray* sToolbarDefaults = nil;
 {
   return mChromeMask;
 }
+
 
 -(void) biggerTextSize
 {

@@ -621,6 +621,8 @@
 				F5CA1A1B02D3957001F34900,
 				F5EB9377030C92450100010C,
 				F5949A48030D58A2014E8430,
+				F520BECB036041D501026D5D,
+				F520BECC036041D501026D5D,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2387,6 +2389,42 @@
 			settings = {
 			};
 		};
+		F520BEC7036041D501026D5D = {
+			isa = PBXFileReference;
+			name = textBigger.tif;
+			path = resources/images/toolbar/textBigger.tif;
+			refType = 2;
+		};
+		F520BEC8036041D501026D5D = {
+			isa = PBXFileReference;
+			name = textSmaller.tif;
+			path = resources/images/toolbar/textSmaller.tif;
+			refType = 2;
+		};
+		F520BEC9036041D501026D5D = {
+			fileRef = F520BEC7036041D501026D5D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F520BECA036041D501026D5D = {
+			fileRef = F520BEC8036041D501026D5D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F520BECB036041D501026D5D = {
+			fileRef = F520BEC7036041D501026D5D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F520BECC036041D501026D5D = {
+			fileRef = F520BEC8036041D501026D5D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		F5247C2D02289FD9013DD99A = {
 			isa = PBXFileReference;
 			name = English;
@@ -2775,6 +2813,8 @@
 				F55CCFD2020E98EA010001CA,
 				F5EB9376030C92450100010C,
 				F5F94BEF0338E8C501026D5D,
+				F520BEC7036041D501026D5D,
+				F520BEC8036041D501026D5D,
 			);
 			isa = PBXGroup;
 			name = "Toolbar-Browser";
@@ -6558,6 +6598,8 @@
 				F5CA1A1C02D3957001F34900,
 				F5EB9378030C92450100010C,
 				F5949A49030D58A2014E8430,
+				F520BEC9036041D501026D5D,
+				F520BECA036041D501026D5D,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;

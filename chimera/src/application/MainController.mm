@@ -702,8 +702,6 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
         /* action == @selector(doSearch:) || */		// always enabled
         action == @selector(findInPage:) ||
         action == @selector(doReload:) ||
-        action == @selector(biggerTextSize:) ||
-        action == @selector(smallerTextSize:) ||
         action == @selector(viewSource:) ||
         action == @selector(savePage:))
   {
@@ -769,7 +767,10 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   }
 
   if ( action == @selector(addBookmark:) )
-    return ![[[[browserController getBrowserWrapper] getBrowserView] getCurrentURI] isEqualToString:@"about:blank"];
+    return (browserController && ![[browserController getBrowserWrapper] isEmpty]);
+  
+  if ( action == @selector(biggerTextSize:) || action == @selector(smallerTextSize:) )
+    return (browserController && ![[browserController getBrowserWrapper] isEmpty]);
     
   if ( action == @selector(doStop:) )
     return (browserController && [[browserController getBrowserWrapper] isBusy]);

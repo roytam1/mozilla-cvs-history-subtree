@@ -737,4 +737,14 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 }
 
 
+//
+// -isEmpty
+//
+// YES if the page currently loaded in the browser view is "about:blank", NO otherwise
+//
+- (BOOL) isEmpty
+{
+  return [[[self getBrowserView] getCurrentURI] isEqualToString:@"about:blank"];
+}
+
 @end

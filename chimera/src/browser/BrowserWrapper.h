@@ -82,6 +82,7 @@
 - (void)setFrame:(NSRect)frameRect;
 - (CHBrowserView*)getBrowserView;
 - (BOOL)isBusy;
+- (BOOL)isEmpty;                      // is about:blank loaded?
 - (void)windowClosed;
 
 - (NSString*)getCurrentURLSpec;
