@@ -24,4 +24,6 @@ class nsIPref;
 - (void)setPref: (const char*)prefName toBoolean:(BOOL)value;
 - (void)setPref: (const char*)prefName toInt:(int)value;
 
+- (NSString*)getLocalizedString:(NSString*)key;
+
 @end
