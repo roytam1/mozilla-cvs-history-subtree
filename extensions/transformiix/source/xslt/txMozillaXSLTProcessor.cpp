@@ -137,8 +137,8 @@ txToDocHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
     aHandler = nsnull;
     switch (aFormat->mMethod) {
         case eMethodNotSet:
-            aHandler = new txUnknownHandler(mPs);
-            break;
+            NS_ERROR("How can method not be known when root element is?");
+            return NS_ERROR_UNEXPECTED;
 
         case eXMLOutput:
         case eHTMLOutput:
