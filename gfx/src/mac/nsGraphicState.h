@@ -76,9 +76,6 @@ public:
 	PRInt32               mOffx;
   PRInt32               mOffy;
 
-  PRInt32               mSaveOffx;
-  PRInt32               mSaveOffy;
-
   RgnHandle							mMainRegion;
   RgnHandle			    		mClipRegion;
 

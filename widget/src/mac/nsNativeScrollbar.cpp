@@ -48,8 +48,6 @@
 #include "nsIDOMElement.h"
 #include "nsIScrollbarMediator.h"
 
-#include "Sound.h"
-
 
 //
 // StControlActionProcOwner
@@ -429,7 +427,7 @@ nsNativeScrollbar::SetViewSize(PRUint32 aSize)
   
   if ( GetControl() )  {
     StartDraw();
-    SetControlViewSize(GetControl(), mVisibleImageSize);
+    ::SetControlViewSize(GetControl(), mVisibleImageSize);
     EndDraw();
   }
   return NS_OK;

@@ -38,6 +38,7 @@
 #ifndef nsCharsetAlias_h__
 #define nsCharsetAlias_h__
 
+#include "prlock.h"
 #include "nsICharsetAlias.h"
 #include "nsURLProperties.h"
 
@@ -61,6 +62,7 @@ public:
 
 private:
   nsURLProperties* mDelegate;
+  PRLock* mDelegateLock;
 };
 
 #endif // nsCharsetAlias_h__

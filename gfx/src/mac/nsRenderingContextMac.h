@@ -204,6 +204,7 @@ protected:
 	};
 
 	void 			SelectDrawingSurface(nsDrawingSurfaceMac* aSurface, PRUint32 aChanges = kEverythingChanged);
+  void      SetupPortState();
 
 protected:
     float                   mP2T;               // Pixel to Twip conversion factor
