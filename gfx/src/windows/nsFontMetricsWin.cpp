@@ -354,7 +354,6 @@ nsFontMetricsWin :: nsFontMetricsWin()
 {
   NS_INIT_REFCNT();
   mSpaceWidth = 0;
-  mLoadedFontsCount = 0;
 }
   
 nsFontMetricsWin :: ~nsFontMetricsWin()
@@ -2002,6 +2001,11 @@ nsFontMetricsWin::LoadGlobalFont(HDC aDC, nsGlobalFont* aGlobalFontItem)
       if (NS_SUCCEEDED(GetConverter(logFont.lfFaceName, getter_AddRefs(converter)))) {
         font = new nsFontWinNonUnicode(&logFont, hfont, aGlobalFontItem->map, converter);
       }
+    }
+
+    if (!font) {
+      ::DeleteObject(hfont);
+      return nsnull;
     }
 
     mLoadedFonts[mLoadedFontsCount++] = font;
