@@ -176,7 +176,7 @@ PL_VectorCompact(PLVector* v)
     }
 }
 
-#if 0   // becomes Copy
+#if 0   /* becomes Copy */
 PR_IMPLEMENT(void)
 PL_VectorSplice(PLVector* v, PRUint32 startIndex, PLVector* newVector)
 {
@@ -196,7 +196,7 @@ PR_IMPLEMENT(void)
 PL_VectorCopy(PLVector* dstVector, PRUint32 dstPosition,
               PLVector* srcVector, PRUint32 srcPosition, PRUint32 length)
 {
-    PR_ASSERT(0);       // XXX not implemented yet
+    PR_ASSERT(0);       /* XXX not implemented yet */
 #if 0
     PL_VectorSetSize(dstVector, PR_MAX(PL_VectorGetSize(dstVector),
                                        PL_VectorGetSize(srcVector)),
