@@ -27,11 +27,13 @@
 #include "smime.h"
 #include "cms.h"
 
-NS_IMPL_ISUPPORTS1(nsHash, nsIHash)
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsHash, nsIHash)
 
 nsHash::nsHash() : m_ctxt(nsnull)
 {
+  NS_INIT_ISUPPORTS();
 }
+
 
 nsHash::~nsHash()
 {
@@ -73,7 +75,7 @@ NS_IMETHODIMP nsHash::End(unsigned char* aBuf, PRUint32* aResultLen, PRUint32 aM
   return NS_OK;
 }
 
-NS_IMPL_ISUPPORTS1(nsCMSMessage, nsICMSMessage)
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsCMSMessage, nsICMSMessage)
 
 nsCMSMessage::nsCMSMessage()
 {
@@ -343,7 +345,7 @@ loser:
   return NS_ERROR_FAILURE;
 }
 
-NS_IMPL_ISUPPORTS1(nsCMSDecoder, nsICMSDecoder)
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsCMSDecoder, nsICMSDecoder)
 
 nsCMSDecoder::nsCMSDecoder()
 {
@@ -386,7 +388,7 @@ NS_IMETHODIMP nsCMSDecoder::Finish(nsICMSMessage ** aCMSMsg)
   return NS_OK;
 }
 
-NS_IMPL_ISUPPORTS1(nsCMSEncoder, nsICMSEncoder)
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsCMSEncoder, nsICMSEncoder)
 
 nsCMSEncoder::nsCMSEncoder()
 {
