@@ -161,9 +161,14 @@ NSCCK_LIBNAME	=libnscck$(NLS_LIBVERSION).$(LIB_SUFFIX)
 NSSB_LIBNAME	=libnssb$(NLS_LIBVERSION).$(LIB_SUFFIX)
 endif
 
-LIBNLS_INCLUDES_LOC = $(LIBNLS_RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/include
-LIBNLS_LIB_LOC	    = $(LIBNLS_RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/lib
+ifdef RELEASE_TREE
+LIBNLS_INCLUDES_LOC = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = $(RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/lib
+else
+LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/lib
 
+endif
 LIBNLS_DIR	    = ../../../../../dist/libnls$(NLS_LIBVERSION)
 ifeq ($(COMPONENT_PULL_METHOD), FTP)
 LIBNLS_INCLUDES =../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/include
@@ -270,7 +275,7 @@ endif
 RPATHFLAG = ..:../lib:../../lib:../../../lib:../../../../lib
 
 ifeq ($(OS_ARCH), SunOS)
-# include $ORIGIN in run time library path (works on Solaris 8 10/01 and later)
+# include $ORIGIN in run time library path (work on Solaris 8 10/01 and later
 RPATHFLAG := \$$ORIGIN/../lib:\$$ORIGIN/../../lib:$(RPATHFLAG)
 
 # flag to pass to cc when linking to set runtime shared library search path
@@ -455,10 +460,7 @@ endif
 endif
 
 
-ifndef PERL
-PERL = perl
-endif
-
+PERL ?= perl
 #
 # shared library symbol export definitions
 #

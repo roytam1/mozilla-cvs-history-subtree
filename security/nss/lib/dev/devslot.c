@@ -298,7 +298,7 @@ nssSlot_IsTokenPresent
 	if (slot->token->base.name[0] != 0) {
 	    /* notify the high-level cache that the token is removed */
 	    slot->token->base.name[0] = 0; /* XXX */
-	    nssToken_NotifyCertsNotVisible(slot->token);
+	    nssToken_NofifyCertsNotVisible(slot->token);
 	}
 #endif
 	slot->token->base.name[0] = 0; /* XXX */

@@ -1,7 +1,0 @@
-( Chimera.SitesPrefPane,
-  org.mozilla.chimera.preference.navigation,
-  org.mozilla.chimera.preference.privacy,
-  Chimera.HelpersPrefPane,
-  Chimera.SecurityPrefPane,
-  org.mozilla.chimera.preference.personal
-)

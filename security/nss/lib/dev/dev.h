@@ -948,7 +948,7 @@ nssToken_GetTrustOrder
 );
 
 NSS_EXTERN PRStatus
-nssToken_NotifyCertsNotVisible
+nssToken_NofifyCertsNotVisible
 (
   NSSToken *tok
 );

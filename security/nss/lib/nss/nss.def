@@ -680,9 +680,3 @@ SECMOD_CanDeleteInternalModule;
 ;+    local:
 ;+       *;
 ;+};
-;+NSS_3.6 { 	# cert creation APIs used by certutil
-;+    global:
-PK11_GetPBEIV;
-;+    local:
-;+       *;
-;+};
