@@ -41,10 +41,12 @@
 #include <windows.h>
 #include <stdlib.h>
 #endif
+#include "nsBuildID.h"
 
 static const nsXREAppData kAppData = {
   "Thunderbird",
   APP_VERSION,
+  BUILD_ID,
   "Copyright (c) 2004 mozilla.org",
   PR_FALSE
 };

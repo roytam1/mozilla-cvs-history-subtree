@@ -311,13 +311,12 @@ nsSoftwareUpdate::InstallJar(  nsIFile* aLocalFile,
         chromeRegistry = tmpRegCR;
 
 
-    nsIExtensionManager* extensionManager = nsnull;
     NS_WITH_ALWAYS_PROXIED_SERVICE( nsIExtensionManager,
-                                    tmpExtensionManager,
+                                    extensionManager,
                                     "@mozilla.org/extensions/manager;1",
                                     NS_UI_THREAD_EVENTQ, &rv);
-    if (NS_SUCCEEDED(rv))
-        extensionManager = tmpExtensionManager;
+    if (NS_FAILED(rv))
+        extensionManager = nsnull;
 
     // we want to call this with or without a chrome registry
     nsInstallInfo *info = new nsInstallInfo( 0, aLocalFile, aURL, aArguments, aPrincipal,

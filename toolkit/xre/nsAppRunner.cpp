@@ -1547,7 +1547,7 @@ static void GetVersion(nsIFile* aProfileDir, char* aVersion, int aVersionLength)
   nsCOMPtr<nsILocalFile> lf(do_QueryInterface(compatibilityFile));
   parser.Init(lf);
 
-  parser.GetString("Compatibility", "Version", aVersion, aVersionLength);
+  parser.GetString("Compatibility", "Build ID", aVersion, aVersionLength);
 }
 
 static PRBool ComponentsListChanged(nsIFile* aProfileDir)
@@ -1790,7 +1790,21 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
   GetVersion(lf, version, MAXPATHLEN);
   PRBool upgraded = PR_FALSE;
   PRBool componentsListChanged = PR_FALSE;
-  if (!strcmp(version, aAppData->appVersion)) {
+
+  // Extensions are deemed compatible for all builds in the "x.x.x+" 
+  // period in between milestones for developer convenience (even though
+  // ongoing code changes might actually make that a poor assumption. 
+  // The size and expertise of the nightly build testing community is 
+  // expected to be sufficient to deal with this issue. 
+  //
+  // Every time a profile is loaded by a build with a different build id, 
+  // it updates the compatibility.ini file saying what build last wrote
+  // the compreg.dat. On subsequent launches if the build id matches, 
+  // there is no need for re-registration. If the user loads the same
+  // profile in different builds the component registry must be
+  // re-generated to prevent mysterious component loading failures.
+  // 
+  if (!strcmp(version, aAppData->appBuildID)) {
     componentsListChanged = ComponentsListChanged(lf);
     if (componentsListChanged) {
       // Remove compreg.dat and xpti.dat, forcing component re-registration,
@@ -1931,6 +1945,13 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
         if (NS_FAILED(NS_TIMELINE_LEAVE("main1")))
           NS_TimelineForceMark("...main1");
 #endif
+      }
+      else {
+        // Upgrade condition (build id changes), but the restart hint was 
+        // not set by the Extension Manager. This is because the compatibility
+        // resolution for Extensions is different than for the component 
+        // registry - major milestone vs. build id. 
+        needsRestart = PR_TRUE;
       }
     }
 

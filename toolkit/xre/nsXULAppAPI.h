@@ -60,6 +60,11 @@ struct nsXREAppData
    */
   const char *appVersion;
 
+  /** 
+   * The application's build identifier, e.g. "2004051604"
+   */
+  const char *appBuildID;
+
   /**
    * The copyright information to print for the -h commandline flag,
    * e.g. "Copyright (c) 2003 mozilla.org".
