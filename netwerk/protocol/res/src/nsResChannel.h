@@ -33,6 +33,7 @@
 #include "nsCOMPtr.h"
 #include "nsAutoLock.h"
 #include "nsIIOService.h"
+#include "prthread.h"
 
 class nsResChannel : public nsIResChannel,
                      public nsIStreamListener
@@ -110,7 +111,6 @@ protected:
     nsCOMPtr<nsILoadGroup>              mLoadGroup;
     nsCOMPtr<nsISupports>               mOwner;
 
-    PRLock*                             mLock;
     nsCOMPtr<nsIResProtocolHandler>     mHandler;
     nsCOMPtr<nsIChannel>                mResolvedChannel;
     State                               mState;
@@ -122,6 +122,9 @@ protected:
     PRInt32                             mCount;
     PRUint32                            mBufferSegmentSize;
     PRUint32                            mBufferMaxSize;
+#ifdef DEBUG
+    PRThread*                           mInitiator;
+#endif
 };
 
 #endif // nsResChannel_h__

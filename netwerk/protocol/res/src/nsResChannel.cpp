@@ -28,7 +28,6 @@
 #include "nsIMIMEService.h"
 #include "nsIComponentManager.h"
 #include "nsIURL.h"
-#include "nsIIOService.h"
 
 static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
 static NS_DEFINE_CID(kMIMEServiceCID, NS_MIMESERVICE_CID);
@@ -39,7 +38,9 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 nsResChannel::nsResChannel()
     : mLoadAttributes(LOAD_NORMAL),
-      mLock(nsnull),
+#ifdef DEBUG
+      mInitiator(nsnull),
+#endif
       mState(QUIESCENT)
 {
     NS_INIT_REFCNT();
@@ -57,10 +58,6 @@ nsResChannel::Init(nsIResProtocolHandler* handler,
                    PRUint32 bufferMaxSize)
 {
     nsresult rv;
-
-    mLock = PR_NewLock();
-    if (mLock == nsnull)
-        return NS_ERROR_OUT_OF_MEMORY;
 
     mBufferSegmentSize = bufferSegmentSize;
     mBufferMaxSize = bufferMaxSize;
@@ -87,7 +84,6 @@ nsResChannel::Init(nsIResProtocolHandler* handler,
 nsResChannel::~nsResChannel()
 {
     if (mCommand) nsCRT::free(mCommand);
-    if (mLock) PR_DestroyLock(mLock);
 }
 
 NS_IMPL_ISUPPORTS5(nsResChannel,
@@ -167,8 +163,6 @@ nsResChannel::Substitutions::Next(nsIURI* *result, nsIIOService* serv)
 NS_IMETHODIMP
 nsResChannel::IsPending(PRBool *result)
 {
-    nsAutoLock lock(mLock);
-
     if (mResolvedChannel)
         return mResolvedChannel->IsPending(result);
     *result = PR_FALSE;
@@ -178,8 +172,8 @@ nsResChannel::IsPending(PRBool *result)
 NS_IMETHODIMP
 nsResChannel::Cancel()
 {
-    nsAutoLock lock(mLock);
-
+    NS_ASSERTION(mInitiator == PR_CurrentThread(),
+                 "wrong thread calling this routine");
     mResolvedURI = mResourceURI;        // remove the resolution
     if (mResolvedChannel)
         return mResolvedChannel->Cancel();
@@ -189,8 +183,8 @@ nsResChannel::Cancel()
 NS_IMETHODIMP
 nsResChannel::Suspend()
 {
-    nsAutoLock lock(mLock);
-
+    NS_ASSERTION(mInitiator == PR_CurrentThread(),
+                 "wrong thread calling this routine");
     if (mResolvedChannel)
         return mResolvedChannel->Suspend();
     return NS_OK;
@@ -199,8 +193,8 @@ nsResChannel::Suspend()
 NS_IMETHODIMP
 nsResChannel::Resume()
 {
-    nsAutoLock lock(mLock);
-
+    NS_ASSERTION(mInitiator == PR_CurrentThread(),
+                 "wrong thread calling this routine");
     if (mResolvedChannel)
         return mResolvedChannel->Resume();
     return NS_OK;
@@ -234,8 +228,6 @@ nsResChannel::OpenInputStream(PRUint32 startPosition, PRInt32 readCount,
 {
     nsresult rv;
 
-    nsAutoLock lock(mLock);
-
     if (mResolvedChannel)
         return NS_ERROR_IN_PROGRESS;
 
@@ -265,8 +257,6 @@ NS_IMETHODIMP
 nsResChannel::OpenOutputStream(PRUint32 startPosition, nsIOutputStream **result)
 {
     nsresult rv;
-
-    nsAutoLock lock(mLock);
 
     if (mResolvedChannel)
         return NS_ERROR_IN_PROGRESS;
@@ -298,7 +288,11 @@ nsResChannel::AsyncOpen(nsIStreamObserver *observer, nsISupports* ctxt)
 {
     nsresult rv;
 
-    nsAutoLock lock(mLock);
+#ifdef DEBUG
+    NS_ASSERTION(mInitiator == nsnull || mInitiator == PR_CurrentThread(),
+                 "wrong thread calling this routine");
+    mInitiator = PR_CurrentThread();
+#endif
 
     switch (mState) {
       case QUIESCENT:
@@ -353,7 +347,11 @@ nsResChannel::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
 {
     nsresult rv;
 
-    nsAutoLock lock(mLock);
+#ifdef DEBUG
+    NS_ASSERTION(mInitiator == nsnull || mInitiator == PR_CurrentThread(),
+                 "wrong thread calling this routine");
+    mInitiator = PR_CurrentThread();
+#endif
 
     switch (mState) {
       case QUIESCENT:
@@ -415,7 +413,11 @@ nsResChannel::AsyncWrite(nsIInputStream *fromStream,
 {
     nsresult rv;
 
-    nsAutoLock lock(mLock);
+#ifdef DEBUG
+    NS_ASSERTION(mInitiator == nsnull || mInitiator == PR_CurrentThread(),
+                 "wrong thread calling this routine");
+    mInitiator = PR_CurrentThread();
+#endif
 
     switch (mState) {
       case QUIESCENT:
@@ -520,8 +522,6 @@ nsResChannel::GetLoadGroup(nsILoadGroup* *aLoadGroup)
 NS_IMETHODIMP
 nsResChannel::SetLoadGroup(nsILoadGroup* aLoadGroup)
 {
-    nsAutoLock lock(mLock);
-
     mLoadGroup = aLoadGroup;
     return NS_OK;
 }
@@ -563,6 +563,8 @@ nsResChannel::SetNotificationCallbacks(nsIInterfaceRequestor* aNotificationCallb
 NS_IMETHODIMP
 nsResChannel::OnStartRequest(nsIChannel* transportChannel, nsISupports* context)
 {
+    NS_ASSERTION(mInitiator == PR_CurrentThread(),
+                 "wrong thread calling this routine");
     NS_ASSERTION(mUserObserver, "No observer...");
     return mUserObserver->OnStartRequest(this, mUserContext);
 }
@@ -571,6 +573,8 @@ NS_IMETHODIMP
 nsResChannel::OnStopRequest(nsIChannel* transportChannel, nsISupports* context,
                             nsresult aStatus, const PRUnichar* aMsg)
 {
+    NS_ASSERTION(mInitiator == PR_CurrentThread(),
+                 "wrong thread calling this routine");
     nsresult rv;
 
     if (NS_FAILED(aStatus) && aStatus != NS_BINDING_ABORTED) {
@@ -608,6 +612,8 @@ nsResChannel::OnDataAvailable(nsIChannel* transportChannel, nsISupports* context
                                nsIInputStream *aIStream, PRUint32 aSourceOffset,
                                PRUint32 aLength)
 {
+    NS_ASSERTION(mInitiator == PR_CurrentThread(),
+                 "wrong thread calling this routine");
     return GetUserListener()->OnDataAvailable(this, mUserContext, aIStream,
                                               aSourceOffset, aLength);
 }
