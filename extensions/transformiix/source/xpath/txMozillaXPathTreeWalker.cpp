@@ -1350,11 +1350,6 @@ txXPathNodeUtils::comparePosition(const txXPathNode& aNode,
         return 1;
     }
 
-    // If they're both documents and not equal, compare the document pointers.
-    if (aNode.isDocument() && aOtherNode.isDocument()) {
-        return (aNode.mDocument > aOtherNode.mDocument ? 1 : -1);
-    }
-
     // Get document for both nodes.
     nsIDocument* document;
     if (aNode.isDocument()) {
