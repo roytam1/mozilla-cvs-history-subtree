@@ -54,7 +54,7 @@ nsHttpAuthCache::Init()
 
     mDB = PL_NewHashTable(128, (PLHashFunction) PL_HashString,
                                (PLHashComparator) PL_CompareStrings,
-                               (PLHashComparator) 0, 0, 0);
+                               (PLHashComparator) 0, &gHashAllocOps, this);
     if (!mDB)
         return NS_ERROR_OUT_OF_MEMORY;
 
@@ -70,7 +70,8 @@ nsHttpAuthCache::GetCredentialsForPath(const char *host,
 {
     NS_ENSURE_TRUE(mDB, NS_ERROR_NOT_INITIALIZED);
  
-    LOG(("nsHttpAuthCache::GetCredentials\n"));
+    LOG(("nsHttpAuthCache::GetCredentialsForPath [host=%s:%d path=%s]\n",
+        host, port, path));
 
     nsCAutoString key;
     nsEntryList *list = LookupEntryList(host, port, key);
@@ -88,7 +89,8 @@ nsHttpAuthCache::GetCredentialsForDomain(const char *host,
 {
     NS_ENSURE_TRUE(mDB, NS_ERROR_NOT_INITIALIZED);
  
-    LOG(("nsHttpAuthCache::GetCredentials\n"));
+    LOG(("nsHttpAuthCache::GetCredentialsForDomain [host=%s:%d realm=%s]\n",
+        host, port, realm));
 
     nsCAutoString key;
     nsEntryList *list = LookupEntryList(host, port, key);
@@ -126,13 +128,14 @@ nsHttpAuthCache::SetCredentials(const char *host,
         if (NS_FAILED(rv))
             delete list;
         else
-            PL_HashTableAdd(mDB, key.get(), list);
+            PL_HashTableAdd(mDB, PL_strdup(key.get()), list);
         return rv;
     }
 
     rv = list->SetCredentials(path, realm, creds);
     if (NS_SUCCEEDED(rv) && (list->Count() == 0)) {
         // the list has no longer has any entries
+        // XXX leak.. need to free key
         PL_HashTableRemove(mDB, key.get());
         delete list;
     }
@@ -143,7 +146,8 @@ nsHttpAuthCache::SetCredentials(const char *host,
 nsresult
 nsHttpAuthCache::ClearAll()
 {
-    return NS_OK;
+    // XXX need to implement this
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 //-----------------------------------------------------------------------------
@@ -163,6 +167,49 @@ nsHttpAuthCache::LookupEntryList(const char *host, PRInt32 port, nsAFlatCString 
 
     return (nsEntryList *) PL_HashTableLookup(mDB, key.get());
 }
+
+void *
+nsHttpAuthCache::AllocTable(void *self, PRSize size)
+{
+    return malloc(size);
+}
+
+void
+nsHttpAuthCache::FreeTable(void *self, void *item)
+{
+    free(item);
+}
+
+PLHashEntry *
+nsHttpAuthCache::AllocEntry(void *self, const void *key)
+{
+    return (PLHashEntry *) malloc(sizeof(PLHashEntry));
+}
+
+void
+nsHttpAuthCache::FreeEntry(void *self, PLHashEntry *he, PRUintn flag)
+{
+    if (flag == HT_FREE_VALUE) {
+        // this would only happen if PL_HashTableAdd were to replace an
+        // existing entry in the hash table, but we _always_ do a lookup
+        // before adding a new entry to avoid this case.
+        NS_NOTREACHED("should never happen");
+    }
+    else if (flag == HT_FREE_ENTRY) {
+        // three wonderful flavors of freeing memory ;-)
+        delete (nsEntry *) he->value;
+        PL_strfree((char *) he->key);
+        free(he);
+    }
+}
+
+PLHashAllocOps nsHttpAuthCache::gHashAllocOps =
+{
+    nsHttpAuthCache::AllocTable,
+    nsHttpAuthCache::FreeTable,
+    nsHttpAuthCache::AllocEntry,
+    nsHttpAuthCache::FreeEntry
+};
 
 //-----------------------------------------------------------------------------
 // nsHttpAuthCache::nsEntry

@@ -74,6 +74,8 @@ nsHttpTransaction::SetupRequest(nsHttpRequestHead *requestHead,
 {
     nsresult rv;
 
+    LOG(("nsHttpTransaction::SetupRequest [this=%x]\n", this));
+
     NS_ENSURE_ARG_POINTER(requestHead);
 
     mReqHeaderBuf.SetLength(0);
@@ -81,8 +83,7 @@ nsHttpTransaction::SetupRequest(nsHttpRequestHead *requestHead,
     rv = requestHead->Flatten(mReqHeaderBuf);
     if (NS_FAILED(rv)) return rv;
 
-    LOG(("nsHttpTransaction::SetupRequest [this=%x\n%s]\n",
-        this, mReqHeaderBuf.get()));
+    LOG2(("http request [\n%s]\n", mReqHeaderBuf.get()));
 
     mReqUploadStream = requestStream;
     if (!mReqUploadStream)
@@ -286,9 +287,16 @@ nsHttpTransaction::HandleContent(char *buf,
     if (!mFiredOnStart) {
 
         if (mResponseHead) {
+#if defined(PR_LOGGING)
+            nsCAutoString headers;
+            mResponseHead->Flatten(headers);
+            LOG2(("http response [\n%s]\n", headers.get()));                        
+#endif
+
             // notify the connection first
             if (mConnection)
                 mConnection->OnHeadersAvailable(this);
+
 
             // grab the content-length from the response headers
             mContentLength = mResponseHead->ContentLength();

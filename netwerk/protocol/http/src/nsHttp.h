@@ -43,7 +43,11 @@
 //
 extern PRLogModuleInfo *gHttpLog;
 #endif
-#define LOG(args) PR_LOG(gHttpLog, PR_LOG_DEBUG, args)
+#define LOG1(args) PR_LOG(gHttpLog, 1, args)
+#define LOG2(args) PR_LOG(gHttpLog, 2, args)
+#define LOG3(args) PR_LOG(gHttpLog, 3, args)
+#define LOG4(args) PR_LOG(gHttpLog, 4, args)
+#define LOG(args) LOG4(args)
 
 #define NS_HTTP_SEGMENT_SIZE 4096
 #define NS_HTTP_BUFFER_SIZE  4096*2

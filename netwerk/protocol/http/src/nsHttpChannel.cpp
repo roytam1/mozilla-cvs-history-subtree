@@ -327,8 +327,10 @@ nsHttpChannel::ProcessResponse()
         // XXX this is actually a cacheable response
         CloseCacheEntry(NS_ERROR_ABORT);
         rv = ProcessRedirection(httpStatus);
-        if (NS_FAILED(rv))
+        if (NS_FAILED(rv)) {
+            LOG(("ProcessRedirection failed [rv=%x]\n", rv));
             rv = ProcessNormal();
+        }
         break;
     case 302:
     case 303:
@@ -336,18 +338,26 @@ nsHttpChannel::ProcessResponse()
     case 307:
         CloseCacheEntry(NS_ERROR_ABORT);
         rv = ProcessRedirection(httpStatus);
-        if (NS_FAILED(rv))
+        if (NS_FAILED(rv)) {
+            LOG(("ProcessRedirection failed [rv=%x]\n", rv));
             rv = ProcessNormal();
+        }
         break;
     case 304:
         rv = ProcessNotModified();
+        if (NS_FAILED(rv)) {
+            LOG(("ProcessNotModified failed [rv=%x]\n", rv));
+            rv = ProcessNormal();
+        }
         break;
     case 401:
     case 407:
         CloseCacheEntry(NS_ERROR_ABORT);
         rv = ProcessAuthentication(httpStatus);
-        if (NS_FAILED(rv))
+        if (NS_FAILED(rv)) {
+            LOG(("ProcessAuthentication failed [rv=%x]\n", rv));
             rv = ProcessNormal();
+        }
         break;
     default:
         CloseCacheEntry(NS_ERROR_ABORT);
