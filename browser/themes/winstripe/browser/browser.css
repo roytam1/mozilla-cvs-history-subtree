@@ -717,7 +717,7 @@ statusbarpanel#statusbar-display {
 
 #security-button {
   list-style-image: none;
-  width: 20px;
+  min-width: 20px;
   -moz-box-direction: reverse;
 }
 
@@ -733,6 +733,11 @@ statusbarpanel#statusbar-display {
   list-style-image: url("chrome://browser/skin/Security-broken.png");
 }
 
+/* XXXsw prevent margins of a value-less label from shifting the image */
+#security-button > label:not([value]) {
+  display: none;
+}
+
 #page-report-button {
   list-style-image: none;
   width: 20px;
@@ -740,7 +745,6 @@ statusbarpanel#statusbar-display {
 
 #page-report-button[blocked] {
   list-style-image: url("chrome://browser/skin/Info.png");
-  padding: 0px 3px 0px 3px; 
 }
 
 #page-theme-button {
@@ -750,7 +754,6 @@ statusbarpanel#statusbar-display {
 
 #page-theme-button[themes] {
   list-style-image: url("chrome://browser/skin/page-themes.png");
-  padding: 0px 3px 0px 3px;
 }
 
 #livemark-button {
@@ -760,7 +763,6 @@ statusbarpanel#statusbar-display {
 
 #livemark-button[livemarks] {
   list-style-image: url("chrome://browser/skin/page-livemarks.png");
-  padding: 0px 3px 0px 3px;
 }
 
 /* ::::: throbber ::::: */
