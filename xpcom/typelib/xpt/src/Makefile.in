@@ -35,6 +35,10 @@ REQUIRES	= $(MODULE)
 
 EXPORTS = $(NULL)
 
+# we don't want the shared lib, but we want to force the creation of a static lib.
+override NO_SHARED_LIB=1
+override NO_STATIC_LIB=
+
 # build libxpt early so that it'll be available to xpidl, which also
 # must be built early.
 export:: libs
