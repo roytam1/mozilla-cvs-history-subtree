@@ -418,7 +418,7 @@ nsXBLService::~nsXBLService(void)
 // This function loads a particular XBL file and installs all of the bindings
 // onto the element.
 NS_IMETHODIMP
-nsXBLService::LoadBindings(nsIContent* aContent, const nsString& aURL, PRBool aAugmentFlag,
+nsXBLService::LoadBindings(nsIContent* aContent, const nsAReadableString& aURL, PRBool aAugmentFlag,
                            nsIXBLBinding** aBinding) 
 { 
   *aBinding = nsnull;
@@ -456,7 +456,7 @@ nsXBLService::LoadBindings(nsIContent* aContent, const nsString& aURL, PRBool aA
 
   if (!newBinding) {
     nsCAutoString str = "Failed to locate XBL binding. XBL is now using id instead of name to reference bindings. Make sure you have switched over.  The invalid binding name is: ";
-    str.AppendWithConversion(aURL);
+    str.AppendWithConversion(NS_ConvertUCS2toUTF8(aURL));
     NS_ERROR(str);
     return NS_OK;
   }
