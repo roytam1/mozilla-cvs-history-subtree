@@ -226,6 +226,7 @@ LDAP_API(unsigned long) LDAP_C ber_scanf( BerElement *ber, const char *fmt,
 	... );
 LDAP_API(void) LDAP_CALL ber_bvfree( struct berval *bv );
 LDAP_API(void) LDAP_CALL ber_bvecfree( struct berval **bv );
+LDAP_API(void) LDAP_CALL ber_svecfree( char **vals );
 LDAP_API(struct berval *) LDAP_CALL ber_bvdup( const struct berval *bv );
 LDAP_API(void) LDAP_CALL ber_set_string_translators( BerElement *ber,
 	BERTranslateProc encode_proc, BERTranslateProc decode_proc );

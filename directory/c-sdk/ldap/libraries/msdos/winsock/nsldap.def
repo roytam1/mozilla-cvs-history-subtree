@@ -154,6 +154,7 @@ EXPORTS
 	BER_ERR_PRINT=_ber_err_print		@149
 	BER_SOCKBUF_FREE=_ber_sockbuf_free		@150
 	BER_GET_NEXT_BUFFER_EXT=_ber_get_next_buffer_ext		@151
+	BER_SVECFREE=_ber_svecfree		@152
 
 	LDAP_MEMFREE=_ldap_memfree		@200
 	LDAP_BER_FREE=_ldap_ber_free		@201

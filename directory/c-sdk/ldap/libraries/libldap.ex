@@ -140,6 +140,7 @@
 149	ber_err_print		C
 150	ber_sockbuf_free
 151	ber_get_next_buffer_ext
+152	ber_svecfree
 
 200	ldap_memfree
 201	ldap_ber_free

@@ -256,12 +256,13 @@ unsigned long
 LDAP_CALL
 ber_get_stringa( BerElement *ber, char **buf )
 {
-	unsigned long	datalen, tag;
+	unsigned long	datalen, ndatalen, tag;
 
 	if ( (tag = ber_skip_tag( ber, &datalen )) == LBER_DEFAULT )
 		return( LBER_DEFAULT );
 
-	if ( (*buf = (char *)NSLBERI_MALLOC( (size_t)datalen + 1 )) == NULL )
+	if ( ((ndatalen = (size_t)datalen + 1) < (size_t) datalen) ||
+	   ( (*buf = (char *)NSLBERI_MALLOC( (size_t)ndatalen )) == NULL ))
 		return( LBER_DEFAULT );
 
 	/*
@@ -290,7 +291,7 @@ unsigned long
 LDAP_CALL
 ber_get_stringal( BerElement *ber, struct berval **bv )
 {
-	unsigned long	len, tag;
+	unsigned long	len, nlen, tag;
 
 	if ( (*bv = (struct berval *)NSLBERI_MALLOC( sizeof(struct berval) ))
 	    == NULL ) {
@@ -301,8 +302,9 @@ ber_get_stringal( BerElement *ber, struct berval **bv )
 		return( LBER_DEFAULT );
 	}
 
-	if ( ((*bv)->bv_val = (char *)NSLBERI_MALLOC( (size_t)len + 1 ))
-	    == NULL ) {
+	if ( ((nlen = (size_t) len + 1) < (size_t)len) ||
+	     (((*bv)->bv_val = (char *)NSLBERI_MALLOC( (size_t)nlen ))
+	    == NULL )) {
 		return( LBER_DEFAULT );
 	}
 
@@ -420,7 +422,7 @@ LDAP_C
 ber_scanf( BerElement *ber, const char *fmt, ... )
 {
 	va_list		ap;
-	char		*last;
+	char		*last, *p;
 	char		*s, **ss, ***sss;
 	struct berval 	***bv, **bvp, *bval;
 	int		*i, j;
@@ -440,8 +442,8 @@ ber_scanf( BerElement *ber, const char *fmt, ... )
 	}
 #endif
 
-	for ( rc = 0; *fmt && rc != LBER_DEFAULT; fmt++ ) {
-		switch ( *fmt ) {
+	for ( rc = 0, p = (char *) fmt; *p && rc != LBER_DEFAULT; p++ ) {
+		switch ( *p ) {
 		case 'a':	/* octet string - allocate storage as needed */
 			ss = va_arg( ap, char ** );
 			rc = ber_get_stringa( ber, ss );
@@ -587,6 +589,94 @@ ber_scanf( BerElement *ber, const char *fmt, ... )
 
 	va_end( ap );
 
+	if (rc != LBER_DEFAULT) {
+	  va_start( ap, fmt );
+	  for ( p--; fmt < p && *fmt; fmt++ ) {
+		switch ( *fmt ) {
+		case 'a':	/* octet string - allocate storage as needed */
+			ss = va_arg( ap, char ** );
+			NSLBERI_FREE(*ss);
+			*ss = NULL;
+			break;
+
+		case 'b':	/* boolean */
+			i = va_arg( ap, int * );
+			break;
+
+		case 'e':	/* enumerated */
+		case 'i':	/* int */
+			l = va_arg( ap, long * );
+			break;
+
+		case 'l':	/* length of next item */
+			l = va_arg( ap, long * );
+			break;
+
+		case 'n':	/* null */
+			break;
+
+		case 's':	/* octet string - in a buffer */
+			s = va_arg( ap, char * );
+			l = va_arg( ap, long * );
+			break;
+
+		case 'o':	/* octet string in a supplied berval */
+			bval = va_arg( ap, struct berval * );
+			if (bval->bv_val) NSLBERI_FREE(bval->bv_val);
+			memset(bval, 0, sizeof(struct berval));
+			break;
+
+		case 'O':	/* octet string - allocate & include length */
+			bvp = va_arg( ap, struct berval ** );
+			ber_bvfree(*bvp);
+			bvp = NULL;
+			break;
+
+		case 'B':	/* bit string - allocate storage as needed */
+			ss = va_arg( ap, char ** );
+			l = va_arg( ap, long * ); /* for length, in bits */
+			if (*ss) NSLBERI_FREE(*ss);
+			*ss = NULL;
+			break;
+
+		case 't':	/* tag of next item */
+			t = va_arg( ap, unsigned long * );
+			break;
+
+		case 'T':	/* skip tag of next item */
+			t = va_arg( ap, unsigned long * );
+			break;
+
+		case 'v':	/* sequence of strings */
+			sss = va_arg( ap, char *** );
+			ber_svecfree(*sss);
+			*sss = NULL;
+			break;
+
+		case 'V':	/* sequence of strings + lengths */
+			bv = va_arg( ap, struct berval *** );
+			ber_bvecfree(*bv);
+			*bv = NULL;
+			break;
+
+		case 'x':	/* skip the next element - whatever it is */
+			break;
+
+		case '{':	/* begin sequence */
+		case '[':	/* begin set */
+			break;
+
+		case '}':	/* end sequence */
+		case ']':	/* end set */
+			break;
+
+		default:
+			break;
+		}
+	  } /* for */
+	  va_end( ap );
+	} /* if */
+
 	return( rc );
 }
 
@@ -642,6 +732,18 @@ ber_bvdup( const struct berval *bv )
 	return( new );
 }
 
+void
+LDAP_CALL
+ber_svecfree( char **vals )
+{
+        int     i;
+
+        if ( vals == NULL )
+                return;
+        for ( i = 0; vals[i] != NULL; i++ )
+                NSLBERI_FREE( vals[i] );
+        NSLBERI_FREE( (char *) vals );
+}
 
 #ifdef STR_TRANSLATION
 void
