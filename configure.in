@@ -3583,7 +3583,7 @@ MOZ_PROTOCOLS_DEFAULT="about data file ftp gopher http jar keyword res viewsourc
 
 MOZ_ARG_ENABLE_STRING(protocols,
 [  --enable-protocols[={prot1,prot2,default,all,none}]
-                           Enable specific protocol handlers],
+                          Enable specific protocol handlers],
 [ for option in `echo $enableval | sed 's/,/ /g'`; do
     if test "$option" = "yes" || test "$option" = "all"; then
         MOZ_PROTOCOLS="$MOZ_PROTOCOLS $MOZ_PROTOCOLS_DEFAULT"
