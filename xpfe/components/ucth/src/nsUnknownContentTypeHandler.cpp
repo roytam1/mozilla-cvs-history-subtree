@@ -140,6 +140,7 @@ nsUnknownContentTypeHandler::HandleUnknownContentType( nsIRequest *request,
             if ( context ) {
                 JSContext *jsContext = (JSContext*)context->GetNativeContext();
                 if ( jsContext ) {
+                  /*
                     void *stackPtr;
                     jsval *argv = JS_PushArguments( jsContext,
                                                     &stackPtr,
@@ -153,7 +154,15 @@ nsUnknownContentTypeHandler::HandleUnknownContentType( nsIRequest *request,
                                                     contentDisp.get() );
                     if ( argv ) {
                         nsCOMPtr<nsIDOMWindowInternal> newWindow;
-                        rv = aWindow->OpenDialog( jsContext, argv, 6, getter_AddRefs( newWindow ) );
+
+
+
+
+
+                        //                        rv = aWindow->OpenDialog( jsContext, argv, 6, getter_AddRefs( newWindow ) );
+
+
+
                         if ( NS_FAILED( rv ) ) {
                             DEBUG_PRINTF( PR_STDOUT, "%s %d: OpenDialog failed, rv=0x%08X\n",
                                           (char*)__FILE__, (int)__LINE__, (int)rv );
@@ -164,6 +173,10 @@ nsUnknownContentTypeHandler::HandleUnknownContentType( nsIRequest *request,
                                       (char*)__FILE__, (int)__LINE__ );
                         rv = NS_ERROR_FAILURE;
                     }
+                  */
+
+
+
                 } else {
                     DEBUG_PRINTF( PR_STDOUT, "%s %d: GetNativeContext failed\n",
                                   (char*)__FILE__, (int)__LINE__ );
@@ -201,6 +214,9 @@ nsUnknownContentTypeHandler::ShowProgressDialog(nsIHelperAppLauncher *aLauncher,
             nsCOMPtr<nsIScriptContext> context;
             sgo->GetContext( getter_AddRefs( context ) );
             if ( context ) {
+              /*
+
+
                 // Get native context.
                 JSContext *jsContext = (JSContext*)context->GetNativeContext();
                 if ( jsContext ) {
@@ -217,11 +233,23 @@ nsUnknownContentTypeHandler::ShowProgressDialog(nsIHelperAppLauncher *aLauncher,
                     if ( argv ) {
                         // Open the dialog.
                         nsCOMPtr<nsIDOMWindowInternal> dialog;
-                        rv = parent->OpenDialog( jsContext, argv, 4, getter_AddRefs( dialog ) );
+
+
+
+
+
+                        //                        rv = parent->OpenDialog( jsContext, argv, 4, getter_AddRefs( dialog ) );
+
+
+
+
                         // Pop arguments.
                         JS_PopArguments( jsContext, stackPtr );
                     }
                 }
+              */
+
+
             }
         }
     }
@@ -245,6 +273,9 @@ nsUnknownContentTypeHandler::Show( nsIHelperAppLauncher *aLauncher, nsISupports 
                 // Get native context.
                 JSContext *jsContext = (JSContext*)context->GetNativeContext();
                 if ( jsContext ) {
+                  /*
+
+
                     // Set up window.arguments[0]...
                     void *stackPtr;
                     jsval *argv = JS_PushArguments( jsContext,
@@ -258,10 +289,26 @@ nsUnknownContentTypeHandler::Show( nsIHelperAppLauncher *aLauncher, nsISupports 
                     if ( argv ) {
                         // Open the dialog.
                         nsCOMPtr<nsIDOMWindowInternal> dialog;
-                        rv = parent->OpenDialog( jsContext, argv, 4, getter_AddRefs( dialog ) );
+
+
+
+
+
+                        //                        rv = parent->OpenDialog( jsContext, argv, 4, getter_AddRefs( dialog ) );
+
+
+
+
                         // Pop arguments.
                         JS_PopArguments( jsContext, stackPtr );
                     }
+
+
+
+                  */
+
+
+
                 }
             }
         }

@@ -39,6 +39,7 @@
 #include "nsNetUtil.h"
 #include "nsIURL.h"
 #include "nsPIXPIManagerCallbacks.h"
+#include "nsISupportsArray.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID( kAppShellServiceCID, NS_APPSHELL_SERVICE_CID );
@@ -142,42 +143,38 @@ nsInstallProgressDialog::LogComment(const PRUnichar* comment)
 NS_IMETHODIMP
 nsInstallProgressDialog::Open(nsIDialogParamBlock* ioParamBlock)
 {
-    nsresult rv = NS_OK;
+  nsresult rv = NS_OK;
     
-    // Now do the stuff to create a window and pass the JS args to it.
-    NS_WITH_SERVICE(nsIAppShellService, appShell, kAppShellServiceCID, &rv );
-    if ( NS_SUCCEEDED( rv ) ) 
-    {
-        nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
-        JSContext* jsContext;
-        rv = appShell->GetHiddenWindowAndJSContext( getter_AddRefs(hiddenWindow), &jsContext);
-        if (NS_SUCCEEDED(rv))
-        {
-            nsCOMPtr<nsPIXPIManagerCallbacks> mgr = do_QueryInterface(mManager);
+  nsCOMPtr<nsIAppShellService> appShell(do_GetService( kAppShellServiceCID,
+                                                       &rv ));
 
-            void* stackPtr;
-            jsval *argv = JS_PushArguments( jsContext,
-                                            &stackPtr,
-                                            "sss%ip%ip",
-                                            "chrome://communicator/content/xpinstall/xpistatus.xul",
-                                            "_blank",
-                                            "chrome,centered,titlebar,resizable",
-                                            (const nsIID*)&NS_GET_IID(nsIDialogParamBlock),
-                                            (nsISupports*)ioParamBlock,
-                                            (const nsIID*)&NS_GET_IID(nsPIXPIManagerCallbacks),
-                                            (nsISupports*)mgr
-                                            );
-            if (argv)
-            {
-                rv = hiddenWindow->OpenDialog( jsContext,
-                                               argv,
-                                               5,
-                                               getter_AddRefs( mWindow ));
-            }
-            JS_PopArguments( jsContext, stackPtr);  
-        }
-    }
-    return rv;
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
+  rv = appShell->GetHiddenDOMWindow( getter_AddRefs(hiddenWindow) );
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIDOMWindowInternalEx> win(do_QueryInterface(hiddenWindow));
+  NS_ENSURE_TRUE(win, NS_ERROR_FAILURE);
+
+  nsCOMPtr<nsISupportsArray> array;
+
+  rv = NS_NewISupportsArray(getter_AddRefs(array));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  array->AppendElement(ioParamBlock);
+  array->AppendElement(mManager);
+
+  nsCOMPtr<nsIDOMWindow> newWin;
+
+  rv = win->OpenDialog(NS_LITERAL_STRING("chrome://communicator/content/xpinstall/xpistatus.xul"),
+                       NS_LITERAL_STRING("_blank"),
+                       NS_LITERAL_STRING("chrome,centered,titlebar,resizable"),
+                       array, getter_AddRefs( newWin ));
+
+  mWindow = do_QueryInterface(newWin);
+
+  return rv;
 }
 
 
@@ -272,7 +269,7 @@ nsInstallProgressDialog::GetCancelStatus(PRBool *_retval)
 // Utility to set element attribute.
 nsresult nsInstallProgressDialog::setDlgAttribute( const char *id,
                                                    const char *name,
-                                                   const nsString &value )
+                                                   const nsAReadableString &value )
 {
     nsresult rv = NS_OK;
 
@@ -312,7 +309,7 @@ nsresult nsInstallProgressDialog::setDlgAttribute( const char *id,
 // Utility to get element attribute.
 nsresult nsInstallProgressDialog::getDlgAttribute(  const char *id,
                                                     const char *name,
-                                                    nsString &value ) 
+                                                    nsAWritableString &value ) 
 {
     nsresult rv = NS_OK;
 

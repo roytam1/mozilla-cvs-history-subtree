@@ -27,6 +27,7 @@
 #include "nsXPComFactory.h"
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
+#include "nsISupportsArray.h"
 
 static NS_DEFINE_CID( kDialogParamBlockCID,          NS_DialogParamBlock_CID);
  
@@ -422,66 +423,29 @@ nsresult nsCommonDialogs::Select(nsIDOMWindowInternal *inParent, const PRUnichar
 }
 
 
- NS_IMETHODIMP nsCommonDialogs::DoDialog(nsIDOMWindowInternal* inParent, nsIDialogParamBlock *ioParamBlock, const char *inChromeURL)
- {
-  nsresult rv = NS_OK;
+NS_IMETHODIMP
+nsCommonDialogs::DoDialog(nsIDOMWindowInternal* inParent,
+                          nsIDialogParamBlock *ioParamBlock,
+                          const char *inChromeURL)
+{
+    nsCOMPtr<nsIDOMWindowInternalEx> win(do_QueryInterface(inParent));
+    nsresult rv = NS_ERROR_NULL_POINTER;
 
-    if ( inParent && ioParamBlock &&inChromeURL )
-    {
-        // Get JS context from parent window.
-        nsCOMPtr<nsIScriptGlobalObject> sgo = do_QueryInterface( inParent, &rv );
-        if ( NS_SUCCEEDED( rv ) && sgo )
-        {
-            nsCOMPtr<nsIScriptContext> context;
-            sgo->GetContext( getter_AddRefs( context ) );
-            if ( context )
-            {
-                JSContext *jsContext = (JSContext*)context->GetNativeContext();
-                if ( jsContext ) {
-                    void *stackPtr;
-                    jsval *argv = JS_PushArguments( jsContext,
-                                                    &stackPtr,
-                                                    "sss%ip",
-                                                    inChromeURL,
-                                                    "_blank",
-                                                    "centerscreen,chrome,modal,titlebar",
-                                                    (const nsIID*)(&NS_GET_IID(nsIDialogParamBlock)),
-                                                    (nsISupports*)ioParamBlock
-                                                  );
-                    if ( argv ) {
-                        nsCOMPtr<nsIDOMWindowInternal> newWindow;
-                        rv = inParent->OpenDialog( jsContext, argv, 4, getter_AddRefs(newWindow) );
-                        JS_PopArguments( jsContext, stackPtr );
-                    }
-                    else
-                    {
-                    	
-                        NS_WARNING( "JS_PushArguments failed\n" );
-                        rv = NS_ERROR_FAILURE;
-                    }
-                }
-                else
-                {
-                    NS_WARNING(" GetNativeContext failed\n" );
-                    rv = NS_ERROR_FAILURE;
-                }
-            }
-            else
-            {
-                NS_WARNING( "GetContext failed\n" );
-                rv = NS_ERROR_FAILURE;
-            }
-        }
-        else
-        {
-            NS_WARNING( "QueryInterface (for nsIScriptGlobalObject) failed \n" );
-        }
+    if ( win && ioParamBlock &&inChromeURL ) {
+        nsCOMPtr<nsISupportsArray> array;
+
+        rv = NS_NewISupportsArray(getter_AddRefs(array));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        array->AppendElement(ioParamBlock);
+
+        nsCOMPtr<nsIDOMWindow> newWindow;
+        rv = win->OpenDialog(NS_ConvertASCIItoUCS2(inChromeURL),
+                             NS_LITERAL_STRING("_blank"),
+                             NS_LITERAL_STRING("centerscreen,chrome,modal,titlebar"),
+                             array, getter_AddRefs(newWindow) );
     }
-    else
-    {
-        NS_WARNING( " OpenDialogWithArg was passed a null pointer!\n" );
-        rv = NS_ERROR_NULL_POINTER;
-    }
+
     return rv;
  }
  

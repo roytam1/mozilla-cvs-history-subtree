@@ -2055,19 +2055,22 @@ nsBookmarksService::OnDataAvailable(nsIRequest* request, nsISupports *ctxt, nsII
 
 NS_IMETHODIMP
 nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
-					nsresult status, const PRUnichar *errorMsg) 
+				  nsresult status, const PRUnichar *errorMsg) 
 {
 	nsresult		rv;
 
-	const char		*uri = nsnull;
-	if (NS_SUCCEEDED(rv = busyResource->GetValueConst(&uri)) && (uri))
+	const char		*charPtrUri = nsnull;
+	nsAutoString            uri;
+	if (NS_SUCCEEDED(rv = busyResource->GetValueConst(&charPtrUri)) &&
+	    (charPtrUri))
 	{
 #ifdef	DEBUG_BOOKMARK_PING_OUTPUT
 		printf("Finished polling '%s'\n", uri);
 #endif
 	}
-    nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
-	nsCOMPtr<nsIHTTPChannel>	httpChannel = do_QueryInterface(channel);
+	uri.AssignWithConversion(charPtrUri);
+
+	nsCOMPtr<nsIHTTPChannel> httpChannel = do_QueryInterface(request);
 	if (httpChannel)
 	{
 		nsCAutoString			eTagValue, lastModValue, contentLengthValue;
@@ -2351,7 +2354,7 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
 				nsCOMPtr<nsIInterfaceRequestor> interfaces;
 				nsCOMPtr<nsIPrompt> prompter;
 
-				channel->GetNotificationCallbacks(getter_AddRefs(interfaces));
+				httpChannel->GetNotificationCallbacks(getter_AddRefs(interfaces));
 				if (interfaces)
 					interfaces->GetInterface(NS_GET_IID(nsIPrompt), getter_AddRefs(prompter));
 				if (!prompter)
@@ -2386,7 +2389,7 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
 							}
 						}
 					}
-					promptStr.AppendWithConversion(uri);
+					promptStr.Append(uri);
 					
 					nsAutoString	temp;
 					getLocaleString("WebPageAskDisplay", temp);
@@ -2435,29 +2438,10 @@ nsBookmarksService::OnStopRequest(nsIRequest* request, nsISupports *ctxt,
 						parent->GetDocShell(getter_AddRefs(docShell));
 					}
 					nsCOMPtr<nsIDOMWindowInternal>	domParent(do_GetInterface(docShell));
-					nsCOMPtr<nsIScriptGlobalObject>	sgo(do_QueryInterface(domParent));
+					// open the window
+					nsCOMPtr<nsIDOMWindow> newWindow;
 
-					nsCOMPtr<nsIScriptContext>	context;
-					if (sgo)
-					{
-						sgo->GetContext(getter_AddRefs(context));
-					}
-					if (context)
-					{
-						JSContext *jsContext = (JSContext*)context->GetNativeContext();
-						if (jsContext)
-						{
-							void	*stackPtr;
-							jsval	*argv = JS_PushArguments(jsContext, &stackPtr, "s", uri);
-							if (argv)
-							{
-					                        // open the window
-					                        nsIDOMWindowInternal	*newWindow;
-					                        domParent->Open(jsContext, argv, 1, &newWindow);
-					                        JS_PopArguments(jsContext, stackPtr);
-							}
-						}
-					}
+					domParent->Open(uri, NS_LITERAL_STRING(""), NS_LITERAL_STRING(""), getter_AddRefs(newWindow));
 				}
 			}
 		}

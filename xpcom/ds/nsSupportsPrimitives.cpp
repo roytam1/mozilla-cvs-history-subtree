@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -38,7 +38,7 @@ nsSupportsIDImpl::nsSupportsIDImpl()
 nsSupportsIDImpl::~nsSupportsIDImpl()
 {
     if(mData)
-      nsMemory::Free(mData);
+        nsMemory::Free(mData);
 }
 
 NS_IMETHODIMP nsSupportsIDImpl::GetType(PRUint16 *aType)
@@ -67,7 +67,7 @@ NS_IMETHODIMP nsSupportsIDImpl::GetData(nsID **aData)
 NS_IMETHODIMP nsSupportsIDImpl::SetData(const nsID *aData)
 {
     if(mData)
-      nsMemory::Free(mData);
+        nsMemory::Free(mData);
     if(aData)
         mData = (nsID*) nsMemory::Clone(aData, sizeof(nsID));
     else
@@ -114,7 +114,7 @@ nsSupportsStringImpl::nsSupportsStringImpl()
 nsSupportsStringImpl::~nsSupportsStringImpl()
 {
     if(mData)
-      nsMemory::Free(mData);
+        nsMemory::Free(mData);
 }
 
 NS_IMETHODIMP nsSupportsStringImpl::GetType(PRUint16 *aType)
@@ -154,7 +154,7 @@ NS_IMETHODIMP nsSupportsStringImpl::ToString(char **_retval)
 NS_IMETHODIMP nsSupportsStringImpl::SetDataWithLength(PRUint32 aLength, const char *aData)
 {
     if(mData)
-      nsMemory::Free(mData);
+        nsMemory::Free(mData);
     if(aData) {
         mData = NS_STATIC_CAST(char*, nsMemory::Alloc((aLength+1)*sizeof(char)));
         if ( mData ) {
@@ -183,7 +183,7 @@ nsSupportsWStringImpl::nsSupportsWStringImpl()
 nsSupportsWStringImpl::~nsSupportsWStringImpl()
 {
     if(mData)
-      nsMemory::Free(mData);
+        nsMemory::Free(mData);
 }
 
 NS_IMETHODIMP nsSupportsWStringImpl::GetType(PRUint16 *aType)
@@ -225,15 +225,15 @@ NS_IMETHODIMP nsSupportsWStringImpl::ToString(PRUnichar **_retval)
 NS_IMETHODIMP nsSupportsWStringImpl::SetDataWithLength(PRUint32 aLength, const PRUnichar *aData)
 {
     if(mData)
-      nsMemory::Free(mData);
+        nsMemory::Free(mData);
     if(aData) {
         mData = NS_STATIC_CAST(PRUnichar*, nsMemory::Alloc((aLength+1)*sizeof(PRUnichar)));
         if ( mData ) {
-          nsCRT::memcpy ( mData, aData, aLength*sizeof(PRUnichar) );
-          mData[aLength] = NS_STATIC_CAST(PRUnichar, 0);
+            nsCRT::memcpy ( mData, aData, aLength*sizeof(PRUnichar) );
+            mData[aLength] = NS_STATIC_CAST(PRUnichar, 0);
         }
         else
-          return NS_ERROR_OUT_OF_MEMORY;
+            return NS_ERROR_OUT_OF_MEMORY;
     }
     else
         mData = nsnull;
@@ -868,6 +868,96 @@ NS_IMETHODIMP nsSupportsVoidImpl::ToString(char **_retval)
     NS_ASSERTION(_retval, "Bad pointer");
 
     static const char str[] = "[raw data]";
+    char* result = (char*) nsMemory::Clone(str, sizeof(str));
+    *_retval = result;
+    return  result ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+}  
+
+/***************************************************************************/
+
+
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsSupportsInterfacePointerImpl,
+                              nsISupportsInterfacePointer,
+                              nsISupportsPrimitive)
+
+nsSupportsInterfacePointerImpl::nsSupportsInterfacePointerImpl()
+    : mIID(nsnull)
+{
+    NS_INIT_ISUPPORTS();
+}
+
+nsSupportsInterfacePointerImpl::~nsSupportsInterfacePointerImpl()
+{
+    if (mIID) {
+        nsMemory::Free(mIID);
+    }
+}
+
+NS_IMETHODIMP nsSupportsInterfacePointerImpl::GetType(PRUint16 *aType)
+{
+    NS_ASSERTION(aType, "Bad pointer");
+    *aType = TYPE_INTERFACE_POINTER;
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsSupportsInterfacePointerImpl::GetData(nsISupports **aData)
+{
+    NS_ASSERTION(aData,"Bad pointer");
+
+    *aData = mData;
+    NS_IF_ADDREF(*aData);
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsSupportsInterfacePointerImpl::SetData(nsISupports * aData)
+{
+    mData = aData;
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsSupportsInterfacePointerImpl::GetDataIID(nsID **aIID)
+{
+    NS_ASSERTION(aIID,"Bad pointer");
+
+    if(mIID)
+    {
+        *aIID = (nsID*) nsMemory::Clone(mIID, sizeof(nsID));
+        return *aIID ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+    }
+    else
+    {
+        *aIID = nsnull;
+        return NS_OK;
+    }
+}
+
+NS_IMETHODIMP nsSupportsInterfacePointerImpl::SetDataIID(const nsID *aIID)
+{
+    if(mIID)
+        nsMemory::Free(mIID);
+    if(aIID)
+        mIID = (nsID*) nsMemory::Clone(aIID, sizeof(nsID));
+    else
+        mIID = nsnull;
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP nsSupportsInterfacePointerImpl::ToString(char **_retval)
+{
+    if(!_retval)
+    {
+        NS_ASSERTION(0,"Bad pointer");
+        return NS_ERROR_NULL_POINTER;
+    }
+
+    static const char str[] = "[interface pointer]";
+
+    // XXX: should we include nsID::ToString here?
+
     char* result = (char*) nsMemory::Clone(str, sizeof(str));
     *_retval = result;
     return  result ? NS_OK : NS_ERROR_OUT_OF_MEMORY;

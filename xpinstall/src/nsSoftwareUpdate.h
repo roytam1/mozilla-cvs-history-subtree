@@ -121,6 +121,5 @@ class nsSoftwareUpdateNameSet : public nsIScriptExternalNameSet
 
         // nsIScriptExternalNameSet
         NS_IMETHOD InitializeClasses(nsIScriptContext* aScriptContext);
-        NS_IMETHOD AddNameSet(nsIScriptContext* aScriptContext);
 };
 #endif

@@ -229,34 +229,34 @@ static nsresult OpenWindow(const char *urlstr, const PRUnichar *args)
 #endif /* DEBUG_CMD_LINE */
   nsresult rv;
   nsCOMPtr<nsIAppShellService> appShellService(do_GetService(kAppShellServiceCID, &rv));
-    if (NS_SUCCEEDED(rv)) {
-      nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
-      JSContext *jsContext;
-      rv = appShellService->GetHiddenWindowAndJSContext(getter_AddRefs(hiddenWindow),
-                                                         &jsContext);
-      if (NS_SUCCEEDED(rv)) {
-        void *stackPtr;
-        jsval *argv = JS_PushArguments( jsContext,
-                                        &stackPtr,
-                                        "sssW",
-                                        urlstr,
-                                        "_blank",
-                                        "chrome,dialog=no,all",
-                                        args );
+  NS_ENSURE_SUCCESS(rv, rv);
 
-        if( argv ) {
-          nsCOMPtr<nsIDOMWindowInternal> newWindow;
-          rv = hiddenWindow->OpenDialog( jsContext,
-                                         argv,
-                                         4,
-                                         getter_AddRefs( newWindow ) );
+  nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
+  rv = appShellService->GetHiddenDOMWindow(getter_AddRefs(hiddenWindow));
 
-          JS_PopArguments( jsContext, stackPtr );
+  nsCOMPtr<nsIDOMWindowInternalEx> win(do_QueryInterface(hiddenWindow));
 
-        }
-      }
+  if (NS_SUCCEEDED(rv) && win) {
+    nsCOMPtr<nsISupportsArray> array;
 
-    }
+    rv = NS_NewISupportsArray(getter_AddRefs(array));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsISupportsWString> str =
+      do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    str->SetData(args);
+
+    array->AppendElement(str);
+
+    nsCOMPtr<nsIDOMWindow> newWindow;
+    rv = win->OpenDialog(NS_ConvertASCIItoUCS2(urlstr),
+                         NS_LITERAL_STRING("_blank"),
+                         NS_LITERAL_STRING("chrome,dialog=no,all"),
+                         array, getter_AddRefs( newWindow ) );
+  }
+
   return rv;
 }
 

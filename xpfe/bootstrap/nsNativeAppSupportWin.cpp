@@ -32,6 +32,9 @@
 #include "nsAppShellCIDs.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsICmdLineHandler.h"
+#include "nsISupportsPrimitives.h"
+#include "nsISupportsArray.h"
+
 #include <windows.h>
 #include <ddeml.h>
 #include <stdlib.h>
@@ -1026,37 +1029,39 @@ nsNativeAppSupportWin::GetCmdLineArgs( LPBYTE request, nsICmdLineService **aResu
 }
 
 nsresult
-nsNativeAppSupportWin::OpenWindow( const char*urlstr, const char *args ) {
-    nsresult rv;
-    static NS_DEFINE_CID( kAppShellServiceCID,    NS_APPSHELL_SERVICE_CID );
-    NS_WITH_SERVICE(nsIAppShellService, appShellService, kAppShellServiceCID, &rv)
-    if ( NS_SUCCEEDED( rv ) ) {
-        nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
-        JSContext *jsContext;
-        rv = appShellService->GetHiddenWindowAndJSContext( getter_AddRefs( hiddenWindow ),
-                                                           &jsContext );
-        if ( NS_SUCCEEDED( rv ) ) {
-            void *stackPtr;
-            jsval *argv = JS_PushArguments( jsContext,
-                                            &stackPtr,
-                                            "ssss",
-                                            urlstr,
-                                            "_blank",
-                                            "chrome,dialog=no,all",
-                                            args );
-            if( argv ) {
-                nsCOMPtr<nsIDOMWindowInternal> newWindow;
-                rv = hiddenWindow->OpenDialog( jsContext,
-                                               argv,
-                                               4,
-                                               getter_AddRefs( newWindow ) );
-                JS_PopArguments( jsContext, stackPtr );
-            }
-        } else {
-            #ifdef MOZ_DEBUG_DDE
-            printf( "GetHiddenWindowAndJSContext failed, rv=0x%08X\n", (int)rv );
-            #endif
-        }
-    }
-    return rv;
+nsNativeAppSupportWin::OpenWindow( const char*urlstr, const char *args )
+{
+  nsresult rv;
+  static NS_DEFINE_CID( kAppShellServiceCID,    NS_APPSHELL_SERVICE_CID );
+  NS_WITH_SERVICE(nsIAppShellService, appShellService, kAppShellServiceCID,
+                  &rv);
+
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIDOMWindowInternal> hiddenWindow;
+
+  rv = appShellService->GetHiddenDOMWindow( getter_AddRefs( hiddenWindow ) );
+
+  nsCOMPtr<nsIDOMWindowInternalEx> win(do_QueryInterface(hiddenWindow));
+
+  if ( NS_SUCCEEDED( rv ) && win ) {
+    nsCOMPtr<nsISupportsArray> array;
+
+    rv = NS_NewISupportsArray(getter_AddRefs(array));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsCOMPtr<nsISupportsString> str =
+      do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    str->SetData(args);
+
+    nsCOMPtr<nsIDOMWindow> newWindow;
+    rv = win->OpenDialog(NS_ConvertASCIItoUCS2(urlstr),
+                         NS_LITERAL_STRING("_blank"),
+                         NS_LITERAL_STRING("chrome,dialog=no,all"),
+                         array, getter_AddRefs( newWindow ) );
+  }
+
+  return rv;
 }
