@@ -56,4 +56,253 @@
 #define HG73299
 #define HG00374
 #define HG83666
+#define HG77677
+#define HG77678
+#define HG72266
+#define HG72267
+#define HG29872
+#define HG52442
+#define HG42322
+#define HG72530
+#define HG52421
+#define HG52987
+#define HG72224
+#define HG62294
+#define HG52286
+#define HG64384
+#define HG99874
+#define HG83647
+#define HG62453
+#define HG42326
+#define HG52432
+#define HG62239
+#define HG42420
+#define HG42933
+#define HG52965
+#define HG66663
+#define HG65243
+#define HG00282
+#define HG02872
+#define HG65241
+#define HG73530
+#define HG72523
+#define HG24327
+#define HG24326
+#define HG23258
+#define HG28265
+#define HG24239
+#define HG56307
+#define HG32686
+#define HG53961
+#define HG97760
+#define HG29866
+#define HG72142
+#define HG82309
+#define HG63256
+#define HG87635
+#define HG93653
+#define HG32428
+#define HG82454
+#define HG43788
+#define HG98298
+#define HG92734
+#define HG87637
+#define HG92435
+#define HG62437
+#define HG62422
+#define HG89377
+#define HG83623
+#define HG93873
+#define HG83336
+#define HG63531	0
+#define HG73653
+#define HG52242
+#define HG42320
+#define HG98379
+#define HG65293
+#define HG42539
+#define HG72761
+#define HG42490
+#define HG73699
+#define HG72873
+#define HG83777
+#define HG32839
+#define HG73209
+#define HG65288 "client.h"
+#define HG73891
+#define HG76298
+#define HG87325
+#define HG73896
+#define HG73684
+#define HG83903
+#define HG32138
+#define HG65294
+#define HG83267
+#define HG63287
+#define HG63453
+#define HG98471
+#define HG52897
+#define HG73870
+#define HG74380
+#define HG52980
+#define HG87326 "mkhelp.h"
+#define HG45245 "mkhelp.h"
+#define HG63250 "mkhelp.h"
+#define HG42784
+#define HG73787
+#define HG72987
+#define HG52422
+#define HG62630
+#define HG24324
+#define HG63454
+#define HG42422
+#define HG64398
+#define HG77355
+#define HG42420
+#define HG87237
+#define HG52423
+#define HG76373
+#define HG72388 FALSE;
+#define HG52223 FALSE;
+#define HG53535
+#define HG52528 FALSE;
+#define HG73277
+#define HG73738
+#define HG62522
+#define HG62363
+#define HG24242
+#define HG42469
+#define HG87376
+#define HG76363
+#define HG83667
+#define HG00484
+#define HG88000
+#define HG50027
+#define HG72762
+#define HG16262
+#define HG72661
+#define HG13227
+#define HG65256
+#define HG33234
+#define HG22658
+#define HG28266
+#define HG00729
+#define HG60283
+#define HG60207
+#define HG42440
+#define HG20026
+#define HG02977
+#define HG02726
+#define HG98276
+#define HG72999
+#define HG73943
+#define HG92762
+#define HG92755
+#define HG98229
+#define HG98265
+#define HG93653
+#define HG82762
+#define HG82621
+#define HG22960
+#define HG92827
+#define HG02087
+#define HG82126
+#define HG62212 FALSE, FALSE
+#define HG91611 FALSE, FALSE
+#define HG81762 FALSE, FALSE
+#define HG76255 FALSE, FALSE
+#define HG22987
+#define HG22296 FALSE, FALSE
+#define HG22867
+#define HG09990
+#define HG02192
+#define HG82821
+#define HG82224
+#define HG22821
+#define HG03067 "msg.h"
+#define HG23277
+#define HG92923
+#define HG82220
+#define HG22067
+#define HG98330
+#define HG98373
+#if 0
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
+#define 
 
+#endif /* 0 */
+
+
+
+
+
+
+
+
+#define HG53784
+#define HG78478
+#define HG89984
+#define HG54689
+#define HG55451
+#define HG36459
+#define HG75442
+#define HG59731
+#define HG56898
