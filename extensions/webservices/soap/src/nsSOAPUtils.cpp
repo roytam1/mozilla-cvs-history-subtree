@@ -493,7 +493,7 @@ nsSOAPUtils::ConvertValueToJSVal(JSContext* aContext,
       if (!jsvalue) return NS_ERROR_FAILURE;
 
       JSObject* data;
-      jsvalue->GetValue(&data);
+      jsvalue->GetObject(&data);
       
       *vp = OBJECT_TO_JSVAL(data);
   }

@@ -49,7 +49,7 @@ public:
   NS_DECL_NSISECURITYCHECKEDCOMPONENT
 
   // nsIXPCScriptable
-  XPC_DECLARE_IXPCSCRIPTABLE
+  NS_DECL_NSIXPCSCRIPTABLE
 
   // nsIJSNativeInitializer
   NS_IMETHOD Initialize(JSContext *cx, JSObject *obj, 

@@ -23,11 +23,13 @@
 #ifndef nsSOAPJSValue_h__
 #define nsSOAPJSValue_h__
 
+#include "nsString.h"
 #include "jsapi.h"
 #include "nsISOAPJSValue.h"
+#include "nsISOAPStruct.h"
 #include "nsCOMPtr.h"
 
-class nsSOAPJSValue : public nsISOAPJSValue
+class nsSOAPJSValue : public nsISOAPJSValue, public nsISOAPStruct
 {
 public:
   NS_DECL_ISUPPORTS
@@ -35,11 +37,15 @@ public:
   // nsISOAPJSValue
   NS_DECL_NSISOAPJSVALUE
 
+  // nsISOAPJSValue
+  NS_DECL_NSISOAPSTRUCT
+
   nsSOAPJSValue();
   virtual ~nsSOAPJSValue();
 
 protected:
-  JSObject *mJSValue;
+  JSObject *mObject;
+  JSContext *mContext;
 };
 
 #endif
