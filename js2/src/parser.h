@@ -780,8 +780,6 @@ namespace JavaScript {
         ExprNode *parsePostfixOperator(ExprNode *e, bool newExpression, bool attribute);
         ExprNode *parsePostfixExpression(SuperState superState, bool newExpression);
         void ensurePostfix(const ExprNode *e);
-        ExprNode *parseAttribute(const Token &t);
-        static bool expressionIsAttribute(const ExprNode *e);
         ExprNode *parseUnaryExpression(SuperState superState);
         ExprNode *parseGeneralExpression(bool allowSuperStmt, bool noIn, bool noAssignment, bool noComma);
       public:
@@ -790,21 +788,20 @@ namespace JavaScript {
         ExprNode *parseNonAssignmentExpression(bool noIn) {return parseGeneralExpression(false, noIn, true, true);}
 
       private:
+        ExprNode *parseAttribute(const Token &t);
+        ExprNode *parseAttributes(size_t pos, ExprNode *attribute);
+        static bool expressionIsAttribute(const ExprNode *e);
         ExprNode *parseParenthesizedListExpression();
         ExprNode *parseTypeExpression(bool noIn=false);
         ExprNode *parseTypeBinding(Token::Kind kind, bool noIn);
         ExprList *parseTypeListBinding(Token::Kind kind);
-        VariableBinding *parseVariableBinding(size_t pos, bool noIn, bool constant);
+        VariableBinding *parseVariableBinding(size_t pos, bool noIn, bool untyped, bool constant);
         VariableBinding *parseParameter();
         void parseFunctionName(FunctionName &fn);
         void parseFunctionSignature(FunctionDefinition &fd);
-
-        enum AttributeStatement {asAny, asBlock, asConstVar};
         StmtNode *parseBlockContents(bool inSwitch, bool noCloseBrace);
         BlockStmtNode *parseBody(bool *semicolonWanted);
-        ExprNode::Kind validateOperatorName(const Token &name);
-        StmtNode *parseDefinition(size_t pos, ExprNode *attributes, const Token &t, bool noIn, bool &semicolonWanted);
-        StmtNode *parseAttributesAndDefinition(size_t pos, ExprNode *attribute, AttributeStatement as, bool &semicolonWanted);
+        StmtNode *parseDefinition(size_t pos, ExprNode *attributes, const Token &t, bool noIn, bool untyped, bool &semicolonWanted);
         StmtNode *parseFor(size_t pos, bool &semicolonWanted);
         StmtNode *parseTry(size_t pos);
 

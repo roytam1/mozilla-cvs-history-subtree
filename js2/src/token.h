@@ -197,27 +197,28 @@ namespace JavaScript
             kindsWithCharsEnd = regExp+1  // End of range of tokens for which the chars field (below) is valid
         };
 
-#define CASE_TOKEN_ATTRIBUTE_IDENTIFIER \
-        Token::Eval:               \
+// Keep synchronized with isNonreserved below
+#define CASE_TOKEN_NONRESERVED     \
+             Token::Eval:          \
         case Token::Exclude:       \
         case Token::Get:           \
         case Token::Include:       \
         case Token::Set:           \
         case Token::identifier
 
-#define CASE_TOKEN_NONRESERVED     \
-        Token::Eval:               \
-        case Token::Exclude:       \
-        case Token::Get:           \
-        case Token::Include:       \
-        case Token::Set:           \
-        case Token::identifier
+// Keep synchronized with isNonExpressionAttribute below
+#define CASE_TOKEN_NONEXPRESSION_ATTRIBUTE \
+             Token::Abstract:      \
+        case Token::Final:         \
+        case Token::Static:        \
+        case Token::Volatile
 
         enum Flag {
+            isNonreserved,              // True if this token is a non-reserved identifier
             isAttribute,                // True if this token is an attribute
+            isNonExpressionAttribute,   // True if this token is an attribute but not an expression
             canFollowAttribute,         // True if this token is an attribute or can follow an attribute
-            canFollowReturn,            // True if this token can follow a return without an expression
-            isNonreserved               // True if this token is a non-reserved identifier
+            canFollowReturn             // True if this token can follow a return without an expression
         };
 
       private:

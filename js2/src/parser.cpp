@@ -258,7 +258,7 @@ JS::ExprNode *JS::Parser::parseUnitSuffixes(ExprNode *e)
         const Token &t = lexer.peek(false);
         if (lineBreakBefore(t) || !t.hasKind(Token::string))
             return e;
-        lexer.get(false);
+        lexer.skip();
         e = new(arena) ExprUnitExprNode(t.getPos(), ExprNode::exprUnit, e, copyTokenChars(t));
     }
 }
@@ -331,9 +331,8 @@ JS::ExprNode *JS::Parser::parsePrimaryExpression(SuperState superState)
       case Token::number:
         {
             const Token &tUnit = lexer.peek(false);
-            if (!lineBreakBefore(tUnit) &&
-                (tUnit.hasKind(Token::unit) || tUnit.hasKind(Token::string))) {
-                lexer.get(false);
+            if (!lineBreakBefore(tUnit) && (tUnit.hasKind(Token::unit) || tUnit.hasKind(Token::string))) {
+                lexer.skip();
                 e = parseUnitSuffixes(new(arena) NumUnitExprNode(t.getPos(), ExprNode::numUnit, copyTokenChars(t),
                                                                  t.getValue(), copyTokenChars(tUnit)));
             } else
@@ -555,78 +554,6 @@ void JS::Parser::ensurePostfix(const ExprNode *e)
 }
 
 
-// Parse and return an Attribute.  The first token has already been read into t.
-//
-// After parseAttribute finishes, the next token might have been peeked with preferRegExp
-// set to true.
-JS::ExprNode *JS::Parser::parseAttribute(const Token &t)
-{
-    ExprNode::Kind eKind;
-
-    switch (t.getKind()) {
-      case Token::True:
-        eKind = ExprNode::True;
-        goto makeExprNode;
-
-      case Token::False:
-        eKind = ExprNode::False;
-      makeExprNode:
-        return new(arena) ExprNode(t.getPos(), eKind);
-
-      case Token::Public:
-      case Token::Private:
-        if (lexer.peek(true).hasKind(Token::doubleColon))
-            break;
-      case Token::Abstract:
-      case Token::Final:
-      case Token::Static:
-      case Token::Volatile:
-        return new(arena) IdentifierExprNode(t);
-
-      case CASE_TOKEN_NONRESERVED:
-        break;
-
-      default:
-        syntaxError("Attribute expected");
-    }
-
-    return parsePostfixOperator(parseQualifiedIdentifier(t, true), false, true);
-}
-
-
-// e is a parsed ListExpression or SuperStatement.  Return true if e is also an Attribute.
-bool JS::Parser::expressionIsAttribute(const ExprNode *e)
-{
-    while (true)
-        switch (e->getKind()) {
-          case ExprNode::identifier:
-          case ExprNode::True:
-          case ExprNode::False:
-            return true;
-
-          case ExprNode::qualify:
-            return static_cast<const QualifyExprNode *>(e)->qualifier->hasKind(ExprNode::identifier);
-
-          case ExprNode::call:
-          case ExprNode::index:
-            e = static_cast<const InvokeExprNode *>(e)->op;
-            break;
-
-          case ExprNode::dot:
-          case ExprNode::dotParen:
-            e = static_cast<const BinaryExprNode *>(e)->op1;
-            break;
-
-          case ExprNode::dotClass:
-            e = static_cast<const UnaryExprNode *>(e)->op;
-            break;
-
-          default:
-            return false;
-        }
-}
-
-
 // Parse and return a UnaryExpression.  If superState is ssExpr, also allow a SuperExpression;
 // if superState is ssStmt, also allow a SuperExpression or a SuperStatement.
 // If the first token was peeked, it should be have been done with preferRegExp set to true.
@@ -656,7 +583,7 @@ JS::ExprNode *JS::Parser::parseUnaryExpression(SuperState superState)
       case Token::decrement:
         eKind = ExprNode::preDecrement;
       getPostfixExpression:
-        lexer.get(true);
+        lexer.skip();
         e = parsePostfixExpression(ssExpr, false);
         break;
 
@@ -687,7 +614,7 @@ JS::ExprNode *JS::Parser::parseUnaryExpression(SuperState superState)
       getUnaryExpressionNotSuper:
         superState = ssNone;
       getUnaryExpression:
-        lexer.get(true);
+        lexer.skip();
         checkStackSize();
         e = parseUnaryExpression(superState);
         break;
@@ -894,7 +821,7 @@ JS::ExprNode *JS::Parser::parseGeneralExpression(bool allowSuperStmt, bool noIn,
                     else {
                         if (!t.hasKind(Token::colon))
                             syntaxError("':' expected", 0);
-                        lexer.get(false);
+                        lexer.skip();
                         subexpressionStack.advance_back();
                         s.op2 = e;
                         goto foundColon;
@@ -907,7 +834,7 @@ JS::ExprNode *JS::Parser::parseGeneralExpression(bool allowSuperStmt, bool noIn,
             break;
 
         // Push the current operator onto the subexpressionStack.
-        lexer.get(false);
+        lexer.skip();
         {
             StackedSubexpression &s = *subexpressionStack.reserve_advance_back();
             bool superLeft = binOpInfo.superLeft;
@@ -933,6 +860,93 @@ JS::ExprNode *JS::Parser::parseGeneralExpression(bool allowSuperStmt, bool noIn,
         } else
             syntaxError("super expression not allowed here", 0);
     return e;
+}
+
+
+// Parse and return an Attribute.  The first token has already been read into t.
+//
+// After parseAttribute finishes, the next token might have been peeked with preferRegExp
+// set to true.
+JS::ExprNode *JS::Parser::parseAttribute(const Token &t)
+{
+    ExprNode::Kind eKind;
+
+    switch (t.getKind()) {
+      case Token::True:
+        eKind = ExprNode::True;
+        goto makeExprNode;
+
+      case Token::False:
+        eKind = ExprNode::False;
+      makeExprNode:
+        return new(arena) ExprNode(t.getPos(), eKind);
+
+      case Token::Public:
+      case Token::Private:
+        if (lexer.peek(true).hasKind(Token::doubleColon))
+            break;
+      case CASE_TOKEN_NONEXPRESSION_ATTRIBUTE:
+        return new(arena) IdentifierExprNode(t);
+
+      case CASE_TOKEN_NONRESERVED:
+        break;
+
+      default:
+        syntaxError("Attribute expected");
+    }
+
+    return parsePostfixOperator(parseQualifiedIdentifier(t, true), false, true);
+}
+
+
+// One attribute has already been read and is provided in the attribute parameter.  Parse
+// other attributes, if any, juxtaposed with the first one, and return the resulting juxtapose
+// expression.  pos is the position of the first attribute.
+// If the next token was peeked, it should be have been done with preferRegExp set to true.
+// After parseAttributes finishes, the next token might have been peeked with preferRegExp set to true.
+JS::ExprNode *JS::Parser::parseAttributes(size_t pos, ExprNode *attribute)
+{
+    ASSERT(attribute);
+    while (true) {
+        const Token &t = lexer.peek(true);
+        if (lineBreakBefore(t) || !t.getFlag(Token::isAttribute))
+            return attribute;
+        lexer.skip();
+        attribute = new(arena) BinaryExprNode(pos, ExprNode::juxtapose, attribute, parseAttribute(t));
+    }
+}
+
+
+// e is a parsed ListExpression or SuperStatement.  Return true if e is also an Attribute.
+bool JS::Parser::expressionIsAttribute(const ExprNode *e)
+{
+    while (true)
+        switch (e->getKind()) {
+          case ExprNode::identifier:
+          case ExprNode::True:
+          case ExprNode::False:
+            return true;
+
+          case ExprNode::qualify:
+            return static_cast<const QualifyExprNode *>(e)->qualifier->hasKind(ExprNode::identifier);
+
+          case ExprNode::call:
+          case ExprNode::index:
+            e = static_cast<const InvokeExprNode *>(e)->op;
+            break;
+
+          case ExprNode::dot:
+          case ExprNode::dotParen:
+            e = static_cast<const BinaryExprNode *>(e)->op1;
+            break;
+
+          case ExprNode::dotClass:
+            e = static_cast<const UnaryExprNode *>(e)->op;
+            break;
+
+          default:
+            return false;
+        }
 }
 
 
@@ -994,24 +1008,46 @@ JS::ExprList *JS::Parser::parseTypeListBinding(Token::Kind kind)
 }
 
 
-// Parse and return a VariableBinding.  pos is the position of the binding or its first attribute, if any.
-// If noIn is false, allow the in operator.  The value of the constant parameter is stored in the returned
-// VariableBinding.
+// Parse and return a VariableBinding (UntypedVariableBinding if untyped is true).
+// pos is the position of the binding or its first attribute, if any.
+// If noIn is false, allow the in operator.
+// The value of the constant parameter is stored in the returned VariableBinding.
 //
 // If the first token was peeked, it should be have been done with preferRegExp set to true.
 // After parseVariableBinding finishes, the next token might have been peeked with preferRegExp set to true.
 // The reason preferRegExp is true is to correctly parse the following case of semicolon insertion:
 //    var a
 //    /regexp/
-JS::VariableBinding *JS::Parser::parseVariableBinding(size_t pos, bool noIn, bool constant)
+JS::VariableBinding *JS::Parser::parseVariableBinding(size_t pos, bool noIn, bool untyped, bool constant)
 {
     const StringAtom &name = parseIdentifier();
-    ExprNode *type = parseTypeBinding(Token::colon, noIn);
+
+    ExprNode *type = 0;
+    if (lexer.eat(true, Token::colon))
+        if (untyped)
+            syntaxError("Type annotation not allowed in a var inside a substatement; enclose the var in a block");
+        else
+            type = parseTypeExpression(noIn);
+
     ExprNode *initializer = 0;
     if (lexer.eat(true, Token::assignment)) {
-        initializer = parseAssignmentExpression(noIn);
-        lexer.redesignate(true);  // Safe: a '/' or a '/=' would have been interpreted as an operator, so
-                                  // it can't be the next token.
+        const Token &t = lexer.peek(true);
+        size_t tPos = t.getPos();
+        if (t.getFlag(Token::isNonExpressionAttribute) && !untyped) {
+            lexer.skip();
+            initializer = new(arena) IdentifierExprNode(t);
+          makeAttribute:
+            initializer = parseAttributes(tPos, initializer);
+        } else {
+            initializer = parseAssignmentExpression(noIn);
+            lexer.redesignate(true); // Safe: a '/' or a '/=' would have been interpreted as an operator,
+                                     // so it can't be the next token.
+            if (!untyped && expressionIsAttribute(initializer)) {
+                const Token &t2 = lexer.peek(true);
+                if (!lineBreakBefore(t2) && t2.getFlag(Token::canFollowAttribute))
+                    goto makeAttribute;
+            }
+        }
     }
 
     return new(arena) VariableBinding(pos, &name, type, initializer, constant);
@@ -1029,10 +1065,10 @@ JS::VariableBinding *JS::Parser::parseParameter()
     size_t pos = t.getPos();
     bool constant = false;
     if (t.hasKind(Token::Const)) {
-        lexer.get(true);
+        lexer.skip();
         constant = true;
     }
-    return parseVariableBinding(pos, false, constant);
+    return parseVariableBinding(pos, false, false, constant);
 }
 
 
@@ -1129,7 +1165,7 @@ JS::StmtNode *JS::Parser::parseBlockContents(bool inSwitch, bool noCloseBrace)
     while (true) {
         const Token *t = &lexer.peek(true);
         if (t->hasKind(Token::semicolon) && semicolonWanted) {
-            lexer.get(true);
+            lexer.skip();
             semicolonWanted = false;
             t = &lexer.peek(true);
         }
@@ -1137,7 +1173,7 @@ JS::StmtNode *JS::Parser::parseBlockContents(bool inSwitch, bool noCloseBrace)
             if (t->hasKind(Token::end))
                 return q.first;
         } else if (t->hasKind(Token::closeBrace)) {
-            lexer.get(true);
+            lexer.skip();
             return q.first;
         }
         if (semicolonWanted && !lineBreakBefore(*t))
@@ -1177,6 +1213,7 @@ JS::BlockStmtNode *JS::Parser::parseBody(bool *semicolonWanted)
 // a Definition or an AnnotatedBlock.  The initial attributes have already been parsed.
 // If there were no attributes, the attributes parameter is nil.
 // If noIn is false, allow the in operator.
+// If untyped is true, do not allow types on variables declared in const or var directives.
 //
 // If the directive ends with an optional Semicolon production, then that semicolon is not parsed.
 // Instead, parseDefinition returns true in semicolonWanted when either a semicolon, a line break (in
@@ -1186,11 +1223,14 @@ JS::BlockStmtNode *JS::Parser::parseBody(bool *semicolonWanted)
 // pos is the position of the beginning of the directive (its first attribute if it has attributes).
 // The first token of the directive has already been read and is provided in t.
 // After parseDefinition finishes, the next token might have been peeked with preferRegExp set to true.
-JS::StmtNode *JS::Parser::parseDefinition(size_t pos, ExprNode *attributes, const Token &t, bool noIn, bool &semicolonWanted)
+JS::StmtNode *JS::Parser::parseDefinition(size_t pos, ExprNode *attributes, const Token &t, bool noIn, bool untyped,
+                                          bool &semicolonWanted)
 {
     semicolonWanted = false;
     StmtNode::Kind sKind;
 
+    if (attributes && lineBreakBefore(t))
+        syntaxError("Line break not allowed here");
     switch (t.getKind()) {
       case Token::openBrace:
         return new(arena) BlockStmtNode(pos, StmtNode::block, attributes, parseBlockContents(false, false));
@@ -1204,7 +1244,7 @@ JS::StmtNode *JS::Parser::parseDefinition(size_t pos, ExprNode *attributes, cons
         {
             NodeQueue<VariableBinding> bindings;
 
-            do bindings += parseVariableBinding(lexer.peek(true).getPos(), noIn, sKind == StmtNode::Const);
+            do bindings += parseVariableBinding(lexer.peek(true).getPos(), noIn, untyped, sKind == StmtNode::Const);
             while (lexer.eat(true, Token::comma));
             semicolonWanted = true;
             return new(arena) VariableStmtNode(pos, sKind, attributes, bindings.first);
@@ -1238,49 +1278,6 @@ JS::StmtNode *JS::Parser::parseDefinition(size_t pos, ExprNode *attributes, cons
 }
 
 
-// Parse and return a Directive that takes initial attributes.
-// semicolonWanted behaves as in parseDefinition.
-// as restricts the kinds of definitions that are allowed after the attributes:
-//   asAny      Any definitions, including blocks, that take attributes can follow
-//   asBlock    Only a block can follow
-//   asConstVar Only a const or var definition can follow, and the 'in'
-//              operator is not allowed at its top level
-//
-// The first attribute has already been read and is provided in the attribute parameter.
-// pos is the position of the first attribute.
-// If the next token was peeked, it should be have been done with preferRegExp set to true.
-// After parseAttributesAndDefinition finishes, the next token might have been peeked with
-// preferRegExp set to true.
-JS::StmtNode *JS::Parser::parseAttributesAndDefinition(size_t pos, ExprNode *attribute, AttributeStatement as, bool &semicolonWanted)
-{
-    ASSERT(attribute);
-    while (true) {
-        const Token &t = lexer.get(true);
-        if (lineBreakBefore(t))
-            syntaxError("Line break not allowed here");
-
-        if (!t.getFlag(Token::isAttribute)) {
-            switch (as) {
-              case asAny:
-                break;
-
-              case asBlock:     // ***** This is dead code.
-                if (!t.hasKind(Token::openBrace))
-                    syntaxError("'{' expected");
-                break;
-
-              case asConstVar:
-                if (!t.hasKind(Token::Const) && !t.hasKind(Token::Var))
-                    syntaxError("const or var expected");
-                break;
-            }
-            return parseDefinition(pos, attribute, t, as == asConstVar, semicolonWanted);
-        }
-        attribute = new(arena) BinaryExprNode(pos, ExprNode::juxtapose, attribute, parseAttribute(t));
-    }
-}
-
-
 // Parse and return a ForStatement.  The 'for' token has already been read; its position is pos.
 // If the statement ends with an optional semicolon, that semicolon might not be parsed.
 // Instead, parseFor returns a semicolonWanted with the same meaning as that in parseDirective.
@@ -1303,19 +1300,22 @@ JS::StmtNode *JS::Parser::parseFor(size_t pos, bool &semicolonWanted)
 
       case Token::Const:
       case Token::Var:
-        initializer = parseDefinition(tPos, 0, t, true, semicolonWanted);
+        initializer = parseDefinition(tPos, 0, t, true, false, semicolonWanted);
         break;
 
-      case Token::Abstract:
-      case Token::Final:
-      case Token::Static:
-      case Token::Volatile:
+      case CASE_TOKEN_NONEXPRESSION_ATTRIBUTE:
         // Token::Private, Token::Public, Token::True, Token::False, and other attributes are
         // handled by the default case below.
         expr1 = new(arena) IdentifierExprNode(t);
       makeAttribute:
-        initializer = parseAttributesAndDefinition(tPos, expr1, asConstVar, semicolonWanted);
-        expr1 = 0;
+        {
+            expr1 = parseAttributes(tPos, expr1);
+            const Token &t2 = lexer.get(true);
+            if (!t2.hasKind(Token::Const) && !t2.hasKind(Token::Var))
+                syntaxError("const or var expected");
+            initializer = parseDefinition(tPos, expr1, t2, true, false, semicolonWanted);
+            expr1 = 0;
+        }
         break;
 
       default:
@@ -1417,15 +1417,17 @@ JS::StmtNode *JS::Parser::parseDirective(bool substatement, bool inSwitch, bool 
         s = new(arena) StmtNode(pos, StmtNode::empty);
         break;
 
-      case Token::openBrace:
       case Token::Import:
       case Token::Export:
       case Token::Const:
-      case Token::Var:
       case Token::Function:
       case Token::Class:
       case Token::Namespace:
-        s = parseDefinition(pos, 0, t, false, semicolonWanted);
+        if (substatement)
+            syntaxError("A definition is not allowed as a substatement; enclose it in a block");
+      case Token::openBrace:
+      case Token::Var:
+        s = parseDefinition(pos, 0, t, false, substatement, semicolonWanted);
         break;
 
       case Token::If:
@@ -1500,7 +1502,7 @@ JS::StmtNode *JS::Parser::parseDirective(bool substatement, bool inSwitch, bool 
             const StringAtom *label = 0;
             t2 = &lexer.peek(true);
             if (t2->hasKind(Token::identifier) && !lineBreakBefore(*t2)) {
-                lexer.get(true);
+                lexer.skip();
                 label = &t2->getIdentifier();
             }
             s = new(arena) GoStmtNode(pos, sKind, label);
@@ -1533,19 +1535,17 @@ JS::StmtNode *JS::Parser::parseDirective(bool substatement, bool inSwitch, bool 
         s = new(arena) DebuggerStmtNode(pos, StmtNode::Debugger);
         break;
 
-      case Token::Abstract:
-      case Token::Final:
-      case Token::Static:
-      case Token::Volatile:
+      case CASE_TOKEN_NONEXPRESSION_ATTRIBUTE:
         e = new(arena) IdentifierExprNode(t);
       makeAttribute:
-        s = parseAttributesAndDefinition(pos, e, asAny, semicolonWanted);
+        e = parseAttributes(pos, e);
+        s = parseDefinition(pos, e, lexer.get(true), false, false, semicolonWanted);
         break;
 
       case CASE_TOKEN_NONRESERVED:
         t2 = &lexer.peek(false);
         if (t2->hasKind(Token::colon)) {
-            lexer.get(false);
+            lexer.skip();
             // Must do this now because parseDirective can invalidate t.
             const StringAtom &name = t.getIdentifier();
             s = new(arena) LabelStmtNode(pos, name, parseDirective(true, false, semicolonWanted));

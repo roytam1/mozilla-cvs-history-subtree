@@ -173,10 +173,11 @@ const char *const JS::Token::kindNames[kindsEnd] = {
 };
 
 
-static const uchar followRet = 1<<JS::Token::canFollowReturn;
-static const uchar isAttr = 1<<JS::Token::isAttribute | 1<<JS::Token::canFollowAttribute;
-static const uchar followAttr = 1<<JS::Token::canFollowAttribute;
 static const uchar nonreserved = 1<<JS::Token::isNonreserved;
+static const uchar followAttr = 1<<JS::Token::canFollowAttribute;
+static const uchar isAttr = 1<<JS::Token::isAttribute | followAttr;
+static const uchar isNEAttr = 1<<JS::Token::isNonExpressionAttribute | isAttr;
+static const uchar followRet = 1<<JS::Token::canFollowReturn;
 
 const uchar JS::Token::kindFlags[kindsEnd] = {
     // Special
@@ -247,7 +248,7 @@ const uchar JS::Token::kindFlags[kindsEnd] = {
     0,                    // question
 
     // Reserved words
-    isAttr,               // Abstract
+    isNEAttr,             // Abstract
     0,                    // As
     0,                    // Break
     0,                    // Case
@@ -264,7 +265,7 @@ const uchar JS::Token::kindFlags[kindsEnd] = {
     followAttr,           // Export
     0,                    // Extends
     isAttr,               // False
-    isAttr,               // Final
+    isNEAttr,             // Final
     0,                    // Finally
     0,                    // For
     followAttr,           // Function
@@ -280,12 +281,12 @@ const uchar JS::Token::kindFlags[kindsEnd] = {
     followAttr,           // Native
     0,                    // New
     0,                    // Null
-    isAttr,               // Package
+    0,                    // Package
     isAttr,               // Private
     followAttr,           // Protected
     isAttr,               // Public
     0,                    // Return
-    isAttr,               // Static
+    isNEAttr,             // Static
     0,                    // Super
     0,                    // Switch
     followAttr,           // Synchronized
@@ -299,7 +300,7 @@ const uchar JS::Token::kindFlags[kindsEnd] = {
     0,                    // Use
     followAttr,           // Var
     0,                    // Void
-    isAttr,               // Volatile
+    isNEAttr,             // Volatile
     followRet,            // While
     0,                    // With
 
