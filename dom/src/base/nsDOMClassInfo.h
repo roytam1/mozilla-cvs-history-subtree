@@ -66,12 +66,12 @@ public:
     return new nsDOMClassInfo(aID);
   }
 
-protected:
-  static nsresult Init();
-
   static nsresult WrapNative(JSContext *cx, JSObject *scope,
                              nsISupports *native, const nsIID& aIID,
                              jsval *vp);
+
+protected:
+  static nsresult Init();
 
   nsDOMClassInfoID mID;
 
@@ -178,11 +178,6 @@ protected:
   virtual ~nsWindowSH()
   {
   }
-
-  // XXX does this need to be a member???
-  static JSBool PR_CALLBACK StubConstructor(JSContext *cx, JSObject *obj,
-                                            uintN argc, jsval *argv,
-                                            jsval *rval);
 
   static nsresult GlobalResolve(nsISupports *aNative, JSContext *cx,
                                 JSObject *obj, JSString *str, PRUint32 flags,

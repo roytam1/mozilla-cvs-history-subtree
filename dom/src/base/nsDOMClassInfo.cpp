@@ -1157,10 +1157,9 @@ nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   return nsEventRecieverSH::SetProperty(wrapper, cx, obj, id, vp, _retval);
 }
 
-// static
-JSBool PR_CALLBACK
-nsWindowSH::StubConstructor(JSContext *cx, JSObject *obj, uintN argc,
-                            jsval *argv, jsval *rval)
+static JSBool PR_CALLBACK
+StubConstructor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+                jsval *rval)
 {
   JSFunction *fun = ::JS_ValueToFunction(cx, argv[-2]);
   if (!fun)
@@ -1213,8 +1212,8 @@ nsWindowSH::StubConstructor(JSContext *cx, JSObject *obj, uintN argc,
     return rv;
   }
 
-  rv = WrapNative(cx, ::JS_GetGlobalObject(cx), native,
-                  NS_GET_IID(nsISupports), rval);
+  rv = nsDOMGenericSH::WrapNative(cx, ::JS_GetGlobalObject(cx), native,
+                                  NS_GET_IID(nsISupports), rval);
 
   return NS_SUCCEEDED(rv) ? JS_TRUE : JS_FALSE;
 }
