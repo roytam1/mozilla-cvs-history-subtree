@@ -437,10 +437,12 @@ mozSRoamingProtocol* mozSRoaming::CreateProtocolHandler()
 NS_IMETHODIMP
 mozSRoaming::Encrypt(PRUnichar **password)
 {
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 NS_IMETHODIMP
 mozSRoaming::Decrypt(PRUnichar **password)
 {
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 void mozSRoaming::Encrypt(/*inout*/ nsAString& )

@@ -128,10 +128,28 @@ nsresult mozSRoamingStream::Init(mozSRoaming* aController)
                              getter_Copies(usernamePref));
     if (NS_SUCCEEDED(rv) && !usernamePref.IsEmpty() )
         /* failure is non-fatal, because username might be in the URL, and
-           even if it isn't, the transfer will pull up a prompt
-           (usually :-( XXX). */
+           even if it isn't, the transfer will pull up a prompt. */
     {
-        
+      nsCOMPtr<nsIIOService> ioserv = do_GetService(kIOServiceCID, &rv);
+      if (NS_SUCCEEDED(rv))
+      {
+        nsCOMPtr<nsIURI> uri;
+        rv = ioserv->NewURI(NS_ConvertUCS2toUTF8(mRemoteBaseUrl),nsnull,nsnull,
+                            getter_AddRefs(uri));
+        if (NS_SUCCEEDED(rv))
+        {
+          rv = uri->SetUsername(NS_ConvertUCS2toUTF8(usernamePref));
+          if (NS_SUCCEEDED(rv))
+          {
+            // Yikes. Did I mention that I hate that C/wide string crap?
+            nsXPIDLCString spec;
+            uri->GetSpec(spec);
+            mRemoteBaseUrl = NS_ConvertUTF8toUCS2(spec);
+            mRemoteBaseUrl.ReplaceSubstring(NS_LITERAL_STRING("$USERID").get(),
+                                            usernamePref.get());
+          }
+        }
+      }
     }
 
     nsXPIDLString passwordPref;

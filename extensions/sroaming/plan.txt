@@ -1,6 +1,5 @@
 now
 - XXXs
-  - username replacement, $USERID in URL
   - pref dialog loses state
   - pref dialog saves (only) "," as files pref
   - small stuff
@@ -9,19 +8,23 @@ now
   - empty pref
   m cancel by user in progress dialog: xpconnect errors
   - ftp
+    - offline
     - xpconnect errors after upload
   - http
-    - no user name (upload to <http://checker/roaming/ben/localstore.rdf>
-           gives NS_OK)
     m wrong path in url (but working server)
     - test same situations with ftp
+    - cancel pw dialog gives "transfer.js line 332: this.files has
+      no properties"
+    - no user name (upload to <http://checker/roaming/ben/localstore.rdf>
+           gives NS_OK) v
   - non existant files: stops during upload, doesn't during download
   m if something fails horribly (e.g. a JS error in the prompt* functions),
     then the UI reports success or is completely malfunctional.
-  m ui: (error/success) messages
+  - ui: (error/success) messages
   - copy protocol
     - no remote files yet
 m mod/upload times
+- ddump, xpcom not defined after done
 
 Later:
 - license headers
@@ -46,3 +49,14 @@ roaming urls
  <http://user@http-server/path/to/dir/>
  Mind the number of slashes.
  Servers used: wu-FTPd and Apache with mod_roaming.
+
+clipboard
+
+undefined.message=Component returned failure code: 0x80004005 (NS_ERROR_FAILURE) [nsIURI.password]
+undefined.result=2147500037
+undefined.name=NS_ERROR_FAILURE
+undefined.filename=chrome://sroaming/content/transfer/transfer.js
+undefined.lineNumber=225
+undefined.columnNumber=4294967295
+
+WARNING: NS_ENSURE_TRUE(!aQualifiedName.IsEmpty()) failed, file ../../../../mozilla/content/base/src/nsNodeInfoManager.cpp, line 287

@@ -222,7 +222,8 @@ Transfer.prototype =
     {
       var ioserv = GetIOService();
       var baseURL = ioserv.newURI(this.remoteDir, null, null);
-      baseURL.password = this.password;
+      if (this.savePassword && this.password && this.password != "")
+        baseURL.password = this.password;
       var localURL = ioserv.newURI(this.localDir, null, null);
       var channel = ioserv.newChannel(file.filename, null, baseURL);
       this.files[id].channel = channel;
@@ -237,6 +238,10 @@ Transfer.prototype =
         var fos = Components
                    .classes["@mozilla.org/network/file-output-stream;1"]
                    .createInstance(Components.interfaces.nsIFileOutputStream);
+        var bos = Components
+                   .classes["@mozilla.org/network/buffered-output-stream;1"]
+                   .createInstance(Components.interfaces
+                                   .nsIBufferedOutputStream);
         var ssl = Components
                    .classes["@mozilla.org/network/simple-stream-listener;1"]
                    .createInstance(Components.interfaces
@@ -249,7 +254,7 @@ Transfer.prototype =
           fos.init(lf, -1, -1, 0);//odd params from NS_NewLocalFileOutputStream
         } catch(e) {
           var dir = lf.parent;
-          if (e.name == "NS_ERROR_FILE_NOT_FOUND"
+          if (e.result == kFileNotFound // XXX test
                // we get this error, if the directory does no exist yet locally
               && dir && !dir.exists())
           {
@@ -262,7 +267,8 @@ Transfer.prototype =
           else
             throw e; // pass on all other errors
         }
-        ssl.init(fos, progress);
+        bos.init(fos, 32768);
+        ssl.init(bos, progress);
         channel.asyncOpen(ssl, null);
       }
       else
@@ -295,7 +301,9 @@ Transfer.prototype =
       }
     } catch(e) {
       dumpError("Transfer failed:\n" + e);
-      throw "transfer failed";
+      file.status = "failed";
+      file.statusCode = e.result;
+      file.statusText = e.message;
     }
   },
 
@@ -537,8 +545,10 @@ Transfer.prototype =
       ddump("   httpResponse: " + file.httpResponse);
           // int: HTTP response code that we got from the server
       ddump("   statusText: " + file.statusText);
-          // String: Text corresponding to httpResponse
-          // Text corresponding to statusCode can be gotten from ...utility.js
+          // String: Text corresponding to error (usually with httpResponse
+          // or fatal errors). Might be in English or the server's language.
+          // Text (usually translated) corresponding to statusCode can be
+          // gotten from ...utility.js; it may include this text.
       ddump("   progress: " + file.progress);
           // float: 0 (nothing) .. 1 (complete)
     }
@@ -644,9 +654,7 @@ SRoamingProgressListener.prototype =
       status = "busy";
     else if (aStatusCode == kStatusSendingTo)
       status = "busy";
-    else if (aStatusCode == kErrorBindingRedirected)
-      status = "busy";
-    else if (aStatusCode == kErrorBindingRetargeted)
+    else if (aStatusCode == kStatusWaitingFor)
       status = "busy";
     else if (aStatusCode == kStatusResolvingHost)
       status = "busy";
@@ -654,10 +662,20 @@ SRoamingProgressListener.prototype =
       status = "busy";
     else if (aStatusCode == kStatusConnectingTo)
       status = "busy";
+    else if (aStatusCode == kErrorBindingRedirected)
+      status = "busy";
+    else if (aStatusCode == kErrorBindingRetargeted)
+      status = "busy";
     else if (aStatusCode == kStatusBeginFTPTransaction)
       status = "busy";
     else if (aStatusCode == kStatusEndFTPTransaction)
       status = "done";
+    else if (aStatusCode == kInProgress)
+      status = "busy";
+    else if (aStatusCode == kStatusFTPLogin)
+      status = "busy";
+    else if (aStatusCode == kErrorFTPAuthNeeded)
+      status = "busy";
     else if (aStatusCode == kNetReset)
       ; // correct?
     else
@@ -779,9 +797,9 @@ SRoamingProgressListener.prototype =
   alert : function(dlgTitle, text)
   {
     ddump("alert");
-    if (!title)
+    if (!dlgTitle)
       title = GetString("Alert");
-    GetPromptService().alert(window, title, message);
+    GetPromptService().alert(window, dlgTitle, text);
   },
   alertCheck : function(dlgTitle, text, checkBoxLabel, checkObj)
   {
@@ -820,7 +838,6 @@ SRoamingProgressListener.prototype =
   select : function(dlgTitle, text, count, selectList, outSelection)
   {
     ddump("select");
-
     var promptServ = GetPromptService();
     if (!promptServ)
       return false;

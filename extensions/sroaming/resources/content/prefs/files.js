@@ -38,14 +38,14 @@ var regkeyProf; // The registry branch with for the current profile.
 
 function Startup()
 {
-   parent.hPrefWindow.registerOKCallbackFunc(Shutdown);
-   SetFiles();
-   ReadFromRegistry()
+  parent.hPrefWindow.registerOKCallbackFunc(Shutdown);
+  SetFiles();
+  ReadFromRegistry()
 }
 
 function Shutdown()
 {
-   SaveToRegistry();
+  SaveToRegistry();
 }
 
 
@@ -79,7 +79,7 @@ function SetFiles()
 
 function SetFile(elementID, filename)
 {
-dump ("setfile " + elementID + ": " + filename + "\n");
+  dump ("setfile " + elementID + ": " + filename + "\n");
   var listitem = document.getElementById(elementID);
   listitem.setAttribute("filename", filename);
 }
@@ -109,7 +109,7 @@ function ReadFromRegistry()
 		var files = value.split(",");
 		// first, disable all defaults
 		var children = E("filesList").childNodes;
-		for (var i = 0; i < children.length; i++)
+		for (var i = 0, l = children.length; i < l; i++)
 		{
 			var checkbox = children[i];
 			if (!("getAttribute" in checkbox) ||
@@ -124,22 +124,21 @@ function ReadFromRegistry()
 		{
 			var file = files[i];
 			var found = false;
-			for (var i2 = 0; i2 < children.length; i2++)
-	        {
-	        	var checkbox = children[i2];
-	        	if (!("getAttribute" in checkbox) ||
-	        	    checkbox.getAttribute("type") != "checkbox")
-	        	    // Somebody adds unwanted nodes as children to listbox :-(
-	        		continue;
-	        	if (checkbox.getAttribute("filename") == file)
-	        	{
-	        		checkbox.checked = true;
+			for (var i2 = 0, l = children.length; i2 < l; i2++)
+      {
+        var checkbox = children[i2];
+        if ("getAttribute" in checkbox
+            && checkbox.getAttribute("type") == "checkbox"
+            // Somebody adds unwanted nodes as children to listbox :-(
+            && checkbox.getAttribute("filename") == file)
+        {
+          checkbox.checked = true;
 					dump("checking\n");
-	        		found = true;
-	        	}
-	        }
-	        if (!found)
-	        {
+          found = true;
+        }
+      }
+      if (!found)
+      {
 				var li = document.createElementNS(kXULNS, "listitem");
 				if (li)
 				{
@@ -196,13 +195,10 @@ function SaveRegBranch(baseregkey, branchname)
 	try {
 		return registry.getKey(baseregkey, branchname);
 	} catch (e) { // XXX catch selectively
-		try { //XXX does that work? try in catch?
-			return registry.addKey(baseregkey, branchname);
-		} catch (e2) {
-			throw e2;
-		}
+    dump(e.result + "-" + e.name + "-" + e + "\n");
+    return registry.addKey(baseregkey, branchname);
+    // throw errors to caller
 	}
-	// throw unexpected errors to caller
 }
 
 

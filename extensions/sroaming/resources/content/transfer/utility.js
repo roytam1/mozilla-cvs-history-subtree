@@ -19,6 +19,7 @@
  * 
  * Contributor(s): 
  *    Netscape Editor team, esp. Charles Manske <cmanske@netscape.com>
+ *    ManyOne <http://www.manyone.net>
  */
 
 /* Provides some global functions useful for implementing the backend or UI
@@ -143,8 +144,8 @@ function ErrorMessageForStatusCode(aStatusCode, aFilename)
     case kUnknownType:
     default:
       statusMessage = GetStringWithFile("UnknownTransferError", aFilename)
-                      + " " + NameForStatusCode(aStatusCode);
-        break;
+                                        + " " + NameForStatusCode(aStatusCode);
+      break;
   }
   return statusMessage
 }
@@ -154,10 +155,15 @@ function ErrorMessageForStatusCode(aStatusCode, aFilename)
 // Error handling (general)
 ////////////////////////////////////////////////////////////////////////////
 
+/*
+  This is bad. We should have this in a central place, but I don't know
+  (nor could find) one where this is available. Note that I do use
+  |Components.results| in the end, but it doesn't have all the errors I need.
+ */
 
 // Transfer error codes
 //   These are translated from C++ error code strings like this:
-//   kFileNotFound = "FILE_NOT_FOUND",
+//   kFileNotFound = "NS_FILE_NOT_FOUND",
 const kNS_OK = 0;
 const kNetBase = 2152398848;
 const kFilesBase = 2152857600;
@@ -165,12 +171,13 @@ const kUnknownType = kFilesBase + 04; // nsError.h
 const kDiskFull = kFilesBase + 10; // nsError.h
 const kNoDeviceSpace = kFilesBase + 16; // nsError.h
 const kNameTooLong = kFilesBase + 17; // nsError.h
-const kFileNotFound = kFilesBase + 18; // nsError.h
+const kFileNotFound = kFilesBase + 18; // nsError.h, 0x80520012
 const kAccessDenied = kFilesBase + 21; // nsError.h
 const kNetReset = kNetBase + 20;
 const kNotConnected = kNetBase + 12; // netCore.h
 const kConnectionRefused = kNetBase + 13;
 const kNetTimeout = kNetBase + 14;
+const kInProgress = kNetBase + 15; // netCore.h
 const kOffline = kNetBase + 16; // netCore.h; 0x804b0010
 const kNoConnectionOrTimeout = kNetBase + 30;
 const kPortAccessNotAllowed = kNetBase + 19; // netCore.h
@@ -183,9 +190,14 @@ const kStatusConnectedTo = kNetBase + 81; // nsISocketTransport.idl
 const kStatusSendingTo = kNetBase + 5; // nsISocketTransport.idl
 const kStatusRecievingFrom = kNetBase + 6; // nsISocketTransport.idl
 const kStatusConnectingTo = kNetBase + 7; // nsISocketTransport.idl
+const kStatusWaitingFor = kNetBase + 82 // nsISocketTransport.idl
 const kStatusReadFrom = kNetBase + 8; // nsIFileTransportService.idl
 const kStatusBeginFTPTransaction = kNetBase + 27; // ftpCore.h
 const kStatusEndFTPTransaction = kNetBase + 28; // ftpCore.h
+const kStatusFTPLogin = kNetBase + 21; // ftpCore.h
+const kStatusFTPCWD = kNetBase + 22; // ftpCore.h
+const kStatusFTPPassive = kNetBase + 23; // ftpCore.h
+const kStatusFTPPWD = kNetBase + 24; // ftpCore.h
 const kErrorNoInterface = 0x80004002; // nsError.h
 const kErrorNotImplemented = 0x80004001; // nsError.h
 const kErrorAbort = 0x80004004; // nsError.h
@@ -195,6 +207,10 @@ const kErrorInvalidValue = 0x80070057; // nsError.h
 const kErrorNotAvailable = 0x80040111; // nsError.h
 const kErrorNotInited = 0xC1F30001; // nsError.h
 const kErrorAlreadyInited = 0xC1F30002; // nsError.h
+const kErrorFTPAuthNeeded = 0x4B001B; // XXX not sure what exactly this is or
+   // where it comes from (grep doesn't find it in dec or hex notation), but
+   // that's what I get when the credentials are not accepted by the FTP server
+const kErrorFTPAuthFailed = 0x4B001C; // dito
 const kStatusHTTP = 500; // XXX
 
 // Translates an XPCOM result code into a String similar to the C++ constant.
@@ -208,8 +224,16 @@ function NameForStatusCode(aStatusCode)
     return "NET_STATUS_RECEIVING_FROM";
   else if (aStatusCode == kStatusSendingTo)
     return "NET_STATUS_SENDING_TO";
+  else if (aStatusCode == kStatusWaitingFor)
+    return "NET_STATUS_WAITING_FOR";
   else if (aStatusCode == kStatusHTTP)
     return "See HTTP response";
+  else if (aStatusCode == kStatusResolvingHost)
+    return "NET_STATUS_RESOLVING_HOST";
+  else if (aStatusCode == kStatusConnectedTo)
+    return "NET_STATUS_CONNECTED_TO";
+  else if (aStatusCode == kStatusConnectingTo)
+    return "NET_STATUS_CONNECTING_TO";
   else if (aStatusCode == kErrorBindingFailed)
     return "BINDING_FAILED";
   else if (aStatusCode == kErrorBindingAborted)
@@ -218,14 +242,6 @@ function NameForStatusCode(aStatusCode)
     return "BINDING_REDIRECTED";
   else if (aStatusCode == kErrorBindingRetargeted)
     return "BINDING_RETARGETED";
-  else if (aStatusCode == kStatusResolvingHost)
-    return "NET_STATUS_RESOLVING_HOST";
-  else if (aStatusCode == kStatusConnectedTo)
-    return "NET_STATUS_CONNECTED_TO";
-  else if (aStatusCode == kStatusConnectingTo)
-    return "NET_STATUS_CONNECTING_TO";
-  else if (aStatusCode == kNetBase + 82) // nsISocketTransport.idl
-    return "WAITING_FOR";
   else if (aStatusCode == kNetBase + 10) // netCore.h
     return "MALFORMED_URI";
   else if (aStatusCode == kNetBase + 11) // netCore.h
@@ -236,7 +252,7 @@ function NameForStatusCode(aStatusCode)
     return "CONNECTION_REFUSED";
   else if (aStatusCode == kNetTimeout)
     return "NET_TIMEOUT";
-  else if (aStatusCode == kNetBase + 15) // netCore.h
+  else if (aStatusCode == kInProgress)
     return "IN_PROGRESS";
   else if (aStatusCode == kOffline)
     return "OFFLINE";
@@ -248,13 +264,13 @@ function NameForStatusCode(aStatusCode)
     return "PORT_ACCESS_NOT_ALLOWED";
   else if (aStatusCode == kNetReset)
     return "NET_RESET";
-  else if (aStatusCode == kNetBase + 21) // ftpCore.h
+  else if (aStatusCode == kStatusFTPLogin)
     return "FTP_LOGIN";
-  else if (aStatusCode == kNetBase + 22) // ftpCore.h
+  else if (aStatusCode == kStatusFTPCWD)
     return "FTP_CWD";
-  else if (aStatusCode == kNetBase + 23) // ftpCore.h
+  else if (aStatusCode == kStatusFTPPassive)
     return "FTP_PASV";
-  else if (aStatusCode == kNetBase + 24) // ftpCore.h
+  else if (aStatusCode == kStatusFTPPWD)
     return "FTP_PWD";
   else if (aStatusCode == kStatusBeginFTPTransaction)
     return "NET_STATUS_BEGIN_FTP_TRANSACTION ";
@@ -290,7 +306,7 @@ function NameForStatusCode(aStatusCode)
     return "NO_DEVICE_SPACE";
   else if (aStatusCode == kNameTooLong)
     return "NAME_TOO_LONG";
-  else if (aStatusCode == kFilesBase + 18)  // nsError.h, 0x80520012
+  else if (aStatusCode == kFileNotFound)
     return "FILE_NOT_FOUND";
   else if (aStatusCode == kFilesBase + 19) // nsError.h
     return "READ_ONLY";
@@ -300,6 +316,10 @@ function NameForStatusCode(aStatusCode)
     return "ACCESS_DENIED";
   else if (aStatusCode == kNoConnectionOrTimeout)
     return "NO_CONNECTION_OR_TIMEOUT";
+  else if (aStatusCode == kErrorFTPAuthNeeded)
+    return "FTP auth needed ?";
+  else if (aStatusCode == kErrorFTPAuthFailed)
+    return "FTP auth failed ?";
   else
     return prettyError(aStatusCode);
 }

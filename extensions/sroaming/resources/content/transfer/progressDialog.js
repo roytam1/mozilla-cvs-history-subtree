@@ -125,15 +125,6 @@ function GetParams()
   ddump("Passing in: String 1 (profile dir) is " + profileDir);
   if (profileDir == null || profileDir == "")
     throw "Error: Bad profile dir param";
-  profileDir += "/"; /* XXX Hack: Profile manager gives us a dir name without
-                        trailing directory delimiter. We will need one when
-                        we later concat the filename. So, just add a / here.
-                        Possible problems:
-                        - non-Unix platforms use e.g. \ and :
-                        - there might be a dir delimiter already. 2 of them
-                          don't hurt, though, at least on Unix.
-                          Check Win32 and Mac OS 9/X.
-                     */
 
   // remote dir
   var remoteDir = params.GetString(2);
@@ -161,12 +152,19 @@ function GetParams()
     files[i].size = undefined;
   }
 
-  gTransfer = new Transfer(download, serial,
-                           profileDir, remoteDir,
-                           password, savepw,
-                           files,
-                           undefined, SetProgressStatus);
-  gTransfer.transfer();
+  try
+  {
+    gTransfer = new Transfer(download, serial,
+                             profileDir, remoteDir,
+                             password, savepw,
+                             files,
+                             undefined, SetProgressStatus);
+    gTransfer.transfer();
+  }
+  catch (e)
+  {
+    dumpError(e);
+  }
 }
 
 function PassBackParams()
