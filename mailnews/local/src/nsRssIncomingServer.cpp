@@ -260,6 +260,14 @@ NS_IMETHODIMP nsRssIncomingServer::GetServerRequiresPasswordForBiff(PRBool *aSer
   return NS_OK;
 }
 
+NS_IMETHODIMP nsRssIncomingServer::GetCanSearchMessages(PRBool *canSearchMessages)
+{
+  NS_ENSURE_ARG_POINTER(canSearchMessages);
+  *canSearchMessages = PR_TRUE;
+  return NS_OK;
+}
+
+
 NS_IMETHODIMP nsRssIncomingServer::OnItemAdded(nsISupports *parentItem, nsISupports *item, const char *viewString)
 {
   nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(item);
