@@ -385,6 +385,18 @@ ExtractAttribValue(LPSTR attribName, LPSTR searchLine)
       LPSTR  endPtr;
       DWORD  totalSize;
 
+      // Have to add this hack for the fact we have an attribute that
+      // is a subset of another (i.e. "mail: " and "xmozillausehtmlmail: ")
+      if ( 
+           (strcmp(attribName, "mail: ") == 0) && (i > 0) && 
+           (*(searchLine+i-1) == 'l' )
+         )
+      {
+        i++;
+        continue;
+      }
+      // end of hack
+
       startPtr = searchLine + (i + complen);
       endPtr = startPtr;
 
