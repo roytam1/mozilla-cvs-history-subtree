@@ -45,7 +45,7 @@ nsDictionary.prototype= {
 
     getKeys: function(count) {
         var asKeys = new Array();
-        for (sKey in this.hash) asKeys.push(sKey);
+        for (var sKey in this.hash) asKeys.push(sKey);
         count.value = asKeys.length;
         return asKeys;
     },
