@@ -1017,7 +1017,7 @@ sub run_all_tests {
 	  my $avg_startuptime = 0; # Average startup time.
 	  my @times;
 
-	  for($i=0; $i<1; $i++) {
+	  for($i=0; $i<10; $i++) {
 		# Settle OS.
 		run_system_cmd("sync; sleep 5", 35);
 		
