@@ -135,7 +135,10 @@ SVG_BRANCH_FILES = \
 	mozilla/netwerk/mime/src/nsXMLMIMEDataSource.cpp \
 	mozilla/uriloader/exthandler/nsExternalHelperAppService.cpp \
 	mozilla/xpfe/browser/src/nsBrowserInstance.cpp \
-	mozilla/other-licenses/libart_lgpl 
+	mozilla/other-licenses/libart_lgpl \
+	mozilla/layout/xul/base/src/nsXULTreeOuterGroupFrame.cpp \
+	mozilla/layout/xul/base/src/nsXULTreeOuterGroupFrame.h
+
 
 # same again with first item of path stripped:
 SVG_BRANCH_FILES_P1= $(SVG_BRANCH_FILES:mozilla/=)

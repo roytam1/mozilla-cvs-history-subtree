@@ -134,7 +134,8 @@ public:
   NS_IMETHOD IsOutermostFrame(PRBool *aResult) { *aResult = PR_TRUE; return NS_OK; };
 
   PRInt32 GetRowCount() { if (mRowGroupInfo && (mRowGroupInfo->mRowCount != -1)) return mRowGroupInfo->mRowCount; PRInt32 count = 0;
-                          ComputeTotalRowCount(count, mContent); mRowGroupInfo->mRowCount = count; return count; };
+                          nsCOMPtr<nsIContent> parent; GetTreeContent(getter_AddRefs(parent));
+                          ComputeTotalRowCount(count, parent); mRowGroupInfo->mRowCount = count; return count; };
 
   PRInt32 GetRowHeightTwips() { 
     return mRowHeight;

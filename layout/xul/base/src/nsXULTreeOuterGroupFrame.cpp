@@ -562,44 +562,42 @@ nsXULTreeOuterGroupFrame::ComputeTotalRowCount(PRInt32& aCount, nsIContent* aPar
   if (!mRowGroupInfo) {
     mRowGroupInfo = new nsXULTreeRowGroupInfo();
   }
-
-  nsCOMPtr<nsIContent> parent = aParent;
-  if (aParent == mContent) {
-    nsCOMPtr<nsIContent> content;
-    mContent->GetBindingParent(getter_AddRefs(content));
-    if (content)
-      GetTreeContent(getter_AddRefs(parent));
-  }
-
+  
   PRInt32 childCount;
-  parent->ChildCount(childCount);
-
+  aParent->ChildCount(childCount);
+    
   for (PRInt32 i = 0; i < childCount; i++) {
     nsCOMPtr<nsIContent> childContent;
-    parent->ChildAt(i, *getter_AddRefs(childContent));
-    nsCOMPtr<nsIAtom> tag;
-    childContent->GetTag(*getter_AddRefs(tag));
-    if (tag == mTreeRowTag) {
-      if ((aCount%TICK_FACTOR) == 0)
-        mRowGroupInfo->Add(childContent);
-
-      mRowGroupInfo->mLastChild = childContent;
-
-      aCount++;
-    }
-    else if (tag == mTreeItemTag) {
-      // Descend into this row group and try to find the next row.
+    aParent->ChildAt(i, *getter_AddRefs(childContent));
+    if (childContent == mContent) {
+      // descend into child if it is the outer treechildren element:
       ComputeTotalRowCount(aCount, childContent);
     }
-    else if (tag == mTreeChildrenTag) {
-      // If it's open, descend into its treechildren.
-      nsCOMPtr<nsIAtom> openAtom = dont_AddRef(NS_NewAtom("open"));
-      nsAutoString isOpen;
-      nsCOMPtr<nsIContent> parent;
-      childContent->GetParent(*getter_AddRefs(parent));
-      parent->GetAttr(kNameSpaceID_None, openAtom, isOpen);
-      if (isOpen.EqualsWithConversion("true"))
-        ComputeTotalRowCount(aCount, childContent);
+    else {
+      nsCOMPtr<nsIAtom> tag;
+      childContent->GetTag(*getter_AddRefs(tag));
+      if (tag == mTreeRowTag) {
+        if ((aCount%TICK_FACTOR) == 0)
+          mRowGroupInfo->Add(childContent);
+        
+        mRowGroupInfo->mLastChild = childContent;
+        
+        aCount++;
+      }
+      else if (tag == mTreeItemTag) {
+        // Descend into this row group and try to find the next row.
+          ComputeTotalRowCount(aCount, childContent);
+      }
+      else if (tag == mTreeChildrenTag) {
+        // If it's open, descend into its treechildren.
+        nsCOMPtr<nsIAtom> openAtom = dont_AddRef(NS_NewAtom("open"));
+        nsAutoString isOpen;
+        nsCOMPtr<nsIContent> parent;
+        childContent->GetParent(*getter_AddRefs(parent));
+        parent->GetAttr(kNameSpaceID_None, openAtom, isOpen);
+        if (isOpen.EqualsWithConversion("true"))
+          ComputeTotalRowCount(aCount, childContent);
+      }
     }
   }
 }
@@ -1460,24 +1458,27 @@ nsXULTreeOuterGroupFrame::RegenerateRowGroupInfo(PRBool aOnScreenCount)
 void
 nsXULTreeOuterGroupFrame::GetTreeContent(nsIContent** aResult)
 {
+  *aResult = nsnull;
   nsCOMPtr<nsIContent> content(mContent);
-  nsCOMPtr<nsIContent> bindingParent;
-  mContent->GetBindingParent(getter_AddRefs(bindingParent));
-  if (bindingParent) {
-    nsCOMPtr<nsIDocument> doc;
-    bindingParent->GetDocument(*getter_AddRefs(doc));
-    nsCOMPtr<nsIBindingManager> bindingManager;
-    doc->GetBindingManager(getter_AddRefs(bindingManager));
-    nsCOMPtr<nsIAtom> tag;
-    PRInt32 namespaceID;
-    bindingManager->ResolveTag(bindingParent, &namespaceID, getter_AddRefs(tag));
-    if (tag.get() == nsXULAtoms::tree) {
-      *aResult = bindingParent;
-      NS_ADDREF(*aResult);
+  while (content) {
+    nsCOMPtr<nsIContent> parent;
+    content->GetParent(*getter_AddRefs(parent));
+    if (parent) {
+      nsCOMPtr<nsIDocument> doc;
+      parent->GetDocument(*getter_AddRefs(doc));
+      nsCOMPtr<nsIBindingManager> bindingManager;
+      doc->GetBindingManager(getter_AddRefs(bindingManager));
+      nsCOMPtr<nsIAtom> tag;
+      PRInt32 namespaceID;
+      bindingManager->ResolveTag(parent, &namespaceID, getter_AddRefs(tag));
+      if (tag.get() == nsXULAtoms::tree) {
+        *aResult = parent;
+        NS_ADDREF(*aResult);
+        break;
+      }
     }
+    content = parent;
   }
-  else 
-    mContent->GetParent(*aResult); // method does the addref
 }
 
 
