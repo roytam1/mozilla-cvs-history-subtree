@@ -46,8 +46,6 @@ var gCount = 0; // number of files
 
 function StartUp()
 {
-  //  AddItem (1, "bookmarks", "server", "local");
-  //  return;
   centerWindowOnScreen();
   LoadElements();
   ClearParam();
@@ -66,7 +64,7 @@ function AddItem(fileid, filename, server, local)
       <radiogroup value="2"
                   style="display: -moz-grid-line;
                          -moz-box-orient: horizontal;"
-                  flex="1">   <!-- acts as column-->
+                  flex="1">   <!-- acts as <column> -->
         <description>file description</description>
         <radio label="last modified server, size server" value="1"/>
         <radio label="last modified local, size local" value="2"/>
@@ -75,9 +73,6 @@ function AddItem(fileid, filename, server, local)
   */
 
   var radiogroup = document.createElement("radiogroup");
-  //  radiogroup.setAttribute("orient", "horizontal");
-  radiogroup.setAttribute("style",
-                      "display: -moz-grid-line; -moz-box-orient: horizontal;");
   radiogroup.setAttribute("id", fileid);
   radiogroup.setAttribute("value", gIsDownload ? "2" : "1");
   var cell;
@@ -100,8 +95,10 @@ function AddItem(fileid, filename, server, local)
 
   var rows = document.getElementById("filerows");
   rows.appendChild(radiogroup);
-  //window.style.fontSize="9pt";
-  //window.sizeToContent();
+
+  // WORKAROUND needs to be here, due to bug 209594
+  radiogroup.setAttribute("style",
+                      "display: -moz-grid-line; -moz-box-orient: horizontal;");
 }
 
 function FileLabel(lastModified, size)

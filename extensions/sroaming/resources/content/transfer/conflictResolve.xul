@@ -52,7 +52,7 @@
 <dialog
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul" 
   xmlns:html="http://www.w3.org/1999/xhtml"
-  id="profileWindow"
+  id="conflictResolve"
   class="color-dialog non-resizable"
   title="&windowtitle.label;"
   orient="vertical"
@@ -103,14 +103,6 @@
         <description><html:b>&server.label;</html:b></description>
         <description><html:b>&local.label;</html:b></description>
       </row>
-      <radiogroup style="display: -moz-grid-line;
-                         -moz-box-orient: horizontal;"
-                  flex="1">
-                  <!-- acts as column-->
-        <description>&server.label;</description>
-        <radio label="1a" value="1a"/>
-        <radio label="1b" value="1b"/>
-      </radiogroup>
     </rows>
   </grid>
   </vbox>
@@ -118,96 +110,3 @@
   <separator orient="vertical"/>
   
 </dialog>
-
-
-<!--
-  <html:table>
-    <html:tr>
-      <html:td>A</html:td>
-      <html:td><html:input type="radio" name="a" value="foo" /></html:td>
-      <html:td><html:input type="radio" name="a" value="bar" /></html:td>
-    </html:tr>
-    <html:tr>
-      <html:td>B</html:td>
-      <html:td><html:input type="radio" name="b" value="foo" /></html:td>
-      <html:td><html:input type="radio" name="b" value="bar" /></html:td>
-    </html:tr>
-  </html:table>
-
-  <freeradiogroup id="a" />
-  <grid>
-    <rows>
-      <row flex="1"/>
-    </rows>
-    <columns>
-      <column flex="1">
-        <html>&server.label;</html>
-      </column>
-      <column flex="1">
-        <freeradio label="foo" group="a" />
-      </column>
-      <column flex="1">
-        <freeradio label="bar" group="a" />
-      </column>
-    </columns>
-  </grid>
-
-  <grid>
-    <rows>
-      <row flex="1"/>
-    </rows>
-    <columns>
-      <column id="filename" flex="1">
-        <html>&server.label;</html>
-      </column>
-      <column flex="1">
-        <html:input type="radio" name="a" value="foo" /> foo
-      </column>
-      <column flex="1">
-        <html:input type="radio" name="a" value="bar" /> foo
-      </column>
-    </columns>
-  </grid>
-
-  <grid>
-    <rows>
-      <row flex="1"/>
-    </rows>
-    <columns>
-      <column id="filename" flex="1">
-        <html>&server.label;</html>
-      </column>
-      <column id="server" flex="1">
-        <hbox>
-          <html>&server.label;</html>
-        </hbox>
-      </column>
-      <column id="local" flex="1">
-        <hbox>
-          <html>&local.label;</html>
-        </hbox>
-      </column>
-    </columns>
-  </grid>
-
-      <column id="filename" flex="1">
-        <html>&server.label;</html>
-      </column>
-      <radiogroup>
-      <column id="server" flex="1">
-        <radio label="foo"/>
-      </column>
-      <column id="local" flex="1">
-        <radio label="bar"/>
-      </column>
-      </radiogroup>
-
-      <row flex="1"/>
-      <row flex="1">
-        <html>&server.label;</html>
-        <hbox>
-          <html>&server.label;</html>
-          <html>&local.label;</html>
-        </hbox>
-      </row>
--->

@@ -1,11 +1,3 @@
-To do:
-- UI
-  - conflict dialog
-    - column headings
-    - width
-  - listing progressmeter doesn't work
-
-Later:
 - nsiprogresseventsink comment
 - license headers
 - nsresult for internal functions, clean up interfaces
@@ -15,6 +7,7 @@ Later:
 - XXXs
 - clean up progressdialog
 - firebird/thunderbird extension
+- listing progressmeter doesn't work
 
 don't care (for now):
 - conflict
