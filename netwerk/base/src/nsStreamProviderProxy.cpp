@@ -22,7 +22,7 @@ nsStreamProviderProxy::~nsStreamProviderProxy()
 class nsOnProvideDataEvent : public nsStreamObserverEvent
 {
 public:
-    nsOnProvideDataEvent(nsStreamProxyBase *aProxy,
+    nsOnProvideDataEvent(nsStreamObserverProxyBase *aProxy,
                          nsIChannel *aChannel,
                          nsISupports *aContext,
                          nsIOutputStream *aSink,
@@ -104,7 +104,7 @@ nsOnProvideDataEvent::HandleEvent()
 //----------------------------------------------------------------------------
 //
 NS_IMPL_ISUPPORTS_INHERITED2(nsStreamProviderProxy,
-                             nsStreamProxyBase,
+                             nsStreamObserverProxyBase,
                              nsIStreamProviderProxy,
                              nsIStreamProvider)
 
@@ -117,7 +117,7 @@ NS_IMETHODIMP
 nsStreamProviderProxy::OnStartRequest(nsIChannel *aChannel,
                                       nsISupports *aContext)
 {
-    return nsStreamProxyBase::OnStartRequest(aChannel, aContext);
+    return nsStreamObserverProxyBase::OnStartRequest(aChannel, aContext);
 }
 
 NS_IMETHODIMP
@@ -132,8 +132,8 @@ nsStreamProviderProxy::OnStopRequest(nsIChannel *aChannel,
     mPipeIn = 0;
     mPipeOut = 0;
 
-    return nsStreamProxyBase::OnStopRequest(aChannel, aContext,
-                                            aStatus, aStatusText);
+    return nsStreamObserverProxyBase::OnStopRequest(aChannel, aContext,
+                                                    aStatus, aStatusText);
 }
 
 //

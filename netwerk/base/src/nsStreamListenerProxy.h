@@ -8,7 +8,7 @@
 #include "nsIOutputStream.h"
 #include "nsCOMPtr.h"
 
-class nsStreamListenerProxy : public nsStreamProxyBase
+class nsStreamListenerProxy : public nsStreamObserverProxyBase
                             , public nsIStreamListenerProxy
                             , public nsIInputStreamObserver
 {

@@ -40,7 +40,7 @@ static NS_DEFINE_CID(kEventQueueService, NS_EVENTQUEUESERVICE_CID);
 // nsStreamObserverEvent implementation...
 //----------------------------------------------------------------------------
 //
-nsStreamObserverEvent::nsStreamObserverEvent(nsStreamProxyBase *aProxy,
+nsStreamObserverEvent::nsStreamObserverEvent(nsStreamObserverProxyBase *aProxy,
                                              nsIChannel *aChannel,
                                              nsISupports *aContext)
     : mProxy(aProxy)
@@ -94,7 +94,7 @@ nsStreamObserverEvent::DestroyPLEvent(PLEvent *aEvent)
 class nsOnStartRequestEvent : public nsStreamObserverEvent
 {
 public:
-    nsOnStartRequestEvent(nsStreamProxyBase *aProxy,
+    nsOnStartRequestEvent(nsStreamObserverProxyBase *aProxy,
                           nsIChannel *aChannel,
                           nsISupports *aContext)
         : nsStreamObserverEvent(aProxy, aChannel, aContext)
@@ -132,7 +132,7 @@ nsOnStartRequestEvent::HandleEvent()
 class nsOnStopRequestEvent : public nsStreamObserverEvent
 {
 public:
-    nsOnStopRequestEvent(nsStreamProxyBase *aProxy,
+    nsOnStopRequestEvent(nsStreamObserverProxyBase *aProxy,
                          nsIChannel *aChannel, nsISupports *aContext,
                          nsresult aStatus, const PRUnichar *aStatusText)
         : nsStreamObserverEvent(aProxy, aChannel, aContext)
@@ -178,22 +178,22 @@ nsOnStopRequestEvent::HandleEvent()
 
 //
 //----------------------------------------------------------------------------
-// nsStreamProxyBase: nsISupports implementation...
+// nsStreamObserverProxyBase: nsISupports implementation...
 //----------------------------------------------------------------------------
 //
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsStreamProxyBase,
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsStreamObserverProxyBase,
                               nsIStreamObserver)
 
 //
 //----------------------------------------------------------------------------
-// nsStreamProxyBase: nsIStreamObserver implementation...
+// nsStreamObserverProxyBase: nsIStreamObserver implementation...
 //----------------------------------------------------------------------------
 //
 NS_IMETHODIMP 
-nsStreamProxyBase::OnStartRequest(nsIChannel *aChannel,
-                                  nsISupports *aContext)
+nsStreamObserverProxyBase::OnStartRequest(nsIChannel *aChannel,
+                                          nsISupports *aContext)
 {
-    PRINTF("nsStreamProxyBase::OnStartRequest\n");
+    PRINTF("nsStreamObserverProxyBase::OnStartRequest\n");
     nsOnStartRequestEvent *ev = 
             new nsOnStartRequestEvent(this, aChannel, aContext);
     if (!ev)
@@ -206,12 +206,12 @@ nsStreamProxyBase::OnStartRequest(nsIChannel *aChannel,
 }
 
 NS_IMETHODIMP 
-nsStreamProxyBase::OnStopRequest(nsIChannel *aChannel,
+nsStreamObserverProxyBase::OnStopRequest(nsIChannel *aChannel,
                                  nsISupports *aContext,
                                  nsresult aStatus,
                                  const PRUnichar *aStatusText)
 {
-    PRINTF("nsStreamProxyBase::OnStopRequest [status=%x]\n", aStatus);
+    PRINTF("nsStreamObserverProxyBase::OnStopRequest [status=%x]\n", aStatus);
     nsOnStopRequestEvent *ev = 
             new nsOnStopRequestEvent(this, aChannel, aContext, aStatus, aStatusText);
     if (!ev)
@@ -225,11 +225,11 @@ nsStreamProxyBase::OnStopRequest(nsIChannel *aChannel,
 
 //
 //----------------------------------------------------------------------------
-// nsStreamProxyBase: implementation...
+// nsStreamObserverProxyBase: implementation...
 //----------------------------------------------------------------------------
 //
 nsresult
-nsStreamProxyBase::SetEventQueue(nsIEventQueue *aEventQ)
+nsStreamObserverProxyBase::SetEventQueue(nsIEventQueue *aEventQ)
 {
     nsresult rv = NS_OK;
     if ((aEventQ == NS_CURRENT_EVENTQ) || (aEventQ == NS_UI_THREAD_EVENTQ)) {
@@ -250,7 +250,7 @@ nsStreamProxyBase::SetEventQueue(nsIEventQueue *aEventQ)
 //----------------------------------------------------------------------------
 //
 NS_IMPL_ISUPPORTS_INHERITED1(nsStreamObserverProxy,
-                             nsStreamProxyBase,
+                             nsStreamObserverProxyBase,
                              nsIStreamObserverProxy)
 
 //

@@ -31,14 +31,14 @@
 
 NS_DECL_LOG(nsStreamProxyLog)
 
-class nsStreamProxyBase : public nsIStreamObserver
+class nsStreamObserverProxyBase : public nsIStreamObserver
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSISTREAMOBSERVER
 
-    nsStreamProxyBase() { NS_INIT_ISUPPORTS(); }
-    virtual ~nsStreamProxyBase() {}
+    nsStreamObserverProxyBase() { NS_INIT_ISUPPORTS(); }
+    virtual ~nsStreamObserverProxyBase() {}
 
     nsIEventQueue *GetEventQueue() { return mEventQ.get(); }
     nsIStreamObserver *GetReceiver() { return mReceiver.get(); }
@@ -55,19 +55,19 @@ private:
     nsCOMPtr<nsIStreamObserver> mReceiver;
 };
 
-class nsStreamObserverProxy : public nsStreamProxyBase
+class nsStreamObserverProxy : public nsStreamObserverProxyBase
                             , public nsIStreamObserverProxy
 {
 public:
     NS_DECL_ISUPPORTS_INHERITED
-    NS_FORWARD_NSISTREAMOBSERVER(nsStreamProxyBase::)
+    NS_FORWARD_NSISTREAMOBSERVER(nsStreamObserverProxyBase::)
     NS_DECL_NSISTREAMOBSERVERPROXY
 };
 
 class nsStreamObserverEvent
 {
 public:
-    nsStreamObserverEvent(nsStreamProxyBase *proxy,
+    nsStreamObserverEvent(nsStreamObserverProxyBase *proxy,
                           nsIChannel *channel, nsISupports *context);
     virtual ~nsStreamObserverEvent();
 
@@ -78,10 +78,10 @@ protected:
     static void PR_CALLBACK HandlePLEvent(PLEvent *);
     static void PR_CALLBACK DestroyPLEvent(PLEvent *);
 
-    PLEvent               mEvent;
-    nsStreamProxyBase    *mProxy;
-    nsCOMPtr<nsIChannel>  mChannel;
-    nsCOMPtr<nsISupports> mContext;
+    PLEvent                    mEvent;
+    nsStreamObserverProxyBase *mProxy;
+    nsCOMPtr<nsIChannel>       mChannel;
+    nsCOMPtr<nsISupports>      mContext;
 };
 
 #define GET_STREAM_OBSERVER_EVENT(_mEvent_ptr) \
