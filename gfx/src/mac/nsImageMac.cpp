@@ -826,6 +826,7 @@ void nsImageMac::CopyBitsWithMask(const BitMap* srcBits, const BitMap* maskBits,
 {
   if (maskBits)
   {
+
     StRegionFromPool    origClipRegion;
     
     if (inDrawingToPort)
@@ -845,7 +846,8 @@ void nsImageMac::CopyBitsWithMask(const BitMap* srcBits, const BitMap* maskBits,
       ::SetClip(newClip);
     }
 
-    ::CopyDeepMask(srcBits, maskBits, destBits, &srcRect, &maskRect, &destRect, srcCopy, nsnull);
+    //::CopyDeepMask(srcBits, maskBits, destBits, &srcRect, &maskRect, &destRect, srcCopy, nsnull);
+    ::CopyDeepMask(srcBits, maskBits, destBits, &srcRect, &maskRect, &destRect, srcCopy, inDrawingToPort ? clipRegion : (RgnHandle)nsnull);
 
     if (inDrawingToPort)
     {
