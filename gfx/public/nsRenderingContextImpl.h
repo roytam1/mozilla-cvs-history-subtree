@@ -27,6 +27,8 @@
 #include "nsPoint.h"
 #ifdef IBMBIDI
 #include "nsIUBidiUtils.h" // Bidi options
+#define IS_REORDERING_SYSTEM  0x00000001
+#define IS_SHAPING_SYSTEM     0x00000002
 #endif // IBMBIDI
 
 
@@ -96,8 +98,23 @@ public:
   NS_IMETHOD FillStdPolygon(const nsPoint aPoints[], PRInt32 aNumPoints) { return NS_OK; }
 
 #ifdef IBMBIDI
-  NS_IMETHOD IsBidiSystem(PRBool& aIsBidi)  { aIsBidi = PR_FALSE; return NS_OK; }
-  NS_IMETHOD SetRTLReading(PRBool aIsRTL)   { mIsRTL = aIsRTL;    return NS_OK; }
+/**
+ *  Examine whether the platfrom provides Bidi support
+ *  
+ */
+  NS_IMETHOD IsReorderingSystem(PRBool& aIsBidi) {
+    aIsBidi = (mBidiEnabled & IS_REORDERING_SYSTEM);
+    return NS_OK;
+  }
+/**
+ *  Examine whether the platfrom provides Arabic support
+ *  
+ */
+  NS_IMETHOD IsShapingSystem(PRBool& aIsBidi) {
+    aIsBidi = (mBidiEnabled & IS_SHAPING_SYSTEM);
+    return NS_OK;
+  }
+  NS_IMETHOD SetRTLReading(PRBool aIsRTL)   { return NS_OK; }
 #endif // IBMBIDI
 
 protected:
@@ -127,8 +144,8 @@ protected:
   void cinsert(int i,int y,const nsPoint aPointArray[],PRInt32 aNumPts);
 
 #ifdef IBMBIDI
-  nsBidiOptions     mBidi; // IBMBIDI Options
-  PRPackedBool      mIsRTL;
+  int           mBidiEnabled;
+  nsBidiOptions mBidi; // IBMBIDI Options
 #endif // IBMBIDI
 
 public:

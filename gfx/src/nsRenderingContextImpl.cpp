@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include "il_util.h"
 
-
 const nsPoint *gPts;
 
 // comparison routines for qsort 
@@ -40,10 +39,10 @@ PRInt32 PR_CALLBACK compare_active(const void *u,const void *v){return ((Edge*)u
  *	@update 3/16/00 dwc
  */
 nsRenderingContextImpl :: nsRenderingContextImpl()
-{
 #ifdef IBMBIDI
-  mIsRTL = PR_FALSE;
+  : mBidiEnabled(0)
 #endif // IBMBIDI
+{
 }
 
 /** ---------------------------------------------------

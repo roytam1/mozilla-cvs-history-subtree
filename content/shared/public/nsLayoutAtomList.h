@@ -83,12 +83,12 @@ LAYOUT_ATOM(selectScrolledContentPseudo, ":-moz-select-scrolled-content")
 
   // Alphabetical list of frame types
 LAYOUT_ATOM(areaFrame, "AreaFrame")
-#ifdef IBMBIDI
-LAYOUT_ATOM(directionalFrame, "BidiControlFrame")
-#endif // IBMBIDI
 LAYOUT_ATOM(blockFrame, "BlockFrame")
 LAYOUT_ATOM(brFrame, "BRFrame")
 LAYOUT_ATOM(bulletFrame, "BulletFrame")
+#ifdef IBMBIDI
+LAYOUT_ATOM(directionalFrame, "DirectionalFrame")
+#endif // IBMBIDI
 LAYOUT_ATOM(hrFrame, "HRFrame")
 LAYOUT_ATOM(htmlFrameInnerFrame, "htmlFrameInnerFrame")
 LAYOUT_ATOM(htmlFrameOuterFrame, "htmlFrameOuterFrame")

@@ -39,8 +39,7 @@ public:
   PRBool IsSuccessful(void);
   nsresult Resolve(nsIPresContext* aPresContext,
                    nsIFrame*       aBlockFrame,
-                   nsIFrame*       aFirstChild,
-                   PRInt32&        aChildCountGrow);
+                   nsIFrame*       aFirstChild);
   void ReorderFrames(nsIPresContext* aPresContext,
                      nsIFrame*       aFirstChild,
                      nsIFrame*       aNextInFlow,
@@ -67,6 +66,19 @@ private:
                                 nsIFrame*       aContainer,
                                 PRInt32&        aMinX,
                                 PRInt32&        aMaxX);
+  nsresult CreateBidiContinuation(nsIPresContext* aPresContext,
+                                  nsIContent*     aContent,
+                                  nsIFrame*       aFrame,
+                                  nsIFrame**      aNewFrame);
+  PRBool RemoveBidiContinuation(nsIPresContext* aPresContext,
+                                nsIFrame*       aFrame,
+                                nsIFrame*       aNextFrame);
+  void AdjustEmbeddingLevel(nsIFrame* aFrame,
+                            PRUint8&  aEmbeddingLevel);
+  void CalculateTextClass(PRInt32  aLimit,
+                          PRInt32& aOffset,
+                          PRUint8& aTextClass,
+                          PRUint8& aPrevTextClass);
   nsAutoString    mBuffer;
   nsVoidArray     mLogicalFrames;
   nsVoidArray     mVisualFrames;

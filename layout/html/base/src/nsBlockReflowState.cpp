@@ -1220,6 +1220,8 @@ void nsBlockFrame::AlignLinesRight(void)
 {
   nscoord Mwidth = this->GetLinesXMax(), tempWidth;
   nsLineBox* line;
+  nsFrame* tmpFrame;
+  nsRect tempRect;
   line = mLines;
   while(line!=NULL)
   {
@@ -1640,12 +1642,7 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
       nsBidiPresUtils* bidiUtils;
       aPresContext->GetBidiUtils(&bidiUtils);
       if (bidiUtils) {
-        PRInt32 childCountGrow;
-        nsresult rv = bidiUtils->Resolve(aPresContext, this,
-                                         mLines->mFirstChild, childCountGrow);
-        if (NS_SUCCEEDED(rv) && childCountGrow > 0) {
-          mLines->SetChildCount(mLines->GetChildCount() + childCountGrow);
-        }
+        bidiUtils->Resolve(aPresContext, this, mLines->mFirstChild);
       }
     }
 #endif // IBMBIDI
@@ -5280,6 +5277,9 @@ nsBlockFrame::InsertFrames(nsIPresContext* aPresContext,
     mFloaters.AppendFrames(nsnull, aFrameList);
     return NS_OK;
   }
+#ifdef IBMBIDI
+  else if (nsLayoutAtoms::nextBidi == aListName) {}
+#endif // IBMBIDI
   else if (nsnull != aListName) {
     return NS_ERROR_INVALID_ARG;
   }
@@ -5295,9 +5295,12 @@ nsBlockFrame::InsertFrames(nsIPresContext* aPresContext,
   printf("\n");
 #endif
   nsresult rv = AddFrames(aPresContext, aFrameList, aPrevFrame);
-  if (NS_SUCCEEDED(rv)) {
-    // Ask the parent frame to reflow me.
-    ReflowDirtyChild(&aPresShell, nsnull);
+#ifdef IBMBIDI
+  if (aListName != nsLayoutAtoms::nextBidi)
+#endif // IBMBIDI
+    if (NS_SUCCEEDED(rv)) {
+      // Ask the parent frame to reflow me.
+      ReflowDirtyChild(&aPresShell, nsnull);
   }
   return rv;
 }
@@ -5458,6 +5461,11 @@ nsBlockFrame::RemoveFrame(nsIPresContext* aPresContext,
       line = line->mNext;
     }
   }
+#ifdef IBMBIDI
+  else if (nsLayoutAtoms::nextBidi == aListName) {
+    rv = DoRemoveFrame(aPresContext, aOldFrame);
+  }
+#endif // IBMBIDI
   else if (nsnull != aListName) {
     rv = NS_ERROR_INVALID_ARG;
   }
@@ -5465,10 +5473,13 @@ nsBlockFrame::RemoveFrame(nsIPresContext* aPresContext,
     rv = DoRemoveFrame(aPresContext, aOldFrame);
   }
 
-  if (NS_SUCCEEDED(rv)) {
-    // Ask the parent frame to reflow me.
-    ReflowDirtyChild(&aPresShell, nsnull);  
-  }
+#ifdef IBMBIDI
+  if (nsLayoutAtoms::nextBidi != aListName)
+#endif // IBMBIDI
+    if (NS_SUCCEEDED(rv)) {
+      // Ask the parent frame to reflow me.
+      ReflowDirtyChild(&aPresShell, nsnull);  
+    }
   return rv;
 }
 
@@ -5653,11 +5664,7 @@ nsBlockFrame::DeleteChildsNextInFlow(nsIPresContext* aPresContext,
                                 (void**) &nextLevel);
     bidiEnabled = (level ^ nextLevel);
   }
-  if (bidiEnabled) {
-    aChild->SetNextInFlow(nsnull);
-    nextInFlow->SetPrevInFlow(nsnull);
-  }
-  else {
+  if (!bidiEnabled) {
 #endif // IBMBIDI
   nsBlockFrame* parent;
   nextInFlow->GetParent((nsIFrame**)&parent);

@@ -58,7 +58,6 @@ static NS_DEFINE_CID(kUBidiUtilCID, NS_UNICHARBIDIUTIL_CID);
 static NS_DEFINE_CID(kBidiCID, NS_BIDI_CID);
 
 #define  ARABIC_HEBREW_RENDERING
-#define IS_BIDI_SYSTEM  (::GetSystemMetrics(SM_MIDEASTENABLED) == PR_TRUE)
 #else // #ifndef IBMBIDI
 //#define  ARABIC_HEBREW_RENDERING
 #endif // IBMBIDI
@@ -179,11 +178,18 @@ nsRenderingContextWin :: nsRenderingContextWin()
 {
   NS_INIT_REFCNT();
 
+#ifdef IBMBIDI
+  OSVERSIONINFO os;
+    os.dwOSVersionInfoSize = sizeof(os);
+    ::GetVersionEx(&os);
+#endif // IBMBIDI
   // The first time in we initialize gIsWIN95 flag
   if (NOT_SETUP == gIsWIN95) {
+#ifndef IBMBIDI
     OSVERSIONINFO os;
     os.dwOSVersionInfoSize = sizeof(os);
     ::GetVersionEx(&os);
+#endif // IBMBIDI
     // XXX This may need tweaking for win98
     if (VER_PLATFORM_WIN32_NT == os.dwPlatformId) {
       gIsWIN95 = PR_FALSE;
@@ -220,6 +226,14 @@ nsRenderingContextWin :: nsRenderingContextWin()
   PushState();
 
   mP2T = 1.0f;
+#ifdef IBMBIDI
+  mBidiEnabled = (::GetSystemMetrics(SM_MIDEASTENABLED) & IS_REORDERING_SYSTEM);
+  if (mBidiEnabled) {
+    if ( (os.dwMajorVersion >= 5) || (1256 == ::GetACP() ) ) {
+      mBidiEnabled |= IS_SHAPING_SYSTEM;
+    }
+  }
+#endif // IBMBIDI
 }
 
 nsRenderingContextWin :: ~nsRenderingContextWin()
@@ -2069,7 +2083,6 @@ FoundFont:
       if (IsNeedShaping() && (BidiEngine->NeedComplexScriptHandling(&pstr[start], i-start,
                                     HAS_HEBREW_GLYPH(prevFont), &bHebrew,
                                     HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic) ) ){
-         //XXX TODO: Handle BDO for both Arabic and Hebrew here
                
 				     if (bArabic) {
 							 //shape the arabic string
@@ -2517,7 +2530,6 @@ FoundFont:
              if (IsNeedShaping() && (BidiEngine->NeedComplexScriptHandling(&pstr[start], i-start,
                                            HAS_HEBREW_GLYPH(prevFont), &bHebrew,
                                            HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic) ) ){
-                //XXX TODO: Handle BDO for both Arabic and Hebrew here
                 
 							 if (bArabic) {       
 							   //shape the arabic string
@@ -2586,7 +2598,6 @@ FoundFont:
          if (IsNeedShaping() &&(BidiEngine->NeedComplexScriptHandling(&pstr[start], i-start,
                                        HAS_HEBREW_GLYPH(prevFont), &bHebrew,
                                        HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic) ) ){
-            //XXX TODO: Handle BDO for both Arabic and Hebrew here
                if (bArabic) {      
 					       //shape the arabic string
                   len = 8192;
@@ -3839,38 +3850,31 @@ nsRenderingContextWin::ConditionRect(nsRect& aSrcRect, RECT& aDestRect)
 }
 
 #ifdef IBMBIDI
-/**
- *  Examine whether the platfrom provides Bidi support
- *  
- */
-nsresult nsRenderingContextWin::IsBidiSystem(PRBool& aIsBidi)
-{
-  aIsBidi = IS_BIDI_SYSTEM;
-  return NS_OK;
-}
 //ahmed
 PRBool nsRenderingContextWin::IsNeedShaping()
 {
   PRBool rv = PR_FALSE;
-	PRBool aIsBidi;
-	IsBidiSystem(aIsBidi);
+	PRBool isBidi;
+	IsShapingSystem(isBidi);
  // rv= !IsBidiSystem() && !mContext->mIsVisual;
-	 rv= !aIsBidi && !mContext->mIsVisual;
+	 rv= !isBidi && !mContext->mIsVisual;
   return rv;
 }
+
 /**
  * Let the device context know whether we want RTL reading
  *  
  */
 nsresult nsRenderingContextWin::SetRTLReading(PRBool aIsRTL)
 {
-  if (mIsRTL != aIsRTL) {
-    if (IS_BIDI_SYSTEM) {
-      UINT flags = (aIsRTL) ? ::GetTextAlign(mDC) | TA_RTLREADING
-                            : ::GetTextAlign(mDC) & (~TA_RTLREADING);
-      ::SetTextAlign(mDC, flags);
-    }
-    mIsRTL = aIsRTL;
+  UINT flags = ::GetTextAlign(mDC);
+  PRBool wasRTL = flags & TA_RTLREADING;
+
+  if (aIsRTL && !wasRTL) {
+    ::SetTextAlign(mDC, flags | TA_RTLREADING);
+  }
+  else if (!aIsRTL && wasRTL) {
+    ::SetTextAlign(mDC, flags & (~TA_RTLREADING) );
   }
   return NS_OK;
 }

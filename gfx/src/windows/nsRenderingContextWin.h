@@ -184,7 +184,6 @@ public:
   NS_IMETHOD RetrieveCurrentNativeGraphicData(PRUint32 * ngd);
 
 #ifdef IBMBIDI
-  NS_IMETHOD IsBidiSystem(PRBool& aIsBidi);
   NS_IMETHOD SetRTLReading(PRBool aIsRTL);
 	//ahmed
 	NS_IMETHOD_(PRBool) IsNeedShaping(void);

@@ -802,8 +802,8 @@ nsContinuingTextFrame::Init(nsIPresContext*  aPresContext,
           ( (nsIFrame*) value)->GetOffsets(start, end);
           if (start < end) {
             mContentLength = start - mContentOffset;
-          } // length > 0
-        } // length > 0
+          }
+        }
       } // value
     } // bidiEnabled
 #endif // IBMBIDI
@@ -1171,12 +1171,6 @@ nsTextFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
   }
   return rv;
 }
-
-//const nsIID&
-//nsTextFrame::GetIID()
-//{
-  //return kTextFrameCID;
-//}
 
 nsresult
 NS_SetContentLengthAndOffsetForBidi(nsIFrame* aFrame, PRInt32 aStart, PRInt32 aEnd)
@@ -1906,7 +1900,7 @@ nsTextFrame::PaintUnicodeText(nsIPresContext* aPresContext,
 #ifdef IBMBIDI
     PRBool isRTL = PR_FALSE;
     PRBool isBidiSystem;
-    aRenderingContext.IsBidiSystem(isBidiSystem);
+    aRenderingContext.IsReorderingSystem(isBidiSystem);
     PRBool bidiEnabled;
     aPresContext->BidiEnabled(bidiEnabled);
 
@@ -3895,17 +3889,15 @@ nsTextFrame::MeasureText(nsIPresContext*          aPresContext,
   PRBool bidiEnabled;
   aPresContext->BidiEnabled(bidiEnabled);
   if (bidiEnabled) {
-    PRInt32 start, end;
+    GetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi, (void**) &nextBidi);
 
-    if (mContentLength > 0) {
-      nsIFrame* nextInFlow = mNextInFlow;
-      GetBidiProperty(aPresContext, nsLayoutAtoms::nextBidi, (void**) &nextBidi);
-  
-      while (nextInFlow && nextInFlow != nextBidi) {
-        nextInFlow->GetOffsets(start, end);
-        mContentLength = end - mContentOffset;
-        nextInFlow->GetNextInFlow(&nextInFlow);
-      }
+    if (nextBidi) {
+      PRInt32 start, end;
+      nextBidi->GetOffsets(start, end);
+#ifdef DEBUG
+      NS_ASSERTION(start > mContentOffset, "illegal content offset and length");
+#endif
+      mContentLength = PR_MAX(1, start - mContentOffset);
     }
   }
 #endif //IBMBIDI
@@ -5084,7 +5076,6 @@ public:
   PRUnichar GetChar(void) const { return mChar; }
   NS_IMETHOD GetFrameType(nsIAtom** aType) const;
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
-  //const nsIID& GetIID(void);
   void* operator new(size_t aSize);
 
 private:
@@ -5124,12 +5115,6 @@ nsDirectionalFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
   }
   return rv;
 }
-
-//const nsIID&
-//nsDirectionalFrame::GetIID()
-//{
-  //return kDirectionalFrameCID;
-//}
 
 void*
 nsDirectionalFrame::operator new(size_t aSize)
