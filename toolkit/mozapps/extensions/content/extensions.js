@@ -568,6 +568,10 @@ var gExtensionsViewController = {
     case "cmd_movedn":
       var children = gExtensionsView.children;
       return (children[children.length-1] != selectedItem);
+#ifdef MOZ_THUNDERBIRD
+    case "cmd_install":
+      return true;   
+#endif
     }
     return false;
   },
@@ -712,9 +716,74 @@ var gExtensionsViewController = {
     {
       gExtensionManager.enableExtension(stripPrefix(gExtensionsView.selected.id));
     },
+#ifdef MOZ_THUNDERBIRD
+    cmd_install: function()
+    {
+      if (gWindowState == "extensions") 
+        installExtension();
+      else
+        installSkin();
+    },
+#endif
   }
 };
 
+#ifdef MOZ_THUNDERBIRD
+///////////////////////////////////////////////////////////////
+// functions to support installing of themes in thunderbird
+///////////////////////////////////////////////////////////////
+const nsIFilePicker = Components.interfaces.nsIFilePicker;
+const nsIIOService = Components.interfaces.nsIIOService;
+const nsIFileProtocolHandler = Components.interfaces.nsIFileProtocolHandler;
+const nsIURL = Components.interfaces.nsIURL;
+
+function installSkin()
+{
+  // 1) Prompt the user for the location of the theme to install. 
+  var extensionsStrings = document.getElementById("extensionsStrings");
+
+  var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
+  fp.init(window, extensionsStrings.getString("installThemePickerTitle"), nsIFilePicker.modeOpen);
+
+
+  fp.appendFilter(extensionsStrings.getString("themesFilter"), "*.jar");
+  fp.appendFilters(nsIFilePicker.filterAll);
+
+  var ret = fp.show();
+  if (ret == nsIFilePicker.returnOK) 
+  {
+    var ioService = Components.classes['@mozilla.org/network/io-service;1'].getService(nsIIOService);
+    var fileProtocolHandler =
+    ioService.getProtocolHandler("file").QueryInterface(nsIFileProtocolHandler);
+    var url = fileProtocolHandler.newFileURI(fp.file).QueryInterface(nsIURL);
+    InstallTrigger.installChrome(InstallTrigger.SKIN, url.spec, decodeURIComponent(url.fileBaseName));
+  }
+}
+
+function installExtension()
+{
+  var extensionsStrings = document.getElementById("extensionsStrings");
+
+  var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
+  fp.init(window, extensionsStrings.getString("installExtensionPickerTitle"), nsIFilePicker.modeOpen);
+  
+  fp.appendFilter(extensionsStrings.getString("extensionFilter"), "*.xpi");
+  
+  fp.appendFilters(nsIFilePicker.filterAll);
+
+  var ret = fp.show();
+  if (ret == nsIFilePicker.returnOK) 
+  {
+    var ioService = Components.classes['@mozilla.org/network/io-service;1'].getService(nsIIOService);
+    var fileProtocolHandler =
+    ioService.getProtocolHandler("file").QueryInterface(nsIFileProtocolHandler);
+    var url = fileProtocolHandler.newFileURI(fp.file).QueryInterface(nsIURL);
+    var xpi = {};
+    xpi[decodeURIComponent(url.fileBaseName)] = url.spec;
+    InstallTrigger.install(xpi);
+  }
+}
+#endif
 
 # -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
