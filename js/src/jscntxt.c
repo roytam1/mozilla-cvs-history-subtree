@@ -140,6 +140,12 @@ js_DestroyContext(JSContext *cx)
     JS_FinishArenaPool(&cx->tempPool);
     if (cx->lastMessage)
 	free(cx->lastMessage);
+
+#ifdef JS_THREADSAFE
+    /* Destroying a context implicitly calls JS_EndRequest(). */ 
+    if (cx->requestDepth)
+        JS_EndRequest(cx);
+#endif
     free(cx);
 }
 
