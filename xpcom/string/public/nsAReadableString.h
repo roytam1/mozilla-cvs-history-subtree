@@ -877,6 +877,13 @@ class nsPromiseConcatenation
           mStrings[kRightString] = &aRightString;
         }
 
+      nsPromiseConcatenation( const nsPromiseConcatenation<CharT>& aLeftString, const basic_nsAReadableString<CharT>& aRightString )
+          : mFragmentIdentifierMask(aLeftString.mFragmentIdentifierMask<<1)
+        {
+          mStrings[kLeftString] = &aLeftString;
+          mStrings[kRightString] = &aRightString;
+        }
+
       virtual PRUint32 Length() const;
       virtual PRBool Promises( const basic_nsAReadableString<CharT>& ) const;
 //    virtual PRBool PromisesExactly( const basic_nsAReadableString<CharT>& ) const;

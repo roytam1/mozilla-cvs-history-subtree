@@ -797,6 +797,13 @@ private:
 };
 
 #ifdef NEW_STRING_APIS
+inline
+nsPromiseConcatenation<char>
+operator+( const nsPromiseConcatenation<char>& lhs, const nsCString& rhs )
+  {
+    return nsPromiseConcatenation<char>(lhs, rhs);
+  }
+
 NS_DEF_STRING_COMPARISON_OPERATORS(nsCString, char)
 NS_DEF_DERIVED_STRING_OPERATOR_PLUS(nsCString, char);
 #endif
