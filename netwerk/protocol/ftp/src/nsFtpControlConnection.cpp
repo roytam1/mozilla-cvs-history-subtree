@@ -98,7 +98,11 @@ nsFtpControlConnection::Connect()
 
     if (NS_FAILED(rv)) return rv;
 
-    rv = mCPipe->AsyncWrite(inStream, nsnull, nsnull);
+    // so that we can share the nsIStreamObserver implemention, we will be checking the context
+    // to indicate between the read and the write transport.  We will be passing the a non-null
+    // context for the write, and a null context for the read.  
+
+    rv = mCPipe->AsyncWrite(inStream, NS_STATIC_CAST(nsIStreamObserver*, this), NS_STATIC_CAST(nsISupports*, this));
     if (NS_FAILED(rv)) return rv;
 
     // get the ball rolling by reading on the control socket.
@@ -159,7 +163,12 @@ nsFtpControlConnection::SetStreamListener(nsIStreamListener *aListener)
 NS_IMETHODIMP
 nsFtpControlConnection::OnStartRequest(nsIChannel *aChannel, nsISupports *aContext)
 {
-    if (!mConnected) 
+    if (!mConnected)
+        return NS_OK;
+
+    // we do not care about notifications from the write channel.
+    // a non null context indicates that this is a write notification.
+    if (aContext != nsnull) 
         return NS_OK;
     
     PR_Lock(mLock);
@@ -179,6 +188,11 @@ nsFtpControlConnection::OnStopRequest(nsIChannel *aChannel, nsISupports *aContex
     
     if (!mConnected) 
         return NS_OK;
+
+    // we do not care about successful notifications from the write channel.
+    // a non null context indicates that this is a write notification.
+    if (aContext != nsnull && NS_SUCCEEDED(aStatus))
+        return NS_OK;
     
     PR_Lock(mLock);
     nsCOMPtr<nsIStreamListener> myListener =  mListener;   
@@ -186,7 +200,7 @@ nsFtpControlConnection::OnStopRequest(nsIChannel *aChannel, nsISupports *aContex
     
     if (!myListener)
         return NS_OK;
-    
+
     return mListener->OnStopRequest(aChannel, aContext, aStatus, aStatusArg);
 }
 
