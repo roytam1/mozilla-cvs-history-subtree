@@ -114,7 +114,7 @@ static const nsModuleComponentInfo components[] =
     nsOperaProfileMigratorConstructor },
 
   { "Seamonkey Profile Migrator",
-    NS_OPERAPROFILEMIGRATOR_CID,
+    NS_SEAMONKEYPROFILEMIGRATOR_CID,
     NS_BROWSERPROFILEMIGRATOR_CONTRACTID_PREFIX "seamonkey",
     nsSeamonkeyProfileMigratorConstructor },
 
