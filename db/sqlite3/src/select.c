@@ -81,7 +81,7 @@ int sqlite3JoinType(Parse *pParse, Token *pA, Token *pB, Token *pC){
   int jointype = 0;
   Token *apAll[3];
   Token *p;
-  static struct {
+  static const struct {
     const char *zKeyword;
     u8 nChar;
     u8 code;

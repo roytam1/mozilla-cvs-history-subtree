@@ -872,7 +872,7 @@ static void strftimeFunc(
 */
 void sqlite3RegisterDateTimeFunctions(sqlite3 *db){
 #ifndef SQLITE_OMIT_DATETIME_FUNCS
-  static struct {
+  static const struct {
      char *zName;
      int nArg;
      void (*xFunc)(sqlite3_context*,int,sqlite3_value**);

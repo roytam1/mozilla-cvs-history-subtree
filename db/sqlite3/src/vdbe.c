@@ -303,7 +303,7 @@ void sqlite3VdbeMemPrettyPrint(Mem *pMem, char *zBuf, int nBuf){
   char *zCsr = zBuf;
   int f = pMem->flags;
 
-  static const char *encnames[] = {"(X)", "(8)", "(16LE)", "(16BE)"};
+  static const char *const encnames[] = {"(X)", "(8)", "(16LE)", "(16BE)"};
 
   if( f&MEM_Blob ){
     int i;
