@@ -28,10 +28,7 @@
 #include "lcglue.h"
 #include "nscore.h"
 #include "nsISecurityContext.h"
-#include "nsCSecurityContext.h"
 #include "nsCRT.h"
-#include "nsIScriptGlobalObject.h"
-#include "nsIScriptObjectOwner.h"
 
 extern "C" int XP_PROGRESS_STARTING_JAVA;
 extern "C" int XP_PROGRESS_STARTING_JAVA_DONE;
@@ -92,7 +89,6 @@ JVMContext* GetJVMContext()
 		context->jsj_env = NULL;
 		context->js_context = NULL;
 		context->js_startframe = NULL;
-		context->java_applet_obj = NULL;
 		localContext.set(context);
 	}
 	return context;
@@ -374,64 +370,27 @@ unwrap_java_wrapper_impl(JNIEnv *pJNIEnv, jobject java_wrapper)
 
 static JSBool PR_CALLBACK
 enter_js_from_java_impl(JNIEnv *jEnv, char **errp,
-                        void **pNSIPrincipaArray, int numPrincipals, 
-                        void *pNSISecurityContext,
-                        void *java_applet_obj)
+                        void **pNSIPrincipaArray, int numPrincipals, void *pNSISecurityContext)
 {
 	JVMContext* context = GetJVMContext();
+	JSContext *pJSCX = context->js_context;
 
-    // Get and Save the current applet object in the vm context.
-    // There is not a 1:1 coorespondence between jvmcontexts and
-    // jscontexts, but there is a 1:1 correspondence between
-    // jvmcontexts and applet objects. So syncronize the two
-    // here and use the applet object to get the jscontext when
-    // needed.
+	if (pNSISecurityContext != NULL) {
 
-    if (java_applet_obj) {
-        context->java_applet_obj = java_applet_obj;
-    }
-    else if (context->java_applet_obj) {
-        java_applet_obj=context->java_applet_obj;
-    }
-
-    JSContext *pJSCX    = map_jsj_thread_to_js_context_impl(nsnull,java_applet_obj,jEnv,errp);
-    nsCOMPtr<nsIPrincipal> principal;
-
-    if (pNSISecurityContext != nsnull) {
-        if (pJSCX) {
-            JSPrincipals *jsprin = nsnull;
-
-            nsCOMPtr<nsIScriptContext> scriptContext = (nsIScriptContext*)JS_GetContextPrivate(pJSCX);
-            if (scriptContext) {
-                nsCOMPtr<nsIScriptGlobalObject> global = scriptContext->GetGlobalObject();
-                NS_ASSERTION(global, "script context has no global object");
-
-                if (global) {
-                    nsCOMPtr<nsIScriptObjectPrincipal> globalData = do_QueryInterface(global);
-                    if (globalData) {
-                        if (NS_FAILED(globalData->GetPrincipal(getter_AddRefs(principal))))
-                            return NS_ERROR_FAILURE;
-                    }
-                }
-            }
-        }
-
-        // What if !pJSCX? 
-
-        nsCOMPtr<nsISecurityContext> jscontext = new nsCSecurityContext(principal);
+        nsCOMPtr<nsISecurityContext> jscontext = dont_AddRef(JVM_GetJSSecurityContext());
         nsISecurityContext* jvcontext = NS_STATIC_CAST(nsISecurityContext*,pNSISecurityContext);
                                         // Should be NS_DYNAMIC_CAST, but no such define exists.
                                         // So for the sake of portability, we'll live 
                                         // dangerously and use brute force.
 
-        if (!jscontext || !jvcontext) {
+        if( !jscontext || !jvcontext ) {
             return PR_FALSE;
         }
 
         // Check that the origin + certificate are the same.
         // If not, then return false.
 
-        const int buflen = 512;
+        const int buflen = 128;
         char jsorigin[buflen];
         char jvorigin[buflen];
         *jsorigin = nsnull;
@@ -440,13 +399,9 @@ enter_js_from_java_impl(JNIEnv *jEnv, char **errp,
         jscontext->GetOrigin(jsorigin,buflen);
         jvcontext->GetOrigin(jvorigin,buflen);
 
-        if (nsCRT::strcasecmp(jsorigin,jvorigin)) {
+        if( nsCRT::strcasecmp(jsorigin,jvorigin) ) {
             return PR_FALSE;
         }
-
-#if 0 // ISSUE: Needs security review. We don't compare certificates. 
-      // because currently there is no basis for making a postive comparision.
-      // If one or the other context is signed, the comparision will fail.
 
         char jscertid[buflen];
         char jvcertid[buflen];
@@ -456,12 +411,12 @@ enter_js_from_java_impl(JNIEnv *jEnv, char **errp,
         jscontext->GetCertificateID(jscertid,buflen);
         jvcontext->GetCertificateID(jvcertid,buflen);
 
-        if (nsCRT::strcasecmp(jscertid,jvcertid)) {
+        if( nsCRT::strcasecmp(jscertid,jvcertid) ) {
             return PR_FALSE;
         }
 
-#endif
-
+    } else {
+        return PR_FALSE;
     }
 
 	return PR_TRUE;
