@@ -123,10 +123,13 @@ interface nsIX509CertDB : nsISupports {
                                               in nsCertCompareFunc aCertCmpFn,
                                               out nsISupportsArray certs);
 
-  nsIX509Cert getDefaultEmailEncryptionCert();
+  /* Get the user encryption cert */
+  nsIX509Cert getEmailEncryptionCert(in wstring aNickname);
 
-  nsIX509Cert getDefaultEmailSigningCert();
+  /* Get the user signing cert */
+  nsIX509Cert getEmailSigningCert(in wstring aNickname);
 
+  /* Get a cert by email address */
   nsIX509Cert getCertByEmailAddress(in nsIPK11Token aToken,
                              in string aEmailAddress);
 

@@ -3799,26 +3799,19 @@ nsNSSCertificateDB::EnableOCSP()
 
 /* nsIX509Cert getDefaultEmailEncryptionCert (); */
 NS_IMETHODIMP
-nsNSSCertificateDB::GetDefaultEmailEncryptionCert(nsIX509Cert **_retval)
+nsNSSCertificateDB::GetEmailEncryptionCert(const PRUnichar* aNickname, nsIX509Cert **_retval)
 {
   nsresult rv = NS_OK;
   CERTCertificate *cert = 0;
-  nsXPIDLCString nickname;
   nsCOMPtr<nsIInterfaceRequestor> ctx = new PipUIContext();
   nsNSSCertificate *nssCert = nsnull;
+  char *asciiname = NULL;
+  asciiname = NS_CONST_CAST(char*, NS_ConvertUCS2toUTF8(aNickname).get());
 
   *_retval = 0;
 
-  static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
-  nsCOMPtr<nsIPref> prefs = do_GetService(kPrefCID, &rv);
-  if (NS_FAILED(rv)) goto loser;
-
-  rv = prefs->GetCharPref("security.default_mail_cert",
-                          getter_Copies(nickname));
-  if (NS_FAILED(rv)) goto loser;
-
   /* Find a good cert in the user's database */
-  cert = CERT_FindUserCertByUsage(CERT_GetDefaultCertDB(), (char*)nickname.get(), 
+  cert = CERT_FindUserCertByUsage(CERT_GetDefaultCertDB(), asciiname, 
            certUsageEmailRecipient, PR_TRUE, ctx);
 
   if (!cert) { goto loser; }  
@@ -3838,26 +3831,19 @@ loser:
 
 /* nsIX509Cert getDefaultEmailSigningCert (); */
 NS_IMETHODIMP
-nsNSSCertificateDB::GetDefaultEmailSigningCert(nsIX509Cert **_retval)
+nsNSSCertificateDB::GetEmailSigningCert(const PRUnichar* aNickname, nsIX509Cert **_retval)
 {
   nsresult rv = NS_OK;
   CERTCertificate *cert = 0;
-  nsXPIDLCString nickname;
   nsCOMPtr<nsIInterfaceRequestor> ctx = new PipUIContext();
   nsNSSCertificate *nssCert = nsnull;
+  char *asciiname = NULL;
+  asciiname = NS_CONST_CAST(char*, NS_ConvertUCS2toUTF8(aNickname).get());
 
   *_retval = 0;
 
-  static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
-  nsCOMPtr<nsIPref> prefs = do_GetService(kPrefCID, &rv);
-  if (NS_FAILED(rv)) goto loser;
-
-  rv = prefs->GetCharPref("security.default_mail_cert",
-                          getter_Copies(nickname));
-  if (NS_FAILED(rv)) goto loser;
-
   /* Find a good cert in the user's database */
-  cert = CERT_FindUserCertByUsage(CERT_GetDefaultCertDB(), (char*)nickname.get(), 
+  cert = CERT_FindUserCertByUsage(CERT_GetDefaultCertDB(), asciiname, 
            certUsageEmailSigner, PR_TRUE, ctx);
 
   if (!cert) { goto loser; }  
