@@ -66,7 +66,8 @@ public class MotifBrowserControlCanvas extends BrowserControlCanvas /* implement
     private int gtkTopWindow;
     private int canvasWinID;
     private int gtkWinPtr;
-    private MDrawingSurfaceInfo drawingSurfaceInfo;
+    // We dont need this, now that we use the JAWT Native Interface
+    //    private MDrawingSurfaceInfo drawingSurfaceInfo;
 
     static private native void loadMainDll();
     private native int createTopLevelWindow();
@@ -84,7 +85,8 @@ public class MotifBrowserControlCanvas extends BrowserControlCanvas /* implement
         this.gtkWinID = 0;
         this.canvasWinID = 0;
         this.gtkWinPtr = 0;
-        this.drawingSurfaceInfo = null;
+        // We dont need this, now that we use the JAWT Native Interface
+        //        this.drawingSurfaceInfo = null;
 
     }
 
