@@ -36,7 +36,7 @@ const MSG_UNKNOWN   = getMsg ("unknown");
 
 client.defaultNick = getMsg( "defaultNick" );
 
-client.version = "0.8.5-pre11";
+client.version = "0.8.5-pre13";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -1466,7 +1466,8 @@ function setCurrentObject (obj)
         return;
     }
 
-    if ("currentObject" in client && client.currentObject == obj)
+    if (("currentObject" in client && client.currentObject == obj) ||
+        !("output" in client) || !client.output)
         return;
         
     var tb, userList;
@@ -1514,7 +1515,7 @@ function setCurrentObject (obj)
     if (client.PRINT_DIRECTION == 1)
     {
         scrollDown();
-        setTimeout ("scrollDown()", 2000);
+        setTimeout ("scrollDown()", 500);
     }
     
     onTopicEditEnd();
@@ -1607,12 +1608,11 @@ function addHistory (source, obj, mergeData, collapseRow)
             */
         }
         
-        tbody.appendChild (obj);
-
-        
         if ((w.document.height - (w.innerHeight + w.pageYOffset)) <
-            (w.innerHeight / 3))
+            (w.innerHeight))
             needScroll = true;
+
+        tbody.appendChild (obj);
     }
     else
         tbody.insertBefore (obj, source.messages.firstChild);
@@ -1626,16 +1626,34 @@ function addHistory (source, obj, mergeData, collapseRow)
 
         if (source.messageCount > source.MAX_MESSAGES)
             if (client.PRINT_DIRECTION == 1)
+            {
                 tbody.removeChild (tbody.firstChild);
+                while (tbody.firstChild &&
+                       tbody.firstChild.firstChild.getAttribute("class") ==
+                       "msg-data")
+                {
+                    --source.messageCount;
+                    tbody.removeChild (tbody.firstChild);
+                }
+            }
             else
+            {
                 tbody.removeChild (tbody.lastChild);
+                while (tbody.lastChild &&
+                       tbody.lastChild.firstChild.getAttribute("class") ==
+                       "msg-data")
+                {
+                    --source.messageCount;
+                    tbody.removeChild (tbody.lastChild);
+                }
+            }
     }
 
     if ("currentObject" in client && client.currentObject == source &&
         needScroll)
     {
         scrollDown();
-        setTimeout ("scrollDown()", 1000);
+        setTimeout ("scrollDown()", 500);
     }                    
     
 }
@@ -1643,7 +1661,7 @@ function addHistory (source, obj, mergeData, collapseRow)
 function findPreviousNickColumns (table)
 {
     var tr = table.firstChild.lastChild;
-    var className = tr.firstChild.getAttribute("class");
+    var className = tr ? tr.firstChild.getAttribute("class") : "";
     while (tr && className.search(/msg-user|msg-type|msg-nested-td/) == -1)
     {
         tr = tr.previousSibling;
