@@ -376,7 +376,7 @@ private:
     class GlobalVariableValue : public TxObject {
     public:
         GlobalVariableValue(ExprResult* aValue = 0)
-            : mValue(aValue), mFlags(none)
+            : mValue(aValue), mFlags(nonOwned)
         {
         }
         virtual ~GlobalVariableValue();
