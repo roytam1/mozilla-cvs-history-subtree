@@ -155,7 +155,7 @@ public:
     const char *        HostName()   { return mHostName; }
     nsHostEnt *         HostEntry()  { return &mHostEntry; }
 
-    PRBool              IsComplete() { return mComplete; }
+    PRBool              IsComplete() { return mState == LOOKUP_COMPLETE; }
     PRBool              IsNotCacheable() { return !mCacheable; }
     PRBool              IsExpired();
     
@@ -171,6 +171,7 @@ public:
     void                ProcessRequests();
 
 private:
+	friend class nsDNSService;
     nsDNSLookup();
 
     PRCList             mRequestQ;    
@@ -179,8 +180,14 @@ private:
     // Result of the DNS Lookup
     nsHostEnt           mHostEntry;
     nsresult            mStatus;
-    PRBool              mComplete;
-    PRBool              mCacheable;
+    PRUint32            mState;
+    enum {
+        LOOKUP_NEW      = 0,
+        LOOKUP_PENDING  = 1,
+        LOOKUP_COMPLETE = 2
+    };
+    
+	PRBool              mCacheable;
     nsTime              mExpires;    
 
     // Platform specific portions
@@ -460,7 +467,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS0(nsDNSLookup);
 nsDNSLookup::nsDNSLookup()
     : mHostName(nsnull)
     , mStatus(NS_OK)
-    , mComplete(PR_FALSE)
+    , mState(LOOKUP_NEW)
     , mCacheable(PR_TRUE)
     , mExpires(0)
 #if defined(XP_UNIX)
@@ -503,9 +510,9 @@ nsDNSLookup::Reset()
     mHostEntry.bufLen = PR_NETDB_BUF_SIZE;
     mHostEntry.bufPtr = mHostEntry.buffer;
 
-    mComplete   = PR_FALSE;
-    mStatus     = NS_OK;
-    mExpires    = nsTime() + nsInt64(EXPIRATION_INTERVAL);      // now + 5 minutes
+    mState    = LOOKUP_NEW;
+    mStatus   = NS_OK;
+    mExpires  = nsTime() + nsInt64(EXPIRATION_INTERVAL);      // now + 5 minutes
 
 #if defined(XP_MAC)
     mStringToAddrComplete = PR_FALSE;
@@ -580,8 +587,8 @@ nsDNSLookup::ConvertHostEntry()
     mHostEntry.hostEnt.h_addr_list[i] = nsnull;
 
     // hey! we made it.
-    mStatus   = NS_OK;
-    mComplete = PR_TRUE;
+    mStatus  = NS_OK;
+    mState   = LOOKUP_COMPLETE;
 }
 #endif
 
@@ -648,7 +655,7 @@ nsDNSLookup::InitiateLookup()
 {
     NS_ASSERTION(PR_CLIST_IS_EMPTY(this), "lookup being initiated while on queue");
     if (HostnameIsIPAddress())  return NS_OK;
-    
+   
 #if defined(XP_BEOS) || defined(XP_OS2)
 
     DoSyncLookup();
@@ -699,8 +706,8 @@ nsDNSLookup::InitiateLookup()
 void
 nsDNSLookup::MarkComplete(nsresult status)
 {
-    mStatus   = status;
-    mComplete = PR_TRUE;
+    mStatus = status;
+    mState  = LOOKUP_COMPLETE;
 }
 
 
@@ -710,22 +717,22 @@ nsDNSLookup::EnqueueRequest(nsDNSRequest * request)
     // mDNSServiceLock must be held, this method releases & reaquires it.
     // must guarantee lookup will not be deallocated for duration of method
     nsresult  rv;
-    PRBool    firstRequest = PR_FALSE;
-
+    
     nsDNSService::UnlockDNSService();   // can't hold locks during callback
     rv = request->FireStart();
     nsDNSService::LockDNSService();
 
     if (NS_FAILED(rv)) return rv;
 
-    if (PR_CLIST_IS_EMPTY(&mRequestQ))  firstRequest = PR_TRUE;
     PR_APPEND_LINK(request, &mRequestQ);
 
-    if (firstRequest && !mComplete) {
-        // this was the first request, we need to kick off the lookup
+    if (mState == LOOKUP_NEW) {
+        // we need to kick off the lookup
+        mState = LOOKUP_PENDING;
         rv = InitiateLookup();
+        if (NS_FAILED(rv))  MarkComplete(rv);
     }
-    return rv;
+    return NS_OK;
 }
 
 
@@ -1212,9 +1219,15 @@ nsDNSService::Lookup(const char*     hostName,
         request = new nsDNSRequest(lookup, userListener, userContext);
         if (!request)  return NS_ERROR_OUT_OF_MEMORY;
         NS_ADDREF(request); // for caller
+ //       NS_ADDREF(request); // XXX debug leak
 
         NS_ADDREF(lookup);  // keep it around for life of this method.
-        lookup->EnqueueRequest(request);    // releases dns lock
+        rv = lookup->EnqueueRequest(request);    // releases dns lock
+        if (NS_FAILED(rv)) {
+            NS_RELEASE(lookup);
+            return rv;
+        }
+
         if (lookup->IsComplete()) {
             lookup->ProcessRequests();      // releases dns lock
             if (lookup->IsNotCacheable()) {
@@ -1541,6 +1554,7 @@ nsDNSService::Shutdown()
     mDNSCondVar = nsnull;
 #endif
 
+    PR_Unlock(mDNSServiceLock);
     PR_DestroyLock(mDNSServiceLock);
     mDNSServiceLock = nsnull;
     mState = DNS_SHUTDOWN;
