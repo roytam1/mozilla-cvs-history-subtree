@@ -82,7 +82,6 @@ EXPORTS		= js.msg \
 		  jscntxt.h \
 		  jscompat.h \
 		  jsconfig.h \
-		  jscpucfg.h \
 		  jsdate.h \
 		  jsdbgapi.h \
 		  jsemit.h \
@@ -218,15 +217,19 @@ endif
 # hardwire dependencies on jsopcode.tbl
 jsopcode.h jsopcode.c: jsopcode.tbl
 
-# Generate jscpucfg.h header
-$(CSRCS): $(OBJDIR)/jscpucfg.h
-
-$(OBJDIR)/jscpucfg.h: $(OBJDIR)/jscpucfg
+# Generate jsautocfg.h header
+$(OBJDIR)/jsautocfg.h: $(OBJDIR)/jscpucfg
 	rm -f $@
 	$(OBJDIR)/jscpucfg > $@
 
 $(OBJDIR)/jscpucfg: $(OBJDIR)/jscpucfg.o
 	$(CC) -o $@ $(OBJDIR)/jscpucfg.o
+
+export:: $(OBJDIR)/jsautocfg.h
+	$(INSTALL) -m 444 $(OBJDIR)/jsautocfg.h $(DIST)/include
+
+# Add to TARGETS so clobber rule works
+TARGETS += $(OBJDIR)/jsautocfg.h $(OBJDIR)/jscpucfg $(OBJDIR)/jscpucfg.o
 
 # this section was put in the merged by danda into the
 # JAVA_*_MERGE section and normally would have
@@ -240,3 +243,7 @@ $(OBJDIR)/js.o: js.c
 	@$(MAKE_OBJDIR)
 	$(CC) -Fo$@ -c $(CFLAGS) $(JSJAVA_CFLAGS) js.c
 endif
+
+clobber::
+	rm -f $(OBJDIR)/jscpucfg $(OBJDIR)/jscpucfg.h
+
