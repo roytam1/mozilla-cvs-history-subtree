@@ -33,6 +33,7 @@
 
 class nsDiskCacheEntry;
 class nsDiskCacheMap;
+class nsDiskCacheRecord;
 
 class nsISupportsArray;
 class nsIInputStream;
@@ -76,6 +77,7 @@ public:
     PRUint32                getCacheSize();
     PRUint32                getEntryCount();
 
+    nsresult getFileForHashNumber(PLDHashNumber hashNumber, PRBool meta, PRUint32 generation, nsIFile ** result);
     nsresult getFileForKey(const char* key, PRBool meta, PRUint32 generation, nsIFile ** result);
     nsresult getFileForDiskCacheEntry(nsDiskCacheEntry * diskEntry, PRBool meta, nsIFile ** result);
 
@@ -96,9 +98,12 @@ public:
     nsresult scanDiskCacheEntries(nsISupportsArray ** result);
     nsresult evictDiskCacheEntries();
     
-    nsresult readDiskCacheMap();
-    nsresult writeDiskCacheMap();
+    nsresult readCacheMap();
+    nsresult writeCacheMap();
 
+    nsresult updateCacheMap(nsDiskCacheEntry * diskEntry);
+    nsresult evictDiskCacheRecord(nsDiskCacheRecord * record);
+    
 private:
     PRBool                      mInitialized;
     nsCOMPtr<nsIObserver>       mPrefsObserver;
