@@ -28,9 +28,7 @@ function Startup()
 {
   const windowNode = document.getElementById("bookmark-window");
   const bookmarksView = document.getElementById("bookmarks-view");
-
   bookmarksView.treeBoxObject.selection.select(0);
-  bookmarksView.tree.focus();
 
   var titleString;
 
@@ -62,6 +60,9 @@ function Startup()
 
   gBMtxmgr = BookmarksUtils.getTransactionManager();
  
+  document.getElementById("CommandUpdate_Bookmarks").setAttribute("commandupdater","true");
+  bookmarksView.tree.focus();
+
 }
 
 function Shutdown ()
