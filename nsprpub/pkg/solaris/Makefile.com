@@ -14,7 +14,7 @@ else
 ROOT = $(subst ../../,,$(MOD_DEPTH))/ROOT
 endif
 
-PKGARCHIVE = $(dist_libdir)/pkgarchive
+PKGARCHIVE = $(dist_prefix)/pkgarchive
 DATAFILES = copyright
 FILES = $(DATAFILES) pkginfo prototype
 
