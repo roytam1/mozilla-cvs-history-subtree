@@ -28,10 +28,12 @@
 
 #include "nsISupports.h"
 
+class nsIAtom;
 class nsIURI;
 class nsIStyleSheet;
+class nsString;
 class nsVoidArray;
-struct nsXULPrototypeElement;
+class nsXULPrototypeElement;
 
 // {187A63D0-8337-11d3-BE47-00104BDE6048}
 #define NS_IXULPROTOTYPEDOCUMENT_IID \
@@ -59,6 +61,13 @@ public:
 
     NS_IMETHOD AddOverlayReference(nsIURI* aURI) = 0;
     NS_IMETHOD GetOverlayReferences(nsVoidArray& aResult) = 0;
+
+    NS_IMETHOD GetHeaderData(nsIAtom* aField, nsString& aData) const = 0;
+    NS_IMETHOD SetHeaderData(nsIAtom* aField, const nsString& aData) = 0;
 };
+
+
+extern NS_IMETHODIMP
+NS_NewXULPrototypeDocument(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 
 #endif // nsIXULPrototypeDocument_h__
