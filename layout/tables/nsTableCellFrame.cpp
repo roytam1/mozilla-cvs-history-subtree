@@ -41,7 +41,6 @@
 #include "nsTableFrame.h"
 #include "nsTableRowGroupFrame.h"
 #include "nsTablePainter.h"
-#include "nsReflowPath.h"
 #include "nsStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"

@@ -42,7 +42,6 @@
 #include "nsHTMLParts.h"
 #include "nsAbsoluteContainingBlock.h"
 #include "nsLineBox.h"
-#include "nsReflowPath.h"
 #include "nsCSSPseudoElements.h"
 #include "nsStyleSet.h"
 

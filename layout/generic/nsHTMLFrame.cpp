@@ -39,7 +39,6 @@
 #include "nsHTMLContainerFrame.h"
 #include "nsCSSRendering.h"
 #include "nsIDocument.h"
-#include "nsReflowPath.h"
 #include "nsPresContext.h"
 #include "nsStyleContext.h"
 #include "nsViewsCID.h"

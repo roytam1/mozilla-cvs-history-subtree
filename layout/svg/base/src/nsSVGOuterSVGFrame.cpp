@@ -53,7 +53,6 @@
 #include "nsISVGValue.h"
 #include "nsISVGValueObserver.h"
 #include "nsHTMLParts.h"
-#include "nsReflowPath.h"
 #include "nsISVGRenderer.h"
 #include "nsISVGRendererRegion.h"
 #include "nsIServiceManager.h"

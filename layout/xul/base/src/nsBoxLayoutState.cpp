@@ -43,7 +43,6 @@
 //
 
 #include "nsBoxLayoutState.h"
-#include "nsReflowPath.h"
 #include "nsBoxFrame.h"
 #include "nsHTMLAtoms.h"
 #include "nsXULAtoms.h"

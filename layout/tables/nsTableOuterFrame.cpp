@@ -37,7 +37,6 @@
  * ***** END LICENSE BLOCK ***** */
 #include "nsTableOuterFrame.h"
 #include "nsTableFrame.h"
-#include "nsHTMLReflowCommand.h"
 #include "nsStyleContext.h"
 #include "nsStyleConsts.h"
 #include "nsPresContext.h"

@@ -42,7 +42,6 @@
 
 class nsIFrame;
 class nsPresContext;
-class nsReflowPath;
 class nsIRenderingContext;
 class nsSpaceManager;
 class nsLineLayout;

@@ -44,7 +44,6 @@
 #include "nsFrameManager.h"
 #include "nsIContent.h"
 #include "nsStyleContext.h"
-#include "nsHTMLReflowCommand.h"
 #include "nsHTMLContainerFrame.h"
 #include "nsBlockFrame.h"
 #include "nsLineBox.h"

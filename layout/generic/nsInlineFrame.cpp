@@ -47,7 +47,6 @@
 #include "nsAbsoluteContainingBlock.h"
 #include "nsLayoutAtoms.h"
 #include "nsCSSAnonBoxes.h"
-#include "nsReflowPath.h"
 #include "nsAutoPtr.h"
 #include "nsFrameManager.h"
 #ifdef ACCESSIBILITY

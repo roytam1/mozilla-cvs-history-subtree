@@ -45,7 +45,6 @@
 #include "nsPresContext.h"
 #include "nsIPresShell.h"
 #include "nsIDocument.h"
-#include "nsReflowPath.h"
 #include "nsIRenderingContext.h"
 #include "nsILoadGroup.h"
 #include "nsIURL.h"

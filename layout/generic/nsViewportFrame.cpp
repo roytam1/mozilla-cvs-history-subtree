@@ -42,7 +42,6 @@
 #include "nsIScrollableFrame.h"
 #include "nsIDeviceContext.h"
 #include "nsPresContext.h"
-#include "nsReflowPath.h"
 #include "nsIPresShell.h"
 
 nsresult

@@ -53,7 +53,6 @@
 #include "nsFrameManager.h"
 #include "nsPresContext.h"
 #include "nsIPresShell.h"
-#include "nsReflowPath.h"
 #include "nsStyleContext.h"
 #include "nsIView.h"
 #include "nsIFontMetrics.h"

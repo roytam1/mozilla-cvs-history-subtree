@@ -46,7 +46,6 @@
 #include "nsLayoutAtoms.h"
 #include "nsStyleConsts.h"
 #include "nsCOMPtr.h"
-#include "nsReflowPath.h"
 
 class nsColumnSetFrame : public nsHTMLContainerFrame {
 public:

@@ -37,7 +37,6 @@
 #include "nsCOMPtr.h"
 #include "nsAbsoluteContainingBlock.h"
 #include "nsContainerFrame.h"
-#include "nsReflowPath.h"
 #include "nsIViewManager.h"
 #include "nsLayoutAtoms.h"
 #include "nsIPresShell.h"
