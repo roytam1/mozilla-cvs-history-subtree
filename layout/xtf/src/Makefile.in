@@ -60,6 +60,7 @@ REQUIRES	= xpcom \
 
 CPPSRCS		= \
 		nsXTFSVGDisplayFrame.cpp \
+		nsXTFXULDisplayFrame.cpp \
 		$(NULL)
 
 include $(topsrcdir)/config/config.mk
@@ -80,6 +81,7 @@ LOCAL_INCLUDES	= \
 		-I$(srcdir)/../../xml/content/src \
 		-I$(srcdir)/../../base/public \
 		-I$(srcdir)/../../svg/base/src \
+		-I$(srcdir)/../../xul/base/src \
 		$(NULL)
 
 

@@ -62,7 +62,7 @@ public:
   // nsIXTFElementWrapper
   NS_DECL_NSIXTFELEMENTWRAPPER
 
-  // nsIContent specialisations:
+  // nsIContent specializations:
   void SetDocument(nsIDocument* aDocument, PRBool aDeep,
                    PRBool aCompileEventHandlers);
   void SetParent(nsIContent* aParent);
@@ -83,6 +83,13 @@ public:
   nsresult GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
                          nsIAtom** aName, nsIAtom** aPrefix) const;
   PRUint32 GetAttrCount() const;
+  virtual already_AddRefed<nsINodeInfo> GetExistingAttrNameFromQName(const nsAString& aStr) const;
+
+  // nsIDOMElement specializations:
+  NS_IMETHOD GetAttribute(const nsAString& aName,
+                          nsAString& aReturn);
+  NS_IMETHOD RemoveAttribute(const nsAString& aName);
+  NS_IMETHOD HasAttribute(const nsAString& aName, PRBool* aReturn);
   
   // nsIClassInfo interface
   NS_DECL_NSICLASSINFO
@@ -94,6 +101,8 @@ protected:
   // implementation helpers:  
   PRBool AggregatesInterface(REFNSIID aIID);
 
+  PRBool HandledByInner(nsIAtom* attr)const;
+  
   PRUint32 mNotificationMask;
   nsCOMPtr<nsIXTFAttributeHandler> mAttributeHandler;
 };

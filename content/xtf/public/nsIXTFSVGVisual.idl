@@ -51,5 +51,17 @@ interface nsIXTFSVGVisual : nsIXTFElement
   // element without creating cyclic XPCOM referencing).
   void onCreated(in nsIXTFSVGVisualWrapper wrapper);
 
+  // The content tree routed in 'visualContent' will be rendered where
+  // the xtf visual is placed into an appropriate context. It can be
+  // dynamically manipulated during the lifetime of the xtf visual.
   readonly attribute nsIDOMElement visualContent;
+  
+  // Children of the xtf visual which are themselves 'visuals'
+  // (i.e. built-ins elements, other xtf visuals or xbl elements with
+  // visual <content>) will be rendered in the context of
+  // 'insertionPoint'. 'insertionPoint' should either be null (in
+  // which case the children will not be automatically rendered) or
+  // point into the 'visualContent' tree.
+  readonly attribute nsIDOMElement insertionPoint;
+
 };

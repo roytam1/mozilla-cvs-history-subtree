@@ -42,10 +42,28 @@ interface nsIAtom;
 [scriptable, uuid(72152f7f-7e8d-43fd-8477-3f29ae8d240d)]
 interface nsIXTFAttributeHandler : nsISupports
 {
+  // If 'false' the given attribute will be handled by the wrapper.
+  // Namespaced attributes will always be handled by the wrapper. The
+  // set of attributes handled by the attribute handler should remain
+  // constant for its complete lifetime.
+  boolean handlesAttribute(in nsIAtom name);
+  
   void setAttribute(in nsIAtom name, in AString newValue);
-  void unsetAttribute(in nsIAtom name);
+  
+  void removeAttribute(in nsIAtom name);
+
+  // If the attribute 'name' is unknown the implementation should mark
+  // the returned string as being 'null' (i.e. return 'null' in JS;
+  // call SetIsVoid(PR_TRUE) in C++) rather than throw an exception.
+  // A 'void' result will be translated into NS_CONTENT_ATTR_NOT_THERE
+  // by the wrapper. An empty result will be translated into
+  // NS_CONTENT_ATTR_NO_VALUE.
   AString getAttribute(in nsIAtom name);
+  
   boolean hasAttribute(in nsIAtom name);
+  
   unsigned long getAttributeCount();
+
+  // note that this method should return an *atom* not a string.
   nsIAtom getAttributeNameAt(in unsigned long index);
 };

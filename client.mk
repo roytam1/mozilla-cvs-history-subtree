@@ -174,7 +174,8 @@ XTF_BRANCH_NEW_FILES = \
 	js/src/xpconnect/loader/mozIJSComponentLib.idl \
 	layout/xtf/Makefile.in \
 	layout/xtf/src/Makefile.in \
-	layout/xtf/src/nsXTFSVGDisplayFrame.cpp
+	layout/xtf/src/nsXTFSVGDisplayFrame.cpp \
+	layout/xtf/src/nsXTFXULDisplayFrame.cpp
 
 
 NSPR_CO_TAG = NSPRPUB_PRE_4_2_CLIENT_BRANCH

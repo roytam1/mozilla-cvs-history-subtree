@@ -99,7 +99,7 @@ nsXTFElementWrapper::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 }
 
 //----------------------------------------------------------------------
-// nsIContent:
+// nsIContent methods:
 
 void
 nsXTFElementWrapper::SetDocument(nsIDocument* aDocument, PRBool aDeep,
@@ -188,8 +188,8 @@ nsXTFElementWrapper::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   
   if (mNotificationMask & nsIXTFElement::NOTIFY_WILL_SET_ATTRIBUTE)
     GetXTFElement()->WillSetAttribute(aName, aValue);
-  
-  if (mAttributeHandler) {
+
+  if (aNameSpaceID==kNameSpaceID_None && HandledByInner(aName)) {
     // XXX we don't do namespaced attributes yet
     if (aNameSpaceID != kNameSpaceID_None) {
       NS_WARNING("setattr: xtf elements don't do namespaced attribs yet!");
@@ -198,7 +198,7 @@ nsXTFElementWrapper::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
     rv = mAttributeHandler->SetAttribute(aName, aValue);
     // XXX mutation events?
   }
-  else { // wrapper handles attribs
+  else { // let wrapper handle it
     rv = nsXTFElementWrapperBase::SetAttr(aNameSpaceID, aName, aPrefix, aValue, aNotify);
   }
   
@@ -212,19 +212,20 @@ nsresult
 nsXTFElementWrapper::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
                              nsAString& aResult)const
 {
-  if (mAttributeHandler) {
+  if (aNameSpaceID==kNameSpaceID_None && HandledByInner(aName)) {
     // XXX we don't do namespaced attributes yet
     if (aNameSpaceID != kNameSpaceID_None) {
       NS_WARNING("getattr: xtf elements don't do namespaced attribs yet!");
       return NS_CONTENT_ATTR_NOT_THERE;
     }
     nsresult rv = mAttributeHandler->GetAttribute(aName, aResult);
-    if (NS_FAILED(rv)) return NS_CONTENT_ATTR_NOT_THERE;
-    if (aResult.IsVoid()) return NS_CONTENT_ATTR_NO_VALUE;
+    if (NS_FAILED(rv)) return rv;
+    if (aResult.IsVoid()) return NS_CONTENT_ATTR_NOT_THERE;
+    if (aResult.IsEmpty()) return NS_CONTENT_ATTR_NO_VALUE;
     
     return NS_CONTENT_ATTR_HAS_VALUE;
   }
-  else { // wrapper handles attribs
+  else { // try wrapper
     return nsXTFElementWrapperBase::GetAttr(aNameSpaceID, aName, aResult);
   }
 }
@@ -232,12 +233,12 @@ nsXTFElementWrapper::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
 PRBool
 nsXTFElementWrapper::HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const
 {
-  if (mAttributeHandler) {
+  if (aNameSpaceID==kNameSpaceID_None && HandledByInner(aName)) {
     PRBool rval = PR_FALSE;
     mAttributeHandler->HasAttribute(aName, &rval);
     return rval;
   }
-  else { // wrapper handles attribs
+  else { // try wrapper
     return nsXTFElementWrapperBase::HasAttr(aNameSpaceID, aName);
   }
 }
@@ -249,24 +250,24 @@ nsXTFElementWrapper::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr,
 {
   nsresult rv;
 
-  if (mNotificationMask & nsIXTFElement::NOTIFY_WILL_UNSET_ATTRIBUTE)
-    GetXTFElement()->WillUnsetAttribute(aAttr);
+  if (mNotificationMask & nsIXTFElement::NOTIFY_WILL_REMOVE_ATTRIBUTE)
+    GetXTFElement()->WillRemoveAttribute(aAttr);
   
-  if (mAttributeHandler) {
+  if (aNameSpaceID==kNameSpaceID_None && HandledByInner(aAttr)) {
     // XXX we don't do namespaced attributes yet
     if (aNameSpaceID != kNameSpaceID_None) {
       NS_WARNING("setattr: xtf elements don't do namespaced attribs yet!");
       return NS_ERROR_FAILURE;
     }  
-    rv = mAttributeHandler->UnsetAttribute(aAttr);
+    rv = mAttributeHandler->RemoveAttribute(aAttr);
     // XXX mutation events?
   }
-  else { // wrapper handles attribs
+  else { // try wrapper
     rv = nsXTFElementWrapperBase::UnsetAttr(aNameSpaceID, aAttr, aNotify);
   }
 
-  if (mNotificationMask & nsIXTFElement::NOTIFY_ATTRIBUTE_UNSET)
-    GetXTFElement()->AttributeUnset(aAttr);
+  if (mNotificationMask & nsIXTFElement::NOTIFY_ATTRIBUTE_REMOVED)
+    GetXTFElement()->AttributeRemoved(aAttr);
 
   return rv;
 }
@@ -275,13 +276,18 @@ nsresult
 nsXTFElementWrapper::GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
                                    nsIAtom** aName, nsIAtom** aPrefix) const
 {
+  PRUint32 innerCount=0;
   if (mAttributeHandler) {
+    mAttributeHandler->GetAttributeCount(&innerCount);
+  }
+  
+  if (aIndex < innerCount) {
     *aNameSpaceID = kNameSpaceID_None;
     *aPrefix = nsnull;
     return mAttributeHandler->GetAttributeNameAt(aIndex, aName);
   }
-  else { // wrapper handles attribs
-    return nsXTFElementWrapperBase::GetAttrNameAt(aIndex, aNameSpaceID,
+  else { // wrapper handles attrib
+    return nsXTFElementWrapperBase::GetAttrNameAt(aIndex - innerCount, aNameSpaceID,
                                                   aName, aPrefix);
   }
 }
@@ -289,14 +295,93 @@ nsXTFElementWrapper::GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
 PRUint32
 nsXTFElementWrapper::GetAttrCount() const
 {
+  PRUint32 innerCount = 0;
   if (mAttributeHandler) {
-    PRUint32 rval = 0;
-    mAttributeHandler->GetAttributeCount(&rval);
-    return rval;
+    mAttributeHandler->GetAttributeCount(&innerCount);
   }
-  else { // wrapper handles attribs
-    return nsXTFElementWrapperBase::GetAttrCount();
+  // add wrapper attribs
+  return innerCount + nsXTFElementWrapperBase::GetAttrCount();
+}
+
+already_AddRefed<nsINodeInfo>
+nsXTFElementWrapper::GetExistingAttrNameFromQName(const nsAString& aStr) const
+{
+  nsINodeInfo* nodeInfo = nsXTFElementWrapperBase::GetExistingAttrNameFromQName(aStr).get();
+
+  // Maybe this attribute is handled by our inner element:
+  if (!nodeInfo) {
+    nsCOMPtr<nsIAtom> nameAtom = do_GetAtom(aStr);
+    if (HandledByInner(nameAtom)) 
+      mNodeInfo->NodeInfoManager()->GetNodeInfo(nameAtom, nsnull, kNameSpaceID_None, &nodeInfo);
   }
+  
+  return nodeInfo;
+}
+
+//----------------------------------------------------------------------
+// nsIDOMElement methods:
+
+NS_IMETHODIMP
+nsXTFElementWrapper::GetAttribute(const nsAString& aName, nsAString& aReturn)
+{
+  const nsAttrName* name = InternalGetExistingAttrNameFromQName(aName);
+  if (name) {
+    GetAttr(name->NamespaceID(), name->LocalName(), aReturn);
+    return NS_OK;
+  }
+
+  // Maybe this attribute is handled by our inner element:
+  if (mAttributeHandler) {
+    nsresult rv = nsContentUtils::CheckQName(aName, PR_FALSE);
+    NS_ENSURE_SUCCESS(rv, rv);
+    nsCOMPtr<nsIAtom> nameAtom = do_GetAtom(aName);
+    if (HandledByInner(nameAtom)) {
+      GetAttr(kNameSpaceID_None, nameAtom, aReturn);
+      return NS_OK;
+    }
+  }
+  
+  SetDOMStringToNull(aReturn);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXTFElementWrapper::RemoveAttribute(const nsAString& aName)
+{
+  const nsAttrName* name = InternalGetExistingAttrNameFromQName(aName);
+
+  if (name) {
+    nsAttrName tmp(*name);
+    return UnsetAttr(name->NamespaceID(), name->LocalName(), PR_TRUE);
+  }
+
+  // Maybe this attribute is handled by our inner element:
+  if (mAttributeHandler) {
+    nsCOMPtr<nsIAtom> nameAtom = do_GetAtom(aName);
+    return UnsetAttr(kNameSpaceID_None, nameAtom, PR_TRUE);
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXTFElementWrapper::HasAttribute(const nsAString& aName, PRBool* aReturn)
+{
+  const nsAttrName* name = InternalGetExistingAttrNameFromQName(aName);
+  if (name) {
+    *aReturn = PR_TRUE;
+    return NS_OK;
+  }
+  
+  // Maybe this attribute is handled by our inner element:
+  if (mAttributeHandler) {
+    nsCOMPtr<nsIAtom> nameAtom = do_GetAtom(aName);
+    *aReturn = HasAttr(kNameSpaceID_None, nameAtom);
+    return NS_OK;
+  }
+
+  *aReturn = PR_FALSE;
+  return NS_OK;
 }
 
 
@@ -414,4 +499,13 @@ nsXTFElementWrapper::AggregatesInterface(REFNSIID aIID)
   nsCOMPtr<nsISupports> inst;
   GetXTFElement()->QueryInterface(aIID, getter_AddRefs(inst));
   return (inst!=nsnull);
+}
+
+PRBool
+nsXTFElementWrapper::HandledByInner(nsIAtom *attr)const
+{
+  PRBool retval = PR_FALSE;
+  if (mAttributeHandler)
+    mAttributeHandler->HandlesAttribute(attr, &retval);
+  return retval;
 }

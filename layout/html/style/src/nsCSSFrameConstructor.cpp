@@ -145,6 +145,8 @@ static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
 
 #ifdef MOZ_XTF
 #include "nsIXTFElement.h"
+nsresult
+NS_NewXTFXULDisplayFrame(nsIPresShell*, nsIFrame**);
 #ifdef MOZ_SVG
 nsresult
 NS_NewXTFSVGDisplayFrame(nsIPresShell*, nsIContent*, nsIFrame**);
@@ -6874,7 +6876,6 @@ nsCSSFrameConstructor::ConstructXTFFrame(nsIPresShell*            aPresShell,
   PRBool isFixedPositioned = PR_FALSE;
   PRBool forceView = PR_FALSE;
   PRBool isBlock = PR_FALSE;
-  PRBool processChildren = PR_FALSE;
   
   //NS_ASSERTION(aTag != nsnull, "null XTF tag");
   //if (aTag == nsnull)
@@ -6909,7 +6910,7 @@ nsCSSFrameConstructor::ConstructXTFFrame(nsIPresShell*            aPresShell,
       rv = NS_NewBlockFrame(aPresShell, &newFrame);
       break;
     case nsIXTFElement::ELEMENT_TYPE_XUL_VISUAL:
-      rv = NS_NewBoxFrame(aPresShell, &newFrame, PR_FALSE, nsnull);
+      rv = NS_NewXTFXULDisplayFrame(aPresShell, &newFrame);
       break;
     case nsIXTFElement::ELEMENT_TYPE_GENERIC_ELEMENT:
       NS_ERROR("huh? ELEMENT_TYPE_GENERIC_ELEMENT should have been flagged by caller");
@@ -6931,26 +6932,32 @@ nsCSSFrameConstructor::ConstructXTFFrame(nsIPresShell*            aPresShell,
                         geometricParent, aStyleContext, nsnull, newFrame);
 
     nsHTMLContainerFrame::CreateViewForFrame(newFrame, aParentFrame, forceView);
-    
-    // Process the child content if requested
-    nsFrameItems childItems;
-    if (processChildren) {
-      rv = ProcessChildren(aPresShell, aPresContext, aState, aContent,
-                           newFrame, PR_TRUE, childItems, isBlock);
-    }
 
-    // always create anonymous frames:
-    
-//    CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent, newFrame,
-//                          PR_FALSE, childItems);
-    // call version of CreateAnonymousFrames that doesn't check tag:
+    // Create anonymous frames before processing children, so that
+    // explicit child content can be appended to the correct anonymous
+    // frame. Call version of CreateAnonymousFrames that doesn't check
+    // tag:
+    nsFrameItems childItems;
     CreateAnonymousFrames(aPresShell, aPresContext, aState, aContent, mDocument, newFrame,
                           PR_FALSE, childItems);
 
     // Set the frame's initial child list
     newFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
     
-    // If the frame is absolutely positioned then create a placeholder frame
+    // Process the child content if requested
+    nsIFrame *insertionFrame = newFrame->GetContentInsertionFrame();
+    if (insertionFrame) {
+        nsFrameItems insertionItems;
+        rv = ProcessChildren(aPresShell, aPresContext, aState, aContent,
+                             insertionFrame, PR_TRUE, insertionItems, isBlock);
+        if (insertionItems.childList) {
+          AppendFrames(aPresContext, aPresShell,aState.mFrameManager,
+                       aContent, insertionFrame,
+                       insertionItems.childList);
+        }
+    }
+    
+   // If the frame is absolutely positioned then create a placeholder frame
     if (isAbsolutelyPositioned || isFixedPositioned) {
       nsIFrame* placeholderFrame;
       

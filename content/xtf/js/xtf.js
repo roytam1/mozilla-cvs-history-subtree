@@ -212,6 +212,7 @@ XTFElement.addProtoObj(
 XTFElement.addProtoObj(
   "onDestroyed",
   function() {
+    this._dump("onDestroyed");
     delete this._wrapper;
   });
 
@@ -331,6 +332,14 @@ XTFMappedAttributeHandler.addProtoGetter(
   function() {return true;});
 
 XTFMappedAttributeHandler.addProtoObj(
+  "handlesAttribute",
+  function(name) {
+    if (this._attributemap[name] || this._attributemap["*"])
+      return true;
+    return false;
+  });
+
+XTFMappedAttributeHandler.addProtoObj(
   "setAttribute",
   function(name, value) {
     this._dump("setAttribute "+name+" "+value);
@@ -341,8 +350,10 @@ XTFMappedAttributeHandler.addProtoObj(
       else if ("varname" in attr)
         this[attr.varname] = value;
       else if ("delegate" in attr) {
-        var hadAttr = this[attr.delegate].hasAttribute(name);
-        this[attr.delegate].setAttribute(name, value);
+        var attrName = attr.delegateAttrib;
+        if (!attrName) attrName = name; 
+        var hadAttr = this[attr.delegate].hasAttribute(attrName);
+        this[attr.delegate].setAttribute(attrName, value);
         if (!hadAttr)
           this._attributeCountChanged();
       }
@@ -361,36 +372,38 @@ XTFMappedAttributeHandler.addProtoObj(
   });
 
 XTFMappedAttributeHandler.addProtoObj(
-  "unsetAttribute",
+  "removeAttribute",
   function(name) {
-    this._dump("unsetAttribute "+name);
+    this._dump("removeAttribute "+name);
     var attr;
     if ((attr = this._attributemap[name])) {
-      if ("unset" in attr) 
-        attr.unset.apply(this, arguments);
+      if ("remove" in attr) 
+        attr.remove.apply(this, arguments);
       else if (("varname" in attr)) {
         if (this.hasOwnProperty(attr.varname))
           delete this[attr.varname];
         else
-          this._error("unsetAttribute: attribute '"+name+"' is already unset");
+          this._error("removeAttribute: attribute '"+name+"' is already removed");
       }
       else if ("delegate" in attr) {
-        var hadAttr = this[attr.delegate].hasAttribute(name);
-        this[attr.delegate].unsetAttribute(name);
+        var attrName = attr.delegateAttrib;
+        if (!attrName) attrName = name;
+        var hadAttr = this[attr.delegate].hasAttribute(attrName);
+        this[attr.delegate].removeAttribute(attrName);
         if (hadAttr)
           this._attributeCountChanged();
       }
       else
-        this._error("unsetAttribute: corrupt attribute descriptor for attrib '"+name+"'");
+        this._error("removeAttribute: corrupt attribute descriptor for attrib '"+name+"'");
     }
     else if ((attr = this._attributemap["*"])) {
-      if ("unset" in attr)
-        attr.unset.apply(this, arguments);
+      if ("remove" in attr)
+        attr.remove.apply(this, arguments);
       else
-        this._error("unsetAttribute: corrupt '*' attribute descriptor on setting '"+name+"'");
+        this._error("removeAttribute: corrupt '*' attribute descriptor on setting '"+name+"'");
     }
     else
-      this._error("unsetAttribute: unknown attribute '"+name+"'");
+      this._error("removeAttribute: unknown attribute '"+name+"'");
   });
 
 XTFMappedAttributeHandler.addProtoObj(
@@ -403,8 +416,13 @@ XTFMappedAttributeHandler.addProtoObj(
         return attr.get.apply(this, arguments);
       else if ("varname" in attr)
         return this[attr.varname];
-      else if ("delegate" in attr)
-        return this[attr.delegate].getAttribute(name);
+      else if ("delegate" in attr) {
+        var attrName = attr.delegateAttrib;
+        if (!attrName) attrName = name;
+        if (!this[attr.delegate].hasAttribute(attrName))
+          return null;
+        return this[attr.delegate].getAttribute(attrName);
+      }
       else
         this._error("getAttribute: corrupt attribute descriptor for attrib '"+name+"'");
     }
@@ -414,8 +432,10 @@ XTFMappedAttributeHandler.addProtoObj(
       else
         this._error("getAttribute: corrupt '*' attribute descriptor on getting '"+name+"'");
     }
-    else 
-      this._error("getAttribute: unknown attribute '"+name+"'");
+    else {
+      this._warning("getAttribute: unknown attribute '"+name+"'");
+      return null;
+    }
   });
 
 XTFMappedAttributeHandler.addProtoObj(
@@ -426,10 +446,14 @@ XTFMappedAttributeHandler.addProtoObj(
     if ((attr = this._attributemap[name])) {
       if ("has" in attr)
         return attr.has.apply(this, arguments);
-      else if ("varname" in attr)
-        return this.hasOwnProperty(this[attr.varname]);
-      else if ("delegate" in attr)
-        return this[attr.delegate].hasAttribute(name);
+      else if ("varname" in attr) { 
+        return this.hasOwnProperty(attr.varname);
+      }
+      else if ("delegate" in attr) { 
+        var attrName = attr.delegateAttrib;
+        if (!attrName) attrName = name;
+        return this[attr.delegate].hasAttribute(attrName);
+      }
       else
         this._error("hasAttribute: corrupt attribute descriptor for attrib '"+name+"'");
     }
@@ -440,21 +464,25 @@ XTFMappedAttributeHandler.addProtoObj(
         this._error("hasAttribute("+name+"): corrupt '*' attribute descriptor");
     }
     else
-      this._error("hasAttribute: unknown attribute '"+name+"'");
+      return false;
   });
 
 XTFMappedAttributeHandler.addProtoObj(
   "getAttributeCount",
   function() {
-    this._dump("getAttributeCount");
+    this._dump("getAttributeCount"); 
     return this._getAttributelist().length;
   });
+
+// global ref to atom service for 'getAttributeNameAt':
+var gAtomservice = Components.classes["@mozilla.org/atom-service;1"]
+                   .getService(Components.interfaces.nsIAtomService);
 
 XTFMappedAttributeHandler.addProtoObj(
   "getAttributeNameAt",
   function(index) {
-    this._dump("getAttributeNameAt "+index);
-    return this._getAttributelist()[index];
+    this._dump("getAttributeNameAt "+index); 
+    return gAtomservice.getAtom(this._getAttributelist()[index]);
   });
 
 XTFMappedAttributeHandler.addProtoObj(
@@ -487,7 +515,7 @@ XTFMappedAttributeHandler.addProtoObj(
     return this.__attributelist;
   });
 
-XTFMappedAttributeHandler.addProtoObj("_attributemap", {} /*, XXX merge flag */);
+XTFMappedAttributeHandler.addProtoObj("_attributemap", {}, {mergenew: cloneObj});
 
 XTFMappedAttributeHandler.addOpsObject("mapAttribute",
   function(name, descriptor) {

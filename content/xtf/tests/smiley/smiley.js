@@ -72,8 +72,8 @@ smileyElement.mapAttribute("*",
       this._g.setAttribute(name, value);
       this._attributeCountChanged();
     },
-    unset: function(name) {
-      this._dump("unsetting "+name);
+    remove: function(name) {
+      this._dump("removing "+name);
       this._g.removeAttribute(name);
       this._attributeCountChanged();
     },
