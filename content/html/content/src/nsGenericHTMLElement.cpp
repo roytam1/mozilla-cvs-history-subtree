@@ -2690,9 +2690,9 @@ nsGenericHTMLElement::GetLayoutHistoryAndKey(nsIHTMLContent* aContent,
   if (docShell) {
     rv = docShell->GetLayoutHistoryState(aHistory);
     NS_ENSURE_SUCCESS(rv, rv);
-    if (!*aHistory) {
-      return NS_OK;
-    }
+  }
+  if (!*aHistory) {
+    return NS_OK;
   }
 
   //
