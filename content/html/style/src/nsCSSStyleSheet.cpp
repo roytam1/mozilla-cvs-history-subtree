@@ -3219,19 +3219,16 @@ static PRBool SelectorMatches(SelectorMatchesData &data,
     } else {
       result = localTrue;
       nsAttrSelector* attr = aSelector->mAttrList;
+      nsAutoString value;
       do {
-        if (!data.mContent->HasAttr(attr->mNameSpace, attr->mAttr)) {
+        nsresult  attrState = data.mContent->GetAttr(attr->mNameSpace, attr->mAttr, value);
+        if (NS_FAILED(attrState) || (NS_CONTENT_ATTR_NOT_THERE == attrState)) {
           result = localFalse;
         }
-        else if (attr->mFunction != NS_ATTR_FUNC_SET) {
-          nsAutoString value;
-          nsresult attrState =
-              data.mContent->GetAttr(attr->mNameSpace, attr->mAttr, value);
-          NS_ASSERTION(NS_SUCCEEDED(attrState) &&
-                       NS_CONTENT_ATTR_NOT_THERE != attrState,
-                       "HasAttr lied or GetAttr failed");
+        else {
           PRBool isCaseSensitive = attr->mCaseSensitive;
           switch (attr->mFunction) {
+            case NS_ATTR_FUNC_SET:    break;
             case NS_ATTR_FUNC_EQUALS: 
               if (isCaseSensitive) {
                 result = PRBool(localTrue == value.Equals(attr->mValue));
