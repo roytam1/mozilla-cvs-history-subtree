@@ -25,7 +25,7 @@
 /* This file implements an nsIOutlinerView for the filepicker */
 
 const nsILocalFile = Components.interfaces.nsILocalFile;
-const nsILocalFile_CONTRACTID = "@mozilla.org/file/local;1";
+const nsLocalFile_CONTRACTID = "@mozilla.org/file/local;1";
 const nsIFile = Components.interfaces.nsIFile;
 const nsIScriptableDateFormat = Components.interfaces.nsIScriptableDateFormat;
 const nsScriptableDateFormat_CONTRACTID = "@mozilla.org/intl/scriptabledateformat;1";
@@ -186,12 +186,12 @@ nsFileView.prototype = {
     }
 
     if (colID == "FilenameColumn") {
-      if (!file.cachedName) {
+      if (!("cachedName" in file)) {
         file.cachedName = file.file.unicodeLeafName;
       }
       return file.cachedName;
     } else if (colID == "LastModifiedColumn") {
-      if (!file.cachedDate) {
+      if (!("cachedDate" in file)) {
         // perhaps overkill, but lets get the right locale handling
         var modDate = new Date(file.file.lastModificationDate);
         file.cachedDate = gDateService.FormatDateTime("", gDateService.dateFormatShort,
@@ -205,7 +205,7 @@ nsFileView.prototype = {
       if (isdir) {
         return "";
       } else {
-        if (!file.cachedSize) {
+        if (!("cachedSize" in file)) {
           file.cachedSize = String(file.file.fileSize);
         }
       }
@@ -345,7 +345,7 @@ nsFileView.prototype = {
     this.mFileList = [];
     this.mDirList = [];
 
-    var dir = Components.classes[nsILocalFile_CONTRACTID].createInstance(nsILocalFile);
+    var dir = Components.classes[nsLocalFile_CONTRACTID].createInstance(nsILocalFile);
     dir.followLinks = false;
     dir.initWithUnicodePath(directory);
     var dirEntries = dir.QueryInterface(nsIFile).directoryEntries;
