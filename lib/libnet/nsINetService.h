@@ -22,7 +22,7 @@
 #include "nscore.h"
 #include "nsISupports.h"
 #include "nsIURL.h"
-#include "nsIStreamNotification.h"
+#include "nsIStreamListener.h"
 
  /* XXX: This should be moved to ns/xpcom/src/nserror.h */
 #define NS_OK    0
@@ -51,7 +51,7 @@ struct nsINetService : public nsISupports
      * @return Returns NS_OK if successful, or NS_FALSE if an error occurred.
      */ 
     NS_IMETHOD OpenStream(nsIURL *aUrl, 
-                          nsIStreamNotification *aConsumer) = 0;
+                          nsIStreamListener *aConsumer) = 0;
 
     /**
      * Initiate a synchronous URL load.<BR><BR>
@@ -65,7 +65,7 @@ struct nsINetService : public nsISupports
      * @return Returns NS_OK if successful, or NS_FALSE if an error occurred.
      */
     NS_IMETHOD OpenBlockingStream(nsIURL *aUrl, 
-                                  nsIStreamNotification *aConsumer,
+                                  nsIStreamListener *aConsumer,
                                   nsIInputStream **aNewStream) = 0;
 };
 

@@ -36,7 +36,7 @@ NS_DEFINE_IID(kIInputStreamIID, NS_IINPUTSTREAM_IID);
 
 nsConnectionInfo::nsConnectionInfo(nsIURL *aURL,
                                    nsNetlibStream *aStream, 
-                                   nsIStreamNotification *aNotify)
+                                   nsIStreamListener *aNotify)
 {
     NS_INIT_REFCNT();
 

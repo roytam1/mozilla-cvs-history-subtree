@@ -30,9 +30,9 @@ public:
     nsNetlibService();
 
     /* Implementation of the nsINetService interface */
-    NS_IMETHOD OpenStream(nsIURL *aUrl, nsIStreamNotification *aConsumer);
+    NS_IMETHOD OpenStream(nsIURL *aUrl, nsIStreamListener *aConsumer);
     NS_IMETHOD OpenBlockingStream(nsIURL *aUrl, 
-                                  nsIStreamNotification *aConsumer,
+                                  nsIStreamListener *aConsumer,
                                   nsIInputStream **aNewStream);
 
 protected:

@@ -22,7 +22,7 @@
 #include "nspr.h"
 #include "nsIURL.h"
 #include "nsIInputStream.h"
-#include "nsIStreamNotification.h"
+#include "nsIStreamListener.h"
 
 
 /* Forward declaration... */
@@ -36,7 +36,7 @@ public:
 
     nsConnectionInfo(nsIURL *aURL, 
                      nsNetlibStream *aStream, 
-                     nsIStreamNotification *aNotify);
+                     nsIStreamListener *aNotify);
 
 protected:
     virtual ~nsConnectionInfo();
@@ -44,7 +44,7 @@ protected:
 public:
     nsIURL                *pURL;
     nsNetlibStream        *pNetStream;
-    nsIStreamNotification *pConsumer;
+    nsIStreamListener *pConsumer;
 };
 
 

@@ -67,7 +67,7 @@ nsNetlibService::~nsNetlibService()
 
 
 NS_IMETHODIMP nsNetlibService::OpenStream(nsIURL *aUrl, 
-                                          nsIStreamNotification *aConsumer)
+                                          nsIStreamListener *aConsumer)
 {
     URL_Struct *URL_s;
     nsConnectionInfo *pConn;
@@ -119,7 +119,7 @@ NS_IMETHODIMP nsNetlibService::OpenStream(nsIURL *aUrl,
 
 
 NS_IMETHODIMP nsNetlibService::OpenBlockingStream(nsIURL *aUrl, 
-                                              nsIStreamNotification *aConsumer,
+                                              nsIStreamListener *aConsumer,
                                               nsIInputStream **aNewStream)
 {
     URL_Struct *URL_s;

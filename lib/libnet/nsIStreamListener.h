@@ -16,8 +16,8 @@
  * Reserved.
  */
 
-#ifndef nsIStreamNotification_h___
-#define nsIStreamNotification_h___
+#ifndef nsIStreamListener_h___
+#define nsIStreamListener_h___
 
 #include "prtypes.h"
 #include "nsISupports.h"
@@ -32,7 +32,7 @@ class nsIInputStream;
   {0xbe, 0xa2, 0x00, 0x80, 0x5f, 0x8a, 0x66, 0xdc} }
 
 /**
- * The nsIStreamNotification interface provides the necessary notifications 
+ * The nsIStreamListener interface provides the necessary notifications 
  * during both synchronous and asynchronous URL loading.  
  * This is a preliminary interface which <B>will</B> change over time!
  * <BR><BR>
@@ -43,7 +43,7 @@ class nsIInputStream;
  * Over time this interface will provide the same functionality as the 
  * IBindStatusCallback interface in the MS INET-SDK...
  */
-struct nsIStreamNotification : public nsISupports 
+struct nsIStreamListener : public nsISupports 
 {
     /**
      * Return information regarding the current URL load.<BR>
@@ -95,4 +95,4 @@ struct nsIStreamNotification : public nsISupports
 };
 
 
-#endif /* nsIStreamNotification_h___ */
+#endif /* nsIStreamListener_h___ */

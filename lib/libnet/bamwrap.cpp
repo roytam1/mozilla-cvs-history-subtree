@@ -21,7 +21,7 @@
 #include "structs.h"
 #include "ctxtfunc.h"
 
-#include "nsIStreamNotification.h"
+#include "nsIStreamListener.h"
 #include "net_strm.h"
 
 /****************************************************************************/
@@ -207,7 +207,7 @@ bam_OnDataAvailable(stream_connection_t *stream_info)
 
 /*
  * Define a NET_StreamClass which pushes its data into an nsIStream
- * and fires off notifications through the nsIStreamNotification interface
+ * and fires off notifications through the nsIStreamListener interface
  */
 
 void stub_complete(NET_StreamClass *stream)

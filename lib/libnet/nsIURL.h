@@ -22,7 +22,7 @@
 #include "nsISupports.h"
 
 class nsIInputStream;
-struct nsIStreamNotification;
+struct nsIStreamListener;
 class nsString;
 
 #define NS_IURL_IID           \
@@ -39,7 +39,7 @@ public:
    *  url. The caller must release the input stream when done with it.
    */
   virtual nsIInputStream* Open(PRInt32* aErrorCode) = 0;
-  virtual nsresult Open(nsIStreamNotification *) = 0;
+  virtual nsresult Open(nsIStreamListener *) = 0;
 
   /** Equality operator */
   virtual PRBool operator==(const nsIURL& aURL) const = 0;

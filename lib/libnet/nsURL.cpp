@@ -34,7 +34,7 @@ public:
 
   virtual PRBool operator==(const nsIURL& aURL) const;
   virtual nsIInputStream* Open(PRInt32* aErrorCode);
-  virtual nsresult Open(nsIStreamNotification *aListener);
+  virtual nsresult Open(nsIStreamListener *aListener);
   virtual nsresult Set(const char *aNewSpec);
   virtual const char* GetProtocol() const;
   virtual const char* GetHost() const;
@@ -312,7 +312,7 @@ nsIInputStream* URLImpl::Open(PRInt32* aErrorCode)
   return in;
 }
 
-nsresult URLImpl::Open(nsIStreamNotification *aListener)
+nsresult URLImpl::Open(nsIStreamListener *aListener)
 {
   nsresult rv;
 

@@ -22,7 +22,7 @@ IGNORE_MANIFEST = 1
 #//
 #//------------------------------------------------------------------------
 MODULE  = netlib
-EXPORTS = nsIStreamNotification.h       \
+EXPORTS = nsIStreamListener.h           \
           nsINetService.h               \
           nsIURL.h                      \
           $(NULL)
