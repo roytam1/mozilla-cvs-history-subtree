@@ -80,7 +80,7 @@ private:
   static nsresult CreateInputStream(const nsAString& aFilename,
                                     nsIFileInputStream ** aFileInputStream,
                                     nsILineInputStream ** aLineInputStream,
-                                    nsAString& aBuffer,
+                                    nsACString& aBuffer,
                                     PRBool * aNetscapeFormat,
                                     PRBool * aMore);
 

@@ -1724,10 +1724,12 @@ FileSystemDataSource::getIEFavoriteURL(nsIRDFResource *source, nsString aFileURL
     nsCOMPtr<nsILineInputStream> linereader = do_QueryInterface(strm, &rv);
 
     nsAutoString    line;
+    nsCAutoString   cLine;
     while(NS_SUCCEEDED(rv))
     {
         PRBool  isEOF;
-        rv = linereader->ReadLine(line, &isEOF);
+        rv = linereader->ReadLine(cLine, &isEOF);
+        CopyASCIItoUTF16(cLine, line);
 
         if (isEOF)
         {

@@ -69,7 +69,7 @@ ParseMIMEType(const nsAString::const_iterator& aStart_iter,
               const nsAString::const_iterator& aEnd_iter);
 
 inline PRBool
-IsNetscapeFormat(const nsAString& aBuffer);
+IsNetscapeFormat(const nsACString& aBuffer);
 
 nsOSHelperAppService::nsOSHelperAppService() : nsExternalHelperAppService()
 {
@@ -294,13 +294,9 @@ nsOSHelperAppService::LookUpTypeAndDescription(const nsAString& aFileExtension,
 }
 
 inline PRBool
-IsNetscapeFormat(const nsAString& aBuffer) {
-  NS_NAMED_LITERAL_STRING(netscapeHeader,
-                          "#--Netscape Communications Corporation MIME Information");
-  NS_NAMED_LITERAL_STRING(MCOMHeader, "#--MCOM MIME Information");
-
-  return StringBeginsWith(aBuffer, netscapeHeader) ||
-         StringBeginsWith(aBuffer, MCOMHeader);
+IsNetscapeFormat(const nsACString& aBuffer) {
+  return StringBeginsWith(aBuffer, NS_LITERAL_CSTRING("#--Netscape Communications Corporation MIME Information")) ||
+         StringBeginsWith(aBuffer, NS_LITERAL_CSTRING("#--MCOM MIME Information"));
 }
 
 /*
@@ -313,7 +309,7 @@ nsresult
 nsOSHelperAppService::CreateInputStream(const nsAString& aFilename,
                                         nsIFileInputStream ** aFileInputStream,
                                         nsILineInputStream ** aLineInputStream,
-                                        nsAString& aBuffer,
+                                        nsACString& aBuffer,
                                         PRBool * aNetscapeFormat,
                                         PRBool * aMore) {
   LOG(("-- CreateInputStream"));
@@ -375,14 +371,16 @@ nsOSHelperAppService::GetTypeAndDescriptionFromMimetypesFile(const nsAString& aF
   nsCOMPtr<nsILineInputStream> mimeTypes;
   PRBool netscapeFormat;
   nsAutoString buf;
+  nsCAutoString cBuf;
   PRBool more = PR_FALSE;
   rv = CreateInputStream(aFilename, getter_AddRefs(mimeFile), getter_AddRefs(mimeTypes),
-                         buf, &netscapeFormat, &more);
+                         cBuf, &netscapeFormat, &more);
 
   if (NS_FAILED(rv)) {
     return rv;
   }
   
+
   nsAutoString extensions;
   nsString entry;
   entry.SetCapacity(100);
@@ -391,6 +389,7 @@ nsOSHelperAppService::GetTypeAndDescriptionFromMimetypesFile(const nsAString& aF
                             descriptionStart, descriptionEnd;
 
   do {
+    CopyASCIItoUTF16(cBuf, buf);
     // read through, building up an entry.  If we finish an entry, check for
     // a match and return out of the loop if we match
 
@@ -473,7 +472,7 @@ nsOSHelperAppService::GetTypeAndDescriptionFromMimetypesFile(const nsAString& aF
       break;
     }
     // read the next line
-    rv = mimeTypes->ReadLine(buf, &more);
+    rv = mimeTypes->ReadLine(cBuf, &more);
   } while (NS_SUCCEEDED(rv));
 
   mimeFile->Close();
@@ -544,9 +543,10 @@ nsOSHelperAppService::GetExtensionsAndDescriptionFromMimetypesFile(const nsAStri
   nsCOMPtr<nsILineInputStream> mimeTypes;
   PRBool netscapeFormat;
   nsAutoString buf;
+  nsCAutoString cBuf;
   PRBool more = PR_FALSE;
   rv = CreateInputStream(aFilename, getter_AddRefs(mimeFile), getter_AddRefs(mimeTypes),
-                         buf, &netscapeFormat, &more);
+                         cBuf, &netscapeFormat, &more);
 
   if (NS_FAILED(rv)) {
     return rv;
@@ -560,6 +560,7 @@ nsOSHelperAppService::GetExtensionsAndDescriptionFromMimetypesFile(const nsAStri
                             descriptionStart, descriptionEnd;
   
   do {
+    CopyASCIItoUTF16(cBuf, buf);
     // read through, building up an entry.  If we finish an entry, check for
     // a match and return out of the loop if we match
 
@@ -634,7 +635,7 @@ nsOSHelperAppService::GetExtensionsAndDescriptionFromMimetypesFile(const nsAStri
       break;
     }
     // read the next line
-    rv = mimeTypes->ReadLine(buf, &more);
+    rv = mimeTypes->ReadLine(cBuf, &more);
   } while (NS_SUCCEEDED(rv));
 
   mimeFile->Close();
@@ -970,9 +971,10 @@ nsOSHelperAppService::GetHandlerAndDescriptionFromMailcapFile(const nsAString& a
   }
 
   nsString entry, buffer;
+  nsCAutoString cBuffer;
   entry.SetCapacity(128);
-  buffer.SetCapacity(80);
-  rv = mailcap->ReadLine(buffer, &more);
+  cBuffer.SetCapacity(80);
+  rv = mailcap->ReadLine(cBuffer, &more);
   if (NS_FAILED(rv)) {
     mailcapFile->Close();
     return rv;
@@ -980,6 +982,7 @@ nsOSHelperAppService::GetHandlerAndDescriptionFromMailcapFile(const nsAString& a
 
   do {  // return on end-of-file in the loop
 
+    CopyASCIItoUTF16(cBuffer, buffer);
     if (!buffer.IsEmpty() && buffer.First() != '#') {
       entry.Append(buffer);
       if (entry.Last() == '\\') {  // entry continues on next line
@@ -1113,7 +1116,7 @@ nsOSHelperAppService::GetHandlerAndDescriptionFromMailcapFile(const nsAString& a
       rv = NS_ERROR_NOT_AVAILABLE;
       break;
     }
-    rv = mailcap->ReadLine(buffer, &more);
+    rv = mailcap->ReadLine(cBuffer, &more);
   } while (NS_SUCCEEDED(rv));
   mailcapFile->Close();
   return rv;

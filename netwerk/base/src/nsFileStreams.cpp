@@ -281,8 +281,8 @@ nsFileInputStream::Init(nsIFile* aFile, PRInt32 aIOFlags, PRInt32 aPerm,
 NS_IMETHODIMP
 nsFileInputStream::Close()
 {
+    // null out mLineBuffer in case Close() is called again after failing
     PR_FREEIF(mLineBuffer);
-    mLineBuffer = nsnull;       // in case Close() is called again after failing
     nsresult rv = nsFileStream::Close();
     if (NS_FAILED(rv)) return rv;
     if (mFile && (mBehaviorFlags & DELETE_ON_CLOSE)) {
@@ -334,7 +334,7 @@ nsFileInputStream::Read(char* aBuf, PRUint32 aCount, PRUint32* aResult)
 }
 
 NS_IMETHODIMP
-nsFileInputStream::ReadLine(nsAString& aLine, PRBool* aResult)
+nsFileInputStream::ReadLine(nsACString& aLine, PRBool* aResult)
 {
     if (!mLineBuffer) {
         nsresult rv = NS_InitLineBuffer(&mLineBuffer);
@@ -365,6 +365,7 @@ nsFileInputStream::IsNonBlocking(PRBool *aNonBlocking)
 NS_IMETHODIMP
 nsFileInputStream::Seek(PRInt32 aWhence, PRInt32 aOffset)
 {
+    PR_FREEIF(mLineBuffer); // this invalidates the line buffer
     if (!mFD) {
         if (mBehaviorFlags & REOPEN_ON_REWIND) {
             nsresult rv = Reopen();

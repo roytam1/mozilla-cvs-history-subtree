@@ -282,9 +282,7 @@ nsMsgSearchOfflineMail::~nsMsgSearchOfflineMail ()
 
 nsresult nsMsgSearchOfflineMail::ValidateTerms ()
 {
-  nsresult err = NS_OK;
-	err = nsMsgSearchAdapter::ValidateTerms ();
-  return err;
+  return nsMsgSearchAdapter::ValidateTerms ();
 }
 
 
@@ -716,16 +714,19 @@ void nsMsgSearchOfflineMail::CleanUpScope()
     }
     
     m_db = nsnull;
-
-    nsCOMPtr <nsIFileSpec> fileSpec;
-	nsresult rv = m_scope->GetMailPath(getter_AddRefs(fileSpec));
+  m_scope->SetInputStream(nsnull);
+#if 0 // not sure how we'll clean this up. the scope term caches in the input stream - maybe just null it out.
+  nsCOMPtr <nsILineInputStream> inputStream;
+  nsCOMPtr <nsILocalFile> localFile
+  nsresult rv = m_scope->GetMailFile(getter_AddRefs(localFile));
     PRBool isOpen = PR_FALSE;
-	if (NS_SUCCEEDED(rv) && fileSpec)
+  if (NS_SUCCEEDED(rv) && localFile)
 	{
        fileSpec->IsStreamOpen(&isOpen);
        if (isOpen) 
          fileSpec->CloseStream();    
     }
+#endif
 }
 
 NS_IMETHODIMP nsMsgSearchOfflineMail::AddResultElement (nsIMsgDBHdr *pHeaders)
