@@ -30,7 +30,7 @@
 #include "nsBox.h"
 class nsSpaceManager;
 
-class nsBoxToBlockAdaptor : public nsBox, nsIBoxToBlockAdaptor {
+class nsBoxToBlockAdaptor : public nsBox, public nsIBoxToBlockAdaptor {
 
 public:
 
@@ -47,6 +47,7 @@ public:
   NS_IMETHOD SetIncludeOverflow(PRBool aInclude);
   NS_IMETHOD GetOverflow(nsSize& aOverflow);
   NS_IMETHOD NeedsRecalc();
+  NS_IMETHOD SetParentBox(nsIBox* aParent);
 
   NS_IMETHOD Recycle(nsIPresShell* aPresShell);
 
@@ -94,6 +95,7 @@ protected:
   PRBool mSizeSet;
   nsSize mOverflow;
   PRBool mIncludeOverflow;
+  nsIPresShell* mPresShell;
 };
 
 #endif

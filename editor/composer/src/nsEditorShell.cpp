@@ -69,7 +69,8 @@
 #include "nsIDOMHTMLImageElement.h"
 #include "nsIPresShell.h"
 #include "nsIPresContext.h"
-#include "nsIDOMSelection.h"
+#include "nsISelection.h"
+#include "nsISelectionPrivate.h"
 
 #include "nsIFileWidget.h"
 #include "nsFileSpec.h"
@@ -386,12 +387,13 @@ nsEditorShell::ResetEditingState()
   // now, unregister the selection listener, if there was one
   if (mStateMaintainer)
   {
-    nsCOMPtr<nsIDOMSelection> domSelection;
+    nsCOMPtr<nsISelection> domSelection;
     // using a scoped result, because we don't really care if this fails
     rv = GetEditorSelection(getter_AddRefs(domSelection));
     if (NS_SUCCEEDED(rv) && domSelection)
     {
-      domSelection->RemoveSelectionListener(mStateMaintainer);
+      nsCOMPtr<nsISelectionPrivate> selPriv(do_QueryInterface(domSelection));
+      selPriv->RemoveSelectionListener(mStateMaintainer);
       NS_IF_RELEASE(mStateMaintainer);
     }
   }
@@ -483,11 +485,12 @@ nsEditorShell::PrepareDocumentForEditing(nsIDocumentLoader* aLoader, nsIURI *aUr
   if (NS_FAILED(rv)) return rv;
   
   // set it up as a selection listener
-  nsCOMPtr<nsIDOMSelection> domSelection;
+  nsCOMPtr<nsISelection> domSelection;
   rv = GetEditorSelection(getter_AddRefs(domSelection));
   if (NS_FAILED(rv)) return rv;
 
-  rv = domSelection->AddSelectionListener(mStateMaintainer);
+  nsCOMPtr<nsISelectionPrivate> selPriv(do_QueryInterface(domSelection));
+  rv = selPriv->AddSelectionListener(mStateMaintainer);
   if (NS_FAILED(rv)) return rv;
 
   // and set it up as a doc state listener
@@ -698,7 +701,7 @@ nsEditorShell::SetContentWindow(nsIDOMWindowInternal* aWin)
   
   {
     // the first is an editor controller, and takes an nsIEditor as the refCon
-    nsCOMPtr<nsIController> controller = do_CreateInstance("component://netscape/editor/editorcontroller", &rv);
+    nsCOMPtr<nsIController> controller = do_CreateInstance("@mozilla.org/editor/editorcontroller;1", &rv);
     if (NS_FAILED(rv)) return rv;  
     nsCOMPtr<nsIEditorController> editorController = do_QueryInterface(controller);
     rv = editorController->Init(nsnull);    // we set the editor later when we have one
@@ -712,7 +715,7 @@ nsEditorShell::SetContentWindow(nsIDOMWindowInternal* aWin)
   
   {
     // the second is a composer controller, and takes an nsIEditorShell as the refCon
-    nsCOMPtr<nsIController> controller = do_CreateInstance("component://netscape/editor/composercontroller", &rv);
+    nsCOMPtr<nsIController> controller = do_CreateInstance("@mozilla.org/editor/composercontroller;1", &rv);
     if (NS_FAILED(rv)) return rv;  
     nsCOMPtr<nsIEditorController> editorController = do_QueryInterface(controller);
     
@@ -2566,7 +2569,7 @@ nsEditorShell::Rewrap(PRBool aRespectNewlines)
   printf("nsEditorShell::Rewrap to %ld columns\n", (long)wrapCol);
 #endif
 
-  nsCOMPtr<nsIDOMSelection> selection;
+  nsCOMPtr<nsISelection> selection;
   rv = GetEditorSelection(getter_AddRefs(selection));
   if (NS_FAILED(rv)) return rv;
 
@@ -2630,7 +2633,7 @@ nsEditorShell::StripCites()
   printf("nsEditorShell::StripCites()\n");
 #endif
 
-  nsCOMPtr<nsIDOMSelection> selection;
+  nsCOMPtr<nsISelection> selection;
   nsresult rv = GetEditorSelection(getter_AddRefs(selection));
   if (NS_FAILED(rv)) return rv;
 
@@ -2886,7 +2889,7 @@ nsEditorShell::DoFind(PRBool aFindNext)
   
   // Get find component.
   nsresult rv;
-  NS_WITH_SERVICE(nsIFindComponent, findComponent, NS_IFINDCOMPONENT_PROGID, &rv);
+  NS_WITH_SERVICE(nsIFindComponent, findComponent, NS_IFINDCOMPONENT_CONTRACTID, &rv);
   NS_ASSERTION(((NS_SUCCEEDED(rv)) && findComponent), "GetService failed for find component.");
   if (NS_FAILED(rv)) { return rv; }
 
@@ -3328,7 +3331,7 @@ nsEditorShell::GetEditor(nsIEditor** aEditor)
 
 
 NS_IMETHODIMP
-nsEditorShell::GetEditorSelection(nsIDOMSelection** aEditorSelection)
+nsEditorShell::GetEditorSelection(nsISelection** aEditorSelection)
 {
   nsCOMPtr<nsIEditor>  editor = do_QueryInterface(mEditor);
   if (editor)
@@ -3412,7 +3415,7 @@ nsEditorShell::GetDocumentLength(PRInt32 *aDocumentLength)
 
 
 NS_IMETHODIMP
-nsEditorShell::MakeOrChangeList(const PRUnichar *listType)
+nsEditorShell::MakeOrChangeList(const PRUnichar *listType, PRBool entireList)
 {
   nsresult err = NS_NOINTERFACE;
 
@@ -3432,7 +3435,7 @@ nsEditorShell::MakeOrChangeList(const PRUnichar *listType)
         }
       }
       else
-        err = mEditor->MakeOrChangeList(aListType);
+        err = mEditor->MakeOrChangeList(aListType, entireList);
       break;
 
     case ePlainTextEditorType:
@@ -4507,7 +4510,7 @@ nsEditorShell::InitSpellChecker()
     if (NS_FAILED(result))
       return result;
 
-    result = nsComponentManager::CreateInstance(NS_SPELLCHECKER_PROGID,
+    result = nsComponentManager::CreateInstance(NS_SPELLCHECKER_CONTRACTID,
                                                 nsnull,
                                                 NS_GET_IID(nsISpellChecker),
                                                 (void **)getter_AddRefs(mSpellChecker));

@@ -21,7 +21,6 @@ Rights Reserved.
 
 <!DOCTYPE window SYSTEM "chrome://messenger/locale/addressbook/abDirTreeOverlay.dtd">
 
-
 <overlay xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 		 xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
@@ -30,8 +29,8 @@ Rights Reserved.
 		  class="abDirectory" 
 		  ref="abdirectory://"
 		  datasources="rdf:addressdirectory"
-		  rdf:containment="http://home.netscape.com/NC-rdf#child"
-		  rdf:ignore="http://home.netscape.com/NC-rdf#CardChild"
+		  containment="http://home.netscape.com/NC-rdf#child"
+		  ignore="http://home.netscape.com/NC-rdf#CardChild"
 		  onselect="DirPaneSelectionChange(); document.commandDispatcher.updateCommands('tree-select');"
 		  onblur="goOnEvent(this,'blur')"
 		  allownegativeassertions="false"
@@ -47,7 +46,7 @@ Rights Reserved.
 				<treeitem uri="..."
 					IsMailList="rdf:http://home.netscape.com/NC-rdf#IsMailList">
 				  <treerow>
-				    <treecell indent="true" class="treecell-indent" value="rdf:http://home.netscape.com/NC-rdf#DirName"
+				    <treecell indent="true" class="treecell-iconic" value="rdf:http://home.netscape.com/NC-rdf#DirName"
 								     IsMailList="rdf:http://home.netscape.com/NC-rdf#IsMailList"/>
 				  </treerow>
 				</treeitem>
@@ -56,7 +55,7 @@ Rights Reserved.
 		</template>
 
                 <treecolgroup>
-		  <treecol rdf:resource="http://home.netscape.com/NC-rdf#DirName" flex="1"/>
+		  <treecol resource="http://home.netscape.com/NC-rdf#DirName" flex="1"/>
                 </treecolgroup>
 
 		<treechildren id="dirTreeBody" flex="1">

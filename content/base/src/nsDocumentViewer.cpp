@@ -45,7 +45,8 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsILinkHandler.h"
 #include "nsIDOMDocument.h"
-#include "nsIDOMSelectionListener.h"
+#include "nsISelectionListener.h"
+#include "nsISelectionPrivate.h"
 #include "nsIDOMHTMLDocument.h"
 #include "nsIDOMHTMLElement.h"
 #include "nsIDOMRange.h"
@@ -85,9 +86,7 @@
 #include "nsIDOMFocusListener.h"
 #include "nsISelectionController.h"
 
-#ifdef MOZ_XSL
 #include "nsITransformMediator.h"
-#endif
 
 static NS_DEFINE_CID(kEventQueueService, NS_EVENTQUEUESERVICE_CID);
 
@@ -106,16 +105,15 @@ class DocumentViewerImpl;
 #pragma mark ** nsDocViwerSelectionListener **
 #endif
 
-class nsDocViwerSelectionListener : public nsIDOMSelectionListener
+class nsDocViwerSelectionListener : public nsISelectionListener
 {
 public:
 
   // nsISupports interface...
   NS_DECL_ISUPPORTS
 
-  // nsIDOMSelectionListerner interface
-  NS_DECL_IDOMSELECTIONLISTENER
-  
+  // nsISelectionListerner interface
+  NS_DECL_NSISELECTIONLISTENER  
 
                        nsDocViwerSelectionListener()
                        : mDocViewer(NULL)
@@ -215,9 +213,7 @@ public:
   NS_IMETHOD GetPresContext(nsIPresContext*& aResult);
   NS_IMETHOD CreateDocumentViewerUsing(nsIPresContext* aPresContext,
                                        nsIDocumentViewer*& aResult);
-#ifdef MOZ_XSL
   NS_IMETHOD SetTransformMediator(nsITransformMediator* aMediator);
-#endif
 
   // nsIContentViewerEdit
   NS_DECL_NSICONTENTVIEWEREDIT
@@ -245,7 +241,7 @@ private:
   nsresult MakeWindow(nsIWidget* aParentWidget,
                       const nsRect& aBounds);
 
-  nsresult GetDocumentSelection(nsIDOMSelection **aSelection);
+  nsresult GetDocumentSelection(nsISelection **aSelection);
 
   //
   // The following three methods are used for printing...
@@ -266,11 +262,9 @@ protected:
   nsCOMPtr<nsIDeviceContext> mDeviceContext;   // ??? can't hurt, but...
   nsIView*                 mView;        // [WEAK] cleaned up by view mgr
 
-  // the following six items are explicitly in this order
+  // the following seven items are explicitly in this order
   // so they will be destroyed in the reverse order (pinkerton, scc)
-#ifdef MOZ_XSL
   nsCOMPtr<nsITransformMediator> mTransformMediator;
-#endif
   nsCOMPtr<nsIDocument>    mDocument;
   nsCOMPtr<nsIWidget>      mWindow;      // ??? should we really own it?
   nsCOMPtr<nsIViewManager> mViewManager;
@@ -279,7 +273,7 @@ protected:
 
   nsCOMPtr<nsIStyleSheet>  mUAStyleSheet;
 
-  nsCOMPtr<nsIDOMSelectionListener> mSelectionListener;
+  nsCOMPtr<nsISelectionListener> mSelectionListener;
   nsCOMPtr<nsIDOMFocusListener> mFocusListener;
   
   PRBool  mEnableRendering;
@@ -436,12 +430,13 @@ DocumentViewerImpl::~DocumentViewerImpl()
   if (mPresShell) {
     // Break circular reference (or something)
     mPresShell->EndObservingDocument();
-    nsCOMPtr<nsIDOMSelection> selection;
+    nsCOMPtr<nsISelection> selection;
     rv = GetDocumentSelection(getter_AddRefs(selection));
-    if (NS_FAILED(rv) || !selection) 
+    nsCOMPtr<nsISelectionPrivate> selPrivate(do_QueryInterface(selection));
+    if (NS_FAILED(rv) || !selPrivate) 
       return;
     if (mSelectionListener)
-      selection->RemoveSelectionListener(mSelectionListener);
+      selPrivate->RemoveSelectionListener(mSelectionListener);
   }
   
 }
@@ -592,15 +587,16 @@ DocumentViewerImpl::Init(nsIWidget* aParentWidget,
   // this is the owning reference. The nsCOMPtr will take care of releasing
   // our ref to the listener on destruction.
   NS_ADDREF(selectionListener);
-  rv = selectionListener->QueryInterface(NS_GET_IID(nsIDOMSelectionListener), getter_AddRefs(mSelectionListener));
+  rv = selectionListener->QueryInterface(NS_GET_IID(nsISelectionListener), getter_AddRefs(mSelectionListener));
   NS_RELEASE(selectionListener);
   if (NS_FAILED(rv)) return rv;
   
-  nsCOMPtr<nsIDOMSelection> selection;
+  nsCOMPtr<nsISelection> selection;
   rv = GetDocumentSelection(getter_AddRefs(selection));
   if (NS_FAILED(rv)) return rv;
   
-  rv = selection->AddSelectionListener(mSelectionListener);
+  nsCOMPtr<nsISelectionPrivate> selPrivate(do_QueryInterface(selection));
+  rv = selPrivate->AddSelectionListener(mSelectionListener);
   if (NS_FAILED(rv)) return rv;
   
   //focus listener
@@ -1087,7 +1083,7 @@ DocumentViewerImpl::CreateStyleSet(nsIDocument* aDocument,
       }
     }
 
-    NS_WITH_SERVICE(nsIChromeRegistry, chromeRegistry, "component://netscape/chrome/chrome-registry", &rv);
+    NS_WITH_SERVICE(nsIChromeRegistry, chromeRegistry, "@mozilla.org/chrome/chrome-registry;1", &rv);
     if (NS_SUCCEEDED(rv) && chromeRegistry) {
       nsCOMPtr<nsISupportsArray> sheets;
       chromeRegistry->GetBackstopSheets(getter_AddRefs(sheets));
@@ -1194,7 +1190,7 @@ DocumentViewerImpl::MakeWindow(nsIWidget* aParentWidget,
   return rv;
 }
 
-nsresult DocumentViewerImpl::GetDocumentSelection(nsIDOMSelection **aSelection)
+nsresult DocumentViewerImpl::GetDocumentSelection(nsISelection **aSelection)
 {
   if (!aSelection) return NS_ERROR_NULL_POINTER;
   if (!mPresShell) return NS_ERROR_NOT_INITIALIZED;
@@ -1296,7 +1292,6 @@ void DocumentViewerImpl::DocumentReadyForPrinting()
   }
 }
 
-#ifdef MOZ_XSL
 NS_IMETHODIMP 
 DocumentViewerImpl::SetTransformMediator(nsITransformMediator* aMediator)
 {
@@ -1305,7 +1300,6 @@ DocumentViewerImpl::SetTransformMediator(nsITransformMediator* aMediator)
   mTransformMediator = aMediator;
   return NS_OK;
 }
-#endif
 
 #ifdef XP_MAC
 #pragma mark -
@@ -1338,7 +1332,7 @@ NS_IMETHODIMP DocumentViewerImpl::SelectAll()
   // XXX this is a temporary implementation copied from nsWebShell
   // for now. I think nsDocument and friends should have some helper
   // functions to make this easier.
-  nsCOMPtr<nsIDOMSelection> selection;
+  nsCOMPtr<nsISelection> selection;
   nsresult rv;
   rv = GetDocumentSelection(getter_AddRefs(selection));
   if (NS_FAILED(rv)) return rv;
@@ -1361,7 +1355,7 @@ NS_IMETHODIMP DocumentViewerImpl::SelectAll()
   }
   if (!bodyNode) return NS_ERROR_FAILURE; 
   
-  rv = selection->ClearSelection();
+  rv = selection->RemoveAllRanges();
   if (NS_FAILED(rv)) return rv;
 
   static NS_DEFINE_CID(kCDOMRangeCID,           NS_RANGE_CID);
@@ -1385,7 +1379,7 @@ NS_IMETHODIMP DocumentViewerImpl::CopySelection()
 
 NS_IMETHODIMP DocumentViewerImpl::GetCopyable(PRBool *aCopyable)
 {
-  nsCOMPtr<nsIDOMSelection> selection;
+  nsCOMPtr<nsISelection> selection;
   nsresult rv;
   rv = GetDocumentSelection(getter_AddRefs(selection));
   if (NS_FAILED(rv)) return rv;
@@ -1763,7 +1757,7 @@ NS_IMETHODIMP DocumentViewerImpl::GetDefaultCharacterSet(PRUnichar** aDefaultCha
       webShell = do_QueryInterface(mContainer);
       if (webShell)
       {
-        nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_PROGID));
+        nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID));
         if(prefs)
           prefs->GetLocalizedUnicharPref("intl.charset.default", &gDefCharset);
       }
@@ -1922,7 +1916,7 @@ NS_IMETHODIMP DocumentViewerImpl::SizeToContent()
 #pragma mark -
 #endif
 
-NS_IMPL_ISUPPORTS(nsDocViwerSelectionListener, NS_GET_IID(nsIDOMSelectionListener));
+NS_IMPL_ISUPPORTS(nsDocViwerSelectionListener, NS_GET_IID(nsISelectionListener));
 
 nsresult nsDocViwerSelectionListener::Init(DocumentViewerImpl *aDocViewer)
 {
@@ -1931,12 +1925,12 @@ nsresult nsDocViwerSelectionListener::Init(DocumentViewerImpl *aDocViewer)
 }
 
 
-NS_IMETHODIMP nsDocViwerSelectionListener::NotifySelectionChanged(nsIDOMDocument *, nsIDOMSelection *, short)
+NS_IMETHODIMP nsDocViwerSelectionListener::NotifySelectionChanged(nsIDOMDocument *, nsISelection *, short)
 {
   NS_ASSERTION(mDocViewer, "Should have doc viewer!");
 
   // get the selection state
-  nsCOMPtr<nsIDOMSelection> selection;
+  nsCOMPtr<nsISelection> selection;
   nsresult rv = mDocViewer->GetDocumentSelection(getter_AddRefs(selection));
   if (NS_FAILED(rv)) return rv;
 

@@ -1187,6 +1187,10 @@ NS_NewGeneratedContentIterator(nsIPresContext*      aPresContext,
   if (!aIterator) {
     return NS_ERROR_NULL_POINTER;
   }
+  NS_ENSURE_ARG_POINTER(aFrame);
+  if (!aFrame) {
+    return NS_ERROR_NULL_POINTER;
+  }
   
   // Make sure the frame corresponds to generated content
 #ifdef DEBUG
@@ -3985,7 +3989,7 @@ nsCSSFrameConstructor::HasGfxScrollbars()
 {
   // Get the Prefs
   if (!mGotGfxPrefs) {
-    nsCOMPtr<nsIPref> pref(do_GetService(NS_PREF_PROGID));
+    nsCOMPtr<nsIPref> pref(do_GetService(NS_PREF_CONTRACTID));
     if (pref) {
       pref->GetBoolPref("nglayout.widget.gfxscrollbars", &mHasGfxScrollbars);
       pref->GetBoolPref("nglayout.widget.gfxlistbox", &mDoGfxListbox);
@@ -4836,15 +4840,27 @@ nsCSSFrameConstructor::ConstructFrameByTag(nsIPresShell*            aPresShell,
   nsresult  rv = NS_OK;
 
   if (nsLayoutAtoms::textTagName == aTag) {
+    PRBool isWhitespace = IsOnlyWhiteSpace(aContent);
     // process pending pseudo frames. whitespace doesn't have an effect.
-    if (!aState.mPseudoFrames.IsEmpty() && !IsOnlyWhiteSpace(aContent)) { 
+    if (!aState.mPseudoFrames.IsEmpty() && !isWhitespace) { 
       ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems);
     }
-    rv = NS_NewTextFrame(aPresShell, &newFrame);
-    // Text frames don't go in the content->frame hash table, because
-    // they're anonymous. This keeps the hash table smaller
-    addToHashTable = PR_FALSE;
-    isReplaced = PR_TRUE;   // XXX kipp: temporary
+    // exclude whitespace from tables in as efficient manner as possible
+    PRBool createFrame = PR_TRUE;
+    if (isWhitespace) {
+      nsCOMPtr<nsIAtom> fType;
+      aParentFrame->GetFrameType(getter_AddRefs(fType));
+      if ((fType.get() != nsLayoutAtoms::tableCellFrame) && IsTableRelated(fType.get())) {
+        createFrame = PR_FALSE;
+      }
+    }
+    if (createFrame) {
+      rv = NS_NewTextFrame(aPresShell, &newFrame);
+      // Text frames don't go in the content->frame hash table, because
+      // they're anonymous. This keeps the hash table smaller
+      addToHashTable = PR_FALSE;
+      isReplaced = PR_TRUE;   // XXX kipp: temporary
+    }
   }
   else {
     nsIHTMLContent *htmlContent;
@@ -4884,6 +4900,7 @@ nsCSSFrameConstructor::ConstructFrameByTag(nsIPresShell*            aPresShell,
         rv = NS_NewImageFrame(aPresShell, &newFrame);
       }
       else if (nsHTMLAtoms::hr == aTag) {
+        isReplaced = PR_TRUE;
         if (!aState.mPseudoFrames.IsEmpty()) { // process pending pseudo frames
           ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems); 
         }
@@ -5030,12 +5047,30 @@ nsCSSFrameConstructor::ConstructFrameByTag(nsIPresShell*            aPresShell,
         rv = NS_NewLabelFrame(aPresShell, &newFrame, isAbsolutelyPositioned ? NS_BLOCK_SPACE_MGR : 0);
         processChildren = PR_TRUE;
       }
+      else if (nsHTMLAtoms::isindex == aTag) {
+        if (!aState.mPseudoFrames.IsEmpty()) { // process pending pseudo frames
+          ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems);
+        }
+        isReplaced = PR_TRUE;
+        rv = NS_NewIsIndexFrame(aPresShell, &newFrame);
+      }
     }
   }
 
   // If we succeeded in creating a frame then initialize it, process its
   // children (if requested), and set the initial child list
   if (NS_SUCCEEDED(rv) && (nsnull != newFrame)) {
+    // XXX: may want to special case this for HR's if we don't want
+    //      to advertise full support of :before and :after for release 1
+    // first, create it's "before" generated content
+    nsIFrame* generatedFrame;
+    if (CreateGeneratedContentFrame(aPresShell, aPresContext, aState, newFrame, aContent,
+                                    aStyleContext, nsCSSAtoms::beforePseudo,
+                                    PR_FALSE, &generatedFrame)) {
+      // Add the generated frame to the child list
+      aFrameItems.AddChild(generatedFrame);
+    }
+
     // If the frame is a replaced element, then set the frame state bit
     if (isReplaced) {
       nsFrameState  state;
@@ -5163,6 +5198,15 @@ nsCSSFrameConstructor::ConstructFrameByTag(nsIPresShell*            aPresShell,
       // the placeholder frame
       aState.mFrameManager->SetPrimaryFrameFor(aContent, newFrame);
     }
+
+    // finally, create it's "after" generated content
+    if (CreateGeneratedContentFrame(aPresShell, aPresContext, aState, newFrame, aContent,
+                                    aStyleContext, nsCSSAtoms::afterPseudo,
+                                    PR_FALSE, &generatedFrame)) {
+      // Add the generated frame to the child list
+      aFrameItems.AddChild(generatedFrame);
+    }
+
   }
 
   return rv;
@@ -5230,7 +5274,7 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*        aPresShell,
   if (!ui->mBehavior.IsEmpty()) {
     // Get the XBL loader.
     nsresult rv;
-    NS_WITH_SERVICE(nsIXBLService, xblService, "component://netscape/xbl", &rv);
+    NS_WITH_SERVICE(nsIXBLService, xblService, "@mozilla.org/xbl;1", &rv);
     if (!xblService)
       return rv;
 
@@ -5378,6 +5422,7 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*        aPresShell,
   if (aTag !=  nsHTMLAtoms::input &&
       aTag !=  nsHTMLAtoms::textarea &&
       aTag !=  nsHTMLAtoms::combobox &&
+      aTag !=  nsHTMLAtoms::isindex &&
       aTag !=  nsXULAtoms::splitter &&
       aTag !=  nsXULAtoms::scrollbar
      ) {
@@ -5465,7 +5510,7 @@ nsCSSFrameConstructor::CreateAnonymousTableCellFrames(nsIPresShell*        aPres
   if (!ui->mBehavior.IsEmpty()) {
     // Get the XBL loader.
     nsresult rv;
-    NS_WITH_SERVICE(nsIXBLService, xblService, "component://netscape/xbl", &rv);
+    NS_WITH_SERVICE(nsIXBLService, xblService, "@mozilla.org/xbl;1", &rv);
     if (!xblService)
       return rv;
 
@@ -7427,7 +7472,7 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsIPresShell*            aPresShe
     if (!ui->mBehavior.IsEmpty()) {
       // Get the XBL loader.
       nsresult rv;
-      NS_WITH_SERVICE(nsIXBLService, xblService, "component://netscape/xbl", &rv);
+      NS_WITH_SERVICE(nsIXBLService, xblService, "@mozilla.org/xbl;1", &rv);
       if (!xblService)
         return rv;
 
@@ -12400,7 +12445,7 @@ nsCSSFrameConstructor::AreAllKidsInline(nsIFrame* aFrameList)
 }
 
 nsresult
-nsCSSFrameConstructor::ConstructInline(nsIPresShell* aPresShell, 
+nsCSSFrameConstructor::ConstructInline(nsIPresShell*            aPresShell, 
                                        nsIPresContext*          aPresContext,
                                        nsFrameConstructorState& aState,
                                        const nsStyleDisplay*    aDisplay,

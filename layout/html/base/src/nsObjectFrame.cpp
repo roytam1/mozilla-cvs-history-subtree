@@ -328,8 +328,32 @@ nsObjectFrame::Destroy(nsIPresContext* aPresContext)
     nsIPluginInstance *inst;
     if(NS_OK == mInstanceOwner->GetInstance(inst))
     {
-      inst->SetWindow(nsnull);
-      inst->Stop();
+      PRBool doCache = PR_TRUE;
+      PRBool doCallSetWindowAfterDestroy = PR_FALSE;
+
+      // first, determine if the plugin wants to be cached
+      inst->GetValue(nsPluginInstanceVariable_DoCacheBool, 
+                     (void *) &doCache);
+      if (!doCache) {
+        // then determine if the plugin wants Destroy to be called after
+        // Set Window.  This is for bug 50547.
+        inst->GetValue(nsPluginInstanceVariable_CallSetWindowAfterDestroyBool, 
+                       (void *) &doCallSetWindowAfterDestroy);
+        if (doCallSetWindowAfterDestroy) {
+          inst->Stop();
+          inst->Destroy();
+          inst->SetWindow(nsnull);
+        }
+        else {
+          inst->SetWindow(nsnull);
+          inst->Stop();
+          inst->Destroy();
+        }
+      }
+      else {
+        inst->SetWindow(nsnull);
+        inst->Stop();
+      }
       NS_RELEASE(inst);
     }
   }
@@ -616,6 +640,9 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
 
         // get the nsIPluginHost interface
         pluginHost = do_GetService(kCPluginManagerCID);
+        if (!pluginHost)
+          return NS_ERROR_FAILURE;
+
         mInstanceOwner->SetPluginHost(pluginHost);
         rv = InstantiatePlugin(aPresContext, aMetrics, aReflowState, pluginHost, mimeType, fullURL);
       }
@@ -653,6 +680,9 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
 
           // get the nsIPluginHost interface
           pluginHost = do_GetService(kCPluginManagerCID);
+          if (!pluginHost)
+            return NS_ERROR_FAILURE;
+
           mInstanceOwner->SetPluginHost(pluginHost);
           if(pluginHost->IsPluginEnabledForType("application/x-oleobject") == NS_OK)
 	          rv = InstantiatePlugin(aPresContext, aMetrics, aReflowState, pluginHost, "application/x-oleobject", fullURL);
@@ -692,6 +722,9 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
 
     // get the nsIPluginHost interface
     pluginHost = do_GetService(kCPluginManagerCID);
+    if (!pluginHost)
+      return NS_ERROR_FAILURE;
+
     mInstanceOwner->SetPluginHost(pluginHost);
 
     mContent->GetTag(atom);
@@ -2378,7 +2411,7 @@ NS_IMETHODIMP_(void) nsPluginInstanceOwner::Notify(nsITimer* /* timer */)
   // reprime the timer? currently have to create a new timer for each call, which is
   // kind of wasteful. need to get periodic timers working on all platforms.
   nsresult rv;
-  mPluginTimer = do_CreateInstance("component://netscape/timer", &rv);
+  mPluginTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
   if (NS_SUCCEEDED(rv))
     mPluginTimer->Init(this, 1000 / 60);
 #endif
@@ -2471,7 +2504,7 @@ NS_IMETHODIMP nsPluginInstanceOwner::CreateWidget(void)
 
 #if defined(XP_MAC)
           // start a periodic timer to provide null events to the plugin instance.
-          mPluginTimer = do_CreateInstance("component://netscape/timer", &rv);
+          mPluginTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
           if (rv == NS_OK)
 	        rv = mPluginTimer->Init(this, 1000 / 60, NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_SLACK);
 #endif
@@ -2489,5 +2522,5 @@ void nsPluginInstanceOwner::SetPluginHost(nsIPluginHost* aHost)
     NS_RELEASE(mPluginHost);
  
   mPluginHost = aHost;
-  NS_ADDREF(mPluginHost);
+  NS_IF_ADDREF(mPluginHost);
 }

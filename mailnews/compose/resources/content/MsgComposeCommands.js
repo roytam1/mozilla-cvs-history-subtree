@@ -23,18 +23,18 @@ var msgCompSendFormat = Components.interfaces.nsIMsgCompSendFormat;
 var msgCompConvertible = Components.interfaces.nsIMsgCompConvertible;
 var msgCompType = Components.interfaces.nsIMsgCompType;
 
-var accountManagerProgID   = "component://netscape/messenger/account-manager";
-var accountManager = Components.classes[accountManagerProgID].getService(Components.interfaces.nsIMsgAccountManager);
+var accountManagerContractID   = "@mozilla.org/messenger/account-manager;1";
+var accountManager = Components.classes[accountManagerContractID].getService(Components.interfaces.nsIMsgAccountManager);
 
-//var mailSessionProgID   = "component://netscape/messenger/services/session";
-//var mailSession = Components.classes[mailSessionProgID].getService(Components.interfaces.nsIMsgMailSession);
+//var mailSessionContractID   = "@mozilla.org/messenger/services/session;1";
+//var mailSession = Components.classes[mailSessionContractID].getService(Components.interfaces.nsIMsgMailSession);
 
-var messengerMigratorProgID   = "component://netscape/messenger/migrator";
+var messengerMigratorContractID   = "@mozilla.org/messenger/migrator;1";
 
-var msgComposeService = Components.classes["component://netscape/messengercompose"].getService();
+var msgComposeService = Components.classes["@mozilla.org/messengercompose;1"].getService();
 msgComposeService = msgComposeService.QueryInterface(Components.interfaces.nsIMsgComposeService);
 
-var commonDialogsService = Components.classes["component://netscape/appshell/commonDialogs"].getService();
+var commonDialogsService = Components.classes["@mozilla.org/appshell/commonDialogs;1"].getService();
 commonDialogsService = commonDialogsService.QueryInterface(Components.interfaces.nsICommonDialogs);
 
 var msgCompose = null;
@@ -51,7 +51,7 @@ var Bundle = srGetStrBundle("chrome://messenger/locale/messengercompose/composeM
 var other_header = "";
 var update_compose_title_as_you_type = true;
 var sendFormat = msgCompSendFormat.AskUser;
-var prefs = Components.classes["component://netscape/preferences"].getService();
+var prefs = Components.classes["@mozilla.org/preferences;1"].getService();
 if (prefs) {
 	prefs = prefs.QueryInterface(Components.interfaces.nsIPref);
 	if (prefs) {
@@ -520,7 +520,7 @@ function GetArgs()
 	var pairs = data.split(separator);
 //	dump("Compose: argument: {" + data + "}\n");
 
-	for (var i = pairs.length - 1; i >= 0; i--)
+	for (i = pairs.length - 1; i >= 0; i--)
 	{
 		var pos = pairs[i].indexOf('=');
 		if (pos == -1)
@@ -588,7 +588,7 @@ function ComposeStartup()
     	  identity = identities.QueryElementAt(0, Components.interfaces.nsIMsgIdentity);
     	else
     	{
-        var identities = GetIdentities();
+        identities = GetIdentities();
         identity = identities[0];
       }	  
     }
@@ -614,7 +614,7 @@ function ComposeStartup()
 		if (msgCompose)
 		{
 			//Creating a Editor Shell
-      var editorShell = Components.classes["component://netscape/editor/editorshell"].createInstance();
+      var editorShell = Components.classes["@mozilla.org/editor/editorshell;1"].createInstance();
       editorShell = editorShell.QueryInterface(Components.interfaces.nsIEditorShell);
 			if (!editorShell)
 			{
@@ -778,7 +778,7 @@ function SetDefaultMailSendCharacterSet()
     // try to get preferences service
     var prefs = null;
     try {
-      prefs = Components.classes['component://netscape/preferences'];
+      prefs = Components.classes['@mozilla.org/preferences;1'];
       prefs = prefs.getService();
       prefs = prefs.QueryInterface(Components.interfaces.nsIPref);
     }
@@ -813,7 +813,7 @@ function InitCharsetMenuCheckMark()
   // try to get preferences service
   var prefs = null;
   try {
-    prefs = Components.classes['component://netscape/preferences'];
+    prefs = Components.classes['@mozilla.org/preferences;1'];
     prefs = prefs.getService();
     prefs = prefs.QueryInterface(Components.interfaces.nsIPref);
   }
@@ -853,7 +853,7 @@ function GetCharsetUIString()
   var charset = msgCompose.compFields.GetCharacterSet();
   if (g_send_default_charset == null) {
     try {
-      prefs = Components.classes['component://netscape/preferences'];
+      prefs = Components.classes['@mozilla.org/preferences;1'];
       prefs = prefs.getService();
       prefs = prefs.QueryInterface(Components.interfaces.nsIPref);
       g_send_default_charset = prefs.getLocalizedUnicharPref("mailnews.send_default_charset");
@@ -873,7 +873,7 @@ function GetCharsetUIString()
 
     if (g_charsetTitle == null) {
       try {
-        var ccm = Components.classes['component://netscape/charset-converter-manager'];
+        var ccm = Components.classes['@mozilla.org/charset-converter-manager;1'];
         ccm = ccm.getService();
         ccm = ccm.QueryInterface(Components.interfaces.nsICharsetConverterManager2);
         // get a localized string
@@ -944,22 +944,22 @@ function GenericSendMessage( msgType )
     			}
 
 				// Before sending the message, check what to do with HTML message, eventually abort.
-                var convert = DetermineConvertibility();
-				action = DetermineHTMLAction(convert);
+        var convert = DetermineConvertibility();
+				var action = DetermineHTMLAction(convert);
 				if (action == msgCompSendFormat.AskUser)
 				{
-                    recommAction = convert == msgCompConvertible.No
+                    var recommAction = convert == msgCompConvertible.No
                                    ? msgCompSendFormat.AskUser
                                    : msgCompSendFormat.PlainText;
-                    var result = {action:recommAction,
+                    var result2 = {action:recommAction,
                                   convertible:convert,
                                   abort:false};
                     window.openDialog("chrome://messenger/content/messengercompose/askSendFormat.xul",
                                       "askSendFormatDialog", "chrome,modal,titlebar,centerscreen",
-                                      result);
-					if (result.abort)
+                                      result2);
+					if (result2.abort)
 						return;
-					action = result.action;
+					action = result2.action;
 				}
 				switch (action)
 				{
@@ -1257,7 +1257,7 @@ function SetComposeWindowTitle(event)
 		return;
 	}
 
-	newTitle = document.getElementById('msgSubject').value;
+	var newTitle = document.getElementById('msgSubject').value;
 
 	/* dump("newTitle = " + newTitle + "\n"); */
 
@@ -1337,7 +1337,7 @@ function AttachFile()
 	currentAttachment = "";
 	//Get file using nsIFilePicker and convert to URL
     try {
-			var fp = Components.classes["component://mozilla/filepicker"].createInstance(nsIFilePicker);
+			var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
 			fp.init(window, Bundle.GetStringFromName("chooseFileToAttach"), nsIFilePicker.modeOpen);
 			fp.appendFilters(nsIFilePicker.filterAll);
 			if (fp.show() == nsIFilePicker.returnOK) {
@@ -1361,12 +1361,16 @@ function AddAttachment(attachment)
 		var row = document.createElement("treerow");
 		var cell = document.createElement("treecell");
 		
+		var prettyName = attachment;
 		if (msgCompose)
 			prettyName = msgCompose.AttachmentPrettyName(attachment);
 		cell.setAttribute("value", prettyName);				//use for display only
 		cell.setAttribute("attachment", attachment);		//full url stored here
 		cell.setAttribute("tooltip", "aTooltip");
-		cell.setAttribute("tooltiptext", unescape(attachment));
+		try {
+			cell.setAttribute("tooltiptext", unescape(attachment));
+		}
+		catch(e) {cell.setAttribute("tooltiptext", attachment);}
 		row.appendChild(cell);
 		item.appendChild(row);
 		bucketBody.appendChild(item);
@@ -1488,7 +1492,7 @@ function DetermineHTMLAction(convertible)
             {
                 //See if a preference has been set to tell us what to do. Note that we do not honor that
                 //preference for newsgroups. Only for e-mail addresses.
-                action = prefs.GetIntPref("mail.default_html_action");
+                var action = prefs.GetIntPref("mail.default_html_action");
                 switch (action)
                 {
                     case msgCompSendFormat.PlainText    :
@@ -1521,17 +1525,17 @@ function DetermineConvertibility()
         return msgCompose.bodyConvertible(
              window.editorShell.contentWindow.document.childNodes[1]);
     } catch(ex) {}
+    return msgCompConvertible.No;
 }
 
 function LoadIdentity(startup)
 {
-    var identityElement = document.getElementById("msgIdentity");
-    
-    prevIdentity = currentIdentity;
+    var identityElement = document.getElementById("msgIdentity");    
+    var prevIdentity = currentIdentity;
     
     if (identityElement) {
         var item = identityElement.selectedItem;
-        idKey = item.getAttribute('id');
+        var idKey = item.getAttribute('id');
         currentIdentity = accountManager.getIdentity(idKey);
 
         if (!startup && prevIdentity && idKey != prevIdentity.key)
@@ -1588,7 +1592,7 @@ function LoadIdentity(startup)
         }
         
         //Setup autocomplete session, we can doit from here as it's use as a service
-        var session = Components.classes["component://netscape/autocompleteSession&type=addrbook"].getService(Components.interfaces.nsIAbAutoCompleteSession);
+        var session = Components.classes["@mozilla.org/autocompleteSession;1?type=addrbook"].getService(Components.interfaces.nsIAbAutoCompleteSession);
         if (session)
         {
             var emailAddr = currentIdentity.email;
@@ -1605,7 +1609,7 @@ function subjectKeyPress(event)
   case 9: 
     if (!event.shiftKey) {
       window._content.focus();
-      event.preventDefault;
+      event.preventDefault();
     }
     break;
   case 13:
@@ -1633,7 +1637,7 @@ function AttachmentBucketClicked(event)
 var attachmentBucketObserver = {
   onDrop: function (aEvent, aData, aDragSession)
     {
-      var aData = aData.length ? aData[0] : aData;
+      aData = aData.length ? aData[0] : aData;
       if (aData.flavour != "application/x-moz-file") 
         return;
     
@@ -1641,8 +1645,7 @@ var attachmentBucketObserver = {
       if (!dataObj) 
         return;
         
-      var fileURL = nsJSComponentManager.createInstance("component://netscape/network/standard-url",
-                                                        "nsIFileURL");
+      var fileURL = nsJSComponentManager.createInstance("@mozilla.org/network/standard-url;1", "nsIFileURL");
       fileURL.file = dataObj;
 	    AddAttachment(fileURL.spec);
     },
@@ -1666,5 +1669,5 @@ var attachmentBucketObserver = {
       var flavourList = { };
       flavourList["application/x-moz-file"] = { width: 2, iid: "nsIFile" };
       return flavourList;
-    },  
+    }  
 };

@@ -28,7 +28,7 @@
 
 #include "nsIEditorShell.h"
 
-#include "nsIDOMSelection.h"
+#include "nsISelection.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMWindowInternal.h"
@@ -231,7 +231,11 @@ nsPrintingCommands::IsCommandEnabled(const PRUnichar *aCommand, nsISupports * re
     *outCmdEnabled = PR_FALSE;        // not implemented yet
   else if (cmdString.EqualsWithConversion("cmd_printPreview"))
     *outCmdEnabled = PR_FALSE;        // not implemented yet
-  
+  else if (cmdString.EqualsWithConversion("cmd_print_button"))
+    *outCmdEnabled = PR_TRUE;
+  else if (cmdString.EqualsWithConversion("cmd_printSetup"))
+    *outCmdEnabled = PR_FALSE;        // not implemented yet
+
   return NS_OK;
 }
 
@@ -380,7 +384,7 @@ nsListCommand::ToggleState(nsIEditorShell *aEditorShell, const char* aTagName)
   if (inList)
     rv = aEditorShell->RemoveList(listType.GetUnicode());    
   else
-    rv = aEditorShell->MakeOrChangeList(listType.GetUnicode());
+    rv = aEditorShell->MakeOrChangeList(listType.GetUnicode(), PR_FALSE);
     
   return rv;
 }

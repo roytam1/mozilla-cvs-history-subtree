@@ -362,7 +362,7 @@ nsURLFetcher::FireURLRequest(nsIURI *aURL, nsOutputFileStream *fOut,
   mOnStopRequestProcessed = PR_FALSE;
 
   // let's try uri dispatching...
-  nsCOMPtr<nsIURILoader> pURILoader (do_GetService(NS_URI_LOADER_PROGID));
+  nsCOMPtr<nsIURILoader> pURILoader (do_GetService(NS_URI_LOADER_CONTRACTID));
   NS_ENSURE_TRUE(pURILoader, NS_ERROR_FAILURE);
 
   nsCOMPtr<nsISupports> cntListener (do_QueryInterface(NS_STATIC_CAST(nsIStreamListener *, this)));
@@ -424,5 +424,15 @@ nsURLFetcher::OnStatusChange(nsIWebProgress* aWebProgress,
                              const PRUnichar* aMessage)
 {
     return NS_OK;
+}
+
+
+
+NS_IMETHODIMP 
+nsURLFetcher::OnSecurityChange(nsIWebProgress *aWebProgress, 
+                               nsIRequest *aRequest, 
+                               PRInt32 state)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 

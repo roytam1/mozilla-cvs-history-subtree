@@ -61,13 +61,14 @@
 #include "nsIEventStateManager.h"
 #include "nsDOMEvent.h"
 #include "nsHTMLParts.h"
-#include "nsIDOMSelection.h"
+#include "nsISelection.h"
 #include "nsISelectionController.h"
 #include "nsLayoutCID.h"
 #include "nsLayoutAtoms.h"
 #include "nsIDOMRange.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMNode.h"
+#include "nsIDOMNodeList.h"
 #include "nsIDOMElement.h"
 #include "nsHTMLAtoms.h"
 #include "nsCOMPtr.h"
@@ -128,6 +129,10 @@
 
 #include "nsIDragService.h"
 
+// Dummy layout request
+#include "nsIChannel.h"
+#include "nsILoadGroup.h"
+#include "nsNetUtil.h"
 
 // SubShell map
 #include "nsDST.h"
@@ -254,6 +259,10 @@ protected:
 // This data member is initialized from the layout.reflow.timeslice pref.
 #define NS_MAX_REFLOW_TIME    1000000
 static PRInt32 gMaxRCProcessingTime = -1;
+
+// Set to true to enable async reflow during document load.
+// This flag is initialized from the layout.reflow.async.duringDocLoad pref.
+static PRBool gAsyncReflowDuringDocLoad = PR_FALSE;
 
 // Largest chunk size we recycle
 static const size_t gMaxRecycledSize = 400;
@@ -579,6 +588,127 @@ struct nsCallbackEventRequest
   nsCallbackEventRequest* next;
 };
 
+//----------------------------------------------------------------------
+//
+// DummyLayoutRequest
+//
+//   This is a dummy request implementation that we add to the document's load
+//   group. It ensures that EndDocumentLoad() in the docshell doesn't fire
+//   before we've finished all of layout.
+//
+
+class DummyLayoutRequest : public nsIChannel
+{
+protected:
+  DummyLayoutRequest();
+  virtual ~DummyLayoutRequest();
+
+  static PRInt32 gRefCnt;
+  static nsIURI* gURI;
+
+  nsCOMPtr<nsILoadGroup> mLoadGroup;
+
+public:
+  static nsresult
+  Create(nsIChannel** aResult);
+
+  NS_DECL_ISUPPORTS
+
+	// nsIRequest
+  NS_IMETHOD GetName(PRUnichar* *result) { 
+    NS_NOTREACHED("DummyLayoutRequest::GetName");
+    return NS_ERROR_NOT_IMPLEMENTED;
+  }
+  NS_IMETHOD IsPending(PRBool *_retval) { *_retval = PR_TRUE; return NS_OK; }
+  NS_IMETHOD GetStatus(nsresult *status) { *status = NS_OK; return NS_OK; } 
+  NS_IMETHOD Cancel(nsresult status);
+  NS_IMETHOD Suspend(void) { return NS_OK; }
+  NS_IMETHOD Resume(void)  { return NS_OK; }
+
+	// nsIChannel
+  NS_IMETHOD GetOriginalURI(nsIURI* *aOriginalURI) { *aOriginalURI = gURI; NS_ADDREF(*aOriginalURI); return NS_OK; }
+  NS_IMETHOD SetOriginalURI(nsIURI* aOriginalURI) { gURI = aOriginalURI; NS_ADDREF(gURI); return NS_OK; }
+  NS_IMETHOD GetURI(nsIURI* *aURI) { *aURI = gURI; NS_ADDREF(*aURI); return NS_OK; }
+  NS_IMETHOD SetURI(nsIURI* aURI) { gURI = aURI; NS_ADDREF(gURI); return NS_OK; }
+  NS_IMETHOD OpenInputStream(nsIInputStream **_retval) { *_retval = nsnull; return NS_OK; }
+	NS_IMETHOD OpenOutputStream(nsIOutputStream **_retval) { *_retval = nsnull; return NS_OK; }
+	NS_IMETHOD AsyncOpen(nsIStreamObserver *observer, nsISupports *ctxt) { return NS_OK; }
+	NS_IMETHOD AsyncRead(nsIStreamListener *listener, nsISupports *ctxt) { return NS_OK; }
+	NS_IMETHOD AsyncWrite(nsIInputStream *fromStream, nsIStreamObserver *observer, nsISupports *ctxt) { return NS_OK; }
+	NS_IMETHOD GetLoadAttributes(nsLoadFlags *aLoadAttributes) { *aLoadAttributes = nsIChannel::LOAD_NORMAL; return NS_OK; }
+  NS_IMETHOD SetLoadAttributes(nsLoadFlags aLoadAttributes) { return NS_OK; }
+	NS_IMETHOD GetContentType(char * *aContentType) { *aContentType = nsnull; return NS_OK; }
+  NS_IMETHOD SetContentType(const char *aContentType) { return NS_OK; }
+	NS_IMETHOD GetContentLength(PRInt32 *aContentLength) { *aContentLength = 0; return NS_OK; }
+  NS_IMETHOD SetContentLength(PRInt32 aContentLength) { NS_NOTREACHED("SetContentLength"); return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD GetTransferOffset(PRUint32 *aTransferOffset) { NS_NOTREACHED("GetTransferOffset"); return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD SetTransferOffset(PRUint32 aTransferOffset) { NS_NOTREACHED("SetTransferOffset"); return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD GetTransferCount(PRInt32 *aTransferCount) { NS_NOTREACHED("GetTransferCount"); return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD SetTransferCount(PRInt32 aTransferCount) { NS_NOTREACHED("SetTransferCount"); return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD GetBufferSegmentSize(PRUint32 *aBufferSegmentSize) { NS_NOTREACHED("GetBufferSegmentSize"); return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD SetBufferSegmentSize(PRUint32 aBufferSegmentSize) { NS_NOTREACHED("SetBufferSegmentSize"); return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD GetBufferMaxSize(PRUint32 *aBufferMaxSize) { NS_NOTREACHED("GetBufferMaxSize"); return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD SetBufferMaxSize(PRUint32 aBufferMaxSize) { NS_NOTREACHED("SetBufferMaxSize"); return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD GetLocalFile(nsIFile* *result) { NS_NOTREACHED("GetLocalFile"); return NS_ERROR_NOT_IMPLEMENTED; }
+  NS_IMETHOD GetPipeliningAllowed(PRBool *aPipeliningAllowed) { *aPipeliningAllowed = PR_FALSE; return NS_OK; }
+  NS_IMETHOD SetPipeliningAllowed(PRBool aPipeliningAllowed) { NS_NOTREACHED("SetPipeliningAllowed"); return NS_ERROR_NOT_IMPLEMENTED; }
+	NS_IMETHOD GetOwner(nsISupports * *aOwner) { *aOwner = nsnull; return NS_OK; }
+	NS_IMETHOD SetOwner(nsISupports * aOwner) { return NS_OK; }
+	NS_IMETHOD GetLoadGroup(nsILoadGroup * *aLoadGroup) { *aLoadGroup = mLoadGroup; NS_IF_ADDREF(*aLoadGroup); return NS_OK; }
+	NS_IMETHOD SetLoadGroup(nsILoadGroup * aLoadGroup) { mLoadGroup = aLoadGroup; return NS_OK; }
+	NS_IMETHOD GetNotificationCallbacks(nsIInterfaceRequestor * *aNotificationCallbacks) { *aNotificationCallbacks = nsnull; return NS_OK; }
+	NS_IMETHOD SetNotificationCallbacks(nsIInterfaceRequestor * aNotificationCallbacks) { return NS_OK; }
+  NS_IMETHOD GetSecurityInfo(nsISupports **info) {*info = nsnull; return NS_OK;}
+};
+
+PRInt32 DummyLayoutRequest::gRefCnt;
+nsIURI* DummyLayoutRequest::gURI;
+
+NS_IMPL_ADDREF(DummyLayoutRequest);
+NS_IMPL_RELEASE(DummyLayoutRequest);
+NS_IMPL_QUERY_INTERFACE2(DummyLayoutRequest, nsIRequest, nsIChannel);
+
+nsresult
+DummyLayoutRequest::Create(nsIChannel** aResult)
+{
+  DummyLayoutRequest* request = new DummyLayoutRequest();
+  if (!request)
+      return NS_ERROR_OUT_OF_MEMORY;
+
+  *aResult = request;
+  NS_ADDREF(*aResult);
+  return NS_OK;
+}
+
+
+DummyLayoutRequest::DummyLayoutRequest()
+{
+  NS_INIT_REFCNT();
+
+  if (gRefCnt++ == 0) {
+      nsresult rv;
+      rv = NS_NewURI(&gURI, "about:layout-dummy-request", nsnull);
+      NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create about:layout-dummy-request");
+  }
+}
+
+
+DummyLayoutRequest::~DummyLayoutRequest()
+{
+  if (--gRefCnt == 0) {
+      NS_IF_RELEASE(gURI);
+  }
+}
+
+NS_IMETHODIMP
+DummyLayoutRequest::Cancel(nsresult status)
+{
+  // XXX Cancel layout - Implement this if we decide to enable the layout.reflow.async.duringDocLoad pref
+  return NS_OK;
+}
+
+// ----------------------------------------------------------------------------
+
 class PresShell : public nsIPresShell, public nsIViewObserver,
                   private nsIDocumentObserver, public nsIFocusTracker,
                   public nsISelectionController,
@@ -616,7 +746,7 @@ public:
 
   NS_IMETHOD SetDisplaySelection(PRInt16 aToggle);
   NS_IMETHOD GetDisplaySelection(PRInt16 *aToggle);
-  NS_IMETHOD GetSelection(SelectionType aType, nsIDOMSelection** aSelection);
+  NS_IMETHOD GetSelection(SelectionType aType, nsISelection** aSelection);
   NS_IMETHOD ScrollSelectionIntoView(SelectionType aType, SelectionRegion aRegion);
   NS_IMETHOD RepaintSelection(SelectionType aType);
   NS_IMETHOD GetFrameSelection(nsIFrameSelection** aSelection);  
@@ -815,6 +945,11 @@ protected:
     */
   nsresult NotifyReflowObservers(const char *aData);
 
+  nsresult ReflowCommandAdded(nsIReflowCommand* aRC);
+  nsresult ReflowCommandRemoved(nsIReflowCommand* aRC);
+  nsresult AddDummyLayoutRequest(void);
+  nsresult RemoveDummyLayoutRequest(void);
+
   nsresult ReconstructFrames(void);
   nsresult CloneStyleSet(nsIStyleSet* aSet, nsIStyleSet** aResult);
   nsresult WillCauseReflow();
@@ -876,6 +1011,8 @@ protected:
   PRPackedBool                  mBatchReflows;  // When set to true, the pres shell batches reflow commands.  
   nsCOMPtr<nsIObserverService>  mObserverService; // Observer service for reflow events
   nsCOMPtr<nsIDragService>      mDragService;
+  PRInt32                       mRCCreatedDuringLoad; // Counter to keep track of reflow commands created during doc
+  nsCOMPtr<nsIChannel>          mDummyLayoutRequest;
 
   // used for list of posted events and attribute changes. To be done
   // after reflow.
@@ -910,7 +1047,6 @@ private:
   void PushCurrentEventInfo(nsIFrame* aFrame, nsIContent* aContent);
   void PopCurrentEventInfo();
   nsresult HandleEventInternal(nsEvent* aEvent, nsIView* aView, nsEventStatus *aStatus);
-
 };
 
 #ifdef NS_DEBUG
@@ -1030,6 +1166,8 @@ PresShell::PresShell():mStackArena(nsnull),
   mBatchReflows = PR_FALSE;
   mDocumentLoading = PR_FALSE;
   mSubShellMap = nsnull;
+  mRCCreatedDuringLoad = 0;
+  mDummyLayoutRequest = nsnull;
 
 #ifdef MOZ_REFLOW_PERF
   mReflowCountMgr = new ReflowCountMgr();
@@ -1237,24 +1375,26 @@ PresShell::Init(nsIDocument* aDocument,
 
   if (gMaxRCProcessingTime == -1) {
     // First, set the defaults
-    gMaxRCProcessingTime = NS_MAX_REFLOW_TIME;    
+    gMaxRCProcessingTime = NS_MAX_REFLOW_TIME;
+    gAsyncReflowDuringDocLoad = PR_FALSE;
 
     // Get the prefs service
     NS_WITH_SERVICE(nsIPref, prefs, kPrefServiceCID, &result);
     if (NS_SUCCEEDED(result)) {
-      prefs->GetIntPref("layout.reflow.timeslice", &gMaxRCProcessingTime);      
+      prefs->GetIntPref("layout.reflow.timeslice", &gMaxRCProcessingTime);
+      prefs->GetBoolPref("layout.reflow.async.duringDocLoad", &gAsyncReflowDuringDocLoad);
     }
   }
 
   // cache the observation service
-  mObserverService = do_GetService(NS_OBSERVERSERVICE_PROGID,
+  mObserverService = do_GetService(NS_OBSERVERSERVICE_CONTRACTID,
                                    &result);
   if (NS_FAILED(result)) {
     return result;
   }
 
   // cache the drag service so we can check it during reflows
-  mDragService = do_GetService("component://netscape/widget/dragservice");
+  mDragService = do_GetService("@mozilla.org/widget/dragservice;1");
 
   return NS_OK;
 }
@@ -1458,7 +1598,7 @@ PresShell::GetDisplaySelection(PRInt16 *aToggle)
 }
 
 NS_IMETHODIMP
-PresShell::GetSelection(SelectionType aType, nsIDOMSelection **aSelection)
+PresShell::GetSelection(SelectionType aType, nsISelection **aSelection)
 {
   if (!aSelection || !mSelection)
     return NS_ERROR_NULL_POINTER;
@@ -1512,7 +1652,7 @@ PresShell::EndObservingDocument()
     mDocument->RemoveObserver(this);
   }
   if (mSelection){
-    nsCOMPtr<nsIDOMSelection> domselection;
+    nsCOMPtr<nsISelection> domselection;
     nsresult result;
     result = mSelection->GetSelection(nsISelectionController::SELECTION_NORMAL, getter_AddRefs(domselection));
     if (NS_FAILED(result))
@@ -2193,7 +2333,50 @@ PresShell::CompleteScroll(PRBool aForward)
 NS_IMETHODIMP
 PresShell::CompleteMove(PRBool aForward, PRBool aExtend)
 {
-  return CompleteScroll(aForward);
+  nsCOMPtr<nsIDocument> document;
+  if (NS_FAILED(GetDocument(getter_AddRefs(document))) || !document)
+    return NS_ERROR_FAILURE;
+  
+  nsCOMPtr<nsIDOMNodeList>nodeList; 
+  nsAutoString bodyTag; bodyTag.AssignWithConversion("body"); 
+
+  nsCOMPtr<nsIDOMDocument> doc = do_QueryInterface(document);
+  if (!doc) 
+    return NS_ERROR_FAILURE;
+  nsresult result = doc->GetElementsByTagName(bodyTag, getter_AddRefs(nodeList));
+
+  if (NS_FAILED(result) || !nodeList)
+    return result?result:NS_ERROR_NULL_POINTER;
+
+  PRUint32 count; 
+  nodeList->GetLength(&count);
+
+  if (count < 1)
+    return NS_ERROR_FAILURE;
+
+  // Use the first body node in the list:
+  nsCOMPtr<nsIDOMNode> node;
+  result = nodeList->Item(0, getter_AddRefs(node)); 
+  if (NS_SUCCEEDED(result) && node)
+  {
+    //return node->QueryInterface(NS_GET_IID(nsIDOMElement), (void **)aBodyElement);
+    // Is above equivalent to this:
+    nsCOMPtr<nsIDOMElement> bodyElement = do_QueryInterface(node);
+    if (bodyElement)
+    {
+      nsCOMPtr<nsIContent> bodyContent = do_QueryInterface(bodyElement);
+      if (bodyContent)
+      {
+        PRInt32 offset = 0;
+        if (aForward)
+        {
+          bodyContent->ChildCount(offset);
+        }
+        result = mSelection->HandleClick(bodyContent,offset,offset,aExtend, PR_FALSE,aExtend);
+      }
+    }
+  }
+  return result;
 }
 
 NS_IMETHODIMP 
@@ -2488,19 +2671,22 @@ PresShell::AppendReflowCommand(nsIReflowCommand* aReflowCommand)
     }
   }  
 #endif
+
   // Add the reflow command to the queue
   nsresult rv = NS_OK;
   if (!AlreadyInQueue(aReflowCommand)) {
     NS_ADDREF(aReflowCommand);
     rv = (mReflowCommands.AppendElement(aReflowCommand) ? NS_OK : NS_ERROR_OUT_OF_MEMORY);
+    ReflowCommandAdded(aReflowCommand);
   }
 
-  // Kick off a reflow event if we aren't batching reflows
+  // For async reflow during doc load, post a reflow event if we are not batching reflow commands.
+  // For sync reflow during doc load, post a reflow event if we are not batching reflow commands
   // and the document is not loading.
-  //
-  // If we're in the middle of a drag, process it right away (needed for mac,
-  // might as well do it on all platforms just to keep the code paths the same).
-  if (!mBatchReflows && !mDocumentLoading) {    
+  if ((gAsyncReflowDuringDocLoad && !mBatchReflows) ||
+      (!gAsyncReflowDuringDocLoad && !mBatchReflows && !mDocumentLoading)) {
+    // If we're in the middle of a drag, process it right away (needed for mac,
+    // might as well do it on all platforms just to keep the code paths the same).
     if ( IsDragInProgress() )
       FlushPendingNotifications();
     else
@@ -2558,6 +2744,7 @@ PresShell::CancelReflowCommand(nsIFrame* aTargetFrame, nsIReflowCommand::ReflowT
           }
 #endif
           mReflowCommands.RemoveElementAt(i);
+          ReflowCommandRemoved(rc);
           NS_RELEASE(rc);
           n--;
           i--;
@@ -2568,8 +2755,6 @@ PresShell::CancelReflowCommand(nsIFrame* aTargetFrame, nsIReflowCommand::ReflowT
   }
   return NS_OK;
 }
-
-
 
 
 NS_IMETHODIMP
@@ -2877,7 +3062,7 @@ PresShell::DoCopy()
   nsString buffer;
   nsresult rv;
 
-  nsCOMPtr<nsIDOMSelection> sel;
+  nsCOMPtr<nsISelection> sel;
   
   nsCOMPtr<nsIEventStateManager> manager;
   nsCOMPtr<nsIContent> content;
@@ -2918,7 +3103,7 @@ PresShell::DoCopy()
 
   nsCOMPtr<nsIDocumentEncoder> docEncoder;
 
-  docEncoder = do_CreateInstance(NS_DOC_ENCODER_PROGID_BASE "text/html");
+  docEncoder = do_CreateInstance(NS_DOC_ENCODER_CONTRACTID_BASE "text/html");
   NS_ENSURE_TRUE(docEncoder, NS_ERROR_FAILURE);
 
   docEncoder->Init(doc, NS_LITERAL_STRING("text/html"), 0);
@@ -2957,7 +3142,7 @@ PresShell::DoCopy()
         // the transferable wants the number bytes for the data and since it is double byte
         // we multiply by 2. 
         nsCOMPtr<nsISupportsWString> dataWrapper;
-        rv = nsComponentManager::CreateInstance(NS_SUPPORTS_WSTRING_PROGID,
+        rv = nsComponentManager::CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID,
                                                 nsnull, 
                                                 NS_GET_IID(nsISupportsWString),
                                                 getter_AddRefs(dataWrapper));
@@ -3171,10 +3356,15 @@ PresShell::GetGeneratedContentIterator(nsIContent*          aContent,
                                                getter_AddRefs(pseudoStyleContext));
       if (pseudoStyleContext) {
         nsIFrame* lastChildFrame = GetLastChildFrame(mPresContext, primaryFrame, aContent);
-        NS_ASSERTION(lastChildFrame && IsGeneratedContentFrame(lastChildFrame),
-                     "can't find generated content frame");
-        // Create an iterator
-        rv = NS_NewGeneratedContentIterator(mPresContext, lastChildFrame, aIterator);
+        if (lastChildFrame)
+        { // it is now legal for GetLastChildFrame to return null.  see bug 52307 (a regression from bug 18754)
+          // in the case of a null child frame, we treat the frame as having no "after" style
+          // the "before" handler above already does this check
+          NS_ASSERTION(IsGeneratedContentFrame(lastChildFrame),
+                       "can't find generated content frame");
+          // Create an iterator
+          rv = NS_NewGeneratedContentIterator(mPresContext, lastChildFrame, aIterator);
+        }
       }
     }
   }
@@ -4209,9 +4399,11 @@ nsresult
 PresShell::DidCauseReflow()
 {    
   mViewManager->CacheWidgetChanges(PR_FALSE);
-  if (mDocumentLoading) {
+
+  if (!gAsyncReflowDuringDocLoad && mDocumentLoading) {
     FlushPendingNotifications();
   }
+
   return NS_OK;
 }
 
@@ -4256,6 +4448,7 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
       // new one during its execution.
       nsIReflowCommand* rc = (nsIReflowCommand*) mReflowCommands.ElementAt(0);
       mReflowCommands.RemoveElementAt(0);
+      ReflowCommandRemoved(rc);
 
       // Dispatch the reflow command
       nsSize          maxSize;
@@ -4401,6 +4594,107 @@ PresShell::CloneStyleSet(nsIStyleSet* aSet, nsIStyleSet** aResult)
   return NS_OK;
 }
 
+nsresult
+PresShell::ReflowCommandAdded(nsIReflowCommand* aRC)
+{
+
+  if (gAsyncReflowDuringDocLoad) {
+    NS_PRECONDITION(mRCCreatedDuringLoad >= 0, "PresShell's reflow command queue is in a bad state.");
+    if (mDocumentLoading) {
+      PRInt32 flags;
+      aRC->GetFlags(&flags);
+      flags |= NS_RC_CREATED_DURING_DOCUMENT_LOAD;
+      aRC->SetFlags(flags);    
+      mRCCreatedDuringLoad++;
+
+      if (!mDummyLayoutRequest) {
+        AddDummyLayoutRequest();
+      }
+
+  #ifdef DEBUG_nisheeth
+      printf("presshell=%p, mRCCreatedDuringLoad=%d\n", this, mRCCreatedDuringLoad);
+  #endif
+    }
+  }
+  return NS_OK;
+}
+
+nsresult
+PresShell::ReflowCommandRemoved(nsIReflowCommand* aRC)
+{
+  if (gAsyncReflowDuringDocLoad) {
+    NS_PRECONDITION(mRCCreatedDuringLoad >= 0, "PresShell's reflow command queue is in a bad state.");  
+    PRInt32 flags;
+    aRC->GetFlags(&flags);
+    if (flags & NS_RC_CREATED_DURING_DOCUMENT_LOAD) {
+      mRCCreatedDuringLoad--;
+  #ifdef DEBUG_nisheeth
+      printf("presshell=%p, mRCCreatedDuringLoad=%d\n", this, mRCCreatedDuringLoad);
+  #endif
+    }
+
+    if (mRCCreatedDuringLoad == 0 && !mDocumentLoading && mDummyLayoutRequest)
+      RemoveDummyLayoutRequest();
+  }
+  return NS_OK;
+}
+
+
+nsresult
+PresShell::AddDummyLayoutRequest(void)
+{ 
+  nsresult rv = NS_OK;
+
+  if (gAsyncReflowDuringDocLoad) {
+    rv = DummyLayoutRequest::Create(getter_AddRefs(mDummyLayoutRequest));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsILoadGroup> loadGroup;
+    if (mDocument) {
+      rv = mDocument->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
+      if (NS_FAILED(rv)) return rv;
+    }
+
+    if (loadGroup) {
+      rv = mDummyLayoutRequest->SetLoadGroup(loadGroup);
+      if (NS_FAILED(rv)) return rv;
+
+      rv = loadGroup->AddChannel(mDummyLayoutRequest, nsnull);
+      if (NS_FAILED(rv)) return rv;
+    }
+
+#ifdef DEBUG_nisheeth
+    printf("presshell=%p, Added dummy layout request.\n", this);
+#endif
+  }
+  return rv;
+}
+
+nsresult
+PresShell::RemoveDummyLayoutRequest(void)
+{
+  nsresult rv = NS_OK;
+
+  if (gAsyncReflowDuringDocLoad) {
+    nsCOMPtr<nsILoadGroup> loadGroup;
+    if (mDocument) {
+      rv = mDocument->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
+      if (NS_FAILED(rv)) return rv;
+    }
+
+    if (loadGroup && mDummyLayoutRequest) {
+      rv = loadGroup->RemoveChannel(mDummyLayoutRequest, nsnull, NS_OK, nsnull);
+      if (NS_FAILED(rv)) return rv;
+
+      mDummyLayoutRequest = nsnull;
+    }
+
+#ifdef DEBUG_nisheeth
+    printf("presshell=%p, Removed dummy layout request.\n", this);
+#endif
+  }
+  return rv;
+}
 
 //------------------------------------------------------
 // End of protected and private methods on the PresShell

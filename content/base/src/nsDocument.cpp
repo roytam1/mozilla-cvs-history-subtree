@@ -87,7 +87,7 @@
 
 #include "nsLayoutAtoms.h"
 #include "nsLayoutCID.h"
-#include "nsIDOMSelection.h"
+#include "nsISelection.h"
 #include "nsIDOMRange.h"
 #include "nsIEnumerator.h"
 #include "nsDOMError.h"
@@ -421,7 +421,7 @@ nsDOMImplementation::HasFeature(const nsAReadableString& aFeature,
                                 const nsAReadableString& aVersion, 
                                 PRBool* aReturn)
 {
-  return nsGenericElement::InternalSupports(aFeature, aVersion, aReturn);
+  return nsGenericElement::InternalIsSupported(aFeature, aVersion, aReturn);
 }
 
 NS_IMETHODIMP
@@ -1010,7 +1010,7 @@ nsDocument::GetPrincipal(nsIPrincipal **aPrincipal)
   if (!mPrincipal) {
     nsresult rv;
     NS_WITH_SERVICE(nsIScriptSecurityManager, securityManager, 
-                    NS_SCRIPTSECURITYMANAGER_PROGID, &rv);
+                    NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
     if (NS_FAILED(rv)) 
         return rv;
     if (NS_FAILED(rv = securityManager->GetCodebasePrincipal(mDocumentURL, 
@@ -1082,8 +1082,8 @@ NS_IMETHODIMP nsDocument::SetDocumentCharacterSet(const nsAReadableString& aChar
     PRInt32 n = mCharSetObservers.Count();
     for (PRInt32 i = 0; i < n; i++) {
       nsIObserver* observer = (nsIObserver*) mCharSetObservers.ElementAt(i);
-      observer->Observe((nsIDocument*) this, NS_LITERAL_STRING("charset"),
-                        nsPromiseFlatString(aCharSetID));
+      observer->Observe((nsIDocument*) this, NS_LITERAL_STRING("charset").get(),
+                        nsPromiseFlatString(aCharSetID).get());
     }
   }
   return NS_OK;
@@ -2385,7 +2385,7 @@ nsDocument::GetAnonymousNodes(nsIDOMElement* aElement, nsIDOMNodeList** aResult)
   *aResult = nsnull;
 
   // Use the XBL service to get a content list.
-  NS_WITH_SERVICE(nsIXBLService, xblService, "component://netscape/xbl", &rv);
+  NS_WITH_SERVICE(nsIXBLService, xblService, "@mozilla.org/xbl;1", &rv);
   if (!xblService)
     return rv;
 
@@ -2590,6 +2590,16 @@ nsDocument::HasChildNodes(PRBool* aHasChildNodes)
   *aHasChildNodes =  (((nsnull != mProlog) && (0 != mProlog->Count())) ||
                       (nsnull != mRootContent) ||
                       ((nsnull != mEpilog) && (0 != mEpilog->Count())));
+  return NS_OK;
+}
+
+NS_IMETHODIMP    
+nsDocument::HasAttributes(PRBool* aHasAttributes)
+{
+  NS_ENSURE_ARG(aHasAttributes);
+
+  *aHasAttributes = PR_FALSE;
+
   return NS_OK;
 }
 
@@ -2968,10 +2978,11 @@ nsDocument::Normalize()
 }
 
 NS_IMETHODIMP
-nsDocument::Supports(const nsAReadableString& aFeature, const nsAReadableString& aVersion,
-                     PRBool* aReturn)
+nsDocument::IsSupported(const nsAReadableString& aFeature,
+                        const nsAReadableString& aVersion,
+                        PRBool* aReturn)
 {
-  return nsGenericElement::InternalSupports(aFeature, aVersion, aReturn);
+  return nsGenericElement::InternalIsSupported(aFeature, aVersion, aReturn);
 }
 
 NS_IMETHODIMP    
@@ -3344,7 +3355,7 @@ NS_IMETHODIMP
 nsDocument::ToXIF(nsIXIFConverter* aConverter, nsIDOMNode* aNode)
 {
   nsresult result=NS_OK;
-  nsCOMPtr<nsIDOMSelection> sel;
+  nsCOMPtr<nsISelection> sel;
   aConverter->GetSelection(getter_AddRefs(sel));
   if (sel)
   {
@@ -3376,7 +3387,7 @@ nsDocument::ToXIF(nsIXIFConverter* aConverter, nsIDOMNode* aNode)
 } 
 
 NS_IMETHODIMP
-nsDocument::CreateXIF(nsAWritableString & aBuffer, nsIDOMSelection* aSelection)
+nsDocument::CreateXIF(nsAWritableString & aBuffer, nsISelection* aSelection)
 {
     nsresult result=NS_OK;
 
@@ -3584,19 +3595,19 @@ nsDocument::SaveFile(nsFileSpec*     aFileSpec,
 
   // Get a document encoder instance:
   nsCOMPtr<nsIDocumentEncoder> encoder;
-  char* progid = (char *)nsMemory::Alloc(strlen(NS_DOC_ENCODER_PROGID_BASE)
+  char* contractid = (char *)nsMemory::Alloc(strlen(NS_DOC_ENCODER_CONTRACTID_BASE)
                                             + aFormatType.Length() + 1);
-  if (! progid)
+  if (! contractid)
     return NS_ERROR_OUT_OF_MEMORY;
-  strcpy(progid, NS_DOC_ENCODER_PROGID_BASE);
+  strcpy(contractid, NS_DOC_ENCODER_CONTRACTID_BASE);
   char* type = aFormatType.ToNewCString();
-  strcat(progid, type);
+  strcat(contractid, type);
   nsCRT::free(type);
-  rv = nsComponentManager::CreateInstance(progid,
+  rv = nsComponentManager::CreateInstance(contractid,
                                           nsnull,
                                           NS_GET_IID(nsIDocumentEncoder),
                                           getter_AddRefs(encoder));
-  nsCRT::free(progid);
+  nsCRT::free(contractid);
   if (NS_FAILED(rv))
     return rv;
 
@@ -3674,7 +3685,7 @@ nsDocument::GetBindingManager(nsIBindingManager** aResult)
 {
   nsresult rv;
   if (!mBindingManager) {
-    mBindingManager = do_CreateInstance("component://netscape/xbl/binding-manager", &rv);
+    mBindingManager = do_CreateInstance("@mozilla.org/xbl/binding-manager;1", &rv);
     if (NS_FAILED(rv))
       return NS_ERROR_FAILURE;
   }
@@ -3766,7 +3777,7 @@ nsIContent* nsDocument::FindContent(const nsIContent* aStartNode,
  *  @return  PR_TRUE if the content is found within the selection
  */
 PRBool
-nsDocument::IsInSelection(nsIDOMSelection* aSelection, const nsIContent* aContent) const
+nsDocument::IsInSelection(nsISelection* aSelection, const nsIContent* aContent) const
 {
   PRBool aYes = PR_FALSE;
   nsCOMPtr<nsIDOMNode> node (do_QueryInterface((nsIContent *) aContent));

@@ -157,7 +157,8 @@ InitDebugFlags()
 #undef NOISY_REFLOW_REASON        // gives a little info about why each reflow was requested
 #undef REFLOW_STATUS_COVERAGE     // I think this is most useful for printing, to see which frames return "incomplete"
 #undef NOISY_SPACEMANAGER         // enables debug output for space manager use, useful for analysing reflow of floaters and positioned elements
-#undef NOISY_BLOCK_INVALIDATE    // enables debug output for all calls to invalidate
+#undef NOISY_BLOCK_INVALIDATE     // enables debug output for all calls to invalidate
+#undef REALLY_NOISY_REFLOW       // some extra debug info
 
 #endif
 
@@ -781,7 +782,21 @@ nsBlockReflowState::ComputeBlockAvailSpace(nsIFrame* aFrame,
 
   const nsMargin& borderPadding = BorderPadding();
 
-  if (NS_FRAME_SPLITTABLE_NON_RECTANGULAR == aSplitType) {
+  /* bug 18445: treat elements mapped to display: block such as text controls
+   * just like normal blocks   */
+  PRBool treatAsNotSplittable=PR_FALSE;
+  nsCOMPtr<nsIAtom>frameType;
+  aFrame->GetFrameType(getter_AddRefs(frameType));
+  if (frameType)
+  { // text controls are splittable, so make a special case here
+    if (nsLayoutAtoms::textInputFrame == frameType.get())
+      treatAsNotSplittable = PR_TRUE;
+  }
+
+  if (NS_FRAME_SPLITTABLE_NON_RECTANGULAR == aSplitType ||    // normal blocks 
+      NS_FRAME_NOT_SPLITTABLE == aSplitType ||                // things like images mapped to display: block
+      PR_TRUE == treatAsNotSplittable)                        // text input controls mapped to display: block (special case)
+  {
     if (mBand.GetFloaterCount()) {
       // Use the float-edge property to determine how the child block
       // will interact with the floater.
@@ -1487,12 +1502,12 @@ nsBlockFrame::Reflow(nsIPresContext*          aPresContext,
                      const nsHTMLReflowState& aReflowState,
                      nsReflowStatus&          aStatus)
 {
-  /*ListTag(stdout);
-  
+  /*
+  ListTag(stdout);
     printf(": begin reflow type %d availSize=%d,%d computedSize=%d,%d\n",
            aReflowState.reason, aReflowState.availableWidth, aReflowState.availableHeight,
-           aReflowState.mComputedWidth, aReflowState.mComputedHeight);*/
-
+           aReflowState.mComputedWidth, aReflowState.mComputedHeight);
+*/
   DO_GLOBAL_REFLOW_COUNT("nsBlockFrame", aReflowState.reason);
 
 #ifdef DEBUG
@@ -2007,15 +2022,6 @@ HaveAutoWidth(const nsHTMLReflowState& aReflowState)
 
 
 static PRBool
-IsPercentageUnitSides(const nsStyleSides* aSides)
-{
-  return eStyleUnit_Percent == aSides->GetLeftUnit()
-      || eStyleUnit_Percent == aSides->GetRightUnit()
-      || eStyleUnit_Percent == aSides->GetTopUnit()
-      || eStyleUnit_Percent == aSides->GetBottomUnit();
-}
-
-static PRBool
 IsPercentageAwareChild(const nsIFrame* aFrame)
 {
   const nsStyleSpacing* space;
@@ -2024,9 +2030,9 @@ IsPercentageAwareChild(const nsIFrame* aFrame)
     return PR_TRUE; // just to be on the safe side
   }
 
-  if (IsPercentageUnitSides(&space->mMargin)
-    || IsPercentageUnitSides(&space->mPadding)
-    || IsPercentageUnitSides(&space->mBorderRadius)) {
+  if (nsLineLayout::IsPercentageUnitSides(&space->mMargin)
+    || nsLineLayout::IsPercentageUnitSides(&space->mPadding)
+    || nsLineLayout::IsPercentageUnitSides(&space->mBorderRadius)) {
     return PR_TRUE;
   }
 
@@ -2042,7 +2048,7 @@ IsPercentageAwareChild(const nsIFrame* aFrame)
     || eStyleUnit_Percent == pos->mHeight.GetUnit()
     || eStyleUnit_Percent == pos->mMinHeight.GetUnit()
     || eStyleUnit_Percent == pos->mMaxHeight.GetUnit()
-    || IsPercentageUnitSides(&pos->mOffset)) { // XXX need more here!!!
+    || nsLineLayout::IsPercentageUnitSides(&pos->mOffset)) { // XXX need more here!!!
     return PR_TRUE;
   }
 
@@ -2600,6 +2606,7 @@ nsBlockFrame::PrepareResizeReflow(nsBlockReflowState& aState)
           // newlines. Therefore, we don't need to reflow the line.
         }
         else if ((line->mNext && !line->HasBreak()) ||
+			           line->ResizeReflowOptimizationDisabled() ||
                  line->HasFloaters() || line->IsImpactedByFloater() ||
                  line->HasPercentageChild() ||
                  (line->mBounds.XMost() > newAvailWidth)) {
@@ -3279,8 +3286,9 @@ nsBlockFrame::ReflowLine(nsBlockReflowState& aState,
       nsRect dirtyRect;
       dirtyRect.UnionRect(oldCombinedArea, combinedArea);
 #ifdef NOISY_BLOCK_INVALIDATE
-      printf("%p invalidate because aDamageDirtyArea is true (%d, %d, %d, %d)\n",
-             this, dirtyRect.x, dirtyRect.y, dirtyRect.width, dirtyRect.height);
+      printf("%p invalidate because %s is true (%d, %d, %d, %d)\n",
+             this, aDamageDirtyArea ? "aDamageDirtyArea" : "aLine->IsForceInvalidate",
+             dirtyRect.x, dirtyRect.y, dirtyRect.width, dirtyRect.height);
 #endif
       Invalidate(aState.mPresContext, dirtyRect);
     }
@@ -4226,7 +4234,9 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
   PRInt32 i;
   nsIFrame* frame = aLine->mFirstChild;
   aLine->SetHasPercentageChild(PR_FALSE); // To be set by ReflowInlineFrame below
-  for (i = 0; i < aLine->GetChildCount(); i++) {      
+  // need to repeatedly call GetChildCount here, because the child
+  // count can change during the loop!
+  for (i = 0; i < aLine->GetChildCount(); i++) { 
     rv = ReflowInlineFrame(aState, aLineLayout, aLine, frame,
                            &lineReflowStatus);
     if (NS_FAILED(rv)) {
@@ -6468,6 +6478,7 @@ nsBlockFrame::HandleEvent(nsIPresContext* aPresContext,
   if (aEvent->message == NS_MOUSE_LEFT_BUTTON_DOWN || aEvent->message == NS_MOUSE_MOVE ||
     aEvent->message == NS_MOUSE_LEFT_DOUBLECLICK ) {
 
+    nsMouseEvent *me = (nsMouseEvent *)aEvent;
 
     nsIFrame *resultFrame = nsnull;//this will be passed the handle event when we 
                                    //can tell who to pass it to
@@ -6482,8 +6493,9 @@ nsBlockFrame::HandleEvent(nsIPresContext* aPresContext,
     result = mainframe->QueryInterface(NS_GET_IID(nsILineIterator),getter_AddRefs(it));
     nsIView* parentWithView;
     nsPoint origin;
+    nsPeekOffsetStruct pos;
 
-    while(NS_SUCCEEDED(result))
+    while(NS_OK == result)
     { //we are starting aloop to allow us to "drill down to the one we want" 
       mainframe->GetOffsetFromView(aPresContext, origin, &parentWithView);
 
@@ -6527,7 +6539,6 @@ nsBlockFrame::HandleEvent(nsIPresContext* aPresContext,
       }
       //we will now ask where to go. if we cant find what we want"aka another block frame" 
       //we drill down again
-      nsPeekOffsetStruct pos;
       pos.mTracker = tracker;
       pos.mDirection = eDirNext;
       pos.mDesiredX = aEvent->point.x;
@@ -6540,7 +6551,8 @@ nsBlockFrame::HandleEvent(nsIPresContext* aPresContext,
                                           );
       
       if (NS_SUCCEEDED(result) && pos.mResultFrame){
-        result = pos.mResultFrame->QueryInterface(NS_GET_IID(nsILineIterator),getter_AddRefs(it));//if this fails thats ok
+        if (result == NS_OK)
+          result = pos.mResultFrame->QueryInterface(NS_GET_IID(nsILineIterator),getter_AddRefs(it));//if this fails thats ok
         resultFrame = pos.mResultFrame;
         mainframe = resultFrame;
       }
@@ -6553,7 +6565,26 @@ nsBlockFrame::HandleEvent(nsIPresContext* aPresContext,
 
     if (resultFrame)
     {
-      result = resultFrame->HandleEvent(aPresContext, aEvent, aEventStatus);
+      if (NS_COMFALSE == result)
+      {
+        nsCOMPtr<nsISelectionController> selCon;
+        result = GetSelectionController(aPresContext, getter_AddRefs(selCon));
+        //get the selection controller
+        if (NS_SUCCEEDED(result) && selCon) 
+        {
+          PRInt16 displayresult;
+          selCon->GetDisplaySelection(&displayresult);
+          if (displayresult == nsISelectionController::SELECTION_OFF)
+            return NS_OK;//nothing to do we cannot affect selection from here
+        }
+        nsCOMPtr<nsIFrameSelection> frameselection;
+        shell->GetFrameSelection(getter_AddRefs(frameselection));
+        if (frameselection)
+          result = frameselection->HandleClick(pos.mResultContent, pos.mContentOffset, 
+                                               pos.mContentOffsetEnd, me->isShift, PR_FALSE, pos.mPreferLeft);
+      }
+      else
+        result = resultFrame->HandleEvent(aPresContext, aEvent, aEventStatus);//else let the frame/container do what it needs
       if (aEvent->message == NS_MOUSE_LEFT_BUTTON_DOWN && !IsMouseCaptured(aPresContext))
           CaptureMouse(aPresContext, PR_TRUE);
       return result;

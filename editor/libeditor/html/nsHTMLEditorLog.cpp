@@ -28,7 +28,7 @@
 #include "nsIDOMNodeList.h"
 #include "nsIDOMCharacterData.h"
 #include "nsIDOMNamedNodeMap.h"
-#include "nsIDOMSelection.h"
+#include "nsISelection.h"
 #include "nsIDOMRange.h"
 #include "nsHTMLEditorLog.h"
 #include "nsCOMPtr.h"
@@ -681,7 +681,7 @@ nsHTMLEditorLog::SwitchTableCellHeaderType(nsIDOMElement *aSourceCell, nsIDOMEle
 }
 
 NS_IMETHODIMP
-nsHTMLEditorLog::MakeOrChangeList(const nsString& aListType)
+nsHTMLEditorLog::MakeOrChangeList(const nsString& aListType, PRBool entireList)
 {
   nsAutoHTMLEditorLogLock logLock(this);
 
@@ -695,7 +695,7 @@ nsHTMLEditorLog::MakeOrChangeList(const nsString& aListType)
     Flush();
   }
 
-  return nsHTMLEditor::MakeOrChangeList(aListType);
+  return nsHTMLEditor::MakeOrChangeList(aListType, entireList);
 }
 
 NS_IMETHODIMP
@@ -958,7 +958,7 @@ nsHTMLEditorLog::PrintUnicode(const nsString &aString)
 nsresult
 nsHTMLEditorLog::PrintSelection()
 {
-  nsCOMPtr<nsIDOMSelection> selection;
+  nsCOMPtr<nsISelection> selection;
   nsresult result;
   PRInt32 rangeCount;
 

@@ -30,7 +30,8 @@
 #include "nsIXIFConverter.h"
 #include "nsRange.h"
 #include "nsTextContentChangeData.h"
-#include "nsIDOMSelection.h"
+#include "nsISelection.h"
+#include "nsISelectionPrivate.h"
 #include "nsIEnumerator.h"
 #include "nsReadableUtils.h"
 
@@ -231,11 +232,11 @@ nsGenericDOMDataNode::Normalize()
 }
 
 nsresult
-nsGenericDOMDataNode::Supports(const nsAReadableString& aFeature,
-                               const nsAReadableString& aVersion,
-                               PRBool* aReturn)
+nsGenericDOMDataNode::IsSupported(const nsAReadableString& aFeature,
+                                  const nsAReadableString& aVersion,
+                                  PRBool* aReturn)
 {
-  return nsGenericElement::InternalSupports(aFeature, aVersion, aReturn);
+  return nsGenericElement::InternalIsSupported(aFeature, aVersion, aReturn);
 }
 
 #if 0
@@ -321,7 +322,7 @@ nsGenericDOMDataNode::SubstringData(PRUint32 aStart,
     aReturn.Assign(mText.Get2b() + aStart, amount);
   }
   else {
-    aReturn.Assign(NS_ConvertASCIItoUCS2(mText.Get1b() + aStart, amount), amount);
+    aReturn.Assign(NS_ConvertASCIItoUCS2(mText.Get1b() + aStart, amount).get(), amount);
   }
 
   return NS_OK;
@@ -558,13 +559,14 @@ nsGenericDOMDataNode::ConvertContentToXIF(const nsIContent *aOuterContent,
                                           nsIXIFConverter* aConverter) const
 {
   const nsIContent* content = aOuterContent;
-  nsCOMPtr<nsIDOMSelection> sel;
+  nsCOMPtr<nsISelection> sel;
   aConverter->GetSelection(getter_AddRefs(sel));
 
   if (sel && mDocument && mDocument->IsInSelection(sel,content))
   {
     nsCOMPtr<nsIEnumerator> enumerator;
-    if (NS_SUCCEEDED(sel->GetEnumerator(getter_AddRefs(enumerator)))) {
+    nsCOMPtr<nsISelectionPrivate> selPrivate(do_QueryInterface(sel));
+    if (NS_SUCCEEDED(selPrivate->GetEnumerator(getter_AddRefs(enumerator)))) {
       for (enumerator->First();NS_OK != enumerator->IsDone(); enumerator->Next()) {
         nsIDOMRange* range = nsnull;
         if (NS_SUCCEEDED(enumerator->CurrentItem((nsISupports**)&range))) {
@@ -999,7 +1001,7 @@ nsGenericDOMDataNode::CopyText(nsAWritableString& aResult)
     aResult.Assign(mText.Get2b(), mText.GetLength());
   }
   else {
-    aResult.Assign(NS_ConvertASCIItoUCS2(mText.Get1b(), mText.GetLength()),
+    aResult.Assign(NS_ConvertASCIItoUCS2(mText.Get1b(), mText.GetLength()).get(),
                    mText.GetLength());
   }
   return NS_OK;

@@ -74,7 +74,7 @@ function validateEmail() {
     if (emailArray.length != 2 ||
         emailArray[0] == "" ||
         emailArray[1] == "") {
-      var alertText = Bundle.GetStringFromName("enterValidEmail");
+      alertText = Bundle.GetStringFromName("enterValidEmail");
       window.alert(alertText);
       return false;
     }
@@ -109,7 +109,7 @@ function checkForFullName() {
     var name = document.getElementById("fullName");
     if (name.value=="") {
         try {
-            var userInfo = Components.classes["component://netscape/userinfo"].getService(Components.interfaces.nsIUserInfo);
+            var userInfo = Components.classes["@mozilla.org/userinfo;1"].getService(Components.interfaces.nsIUserInfo);
             name.value = userInfo.fullname;
         }
         catch (ex) {
@@ -122,7 +122,7 @@ function checkForEmail() {
     var email = document.getElementById("email");
     if (email.value=="") {
         try {
-            var userInfo = Components.classes["component://netscape/userinfo"].getService(Components.interfaces.nsIUserInfo);
+            var userInfo = Components.classes["@mozilla.org/userinfo;1"].getService(Components.interfaces.nsIUserInfo);
             email.value = userInfo.emailAddress;
         }
         catch (ex) {

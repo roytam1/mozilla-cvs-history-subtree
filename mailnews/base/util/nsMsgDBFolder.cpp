@@ -463,7 +463,10 @@ nsresult nsMsgDBFolder::ReadDBFolderInfo(PRBool force)
 				//folderInfo->GetImapTotalPendingMessages(&mNumPendingTotalMessages);
 				//folderInfo->GetImapUnreadPendingMessages(&mNumPendingUnreadMessages);
 
-				folderInfo->GetCharacterSet(&mCharset);
+				PRBool defaultUsed;
+				folderInfo->GetCharacterSet2(&mCharset, &defaultUsed);
+				if (defaultUsed)
+					mCharset.AssignWithConversion("");
         
 				if (db) {
 					PRBool hasnew;
@@ -771,12 +774,15 @@ NS_IMETHODIMP nsMsgDBFolder::ManyHeadersToDownload(PRBool *retval)
 
 	if (!retval)
 		return NS_ERROR_NULL_POINTER;
-	if (!mDatabase)
-		*retval = PR_TRUE;
-	else if (NS_SUCCEEDED(GetTotalMessages(PR_FALSE, &numTotalMessages)) && numTotalMessages <= 0)
-		*retval = PR_TRUE;
-	else
-		*retval = PR_FALSE;
+  *retval = PR_TRUE;
+
+  // is there any reason to return false?
+//	if (!mDatabase)
+//		*retval = PR_TRUE;
+//	else if (NS_SUCCEEDED(GetTotalMessages(PR_FALSE, &numTotalMessages)) && numTotalMessages <= 0)
+//		*retval = PR_TRUE;
+//	else
+//		*retval = PR_FALSE;
 	return NS_OK;
 }
 
@@ -851,7 +857,7 @@ nsresult nsMsgDBFolder::FlushToFolderCache()
 {
   nsresult rv;
   NS_WITH_SERVICE(nsIMsgAccountManager, accountManager,
-                  NS_MSGACCOUNTMANAGER_PROGID, &rv);
+                  NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
   if (NS_SUCCEEDED(rv) && accountManager)
   {
     nsCOMPtr<nsIMsgFolderCache> folderCache;

@@ -28,7 +28,7 @@
 #include "nsIEditorShell.h"
 #include "nsIEditorMailSupport.h"
 #include "nsIFormControlFrame.h"
-#include "nsIDOMSelection.h"
+#include "nsISelection.h"
 #include "nsIHTMLEditor.h"
 #include "nsISupportsPrimitives.h"
 #include "nsXPIDLString.h"
@@ -229,7 +229,7 @@ nsresult nsEditorController::GetEditorCommandManager(nsIControllerCommandManager
   if (!cmdManager)
   {
     nsresult rv;
-    cmdManager = do_CreateInstance("component://netscape/rdf/controller-command-manager", &rv);
+    cmdManager = do_CreateInstance("@mozilla.org/rdf/controller-command-manager;1", &rv);
     if (NS_FAILED(rv)) return rv;
 
     // register the commands. This just happens once per instance
@@ -266,7 +266,7 @@ NS_IMETHODIMP nsComposerController::Init(nsISupports *aCommandRefCon)
   rv = nsEditorController::Init(aCommandRefCon);
   if (NS_FAILED(rv)) return rv;  
   
-  mCommandManager = do_CreateInstance("component://netscape/rdf/controller-command-manager", &rv);
+  mCommandManager = do_CreateInstance("@mozilla.org/rdf/controller-command-manager;1", &rv);
   if (NS_FAILED(rv)) return rv;
 
   // register the commands.
@@ -293,6 +293,8 @@ nsresult nsComposerController::RegisterComposerCommands(nsIControllerCommandMana
   // File menu
   NS_REGISTER_FIRST_COMMAND(nsPrintingCommands, "cmd_print");
   NS_REGISTER_NEXT_COMMAND(nsPrintingCommands, "cmd_printSetup");
+  NS_REGISTER_NEXT_COMMAND(nsPrintingCommands,"cmd_print_button");
+  NS_REGISTER_NEXT_COMMAND(nsPrintingCommands,"cmd_printSetup");
   NS_REGISTER_LAST_COMMAND(nsPrintingCommands, "cmd_printPreview");
   
   // Edit menu

@@ -30,7 +30,7 @@
 #include "nsIDOMElement.h"
 #include "nsIDOMCharacterData.h"
 #include "nsIDOMMouseEvent.h"
-#include "nsIDOMSelection.h"
+#include "nsISelection.h"
 #include "nsIDOMRange.h"
 #include "nsIDOMNSRange.h"
 #include "nsIDOMEventTarget.h"
@@ -208,7 +208,7 @@ nsEditorShellMouseListener::MouseDown(nsIDOMEvent* aMouseEvent)
     res = mouseEvent->GetDetail(&clickCount);
     if (NS_FAILED(res)) return res;
 
-    nsCOMPtr<nsIDOMSelection> selection;
+    nsCOMPtr<nsISelection> selection;
     mEditorShell->GetEditorSelection(getter_AddRefs(selection));
     if (!selection) return NS_OK;
 
@@ -263,7 +263,7 @@ nsEditorShellMouseListener::MouseDown(nsIDOMEvent* aMouseEvent)
 
         // Get enclosing link
         nsCOMPtr<nsIDOMElement> linkElement;
-        res = mEditorShell->GetElementOrParentByTagName(NS_LITERAL_STRING("href"), node, getter_AddRefs(linkElement));
+        res = mEditorShell->GetElementOrParentByTagName(NS_LITERAL_STRING("href").get(), node, getter_AddRefs(linkElement));
         if (NS_FAILED(res)) return res;
         if (linkElement)
           element = linkElement;

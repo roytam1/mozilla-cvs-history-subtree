@@ -29,7 +29,7 @@
 #include "nsIComponentManager.h" 
 #include "nsIServiceManager.h"
 #include "nsIDocument.h"
-#include "nsIDOMSelection.h"
+#include "nsISelection.h"
 #include "nsIPresShell.h"
 #include "nsParserCIID.h"
 #include "nsIParser.h"
@@ -73,7 +73,7 @@ public:
   NS_DECL_ISUPPORTS
 
   // Inherited methods from nsIDocumentEncoder
-  NS_IMETHOD SetSelection(nsIDOMSelection* aSelection);
+  NS_IMETHOD SetSelection(nsISelection* aSelection);
   NS_IMETHOD SetRange(nsIDOMRange* aRange);
   NS_IMETHOD SetWrapColumn(PRUint32 aWC);
   NS_IMETHOD SetCharset(const nsAReadableString& aCharset);
@@ -106,7 +106,7 @@ protected:
   static PRBool IncludeInContext_HTML(nsIDOMNode *aNode);
 
   nsCOMPtr<nsIDocument>          mDocument;
-  nsCOMPtr<nsIDOMSelection>      mSelection;
+  nsCOMPtr<nsISelection>         mSelection;
   nsCOMPtr<nsIDOMRange>          mRange;
   nsCOMPtr<nsIOutputStream>      mStream;
   nsCOMPtr<nsIContentSerializer> mSerializer;
@@ -200,7 +200,7 @@ nsDocumentEncoder::SetWrapColumn(PRUint32 aWC)
 }
 
 NS_IMETHODIMP
-nsDocumentEncoder::SetSelection(nsIDOMSelection* aSelection)
+nsDocumentEncoder::SetSelection(nsISelection* aSelection)
 {
   mSelection = aSelection;
   return NS_OK;
@@ -680,14 +680,6 @@ nsDocumentEncoder::SerializeRangeToString(nsIDOMRange *aRange,
 
   PRInt32 i = startAncestors.Count();
 
-  nsVoidArray commonAncestors;
-  commonAncestors = startAncestors;
-
-  nsresult rv = NS_OK;
-
-  rv = SerializeRangeContextStart(commonAncestors, aOutputString);
-  NS_ENSURE_SUCCESS(rv, rv);
-
   while (i--) {
     nsIDOMNode *node = NS_STATIC_CAST(nsIDOMNode *, startAncestors.ElementAt(i));
 
@@ -696,6 +688,14 @@ nsDocumentEncoder::SerializeRangeToString(nsIDOMRange *aRange,
     if (!node || node == commonParent.get())
       break;
   }
+
+  nsVoidArray commonAncestors;
+  nsRange::FillArrayWithAncestors(&commonAncestors, commonParent);
+
+  nsresult rv = NS_OK;
+
+  rv = SerializeRangeContextStart(commonAncestors, aOutputString);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   rv = SerializeRangeNodes(startAncestors, commonParent, start, startOffset,
                              end, endOffset, aOutputString);
@@ -720,7 +720,7 @@ nsDocumentEncoder::EncodeToString(nsAWritableString& aOutputString)
 
   // xxx Also make sure mString is a mime type "text/html" or "text/plain"
 
-  nsCAutoString progId(NS_CONTENTSERIALIZER_PROGID_PREFIX);
+  nsCAutoString progId(NS_CONTENTSERIALIZER_CONTRACTID_PREFIX);
   progId.AppendWithConversion(mMimeType);
 
   mSerializer = do_CreateInstance(NS_STATIC_CAST(const char *, progId));

@@ -22,97 +22,15 @@
  */
 
 function onInit() {
-    fixLabels(document.getElementById("ispBox"));
+    // this is a total hack.
+    // select the first radio button, assuming the wizard hasn't
+    // already selected one for us. The wizard can get in this wierd state
+    var elements = document.getElementsByAttribute("group", "acctyperadio");
+    var topItem = elements[0];
+    for (var i=0; i < elements.length; i++)
+        if (elements[i].checked) topItem = elements[i];
 
-    preselectRadioButtons();
-    
-    onTypeChanged();
-}
-
-// this is a workaround for #44713 - I can't preselect radio buttons
-// by marking them with checked="true"
-function preselectRadioButtons()
-{
-    try {
-        // select the first item in the outer group (mail account)
-        var radiogroup = document.getElementById("acctyperadio");
-        if (!radiogroup.selectedItem) {
-            radiogroup.selectedItem =
-                radiogroup.getElementsByAttribute("group", radiogroup.id)[0];
-        }
-
-        // select the last item in the inner group (other ISP)
-        radiogroup = document.getElementById("ispchoice");
-        if (!radiogroup.selectedItem) {
-            var radiobuttons =
-                radiogroup.getElementsByAttribute("group", radiogroup.id);
-            radiogroup.selectedItem = radiobuttons[radiobuttons.length-1];
-        }
-        
-    } catch (ex) {
-        dump("Error preselecting a radio button: " + ex + "!\n");
-    }
-}
-
-// this is a workaround for a template shortcoming.
-// basically: templates can't set the "id" attribute on a node, so we
-// have to set "fakeid" and then transfer it manually
-function fixLabels(box) {
-    dump("Fixing labels on " + box + "\n");
-    if (!box) return;
-    var child = box.firstChild;
-
-    dump("starting looking with " + child + "\n");
-    var haveDynamicInputs = false;
-    while (child) {
-
-        dump("found child: " + child + "\n");
-        if (child.localName.toLowerCase() == "radio") {
-            dump("Found dynamic inputs!\n");
-            haveDynamicInputs = true;
-        }
-
-        child = child.nextSibling;
-    }
-
-    if (haveDynamicInputs) {
-        var subButtons = document.getElementById("ispchoice");
-        dump("** Have dynamic inputs: showing " + subButtons + "\n");
-        subButtons.removeAttribute("hidden");
-
-        var otherIspRadio = document.getElementById("otherIspRadio");
-        dump("** Also showing the other ISP button\n");
-        otherIspRadio.removeAttribute("hidden");
-    }
-}
-
-function onTypeChanged() {
-    var ispBox = document.getElementById("ispBox");
-
-    var mailaccount = document.getElementById("mailaccount");
-    enableControls(ispBox, mailaccount.checked);
-}
-
-function enableControls(container, enabled)
-{
-    if (!container) return;
-    var child = container.firstChild;
-    while (child) {
-        enableIspButtons(child, enabled);
-        child = child.nextSibling;
-    }
-    var otherIspRadio = document.getElementById("otherIspRadio");
-    enableIspButtons(otherIspRadio, enabled);
-}
-
-function enableIspButtons(child, enabled)
-{
-    dump("disabling " + child.id + "\n");
-    if (enabled)
-        child.removeAttribute("disabled");
-    else
-        child.setAttribute("disabled", "true");
-
+    document.getElementById("acctyperadio").selectedItem = topItem;
 }
 
 function onUnload() {
@@ -129,22 +47,12 @@ function initializeIspData()
 {
     if (!document.getElementById("mailaccount").checked) {
         parent.SetCurrentAccountData(null);
-        return;
     }
     
-    var ispName;
     // now reflect the datasource up into the parent
-    var controls = document.getElementsByAttribute("wsm_persist", "true");
-    
-    for (var i=0; i<controls.length ;i++) {
-        var formElement = controls[i];
-        if (formElement.getAttribute("group") == "ispchoice" &&
-            formElement.checked) {
-            dump("ispName = " + formElement.id + "\n");
-            ispName = formElement.id;
-            break;
-        }
-    }
+    var accountSelection = document.getElementById("acctyperadio");
+
+    var ispName = accountSelection.selectedItem.id;
 
     dump("initializing ISP data for " + ispName + "\n");
     

@@ -44,10 +44,10 @@ function awGetSelectItemIndex(itemData)
     if (selectElementIndexTable == null)
     {
 	    selectElementIndexTable = new Object();
-	    selectElem = document.getElementById("msgRecipientType#1");
+	    var selectElem = document.getElementById("msgRecipientType#1");
         for (var i = 0; i < selectElem.childNodes[0].childNodes.length; i ++)
     {
-            aData = selectElem.childNodes[0].childNodes[i].getAttribute("data");
+            var aData = selectElem.childNodes[0].childNodes[i].getAttribute("data");
             selectElementIndexTable[aData] = i;
         }
     }
@@ -73,9 +73,10 @@ function Recipients2CompFields(msgCompFields)
 		var ng_Sep = "";
 		var follow_Sep = "";
 
+    var inputField;
 	    while ((inputField = awGetInputElement(i)))
 	    {
-	    	fieldValue = inputField.value;
+	    	var fieldValue = inputField.value;
 	    	if (fieldValue == null)
 	    	  fieldValue = inputField.getAttribute("value");
 
@@ -124,21 +125,14 @@ function CompFields2Recipients(msgCompFields, msgType)
 		awSetInputAndPopup(msgCompFields.GetNewsgroups(), "addr_newsgroups", newTreeChildrenNode, templateNode);
 		awSetInputAndPopup(msgCompFields.GetFollowupTo(), "addr_followup", newTreeChildrenNode, templateNode);
 		
-    if (top.MAX_RECIPIENTS == 0)
-		{
-		  top.MAX_RECIPIENTS = 1;
-			awSetAutoComplete(top.MAX_RECIPIENTS);
-		}
-		else
-		{
-		    //If it's a new message, we need to add an extrat empty recipient.
-		    var msgComposeType = Components.interfaces.nsIMsgCompType;
-		    if (msgType == msgComposeType.New)
-		        _awSetInputAndPopup("", "addr_to", newTreeChildrenNode, templateNode);
-	        var parent = treeChildren.parentNode;
-	        parent.replaceChild(newTreeChildrenNode, treeChildren);
-            setTimeout("awFinishCopyNodes();", 0);
-        }
+		//If it's a new message, we need to add an extrat empty recipient.
+		var msgComposeType = Components.interfaces.nsIMsgCompType;
+		if (msgType == msgComposeType.New || top.MAX_RECIPIENTS == 0)
+		    _awSetInputAndPopup("", "addr_to", newTreeChildrenNode, templateNode);
+		dump("replacing child in comp fields 2 recips \n");
+	    var parent = treeChildren.parentNode;
+	    parent.replaceChild(newTreeChildrenNode, treeChildren);
+        setTimeout("awFinishCopyNodes();", 0);
 	}
 }
 
@@ -311,7 +305,7 @@ function awDeleteHit(inputElement)
   if (nextRow) {
     awSetFocus(row+index, nextRow)
     if (row)
-      awRemoveRow(row);
+      awCleanupRows(row);
   }
   else
     inputElement.value = "";
@@ -338,7 +332,7 @@ function awAppendNewRow(setFocus)
 	{
 	    var lastRecipientType = awGetPopupElement(top.MAX_RECIPIENTS).selectedItem.getAttribute("data");
 
-		newNode = awCopyNode(treeitem1, body, 0);
+		var newNode = awCopyNode(treeitem1, body, 0);
 		top.MAX_RECIPIENTS++;
 
         var input = newNode.getElementsByTagName(awInputElementName());
@@ -474,11 +468,21 @@ function _awSetFocus()
 	var tree = document.getElementById('addressingWidgetTree');
 	try
 	{
-		theNewRow = awGetTreeRow(top.awRow);
+		var theNewRow = awGetTreeRow(top.awRow);
 		//temporary patch for bug 26344
 		awFinishCopyNode(theNewRow);
 
-		tree.ensureElementIsVisible(theNewRow);
+    //Warning: firstVisibleRow is zero base but top.awRow is one base!
+    var firstVisibleRow = tree.getIndexOfFirstVisibleRow();
+    var numOfVisibleRows = tree.getNumberOfVisibleRows();
+  
+    //Do we need to scroll in order to see the selected row?
+    if (top.awRow <= firstVisibleRow)
+      tree.scrollToIndex(top.awRow - 1);
+    else
+      if (top.awRow - 1 >= (firstVisibleRow + numOfVisibleRows))
+        tree.scrollToIndex(top.awRow - numOfVisibleRows);
+
 		top.awInputElement.focus();
 	}
 	catch(ex)
@@ -527,7 +531,7 @@ function DragOverTree(event)
 	var dragSession = null;
 	var retVal = true;
 
-	var dragService = Components.classes["component://netscape/widget/dragservice"].getService();
+	var dragService = Components.classes["@mozilla.org/widget/dragservice;1"].getService();
 	if (dragService) 
 		dragService = dragService.QueryInterface(Components.interfaces.nsIDragService);
 	if (!dragService)	return(false);
@@ -554,12 +558,12 @@ function DragOverTree(event)
 function DropOnAddressingWidgetTree(event)
 {
 	dump("DropOnTree\n");
-	var rdf = Components.classes["component://netscape/rdf/rdf-service"].getService();
+	var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService();
 	if (rdf)   
 		rdf = rdf.QueryInterface(Components.interfaces.nsIRDFService);
 	if (!rdf) return(false);
 
-	var dragService = Components.classes["component://netscape/widget/dragservice"].getService();
+	var dragService = Components.classes["@mozilla.org/widget/dragservice;1"].getService();
 	if (dragService) 
 		dragService = dragService.QueryInterface(Components.interfaces.nsIDragService);
 	if (!dragService)	return(false);
@@ -567,7 +571,7 @@ function DropOnAddressingWidgetTree(event)
 	var dragSession = dragService.getCurrentSession();
 	if ( !dragSession )	return(false);
 
-	var trans = Components.classes["component://netscape/widget/transferable"].createInstance(Components.interfaces.nsITransferable);
+	var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
 	if ( !trans ) return(false);
 	trans.addDataFlavor("text/nsabcard");
 
@@ -615,8 +619,8 @@ function _awSetAutoComplete(selectElem, inputElem)
 
 function awSetAutoComplete(rowNumber)
 {
-    inputElem = awGetInputElement(rowNumber);
-    selectElem = awGetPopupElement(rowNumber);
+    var inputElem = awGetInputElement(rowNumber);
+    var selectElem = awGetPopupElement(rowNumber);
     _awSetAutoComplete(selectElem, inputElem)
 }
 

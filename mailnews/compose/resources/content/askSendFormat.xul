@@ -1,5 +1,6 @@
 <?xml version="1.0"?><!-- -*- Mode: SGML; tab-width: 4; indent-tabs-mode: nil; -*- -->
 
+<?xml-stylesheet href="chrome://messenger/skin/messenger.css" type="text/css"?> 
 <?xml-stylesheet href="chrome://messenger/skin/messengercompose/messengercompose.css" type="text/css"?>
 
 <?xul-overlay href="chrome://global/content/dialogOverlay.xul"?>
@@ -23,7 +24,7 @@
     <spring style="height:0.5em"/>
     <box align="horizontal">
         <spring style="width:10px"/>
-        <box orient="vertical" valign="middle">
+        <box orient="vertical" id="askImageBox">
             <image id="convertDefault" />
         </box>
         <spring style="width:10px"/>

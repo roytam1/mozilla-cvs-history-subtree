@@ -31,7 +31,10 @@ Rights Reserved.
 <!ENTITY newFolderCmd.accesskey			"f">  
 <!ENTITY newAccountCmd.label			"Account...">  
 <!ENTITY newAccountCmd.accesskey		"a">  
-<!ENTITY openAttachmentCmd.label		".Open Attachment">  
+<!ENTITY openMessageCmd.label		"Open Message">
+<!ENTITY openMessageCmd.accesskey		"o">
+<!ENTITY openMessageCmd.key			"o">
+<!ENTITY openAttachmentCmd.label		"Attachments">  
 <!ENTITY openAttachmentCmd.accesskey		"a">  
 <!ENTITY saveAsMenu.label				"Save As"> 
 <!ENTITY saveAsMenu.accesskey			"s"> 
@@ -107,7 +110,7 @@ Rights Reserved.
 <!ENTITY showLocationToolbarCmd.label		".Location Toolbar">
 <!ENTITY showLocationToolbarCmd.accesskey	"l">
 <!ENTITY showMessageCmd.label				"Message">  
-<!ENTITY showMessageCmd.accesskey				"">  
+<!ENTITY showMessageCmd.accesskey                               "e">  
 <!ENTITY sortMenu.label "Sort by"> 
 <!ENTITY sortMenu.accesskey "o"> 
 <!ENTITY sortByDateCmd.label "Date">  
@@ -121,11 +124,11 @@ Rights Reserved.
 <!ENTITY sortBySizeCmd.label "Size">  
 <!ENTITY sortBySizeCmd.accesskey "z">  
 <!ENTITY sortByStatusCmd.label "Status">  
-<!ENTITY sortByStatusCmd.accesskey "Status">  
+<!ENTITY sortByStatusCmd.accesskey "u">  
 <!ENTITY sortBySubjectCmd.label "Subject">  
 <!ENTITY sortBySubjectCmd.accesskey "s">  
 <!ENTITY sortByUnreadCmd.label "Unread">  
-<!ENTITY sortByUnreadCmd.accesskey "u">  
+<!ENTITY sortByUnreadCmd.accesskey "n">  
 <!ENTITY sortByOrderReceivedCmd.label "Order Received">  
 <!ENTITY sortByOrderReceivedCmd.accesskey "o">  
 <!ENTITY msgsMenu.label "Messages"> 
@@ -219,7 +222,7 @@ Rights Reserved.
 <!-- Search Menu -->
 <!ENTITY searchMenu.accesskey "s">
 <!ENTITY searchMenu.label "Search">
-<!ENTITY findCmd.label "Find...">  
+<!ENTITY findCmd.label "Find in This Message...">  
 <!ENTITY findCmd.accesskey "f">  
 <!ENTITY findCmd.key "f">  
 <!ENTITY findAgainCmd.label "Find Again">

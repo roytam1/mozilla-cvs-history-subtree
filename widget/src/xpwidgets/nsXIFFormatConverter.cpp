@@ -141,7 +141,7 @@ nsresult
 nsHTMLFormatConverter :: AddFlavorToList ( nsISupportsArray* inList, const char* inFlavor )
 {
   nsCOMPtr<nsISupportsString> dataFlavor;
-  nsresult rv = nsComponentManager::CreateInstance(NS_SUPPORTS_STRING_PROGID, nsnull, 
+  nsresult rv = nsComponentManager::CreateInstance(NS_SUPPORTS_STRING_CONTRACTID, nsnull, 
                                                     NS_GET_IID(nsISupportsString), getter_AddRefs(dataFlavor));
   if ( dataFlavor ) {
     dataFlavor->SetData ( NS_CONST_CAST(char*, inFlavor) );
@@ -289,7 +289,7 @@ nsHTMLFormatConverter::ConvertFromHTMLToText(const nsAutoString & aFromStr,
   static PRBool hasDeterminedCharset = PR_FALSE;
   if ( !hasDeterminedCharset ) {
     nsresult res;
-    nsCOMPtr <nsIPlatformCharset> platformCharsetService = do_GetService(NS_PLATFORMCHARSET_PROGID, &res);
+    nsCOMPtr <nsIPlatformCharset> platformCharsetService = do_GetService(NS_PLATFORMCHARSET_CONTRACTID, &res);
     if (NS_SUCCEEDED(res))
       res = platformCharsetService->GetCharset(kPlatformCharsetSel_PlainTextInClipboard, platformCharset);
     if (NS_FAILED(res))
@@ -331,7 +331,7 @@ nsHTMLFormatConverter::ConvertFromHTMLToUnicode(const nsAutoString & aFromStr, n
   // convert it!
   nsCOMPtr<nsIContentSink> sink;
 
-  sink = do_CreateInstance(NS_PLAINTEXTSINK_PROGID);
+  sink = do_CreateInstance(NS_PLAINTEXTSINK_CONTRACTID);
   NS_ENSURE_TRUE(sink, NS_ERROR_FAILURE);
 
   nsCOMPtr<nsIHTMLToTextSink> textSink(do_QueryInterface(sink));

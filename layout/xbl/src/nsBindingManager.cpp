@@ -354,7 +354,7 @@ nsBindingManager::AddLayeredBinding(nsIContent* aContent, const nsAReadableStrin
 {
   // First we need to load our binding.
   nsresult rv;
-  NS_WITH_SERVICE(nsIXBLService, xblService, "component://netscape/xbl", &rv);
+  NS_WITH_SERVICE(nsIXBLService, xblService, "@mozilla.org/xbl;1", &rv);
   if (!xblService)
     return rv;
 
@@ -411,21 +411,39 @@ NS_IMETHODIMP
 nsBindingManager::LoadBindingDocument(nsIDocument* aBoundDoc, const nsAReadableString& aURL,
                                       nsIDocument** aResult)
 {
+  nsCAutoString url; url.AssignWithConversion((const PRUnichar*)nsPromiseFlatString(aURL).get());
+  
+  nsCOMPtr<nsIURL> uri;
+  nsComponentManager::CreateInstance("@mozilla.org/network/standard-url;1",
+                                     nsnull,
+                                     NS_GET_IID(nsIURL),
+                                     getter_AddRefs(uri));
+  uri->SetSpec(url);
+  
+
+  nsCOMPtr<nsIURI> docURL = getter_AddRefs(aBoundDoc->GetDocumentURL());
+  nsXPIDLCString scheme;
+  docURL->GetScheme(getter_Copies(scheme));
+
+  nsXPIDLCString otherScheme;
+  uri->GetScheme(getter_Copies(otherScheme));
+
   // First we need to load our binding.
   *aResult = nsnull;
   nsresult rv;
-  NS_WITH_SERVICE(nsIXBLService, xblService, "component://netscape/xbl", &rv);
+  NS_WITH_SERVICE(nsIXBLService, xblService, "@mozilla.org/xbl;1", &rv);
   if (!xblService)
     return rv;
 
   // Load the binding doc.
-  nsCString url; url.AssignWithConversion((const PRUnichar*)nsPromiseFlatString(aURL));
   nsCOMPtr<nsIXBLDocumentInfo> info;
   xblService->LoadBindingDocumentInfo(nsnull, aBoundDoc, url, nsCAutoString(), PR_TRUE, getter_AddRefs(info));
   if (!info)
     return NS_ERROR_FAILURE;
 
-  info->GetDocument(aResult); // Addref happens here.
+  if (!PL_strcmp(scheme, otherScheme))
+    info->GetDocument(aResult); // Addref happens here.
+    
   return NS_OK;
 }
 

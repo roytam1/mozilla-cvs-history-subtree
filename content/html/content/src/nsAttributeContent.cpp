@@ -31,7 +31,7 @@
 #include "nsIXIFConverter.h"
 #include "nsRange.h"
 
-#include "nsIDOMSelection.h"
+#include "nsISelection.h"
 #include "nsIEnumerator.h"
 
 
@@ -472,7 +472,7 @@ nsAttributeContent::CopyText(nsAWritableString& aResult)
     aResult.Assign(mText.Get2b(), mText.GetLength());
   }
   else {
-    aResult.Assign(NS_ConvertASCIItoUCS2(mText.Get1b(), mText.GetLength()), mText.GetLength());
+    aResult.Assign(NS_ConvertASCIItoUCS2(mText.Get1b(), mText.GetLength()).get(), mText.GetLength());
   }
   return NS_OK;
 }

@@ -42,6 +42,7 @@ var gOutputWrap          = 32;
 var gOutputFormatFlowed  = 64;
 var gOutputAbsoluteLinks = 128;
 var gOutputEncodeEntities = 256;
+var gStringBundle;
 
 // Use for 'defaultIndex' param in InitPixelOrPercentMenulist
 var gPixel = 0;
@@ -109,6 +110,11 @@ function ValidateNumberString(value, minValue, maxValue)
   return "";
 }
 
+function SetTextfieldFocusById(id)
+{
+  SetTextfieldFocus(document.getElementById(id));
+}
+
 function SetTextfieldFocus(textfield)
 {
   if (textfield)
@@ -131,7 +137,22 @@ function ShowInputErrorMessage(message)
 
 function GetString(name)
 {
-  return editorShell.GetString(name);
+  if (editorShell)
+  {
+    return editorShell.GetString(name);
+  }
+  else
+  {
+    // Non-editors (like prefs) may use these methods
+    if (!gStringBundle)
+    {
+      gStringBundle = srGetStrBundle("chrome://editor/locale/editor.properties");
+      if (!gStringBundle)
+        return null;
+    }
+    return gStringBundle.GetStringFromName(name);
+  }
+  return null;
 }
 
 function TrimStringLeft(string)
@@ -252,11 +273,13 @@ function SetClassEnabledById( elementID, doEnable )
 //  but elementInDoc is needed to find parent context in document
 function GetAppropriatePercentString(elementForAtt, elementInDoc)
 {
-  if (elementForAtt.nodeName == "TD" || elementForAtt.nodeName == "TH")
+  var name = elementForAtt.nodeName.toLowerCase();
+  if ( name == "td" || name == "th")
     return GetString("PercentOfTable");
 
   // Check if element is within a table cell
-  if(editorShell.GetElementOrParentByTagName("td",elementInDoc))
+  // Check if current selection anchor node is within a table cell
+  if (editorShell.GetElementOrParentByTagName("td", elementInDoc))
     return GetString("PercentOfCell");
   else
     return GetString("PercentOfWindow");
@@ -542,7 +565,7 @@ function GetTreelistValueAt(tree, index)
 // forceInteger by petejc (pete@postpagan.com)
 
 // No one likes the beep!
-//var sysBeep = Components.classes["component://netscape/sound"].createInstance();
+//var sysBeep = Components.classes["@mozilla.org/sound;1"].createInstance();
 //sysBeep     = sysBeep.QueryInterface(Components.interfaces.nsISound);
 
 function forceInteger(elementID)
@@ -607,7 +630,7 @@ function getContainer ()
     if (selection)
     {
         var focusN = selection.focusNode;
-        if (focusN.nodeName == "TD")
+        if (focusN.nodeName.toLowerCase == "td")
           return focusN
                 else
         {
@@ -737,7 +760,7 @@ function GetPrefs()
 {
   var prefs;
   try {
-    prefs = Components.classes['component://netscape/preferences'];
+    prefs = Components.classes['@mozilla.org/preferences;1'];
     if (prefs) prefs = prefs.getService();
     if (prefs) prefs = prefs.QueryInterface(Components.interfaces.nsIPref);
     if (prefs)
@@ -755,7 +778,7 @@ function GetPrefs()
 
 function GetScriptFileSpec()
 {
-  var fs = Components.classes["component://netscape/filespec"].createInstance();
+  var fs = Components.classes["@mozilla.org/filespec;1"].createInstance();
   fs = fs.QueryInterface(Components.interfaces.nsIFileSpec);
   fs.unixStyleFilePath = "journal.js";
   return fs;
@@ -765,8 +788,8 @@ const nsIFilePicker = Components.interfaces.nsIFilePicker;
 
 function GetLocalFileURL(filterType)
 {
-  var fp = Components.classes["component://mozilla/filepicker"].createInstance(nsIFilePicker);
-  fp.init(window, editorShell.GetString("OpenHTMLFile"), nsIFilePicker.modeOpen);
+  var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
+  fp.init(window, GetString("OpenHTMLFile"), nsIFilePicker.modeOpen);
 
   if (filterType == "img")
     fp.appendFilters(nsIFilePicker.filterImages);
@@ -947,4 +970,34 @@ function onCancel()
 {
   SaveWindowLocation();
   window.close();
+}
+
+function GetDefaultBrowserColors()
+{
+  var prefs = GetPrefs();
+  var colors = new Object();
+  var useWinColors = false;
+  if (navigator.appVersion.indexOf("Win") != -1)
+  {
+    // In Windows only, there's a pref to use system colors instead of pref colors
+    try { useWinColors = prefs.GetBoolPref("browser.display.wfe.use_windows_colors"); } catch (e) {}
+  }
+
+  if (!useWinColors)
+  {
+    try { colors.TextColor = prefs.CopyCharPref("browser.display.foreground_color"); } catch (e) {}
+
+    try { colors.BackgroundColor = prefs.CopyCharPref("browser.display.background_color"); } catch (e) {}
+  }
+  // Use OS colors for text and background if explicitly asked or pref is not set
+  if (!colors.TextColor)
+    colors.TextColor = "windowtext";
+  
+  if (!colors.BackgroundColor)
+    colors.BackgroundColor = "window";
+
+  colors.LinkColor = prefs.CopyCharPref("browser.anchor_color");
+  colors.VisitedLinkColor = prefs.CopyCharPref("browser.visited_color");
+
+  return colors;
 }

@@ -22,7 +22,7 @@
 #include "nsCOMPtr.h"
 #include "nsXIFConverter.h"
 #include <fstream.h>
-#include "nsIDOMSelection.h"
+#include "nsISelection.h"
 #include "nsReadableUtils.h"
 
 MOZ_DECL_CTOR_COUNTER(nsXIFConverter);
@@ -100,7 +100,7 @@ nsXIFConverter::Init(nsAWritableString& aBuffer)
 }
 
 NS_IMETHODIMP
-nsXIFConverter::SetSelection(nsIDOMSelection* aSelection) 
+nsXIFConverter::SetSelection(nsISelection* aSelection) 
 {
   NS_ENSURE_ARG_POINTER(aSelection);
   NS_ENSURE_TRUE(mBuffer,NS_ERROR_NOT_INITIALIZED);
@@ -121,10 +121,10 @@ nsXIFConverter::SetSelection(nsIDOMSelection* aSelection)
 
 
 NS_IMETHODIMP
-nsXIFConverter::GetSelection(nsIDOMSelection** aSelection)
+nsXIFConverter::GetSelection(nsISelection** aSelection)
 { 
   NS_ENSURE_ARG_POINTER(aSelection);
-  nsCOMPtr<nsIDOMSelection> sel =  do_QueryReferent(mSelectionWeak);
+  nsCOMPtr<nsISelection> sel =  do_QueryReferent(mSelectionWeak);
   NS_IF_ADDREF(*aSelection = sel);
   return *aSelection?NS_OK :NS_ERROR_FAILURE;
 }
@@ -539,7 +539,7 @@ nsXIFConverter::BeginLeaf(const nsAReadableString& aTag)
 // XXX: Complete hack to prevent the style leaf
 // From being created until the style sheet work
 // is redone. -- gpk 1/27/99
-  if (nsCRT::strcasecmp(nsPromiseFlatString(aTag), NS_LITERAL_STRING("STYLE")) == 0)
+  if (nsCRT::strcasecmp(nsPromiseFlatString(aTag).get(), NS_LITERAL_STRING("STYLE").get()) == 0)
     return NS_OK;
 
 
@@ -556,7 +556,7 @@ nsXIFConverter::EndLeaf(const nsAReadableString& aTag)
 // XXX: Complete hack to prevent the style leaf
 // From being created until the style sheet work
 // is redone. -- gpk 1/27/99
-  if (nsCRT::strcasecmp(nsPromiseFlatString(aTag), NS_LITERAL_STRING("STYLE")) == 0)
+  if (nsCRT::strcasecmp(nsPromiseFlatString(aTag).get(), NS_LITERAL_STRING("STYLE").get()) == 0)
     return NS_OK;
 
 

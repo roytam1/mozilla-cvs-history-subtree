@@ -29,7 +29,6 @@ Rights Reserved.
 %navigatorDTD;
 ]>  
 <overlay
-  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
   xmlns:nc="http://home.netscape.com/NC-rdf#"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
@@ -129,13 +128,13 @@ Rights Reserved.
 	<key id="key_selectAll"/>
 	<key id="key_preferences"/>
   
-	<key id="key_toggleRead" key="&markAsReadCmd.key;" alt="false" control="false" shift="false" observes="cmd_markAsRead"/>
-	<key id="key_markAllRead" key="&markAllReadCmd.key;" alt="false" control="false" shift="false" observes="cmd_markAllRead"/>
-	<key id="key_nextMsg" key="&nextMsgCmd.key;" alt="false" control="false" shift="false" observes="cmd_nextMsg"/>
-	<key id="key_nextUnreadMsg" key="&nextUnreadMsgCmd.key;" alt="false" control="false" shift="false" observes="cmd_nextUnreadMsg"/>
-	<key id="key_nextUnreadThread" key="&nextUnreadThreadCmd.key;" control="false" shift="false" alt="false" observes="cmd_nextUnreadThread"/>
-	<key id="key_previousMsg" key="&previousMsgCmd.key;" alt="false" control="false" shift="false" observes="cmd_previousMsg"/>
-	<key id="key_previousUnreadMsg" key="&previousUnreadMsgCmd.key;" control="false" shift="false" observes="cmd_previousUnreadMsg"/>
+	<key id="key_toggleRead" key="&markAsReadCmd.key;" xulkey="false" alt="false" control="false" shift="false" observes="cmd_markAsRead"/>
+	<key id="key_markAllRead" key="&markAllReadCmd.key;" xulkey="false" alt="false" control="false" shift="false" observes="cmd_markAllRead"/>
+	<key id="key_nextMsg" key="&nextMsgCmd.key;" xulkey="false" alt="false" control="false" shift="false" observes="cmd_nextMsg"/>
+	<key id="key_nextUnreadMsg" key="&nextUnreadMsgCmd.key;" xulkey="false" alt="false" control="false" shift="false" observes="cmd_nextUnreadMsg"/>
+	<key id="key_nextUnreadThread" key="&nextUnreadThreadCmd.key;" xulkey="false" control="false" shift="false" alt="false" observes="cmd_nextUnreadThread"/>
+	<key id="key_previousMsg" key="&previousMsgCmd.key;" xulkey="false" alt="false" control="false" shift="false" observes="cmd_previousMsg"/>
+	<key id="key_previousUnreadMsg" key="&previousUnreadMsgCmd.key;" xulkey="false" control="false" shift="false" observes="cmd_previousUnreadMsg"/>
 	<key id="key_reply" key="&replyMsgCmd.key;" xulkey="true" shift="false" observes="cmd_reply"/>
 	<key id="key_replyall" key="&replyToAllMsgCmd.key;" xulkey="true" shift="true" observes="cmd_replyall"/>
 	<key id="key_forward" key="&forwardMsgCmd.key;" xulkey="true" shift="false" observes="cmd_forward"/>
@@ -187,7 +186,7 @@ Rights Reserved.
 			  value="&contextMoveMsgMenu.label;"
 			  accesskey="&contextMoveMsgMenu.accesskey;"
 			  datasources="rdf:null"
-			  rdf:ignore="http://home.netscape.com/NC-rdf#MessageChild">
+			  ignore="http://home.netscape.com/NC-rdf#MessageChild">
 			<menupopup/>
 			<template> 
 				<rule nc:CanFileMessages="true" iscontainer="true" isempty="false">
@@ -239,7 +238,7 @@ Rights Reserved.
 			value="&contextCopyMsgMenu.label;"
 			accesskey="&contextCopyMsgMenu.accesskey;"
 			datasources="rdf:null" 
-			rdf:ignore="http://home.netscape.com/NC-rdf#MessageChild">
+			ignore="http://home.netscape.com/NC-rdf#MessageChild">
 			<menupopup/>
 			<template>
 				<rule nc:CanFileMessages="true" iscontainer="true" isempty="false">
@@ -392,7 +391,7 @@ Rights Reserved.
 			  value="&contextMoveMsgMenu.label;"
 			  accesskey="&contextMoveMsgMenu.accesskey;"
 			  datasources="rdf:null"
-			  rdf:ignore="http://home.netscape.com/NC-rdf#MessageChild">
+			  ignore="http://home.netscape.com/NC-rdf#MessageChild">
 			<menupopup/>
 			<template> 
 				<rule nc:CanFileMessages="true" iscontainer="true" isempty="false">
@@ -444,7 +443,7 @@ Rights Reserved.
 			value="&contextCopyMsgMenu.label;"
 			accesskey="&contextCopyMsgMenu.accesskey;"
 			datasources="rdf:null" 
-			rdf:ignore="http://home.netscape.com/NC-rdf#MessageChild">
+			ignore="http://home.netscape.com/NC-rdf#MessageChild">
 			<menupopup/>
 			<template>
 				<rule nc:CanFileMessages="true" iscontainer="true" isempty="false">
@@ -536,7 +535,7 @@ Rights Reserved.
 
 <menubar id="mailMenubar">
 	<menu id="menu_File">
-		<menupopup id="menu_FilePopup">
+		<menupopup id="menu_FilePopup" oncreate="file_init();">
 			<menuitem value="&newMsgCmd.label;"
 			accesskey="&newMsgCmd.accesskey;"
 			key="key_newMessage"
@@ -558,6 +557,7 @@ Rights Reserved.
 				observes="cmd_openMessage"
 				accesskey="&openMessageWindowCmd.accesskey;"
 				key="key_openMessage"/>
+			<menu id="fileAttachmentMenu" value="&openAttachmentCmd.label;"/>
 			<menuseparator/>
 			<menuitem id="menu_close"/>
 			<menu value="&saveAsMenu.label;" accesskey="&saveAsMenu.accesskey;">
@@ -608,7 +608,6 @@ Rights Reserved.
 			<menuitem id="menu_cut"/>
 			<menuitem id="menu_copy"/>
 			<menuitem id="menu_paste"/>
-			<menuseparator/>
 			<menuitem id="menu_delete"/>
 			<menuseparator/>
 			<menuitem id="menu_selectAll"/>
@@ -658,6 +657,15 @@ Rights Reserved.
 				<menupopup>
 					<menuitem id="viewAllMessagesMenuItem" type="checkbox" value="&allMsgsCmd.label;" accesskey="&allMsgsCmd.accesskey;" disabled="true" observes="cmd_viewAllMsgs"/>
 					<menuitem id="viewUnreadMessagesMenuItem" type="checkbox" value="&unreadMsgsCmd.label;" accesskey="&unreadMsgsCmd.accesskey;" disabled="true" observes="cmd_viewUnreadMsgs"/>
+					<menuseparator/>
+					<menuitem id="menu_showThreads"
+					 type="checkbox"
+					 value="&threadsMsgsCmd.label;"
+					 accesskey="&threadsMsgsCmd.accesskey;"
+					 observes="cmd_sortByThread"/>
+					<menuseparator/>
+					<menuitem value="&expandAllThreadsCmd.label;" accesskey="&expandAllThreadsCmd.accesskey;" disabled="true" observes="cmd_expandAllThreads"/>
+					<menuitem value="&collapseAllThreadsCmd.label;" accesskey="&collapseAllThreadsCmd.accesskey;" disabled="true" observes="cmd_collapseAllThreads"/>
 				</menupopup>
 			</menu>
 			<menu id="viewheadersmenu" value="&headersMenu.label;" accesskey="&headersMenu.accesskey;">
@@ -677,17 +685,6 @@ Rights Reserved.
 					 oncommand="MsgViewNormalHeaders();"/>
 				</menupopup>
 			</menu>
-			<menuitem id="menu_showThreads"
-			 type="checkbox"
-			 value="&threadsMsgsCmd.label;"
-			 accesskey="&threadsMsgsCmd.accesskey;"
-			 observes="cmd_sortByThread"/>
-			<menu  id="menu_expandOrCollapse" value="&expandOrCollapseMenu.label;" accesskey="&expandOrCollapseMenu.accesskey;">
-				<menupopup>
-					<menuitem value="&expandAllThreadsCmd.label;" accesskey="&expandAllThreadsCmd.accesskey;" disabled="true" observes="cmd_expandAllThreads"/>
-					<menuitem value="&collapseAllThreadsCmd.label;" accesskey="&collapseAllThreadsCmd.accesskey;" disabled="true" observes="cmd_collapseAllThreads"/>
-				</menupopup>
-			</menu>
 			<menuseparator/>
 			<menuitem value="&reloadCmd.label;" accesskey="&reloadCmd.accesskey;" observes="cmd_reload"/>
 			<menuitem id="stopMenuitem" value="&stopCmd.label;" accesskey="&stopCmd.accesskey;" disabled="true" oncommand="MsgStop();"/>
@@ -702,8 +699,9 @@ Rights Reserved.
 			<menuitem value="&findCmd.label;" key="key_find" accesskey="&findCmd.accesskey;" observes="cmd_find"/>
 			<menuitem value="&findAgainCmd.label;" key="key_findAgain" accesskey="&findAgainCmd.accesskey;" observes="cmd_findAgain"/>
 			<menuseparator/>
-			<menuitem value="&searchInternetCmd.label;" accesskey="&searchInternetCmd.accesskey;" oncommand="openTopWin('http://search.netscape.com/')"/>
 			<menuitem value="&searchMailCmd.label;" accesskey="&searchMailCmd.accesskey;" oncommand="MsgSearchMessages();"/>
+			<menuseparator/>
+			<menuitem value="&searchInternetCmd.label;" accesskey="&searchInternetCmd.accesskey;" oncommand="openTopWin('http://search.netscape.com/')"/>
 			<menuitem value="&searchBookmarksCmd.label;" accesskey="&searchBookmarksCmd.accesskey;" oncommand="window.openDialog('chrome://communicator/content/bookmarks/bm-find.xul', 'FindBookmarksWindow', 'centerscreen,dialog=no,close,chrome,resizable');"/>
 		</menupopup>
 	</menu>
@@ -763,7 +761,7 @@ Rights Reserved.
 		<menuitem value="&editMsgAsNewCmd.label;" accesskey="&editMsgAsNewCmd.accesskey;" observes="cmd_editAsNew"/>
 		<menuseparator/>
 		<menu value="&moveMsgMenu.label;" accesskey="&moveMsgMenu.accesskey;" id="moveMenu" datasources="rdf:null"
-		 rdf:ignore="http://home.netscape.com/NC-rdf#MessageChild">
+		 ignore="http://home.netscape.com/NC-rdf#MessageChild">
 			<menupopup/>
 			<template> 
 				<rule nc:CanFileMessages="true" iscontainer="true" isempty="false">
@@ -812,7 +810,7 @@ Rights Reserved.
 			</template>
 		</menu>
 		<menu value="&copyMsgMenu.label;" accesskey="&copyMsgMenu.accesskey;" id="copyMenu" datasources="rdf:null"
-		 rdf:ignore="http://home.netscape.com/NC-rdf#MessageChild">
+		 ignore="http://home.netscape.com/NC-rdf#MessageChild">
 			<menupopup/>
 			<template>
 				<rule nc:CanFileMessages="true" iscontainer="true" isempty="false">
@@ -889,7 +887,7 @@ Rights Reserved.
 			<button class="button-toolbar-2 top" id="button-replyall" value="&replyAllButton.label;" tooltip="aTooltip" tooltiptext="&replyAllButton.tooltip;" observes="button_replyall" onclick="MsgReplyToAllMessage(event)"/>
 			<button class="button-toolbar-2 top" id="button-forward" value="&forwardButton.label;" tooltip="aTooltip"  tooltiptext="&forwardButton.tooltip;" observes="button_forward" onclick="MsgForwardMessage(event)"/>
 			<toolbarseparator/>
-			<menu id="FileButtonMenu" observes="cmd_file" datasources="rdf:null" rdf:ignore="http://home.netscape.com/NC-rdf#MessageChild">
+			<menu id="FileButtonMenu" observes="cmd_file" datasources="rdf:null" ignore="http://home.netscape.com/NC-rdf#MessageChild">
 				<button class="button-toolbar-2 top" observes="cmd_file" id="button-file" value="&fileButton.label;"  tooltip="aTooltip" tooltiptext="&fileButton.tooltip;"/>
 				<template> 
 					<rule nc:CanFileMessages="true" iscontainer="true" isempty="false">

@@ -32,16 +32,13 @@
 <!ENTITY tableSpacing.label               "Spacing:">
 <!ENTITY tablePadding.label               "Padding:">
 <!ENTITY tablePxBetwCells.label           "pixels between cells">
-<!-- LOCALIZATION NOTE (tablePxBetwBrdrCellContent.label): Don't translate <html:br/> -->
-<!ENTITY tablePxBetwBrdrCellContent.label "pixels between border<html:br/>and cell content">
+<!ENTITY tablePxBetwBrdrCellContent.label "pixels between cell border and content">
 <!ENTITY tableAlignment.label             "Table Alignment:">
 <!ENTITY tableCaption.label               "Caption:">
 <!ENTITY tableCaptionAbove.label          "Above Table">
 <!ENTITY tableCaptionBelow.label          "Below Table">
 <!ENTITY tableCaptionNone.label           "None">
 <!ENTITY tableInheritColor.label           "(Let page color show through)">
-<!-- Don't translate <html:br/> -->
-<!ENTITY tableUseCheckboxHelp.label       "Use checkboxes to determine which properties<html:br/>are applied to the table">
 
 <!ENTITY cellPercent.label                "percent of table">
 <!ENTITY cellSelection.label              "Selection">
@@ -50,9 +47,11 @@
 <!ENTITY cellSelectColumn.label           "Column">
 <!ENTITY cellSelectNext.label             "Next">
 <!ENTITY cellSelectPrevious.label         "Previous">
-<!ENTITY cellChangeSelectionMsg.label     "When moving the selection:">
-<!ENTITY cellApplyBeforeMove.label        "Apply changes before moving">
+<!ENTITY cellApplyBeforeMove.label        "Apply changes before changing selection">
 <!ENTITY cellKeepCurrentData.label        "Keep current settings">
+<!-- LOCALIZATION NOTE Next 2 form 1 sentence (we don't want to use HTML tag to wrap) -->
+<!ENTITY applyBeforeChange1.label         "Current changes will be applied">
+<!ENTITY applyBeforeChange2.label         "before changing the selection.">
 <!ENTITY cellRowSpan.label                "Row Span:">
 <!ENTITY cellColSpan.label                "Column Span:">
 <!ENTITY cellContentAlignment.label       "Content Alignment">
@@ -74,7 +73,6 @@
 <!ENTITY cellUseCheckboxHelp.label        "Use checkboxes to determine which properties<html:br/>are applied to all selected cells">
 
 <!-- Used in both Table and Cell panels  -->
-<!ENTITY defaultColor.label               "Don't specify color">
 <!ENTITY size.label                       "Size">
 <!ENTITY pixels.label                     "pixels">
 <!ENTITY backgroundColor.label            "Background Color:">

@@ -170,6 +170,7 @@ char *strtoken_r(char ** stringp, const char *delim, PRInt32 skip)
 		} while (sc != 0);
 	}
 	/* NOTREACHED */
+	return (NULL);
 }
 
 
@@ -3435,7 +3436,7 @@ nsresult DIR_GetServerPreferences(nsVoidArray** list)
 		// see if we have the ab upgrader.  if so, skip this, since we
 		// will be migrating.
 		nsresult rv;
-		nsCOMPtr <nsIAbUpgrader> abUpgrader = do_GetService(NS_AB4xUPGRADER_PROGID, &rv);
+		nsCOMPtr <nsIAbUpgrader> abUpgrader = do_GetService(NS_AB4xUPGRADER_CONTRACTID, &rv);
   		if (NS_FAILED(rv) || !abUpgrader) {
 #ifdef DEBUG_sspitzer_
 			printf("move the pab aside, since we don't have the ab upgrader\n");

@@ -171,6 +171,9 @@ nsXBLJSClass::Destroy()
 // Static initialization
 PRUint32 nsXBLBinding::gRefCnt = 0;
  
+nsIAtom* nsXBLBinding::kXULTemplateAtom = nsnull;
+nsIAtom* nsXBLBinding::kXULObservesAtom = nsnull;
+
 nsIAtom* nsXBLBinding::kContentAtom = nsnull;
 nsIAtom* nsXBLBinding::kImplementationAtom = nsnull;
 nsIAtom* nsXBLBinding::kHandlersAtom = nsnull;
@@ -284,6 +287,9 @@ nsXBLBinding::nsXBLBinding(const nsCString& aDocURI, const nsCString& aID)
   if (gRefCnt == 1) {
     kPool.Init("XBL Attribute Entries", kBucketSizes, kNumBuckets, kInitialSize);
 
+    kXULTemplateAtom = NS_NewAtom("template");
+    kXULObservesAtom = NS_NewAtom("observes");
+
     kContentAtom = NS_NewAtom("content");
     kImplementationAtom = NS_NewAtom("implementation");
     kHandlersAtom = NS_NewAtom("handlers");
@@ -312,7 +318,7 @@ nsXBLBinding::nsXBLBinding(const nsCString& aDocURI, const nsCString& aID)
     kBindingDetachedAtom = NS_NewAtom("bindingdetached");
     kInheritStyleAtom = NS_NewAtom("inheritstyle");
 
-    nsServiceManager::GetService("component://netscape/xbl",
+    nsServiceManager::GetService("@mozilla.org/xbl;1",
                                    NS_GET_IID(nsIXBLService),
                                    (nsISupports**) &gXBLService);
     
@@ -334,6 +340,9 @@ nsXBLBinding::~nsXBLBinding(void)
   //  printf("REF COUNT DOWN: %d %s\n", gRefCnt, (const char*)mID);
 
   if (gRefCnt == 0) {
+    NS_RELEASE(kXULTemplateAtom);
+    NS_RELEASE(kXULObservesAtom);
+
     NS_RELEASE(kContentAtom);
     NS_RELEASE(kImplementationAtom);
     NS_RELEASE(kHandlersAtom);
@@ -361,7 +370,7 @@ nsXBLBinding::~nsXBLBinding(void)
     NS_RELEASE(kBindingAttachedAtom);
     NS_RELEASE(kInheritStyleAtom);
 
-    nsServiceManager::ReleaseService("component://netscape/xbl", gXBLService);
+    nsServiceManager::ReleaseService("@mozilla.org/xbl;1", gXBLService);
     gXBLService = nsnull;
 
     EventHandlerMapEntry* entry = kEventHandlerMap;
@@ -510,31 +519,31 @@ nsXBLBinding::GenerateAnonymousContent(nsIContent* aBoundElement)
   // Plan to build the content by default.
   PRBool buildContent = PR_TRUE;
 
-  // See if there's an excludes attribute.
-  nsAutoString excludes;
-  content->GetAttribute(kNameSpaceID_None, kExcludesAtom, excludes);
-  if ( excludes != NS_LITERAL_STRING("*")) {
+  // See if there's an includes attribute.
+  nsAutoString includes;
+  content->GetAttribute(kNameSpaceID_None, kIncludesAtom, includes);
+  if ( includes != NS_LITERAL_STRING("*")) {
     PRInt32 childCount;
     aBoundElement->ChildCount(childCount);
     if (childCount > 0) {
       // We'll only build content if all the explicit children are 
-      // in the excludes list.
-    
-      if (!excludes.IsEmpty()) {
-        // Walk the children and ensure that all of them
-        // are in the excludes array.
-        for (PRInt32 i = 0; i < childCount; i++) {
-          nsCOMPtr<nsIContent> child;
-          aBoundElement->ChildAt(i, *getter_AddRefs(child));
-          nsCOMPtr<nsIAtom> tag;
-          child->GetTag(*getter_AddRefs(tag));
-          if (!IsInExcludesList(tag, excludes)) {
+      // in the includes list.
+      // Walk the children and ensure that all of them
+      // are in the includes array.
+      for (PRInt32 i = 0; i < childCount; i++) {
+        nsCOMPtr<nsIContent> child;
+        aBoundElement->ChildAt(i, *getter_AddRefs(child));
+        nsCOMPtr<nsIAtom> tag;
+        child->GetTag(*getter_AddRefs(tag));
+        if (!IsInExcludesList(tag, includes)) {
+          // XXX HACK! Ignore <template> and <observes>
+          if (tag.get() != kXULTemplateAtom &&
+            tag.get() != kXULObservesAtom) {
             buildContent = PR_FALSE;
             break;
           }
         }
       }
-      else buildContent = PR_FALSE;
     }
   }
   
@@ -545,35 +554,7 @@ nsXBLBinding::GenerateAnonymousContent(nsIContent* aBoundElement)
     buildContent = PR_TRUE;
 
   if (buildContent) {
-     // Always check the content element for potential attributes.
-    nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content));
-    nsCOMPtr<nsIDOMNamedNodeMap> namedMap;
-
-    node->GetAttributes(getter_AddRefs(namedMap));
-    PRUint32 length;
-    namedMap->GetLength(&length);
-
-    nsCOMPtr<nsIDOMNode> attribute;
-    for (PRUint32 i = 0; i < length; ++i)
-    {
-      namedMap->Item(i, getter_AddRefs(attribute));
-      nsCOMPtr<nsIDOMAttr> attr(do_QueryInterface(attribute));
-      nsAutoString name;
-      attr->GetName(name);
-      if (name  != NS_LITERAL_STRING("excludes")) {
-        nsAutoString value;
-        nsCOMPtr<nsIDOMElement> element(do_QueryInterface(mBoundElement));
-        element->GetAttribute(name, value);
-        if (value.IsEmpty()) {
-          nsAutoString value2;
-          attr->GetValue(value2);
-          nsCOMPtr<nsIAtom> atom = getter_AddRefs(NS_NewAtom(name));
-          mBoundElement->SetAttribute(kNameSpaceID_None, atom, value2, PR_FALSE);
-        }
-      }
-    }
-  
-    nsCOMPtr<nsIDOMElement> domElement = do_QueryInterface(content);
+    nsCOMPtr<nsIDOMElement> domElement(do_QueryInterface(content));
 
     nsCOMPtr<nsIDOMNode> clonedNode;
     domElement->CloneNode(PR_TRUE, getter_AddRefs(clonedNode));
@@ -581,6 +562,32 @@ nsXBLBinding::GenerateAnonymousContent(nsIContent* aBoundElement)
     nsCOMPtr<nsIContent> clonedContent = do_QueryInterface(clonedNode);
     SetAnonymousContent(clonedContent);
 
+     // Always check the content element for potential attributes.
+    PRInt32 length;
+    clonedContent->GetAttributeCount(length);
+    
+    PRInt32 namespaceID;
+    nsCOMPtr<nsIAtom> name;
+    nsCOMPtr<nsIAtom> prefix;
+
+    for (PRInt32 i = 0; i < length; ++i)
+    {
+      clonedContent->GetAttributeNameAt(0, namespaceID, *getter_AddRefs(name), *getter_AddRefs(prefix));
+
+      if (name.get() != kIncludesAtom) {
+        nsAutoString value;
+        mBoundElement->GetAttribute(namespaceID, name, value);
+        if (value.IsEmpty()) {
+          nsAutoString value2;
+          clonedContent->GetAttribute(namespaceID, name, value2);
+          mBoundElement->SetAttribute(namespaceID, name, value2, PR_FALSE);
+        }
+      }
+
+      // Conserve space by wiping the attributes off the clone.
+      clonedContent->UnsetAttribute(namespaceID, name, PR_FALSE);
+    }
+  
     if (childrenElement)
       BuildInsertionTable();
   }
@@ -659,32 +666,15 @@ nsXBLBinding::InstallEventHandlers(nsIContent* aBoundElement, nsIXBLBinding** aB
             receiver = do_QueryInterface(otherElement);
           }
 
-          // Add an event listener for mouse and key events only.
-          PRBool mouse, key, focus, xul, scroll, form;
-          mouse = key = focus = xul = scroll = form = PR_FALSE;
+          PRBool supported = PR_FALSE;
+          if (!special)
+            supported = PR_TRUE;
+          else supported = IsSupportedHandler(&iid);
 
-          if (!special) {
-            key = IsKeyHandler(type);
-            if (!key) {
-              mouse = IsMouseHandler(type);
-              if (!mouse) {
-                focus = IsFocusHandler(type);
-                if (!focus) {
-                  xul = IsXULHandler(type);
-                  if (!xul) {
-                    scroll = IsScrollHandler(type);
-                    if (!scroll) 
-                      form = IsFormHandler(type);
-                  }
-                }
-              }
-            }
-          }
-
-          if (mouse || key || focus || xul || scroll || form || special) {
+          if (supported) {
             // Create a new nsXBLEventHandler.
             nsXBLEventHandler* handler;
-            NS_NewXBLEventHandler(receiver, curr, type, &handler);
+            NS_NewXBLEventHandler(receiver, curr, eventAtom, &handler);
 
             // We chain all our event handlers together for easy
             // removal later (if/when the binding dies).
@@ -703,33 +693,33 @@ nsXBLBinding::InstallEventHandlers(nsIContent* aBoundElement, nsIXBLBinding** aB
               useCapture = PR_TRUE;
 
             // Add the event listener.
-            if (mouse)
+            if (iid.Equals(NS_GET_IID(nsIDOMMouseListener)))
               receiver->AddEventListener(type, (nsIDOMMouseListener*)handler, useCapture);
-            else if(key)
+            else if(iid.Equals(NS_GET_IID(nsIDOMKeyListener)))
               receiver->AddEventListener(type, (nsIDOMKeyListener*)handler, useCapture);
-            else if(focus)
+            else if(iid.Equals(NS_GET_IID(nsIDOMFocusListener)))
               receiver->AddEventListener(type, (nsIDOMFocusListener*)handler, useCapture);
-            else if (xul)
+            else if (iid.Equals(NS_GET_IID(nsIDOMMenuListener)))
               receiver->AddEventListener(type, (nsIDOMMenuListener*)handler, useCapture);
-            else if (scroll)
+            else if (iid.Equals(NS_GET_IID(nsIDOMScrollListener)))
               receiver->AddEventListener(type, (nsIDOMScrollListener*)handler, useCapture);
-            else if (form)
+            else if (iid.Equals(NS_GET_IID(nsIDOMFormListener)))
               receiver->AddEventListener(type, (nsIDOMFormListener*)handler, useCapture);
-
+            
             if (!special) // Let the listener manager hold on to the handler.
               NS_RELEASE(handler);
           }
-          else {
-            // Call AddScriptEventListener for other IID types
-            // XXX Want this to all go away!
-            NS_WARNING("***** Non-compliant XBL event listener attached! *****");
-            nsAutoString value;
-            child->GetAttribute(kNameSpaceID_None, kActionAtom, value);
-            if (value.IsEmpty())
-                GetTextData(child, value);
+        }
+        else {
+          // Call AddScriptEventListener for other IID types
+          // XXX Want this to all go away!
+          NS_WARNING("***** Non-compliant XBL event listener attached! *****");
+          nsAutoString value;
+          child->GetAttribute(kNameSpaceID_None, kActionAtom, value);
+          if (value.IsEmpty())
+              GetTextData(child, value);
 
-            AddScriptEventListener(mBoundElement, eventAtom, value, iid);
-          }
+          AddScriptEventListener(mBoundElement, eventAtom, value, iid);
         }
       }
 
@@ -1477,7 +1467,7 @@ nsXBLBinding::BuildInsertionTable()
         // XXX We should use a strtok function that tokenizes PRUnichar's
         // so that we don't have to convert from Unicode to ASCII and then back
 
-        char* token = nsCRT::strtok( str, ", ", &newStr );
+        char* token = nsCRT::strtok( str, "| ", &newStr );
         while( token != NULL ) {
           // Build an atom out of this string.
           nsCOMPtr<nsIAtom> atom;
@@ -1528,13 +1518,13 @@ nsXBLBinding::IsInExcludesList(nsIAtom* aTag, const nsString& aList)
   // found inside of 'blur'.
   if (indx > 0) {
     PRUnichar ch = aList[indx - 1];
-    if (! nsCRT::IsAsciiSpace(ch) && ch != PRUnichar(','))
+    if (! nsCRT::IsAsciiSpace(ch) && ch != PRUnichar('|'))
       return PR_FALSE;
   }
 
   if (indx + element.Length() < aList.Length()) {
     PRUnichar ch = aList[indx + element.Length()];
-    if (! nsCRT::IsAsciiSpace(ch) && ch != PRUnichar(','))
+    if (! nsCRT::IsAsciiSpace(ch) && ch != PRUnichar('|'))
       return PR_FALSE;
   }
 
@@ -1665,49 +1655,16 @@ nsXBLBinding::GetEventHandlerIID(nsIAtom* aName, nsIID* aIID, PRBool* aFound)
 }
 
 PRBool
-nsXBLBinding::IsMouseHandler(const nsString& aName)
+nsXBLBinding::IsSupportedHandler(const nsIID* aIID)
 {
-  return ((aName == NS_LITERAL_STRING("click")) || (aName == NS_LITERAL_STRING("dblclick")) || (aName == NS_LITERAL_STRING("mousedown")) ||
-          (aName == NS_LITERAL_STRING("mouseover")) || (aName == NS_LITERAL_STRING("mouseout")) || (aName == NS_LITERAL_STRING("mouseup")));
+  return (aIID->Equals(NS_GET_IID(nsIDOMMouseListener)) ||
+    aIID->Equals(NS_GET_IID(nsIDOMKeyListener)) ||
+    aIID->Equals(NS_GET_IID(nsIDOMFocusListener)) ||
+    aIID->Equals(NS_GET_IID(nsIDOMMenuListener)) ||
+    aIID->Equals(NS_GET_IID(nsIDOMScrollListener)) ||
+    aIID->Equals(NS_GET_IID(nsIDOMFormListener)));
 }
-
-PRBool
-nsXBLBinding::IsKeyHandler(const nsString& aName)
-{
-  return ((aName == NS_LITERAL_STRING("keypress")) || (aName == NS_LITERAL_STRING("keydown")) || (aName == NS_LITERAL_STRING("keyup")));
-}
-
-PRBool
-nsXBLBinding::IsFocusHandler(const nsString& aName)
-{
-  return ((aName == NS_LITERAL_STRING("focus")) || (aName == NS_LITERAL_STRING("blur")));
-}
-
-PRBool
-nsXBLBinding::IsXULHandler(const nsString& aName)
-{
-  return ((aName == NS_LITERAL_STRING("create")) || (aName == NS_LITERAL_STRING("destroy")) || (aName == NS_LITERAL_STRING("broadcast")) ||
-          (aName == NS_LITERAL_STRING("command")) || (aName == NS_LITERAL_STRING("commandupdate")) || (aName == NS_LITERAL_STRING("close")));
-}
-
-PRBool
-nsXBLBinding::IsScrollHandler(const nsString& aName)
-{
-  return (aName == NS_LITERAL_STRING("overflow") ||
-          aName == NS_LITERAL_STRING("underflow") ||
-          aName == NS_LITERAL_STRING("overflowchanged"));
-}
-
-PRBool
-nsXBLBinding::IsFormHandler(const nsString& aName)
-{
-  return (aName == NS_LITERAL_STRING("submit") ||
-          aName == NS_LITERAL_STRING("reset") ||
-          aName == NS_LITERAL_STRING("change") ||
-          aName == NS_LITERAL_STRING("input") ||
-          aName == NS_LITERAL_STRING("select"));
-}
-
+          
 NS_IMETHODIMP
 nsXBLBinding::AddScriptEventListener(nsIContent* aElement, nsIAtom* aName, const nsString& aValue, REFNSIID aIID)
 {

@@ -1079,6 +1079,7 @@ nsIParserNode* nsDTDContext::PopStyle(eHTMLTags aTag){
       if(aTag==theStack->Last()) {
         result=theStack->Pop();
         mResidualStyleCount--;
+        break; // Fix bug 50710 - Stop after finding a style.
       } else {
         // NS_ERROR("bad residual style entry");
       }
@@ -1643,12 +1644,12 @@ nsObserverTopic* CObserverService::CreateTopic(const nsString& aTopic) {
 void CObserverService::RegisterObservers(const nsString& aTopic) {
   nsresult result = NS_OK;
   nsIObserverService* theObserverService = nsnull;
-  result = nsServiceManager::GetService(NS_OBSERVERSERVICE_PROGID, NS_GET_IID(nsIObserverService),
+  result = nsServiceManager::GetService(NS_OBSERVERSERVICE_CONTRACTID, NS_GET_IID(nsIObserverService),
                                       (nsISupports**) &theObserverService, nsnull);
   if(result == NS_OK){
     nsIEnumerator* theEnum = nsnull;
     result = theObserverService->EnumerateObserverList(aTopic.GetUnicode(), &theEnum);
-    nsServiceManager::ReleaseService(NS_OBSERVERSERVICE_PROGID, theObserverService);
+    nsServiceManager::ReleaseService(NS_OBSERVERSERVICE_CONTRACTID, theObserverService);
 
     if(result == NS_OK) {
       nsCOMPtr<nsIElementObserver> theElementObserver;

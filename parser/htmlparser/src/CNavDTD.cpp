@@ -537,15 +537,6 @@ nsresult CNavDTD::DidBuildModel(nsresult anErrorCode,PRBool aNotifySink,nsIParse
               result=HandleToken(theEndToken,mParser);
             }
           }
-          if(!mBodyContext->mFlags.mHadDocTypeDecl) {
-            CToken* theDocTypeToken=mTokenAllocator->CreateTokenOfType(eToken_doctypeDecl,eHTMLTag_markupDecl);
-            if(theDocTypeToken) {
-              nsAutoString theDocTypeStr;
-              theDocTypeStr.AssignWithConversion("<!DOCTYPE \"-//W3C//DTD HTML 3.2 Final//EN\">");
-              theDocTypeToken->Reinitialize(eHTMLTag_markupDecl,theDocTypeStr);
-              result=HandleToken(theDocTypeToken,mParser);
-            }
-          }
           if(result==NS_OK) {
             eHTMLTags theTarget; 
 
@@ -848,7 +839,9 @@ nsresult CNavDTD::DidHandleStartTag(nsCParserNode& aNode,eHTMLTags aChildTag){
         MOZ_TIMER_DEBUGLOG(("Stop: Parse Time: CNavDTD::DidHandleStartTag(), this=%p\n", this));
         const nsString& theString=aNode.GetSkippedContent();
         if(0<theString.Length()) {
-          CViewSourceHTML::WriteText(theString,*mSink,PR_TRUE,PR_FALSE);
+          CTextToken *theToken=(CTextToken*)mTokenAllocator->CreateTokenOfType(eToken_text,eHTMLTag_text,theString);
+          nsCParserNode theNode(theToken,0);
+          result=mSink->AddLeaf(theNode); //when the node get's destructed, so does the new token
         }
         MOZ_TIMER_DEBUGLOG(("Start: Parse Time: CNavDTD::DidHandleStartTag(), this=%p\n", this));
         START_TIMER()
@@ -1667,6 +1660,10 @@ eHTMLTags FindAutoCloseTargetForEndTag(eHTMLTags aCurrentTag,nsDTDContext& aCont
             }
             //otherwise its in the close list so skip to next tag...
           } 
+          eHTMLTags theTarget=aContext.TagAt(theChildIndex);
+          if(aCurrentTag!=theTarget) {
+            aCurrentTag=theTarget; //use the synonym.
+          }
           return aCurrentTag; //if you make it here, we're ungated and found a target!
         }//if
         else if(theRootTags) {
@@ -1781,7 +1778,6 @@ nsresult CNavDTD::HandleEndToken(CToken* aToken) {
 
     case eHTMLTag_noframes:
     case eHTMLTag_noembed:
-    case eHTMLTag_noscript:
       mHasOpenNoXXX--;
       //and allow to fall through...
 
@@ -1794,6 +1790,7 @@ nsresult CNavDTD::HandleEndToken(CToken* aToken) {
         }
         else {
           eHTMLTags theParentTag=mBodyContext->Last();
+
           if(kNotFound==GetIndexOfChildOrSynonym(*mBodyContext,theChildTag)) {
 
             // Ref: bug 30487
@@ -2124,10 +2121,6 @@ nsresult CNavDTD::HandleDocTypeDeclToken(CToken* aToken){
 
   nsresult result=NS_OK;
 
-  if(mBodyContext) {
-    mBodyContext->mFlags.mHadDocTypeDecl=PR_TRUE; 
-  }
-
   #ifdef  RICKG_DEBUG
     WriteTokenToLog(aToken);
   #endif
@@ -2318,6 +2311,23 @@ PRBool CNavDTD::CanContain(PRInt32 aParent,PRInt32 aChild) const {
     }
   }
 #endif
+
+#if 0
+  /* For the sake of bug 52443 I have back out my change in allowing 
+   * newlines/whitespace inside TABLE,TR,TBODY,TFOOT,THEAD. Once
+   * the table code is ready to deal with whitespaces/newlines then
+   * the parser can pass it through... But for now...it's out!!!! 
+   */
+  if(!result) {
+    // Bug 42429 - Preserve whitespace inside TABLE,TR,TBODY,TFOOT,etc.,
+    if(gHTMLElements[aParent].HasSpecialProperty(kBadContentWatch)) {
+      if(nsHTMLElement::IsWhitespaceTag((eHTMLTags)aChild)) { 
+        result=PR_TRUE; 
+      }
+    }
+  }
+#endif
+
   return result;
 } 
 
@@ -3181,6 +3191,7 @@ nsresult CNavDTD::CloseNoscript(const nsIParserNode *aNode) {
     START_TIMER();
 
     if(NS_SUCCEEDED(result)) {
+      NS_ASSERTION((mHasOpenNoXXX > -1), "mHasOpenNoXXX underflow");
       if(mHasOpenNoXXX > 0) { 
         mHasOpenNoXXX--;
       }

@@ -22,7 +22,7 @@
  */
 
 // using the rdf service extensively here
-var rdf = Components.classes["component://netscape/rdf/rdf-service"].getService(Components.interfaces.nsIRDFService);
+var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
 
 // all the RDF resources we'll be retrieving
 var NC = "http://home.netscape.com/NC-rdf#";
@@ -47,7 +47,7 @@ function getIspDefaultsForUri(domainURI)
     if (!ispDefaults) 
         ispDefaults = rdf.GetDataSource("rdf:ispdefaults");
     
-    domainRes = rdf.GetResource(domainURI);
+    var domainRes = rdf.GetResource(domainURI);
 
     var result = dataSourceToObject(ispDefaults, domainRes);
 

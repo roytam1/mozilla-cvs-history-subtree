@@ -451,7 +451,7 @@ nsresult nsPop3Protocol::Initialize(nsIURI * aURL)
  */
   rv = prefs->GetBoolPref(PREF_MAIL_ALLOW_AT_SIGN_IN_USER_NAME, &m_allow_at_sign_in_mail_user_name);
 
-  mStringService = do_GetService(NS_MSG_POPSTRINGSERVICE_PROGID);
+  mStringService = do_GetService(NS_MSG_POPSTRINGSERVICE_CONTRACTID);
   return rv;
 }
 
@@ -496,6 +496,8 @@ void nsPop3Protocol::UpdateProgressPercent (PRUint32 totalDone, PRUint32 total)
     mProgressEventSink->OnProgress(this, m_channelContext, (PRInt32) totalDone, (PRInt32) total); 
 }
 
+// note:  SetUsername() expects an unescaped string
+// do not pass in an escaped string
 void nsPop3Protocol::SetUsername(const char* name)
 {
 	NS_ASSERTION(name, "no name specified!");
@@ -694,8 +696,6 @@ nsresult nsPop3Protocol::LoadUrl(nsIURI* aURL, nsISupports * /* aConsumer */)
     rv = server->GetLocalPath(getter_AddRefs(mailDirectory));
 		server->SetServerBusy(PR_TRUE); // the server is now busy
 	}
-
-    m_pop3ConData->uidlinfo = net_pop3_load_state(host, GetUsername(), mailDirectory);
 
     m_pop3ConData->uidlinfo = net_pop3_load_state(host, GetUsername(), mailDirectory);
 	m_pop3ConData->biffstate = nsIMsgFolder::nsMsgBiffState_NoMail;

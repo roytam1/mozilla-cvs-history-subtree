@@ -477,7 +477,6 @@ public:
   PRUnichar* mText;
   PRInt32 mTextLength;
   PRInt32 mTextSize;
-  PRInt32 mIgnoredOpenCount;
 };
 
 //----------------------------------------------------------------------
@@ -1158,7 +1157,6 @@ SinkContext::SinkContext(HTMLContentSink* aSink)
   mTextSize = 0;
   mLastTextNode = nsnull;
   mLastTextNodeSize = 0;
-  mIgnoredOpenCount = 0;
 }
 
 SinkContext::~SinkContext()
@@ -1297,13 +1295,6 @@ SinkContext::OpenContainer(const nsIParserNode& aNode)
   SINK_TRACE_NODE(SINK_TRACE_CALLS,
                   "SinkContext::OpenContainer", aNode, mStackPos, mSink);
 
-  // XXX - Hack to handle stack over flow ( Bug 18480 )
-  if (mStackPos > 1000) {
-    mIgnoredOpenCount++;
-    return AddLeaf(aNode);
-  }
-  // XXX - Hack Ends
-
   nsresult rv;
   if (mStackPos + 1 > mStackSize) {
     rv = GrowStack();
@@ -1404,13 +1395,6 @@ nsresult
 SinkContext::CloseContainer(const nsIParserNode& aNode)
 {
   nsresult result = NS_OK;
-
-  // XXX - Hack to handle stack over flow ( Bug 18480 )
-  if (mIgnoredOpenCount) {
-    mIgnoredOpenCount--;
-    return NS_OK;
-  }
-  // XXX -Hack Ends.
 
   // Flush any collected text content. Release the last text
   // node to indicate that no more should be added to it.
@@ -2472,7 +2456,7 @@ HTMLContentSink::WillInterrupt()
           mNotificationTimer->Cancel();
         }
         
-        mNotificationTimer = do_CreateInstance("component://netscape/timer", &result);
+        mNotificationTimer = do_CreateInstance("@mozilla.org/timer;1", &result);
         if (NS_SUCCEEDED(result)) {
           SINK_TRACE(SINK_TRACE_REFLOW,
                      ("HTMLContentSink::WillInterrupt: setting up timer with delay %d", delay));
@@ -3008,7 +2992,7 @@ HTMLContentSink::OpenNoscript(const nsIParserNode& aNode) {
   
   nsresult result=mCurrentContext->OpenContainer(aNode);
   if(NS_SUCCEEDED(result)) {
-    NS_WITH_SERVICE(nsIPref, prefs, "component://netscape/preferences", &result);
+    NS_WITH_SERVICE(nsIPref, prefs, "@mozilla.org/preferences;1", &result);
     if(NS_SUCCEEDED(result)) {
       PRBool jsEnabled;
       result=prefs->GetBoolPref("javascript.enabled", &jsEnabled);
@@ -3641,7 +3625,7 @@ HTMLContentSink::ProcessBaseHref(const nsString& aBaseHref)
   //-- Make sure this page is allowed to load this URL
   nsresult rv;
   NS_WITH_SERVICE(nsIScriptSecurityManager, securityManager, 
-                  NS_SCRIPTSECURITYMANAGER_PROGID, &rv);
+                  NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
   if (NS_FAILED(rv)) return;
   nsCOMPtr<nsIURI> baseHrefURI;
   rv = NS_NewURI(getter_AddRefs(baseHrefURI), aBaseHref, nsnull);
@@ -4331,7 +4315,7 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
                 if (NS_SUCCEEDED(rv)) {
                     NS_WITH_SERVICE(nsIScriptSecurityManager,
                                     securityManager, 
-                                    NS_SCRIPTSECURITYMANAGER_PROGID,
+                                    NS_SCRIPTSECURITYMANAGER_CONTRACTID,
                                     &rv);
                     if (NS_SUCCEEDED(rv)) {
                         rv = securityManager->CheckLoadURI(baseURI,
@@ -4351,7 +4335,7 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
                 }
             } // END refresh
             else if (!header.CompareWithConversion("set-cookie", PR_TRUE)) {
-                nsCOMPtr<nsICookieService> cookieServ = do_GetService(NS_COOKIESERVICE_PROGID, &rv);
+                nsCOMPtr<nsICookieService> cookieServ = do_GetService(NS_COOKIESERVICE_CONTRACTID, &rv);
                 if (NS_FAILED(rv)) return rv;
 
                 nsCOMPtr<nsIURI> baseURI;
@@ -4359,7 +4343,7 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
                 rv = webNav->GetCurrentURI(getter_AddRefs(baseURI));
                 if (NS_FAILED(rv)) return rv;
 
-                rv = cookieServ->SetCookieString(baseURI, nsnull, result); // need to add nsHTMLDocument parameter
+                rv = cookieServ->SetCookieString(baseURI, mDocument, result);
                 if (NS_FAILED(rv)) return rv;
             } // END set-cookie
 
@@ -4884,8 +4868,20 @@ HTMLContentSink::ProcessSCRIPTTag(const nsIParserNode& aNode)
   MOZ_TIMER_STOP(mWatch);
 
   // Don't process scripts that aren't JavaScript and don't process
-  // scripts that are inside iframes, noframe, or noscript tags.
-  if (isJavaScript && !mNumOpenIFRAMES && !mInsideNoXXXTag) {
+  // scripts that are inside iframes, noframe, or noscript tags,
+  // or if the script context has script evaluation disabled:
+  PRBool scriptsEnabled = PR_TRUE;
+  nsCOMPtr<nsIScriptGlobalObject> globalObject;
+  mDocument->GetScriptGlobalObject(getter_AddRefs(globalObject));
+  if (globalObject)
+  {
+    nsCOMPtr<nsIScriptContext> context;
+    if (NS_SUCCEEDED(globalObject->GetContext(getter_AddRefs(context)))
+        && context)
+      context->GetScriptsEnabled(&scriptsEnabled);
+  }
+
+  if (scriptsEnabled && isJavaScript && !mNumOpenIFRAMES && !mInsideNoXXXTag) {
     mScriptLanguageVersion = jsVersionString;
 
     // If there is a SRC attribute...
@@ -4900,7 +4896,7 @@ HTMLContentSink::ProcessSCRIPTTag(const nsIParserNode& aNode)
 
       // Check that this page is allowed to load this URI.
       NS_WITH_SERVICE(nsIScriptSecurityManager, securityManager, 
-                      NS_SCRIPTSECURITYMANAGER_PROGID, &rv);
+                      NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
       if (NS_FAILED(rv)) 
           return rv;
       rv = securityManager->CheckLoadURI(mDocumentBaseURL, mScriptURI, PR_FALSE);

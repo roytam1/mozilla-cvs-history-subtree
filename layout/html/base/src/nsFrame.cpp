@@ -49,10 +49,11 @@
 #include "nsIDeviceContext.h"
 #include "nsHTMLIIDs.h"
 #include "nsIEventStateManager.h"
-#include "nsIDOMSelection.h"
+#include "nsISelection.h"
 #include "nsIFrameSelection.h"
 #include "nsHTMLParts.h"
 #include "nsLayoutAtoms.h"
+#include "nsHTMLAtoms.h"
 
 #include "nsFrameTraversal.h"
 #include "nsCOMPtr.h"
@@ -1007,15 +1008,44 @@ nsFrame::HandlePress(nsIPresContext* aPresContext,
   if (nsEventStatus_eConsumeNoDefault == *aEventStatus) {
     return NS_OK;
   }
-  // check whether style allows selection
-  // if not, don't tell selection the mouse event even occured.
+
   nsresult rv;
-  
+  nsCOMPtr<nsIPresShell> shell;
+  aPresContext->GetShell(getter_AddRefs(shell));
+  if (!shell)
+    return NS_ERROR_FAILURE;
+
+  // if we are in Navigator and the click is in a link, we don't want to start
+  // selection because we don't want to interfere with a potential drag of said
+  // link and steal all its glory.
+  PRBool isEditor = PR_FALSE;
+  shell->GetDisplayNonTextSelection ( &isEditor );
+  if ( !isEditor ) {
+    nsCOMPtr<nsIContent> content;
+    GetContent ( getter_AddRefs(content) );
+    if ( content ) {
+      do {
+        // are we an anchor? If so, bail out now!
+        nsCOMPtr<nsIAtom> tag;
+        content->GetTag(*getter_AddRefs(tag));
+        if ( tag.get() == nsHTMLAtoms::a )
+          return NS_OK;
+        
+        // now try the parent
+        nsIContent* parent;
+        content->GetParent(parent);
+        content = dont_AddRef(parent);
+      } while ( content );   
+    }
+  } // if browser, not editor
+
+  // check whether style allows selection
+  // if not, don't tell selection the mouse event even occured.  
   PRBool  selectable;
   PRUint8 selectStyle;
   rv = IsSelectable(&selectable, &selectStyle);
   if (NS_FAILED(rv)) return rv;
-
+  
   // check for select: none
   if (!selectable)
     return NS_OK;
@@ -1039,15 +1069,6 @@ nsFrame::HandlePress(nsIPresContext* aPresContext,
   }
 
   //get the frame selection from sel controller
-
-  nsCOMPtr<nsIPresShell> shell;
-  rv = aPresContext->GetShell(getter_AddRefs(shell));
-
-  if (NS_FAILED(rv))
-    return rv;
-
-  if (!shell)
-    return NS_ERROR_FAILURE;
 
   // nsFrameState  state;
   // GetFrameState(&state);
@@ -1302,7 +1323,7 @@ nsFrame::PeekBackwardAndForward(nsSelectionAmount aAmountBack,
   if (NS_FAILED(rv))
     return rv;
 
-  nsCOMPtr<nsIDOMSelection> selection;
+  nsCOMPtr<nsISelection> selection;
   if (NS_SUCCEEDED(selcon->GetSelection(nsISelectionController::SELECTION_NORMAL,
                                         getter_AddRefs(selection)))){
     rv = selection->Collapse(startNode,startpos.mContentOffset);
@@ -2686,6 +2707,50 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
           return result;
         point.y = tempRect.height + offset.y;
 
+        //special check. if we allow non-text selection then we can allow a hit location to fall before a table. 
+        //otherwise there is no way to get and click signal to fall before a table (it being a line iterator itself)
+        PRBool isEditor = PR_FALSE;
+        nsCOMPtr<nsIPresShell> shell;
+        aPresContext->GetShell(getter_AddRefs(shell));
+        if (!shell)
+          return NS_ERROR_FAILURE;
+        shell->GetDisplayNonTextSelection ( &isEditor );
+        if ( isEditor ) 
+        {
+          nsIAtom *resultFrameType;
+          if(NS_SUCCEEDED(resultFrame->GetFrameType(&resultFrameType)) && resultFrameType)
+          {
+            if (resultFrameType ==  nsLayoutAtoms::tableOuterFrame)
+            {
+              if (((point.x - offset.x + tempRect.x)<0) ||  ((point.x - offset.x+ tempRect.x)>tempRect.width))//off left/right side
+              {
+                nsCOMPtr<nsIContent> content;
+                resultFrame->GetContent(getter_AddRefs(content));
+                nsCOMPtr<nsIContent> parent;
+                if (content)
+                {
+                  content->GetParent(*getter_AddRefs(parent));
+                  if (parent)
+                  {
+                    aPos->mResultContent = parent;
+                    parent->IndexOf(content, aPos->mContentOffset);
+                    aPos->mPreferLeft = PR_FALSE;
+                    if ((point.x - offset.x+ tempRect.x)>tempRect.width)
+                    {
+                      aPos->mContentOffset++;//go to end of this frame
+                      aPos->mPreferLeft = PR_TRUE;
+                    }
+                    aPos->mContentOffsetEnd = aPos->mContentOffset;
+                    //result frame is the result frames parent.
+                    resultFrame->GetParent(&aPos->mResultFrame);
+                    return NS_COMFALSE;
+                  }
+                }
+              }
+            }
+          }
+        }
+
         if (NS_FAILED(resultFrame->GetView(aPresContext, &view)) || !view)
         {
           result = resultFrame->GetContentAndOffsetsFromPoint(context,point,
@@ -3086,7 +3151,9 @@ nsFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
         }
         //this block is now one child down from blockframe
         if (NS_FAILED(result) || !it || !blockFrame || !thisBlock)
+        {
           return ((result) ? result : NS_ERROR_FAILURE);
+        }
         result = it->FindLineContaining(thisBlock, &thisLine);
         if (NS_FAILED(result) || thisLine <0)
           return result;
@@ -3394,6 +3461,21 @@ nsFrame::ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild)
 {
   NS_ASSERTION(0, "nsFrame::ReflowDirtyChild() should never be called.");  
   return NS_ERROR_NOT_IMPLEMENTED;    
+}
+
+
+NS_IMETHODIMP 
+nsFrame::GetParentStyleContextProvider(nsIPresContext* aPresContext,
+                                       nsIFrame** aProviderFrame, 
+                                       nsContextProviderRelationship& aRelationship)
+{
+  NS_ASSERTION(aPresContext && aProviderFrame, "null arguments: aPresContext and-or aProviderFrame");
+  if (aProviderFrame) {
+    // parent context provider is the parent frame by default
+    *aProviderFrame = mParent;
+    aRelationship = eContextProvider_Ancestor;
+  }
+  return ((aProviderFrame != nsnull) && (*aProviderFrame != nsnull)) ? NS_OK : NS_ERROR_FAILURE;
 }
 
 //-----------------------------------------------------------------------------------

@@ -57,7 +57,7 @@
 #include "nsTextTransformer.h"
 #include "nsLayoutAtoms.h"
 #include "nsIFrameSelection.h"
-#include "nsIDOMSelection.h"
+#include "nsISelection.h"
 #include "nsIDOMRange.h"
 #include "nsILookAndFeel.h"
 
@@ -216,7 +216,7 @@ nsBlinkTimer::~nsBlinkTimer()
 void nsBlinkTimer::Start()
 {
   nsresult rv;
-  mTimer = do_CreateInstance("component://netscape/timer", &rv);
+  mTimer = do_CreateInstance("@mozilla.org/timer;1", &rv);
   if (NS_OK == rv) {
     mTimer->Init(this, 750, NS_PRIORITY_NORMAL, NS_TYPE_REPEATING_PRECISE);
   }

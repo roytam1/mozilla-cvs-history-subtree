@@ -157,6 +157,8 @@ var ThreadPaneController =
 					if ( threadTree.selectedItems && threadTree.selectedItems.length != 1 )
 						ClearMessagePane();
 				}
+					//setting threadTree on
+        			//document.getElementById("threadTree").setAttribute("focusring","true");
 				break;
 		}
 	},
@@ -166,7 +168,16 @@ var ThreadPaneController =
 		// on blur events set the menu item texts back to the normal values
 		if ( event == 'blur' )
         {
+              //document.getElementById("threadTree").setAttribute("focusring","false");
+
 		}
+		
+		if ( event == 'focus' )
+        {
+        	//alert("focus")
+              //document.getElementById("threadTree").setAttribute("focusring","true");
+
+		}		
 	}
 };
 
@@ -321,7 +332,8 @@ var DefaultController =
 	doCommand: function(command)
 	{
    		//dump("ThreadPaneController.doCommand(" + command + ")\n");
-
+   		
+        document.getElementById("messagepane").setAttribute("focusring","true");
 		switch ( command )
 		{
 			case "cmd_getNewMessages":
@@ -491,20 +503,7 @@ function GetNumSelectedMessages()
 
 function CommandUpdate_Mail()
 {
-	/*var messagePane = top.document.getElementById('messagePane');
-	var drawFocusBorder = messagePane.getAttribute('draw-focus-border');
-	
-	if ( MessagePaneHasFocus() )
-	{
-		if ( !drawFocusBorder )
-			messagePane.setAttribute('draw-focus-border', 'true');
-	}
-	else
-	{
-		if ( drawFocusBorder )
-			messagePane.removeAttribute('draw-focus-border');
-	}*/
-		
+
 	goUpdateCommand('button_delete');
 	goUpdateCommand('cmd_delete');
 	goUpdateCommand('cmd_nextMsg');
@@ -528,6 +527,52 @@ function CommandUpdate_Mail()
 	goUpdateCommand('cmd_emptyTrash');
 	goUpdateCommand('cmd_compactFolder');
 }
+
+
+var lastFocusedElement=null;
+
+function FocusRingUpdate_Mail(){
+	var currentFocusedElement = null;
+	
+	if(MessagePaneHasFocus()){
+		currentFocusedElement="messagepanebox"
+	}
+	else{
+		currentFocusedElement= WhichPaneHasFocus()	
+	}
+	
+	if(currentFocusedElement != lastFocusedElement){
+			if( currentFocusedElement == "threadTree"){
+				document.getElementById("threadTree").setAttribute("focusring","true")
+				//document.getElementById("folderTree").setAttribute("focusring","false")
+				document.getElementById("messagepanebox").setAttribute("focusring","false")
+
+			}
+
+			else{
+				if(currentFocusedElement=="folderTree"){
+						document.getElementById("threadTree").setAttribute("focusring","false")
+						//document.getElementById("folderTree").setAttribute("focusring","true")
+						document.getElementById("messagepanebox").setAttribute("focusring","false")
+				}
+				else{
+					if(currentFocusedElement=="messagepanebox"){
+						document.getElementById("threadTree").setAttribute("focusring","false")
+						//document.getElementById("folderTree").setAttribute("focusring","false")
+						document.getElementById("messagepanebox").setAttribute("focusring","true")
+					}
+					else{
+						document.getElementById("threadTree").setAttribute("focusring","false")
+						//document.getElementById("folderTree").setAttribute("focusring","false")
+						document.getElementById("messagepanebox").setAttribute("focusring","false")
+						}
+
+					}
+			}	
+		lastFocusedElement=currentFocusedElement;
+		}
+	}
+	
 
 function ThreadTreeUpdate_Mail(command)
 {
@@ -607,7 +652,9 @@ function CommandUpdate_UndoRedo()
     EnableMenuItem("menu_redo", SetupUndoRedoCommand("cmd_redo"));
 }
 
+
 function MessagePaneHasFocus()
+
 {
 	var focusedWindow = top.document.commandDispatcher.focusedWindow;
 	var messagePaneWindow = top.frames['messagepane'];
@@ -615,7 +662,7 @@ function MessagePaneHasFocus()
 	if ( focusedWindow && messagePaneWindow && (focusedWindow != top) )
 	{
 		var hasFocus = IsSubWindowOf(focusedWindow, messagePaneWindow, false);
-		dump("...........Focus on MessagePane = " + hasFocus + "\n");
+
 		return hasFocus;
 	}
 	
@@ -635,6 +682,34 @@ function IsSubWindowOf(search, wind, found)
 	}
 	return false;
 }
+
+
+function WhichPaneHasFocus(){
+	var whichPane= "none";
+	currentNode = top.document.commandDispatcher.focusedElement;	
+
+	
+	if(currentNode){
+		while(currentNode.parentNode!=null){
+			if(currentNode.getAttribute("id") == "threadTree" ){ whichPane="threadTree" }
+			
+			if(currentNode.getAttribute("id") == "folderTree"){  whichPane="folderTree" } 
+	
+			if(currentNode.getAttribute("id") == "messagepanebox"){  whichPane="messagepanebox" }
+					
+			currentNode = currentNode.parentNode;
+		}
+	
+	}
+	
+	
+	
+	return whichPane
+
+}
+
+
+
 
 
 function SetupCommandUpdateHandlers()

@@ -26,6 +26,7 @@
 #include "nsCOMPtr.h"
 #include "nsLineLayout.h"
 #include "nsBlockFrame.h"
+#include "nsInlineFrame.h"
 #include "nsStyleConsts.h"
 #include "nsHTMLContainerFrame.h"
 #include "nsHTMLIIDs.h"
@@ -63,6 +64,9 @@
 #endif
 
 //----------------------------------------------------------------------
+
+
+#define FIX_BUG_50257
 
 #define PLACED_LEFT  0x1
 #define PLACED_RIGHT 0x2
@@ -153,29 +157,12 @@ nsLineLayout::InStrictMode()
   if (!GetFlag(LL_KNOWSTRICTMODE)) {
     SetFlag(LL_KNOWSTRICTMODE, PR_TRUE);
     SetFlag(LL_INSTRICTMODE, PR_TRUE);
-
-    // Get the compatabilty mode from pres context via the document and pres shell
-    if (mBlockReflowState->frame) {
-      nsCOMPtr<nsIContent> content;
-      mBlockReflowState->frame->GetContent(getter_AddRefs(content));
-      if (content) {
-        nsCOMPtr<nsIDocument> doc;
-        content->GetDocument(*getter_AddRefs(doc));
-        if (doc) {
-          nsIPresShell* shell = doc->GetShellAt(0);
-          if (shell) {
-            nsCOMPtr<nsIPresContext> presContext;
-            shell->GetPresContext(getter_AddRefs(presContext));
-            if (presContext) {
-              nsCompatibility mode;
-              presContext->GetCompatibilityMode(&mode);
-              if (eCompatibility_NavQuirks == mode) {
-                SetFlag(LL_INSTRICTMODE, PR_FALSE);
-              }
-            }
-            NS_RELEASE(shell);
-          }
-        }
+    // ask the cached presentation context for the compatibility mode
+    if (mPresContext) {
+      nsCompatibility mode;
+      mPresContext->GetCompatibilityMode(&mode);
+      if (eCompatibility_NavQuirks == mode) {
+        SetFlag(LL_INSTRICTMODE, PR_FALSE);
       }
     }
   }
@@ -855,8 +842,11 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   }
 
   // Setup reflow state for reflowing the frame
-  nsHTMLReflowState reflowState(mPresContext, *psd->mReflowState, aFrame,
-                                availSize, reason);
+  nsHTMLReflowState reflowState(mPresContext, *psd->mReflowState,
+                                aFrame, availSize,
+                                (psd->mRightEdge - psd->mLeftEdge),
+                                psd->mReflowState->availableHeight);
+  reflowState.reason = reason;
   reflowState.mLineLayout = this;
   reflowState.isTopOfPage = GetFlag(LL_ISTOPOFPAGE);
   SetFlag(LL_UNDERSTANDSNWHITESPACE, PR_FALSE);
@@ -926,22 +916,16 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   nscoord ty = y - psd->mReflowState->mComputedBorderPadding.top;
   mSpaceManager->Translate(tx, ty);
 
-  pfd->SetFlag(PFD_ISTEXTFRAME, PR_FALSE);
-  pfd->SetFlag(PFD_ISLETTERFRAME, PR_FALSE);
-  pfd->SetFlag(PFD_ISNONEMPTYTEXTFRAME, PR_FALSE);
-  pfd->SetFlag(PFD_ISNONWHITESPACETEXTFRAME, PR_FALSE);
-  pfd->SetFlag(PFD_ISSTICKY, PR_FALSE);
-  pfd->SetFlag(PFD_ISBULLET, PR_FALSE);
-
   aFrame->Reflow(mPresContext, metrics, reflowState, aReflowStatus);
+
+  nsCOMPtr<nsIAtom> frameType;
+  aFrame->GetFrameType(getter_AddRefs(frameType));
 
   // SEC: added this next block for bug 45152
   // text frames don't know how to invalidate themselves on initial reflow.  Do it for them here.
   // This only shows up in textareas, so do a quick check to see if we're inside one
   if (eReflowReason_Initial == reflowState.reason)
   {
-    nsCOMPtr<nsIAtom> frameType;
-    aFrame->GetFrameType(getter_AddRefs(frameType));
     if (frameType && nsLayoutAtoms::textFrame == frameType.get()) 
     { // aFrame is a text frame, see if it's inside a text control
       // although this is a bit slow, the frame tree shouldn't be too deep, it's only called
@@ -953,11 +937,11 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
       PRBool inTextControl = PR_FALSE;
       while (parentFrame)
       { 
-        nsCOMPtr<nsIAtom> frameType;
-        parentFrame->GetFrameType(getter_AddRefs(frameType));
-        if (frameType)
+        nsCOMPtr<nsIAtom> parentFrameType;
+        parentFrame->GetFrameType(getter_AddRefs(parentFrameType));
+        if (parentFrameType)
         {
-          if (nsLayoutAtoms::textInputFrame == frameType.get()) 
+          if (nsLayoutAtoms::textInputFrame == parentFrameType.get()) 
           {
             inTextControl = PR_TRUE; // found it
             break;
@@ -968,8 +952,9 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
       if (inTextControl)
       {
         nsLineBox *currentLine=nsnull;
-        nsresult rv = nsBlockFrame::GetCurrentLine(mBlockRS, &currentLine);
-        if (NS_SUCCEEDED(rv) && currentLine) {
+        // use localResult because a failure here should not be propagated to my caller
+        nsresult localResult = nsBlockFrame::GetCurrentLine(mBlockRS, &currentLine);
+        if (NS_SUCCEEDED(localResult) && currentLine) {
           currentLine->SetForceInvalidate(PR_TRUE);
         }
       }
@@ -982,10 +967,8 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
 
   // XXX See if the frame is a placeholderFrame and if it is process
   // the floater.
-  nsIAtom* frameType;
-  aFrame->GetFrameType(&frameType);
   if (frameType) {
-    if (frameType == nsLayoutAtoms::placeholderFrame) {
+    if (nsLayoutAtoms::placeholderFrame == frameType.get()) {
       nsIFrame* outOfFlowFrame = ((nsPlaceholderFrame*)aFrame)->GetOutOfFlowFrame();
       if (outOfFlowFrame) {
         const nsStylePosition*  position;
@@ -1010,7 +993,7 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
         }
       }
     }
-    else if (frameType == nsLayoutAtoms::textFrame) {
+    else if (nsLayoutAtoms::textFrame == frameType.get()) {
       // Note non-empty text-frames for inline frame compatability hackery
       pfd->SetFlag(PFD_ISTEXTFRAME, PR_TRUE);
       // XXX An empty text frame at the end of the line seems not
@@ -1032,10 +1015,9 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
         }
       }
     }
-    else if (frameType == nsLayoutAtoms::letterFrame) {
+    else if (nsLayoutAtoms::letterFrame==frameType.get()) {
       pfd->SetFlag(PFD_ISLETTERFRAME, PR_TRUE);
     }
-    NS_RELEASE(frameType);
   }
 
   mSpaceManager->Translate(-tx, -ty);
@@ -1262,6 +1244,7 @@ nsLineLayout::CanPlaceFrame(PerFrameData* pfd,
                             nsHTMLReflowMetrics& aMetrics,
                             nsReflowStatus& aStatus)
 {
+  NS_PRECONDITION(pfd && pfd->mFrame, "bad args, null pointers for frame data");
   // Compute right margin to use
   nscoord rightMargin = 0;
   if (0 != pfd->mBounds.width) {
@@ -1328,6 +1311,18 @@ nsLineLayout::CanPlaceFrame(PerFrameData* pfd,
 #endif
     return PR_TRUE;
   }
+
+#ifdef FIX_BUG_50257
+  // another special case:  always place a BR
+  nsCOMPtr<nsIAtom> frameType;
+  pfd->mFrame->GetFrameType(getter_AddRefs(frameType));
+  if (nsLayoutAtoms::brFrame == frameType.get()) {
+#ifdef NOISY_CAN_PLACE_FRAME
+    printf("   ==> BR frame fits\n");
+#endif
+    return PR_TRUE;
+  }
+#endif
 
   if (aNotSafeToBreak) {
     // There are no frames on the line or we are in the first word on
@@ -1548,6 +1543,86 @@ nsLineLayout::DumpPerSpanData(PerSpanData* psd, PRInt32 aIndent)
 #define VALIGN_TOP    1
 #define VALIGN_BOTTOM 2
 
+PRBool
+nsLineLayout::IsPercentageUnitSides(const nsStyleSides* aSides)
+{
+  return eStyleUnit_Percent == aSides->GetLeftUnit()
+      || eStyleUnit_Percent == aSides->GetRightUnit()
+      || eStyleUnit_Percent == aSides->GetTopUnit()
+      || eStyleUnit_Percent == aSides->GetBottomUnit();
+}
+
+PRBool
+nsLineLayout::IsPercentageAwareReplacedElement(nsIPresContext *aPresContext, 
+                                               nsIFrame* aFrame)
+{
+  nsFrameState frameState;
+  aFrame->GetFrameState(&frameState);
+  if (frameState & NS_FRAME_REPLACED_ELEMENT)
+  {
+    nsCOMPtr<nsIAtom> frameType;
+    aFrame->GetFrameType(getter_AddRefs(frameType));
+    if (nsLayoutAtoms::brFrame != frameType.get() && 
+        nsLayoutAtoms::textFrame != frameType.get())
+    {
+      const nsStyleSpacing* space;
+      nsresult rv = aFrame->GetStyleData(eStyleStruct_Spacing,(const nsStyleStruct*&) space);
+      if (NS_FAILED(rv)) {
+        return PR_TRUE; // just to be on the safe side
+      }
+
+      if (IsPercentageUnitSides(&space->mMargin)
+        || IsPercentageUnitSides(&space->mPadding)
+        || IsPercentageUnitSides(&space->mBorderRadius)) {
+        return PR_TRUE;
+      }
+
+      const nsStylePosition* pos;
+      rv = aFrame->GetStyleData(eStyleStruct_Position,(const nsStyleStruct*&) pos);
+      if (NS_FAILED(rv)) {
+        return PR_TRUE; // just to be on the safe side
+      }
+
+      if (eStyleUnit_Percent == pos->mWidth.GetUnit()
+        || eStyleUnit_Percent == pos->mMaxWidth.GetUnit()
+        || eStyleUnit_Percent == pos->mMinWidth.GetUnit()
+        || eStyleUnit_Percent == pos->mHeight.GetUnit()
+        || eStyleUnit_Percent == pos->mMinHeight.GetUnit()
+        || eStyleUnit_Percent == pos->mMaxHeight.GetUnit()
+        || IsPercentageUnitSides(&pos->mOffset)) { // XXX need more here!!!
+        return PR_TRUE;
+      }
+    }
+  }
+
+  return PR_FALSE;
+}
+
+PRBool IsPercentageAwareFrame(nsIPresContext *aPresContext, nsIFrame *aFrame)
+{
+  nsFrameState childFrameState;
+  aFrame->GetFrameState(&childFrameState);
+  if (childFrameState & NS_FRAME_REPLACED_ELEMENT) {
+    if (nsLineLayout::IsPercentageAwareReplacedElement(aPresContext, aFrame)) {
+      return PR_TRUE;
+    }
+  }
+  else
+  {
+    nsIFrame *child;
+    aFrame->FirstChild(aPresContext, nsnull, &child);
+    if (child)
+    { // aFrame is an inline container frame, check my frame state
+      if (childFrameState & NS_INLINE_FRAME_CONTAINS_PERCENT_AWARE_CHILD) {
+        return PR_TRUE;
+      }
+    }
+    // else it's a frame we just don't care about
+  }  
+  return PR_FALSE;
+}
+
+
 void
 nsLineLayout::VerticalAlignFrames(nsLineBox* aLineBox,
                                   nsSize& aMaxElementSizeResult,
@@ -1683,6 +1758,14 @@ nsLineLayout::VerticalAlignFrames(nsLineBox* aLineBox,
     if (span) {
       nscoord distanceFromTop = pfd->mBounds.y - mTopEdge;
       PlaceTopBottomFrames(span, distanceFromTop, lineHeight);
+    }
+    // check to see if the frame is an inline replace element
+    // and if it is percent-aware.  If so, mark the line.
+    if ((PR_FALSE==aLineBox->ResizeReflowOptimizationDisabled()) &&
+         pfd->mFrameType & NS_CSS_FRAME_TYPE_INLINE)
+    {
+      if (IsPercentageAwareFrame(mPresContext, pfd->mFrame))
+        aLineBox->DisableResizeReflowOptimization();
     }
     pfd = pfd->mNext;
   }
@@ -2601,7 +2684,37 @@ nsLineLayout::HorizontalAlignFrames(nsRect& aLineBounds,
 #endif
   if (remainingWidth > 0) {
     nscoord dx = 0;
-    switch (mTextAlign) {
+    PRUint32 textAlign = mTextAlign;
+    // here is where we do special adjustments for HR's 
+    // see bug 18754
+    if (!InStrictMode()) {
+      if (psd->mFirstFrame && psd->mFirstFrame->mFrame)
+      {
+        nsCOMPtr<nsIAtom> frameType;
+        psd->mFirstFrame->mFrame->GetFrameType(getter_AddRefs(frameType));
+        if (nsLayoutAtoms::hrFrame == frameType.get()) {
+          // get the alignment from the HR frame
+          {
+            const nsStyleSpacing* spacing;
+            psd->mFirstFrame->mFrame->GetStyleData(eStyleStruct_Spacing,
+                                                   (const nsStyleStruct*&)spacing);
+            textAlign = NS_STYLE_TEXT_ALIGN_CENTER;
+            nsStyleCoord zero(nscoord(0));
+            nsStyleCoord temp;
+            if ((eStyleUnit_Coord==spacing->mMargin.GetLeftUnit()) &&
+                 (zero==spacing->mMargin.GetLeft(temp)))
+            {
+              textAlign = NS_STYLE_TEXT_ALIGN_LEFT;
+            }
+            else if ((eStyleUnit_Coord==spacing->mMargin.GetRightUnit()) &&
+                     (zero==spacing->mMargin.GetRight(temp))) {
+              textAlign = NS_STYLE_TEXT_ALIGN_RIGHT;
+            }
+          }
+        }
+      }
+    }
+    switch (textAlign) {
       case NS_STYLE_TEXT_ALIGN_DEFAULT:
         if (NS_STYLE_DIRECTION_LTR == psd->mDirection) {
           // default alignment for left-to-right is left so do nothing

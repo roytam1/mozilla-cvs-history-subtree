@@ -1847,7 +1847,7 @@ NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
                            GDK_LEAVE_NOTIFY_MASK |
                            GDK_STRUCTURE_MASK | 
                            GDK_FOCUS_CHANGE_MASK );
-    gdk_window_set_events(mShell->window, 
+    gdk_window_set_events(mMozArea->window, 
                           mask);
     gtk_signal_connect(GTK_OBJECT(mMozArea),
                        "key_press_event",
@@ -1988,14 +1988,14 @@ NS_IMETHODIMP nsWindow::SetTitle(const nsString& aTitle)
   nsCOMPtr<nsIUnicodeEncoder> encoder;
   // get the charset
   nsAutoString platformCharset;
-  nsCOMPtr <nsIPlatformCharset> platformCharsetService = do_GetService(NS_PLATFORMCHARSET_PROGID, &rv);
+  nsCOMPtr <nsIPlatformCharset> platformCharsetService = do_GetService(NS_PLATFORMCHARSET_CONTRACTID, &rv);
   if (NS_SUCCEEDED(rv))
     rv = platformCharsetService->GetCharset(kPlatformCharsetSel_Menu, platformCharset);
   if (NS_FAILED(rv))
     platformCharset.AssignWithConversion("ISO-8859-1");
 
   // get the encoder
-  NS_WITH_SERVICE(nsICharsetConverterManager, ccm, NS_CHARSETCONVERTERMANAGER_PROGID, &rv);  
+  NS_WITH_SERVICE(nsICharsetConverterManager, ccm, NS_CHARSETCONVERTERMANAGER_CONTRACTID, &rv);  
   rv = ccm->GetUnicodeEncoder(&platformCharset, getter_AddRefs(encoder));
 
   // Estimate out length and allocate the buffer based on a worst-case estimate, then do
@@ -3014,6 +3014,22 @@ void nsWindow::StoreProperty(char *property, unsigned char *data)
 }
 
 // These are all of our drag and drop operations
+
+void
+nsWindow::InitDragEvent (nsMouseEvent &aEvent)
+{
+  // set everything to zero
+  memset(&aEvent, 0, sizeof(nsMouseEvent));
+  // set the keyboard modifiers
+  gint x, y;
+  GdkModifierType state = (GdkModifierType)0;
+  gdk_window_get_pointer(NULL, &x, &y, &state);
+  aEvent.isShift = (state & GDK_SHIFT_MASK) ? PR_TRUE : PR_FALSE;
+  aEvent.isControl = (state & GDK_CONTROL_MASK) ? PR_TRUE : PR_FALSE;
+  aEvent.isAlt = (state & GDK_MOD1_MASK) ? PR_TRUE : PR_FALSE;
+  aEvent.isMeta = PR_FALSE; // GTK+ doesn't support the meta key
+}
+
 /* static */
 gint
 nsWindow::DragMotionSignal (GtkWidget *      aWidget,
@@ -3090,6 +3106,8 @@ gint nsWindow::OnDragMotionSignal      (GtkWidget *      aWidget,
   dragSessionGTK->TargetStartDragMotion();
 
   nsMouseEvent event;
+
+  InitDragEvent(event);
 
   event.message = NS_DRAGDROP_OVER;
   event.eventStructType = NS_DRAGDROP_EVENT;
@@ -3224,6 +3242,8 @@ nsWindow::OnDragDropSignal        (GtkWidget        *aWidget,
 
   nsMouseEvent event;
 
+  InitDragEvent(event);
+
   event.message = NS_DRAGDROP_OVER;
   event.eventStructType = NS_DRAGDROP_EVENT;
   event.widget = innerMostWidget;
@@ -3231,6 +3251,8 @@ nsWindow::OnDragDropSignal        (GtkWidget        *aWidget,
   event.point.y = rety;
 
   innerMostWidget->DispatchMouseEvent(event);
+
+  InitDragEvent(event);
 
   event.message = NS_DRAGDROP_DROP;
   event.eventStructType = NS_DRAGDROP_EVENT;
@@ -3386,7 +3408,7 @@ nsWindow::ResetDragMotionTimer(GtkWidget *aWidget,
   }
   
   // otherwise we create a new timer
-  mDragMotionTimer = do_CreateInstance("component://netscape/timer");
+  mDragMotionTimer = do_CreateInstance("@mozilla.org/timer;1");
   NS_ASSERTION(mDragMotionTimer, "Failed to create drag motion timer!");
   mDragMotionTimer->Init(DragMotionTimerCallback, this, 100);
 }

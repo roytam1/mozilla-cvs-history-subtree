@@ -30,7 +30,7 @@
 #include "nsIDocument.h"
 #include "nsIPresShell.h"
 #include "nsIDOMElement.h"
-#include "nsIDOMSelection.h"
+#include "nsISelection.h"
 #include "nsIDOMCharacterData.h"
 #include "nsIEditProperty.h"
 #include "nsISupportsArray.h"
@@ -42,7 +42,7 @@
 #include "nsIPrivateCompositionEvent.h"
 #include "nsIEditorMailSupport.h"
 #include "nsIDocumentEncoder.h"
-#include "nsIPrivateDOMEvent.h"
+#include "nsIDOMNSUIEvent.h"
 #include "nsIPref.h"
 #include "nsILookAndFeel.h"
 #include "nsIPresContext.h"
@@ -158,12 +158,12 @@ nsTextEditorKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
     return NS_OK;
   }
   
-  nsCOMPtr<nsIPrivateDOMEvent> privateEvent = do_QueryInterface(aKeyEvent);
-  if(privateEvent) 
+  nsCOMPtr<nsIDOMNSUIEvent> nsUIEvent = do_QueryInterface(aKeyEvent);
+  if(nsUIEvent) 
   {
-    PRBool dispatchStopped;
-    privateEvent->IsDispatchStopped(&dispatchStopped);
-    if(dispatchStopped)
+    PRBool defaultPrevented;
+    nsUIEvent->GetPreventDefault(&defaultPrevented);
+    if(defaultPrevented)
       return NS_OK;
   }
 
@@ -191,26 +191,20 @@ nsTextEditorKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
   // so look for special keys using keyCode
   if (0 != keyCode)
   {
-    PRBool isAnyModifierKey;
+    PRBool isAnyModifierKeyButShift;
     nsresult rv;
-    rv = keyEvent->GetAltKey(&isAnyModifierKey);
+    rv = keyEvent->GetAltKey(&isAnyModifierKeyButShift);
     if (NS_FAILED(rv)) return rv;
     
-    if (!isAnyModifierKey)
+    if (!isAnyModifierKeyButShift)
     {
-      rv = keyEvent->GetMetaKey(&isAnyModifierKey);
+      rv = keyEvent->GetMetaKey(&isAnyModifierKeyButShift);
       if (NS_FAILED(rv)) return rv;
       
-      if (!isAnyModifierKey)
+      if (!isAnyModifierKeyButShift)
       {
-        rv = keyEvent->GetShiftKey(&isAnyModifierKey);
+        rv = keyEvent->GetCtrlKey(&isAnyModifierKeyButShift);
         if (NS_FAILED(rv)) return rv;
-        
-        if (!isAnyModifierKey)
-        {
-          rv = keyEvent->GetCtrlKey(&isAnyModifierKey);
-          if (NS_FAILED(rv)) return rv;
-        }
       }
     }
 
@@ -225,7 +219,7 @@ nsTextEditorKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
         break;
 
       case nsIDOMKeyEvent::DOM_VK_BACK_SPACE: 
-        if (isAnyModifierKey)
+        if (isAnyModifierKeyButShift)
           return NS_OK;
 
         mEditor->DeleteSelection(nsIEditor::ePrevious);
@@ -235,7 +229,7 @@ nsTextEditorKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
         break;
  
       case nsIDOMKeyEvent::DOM_VK_DELETE:
-        if (isAnyModifierKey)
+        if (isAnyModifierKeyButShift)
           return NS_OK;
 
         mEditor->DeleteSelection(nsIEditor::eNext);
@@ -400,7 +394,7 @@ nsTextEditorMouseListener::MouseClick(nsIDOMEvent* aMouseEvent)
         if (!NS_SUCCEEDED(nsuiEvent->GetRangeOffset(&offset)))
           return NS_ERROR_NULL_POINTER;
 
-        nsCOMPtr<nsIDOMSelection> selection;
+        nsCOMPtr<nsISelection> selection;
         if (NS_SUCCEEDED(editor->GetSelection(getter_AddRefs(selection))))
           (void)selection->Collapse(parent, offset);
 
@@ -635,7 +629,7 @@ nsresult
 nsTextEditorDragListener::DragOver(nsIDOMEvent* aDragEvent)
 {
   nsresult rv;
-  NS_WITH_SERVICE ( nsIDragService, dragService, "component://netscape/widget/dragservice", &rv );
+  NS_WITH_SERVICE ( nsIDragService, dragService, "@mozilla.org/widget/dragservice;1", &rv );
   if ( NS_SUCCEEDED(rv) ) {
     nsCOMPtr<nsIDragSession> dragSession(do_QueryInterface(dragService));
     if ( dragSession ) {
@@ -681,7 +675,7 @@ nsTextEditorDragListener::DragDrop(nsIDOMEvent* aMouseEvent)
   if ( htmlEditor )
   {
     nsresult rv;
-    NS_WITH_SERVICE(nsIDragService, dragService, "component://netscape/widget/dragservice", &rv);
+    NS_WITH_SERVICE(nsIDragService, dragService, "@mozilla.org/widget/dragservice;1", &rv);
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsIDragSession> dragSession(do_QueryInterface(dragService));
@@ -710,7 +704,7 @@ nsTextEditorDragListener::DragDrop(nsIDOMEvent* aMouseEvent)
        selection, nothing should happen. 
        cmanske: But do this only if drag source is not the same as target (current) document!
     */
-    nsCOMPtr<nsIDOMSelection> selection;
+    nsCOMPtr<nsISelection> selection;
     rv = mEditor->GetSelection(getter_AddRefs(selection));
     if (NS_FAILED(rv) || !selection) 
       return rv?rv:NS_ERROR_FAILURE;

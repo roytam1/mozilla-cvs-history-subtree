@@ -361,9 +361,8 @@ nsImageFrame::Reflow(nsIPresContext*          aPresContext,
   GetDesiredSize(aPresContext, aReflowState, aMetrics);
   AddBordersAndPadding(aPresContext, aReflowState, aMetrics, mBorderPadding);
   if (nsnull != aMetrics.maxElementSize) {
-    // If we have a percentage based width (and no height), then our MES width is 0
-    if (eStyleUnit_Percent == aReflowState.mStylePosition->mWidth.GetUnit() &&
-        eStyleUnit_Coord != aReflowState.mStylePosition->mHeight.GetUnit()) {
+    // If we have a percentage based width, then our MES width is 0
+    if (eStyleUnit_Percent == aReflowState.mStylePosition->mWidth.GetUnit()) {
       aMetrics.maxElementSize->width = 0;
     } else {
       aMetrics.maxElementSize->width = aMetrics.width;
@@ -753,7 +752,7 @@ nsImageFrame::TriggerLink(nsIPresContext* aPresContext,
       // Almost a copy of the similarly named method in nsGenericElement
       nsresult rv;
       NS_WITH_SERVICE(nsIScriptSecurityManager, securityManager, 
-                      NS_SCRIPTSECURITYMANAGER_PROGID, &rv);
+                      NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
 
       nsCOMPtr<nsIPresShell> ps;
       if (NS_SUCCEEDED(rv)) 

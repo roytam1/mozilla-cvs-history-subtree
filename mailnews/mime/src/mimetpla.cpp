@@ -35,6 +35,7 @@
 #include "nsIServiceManager.h"
 #include "nsIPref.h"
 #include "prprf.h"
+#include "nsMsgI18N.h"
 
 static NS_DEFINE_CID(kTXTToHTMLConvCID, MOZITXTTOHTMLCONV_CID);
 static NS_DEFINE_CID(kCPrefServiceCID, NS_PREF_CID);
@@ -189,7 +190,7 @@ MimeInlineTextPlain_parse_begin (MimeObject *obj)
            /* 4.x' editor can't break <div>s (e.g. to interleave comments).
               We'll add the class to the <blockquote type=cite> later. */
       {
-        openingDiv = "<div class=\"text-plain\"";
+        openingDiv = "<div class=\"moz-text-plain\"";
         if (!plainHTML)
         {
           if (obj->options->wrap_long_lines_p)
@@ -249,14 +250,15 @@ MimeInlineTextPlain_parse_eof (MimeObject *obj, PRBool abort_p)
       MimeInlineTextPlain *text = (MimeInlineTextPlain *) obj;
       if (text->mIsSig && !quoting)
       {
-        status = MimeObject_write(obj, "</div>", 6, PR_FALSE);  // .txt-sig
+        status = MimeObject_write(obj, "</div>", 6, PR_FALSE);  // .moz-txt-sig
         if (status < 0) return status;
       }
       status = MimeObject_write(obj, "</pre>", 6, PR_FALSE);
       if (status < 0) return status;
       if (!quoting)
       {
-        status = MimeObject_write(obj, "</div>", 6, PR_FALSE);  // .text-plain
+        status = MimeObject_write(obj, "</div>", 6, PR_FALSE);
+                                        // .moz-text-plain
         if (status < 0) return status;
       }
 
@@ -382,8 +384,8 @@ MimeInlineTextPlain_parse_line (char *line, PRInt32 length, MimeObject *obj)
     // Write plain text quoting tags
     if (logicalLineStart != 0 && !(plainHTML && text->mBlockquoting))
     {
-      if (!quoting)
-        prefaceResultStr += "<span class=txt-citetags>";
+      if (!plainHTML)
+        prefaceResultStr += "<span class=\"moz-txt-citetags\">";
 
       nsAutoString citeTagsSource;
       lineSourceStr.Mid(citeTagsSource, 0, logicalLineStart);
@@ -406,7 +408,7 @@ MimeInlineTextPlain_parse_line (char *line, PRInt32 length, MimeObject *obj)
 
       prefaceResultStr += citeTagsResultCStr;
       Recycle(citeTagsResultCStr);
-      if (!quoting)
+      if (!plainHTML)
         prefaceResultStr += "</span>";
     }
 
@@ -419,15 +421,58 @@ MimeInlineTextPlain_parse_line (char *line, PRInt32 length, MimeObject *obj)
     {
       text->mIsSig = PR_TRUE;
       if (!quoting)
-        prefaceResultStr += "<div class=txt-sig>";
+        prefaceResultStr += "<div class=\"moz-txt-sig\">";
     }
+
+    // Get a mail charset of this message.
+    MimeInlineText  *inlinetext = (MimeInlineText *) obj;
+    char *mailCharset = NULL;
+    if (inlinetext->charset && *(inlinetext->charset))
+      mailCharset = inlinetext->charset;
 
     /* This is the main TXT to HTML conversion:
        escaping (very important), eventually recognizing etc. */
     PRUnichar* lineResultUnichar = nsnull;
-    rv = conv->ScanTXT(lineSourceStr.GetUnicode() + logicalLineStart,
-                       whattodo, &lineResultUnichar);
-    if (NS_FAILED(rv)) return -1;
+
+    if (obj->options->format_out != nsMimeOutput::nsMimeMessageSaveAs ||
+        !mailCharset || !nsMsgI18Nstateful_charset(mailCharset))
+    {
+      rv = conv->ScanTXT(lineSourceStr.GetUnicode() + logicalLineStart,
+                         whattodo, &lineResultUnichar);
+      if (NS_FAILED(rv)) return -1;
+    }
+    else
+    {
+      // If nsMimeMessageSaveAs, the string is in mail charset (and stateful, e.g. ISO-2022-JP).
+      // convert to unicode so it won't confuse ScanTXT.
+      nsAutoString ustr;
+      nsCAutoString cstr(line, length);
+      nsCAutoString mailCharsetStr(mailCharset);
+
+      rv = nsMsgI18NConvertToUnicode(mailCharsetStr, cstr, ustr);
+      if (NS_SUCCEEDED(rv))
+      {
+        PRUnichar *u;
+        rv = conv->ScanTXT(ustr.GetUnicode() + logicalLineStart, whattodo, &u);
+        if (NS_SUCCEEDED(rv))
+        {
+          ustr.Assign(u);
+          Recycle(u);
+          rv = nsMsgI18NConvertFromUnicode(mailCharsetStr, ustr, cstr);
+          if (NS_SUCCEEDED(rv))
+          {
+            // create PRUnichar* which contains NON unicode 
+            // as the following code expecting it
+            ustr.AssignWithConversion(cstr);                                                  
+            lineResultUnichar = ustr.ToNewUnicode();
+            if (!lineResultUnichar) return -1;
+          }
+        }
+      }
+      if (NS_FAILED(rv))
+        return -1;
+    }
+
 
     // avoid an extra string copy by using nsSubsumeStr, this transfers
     // ownership of wresult to strresult so don't try to free wresult later.

@@ -48,7 +48,7 @@
 #include "plbase64.h"
 #include "nsEscape.h"
 
-#include "nsIPSMSocketInfo.h"
+#include "nsISecureSocketInfo.h"
 /* sigh, cmtcmn.h, included from nsIPSMSocketInfo.h, includes windows.h, which includes winuser.h,
    which defines PostMessage to be either PostMessageA or PostMessageW... of course it does this
    without using parameters, so any use of PostMessage now becomes PostMessageA...
@@ -113,7 +113,7 @@ nsresult nsExplainErrorDetails(nsISmtpUrl * aSmtpUrl, int code, ...)
 
   PRUnichar *  msg;
 	nsXPIDLString eMsg;
-  nsCOMPtr<nsIMsgStringService> smtpBundle = do_GetService(NS_MSG_SMTPSTRINGSERVICE_PROGID);
+  nsCOMPtr<nsIMsgStringService> smtpBundle = do_GetService(NS_MSG_SMTPSTRINGSERVICE_CONTRACTID);
 
 	va_start (args, code);
 
@@ -308,7 +308,7 @@ void nsSmtpProtocol::Initialize(nsIURI * aURL)
     m_runningURL = do_QueryInterface(aURL);
 
   if (!mSmtpBundle)
-    mSmtpBundle = do_GetService(NS_MSG_SMTPSTRINGSERVICE_PROGID);
+    mSmtpBundle = do_GetService(NS_MSG_SMTPSTRINGSERVICE_CONTRACTID);
 
     // extract out message feedback if there is any.
 	nsCOMPtr<nsIMsgMailNewsUrl> mailnewsUrl = do_QueryInterface(aURL);
@@ -771,7 +771,7 @@ PRInt32 nsSmtpProtocol::SendTLSResponse()
       rv = m_channel->GetSecurityInfo(getter_AddRefs(secInfo));
 
       if (NS_SUCCEEDED(rv) && secInfo) {
-          nsCOMPtr<nsIPSMSocketInfo> securityInfo = do_QueryInterface(secInfo, &rv);
+          nsCOMPtr<nsISecureSocketInfo> securityInfo = do_QueryInterface(secInfo, &rv);
 
           if (NS_SUCCEEDED(rv) && securityInfo) {
               rv = securityInfo->TLSStepUp();
@@ -1637,7 +1637,7 @@ nsresult nsSmtpProtocol::RequestOverrideInfo(nsISmtpServer * aSmtpServer)
   NS_ENSURE_ARG(aSmtpServer);
 
 	nsresult rv;
-	nsCAutoString progID(NS_MSGLOGONREDIRECTORSERVICE_PROGID);
+	nsCAutoString contractID(NS_MSGLOGONREDIRECTORSERVICE_CONTRACTID);
 
   // go get the redirection type...
   nsXPIDLCString redirectionTypeStr; 
@@ -1649,10 +1649,10 @@ nsresult nsSmtpProtocol::RequestOverrideInfo(nsISmtpServer * aSmtpServer)
   if (!redirectionType || !*redirectionType )
     return NS_OK;
 
-	progID.Append('/');
-	progID.Append(redirectionTypeStr);
+	contractID.Append('/');
+	contractID.Append(redirectionTypeStr);
 
-	m_logonRedirector = do_GetService(progID.GetBuffer(), &rv);
+	m_logonRedirector = do_GetService(contractID.GetBuffer(), &rv);
 	if (m_logonRedirector && NS_SUCCEEDED(rv))
 	{
 		nsXPIDLCString password;

@@ -123,6 +123,15 @@ PRInt32 nsTableRowGroupFrame::GetStartRowIndex()
     
     GetNextFrame(childFrame, &childFrame);
   }
+  // if the row group doesn't have any children, get it the hard way
+  if (-1 == result) {
+    nsTableFrame* tableFrame;
+    nsTableFrame::GetTableFrame(this, tableFrame);
+    if (tableFrame) {
+      return tableFrame->GetStartRowIndex(*this);
+    }
+  }
+      
   return result;
 }
 
@@ -1230,6 +1239,8 @@ nsTableRowGroupFrame::AppendFrames(nsIPresContext* aPresContext,
     NS_IF_RELEASE(frameType);
   }
 
+  PRInt32 rowIndex;
+  GetRowCount(rowIndex);
   // Append the frames to the sibling chain
   mFrames.AppendFrames(nsnull, aFrameList);
 
@@ -1237,7 +1248,7 @@ nsTableRowGroupFrame::AppendFrames(nsIPresContext* aPresContext,
     nsTableFrame* tableFrame = nsnull;
     nsTableFrame::GetTableFrame(this, tableFrame);
     if (tableFrame) {
-      tableFrame->AppendRows(*aPresContext, *this, rows);
+      tableFrame->AppendRows(*aPresContext, *this, rowIndex, rows);
 
       // Because the number of columns may have changed invalidate the column widths
       tableFrame->InvalidateColumnWidths();
@@ -1504,6 +1515,22 @@ GetFrameYMost(nsIFrame* aFrame)
   return rect.YMost();
 }
 
+nsIFrame*
+GetLastRowSibling(nsIFrame* aRowFrame)
+{
+  nsIFrame* lastRowFrame = nsnull;
+  nsIFrame* lastFrame    = aRowFrame;
+  while (lastFrame) {
+    nsCOMPtr<nsIAtom> fType;
+    lastFrame->GetFrameType(getter_AddRefs(fType));
+    if (nsLayoutAtoms::tableRowFrame == fType.get()) {
+      lastRowFrame = lastFrame;
+    }
+    lastFrame->GetNextSibling(&lastFrame);
+  }
+  return lastRowFrame;
+}
+
 NS_METHOD nsTableRowGroupFrame::IR_TargetIsChild(nsIPresContext*      aPresContext,
                                                  nsHTMLReflowMetrics& aDesiredSize,
                                                  RowGroupReflowState& aReflowState,
@@ -1551,7 +1578,7 @@ NS_METHOD nsTableRowGroupFrame::IR_TargetIsChild(nsIPresContext*      aPresConte
         // We don't need to do any painting. The row frame has made sure that
         // the cell is properly positioned, and done any necessary repainting.
         // Just calculate our desired height
-        aDesiredSize.height = GetFrameYMost(mFrames.LastChild());
+        aDesiredSize.height = GetFrameYMost(GetLastRowSibling(mFrames.FirstChild()));
       } else {
         // Inform the row of its new height.
         ((nsTableRowFrame*)aNextFrame)->DidResize(aPresContext, aReflowState.reflowState);
@@ -1581,7 +1608,7 @@ NS_METHOD nsTableRowGroupFrame::IR_TargetIsChild(nsIPresContext*      aPresConte
     } else {
       if (desiredSize.mNothingChanged) { // mNothingChanges currently only works when a cell is the target
         // the cell frame did not change size. Just calculate our desired height
-        aDesiredSize.height = GetFrameYMost(mFrames.LastChild());
+        aDesiredSize.height = GetFrameYMost(GetLastRowSibling(mFrames.FirstChild()));
       } else {
         // Adjust the frames that follow...
         AdjustSiblingsAfterReflow(aPresContext, aReflowState, aNextFrame,

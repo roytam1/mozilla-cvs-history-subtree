@@ -33,6 +33,7 @@
 #include "nsIServiceManager.h"
 #include "mimemoz2.h"
 #include "prprf.h"
+#include "nsMsgI18N.h"
 
 static NS_DEFINE_CID(kPrefCID, NS_PREF_CID);
 
@@ -168,7 +169,7 @@ MimeInlineTextPlainFlowed_parse_begin (MimeObject *obj)
        /* 4.x' editor can't break <div>s (e.g. to interleave comments).
           We'll add the class to the <blockquote type=cite> later. */
   {
-    nsCAutoString openingDiv("<div class=\"text-flowed\"");
+    nsCAutoString openingDiv("<div class=\"moz-text-flowed\"");
     // We currently have to add formatting here. :-(
     if (!plainHTML && !fontstyle.IsEmpty())
     {
@@ -230,12 +231,12 @@ MimeInlineTextPlainFlowed_parse_eof (MimeObject *obj, PRBool abort_p)
   }
     
   if (exdata->isSig && !quoting) {
-    status = MimeObject_write(obj, "</div>", 6, PR_FALSE);      // txt-sig
+    status = MimeObject_write(obj, "</div>", 6, PR_FALSE); // .moz-txt-sig
     if (status<0) goto EarlyOut;
   }
   if (!quoting) // HACK (see above)
   {
-    status = MimeObject_write(obj, "</div>", 6, PR_FALSE);  // text-flowed
+    status = MimeObject_write(obj, "</div>", 6, PR_FALSE); // .moz-text-flowed
     if (status<0) goto EarlyOut;
   }
     
@@ -335,13 +336,56 @@ MimeInlineTextPlainFlowed_parse_line (char *line, PRInt32 length, MimeObject *ob
                       might not be able to display the glyphs. */
     }
 
-    /* This is the main TXT to HTML conversion:
-       escaping (very important), eventually recognizing etc. */
-    rv = conv->ScanTXT(lineSource.GetUnicode(), whattodo, &wresult);
-    if (NS_FAILED(rv)) return -1;
+    // Get a mail charset of this message.
+    MimeInlineText  *inlinetext = (MimeInlineText *) obj;
+    char *mailCharset = NULL;
+    if (inlinetext->charset && *(inlinetext->charset))
+      mailCharset = inlinetext->charset;
 
-    lineResult = wresult;
-    Recycle(wresult);
+    if (obj->options->format_out != nsMimeOutput::nsMimeMessageSaveAs ||
+        !mailCharset || !nsMsgI18Nstateful_charset(mailCharset))
+    {
+      /* This is the main TXT to HTML conversion:
+	       escaping (very important), eventually recognizing etc. */
+      rv = conv->ScanTXT(lineSource.GetUnicode(), whattodo, &wresult);
+      if (NS_FAILED(rv)) return -1;
+      lineResult = wresult;
+      Recycle(wresult);
+    }
+    else
+    {
+      // If nsMimeMessageSaveAs, the string is in mail charset (and stateful, e.g. ISO-2022-JP).
+      // convert to unicode so it won't confuse ScanTXT.
+      char *newcstr;
+
+      newcstr = lineSource.ToNewCString();      // lineSource uses nsString but the string is NOT unicode
+      if (!newcstr) return -1;
+
+      nsAutoString ustr;
+      nsCAutoString cstr;
+      nsCAutoString mailCharsetStr(mailCharset);
+
+      cstr.Assign(newcstr);
+      Recycle(newcstr);
+
+      rv = nsMsgI18NConvertToUnicode(mailCharsetStr, cstr, ustr);
+      if (NS_SUCCEEDED(rv))
+      {
+        PRUnichar *u;
+        rv = conv->ScanTXT(ustr.GetUnicode(), whattodo, &u);
+        if (NS_SUCCEEDED(rv))
+        {
+          ustr.Assign(u);
+          Recycle(u);
+          rv = nsMsgI18NConvertFromUnicode(mailCharsetStr, ustr, cstr);
+          if (NS_SUCCEEDED(rv))
+            lineResult.AssignWithConversion(cstr);   // create nsString which contains NON unicode 
+                                                     // as the following code expecting it
+        }
+      }
+      if (NS_FAILED(rv))
+        return -1;
+    }
   }
   else
   {
@@ -406,8 +450,8 @@ MimeInlineTextPlainFlowed_parse_line (char *line, PRInt32 length, MimeObject *ob
         preface += "--&nbsp;<br>";
       } else {
         exdata->isSig = PR_TRUE;
-        preface +=
-         "<div class=\"txt-sig\"><span class=\"txt-tag\">--&nbsp;<br></span>";
+        preface += "<div class=\"moz-txt-sig\"><span class=\"moz-txt-tag\">"
+                   "--&nbsp;<br></span>";
       }
     } else {
       Line_convert_whitespace(lineResult, PR_FALSE /* Allow wraps */,

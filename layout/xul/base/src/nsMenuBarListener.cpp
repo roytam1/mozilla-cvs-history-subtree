@@ -48,8 +48,6 @@
 
 #include "nsIPref.h"
 
-static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
-
 /*
  * nsMenuBarListener implementation
  */
@@ -101,7 +99,7 @@ void nsMenuBarListener::InitAccessKey()
 
   // Get the menu access key value from prefs, overriding the default:
   nsresult rv;
-  NS_WITH_SERVICE(nsIPref, prefs, NS_PREF_PROGID, &rv);
+  NS_WITH_SERVICE(nsIPref, prefs, NS_PREF_CONTRACTID, &rv);
   if (NS_SUCCEEDED(rv) && prefs)
   {
     rv = prefs->GetIntPref("ui.key.menuAccessKey", &mAccessKey);
@@ -109,7 +107,7 @@ void nsMenuBarListener::InitAccessKey()
                              &mAccessKeyFocuses);
   }
 #ifdef DEBUG_akkana
-  if (NS_FAILED(rv))
+  if (NS_FAILED(rv) || !prefs)
   {
     NS_ASSERTION(PR_FALSE,"Menubar listener couldn't get accel key from prefs!\n");
   }
@@ -154,6 +152,15 @@ nsMenuBarListener::KeyUp(nsIDOMEvent* aKeyEvent)
 nsresult
 nsMenuBarListener::KeyPress(nsIDOMEvent* aKeyEvent)
 {
+  // if event has already been handled, bail
+  nsCOMPtr<nsIDOMNSUIEvent> uiEvent ( do_QueryInterface(aKeyEvent) );
+  if ( uiEvent ) {
+    PRBool eventHandled = PR_FALSE;
+    uiEvent->GetPreventDefault ( &eventHandled );
+    if ( eventHandled )
+      return NS_OK;       // don't consume event
+  }
+
   InitAccessKey();
 
   if (mAccessKey)
