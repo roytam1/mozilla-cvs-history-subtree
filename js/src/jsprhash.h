@@ -79,51 +79,51 @@ struct JSPRHashTable {
  * Create a new hash table.
  * If allocOps is null, use default allocator ops built on top of malloc().
  */
-JSEXTERN(JSPRHashTable *)
+JS_EXTERN_API(JSPRHashTable *)
 JSPR_NewHashTable(JSPRUint32 n, JSPRHashFunction keyHash,
                 JSPRHashComparator keyCompare, JSPRHashComparator valueCompare,
                 JSPRHashAllocOps *allocOps, void *allocPriv);
 
-JSEXTERN(void)
+JS_EXTERN_API(void)
 JSPR_HashTableDestroy(JSPRHashTable *ht);
 
 /* Low level access methods */
-JSEXTERN(JSPRHashEntry **)
+JS_EXTERN_API(JSPRHashEntry **)
 JSPR_HashTableRawLookup(JSPRHashTable *ht, JSPRHashNumber keyHash, const void *key);
 
-JSEXTERN(JSPRHashEntry *)
+JS_EXTERN_API(JSPRHashEntry *)
 JSPR_HashTableRawAdd(JSPRHashTable *ht, JSPRHashEntry **hep, JSPRHashNumber keyHash,
                    const void *key, void *value);
 
-JSEXTERN(void)
+JS_EXTERN_API(void)
 JSPR_HashTableRawRemove(JSPRHashTable *ht, JSPRHashEntry **hep, JSPRHashEntry *he);
 
 /* Higher level access methods */
-JSEXTERN(JSPRHashEntry *)
+JS_EXTERN_API(JSPRHashEntry *)
 JSPR_HashTableAdd(JSPRHashTable *ht, const void *key, void *value);
 
-JSEXTERN(JSPRBool)
+JS_EXTERN_API(JSPRBool)
 JSPR_HashTableRemove(JSPRHashTable *ht, const void *key);
 
-JSEXTERN(JSPRIntn)
+JS_EXTERN_API(JSPRIntn)
 JSPR_HashTableEnumerateEntries(JSPRHashTable *ht, JSPRHashEnumerator f, void *arg);
 
-JSEXTERN(void *)
+JS_EXTERN_API(void *)
 JSPR_HashTableLookup(JSPRHashTable *ht, const void *key);
 
-JSEXTERN(JSPRIntn)
+JS_EXTERN_API(JSPRIntn)
 JSPR_HashTableDump(JSPRHashTable *ht, JSPRHashEnumerator dump, FILE *fp);
 
 /* General-purpose C string hash function. */
-JSEXTERN(JSPRHashNumber)
+JS_EXTERN_API(JSPRHashNumber)
 JSPR_HashString(const void *key);
 
 /* Compare strings using strcmp(), return true if equal. */
-JSEXTERN(int)
+JS_EXTERN_API(int)
 JSPR_CompareStrings(const void *v1, const void *v2);
 
 /* Stub function just returns v1 == v2 */
-JSEXTERN(JSPRIntn)
+JS_EXTERN_API(JSPRIntn)
 JSPR_CompareValues(const void *v1, const void *v2);
 
 JSPR_END_EXTERN_C

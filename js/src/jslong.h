@@ -47,9 +47,9 @@ JSInt64 __pascal __loadds __export
 JSInt64 __pascal __loadds __export
     JSLL_Zero(void);
 #else
-EXTERN(JSInt64) JSLL_MaxInt(void);
-EXTERN(JSInt64) JSLL_MinInt(void);
-EXTERN(JSInt64) JSLL_Zero(void);
+JS_EXTERN_API(JSInt64) JSLL_MaxInt(void);
+JS_EXTERN_API(JSInt64) JSLL_MinInt(void);
+JS_EXTERN_API(JSInt64) JSLL_Zero(void);
 #endif
 
 #define JSLL_MAXINT   JSLL_MaxInt()
@@ -248,7 +248,7 @@ EXTERN(JSInt64) JSLL_Zero(void);
 
 #define JSLL_UDIVMOD(qp, rp, a, b)    ll_udivmod(qp, rp, a, b)
 
-EXTERN(void) ll_udivmod(JSUint64 *qp, JSUint64 *rp, JSUint64 a, JSUint64 b);
+JS_EXTERN_API(void) ll_udivmod(JSUint64 *qp, JSUint64 *rp, JSUint64 a, JSUint64 b);
 
 #define JSLL_DIV(r, a, b) { \
     JSInt64 _a, _b; \

@@ -591,7 +591,7 @@ gc_hash_root(const void *key)
     return num >> 2;
 }
 
-STATIC_DLL_CALLBACK(intN)
+JS_STATIC_DLL_CALLBACK(intN)
 gc_root_marker(JSHashEntry *he, intN i, void *arg)
 {
     void **rp = (void **)he->key;

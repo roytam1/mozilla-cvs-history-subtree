@@ -75,8 +75,14 @@
 "PR_MapEvents",
 "PR_RevokeEvents",
 
+"PR_cnvtf",
+"PR_dtoa",
+"PR_strtod",
+
 "PRFileDesc",
 
+"PR_HASH_BITS",
+"PR_GOLDEN_RATIO",
 "PRHashAllocOps",
 "PRHashComparator",
 "PRHashEntry",
@@ -413,13 +419,12 @@ sub convert_includes {
 
 sub convert_declarations {
     ($line) = @_;
-    $line =~ s/PR_EXTERN/EXTERN/g;
-    $line =~ s/PR_IMPLEMENT/IMPLEMENT/g;
-    $line =~ s/PR_CALLBACK/DLL_CALLBACK/g;
-    $line =~ s/PR_STATIC_CALLBACK/STATIC_DLL_CALLBACK/g;
-    $line =~ s/PR_IMPORT/IMPORT/g;
-    $line =~ s/PR_PUBLIC_API/PUBLIC_API/g;
-    $line =~ s/PR_PUBLIC_DATA/PUBLIC_DATA/g;
+    $line =~ s/PR_EXTERN/JS_EXTERN/g;
+    $line =~ s/PR_IMPLEMENT_DATA/JS_EXPORT_DATA/g;
+    $line =~ s/PR_IMPLEMENT/JS_EXPORT_API/g;
+    $line =~ s/PR_CALLBACK/JS_DLL_CALLBACK/g;
+    $line =~ s/PR_STATIC_CALLBACK/JS_STATIC_DLL_CALLBACK/g;
+    $line =~ s/PR_IMPORT/JS_IMPORT/g;
     return $line;
 }    
 

@@ -183,7 +183,7 @@ num_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     d = JSVAL_IS_INT(v) ? (jsdouble)JSVAL_TO_INT(v) : *JSVAL_TO_DOUBLE(v);
     i = JS_snprintf(buf, sizeof buf, "(new %s(", number_class.name);
 
-    PR_cnvtf(buf + i, sizeof buf - i, 20, d);
+    JS_cnvtf(buf + i, sizeof buf - i, 20, d);
     i = strlen(buf);
     JS_snprintf(buf + i, sizeof buf - i, "))");
     str = JS_NewStringCopyZ(cx, buf);
@@ -433,7 +433,7 @@ js_NumberToString(JSContext *cx, jsdouble d)
     if (JSDOUBLE_IS_INT(d, i)) {
 	JS_snprintf(buf, sizeof buf, "%ld", (long)i);
     } else {
-	PR_cnvtf(buf, sizeof buf, 20, d);
+	JS_cnvtf(buf, sizeof buf, 20, d);
     }
     return JS_NewStringCopyZ(cx, buf);
 }
@@ -648,7 +648,7 @@ js_strtod(JSContext *cx, const jschar *s, const jschar **ep, jsdouble *dp)
 	estr = istr + 8;
     } else {
 	errno = 0;
-	d = PR_strtod(cstr, &estr);
+	d = JS_strtod(cstr, &estr);
 	if (errno == ERANGE)
 	    if (d == HUGE_VAL)
 		d = *cx->runtime->jsPositiveInfinity;
@@ -758,7 +758,7 @@ js_strtointeger(JSContext *cx, const jschar *s, const jschar **ep, jsint base, j
 	if (base == 10) {
 	    /* If we're accumulating a decimal number and the number is >= 2^53, then
 	     * the result from the repeated multiply-add above may be inaccurate.  Call
-	     * PR_strtod to get the correct answer.
+	     * JS_strtod to get the correct answer.
 	     */
 	    size_t i;
 	    size_t length = s1 - start;
@@ -772,7 +772,7 @@ js_strtointeger(JSContext *cx, const jschar *s, const jschar **ep, jsint base, j
 	    cstr[length] = 0;
 
 	    errno = 0;
-	    value = PR_strtod(cstr, &estr);
+	    value = JS_strtod(cstr, &estr);
 	    if (errno == ERANGE && value == HUGE_VAL)
 		value = *cx->runtime->jsPositiveInfinity;
 	    free(cstr);

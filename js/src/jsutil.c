@@ -28,7 +28,7 @@
 #    include <windows.h>
 #endif
 
-IMPLEMENT(void) JS_Assert(const char *s, const char *file, JSIntn ln)
+JS_EXPORT_API(void) JS_Assert(const char *s, const char *file, JSIntn ln)
 {
 #if defined(XP_UNIX) || defined(XP_OS2)
     fprintf(stderr, "Assertion failure: %s, at %s:%d\n", s, file, ln);

@@ -5,16 +5,16 @@
 #ifndef jsaddr_h___
 #define jsaddr_h___
 
-EXTERN(JSPropertyOp)
+JS_EXTERN_API(JSPropertyOp)
 js_GetArgumentAddress();
 
-EXTERN(JSPropertyOp)
+JS_EXTERN_API(JSPropertyOp)
 js_SetArgumentAddress();
 
-EXTERN(JSPropertyOp)
+JS_EXTERN_API(JSPropertyOp)
 js_GetLocalVariableAddress();
 
-EXTERN(JSPropertyOp)
+JS_EXTERN_API(JSPropertyOp)
 js_SetLocalVariableAddress();
 
 #endif /* jsaddr_h___ */

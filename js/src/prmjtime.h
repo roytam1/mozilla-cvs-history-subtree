@@ -53,19 +53,19 @@ struct PRMJTime {
 #define PRMJ_USEC_PER_MSEC	1000L
 
 /* Return the current local time in micro-seconds */
-extern IMPLEMENT(JSInt64)
+extern JSInt64
 PRMJ_Now(void);
 
 /* get the difference between this time zone and  gmt timezone in seconds */
-extern IMPLEMENT(time_t)
+extern time_t
 PRMJ_LocalGMTDifference(void);
 
 /* Format a time value into a buffer. Same semantics as strftime() */
-extern IMPLEMENT(size_t)
+extern size_t
 PRMJ_FormatTime(char *buf, int buflen, char *fmt, PRMJTime *tm);
 
 /* Get the DST offset for the local time passed in */
-extern IMPLEMENT(JSInt64)
+extern JSInt64
 PRMJ_DSTOffset(JSInt64 time);
 
 JS_END_EXTERN_C

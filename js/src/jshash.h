@@ -83,47 +83,47 @@ struct JSHashTable {
  * Create a new hash table.
  * If allocOps is null, use default allocator ops built on top of malloc().
  */
-EXTERN(JSHashTable *)
+JS_EXTERN_API(JSHashTable *)
 JS_NewHashTable(uint32 n, JSHashFunction keyHash,
                 JSHashComparator keyCompare, JSHashComparator valueCompare,
                 JSHashAllocOps *allocOps, void *allocPriv);
 
-EXTERN(void)
+JS_EXTERN_API(void)
 JS_HashTableDestroy(JSHashTable *ht);
 
 /* Low level access methods */
-EXTERN(JSHashEntry **)
+JS_EXTERN_API(JSHashEntry **)
 JS_HashTableRawLookup(JSHashTable *ht, JSHashNumber keyHash, const void *key);
 
-EXTERN(JSHashEntry *)
+JS_EXTERN_API(JSHashEntry *)
 JS_HashTableRawAdd(JSHashTable *ht, JSHashEntry **hep, JSHashNumber keyHash,
                    const void *key, void *value);
 
-EXTERN(void)
+JS_EXTERN_API(void)
 JS_HashTableRawRemove(JSHashTable *ht, JSHashEntry **hep, JSHashEntry *he);
 
 /* Higher level access methods */
-EXTERN(JSHashEntry *)
+JS_EXTERN_API(JSHashEntry *)
 JS_HashTableAdd(JSHashTable *ht, const void *key, void *value);
 
-EXTERN(JSBool)
+JS_EXTERN_API(JSBool)
 JS_HashTableRemove(JSHashTable *ht, const void *key);
 
-EXTERN(intN)
+JS_EXTERN_API(intN)
 JS_HashTableEnumerateEntries(JSHashTable *ht, JSHashEnumerator f, void *arg);
 
-EXTERN(void *)
+JS_EXTERN_API(void *)
 JS_HashTableLookup(JSHashTable *ht, const void *key);
 
-EXTERN(intN)
+JS_EXTERN_API(intN)
 JS_HashTableDump(JSHashTable *ht, JSHashEnumerator dump, FILE *fp);
 
 /* General-purpose C string hash function. */
-EXTERN(JSHashNumber)
+JS_EXTERN_API(JSHashNumber)
 JS_HashString(const void *key);
 
 /* Stub function just returns v1 == v2 */
-IMPLEMENT(intN)
+JS_EXTERN_API(intN)
 JS_CompareValues(const void *v1, const void *v2);
 
 JS_END_EXTERN_C

@@ -36,90 +36,117 @@
 #include <stddef.h>
 
 /***********************************************************************
-** MACROS:      EXTERN
-**              IMPLEMENT
+** MACROS:      JS_EXTERN_API
+**              JS_EXPORT_API
 ** DESCRIPTION:
 **      These are only for externally visible routines and globals.  For
 **      internal routines, just use "extern" for type checking and that
 **      will not export internal cross-file or forward-declared symbols.
 **      Define a macro for declaring procedures return types. We use this to
 **      deal with windoze specific type hackery for DLL definitions. Use
-**      EXTERN when the prototype for the method is declared. Use
-**      IMPLEMENT for the implementation of the method.
+**      JS_EXTERN_API when the prototype for the method is declared. Use
+**      JS_EXPORT_API for the implementation of the method.
 **
 ** Example:
 **   in dowhim.h
-**     EXTERN( void ) DoWhatIMean( void );
+**     JS_EXTERN_API( void ) DoWhatIMean( void );
 **   in dowhim.c
-**     IMPLEMENT( void ) DoWhatIMean( void ) { return; }
+**     JS_EXPORT_API( void ) DoWhatIMean( void ) { return; }
 **
 **
 ***********************************************************************/
 #ifdef WIN32
-#define EXTERN(__type) extern _declspec(dllexport) __type
-#define IMPLEMENT(__type) _declspec(dllexport) __type
-#define EXTERN_DATA(__type) extern _declspec(dllexport) __type
-#define IMPLEMENT_DATA(__type) _declspec(dllexport) __type
+#define JS_EXTERN_API(__type) extern _declspec(dllexport) __type
+#define JS_EXPORT_API(__type) _declspec(dllexport) __type
+#define JS_EXTERN_DATA(__type) extern _declspec(dllexport) __type
+#define JS_EXPORT_DATA(__type) _declspec(dllexport) __type
 
-#define DLL_CALLBACK
-#define CALLBACK_DECL
-#define STATIC_DLL_CALLBACK(__x) static __x
+#define JS_DLL_CALLBACK
+#define JS_STATIC_DLL_CALLBACK(__x) static __x
 
 #elif defined(WIN16)
 
-#define CALLBACK_DECL        __cdecl
-
 #ifdef _WINDLL
-#define EXTERN(__type) extern __type _cdecl _export _loadds
-#define IMPLEMENT(__type) __type _cdecl _export _loadds
-#define EXTERN_DATA(__type) extern __type _export
-#define IMPLEMENT_DATA(__type) __type _export
+#define JS_EXTERN_API(__type) extern __type _cdecl _export _loadds
+#define JS_EXPORT_API(__type) __type _cdecl _export _loadds
+#define JS_EXTERN_DATA(__type) extern __type _export
+#define JS_EXPORT_DATA(__type) __type _export
 
-#define DLL_CALLBACK             __cdecl __loadds
-#define STATIC_DLL_CALLBACK(__x) static __x CALLBACK
+#define JS_DLL_CALLBACK             __cdecl __loadds
+#define JS_STATIC_DLL_CALLBACK(__x) static __x CALLBACK
 
 #else /* this must be .EXE */
-#define EXTERN(__type) extern __type _cdecl _export
-#define IMPLEMENT(__type) __type _cdecl _export
-#define EXTERN_DATA(__type) extern __type _export
-#define IMPLEMENT_DATA(__type) __type _export
+#define JS_EXTERN_API(__type) extern __type _cdecl _export
+#define JS_EXPORT_API(__type) __type _cdecl _export
+#define JS_EXTERN_DATA(__type) extern __type _export
+#define JS_EXPORT_DATA(__type) __type _export
 
-#define DLL_CALLBACK             __cdecl __loadds
-#define STATIC_DLL_CALLBACK(__x) __x DLL_CALLBACK
+#define JS_DLL_CALLBACK             __cdecl __loadds
+#define JS_STATIC_DLL_CALLBACK(__x) __x JS_DLL_CALLBACK
 #endif /* _WINDLL */
 
 #elif defined(XP_MAC)
-#define EXTERN(__type) extern __declspec(export) __type
-#define IMPLEMENT(__type) __declspec(export) __type
-#define EXTERN_DATA(__type) extern __declspec(export) __type
-#define IMPLEMENT_DATA(__type) __declspec(export) __type
+#define JS_EXTERN_API(__type) extern __declspec(export) __type
+#define JS_EXPORT_API(__type) __declspec(export) __type
+#define JS_EXTERN_DATA(__type) extern __declspec(export) __type
+#define JS_EXPORT_DATA(__type) __declspec(export) __type
 
-#define DLL_CALLBACK
-#define CALLBACK_DECL
-#define STATIC_DLL_CALLBACK(__x) static __x
+#define JS_DLL_CALLBACK
+#define JS_STATIC_DLL_CALLBACK(__x) static __x
 
 #elif defined(XP_OS2) 
-#define EXTERN(__type) extern __type
-#define IMPLEMENT(__type) __type
-#define EXTERN_DATA(__type) extern __type
-#define IMPLEMENT_DATA(__type) __type
-#define DLL_CALLBACK
-#define CALLBACK_DECL
-#define STATIC_DLL_CALLBACK(__x) __x _Optlink
+#define JS_EXTERN_API(__type) extern __type
+#define JS_EXPORT_API(__type) __type
+#define JS_EXTERN_DATA(__type) extern __type
+#define JS_EXPORT_DATA(__type) __type
+#define JS_DLL_CALLBACK
+#define JS_STATIC_DLL_CALLBACK(__x) __x _Optlink
 
 #else /* Unix */
-#define EXTERN(__type) extern __type
-#define IMPLEMENT(__type) __type
-#define EXTERN_DATA(__type) extern __type
-#define IMPLEMENT_DATA(__type) __type
-#define DLL_CALLBACK
-#define CALLBACK_DECL
-#define STATIC_DLL_CALLBACK(__x) static __x
+#define JS_EXTERN_API(__type) extern __type
+#define JS_EXPORT_API(__type) __type
+#define JS_EXTERN_DATA(__type) extern __type
+#define JS_EXPORT_DATA(__type) __type
+#define JS_DLL_CALLBACK
+#define JS_STATIC_DLL_CALLBACK(__x) static __x
 
 #endif
 
-#ifndef NO_NSPR_10_SUPPORT
-#define PUBLIC_API		IMPLEMENT
+#ifdef _WIN32
+#    define JS_IMPORT_API(__x)      _declspec(dllimport) __x
+#else
+#    define JS_IMPORT_API(__x)      JS_EXPORT_API (__x)
+#endif
+
+#ifdef _WIN32
+#    define JS_IMPORT_DATA(__x)      _declspec(dllimport) __x
+#else
+#    define JS_IMPORT_DATA(__x)      __x
+#endif
+
+/*
+ * The linkage of JS API functions differs depending on whether the file is
+ * used within the JS library or not.  Any source file within the JS
+ * interpreter should define EXPORT_JS_API whereas any client of the library
+ * should not.
+ */
+#ifdef EXPORT_JS_API
+#define JS_PUBLIC_API(t)    JS_EXPORT_API(t)
+#define JS_PUBLIC_DATA(t)   JS_EXPORT_DATA(t)
+#else
+#define JS_PUBLIC_API(t)    JS_IMPORT_API(t)
+#define JS_PUBLIC_DATA(t)   JS_IMPORT_DATA(t)
+#endif
+
+#define JS_FRIEND_API(t)    JS_EXPORT_API(t)
+#define JS_FRIEND_DATA(t)   JS_EXPORT_DATA(t)
+
+#ifdef _WIN32
+#   define JS_INLINE __inline
+#elif defined(__GNUC__)
+#   define JS_INLINE inline
+#else
+#   define JS_INLINE
 #endif
 
 /***********************************************************************
@@ -324,53 +351,13 @@ typedef JSUint8 JSPackedBool;
 */
 typedef enum { JS_FAILURE = -1, JS_SUCCESS = 0 } JSStatus;
 
-#ifdef NO_NSPR_10_SUPPORT
-#else
-/********* ???????????????? FIX ME       ??????????????????????????? *****/
-/********************** Some old definitions until pr=>ds transition is done ***/
-/********************** Also, we are still using NSPR 1.0. GC ******************/
-/*
-** Fundamental NSPR macros, used nearly everywhere.
-*/
-
-/*
-** Macro body brackets so that macros with compound statement definitions
-** behave syntactically more like functions when called.
-*/
-#define NSPR_BEGIN_MACRO        do {
-#define NSPR_END_MACRO          } while (0)
-
-/*
-** Macro shorthands for conditional C++ extern block delimiters.
-*/
-#ifdef NSPR_BEGIN_EXTERN_C
-#undef NSPR_BEGIN_EXTERN_C
-#endif
-#ifdef NSPR_END_EXTERN_C
-#undef NSPR_END_EXTERN_C
-#endif
-
-#ifdef __cplusplus
-#define NSPR_BEGIN_EXTERN_C     extern "C" {
-#define NSPR_END_EXTERN_C       }
-#else
-#define NSPR_BEGIN_EXTERN_C
-#define NSPR_END_EXTERN_C
-#endif
-
 /*
 ** A JSWord is an integer that is the same size as a void*
 */
 typedef long JSWord;
 typedef unsigned long JSUword;
 
-/********* ????????????? End Fix me ?????????????????????????????? *****/
-#endif /* NO_NSPR_10_SUPPORT */
-
 #include "jsotypes.h"
-#ifndef NSPR20
-#define NSPR20 1
-#endif
 
 JS_END_EXTERN_C
 

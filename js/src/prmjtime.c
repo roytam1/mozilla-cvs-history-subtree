@@ -131,7 +131,7 @@ static void PRMJ_basetime(JSInt64 tsecs, PRMJTime *prtm);
 /*
  * get the difference in seconds between this time zone and UTC (GMT)
  */
-IMPLEMENT(time_t)
+time_t
 PRMJ_LocalGMTDifference()
 {
 #if defined(XP_UNIX) || defined(XP_PC)
@@ -241,7 +241,7 @@ PRMJ_ToExtendedTime(JSInt32 time)
     return exttime;
 }
 
-IMPLEMENT(JSInt64)
+JSInt64
 PRMJ_Now(void)
 {
 #ifdef XP_PC
@@ -302,7 +302,7 @@ PRMJ_Now(void)
 }
 
 /* Get the DST timezone offset for the time passed in */
-IMPLEMENT(JSInt64)
+JSInt64
 PRMJ_DSTOffset(JSInt64 time)
 {
     JSInt64 us2s;
@@ -376,7 +376,7 @@ PRMJ_DSTOffset(JSInt64 time)
 }
 
 /* Format a time value into a buffer. Same semantics as strftime() */
-IMPLEMENT(size_t)
+size_t
 PRMJ_FormatTime(char *buf, int buflen, char *fmt, PRMJTime *prtm)
 {
 #if defined(XP_UNIX) || defined(XP_PC) || defined(XP_MAC)

@@ -438,7 +438,7 @@ deallocateFatlock(JSFatLock *m)
   js_UnlockGlobal();
 }
 
-JS_PUBLIC_API(int)
+int
 js_SetupLocks(int l)
 {
   if (l > 10000)       /* l equals number of initially allocated fat locks */
@@ -462,7 +462,7 @@ js_SetupLocks(int l)
   return 1;
 }
 
-JS_PUBLIC_API(void)
+void
 js_CleanupLocks()
 {
   if (_global_lock != NULL) {

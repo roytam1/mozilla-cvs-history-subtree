@@ -58,7 +58,7 @@ JS_BEGIN_EXTERN_C
 
 #ifdef DEBUG
 
-EXTERN(void) JS_Assert(const char *s, const char *file, JSIntn ln);
+JS_EXTERN_API(void) JS_Assert(const char *s, const char *file, JSIntn ln);
 #define JS_ASSERT(_expr) \
     ((_expr)?((void)0):JS_Assert(# _expr,__FILE__,__LINE__))
 
@@ -77,7 +77,7 @@ EXTERN(void) JS_Assert(const char *s, const char *file, JSIntn ln);
 ** call to the debugger or other moral equivalent as well as causing the
 ** entire process to stop.
 */
-EXTERN(void) JS_Abort(void);
+JS_EXTERN_API(void) JS_Abort(void);
 
 JS_END_EXTERN_C
 

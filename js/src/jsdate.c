@@ -1558,7 +1558,7 @@ date_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     if (!date)
 	return JS_FALSE;
 
-    PR_cnvtf(buf, sizeof buf, 20, *date);
+    JS_cnvtf(buf, sizeof buf, 20, *date);
     bytes = JS_smprintf("(new %s(%s))", date_class.name, buf);
     if (!bytes) {
 	JS_ReportOutOfMemory(cx);

@@ -1559,7 +1559,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 		    todo = Sprint(&ss->sprinter, "%ld", ival);
 		} else if (JSVAL_IS_DOUBLE(key)) {
 		    char buf[32];
-		    PR_cnvtf(buf, sizeof buf, 20, *JSVAL_TO_DOUBLE(key));
+		    JS_cnvtf(buf, sizeof buf, 20, *JSVAL_TO_DOUBLE(key));
 		    todo = Sprint(&ss->sprinter, buf);
 		} else if (JSVAL_IS_STRING(key)) {
 		    rval = QuoteString(&ss->sprinter, ATOM_TO_STRING(atom),

@@ -21,7 +21,7 @@
 /*
 ** Compute the log of the least power of 2 greater than or equal to n
 */
-IMPLEMENT(JSIntn) JS_CeilingLog2(JSUint32 n)
+JS_EXPORT_API(JSIntn) JS_CeilingLog2(JSUint32 n)
 {
     JSIntn log2 = 0;
 
@@ -44,7 +44,7 @@ IMPLEMENT(JSIntn) JS_CeilingLog2(JSUint32 n)
 ** Compute the log of the greatest power of 2 less than or equal to n.
 ** This really just finds the highest set bit in the word.
 */
-IMPLEMENT(JSIntn) JS_FloorLog2(JSUint32 n)
+JS_EXPORT_API(JSIntn) JS_FloorLog2(JSUint32 n)
 {
     JSIntn log2 = 0;
 

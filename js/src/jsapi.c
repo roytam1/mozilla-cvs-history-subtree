@@ -809,7 +809,7 @@ typedef struct NamedRootDumpArgs {
     void *data;
 } NamedRootDumpArgs;
 
-STATIC_DLL_CALLBACK(intN)
+JS_STATIC_DLL_CALLBACK(intN)
 js_named_root_dumper(JSHashEntry *he, intN i, void *arg)
 {
     NamedRootDumpArgs *args = arg;
@@ -2524,7 +2524,7 @@ JS_ReportErrorNumber(JSContext *cx, JSErrorCallback errorCallback,
     va_end(ap);
 }
 
-IMPLEMENT(void)
+JS_PUBLIC_API(void)
 JS_ReportWarning(JSContext *cx, const char *format, ...)
 {
     va_list ap;

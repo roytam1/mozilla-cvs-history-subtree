@@ -28,7 +28,7 @@
 JS_BEGIN_EXTERN_C
 
 /*
- * PR_strtod() returns as a double-precision floating-point number
+ * JS_strtod() returns as a double-precision floating-point number
  * the  value represented by the character string pointed to by
  * s00.  The string is scanned up to  the  first  unrecognized
  * character.
@@ -37,17 +37,17 @@ JS_BEGIN_EXTERN_C
  * to by se.  If no number can be  formed, se is set to s00r, and
  * zero is returned.
  */
-extern PUBLIC_API(double)
-PR_strtod(const char *s00, char **se);
+JS_FRIEND_API(double)
+JS_strtod(const char *s00, char **se);
 
 /*
- * PR_cnvtf()
+ * JS_cnvtf()
  * conversion routines for floating point
  * prcsn - number of digits of precision to generate floating
  * point value.
  */
-extern PUBLIC_API(void)
-PR_cnvtf(char *buf, intN bufsz, intN prcsn, double dval);
+JS_FRIEND_API(void)
+JS_cnvtf(char *buf, intN bufsz, intN prcsn, double dval);
 
 JS_END_EXTERN_C
 

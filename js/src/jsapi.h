@@ -269,10 +269,10 @@ JS_NewContext(JSRuntime *rt, size_t stacksize);
 extern JS_PUBLIC_API(void)
 JS_DestroyContext(JSContext *cx);
 
-EXTERN(void*)
+JS_EXTERN_API(void*)
 JS_GetContextPrivate(JSContext *cx);
 
-EXTERN(void)
+JS_EXTERN_API(void)
 JS_SetContextPrivate(JSContext *cx, void *data);
 
 extern JS_PUBLIC_API(JSRuntime *)
@@ -500,7 +500,7 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
 extern JS_PUBLIC_API(JSClass *)
 JS_GetClass(JSContext *cx, JSObject *obj);
 #else
-JS_PUBLIC_API(JSClass *)
+extern JS_PUBLIC_API(JSClass *)
 JS_GetClass(JSObject *obj);
 #endif
 
@@ -937,7 +937,7 @@ JS_ReportErrorNumber(JSContext *cx, JSErrorCallback errorCallback,
 /*
  * As above, but report a warning instead (JSREPORT_IS_WARNING(report->flags)).
  */
-EXTERN(void)
+extern JS_PUBLIC_API(void)
 JS_ReportWarning(JSContext *cx, const char *format, ...);
 
 /*

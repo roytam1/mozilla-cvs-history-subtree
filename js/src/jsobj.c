@@ -104,7 +104,7 @@ JSClass js_ObjectClass = {
 static JSBool
 obj_getSlot(JSContext *cx, JSObject *obj, jsval id, jsval *vp);
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 obj_setSlot(JSContext *cx, JSObject *obj, jsval id, jsval *vp);
 
 static JSBool
@@ -139,7 +139,7 @@ obj_getSlot(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
     return JS_TRUE;
 }
 
-STATIC_DLL_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 obj_setSlot(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
     JSObject *obj2;
@@ -191,7 +191,7 @@ error:
 
 #endif /* !JS_HAS_OBJ_PROTO_PROP */
 
-STATIC_DLL_CALLBACK(JSHashNumber)
+JS_STATIC_DLL_CALLBACK(JSHashNumber)
 js_hash_object(const void *key)
 {
     return (JSHashNumber)key >> JSVAL_TAGBITS;

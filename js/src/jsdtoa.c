@@ -100,7 +100,7 @@
  * #define VAX for VAX-style floating-point arithmetic.
  * #define Unsigned_Shifts if >> does treats its left operand as unsigned.
  * #define No_leftright to omit left-right logic in fast floating-point
- *	computation of PR_dtoa.
+ *	computation of JS_dtoa.
  * #define Check_FLT_ROUNDS if FLT_ROUNDS can assume the values 2 or 3.
  * #define RND_PRODQUOT to use rnd_prod and rnd_quot (assembly routines
  *	that use extended-precision instructions to compute rounded
@@ -1199,8 +1199,8 @@ static void InitDtoa(void)
 
 /* nspr2 watcom bug ifdef omitted */
 
-PUBLIC_API(double)
-PR_strtod(CONST char *s00, char **se)
+JS_FRIEND_API(double)
+JS_strtod(CONST char *s00, char **se)
 {
 	int32 bb2, bb5, bbe, bd2, bd5, bbbits, bs2, c, dsign,
 		e, e1, esign, i, j, k, nd, nd0, nf, nz, nz0, sign;
@@ -1874,7 +1874,7 @@ quorem(Bigint *b, Bigint *S)
  */
 
 static JSBool
-PR_dtoa(double d, int mode, int ndigits,
+JS_dtoa(double d, int mode, int ndigits,
 	int *decpt, int *sign, char **rve, char *buf, size_t bufsize)
 {
 	/*	Arguments ndigits, decpt, sign are similar to those
@@ -2520,8 +2520,8 @@ ret1:
 ** Also, the ECMA spec says that there should always be a
 **   '+' or '-' after the 'e' in scientific notation
 */
-PUBLIC_API(void)
-PR_cnvtf(char *buf,int bufsz, int prcsn,double fval)
+JS_FRIEND_API(void)
+JS_cnvtf(char *buf,int bufsz, int prcsn,double fval)
 {
     intN decpt,sign,numdigits;
     char *num, *nump;
@@ -2535,7 +2535,7 @@ PR_cnvtf(char *buf,int bufsz, int prcsn,double fval)
 		return;
 	}
 	/* XXX Why use mode 1? */
-	if (PR_dtoa(fval,1,prcsn,&decpt,&sign,&endnum,num,bufsz)
+	if (JS_dtoa(fval,1,prcsn,&decpt,&sign,&endnum,num,bufsz)
 			== JS_FALSE) {
 		buf[0] = '\0';
 		goto done;

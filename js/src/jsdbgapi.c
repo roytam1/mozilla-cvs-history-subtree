@@ -270,7 +270,7 @@ js_FindWatchPoint(JSRuntime *rt, JSObject *obj, jsval userid)
     return wp->sprop;
 }
 
-JSBool DLL_CALLBACK
+JSBool JS_DLL_CALLBACK
 js_watch_set(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
     JSRuntime *rt;

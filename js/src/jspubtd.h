@@ -25,61 +25,6 @@
 #define NETSCAPE_INTERNAL 1
 #include "jscompat.h"
 
-#ifndef JS_INLINE
-#  ifdef _WIN32
-#       define JS_INLINE __inline
-#  elif defined(__GNUC__)
-#       define JS_INLINE inline
-#  else
-#       define JS_INLINE
-#  endif
-#endif /* JS_INLINE */
-
-/*
- * Downrev NSPR versions of jstypes.h do not define these linkage-related
- * PR_* macros, so we define them if necessary.  Eventually, we should be
- * able to remove these local definitions (move them to js/ref/jstypes.h,
- * and get them from an uprev NSPR's jstypes.h for js/src).
- */
-#ifndef IMPORT_API
-#    ifdef _WIN32
-#        define IMPORT_API(__x)      _declspec(dllimport) __x
-#    else
-#        define IMPORT_API(__x)      IMPLEMENT(__x)
-#    endif
-#endif /* IMPORT_API */
-#ifndef IMPORT_DATA
-#    ifdef _WIN32
-#        define IMPORT_DATA(__x)      _declspec(dllimport) __x
-#    else
-#        define IMPORT_DATA(__x)      __x
-#    endif
-#endif /* IMPORT_DATA */
-#ifndef PUBLIC_DATA
-#    ifdef _WIN32
-#        define PUBLIC_DATA(__x)      _declspec(dllexport) __x
-#    else
-#        define PUBLIC_DATA(__x)      __x
-#    endif
-#endif /* PUBLIC_DATA */
-
-/*
- * The linkage of JS API functions differs depending on whether the file is
- * used within the JS library or not.  Any source file within the JS
- * interpreter should define EXPORT_JS_API whereas any client of the library
- * should not.
- */
-#ifdef EXPORT_JS_API
-#define JS_PUBLIC_API(t)    IMPLEMENT(t)
-#define JS_PUBLIC_DATA(t)   PUBLIC_DATA(t)
-#else
-#define JS_PUBLIC_API(t)    IMPORT_API(t)
-#define JS_PUBLIC_DATA(t)   IMPORT_DATA(t)
-#endif
-
-#define JS_FRIEND_API(t)    JS_PUBLIC_API(t)
-#define JS_FRIEND_DATA(t)   JS_PUBLIC_DATA(t)
-
 /* Scalar typedefs. */
 typedef uint16    jschar;
 typedef int32     jsint;
