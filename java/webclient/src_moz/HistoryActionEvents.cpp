@@ -32,6 +32,7 @@
  */
 
 #include "HistoryActionEvents.h"
+#include "ns_util.h"
 
 /*
  * wsCanBackEvent
@@ -174,9 +175,10 @@ wsGoToEvent::handleEvent ()
  * wsGetHistoryLengthEvent
  */
 
-wsGetHistoryLengthEvent::wsGetHistoryLengthEvent(nsISHistory * sHistory) :
+wsGetHistoryLengthEvent::wsGetHistoryLengthEvent(WebShellInitContext 
+                                                 *yourInitContext) :
      nsActionEvent(),
-     mHistory(sHistory)
+     mInitContext(yourInitContext)
 {
 }
 
@@ -185,10 +187,17 @@ void *
 wsGetHistoryLengthEvent::handleEvent ()
 {
     void *result = nsnull;
-    if (mHistory) {
+
+    if (mInitContext) {
+        nsISHistory* sHistory;
         PRInt32 historyLength = 0;
+        nsresult rv = mInitContext->webNavigation->
+            GetSessionHistory(&sHistory);
         
-        nsresult rv = mHistory->GetCount(&historyLength);
+        if ( NS_FAILED(rv)) {
+            return result;
+        }
+        rv = sHistory->GetCount(&historyLength);
         result = (void *) historyLength;
     }
     return result;
@@ -199,9 +208,9 @@ wsGetHistoryLengthEvent::handleEvent ()
  * wsGetHistoryIndexEvent
  */
 
-wsGetHistoryIndexEvent::wsGetHistoryIndexEvent(nsISHistory * sHistory) :
+wsGetHistoryIndexEvent::wsGetHistoryIndexEvent(WebShellInitContext *yourInitContext) :
         nsActionEvent(),
-	mHistory(sHistory)
+        mInitContext(yourInitContext)
 {
 }
 
@@ -210,10 +219,12 @@ void *
 wsGetHistoryIndexEvent::handleEvent ()
 {
     void *result = nsnull;
-    if (mHistory) {
+    if (mInitContext) {
         PRInt32 historyIndex = 0;
-
-        nsresult rv = mHistory->GetIndex(&historyIndex);
+        nsISHistory* sHistory;
+        nsresult rv = mInitContext->webNavigation->GetSessionHistory(&sHistory);
+        
+        rv = sHistory->GetIndex(&historyIndex);
         result = (void *) historyIndex;
     }
     return result;
@@ -226,10 +237,10 @@ wsGetHistoryIndexEvent::handleEvent ()
  * wsGetURLForIndexEvent
  */
 
-wsGetURLForIndexEvent::wsGetURLForIndexEvent(nsISHistory * sHistory, 
+wsGetURLForIndexEvent::wsGetURLForIndexEvent(WebShellInitContext *yourInitContext, 
                                              PRInt32 historyIndex) :
   nsActionEvent(),
-  mHistory(sHistory),
+  mInitContext(yourInitContext),
   mHistoryIndex(historyIndex)
 {
 }
@@ -239,28 +250,30 @@ void *
 wsGetURLForIndexEvent::handleEvent ()
 {
     void *result = nsnull;
-    if (mHistory) {
+    if (mInitContext) {
         nsresult rv;
+        nsISHistory* sHistory;
+        rv = mInitContext->webNavigation->GetSessionHistory(&sHistory);
         char *indexURL = nsnull;
-
-	nsISHEntry * Entry;
-        rv = mHistory->GetEntryAtIndex(mHistoryIndex, PR_FALSE, &Entry);
+        
+        nsISHEntry * Entry;
+        rv = sHistory->GetEntryAtIndex(mHistoryIndex, PR_FALSE, &Entry);
         if (NS_FAILED(rv)) {
             return result;
         }
-
-	nsIURI * URI;
-	rv = Entry->GetURI(&URI);
-
-	if (NS_FAILED(rv)) {
+        
+        nsIURI * URI;
+        rv = Entry->GetURI(&URI);
+        
+        if (NS_FAILED(rv)) {
             return result;
         }
-	
-	rv = URI->GetSpec(&indexURL);
-	if (NS_FAILED(rv)) {
+        
+        rv = URI->GetSpec(&indexURL);
+        if (NS_FAILED(rv)) {
             return result;
         }	
-
+        
         result = (void *) indexURL;
     }
     return result;

@@ -36,6 +36,7 @@
 #include "nsIWebNavigation.h"
 #include "nsISHistory.h"
 
+struct WebShellInitContext;
 
 class wsCanBackEvent : public nsActionEvent {
 public:
@@ -84,30 +85,30 @@ protected:
 
 class wsGetHistoryLengthEvent : public nsActionEvent {
 public:
-                       wsGetHistoryLengthEvent(nsISHistory * sHistory);
-        void    *      handleEvent     (void);
-
+    wsGetHistoryLengthEvent(WebShellInitContext *yourInitContext);
+    void    *      handleEvent     (void);
+    
 protected:
-    nsISHistory * mHistory;
+    WebShellInitContext *mInitContext;
 };
 
 class wsGetHistoryIndexEvent : public nsActionEvent {
 public:
-                       wsGetHistoryIndexEvent (nsISHistory * sHistory);
+                       wsGetHistoryIndexEvent (WebShellInitContext *yourInitContext);
         void    *      handleEvent     (void);
 protected:
-    nsISHistory * mHistory;
+    WebShellInitContext *mInitContext;
 };
 
 class wsGetURLForIndexEvent : public nsActionEvent {
 public:
-                 wsGetURLForIndexEvent(nsISHistory * sHistory, 
+                 wsGetURLForIndexEvent(WebShellInitContext *yourInitContext, 
                                        PRInt32 historyIndex);
         void    *       handleEvent    (void);
 
 protected:
-  nsISHistory * mHistory;
-  PRInt32         mHistoryIndex;
+    WebShellInitContext *mInitContext;
+    PRInt32         mHistoryIndex;
 };
 
 #endif /* HistoryActionEvents_h___ */
