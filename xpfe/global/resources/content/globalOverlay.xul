@@ -116,7 +116,7 @@
 				 </menupopup>
 			</menu>
 			-->
-			<menuitem value="&releaseCommCmd.label;" oncommand="window.content.location.href='http://www.mozilla.org/projects/seamonkey/release-notes/m10.html'"/>
+			<menuitem value="&releaseCommCmd.label;" oncommand="window.content.location.href='http://www.mozilla.org/projects/seamonkey/release-notes/m12.html'"/>
 			<menuitem value="&aboutCommCmd.label;" oncommand="window.content.location.href='about:'"/>
 		</menupopup>
 	</menu>
