@@ -770,7 +770,6 @@ sidebarheader {
   list-style-image: url("chrome://global/skin/icons/loading_16.gif");
 }	
 
-
 /* ::::: content area ::::: */
 
 #security-button {
@@ -1049,3 +1048,30 @@ toolbarbutton.chevron > .toolbarbutton-menu-dropmarker {
 	color: #505050;
 }
 
+tabpanels.plain {
+	background-color: #fff !important;
+}
+
+browsermessage {
+  background-color: #E6E6E6;
+  border: 1px solid #C8C8C8;
+  -moz-border-radius: 7px;
+  margin: 6px;
+  padding: 4px;
+  font: icon;
+  color: #505050;
+}
+
+.messageImage {
+  margin: 0px 6px 0px 2px;
+}
+
+.messageText {
+  margin: 0px 0px 0px 1px;
+}
+
+.messageButton {
+  font-weight: normal;
+  color: #000;
+  margin: 0px 4px 0px 8px;
+}
