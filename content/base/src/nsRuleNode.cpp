@@ -4441,8 +4441,7 @@ nsRuleNode::ComputeSVGResetData(nsStyleStruct* aStartStruct,
       aRuleDetail != eRuleFullReset &&
       aRuleDetail != eRulePartialReset &&
       aRuleDetail != eRuleNone)
-    parentSVGReset = NS_STATIC_CAST(const nsStyleSVGReset*,
-                                    parentContext->GetStyleData(eStyleStruct_SVGReset));
+    parentSVGReset = parentContext->GetStyleSVGReset();
 
   PRBool inherited = aInherited;
 

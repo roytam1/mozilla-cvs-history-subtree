@@ -833,7 +833,7 @@ void nsStyleContext::DumpRegressionData(nsIPresContext* aPresContext, FILE* out,
 
   // SVGReset
   IndentBy(out,aIndent);
-  const nsStyleSVGReset* svgReset = (const nsStyleSVGReset*)GetStyleData(eStyleStruct_SVGReset);
+  const nsStyleSVGReset* svgReset = GetStyleSVGReset();
   fprintf(out, "<svgreset data=\"%d\" />\n",
           (int)svgReset->mDominantBaseline);
 #endif
