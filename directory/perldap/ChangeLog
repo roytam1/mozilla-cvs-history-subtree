@@ -1,3 +1,7 @@
+1999-03-23  Leif Hedstrom  <leif@netscape.com>
+
+	* Changed versioning numbers for all .pm files.
+
 1999-03-22  Leif Hedstrom  <leif@netscape.com>
 
 	* Entry.pm: Removed all _self_obj_ stuff...
