@@ -273,7 +273,7 @@ FlattenMAPIMessageStructure(lpMapiMessage msg, DWORD *totalSize)
       return NULL;
     }
 
-    strArray[currentString++] = CheckNullString((char *)szNewFileName);
+    strArray[currentString++] = CheckNullString((char *)strdup(szNewFileName));
     strArray[currentString++] = CheckNullString(msg->lpFiles[i].lpszFileName);
 
     AddTempFile((LPSTR) szNewFileName);
