@@ -234,6 +234,8 @@ nsPluginManager::FetchURL(nsISupports* peer, nsURLInfo* urlInfo)
 {
     NPError rslt = NPERR_INVALID_PARAM;
     nsPluginInstancePeer* instPeer = NULL;
+    if (!nsVersionOK(urlInfo->version, nsURLInfo_Version))
+        return NS_ERROR_ILLEGAL_VALUE;
     if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK) {
         NPP npp = instPeer->GetNPP();
         if (urlInfo->postData || urlInfo->postHeaders) {

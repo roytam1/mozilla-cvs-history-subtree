@@ -323,6 +323,21 @@ enum nsPluginReason {
 };
 
 ////////////////////////////////////////////////////////////////////////////////
+// Version Numbers for Structs
+
+// These version number are for structures whose fields may evolve over time.
+// When fields are added to the end of the struct, the minor version will be
+// incremented. When the struct changes in an incompatible way the major version
+// will be incremented. 
+
+#define nsMajorVersion(v)       (((v) >> 16) & 0xffff)
+#define nsMinorVersion(v)       ((v) & 0xffff)
+
+#define nsVersionOK(suppliedV, requiredV)                   \
+    (nsMajorVersion(suppliedV) == nsMajorVersion(requiredV) \
+     && nsMinorVersion(suppliedV) >= nsMinorVersion(requiredV))
+
+////////////////////////////////////////////////////////////////////////////////
 // Classes
 ////////////////////////////////////////////////////////////////////////////////
 

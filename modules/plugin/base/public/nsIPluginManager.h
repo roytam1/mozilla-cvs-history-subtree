@@ -80,7 +80,8 @@ struct nsURLInfo {
 
 /**
  * nsURLInfo_Version is the current version number for the nsURLInfo 
- * struct specified above.
+ * struct specified above. The nsVersionOk macro will be used when comparing
+ * a supplied nsURLInfo struct against this version.
  */
 #define nsURLInfo_Version       0x00010000
 

@@ -38,10 +38,16 @@
 // to implement in order to implement a Java virtual machine plugin. 
 
 struct nsJVMInitArgs {
-    jint version;
+    PRUint32    version;
     const char* classpathAdditions;     // appended to the JVM's classpath
+    // other fields may be added here for version numbers beyond 0x00010000
 };
 
+/**
+ * nsJVMInitArgs_Version is the current version number for the nsJVMInitArgs
+ * struct specified above. The nsVersionOk macro should be used when comparing
+ * a supplied nsJVMInitArgs struct against this version.
+ */
 #define nsJVMInitArgs_Version   0x00010000 
 
 class nsIJVMPlugin : public nsIPlugin {
