@@ -90,6 +90,7 @@ int main(int argc, char **argv)
     PLOptStatus optstatus;
 
     PRUint32 flags = 0;
+    PRBool             useCommandLinePassword = PR_FALSE;
     Error ret;
     SECStatus rv;
     char * dbString = NULL;

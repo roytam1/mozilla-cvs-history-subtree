@@ -1,40 +1,43 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape security libraries.
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1994-2000
- * the Initial Developer. All Rights Reserved.
- *
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
+ * Portions created by Sun Microsystems, Inc. are Copyright (C) 2003
+ * Sun Microsystems, Inc. All Rights Reserved.
+ * 
  * Contributor(s):
- *   Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
+ *	Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
  *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
+ * Private Key Database code
  *
- * ***** END LICENSE BLOCK ***** */
-/* $Id$ */
+ * $Id$
+ */
 
 #include "lowkeyi.h"
 #include "seccomon.h"
@@ -1917,13 +1920,10 @@ seckey_decrypt_private_key(NSSLOWKEYEncryptedPrivateKeyInfo *epki,
 
     if(dest != NULL)
     {
-        SECItem newPrivateKey;
-        SECItem newAlgParms;
-
         SEC_PRINT("seckey_decrypt_private_key()", "PrivateKeyInfo", -1,
 		  dest);
 
-	rv = SEC_QuickDERDecodeItem(temparena, pki, 
+	rv = SEC_ASN1DecodeItem(temparena, pki, 
 	    nsslowkey_PrivateKeyInfoTemplate, dest);
 	if(rv == SECSuccess)
 	{
@@ -1932,37 +1932,29 @@ seckey_decrypt_private_key(NSSLOWKEYEncryptedPrivateKeyInfo *epki,
 	      case SEC_OID_PKCS1_RSA_ENCRYPTION:
 		pk->keyType = NSSLOWKEYRSAKey;
 		prepare_low_rsa_priv_key_for_asn1(pk);
-                if (SECSuccess != SECITEM_CopyItem(permarena, &newPrivateKey,
-                    &pki->privateKey) ) break;
-		rv = SEC_QuickDERDecodeItem(permarena, pk,
+		rv = SEC_ASN1DecodeItem(permarena, pk,
 					nsslowkey_RSAPrivateKeyTemplate,
-					&newPrivateKey);
+					&pki->privateKey);
 		break;
 	      case SEC_OID_ANSIX9_DSA_SIGNATURE:
 		pk->keyType = NSSLOWKEYDSAKey;
 		prepare_low_dsa_priv_key_for_asn1(pk);
-                if (SECSuccess != SECITEM_CopyItem(permarena, &newPrivateKey,
-                    &pki->privateKey) ) break;
-		rv = SEC_QuickDERDecodeItem(permarena, pk,
+		rv = SEC_ASN1DecodeItem(permarena, pk,
 					nsslowkey_DSAPrivateKeyTemplate,
-					&newPrivateKey);
+					&pki->privateKey);
 		if (rv != SECSuccess)
 		    goto loser;
 		prepare_low_pqg_params_for_asn1(&pk->u.dsa.params);
-                if (SECSuccess != SECITEM_CopyItem(permarena, &newAlgParms,
-                    &pki->algorithm.parameters) ) break;
-		rv = SEC_QuickDERDecodeItem(permarena, &pk->u.dsa.params,
+		rv = SEC_ASN1DecodeItem(permarena, &pk->u.dsa.params,
 					nsslowkey_PQGParamsTemplate,
-					&newAlgParms);
+					&pki->algorithm.parameters);
 		break;
 	      case SEC_OID_X942_DIFFIE_HELMAN_KEY:
 		pk->keyType = NSSLOWKEYDHKey;
 		prepare_low_dh_priv_key_for_asn1(pk);
-                if (SECSuccess != SECITEM_CopyItem(permarena, &newPrivateKey,
-                    &pki->privateKey) ) break;
-		rv = SEC_QuickDERDecodeItem(permarena, pk,
+		rv = SEC_ASN1DecodeItem(permarena, pk,
 					nsslowkey_DHPrivateKeyTemplate,
-					&newPrivateKey);
+					&pki->privateKey);
 		break;
 #ifdef NSS_ENABLE_ECC
 	      case SEC_OID_ANSIX962_EC_PUBLIC_KEY:
@@ -1972,11 +1964,9 @@ seckey_decrypt_private_key(NSSLOWKEYEncryptedPrivateKeyInfo *epki,
 		fordebug = &pki->privateKey;
 		SEC_PRINT("seckey_decrypt_private_key()", "PrivateKey", 
 			  pk->keyType, fordebug);
-                if (SECSuccess != SECITEM_CopyItem(permarena, &newPrivateKey,
-                    &pki->privateKey) ) break;
-		rv = SEC_QuickDERDecodeItem(permarena, pk,
+		rv = SEC_ASN1DecodeItem(permarena, pk,
 					nsslowkey_ECPrivateKeyTemplate,
-					&newPrivateKey);
+					&pki->privateKey);
 		if (rv != SECSuccess)
 		    goto loser;
 
@@ -2072,7 +2062,7 @@ seckey_decode_encrypted_private_key(NSSLOWKEYDBKey *dbkey, SECItem *pwitem)
 	goto loser;
     }
 
-    rv = SEC_QuickDERDecodeItem(temparena, epki,
+    rv = SEC_ASN1DecodeItem(temparena, epki,
 			    nsslowkey_EncryptedPrivateKeyInfoTemplate,
 			    &(dbkey->derPK)); 
     if(rv != SECSuccess) {
