@@ -9,6 +9,8 @@ package org.mozilla.webclient.test;
 import java.awt.*;
 import java.awt.event.*;
 
+import org.mozilla.webclient.Prompt;
+
 import java.util.Properties;
 
 public class PasswordDialog extends WorkDialog implements ActionListener, ItemListener{
@@ -53,8 +55,8 @@ public class PasswordDialog extends WorkDialog implements ActionListener, ItemLi
 	  else if(ae.getSource() == okButton) {
 	    wasCanceled = false;
 	    wasOk = true;
-	    props.setProperty("userName", userField.getText());
-	    props.setProperty("password", passField.getText());
+	    props.setProperty(Prompt.USER_NAME_KEY, userField.getText());
+	    props.setProperty(Prompt.PASSWORD_KEY, passField.getText());
 	    setUserField("");
 	    setPassField("");
 	    dispose(true);

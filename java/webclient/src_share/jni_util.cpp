@@ -63,6 +63,10 @@ jobject BUTTON_KEY;
 jobject CLICK_COUNT_KEY;
 jobject USER_NAME_KEY;
 jobject PASSWORD_KEY;
+jobject EDIT_FIELD_1_KEY;
+jobject EDIT_FIELD_2_KEY;
+jobject CHECKBOX_STATE_KEY;
+jobject BUTTON_PRESSED_KEY;
 jobject TRUE_VALUE;
 jobject FALSE_VALUE;
 jobject ONE_VALUE;
@@ -181,6 +185,30 @@ jboolean util_InitStringConstants(JNIEnv *env)
                    ::util_NewGlobalRef(env, (jobject)
                                        ::util_NewStringUTF(env, 
                                                            "password")))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (EDIT_FIELD_1_KEY = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, 
+                                                           "editfield1Value")))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (EDIT_FIELD_2_KEY = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, 
+                                                           "editfield12Value")))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (CHECKBOX_STATE_KEY = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, 
+                                                           "checkboxState")))) {
+        return JNI_FALSE;
+    }
+    if (nsnull == (BUTTON_PRESSED_KEY = 
+                   ::util_NewGlobalRef(env, (jobject)
+                                       ::util_NewStringUTF(env, 
+                                                           "buttonPressed")))) {
         return JNI_FALSE;
     }
     if (nsnull == (TRUE_VALUE = 
@@ -681,6 +709,93 @@ jobject util_GetFromPropertiesObject(JNIEnv *env, jobject propertiesObject,
     result = env->CallObjectMethod(propertiesObject, 
                                    gPropertiesGetPropertyMethodID, name);
 #endif
+    return result;
+}
+
+jboolean util_GetBoolFromPropertiesObject(JNIEnv *env, 
+                                          jobject propertiesObject,
+                                          jobject name, jobject reserved)
+{
+    jboolean result = JNI_FALSE;
+    jstring stringResult = nsnull;
+    
+    if (nsnull == (stringResult = (jstring) 
+                   util_GetFromPropertiesObject(env, propertiesObject, 
+                                                name, reserved))) {
+        return result;
+    }
+#ifdef BAL_INTERFACE
+        // PENDING(edburns): make it so there is a way to convert from
+        // string to boolean
+#else
+    jclass clazz;
+    jmethodID valueOfMethodID;
+    jmethodID booleanValueMethodID;
+    jobject boolInstance;
+    if (nsnull == (clazz = ::util_FindClass(env, "java/lang/Boolean"))) {
+        return result;
+    }
+    if (nsnull == (valueOfMethodID = 
+                   env->GetStaticMethodID(clazz,"valueOf",
+                                          "(Ljava/lang/String;)Ljava/lang/Boolean;"))) {
+        return result;
+    }
+    if (nsnull == (boolInstance = env->CallStaticObjectMethod(clazz, 
+                                                      valueOfMethodID, 
+                                                      stringResult))) {
+        return result;
+    }
+    // now call booleanValue
+    if (nsnull == (booleanValueMethodID = env->GetMethodID(clazz, 
+                                                           "booleanValue",
+                                                           "()Z"))) {
+        return result;
+    }
+    result = env->CallBooleanMethod(boolInstance, booleanValueMethodID);
+#endif        
+    
+    return result;
+}
+
+jint util_GetIntFromPropertiesObject(JNIEnv *env, jobject propertiesObject,
+                                     jobject name, jobject reserved)
+{
+    jint result = -1;
+    jstring stringResult = nsnull;
+
+    if (nsnull == (stringResult = (jstring) 
+                   util_GetFromPropertiesObject(env, propertiesObject, name,
+                                                reserved))) {
+        return result;
+    }
+#ifdef BAL_INTERFACE
+        // PENDING(edburns): make it so there is a way to convert from
+        // string to int
+#else
+    jclass clazz;
+    jmethodID valueOfMethodID, intValueMethodID;
+    jobject integer;
+    if (nsnull == (clazz = ::util_FindClass(env, "java/lang/Integer"))) {
+        return result;
+    }
+    if (nsnull == (valueOfMethodID = 
+                   env->GetStaticMethodID(clazz, "valueOf",
+                                          "(Ljava/lang/String;)Ljava/lang/Integer;"))) {
+        return result;
+    }
+    if (nsnull == (integer = env->CallStaticObjectMethod(clazz, 
+                                                         valueOfMethodID, 
+                                                         stringResult))) {
+        return result;
+    }
+    // now call intValue
+    if (nsnull == (intValueMethodID = env->GetMethodID(clazz, "intValue",
+                                                       "()I"))) {
+        return result;
+    }
+    result = env->CallIntMethod(integer, intValueMethodID);
+#endif        
+
     return result;
 }
 

@@ -38,7 +38,7 @@
 
 #include "dom_util.h"
 
-#include "nsActions.h"
+#include "PromptActionEvents.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
@@ -49,128 +49,7 @@ static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 #define WC_ITOA(intVal, buf, radix) itoa(intVal, buf, radix)
 #endif
 
-static jobject gAuthProperties = nsnull;
-
-class wsPromptEvent : public nsActionEvent {
-public:
-    wsPromptEvent (WebShellInitContext *yourInitContext,
-                   jobject yourPromptGlobalRef,
-                   const PRUnichar *dialogTitle, 
-                   const PRUnichar *text, 
-                   const PRUnichar *passwordRealm, 
-                   PRUint32 savePassword, 
-                   PRUnichar **outUser, 
-                   PRUnichar **outPwd, 
-                   PRBool *_retval);
-    void    *       handleEvent    (void);
-    
-protected:
-    WebShellInitContext *mInitContext;
-    jobject mPromptGlobalRef;
-    nsAutoString mDialogTitle;
-    nsAutoString mText;
-    nsAutoString mPasswordRealm;
-    PRUint32 mSavePassword;
-    PRUnichar **mOutUser;
-    PRUnichar **mOutPwd;
-    PRBool *mRetVal;
-};
-
-wsPromptEvent::wsPromptEvent(WebShellInitContext *yourInitContext,
-                             jobject yourPromptGlobalRef, 
-                             const PRUnichar *dialogTitle, 
-                             const PRUnichar *text, 
-                             const PRUnichar *passwordRealm, 
-                             PRUint32 savePassword, 
-                             PRUnichar **outUser, 
-                             PRUnichar **outPwd, 
-                             PRBool *_retval) :
-    mInitContext(yourInitContext), mPromptGlobalRef(yourPromptGlobalRef), 
-    mDialogTitle(dialogTitle), mText(text), 
-    mPasswordRealm(passwordRealm), mOutUser(outUser),
-    mOutPwd(outPwd), mRetVal(_retval)
-{
-    
-}
-
-void *wsPromptEvent::handleEvent()
-{
-    JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
-    jstring title = nsnull;
-    jstring text = nsnull;
-    jstring passwordRealm = nsnull;
-    jboolean result = JNI_FALSE;
-    jstring user = nsnull;
-    jstring password = nsnull;
-    const jchar *userJchar = nsnull;
-    const jchar *passwordJchar = nsnull;
-    jclass promptClass = nsnull;
-    jmethodID mid = nsnull;
-    nsAutoString autoUser;
-    nsAutoString autoPassword;
-    if (!gAuthProperties) {
-        return (void *) NS_ERROR_FAILURE;
-    }
-
-    // step one, convert to strings
-    if (mDialogTitle.GetUnicode()) {
-        title = ::util_NewString(env, 
-                                 (const jchar *) mDialogTitle.GetUnicode(),
-                                 mDialogTitle.Length());
-    }
-    if (mText.GetUnicode()) {
-        text = ::util_NewString(env, (const jchar *) mText.GetUnicode(),
-                                mText.Length());
-    }
-    if (mPasswordRealm.GetUnicode()) {
-        passwordRealm = ::util_NewString(env, 
-                                         (const jchar *) 
-                                         mPasswordRealm.GetUnicode(),
-                                         mPasswordRealm.Length());
-    }
-
-#ifdef BAL_INTERFACE
-#else
-    // step two, call the java method.
-    if (!(promptClass = env->GetObjectClass(mPromptGlobalRef))) {
-        return (void *) NS_ERROR_FAILURE;
-    }
-    if (!(mid = env->GetMethodID(promptClass, "promptUsernameAndPassword", 
-                                 "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/util/Properties;)Z"))) {
-        return (void *) NS_ERROR_FAILURE;
-    }
-    result = env->CallBooleanMethod(mPromptGlobalRef, mid, title, text, 
-                                    passwordRealm, (jint) mSavePassword, 
-                                    gAuthProperties);
-#endif
-    
-    // pull userName and password entries out of the properties table
-    
-    user = (jstring) ::util_GetFromPropertiesObject(env, gAuthProperties,
-                                                    USER_NAME_KEY, (jobject)
-                                                    &(mInitContext->shareContext));
-    userJchar = ::util_GetStringChars(env, user);
-    autoUser = (PRUnichar *) userJchar;
-    *mOutUser = autoUser.ToNewUnicode();
-    ::util_ReleaseStringChars(env, user, userJchar);
-    
-    password = (jstring) ::util_GetFromPropertiesObject(env, gAuthProperties,
-                                                        PASSWORD_KEY, (jobject)
-                                                        &(mInitContext->shareContext));
-    passwordJchar = ::util_GetStringChars(env, password);
-    autoPassword = (PRUnichar *) passwordJchar;
-    *mOutPwd = autoPassword.ToNewUnicode();
-    ::util_ReleaseStringChars(env, password, passwordJchar);
-    
-    *mRetVal = (result == JNI_TRUE) ? PR_TRUE : PR_FALSE;
-    
-    ::util_DeleteString(env, title);
-    ::util_DeleteString(env, text);
-    ::util_DeleteString(env, passwordRealm);
-    
-    return (void *) NS_OK;
-}
-
+jobject gPromptProperties = nsnull;
 
 
 CBrowserContainer::CBrowserContainer(nsIWebBrowser *pOwner, JNIEnv *env,
@@ -304,42 +183,59 @@ NS_IMETHODIMP CBrowserContainer::PromptUsernameAndPassword(const PRUnichar *dial
     }
 
     JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
+    wsPromptUsernameAndPasswordEvent *actionEvent = nsnull;
+    void *voidResult = nsnull;
+
+    wsStringStruct strings[3] = { 
+        {dialogTitle, nsnull},
+        {text, nsnull},
+        {passwordRealm, nsnull} };
+
+    rv = ::util_CreateJstringsFromUnichars(strings, 3);
+    if (NS_FAILED(rv)) {
+        ::util_ThrowExceptionToJava(env, "Exception: PromptUserNameAndPassword: can't create jstrings from Unichars");
+        goto PUAP_CLEANUP;
+    }
+
 
     // PENDING(edburns): uniformly apply checks for this throughout the
     // code
     PR_ASSERT(mInitContext);
     PR_ASSERT(mInitContext->initComplete); 
 
-    // try to initialize the properties object for basic auth
-    if (!gAuthProperties) {
-        gAuthProperties = 
+    // try to initialize the properties object for basic auth and cookies
+    if (!gPromptProperties) {
+        gPromptProperties = 
             ::util_CreatePropertiesObject(env, (jobject)
                                           &(mInitContext->shareContext));
-        if (!gAuthProperties) {
+        if (!gPromptProperties) {
             printf("Error: can't create properties object for authentitication");
-            return NS_OK;
+            rv = NS_ERROR_NULL_POINTER;
+            goto PUAP_CLEANUP;
         }
     }
     else {
-        ::util_ClearPropertiesObject(env, gAuthProperties, (jobject) 
+        ::util_ClearPropertiesObject(env, gPromptProperties, (jobject) 
                                      &(mInitContext->shareContext));
     }
     
-    wsPromptEvent *actionEvent = nsnull;
-    void *voidResult = nsnull;
-    if (!(actionEvent = new wsPromptEvent(mInitContext, mPrompt, 
-                                          dialogTitle, text, 
-                                          passwordRealm, savePassword,
+    if (!(actionEvent = new wsPromptUsernameAndPasswordEvent(mInitContext, mPrompt, 
+                                          strings, savePassword,
                                           user, pwd, _retval))) {
-        ::util_ThrowExceptionToJava(env, "Exception: PromptUserNameAndPassword: can't create wsPromptEvent");
-        return rv;
+        ::util_ThrowExceptionToJava(env, "Exception: PromptUserNameAndPassword: can't create wsPromptUsernameAndPasswordEvent");
+        rv = NS_ERROR_NULL_POINTER;
+        goto PUAP_CLEANUP;
     }
-    // the out params to this method are set in wsPromptEvent::handleEvent()
+    // the out params to this method are set in wsPromptUsernameAndPasswordEvent::handleEvent()
     voidResult = ::util_PostSynchronousEvent(mInitContext, 
                                              (PLEvent *) *actionEvent);
 
-    return (nsresult) voidResult;
+    rv = (nsresult) voidResult;
+ PUAP_CLEANUP:
 
+    ::util_DeleteJstringsFromUnichars(strings, 3);
+
+    return rv;
 }
 
 /* boolean promptPassword (in wstring text, in wstring title, out wstring pwd); */
@@ -359,10 +255,103 @@ NS_IMETHODIMP CBrowserContainer::Select(const PRUnichar *inDialogTitle, const PR
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* void universalDialog (in wstring inTitleMessage, in wstring inDialogTitle, in wstring inMsg, in wstring inCheckboxMsg, in wstring inButton0Text, in wstring inButton1Text, in wstring inButton2Text, in wstring inButton3Text, in wstring inEditfield1Msg, in wstring inEditfield2Msg, inout wstring inoutEditfield1Value, inout wstring inoutEditfield2Value, in wstring inIConURL, inout boolean inoutCheckboxState, in PRInt32 inNumberButtons, in PRInt32 inNumberEditfields, in PRInt32 inEditField1Password, out PRInt32 outButtonPressed); */
-NS_IMETHODIMP CBrowserContainer::UniversalDialog(const PRUnichar *inTitleMessage, const PRUnichar *inDialogTitle, const PRUnichar *inMsg, const PRUnichar *inCheckboxMsg, const PRUnichar *inButton0Text, const PRUnichar *inButton1Text, const PRUnichar *inButton2Text, const PRUnichar *inButton3Text, const PRUnichar *inEditfield1Msg, const PRUnichar *inEditfield2Msg, PRUnichar **inoutEditfield1Value, PRUnichar **inoutEditfield2Value, const PRUnichar *inIConURL, PRBool *inoutCheckboxState, PRInt32 inNumberButtons, PRInt32 inNumberEditfields, PRInt32 inEditField1Password, PRInt32 *outButtonPressed)
+NS_IMETHODIMP 
+CBrowserContainer::UniversalDialog(const PRUnichar *inTitleMessage, 
+                                   const PRUnichar *inDialogTitle, 
+                                   const PRUnichar *inMsg, 
+                                   const PRUnichar *inCheckboxMsg, 
+                                   const PRUnichar *inButton0Text, 
+                                   const PRUnichar *inButton1Text, 
+                                   const PRUnichar *inButton2Text, 
+                                   const PRUnichar *inButton3Text, 
+                                   const PRUnichar *inEditfield1Msg, 
+                                   const PRUnichar *inEditfield2Msg, 
+                                   PRUnichar **inoutEditfield1Value, 
+                                   PRUnichar **inoutEditfield2Value, 
+                                   const PRUnichar *inIConURL, 
+                                   PRBool *inoutCheckboxState, 
+                                   PRInt32 inNumberButtons, 
+                                   PRInt32 inNumberEditfields, 
+                                   PRInt32 inEditField1Password, 
+                                   PRInt32 *outButtonPressed)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    printf("debug: edburns: CBrowserContainer::UniversalDialog()\n");
+    nsresult rv = NS_ERROR_FAILURE;
+    
+    // if the user hasn't given us a prompt, oh well
+    if	 (!mPrompt) {
+        return NS_OK;
+    }
+    
+    JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
+    wsPromptUniversalDialogEvent *actionEvent = nsnull;
+    void *voidResult = nsnull;
+
+    wsStringStruct strings[10] = { 
+        {inTitleMessage, nsnull},
+        {inDialogTitle, nsnull},
+        {inMsg, nsnull},
+        {inCheckboxMsg, nsnull},
+        {inButton0Text, nsnull},
+        {inButton1Text, nsnull},
+        {inButton2Text, nsnull},
+        {inButton3Text, nsnull},
+        {inEditfield1Msg, nsnull},
+        {inEditfield2Msg, nsnull} };
+
+    rv = ::util_CreateJstringsFromUnichars(strings, 10);
+    if (NS_FAILED(rv)) {
+        ::util_ThrowExceptionToJava(env, "Exception: UniversalDialog: can't create jstrings from Unichars");
+        goto UD_CLEANUP;
+    }
+
+
+    // PENDING(edburns): uniformly apply checks for this throughout the
+    // code
+    PR_ASSERT(mInitContext);
+    PR_ASSERT(mInitContext->initComplete); 
+
+    // try to initialize the properties object for basic auth and cookies
+    if (!gPromptProperties) {
+        gPromptProperties = 
+            ::util_CreatePropertiesObject(env, (jobject)
+                                          &(mInitContext->shareContext));
+        if (!gPromptProperties) {
+            printf("Error: can't create properties object for authentitication");
+            rv = NS_ERROR_NULL_POINTER;
+            goto UD_CLEANUP;
+        }
+    }
+    else {
+        ::util_ClearPropertiesObject(env, gPromptProperties, (jobject) 
+                                     &(mInitContext->shareContext));
+    }
+    
+    if (!(actionEvent = new wsPromptUniversalDialogEvent(mInitContext, 
+                                                         mPrompt, 
+                                                         strings, 
+                                                         inoutEditfield1Value,
+                                                         inoutEditfield2Value,
+                                                         inoutCheckboxState,
+                                                         inNumberButtons, 
+                                                         inNumberEditfields, 
+                                                         inEditField1Password,
+                                                         outButtonPressed))) {
+        ::util_ThrowExceptionToJava(env, "Exception: UniversalDialog: can't create wsPromptUniversalDialogEvent");
+        rv = NS_ERROR_NULL_POINTER;
+        goto UD_CLEANUP;
+    }
+    // the out params to this method are set in wsPromptUsernameAndPasswordEvent::handleEvent()
+    voidResult = ::util_PostSynchronousEvent(mInitContext, 
+                                             (PLEvent *) *actionEvent);
+
+    rv = (nsresult) voidResult;
+ UD_CLEANUP:
+
+    ::util_DeleteJstringsFromUnichars(strings, 10);
+
+    return rv;
+
 }
 
 

@@ -52,8 +52,9 @@ public void stop();
 /**
 
  * Gives this Navigation instance the ability to call back the custom
- * app when a site with basic authentication is encountered.  The custom
- * app can choose to put up appropriate modal UI.
+ * app when a site with basic authentication, cookies, etc, is
+ * encountered.  The custom app can choose to put up appropriate modal
+ * UI.
 
  */
 

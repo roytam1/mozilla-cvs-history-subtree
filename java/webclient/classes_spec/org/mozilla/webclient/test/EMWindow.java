@@ -85,6 +85,7 @@ public class EMWindow extends Frame implements DialogClient, ActionListener, Doc
 	private Panel			buttonsPanel;
     private FindDialog           findDialog = null;
 private PasswordDialog           passDialog = null;
+private UniversalDialog           uniDialog = null;
     private MenuBar             menuBar;
     private Menu                historyMenu;
     private MenuItem backMenuItem;
@@ -533,7 +534,7 @@ public void actionPerformed (ActionEvent evt)
 
 
 public void dialogDismissed(Dialog d) {
-    if (d == passDialog) {
+    if (d == passDialog || d == uniDialog) {
         return;
     }
   if(findDialog.wasClosed()) {
@@ -802,6 +803,62 @@ public boolean promptUsernameAndPassword(String dialogTitle,
     
     return passDialog.wasOk();
 }
+
+public boolean universalDialog(String titleMessage,
+                               String dialogTitle,
+                               String text,
+                               String checkboxMsg,
+                               String button0Text,
+                               String button1Text,
+                               String button2Text,
+                               String button3Text,
+                               String editfield1Msg,
+                               String editfield2Msg,
+                               int numButtons,
+                               int numEditfields,
+                               boolean editfield1Password,
+                               Properties fillThis)
+{
+    System.out.println("titleMessage " + titleMessage);
+    System.out.println("dialogTitle " + dialogTitle);
+    System.out.println("text " + text);
+    System.out.println("checkboxMsg " + checkboxMsg);
+    System.out.println("button0Text " + button0Text);
+    System.out.println("button1Text " + button1Text);
+    System.out.println("button2Text " + button2Text);
+    System.out.println("button3Text " + button3Text);
+    System.out.println("editfield1Msg " + editfield1Msg);
+    System.out.println("editfield2Msg " + editfield2Msg);
+    System.out.println("numButtons " + numButtons);
+    System.out.println("numEditfields " + numEditfields);
+    System.out.println("editfield1Password " + editfield1Password);
+        
+    fillThis.put("editfield1Value", "edit1");
+    fillThis.put("editfield2Value", "edit2");
+    fillThis.put("checkboxState", "true");
+    if (null == fillThis) {
+        return false;
+    }
+    if (null == uniDialog) {
+        if (dialogTitle.equals("")) {
+            dialogTitle = "Universal Dialog";
+        }
+        uniDialog = new UniversalDialog(this, this, dialogTitle);
+        if (null == uniDialog) {
+            return false;
+        }
+        uniDialog.setParms(titleMessage, dialogTitle, text, checkboxMsg, 
+                           button0Text, button1Text, button2Text, 
+                           editfield1Msg, editfield2Msg, numButtons, 
+                           numEditfields, editfield1Password, fillThis);
+        uniDialog.setModal(true);
+    }
+    
+    uniDialog.setVisible(true);
+
+    return true;
+}
+
 
 class HistoryActionListener implements ActionListener
 {

@@ -67,6 +67,45 @@ void *util_PostSynchronousEvent(WebShellInitContext * initContext, PLEvent * eve
     return voidResult;
 } // PostSynchronousEvent()          
 
+nsresult util_CreateJstringsFromUnichars(wsStringStruct *strings, 
+                                         PRInt32 arrayLen)
+{
+    PR_ASSERT(strings);
+    int i = 0;
+    nsAutoString autoStr;
+    JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
+
+    for (i = 0; i < arrayLen; i++) {
+        autoStr = strings[i].uniStr;
+        strings[i].jStr = nsnull;
+        if (autoStr.GetUnicode()) {
+            strings[i].jStr = ::util_NewString(env, (const jchar *) 
+                                               autoStr.GetUnicode(),
+                                               autoStr.Length());
+            if (nsnull == strings[i].jStr) {
+                return NS_ERROR_NULL_POINTER;
+            }
+        }
+    }
+    return NS_OK;
+}
+
+nsresult util_DeleteJstringsFromUnichars(wsStringStruct *strings, 
+                                         PRInt32 arrayLen)
+{
+    PR_ASSERT(strings);
+    int i = 0;
+    JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
+    
+    for (i = 0; i < arrayLen; i++) {
+        if (nsnull != strings[i].jStr) {
+            ::util_DeleteString(env, strings[i].jStr);
+            strings[i].jStr = nsnull;
+        }
+    }
+    return NS_OK;
+}
+
 #ifdef XP_UNIX
 jint util_GetGTKWinPtrFromCanvas(JNIEnv *env, jobject browserControlCanvas)
 {

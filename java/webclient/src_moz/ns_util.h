@@ -151,6 +151,25 @@ void    util_PostEvent (WebShellInitContext * initContext, PLEvent * event);
 
 void *  util_PostSynchronousEvent (WebShellInitContext * initContext, PLEvent * event);
 
+typedef struct _wsStringStruct {
+    const PRUnichar *uniStr;
+    jstring jStr;
+} wsStringStruct;
+
+/**
+
+ * @param strings wsStringStruct [].  A null terminated array of
+ * wsStringStruct instances.  On return, the jStr of each element is the
+ * new jstring.  Call util_DeleteJstringsFromUnichars to deallocate.
+
+ */
+
+nsresult util_CreateJstringsFromUnichars(wsStringStruct *strings, 
+                                         PRInt32 arrayLen);
+
+nsresult util_DeleteJstringsFromUnichars(wsStringStruct *strings, 
+                                         PRInt32 arrayLen);
+
 // hack functions to get around mozilla oddities
 #ifdef XP_UNIX
 jint util_GetGTKWinPtrFromCanvas(JNIEnv *env, jobject browserControlCanvas);

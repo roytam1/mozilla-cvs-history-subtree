@@ -78,6 +78,10 @@ extern jobject BUTTON_KEY;
 extern jobject CLICK_COUNT_KEY;
 extern jobject USER_NAME_KEY;
 extern jobject PASSWORD_KEY;
+extern jobject EDIT_FIELD_1_KEY;
+extern jobject EDIT_FIELD_2_KEY;
+extern jobject CHECKBOX_STATE_KEY;
+extern jobject BUTTON_PRESSED_KEY;
 extern jobject TRUE_VALUE;
 extern jobject FALSE_VALUE;
 extern jobject ONE_VALUE;
@@ -324,6 +328,25 @@ void util_StoreIntoPropertiesObject(JNIEnv *env, jobject propertiesObject,
 jobject util_GetFromPropertiesObject(JNIEnv *, jobject propertiesObject,
                                      jobject name, jobject reserved);
 
+/**
+   
+ * A JNI wrapper to get a boolean value for a name out of a PropertiesObject
+ * created by CreatePropertiesObject
+ 
+ */
+
+jboolean util_GetBoolFromPropertiesObject(JNIEnv *, jobject propertiesObject,
+                                          jobject name, jobject reserved);
+
+/**
+   
+ * A JNI wrapper to get an int value for a name out of a PropertiesObject
+ * created by CreatePropertiesObject
+ 
+ */
+
+jint util_GetIntFromPropertiesObject(JNIEnv *, jobject propertiesObject,
+                                     jobject name, jobject reserved);
 
 //
 // Functions provided by the browser specific native code

@@ -38,6 +38,13 @@ import java.util.Properties;
 public interface Prompt
 {
 
+public static final String USER_NAME_KEY = "userName";
+public static final String PASSWORD_KEY = "password";
+public static final String EDIT_FIELD_1_KEY = "editfield1Value";
+public static final String EDIT_FIELD_2_KEY = "editfield2Value";
+public static final String CHECKBOX_STATE_KEY = "checkboxState";
+public static final String BUTTON_PRESSED_KEY = "buttonPressed";
+
 /**
 
  * Puts up a username/password dialog with OK and Cancel buttons.
@@ -56,5 +63,74 @@ public boolean promptUsernameAndPassword(String dialogTitle,
 					 String passwordRealm,
 					 int savePassword,
 					 Properties fillThis);
+
+/**
+
+ * Tells the custom app to put up a modal dialog using the information
+ * in the params for the dialog ui. <P>
+
+ * keys: <P>
+
+ * <DL>
+
+ * <DT>editfield1Value</DT>
+ * <DD>initial and final value for first edit field</DD>
+
+ * <DT>editfield2Value</DT>
+ * <DD>initial and final value for second edit field</DD>
+
+ * <DT>checkboxState</DT>
+ * <DD>initial and final state of checkbox: true or false</DD>
+
+ * <DT>buttonPressed</DT>
+ * <DD>number of button that was pressed (0 to 3)</DD>
+
+ * </DL><P>
+
+ * @param titleMessage
+
+ * @param dialogTitle e.g., alert, confirm, prompt, prompt password 
+ 
+ * @param text main message for dialog
+
+ * @param checkboxMsg message for checkbox 
+
+ * @param button0Text text for first button
+
+ * @param button1Text text for second button
+
+ * @param button2Text text for third button 
+
+ * @param button3Text text for fourth button
+
+ * @param editfield1Msg message for first edit field
+ 
+ * @param editfield2Msg message for second edit field
+
+ * @param numberButtons total number of buttons (0 to 4)
+
+ * @param numberEditfields total number of edit fields (0 to 2) 
+ 
+ * @param editField1Password whether or not editField1 is a password
+
+ * @param fillThis the properties object to be filled with the above
+ * keys
+
+ */
+
+public boolean universalDialog(String titleMessage,
+                               String dialogTitle,
+                               String text,
+                               String checkboxMsg,
+                               String button0Text,
+                               String button1Text,
+                               String button2Text,
+                               String button3Text,
+                               String editfield1Msg,
+                               String editfield2Msg,
+                               int numberButtons,
+                               int numberEditfields,
+                               boolean editField1Password,
+                               Properties fillThis);
     
 } // end of interface History

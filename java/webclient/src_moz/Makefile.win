@@ -45,6 +45,7 @@ OBJS =                              \
     .\$(OBJDIR)\NavigationImpl.obj  \
     .\$(OBJDIR)\NavigationActionEvents.obj  \
     .\$(OBJDIR)\CBrowserContainer.obj  \
+    .\$(OBJDIR)\PromptActionEvents.obj  \
     .\$(OBJDIR)\NativeEventThread.obj  \
     .\$(OBJDIR)\RDFEnumeration.obj  \
     .\$(OBJDIR)\RDFTreeNode.obj  \

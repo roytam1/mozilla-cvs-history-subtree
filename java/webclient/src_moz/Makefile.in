@@ -45,6 +45,7 @@ CPPSRCS = \
 	rdf_util.cpp \
 	BookmarksImpl.cpp \
 	CBrowserContainer.cpp \
+	PromptActionEvents.cpp  \
 	CurrentPageImpl.cpp \
 	CurrentPageActionEvents.cpp \
 	HistoryImpl.cpp \
