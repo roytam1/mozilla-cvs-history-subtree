@@ -108,6 +108,8 @@ DownloadProgressListener.prototype =
       download.setAttribute("progress", percent);
 
       download.setAttribute("progressmode", "normal");
+      
+      onUpdateProgress();
     }
     else {
       percent = -1;

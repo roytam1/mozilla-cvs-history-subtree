@@ -50,7 +50,7 @@
 <window xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         id="downloadManager" windowtype="Download:Manager"
-        orient="vertical" title="&downloads.title;"
+        orient="vertical" title="&downloads.title;" statictitle="&downloads.title;"
         width="400" height="300" screenX="10" screenY="10"
         persist="width height screenX screenY sizeMode"
         onload="Startup();" onunload="Shutdown();">

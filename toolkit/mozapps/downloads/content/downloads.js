@@ -132,6 +132,15 @@ var gDownloadObserver = {
         rdfc.AppendElement(dlRes);
       else
         rdfc.InsertElementAt(dlRes, insertIndex, true);      
+      
+      break;
+    case "dl-start":
+      // Add this download to the percentage average tally
+      gDownloadPercentages[dl.target.persistentDescriptor] = true;
+      ++gDownloadPercentagesMeta.count;
+      
+      break;
+      
     }
   }
 };
@@ -209,7 +218,6 @@ function onDownloadOpen(aEvent)
       var f = Components.classes["@mozilla.org/file/local;1"].createInstance(Components.interfaces.nsILocalFile);
       f.initWithPath(aEvent.target.id);
 
-      dump("*** f = " + f.path + "\n");
       if (f.exists()) {
         // XXXben security check!  
         f.launch();
@@ -248,6 +256,53 @@ function onDownloadRetry(aEvent)
   }
   
   gDownloadViewController.onCommandUpdate();
+}
+
+// This is called by the progress listener. We don't actually use the event
+// system here to minimize time wastage. 
+var gDownloadPercentages = {};
+var gDownloadPercentagesMeta = {
+  count: 0,
+  lastMean: 0
+};
+
+function onUpdateProgress()
+{
+  var mean = 0;
+  var count = 0;
+  for (var download in gDownloadPercentages) {
+    if (gDownloadPercentages[download]) {
+      var dl = document.getElementById(download);
+      var progress = parseInt(dl.getAttribute("progress"));
+      if (progress < 100) {
+        ++count;
+        mean += progress;
+      }
+    }
+  }
+  // Refresh count. 
+  gDownloadPercentagesMeta.count = count;
+  
+  if (count == 0)
+    window.title = document.documentElement.getAttribute("statictitle");    
+  else {
+    mean /= gDownloadPercentagesMeta.count;
+    mean = Math.round(mean);
+    
+    if (mean != gDownloadPercentagesMeta.lastMean) {
+      gDownloadPercentagesMeta.lastMean = mean;
+      var strings = document.getElementById("downloadStrings");
+      
+      var title = "";
+      if (gDownloadPercentagesMeta.count > 1)
+        title = strings.getFormattedString("downloadsTitleMultiple", [mean, gDownloadPercentagesMeta.count]);
+      else
+        title = strings.getFormattedString("downloadsTitle", [mean]);
+
+      window.title = title;
+      gDownloadPercentagesMeta.lastMean = mean;
+    }
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -289,6 +344,7 @@ function Startup()
   observerService.addObserver(gDownloadObserver, "dl-done",   false);
   observerService.addObserver(gDownloadObserver, "dl-cancel", false);
   observerService.addObserver(gDownloadObserver, "dl-failed", false);  
+  observerService.addObserver(gDownloadObserver, "dl-start", false);  
 }
 
 function Shutdown() 
