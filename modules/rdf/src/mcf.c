@@ -945,9 +945,10 @@ RDF_DeleteNotifiable (RDF_Notification ns)
     rdf->notifs = pr->next; 
   } else {
     for (not = rdf->notifs; (not != NULL) ; not = not->next) {
-      if (ns == not) {
-	pr->next = not->next; 
-	return 0;
+      if (ns == not) 
+	  {
+		pr->next = not->next; 
+		break;
       }
       pr = not;
     }
