@@ -661,6 +661,13 @@
 #define HG98216
 #define HG91761 SetDlgItemInt(IDC_EDIT_PORT_NO, LDAP_PORT);
 
+#define HG51387
+#define HG51388
+#define HG51389
+
+#define HG43287
+#define HG43288
+
 
 
 #endif /* _ROSETTA_H_ */
