@@ -1407,7 +1407,7 @@ nsresult nsMsgSearchScopeTerm::InitializeAdapter (nsISupportsArray *termList)
       NS_ASSERTION(PR_FALSE, "not supporting LDAP yet");
 			break;
 		case nsMsgSearchScope::OfflineNewsgroup:
-      NS_ASSERTION(PR_FALSE, "not supporting offline news");
+      m_adapter = new nsMsgSearchOfflineNews (this, termList);
 			break;
 		default:
 			NS_ASSERTION(PR_FALSE, "invalid scope");

@@ -33,10 +33,12 @@
 #include "nsIMsgSendLater.h"
 #include "nsIMsgAccountManager.h"
 #include "nsMsgCompCID.h"
+#include "nsIIOService.h"
 
 static NS_DEFINE_CID(kCImapService, NS_IMAPSERVICE_CID);
 static NS_DEFINE_CID(kCMsgAccountManagerCID, NS_MSGACCOUNTMANAGER_CID);
 static NS_DEFINE_CID(kMsgSendLaterCID, NS_MSGSENDLATER_CID); 
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 NS_IMPL_THREADSAFE_ISUPPORTS5(nsMsgOfflineManager,
                               nsIMsgOfflineManager,
@@ -237,6 +239,15 @@ NS_IMETHODIMP nsMsgOfflineManager::GoOnline(PRBool sendUnsentMessages, PRBool pl
 NS_IMETHODIMP nsMsgOfflineManager::SynchronizeForOffline(PRBool downloadNews, PRBool downloadMail, PRBool sendUnsentMessages, PRBool goOfflineWhenDone, nsIMsgWindow *aMsgWindow)
 {
   m_curOperation = eDownloadingForOffline;
+	nsresult rv = NS_OK;
+  if (goOfflineWhenDone)
+  {
+    NS_WITH_SERVICE(nsIIOService, netService, kIOServiceCID, &rv);
+    if (NS_SUCCEEDED(rv) && netService)
+    {
+      netService->SetOffline(PR_TRUE);
+    }
+  }
   return NS_OK;
 }
 
