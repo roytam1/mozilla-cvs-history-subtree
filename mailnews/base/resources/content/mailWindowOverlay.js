@@ -1529,6 +1529,11 @@ function CommandUpdate_UndoRedo()
 function SetupUndoRedoCommand(command)
 {
     var loadedFolder = GetLoadedMsgFolder();
+    // if we have selected a server, and are viewing account central
+    // there is no loaded folder
+    if (!loadedFolder)
+      return false;
+
     var server = loadedFolder.server;
     if (!(server.canUndoDeleteOnServer))
       return false;
