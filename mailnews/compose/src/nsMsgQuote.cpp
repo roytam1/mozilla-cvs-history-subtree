@@ -161,8 +161,8 @@ NS_IMETHODIMP nsMsgQuote::GetStreamListener(nsIStreamListener ** aStreamListener
 }
 
 nsresult
-nsMsgQuote::QuoteMessage(const char *msgURI, PRBool quoteHeaders, PRBool headersOnly, nsIStreamListener * aQuoteMsgStreamListener,
-                         const char * aMsgCharSet)
+nsMsgQuote::QuoteMessage(const char *msgURI, PRBool quoteHeaders, PRBool headersOnly, PRBool quoteOriginal, 
+                         nsIStreamListener * aQuoteMsgStreamListener, const char * aMsgCharSet)
 {
   nsresult  rv;
 
@@ -204,6 +204,14 @@ nsMsgQuote::QuoteMessage(const char *msgURI, PRBool quoteHeaders, PRBool headers
     nsCOMPtr<nsIMsgI18NUrl> i18nUrl (do_QueryInterface(aURL));
     if (i18nUrl)
       i18nUrl->SetCharsetOverRide(tempStr.get());
+  }
+
+  if (quoteOriginal) {
+    if (!mQuoteListener) {
+      rv = nsComponentManager::CreateInstance(kMsgQuoteListenerCID, nsnull, NS_GET_IID(nsIMsgQuoteListener), getter_AddRefs(mQuoteListener));
+      if (NS_FAILED(rv)) return rv;
+    }
+    mQuoteListener->SetMsgQuote(this);
   }
 
   // funky magic go get the isupports for this class which inherits from multiple interfaces.

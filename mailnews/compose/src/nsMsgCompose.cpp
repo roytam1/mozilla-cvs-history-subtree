@@ -1844,7 +1844,7 @@ nsMsgCompose::QuoteMessage(const char *msgURI)
 
   listener->SetComposeObj(this);
   
-  rv = mQuote->QuoteMessage(msgURI, PR_FALSE, PR_FALSE, listener, m_compFields->GetCharacterSet());
+  rv = mQuote->QuoteMessage(msgURI, PR_FALSE, PR_FALSE, PR_FALSE, listener, m_compFields->GetCharacterSet());
 
   return rv;
 }
@@ -1881,13 +1881,7 @@ nsMsgCompose::QuoteOriginalMessage(const char *originalMsgURI, PRInt32 what) // 
 
   mQuoteStreamListener->SetComposeObj(this);
  
-  
-  nsCOMPtr<nsIMsgQuoteListener> quoteListener;
-  rv = nsComponentManager::CreateInstance(kMsgQuoteListenerCID, nsnull, NS_GET_IID(nsIMsgQuoteListener), getter_AddRefs(quoteListener));
-  if (NS_FAILED(rv)) return rv;
-  quoteListener->SetMsgQuote(mQuote);
-
-  rv = mQuote->QuoteMessage(originalMsgURI, what != 1, !bAutoQuote, mQuoteStreamListener, m_compFields->GetCharacterSet());
+  rv = mQuote->QuoteMessage(originalMsgURI, what != 1, !bAutoQuote, PR_TRUE, mQuoteStreamListener, m_compFields->GetCharacterSet());
   return rv;
 }
 
