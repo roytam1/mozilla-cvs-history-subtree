@@ -78,13 +78,10 @@
 #include "nsICategoryManager.h"
 #include "nsCategoryManagerUtils.h"
 
-// #define LDAP_MOD_SUPPORT   1
+#define LDAP_MOD_SUPPORT   1
 #ifdef  LDAP_MOD_SUPPORT
 #include "nsILDAPModification.h"
 #endif
-
-// someone will suffer for this, I promise
-#define RDF_AGGREGATION_BROKEN_IN_BOOKMARKS_DAMNIT  1
 
 #define REMOTE_BOOKMARK_PREFIX         "moz-bookmark-"
 #define REMOTE_BOOKMARK_PREFIX_LENGTH  (sizeof(REMOTE_BOOKMARK_PREFIX)-1)
@@ -428,30 +425,15 @@ nsRemoteBookmarks::GetTarget(nsIRDFResource* aSource,
   {
     if (isRemoteBookmarkURI(aSource) && (aProperty == kNC_Child) && (tv == PR_TRUE))
     {
-      *aTarget = aSource;
-      NS_IF_ADDREF(*aTarget);
-      return(NS_OK);
+      if (isRemoteContainer(aSource))
+      {
+        *aTarget = aSource;
+        NS_IF_ADDREF(*aTarget);
+        return(NS_OK);
+      }
     }
     // fallback to querying mInner
     nsresult rv = mInner->GetTarget(aSource, aProperty, tv, aTarget);
-
-#ifdef RDF_AGGREGATION_BROKEN_IN_BOOKMARKS_DAMNIT
-    if ((rv == NS_RDF_NO_VALUE) && (aProperty == kNC_URL))
-    {
-      // XXX should only do this if we contain "aSource" !!!
-
-  		const char *uri;
-			rv = aSource->GetValueConst(&uri);
-			NS_ENSURE_SUCCESS(rv, rv);
-			nsAutoString	ncURI; 
-      ncURI.AssignWithConversion(uri);
-			nsIRDFLiteral *literal;
-			rv = gRDF->GetLiteral(ncURI.get(), &literal);
-			NS_ENSURE_SUCCESS(rv, rv);
-      *aTarget = NS_REINTERPRET_CAST(nsIRDFNode *, literal);    // it was AddReffed by GetLiteral()
-    }
-#endif
-
     return(rv);
   }
 	return(NS_RDF_NO_VALUE);
@@ -687,7 +669,10 @@ nsRemoteBookmarks::HasAssertion(nsIRDFResource* aSource,
 
   if (isRemoteBookmarkURI(aSource) && (aProperty == kNC_Child))
   {
-    *aHasAssertion = PR_TRUE;
+    if (isRemoteContainer(aSource))
+    {
+      *aHasAssertion = PR_TRUE;
+    }
   }
   else
   {
@@ -790,8 +775,11 @@ nsRemoteBookmarks::HasArcOut(nsIRDFResource *aSource,
   {
     if (isRemoteBookmarkURI(aSource) && (aArc == kNC_Child))
     {
-      *_retval = PR_TRUE;
-      return(NS_OK);
+      if (isRemoteContainer(aSource))
+      {
+        *_retval = PR_TRUE;
+        return(NS_OK);
+      }
     }
     // fallback to querying mInner
     nsresult rv = mInner->HasArcOut(aSource, aArc, _retval);
@@ -1538,9 +1526,7 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
 
       nsCOMPtr<nsIRDFResource> searchType;
       nsCOMPtr<nsIRDFResource> searchRes;
-#ifndef  RDF_AGGREGATION_BROKEN_IN_BOOKMARKS_DAMNIT
       nsCOMPtr<nsIRDFLiteral> searchResLit;
-#endif
 
       // check objectclass to determine what we are dealing with
       nsAutoString classStr, urlStr, nameStr;
@@ -1555,15 +1541,10 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
         if (urlStr.Length() < 1)
           return(NS_OK);
 
-#ifdef  RDF_AGGREGATION_BROKEN_IN_BOOKMARKS_DAMNIT
-        rv = gRDF->GetUnicodeResource(urlStr.get(), getter_AddRefs(searchRes));
-        NS_ENSURE_SUCCESS(rv, rv);
-#else
         rv = gRDF->GetResource(ldapSearchUrlString.get(), getter_AddRefs(searchRes));
         NS_ENSURE_SUCCESS(rv, rv);
         rv = gRDF->GetLiteral(urlStr.get(), getter_AddRefs(searchResLit));
         NS_ENSURE_SUCCESS(rv, rv);
-#endif
 
         // set its type
         searchType = kNC_Bookmark;
@@ -1606,17 +1587,11 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
       rv = gRDF->GetResource(ldapSearchUrlString.get(), getter_AddRefs(urlRes));
       NS_ENSURE_SUCCESS(rv, rv);
 
-#ifdef  RDF_AGGREGATION_BROKEN_IN_BOOKMARKS_DAMNIT
-      // with RDF aggregation non-functional, we can't just assert #URL;
-      // so we have to be tricky and hang the true LDAP URL off of #LDAPURL
-      rv = mInner->Assert(searchRes, kNC_LDAPURL, urlRes, PR_TRUE);
-      NS_ENSURE_SUCCESS(rv, rv);
-#else
-      // if/when RDF aggregation is functional, just assert #URL
-      // and the LDAP URL will just be the node's URI
-      rv = mInner->Assert(searchRes, kNC_URL, searchResLit, PR_TRUE);
-      NS_ENSURE_SUCCESS(rv, rv);
-#endif
+      if (searchResLit)
+      {
+        rv = mInner->Assert(searchRes, kNC_URL, searchResLit, PR_TRUE);
+        NS_ENSURE_SUCCESS(rv, rv);
+      }
 
       // prevent duplicates                                                       
       PRInt32 aIndex;                                                             
@@ -1713,26 +1688,6 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
     }
 
     nsCOMPtr<nsIRDFResource> aNode;
-#ifdef  RDF_AGGREGATION_BROKEN_IN_BOOKMARKS_DAMNIT
-    if (mURLLiteral)
-    {
-      const PRUnichar *uri = nsnull;
-      rv = mURLLiteral->GetValueConst(&uri);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      rv = gRDF->GetUnicodeResource(uri, getter_AddRefs(aNode));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      // with RDF aggregation non-functional, we can't just assert #URL;
-      // so we have to be tricky and hang the true LDAP URL off of #LDAPURL
-      rv = mInner->Assert(aNode, kNC_LDAPURL, mNode, PR_TRUE);
-      NS_ENSURE_SUCCESS(rv, rv);
-    }
-    else
-    {
-      aNode = mNode;
-    }
-#else
     aNode = mNode;
     if (mURLLiteral)
     {
@@ -1740,7 +1695,6 @@ nsRemoteBookmarks::OnLDAPMessage(nsILDAPMessage *aMessage)
       mURLLiteral = nsnull;
       NS_ENSURE_SUCCESS(rv, rv);
     }
-#endif
 
     // success, update the internal graph
     if (mNameLiteral)
@@ -2345,25 +2299,25 @@ nsRemoteBookmarks::getPropertySchemaName(nsIRDFResource *aProperty)
 nsCOMPtr<nsIRDFResource>
 nsRemoteBookmarks::getLDAPUrl(nsIRDFResource *aSource)
 {
-#ifdef  RDF_AGGREGATION_BROKEN_IN_BOOKMARKS_DAMNIT
-
-  nsCOMPtr<nsIRDFResource> rdfRes;
-  nsCOMPtr<nsIRDFNode> rdfNode;
-  nsresult rv = mInner->GetTarget(aSource, kNC_LDAPURL, PR_TRUE, getter_AddRefs(rdfNode));
-  if (NS_SUCCEEDED(rv) && (rv != NS_RDF_NO_VALUE))
-  {
-    rdfRes = do_QueryInterface(rdfNode);
-  }
-  if (!rdfRes)
-  {
-    rdfRes = aSource;
-  }
-  return(rdfRes);
-
-#else
-
   NS_IF_ADDREF(aSource);
   return(aSource);
+}
 
-#endif
+
+
+PRBool
+nsRemoteBookmarks::isRemoteContainer(nsIRDFResource *aNode)
+{
+  PRBool  isContainerFlag = PR_FALSE;
+  if (isRemoteBookmarkURI(aNode) == PR_TRUE)
+  {
+    nsCOMPtr<nsIRDFNode> nodeType;
+    nsresult rv = mInner->GetTarget(aNode, kRDF_type, PR_TRUE, getter_AddRefs(nodeType));
+    nsCOMPtr<nsIRDFResource> nodeRes = do_QueryInterface(nodeType);
+    if (NS_FAILED(rv) || (rv == NS_RDF_NO_VALUE) || (nodeRes != kNC_Bookmark))
+    {
+      isContainerFlag = PR_TRUE;
+    }
+  }
+  return(isContainerFlag);
 }
