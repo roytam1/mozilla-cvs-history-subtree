@@ -1757,7 +1757,7 @@ RDFElementImpl::RemoveBroadcastListener(const nsString& attr, nsIDOMNode* aNode)
 		XULBroadcastListener* xulListener = (XULBroadcastListener*)mBroadcastListeners[i];
 		
 		if (xulListener->mAttribute == attr &&
-			xulListener->mListener == aNode)
+			xulListener->mListener == nsCOMPtr<nsIDOMNode>(aNode))
 		{
 			// Do the removal.
 			mBroadcastListeners.RemoveElementAt(i);
