@@ -1783,8 +1783,6 @@ nsHTMLSelectElement::SaveState(nsIPresContext* aPresContext,
   PRUint32 len;
   GetLength(&len);
 
-  // We loop through the cached list of selected items because it's hella faster
-  // than looping through all options
   for (PRUint32 optIndex = 0; optIndex < len; optIndex++) {
     nsCOMPtr<nsIDOMHTMLOptionElement> option;
     mOptions->ItemAsOption(optIndex, getter_AddRefs(option));
@@ -1793,7 +1791,7 @@ nsHTMLSelectElement::SaveState(nsIPresContext* aPresContext,
       option->GetSelected(&isSelected);
       if (isSelected) {
         if (!stateStr.IsEmpty()) {
-          stateStr.Append(PRUnichar(","));
+          stateStr.Append(PRUnichar(','));
         }
         stateStr.AppendInt(optIndex);
       }
@@ -1985,8 +1983,8 @@ nsHTMLSelectElement::GetNamesValues(PRInt32 aMaxNumValues,
   PRUint32 len;
   GetLength(&len);
 
-  // We loop through the cached list of selected items because it's hella faster
-  // than looping through all options
+  // We loop through the cached list of selected items because it's
+  // hella faster than looping through all options
   for (PRUint32 optIndex = 0; optIndex < len; optIndex++) {
     // Don't send disabled options
     PRBool disabled;
