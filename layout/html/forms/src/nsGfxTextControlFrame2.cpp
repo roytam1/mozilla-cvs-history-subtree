@@ -3157,7 +3157,7 @@ nsGfxTextControlFrame2::SubmitAttempt()
         if (submitBtn != nsnull) {
           originFrame = submitBtn;
         }
-        if (inputTxtCnt == 1 || submitBtn != nsnull) {
+        if (inputTxtCnt == 1) {
           // do Submit & Frame processing of event
           nsFormControlHelper::DoManualSubmitOrReset(context, presShell, mFormFrame, 
                                                      originFrame, PR_TRUE, PR_FALSE); 
