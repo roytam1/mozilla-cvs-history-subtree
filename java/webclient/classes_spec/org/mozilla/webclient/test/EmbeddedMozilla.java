@@ -68,7 +68,7 @@ public void CreateEMWindow()
 {
   System.out.println("Creating new EmbeddedMozilla window");
   EMWindow aEMWindow ;
-  aEMWindow = new EMWindow("EmbeddedMozila#" + count+1,
+  aEMWindow = new EMWindow("EmbeddedMozila#" + (int)(count+1),
                                  binDir, url, count, this);
   count++;
 }
@@ -93,7 +93,7 @@ public static void main(String [] arg)
         printUsage();
         System.exit(-1);
     }
-    String urlArg =(2 == arg.length) ? arg[1] : "file:///E|/Projects/tmp/5105.html";
+    String urlArg =(2 == arg.length) ? arg[1] : "http://www.mozilla.org/projects/blackwood/webclient/";
 
     // set class vars used in EmbeddedMozilla ctor 
     binDir = arg[0];
