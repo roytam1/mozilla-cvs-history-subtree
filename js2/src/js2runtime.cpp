@@ -320,13 +320,13 @@ bool Context::executeOperator(Operator op, JSType *t1, JSType *t2)
         throw Exception(Exception::runtimeError, "No applicable operators found");
 
     OperatorList::iterator candidate = applicableOperators.begin();
-    for (oi = applicableOperators.begin() + 1,
-                end = applicableOperators.end();
-                (oi != end); oi++) 
+    for (OperatorList::iterator aoi = applicableOperators.begin() + 1,
+                aend = applicableOperators.end();
+                (aoi != aend); aoi++) 
     {
-        if ((*oi)->mType1->derivesFrom((*candidate)->mType1)
-                || ((*oi)->mType2->derivesFrom((*candidate)->mType2)))
-            candidate = oi;
+        if ((*aoi)->mType1->derivesFrom((*candidate)->mType1)
+                || ((*aoi)->mType2->derivesFrom((*candidate)->mType2)))
+            candidate = aoi;
     }
 
     JSFunction *target = (*candidate)->mImp;
@@ -1308,7 +1308,7 @@ JSValue objectLessEqual(Context *cx, JSValue *argv, uint32 argc)
         return kTrueValue;
 }
 
-JSValue compareEqual(Context *cx, JSValue &r1, JSValue &r2)
+JSValue compareEqual(Context *cx, JSValue r1, JSValue r2)
 {
     if (r1.getType() != r2.getType()) {
         if (r1.isNull() && r2.isUndefined())
@@ -1360,8 +1360,8 @@ JSValue compareEqual(Context *cx, JSValue &r1, JSValue &r2)
 
 JSValue objectEqual(Context *cx, JSValue *argv, uint32 argc)
 {
-    JSValue &r1 = argv[0];
-    JSValue &r2 = argv[1];
+    JSValue r1 = argv[0];
+    JSValue r2 = argv[1];
     
     return compareEqual(cx, r1, r2);
 }
