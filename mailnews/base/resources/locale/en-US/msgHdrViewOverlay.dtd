@@ -32,6 +32,7 @@ Rights Reserved.
 
 <!ENTITY dateField.label "Date: ">
 <!ENTITY userAgentField.label "User-Agent: ">
+<!ENTITY originalWebsite.label "Website: ">
 <!ENTITY saveAll.label "Save All..">
 
 <!ENTITY editMessage.label "Edit Draft...">
