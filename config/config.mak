@@ -311,8 +311,8 @@ MAKE_UNMANGLE=if exist unmangle.bat call unmangle.bat
 #//
 #//------------------------------------------------------------------------
 !if "$(MOZ_BITS)" == "16"
-LIBNSPR=$(DIST)\lib\nspr21.lib
-LIBNSPR=$(LIBNSPR) $(DIST)\lib\plds21.lib
+LIBNSPR=$(DIST)\lib\nspr3.lib
+LIBNSPR=$(LIBNSPR) $(DIST)\lib\plds3.lib
 !else
 LIBNSPR=$(DIST)\lib\nspr3.lib
 LIBNSPR=$(LIBNSPR) $(DIST)\lib\plds3.lib

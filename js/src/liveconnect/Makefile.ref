@@ -79,7 +79,7 @@ ifdef JS_THREADSAFE
 ifdef USE_MSVC
 OTHER_LIBS += $(DEPTH)/../../dist/$(OBJDIR)/lib/nspr3.lib
 else
-OTHER_LIBS += -L$(DEPTH)/../../dist/$(OBJDIR)/lib -lnspr21
+OTHER_LIBS += -L$(DEPTH)/../../dist/$(OBJDIR)/lib -lnspr3
 endif
 endif
 
