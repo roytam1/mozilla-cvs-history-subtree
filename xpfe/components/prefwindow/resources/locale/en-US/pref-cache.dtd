@@ -2,8 +2,10 @@
 
 <!--LOCALIZATION NOTE : FILE Cache prefs dialog -->
 <!ENTITY  lHeader                       "Cache">
+<!ENTITY  mailonlyHeader                "Advanced">
 <!ENTITY  cacheTitle.label              "Set Cache Options">
 <!ENTITY  cachePara                     "The cache keeps copies of frequently visited web pages on your hard disk. This reduces the amount of time you are connected to the Internet. (Clicking Reload always shows you the latest version of a page.)">
+<!ENTITY  mailOnlyCachePara             "Cache is used to store temporary local copies of messages so that display time is reduced.  Restart mail for changes to take effect">
 <!ENTITY  memCache.label                "Memory Cache:">
 <!ENTITY  memCache.accesskey            "m">
 <!ENTITY  diskCache.label               "Disk Cache:">
@@ -28,3 +30,4 @@
 <!ENTITY  neverRadio.accesskey          "n">
 <!ENTITY  autoRadio.label               "When the page is out of date">
 <!ENTITY  autoRadio.accesskey           "w">
+

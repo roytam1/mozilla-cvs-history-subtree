@@ -10,12 +10,13 @@
     
   <script type="application/x-javascript">
   <![CDATA[
-    var _elementIDs = ["forwardMessageMode", "autoQuote", "replyOnTop", "spellCheckBeforeSend", "strictlyMime", "wrapLength", "sendDefaultCharsetList"];
+    var _elementIDs = ["forwardMessageMode", "autoQuote", "replyOnTop", "spellCheckBeforeSend", "strictlyMime", "wrapLength", "sendDefaultCharsetList", "mailWarnOnSendAccelKey"];
     var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
     observerService.notifyObservers(null, "charsetmenu-selected", "mailedit");
 
     function Startup()
     {
+      document.getElementById("spellCheckBeforeSend").hidden = !("@mozilla.org/spellchecker;1" in Components.classes);
       doEnabling();
     }
     
@@ -30,21 +31,6 @@
       else {
         quotebox.firstChild.setAttribute("disabled","true");
         quotebox.lastChild.setAttribute("disabled","true");
-      }
-      
-      var spellChecker;
-      try {
-        spellChecker = Components.classes["@mozilla.org/spellchecker;1"];
-        //switch to this when nsISpellChecker becomes scriptable
-        //spellChecker = Components.classes["@mozilla.org/spellchecker;1"].createInstance(Components.interfaces.nsISpellChecker);
-      }
-      catch (ex) {
-        spellChecker = null;
-      }
-
-      if (!spellChecker) {
-        var spellCheckerCheckbox = document.getElementById("spellCheckBeforeSend");
-        spellCheckerCheckbox.setAttribute("hidden","true");
       }
     }
   ]]>
@@ -90,6 +76,9 @@
     <checkbox id="strictlyMime" label="&useMIME.label;"
               prefstring="mail.strictly_mime"/>
     
+    <checkbox id="mailWarnOnSendAccelKey" label="&warnOnSendAccelKey.label;"
+              prefstring="mail.warn_on_send_accel_key" accesskey="&warnOnSendAccelKey.accesskey;" />
+
 	<hbox align="center">
         <label value="&wrapOutMsg.label;" accesskey="&wrapOutMsg.accesskey;" control="wrapLength"/>
     <textbox id="wrapLength" size="3" preftype="int"
@@ -97,6 +86,7 @@
     <label value="&char.label;"/>
   </hbox>
 
+<!-- not needed for standalone mail
    <hbox align="center">
     <label value="&sendDefaultCharset.label;" accesskey="&sendDefaultCharset.accesskey;" page="sendDefaultCharsetList"/>
     <menulist id="sendDefaultCharsetList" ref="NC:MaileditCharsetMenuRoot" datasources="rdf:charset-menu"
@@ -108,6 +98,7 @@
       </template>
     </menulist>       
     </hbox> 
+-->
   </groupbox>
   
 <!--

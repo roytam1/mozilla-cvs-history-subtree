@@ -34,15 +34,10 @@ Rights Reserved.
 <!ENTITY color.label                      "Color:">
 <!ENTITY color.accesskey                  "c">
 <!ENTITY displayWidth.label               "Plain Text Messages">
-<!ENTITY plainText.label				  "Use this font when displaying plain text messages:">
-<!ENTITY displayText.label				  "Use the following settings when  displaying quoted plain text messages:">
-<!ENTITY viewingPlainText.label			  "When viewing plain text messages:">
-<!ENTITY languagesTitle.label			  "Languages">
-<!ENTITY coding.label					  "Use the following character coding as the default for viewing messages:">
-<!ENTITY sendDefaultCharset.label         "Character Coding:">
-<!ENTITY sendDefaultCharset.accesskey	  "h">
-<!ENTITY forceCharsetOverride.label       "Apply default to all messages (ignore character coding specified by MIME header)">
-<!ENTITY forceCharsetOverride.accesskey   "p">
+<!ENTITY plainText.label				          "Use the following font:">
+<!ENTITY displayText.label				        "When  displaying quoted plain text messages, use the settings:">
+<!ENTITY viewingPlainText.label			      "When displaying plain text messages:">
+<!ENTITY coding.label					            "Use the following character coding as the default for viewing messages:">
 <!ENTITY fixedWidth.label                 "Fixed width font">
 <!ENTITY fixedWidth.accesskey             "f">
 <!ENTITY variableWidth.label              "Variable width font">
@@ -52,7 +47,7 @@ Rights Reserved.
 <!ENTITY wrapInMsg.label                  "Wrap text to fit window width">
 <!ENTITY wrapInMsg.accesskey              "w">
 <!-- LOCALIZATION NOTE : (emoticonsAndStructs.label) 'Emoticons' are also known as 'Smileys', e.g. :-)   -->
-<!ENTITY convertEmoticons.label           "Display emoticons as graphics.">
+<!ENTITY convertEmoticons.label           "Display emoticons as graphics">
 <!ENTITY convertEmoticons.accesskey       "d">
 <!ENTITY example1.label                   "For example, display ' :-) ' as">
 <!ENTITY example2.label                   ".">

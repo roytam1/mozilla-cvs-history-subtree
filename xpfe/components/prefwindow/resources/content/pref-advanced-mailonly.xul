@@ -1,0 +1,246 @@
+<?xml version="1.0"?> 
+<!--
+   The contents of this file are subject to the Netscape Public
+   License Version 1.1 (the "License"); you may not use this file
+   except in compliance with the License. You may obtain a copy of
+   the License at http://www.mozilla.org/NPL/
+    
+   Software distributed under the License is distributed on an "AS
+   IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+   implied. See the License for the specific language governing
+   rights and limitations under the License.
+    
+   The Original Code is Mozilla Communicator client code, released
+   March 31, 1998.
+   
+   The Initial Developer of the Original Code is Netscape
+   Communications Corporation. Portions created by Netscape are
+   Copyright (C) 1998-1999 Netscape Communications Corporation. All
+   Rights Reserved.
+   
+   Contributor(s): 
+        Diego Biurrun   <diego@biurrun.de>
+                - added disk cache folder choice
+  -->
+<?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
+
+<!DOCTYPE window [
+<!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd" >
+%brandDTD;
+<!ENTITY % prefCacheDTD SYSTEM "chrome://communicator/locale/pref/pref-cache.dtd" >
+%prefCacheDTD;
+<!ENTITY % platformDTD SYSTEM "chrome://global-platform/locale/platformDialogOverlay.dtd" >
+%platformDTD;
+<!ENTITY % prefMousewheelDTD SYSTEM "chrome://communicator/locale/pref/pref-mousewheel.dtd" >
+%prefMousewheelDTD;
+]>
+
+<page xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      onload="parent.initPanel('chrome://communicator/content/pref/pref-advanced-mailonly.xul');"
+      headertitle="&mailonlyHeader;">
+
+  <script type="application/x-javascript">
+  <![CDATA[
+    var _elementIDs = ["browserCacheMemoryCache", "browserCacheDiskCache",
+                       "mousewheelWithNoKeyAction", "mousewheelWithNoKeyNumlines", "mousewheelWithNoKeySysNumlines", 
+                       "mousewheelWithAltKeyAction", "mousewheelWithAltKeyNumlines", "mousewheelWithAltKeySysNumlines", 
+                       "mousewheelWithCtrlKeyAction", "mousewheelWithCtrlKeyNumlines", "mousewheelWithCtrlKeySysNumlines", 
+                       "mousewheelWithShiftKeyAction", "mousewheelWithShiftKeyNumlines", "mousewheelWithShiftKeySysNumlines"]; 
+     
+    function switchMWPage( aElement )
+    {
+      var deck = document.getElementById( "modifierDeck" );
+      deck.setAttribute( "selectedIndex", aElement.selectedItem.value );
+    }
+    
+    function doEnableElement( aEventTarget, aElementID )
+    {
+      var aElement = document.getElementById( aElementID );
+      if( aEventTarget.checked == true )
+        aElement.setAttribute( "disabled", "true" );
+      else
+        aElement.removeAttribute( "disabled" );
+    }
+    
+    function Startup()
+    {
+      var fields = ["mousewheelWithNoKeyNumlines", "mousewheelWithAltKeyNumlines", "mousewheelWithCtrlKeyNumlines", "mousewheelWithShiftKeyNumlines"];
+      var checkboxes = ["mousewheelWithNoKeySysNumlines", "mousewheelWithAltKeySysNumlines", "mousewheelWithCtrlKeySysNumlines", "mousewheelWithShiftKeySysNumlines"];
+      for( var i = 0; i < checkboxes.length; i++ )
+      {
+        var currEl = document.getElementById( checkboxes[i] );
+        doEnableElement( currEl, fields[i] );
+      }
+    }  
+  
+    function enableField(aCheckbox, aNodeID) 
+    { 
+      var el = document.getElementById(aNodeID); 
+      if (aCheckbox.checked) 
+        el.setAttribute("disabled", "true"); 
+      else 
+        el.removeAttribute("disabled"); 
+    } 
+  ]]>
+  </script>
+  
+  <stringbundle id="bundle_prefutilities"
+                src="chrome://communicator/locale/pref/prefutilities.properties"/>
+  <script type="application/x-javascript" src="chrome://communicator/content/pref/pref-cache.js"/>
+
+  <groupbox>
+    <caption label="&cacheTitle.label;"/>
+    
+    <description>&mailOnlyCachePara;</description>
+
+    <separator class="thin"/>
+    
+    <grid>
+      <columns>
+        <column/>
+        <column flex="1"/>
+        <column/>
+      </columns>
+      
+      <rows>
+        <row align="center">
+          <label value="&memCache.label;" accesskey="&memCache.accesskey;" control="browserCacheMemoryCache"/>
+          <hbox align="center">
+            <textbox id="browserCacheMemoryCache" size="8" preftype="int"
+                       prefstring="browser.cache.memory.capacity"/>
+            <label value="&kbytes;"/>
+          </hbox>
+          <button label="&clearMemCache.label;" accesskey="&clearMemCache.accesskey;"
+                  oncommand="prefClearMemCache();"
+                  id="clearMemCache"
+                  prefstring="pref.advanced.cache.disable_button.clear_memory"/>
+        </row>
+        <row align="center">
+          <label value="&diskCache.label;" accesskey="&diskCache.accesskey;" control="browserCacheDiskCache"/>
+          <hbox align="center">
+            <textbox id="browserCacheDiskCache" size="8" preftype="int"
+                       prefstring="browser.cache.disk.capacity" prefattribute="value"/>
+            <label value="&kbytes;"/>
+          </hbox>
+          <button label="&clearDiskCache.label;" accesskey="&clearDiskCache.accesskey;"
+                  oncommand="prefClearDiskCache();"
+                  id="clearDiskCache"
+                  prefstring="pref.advanced.cache.disable_button.clear_disk"/>
+        </row>
+        <row align="center">
+          <label value="&diskCacheFolder.label;"/>
+          <hbox align="center">
+            <textbox id="browserCacheDiskCacheFolder" readonly="true"/>
+          </hbox>
+          <button label="&chooseDiskCacheFolder.label;" accesskey="&chooseDiskCacheFolder.accesskey;"
+                  oncommand="prefCacheSelectFolder();" id="chooseDiskCacheFolder"/>
+        </row>
+      </rows>
+    </grid>
+  </groupbox>
+
+  <groupbox>
+    <caption label="&mouseWheelTitle.label;"/>
+    <hbox align="center">
+      <label value="&mouseWheelPanel.label;" accesskey="&mouseWheelPanel.accesskey;" 
+             control="mouseWheelMode"/>
+      <menulist id="mouseWheelMode" oncommand="switchMWPage(this);"
+        preftype="bool" prefstring="pref.mousewheel.disable_button.modifier" prefattribute="disabled">
+        <menupopup>
+          <menuitem value="0" label="&usingJustTheWheel.label;"/>
+          <menuitem value="1" label="&usingWheelAndAlt.label;"/>
+          <menuitem value="2" label="&usingWheelAndCtrl.label;"/>
+          <menuitem value="3" label="&usingWheelAndShft.label;"/>
+        </menupopup>
+      </menulist>
+    </hbox>
+
+
+    <deck id="modifierDeck" class="indent">
+      
+      <!-- no key modifiers -->
+      <radiogroup id="mousewheelWithNoKeyAction"
+                  prefstring="mousewheel.withnokey.action">
+        <hbox align="start">
+          <radio value="0" label="&scroll.label;" accesskey="&scroll.accesskey;"/>
+          <vbox align="start">
+            <hbox align="center">
+              <textbox id="mousewheelWithNoKeyNumlines" size="3" 
+                         preftype="int" prefstring="mousewheel.withnokey.numlines"
+                         prefattribute="value"/>
+              <label value="&scrollLines.label;"/>
+            </hbox>
+            <checkbox id="mousewheelWithNoKeySysNumlines" label="&useSystemDefault.label;" accesskey="&useSystemDefault.accesskey;"
+                      prefstring="mousewheel.withnokey.sysnumlines"
+                      oncommand="enableField(this, 'mousewheelWithNoKeyNumlines');"/>
+          </vbox>
+        </hbox>
+        <radio value="1" label="&scrollPgUpPgDn.label;" accesskey="&scrollPgUpPgDn.accesskey;"/>
+        <radio value="2" label="&history.label;" accesskey="&history.accesskey;"/>
+        <radio value="3" label="&textsize.label;" accesskey="&textsize.accesskey;"/>
+      </radiogroup>
+        
+      <!-- alt modifiers -->
+      <radiogroup id="mousewheelWithAltKeyAction"
+                  prefstring="mousewheel.withaltkey.action">
+        <hbox align="start">
+          <radio value="0" label="&scroll.label;" accesskey="&scroll.accesskey;"/>
+          <vbox align="start">
+            <hbox align="center">
+              <textbox id="mousewheelWithAltKeyNumlines" size="3" 
+                        preftype="int" prefstring="mousewheel.withaltkey.numlines"/>
+              <label value="&scrollLines.label;"/>
+            </hbox>
+            <checkbox id="mousewheelWithAltKeySysNumlines" label="&useSystemDefault.label;" accesskey="&useSystemDefault.accesskey;"
+                      prefstring="mousewheel.withaltkey.sysnumlines"
+                      oncommand="enableField(this, 'mousewheelWithAltKeyNumlines');"/>
+          </vbox>
+        </hbox>
+        <radio value="1" label="&scrollPgUpPgDn.label;" accesskey="&scrollPgUpPgDn.accesskey;"/>
+        <radio value="2" label="&history.label;" accesskey="&history.accesskey;"/>
+        <radio value="3" label="&textsize.label;" accesskey="&textsize.accesskey;"/>
+      </radiogroup>
+
+      <!-- ctrl modifiers -->
+      <radiogroup id="mousewheelWithCtrlKeyAction"
+                  prefstring="mousewheel.withcontrolkey.action" >
+        <hbox align="start">
+          <radio value="0" label="&scroll.label;" accesskey="&scroll.accesskey;"/>
+          <vbox align="start">
+            <hbox align="center">
+              <textbox id="mousewheelWithCtrlKeyNumlines" size="3" 
+                       preftype="int" prefstring="mousewheel.withcontrolkey.numlines"/>
+              <label value="&scrollLines.label;"/>
+            </hbox>
+            <checkbox id="mousewheelWithCtrlKeySysNumlines" label="&useSystemDefault.label;" accesskey="&useSystemDefault.accesskey;"
+                      prefstring="mousewheel.withcontrolkey.sysnumlines"
+                      oncommand="enableField(this, 'mousewheelWithCtrlKeyNumlines');"/>
+          </vbox>
+        </hbox>
+        <radio value="1" label="&scrollPgUpPgDn.label;" accesskey="&scrollPgUpPgDn.accesskey;"/>
+        <radio value="2" label="&history.label;" accesskey="&history.accesskey;"/>
+        <radio value="3" label="&textsize.label;" accesskey="&textsize.accesskey;"/>
+      </radiogroup>
+
+      <!-- shift modifiers -->
+      <radiogroup id="mousewheelWithShiftKeyAction" prefstring="mousewheel.withshiftkey.action">
+        <hbox align="start">
+          <radio value="0" label="&scroll.label;" accesskey="&scroll.accesskey;"/>
+          <vbox align="start">
+            <hbox align="center">
+              <textbox id="mousewheelWithShiftKeyNumlines" size="3" 
+                         preftype="int" prefstring="mousewheel.withshiftkey.numlines"/>
+              <label value="&scrollLines.label;"/>
+            </hbox>
+            <checkbox id="mousewheelWithShiftKeySysNumlines" label="&useSystemDefault.label;" accesskey="&useSystemDefault.accesskey;"
+                      prefstring="mousewheel.withshiftkey.sysnumlines"
+                      oncommand="enableField(this, 'mousewheelWithShiftKeyNumlines');"/>
+          </vbox>
+        </hbox>
+        <radio value="1" label="&scrollPgUpPgDn.label;" accesskey="&scrollPgUpPgDn.accesskey;"/>
+        <radio value="2" label="&history.label;" accesskey="&history.accesskey;"/>
+        <radio value="3" label="&textsize.label;" accesskey="&textsize.accesskey;"/>
+      </radiogroup>
+    </deck>     
+  </groupbox>
+</page>

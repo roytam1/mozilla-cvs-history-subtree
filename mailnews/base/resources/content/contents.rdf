@@ -19,7 +19,7 @@
 
   <!-- overlay information -->
   <RDF:Seq about="urn:mozilla:overlays">
-    <RDF:li resource="chrome://communicator/content/pref/preftree.xul"/>
+    <RDF:li resource="chrome://communicator/content/pref/preftree-mailonly.xul"/>
     <RDF:li resource="chrome://communicator/content/pref/pref-appearance.xul"/>
     <RDF:li resource="chrome://communicator/content/pref/pref-scripts.xul"/>
     <RDF:li resource="chrome://cookie/content/pref-cookies.xul"/>
@@ -35,28 +35,43 @@
 
 
   <!-- messenger preferences branches -->
-  <RDF:Seq about="chrome://communicator/content/pref/preftree.xul">
-    <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+  <RDF:Seq about="chrome://communicator/content/pref/preftree-mailonly.xul">
+    <!-- not needed for standalone mail
+      <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+    -->
+    <RDF:li>chrome://messenger/content/mailPrefsOverlay-mailonly.xul</RDF:li>
   </RDF:Seq>
 
   <!-- messenger startup pref -->
   <RDF:Seq about="chrome://communicator/content/pref/pref-appearance.xul">
-    <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+    <!-- not needed for standalone mail
+      <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+    -->
+    <RDF:li>chrome://messenger/content/mailPrefsOverlay-mailonly.xul</RDF:li>
   </RDF:Seq>
 
   <!-- messenger js toggle pref -->
   <RDF:Seq about="chrome://communicator/content/pref/pref-scripts.xul">
-    <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+    <!-- not needed for standalone mail
+      <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+    -->
+    <RDF:li>chrome://messenger/content/mailPrefsOverlay-mailonly.xul</RDF:li>
   </RDF:Seq>
 
   <!-- messenger cookie toggle pref -->
   <RDF:Seq about="chrome://cookie/content/pref-cookies.xul">
-    <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+    <!-- not needed for standalone mail
+      <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+    -->
+    <RDF:li>chrome://messenger/content/mailPrefsOverlay-mailonly.xul</RDF:li>
   </RDF:Seq>
 
   <!-- messenger image toggle pref -->
   <RDF:Seq about="chrome://cookie/content/pref-images.xul">
-    <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+    <!-- not needed for standalone mail
+      <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+    -->
+    <RDF:li>chrome://messenger/content/mailPrefsOverlay-mailonly.xul</RDF:li>
   </RDF:Seq>
 
   <!-- messenger items for Navigator -->

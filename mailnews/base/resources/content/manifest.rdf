@@ -16,7 +16,7 @@
 
   <!-- overlay information -->
   <RDF:Seq about="urn:mozilla:overlays">
-    <RDF:li resource="chrome://communicator/content/pref/preftree.xul"/>
+    <RDF:li resource="chrome://communicator/content/pref/preftree-mailonly.xul"/>
     <RDF:li resource="chrome://communicator/content/pref/pref-appearance.xul"/>
     <RDF:li resource="chrome://communicator/content/pref/pref-advanced.xul"/>
     <!-- commenting out tasksOverlay.xul because the menu items have been moved to mailTasksOverlay.xul
@@ -33,18 +33,27 @@
 
 
   <!-- messenger preferences branches -->
-  <RDF:Seq about="chrome://communicator/content/pref/preftree.xul">
-    <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+  <RDF:Seq about="chrome://communicator/content/pref/preftree-mailonly.xul">
+    <!-- not needed for standalone mail
+      <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+    -->
+    <RDF:li>chrome://messenger/content/mailPrefsOverlay-mailonly.xul</RDF:li>
   </RDF:Seq>
 
   <!-- messenger startup pref -->
   <RDF:Seq about="chrome://communicator/content/pref/pref-appearance.xul">
-    <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+    <!-- not needed for standalone mail
+      <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+    -->
+    <RDF:li>chrome://messenger/content/mailPrefsOverlay-mailonly.xul</RDF:li>
   </RDF:Seq>
 
   <!-- messenger js toggle pref -->
   <RDF:Seq about="chrome://communicator/content/pref/pref-advanced.xul">
-    <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+    <!-- not needed for standalone mail
+      <RDF:li>chrome://messenger/content/mailPrefsOverlay.xul</RDF:li>
+    -->
+    <RDF:li>chrome://messenger/content/mailPrefsOverlay-mailonly.xul</RDF:li>
   </RDF:Seq>
 
   <!-- commenting out tasksOverlay.xul because the menu items have been moved to mailTasksOverlay.xul

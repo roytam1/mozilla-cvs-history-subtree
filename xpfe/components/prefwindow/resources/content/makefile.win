@@ -69,7 +69,7 @@ CHROME_CONTENT = \
 	.\pref-smartupdate.xul \
 	.\pref.xul \
 	.\nsPrefWindow.js \
-	.\preftree.xul \
+	.\preftree-mailonly.xul \
 	.\pref-mousewheel.xul \
 	.\pref-winhooks.xul \
 	.\pref-winhooks.js \

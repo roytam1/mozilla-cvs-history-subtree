@@ -64,4 +64,7 @@ Rights Reserved.
 <!ENTITY languagesTitle.label				  "Languages">
 <!ENTITY languagesText.label				  "Use the following character coding as the default for composing messages:">
 
+<!ENTITY warnOnSendAccelKey.label             "Confirm when using keyboard shortcut to send message">
+<!ENTITY warnOnSendAccelKey.accesskey         "n">
+
 <!-- Tooltips -->  

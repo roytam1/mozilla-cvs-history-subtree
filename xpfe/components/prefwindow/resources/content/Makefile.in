@@ -26,10 +26,12 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+ifndef MOZ_MINOTAUR
 ifeq ($(OS_ARCH),WINNT)
 DIRS		= win
 else
 DIRS		= unix
+endif
 endif
 
 include $(topsrcdir)/config/rules.mk

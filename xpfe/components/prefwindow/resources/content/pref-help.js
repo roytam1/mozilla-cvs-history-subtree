@@ -52,7 +52,6 @@ var fm = {
   "chrome://pippki/content/pref-certs.xul": "certs_prefs",
   "chrome://pippki/content/pref-validation.xul": "validation_prefs",
   "chrome://communicator/content/pref/pref-advanced.xul": "advanced_pref_advanced",
-  "chrome://communicator/content/pref/pref-cache.xul": "advanced_pref_cache",
   "chrome://communicator/content/pref/pref-debug.xul": "debug",
   "chrome://communicator/content/pref/pref-debug1.xul": "debug_event",
   "chrome://communicator/content/pref/pref-debug2.xul": "debug_network",

@@ -1,7 +1,7 @@
 <?xml version="1.0"?> 
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?> 
 
-<?xul-overlay href="chrome://communicator/content/pref/preftree.xul"?>
+<?xul-overlay href="chrome://communicator/content/pref/preftree-mailonly.xul"?>
 
 <!DOCTYPE window SYSTEM "chrome://communicator/locale/pref/pref.dtd" >
 

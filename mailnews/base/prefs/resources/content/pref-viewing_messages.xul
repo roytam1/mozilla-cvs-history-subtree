@@ -40,19 +40,28 @@
   <groupbox>
     <caption label="&displayWidth.label;"/>
 
-      <description>&plainText.label;</description>
-    
-    <hbox class="indent">
+    <description>&viewingPlainText.label;</description>
+    <vbox align="start">
+      <checkbox id="wrapLongLines" label="&wrapInMsg.label;"
+                prefstring="mail.wrap_long_lines" />
+      <checkbox class="iconic" id="displayGlyph" label="&convertEmoticons.label;"
+                prefstring="mail.display_glyph"/>   
+    </vbox>
+
+    <hbox align="center">
+      <label value="&plainText.label;"/>
       <radiogroup id="mailFixedWidthMessages" 
                   preftype="bool" prefstring="mail.fixed_width_messages">
-        <radio value="true" label="&fixedWidth.label;"/>
-        <radio value="false" label="&variableWidth.label;"/>                
+        <hbox>
+          <radio value="true" label="&fixedWidth.label;"/>
+          <radio value="false" label="&variableWidth.label;"/>                
+        </hbox>
       </radiogroup>
     </hbox>
 
     <separator class="thin"/>
 
-  <description>&displayText.label;</description>
+    <description>&displayText.label;</description>
     <hbox class="indent" align="center">
       <label value="&style.label;" accesskey="&style.accesskey;" control="mailQuotedStyle"/>
       <menulist id="mailQuotedStyle" prefstring="mail.quoted_style">
@@ -78,37 +87,5 @@
       <broadcaster id="mailCitationColor" pref="true" preftype="color" prefstring="mail.citation_color" prefattribute="value" wsm_attributes="value"/>
     </hbox>    
 
-  <description>&viewingPlainText.label;</description>
-    <vbox align="start" class="indent">
-      <checkbox id="wrapLongLines" label="&wrapInMsg.label;"
-                prefstring="mail.wrap_long_lines" />
-      <checkbox class="iconic" id="displayGlyph" label="&convertEmoticons.label;"
-                prefstring="mail.display_glyph"/>   
-      <hbox align="center" class="indent">
-           <label value="&example1.label;"/>
-           <image class="smileface"/>
-           <label value="&example2.label;"/>
-      </hbox>
-    
-    </vbox>
   </groupbox>
-
-  <groupbox align="start">
-    <caption label="&languagesTitle.label;"/>
-    <description>&coding.label;</description>
-    <hbox align="center">
-      <label control="sendDefaultCharsetList"
-             value="&sendDefaultCharset.label;" accesskey="&sendDefaultCharset.accesskey;"/>
-        <menulist id="sendDefaultCharsetList" ref="NC:DecodersRoot" datasources="rdf:charset-menu"
-                preftype="localizedstring" prefstring="mailnews.view_default_charset">
-        <template>
-          <menupopup>
-            <menuitem label="rdf:http://home.netscape.com/NC-rdf#Name" value="..." uri="..."/>
-          </menupopup>
-        </template>
-      </menulist> 
-    </hbox>      
-    <checkbox id="forceCharsetOverride" label="&forceCharsetOverride.label;"
-              prefstring="mailnews.force_charset_override"/>
-  </groupbox>   
 </page>

@@ -1,4 +1,4 @@
-pref-advanced.xul
+pref-advanced-mailonly.xul
 pref-appearance.xul
 pref-applications.xul
 pref-applications.js
@@ -40,4 +40,4 @@ pref-smart_browsing.xul
 pref-smartupdate.xul
 nsPrefWindow.js
 pref.xul
-preftree.xul
+preftree-mailonly.xul
