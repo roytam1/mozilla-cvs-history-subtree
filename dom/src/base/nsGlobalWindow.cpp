@@ -2326,6 +2326,8 @@ GlobalWindowImpl::GetFrames(nsIDOMWindow** aFrames)
   *aFrames = this;
   NS_ADDREF(*aFrames);
 
+  FlushPendingNotifications();
+
   return NS_OK;
 }
 
