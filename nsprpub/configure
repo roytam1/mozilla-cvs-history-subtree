@@ -3100,6 +3100,44 @@ EOF
 
     ;;
 
+*-darwin*)
+    cat >> confdefs.h <<\EOF
+#define XP_UNIX 1
+EOF
+
+    cat >> confdefs.h <<\EOF
+#define DARWIN 1
+EOF
+
+    cat >> confdefs.h <<\EOF
+#define HAVE_BSD_FLOCK 1
+EOF
+
+    CFLAGS="$CFLAGS -Wmost -fno-common -pipe"
+    if echo $OS_TEST | grep -c 86 2>/dev/null; then
+        CFLAGS="$CFLAGS -mno-486"
+        cat >> confdefs.h <<\EOF
+#define i386 1
+EOF
+
+        CPU_ARCH=i386
+    else
+        cat >> confdefs.h <<\EOF
+#define ppc 1
+EOF
+
+        CPU_ARCH=ppc
+    fi
+    DSO_LDOPTS='-dynamiclib -compatibility_version 1 -current_version 1 -all_load -install_name @executable_path/$@'
+    # Use the standard preprocessor (cpp)
+    CFLAGS="$CFLAGS -traditional-cpp"
+    MKSHLIB='$(CC) -arch $(CPU_ARCH) $(DSO_LDOPTS) -o $@'
+    DLL_SUFFIX=dylib
+    USE_PTHREADS=1
+    MDCPUCFG_H=_darwin.cfg
+    PR_MD_CSRCS=darwin.c
+    ;;
+
 *-dgux*)
     cat >> confdefs.h <<\EOF
 #define XP_UNIX 1
@@ -4012,17 +4050,17 @@ EOF
 
     ac_safe=`echo "machine/builtins.h" | sed 'y%./+-%__p_%'`
 echo $ac_n "checking for machine/builtins.h""... $ac_c" 1>&6
-echo "configure:4016: checking for machine/builtins.h" >&5
+echo "configure:4054: checking for machine/builtins.h" >&5
 if eval "test \"`echo '$''{'ac_cv_header_$ac_safe'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
 else
   cat > conftest.$ac_ext <<EOF
-#line 4021 "configure"
+#line 4059 "configure"
 #include "confdefs.h"
 #include <machine/builtins.h>
 EOF
 ac_try="$ac_cpp conftest.$ac_ext >/dev/null 2>conftest.out"
-{ (eval echo configure:4026: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
+{ (eval echo configure:4064: \"$ac_try\") 1>&5; (eval $ac_try) 2>&5; }
 ac_err=`grep -v '^ *+' conftest.out | grep -v "^conftest.${ac_ext}\$"`
 if test -z "$ac_err"; then
   rm -rf conftest*
@@ -4101,44 +4139,6 @@ EOF
     USE_NSPR_THREADS=1
     MDCPUCFG_H=_qnx.cfg
     PR_MD_CSRCS=qnx.c
-    ;;
-
-*-darwin*)
-    cat >> confdefs.h <<\EOF
-#define XP_UNIX 1
-EOF
-
-    cat >> confdefs.h <<\EOF
-#define DARWIN 1
-EOF
-
-    cat >> confdefs.h <<\EOF
-#define HAVE_BSD_FLOCK 1
-EOF
-
-    CFLAGS="$CFLAGS -Wmost -fno-common -pipe"
-    if echo $OS_TEST | grep -c 86 2>/dev/null; then
-        CFLAGS="$CFLAGS -mno-486"
-        cat >> confdefs.h <<\EOF
-#define i386 1
-EOF
-
-        CPU_ARCH=i386
-    else
-        cat >> confdefs.h <<\EOF
-#define ppc 1
-EOF
-
-        CPU_ARCH=ppc
-    fi
-    DSO_LDOPTS='-dynamiclib -compatibility_version 1 -current_version 1 -all_load -install_name @executable_path/$@'
-    # Use the standard preprocessor (cpp)
-    CFLAGS="$CFLAGS -traditional-cpp"
-    MKSHLIB='$(CC) -arch $(CPU_ARCH) $(DSO_LDOPTS) -o $@'
-    DLL_SUFFIX=dylib
-    USE_PTHREADS=1
-    MDCPUCFG_H=_darwin.cfg
-    PR_MD_CSRCS=darwin.c
     ;;
 
 *-*-sco*)
