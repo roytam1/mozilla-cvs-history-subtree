@@ -73,6 +73,7 @@ void			insertNotify (RDF rdf, RDF_Notification not, RDF_Resource u, RDF_Resource
 void			unassertNotify (RDF_Notification not, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type, char* ds);
 void			sendNotifications1 (RDFL rl, RDF_EventType opType, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type, PRBool tv);
 void			sendNotifications (RDF rdf, RDF_EventType opType, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type, PRBool tv, char* ds);
+PRBool			setFindExactStringMatchingMode(PRBool exactFlag);
 RDF_Resource		nextFindValue (RDF_Cursor c);
 PRBool			itemMatchesFind (RDF r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type);
 PR_PUBLIC_API(RDF_Cursor)RDF_Find (RDF_Resource s, void* v, RDF_ValueType type);

@@ -36,6 +36,7 @@
 
 	/* globals */
 RDFL		gAllDBs = 0;
+PRBool		gExactStringMatchMode = PR_FALSE;
 
 
 
@@ -645,7 +646,10 @@ RDF_NextValue (RDF_Cursor c)
   rdf =  c->rdf;
   ans = (*rdf->translators[c->count]->nextValue)(rdf->translators[c->count], c->current);
   while (ans != NULL) {
-    if (c->count == 0) return addDep(c->rdf, ans);
+    if (c->count == 0) {
+      if (c->type == RDF_RESOURCE_TYPE)  return addDep(c->rdf, ans);
+      else				 return ans;
+      }
     if (((!c->inversep) && 
 	(!(callHasAssertions(0, rdf, c->u, c->s, ans, c->type, !c->tv)))) ||
 	((c->inversep) && 
@@ -714,17 +718,18 @@ findEnumerator (PLHashEntry *he, PRIntn i, void *arg)
   RDF_Cursor c = (RDF_Cursor) arg;
   RDF_Resource u = (RDF_Resource)he->value;
   if (itemMatchesFind(c->rdf, u, c->s, c->value, c->type)) {
-    c->count++;
-    if (c->size <= c->count) {
-      RDF_Resource* newBlock = getMem(c->size+5);
+    /* if (c->size <= c->count) */ {
+      RDF_Resource* newBlock = getMem(c->size + sizeof(RDF_Resource *));
       if (newBlock == NULL) return  HT_ENUMERATE_STOP;
       if (c->size > 0) {
-	memcpy(newBlock, c->pdata, c->size * sizeof(RDF_Resource*));
+	memcpy(newBlock, c->pdata, c->size);
 	freeMem(c->pdata);
       }
       c->pdata = newBlock;
+      c->size += sizeof(RDF_Resource *);
     }
-    *((RDF_Resource*)c->pdata + c->count) = u;
+    *((RDF_Resource*)(((char *)c->pdata) + (c->count*sizeof(RDF_Resource *)))) = u;
+    c->count++;
   }
   return  HT_ENUMERATE_NEXT;
 }
@@ -739,7 +744,7 @@ RDF_Find (RDF_Resource s, void* v, RDF_ValueType type)
   c->value = v;
   c->type = type;
   c->queryType =  RDF_FIND_QUERY;
-  c->count = 0;
+  c->rdf = gAllDBs->rdf;
   PL_HashTableEnumerateEntries(resourceHash, findEnumerator, c);
   c->count = 0;
   return c;
@@ -750,21 +755,43 @@ RDF_Find (RDF_Resource s, void* v, RDF_ValueType type)
 PRBool
 itemMatchesFind (RDF r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType type)
 {
-  RDF_Cursor c = RDF_GetTargets(r, u, s, type, 1);
   void* val;
-  while (val = RDF_NextValue(c)) {
-    PRBool ok = 0;
-    if (type == RDF_RESOURCE_TYPE) {
-      ok = (u == v);
-    } else if (type == RDF_STRING_TYPE) {
-      ok = (strstr(val, v) != NULL);
+  RDF_Cursor c = RDF_GetTargets(r, u, s, type, 1);
+  if (c != NULL) {
+    while (val = RDF_NextValue(c)) {
+      PRBool ok = 0;
+      if (type == RDF_RESOURCE_TYPE) {
+        ok = (u == v);
+      } else if (type == RDF_STRING_TYPE) {
+        if (gExactStringMatchMode == PR_TRUE)
+        {
+          ok = (!strcasecmp(val, v));
+        }
+        else
+        {
+          ok = (strstr(val, v) != NULL);
+        }
+      }
+      if (ok) {
+        RDF_DisposeCursor(c);
+        return 1;
+      }
     }
-    if (ok) {
-      RDF_DisposeCursor(c);
-      return 1;
-    }
+    RDF_DisposeCursor(c);
   }
   return 0;
+}
+
+
+
+PRBool
+setFindExactStringMatchingMode(PRBool exactFlag)
+{
+	PRBool		oldMode;
+
+	oldMode = gExactStringMatchMode;
+	gExactStringMatchMode = exactFlag;
+	return(oldMode);
 }
 
 
@@ -772,11 +799,13 @@ itemMatchesFind (RDF r, RDF_Resource u, RDF_Resource s, void* v, RDF_ValueType t
 RDF_Resource
 nextFindValue (RDF_Cursor c)
 {
-  if (c->count < c->size && (*((RDF_Resource*)c->pdata + c->count) != NULL)) {
-    RDF_Resource ans = (RDF_Resource)*((RDF_Resource*)c->pdata + c->count);
+	RDF_Resource ans = NULL;
+
+  if (((c->count*sizeof(RDF_Resource *)) < c->size) && (*((RDF_Resource*)c->pdata + c->count) != NULL)) {
+    ans = (RDF_Resource)*((RDF_Resource*)c->pdata + (c->count*sizeof(RDF_Resource *)));
     c->count++;
-    return ans;
-  } else   return NULL;
+  }
+  return ans;
 }
 
 
