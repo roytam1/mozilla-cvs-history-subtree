@@ -882,6 +882,9 @@ public:
    * 'max-width' properties on this frame, but it is affected by the
    * values of those properties on this frame's descendants.
    *
+   * The value returned should **NOT** include the space required for
+   * padding and border.
+   *
    * Note that many frames will cache the result of this function call
    * unless MarkIntrinsicWidthsDirty is called.
    */
@@ -893,6 +896,9 @@ public:
    * This is *not* affected by the CSS 'min-width', 'width', and
    * 'max-width' properties on this frame, but it is affected by the
    * values of those properties on this frame's descendants.
+   *
+   * The value returned should **NOT** include the space required for
+   * padding and border.
    *
    * Note that many frames will cache the result of this function call
    * unless MarkIntrinsicWidthsDirty is called.
