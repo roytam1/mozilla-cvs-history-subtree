@@ -1568,7 +1568,7 @@ sub PrintSize($) {
     } elsif ($size > 1000) {
         $rv = PrintNum($size / 1000.0) . "K";
     } else {
-        $rv = PrintNum($size);
+        $rv = PrintNum($size) . "B";
     }
 }
 
