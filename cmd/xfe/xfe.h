@@ -120,7 +120,7 @@ typedef struct fe_Drawable
 } fe_Drawable;
 
 
-// Client data for Imagelib callbacks
+/* Client data for Imagelib callbacks */
 typedef struct fe_PixmapClientData {
     Pixmap pixmap;
     Display *dpy;
@@ -363,7 +363,7 @@ extern Pixmap fe_ToolbarPixmap (MWContext *context, int i, Boolean disabled_p,
 				Boolean urls_p);
 
 
-// Image rendering methods. 
+/* Image rendering methods.  */
 extern Pixmap
 fe_TiledMaskWithClipRegion(Display *dpy, Drawable drawable,
                            Pixmap mask_x_pixmap,
