@@ -410,6 +410,7 @@ sub SetupPath {
             }
         }
     }
+    $Settings::ConfigureArgs .= '--cache-file=/dev/null';
     #print "Path after: $ENV{PATH}\n";
 }
 
