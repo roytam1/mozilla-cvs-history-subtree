@@ -421,40 +421,43 @@ void* nsChildView::GetNativeData(PRUint32 aDataType)
       if (mPluginPort == nsnull)
         mPluginPort = new nsPluginPort;
         
-        [mView setIsPluginView: YES];
-        
-        NSWindow* window = [mView window];
-        if (window) {
-            WindowRef topLevelWindow = (WindowRef) [window _windowRef];  // PRIVATE APPLE SPI FOO.
-            if (topLevelWindow) {
-                mPluginPort->port = GetWindowPort(topLevelWindow);
-
-                NSPoint viewOrigin = [mView convertPoint:NSZeroPoint toView:nil];
-                NSRect frame = [window frame];
-                viewOrigin.y = frame.size.height - viewOrigin.y;
-                
-                // need to convert view's origin to window coordinates.
-                // then, encode as "SetOrigin" ready values.
-                mPluginPort->portx = -viewOrigin.x;
-                mPluginPort->porty = -viewOrigin.y;
-                
-                // set up the clipping region for plugins.
-                RgnHandle clipRgn = ::NewRgn();
-                if (clipRgn != NULL) {
-                    NSRect visibleBounds = [mView visibleRect];
-                    NSPoint clipOrigin = [mView convertPoint:visibleBounds.origin toView:nil];
-                    clipOrigin.y = frame.size.height - clipOrigin.y;
-                    SetRectRgn(clipRgn, clipOrigin.x, clipOrigin.y,
-                               clipOrigin.x + visibleBounds.size.width,
-                               clipOrigin.y + visibleBounds.size.height);
-                    SetPortClipRegion(mPluginPort->port, clipRgn);
-                    DisposeRgn(clipRgn);
-                }
-            }
+      [mView setIsPluginView: YES];
+      
+      NSWindow* window = [mView getNativeWindow];
+      if (window) {
+        WindowRef topLevelWindow = (WindowRef) [window _windowRef];  // PRIVATE APPLE SPI FOO.
+        if (topLevelWindow) {
+          mPluginPort->port = GetWindowPort(topLevelWindow);
+      
+          NSPoint viewOrigin = [mView convertPoint:NSZeroPoint toView:nil];
+          NSRect frame = [window frame];
+          viewOrigin.y = frame.size.height - viewOrigin.y;
+          
+          // need to convert view's origin to window coordinates.
+          // then, encode as "SetOrigin" ready values.
+          mPluginPort->portx = -viewOrigin.x;
+          mPluginPort->porty = -viewOrigin.y;
+          
+          // set up the clipping region for plugins.
+          RgnHandle clipRgn = ::NewRgn();
+          if (clipRgn != NULL) {
+            NSRect visibleBounds = [mView visibleRect];
+            NSPoint clipOrigin = [mView convertPoint:visibleBounds.origin toView:nil];
+            clipOrigin.y = frame.size.height - clipOrigin.y;
+            SetRectRgn(clipRgn, clipOrigin.x, clipOrigin.y,
+                       clipOrigin.x + visibleBounds.size.width,
+                       clipOrigin.y + visibleBounds.size.height);
+            SetPortClipRegion(mPluginPort->port, clipRgn);
+            DisposeRgn(clipRgn);
+          }
         }
-    
+      } else {
+        printf("@@@@ Couldn't get NSWindow for plugin port. @@@@\n");
+        abort();
+      }
+
       retVal = (void*)mPluginPort;
-        break;
+      break;
   }
 
   return retVal;
