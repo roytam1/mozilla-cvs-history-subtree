@@ -3472,11 +3472,11 @@ nsMsgComposeAndSend::DeliverFileAsNews()
   if (!mailSession) return NS_ERROR_FAILURE;
 
   nsCOMPtr<nsIMsgWindow>    msgWindow;
-
-//JFD TODO: we should use GetDefaultPrompt instead
   rv = mailSession->GetTopmostMsgWindow(getter_AddRefs(msgWindow));
+    // see bug #163139
+    // we might not have a msg window if only the compose window is open.
   if(NS_FAILED(rv))
-    return rv;
+      msgWindow = nsnull;
 
     rv = nntpService->PostMessage(fileToPost, mCompFields->GetNewsgroups(), mCompFields->GetNewspostUrl(),
                                   uriListener, msgWindow, nsnull);
