@@ -145,6 +145,7 @@ pref("addressbook.throbber.url","chrome://messenger-region/locale/region.propert
 
 // show a broken image icon for blocked remote image requests
 pref("network.image.imageBehavior", 2);
+pref("network.cookie.cookieBehavior", 2); // 0-Accept, 1-dontAcceptForeign, 2-dontUse, 3-p3p
 
 // thunderbird shows size in KB instead of lines by default
 pref("news.show_size_in_lines", false);
