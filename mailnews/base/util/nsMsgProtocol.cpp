@@ -19,9 +19,11 @@
 #include "msgCore.h"
 #include "nsMsgProtocol.h"
 #include "nsIMsgMailNewsUrl.h"
-#include "nsINetService.h"
+#include "nsISocketTransportService.h"
+#include "nsIFileTransportService.h"
 
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
+static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
+static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
 
 NS_IMPL_ISUPPORTS(nsMsgProtocol, nsIStreamListener::GetIID())
 
@@ -35,18 +37,25 @@ nsMsgProtocol::nsMsgProtocol()
 nsMsgProtocol::~nsMsgProtocol()
 {}
 
-nsresult nsMsgProtocol::OpenNetworkSocket(nsIURI * aURL, PRUint32 aPort, const char * aHostName) // open a connection on this url
+nsresult nsMsgProtocol::OpenNetworkSocket(nsIURI * aURL) // open a connection on this url
 {
 	nsresult rv = NS_OK;
+	char * hostName = nsnull;
+	PRInt32 port = 0;
 
-	NS_WITH_SERVICE(nsINetService, pNetService, kNetServiceCID, &rv); 
-    if (NS_SUCCEEDED(rv) && pNetService) 
+    NS_WITH_SERVICE(nsISocketTransportService, socketService, kSocketTransportServiceCID, &rv);
+
+	if (NS_SUCCEEDED(rv) && aURL)
 	{
-		rv = pNetService->CreateSocketTransport(getter_AddRefs(m_transport), aPort, aHostName);
-		if (NS_SUCCEEDED(rv) && m_transport)
+		aURL->GetPort(&port);
+		aURL->GetHost(&hostName);
+
+		rv = socketService->CreateTransport(hostName, port, getter_AddRefs(m_channel));
+		nsCRT::free(hostName);
+		if (NS_SUCCEEDED(rv) && m_channel)
 		{
+			m_socketIsOpen = PR_FALSE;
 			rv = SetupTransportState();
-			m_socketIsOpen = PR_TRUE;
 		}
 	}
 
@@ -55,17 +64,21 @@ nsresult nsMsgProtocol::OpenNetworkSocket(nsIURI * aURL, PRUint32 aPort, const c
 
 nsresult nsMsgProtocol::OpenFileSocket(nsIURI * aURL, const nsFileSpec * aFileSpec)
 {
+	// mscott - file needs to be encoded directly into aURL. I should be able to get
+	// rid of this method completely.
+
 	nsresult rv = NS_OK;
-	
-	NS_WITH_SERVICE(nsINetService, pNetService, kNetServiceCID, &rv); 
-    if (NS_SUCCEEDED(rv) && pNetService && aURL) 
+    NS_WITH_SERVICE(nsIFileTransportService, fileService, kFileTransportServiceCID, &rv);
+
+	if (NS_SUCCEEDED(rv) && aURL)
 	{
-		nsFilePath filePath(*aFileSpec);
-		rv = pNetService->CreateFileSocketTransport(getter_AddRefs(m_transport), filePath);
-		if (NS_SUCCEEDED(rv) && m_transport)
+
+		rv = fileService->CreateTransport((const char *) *aFileSpec, getter_AddRefs(m_channel));
+
+		if (NS_SUCCEEDED(rv) && m_channel)
 		{
+			m_socketIsOpen = PR_FALSE;
 			rv = SetupTransportState();
-			m_socketIsOpen = PR_TRUE;
 		}
 	}
 
@@ -76,17 +89,11 @@ nsresult nsMsgProtocol::SetupTransportState()
 {
 	nsresult rv = NS_OK;
 
-	if (m_transport)
+	if (!m_socketIsOpen && m_channel)
 	{
-		rv = m_transport->GetOutputStream(getter_AddRefs(m_outputStream));
+		rv = m_channel->OpenOutputStream(0 /* start position */, getter_AddRefs(m_outputStream));
 		NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create an output stream");
-
-		rv = m_transport->GetOutputStreamConsumer(getter_AddRefs(m_outputConsumer));
-		NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create an output consumer");
-
-		// register self as the consumer for the socket...
-		rv = m_transport->SetInputStreamConsumer((nsIStreamListener *) this);
-		NS_ASSERTION(NS_SUCCEEDED(rv), "unable to register NNTP instance as a consumer on the socket");
+		// we want to open the stream 
 	} // if m_transport
 
 	return rv;
@@ -97,8 +104,7 @@ nsresult nsMsgProtocol::CloseSocket()
 	// release all of our socket state
 	m_socketIsOpen = PR_FALSE;
 	m_outputStream = null_nsCOMPtr();
-	m_outputConsumer = null_nsCOMPtr();
-	m_transport = null_nsCOMPtr();
+	m_channel = null_nsCOMPtr();
 
 	return NS_OK;
 }
@@ -115,20 +121,11 @@ PRInt32 nsMsgProtocol::SendData(nsIURI * aURL, const char * dataBuffer)
 	PRUint32 writeCount = 0; 
 	PRInt32 status = 0; 
 
-	NS_PRECONDITION(m_outputStream && m_outputConsumer, "no registered consumer for our output");
+	NS_PRECONDITION(m_outputStream, "oops....we don't have an output stream...how did that happen?");
 	if (dataBuffer && m_outputStream)
 	{
-		nsresult rv = m_outputStream->Write(dataBuffer, PL_strlen(dataBuffer), &writeCount);
-		if (NS_SUCCEEDED(rv) && writeCount == PL_strlen(dataBuffer))
-		{
-			nsCOMPtr<nsIInputStream> inputStream;
-			inputStream = do_QueryInterface(m_outputStream);
-			if (inputStream)
-				m_outputConsumer->OnDataAvailable(aURL, inputStream, writeCount);
-			status = 1; // mscott: we need some type of MK_OK? MK_SUCCESS? Arrgghhh
-		}
-		else // the write failed for some reason, returning 0 trips an error by the caller
-			status = 0; // mscott: again, I really want to add an error code here!!
+		return m_outputStream->Write(dataBuffer, PL_strlen(dataBuffer), &writeCount);
+		
 	}
 
 	return status;
@@ -136,41 +133,62 @@ PRInt32 nsMsgProtocol::SendData(nsIURI * aURL, const char * dataBuffer)
 
 // Whenever data arrives from the connection, core netlib notifices the protocol by calling
 // OnDataAvailable. We then read and process the incoming data from the input stream. 
-NS_IMETHODIMP nsMsgProtocol::OnDataAvailable(nsIURI* aURL, nsIInputStream *aIStream, PRUint32 aLength)
+NS_IMETHODIMP nsMsgProtocol::OnDataAvailable(nsISupports *ctxt, nsIBufferInputStream *inStr, PRUint32 sourceOffset, PRUint32 count)
 {
 	// right now, this really just means turn around and churn through the state machine
-	return ProcessProtocolState(aURL, aIStream, aLength);
+	nsCOMPtr<nsIURI> uri = do_QueryInterface(ctxt);
+	return ProcessProtocolState(uri, inStr, sourceOffset, count);
 }
 
-NS_IMETHODIMP nsMsgProtocol::OnStartBinding(nsIURI* aURL, const char *aContentType)
+NS_IMETHODIMP nsMsgProtocol::OnStartBinding(nsISupports *ctxt)
 {
-	nsCOMPtr <nsIMsgMailNewsUrl> aMsgUrl = do_QueryInterface(aURL);
-	return aMsgUrl->SetUrlState(PR_TRUE, NS_OK);
+	nsresult rv = NS_OK;
+	nsCOMPtr <nsIMsgMailNewsUrl> aMsgUrl = do_QueryInterface(ctxt, &rv);
+	if (NS_SUCCEEDED(rv) && aMsgUrl)
+		return aMsgUrl->SetUrlState(PR_TRUE, NS_OK);
+	else
+		return NS_ERROR_NO_INTERFACE;
 }
 
 // stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-NS_IMETHODIMP nsMsgProtocol::OnStopBinding(nsIURI* aURL, nsresult aStatus, const PRUnichar* aMsg)
+NS_IMETHODIMP nsMsgProtocol::OnStopBinding(nsISupports *ctxt, nsresult aStatus, const PRUnichar* aMsg)
 {
-	nsCOMPtr <nsIMsgMailNewsUrl> aMsgUrl = do_QueryInterface(aURL);
-	return aMsgUrl->SetUrlState(PR_FALSE, aStatus);
+	nsresult rv = NS_OK;
+	nsCOMPtr <nsIMsgMailNewsUrl> aMsgUrl = do_QueryInterface(ctxt, &rv);
+	if (NS_SUCCEEDED(rv) && aMsgUrl)
+		return aMsgUrl->SetUrlState(PR_FALSE, aStatus);
+	else
+		return NS_ERROR_NO_INTERFACE;
 }
 
-nsresult nsMsgProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
+NS_IMETHODIMP nsMsgProtocol::OnStartRequest(nsISupports *ctxt)
+{
+	return OnStartBinding(ctxt);
+}
+
+NS_IMETHODIMP nsMsgProtocol::OnStopRequest(nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg)
+{
+	return OnStopBinding(ctxt, status, errorMsg);
+}
+
+nsresult nsMsgProtocol::LoadUrl(nsIURI * aURL, nsIEventQueue *eventQueue, nsISupports * /* aConsumer */)
 {
 	// okay now kick us off to the next state...
 	// our first state is a process state so drive the state machine...
-	PRBool transportOpen = PR_FALSE;
 	nsresult rv = NS_OK;
 	nsCOMPtr <nsIMsgMailNewsUrl> aMsgUrl = do_QueryInterface(aURL);
 
-	rv = m_transport->IsTransportOpen(&transportOpen);
 	if (NS_SUCCEEDED(rv))
 	{
 		rv = aMsgUrl->SetUrlState(PR_TRUE, NS_OK); // set the url as a url currently being run...
-		if (!transportOpen)
-			rv = m_transport->Open(aURL);  // opening the url will cause to get notified when the connection is established
+		if (!m_socketIsOpen)
+		{
+			// put us in a state where we are always notified of incoming data
+			m_channel->AsyncRead(0, -1, aURL, eventQueue, this /* stream observer */ );
+			m_socketIsOpen = PR_TRUE; // mark the channel as open
+		}
 		else  // the connection is already open so we should begin processing our new url...
-			rv = ProcessProtocolState(aURL, nsnull, 0); 
+			rv = ProcessProtocolState(aURL, nsnull, 0, 0); 
 	}
 
 	return rv;
