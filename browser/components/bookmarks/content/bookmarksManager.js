@@ -231,7 +231,13 @@ function onViewSelected(aEvent)
     //var protocol = selection.protocol[0];
     if (selection.isContainer[0]) {// && protocol != "find" && protocol != "file") {
       RDFC.Init(aEvent.target.db, selection.item[0]);
-      var count = RDFC.GetCount();
+      var count = 0;
+      var children = RDFC.GetElements();
+      while (children.hasMoreElements()) {
+        if (BookmarksUtils.resolveType(children.getNext()) != "BookmarkSeparator")
+          count++;
+      }
+
       displayValue = BookmarksUtils.getLocaleString("status_foldercount", String(count));
     }
     else if (selection.type[0] == "Bookmark")
