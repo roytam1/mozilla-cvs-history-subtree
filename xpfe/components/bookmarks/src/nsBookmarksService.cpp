@@ -2910,50 +2910,86 @@ nsBookmarksService::GetLastCharset(const char* aURL, PRUnichar** aLastCharset)
 }
 
 NS_IMETHODIMP
-nsBookmarksService::UpdateBookmarkIcon(const char *aURL, const PRUnichar *iconURL)
+nsBookmarksService::UpdateBookmarkIcon(const char *aURL, const PRUnichar *aIconURL)
 {
-    nsresult rv;
-    nsCOMPtr<nsIRDFResource> bookmark;
-    if (NS_FAILED(rv = gRDF->GetResource(nsDependentCString(aURL), getter_AddRefs(bookmark) )))
-    {
-        NS_ERROR("unable to get bookmark resource");
+    nsCOMPtr<nsIRDFLiteral> urlLiteral;
+    nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUCS2(aURL).get(),
+                                   getter_AddRefs(urlLiteral));
+    if (NS_FAILED(rv))
         return rv;
-    }
-    nsCOMPtr<nsIRDFNode>    favIconNode;
-    if (NS_FAILED(rv = ProcessCachedBookmarkIcon(bookmark, iconURL,
-        getter_AddRefs(favIconNode))))
-    {
+
+    nsCOMPtr<nsISimpleEnumerator> bookmarks;
+    rv = GetSources(kNC_URL, urlLiteral, PR_TRUE, getter_AddRefs(bookmarks));
+    if (NS_FAILED(rv))
         return rv;
+
+    PRBool hasMoreBookmarks = PR_FALSE;
+    while (NS_SUCCEEDED(rv = bookmarks->HasMoreElements(&hasMoreBookmarks)) &&
+           hasMoreBookmarks) {
+        nsCOMPtr<nsISupports> supports;
+        rv = bookmarks->GetNext(getter_AddRefs(supports));
+        if (NS_FAILED(rv)) 
+            return rv;
+
+        nsCOMPtr<nsIRDFResource> bookmark = do_QueryInterface(supports);
+        if (bookmark) {
+            nsCOMPtr<nsIRDFNode> iconNode;
+            rv = ProcessCachedBookmarkIcon(bookmark, aIconURL,
+                                           getter_AddRefs(iconNode));
+            if (NS_FAILED(rv))
+                return rv;
+
+            if (iconNode) {
+                // Yes, that's right. Fake out RDF observers.
+                (void)OnAssert(this, bookmark, kNC_Icon, iconNode);
+            }
+        }
     }
-    if ((rv != NS_RDF_NO_VALUE) && favIconNode)
-    {
-        // yes, that's right; fake out RDF observers
-        (void)OnAssert(this, bookmark, kNC_Icon, favIconNode);
-    }
+
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsBookmarksService::RemoveBookmarkIcon(const char *aURL, const PRUnichar *iconURL)
+nsBookmarksService::RemoveBookmarkIcon(const char *aURL, const PRUnichar *aIconURL)
 {
-    nsresult rv;
-    nsCOMPtr<nsIRDFResource> bookmark;
-    if (NS_FAILED(rv = gRDF->GetResource(nsDependentCString(aURL), getter_AddRefs(bookmark) )))
-    {
-        NS_ERROR("unable to get bookmark resource");
+    nsCOMPtr<nsIRDFLiteral> urlLiteral;
+    nsresult rv = gRDF->GetLiteral(NS_ConvertUTF8toUCS2(aURL).get(),
+                                   getter_AddRefs(urlLiteral));
+    if (NS_FAILED(rv))
         return rv;
-    }
-    nsCOMPtr<nsIRDFLiteral> iconLiteral;
-    if (NS_FAILED(rv = gRDF->GetLiteral(iconURL, getter_AddRefs(iconLiteral))))
-    {
+
+    nsCOMPtr<nsISimpleEnumerator> bookmarks;
+    rv = GetSources(kNC_URL, urlLiteral, PR_TRUE, getter_AddRefs(bookmarks));
+    if (NS_FAILED(rv))
         return rv;
+
+    PRBool hasMoreBookmarks = PR_FALSE;
+    while (NS_SUCCEEDED(rv = bookmarks->HasMoreElements(&hasMoreBookmarks)) &&
+           hasMoreBookmarks) {
+        nsCOMPtr<nsISupports> supports;
+        rv = bookmarks->GetNext(getter_AddRefs(supports));
+        if (NS_FAILED(rv)) 
+            return rv;
+
+        nsCOMPtr<nsIRDFResource> bookmark = do_QueryInterface(supports);
+        if (bookmark) {
+            nsCOMPtr<nsIRDFLiteral> iconLiteral;
+            rv = gRDF->GetLiteral(aIconURL, getter_AddRefs(iconLiteral));
+            if (NS_FAILED(rv)) 
+                return rv;
+
+            PRBool hasThisIconURL = PR_FALSE;
+            rv = mInner->HasAssertion(bookmark, kNC_Icon, iconLiteral, PR_TRUE,
+                                      &hasThisIconURL);
+            if (NS_FAILED(rv)) 
+                return rv;
+
+            if (hasThisIconURL) {
+                (void)mInner->Unassert(bookmark, kNC_Icon, iconLiteral);
+            }
+        }
     }
-    PRBool  hasThisIconURL = PR_FALSE;
-    if (NS_SUCCEEDED(rv = mInner->HasAssertion(bookmark, kNC_Icon, iconLiteral,
-        PR_TRUE, &hasThisIconURL)) && (hasThisIconURL == PR_TRUE))
-    {
-        (void)mInner->Unassert(bookmark, kNC_Icon, iconLiteral);
-    }
+
     return NS_OK;
 }
 
@@ -2975,82 +3011,84 @@ nsBookmarksService::UpdateLastVisitedDate(const char *aURL,
     if (NS_FAILED(rv))
         return rv;
 
-    nsCOMPtr<nsISimpleEnumerator> sources;
-    rv = GetSources(kNC_URL, urlLiteral, PR_TRUE, getter_AddRefs(sources));
+    nsCOMPtr<nsISimpleEnumerator> bookmarks;
+    rv = GetSources(kNC_URL, urlLiteral, PR_TRUE, getter_AddRefs(bookmarks));
     if (NS_FAILED(rv))
         return rv;
 
-    PRBool hasMoreSrcs = PR_FALSE;
-    while (NS_SUCCEEDED(rv = sources->HasMoreElements(&hasMoreSrcs)) &&
-           hasMoreSrcs) {
+    PRBool hasMoreBookmarks = PR_FALSE;
+    while (NS_SUCCEEDED(rv = bookmarks->HasMoreElements(&hasMoreBookmarks)) &&
+           hasMoreBookmarks) {
         nsCOMPtr<nsISupports> supports;
-        rv = sources->GetNext(getter_AddRefs(supports));
+        rv = bookmarks->GetNext(getter_AddRefs(supports));
         if (NS_FAILED(rv)) 
             return rv;
 
         nsCOMPtr<nsIRDFResource> bookmark = do_QueryInterface(supports);
-        if (!bookmark)
-            continue;
+        if (bookmark) {
+            // Always use mInner! Otherwise, we could get into an infinite loop
+            // due to Assert/Change calling UpdateBookmarkLastModifiedDate().
 
-        // Always use mInner! Otherwise, we could get into an infinite loop
-        // due to Assert/Change calling UpdateBookmarkLastModifiedDate().
-
-        nsCOMPtr<nsIRDFNode> nodeType;
-        GetSynthesizedType(bookmark, getter_AddRefs(nodeType));
-        if (nodeType == kNC_Bookmark) {
-            nsCOMPtr<nsIRDFDate> now;
-            rv = gRDF->GetDateLiteral(PR_Now(), getter_AddRefs(now));
-            if (NS_FAILED(rv))
-                return rv;
-
-            nsCOMPtr<nsIRDFNode> lastMod;
-            rv = mInner->GetTarget(bookmark, kWEB_LastVisitDate, PR_TRUE,
-                                   getter_AddRefs(lastMod));
-            if (NS_FAILED(rv))
-                return rv;
-
-            if (lastMod) {
-                rv = mInner->Change(bookmark, kWEB_LastVisitDate, lastMod, now);
-            }
-            else {
-                rv = mInner->Assert(bookmark, kWEB_LastVisitDate, now, PR_TRUE);
-            }
-            if (NS_FAILED(rv))
-                return rv;
-
-            // Piggy-backing last charset.
-            if (aCharset && !nsDependentString(aCharset).IsEmpty()) {
-                nsCOMPtr<nsIRDFLiteral> charsetliteral;
-                rv = gRDF->GetLiteral(aCharset, getter_AddRefs(charsetliteral));
+            nsCOMPtr<nsIRDFNode> nodeType;
+            GetSynthesizedType(bookmark, getter_AddRefs(nodeType));
+            if (nodeType == kNC_Bookmark) {
+                nsCOMPtr<nsIRDFDate> now;
+                rv = gRDF->GetDateLiteral(PR_Now(), getter_AddRefs(now));
                 if (NS_FAILED(rv))
                     return rv;
 
-                nsCOMPtr<nsIRDFNode> charsetNode;
-                rv = mInner->GetTarget(bookmark, kWEB_LastCharset, PR_TRUE,
-                                       getter_AddRefs(charsetNode));
+                nsCOMPtr<nsIRDFNode> lastMod;
+                rv = mInner->GetTarget(bookmark, kWEB_LastVisitDate, PR_TRUE,
+                                       getter_AddRefs(lastMod));
                 if (NS_FAILED(rv))
                     return rv;
 
-                if (charsetNode) {
-                    rv = mInner->Change(bookmark, kWEB_LastCharset, charsetNode, charsetliteral);
+                if (lastMod) {
+                    rv = mInner->Change(bookmark, kWEB_LastVisitDate, lastMod, now);
                 }
                 else {
-                    rv = mInner->Assert(bookmark, kWEB_LastCharset, charsetliteral, PR_TRUE);
+                    rv = mInner->Assert(bookmark, kWEB_LastVisitDate, now, PR_TRUE);
                 }
                 if (NS_FAILED(rv))
                     return rv;
-            } 
 
-            // Also update bookmark's "status"!
-            nsCOMPtr<nsIRDFNode> statusNode;
-            rv = mInner->GetTarget(bookmark, kWEB_Status, PR_TRUE,
-                                   getter_AddRefs(statusNode));
-            if (NS_SUCCEEDED(rv) && statusNode) {
-                rv = mInner->Unassert(bookmark, kWEB_Status, statusNode);
-                NS_ASSERTION(rv == NS_RDF_ASSERTION_ACCEPTED, "unable to Unassert changed status");
+                // Piggy-backing last charset.
+                if (aCharset && !nsDependentString(aCharset).IsEmpty()) {
+                    nsCOMPtr<nsIRDFLiteral> charsetliteral;
+                    rv = gRDF->GetLiteral(aCharset,
+                                          getter_AddRefs(charsetliteral));
+                    if (NS_FAILED(rv))
+                        return rv;
+
+                    nsCOMPtr<nsIRDFNode> charsetNode;
+                    rv = mInner->GetTarget(bookmark, kWEB_LastCharset, PR_TRUE,
+                                           getter_AddRefs(charsetNode));
+                    if (NS_FAILED(rv))
+                        return rv;
+
+                    if (charsetNode) {
+                        rv = mInner->Change(bookmark, kWEB_LastCharset,
+                                            charsetNode, charsetliteral);
+                    }
+                    else {
+                        rv = mInner->Assert(bookmark, kWEB_LastCharset,
+                                            charsetliteral, PR_TRUE);
+                    }
+                    if (NS_FAILED(rv))
+                        return rv;
+                } 
+
+                // Also update bookmark's "status"!
+                nsCOMPtr<nsIRDFNode> statusNode;
+                rv = mInner->GetTarget(bookmark, kWEB_Status, PR_TRUE,
+                                       getter_AddRefs(statusNode));
+                if (NS_SUCCEEDED(rv) && statusNode) {
+                    rv = mInner->Unassert(bookmark, kWEB_Status, statusNode);
+                    NS_ASSERTION(rv == NS_RDF_ASSERTION_ACCEPTED, "unable to Unassert changed status");
+                }
+
+//              mDirty = PR_TRUE;
             }
-
-//          mDirty = PR_TRUE;
         }
     }
 

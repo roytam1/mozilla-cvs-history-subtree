@@ -79,8 +79,8 @@ interface nsIBookmarksService : nsISupports
 
     nsIRDFResource createSeparator();
 
-    void updateBookmarkIcon(in string aURL, in wstring iconURL);
-    void removeBookmarkIcon(in string aURL, in wstring iconURL);
+    void updateBookmarkIcon(in string aURL, in wstring aIconURL);
+    void removeBookmarkIcon(in string aURL, in wstring aIconURL);
 
     void updateLastVisitedDate(in string aURL, in wstring docCharset);
     
