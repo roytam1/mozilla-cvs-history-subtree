@@ -45,4 +45,6 @@
 - (float)getExtraTopSpace;
 - (BOOL)tabsVisible;
 
+- (BrowserTabViewItem*)itemWithTag:(int)tag;
+
 @end

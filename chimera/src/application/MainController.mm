@@ -222,28 +222,28 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
 {
   BrowserWindowController* browserController = [self getMainWindowBrowserController];
   if (browserController)
-    [browserController newTab:eNewTabHomepage];		// we'll look at the pref to decide whether to load the home page
+    [browserController newTab:aSender];
 }
 
 -(IBAction)closeTab:(id)aSender
 {
   BrowserWindowController* browserController = [self getMainWindowBrowserController];
   if (browserController)
-    [browserController closeTab];
+    [browserController closeCurrentTab:aSender];
 }
 
 -(IBAction) previousTab:(id)aSender
 {
   BrowserWindowController* browserController = [self getMainWindowBrowserController];
   if (browserController)
-    [browserController previousTab];
+    [browserController previousTab:aSender];
 }
 
 -(IBAction) nextTab:(id)aSender;
 {
   BrowserWindowController* browserController = [self getMainWindowBrowserController];
   if (browserController)
-    [browserController nextTab];
+    [browserController nextTab:aSender];
 }
 
 -(IBAction) openFile:(id)aSender

@@ -395,7 +395,7 @@ static NSArray* sToolbarDefaults = nil;
     // create ourselves a new tab and fill it with the appropriate content. If we
     // have a URL pending to be opened here, don't load anything in it, otherwise,
     // load the homepage if that's what the user wants (or about:blank).
-    [self newTab:(mPendingURL ? eNewTabEmpty : (mShouldLoadHomePage ? eNewTabHomepage : eNewTabAboutBlank))];
+    [self createNewTab:(mPendingURL ? eNewTabEmpty : (mShouldLoadHomePage ? eNewTabHomepage : eNewTabAboutBlank))];
     
     // we have a url "pending" from the "open new window with link" command. Deal
     // with it now that everything is loaded.
@@ -1118,11 +1118,11 @@ static NSArray* sToolbarDefaults = nil;
 	[mProxyIcon setImage:siteIconImage];
 }
 
-- (void)newTab:(ENewTabContents)contents;
+- (void)createNewTab:(ENewTabContents)contents;
 {
-    BrowserTabViewItem* newTab = [BrowserTabView makeNewTabItem];
-    BrowserWrapper* newView = [[[BrowserWrapper alloc] initWithTab: newTab andWindow: [mTabBrowser window]] autorelease];
-
+    BrowserTabViewItem* newTab  = [self createNewTabItem];
+    BrowserWrapper*     newView = [newTab view];
+    
     BOOL loadHomepage = NO;
     if (contents == eNewTabHomepage)
     {
@@ -1133,7 +1133,6 @@ static NSArray* sToolbarDefaults = nil;
     }
 
     [newTab setLabel: (loadHomepage ? NSLocalizedString(@"TabLoading", @"") : NSLocalizedString(@"UntitledPageTitle", @""))];
-    [newTab setView: newView];
     [mTabBrowser addTabViewItem: newTab];
     
     BOOL focusURLBar = NO;
@@ -1160,7 +1159,12 @@ static NSArray* sToolbarDefaults = nil;
       [self focusURLBar];
 }
 
--(void)closeTab
+- (IBAction)newTab:(id)sender
+{
+  [self createNewTab:eNewTabHomepage];  // we'll look at the pref to decide whether to load the home page
+}
+
+-(IBAction)closeCurrentTab:(id)sender
 {
   if ( [mTabBrowser numberOfTabViewItems] > 1 ) {
     [[[mTabBrowser selectedTabViewItem] view] windowClosed];
@@ -1168,20 +1172,89 @@ static NSArray* sToolbarDefaults = nil;
   }
 }
 
-- (void)previousTab
+- (IBAction)previousTab:(id)sender
 {
   if ([mTabBrowser indexOfTabViewItem:[mTabBrowser selectedTabViewItem]] == 0)
-    [mTabBrowser selectLastTabViewItem:self];
+    [mTabBrowser selectLastTabViewItem:sender];
   else
-    [mTabBrowser selectPreviousTabViewItem:self];
+    [mTabBrowser selectPreviousTabViewItem:sender];
 }
 
-- (void)nextTab
+- (IBAction)nextTab:(id)sender
 {
   if ([mTabBrowser indexOfTabViewItem:[mTabBrowser selectedTabViewItem]] == [mTabBrowser numberOfTabViewItems] - 1)
-    [mTabBrowser selectFirstTabViewItem:self];
+    [mTabBrowser selectFirstTabViewItem:sender];
   else
-    [mTabBrowser selectNextTabViewItem:self];
+    [mTabBrowser selectNextTabViewItem:sender];
+}
+
+- (IBAction)closeSendersTab:(id)sender
+{
+  if ([sender isMemberOfClass:[NSMenuItem class]])
+  {
+    BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
+    if (tabViewItem)
+    {
+      [[tabViewItem view] windowClosed];
+      [mTabBrowser removeTabViewItem:tabViewItem];
+    }
+  }
+}
+
+- (IBAction)closeOtherTabs:(id)sender
+{
+  if ([sender isMemberOfClass:[NSMenuItem class]])
+  {
+    BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
+    if (tabViewItem)
+    {
+      while ([mTabBrowser numberOfTabViewItems] > 1)
+      {
+        NSTabViewItem* doomedItem = nil;
+        if ([mTabBrowser indexOfTabViewItem:tabViewItem] == 0)
+          doomedItem = [mTabBrowser tabViewItemAtIndex:1];
+        else
+          doomedItem = [mTabBrowser tabViewItemAtIndex:0];
+        
+        [[doomedItem view] windowClosed];
+        [mTabBrowser removeTabViewItem:doomedItem];
+      }
+    }
+  }
+}
+
+- (IBAction)reloadSendersTab:(id)sender
+{
+  if ([sender isMemberOfClass:[NSMenuItem class]])
+  {
+    BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
+    if (tabViewItem)
+    {
+      [[[tabViewItem view] getBrowserView] reload: NSLoadFlagsNone];
+    }
+  }
+}
+
+- (IBAction)moveTabToNewWindow:(id)sender
+{
+  if ([sender isMemberOfClass:[NSMenuItem class]])
+  {
+    BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
+    if (tabViewItem)
+    {
+      NSString* url = [[tabViewItem view] getCurrentURLSpec];
+
+      PRBool backgroundLoad = PR_FALSE;
+      nsCOMPtr<nsIPrefBranch> pref(do_GetService("@mozilla.org/preferences-service;1"));
+      if (pref)
+        pref->GetBoolPref("browser.tabs.loadInBackground", &backgroundLoad);
+
+      [self openNewWindowWithURL:url referrer:nil loadInBackground:backgroundLoad];
+
+      [[tabViewItem view] windowClosed];
+      [mTabBrowser removeTabViewItem:tabViewItem];
+    }
+  }
 }
 
 - (void)tabView:(NSTabView *)aTabView didSelectTabViewItem:(NSTabViewItem *)aTabViewItem
@@ -1249,7 +1322,8 @@ static NSArray* sToolbarDefaults = nil;
 
 -(void)openNewTabWithURL: (NSString*)aURLSpec referrer:(NSString*)aReferrer loadInBackground: (BOOL)aLoadInBG
 {
-    BrowserTabViewItem* newTab = [BrowserTabView makeNewTabItem];
+    BrowserTabViewItem* newTab  = [self createNewTabItem];
+    BrowserWrapper*     newView = [newTab view];
 
     // hyatt originally made new tabs open on the far right and tabs opened from a content
     // link open to the right of the current tab. The idea was to keep the new tab
@@ -1263,16 +1337,29 @@ static NSArray* sToolbarDefaults = nil;
     [mTabBrowser addTabViewItem: newTab];
 #endif
 
-    BrowserWrapper* newView = [[[BrowserWrapper alloc] initWithTab: newTab andWindow: [mTabBrowser window]] autorelease];
-    [newView setTab: newTab];
-    
     [newTab setLabel: NSLocalizedString(@"TabLoading", @"")];
-    [newTab setView: newView];
 
     [newView loadURI:aURLSpec referrer:aReferrer flags:NSLoadFlagsNone activate:!aLoadInBG];
 
     if (!aLoadInBG)
       [mTabBrowser selectTabViewItem: newTab];
+}
+
+
+-(BrowserTabViewItem*)createNewTabItem
+{
+  BrowserTabViewItem* newTab = [BrowserTabView makeNewTabItem];
+  BrowserWrapper* newView = [[[BrowserWrapper alloc] initWithTab: newTab andWindow: [mTabBrowser window]] autorelease];
+
+  [newTab setView: newView];
+  
+  // we have to copy the context menu for each tag, because
+  // the menu gets the tab view item's tag.
+  NSMenu* contextMenu = [mTabMenu copy];
+  [[newTab tabItemContentsView] setMenu:contextMenu];
+  [contextMenu release];
+
+  return newTab;
 }
 
 -(void)setupSidebarTabs

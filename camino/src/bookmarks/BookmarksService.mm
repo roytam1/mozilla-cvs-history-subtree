@@ -44,6 +44,7 @@
 #import "BookmarksDataSource.h"
 #import "BookmarkInfoController.h"
 #import "BrowserTabView.h"
+#import "BrowserWindowController.h"
 #import "SiteIconProvider.h"
 
 #include "nsCRT.h"
@@ -1118,10 +1119,8 @@ BookmarksService::OpenBookmarkGroup(id aTabView, nsIDOMElement* aFolder)
           // We need to make a new tab.
           // XXX this needs fixing to not max out the number of tabs in a browser window.
           // See [BrowserWindowController newTabsAllowed];
-          tabViewItem = [BrowserTabView makeNewTabItem];
-          BrowserWrapper* newView = [[[BrowserWrapper alloc] initWithTab: tabViewItem andWindow: [aTabView window]] autorelease];
+          tabViewItem = [[[aTabView window] windowController] createNewTabItem];
           [tabViewItem setLabel: NSLocalizedString(@"UntitledPageTitle", @"")];
-          [tabViewItem setView: newView];
           [aTabView addTabViewItem: tabViewItem];
         }
         else

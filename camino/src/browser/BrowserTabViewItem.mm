@@ -48,7 +48,7 @@
 
 
 @interface BrowserTabViewItem(Private)
-- (void)buildTabContents;
+- (int)setTag:(int)tag;
 - (void)relocateTabContents:(NSRect)inRect;
 - (BOOL)draggable;
 @end
@@ -196,7 +196,7 @@
 #pragma mark -
 
 // a container view for the items in the tab view item. We use a subclass of
-// NSView to handle drag and drop
+// NSView to handle drag and drop, and context menus
 @interface BrowserTabItemContainerView : NSView
 {
   BrowserTabViewItem*           mTabViewItem;
@@ -225,7 +225,7 @@
     [mLabelCell setControlSize:NSSmallControlSize];		// doesn't work?
     [mLabelCell setImagePadding:0.0];
     [mLabelCell setImageSpace:2.0];
-    
+
     [self registerForDraggedTypes:[NSArray arrayWithObjects:
         @"MozURLType", @"MozBookmarkType", NSStringPboardType, NSFilenamesPboardType, NSURLPboardType, nil]];
   }
@@ -406,6 +406,16 @@
                     event:theEvent pasteboard:pboard source:self slideBack:YES];
 }
 
+- (void)setMenu:(NSMenu *)aMenu
+{
+  // set the tag of every menu item to the tab view item's tag,
+  // so that the target of the menu commands know which one they apply to.
+  for (unsigned int i = 0; i < [aMenu numberOfItems]; i ++)
+    [[aMenu itemAtIndex:i] setTag:[mTabViewItem tag]];
+
+  [super setMenu:aMenu];
+}
+
 @end
 
 #pragma mark -
@@ -416,6 +426,11 @@
 {
   if ( (self = [super initWithIdentifier:identifier withTabIcon:tabIcon]) )
   {
+    static int sTabItemTag = 1; // used to uniquely identify tabs for context menus
+  
+    [self setTag:sTabItemTag];
+    sTabItemTag++;
+
     mTabContentsView = [[BrowserTabItemContainerView alloc]
                             initWithFrame:NSMakeRect(0, 0, 100, 16) andTabItem:self];
     mDraggable = NO;
@@ -441,6 +456,16 @@
 - (NSView*)tabItemContentsView
 {
   return mTabContentsView;
+}
+
+- (int)setTag:(int)tag
+{
+  mTag = tag;
+}
+
+- (int)tag
+{
+  return mTag;
 }
 
 - (void)updateTabVisibility:(BOOL)nowVisible

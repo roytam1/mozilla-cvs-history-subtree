@@ -92,6 +92,7 @@ typedef enum
 @class BrowserTabView;
 @class PageProxyIcon;
 @class BrowserContentView;
+@class BrowserTabViewItem;
 
 @interface BrowserWindowController : NSWindowController<Find>
 {
@@ -127,6 +128,7 @@ typedef enum
   IBOutlet NSMenu*              mInputMenu;
   IBOutlet NSMenu*              mLinkMenu;
   IBOutlet NSMenu*              mImageLinkMenu;
+  IBOutlet NSMenu*              mTabMenu;
 
   // Context menu item outlets
   IBOutlet NSMenuItem*          mBackItem;
@@ -233,10 +235,17 @@ typedef enum
 - (IBAction)toggleSidebar:(id)aSender;
 - (BOOL)bookmarksAreVisible:(BOOL)inRequireSelection;
 
-- (void)newTab:(ENewTabContents)contents;
-- (void)closeTab;
-- (void)previousTab;
-- (void)nextTab;
+- (void)createNewTab:(ENewTabContents)contents;
+
+- (IBAction)newTab:(id)sender;
+- (IBAction)closeCurrentTab:(id)sender;
+- (IBAction)previousTab:(id)sender;
+- (IBAction)nextTab:(id)sender;
+
+- (IBAction)closeSendersTab:(id)sender;
+- (IBAction)closeOtherTabs:(id)sender;
+- (IBAction)reloadSendersTab:(id)sender;
+- (IBAction)moveTabToNewWindow:(id)sender;
 
 - (IBAction)back:(id)aSender;
 - (IBAction)forward:(id)aSender;
@@ -249,6 +258,8 @@ typedef enum
 -(void)openNewWindowWithURL: (NSString*)aURLSpec referrer:(NSString*)aReferrer loadInBackground: (BOOL)aLoadInBG;
 -(void)openNewWindowWithGroup: (nsIDOMElement*)aFolderElement loadInBackground: (BOOL)aLoadInBG;
 -(void)openNewTabWithURL: (NSString*)aURLSpec referrer: (NSString*)aReferrer loadInBackground: (BOOL)aLoadInBG;
+
+-(BrowserTabViewItem*)createNewTabItem;
 
 -(void)autosaveWindowFrame;
 -(void)disableAutosave;

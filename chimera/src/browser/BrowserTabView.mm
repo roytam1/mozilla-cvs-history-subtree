@@ -138,6 +138,23 @@
   [self showOrHideTabsAsAppropriate];
 }
 
+- (BrowserTabViewItem*)itemWithTag:(int)tag
+{
+  NSArray* tabViewItems = [self tabViewItems];
+
+  for (unsigned int i = 0; i < [tabViewItems count]; i ++)
+  {
+    id tabItem = [tabViewItems objectAtIndex:i];
+    if ([tabItem isMemberOfClass:[BrowserTabViewItem class]] &&
+      	([(BrowserTabViewItem*)tabItem tag] == tag))
+    {
+      return tabItem;
+    }
+  }
+
+  return nil;
+}
+
 /******************************************/
 /*** Accessor Methods                   ***/
 /******************************************/
@@ -401,14 +418,7 @@ const float kTabsInvisibleTopGap  = -7.0;		// space removed to push tab content 
 
 -(void)addTabForURL:(NSString*)aURL referrer:(NSString*)aReferrer
 {
-  // We need to make a new tab.
-  BrowserTabViewItem *tabViewItem= [BrowserTabView makeNewTabItem];
-  BrowserWrapper *newView = [[[BrowserWrapper alloc] initWithTab: tabViewItem andWindow: [self window]] autorelease];
-  [tabViewItem setLabel: NSLocalizedString(@"UntitledPageTitle", @"")];
-  [tabViewItem setView: newView];
-  [self addTabViewItem: tabViewItem];
-
-  [[tabViewItem view] loadURI: aURL referrer:aReferrer flags: NSLoadFlagsNone activate:NO];
+  [[[self window] windowController] openNewTabWithURL:aURL referrer:aReferrer loadInBackground:YES];
 }
 
 #pragma mark -
