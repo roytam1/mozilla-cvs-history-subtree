@@ -28,6 +28,8 @@
  * @See nsIBinaryInputStream
  */
 
+[nsid] native nsID(nsID);
+
 [scriptable, uuid(6c248606-4eae-46fa-9df0-ba58502368eb)]
 interface nsIObjectInputStream : nsIBinaryInputStream
 {
@@ -41,6 +43,8 @@ interface nsIObjectInputStream : nsIBinaryInputStream
      * @See nsIObjectOutputStream
      */
     nsISupports readObject(in PRBool aIsStrongRef);
+
+    nsID readID();
 
     [notxpcom] charPtr getBuffer(in PRUint32 aLength, in PRUint32 aAlign);
 

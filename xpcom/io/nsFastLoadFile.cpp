@@ -133,7 +133,7 @@ nsFastLoadFileReader::ReadFooter(nsFastLoadFooter *aFooter)
 
     PRUint32 i, n;
     for (i = 0, n = aFooter->mNumIDs; i < n; i++) {
-        rv = ReadID(&aFooter->mIDMap[i]);
+        rv = ReadSlowID(&aFooter->mIDMap[i]);
         if (NS_FAILED(rv)) return rv;
     }
 
@@ -182,7 +182,7 @@ nsFastLoadFileReader::ReadFooterPrefix(nsFastLoadFooterPrefix *aFooterPrefix)
 }
 
 nsresult
-nsFastLoadFileReader::ReadID(nsID *aID)
+nsFastLoadFileReader::ReadSlowID(nsID *aID)
 {
     nsresult rv;
 
@@ -257,11 +257,8 @@ nsFastLoadFileReader::Open()
     rv = ReadFooter(&mFooter);
     if (NS_FAILED(rv)) return rv;
 
-    rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
-                        PRInt32(dataOffset));
-    if (NS_FAILED(rv)) return rv;
-
-    return NS_OK;
+    return seekable->Seek(nsISeekableStream::NS_SEEK_SET,
+                          PRInt32(dataOffset));
 }
 
 NS_IMETHODIMP
@@ -391,6 +388,19 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
 }
 
 NS_IMETHODIMP
+nsFastLoadFileReader::ReadID(nsID *aResult)
+{
+    nsresult rv;
+    NSFastLoadID fastID;
+
+    rv = Read32(&fastID);
+    if (NS_FAILED(rv)) return rv;
+
+    *aResult = mFooter.GetID(fastID);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
 nsFastLoadFileReader::Seek(PRInt32 aWhence, PRInt32 aOffset)
 {
     nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
@@ -473,19 +483,22 @@ static PLDHashTableOps idmap_DHashTableOps = {
     NULL
 };
 
-NSFastLoadID
-nsFastLoadFileWriter::MapID(const nsID& aSlowID)
+nsresult
+nsFastLoadFileWriter::MapID(const nsID& aSlowID, NSFastLoadID *aResult)
 {
     nsIDMapEntry *entry =
         NS_STATIC_CAST(nsIDMapEntry*,
                        PL_DHashTableOperate(&mIDMap, &aSlowID, PL_DHASH_ADD));
+    if (!entry)
+        return NS_ERROR_OUT_OF_MEMORY;
 
     if (entry->mFastID == 0) {
         entry->mFastID = mIDMap.entryCount;
         entry->mSlowID = aSlowID;
     }
 
-    return entry->mFastID;
+    *aResult = entry->mFastID;
+    return NS_OK;
 }
 
 struct nsObjectMapEntry : public PLDHashEntryHdr {
@@ -543,7 +556,7 @@ nsFastLoadFileWriter::WriteHeader(nsFastLoadHeader *aHeader)
 }
 
 nsresult
-nsFastLoadFileWriter::WriteID(const nsID& aID)
+nsFastLoadFileWriter::WriteSlowID(const nsID& aID)
 {
     nsresult rv;
 
@@ -643,7 +656,7 @@ nsFastLoadFileWriter::WriteFooter()
     rv = Write32(length);
     if (NS_SUCCEEDED(rv)) {
         for (i = 0; i < length; i++) {
-            rv = WriteID(idvec[i]);
+            rv = WriteSlowID(idvec[i]);
             if (NS_FAILED(rv)) break;
         }
     }
@@ -773,6 +786,10 @@ nsFastLoadFileWriter::WriteObjectCommon(nsISupports* aObject,
             NS_STATIC_CAST(nsObjectMapEntry*,
                            PL_DHashTableOperate(&mObjectMap, aObject,
                                                 PL_DHASH_ADD));
+        if (!entry) {
+            aObject->Release();
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
 
         if (!entry->mObject) {
             // First time we've seen this object address: add it to mObjectMap
@@ -826,7 +843,10 @@ nsFastLoadFileWriter::WriteObjectCommon(nsISupports* aObject,
         rv = serializable->GetCID(&slowCID);
         if (NS_FAILED(rv)) return rv;
 
-        NSFastLoadID fastCID = MapID(slowCID);
+        NSFastLoadID fastCID;
+        rv = MapID(slowCID, &fastCID);
+        if (NS_FAILED(rv)) return rv;
+
         rv = Write32(fastCID);
         if (NS_FAILED(rv)) return rv;
 
@@ -884,11 +904,23 @@ nsFastLoadFileWriter::WriteCompoundObject(nsISupports* aObject,
     rv = WriteObjectCommon(rootObject, aIsStrongRef, MFL_QUERY_INTERFACE_TAG);
     if (NS_FAILED(rv)) return rv;
 
-    NSFastLoadID iid = MapID(aIID);
-    rv = Write32(iid);
+    NSFastLoadID iid;
+    rv = MapID(aIID, &iid);
     if (NS_FAILED(rv)) return rv;
 
-    return NS_OK;
+    return Write32(iid);
+}
+
+NS_IMETHODIMP
+nsFastLoadFileWriter::WriteID(const nsID& aID)
+{
+    nsresult rv;
+    NSFastLoadID fastID;
+
+    rv = MapID(aID, &fastID);
+    if (NS_FAILED(rv)) return rv;
+
+    return Write32(fastID);
 }
 
 NS_IMETHODIMP

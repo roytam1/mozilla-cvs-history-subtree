@@ -268,6 +268,13 @@ nsBinaryOutputStream::WriteCompoundObject(nsISupports* aObject,
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+NS_IMETHODIMP
+nsBinaryOutputStream::WriteID(const nsIID& aIID)
+{
+    NS_NOTREACHED("WriteID");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
 NS_IMETHODIMP_(char*)
 nsBinaryOutputStream::GetBuffer(PRUint32 aLength, PRUint32 aAlign)
 {
@@ -515,6 +522,13 @@ NS_IMETHODIMP
 nsBinaryInputStream::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
 {
     NS_NOTREACHED("ReadObject");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsBinaryInputStream::ReadID(nsID *aResult)
+{
+    NS_NOTREACHED("ReadID");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 

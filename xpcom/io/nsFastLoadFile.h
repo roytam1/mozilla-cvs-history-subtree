@@ -194,6 +194,7 @@ class NS_COM nsFastLoadFileReader
 
     // overridden nsIObjectInputStream methods
     NS_IMETHOD ReadObject(PRBool aIsStrongRef, nsISupports* *_retval);
+    NS_IMETHOD ReadID(nsID *aResult);
 
     // nsISeekableStream methods
     NS_DECL_NSISEEKABLESTREAM
@@ -258,7 +259,7 @@ class NS_COM nsFastLoadFileReader
 
     nsresult ReadFooter(nsFastLoadFooter *aFooter);
     nsresult ReadFooterPrefix(nsFastLoadFooterPrefix *aFooterPrefix);
-    nsresult ReadID(nsID *aID);
+    nsresult ReadSlowID(nsID *aID);
     nsresult ReadSharpObjectInfo(nsFastLoadSharpObjectInfo *aInfo);
     nsresult DeserializeObject(nsISupports* *aObject);
 
@@ -318,14 +319,15 @@ class NS_COM nsFastLoadFileWriter
     NS_IMETHOD WriteCompoundObject(nsISupports* aObject,
                                    const nsIID& aIID,
                                    PRBool aIsStrongRef);
+    NS_IMETHOD WriteID(const nsID& aID);
 
     // nsISeekableStream methods
     NS_DECL_NSISEEKABLESTREAM
 
-    NSFastLoadID MapID(const nsID& aSlowID);
+    nsresult MapID(const nsID& aSlowID, NSFastLoadID *aResult);
 
     nsresult WriteHeader(nsFastLoadHeader *aHeader);
-    nsresult WriteID(const nsID& aID);
+    nsresult WriteSlowID(const nsID& aID);
     nsresult WriteSharpObjectInfo(const nsFastLoadSharpObjectInfo& aInfo);
     nsresult WriteFooter();
 

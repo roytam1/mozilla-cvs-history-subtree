@@ -66,6 +66,8 @@ interface nsIObjectOutputStream : nsIBinaryOutputStream
                              in nsIIDRef aIID,
                              in PRBool aIsStrongRef);
 
+    void writeID(in nsIDRef aID);
+
     [notxpcom] charPtr getBuffer(in PRUint32 aLength, in PRUint32 aAlign);
 
     [notxpcom] void putBuffer(in charPtr aBuffer, in PRUint32 aLength);
