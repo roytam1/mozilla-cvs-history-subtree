@@ -75,6 +75,7 @@ public:
 
   ////////////////////////////////////////////////////////////////////////////
   // Constructor & Destructor
+  tmTransactionService() : mObservers(0) {};
 
   /**
     * Reclaim all the memory allocated: PL_hashtable, tmVectors
