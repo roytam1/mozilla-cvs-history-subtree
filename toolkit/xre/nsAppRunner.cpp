@@ -60,7 +60,6 @@
 #include "nsIArray.h"
 #include "nsICategoryManager.h"
 #include "nsIChromeRegistry.h"
-#include "nsIClipboard.h"
 #include "nsICmdLineHandler.h"
 #include "nsICmdLineService.h"
 #include "nsIComponentManager.h"
@@ -876,21 +875,6 @@ private:
 ScopedXPCOMStartup::~ScopedXPCOMStartup()
 {
   if (mServiceManager) {
-    { // scoping this in a block to force release
-      // at this point, all that is on the clipboard is a proxy object,
-      // but that object won't be valid once the app goes away. As a
-      // result, we need to force the data out of that proxy and properly
-      // onto the clipboard. This can't be done in the clipboard service's
-      // shutdown routine because it requires the parser/etc which has
-      // already been shutdown by the time the clipboard is shut down.
-      // XXXbsmedberg this sucks! the clipboard should implement nsIObserver
-      // and watch for "xpcom-shutdown"... bug 239390
-      nsCOMPtr<nsIClipboard> clipService
-        (do_GetService("@mozilla.org/widget/clipboard;1"));
-      if (clipService)
-        clipService->ForceDataToClipboard(nsIClipboard::kGlobalClipboard);
-    }
-
     gDirServiceProvider->DoShutdown();
 
     NS_ShutdownXPCOM(mServiceManager);
