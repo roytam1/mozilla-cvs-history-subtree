@@ -5166,6 +5166,8 @@ nsCSSFrameConstructor::CreateAnonymousFrames(nsIPresShell*            aPresShell
         // create the frame and attach it to our frame
         ConstructFrame(aPresShell, aPresContext, aState, content, aParentFrame, aChildItems);
       }
+
+      creator->PostCreateFrames();
     }
   }
 
