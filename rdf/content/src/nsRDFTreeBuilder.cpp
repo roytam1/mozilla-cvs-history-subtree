@@ -1468,7 +1468,7 @@ RDFTreeBuilderImpl::FindTextElement(nsIContent* aElement,
 }
 
 nsresult
-RDFTreeBuilderImpl::EnsureCell(nsIContent* aTreeItemElement,
+RDFTreeBuilderImpl::EnsureCell(nsIContent* aTreeRowElement,
                                PRInt32 aIndex,
                                nsIContent** aCellElement)
 {
@@ -1488,15 +1488,15 @@ RDFTreeBuilderImpl::EnsureCell(nsIContent* aTreeItemElement,
     // Iterate through the children of the <xul:treeitem>, counting
     // <xul:treecell> tags until we get to the aIndex-th one.
     PRInt32 count;
-    if (NS_FAILED(rv = aTreeItemElement->ChildCount(count))) {
-        NS_ERROR("unable to get xul:treeitem's child count");
+    if (NS_FAILED(rv = aTreeRowElement->ChildCount(count))) {
+        NS_ERROR("unable to get xul:treerow's child count");
         return rv;
     }
 
     for (PRInt32 i = 0; i < count; ++i) {
         nsCOMPtr<nsIContent> kid;
-        if (NS_FAILED(rv = aTreeItemElement->ChildAt(i, *getter_AddRefs(kid)))) {
-            NS_ERROR("unable to retrieve xul:treeitem's child");
+        if (NS_FAILED(rv = aTreeRowElement->ChildAt(i, *getter_AddRefs(kid)))) {
+            NS_ERROR("unable to retrieve xul:treerow's child");
             return rv;
         }
 
@@ -1542,8 +1542,8 @@ RDFTreeBuilderImpl::EnsureCell(nsIContent* aTreeItemElement,
             return rv;
         }
 
-        if (NS_FAILED(rv = aTreeItemElement->AppendChildTo(cellElement, PR_FALSE))) {
-            NS_ERROR("unable to append xul:treecell to treeitem");
+        if (NS_FAILED(rv = aTreeRowElement->AppendChildTo(cellElement, PR_FALSE))) {
+            NS_ERROR("unable to append xul:treecell to treerow");
             return rv;
         }
     }
@@ -1557,14 +1557,25 @@ nsresult
 RDFTreeBuilderImpl::CreateTreeItemCells(nsIContent* aTreeItemElement)
 {
     // <xul:treeitem>
+    //  <xul:treerow>
     //   <xul:treecell RDF:ID="property">value</xul:treecell>
     //   ...
+    //  </xul:treerow>
     // </xul:treeitem>
     nsresult rv;
 
     // XXX at this point, we should probably ensure that aElement is
     // actually a <xul:treeitem>...
-
+    nsCOMPtr<nsIContent> treeRowElement;
+    rv = NS_NewRDFElement(kNameSpaceID_XUL,
+                          kTreeRowAtom,
+                          getter_AddRefs(treeRowElement));
+    if (NS_FAILED(rv)) { 
+      NS_ERROR("Unable to create a tree row.");
+      return rv;
+    }
+    aTreeItemElement->AppendChildTo(treeRowElement, PR_FALSE);
+    
     // Get the treeitem's resource so that we can generate cell
     // values. We could QI for the nsIRDFResource here, but doing this
     // via the nsIContent interface allows us to support generic nodes
@@ -1612,7 +1623,7 @@ RDFTreeBuilderImpl::CreateTreeItemCells(nsIContent* aTreeItemElement)
         // tree cell that lives beneath _this_ tree item for its
         // value.
         nsCOMPtr<nsIContent> cellElement;
-        if (NS_FAILED(rv = EnsureCell(aTreeItemElement, cellIndex, getter_AddRefs(cellElement)))) {
+        if (NS_FAILED(rv = EnsureCell(treeRowElement, cellIndex, getter_AddRefs(cellElement)))) {
             NS_ERROR("unable to find/create cell element");
             return rv;
         }
