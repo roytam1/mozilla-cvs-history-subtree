@@ -926,7 +926,8 @@ NS_IMETHODIMP nsAbMDBDirectory::OnListEntryChange
 
 NS_IMETHODIMP nsAbMDBDirectory::OnAnnouncerGoingAway(nsIAddrDBAnnouncer *instigator)
 {
-  NS_ASSERTION(0,"nsAbMDBDirectory::OnAnnouncerGoingAway");
+  if (mDatabase)
+      mDatabase->RemoveListener(this);
   return NS_OK;
 }
 
