@@ -96,7 +96,7 @@ Feed.onProgress = function(event) {
   var feed = gFzFeedCache[url];
 
   if (feed.downloadCallback)
-    feed.downloadCallback.onProgress(event.position, event.totalSize);
+    feed.downloadCallback.onProgress(feed, event.position, event.totalSize);
 }
 
 Feed.onDownloadError = function(event) {
@@ -108,7 +108,7 @@ Feed.onDownloadError = function(event) {
   {
     debug(feed.title + " download failed");
     if (feed.downloadCallback)
-      feed.downloaded(nsnull);
+      feed.downloaded(feed, false);
   }
   throw("error downloading feed " + url);
 }
@@ -476,7 +476,7 @@ function storeNextItem()
     item.feed.removeInvalidItems();
 
     if (item.feed.downloadCallback)
-      item.feed.downloadCallback.downloaded(item.feed);
+      item.feed.downloadCallback.downloaded(item.feed, true);
 
     item.feed.request = null; // force the xml http request to go away. This helps reduce some
                               // nasty assertions on shut down of all things.
