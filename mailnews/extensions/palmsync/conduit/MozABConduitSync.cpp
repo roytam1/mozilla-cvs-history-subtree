@@ -302,7 +302,16 @@ DWORD WINAPI DoFastSync(LPVOID lpParameter)
       memset(mozABSeen, FALSE, sizeof(DWORD) * mozABCount);
 
     CONDUIT_LOG1(gFD, "first device = %lx\n", sync->m_rSyncProperties.m_FirstDevice);
-    neverDidPalmSyncBefore = (sync->m_rSyncProperties.m_FirstDevice != eNeither);
+    BOOL initialHHSync = (sync->m_rSyncProperties.m_FirstDevice == eHH);
+
+    // See if palm sync was performed before.
+    for(mozABIndex=0; mozABIndex<mozABCount; mozABIndex++)
+      if (! (mozDirFlagsList[mozABIndex] & kFirstTimeSyncDirFlag))
+      {
+        neverDidPalmSyncBefore = FALSE;
+        break;
+      }
+    
     // Log moz addrbooks.
     for (mozABIndex=0; mozABIndex<mozABCount; mozABIndex++)
     {
@@ -454,7 +463,7 @@ DWORD WINAPI DoFastSync(LPVOID lpParameter)
         //       (even if it's an empty AB).
         if(!retval && !foundInABList) 
         {
-            if (catFlags != CAT_DIRTY && !neverDidPalmSyncBefore)
+            if (catFlags != CAT_DIRTY && !neverDidPalmSyncBefore && !initialHHSync)
             {
               BOOL abDeleted = sync->m_dbPC->PCABDeleted(catName);
               if (abDeleted)
@@ -496,7 +505,7 @@ DWORD WINAPI DoFastSync(LPVOID lpParameter)
     // and the case where Palm ABs have been deleted.
     for(mozABIndex=0; mozABIndex<mozABCount; mozABIndex++)
     {
-        if((mozDirFlagsList[mozABIndex] & kFirstTimeSyncDirFlag || neverDidPalmSyncBefore) && !sync->CategoryExists(*mozABNameList[mozABIndex],  mozDirFlagsList[mozABIndex] & kIsPabDirFlag))
+        if((mozDirFlagsList[mozABIndex] & kFirstTimeSyncDirFlag || neverDidPalmSyncBefore || initialHHSync) && !sync->CategoryExists(*mozABNameList[mozABIndex],  mozDirFlagsList[mozABIndex] & kIsPabDirFlag))
         {
             CONDUIT_LOG3(gFD, "\nMoz AB[%d] category index = %d, name = '%s' doesn't exist on Palm so needs to be added to palm\n",
                     mozABIndex, mozCatIndexList[mozABIndex], mozABNameList[mozABIndex]->GetBuffer(0));
@@ -560,7 +569,7 @@ DWORD WINAPI DoFastSync(LPVOID lpParameter)
             // Lastly, update the AB with new category index and mod time.
             retval = sync->m_dbPC->UpdatePCABSyncInfo(success ? cat.GetIndex() : -1, *mozABNameList[mozABIndex]);
         }
-        else if (!mozABSeen[mozABIndex] && !neverDidPalmSyncBefore)
+        else if (!mozABSeen[mozABIndex] && !neverDidPalmSyncBefore && !initialHHSync)
         {
           // We should not delete personal and collected address books here. Rather,
           // reset the mod time so next time we can sync them back to Palm again.
