@@ -237,6 +237,9 @@ PRIVATE int32
 net_remove_last_memory_cache_object(void)
 {
 	net_MemoryCacheObject * mem_cache_obj;
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
 	
 	/* safty valve in case there are no list items 
 	 * or if we are in the process of adding an object
@@ -272,6 +275,9 @@ net_remove_last_memory_cache_object(void)
 PRIVATE void
 net_ReduceMemoryCacheTo(uint32 size)
 {
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
     /* safty valve in case we are in the process of adding an object
      */
     if(net_cache_adding_object)
@@ -296,6 +302,9 @@ NET_SetMemoryCacheSize(int32 new_size)
 	int32 image_cache_size;
 	int32 html_cache_size;
 
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
 	if(new_size <= 0)
 	  {
     	IL_SetCacheSize(0);
@@ -341,6 +350,9 @@ NET_SetMemoryCacheSize(int32 new_size)
 PUBLIC int32
 NET_RemoveLastMemoryCacheObject()
 {
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
 	net_remove_last_memory_cache_object();
 
 	return(net_MemoryCacheSize);
@@ -351,13 +363,21 @@ NET_RemoveLastMemoryCacheObject()
 PUBLIC int32
 NET_GetMemoryCacheSize()
 {
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
+
     return(net_MemoryCacheSize);
 }
 
 PUBLIC int32
 NET_GetMaxMemoryCacheSize()
 {
+#ifdef NU_CACHE
+    return CachePref_GetMemCacheSize();
+#else
     return net_MaxMemoryCacheSize;
+#endif
 }
 
 /* compare entries for the hashing functions
@@ -376,6 +396,9 @@ PRIVATE int net_CacheHashComp(net_MemoryCacheObject * obj1,
 	char *ques3=0;
 	char *ques4=0;
 
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
     if(obj1->cache_obj.method != obj2->cache_obj.method)
         return(obj1->cache_obj.method - obj2->cache_obj.method);
 
@@ -484,6 +507,9 @@ PRIVATE uint32 net_CacheHashFunc(net_MemoryCacheObject * obj1)
 	XP_Bool news_type_url = FALSE;
 	XP_Bool imap_type_url = FALSE;
  
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
 	if(!obj1)
 		return 0;
 
@@ -530,6 +556,9 @@ PRIVATE uint32 net_CacheHashFunc(net_MemoryCacheObject * obj1)
 PRIVATE unsigned int net_MemCacheWriteReady (NET_StreamClass *stream)
 {
    CacheDataObject *obj=stream->data_object;   
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
    if(obj->next_stream)
        return((*obj->next_stream->is_write_ready)(obj->next_stream));
    else
@@ -544,6 +573,9 @@ PRIVATE unsigned int net_MemCacheWriteReady (NET_StreamClass *stream)
 PRIVATE int net_MemCacheWrite (NET_StreamClass *stream, CONST char* buffer, int32 len)
 {
 	CacheDataObject *obj=stream->data_object;	
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
 	TRACEMSG(("net_MemCacheWrite called with %ld buffer size", len));
 
 	/* if delete_me is set, we don't want to keep writing to the memcache stream.
@@ -676,6 +708,9 @@ EndOfMemWrite:  /* target of a goto from an error above */
 PRIVATE void net_MemCacheComplete (NET_StreamClass *stream)
 {
 	CacheDataObject *obj=stream->data_object;	
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
 	/* refresh these entries in case meta changes them */
 	if(obj->URL_s && obj->memory_copy)
 	  {
@@ -753,6 +788,9 @@ PRIVATE void net_MemCacheAddObjectToCache (CacheDataObject * obj)
 {
     int status;
 
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
 	/* if the hash table doesn't exist yet, initialize it now 
 	 */
     if(!net_MemoryCacheHashList)
@@ -859,6 +897,9 @@ loser:
 PRIVATE void net_MemCacheAbort (NET_StreamClass *stream, int status)
 {
 	CacheDataObject *obj=stream->data_object;	
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
     /* abort the next stream
      */
     if(obj->next_stream)
@@ -891,6 +932,10 @@ NET_MemCacheConverter (FO_Present_Types format_out,
 	net_MemorySegment * mem_seg=0;
 	net_MemoryCacheObject *memory_copy=0;
 	net_MemCacheConverterObject *mem_conv_obj = converter_obj;
+
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
     
     TRACEMSG(("Setting up cache stream. Have URL: %s\n", URL_s->address));
 
@@ -1076,6 +1121,10 @@ net_FindObjectInMemoryCache(URL_Struct *URL_s)
 {
 	net_MemoryCacheObject tmp_cache_obj, *return_obj;
 
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
+
 	/* fill in the temporary cache object so we can
 	 * use it for searching
 	 */
@@ -1117,6 +1166,10 @@ NET_ChangeMemCacheLock(URL_Struct *URL_s, PRBool set)
 {
 	net_MemoryCacheObject * found_cache_obj;
 
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
+
 	/* look up cache struct */
 	found_cache_obj = net_FindObjectInMemoryCache(URL_s);
 
@@ -1148,6 +1201,9 @@ MODULE_PRIVATE void
 NET_RemoveURLFromMemCache(URL_Struct *URL_s)
 {
 	net_MemoryCacheObject * found_cache_obj;
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
 
 	found_cache_obj = net_FindObjectInMemoryCache(URL_s);
 
@@ -1163,6 +1219,9 @@ NET_RemoveURLFromMemCache(URL_Struct *URL_s)
 PUBLIC XP_Bool
 NET_IsURLInMemCache(URL_Struct *URL_s)
 {
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
 	if(net_FindObjectInMemoryCache(URL_s))
 		return(TRUE);
 	else
@@ -1179,6 +1238,12 @@ NET_IsURLInMemCache(URL_Struct *URL_s)
  */
 MODULE_PRIVATE int
 NET_FindURLInMemCache(URL_Struct * URL_s, MWContext *ctxt)
+#ifdef NU_CACHE
+{
+    PR_ASSERT(0); /* Should not be getting called */
+    return 0;
+}
+#else
 {
 	net_MemoryCacheObject *found_cache_obj;
 
@@ -1255,6 +1320,7 @@ NET_FindURLInMemCache(URL_Struct * URL_s, MWContext *ctxt)
 
     return(0);
 }
+#endif
 
 /*****************************************************************
  *  Memory cache output module routine
@@ -1295,6 +1361,12 @@ IMAP_URLFinished(URL_Struct *URL_s);
 
 PRIVATE int32
 net_MemoryCacheLoad (ActiveEntry * cur_entry)
+#ifdef NU_CACHE
+{
+    PR_ASSERT(0); /* Should not be getting called */
+    return 0;
+}
+#else
 {
     /* get memory for Connection Data */
     MemCacheConData * connection_data = PR_NEW(MemCacheConData);
@@ -1470,19 +1542,24 @@ net_MemoryCacheLoad (ActiveEntry * cur_entry)
     return(cur_entry->status);
 	
 }
-
+#endif
 /* called repeatedly from NET_ProcessNet to push all the
  * data up the stream
  */
 PRIVATE int32
 net_ProcessMemoryCache (ActiveEntry * cur_entry)
+#ifdef NU_CACHE
+{
+    PR_ASSERT(0);
+    return 0;
+}
+#else
 {
 	MemCacheConData * connection_data = (MemCacheConData *)cur_entry->con_data;
 	net_MemorySegment * mem_seg;
     uint32  chunk_size;
 	uint32  buffer_size;
 	char  *mem_seg_ptr;
-
 
 	if (!cur_entry->URL_s->memory_copy)
 	{
@@ -1638,12 +1715,18 @@ net_ProcessMemoryCache (ActiveEntry * cur_entry)
 	return(cur_entry->status);
 
 }
-
+#endif
 /* called by functions in mkgeturl to interrupt the loading of
  * an object.  (Usually a user interrupt) 
  */
 PRIVATE int32
 net_InterruptMemoryCache (ActiveEntry * cur_entry)
+#ifdef NU_CACHE
+{
+    PR_ASSERT(0); /* Should not be getting called */
+    return 0;
+}
+#else
 {
 	MemCacheConData * connection_data = (MemCacheConData *)cur_entry->con_data;
 
@@ -1685,7 +1768,7 @@ net_InterruptMemoryCache (ActiveEntry * cur_entry)
 
 	return(cur_entry->status);
 }
-
+#endif
 /* create an HTML stream and push a bunch of HTML about
  * the memory cache
  */
@@ -1693,13 +1776,32 @@ MODULE_PRIVATE void
 NET_DisplayMemCacheInfoAsHTML(ActiveEntry * cur_entry)
 #ifdef NU_CACHE
 {
+    NET_StreamClass *stream;
+
     if (cur_entry)
     {
         cur_entry->status = MK_UNABLE_TO_CONVERT;
         return;
     }
-    PR_ASSERT(0);
-    /* Todo - Gagan */
+	StrAllocCopy(cur_entry->URL_s->content_type, TEXT_HTML);
+
+	cur_entry->format_out = CLEAR_CACHE_BIT(cur_entry->format_out);
+	stream = NET_StreamBuilder(cur_entry->format_out, 
+							   cur_entry->URL_s, 
+							   cur_entry->window_id);
+
+	if(!stream)
+    {
+		cur_entry->status = MK_UNABLE_TO_CONVERT;
+		return;
+    }
+    
+    cur_entry->status = (*stream->put_block)(stream, "Just hang in there... ", 23);
+
+    if(cur_entry->status < 0)
+		(*stream->abort)(stream, cur_entry->status);
+	else
+		(*stream->complete)(stream);
 }
 #else
 {
@@ -1954,6 +2056,12 @@ NET_StreamClass *
 net_CloneWysiwygMemCacheEntry(MWContext *window_id, URL_Struct *URL_s,
 			      uint32 nbytes, const char * wysiwyg_url,
 			      const char * base_href)
+#ifdef NU_CACHE 
+{
+    PR_ASSERT(0); /* Should not be getting called */
+    return NULL;
+}
+#else
 {
 	net_MemoryCacheObject *memory_copy;
 	PRCList *link;
@@ -2006,6 +2114,7 @@ found:
 	  }
 	return stream;
 }
+#endif
 
 PRIVATE void
 net_CleanupMemoryCacheProtocol(void)
@@ -2016,6 +2125,10 @@ void
 NET_InitMemCacProtocol(void)
 {
     static NET_ProtoImpl mem_cac_proto_impl;
+
+#ifdef NU_CACHE
+    PR_ASSERT(0); /* Should not be getting called */
+#endif
 
     mem_cac_proto_impl.init = net_MemoryCacheLoad;
     mem_cac_proto_impl.process = net_ProcessMemoryCache;
