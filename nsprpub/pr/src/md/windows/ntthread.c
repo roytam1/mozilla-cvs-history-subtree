@@ -368,7 +368,6 @@ _PR_MD_CREATE_PRIMORDIAL_USER_THREAD(PRThread *thread)
 {
     thread->md.fiber_id = ConvertThreadToFiber(NULL);
     PR_ASSERT(thread->md.fiber_id);
-    thread->flags &= (~_PR_GLOBAL_SCOPE);
     _MD_SET_CURRENT_THREAD(thread);
     _MD_SET_LAST_THREAD(thread);
     thread->no_sched = 1;

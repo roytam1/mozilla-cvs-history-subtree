@@ -1319,7 +1319,7 @@ PR_IMPLEMENT(PRThread*) _PR_CreateThread(PRThreadType type,
      */
         PR_Unlock(_pr_activeLock);
 
-        if ( (thread->flags & _PR_IDLE_THREAD) || _PR_IS_NATIVE_THREAD(me) )
+        if ((! (thread->flags & _PR_IDLE_THREAD)) && _PR_IS_NATIVE_THREAD(me) )
             thread->cpu = _PR_GetPrimordialCPU();
         else
             thread->cpu = _PR_MD_CURRENT_CPU();

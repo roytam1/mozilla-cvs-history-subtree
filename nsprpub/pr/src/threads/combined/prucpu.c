@@ -178,12 +178,32 @@ static void _PR_RunCPU(void *unused)
 
     PR_ASSERT(NULL != me);
 
+    /*
+     * _PR_CreateCPU calls _PR_CreateThread to create the
+     * idle thread.  Because _PR_CreateThread calls PR_Lock,
+     * the current thread has to remain a global thread
+     * during the _PR_CreateCPU call so that it can wait for
+     * the lock if the lock is held by another thread.  If
+     * we clear the _PR_GLOBAL_SCOPE flag in
+     * _PR_MD_CREATE_PRIMORDIAL_THREAD, the current thread
+     * will be treated as a local thread and have trouble
+     * waiting for the lock because the CPU is not fully
+     * constructed yet.
+     *
+     * After the CPU is created, it is safe to mark the
+     * current thread as a local thread.
+     */
+
 #ifdef HAVE_CUSTOM_USER_THREADS
     _PR_MD_CREATE_PRIMORDIAL_USER_THREAD(me);
 #endif
 
     me->no_sched = 1;
     cpu = _PR_CreateCPU(me, PR_TRUE);
+
+#ifdef HAVE_CUSTOM_USER_THREADS
+    me->flags &= (~_PR_GLOBAL_SCOPE);
+#endif
 
     _PR_MD_SET_CURRENT_CPU(cpu);
     _PR_MD_SET_CURRENT_THREAD(cpu->thread);
