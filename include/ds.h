@@ -25,9 +25,7 @@
 #ifdef XP_OS2
 #define INCL_WIN
 #define INCL_GPI
-#define TID OS2TID   /* global rename in OS2 H's!               */
 #include <os2.h>
-#undef TID           /* and restore                             */
 #endif
 
 #include "xp_mcom.h"

@@ -36,9 +36,7 @@
 #define INCL_WIN
 #define INCL_WINATOM
 #define INCL_GPI
-#define TID OS2TID   /* global rename in OS2 H's!               */
 #include <os2.h>
-#undef TID           /* and restore                             */
 
 
 /*DAK these are empty.. #include <windef.h> */

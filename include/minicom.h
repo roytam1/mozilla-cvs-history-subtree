@@ -40,9 +40,7 @@ extern "C" {
 #else /* !XP_PC or XP_OS2*/
 
 #if defined(XP_OS2)
-#define TID OS2TID   /* global rename in OS2 H's!               */
 #include <os2.h>
-#undef TID           /* and restore                             */
 #endif
 
 typedef struct _GUID {

@@ -140,7 +140,7 @@
 #include <io.h>
 #include <limits.h>
 
-#ifndef XP_OS2 
+#ifndef XP_OS2_VACPP
 #define MAXPATHLEN 	1024               
 #else
 #include "os2file.h"  /* includes dirent.h */
@@ -191,7 +191,7 @@ XP_END_PROTOS
 
 #if defined(XP_OS2)
 #include <xp_mcom.h>
-#include <pros2os.h>
+#include "prtypes.h"
 XP_BEGIN_PROTOS
 int mkstemp(char *path);
 XP_END_PROTOS
