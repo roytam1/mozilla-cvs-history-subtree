@@ -94,6 +94,7 @@ nsDiskCacheBlockFile::Open( nsILocalFile *  blockFile, PRUint32  blockSize)
 error_exit:
     if (mStream) {
         (void) mStream->Close();
+        NS_RELEASE(mStream);
         mStream = nsnull;
     }
     

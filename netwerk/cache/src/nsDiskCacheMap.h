@@ -25,21 +25,199 @@
 #ifndef _nsDiskCacheMap_h_
 #define _nsDiskCacheMap_h_
 
-#include "nsDiskCache.h"
+#include "nsANSIFileStreams.h"
+
+#include "prtypes.h"
+#include "prnetdb.h"
+#include "nsDebug.h"
 #include "nsError.h"
+#include "nsILocalFile.h"
 
 class nsIInputStream;
 class nsIOutputStream;
 
-struct nsDiskCacheHeader {
+/**
+ *   Cache Location Format
+ *
+ *    0011 0000 0000 0000 0000 0000 0000 0000 : File Selector (0 = separate file)
+ *    0000 0011 0000 0000 0000 0000 0000 0000 : number of extra contiguous blocks 1-4
+ *    1100 1100 0000 0000 0000 0000 0000 0000 : reserved bits
+ *    0000 0000 1111 1111 1111 1111 1111 1111 : block#  0-16777216 (2^24)
+ *
+ *    0000 0000 1111 1111 1111 1111 0000 0000 : eFileReservedMask
+ *    0000 0000 0000 0000 0000 0000 1111 1111 : eFileGenerationMask
+ *
+ *  File Selector:
+ *      0 = separate file on disk
+ *      1 = 256 byte block file
+ *      2 = 1k block file
+ *      3 = 4k block file
+ */
+ 
+ 
+/******************************************************************************
+ *  nsDiskCacheRecord
+ *****************************************************************************/
+class nsDiskCacheRecord {
+
+private:
+    PRUint32    mHashNumber;
+    PRUint32    mEvictionRank;
+    PRUint32    mLocation;
+    PRUint32    mMetaLocation;
+ 
+    enum {
+        eLocationSelectorMask   = 0x30000000,
+        eLocationSelectorOffset = 28,
+        
+        eExtraBlocksMask        = 0x03000000,
+        eExtraBlocksOffset      = 24,
+        
+        eReservedMask           = 0xCC000000,
+        
+        eBlockNumberMask        = 0x00FFFFFF,
+
+        eFileReservedMask       = 0x00FFFF00,
+        eFileGenerationMask     = 0x000000FF
+    };
+
+public:
+    nsDiskCacheRecord()
+        :   mHashNumber(0), mEvictionRank(0), mLocation(0), mMetaLocation(0)
+    {
+    }
+    
+    PRUint32   HashNumber() const
+    {
+        return mHashNumber;
+    }
+    
+    void       SetHashNumber(PRUint32 hashNumber)
+    {
+        mHashNumber = hashNumber;
+    }
+
+    PRUint32   EvictionRank() const
+    {
+        return mEvictionRank;
+    }
+
+    void       SetEvictionRank(PRUint32 rank)
+    {
+        mEvictionRank = rank;
+    }
+
+    PRUint32   LocationSelector() const
+    {
+        return (PRUint32)(mLocation & eLocationSelectorMask) >> eLocationSelectorOffset;
+    }
+
+    void       SetLocationSelector(PRUint32 selector)
+    {
+        mLocation &= ~eLocationSelectorMask; // clear location selector bits
+        mLocation |= (selector & eLocationSelectorMask) << eLocationSelectorOffset;
+    }
+
+    PRUint32   BlockCount() const
+    {
+        return (PRUint32)((mLocation & eExtraBlocksMask) >> eExtraBlocksOffset) + 1;
+    }
+
+    void       SetBlockCount(PRUint32 count)
+    {
+        NS_ASSERTION( (count>=1) && (count<=4),"invalid block count");
+        count = --count;
+        mLocation &= ~eExtraBlocksMask; // clear extra blocks bits
+        mLocation |= (count & eExtraBlocksMask) << eExtraBlocksOffset;
+    }
+
+    PRUint32   BlockNumber() const
+    {
+        return (mLocation & eBlockNumberMask);
+    }
+
+    void       SetBlockNumber(PRUint32  blockNumber)
+    {
+        mLocation &= ~eBlockNumberMask;  // clear block number bits
+        mLocation |= blockNumber & eBlockNumberMask;
+    }
+
+    PRUint16   FileGeneration() const
+    {
+        return (mLocation & eFileGenerationMask);
+    }
+
+    void       SetFileGeneration(PRUint16 generation)
+    {
+        mLocation &= ~eFileGenerationMask;  // clear file generation bits
+        mLocation |= generation & eFileGenerationMask;
+    }
+
+    void        Swap()
+    {
+#if defined(IS_LITTLE_ENDIAN)
+        mHashNumber   = ::PR_htonl(mHashNumber);
+        mEvictionRank = ::PR_htonl(mEvictionRank);
+        mLocation     = ::PR_htonl(mLocation);
+        mMetaLocation = ::PR_htonl(mMetaLocation);
+#endif
+    }
+    
+    void        Unswap()
+    {
+#if defined(IS_LITTLE_ENDIAN)
+        mHashNumber   = ::PR_ntohl(mHashNumber);
+        mEvictionRank = ::PR_ntohl(mEvictionRank);
+        mLocation     = ::PR_ntohl(mLocation);
+        mMetaLocation = ::PR_ntohl(mMetaLocation);
+#endif
+    }
+
+};
+
+
+/******************************************************************************
+ *  nsDiskCacheRecordVisitor
+ *****************************************************************************/
+
+enum {  kDeleteRecordAndContinue = -1,
+        kStopVisitingRecords     =  0,
+        kVisitNextRecord         =  1
+};
+
+class nsDiskCacheRecordVisitor {
+    PRInt32  VisitRecord(nsDiskCacheRecord *  mapRecord);
+};
+
+
+/******************************************************************************
+ *  nsDiskCacheBucket
+ *****************************************************************************/
+    enum {
+        kRecordsPerBucket = 256,
+        kBucketsPerTable = (1 << 5)                 // must be a power of 2!
+    };
+
+struct nsDiskCacheBucket {
+    nsDiskCacheRecord   mRecords[kRecordsPerBucket];
+};
+
+
+/******************************************************************************
+ *  nsDiskCacheHeader
+ *****************************************************************************/
     enum { kCurrentVersion = 0x00010002 };
 
-    PRUint32    mHashNumber;
-    PRUint32    mLocation;
+struct nsDiskCacheHeader {
+
     PRUint32    mVersion;                           // cache version.
     PRUint32    mDataSize;                          // size of cache in bytes.
     PRUint32    mEntryCount;                        // number of entries stored in cache.
     PRUint32    mIsDirty;                           // dirty flag.
+    
+    // pad to blocksize
+    PRUint8     reserved[sizeof(nsDiskCacheBucket) - 4 * sizeof(PRUint32)];
+
     // XXX need a bitmap?
     
     nsDiskCacheHeader()
@@ -69,12 +247,45 @@ struct nsDiskCacheHeader {
     }
 };
 
+enum {  kCacheMapSize = sizeof(nsDiskCacheHeader) +
+                        kBucketsPerTable * sizeof(nsDiskCacheBucket)
+};
 
-// XXX initial capacity, enough for 8192 distinct entries.
+/******************************************************************************
+ *  nsDiskCacheMap
+ *
+ *  // XXX initial capacity, enough for 8192 distinct entries.
+ *****************************************************************************/
 class nsDiskCacheMap {
 public:
     nsDiskCacheMap();
     ~nsDiskCacheMap();
+
+/**
+ *  Open
+ *
+ *  Creates a new cache map file if one doesn't exist.
+ *  Returns error if it detects change in format or cache wasn't closed.
+ */
+//  nsresult Open(nsIFile *  cacheDirectory);
+    nsresult Open(nsILocalFile * mapFile);
+    nsresult Close();
+
+//  nsresult Flush();
+
+/**
+ *  Record operations
+ *
+ *  AddRecord - 
+ */
+    nsresult AddRecord( nsDiskCacheRecord *  mapRecord, nsDiskCacheRecord * oldRecord);
+    nsresult UpdateRecord( nsDiskCacheRecord *  mapRecord);
+    nsresult FindRecord( PRUint32  hashNumber, nsDiskCacheRecord *  mapRecord);
+
+    nsresult GetRecord2( nsDiskCacheRecord *  mapRecord);
+    nsresult DeleteRecord2( nsDiskCacheRecord *  mapRecord);
+    nsresult EvictRecords( nsDiskCacheRecordVisitor *  visitor);
+
 
     void Reset();
     
@@ -85,35 +296,8 @@ public:
     nsDiskCacheRecord* GetRecord(PRUint32 hashNumber);
     void DeleteRecord(nsDiskCacheRecord* record);
     
+    nsresult GetBucketForHashNumber(PRUint32  hashNumber, nsDiskCacheBucket ** result);
 
-/**
- *  Open
- *
- *  Creates a new cache map file if one doesn't exist.
- *  Returns error if it detects change in format or cache wasn't closed.
- */
-//  nsresult Open(nsIFile *  cacheDirectory);
-
-//  nsresult Flush();
-//  nsresult Close();
-
-/**
- *  Record operations
- *
- *  AddRecord - 
- */
-//  nsresult AddRecord( nsDiskCacheRecord *  mapRecord);
-//  nsresult UpdateRecord( nsDiskCacheRecord *  mapRecord);
-//  nsresult GetRecord( nsDiskCacheRecord *  mapRecord);
-//  nsresult DeleteRecord( nsDiskCacheRecord *  mapRecord);
-//  nsresult EvictRecords( nsDiskCacheRecordVisitor *  visitor);
-
-
-    enum {
-        kRecordsPerBucket = 256,
-        kBucketsPerTable = (1 << 5)                 // must be a power of 2!
-    };
-    
     nsDiskCacheRecord* GetBucket(PRUint32 index)
     {
         return mBuckets[index].mRecords;
@@ -139,10 +323,7 @@ public:
     nsresult WriteHeader(nsIOutputStream* output);
     
 private:
-    struct nsDiskCacheBucket {
-        nsDiskCacheRecord   mRecords[kRecordsPerBucket];
-    };
-    
+    nsANSIFileStream *      mStream;    
     nsDiskCacheHeader       mHeader;
     nsDiskCacheBucket       mBuckets[kBucketsPerTable];
 };

@@ -27,13 +27,16 @@
 #ifndef _nsCacheService_h_
 #define _nsCacheService_h_
 
-#include "nspr.h"
 #include "nsICacheService.h"
 #include "nsCacheSession.h"
 #include "nsCacheDevice.h"
 #include "nsCacheEntry.h"
+
+#include "nspr.h"
 #include "nsIObserver.h"
 #include "nsString.h"
+#include "nsIEventQueueService.h"
+#include "nsProxiedService.h"
 
 class nsCacheRequest;
 
@@ -63,6 +66,7 @@ public:
     nsresult         OpenCacheEntry(nsCacheSession *           session,
                                     const char *               key,
                                     nsCacheAccessMode          accessRequested,
+                                    PRBool                     blockingMode,
                                     nsICacheListener *         listener,
                                     nsICacheEntryDescriptor ** result);
 
@@ -74,6 +78,7 @@ public:
     /**
      * Methods called by nsCacheEntryDescriptor
      */
+    nsresult         SetCacheElement(nsCacheEntry * entry, nsISupports * element);
 
     nsresult         OnDataSizeChange(nsCacheEntry * entry, PRInt32 deltaSize);
 
@@ -116,6 +121,7 @@ private:
     nsresult         CreateRequest(nsCacheSession *   session,
                                    const char *       clientKey,
                                    nsCacheAccessMode  accessRequested,
+                                   PRBool             blockingMode,
                                    nsICacheListener * listener,
                                    nsCacheRequest **  request);
 
@@ -132,7 +138,8 @@ private:
 
     void             DeactivateEntry(nsCacheEntry * entry);
 
-    nsresult         ProcessRequest(nsCacheRequest * request,
+    nsresult         ProcessRequest(nsCacheRequest *           request,
+                                    PRBool                     calledFromOpenCacheEntry,
                                     nsICacheEntryDescriptor ** result);
 
     nsresult         ProcessPendingRequests(nsCacheEntry * entry);
@@ -149,16 +156,15 @@ private:
 #if defined(PR_LOGGING)
     void LogCacheStatistics();
 #endif
+
     /**
      *  Data Members
      */
 
-    enum {
-        cacheServiceActiveMask    = 1
-    };
-
-    static nsCacheService * gService;  // there can be only one...
-
+    static nsCacheService *             gService;  // there can be only one...
+    nsCOMPtr<nsIEventQueueService>      mEventQService;
+    nsCOMPtr<nsIProxyObjectManager>     mProxyObjectManager;
+    
     PRLock*                 mCacheServiceLock;
     
     PRBool                  mEnableMemoryDevice;
@@ -167,7 +173,6 @@ private:
     nsCacheDevice *         mMemoryDevice;
     nsCacheDevice *         mDiskDevice;
 
-    //    nsCacheClientHashTable  mClientIDs;
     nsCacheEntryHashTable   mActiveEntries;
     PRCList                 mDoomedEntries;
 

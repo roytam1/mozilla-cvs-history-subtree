@@ -304,11 +304,30 @@ NS_IMETHODIMP nsDiskCacheDeviceInfo::GetDescription(char ** aDescription)
 }
 
 /* readonly attribute string usageReport; */
-NS_IMETHODIMP nsDiskCacheDeviceInfo::GetUsageReport(char ** aUsageReport)
+NS_IMETHODIMP nsDiskCacheDeviceInfo::GetUsageReport(char ** usageReport)
 {
-    NS_ENSURE_ARG_POINTER(aUsageReport);
-    *aUsageReport = nsCRT::strdup("disk cache usage report");
-    return *aUsageReport ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+    NS_ENSURE_ARG_POINTER(usageReport);
+    nsCString buffer;
+    
+    buffer.Assign("<table>\n");
+
+    buffer.Append("<tr><td><b>Cache Directory:</b></td><td><tt> ");
+    nsCOMPtr<nsILocalFile> cacheDir;
+    char *                 path;
+    mDevice->getCacheDirectory(getter_AddRefs(cacheDir)); 
+    nsresult rv = cacheDir->GetPath(&path);
+    if (NS_SUCCEEDED(rv)) {
+        buffer.Append(path);
+    } else {
+        buffer.Append("directory unavailable");
+    }
+    buffer.Append("</tt></td></tr>");
+    buffer.Append("<tr><td><b>Files:</b></td><td><tt> 1492</tt></td></tr>");
+    buffer.Append("</table>");
+    *usageReport = buffer.ToNewCString();
+    if (!*usageReport) return NS_ERROR_OUT_OF_MEMORY;
+
+    return NS_OK;
 }
 
 /* readonly attribute unsigned long entryCount; */
@@ -537,12 +556,14 @@ NS_IMETHODIMP nsDiskCacheEntryInfo::GetClientID(char ** clientID)
     return ClientIDFromCacheKey(nsLiteralCString(mMetaDataFile.mKey), clientID);
 }
 
+
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetDeviceID(char ** deviceID)
 {
     NS_ENSURE_ARG_POINTER(deviceID);
     *deviceID = nsCRT::strdup(DISK_CACHE_DEVICE_ID);
     return *deviceID ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
+
 
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetKey(char ** clientKey)
 {
@@ -644,6 +665,10 @@ nsDiskCacheDevice::~nsDiskCacheDevice()
     NS_IF_RELEASE(mCacheStream);
 }
 
+
+/**
+ *  methods of nsCacheDevice
+ */
 nsresult
 nsDiskCacheDevice::Init()
 {
@@ -923,6 +948,7 @@ nsDiskCacheDevice::GetTransportForEntry(nsCacheEntry * entry,
     return rv;
 }
 
+
 nsresult
 nsDiskCacheDevice::GetFileForEntry(nsCacheEntry *    entry,
                                    nsIFile **        result)
@@ -969,7 +995,7 @@ nsDiskCacheDevice::EvictEntries(const char * clientID)
 {
     nsresult rv;
     
-    PRUint32 prefixLength = nsCRT::strlen(clientID);
+    PRUint32 prefixLength = (clientID ? nsCRT::strlen(clientID) : 0);
     PRUint32 newDataSize = mCacheMap->DataSize();
     PRUint32 newEntryCount = mCacheMap->EntryCount();
 
@@ -977,13 +1003,13 @@ nsDiskCacheDevice::EvictEntries(const char * clientID)
     rv = updateDiskCacheEntries();
     if (NS_FAILED(rv)) return rv;
     
-    nsDiskCacheRecord records[nsDiskCacheMap::kRecordsPerBucket];
-    for (PRUint32 i = 0; i < nsDiskCacheMap::kBucketsPerTable; ++i) {
+    nsDiskCacheRecord records[kRecordsPerBucket];
+    for (PRUint32 i = 0; i < kBucketsPerTable; ++i) {
         // XXX copy the i-th bucket from the cache map. GetBucket()
         // should probably be changed to do this.
         PRUint32 j, count = 0;
         const nsDiskCacheRecord* bucket = mCacheMap->GetBucket(i);
-        for (j = 0; j < nsDiskCacheMap::kRecordsPerBucket; ++j) {
+        for (j = 0; j < kRecordsPerBucket; ++j) {
             const nsDiskCacheRecord* record = bucket++;
             if (record->HashNumber() == 0)
                 break;
@@ -1057,6 +1083,10 @@ nsDiskCacheDevice::EvictEntries(const char * clientID)
     return NS_OK;
 }
 
+
+/**
+ *  methods for prefs
+ */
 void nsDiskCacheDevice::setPrefsObserver(nsIObserver* observer)
 {
     mPrefsObserver = observer;
@@ -1071,6 +1101,15 @@ void nsDiskCacheDevice::setCacheDirectory(nsILocalFile* cacheDirectory)
 {
     mCacheDirectory = cacheDirectory;
 }
+
+
+void
+nsDiskCacheDevice::getCacheDirectory(nsILocalFile ** result)
+{
+    *result = mCacheDirectory;
+    NS_IF_ADDREF(*result);
+}
+
 
 void nsDiskCacheDevice::setCacheCapacity(PRUint32 capacity)
 {
@@ -1098,6 +1137,9 @@ PRUint32 nsDiskCacheDevice::getEntryCount()
     return mCacheMap->EntryCount();
 }
 
+/**
+ *  private methods
+ */
 nsresult nsDiskCacheDevice::getFileForHashNumber(PLDHashNumber hashNumber, PRBool meta, PRUint32 generation, nsIFile ** result)
 {
     if (mCacheDirectory) {
@@ -1201,9 +1243,9 @@ nsresult nsDiskCacheDevice::visitEntries(nsICacheVisitor * visitor)
     if (!entryInfo) return NS_ERROR_OUT_OF_MEMORY;
     nsCOMPtr<nsICacheEntryInfo> ref(entryInfo);
     
-    for (PRUint32 i = 0; i < nsDiskCacheMap::kBucketsPerTable; ++i) {
+    for (PRUint32 i = 0; i < kBucketsPerTable; ++i) {
         nsDiskCacheRecord* bucket = mCacheMap->GetBucket(i);
-        for (PRUint32 j = 0; j < nsDiskCacheMap::kRecordsPerBucket; ++j) {
+        for (PRUint32 j = 0; j < kRecordsPerBucket; ++j) {
             nsDiskCacheRecord* record = bucket++;
             if (record->HashNumber() == 0)
                 break;
@@ -1290,25 +1332,6 @@ nsresult nsDiskCacheDevice::updateDiskCacheEntry(nsDiskCacheEntry* diskEntry)
 }
 
 
-// XXX move to nsCacheEntry.cpp
-static nsresult NS_NewCacheEntry(nsCacheEntry ** result,
-                                 const char * key,
-                                 PRBool streamBased,
-                                 nsCacheStoragePolicy storagePolicy,
-                                 nsCacheDevice* device)
-{
-    nsCString* newKey = new nsCString(key);
-    if (!newKey) return NS_ERROR_OUT_OF_MEMORY;
-    
-    nsCacheEntry* entry = new nsCacheEntry(newKey, streamBased, storagePolicy);
-    if (!entry) { delete newKey; return NS_ERROR_OUT_OF_MEMORY; }
-    
-    entry->SetCacheDevice(device);
-    
-    *result = entry;
-    return NS_OK;
-}
-
 nsresult nsDiskCacheDevice::readDiskCacheEntry(const char * key, nsDiskCacheEntry ** result)
 {
     // result should be nsull on cache miss.
@@ -1337,7 +1360,7 @@ nsresult nsDiskCacheDevice::readDiskCacheEntry(const char * key, nsDiskCacheEntr
     if (nsCRT::strcmp(key, metaDataFile.mKey) != 0) return NS_ERROR_NOT_AVAILABLE;
     
     nsCacheEntry* entry = nsnull;
-    rv = NS_NewCacheEntry(&entry, key, PR_TRUE, nsICache::STORE_ON_DISK, this);
+    rv = CreateCacheEntry(key, PR_TRUE, nsICache::STORE_ON_DISK, this, &entry);
     if (NS_FAILED(rv)) return rv;
 
     // initialize the entry.
@@ -1633,9 +1656,9 @@ nsresult nsDiskCacheDevice::evictDiskCacheEntries()
     PRUint32 count = 0;
     nsDiskCacheRecord* sortedRecords = new nsDiskCacheRecord[mCacheMap->EntryCount()];
     if (sortedRecords) {
-        for (PRUint32 i = 0; i < nsDiskCacheMap::kBucketsPerTable; ++i) {
+        for (PRUint32 i = 0; i < kBucketsPerTable; ++i) {
             nsDiskCacheRecord* bucket = mCacheMap->GetBucket(i);
-            for (PRUint32 j = 0; j < nsDiskCacheMap::kRecordsPerBucket; ++j) {
+            for (PRUint32 j = 0; j < kRecordsPerBucket; ++j) {
                 nsDiskCacheRecord* record = bucket++;
                 if (record->HashNumber() == 0)
                     break;

@@ -70,9 +70,10 @@ public:
     virtual nsresult        EvictEntries(const char * clientID);
 
 /* private: */
-    void                    setPrefsObserver(nsIObserver* observer);
+    void                    setPrefsObserver(nsIObserver *  observer);
     void                    getPrefsObserver(nsIObserver ** result);
-    void                    setCacheDirectory(nsILocalFile* directory);
+    void                    setCacheDirectory(nsILocalFile *  directory);
+    void                    getCacheDirectory(nsILocalFile ** result);
     void                    setCacheCapacity(PRUint32 capacity);
     PRUint32                getCacheCapacity();
     PRUint32                getCacheSize();
