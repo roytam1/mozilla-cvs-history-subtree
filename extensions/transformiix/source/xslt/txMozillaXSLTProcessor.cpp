@@ -236,10 +236,10 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
                                           nsITransformObserver* aObserver,
                                           nsIDOMDocument** aOutputDoc)
 {
-    NS_ASSERTION(aSourceDOM, "missing source document");
-    NS_ASSERTION(aStyleDOM, "missing style document");
-    NS_ASSERTION(aObserver, "missing observer");
-    NS_ASSERTION(aOutputDoc, "bad return-pointer");
+    NS_ENSURE_ARG(aSourceDOM);
+    NS_ENSURE_ARG(aStyleDOM);
+    NS_ASSERTION(aObserver, "no observer");
+    NS_ENSURE_ARG_POINTER(aOutputDoc);
 
     // Do we really need this now that this is not a scriptable function?
     if (!URIUtils::CanCallerAccess(aSourceDOM) ||
@@ -321,7 +321,7 @@ txMozillaXSLTProcessor::Init(nsIDOMNode *aStyle)
     aStyle->GetNodeType(&type);
     NS_ENSURE_TRUE(type == nsIDOMNode::ELEMENT_NODE ||
                    type == nsIDOMNode::DOCUMENT_NODE,
-                   NS_ERROR_FAILURE);
+                   NS_ERROR_INVALID_ARG);
 
     mStylesheet = aStyle;
     return NS_OK;
@@ -331,9 +331,9 @@ NS_IMETHODIMP
 txMozillaXSLTProcessor::TransformToDocument(nsIDOMNode *aSource,
                                             nsIDOMDocument **aResult)
 {
-    NS_ASSERTION(aSource, "missing source document");
-    NS_ASSERTION(aResult, "bad return-pointer");
-    NS_ENSURE_TRUE(mStylesheet, NS_ERROR_FAILURE);
+    NS_ENSURE_ARG(aSource);
+    NS_ENSURE_ARG_POINTER(aResult);
+    NS_ENSURE_TRUE(mStylesheet, NS_ERROR_NOT_INITIALIZED);
 
     if (!URIUtils::CanCallerAccess(aSource)) {
         return NS_ERROR_DOM_SECURITY_ERR;
@@ -408,7 +408,8 @@ txMozillaXSLTProcessor::TransformToFragment(nsIDOMNode *aSource,
 {
     NS_ENSURE_ARG(aSource);
     NS_ENSURE_ARG(aOutput);
-    NS_ENSURE_TRUE(mStylesheet, NS_ERROR_FAILURE);
+    NS_ENSURE_ARG_POINTER(aResult);
+    NS_ENSURE_TRUE(mStylesheet, NS_ERROR_NOT_INITIALIZED);
 
     if (!URIUtils::CanCallerAccess(aSource) ||
         !URIUtils::CanCallerAccess(aOutput)) {
