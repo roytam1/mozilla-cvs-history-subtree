@@ -370,3 +370,11 @@ jscpucfg$(BIN_SUFFIX): jscpucfg.c Makefile.in
 	$(HOST_CC) $(HOST_CFLAGS) $(DEFINES) $(NSPR_CFLAGS) $(OUTOPTION)$@ $<
 endif
 
+# OS/2 Optimization bug
+# This suppresses optimization for this single compilation unit.
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+jsdtoa.obj: jsdtoa.c
+	$(REPORT_BUILD)
+	@$(MAKE_DEPS_AUTO)
+	$(ELOG) $(CC) $(OUTOPTION)$@ -c $(filter-out /O+, $(COMPILE_CFLAGS)) $(_VPATH_SRCS)
+#endif
