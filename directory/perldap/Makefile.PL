@@ -151,8 +151,6 @@ if ($osname =~ /mswin/i)
 }
 
 push(@extras,
-     CAPI => 'TRUE');
-push(@extras,
      CAPI => 'TRUE')
     if ($] >= 5.005 and $^O eq 'MSWin32'
         and $Config{archname} =~ /-object\b/i);
