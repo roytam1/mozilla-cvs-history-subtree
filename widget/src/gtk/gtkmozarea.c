@@ -80,6 +80,7 @@ gtk_mozarea_realize (GtkWidget *widget)
   mozarea->superwin = gdk_superwin_new (gtk_widget_get_parent_window (widget),
 					widget->allocation.x, widget->allocation.y,
 					widget->allocation.width, widget->allocation.height);
+  gdk_window_set_user_data (mozarea->superwin->shell_window, mozarea);
   widget->window = mozarea->superwin->shell_window;
 }
 

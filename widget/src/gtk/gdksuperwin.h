@@ -47,8 +47,8 @@ struct _GdkSuperWin
 
   /* Private */
   GList *translate_queue;
-  
-  GdkSuperWinFunc event_func;
+  GdkSuperWinFunc shell_func;
+  GdkSuperWinFunc bin_func;
   gpointer        func_data;
   GDestroyNotify  notify;
 
@@ -68,10 +68,13 @@ GdkSuperWin *gdk_superwin_new (GdkWindow      *parent_window,
                                guint           width,
                                guint           height);
 
-void  gdk_superwin_set_event_func (GdkSuperWin    *superwin,
-                                   GdkSuperWinFunc event_func,
-                                   gpointer        func_data,
-                                   GDestroyNotify  notify);
+void  
+gdk_superwin_set_event_funcs (GdkSuperWin    *superwin,
+                              GdkSuperWinFunc shell_func,
+                              GdkSuperWinFunc bin_func,
+                              gpointer        func_data,
+                              GDestroyNotify  notify);
+
 void gdk_superwin_scroll (GdkSuperWin *superwin,
                           gint         dx,
                           gint         dy);
