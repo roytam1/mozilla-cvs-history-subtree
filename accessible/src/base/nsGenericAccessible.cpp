@@ -529,7 +529,7 @@ PRBool nsLinkableAccessible::IsALink()
 
   nsCOMPtr<nsIContent> walkUpContent(do_QueryInterface(mNode));
   if (walkUpContent) {
-    nsCOMPtr<nsIContent> tempContent;
+    nsCOMPtr<nsIContent> tempContent = walkUpContent;
     while (walkUpContent) {
       nsCOMPtr<nsILink> link(do_QueryInterface(walkUpContent));
       if (link) {

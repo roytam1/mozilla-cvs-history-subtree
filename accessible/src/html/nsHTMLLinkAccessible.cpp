@@ -40,7 +40,7 @@ nsLinkableAccessible(aShell, aDomNode)
 /* wstring getAccName (); */
 NS_IMETHODIMP nsHTMLLinkAccessible::GetAccName(PRUnichar **_retval)
 { 
-  if (!mLinkContent)
+  if (!IsALink())  // Also initializes private data members
     return NS_ERROR_FAILURE;
 
   nsAutoString nameString;
