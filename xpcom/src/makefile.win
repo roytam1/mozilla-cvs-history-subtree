@@ -66,6 +66,7 @@ CPPSRCS =                             \
         nsTraceRefcnt.cpp             \
         nsRegistry.cpp                \
         nsXPComFactory.cpp            \
+        nsXPIDLString.cpp             \
         nsEventQueueService.cpp       \
         nsAllocator.cpp               \
         xcDll.cpp                     \
