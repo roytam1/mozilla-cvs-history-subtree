@@ -18,6 +18,7 @@
 # Contributor(s): 
 
 DEPTH = ..\..\..
+include <$(DEPTH)/config/config.mak>
 
 MODULE = necko
 
@@ -27,14 +28,6 @@ LCFLAGS = -DWIN32_LEAN_AND_MEAN -D_IMPL_NS_NET
 
 CPP_OBJS =                                       \
         .\$(OBJDIR)\nsStreamConverterService.obj \
-        $(NULL)
-
-LOCAL_INCLUDES=-I.
-
-INCLUDES = $(LOCAL_INCLUDES)
-
-INCS = $(INCS)                  \
-        -I$(DEPTH)\dist\include \
         $(NULL)
 
 include <$(DEPTH)\config\rules.mak>
