@@ -826,7 +826,7 @@ endif
 
 EXPORT_LDFLAGS	= -z defs -L$(MOTIF)/lib -L$(USRLIBDIR) -R$(MOTIF)/lib \
 		  -R$(USRLIBDIR) $(BASIC_LIBS) $(EXPORT_LIB) $(BASIC_LIBS_2) \
-		  $(OTHER_LIBS) $(NSPR_LIB)
+		  $(BASIC_DSOS) $(OTHER_LIBS) $(NSPR_LIB)
 
 endif
 endif
