@@ -30,6 +30,7 @@
 #include "nsMsgKeyArray.h"
 #include "nsUint8Array.h"
 #include "nsIDBChangeListener.h"
+#include "nsVoidArray.h"
 
 enum eFieldType {
     kString,
@@ -106,6 +107,8 @@ protected:
   nsresult GetFieldTypeAndLenForSort(nsMsgViewSortTypeValue sortType, PRUint16 *pMaxLen, eFieldType *pFieldType);
   nsresult GetStringField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, char **result);
   nsresult GetLongField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType, PRUint32 *result);
+
+  void FreeAll(nsVoidArray *ptrs);
   
   nsMsgKeyArray m_keys;
   nsUInt32Array m_flags;

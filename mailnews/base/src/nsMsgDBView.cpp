@@ -56,6 +56,7 @@ NS_IMETHODIMP nsMsgDBView::Open(nsIMsgFolder *folder, nsMsgViewSortTypeValue vie
   nsCOMPtr <nsIDBFolderInfo> folderInfo;
 
   nsresult rv = folder->GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(m_db));
+  NS_ENSURE_SUCCESS(rv,rv);
 	m_db->AddListener(this);
 #ifdef HAVE_PORT
 	if (viewType == ViewAny)
@@ -267,10 +268,12 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     rv = GetFieldTypeAndLenForSort(sortType, &maxLen, &fieldType);
     NS_ENSURE_SUCCESS(rv,rv);
 
+    nsVoidArray ptrs;
     PRUint32 arraySize = GetSize();
     IdStr** pPtrBase = (IdStr**)PR_Malloc(arraySize * sizeof(IdStr*));
     NS_ASSERTION(pPtrBase, "out of memory, can't sort");
     if (!pPtrBase) return NS_ERROR_OUT_OF_MEMORY;
+    ptrs.AppendElement((void *)pPtrBase); // remember this pointer so we can free it later
     
     // build up the beast, so we can sort it.
     PRUint32 numSoFar = 0;
@@ -282,9 +285,11 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     char *pTemp = (char *) PR_Malloc(allocSize);
     NS_ASSERTION(pTemp, "out of memory, can't sort");
     if (!pTemp) {   
-        PR_FREEIF(pPtrBase);
+        FreeAll(&ptrs);
         return NS_ERROR_OUT_OF_MEMORY;
     }
+
+    ptrs.AppendElement((void *)pTemp); // remember this pointer so we can free it later
 
     char * pBase = pTemp;
     PRBool more = PR_TRUE;
@@ -297,8 +302,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
         rv = m_db->GetMsgHdrForKey(thisKey, getter_AddRefs(msgHdr));
         NS_ASSERTION(NS_SUCCEEDED(rv) && msgHdr, "header not found");
         if (NS_FAILED(rv) || !msgHdr) {
-          PR_FREEIF(pPtrBase);
-          PR_FREEIF(pTemp);
+          FreeAll(&ptrs);
           return NS_ERROR_UNEXPECTED;
         }
       }
@@ -351,23 +355,23 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
         pTemp = (char*)PR_Malloc(allocSize);
         NS_ASSERTION(pTemp, "out of memory, can't sort");
         if (!pTemp) {
-          PR_FREEIF(pPtrBase);
+          FreeAll(&ptrs);
           return NS_ERROR_OUT_OF_MEMORY;
         }
         pBase = pTemp;
+        ptrs.AppendElement((void *)pTemp); // remember this pointer so we can free it later
       }
 
       // make sure there aren't more IDs than we allocated space for
       NS_ASSERTION(numSoFar < arraySize, "out of memory");
       if (numSoFar >= arraySize) {
-        PR_FREEIF(pPtrBase);
-        PR_FREEIF(pTemp);
+        FreeAll(&ptrs);
         return NS_ERROR_OUT_OF_MEMORY;
       }
 
       // now store this entry away in the allocated memory
       pPtrBase[numSoFar] = (IdStr*)pTemp;
-      EntryInfo *info = (EntryInfo *)  pTemp;
+      EntryInfo *info = (EntryInfo *)pTemp;
       info->id = thisKey;
       PRUint32 bits= 0;
       bits = m_flags.GetAt(numSoFar);
@@ -391,7 +395,29 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     }
 
     // do the sort
-    // use new array to shuffle m_keys
+    switch (fieldType) {
+        case kString:
+            printf("sort strings, not implemented yet\n");
+            break;
+        case kU16:
+            printf("sort u16s, not implemented yet\n");
+            break;
+        case kU32:
+            printf("sort u32s, not implemented yet\n");
+            break;
+        case kU64:
+            printf("sort u64s, not implemented yet\n");
+            break;
+        default:
+            NS_ASSERTION(0, "not supposed to get here");
+            break;
+    }
+
+    // now put the IDs into the array in proper order
+    for (PRUint32 i = 0; i < numSoFar; i++) {
+        m_keys.SetAt(i, pPtrBase[i]->info.id);
+        m_flags.SetAt(i, pPtrBase[i]->info.bits);
+    }
 
     m_sortType = sortType;
     m_sortOrder = sortOrder;
@@ -401,9 +427,26 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
         NS_ASSERTION(NS_SUCCEEDED(rv),"failed to reverse sort");
     }
 
-    // free new array
+    // free all the memory we allocated
+    FreeAll(&ptrs);
+
+    m_sortValid = PR_TRUE;
+    //m_messageDB->SetSortInfo(sortType, sortOrder);
 
     return NS_OK;
+}
+
+void nsMsgDBView::FreeAll(nsVoidArray *ptrs)
+{
+    PRInt32 i;
+    PRInt32 count = (PRInt32) ptrs->Count();
+    if (count == 0) return;
+
+    for (i=(count - 1);i>=0;i--) {
+        void *ptr = (void *) ptrs->ElementAt(i);
+        PR_FREEIF(ptr);
+        ptrs->RemoveElementAt(i);
+    }
 }
 
 nsMsgViewIndex nsMsgDBView::GetIndexOfFirstDisplayedKeyInThread(nsIMsgThread *threadHdr)
