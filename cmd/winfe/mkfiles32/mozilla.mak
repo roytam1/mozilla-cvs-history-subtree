@@ -294,15 +294,15 @@ CFLAGS_LIBMOCHA_C=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/lm.pch" /YX"lm.h"
 CFLAGS_LAYOUT_CPP=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/editor.pch" /YX"editor.h"
 CFLAGS_PLUGIN_CPP=      $(CFLAGS_DEFAULT) /I$(DEPTH)\cmd\winfe /Fp"$(OUTDIR)/stdafx.pch" /YX"stdafx.h"
 CFLAGS_LIBPREF_C=                 $(CFLAGS_DEBUG)
-CFLAGS_WINFE_C=                 $(CFLAGS_DEBUG)
+CFLAGS_WINFE_C=                 $(CFLAGS_DEFAULT)
 !if "$(MOZ_BITS)"=="32"
 !if "$(MOZ_BCPRO)" == ""
-CFLAGS_WINFE_CPP=       $(CFLAGS_DEBUG) /I$(DEPTH)\jpeg /Fp"$(OUTDIR)/stdafx.pch" /YX"stdafx.h"
+CFLAGS_WINFE_CPP=       $(CFLAGS_DEFAULT) /I$(DEPTH)\jpeg /Fp"$(OUTDIR)/stdafx.pch" /YX"stdafx.h"
 !else
-CFLAGS_WINFE_CPP=       $(CFLAGS_DEBUG) /I$(DEPTH)\jpeg
+CFLAGS_WINFE_CPP=       $(CFLAGS_DEFAULT) /I$(DEPTH)\jpeg
 !endif
 !else
-CFLAGS_WINFE_CPP=       $(CFLAGS_DEBUG)
+CFLAGS_WINFE_CPP=       $(CFLAGS_DEFAULT)
 !endif
 !if "$(MOZ_BITS)"=="16"
 CFLAGS_WINDOWS_C=		$(CFLAGS_DEFAULT) /I$(DEPTH)\dist\public\win16\private

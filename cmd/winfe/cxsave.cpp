@@ -1450,17 +1450,7 @@ int CSaveAttachmentStream::Write(const char *lpBuf, int32 nCount)
 		}
 	}
 
-<<<<<<< cxsave.cpp
-	if (m_nPosition + nCount > m_nBufferSize)
-		Grow(m_nPosition + nCount);
-
-	ASSERT(m_nPosition + nCount <= m_nBufferSize);
-
-	// Safety net
-	if (m_nPosition + nCount > m_nBufferSize)
-=======
 	if (m_pFile)
->>>>>>> 3.1.16.3
 	{
 		m_pFile->Write(lpBuf, nCount);
 	}
