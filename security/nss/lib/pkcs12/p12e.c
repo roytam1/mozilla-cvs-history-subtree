@@ -1,38 +1,35 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape security libraries.
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1994-2000
- * the Initial Developer. All Rights Reserved.
- *
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
  * Contributor(s):
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
+ */
 
 #include "nssrenam.h"
 #include "p12t.h"
@@ -51,39 +48,6 @@
 #include "p12local.h"
 #include "alghmac.h"
 #include "prcpucfg.h"
-
-/*
-** This PKCS12 file encoder uses numerous nested ASN.1 and PKCS7 encoder
-** contexts.  It can be difficult to keep straight.  Here's a picture:
-**
-**  "outer"  ASN.1 encoder.  The output goes to the library caller's CB.
-**  "middle" PKCS7 encoder.  Feeds    the "outer" ASN.1 encoder.
-**  "middle" ASN1  encoder.  Encodes  the encrypted aSafes. 
-**                           Feeds    the "middle" P7 encoder above.
-**  "inner"  PKCS7 encoder.  Encrypts the "authenticated Safes" (aSafes)
-**                           Feeds    the "middle" ASN.1 encoder above.
-**  "inner"  ASN.1 encoder.  Encodes  the unencrypted aSafes.  
-**                           Feeds    the "inner" P7 enocder above.
-**
-** Buffering has been added at each point where the output of an ASN.1
-** encoder feeds the input of a PKCS7 encoder.
-*/
-
-/*********************************
- * Output buffer object, used to buffer output from ASN.1 encoder
- * before passing data on down to the next PKCS7 encoder.
- *********************************/
-
-#define PK12_OUTPUT_BUFFER_SIZE  8192
-
-struct sec_pkcs12OutputBufferStr {
-    SEC_PKCS7EncoderContext * p7eCx;
-    PK11Context             * hmacCx;
-    unsigned int              numBytes;
-    unsigned int              bufBytes;
-             char             buf[PK12_OUTPUT_BUFFER_SIZE];
-};
-typedef struct sec_pkcs12OutputBufferStr sec_pkcs12OutputBuffer;
 
 /*********************************
  * Structures used in exporting the PKCS 12 blob
@@ -169,29 +133,24 @@ typedef struct sec_PKCS12EncoderContextStr {
     /* encoder information - this is set up based on whether 
      * password based or public key pased privacy is being used
      */
-    SEC_ASN1EncoderContext *outerA1ecx;
+    SEC_ASN1EncoderContext *ecx;
     union {
 	struct sec_pkcs12_hmac_and_output_info hmacAndOutputInfo;
-	struct sec_pkcs12_encoder_output       encOutput;
+	struct sec_pkcs12_encoder_output encOutput;
     } output;
 
     /* structures for encoding of PFX and MAC */
-    sec_PKCS12PFXItem        pfx;
-    sec_PKCS12MacData        mac;
+    sec_PKCS12PFXItem pfx;
+    sec_PKCS12MacData mac;
 
     /* authenticated safe encoding tracking information */
-    SEC_PKCS7ContentInfo    *aSafeCinfo;
-    SEC_PKCS7EncoderContext *middleP7ecx;
-    SEC_ASN1EncoderContext  *middleA1ecx;
-    unsigned int             currentSafe;
+    SEC_PKCS7ContentInfo *aSafeCinfo;
+    SEC_PKCS7EncoderContext *aSafeP7Ecx;
+    SEC_ASN1EncoderContext *aSafeEcx;
+    unsigned int currentSafe;
 
     /* hmac context */
-    PK11Context             *hmacCx;
-
-    /* output buffers */
-    sec_pkcs12OutputBuffer  middleBuf;
-    sec_pkcs12OutputBuffer  innerBuf;
-
+    PK11Context *hmacCx;
 } sec_PKCS12EncoderContext;
 
 
@@ -1247,8 +1206,7 @@ SEC_PKCS12AddEncryptedKey(SEC_PKCS12ExportContext *p12ctxt,
     }
 	   
     if(keyId) {
-	if(sec_PKCS12AddAttributeToBag(p12ctxt, returnBag, 
-	                               SEC_OID_PKCS9_LOCAL_KEY_ID,
+	if(sec_PKCS12AddAttributeToBag(p12ctxt, returnBag, SEC_OID_PKCS9_LOCAL_KEY_ID,
 				       keyId) != SECSuccess) {
 	    goto loser;
 	}
@@ -1670,7 +1628,8 @@ sec_pkcs12_encoder_start_context(SEC_PKCS12ExportContext *p12exp)
 
     /* allocate the encoder context */
     mark = PORT_ArenaMark(p12exp->arena);
-    p12enc = PORT_ArenaZNew(p12exp->arena, sec_PKCS12EncoderContext);
+    p12enc = (sec_PKCS12EncoderContext*)PORT_ArenaZAlloc(p12exp->arena, 
+    			      sizeof(sec_PKCS12EncoderContext));
     if(!p12enc) {
 	PORT_SetError(SEC_ERROR_NO_MEMORY);
 	return NULL;
@@ -1722,7 +1681,6 @@ sec_pkcs12_encoder_start_context(SEC_PKCS12ExportContext *p12exp)
 	    PK11SymKey *symKey;
 	    SECItem *params;
 	    CK_MECHANISM_TYPE integrityMech;
-	    CK_MECHANISM_TYPE hmacMech;
 
 	    /* zero out macData and set values */
 	    PORT_Memset(&p12enc->mac, 0, sizeof(sec_PKCS12MacData));
@@ -1766,12 +1724,9 @@ sec_pkcs12_encoder_start_context(SEC_PKCS12ExportContext *p12exp)
 	    }
 
 	    /* initialize hmac */
-	    /* XXX NBB, why is this mech different than the one above? */
-	    hmacMech =  sec_pkcs12_algtag_to_mech( 
-	                              p12exp->integrityInfo.pwdInfo.algorithm);
-
-	    p12enc->hmacCx = PK11_CreateContextBySymKey( hmacMech, CKA_SIGN, 
-	                                                 symKey, &ignore);
+	    p12enc->hmacCx = PK11_CreateContextBySymKey(
+	     sec_pkcs12_algtag_to_mech(p12exp->integrityInfo.pwdInfo.algorithm),
+	                                           CKA_SIGN, symKey, &ignore);
 
 	    PK11_FreeSymKey(symKey);
 	    if(!p12enc->hmacCx) {
@@ -1807,12 +1762,11 @@ loser:
     return NULL;
 }
 
-/* The outermost ASN.1 encoder calls this function for output.
-** This function calls back to the library caller's output routine,
-** which typically writes to a PKCS12 file.
+/* callback wrapper to allow the ASN1 engine to call the PKCS 12 
+ * output routines.
  */
 static void
-sec_P12A1OutputCB_Outer(void *arg, const char *buf, unsigned long len,
+sec_pkcs12_encoder_out(void *arg, const char *buf, unsigned long len,
 		       int depth, SEC_ASN1EncodingPart data_kind)
 {
     struct sec_pkcs12_encoder_output *output;
@@ -1821,91 +1775,62 @@ sec_P12A1OutputCB_Outer(void *arg, const char *buf, unsigned long len,
     (* output->outputfn)(output->outputarg, buf, len);
 }
 
-/* The "middle" and "inner" ASN.1 encoders call this function to output. 
-** This function does HMACing, if appropriate, and then buffers the data.
-** The buffered data is eventually passed down to the underlying PKCS7 encoder.
+/* callback wrapper to wrap SEC_PKCS7EncoderUpdate for ASN1 encoder
+ */
+static void 
+sec_pkcs12_wrap_pkcs7_encoder_update(void *arg, const char *buf, 
+				     unsigned long len, int depth, 
+				     SEC_ASN1EncodingPart data_kind)
+{
+    SEC_PKCS7EncoderContext *ecx;
+    if(!buf || !len) {
+	return;
+    }
+
+    ecx = (SEC_PKCS7EncoderContext*)arg;
+    SEC_PKCS7EncoderUpdate(ecx, buf, len);
+}
+
+/* callback wrapper to wrap SEC_ASN1EncoderUpdate for PKCS 7 encoding
  */
 static void
-sec_P12A1OutputCB_HmacP7Update(void *arg, const char *buf,
-			       unsigned long        len, 
-			       int                  depth,
-			       SEC_ASN1EncodingPart data_kind)
+sec_pkcs12_wrap_asn1_update_for_p7_update(void *arg, const char *buf,
+					  unsigned long len)
 {
-    sec_pkcs12OutputBuffer *  bufcx = (sec_pkcs12OutputBuffer *)arg;
+    if(!buf && !len) return;
 
-    if(!buf || !len) 
-	return;
-
-    if (bufcx->hmacCx) {
-	PK11_DigestOp(bufcx->hmacCx, (unsigned char *)buf, len);
-    }
-
-    /* buffer */
-    if (bufcx->numBytes > 0) {
-	int toCopy;
-	if (len + bufcx->numBytes <= bufcx->bufBytes) {
-	    memcpy(bufcx->buf + bufcx->numBytes, buf, len);
-	    bufcx->numBytes += len;
-	    if (bufcx->numBytes < bufcx->bufBytes) 
-	    	return;
-	    SEC_PKCS7EncoderUpdate(bufcx->p7eCx, bufcx->buf, bufcx->bufBytes);
-	    bufcx->numBytes = 0;
-	    return;
-	} 
-	toCopy = bufcx->bufBytes - bufcx->numBytes;
-	memcpy(bufcx->buf + bufcx->numBytes, buf, toCopy);
-	SEC_PKCS7EncoderUpdate(bufcx->p7eCx, bufcx->buf, bufcx->bufBytes);
-	bufcx->numBytes = 0;
-	len -= toCopy;
-	buf += toCopy;
-    } 
-    /* buffer is presently empty */
-    if (len >= bufcx->bufBytes) {
-	/* Just pass it through */
-	SEC_PKCS7EncoderUpdate(bufcx->p7eCx, buf, len);
-    } else {
-	/* copy it all into the buffer, and return */
-	memcpy(bufcx->buf, buf, len);
-	bufcx->numBytes = len;
-    }
+    SEC_ASN1EncoderUpdate((SEC_ASN1EncoderContext*)arg, buf, len);
 }
 
-void
-sec_FlushPkcs12OutputBuffer( sec_pkcs12OutputBuffer *  bufcx)
-{
-    if (bufcx->numBytes > 0) {
-	SEC_PKCS7EncoderUpdate(bufcx->p7eCx, bufcx->buf, bufcx->numBytes);
-	bufcx->numBytes = 0;
-    }
-}
-
-/* Feeds the output of a PKCS7 encoder into the next outward ASN.1 encoder.
-** This function is used by both the inner and middle PCS7 encoders.
-*/
+/* callback wrapper which updates the HMAC and passes on bytes to the 
+ * appropriate output function.
+ */
 static void
-sec_P12P7OutputCB_CallA1Update(void *arg, const char *buf, unsigned long len)
+sec_pkcs12_asafe_update_hmac_and_encode_bits(void *arg, const char *buf,
+				      unsigned long len, int depth,
+				      SEC_ASN1EncodingPart data_kind)
 {
-    SEC_ASN1EncoderContext *cx = (SEC_ASN1EncoderContext*)arg;
+    sec_PKCS12EncoderContext *p12ecx;
 
-    if (!buf || !len) 
-    	return;
-
-    SEC_ASN1EncoderUpdate(cx, buf, len);
+    p12ecx = (sec_PKCS12EncoderContext*)arg;
+    PK11_DigestOp(p12ecx->hmacCx, (unsigned char *)buf, len);
+    sec_pkcs12_wrap_pkcs7_encoder_update(p12ecx->aSafeP7Ecx, buf, len,
+    					 depth, data_kind);
 }
-
 
 /* this function encodes content infos which are part of the
  * sequence of content infos labeled AuthenticatedSafes 
  */
 static SECStatus 
 sec_pkcs12_encoder_asafe_process(sec_PKCS12EncoderContext *p12ecx)
-{
-    SEC_PKCS7EncoderContext *innerP7ecx;
-    SEC_PKCS7ContentInfo    *cinfo;
-    void                    *arg          = NULL;
-    SEC_ASN1EncoderContext  *innerA1ecx   = NULL;
-    SECStatus                rv           = SECSuccess;
-    SEC_PKCS5KeyAndPassword  keyPwd;
+{ 
+    SECStatus rv = SECSuccess;
+    SEC_PKCS5KeyAndPassword keyPwd;
+    SEC_PKCS7EncoderContext *p7ecx;
+    SEC_PKCS7ContentInfo *cinfo;
+    SEC_ASN1EncoderContext *ecx = NULL;
+
+    void *arg = NULL;
 
     if(p12ecx->currentSafe < p12ecx->p12exp->authSafe.safeCount) {
 	SEC_PKCS12SafeInfo *safeInfo;
@@ -1940,52 +1865,44 @@ sec_pkcs12_encoder_asafe_process(sec_PKCS12EncoderContext *p12ecx)
 	}
 
 	/* start the PKCS7 encoder */
-	innerP7ecx = SEC_PKCS7EncoderStart(cinfo, 
-				  sec_P12P7OutputCB_CallA1Update,
-				  p12ecx->middleA1ecx, (PK11SymKey *)arg);
-	if(!innerP7ecx) {
+	p7ecx = SEC_PKCS7EncoderStart(cinfo, 
+				      sec_pkcs12_wrap_asn1_update_for_p7_update,
+				      p12ecx->aSafeEcx, (PK11SymKey *)arg);
+	if(!p7ecx) {
 	    goto loser;
 	}
 
 	/* encode safe contents */
-	p12ecx->innerBuf.p7eCx    = innerP7ecx;
-	p12ecx->innerBuf.hmacCx   = NULL;
-	p12ecx->innerBuf.numBytes = 0;
-	p12ecx->innerBuf.bufBytes = sizeof p12ecx->innerBuf.buf;
-
-	innerA1ecx = SEC_ASN1EncoderStart(safeInfo->safe, 
-	                           sec_PKCS12SafeContentsTemplate,
-				   sec_P12A1OutputCB_HmacP7Update, 
-				   &p12ecx->innerBuf);
-	if(!innerA1ecx) {
+	ecx = SEC_ASN1EncoderStart(safeInfo->safe, sec_PKCS12SafeContentsTemplate,
+				   sec_pkcs12_wrap_pkcs7_encoder_update, p7ecx);
+	if(!ecx) {
 	    goto loser;
 	}   
-	rv = SEC_ASN1EncoderUpdate(innerA1ecx, NULL, 0);
-	SEC_ASN1EncoderFinish(innerA1ecx);
-	sec_FlushPkcs12OutputBuffer( &p12ecx->innerBuf);
-	innerA1ecx = NULL;
+	rv = SEC_ASN1EncoderUpdate(ecx, NULL, 0);
+	SEC_ASN1EncoderFinish(ecx);
+	ecx = NULL;
 	if(rv != SECSuccess) {
 	    goto loser;
 	}
 
 
 	/* finish up safe content info */
-	rv = SEC_PKCS7EncoderFinish(innerP7ecx, p12ecx->p12exp->pwfn, 
+	rv = SEC_PKCS7EncoderFinish(p7ecx, p12ecx->p12exp->pwfn, 
 				    p12ecx->p12exp->pwfnarg);
     }
-    memset(&p12ecx->innerBuf, 0, sizeof p12ecx->innerBuf);
+
     return SECSuccess;
 
 loser:
-    if(innerP7ecx) {
-	SEC_PKCS7EncoderFinish(innerP7ecx, p12ecx->p12exp->pwfn, 
+    if(p7ecx) {
+	SEC_PKCS7EncoderFinish(p7ecx, p12ecx->p12exp->pwfn, 
 			       p12ecx->p12exp->pwfnarg);
     }
 
-    if(innerA1ecx) {
-	SEC_ASN1EncoderFinish(innerA1ecx);
+    if(ecx) {
+	SEC_ASN1EncoderFinish(ecx);
     }
-    memset(&p12ecx->innerBuf, 0, sizeof p12ecx->innerBuf);
+
     return SECFailure;
 }
 
@@ -1993,7 +1910,7 @@ loser:
  * encoded.
  */
 static SECStatus
-sec_Pkcs12FinishMac(sec_PKCS12EncoderContext *p12ecx)
+sec_pkcs12_update_mac(sec_PKCS12EncoderContext *p12ecx)
 {
     SECItem hmac = { siBuffer, NULL, 0 };
     SECStatus rv;
@@ -2063,9 +1980,19 @@ loser:
     return rv;
 }
 
-/* pfx notify function for ASN1 encoder.  
- * We want to stop encoding once we reach the authenticated safe.  
- * At that point, the encoder will be updated via streaming
+/* wraps the ASN1 encoder update for PKCS 7 encoder */
+static void
+sec_pkcs12_wrap_asn1_encoder_update(void *arg, const char *buf, 
+				    unsigned long len)
+{
+    SEC_ASN1EncoderContext *cx;
+
+    cx = (SEC_ASN1EncoderContext*)arg;
+    SEC_ASN1EncoderUpdate(cx, buf, len);
+}
+
+/* pfx notify function for ASN1 encoder.  we want to stop encoding, once we reach
+ * the authenticated safe.  at that point, the encoder will be updated via streaming
  * as the authenticated safe is  encoded. 
  */
 static void
@@ -2083,9 +2010,9 @@ sec_pkcs12_encoder_pfx_notify(void *arg, PRBool before, void *dest, int real_dep
 	return;
     }
 
-    SEC_ASN1EncoderSetTakeFromBuf(p12ecx->outerA1ecx);
-    SEC_ASN1EncoderSetStreaming(p12ecx->outerA1ecx);
-    SEC_ASN1EncoderClearNotifyProc(p12ecx->outerA1ecx);
+    SEC_ASN1EncoderSetTakeFromBuf(p12ecx->ecx);
+    SEC_ASN1EncoderSetStreaming(p12ecx->ecx);
+    SEC_ASN1EncoderClearNotifyProc(p12ecx->ecx);
 }
 
 /* SEC_PKCS12Encode
@@ -2118,88 +2045,81 @@ SEC_PKCS12Encode(SEC_PKCS12ExportContext *p12exp,
     outInfo.outputfn = output;
     outInfo.outputarg = outputarg;
 
-    /* set up PFX encoder, the "outer" encoder.  Set it for streaming */
-    p12enc->outerA1ecx = SEC_ASN1EncoderStart(&p12enc->pfx, 
-                                       sec_PKCS12PFXItemTemplate,
-				       sec_P12A1OutputCB_Outer, 
+    /* set up PFX encoder.  Set it for streaming */
+    p12enc->ecx = SEC_ASN1EncoderStart(&p12enc->pfx, sec_PKCS12PFXItemTemplate,
+				       sec_pkcs12_encoder_out, 
 				       &outInfo);
-    if(!p12enc->outerA1ecx) {
+    if(!p12enc->ecx) {
 	PORT_SetError(SEC_ERROR_NO_MEMORY);
 	rv = SECFailure;
 	goto loser;
     }
-    SEC_ASN1EncoderSetStreaming(p12enc->outerA1ecx);
-    SEC_ASN1EncoderSetNotifyProc(p12enc->outerA1ecx, 
-                                 sec_pkcs12_encoder_pfx_notify, p12enc);
-    rv = SEC_ASN1EncoderUpdate(p12enc->outerA1ecx, NULL, 0);
+    SEC_ASN1EncoderSetStreaming(p12enc->ecx);
+    SEC_ASN1EncoderSetNotifyProc(p12enc->ecx, sec_pkcs12_encoder_pfx_notify, p12enc);
+    rv = SEC_ASN1EncoderUpdate(p12enc->ecx, NULL, 0);
     if(rv != SECSuccess) {
 	rv = SECFailure;
 	goto loser;
     }
 
     /* set up asafe cinfo - the output of the encoder feeds the PFX encoder */
-    p12enc->middleP7ecx = SEC_PKCS7EncoderStart(p12enc->aSafeCinfo, 
-				       sec_P12P7OutputCB_CallA1Update,
-				       p12enc->outerA1ecx, NULL);
-    if(!p12enc->middleP7ecx) {
+    p12enc->aSafeP7Ecx = SEC_PKCS7EncoderStart(p12enc->aSafeCinfo, 
+    					       sec_pkcs12_wrap_asn1_encoder_update,
+    					       p12enc->ecx, NULL);
+    if(!p12enc->aSafeP7Ecx) {
 	rv = SECFailure;
 	goto loser;
     }
 
     /* encode asafe */
-    p12enc->middleBuf.p7eCx    = p12enc->middleP7ecx;
-    p12enc->middleBuf.hmacCx   = NULL;
-    p12enc->middleBuf.numBytes = 0;
-    p12enc->middleBuf.bufBytes = sizeof p12enc->middleBuf.buf;
-
-    /* Setup the "inner ASN.1 encoder for Authenticated Safes.  */
-    if(p12enc->p12exp->integrityEnabled && 
-       p12enc->p12exp->pwdIntegrity) {
-	p12enc->middleBuf.hmacCx = p12enc->hmacCx;
+    if(p12enc->p12exp->integrityEnabled && p12enc->p12exp->pwdIntegrity) {
+	p12enc->aSafeEcx = SEC_ASN1EncoderStart(&p12enc->p12exp->authSafe,
+					sec_PKCS12AuthenticatedSafeTemplate, 
+					sec_pkcs12_asafe_update_hmac_and_encode_bits,
+    					p12enc);
+    } else {
+	p12enc->aSafeEcx = SEC_ASN1EncoderStart(&p12enc->p12exp->authSafe,
+				sec_PKCS12AuthenticatedSafeTemplate,
+				sec_pkcs12_wrap_pkcs7_encoder_update,
+				p12enc->aSafeP7Ecx);
     }
-    p12enc->middleA1ecx = SEC_ASN1EncoderStart(&p12enc->p12exp->authSafe,
-			    sec_PKCS12AuthenticatedSafeTemplate,
-			    sec_P12A1OutputCB_HmacP7Update,
-			    &p12enc->middleBuf);
-    if(!p12enc->middleA1ecx) {
+    if(!p12enc->aSafeEcx) {
 	rv = SECFailure;
 	goto loser;
     }
-    SEC_ASN1EncoderSetStreaming(p12enc->middleA1ecx);
-    SEC_ASN1EncoderSetTakeFromBuf(p12enc->middleA1ecx); 
+    SEC_ASN1EncoderSetStreaming(p12enc->aSafeEcx);
+    SEC_ASN1EncoderSetTakeFromBuf(p12enc->aSafeEcx); 
 	
     /* encode each of the safes */			 
     while(p12enc->currentSafe != p12enc->p12exp->safeInfoCount) {
 	sec_pkcs12_encoder_asafe_process(p12enc);
 	p12enc->currentSafe++;
     }
-    SEC_ASN1EncoderClearTakeFromBuf(p12enc->middleA1ecx);
-    SEC_ASN1EncoderClearStreaming(p12enc->middleA1ecx);
-    SEC_ASN1EncoderUpdate(p12enc->middleA1ecx, NULL, 0);
-    SEC_ASN1EncoderFinish(p12enc->middleA1ecx);
-
-    sec_FlushPkcs12OutputBuffer( &p12enc->middleBuf);
+    SEC_ASN1EncoderClearTakeFromBuf(p12enc->aSafeEcx);
+    SEC_ASN1EncoderClearStreaming(p12enc->aSafeEcx);
+    SEC_ASN1EncoderUpdate(p12enc->aSafeEcx, NULL, 0);
+    SEC_ASN1EncoderFinish(p12enc->aSafeEcx);
 
     /* finish the encoding of the authenticated safes */
-    rv = SEC_PKCS7EncoderFinish(p12enc->middleP7ecx, p12exp->pwfn, 
+    rv = SEC_PKCS7EncoderFinish(p12enc->aSafeP7Ecx, p12exp->pwfn, 
     				p12exp->pwfnarg);
     if(rv != SECSuccess) {
 	goto loser;
     }
 
-    SEC_ASN1EncoderClearTakeFromBuf(p12enc->outerA1ecx);
-    SEC_ASN1EncoderClearStreaming(p12enc->outerA1ecx);
+    SEC_ASN1EncoderClearTakeFromBuf(p12enc->ecx);
+    SEC_ASN1EncoderClearStreaming(p12enc->ecx);
 
     /* update the mac, if necessary */
-    rv = sec_Pkcs12FinishMac(p12enc);
+    rv = sec_pkcs12_update_mac(p12enc);
     if(rv != SECSuccess) {
 	goto loser;
     }
    
     /* finish encoding the pfx */ 
-    rv = SEC_ASN1EncoderUpdate(p12enc->outerA1ecx, NULL, 0);
+    rv = SEC_ASN1EncoderUpdate(p12enc->ecx, NULL, 0);
 
-    SEC_ASN1EncoderFinish(p12enc->outerA1ecx);
+    SEC_ASN1EncoderFinish(p12enc->ecx);
 
 loser:
     return rv;

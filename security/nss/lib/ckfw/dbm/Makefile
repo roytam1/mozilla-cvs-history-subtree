@@ -30,7 +30,7 @@
 # may use your version of this file under either the MPL or the
 # GPL.
 #
-MAKEFILE_CVS_ID = "@(#) $RCSfile$ $Revision$ $Date$"
+MAKEFILE_CVS_ID = "@(#) $RCSfile$ $Revision$ $Date$ $Name$"
 
 include manifest.mn
 include config.mk
