@@ -117,6 +117,38 @@ void ArrayList::clear() {
 } //-- clear
 
 /**
+ * Removes all elements from the list
+ * @param deleteObjects allows specifying whether or not to delete the TxObjects
+ * that are currently in the list.
+ * <BR />
+ * Note: If object deletion is enabled this method will check for duplicate references
+ * in the list to prevent possible seg faults and will therefore run slower than an algorithm
+ * that doesn't check for duplicates.
+**/
+void ArrayList::clear(MBool deleteObjects) {
+
+
+    if (deleteObjects) {
+        for (int i = 0; i < elementCount; i++) {
+            if (elements[i]) {
+                TxObject* tmp = elements[i];
+                elements[i] = 0;
+                //-- check for duplicates to avoid attempting to free memory that
+                //-- has already been freed
+                int idx = i+1;
+                for ( ; idx < elementCount; idx++) {
+                    if (elements[idx] == tmp) elements[idx] = 0;
+                }
+                delete tmp;
+            }
+        }
+        elementCount = 0;
+    }
+    else clear();
+
+} //-- clear(MBool);
+
+/**
  * Returns true if the specified TxObject is contained in the list.
  * @param object the TxObject to search for
  * @return true if specified object is contained in the list

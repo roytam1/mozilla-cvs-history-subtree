@@ -77,6 +77,13 @@ public:
     void clear();
 
     /**
+     * Removes all elements from the list
+     * @param deleteObjects allows specifying whether or not to delete the TxObjects
+     * that are currently in the list
+    **/
+    void clear(MBool deleteObjects);
+
+    /**
      * Returns true if the specified TxObject is contained in the list.
      * @param object the TxObject to search for
      * @return true if specified object is contained in the list
