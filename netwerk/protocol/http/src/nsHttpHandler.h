@@ -109,11 +109,7 @@ public:
     // The HTTP handler caches pointers to specific XPCOM services, and
     // provides the following helper routines for accessing those services:
     //
-    nsresult GetProxyForObject(nsIEventQueue *queue,
-                               const nsIID &iid,
-                               nsISupports *object, 
-                               PRInt32 proxyType,
-                               void **result);
+    nsresult GetProxyObjectManager(nsIProxyObjectManager **);
 
     // Called by the channel before writing a request
     nsresult OnModifyRequest(nsIHttpChannel *);

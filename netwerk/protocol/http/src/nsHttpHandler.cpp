@@ -396,17 +396,16 @@ nsHttpHandler::CancelPendingTransaction(nsHttpTransaction *trans,
 }
 
 nsresult
-nsHttpHandler::GetProxyForObject(nsIEventQueue *queue, const nsIID &iid,
-                                 nsISupports *object, PRInt32 proxyType,
-                                 void **result)
+nsHttpHandler::GetProxyObjectManager(nsIProxyObjectManager **result)
 {
     if (!mProxyMgr) {
         nsresult rv;
         mProxyMgr = do_GetService("@mozilla.org/xpcomproxy;1", &rv);
         if (NS_FAILED(rv)) return rv;
     }
-
-    return mProxyMgr->GetProxyForObject(queue, iid, object, proxyType, result);
+    *result = mProxyMgr;
+    NS_ADDREF(*result);
+    return NS_OK;
 }
 
 nsresult

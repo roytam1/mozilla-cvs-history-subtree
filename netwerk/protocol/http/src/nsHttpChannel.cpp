@@ -29,6 +29,7 @@
 #include "nsHttpResponseHead.h"
 #include "nsHttp.h"
 #include "nsIHttpAuthenticator.h"
+#include "nsIAuthPrompt.h"
 #include "nsNetUtil.h"
 #include "nsString2.h"
 #include "nsReadableUtils.h"
@@ -421,6 +422,10 @@ nsHttpChannel::GetCredentials(const char *challenges,
     LOG(("nsHttpChannel::GetCredentials [this=%x proxyAuth=%d challenges=%s]\n",
         this, proxyAuth, challenges));
 
+    nsHttpAuthCache *authCache = nsHttpHandler::get()->AuthCache();
+    if (!authCache)
+        return NS_ERROR_NOT_INITIALIZED;
+
     // proxy auth's never in prehost
     if (!mAuthTriedWithPrehost && !proxyAuth) {
         rv = GetUserPassFromURI(user, pass);
@@ -429,8 +434,74 @@ nsHttpChannel::GetCredentials(const char *challenges,
 
     // figure out which challenge we can handle and which authenticator to use.
     nsCAutoString challenge;
-    nsCAutoString challengeType;
-    nsCOMPtr<nsIHttpAuthenticator> authenticator;
+    nsCOMPtr<nsIHttpAuthenticator> auth;
+
+    rv = SelectChallenge(challenges, challenge, getter_AddRefs(auth));
+
+    if (!auth) {
+        LOG(("authentication type not supported\n"));
+        return NS_ERROR_FAILURE;
+    }
+
+    nsCAutoString realm;
+    if (user.IsEmpty()) {
+        rv = ParseRealm(challenge.get(), realm);
+        if (NS_FAILED(rv)) return rv;
+
+        const char *host;
+        PRInt32 port;
+
+        if (proxyAuth) {
+            host = mConnectionInfo->ProxyHost();
+            port = mConnectionInfo->ProxyPort();
+        }
+        else {
+            host = mConnectionInfo->Host();
+            port = mConnectionInfo->Port();
+        }
+
+        // check to see if credentials are already cached for this domain,
+        // which could happen if we had two channels concurrently requesting
+        // resources from the same domain (ie. the first channel would have
+        // acquired suitable credentials for this channel as well).
+        rv = authCache->GetCredentials(host,
+                                       port,
+                                       nsnull,
+                                       realm.get(),
+                                       creds);
+        if (NS_SUCCEEDED(rv)) {
+            LOG(("using cached credentials!\n"));
+            return NS_OK;
+        }
+
+        // at this point we are forced to interact with the user to get their
+        // username and password for this domain.
+        rv = PromptForUserPass(host, port, proxyAuth, realm.get(), user, pass);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    // talk to the authenticator to get credentials for this user/pass combo.
+    nsXPIDLCString result;
+    rv = auth->GenerateCredentials(this,
+                                   challenge.get(),
+                                   user.get(),
+                                   pass.get(),
+                                   getter_Copies(result));
+    if (NS_FAILED(rv)) return rv;
+
+    creds.Assign(result);
+    return NS_OK;
+}
+
+nsresult
+nsHttpChannel::SelectChallenge(const char *challenges,
+                               nsAFlatCString &challenge,
+                               nsIHttpAuthenticator **auth)
+{
+    nsCAutoString scheme;
+
+    LOG(("nsHttpChannel::SelectChallenge [this=%x]\n", this));
+
     // loop over the various challenges (LF separated)...
     for (const char *eol = challenges - 1; eol; ) {
         const char *p = eol + 1;
@@ -443,45 +514,34 @@ nsHttpChannel::GetCredentials(const char *challenges,
 
         // get the challenge type
         if ((p = PL_strchr(challenge.get(), ' ')) != nsnull)
-            challengeType.Assign(challenge.get(), p - challenge.get());
+            scheme.Assign(challenge.get(), p - challenge.get());
         else
-            challengeType.Assign(challenge);
+            scheme.Assign(challenge);
 
         // normalize to lowercase
-        ToLowerCase(challengeType);
+        ToLowerCase(scheme);
 
-        rv = GetAuthenticator(challengeType.get(),
-                              getter_AddRefs(authenticator));
-
-        if (NS_SUCCEEDED(rv))
-            break;
+        if (NS_SUCCEEDED(GetAuthenticator(scheme.get(), auth)))
+            return NS_OK;
     }
-
-    if (!authenticator) {
-        LOG(("authentication type not supported\n"));
-        return NS_ERROR_FAILURE;
-    } 
-
-
-
-
-    // check
-    return NS_OK;
+    return NS_ERROR_FAILURE;
 }
 
 nsresult
-nsHttpChannel::GetAuthenticator(const char *challengeType,
-                                nsIHttpAuthenticator **authenticator)
+nsHttpChannel::GetAuthenticator(const char *scheme, nsIHttpAuthenticator **auth)
 {
+    LOG(("nsHttpChannel::GetAuthenticator [this=%x scheme=%s]\n", this, scheme));
+
     nsCAutoString contractid;
     contractid.Assign(NS_HTTP_AUTHENTICATOR_CONTRACTID_PREFIX);
-    contractid.Append(challengeType);
+    contractid.Append(scheme);
 
-    nsCOMPtr<nsIHttpAuthenticator> auth = do_GetService(contractid, &rv);
+    nsresult rv;
+    nsCOMPtr<nsIHttpAuthenticator> serv = do_GetService(contractid, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    *authenticator = auth;
-    NS_ADDREF(*authenticator);
+    *auth = serv;
+    NS_ADDREF(*auth);
     return NS_OK;
 }
 
@@ -514,6 +574,71 @@ nsHttpChannel::GetUserPassFromURI(nsAString &user,
             user = NS_ConvertASCIItoUCS2(buf);
         }
     }
+    return NS_OK;
+}
+
+nsresult
+nsHttpChannel::ParseRealm(const char *challenge, nsACString &realm)
+{
+    //
+    // From RFC2617 section 1.2, the realm value is defined as such:
+    //
+    //    realm       = "realm" "=" realm-value
+    //    realm-value = quoted-string
+    //
+    // but, we'll accept anything after the the "=" up to the first space, or
+    // end-of-line, if the string is not quoted.
+    //
+    const char *p = PL_strstr(challenge, "realm=");
+    if (p) {
+        p += 6;
+        if (*p == '"')
+            p++;
+        const char *end = PL_strchr(p, '"');
+        if (!end)
+            end = PL_strchr(p, ' ');
+        if (end)
+            realm.Assign(p, end - p);
+        else
+            realm.Assign(p);
+    }
+    return NS_OK;
+}
+
+nsresult
+nsHttpChannel::PromptForUserPass(const char *host,
+                                 PRInt32 port,
+                                 PRBool proxyAuth,
+                                 const char *realm,
+                                 nsAString &user,
+                                 nsAString &pass)
+{
+    LOG(("nsHttpChannel::PromptForUserPass [this=%x realm=%s]\n", this, realm));
+
+    nsresult rv;
+    nsCOMPtr<nsIAuthPrompt> authPrompt = do_GetInterface(mCallbacks, &rv); 
+    if (NS_FAILED(rv)) {
+        NS_WARNING("notification callbacks should provide nsIAuthPrompt");
+        return rv;
+    }
+
+    // get a sync proxy for the auth prompt to ensure that it is run on the
+    // ui thread only.
+    nsCOMPtr<nsIProxyObjectManager> mgr;
+    rv = nsHttpHandler::get()->GetProxyObjectManager(getter_AddRefs(mgr));
+    if (mgr) {
+        nsCOMPtr<nsIAuthPrompt> temp = authPrompt;
+        rv = mgr->GetProxyForObject(NS_UI_THREAD_EVENTQ,
+                                    NS_GET_IID(nsIAuthPrompt),
+                                    temp,
+                                    PROXY_SYNC,
+                                    getter_AddRefs(authPrompt));
+        if (NS_FAILED(rv)) return rv;
+    }
+
+
+
+
     return NS_OK;
 }
 
@@ -711,15 +836,21 @@ nsHttpChannel::SetNotificationCallbacks(nsIInterfaceRequestor *callbacks)
     mHttpEventSink = do_GetInterface(mCallbacks);
     mProgressSink = do_GetInterface(mCallbacks);
 
+    nsresult rv = NS_OK;
     if (mProgressSink) {
         nsCOMPtr<nsIProgressEventSink> temp = mProgressSink;
-        return nsHttpHandler::get()->GetProxyForObject(NS_CURRENT_EVENTQ,
-                                                       NS_GET_IID(nsIProgressEventSink),
-                                                       temp,
-                                                       PROXY_ASYNC | PROXY_ALWAYS,
-                                                       getter_AddRefs(mProgressSink));
+        nsCOMPtr<nsIProxyObjectManager> mgr;
+
+        rv = nsHttpHandler::get()->GetProxyObjectManager(getter_AddRefs(mgr));
+
+        if (mgr)
+            rv = mgr->GetProxyForObject(NS_CURRENT_EVENTQ,
+                                        NS_GET_IID(nsIProgressEventSink),
+                                        temp,
+                                        PROXY_ASYNC | PROXY_ALWAYS,
+                                        getter_AddRefs(mProgressSink));
     }
-    return NS_OK;
+    return rv;
 }
 
 NS_IMETHODIMP
