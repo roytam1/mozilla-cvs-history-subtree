@@ -912,21 +912,11 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
         if (imgCon) {
           nsPoint p(inner.x, inner.y);
 
-#define DONTPAINTEVERYTHING 1
-
-#ifdef DONTPAINTEVERYTHING
           inner.IntersectRect(inner, aDirtyRect);
           nsRect r(inner.x, inner.y, inner.width, inner.height);
+          r.x -= mBorderPadding.left;
+          r.y -= mBorderPadding.top;
 
-          float t2p;
-          aPresContext->GetTwipsToPixels(&t2p);
-
-          r *= t2p;
-#else
-          nsRect r(0,0,0,0);
-          imgCon->GetWidth(&r.width);
-          imgCon->GetHeight(&r.height);
-#endif
           aRenderingContext.DrawImage(imgCon, &r, &p);
         }
 #else
