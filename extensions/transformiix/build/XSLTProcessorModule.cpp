@@ -38,7 +38,6 @@
 #include "nsXPIDLString.h"
 #include "txAtoms.h"
 #include "txMozillaXSLTProcessor.h"
-#include "XSLTProcessor.h"
 #include "TxLog.h"
 #include "nsCRT.h"
 #include "nsIScriptSecurityManager.h"
@@ -56,7 +55,6 @@ NS_DOMCI_EXTENSION(Transformiix)
     NS_DOMCI_EXTENSION_ENTRY_BEGIN(XSLTProcessor)
         NS_DOMCI_EXTENSION_ENTRY_INTERFACE(nsIXSLTProcessor)
         NS_DOMCI_EXTENSION_ENTRY_INTERFACE(nsIXSLTProcessorObsolete) // XXX DEPRECATED
-        NS_DOMCI_EXTENSION_ENTRY_INTERFACE(nsIDocumentTransformer)
     NS_DOMCI_EXTENSION_ENTRY_END(XSLTProcessor, nsIXSLTProcessor, PR_TRUE,
                                  &kXSLTProcessorCID)
 
@@ -202,7 +200,8 @@ Initialize(nsIModule* aSelf)
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
-    nsresult rv = CallGetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &gTxSecurityManager);
+    nsresult rv = CallGetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID,
+				 &gTxSecurityManager);
     if (NS_FAILED(rv)) {
         gTxSecurityManager = nsnull;
         return rv;
