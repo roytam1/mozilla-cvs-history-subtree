@@ -28,7 +28,9 @@
 
 #include "nsCOMPtr.h"
 
-#include "nsIImage2.h"
+#include "nsIImageContainer.h"
+#include "nsIImageFrame.h"
+#include "nsIImageDecoderObserver.h"
 #include "nsIImageRequest2.h"
 #include "nsIInputStream.h"
 
@@ -77,10 +79,12 @@ public:
 protected:
   int OutputScanlines(int num_scanlines);
 
-private:
-  nsCOMPtr<nsIImage2> mImage;
+public:
+  nsCOMPtr<nsIImageContainer> mImage;
+  nsCOMPtr<nsIImageFrame> mFrame;
   nsCOMPtr<nsIImageRequest> mRequest;
-  nsCOMPtr<nsIInputStream> mStream;
+
+  nsCOMPtr<nsIImageDecoderObserver> mObserver;
 
   struct jpeg_decompress_struct mInfo;
   decoder_error_mgr mErr;

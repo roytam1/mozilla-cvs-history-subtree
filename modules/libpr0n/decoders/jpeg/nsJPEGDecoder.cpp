@@ -32,6 +32,8 @@
 
 #include "nsCRT.h"
 
+#include "nsIComponentManager.h"
+
 NS_IMPL_ISUPPORTS2(nsJPEGDecoder, nsIImageDecoder, nsIOutputStream)
 
 
@@ -110,6 +112,7 @@ nsJPEGDecoder::~nsJPEGDecoder()
 NS_IMETHODIMP nsJPEGDecoder::Init(nsIImageRequest *aRequest)
 {
   mRequest = aRequest;
+  mObserver = do_QueryInterface(mRequest);
 
   aRequest->GetImage(getter_AddRefs(mImage));
 
@@ -278,7 +281,15 @@ NS_IMETHODIMP nsJPEGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PR
     /* Used to set up image size so arrays can be allocated */
     jpeg_calc_output_dimensions(&mInfo);
 
-    mImage->Init(mInfo.image_width, mInfo.image_height, nsIGFXFormat::RGB);
+    mObserver->OnStartDecode(nsnull, nsnull);
+
+    mImage->Init(mInfo.image_width, mInfo.image_height); 
+    mObserver->OnStartContainer(nsnull, nsnull, mImage);
+
+    mFrame = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
+    mFrame->Init(0, 0, mInfo.image_width, mInfo.image_height, nsIGFXFormat::RGB);
+    mImage->AppendFrame(mFrame);
+    mObserver->OnStartFrame(nsnull, nsnull, mFrame);
 
 
     /*
@@ -361,7 +372,12 @@ NS_IMETHODIMP nsJPEGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PR
      */
     (void) jpeg_read_scanlines(&mInfo, buffer, 1);
     /* Assume put_scanline_someplace wants a pointer and sample count. */
-    mImage->SetBits(buffer[0], row_stride, row_stride*mInfo.output_scanline /* XXX ??? */);
+    mFrame->SetImageData(buffer[0], row_stride, row_stride*mInfo.output_scanline /* XXX ??? */);
+
+
+    nsRect r(0, mInfo.output_scanline, mInfo.output_width, 1);
+    mObserver->OnDataAvailable(nsnull, nsnull, mFrame, &r);
+
   }
 #endif
 
@@ -420,7 +436,7 @@ nsJPEGDecoder::OutputScanlines(int num_scanlines)
       }
 
 
-      mImage->SetBits(samples, strlen((const char *)samples), strlen((const char *)samples)*mInfo.output_scanline /* XXX ??? */);
+      mFrame->SetImageData(samples, strlen((const char *)samples), strlen((const char *)samples)*mInfo.output_scanline /* XXX ??? */);
 #if 0
       ic->imgdcb->ImgDCBHaveRow( 0, samples, 0, mInfo.output_width, mInfo.output_scanline-1,
                   1, ilErase, pass);
@@ -545,6 +561,8 @@ fill_input_buffer (j_decompress_ptr jd)
 PRBool nsJPEGDecoder::FillInput(j_decompress_ptr jd)
 {
   // read the data from the input stram...
+
+  return PR_FALSE;
 
   decoder_source_mgr *src = (decoder_source_mgr *)jd->src;
 
@@ -719,5 +737,13 @@ skip_input_data (j_decompress_ptr jd, long num_bytes)
 void PR_CALLBACK
 term_source (j_decompress_ptr jd)
 {
+  decoder_source_mgr *src = (decoder_source_mgr *)jd->src;
+
+  if (src->decoder->mObserver) {
+    src->decoder->mObserver->OnStopFrame(nsnull, nsnull, src->decoder->mFrame);
+    src->decoder->mObserver->OnStopContainer(nsnull, nsnull, src->decoder->mImage);
+    src->decoder->mObserver->OnStopDecode(nsnull, nsnull, NS_OK, nsnull);
+  }
+
     /* No work necessary here */
 }
