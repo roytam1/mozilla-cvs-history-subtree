@@ -865,7 +865,7 @@ public:
                                 nsISupports** aResult) const;
   NS_IMETHOD GetPlaceholderFrameFor(nsIFrame*  aFrame,
                                     nsIFrame** aPlaceholderFrame) const;
-  NS_IMETHOD FrameNeedsReflow(nsIFrame *aFrame);
+  NS_IMETHOD FrameNeedsReflow(nsIFrame *aFrame, PRBool aIntrinsicDirty);
   NS_IMETHOD CancelAllPendingReflows();
   NS_IMETHOD IsSafeToFlush(PRBool& aIsSafeToFlush);
   NS_IMETHOD FlushPendingNotifications(mozFlushType aType);
