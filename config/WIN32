@@ -135,7 +135,7 @@ OS_LFLAGS=$(OS_LFLAGS) /MAP:$(MAPFILE) /MAPINFO:LINES
 #//------------------------------------------------------------------------
 !if "$(OS_TARGET)" == "WINCE"
 RTL_FLAGS=-Zl
-OS_LFLAGS=$(OS_FLAGS) /NODEFAULTLIB:OLDNAMES.lib
+OS_LFLAGS=$(OS_LFLAGS) /NODEFAULTLIB:OLDNAMES.lib
 !else
 !ifdef USE_STATIC_LIBS
 RTL_FLAGS=-MT          # Statically linked multithreaded RTL
