@@ -473,6 +473,27 @@ static pascal OSStatus OnContentClick(EventHandlerCallRef handler, EventRef even
     return noErr;
 }
 
+#define AppKitVersionNumberWithCarbonWindowRefSupport 644
+
+inline bool hasCarbonWindowRef()
+{
+  return (NSAppKitVersionNumber >= AppKitVersionNumberWithCarbonWindowRefSupport);
+}
+
+inline WindowRef windowToWindowRef(NSWindow* window)
+{
+  return (WindowRef) (hasCarbonWindowRef() ?
+                      [window windowRef] :
+                      [window _windowRef]);
+}
+
+inline NSRect getWindowRefFrame(NSWindow* window)
+{
+    return (hasCarbonWindowRef() ?
+            [[window contentView] frame] :
+            [window frame]);
+}
+
 //-------------------------------------------------------------------------
 //
 // Return some native data according to aDataType
@@ -533,12 +554,12 @@ void* nsChildView::GetNativeData(PRUint32 aDataType)
       
       NSWindow* window = [mView getNativeWindow];
       if (window) {
-        WindowRef topLevelWindow = (WindowRef) [window _windowRef];  // PRIVATE APPLE SPI FOO.
+        WindowRef topLevelWindow = windowToWindowRef(window);
         if (topLevelWindow) {
           mPluginPort->port = GetWindowPort(topLevelWindow);
       
           NSPoint viewOrigin = [mView convertPoint:NSZeroPoint toView:nil];
-          NSRect frame = [window frame];
+          NSRect frame = getWindowRefFrame(window);
           viewOrigin.y = frame.size.height - viewOrigin.y;
           
           // need to convert view's origin to window coordinates.
@@ -1868,7 +1889,7 @@ nsChildView::GetQuickDrawPort()
     if (mPluginPort)
         return mPluginPort->port;
     else
-  return [mView qdPort];
+        return (GrafPtr) [mView qdPort];
 }
 
 #pragma mark -
