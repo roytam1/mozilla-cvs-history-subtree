@@ -808,7 +808,7 @@ nsLocalFile::IsContainedIn(nsIFile *inFile, PRBool recur, PRBool *_retval)
      * See if the given path is a prefix of our path, but make sure that
      * we don't treat /foo as a parent of /foobar/thing.
      */
-    if (strncmp(inPath, mPath, inLen) || ((const char *)mPath)[inLen] == '/') {
+    if (strncmp(inPath, mPath, inLen) || ((const char *)mPath)[inLen] != '/') {
         *_retval = PR_FALSE;
         return NS_OK;
     }
