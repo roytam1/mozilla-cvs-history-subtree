@@ -43,7 +43,6 @@ class CPatternProgressBar : public LPane
 
 		virtual	void			SetValue(Int32 inValue);
 		virtual	Int32			GetValue(void) const;
-//		virtual	void			SetValueRange(const Range32T& inRange);
 		virtual	void			SetToIndefinite(void);
 		virtual	void			SetSeamless(void);
 

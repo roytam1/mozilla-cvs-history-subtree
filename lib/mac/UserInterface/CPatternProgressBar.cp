@@ -34,6 +34,8 @@
 const ResIDT cOfflineListID = 16010;
 const Int16 cOfflineStrIndex = 3;
 
+#define PLAIN_PROGRESS_BAR
+
 // ÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑ
 //
 #pragma mark --- CPatternProgressBar ---
@@ -129,8 +131,15 @@ void CPatternProgressBar::DrawIndefiniteBar(const Rect& inBounds)
 	CGrafPtr thePort;
 	::GetPort(&(GrafPtr)thePort);
 	mPatternWorld->Fill(thePort, inBounds, theAlignment);
+	
+#ifndef PLAIN_PROGRESS_BAR
 	UGraphicGizmos::BevelTintRect(theBoundsCopy, -1, 0x4000, 0x4000);
 	::InsetRect(&theBoundsCopy, 1, 1);
+#else
+	::InsetRect(&theBoundsCopy, 1, 1);
+	UGraphicGizmos::BevelTintRect(theBoundsCopy, -1, 0x4000, 0x4000);
+#endif //PLAIN_PROGRESS_BAR
+
 	UGraphicGizmos::LowerColorVolume(theBoundsCopy, 0x2000);
 
 	// Get our drawing port, and save the origin state.
@@ -223,9 +232,14 @@ void CPatternProgressBar::DrawPercentageBar(const Rect& inBounds)
 	
 	if (RectWidth(theLeftBox) >= 5)
 		{
+#ifndef PLAIN_PROGRESS_BAR
 		UGraphicGizmos::BevelTintRect(theLeftBox, 1, 0x4000, 0x6000);
 		::InsetRect(&theLeftBox, 1, 1);
 		UGraphicGizmos::LowerColorVolume(theLeftBox, 0x1000);
+#else
+		UGraphicGizmos::LowerColorVolume(theLeftBox, 0x0000);
+#endif
+		
 		}
 	else
 		theRightBox.left = theLeftBox.left;
@@ -255,16 +269,6 @@ void CPatternProgressBar::SetValue(Int32 inValue)
 			Draw(NULL);
 		}
 }
-
-// ÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑ
-//	¥
-// ÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑ
-#if 0
-void CPatternProgressBar::SetValueRange(const Range32T& inRange)
-{
-	mValueRange = inRange;
-}
-#endif
 
 // ÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑÑ
 //	¥
@@ -336,6 +340,11 @@ void CPatternProgressBar::RecalcPoleMasks(void)
 	Rect theFrame;
 	CalcLocalFrameRect(theFrame);
 	::InsetRect(&theFrame, 1, 1);
+	
+#ifdef PLAIN_PROGRESS_BAR
+	theFrame.top ++;
+#endif
+
 	theFrame.right += RectHeight(theFrame) * 2;
 	theFrame.left -= RectHeight(theFrame) * 2;
 	
@@ -355,17 +364,12 @@ void CPatternProgressBar::RecalcPoleMasks(void)
 
 	StRegion theStampRgn;
 	::OpenRgn();
-// 97-05-11 pkc -- reverse indefinite bar slant to comply with MacOS standard
+
 	::MoveTo(theStamp.left, theStamp.top);
 	::LineTo(theStamp.left + theHalfHeight, theStamp.top);
 	::LineTo(theStamp.right - 1, theStamp.bottom - 1);
 	::LineTo(theStamp.right - (1 + theHalfHeight), theStamp.bottom - 1);
 	::LineTo(theStamp.left, theStamp.top);
-//	::MoveTo(theStamp.left, theStamp.bottom - 1);
-//	::LineTo(theStamp.left + theHalfHeight, theStamp.top);
-//	::LineTo(theStamp.right - 1, theStamp.top);
-//	::LineTo(theStamp.right - (1 + theHalfHeight), theStamp.bottom - 1);
-//	::LineTo(theStamp.left, theStamp.bottom - 1);
 	::CloseRgn(theStampRgn);
 
 	GWorldPtr theMacWorld = theMaskWorld.GetMacGWorld();
@@ -387,18 +391,20 @@ void CPatternProgressBar::RecalcPoleMasks(void)
 	theStamp = theFrame;
 	theStamp.right = theStamp.left + RectHeight(theStamp) + theHalfHeight;
 		
+	// the light shade
 	if (theMaskWorld.BeginDrawing())
 		{
 		::EraseRect(&theFrame);
 		while (theStamp.left < theFrame.right)
 			{
-			// 97-05-11 pkc -- reverse indefinite bar slant to comply with MacOS standard
+#ifndef PLAIN_PROGRESS_BAR
 			::MoveTo(theStamp.left, theStamp.top);
 			::LineTo(theStamp.left + theHalfHeight, theStamp.top);
 			::LineTo(theStamp.right - 1, theStamp.bottom - 1);
-//			::MoveTo(theStamp.left, theStamp.bottom - 1);
-//			::LineTo(theStamp.left + theHalfHeight, theStamp.top);
-//			::LineTo(theStamp.right - 1, theStamp.top);
+#else
+			::MoveTo(theStamp.left + theHalfHeight, theStamp.top);
+			::LineTo(theStamp.right - 1, theStamp.bottom - 1);
+#endif
 			::OffsetRect(&theStamp,theHeight, 0);
 			}
 
@@ -410,18 +416,20 @@ void CPatternProgressBar::RecalcPoleMasks(void)
 	theStamp = theFrame;
 	theStamp.right = theStamp.left + RectHeight(theStamp) + theHalfHeight;
 		
+	// the dark shade
 	if (theMaskWorld.BeginDrawing())
 		{
 		::EraseRect(&theFrame);
 		while (theStamp.left < theFrame.right)
 			{
-			// 97-05-11 pkc -- reverse indefinite bar slant to comply with MacOS standard
+#ifndef PLAIN_PROGRESS_BAR
 			::MoveTo(theStamp.right - 1, theStamp.bottom - 1);
 			::LineTo(theStamp.right - (1 + theHalfHeight), theStamp.bottom - 1);
 			::LineTo(theStamp.left, theStamp.top);
-//			::MoveTo(theStamp.right - 1, theStamp.top);
-//			::LineTo(theStamp.right - (1 + theHalfHeight), theStamp.bottom - 1);
-//			::LineTo(theStamp.left, theStamp.bottom - 1);
+#else
+			::MoveTo(theStamp.right - (2 + theHalfHeight), theStamp.bottom - 2);
+			::LineTo(theStamp.left, theStamp.top);
+#endif
 			::OffsetRect(&theStamp, theHeight, 0);
 			}
 
@@ -500,6 +508,8 @@ void CPatternProgressCaption::DrawSelf(void)
 //	UGraphicGizmos::BevelTintRect(theFrame, -1, 0x4000, 0x6000);
 
 	::InsetRect(&theFrame, 5, 0);
+	theFrame.right -= 5;			//tweaking magic
+	theFrame.bottom --;
 	Int16 theJust = UTextTraits::SetPortTextTraits(mTraitsID);
 
 	if (mText.Length() > 0)

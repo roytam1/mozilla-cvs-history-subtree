@@ -53,6 +53,9 @@ CContextMenuAttachment::EClickState CContextMenuAttachment::WaitMouseAction(
 		return eMouseTimeout;
 	}
 
+	if (inDelay == kDefaultDelay)			// GetDblTime() can be 48, 32 or 20 ticks
+		inDelay = MAX(GetDblTime(), 30); 	// but 20 is too short to display the popup
+
 	while (::StillDown())
 	{
 		Point theCurrentPoint;
@@ -176,7 +179,7 @@ UInt16 CContextMenuAttachment::PruneMenu(LMenu* inMenu)
 void CContextMenuAttachment::DoPopup(const SMouseDownEvent& inMouseDown, EClickState& outResult)
 //-----------------------------------
 {
-	Try_
+	try
 	{
 		LMenu* menu = BuildMenu();
 		MenuHandle menuH = menu->GetMacMenuH();
@@ -192,11 +195,9 @@ void CContextMenuAttachment::DoPopup(const SMouseDownEvent& inMouseDown, EClickS
 			StMercutioMDEFTextState theMercutioMDEFTextState;
 			if (mTextTraitsID)
 			{				
-				mHostView->FocusDraw();
 				TextTraitsH traitsH = UTextTraits::LoadTextTraits(mTextTraitsID);
 				if (traitsH)
 				{
-					mHostView->FocusDraw();
 					::LMSetSysFontFam((**traitsH).fontNumber);
 					::LMSetSysFontSize((**traitsH).size);
 					::LMSetLastSPExtra(-1L);
@@ -225,30 +226,25 @@ void CContextMenuAttachment::DoPopup(const SMouseDownEvent& inMouseDown, EClickS
 		if (command)
 			mHostCommander->ObeyCommand(command, (void*)&inMouseDown);
 	}
-	Catch_(inError)
+	catch(...)
 	{
 	}
-	EndCatch_
 } // CContextMenuAttachment::DoPopup
 
-
-//
-// Execute
-//
+//----------------------------------------------------------------------------------------
+Boolean CContextMenuAttachment::Execute( MessageT inMessage, void *ioParam )
 // Overridden to listen for multiple messages (context menu and context menu cursor)
-//
-Boolean
-CContextMenuAttachment :: Execute ( MessageT inMessage, void *ioParam )
+//----------------------------------------------------------------------------------------
 {
 	Boolean	executeHost = true;
 	
-	if ((inMessage == msg_ContextMenu) || (inMessage == msg_ContextMenuCursor)) {
+	if ((inMessage == msg_ContextMenu) || (inMessage == msg_ContextMenuCursor))
+	{
 		ExecuteSelf(inMessage, ioParam);
 		executeHost = mExecuteHost;
 	}
-	
 	return executeHost;
-}
+} // CContextMenuAttachment::Execute
 
 
 //-----------------------------------
@@ -260,57 +256,46 @@ void CContextMenuAttachment::ExecuteSelf(
 	mExecuteHost = true;
 	if (!mHostView || !mHostCommander)
 		return;
-
-	switch ( inMessage ) {
+	switch ( inMessage )
+	{
 		case msg_ContextMenu:
+			mHostView->FocusDraw(); // so that coordinate computations are correct.
 			SExecuteParams& params = *(SExecuteParams*)ioParam;		
 			const SMouseDownEvent& mouseDown = *params.inMouseDown;
 			params.outResult = WaitMouseAction(
 										mouseDown.whereLocal,
-										mouseDown.macEvent.when,
-										2 * GetDblTime());
+										mouseDown.macEvent.when);
 			if (params.outResult == eMouseTimeout)
 				DoPopup(mouseDown, params.outResult);
 			break;
-	
 		case msg_ContextMenuCursor:
 			Assert_(ioParam != NULL);
 			ChangeCursor ( (EventRecord*)ioParam );
 			break;
-			
 	} // case of which message
-	
 } // CContextMenuAttachment::ExecuteSelf
 
-//
-// BuildMenu
-// THROWS int on error
-//
-// Reads in the menu with the id given in the PPob. This can be overridden to read the menu
-// from some other place, such as from the back-end.
-//
-
-LMenu*
-CContextMenuAttachment :: BuildMenu ( )
+//----------------------------------------------------------------------------------------
+LMenu* CContextMenuAttachment::BuildMenu( )
+// THROWS OSErr on error
+// Reads in the menu with the id given in the PPob. This can be overridden to read the
+// menu from some other place, such as from the back-end.
+//----------------------------------------------------------------------------------------
 {
 	LMenu* menu = new LMenu(mMenuID);
 	MenuHandle menuH = menu->GetMacMenuH();
 	if (!menuH)
-		throw ResError();
+		throw (OSErr)ResError();
 	::DetachResource((Handle)menuH);
 	
 	return menu;
 
 } // CContextMenuAttachment::BuildMenu
 
-
-//
-// ChangeCursor
-//
+//----------------------------------------------------------------------------------------
+void CContextMenuAttachment::ChangeCursor( const EventRecord* inEvent )
 // Makes the mouse the contextual menu cursor from OS8 if cmd key is down
-//
-void
-CContextMenuAttachment :: ChangeCursor ( const EventRecord* inEvent )
+//----------------------------------------------------------------------------------------
 {
 	if ( inEvent->modifiers & controlKey ) {
 		CursHandle contextCurs = ::GetCursor ( kContextualCursorID );
@@ -319,5 +304,4 @@ CContextMenuAttachment :: ChangeCursor ( const EventRecord* inEvent )
 	}
 	else
 		::InitCursor();
-
 } // ChangeCursor
