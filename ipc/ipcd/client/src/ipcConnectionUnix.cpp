@@ -371,6 +371,7 @@ TryConnect(PRFileDesc **result)
   PRSocketOptionData opt;
   nsresult rv = NS_ERROR_FAILURE;
 
+#ifndef XP_BEOS
   fd = PR_OpenTCPSocket(PR_AF_LOCAL);
   if (!fd)
     goto end;
@@ -397,6 +398,8 @@ TryConnect(PRFileDesc **result)
 end:
   if (fd)
     PR_Close(fd);
+#endif
+
   return rv;
 }
 
