@@ -23,11 +23,7 @@
  */
 #include <stddef.h>
 #include "prtypes.h"
-#ifndef NSPR20
-#include "prhash.h"
-#else
 #include "plhash.h"
-#endif
 #include "jsapi.h"
 #include "jsprvtd.h"
 #include "jspubtd.h"

@@ -419,25 +419,20 @@ extern "C++"    {
 /**
  ** farproc for non-windows platforms
  **/
-#ifdef NSPR20
+
 #ifndef NLS_WIN
 
 #ifndef XP_UNIX
 #define FARPROC void*
 #else
 #include "md/_unixos.h"
-#endif
+#endif /* XP_UNIX */
 
 #endif /* NLS_WIN */
-#else
-#ifdef NLS_UNIX
-#include "prunixos.h"
-#endif
-#endif
 
 #ifdef NLS_WIN
 #define MODULE_PATH_LENGTH 255	/* maximum path+filename length for getting DLL names */
-#endif
+#endif /* NLS_WIN */
 
 #ifdef NLS_WIN16
 NLS_BEGIN_PROTOS

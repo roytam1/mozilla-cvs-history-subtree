@@ -199,9 +199,6 @@ extern "C" void SECNAV_EarlyInit(void);
 extern "C" void SECNAV_Init(void);
 extern "C" int SECNAV_RunInitialSecConfig(void);
 extern "C" void SECNAV_Shutdown(void);
-#ifndef NSPR20
-extern "C" PR_PUBLIC_API(void) PR_Shutdown(void);
-#endif
 
 /****************************************************************************
 *
@@ -2396,17 +2393,7 @@ int CNetscapeApp::ExitInstance()
     //
 #if !defined(_WIN32)
 #if defined(OJI) || defined(JAVA)
-#if defined(NSPR20)
-	/*
-	 * XXX SHould PR_CLeanup be called here?
-	 *
-	 * In nspr10 PR_Shutdown unloads all the dlls
-	 * In nspr20 PR_shutdown is equivalent to the socket shutdown call
-	 *	  and implict cleanup unloads the dlls for win16
-	 */	
-#else
-    PR_Shutdown();
-#endif
+
 #endif
 #endif  /* OJI || JAVA */
 

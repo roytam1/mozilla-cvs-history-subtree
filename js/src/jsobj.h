@@ -27,11 +27,7 @@
  * is reference counted and the slot vector is malloc'ed.
  */
 #ifdef NETSCAPE_INTERNAL
-#ifndef NSPR20
-#include "prhash.h"
-#else
 #include "plhash.h"
-#endif
 #endif
 #include "jsprvtd.h"
 #include "jspubtd.h"

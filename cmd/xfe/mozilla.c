@@ -2129,7 +2129,6 @@ main
   ** a higher priority than any java applet. Java's priority range is
   ** 1-10, and we're mapping that to 11-20 (in sysThreadSetPriority).
   */
-#ifdef NSPR20
 /* No explicit initialization needed for NSPR 2.0 */
   {
 #ifdef DEBUG
@@ -2153,17 +2152,7 @@ main
 	  PR_BlockClockInterrupts();
   }
 
-#elif defined(NSPR_SPLASH) /* !NSPR20 && NSPR_SPLASH */
-  /*
-  ** if we're using the splash screen, we need the mozilla thread to
-  ** be at a lower priority (so the label gets updated and we handle X
-  ** events quickly.  It may make the startup time longer, but the user
-  ** will be happier.  We'll set it back after fe_splashStop().
-  */
-  PR_Init("mozilla", 20, 1, 0);
-#else                      /* !NSPR20 && !NSPR_SPLASH */
   PR_Init("mozilla", 24, 1, 0);
-#endif                     /* NSRP20 */
 
 #ifdef JAVA
   LJ_SetProgramName(argv[0]);

@@ -81,11 +81,7 @@ static DDSURFACEDESC ddsd;
 
 extern "C" {
 
-#ifndef NSPR20
-PR_LOG_DEFINE(APPLET);
-#else
 extern PRLogModuleInfo *APPLET;
-#endif
 
 /*
 ** API for querying the Navigator's Color Palette from the "outside"...

@@ -48,15 +48,7 @@
 #undef WANT_ENUM_STRING_IDS
 #include "mkreg.h"
 
-#ifndef NSPR20
-#if defined(XP_UNIX) || defined(XP_WIN32)
 #include "prnetdb.h"
-#else
-#define PRHostEnt struct hostent
-#endif
-#else
-#include "prnetdb.h"
-#endif
 
 #include "net.h"
 #include "libmocha.h"
@@ -391,18 +383,10 @@ PRIVATE Bool fill_return_values(PACF_Type   type,
 	    node->socks_addr = inet_addr(host);
 	}
 	else {
-#ifdef NSPR20
 		PRStatus rv;
 	    PRHostEnt  *hp;
 	    PRHostEnt  hpbuf;
 	    char dbbuf[PR_NETDB_BUF_SIZE];
-#else
-	    struct hostent  *hp;
-#if defined(XP_UNIX) || defined(XP_WIN32) 
-	    struct hostent hpbuf;
-	    char dbbuf[PR_NETDB_BUF_SIZE];
-#endif
-#endif /* NSPR20 */
 
 	    NET_InGetHostByName++; /* global semaphore */
 #ifdef NSPR20
