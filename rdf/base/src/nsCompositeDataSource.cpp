@@ -1227,6 +1227,7 @@ CompositeDataSourceImpl::OnAssert(nsIRDFResource* aSource,
         for (PRInt32 i = PRInt32(count) - 1; i >= 0; --i) {
             nsIRDFObserver* obs = (nsIRDFObserver*) mObservers->ElementAt(i);
             obs->OnAssert(aSource, aProperty, aTarget);
+            NS_RELEASE(obs);
             // XXX ignore return value?
         }
     }
@@ -1261,6 +1262,7 @@ CompositeDataSourceImpl::OnUnassert(nsIRDFResource* aSource,
         for (PRInt32 i = PRInt32(count) - 1; i >= 0; --i) {
             nsIRDFObserver* obs = (nsIRDFObserver*) mObservers->ElementAt(i);
             obs->OnUnassert(aSource, aProperty, aTarget);
+            NS_RELEASE(obs);
             // XXX ignore return value?
         }
     }
@@ -1288,6 +1290,7 @@ CompositeDataSourceImpl::OnChange(nsIRDFResource* aSource,
         for (PRInt32 i = PRInt32(count) - 1; i >= 0; --i) {
             nsIRDFObserver* obs = (nsIRDFObserver*) mObservers->ElementAt(i);
             obs->OnChange(aSource, aProperty, aOldTarget, aNewTarget);
+            NS_RELEASE(obs);
             // XXX ignore return value?
         }
     }
@@ -1315,6 +1318,7 @@ CompositeDataSourceImpl::OnMove(nsIRDFResource* aOldSource,
         for (PRInt32 i = PRInt32(count) - 1; i >= 0; --i) {
             nsIRDFObserver* obs = (nsIRDFObserver*) mObservers->ElementAt(i);
             obs->OnMove(aOldSource, aNewSource, aProperty, aTarget);
+            NS_RELEASE(obs);
             // XXX ignore return value?
         }
     }
