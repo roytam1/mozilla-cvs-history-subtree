@@ -28,7 +28,6 @@ Rights Reserved.
 <?xul-overlay href="chrome://messenger/content/msgHdrViewOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/mailWindowOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/mailOverlay.xul"?>
-<?xul-overlay href="chrome://communicator/content/sidebar/sidebarOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
 
@@ -96,7 +95,6 @@ Rights Reserved.
         events="focus"
         oncommandupdate="FocusRingUpdate_Mail()"/>
   <commandset id="tasksCommands"/>
-  <command id="toggleSidebar"/>
 </commandset>
 
 <broadcasterset id="mailBroadcasters">
@@ -106,7 +104,6 @@ Rights Reserved.
 </broadcasterset>
 
 <keyset id="mailKeys">
-  <key id="showHideSidebar"/>
   <keyset id="tasksKeys"/>
 </keyset>
 
@@ -137,7 +134,6 @@ Rights Reserved.
 </popup>
 
 <popup id="messagePaneContext"/>
-<popup id="sidebarPopup"/>
 
   <toolbox id="mailToolbarToolbox" class="toolbox-top">
     <menubar id="mailMenubar"/>
