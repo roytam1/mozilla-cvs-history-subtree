@@ -292,6 +292,14 @@ nsDiskCacheRecordTransport::Resume(void)
   return mCurrentReadRequest->Resume();
 }
 
+NS_IMETHODIMP
+nsDiskCacheRecordTransport::GetTransport(nsITransport **result)
+{
+    NS_ENSURE_ARG_POINTER(result);
+    NS_ADDREF(*result = this);
+    return NS_OK;
+}
+
 
 #if 0
 // implement nsIChannel
