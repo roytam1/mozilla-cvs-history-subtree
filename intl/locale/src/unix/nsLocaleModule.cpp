@@ -25,6 +25,7 @@
 #include "nsCOMPtr.h"
 #include "nsIModule.h"
 #include "nsIComponentManager.h"
+#include "nsIGenericFactory.h"
 #include "nsIFactory.h"
 
 #include "nsILocaleService.h"
@@ -308,9 +309,10 @@ nsLocaleModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload)
 
 static nsLocaleModule *gModule = NULL;
 
-extern "C" NS_EXPORT nsresult NSGetModule_nsLocaleModule(nsIComponentManager *servMgr,
-                                          nsIFile* location,
-                                          nsIModule** return_cobj)
+extern "C" NS_EXPORT nsresult
+NSGETMODULE_ENTRY_POINT(nsLocaleModule) (nsIComponentManager *servMgr,
+                                         nsIFile* location,
+                                         nsIModule** return_cobj)
 {
   nsresult rv = NS_OK;
 

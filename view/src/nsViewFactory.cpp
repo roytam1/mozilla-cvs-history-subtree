@@ -26,6 +26,7 @@
 #include "nsISupports.h"
 #include "nsCOMPtr.h"
 #include "nsIServiceManager.h"
+#include "nsIGenericFactory.h"
 
 #include "nsViewsCID.h"
 #include "nsView.h"
@@ -183,9 +184,10 @@ static nsViewModule *gModule = NULL;
 //////////////////////////////////////////////////////////////////////
 // Module entry point
 
-extern "C" NS_EXPORT nsresult NSGetModule_nsViewFactory(nsIComponentManager *servMgr,
-                                          nsIFile* aPath,
-                                          nsIModule** return_cobj)
+extern "C" NS_EXPORT nsresult
+NSGETMODULE_ENTRY_POINT(nsViewFactory) (nsIComponentManager *servMgr,
+                                        nsIFile* aPath,
+                                        nsIModule** return_cobj)
 {
     nsViewModule *viewModule;
     nsresult rv = NS_OK;

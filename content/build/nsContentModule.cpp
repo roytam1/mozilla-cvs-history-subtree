@@ -42,6 +42,7 @@
 #include "nsIScriptNameSetRegistry.h"
 #include "nsIScriptNameSpaceManager.h"
 #include "nsIScriptExternalNameSet.h"
+#include "nsIGenericFactory.h"
 
 #include "nsINodeInfo.h"
 
@@ -67,7 +68,8 @@
 
 static nsContentModule *gModule = NULL;
 
-extern "C" NS_EXPORT nsresult NSGetModule_nsContentModule(nsIComponentManager *servMgr,
+extern "C" NS_EXPORT nsresult
+NSGETMODULE_ENTRY_POINT(nsContentModule) (nsIComponentManager *servMgr,
                                           nsIFile* location,
                                           nsIModule** return_cobj)
 {

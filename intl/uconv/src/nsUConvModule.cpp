@@ -346,9 +346,10 @@ nsUConvModule::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload)
 
 static nsUConvModule *gModule = NULL;
 
-extern "C" NS_EXPORT nsresult NSGetModule_nsUConvModule(nsIComponentManager *servMgr,
-                             nsIFile* aPath,
-                             nsIModule** return_cobj)
+extern "C" NS_EXPORT nsresult
+NSGETMODULE_ENTRY_POINT(nsUConvModule) (nsIComponentManager *servMgr,
+                                        nsIFile* aPath,
+                                        nsIModule** return_cobj)
 {
   nsresult rv = NS_OK;
 
