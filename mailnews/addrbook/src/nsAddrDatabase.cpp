@@ -3043,12 +3043,23 @@ nsresult nsAddrDatabase::CreateABList(nsIMdbRow* listRow, nsIAbDirectory **resul
 
         if (mailList)
     {
+            // if we are using turbo, and we "exit" and restart with the same profile
+            // the current mailing list will still be in memory, so when we do
+            // GetResource() and QI, we'll get it again.
+            // in that scenario, the mailList that we pass in will already be
+            // be a mailing list, with a valid row and all the entries
+            // in that scenario, we can skip GetListFromDB(), which would have
+            // have added all the cards to the list again.
+            // see bug #134743
+            mdb_id existingID;
+            dbmailList->GetDbRowID(&existingID);
+            if (existingID != rowID) {
             GetListFromDB(mailList, listRow);
             dbmailList->SetDbRowID(rowID);
             mailList->SetIsMailList(PR_TRUE);
+            }
 
             dbm_dbDirectory->AddMailListToDirectory(mailList);
-
             NS_IF_ADDREF(*result = mailList);
         }
     }
