@@ -51,6 +51,7 @@
 #include "nsPluginsDir.h"
 #include "nsVoidArray.h"  // array for holding "active" streams
 #include "nsIDirectoryService.h"
+#include "nsIGenericFactory.h"
 
 class ns4xPlugin;
 class nsFileSpec;
@@ -391,7 +392,7 @@ public:
 
 private:
   nsresult
-  LoadXPCOMPlugins(nsIComponentManager* aComponentManager, nsIFile* aPath);
+  LoadXPCOMPlugins(nsIComponentManager* aComponentManager);
 
   nsresult
   NewEmbededPluginStream(nsIURI* aURL, nsIPluginInstanceOwner *aOwner, nsIPluginInstance* aInstance);
@@ -414,7 +415,7 @@ private:
                           nsIURI* aURL, PRBool aDefaultPlugin);
 
   nsresult 
-  RegisterPluginMimeTypesWithLayout(nsPluginTag *pluginTag, nsIComponentManager * compManager, nsIFile * layoutPath);
+  RegisterPluginMimeTypesWithLayout(nsPluginTag *pluginTag, nsIComponentManager * compManager);
 
   nsresult
   FindPlugins(PRBool aCreatePluginList, PRBool * aPluginsChanged);
@@ -422,7 +423,6 @@ private:
   nsresult
   ScanPluginsDirectory(nsIFile * pluginsDir, 
                        nsIComponentManager * compManager, 
-                       nsIFile * layoutPath,
                        PRBool aCreatePluginList,
                        PRBool * aPluginsChanged,
                        PRBool checkForUnwantedPlugins = PR_FALSE);
@@ -430,7 +430,6 @@ private:
   nsresult
   ScanPluginsDirectoryList(nsISimpleEnumerator * dirEnum,
                            nsIComponentManager * compManager, 
-                           nsIFile * layoutPath,
                            PRBool aCreatePluginList,
                            PRBool * aPluginsChanged,
                            PRBool checkForUnwantedPlugins = PR_FALSE);
@@ -462,7 +461,7 @@ private:
   nsresult EnsurePrivateDirServiceProvider();
 
   // one-off hack to include nppl3260.dll from the components folder
-  nsresult ScanForRealInComponentsFolder(nsIComponentManager * aCompManager, nsIFile * aLayoutPath);
+  nsresult ScanForRealInComponentsFolder(nsIComponentManager * aCompManager);
 
   char        *mPluginPath;
   nsPluginTag *mPlugins;
@@ -477,6 +476,8 @@ private:
   nsUnusedLibrary *mUnusedLibraries;
 
   nsCOMPtr<nsIDirectoryServiceProvider> mPrivateDirServiceProvider;  
+
+  nsCOMPtr<nsIGenericFactory> mFactory;
 };
 
 #endif
