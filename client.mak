@@ -40,14 +40,105 @@ MOZ_OBJDIR = WIN32_O.OBJ
 #// Figure out how to do the pull.
 #//------------------------------------------------------------------------
 # uncomment these, modify branch tag, and check in to branch for milestones
-#MOZ_BRANCH=SeaMonkey_M17_BRANCH
-#NSPR_CO_TAG=SeaMonkey_M17_BRANCH
-#PSM_CO_TAG=SeaMonkey_M17_BRANCH
-#NSS_CO_TAG=SeaMonkey_M17_BRANCH
-#LDAPCSDK_CO_TAG=SeaMonkey_M17_BRANCH
-#ACCESSIBLE_CO_TAG=SeaMonkey_M17_BRANCH
-#IMGLIB2_CO_TAG=SeaMonkey_M17_BRANCH
-#GFX2_CO_TAG=SeaMonkey_M17_BRANCH
+
+# yes, we're building mozilla with svg:
+MOZ_SVG=1
+
+# this SVG mini-branch is based off the 0.9.6 milestone
+MOZ_BRANCH=MOZILLA_0_9_6_RELEASE
+NSPR_CO_TAG=MOZILLA_0_9_6_RELEASE
+PSM_CO_TAG=MOZILLA_0_9_6_RELEASE
+NSS_CO_TAG=MOZILLA_0_9_6_RELEASE
+LDAPCSDK_CO_TAG=MOZILLA_0_9_6_RELEASE
+ACCESSIBLE_CO_TAG=MOZILLA_0_9_6_RELEASE
+IMGLIB2_CO_TAG=MOZILLA_0_9_6_RELEASE
+GFX2_CO_TAG=MOZILLA_0_9_6_RELEASE
+
+
+SVG_BRANCH=SVG_0_9_6_BRANCH
+MOZ_INTERNAL_LIBART_CO_DATE=2001-11-21
+
+# list of all tagged files on the svg mini-branch.
+# we pull these files on SVG_0_9_6_BRANCH
+SVG_BRANCH_FILES = \
+	mozilla/content/svg \
+	mozilla/layout/svg \
+	mozilla/dom/public/idl/svg \
+	\
+	mozilla/aclocal.m4 \
+	mozilla/allmakefiles.sh \
+	mozilla/build/autoconf/libart.m4 \
+	mozilla/build/mac/build_scripts/MozillaBuildList.pm \
+	mozilla/client.mk \
+	mozilla/client.mak \
+	mozilla/config/autoconf.mk.in \
+	mozilla/configure \
+	mozilla/configure.in \
+	mozilla/content/Makefile.in \
+	mozilla/content/base/public/nsIDocument.h \
+	mozilla/content/base/public/nsIElementFactory.h \
+	mozilla/content/base/src/nsRuleNode.cpp \
+	mozilla/content/base/src/nsStyleContext.cpp \
+	mozilla/content/build/Makefile.in \
+	mozilla/content/build/makefile.win \
+	mozilla/content/build/nsContentCID.h \
+	mozilla/content/build/nsContentDLF.cpp \
+	mozilla/content/build/nsContentModule.cpp \
+	mozilla/content/html/style/src/nsCSSDeclaration.cpp \
+	mozilla/content/html/style/src/nsCSSParser.cpp \
+	mozilla/content/html/style/src/nsCSSStyleRule.cpp \
+	mozilla/content/html/style/src/nsICSSDeclaration.h \
+	mozilla/content/macbuild/contentSVG.mcp \
+	mozilla/content/makefile.win \
+	mozilla/content/shared/public/MANIFEST \
+	mozilla/content/shared/public/Makefile.in \
+	mozilla/content/shared/public/makefile.win \
+	mozilla/content/shared/public/nsCSSKeywordList.h \
+	mozilla/content/shared/public/nsCSSPropList.h \
+	mozilla/content/shared/public/nsCSSProps.h \
+	mozilla/content/shared/public/nsRuleNode.h \
+	mozilla/content/shared/public/nsSVGAtomList.h \
+	mozilla/content/shared/public/nsSVGAtoms.h \
+	mozilla/content/shared/public/nsStyleStruct.h \
+	mozilla/content/shared/src/Makefile.in \
+	mozilla/content/shared/src/makefile.win \
+	mozilla/content/shared/src/nsCSSProps.cpp \
+	mozilla/content/shared/src/nsSVGAtoms.cpp \
+	mozilla/content/shared/src/nsStyleStruct.cpp \
+	mozilla/content/shared/src/nsStyleUtil.cpp \
+	mozilla/content/xml/document/src/nsXMLDocument.cpp \
+	mozilla/content/xml/document/src/nsXMLDocument.h \
+	mozilla/dom/macbuild/dom_svgIDL.mcp \
+	mozilla/dom/public/idl/Makefile.in \
+	mozilla/dom/public/idl/makefile.win \
+	mozilla/dom/public/nsIDOMClassInfo.h \
+	mozilla/dom/src/base/nsDOMClassInfo.cpp \
+	mozilla/gfx/public/nsTransform2D.h \
+	mozilla/gfx/public/nsIDrawingSurface.h \
+	mozilla/gfx/src/windows/nsDrawingSurfaceWin.cpp \
+	mozilla/gfx/src/mac/nsRenderingContextMac.cpp \
+	mozilla/htmlparser/public/nsIParser.h \
+	mozilla/htmlparser/src/nsExpatTokenizer.cpp \
+	mozilla/htmlparser/src/nsViewSourceHTML.cpp \
+	mozilla/htmlparser/src/nsWellFormedDTD.cpp \
+	mozilla/layout/base/public/nsStyleConsts.h \
+	mozilla/layout/build/Makefile.in \
+	mozilla/layout/build/makefile.win \
+	mozilla/layout/html/style/src/Makefile.in \
+	mozilla/layout/html/style/src/makefile.win \
+	mozilla/layout/html/style/src/nsCSSFrameConstructor.cpp \
+	mozilla/layout/html/style/src/nsCSSFrameConstructor.h \
+	mozilla/layout/html/tests/makefile.win \
+	mozilla/layout/macbuild/layoutsvg.mcp \
+	mozilla/Makefile.in \
+	mozilla/makefile.win \
+	mozilla/netwerk/mime/src/nsXMLMIMEDataSource.cpp \
+	mozilla/uriloader/exthandler/nsExternalHelperAppService.cpp \
+	mozilla/xpfe/browser/src/nsBrowserInstance.cpp \
+	mozilla/other-licenses/libart_lgpl 
+
+# same again with first item of path stripped:
+SVG_BRANCH_FILES_P1= $(SVG_BRANCH_FILES:mozilla/=)
 
 
 !ifdef MOZ_BRANCH
@@ -100,6 +191,11 @@ MOZ_CO_FLAGS = -P
 !endif
 
 CVSCO = cvs $(CVS_FLAGS) co $(MOZ_CO_FLAGS) $(CVS_BRANCH)
+
+#//------------------------------------------------------------------------
+#// Figure out how to pull the minibranch files.
+#//------------------------------------------------------------------------
+CVSCO_SVG_MINIBRANCH = cvs $(CVS_FLAGS) co -r $(SVG_BRANCH)
 
 #//------------------------------------------------------------------------
 #// Figure out how to pull NSPR.
@@ -216,6 +312,41 @@ GFX2_CO_FLAGS=$(GFX2_CO_FLAGS) $(CVS_BRANCH)
 
 CVSCO_GFX2 = cvs $(CVS_FLAGS) co $(GFX2_CO_FLAGS)
 
+#//------------------------------------------------------------------------
+#// Figure out how to pull the internal libart
+#// (only pulled and built if MOZ_INTERNAL_LIBART_LGPL is set)
+#// If no MOZ_INTERNAL_LIBART_CO_DATE is specified, use the default tag
+#//------------------------------------------------------------------------
+
+!if defined(MOZ_SVG) && !defined(MOZ_INTERNAL_LIBART_LGPL)
+ERR_MESSAGE = ^
+You are trying to build Mozilla with SVG support (MOZ_SVG=1), but you ^
+haven't specified that mozilla/other-licenses/libart_lgpl should be ^
+pulled and built. At the moment Mozilla SVG builds need this patched ^
+version of libart. You either need to disable SVG support (unset MOZ_SVG) ^
+or enable pulling and building by setting MOZ_INTERNAL_LIBART_LGPL=1.^
+^
+If you choose to pull and build libart, note that it is only licensed^
+under the terms of the LGPL, not the MPL. (Which is why you have to opt^
+in explicitly.)
+!endif
+
+!if defined(MOZ_INTERNAL_LIBART_LGPL)
+
+!ifndef MOZ_INTERNAL_LIBART_CO_FLAGS
+MOZ_INTERNAL_LIBART_CO_FLAGS=$(MOZ_CO_FLAGS)
+!endif
+
+!if "$(MOZ_INTERNAL_LIBART_CO_DATE)" != ""
+MOZ_INTERNAL_LIBART_CO_FLAGS=$(MOZ_INTERNAL_LIBART_CO_FLAGS) -D $(MOZ_INTERNAL_LIBART_CO_DATE)
+!else
+MOZ_INTERNAL_LIBART_CO_FLAGS=$(MOZ_INTERNAL_LIBART_CO_FLAGS) $(CVS_BRANCH)
+!endif
+
+
+CVSCO_MOZ_INTERNAL_LIBART = cvs $(CVS_FLAGS) co $(MOZ_INTERNAL_LIBART_CO_FLAGS)
+
+!endif
 
 ## The master target
 ############################################################
@@ -228,7 +359,7 @@ pull_and_build_all: pull_all build_all_dep
 
 pull_clobber_and_build_all: pull_all clobber_all build_all
 
-pull_all: pull_nspr pull_psm pull_ldapcsdk pull_accessible pull_gfx2 pull_imglib2 pull_seamonkey
+pull_all: pull_nspr pull_psm pull_ldapcsdk pull_accessible pull_gfx2 pull_imglib2 pull_seamonkey pull_svg_mini_branch
 
 pull_nspr: pull_clientmak
       cd $(MOZ_SRC)\.
@@ -260,6 +391,12 @@ pull_imglib2:
   cd $(MOZ_SRC)\.
   $(CVSCO_IMGLIB2) mozilla/modules/libpr0n
 
+!if defined(MOZ_INTERNAL_LIBART_LGPL)
+pull_moz_internal_libart:
+  cd $(MOZ_SRC)\.
+  $(CVSCO_MOZ_INTERNAL_LIBART) mozilla/other-licenses/libart_lgpl
+!endif
+
 pull_xpconnect: pull_nspr
 	cd $(MOZ_SRC)\.
 	$(CVSCO) mozilla/include
@@ -283,7 +420,12 @@ pull_seamonkey: pull_clientmak
 
 pull_clientmak:
     cd $(MOZ_SRC)\.
-    $(CVSCO) mozilla/client.mak
+    $(CVSCO_SVG_MINIBRANCH) mozilla/client.mak
+
+pull_svg_mini_branch:
+	cd $(MOZ_SRC)\.
+	$(CVSCO_SVG_MINIBRANCH) $(SVG_BRANCH_FILES)
+
 
 ############################################################
 
@@ -326,8 +468,6 @@ clobber_xpconnect:
 	nmake -f makefile.win clobber_all
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\js
 	nmake -f makefile.win clobber_all
-	@cd $(MOZ_SRC)\$(MOZ_TOP)\js\src\xpconnect
-	nmake -f makefile.win clobber_all
 
 clobber_seamonkey:
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\.
@@ -348,8 +488,6 @@ depend_xpconnect:
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\xpcom
 	nmake -f makefile.win depend
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\js\src
-	nmake -f makefile.win depend
-	@cd $(MOZ_SRC)\$(MOZ_TOP)\js\src\xpconnect
 	nmake -f makefile.win depend
 
 build_nspr: 
@@ -372,8 +510,6 @@ build_xpconnect: build_nspr
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\xpcom
 	nmake -f makefile.win install
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\js\src
-	nmake -f makefile.win all
-	@cd $(MOZ_SRC)\$(MOZ_TOP)\js\src\xpconnect
 	nmake -f makefile.win all
 
 build_seamonkey:
@@ -425,6 +561,25 @@ regchrome::
 deliver::
 	@cd $(MOZ_SRC)\mozilla\.
 	nmake /f makefile.win splitsymbols
+
+
+# svg mini-branch maintenance targets:
+
+commit_local:
+	cvs -z3 ci $(SVG_BRANCH_FILES_P1)
+
+diff_local:
+	cvs -z3 diff -u $(SVG_BRANCH_FILES_P1)
+
+diff_devel_branch:
+	cvs -z3 diff -u -r SVG_20010721_BRANCH $(SVG_BRANCH_FILES_P1)
+
+diff_milestone:
+	cvs -z3 diff -u -r MOZILLA_0_9_6_RELEASE $(SVG_BRANCH_FILES_P1)
+
+tag_branch:
+	cvs -z3 tag -b SVG_0_9_6_BRANCH $(SVG_BRANCH_FILES_P1)
+
 
 #//------------------------------------------------------------------------
 #// Utility stuff...
