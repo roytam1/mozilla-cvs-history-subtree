@@ -42,6 +42,7 @@ REQUIRES	= xpcom \
 		  intl \
 		  addrbook \
 		  mork \
+		  msgbaseutil \
 		  $(NULL)
 
 ifeq ($(USE_SHORT_LIBNAME),1)
