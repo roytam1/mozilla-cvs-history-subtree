@@ -1,0 +1,121 @@
+<?xml version="1.0"?>
+
+<!DOCTYPE overlay SYSTEM "chrome://browser/locale/preferences/content.dtd">
+
+<overlay id="ContentPaneOverlay"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+  <prefpane id="paneContent" onpaneload="gContentPane.init();">
+    <preferences>
+      <preference id="dom.disable_open_during_load"   name="dom.disable_open_during_load"   type="bool"/>
+      <preference id="xpinstall.enabled"              name="xpinstall.enabled"              type="bool"/>
+      <preference id="permissions.default.image"      name="permissions.default.image"      type="int"/>
+      <preference id="security.enable_java"           name="security.enable_java"           type="bool"/>
+      <preference id="javascript.enabled"             name="javascript.enabled"             type="bool"/>
+      <preference id="dom.event.contextmenu.enabled"  name="dom.event.contextmenu.enabled"  type="bool"/>
+      <preference id="dom.disable_window_move_resize" name="dom.disable_window_move_resize" type="bool" inverted="true"/>
+      <preference id="dom.disable_window_flip"        name="dom.disable_window_flip"        type="bool" inverted="true"/>
+      <preference id="dom.disable_image_src_set"      name="dom.disable_image_src_set"      type="bool" inverted="true"/>
+      <preference id="dom.disable_window_open_feature.status"
+                  name="dom.disable_window_open_feature.status"
+                  type="bool" inverted="true"/>
+      <preference id="dom.disable_window_status_change"
+                  name="dom.disable_window_status_change"
+                  type="bool" inverted="true"/>
+    </preferences>
+    
+    <script type="application/x-javascript" src="chrome://browser/content/preferences/content.js"/>
+
+    <groupbox>
+      <grid>
+        <columns>
+          <column flex="1"/>
+          <column/>
+        </columns>
+        <rows>
+          <row>
+            <vbox align="start">
+              <checkbox id="popupPolicy" preference="dom.disable_open_during_load"
+                        label="&popupReject.label;" accesskey="&popupReject.accesskey;"
+                        onpreferenceread="return gContentPane.updateButtons('popupPolicyButton', 
+                                                                            'dom.disable_open_during_load');"/>
+            </vbox>
+            <button id="popupPolicyButton" label="&allowedSites.label;"
+                    oncommand="gContentPane.showExceptions('popup');"/>
+          </row>
+          <row>
+            <vbox align="start">
+              <checkbox id="enableSoftwareInstall" preference="xpinstall.enabled"
+                        label="&enableXPInstall.label;" accesskey="&enableXPInstall.accesskey;"
+                        onpreferenceread="return gContentPane.updateButtons('enableSoftwareInstallButton', 
+                                                                            'xpinstall.enabled');"/>
+            </vbox>
+            <button id="enableSoftwareInstallButton" label="&allowedSites.label;"
+                    oncommand="gContentPane.showExceptions('install');"/>
+          </row>
+          <row>
+            <vbox align="start">
+              <checkbox id="enableImages" 
+                        label="&enableImages.label;" 
+                        accesskey="&enableImages.accesskey;"
+                        preference="permissions.default.image"
+                        onpreferenceread="return gContentPane.readEnableImagesPref();"
+                        onpreferencewrite="return gContentPane.writeEnableImagesPref();"/>
+              <checkbox id="enableRestricted" class="indent"
+                        label="&forOriginatingSiteOnly.label;" 
+                        accesskey="&forOriginatingSiteOnly.accesskey;"
+                        preference="permissions.default.image"
+                        onpreferenceread="return gContentPane.readEnableRestrictedPref();"
+                        onpreferencewrite="return gContentPane.writeEnableImagesPref();"/>
+            </vbox>
+            <vbox>
+              <button id="manageImages" label="&exceptions.label;"
+                      oncommand="gContentPane.showExceptions('image');"/>
+            </vbox>
+          </row>
+          <separator class="thin"/>
+          <row>
+            <vbox align="start">
+              <checkbox id="advancedJavaAllow" label="&enbJavaCheck.label;" accesskey="&enbJavaCheck.accesskey;"
+                        preference="security.enable_java"/>
+            </vbox>
+          </row>
+          <row>
+            <vbox align="start">
+              <checkbox id="enableJavaScript" preference="javascript.enabled"
+                        label="&enableJavaScript.label;" accesskey="&enableJavaScript.accesskey;"
+                        onpreferenceread="return gContentPane.updateButtons('advancedJavascript', 
+                                                                            'javascript.enabled');"/>
+            </vbox>
+            <button id="advancedJavascript" class="uniWidthButton"
+                    label="&advancedJavaScript.label;" accesskey="&advancedJavaScript.accesskey;"
+                    oncommand="gContentPane.showAdvancedScript();"/>
+          </row>
+        </rows>
+      </grid>
+    </groupbox>  
+
+    <groupbox>
+      <caption label="&fonts.caption;"/>
+      <hbox align="center">
+        <description flex="1">&fontsInfo.label;</description>
+        <button label="&showFontsAndColors.label;" 
+                accesskey="&showFontsAndColors.accesskey;" 
+                oncommand="showFontsAndColors();"/>
+      </hbox>
+    </groupbox>
+
+    <groupbox>
+      <caption label="&languages.caption;"/>
+      <hbox align="center">
+        <description flex="1">&languagesInfo.label;</description>
+        <button label="&showLanguages.label;"
+                accesskey="&showLanguages.accesskey;"
+                oncommand="showLanguages();"/>
+      </hbox>
+    </groupbox>
+
+              
+  </prefpane>
+
+</overlay>

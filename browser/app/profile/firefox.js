@@ -231,11 +231,23 @@ pref("privacy.popups.policy",               1);
 pref("privacy.popups.usecustom",            true);
 pref("privacy.popups.firstTime",            true);
 pref("privacy.popups.showBrowserMessage",   true);
- 
+
+pref("privacy.item.history",    true);
+pref("privacy.item.formdata",   true);
+pref("privacy.item.passwords",  false);
+pref("privacy.item.downloads",  true);
+pref("privacy.item.cookies",    false);
+pref("privacy.item.cache",      true);
+pref("privacy.item.siteprefs",  false);
+
+pref("privacy.sanitize.sanitizeOnShutdown", false);
+pref("privacy.sanitize.promptOnSanitize", false);
+
 pref("network.proxy.share_proxy_settings",  false); // use the same proxy settings for all protocols
 
 pref("network.cookie.cookieBehavior",       0); // cookies enabled
 pref("network.cookie.enableForCurrentSessionOnly", false);
+pref("network.cookie.denyRemovedCookies", false);
 
 // l12n and i18n
 pref("intl.accept_languages", "chrome://global/locale/intl.properties");
@@ -327,3 +339,5 @@ pref("plugin.default_plugin_disabled", true);
 
 // plugin finder service
 pref("pfs.datasource.url", "chrome://mozapps/locale/plugins/plugins.properties");
+
+pref("browser.preferences.instantApply", true);

@@ -3497,8 +3497,17 @@ function asyncFocusSearchBox(event)
 
 function openPreferences()
 {
-  openDialog("chrome://browser/content/pref/pref.xul","PrefWindow", 
-             "chrome,titlebar,resizable,modal");
+  var instantApply = gPrefService.getBoolPref("browser.preferences.instantApply");
+  var features = "chrome,titlebar,resizable" + (instantApply ? "" : ",modal");
+
+  var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                     .getService(Components.interfaces.nsIWindowMediator);
+  var win = wm.getMostRecentWindow("Browser:Preferences");
+  if (win)
+    win.focus();
+  else 
+    openDialog("chrome://browser/content/preferences/preferences.xul", 
+               "Preferences", features);
 }
 
 var gHomeButton = {

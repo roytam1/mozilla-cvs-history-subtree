@@ -36,6 +36,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#ifndef nsURIHashKey_h__
+#define nsURIHashKey_h__
+
 #include "pldhash.h"
 #include "nsCOMPtr.h"
 #include "nsCRT.h"
@@ -78,3 +81,5 @@ public:
 private:
     nsCOMPtr<nsIURI> mKey;
 };
+
+#endif // nsURIHashKey_h__

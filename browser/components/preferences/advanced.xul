@@ -1,0 +1,241 @@
+<?xml version="1.0"?>
+
+# -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+# 
+# The contents of this file are subject to the Mozilla Public License Version
+# 1.1 (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.mozilla.org/MPL/
+# 
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+# 
+# The Original Code is the Firefox Preferences System.
+# 
+# The Initial Developer of the Original Code is Ben Goodger.
+# Portions created by the Initial Developer are Copyright (C) 2005
+# the Initial Developer. All Rights Reserved.
+# 
+# Contributor(s):
+#   Ben Goodger <ben@mozilla.org>
+# 
+# Alternatively, the contents of this file may be used under the terms of
+# either the GNU General Public License Version 2 or later (the "GPL"), or
+# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+# in which case the provisions of the GPL or the LGPL are applicable instead
+# of those above. If you wish to allow use of your version of this file only
+# under the terms of either the GPL or the LGPL, and not to allow others to
+# use your version of this file under the terms of the MPL, indicate your
+# decision by deleting the provisions above and replace them with the notice
+# and other provisions required by the GPL or the LGPL. If you do not delete
+# the provisions above, a recipient may use your version of this file under
+# the terms of any one of the MPL, the GPL or the LGPL.
+# 
+# ***** END LICENSE BLOCK *****
+
+<!DOCTYPE overlay [
+<!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd">
+%brandDTD;
+<!ENTITY % advancedDTD SYSTEM "chrome://browser/locale/preferences/advanced.dtd">
+%advancedDTD;
+]>
+
+<overlay id="AdvancedPaneOverlay"
+         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+
+  <prefpane id="paneAdvanced" onpaneload="gAdvancedPane.init();">
+    <preferences>
+      <preference id="accessibility.browsewithcaret"   name="accessibility.browsewithcaret"   type="bool"/>
+      <preference id="accessibility.typeaheadfind"     name="accessibility.typeaheadfind"     type="bool"/>
+      <preference id="browser.enable_automatic_image_resizing"
+                  name="browser.enable_automatic_image_resizing"
+                  type="bool"/>
+      <preference id="general.autoScroll"              name="general.autoScroll"              type="bool"/>
+      <preference id="general.smoothScroll"            name="general.smoothScroll"            type="bool"/>
+      <preference id="browser.link.open_external"      name="browser.link.open_external"      type="int"/>
+      <preference id="browser.link.open_newwindow"     name="browser.link.open_newwindow"     type="int"/>
+      <preference id="browser.tabs.autoHide"           name="browser.tabs.autoHide"           type="bool"/>
+      <preference id="browser.tabs.loadInBackground"   name="browser.tabs.loadInBackground"   type="bool"/>
+      <preference id="browser.tabs.warnOnClose"        name="browser.tabs.warnOnClose"        type="bool"/>
+      <preference id="app.update.autoUpdateEnabled"    name="app.update.autoUpdateEnabled"    type="bool"/>
+      <preference id="app.update.autoInstallEnabled"   name="app.update.autoInstallEnabled"   type="bool"/>
+      <preference id="app.update.autoInstallMode"      name="app.update.autoInstallMode"      type="int"/>
+      <preference id="extensions.update.autoUpdateEnabled"
+                  name="extensions.update.autoUpdateEnabled"
+                  type="bool"/>
+      <preference id="security.enable_ssl2"            name="security.enable_ssl2"            type="bool"/>
+      <preference id="security.enable_ssl3"            name="security.enable_ssl3"            type="bool"/>
+      <preference id="security.enable_tls"             name="security.enable_tls"             type="bool"/>
+      <preference id="security.default_personal_cert"  name="security.default_personal_cert"  type="string"/>
+    </preferences>
+    
+    <script type="application/x-javascript" src="chrome://browser/content/preferences/advanced.js"/>
+
+    <tabbox id="advancedPrefs" flex="1" persist="selectedIndex">
+      <tabs onselect="gAdvancedPane.updateSelectedTab();">
+        <tab label="&generalTab.label;"/>
+        <tab label="&tabsTab.label;"/>
+        <tab label="&updateTab.label;"/>
+        <tab label="&securityTab.label;"/>
+      </tabs>
+      <tabpanels flex="1">
+        <tabpanel orient="vertical">
+          <groupbox align="start">
+            <caption label="&accessibility.label;"/>
+            <checkbox id="moveSystemCaret" label="&moveSystemCaret.label;"
+                      preference="accessibility.browsewithcaret"/>
+            <checkbox id="useTypeAheadFind" label="&useTypeAheadFind.label;"
+                      preference="accessibility.typeaheadfind"/>
+          </groupbox>
+          <groupbox align="start">
+            <caption label="&browsing.label;"/>
+            <checkbox id="enableAutoImageResizing"
+                      label="&enableAutoImageResizing.label;"
+                      preference="browser.enable_automatic_image_resizing"/>
+            <checkbox id="useAutoScrolling" label="&useAutoScrolling.label;"
+                      preference="general.autoScroll"/>
+            <checkbox id="useSmoothScrolling" label="&useSmoothScrolling.label;"
+                      preference="general.smoothScroll"/>
+          </groupbox>
+        </tabpanel>
+        <tabpanel orient="vertical">
+          <groupbox align="start">
+            <caption label="&openExternalLinksIn.label;"/>
+            <radiogroup id="tabbedExternalLinks"
+                        preference="browser.link.open_external">
+              <radio label="&newWindow.label;" value="2"/>
+              <radio label="&newTabInRecentWindow.label;" value="3"/>
+              <radio label="&recentWindowOrTab.label;" value="1"/>
+            </radiogroup>
+          </groupbox>
+          <vbox align="start">
+            <checkbox id="tabbedOpenForce" label="&forceNewWindowLinks.label;"
+                      preference="browser.link.open_newwindow"
+                      onpreferencewrite="return gAdvancedPane.writeWindowLinksBehavior();"
+                      onpreferenceread="return gAdvancedPane.readForceLinks();"/>
+            <radiogroup id="tabbedWindowLinks" class="indent"
+                        preference="browser.link.open_newwindow"
+                        onpreferencewrite="return gAdvancedPane.writeWindowLinksBehavior();"
+                        onpreferenceread="return gAdvancedPane.readForceLinksMode();">
+              <radio label="&sameTabOrWindow.label;" value="1"/>
+              <radio label="&newTab.label;" value="3"/>
+            </radiogroup>
+            <checkbox id="hideTabBar" label="&hideTabBar.label;"
+                      preference="browser.tabs.autoHide"/>
+            <checkbox id="loadInBackground" label="&loadInBackground.label;"
+                      preference="browser.tabs.loadInBackground" reversed="true"/>
+            <checkbox id="warnOnClose" label="&warnOnClose.label;"
+                      preference="browser.tabs.warnOnClose"/>
+          </vbox>
+        </tabpanel>
+        <tabpanel orient="vertical">
+          <vbox>
+            <label>&softwareupdateinfo.label;</label>
+            <separator class="thin"/>
+            <vbox align="start">
+              <checkbox id="enableSmartUpdate"
+                        label="&enableSmartUpdate.label;"
+                        preference="app.update.autoUpdateEnabled"
+                        onpreferenceread="return gAdvancedPane.updateAppUpdateUI();"/>
+              <vbox class="indent" align="start">
+                <checkbox id="enableAutoInstall"
+                          label="&enableAutoInstall.label;"
+                          preference="app.update.autoInstallEnabled"
+                          onpreferenceread="return gAdvancedPane.updateAutoInstallUI();"/>
+                <radiogroup id="autoInstallMode" preference="app.update.autoInstallMode">
+                  <grid class="indent">
+                    <columns>
+                      <column/>
+                      <column flex="1"/>
+                    </columns>
+                    <rows>
+                      <row><label id="updateAnd"
+                                  preference="app.update.autoUpdateEnabled">&updateAnd.label;</label>
+                           <radio label="&autoDownloadAndInstall.label;" value="0"/></row>
+                      <row><hbox/>
+                           <radio label="&autoDownloadAndPrompt.label;" value="1"/></row>
+                    </rows>
+                  </grid>
+                </radiogroup>
+                <separator class="thin"/>
+                <hbox>
+                  <button label="&checkNow.label;"
+                          oncommand="gAdvancedPane.checkForUpdates(Components.interfaces.nsIUpdateItem.TYPE_APP);"/>
+                </hbox>
+              </vbox>
+            </vbox>
+            <separator class="thin"/>
+            <separator class="groove"/>
+            <separator class="thin"/>
+            <vbox align="start">
+              <checkbox id="enableExtensionUpdate"
+                        label="&enableExtensionUpdate.label;"
+                        preference="extensions.update.autoUpdateEnabled"/>      
+              <separator class="thin"/>
+              <hbox class="indent">
+                <button label="&checkNow.label;"
+                        oncommand="gAdvancedPane.checkForUpdates(Components.interfaces.nsIUpdateItem.TYPE_ADDON);"/>
+              </hbox>
+            </vbox>
+          </vbox>
+        </tabpanel>
+        <tabpanel orient="vertical">
+          <groupbox>
+            <caption label="&protocols.label;"/>
+            <grid>
+              <columns>
+                <column flex="1"/>
+                <column flex="1"/>
+              </columns>
+              <rows>
+                <row>
+                  <hbox>
+                    <checkbox id="useSSL2" label="&useSSL2.label;"
+                              preference="security.enable_ssl2"/>
+                  </hbox>
+                  <hbox>
+                    <checkbox id="useSSL3" label="&useSSL3.label;"
+                              preference="security.enable_ssl3"/>
+                  </hbox>
+                </row>
+                <row>
+                  <hbox>
+                    <checkbox id="useTLS1" label="&useTLS1.label;"
+                              preference="security.enable_tls"/>
+                  </hbox>
+                  <hbox/>
+                </row>
+              </rows>
+            </grid>
+          </groupbox>
+          <groupbox>
+            <caption label="&certificates.label;"/>
+            <description>&certselect.description;</description>
+            <radiogroup id="certSelection" orient="horizontal" preftype="string" 
+	                preference="security.default_personal_cert">
+              <radio label="&certselect.auto;" value="Select Automatically"/>
+              <radio label="&certselect.ask;" value="Ask Every Time"/>
+            </radiogroup>
+            
+            <separator/>
+            
+            <description>
+              <button label="&viewCertificates.label;" 
+                      oncommand="gAdvancedPane.showCertificates();"/>
+              <button label="&viewCRLs.label;" 
+                      oncommand="gAdvancedPane.showCRLs();"/>
+              <button label="&viewOCSP.label;" 
+                      oncommand="gAdvancedPane.showOCSP();"/>
+              <button label="&viewSecurityDevices.label;" 
+                      oncommand="gAdvancedPane.showSecurityDevices();"/>
+            </description>                              
+          </groupbox>
+        </tabpanel>
+      </tabpanels>
+    </tabbox>   
+  </prefpane>
+
+</overlay>

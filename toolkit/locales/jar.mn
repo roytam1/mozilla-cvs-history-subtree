@@ -28,6 +28,7 @@
   locale/@AB_CD@/global/mozilla.dtd                     (@AB_CD@/chrome/global/mozilla.dtd)
 + locale/@AB_CD@/global/nsTreeSorting.properties        (@AB_CD@/chrome/global/nsTreeSorting.properties)
   locale/@AB_CD@/global/plugins.properties              (@AB_CD@/chrome/global/plugins.properties)
+  locale/@AB_CD@/global/preferences.dtd                 (@AB_CD@/chrome/global/preferences.dtd)
   locale/@AB_CD@/global/printdialog.properties          (@AB_CD@/chrome/global/printdialog.properties)
 + locale/@AB_CD@/global/printdialog.dtd                 (@AB_CD@/chrome/global/printdialog.dtd)
 + locale/@AB_CD@/global/printjoboptions.dtd             (@AB_CD@/chrome/global/printjoboptions.dtd)

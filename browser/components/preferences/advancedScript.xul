@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+# -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+# Version: MPL 1.1/GPL 2.0/LGPL 2.1
+# 
+# The contents of this file are subject to the Mozilla Public License Version
+# 1.1 (the "License"); you may not use this file except in compliance with
+# the License. You may obtain a copy of the License at
+# http://www.mozilla.org/MPL/
+# 
+# Software distributed under the License is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+# for the specific language governing rights and limitations under the
+# License.
+# 
+# The Original Code is the Firefox Preferences.
+# 
+# The Initial Developer of the Original Code is Ben Goodger.
+# Portions created by the Initial Developer are Copyright (C) 2004
+# the Initial Developer. All Rights Reserved.
+# 
+# Contributor(s):
+#   Ben Goodger <ben@mozilla.org>
+# 
+# Alternatively, the contents of this file may be used under the terms of
+# either the GNU General Public License Version 2 or later (the "GPL"), or
+# the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+# in which case the provisions of the GPL or the LGPL are applicable instead
+# of those above. If you wish to allow use of your version of this file only
+# under the terms of either the GPL or the LGPL, and not to allow others to
+# use your version of this file under the terms of the MPL, indicate your
+# decision by deleting the provisions above and replace them with the notice
+# and other provisions required by the GPL or the LGPL. If you do not delete
+# the provisions above, a recipient may use your version of this file under
+# the terms of any one of the MPL, the GPL or the LGPL.
+# 
+# ***** END LICENSE BLOCK *****
+
+<?xml-stylesheet href="chrome://global/skin/"?>
+
+<!DOCTYPE dialog SYSTEM "chrome://browser/locale/preferences/advancedScript.dtd">
+
+<dialog id="advancedScripts"
+        xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+        title="&allowScripts.title;"
+        onload="onDialogLoad();" ondialogaccept="onDialogAccept();">
+
+  <script type="application/x-javascript">
+  <![CDATA[
+    var elements = ["allowWindowMoveResize", "allowWindowFlip", "allowControlContextMenu", 
+                    "allowHideStatusBar", "allowWindowStatusChange", "allowImageSrcChange"];
+
+    function onDialogLoad()
+    {
+      for (var i = 0; i < elements.length; ++i) {
+        var element = document.getElementById(elements[i]);
+        var prefElt = window.opener.document.getElementById(element.getAttribute("preference"));
+        var checkbox = document.getElementById(elements[i]);
+        checkbox.setAttribute("checked", prefElt.value);
+      }
+    }
+  
+    function onDialogAccept()
+    {
+      for (var i = 0; i < elements.length; ++i) {
+        var element = document.getElementById(elements[i]);
+        var prefElt = window.opener.document.getElementById(element.getAttribute("preference"));
+        var checkbox = document.getElementById(elements[i]);
+        prefElt.value = checkbox.checked;
+      }
+    }
+  ]]>
+  </script>
+
+  <groupbox align="start">
+    <caption label="&allowScripts.label;"/>
+
+    <checkbox id="allowWindowMoveResize" 
+              preference="dom.disable_window_move_resize"
+              label="&allowWindowMoveResize.label;"/>          
+    <checkbox id="allowWindowFlip" 
+              preference="dom.disable_window_flip"
+              label="&allowWindowFlip.label;"/>          
+    <checkbox id="allowControlContextMenu" 
+              preference="dom.event.contextmenu.enabled"
+              label="&allowControlContextMenu.label;"/>
+    <checkbox id="allowHideStatusBar" 
+              preference="dom.disable_window_open_feature.status"
+              label="&allowHideStatusBar.label;"/>          
+    <checkbox id="allowWindowStatusChange" 
+              preference="dom.disable_window_status_change"
+              label="&allowWindowStatusChange.label;"/>   
+    <checkbox id="allowImageSrcChange" 
+              preference="dom.disable_image_src_set"
+              label="&allowWindowImageSrcChange.label;"/>     
+  </groupbox>
+
+</dialog>

@@ -1,0 +1,31 @@
+<!ENTITY  lHeader                           "Web Features">
+
+<!ENTITY  enbJavaCheck.label                "Enable Java">
+<!ENTITY  enbJavaCheck.accesskey            "j">
+<!ENTITY  enableJavaScript.label            "Enable JavaScript">
+<!ENTITY  enableJavaScript.accesskey        "s">
+<!ENTITY  advancedJavaScript.label          "Advanced...">
+<!ENTITY  advancedJavaScript.accesskey      "a">
+
+<!ENTITY  enableImages.label                "Load Images">
+<!ENTITY  enableImages.accesskey            "i">
+<!ENTITY  forOriginatingSiteOnly.label      "for the originating web site only">
+<!ENTITY  forOriginatingSiteOnly.accesskey  "W">
+<!ENTITY  popupReject.label                 "Block Popup Windows">
+<!ENTITY  popupReject.accesskey             "b">
+<!ENTITY  enableXPInstall.label             "Allow web sites to install software">
+<!ENTITY  enableXPInstall.accesskey         "i">
+
+<!ENTITY  allowedSites.label                "Allowed Sites">
+<!ENTITY  exceptions.label                  "Exceptions">
+
+<!ENTITY fonts.caption                      "Fonts &amp; Colors">
+<!ENTITY fontsInfo.label                    "Select default Fonts and Colors for web pages.">
+<!ENTITY showFontsAndColors.label           "Fonts &amp; Colors...">
+<!ENTITY showFontsAndColors.accesskey       "F">
+
+<!ENTITY languages.caption                  "Languages">
+<!ENTITY languagesInfo.label                "Select default Languages and Character Encoding for web pages.">
+<!ENTITY showLanguages.label                "Languages...">
+<!ENTITY showLanguages.accesskey            "L">
+
