@@ -127,6 +127,11 @@ interface tmITransactionService : nsISupports
     *        this will be used to notify the application when transactions
     *        and messages come in.
     *
+    * @param aLockingCall
+    *        Have the Transaction Sevice acquire a lock based on the domain
+    *        before attaching. This should be used when persistant storage
+    *        is being used to prevent data corruption.
+    *
     * @returns NS_OK if the attach message was sent to the Transaction Manager.
     *
     * @returns an NS_ERROR_<foo> code specific to the failure otherwise
@@ -134,7 +139,9 @@ interface tmITransactionService : nsISupports
     * @returns TM_ERROR_QUEUE_EXISTS if the queue already exists which means
     *          someone has already attached to it.
     */
-  void attach(in ACString aDomainName, in tmITransactionObserver aObserver);
+  void attach(in ACString aDomainName, 
+              in tmITransactionObserver aObserver, 
+              in PRBool aLockingCall);
 
   /**
     * Sends a detach message to the Transaction Manager to unlink the observer
@@ -173,6 +180,11 @@ interface tmITransactionService : nsISupports
     * @param aDomainName
     *        The domain, in the current namespace, to flush.
     *
+    * @param aLockingCall
+    *        Have the Transaction Sevice acquire a lock based on the domain
+    *        before flushing. This should be used when persistant storage
+    *        is being used to prevent data corruption.
+    *
     * @returns NS_OK if the flush message is sent to the Transaction Manager
     *
     * @returns NS_ERROR_FAILURE is something goes wrong
@@ -180,7 +192,7 @@ interface tmITransactionService : nsISupports
     * @returns NS_ERRROR_UNEXPECTD if the domain does not have an observer 
     *          attached
     */
-  void flush(in ACString aDomainName);
+  void flush(in ACString aDomainName, in PRBool aLockingCall);
 
   /**
     * Send the data to the Transaction Manager to be broadcast to any

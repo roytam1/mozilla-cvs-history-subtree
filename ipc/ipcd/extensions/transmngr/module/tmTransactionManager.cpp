@@ -75,7 +75,7 @@ tmTransactionManager::HandleTransaction(tmTransaction *aTrans) {
 
   // get the right queue -- attaches do it differently
   if (action == TM_ATTACH) {
-    char *name = (char *)aTrans->GetMessage(); // is qName for Attaches
+    const char *name = (char*) aTrans->GetMessage(); // is qName for Attaches
     queue = GetQueue(name);  
     if (!queue) {
       PRInt32 index = AddQueue(name);

@@ -107,6 +107,8 @@ tmIPCModule::HandleMsg(ipcClientHandle client, const nsID &target,
       // pass it on to the trans mngr
       tm->HandleTransaction(trans);
     }
+    else
+      delete trans;
   }
 }
 

@@ -38,6 +38,7 @@
 #ifndef _tmTransactionService_H_
 #define _tmTransactionService_H_
 
+#include "ipcILockService.h"
 #include "ipcIService.h"
 #include "nsString.h"
 #include "nsVoidArray.h"
@@ -151,9 +152,16 @@ protected:
   /**
     * @returns the joined queue name - namespace + domain 
     *          (prefs, cookies etc) corresponding to the ID passed in.
-    * @reutnrs nsnull if the ID is not found.
+    * @returns nsnull if the ID is not found.
     */
   char* GetJoinedQueueName(PRUint32 aQueueID);
+
+  /**
+    * @returns the joined queue name - namespace + domain 
+    *          (prefs, cookies etc) corresponding to the ID passed in.
+    * @returns nsnull if the ID is not found.
+    */
+  char* GetJoinedQueueName(const nsACString & aDomainName);
 
   /**
     * @returns the tm_queue_mapping object that contains the ID passed in.
@@ -171,13 +179,15 @@ protected:
   ////////////////////////////////////////////////////////////////////////////
   // Protected Member Variables
 
+  PRBool mLocked;                     // storage for lock state
   nsCString mNamespace;               // limit domains to the namespace
   PLHashTable *mObservers;            // maps qName -> tmITransactionObserver
 
   tmVector mQueueMaps;                // queue - name - domain mappings
   tmVector mWaitingMessages;          // messages sent before ATTACH_REPLY
 
-  nsCOMPtr<ipcIService> ipcService;   // cache the ipc service
+  nsCOMPtr<ipcIService> ipcService;       // cache the ipc service
+  nsCOMPtr<ipcILockService> lockService;  // cache the lock service
 
 private:
 

@@ -54,7 +54,8 @@ struct tm_waiting_msg {
 
 tm_waiting_msg::~tm_waiting_msg() {
   printf("destroying a tm_waiting_msg struct\n");
-  PL_strfree(domainName);
+  if (domainName)
+    PL_strfree(domainName);
 }
 
 struct tm_queue_mapping {
@@ -67,8 +68,10 @@ struct tm_queue_mapping {
 
 tm_queue_mapping::~tm_queue_mapping() {
   printf("destroying a tm_queue_mapping struct\n");
-  PL_strfree(domainName);
-  PL_strfree(joinedQueueName);
+  if (domainName)
+    PL_strfree(domainName);
+  if (joinedQueueName)
+    PL_strfree(joinedQueueName);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -77,7 +80,8 @@ tm_queue_mapping::~tm_queue_mapping() {
 tmTransactionService::~tmTransactionService() {
 
   // just destroy this, it contains 2 pointers it doesn't own.
-  PL_HashTableDestroy(mObservers);
+  if (mObservers)
+    PL_HashTableDestroy(mObservers);
 
   PRUint32 index = 0;
   PRUint32 size = mWaitingMessages.Size();
@@ -111,11 +115,17 @@ NS_IMETHODIMP
 tmTransactionService::Init(const nsACString & aNamespace) {
 
   // register with the IPC service
-  ipcService = (do_GetService("@mozilla.org/ipc/service;1"));
+  ipcService = do_GetService("@mozilla.org/ipc/service;1");
   if (!ipcService)
     return NS_ERROR_FAILURE;
   if(NS_FAILED(ipcService->SetMessageObserver(kTransModuleID, this)))
     return NS_ERROR_FAILURE;
+
+  // get the lock service
+  lockService = do_GetService("@mozilla.org/ipc/lock-service;1");
+  if (!lockService)
+    return NS_ERROR_FAILURE;
+  mLocked = PR_FALSE;
 
   // create some internal storage
   mObservers = PL_NewHashTable(20, 
@@ -136,7 +146,8 @@ tmTransactionService::Init(const nsACString & aNamespace) {
 
 NS_IMETHODIMP
 tmTransactionService::Attach(const nsACString & aDomainName, 
-                             tmITransactionObserver *aObserver) {
+                             tmITransactionObserver *aObserver,
+                             PRBool aLockingCall) {
 
   // if the queue already exists, then someone else is attached to it. must
   //   return an error here. Only one module attached to a queue per app.
@@ -150,6 +161,8 @@ tmTransactionService::Attach(const nsACString & aDomainName,
 
   // this char* has two homes, make sure it gets PL_free()ed properly
   char* joinedQueueName = ToNewCString(jQName);
+  if (!joinedQueueName)
+    return NS_ERROR_OUT_OF_MEMORY;
 
   // link the observer to the joinedqueuename.  home #1 for joinedQueueName
   // these currently don't get removed until the destructor on this is called.
@@ -159,10 +172,23 @@ tmTransactionService::Attach(const nsACString & aDomainName,
   tm_queue_mapping *qm = new tm_queue_mapping();
   if (!qm)
     return NS_ERROR_OUT_OF_MEMORY;
-  qm->queueID = TM_NO_ID;              // initially no ID for the queue
-  qm->joinedQueueName = joinedQueueName;    // home #2 for joinedQueueName
+  qm->queueID = TM_NO_ID;                   // initially no ID for the queue
+  qm->joinedQueueName = joinedQueueName;    // home #2, owner of joinedQueueName
   qm->domainName = ToNewCString(aDomainName);
+  if (!qm->domainName) {
+    PL_HashTableRemove(mObservers, joinedQueueName);
+    delete qm;
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
   mQueueMaps.Append(qm);
+
+  // acquire a lock if neccessary
+  if (aLockingCall) {
+    if (NS_SUCCEEDED(lockService->AcquireLock(joinedQueueName, 
+                                              nsnull, 
+                                              PR_TRUE)))
+      mLocked = PR_TRUE;
+  }
 
   tmTransaction trans;
   if (NS_SUCCEEDED(trans.Init(0,                             // no IPC client
@@ -188,7 +214,15 @@ tmTransactionService::Detach(const nsACString & aDomainName) {
 }
 
 NS_IMETHODIMP
-tmTransactionService::Flush(const nsACString & aDomainName) {
+tmTransactionService::Flush(const nsACString & aDomainName,
+                            PRBool aLockingCall) {
+  // XXX acquire a lock if neccessary
+  if (aLockingCall) {
+    if (NS_SUCCEEDED(lockService->AcquireLock(GetJoinedQueueName(aDomainName), 
+                                              nsnull, 
+                                              PR_TRUE)))
+      mLocked = PR_TRUE;
+  }
 
   // synchronous flush
   return SendDetachOrFlush(GetQueueID(aDomainName), TM_FLUSH, PR_TRUE);
@@ -212,9 +246,13 @@ tmTransactionService::PostTransaction(const nsACString & aDomainName,
       // stack it and pack it
       tm_waiting_msg *msg = new tm_waiting_msg(); 
       if (!msg)
-        return NS_ERROR_FAILURE;
+        return NS_ERROR_OUT_OF_MEMORY;
       msg->trans = trans;
       msg->domainName = ToNewCString(aDomainName);
+      if (!msg->domainName) {
+        delete msg;
+        return NS_ERROR_OUT_OF_MEMORY;
+      }
       mWaitingMessages.Append(msg);
     }
     else {
@@ -317,6 +355,11 @@ tmTransactionService::OnAttachReply(tmTransaction *aTrans) {
                                                  (char*)aTrans->GetMessage());
   if (observer)
     observer->OnAttachReply(aTrans->GetQueueID(), aTrans->GetStatus());
+
+  // if we have the lock, drop it
+  if (mLocked)
+    if (NS_SUCCEEDED(lockService->ReleaseLock(GetJoinedQueueName(aTrans->GetQueueID()))))
+      mLocked = PR_FALSE;
 }
 
 void
@@ -354,6 +397,11 @@ tmTransactionService::OnFlushReply(tmTransaction *aTrans) {
                               GetJoinedQueueName(aTrans->GetQueueID()));
   if (observer)
     observer->OnFlushReply(aTrans->GetQueueID(), aTrans->GetStatus());
+
+  // if we have the lock, drop it
+  if (mLocked)
+    if (NS_SUCCEEDED(lockService->ReleaseLock(GetJoinedQueueName(aTrans->GetQueueID()))))
+      mLocked = PR_FALSE;
 }
 
 void
@@ -376,7 +424,7 @@ tmTransactionService::DispatchStoredMessages(tm_queue_mapping *aQMapping) {
   for (PRUint32 index = 0; index < size; index ++) {
     msg = (tm_waiting_msg*) mWaitingMessages[index];
     // if the message is waiting on the queue passed in
-    if (msg && PL_strcmp(aQMapping->domainName, msg->domainName) == 0) {
+    if (msg && strcmp(aQMapping->domainName, msg->domainName) == 0) {
 
       // found a match, send it and remove
       msg->trans.SetQueueID(aQMapping->queueID);
@@ -397,8 +445,7 @@ tmTransactionService::GetQueueID(const nsACString & aDomainName) {
   tm_queue_mapping *qmap = nsnull;
   for (PRUint32 index = 0; index < size; index++) {
     qmap = (tm_queue_mapping*) mQueueMaps[index];
-    if (qmap && 
-        PL_strcmp(qmap->domainName, ToNewCString(aDomainName)) == 0)
+    if (qmap && aDomainName.Equals(qmap->domainName))
       return qmap->queueID;
   }
   return TM_NO_ID;
@@ -412,6 +459,19 @@ tmTransactionService::GetJoinedQueueName(PRUint32 aQueueID) {
   for (PRUint32 index = 0; index < size; index++) {
     qmap = (tm_queue_mapping*) mQueueMaps[index];
     if (qmap && qmap->queueID == aQueueID)
+      return qmap->joinedQueueName;
+  }
+  return nsnull;
+}
+
+char*
+tmTransactionService::GetJoinedQueueName(const nsACString & aDomainName) {
+
+  PRUint32 size = mQueueMaps.Size();
+  tm_queue_mapping *qmap = nsnull;
+  for (PRUint32 index = 0; index < size; index++) {
+    qmap = (tm_queue_mapping*) mQueueMaps[index];
+    if (qmap && aDomainName.Equals(qmap->domainName))
       return qmap->joinedQueueName;
   }
   return nsnull;

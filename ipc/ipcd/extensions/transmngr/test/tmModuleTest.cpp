@@ -226,7 +226,7 @@ PRInt32 main(PRInt32 argc, char *argv[])
     printf("tmModuleTest: using profileName [%s]\n", profileName);
 
     // attach to the queue in the transaction manager
-    gTransServ->Attach(nsDependentCString(queueName), observ);
+    gTransServ->Attach(nsDependentCString(queueName), observ, PR_TRUE);
     printf("tmModuleTest: observing queue [%s]\n", queueName);
 
 
@@ -263,7 +263,7 @@ PRInt32 main(PRInt32 argc, char *argv[])
           gTransServ->PostTransaction(nsDependentCString(queueName), (PRUint8 *)data, dataLen);
         }
         // flush the queue
-        gTransServ->Flush(nsDependentCString(queueName));
+        gTransServ->Flush(nsDependentCString(queueName), PR_TRUE);
         // post a couple events
         for (i=0; i < 8; i++) {
           gTransServ->PostTransaction(nsDependentCString(queueName), (PRUint8 *)data, dataLen);
