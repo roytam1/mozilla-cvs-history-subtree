@@ -33,7 +33,8 @@
  * the provisions above, a recipient may use your version of this file under
  * the terms of any one of the NPL, the GPL or the LGPL.
  *
- * ***** END LICENSE BLOCK ***** */#include "nsCOMPtr.h"
+ * ***** END LICENSE BLOCK ***** */
+#include "nsCOMPtr.h"
 #include "nsPresContext.h"
 #include "nsIPresShell.h"
 #include "nsIPref.h"
@@ -165,6 +166,9 @@ nsPresContext::nsPresContext()
   mStopChrome = PR_TRUE;
 
   mShell = nsnull;
+  mLinkHandler = nsnull;
+  mContainer = nsnull;
+
 
   mDefaultColor = NS_RGB(0x00, 0x00, 0x00);
   mDefaultBackgroundColor = NS_RGB(0xFF, 0xFF, 0xFF);
@@ -1418,6 +1422,19 @@ NS_IMETHODIMP
 nsPresContext::GetImageLoadFlags(nsLoadFlags& aLoadFlags)
 {
   aLoadFlags = nsIRequest::LOAD_NORMAL;
+
+  nsCOMPtr<nsIDocument> doc;
+  (void) mShell->GetDocument(getter_AddRefs(doc));
+
+  if (doc) {
+    nsCOMPtr<nsILoadGroup> loadGroup;
+    (void) doc->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
+
+    if (loadGroup) {
+      loadGroup->GetLoadFlags(&aLoadFlags);
+    }
+  }
+
   return NS_OK;
 }
 
