@@ -53,7 +53,10 @@
 #include "nsInstallExecute.h"
 #include "nsInstallPatch.h"
 #include "nsInstallUninstall.h"
+
+#ifdef XP_WIN
 #include "nsWinReg.h"
+#endif
 
 #ifdef XP_PC
 #define FILESEP "\\"
