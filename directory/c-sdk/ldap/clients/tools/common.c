@@ -107,6 +107,7 @@ ldaptool_common_usage( int two_hosts )
 #endif /* NET_SSL */
     fprintf( stderr, "    -D binddn\tbind dn\n" );
     fprintf( stderr, "    -w passwd\tbind passwd (for simple authentication)\n" );
+    fprintf( stderr, "    -w - \tprompt for bind passwd (for simple authentication)\n" );
     fprintf( stderr, "    -E\t\task server to expose (report) bind identity\n" );
 #ifdef LDAP_DEBUG
     fprintf( stderr, "    -d level\tset LDAP debugging level to `level'\n" );
@@ -164,6 +165,7 @@ static int		lib_version_mismatch_is_fatal = 1;
 static int		ldversion = -1;	/* use default */
 static int		refhoplim = LDAPTOOL_DEFREFHOPLIMIT;
 static int		send_manage_dsait_ctrl = 0;
+static int		prompt_password = 0;
 
 #ifndef NO_LIBLCACHE
 static char		*cache_config_file = NULL;
@@ -462,7 +464,10 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 
 #endif /* NET_SSL */
 	case 'w':	/* bind password */
-	    passwd = strdup( optarg );
+	    if ( optarg[0] == '-' && optarg[1] == '\0' )
+	    	prompt_password = 1;
+	    else
+	      passwd = strdup( optarg );
 	    break;
 	case 'O':	/* referral hop limit */
 	    refhoplim = atoi( optarg );
@@ -525,6 +530,37 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 		return (-1);
 	}
     }
+
+    if (prompt_password != 0) {
+	char *password_string = "Enter bind password: ";
+	char pbuf[257];
+
+#if defined(_WIN32)
+	fputs(password_string,stdout);
+	fflush(stdout);
+	if (fgets(pbuf,256,stdin) == NULL) {
+	    rp = NULL;
+	} else {
+	    char *tmp;
+
+	    tmp = strchr(pbuf,'\n');
+	    if (tmp) *tmp = '\0';
+	    tmp = strchr(pbuf,'\r');
+	    if (tmp) *tmp = '\0';
+	    passwd = pbuf;
+	}
+#else
+#if defined(SOLARIS)
+	/* 256 characters on Solaris */
+	passwd = getpassphrase(password_string);
+#else
+	/* limited to 16 chars on Tru64, 32 on AIX */
+	passwd = getpass(password_string);
+#endif
+#endif
+
+    }
+
     /*
      * If verbose (-v) flag was passed in, display program name and start time.
      * If the verbose flag was passed at least twice (-vv), also display
