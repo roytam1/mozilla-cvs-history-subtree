@@ -7,12 +7,12 @@
 #   mozilla/gc, , 10/25/2000 12:00:00
 #
 
-mozilla/nsprpub,        MOZILLA_0_9_4_BRANCH
-mozilla/security/nss,   MOZILLA_0_9_4_BRANCH
-mozilla/security/manager, MOZILLA_0_9_4_BRANCH
-mozilla/accessible, MOZILLA_0_9_4_BRANCH
-DirectorySDKSourceC,    MOZILLA_0_9_4_BRANCH
-mozilla/lib/mac/Instrumentation, MOZILLA_0_9_4_BRANCH
-mozilla/gfx2, MOZILLA_0_9_4_BRANCH
-mozilla/modules/libpr0n, MOZILLA_0_9_4_BRANCH
-SeaMonkeyAll, MOZILLA_0_9_4_BRANCH
+mozilla/nsprpub,        NETSCAPE_6_2_RELEASE
+mozilla/security/nss,   NETSCAPE_6_2_RELEASE
+mozilla/security/manager, NETSCAPE_6_2_RELEASE
+mozilla/accessible, NETSCAPE_6_2_RELEASE
+DirectorySDKSourceC,    NETSCAPE_6_2_RELEASE
+mozilla/lib/mac/Instrumentation, NETSCAPE_6_2_RELEASE
+mozilla/gfx2, NETSCAPE_6_2_RELEASE
+mozilla/modules/libpr0n, NETSCAPE_6_2_RELEASE
+SeaMonkeyAll, NETSCAPE_6_2_RELEASE
