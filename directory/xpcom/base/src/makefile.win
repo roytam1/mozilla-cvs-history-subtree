@@ -28,6 +28,8 @@ LLIBS = $(LIBNSPR) \
 	$(DIST)\lib\nsldap32v40.lib \
 	$(NULL)
 
+INCS=$(INCS) -I$(PUBLIC)\ldap
+
 CPP_OBJS = .\$(OBJDIR)\nsLDAPURL.obj             \
            .\$(OBJDIR)\nsLDAPProtocolModule.obj  \
            .\$(OBJDIR)\nsLDAPMessage.obj         \

@@ -71,6 +71,8 @@ EXPORTS=								\
 
 LIBRARY_NAME=addrbook_s
 
+INCS=$(INCS) -I$(PUBLIC)\ldap
+
 CPP_OBJS=										\
     .\$(OBJDIR)\nsAddressBook.obj				\
     .\$(OBJDIR)\nsAddrBookSession.obj			\
