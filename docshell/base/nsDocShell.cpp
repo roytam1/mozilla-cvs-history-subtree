@@ -5448,6 +5448,7 @@ nsDocShell::AddToSessionHistory(nsIURI * aURI,
     nsCOMPtr<nsIURI> referrerURI;
     nsCOMPtr<nsISupports> cacheKey;
     nsCOMPtr<nsISupports> cacheToken;
+    nsXPIDLCString val;
     if (aChannel) {
         nsCOMPtr<nsICachingChannel>
             cacheChannel(do_QueryInterface(aChannel));
@@ -5463,6 +5464,7 @@ nsDocShell::AddToSessionHistory(nsIURI * aURI,
         if (httpChannel) {
             httpChannel->GetUploadStream(getter_AddRefs(inputStream));
             httpChannel->GetReferrer(getter_AddRefs(referrerURI));
+            httpChannel->GetResponseHeader("Cache-Control", getter_Copies(val));
         }
     }
 
@@ -5478,7 +5480,7 @@ nsDocShell::AddToSessionHistory(nsIURI * aURI,
      * HistoryLayoutState. By default, SH will set this
      * flag to PR_TRUE and save HistoryLayoutState.
      */
-    if (!cacheToken)
+    if (val && (PL_strcasestr(val, "no-store") || PL_strcasestr(val, "no-cache")))
       entry->SetSaveHistoryStateFlag(PR_FALSE);
     
 
