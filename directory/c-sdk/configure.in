@@ -1602,7 +1602,7 @@ mips-sony-newsos*)
     fi
     PR_MD_CSRCS=solaris.c
     DSO_LDOPTS='-G -h $(notdir $@)'
-    if test -z "$GNU_CC"; then
+    if test -n "$GNU_CC"; then
         DSO_CFLAGS=-fPIC
     else
         DSO_CFLAGS=-KPIC
@@ -1610,7 +1610,7 @@ mips-sony-newsos*)
     if test -z "$GNU_AS"; then
         ASFLAGS="$ASFLAGS -Wa,-P"
     fi
-    if test -z "$GNU_CC"; then
+    if test -n "$GNU_CC"; then
         CFLAGS="$CFLAGS -Wall"
         CXXFLAGS="$CXXFLAGS -Wall"
         if test -n "$USE_MDUPDATE"; then
