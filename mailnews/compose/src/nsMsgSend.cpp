@@ -1249,48 +1249,54 @@ nsMsgComposeAndSend::PreProcessPart(nsMsgAttachmentHandler  *ma,
 #pragma optimization_level 4
 #endif // XP_MAC && DEBUG
 
+# define FROB(X) \
+  if (X && *X) \
+	{ \
+	   if (*recipients) PL_strcat(recipients, ","); \
+		 PL_strcat(recipients, X); \
+	}
+
 nsresult nsMsgComposeAndSend::BeginCryptoEncapsulation ()
 {
+  // Try to create a secure compose object. If we can create it, then query to see
+  // if we need to use it for this send transaction. 
+
   nsresult rv = NS_OK;
-  char*recipients = nsnull;
-  if (mCompFields->GetAlwaysEncryptMessage() || mCompFields->GetSignMessage())
-	{
-	  int status = 0;
-	  recipients = (char *)
+  nsCOMPtr<nsIMsgComposeSecure> secureCompose;
+  secureCompose = do_CreateInstance(NS_MSGCOMPOSESECURE_CONTRACTID, &rv);
+  if (NS_SUCCEEDED(rv) && secureCompose)
+  {
+    PRBool requiresEncryptionWork = PR_FALSE;
+    secureCompose->RequiresCryptoEncapsulation(mUserIdentity, mCompFields, &requiresEncryptionWork);
+    if (requiresEncryptionWork)
+    {
+      m_crypto_closure = secureCompose;
+      // bah i'd like to move the following blurb into the implementation of BeginCryptoEncapsulation; however
+      // the apis for nsIMsgComposeField just aren't rich enough. It requires the implementor to jump through way
+      // too many string conversions....
+	    int status = 0;
+	    char * recipients = (char *)
       PR_MALLOC((mCompFields->GetTo()  ? nsCRT::strlen(mCompFields->GetTo())  : 0) +
 				 (mCompFields->GetCc()  ? nsCRT::strlen(mCompFields->GetCc())  : 0) +
 				 (mCompFields->GetBcc() ? nsCRT::strlen(mCompFields->GetBcc()) : 0) +
-				 (mCompFields->GetNewsgroups()
-				  ? nsCRT::strlen(mCompFields->GetNewsgroups()) : 0) +
-				 20);
-	  if (!recipients) return NS_ERROR_OUT_OF_MEMORY;
-	  *recipients = 0;
-# define FROB(X) \
-	  if (X && *X) \
-		{ \
-		  if (*recipients) PL_strcat(recipients, ","); \
-		  PL_strcat(recipients, X); \
-		}
-	  FROB(mCompFields->GetTo())
-	  FROB(mCompFields->GetCc())
-	  FROB(mCompFields->GetBcc())
-	  FROB(mCompFields->GetNewsgroups())
-# undef FROB
-    m_crypto_closure = do_CreateInstance(NS_MSGCOMPOSESECURE_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) {
-     goto loser;
-    }
-    rv = m_crypto_closure->BeginCryptoEncapsulation(mOutputFile,
-												mCompFields->GetAlwaysEncryptMessage(),
-												mCompFields->GetSignMessage(),
-												recipients, mUserIdentity,
-												(m_deliver_mode == nsMsgSaveAsDraft));
+				 (mCompFields->GetNewsgroups() ? nsCRT::strlen(mCompFields->GetNewsgroups()) : 0) + 20);
+	    if (!recipients) return NS_ERROR_OUT_OF_MEMORY;
 
-	}
-loser:
-  if (recipients) {
-    PR_Free(recipients);
+      *recipients = 0;
+
+	    FROB(mCompFields->GetTo())
+	    FROB(mCompFields->GetCc())
+	    FROB(mCompFields->GetBcc())
+	    FROB(mCompFields->GetNewsgroups())
+
+      // end section of code I'd like to move to the implementor.....
+      rv = m_crypto_closure->BeginCryptoEncapsulation(mOutputFile, recipients, mCompFields, mUserIdentity, (m_deliver_mode == nsMsgSaveAsDraft));
+
+      PR_FREEIF(recipients);
+    }
+
   }
+
   return rv;
 }
 
@@ -2720,9 +2726,10 @@ nsMsgComposeAndSend::InitCompositionFields(nsMsgCompFields *fields)
 	mCompFields->SetReturnReceipt(fields->GetReturnReceipt());
 	mCompFields->SetUuEncodeAttachments(fields->GetUuEncodeAttachments());
 
-  mCompFields->SetAlwaysEncryptMessage(fields->GetAlwaysEncryptMessage());
-  mCompFields->SetSignMessage(fields->GetSignMessage());
+  nsCOMPtr<nsISupports> secInfo;
+  fields->GetSecurityInfo(getter_AddRefs(secInfo));
 
+  mCompFields->SetSecurityInfo(secInfo);
 
 	//
   // Check the fields for legitimacy...
