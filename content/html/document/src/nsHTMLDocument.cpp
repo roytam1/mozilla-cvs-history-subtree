@@ -1981,13 +1981,8 @@ nsHTMLDocument::SetCookie(const nsAString& aCookie)
 
 // static
 nsresult
-nsHTMLDocument::GetSourceDocumentURI(nsIURI** sourceURI)
+nsHTMLDocument::GetSourceCodebaseURI(nsIURI** sourceURI)
 {
-  // XXX Tom said this reminded him of the "Six Degrees of
-  // Kevin Bacon" game. We try to get from here to there using
-  // whatever connections possible. The problem is that this
-  // could break if any of the connections along the way change.
-  // I wish there were a better way.
   *sourceURI = nsnull;
 
   // XXX This will fail on non-DOM contexts :(
@@ -1998,9 +1993,15 @@ nsHTMLDocument::GetSourceDocumentURI(nsIURI** sourceURI)
     return NS_OK; // No document in the window
   }
 
-  NS_IF_ADDREF(*sourceURI = doc->GetDocumentURI());
+  nsIPrincipal *principal = doc->GetPrincipal();
 
-  return sourceURI ? NS_OK : NS_ERROR_FAILURE;
+  if (!principal) {
+    return NS_OK; // No principal available
+  }
+
+  principal->GetURI(sourceURI);
+
+  return *sourceURI ? NS_OK : NS_ERROR_FAILURE;
 }
 
 // XXX TBI: accepting arguments to the open method.
@@ -2192,7 +2193,7 @@ nsHTMLDocument::Open(nsIDOMDocument** aReturn)
 
   // XXX This will fail on non-DOM contexts :(
   nsCOMPtr<nsIURI> sourceURI;
-  nsresult rv = GetSourceDocumentURI(getter_AddRefs(sourceURI));
+  nsresult rv = GetSourceCodebaseURI(getter_AddRefs(sourceURI));
 
   // Recover if we had a problem obtaining the source URI
   if (!sourceURI) {
