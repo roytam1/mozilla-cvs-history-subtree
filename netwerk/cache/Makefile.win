@@ -20,9 +20,8 @@ DEPTH=..\..
 DIRS= 	\
 	public                  \
 	mgr			\
-	pref			\
 	memcache		\
-#	filecache		\
+	filecache		\
 	build                   \
 	$(NULL)
 

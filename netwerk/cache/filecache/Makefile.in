@@ -36,7 +36,6 @@ CPPSRCS		= \
         nsDBEnumerator.cpp \
         nsNetDiskCache.cpp \
         nsDiskCacheRecord.cpp \
-        nsDiskCacheFactory.cpp \
 		$(NULL)
 
 EXTRA_LIBS	= $(NSPR_LIBS) 

@@ -32,7 +32,7 @@
 #include "nsINetDataCacheRecord.h"
 #include "nsMemCacheCID.h"
 // file cache include
-#include "nsNetDiskCache.h"
+#include "nsNetDiskCacheCID.h"
 #include "nsIPref.h"
 #include "prenv.h"
 #include "nsIFileStream.h"

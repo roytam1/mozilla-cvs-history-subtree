@@ -19,39 +19,22 @@ DEPTH=..\..\..
 
 include <$(DEPTH)/config/config.mak>
 
-MODULE = necko
+MODULE = nkcache
 
-IS_COMPONENT=1
-DLLNAME=necko_memcache
-DLL=.\$(OBJDIR)\$(DLLNAME).dll
+LIBRARY_NAME = nkmemcache_s
 
-MAKE_OBJ_TYPE	= DLL
-
-
-EXPORTS= 	        \
-	nsMemCacheCID.h	\
-	$(NULL)
-
-LINCS = \
-	-I$(PUBLIC) \
-	$(NULL)
-
-LLIBS	= \
-	$(LIBNSPR) \
-	$(DIST)\lib\xpcom.lib \
-	$(NULL)
-
-OBJS = 	.\$(OBJDIR)\nsMemCache.obj        \
+CPP_OBJS =                                \
+ 	.\$(OBJDIR)\nsMemCache.obj        \
 	.\$(OBJDIR)\nsMemCacheRecord.obj  \
 	.\$(OBJDIR)\nsMemCacheChannel.obj \
-	.\$(OBJDIR)\nsNetDataCacheModule.obj \
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>
 
+libs:: $(LIBRARY)
+	$(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
+
 clobber::
         rm -rf $(OBJDIR)
+        rm -f $(DIST)\lib\$(LIBRARY_NAME).lib
 
-install:: $(DLL)
-	$(MAKE_INSTALL) $(DLL) $(DIST)\bin\components
-	$(MAKE_INSTALL) .\$(OBJDIR)\$(DLLNAME).lib $(DIST)\lib
