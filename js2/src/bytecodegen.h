@@ -264,12 +264,12 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
             ASSERT(mStackTop >= 0);
         }
 
-        void addOpStretchStack(uint8 op, uint32 n)        
+        void addOpStretchStack(uint8 op, int32 n)        
         {
             addByte(op);
             mStackTop += gByteCodeData[op].stackImpact;
             if ((mStackTop + n) > mStackMax)
-                mStackMax = (mStackTop + n); 
+                mStackMax = mStackTop + n;
             ASSERT(mStackTop >= 0);
         }
 
@@ -402,14 +402,14 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
                         (i != end); i++)
         {
             uint32 branchLocation = *i;
-            bcg->setOffset(branchLocation, mLocation - branchLocation); 
+            bcg->setOffset(branchLocation, int32(mLocation - branchLocation)); 
         }
     }
 
     inline void Label::addFixup(ByteCodeGen *bcg, uint32 branchLocation) 
     { 
         if (mHasLocation)
-            bcg->addOffset(mLocation - branchLocation);
+            bcg->addOffset(int32(mLocation - branchLocation));
         else {
             mFixupList.push_back(branchLocation); 
             bcg->addLong(0);
