@@ -208,23 +208,37 @@ namespace JS2Runtime {
     
     
     class JSFunction {
-    typedef JSValue (NativeCode)(JSValueList);
+    typedef JSValue (NativeCode)(JSValue *argv, uint32 argc);
     public:
-        JSFunction(NativeCode *code) : mCode(code) { }
+        JSFunction(ByteCodeModule *bcm) : mByteCode(bcm), mCode(NULL) { }
+        JSFunction(NativeCode *code) : mByteCode(NULL), mCode(code) { }
+
+        bool isNative() { return (mCode != NULL); }
+
+        ByteCodeModule *mByteCode;
         NativeCode *mCode;
     };
     
-    typedef enum { ValuePointer, FunctionPair, IndexPair, Slot, Method } PropertyFlag;
-    Formatter& operator<<(Formatter& f, const PropertyFlag& flg);
 
 
-    
+
+
+
+    class Context;
+
     
     
     
     class Reference {
     public:
-        virtual void emitCodeSequence() { }
+        virtual void emitCodeSequence(ByteCodeGen *bcg) 
+                { throw Exception(Exception::runtimeError, "gen code for base ref"); }
+        virtual JSValue getValue()
+                { throw Exception(Exception::runtimeError, "get value for base ref"); }
+        virtual bool getValue(Context *cx)
+                { throw Exception(Exception::runtimeError, "get value(cx) for base ref"); }
+        virtual bool setValue(Context *cx)
+                { throw Exception(Exception::runtimeError, "set value for base ref"); }
     };
 
     class AccessorReference : public Reference {
@@ -232,6 +246,8 @@ namespace JS2Runtime {
         AccessorReference(JSFunction *f) : mFunction(f) { }
         JSFunction *mFunction;
         void emitCodeSequence(ByteCodeGen *bcg);
+        bool getValue(Context *cx);
+        bool setValue(Context *cx);
     };
     class LocalVarReference : public Reference {
     public:
@@ -239,6 +255,8 @@ namespace JS2Runtime {
         Access mAccess;
         uint32 mIndex;
         void emitCodeSequence(ByteCodeGen *bcg);
+        bool getValue(Context *cx);
+        bool setValue(Context *cx);
     };
     class ClosureVarReference : public LocalVarReference {
     public:
@@ -266,12 +284,37 @@ namespace JS2Runtime {
         JSFunction *mFunction;
         void emitCodeSequence(ByteCodeGen *bcg);
     };
+    class ValueReference : public Reference {
+    public:
+        ValueReference(JSObject *base, const String& name, Access acc) 
+            : mBase(base), mName(name), mAccess(acc) { }
+        JSObject *mBase;
+        const String& mName;
+        Access mAccess;
+        void emitCodeSequence(ByteCodeGen *bcg);
+        virtual bool getValue(Context *cx);
+        virtual bool setValue(Context *cx);
+        virtual JSValue getValue();
+    };
+    class ParameterReference : public Reference {
+    public:
+        ParameterReference(uint32 index, Access acc) : mAccess(acc), mIndex(index) { }
+        Access mAccess;
+        uint32 mIndex;
+        void emitCodeSequence(ByteCodeGen *bcg);
+    };
+
+    // the generic "we don't know anybody by that name"
     class NameReference : public Reference {
     public:
         NameReference(const String& name, Access acc) : mAccess(acc), mName(name) { }
         Access mAccess;
         const String& mName;
         void emitCodeSequence(ByteCodeGen *bcg);
+        virtual bool getValue(Context *cx)
+                { throw Exception(Exception::runtimeError, "get value for name ref"); }
+        virtual bool setValue(Context *cx)
+                { throw Exception(Exception::runtimeError, "set value for name ref"); }
     };
 
 
@@ -283,7 +326,7 @@ namespace JS2Runtime {
     
     
     
-    
+    typedef enum { ValuePointer, FunctionPair, IndexPair, Slot, Method } PropertyFlag;    
     
     class Property {
     public:
@@ -314,7 +357,8 @@ namespace JS2Runtime {
         JSType *mType;
         PropertyFlag mFlag;
     };
-    
+    Formatter& operator<<(Formatter& f, const Property& prop);
+   
 
     typedef std::map<String, Property, std::less<const String> > PropertyMap;
 
@@ -388,6 +432,12 @@ namespace JS2Runtime {
             mProperties[name] = Property(new JSValue(), type);
         }
 
+        // add a property (with a value)
+        virtual void defineVariable(const String &name, JSType *type, JSValue v)
+        {
+            mProperties[name] = Property(new JSValue(v), type);
+        }
+
         // get all the goods on a specific property
         Property &getPropertyData(const String &name)
         {
@@ -399,6 +449,8 @@ namespace JS2Runtime {
         {
             Property &prop = getPropertyData(name);
             switch (prop.mFlag) {
+            case ValuePointer:
+                return new ValueReference(this, name, acc);
             case FunctionPair:
                 if (acc == Read)
                     return new FunctionReference(prop.mData.fPair.getF);
@@ -408,14 +460,17 @@ namespace JS2Runtime {
                 NOT_REACHED("bad storage kind");
                 return NULL;
             }
-            return new NameReference(name, acc);
         }
+
+        virtual bool hasLocalVars()     { return false; }
+        virtual uint32 localVarCount()  { return 0; }
+
         
         void printProperties(Formatter &f) const
         {
             for (PropertyMap::const_iterator i = mProperties.begin(), end = mProperties.end(); (i != end); i++) 
             {
-                f << "[" << PROPERTY_NAME(i) << "] " << PROPERTY_KIND(i) << "\n";
+                f << "[" << PROPERTY_NAME(i) << "] " << PROPERTY(i) << "\n";
             }
         }
 
@@ -602,10 +657,32 @@ namespace JS2Runtime {
 
 
 
-
+    // an Activation has two jobs:
+    // 1. At compile time it represents the function/method being compiled and collects
+    //      the local vars/consts being defined in that function. 
+    // 2. At runtime it is the container for the values of those local vars
+    //      (although it's only constructed as such when the function 
+    //          either calls another function - so the activation represents
+    //          the saved state, or when a closure object is constructed)
 
     class Activation : public JSType {
     public:
+
+        Activation() : JSType(NULL), mLocals(NULL), mPC(0), mModule(NULL) { }
+
+        Activation(JSValue *locals, JSValue *argBase, uint8 *pc, ByteCodeModule *module);
+
+        
+        // saved values from a previous execution
+        JSValue *mLocals;
+        JSValue *mArgumentBase;
+        uint8 *mPC;
+        ByteCodeModule *mModule;
+
+
+        bool hasLocalVars()             { return true; }
+        virtual uint32 localVarCount()  { return mVariableCount; }
+
         Reference *genReference(const String& name, Access acc, uint32 depth)
         {
             Property &prop = getPropertyData(name);
@@ -620,15 +697,23 @@ namespace JS2Runtime {
 
             return new LocalVarReference(prop.mData.index, acc);
         }
+
     };
 
 
+    class ParameterBarrel : public JSType {
+    public:
 
+        ParameterBarrel() : JSType(NULL) { }
 
+        Reference *genReference(const String& name, Access acc, uint32 depth)
+        {
+            Property &prop = getPropertyData(name);
+            ASSERT(prop.mFlag == Slot);
+            return new ParameterReference(prop.mData.index, acc);
+        }
 
-
-
-
+    };
 
 
     class ScopeChain {
@@ -645,6 +730,7 @@ namespace JS2Runtime {
 
         void popScope()
         {
+            ASSERT(mScopeStack.size());
             mScopeStack.pop_back();
         }
 
@@ -674,21 +760,92 @@ namespace JS2Runtime {
             uint32 depth = 0;
             for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
             {
-                if ((*s)->hasProperty(name, acc)) {
+                if ((*s)->hasProperty(name, acc))
                     return (*s)->genReference(name, acc, depth);
-                }
             }
-            return new NameReference(name, acc);
+            return NULL;
         }
+
+        // a compile time request to get the value for a name
+        JSValue getValue(const String& name)
+        {
+            Reference *ref = getName(name, Read);
+            return ref->getValue();
+        }
+
+
+        // a runtime request to get the value for a name
+        // it'll either return a value or cause the
+        // interpreter to switch execution to a getter function
+        bool getNameValue(const String& name, Context *cx)
+        {
+            Reference *ref = getName(name, Read);
+            return ref->getValue(cx);
+        }
+
+        bool setNameValue(const String& name, Context *cx)
+        {
+            JSObject *top = *mScopeStack.rbegin();
+            Reference *ref = NULL;
+            if (top->hasProperty(name, Write))
+                ref = top->genReference(name, Write, 0);
+            else {
+                // then define the property in the top scope
+                ref = new ValueReference(top, name, Write); // XXX Optimize this by defining the variable
+                                                            // and setting it's value without building a reference
+                                                            // (and re-visit the whole issue of constructing
+                                                            // references at runtime anyway [whose deleting these?])
+                top->defineVariable(name, Object_Type);
+            }
+            return ref->setValue(cx);
+        }
+
+        // return the number of local vars used by all the 
+        // Activations on the top of the chain
+        uint32 countVars()
+        {
+            uint32 result = 0;
+            for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++)
+            {
+                if ((*s)->hasLocalVars())
+                    result += (*s)->localVarCount();
+                else
+                    break;
+            }
+            return result;
+        }
+
+
+        void processDeclarations(StmtNode *p);
+
+        // Lookup a name as a type in the chain
+        JSType *findType(const StringAtom& typeName);
+
+        // Get a type from an ExprNode 
+        JSType *extractType(ExprNode *t);
 
 
     };
 
 
+    class OperatorDefinition {
+    public:
+        
+        OperatorDefinition(JSType *type1, JSType *type2, JSFunction *imp)
+            : mType1(type1), mType2(type2), mImp(imp) { }
 
 
+        JSType *mType1;
+        JSType *mType2;
+        JSFunction *mImp;
+
+        bool isApplicable(JSType *tx, JSType *ty)
+        {
+            return (tx == mType1) && (ty == mType2);
+        }
 
 
+    };
 
     class Context {
     public:
@@ -700,38 +857,62 @@ namespace JS2Runtime {
               ConstructorKeyWord(mWorld.identifiers["constructor"]),
               OperatorKeyWord(mWorld.identifiers["operator"])
         {
+            initOperators();
         }
+
+        void initOperators();
         
         void defineOperator(Operator op, JSType *t1, JSType *t2, JSFunction *imp)
         {
+        
         }
+
         bool executeOperator(Operator op, JSType *t1, JSType *t2);
+
+        void switchToFunction(JSFunction *f)
+        {
+            ASSERT(false);  // somebody should write some code here one day
+        }
 
         JSObject *mGlobal;
         World &mWorld;
         ScopeChain mScopeChain;
+
+        // the currently executing 'function'
+        ByteCodeModule *mCurModule;
+
+        // this is the execution stack (for the current function at least)
+        std::vector<JSValue> mStack;
+
+        // the activation stack
+        std::stack<Activation *> mActivationStack;
+
+        // the locals for the current function (an array, constructed on function entry)
+        JSValue *mLocals;
+
+        // the base of the incoming arguments for this function
+        // (it's a pointer into the execution stack)
+        JSValue *mArgumentBase;
+
+        typedef std::vector<OperatorDefinition *> OperatorList;
+            
+        OperatorList mOperatorTable[OperatorCount];
+
 
         StringAtom& VirtualKeyWord; 
         StringAtom& ConstructorKeyWord; 
         StringAtom& OperatorKeyWord; 
 
         
-//        JSObject *getGlobalObject() { return mGlobal; }
-//        World &getWorld()           { return mWorld; }
-
 
         void buildRuntime(StmtNode *p);
         void buildRuntimeForStmt(StmtNode *p);
+        void processDeclarations(StmtNode *p);
 
         
         ByteCodeModule *genCode(StmtNode *p, String sourceName);
         JSValue interpret(ByteCodeModule *bcm, JSValueList args);
-
-
-        // the default accessors used to access instance (& static) variables & methods
-        static JSFunction *defaultGetter;
-        static JSFunction *defaultSetter;
-        static JSFunction *methodGetter;
+        JSValue interpret(uint8 *pc, uint8 *endPC);
         
         
         /* utility routines */
@@ -747,17 +928,53 @@ namespace JS2Runtime {
         // Get the number of parameters.
         uint32 getParameterCount(FunctionDefinition &function);
 
-        // Lookup a name as a type in the global object
-        JSType *findType(const StringAtom& typeName);
-
-        // Get a type from an ExprNode 
-        JSType *extractType(ExprNode *t);
-
-        
-        
-        
 
     };
+
+
+    inline bool AccessorReference::getValue(Context *cx) 
+    { 
+        cx->switchToFunction(mFunction);
+        return true; 
+    }
+    
+    inline bool AccessorReference::setValue(Context *cx) 
+    { 
+        cx->switchToFunction(mFunction);
+        return true; 
+    }
+    
+    inline bool LocalVarReference::getValue(Context *cx)
+    {
+        cx->mStack.push_back(cx->mLocals[mIndex]);
+        return false;
+    }
+
+    inline bool LocalVarReference::setValue(Context *cx)
+    {
+        cx->mLocals[mIndex] = cx->mStack.back();
+        cx->mStack.pop_back();
+        return false;
+    }
+
+    inline JSValue ValueReference::getValue()
+    {
+        return mBase->getProperty(mName);
+    }
+
+    inline bool ValueReference::getValue(Context *cx)
+    {
+        cx->mStack.push_back(mBase->getProperty(mName));
+        return false;
+    }
+
+    inline bool ValueReference::setValue(Context *cx)
+    {
+        mBase->setProperty(mName, cx->mStack.back());
+        cx->mStack.pop_back();
+        return false;
+    }
+
 
 }
 }

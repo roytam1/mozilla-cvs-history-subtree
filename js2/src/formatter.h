@@ -84,6 +84,11 @@ namespace JavaScript
             printFormat(*this, "%u", i);
             return *this;
         }
+        Formatter &operator<<(uint8 i) {
+            printFormat(*this, "%u", i);
+            return *this;
+        }
+
 
         friend void printString(Formatter &f, const char *strBegin,
                                 const char *strEnd) {

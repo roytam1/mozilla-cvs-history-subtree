@@ -57,8 +57,13 @@ namespace ByteCode {
         LoadConstantTrueOp,     //                     --> <true value object>
         LoadConstantFalseOp,    //                     --> <false value object>
         LoadConstantNullOp,     //                     --> <null value object>
+        LoadConstantNumberOp,   // <poolindex>
 
-        InvokeOp,               //                     <args> <invokor> --> <result>
+        LoadFunctionOp,         // <pointer>        XXX !!! XXX
+        LoadTypeOp,             // <pointer>        XXX !!! XXX
+
+
+        InvokeOp,               // <argCount>          <args> <invokor> --> <result>
 
         GetTypeOp,              //                     <object> --> <type of object>
 
@@ -87,6 +92,10 @@ namespace ByteCode {
         // for instance methods
         GetMethodOp,            // <slot>              <base> --> <invokor>
 
+        // for argumentz
+        GetArgOp,               // <index>             --> <object>
+        SetArgOp,               // <index>             --> <object>
+
         // for local variables in the immediate scope
         GetLocalVarOp,          // <index>             --> <invokor>
         SetLocalVarOp,          // <index>             --> <invokor>
@@ -105,27 +114,83 @@ namespace ByteCode {
 
     class ByteCodeModule {
     public:
-        ByteCodeOp *mCodeBase;
+            
+        ByteCodeModule(ByteCodeGen *bcg);
+
+        uint32 getLong(int index) const      { return *((uint32 *)&mCodeBase[index]); }
+        String getString(int index) const    { return String(&mStringPoolContents.at(index)); }
+        float64 getNumber(int index) const   { return mNumberPoolContents.at(index); }
+
+
+        uint32 mLocalsCount;        // number of local vars to allocate space for
+        
+        uint8 *mCodeBase;
         uint32 mLength;
 
+        std::vector<char16> mStringPoolContents;
+        std::vector<float64> mNumberPoolContents;
+
     };
+    Formatter& operator<<(Formatter& f, const ByteCodeModule& bcm);
 
     #define BufferIncrement (32)
 
     class ByteCodeGen {
     public:
+
+        ByteCodeGen() : mBuffer(new CodeBuffer) { }
+
         ByteCodeModule *genCodeForStatement(StmtNode *p);
         void genExpr(ExprNode *p);
+        Reference *genReference(ExprNode *p, Access acc);
+
+        typedef std::vector<uint8> CodeBuffer;
+
+        std::stack<CodeBuffer *> grumpy;
+
+        // this is the current code buffer
+        CodeBuffer *mBuffer;
+
+        void pushOnGrumpy()
+        {
+            grumpy.push(mBuffer);
+            mBuffer = new CodeBuffer;
+        }
+
+        void popOffGrumpy()
+        {
+            mBuffer = grumpy.top();
+            grumpy.pop();
+        }
 
 
-        void addByte(char v);
-        void addPointer(void *v) { }
-        void addLong(uint32 i)   { }
+        void addByte(uint8 v)      { mBuffer->push_back(v); }
+        void addPointer(void *v)   { addLong((uint32)v); }
+        void addLong(uint32 v)     
+            { mBuffer->insert(mBuffer->end(), (uint8 *)&v, (uint8 *)(&v) + sizeof(uint32)); }
 
-        String mStringPoolContents;
+
+        std::vector<char16> mStringPoolContents;
         typedef std::map<String, uint32, std::less<String> > StringPool;
         StringPool mStringPool;
 
+        std::vector<float64> mNumberPoolContents;
+        typedef std::map<float64, uint32, std::less<double> > NumberPool;
+        NumberPool mNumberPool;
+
+
+        void addNumber(float64 f)
+        {
+            NumberPool::iterator i = mNumberPool.find(f);
+            if (i != mNumberPool.end())
+                addLong(i->second);
+            else {
+                addLong(mNumberPool.size());
+                mNumberPoolContents.push_back(f);
+            }
+        }
+        
+        
         void addStringRef(const String &str)
         {
             StringPool::iterator i = mStringPool.find(str);
@@ -133,15 +198,13 @@ namespace ByteCode {
                 addLong(i->second);
             else {
                 addLong(mStringPoolContents.size());
-                mStringPoolContents += str;
+                mStringPoolContents.insert(mStringPoolContents.end(), str.begin(), str.end());
+                mStringPoolContents.push_back(0);
             }
         }
 
         ScopeChain mScopeChain;
 
-        ByteCodeOp *mBuffer;
-        ByteCodeOp *mBufferTop;
-        ByteCodeOp *mBufferMax;
     };
 
 

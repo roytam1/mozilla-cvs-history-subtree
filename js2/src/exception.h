@@ -48,7 +48,8 @@ namespace JavaScript
     struct Exception {
         enum Kind {
             syntaxError,
-            stackOverflow
+            stackOverflow,
+            runtimeError
         };
         
         Kind kind;         // The exception's kind
@@ -61,6 +62,9 @@ namespace JavaScript
         uint32 pos;        // Offset within the input of the error
         String sourceLine; // The text of the source line
 
+        Exception (Kind kind, const char *message) :
+                kind(kind), message(widenCString(message)), lineNum(0), charNum(0) {}
+        
         Exception (Kind kind, const String &message) :
                 kind(kind), message(message), lineNum(0), charNum(0) {}
         
