@@ -1376,42 +1376,28 @@ nsEventPropSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   if (canBeEventName(str)) {
     DefineStaticJSIds(cx);
 
-    const PRUnichar *ustr = NS_REINTERPRET_CAST(const PRUnichar *,
-                                                ::JS_GetStringChars(str));
-    const nsIID *iid = nsnull;
-
     if (str == sOnmousedown_id ||
-        str == sOnmouseup_id ||
-        str == sOnclick_id ||
+        str == sOnmouseup_id   ||
+        str == sOnclick_id     ||
         str == sOnmouseover_id ||
-        str == sOnmouseout_id) {
-      iid = &NS_GET_IID(nsIDOMMouseListener);
-    } else if (str == sOnkeydown_id ||
-               str == sOnkeyup_id ||
-               str == sOnkeypress_id) {
-      iid = &NS_GET_IID(nsIDOMKeyListener);
-    } else if (str == sOnmousemove_id) {
-      iid = &NS_GET_IID(nsIDOMMouseMotionListener);
-    } else if (str == sOnfocus_id ||
-               str == sOnblur_id) {
-      iid = &NS_GET_IID(nsIDOMFocusListener);
-    } else if (str == sOnsubmit_id ||
-               str == sOnreset_id ||
-               str == sOnchange_id ||
-               str == sOnselect_id) {
-      iid = &NS_GET_IID(nsIDOMFormListener);
-    } else if (str == sOnload_id ||
-               str == sOnunload_id ||
-               str == sOnabort_id ||
-               str == sOnerror_id) {
-      iid = &NS_GET_IID(nsIDOMLoadListener);
-    } else if (str == sOnpaint_id ||
-               str == sOnresize_id ||
-               str == sOnscroll_id) {
-      iid = &NS_GET_IID(nsIDOMPaintListener);
-    }
-
-    if (iid) {
+        str == sOnmouseout_id  ||
+        str == sOnkeydown_id   ||
+        str == sOnkeyup_id     ||
+        str == sOnkeypress_id  ||
+        str == sOnmousemove_id ||
+        str == sOnfocus_id     ||
+        str == sOnblur_id      ||
+        str == sOnsubmit_id    ||
+        str == sOnreset_id     ||
+        str == sOnchange_id    ||
+        str == sOnselect_id    ||
+        str == sOnload_id      ||
+        str == sOnunload_id    ||
+        str == sOnabort_id     ||
+        str == sOnerror_id     ||
+        str == sOnpaint_id     ||
+        str == sOnresize_id    ||
+        str == sOnscroll_id) {
       nsCOMPtr<nsIScriptContext> script_cx;
       nsresult rv =
         nsJSUtils::nsGetStaticScriptContext(cx, obj,
@@ -1433,6 +1419,9 @@ nsEventPropSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
         receiver->GetListenerManager(getter_AddRefs(manager));
 
         if (manager) {
+          const PRUnichar *ustr =
+            NS_REINTERPRET_CAST(const PRUnichar *, ::JS_GetStringChars(str));
+
           nsCOMPtr<nsIAtom> atom(getter_AddRefs(NS_NewAtom(ustr)));
           NS_ENSURE_TRUE(atom, NS_ERROR_OUT_OF_MEMORY);
 
