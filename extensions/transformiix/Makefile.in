@@ -26,8 +26,9 @@ VPATH           = @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+ifdef TX_EXE
 DIRS            = source
-ifndef TX_EXE
+else
 DIRS += build
 endif
 
