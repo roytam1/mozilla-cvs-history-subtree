@@ -31,6 +31,10 @@ MOZ_TOP=mozilla
 #//------------------------------------------------------------------------
 #// Figure out how to do the pull.
 #//------------------------------------------------------------------------
+MOZ_BRANCH=SeaMonkey_M16_BRANCH
+NSPR_CO_TAG=SeaMonkey_M16_BRANCH
+PSM_CO_TAG=SeaMonkey_M16_BRANCH
+
 !if "$(MOZ_BRANCH)" != ""
 CVS_BRANCH=-r $(MOZ_BRANCH)
 HAVE_BRANCH=1
