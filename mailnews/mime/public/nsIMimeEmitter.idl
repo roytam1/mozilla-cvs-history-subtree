@@ -19,6 +19,7 @@
 #include "nsrootidl.idl"
 
 interface nsIOutputStream;
+interface nsIInputStream;
 interface nsIURI;
 interface nsIStreamListener;
 
@@ -38,7 +39,7 @@ interface nsIMimeEmitter : nsISupports{
     void    Complete();
 
     // Set the output stream/listener for processed data.
-    void    SetOutputStream(in nsIOutputStream outStream);
+    void    SetPipe(in nsIInputStream inputStream, in nsIOutputStream outStream);
     void    SetOutputListener(in nsIStreamListener listener);
 
     // Header handling routines.
