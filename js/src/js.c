@@ -1099,9 +1099,6 @@ static JSPropertySpec its_props[] = {
  * below is used as a callback for the jsdbgapi JS_SetSourceHandler hook. 
  * A more normal embedding (e.g. mozilla) loads source itself and can send 
  * source directly to JSD without using this hook scheme.
- *
- * XXX At some future point JSD will understand Unicode source and the
- * *very* ugly conversion below will be unnecessary.
  */
 static void
 SendSourceToJSDebugger(const char *filename, uintN lineno,
@@ -1124,26 +1121,8 @@ SendSourceToJSDebugger(const char *filename, uintN lineno,
 	}
     }
     if (jsdsrc) {
-	/* here we convert our Unicode into a C string to pass to JSD */
-#define JSD_BUF_SIZE 1024
-	static char* buf = NULL;
-	int remaining = length;
-
-	if (!buf)
-	    buf = malloc(JSD_BUF_SIZE);
-	if (buf)
-	{
-	    while (remaining && jsdsrc) {
-		int bytes = JS_MIN(remaining, JSD_BUF_SIZE);
-		int i;
-		for (i = 0; i < bytes; i++)
-		    buf[i] = (const char) *(str++);
-		jsdsrc = JSD_AppendSourceText(jsdc,jsdsrc,
-					      buf, bytes,
-					      JSD_SOURCE_PARTIAL);
-		remaining -= bytes;
-	    }
-	}
+        jsdsrc = JSD_AppendUCSourceText(jsdc,jsdsrc, str, length, 
+                                        JSD_SOURCE_PARTIAL);
     }
     *listenerTSData = jsdsrc;
 }
