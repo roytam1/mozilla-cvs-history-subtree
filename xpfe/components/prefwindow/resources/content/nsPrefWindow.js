@@ -324,7 +324,7 @@ nsPrefWindow.prototype =
             {
               var currentItem = panelChildren.childNodes[i];
               if( currentItem.id != aComponentName && currentItem.id != "appearance" )
-                currentItem.removeAttribute( "open" );
+                currentItem.setAttribute( "open",true );
             }
           var openItem = document.getElementById( aSelectItem );
           panelTree.selectItem( openItem );
