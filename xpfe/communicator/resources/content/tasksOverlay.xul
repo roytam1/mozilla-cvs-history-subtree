@@ -16,12 +16,16 @@
 
 
 <keyset id="tasksKeys">
+<!-- no nav 
   <key id="key_navigator"    key="&navigatorCmd.commandkey;"   command="Tasks:Navigator" modifiers="accel"/>
+-->
 
   <!-- Tools Menu -->
 </keyset>
 <commandset id="tasksCommands">
+<!-- no nav 
   <command id="Tasks:Navigator" oncommand="toNavigator();"/>
+-->
 </commandset>
 
 
@@ -30,10 +34,14 @@
         <menupopup id="taskPopup">
           <menu id="search" label="&search.label;" accesskey="&search.accesskey;">
             <menupopup id="searchMenu">
+<!-- no nav
               <menuitem label="&searchInternetCmd.label;" accesskey="&searchInternetCmd.accesskey;" oncommand="loadXURL('urn:clienturl:srchmenu:srchinternet');"/>
+-->
             </menupopup>
           </menu>
+<!-- no nav
           <menuitem id="downloadmgr" label="&downloadManagerCmd.label;" accesskey="&downloadManagerCmd.accesskey;" oncommand="toDownloadManager();"/>
+
           <menuseparator/>
           <menu label="&webDevelopment.label;" accesskey="&webDevelopment.accesskey;">
             <menupopup id="toolsPopup" onpopupshowing="javaItemEnabling();">
@@ -41,6 +49,7 @@
               <menuitem label="&javaScriptConsoleCmd.label;" accesskey="&javaScriptConsoleCmd.accesskey;" oncommand="toJavaScriptConsole();"/>
             </menupopup>
           </menu>
+-->
         </menupopup>
       </menu>
 
@@ -56,7 +65,9 @@
           </rule>
         </template>
         <menupopup id="windowPopup">
+<!-- no nav
           <menuitem label="&navigatorCmd.label;" accesskey="&navigatorCmd.accesskey;" key="key_navigator" command="Tasks:Navigator" id="tasksMenuNavigator" class="menuitem-iconic icon-navigator16"/>
+-->
 
           <!-- Overlays get stuffed in here. -->
           <menuseparator id="sep-window-list"/>
@@ -65,7 +76,9 @@
 
 
   <statusbarpanel id="component-bar" persist="collapsed">
+<!-- no nav
     <toolbarbutton class="taskbutton" id="mini-nav" oncommand="toNavigator();" 
                    tooltiptext="&taskNavigator.tooltip;"/>
+-->
   </statusbarpanel> 
 </overlay>

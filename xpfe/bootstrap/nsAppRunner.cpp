@@ -712,6 +712,13 @@ static PRBool IsStartupCommand(const char *arg)
   return PR_FALSE;
 }
 
+// if this is defined as "foo", we always act as if the user always 
+// does -foo when running the application
+#define XRE_APP "mail"
+
+// XRE apps don't want splash screens
+#define NO_SPLASH
+
 static nsresult HandleArbitraryStartup( nsICmdLineService* cmdLineArgs, nsIPref *prefs,  PRBool heedGeneralStartupPrefs, PRBool *windowOpened)
 {
 	nsresult rv;
@@ -731,6 +738,11 @@ static nsresult HandleArbitraryStartup( nsICmdLineService* cmdLineArgs, nsIPref 
 
 	if ((const char*)tempString) PR_sscanf(tempString, "%d", &height);
 
+#ifdef XRE_APP
+  // we ignore generic command line args
+  // and the startup prefs.  we just launch this XRE app
+  return LaunchApplication(XRE_APP, height, width, windowOpened);
+#else /* MAIL_ONLY */ 
   if (heedGeneralStartupPrefs) {
 #ifdef DEBUG_CMD_LINE
     printf("XXX iterate over all the general.startup.* prefs\n");
@@ -780,8 +792,8 @@ static nsresult HandleArbitraryStartup( nsICmdLineService* cmdLineArgs, nsIPref 
       }
     }
   }
-
   return NS_OK;
+#endif /* XRE_APP */
 }
 
 // This should be done by app shell enumeration someday
@@ -1798,7 +1810,11 @@ int main(int argc, char* argv[])
   // Note: this object is not released here.  It is passed to main1 which
   //       has responsibility to release it.
   nsISplashScreen *splash = 0;
+#ifdef NO_SPLASH
+  PRBool dosplash = PR_FALSE;
+#else
   PRBool dosplash = GetWantSplashScreen(argc, argv);
+#endif /* NO_SPLASH */
 
   if (dosplash && !nativeApp) {
     // If showing splash screen and platform doesn't implement

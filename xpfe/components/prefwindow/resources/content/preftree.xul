@@ -65,6 +65,7 @@
       </treechildren>
     </treeitem>
     <!-- XXX remove this when overlays.rdf works for navigator -->
+<!-- stand alone mail, not needed
     <treeitem container="true" id="navigator">
       <treerow>
         <treecell url="chrome://communicator/content/pref/pref-navigator.xul" label="&navigator.label;"/> 
@@ -105,14 +106,14 @@
             <treecell url="chrome://communicator/content/pref/pref-download.xul" label="&download.label;"/>
           </treerow>
         </treeitem>
-        <!-- Taking out Policies panel b/c bug 44121
         <treeitem>
           <treerow>
             <treecell url="chrome://communicator/content/pref/pref-policies.xul" label="&policies.label;"/>
           </treerow>
-        </treeitem> -->
+        </treeitem>
       </treechildren>
     </treeitem>
+-->
     
     <!-- Security and Privacy items -->
     <treeitem container="true" id="securityItem">

@@ -94,7 +94,9 @@
   <statusbarpanel id="component-bar">
     <toolbarbutton class="taskbutton" id="mini-mail" oncommand="toMessengerWindow()" 
             position="2" tooltiptext="&taskMessenger.tooltip;"/>
+<!-- stand alone mail, no composer
     <toolbarbutton id="mini-comp" insertafter="mini-mail"/>
+-->
     <toolbarbutton class="taskbutton" id="mini-addr" oncommand="toAddressBook();"
             insertafter="mini-comp" tooltiptext="&taskAddressBook.tooltip;"/>
   </statusbarpanel>
@@ -105,9 +107,11 @@
   </menupopup>
 
   <menupopup id="windowPopup">
-    <menuitem accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail" id="tasksMenuMail" insertafter="tasksMenuNavigator" class="menuitem-iconic icon-mail16 menu-iconic"/>
+    <menuitem accesskey="&messengerCmd.accesskey;" label="&messengerCmd.label;"  key="key_mail" command="Tasks:Mail" id="tasksMenuMail" class="menuitem-iconic icon-mail16 menu-iconic" position="1"/>
+<!-- stand alone mail, no editor
     <menuitem id="tasksMenuEditor" insertafter="tasksMenuMail"/>
-    <menuitem label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook" id="tasksMenuAddressBook" insertafter="tasksMenuEditor" class="menuitem-iconic icon-addressbook16 menu-iconic"/>
+-->
+    <menuitem label="&addressBookCmd.label;" accesskey="&addressBookCmd.accesskey;" key="key_addressbook" command="Tasks:AddressBook" id="tasksMenuAddressBook" class="menuitem-iconic icon-addressbook16 menu-iconic" position="2"/>
   </menupopup>
   
 </overlay>         

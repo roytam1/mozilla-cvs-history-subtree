@@ -40,6 +40,7 @@
 <overlay id="editorTasksOverlay"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
+<!-- in stand alone mail, no editor
   <script type="application/x-javascript">
   <![CDATA[
     function toEditor()
@@ -71,6 +72,6 @@
   <menupopup id="windowPopup">
     <menuitem label="&editorCmd.label;" accesskey="&editorCmd.accesskey;" key="key_editor" command="Tasks:Editor" id="tasksMenuEditor" insertafter="IMMenuItem,tasksMenuNavigator" class="menuitem-iconic icon-composer16 menu-iconic"/>
   </menupopup>
-  
+-->
 </overlay>         
 

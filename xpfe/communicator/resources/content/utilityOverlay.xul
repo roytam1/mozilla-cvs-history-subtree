@@ -233,19 +233,21 @@
       <menuitem accesskey="&releaseCmd.accesskey;"
                 label="&releaseCmd.label;"
                 id="releaseUrl"
-                oncommand="openTopWin('&releaseURL;');"/>
+                oncommand="openTopWin('http://www.mozilla.org/mailnews/minotaur/index.html')"/>
 
       <menuseparator/>
 
+<!-- stand alone mail, no about:plugins
       <menuitem class="about"
                 accesskey="&aboutCommPluginsCmd.accesskey;"
                 label="&aboutCommPluginsCmd.label;"
                 id="pluginInfo"
                 oncommand="openTopWin('about:plugins')"/>
+-->
       <menuitem accesskey="&aboutCmd.accesskey;"
                 label="&aboutCmd.label;"
                 id="aboutName"
-                oncommand="goAboutDialog();"/>
+                oncommand="openTopWin('http://www.mozilla.org/mailnews/minotaur/index.html')"/>
     </menupopup>
   </menu>
         

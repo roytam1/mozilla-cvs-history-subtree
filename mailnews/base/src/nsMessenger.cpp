@@ -73,6 +73,10 @@
 #include "nsIContentViewer.h" 
 #include "nsIWebShell.h" 
 
+#ifndef ENABLE_BROWSER
+#include "nsILinkHandler.h"
+#endif
+
 // embedding
 #include "nsIWebBrowserPrint.h"
 
@@ -661,6 +665,41 @@ nsMessenger::OpenURL(const char * url)
   }
   return NS_OK;
 }
+
+#ifndef ENABLE_BROWSER
+NS_IMETHODIMP
+nsMessenger::LoadURL(nsIDOMWindowInternal *aWin, const char *aUrl)
+{
+   nsresult rv;
+   nsCOMPtr<nsIScriptGlobalObject> globalObj = do_QueryInterface(aWin, &rv);
+   NS_ENSURE_SUCCESS(rv,rv);
+ 
+   nsCOMPtr <nsIDocShell> docShell;
+   rv = globalObj->GetDocShell(getter_AddRefs(docShell));
+   NS_ENSURE_SUCCESS(rv,rv);
+   if (!docShell)
+     return NS_ERROR_FAILURE;
+
+   nsCOMPtr<nsILinkHandler> lh = do_QueryInterface(docShell, &rv);
+   NS_ENSURE_SUCCESS(rv,rv);
+
+   // this works, because of the hack to nsWebShell.cpp
+   rv = lh->OnLinkClick(nsnull,
+     eLinkVerb_Replace,
+     NS_ConvertASCIItoUCS2(aUrl).get(),
+     nsnull,nsnull,nsnull);
+   NS_ENSURE_SUCCESS(rv,rv);
+
+   return rv;
+}
+#else
+NS_IMETHODIMP
+nsMessenger::LoadURL(nsIDOMWindowInternal *aWin, const char *url)
+{
+  // if you are a browser, you should not be in here.
+  return NS_ERROR_UNEXPECTED;
+}
+#endif
 
 nsresult
 nsMessenger::SaveAttachment(nsIFileSpec * fileSpec,

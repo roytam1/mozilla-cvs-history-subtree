@@ -33,6 +33,7 @@
   </groupbox>
 
   <!-- category tree entries for editor -->
+<!-- stand alone mail, no editor
   <treechildren id="panelChildren">
     <treeitem container="true" id="editor" position="3">
       <treerow>       
@@ -44,15 +45,14 @@
             <treecell url="chrome://editor/content/pref-editing.xul" label="&editing.label;"/> 
           </treerow>
         </treeitem>
-        <!--     
         <treeitem>
           <treerow>
             <treecell url="chrome://editor/content/pref-publish.xul" label="&publish.label;"/> 
           </treerow>
         </treeitem>  
-        -->
       </treechildren>
     </treeitem>
   </treechildren>
+-->
            
 </overlay>         

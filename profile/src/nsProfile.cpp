@@ -737,6 +737,8 @@ nsProfile::AutoMigrate()
     return rv;
 }
 
+#define XRE_APP "mail"
+
 nsresult
 nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
                        PRBool canInteract,
@@ -779,6 +781,13 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
         }
     }
 
+    // if this is a XRE_APP, we don't care about profiles
+    // modern OSes have a profile concept already
+    // if you want another profile, logout.
+    // if your application has the concept of identies
+    // your application should switch between them.
+    // oh, the hard lessons we've learned.
+#ifndef XRE_APP
     // -P command line option works this way:
     // apprunner -P profilename 
     // runs the app using the profile <profilename> 
@@ -940,7 +949,12 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
 		rv = gProfileDataAccess->DetermineForceMigration(&forceMigration);
 		NS_ASSERTION(NS_SUCCEEDED(rv),"failed to determine if we should force migration");
 	}
+#endif /* XRE_APP */
 
+#ifdef ALLOW_MIGRATION
+    // only do migration of we want this application to replace
+    // Netscape 4.x, and we therefore need to migrate the 4.x profiles over
+    //
     // Start Migaration activity
     rv = cmdLineArgs->GetCmdLineValue(INSTALLER_CMD_LINE_ARG, getter_Copies(cmdResult));
     if (NS_SUCCEEDED(rv) || forceMigration)
@@ -980,6 +994,7 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
             }
         }
     }
+#endif /* ALLOW_MIGRATION */
 
 #ifdef DEBUG_profile_verbose
     printf("Profile Manager : Command Line Options : End\n");

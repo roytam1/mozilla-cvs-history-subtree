@@ -44,8 +44,9 @@ Rights Reserved.
 <script src="chrome://messenger/content/commandglue.js"/>
 <script src="chrome://messenger/content/mail-offline.js"/>
 <script type="application/x-javascript" src="chrome://communicator/content/findUtils.js"/>
+<!-- stand alone mail, no bookmarking
 <script type="application/x-javascript" src="chrome://communicator/content/bookmarks/bookmarksOverlay.js"/>
-
+-->
 <stringbundleset id="stringbundleset">
   <stringbundle id="bundle_messenger" src="chrome://messenger/locale/messenger.properties"/>
   <stringbundle id="bundle_offlinePrompts" src="chrome://messenger/locale/offline.properties"/>
@@ -100,8 +101,11 @@ Rights Reserved.
 </commandset>
 
 <commandset id="mailCommands">
+<!--
+  in stand alone mail app, no nav, no editor
   <command id="cmd_newNavigator"/>
   <command id="cmd_newEditor"/>
+-->
   <command id="cmd_quit"/>
   <!--The cmd_createFilterFromPopup is used to notify the email context popup -->
   <command id="cmd_createFilterFromPopup"/>
@@ -269,8 +273,11 @@ Rights Reserved.
     <key id="space" key=" " oncommand="SpaceHit()"/>
 
   <!-- File Menu -->
+<!--
+  in stand alone mail app, no nav, no editor
   <key id="key_newNavigator"/>
   <key id="key_newBlankPage"/>
+-->
   <key id="key_close"/>
   <key id="key_quit"/>
   <!-- Edit Menu -->
@@ -625,10 +632,12 @@ Rights Reserved.
   <popup id="messagePaneContext"   
      onpopupshowing="gContextMenu = new nsContextMenu(this); return fillMessagePaneContextMenu();"
      onpopuphiding="gContextMenu.onDestroy(); gContextMenu = null;">
+<!-- stand alone mail.  why do we need this any way, if clicking on it will open the link in a new browser window anyways?  seems like a bug on the trunk
         <menuitem id="context-openlink"
                   label="&openLinkCmd.label;"
                   accesskey="&openLinkCmd.accesskey;"
                   oncommand="gContextMenu.openLink();"/>
+-->
         <menuseparator id="messagePaneContext-sep-link"/>
         <menuitem id="context-selectall"
                   label="&selectAllCmd.label;"
@@ -881,11 +890,13 @@ Rights Reserved.
                   label="&saveImageCmd.label;"
                   accesskey="&saveImageCmd.accesskey;"
                   oncommand="gContextMenu.saveImage();"/>
+<!-- stand alone mail, no bookmarking
         <menuitem id="context-bookmarklink"
                   label="&bookmarkLinkCmd.label;"
                   accesskey="&bookmarkLinkCmd.accesskey;"
                   oncommand="BookmarksUtils.addBookmark(gContextMenu.linkURL(),
                                                         gContextMenu.linkText());"/>
+-->
 
 </popup>
 
@@ -904,9 +915,12 @@ Rights Reserved.
           <menuitem id="newAccountMenuItem" label="&newAccountCmd.label;"
                      accesskey="&newAccountCmd.accesskey;"
                      oncommand="MsgAccountWizard();"/>
+<!--
+  in stand alone mail app, no nav, no editor
           <menuseparator/>
           <menuitem id="menu_newNavigator"/>
           <menuitem id="menu_newEditor"/>
+-->
         </menupopup>
       </menu>
       <menuitem id="openMessageWindowMenuitem" label="&openMessageWindowCmd.label;"

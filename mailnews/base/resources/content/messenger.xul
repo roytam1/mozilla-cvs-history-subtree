@@ -28,7 +28,12 @@ Rights Reserved.
 <?xul-overlay href="chrome://messenger/content/msgHdrViewOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/mailWindowOverlay.xul"?>
 <?xul-overlay href="chrome://messenger/content/mailOverlay.xul"?>
+<!--
+ no side bar in stand alone mail
 <?xul-overlay href="chrome://communicator/content/sidebar/sidebarOverlay.xul"?>
+-->
+<!-- we used to get this from sidebarOverlay.xul -->
+<?xul-overlay href="chrome://communicator/content/contentAreaContextOverlay.xul"?> 
 <?xul-overlay href="chrome://communicator/content/tasksOverlay.xul"?>
 <?xul-overlay href="chrome://communicator/content/communicatorOverlay.xul"?>
 
@@ -75,7 +80,6 @@ Rights Reserved.
 <script type="application/x-javascript" src="chrome://communicator/content/contentAreaClick.js"/>
 <script type="application/x-javascript" src="chrome://global/content/nsTransferable.js"/>
 <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
-
 
 <commandset id="mailCommands">
   <commandset id="mailFileMenuItems"/>
@@ -147,7 +151,7 @@ Rights Reserved.
 
   <hbox style="height:100px" flex="1">
     <vbox id="sidebar-box">
-      <tree id="folderTree" persist="height width" flex="1" context="folderPaneContext"/>
+      <tree id="folderTree" style="min-width: 150px" persist="height width" flex="1" context="folderPaneContext"/>
     </vbox>
           
     <splitter id="sidebar-splitter"/>
@@ -159,7 +163,7 @@ Rights Reserved.
                   </vbox>
       <vbox id="messagesBox" flex="1">
       <hbox id="searchBox"/>
-      <tree id="threadTree" flex="2" persist="height" style="height:0px" context="threadPaneContext"/>
+      <tree id="threadTree" flex="1" persist="height" style="height:0px" context="threadPaneContext"/>
 
       <!-- if you change this id, please change GetThreadAndMessagePaneSplitter() and MsgToggleMessagePane() -->
       <splitter collapse="after" persist="state" 

@@ -70,7 +70,7 @@ CPP_OBJS=                               \
  $(NULL)
 
 MAKE_OBJ_TYPE = EXE
-PROGRAM = .\$(OBJDIR)\mozilla.exe
+PROGRAM = .\$(OBJDIR)\minotaur.exe
 RCINCLUDE = splash.rc
 
 LCFLAGS = \
@@ -175,4 +175,4 @@ libs:: $(PROGRAM)
 	$(MAKE_INSTALL) $(PROGRAM) $(DIST)\bin
 
 clobber::
-	rm -f $(DIST)\bin\mozilla.exe
+	rm -f $(DIST)\bin\minotaur.exe

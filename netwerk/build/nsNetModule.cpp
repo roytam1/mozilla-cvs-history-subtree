@@ -588,6 +588,8 @@ static void PR_CALLBACK nsNeckoShutdown(nsIModule *neckoModule)
     nsStandardURL::ShutdownGlobalObjects();
 }
 
+#define XRE_APP "mail"
+
 static const nsModuleComponentInfo gNetModuleInfo[] = {
     { NS_IOSERVICE_CLASSNAME,
       NS_IOSERVICE_CID,
@@ -961,6 +963,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_ABOUT_MODULE_CONTRACTID_PREFIX "blank", 
       nsAboutBlank::Create
     },
+#ifndef XRE_APP
     { "about:bloat", 
       NS_ABOUT_BLOAT_MODULE_CID,
       NS_ABOUT_MODULE_CONTRACTID_PREFIX "bloat", 
@@ -996,6 +999,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_ABOUT_MODULE_CONTRACTID_PREFIX "cache-entry",
       nsAboutCacheEntryConstructor
     },
+#endif
     // from netwerk/protocol/keyword:
     { "The Keyword Protocol Handler", 
       NS_KEYWORDPROTOCOLHANDLER_CID,

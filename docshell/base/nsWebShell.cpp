@@ -117,6 +117,11 @@ typedef unsigned long HMTX;
 #include "nsIFileStream.h"
 #include "nsISHistoryInternal.h"
 
+#ifndef ENABLE_BROWSER
+#include "nsIExternalProtocolService.h"
+#include "nsCExternalHandlerService.h"
+#endif
+
 #include "nsIHttpChannel.h" // add this to the ick include list...we need it to QI for post data interface
 
 #include "nsILocaleService.h"
@@ -566,6 +571,58 @@ nsWebShell::OnLinkClickSync(nsIContent *aContent,
   if (aRequest) {
     *aRequest = nsnull;
   }
+
+#ifndef ENABLE_BROWSER
+  // this hack is to make it so when we click on links in messages
+  // we launch the default application  
+  // for example, http -> IE, Mozilla, NS 7.0
+  //
+  // stand alone mail still needs http support to handle
+  // img src links in html mail, the start page,
+  // and ab sync
+  //
+  // since this is a stand alone mail application, we handle
+  // mailto, news, nntp and imap urls
+  //
+  // hack, clean this up.  allow for XRE applications to say
+  // which schemes they handle.
+  nsAutoString spec(aURLSpec);
+  nsAutoString scheme;
+  PRInt32 pos = spec.FindChar(':');
+  static const char kMailToURI[] = "mailto";
+  static const char kNewsURI[] = "news";
+  static const char kSnewsURI[] = "snews";
+  static const char kNntpURI[] = "nntp";
+  static const char kImapURI[] = "imap";
+  if ((pos == (PRInt32)(sizeof kMailToURI - 1)) && (spec.Left(scheme, pos) != -1) && scheme.EqualsIgnoreCase(kMailToURI)) {
+    // the scheme is mailto, we can handle it
+  }
+  else if ((pos == (PRInt32)(sizeof kNewsURI - 1)) && (spec.Left(scheme, pos) != -1) && scheme.EqualsIgnoreCase(kNewsURI)) {
+    // the scheme is news, we can handle it
+  }
+  else if ((pos == (PRInt32)(sizeof kSnewsURI - 1)) && (spec.Left(scheme, pos) != -1) && scheme.EqualsIgnoreCase(kSnewsURI)) {
+    // the scheme is snews, we can handle it
+  }
+  else if ((pos == (PRInt32)(sizeof kNntpURI - 1)) && (spec.Left(scheme, pos) != -1) && scheme.EqualsIgnoreCase(kNntpURI)) {
+    // the scheme is nntp, we can handle it
+  }
+  else if ((pos == (PRInt32)(sizeof kImapURI - 1)) && (spec.Left(scheme, pos) != -1) && scheme.EqualsIgnoreCase(kImapURI)) {
+    // the scheme is imap, we can handle it
+  }
+  else {
+    // we don't handle this type, the the registered handler take it
+    nsCOMPtr <nsIURI> uri;
+    rv = NS_NewURI(getter_AddRefs(uri), NS_ConvertUCS2toUTF8(aURLSpec).get());
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCOMPtr<nsIExternalProtocolService> extProtService = do_GetService(NS_EXTERNALPROTOCOLSERVICE_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    rv = extProtService->LoadUrl(uri);
+    NS_ENSURE_SUCCESS(rv,rv);
+    return rv;
+  }
+#endif
 
   switch(aVerb) {
     case eLinkVerb_New:

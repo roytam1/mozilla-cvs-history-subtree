@@ -260,6 +260,9 @@ function openTopWin( url )
         url = "about:blank";
     }
 
+    // hack, see below
+    // if this is stand alone mail, this will return null
+    // since there should be no browser windows
     var topWindowOfType = getTopWin();
     if ( topWindowOfType )
     {
@@ -267,6 +270,25 @@ function openTopWin( url )
         topWindowOfType.loadURI(url);
         return topWindowOfType;
     }
+   
+    // hack
+    // I'd rather abstract this out and hide it behind an interface.
+    // the browser impl would do window.openDialog()
+    // the stand alone mail would use messenger to load the url.
+    // if when building stand alone, we won't build the browser version
+    // and vice versa.  that will be the next step.
+    try {
+      var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
+      messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
+      // if building stand alone, this will succeed
+      // otherwise, we'll return error, and do window.openDialog() below
+      messenger.loadURL(window, url);
+      return;
+    }
+    catch (ex) {
+      // not in stand alone messenger mode
+    }
+
     return window.openDialog( getBrowserURL(), "_blank", "chrome,all,dialog=no", url );
 }
 
