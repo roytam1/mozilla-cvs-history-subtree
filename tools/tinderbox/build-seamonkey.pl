@@ -156,7 +156,7 @@ sub BuildIt {
     chdir $Settings::DirName or die "Couldn't enter $Settings::DirName";
     
     my $build_dir = getcwd();
-    my $binary_basename = '$Settings::BinaryName';
+    my $binary_basename = "$Settings::BinaryName";
     my $binary_dir = "$build_dir/$Settings::Topsrcdir/dist/bin";
     my $full_binary_name = "$binary_dir/$binary_basename";
     my $exit_early = 0;
