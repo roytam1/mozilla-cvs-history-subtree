@@ -165,6 +165,9 @@ nsHTMLIFrameElement::nsHTMLIFrameElement()
 
 nsHTMLIFrameElement::~nsHTMLIFrameElement()
 {
+  if (mFrameLoader) {
+    mFrameLoader->Destroy();
+  }
 }
 
 
@@ -348,42 +351,7 @@ nsHTMLIFrameElement::LoadSrc(const nsAReadableString& aStr)
 
 
 
-  nsAutoString src(aStr);
-  GetSrc(src);
-  src.Trim(" \t\n\r");
-
-  if (src.IsEmpty()) {
-    // about:blank will be synthesized into a frame if not URL is
-    // loaded into it (bug 35986)
-
-
-
-
-
-
-
-
-
-    // load about:blank if we're loading something already
-
-
-
-
-
-
-
-    return NS_OK;
-  }
-
-  // Make an absolute URI
-  nsCOMPtr<nsIURI> base_uri;
-  GetBaseURL(*getter_AddRefs(base_uri));
-
-  nsCOMPtr<nsIURI> uri;
-  rv = NS_NewURI(getter_AddRefs(uri), src, base_uri);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  rv = mFrameLoader->LoadURI(uri);
+  rv = mFrameLoader->LoadFrame();
   NS_ASSERTION(NS_SUCCEEDED(rv), "failed to load URL");
 
   return rv;

@@ -45,6 +45,7 @@
 #include "nsIDOMWindow.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
+#include "nsIContent.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
 #include "nsIWebNavigation.h"
@@ -66,6 +67,9 @@
 #include "nsIURI.h"
 #include "nsNetUtil.h"
 
+#include "nsHTMLAtoms.h"
+#include "nsINameSpaceManager.h"
+
 
 // Bug 8065: Limit content frame depth to some reasonable level. This
 // does not count chrome frames when determining depth, nor does it
@@ -86,8 +90,8 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIFrameLoader
-  NS_IMETHOD Init(nsIDOMElement *aOwner);
-  NS_IMETHOD LoadURI(nsIURI *aURI);
+  NS_IMETHOD Init(nsIContent *aOwner);
+  NS_IMETHOD LoadFrame();
   NS_IMETHOD GetDocShell(nsIDocShell **aDocShell);
   NS_IMETHOD Destroy();
 
@@ -103,7 +107,7 @@ protected:
 
   nsCOMPtr<nsIDocShell> mDocShell;
 
-  nsCOMPtr<nsIDOMElement> mOwnerElement;
+  nsIContent *mOwnerContent; // WEAK
 
   nsCOMPtr<nsIURI> mURI;
 };
@@ -121,6 +125,7 @@ NS_NewFrameLoader(nsIFrameLoader **aFrameLoader)
 
 
 nsFrameLoader::nsFrameLoader()
+  : mOwnerContent(nsnull)
 {
   NS_INIT_ISUPPORTS();
 }
@@ -146,23 +151,81 @@ NS_IMPL_ADDREF(nsFrameLoader);
 NS_IMPL_RELEASE(nsFrameLoader);
 
 NS_IMETHODIMP
-nsFrameLoader::Init(nsIDOMElement *aOwner)
+nsFrameLoader::Init(nsIContent *aOwner)
 {
-  mOwnerElement = aOwner;
+  mOwnerContent = aOwner;
 
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsFrameLoader::LoadURI(nsIURI *aURI)
+nsFrameLoader::LoadFrame()
 {
-  mURI = aURI;
+  NS_ENSURE_TRUE(mOwnerContent, NS_ERROR_NOT_INITIALIZED);
+
+  // Push this into a GetSrc() method...
+
+  nsCOMPtr<nsIDOMHTMLIFrameElement> iframe(do_QueryInterface(mOwnerContent));
+  nsAutoString src;
+
+  if (iframe) {
+    iframe->GetSrc(src);
+  } else {
+    nsCOMPtr<nsIDOMHTMLFrameElement> frame(do_QueryInterface(mOwnerContent));
+
+    if (frame) {
+      frame->GetSrc(src);
+    } else {
+      NS_ERROR("Whaa, don't know how to get the src from the frame element!");
+    }
+  } 
+
+  src.Trim(" \t\n\r");
+
+  if (src.IsEmpty()) {
+    // about:blank will be synthesized into a frame if not URL is
+    // loaded into it (bug 35986)
+
+
+
+
+
+
+
+
+
+    // load about:blank if we're loading something already
+
+
+
+
+
+
+
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIDocument> doc;
+  mOwnerContent->GetDocument(*getter_AddRefs(doc));
+
+  if (!doc) {
+    // Can't find owner doc, don't load the frame...
+
+    return NS_OK;
+  }
 
   nsresult rv = EnsureDocShell();
 
   if (NS_FAILED(rv)) {
     return rv;
   }
+
+  // Make an absolute URI
+  nsCOMPtr<nsIURI> base_uri;
+  doc->GetBaseURL(*getter_AddRefs(base_uri));
+
+  rv = NS_NewURI(getter_AddRefs(mURI), src, base_uri);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // Check for security
   nsCOMPtr<nsIScriptSecurityManager> secMan =
@@ -200,9 +263,8 @@ nsFrameLoader::LoadURI(nsIURI *aURI)
 
     loadInfo->SetInheritOwner(PR_TRUE);
 
-    nsCOMPtr<nsIDOMDocument> dom_doc;
-    mOwnerElement->GetOwnerDocument(getter_AddRefs(dom_doc));
-    nsCOMPtr<nsIDocument> doc(do_QueryInterface(dom_doc));
+    nsCOMPtr<nsIDocument> doc;
+    mOwnerContent->GetDocument(*getter_AddRefs(doc));
 
     if (doc) {
       doc->GetBaseURL(*getter_AddRefs(referrer));
@@ -245,6 +307,16 @@ nsFrameLoader::GetDocShell(nsIDocShell **aDocShell)
 NS_IMETHODIMP
 nsFrameLoader::Destroy()
 {
+  mOwnerContent = nsnull;
+
+  nsCOMPtr<nsIBaseWindow> base_win(do_QueryInterface(mDocShell));
+
+  if (base_win) {
+    base_win->Destroy();
+  }
+
+  mDocShell = nsnull;
+
   return NS_OK;
 }
 
@@ -260,10 +332,8 @@ nsFrameLoader::GetPresContext(nsIPresContext **aPresContext)
 {
   *aPresContext = nsnull;
 
-  nsCOMPtr<nsIDOMDocument> dom_doc;
-  mOwnerElement->GetOwnerDocument(getter_AddRefs(dom_doc));
-
-  nsCOMPtr<nsIDocument> doc(do_QueryInterface(dom_doc));
+  nsCOMPtr<nsIDocument> doc;
+  mOwnerContent->GetDocument(*getter_AddRefs(doc));
 
   while (doc) {
     nsCOMPtr<nsIPresShell> presShell;
@@ -361,7 +431,7 @@ nsFrameLoader::EnsureDocShell()
   nsCOMPtr<nsIDocShellTreeItem> docShellAsItem(do_QueryInterface(mDocShell));
   NS_ENSURE_TRUE(docShellAsItem, NS_ERROR_FAILURE);
   nsAutoString frameName;
-  mOwnerElement->GetAttribute(NS_LITERAL_STRING("name"), frameName);
+  mOwnerContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::name, frameName);
 
   if (!frameName.IsEmpty()) {
     docShellAsItem->SetName(frameName.get());
@@ -386,7 +456,7 @@ nsFrameLoader::EnsureDocShell()
     PRBool isContent;
 
     isContent = PR_FALSE;
-    mOwnerElement->GetAttribute(NS_LITERAL_STRING("type"), value);
+    mOwnerContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::type, value);
 
     if (!value.IsEmpty()) {
       // we accept "content" and "content-xxx" values.
@@ -455,7 +525,7 @@ nsFrameLoader::EnsureDocShell()
       // Our parent shell is a chrome shell. It is therefore our nearest
       // enclosing chrome shell.
 
-      chromeEventHandler = do_QueryInterface(mOwnerElement);
+      chromeEventHandler = do_QueryInterface(mOwnerContent);
       NS_WARN_IF_FALSE(chromeEventHandler,
                        "This mContent should implement this.");
     } else {

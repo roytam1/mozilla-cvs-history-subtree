@@ -865,7 +865,8 @@ DocumentViewerImpl::DocumentViewerImpl()
 #endif
 }
 
-void DocumentViewerImpl::PrepareToStartLoad() {
+void DocumentViewerImpl::PrepareToStartLoad()
+{
   mEnableRendering  = PR_TRUE;
   mStopped          = PR_FALSE;
   mLoaded           = PR_FALSE;
@@ -898,12 +899,14 @@ NS_IMPL_ISUPPORTS6(DocumentViewerImpl,
 DocumentViewerImpl::~DocumentViewerImpl()
 {
   NS_ASSERTION(!mDocument, "User did not call nsIContentViewer::Close");
-  if (mDocument)
+  if (mDocument) {
     Close();
+  }
 
   NS_ASSERTION(!mPresShell, "User did not call nsIContentViewer::Destroy");
-  if (mPresShell)
+  if (mPresShell) {
     Destroy();
+  }
 
   // XXX(?) Revoke pending invalidate events
 
@@ -931,7 +934,7 @@ DocumentViewerImpl::LoadStart(nsISupports *aDoc)
 
   nsresult rv;
   if (!mDocument) {
-    mDocument = do_QueryInterface(aDoc,&rv);
+    mDocument = do_QueryInterface(aDoc, &rv);
   }
   else if (mDocument == aDoc) {
     // Reset the document viewer's state back to what it was 
@@ -987,11 +990,12 @@ DocumentViewerImpl::Init(nsIWidget* aParentWidget,
   if (aParentWidget && !mPresContext) {
     // Create presentation context
     if (mIsCreatingPrintPreview) {
-      mPresContext = do_CreateInstance(kPrintPreviewContextCID,&rv);
+      mPresContext = do_CreateInstance(kPrintPreviewContextCID, &rv);
     } else {
-      mPresContext = do_CreateInstance(kGalleyContextCID,&rv);
+      mPresContext = do_CreateInstance(kGalleyContextCID, &rv);
     }
-    if (NS_FAILED(rv)) return rv;
+    if (NS_FAILED(rv))
+      return rv;
 
     mPresContext->Init(aDeviceContext); 
 #ifdef NS_PRINT_PREVIEW
@@ -1013,21 +1017,17 @@ DocumentViewerImpl::Init(nsIWidget* aParentWidget,
 
     if (!mIsDoingPrintPreview) {
       // Set script-context-owner in the document
-      nsCOMPtr<nsIScriptGlobalObjectOwner> owner;
-      requestor->GetInterface(NS_GET_IID(nsIScriptGlobalObjectOwner),
-                              getter_AddRefs(owner));
 
-      if (owner) {
-        nsCOMPtr<nsIScriptGlobalObject> global;
-        owner->GetScriptGlobalObject(getter_AddRefs(global));
+      nsCOMPtr<nsIScriptGlobalObject> global;
+      requestor->GetInterface(NS_GET_IID(nsIScriptGlobalObject),
+                              getter_AddRefs(global));
 
-        if (global) {
-          mDocument->SetScriptGlobalObject(global);
-          nsCOMPtr<nsIDOMDocument> domdoc(do_QueryInterface(mDocument));
+      if (global) {
+        mDocument->SetScriptGlobalObject(global);
+        nsCOMPtr<nsIDOMDocument> domdoc(do_QueryInterface(mDocument));
 
-          if (domdoc) {
-            global->SetNewDocument(domdoc, PR_TRUE);
-          }
+        if (domdoc) {
+          global->SetNewDocument(domdoc, PR_TRUE);
         }
       }
     }
@@ -1110,7 +1110,8 @@ DocumentViewerImpl::Init(nsIWidget* aParentWidget,
 
     nsCOMPtr<nsISelectionPrivate> selPrivate(do_QueryInterface(selection));
     rv = selPrivate->AddSelectionListener(mSelectionListener);
-    if (NS_FAILED(rv)) return rv;
+    if (NS_FAILED(rv))
+      return rv;
 
     //focus listener
     // now register ourselves as a focus listener, so that we get called
@@ -1126,15 +1127,13 @@ DocumentViewerImpl::Init(nsIWidget* aParentWidget,
 
     if(mDocument) {
       // get the DOM event receiver
-      nsCOMPtr<nsIDOMEventReceiver> erP (do_QueryInterface(mDocument, &rv));
-      if(NS_FAILED(rv)) 
-        return rv;
-      if(!erP)
-        return NS_ERROR_FAILURE;
+      nsCOMPtr<nsIDOMEventReceiver> erP(do_QueryInterface(mDocument));
 
-      rv = erP->AddEventListenerByIID(mFocusListener,
-                                      NS_GET_IID(nsIDOMFocusListener));
-      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register focus listener");
+      if (erP) {
+        rv = erP->AddEventListenerByIID(mFocusListener,
+                                        NS_GET_IID(nsIDOMFocusListener));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register focus listener");
+      }
     }
   }
 
@@ -1161,14 +1160,14 @@ DocumentViewerImpl::LoadComplete(nsresult aStatus)
   rv = mDocument->GetScriptGlobalObject(getter_AddRefs(global));
 
   // Fail if no ScriptGlobalObject is available...
-  NS_ASSERTION(global, "nsIScriptGlobalObject not set for document!");
-  if (!global) return NS_ERROR_NULL_POINTER;
+  NS_ENSURE_TRUE(global, NS_ERROR_NULL_POINTER);
 
   mLoaded = PR_TRUE;
 
-  /* We need to protect ourself against auto-destruction in case the window is closed
-     while processing the OnLoad event.
-     See bug http://bugzilla.mozilla.org/show_bug.cgi?id=78445 for more explanation.
+  /* We need to protect ourself against auto-destruction in case the
+     window is closed while processing the OnLoad event.  See bug
+     http://bugzilla.mozilla.org/show_bug.cgi?id=78445 for more
+     explanation.
   */
   NS_ADDREF_THIS();
 
@@ -1184,18 +1183,21 @@ DocumentViewerImpl::LoadComplete(nsresult aStatus)
 #ifdef MOZ_TIMELINE
     // if navigator.xul's load is complete, the main nav window is visible
     // mark that point.
+
     if (mDocument) {
       //printf("DEBUG: getting uri from document (%p)\n", mDocument.get());
+
       nsCOMPtr<nsIURI> uri;
       mDocument->GetDocumentURL(getter_AddRefs(uri));
-      if (uri.get() != nsnull) {
+
+      if (uri) {
         //printf("DEBUG: getting spec fro uri (%p)\n", uri.get());
-        char *spec = nsnull;
-        uri->GetSpec(&spec);
-        if (spec && !strcmp(spec, "chrome://navigator/content/navigator.xul")) {
+        nsXPIDLCString spec;
+        uri->GetSpec(getter_Copies(spec));
+        if (spec.get() &&
+            !strcmp(spec.get(), "chrome://navigator/content/navigator.xul")) {
           NS_TIMELINE_MARK("Navigator Window visible now");
         }
-        CRTFREEIF(spec);
       }
     }
 #endif /* MOZ_TIMELINE */
@@ -1205,8 +1207,9 @@ DocumentViewerImpl::LoadComplete(nsresult aStatus)
 
   // Now that the document has loaded, we can tell the presshell
   // to unsuppress painting.
-  if (mPresShell && !mStopped)
+  if (mPresShell && !mStopped) {
     mPresShell->UnsuppressPainting();
+  }
 
   NS_RELEASE_THIS();
 
@@ -1258,8 +1261,6 @@ DocumentViewerImpl::Close()
   // for an object that can be switched in and out so that we don't need
   // to disable scripts during paint suppression.
 
-  nsresult rv;
-
   if (mDocument) {
 #ifdef NS_PRINT_PREVIEW
     // Turn scripting back on 
@@ -1273,16 +1274,22 @@ DocumentViewerImpl::Close()
     // in the DocViewer Init
     nsCOMPtr<nsIScriptGlobalObject> globalObject;
     mDocument->GetScriptGlobalObject(getter_AddRefs(globalObject));
+
     if (globalObject) {
       globalObject->SetNewDocument(nsnull, PR_TRUE);
     }
+
     // out of band cleanup of webshell
     mDocument->SetScriptGlobalObject(nsnull);
+
     if (mFocusListener) {
       // get the DOM event receiver
-      nsCOMPtr<nsIDOMEventReceiver> erP( do_QueryInterface(mDocument, &rv) );
-      if(NS_SUCCEEDED(rv) && erP)
-        erP->RemoveEventListenerByIID(mFocusListener, NS_GET_IID(nsIDOMFocusListener));
+      nsCOMPtr<nsIDOMEventReceiver> erP(do_QueryInterface(mDocument));
+
+      if(erP) {
+        erP->RemoveEventListenerByIID(mFocusListener,
+                                      NS_GET_IID(nsIDOMFocusListener));
+      }
     }
   }
 
@@ -1330,11 +1337,15 @@ DocumentViewerImpl::Destroy()
   if (mPresShell) {
     // Break circular reference (or something)
     mPresShell->EndObservingDocument();
+
     nsCOMPtr<nsISelection> selection;
-    nsresult rv = GetDocumentSelection(getter_AddRefs(selection));
+    GetDocumentSelection(getter_AddRefs(selection));
+
     nsCOMPtr<nsISelectionPrivate> selPrivate(do_QueryInterface(selection));
-    if (NS_SUCCEEDED(rv) && selPrivate && mSelectionListener) 
+
+    if (selPrivate && mSelectionListener) 
       selPrivate->RemoveSelectionListener(mSelectionListener);
+
     mPresShell->Destroy();
     mPresShell = nsnull;
   }
@@ -1373,11 +1384,13 @@ DocumentViewerImpl::SetDOMDocument(nsIDOMDocument *aDocument)
   // Assumptions:
   //
   // 1) this document viewer has been initialized with a call to Init().
-  // 2) the stylesheets associated with the document have been added to the document.
+  // 2) the stylesheets associated with the document have been added
+  // to the document.
 
-  // XXX Right now, this method assumes that the layout of the current document
-  // hasn't started yet.  More cleanup will probably be necessary to make this
-  // method work for the case when layout *has* occurred for the current document.
+  // XXX Right now, this method assumes that the layout of the current
+  // document hasn't started yet.  More cleanup will probably be
+  // necessary to make this method work for the case when layout *has*
+  // occurred for the current document.
   // That work can happen when and if it is needed.
   
   nsresult rv;
@@ -1391,46 +1404,47 @@ DocumentViewerImpl::SetDOMDocument(nsIDOMDocument *aDocument)
   mDocument = newDoc;
 
   // 1) Set the script global object on the new document
-  nsCOMPtr<nsIInterfaceRequestor> requestor(do_QueryInterface(mContainer));
-  if (requestor) {
-    nsCOMPtr<nsIScriptGlobalObjectOwner> owner;
-    requestor->GetInterface(NS_GET_IID(nsIScriptGlobalObjectOwner),
-       getter_AddRefs(owner));
-    if (nsnull != owner) {
-      nsCOMPtr<nsIScriptGlobalObject> global;
-      rv = owner->GetScriptGlobalObject(getter_AddRefs(global));
-      if (NS_SUCCEEDED(rv) && (nsnull != global)) {
-        mDocument->SetScriptGlobalObject(global);
-        global->SetNewDocument(aDocument, PR_TRUE);
-      }
-    }
-  }  
+  nsCOMPtr<nsIScriptGlobalObject> global(do_GetInterface(mContainer));
 
-  // 2) Create a new style set for the document
-  nsCOMPtr<nsIStyleSet> styleSet;
-  rv = CreateStyleSet(mDocument, getter_AddRefs(styleSet));
-  if (NS_FAILED(rv)) return rv;
+  if (global) {
+    mDocument->SetScriptGlobalObject(global);
+    global->SetNewDocument(aDocument, PR_TRUE);
+  }
 
-  // 3) Replace the current pres shell with a new shell for the new document 
-  mPresShell->EndObservingDocument();
-  mPresShell->Destroy();
+  // 2) Replace the current pres shell with a new shell for the new document
 
-  mPresShell = nsnull;
-  rv = newDoc->CreateShell(mPresContext, mViewManager, styleSet,
-                           getter_AddRefs(mPresShell));
-  if (NS_FAILED(rv)) return rv;
+  if (mPresShell) {
+    mPresShell->EndObservingDocument();
+    mPresShell->Destroy();
 
-  mPresShell->BeginObservingDocument();
+    mPresShell = nsnull;
+  }
 
-  // 4) Register the focus listener on the new document
-  if(mDocument)
-  {    
+  // And if we're already given a presshell...
+  if (mPresContext) {
+    // 3) Create a new style set for the document
+
+    nsCOMPtr<nsIStyleSet> styleSet;
+    rv = CreateStyleSet(mDocument, getter_AddRefs(styleSet));
+    if (NS_FAILED(rv))
+      return rv;
+
+    rv = newDoc->CreateShell(mPresContext, mViewManager, styleSet,
+                             getter_AddRefs(mPresShell));
+    if (NS_FAILED(rv)) return rv;
+
+    mPresShell->BeginObservingDocument();
+
+    // 4) Register the focus listener on the new document
+
     nsCOMPtr<nsIDOMEventReceiver> erP = do_QueryInterface(mDocument, &rv);
-    if(NS_FAILED(rv) || !erP)
-      return rv ? rv : NS_ERROR_FAILURE;
+    NS_WARN_IF_FALSE(erP, "No event receiver in document!");
 
-    rv = erP->AddEventListenerByIID(mFocusListener, NS_GET_IID(nsIDOMFocusListener));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register focus listener");
+    if(erP) {
+      rv = erP->AddEventListenerByIID(mFocusListener,
+                                      NS_GET_IID(nsIDOMFocusListener));
+      NS_ASSERTION(NS_SUCCEEDED(rv), "failed to register focus listener");
+    }
   }
 
   return rv;

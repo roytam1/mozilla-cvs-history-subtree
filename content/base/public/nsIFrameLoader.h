@@ -43,7 +43,7 @@
 #include "nsAWritableString.h"
 
 // Forward declarations
-class nsIDOMElement;
+class nsIContent;
 class nsIDocShell;
 class nsIURI;
 
@@ -57,15 +57,21 @@ class nsIURI;
 { 0x0080d493, 0x96b4, 0x4606, \
   {0xa7, 0x43, 0x0f, 0x47, 0xee, 0x87, 0x14, 0xd1} }
 
+// CID for the nsIFrameLoader implementation
+#define NS_FRAMELOADER_CID   \
+{ 0x712603da, 0xf245, 0x4503, \
+  {0xa5, 0x41, 0xb0, 0x49, 0xcb, 0x06, 0x81, 0xae} }
+
+#define NS_FRAMELOADER_CONTRACTID "@mozilla.org/content/frameloader"
 
 class nsIFrameLoader : public nsISupports
 {
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_IFRAMELOADER_IID)
 
-  NS_IMETHOD Init(nsIDOMElement *aOwner) = 0;
+  NS_IMETHOD Init(nsIContent *aOwner) = 0;
 
-  NS_IMETHOD LoadURI(nsIURI *aURI) = 0;
+  NS_IMETHOD LoadFrame() = 0;
 
   NS_IMETHOD GetDocShell(nsIDocShell **aDocShell) = 0;
 

@@ -236,7 +236,7 @@ public:
                   nsIFrame*        aPrevInFlow);
 
   void GetParentContent(nsIContent** aContent);
-  void GetDocShell(nsIDocShell **aDocShell);
+  nsresult GetDocShell(nsIDocShell **aDocShell);
 
   PRBool GetURL(nsIContent* aContent, nsString& aResult);
   PRBool GetName(nsIContent* aContent, nsString& aResult);
@@ -715,6 +715,10 @@ nsHTMLFrameInnerFrame::~nsHTMLFrameInnerFrame()
       content_viewer->Hide();
     }
   }
+
+  if (mOwnsFrameLoader && mFrameLoader) {
+    mFrameLoader->Destroy();
+  }
 }
 
 PRBool nsHTMLFrameInnerFrame::GetURL(nsIContent* aContent, nsString& aResult)
@@ -928,7 +932,7 @@ nsHTMLFrameInnerFrame::GetParentContent(nsIContent** aContent)
   }
 }
 
-void
+nsresult
 nsHTMLFrameInnerFrame::GetDocShell(nsIDocShell **aDocShell)
 {
   *aDocShell = nsnull;
@@ -937,22 +941,38 @@ nsHTMLFrameInnerFrame::GetDocShell(nsIDocShell **aDocShell)
   GetParent(&parent);
 
   if (!parent) {
-    return;
+    return NS_OK;
   }
 
-  nsCOMPtr<nsIContent> content;
-  parent->GetContent(getter_AddRefs(content));
+  if (!mFrameLoader) {
+    nsCOMPtr<nsIContent> content;
+    parent->GetContent(getter_AddRefs(content));
 
-  nsCOMPtr<nsIFrameLoaderOwner> frame_loader_owner(do_QueryInterface(content));
+    nsCOMPtr<nsIFrameLoaderOwner> frame_loader_owner =
+      do_QueryInterface(content);
 
-  if (frame_loader_owner) {
-    nsCOMPtr<nsIFrameLoader> frame_loader;
-    frame_loader_owner->GetFrameLoader(getter_AddRefs(frame_loader));
+    if (frame_loader_owner) {
+      frame_loader_owner->GetFrameLoader(getter_AddRefs(mFrameLoader));
+    }
 
-    if (frame_loader) {
-      frame_loader->GetDocShell(aDocShell);
+    if (!mFrameLoader) {
+      // No frame loader available from the content, create our own...
+
+      nsresult rv = NS_OK;
+      mFrameLoader = do_CreateInstance(NS_FRAMELOADER_CONTRACTID, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      mFrameLoader->Init(content);
+
+      // ... and tell it to start loading.
+
+      mFrameLoader->LoadFrame();
+
+      mOwnsFrameLoader = PR_TRUE;
     }
   }
+
+  return mFrameLoader->GetDocShell(aDocShell);
 }
 
 NS_IMETHODIMP
@@ -985,10 +1005,22 @@ nsHTMLFrameInnerFrame::DidReflow(nsIPresContext* aPresContext,
 nsresult
 nsHTMLFrameInnerFrame::ShowDocShell(nsIPresContext* aPresContext)
 {
-  nsresult rv;
-
   nsCOMPtr<nsIDocShell> docShell;
-  GetDocShell(getter_AddRefs(docShell));
+  nsresult rv = GetDocShell(getter_AddRefs(docShell));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // Make sure there's a document in the docshell.
+  nsCOMPtr<nsIDOMWindow> win(do_GetInterface(docShell));
+  NS_ENSURE_TRUE(win, NS_ERROR_UNEXPECTED);
+
+  {
+    nsCOMPtr<nsIDOMDocument> dom_doc;
+
+    // This will synchronously create a document if there is no
+    // document in the window yet.
+
+    win->GetDocument(getter_AddRefs(dom_doc));
+  }
 
   nsCOMPtr<nsIPresShell> presShell;
   docShell->GetPresShell(getter_AddRefs(presShell));
