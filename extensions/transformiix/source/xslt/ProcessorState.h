@@ -139,11 +139,6 @@ public:
     NodeSet* getAttributeSet(const txExpandedName& aName);
 
     /**
-     * Returns the source node currently being processed
-     */
-    Node* getCurrentNode();
-
-    /**
      * Returns the template associated with the given name, or
      * null if not template is found
      */
@@ -163,8 +158,10 @@ public:
     /**
      * Add a global variable
      */
-    nsresult addGlobalVariable(Element* aVarElem,
-                               ImportFrame* aImportFrame);
+    nsresult addGlobalVariable(const txExpandedName& aVarName,
+                               Element* aVarElem,
+                               ImportFrame* aImportFrame,
+                               ExprResult* aDefaultValue);
 
     /**
      * Add a stylesheet parameter

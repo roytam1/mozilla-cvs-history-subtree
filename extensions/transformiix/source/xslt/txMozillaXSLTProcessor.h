@@ -40,13 +40,14 @@
 #ifndef TRANSFRMX_TXMOZILLAXSLTPROCESSOR_H
 #define TRANSFRMX_TXMOZILLAXSLTPROCESSOR_H
 
+#include "ExprResult.h"
 #include "nsIDocumentTransformer.h"
 #include "nsIVariant.h"
 #include "nsIXSLTProcessor.h"
 #include "nsVoidArray.h"
 #include "nsWeakPtr.h"
-
-class ExprResult;
+#include "txExpandedNameMap.h"
+#include "XSLTProcessor.h"
 
 /* bacd8ad0-552f-11d3-a9f7-000064657374 */
 #define TRANSFORMIIX_XSLT_PROCESSOR_CID   \
@@ -55,37 +56,63 @@ class ExprResult;
 #define TRANSFORMIIX_XSLT_PROCESSOR_CONTRACTID \
 "@mozilla.org/document-transformer;1?type=text/xsl"
 
-struct txVariable
+class txVariable : public txIGlobalParameter
 {
 public:
-    txVariable(const nsAString & aNamespaceURI,
-               const nsAString & aLocalName,
-               nsIVariant *aValue) : mNamespaceURI(aNamespaceURI),
-                                     mLocalName(aLocalName),
-                                     mValue(aValue)
+    txVariable(nsIVariant *aValue) : mValue(aValue),
+                                     mTxValue(nsnull)
     {
-    };
+    }
     ~txVariable()
     {
-    };
-    nsString mNamespaceURI;
-    nsString mLocalName;
+        delete mTxValue;
+    }
+    nsresult getValue(ExprResult** aValue)
+    {
+        NS_ENSURE_TRUE(mValue, NS_ERROR_FAILURE);
+
+        if (!mTxValue) {
+            Convert(mValue, &mTxValue);
+        }
+        NS_ENSURE_TRUE(mTxValue, NS_ERROR_FAILURE);
+
+        *aValue = mTxValue->clone();
+        NS_ENSURE_TRUE(*aValue, NS_ERROR_FAILURE);
+
+        return NS_OK;
+    }
+    nsresult getValue(nsIVariant** aValue)
+    {
+        *aValue = mValue;
+        NS_IF_ADDREF(*aValue);
+        return NS_OK;
+    }
+    void setValue(nsIVariant* aValue)
+    {
+        mValue = aValue;
+        mTxValue = nsnull;
+    }
+
+private:
+    static nsresult Convert(nsIVariant *aValue, ExprResult** aResult);
+
     nsCOMPtr<nsIVariant> mValue;
+    ExprResult* mTxValue;
 };
 
-/*
+/**
  * txMozillaXSLTProcessor is a front-end to the XSLT Processor.
  */
 class txMozillaXSLTProcessor : public nsIDocumentTransformer,
                                public nsIXSLTProcessor
 {
 public:
-    /*
+    /**
      * Creates a new txMozillaXSLTProcessor
      */
     txMozillaXSLTProcessor();
 
-    /*
+    /**
      * Default destructor for txMozillaXSLTProcessor
      */
     virtual ~txMozillaXSLTProcessor();
@@ -99,11 +126,9 @@ public:
     // nsIXSLTProcessor interface
     NS_DECL_NSIXSLTPROCESSOR
 
-private:
-    static ExprResult* ConvertParameter(nsIVariant *aValue);
-
+protected:
     nsCOMPtr<nsIDOMNode> mStylesheet;
-    nsVoidArray* mVariables;
+    txExpandedNameMap mVariables;
 };
 
 #endif

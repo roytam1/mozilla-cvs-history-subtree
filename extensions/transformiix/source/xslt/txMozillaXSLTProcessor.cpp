@@ -38,7 +38,9 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "txMozillaXSLTProcessor.h"
+#include "nsDOMError.h"
 #include "nsIContent.h"
+#include "nsIDocument.h"
 #include "nsIDOMClassInfo.h"
 #include "nsIScriptLoader.h"
 #include "nsITransformObserver.h"
@@ -47,7 +49,7 @@
 #include "txMozillaTextOutput.h"
 #include "txMozillaXMLOutput.h"
 #include "txSingleNodeContext.h"
-#include "XSLTProcessor.h"
+#include "txURIUtils.h"
 #include "XMLUtils.h"
 
 NS_IMPL_ADDREF(txMozillaXSLTProcessor)
@@ -59,14 +61,13 @@ NS_INTERFACE_MAP_BEGIN(txMozillaXSLTProcessor)
     NS_INTERFACE_MAP_ENTRY_EXTERNAL_DOM_CLASSINFO(XSLTProcessor)
 NS_INTERFACE_MAP_END
 
-txMozillaXSLTProcessor::txMozillaXSLTProcessor() : mVariables(nsnull)
+txMozillaXSLTProcessor::txMozillaXSLTProcessor() : mVariables(PR_TRUE)
 {
     NS_INIT_ISUPPORTS();
 }
 
 txMozillaXSLTProcessor::~txMozillaXSLTProcessor()
 {
-    delete mVariables;
 }
 
 NS_IMETHODIMP
@@ -75,9 +76,14 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
                                           nsITransformObserver* aObserver,
                                           nsIDOMDocument** aOutputDoc)
 {
-    // We need source and result documents but no stylesheet.
     NS_ENSURE_ARG(aSourceDOM);
+    NS_ENSURE_ARG(aStyleDOM);
     NS_ENSURE_ARG(aOutputDoc);
+
+    if (!URIUtils::CanCallerAccess(aSourceDOM) ||
+        !URIUtils::CanCallerAccess(aStyleDOM)) {
+        return NS_ERROR_DOM_SECURITY_ERR;
+    }
 
     // Create wrapper for the source document.
     nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
@@ -115,19 +121,21 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
         nsCOMPtr<nsIDOMDocument> styleDoc = do_QueryInterface(aStyleDOM);
         nsresult rv;
         if (styleDoc) {
-            rv = txXSLTProcessor::processStylesheet(&sourceDocument, &xslDocument, &ps);
+            rv = txXSLTProcessor::processStylesheet(&xslDocument,
+                                                    &mVariables, &ps);
         }
         else {
             nsCOMPtr<nsIDOMElement> styleElem = do_QueryInterface(aStyleDOM);
             NS_ENSURE_TRUE(styleElem, NS_ERROR_FAILURE);
             Element* element = xslDocument.createElement(styleElem);
             NS_ENSURE_TRUE(element, NS_ERROR_OUT_OF_MEMORY);
-            rv = txXSLTProcessor::processTopLevel(&sourceDocument, element, &ps);
+            rv = txXSLTProcessor::processTopLevel(element, &mVariables,
+                                                  &ps);
         }
         NS_ENSURE_SUCCESS(rv, rv);
 
         // Process root of XML source document
-        txXSLTProcessor::transform(sourceNode, &ps);
+        txXSLTProcessor::transform(&ps);
     }
     // End of block to ensure the destruction of the ProcessorState
     // before the destruction of the documents.
@@ -138,6 +146,10 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
 NS_IMETHODIMP
 txMozillaXSLTProcessor::Init(nsIDOMNode *aStyle)
 {
+    if (!URIUtils::CanCallerAccess(aStyle)) {
+        return NS_ERROR_DOM_SECURITY_ERR;
+    }
+
     mStylesheet = aStyle;
     return NS_OK;
 }
@@ -150,6 +162,11 @@ txMozillaXSLTProcessor::TransformNode(nsIDOMNode *aSource,
     NS_ENSURE_ARG(aSource);
     NS_ENSURE_ARG(aOutput);
     NS_ENSURE_TRUE(mStylesheet, NS_ERROR_FAILURE);
+
+    if (!URIUtils::CanCallerAccess(aSource) ||
+        !URIUtils::CanCallerAccess(aOutput)) {
+        return NS_ERROR_DOM_SECURITY_ERR;
+    }
 
     // Create wrapper for the source document.
     nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
@@ -191,14 +208,16 @@ txMozillaXSLTProcessor::TransformNode(nsIDOMNode *aSource,
         nsCOMPtr<nsIDOMDocument> styleDoc = do_QueryInterface(mStylesheet);
         nsresult rv;
         if (styleDoc) {
-            rv = txXSLTProcessor::processStylesheet(&sourceDocument, &xslDocument, &ps);
+            rv = txXSLTProcessor::processStylesheet(&xslDocument,
+                                                    &mVariables, &ps);
         }
         else {
             nsCOMPtr<nsIDOMElement> styleElem = do_QueryInterface(mStylesheet);
             NS_ENSURE_TRUE(styleElem, NS_ERROR_FAILURE);
             Element* element = xslDocument.createElement(styleElem);
             NS_ENSURE_TRUE(element, NS_ERROR_OUT_OF_MEMORY);
-            rv = txXSLTProcessor::processTopLevel(&sourceDocument, element, &ps);
+            rv = txXSLTProcessor::processTopLevel(element, &mVariables,
+                                                  &ps);
         }
         NS_ENSURE_SUCCESS(rv, rv);
 
@@ -210,45 +229,8 @@ txMozillaXSLTProcessor::TransformNode(nsIDOMNode *aSource,
             loader->Suspend();
         }
 
-        if (mVariables) {
-            txVariable* var;
-            PRInt32 index;
-            PRInt32 count = mVariables->Count();
-
-            // XXX Change when sicking lands vars rewrite
-//            NamedMap* globalVars =
-//                (NamedMap*)ps.getVariableSetStack()->peek();
-
-            nsCOMPtr<nsINameSpaceManager> namespaceManager;
-            rv = document->GetNameSpaceManager(*getter_AddRefs(namespaceManager));
-            NS_ENSURE_SUCCESS(rv, rv);
-
-            for (index = 0; index < count; index++) {
-                var = (txVariable*)mVariables->ElementAt(index);
-                ExprResult* value = ConvertParameter(var->mValue);
-                if (!value) {
-                    // XXX Error? Signal to user?
-                    continue;
-                }
-                PRInt32 nsId = kNameSpaceID_Unknown;
-                rv = namespaceManager->GetNameSpaceID(var->mNamespaceURI, nsId);
-                nsCOMPtr<nsIAtom> localName = do_GetAtom(var->mLocalName);
-                txExpandedName name(nsId, localName);
-
-                // XXX Change when sicking lands vars rewrite
- /*               VariableBinding* binding = new VariableBinding(String(var->mLocalName), value);
-                if (!binding) {
-                    // XXX Error? Signal to user?
-                    continue;
-                }
-                binding->allowShadowing();
-                globalVars->put(String(var->mLocalName), binding);
-*/
-            }
-        }
-
         // Process root of XML source document
-        txXSLTProcessor::transform(sourceNode, &ps);
+        txXSLTProcessor::transform(&ps);
     }
     // End of block to ensure the destruction of the ProcessorState
     // before the destruction of the documents.
@@ -307,28 +289,26 @@ txMozillaXSLTProcessor::SetParameter(const nsAString & aNamespaceURI,
         }        
     }
 
-    if (!mVariables) {
-        mVariables = new nsAutoVoidArray();
-        NS_ENSURE_TRUE(mVariables, NS_ERROR_OUT_OF_MEMORY);
+    nsCOMPtr<nsINameSpaceManager> namespaceManager;
+    nsresult rv;
+    //rv = document->GetNameSpaceManager(*getter_AddRefs(namespaceManager));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    PRInt32 nsId = kNameSpaceID_Unknown;
+    rv = namespaceManager->GetNameSpaceID(aNamespaceURI, nsId);
+    nsCOMPtr<nsIAtom> localName = do_GetAtom(aLocalName);
+    txExpandedName varName(nsId, localName);
+
+    txVariable* var = (txVariable*)mVariables.get(varName);
+    if (var) {
+        var->setValue(aValue);
+        return NS_OK;
     }
 
-    txVariable* var;
-    PRInt32 index;
-    PRInt32 count = mVariables->Count();
-    for (index = 0; index < count; index++) {
-        var = (txVariable*)mVariables->ElementAt(index);
-        if (var->mNamespaceURI.Equals(aNamespaceURI) &&
-            var->mLocalName.Equals(aLocalName)) {
-            var->mValue = aValue;
-            return NS_OK;
-        }
-    }
-
-    var = new txVariable(aNamespaceURI, aLocalName, aValue);
+    var = new txVariable(aValue);
     NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
 
-    mVariables->AppendElement(var);
-    return NS_OK;
+    return mVariables.add(varName, var);
 }
 
 NS_IMETHODIMP
@@ -336,21 +316,19 @@ txMozillaXSLTProcessor::GetParameter(const nsAString& aNamespaceURI,
                                      const nsAString& aLocalName,
                                      nsIVariant **aResult)
 {
-    *aResult = nsnull;
-    if (!mVariables) {
-        return NS_OK;
-    }
+    nsCOMPtr<nsINameSpaceManager> namespaceManager;
+    nsresult rv;
+    //nsresult rv = document->GetNameSpaceManager(*getter_AddRefs(namespaceManager));
+    NS_ENSURE_SUCCESS(rv, rv);
 
-    txVariable* var;
-    PRInt32 index;
-    PRInt32 count = mVariables->Count();
-    for (index = 0; index < count; index++) {
-        var = (txVariable*)mVariables->ElementAt(index);
-        if (var->mNamespaceURI.Equals(aNamespaceURI) &&
-            var->mLocalName.Equals(aLocalName)) {
-            *aResult = var->mValue;
-            return NS_OK;
-        }
+    PRInt32 nsId = kNameSpaceID_Unknown;
+    rv = namespaceManager->GetNameSpaceID(aNamespaceURI, nsId);
+    nsCOMPtr<nsIAtom> localName = do_GetAtom(aLocalName);
+    txExpandedName varName(nsId, localName);
+
+    txVariable* var = (txVariable*)mVariables.get(varName);
+    if (var) {
+        return var->getValue(aResult);
     }
     return NS_OK;
 }
@@ -359,49 +337,34 @@ NS_IMETHODIMP
 txMozillaXSLTProcessor::RemoveParameter(const nsAString& aNamespaceURI,
                                         const nsAString& aLocalName)
 {
-    if (!mVariables) {
-        return NS_OK;
-    }
+    nsCOMPtr<nsINameSpaceManager> namespaceManager;
+    nsresult rv;
+    //nsresult rv = document->GetNameSpaceManager(*getter_AddRefs(namespaceManager));
+    NS_ENSURE_SUCCESS(rv, rv);
 
-    txVariable* var;
-    PRInt32 index;
-    PRInt32 count = mVariables->Count();
-    for (index = 0; index < count; index++) {
-        var = (txVariable*)mVariables->ElementAt(index);
-        if (var->mNamespaceURI.Equals(aNamespaceURI) &&
-            var->mLocalName.Equals(aLocalName)) {
-            if (mVariables->RemoveElementAt(index)) {
-                delete var;
-            }
-            return NS_OK;
-        }
-    }
+    PRInt32 nsId = kNameSpaceID_Unknown;
+    rv = namespaceManager->GetNameSpaceID(aNamespaceURI, nsId);
+    nsCOMPtr<nsIAtom> localName = do_GetAtom(aLocalName);
+    txExpandedName varName(nsId, localName);
+
+    mVariables.remove(varName);
     return NS_OK;
 }
 
 NS_IMETHODIMP
 txMozillaXSLTProcessor::ClearParameters()
 {
-    if (!mVariables) {
-        return NS_OK;
-    }
+    mVariables.clear();
 
-    txVariable* var;
-    PRInt32 index;
-    PRInt32 count = mVariables->Count();
-    for (index = 0; index < count; index++) {
-        var = (txVariable*)mVariables->ElementAt(index);
-        if (mVariables->RemoveElementAt(index)) {
-            delete var;
-        }
-    }
     return NS_OK;
 }
 
 /* static*/
-ExprResult*
-txMozillaXSLTProcessor::ConvertParameter(nsIVariant *aValue)
+nsresult
+txVariable::Convert(nsIVariant *aValue, ExprResult** aResult)
 {
+    *aResult = nsnull;
+
     PRUint16 dataType;
     aValue->GetDataType(&dataType);
     switch (dataType) {
@@ -419,8 +382,12 @@ txMozillaXSLTProcessor::ConvertParameter(nsIVariant *aValue)
         {
             double value;
             nsresult rv = aValue->GetAsDouble(&value);
-            NS_ENSURE_SUCCESS(rv, nsnull);
-            return new NumberResult(value);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            *aResult = new NumberResult(value);
+            NS_ENSURE_TRUE(aResult, NS_ERROR_OUT_OF_MEMORY);
+
+            return NS_OK;
         }
 
         // Boolean
@@ -428,8 +395,12 @@ txMozillaXSLTProcessor::ConvertParameter(nsIVariant *aValue)
         {
             PRBool value;
             nsresult rv = aValue->GetAsBool(&value);
-            NS_ENSURE_SUCCESS(rv, nsnull);
-            return new BooleanResult(value);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            *aResult = new BooleanResult(value);
+            NS_ENSURE_TRUE(aResult, NS_ERROR_OUT_OF_MEMORY);
+
+            return NS_OK;
         }
 
         // String
@@ -446,8 +417,12 @@ txMozillaXSLTProcessor::ConvertParameter(nsIVariant *aValue)
         {
             String value;
             nsresult rv = aValue->GetAsAString(value.getNSString());
-            NS_ENSURE_SUCCESS(rv, nsnull);
-            return new StringResult(value);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            *aResult = new StringResult(value);
+            NS_ENSURE_TRUE(aResult, NS_ERROR_OUT_OF_MEMORY);
+
+            return NS_OK;
         }
 
         // Nodeset
@@ -457,10 +432,11 @@ txMozillaXSLTProcessor::ConvertParameter(nsIVariant *aValue)
             nsID *iid;
             nsCOMPtr<nsISupports> supports;
             nsresult rv = aValue->GetAsInterface(&iid, getter_AddRefs(supports));
-            NS_ENSURE_SUCCESS(rv, nsnull);
+            NS_ENSURE_SUCCESS(rv, rv);
             if (iid) {
                 // XXX Figure out what the user added and if we can do
-                //     anything with it. Node, nsIDOMXPathResult
+                //     anything with it.
+                //     nsIDOMNode, nsIDOMNodeList, nsIDOMXPathResult
                 nsMemory::Free(iid);
             }
             break;
@@ -473,5 +449,5 @@ txMozillaXSLTProcessor::ConvertParameter(nsIVariant *aValue)
             break;
         }
     }
-    return nsnull;
+    return NS_ERROR_ILLEGAL_VALUE;
 }

@@ -30,6 +30,12 @@
 
 #include "ProcessorState.h"
 
+class txIGlobalParameter : public TxObject
+{
+public:
+    virtual nsresult getValue(ExprResult** aValue) = 0;
+};
+
 /**
  * A class for Processing XSLT Stylesheets
  */
@@ -46,41 +52,38 @@ public:
     /**
      * Processes a stylesheet document.
      *
-     * @param aSource the source document
      * @param aStylesheet the stylesheet document to process
      * @param aPs the current ProcessorState
      */
-    static nsresult processStylesheet(Document* aSource,
-                                      Document* aStylesheet,
+    static nsresult processStylesheet(Document* aStylesheet,
+                                      txExpandedNameMap* aGlobalParams,
                                       ProcessorState* aPs);
 
     /**
      * Processes a stylesheet element.
      *
-     * @param aSource the source document
      * @param aStylesheet the stylesheet element to process
      * @param aPs the current ProcessorState
      */
-    static nsresult processTopLevel(Document* aSource,
-                                    Element* aStylesheet,
+    static nsresult processTopLevel(Element* aStylesheet,
+                                    txExpandedNameMap* aGlobalParams,
                                     ProcessorState* aPs);
 
     /**
      * Transforms a node.
      *
-     * @param aNode the node to transform
      * @param aPs the current ProcessorState
      */
-    static void transform(Node* aNode, ProcessorState* aPs);
+    static void transform(ProcessorState* aPs);
 
 private:
     /**
      * Copy a node. For document nodes, copy the children.
      *
-     * @param aNode YYY
+     * @param aSourceNode node to copy
      * @param aPs the current ProcessorState
      */
-    static void copyNode(Node* aNode, ProcessorState* aPs);
+    static void copyNode(Node* aSourceNode, ProcessorState* aPs);
 
     /**
      * Create the document we will use to create result tree fragments.
@@ -100,23 +103,10 @@ private:
     /**
      * XXX.
      *
-     * @param aNode YYY
-     * @param aMode YYY
-     * @param aPs the current ProcessorState
-     */
-    static void process(Node* aNode,
-                        const txExpandedName& aMode,
-                        ProcessorState* aPs);
-
-    /**
-     * XXX.
-     *
-     * @param aNode YYY
      * @param aAction YYY
      * @param aPs the current ProcessorState
      */
-    static void processAction(Node* aNode,
-                              Node* aAction,
+    static void processAction(Node* aAction,
                               ProcessorState* aPs);
 
     /**
@@ -124,36 +114,31 @@ private:
      * of the element specified in aElement
      *
      * @param aElement YYY
-     * @param aNode YYY
      * @param aPs the current ProcessorState
      * @param aRecursionStack YYY
      */
-    static void processAttributeSets(Element* aElement, Node* aNode,
-                                     ProcessorState* aPs, Stack* aRecursionStack = 0);
+    static void processAttributeSets(Element* aElement, ProcessorState* aPs,
+                                     Stack* aRecursionStack = 0);
 
     /**
      * Processes the children of the specified element using the given context node
      * and ProcessorState.
      *
-     * @param aNode the context node
      * @param aElement the template to be processed. Must be != NULL
      * @param aPs the current ProcessorState
      */
-    static void processChildren(Node* aNode,
-                                Element* aElement,
+    static void processChildren(Element* aElement,
                                 ProcessorState* aPs);
 
     /**
      * XXX.
      *
-     * @param aNode YYY
      * @param aElement YYY
      * @param aPs the current ProcessorState
      * @param aOnlyText YYY
      * @param aValue YYY
      */
-    static void processChildrenAsValue(Node* aNode, 
-                                       Element* aElement,
+    static void processChildrenAsValue(Element* aElement,
                                        ProcessorState* aPs,
                                        MBool aOnlyText,
                                        String& aValue);
@@ -161,24 +146,20 @@ private:
     /**
      * Invokes the default template for the specified node
      *
-     * @param aNode context node
      * @param aPs the current ProcessorState
      * @param aMode template mode
      */
-    static void processDefaultTemplate(Node* aNode,
-                                       ProcessorState* aPs,
+    static void processDefaultTemplate(ProcessorState* aPs,
                                        const txExpandedName& aMode);
 
     /**
      * Processes an include or import stylesheet.
      *
      * @param aHref URI of stylesheet to process
-     * @param aSource source document
      * @param aImportFrame current importFrame iterator
      * @param aPs the current ProcessorState
      */
     static void processInclude(String& aHref,
-                               Document* aSource,
                                txListIterator* aImportFrame,
                                ProcessorState* aPs);
 
@@ -186,14 +167,12 @@ private:
      * XXX.
      *
      * @param aTemplate YYY
-     * @param aNode YYY
      * @param aParams YYY
      * @param aMode YYY
      * @param aFrame YYY
      * @param aPs the current ProcessorState
      */
     static void processMatchedTemplate(Node* aTemplate,
-                                       Node* aNode,
                                        txVariableMap* aParams,
                                        const txExpandedName& aMode,
                                        ProcessorState::ImportFrame* aFrame,
@@ -204,24 +183,22 @@ private:
      *
      * @param aAction  the action node that takes parameters (xsl:call-template
      *                 or xsl:apply-templates
-     * @param aContext the current context node
      * @param aMap     map to place parsed variables in
      * @param aPs      the current ProcessorState
      * @return         errorcode
      */
-    static nsresult processParameters(Element* aAction, Node* aContext,
-                                      txVariableMap* aMap, ProcessorState* aPs);
+    static nsresult processParameters(Element* aAction, txVariableMap* aMap,
+                                      ProcessorState* aPs);
 
     /**
      * XXX.
      *
-     * @param aSource YYY
      * @param aStylesheet YYY
      * @param aImportFrame YYY
      * @param aPs the current ProcessorState
      */
-    static void processStylesheet(Document* aSource,
-                                  Document* aStylesheet,
+    static void processStylesheet(Document* aStylesheet,
+                                  txExpandedNameMap* aGlobalParams,
                                   txListIterator* aImportFrame,
                                   ProcessorState* aPs);
 
@@ -229,35 +206,32 @@ private:
      * Processes the specified template using the given context,
      * ProcessorState, and parameters.
      *
-     * @param aContext YYY
      * @param aTemplate YYY
      * @param aParams YYY
      * @param aPs the current ProcessorState
      */
-    static void processTemplate(Node* aContext, Node* aTemplate,
-                                txVariableMap* aParams, ProcessorState* aPs);
+    static void processTemplate(Node* aTemplate, txVariableMap* aParams,
+                                ProcessorState* aPs);
 
     /**
      * XXX.
      *
-     * @param aSource YYY
      * @param aStylesheet YYY
      * @param aImportFrame YYY
      * @param aPs the current ProcessorState
      */
-    static void processTopLevel(Document* aSource, Element* aStylesheet,
+    static void processTopLevel(Element* aStylesheet,
+                                txExpandedNameMap* aGlobalParams,
                                 txListIterator* aImportFrame,
                                 ProcessorState* aPs);
 
     /**
      * XXX.
      *
-     * @param aNode YYY
      * @param aVariable YYY
      * @param aPs the current ProcessorState
      */
-    static ExprResult* processVariable(Node* aNode,
-                                       Element* aVariable,
+    static ExprResult* processVariable(Element* aVariable,
                                        ProcessorState* aPs);
 
     /**
@@ -273,12 +247,10 @@ private:
     /**
      * Performs the xsl:copy action as specified in the XSLT specification
      *
-     * @param aNode YYY
      * @param aAction YYY
      * @param aPs the current ProcessorState
      */
-    static void xslCopy(Node* aNode,
-                        Element* aAction,
+    static void xslCopy(Element* aAction,
                         ProcessorState* aPs);
 
     /**

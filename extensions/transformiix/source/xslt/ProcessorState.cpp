@@ -661,40 +661,28 @@ Document* ProcessorState::getStylesheetDocument()
 /*
  * Add a global variable
  */
-nsresult ProcessorState::addGlobalVariable(Element* aVarElem,
-                                           ImportFrame* aImportFrame)
+nsresult ProcessorState::addGlobalVariable(const txExpandedName& aVarName,
+                                           Element* aVarElem,
+                                           ImportFrame* aImportFrame,
+                                           ExprResult* aDefaultValue)
 {
-    nsresult rv;
-    txExpandedName varName;
-    String qName;
-    aVarElem->getAttr(txXSLTAtoms::name, kNameSpaceID_None, qName);
-    rv = varName.init(qName, aVarElem, MB_FALSE);
-    if (NS_FAILED(rv))
-        return rv;
+    // If we know the value we don't need the variable, only the value
+    if (aDefaultValue) {
+        return aImportFrame->mVariables.add(aVarName, aVarElem);
+    }
 
-    return aImportFrame->mVariables.add(varName, aVarElem);
-}
-
-/*
- * Add a stylesheet parameter
- */
-nsresult ProcessorState::addStyleSheetParameter(txExpandedName& aName,
-                                                ExprResult* aValue)
-{
     GlobalVariableValue* var =
-        (GlobalVariableValue*)mGlobalVariableValues.get(aName);
+        (GlobalVariableValue*)mGlobalVariableValues.get(aVarName);
     if (var) {
-        return var->mValue == aValue ? NS_OK : NS_ERROR_UNEXPECTED;
+        return var->mValue == aDefaultValue ? NS_OK : NS_ERROR_UNEXPECTED;
     }
 
     var = new GlobalVariableValue;
-    if (!var) {
-        return NS_ERROR_OUT_OF_MEMORY;
-    }
+    NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
 
     var->mEvaluating = MB_FALSE;
-    var->mValue = aValue;
-    return mGlobalVariableValues.add(aName, var);
+    var->mValue = aDefaultValue;
+    return mGlobalVariableValues.add(aVarName, var);
 }
 
 /*
@@ -1038,8 +1026,7 @@ nsresult ProcessorState::getVariable(PRInt32 aNamespace, txAtom* aLName,
     mLocalVariables = 0;
     txSingleNodeContext evalContext(mSourceDocument, this);
     txIEvalContext* priorEC = setEvalContext(&evalContext);
-    globVar->mValue = txXSLTProcessor::processVariable(mSourceDocument, varElem,
-                                                       this);
+    globVar->mValue = txXSLTProcessor::processVariable(varElem, this);
     setEvalContext(priorEC);
     mLocalVariables = oldVars;
 
