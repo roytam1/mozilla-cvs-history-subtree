@@ -79,7 +79,7 @@ static NS_DEFINE_CID(kParserCID,                NS_PARSER_IID); // XXX
 static NS_DEFINE_CID(kPresShellCID,             NS_PRESSHELL_CID);
 static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFServiceCID,            NS_RDFSERVICE_CID);
-static NS_DEFINE_CID(kRDFSimpleDataBaseCID,     NS_RDFSIMPLEDATABASE_CID);
+static NS_DEFINE_CID(kRDFDataBaseCID,           NS_RDFDATABASE_CID);
 static NS_DEFINE_CID(kRangeListCID,             NS_RANGELIST_CID);
 static NS_DEFINE_CID(kTextNodeCID,              NS_TEXTNODE_CID);
 static NS_DEFINE_CID(kWellFormedDTDCID,         NS_WELLFORMEDDTD_CID);
@@ -1033,7 +1033,7 @@ nsRDFDocument::Init(void)
     if (NS_FAILED(rv))
         return rv;
 
-    if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFSimpleDataBaseCID,
+    if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFDataBaseCID,
                                                     nsnull,
                                                     kIRDFDataBaseIID,
                                                     (void**) &mDB)))
