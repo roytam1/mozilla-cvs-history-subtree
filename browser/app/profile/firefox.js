@@ -179,6 +179,7 @@ pref("privacy.popups.showBrowserMessage",   true);
 
 
 pref("network.protocols.useSystemDefaults", false); // set to true if user links should use system default handlers
+pref("network.proxy.share_proxy_settings",  false); // use the same proxy settings for all protocols
 pref("network.cookie.cookieBehavior",       0); // cookies enabled
 pref("network.cookie.enableForCurrentSessionOnly", false);
 

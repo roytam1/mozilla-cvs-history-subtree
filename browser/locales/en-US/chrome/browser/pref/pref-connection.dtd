@@ -37,3 +37,5 @@
 <!ENTITY  noproxy.label                 "No Proxy for:">
 <!ENTITY  noproxy.accesskey             "n">
 <!ENTITY  noproxyExplain.label          "Example: .mozilla.org, .net.nz, 192.168.1.0/24">
+<!ENTITY  shareproxy.label              "Use the same proxy for all protocols">
+<!ENTITY  shareproxy.accesskey          "x">
