@@ -345,18 +345,7 @@ nsAbsoluteContainingBlock::ReflowAbsoluteFrame(nsIFrame*                aDelegat
         printf("%s ", NS_LossyConvertUCS2toASCII(name).get());
       }
     }
-    printf("r=%d",aReflowState.reason);
 
-    if (aReflowState.reason == eReflowReason_Incremental) {
-      nsHTMLReflowCommand *command = aReflowState.path->mReflowCommand;
-
-      if (command) {
-        // We're the target.
-        nsReflowType type;
-        command->GetType(type);
-        printf("(%d)", type);      
-      }
-    }
     char width[16];
     char height[16];
     PrettyUC(aReflowState.availableWidth, width);
