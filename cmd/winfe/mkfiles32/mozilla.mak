@@ -861,6 +861,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libmocha\lm_trggr.c  
 	$(DEPTH)\lib\libmocha\lm_url.c
 	$(DEPTH)\lib\libmocha\lm_win.c
+	$(DEPTH)\lib\libmocha\lm_wngrp.c
 !ifndef NO_SECURITY
 	$(DEPTH)\lib\libmocha\lm_pk11.c
 !endif
