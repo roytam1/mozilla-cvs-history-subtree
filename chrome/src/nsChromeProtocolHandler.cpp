@@ -122,8 +122,7 @@ protected:
     static NS_HIDDEN_(nsresult)
     PostLoadEvent(nsCachedChromeChannel* aChannel, PLHandleEventProc aHandler);
 
-    static void* PR_CALLBACK HandleStartLoadEvent(PLEvent* aEvent);
-    static void* PR_CALLBACK HandleStopLoadEvent(PLEvent* aEvent);
+    static void* PR_CALLBACK HandleLoadEvent(PLEvent* aEvent);
     static void PR_CALLBACK DestroyLoadEvent(PLEvent* aEvent);
 
 #ifdef PR_LOGGING
@@ -230,7 +229,7 @@ nsCachedChromeChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
     // Queue an event to ourselves to let the stack unwind before
     // calling OnStartRequest(). This allows embedding to occur
     // before we fire OnStopRequest().
-    rv = PostLoadEvent(this, HandleStartLoadEvent);
+    rv = PostLoadEvent(this, HandleLoadEvent);
     if (NS_FAILED(rv))
         return rv;
 
@@ -380,7 +379,7 @@ nsCachedChromeChannel::PostLoadEvent(nsCachedChromeChannel* aChannel,
 }
 
 void* PR_CALLBACK
-nsCachedChromeChannel::HandleStartLoadEvent(PLEvent* aEvent)
+nsCachedChromeChannel::HandleLoadEvent(PLEvent* aEvent)
 {
     // Fire the OnStartRequest() for the cached chrome channel, then
     // queue another event to trigger the OnStopRequest()...
@@ -396,20 +395,6 @@ nsCachedChromeChannel::HandleStartLoadEvent(PLEvent* aEvent)
 
     (void) channel->mListener->OnStartRequest(channel, channel->mContext);
 
-    // XXX why post another event?  the stack isn't going to look any
-    //     different when HandleStopLoadEvent is called.
-    //(void) PostLoadEvent(channel, HandleStopLoadEvent);
-    HandleStopLoadEvent(aEvent);
-    return nsnull;
-}
-
-void* PR_CALLBACK
-nsCachedChromeChannel::HandleStopLoadEvent(PLEvent* aEvent)
-{
-    // Fire the OnStopRequest() for the cached chrome channel, and
-    // remove it from the load group.
-    nsCachedChromeChannel* channel = (nsCachedChromeChannel*) aEvent->owner;
-
     LOG(("nsCachedChromeChannel[%p]: firing OnStopRequest for %p",
         channel, channel->mListener.get()));
 
@@ -420,8 +405,7 @@ nsCachedChromeChannel::HandleStopLoadEvent(PLEvent* aEvent)
         LOG(("nsCachedChromeChannel[%p]: removing self from load group %p",
             channel, channel->mLoadGroup.get()));
 
-        // XXX should pass channel->mStatus instead of NS_OK
-        (void) channel->mLoadGroup->RemoveRequest(channel, nsnull, NS_OK);
+        (void) channel->mLoadGroup->RemoveRequest(channel, nsnull, channel->mStatus);
     }
 
     channel->mListener = nsnull;

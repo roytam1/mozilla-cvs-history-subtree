@@ -85,7 +85,6 @@
 #include "nsIWindowCreator.h"
 #include "nsIWindowMediator.h"
 #include "nsIWindowWatcher.h"
-#include "nsIResProtocolHandler.h"
 
 #include "nsCRT.h"
 #include "nsCOMPtr.h"
@@ -393,7 +392,6 @@ static nsXREAppData *LoadAppData(const char *appDataFile)
   NS_GetFileFromPath(appDataFile, getter_AddRefs(lf));
   if (!lf)
     return nsnull;
-  //lf->AppendNative(NS_LITERAL_CSTRING("xulapp.ini"));
 
   nsINIParser parser; 
   if (NS_FAILED(parser.Init(lf)))
@@ -1731,7 +1729,7 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
   gArgv = argv;
 
   // allow -app argument to override default app data
-  const char *appDataFile;
+  const char *appDataFile = nsnull;
   if (CheckArg("app", &appDataFile))
     aAppData = LoadAppData(appDataFile);
 
@@ -1774,7 +1772,7 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
   // Initialize XPCOM's module info table
   NSGetStaticModuleInfo = app_getModuleInfo;
 #endif
-  
+
   // Handle -help and -version command line arguments.
   // They should return quickly, so we deal with them here.
   if (CheckArg("h") || CheckArg("help") || CheckArg("?")) {
@@ -1936,7 +1934,7 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
   // profile in different builds the component registry must be
   // re-generated to prevent mysterious component loading failures.
   // 
-  if (!strcmp(version, gAppData->appBuildID)) {
+  if (!strcmp(version, aAppData->appBuildID)) {
     componentsListChanged = ComponentsListChanged(lf);
     if (componentsListChanged) {
       // Remove compreg.dat and xpti.dat, forcing component re-registration,
@@ -2071,7 +2069,7 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
         // if we had no command line arguments, argc == 1.
 
         PRBool windowOpened = PR_FALSE;
-        rv = DoCommandLines(cmdLineArgs, gAppData->useStartupPrefs, &windowOpened);
+        rv = DoCommandLines(cmdLineArgs, aAppData->useStartupPrefs, &windowOpened);
         NS_ENSURE_SUCCESS(rv, 1);
       
         // Make sure there exists at least 1 window.
@@ -2090,7 +2088,7 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
         nsCOMPtr<nsIXRemoteService> remoteService;
         remoteService = do_GetService(NS_IXREMOTESERVICE_CONTRACTID);
         if (remoteService)
-          remoteService->Startup(gAppData->appName);
+          remoteService->Startup(aAppData->appName);
 #endif /* MOZ_ENABLE_XREMOTE */
 
         // enable win32 DDE responses and Mac appleevents responses

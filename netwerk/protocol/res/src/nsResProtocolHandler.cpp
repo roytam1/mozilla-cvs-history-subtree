@@ -268,8 +268,7 @@ nsResProtocolHandler::GetSubstitution(const nsACString& root, nsIURI **result)
 {
     NS_ENSURE_ARG_POINTER(result);
 
-    nsresult rv = mSubstitutions.Get(root, result);
-    if (NS_SUCCEEDED(rv))
+    if (mSubstitutions.Get(root, result))
         return NS_OK;
 
     // try invoking the directory service for "resource:root"
@@ -279,7 +278,7 @@ nsResProtocolHandler::GetSubstitution(const nsACString& root, nsIURI **result)
     key.Append(root);
 
     nsCOMPtr<nsIFile> file;
-    rv = NS_GetSpecialDirectory(key.get(), getter_AddRefs(file));
+    nsresult rv = NS_GetSpecialDirectory(key.get(), getter_AddRefs(file));
     if (NS_FAILED(rv))
         return NS_ERROR_NOT_AVAILABLE;
         
