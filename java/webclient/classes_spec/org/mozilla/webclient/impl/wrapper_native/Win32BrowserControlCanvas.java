@@ -1,5 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- *
+/*
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
@@ -20,13 +19,16 @@
  * Contributor(s): 
  */
 
-package org.mozilla.webclient.impl.wrapper_native.win32;
+package org.mozilla.webclient.impl.wrapper_native;
 
 // Win32BrowserControlCanvas.java
 
 import org.mozilla.util.Assert;
 import org.mozilla.util.Log;
 import org.mozilla.util.ParameterCheck;
+
+import org.mozilla.webclient.impl.wrapper_native.WCRunnable;
+import org.mozilla.webclient.impl.wrapper_native.NativeEventThread;
 
 /**
 
@@ -64,7 +66,15 @@ public class Win32BrowserControlCanvas extends BrowserControlCanvas {
 	 *
 	 * @returns The native window handle. 
 	 */
-	protected int getWindow() {
-		return this.getHandleToPeer();
-	}
+    protected int getWindow() {
+	Integer result = (Integer)
+	    NativeEventThread.instance.pushBlockingWCRunnable(new WCRunnable(){
+		    public Object run() {
+			Integer result = 
+			    new Integer(Win32BrowserControlCanvas.this.getHandleToPeer());
+			return result;
+		    }
+		});
+	return result.intValue();
+    }
 }

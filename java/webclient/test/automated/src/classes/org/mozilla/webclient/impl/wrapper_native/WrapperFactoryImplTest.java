@@ -67,16 +67,4 @@ public class WrapperFactoryImplTest extends WebclientTestCase {
 	}
     }
 
-    public void testGetNativeBrowserControl() throws Exception {
-	assertTrue(false);
-	/**
-	WrapperFactoryImpl wrapper = new WrapperFactoryImpl();
-	wrapper.initialize(getBrowserBinDir());
-	BrowserControl bc = new BrowserControlImpl(wrapper);
-
-	assertTrue(-1 != wrapper.getNativeBrowserControl(bc));
-	BrowserControlFactory.deleteBrowserControl(bc);
-	**/
-    }
-
 }
