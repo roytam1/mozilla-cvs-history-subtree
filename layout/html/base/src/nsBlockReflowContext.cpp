@@ -521,6 +521,9 @@ nsBlockReflowContext::DoReflowBlock(nsHTMLReflowState &aReflowState,
   if (view) {
     nsContainerFrame::PositionFrameView(mPresContext, aFrame, view);
   }
+  else {
+    nsContainerFrame::PositionChildViews(mPresContext, aFrame);
+  }
 
 #ifdef DEBUG
   mMetrics.width = nscoord(0xdeadbeef);
