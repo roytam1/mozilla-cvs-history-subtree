@@ -25,15 +25,25 @@
 #ifdef XP_PC
 
 #ifdef _WIN32
-#include "os/win32.h"
+#define HAVE_LONG_LONG
 #else
-#include "os/win16.h"
+#undef HAVE_LONG_LONG
 #endif
 #endif /* XP_PC */
 
 #ifdef XP_MAC
-#include "jsmacos.h"
-#endif
+
+JS_BEGIN_EXTERN_C
+
+#include <stddef.h>
+
+extern void* reallocSmaller(void* block, size_t newSize);
+
+extern char* strdup(const char* str);
+
+JS_END_EXTERN_C
+
+#endif /* XP_MAC */
 
 #ifdef XP_UNIX
 
@@ -41,34 +51,40 @@
  * Get OS specific header information.
  */
 #if defined(AIXV3)
-#include "os/aix.h"
+#define HAVE_LONG_LONG
 
 #elif defined(BSDI)
-#include "os/bsdi.h"
+#define HAVE_LONG_LONG
 
 #elif defined(HPUX)
-#include "os/hpux.h"
+#undef HAVE_LONG_LONG
 
 #elif defined(IRIX)
-#include "os/irix.h"
+#define HAVE_LONG_LONG
 
 #elif defined(LINUX)
-#include "os/linux.h"
+#undef HAVE_LONG_LONG
 
 #elif defined(OSF1)
-#include "os/osf1.h"
+#define HAVE_LONG_LONG
 
 #elif defined(SCO)
-#include "os/scoos.h"
+#undef HAVE_LONG_LONG
 
 #elif defined(SOLARIS)
-#include "os/solaris.h"
+#define HAVE_LONG_LONG
 
 #elif defined(SUNOS4)
-#include "os/sunos.h"
+#undef HAVE_LONG_LONG
+
+/*
+** Missing function prototypes
+*/
+
+extern void *sbrk(int);
 
 #elif defined(UNIXWARE)
-#include "os/unixware.h"
+#undef HAVE_LONG_LONG
 #endif
 
 #endif /* XP_UNIX */

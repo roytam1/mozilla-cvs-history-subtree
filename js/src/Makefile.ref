@@ -162,28 +162,28 @@ HFILES = $(JS_HFILES) $(API_HFILES)
 
 JS_CFILES =		\
 	jsapi.c		\
+	jsarena.c	\
 	jsarray.c	\
 	jsatom.c	\
 	jsbool.c	\
 	jscntxt.c	\
 	jsdate.c	\
 	jsdbgapi.c	\
+	jsdtoa.c	\
 	jsemit.c	\
 	jsexn.c		\
 	jsfun.c		\
 	jsgc.c		\
+	jshash.c	\
 	jsinterp.c	\
 	jslock.c	\
+	jslog2.c	\
+	jslong.c	\
 	jsmath.c	\
 	jsnum.c		\
 	jsobj.c		\
 	jsopcode.c      \
 	jsparse.c	\
-	jsarena.c	\
-	jsdtoa.c	\
-	jshash.c	\
-	jslog2.c	\
-	jslong.c	\
 	jsprf.c		\
 	jsregexp.c	\
 	jsscan.c	\
