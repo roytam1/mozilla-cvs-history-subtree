@@ -155,11 +155,11 @@ XPCThrower::Verbosify(XPCCallContext& ccx,
 
     if(ccx.HasInterfaceAndMember())
     {
-        XPCNativeInterface* interface = ccx.GetInterface();
+        XPCNativeInterface* iface = ccx.GetInterface();
         sz = JS_smprintf("%s [%s.%s]",
                          *psz,
-                         interface->GetNameString(),
-                         interface->GetMemberName(ccx, ccx.GetMember()));
+                         iface->GetNameString(),
+                         iface->GetMemberName(ccx, ccx.GetMember()));
     }
 
     if(sz)
