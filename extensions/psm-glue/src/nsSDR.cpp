@@ -197,6 +197,40 @@ loser:
     return rv;
 }
 
+/* void changePassword(); */
+NS_IMETHODIMP nsSecretDecoderRing::
+ChangePassword()
+{
+  return NS_OK;
+}
+
+/* void logout(); */
+NS_IMETHODIMP nsSecretDecoderRing::
+Logout()
+{
+    nsresult rv = NS_OK;
+    CMTStatus status;
+    CMT_CONTROL *control;
+
+    /* Check object initialization */
+    NS_ASSERTION(mPSM != nsnull, "SDR object not initialized");
+    if (mPSM == nsnull) { rv = NS_ERROR_NOT_INITIALIZED; goto loser; }
+
+    /* Get the control connection */
+    rv = mPSM->GetControlConnection(&control);
+    if (rv != NS_OK) { rv = NS_ERROR_NOT_AVAILABLE; goto loser; }
+    
+    /* Call PSM to decrypt the value */
+    status = CMT_LogoutAllTokens(control);
+    if (status != CMTSuccess) { rv = NS_ERROR_FAILURE; goto loser; } /* Promote? */
+
+loser:
+    return rv;
+}
+
+
+// Support routines
+
 nsresult nsSecretDecoderRing::
 encode(const unsigned char *data, PRInt32 dataLen, char **_retval)
 {
