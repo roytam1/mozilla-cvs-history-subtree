@@ -29,7 +29,6 @@
         <parameter name="aSourceEvent"/>
         <body>
         <![CDATA[
-          dump("*** checked\n");
           var updates = Components.classes["@mozilla.org/updates/update-service;1"]
                                   .getService(Components.interfaces.nsIUpdateService);
           this.severity     = updates.updateSeverity;
