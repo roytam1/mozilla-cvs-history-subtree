@@ -3102,7 +3102,7 @@ nsBookmarksService::UpdateBookmarkIcon(const char *aURL, const PRUnichar *aIconU
             nsCOMPtr<nsIRDFNode> iconNode;
             rv = mInner->GetTarget(bookmark, kNC_Icon, PR_TRUE, getter_AddRefs(iconNode));
             if (NS_SUCCEEDED(rv) && rv != NS_RDF_NO_VALUE) {
-                (void) Unassert (bookmark, kNC_Icon, iconNode);
+                (void) mInner->Unassert (bookmark, kNC_Icon, iconNode);
             }
 
             // create a new literal for the url
@@ -3114,6 +3114,8 @@ nsBookmarksService::UpdateBookmarkIcon(const char *aURL, const PRUnichar *aIconU
             rv = mInner->Assert(bookmark, kNC_Icon, urlLiteral, PR_TRUE);
             if (NS_FAILED(rv))
                 return rv;
+
+            mDirty = PR_TRUE;
         }
     }
 
@@ -3130,7 +3132,7 @@ nsBookmarksService::RemoveBookmarkIcon(const char *aURL)
         return rv;
 
     nsCOMPtr<nsISimpleEnumerator> bookmarks;
-    rv = GetSources(kNC_URL, urlLiteral, PR_TRUE, getter_AddRefs(bookmarks));
+    rv = mInner->GetSources(kNC_URL, urlLiteral, PR_TRUE, getter_AddRefs(bookmarks));
     if (NS_FAILED(rv))
         return rv;
 
@@ -3637,11 +3639,39 @@ nsBookmarksService::GetTarget(nsIRDFResource* aSource,
             return rv;
         }
     }
-    else if ((aProperty == kNC_Icon) && !mBrowserIcons)
+    else if (aProperty == kNC_Icon)
     {
-        // if the user has favicons turned off, don't return anything
-        *aTarget = nsnull;
-        return NS_RDF_NO_VALUE;
+        if (!mBrowserIcons) {
+            // if the user has favicons turned off, don't return anything
+            *aTarget = nsnull;
+            return NS_RDF_NO_VALUE;
+        } else {
+            // the user doesn't have favicons turned off, but might have
+            // old non-data URLs for icons.  We only want to return the
+            // value if it's a data url.
+            rv = mInner->GetTarget(aSource, aProperty, aTruthValue, aTarget);
+            if (NS_FAILED(rv) || rv == NS_RDF_NO_VALUE)
+                return rv;
+
+            nsCOMPtr<nsIRDFLiteral> iconLiteral = do_QueryInterface(*aTarget);
+            if (!iconLiteral) {
+                // erm, shouldn't happen
+                aTarget = nsnull;
+                return NS_RDF_NO_VALUE;
+            }
+
+            const PRUnichar *url = nsnull;
+            iconLiteral->GetValueConst(&url);
+            nsDependentString urlStr(url);
+
+            // if it's a data: url, all is well
+            if (Substring(urlStr, 0, 5).Equals(NS_LITERAL_STRING("data:")))
+                return NS_OK;
+
+            // no data:? no icon!
+            aTarget = nsnull;
+            return NS_RDF_NO_VALUE;
+        }
     }
     else if ((aProperty == kNC_child || aProperty == kRDF_nextVal) &&
              NS_SUCCEEDED(mInner->HasAssertion(aSource, kRDF_type, kNC_Livemark,
