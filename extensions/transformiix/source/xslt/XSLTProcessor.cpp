@@ -260,8 +260,6 @@ txXSLTProcessor::processAction(Node* aNode,
     if (!aXsltAction)
         return;
 
-    Document* resultDoc = aPs->getResultDocument();
-
     unsigned short nodeType = aXsltAction->getNodeType();
 
     // Handle text nodes
@@ -454,7 +452,7 @@ txXSLTProcessor::processAction(Node* aNode,
             String nsURI;
             aPs->processAttrValueTemplate(resultNs, actionElement,
                                           nsURI);
-            resultNsID = resultDoc->namespaceURIToID(nsURI);
+            resultNsID = aPs->getStylesheetDocument()->namespaceURIToID(nsURI);
         }
         else {
             String prefix;
@@ -615,7 +613,7 @@ txXSLTProcessor::processAction(Node* aNode,
             if (nsURI.isEmpty())
                 resultNsID = kNameSpaceID_None;
             else
-                resultNsID = resultDoc->namespaceURIToID(nsURI);
+                resultNsID = aPs->getStylesheetDocument()->namespaceURIToID(nsURI);
         }
         else {
             String prefix;
@@ -734,7 +732,7 @@ txXSLTProcessor::processAction(Node* aNode,
         String message;
         processChildrenAsValue(aNode, actionElement, aPs, MB_FALSE, message);
         // We should add a MessageObserver class
-        logMessage(message);
+        aPs->getProcessorHelper()->logMessage(message);
     }
     // xsl:number
     else if (localName == txXSLTAtoms::number) {
@@ -1554,7 +1552,12 @@ txXSLTProcessor::processVariable(Node* aNode,
             // XXX ErrorReport: Out of memory
             return 0;
         txXMLEventHandler* previousHandler = mResultHandler;
-        txRtfHandler rtfHandler(aPs->getResultDocument(), rtf);
+        Document* rtfDoc = aPs->getRTFDocument();
+        if (!rtfDoc) {
+            // XXX ErrorReport: Out of memory
+            return 0;
+        }
+        txRtfHandler rtfHandler(rtfDoc, rtf);
         mResultHandler = &rtfHandler;
         processChildren(aNode, aXsltVariable, aPs);
         //NS_ASSERTION(previousHandler, "Setting mResultHandler to NULL!");
@@ -1583,7 +1586,7 @@ txXSLTProcessor::startElement(const String& aName,
             else {
                 format->mMethod = eXMLOutput;
             }
-            mOutputHandler = getOutputHandler(format->mMethod);
+            mOutputHandler = aPs->getProcessorHelper()->getOutputHandler(format->mMethod);
             mOutputHandler->setOutputFormat(format);
         }
         mHaveDocumentElement = MB_TRUE;
@@ -1602,7 +1605,7 @@ txXSLTProcessor::transform(Node* aNode, ProcessorState* aPs)
         outputFormat->merge(frame->mOutputFormat);
     }
 
-    mOutputHandler = getOutputHandler(outputFormat->mMethod);
+    mOutputHandler = aPs->getProcessorHelper()->getOutputHandler(outputFormat->mMethod);
     if (!mOutputHandler) {
         return;
     }

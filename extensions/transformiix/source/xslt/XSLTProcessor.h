@@ -70,20 +70,6 @@ protected:
     String& getAppVersion();
 
     /*
-     * XXX.
-     *
-     * @param aMethod YYY
-     */
-    virtual txOutputXMLEventHandler* getOutputHandler(txOutputMethod aMethod) = 0;
-
-    /*
-     * XXX.
-     *
-     * @param aMethod YYY
-     */
-    virtual void logMessage(const String& aMessage) = 0;
-
-    /*
      * Processes a stylesheet document.
      *
      * @param aSource the source document
@@ -379,11 +365,6 @@ private:
      * Fatal ErrorObserver
      */
     SimpleErrorObserver mFatalObserver;
-
-    /*
-     * An expression parser for creating AttributeValueTemplates
-     */
-    ExprParser mExprParser;
 
     txOutputXMLEventHandler* mOutputHandler;
     txXMLEventHandler* mResultHandler;

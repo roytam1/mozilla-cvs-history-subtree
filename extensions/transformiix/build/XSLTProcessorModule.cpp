@@ -55,8 +55,8 @@ NS_DOMCI_EXTENSION(Transformiix)
     NS_DOMCI_EXTENSION_ENTRY_BEGIN(XSLTProcessor)
         NS_DOMCI_EXTENSION_ENTRY_INTERFACE(nsIXSLTProcessor)
         NS_DOMCI_EXTENSION_ENTRY_INTERFACE(nsIDocumentTransformer) // XXX DEPRECATED
-    NS_DOMCI_EXTENSION_ENTRY_END(XSLTProcessor, nsIXSLTProcessor,
-                                 PR_FALSE, &kXSLTProcessorCID)
+    NS_DOMCI_EXTENSION_ENTRY_END(XSLTProcessor, nsIXSLTProcessor, PR_TRUE,
+                                 &kXSLTProcessorCID)
 
     static NS_DEFINE_CID(kXPathEvaluatorCID, TRANSFORMIIX_XPATH_EVALUATOR_CID);
     NS_DOMCI_EXTENSION_ENTRY_BEGIN(XPathEvaluator)

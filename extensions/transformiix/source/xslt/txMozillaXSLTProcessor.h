@@ -42,13 +42,13 @@
 
 #include "XSLTProcessor.h"
 #include "nsIDocumentTransformer.h"
-#include "nsIScriptLoaderObserver.h"
 #include "nsIVariant.h"
 #include "nsIXSLTProcessor.h"
 #include "nsVoidArray.h"
 #include "nsWeakPtr.h"
+#include "txXMLEventHandler.h"
 
-class txMozillaXMLEventHandler;
+class nsITransformObserver;
 
 /* bacd8ad0-552f-11d3-a9f7-000064657374 */
 #define TRANSFORMIIX_XSLT_PROCESSOR_CID   \
@@ -80,8 +80,7 @@ public:
  */
 class txMozillaXSLTProcessor : public txXSLTProcessor,
                                public nsIDocumentTransformer,
-                               public nsIXSLTProcessor,
-                               public nsIScriptLoaderObserver
+                               public nsIXSLTProcessor
 {
 public:
     /*
@@ -103,21 +102,29 @@ public:
     // nsIXSLTProcessor interface
     NS_DECL_NSIXSLTPROCESSOR
 
-    // nsIScriptLoaderObserver interface
-    NS_DECL_NSISCRIPTLOADEROBSERVER
+private:
+    static ExprResult* ConvertParameter(nsIVariant *aValue);
+
+    nsCOMPtr<nsIDOMNode> mStylesheet;
+    nsVoidArray* mVariables;
+};
+
+class txMozillaHelper : public txIProcessorHelper
+{
+public:
+    txMozillaHelper(nsIDOMDocument* aSourceDocument,
+                    nsITransformObserver* aObserver);
+    virtual ~txMozillaHelper();
+
+    txOutputXMLEventHandler* getOutputHandler(txOutputMethod aMethod);
+    void logMessage(const String& aMessage);
+    Document* createRTFDocument(txOutputMethod aMethod);
+
+    nsCOMPtr<txIMozillaXMLEventHandler> mMozillaOutputHandler;
 
 private:
-    virtual txOutputXMLEventHandler* getOutputHandler(txOutputMethod aMethod);
-    virtual void logMessage(const String& aMessage);
-
-    void SignalTransformEnd();
-
-    nsCOMPtr<nsIDocument> mResultDocument;
-    nsCOMPtr<nsIDOMNode> mStylesheet;
-    nsCOMPtr<nsIScriptLoader> mScriptLoader;
+    nsCOMPtr<nsIDOMDocument> mSourceDocument;
     nsWeakPtr mObserver;
-    nsVoidArray* mVariables;
-    txMozillaXMLEventHandler* mMozillaOutputHandler;
 };
 
 #endif

@@ -43,13 +43,18 @@
 #include "nsIContent.h"
 #include "nsIDOMCharacterData.h"
 #include "nsCOMPtr.h"
+#include "nsWeakPtr.h"
 #include "txOutputFormat.h"
 
-class txMozillaTextOutput : public txMozillaXMLEventHandler
+class nsITransformObserver;
+
+class txMozillaTextOutput : public txIMozillaXMLEventHandler
 {
 public:
     txMozillaTextOutput();
     virtual ~txMozillaTextOutput();
+
+    NS_DECL_ISUPPORTS
 
     /*
      * Signals to receive the start of an attribute.
@@ -121,41 +126,31 @@ public:
     void setOutputFormat(txOutputFormat* aOutputFormat);
 
     /*
-     * Disables loading of stylesheets.
-     */
-    void disableStylesheetLoad();
-
-    /*
-     * Returns the root content of the result.
+     * Sets the Mozilla source document
      *
-     * @param aReturn the root content
+     * @param aDocument the Mozilla source document
      */
-    nsresult getRootContent(nsIContent** aReturn);
+    void setSourceDocument(nsIDOMDocument* aDocument);
 
     /*
-     * Returns PR_TRUE if the event handler has finished anything
-     * extra that had to happen after the transform has finished.
-     */
-    PRBool isDone();
-
-    /*
-     * Removes a script element from the array of elements that are
-     * still loading.
-     *
-     * @param aReturn the script element to remove
-     */
-    void removeScriptElement(nsIDOMHTMLScriptElement *aElement);
-
-    /*
-     * Sets the Mozilla output document.
+     * Gets the Mozilla output document
      *
      * @param aDocument the Mozilla output document
      */
-    void setOutputDocument(nsIDOMDocument* aDocument);
+    void getOutputDocument(nsIDOMDocument** aDocument);
+
+    /*
+     * Sets the content-sink observer
+     *
+     * @param aObserver the content-sink observer
+     */
+    void setObserver(nsITransformObserver* aObserver);
 
 private:
     nsCOMPtr<nsIDOMCharacterData> mTextNode;
     nsCOMPtr<nsIContent> mRootContent;
+    nsWeakPtr mObserver;
+    nsCOMPtr<nsIDOMDocument> mDocument;
     txOutputFormat mOutputFormat;
 };
 

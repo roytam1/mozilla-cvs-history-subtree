@@ -44,16 +44,23 @@
 #include "nsIDOMDocument.h"
 #include "nsIDOMHTMLTextAreaElement.h"
 #include "nsINameSpaceManager.h"
+#include "nsIScriptLoader.h"
+#include "nsIScriptLoaderObserver.h"
 #include "nsIStyleSheetLinkingElement.h"
 #include "nsString.h"
 #include "nsSupportsArray.h"
+#include "nsWeakPtr.h"
 #include "txOutputFormat.h"
 
-class txMozillaXMLOutput : public txMozillaXMLEventHandler
+class txMozillaXMLOutput : public txIMozillaXMLEventHandler,
+                           public nsIScriptLoaderObserver
 {
 public:
     txMozillaXMLOutput();
     virtual ~txMozillaXMLOutput();
+
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSISCRIPTLOADEROBSERVER
 
     /*
      * Signals to receive the start of an attribute.
@@ -131,19 +138,6 @@ public:
     void disableStylesheetLoad();
 
     /*
-     * Returns the root content of the result.
-     *
-     * @param aReturn the root content
-     */
-    nsresult getRootContent(nsIContent** aReturn);
-
-    /*
-     * Returns PR_TRUE if the event handler has finished anything
-     * extra that had to happen after the transform has finished.
-     */
-    PRBool isDone();
-
-    /*
      * Removes a script element from the array of elements that are
      * still loading.
      *
@@ -152,11 +146,25 @@ public:
     void removeScriptElement(nsIDOMHTMLScriptElement *aElement);
 
     /*
-     * Sets the Mozilla output document.
+     * Sets the Mozilla source document
+     *
+     * @param aDocument the Mozilla source document
+     */
+    void setSourceDocument(nsIDOMDocument* aDocument);
+
+    /*
+     * Gets the Mozilla output document
      *
      * @param aDocument the Mozilla output document
      */
-    void setOutputDocument(nsIDOMDocument* aDocument);
+    void getOutputDocument(nsIDOMDocument** aDocument);
+
+    /*
+     * Sets the content-sink observer
+     *
+     * @param aObserver the content-sink observer
+     */
+    void setObserver(nsITransformObserver* aObserver);
 
 private:
     void closePrevious(PRInt8 aAction);
@@ -164,11 +172,15 @@ private:
     void endHTMLElement(nsIDOMElement* aElement, PRBool aXHTML);
     void processHTTPEquiv(nsIAtom* aHeader, const nsAString& aValue);
     void wrapChildren(nsIDOMNode* aCurrentNode, nsIDOMElement* aWrapper);
+    nsresult createResultDocument(const String& aName);
+    void SignalTransformEnd();
 
+    nsCOMPtr<nsIDOMDocument> mSourceDocument;
     nsCOMPtr<nsIDOMDocument> mDocument;
     nsCOMPtr<nsIDOMNode> mCurrentNode;
     nsCOMPtr<nsIDOMNode> mParentNode;
     nsCOMPtr<nsIContent> mRootContent;
+    nsWeakPtr mObserver;
 
     nsCOMPtr<nsIDOMNode> mNonAddedParent;
     nsCOMPtr<nsIDOMNode> mNonAddedNode;
@@ -184,13 +196,36 @@ private:
 
     txOutputFormat mOutputFormat;
 
-    PRPackedBool mDisableStylesheetLoad;
     PRPackedBool mDontAddCurrent;
 
     PRPackedBool mHaveTitleElement;
     PRPackedBool mHaveBaseElement;
 
+    PRPackedBool mInTransform;
+ 
     enum txAction { eCloseElement = 1, eFlushText = 2 };
+
+    struct DelayedNode {
+        enum Type { eCommentNode, ePINode, eTextNode };
+        DelayedNode(Type aType, const String& aName, const String& aData)
+            : mType(aType),
+              mName(aName),
+              mData(aData)
+        {
+        }
+
+        DelayedNode(Type aType, const String& aData)
+            : mType(aType),
+              mData(aData)
+        {
+        }
+
+        Type mType;
+        String mName;
+        String mData;
+    };
+
+    txList mDelayedNodes;
 };
 
 #endif

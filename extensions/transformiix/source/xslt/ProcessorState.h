@@ -40,8 +40,20 @@
 #include "Map.h"
 #include "txIXPathContext.h"
 
-class txXSLKey;
 class txDecimalFormat;
+class txOutputXMLEventHandler;
+class txXSLKey;
+
+class txIProcessorHelper
+{
+public:
+    virtual ~txIProcessorHelper()
+    {
+    };
+    virtual txOutputXMLEventHandler* getOutputHandler(txOutputMethod aMethod) = 0;
+    virtual void logMessage(const String& aMessage) = 0;
+    virtual Document* createRTFDocument(txOutputMethod aMethod) = 0;
+};
 
 /**
  * Class used for keeping the current state of the XSL Processor
@@ -55,7 +67,7 @@ public:
     **/
     ProcessorState(Document* aSourceDocument,
                    Document* aXslDocument,
-                   Document* aResultDocument);
+                   txIProcessorHelper* aHelper);
 
     /**
      * Destroys this ProcessorState
@@ -165,11 +177,6 @@ public:
 
     Expr* getExpr(Element* aElem, ExprAttr aAttr);
     txPattern* getPattern(Element* aElem, PatternAttr aAttr);
-
-    /**
-     * Returns a pointer to the result document
-    **/
-    Document* getResultDocument();
 
     /**
      * Retrieve the document designated by the URI uri, using baseUri as base URI.
@@ -286,6 +293,26 @@ public:
      * Returns a decimal format or NULL if no such format exists.
     **/
     txDecimalFormat* getDecimalFormat(String& name);
+
+    /*
+     * Returns the processor helper.
+     */
+    txIProcessorHelper* getProcessorHelper();
+
+    /*
+     * Returns a pointer to a document that can be used to create RTFs
+     */
+    Document* getRTFDocument();
+
+    /*
+     * Sets a new document to be used for creating RTFs
+     */
+    void setRTFDocument(Document* aDoc);
+
+    /*
+     * Returns the stylesheet document
+     */
+    Document* getStylesheetDocument();
 
     /*
      * Virtual methods from txIEvalContext
@@ -409,7 +436,18 @@ private:
 
     Document*      mSourceDocument;
     Document*      xslDocument;
-    Document*      resultDocument;
+    
+    /*
+     * Document used to create RTFs
+     */
+    Document* mRTFDocument;
+    
+    /*
+     * Helper for creating output handlers, logging messages and
+     * creating a temporary document for RTFs
+     */
+    txIProcessorHelper* mHelper;
+
     Stack          variableSets;
 
     /**

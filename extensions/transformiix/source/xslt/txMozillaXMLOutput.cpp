@@ -39,6 +39,7 @@
 #include "txMozillaXMLOutput.h"
 
 #include "nsIDocument.h"
+#include "nsIDocShell.h"
 #include "nsIDOMComment.h"
 #include "nsIDOMDocumentType.h"
 #include "nsIDOMDOMImplementation.h"
@@ -47,13 +48,19 @@
 #include "nsIDOMHTMLTableSectionElem.h"
 #include "nsIDOMHTMLScriptElement.h"
 #include "nsIDOMNSDocument.h"
+#include "nsIParser.h"
+#include "nsIRefreshURI.h"
+#include "nsIScriptGlobalObject.h"
+#include "nsITextContent.h"
+#include "nsITransformObserver.h"
+#include "nsIXMLContent.h"
+#include "nsContentCID.h"
+#include "nsNetUtil.h"
 #include "nsUnicharUtils.h"
 #include "txAtoms.h"
-#include "nsIParser.h"
-#include "nsNetUtil.h"
-#include "nsIScriptGlobalObject.h"
-#include "nsIRefreshURI.h"
-#include "nsIDocShell.h"
+
+static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
+static NS_DEFINE_CID(kHTMLDocumentCID, NS_HTMLDOCUMENT_CID);
 
 #define kXHTMLNameSpaceURI "http://www.w3.org/1999/xhtml"
 #define kTXNameSpaceURI "http://www.mozilla.org/TransforMiix"
@@ -64,13 +71,22 @@
     if (!mCurrentNode)                                  \
         return
 
-txMozillaXMLOutput::txMozillaXMLOutput() : mDisableStylesheetLoad(PR_FALSE)
+txMozillaXMLOutput::txMozillaXMLOutput() : mStyleSheetCount(0),
+                                           mDontAddCurrent(PR_FALSE),
+                                           mHaveTitleElement(PR_FALSE),
+                                           mHaveBaseElement(PR_FALSE),
+                                           mInTransform(PR_FALSE)
 {
+    NS_INIT_ISUPPORTS();
 }
 
 txMozillaXMLOutput::~txMozillaXMLOutput()
 {
 }
+
+NS_IMPL_ISUPPORTS2(txMozillaXMLOutput,
+                   txIMozillaXMLEventHandler,
+                   nsIScriptLoaderObserver);
 
 void txMozillaXMLOutput::attribute(const String& aName,
                                    const PRInt32 aNsID,
@@ -112,27 +128,29 @@ void txMozillaXMLOutput::comment(const String& aData)
 {
     closePrevious(eCloseElement | eFlushText);
 
-    TX_ENSURE_CURRENTNODE;
-
-    nsCOMPtr<nsIDOMComment> comment;
-    nsresult rv = mDocument->CreateComment(aData.getConstNSString(),
-                                           getter_AddRefs(comment));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create comment");
-
-    nsCOMPtr<nsIDOMNode> node = do_QueryInterface(comment);
-    nsCOMPtr<nsIDOMNode> resultNode;
-    rv = mCurrentNode->AppendChild(node, getter_AddRefs(resultNode));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "Can't append comment");
-}
-
-void txMozillaXMLOutput::disableStylesheetLoad()
-{
-    mDisableStylesheetLoad = PR_TRUE;
+    if (mCurrentNode) {
+        nsCOMPtr<nsIDOMComment> comment;
+        nsresult rv = mDocument->CreateComment(aData.getConstNSString(),
+                                               getter_AddRefs(comment));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create comment");
+        nsCOMPtr<nsIDOMNode> resultNode;
+        rv = mCurrentNode->AppendChild(comment, getter_AddRefs(resultNode));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Can't append comment");
+    }
+    else {
+        DelayedNode* dn = new DelayedNode(DelayedNode::eCommentNode,
+                                          aData);
+        if (!dn) {
+            return;
+        }
+        mDelayedNodes.add(dn);
+    }
 }
 
 void txMozillaXMLOutput::endDocument()
 {
     closePrevious(eCloseElement | eFlushText);
+    // XXX is this really needed since we reset the document?
     if (!mHaveTitleElement) {
         nsCOMPtr<nsIDOMNSDocument> domDoc = do_QueryInterface(mDocument);
         if (domDoc) {
@@ -155,6 +173,9 @@ void txMozillaXMLOutput::endDocument()
             }
         }
     }
+
+    mInTransform = PR_FALSE;
+    SignalTransformEnd();
 }
 
 void txMozillaXMLOutput::endElement(const String& aName, const PRInt32 aNsID)
@@ -204,21 +225,9 @@ void txMozillaXMLOutput::endElement(const String& aName, const PRInt32 aNsID)
     }
 }
 
-nsresult txMozillaXMLOutput::getRootContent(nsIContent** aReturn)
+void txMozillaXMLOutput::getOutputDocument(nsIDOMDocument** aDocument)
 {
-    NS_ASSERTION(aReturn, "NULL pointer passed to getRootContent");
-
-    *aReturn = mRootContent;
-    NS_IF_ADDREF(*aReturn);
-    return NS_OK;
-}
-
-PRBool txMozillaXMLOutput::isDone()
-{
-    PRUint32 scriptCount = 0;
-    if (mScriptElements)
-        mScriptElements->Count(&scriptCount);
-    return (scriptCount == 0);
+    *aDocument = mDocument;
 }
 
 void txMozillaXMLOutput::processingInstruction(const String& aTarget, const String& aData)
@@ -228,31 +237,39 @@ void txMozillaXMLOutput::processingInstruction(const String& aTarget, const Stri
 
     closePrevious(eCloseElement | eFlushText);
 
-    TX_ENSURE_CURRENTNODE;
+    if (mCurrentNode) {
+        nsCOMPtr<nsIDOMProcessingInstruction> pi;
+        nsresult rv = mDocument->CreateProcessingInstruction(aTarget.getConstNSString(),
+                                                             aData.getConstNSString(),
+                                                             getter_AddRefs(pi));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create processing instruction");
 
-    nsCOMPtr<nsIDOMProcessingInstruction> pi;
-    nsresult rv = mDocument->CreateProcessingInstruction(aTarget.getConstNSString(),
-                                                         aData.getConstNSString(),
-                                                         getter_AddRefs(pi));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create entity reference");
+        nsCOMPtr<nsIStyleSheetLinkingElement> ssle = do_QueryInterface(pi);
+        if (ssle) {
+            ssle->InitStyleLinkElement(nsnull, PR_FALSE);
+            ssle->SetEnableUpdates(PR_FALSE);
+        }
 
-    nsCOMPtr<nsIStyleSheetLinkingElement> ssle = do_QueryInterface(pi);
-    if (ssle) {
-      ssle->InitStyleLinkElement(nsnull, PR_FALSE);
-      ssle->SetEnableUpdates(PR_FALSE);
+        nsCOMPtr<nsIDOMNode> tmp;
+        rv = mCurrentNode->AppendChild(pi, getter_AddRefs(tmp));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Can't append processing instruction");
+
+        if (ssle && mObserver) {
+            ssle->SetEnableUpdates(PR_TRUE);
+            rv = ssle->UpdateStyleSheet(nsnull, mStyleSheetCount);
+            if (NS_SUCCEEDED(rv) || (rv == NS_ERROR_HTMLPARSER_BLOCK)) {
+                mStyleSheetCount++;
+            }
+        }
     }
-
-    nsCOMPtr<nsIDOMNode> resultNode;
-    mCurrentNode->AppendChild(pi, getter_AddRefs(resultNode));
-    NS_ASSERTION(NS_SUCCEEDED(rv), "Can't append entity reference");
-    if (NS_FAILED(rv))
-        return;
-
-    if (ssle) {
-      ssle->SetEnableUpdates(PR_TRUE);
-      rv = ssle->UpdateStyleSheet(nsnull, mStyleSheetCount);
-      if (NS_SUCCEEDED(rv) || (rv == NS_ERROR_HTMLPARSER_BLOCK))
-        mStyleSheetCount++;
+    else {
+        DelayedNode* dn = new DelayedNode(DelayedNode::ePINode,
+                                          aTarget,
+                                          aData);
+        if (!dn) {
+            return;
+        }
+        mDelayedNodes.add(dn);
     }
 }
 
@@ -265,24 +282,9 @@ void txMozillaXMLOutput::removeScriptElement(nsIDOMHTMLScriptElement *aElement)
     }
 }
 
-void txMozillaXMLOutput::setOutputDocument(nsIDOMDocument* aDocument)
+void txMozillaXMLOutput::setSourceDocument(nsIDOMDocument* aDocument)
 {
-    NS_ASSERTION(aDocument, "Document can't be NULL!");
-    if (!aDocument)
-        return;
-
-    mDocument = aDocument;
-    mCurrentNode = mDocument;
-    mStyleSheetCount = 0;
-    mHaveTitleElement = PR_FALSE;
-    mHaveBaseElement = PR_FALSE;
-    mNonAddedParent = nsnull;
-    mNonAddedNode = nsnull;
-    mRefreshString.Truncate();
-
-    nsCOMPtr<nsIDocument> doc = do_QueryInterface(aDocument);
-    doc->GetNameSpaceManager(*getter_AddRefs(mNameSpaceManager));
-    NS_ASSERTION(mNameSpaceManager, "Can't get namespace manager.");
+    mSourceDocument = aDocument;
 }
 
 void txMozillaXMLOutput::setOutputFormat(txOutputFormat* aOutputFormat)
@@ -294,7 +296,8 @@ void txMozillaXMLOutput::setOutputFormat(txOutputFormat* aOutputFormat)
 
 void txMozillaXMLOutput::startDocument()
 {
-    NS_ASSERTION(mDocument, "Document can't be NULL!");
+    NS_ASSERTION(mSourceDocument, "missing source document");
+    mInTransform = PR_TRUE;
 }
 
 void txMozillaXMLOutput::startElement(const String& aName,
@@ -304,28 +307,11 @@ void txMozillaXMLOutput::startElement(const String& aName,
 
     nsresult rv;
 
-    if (!mRootContent && !mOutputFormat.mSystemId.isEmpty()) {
-        // No root element yet, so add the doctype if necesary.
-        nsCOMPtr<nsIDOMDOMImplementation> implementation;
-        rv = mDocument->GetImplementation(getter_AddRefs(implementation));
-        NS_ASSERTION(NS_SUCCEEDED(rv), "Can't get DOMImplementation");
-        if (NS_SUCCEEDED(rv)) {
-            nsAutoString qName;
-            nsCOMPtr<nsIDOMDocumentType> documentType;
-            nsCOMPtr<nsIDOMNode> firstNode, node;
-            if (mOutputFormat.mMethod == eHTMLOutput)
-                qName.Assign(NS_LITERAL_STRING("html"));
-            else
-                qName.Assign(aName.getConstNSString());
-            rv = implementation->CreateDocumentType(qName,
-                                                    mOutputFormat.mPublicId.getConstNSString(),
-                                                    mOutputFormat.mSystemId.getConstNSString(),
-                                                    getter_AddRefs(documentType));
-            NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create doctype");
-
-            mDocument->GetFirstChild(getter_AddRefs(firstNode));
-            rv = mDocument->InsertBefore(documentType, firstNode, getter_AddRefs(node));
-            NS_ASSERTION(NS_SUCCEEDED(rv), "Can't insert doctype");
+    // Create document if needed
+    if (!mDocument) {
+        rv = createResultDocument(aName);
+        if (NS_FAILED(rv)) {
+            return;
         }
     }
 
@@ -333,11 +319,8 @@ void txMozillaXMLOutput::startElement(const String& aName,
     mDontAddCurrent = PR_FALSE;
 
     if ((mOutputFormat.mMethod == eHTMLOutput) && (aNsID == kNameSpaceID_None)) {
-        // Outputting HTML as XHTML, lowercase element names
-        nsAutoString lowerName(aName.getConstNSString());
-        ToLowerCase(lowerName);
-        rv = mDocument->CreateElementNS(NS_LITERAL_STRING(kXHTMLNameSpaceURI), lowerName,
-                                        getter_AddRefs(element));
+        rv = mDocument->CreateElement(aName.getConstNSString(),
+                                      getter_AddRefs(element));
         NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create element");
 
         startHTMLElement(element);
@@ -366,15 +349,10 @@ void txMozillaXMLOutput::startElement(const String& aName,
 
 void txMozillaXMLOutput::closePrevious(PRInt8 aAction)
 {
-    TX_ENSURE_CURRENTNODE;
-
     nsresult rv;
-    PRInt32 namespaceID = kNameSpaceID_None;
-    nsCOMPtr<nsIContent> currentContent = do_QueryInterface(mCurrentNode);
-    if (currentContent)
-        currentContent->GetNameSpaceID(namespaceID);
-
     if ((aAction & eCloseElement) && mParentNode) {
+        TX_ENSURE_CURRENTNODE;
+
         nsCOMPtr<nsIDocument> document = do_QueryInterface(mParentNode);
         nsCOMPtr<nsIDOMElement> currentElement = do_QueryInterface(mCurrentNode);
 
@@ -408,7 +386,6 @@ void txMozillaXMLOutput::closePrevious(PRInt8 aAction)
             }
             else {
                 nsCOMPtr<nsIDOMNode> resultNode;
-
                 rv = mParentNode->AppendChild(mCurrentNode, getter_AddRefs(resultNode));
                 NS_ASSERTION(NS_SUCCEEDED(rv), "Can't append node");
             }
@@ -416,13 +393,22 @@ void txMozillaXMLOutput::closePrevious(PRInt8 aAction)
         mParentNode = nsnull;
     }
     else if ((aAction & eFlushText) && !mText.IsEmpty()) {
-        nsCOMPtr<nsIDOMText> text;
-        rv = mDocument->CreateTextNode(mText, getter_AddRefs(text));
-        NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create text node");
+        if (mCurrentNode) {
+            nsCOMPtr<nsIDOMText> text;
+            rv = mDocument->CreateTextNode(mText, getter_AddRefs(text));
+            NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create text node");
 
-        nsCOMPtr<nsIDOMNode> resultNode;
-        mCurrentNode->AppendChild(text, getter_AddRefs(resultNode));
-        NS_ASSERTION(NS_SUCCEEDED(rv), "Can't append text node");
+            nsCOMPtr<nsIDOMNode> resultNode;
+            mCurrentNode->AppendChild(text, getter_AddRefs(resultNode));
+            NS_ASSERTION(NS_SUCCEEDED(rv), "Can't append text node");
+        }
+        else {
+            DelayedNode* dn = new DelayedNode(DelayedNode::eTextNode,
+                                              String(mText.get(), mText.Length()));
+            if (dn) {
+                mDelayedNodes.add(dn);
+            }
+        }
 
         mText.Truncate();
     }
@@ -553,7 +539,8 @@ void txMozillaXMLOutput::endHTMLElement(nsIDOMElement* aElement,
     }
 
     // Handle all sorts of stylesheets
-    if (!mDisableStylesheetLoad) {
+    nsCOMPtr<nsITransformObserver> observer = do_QueryReferent(mObserver);
+    if (observer) {
         nsCOMPtr<nsIStyleSheetLinkingElement> ssle =
             do_QueryInterface(aElement);
         if (ssle) {
@@ -592,10 +579,199 @@ void txMozillaXMLOutput::wrapChildren(nsIDOMNode* aCurrentNode,
     currentContent->ChildCount(count);
     for (i = 0; i < count; i++) {
         rv = currentContent->ChildAt(0, *getter_AddRefs(childContent));
-        if (NS_SUCCEEDED(rv)) {
-            child = do_QueryInterface(childContent);
-            aCurrentNode->RemoveChild(child, getter_AddRefs(resultNode));
+        child = do_QueryInterface(childContent);
+        NS_ASSERTION(childContent, "couldn't get all children");
+        
+        // Don't move doc-type nodes since they are only allowed in the root
+        PRUint16 nodeType;
+        child->GetNodeType(&nodeType);
+        if (nodeType != nsIDOMNode::DOCUMENT_TYPE_NODE) {
             aWrapper->AppendChild(resultNode, getter_AddRefs(child));
         }
     }
+}
+
+nsresult
+txMozillaXMLOutput::createResultDocument(const String& aName)
+{
+    NS_ENSURE_TRUE(mSourceDocument, NS_ERROR_UNEXPECTED);
+    nsresult rv;
+
+    // Create the document
+    nsCOMPtr<nsIDocument> doc;
+    if (mOutputFormat.mMethod == eHTMLOutput) {
+        doc = do_CreateInstance(kHTMLDocumentCID, &rv);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+    else {
+        doc = do_CreateInstance(kXMLDocumentCID, &rv);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+    mDocument = do_QueryInterface(doc);
+    mCurrentNode = mDocument;
+    doc->GetNameSpaceManager(*getter_AddRefs(mNameSpaceManager));
+    NS_ASSERTION(mNameSpaceManager, "Can't get namespace manager.");
+
+    // Reset and set up the document
+    nsCOMPtr<nsILoadGroup> loadGroup;
+    nsCOMPtr<nsIChannel> channel;
+    nsCOMPtr<nsIDocument> sourceDoc = do_QueryInterface(mSourceDocument);
+    sourceDoc->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
+    nsCOMPtr<nsIIOService> serv = do_GetService(NS_IOSERVICE_CONTRACTID);
+    if (serv) {
+        // Create a temporary channel to get nsIDocument->Reset to
+        // do the right thing. We want the output document to get
+        // much of the input document's characteristics.
+        nsCOMPtr<nsIURI> docURL;
+        sourceDoc->GetDocumentURL(getter_AddRefs(docURL));
+        serv->NewChannelFromURI(docURL, getter_AddRefs(channel));
+    }
+    doc->Reset(channel, loadGroup);
+    nsCOMPtr<nsIURI> baseURL;
+    sourceDoc->GetBaseURL(*getter_AddRefs(baseURL));
+    doc->SetBaseURL(baseURL);
+    // XXX We might want to call SetDefaultStylesheets here
+
+    // Set up script loader of the result document.
+    nsCOMPtr<nsIScriptLoader> loader;
+    doc->GetScriptLoader(getter_AddRefs(loader));
+    nsCOMPtr<nsITransformObserver> observer = do_QueryReferent(mObserver);
+    if (loader) {
+        if (observer) {
+            loader->AddObserver(this);
+        }
+        else {
+            // Don't load scripts, we can't notify the caller when they're loaded.
+            loader->Suspend();
+        }
+    }
+
+    if (observer) {
+        observer->OnDocumentCreated(mDocument);
+    }
+
+    // Add a doc-type if requested
+    if (!mOutputFormat.mSystemId.isEmpty()) {
+        nsCOMPtr<nsIDOMDOMImplementation> implementation;
+        rv = mSourceDocument->GetImplementation(getter_AddRefs(implementation));
+        NS_ENSURE_SUCCESS(rv, rv);
+        nsAutoString qName;
+        if (mOutputFormat.mMethod == eHTMLOutput) {
+            qName.Assign(NS_LITERAL_STRING("html"));
+        }
+        else {
+            qName.Assign(aName.getConstNSString());
+        }
+        nsCOMPtr<nsIDOMDocumentType> documentType;
+        rv = implementation->CreateDocumentType(qName,
+                                                mOutputFormat.mPublicId.getConstNSString(),
+                                                mOutputFormat.mSystemId.getConstNSString(),
+                                                getter_AddRefs(documentType));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create doctype");
+        nsCOMPtr<nsIDOMNode> tmp;
+        mDocument->AppendChild(documentType, getter_AddRefs(tmp));
+    }
+
+    // Add childnodes that were created before we had a document
+    txListIterator iter(&mDelayedNodes);
+    DelayedNode* dn;
+    while((dn = (DelayedNode*)iter.next())) {
+        switch (dn->mType) {
+            case DelayedNode::eCommentNode:
+            {
+                comment(dn->mData);
+                break;
+            }
+            case DelayedNode::ePINode:
+            {
+                processingInstruction(dn->mName, dn->mData);
+                break;
+            }
+            case DelayedNode::eTextNode:
+            {
+                characters(dn->mData);
+                break;
+            }
+        }
+        delete dn;
+        iter.remove();
+    }
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+txMozillaXMLOutput::ScriptAvailable(nsresult aResult, 
+                                    nsIDOMHTMLScriptElement *aElement, 
+                                    PRBool aIsInline,
+                                    PRBool aWasPending,
+                                    nsIURI *aURI, 
+                                    PRInt32 aLineNo,
+                                    const nsAString& aScript)
+{
+    if (NS_FAILED(aResult)) {
+        removeScriptElement(aElement);
+        SignalTransformEnd();
+    }
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP 
+txMozillaXMLOutput::ScriptEvaluated(nsresult aResult, 
+                                    nsIDOMHTMLScriptElement *aElement,
+                                    PRBool aIsInline,
+                                    PRBool aWasPending)
+{
+    removeScriptElement(aElement);
+    SignalTransformEnd();
+    return NS_OK;
+}
+
+void
+txMozillaXMLOutput::SignalTransformEnd()
+{
+    if (mInTransform) {
+        return;
+    }
+
+    nsCOMPtr<nsITransformObserver> observer = do_QueryReferent(mObserver);
+    if (!observer) {
+        return;
+    }
+
+    if (mScriptElements) {
+        PRUint32 scriptCount = 0;
+        mScriptElements->Count(&scriptCount);
+        if (scriptCount != 0) {
+            return;
+        }
+    }
+
+    nsCOMPtr<nsIScriptLoader> loader;
+    nsCOMPtr<nsIDocument> doc = do_QueryInterface(mDocument);
+    doc->GetScriptLoader(getter_AddRefs(loader));
+    if (loader) {
+        loader->RemoveObserver(this);
+    }
+
+    mObserver = nsnull;
+
+//    if (root) {
+//        mDocument->ContentInserted(nsnull, root, 0);
+//    }
+
+    // XXX Need a better way to determine transform success/failure
+    if (mDocument) {
+      observer->OnTransformDone(NS_OK, mDocument);
+    }
+    else {
+      // XXX Need better error message and code.
+      observer->OnTransformDone(NS_ERROR_FAILURE, nsnull);
+    }
+}
+
+void txMozillaXMLOutput::setObserver(nsITransformObserver* aObserver)
+{
+    mObserver = do_GetWeakReference(aObserver);
 }

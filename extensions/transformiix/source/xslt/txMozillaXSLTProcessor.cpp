@@ -38,6 +38,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "txMozillaXSLTProcessor.h"
+#include "nsContentCID.h"
 #include "nsIConsoleService.h"
 #include "nsIContent.h"
 #include "nsIDOMClassInfo.h"
@@ -49,20 +50,21 @@
 #include "txMozillaXMLOutput.h"
 #include "txSingleNodeContext.h"
 #include "txXMLEventHandler.h"
+#include "VariableBinding.h"
+#include "XMLUtils.h"
+
+static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
 
 NS_IMPL_ADDREF(txMozillaXSLTProcessor)
 NS_IMPL_RELEASE(txMozillaXSLTProcessor)
 NS_INTERFACE_MAP_BEGIN(txMozillaXSLTProcessor)
-    NS_INTERFACE_MAP_ENTRY(nsIDocumentTransformer)
     NS_INTERFACE_MAP_ENTRY(nsIXSLTProcessor)
-    NS_INTERFACE_MAP_ENTRY(nsIScriptLoaderObserver)
-    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDocumentTransformer)
+    NS_INTERFACE_MAP_ENTRY(nsIDocumentTransformer)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIXSLTProcessor)
     NS_INTERFACE_MAP_ENTRY_EXTERNAL_DOM_CLASSINFO(XSLTProcessor)
 NS_INTERFACE_MAP_END
 
-txMozillaXSLTProcessor::txMozillaXSLTProcessor() :
-    mVariables(nsnull),
-    mMozillaOutputHandler(nsnull)
+txMozillaXSLTProcessor::txMozillaXSLTProcessor() : mVariables(nsnull)
 {
     NS_INIT_ISUPPORTS();
 }
@@ -70,21 +72,17 @@ txMozillaXSLTProcessor::txMozillaXSLTProcessor() :
 txMozillaXSLTProcessor::~txMozillaXSLTProcessor()
 {
     delete mVariables;
-    delete mMozillaOutputHandler;
 }
 
 NS_IMETHODIMP
 txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
                                           nsIDOMNode* aStyleDOM,
-                                          nsIDOMDocument* aOutputDoc,
-                                          nsITransformObserver* aObserver)
+                                          nsITransformObserver* aObserver,
+                                          nsIDOMDocument** aOutputDoc)
 {
     // We need source and result documents but no stylesheet.
     NS_ENSURE_ARG(aSourceDOM);
     NS_ENSURE_ARG(aOutputDoc);
-
-    delete mMozillaOutputHandler;
-    mMozillaOutputHandler = nsnull;
 
     // Create wrapper for the source document.
     nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
@@ -105,62 +103,13 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     }
     Document xslDocument(styleDOMDocument);
 
-    // Create wrapper for the output document.
-    mResultDocument = do_QueryInterface(aOutputDoc);
-    NS_ENSURE_TRUE(mResultDocument, NS_ERROR_FAILURE);
-    Document resultDocument(aOutputDoc);
-
-    // Reset the output document.
-    // Create a temporary channel to get nsIDocument->Reset to
-    // do the right thing.
-    nsCOMPtr<nsILoadGroup> loadGroup;
-    nsCOMPtr<nsIChannel> channel;
-    nsCOMPtr<nsIURI> docURL;
-    nsCOMPtr<nsIDocument> source = do_QueryInterface(sourceDOMDocument);
-
-    mResultDocument->GetDocumentURL(getter_AddRefs(docURL));
-    if (!docURL && source) {
-        source->GetDocumentURL(getter_AddRefs(docURL));
-    }
-    NS_ASSERTION(docURL, "No document URL");
-
-    mResultDocument->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
-    if (!loadGroup && source) {
-        source->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
-    }
-
-    nsresult rv = NS_NewChannel(getter_AddRefs(channel), docURL,
-                                nsnull, loadGroup);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    // Start of hack for keeping the scrollbars on an existing document.
-    // Based on similar hack that jst wrote for document.open().
-    // See bugs 78070 and 55334.
-    nsCOMPtr<nsIContent> root;
-    mResultDocument->GetRootContent(getter_AddRefs(root));
-    if (root) {
-        mResultDocument->SetRootContent(nsnull);
-    }
-
-    // Call Reset(), this will now do the full reset, except removing
-    // the root from the document, doing that confuses the scrollbar
-    // code in mozilla since the document in the root element and all
-    // the anonymous content (i.e. scrollbar elements) is set to
-    // null.
-    rv = mResultDocument->Reset(channel, loadGroup);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    if (root) {
-        // Tear down the frames for the root element.
-        mResultDocument->ContentRemoved(nsnull, root, 0);
-    }
-    // End of hack for keeping the scrollbars on an existing document.
-
     // Start of block to ensure the destruction of the ProcessorState
     // before the destruction of the documents.
     {
+        txMozillaHelper processorHelper(sourceDOMDocument, aObserver);
+
         // Create a new ProcessorState
-        ProcessorState ps(&sourceDocument, &xslDocument, &resultDocument);
+        ProcessorState ps(&sourceDocument, &xslDocument, &processorHelper);
 
         // XXX Need to add error observers
 
@@ -170,6 +119,7 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
 
         // Index templates and process top level xslt elements
         nsCOMPtr<nsIDOMDocument> styleDoc = do_QueryInterface(aStyleDOM);
+        nsresult rv;
         if (styleDoc) {
             rv = processStylesheet(&sourceDocument, &xslDocument, &ps);
         }
@@ -182,94 +132,13 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
         }
         NS_ENSURE_SUCCESS(rv, rv);
 
-        // Get the script loader of the result document.
-        if (aObserver) {
-            mResultDocument->GetScriptLoader(getter_AddRefs(mScriptLoader));
-            if (mScriptLoader) {
-                mScriptLoader->AddObserver(this);
-            }
-        }
-
         // Process root of XML source document
         transform(sourceNode, &ps);
     }
     // End of block to ensure the destruction of the ProcessorState
     // before the destruction of the documents.
 
-    mMozillaOutputHandler->getRootContent(getter_AddRefs(root));
-    if (root) {
-        mResultDocument->ContentInserted(nsnull, root, 0);
-    }
-
-    mObserver = do_GetWeakReference(aObserver);
-    SignalTransformEnd();
-
     return NS_OK;
-}
-
-NS_IMETHODIMP
-txMozillaXSLTProcessor::ScriptAvailable(nsresult aResult, 
-                                        nsIDOMHTMLScriptElement *aElement, 
-                                        PRBool aIsInline,
-                                        PRBool aWasPending,
-                                        nsIURI *aURI, 
-                                        PRInt32 aLineNo,
-                                        const nsAString& aScript)
-{
-    if (NS_FAILED(aResult) && mMozillaOutputHandler) {
-        mMozillaOutputHandler->removeScriptElement(aElement);
-        SignalTransformEnd();
-    }
-
-    return NS_OK;
-}
-
-NS_IMETHODIMP 
-txMozillaXSLTProcessor::ScriptEvaluated(nsresult aResult, 
-                                        nsIDOMHTMLScriptElement *aElement,
-                                        PRBool aIsInline,
-                                        PRBool aWasPending)
-{
-    if (mMozillaOutputHandler) {
-        mMozillaOutputHandler->removeScriptElement(aElement);
-        SignalTransformEnd();
-    }
-
-    return NS_OK;
-}
-
-void
-txMozillaXSLTProcessor::SignalTransformEnd()
-{
-    nsCOMPtr<nsITransformObserver> observer = do_QueryReferent(mObserver);
-    if (!observer) {
-        return;
-    }
-
-    if (!mMozillaOutputHandler || !mMozillaOutputHandler->isDone()) {
-        return;
-    }
-
-    if (mScriptLoader) {
-        mScriptLoader->RemoveObserver(this);
-        mScriptLoader = nsnull;
-    }
-
-    mObserver = nsnull;
-
-    // XXX Need a better way to determine transform success/failure
-    nsCOMPtr<nsIContent> rootContent;
-    mMozillaOutputHandler->getRootContent(getter_AddRefs(rootContent));
-    nsCOMPtr<nsIDOMNode> root = do_QueryInterface(rootContent);
-    if (root) {
-      nsCOMPtr<nsIDOMDocument> resultDoc;
-      root->GetOwnerDocument(getter_AddRefs(resultDoc));
-      observer->OnTransformDone(NS_OK, resultDoc);
-    }
-    else {
-      // XXX Need better error message and code.
-      observer->OnTransformDone(NS_ERROR_FAILURE, nsnull);
-    }
 }
 
 NS_IMETHODIMP
@@ -287,9 +156,6 @@ txMozillaXSLTProcessor::TransformNode(nsIDOMNode *aSource,
     NS_ENSURE_ARG(aSource);
     NS_ENSURE_ARG(aOutput);
     NS_ENSURE_TRUE(mStylesheet, NS_ERROR_FAILURE);
-
-    delete mMozillaOutputHandler;
-    mMozillaOutputHandler = nsnull;
 
     // Create wrapper for the source document.
     nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
@@ -311,15 +177,17 @@ txMozillaXSLTProcessor::TransformNode(nsIDOMNode *aSource,
     Document xslDocument(styleDOMDocument);
 
     // Create wrapper for the output document.
-    mResultDocument = do_QueryInterface(aOutput);
-    NS_ENSURE_TRUE(mResultDocument, NS_ERROR_FAILURE);
+    nsCOMPtr<nsIDocument> document = do_QueryInterface(aOutput);
+    NS_ENSURE_TRUE(document, NS_ERROR_FAILURE);
     Document resultDocument(aOutput);
 
     // Start of block to ensure the destruction of the ProcessorState
     // before the destruction of the documents.
     {
+        txMozillaHelper processorHelper(sourceDOMDocument, nsnull);
+
         // Create a new ProcessorState
-        ProcessorState ps(&sourceDocument, &xslDocument, &resultDocument);
+        ProcessorState ps(&sourceDocument, &xslDocument, &processorHelper);
 
         // XXX Need to add error observers
 
@@ -344,13 +212,46 @@ txMozillaXSLTProcessor::TransformNode(nsIDOMNode *aSource,
 
         // Get the script loader of the result document.
         nsCOMPtr<nsIScriptLoader> loader;
-        mResultDocument->GetScriptLoader(getter_AddRefs(loader));
+        document->GetScriptLoader(getter_AddRefs(loader));
         if (loader) {
             // Don't load scripts, we can't notify the caller when they're loaded.
             loader->Suspend();
         }
 
         if (mVariables) {
+            txVariable* var;
+            PRInt32 index;
+            PRInt32 count = mVariables->Count();
+
+            // XXX Change when sicking lands vars rewrite
+            NamedMap* globalVars =
+                (NamedMap*)ps.getVariableSetStack()->peek();
+
+            nsCOMPtr<nsINameSpaceManager> namespaceManager;
+            rv = document->GetNameSpaceManager(*getter_AddRefs(namespaceManager));
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            for (index = 0; index < count; index++) {
+                var = (txVariable*)mVariables->ElementAt(index);
+                ExprResult* value = ConvertParameter(var->mValue);
+                if (!value) {
+                    // XXX Error? Signal to user?
+                    continue;
+                }
+                PRInt32 nsId = kNameSpaceID_Unknown;
+                rv = namespaceManager->GetNameSpaceID(var->mNamespaceURI, nsId);
+                nsCOMPtr<nsIAtom> localName = do_GetAtom(var->mLocalName);
+                txExpandedName name(nsId, localName);
+
+                // XXX Change when sicking lands vars rewrite
+                VariableBinding* binding = new VariableBinding(String(&var->mLocalName), value);
+                if (!binding) {
+                    // XXX Error? Signal to user?
+                    continue;
+                }
+                binding->allowShadowing();
+                globalVars->put(String(&var->mLocalName), binding);
+            }
         }
 
         // Process root of XML source document
@@ -358,8 +259,6 @@ txMozillaXSLTProcessor::TransformNode(nsIDOMNode *aSource,
     }
     // End of block to ensure the destruction of the ProcessorState
     // before the destruction of the documents.
-
-    SignalTransformEnd();
 
     return NS_OK;
 }
@@ -369,6 +268,52 @@ txMozillaXSLTProcessor::SetParameter(const nsAString & aNamespaceURI,
                                      const nsAString & aLocalName,
                                      nsIVariant *aValue)
 {
+    PRUint16 dataType;
+    aValue->GetDataType(&dataType);
+    switch (dataType) {
+        // Number
+        case nsIDataType::VTYPE_INT8:
+        case nsIDataType::VTYPE_INT16:
+        case nsIDataType::VTYPE_INT32:
+        case nsIDataType::VTYPE_INT64:
+        case nsIDataType::VTYPE_UINT8:
+        case nsIDataType::VTYPE_UINT16:
+        case nsIDataType::VTYPE_UINT32:
+        case nsIDataType::VTYPE_UINT64:
+        case nsIDataType::VTYPE_FLOAT:
+        case nsIDataType::VTYPE_DOUBLE:
+
+        // Boolean
+        case nsIDataType::VTYPE_BOOL:
+
+        // String
+        case nsIDataType::VTYPE_CHAR:
+        case nsIDataType::VTYPE_WCHAR:
+        case nsIDataType::VTYPE_DOMSTRING:
+        case nsIDataType::VTYPE_CHAR_STR:
+        case nsIDataType::VTYPE_WCHAR_STR:
+        case nsIDataType::VTYPE_STRING_SIZE_IS:
+        case nsIDataType::VTYPE_WSTRING_SIZE_IS:
+        case nsIDataType::VTYPE_UTF8STRING:
+        case nsIDataType::VTYPE_CSTRING:
+        case nsIDataType::VTYPE_ASTRING:
+
+        // Nodeset
+        case nsIDataType::VTYPE_INTERFACE:
+        case nsIDataType::VTYPE_INTERFACE_IS:
+        case nsIDataType::VTYPE_ARRAY:
+        {
+            // This might still be an error, but we'll only
+            // find out later since we lazily evaluate.
+            break;
+        }
+
+        default:
+        {
+            return NS_ERROR_FAILURE;
+        }        
+    }
+
     if (!mVariables) {
         mVariables = new nsAutoVoidArray();
         NS_ENSURE_TRUE(mVariables, NS_ERROR_OUT_OF_MEMORY);
@@ -460,14 +405,102 @@ txMozillaXSLTProcessor::ClearParameters()
     return NS_OK;
 }
 
+/* static*/
+ExprResult*
+txMozillaXSLTProcessor::ConvertParameter(nsIVariant *aValue)
+{
+    PRUint16 dataType;
+    aValue->GetDataType(&dataType);
+    switch (dataType) {
+        // Number
+        case nsIDataType::VTYPE_INT8:
+        case nsIDataType::VTYPE_INT16:
+        case nsIDataType::VTYPE_INT32:
+        case nsIDataType::VTYPE_INT64:
+        case nsIDataType::VTYPE_UINT8:
+        case nsIDataType::VTYPE_UINT16:
+        case nsIDataType::VTYPE_UINT32:
+        case nsIDataType::VTYPE_UINT64:
+        case nsIDataType::VTYPE_FLOAT:
+        case nsIDataType::VTYPE_DOUBLE:
+        {
+            double value;
+            nsresult rv = aValue->GetAsDouble(&value);
+            NS_ENSURE_SUCCESS(rv, nsnull);
+            return new NumberResult(value);
+        }
+
+        // Boolean
+        case nsIDataType::VTYPE_BOOL:
+        {
+            PRBool value;
+            nsresult rv = aValue->GetAsBool(&value);
+            NS_ENSURE_SUCCESS(rv, nsnull);
+            return new BooleanResult(value);
+        }
+
+        // String
+        case nsIDataType::VTYPE_CHAR:
+        case nsIDataType::VTYPE_WCHAR:
+        case nsIDataType::VTYPE_DOMSTRING:
+        case nsIDataType::VTYPE_CHAR_STR:
+        case nsIDataType::VTYPE_WCHAR_STR:
+        case nsIDataType::VTYPE_STRING_SIZE_IS:
+        case nsIDataType::VTYPE_WSTRING_SIZE_IS:
+        case nsIDataType::VTYPE_UTF8STRING:
+        case nsIDataType::VTYPE_CSTRING:
+        case nsIDataType::VTYPE_ASTRING:
+        {
+            String value;
+            nsresult rv = aValue->GetAsAString(value.getNSString());
+            NS_ENSURE_SUCCESS(rv, nsnull);
+            return new StringResult(value);
+        }
+
+        // Nodeset
+        case nsIDataType::VTYPE_INTERFACE:
+        case nsIDataType::VTYPE_INTERFACE_IS:
+        {
+            nsID *iid;
+            nsCOMPtr<nsISupports> supports;
+            nsresult rv = aValue->GetAsInterface(&iid, getter_AddRefs(supports));
+            NS_ENSURE_SUCCESS(rv, nsnull);
+            if (iid) {
+                // XXX Figure out what the user added and if we can do
+                //     anything with it. Node, nsIDOMXPathResult
+                nsMemory::Free(iid);
+            }
+            break;
+        }
+
+        case nsIDataType::VTYPE_ARRAY:
+        {
+            // XXX Figure out what the user added and if we can do
+            //     anything with it. Array of Nodes. 
+            break;
+        }
+    }
+    return nsnull;
+}
+
+txMozillaHelper::txMozillaHelper(nsIDOMDocument* aSourceDocument,
+                                 nsITransformObserver* aObserver) :
+    mSourceDocument(aSourceDocument),
+    mObserver(do_GetWeakReference(aObserver))
+{
+}
+
+txMozillaHelper::~txMozillaHelper()
+{
+}
+
 txOutputXMLEventHandler*
-txMozillaXSLTProcessor::getOutputHandler(txOutputMethod aMethod)
+txMozillaHelper::getOutputHandler(txOutputMethod aMethod)
 {
     if (mMozillaOutputHandler) {
         if (aMethod == eHTMLOutput || aMethod == eXMLOutput) {
             return mMozillaOutputHandler;
         }
-        delete mMozillaOutputHandler;
         mMozillaOutputHandler = nsnull;
     }
     switch (aMethod) {
@@ -485,24 +518,35 @@ txMozillaXSLTProcessor::getOutputHandler(txOutputMethod aMethod)
         }
     }
     if (mMozillaOutputHandler) {
-        nsCOMPtr<nsIDOMDocument> resultDocument =
-            do_QueryInterface(mResultDocument);
-        mMozillaOutputHandler->setOutputDocument(resultDocument);
+        mMozillaOutputHandler->setSourceDocument(mSourceDocument);
+        nsCOMPtr<nsITransformObserver> observer =
+            do_QueryReferent(mObserver);
+        mMozillaOutputHandler->setObserver(observer);
     }
     return mMozillaOutputHandler;
 }
 
 void
-txMozillaXSLTProcessor::logMessage(const String& aMessage)
+txMozillaHelper::logMessage(const String& aMessage)
 {
     nsresult rv;
     nsCOMPtr<nsIConsoleService> consoleSvc = 
       do_GetService("@mozilla.org/consoleservice;1", &rv);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "xsl:message couldn't get console service");
+    NS_ASSERTION(NS_SUCCEEDED(rv),
+                 "xsl:message couldn't get console service");
     if (consoleSvc) {
         nsAutoString logString(NS_LITERAL_STRING("xsl:message - "));
         logString.Append(aMessage.getConstNSString());
         rv = consoleSvc->LogStringMessage(logString.get());
         NS_ASSERTION(NS_SUCCEEDED(rv), "xsl:message couldn't log");
     }
+}
+
+Document*
+txMozillaHelper::createRTFDocument(txOutputMethod aMethod)
+{
+    nsresult rv;
+    nsCOMPtr<nsIDOMDocument> domDoc = do_CreateInstance(kXMLDocumentCID, &rv);
+    NS_ENSURE_SUCCESS(rv, nsnull);
+    return new Document(domDoc);
 }

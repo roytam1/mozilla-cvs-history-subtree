@@ -30,9 +30,11 @@ class txOutputFormat;
 #ifdef TX_EXE
 #include <iostream.h>
 #else
+#include "nsISupports.h"
 class nsIContent;
 class nsIDOMDocument;
 class nsIDOMHTMLScriptElement;
+class nsITransformObserver;
 #endif
 
 /*
@@ -146,41 +148,36 @@ public:
     virtual void charactersNoOutputEscaping(const String& aData) = 0;
 };
 #else
-class txMozillaXMLEventHandler : public txOutputXMLEventHandler
+#define TX_IMOZILLAXMLEVENTHANDLER_IID \
+{ 0x80e5e802, 0x8c88, 0x11d6, \
+  { 0xa7, 0xf2, 0xc5, 0xc3, 0x85, 0x6b, 0xbb, 0xbc }}
+
+class txIMozillaXMLEventHandler : public nsISupports,
+                                  public txOutputXMLEventHandler
 {
 public:
-    /*
-     * Disables loading of stylesheets.
-     */
-    virtual void disableStylesheetLoad() = 0;
+    NS_DEFINE_STATIC_IID_ACCESSOR(TX_IMOZILLAXMLEVENTHANDLER_IID)
 
     /*
-     * Returns the root content of the result.
+     * Sets the Mozilla source document
      *
-     * @param aReturn the root content
+     * @param aDocument the Mozilla source document
      */
-    virtual nsresult getRootContent(nsIContent** aReturn) = 0;
+    virtual void setSourceDocument(nsIDOMDocument* aDocument) = 0;
 
     /*
-     * Returns PR_TRUE if the event handler has finished anything
-     * extra that had to happen after the transform has finished.
-     */
-    virtual PRBool isDone() = 0;
-
-    /*
-     * Removes a script element from the array of elements that are
-     * still loading.
-     *
-     * @param aReturn the script element to remove
-     */
-    virtual void removeScriptElement(nsIDOMHTMLScriptElement *aElement) = 0;
-
-    /*
-     * Sets the Mozilla output document.
+     * Gets the Mozilla output document
      *
      * @param aDocument the Mozilla output document
      */
-    virtual void setOutputDocument(nsIDOMDocument* aDocument) = 0;
+    virtual void getOutputDocument(nsIDOMDocument** aDocument) = 0;
+
+    /*
+     * Sets the content-sink observer
+     *
+     * @param aObserver the content-sink observer
+     */
+    virtual void setObserver(nsITransformObserver* aObserver) = 0;
 };
 #endif
 

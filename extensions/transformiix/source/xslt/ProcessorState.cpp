@@ -48,19 +48,19 @@
 
 /**
  * Creates a new ProcessorState for the given XSL document
- * and resultDocument
 **/
 ProcessorState::ProcessorState(Document* aSourceDocument,
                                Document* aXslDocument,
-                               Document* aResultDocument)
+                               txIProcessorHelper* aHelper)
     : mEvalContext(0),
       mSourceDocument(aSourceDocument),
       xslDocument(aXslDocument),
-      resultDocument(aResultDocument)
+      mRTFDocument(0),
+      mHelper(aHelper)
 {
     NS_ASSERTION(aSourceDocument, "missing source document");
     NS_ASSERTION(aXslDocument, "missing xslt document");
-    NS_ASSERTION(aResultDocument, "missing result document");
+    NS_ASSERTION(aHelper, "missing xslt helper");
 
     // add global variable set
     NamedMap* globalVars = new NamedMap();
@@ -628,9 +628,31 @@ txOutputFormat* ProcessorState::getOutputFormat()
     return &mOutputFormat;
 }
 
-Document* ProcessorState::getResultDocument()
+txIProcessorHelper* ProcessorState::getProcessorHelper()
 {
-    return resultDocument;
+    NS_ASSERTION(mHelper, "missing processor helper");
+    return mHelper;
+}
+
+Document* ProcessorState::getRTFDocument()
+{
+    if (mRTFDocument) {
+        return mRTFDocument;
+    }
+   
+    mRTFDocument = mHelper->createRTFDocument(eXMLOutput);
+    return mRTFDocument;
+}
+
+void ProcessorState::setRTFDocument(Document* aDoc)
+{
+    mRTFDocument = aDoc;
+}
+
+Document* ProcessorState::getStylesheetDocument()
+{
+    NS_ASSERTION(xslDocument, "missing stylesheet document");
+    return xslDocument;
 }
 
 Stack* ProcessorState::getVariableSetStack()
