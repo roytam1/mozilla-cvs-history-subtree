@@ -46,7 +46,7 @@ RANLIB = echo
 BSDECHO = echo
 NSINSTALL = nsinstall
 INSTALL	= $(NSINSTALL)
-MAKE_OBJDIR = -mkdir $(OBJDIR)
+MAKE_OBJDIR = if test ! -d $(OBJDIR); then mkdir $(OBJDIR); fi
 IMPLIB = flipper implib -nologo -noignorecase
 FILTER = flipper cppfilt -q
 RC = rc.exe
@@ -100,7 +100,7 @@ else
 CC		= gcc
 CCC		= gcc
 LINK	= gcc
-AR      = gcc
+AR      = ar -q $@
 RC 		= rc.exe
 
 DEFINES += -DXP_OS2_EMX
@@ -113,6 +113,8 @@ endif
 
 OS_CFLAGS     = -I. -Wall -Zmt $(DEFINES)
 OS_EXE_CFLAGS = -I. -Wall -Zmt $(DEFINES)
+
+AR_EXTRA_ARGS =
 
 endif
 
