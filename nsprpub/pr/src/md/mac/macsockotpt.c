@@ -243,6 +243,22 @@ static void PrepareForAsyncCompletion(PRThread * thread, PRInt32 osfd)
 }
 
 
+static void
+WakeUpNotifiedThread(PRThread *thread, OTResult result)
+{
+    _PRCPU *      cpu      = _PR_MD_CURRENT_CPU(); 
+
+	if (thread) {
+		thread->md.osErrCode = result;
+		if (_PR_MD_GET_INTSOFF()) {
+			cpu->u.missed[cpu->where] |= _PR_MISSED_IO;
+			thread->md.missedIONotify = PR_TRUE;
+			return;
+		}
+		DoneWaitingOnThisThread(thread);
+	}
+}
+
 // Notification routine
 // Async callback routine.
 // A5 is OK. Cannot allocate memory here
@@ -252,9 +268,9 @@ pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResult resul
 	_MDFileDesc * md       = &(secret->md);
 	EndpointRef   endpoint = (EndpointRef)secret->md.osfd;
     PRThread *    thread   = NULL;
-    _PRCPU *      cpu      = _PR_MD_CURRENT_CPU(); 
 	OSStatus      err;
 	OTResult	  resultOT;
+    TDiscon		  discon;
 
     switch (code)
     {
@@ -303,10 +319,27 @@ pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResult resul
 			return;
 
         case T_DISCONNECT:  // A disconnect is available
-            err = OTRcvDisconnect(endpoint, NULL);
+            err = OTRcvDisconnect(endpoint, &discon);
             PR_ASSERT(err == kOTNoError);
             secret->md.exceptReady     = PR_TRUE;
             secret->md.connectionOpen  = PR_FALSE;
+
+			// wake up waiting threads, if any
+			result = kECONNRESETErr;//(OTResult) discon.reason;
+
+            if ((thread = secret->md.read.thread) != NULL) {
+		        secret->md.read.thread    = NULL;
+    	        secret->md.read.cookie    = cookie;
+            	WakeUpNotifiedThread(thread, result);
+    	    }
+            
+            if ((thread = secret->md.write.thread) != NULL) {
+	            secret->md.write.thread    = NULL;
+	            secret->md.write.cookie    = cookie;
+	            WakeUpNotifiedThread(thread, result);
+	        }
+	        
+	        thread = NULL; // already took care of notification here
             break;
 		
         case T_ERROR:       // obsolete/unused in library
@@ -323,6 +356,11 @@ pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResult resul
             secret->md.readReady      = PR_TRUE;   // mark readable (to emulate bsd sockets)
             // remember connection is closed, so we can return 0 on read or receive
 			secret->md.connectionOpen = PR_FALSE;
+	
+            thread = secret->md.read.thread;
+	        secret->md.read.thread    = NULL;
+	        secret->md.read.cookie    = cookie;
+
             break;		
 
         case T_GODATA:   // Flow control lifted on standard data
@@ -391,16 +429,7 @@ pascal void  NotifierRoutine(void * contextPtr, OTEventCode code, OTResult resul
             return;
     }
 
-	if (thread) {
-		thread->md.osErrCode = result;
-		if (_PR_MD_GET_INTSOFF()) {
-			cpu->u.missed[cpu->where] |= _PR_MISSED_IO;
-			thread->md.missedIONotify = PR_TRUE;
-			return;
-		}
-
-		DoneWaitingOnThisThread(thread);
-	}
+	WakeUpNotifiedThread(thread, result);
 }
 
 
@@ -988,7 +1017,7 @@ PRInt32 _MD_socketavailable(PRFileDesc *fd)
     
     err = OTCountDataBytes(endpoint, &bytes);
     if ((err == kOTLookErr) ||         // Not really errors, we just need to do a read,
-        (err == kOTNoDataErr))        // or there’s nothing there.
+        (err == kOTNoDataErr))        // or there's nothing there.
         err = kOTNoError;
         
     if (err != kOTNoError)
