@@ -1506,6 +1506,15 @@ sub run_all_tests {
             } else {
                 print_log "Already set dom.allow_scripts_to_close_windows\n";
             }
+
+            # Suppress security warnings for QA test.
+            if ($Settings::QATest &&
+                system("\\grep -s security.warn_submit_insecure $pref_file > /dev/null")) {
+                print_log "Setting security.warn_submit_insecure to true.\n";
+                open PREFS, ">>$pref_file" or die "can't open $pref_file ($?)\n";
+                print PREFS "user_pref(\"security.warn_submit_insecure\", true);\n";
+                close PREFS;
+            }
             
         }
     }
