@@ -30,7 +30,10 @@
 #include "nsIChannel.h"
 #include "nsNetUtil.h"
 #include "nsIComponentManager.h"
-#include "nsWidgetsCID.h"
+#include "nsIWindow.h"
+#include "nsIChildWindow.h"
+#include "nsIGUIEventListener.h"
+#include "nsIOutputDevice.h"
 #include "nsILinkHandler.h"
 #include "nsIWebShell.h"
 #include "nsIContentViewerEdit.h"
@@ -44,9 +47,9 @@
 #include "nsIDOMDocument.h"
 #include "nsPluginViewer.h"
 
-// Class IDs
-static NS_DEFINE_IID(kChildWindowCID, NS_CHILD_CID);
-static NS_DEFINE_IID(kIWidgetIID, NS_IWIDGET_IID);
+
+#include <stdio.h>
+
 
 // Interface IDs
 static NS_DEFINE_IID(kIContentViewerIID, NS_ICONTENT_VIEWER_IID);
@@ -110,16 +113,17 @@ public:
 
   //locals
 
-  NS_IMETHOD Init(PluginViewerImpl *aViewer, nsIWidget *aWindow);
+  NS_IMETHOD Init(PluginViewerImpl *aViewer, nsIChildWindow *aWindow);
 
 private:
   nsPluginWindow    mPluginWindow;
   nsIPluginInstance *mInstance;
-  nsIWidget         *mWindow;       //we do not addref this...
+  nsIWindow         *mWindow;       //we do not addref this...
   PluginViewerImpl  *mViewer;       //we do not addref this...
 };
 
-class PluginViewerImpl : public nsIContentViewer,
+class PluginViewerImpl : public nsIGUIEventListener,
+                         public nsIContentViewer,
                          public nsIContentViewerEdit,
                          public nsIContentViewerFile
 {
@@ -132,9 +136,12 @@ public:
   // nsISupports
   NS_DECL_ISUPPORTS
 
+  // nsIGUIEventListener
+  NS_IMETHODIMP ProcessEvent(const nsGUIEvent *aEvent);
+
   // nsIContentViewer
-  NS_IMETHOD Init(nsIWidget* aParentWidget,
-                  nsIDeviceContext* aDeviceContext,
+  NS_IMETHOD Init(nsIWindow* aParentWidget,
+                  nsIOutputDevice* aDeviceContext,
                   const nsRect& aBounds);
   NS_IMETHOD BindToDocument(nsISupports* aDoc, const char* aCommand);
   NS_IMETHOD SetContainer(nsISupports* aContainer);
@@ -146,7 +153,7 @@ public:
   NS_IMETHOD SetDOMDocument(nsIDOMDocument *aDocument);
   NS_IMETHOD GetBounds(nsRect& aResult);
   NS_IMETHOD SetBounds(const nsRect& aBounds);
-  NS_IMETHOD Move(PRInt32 aX, PRInt32 aY);
+  NS_IMETHOD Move(gfx_coord aX, gfx_coord aY);
   NS_IMETHOD Show();
   NS_IMETHOD Hide();
   NS_IMETHOD SetEnableRendering(PRBool aOn);
@@ -163,8 +170,8 @@ public:
   nsresult CreatePlugin(nsIPluginHost* aHost, const nsRect& aBounds,
                         nsIStreamListener*& aResult);
 
-  nsresult MakeWindow(nsNativeWidget aParent,
-                      nsIDeviceContext* aDeviceContext,
+  nsresult MakeWindow(nsIWindow* aParent,
+                      nsIOutputDevice *aOutputDevice,
                       const nsRect& aBounds);
 
   nsresult StartLoad(nsIChannel* channel, nsIStreamListener*& aResult);
@@ -175,7 +182,7 @@ public:
 
   nsresult GetDocument(nsIDocument* *aDocument);
 
-  nsIWidget* mWindow;
+  nsCOMPtr<nsIWindow> mWindow;
   nsIDocument* mDocument;
   nsCOMPtr<nsISupports> mContainer;
   nsIChannel* mChannel;
@@ -250,10 +257,7 @@ PluginViewerImpl::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 PluginViewerImpl::~PluginViewerImpl()
 {
   NS_IF_RELEASE(mOwner);
-  if (nsnull != mWindow) {
-    mWindow->Destroy();
-    NS_RELEASE(mWindow);
-  }
+
   NS_IF_RELEASE(mDocument);
   NS_IF_RELEASE(mChannel);
 }
@@ -293,17 +297,18 @@ PluginViewerImpl::GetContainer(nsISupports** aResult)
 
 
 NS_IMETHODIMP
-PluginViewerImpl::Init(nsIWidget* aParentWidget,
-                       nsIDeviceContext* aDeviceContext,
+PluginViewerImpl::Init(nsIWindow* aParentWidget,
+                       nsIOutputDevice* aDeviceContext,
                        const nsRect& aBounds)
 {
-  nsresult rv = MakeWindow(aParentWidget->GetNativeData(NS_NATIVE_WIDGET),
-   aDeviceContext, aBounds);
+  nsresult rv = MakeWindow(aParentWidget,
+                           aDeviceContext, aBounds);
   if (NS_OK == rv) {
     mOwner = new pluginInstanceOwner();
     if (nsnull != mOwner) {
       NS_ADDREF(mOwner);
-      rv = mOwner->Init(this, mWindow);
+      nsCOMPtr<nsIChildWindow> cwin(do_QueryInterface(mWindow));
+      rv = mOwner->Init(this, cwin);
     }
   }
   return rv;
@@ -351,17 +356,17 @@ PluginViewerImpl::CreatePlugin(nsIPluginHost* aHost, const nsRect& aBounds,
 
     mOwner->GetWindow(win);
 
-    win->x = aBounds.x;
-    win->y = aBounds.y;
-    win->width = aBounds.width;
-    win->height = aBounds.height;
-    win->clipRect.top = aBounds.y;
-    win->clipRect.left = aBounds.x;
-    win->clipRect.bottom = aBounds.YMost();
-    win->clipRect.right = aBounds.XMost();
-  #ifdef XP_UNIX
+    win->x = GFXCoordToIntRound(aBounds.x);
+    win->y = GFXCoordToIntRound(aBounds.y);
+    win->width = GFXCoordToIntRound(aBounds.width);
+    win->height = GFXCoordToIntRound(aBounds.height);
+    win->clipRect.top = win->x;
+    win->clipRect.left = win->y;
+    win->clipRect.bottom = GFXCoordToIntRound(aBounds.YMost());
+    win->clipRect.right = GFXCoordToIntRound(aBounds.XMost());
+#ifdef XP_UNIX
     win->ws_info = nsnull;   //XXX need to figure out what this is. MMP
-  #endif
+#endif
 
     nsIURI* uri;
     rv = mChannel->GetURI(&uri);
@@ -415,26 +420,30 @@ PluginViewerImpl::SetDOMDocument(nsIDOMDocument *aDocument)
   return NS_ERROR_FAILURE;
 }
 
-static nsEventStatus PR_CALLBACK
-HandlePluginEvent(nsGUIEvent *aEvent)
+NS_IMETHODIMP
+PluginViewerImpl::ProcessEvent(const nsGUIEvent *aEvent)
 {
-  if( (*aEvent).message == NS_PLUGIN_ACTIVATE) {
-    (nsIWidget*)((*aEvent).widget)->SetFocus();
+  if( aEvent->message == NS_PLUGIN_ACTIVATE) {
+    aEvent->widget->SetFocus();
   }
   return nsEventStatus_eIgnore;
 }
+
 nsresult
-PluginViewerImpl::MakeWindow(nsNativeWidget aParent,
-                             nsIDeviceContext* aDeviceContext,
+PluginViewerImpl::MakeWindow(nsIWindow *aParent,
+                             nsIOutputDevice *aOutputDevice,
                              const nsRect& aBounds)
 {
-  nsresult rv =
-    nsComponentManager::CreateInstance(kChildWindowCID, nsnull, kIWidgetIID,
-                                 (void**)&mWindow);
-  if (NS_OK != rv) {
+  nsresult rv;
+  nsCOMPtr<nsIChildWindow> cwin = do_CreateInstance("@mozilla/gfx/window/child;2", &rv);
+  if (NS_FAILED(rv)) {
     return rv;
   }
-  mWindow->Create(aParent, aBounds, HandlePluginEvent, aDeviceContext);
+
+  cwin->Init(aParent, aBounds.x, aBounds.y, aBounds.width, aBounds.height);
+  mWindow = do_QueryInterface(cwin);
+  mWindow->SetEventListener(this);
+
   return rv;
 }
 
@@ -443,7 +452,7 @@ PluginViewerImpl::GetBounds(nsRect& aResult)
 {
   NS_PRECONDITION(nsnull != mWindow, "null window");
   if (nsnull != mWindow) {
-    mWindow->GetBounds(aResult);
+    mWindow->GetBounds(&aResult.y, &aResult.x, &aResult.width, &aResult.height);
   }
   else {
     aResult.SetRect(0, 0, 0, 0);
@@ -459,18 +468,18 @@ PluginViewerImpl::SetBounds(const nsRect& aBounds)
     // Don't have the widget repaint. Layout will generate repaint requests
     // during reflow
     nsIPluginInstance *inst;
-    mWindow->Resize(aBounds.x, aBounds.y, aBounds.width, aBounds.height, PR_FALSE);
+    mWindow->MoveResize(aBounds.x, aBounds.y, aBounds.width, aBounds.height, PR_FALSE);
     if ((nsnull != mOwner) && (NS_OK == mOwner->GetInstance(inst)) && (nsnull != inst)) {
       nsPluginWindow  *win;
       if (NS_OK == mOwner->GetWindow(win)) {
-        win->x = aBounds.x;
-        win->y = aBounds.y;
-        win->width = aBounds.width;
-        win->height = aBounds.height;
-        win->clipRect.top = aBounds.y;
-        win->clipRect.left = aBounds.x;
-        win->clipRect.bottom = aBounds.YMost();
-        win->clipRect.right = aBounds.XMost();
+        win->x = GFXCoordToIntRound(aBounds.x);
+        win->y = GFXCoordToIntRound(aBounds.y);
+        win->width = GFXCoordToIntRound(aBounds.width);
+        win->height = GFXCoordToIntRound(aBounds.height);
+        win->clipRect.top = GFXCoordToIntRound(aBounds.y);
+        win->clipRect.left = GFXCoordToIntRound(aBounds.x);
+        win->clipRect.bottom = GFXCoordToIntRound(aBounds.YMost());
+        win->clipRect.right = GFXCoordToIntRound(aBounds.XMost());
 
         inst->SetWindow(win);
       }
@@ -481,7 +490,7 @@ PluginViewerImpl::SetBounds(const nsRect& aBounds)
 }
 
 NS_IMETHODIMP
-PluginViewerImpl::Move(PRInt32 aX, PRInt32 aY)
+PluginViewerImpl::Move(gfx_coord aX, gfx_coord aY)
 {
   NS_PRECONDITION(nsnull != mWindow, "null window");
   if (nsnull != mWindow) {
@@ -490,12 +499,20 @@ PluginViewerImpl::Move(PRInt32 aX, PRInt32 aY)
     if ((nsnull != mOwner) && (NS_OK == mOwner->GetInstance(inst)) && (nsnull != inst)) {
       nsPluginWindow  *win;
       if (NS_OK == mOwner->GetWindow(win)) {
-        win->x = aX;
-        win->y = aY;
-        win->clipRect.bottom = (win->clipRect.bottom - win->clipRect.top) + aY;
-        win->clipRect.right = (win->clipRect.right - win->clipRect.left) + aX;
-        win->clipRect.top = aY;
-        win->clipRect.left = aX;
+        win->x = GFXCoordToIntRound(aX);
+        win->y = GFXCoordToIntRound(aY);
+        win->clipRect.bottom = GFXCoordToIntRound(
+                                                  gfx_coord(
+                                                            gfx_coord(win->clipRect.bottom) -
+                                                            gfx_coord(win->clipRect.top)
+                                                            ) + aY);
+        win->clipRect.right = GFXCoordToIntRound(
+                                                  gfx_coord(
+                                                            gfx_coord(win->clipRect.right) -
+                                                            gfx_coord(win->clipRect.left)
+                                                            ) + aX);
+        win->clipRect.top = GFXCoordToIntRound(aY);
+        win->clipRect.left = GFXCoordToIntRound(aX);
 
         inst->SetWindow(win);
       }
@@ -510,7 +527,7 @@ PluginViewerImpl::Show()
 {
   NS_PRECONDITION(nsnull != mWindow, "null window");
   if (nsnull != mWindow) {
-    mWindow->Show(PR_TRUE);
+    mWindow->Show();
   }
 
   // XXX should we call SetWindow here?
@@ -523,7 +540,7 @@ PluginViewerImpl::Hide()
 {
   NS_PRECONDITION(nsnull != mWindow, "null window");
   if (nsnull != mWindow) {
-    mWindow->Show(PR_FALSE);
+    mWindow->Hide();
   }
 
   // should we call SetWindow(nsnull) here?
@@ -551,7 +568,7 @@ PluginViewerImpl::GetEnableRendering(PRBool* aResult)
 void
 PluginViewerImpl::ForceRefresh()
 {
-  mWindow->Invalidate(PR_TRUE);
+  mWindow->InvalidateRect(nsnull, PR_TRUE);
 }
 
 nsresult PluginViewerImpl::GetURI(nsIURI* *aURI)
@@ -665,10 +682,9 @@ PluginViewerImpl::GetPrintable(PRBool *aPrintable)
 
 
 NS_IMETHODIMP
-PluginViewerImpl::PrintContent(nsIWebShell *aParent, nsIDeviceContext *aDContext)
+PluginViewerImpl::PrintContent(nsIWebShell *aParent)
 {
   NS_ENSURE_ARG_POINTER(aParent);
-  NS_ENSURE_ARG_POINTER(aDContext);
 
   return NS_OK;
 }
@@ -828,7 +844,9 @@ NS_IMETHODIMP pluginInstanceOwner :: CreateWidget(void)
   return NS_OK;
 }
 
-NS_IMETHODIMP pluginInstanceOwner :: GetURL(const char *aURL, const char *aTarget, void *aPostData, PRUint32 aPostDataLen, void *aHeadersData, 
+NS_IMETHODIMP pluginInstanceOwner :: GetURL(const char *aURL, const char *aTarget,
+                                            void *aPostData, PRUint32 aPostDataLen,
+                                            void *aHeadersData, 
                                             PRUint32 aHeadersDataLen)
 {
   nsresult  rv;
@@ -911,7 +929,7 @@ NS_IMETHODIMP pluginInstanceOwner :: GetDocument(nsIDocument* *aDocument)
 	return mViewer->GetDocument(aDocument);
 }
 
-NS_IMETHODIMP pluginInstanceOwner :: Init(PluginViewerImpl *aViewer, nsIWidget *aWindow)
+NS_IMETHODIMP pluginInstanceOwner :: Init(PluginViewerImpl *aViewer, nsIChildWindow *aWindow)
 {
   //do not addref
   mWindow = aWindow;
