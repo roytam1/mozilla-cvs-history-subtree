@@ -181,10 +181,6 @@ static char *reopname[] = {
     "ucflat1i",
     "anchor1",
     "ncclass",
-    "quant_min",
-    "star_min",
-    "plus_min",
-    "opt_min",
     "dotstar_min",
     "lparen_non",
     "rparen_non",
@@ -845,7 +841,7 @@ ParseAtom(CompilerState *state)
 	ren->u.num = num;
         if ((op == REOP_LPAREN) || (op == REOP_LPARENNON)) {
                 /* Assume RPAREN ops immediately succeed LPAREN ops */
-	    ren2 = NewRENode(state, (REOp)(op + 1), NULL);  
+	    ren2 = NewRENode(state, (REOp)(op + 1), NULL);
 	    if (!ren2 || !SetNext(state, ren, ren2))
 	        return NULL;
 	    ren2->u.num = num;
@@ -1197,7 +1193,7 @@ static JSBool matchChar(int flags, jschar c, jschar c2)
             return JS_FALSE;
 }
 
-static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop, 
+static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
                                                 const jschar *cp);
 
 static const jschar *matchGreedyKid(MatchState *state, RENode *ren,
@@ -1207,9 +1203,9 @@ static const jschar *matchGreedyKid(MatchState *state, RENode *ren,
     const jschar *kidMatch;
     const jschar *match;
 
-    kidMatch = matchRENodes(state, (RENode *)ren->kid, ren->next, cp);        
+    kidMatch = matchRENodes(state, (RENode *)ren->kid, ren->next, cp);
     if (kidMatch == NULL) {
-        match = matchRENodes(state, ren->next, NULL, cp);        
+        match = matchRENodes(state, ren->next, NULL, cp);
         if (match == NULL)
             return NULL;
         else {
@@ -1242,7 +1238,7 @@ static const jschar *matchNonGreedyKid(MatchState *state, RENode *ren,
 
     match = matchRENodes(state, ren->next, NULL, cp);
     if (match != NULL) return cp;
-    kidMatch = matchRENodes(state, (RENode *)ren->kid, ren->next, cp);  
+    kidMatch = matchRENodes(state, (RENode *)ren->kid, ren->next, cp);
     if (kidMatch == NULL)
         return NULL;
     else
@@ -1321,7 +1317,7 @@ static JSBool buildBitmap(MatchState *state, RENode *ren)
 	bitmap[i] = fill;
     nchars = n * JS_BITS_PER_BYTE;
     bitmap[0] &= 0xFE;  /* 0 never matches */
-    
+
 /* Split ops up into statements to keep MSVC1.52 from crashing. */
 #define MATCH_BIT(c)    { i = (c) >> 3; b = (c) & 7; b = 1 << b;              \
 		  if (fill) bitmap[i] &= ~b; else bitmap[i] |= b; }
@@ -1493,7 +1489,7 @@ static JSBool buildBitmap(MatchState *state, RENode *ren)
     }
 }
 
-static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop, 
+static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
                                                 const jschar *cp)
 {
     const jschar *cp2, *kidMatch, *cpend = state->cpend;
@@ -1533,10 +1529,10 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
                     }
                     if (num < ren->u.range.max) {
                         if ((ren->flags & RENODE_MINIMAL) == 0)
-                            cp = matchGreedyKid(state, ren, num, 
+                            cp = matchGreedyKid(state, ren, num,
                                                 ren->u.range.max, cp, lastKid);
                         else
-                            cp = matchNonGreedyKid(state, ren, num, 
+                            cp = matchNonGreedyKid(state, ren, num,
                                                 ren->u.range.max, cp, lastKid);
                         if (cp == NULL) return NULL;
                     }
@@ -1572,7 +1568,7 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
                         const jschar *restMatch = matchRENodes(state, ren->next,
                                                     stop, cp);
                         if (restMatch != NULL) return restMatch;
-                    }                        
+                    }
                     kidMatch = matchRENodes(state, (RENode *)ren->kid,
                                                 ren->next, cp);
                     if (kidMatch == NULL)
@@ -1693,14 +1689,14 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
            case REOP_WBDRY:
                 if (((cp == state->cpbegin) || !JS_ISWORD(cp[-1]))
                       ^ ((cp >= cpend) || !JS_ISWORD(*cp)))
-                    ; // leave cp 
+                    ; // leave cp
                 else
                     return NULL;
                 break;
           case REOP_WNONBDRY:
                 if (((cp == state->cpbegin) || !JS_ISWORD(cp[-1]))
                       ^ ((cp < cpend) && JS_ISWORD(*cp)))
-                    ; // leave cp 
+                    ; // leave cp
                 else
                     return NULL;
                 break;
@@ -1810,7 +1806,7 @@ MatchRegExp(MatchState *state, RENode *ren, const jschar *cp)
     const jschar *cp2, *cp3;
     // have to include the position beyond the last character
     // in order to detect end-of-input/line condition
-    for (cp2 = cp; cp2 <= state->cpend; cp2++) {            
+    for (cp2 = cp; cp2 <= state->cpend; cp2++) {
         state->skipped = cp2 - cp;
         state->parenCount = 0;
         cp3 = matchRENodes(state, ren, NULL, cp2);
