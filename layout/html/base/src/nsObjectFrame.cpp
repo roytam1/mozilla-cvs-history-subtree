@@ -663,7 +663,7 @@ nsObjectFrame::Init(nsIPresContext*  aPresContext,
     nsCOMPtr<nsIPrefBranch> prefBranch =
       do_GetService(NS_PREFSERVICE_CONTRACTID);
     if (NS_FAILED(prefBranch->GetBoolPref("plugin.default_plugin_disabled",
-                                          &sDefaultPluginDisabled)) {
+                                          &sDefaultPluginDisabled))) {
       sDefaultPluginDisabled = PR_FALSE;
     }
   }
