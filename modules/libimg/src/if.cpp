@@ -32,6 +32,10 @@
 
 #include "il_strm.h"
 
+/* ebb - begin */
+#include "icc_profile.h"
+/* ebb - begin */
+
 PR_BEGIN_EXTERN_C
 extern int XP_MSG_IMAGE_PIXELS;
 extern int MK_UNABLE_TO_LOCATE_FILE;
@@ -171,6 +175,11 @@ il_image_complete_notify(il_container *ic)
         XP_NotifyObservers(image_req->obs_list, IL_IMAGE_COMPLETE,
                            &message_data);
     }
+/*	ebb - begin */
+	if (ic->icc_matching_session) {
+		il_icc_matching_complete(ic);
+	}
+/*	ebb - end */
 }
 
 /* Notify observers that a frame of an image animation has finished
@@ -697,7 +706,18 @@ IL_StreamWriteReady(il_container *ic)
 
     if (!request_size)
         return 0;
-
+        
+/*	ebb - begin */
+	/*
+		If there's a profile loading, we don't want dsata yet.
+		That's because our data will get color-matched during decode,
+		and if we haven't gotten the profile by then it won't
+		get color-matched.
+    */
+	if (il_waiting_for_icc_profile(ic))
+        return 0;
+/*	ebb - end */
+        
 	/*
      * It could be that layout aborted image loading by calling IL_FreeImage
      * before the netlib finished transferring data.  Don't do anything.
@@ -1331,7 +1351,7 @@ il_image_complete(il_container *ic)
 
                     /* Suppress thermo & progress bar */
 					netRequest->SetBackgroundLoad(PR_TRUE);
-					reader = IL_NewNetReader(ic);
+					reader = IL_NewNetReader(ic /* ebb - begin */ ,NULL /* ebb - end */);
                     (void) ic->net_cx->GetURL(ic->url, NET_DONT_RELOAD, 
 											  reader);
                     /* Release reader, GetURL will keep a ref to it. */
@@ -1640,6 +1660,9 @@ il_internal_image(const char *image_url)
 
 IL_IMPLEMENT(IL_ImageReq *)
 IL_GetImage(const char* image_url,
+/* ebb - begin */
+			const char* icc_profile_url,
+/* ebb - end */
             IL_GroupContext *img_cx,
             XP_ObserverList obs_list,
             NI_IRGB *background_color,
@@ -1723,7 +1746,7 @@ IL_GetImage(const char* image_url,
 #endif /* STANDALONE_IMAGE_LIB */
 	}
 
-    ic = il_get_container(img_cx, cache_reload_policy, image_url,
+    ic = il_get_container(img_cx, cache_reload_policy, image_url, icc_profile_url, /*	ebb - added icc_profile_url param */
                           background_color, img_cx->dither_mode, req_depth,
                           req_width, req_height);
     if (!ic)
@@ -1761,6 +1784,18 @@ IL_GetImage(const char* image_url,
 #endif /* STANDALONE_IMAGE_LIB */
         return image_req;
     }
+    
+/* ebb - begin */
+    /*
+    	If the image has an associated profile, load that first.
+    	BUT first check to see if this is a cached image that
+    	already has issued a request.  If so, don't request again.
+    */
+	if (ic->icc_profile_url != NULL && ic->icc_profile_req == NULL)
+	{
+		ic->icc_profile_req = IL_GetICCProfile(icc_profile_url, img_cx, net_cx, ic);
+	}
+/* ebb - end */
 
     /* If the image is already in memory ... */
 	if (ic->state != IC_VIRGIN) {
@@ -1880,7 +1915,7 @@ IL_GetImage(const char* image_url,
     ic->is_url_loading = PR_TRUE;
 
     /* save away the container */
-	reader = IL_NewNetReader(ic);
+	reader = IL_NewNetReader(ic /* ebb - begin */ ,NULL /* ebb - end */);
 	if (!reader) {
         NS_RELEASE(image_req->net_cx);
         PR_FREEIF(image_req);
@@ -1953,6 +1988,11 @@ IL_InterruptContext(IL_GroupContext *img_cx)
                 image_req->stopped = TRUE;
             }
         }
+/*	ebb - begin	*/
+    	/* Also stop all requests for ICC Profiles associated with this context */
+    	if (ic->icc_profile_req)
+    		il_stop_icc_profile_request(ic->icc_profile_req);
+/*	ebb - end */
     }
 }
 
@@ -1962,6 +2002,20 @@ IL_InterruptRequest(IL_ImageReq *image_req)
 {
   if (image_req != NULL) {
 	image_req->stopped = TRUE;
+
+/*	ebb - begin	*/
+    /*
+     * If the image container associated with this request
+     * is ONLY referenced by this request, then stop any profile request
+     * it may have made as well.
+    */
+    if (image_req->ic->clients == image_req &&
+    	image_req->ic->clients == image_req->ic->lclient)
+    {
+    	if (image_req->ic->icc_profile_req)
+    		il_stop_icc_profile_request(image_req->ic->icc_profile_req);
+    }
+/*	ebb - end */
   }
 }
 
