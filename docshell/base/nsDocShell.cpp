@@ -3580,7 +3580,8 @@ nsDocShell::DoURILoad(nsIURI * aURI, nsIURI * aReferrerURI,
         }
         // Set the referrer explicitly
         if (aReferrerURI)       // Referrer is currenly only set for link clicks here.
-            httpChannel->SetReferrer(aReferrerURI);
+            httpChannel->SetReferrer(aReferrerURI,
+                                     nsIHttpChannel::REFERRER_LINK_CLICK);
     }
     else {
         // iff we are dealing with a JS or a data url, we may need an inherited owner.
