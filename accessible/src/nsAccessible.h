@@ -139,7 +139,6 @@ class nsLinkableAccessible : public nsAccessible
     NS_IMETHOD GetAccState(PRUint32 *_retval);
 
   protected:
-    nsCOMPtr<nsIDOMNode> mDomNode;
     PRBool IsALink();
     PRBool mIsALinkCached;  // -1 = unknown, 0 = not a link, 1 = is a link
     nsCOMPtr<nsIContent> mLinkContent;

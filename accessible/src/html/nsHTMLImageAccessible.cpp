@@ -107,8 +107,7 @@ nsIAccessible *nsHTMLImageAccessible::CreateAreaAccessible(PRUint32 areaNum)
     return NULL;
   if (accService) {
     nsIAccessible* acc = nsnull;
-    nsCOMPtr<nsISupports> presShell(do_QueryInterface(mPresShell));
-    accService->CreateHTMLAreaAccessible(presShell, domNode, this, &acc);
+    accService->CreateHTMLAreaAccessible(mPresShell, domNode, this, &acc);
     return acc;
   }
   return nsnull;

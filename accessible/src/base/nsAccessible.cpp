@@ -775,9 +775,9 @@ nsAccessible::nsAccessible(nsIDOMNode* aNode, nsIWeakReference* aShell)
   mPresShell = aShell;
      
   nsCOMPtr<nsIDocument> document;
-  nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
-  if (shell)
-    shell->GetDocument(getter_AddRefs(document));
+  nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
+  if (content)
+    content->GetDocument(*getter_AddRefs(document));
   if (document) {
     nsCOMPtr<nsIScriptGlobalObject> ourGlobal;
     document->GetScriptGlobalObject(getter_AddRefs(ourGlobal));
@@ -1701,6 +1701,7 @@ nsAccessible(aNode, aShell), mIsALinkCached(PR_FALSE), mLinkContent(nsnull), mIs
 /* long GetAccState (); */
 NS_IMETHODIMP nsLinkableAccessible::GetAccState(PRUint32 *_retval)
 {
+  nsAccessible::GetAccState(_retval);
   *_retval |= STATE_READONLY | STATE_SELECTABLE;
   if (IsALink()) {
     *_retval |= STATE_FOCUSABLE | STATE_LINKED;

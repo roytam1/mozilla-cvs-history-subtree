@@ -34,7 +34,7 @@
 // --- area -----
 
 nsHTMLAreaAccessible::nsHTMLAreaAccessible(nsIDOMNode *aDomNode, nsIAccessible *aAccParent, nsIWeakReference* aShell):
-nsGenericAccessible(), mAccParent(aAccParent)
+nsLinkableAccessible(aDomNode, aShell), mAccParent(aAccParent)
 { 
 }
 
@@ -89,57 +89,6 @@ NS_IMETHODIMP nsHTMLAreaAccessible::GetAccDescription(PRUnichar **_retval)
   return NS_OK;
 }
 
-
-/* PRUint8 getAccNumActions (); */
-NS_IMETHODIMP nsHTMLAreaAccessible::GetAccNumActions(PRUint8 *_retval)
-{
-  *_retval = 1;
-  return NS_OK;
-}
-
-/* wstring getAccActionName (in PRUint8 index); */
-NS_IMETHODIMP nsHTMLAreaAccessible::GetAccActionName(PRUint8 index, PRUnichar **_retval)
-{
-  if (index == 0) {
-    *_retval = ToNewUnicode(NS_LITERAL_STRING("jump"));
-    return NS_OK;
-  }
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* void accDoAction (in PRUint8 index); */
-NS_IMETHODIMP nsHTMLAreaAccessible::AccDoAction(PRUint8 index)
-{
-  if (index == 0) {
-    nsCOMPtr<nsIPresContext> presContext;
-    mPresShell->GetPresContext(getter_AddRefs(presContext));
-    if (presContext) {
-      nsMouseEvent linkClickEvent;
-      linkClickEvent.eventStructType = NS_EVENT;
-      linkClickEvent.message = NS_MOUSE_LEFT_CLICK;
-      linkClickEvent.isShift = PR_FALSE;
-      linkClickEvent.isControl = PR_FALSE;
-      linkClickEvent.isAlt = PR_FALSE;
-      linkClickEvent.isMeta = PR_FALSE;
-      linkClickEvent.clickCount = 0;
-      linkClickEvent.widget = nsnull;
-
-      nsEventStatus eventStatus =  nsEventStatus_eIgnore;
-      nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
-      content->HandleDOMEvent(presContext, &linkClickEvent, 
-        nsnull, NS_EVENT_FLAG_INIT, &eventStatus);
-      return NS_OK;
-    }
-    return NS_ERROR_FAILURE;
-  }
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsHTMLAreaAccessible::GetAccState(PRUint32 *_retval) 
-{
-  *_retval = STATE_LINKED | STATE_FOCUSABLE | STATE_READONLY;
-  return NS_OK;
-}
 
 /* nsIAccessible getAccFirstChild (); */
 NS_IMETHODIMP nsHTMLAreaAccessible::GetAccFirstChild(nsIAccessible **_retval)

@@ -490,6 +490,8 @@ nsHTMLSelectWindowAccessible::nsHTMLSelectWindowAccessible(nsIAccessible* aParen
 
 NS_IMETHODIMP nsHTMLSelectWindowAccessible::GetAccState(PRUint32 *_retval)
 {
+   nsAccessible::GetAccState(_retval);
+
    SetupMenuListener();
 
   // if open we are visible if closed we are invisible

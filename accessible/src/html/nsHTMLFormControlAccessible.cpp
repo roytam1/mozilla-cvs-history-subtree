@@ -116,7 +116,8 @@ NS_IMETHODIMP nsHTMLFormControlAccessible::GetAccState(PRUint32 *_retval)
   // focusable, focused, checked, protected, unavailable
   nsCOMPtr<nsIDOMHTMLInputElement> element(do_QueryInterface(mDOMNode));
 
-  *_retval = STATE_FOCUSABLE;
+  nsAccessible::GetAccState(_retval);
+  *_retval |= STATE_FOCUSABLE;
 
   PRBool checked = PR_FALSE;
   element->GetChecked(&checked);
@@ -341,6 +342,7 @@ NS_IMETHODIMP nsHTML4ButtonAccessible::GetAccRole(PRUint32 *_retval)
 /* long getAccState (); */
 NS_IMETHODIMP nsHTML4ButtonAccessible::GetAccState(PRUint32 *_retval)
 {
+  nsAccessible::GetAccState(_retval);
   *_retval |= STATE_FOCUSABLE;
   return NS_OK;
 }
@@ -400,7 +402,8 @@ NS_IMETHODIMP nsHTMLTextFieldAccessible::GetAccState(PRUint32 *_retval)
   // can be
   // focusable, focused, protected. readonly, unavailable, selected
 
-  *_retval = STATE_FOCUSABLE;
+  nsAccessible::GetAccState(_retval);
+  *_retval |= STATE_FOCUSABLE;
 
   nsCOMPtr<nsIDOMHTMLTextAreaElement> textArea(do_QueryInterface(mDOMNode));
   nsCOMPtr<nsIDOMHTMLInputElement> inputElement(do_QueryInterface(mDOMNode));

@@ -270,13 +270,10 @@ NS_IMETHODIMP nsAccessibilityService::CreateHTMLImageAccessible(nsISupports *aFr
 }
 
 /* nsIAccessible createHTMLAreaAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
-NS_IMETHODIMP nsAccessibilityService::CreateHTMLAreaAccessible(nsISupports *aShell, nsIDOMNode *aDOMNode, nsIAccessible *aAccParent, 
+NS_IMETHODIMP nsAccessibilityService::CreateHTMLAreaAccessible(nsIWeakReference *aShell, nsIDOMNode *aDOMNode, nsIAccessible *aAccParent, 
                                                                nsIAccessible **_retval)
 {
-  nsCOMPtr<nsIPresShell> shell(do_QueryInterface(aShell));
-  nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(shell));
-
-  *_retval = new nsHTMLAreaAccessible(aDOMNode, aAccParent, wr);
+  *_retval = new nsHTMLAreaAccessible(aDOMNode, aAccParent, aShell);
 
   if (*_retval) {
     NS_ADDREF(*_retval);
