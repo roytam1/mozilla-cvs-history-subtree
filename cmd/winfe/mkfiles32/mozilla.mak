@@ -412,12 +412,12 @@ LINK_LIBS= \
     $(DIST)\lib\jpeg$(MOZ_BITS)$(VERSION_NUMBER).lib \
     $(DIST)\lib\dbm$(MOZ_BITS).lib \
 !endif
-#!if "$(WINOS)" == "WIN95"
-#    $(DIST)\lib\xpcom$(MOZ_BITS).lib
-#!else
-#    $(DIST)\lib\xpcom$(MOZ_BITS).lib \
-#    $(NULL)
-#!endif
+!if "$(WINOS)" == "WIN95"
+    $(DIST)\lib\xpcom$(MOZ_BITS).lib
+!else
+    $(DIST)\lib\xpcom$(MOZ_BITS).lib \
+    $(NULL)
+!endif
 
 ##      Specify MFC libs before other libs and before .obj files,
 ##              such that _CrtDumpMemoryLeaks will be called
