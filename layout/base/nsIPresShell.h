@@ -54,7 +54,6 @@
 #include "nsISupports.h"
 #include "nsCoord.h"
 #include "nsEvent.h"
-#include "nsReflowType.h"
 #include "nsCompatibility.h"
 #include "nsCOMArray.h"
 #include "nsFrameManagerBase.h"
@@ -321,11 +320,10 @@ public:
                                     nsIFrame** aPlaceholderFrame) const = 0;
 
   /**
-   * Reflow commands
+   * Tell the pres shell that some frames are dirty (as indicated by bits)
+   * and need Reflow.
    */
-  NS_IMETHOD AppendReflowCommand(nsHTMLReflowCommand* aReflowCommand) = 0;
-  NS_IMETHOD CancelReflowCommand(nsIFrame* aTargetFrame, nsReflowType* aCmdType) = 0;
-  NS_IMETHOD CancelAllReflowCommands() = 0;
+  NS_IMETHOD FramesNeedReflow() = 0;
 
   /**
    * Recreates the frames for a node
