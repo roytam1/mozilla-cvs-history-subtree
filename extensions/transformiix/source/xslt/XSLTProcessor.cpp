@@ -1590,7 +1590,66 @@ XSLTProcessor::TransformDocument(nsIDOMElement* aSourceDOM,
                                nsIDOMDocument* aOutputDoc,
                                nsIObserver* aObserver)
 {
-  return NS_OK;
+    nsCOMPtr<nsIDOMNode> sourceDOMNode;
+    nsCOMPtr<nsIDOMDocument> sourceDOMDocument;
+    nsCOMPtr<nsIDOMDocument> styleDOMDocument;
+
+    aSourceDOM->GetOwnerDocument(getter_AddRefs(sourceDOMDocument));
+    Document sourceDocument(sourceDOMDocument);
+    Node sourceNode(aSourceDOM, &sourceDocument);
+
+    aStyleDOM->GetOwnerDocument(getter_AddRefs(styleDOMDocument));
+    Document xslDocument(styleDOMDocument);
+    Element styleElement(aStyleDOM, &xslDocument);
+    
+    Document resultDocument(aOutputDoc);
+
+    //-- create a new ProcessorState
+    ProcessorState ps(xslDocument, resultDocument);
+
+    nsCOMPtr<nsIDocument> sourceNsDocument = do_QueryInterface(sourceDOMDocument);
+    nsCOMPtr<nsIURI> docURL;
+
+    sourceNsDocument->GetBaseURL(*getter_AddRefs(docURL));
+    if (docURL) {
+        char* urlString;
+
+        docURL->GetSpec(&urlString);
+        DOMString documentBase(urlString);
+//cout << "documentbase: " << documentBase << endl;
+        ps.setDocumentBase(documentBase);
+        nsCRT::free(urlString);
+    }
+    else
+        ps.setDocumentBase("");
+    
+
+    //-- add error observers
+
+      //------------------------------------------------------/
+     //- index templates and process top level xsl elements -/
+    //------------------------------------------------------/
+
+    processTopLevel(&styleElement, &ps);
+
+      //---------------------------------------/
+     //- Process root of XML source document -/
+    //---------------------------------------/
+    process(&sourceNode, &sourceNode, &ps);
+ 
+/*
+    Uncomment and add #include "printers.h" to see the output document
+    in the log.
+
+    XMLPrinter outputprinter;
+    outputprinter.setUseFormat(MB_TRUE);
+  
+    cout << endl << "--- Result document ---" << endl;
+    outputprinter.print(&resultDocument);
+    cout << endl;
+*/
+    
+    return NS_OK;
 }
 #endif
 
