@@ -202,11 +202,11 @@ components/libucvlatin.dylib
 components/unicharutil.xpt
 components/libchardet.dylib
 ; optional - on english only systems
-; components/libucvja.dylib for japanese
-; components/libucvko.dylib for korean
-; components/libucvcn.dylib for simplified chinese
-; components/libucvtw.dylib for traditional chinese
-; components/libucvtw2.dylib for traditional chinese
+components/libucvja.dylib
+components/libucvko.dylib
+components/libucvcn.dylib
+components/libucvtw.dylib
+components/libucvtw2.dylib
 ; components/libucvibm.dylib for ibm
 
 
