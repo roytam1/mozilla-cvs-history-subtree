@@ -872,8 +872,7 @@ public:
   /**
    * Mark any stored intrinsic width information as dirty (requiring
    * re-calculation).  Note that this should generally not be called
-   * directly; nsLayoutUtils::MarkIntrinsicWidthsDirty should be used
-   * instead.
+   * directly; nsPresShell::FrameNeedsReflow will call it instead.
    */
   virtual void MarkIntrinsicWidthsDirty() = 0;
 

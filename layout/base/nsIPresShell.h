@@ -323,8 +323,12 @@ public:
    * and needs Reflow.  It's OK if this is an ancestor of the frame needing
    * reflow as long as the ancestor chain between them doesn't cross a reflow
    * root.
+   *
+   * If aIntrinsicDirty is true, then also mark the intrinsic widths as
+   * dirty on the frame, all of its ancestors, and all of its
+   * descendants.
    */
-  NS_IMETHOD FrameNeedsReflow(nsIFrame *aFrame) = 0;
+  NS_IMETHOD FrameNeedsReflow(nsIFrame *aFrame, PRBool aIntrinsicDirty) = 0;
 
   NS_IMETHOD CancelAllPendingReflows() = 0;
 

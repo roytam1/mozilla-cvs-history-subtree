@@ -242,12 +242,6 @@ public:
   static PRUint8 CombineBreakType(PRUint8 aOrigBreakType, PRUint8 aNewBreakType);
 
   /**
-   * Mark the intrinsic widths as dirty on the frame, all of its ancestors,
-   * and all of its descendants.
-   */
-  static void MarkIntrinsicWidthsDirty(nsIFrame* aFrame);
-
-  /**
    * Get the contribution of aFrame to its containing block's intrinsic
    * width.  This considers the child's intrinsic width, its 'width',
    * 'min-width', and 'max-width' properties, and its padding, border,

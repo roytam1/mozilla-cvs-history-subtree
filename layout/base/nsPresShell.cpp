@@ -3216,7 +3216,7 @@ PresShell::EndLoad(nsIDocument *aDocument)
 }
 
 NS_IMETHODIMP
-PresShell::FrameNeedsReflow(nsIFrame *aFrame)
+PresShell::FrameNeedsReflow(nsIFrame *aFrame, PRBool aIntrinsicDirty)
 {
   NS_PRECONDITION(aFrame->GetStateBits() &
                     (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN),
@@ -3243,6 +3243,40 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame)
     }
   }  
 #endif
+
+  if (aIntrinsicDirty) {
+    // Mark the intrinsic widths as dirty on the frame, all of its ancestors,
+    // and all of its descendants:
+
+    // Mark argument and all ancestors dirty (unless we hit a reflow root
+    // other than aFrame)
+    for (nsIFrame *a = aFrame;
+         a && (!(a->GetStateBits() & NS_FRAME_REFLOW_ROOT) || a == aFrame);
+         a = a->GetParent())
+      a->MarkIntrinsicWidthsDirty();
+
+    // Mark all descendants dirty (using an nsVoidArray stack rather than
+    // recursion).
+    nsVoidArray stack;
+    stack.AppendElement(aFrame);
+
+    while (stack.Count() != 0) {
+      nsIFrame *f =
+        NS_STATIC_CAST(nsIFrame*, stack.FastElementAt(stack.Count() - 1));
+      stack.RemoveElementAt(stack.Count() - 1);
+
+      PRInt32 childListIndex = 0;
+      nsIAtom *childListName;
+      do {
+        childListName = f->GetAdditionalChildListName(childListIndex++);
+        for (nsIFrame *kid = f->GetFirstChild(childListName); kid;
+             kid = kid->GetNextSibling()) {
+          kid->MarkIntrinsicWidthsDirty();
+          stack.AppendElement(kid);
+        }
+      } while (childListName);
+    }
+  }
 
   // Set NS_FRAME_HAS_DIRTY_CHILDREN bits (via nsIFrame::HasDirtyChild) up the
   // tree until we reach either a frame that's already dirty or a reflow root.
