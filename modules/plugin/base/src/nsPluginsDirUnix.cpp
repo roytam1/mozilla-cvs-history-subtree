@@ -185,7 +185,11 @@ static PRBool LoadExtraSharedLib(const char *name, char **soname, PRBool tryToGe
 
 #define PLUGIN_MAX_NUMBER_OF_EXTRA_LIBS 32
 #define PREF_PLUGINS_SONAME "plugin.soname.list"
-#define DEFAULT_EXTRA_LIBS_LIST "libXt" LOCAL_PLUGIN_DLL_SUFFIX ":libXext" LOCAL_PLUGIN_DLL_SUFFIX
+#ifdef SOLARIS
+   #define DEFAULT_EXTRA_LIBS_LIST "libXt" LOCAL_PLUGIN_DLL_SUFFIX ":libXext" LOCAL_PLUGIN_DLL_SUFFIX ":libXm" LOCAL_PLUGIN_DLL_SUFFIX
+#else
+   #define DEFAULT_EXTRA_LIBS_LIST "libXt" LOCAL_PLUGIN_DLL_SUFFIX ":libXext" LOCAL_PLUGIN_DLL_SUFFIX
+#endif
 /*
  this function looks for
  user_pref("plugin.soname.list", "/usr/X11R6/lib/libXt.so.6:libXiext.so");
