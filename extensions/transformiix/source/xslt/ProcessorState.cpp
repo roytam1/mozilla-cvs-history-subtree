@@ -105,8 +105,9 @@ void ProcessorState::addAttributeSet(Element* aAttributeSet,
     if (!aAttributeSet)
         return;
 
-    const String& name = aAttributeSet->getAttribute(NAME_ATTR);
-    if (name.isEmpty()) {
+    String name;
+    if (!aAttributeSet->getAttr(txXSLTAtoms::name,
+                                kNameSpaceID_None, name)) {
         String err("missing required name attribute for xsl:attribute-set");
         receiveError(err);
         return;
@@ -154,7 +155,8 @@ void ProcessorState::addTemplate(Element* aXslTemplate,
     NS_ASSERTION(aXslTemplate, "missing template");
     
     String name;
-    if (aXslTemplate->getAttr(txXSLTAtoms::name, kNameSpaceID_None, name)) {
+    if (aXslTemplate->getAttr(txXSLTAtoms::name,
+                              kNameSpaceID_None, name)) {
         // check for duplicates
         Element* tmp = (Element*)aImportFrame->mNamedTemplates.get(name);
         if (tmp) {
@@ -722,8 +724,8 @@ MBool ProcessorState::addDecimalFormat(Element* element)
     if (!format)
         return MB_FALSE;
 
-    String attValue = element->getAttribute(NAME_ATTR);
-    String formatName = attValue;
+    String formatName, attValue;
+    element->getAttr(txXSLTAtoms::name, kNameSpaceID_None, formatName);
 
     if (element->getAttr(txXSLTAtoms::decimalSeparator,
                          kNameSpaceID_None, attValue)) {

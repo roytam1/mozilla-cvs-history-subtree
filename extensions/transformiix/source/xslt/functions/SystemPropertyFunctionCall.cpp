@@ -43,7 +43,7 @@ ExprResult* SystemPropertyFunctionCall::evaluate(txIEvalContext* aContext)
             if (XMLUtils::isValidQName(property)) {
                 String prefix;
                 PRInt32 aNSID = kNameSpaceID_None;
-                XMLUtils::getLocalPart(property, prefix);
+                XMLUtils::getPrefix(property, prefix);
                 if (!prefix.isEmpty()) {
                     txAtom* prefixAtom = TX_GET_ATOM(prefix);
                     aNSID = mStylesheetNode->lookupNamespaceID(prefixAtom);

@@ -167,17 +167,14 @@ XSLTProcessor::~XSLTProcessor()
 // XXX Mozilla module only code. This should move to txMozillaXSLTProcessor
 // XXX
 
-// QueryInterface implementation for XSLTProcessor
-NS_INTERFACE_MAP_BEGIN(XSLTProcessor)
-  NS_INTERFACE_MAP_ENTRY(nsIDocumentTransformer)
-  NS_INTERFACE_MAP_ENTRY(nsIScriptLoaderObserver)
-  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDocumentTransformer)
-  NS_INTERFACE_MAP_ENTRY_DOM_CLASSINFO(XSLTProcessor)
-NS_INTERFACE_MAP_END
-
-
 NS_IMPL_ADDREF(XSLTProcessor)
 NS_IMPL_RELEASE(XSLTProcessor)
+NS_INTERFACE_MAP_BEGIN(XSLTProcessor)
+    NS_INTERFACE_MAP_ENTRY(nsIDocumentTransformer)
+    NS_INTERFACE_MAP_ENTRY(nsIScriptLoaderObserver)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDocumentTransformer)
+    NS_INTERFACE_MAP_ENTRY_EXTERNAL_DOM_CLASSINFO(XSLTProcessor)
+NS_INTERFACE_MAP_END
 
 // XXX
 // XXX Mozilla module only code. This should move to txMozillaXSLTProcessor
@@ -489,9 +486,10 @@ void XSLTProcessor::processTopLevel(Document* aSource,
             switch (getElementType(element, aPs)) {
                 case XSLType::IMPORT :
                 {
-                    String href;
-                    URIUtils::resolveHref(element->getAttribute(HREF_ATTR),
-                                          element->getBaseURI(),
+                    String hrefAttr, href;
+                    element->getAttr(txXSLTAtoms::href, kNameSpaceID_None,
+                                     hrefAttr);
+                    URIUtils::resolveHref(hrefAttr, element->getBaseURI(),
                                           href);
 
                     // Create a new ImportFrame with correct firstNotImported
@@ -534,7 +532,9 @@ void XSLTProcessor::processTopLevel(Document* aSource,
                 {
                     if (!aPs->addDecimalFormat(element)) {
                         // Add error to ErrorObserver
-                        String fName = element->getAttribute(NAME_ATTR);
+                        String fName;
+                        element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
+                                         fName);
                         String err("unable to add ");
                         if (fName.isEmpty())
                             err.append("default");
@@ -550,7 +550,9 @@ void XSLTProcessor::processTopLevel(Document* aSource,
                 }
                 case XSLType::PARAM :
                 {
-                    String name = element->getAttribute(NAME_ATTR);
+                    String name;
+                    element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
+                                     name);
                     if (name.isEmpty()) {
                         String err("missing required name attribute for xsl:param");
                         aPs->receiveError(err, NS_ERROR_FAILURE);
@@ -570,9 +572,10 @@ void XSLTProcessor::processTopLevel(Document* aSource,
                 }
                 case XSLType::INCLUDE :
                 {
-                    String href;
-                    URIUtils::resolveHref(element->getAttribute(HREF_ATTR),
-                                          element->getBaseURI(),
+                    String hrefAttr, href;
+                    element->getAttr(txXSLTAtoms::href, kNameSpaceID_None,
+                                     hrefAttr);
+                    URIUtils::resolveHref(hrefAttr, element->getBaseURI(),
                                           href);
 
                     processInclude(href, aSource, importFrame, aPs);
@@ -581,8 +584,11 @@ void XSLTProcessor::processTopLevel(Document* aSource,
                 case XSLType::KEY :
                 {
                     if (!aPs->addKey(element)) {
+                        String name;
+                        element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
+                                         name);
                         String err("error adding key '");
-                        err.append(element->getAttribute(NAME_ATTR));
+                        err.append(name);
                         err.append("'");
                         aPs->receiveError(err, NS_ERROR_FAILURE);
                     }
@@ -673,7 +679,9 @@ void XSLTProcessor::processTopLevel(Document* aSource,
                     break;
                 case XSLType::VARIABLE :
                 {
-                    String name = element->getAttribute(NAME_ATTR);
+                    String name;
+                    element->getAttr(txXSLTAtoms::name, kNameSpaceID_None,
+                                     name);
                     if (name.isEmpty()) {
                         String err("missing required name attribute for xsl:variable");
                         aPs->receiveError(err, NS_ERROR_FAILURE);
@@ -685,8 +693,9 @@ void XSLTProcessor::processTopLevel(Document* aSource,
                 }
                 case XSLType::PRESERVE_SPACE :
                 {
-                    String elements = element->getAttribute(ELEMENTS_ATTR);
-                    if (elements.isEmpty()) {
+                    String elements;
+                    if (!element->getAttr(txXSLTAtoms::elements,
+                                          kNameSpaceID_None, elements)) {
                         //-- add error to ErrorObserver
                         String err("missing required 'elements' attribute for ");
                         err.append("xsl:preserve-space");
@@ -701,8 +710,9 @@ void XSLTProcessor::processTopLevel(Document* aSource,
                 }
                 case XSLType::STRIP_SPACE :
                 {
-                    String elements = element->getAttribute(ELEMENTS_ATTR);
-                    if (elements.isEmpty()) {
+                    String elements;
+                    if (!element->getAttr(txXSLTAtoms::elements,
+                                          kNameSpaceID_None, elements)) {
                         //-- add error to ErrorObserver
                         String err("missing required 'elements' attribute for ");
                         err.append("xsl:strip-space");
@@ -852,7 +862,7 @@ Document* XSLTProcessor::process(Document& xmlDocument,
  * and prints the results to the given ostream argument
  */
 void XSLTProcessor::process(Document& aXMLDocument,
-                            Document& aXSLTDocument,
+                            Node& aStylesheet,
                             ostream& aOut)
 {
     // Need a result document for creating result tree fragments.
@@ -862,7 +872,16 @@ void XSLTProcessor::process(Document& aXMLDocument,
     // before the destruction of the result document.
     {
         // Create a new ProcessorState
-        ProcessorState ps(&aXMLDocument, &aXSLTDocument, &result);
+        Document* stylesheetDoc = 0;
+        Element* stylesheetElem = 0;
+        if (aStylesheet.getNodeType() == Node::DOCUMENT_NODE) {
+            stylesheetDoc = (Document*)&aStylesheet;
+        }
+        else {
+            stylesheetElem = (Element*)&aStylesheet;
+            stylesheetDoc = aStylesheet.getOwnerDocument();
+        }
+        ProcessorState ps(&aXMLDocument, stylesheetDoc, &result);
 
         // Add error observers
         txListIterator iter(&errorObservers);
@@ -880,7 +899,11 @@ void XSLTProcessor::process(Document& aXMLDocument,
         if (!importFrame.next())
             // XXX ErrorReport: out of memory
             return;
-        processStylesheet(&aXMLDocument, &aXSLTDocument, &importFrame, &ps);
+        
+        if (stylesheetElem)
+            processTopLevel(&aXMLDocument, stylesheetElem, &importFrame, &ps);
+        else
+            processStylesheet(&aXMLDocument, stylesheetDoc, &importFrame, &ps);
 
         initializeHandlers(&ps);
         if (mOutputHandler)
@@ -930,7 +953,25 @@ void XSLTProcessor::process
         delete xmlDoc;
         return;
     }
-    process(*xmlDoc, *xslDoc, out);
+
+    Node* stylesheet;
+    String frag;
+    URIUtils::getFragmentIdentifier(href, frag);
+    if (!frag.isEmpty()) {
+        stylesheet = xslDoc->getElementById(frag);
+        if (!stylesheet) {
+            String err("unable to get fragment");
+            notifyError(err, ErrorObserver::FATAL);
+            delete xmlDoc;
+            delete xslDoc;
+            return;
+        }
+    }
+    else {
+        stylesheet = xslDoc;
+    }
+
+    process(*xmlDoc, *stylesheet, out);
     delete xmlDoc;
     delete xslDoc;
 } //-- process
@@ -1129,8 +1170,9 @@ void XSLTProcessor::processAction(Node* aNode,
                     // Process xsl:with-param elements
                     NamedMap* actualParams = processParameters(actionElement, aNode, aPs);
 
-                    const String& mode =
-                        actionElement->getAttribute(MODE_ATTR);
+                    String mode;
+                    actionElement->getAttr(txXSLTAtoms::mode,
+                                           kNameSpaceID_None, mode);
 
                     txNodeSetContext evalContext(nodeSet, aPs);
                     txIEvalContext* priorEC =
@@ -1160,8 +1202,9 @@ void XSLTProcessor::processAction(Node* aNode,
             // xsl:attribute
             case XSLType::ATTRIBUTE:
             {
-                Attr* attr = actionElement->getAttributeNode(NAME_ATTR);
-                if (!attr) {
+                String nameAttr;
+                if (!actionElement->getAttr(txXSLTAtoms::name,
+                                            kNameSpaceID_None, nameAttr)) {
                     String err("missing required name attribute for xsl:attribute");
                     aPs->receiveError(err, NS_ERROR_FAILURE);
                     break;
@@ -1169,7 +1212,7 @@ void XSLTProcessor::processAction(Node* aNode,
 
                 // Process name as an AttributeValueTemplate
                 String name;
-                aPs->processAttrValueTemplate(attr->getValue(), aNode, name);
+                aPs->processAttrValueTemplate(nameAttr, aNode, name);
 
                 // Check name validity (must be valid QName and not xmlns)
                 if (!XMLUtils::isValidQName(name)) {
@@ -1228,8 +1271,9 @@ void XSLTProcessor::processAction(Node* aNode,
             // call-template
             case XSLType::CALL_TEMPLATE:
             {
-                String templateName = actionElement->getAttribute(NAME_ATTR);
-                if (!templateName.isEmpty()) {
+                String templateName;
+                if (actionElement->getAttr(txXSLTAtoms::name,
+                                           kNameSpaceID_None, templateName)) {
                     Element* xslTemplate = aPs->getNamedTemplate(templateName);
                     if ( xslTemplate ) {
                         NamedMap* actualParams = processParameters(actionElement, aNode, aPs);
@@ -1319,8 +1363,9 @@ void XSLTProcessor::processAction(Node* aNode,
             // xsl:element
             case XSLType::ELEMENT:
             {
-                Attr* attr = actionElement->getAttributeNode(NAME_ATTR);
-                if (!attr) {
+                String nameAttr;
+                if (!actionElement->getAttr(txXSLTAtoms::name,
+                                            kNameSpaceID_None, nameAttr)) {
                     String err("missing required name attribute for xsl:element");
                     aPs->receiveError(err, NS_ERROR_FAILURE);
                     break;
@@ -1328,7 +1373,7 @@ void XSLTProcessor::processAction(Node* aNode,
 
                 // Process name as an AttributeValueTemplate
                 String name;
-                aPs->processAttrValueTemplate(attr->getValue(), aNode, name);
+                aPs->processAttrValueTemplate(nameAttr, aNode, name);
 
                 // Check name validity (must be valid QName and not xmlns)
                 if (!XMLUtils::isValidQName(name)) {
@@ -1498,8 +1543,9 @@ void XSLTProcessor::processAction(Node* aNode,
             // xsl:processing-instruction
             case XSLType::PROC_INST:
             {
-                Attr* attr = actionElement->getAttributeNode(NAME_ATTR);
-                if (!attr) {
+                String nameAttr;
+                if (!actionElement->getAttr(txXSLTAtoms::name,
+                                            kNameSpaceID_None, nameAttr)) {
                     String err("missing required name attribute for xsl:");
                     err.append(PROC_INST);
                     aPs->receiveError(err, NS_ERROR_FAILURE);
@@ -1508,7 +1554,7 @@ void XSLTProcessor::processAction(Node* aNode,
 
                 // Process name as an AttributeValueTemplate
                 String name;
-                aPs->processAttrValueTemplate(attr->getValue(), aNode, name);
+                aPs->processAttrValueTemplate(nameAttr, aNode, name);
 
                 // Check name validity (must be valid NCName and a PITarget)
                 // XXX Need to check for NCName and PITarget
@@ -1591,8 +1637,9 @@ void XSLTProcessor::processAction(Node* aNode,
             // xsl:variable
             case XSLType::VARIABLE:
             {
-                String name = actionElement->getAttribute(NAME_ATTR);
-                if (name.isEmpty()) {
+                String name;
+                if (!actionElement->getAttr(txXSLTAtoms::name,
+                                            kNameSpaceID_None, name)) {
                     String err("missing required name attribute for xsl:variable");
                     aPs->receiveError(err, NS_ERROR_FAILURE);
                     break;
@@ -1719,8 +1766,9 @@ NamedMap* XSLTProcessor::processParameters(Element* xslAction, Node* context, Pr
             Element* action = (Element*)tmpNode;
             short xslType = getElementType(action, ps);
             if ( xslType == XSLType::WITH_PARAM ) {
-                String name = action->getAttribute(NAME_ATTR);
-                if (name.isEmpty()) {
+                String name;
+                if (!action->getAttr(txXSLTAtoms::name,
+                                     kNameSpaceID_None, name)) {
                     String err("missing required name attribute for xsl:with-param");
                     ps->receiveError(err, NS_ERROR_FAILURE);
                 }
@@ -1942,8 +1990,9 @@ void XSLTProcessor::processTemplateParams
                 Element* action = (Element*)tmpNode;
                 short xslType = getElementType(action, ps);
                 if ( xslType == XSLType::PARAM ) {
-                    String name = action->getAttribute(NAME_ATTR);
-                    if (name.isEmpty()) {
+                    String name;
+                    if (!action->getAttr(txXSLTAtoms::name,
+                                         kNameSpaceID_None, name)) {
                         String err("missing required name attribute for xsl:param");
                         ps->receiveError(err, NS_ERROR_FAILURE);
                     }
@@ -2326,7 +2375,18 @@ XSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
         importFrame.addAfter(new ProcessorState::ImportFrame(0));
         if (!importFrame.next())
             return NS_ERROR_OUT_OF_MEMORY;
-        processStylesheet(&sourceDocument, &xslDocument, &importFrame, &ps);
+        nsCOMPtr<nsIDOMDocument> styleDoc = do_QueryInterface(aStyleDOM);
+        if (styleDoc) {
+            processStylesheet(&sourceDocument, &xslDocument, &importFrame,
+                              &ps);
+        }
+        else {
+            nsCOMPtr<nsIDOMElement> styleElem = do_QueryInterface(aStyleDOM);
+            NS_ENSURE_TRUE(styleElem, NS_ERROR_FAILURE);
+            Element* element = xslDocument.createElement(styleElem);
+            NS_ENSURE_TRUE(element, NS_ERROR_OUT_OF_MEMORY);
+            processTopLevel(&sourceDocument, element, &importFrame, &ps);
+        }
 
         initializeHandlers(&ps);
 
