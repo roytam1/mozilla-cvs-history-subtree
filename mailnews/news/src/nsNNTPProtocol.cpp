@@ -3328,6 +3328,9 @@ PRInt32 nsNNTPProtocol::ReadNewsList(nsIInputStream * inputStream, PRUint32 leng
     m_nextState = NEWS_FINISHED;
 
     // suspend necko request until timeout
+    // might not have a request if someone called CloseSocket()
+    // see bug #195440
+    if (m_request)
     m_request->Suspend();
   }
   
@@ -3365,6 +3368,9 @@ void nsNNTPProtocol::TimerCallback()
 	ProcessProtocolState(nsnull, mInputStream, 0,0); 
 
     // resume necko request
+  // might not have a request if someone called CloseSocket() 
+  // see bug #195440
+  if (m_request)
     m_request->Resume();
 
 	return;
