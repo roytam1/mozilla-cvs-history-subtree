@@ -290,12 +290,40 @@ protected:
   nsMargin      mCachedPadding;
 };
 
+struct nsBorderColors {
+  nsBorderColors* mNext;
+  nscolor mColor;
+  
+  nsBorderColors* CopyColors() {
+    nsBorderColors* next = nsnull;
+    if (mNext)
+      next = mNext->CopyColors();
+    return new nsBorderColors(mColor, next);
+  }
+
+  nsBorderColors() :mNext(nsnull) { mColor = NS_RGB(0,0,0); };
+
+  nsBorderColors(const nscolor& aColor, nsBorderColors* aNext=nsnull) {
+    mColor = aColor;
+    mNext = aNext;
+  }
+
+  ~nsBorderColors() {
+    delete mNext;
+  }
+};
 
 struct nsStyleBorder: public nsStyleStruct {
-  nsStyleBorder() {};
+  nsStyleBorder() :mBorderColors(nsnull) {};
   nsStyleBorder(nsIPresContext* aContext);
   nsStyleBorder(const nsStyleBorder& aBorder);
-  ~nsStyleBorder(void) {};
+  ~nsStyleBorder(void) {
+    if (mBorderColors) {
+      for (PRInt32 i = 0; i < 4; i++)
+        delete mBorderColors[i];
+      delete []mBorderColors;
+    }
+  };
 
   NS_DEFINE_STATIC_STYLESTRUCTID_ACCESSOR(eStyleStruct_Border)
 
@@ -309,6 +337,16 @@ struct nsStyleBorder: public nsStyleStruct {
   nsStyleSides  mBorder;          // [reset] length, enum (see nsStyleConsts.h)
   nsStyleSides  mBorderRadius;    // [reset] length, percent, inherit
   PRUint8       mFloatEdge;       // [reset] see nsStyleConsts.h
+  nsBorderColors** mBorderColors; // [reset] multiple levels of color for a border.
+
+  void EnsureBorderColors() {
+    if (!mBorderColors) {
+      mBorderColors = new nsBorderColors*[4];
+      if (mBorderColors)
+        for (PRInt32 i = 0; i < 4; i++)
+          mBorderColors[i] = nsnull;
+    }
+  }
 
   PRBool GetBorder(nsMargin& aBorder) const
   {
@@ -354,6 +392,30 @@ struct nsStyleBorder: public nsStyleStruct {
     mBorderStyle[aSide] |= BORDER_COLOR_DEFINED; 
   }
 
+  void GetCompositeColors(PRInt32 aIndex, nsBorderColors** aColors) const
+  {
+    if (!mBorderColors)
+      *aColors = nsnull;
+    else
+      *aColors = mBorderColors[aIndex];
+  }
+
+  void AppendBorderColor(PRInt32 aIndex, nscolor aColor)
+  {
+    NS_ASSERTION(aIndex >= 0 && aIndex <= 3, "bad side for composite border color");
+    nsBorderColors* colorEntry = new nsBorderColors(aColor);
+    if (!mBorderColors[aIndex])
+      mBorderColors[aIndex] = colorEntry;
+    else {
+      nsBorderColors* last = mBorderColors[aIndex];
+      while (last->mNext)
+        last = last->mNext;
+      last->mNext = colorEntry;
+    }
+    mBorderStyle[aIndex] &= ~BORDER_COLOR_SPECIAL;
+    mBorderStyle[aIndex] |= BORDER_COLOR_DEFINED;
+  }
+
   void SetBorderTransparent(PRUint8 aSide)
   {
     NS_ASSERTION(aSide <= NS_SIDE_LEFT, "bad side"); 
@@ -382,8 +444,9 @@ protected:
   nsMargin      mCachedBorder;
 
   PRUint8       mBorderStyle[4];  // [reset] See nsStyleConsts.h
-  nscolor       mBorderColor[4];  // [reset] 
-
+  nscolor       mBorderColor[4];  // [reset] the colors to use for a simple border.  not used
+                                  // if -moz-border-colors is specified
+  
   // XXX remove with deprecated methods
   nscoord       mBorderWidths[3];
 };
@@ -521,6 +584,7 @@ struct nsStyleList : public nsStyleStruct {
   PRUint8   mListStyleType;             // [inherited] See nsStyleConsts.h
   PRUint8   mListStylePosition;         // [inherited] 
   nsString  mListStyleImage;            // [inherited] absolute url string
+  nsRect        mImageRegion;           // [inherited] the rect to use within an image  
 };
 
 struct nsStylePosition : public nsStyleStruct {
@@ -550,7 +614,6 @@ struct nsStylePosition : public nsStyleStruct {
   nsStyleCoord  mMinHeight;             // [reset] coord, percent, inherit
   nsStyleCoord  mMaxHeight;             // [reset] coord, percent, null, inherit
   PRUint8       mBoxSizing;             // [reset] see nsStyleConsts.h
-
   nsStyleCoord  mZIndex;                // [reset] 
 };
 
