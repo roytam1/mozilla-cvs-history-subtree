@@ -1608,7 +1608,9 @@ net_AddCookiePermission
 /* Java script is calling NET_SetCookieString, netlib is calling 
 ** this via NET_SetCookieStringFromHttp.
 */
-PR_PUBLIC_API(void) RDF_AddCookieResource(char* name, char* path, char* host, char* expires) ;
+PR_PUBLIC_API(void) RDF_AddCookieResource(char* name, char* path, char* host, 
+                                          char* expires, char* value, 
+                                          PRBool isDomain, PRBool secure) ;
 
 PRIVATE void
 net_IntSetCookieString(MWContext * context, 
@@ -2124,7 +2126,10 @@ net_IntSetCookieString(MWContext * context,
 				    (prev_cookie->name,
 				    prev_cookie->path,
 				    prev_cookie->host,
-				    ctime(&(prev_cookie->expires)));
+				    ctime(&(prev_cookie->expires)),
+                    prev_cookie->cookie,
+                    prev_cookie->is_domain,
+                    prev_cookie->secure);
 				XP_ListInsertObject(net_cookie_list, tmp_cookie_ptr, prev_cookie);
 				cookies_changed = TRUE;
 				NET_SaveCookies(NULL);
@@ -2137,7 +2142,10 @@ net_IntSetCookieString(MWContext * context,
 		    (prev_cookie->name,
 		     prev_cookie->path,
 		     prev_cookie->host,
-		     ctime(&(prev_cookie->expires)));
+		     ctime(&(prev_cookie->expires)),
+             prev_cookie->cookie,
+             prev_cookie->is_domain,
+             prev_cookie->secure);
 		XP_ListAddObjectToEnd(net_cookie_list, prev_cookie);
 	  }
 
@@ -2547,7 +2555,11 @@ NET_InitRDFCookieResources (void) {
       (item->name,
       item->path,
       item->host,
-      "" /* item->expires */) ;
+       ctime(&(item->expires)),
+       item->cookie,
+       item->is_domain,
+       item->secure);
+
   }
   net_unlock_cookie_list();
 }
