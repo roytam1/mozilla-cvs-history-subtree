@@ -77,6 +77,7 @@ public:
   NS_IMETHOD           Invalidate(const nsRect &aRect, PRBool aIsSynchronous);
   NS_IMETHOD           SetBackgroundColor(const nscolor &aColor);
   NS_IMETHOD           SetCursor(nsCursor aCursor);
+  NS_IMETHOD           SetFocus(void);
   void                 QueueDraw();
   void                 UnqueueDraw();
   void                 DoPaint(PRInt32 x, PRInt32 y, PRInt32 width, PRInt32 height,
@@ -179,6 +180,8 @@ private:
                        GdkBitmap *window_mask);
   nsresult     SetIcon();
   PRBool       mIsUpdating;
+  // this is the current GdkSuperWin with the focus
+  static nsWindow  *focusWindow;
 };
 
 //

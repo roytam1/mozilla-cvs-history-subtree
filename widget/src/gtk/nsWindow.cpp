@@ -43,6 +43,9 @@
 
 #include "stdio.h"
 
+// this is the nsWindow with the focus
+nsWindow  *nsWindow::focusWindow = NULL;
+
 //-------------------------------------------------------------------------
 //
 // nsWindow constructor
@@ -84,6 +87,10 @@ nsWindow::~nsWindow()
 #endif
   mIsDestroyingWindow = PR_TRUE;
   if (nsnull != mShell || nsnull != mSuperWin) {
+    // make sure to release our focus window
+    if (this == focusWindow) {
+      focusWindow = NULL;
+    }
     Destroy();
   }
 #ifdef USE_SUPERWIN
@@ -520,6 +527,22 @@ NS_IMETHODIMP nsWindow::SetCursor(nsCursor aCursor)
       ::gdk_cursor_destroy(newCursor);
     }
   }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsWindow::SetFocus(void)
+{
+  GtkWidget *top_mozarea = GetMozArea();
+
+  if (top_mozarea)
+  {
+    if (!GTK_WIDGET_HAS_FOCUS(top_mozarea))
+      gtk_widget_grab_focus(top_mozarea);
+  }
+
+  focusWindow = this;
+  
   return NS_OK;
 }
 
@@ -1390,8 +1413,15 @@ NS_IMETHODIMP nsWindow::EndResizingChildren(void)
 
 PRBool nsWindow::OnKey(nsKeyEvent &aEvent)
 {
+  if (focusWindow) {
+    focusWindow->AddRef();
+    aEvent.widget = focusWindow;
+  }
   if (mEventCallback) {
     return DispatchWindowEvent(&aEvent);
+  }
+  if (focusWindow) {
+    focusWindow->Release();
   }
   return PR_FALSE;
 }
