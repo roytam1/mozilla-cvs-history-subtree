@@ -25,6 +25,6 @@ DIRS= classic modern
 
 include <$(DEPTH)\config\rules.mak>
 
-# choose Classic skin as default
+# choose Modern skin as default
 chrome::
-    echo skin,install,select,classic/1.0 >>$(DIST)\bin\chrome\installed-chrome.txt
+    echo skin,install,select,modern/1.0 >>$(DIST)\bin\chrome\installed-chrome.txt

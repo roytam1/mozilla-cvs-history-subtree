@@ -27,18 +27,22 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 FILES		= \
-	bugzilla.gif        \
-	bugzilla.src        \
-	dmoz.gif            \
-	dmoz.src            \
+ICQ.gif \
+ICQ.src \
 	google.gif          \
 	google.src          \
-	lxrmozilla.gif      \
-	lxrmozilla.src      \
-	mozilla.gif         \
-	mozilla.src         \
-	NetscapeSearch.gif  \
-	NetscapeSearch.src  \
+Lycos.gif \
+Lycos.src \
+HotBot.gif \
+HotBot.src \
+Excite.gif \
+Excite.src \
+eBay.gif \
+eBay.src \
+monster.gif \
+monster.src \
+dmoz.gif \
+dmoz.src \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk

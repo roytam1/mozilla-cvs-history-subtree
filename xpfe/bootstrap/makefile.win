@@ -49,6 +49,8 @@ REQUIRES	= xpcom \
 		  $(NULL)
 include <$(DEPTH)/config/config.mak>
 
+DIRS=icons
+
 DEFINES=-DWIN32_LEAN_AND_MEAN
 
 !if defined(MOZ_STATIC_COMPONENT_LIBS) && !defined(MOZ_GECKO_DLL)
@@ -70,7 +72,7 @@ CPP_OBJS=                               \
  $(NULL)
 
 MAKE_OBJ_TYPE = EXE
-PROGRAM = .\$(OBJDIR)\mozilla.exe
+PROGRAM = .\$(OBJDIR)\beonex-comm.exe
 RCINCLUDE = splash.rc
 
 LCFLAGS = \
@@ -174,5 +176,10 @@ $(EXTRA_LIBS_LIST_FILE): $(FINAL_LINK_COMPS) $(FINAL_LINK_LIBS)
 libs:: $(PROGRAM)
 	$(MAKE_INSTALL) $(PROGRAM) $(DIST)\bin
 
+#install:: $(topsrcdir)\README\user\win32.txt $(topsrcdir)\LICENSE
+# Can't use install, because I want a different filename
+#	copy $(topsrcdir)\README\user\win32.txt $(DIST)\bin\README.txt
+#	copy $(topsrcdir)\LICENSE $(DIST)\bin\LICENSE.txt
+
 clobber::
-	rm -f $(DIST)\bin\mozilla.exe
+	rm -f $(DIST)\bin\beonex-comm.exe

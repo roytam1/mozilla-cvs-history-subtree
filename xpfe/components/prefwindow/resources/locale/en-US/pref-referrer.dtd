@@ -1,0 +1,40 @@
+<!ENTITY lHeader                          "HTTP Referrer">
+<!ENTITY referrerSubheader                "Specify how and when &brandShortName; sends the HTTP referrer header.">
+<!ENTITY referrerDetails                  "When you click on a link or load an embedded image, the referrer header sent by &brandShortName; normally reveals the location of the document containing the link to the server which holds the link target. This can harm your privacy by allowing 3rd parties to see which sites and pages you visited just before them.">
+<!ENTITY referrerFakeDescr                "Using one of the faked referrer options violates the HTTP standard, but can help you to protect your privacy, while still allowing access to sites which wrongly require the referrer header to be present.">
+
+
+<!ENTITY referrerBox.label                "Referrer">
+
+<!ENTITY disableReferrer.label            "Never send the referrer">
+<!ENTITY disableReferrer.accesskey        "N">
+<!ENTITY disableReferrer.tooltip          "This mode will never send the referrer header">
+
+<!ENTITY referrerLinkClick.label          "Send the referrer for all web links, but not for images">
+<!ENTITY referrerLinkClick.accesskey      "l">
+<!ENTITY referrerLinkClick.tooltip        "This mode will send the referrer for all HTTP links, but not for images">
+
+<!ENTITY referrerImages.label             "Send the referrer for all web links and embedded objects">
+<!ENTITY referrerImages.accesskey         "i">
+<!ENTITY referrerImages.tooltip           "This mode will send the referrer for all HTTP link clicks and images">
+
+<!ENTITY sameHostReferrerOnly.label       "Disable referrers for 3rd party servers">
+<!ENTITY sameHostReferrerOnly.accesskey   "o">
+<!ENTITY sameHostReferrerOnly.tooltip     "This mode will send the normal referrer only while you stay on the same server, but none when you make requests to a new server.">
+
+<!ENTITY nonHostSendPrePath.label         "Send a faked referrer to 3rd party servers">
+<!ENTITY nonHostSendPrePath.accesskey     "f">
+<!ENTITY nonHostSendPrePath.tooltip       "This mode will send the normal referrer only while you stay on the same server. The fake referrer is sent to 3rd party server, containing only the 3rd party server's base URL">
+
+<!ENTITY alwaysSendPrePath.label          "Always send a faked referrer">
+<!ENTITY alwaysSendPrePath.accesskey      "A">
+<!ENTITY alwaysSendPrePath.tooltip        "The fake referrer contains only the queried server's base URL">
+
+<!ENTITY referrerSchemeGroup.label        "From bookmarks and other non-web sources">
+<!ENTITY referrerSchemeOverride.label     "Send a faked referrer">
+<!ENTITY referrerSchemeOverride.accesskey "b">
+<!ENTITY referrerSchemeOverride.tooltip   "Send a faked referrer for bookmarks, links and images in emails etc.">
+
+<!ENTITY referrerNoSchemeOverride.label     "Send no referrer">
+<!ENTITY referrerNoSchemeOverride.accesskey "e">
+<!ENTITY referrerNoSchemeOverride.tooltip   "Never send a referrer for these request origins">

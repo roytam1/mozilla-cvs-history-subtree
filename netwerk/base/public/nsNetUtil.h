@@ -111,7 +111,7 @@ NS_NewURI(nsIURI* *result,
           nsIURI* baseURI = nsnull,
           nsIIOService* ioService = nsnull)     // pass in nsIIOService to optimize callers
 {
-    return NS_NewURI(result, NS_ConvertUCS2toUTF8(spec), charset, baseURI, ioService);
+    return NS_NewURI(result, NS_ConvertUCS2toUTF8(spec), "UTF-8", baseURI, ioService);
 }
 
 inline nsresult

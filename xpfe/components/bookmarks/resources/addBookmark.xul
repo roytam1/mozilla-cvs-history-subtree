@@ -36,7 +36,7 @@
 %addBookmarkDTD;
 ]>
 
-<dialog id="newBookmarkDialog" style="width: 36em;"
+<dialog id="newBookmarkDialog" style="width: 36em; height: 36em;"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         ondialogaccept="return onOK(event)"
         title="&newBookmark.title;" title-selectFolder="&selectFolder.label;"

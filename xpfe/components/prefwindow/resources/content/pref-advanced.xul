@@ -136,6 +136,8 @@
                 prefstring="security.enable_java"/>
       <checkbox id="advancedXSLTAllow" label="XSLT" preftype="bool" pref="true" prefstring="xslt.enabled"/>
     </vbox>
+
+    <vbox hidden="true">
     <vbox>
       <separator/>
       <description>&description.label;</description>
@@ -153,7 +155,13 @@
                flex="2"/>
     </hbox>
     </vbox>
+    <vbox>
+      <separator/>
+      <html>&description.label;</html>
+      <separator/>
+    </vbox>
     <separator/>
+    </vbox>
   </groupbox>
   <groupbox id="perfSettings">
     <caption id="perfLabel" label="&perfTitle.label;"/>

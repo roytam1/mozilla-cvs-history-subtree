@@ -417,6 +417,7 @@ nsIOService::GetProtocolHandler(const char* scheme, nsIProtocolHandler* *result)
     if (NS_SUCCEEDED(rv)) return NS_OK;
 
     PRBool externalProtocol = PR_FALSE;
+    PRBool useAnyExternal = PR_TRUE;
     nsCOMPtr<nsIPrefBranch> prefBranch;
     GetPrefBranch(getter_AddRefs(prefBranch));
     if (prefBranch) {
@@ -425,26 +426,34 @@ nsIOService::GetProtocolHandler(const char* scheme, nsIProtocolHandler* *result)
         rv = prefBranch->GetBoolPref(externalProtocolPref.get(), &externalProtocol);
         if (NS_FAILED(rv))
             externalProtocol = PR_FALSE;
+
+        rv = prefBranch->GetBoolPref("network.protocol-handler.useAnyExternal",
+                                     &useAnyExternal);
     }
+
+    nsresult gotHandler = NS_ERROR_UNEXPECTED;
 
     if (!externalProtocol) {
         nsCAutoString contractID(NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX);
         contractID += scheme;
         ToLowerCase(contractID);
 
-        rv = CallGetService(contractID.get(), result);
+        gotHandler = CallGetService(contractID.get(), result);
     }
-    
-    if (externalProtocol || NS_FAILED(rv)) 
+
+    if (externalProtocol || (NS_FAILED(gotHandler) && useAnyExternal))
     {
       // okay we don't have a protocol handler to handle this url type, so use the default protocol handler.
       // this will cause urls to get dispatched out to the OS ('cause we can't do anything with them) when 
       // we try to read from a channel created by the default protocol handler.
 
-      rv = CallGetService(NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX"default",
-                          result);
-      if (NS_FAILED(rv)) return NS_ERROR_UNKNOWN_PROTOCOL;
+      gotHandler = CallGetService(
+                             NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX"default",
+                             result);
     }
+
+    if (NS_FAILED(gotHandler))
+        return NS_ERROR_UNKNOWN_PROTOCOL;
 
     CacheProtocolHandler(scheme, *result);
 

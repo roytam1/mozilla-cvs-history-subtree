@@ -3225,7 +3225,8 @@ dnl ========================================================
 dnl = Enable compilation of specific extension modules
 dnl ========================================================
 
-MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help pref transformiix venkman inspector irc universalchardet"
+MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs pref transformiix irc spellcheck"
+dnl MOZ_EXTENSIONS_DEFAULT=" cookie wallet content-packs xml-rpc xmlextras help pref transformiix venkman inspector irc universalchardet"
 
 dnl Check if Thai Rendering Extension needs to be enabled
 if test -n "$SUNCTL"; then
@@ -3770,14 +3771,14 @@ dnl ========================================================
 dnl = Location of the mozilla user directory (default is ~/.mozilla).],
 dnl ========================================================
 MOZ_ARG_WITH_STRING(user-appdir,
-[  --with-user-appdir=DIR  Set user-specific appdir (default=.mozilla)],
+[  --with-user-appdir=DIR  Set user-specific appdir (default=.beonex/comm)],
 [ val=`echo $withval`
 if echo "$val" | grep "\/" >/dev/null; then
     AC_MSG_ERROR("Homedir must be single relative path.")
 else 
     AC_DEFINE_UNQUOTED(MOZ_USER_DIR,"$val")
 fi], 
-    AC_DEFINE(MOZ_USER_DIR,".mozilla") )
+    AC_DEFINE(MOZ_USER_DIR,".beonex/comm") )
 
 dnl Need the contents of config-defs.h in the build logs
 VERBOSE_CONFIG_DEFS=1
@@ -4568,6 +4569,7 @@ elif test "$OS_ARCH" = "WINNT"; then
   AC_DEFINE(XP_PC)
 elif test "$OS_ARCH" = "BeOS"; then
   AC_DEFINE(XP_BEOS)
+  AC_DEFINE(MOZ_USER_DIR,"beonex/comm")
   MOZ_MOVEMAIL=1
 elif test "$OS_ARCH" = "Darwin"; then
   AC_DEFINE(XP_UNIX)

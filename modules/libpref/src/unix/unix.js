@@ -58,7 +58,7 @@ pref("editor.singleLine.pasteNewlines", 0);
 
 // Middle-mouse handling
 pref("middlemouse.paste", true);
-pref("middlemouse.contentLoadURL", true);
+pref("middlemouse.contentLoadURL", false);
 pref("middlemouse.openNewWindow", true);
 pref("middlemouse.scrollbarPosition", true);
 
@@ -176,7 +176,7 @@ pref("font.name.monospace.zh-CN", "isas-song ti-gb2312.1980-0");
 
 // zh-TW
 
-pref("font.default", "serif");
+pref("font.default", "sans-serif");
 pref("font.size.variable.ar", 16);
 pref("font.size.fixed.ar", 12);
 
@@ -208,10 +208,10 @@ pref("font.size.variable.x-cyrillic", 16);
 pref("font.size.fixed.x-cyrillic", 12);
 
 pref("font.size.variable.x-unicode", 16);
-pref("font.size.fixed.x-unicode", 12);
+pref("font.size.fixed.x-unicode", 14);
 
 pref("font.size.variable.x-western", 16);
-pref("font.size.fixed.x-western", 12);
+pref("font.size.fixed.x-western", 14);
 
 pref("font.size.variable.zh-CN", 16);
 pref("font.size.fixed.zh-CN", 16);

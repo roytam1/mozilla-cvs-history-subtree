@@ -55,7 +55,7 @@ pref("editor.hrule.align",                  1); // center
 
 pref("editor.table.maintain_structure", true);
 
-pref("editor.prettyprint", true);
+pref("editor.prettyprint", false);
 
 pref("editor.htmlWrapColumn", 72);
 

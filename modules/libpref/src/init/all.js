@@ -38,12 +38,18 @@
 // SYNTAX HINTS:  dashes are delimiters.  Use underscores instead.
 //  The first character after a period must be alphabetic.
 
-pref("network.search.url","http://cgi.netscape.com/cgi-bin/url_search.cgi?search=");
+pref("general.useragent.misc", "Stable");
+// Separate the ever-changing version info to avoid merge conflicts
 
-pref("keyword.URL", "http://keyword.netscape.com/keyword/");
-pref("keyword.enabled", false);
-pref("general.useragent.locale", "chrome://navigator/locale/navigator.properties");
-pref("general.useragent.misc", "rv:1.0.1");
+// see <http://www.mozilla.org/build/revised-user-agent-strings.html>
+pref("general.useragent.locale", "en");
+pref("general.useragent.vendor", "Beonex");
+pref("general.useragent.vendorSub", "0.8.1-stable");
+
+pref("network.search.url","http://www.google.com/search?q=");
+
+pref("keyword.URL", "http://www.google.com/search?btnI=I%27m+Feeling+Lucky&q="); //XXX permanent?
+pref("keyword.enabled", true);
 
 pref("general.startup.browser",             true);
 pref("general.startup.mail",                false);
@@ -61,7 +67,8 @@ pref("backups.number_of_prefs_copies", 1);
 pref("browser.startup.page",                1);
 pref("browser.startup.homepage",	   "chrome://navigator-region/locale/region.properties");
 // "browser.startup.homepage_override" was for 4.x
-pref("browser.startup.homepage_override.1", true);
+pref("browser.startup.homepage_override.beonex.0-8.1", true);
+
 pref("browser.startup.autoload_homepage",   true);
 
 pref("browser.cache.enable",                true); // see also network.http.use-cache
@@ -109,12 +116,12 @@ pref("browser.chrome.favicons", false);
 pref("browser.chrome.toolbar_tips",         true);
 pref("browser.chrome.toolbar_style",        2);
 
-pref("browser.toolbars.showbutton.bookmarks", true);
+pref("browser.toolbars.showbutton.bookmarks", false);
 pref("browser.toolbars.showbutton.go",      false);
 pref("browser.toolbars.showbutton.home",    true);
-pref("browser.toolbars.showbutton.mynetscape", true);
-pref("browser.toolbars.showbutton.net2phone", true);
-pref("browser.toolbars.showbutton.print",   true);
+pref("browser.toolbars.showbutton.mynetscape", false);
+pref("browser.toolbars.showbutton.net2phone", false);
+pref("browser.toolbars.showbutton.print",   false);
 pref("browser.toolbars.showbutton.search",  true);
 
 pref("browser.turbo.enabled", false);
@@ -141,7 +148,7 @@ pref("browser.download.progressDnldDialog.enable_launch_reveal_buttons", true);
 pref("browser.search.defaulturl", "chrome://navigator-region/locale/region.properties");
 pref("browser.search.opensidebarsearchpanel", true);
 pref("browser.search.last_search_category", "NC:SearchCategory?category=urn:search:category:1");
-pref("browser.search.mode", 0);
+pref("browser.search.mode", 1);
 pref("browser.search.powermode", 0);
 // basic search popup constraint: minimum sherlock plugin version displayed
 // (note: must be a string representation of a float or it'll default to 0.0)
@@ -163,7 +170,7 @@ pref("browser.PICS.ratings_enabled", false);
 pref("browser.PICS.pages_must_be_rated", false);
 pref("browser.PICS.disable_for_this_session", false);
 pref("browser.PICS.reenable_for_this_session", false);
-pref("browser.PICS.service.http___home_netscape_com_default_rating.service_enabled", true);
+pref("browser.PICS.service.http___home_netscape_com_default_rating.service_enabled", false);
 pref("browser.PICS.service.http___home_netscape_com_default_rating.s", 0);
 
 // loading and rendering of framesets and iframes
@@ -205,11 +212,11 @@ pref("slider.snapMultiplier", 6);
 pref("application.use_ns_plugin_finder", false);
 
 // Smart Browsing prefs
-pref("browser.related.enabled", true);
+pref("browser.related.enabled", false);
 pref("browser.related.autoload", 1);  // 0 = Always, 1 = After first use, 2 = Never
-pref("browser.related.provider", "http://www-rl.netscape.com/wtgn?");
+pref("browser.related.provider", "http://www-rl.netscape.com/wtgn?"); //XXX
 pref("browser.related.disabledForDomains", "");
-pref("browser.goBrowsing.enabled", true);
+pref("browser.goBrowsing.enabled", false);
 
 // URI fixup prefs
 pref("browser.fixup.alternate.enabled", true);
@@ -358,9 +365,9 @@ pref("dom.disable_cookie_get",              false);
 pref("dom.disable_cookie_set",              false);
 pref("dom.disable_image_src_set",           false);
 pref("dom.disable_open_during_load",        false);
-pref("dom.disable_window_flip",             false);
-pref("dom.disable_window_move_resize",      false);
-pref("dom.disable_window_status_change",    false);
+pref("dom.disable_window_flip",             true);
+pref("dom.disable_window_move_resize",      true);
+pref("dom.disable_window_status_change",    true);
 
 pref("dom.disable_window_open_feature.status",      false);
 
@@ -372,7 +379,7 @@ pref("javascript.strict_domain_checking",   false);
 
 // advanced prefs
 pref("advanced.always_load_images",         true);
-pref("security.enable_java",                true);
+pref("security.enable_java",                false);
 pref("css.allow",                           true);
 pref("advanced.mailftp",                    false);
 pref("image.animation_mode",                "normal");
@@ -444,7 +451,20 @@ pref("network.http.request.timeout", 120);	// in seconds
 // Headers
 pref("network.http.accept.default", "text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,video/x-mng,image/png,image/jpeg,image/gif;q=0.2,text/css,*/*;q=0.1");
 
-pref("network.http.sendRefererHeader",      2); // 0=don't send any, 1=send only on clicks, 2=send on image requests as well
+
+// Controls how and when the referrer header will be sent:
+//  0 - never send the referrer
+//  1 - send only on HTTP link clicks
+//  2 - send for both HTTP link clicks and inlines (images)
+//  3 - not currently used
+//  4 - send the referrer only to the same home, otherwise none
+//  5 - send the referrer to the same host, otherwise send a faked referrer
+//  6 - always send a faked referrer (base URL of target server)
+pref("network.http.sendRefererHeader", 5);
+
+// If true, the modified referrer will be sent for schemes which
+// normally wouldn't send a referrer, such as file: and resource: and imap:
+pref("network.http.referrerSchemeOverride", false);
 
 // Maximum number of consecutive redirects before aborting.
 pref("network.http.redirection-limit", 10);
@@ -493,8 +513,7 @@ pref("network.hosts.socks_serverport",      1080);
 pref("network.hosts.socks_conf",            "");
 pref("network.image.imageBehavior",         0); // 0-Accept, 1-dontAcceptForeign, 2-dontUse
 pref("network.image.warnAboutImages",       false);
-pref("network.proxy.autoconfig_url",        "");
-pref("network.proxy.type",                  0);
+pref("network.proxy.type",                  0); // 0=Direct, 1=Manual, 2=autoconfig
 pref("network.proxy.ftp",                   "");
 pref("network.proxy.ftp_port",              0);
 pref("network.proxy.gopher",                "");
@@ -511,21 +530,38 @@ pref("network.proxy.socks",                 "");
 pref("network.proxy.socks_port",            0);
 pref("network.proxy.socks_version",         5);
 pref("network.proxy.no_proxies_on",         "");
+pref("network.proxy.autoconfig_url",        "");
 pref("network.online",                      true); //online/offline
 pref("network.accept_cookies",              0);     // 0 = Always, 1 = warn, 2 = never
-pref("network.foreign_cookies",             0); // 0 = Accept, 1 = Don't accept
-pref("network.cookie.cookieBehavior",       3); // 0-Accept, 1-dontAcceptForeign, 2-dontUse, 3-p3p
+pref("network.foreign_cookies",             1); // 0=Accept, 1=Don't accept
+pref("network.cookie.cookieBehavior",       1); // 0=Accept, 1=dontAcceptForeign, 2=dontUse, 3=p3p
 pref("network.cookie.disableCookieForMailNews", true); // disable all cookies for mail
 pref("network.cookie.warnAboutCookies",     false);
-pref("network.cookie.lifetime.enabled",     false);
-pref("network.cookie.lifetime.behavior",    0);
+pref("network.cookie.lifetime.enabled",     true);
+pref("network.cookie.lifetime.behavior",    0); // 0-session, 1-days
 pref("network.cookie.lifetime.days",        90);
-
-// The following default value is for p3p medium mode.
+/* morse, why did you break backwards-compatibility and made the pref more
+   inflexible, just to make the implementation of the prefs forntend easier??*/
+/* network.cookie.p3plevel consists of 8 characters having the
+ * following interpretation:
+ *   [0]: first-party cookies when site has no privacy policy
+ *   [1]: third-party cookies when site has no privacy policy
+ *   [2]: first-party cookies when site uses PII with no user consent
+ *   [3]: third-party cookies when site uses PII with no user consent
+ *   [4]: first-party cookies when site uses PII with implicit consent only
+ *   [5]: third-party cookies when site uses PII with implicit consent only
+ *   [6]: first-party cookies when site uses PII with explicit consent
+ *   [7]: third-party cookies when site uses PII with explicit consent
+ * PII = personally identifiable information
+ *
+ * each of the eight characters can be one of the following
+ *   'a': accept the cookie
+ *   'd': accept the cookie but downgrade it to a session cookie
+ *   'r': reject the cookie
+ */
+pref("network.cookie.p3p",                  "drrrrrdr");
+pref("network.cookie.p3plevel",             3);  // 0=low, 1=medium, 2=high, 3=custom
 // See extensions/cookie/resources/content/p3p.xul for the definitions of low/medium/hi
-pref("network.cookie.p3p",                  "ffffaaaa");
-pref("network.cookie.p3plevel",             1); // 0=low, 1=medium, 2=high, 3=custom
-
 pref("signon.rememberSignons",              true);
 pref("signon.expireMasterPassword",         false);
 pref("network.enablePad",                   false); // Allow client to do proxy autodiscovery
@@ -635,9 +671,12 @@ pref("profile.seconds_until_defunct", -1);
 // Customizable toolbar stuff
 pref("custtoolbar.personal_toolbar_folder", "");
 
-pref("sidebar.customize.all_panels.url", "http://sidebar-rdf.netscape.com/%LOCALE%/sidebar-rdf/%SIDEBAR_VERSION%/all-panels.rdf");
-pref("sidebar.customize.directory.url", "http://dmoz.org/Netscape/Sidebar/");
-pref("sidebar.customize.more_panels.url", "http://dmoz.org/Netscape/Sidebar/");
+//pref("sidebar.customize.all_panels.url", "chrome://communicator/locale/sidebar/net-panels.rdf");
+//pref("sidebar.customize.all_panels.url", "http://sidebar-rdf.netscape.com/%LOCALE%/sidebar-rdf/%SIDEBAR_VERSION%/all-panels.rdf");
+pref("sidebar.customize.all_panels.url", "");
+//pref("sidebar.customize.directory.url", "http://dmoz.org/Netscape/Sidebar/");
+pref("sidebar.customize.directory.url", "http://www.beonex.com/communicator/redir/panel");
+pref("sidebar.customize.more_panels.url", "http://www.beonex.com/communicator/redir/panel");
 pref("sidebar.num_tabs_in_view", 8);
 
 pref("prefs.converted-to-utf8",false);
@@ -715,7 +754,7 @@ pref("alerts.height", 50);
 
 // update notifications prefs
 pref("update_notifications.enabled", true);
-pref("update_notifications.provider.0.frequency", 7); // number of days
+pref("update_notifications.provider.0.frequency", 1); // number of days
 pref("update_notifications.provider.0.datasource", "chrome://communicator-region/locale/region.properties");
 
 // 0 opens the download manager

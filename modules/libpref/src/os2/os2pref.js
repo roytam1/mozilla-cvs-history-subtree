@@ -111,7 +111,7 @@ pref("font.name-list.serif.zh-TW", "Times New Roman WT TC, Times New Roman MT 30
 pref("font.name.sans-serif.zh-TW", "Helv");
 pref("font.name.monospace.zh-TW", "Courier");
 
-pref("font.default", "serif");
+pref("font.default", "sans-serif");
 pref("font.size.variable.ar", 16);
 pref("font.size.fixed.ar", 13);
 

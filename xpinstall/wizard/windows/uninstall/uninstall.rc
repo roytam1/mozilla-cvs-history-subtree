@@ -71,15 +71,15 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "Comments", "\0"
-            VALUE "CompanyName", "mozilla.org\0"
-            VALUE "FileDescription", "uninstall\0"
+            VALUE "CompanyName", "Beonex\0"
+            VALUE "FileDescription", "Uninstaller for Beonex Communicator\0"
             VALUE "FileVersion", "1, 0, 0, 2\0"
             VALUE "InternalName", "uninstall\0"
             VALUE "LegalCopyright", "Copyright © 2001\0"
             VALUE "LegalTrademarks", "\0"
             VALUE "OriginalFilename", "uninstall.exe\0"
             VALUE "PrivateBuild", "\0"
-            VALUE "ProductName", "Mozilla uninstaller\0"
+            VALUE "ProductName", "Beonex uninstaller\0"
             VALUE "ProductVersion", "1, 0, 0, 2\0"
             VALUE "SpecialBuild", "\0"
         END

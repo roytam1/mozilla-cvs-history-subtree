@@ -104,7 +104,8 @@ nsHttpHandler::nsHttpHandler()
     , mProxyHttpVersion(NS_HTTP_VERSION_1_1)
     , mCapabilities(NS_HTTP_ALLOW_KEEPALIVE)
     , mProxyCapabilities(NS_HTTP_ALLOW_KEEPALIVE)
-    , mReferrerLevel(0xff) // by default we always send a referrer
+    , mReferrerLevel(2)    // 2 == REFERRER_INLINES - by default, always send the referrer
+    , mReferrerSchemeOverride(PR_FALSE)
     , mIdleTimeout(10)
     , mMaxRequestAttempts(10)
     , mMaxRequestDelay(10)
@@ -1188,36 +1189,15 @@ nsHttpHandler::InitUserAgentComponents()
     OSVERSIONINFO info = { sizeof OSVERSIONINFO };
     if (GetVersionEx(&info)) {
         if (info.dwPlatformId == VER_PLATFORM_WIN32_NT) {
-            if (info.dwMajorVersion      == 3)
-                mOscpu.Adopt(nsCRT::strdup("WinNT3.51"));
-            else if (info.dwMajorVersion == 4)
-                mOscpu.Adopt(nsCRT::strdup("WinNT4.0"));
-            else {
-                char *buf = PR_smprintf("Windows NT %ld.%ld",
-                                        info.dwMajorVersion,
-                                        info.dwMinorVersion);
-                if (buf) {
-                    mOscpu.Adopt(nsCRT::strdup(buf));
-                    PR_smprintf_free(buf);
-                }
-            }
+          mOscpu.Adopt(nsCRT::strdup("WinNT"));
         } else if (info.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS &&
                    info.dwMajorVersion == 4) {
-            if (info.dwMinorVersion == 90)
-                mOscpu.Adopt(nsCRT::strdup("Win 9x 4.90"));  // Windows Me
-            else if (info.dwMinorVersion > 0)
-                mOscpu.Adopt(nsCRT::strdup("Win98"));
-            else
-                mOscpu.Adopt(nsCRT::strdup("Win95"));
+          mOscpu.Adopt(nsCRT::strdup("Win9x"));
         } else {
-            char *buf = PR_smprintf("Windows %ld.%ld",
-                                    info.dwMajorVersion,
-                                    info.dwMinorVersion);
-            if (buf) {
-                mOscpu.Adopt(nsCRT::strdup(buf));
-                PR_smprintf_free(buf);
-            }
+          mOscpu.Adopt(nsCRT::strdup("Win"));
         }
+    } else {
+      mOscpu.Adopt(nsCRT::strdup("Win"));
     }
 #elif defined (XP_UNIX) || defined (XP_BEOS)
     struct utsname name;
@@ -1246,6 +1226,7 @@ nsHttpHandler::PrefsChanged(nsIPrefBranch *prefs, const char *pref)
 {
     nsresult rv = NS_OK;
     PRInt32 val;
+    PRBool cVar = PR_FALSE;
 
     LOG(("nsHttpHandler::PrefsChanged [pref=%s]\n", pref));
 
@@ -1303,20 +1284,8 @@ nsHttpHandler::PrefsChanged(nsIPrefBranch *prefs, const char *pref)
         mUserAgentIsDirty = PR_TRUE;
     }
 
-    // Gather locale.
-    if (PREF_CHANGED(UA_PREF("locale"))) {
-        nsCOMPtr<nsIPrefLocalizedString> pls;
-        prefs->GetComplexValue(UA_PREF("locale"),
-                                NS_GET_IID(nsIPrefLocalizedString),
-                                getter_AddRefs(pls));
-        if (pls) {
-            nsXPIDLString uval;
-            pls->ToString(getter_Copies(uval));
-            if (uval)
-                mLanguage.Adopt(ToNewUTF8String(nsDependentString(uval)));
-        } 
-        mUserAgentIsDirty = PR_TRUE;
-    }
+    // Set locale.
+    mLanguage.Adopt(nsCRT::strdup("en"));
 
     // general.useragent.override
     if (PREF_CHANGED(UA_PREF("override"))) {
@@ -1377,6 +1346,12 @@ nsHttpHandler::PrefsChanged(nsIPrefBranch *prefs, const char *pref)
             mReferrerLevel = (PRUint8) CLAMP(val, 0, 0xff);
     }
 
+    if (PREF_CHANGED(HTTP_PREF("referrerSchemeOverride"))) {
+        rv = prefs->GetBoolPref(HTTP_PREF("referrerSchemeOverride"), &cVar);
+        if (NS_SUCCEEDED(rv))
+            mReferrerSchemeOverride = cVar;
+    }
+
     if (PREF_CHANGED(HTTP_PREF("redirection-limit"))) {
         rv = prefs->GetIntPref(HTTP_PREF("redirection-limit"), &val);
         if (NS_SUCCEEDED(rv))
@@ -1407,8 +1382,6 @@ nsHttpHandler::PrefsChanged(nsIPrefBranch *prefs, const char *pref)
             // it does not make sense to issue a HTTP/0.9 request to a proxy server
         }
     }
-
-    PRBool cVar = PR_FALSE;
 
     if (PREF_CHANGED(HTTP_PREF("keep-alive"))) {
         rv = prefs->GetBoolPref(HTTP_PREF("keep-alive"), &cVar);

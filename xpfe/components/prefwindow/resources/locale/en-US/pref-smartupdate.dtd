@@ -1,7 +1,7 @@
 <!--LOCALIZATION NOTE : FILE UI for Software Updates prefs -->
 <!ENTITY lHeader                              "Software Installation">
 <!ENTITY smartTitle.label                     "Manage Software Installations and Updates">
-<!ENTITY enableSU.label                       "Enable software installation. (You will be prompted for each update.)">
+<!ENTITY enableSU.label                       "Enable software installation. (You will be prompted before each update.)">
 
 <!ENTITY enableSU.accesskey                   "e">
 <!ENTITY enableNotification.label             "Notify me when new and updated software is available">
@@ -11,11 +11,12 @@
 <!ENTITY selectUninstall.label                "To uninstall, select from the following list and click the uninstall button">
 <!ENTITY uninstallButton.label                "Uninstall">
 <!ENTITY uninstallButton.accesskey            "u">
-
 <!ENTITY updateNotifications.label            "Update Notifications">
 <!ENTITY updateNotifications.desc             "Check for new versions of this software.  No information about you or your computer will be revealed during this operation.">
 <!ENTITY enableUN.label                       "Check for updates:">
 <!ENTITY enableUN.accesskey                   "c">
+<!ENTITY daily.label                          "daily">
+<!ENTITY daily.accesskey                      "d">
 <!ENTITY weekly.label                         "weekly">
 <!ENTITY weekly.accesskey                     "w">
 <!ENTITY monthly.label                        "monthly">

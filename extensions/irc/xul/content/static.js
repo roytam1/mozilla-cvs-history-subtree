@@ -209,13 +209,8 @@ function initStatic()
     if (client.CHARSET)
         setCharset(client.CHARSET);
     
-    var ary = navigator.userAgent.match (/;\s*([^;\s]+\s*)\).*\/(\d+)/);
-    if (ary)
-        client.userAgent = "ChatZilla " + client.version + " [Mozilla " + 
-            ary[1] + "/" + ary[2] + "]";
-    else
-        client.userAgent = "ChatZilla " + client.version + " [" + 
-            navigator.userAgent + "]";
+    client.userAgent = "ChatZilla " + client.version +
+                       " in Beonex Communicator";
 
     obj = document.getElementById("input");
     obj.addEventListener("keypress", onInputKeyPress, false);

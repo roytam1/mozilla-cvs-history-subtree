@@ -28,5 +28,8 @@ include $(DEPTH)/config/autoconf.mk
 
 DIRS		= classic modern 
 
-include $(topsrcdir)/config/rules.mk
 
+#default-theme:
+#	echo "skin,install,select,modern/1.0" >> $(DIST)/bin/chrome/installed-chrome.txt
+
+include $(topsrcdir)/config/rules.mk

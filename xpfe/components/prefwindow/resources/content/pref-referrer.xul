@@ -1,0 +1,147 @@
+<?xml version="1.0"?> 
+
+<!-- 
+   - Version: MPL 1.1/GPL 2.0/LGPL 2.1
+   -
+   - The contents of this file are subject to the Mozilla Public License Version
+   - 1.1 (the "License"); you may not use this file except in compliance with
+   - the License. You may obtain a copy of the License at
+   - http://www.mozilla.org/MPL/
+   -
+   - Software distributed under the License is distributed on an "AS IS" basis,
+   - WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+   - for the specific language governing rights and limitations under the
+   - License.
+   -
+   - The Original Code is Mozilla.org code.
+   -
+   - The Initial Developer of the Original Code is
+   - Netscape Communications Corp.
+   - Portions created by Netscape Communications Corp are Copyright (C) 2001
+   - Netscape Communications Corp. All Rights Reserved.
+   -
+   - Contributor(s):
+   -   Jeff Thieleke <thieleke@yahoo.com>
+   -
+   - Alternatively, the contents of this file may be used under the terms of
+   - either the GNU General Public License Version 2 or later (the "GPL"), or
+   - the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+   - in which case the provisions of the GPL or the LGPL are applicable instead
+   - of those above. If you wish to allow use of your version of this file only
+   - under the terms of either the GPL or the LGPL, and not to allow others to
+   - use your version of this file under the terms of the MPL, indicate your
+   - decision by deleting the provisions above and replace them with the notice
+   - and other provisions required by the LGPL or the GPL. If you do not delete
+   - the provisions above, a recipient may use your version of this file under
+   - the terms of any one of the MPL, the GPL or the LGPL.
+   -
+-->
+
+<?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?>
+
+<!DOCTYPE window [
+<!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd" >
+%brandDTD;
+<!ENTITY % prefReferrerDTD SYSTEM "chrome://communicator/locale/pref/pref-referrer.dtd" >
+%prefReferrerDTD;
+]>
+
+<page xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+      onload="init();"
+      headertitle="&lHeader;">
+          
+  <script type="application/x-javascript">
+  <![CDATA[
+
+  var _elementIDs = ["referrerLevel", "referrerSchemeOverride"];
+
+  // Set this to 'true' to hide referrer level options that the referrer
+  var noFakeReferrers = false;
+//  var noFakeReferrers = true;
+
+  function init()
+  {
+    parent.initPanel('chrome://communicator/content/pref/pref-referrer.xul');
+
+    var referrerLevel = document.getElementById("referrerLevel").value;
+    if(referrerLevel > 0)
+      setReferrerOverrideEnabled(true);
+
+
+    if(noFakeReferrers)
+    {
+      document.getElementById("nonHostSendPrePath").hidden          = true;
+      document.getElementById("alwaysSendPrePath").hidden           = true;
+      document.getElementById("referrerSchemeOverrideGroup").hidden = true;
+      document.getElementById("referrerFakeDescr").hidden           = true;
+    }
+  }
+
+  function setReferrerOverrideEnabled(overrideEnabled)
+  {
+    var overrideCheckbox = document.getElementById("referrerSchemeOverride");
+    overrideCheckbox.disabled = !overrideEnabled;
+  }
+  ]]>
+  </script>
+
+        
+<!-- Too big for Win32
+  <description>&referrerSubheader;</description>
+-->
+  <description>&referrerDetails;</description>
+  <description id="referrerFakeDescr">&referrerFakeDescr;</description>
+
+  <groupbox>
+    <caption label="&referrerBox.label;"/>
+    <radiogroup id="referrerLevel"
+                prefstring="network.http.sendRefererHeader" preftype="int">
+      <radio value="0" id="disableReferrer"
+             label="&disableReferrer.label;"
+             accesskey="&disableReferrer.accesskey;"
+             tooltiptext="&disableReferrer.tooltip;"
+             oncommand="setReferrerOverrideEnabled(false);"/>
+      <radio value="1" id="referrerLinkClick"
+             label="&referrerLinkClick.label;"
+             accesskey="&referrerLinkClick.accesskey;"
+             tooltiptext="&referrerLinkClick.tooltip;"
+             oncommand="setReferrerOverrideEnabled(true);"/>
+      <radio value="2" id="referrerInlines"
+             label="&referrerImages.label;"
+             accesskey="&referrerImages.accesskey;"
+             tooltiptext="&referrerImages.tooltip;"
+             oncommand="setReferrerOverrideEnabled(true);"/>
+      <radio value="4" id="sameHostReferrerOnly"
+             label="&sameHostReferrerOnly.label;"
+             accesskey="&sameHostReferrerOnly.accesskey;"
+             tooltiptext="&sameHostReferrerOnly.tooltip;"
+             oncommand="setReferrerOverrideEnabled(true);"/>
+      <radio value="5" id="nonHostSendPrePath"
+             label="&nonHostSendPrePath.label;"
+             accesskey="&nonHostSendPrePath.accesskey;"
+             tooltiptext="&nonHostSendPrePath.tooltip;"
+             oncommand="setReferrerOverrideEnabled(true);"/>
+      <radio value="6" id="alwaysSendPrePath"
+             label="&alwaysSendPrePath.label;"
+             accesskey="&alwaysSendPrePath.accesskey;"
+             tooltiptext="&alwaysSendPrePath.tooltip;"
+             oncommand="setReferrerOverrideEnabled(true);"/>
+    </radiogroup>
+  </groupbox>
+
+  <groupbox id="referrerSchemeOverrideGroup">
+    <caption label="&referrerSchemeGroup.label;"/>
+    <radiogroup id="referrerSchemeOverride"
+                prefstring="network.http.referrerSchemeOverride"
+                preftype="bool">
+      <radio value="true" id="referrerBookmarksFake"
+             label="&referrerSchemeOverride.label;"
+             accesskey="&referrerSchemeOverride.accesskey;"
+             tooltiptext="&referrerSchemeOverride.tooltip;" />
+      <radio value="false" id="referrerBookmarksNo"
+             label="&referrerNoSchemeOverride.label;"
+             accesskey="&referrerNoSchemeOverride.accesskey;"
+             tooltiptext="&referrerNoSchemeOverride.tooltip;" />
+    </radiogroup>
+  </groupbox>
+</page>

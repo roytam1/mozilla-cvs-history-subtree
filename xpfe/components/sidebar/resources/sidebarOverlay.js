@@ -398,7 +398,7 @@ function (force_reload)
         content.removeAttribute('hidden');
         content.removeAttribute('collapsed');
 
-        if (sidebarObj.collapsed && panel.is_sandboxed()) {
+        if (sidebarObj.collapsed) {
           if (!panel.is_persistent()) {
             debug("    set src=about:blank");
             iframe.setAttribute('src', 'about:blank');
@@ -443,10 +443,6 @@ function (force_reload)
             content.setAttribute('hidden','true');
             iframe.setAttribute('loadstate', 'never loaded');
           }
-        }
-        if (panel.is_sandboxed()) {
-          if (!panel.is_persistent())
-            iframe.setAttribute('src', 'about:blank');
         }
       }
     }
@@ -900,7 +896,7 @@ function get_remote_datasource_url() {
     url = prefs.getCharPref("sidebar.customize.all_panels.url");
     url = url.replace(/%SIDEBAR_VERSION%/g, SIDEBAR_VERSION);
   } catch(ex) {
-    debug("Unable to get remote url pref. What now? "+ex);
+    debug("Unable to get pref |sidebar.customize.all_panels.url|. "+ex);
   }
   try {
     locale = prefs.getComplexValue("intl.content.langcode",
@@ -913,8 +909,14 @@ function get_remote_datasource_url() {
       locale = prefs.getComplexValue("general.useragent.locale",
                                      Components.interfaces.nsIPrefLocalizedString);
   } catch(ex) {
-      debug("Unable to get system locale. What now? "+ex);
+      locale = "en";
+      debug("Unable to get system locale. Falling back to 'en'. "+ex);
     }
+  }
+  if (!locale || locale == "")
+  {
+    locale = "en";
+    debug("Have empty locale. Falling back to 'en'.");
   }
   locale = locale.data.toLowerCase();
   url = url.replace(/%LOCALE%/g, locale);

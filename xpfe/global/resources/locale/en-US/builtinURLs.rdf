@@ -25,32 +25,32 @@
          xmlns:NC="http://home.netscape.com/NC-rdf#">
 
   <RDF:Description about='urn:clienturl:toolbar:mynetscape'>
-    <NC:title>My Netscape</NC:title>
-    <NC:content>http://my.netscape.com/</NC:content>
+    <NC:title>Support</NC:title>
+    <NC:content>http://www.beonex.com/communicator/support</NC:content>
   </RDF:Description>
 
   <RDF:Description about='urn:clienturl:toolbar:home'>
     <NC:title>Home</NC:title>
-    <NC:content>http://home.netscape.com/</NC:content>
+    <NC:content>about:welcome</NC:content>
   </RDF:Description>
 
   <RDF:Description about='urn:clienturl:toolbar:relnotes'>
     <NC:title>Release Notes</NC:title>
-    <NC:content>http://www.mozilla.org/releases/mozilla1.0/</NC:content>
+    <NC:content>http://www.beonex.com/communicator/version/0.8/release-notes</NC:content>
   </RDF:Description>
 
   <!-- View Menu -->
 
   <RDF:Description about='urn:clienturl:viewmenu:intlwebcontent'>
     <NC:title>International Languages and Web Content</NC:title>
-    <NC:content>http://www.mozilla.org/projects/l10n/mlp_status.html#contrib</NC:content>
+    <NC:content>http://www.beonex.com/communicator/version/0.8/add-ons/l10n</NC:content>
   </RDF:Description>
 
   <!-- Search Menu -->
 
   <RDF:Description about='urn:clienturl:srchmenu:srchinternet'>
-    <NC:title>Search Internet</NC:title>
-    <NC:content>http://home.netscape.com/bookmark/6_0/ssearch.html</NC:content>
+    <NC:title>Search the Web</NC:title>
+    <NC:content>http://www.google.com</NC:content>
   </RDF:Description>
 
   <!-- Composer -->

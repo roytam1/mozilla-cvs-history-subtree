@@ -36,7 +36,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 const kDebug               = false;
-const kUpdateCheckDelay    = 5 * 60 * 1000; // 5 minutes
+const kUpdateCheckStartDelay = 5 * 60 * 1000; // 5 minutes after startup
+const kUpdateCheckMinFreq  = 6 * 60 * 60 * 1000; // then every 6 hours
 const kUNEnabledPref       = "update_notifications.enabled";
 const kUNDatasourceURIPref = "update_notifications.provider.0.datasource";
 const kUNFrequencyPref     = "update_notifications.provider.0.frequency";
@@ -75,14 +76,9 @@ var nsUpdateNotifier =
 
     if (aTopic == "domwindowopened")
     {
+      this.setTimer(kUpdateCheckStartDelay);
       try 
       {
-        const kIScriptableTimer = Components.interfaces.nsIScriptableTimer;
-        mTimer = Components.classes["@mozilla.org/timer;1"].
-          createInstance(kIScriptableTimer);
-        mTimer.init(this, kUpdateCheckDelay, kIScriptableTimer.PRIORITY_NORMAL,
-          kIScriptableTimer.TYPE_ONE_SHOT);
-
         // we are no longer interested in the ``domwindowopened'' topic
         var observerService = Components.
           classes["@mozilla.org/observer-service;1"].
@@ -91,13 +87,30 @@ var nsUpdateNotifier =
       }
       catch (ex)
       {
-        debug("Exception init'ing timer: " + ex);
+        debug("Exception removing observer for update notification: " + ex);
       }
     }
     else if (aTopic == "timer-callback")
     {
       mTimer = null; // free up timer so it can be gc'ed
       this.checkForUpdate();
+      this.setTimer(kUpdateCheckMinFreq);
+    }
+  },
+
+  setTimer: function(delay)
+  {
+    try 
+    {
+      const kIScriptableTimer = Components.interfaces.nsIScriptableTimer;
+      mTimer = Components.classes["@mozilla.org/timer;1"].
+        createInstance(kIScriptableTimer);
+      mTimer.init(this, delay, kIScriptableTimer.PRIORITY_NORMAL,
+        kIScriptableTimer.TYPE_ONE_SHOT);
+    }
+    catch (ex)
+    {
+      debug("Exception init'ing timer: " + ex);
     }
   },
 

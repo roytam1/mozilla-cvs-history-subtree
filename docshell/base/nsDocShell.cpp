@@ -5986,7 +5986,18 @@ nsDocShell::AddToGlobalHistory(nsIURI * aURI)
     NS_ENSURE_STATE(mGlobalHistory);
 
     nsCAutoString spec;
+    nsCAutoString pw;
+    nsCAutoString blankpw("");
+    nsresult rv = aURI->GetPassword(pw);
+    if (pw.Length()) {
+       aURI->SetPassword(blankpw);
+    }
+
     NS_ENSURE_SUCCESS(aURI->GetSpec(spec), NS_ERROR_FAILURE);
+    if (pw.Length()) {
+       aURI->SetPassword(pw);
+    }
+
 
     NS_ENSURE_SUCCESS(mGlobalHistory->AddPage(spec.get()), NS_ERROR_FAILURE);
 

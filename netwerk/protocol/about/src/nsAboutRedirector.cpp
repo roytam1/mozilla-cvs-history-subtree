@@ -66,12 +66,14 @@ struct RedirEntry {
   before adding new map entries with dropChromePrivs == PR_FALSE.
  */
 static RedirEntry kRedirMap[] = {
-    { "credits", "http://www.mozilla.org/credits/", PR_TRUE },
+    { "credits", "chrome://global/content/credits.html", PR_TRUE },
+    { "welcome", "chrome://communicator/locale/welcome.html", PR_TRUE },
+    { "licence", "chrome://global/locale/license.html", PR_TRUE },
     { "mozilla", "chrome://global/content/mozilla.html", PR_TRUE },
     { "plugins", "chrome://global/content/plugins.html", PR_TRUE },
     { "config", "chrome://global/content/config.xul", PR_FALSE }
 };
-static const int kRedirTotal = 4; // sizeof(kRedirMap)/sizeof(*kRedirMap)
+static const int kRedirTotal = 6; // sizeof(kRedirMap)/sizeof(*kRedirMap)
 
 NS_IMETHODIMP
 nsAboutRedirector::NewChannel(nsIURI *aURI, nsIChannel **result)

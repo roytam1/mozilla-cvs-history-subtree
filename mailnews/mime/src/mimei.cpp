@@ -45,22 +45,23 @@
 #ifdef ENABLE_SMIME
 #include "mimecms.h"	/*   |     |     |--- MimeEncryptedPKCS7			*/
 #endif
-
 #include "mimemsg.h"	/*   |     |--- MimeMessage							*/
 #include "mimeunty.h"	/*   |     |--- MimeUntypedText						*/
 #include "mimeleaf.h"	/*   |--- MimeLeaf (abstract)						*/
 #include "mimetext.h"	/*   |     |--- MimeInlineText (abstract)			*/
 #include "mimetpla.h"	/*   |     |     |--- MimeInlineTextPlain			*/
+#include "mimethpl.h"	/*   |     |     |     |--- M.I.TextHTMLAsPlaintext */
 #include "mimetpfl.h" /*   |     |     |--- MimeInlineTextPlainFlowed         */
 #include "mimethtm.h"	/*   |     |     |--- MimeInlineTextHTML			*/
+#include "mimethsa.h"	/*   |     |     |     |--- M.I.TextHTMLSanitized   */
 #include "mimetric.h"	/*   |     |     |--- MimeInlineTextRichtext		*/
 #include "mimetenr.h"	/*   |     |     |     |--- MimeInlineTextEnriched	*/
-/* SUPPORTED VIA PLUGIN    |     |     |--------- MimeInlineTextCalendar  */
-
-#include "nsIPref.h"
+/* SUPPORTED VIA PLUGIN      |     |     |--- MimeInlineTextVCard           */
+/* SUPPORTED VIA PLUGIN      |     |     |--- MimeInlineTextCalendar        */
 #include "mimeiimg.h"	/*   |     |--- MimeInlineImage						*/
 #include "mimeeobj.h"	/*   |     |--- MimeExternalObject					*/
 #include "mimeebod.h"	/*   |--- MimeExternalBody							*/
+                        /* If you add classes here,also add them to mimei.h */
 #include "prlog.h"
 #include "prmem.h"
 #include "prenv.h"
@@ -78,6 +79,7 @@
 #include "nsMimeStringResources.h"
 #include "nsMimeTypes.h"
 #include "nsMsgUtils.h"
+#include "nsIPref.h"
 #include "imgILoader.h"
 
 #define	IMAP_EXTERNAL_CONTENT_HEADER "X-Mozilla-IMAP-Part"
@@ -288,6 +290,75 @@ mime_free (MimeObject *object)
   PR_Free(object);
 }
 
+
+PRBool mime_is_allowed_class(const MimeObjectClass *clazz,
+                             PRInt32 types_of_classes_to_disallow)
+{
+  if (types_of_classes_to_disallow == 0)
+    return PR_TRUE;
+  PRBool avoid_html = (types_of_classes_to_disallow >= 1);
+  PRBool avoid_images = (types_of_classes_to_disallow >= 2);
+  PRBool avoid_strange_content = (types_of_classes_to_disallow >= 3);
+  PRBool allow_only_vanilla_classes = (types_of_classes_to_disallow == 100);
+
+  if (allow_only_vanilla_classes)
+    /* A "safe" class is one that is unlikely to have security bugs or to
+       allow security exploits or one that is essential for the usefulness
+       of the application, even for paranoid users.
+       What's included here is more personal judgement than following
+       strict rules, though, unfortunately.
+       The function returns true only for known good classes, i.e. is a
+       "whitelist" in this case.
+       This idea comes from Georgi Guninski.
+    */
+    return
+      (
+        clazz == (MimeObjectClass *)&mimeInlineTextPlainClass ||
+        clazz == (MimeObjectClass *)&mimeInlineTextPlainFlowedClass ||
+        clazz == (MimeObjectClass *)&mimeInlineTextHTMLSanitizedClass ||
+        clazz == (MimeObjectClass *)&mimeInlineTextHTMLAsPlaintextClass ||
+           /* The latter 2 classes bear some risk, because they use the Gecko
+              HTML parser, but the user has the option to make an explicit
+              choice in this case, via html_as. */
+        clazz == (MimeObjectClass *)&mimeMultipartMixedClass ||
+        clazz == (MimeObjectClass *)&mimeMultipartAlternativeClass ||
+        clazz == (MimeObjectClass *)&mimeMultipartDigestClass ||
+        clazz == (MimeObjectClass *)&mimeMultipartAppleDoubleClass ||
+        clazz == (MimeObjectClass *)&mimeMessageClass ||
+        clazz == (MimeObjectClass *)&mimeExternalObjectClass ||
+                               /*    mimeUntypedTextClass? -- does uuencode */
+#ifdef ENABLE_SMIME
+        clazz == (MimeObjectClass *)&mimeMultipartSignedCMSClass ||
+        clazz == (MimeObjectClass *)&mimeEncryptedCMSClass ||
+#endif
+        clazz == 0
+      );
+
+  /* Contrairy to above, the below code is a "blacklist", i.e. it
+     *excludes* some "bad" classes. */
+  return
+     !(
+        (avoid_html
+         && (
+              clazz == (MimeObjectClass *)&mimeInlineTextHTMLClass
+                         /* Should not happen - we protect against that in
+                            mime_find_class(). Still for safety... */
+            )) ||
+        (avoid_images
+         && (
+              clazz == (MimeObjectClass *)&mimeInlineImageClass
+            )) ||
+        (avoid_strange_content
+         && (
+              clazz == (MimeObjectClass *)&mimeInlineTextEnrichedClass ||
+              clazz == (MimeObjectClass *)&mimeInlineTextRichtextClass ||
+              clazz == (MimeObjectClass *)&mimeSunAttachmentClass ||
+              clazz == (MimeObjectClass *)&mimeExternalBodyClass
+            ))
+      );
+}
+
+
 MimeObjectClass *
 mime_find_class (const char *content_type, MimeHeaders *hdrs,
 				 MimeDisplayOptions *opts, PRBool exact_match_p)
@@ -295,6 +366,32 @@ mime_find_class (const char *content_type, MimeHeaders *hdrs,
   MimeObjectClass *clazz = 0;
   MimeObjectClass *tempClass = 0;
   contentTypeHandlerInitStruct  ctHandlerInfo;
+
+  // Read some prefs
+  nsIPref *pref = GetPrefServiceManager(opts); 
+  PRInt32 html_as = 0;  // def. see below
+  PRInt32 types_of_classes_to_disallow = 0;  /* Let only a few libmime classes
+       process incoming data. This protects from bugs (e.g. buffer overflows)
+       and from security loopholes (e.g. allowing unchecked HTML in some
+       obscure classes, although the user has html_as > 0).
+       This option is mainly for the UI of html_as.
+       0 = allow all available classes
+       1 = Use hardcoded blacklist to avoid rendering (incoming) HTML
+       2 = ... and images
+       3 = ... and some other uncommon content types
+       100 = Use hardcoded whitelist to avoid even more bugs(buffer overflows).
+           This mode will limit the features available (e.g. uncommon
+           attachment types and inline images) and is for paranoid users.
+       */
+  if (pref)
+  {
+    pref->GetIntPref("mailnews.display.html_as", &html_as);
+    pref->GetIntPref("mailnews.display.disallow_mime_handlers",
+                     &types_of_classes_to_disallow);
+    if (types_of_classes_to_disallow > 0 && html_as == 0)
+         // We have non-sensical prefs. Do some fixup.
+      html_as = 1;
+  }
 
   /* 
   * What we do first is check for an external content handler plugin. 
@@ -305,6 +402,19 @@ mime_find_class (const char *content_type, MimeHeaders *hdrs,
   */
   if ((tempClass = mime_locate_external_content_handler(content_type, &ctHandlerInfo)) != NULL)
   {
+    if (types_of_classes_to_disallow > 0
+        && (!nsCRT::strncasecmp(content_type, "text/x-vcard", 12) ||
+            !nsCRT::strncasecmp(content_type, "text/calendar", 13))
+       )
+      /* Use a little hack to prevent some dangerous plugins, which ship
+         with Mozilla, to run.
+         For the truely user-installed plugins, we rely on the judgement
+         of the user. */
+    {
+      if (!exact_match_p)
+        clazz = (MimeObjectClass *)&mimeExternalObjectClass; // As attachment
+    }
+    else
     clazz = (MimeObjectClass *)tempClass;
   }
   else
@@ -318,7 +428,33 @@ mime_find_class (const char *content_type, MimeHeaders *hdrs,
     else if (!nsCRT::strncasecmp(content_type,			"text/", 5))
     {
       if      (!nsCRT::strcasecmp(content_type+5,		"html"))
+      {
+        if (opts
+            && opts->format_out == nsMimeOutput::nsMimeMessageSaveAs)
+          // SaveAs in new modes doesn't work yet.
+        {
+          clazz = (MimeObjectClass *)&mimeInlineTextHTMLClass;
+          types_of_classes_to_disallow = 0;
+        }
+        else if (html_as == 0) // Render sender's HTML
         clazz = (MimeObjectClass *)&mimeInlineTextHTMLClass;
+        else if (html_as == 1) // convert HTML to plaintext
+          // Do a HTML->TXT->HTML conversion, see mimethpl.h.
+          clazz = (MimeObjectClass *)&mimeInlineTextHTMLAsPlaintextClass;
+        else if (html_as == 2) // display HTML source
+          /* This is for the freaks. Treat HTML as plaintext,
+             which will cause the HTML source to be displayed.
+             Not very user-friendly, but some seem to want this. */
+          clazz = (MimeObjectClass *)&mimeInlineTextPlainClass;
+        else if (html_as == 3) // Sanitize
+          // Strip all but allowed HTML
+          clazz = (MimeObjectClass *)&mimeInlineTextHTMLSanitizedClass;
+        else // Goofy pref
+          /* User has an unknown pref value. Maybe he used a newer Mozilla
+             with a new alternative to avoid HTML. Defaulting to option 1,
+             which is less dangerous than defaulting to the raw HTML. */
+          clazz = (MimeObjectClass *)&mimeInlineTextHTMLAsPlaintextClass;
+      }
       else if (!nsCRT::strcasecmp(content_type+5,		"enriched"))
         clazz = (MimeObjectClass *)&mimeInlineTextEnrichedClass;
       else if (!nsCRT::strcasecmp(content_type+5,		"richtext"))
@@ -331,10 +467,8 @@ mime_find_class (const char *content_type, MimeHeaders *hdrs,
         clazz = (MimeObjectClass *)&mimeInlineTextPlainClass;
 
         PRBool disable_format_flowed = PR_FALSE;
-        nsIPref *pref = GetPrefServiceManager(opts); 
         if (pref)
-          (void)pref->GetBoolPref(
-                           "mailnews.display.disable_format_flowed_support",
+          pref->GetBoolPref("mailnews.display.disable_format_flowed_support",
                            &disable_format_flowed);
         
         if(!disable_format_flowed)
@@ -402,8 +536,10 @@ mime_find_class (const char *content_type, MimeHeaders *hdrs,
           ? MimeHeaders_get_parameter(ct, PARAM_MICALG, NULL, NULL)
           : 0);
         
-          if (proto && (!nsCRT::strcasecmp(proto, APPLICATION_XPKCS7_SIGNATURE) &&
-                          micalg && (!nsCRT::strcasecmp(micalg, PARAM_MICALG_MD5) ||
+          if (proto
+              && (!nsCRT::strcasecmp(proto, APPLICATION_XPKCS7_SIGNATURE)
+                  && micalg
+                  && (!nsCRT::strcasecmp(micalg, PARAM_MICALG_MD5) ||
                                                  !nsCRT::strcasecmp(micalg, PARAM_MICALG_SHA1) ||
                                                  !nsCRT::strcasecmp(micalg, PARAM_MICALG_SHA1_2) ||
                                                  !nsCRT::strcasecmp(micalg, PARAM_MICALG_SHA1_3) ||
@@ -472,6 +608,16 @@ mime_find_class (const char *content_type, MimeHeaders *hdrs,
     */
     else if (!exact_match_p)
       clazz = (MimeObjectClass *)&mimeExternalObjectClass;  
+
+    if (!mime_is_allowed_class(clazz, types_of_classes_to_disallow))
+    {
+      /* Do that check here (not after the if block), because we want to allow
+         user-installed plugins. */
+      if(!exact_match_p)
+        clazz = (MimeObjectClass *)&mimeExternalObjectClass;
+      else
+        clazz = 0;
+    }
   }
 
  if (!exact_match_p)
@@ -617,6 +763,8 @@ mime_create (const char *content_type, MimeHeaders *hdrs,
           (clazz != (MimeObjectClass *)&mimeInlineTextPlainClass) &&
           (clazz != (MimeObjectClass *)&mimeInlineTextPlainFlowedClass) &&
           (clazz != (MimeObjectClass *)&mimeInlineTextHTMLClass) &&
+          (clazz != (MimeObjectClass *)&mimeInlineTextHTMLSanitizedClass) &&
+          (clazz != (MimeObjectClass *)&mimeInlineTextHTMLAsPlaintextClass) &&
           (clazz != (MimeObjectClass *)&mimeInlineTextRichtextClass) &&
           (clazz != (MimeObjectClass *)&mimeInlineTextEnrichedClass) &&
           (clazz != (MimeObjectClass *)&mimeMessageClass) &&

@@ -1,107 +1,254 @@
 <?xml version="1.0"?>
-<RDF:RDF
-     xmlns:NC="http://home.netscape.com/NC-rdf#"
-     xmlns:RDF="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-  <RDF:Description about="chrome://messenger/content/messenger.xul#flaggedCol">
-    <hidden>true</hidden>
+<RDF:RDF xmlns:NC="http://home.netscape.com/NC-rdf#"
+         xmlns:RDF="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+  <RDF:Description about="chrome://navigator/content/navigator.xul#main-window"
+                   sizemode="normal" />
+  <RDF:Description about="chrome://editor/content/editor.xul#editorWindow"
+                   sizemode="normal" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#addressbookWindow"
+                   sizemode="normal" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#messengerWindow"
+                   sizemode="normal" />
+  <RDF:Description about="chrome://chatzilla/content/chatzilla.xul#chatzilla-window" />
+  <RDF:Description about="chrome://messenger/content/AccountWizard.xul#AccountWizard" />
+
+<!--what's above is hand-edited -->
+
+  <RDF:Description about="chrome://navigator/content/navigator.xul">
+    <NC:persist resource="chrome://navigator/content/navigator.xul#print-button"/>
+    <NC:persist resource="chrome://navigator/content/navigator.xul#main-window"/>
+    <NC:persist resource="chrome://navigator/content/navigator.xul#PersonalToolbar"/>
+    <NC:persist resource="chrome://navigator/content/navigator.xul#cmd_viewpersonaltoolbar"/>
+    <NC:persist resource="chrome://navigator/content/navigator.xul#sidebar-panels"/>
+    <NC:persist resource="chrome://navigator/content/navigator.xul#sidebar-splitter"/>
+    <NC:persist resource="chrome://navigator/content/navigator.xul#sidebar-box"/>
+    <NC:persist resource="chrome://navigator/content/navigator.xul#sidebar-title-box"/>
+    <NC:persist resource="chrome://navigator/content/navigator.xul#sidebar-panels-splitter-box"/>
+    <NC:persist resource="chrome://navigator/content/navigator.xul#bookmarks-button"/>
+    <NC:persist resource="chrome://navigator/content/navigator.xul#linktoolbar"/>
   </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/messenger.xul#unreadCol">
-    <hidden>true</hidden>
+  <RDF:Description about="chrome://messenger/content/messenger.xul#statusCol"
+                   hidden="true"
+                   ordinal="13" />
+  <RDF:Description about="chrome://messenger/content/AccountWizard.xul">
+    <NC:persist resource="chrome://messenger/content/AccountWizard.xul#AccountWizard"/>
   </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/messenger.xul#totalCol">
-    <hidden>true</hidden>
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#FaxNumber"
+                   ordinal="13"
+                   hidden="true" />
+  <RDF:Description about="chrome://editor/content/editor.xul#taskbar"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/messengercompose/messengercompose.xul#menu_showTaskbar"
+                   checked="false" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#subjectCol"
+                   ordinal="5" />
+  <RDF:Description about="chrome://messenger/content/messageWindow.xul#taskbar"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#menu_showTaskbar"
+                   checked="false" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#WorkPhone"
+                   ordinal="5" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#abResultsOutliner"
+                   height="94" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#labelCol"
+                   hidden="true"
+                   ordinal="19" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#CellularNumber"
+                   ordinal="17"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/messengercompose/messengercompose.xul">
+    <NC:persist resource="chrome://messenger/content/messengercompose/messengercompose.xul#taskbar"/>
+    <NC:persist resource="chrome://messenger/content/messengercompose/messengercompose.xul#menu_showTaskbar"/>
   </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/messenger.xul#OrderReceivedColumn">
-    <hidden>true</hidden>
+  <RDF:Description about="chrome://messenger/content/messenger.xul#taskbar"
+                   hidden="true" />
+  <RDF:Description about="chrome://editor/content/editor.xul#sidebar-title-box"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#Company"
+                   ordinal="7" />
+  <RDF:Description about="chrome://navigator/content/navigator.xul#bookmarks-button"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#sidebar-title-box"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/messageWindow.xul">
+    <NC:persist resource="chrome://messenger/content/messageWindow.xul#taskbar"/>
+    <NC:persist resource="chrome://messenger/content/messageWindow.xul#menu_showTaskbar"/>
   </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/messenger.xul#statusCol">
-    <hidden>true</hidden>
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#sidebar-panels-splitter-box"
+                   hidden="true" />
+  <RDF:Description about="chrome://editor/content/editor.xul#sidebar-panels-splitter-box"
+                   hidden="true" />
+  <RDF:Description about="chrome://navigator/content/navigator.xul#sidebar-box"
+                   state="open"
+                   hidden="true"
+                   width="190" />
+  <RDF:Description about="chrome://navigator/content/navigator.xul#component-bar"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#priorityCol"
+                   ordinal="21" />
+  <RDF:Description about="chrome://navigator/content/navigator.xul#cmd_viewcomponentbar"
+                   checked="false" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#OrderReceivedColumn"
+                   hidden="true" />
+  <RDF:Description about="chrome://navigator/content/navigator.xul#linktoolbar"
+                   hidden="maybe" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#SecondEmail"
+                   ordinal="19"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#totalCol"
+                   hidden="true"
+                   ordinal="25" />
+  <RDF:Description about="chrome://chatzilla/content/chatzilla.xul">
+    <NC:persist resource="chrome://chatzilla/content/chatzilla.xul#chatzilla-window"/>
   </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/messenger.xul#sizeCol">
-    <hidden>true</hidden>
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#HomePhone"
+                   ordinal="11"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#flaggedCol"
+                   hidden="true"
+                   ordinal="17" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#unreadCol"
+                   hidden="true"
+                   ordinal="23" />
+  <RDF:Description about="chrome://navigator/content/navigator.xul#sidebar-splitter"
+                   state="open"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#GeneratedName"
+                   ordinal="1" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#senderOrRecipientCol"
+                   ordinal="7" />
+  <RDF:Description about="mailbox://browser@etzu"
+                   open="true" />
+  <RDF:Description about="chrome://navigator/content/navigator.xul#sidebar-panels"
+                   last-selected-panel="urn:sidebar:panel:search" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#StatusColumn"
+                   hidden="true" />
+  <RDF:Description about="chrome://navigator/content/navigator.xul#PersonalToolbar"
+                   hidden="true" />
+  <RDF:Description about="chrome://editor/content/editor.xul#sidebar-splitter"
+                   hidden="true" />
+  <RDF:Description about="chrome://navigator/content/navigator.xul#cmd_viewpersonaltoolbar"
+                   checked="false" />
+  <RDF:Description about="chrome://navigator/content/navigator.xul#status-bar"
+                   hidden="false" />
+  <RDF:Description about="chrome://editor/content/editor.xul">
+    <NC:persist resource="chrome://editor/content/editor.xul#sidebar-panels"/>
+    <NC:persist resource="chrome://editor/content/editor.xul#main-window"/>
+    <NC:persist resource="chrome://editor/content/editor.xul#sidebar-box"/>
+    <NC:persist resource="chrome://editor/content/editor.xul#sidebar-splitter"/>
+    <NC:persist resource="chrome://editor/content/editor.xul#sidebar-title-box"/>
+    <NC:persist resource="chrome://editor/content/editor.xul#sidebar-panels-splitter-box"/>
+    <NC:persist resource="chrome://editor/content/editor.xul#taskbar"/>
+    <NC:persist resource="chrome://editor/content/editor.xul#cmd_viewtaskbar"/>
+    <NC:persist resource="chrome://editor/content/editor.xul#editorWindow"/>
   </RDF:Description>
   <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul">
-    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#abResultsOutliner"/>
-    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#sidebar-panels-splitter-box"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#sidebar-panels"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#addressbookWindow"/>
     <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#sidebar-title-box"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#sidebar-panels-splitter-box"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#sidebar-box"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#taskbar"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#menu_showTaskbar"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#abResultsOutliner"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#GeneratedName"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#PrimaryEmail"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#WorkPhone"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#Company"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#NickName"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#HomePhone"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#FaxNumber"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#PagerNumber"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#CellularNumber"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#SecondEmail"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#JobTitle"/>
+    <NC:persist resource="chrome://messenger/content/addressbook/addressbook.xul#Department"/>
   </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#abResultsOutliner" height="94" />
-  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#sidebar-panels-splitter-box">
-    <collapsed>true</collapsed>
-  </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#sidebar-title-box">
-    <hidden>true</hidden>
-  </RDF:Description>
+  <RDF:Description about="chrome://messenger/content/messageWindow.xul#menu_showTaskbar"
+                   checked="false" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#dateCol"
+                   ordinal="11" />
+  <RDF:Description about="chrome://messenger/content/messengercompose/messengercompose.xul#taskbar"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#threadCol"
+                   ordinal="1" />
+  <RDF:Description about="chrome://navigator/content/navigator.xul#cmd_viewtaskbar"
+                   checked="false" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#JobTitle"
+                   ordinal="21"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#PrimaryEmail"
+                   ordinal="3" />
+  <RDF:Seq about="nc:urlbar-history">
+  </RDF:Seq>
+  <RDF:Description about="chrome://messenger/content/messenger.xul#folderTotalCol"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#PagerNumber"
+                   ordinal="15"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#sidebar-panels-splitter-box"
+                   height="288"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#Department"
+                   ordinal="23"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#sidebar-title-box"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#NickName"
+                   ordinal="9"
+                   hidden="true" />
+  <RDF:Description about="chrome://navigator/content/navigator.xul#print-button"
+                   hidden="true" />
   <RDF:Description about="chrome://messenger/content/messenger.xul">
-    <NC:persist resource="chrome://messenger/content/messenger.xul#statusCol"/>
-    <NC:persist resource="chrome://messenger/content/messenger.xul#sizeCol"/>
-    <NC:persist resource="chrome://messenger/content/messenger.xul#unreadCol"/>
-    <NC:persist resource="chrome://messenger/content/messenger.xul#totalCol"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#StatusColumn"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#SizeColumn"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#UnreadColumn"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#TotalColumn"/>
     <NC:persist resource="chrome://messenger/content/messenger.xul#OrderReceivedColumn"/>
-    <NC:persist resource="chrome://messenger/content/messenger.xul#flaggedCol"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#FlaggedButtonColumn"/>
     <NC:persist resource="chrome://messenger/content/messenger.xul#messengerWindow"/>
     <NC:persist resource="chrome://messenger/content/messenger.xul#sidebar-panels"/>
     <NC:persist resource="chrome://messenger/content/messenger.xul#sidebar-panels-splitter-box"/>
-    <NC:persist resource="chrome://messenger/content/messenger.xul#threadOutliner"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#sidebar-title-box"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#sidebar-box"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#taskbar"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#menu_showTaskbar"/>
+    <NC:persist resource="mailbox://browser@etzu"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#totalCol"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#unreadCol"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#statusCol"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#flaggedCol"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#threadCol"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#subjectCol"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#senderOrRecipientCol"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#unreadButtonColHeader"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#dateCol"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#sizeCol"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#labelCol"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#priorityCol"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#folderUnreadCol"/>
+    <NC:persist resource="chrome://messenger/content/messenger.xul#folderTotalCol"/>
   </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/messenger.xul#messengerWindow">
-    <screenX>4</screenX>
-    <screenY>4</screenY>
-    <width>632</width>
-    <height>450</height>
-  </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/messenger.xul#sidebar-panels">
-    <last-selected-panel>urn:sidebar:panel:bookmarks</last-selected-panel>
-    <hidden>true</hidden>
-  </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/messenger.xul#sidebar-panels-splitter-box">
-    <height>288</height>
-    <hidden>true</hidden>
-  </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/messenger.xul#threadOutliner" height="94" />
-  <RDF:Description about="chrome://messenger/content/mail3PaneWindowVertLayout.xul">
-    <NC:persist resource="chrome://messenger/content/mail3PaneWindowVertLayout.xul#sidebar-panels-splitter-box"/>
-    <NC:persist resource="chrome://messenger/content/mail3PaneWindowVertLayout.xul#sidebar-panels"/>
-    <NC:persist resource="chrome://messenger/content/mail3PaneWindowVertLayout.xul#threadOutliner"/>
-  </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/mail3PaneWindowVertLayout.xul#sidebar-panels-splitter-box">
-    <hidden>true</hidden>
-  </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/mail3PaneWindowVertLayout.xul#sidebar-panels">
-    <hidden>true</hidden>
-  </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/mail3PaneWindowVertLayout.xul#threadOutliner" height="94" />
-  <RDF:Description about="chrome://navigator/content/navigator.xul#sidebar-panels">
-    <last-selected-panel>urn:sidebar:panel:bookmarks</last-selected-panel>
-  </RDF:Description>
-  <RDF:Description about="chrome://navigator/content/navigator.xul">
-    <NC:persist resource="chrome://navigator/content/navigator.xul#sidebar-panels"/>
-  </RDF:Description>
-
-  <RDF:Description about="chrome://messenger/content/mail3PaneWindowVertLayout.xul#flaggedCol">
-    <hidden>true</hidden>
-  </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/mail3PaneWindowVertLayout.xul#unreadCol">
-    <hidden>true</hidden>
-  </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/mail3PaneWindowVertLayout.xul#totalCol">
-    <hidden>true</hidden>
-  </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/mail3PaneWindowVertLayout.xul#OrderReceivedColumn">
-    <hidden>true</hidden>
-  </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/mail3PaneWindowVertLayout.xul#statusCol">
-    <hidden>true</hidden>
-  </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/mail3PaneWindowVertLayout.xul#sizeCol">
-    <hidden>true</hidden>
-  </RDF:Description>
-  <RDF:Description about="chrome://messenger/content/mail3PaneWindowVertLayout.xul">
-    <NC:persist resource="chrome://messenger/content/mail3PaneWindowVertLayout.xul#statusCol"/>
-    <NC:persist resource="chrome://messenger/content/mail3PaneWindowVertLayout.xul#sizeCol"/>
-    <NC:persist resource="chrome://messenger/content/mail3PaneWindowVertLayout.xul#unreadCol"/>
-    <NC:persist resource="chrome://messenger/content/mail3PaneWindowVertLayout.xul#totalCol"/>
-    <NC:persist resource="chrome://messenger/content/mail3PaneWindowVertLayout.xul#OrderReceivedColumn"/>
-    <NC:persist resource="chrome://messenger/content/mail3PaneWindowVertLayout.xul#flaggedCol"/>
-  </RDF:Description>
+  <RDF:Description about="chrome://messenger/content/messenger.xul#unreadButtonColHeader"
+                   ordinal="9" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#TotalColumn"
+                   hidden="true" />
+  <RDF:Description about="chrome://editor/content/editor.xul#cmd_viewtaskbar"
+                   checked="false" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#sizeCol"
+                   ordinal="15" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#taskbar"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#UnreadColumn"
+                   hidden="true" />
+  <RDF:Description about="chrome://editor/content/editor.xul#sidebar-box"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#folderUnreadCol"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/addressbook/addressbook.xul#menu_showTaskbar"
+                   checked="false" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#FlaggedButtonColumn"
+                   hidden="true" />
+  <RDF:Description about="chrome://messenger/content/messenger.xul#SizeColumn"
+                   hidden="true" />
 </RDF:RDF>

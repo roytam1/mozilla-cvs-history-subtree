@@ -220,7 +220,9 @@ mozTXTToHTMLConv::FindURLStart(const PRUnichar * aInString, PRInt32 aInLength,
          aInString[PRUint32(i)] == '.'
          ); i--)
       ;
-    if (++i >= 0 && i < pos && nsCRT::IsAsciiAlpha(aInString[PRUint32(i)]))
+    if (++i >= 0
+        && i < PRInt32(pos)
+        && nsCRT::IsAsciiAlpha(aInString[PRUint32(i)]))
     {
       start = PRUint32(i);
       return PR_TRUE;
@@ -243,7 +245,8 @@ mozTXTToHTMLConv::FindURLStart(const PRUnichar * aInString, PRInt32 aInLength,
       ;
     if
       (
-        ++i >= 0 && i < pos
+        ++i >= 0
+        && i < PRInt32(pos)
           &&
           (
             nsCRT::IsAsciiAlpha(aInString[PRUint32(i)]) ||
@@ -1123,7 +1126,8 @@ mozTXTToHTMLConv::ScanTXT(const PRUnichar * aInString, PRInt32 aInStringLength, 
 }
 
 void
-mozTXTToHTMLConv::ScanHTML(nsString& aInString, PRUint32 whattodo, nsString &aOutString)
+mozTXTToHTMLConv::ScanHTML(nsString& aInString, PRUint32 whattodo,
+                           nsString &aOutString)
 { 
   // some common variables we were recalculating
   // every time inside the for loop...
@@ -1138,7 +1142,7 @@ mozTXTToHTMLConv::ScanHTML(nsString& aInString, PRUint32 whattodo, nsString &aOu
   /* Skip all tags ("<[...]>") and content in an a tag ("<a[...]</a>")
      or in a tag ("<!--[...]-->").
      Unescape the rest (text between tags) and pass it to ScanTXT. */
-  for (PRInt32 i = 0; PRUint32(i) < lengthOfInString;)
+  for (PRInt32 i = 0; i < lengthOfInString;)
   {
     if (aInString[i] == '<')  // html tag
     {

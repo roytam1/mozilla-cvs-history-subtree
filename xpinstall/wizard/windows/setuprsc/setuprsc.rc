@@ -424,7 +424,7 @@ IDI_SETUP               ICON    DISCARDABLE     "setup.ico"
 
 IDB_BOX_UNCHECKED       BITMAP  FIXED IMPURE    "box_unch.bmp"
 IDB_BOX_CHECKED         BITMAP  FIXED IMPURE    "box_chec.bmp"
-IDB_BITMAP_WELCOME      BITMAP  DISCARDABLE     "bitmap1.bmp"
+IDB_BITMAP_WELCOME      BITMAP  DISCARDABLE     "dialogsLogo.bmp"
 IDB_BOX_CHECKED_DISABLED BITMAP  FIXED IMPURE    "box_ch_d.bmp"
 IDB_BITMAP_DOWNLOAD_LOGO BITMAP  DISCARDABLE     "downloadLogo.bmp"
 IDB_QUICK_LAUNCH        BITMAP  DISCARDABLE     "turbo-systray.bmp"
@@ -477,3 +477,29 @@ END
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
 
+1 VERSIONINFO 
+FILEVERSION 0, 7, 0, 1
+PRODUCTVERSION 1, 0, 0, 0
+FILEOS VOS_DOS_WINDOWS16
+FILETYPE VFT_APP
+{
+ BLOCK "StringFileInfo"
+ {
+  BLOCK "040904E4"
+  {
+   VALUE "CompanyName", "Beonex\000\000"
+   VALUE "FileDescription", "Beonex Communicator Installer\000"
+   VALUE "FileVersion", "1.0.0.1\000\000"
+   VALUE "InternalName", "mozilla-installer\000"
+   VALUE "LegalCopyright", "Copyright © 2001\000\000"
+   VALUE "OriginalFilename", "beonex-comm-installer.exe\000"
+  }
+
+ }
+
+ BLOCK "VarFileInfo"
+ {
+  VALUE "Translation", 0x409, 1252
+ }
+
+}

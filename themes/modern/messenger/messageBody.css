@@ -49,7 +49,7 @@ window {
   overflow: auto;
 }
 
-html|html {
+html|html, body {
   /* XXX Doesn't seem to work. (Same with "html|body".) */
   background-color: white;
 }

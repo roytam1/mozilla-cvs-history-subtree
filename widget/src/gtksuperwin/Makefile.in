@@ -49,6 +49,9 @@ ifeq ($(OS_ARCH), Linux)
 DEFINES		+= -D_BSD_SOURCE
 endif
 
+CXX=gcc
+LDFLAGS += -Wl,-Bstatic -Wl,-lstdc++ -Wl,-Bdynamic
+
 INCLUDES	+= \
 		-I$(srcdir) \
 		$(NULL)

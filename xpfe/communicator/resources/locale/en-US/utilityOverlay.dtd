@@ -85,9 +85,11 @@
 <!ENTITY newTutorCmd.label				"New to The Net Tutorial">  
 <!ENTITY supportChannelCmd.label			"Technical Support"> 
 <!ENTITY interUsersCmd.label				"International Users">  
-<!-- LOCALIZATION NOTE  (helpAtCmd.label): Do NOT translate "Netscape.com" -->
-<!ENTITY helpAtCmd.label				"Help at Netscape.com">
-<!ENTITY releaseCmd.label				"Release Notes">
+<!ENTITY docCommCmd.label			"Documentation">
+<!ENTITY docCommCmd.accesskey	                "d">
+<!ENTITY welcomeCommCmd.label			"Welcome">
+<!ENTITY welcomeCommCmd.accesskey		"w">
+<!ENTITY releaseCmd.label				"Release-Notes">
 <!ENTITY releaseCmd.accesskey				"r">
 <!ENTITY aboutCmd.label					"About &brandShortName;">
 <!ENTITY aboutCmd.accesskey				"A">

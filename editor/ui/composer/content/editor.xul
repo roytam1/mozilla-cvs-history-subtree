@@ -64,7 +64,9 @@
         persist="screenX screenY width height sizemode">
 
   <script type="application/x-javascript" src="chrome://editor/content/editor.js"/>
+<!--
   <script type="application/x-javascript" src="chrome://editor/content/EditorCommandsDebug.js"/>
+-->
   <script type="application/x-javascript" src="chrome://editor/content/EditorContextMenu.js"/>
   <script type="application/x-javascript" src="chrome://editor/content/editorApplicationOverlay.js"/>
   <script type="application/x-javascript" src="chrome://editor/content/publishprefs.js"/>
@@ -153,11 +155,9 @@
 
     <menu id="windowMenu"/>
 
-    <!-- DEBUG only -->
-<!-- Removing debug menu
+    <!-- DEBUG only
     <menu id="debugMenu" /> 
-  -->
-    <!-- end DEBUG only -->
+    end DEBUG only -->
   
     <!-- help menu filled from globalOverlay -->
     <menu id="menu_Help"/>

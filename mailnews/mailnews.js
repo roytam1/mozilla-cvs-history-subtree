@@ -66,7 +66,7 @@ pref("mail.inline_attachments",             true);
 pref("mailnews.headers.showUserAgent",       false);
 
 // Mail server preferences, pop by default
-pref("mail.server_type",	0); 	// 0 pop, 1 imap,
+pref("mail.server_type",	1); 	// 0 pop, 1 imap,
 					// (Unix only:)
 					// 2 movemail, 3 inbox          
 pref("mail.auth_login", true);
@@ -91,6 +91,7 @@ pref("mail.imap.cleanup_inbox_on_exit",     false);
 pref("mail.imap.mime_parts_on_demand",      true);
 pref("mail.imap.mime_parts_on_demand_max_depth", 15);
 pref("mail.imap.mime_parts_on_demand_threshold", 30000);
+//pref("mail.imap.noop_check_count",          1); //XXX should we?
 pref("mail.thread_without_re",	            true);
 pref("mail.leave_on_server",                false);
 pref("mail.default_cc",                     "");
@@ -267,8 +268,9 @@ pref("ldap_2.prefs_migrated",      false);
 
 pref("mailnews.confirm.moveFoldersToTrash", true);
 
-pref("mailnews.start_page.url", "chrome://messenger-region/locale/region.properties");
-pref("mailnews.start_page.enabled", true);
+pref("mailnews.start_page.url", "about:blank");
+pref("mailnews.start_page.enabled", false);
+
 
 pref("mailnews.account_central_page.url", "chrome://messenger/locale/messenger.properties");
 
@@ -286,7 +288,7 @@ pref("mail.identity.default.directoryServer","");
 pref("mail.identity.default.overrideGlobal_Pref", false);
 
 
-pref("mail.collect_email_address_incoming", true);
+pref("mail.collect_email_address_incoming", false);
 pref("mail.collect_email_address_outgoing", true);
 pref("mail.collect_email_address_newsgroup", false);
 pref("mail.collect_email_address_enable_size_limit", true);
@@ -330,9 +332,24 @@ pref("mail.server.default.canFileMessages", true);
 pref("mail.smtpserver.default.auth_method", 1); // auth any
 pref("mail.smtpserver.default.try_ssl", 0);
 
-pref("mail.display_glyph", true);   // see <http://www.bucksch.org/1/projects/mozilla/16507>
-pref("mail.display_struct", true);  // ditto
-pref("mail.send_struct", false);   // ditto
+// For the next 3 prefs, see <http://www.bucksch.org/1/projects/mozilla/16507>
+pref("mail.display_glyph", true);   // TXT->HTML :-) etc. in viewer
+pref("mail.display_struct", true);  // TXT->HTML *bold* etc. in viewer; ditto
+pref("mail.send_struct", false);   // HTML->HTML *bold* etc. during Send; ditto
+// For the next 4 prefs, see <http://www.bucksch.org/1/projects/mozilla/108153>
+pref("mailnews.display.prefer_plaintext", false);  // Ignore HTML parts in multipart/alternative
+pref("mailnews.display.html_as", 3);  // How to display HTML parts. 0 = Render the sender's HTML; 1 = HTML->TXT->HTML; 2 = Show HTML source; 3 = Sanitize HTML
+pref("mailnews.display.html_sanitizer.allowed_tags", "html head title body p br div(lang,title) h1 h2 h3 h4 h5 h6 ul ol li(value,start,compact) dl dt dd blockquote(type,cite) pre noscript noframes strong em sub sup span(lang,title) acronym(title) abbr(title) del(title,cite,datetime) ins(title,cite,datetime) q(cite) a(href,name,title) img(alt,title,longdesc) base(href) area(alt) applet(alt) object(alt) var samp dfn address kbd code cite s strike tt b i table(align) caption tr(align,valign) td(rowspan,colspan,align,valign) th(rowspan,colspan,align,valign)");
+pref("mailnews.display.disallow_mime_handlers", 3);  /* Let only a few classes process incoming data. This protects from bugs (e.g. buffer overflows) and from security loopholes (e.g. allowing unchecked HTML in some obscure classes, although the user has html_as > 0).
+This option is mainly for the UI of html_as.
+0 = allow all available classes
+1 = Use hardcoded blacklist to avoid rendering (incoming) HTML
+2 = ... and inline images
+3 = ... and some other uncommon content types
+100 = Use hardcoded whitelist to avoid even more bugs(buffer overflows).
+      This mode will limit the features available (e.g. uncommon
+      attachment types and inline images) and is for paranoid users.
+*/
 
 pref("mail.forward_message_mode", 0); // 0=default as attachment 2=forward as inline with attachments, (obsolete 4.x value)1=forward as quoted (mapped to 2 in mozilla)
 
@@ -442,5 +459,5 @@ pref("mailnews.fakeaccount.show", false);
 pref("mailnews.fakeaccount.server", "");
 
 // message display properties
-pref("mailnews.message_display.disable_remote_image", false);
-pref("mailnews.message_display.allow.plugins", true);
+pref("mailnews.message_display.disable_remote_image", true);
+pref("mailnews.message_display.allow.plugins", false);

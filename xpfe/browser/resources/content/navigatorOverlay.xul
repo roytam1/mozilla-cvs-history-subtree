@@ -149,6 +149,7 @@
              accesskey="&addCurPageAsCmd.accesskey;"
              oncommand="addBookmarkAs();"/>
     <command id="Browser:AddGroupmarkAs" label="&addCurTabsAsCmd.label;"
+             hidden="true"
              accesskey="&addCurTabsAsCmd.accesskey;"
              oncommand="addGroupmarkAs(); event.preventBubble();"/>
     <command id="Browser:ManageBookmark" label="&manBookmarksCmd.label;" accesskey="&manBookmarksCmd.accesskey;" 
@@ -177,7 +178,14 @@
   <menubar id="main-menubar" class="chromeclass-menubar">
     <menu id="menu_File">
       <menupopup id="menu_FilePopup" onpopupshowing="getContentAreaFrameCount();">
-        <menu id="menu_New">
+        <menuitem id="menu_newNavigator" command="cmd_newNavigator"
+                  key="key_newNavigator"
+                  label="&browserCmd.label;"
+                  accesskey="&browserCmd.accesskey;"/>
+        <menuitem id="menu_newNavigatorTab" command="cmd_newNavigatorTab"
+                  key="key_newNavigatorTab"
+                  label="&newtabCmd.label;" accesskey="&tabCmd.accesskey;"/>
+        <menu hidden="true" id="menu_New">
           <menupopup id="menu_NewPopup">
             <!-- From utilityOverlay.xul -->
             <menuitem id="menu_newNavigator" command="cmd_newNavigator"/>
@@ -256,8 +264,8 @@
         <menuseparator />
         <menuitem accesskey="&pageSourceCmd.accesskey;" label="&pageSourceCmd.label;" key="key_viewSource" command="View:PageSource"/>
         <menuitem accesskey="&pageInfoCmd.accesskey;"   label="&pageInfoCmd.label;"   key="key_viewInfo"   command="View:PageInfo"/>
-        <menuseparator />
-        <menu label="&applyTheme.label;" accesskey="&applyTheme.accesskey;">
+        <menuseparator hidden="true"/>
+        <menu hidden="true" label="&applyTheme.label;" accesskey="&applyTheme.accesskey;">
           <menupopup datasources="rdf:chrome" ref="urn:mozilla:skin:root" oncommand="applyTheme(event.target)">
             <menuitem label="&themePreferencesCmd.label;" accesskey="&themePreferencesCmd.accesskey;"
                       oncommand="goPreferences('appearance','chrome://communicator/content/pref/pref-themes.xul', 'themes-panel')"/>
@@ -353,7 +361,8 @@
   <menu id="windowMenu"/>
   
   <menu accesskey="&helpMenuCmd.accesskey;" id="menu_Help"/>
-
+  <!-- Menu for testing.
+-->
 </menubar>
 
 </overlay>

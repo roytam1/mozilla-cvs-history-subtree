@@ -311,7 +311,7 @@ s, strike, del {
 }
 
 blink {
-  text-decoration: blink;
+  font-weight: bolder;
 }
 
 big {
@@ -557,15 +557,8 @@ noembed, noscript, param {
   }
 }
 
-/* emulation of non-standard HTML <marquee> tag */
+/* marquee is a Microsoft extension to HTML. Set it to display: block for
+   graceful degradation */
 marquee {
-  -moz-binding: url('chrome://xbl-marquee/content/xbl-marquee.xml#marquee-horizontal');
-}
-
-marquee[direction="up"], marquee[direction="down"] {
-  -moz-binding: url('chrome://xbl-marquee/content/xbl-marquee.xml#marquee-vertical');
-}
-
-@media print {
-  marquee { -moz-binding: none; }
+  display: block;
 }

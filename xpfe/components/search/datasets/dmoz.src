@@ -4,7 +4,7 @@
 
 <SEARCH
 	name="dmoz.org"
-	description = "dmoz.org"
+	description = "dmoz.org - Directory - Maintained by volunteers, owned by Netscape"
 	method="GET"
 	action="http://search.dmoz.org/cgi-bin/search"
 >
@@ -26,9 +26,3 @@
 >
 
 </SEARCH>
-
-<BROWSER
-      update="http://www.mozilla.org/projects/search/dmoz.src" 
-      updateIcon="http://www.mozilla.org/projects/search/dmoz.gif" 
-      updateCheckDays="3"
->

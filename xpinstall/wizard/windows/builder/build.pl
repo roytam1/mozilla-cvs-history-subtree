@@ -47,7 +47,7 @@ ParseArgv(@ARGV);
 if($inXpiURL eq "")
 {
   # archive url not supplied, set it to default values
-  $inXpiURL      = "ftp://not.supplied.com";
+  $inXpiURL      = "ftp://not.supplied.domain.invalid";
 }
 if($inRedirIniURL eq "")
 {
@@ -98,9 +98,9 @@ if(system("copy $cwdDistWin\\install\\xpi\\*.* $cwdDistWin\\install"))
 print "\n";
 print "**\n";
 print "*\n";
-print "*  A self-extracting installer has been built and delivered:\n";
+print "*  A self-extracting installer has been built and delivered to:\n";
 print "*\n";
-print "*      $cwdDistWin\\install\\mozilla-win32-install.exe\n";
+print "*      $cwdDistWin\\install\\\n";
 print "*\n";
 print "**\n";
 print "\n";
@@ -246,7 +246,7 @@ sub GetVersion
     $distWinPathName = "Win32_d.obj";
   }
 
-  $fileMozilla = "$depthPath\\dist\\$distWinPathName\\bin\\mozilla.exe";
+  $fileMozilla = "$depthPath\\dist\\$distWinPathName\\bin\\beonex-comm.exe";
   # verify the existance of file
   if(!(-e "$fileMozilla"))
   {

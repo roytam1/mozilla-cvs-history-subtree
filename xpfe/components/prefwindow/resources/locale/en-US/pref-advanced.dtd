@@ -10,13 +10,16 @@
 <!ENTITY enbJavaCheck.label           "Enable Java">
 <!ENTITY enbJavaCheck.accesskey       "j">
 
+<!ENTITY enbPopupCheck.label          "Disable new popup windows during page (un)load">
+<!ENTITY enbPopupCheck.accesskey      "p">
+
 <!ENTITY sendAddFtpCheck.label        "Send this email address as anonymous FTP password:">
 <!ENTITY sendAddFtpCheck.accesskey    "e">
 
 <!ENTITY imageBlocking.label          "Image Blocking...">
 <!ENTITY imageBlocking.accesskey      "b">
 
-<!ENTITY description.label            "Checked items are automatically enabled when you visit web pages that use them. If you uncheck an item, pages may load faster but some functionality will be limited.">
+<!ENTITY description.label            "Checked items are automatically enabled when you visit content that uses them. If you uncheck an item, it may increase security or privacy, but some functionality will be limited.">
 
 <!ENTITY perfTitle.label              "Enable features that increase performance">
 <!ENTITY enableTurbo.label            "Enable Quick Launch">

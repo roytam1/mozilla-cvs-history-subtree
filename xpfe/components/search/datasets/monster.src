@@ -1,0 +1,28 @@
+# Sherlock Plugin for monster.com
+# Copyright (c) 2000 Netscape Communications Corp.
+# Author - Myron Rosmarin
+
+<search 
+     name        = "monster.com"
+     description = "monster.com - Job search"
+     method      = "GET"
+     action      = "http://jobsearch.netscape.monster.com/jobsearch.asp"
+>
+
+<INPUT NAME="fn" VALUE="">
+<INPUT NAME="loc" VALUE="">
+<INPUT NAME="ss" VALUE="0">
+<INPUT NAME="q" user>
+
+
+<interpret
+     bannerStart="<!--- BEGIN AD BANNER --->"
+     bannerEnd="<!--- END AD BANNER --->"
+     resultListStart = "<!-- Jobs nnn of nnn -->"
+     resultListEnd   = "<!-- Define a "previous" button if this isn't the first page -->"
+     resultItemStart = "<TR>"
+>
+
+</search>
+
+<BROWSER alsomatch="http://jobsearch.netscape.monster.com/jobsearch.asp">

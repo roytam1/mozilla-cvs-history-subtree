@@ -180,8 +180,6 @@ MimeInlineTextHTML_parse_line (char *line, PRInt32 length, MimeObject *obj)
         (cp = PL_strncasestr(cp, "CHARSET=", length - (int)(cp - line))) 
         ) 
     {
-      if (cp)
-      {
         char* cp1 = cp + 8;  //8 for the length of "CHARSET="
         char* cp2 = PL_strnpbrk(cp1, " \"\'", length - (int)(cp1 - line));
         if (cp2)
@@ -214,17 +212,11 @@ MimeInlineTextHTML_parse_line (char *line, PRInt32 length, MimeObject *obj)
         }
       }
     }
-  }
 
   // Now, just write out the data...
   return MimeObject_write(obj, line, length, PR_TRUE);
 }
 
-/* This method is the same as that of MimeInlineTextRichtext (and thus
-   MimeInlineTextEnriched); maybe that means that MimeInlineTextHTML
-   should share a common parent with them which is not also shared by
-   MimeInlineTextPlain?
- */
 static int
 MimeInlineTextHTML_parse_eof (MimeObject *obj, PRBool abort_p)
 {
