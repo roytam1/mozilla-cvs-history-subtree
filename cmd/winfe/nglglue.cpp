@@ -206,6 +206,89 @@ LO_DocumentInfo(MWContext *context, NET_StreamClass *stream)
 
 /*
  *---------------------------------------------------------------------------
+ * From ns/modules/libimg/src/if.c
+ *---------------------------------------------------------------------------
+ */
+
+/*
+ *  determine what kind of image data we are dealing with
+ */
+int
+IL_Type(const char *buf, int32 len)
+{
+    MOZ_FUNCTION_STUB;
+    return 0; /* IL_NOTFOUND */
+}
+
+/*
+ *---------------------------------------------------------------------------
+ * From ns/modules/libimg/src/ilclient.c
+ *---------------------------------------------------------------------------
+ */
+
+#define OPAQUE_CONTEXT void
+
+/*
+ * Create an HTML stream and generate HTML describing
+ * the image cache.  Use "about:memory-cache" URL to acess.
+ */
+int 
+IL_DisplayMemCacheInfoAsHTML(FO_Present_Types format_out, URL_Struct *urls,
+                             OPAQUE_CONTEXT *cx)
+{
+    MOZ_FUNCTION_STUB;
+    return 0;
+}
+
+
+char *
+IL_HTMLImageInfo(char *url_address)
+{
+    MOZ_FUNCTION_STUB;
+    return NULL;
+}
+
+/* Set limit on approximate size, in bytes, of all pixmap storage used
+   by the imagelib.  */
+void
+IL_SetCacheSize(uint32 new_size)
+{
+    MOZ_FUNCTION_STUB;
+}
+
+PRBool
+IL_PreferredStream(URL_Struct *urls)
+{
+    MOZ_FUNCTION_STUB;
+    return FALSE;
+}
+
+
+/*
+ *---------------------------------------------------------------------------
+ * From ns/modules/libimg/src/external.c
+ *---------------------------------------------------------------------------
+ */
+NET_StreamClass *
+IL_ViewStream(FO_Present_Types format_out, void *newshack, URL_Struct *urls,
+              OPAQUE_CONTEXT *cx)
+{
+    MOZ_FUNCTION_STUB;
+    return NULL;
+}
+
+NET_StreamClass *
+IL_NewStream (FO_Present_Types format_out,
+              void *type,
+              URL_Struct *urls,
+              OPAQUE_CONTEXT *cx)
+{
+    MOZ_FUNCTION_STUB;
+    return NULL;
+}
+
+/*
+ *---------------------------------------------------------------------------
  * From ns/lib/layout/layobj.c
  *---------------------------------------------------------------------------
  */
