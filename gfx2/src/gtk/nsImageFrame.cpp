@@ -25,6 +25,9 @@
 
 #include "nsTransform2D.h"
 
+#include <gdk/gdkx.h>
+#include <gdk/gdkprivate.h>
+
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
 NS_IMPL_ISUPPORTS1(nsImageFrame, nsIImageFrame)
@@ -276,36 +279,115 @@ NS_IMETHODIMP nsImageFrame::SetAlphaData(const PRUint8 *data, PRUint32 length, P
 }
 
 
+GdkBitmap *
+nsImageFrame::GetAlphaBitmap()
+{
+  if (!mAlphaData)
+    return nsnull;
 
-nsresult nsImageFrame::DrawImage(GdkDrawable *dest, const GdkGC *gc, const nsRect * aSrcRect, const nsPoint * aDestPoint)
+  GdkBitmap *bitmap = gdk_pixmap_new(nsnull, mRect.width, mRect.height, 1);
+
+  XImage *x_image = nsnull;
+  Pixmap xpixmap = 0;
+  Display *dpy = nsnull;
+  Visual *visual = nsnull;
+
+  /* get the X primitives */
+  dpy = GDK_WINDOW_XDISPLAY(bitmap);
+
+  /* this is the depth of the pixmap that we are going to draw to.
+     It's always a bitmap.  We're doing alpha here folks. */
+  visual = GDK_VISUAL_XVISUAL(gdk_rgb_get_visual());
+
+  // Make an image out of the alpha-bits created by the image library
+  x_image = XCreateImage(dpy, visual,
+                         1, /* visual depth...1 for bitmaps */
+                         XYPixmap,
+                         0, /* x offset, XXX fix this */
+                         (char *)mAlphaData->data,  /* cast away our sign. */
+                         mRect.width,
+                         mRect.height,
+                         32,/* bitmap pad */
+                         mAlphaData->bytesPerRow); /* bytes per line */
+
+  x_image->bits_per_pixel=1;
+
+  /* Image library always places pixels left-to-right MSB to LSB */
+  x_image->bitmap_bit_order = MSBFirst;
+
+  /* This definition doesn't depend on client byte ordering
+     because the image library ensures that the bytes in
+     bitmask data are arranged left to right on the screen,
+     low to high address in memory. */
+  x_image->byte_order = MSBFirst;
+#if defined(IS_LITTLE_ENDIAN)
+  // no, it's still MSB XXX check on this!!
+  //      x_image->byte_order = LSBFirst;
+#elif defined (IS_BIG_ENDIAN)
+  x_image->byte_order = MSBFirst;
+#else
+#error ERROR! Endianness is unknown;
+#endif
+
+  // Write into the pixemap that is underneath gdk's mAlphaPixmap
+  // the image we just created.
+  xpixmap = GDK_WINDOW_XWINDOW(bitmap);
+
+  GdkGC *gc1bit = gdk_gc_new(bitmap);
+
+  XPutImage(dpy, xpixmap, GDK_GC_XGC(gc1bit), x_image, 0, 0, 0, 0,
+            mRect.width, mRect.height);
+
+  gdk_gc_unref(gc1bit);
+
+  // Now we are done with the temporary image
+  x_image->data = 0;          /* Don't free the IL_Pixmap's bits. */
+  XDestroyImage(x_image);
+
+  return bitmap;
+}
+
+
+
+nsresult nsImageFrame::DrawImage(GdkDrawable *aDest, const GdkGC *aGC, const nsRect * aSrcRect, const nsPoint * aDestPoint)
 {
 #if 0
   GdkPixmap *image = gdk_pixmap_new(mSurface->GetDrawable(), width, height, gdk_rgb_get_visual()->depth);
 #endif
 
-  gdk_draw_rgb_image(dest, NS_CONST_CAST(GdkGC *, gc),
+  GdkBitmap *alphaMask = GetAlphaBitmap();
+  GdkGC *gc = nsnull;
+
+  if (alphaMask) {
+    gc = gdk_gc_new(aDest);
+
+    gdk_gc_copy(gc, NS_CONST_CAST(GdkGC*, aGC));
+    gdk_gc_set_clip_mask(gc, alphaMask);
+    gdk_gc_set_clip_origin(gc,
+                           aDestPoint->x + aSrcRect->x,
+                           aDestPoint->y + aSrcRect->y);
+  }
+
+  if (!gc) {
+    gc = NS_CONST_CAST(GdkGC *, aGC);
+    gdk_gc_ref(gc);
+  }
+  gdk_draw_rgb_image(aDest, gc,
                      (aDestPoint->x + aSrcRect->x), (aDestPoint->y + aSrcRect->y),
                      mRect.width, aSrcRect->height,
                      GDK_RGB_DITHER_MAX,
                      mImageData.data + (aSrcRect->y * mImageData.bytesPerRow),
                      mImageData.bytesPerRow);
 
-#if 0
-  printf(" (%f, %f), (%i, %i), %i, %i\n}\n", pt.x, pt.y, x, y, width, height);
+  if (alphaMask)
+    gdk_pixmap_unref(alphaMask);
 
-  gdk_window_copy_area(GDK_ROOT_PARENT(), mGC, 0, 0,
-                       image, 0, 0, width, height);
-
-  gdk_window_copy_area(mSurface->GetDrawable(), mGC, pt.x + x, pt.y + y,
-                       image, sr.x, 0, sr.width, height);
-
-  gdk_pixmap_unref(image);
-#endif
+  gdk_gc_unref(gc);
 
   return NS_OK;
 }
 
-nsresult nsImageFrame::DrawScaledImage(GdkDrawable *drawable, const GdkGC *gc, const nsRect * aSrcRect, const nsRect * aDestRect)
+nsresult nsImageFrame::DrawScaledImage(GdkDrawable *drawable, const GdkGC *aGC, const nsRect * aSrcRect, const nsRect * aDestRect)
 {
   nsTransform2D trans;
   trans.SetToScale((float(mRect.width) / float(aDestRect->width)), (float(mRect.height) / float(aDestRect->height)));
@@ -342,7 +424,7 @@ nsresult nsImageFrame::DrawScaledImage(GdkDrawable *drawable, const GdkGC *gc, c
   gdk_pixbuf_unref(pb);
 
   gdk_pixbuf_render_to_drawable(npb,
-                                drawable, gc,
+                                drawable, NS_CONST_CAST(GdkGC*, aGC),
                                 0, 0,
                                 (aDestRect->x + aSrcRect->x),
                                 (aDestRect->y + aSrcRect->y),

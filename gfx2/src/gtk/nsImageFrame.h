@@ -64,6 +64,9 @@ public:
   nsresult DrawScaledImage(GdkDrawable *dest, const GdkGC *gc, const nsRect * aSrcRect, const nsRect * aDestRect);
 
 private:
+  GdkBitmap *GetAlphaBitmap();
+
+
   /* additional members */
   nsRect mRect;
 

@@ -28,7 +28,7 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= gfx2
-XPIDL_MODULE	= gfx2xlib
+XPIDL_MODULE	= gfx2gtk
 LIBRARY_NAME	= gfx2
 IS_COMPONENT	= 1
 
