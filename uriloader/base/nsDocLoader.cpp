@@ -23,7 +23,6 @@
 #include "nspr.h"
 #include "prlog.h"
 
-#include "nsIDocumentLoaderObserver.h"
 #include "nsDocLoader.h"
 #include "nsCURILoader.h"
 #include "nsNetUtil.h"
@@ -325,38 +324,6 @@ nsDocLoaderImpl::IsBusy(PRBool * aResult)
   return NS_OK;
 }
 
-
-/*
- * Do not hold refs to the objects in the observer lists.  Observers
- * are expected to remove themselves upon their destruction if they
- * have not removed themselves previously
- */
-NS_IMETHODIMP
-nsDocLoaderImpl::AddObserver(nsIDocumentLoaderObserver* aObserver)
-{
-  nsresult rv;
-
-  if (mDocObservers.IndexOf(aObserver) == -1) {
-    //
-    // XXX this method incorrectly returns a bool    
-    //
-    rv = mDocObservers.AppendElement(aObserver) ? NS_OK : NS_ERROR_FAILURE;
-  } else {
-    // The observer is already in the list...
-    rv = NS_ERROR_FAILURE;
-  }
-  return rv;
-}
-
-NS_IMETHODIMP
-nsDocLoaderImpl::RemoveObserver(nsIDocumentLoaderObserver* aObserver)
-{
-  if (PR_TRUE == mDocObservers.RemoveElement(aObserver)) {
-    return NS_OK;
-  }
-  return NS_ERROR_FAILURE;
-}
-
 NS_IMETHODIMP
 nsDocLoaderImpl::SetContainer(nsISupports* aContainer)
 {
@@ -507,8 +474,6 @@ nsDocLoaderImpl::OnStartRequest(nsIRequest *request, nsISupports *aCtxt)
 
         // Fire the start document load notification
         doStartDocumentLoad();
-        FireOnStartDocumentLoad(this, request);
-
         return NS_OK;
       }
     } 
@@ -522,7 +487,6 @@ nsDocLoaderImpl::OnStartRequest(nsIRequest *request, nsISupports *aCtxt)
                "mDocumentRequest MUST be set for the duration of a page load!");
 
   doStartURLLoad(request);
-  FireOnStartURLLoad(this, request);
 
   return NS_OK;
 }
@@ -584,7 +548,6 @@ nsDocLoaderImpl::OnStopRequest(nsIRequest *aRequest,
     // Fire the OnStateChange(...) notification for stop request
     //
     doStopURLLoad(aRequest, aStatus);
-    FireOnEndURLLoad(this, aRequest, aStatus);
     
     rv = mLoadGroup->GetActiveCount(&count);
     if (NS_FAILED(rv)) return rv;
@@ -598,7 +561,6 @@ nsDocLoaderImpl::OnStopRequest(nsIRequest *aRequest,
   }
   else {
     doStopURLLoad(aRequest, aStatus); 
-    FireOnEndURLLoad(this, aRequest, aStatus);
   }
   
   return NS_OK;
@@ -665,7 +627,6 @@ void nsDocLoaderImpl::DocLoaderIsEmpty()
       // was called from a handler!
       //
       doStopDocumentLoad(docRequest, loadGroupStatus);
-      FireOnEndDocumentLoad(this, docRequest, loadGroupStatus);
 
       if (mParent) {
         mParent->DocLoaderIsEmpty();
@@ -770,218 +731,6 @@ void nsDocLoaderImpl::doStopDocumentLoad(nsIRequest *request,
                     nsIWebProgressListener::STATE_IS_WINDOW |
                     nsIWebProgressListener::STATE_IS_NETWORK,
                     aStatus);
-}
-
-
-
-
-void nsDocLoaderImpl::FireOnStartDocumentLoad(nsDocLoaderImpl* aLoadInitiator,
-                                              nsIRequest *aDocRequest)
-{
-  PRInt32 count;
-
-  nsCOMPtr<nsIURI> uri;
-  nsCOMPtr<nsIChannel> channel = do_QueryInterface(aDocRequest);
-  if (channel)
-      channel->GetURI(getter_AddRefs(uri));
-
-#if defined(DEBUG)
-  nsXPIDLCString buffer;
-
-  GetURIStringFromRequest(aDocRequest, buffer);
-  if (aLoadInitiator == this) {
-    PR_LOG(gDocLoaderLog, PR_LOG_DEBUG, 
-           ("DocLoader:%p: ++ Firing OnStartDocumentLoad(...).\tURI: %s\n",
-            this, (const char *) buffer));
-  } else {
-    PR_LOG(gDocLoaderLog, PR_LOG_DEBUG, 
-           ("DocLoader:%p: --   Propagating OnStartDocumentLoad(...)."
-            "DocLoader:%p  URI:%s\n", 
-            this, aLoadInitiator, (const char *) buffer));
-  }
-#endif /* DEBUG */
-
-  /*
-   * First notify any observers that the document load has begun...
-   *
-   * Operate the elements from back to front so that if items get
-   * get removed from the list it won't affect our iteration
-   */
-  count = mDocObservers.Count();
-  while (count > 0) {
-    nsIDocumentLoaderObserver *observer;
-
-    observer = NS_STATIC_CAST(nsIDocumentLoaderObserver*, mDocObservers.ElementAt(--count));
-
-    NS_ASSERTION(observer, "NULL observer found in list.");
-    if (! observer) {
-      continue;
-    }
-
-    observer->OnStartDocumentLoad(aLoadInitiator, uri, mCommand);
-  }
-
-  /*
-   * Finally notify the parent...
-   */
-  if (mParent) {
-    mParent->FireOnStartDocumentLoad(aLoadInitiator, aDocRequest);
-  }
-}
-
-void nsDocLoaderImpl::FireOnEndDocumentLoad(nsDocLoaderImpl* aLoadInitiator,
-                                            nsIRequest *aDocRequest,
-                                            nsresult aStatus)
-									
-{
-#if defined(DEBUG)
-  nsXPIDLCString buffer;
-
-  GetURIStringFromRequest(aDocRequest, buffer);
-  if (aLoadInitiator == this) {
-    PR_LOG(gDocLoaderLog, PR_LOG_DEBUG, 
-           ("DocLoader:%p: ++ Firing OnEndDocumentLoad(...)"
-            "\tURI: %s Status: %x\n", 
-            this, (const char *) buffer, aStatus));
-  } else {
-    PR_LOG(gDocLoaderLog, PR_LOG_DEBUG, 
-           ("DocLoader:%p: --   Propagating OnEndDocumentLoad(...)."
-            "DocLoader:%p  URI:%s\n", 
-            this, aLoadInitiator, (const char *)buffer));
-  }
-#endif /* DEBUG */
-
-  /*
-   * First notify any observers that the document load has finished...
-   *
-   * Operate the elements from back to front so that if items get
-   * get removed from the list it won't affect our iteration
-   */
-  PRInt32 count;
-
-  count = mDocObservers.Count();
-  while (count > 0) {
-    nsIDocumentLoaderObserver *observer;
-
-    observer = NS_STATIC_CAST(nsIDocumentLoaderObserver*, mDocObservers.ElementAt(--count));
-
-    NS_ASSERTION(observer, "NULL observer found in list.");
-    if (! observer) {
-      continue;
-    }
-
-    observer->OnEndDocumentLoad(aLoadInitiator, aDocRequest, aStatus);
-  }
-
-  /*
-   * Next notify the parent...
-   */
-  if (mParent) {
-    mParent->FireOnEndDocumentLoad(aLoadInitiator, aDocRequest, aStatus);
-  }
-}
-
-
-void nsDocLoaderImpl::FireOnStartURLLoad(nsDocLoaderImpl* aLoadInitiator,
-                                         nsIRequest* aRequest)
-{
-#if defined(DEBUG)
-  nsXPIDLCString buffer;
-
-  GetURIStringFromRequest(aRequest, buffer);
-  if (aLoadInitiator == this) {
-    PR_LOG(gDocLoaderLog, PR_LOG_DEBUG, 
-           ("DocLoader:%p: ++ Firing OnStartURLLoad(...)"
-            "\tURI: %s\n", 
-            this, (const char *) buffer));
-  } else {
-    PR_LOG(gDocLoaderLog, PR_LOG_DEBUG, 
-           ("DocLoader:%p: --   Propagating OnStartURLLoad(...)."
-            "DocLoader:%p  URI:%s\n", 
-            this, aLoadInitiator, (const char *) buffer));
-  }
-#endif /* DEBUG */
-
-
-  PRInt32 count;
-
-  /*
-   * First notify any observers that the URL load has begun...
-   *
-   * Operate the elements from back to front so that if items get
-   * get removed from the list it won't affect our iteration
-   */
-  count = mDocObservers.Count();
-  while (count > 0) {
-    nsIDocumentLoaderObserver *observer;
-
-    observer = NS_STATIC_CAST(nsIDocumentLoaderObserver*, mDocObservers.ElementAt(--count));
-
-    NS_ASSERTION(observer, "NULL observer found in list.");
-    if (! observer) {
-      continue;
-    }
-
-    observer->OnStartURLLoad(aLoadInitiator, aRequest);
-  }
-
-  /*
-   * Finally notify the parent...
-   */
-  if (mParent) {
-    mParent->FireOnStartURLLoad(aLoadInitiator, aRequest);
-  }
-}
-
-
-void nsDocLoaderImpl::FireOnEndURLLoad(nsDocLoaderImpl* aLoadInitiator,
-                                       nsIRequest *request, nsresult aStatus)
-{
-#if defined(DEBUG)
-  nsXPIDLCString buffer;
-
-  GetURIStringFromRequest(request, buffer);
-  if (aLoadInitiator == this) {
-    PR_LOG(gDocLoaderLog, PR_LOG_DEBUG, 
-           ("DocLoader:%p: ++ Firing OnEndURLLoad(...)"
-            "\tURI: %s Status: %x\n", 
-            this, (const char *) buffer, aStatus));
-  } else {
-    PR_LOG(gDocLoaderLog, PR_LOG_DEBUG, 
-           ("DocLoader:%p: --   Propagating OnEndURLLoad(...)."
-            "DocLoader:%p  URI:%s\n", 
-            this, aLoadInitiator, (const char *) buffer));
-  }
-#endif /* DEBUG */
-
-  PRInt32 count;
-
-  /*
-   * First notify any observers that the URL load has completed...
-   *
-   * Operate the elements from back to front so that if items get
-   * get removed from the list it won't affect our iteration
-   */
-  count = mDocObservers.Count();
-  while (count > 0) {
-    nsIDocumentLoaderObserver *observer;
-
-    observer = NS_STATIC_CAST(nsIDocumentLoaderObserver*, mDocObservers.ElementAt(--count));
-
-    NS_ASSERTION(observer, "NULL observer found in list.");
-    if (! observer) {
-      continue;
-    }
-
-    observer->OnEndURLLoad(aLoadInitiator, request, aStatus);
-  }
-
-  /*
-   * Finally notify the parent...
-   */
-  if (mParent) {
-    mParent->FireOnEndURLLoad(aLoadInitiator, request, aStatus);
-  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////
