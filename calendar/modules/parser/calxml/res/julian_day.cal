@@ -4,16 +4,16 @@
 
 <!-- This is the User Heading Rule -->
 <panel name="UserHeadingRule"> 
-  <tcc foregroundcolor="#0000FF" name="PrevDay" orientation="west" control="MultiCalendarEventWeekView" usectxrule="day-1" weightminor="0" weightmajor="0"/> 
+  <tcc foregroundcolor="#0000FF" name="PrevDay" orientation="west" control="MultiCalendarEventWeekView" major="tbh" usectxrule="day-1" weightminor="0" weightmajor="0"/> 
   <object class="timebaruserheading" name="tuh" title="Julian Calendar 0.1" weightmajor="1"/>
   <tcc foregroundcolor="#0000FF" name="NextDay" orientation="east" control="MultiCalendarEventWeekView" usectxrule="day+1" weightminor="0" weightmajor="0"/> 
 </panel> 
 
 <!-- This is the Timebar Scale Rule -->
 <panel name="ScaleViewRule"> 
-  <tcc foregroundcolor="#0000FF" name="PrevHour" orientation="north" control="MultiCalendarEventWeekView" usectxrule="hour-1" weightminor="0" weightmajor="0"/> 
+  <tcc foregroundcolor="#0000FF" name="PrevHour" orientation="north" control="MultiCalendarEventWeekView" height="tbh" usectxrule="hour-4" weightminor="0" weightmajor="0"/> 
   <timebarscale name="TimebarScale" weightminor="0" weightmajor="1"/>
-  <tcc foregroundcolor="#0000FF" name="NextHour" orientation="south" control="MultiCalendarEventWeekView" usectxrule="hour+1" weightminor="0" weightmajor="0"/> 
+  <tcc foregroundcolor="#0000FF" name="NextHour" orientation="south" control="MultiCalendarEventWeekView" usectxrule="hour+4" weightminor="0" weightmajor="0"/> 
 </panel> 
 
 <!-- This is the MonthController and Todo List -->
@@ -45,10 +45,10 @@
 </panel> 
 
 <!-- This is the root GUI panel. This is where life begins -->
-<panel id="MainCalendarPanel" label="Calendar UI"> 
+<rootpanel id="MainCalendarPanel" label="Calendar UI"> 
   <control id="uhr" rule="MultiCalendarUserEventWeekView" layout="ybox"/>
   <ctx id="StartContext" default="today"/>
-</panel> 
+</rootpanel> 
 
 
 </Calendar>

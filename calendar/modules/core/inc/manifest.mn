@@ -19,6 +19,7 @@ PRIVATE_EXPORTS = \
 	nsCalendarUser.h \
 	nsCalList.h \
 	nsCalLoggedInUser.h \
+	nsCalScheduler.h \
 	nsCalSession.h \
 	nsCalSessionMgr.h \
 	nsCalUser.h \

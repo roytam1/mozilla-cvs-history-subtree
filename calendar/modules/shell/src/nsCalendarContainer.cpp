@@ -40,12 +40,7 @@
 #include "nsX400Parser.h"
 #include "nscal.h"
 #include "nsCalMultiDayViewCanvas.h"
-#include "nsCalMultiUserViewCanvas.h"
 #include "nsLayer.h"
-#include "nsCalTimebarCanvas.h"
-#include "nsCalUICIID.h"
-#include "nsCalNewModelCommand.h"
-#include "nsIXPFCCommand.h"
 
 // XXX: This code should use XML for defining the Root UI. We need to
 //      implement the stream manager first to do this, then lots of
@@ -264,7 +259,7 @@ nsresult nsCalendarContainer::Init(nsIWidget * aParent,
 }
 
 
-nsresult nsCalendarContainer::SetMenuBar(nsIXPFCMenuBar * aMenuBar)
+nsresult nsCalendarContainer::SetMenuBar(nsIMenuBar * aMenuBar)
 {  
   mMenuManager->SetMenuBar(aMenuBar);
 
@@ -292,7 +287,7 @@ nsIMenuManager * nsCalendarContainer::GetMenuManager()
 
 }
 
-nsresult nsCalendarContainer::SetToolbarManager(nsIXPFCToolbarManager * aToolbarManager)
+nsresult nsCalendarContainer::SetToolbarManager(nsIToolbarManager * aToolbarManager)
 {  
   mToolbarManager = aToolbarManager;
 
@@ -302,7 +297,7 @@ nsresult nsCalendarContainer::SetToolbarManager(nsIXPFCToolbarManager * aToolbar
 
 }
 
-nsIXPFCToolbarManager * nsCalendarContainer::GetToolbarManager()
+nsIToolbarManager * nsCalendarContainer::GetToolbarManager()
 {  
   return (mToolbarManager);
 }
@@ -394,11 +389,11 @@ nsresult nsCalendarContainer::ShowDialog(nsIXPFCDialog * aDialog)
 
 nsresult nsCalendarContainer::UpdateMenuBar()
 {  
-  static NS_DEFINE_IID(kCIXPFCMenuContainerIID, NS_IXPFCMENUCONTAINER_IID);
+  static NS_DEFINE_IID(kCIMenuContainerIID, NS_IMENUCONTAINER_IID);
 
-  nsIXPFCMenuContainer * container = nsnull;
+  nsIMenuContainer * container = nsnull;
 
-  nsresult res = mMenuManager->GetMenuBar()->QueryInterface(kCIXPFCMenuContainerIID,(void**)&container);
+  nsresult res = mMenuManager->GetMenuBar()->QueryInterface(kCIMenuContainerIID,(void**)&container);
 
   if (res == NS_OK)
   {
@@ -471,10 +466,7 @@ nsresult nsCalendarContainer::GetApplicationShell(nsIApplicationShell*& aResult)
 }
 
 
-nsresult nsCalendarContainer::LoadURL(const nsString& aURLSpec, 
-                                      nsIStreamObserver* aListener, 
-                                      nsIXPFCCanvas * aParentCanvas,
-                                      nsIPostData * aPostData)
+nsresult nsCalendarContainer::LoadURL(const nsString& aURLSpec, nsIStreamObserver* aListener, nsIPostData * aPostData)
 {
   /*
    * this is temp hack code til get capi url's in the stream manager....sorry!
@@ -487,7 +479,7 @@ nsresult nsCalendarContainer::LoadURL(const nsString& aURLSpec,
      * This is a normal url, go thru the stream manager
      */
 
-    return(mCalendarWidget->LoadURL(aURLSpec, aListener, aParentCanvas, aPostData));
+    return(mCalendarWidget->LoadURL(aURLSpec, aListener, aPostData));
   }
 
   /*
@@ -566,6 +558,12 @@ nsresult nsCalendarContainer::LoadURL(const nsString& aURLSpec,
     sHandle.Prepend(":");
   }
 
+#if 0
+  s = shell->mSessionMgr.GetAt(0L)->mCapi->CAPI_GetHandle(shell->mCAPISession,
+                              sHandle.GetBuffer(),
+                              0,
+                              &(shell->mCAPIHandle));
+#endif
   nsCalSession* pCalSession;
   /*
    * Get the session from the session manager...
@@ -587,7 +585,7 @@ nsresult nsCalendarContainer::LoadURL(const nsString& aURLSpec,
 
 
   /*
-   * Create the Model interfaces to the view system  ....
+   * Whatever ....
    */
 
   nsILayer* pLayer;
@@ -665,42 +663,31 @@ nsresult nsCalendarContainer::LoadURL(const nsString& aURLSpec,
    * find a multi canvas and add one here and then set it's model ... yeehaaa
    */
 
-  // XXX: This should probably be done via searching for class type. We also probably
-  //      Want the XML for the menubar command to specify specifically the target 
-  //      canvas for these types of operations.
   nsString mcstring("MultiCalendarEventWeekView");
 
   nsCalMultiDayViewCanvas * mc = (nsCalMultiDayViewCanvas *) mRootCanvas->CanvasFromName(mcstring);
 
   if (nsnull != mc)
   {
+    nsIXPFCCanvas * canvas = mc->AddDayViewCanvas();
 
     /*
-     * Send an NewModelCommand to all canvas's....
-     *
-     * This event basically specifies that a new model
-     * needs to be viewed somewhere.  Currently, only
-     * the multi canvas handles this
+     * Get the last sibling and set it's model....
      */
 
-    static NS_DEFINE_IID(kXPFCCommandIID, NS_IXPFC_COMMAND_IID);
+    if (canvas != nsnull)
+    {
+      mc->SetTimeContext(mc->GetTimeContext());
 
-    nsCalNewModelCommand * command = nsnull;
+      canvas->SetModel(model);
 
-    res = nsRepository::CreateInstance(kCCalNewModelCommandCID, 
-                                       nsnull, 
-                                       kXPFCCommandIID,
-                                       (void **)&command);
-    if (NS_OK != res)
-        return res;
+      mc->Layout();
 
-    command->Init();
+      nsRect bounds;
+      mc->GetView()->GetBounds(bounds);
+      gXPFCToolkit->GetViewManager()->UpdateView(mc->GetView(), bounds, NS_VMREFRESH_AUTO_DOUBLE_BUFFER);
 
-    command->mModel = model;
-
-    mRootCanvas->BroadcastCommand(*command);
-
-    NS_RELEASE(command);
+    }
 
   }
 
@@ -773,14 +760,11 @@ nsresult nsCalendarContainer::RegisterFactories()
   nsRepository::RegisterFactory(kCDurationCID, UTIL_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCCalDurationCommandCID, CALUI_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCCalDayListCommandCID, CALUI_DLL, PR_FALSE, PR_FALSE);
-  nsRepository::RegisterFactory(kCCalNewModelCommandCID, CALUI_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCCalStatusCanvasCID, CALUI_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCCalCommandCanvasCID, CALUI_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCCalTodoComponentCanvasCID, CALUI_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCCalDayViewCID, CALUI_DLL, PR_FALSE, PR_FALSE);
-  nsRepository::RegisterFactory(kCCalMonthViewCID, CALUI_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCCalMultiDayViewCID, CALUI_DLL, PR_FALSE, PR_FALSE);
-  nsRepository::RegisterFactory(kCCalMultiUserViewCID, CALUI_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCalTimebarHeadingCID, CALUI_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCalTimebarUserHeadingCID, CALUI_DLL, PR_FALSE, PR_FALSE);
   nsRepository::RegisterFactory(kCalTimebarTimeHeadingCID, CALUI_DLL, PR_FALSE, PR_FALSE);

@@ -15,7 +15,6 @@ EXPORTS = \
 PRIVATE_EXPORTS = \
 	nsCalDurationCommand.h \
 	nsCalDayListCommand.h \
-	nsCalNewModelCommand.h \
 	$(NULL)
 
 MODULE = trex

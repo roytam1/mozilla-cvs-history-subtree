@@ -58,7 +58,7 @@ NS_IMPL_RELEASE(nsCalCanvas)
 
 nsresult nsCalCanvas :: Init()
 {
-  return (nsXPFCCanvas::Init()); 
+  return NS_OK;    
 }
 
 nsresult nsCalCanvas :: GetUser(nsICalendarUser *& aUser)

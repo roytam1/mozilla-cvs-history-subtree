@@ -21,7 +21,7 @@
 #include "nsIContentViewer.h"
 #include "nsIParser.h"
 #include "nsIXPFCCanvas.h"
-#include "nsIXPFCMenuBar.h"
+#include "nsIMenuBar.h"
 
 class nsIPostData;
 class nsICalendarShell;
@@ -62,7 +62,6 @@ public:
 
   NS_IMETHOD LoadURL(const nsString& aURLSpec,
                      nsIStreamObserver* aListener,
-                     nsIXPFCCanvas * aParentCanvas = 0,
                      nsIPostData* aPostData = 0) = 0;
 
 };

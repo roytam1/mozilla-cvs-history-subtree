@@ -196,7 +196,7 @@ nsresult nsCalTimebarScale :: DrawTime(nsIRenderingContext& aContext,
    */
   
   aContext.GetFontMetrics()->GetHeight(height);
-  aContext.GetWidth(text,width);
+  aContext.GetFontMetrics()->GetWidth(text,width);
 
   /*
    * center the text in our rect and draw it
