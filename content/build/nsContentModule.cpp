@@ -356,6 +356,7 @@ MAKE_CTOR(CreateXMLContentSerializer,     nsIContentSerializer,        NS_NewXML
 MAKE_CTOR(CreateHTMLContentSerializer,    nsIContentSerializer,        NS_NewHTMLContentSerializer)
 MAKE_CTOR(CreatePlainTextSerializer,      nsIContentSerializer,        NS_NewPlainTextSerializer)
 MAKE_CTOR(CreateHTMLFragmentSink,         nsIHTMLFragmentContentSink,  NS_NewHTMLFragmentContentSink)
+MAKE_CTOR(CreateHTMLFragmentSink2,        nsIHTMLFragmentContentSink,  NS_NewHTMLFragmentContentSink2)
 MAKE_CTOR(CreateSanitizingHTMLSerializer, nsIContentSerializer,        NS_NewSanitizingHTMLSerializer)
 MAKE_CTOR(CreateXBLService,               nsIXBLService,               NS_NewXBLService)
 MAKE_CTOR(CreateBindingManager,           nsIBindingManager,           NS_NewBindingManager)
@@ -750,6 +751,11 @@ static const nsModuleComponentInfo gComponents[] = {
     NS_HTMLFRAGMENTSINK_CID,
     NS_HTMLFRAGMENTSINK_CONTRACTID,
     CreateHTMLFragmentSink },
+
+  { "html fragment sink 2",
+    NS_HTMLFRAGMENTSINK2_CID,
+    NS_HTMLFRAGMENTSINK2_CONTRACTID,
+    CreateHTMLFragmentSink2 },
 
   { "HTML sanitizing content serializer",
     MOZ_SANITIZINGHTMLSERIALIZER_CID,
