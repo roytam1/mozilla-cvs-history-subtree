@@ -890,7 +890,7 @@ PRBool
 SECNAV_SecurityDialog(MWContext *context, int state)
 {
     MOZ_FUNCTION_STUB;
-    return FALSE;
+	return (state == SD_INSECURE_POST_FROM_INSECURE_DOC);
 }
 
 
