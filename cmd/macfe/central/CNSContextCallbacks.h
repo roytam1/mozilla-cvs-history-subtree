@@ -383,11 +383,11 @@ class CNSContextCallbacks
 											int 					height);
 
               static void         FreeBuiltinElement(
-                                MWContext *context, 
+                                MWContext *inContext, 
                                 LO_BuiltinStruct *);
 
     static void         DisplayBuiltin(
-                      MWContext * context, 
+                      MWContext * inContext, 
                       int iLocation ,
                       LO_BuiltinStruct *builtin_struct);
 

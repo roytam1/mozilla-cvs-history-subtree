@@ -745,7 +745,7 @@ void CNSContextCallbacks::HandleClippingView(
 }
 
 void CNSContextCallbacks::FreeBuiltinElement(
-                                MWContext *context, 
+                                MWContext *inContext, 
                                 LO_BuiltinStruct *)
 {
       CNSContext* theNSContext = ExtractNSContext(inContext);
@@ -754,7 +754,7 @@ void CNSContextCallbacks::FreeBuiltinElement(
 }
 
 void CNSContextCallbacks::DisplayBuiltin(
-                      MWContext * context, 
+                      MWContext * inContext, 
                       int iLocation ,
                       LO_BuiltinStruct *builtin_struct)
 {
