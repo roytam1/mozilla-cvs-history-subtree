@@ -855,7 +855,10 @@ if [ "$MOZ_USE_OFFICIAL_BRANDING" ]; then
         "
     fi
     if [ "$MOZ_THUNDERBIRD" ]; then
-        MAKEFILES_thunderbird_branding="other-licenses/branding/thunderbird/Makefile"
+        MAKEFILES_thunderbird_branding="
+          other-licenses/branding/thunderbird/Makefile
+          other-licenses/branding/thunderbird/content/Makefile
+        "
     fi
 fi
 
