@@ -173,6 +173,7 @@ UnregisterBasicAuth(nsIComponentManager *aCompMgr, nsIFile *aPath,
 #include "mozTXTToHTMLConv.h"
 #include "nsUnknownDecoder.h"
 #include "nsTXTToHTMLConv.h"
+#include "nsIndexedToHTML.h"
 
 nsresult NS_NewFTPDirListingConv(nsFTPDirListingConv** result);
 nsresult NS_NewMultiMixedConv (nsMultiMixedConv** result);
@@ -233,9 +234,9 @@ RegisterStreamConverters(nsIComponentManager *aCompMgr, nsIFile *aPath,
 
     PRUint32 count = 0;
     while (count < g_StreamConverterCount) {
-        rv = catmgr->AddCategoryEntry(NS_ISTREAMCONVERTER_KEY, g_StreamConverterArray[count],
-                                      "x", PR_TRUE, PR_TRUE, getter_Copies(previous));
-        if (NS_FAILED(rv)) return rv;
+        (void) catmgr->AddCategoryEntry(NS_ISTREAMCONVERTER_KEY, g_StreamConverterArray[count],
+                                      "", PR_TRUE, PR_TRUE, getter_Copies(previous));
+        if (NS_FAILED(rv)) NS_ASSERTION(0, "adding a cat entry failed");
         count++;
     }
     
