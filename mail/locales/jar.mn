@@ -183,7 +183,7 @@
   locale/communicator-platform/unix/pref/platformPrefOverlay.dtd    (@AB_CD@/chrome/communicator-platform/unix/pref/platformPrefOverlay.dtd)
 * locale/navigator/contents.rdf         (generic/chrome/navigator/contents.rdf)
   locale/navigator/navigator.properties (@AB_CD@/chrome/navigator/navigator.properties)
-  locale/navigator-platform/contents.rdf                        (generic/chrome/navigator-region/contents.rdf)
+* locale/navigator-platform/contents.rdf                        (generic/chrome/navigator-region/contents.rdf)
   locale/navigator-platform/win/platformNavigationBindings.dtd  (@AB_CD@/chrome/navigator-platform/win/platformNavigationBindings.dtd)
   locale/navigator-platform/win/navigator.properties            (@AB_CD@/chrome/navigator-platform/win/navigator.properties)
   locale/navigator-platform/mac/platformNavigationBindings.dtd  (@AB_CD@/chrome/navigator-platform/mac/platformNavigationBindings.dtd)
