@@ -74,7 +74,7 @@ js_NewContext(JSRuntime *rt, size_t stacksize)
 
 #if JS_HAS_REGEXPS
     if (!js_InitRegExpStatics(cx, &cx->regExpStatics)) {
-	js_DestroyContext(cx);
+	js_DestroyContext(cx, JS_TRUE);
 	return NULL;
     }
 #endif
@@ -86,7 +86,7 @@ js_NewContext(JSRuntime *rt, size_t stacksize)
 }
 
 void
-js_DestroyContext(JSContext *cx)
+js_DestroyContext(JSContext *cx, JSBool force_gc)
 {
     JSRuntime *rt;
     JSBool rtempty;
@@ -128,8 +128,12 @@ js_DestroyContext(JSContext *cx)
     js_FreeRegExpStatics(cx, &cx->regExpStatics);
 #endif
 
-    if (rtempty) {
+    if (force_gc)
         js_ForceGC(cx);
+
+    if (rtempty) {
+        if (!force_gc)
+            js_ForceGC(cx);
 
 	/* Free atom state now that we've run the GC. */
 	js_FreeAtomState(cx, &rt->atomState);

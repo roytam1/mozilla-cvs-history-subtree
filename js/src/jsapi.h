@@ -271,6 +271,9 @@ JS_NewContext(JSRuntime *rt, size_t stacksize);
 extern JS_PUBLIC_API(void)
 JS_DestroyContext(JSContext *cx);
 
+extern JS_PUBLIC_API(void)
+JS_DestroyContextNoGC(JSContext *cx);
+
 JS_EXTERN_API(void*)
 JS_GetContextPrivate(JSContext *cx);
 

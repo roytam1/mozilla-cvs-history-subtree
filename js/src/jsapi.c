@@ -572,7 +572,13 @@ JS_NewContext(JSRuntime *rt, size_t stacksize)
 JS_PUBLIC_API(void)
 JS_DestroyContext(JSContext *cx)
 {
-    js_DestroyContext(cx);
+    js_DestroyContext(cx, JS_TRUE);
+}
+
+JS_PUBLIC_API(void)
+JS_DestroyContextNoGC(JSContext *cx)
+{
+    js_DestroyContext(cx, JS_FALSE);
 }
 
 JS_PUBLIC_API(void*)
