@@ -231,7 +231,7 @@ NS_INTERFACE_MAP_END_THREADSAFE
 NS_IMPL_THREADSAFE_ADDREF(nsCryptoRunArgs)
 NS_IMPL_THREADSAFE_RELEASE(nsCryptoRunArgs)
 
-#if 1
+#if 0
 /*
  * We're cheating for now so that escrowing keys on smart cards 
  * will work.  The NSS team gave us their blessing to do this
@@ -536,11 +536,11 @@ nsConvertToActualKeyGenParams(PRUint32 keyGenMech, char *params,
        }
        rv = PK11_PQG_ParamGen(0, &pqgParams, &vfy);
        if (vfy) {
-         PQG_DestroyVerify(vfy);
+         PK11_PQG_DestroyVerify(vfy);
        }
        if (rv != SECSuccess) {
          if (pqgParams) {
-           PQG_DestroyParams(pqgParams);
+           PK11_PQG_DestroyParams(pqgParams);
          }
          return nsnull;
        }
@@ -581,7 +581,7 @@ nsFreeKeyGenParams(CK_MECHANISM_TYPE keyGenMechanism, void *params)
     nsMemory::Free(params);
     break;
   case CKM_DSA_KEY_PAIR_GEN:
-    PQG_DestroyParams(NS_STATIC_CAST(PQGParams*,params));
+    PK11_PQG_DestroyParams(NS_STATIC_CAST(PQGParams*,params));
     break;
   }
 }
@@ -692,7 +692,7 @@ cryptojs_generateOneKeyPair(JSContext *cx, nsKeyPairInfo *keyPairInfo,
   //If we generated the key pair on the internal slot because the
   // keys were going to be escrowed, move the keys over right now.
   if (willEscrow && intSlot) {
-    SECKEYPrivateKey *newPrivKey = pk11_loadPrivKey(origSlot, 
+    SECKEYPrivateKey *newPrivKey = PK11_LoadPrivKey(origSlot, 
                                                     keyPairInfo->privKey,
                                                     keyPairInfo->pubKey,
                                                     PR_TRUE, PR_TRUE);
@@ -924,7 +924,7 @@ nsSetRegToken(CRMFCertRequest *certReq, char *regToken)
     src.data = (unsigned char*)regToken;
     src.len  = nsCRT::strlen(regToken);
     SECItem *derEncoded = SEC_ASN1EncodeItem(nsnull, nsnull, &src, 
-                                             SEC_UTF8StringTemplate);
+                                        SEC_ASN1_GET(SEC_UTF8StringTemplate));
 
     if (!derEncoded)
       return NS_ERROR_FAILURE;
@@ -952,7 +952,7 @@ nsSetAuthenticator(CRMFCertRequest *certReq, char *authenticator)
     src.data = (unsigned char*)authenticator;
     src.len  = nsCRT::strlen(authenticator);
     SECItem *derEncoded = SEC_ASN1EncodeItem(nsnull, nsnull, &src,
-                                             SEC_UTF8StringTemplate);
+                                     SEC_ASN1_GET(SEC_UTF8StringTemplate));
     if (!derEncoded)
       return NS_ERROR_FAILURE;
 
