@@ -397,10 +397,6 @@ MAKE_DIRS		+= $(MDDEPDIR)
 GARBAGE_DIRS		+= $(MDDEPDIR)
 endif
 
-ifneq ($(XPIDLSRCS),)
-GARBAGE_DIRS		+= $(XPIDL_GEN_DIR)
-endif
-
 #
 # Tags: emacs (etags), vi (ctags)
 # TAG_PROGRAM := ctags -L -
@@ -656,7 +652,6 @@ ifdef DIRS
 endif
 
 export:: $(SUBMAKEFILES) $(MAKE_DIRS)
-	+$(LOOP_OVER_DIRS)
 
 #
 # Rule to create list of libraries for final link
@@ -1423,6 +1418,10 @@ endif
 ################################################################################
 # Copy each element of EXPORTS to $(PUBLIC)
 
+_SUB_MODULE_XPIDLSRCS = $(foreach m,$(XPIDLSRCS_SUB_MODULES),$m_module_xpidlsrcs)
+
+export:: $(foreach m,$(EXPORTS_SUB_MODULES),$m_module_exports) $(_SUB_MODULE_XPIDLSRCS)
+
 ifneq ($(EXPORTS)$(XPIDLSRCS)$(SDK_HEADERS)$(SDK_XPIDLSRCS),)
 $(SDK_PUBLIC) $(PUBLIC)::
 	@if test ! -d $@; then echo Creating $@; rm -rf $@; $(NSINSTALL) -D $@; else true; fi
@@ -1447,6 +1446,12 @@ ifndef NO_DIST_INSTALL
 	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC)/.headerlist $(notdir $(filter-out $(SDK_PUBLIC),$^))
 endif
 endif 
+
+%_module_exports::
+ifndef NO_DIST_INSTALL
+	$(INSTALL) $(IFLAGS1) $($(*F)_EXPORTS) $(PUBLIC:/$(MODULE)=/$(*F))
+	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC:/$(MODULE)=/$(*F))/.headerlist $(notdir $($(*F)_EXPORTS))
+endif
 
 ################################################################################
 # Copy each element of PREF_JS_EXPORTS to $(DIST)/bin/defaults/pref
@@ -1526,7 +1531,7 @@ endif
 ifndef NO_GEN_XPT
 # generate intermediate .xpt files into $(XPIDL_GEN_DIR), then link
 # into $(XPIDL_MODULE).xpt and export it to $(DIST)/bin/components.
-$(XPIDL_GEN_DIR)/%.xpt: %.idl $(XPIDL_COMPILE)
+$(XPIDL_GEN_DIR)/%.xpt: %.idl $(XPIDL_COMPILE) $(XPIDL_GEN_DIR)/.done
 	$(REPORT_BUILD)
 ifdef _NO_AUTO_VARS
 	$(ELOG) $(XPIDL_COMPILE) -m typelib -w -I $(IDL_DIR) -I$(srcdir) -o $(XPIDL_GEN_DIR)/$* $(srcdir)/$*.idl
@@ -1537,7 +1542,7 @@ endif
 $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.xpt,$(XPIDLSRCS) $(SDK_XPIDLSRCS)) Makefile.in Makefile
 	$(XPIDL_LINK) $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.xpt,$(XPIDLSRCS) $(SDK_XPIDLSRCS)) 
 
-libs:: $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt
+process_xpidlsrcs libs:: $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt
 ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $(XPIDL_GEN_DIR)/$(XPIDL_MODULE).xpt $(DIST)/bin/$(COMPONENTS_PATH)
 endif
@@ -1552,18 +1557,20 @@ endif
 endif # NO_INSTALL
 endif # NO_GEN_XPT
 
-GARBAGE_DIRS		+= $(XPIDL_GEN_DIR)
-
 endif # XPIDLSRCS || SDK_XPIDLSRCS
+
+ifneq ($(XPIDLSRCS)$(SDK_XPIDLSRCS)$(_SUB_MODULE_XPIDLSRCS),)
+GARBAGE_DIRS		+= $(XPIDL_GEN_DIR)
+endif
 
 ifneq ($(XPIDLSRCS),)
 # export .idl files to $(IDL_DIR)
-export:: $(XPIDLSRCS) $(IDL_DIR)
+process_xpidlsrcs export:: $(XPIDLSRCS) $(IDL_DIR)
 ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $^
 endif
 
-export:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(XPIDLSRCS)) $(PUBLIC)
+process_xpidlsrcs export:: $(patsubst %.idl,$(XPIDL_GEN_DIR)/%.h, $(XPIDLSRCS)) $(PUBLIC)
 ifndef NO_DIST_INSTALL
 	$(INSTALL) $(IFLAGS1) $^
 	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(PUBLIC)/.headerlist $(notdir $(filter-out $(PUBLIC),$^))
@@ -1581,7 +1588,8 @@ endif
 
 endif # XPIDLSRCS
 
-
+%_module_xpidlsrcs:
+	$(MAKE) -e XPIDLSRCS="$($(*)_XPIDLSRCS)" XPIDL_MODULE="$(*)" MODULE=$(if $($(*)_MODULE),$($(*)_MODULE),$(MODULE)) process_xpidlsrcs
 
 #
 # General rules for exporting idl files.
