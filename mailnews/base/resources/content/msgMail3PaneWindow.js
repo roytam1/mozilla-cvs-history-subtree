@@ -198,23 +198,22 @@ function HandleDeleteOrMoveMsgFailed(folder)
 function HandleDeleteOrMoveMsgCompleted(folder)
 {
 	var threadTree = GetThreadTree();
-  dump("handling delete or move msg completed\n");
 //	if(IsCurrentLoadedFolder(folder)) ### rewrite/implement this
 //	{
-    dump("current folder loaded handling delete or move msg completed\n");
 		msgNavigationService.EnsureDocumentIsLoaded(document);
 		if(gNextMessageViewIndexAfterDelete != -1)
 		{
-      dump("gNextMessageViewIndexAfterDelete != -1 handling delete or move msg completed\n");
-
       var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
       var outlinerSelection = outlinerView.selection;
       viewSize = outlinerView.rowCount;
-      if (viewSize.value < gNextMessageViewIndexAfterDelete - 1)
-        if (viewSize.value > 0)
-          gNextMessageViewIndexAfterDelete = viewSize.value;
+      dump("view size = " + viewSize + "\n");
+      if (gNextMessageViewIndexAfterDelete >= viewSize)
+      {
+        if (viewSize > 0)
+          gNextMessageViewIndexAfterDelete = viewSize - 1;
         else
           gNextMessageViewIndexAfterDelete = -1;
+      }
       outlinerSelection.clearSelection(); /* clear selection in either case  */
       if (gNextMessageViewIndexAfterDelete != -1)
         outlinerSelection.select(gNextMessageViewIndexAfterDelete);
