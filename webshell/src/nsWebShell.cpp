@@ -3234,36 +3234,46 @@ nsWebShell::OnEndDocumentLoad(nsIDocumentLoader* loader,
         rv = aURL->GetHost(getter_Copies(host));
         if (NS_FAILED(rv)) return rv;
 
+        CBufDescriptor buf((const char *)host, PR_TRUE, PL_strlen(host) + 1);
+        nsCAutoString hostStr(buf);
+        PRInt32 dotLoc = hostStr.FindChar('.');
+
+        // First see if we should throw it to the keyword server.
+        NS_ASSERTION(mPrefs, "the webshell's pref service wasn't initialized");
+        PRBool keywordsEnabled = PR_FALSE;
+        rv = mPrefs->GetBoolPref("keyword.enabled", &keywordsEnabled);
+        if (NS_FAILED(rv)) return rv;
+
+        if (keywordsEnabled && (-1 == dotLoc)) {
+            // only send non-qualified hosts to the keyword server
+            nsAutoString keywordSpec("keyword:");
+            keywordSpec.Append(host);
+            return LoadURL(keywordSpec.GetUnicode(), "view");
+        } // end keywordsEnabled
+
         // Doc failed to load because the host was not found.
         if (aStatus == NS_ERROR_UNKNOWN_HOST) {
-            CBufDescriptor buf((const char *)host, PR_TRUE, PL_strlen(host) + 1);
-            nsCAutoString hostStr(buf);
-            PRInt32 dotLoc = hostStr.FindChar('.');
-
-            // First see if we should throw it to the keyword server.
-            NS_ASSERTION(mPrefs, "the webshell's pref service wasn't initialized");
-            PRBool keywordsEnabled = PR_FALSE;
-            rv = mPrefs->GetBoolPref("keyword.enabled", &keywordsEnabled);
-            if (NS_FAILED(rv)) return rv;
-
-            if (keywordsEnabled && (-1 == dotLoc)) {
-                // only send non-qualified hosts to the keyword server
-                nsAutoString keywordSpec("keyword:");
-                keywordSpec.Append(host);
-                return LoadURL(keywordSpec.GetUnicode(), "view");
-            } // end keywordsEnabled
-
             // Try our www.*.com trick.
             nsCAutoString retryHost;
-            if (-1 == dotLoc) {
-                retryHost = "www.";
-                retryHost += hostStr;
-                retryHost += ".com";
-            } else {
-                PRInt32 hostLen = hostStr.Length();
-                if ( ((hostLen - dotLoc) == 3) || ((hostLen - dotLoc) == 4) ) {
+            nsXPIDLCString scheme;
+            rv = aURL->GetScheme(getter_Copies(scheme));
+            if (NS_FAILED(rv)) return rv;
+
+            PRUint32 schemeLen = PL_strlen((const char*)scheme);
+            CBufDescriptor schemeBuf((const char*)scheme, PR_TRUE, schemeLen+1, schemeLen);
+            nsCAutoString schemeStr(schemeBuf);
+
+            if (schemeStr.Find("http") == 0) {
+                if (-1 == dotLoc) {
                     retryHost = "www.";
                     retryHost += hostStr;
+                    retryHost += ".com";
+                } else {
+                    PRInt32 hostLen = hostStr.Length();
+                    if ( ((hostLen - dotLoc) == 3) || ((hostLen - dotLoc) == 4) ) {
+                        retryHost = "www.";
+                        retryHost += hostStr;
+                    }
                 }
             }
 
