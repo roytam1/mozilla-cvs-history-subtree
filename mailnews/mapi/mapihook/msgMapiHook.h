@@ -48,6 +48,7 @@ class nsMapiHook
                         PRUnichar **aPassword);
         static PRBool VerifyUserName(const PRUnichar *aUsername, char **aIdKey);
 
+        static PRBool IsBlindSendAllowed () ;
         static nsresult BlindSendMail (unsigned long aSession, nsIMsgCompFields * aCompFields) ;
         static nsresult ShowComposerWindow (unsigned long aSession, nsIMsgCompFields * aCompFields) ;
         static nsresult PopulateCompFields(lpnsMapiMessage aMessage, nsIMsgCompFields * aCompFields) ;

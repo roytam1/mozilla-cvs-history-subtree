@@ -60,6 +60,7 @@
 #include "nsReadableUtils.h"
 #include "nsMsgBaseCID.h"
 #include "nsIStringBundle.h"
+#include "nsIPref.h"
 #include "nsString.h"
 
 #include "nsIMsgCompFields.h"
@@ -77,11 +78,11 @@
 #include "msgMapiSupport.h"
 #include "msgMapiMain.h"
 
-
-static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 static NS_DEFINE_CID(kCmdLineServiceCID, NS_COMMANDLINE_SERVICE_CID);
 
 #define MAPI_PROPERTIES_CHROME  "chrome://messenger/locale/mapi.properties"
+#define PREF_MAPI_WARN_PRIOR_TO_BLIND_SEND "mapi.blind-send.warn"
+#define PREF_MAPI_BLIND_SEND_ENABLED       "mapi.blind-send.enabled"
 
 class nsMAPISendListener : public nsIMsgSendListener
 {
@@ -182,7 +183,7 @@ PRBool nsMapiHook::DisplayLoginDialog(PRBool aLogin, PRUnichar **aUsername, \
     nsCOMPtr<nsIPromptService> dlgService(do_GetService("@mozilla.org/embedcomp/prompt-service;1", &rv));
     if (NS_SUCCEEDED(rv) && dlgService)
     {
-        nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(kStringBundleServiceCID, &rv));
+        nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv));
         if (NS_FAILED(rv) || !bundleService) return PR_FALSE;
 
         nsCOMPtr<nsIStringBundle> bundle;
@@ -284,11 +285,61 @@ if (nsDependentString(aUsername) == NS_ConvertASCIItoUCS2(aEmail))  // == overlo
     return PR_FALSE;
 }
 
+PRBool 
+nsMapiHook::IsBlindSendAllowed()
+{
+    PRBool enabled = PR_FALSE;
+    PRBool warn = PR_TRUE;
+    nsCOMPtr<nsIPref> prefs = do_GetService(NS_PREF_CONTRACTID);
+    if (prefs) {
+	    prefs->GetBoolPref(PREF_MAPI_WARN_PRIOR_TO_BLIND_SEND,&warn);
+            prefs->GetBoolPref(PREF_MAPI_BLIND_SEND_ENABLED,&enabled);
+    } 
+    if (!enabled)
+        return PR_FALSE;
+
+    if (!warn)
+        return PR_TRUE; // Everything is okay.  
+
+    nsresult rv;
+    nsCOMPtr<nsIStringBundleService> bundleService(do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv));
+    if (NS_FAILED(rv) || !bundleService) return PR_FALSE;
+
+    nsCOMPtr<nsIStringBundle> bundle;
+    rv = bundleService->CreateBundle(MAPI_PROPERTIES_CHROME, getter_AddRefs(bundle));
+    if (NS_FAILED(rv) || !bundle) return PR_FALSE;
+
+    nsXPIDLString warningMsg;
+    rv = bundle->GetStringFromName(NS_LITERAL_STRING("mapiBlindSendWarning").get(),
+                                        getter_Copies(warningMsg));
+    if (NS_FAILED(rv)) return PR_FALSE;
+    
+   nsXPIDLString dontShowAgainMessage;
+    rv = bundle->GetStringFromName(NS_LITERAL_STRING("mapiBlindSendDontShowAgain").get(),
+                                        getter_Copies(dontShowAgainMessage));
+    if (NS_FAILED(rv)) return PR_FALSE;
+
+    nsCOMPtr<nsIPromptService> dlgService(do_GetService("@mozilla.org/embedcomp/prompt-service;1", &rv));
+    if (NS_FAILED(rv) || !dlgService) return PR_FALSE;
+    
+    PRBool continueToWarn = PR_TRUE;
+    PRBool okayToContinue = PR_FALSE;
+    dlgService->ConfirmCheck(nsnull, nsnull, warningMsg, dontShowAgainMessage, &continueToWarn, &okayToContinue);
+        
+    if (!continueToWarn && okayToContinue && prefs)
+        prefs->SetBoolPref(PREF_MAPI_WARN_PRIOR_TO_BLIND_SEND,PR_FALSE);
+    
+    return okayToContinue;
+        
+}
 
 // this is used for Send without UI
 nsresult nsMapiHook::BlindSendMail (unsigned long aSession, nsIMsgCompFields * aCompFields) 
 {
     nsresult rv = NS_OK ;
+
+    if (!IsBlindSendAllowed())
+        return NS_ERROR_FAILURE;
 
     /** create nsIMsgComposeParams obj and other fields to populate it **/    
 
