@@ -160,7 +160,7 @@ public:
     NS_IMETHOD GetSources(nsIRDFResource* property,
                           nsIRDFNode* target,
                           PRBool tv,
-                          nsIRDFEnumerator** sources);
+                          nsISimpleEnumerator** sources);
 
     NS_IMETHOD GetTarget(nsIRDFResource* source,
                          nsIRDFResource* property,
@@ -170,7 +170,7 @@ public:
     NS_IMETHOD GetTargets(nsIRDFResource* source,
                           nsIRDFResource* property,
                           PRBool tv,
-                          nsIRDFEnumerator** targets);
+                          nsISimpleEnumerator** targets);
 
     NS_IMETHOD Assert(nsIRDFResource* source, 
                       nsIRDFResource* property, 
@@ -192,12 +192,12 @@ public:
     NS_IMETHOD RemoveObserver(nsIRDFObserver* n);
 
     NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
-                           nsIRDFEnumerator** labels);
+                           nsISimpleEnumerator** labels);
 
     NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
-                            nsIRDFEnumerator** labels);
+                            nsISimpleEnumerator** labels);
 
-    NS_IMETHOD GetAllResources(nsIRDFEnumerator** aResult);
+    NS_IMETHOD GetAllResources(nsISimpleEnumerator** aResult);
 
     NS_IMETHOD Flush();
 
@@ -232,7 +232,7 @@ const PRInt32 InMemoryDataSource::kInitialTableSize = 500;
 /**
  * InMemoryAssertionEnumeratorImpl
  */
-class InMemoryAssertionEnumeratorImpl : public nsIRDFEnumerator
+class InMemoryAssertionEnumeratorImpl : public nsISimpleEnumerator
 {
 private:
     InMemoryDataSource* mDataSource;
@@ -260,7 +260,7 @@ public:
     // nsISupports interface
     NS_DECL_ISUPPORTS
    
-    // nsIRDFEnumerator interface
+    // nsISimpleEnumerator interface
     NS_IMETHOD HasMoreElements(PRBool* aResult);
     NS_IMETHOD GetNext(nsISupports** aResult);
 };
@@ -306,7 +306,7 @@ InMemoryAssertionEnumeratorImpl::~InMemoryAssertionEnumeratorImpl(void)
     NS_IF_RELEASE(mValue);
 }
 
-NS_IMPL_ISUPPORTS(InMemoryAssertionEnumeratorImpl, nsIRDFEnumerator::GetIID());
+NS_IMPL_ISUPPORTS(InMemoryAssertionEnumeratorImpl, nsISimpleEnumerator::GetIID());
 
 NS_IMETHODIMP
 InMemoryAssertionEnumeratorImpl::HasMoreElements(PRBool* aResult)
@@ -375,7 +375,7 @@ InMemoryAssertionEnumeratorImpl::GetNext(nsISupports** aResult)
  * out for is the mutliple inheiritance clashes.
  */
 
-class InMemoryArcsEnumeratorImpl : public nsIRDFEnumerator
+class InMemoryArcsEnumeratorImpl : public nsISimpleEnumerator
 {
 private:
     InMemoryDataSource* mDataSource;
@@ -395,7 +395,7 @@ public:
     // nsISupports interface
     NS_DECL_ISUPPORTS
 
-    // nsIRDFEnumerator interface
+    // nsISimpleEnumerator interface
     NS_IMETHOD HasMoreElements(PRBool* aResult);
     NS_IMETHOD GetNext(nsISupports** aResult);
 };
@@ -435,7 +435,7 @@ InMemoryArcsEnumeratorImpl::~InMemoryArcsEnumeratorImpl(void)
     }
 }
 
-NS_IMPL_ISUPPORTS(InMemoryArcsEnumeratorImpl, nsIRDFEnumerator::GetIID());
+NS_IMPL_ISUPPORTS(InMemoryArcsEnumeratorImpl, nsISimpleEnumerator::GetIID());
 
 NS_IMETHODIMP
 InMemoryArcsEnumeratorImpl::HasMoreElements(PRBool* aResult)
@@ -803,7 +803,7 @@ NS_IMETHODIMP
 InMemoryDataSource::GetSources(nsIRDFResource* aProperty,
                                nsIRDFNode* aTarget,
                                PRBool aTruthValue,
-                               nsIRDFEnumerator** aResult)
+                               nsISimpleEnumerator** aResult)
 {
     NS_PRECONDITION(aProperty != nsnull, "null ptr");
     if (! aProperty)
@@ -835,7 +835,7 @@ NS_IMETHODIMP
 InMemoryDataSource::GetTargets(nsIRDFResource* aSource,
                                nsIRDFResource* aProperty,
                                PRBool aTruthValue,
-                               nsIRDFEnumerator** aResult)
+                               nsISimpleEnumerator** aResult)
 {
     NS_PRECONDITION(aSource != nsnull, "null ptr");
     if (! aSource)
@@ -1182,7 +1182,7 @@ InMemoryDataSource::RemoveObserver(nsIRDFObserver* observer)
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::ArcLabelsIn(nsIRDFNode* aTarget, nsIRDFEnumerator** aResult)
+InMemoryDataSource::ArcLabelsIn(nsIRDFNode* aTarget, nsISimpleEnumerator** aResult)
 {
     NS_PRECONDITION(aTarget != nsnull, "null ptr");
     if (! aTarget)
@@ -1205,7 +1205,7 @@ InMemoryDataSource::ArcLabelsIn(nsIRDFNode* aTarget, nsIRDFEnumerator** aResult)
 }
 
 NS_IMETHODIMP
-InMemoryDataSource::ArcLabelsOut(nsIRDFResource* aSource, nsIRDFEnumerator** aResult)
+InMemoryDataSource::ArcLabelsOut(nsIRDFResource* aSource, nsISimpleEnumerator** aResult)
 {
     NS_PRECONDITION(aSource != nsnull, "null ptr");
     if (! aSource)
@@ -1244,7 +1244,7 @@ rdf_ResourceEnumerator(PLHashEntry* he, PRIntn index, void* closure)
 
 
 NS_IMETHODIMP
-InMemoryDataSource::GetAllResources(nsIRDFEnumerator** aResult)
+InMemoryDataSource::GetAllResources(nsISimpleEnumerator** aResult)
 {
     NS_PRECONDITION(aResult != nsnull, "null ptr");
     if (! aResult)

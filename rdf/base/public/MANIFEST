@@ -2,7 +2,6 @@ rdf.h
 nsIRDFCompositeDataSource.h
 nsIRDFContentSink.h
 nsIRDFDataSource.h
-nsIRDFEnumerator.h
 nsIRDFNode.h
 nsIRDFObserver.h
 nsIRDFResource.h

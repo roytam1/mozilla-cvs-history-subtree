@@ -49,7 +49,6 @@
 #include "nsIRDFCompositeDataSource.h"
 #include "nsIRDFContentModelBuilder.h"
 #include "nsIRDFDocument.h"
-#include "nsIRDFEnumerator.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFObserver.h"
 #include "nsIRDFService.h"
@@ -582,7 +581,7 @@ RDFXULBuilderImpl::CreateContents(nsIContent* aElement)
 
     // Iterate through all of the element's children, and construct
     // appropriate children for each arc.
-    nsCOMPtr<nsIRDFEnumerator> children;
+    nsCOMPtr<nsISimpleEnumerator> children;
     rv = NS_NewContainerEnumerator(mDB, resource, getter_AddRefs(children));
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create cursor for children");
     if (NS_FAILED(rv)) return rv;
@@ -1660,7 +1659,7 @@ RDFXULBuilderImpl::CreateHTMLElement(nsINameSpace* aContainingNameSpace,
     // attributes on the element.  First, create a cursor that'll
     // iterate through all the properties that lead out of this
     // resource.
-    nsCOMPtr<nsIRDFEnumerator> properties;
+    nsCOMPtr<nsISimpleEnumerator> properties;
     rv = mDB->ArcLabelsOut(aResource, getter_AddRefs(properties));
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create arcs-out cursor");
     if (NS_FAILED(rv)) return rv;
@@ -1799,7 +1798,7 @@ RDFXULBuilderImpl::CreateHTMLContents(nsINameSpace* aContainingNameSpace,
 {
     nsresult rv;
 
-    nsCOMPtr<nsIRDFEnumerator> children;
+    nsCOMPtr<nsISimpleEnumerator> children;
     rv = NS_NewContainerEnumerator(mDB, aResource, getter_AddRefs(children));
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create cursor for children");
     if (NS_FAILED(rv)) return rv;
@@ -1861,7 +1860,7 @@ RDFXULBuilderImpl::CreateXULElement(nsINameSpace* aContainingNameSpace,
     // attributes on the element.  First, create a cursor that'll
     // iterate through all the properties that lead out of this
     // resource.
-    nsCOMPtr<nsIRDFEnumerator> properties;
+    nsCOMPtr<nsISimpleEnumerator> properties;
     rv = mDB->ArcLabelsOut(aResource, getter_AddRefs(properties));
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create arcs-out cursor");
     if (NS_FAILED(rv)) return rv;

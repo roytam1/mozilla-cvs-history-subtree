@@ -400,7 +400,7 @@ nsBrowsingProfile::CountPageVisit(const char* initialURL)
         nsIRDFResource* urlRes;
         rv = gRDFService->GetResource(url, &urlRes);
         if (NS_SUCCEEDED(rv)) {
-            nsIRDFEnumerator* sources;
+            nsISimpleEnumerator* sources;
             rv = gCategoryDB->GetSources(kOPENDIR_narrow, urlRes, PR_TRUE, &sources);
             if (NS_SUCCEEDED(rv)) {
                 while (1) {

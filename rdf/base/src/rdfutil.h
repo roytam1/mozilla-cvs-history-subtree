@@ -42,7 +42,7 @@
 #include "prtypes.h"
 
 class nsIRDFDataSource;
-class nsIRDFEnumerator;
+class nsISimpleEnumerator;
 class nsIRDFResource;
 class nsIRDFNode;
 class nsIRDFResource;
@@ -190,15 +190,8 @@ rdf_ContainerIndexOf(nsIRDFDataSource* aDataSource,
 PR_EXTERN(nsresult)
 NS_NewContainerEnumerator(nsIRDFDataSource* aDataSource,
                           nsIRDFResource* aContainer,
-                          nsIRDFEnumerator** aResult);
+                          nsISimpleEnumerator** aResult);
 
-
-/**
- * Create an empty nsIRDFCursor. This will *never* fail, and will *always*
- * return the same object.
- */
-PR_EXTERN(nsresult)
-NS_NewEmptyEnumerator(nsIRDFEnumerator** aResult);
 
 PR_EXTERN(void) SHTtest ();
                        

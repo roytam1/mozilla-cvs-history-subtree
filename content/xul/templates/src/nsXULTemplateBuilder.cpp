@@ -47,7 +47,6 @@
 #include "nsIRDFContentModelBuilder.h"
 #include "nsIRDFCompositeDataSource.h"
 #include "nsIRDFDocument.h"
-#include "nsIRDFEnumerator.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFObserver.h"
 #include "nsIRDFService.h"
@@ -479,7 +478,7 @@ RDFGenericBuilderImpl::CreateContents(nsIContent* aElement)
     // handles multi-attributes. For performance...
 
     // Create a cursor that'll enumerate all of the outbound arcs
-    nsCOMPtr<nsIRDFEnumerator> properties;
+    nsCOMPtr<nsISimpleEnumerator> properties;
     rv = mDB->ArcLabelsOut(resource, getter_AddRefs(properties));
     if (NS_FAILED(rv)) return rv;
 
@@ -510,7 +509,7 @@ RDFGenericBuilderImpl::CreateContents(nsIContent* aElement)
 
         // Create a second cursor that'll enumerate all of the values
         // for all of the arcs.
-        nsCOMPtr<nsIRDFEnumerator> targets;
+        nsCOMPtr<nsISimpleEnumerator> targets;
         rv = mDB->GetTargets(resource, property, PR_TRUE, getter_AddRefs(targets));
         if (NS_FAILED(rv)) return rv;
 
@@ -1303,7 +1302,7 @@ RDFGenericBuilderImpl::IsContainer(nsIContent* aElement, nsIRDFResource* aResour
     // have children.
 
     // XXX Per Bug 3367, this'll have to be fixed.
-    nsCOMPtr<nsIRDFEnumerator> arcs;
+    nsCOMPtr<nsISimpleEnumerator> arcs;
     nsresult rv;
 
     rv = mDB->ArcLabelsOut(aResource, getter_AddRefs(arcs));

@@ -53,7 +53,7 @@ static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 
 ////////////////////////////////////////////////////////////////////////
 
-class ContainerEnumeratorImpl : public nsIRDFEnumerator {
+class ContainerEnumeratorImpl : public nsISimpleEnumerator {
 private:
     // pseudo-constants
     static nsrefcnt        gRefCnt;
@@ -63,7 +63,7 @@ private:
     nsCOMPtr<nsIRDFResource>        mContainer;
     nsCOMPtr<nsIRDFResource>        mOrdinalProperty;
 
-    nsIRDFEnumerator* mCurrent;
+    nsISimpleEnumerator* mCurrent;
     nsIRDFNode*       mResult;
     PRInt32 mNextIndex;
 
@@ -119,7 +119,7 @@ ContainerEnumeratorImpl::~ContainerEnumeratorImpl(void)
     }
 }
 
-NS_IMPL_ISUPPORTS(ContainerEnumeratorImpl, nsIRDFEnumerator::GetIID());
+NS_IMPL_ISUPPORTS(ContainerEnumeratorImpl, nsISimpleEnumerator::GetIID());
 
 
 NS_IMETHODIMP
@@ -212,7 +212,7 @@ ContainerEnumeratorImpl::GetNext(nsISupports** aResult)
 nsresult
 NS_NewContainerEnumerator(nsIRDFDataSource* aDataSource,
                           nsIRDFResource* aContainer,
-                          nsIRDFEnumerator** aResult)
+                          nsISimpleEnumerator** aResult)
 {
     NS_PRECONDITION(aDataSource != nsnull, "null ptr");
     if (! aDataSource)

@@ -179,7 +179,7 @@ public:
 
     NS_IMETHOD GetSources(nsIRDFResource* property,
                           nsIRDFNode* target,  PRBool tv,
-                          nsIRDFEnumerator** sources) {
+                          nsISimpleEnumerator** sources) {
         return mInner->GetSources(property, target, tv, sources);
     }
 
@@ -215,7 +215,7 @@ public:
     NS_IMETHOD GetTargets(nsIRDFResource* source,
                           nsIRDFResource* property,
                           PRBool tv,
-                          nsIRDFEnumerator** targets) {
+                          nsISimpleEnumerator** targets) {
         return mInner->GetTargets(source, property, tv, targets);
     }
 
@@ -250,12 +250,12 @@ public:
     }
 
     NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
-                           nsIRDFEnumerator** labels) {
+                           nsISimpleEnumerator** labels) {
         return mInner->ArcLabelsIn(node, labels);
     }
 
     NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
-                            nsIRDFEnumerator** labels) {
+                            nsISimpleEnumerator** labels) {
         return mInner->ArcLabelsOut(source, labels);
     }
 
@@ -283,7 +283,7 @@ public:
         return mInner->DoCommand(aSources, aCommand, aArguments);
     }
 
-    NS_IMETHOD GetAllResources(nsIRDFEnumerator** aResult) {
+    NS_IMETHOD GetAllResources(nsISimpleEnumerator** aResult) {
         return mInner->GetAllResources(aResult);
     }
 

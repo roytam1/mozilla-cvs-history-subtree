@@ -25,6 +25,7 @@
  */
 
 #include "nsIEnumerator.idl"
+#include "nsISimpleEnumerator.idl"
 #include "nsISupports.idl"
 #include "nsISupportsArray.idl"
 
@@ -96,13 +97,6 @@ interface nsIRDFInt : nsIRDFNode {
 
 interface nsIRDFDataSource;
 
-// XXX This should go to XPCOM
-[scriptable, uuid(0F4819D0-F883-11D2-BDD2-000064657374)]
-interface nsIRDFEnumerator : nsISupports {
-    boolean HasMoreElements();
-    nsISupports GetNext();
-};
-
 // An nsIRDFObserver object is an observer that will be notified
 // when assertions are made or removed from a datasource
 [scriptable, uuid(3CC75360-484A-11D2-BC16-00805F912FE7)]
@@ -144,9 +138,9 @@ interface nsIRDFDataSource : nsISupports {
     // specified arc & truth value
     //
     // @return NS_OK unless a catastrophic error occurs. If the
-    // method returns NS_OK, you may assume that nsIRDFEnumerator points
+    // method returns NS_OK, you may assume that nsISimpleEnumerator points
     // to a valid (but possibly empty) cursor.
-    nsIRDFEnumerator GetSources(in nsIRDFResource aProperty,
+    nsISimpleEnumerator GetSources(in nsIRDFResource aProperty,
                                 in nsIRDFNode     aTarget,
                                 in boolean        aTruthValue);
 
@@ -163,9 +157,9 @@ interface nsIRDFDataSource : nsISupports {
     // arc and truth value.
     //
     // @return NS_OK unless a catastrophic error occurs. If the
-    // method returns NS_OK, you may assume that nsIRDFEnumerator points
+    // method returns NS_OK, you may assume that nsISimpleEnumerator points
     // to a valid (but possibly empty) cursor.
-    nsIRDFEnumerator GetTargets(in nsIRDFResource aSource,
+    nsISimpleEnumerator GetTargets(in nsIRDFResource aSource,
                                 in nsIRDFResource aProperty,
                                 in boolean aTruthValue);
 
@@ -196,20 +190,20 @@ interface nsIRDFDataSource : nsISupports {
     //
     // @return NS_OK unless a catastrophic error occurs. If the method
     // returns NS_OK, you may assume that labels points to a valid (but
-    // possible empty) nsIRDFEnumerator object.
-    nsIRDFEnumerator ArcLabelsIn(in nsIRDFNode aNode);
+    // possible empty) nsISimpleEnumerator object.
+    nsISimpleEnumerator ArcLabelsIn(in nsIRDFNode aNode);
 
     // Get a cursor to iterate over all the arcs that originate in
     // a resource.
     //
     // @return NS_OK unless a catastrophic error occurs. If the method
     // returns NS_OK, you may assume that labels points to a valid (but
-    // possible empty) nsIRDFEnumerator object.
-    nsIRDFEnumerator ArcLabelsOut(in nsIRDFResource aSource);
+    // possible empty) nsISimpleEnumerator object.
+    nsISimpleEnumerator ArcLabelsOut(in nsIRDFResource aSource);
 
     // Retrieve all of the resources that the data source currently
     // refers to.
-    nsIRDFEnumerator GetAllResources();
+    nsISimpleEnumerator GetAllResources();
 
     // Request that a data source write it's contents out to 
     // permanent storage if applicable.

@@ -23,7 +23,6 @@
 #include <ctype.h> // for toupper()
 #include <stdio.h>
 #include "nscore.h"
-#include "nsIRDFEnumerator.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFObserver.h"
@@ -108,7 +107,7 @@ private:
 	static nsIRDFResource	*kRDF_InstanceOf;
 	static nsIRDFResource	*kRDF_type;
 
-	NS_METHOD	GetFTPListing(nsIRDFResource *source, nsIRDFEnumerator** aResult);
+	NS_METHOD	GetFTPListing(nsIRDFResource *source, nsISimpleEnumerator** aResult);
 	NS_METHOD	GetURL(nsIRDFResource *source, nsIRDFLiteral** aResult);
 	NS_METHOD	GetName(nsIRDFResource *source, nsIRDFLiteral** aResult);
 
@@ -135,7 +134,7 @@ public:
 	NS_IMETHOD	GetSources(nsIRDFResource *property,
 				nsIRDFNode *target,
 				PRBool tv,
-				nsIRDFEnumerator **sources /* out */);
+				nsISimpleEnumerator **sources /* out */);
 	NS_IMETHOD	GetTarget(nsIRDFResource *source,
 				nsIRDFResource *property,
 				PRBool tv,
@@ -143,7 +142,7 @@ public:
 	NS_IMETHOD	GetTargets(nsIRDFResource *source,
 				nsIRDFResource *property,
 				PRBool tv,
-				nsIRDFEnumerator **targets /* out */);
+				nsISimpleEnumerator **targets /* out */);
 	NS_IMETHOD	Assert(nsIRDFResource *source,
 				nsIRDFResource *property,
 				nsIRDFNode *target,
@@ -157,10 +156,10 @@ public:
 				PRBool tv,
 				PRBool *hasAssertion /* out */);
 	NS_IMETHOD	ArcLabelsIn(nsIRDFNode *node,
-				nsIRDFEnumerator **labels /* out */);
+				nsISimpleEnumerator **labels /* out */);
 	NS_IMETHOD	ArcLabelsOut(nsIRDFResource *source,
-				nsIRDFEnumerator **labels /* out */);
-	NS_IMETHOD	GetAllResources(nsIRDFEnumerator** aCursor);
+				nsISimpleEnumerator **labels /* out */);
+	NS_IMETHOD	GetAllResources(nsISimpleEnumerator** aCursor);
 	NS_IMETHOD	AddObserver(nsIRDFObserver *n);
 	NS_IMETHOD	RemoveObserver(nsIRDFObserver *n);
 	NS_IMETHOD	Flush();
@@ -338,7 +337,7 @@ NS_IMETHODIMP
 FTPDataSource::GetSources(nsIRDFResource *property,
                            nsIRDFNode *target,
 			   PRBool tv,
-                           nsIRDFEnumerator **sources /* out */)
+                           nsISimpleEnumerator **sources /* out */)
 {
 	return mInner->GetSources(property, target, tv, sources);
 }
@@ -675,7 +674,7 @@ FTPDataSourceCallback::QueryInterface(REFNSIID iid, void **result)
 
 
 NS_METHOD
-FTPDataSource::GetFTPListing(nsIRDFResource *source, nsIRDFEnumerator** aResult)
+FTPDataSource::GetFTPListing(nsIRDFResource *source, nsISimpleEnumerator** aResult)
 {
 	nsresult	rv = NS_ERROR_FAILURE;
 
@@ -704,7 +703,7 @@ NS_IMETHODIMP
 FTPDataSource::GetTargets(nsIRDFResource *source,
                            nsIRDFResource *property,
                            PRBool tv,
-                           nsIRDFEnumerator **targets /* out */)
+                           nsISimpleEnumerator **targets /* out */)
 {
 	nsresult		rv = NS_ERROR_FAILURE;
 
@@ -731,7 +730,7 @@ FTPDataSource::GetTargets(nsIRDFResource *source,
             rv = gRDFService->GetLiteral(url.GetUnicode(), &literal);
             if (NS_FAILED(rv)) return rv;
 
-            nsIRDFEnumerator* result = new nsSingletonEnumerator(literal);
+            nsISimpleEnumerator* result = new nsSingletonEnumerator(literal);
 
             NS_RELEASE(literal);
 
@@ -812,7 +811,7 @@ FTPDataSource::HasAssertion(nsIRDFResource *source,
 
 NS_IMETHODIMP
 FTPDataSource::ArcLabelsIn(nsIRDFNode *node,
-                            nsIRDFEnumerator ** labels /* out */)
+                            nsISimpleEnumerator ** labels /* out */)
 {
 	return mInner->ArcLabelsIn(node, labels);
 }
@@ -821,11 +820,11 @@ FTPDataSource::ArcLabelsIn(nsIRDFNode *node,
 
 NS_IMETHODIMP
 FTPDataSource::ArcLabelsOut(nsIRDFResource *source,
-                             nsIRDFEnumerator **labels /* out */)
+                             nsISimpleEnumerator **labels /* out */)
 {
 	if (isFTPURI(source) && isFTPDirectory(source))
 	{
-        nsIRDFEnumerator* result = new nsSingletonEnumerator(kNC_Child);
+        nsISimpleEnumerator* result = new nsSingletonEnumerator(kNC_Child);
         if (! result)
             return NS_ERROR_OUT_OF_MEMORY;
 
@@ -842,7 +841,7 @@ FTPDataSource::ArcLabelsOut(nsIRDFResource *source,
 
 
 NS_IMETHODIMP
-FTPDataSource::GetAllResources(nsIRDFEnumerator** aCursor)
+FTPDataSource::GetAllResources(nsISimpleEnumerator** aCursor)
 {
 	return mInner->GetAllResources(aCursor);
 }

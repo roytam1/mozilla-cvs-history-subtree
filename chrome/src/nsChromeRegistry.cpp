@@ -74,7 +74,7 @@ public:
     NS_IMETHOD GetSources(nsIRDFResource* property,
                           nsIRDFNode* target,
                           PRBool tv,
-                          nsIRDFEnumerator** sources /* out */)  ;
+                          nsISimpleEnumerator** sources /* out */)  ;
     NS_IMETHOD GetTarget(nsIRDFResource* source,
                          nsIRDFResource* property,
                          PRBool tv,
@@ -82,7 +82,7 @@ public:
     NS_IMETHOD GetTargets(nsIRDFResource* source,
                           nsIRDFResource* property,
                           PRBool tv,
-                          nsIRDFEnumerator** targets /* out */)  ;
+                          nsISimpleEnumerator** targets /* out */)  ;
     NS_IMETHOD Assert(nsIRDFResource* source, 
                       nsIRDFResource* property, 
                       nsIRDFNode* target,
@@ -98,10 +98,10 @@ public:
     NS_IMETHOD AddObserver(nsIRDFObserver* n)  ;
     NS_IMETHOD RemoveObserver(nsIRDFObserver* n)  ;
     NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
-                           nsIRDFEnumerator** labels /* out */)  ;
+                           nsISimpleEnumerator** labels /* out */)  ;
     NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
-                            nsIRDFEnumerator** labels /* out */)  ;
-    NS_IMETHOD GetAllResources(nsIRDFEnumerator** aResult)  ;
+                            nsISimpleEnumerator** labels /* out */)  ;
+    NS_IMETHOD GetAllResources(nsISimpleEnumerator** aResult)  ;
     NS_IMETHOD Flush(void)  ;
     NS_IMETHOD GetAllCommands(nsIRDFResource* source,
                               nsIEnumerator/*<nsIRDFResource>*/** commands)  ;
@@ -492,7 +492,7 @@ NS_IMETHODIMP
 nsChromeRegistry::GetSources(nsIRDFResource* property,
                       nsIRDFNode* target,
                       PRBool tv,
-                      nsIRDFEnumerator** sources /* out */)
+                      nsISimpleEnumerator** sources /* out */)
 {
   return mInner->GetSources(property, target, tv, sources);
 }
@@ -511,7 +511,7 @@ NS_IMETHODIMP
 nsChromeRegistry::GetTargets(nsIRDFResource* source,
                       nsIRDFResource* property,
                       PRBool tv,
-                      nsIRDFEnumerator** targets /* out */)
+                      nsISimpleEnumerator** targets /* out */)
 {
   return mInner->GetTargets(source, property, tv, targets);
 }
@@ -554,18 +554,18 @@ NS_IMETHODIMP nsChromeRegistry::RemoveObserver(nsIRDFObserver* n)
 }
 
 NS_IMETHODIMP nsChromeRegistry::ArcLabelsIn(nsIRDFNode* node,
-                       nsIRDFEnumerator** labels /* out */)
+                       nsISimpleEnumerator** labels /* out */)
 {
   return mInner->ArcLabelsIn(node, labels);
 }
 
 NS_IMETHODIMP nsChromeRegistry::ArcLabelsOut(nsIRDFResource* source,
-                        nsIRDFEnumerator** labels /* out */) 
+                        nsISimpleEnumerator** labels /* out */) 
 {
   return mInner->ArcLabelsOut(source, labels);
 }
 
-NS_IMETHODIMP nsChromeRegistry::GetAllResources(nsIRDFEnumerator** aCursor)
+NS_IMETHODIMP nsChromeRegistry::GetAllResources(nsISimpleEnumerator** aCursor)
 {
   return mInner->GetAllResources(aCursor);
 }

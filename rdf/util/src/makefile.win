@@ -23,7 +23,6 @@ MODULE=rdfutil
 LIBRARY_NAME=rdfutil_s
 
 CPP_OBJS=\
-        .\$(OBJDIR)\nsEnumeratorUtils.obj         \
         .\$(OBJDIR)\nsRDFResource.obj             \
 	$(NULL)
 

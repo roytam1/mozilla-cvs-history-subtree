@@ -31,7 +31,6 @@
 #include "nsIRDFContentModelBuilder.h"
 #include "nsIRDFCompositeDataSource.h"
 #include "nsIRDFDocument.h"
-#include "nsIRDFEnumerator.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFObserver.h"
 #include "nsIRDFService.h"
@@ -262,7 +261,7 @@ RDFMenuBuilderImpl::AddWidgetItem(nsIContent* aElement,
     // properties out of the resource.
 
     // XXX Per Bug 3367, this'll have to be fixed.
-    nsCOMPtr<nsIRDFEnumerator> arcs;
+    nsCOMPtr<nsISimpleEnumerator> arcs;
     rv = mDB->ArcLabelsOut(aValue, getter_AddRefs(arcs));
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get arcs out");
     if (NS_FAILED(rv)) return rv;

@@ -35,7 +35,6 @@
 
 #include "nsCOMPtr.h"
 #include "nsIRDFDataSource.h"
-#include "nsIRDFEnumerator.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
 #include "nsIServiceManager.h"
@@ -635,7 +634,7 @@ rdf_ContainerRenumber(nsIRDFDataSource* aDataSource,
         // Because of aggregation, we need to be paranoid about
         // the possibility that >1 element may be present per
         // ordinal.
-        nsCOMPtr<nsIRDFEnumerator> targets;
+        nsCOMPtr<nsISimpleEnumerator> targets;
         rv = aDataSource->GetTargets(aContainer, oldOrdinal, PR_TRUE, getter_AddRefs(targets));
         if (NS_FAILED(rv)) return rv;
 
@@ -815,7 +814,7 @@ rdf_ContainerIndexOf(nsIRDFDataSource* aDataSource,
         // ordinal. This is an ultra-paranoid way to do it, but -- due
         // to aggregation, we may end up with a container that has >1
         // element for the same ordinal.
-        nsCOMPtr<nsIRDFEnumerator> targets;
+        nsCOMPtr<nsISimpleEnumerator> targets;
         rv = aDataSource->GetTargets(aContainer, ordinal, PR_TRUE, getter_AddRefs(targets));
         if (NS_FAILED(rv)) return rv;
 

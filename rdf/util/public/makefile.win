@@ -23,7 +23,6 @@ DEPTH=..\..\..
 
 EXPORTS=\
         nsRDFResource.h                 \
-        nsEnumeratorUtils.h             \
 	$(NULL)
 
 include <$(DEPTH)/config/rules.mak>

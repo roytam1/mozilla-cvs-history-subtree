@@ -24,7 +24,6 @@
 #include <ctype.h> // for toupper()
 #include <stdio.h>
 #include "nscore.h"
-#include "nsIRDFEnumerator.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFObserver.h"
@@ -138,7 +137,7 @@ public:
 	NS_IMETHOD	GetSources(nsIRDFResource *property,
 				nsIRDFNode *target,
 				PRBool tv,
-				nsIRDFEnumerator **sources /* out */);
+				nsISimpleEnumerator **sources /* out */);
 	NS_IMETHOD	GetTarget(nsIRDFResource *source,
 				nsIRDFResource *property,
 				PRBool tv,
@@ -146,7 +145,7 @@ public:
 	NS_IMETHOD	GetTargets(nsIRDFResource *source,
 				nsIRDFResource *property,
 				PRBool tv,
-				nsIRDFEnumerator **targets /* out */);
+				nsISimpleEnumerator **targets /* out */);
 	NS_IMETHOD	Assert(nsIRDFResource *source,
 				nsIRDFResource *property,
 				nsIRDFNode *target,
@@ -160,10 +159,10 @@ public:
 				PRBool tv,
 				PRBool *hasAssertion /* out */);
 	NS_IMETHOD	ArcLabelsIn(nsIRDFNode *node,
-				nsIRDFEnumerator **labels /* out */);
+				nsISimpleEnumerator **labels /* out */);
 	NS_IMETHOD	ArcLabelsOut(nsIRDFResource *source,
-				nsIRDFEnumerator **labels /* out */);
-	NS_IMETHOD	GetAllResources(nsIRDFEnumerator** aCursor);
+				nsISimpleEnumerator **labels /* out */);
+	NS_IMETHOD	GetAllResources(nsISimpleEnumerator** aCursor);
 	NS_IMETHOD	AddObserver(nsIRDFObserver *n);
 	NS_IMETHOD	RemoveObserver(nsIRDFObserver *n);
 	NS_IMETHOD	Flush();
@@ -359,7 +358,7 @@ NS_IMETHODIMP
 RelatedLinksDataSource::GetSources(nsIRDFResource *property,
                            nsIRDFNode *target,
 			   PRBool tv,
-                           nsIRDFEnumerator **sources /* out */)
+                           nsISimpleEnumerator **sources /* out */)
 {
 	nsresult	result = NS_RDF_NO_VALUE;
 	if (mInner)	result = mInner->GetSources(property, target, tv, sources);
@@ -772,7 +771,7 @@ NS_IMETHODIMP
 RelatedLinksDataSource::GetTargets(nsIRDFResource *source,
                            nsIRDFResource *property,
                            PRBool tv,
-                           nsIRDFEnumerator **targets /* out */)
+                           nsISimpleEnumerator **targets /* out */)
 {
 	nsresult		rv = NS_ERROR_FAILURE;
 
@@ -795,7 +794,7 @@ RelatedLinksDataSource::GetTargets(nsIRDFResource *source,
 			rv = gRDFService->GetLiteral(pulse.GetUnicode(), &pulseLiteral);
             if (NS_FAILED(rv)) return rv;
 
-            nsIRDFEnumerator* result = new nsSingletonEnumerator(pulseLiteral);
+            nsISimpleEnumerator* result = new nsSingletonEnumerator(pulseLiteral);
             NS_RELEASE(pulseLiteral);
             if (! result)
                 return NS_ERROR_OUT_OF_MEMORY;
@@ -815,7 +814,7 @@ RelatedLinksDataSource::GetTargets(nsIRDFResource *source,
             rv = gRDFService->GetLiteral(url.GetUnicode(), &literal);
             if (NS_FAILED(rv)) return rv;
 
-            nsIRDFEnumerator* result = new nsSingletonEnumerator(literal);
+            nsISimpleEnumerator* result = new nsSingletonEnumerator(literal);
             NS_RELEASE(literal);
             if (! result)
                 return NS_ERROR_OUT_OF_MEMORY;
@@ -895,7 +894,7 @@ RelatedLinksDataSource::HasAssertion(nsIRDFResource *source,
 
 NS_IMETHODIMP
 RelatedLinksDataSource::ArcLabelsIn(nsIRDFNode *node,
-                            nsIRDFEnumerator ** labels /* out */)
+                            nsISimpleEnumerator ** labels /* out */)
 {
 	nsresult	result = NS_RDF_NO_VALUE;
 	if (mInner)	result = mInner->ArcLabelsIn(node, labels);
@@ -906,7 +905,7 @@ RelatedLinksDataSource::ArcLabelsIn(nsIRDFNode *node,
 
 NS_IMETHODIMP
 RelatedLinksDataSource::ArcLabelsOut(nsIRDFResource *source,
-                             nsIRDFEnumerator **labels /* out */)
+                             nsISimpleEnumerator **labels /* out */)
 {
 	nsresult		rv = NS_RDF_NO_VALUE;
 
@@ -921,7 +920,7 @@ RelatedLinksDataSource::ArcLabelsOut(nsIRDFResource *source,
 		array->AppendElement(kNC_Child);
 		array->AppendElement(kNC_pulse);
 
-        nsIRDFEnumerator* result = new nsArrayEnumerator(array);
+        nsISimpleEnumerator* result = new nsArrayEnumerator(array);
         if (! result)
             return NS_ERROR_OUT_OF_MEMORY;
 
@@ -940,7 +939,7 @@ RelatedLinksDataSource::ArcLabelsOut(nsIRDFResource *source,
 
 
 NS_IMETHODIMP
-RelatedLinksDataSource::GetAllResources(nsIRDFEnumerator** aCursor)
+RelatedLinksDataSource::GetAllResources(nsISimpleEnumerator** aCursor)
 {
 	nsresult	result;
 	if (mInner)	result = mInner->GetAllResources(aCursor);

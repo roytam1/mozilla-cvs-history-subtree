@@ -86,7 +86,7 @@ public:
     NS_IMETHOD GetSources(nsIRDFResource* property,
                           nsIRDFNode* target,
                           PRBool tv,
-                          nsIRDFEnumerator** sources);
+                          nsISimpleEnumerator** sources);
 
     NS_IMETHOD GetTarget(nsIRDFResource* source,
                          nsIRDFResource* property,
@@ -96,7 +96,7 @@ public:
     NS_IMETHOD GetTargets(nsIRDFResource* source,
                           nsIRDFResource* property,
                           PRBool tv,
-                          nsIRDFEnumerator** targets);
+                          nsISimpleEnumerator** targets);
 
     NS_IMETHOD Assert(nsIRDFResource* source, 
                       nsIRDFResource* property, 
@@ -118,12 +118,12 @@ public:
     NS_IMETHOD RemoveObserver(nsIRDFObserver* n);
 
     NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
-                           nsIRDFEnumerator** labels);
+                           nsISimpleEnumerator** labels);
 
     NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
-                            nsIRDFEnumerator** labels);
+                            nsISimpleEnumerator** labels);
 
-    NS_IMETHOD GetAllResources(nsIRDFEnumerator** aCursor);
+    NS_IMETHOD GetAllResources(nsISimpleEnumerator** aCursor);
 
     NS_IMETHOD Flush();
 
@@ -170,7 +170,7 @@ protected:
 // CompositeEnumeratorImpl
 //
 
-class CompositeEnumeratorImpl : public nsIRDFEnumerator
+class CompositeEnumeratorImpl : public nsISimpleEnumerator
 {
 public:
     CompositeEnumeratorImpl(CompositeDataSourceImpl* aCompositeDataSource);
@@ -179,20 +179,20 @@ public:
     // nsISupports interface
     NS_DECL_ISUPPORTS
 
-    // nsIRDFEnumerator interface
+    // nsISimpleEnumerator interface
     NS_IMETHOD HasMoreElements(PRBool* aResult);
     NS_IMETHOD GetNext(nsISupports** aResult);
 
     // pure abstract methods to be overridden
     virtual nsresult
-    GetEnumerator(nsIRDFDataSource* aDataSource, nsIRDFEnumerator** aResult) = 0;
+    GetEnumerator(nsIRDFDataSource* aDataSource, nsISimpleEnumerator** aResult) = 0;
 
     virtual nsresult
     HasNegation(nsIRDFDataSource* aDataSource, nsIRDFNode* aNode, PRBool* aResult) = 0;
 
 protected:
     CompositeDataSourceImpl* mCompositeDataSource;
-    nsIRDFEnumerator* mCurrent;
+    nsISimpleEnumerator* mCurrent;
     nsIRDFNode*       mResult;
     PRInt32           mNext;
 
@@ -233,9 +233,9 @@ CompositeEnumeratorImpl::QueryInterface(REFNSIID iid, void** result)
     if (! result)
         return NS_ERROR_NULL_POINTER;
 
-    if (iid.Equals(nsIRDFEnumerator::GetIID()) ||
+    if (iid.Equals(nsISimpleEnumerator::GetIID()) ||
         iid.Equals(kISupportsIID)) {
-        *result = NS_STATIC_CAST(nsIRDFEnumerator*, this);
+        *result = NS_STATIC_CAST(nsISimpleEnumerator*, this);
         NS_ADDREF(this);
         return NS_OK;
     }
@@ -383,7 +383,7 @@ public:
     virtual ~CompositeArcsInOutEnumeratorImpl();
 
     virtual nsresult
-    GetEnumerator(nsIRDFDataSource* aDataSource, nsIRDFEnumerator** aResult);
+    GetEnumerator(nsIRDFDataSource* aDataSource, nsISimpleEnumerator** aResult);
 
     virtual nsresult
     HasNegation(nsIRDFDataSource* aDataSource, nsIRDFNode* aNode, PRBool* aResult);
@@ -413,7 +413,7 @@ CompositeArcsInOutEnumeratorImpl::~CompositeArcsInOutEnumeratorImpl()
 nsresult
 CompositeArcsInOutEnumeratorImpl::GetEnumerator(
                  nsIRDFDataSource* aDataSource,
-                 nsIRDFEnumerator** aResult)
+                 nsISimpleEnumerator** aResult)
 {
     if (mType == eArcsIn) {
         return aDataSource->ArcLabelsIn(mNode, aResult);
@@ -452,7 +452,7 @@ public:
     virtual ~CompositeAssertionEnumeratorImpl();
 
     virtual nsresult
-    GetEnumerator(nsIRDFDataSource* aDataSource, nsIRDFEnumerator** aResult);
+    GetEnumerator(nsIRDFDataSource* aDataSource, nsISimpleEnumerator** aResult);
 
     virtual nsresult
     HasNegation(nsIRDFDataSource* aDataSource, nsIRDFNode* aNode, PRBool* aResult);
@@ -493,7 +493,7 @@ CompositeAssertionEnumeratorImpl::~CompositeAssertionEnumeratorImpl()
 nsresult
 CompositeAssertionEnumeratorImpl::GetEnumerator(
                  nsIRDFDataSource* aDataSource,
-                 nsIRDFEnumerator** aResult)
+                 nsISimpleEnumerator** aResult)
 {
     if (mSource) {
         return aDataSource->GetTargets(mSource, mProperty, mTruthValue, aResult);
@@ -637,7 +637,7 @@ NS_IMETHODIMP
 CompositeDataSourceImpl::GetSources(nsIRDFResource* aProperty,
                                     nsIRDFNode* aTarget,
                                     PRBool aTruthValue,
-                                    nsIRDFEnumerator** aResult)
+                                    nsISimpleEnumerator** aResult)
 {
     NS_PRECONDITION(aProperty != nsnull, "null ptr");
     if (! aProperty)
@@ -734,7 +734,7 @@ NS_IMETHODIMP
 CompositeDataSourceImpl::GetTargets(nsIRDFResource* aSource,
                                     nsIRDFResource* aProperty,
                                     PRBool aTruthValue,
-                                    nsIRDFEnumerator** aResult)
+                                    nsISimpleEnumerator** aResult)
 {
     NS_PRECONDITION(aSource != nsnull, "null ptr");
     if (! aSource)
@@ -941,7 +941,7 @@ CompositeDataSourceImpl::RemoveObserver(nsIRDFObserver* aObserver)
 }
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::ArcLabelsIn(nsIRDFNode* aTarget, nsIRDFEnumerator** aResult)
+CompositeDataSourceImpl::ArcLabelsIn(nsIRDFNode* aTarget, nsISimpleEnumerator** aResult)
 {
     NS_PRECONDITION(aTarget != nsnull, "null ptr");
     if (! aTarget)
@@ -951,7 +951,7 @@ CompositeDataSourceImpl::ArcLabelsIn(nsIRDFNode* aTarget, nsIRDFEnumerator** aRe
     if (! aResult)
         return NS_ERROR_NULL_POINTER;
 
-    nsIRDFEnumerator* result = 
+    nsISimpleEnumerator* result = 
         new CompositeArcsInOutEnumeratorImpl(this, aTarget, CompositeArcsInOutEnumeratorImpl::eArcsIn);
 
     if (! result)
@@ -964,7 +964,7 @@ CompositeDataSourceImpl::ArcLabelsIn(nsIRDFNode* aTarget, nsIRDFEnumerator** aRe
 
 NS_IMETHODIMP
 CompositeDataSourceImpl::ArcLabelsOut(nsIRDFResource* aSource,
-                                      nsIRDFEnumerator** aResult)
+                                      nsISimpleEnumerator** aResult)
 {
     NS_PRECONDITION(aSource != nsnull, "null ptr");
     if (! aSource)
@@ -974,7 +974,7 @@ CompositeDataSourceImpl::ArcLabelsOut(nsIRDFResource* aSource,
     if (! aResult)
         return NS_ERROR_NULL_POINTER;
 
-    nsIRDFEnumerator* result =
+    nsISimpleEnumerator* result =
         new CompositeArcsInOutEnumeratorImpl(this, aSource, CompositeArcsInOutEnumeratorImpl::eArcsOut);
 
     if (! result)
@@ -986,7 +986,7 @@ CompositeDataSourceImpl::ArcLabelsOut(nsIRDFResource* aSource,
 }
 
 NS_IMETHODIMP
-CompositeDataSourceImpl::GetAllResources(nsIRDFEnumerator** aResult)
+CompositeDataSourceImpl::GetAllResources(nsISimpleEnumerator** aResult)
 {
     NS_NOTYETIMPLEMENTED("write me!");
     return NS_ERROR_NOT_IMPLEMENTED;

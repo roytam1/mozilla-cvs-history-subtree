@@ -49,7 +49,6 @@
 #include "nsIOutputStream.h"
 #include "nsIParser.h"
 #include "nsIRDFContentSink.h"
-#include "nsIRDFEnumerator.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
 #include "nsIRDFXMLDataSource.h"
@@ -202,7 +201,7 @@ public:
     NS_IMETHOD GetSources(nsIRDFResource* property,
                           nsIRDFNode* target,
                           PRBool tv,
-                          nsIRDFEnumerator** sources) {
+                          nsISimpleEnumerator** sources) {
         return mInner->GetSources(property, target, tv, sources);
     }
 
@@ -216,7 +215,7 @@ public:
     NS_IMETHOD GetTargets(nsIRDFResource* source,
                           nsIRDFResource* property,
                           PRBool tv,
-                          nsIRDFEnumerator** targets) {
+                          nsISimpleEnumerator** targets) {
         return mInner->GetTargets(source, property, tv, targets);
     }
 
@@ -246,16 +245,16 @@ public:
     }
 
     NS_IMETHOD ArcLabelsIn(nsIRDFNode* node,
-                           nsIRDFEnumerator** labels) {
+                           nsISimpleEnumerator** labels) {
         return mInner->ArcLabelsIn(node, labels);
     }
 
     NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
-                            nsIRDFEnumerator** labels) {
+                            nsISimpleEnumerator** labels) {
         return mInner->ArcLabelsOut(source, labels);
     }
 
-    NS_IMETHOD GetAllResources(nsIRDFEnumerator** aResult) {
+    NS_IMETHOD GetAllResources(nsISimpleEnumerator** aResult) {
         return mInner->GetAllResources(aResult);
     }
 
@@ -1125,7 +1124,7 @@ RDFXMLDataSourceImpl::SerializeProperty(nsIOutputStream* aStream,
 {
     nsresult rv;
 
-    nsCOMPtr<nsIRDFEnumerator> assertions;
+    nsCOMPtr<nsISimpleEnumerator> assertions;
     if (NS_FAILED(rv = mInner->GetTargets(aResource, aProperty, PR_TRUE, getter_AddRefs(assertions))))
         return rv;
 
@@ -1182,7 +1181,7 @@ static const char kRDFDescription3[] = "  </RDF:Description>\n";
     rdf_BlockingWrite(aStream, uri);
     rdf_BlockingWrite(aStream, kRDFDescription2, sizeof(kRDFDescription2) - 1);
 
-    nsCOMPtr<nsIRDFEnumerator> arcs;
+    nsCOMPtr<nsISimpleEnumerator> arcs;
     rv = mInner->ArcLabelsOut(aResource, getter_AddRefs(arcs));
     if (NS_FAILED(rv)) return rv;
 
@@ -1220,7 +1219,7 @@ RDFXMLDataSourceImpl::SerializeMember(nsIOutputStream* aStream,
     // there may for some random reason be two or more elements with
     // the same ordinal value. Okay, I'm paranoid.
 
-    nsCOMPtr<nsIRDFEnumerator> cursor;
+    nsCOMPtr<nsISimpleEnumerator> cursor;
     rv = mInner->GetTargets(aContainer, aProperty, PR_TRUE, getter_AddRefs(cursor));
     if (NS_FAILED(rv)) return rv;
 
@@ -1343,7 +1342,7 @@ static const char kRDFAlt[] = "RDF:Alt";
     // We iterate through all of the arcs, in case someone has applied
     // properties to the bag itself.
 
-    nsCOMPtr<nsIRDFEnumerator> arcs;
+    nsCOMPtr<nsISimpleEnumerator> arcs;
     rv = mInner->ArcLabelsOut(aContainer, getter_AddRefs(arcs));
     if (NS_FAILED(rv)) return rv;
 
@@ -1455,7 +1454,7 @@ NS_IMETHODIMP
 RDFXMLDataSourceImpl::Serialize(nsIOutputStream* aStream)
 {
     nsresult rv;
-    nsCOMPtr<nsIRDFEnumerator> resources;
+    nsCOMPtr<nsISimpleEnumerator> resources;
 
     rv = mInner->GetAllResources(getter_AddRefs(resources));
     if (NS_FAILED(rv)) return rv;

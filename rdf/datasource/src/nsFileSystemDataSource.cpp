@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include "nscore.h"
 #include "nsCOMPtr.h"
+#include "nsIEnumerator.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFObserver.h"
@@ -96,7 +97,7 @@ public:
 	NS_IMETHOD	GetSources(nsIRDFResource *property,
 				nsIRDFNode *target,
 				PRBool tv,
-				nsIRDFEnumerator **sources /* out */);
+				nsISimpleEnumerator **sources /* out */);
 	NS_IMETHOD	GetTarget(nsIRDFResource *source,
 				nsIRDFResource *property,
 				PRBool tv,
@@ -104,7 +105,7 @@ public:
 	NS_IMETHOD	GetTargets(nsIRDFResource *source,
 				nsIRDFResource *property,
 				PRBool tv,
-				nsIRDFEnumerator **targets /* out */);
+				nsISimpleEnumerator **targets /* out */);
 	NS_IMETHOD	Assert(nsIRDFResource *source,
 				nsIRDFResource *property,
 				nsIRDFNode *target,
@@ -118,10 +119,10 @@ public:
 				PRBool tv,
 				PRBool *hasAssertion /* out */);
 	NS_IMETHOD	ArcLabelsIn(nsIRDFNode *node,
-				nsIRDFEnumerator **labels /* out */);
+				nsISimpleEnumerator **labels /* out */);
 	NS_IMETHOD	ArcLabelsOut(nsIRDFResource *source,
-				nsIRDFEnumerator **labels /* out */);
-	NS_IMETHOD	GetAllResources(nsIRDFEnumerator** aResult);
+				nsISimpleEnumerator **labels /* out */);
+	NS_IMETHOD	GetAllResources(nsISimpleEnumerator** aResult);
 	NS_IMETHOD	AddObserver(nsIRDFObserver *n);
 	NS_IMETHOD	RemoveObserver(nsIRDFObserver *n);
 	NS_IMETHOD	Flush();
@@ -141,8 +142,8 @@ public:
     // helper methods
     static PRBool isFileURI(nsIRDFResource* aResource);
 
-    static nsresult GetVolumeList(nsIRDFEnumerator **aResult);
-    static nsresult GetFolderList(nsIRDFResource *source, nsIRDFEnumerator **aResult);
+    static nsresult GetVolumeList(nsISimpleEnumerator **aResult);
+    static nsresult GetFolderList(nsIRDFResource *source, nsISimpleEnumerator **aResult);
     static nsresult GetName(nsIRDFResource *source, nsIRDFLiteral** aResult);
     static nsresult GetURL(nsIRDFResource *source, nsIRDFLiteral** aResult);
     static PRBool   isVisible(const nsNativeFileSpec& file);
@@ -293,7 +294,7 @@ NS_IMETHODIMP
 FileSystemDataSource::GetSources(nsIRDFResource *property,
                            nsIRDFNode *target,
 			   PRBool tv,
-                           nsIRDFEnumerator **sources /* out */)
+                           nsISimpleEnumerator **sources /* out */)
 {
 	PR_ASSERT(0);
 	return NS_ERROR_NOT_IMPLEMENTED;
@@ -374,7 +375,7 @@ NS_IMETHODIMP
 FileSystemDataSource::GetTargets(nsIRDFResource *source,
                            nsIRDFResource *property,
                            PRBool tv,
-                           nsIRDFEnumerator **targets /* out */)
+                           nsISimpleEnumerator **targets /* out */)
 {
 	// we only have positive assertions in the file system data source.
 	if (! tv)
@@ -393,7 +394,7 @@ FileSystemDataSource::GetTargets(nsIRDFResource *source,
 			nsAutoString	pulse("12");
 			nsIRDFLiteral	*pulseLiteral;
 			gRDFService->GetLiteral(pulse.GetUnicode(), &pulseLiteral);
-                        nsIRDFEnumerator* result = new nsSingletonEnumerator(pulseLiteral);
+                        nsISimpleEnumerator* result = new nsSingletonEnumerator(pulseLiteral);
                         NS_RELEASE(pulseLiteral);
 
                         if (! result)
@@ -416,7 +417,7 @@ FileSystemDataSource::GetTargets(nsIRDFResource *source,
                     rv = GetName(source, getter_AddRefs(name));
                     if (NS_FAILED(rv)) return rv;
 
-                    nsIRDFEnumerator* result = new nsSingletonEnumerator(name);
+                    nsISimpleEnumerator* result = new nsSingletonEnumerator(name);
                     if (! result)
                         return NS_ERROR_OUT_OF_MEMORY;
 
@@ -430,7 +431,7 @@ FileSystemDataSource::GetTargets(nsIRDFResource *source,
                     rv = GetURL(source, getter_AddRefs(url));
                     if (NS_FAILED(rv)) return rv;
 
-                    nsIRDFEnumerator* result = new nsSingletonEnumerator(url);
+                    nsISimpleEnumerator* result = new nsSingletonEnumerator(url);
                     if (! result)
                         return NS_ERROR_OUT_OF_MEMORY;
 
@@ -450,7 +451,7 @@ FileSystemDataSource::GetTargets(nsIRDFResource *source,
                         rv = gRDFService->GetLiteral(url.GetUnicode(), &literal);
                         if (NS_FAILED(rv)) return rv;
 
-                        nsIRDFEnumerator* result = new nsSingletonEnumerator(literal);
+                        nsISimpleEnumerator* result = new nsSingletonEnumerator(literal);
                         NS_RELEASE(literal);
 
                         if (! result)
@@ -467,7 +468,7 @@ FileSystemDataSource::GetTargets(nsIRDFResource *source,
 			rv = gRDFService->GetLiteral(pulse.GetUnicode(), &pulseLiteral);
                         if (NS_FAILED(rv)) return rv;
 
-                        nsIRDFEnumerator* result = new nsSingletonEnumerator(pulseLiteral);
+                        nsISimpleEnumerator* result = new nsSingletonEnumerator(pulseLiteral);
                         NS_RELEASE(pulseLiteral);
 
                         if (! result)
@@ -540,7 +541,7 @@ FileSystemDataSource::HasAssertion(nsIRDFResource *source,
 
 NS_IMETHODIMP
 FileSystemDataSource::ArcLabelsIn(nsIRDFNode *node,
-                            nsIRDFEnumerator ** labels /* out */)
+                            nsISimpleEnumerator ** labels /* out */)
 {
 	PR_ASSERT(0);
 	return NS_ERROR_NOT_IMPLEMENTED;
@@ -550,7 +551,7 @@ FileSystemDataSource::ArcLabelsIn(nsIRDFNode *node,
 
 NS_IMETHODIMP
 FileSystemDataSource::ArcLabelsOut(nsIRDFResource *source,
-                             nsIRDFEnumerator **labels /* out */)
+                             nsISimpleEnumerator **labels /* out */)
 {
         nsresult rv;
 
@@ -563,7 +564,7 @@ FileSystemDataSource::ArcLabelsOut(nsIRDFResource *source,
             array->AppendElement(kNC_Child);
             array->AppendElement(kNC_pulse);
 
-            nsIRDFEnumerator* result = new nsArrayEnumerator(array);
+            nsISimpleEnumerator* result = new nsArrayEnumerator(array);
             if (! result)
                 return NS_ERROR_OUT_OF_MEMORY;
 
@@ -590,7 +591,7 @@ FileSystemDataSource::ArcLabelsOut(nsIRDFResource *source,
 
             array->AppendElement(kRDF_type);
 
-            nsIRDFEnumerator* result = new nsArrayEnumerator(array);
+            nsISimpleEnumerator* result = new nsArrayEnumerator(array);
             if (! result)
                 return NS_ERROR_OUT_OF_MEMORY;
 
@@ -605,7 +606,7 @@ FileSystemDataSource::ArcLabelsOut(nsIRDFResource *source,
 
 
 NS_IMETHODIMP
-FileSystemDataSource::GetAllResources(nsIRDFEnumerator** aCursor)
+FileSystemDataSource::GetAllResources(nsISimpleEnumerator** aCursor)
 {
 	NS_NOTYETIMPLEMENTED("sorry!");
 	return NS_ERROR_NOT_IMPLEMENTED;
@@ -696,7 +697,7 @@ NS_NewRDFFileSystemDataSource(nsIRDFDataSource **result)
 
 
 nsresult
-FileSystemDataSource::GetVolumeList(nsIRDFEnumerator** aResult)
+FileSystemDataSource::GetVolumeList(nsISimpleEnumerator** aResult)
 {
         nsresult rv;
         nsCOMPtr<nsISupportsArray> volumes;
@@ -753,7 +754,7 @@ FileSystemDataSource::GetVolumeList(nsIRDFEnumerator** aResult)
 	volumes->AppendElement(vol);
 #endif
 
-        nsIRDFEnumerator* result = new nsArrayEnumerator(volumes);
+        nsISimpleEnumerator* result = new nsArrayEnumerator(volumes);
         if (! result)
             return NS_ERROR_OUT_OF_MEMORY;
 
@@ -807,7 +808,7 @@ FileSystemDataSource::isVisible(const nsNativeFileSpec& file)
 
 
 nsresult
-FileSystemDataSource::GetFolderList(nsIRDFResource *source, nsIRDFEnumerator** aResult)
+FileSystemDataSource::GetFolderList(nsIRDFResource *source, nsISimpleEnumerator** aResult)
 {
         nsresult rv;
         nsCOMPtr<nsISupportsArray> nameArray;
@@ -834,7 +835,7 @@ FileSystemDataSource::GetFolderList(nsIRDFResource *source, nsIRDFEnumerator** a
 		}
 	}
 
-        nsIRDFEnumerator* result = new nsArrayEnumerator(nameArray);
+        nsISimpleEnumerator* result = new nsArrayEnumerator(nameArray);
         if (! result)
             return NS_ERROR_OUT_OF_MEMORY;
 

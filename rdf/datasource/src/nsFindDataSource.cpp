@@ -25,7 +25,6 @@
 #include "nscore.h"
 #include "nsCOMPtr.h"
 #include "nsIRDFDataSource.h"
-#include "nsIRDFEnumerator.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFObserver.h"
 #include "nsIRDFResourceFactory.h"
@@ -76,7 +75,7 @@ private:
 	static nsIRDFResource	*kRDF_InstanceOf;
 	static nsIRDFResource	*kRDF_type;
 
-	NS_METHOD	getFindResults(nsIRDFResource *source, nsIRDFEnumerator** aResult);
+	NS_METHOD	getFindResults(nsIRDFResource *source, nsISimpleEnumerator** aResult);
 
 	NS_METHOD	getFindName(nsIRDFResource *source, nsIRDFLiteral** aResult);
 
@@ -105,7 +104,7 @@ public:
 	NS_IMETHOD	GetSources(nsIRDFResource *property,
 				nsIRDFNode *target,
 				PRBool tv,
-				nsIRDFEnumerator **sources /* out */);
+				nsISimpleEnumerator **sources /* out */);
 	NS_IMETHOD	GetTarget(nsIRDFResource *source,
 				nsIRDFResource *property,
 				PRBool tv,
@@ -113,7 +112,7 @@ public:
 	NS_IMETHOD	GetTargets(nsIRDFResource *source,
 				nsIRDFResource *property,
 				PRBool tv,
-				nsIRDFEnumerator **targets /* out */);
+				nsISimpleEnumerator **targets /* out */);
 	NS_IMETHOD	Assert(nsIRDFResource *source,
 				nsIRDFResource *property,
 				nsIRDFNode *target,
@@ -127,10 +126,10 @@ public:
 				PRBool tv,
 				PRBool *hasAssertion /* out */);
 	NS_IMETHOD	ArcLabelsIn(nsIRDFNode *node,
-				nsIRDFEnumerator **labels /* out */);
+				nsISimpleEnumerator **labels /* out */);
 	NS_IMETHOD	ArcLabelsOut(nsIRDFResource *source,
-				nsIRDFEnumerator **labels /* out */);
-	NS_IMETHOD	GetAllResources(nsIRDFEnumerator** aCursor);
+				nsISimpleEnumerator **labels /* out */);
+	NS_IMETHOD	GetAllResources(nsISimpleEnumerator** aCursor);
 	NS_IMETHOD	AddObserver(nsIRDFObserver *n);
 	NS_IMETHOD	RemoveObserver(nsIRDFObserver *n);
 	NS_IMETHOD	Flush();
@@ -285,7 +284,7 @@ NS_IMETHODIMP
 FindDataSource::GetSources(nsIRDFResource *property,
                            nsIRDFNode *target,
 			   PRBool tv,
-                           nsIRDFEnumerator **sources /* out */)
+                           nsISimpleEnumerator **sources /* out */)
 {
 	PR_ASSERT(0);
 	return NS_ERROR_NOT_IMPLEMENTED;
@@ -463,7 +462,7 @@ FindDataSource::parseFindURL(nsIRDFResource *u, nsISupportsArray *array)
 		nsIRDFDataSource	*datasource;
 		if (NS_SUCCEEDED(rv = gRDFService->GetDataSource(tokens[0].value, &datasource)))
 		{
-			nsIRDFEnumerator	*cursor = nsnull;
+			nsISimpleEnumerator	*cursor = nsnull;
 			if (NS_SUCCEEDED(rv = datasource->GetAllResources(&cursor)))
 			{
 				while (1) 
@@ -537,7 +536,7 @@ FindDataSource::parseFindURL(nsIRDFResource *u, nsISupportsArray *array)
 
 
 NS_METHOD
-FindDataSource::getFindResults(nsIRDFResource *source, nsIRDFEnumerator** aResult)
+FindDataSource::getFindResults(nsIRDFResource *source, nsISimpleEnumerator** aResult)
 {
 	nsresult	rv;
 	nsCOMPtr<nsISupportsArray> nameArray;
@@ -547,7 +546,7 @@ FindDataSource::getFindResults(nsIRDFResource *source, nsIRDFEnumerator** aResul
 	rv = parseFindURL(source, nameArray);
     if (NS_FAILED(rv)) return rv;
 
-    nsIRDFEnumerator* result = new nsArrayEnumerator(nameArray);
+    nsISimpleEnumerator* result = new nsArrayEnumerator(nameArray);
     if (! result)
         NS_ERROR_OUT_OF_MEMORY;
 
@@ -573,7 +572,7 @@ NS_IMETHODIMP
 FindDataSource::GetTargets(nsIRDFResource *source,
                            nsIRDFResource *property,
                            PRBool tv,
-                           nsIRDFEnumerator **targets /* out */)
+                           nsISimpleEnumerator **targets /* out */)
 {
 	nsresult		rv = NS_ERROR_FAILURE;
 
@@ -593,7 +592,7 @@ FindDataSource::GetTargets(nsIRDFResource *source,
             rv = getFindName(source, getter_AddRefs(name));
             if (NS_FAILED(rv)) return rv;
 
-            nsIRDFEnumerator* result =
+            nsISimpleEnumerator* result =
                 new nsSingletonEnumerator(name);
 
             if (! result)
@@ -614,7 +613,7 @@ FindDataSource::GetTargets(nsIRDFResource *source,
             rv = gRDFService->GetLiteral(url.GetUnicode(), &literal);
             if (NS_FAILED(rv)) return rv;
 
-            nsIRDFEnumerator* result = 
+            nsISimpleEnumerator* result = 
                 new nsSingletonEnumerator(literal);
 
             NS_RELEASE(literal);
@@ -633,7 +632,7 @@ FindDataSource::GetTargets(nsIRDFResource *source,
 			rv = gRDFService->GetLiteral(pulse.GetUnicode(), &pulseLiteral);
             if (NS_FAILED(rv)) return rv;
 
-            nsIRDFEnumerator* result =
+            nsISimpleEnumerator* result =
                 new nsSingletonEnumerator(pulseLiteral);
 
             NS_RELEASE(pulseLiteral);
@@ -708,7 +707,7 @@ FindDataSource::HasAssertion(nsIRDFResource *source,
 
 NS_IMETHODIMP
 FindDataSource::ArcLabelsIn(nsIRDFNode *node,
-                            nsIRDFEnumerator ** labels /* out */)
+                            nsISimpleEnumerator ** labels /* out */)
 {
 	PR_ASSERT(0);
 	return NS_ERROR_NOT_IMPLEMENTED;
@@ -718,7 +717,7 @@ FindDataSource::ArcLabelsIn(nsIRDFNode *node,
 
 NS_IMETHODIMP
 FindDataSource::ArcLabelsOut(nsIRDFResource *source,
-                             nsIRDFEnumerator **labels /* out */)
+                             nsISimpleEnumerator **labels /* out */)
 {
 	nsresult		rv;
 
@@ -731,7 +730,7 @@ FindDataSource::ArcLabelsOut(nsIRDFResource *source,
 		array->AppendElement(kNC_Child);
 		array->AppendElement(kNC_pulse);
 
-        nsIRDFEnumerator* result = new nsArrayEnumerator(array);
+        nsISimpleEnumerator* result = new nsArrayEnumerator(array);
         if (! result)
             return NS_ERROR_OUT_OF_MEMORY;
 
@@ -747,7 +746,7 @@ FindDataSource::ArcLabelsOut(nsIRDFResource *source,
 
 
 NS_IMETHODIMP
-FindDataSource::GetAllResources(nsIRDFEnumerator** aCursor)
+FindDataSource::GetAllResources(nsISimpleEnumerator** aCursor)
 {
 	NS_NOTYETIMPLEMENTED("sorry!");
 	return NS_ERROR_NOT_IMPLEMENTED;

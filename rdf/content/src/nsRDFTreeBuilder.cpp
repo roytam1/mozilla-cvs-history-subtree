@@ -46,7 +46,6 @@
 #include "nsIRDFContentModelBuilder.h"
 #include "nsIRDFCompositeDataSource.h"
 #include "nsIRDFDocument.h"
-#include "nsIRDFEnumerator.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFObserver.h"
 #include "nsIRDFService.h"
@@ -464,7 +463,7 @@ RDFTreeBuilderImpl::CheckRDFGraphForUpdates(nsIContent *container)
 	if (NS_SUCCEEDED(rv = domElement->GetResource(getter_AddRefs(res))))
 	{
         // XXX Per Bug 3367, this'll have to be fixed.
-		nsCOMPtr<nsIRDFEnumerator> arcs;
+		nsCOMPtr<nsISimpleEnumerator> arcs;
 		rv = mDB->ArcLabelsOut(res, getter_AddRefs(arcs));
         NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get arcs out");
         if (NS_FAILED(rv)) return rv;
@@ -496,7 +495,7 @@ RDFTreeBuilderImpl::CheckRDFGraphForUpdates(nsIContent *container)
 				return(rv);
 			}
 
-			nsCOMPtr<nsIRDFEnumerator> targets;
+			nsCOMPtr<nsISimpleEnumerator> targets;
 			rv = db->GetTargets(res, property, PR_TRUE, getter_AddRefs(targets));
             NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get targets for property");
 			if (NS_FAILED(rv)) return rv;
@@ -1107,7 +1106,7 @@ RDFTreeBuilderImpl::AddWidgetItem(nsIContent* aElement,
 
     // Add miscellaneous attributes by iterating _all_ of the
     // properties out of the resource.
-    nsCOMPtr<nsIRDFEnumerator> arcs;
+    nsCOMPtr<nsISimpleEnumerator> arcs;
     rv = mDB->ArcLabelsOut(aValue, getter_AddRefs(arcs));
     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to get arcs out");
     if (NS_FAILED(rv)) return rv;

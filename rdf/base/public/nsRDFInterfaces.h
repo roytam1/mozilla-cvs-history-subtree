@@ -141,30 +141,6 @@ class nsIRDFInt : public nsIRDFNode {
 };
 class nsIRDFDataSource; /* forward decl */
 
-/* starting interface:    nsIRDFEnumerator */
-
-/* {0F4819D0-F883-11D2-BDD2-000064657374} */
-#define NS_IRDFENUMERATOR_IID_STR "0F4819D0-F883-11D2-BDD2-000064657374"
-#define NS_IRDFENUMERATOR_IID \
-  {0x0F4819D0, 0xF883, 0x11D2, \
-    { 0xBD, 0xD2, 0x00, 0x00, 0x64, 0x65, 0x73, 0x74 }}
-
-class nsIRDFEnumerator : public nsISupports {
- public: 
-  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IRDFENUMERATOR_IID)
-
-  /* boolean HasMoreElements (); */
-  NS_IMETHOD HasMoreElements(PRBool *_retval) = 0;
-
-  /* nsISupports GetNext (); */
-  NS_IMETHOD GetNext(nsISupports **_retval) = 0;
-
-#ifdef XPIDL_JS_STUBS
-  static NS_EXPORT_(JSObject *) InitJSClass(JSContext *cx);
-  static NS_EXPORT_(JSObject *) GetJSObject(JSContext *cx, nsIRDFEnumerator *priv);
-#endif
-};
-
 /* starting interface:    nsIRDFObserver */
 
 /* {3CC75360-484A-11D2-BC16-00805F912FE7} */
@@ -210,14 +186,14 @@ class nsIRDFDataSource : public nsISupports {
   /* nsIRDFResource GetSource (in nsIRDFResource aProperty, in nsIRDFNode aTarget, in boolean aTruthValue); */
   NS_IMETHOD GetSource(nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue, nsIRDFResource **_retval) = 0;
 
-  /* nsIRDFEnumerator GetSources (in nsIRDFResource aProperty, in nsIRDFNode aTarget, in boolean aTruthValue); */
-  NS_IMETHOD GetSources(nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue, nsIRDFEnumerator **_retval) = 0;
+  /* nsISimpleEnumerator GetSources (in nsIRDFResource aProperty, in nsIRDFNode aTarget, in boolean aTruthValue); */
+  NS_IMETHOD GetSources(nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue, nsISimpleEnumerator **_retval) = 0;
 
   /* nsIRDFNode GetTarget (in nsIRDFResource aSource, in nsIRDFResource aProperty, in boolean aTruthValue); */
   NS_IMETHOD GetTarget(nsIRDFResource *aSource, nsIRDFResource *aProperty, PRBool aTruthValue, nsIRDFNode **_retval) = 0;
 
-  /* nsIRDFEnumerator GetTargets (in nsIRDFResource aSource, in nsIRDFResource aProperty, in boolean aTruthValue); */
-  NS_IMETHOD GetTargets(nsIRDFResource *aSource, nsIRDFResource *aProperty, PRBool aTruthValue, nsIRDFEnumerator **_retval) = 0;
+  /* nsISimpleEnumerator GetTargets (in nsIRDFResource aSource, in nsIRDFResource aProperty, in boolean aTruthValue); */
+  NS_IMETHOD GetTargets(nsIRDFResource *aSource, nsIRDFResource *aProperty, PRBool aTruthValue, nsISimpleEnumerator **_retval) = 0;
 
   /* void Assert (in nsIRDFResource aSource, in nsIRDFResource aProperty, in nsIRDFNode aTarget, in boolean aTruthValue); */
   NS_IMETHOD Assert(nsIRDFResource *aSource, nsIRDFResource *aProperty, nsIRDFNode *aTarget, PRBool aTruthValue) = 0;
@@ -234,14 +210,14 @@ class nsIRDFDataSource : public nsISupports {
   /* void RemoveObserver (in nsIRDFObserver aObserver); */
   NS_IMETHOD RemoveObserver(nsIRDFObserver *aObserver) = 0;
 
-  /* nsIRDFEnumerator ArcLabelsIn (in nsIRDFNode aNode); */
-  NS_IMETHOD ArcLabelsIn(nsIRDFNode *aNode, nsIRDFEnumerator **_retval) = 0;
+  /* nsISimpleEnumerator ArcLabelsIn (in nsIRDFNode aNode); */
+  NS_IMETHOD ArcLabelsIn(nsIRDFNode *aNode, nsISimpleEnumerator **_retval) = 0;
 
-  /* nsIRDFEnumerator ArcLabelsOut (in nsIRDFResource aSource); */
-  NS_IMETHOD ArcLabelsOut(nsIRDFResource *aSource, nsIRDFEnumerator **_retval) = 0;
+  /* nsISimpleEnumerator ArcLabelsOut (in nsIRDFResource aSource); */
+  NS_IMETHOD ArcLabelsOut(nsIRDFResource *aSource, nsISimpleEnumerator **_retval) = 0;
 
-  /* nsIRDFEnumerator GetAllResources (); */
-  NS_IMETHOD GetAllResources(nsIRDFEnumerator **_retval) = 0;
+  /* nsISimpleEnumerator GetAllResources (); */
+  NS_IMETHOD GetAllResources(nsISimpleEnumerator **_retval) = 0;
 
   /* void Flush (); */
   NS_IMETHOD Flush() = 0;
