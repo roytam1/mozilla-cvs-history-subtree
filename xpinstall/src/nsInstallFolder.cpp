@@ -211,15 +211,20 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
         switch (folderDirSpecID) 
 		{
             case 100: ///////////////////////////////////////////////////////////  Plugins
-                //if (!nsSoftwareUpdate::GetProgramDirectory())
-                //{
-                //    SetAppShellDirectory(nsSpecialFileSpec::App_PluginsDirectory );
-                //}
-                //else
+                if (!nsSoftwareUpdate::GetProgramDirectory())
                 {
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.OS_CurrentProcessDirectory", NS_GET_IID(nsIFile), getter_AddRefs(mFileSpec));
+#ifdef XP_MAC
+                    mFileSpec->Append("Plugins");
+#else
+                    mFileSpec->Append("plugins");
+#endif
+                }
+                else
+                {
+                    rv = nsSoftwareUpdate::GetProgramDirectory()->Clone(getter_AddRefs(mFileSpec));
 
                     if (NS_SUCCEEDED(rv))
                     {
@@ -236,12 +241,15 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 101: ///////////////////////////////////////////////////////////  Program
             case 102: ///////////////////////////////////////////////////////////  Communicator
-                //if (!nsSoftwareUpdate::GetProgramDirectory())
+                if (!nsSoftwareUpdate::GetProgramDirectory())  //Not in stub installer
                 {
-                    //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::OS_CurrentProcessDirectory ));
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.OS_CurrentProcessDirectory", NS_GET_IID(nsIFile), getter_AddRefs(mFileSpec));
+                }
+                else //In stub installer.  mProgram has been set so 
+                {
+                    rv = nsSoftwareUpdate::GetProgramDirectory()->Clone(getter_AddRefs(mFileSpec));
                 }
                 break;
             
@@ -252,12 +260,12 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 104: ///////////////////////////////////////////////////////////  Temporary
               {
-                //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::OS_TemporaryDirectory ));
                 NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                 directoryService->Get("system.OS_TemporaryDirectory", NS_GET_IID(nsIFile), getter_AddRefs(mFileSpec));
               }
               break;
+
             case 105: ///////////////////////////////////////////////////////////  Installed
                 // we should never be here.
                 mFileSpec = nsnull;
@@ -275,7 +283,6 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 108: ///////////////////////////////////////////////////////////  OS Drive
               {
-                  //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::OS_DriveDirectory ));
                   NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                   directoryService->Get("system.OS_DriveDirectory", NS_GET_IID(nsIFile), getter_AddRefs(mFileSpec));
@@ -309,9 +316,7 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
                 break;
 
             case 110: ///////////////////////////////////////////////////////////  Components
-                //if (!nsSoftwareUpdate::GetProgramDirectory())
-                //    SetAppShellDirectory(nsSpecialFileSpec::App_ComponentsDirectory );
-                //else
+                if (!nsSoftwareUpdate::GetProgramDirectory())
                 {
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
@@ -328,13 +333,26 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 #endif
                     }
                 }
+                else
+                {
+                    rv = nsSoftwareUpdate::GetProgramDirectory()->Clone(getter_AddRefs(mFileSpec));
+
+                    if (NS_SUCCEEDED(rv))
+                    {
+#ifdef XP_MAC
+                        mFileSpec->Append("Components");
+#else
+                        mFileSpec->Append("components");
+#endif
+                    }
+                    else
+                      mFileSpec = nsnull;
+                }
                 break;
             
             case 111: ///////////////////////////////////////////////////////////  Chrome
-                //if (!nsSoftwareUpdate::GetProgramDirectory())
-                //    SetAppShellDirectory(nsSpecialFileSpec::App_ChromeDirectory );
-                //else
-                {
+                if (!nsSoftwareUpdate::GetProgramDirectory())
+                { 
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.OS_CurrentProcessDirectory", 
@@ -351,11 +369,23 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 #endif
                     }
                 }
+                else
+                {
+                    rv = nsSoftwareUpdate::GetProgramDirectory()->Clone(getter_AddRefs(mFileSpec));
+
+                    if (NS_SUCCEEDED(rv))
+                    {
+#ifdef XP_MAC
+                        mFileSpec->Append("Chrome");
+#else
+                        mFileSpec->Append("chrome");
+#endif
+                    }
+                }
                 break;
 
             case 200: ///////////////////////////////////////////////////////////  Win System
               {  
-              //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Win_SystemDirectory ));
                   NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                   directoryService->Get("system.SystemDirectory", 
@@ -367,18 +397,16 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 201: ///////////////////////////////////////////////////////////  Windows
               {
-               //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Win_WindowsDirectory ));
-                    NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
+                   NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
-                    directoryService->Get("system.WindowsDirectory", 
-                                           NS_GET_IID(nsIFile), 
-                                           getter_AddRefs(mFileSpec));
+                   directoryService->Get("system.WindowsDirectory", 
+                                          NS_GET_IID(nsIFile), 
+                                          getter_AddRefs(mFileSpec));
               }
                 break;
 
             case 300: ///////////////////////////////////////////////////////////  Mac System
               {   
-               //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Mac_SystemDirectory ));
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.Directory", 
@@ -389,7 +417,6 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 301: ///////////////////////////////////////////////////////////  Mac Desktop
               {  
-               //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Mac_DesktopDirectory ));
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.DesktopDirectory", 
@@ -400,7 +427,6 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 302: ///////////////////////////////////////////////////////////  Mac Trash
               {  
-              //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Mac_TrashDirectory ));
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.TrashDirectory", 
@@ -411,7 +437,6 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 303: ///////////////////////////////////////////////////////////  Mac Startup
               {  
-              //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Mac_StartupDirectory ));
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.StartupDirectory", 
@@ -422,7 +447,6 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 304: ///////////////////////////////////////////////////////////  Mac Shutdown
               {  
-              //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Mac_ShutdownDirectory ));
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.ShutdownDirectory", 
@@ -433,7 +457,6 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 305: ///////////////////////////////////////////////////////////  Mac Apple Menu
               {  
-              //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Mac_AppleMenuDirectory ));
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.AppleMenuDirectory", 
@@ -444,7 +467,6 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 306: ///////////////////////////////////////////////////////////  Mac Control Panel
               {  
-              //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Mac_ControlPanelDirectory ));
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.ControlPanelDirectory", 
@@ -455,7 +477,6 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 307: ///////////////////////////////////////////////////////////  Mac Extension
               {  
-              //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Mac_ExtensionDirectory ));
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.ExtensionDirectory", 
@@ -466,7 +487,6 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 308: ///////////////////////////////////////////////////////////  Mac Fonts
               {  
-              //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Mac_FontsDirectory ));
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.FontsDirectory", 
@@ -477,7 +497,6 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 309: ///////////////////////////////////////////////////////////  Mac Preferences
               {  
-              //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Mac_PreferencesDirectory ));
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.PreferencesDirectory", 
@@ -488,7 +507,6 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
                     
             case 310: ///////////////////////////////////////////////////////////  Mac Documents
               {  
-              //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Mac_DocumentsDirectory ));
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.DocumentsDirectory", 
@@ -499,7 +517,6 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
                     
             case 400: ///////////////////////////////////////////////////////////  Unix Local
               {  
-              //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Unix_LocalDirectory ));
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.LocalDirectory", 
@@ -510,7 +527,6 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case 401: ///////////////////////////////////////////////////////////  Unix Lib
               {  
-              //mFileSpec = new nsFileSpec( nsSpecialSystemDirectory( nsSpecialSystemDirectory::Unix_LibDirectory ));
                     NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
 
                     directoryService->Get("system.LibDirectory", 
