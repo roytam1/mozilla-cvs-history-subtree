@@ -192,7 +192,7 @@ NewRENode(CompilerState *state, REOp op, void *kid)
     ren->kid = kid;
     return ren;
 }
-#define DEBUG_notme
+
 #ifdef DEBUG
 
 #include <stdio.h>
