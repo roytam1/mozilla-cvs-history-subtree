@@ -703,7 +703,7 @@ JS_InitStandardClasses(JSContext *cx, JSObject *obj)
 	   js_InitExceptionClasses(cx, obj) &&
 #endif
 #if JS_HAS_FILE_OBJECT
-           js_InitFileClass(cx, obj) &&
+           js_InitFileClass(cx, obj, JS_TRUE) &&
 #endif
 	   js_InitDateClass(cx, obj);
 }

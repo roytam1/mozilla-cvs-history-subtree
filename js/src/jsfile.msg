@@ -26,7 +26,6 @@ MSG_DEF(JSFILEMSG_FILE_CURRENTDIR_UNDEFINED_ERROR,                 2, 0, JSEXN_N
 MSG_DEF(JSFILEMSG_FIRST_ARGUMENT_OPEN_NOT_STRING_ERROR,            3, 1, JSEXN_NONE, "The first argument {0} to file.open must be a string")
 MSG_DEF(JSFILEMSG_SECOND_ARGUMENT_OPEN_NOT_STRING_ERROR,           4, 0, JSEXN_NONE, "The second argument to file.open must be a string")
 MSG_DEF(JSFILEMSG_CANNOT_COPY_FILE_OPEN_FOR_WRITING_ERROR,         5, 1, JSEXN_NONE, "Cannot copy file {0} open for writing")
-MSG_DEF(JSFILEMSG_CANNOT_ACCESS_FILE_INFO_ERROR,                   6, 1, JSEXN_NONE, "Cannot access file information for {0}")
 MSG_DEF(JSFILEMSG_COPY_READ_ERROR,                                 7, 1, JSEXN_NONE, "An error occured while attempting to read a file {0} to copy")
 MSG_DEF(JSFILEMSG_COPY_WRITE_ERROR,                                8, 1, JSEXN_NONE, "An error occured while attempting to copy into file {0}")
 MSG_DEF(JSFILEMSG_EXPECTS_ONE_ARG_ERROR,                           9, 0, JSEXN_NONE, "Operation {0} expects one argument, not {1}")
@@ -49,7 +48,6 @@ MSG_DEF(JSFILEMSG_READ_FAILED,                                    26, 1, JSEXN_N
 MSG_DEF(JSFILEMSG_SKIP_FAILED,                                    27, 1, JSEXN_NONE, "Skip failed on file {0}")
 MSG_DEF(JSFILEMSG_FIRST_ARGUMENT_MUST_BE_A_FUNCTION_OR_REGEX,     28, 1, JSEXN_NONE, "The first argument to file.list must be a function or a regex")
 MSG_DEF(JSFILEMSG_CANNOT_DO_LIST_ON_A_FILE,                       29, 1, JSEXN_NONE, "{0} must be a directory, cannot do list")
-MSG_DEF(JSFILEMSG_NATIVE_OPERATION_IS_NOT_SUPPORTED,              30, 2, JSEXN_NONE, "Native operation {0} is not supported on {1}")
 MSG_DEF(JSFILEMSG_CANNOT_SET_PRIVATE_FILE,                        31, 1, JSEXN_NONE, "Cannot set private data for file {0}")
 MSG_DEF(JSFILEMSG_FIRST_ARGUMENT_MUST_BE_A_NUMBER,                32, 2, JSEXN_NONE, "First argument to {0} must be a number, not {1}")
 MSG_DEF(JSFILEMSG_CANNOT_WRITE,                                   33, 1, JSEXN_NONE, "Cannot write to {0}, file mode is different")
@@ -60,6 +58,9 @@ MSG_DEF(JSFILEMSG_UNDEF_ARRAY_LENGTH,                             37, 1, JSEXN_N
 MSG_DEF(JSFILEMSG_MKDIR_FAILED,                                   38, 1, JSEXN_NONE, "mkdir {0} failed")
 MSG_DEF(JSFILEMSG_CANNOT_OPEN_DIR,                                39, 1, JSEXN_NONE, "Cannot open directory {0}")
 MSG_DEF(JSFILEMSG_INIT_FAILED,                                    40, 0, JSEXN_NONE, "JS_InitClass failed")
+MSG_DEF(JSFILEMSG_CANNOT_PERFORM_NATIVE_OPERATION,                41, 2, JSEXN_NONE, "Cannot {0} native file {1}")
+
+
 
 
 
