@@ -219,62 +219,72 @@ Contributor(s): ______________________________________. -->
 
 <toolbox id="main-toolbox">
   
-  <toolbar class="main-bar" chromeclass="toolbar" persist="collapsed"
-    datasources="rdf:bookmarks" id="PersonalToolbar"
-    ref="NC:PersonalToolbarFolder" 
-    ondraggesture="return BeginDragPersonalToolbar(event);"
-    ondragdrop="return DropPersonalToolbar(event);"
-    ondragover="return DragOverPersonalToolbar(event);"
-   >
+  <toolbar id="PersonalToolbar" class="main-bar" chromeclass="toolbar" persist="collapsed">
 
-    <!-- This template builds content from the bookmarks datasource -->
-    <template>
-      <!-- Rules for content hanging _directly_ off the toolbar -->
-      <rule parent="toolbar" iscontainer="true">
-        <menu uri="...">
-          <titledbutton value="rdf:http://home.netscape.com/NC-rdf#Name"  onclick="OpenBookmarkURL(event.target, 'PersonalToolbar')"
-            align="left" />
-          <menupopup />
-        </menu>
-      </rule>
-      <rule parent="toolbar">
-        <titledbutton uri="..." align="left" 
-          value="rdf:http://home.netscape.com/NC-rdf#Name"  onclick="OpenBookmarkURL(event.target, 'PersonalToolbar')"/>
-      </rule>
+	<!-- button area of personal toolbar -->
+	<box align="horizontal"
+	     flex="100%"
+	     style="overflow: hidden"
+	     datasources="rdf:bookmarks"
+	     ref="NC:PersonalToolbarFolder"
+	     ondraggesture="return BeginDragPersonalToolbar(event);"
+	     ondragdrop="return DropPersonalToolbar(event);"
+	     ondragover="return DragOverPersonalToolbar(event);">
 
-      <!-- Recursive rules for nested folders -->
-      <rule iscontainer="true">
-        <menupopup>
-          <menu uri="..." crop="right" flex="1" align="left"
-            value="rdf:http://home.netscape.com/NC-rdf#Name" >
-            <menupopup />
-          </menu>
-        </menupopup>
-      </rule>
-      <rule>
-        <menupopup>
-          <menuitem align="left" uri="..." 
-            value="rdf:http://home.netscape.com/NC-rdf#Name"  onclick="OpenBookmarkURL(event.target, 'PersonalToolbar')"/>
-        </menupopup>
-      </rule>
-    </template>
+	    <!-- This template builds content from the bookmarks datasource -->
+	    <template>
+	      <!-- Rules for content hanging _directly_ off the toolbar -->
+	      <rule parent="box" iscontainer="true">
+	        <menu uri="...">
+	          <titledbutton value="rdf:http://home.netscape.com/NC-rdf#Name"
+	                        onclick="OpenBookmarkURL(event.target, 'PersonalToolbar')"
+	                        align="left" />
+	          <menupopup/>
+	        </menu>
+	      </rule>
+	      <rule parent="box">
+	        <titledbutton uri="..." align="left" 
+	          value="rdf:http://home.netscape.com/NC-rdf#Name"  onclick="OpenBookmarkURL(event.target, 'PersonalToolbar')"/>
+	      </rule>
 
-    <titledbutton id="home-button" align="left"
-      value="&homeButton.label;" 
-      defaultURL="&defaultHomepage.url;"
-      onclick="BrowserHome(); event.preventBubble();"/>
-    <titledbutton id="netscape-button" crop="right" align="left"
-      value="&netscapeButton.label;" 
-      onclick="window.content.location.href='&myNetscape.url;'; event.preventBubble();"/>
+	      <!-- Recursive rules for nested folders -->
+	      <rule iscontainer="true">
+	        <menupopup>
+	          <menu uri="..." crop="right" flex="1" align="left"
+	            value="rdf:http://home.netscape.com/NC-rdf#Name" >
+	            <menupopup />
+	          </menu>
+	        </menupopup>
+	      </rule>
+	      <rule>
+	        <menupopup>
+	          <menuitem align="left" uri="..." 
+	            value="rdf:http://home.netscape.com/NC-rdf#Name"  onclick="OpenBookmarkURL(event.target, 'PersonalToolbar')"/>
+	        </menupopup>
+	      </rule>
+	    </template>
+	     
+	    <titledbutton id="home-button" align="left"
+	      value="&homeButton.label;" 
+	      defaultURL="&defaultHomepage.url;"
+	      onclick="BrowserHome(); event.preventBubble();"/>
+	    <titledbutton id="netscape-button" crop="right" align="left"
+	      value="&netscapeButton.label;" 
+	      onclick="window.content.location.href='&myNetscape.url;'; event.preventBubble();"/>
+    
+    </box>
+	
+	<!-- throbber area of personal toolbar -->
+	<box id="personaltoolbar-endcap" align="vertical" width="68px"/>
   </toolbar>
 
   <toolbar id="nav-bar" class="main-bar" chromeclass="toolbar" persist="collapsed">
-    <box id="toolbar_button_box">
-      <titledbutton id="back-button" crop="right" align="top" observes="canGoBack" />  
+	<box align="horizontal" flex="100%" style="overflow: hidden">
+      <titledbutton id="back-button" class="button32" crop="right" align="top" observes="canGoBack" />  
 
-      <titledbutton id="forward-button" crop="right" align="top" observes="canGoForward" />
+      <titledbutton id="forward-button" class="button32" crop="right" align="top" observes="canGoForward" />
     
-      <titledbutton id="stop-button" crop="right" align="top" onclick="BrowserStop()">
+      <titledbutton id="stop-button" class="button32" crop="right" align="top" onclick="BrowserStop()">
         <observes element="canStop" attribute="disabled"
                   onbroadcast="BrowserCanStop()"/>
       </titledbutton>
@@ -284,7 +294,7 @@ Contributor(s): ______________________________________. -->
       and pass on appropriate reload type. (The shift functionality
       is available.  There's a shiftDown field in the event object.)
       -->
-      <titledbutton id="reload-button" crop="right" align="top" observes="canReload"/>
+      <titledbutton id="reload-button" class="button32" crop="right" align="top" observes="canReload"/>
    
           <!-- changed : the url field is now grouped with search -->
           <box align="vertical" flex="100%">
@@ -339,7 +349,8 @@ Contributor(s): ______________________________________. -->
       -->
     </box>
 
-    <box id="toolbar_throbber_box"/>
+	<!-- throbber area of navigation toolbar -->
+	<box id="navbar-endcap" align="vertical" width="68px"/>
   </toolbar>
 
 </toolbox>

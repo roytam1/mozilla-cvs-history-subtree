@@ -47,7 +47,6 @@ box#sidebar-box
   min-width: 10px;
   max-width: 400px;
   border: none;
-  border-top: 8px solid #003366;
   border-bottom: 8px solid #003366;
 }
 
@@ -76,39 +75,48 @@ iframe.panel-frame
 /*
  *  Sidebar and Panel title buttons
  */
-splitter#title-box
-{
+splitter#title-box {
+  color: #CCFFFF;
+  background-color: #003366;
+  padding: 0px;
+  padding-left: 5px;
+  padding-right: 5px;
+  font: smaller;
+}
+
+splitter#title-box div {
+  margin: 2px;
+  font: smaller;
+}
+
+splitter#title-box titledbutton {
+  padding: 0px;
+  font: smaller;
+}
+
+splitter#title-box titledbutton:hover {
   color: white;
-  background-color: #666699;
-}
-
-splitter#title-box > titledbutton
-{
-  color: inherit;
-}
-
-splitter#title-box > div
-{
-  color: inherit;
-  padding: 5px;
 }
 
 
-splitter.panel-bar
-{
+splitter.panel-bar {
   padding: 0px;
-  border-top: 1px solid #ffffff;
-  background-color: #c8ccd8;
-}
-
-splitter.panel-bar div
-{
-  padding: 5px;
-}
-
-splitter.panel-bar titledbutton
-{
+  border-top: 1px solid white;
+  background-color: #CCCCCC;
   padding: 0px;
+  padding-left: 5px;
+  padding-right: 5px;
+  font: smaller;
+}
+
+splitter.panel-bar div {
+  margin: 2px;
+  font: smaller;
+}
+
+splitter.panel-bar titledbutton {
+  padding: 0px;
+  font: smaller;
 }
 
 splitter > titledbutton.show-hide
@@ -126,7 +134,7 @@ splitter[state="collapsed"] > titledbutton.show-hide
  */
 splitter#alerts-splitter
 {
-  background-color: #666699;
+  background-color: #003366;
 }
 
 splitter#alerts-splitter > div

@@ -6,29 +6,77 @@
 }
 
 titledbutton#back-button {
-	list-style-image:url(chrome://navigator/skin/back.gif);
+	list-style-image:url("chrome://navigator/skin/back.gif");
 }
 
 titledbutton#forward-button {
-	list-style-image:url(chrome://navigator/skin/forward.gif);
+	list-style-image:url("chrome://navigator/skin/forward.gif");
 }
 
 titledbutton#stop-button {
-	list-style-image:url(chrome://navigator/skin/stop.gif);
+	list-style-image:url("chrome://navigator/skin/stop.gif");
 } 
 
 titledbutton#reload-button {
-	list-style-image:url(chrome://navigator/skin/reload.gif);
+	list-style-image:url("chrome://navigator/skin/reload.gif");
 }
 
-titledbutton#search-button { 
- list-style-image:none;
- margin: 0px;
- margin-right: 2px;
- background-color: #99CCCC;
- border: 2px solid #99CCCC;
- -moz-border-radius: 4px;
+/*all the urlbar stuff*/
+#page-proxy-button { 
+	background-color: white; 
+	margin: 0px; 
+	min-width: 10px;
+	border: none; 
+	list-style-image:url("chrome://bookmarks/skin/bookmark-item.gif"); 
 } 
+
+#urlbar { 
+	width: 100%; 
+	vertical-align: middle;
+	padding: 0px;
+	margin: 0px; 
+	font: inherit;
+	border: none;
+} 
+
+box#url-bar-box {
+	border: 2px solid white;
+	margin: 0px;
+	margin-left: 10px;
+	padding: 0px;
+	background-color: white;
+	-moz-border-radius: 5px;
+	margin-bottom: 8px;
+	font: inherit;
+}
+
+
+#sessionhist-popup { 
+	background-color: white; 
+	margin: 0px;
+	width: 10px; 
+	border: none; 
+	list-style-image:url("chrome://global/skin/scroll-down.gif"); 
+} 
+
+#search-button { 
+	list-style-image:none;
+	margin: 0px;
+	margin-right: 2px;
+	background-color: #99CCCC;
+	border: 2px solid #99CCCC;
+	-moz-border-radius: 4px;
+} 
+
+#action-popup { 
+	list-style-image:url("chrome://global/skin/scroll-down.gif"); 
+	background-color: #99CCCC;
+	margin: 0px; 
+	border: 2px solid #99CCCC;
+	-moz-border-radius: 4px;
+}
+/*end urlbar stuff*/
+
 
 box#status-bar titledbutton {
      border: none;
@@ -92,12 +140,6 @@ toolbar#PersonalToolbar {
     border: none;
 }
 
-toolbar#PersonalToolbar box#endcap {
-	min-width: 69px; 
-	background-image: url("chrome://navigator/skin/bmbar-bg-endcap.gif"); 
-	background-repeat: no-repeat;
-}
-
 toolbar#PersonalToolbar titledbutton {
    margin: 0px;
    margin-right: 1em;
@@ -126,6 +168,16 @@ toolbar#PersonalToolbar titledbutton:active {
    padding-bottom: 0px;
 }
 
+toolbar#PersonalToolbar #personaltoolbar-endcap { 
+	background-color: #CCCCCC;
+	min-width: 68px;
+	max-width: 68px;
+	background-image: url("chrome://navigator/skin/n-box-persbar.gif");
+	background-repeat: no-repeat;
+	background-position: 100% 0%;
+}
+
+
 /**
  * Navigation Toolbar
  */
@@ -134,17 +186,17 @@ toolbar#nav-bar {
 	background-repeat: repeat-x;
 	background-position: 0% 0%;
 	background-color: #CCCCCC;
-	min-height: 39px;
-	max-height: 39px;
 	padding: 0px;
 	padding-bottom: 4px;
 }
 
-toolbar#nav-bar box#endcap {
-	min-width: 8px; 
-	background-image: url("chrome://navigator/skin/navbar-endcap.gif"); 
-	background-position: 0% 0%;
+toolbar#nav-bar #navbar-endcap { 
+	background-color: #CCCCCC;
+	min-width: 68px;
+	max-width: 68px;
+	background-image: url("chrome://navigator/skin/n-box-navbar.gif");
 	background-repeat: no-repeat;
+	background-position: 100% 0%;
 }
 
 /**

@@ -173,30 +173,74 @@ toolbar.standard titledbutton[disabled="true"] {
 /**
  * round buttons used in 'standard toolbar'
  */
-toolbar.standard titledbutton.button28 {
+toolbar titledbutton.button28 {
 	background-image:url("chrome://global/skin/button28-bg.gif");
 }
 
-toolbar.standard titledbutton.button28[disabled="true"] {
+toolbar titledbutton.button28[disabled="true"] {
 	background-image:url("chrome://global/skin/button28-bg-disabled.gif");
 }
 
-toolbar.standard titledbutton.button28[disabled="true"]:hover {
+toolbar titledbutton.button28[disabled="true"]:hover {
 	background-image:url("chrome://global/skin/button28-bg-disabled.gif");
 }
 
-toolbar.standard titledbutton.button28[disabled="true"]:active {
+toolbar titledbutton.button28[disabled="true"]:active {
 	background-image:url("chrome://global/skin/button28-bg-disabled.gif");
 }
 
-toolbar.standard titledbutton.button28:hover {
+toolbar titledbutton.button28:hover {
 	background-image:url("chrome://global/skin/button28-bg-hover.gif");
 }
 
-toolbar.standard titledbutton.button28:active {
+toolbar titledbutton.button28:active {
 	background-image:url("chrome://global/skin/button28-bg-active.gif");
 }
 
+
+/**
+ * 32px round buttons (used in Navigation Toolbar)
+ */
+toolbar titledbutton.button32 {
+	background-repeat: no-repeat;
+	background-position: 50% 0px;
+	background-color: transparent;
+	color: #CCFFFF;
+	border: none;
+	padding: 0px;
+	min-width: 36px;
+	min-height: 36px;
+	margin: 1px;
+	margin-top: 6px;
+	margin-right: 6px;
+	font-size: smaller;
+	background-image:url("chrome://global/skin/button32-bg.gif");
+}
+
+toolbar titledbutton.button32[disabled="true"] {
+	background-image:url("chrome://global/skin/button32-bg-disabled.gif");
+}
+
+toolbar titledbutton.button32[disabled="true"]:hover {
+	background-image:url("chrome://global/skin/button32-bg-disabled.gif");
+}
+
+toolbar titledbutton.button32[disabled="true"]:active {
+	background-image:url("chrome://global/skin/button32-bg-disabled.gif");
+}
+
+toolbar titledbutton.button32:hover {
+	border: none;
+	background-image:url("chrome://global/skin/button32-bg-hover.gif");
+}
+
+toolbar titledbutton.button32:active {
+	margin-top: 7px;
+	margin-left: 2px;
+	margin-bottom: 0px;
+	margin-right: 5px;
+	background-image:url("chrome://global/skin/button32-bg-active.gif");
+}
 
 /**
  * Throbber
