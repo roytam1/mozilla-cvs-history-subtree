@@ -538,6 +538,7 @@ var MessageWindowController =
 			case "cmd_settingsOffline":
 			case "cmd_nextMsg":
       case "button_next":
+      case "button_previous":
 			case "cmd_nextUnreadMsg":
 			case "cmd_nextFlaggedMsg":
 			case "cmd_nextUnreadThread":
@@ -618,6 +619,7 @@ var MessageWindowController =
 			case "cmd_close":
 			case "cmd_nextMsg":
       case "button_next":
+      case "button_previous":
 			case "cmd_nextUnreadMsg":
 			case "cmd_nextUnreadThread":
 			case "cmd_previousMsg":
@@ -790,6 +792,7 @@ var MessageWindowController =
 			case "cmd_previousMsg":
         performNavigation(nsMsgNavigationType.previousMessage);
 				break;
+      case "button_previous":
 			case "cmd_previousUnreadMsg":
         performNavigation(nsMsgNavigationType.previousUnreadMessage);
 				break;

@@ -224,6 +224,7 @@ var DefaultController =
 			case "cmd_shiftDelete":
 			case "cmd_nextMsg":
       case "button_next":
+      case "button_previous":
 			case "cmd_nextUnreadMsg":
 			case "cmd_nextFlaggedMsg":
 			case "cmd_nextUnreadThread":
@@ -373,6 +374,7 @@ var DefaultController =
       case "cmd_label4":
       case "cmd_label5":
         return(MailAreaHasFocus() && GetNumSelectedMessages() > 0);
+      case "button_previous":
       case "button_next":
         return IsViewNavigationItemEnabled();
       case "cmd_nextMsg":
@@ -515,6 +517,9 @@ var DefaultController =
 			case "cmd_nextUnreadMsg":
 				MsgNextUnreadMessage();
 				break;
+      case "button_previous":
+        MsgPreviousUnreadMessage();
+        break;
 			case "cmd_nextUnreadThread":
 				MsgNextUnreadThread();
 				break;
@@ -955,6 +960,12 @@ function MsgNextUnreadMessage()
 {
 	GoNextMessage(nsMsgNavigationType.nextUnreadMessage, true);
 }
+
+function MsgPreviousUnreadMessage()
+{
+	GoNextMessage(nsMsgNavigationType.previousUnreadMessage, true);
+}
+
 function MsgNextFlaggedMessage()
 {
 	GoNextMessage(nsMsgNavigationType.nextFlagged, true);

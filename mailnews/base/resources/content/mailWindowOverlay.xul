@@ -223,6 +223,7 @@ Rights Reserved.
   <command id="button_getNewMessages"/>
   <command id="button_print"/>
   <command id="button_next"/>
+  <command id="button_previous"/>
   <command id="button_file"/>
   <command id="cmd_delete"/>
 </commandset>
@@ -1473,6 +1474,7 @@ Rights Reserved.
         </template>
         <menupopup/>
       </toolbarbutton>
+      <toolbarbutton class="toolbarbutton-1" id="button-previous" label="&previousButton.label;" oncommand="goDoCommand('button_previous')" tooltiptext="&previousButton.tooltip;" observes="button_previous"/>
       <toolbarbutton class="toolbarbutton-1" id="button-next" label="&nextButton.label;" oncommand="goDoCommand('button_next')" tooltiptext="&nextButton.tooltip;" observes="button_next"/>
       <toolbarbutton class="toolbarbutton-1" id="button-delete" label="&deleteButton.label;" tooltiptext="&deleteButton.tooltip;" observes="button_delete" oncommand="goDoCommand('button_delete')"/>
       <toolbarbutton type="menu-button" id="button-mark" class="toolbarbutton-1" label="&markButton.label;" hidden="true" oncommand="goDoCommand('button_mark')"

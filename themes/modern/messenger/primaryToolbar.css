@@ -166,6 +166,22 @@
   -moz-image-region: rect(204px 199px 237px 150px) !important;
 } 
 
+#button-previous {
+  -moz-image-region: rect(204px 49px 237px 0);
+}
+
+#button-previous:hover {
+  -moz-image-region: rect(204px 99px 237px 50px);
+} 
+
+#button-previous:hover:active {
+  -moz-image-region: rect(204px 149px 237px 100px);
+} 
+
+#button-previous[disabled] {
+  -moz-image-region: rect(204px 199px 237px 150px) !important;
+} 
+
 #button-delete {
   -moz-image-region: rect(0, 49px 34px 0);
 }
