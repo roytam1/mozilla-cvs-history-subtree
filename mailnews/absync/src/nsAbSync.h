@@ -47,9 +47,11 @@
 #include "nsIAbMDBCard.h"
 #include "nsAbSyncCRCModel.h"
 #include "nsVoidArray.h"
+#include "nsUInt32Array.h"
 #include "nsIStringBundle.h"
 #include "nsIDocShell.h"
 #include "nsIFileSpec.h"
+#include "prlog.h"
 
 //
 // Basic Sync Logic
@@ -92,12 +94,25 @@ typedef struct {
   PRUint32      flags;
 } syncMappingRecord;
 
-#define     SYNC_MODIFIED     0x0001    // Must modify record on server
-#define     SYNC_ADD          0x0002    // Must add record to server   
-#define     SYNC_DELETED      0x0004    // Must delete record from server
-#define     SYNC_RETRY        0x0008    // Sent to server but failed...must retry!
-#define     SYNC_RENUMBER     0x0010    // Renumber on the server
-#define     SYNC_PROCESSED    0x8000    // We processed the entry...nothing to do
+typedef struct {
+  PRInt32       serverID;
+  PRInt32       localID;
+  ulong         CRC;
+  nsUInt32Array memServerID;
+  nsUInt32Array memLocalID;
+  nsUInt32Array memFlags;
+} syncListMappingRecord;
+
+#define     SYNC_MODIFIED                 0x0001    // Must modify record on server
+#define     SYNC_ADD                      0x0002    // Must add record to server   
+#define     SYNC_DELETED                  0x0004    // Must delete record from server
+#define     SYNC_RETRY                    0x0008    // Sent to server but failed...must retry!
+#define     SYNC_RENUMBER                 0x0010    // Renumber on the server
+#define     SYNC_IS_CARD                  0x0100    // It's a user record
+#define     SYNC_IS_LIST                  0x0200    // It's a list record
+#define     SYNC_IS_AOL_GROUPS            0x0400    // It's an aol 'groups'.
+#define     SYNC_IS_AOL_ADDITIONAL_EMAIL  0x0800    // It's an aol additional email address.
+#define     SYNC_PROCESSED                0x8000    // We processed the entry...nothing to do
 
 #define SYNC_ALLTAGS             1000
 #define SYNC_EMAILS              2000
@@ -120,20 +135,22 @@ typedef struct {
 #define SYNC_ESCAPE_DEL                 "op%3Ddel"
 
 //mailing list
-#define SYNC_ESCAPE_MAIL_ADD            "op%3DmaillistCreate"
-#define SYNC_ESCAPE_MAIL_MOD            "op%3DmaillistRen"
-#define SYNC_ESCAPE_MAIL_DEL            "op%3DmaillistDel"
-#define SYNC_ESCAPE_MAIL_EMAIL_MOD      "op%3DemailstringUpdate"
-#define SYNC_ESCAPE_MAIL_CONTACT_ADD    "op%3DmaillistAdd"
-#define SYNC_ESCAPE_MAIL_CONTACT_DEL    "op%3DmaillistMemberDel"
+#define SYNC_ESCAPE_ADDLIST             "op%3DmaillistCreate"
+#define SYNC_ESCAPE_MODLIST             "op%3DmaillistRen"
+#define SYNC_ESCAPE_DELLIST             "op%3DmaillistDel"
+#define SYNC_ESCAPE_MOD_LIST_EMAIL      "op%3DemailstringUpdate"
+#define SYNC_ESCAPE_ADD_LIST_CONTACT    "op%3DmaillistAdd"
+#define SYNC_ESCAPE_DEL_LIST_CONTACT    "op%3DmaillistMemberDel"
 
 // group
-#define SYNC_ESCAPE_GROUP_DEL            "op%3DgrpDel"
+#define SYNC_ESCAPE_DELGROUP            "op%3DgrpDel"
 
 // Defines for what type of add this may be?
 #define SYNC_SINGLE_USER_TYPE            1
 #define SYNC_MAILLIST_TYPE               2
 #define SYNC_GROUP_TYPE                  3
+#define SYNC_MAILLIST_MEMBER_TYPE        4
+#define SYNC_MAILLIST_MEMBER_EMAIL_TYPE  5
 #define SYNC_UNKNOWN_TYPE                0
 
 // Server errors that need to be converted to more user-friendly ones.
@@ -147,7 +164,7 @@ typedef struct {
 // We need this structure for mapping our field names to the server
 // field names
 //
-#define       kMaxColumns   38
+#define       kMaxColumns   46
 
 typedef struct {
   const char  *abField;
@@ -180,9 +197,9 @@ private:
   NS_IMETHOD      InitSchemaColumns();
 
   NS_IMETHOD      OpenAB(char *aAbName, nsIAddrDatabase **aDatabase);
-  NS_IMETHOD      AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *directory);
+  NS_IMETHOD      AnalyzeAllRecords(nsIAddrDatabase *aDatabase, nsIAbDirectory *directory, PRBool analyzeUser);
   NS_IMETHOD      GenerateProtocolForCard(nsIAbCard *aCard, PRBool  aAddId, nsString &protLine);
-  PRBool          ThisCardHasChanged(nsIAbCard *aCard, syncMappingRecord *syncRecord, nsString &protLine);
+  PRBool          ThisCardHasChanged(nsIAbCard *aCard, syncMappingRecord *syncRecord, nsString &protLine, PRBool cardIsUser);
   void            InternalInit();
   nsresult        InternalCleanup(nsresult aResult);
   nsresult        CleanServerTable(nsVoidArray *aArray);
@@ -210,6 +227,7 @@ private:
   PRInt32                         mCurrentPostRecord;
 
   nsCOMPtr<nsIFileSpec>           mHistoryFile;
+  nsCOMPtr<nsIFileSpec>           mListHistoryFile;
   nsCOMPtr<nsIFileSpec>           mLockFile;
   PRBool                          mLastSyncFailed;
 
@@ -218,6 +236,12 @@ private:
   PRUint32                        mNewTableSize;
   syncMappingRecord               *mNewSyncMapingTable;   // New table after reading address book
   nsVoidArray                     *mNewServerTable;       // New entries from the server
+// For lists
+  PRUint32                        mListOldTableSize;
+  syncListMappingRecord           *mListOldSyncMapingTable;// Old history table for list
+  PRUint32                        mListNewTableSize;
+  syncListMappingRecord           *mListNewSyncMapingTable;// New lis table for existing address book
+  nsVoidArray                     *mListNewServerTable;    // New lists from the server
 
   PRUint32                        mCrashTableSize;
   syncMappingRecord               *mCrashTable;           // Comparison table for crash recovery...
@@ -230,6 +254,7 @@ private:
   ///////////////////////////////////////////////
   // The following is for protocol parsing
   ///////////////////////////////////////////////
+  long            GetCRC(char *str);
   PRBool          EndOfStream();                          // If this returns true, we are done with the data...
   PRBool          ParseNextSection();                     // Deal with next section
   nsresult        AdvanceToNextLine();
@@ -239,29 +264,82 @@ private:
   char            *ExtractCharacterString(char *aLine, char *aTag, char aDelim);
 
   nsresult        PatchHistoryTableWithNewID(PRInt32 clientID, PRInt32 serverID, PRInt32 aMultiplier, ulong crc);
-  nsresult        DeleteRecord();
-  nsresult        DeleteList();
-  nsresult        DeleteGroup();
+  nsresult        DeleteUsers();
+  nsresult        DeleteMailingLists();
+  nsresult        DeleteGroups();
+  nsresult        DeleteMailingListMembers();
   nsresult        DeleteCardByServerID(PRInt32 aServerID);
   nsresult        LocateClientIDFromServerID(PRInt32 aServerID, PRInt32 *aClientID);
+  nsresult        LocateServerIDFromClientID(PRInt32 aClientID, PRInt32 *aServerID);
   PRInt32         DetermineTagType(nsStringArray *aArray);
   nsresult        AddNewUsers();
+  nsresult        AddNewMailingLists();
+  nsresult        AddNewGroups();
+  nsresult        AddNewMailingListMembers();
+  nsresult        AddNewMailingListEmailMembers();
   nsresult        AddValueToNewCard(nsIAbCard *aCard, nsString *aTagName, nsString *aTagValue);
 
   PRBool          TagHit(const char *aTag, PRBool advanceToNextLine); // See if we are sitting on a particular tag...and advance if asked 
   PRBool          ErrorFromServer(char **errString);      // Return true if the server returned an error...
   nsresult        ProcessOpReturn();
-  nsresult        ProcessNewRecords();
-  nsresult        ProcessDeletedRecords();
+  nsresult        ProcessNewRecords(PRUint32 sectionId);
+  nsresult        ProcessDeletedRecords(PRUint32 sectionId);
   nsresult        ProcessLastChange();
   nsresult        ProcessPhoneNumbersTheyAreSpecial(nsIAbCard *aCard);
   PRInt32         GetTypeOfPhoneNumber(const nsAString& tagName);
   nsresult        AddValueToProtocolLine(const PRUnichar *value, nsString &protocolLine);
 
+  nsresult        RecoverUserSyncRecords(nsIEnumerator *cardEnum);
+  nsresult        LoadUsersFromHistoryFile();
+  nsresult        SaveCurrentUsersToHistoryFile();
+  void            CheckDeletedRecords(nsIAddrDatabase  *aDatabase, nsIAbDirectory *directory);
+  nsresult        InitUserSyncTable(nsIEnumerator *cardEnum);
+  nsresult        LoadInputValuesAndTags(nsStringArray **recordTags, nsStringArray **recordValues);
+  void            MarkDeletedInSyncTable(PRInt32 clientID);
+  PRUint32        WhichCardType(nsIAbCard *card);
+  void            ParseDateFields(nsIAbCard *aCard, nsString *aTagName, nsString *aTagValue);
+
+  // Routines for mail list sync
+  nsresult        LoadListsFromHistoryFile();
+  nsresult        SaveCurrentListsToHistoryFile();
+  nsresult        InitListSyncTable(nsIEnumerator *cardEnum);
+  nsresult        GetMemberListByCard(nsIAbCard *aCard, nsISupportsArray **aList);
+  nsresult        GenerateMemberProtocolForNewList(nsIAbCard *aCard, PRUint32 listIndex, nsString &protLine);
+  nsresult        CheckCurrentListForChangedMember(nsIAbCard *aCard, PRUint32 listIndex, nsString &protLine);
+  NS_IMETHOD      GenerateProtocolForList(nsIAbCard *aCard, PRBool  aAddId, nsString &protLine);
+  nsresult        CreateANewMailingList(nsString listName, nsIAddrDatabase *pDb, nsIAbDirectory *directory, PRInt32 *localID);
+  nsresult        CleanListServerTable(nsVoidArray *aArray);
+  nsresult        ExtractMappedMemberIDs(char *aLine, char *aTag, PRInt32 *serverID, PRInt32 *memLocalID, PRInt32 *memServerID);
+  nsresult        PatchListHistoryTableWithNewMemberID(PRInt32 listServerID, PRInt32 memLocalID, PRInt32 memServerID, PRInt32 aMultiplier);
+  nsresult        PatchListHistoryTableWithNewID(PRInt32 clientID, PRInt32 listServerID, PRInt32 aMultiplier);
+  void            ConvertListMappingEntryToString(syncListMappingRecord &listRecord, char **result);
+  PRUint32        CountListLines(const char *start, const char *end);
+  void            ParseListMappingEntry(const char *start, const char *end, PRUint32 listNum);
+  void            ExtractTwoIDs(const char *PCurPos, const char delim, PRInt32 *local, PRInt32 *server);
+  void            ExtractThreeIDs(const char *str, const char delim, ulong *crc, PRInt32 *localId, PRInt32 *serverId);
+  nsresult        LocateExistingListRecord(PRUint32 listID, syncListMappingRecord **result);
+  nsresult        LocateHistoryListRecord(PRUint32 listID, syncListMappingRecord **result);
+  PRBool          MemberNotFoundInHistory(syncListMappingRecord *listRecord, PRUint32 memberID);
+  void            AddAListMememerToProtocolLine(PRUint32 listKey, PRUint32 memberKey, PRUint32 cid, nsString &protLine);
+  void            CheckDeletedMembers(syncListMappingRecord *listRecord, nsString &protLine);
+  nsresult        InitNewListTablesAndOpenDB(nsIAddrDatabase **aDatabase, nsIAbDirectory **directory);
+  nsresult        AddMemberToList(nsIAbCard *listCard, nsIAbCard *newCard);
+  nsresult        ChangeMailingListName(nsIAbDirectory *directory, nsString listName, nsIAbCard *listCard);
+  nsresult        DeleteMemberFromList(nsIAddrDatabase *aDatabase, nsIAbCard *listCard, PRInt32 memberLocalID);
+  PRBool          MemberAlreadyExists(syncListMappingRecord *listRecord, PRInt32 localID, PRInt32 serverID);
+  nsresult        AddGroupsValueToNewCard(nsIAbCard *aCard, nsString *aTagName, nsString *aTagValue);
+  nsresult        InitNewTables();
+  nsresult        ParseEmailMemberIds(nsString *idString, nsUInt32Array &memberServerIDs);
+  nsresult        ParseEmailMemberAddresses(nsString *addrString, nsVoidArray &memberAddresses);
+  PRUint32        GetCardTypeByMemberId(PRUint32 aClientID);
+  void            GenerateEmailStringUpdateProtocol(PRInt32 listServerID, nsString emailString, nsString &protLine);
+  void            AppendProtocolCmdHeader(nsString &protLine, const char *cmd);
+
   // For updating...
   PRInt32         HuntForExistingABEntryInServerRecord(PRInt32          aPersonIndex, 
                                                        nsIAddrDatabase  *aDatabase,
                                                        nsIAbDirectory   *directory,
+                                                       PRBool           isUser,
                                                        PRInt32          *aServerID, 
                                                        nsIAbCard        **newCard);
 
@@ -273,6 +351,9 @@ private:
   PRBool          CardAlreadyInAddressBook(nsIAbCard        *newCard,
                                            PRInt32          *aClientID,
                                            ulong            *aRetCRC);
+  // Logging
+  void            Log(const char *logSubName, char *logData);
+  void            ParseAndLogServerData(const char *logData);
 
   nsString        mLocale;                                // Charset of returned data!
   nsStringArray   *mDeletedRecordTags;                    // The deleted record tags from the server...
