@@ -321,21 +321,25 @@ function DropOnFolderOutliner(event)
 {
     debugDump("DropOnFolderOutliner\n");
 
-    var treeRoot = GetFolderTree();
-    if (!treeRoot)	return(false);
-    var treeDatabase = treeRoot.database;
-    if (!treeDatabase)	return(false);
+    var folderOutliner = GetFolderOutliner();
+    var row = { };
+    var col = { };
+    var elt = { };
+    folderOutliner.outlinerBoxObject.getCellAt(event.clientX, event.clientY, row, col, elt);
+    var folderResource = GetFolderResource(row.value);
 
-    // target is the <treecell>, and "id" is on the <treeitem> two levels above
-    var treeItem = event.target.parentNode.parentNode;
-    if (!treeItem)	return(false);
+    var folderDatasource = GetFolderDatasource();
+    if (!folderDatasource)
+	return false;
 
     if (event.ctrlKey)
         ctrlKeydown = true;
-	else
+    else
         ctrlKeydown = false;
-	// drop action is always "on" not "before" or "after"
-	// get drop hint attributes
+
+    // drop action is always "on" not "before" or "after"
+    // get drop hint attributes
+/*
     var dropBefore = treeItem.getAttribute("dd-droplocation");
     var dropOn = treeItem.getAttribute("dd-dropon");
 
@@ -343,19 +347,20 @@ function DropOnFolderOutliner(event)
     if (dropOn == "true") 
         dropAction = "on";
     else
-        return(false);
+        return false;
+*/
+    var dropAction;
 
-    var targetID = treeItem.getAttribute("id");
-    if (!targetID)	return(false);
+    var targetID = folderResource.Value;
 
     debugDump("***targetID = " + targetID + "\n");
 
     //make sure target is a folder
     var dragSession = dragService.getCurrentSession();
-    if ( !dragSession )	return(false);
+    if (!dragSession)
+        return false;
 
     var trans = Components.classes["@mozilla.org/widget/transferable;1"].createInstance(Components.interfaces.nsITransferable);
-    if ( !trans ) return(false);
 
     var list = Components.classes["@mozilla.org/supports-array;1"].createInstance(Components.interfaces.nsISupportsArray);
 
@@ -366,19 +371,22 @@ function DropOnFolderOutliner(event)
 
     trans.addDataFlavor("text/nsmessageOrfolder");
 	
-    for ( var i = 0; i < dragSession.numDropItems; ++i )
+    for (var i = 0; i < dragSession.numDropItems; i++)
     {
-        dragSession.getData ( trans, i );
+        dragSession.getData (trans, i);
         var dataObj = new Object();
         var bestFlavor = new Object();
         var len = new Object();
-        trans.getAnyTransferData ( bestFlavor, dataObj, len );
-        if ( dataObj )	dataObj = dataObj.value.QueryInterface(Components.interfaces.nsISupportsWString);
-        if ( !dataObj )	continue;
+        trans.getAnyTransferData (bestFlavor, dataObj, len);
+        if (dataObj)
+            dataObj = dataObj.value.QueryInterface(Components.interfaces.nsISupportsWString);
+        if (!dataObj)
+            continue;
 
         // pull the URL out of the data object
         var sourceID = dataObj.data.substring(0, len.value);
-        if (!sourceID)	continue;
+        if (!sourceID)
+            continue;
 
         debugDump("    Node #" + i + ": drop '" + sourceID + "' " + dropAction + " '" + targetID + "'\n");
 
@@ -400,22 +408,21 @@ function DropOnFolderOutliner(event)
             }
         }
         else {
-            if (!dropMessage) {
+            if (!dropMessage)
                 dump("drag and drop of multiple folders isn't supported\n");
-            }
         }
 
         if (dropMessage) {
-          // from the message uri, get the appropriate messenger service
-          // and then from that service, get the msgDbHdr
-          list.AppendElement(messenger.messageServiceFromURI(sourceID).messageURIToMsgHdr(sourceID));
+            // from the message uri, get the appropriate messenger service
+            // and then from that service, get the msgDbHdr
+            list.AppendElement(messenger.messageServiceFromURI(sourceID).messageURIToMsgHdr(sourceID));
         }
         else {
-		  // Prevent dropping of a node before, after, or on itself
-          if (sourceNode == targetNode)	
-            continue;
+            // Prevent dropping of a node before, after, or on itself
+            if (sourceNode == targetNode)	
+                continue;
 
-          list.AppendElement(sourceNode);
+            list.AppendElement(sourceNode);
         }
     }
 
@@ -426,7 +433,8 @@ function DropOnFolderOutliner(event)
     isSourceNews = isNewsURI(sourceID);
     
     var targetNode = RDF.GetResource(targetID, true);
-    if (!targetNode)	return(false);
+    if (!targetNode)
+        return(false);
     var targetFolder = targetNode.QueryInterface(Components.interfaces.nsIMsgFolder);
     var targetServer = targetFolder.server;
 
@@ -436,23 +444,26 @@ function DropOnFolderOutliner(event)
         sourceServer = sourceFolder.server;
 
         try {
-          if (isSourceNews) {
-            // news to pop or imap is always a copy
-            messenger.CopyMessages(sourceFolder, targetFolder, list, false);
-          }
-          else {
-            // fix this, will not work for multiple 3 panes
-            if (!ctrlKeydown) {
-              SetNextMessageAfterDelete();
+            if (isSourceNews)
+            {
+                // news to pop or imap is always a copy
+                messenger.CopyMessages(sourceFolder, targetFolder, list, false);
             }
-            messenger.CopyMessages(sourceFolder, targetFolder, list, !ctrlKeydown);
-          }
+            else
+            {
+                // fix this, will not work for multiple 3 panes
+                if (!ctrlKeydown)
+                    SetNextMessageAfterDelete();
+                messenger.CopyMessages(sourceFolder, targetFolder, list, !ctrlKeydown);
+            }
         }
-        catch (ex) {
+        catch (ex)
+        {
           dump("failed to copy messages: " + ex + "\n");
         }
     }
-    else {
+    else
+    {
         sourceServer = sourceFolder.server;
         try 
         {
@@ -464,7 +475,7 @@ function DropOnFolderOutliner(event)
         }
     }
 
-    return(false);
+    return false;
 }
 
 function DropOnThreadPane(event)
