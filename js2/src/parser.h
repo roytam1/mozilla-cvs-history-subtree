@@ -50,6 +50,7 @@ namespace JavaScript {
         class JSType;
     }
 
+
 //
 // Language Selectors
 //
@@ -67,15 +68,15 @@ namespace JavaScript {
         uint32 flags;                   // Bitmap of flags at locations as above
     };
 
+
 //
 // Parser
 //
 
-// The structures below are generally allocated inside an arena.  The
-// structures' destructors may never be called, so these structures should not
-// hold onto any data that needs to be destroyed explicitly.  Strings are
-// allocated via newArenaString.
-
+    // The structures below are generally allocated inside an arena.  The
+    // structures' destructors may never be called, so these structures should not
+    // hold onto any data that needs to be destroyed explicitly.  Strings are
+    // allocated via newArenaString.
     struct ParseNode: ArenaObject {
         size_t pos;                     // Position of this statement or expression
 
@@ -83,26 +84,23 @@ namespace JavaScript {
     };
 
 
-// A helper template for creating linked lists of ParseNode subtypes.  N should
-// be derived from a ParseNode and should have an instance variable called
-// <next> of type N* and that is initialized to nil when an N instance is
-// created.
-    template<class N>
-    class NodeQueue {
-    public:
+    // A helper template for creating linked lists of ParseNode subtypes.  N should
+    // be derived from a ParseNode and should have an instance variable called
+    // <next> of type N* and that is initialized to nil when an N instance is
+    // created.
+    template<class N> class NodeQueue {
+      public:
         N *first;                       // Head of queue
-    private:
+      private:
         N **last;                       // Next link of last element of queue
 
-    public:
+      public:
         NodeQueue(): first(0), last(&first) {}
-    private:
+      private:
         NodeQueue(const NodeQueue&);        // No copy constructor
         void operator=(const NodeQueue&);   // No assignment operator
-    public:
-        void operator+=(N *elt) {
-            ASSERT(elt && !elt->next); *last = elt; last = &elt->next;
-        }
+      public:
+        void operator+=(N *elt) {ASSERT(elt && !elt->next); *last = elt; last = &elt->next;}
     };
 
 
@@ -118,14 +116,13 @@ namespace JavaScript {
         ExprNode *type;                 // Type expression or nil if not provided
         ExprNode *initializer;          // Initial value expression or nil if not provided
         bool constant;                  // true for const variables and parameters
+
+        JS2Runtime::Property *prop;     // the sematics/codegen passes stuff their data in here.
+
         VariableBinding(size_t pos, ExprNode *name, ExprNode *type, ExprNode *initializer, bool constant):
                 ParseNode(pos), next(0), name(name), type(type), initializer(initializer), constant(constant) {}
 
-                // the sematics/codegen passes stuff their
-                // data in here.
-                JS2Runtime::Property *prop;
-
-                void print(PrettyPrinter &f, bool printConst) const;
+        void print(PrettyPrinter &f, bool printConst) const;
     };
 
 
@@ -274,8 +271,7 @@ namespace JavaScript {
 
     struct FunctionDefinition: FunctionName {
         VariableBinding *parameters;    // Linked list of all parameters, including optional and rest parameters, if any
-        VariableBinding *optParameters; // Pointer to first non-required parameter inside parameters list; nil if none
-        VariableBinding *namedParameters; // The first parameter after the named parameter marker. May or may not have aliases.
+        VariableBinding *optParameters; // Pointer to first non-required (or rest) parameter inside parameters list; nil if none
         VariableBinding *restParameter; // Pointer to rest parameter inside parameters list; nil if none
         ExprNode *resultType;           // Result type expression or nil if not provided
         BlockStmtNode *body;            // Body; nil if none
@@ -576,11 +572,10 @@ namespace JavaScript {
         ExprNode *type;                 // Type expression or nil if not provided
         StmtNode *stmt;                 // The catch clause's body; non-nil only
 
+        JS2Runtime::Property *prop;     // the sematics/codegen passes stuff their data in here.
+
         CatchClause(size_t pos, const StringAtom &name, ExprNode *type, StmtNode *stmt):
                 ParseNode(pos), next(0), name(name), type(type), stmt(stmt) {ASSERT(stmt);}
-
-        // the sematics/codegen passes stuff their data in here.
-        JS2Runtime::Property *prop;
     };
 
     struct TryStmtNode: StmtNode {
@@ -658,7 +653,7 @@ namespace JavaScript {
 
     struct FunctionStmtNode: AttributeStmtNode {
         FunctionDefinition function;    // Function definition
-                JS2Runtime::JSFunction *mFunction;  // used by backend
+        JS2Runtime::JSFunction *mFunction; // used by backend
 
         FunctionStmtNode(size_t pos, Kind kind, ExprList *attributes): AttributeStmtNode(pos, kind, attributes) {}
 
@@ -679,9 +674,9 @@ namespace JavaScript {
         ExprNode *superclass;           // Superclass expression (classes only); nil if omitted
         BlockStmtNode *body;            // The class's body; nil if omitted
 
-                JS2Runtime::JSType *mType;      // used by backend
+        JS2Runtime::JSType *mType;      // used by backend
 
-                ClassStmtNode(size_t pos, Kind kind, ExprList *attributes, ExprNode *name, ExprNode *superclass,
+        ClassStmtNode(size_t pos, Kind kind, ExprList *attributes, ExprNode *name, ExprNode *superclass,
                       ExprList *superinterfaces, BlockStmtNode *body):
                 NamespaceStmtNode(pos, kind, attributes, name, superinterfaces), superclass(superclass), body(body) {}
 
@@ -793,6 +788,7 @@ namespace JavaScript {
         ExprNode *parseTypeBinding(Token::Kind kind, bool noIn);
         ExprList *parseTypeListBinding(Token::Kind kind);
         VariableBinding *parseVariableBinding(bool noQualifiers, bool noIn, bool constant);
+        VariableBinding *parseFunctionParameter();
         void parseFunctionName(FunctionName &fn);
         void parseFunctionSignature(FunctionDefinition &fd);
 
@@ -810,22 +806,6 @@ namespace JavaScript {
         StmtNode *parseStatement(bool directive, bool inSwitch, SemicolonState &semicolonState);
         StmtNode *parseStatementAndSemicolon(SemicolonState &semicolonState);
         StmtNode *parseProgram() {return parseBlockContents(false, true);}
-
-      private:
-        bool lookahead(Token::Kind kind, bool preferRegExp=true);
-        const Token *match(Token::Kind kind, bool preferRegExp=true);
-        ExprPairList *parseLiteralField();
-        ExprNode *parseFieldName();
-        VariableBinding *parseAllParameters(FunctionDefinition &fd, NodeQueue<VariableBinding> &params);
-        VariableBinding *parseNamedParameters(FunctionDefinition &fd, NodeQueue<VariableBinding> &params);
-        VariableBinding *parseRestParameter();
-        VariableBinding *parseParameter();
-        VariableBinding *parseOptionalNamedRestParameters(FunctionDefinition &fd, NodeQueue<VariableBinding> &params);
-        VariableBinding *parseNamedRestParameters(FunctionDefinition &fd, NodeQueue<VariableBinding> &params);
-        VariableBinding *parseOptionalParameter();
-        VariableBinding *parseOptionalParameterPrime(VariableBinding *binding);
-        VariableBinding *parseNamedParameter(NodeQueue<IdentifierList> &aliases);
-        ExprNode *parseResultSignature();
     };
 }
 #endif /* parser_h___ */

@@ -33,7 +33,6 @@
 
 #include "numerics.h"
 #include "parser.h"
-#include "nodefactory.h"
 
 namespace JS = JavaScript;
 
@@ -42,16 +41,12 @@ namespace JS = JavaScript;
 // Parser
 //
 
-JS::NodeFactory *JS::NodeFactory::state;
-
-
 // Create a new Parser for parsing the provided source code, interning
 // identifiers, keywords, and regular expressions in the designated world,
 // and allocating the parse tree in the designated arena.
 JS::Parser::Parser(World &world, Arena &arena, const String &source, const String &sourceLocation, uint32 initialLineNum):
         lexer(world, source, sourceLocation, initialLineNum), arena(arena), lineBreaksSignificant(true)
 {
-    NodeFactory::Init(arena);
 }
 
 
@@ -113,7 +108,8 @@ JS::ExprNode *JS::Parser::makeIdentifierExpression(const Token &t) const
 }
 
 
-// Parse and return an Identifier.
+// Parse and return an Identifier.  If the token has been peeked, it should have
+// been done with preferRegExp set to true.
 JS::ExprNode *JS::Parser::parseIdentifier()
 {
     const Token &t = lexer.get(true);
@@ -231,7 +227,7 @@ JS::PairListExprNode *JS::Parser::parseObjectLiteral(const Token &initialToken)
             ExprNode *field = makeIdentifierExpression(t);
             if (!field) {
                 if (t.hasKind(Token::string))
-                    field = NodeFactory::LiteralString(t.getPos(), ExprNode::string, copyTokenChars(t));
+                    field = new(arena) StringExprNode(t.getPos(), ExprNode::string, copyTokenChars(t));
                 else if (t.hasKind(Token::number))
                     field = new(arena) NumberExprNode(t);
                 else if (t.hasKind(Token::openParenthesis)) {
@@ -347,7 +343,7 @@ JS::ExprNode *JS::Parser::parsePrimaryExpression(SuperState superState)
         break;
 
       case Token::string:
-        e = NodeFactory::LiteralString(t.getPos(), ExprNode::string, copyTokenChars(t));
+        e = new(arena) StringExprNode(t.getPos(), ExprNode::string, copyTokenChars(t));
         break;
 
       case Token::regExp:
@@ -1020,6 +1016,7 @@ JS::ExprList *JS::Parser::parseTypeListBinding(Token::Kind kind)
 // If noQualifiers is false, allow a QualifiedIdentifier as the variable name;
 // otherwise, restrict the variable name to be a simple Identifier.
 // If noIn is false, allow the in operator.
+// The value of the constant parameter is stored in the result VariableBinding.
 //
 // If the first token was peeked, it should be have been done with preferRegExp set to true.
 // After parseVariableBinding finishes, the next token might have been peeked with preferRegExp set to true.
@@ -1052,6 +1049,17 @@ JS::VariableBinding *JS::Parser::parseVariableBinding(bool noQualifiers, bool no
 }
 
 
+// Parse and return a VariableBinding for a function parameter.  The parameter may optionally be
+// preceded by the const attribute.
+//
+// If the first token was peeked, it should be have been done with preferRegExp set to true.
+// After parseFunctionParameter finishes, the next token might have been peeked with preferRegExp set to true.
+JS::VariableBinding *JS::Parser::parseFunctionParameter()
+{
+    return parseVariableBinding(true, false, lexer.eat(true, Token::Const) != 0);
+}
+
+
 // Parse a FunctionName and initialize fn with the result.
 //
 // If the first token was peeked, it should be have been done with preferRegExp set to true.
@@ -1060,19 +1068,23 @@ void JS::Parser::parseFunctionName(FunctionName &fn)
 {
     fn.prefix = FunctionName::normal;
     const Token *t = &lexer.get(true);
-    if (t->hasKind(Token::string)) {
-        fn.name = NodeFactory::LiteralString(t->getPos(), ExprNode::string, copyTokenChars(*t));
-    }
+    ExprNode *name;
+
+    if (t->hasKind(Token::string))
+        name = new(arena) StringExprNode(t->getPos(), ExprNode::string, copyTokenChars(*t));
     else {
         if (t->hasKind(Token::Get) || t->hasKind(Token::Set)) {
             const Token *t2 = &lexer.peek(true);
-            if (!lineBreakBefore(*t2) && t2->getFlag(Token::canFollowGet)) {
+            if (!lineBreakBefore(*t2) && t2->getFlag(Token::isNonreserved)) {
                 fn.prefix = t->hasKind(Token::Get) ? FunctionName::Get : FunctionName::Set;
                 t = &lexer.get(true);
             }
         }
-        fn.name = parseQualifiedIdentifier(*t, true);
+        name = makeIdentifierExpression(*t);
+        if (!name)
+            syntaxError("Identifier expected");
     }
+    fn.name = name;
 }
 
 
@@ -1088,32 +1100,22 @@ void JS::Parser::parseFunctionSignature(FunctionDefinition &fd)
 
     NodeQueue<VariableBinding> parameters;
     VariableBinding *optParameters = 0;
-    VariableBinding *namedParameters = 0;
     VariableBinding *restParameter = 0;
-#ifdef NEW_PARSER
-    fd.optParameters = optParameters;
-    fd.namedParameters = namedParameters;
-    fd.restParameter = restParameter;
-#endif
     if (!lexer.eat(true, Token::closeParenthesis)) {
-#ifdef NEW_PARSER
-        parseAllParameters(fd,parameters);
-        match(Token::closeParenthesis);
-#else
         while (true) {
             if (lexer.eat(true, Token::tripleDot)) {
                 const Token &t1 = lexer.peek(true);
                 if (t1.hasKind(Token::closeParenthesis))
                     restParameter = new(arena) VariableBinding(t1.getPos(), 0, 0, 0, false);
                 else
-                    restParameter = parseVariableBinding(true, false, lexer.eat(true, Token::Const) != 0);
+                    restParameter = parseFunctionParameter();
                 if (!optParameters)
                     optParameters = restParameter;
                 parameters += restParameter;
                 require(true, Token::closeParenthesis);
                 break;
             } else {
-                VariableBinding *b = parseVariableBinding(true, false, lexer.eat(true, Token::Const) != 0);
+                VariableBinding *b = parseFunctionParameter();
                 if (b->initializer) {
                     if (!optParameters)
                         optParameters = b;
@@ -1129,15 +1131,11 @@ void JS::Parser::parseFunctionSignature(FunctionDefinition &fd)
                         syntaxError("',' or ')' expected");
             }
         }
-#endif
     }
     fd.parameters = parameters.first;
-#ifndef NEW_PARSER
     fd.optParameters = optParameters;
     fd.restParameter = restParameter;
     fd.resultType = parseTypeBinding(Token::colon, false);
-#endif
-    fd.resultType = parseResultSignature();
 }
 
 
@@ -1608,8 +1606,7 @@ JS::StmtNode *JS::Parser::parseStatement(bool /*directive*/, bool inSwitch, Semi
       default:
         lexer.unget();
         e = parseGeneralExpression(true, false, false, false);
-        // Safe: a '/' or a '/=' would have been interpreted as an
-        // operator, so it can't be the next token.
+        // Safe: a '/' or a '/=' would have been interpreted as an operator, so it can't be the next token.
         lexer.redesignate(true);
         if (expressionIsAttribute(e)) {
             t2 = &lexer.peek(true);
@@ -1635,367 +1632,6 @@ JS::StmtNode *JS::Parser::parseStatementAndSemicolon(SemicolonState &semicolonSt
         semicolonState = semiNone;
     return s;
 }
-
-
-// BEGIN NEW CODE
-
-bool JS::Parser::lookahead(Token::Kind kind, bool preferRegExp)
-{
-    const Token &t = lexer.peek(preferRegExp);
-    if (t.getKind() != kind)
-        return false;
-    return true;
-}
-
-const JS::Token *JS::Parser::match(Token::Kind kind, bool preferRegExp)
-{
-    const Token *t = lexer.eat(preferRegExp,kind);
-    if (!t || t->getKind() != kind)
-        return 0;
-    return t;
-}
-
-
-/**
-* LiteralField
-*      FieldName : AssignmentExpressionallowIn
-*/
-
-JS::ExprPairList *JS::Parser::parseLiteralField()
-{
-
-    ExprPairList *result=NULL;
-    ExprNode *first;
-    ExprNode *second;
-
-    first = parseFieldName();
-    match(Token::colon);
-    second = parseAssignmentExpression(false);
-    lexer.redesignate(true); // Safe: looking for non-slash punctuation.
-    result = NodeFactory::LiteralField(first,second);
-
-    return result;
-}
-
-/**
-* FieldName
-*      Identifier
-*      String
-*      Number
-*      ParenthesizedExpression
-*/
-
-JS::ExprNode *JS::Parser::parseFieldName()
-{
-
-    ExprNode *result;
-
-    if( lookahead(Token::string) ) {
-        const Token *t = match(Token::string);
-        result = NodeFactory::LiteralString(t->getPos(), ExprNode::string, copyTokenChars(*t));
-    } else if(lookahead(Token::number)) {
-        const Token *t = match(Token::number);
-        result = NodeFactory::LiteralNumber(*t);
-    } else if( lookahead(Token::openParenthesis) ) {
-        result = parseParenthesizedListExpression();
-    } else {
-        result = parseIdentifier();
-    }
-
-    return result;
-}
-
-
-/**
-* AllParameters
-*      Parameter
-*      Parameter , AllParameters
-*      Parameter OptionalParameterPrime
-*      Parameter OptionalParameterPrime , OptionalNamedRestParameters
-*      | NamedRestParameters
-*      RestParameter
-*      RestParameter , | NamedParameters
-*/
-
-JS::VariableBinding *JS::Parser::parseAllParameters(FunctionDefinition &fd, NodeQueue<VariableBinding> &params)
-{
-
-    VariableBinding *result;
-
-    if(lookahead(Token::tripleDot)) {
-        fd.restParameter = parseRestParameter();
-        params += fd.restParameter;
-        if( lookahead(Token::comma) ) {
-            match(Token::comma);
-            match(Token::bitwiseOr);
-            result = parseNamedParameters(fd,params);
-        } else {
-            result = params.first;
-        }
-    } else if( lookahead(Token::bitwiseOr) ) {
-        match(Token::bitwiseOr);
-        result = parseNamedRestParameters(fd,params);
-    } else {
-        VariableBinding *first;
-        first = parseParameter();
-        if( lookahead(Token::comma) ) {
-            params += first;
-            match(Token::comma);
-            result = parseAllParameters(fd,params);
-        } else if( lookahead(Token::assignment) ) {
-            first = parseOptionalParameterPrime(first);
-            if (!fd.optParameters) {
-                fd.optParameters = first;
-            }
-            params += first;
-            if( lookahead(Token::comma) ) {
-                match(Token::comma);
-                result = parseOptionalNamedRestParameters(fd,params);
-            }
-        } else {
-            params += first;
-            result = params.first;
-        }
-    }
-
-    return result;
-}
-
-/**
-* OptionalNamedRestParameters
-*      OptionalParameter
-*      OptionalParameter , OptionalNamedRestParameters
-*      | NamedRestParameters
-*      RestParameter
-*      RestParameter , | NamedParameters
-*/
-
-JS::VariableBinding *JS::Parser::parseOptionalNamedRestParameters (FunctionDefinition &fd, NodeQueue<VariableBinding> &params)
-{
-
-    VariableBinding *result;
-
-    if( lookahead(Token::tripleDot) ) {
-        fd.restParameter = parseRestParameter();
-        params += fd.restParameter;
-        if( lookahead(Token::comma) ) {
-            match(Token::comma);
-            match(Token::bitwiseOr);
-            result = parseNamedParameters(fd,params);
-        } else {
-            result = params.first;
-        }
-    } else if( lookahead(Token::bitwiseOr) ) {
-        match(Token::bitwiseOr);
-        result = parseNamedRestParameters(fd,params);
-    } else {
-        VariableBinding *first;
-        first = parseOptionalParameter();
-        if (!fd.optParameters) {
-            fd.optParameters = first;
-        }
-        params += first;
-        if( lookahead(Token::comma) ) {
-            match(Token::comma);
-            result = parseOptionalNamedRestParameters(fd,params);
-        } else {
-            result = params.first;
-        }
-    }
-
-    return result;
-}
-
-/**
-* NamedRestParameters
-*      NamedParameter
-*      NamedParameter , NamedRestParameters
-*      RestParameter
-*/
-
-JS::VariableBinding *JS::Parser::parseNamedRestParameters(FunctionDefinition &fd, NodeQueue<VariableBinding> &params)
-{
-
-    VariableBinding *result;
-
-    if (lookahead(Token::tripleDot)) {
-        fd.restParameter = parseRestParameter();
-        params += fd.restParameter;
-        result = params.first;
-    } else {
-        NodeQueue<IdentifierList> aliases;
-        VariableBinding *first;
-        first = parseNamedParameter(aliases);
-        // The following marks the position in the list that named
-        // parameters may occur. It is not required that this
-        // particular parameter has
-        // aliases associated with it.
-        if (!fd.namedParameters) {
-            fd.namedParameters = first;
-        }
-        if (!fd.optParameters && first->initializer) {
-            fd.optParameters = first;
-        }
-        if( lookahead(Token::comma) ) {
-            params += first;
-            match(Token::comma);
-            result = parseNamedRestParameters(fd,params);
-        } else {
-            params += first;
-            result = params.first;
-        }
-    }
-
-    return result;
-}
-
-/**
-* NamedParameters
-*      NamedParameter
-*      NamedParameter , NamedParameters
-*/
-
-JS::VariableBinding *JS::Parser::parseNamedParameters(FunctionDefinition &fd, NodeQueue<VariableBinding> &params)
-{
-
-    VariableBinding *result,*first;
-    NodeQueue<IdentifierList> aliases;   // List of aliases.
-    first = parseNamedParameter(aliases);
-    // The following marks the position in the list that named parameters
-    // may occur. It is not required that this particular parameter has
-    // aliases associated with it.
-    if (!fd.namedParameters) {
-        fd.namedParameters = first;
-    }
-    if (!fd.optParameters && first->initializer) {
-        fd.optParameters = first;
-    }
-    if (lookahead(Token::comma)) {
-        params += first;
-        match(Token::comma);
-        result = parseNamedParameters(fd,params);
-    } else {
-        params += first;
-        result = params.first;
-    }
-
-    return result;
-}
-
-/**
-* RestParameter
-*      ...
-*      ... Parameter
-*/
-
-JS::VariableBinding *JS::Parser::parseRestParameter()
-{
-
-    VariableBinding *result;
-
-    match(Token::tripleDot);
-    if (lookahead(Token::closeParenthesis) ||
-        lookahead(Token::comma)) {
-        result = NodeFactory::Parameter(0, 0, false);
-    } else {
-        result = parseParameter();
-    }
-
-    return result;
-}
-
-/**
-* Parameter
-*      Identifier
-*      Identifier : TypeExpression[allowIn]
-*/
-
-JS::VariableBinding *JS::Parser::parseParameter()
-{
-    bool constant = lexer.eat(true, Token::Const) != 0;
-    ExprNode *first = parseIdentifier();
-    ExprNode *second = parseTypeBinding (Token::colon, false);
-
-    return NodeFactory::Parameter(first, second, constant);
-}
-
-/**
-* OptionalParameter
-*      Parameter = AssignmentExpression[allowIn]
-*/
-
-JS::VariableBinding *JS::Parser::parseOptionalParameter()
-{
-
-    VariableBinding *result,*first;
-
-    first = parseParameter();
-    result = parseOptionalParameterPrime(first);
-
-    return result;
-}
-
-JS::VariableBinding *JS::Parser::parseOptionalParameterPrime(VariableBinding *first)
-{
-
-    VariableBinding* result=NULL;
-
-    match(Token::assignment);
-    first->initializer = parseAssignmentExpression(false);
-    lexer.redesignate(true); // Safe: looking for non-slash puncutation.
-    result = first;
-
-    return result;
-}
-
-/**
-* NamedParameter
-*      Parameter
-*      OptionalParameter
-*      String NamedParameter
-*/
-
-JS::VariableBinding *JS::Parser::parseNamedParameter(NodeQueue<IdentifierList> &aliases)
-{
-
-    VariableBinding *result;
-
-    if(lookahead(Token::string)) {
-        const Token *t = match(Token::string);
-        aliases += new(arena) IdentifierList(*new StringAtom(copyTokenChars(*t)));
-        result = parseNamedParameter(aliases);
-    } else {
-        result = parseParameter();
-        // ****** result->aliases = aliases.first;
-        if(lookahead(Token::assignment)) {
-            result = parseOptionalParameterPrime(result);
-        }
-    }
-    return result;
-}
-
-/**
-* ResultSignature
-*      <empty>
-*      : TypeExpression[allowIn]
-*/
-
-JS::ExprNode *JS::Parser::parseResultSignature()
-{
-
-    ExprNode* result=NULL;
-
-    if (lookahead(Token::colon))
-    {
-        match(Token::colon);
-        result = parseTypeExpression(); // allowIn is default.
-    } else {
-        result = NULL;
-    }
-
-    return result;
-}
-
 
 
 //
@@ -2035,22 +1671,8 @@ void JS::VariableBinding::print(PrettyPrinter &f, bool printConst) const
 {
     PrettyPrinter::Block b(f);
 
-#ifdef NEW_PARSER
-    if (aliases) {
-        IdentifierList *id = aliases;
-        f << "| ";
-        while (id) {
-            f << "'";
-            f << id->name;
-            f << "' ";
-            id = id->next;
-        }
-    }
-#endif
-
     if (printConst && constant)
         f << "const ";
-
     if (name)
         f << name;
     PrettyPrinter::Indent i(f, subexpressionIndent);
