@@ -668,6 +668,7 @@ case "$target" in
     AC_DEFINE(HPUX)
     AC_DEFINE(_HPUX_SOURCE)
     AC_DEFINE(hppa)
+    AC_DEFINE(hpux)
     DLL_SUFFIX=sl
     DSO_LDOPTS='-b +h $(notdir $@)'
     PR_MD_CSRCS=hpux.c
