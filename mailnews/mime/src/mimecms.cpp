@@ -419,6 +419,7 @@ MimeCMS_eof (void *crypto_closure, PRBool abort_p)
     wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
     prompter->Alert(0, msg.get());
   }
+  data->decoder_context = 0;
 
   /* Is the content info encrypted? */
   if (data->content_info) {

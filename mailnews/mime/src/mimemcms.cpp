@@ -4,6 +4,8 @@
 #include "nsMimeTypes.h"
 #include "nspr.h"
 #include "nsMimeStringResources.h"
+#include "nsIWindowWatcher.h"
+#include "nsIPrompt.h"
 
 #define MIME_SUPERCLASS mimeMultipartSignedClass
 MimeDefClass(MimeMultipartSignedCMS, MimeMultipartSignedCMSClass,
@@ -378,6 +380,12 @@ MimeMultCMS_generate (void *crypto_closure)
 
   if (data->content_info)
 	{
+    nsString msg(NS_LITERAL_STRING("This mail message was digitally signed by the sender").get());
+    nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+    nsCOMPtr<nsIPrompt> prompter;
+    wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
+    prompter->Alert(0, msg.get());
+
 	  rv = data->content_info->VerifyDetachedSignature();
 	  if (NS_FAILED(rv)) {
       if (!data->verify_error)

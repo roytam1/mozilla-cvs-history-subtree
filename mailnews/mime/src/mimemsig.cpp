@@ -598,11 +598,13 @@ MimeMultipartSigned_emit_child (MimeObject *obj)
 	{
 	  char *html = (((MimeMultipartSignedClass *) obj->clazz)
 					->crypto_generate_html (sig->crypto_closure));
+#if 0 // XXX For the moment, no HTML output. Fix this XXX //
 	  if (!html) return -1; /* MIME_OUT_OF_MEMORY? */
 
 	  status = MimeObject_write(obj, html, nsCRT::strlen(html), PR_FALSE);
 	  PR_Free(html);
 	  if (status < 0) return status;
+#endif
 
 	  /* Now that we have written out the crypto stamp, the outermost header
 		 block is well and truly closed.  If this is in fact the outermost
