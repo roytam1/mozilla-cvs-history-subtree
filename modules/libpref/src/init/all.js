@@ -660,7 +660,6 @@ pref("layout.frames.force_resizability", false);
 pref("capability.policy.default.SOAPCall.invokeVerifySourceHeader", "allAccess");
 
 // pref to control the alert notification 
-pref("alerts.width", 200);
 pref("alerts.slideIncrement", 1);
 pref("alerts.slideIncrementTime", 10);
 pref("alerts.totalOpenTime", 3500);
