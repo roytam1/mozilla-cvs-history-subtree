@@ -1406,6 +1406,8 @@ nsWindow::OnButtonPressEvent(GtkWidget *aWidget, GdkEventButton *aEvent)
         break;
     }
 
+    nsCOMPtr<nsIWidget> kungFuDeathGrip = this;
+
     nsMouseEvent event(eventType, this);
     InitButtonEvent(event, aEvent);
 
@@ -1566,6 +1568,8 @@ nsWindow::OnKeyPressEvent(GtkWidget *aWidget, GdkEventKey *aEvent)
         || aEvent->keyval == GDK_Alt_R) {
         return TRUE;
     }
+
+    nsCOMPtr<nsIWidget> kungFuDeathGrip = this;
 
     // If the key repeat flag isn't set then set it so we don't send
     // another key down event on the next key press -- DOM events are
