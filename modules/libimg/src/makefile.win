@@ -114,11 +114,13 @@ DEPTH=..\..\..
 LOCAL_INCLUDES=-I../png -I. -I$(DEPTH)/dist/public/zlib 
 LIBRARY_NAME=img 
 EXTRA_LIBS=$(DIST)/lib/libzlib.a $(DIST)/lib/libpng.a 
+
+### STANDALONE_IMAGE_LIB
 !ifdef STANDALONE_IMAGE_LIB
-CSRCS=color.c colormap.c dither.c gif.c if.c ilclient.c il_util.c \
-    ilNetReader.cpp jpeg.c scale.c xbm.c ipng.c	png_png.c xpcompat.cpp
+CPPSRCS=color.cpp colormap.cpp dither.cpp gif.cpp if.cpp ilclient.cpp il_util.cpp \
+    ilNetReader.cpp jpeg.cpp scale.cpp xbm.cpp ipng.cpp png_png.cpp xpcompat.cpp
 REQUIRES=zlib nspr jpeg util img png xpcom
-C_OBJS=.\$(OBJDIR)\color.obj .\$(OBJDIR)\colormap.obj \
+CPP_OBJS=.\$(OBJDIR)\color.obj .\$(OBJDIR)\colormap.obj \
     .\$(OBJDIR)\dither.obj .\$(OBJDIR)\gif.obj .\$(OBJDIR)\if.obj \
     .\$(OBJDIR)\ilclient.obj .\$(OBJDIR)\il_util.obj \
     .\$(OBJDIR)\ilNetReader.obj .\$(OBJDIR)\jpeg.obj \
@@ -130,9 +132,11 @@ LINCS=-I$(XPDIST)\public\zlib -I$(XPDIST)\public\nspr \
     -I$(XPDIST)\public\jpeg -I$(XPDIST)\public\util -I$(XPDIST)\public\img \
     -I$(XPDIST)\public\png -I$(XPDIST)\public\xpcom 
 !endif
+
+### non-STANDALONE_IMAGE_LIB
 !else
-CSRCS=color.c colormap.c dither.c dummy_nc.c external.c gif.c if.c \
-   ilclient.c il_util.c jpeg.c scale.c xbm.c ipng.c png_png.c ilNetReader.cpp 
+CPPSRCS=color.cpp colormap.cpp dither.cpp dummy_nc.cpp external.cpp gif.cpp if.cpp \
+   ilclient.cpp il_util.cpp jpeg.cpp scale.cpp xbm.cpp ipng.cpp png_png.cpp ilNetReader.cpp 
 REQUIRES=jtools java zlib nspr dbm jpeg util img png layer js xpcom
 EXPORTS=PIMGCB.h PPSIMGCB.h 
 JMC_HEADERS=$(JMC_GEN_DIR)\MIMGCB.h $(JMC_GEN_DIR)\MPSIMGCB.h 
@@ -140,7 +144,7 @@ JMC_STUBS=$(JMC_GEN_DIR)\MIMGCB.c $(JMC_GEN_DIR)\MPSIMGCB.c
 JMC_OBJS=.\$(OBJDIR)\MIMGCB.obj .\$(OBJDIR)\MPSIMGCB.obj 
 JMC_GEN=MIMGCB MPSIMGCB 
 JMC_GEN_FLAGS=-cimpl -noexc -module 
-C_OBJS=.\$(OBJDIR)\color.obj .\$(OBJDIR)\colormap.obj \
+CPP_OBJS=.\$(OBJDIR)\color.obj .\$(OBJDIR)\colormap.obj \
     .\$(OBJDIR)\dither.obj .\$(OBJDIR)\dummy_nc.obj \
     .\$(OBJDIR)\external.obj .\$(OBJDIR)\gif.obj .\$(OBJDIR)\if.obj \
     .\$(OBJDIR)\ilclient.obj .\$(OBJDIR)\il_util.obj \
