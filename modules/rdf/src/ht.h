@@ -311,7 +311,7 @@ char *				constructHTMLTagData(char *dynStr, int strID, char *data);
 char *				constructHTML(char *dynStr, HT_Resource node, void *token, uint32 tokenType);
 char *				constructHTMLPermission(char *dynStr, HT_Resource node, RDF_Resource token, char *permText);
 PRBool				htIsOpLocked(HT_Resource node, RDF_Resource token);
-static PRBool			rdfFindDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned int button);
+PRBool				rdfFindDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned int button);
 char *				constructBasicHTML(char *dynStr, int strID, char *data1, char *data2);
 void				setHiddenState (HT_Resource node);
 void				htSetFindResourceName(RDF db, RDF_Resource r);

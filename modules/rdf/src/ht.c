@@ -817,6 +817,7 @@ sortNodes(HT_View view, HT_Resource parent, HT_Resource *children, uint32 numChi
 	PRBool			descendingFlag, sortChanged = false;
 	void			*sortToken;
 	uint32			sortTokenType;
+	uint32			startIndex, loop;
 
 	XP_ASSERT(view != NULL);
 	XP_ASSERT(parent != NULL);
@@ -839,8 +840,34 @@ sortNodes(HT_View view, HT_Resource parent, HT_Resource *children, uint32 numChi
 	}
 	if (numChildren>1)
 	{
-		XP_QSORT((void *)children, (size_t)numChildren,
-		(size_t)sizeof(HT_Resource *), (void *)nodeCompareRtn);
+		/* smart sorting (sort within separators) on name column */
+		if (view->sortToken == gCoreVocab->RDF_name)
+		{
+			startIndex=0;
+			for (loop=0; loop<numChildren; loop++)
+			{
+				if (HT_IsSeparator(children[loop]))
+				{
+					if (loop > startIndex+1)
+					{
+						XP_QSORT((void *)&children[startIndex], (size_t)(loop-startIndex),
+							(size_t)sizeof(HT_Resource *), (void *)nodeCompareRtn);
+						startIndex = loop+1;
+					}
+				}
+			}
+			if (loop > startIndex+1)
+			{
+				XP_QSORT((void *)&children[startIndex], (size_t)(loop-startIndex),
+					(size_t)sizeof(HT_Resource *), (void *)nodeCompareRtn);
+				startIndex = loop+1;
+			}
+		}
+		else
+		{
+			XP_QSORT((void *)children, (size_t)numChildren,
+				(size_t)sizeof(HT_Resource *), (void *)nodeCompareRtn);
+		}
 	}
 	if (sortChanged == true)
 	{
@@ -1379,7 +1406,7 @@ htSetBookmarkAddDateToNow(RDF_Resource r)
 	}
 	else
 	{
-		/* time((time_t *)&now); */
+		time((time_t *)&now);
 		if ((time = localtime((time_t *) &now)) != NULL)
 		{
 #ifdef	XP_MAC
@@ -6250,7 +6277,7 @@ htIsOpLocked(HT_Resource node, RDF_Resource token)
 
 
 
-static PRBool
+PRBool
 rdfFindDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned int button)
 {
 	HT_Pane			paneList;
