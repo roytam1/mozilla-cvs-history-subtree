@@ -277,6 +277,11 @@ txStylesheet::getKeyMap()
 PRBool
 txStylesheet::isStripSpaceAllowed(const txXPathNode& aNode, txIMatchContext* aContext)
 {
+    PRInt32 frameCount = mStripSpaceTests.Count();
+    if (frameCount == 0) {
+        return PR_FALSE;
+    }
+
     txXPathTreeWalker walker(aNode);
 
     PRUint16 nodeType = walker.getNodeType();
@@ -288,32 +293,23 @@ txStylesheet::isStripSpaceAllowed(const txXPathNode& aNode, txIMatchContext* aCo
         nodeType = walker.getNodeType();
     }
 
-    switch (nodeType) {
-        case txXPathNodeType::ELEMENT_NODE:
-        {
-            const txXPathNode& node = walker.getCurrentPosition();
+    if (nodeType != txXPathNodeType::ELEMENT_NODE) {
+        return PR_FALSE;
+    }
 
-            // check Whitespace stipping handling list against given Node
-            PRInt32 i, frameCount = mStripSpaceTests.Count();
-            for (i = 0; i < frameCount; ++i) {
-                txStripSpaceTest* sst =
-                    NS_STATIC_CAST(txStripSpaceTest*, mStripSpaceTests[i]);
-                if (sst->matches(node, aContext)) {
-                    if (sst->stripsSpace() && 
-                        !XMLUtils::getXMLSpacePreserve(node)) {
-                        return MB_TRUE;
-                    }
-                    return MB_FALSE;
-                }
-            }
-            break;
-        }
-        case txXPathNodeType::DOCUMENT_NODE:
-        {
-            return MB_TRUE;
+    const txXPathNode& node = walker.getCurrentPosition();
+
+    // check Whitespace stipping handling list against given Node
+    PRInt32 i;
+    for (i = 0; i < frameCount; ++i) {
+        txStripSpaceTest* sst =
+            NS_STATIC_CAST(txStripSpaceTest*, mStripSpaceTests[i]);
+        if (sst->matches(node, aContext)) {
+            return sst->stripsSpace() && !XMLUtils::getXMLSpacePreserve(node);
         }
     }
-    return MB_FALSE;
+    
+    return PR_FALSE;
 }
 
 nsresult

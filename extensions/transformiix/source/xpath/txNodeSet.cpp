@@ -97,7 +97,7 @@ txNodeSet::txNodeSet(const txNodeSet& aSource, txResultRecycler* aRecycler)
 txNodeSet::~txNodeSet()
 {
     NS_ASSERTION(!mMarks, "should've swept before this is going away");
-    mMarks = nsnull;
+    delete [] mMarks;
 
     if (mStart) {
         while (mStart < mEnd) {
@@ -419,6 +419,7 @@ txNodeSet::sweep()
     }
     mStart = mStartBuffer;
     mEnd = insertion;
+    delete [] mMarks;
     mMarks = nsnull;
 
     return NS_OK;
@@ -438,6 +439,7 @@ txNodeSet::clear()
 #endif
         mStart = mEnd = mStartBuffer;
     }
+    delete [] mMarks;
     mMarks = nsnull;
     mDirection = kForward;
 }

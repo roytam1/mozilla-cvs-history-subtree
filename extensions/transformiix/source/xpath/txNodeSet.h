@@ -241,7 +241,7 @@ private:
     txXPathNode *mStart, *mEnd, *mStartBuffer, *mEndBuffer;
     PRInt32 mDirection;
     // used for mark() and sweep() in predicates
-    nsAutoArrayPtr<PRPackedBool> mMarks;
+    PRPackedBool* mMarks;
 };
 
 typedef txNodeSet NodeSet;
