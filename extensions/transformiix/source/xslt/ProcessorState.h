@@ -264,6 +264,15 @@ public:
     **/
     void stripSpace(String& names);
 
+    /**
+     * Adds a document to set of loaded documents
+    **/
+    void addLoadedDocument(Document* doc, String& location);
+    
+    /**
+     * Returns a loaded document given it's url. NULL if no such doc exists
+    **/
+    Document* getLoadedDocument(String& url);
 
     //-------------------------------------/
     //- Virtual Methods from ContextState -/
@@ -407,6 +416,11 @@ private:
      * A set of all availabe templates
     **/
     NodeSet        templates;
+    
+    /**
+     * the set of loaded documents
+    **/
+    NamedMap       loadedDocuments;
 
 
     XSLTAction*    currentAction;

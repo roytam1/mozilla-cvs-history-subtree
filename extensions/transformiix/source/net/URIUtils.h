@@ -90,20 +90,32 @@ public:
 
 
     static istream* getInputStream
-        (String& href, String& documentBase, String& errMsg);
+        (String& href, String& errMsg);
 
     /**
      * Returns the document base of the href argument
      * The document base will be appended to the given dest String
     **/
-    static void getDocumentBase(String& href, String& dest);
+    static void getDocumentBase(const String& href, String& dest);
 
     /**
      * Resolves the given href argument, using the given documentBase
      * if necessary.
      * The new resolved href will be appended to the given dest String
     **/
-    static void resolveHref(String& href, String& documentBase, String& dest);
+    static void resolveHref(const String& href, const String& base, String& dest);
+
+    /**
+     * Returns the fragment identifier of the given URI, or "" if none exists
+     * frag is cleared before the idetifier is appended
+    **/
+    static void getFragmentIdentifier(const String& href, String& frag);
+
+    /**
+     * Returns the document location of given the URI (ie everything except
+     * fragment). docUri is cleared before the URI is appended
+    **/
+    static void getDocumentURI(const String& href, String& docUri);
 
 
 private:

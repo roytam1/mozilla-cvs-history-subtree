@@ -121,22 +121,18 @@ int main(int argc, char** argv) {
     String documentBase;
     if ( !xsltFilename ) {
       if (!xmlFilename) {
-	cerr << "you must specify XSLT file with -s option if XML is read from standard input" << endl;
-	printUsage();
-	return -1;
+        cerr << "you must specify XSLT file with -s option if XML is read from standard input" << endl;
+        printUsage();
+        return -1;
       }
-      //-- use xml document to obtain a document base
-      URIUtils::getDocumentBase(*xmlFilename, documentBase);
-      xsltProcessor.process(*xmlInput, *resultOutput, documentBase);
+      xsltProcessor.process(*xmlInput, *xmlFilename, *resultOutput);
     }
     else {
         //-- open XSLT file
         char* chars = new char[xsltFilename->length()+1];
         ifstream xsltInput(xsltFilename->toCharArray(chars), ios::in);
         delete chars;
-        // obtain document base from XSLT stylesheet
-        URIUtils::getDocumentBase(*xsltFilename, documentBase);
-        xsltProcessor.process(*xmlInput, xsltInput, *resultOutput, documentBase);
+        xsltProcessor.process(*xmlInput, *xmlFilename, xsltInput, *xsltFilename, *resultOutput);
     }
     resultFileStream.close();
     return 0;

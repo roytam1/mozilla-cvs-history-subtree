@@ -67,9 +67,9 @@ class XMLParser
     XMLParser();
    ~XMLParser();
 
-    Document* getDocumentFromURI(String& href, String& documentBase, String& errMsg);
+    Document* getDocumentFromURI(const String& href, const String& baseUri, String& errMsg);
 #ifndef MOZ_XSL
-    Document* parse(istream& inputStream);
+    Document* parse(istream& inputStream, const String& uri);
     const String& getErrorString();
 
   protected:

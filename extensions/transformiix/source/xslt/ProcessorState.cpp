@@ -36,6 +36,7 @@
 
 #include "ProcessorState.h"
 #include "XSLTFunctions.h"
+#include "URIUtils.h"
 
   //-------------/
  //- Constants -/
@@ -681,6 +682,24 @@ void ProcessorState::stripSpace(String& names) {
 
 } //-- stripSpace
 
+/**
+ * Adds a document to set of loaded documents
+**/
+void ProcessorState::addLoadedDocument(Document* doc, String& url) {
+    String docUrl;
+    URIUtils::getDocumentURI(url, docUrl);
+    loadedDocuments.put(docUrl, doc);
+}
+
+/**
+ * Returns a loaded document given it's url. NULL if no such doc exists
+**/
+Document* ProcessorState::getLoadedDocument(String& url) {
+    String docUrl;
+    URIUtils::getDocumentURI(url, docUrl);
+    return (Document*) loadedDocuments.get(docUrl);
+}
+
   //--------------------------------------------------/
  //- Virtual Methods from derived from ContextState -/
 //--------------------------------------------------/
@@ -791,7 +810,7 @@ FunctionCall* ProcessorState::resolveFunctionCall(const String& name) {
    String err;
 
    if (DOCUMENT_FN.isEqual(name)) {
-       return new DocumentFunctionCall(xslDocument);
+       return new DocumentFunctionCall(this, xslDocument);
    }
    else if (KEY_FN.isEqual(name)) {
        err = "function not yet implemented: ";
@@ -1031,5 +1050,8 @@ void ProcessorState::initialize() {
 
 	    //cout << "XSLT namespace: " << xsltNameSpace << endl;
 	}
+    
+    //-- Make sure all loaded documents get deleted
+    loadedDocuments.setObjectDeletion(MB_TRUE);
 }
 
