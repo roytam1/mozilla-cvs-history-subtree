@@ -52,7 +52,7 @@ XFE_SubscribeView::XFE_SubscribeView(XFE_Component *toplevel_component,
 	int max_button_width;
 
 	// Clone the context
-	m_cloneContext = XP_NEW_ZAP(MWContext);
+	m_cloneContext = XP_NewContext(MWContext);
 	if (!m_cloneContext)
 		return;
 	
