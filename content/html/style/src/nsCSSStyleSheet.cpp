@@ -71,6 +71,8 @@
 #include "nsIXULContent.h"
 #endif
 
+#include "nsDOMClassInfo.h"
+
 //#define DEBUG_RULES
 //#define EVENT_DEBUG
 
@@ -619,13 +621,22 @@ CSSRuleListImpl::~CSSRuleListImpl()
 {
 }
 
+// XPConnect interface list for CSSStyleRuleImpl
+NS_CLASINFO_MAP_BEGIN(CSSRuleList)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMCSSRuleList)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for CSSRuleList
+NS_INTERFACE_MAP_BEGIN(CSSRuleListImpl)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMCSSRuleList)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(CSSRuleList)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(CSSRuleListImpl);
 NS_IMPL_RELEASE(CSSRuleListImpl);
-
-NS_INTERFACE_MAP_BEGIN(CSSRuleListImpl)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMCSSRuleList)
-   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMCSSRuleList)
-NS_INTERFACE_MAP_END
 
 
 NS_IMETHODIMP    
@@ -695,13 +706,24 @@ private:
   CSSStyleSheetImpl*         mStyleSheet;
 };
 
+
+// XPConnect interface list for CSSStyleSheetStyleRuleImpl
+NS_CLASINFO_MAP_BEGIN(MediaList)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMMediaList)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for CSSStyleRuleImpl
+NS_INTERFACE_MAP_BEGIN(DOMMediaListImpl)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMMediaList)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMMediaList)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(MediaList)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(DOMMediaListImpl);
 NS_IMPL_RELEASE(DOMMediaListImpl);
 
-NS_INTERFACE_MAP_BEGIN(DOMMediaListImpl)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMMediaList)
-   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMMediaList)
-NS_INTERFACE_MAP_END
 
 DOMMediaListImpl::DOMMediaListImpl(nsISupportsArray *aArray,
                                    CSSStyleSheetImpl *aStyleSheet)
@@ -886,34 +908,26 @@ CSSImportsCollectionImpl::~CSSImportsCollectionImpl()
 {
 }
 
+
+// XPConnect interface list for CSSImportsCollectionImpl
+NS_CLASINFO_MAP_BEGIN(StyleSheetList)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMStyleSheetList)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for CSSImportsCollectionImpl
+NS_INTERFACE_MAP_BEGIN(CSSImportsCollectionImpl)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMStyleSheetList)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(StyleSheetList)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(CSSImportsCollectionImpl);
 NS_IMPL_RELEASE(CSSImportsCollectionImpl);
 
-nsresult 
-CSSImportsCollectionImpl::QueryInterface(REFNSIID aIID, void** aInstancePtrResult)
-{
-  if (NULL == aInstancePtrResult) {
-    return NS_ERROR_NULL_POINTER;
-  }
 
-  static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
-  if (aIID.Equals(NS_GET_IID(nsIDOMStyleSheetList))) {
-    nsIDOMStyleSheetList *tmp = this;
-    *aInstancePtrResult = (void*) tmp;
-    AddRef();
-    return NS_OK;
-  }
-  if (aIID.Equals(kISupportsIID)) {
-    nsIDOMStyleSheetList *tmp = this;
-    nsISupports *tmp2 = tmp;
-    *aInstancePtrResult = (void*) tmp2;
-    AddRef();
-    return NS_OK;
-  }
-  return NS_NOINTERFACE;
-}
-
-NS_IMETHODIMP    
+NS_IMETHODIMP
 CSSImportsCollectionImpl::GetLength(PRUint32* aLength)
 {
   if (nsnull != mStyleSheet) {
@@ -1346,48 +1360,27 @@ CSSStyleSheetImpl::~CSSStyleSheetImpl()
   }
 }
 
+
+// XPConnect interface list for CSSStyleSheetImpl
+NS_CLASINFO_MAP_BEGIN(CSSStyleSheet)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMCSSStyleSheet)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for CSSStyleSheetImpl
+NS_INTERFACE_MAP_BEGIN(CSSStyleSheetImpl)
+  NS_INTERFACE_MAP_ENTRY(nsICSSStyleSheet)
+  NS_INTERFACE_MAP_ENTRY(nsIStyleSheet)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMStyleSheet)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMCSSStyleSheet)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsICSSStyleSheet)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(CSSStyleSheet)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(CSSStyleSheetImpl)
 NS_IMPL_RELEASE(CSSStyleSheetImpl)
 
-nsresult CSSStyleSheetImpl::QueryInterface(const nsIID& aIID,
-                                           void** aInstancePtrResult)
-{
-  NS_PRECONDITION(nsnull != aInstancePtrResult, "null pointer");
-  if (nsnull == aInstancePtrResult) {
-    return NS_ERROR_NULL_POINTER;
-  }
-  static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
-  if (aIID.Equals(NS_GET_IID(nsICSSStyleSheet))) {
-    *aInstancePtrResult = (void*) ((nsICSSStyleSheet*)this);
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIStyleSheet))) {
-    *aInstancePtrResult = (void*) ((nsIStyleSheet*)this);
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMStyleSheet))) {
-    nsIDOMStyleSheet *tmp = this;
-    *aInstancePtrResult = (void*) tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMCSSStyleSheet))) {
-    nsIDOMCSSStyleSheet *tmp = this;
-    *aInstancePtrResult = (void*) tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(kISupportsIID)) {
-    nsICSSStyleSheet *tmp = this;
-    nsISupports *tmp2 = tmp;
-    *aInstancePtrResult = (void*) tmp2;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  return NS_NOINTERFACE;
-}
 
 NS_IMETHODIMP
 CSSStyleSheetImpl::GetStyleRuleProcessor(nsIStyleRuleProcessor*& aProcessor,

@@ -37,8 +37,6 @@
 #include "nsIDOMHTMLImageElement.h"
 #include "nsIDOMHTMLOptionElement.h"
 #include "nsIScriptSecurityManager.h"
-#include "nsIScriptNameSetRegistry.h"
-#include "nsIScriptNameSpaceManager.h"
 #include "nsDOMCID.h"
 #include "nsIServiceManager.h"
 #include "nsIXPConnect.h"
@@ -54,6 +52,7 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIPrompt.h"
 #include "nsIObserverService.h"
+#include "nsScriptNameSpaceManager.h"
 
 // Force PR_LOGGING so we can get JS strict warnings even in release builds
 #define FORCE_PR_LOG 1
@@ -65,7 +64,6 @@
 
 const size_t gStackSize = 8192;
 
-static NS_DEFINE_IID(kCScriptNameSetRegistryCID, NS_SCRIPT_NAMESET_REGISTRY_CID);
 static NS_DEFINE_IID(kPrefServiceCID, NS_PREF_CID);
 
 #ifdef PR_LOGGING
@@ -73,6 +71,9 @@ static PRLogModuleInfo* gJSDiagnostics = nsnull;
 #endif
 
 const char kXPConnectServiceContractID[] = "@mozilla.org/js/xpc/XPConnect;1";
+
+nsScriptNameSpaceManager *gNameSpaceManager;
+
 
 void PR_CALLBACK
 NS_ScriptErrorReporter(JSContext *cx,
@@ -1029,6 +1030,15 @@ nsJSContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
     return NS_ERROR_OUT_OF_MEMORY;
 
   nsresult rv;
+
+  if (!gNameSpaceManager) {
+    gNameSpaceManager = new nsScriptNameSpaceManager;
+    NS_ENSURE_TRUE(gNameSpaceManager, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = gNameSpaceManager->Init();
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
   mIsInitialized = PR_FALSE;
 
   nsCOMPtr<nsIXPConnect> xpc = do_GetService(kXPConnectServiceContractID, &rv);
@@ -1102,12 +1112,9 @@ nsJSContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
 nsresult
 nsJSContext::InitializeExternalClasses()
 {
-  nsresult rv;
-  NS_WITH_SERVICE(nsIScriptNameSetRegistry, registry, kCScriptNameSetRegistryCID, &rv);
-  if (NS_SUCCEEDED(rv)) {
-    rv = registry->InitializeClasses(this);
-  }
-  return rv;
+  NS_ENSURE_TRUE(gNameSpaceManager, NS_ERROR_NOT_INITIALIZED);
+
+  return gNameSpaceManager->InitForContext(this);
 }
 
 nsresult
@@ -1307,13 +1314,16 @@ nsJSContext::InitClasses()
 //  nsCOMPtr<nsIScriptGlobalObject> global = dont_AddRef(GetGlobalObject());
   JSObject *globalObj = ::JS_GetGlobalObject(mContext);
 
+  rv = InitializeExternalClasses();
+  NS_ENSURE_SUCCESS(rv, rv);
+
   /*
 
   if (NS_FAILED(NS_InitWindowClass(this, global)) ||
       NS_FAILED(NS_InitNodeClass(this, nsnull)) ||
       NS_FAILED(NS_InitKeyEventClass(this, nsnull)) ||
       NS_FAILED(InitializeLiveConnectClasses()) ||
-      NS_FAILED(InitializeExternalClasses()) ||
+---      NS_FAILED(InitializeExternalClasses()) ||
       // XXX Temporarily here. These shouldn't be hardcoded.
       NS_FAILED(NS_InitHTMLImageElementClass(this, nsnull)) ||
       NS_FAILED(NS_InitHTMLOptionElementClass(this, nsnull))) {
@@ -1396,27 +1406,6 @@ nsJSContext::ScriptEvaluated(PRBool aTerminated)
   mBranchCallbackCount = 0;
 
   return NS_OK;
-}
-
-NS_IMETHODIMP
-nsJSContext::GetNameSpaceManager(nsIScriptNameSpaceManager** aInstancePtr)
-{
-  nsresult rv = NS_OK;
-
-  if (!mNameSpaceManager.get()) {
-    rv = NS_NewScriptNameSpaceManager(getter_AddRefs(mNameSpaceManager));
-    if (NS_SUCCEEDED(rv)) {
-      // XXXbe used contractid rather than CID?
-      NS_WITH_SERVICE(nsIScriptNameSetRegistry, registry, kCScriptNameSetRegistryCID, &rv);
-      if (NS_SUCCEEDED(rv)) {
-        rv = registry->PopulateNameSpace(this);
-      }
-    }
-  }
-
-  *aInstancePtr = mNameSpaceManager;
-  NS_ADDREF(*aInstancePtr);
-  return rv;
 }
 
 NS_IMETHODIMP
@@ -1561,10 +1550,16 @@ nsJSEnvironment::nsJSEnvironment()
 
 nsJSEnvironment::~nsJSEnvironment()
 {
-  if (--globalCount == 0)
+  if (--globalCount == 0) {
     nsJSUtils::nsClearCachedSecurityManager();
+
+    delete gNameSpaceManager;
+    gNameSpaceManager = nsnull;
+  }
+
   if (mRuntimeService)
-    nsServiceManager::ReleaseService(kJSRuntimeServiceContractID, mRuntimeService);
+    nsServiceManager::ReleaseService(kJSRuntimeServiceContractID,
+                                     mRuntimeService);
 }
 
 NS_IMPL_ISUPPORTS1(nsJSEnvironment,nsIObserver);

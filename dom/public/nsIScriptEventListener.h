@@ -37,8 +37,8 @@ class nsIScriptContext;
 0xe34ed820, 0x1b62, 0x11d2, \
 {0xbd, 0x89, 0x00, 0x80, 0x5f, 0x8a, 0xe3, 0xf4} }
 
-class nsIScriptEventListener : public nsISupports {
-
+class nsIScriptEventListener : public nsISupports
+{
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTEVENTLISTENER_IID)
 

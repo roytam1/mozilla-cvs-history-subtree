@@ -27,21 +27,21 @@ interface nsISelection;
 [scriptable, uuid(a6cf906b-15b3-11d2-932e-00805f8add32)]
 interface nsIDOMWindow : nsISupports
 {
-  readonly attribute nsIDOMDocument           document;
-  readonly attribute nsIDOMWindow             parent;
+  readonly attribute nsIDOMDocument                     document;
+  readonly attribute nsIDOMWindow                       parent;
 
   /* [replaceable] readonly attribute  nsIDOMWindow top; */
-  readonly attribute nsIDOMWindow             top;
+  readonly attribute nsIDOMWindow                       top;
 
   /* [replaceable] readonly attribute  nsIDOMBarProp scrollbars; */
-  readonly attribute nsIDOMBarProp            scrollbars;
+  readonly attribute nsIDOMBarProp                      scrollbars;
 
-  readonly attribute nsIDOMWindowCollection   frames;
+  [noscript] readonly attribute nsIDOMWindowCollection  frames;
 
   /* XXX: Shouldn't name be replaceable? */
-           attribute DOMString                name;
-  readonly attribute long                     scrollX;
-  readonly attribute long                     scrollY;
+           attribute DOMString                          name;
+  readonly attribute long                               scrollX;
+  readonly attribute long                               scrollY;
 
   void                      scrollTo(in long xScroll, in long yScroll);
   void                      scrollBy(in long xScrollDif, in long yScrollDif);

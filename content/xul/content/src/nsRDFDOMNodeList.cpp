@@ -37,6 +37,7 @@
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsRDFDOMNodeList.h"
+#include "nsDOMClassInfo.h"
 
 ////////////////////////////////////////////////////////////////////////
 // ctors & dtors
@@ -79,7 +80,8 @@ nsRDFDOMNodeList::Create(nsRDFDOMNodeList** aResult)
 }
 
 nsresult
-nsRDFDOMNodeList::CreateWithArray(nsISupportsArray* aArray, nsRDFDOMNodeList** aResult)
+nsRDFDOMNodeList::CreateWithArray(nsISupportsArray* aArray,
+                                  nsRDFDOMNodeList** aResult)
 {
     nsRDFDOMNodeList* list = new nsRDFDOMNodeList();
     if (! list)
@@ -96,31 +98,25 @@ nsRDFDOMNodeList::CreateWithArray(nsISupportsArray* aArray, nsRDFDOMNodeList** a
 ////////////////////////////////////////////////////////////////////////
 // nsISupports interface
 
+
+// XPConnect interface list for nsRDFDOMNodeList
+NS_CLASINFO_MAP_BEGIN(XULNodeList)
+    NS_CLASINFO_MAP_ENTRY(nsIDOMNodeList)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsRDFDOMNodeList
+NS_INTERFACE_MAP_BEGIN(nsRDFDOMNodeList)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMNodeList)
+    NS_INTERFACE_MAP_ENTRY(nsIRDFNodeList)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMNodeList)
+    NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO_WITH_NAME(XULNodeList, NodeList)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(nsRDFDOMNodeList);
 NS_IMPL_RELEASE(nsRDFDOMNodeList);
 
-nsresult
-nsRDFDOMNodeList::QueryInterface(REFNSIID aIID, void** aResult)
-{
-    NS_PRECONDITION(aResult != nsnull, "null ptr");
-    if (! aResult)
-        return NS_ERROR_NULL_POINTER;
-
-    if (aIID.Equals(NS_GET_IID(nsIDOMNodeList)) ||
-        aIID.Equals(NS_GET_IID(nsISupports))) {
-        *aResult = NS_STATIC_CAST(nsIDOMNodeList*, this);
-    }
-    else if (aIID.Equals(NS_GET_IID(nsIRDFNodeList))) {
-        *aResult = NS_STATIC_CAST(nsIRDFNodeList*, this);
-    }
-    else {
-        *aResult = nsnull;
-        return NS_NOINTERFACE;
-    }
-
-    NS_ADDREF(this);
-    return NS_OK;
-}
 
 ////////////////////////////////////////////////////////////////////////
 // nsIDOMNodeList interface

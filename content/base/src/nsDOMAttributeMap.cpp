@@ -27,7 +27,6 @@
 #include "nsINameSpaceManager.h"
 #include "nsDOMError.h"
 
-
 //----------------------------------------------------------------------
 
 nsDOMAttributeMap::nsDOMAttributeMap(nsIContent* aContent)
@@ -48,9 +47,17 @@ nsDOMAttributeMap::DropReference()
   mContent = nsnull;
 }
 
+
+// XPConnect interface list for nsDOMAttributeMap
+NS_CLASINFO_MAP_BEGIN(NamedNodeMap)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNamedNodeMap)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsDOMAttributeMap
 NS_INTERFACE_MAP_BEGIN(nsDOMAttributeMap)
-   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMNamedNodeMap)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMNamedNodeMap)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNamedNodeMap)
 NS_INTERFACE_MAP_END
 
 NS_IMPL_ADDREF(nsDOMAttributeMap)

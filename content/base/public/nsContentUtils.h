@@ -32,14 +32,14 @@
  * file under either the NPL or the GPL.
  */
 
-/* A namespace class for static layout utilities. */
+/* A namespace class for static content utilities. */
 
 #ifndef nsContentUtils_h___
 #define nsContentUtils_h___
 
 #include "nslayout.h"
 #include "jspubtd.h"
-#include "nsAWritableString.h"
+#include "nsAReadableString.h"
 
 class nsIScriptContext;
 class nsIScriptGlobalObject;

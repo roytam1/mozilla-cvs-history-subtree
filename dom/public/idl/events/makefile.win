@@ -33,6 +33,7 @@ XPIDLSRCS =					\
 	.\nsIDOMMutationEvent.idl		\
 	.\nsIDOMNSUIEvent.idl			\
 	.\nsIDOMUIEvent.idl			\
+	.\nsIDOMEventListener.idl		\
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>

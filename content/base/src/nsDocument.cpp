@@ -209,14 +209,24 @@ nsDOMStyleSheetList::~nsDOMStyleSheetList()
   mDocument = nsnull;
 }
 
-NS_IMPL_ADDREF(nsDOMStyleSheetList)
-NS_IMPL_RELEASE(nsDOMStyleSheetList)
 
+// XPConnect interface list for nsDOMStyleSheetList
+NS_CLASINFO_MAP_BEGIN(StyleSheetList) // This is duplicated in nsCSSStyleSheet.cpp
+  NS_CLASINFO_MAP_ENTRY(nsIDOMStyleSheetList)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsDOMStyleSheetList
 NS_INTERFACE_MAP_BEGIN(nsDOMStyleSheetList)
    NS_INTERFACE_MAP_ENTRY(nsIDOMStyleSheetList)
    NS_INTERFACE_MAP_ENTRY(nsIDocumentObserver)
    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMStyleSheetList)
 NS_INTERFACE_MAP_END
+
+
+NS_IMPL_ADDREF(nsDOMStyleSheetList)
+NS_IMPL_RELEASE(nsDOMStyleSheetList)
+
 
 NS_IMETHODIMP    
 nsDOMStyleSheetList::GetLength(PRUint32* aLength)
@@ -369,14 +379,23 @@ nsDOMImplementation::~nsDOMImplementation()
 {
 }
 
-NS_IMPL_ADDREF(nsDOMImplementation);
-NS_IMPL_RELEASE(nsDOMImplementation);
 
+// XPConnect interface list for nsDOMImplementation
+NS_CLASINFO_MAP_BEGIN(DOMImplementation)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMDOMImplementation)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsDOMImplementation
 NS_INTERFACE_MAP_BEGIN(nsDOMImplementation)
    NS_INTERFACE_MAP_ENTRY(nsIDOMDOMImplementation)
    NS_INTERFACE_MAP_ENTRY(nsIPrivateDOMImplementation)
    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMDOMImplementation)
 NS_INTERFACE_MAP_END
+
+
+NS_IMPL_ADDREF(nsDOMImplementation);
+NS_IMPL_RELEASE(nsDOMImplementation);
 
 
 NS_IMETHODIMP    
@@ -2819,69 +2838,6 @@ nsDocument::CreateEvent(const nsAReadableString& aEventType, nsIDOMEvent** aRetu
 
   return NS_ERROR_FAILURE;
 }
-
-#if 0
-PRBool    nsDocument::SetProperty(JSContext *aContext, JSObject *aObj, jsval aID, jsval *aVp)
-{
-  PRBool result = PR_TRUE;
-
-  if (JS_TypeOfValue(aContext, *aVp) == JSTYPE_FUNCTION && JSVAL_IS_STRING(aID)) {
-    const PRUnichar* str = NS_REINTERPRET_CAST(const PRUnichar *, JS_GetStringChars(JS_ValueToString(aContext, aID)));
-
-    if (str && str[0] == 'o' && str[1] == 'n' && str[2]) {
-      PRBool iidFound = PR_TRUE;
-      nsIID theIID;
-      nsCOMPtr<nsIAtom> atom(dont_AddRef(NS_NewAtom(str)));
-
-      if (atom.get() == nsLayoutAtoms::onmousedown || atom.get() == nsLayoutAtoms::onmouseup || atom.get() ==  nsLayoutAtoms::onclick ||
-         atom.get() == nsLayoutAtoms::onmouseover || atom.get() == nsLayoutAtoms::onmouseout) {
-        theIID = NS_GET_IID(nsIDOMMouseListener);
-      }
-      else if (atom.get() == nsLayoutAtoms::onkeydown || atom.get() == nsLayoutAtoms::onkeyup || atom.get() == nsLayoutAtoms::onkeypress) {
-        theIID = NS_GET_IID(nsIDOMKeyListener);
-      }
-      else if (atom.get() == nsLayoutAtoms::onmousemove) {
-        theIID = NS_GET_IID(nsIDOMMouseMotionListener);
-      }
-      else if (atom.get() == nsLayoutAtoms::onfocus || atom.get() == nsLayoutAtoms::onblur) {
-        theIID = NS_GET_IID(nsIDOMFocusListener);
-      }
-      else if (atom.get() == nsLayoutAtoms::onsubmit || atom.get() == nsLayoutAtoms::onreset || atom.get() == nsLayoutAtoms::onchange ||
-               atom.get() == nsLayoutAtoms::onselect) {
-        theIID = NS_GET_IID(nsIDOMFormListener);
-      }
-      else if (atom.get() == nsLayoutAtoms::onload || atom.get() == nsLayoutAtoms::onunload || atom.get() == nsLayoutAtoms::onabort ||
-               atom.get() == nsLayoutAtoms::onerror) {
-        theIID = NS_GET_IID(nsIDOMLoadListener);
-      }
-      else if (atom.get() == nsLayoutAtoms::onpaint) {
-        theIID = NS_GET_IID(nsIDOMPaintListener);
-      }
-      else {
-        iidFound = PR_FALSE;
-      }
-
-      if (iidFound) {
-        nsCOMPtr<nsIEventListenerManager> manager;
-        GetListenerManager(getter_AddRefs(manager));
-
-        if (manager) {
-          nsCOMPtr<nsIScriptContext> scriptContext;
-          nsresult rv = nsContentUtils::GetStaticScriptContext(aContext, NS_REINTERPRET_CAST(JSObject*, mScriptObject),
-                                                              getter_AddRefs(scriptContext));
-          if (NS_SUCCEEDED(rv) && scriptContext) {
-            rv = manager->RegisterScriptEventListener(scriptContext, this, atom, theIID);
-          }
-          if (NS_FAILED(rv))
-            result = PR_FALSE;
-        }
-      }
-    }
-  }
-
-  return result;
-}
-#endif
 
 NS_IMETHODIMP
 nsDocument::InitDiskDocument(nsIFile *aFile)

@@ -34,6 +34,8 @@
 #include "nsCOMPtr.h"
 #include "nsDOMError.h"
 
+#include "nsDOMClassInfo.h"
+
 /*
  * This is the implementation of the readonly CSSStyleDeclaration that is
  * returned by the getComputedStyle() function.
@@ -104,15 +106,23 @@ nsComputedDOMStyle::~nsComputedDOMStyle()
 }
 
 
+// XPConnect interface list for nsComputedDOMStyle
+NS_CLASINFO_MAP_BEGIN(ComputedCSSStyleDeclaration)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMCSSStyleDeclaration)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsComputedDOMStyle
+NS_INTERFACE_MAP_BEGIN(nsComputedDOMStyle)
+  NS_INTERFACE_MAP_ENTRY(nsIComputedDOMStyle)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMCSSStyleDeclaration)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIComputedDOMStyle)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(ComputedCSSStyleDeclaration)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(nsComputedDOMStyle);
 NS_IMPL_RELEASE(nsComputedDOMStyle);
-
-
-NS_INTERFACE_MAP_BEGIN(nsComputedDOMStyle)
-   NS_INTERFACE_MAP_ENTRY(nsIComputedDOMStyle)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMCSSStyleDeclaration)
-   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIComputedDOMStyle)
-NS_INTERFACE_MAP_END
 
 
 NS_IMETHODIMP

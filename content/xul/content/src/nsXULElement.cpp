@@ -120,6 +120,7 @@
 #include "nsIDOMCSSStyleDeclaration.h"
 #include "nsXULAtoms.h"
 #include "nsITreeBoxObject.h"
+#include "nsDOMClassInfo.h"
 
 #include "nsMutationEvent.h"
 #include "nsIDOMMutationEvent.h"
@@ -675,6 +676,13 @@ nsXULElement::Create(nsINodeInfo *aNodeInfo, nsIContent** aResult)
 //----------------------------------------------------------------------
 // nsISupports interface
 
+// XPConnect interface list for nsXULElement
+NS_CLASINFO_MAP_BEGIN(XULElement)
+    NS_CLASINFO_MAP_ENTRY(nsIDOMXULElement)
+    NS_CLASINFO_MAP_ENTRY(nsIDOMEventTarget)
+NS_CLASINFO_MAP_END
+
+
 NS_IMPL_ADDREF(nsXULElement);
 NS_IMPL_RELEASE(nsXULElement);
 
@@ -743,7 +751,19 @@ nsXULElement::QueryInterface(REFNSIID iid, void** result)
         //        return manager->GetBindingImplementation(NS_STATIC_CAST(nsIStyledContent*, this), mScriptObject, 
         //                                                 iid, result);
 //    }
-    else {
+    else if (iid.Equals(NS_GET_IID(nsIClassInfo))) {
+        nsISupports *inst =
+          nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::eXULElement_id,
+                                               GetXULElementIIDs,
+                                               "XULElement");
+        NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);
+
+        NS_ADDREF(inst);
+
+        *result = inst;
+
+        return NS_OK;
+    } else {
         *result = nsnull;
         return NS_NOINTERFACE;
     }
@@ -2003,117 +2023,6 @@ nsXULElement::HandleEvent(nsIDOMEvent *aEvent)
 
 
 //----------------------------------------------------------------------
-
-
-#if 0
-NS_IMETHODIMP
-nsXULElement::GetScriptObject(nsIScriptContext* aContext, void** aScriptObject)
-{
-    nsresult rv = NS_OK;
-
-    if (! mScriptObject) {
-        // Use the XBL service to get the `base' tag, which'll be how
-        // we determine what kind of script object to cook up.
-        nsCOMPtr<nsIXBLService> xblService = do_GetService("@mozilla.org/xbl;1", &rv);
-        NS_ASSERTION(xblService != nsnull, "couldn't get XBL service");
-        if (! xblService)
-            return NS_ERROR_UNEXPECTED;
-
-        nsCOMPtr<nsIAtom> tag;
-        PRInt32 dummy;
-        xblService->ResolveTag(NS_STATIC_CAST(nsIStyledContent*, this), &dummy, getter_AddRefs(tag));
-
-        // Use the DOM's script object factory to cough up a script
-        // object
-        nsAutoString tagStr;
-        tag->ToString(tagStr);
-
-        nsCOMPtr<nsIDOMScriptObjectFactory> factory
-            = do_GetService(kDOMScriptObjectFactoryCID, &rv);
-
-        NS_ASSERTION(factory != nsnull, "couldn't get script object factory");
-        if (! factory)
-            return NS_ERROR_UNEXPECTED;
-
-        // We'll either be parented by the element that encloses us
-        // (if there is one), or the document.
-        nsISupports* parent =  mParent
-            ? NS_STATIC_CAST(nsISupports*, mParent)
-            : NS_STATIC_CAST(nsISupports*, mDocument);
-
-        rv = factory->NewScriptXULElement(tagStr, aContext,
-                                          NS_STATIC_CAST(nsIStyledContent*, this),
-                                          parent,
-                                          &mScriptObject);
-                                          
-
-        // The actual script object that we created will depend on our
-        // tag's name
-        const char* rootname;
-        if (tag.get() == nsXULAtoms::tree) {
-            rootname = "nsXULTreeElement::mScriptObject";
-        }
-        else {
-            rootname = "nsXULElement::mScriptObject";
-        }
-
-        // Ensure that a reference exists to this element.
-        //
-        // XXX This is different from nsGenericElement, which doesn't
-        // root until the element is in the document; however, we're
-        // screwed, and GC will cause us to lose properties if we
-        // don't eagerly root.
-        aContext->AddNamedReference((void*) &mScriptObject, mScriptObject, rootname);
-
-        // See if we have a frame.
-        if (mDocument) {
-          nsCOMPtr<nsIPresShell> shell = getter_AddRefs(mDocument->GetShellAt(0));
-          if (shell) {
-            nsIFrame* frame;
-            shell->GetPrimaryFrameFor(NS_STATIC_CAST(nsIStyledContent*, this), &frame);
-            if (!frame) {
-              // We must ensure that the XBL Binding is installed before we hand
-              // back this object.
-              nsCOMPtr<nsIBindingManager> bindingManager;
-              mDocument->GetBindingManager(getter_AddRefs(bindingManager));
-              nsCOMPtr<nsIXBLBinding> binding;
-              bindingManager->GetBinding(NS_STATIC_CAST(nsIStyledContent*, this), getter_AddRefs(binding));
-              if (!binding) {
-                nsCOMPtr<nsIScriptGlobalObject> global;
-                mDocument->GetScriptGlobalObject(getter_AddRefs(global));
-                nsCOMPtr<nsIDOMViewCSS> viewCSS(do_QueryInterface(global));
-                if (viewCSS) {
-                  nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
-                  nsAutoString empty;
-                  viewCSS->GetComputedStyle(this, empty, getter_AddRefs(cssDecl));
-                  if (cssDecl) {
-                    nsAutoString behavior; behavior.Assign(NS_LITERAL_STRING("-moz-binding"));
-                    nsAutoString value;
-                    cssDecl->GetPropertyValue(behavior, value);
-                    if (!value.IsEmpty()) {
-                      // We have a binding that must be installed.
-                      PRBool dummy2;
-                      xblService->LoadBindings(NS_STATIC_CAST(nsIStyledContent*, this), value, PR_FALSE,
-                                               getter_AddRefs(binding), &dummy2);
-                      if (binding) {
-                        binding->ExecuteAttachedHandler();
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-    }
-
-    *aScriptObject = mScriptObject;
-    
-    return rv;
-}
-#endif
-
-//----------------------------------------------------------------------
 // nsIScriptEventHandlerOwner interface
 
 NS_IMETHODIMP
@@ -2252,8 +2161,6 @@ nsXULElement::SetDocument(nsIDocument* aDocument, PRBool aDeep, PRBool aCompileE
     if (aDocument != mDocument) {
         nsCOMPtr<nsIXULDocument> rdfDoc;
         if (mDocument) {
-            // Release the named reference to the script object so it can
-            // be garbage collected.
             /*
             if (mScriptObject) {
                 nsCOMPtr<nsIScriptGlobalObject> global;

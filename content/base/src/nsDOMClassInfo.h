@@ -124,6 +124,28 @@ public:
     eHTMLUnknownElement_id,
     eHTMLWBRElement_id,
 
+    // CSS classes
+    eCSSStyleRule_id,
+    eCSSRuleList_id,
+    eMediaList_id,
+    eStyleSheetList_id,
+    eCSSStyleSheet_id,
+    eCSSStyleDeclaration_id,
+    eComputedCSSStyleDeclaration_id,
+    eROCSSPrimitiveValue_id,
+
+    // Range classes
+    eRange_id,
+    eSelection_id,
+
+    // XUL classes
+    eXULDocument_id,
+    eXULElement_id,
+    eXULCommandDispatcher_id,
+    eXULNodeList_id,
+    eXULNamedNodeMap_id,
+    eXULAttr_id,
+
     eDOMClassInfoIDCount // This one better be the last one in this list
   };
 
@@ -192,6 +214,15 @@ void Get##_class##IIDs(nsVoidArray& aArray)                                   \
       nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::e##_class##_id,    \
                                            Get##_class##IIDs,                 \
                                            #_class);                          \
+    NS_ENSURE_TRUE(foundInterface, NS_ERROR_OUT_OF_MEMORY);                   \
+  } else
+
+#define NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO_WITH_NAME(_class, _name)     \
+  if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {                                \
+    foundInterface =                                                          \
+      nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::e##_class##_id,    \
+                                           Get##_class##IIDs,                 \
+                                           #_name);                           \
     NS_ENSURE_TRUE(foundInterface, NS_ERROR_OUT_OF_MEMORY);                   \
   } else
 

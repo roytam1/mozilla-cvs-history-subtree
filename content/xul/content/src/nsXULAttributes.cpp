@@ -50,6 +50,7 @@
 #include "nsXULAttributes.h"
 #include "nsLayoutCID.h"
 #include "nsReadableUtils.h"
+#include "nsDOMClassInfo.h"
 
 static NS_DEFINE_CID(kCSSParserCID, NS_CSSPARSER_CID);
 
@@ -243,28 +244,25 @@ nsXULAttribute::Create(nsIContent* aContent,
 }
 
 // nsISupports interface
+
+// XPConnect interface list for nsXULAttribute
+NS_CLASINFO_MAP_BEGIN(XULAttr)
+    NS_CLASINFO_MAP_ENTRY(nsIDOMAttr)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsXULAttribute
+NS_INTERFACE_MAP_BEGIN(nsXULAttribute)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMAttr)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMAttr)
+    NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO_WITH_NAME(XULAttr, Attr)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(nsXULAttribute);
 NS_IMPL_RELEASE(nsXULAttribute);
 
-NS_IMETHODIMP
-nsXULAttribute::QueryInterface(REFNSIID aIID, void** aResult)
-{
-    NS_PRECONDITION(aResult != nsnull, "null ptr");
-    if (! aResult)
-        return NS_ERROR_NULL_POINTER;
-
-    if (aIID.Equals(NS_GET_IID(nsIDOMAttr)) ||
-        aIID.Equals(NS_GET_IID(nsIDOMNode)) ||
-        aIID.Equals(NS_GET_IID(nsISupports))) {
-        *aResult = NS_STATIC_CAST(nsIDOMAttr*, this);
-        NS_ADDREF(this);
-        return NS_OK;
-    }
-    else {
-        *aResult = nsnull;
-        return NS_NOINTERFACE;
-    }
-}
 
 // nsIDOMNode interface
 
@@ -559,27 +557,23 @@ nsXULAttributes::Create(nsIContent* aContent, nsXULAttributes** aResult)
 
 // nsISupports interface
 
+// XPConnect interface list for nsXULAttributes
+NS_CLASINFO_MAP_BEGIN(XULNamedNodeMap)
+    NS_CLASINFO_MAP_ENTRY(nsIDOMNamedNodeMap)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsXULAttributes
+NS_INTERFACE_MAP_BEGIN(nsXULAttributes)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMNamedNodeMap)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMNamedNodeMap)
+    NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO_WITH_NAME(XULNamedNodeMap,
+                                                       NamedNodeMap)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(nsXULAttributes);
 NS_IMPL_RELEASE(nsXULAttributes);
-
-NS_IMETHODIMP
-nsXULAttributes::QueryInterface(REFNSIID aIID, void** aResult)
-{
-    NS_PRECONDITION(aResult != nsnull, "null ptr");
-    if (! aResult)
-        return NS_ERROR_NULL_POINTER;
-
-    if (aIID.Equals(NS_GET_IID(nsIDOMNamedNodeMap)) ||
-        aIID.Equals(NS_GET_IID(nsISupports))) {
-        *aResult = NS_STATIC_CAST(nsIDOMNamedNodeMap*, this);
-        NS_ADDREF(this);
-        return NS_OK;
-    }
-    else {
-        *aResult = nsnull;
-        return NS_NOINTERFACE;
-    }
-}
 
 
 // nsIDOMNamedNodeMap interface

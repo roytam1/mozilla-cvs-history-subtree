@@ -39,17 +39,7 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIDOMNamedNodeMap interface
-  NS_IMETHOD GetLength(PRUint32* aSize);
-  NS_IMETHOD GetNamedItem(const nsAReadableString& aName, nsIDOMNode** aReturn);
-  NS_IMETHOD SetNamedItem(nsIDOMNode* aNode, nsIDOMNode** aReturn);
-  NS_IMETHOD RemoveNamedItem(const nsAReadableString& aName, nsIDOMNode** aReturn);
-  NS_IMETHOD Item(PRUint32 aIndex, nsIDOMNode** aReturn);
-  NS_IMETHOD GetNamedItemNS(const nsAReadableString& aNamespaceURI,
-                            const nsAReadableString& aLocalName, nsIDOMNode** aReturn);
-  NS_IMETHOD SetNamedItemNS(nsIDOMNode* aArg, nsIDOMNode** aReturn);
-  NS_IMETHOD RemoveNamedItemNS(const nsAReadableString& aNamespaceURI,
-                               const nsAReadableString& aLocalName, 
-                               nsIDOMNode** aReturn);
+  NS_DECL_NSIDOMNAMEDNODEMAP
 
   void DropReference();
 
@@ -60,7 +50,7 @@ public:
 #endif
 
 private:
-  nsIContent* mContent;
+  nsIContent* mContent; // Weak reference
 };
 
 

@@ -1,3 +1,4 @@
+# Generated automatically from Makefile.in by configure.
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.1 (the "NPL"); you may not use this file except in
@@ -17,9 +18,17 @@
 
 #! gmake
 
-MOD_DEPTH = ../../../..
+MOD_DEPTH	= ../../../..
+topsrcdir	= ../../../..
+srcdir		= .
 
-include $(MOD_DEPTH)/config/config.mk
+include $(MOD_DEPTH)/config/autoconf.mk
+
+include $(topsrcdir)/config/config.mk
+
+ifdef USE_AUTOCONF
+OS_TARGET=$(MOZ_WIN32_TARGET)
+endif
 
 ifeq ($(OS_TARGET), WIN16)
 CSRCS = \
@@ -76,11 +85,11 @@ endif
 
 TARGETS	= $(OBJS)
 
-INCLUDES = -I$(includedir) -I$(MOD_DEPTH)/pr/include -I$(MOD_DEPTH)/pr/include/private
+INCLUDES = -I$(includedir) -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
 
-DEFINES     += -D_NSPR_BUILD_
+DEFINES += -D_NSPR_BUILD_
 
-include $(MOD_DEPTH)/config/rules.mk
+include $(topsrcdir)/config/rules.mk
 
 export:: $(TARGETS)
 

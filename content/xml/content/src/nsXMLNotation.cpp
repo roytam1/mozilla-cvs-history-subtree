@@ -96,50 +96,24 @@ nsXMLNotation::~nsXMLNotation()
 {
 }
 
+
+// XPConnect interface list for nsXMLNotation
+NS_CLASINFO_MAP_BEGIN(Notation)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNotation)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsXMLNotation
+NS_INTERFACE_MAP_BEGIN(nsXMLNotation)
+  NS_INTERFACE_MAP_ENTRY_DOM_DATA()
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNotation)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(Notation)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(nsXMLNotation)
 NS_IMPL_RELEASE(nsXMLNotation)
 
-nsresult 
-nsXMLNotation::QueryInterface(REFNSIID aIID, void** aInstancePtrResult)
-{
-  if (NULL == aInstancePtrResult) {
-    return NS_ERROR_NULL_POINTER;
-  }
-
-  if (aIID.Equals(NS_GET_IID(nsISupports))) {                          
-    nsIDOMNotation* tmp = this;                                
-    nsISupports* tmp2 = tmp;                                
-    *aInstancePtrResult = (void*) tmp2;                                  
-    NS_ADDREF_THIS();                                       
-    return NS_OK;                                           
-  }                                                         
-  if (aIID.Equals(NS_GET_IID(nsIDOMNode))) {                           
-    nsIDOMNode* tmp = this;                                
-    *aInstancePtrResult = (void*) tmp;                                   
-    NS_ADDREF_THIS();                                       
-    return NS_OK;                                           
-  }                                                         
-  if (aIID.Equals(NS_GET_IID(nsIDOMEventReceiver))) {                  
-    nsCOMPtr<nsIEventListenerManager> man;
-    if (NS_SUCCEEDED(mInner.GetListenerManager(this, getter_AddRefs(man)))){
-      return man->QueryInterface(NS_GET_IID(nsIDOMEventReceiver), (void**)aInstancePtrResult);
-    }     
-    return NS_NOINTERFACE;
-  }                                                         
-  if (aIID.Equals(NS_GET_IID(nsIContent))) {                           
-    nsIContent* tmp = this;                                
-    *aInstancePtrResult = (void*) tmp;                                   
-    NS_ADDREF_THIS();                                       
-    return NS_OK;                                           
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMNotation))) {
-    nsIDOMNotation* tmp = this;
-    *aInstancePtrResult = (void*) tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  return NS_NOINTERFACE;
-}
 
 NS_IMETHODIMP    
 nsXMLNotation::GetPublicId(nsAWritableString& aPublicId)

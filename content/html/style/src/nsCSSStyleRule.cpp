@@ -55,6 +55,8 @@
 #include "nsIStyleSet.h"
 #include "nsISizeOfHandler.h"
 
+#include "nsDOMClassInfo.h"
+
 // MJA: bug 31816
 #include "nsIPresShell.h"
 #include "nsIDocShellTreeItem.h"
@@ -1276,52 +1278,27 @@ CSSStyleRuleImpl::~CSSStyleRuleImpl(void)
   }
 }
 
+// XPConnect interface list for CSSStyleRuleImpl
+NS_CLASINFO_MAP_BEGIN(CSSStyleRule)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMCSSStyleRule)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for CSSStyleRuleImpl
+NS_INTERFACE_MAP_BEGIN(CSSStyleRuleImpl)
+  NS_INTERFACE_MAP_ENTRY(nsICSSStyleRule)
+  NS_INTERFACE_MAP_ENTRY(nsICSSRule)
+  NS_INTERFACE_MAP_ENTRY(nsIStyleRule)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMCSSRule)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMCSSStyleRule)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsICSSStyleRule)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(CSSStyleRule)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF_INHERITED(CSSStyleRuleImpl, nsCSSRule);
 NS_IMPL_RELEASE_INHERITED(CSSStyleRuleImpl, nsCSSRule);
 
-nsresult CSSStyleRuleImpl::QueryInterface(const nsIID& aIID,
-                                          void** aInstancePtrResult)
-{
-  NS_PRECONDITION(nsnull != aInstancePtrResult, "null pointer");
-  if (nsnull == aInstancePtrResult) {
-    return NS_ERROR_NULL_POINTER;
-  }
-  if (aIID.Equals(NS_GET_IID(nsICSSStyleRule))) {
-    *aInstancePtrResult = (void*) ((nsICSSStyleRule*)this);
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsICSSRule))) {
-    *aInstancePtrResult = (void*) ((nsICSSRule*)this);
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIStyleRule))) {
-    *aInstancePtrResult = (void*) ((nsIStyleRule*)this);
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMCSSRule))) {
-    nsIDOMCSSRule *tmp = this;
-    *aInstancePtrResult = (void*) tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMCSSStyleRule))) {
-    nsIDOMCSSStyleRule *tmp = this;
-    *aInstancePtrResult = (void*) tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsISupports))) {
-    nsICSSStyleRule *tmp = this;
-    nsISupports *tmp2 = tmp;
-    *aInstancePtrResult = (void*) tmp2;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  return NS_NOINTERFACE;
-}
 
 #if 0
 NS_IMETHODIMP CSSStyleRuleImpl::Equals(const nsIStyleRule* aRule, PRBool& aResult) const

@@ -26,31 +26,6 @@
 #include "nsISupports.h"
 #include "nsString.h"
 
-#define NS_IDOM_NATIVE_OBJECT_REGISTRY_IID   \
-{ 0xa6cf9067, 0x15b3, 0x11d2,               \
- { 0x93, 0x2e, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32 } }
 
-class nsIDOMNativeObjectRegistry : public nsISupports {
-public:  
-  static const nsIID& GetIID() { static nsIID iid = NS_IDOM_NATIVE_OBJECT_REGISTRY_IID; return iid; }
-
-  /**
-   * Register a class ID for a factory to create the native object
-   * associated with a specific DOM class e.g. "HTMLImageElement".
-   *
-   * @param aClassName - DOM class associated with the factory
-   * @param aCID - (in param) Class ID for the factory.
-   */
-  NS_IMETHOD RegisterFactory(const nsString& aClassName, const nsIID& aCID)=0;
-
-  /*
-   * Obtain the class ID for a factory t create the native object
-   * associated with a sepcific DOM class
-   *
-   * @param aClassName - DOM class associated with the factory
-   * @param aCID - (out param) Class ID for the factory.
-   */
-  NS_IMETHOD GetFactoryCID(const nsString& aClassName, nsIID& aCID)=0;
-};
 
 #endif /* nsIDOMNativeObjectRegistry_h__ */

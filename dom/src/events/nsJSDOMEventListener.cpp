@@ -27,6 +27,7 @@
 #include "nsIScriptGlobalObject.h"
 #include "nsJSUtils.h"
 #include "nsIServiceManager.h"
+#include "nsIXPConnect.h"
 #include "jsapi.h"
 
 static NS_DEFINE_IID(kIScriptEventListenerIID, NS_ISCRIPTEVENTLISTENER_IID);
@@ -50,7 +51,8 @@ nsJSDOMEventListener::~nsJSDOMEventListener()
 {
 }
 
-nsresult nsJSDOMEventListener::QueryInterface(REFNSIID aIID, void** aInstancePtr)
+nsresult
+nsJSDOMEventListener::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
   if (! aInstancePtr) {
     return NS_ERROR_NULL_POINTER;
@@ -77,25 +79,44 @@ NS_IMPL_ADDREF(nsJSDOMEventListener)
 
 NS_IMPL_RELEASE(nsJSDOMEventListener)
 
-nsresult nsJSDOMEventListener::HandleEvent(nsIDOMEvent* aEvent)
+NS_IMETHODIMP
+nsJSDOMEventListener::HandleEvent(nsIDOMEvent* aEvent)
 {
-  JSObject *eventObj;
-  if (NS_OK != NS_NewScriptKeyEvent(mContext, aEvent, nsnull, (void**)&eventObj)) {
-    if (NS_OK != NS_NewScriptMutationEvent(mContext, aEvent, nsnull, (void**)&eventObj))
-      return NS_ERROR_FAILURE;
-  }
+  JSContext *cx = (JSContext *)mContext->GetNativeContext();
+
+  nsresult rv = NS_OK;
+  
+  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+
+  rv = xpc->WrapNative(cx, ::JS_GetGlobalObject(cx), aEvent,
+                       NS_GET_IID(nsIDOMEvent), getter_AddRefs(holder));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  JSObject* e = nsnull; // XPConnect-wrapped property value.
+
+  rv = holder->GetJSObject(&e);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   jsval argv[1];
-  argv[0] = OBJECT_TO_JSVAL(eventObj);
+  argv[0] = OBJECT_TO_JSVAL(e);
   PRBool jsBoolResult;
-  if (NS_FAILED(mContext->CallEventHandler(mTarget, mHandler, 1, argv, &jsBoolResult, PR_FALSE))) {
-    return NS_ERROR_FAILURE;
+
+  rv = mContext->CallEventHandler(mTarget, mHandler, 1, argv, &jsBoolResult,
+                                  PR_FALSE);
+
+  if (NS_FAILED(rv)) {
+    return rv;
   }
+
   return jsBoolResult ? NS_OK : NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
-nsJSDOMEventListener::CheckIfEqual(nsIScriptEventListener *aListener, PRBool *aResult)
+nsJSDOMEventListener::CheckIfEqual(nsIScriptEventListener *aListener,
+                                   PRBool *aResult)
 {
   *aResult = PR_FALSE;
 
@@ -125,14 +146,14 @@ nsJSDOMEventListener::GetInternals(void** aTarget, void** aHandler)
  * Factory functions
  */
 
-extern "C" NS_DOM nsresult
+extern nsresult
 NS_NewScriptEventListener(nsIDOMEventListener ** aInstancePtrResult,
                           nsIScriptContext *aContext,
                           void* aTarget,
                           void *aHandler)
 {
   NS_PRECONDITION(aContext != nsnull, "null ptr");
-  if (! aContext)
+  if (!aContext)
     return NS_ERROR_NULL_POINTER;
 
   nsJSDOMEventListener* it =
@@ -140,10 +161,11 @@ NS_NewScriptEventListener(nsIDOMEventListener ** aInstancePtrResult,
                              NS_REINTERPRET_CAST(JSObject*, aTarget),
                              NS_REINTERPRET_CAST(JSObject*, aHandler));
 
-  if (! it) {
+  if (!it) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  return it->QueryInterface(kIDOMEventListenerIID, (void **) aInstancePtrResult);   
+  return it->QueryInterface(kIDOMEventListenerIID,
+                            (void **)aInstancePtrResult);   
 }
 

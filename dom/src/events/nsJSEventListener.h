@@ -42,7 +42,7 @@ public:
   NS_DECL_ISUPPORTS
 
   //nsIDOMEventListener interface
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
 
   //nsIJSEventListener interface
   NS_IMETHOD GetEventTarget(nsIScriptContext** aContext,

@@ -23,13 +23,15 @@
 #define nsDOMCSSSDeclaration_h___
 
 #include "nsISupports.h"
+#include "nsIDOMCSSStyleDeclaration.h"
 #include "nsIDOMCSS2Properties.h"
 
 class nsICSSDeclaration;
 class nsICSSParser;
 class nsIURI;
 
-class nsDOMCSSDeclaration : public nsIDOMNSCSS2Properties
+class nsDOMCSSDeclaration : public nsIDOMCSSStyleDeclaration,
+                            public nsIDOMNSCSS2Properties
 {
 public:
   nsDOMCSSDeclaration();

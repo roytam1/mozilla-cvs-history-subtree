@@ -72,14 +72,14 @@ public:
    * @param aKeyEvent @see nsIDOMEvent.h 
    * @returns whether the event was consumed or ignored. @see nsresult
    */
-  virtual nsresult KeyDown(nsIDOMEvent* aKeyEvent) { return NS_OK; }
+  NS_IMETHOD KeyDown(nsIDOMEvent* aKeyEvent) { return NS_OK; }
 
   /**
    * Processes a key release event
    * @param aKeyEvent @see nsIDOMEvent.h 
    * @returns whether the event was consumed or ignored. @see nsresult
    */
-  virtual nsresult KeyUp(nsIDOMEvent* aKeyEvent) { return NS_OK; }
+  NS_IMETHOD KeyUp(nsIDOMEvent* aKeyEvent) { return NS_OK; }
 
   /**
    * Processes a key typed event
@@ -87,7 +87,7 @@ public:
    * @returns whether the event was consumed or ignored. @see nsresult
    *
    */
-  virtual nsresult KeyPress(nsIDOMEvent* aKeyEvent); // we only care when a key is pressed
+  NS_IMETHOD KeyPress(nsIDOMEvent* aKeyEvent); // we only care when a key is pressed
 
   // nsIFormControlFrame
   NS_IMETHOD QueryInterface(const nsIID& aIID, void** aInstancePtr);
@@ -116,7 +116,7 @@ public:
                             nsIContent *      aContent,
                             nsIFrame**        aFrame) { if (aFrame) *aFrame = nsnull; return NS_ERROR_FAILURE; }
 
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent) { return NS_OK; }
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent) { return NS_OK; }
 
   NS_IMETHOD OnSubmit(nsIPresContext* aPresContext);
 

@@ -567,45 +567,26 @@ struct nsGenericDOMDataNode {
  * This macro implements the portion of query interface that is
  * generic to all html content objects.
  */
-#define NS_IMPL_DOM_DATA_QUERY_INTERFACE(_id, _iptr, _this) \
-  if (_id.Equals(NS_GET_IID(nsISupports))) {                \
-    nsIContent* tmp = _this;                                \
-    nsISupports* tmp2 = tmp;                                \
-    *_iptr = (void*) tmp2;                                  \
-    NS_ADDREF_THIS();                                       \
-    return NS_OK;                                           \
-  }                                                         \
-  if (_id.Equals(NS_GET_IID(nsIDOMNode))) {                 \
-    nsIDOMNode* tmp = _this;                                \
-    *_iptr = (void*) tmp;                                   \
-    NS_ADDREF_THIS();                                       \
-    return NS_OK;                                           \
-  }                                                         \
-  if (_id.Equals(NS_GET_IID(nsIDOMCharacterData))) {        \
-    nsIDOMCharacterData* tmp = _this;                       \
-    *_iptr = (void*) tmp;                                   \
-    NS_ADDREF_THIS();                                       \
-    return NS_OK;                                           \
-  }                                                         \
-  if (_id.Equals(NS_GET_IID(nsIDOMEventReceiver))) {        \
-    nsCOMPtr<nsIEventListenerManager> man;                  \
-    if (NS_SUCCEEDED(mInner.GetListenerManager(this, getter_AddRefs(man)))){ \
-      return man->QueryInterface(NS_GET_IID(nsIDOMEventReceiver), (void**)_iptr); \
-    }                                                       \
-    return NS_NOINTERFACE;                                  \
-  }                                                         \
-  if (_id.Equals(NS_GET_IID(nsIDOMEventTarget))) {          \
-    nsCOMPtr<nsIEventListenerManager> man;                  \
-    if (NS_SUCCEEDED(mInner.GetListenerManager(this, getter_AddRefs(man)))){ \
-      return man->QueryInterface(NS_GET_IID(nsIDOMEventTarget), (void**)_iptr); \
-    }                                                       \
-    return NS_NOINTERFACE;                                  \
-  }                                                         \
-  if (_id.Equals(NS_GET_IID(nsIContent))) {                 \
-    nsIContent* tmp = _this;                                \
-    *_iptr = (void*) tmp;                                   \
-    NS_ADDREF_THIS();                                       \
-    return NS_OK;                                           \
-  }
+
+#define NS_INTERFACE_MAP_ENTRY_DOM_DATA()                                     \
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIContent)                   \
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNode)                                          \
+  if (aIID.Equals(NS_GET_IID(nsIDOMEventReceiver))) {                         \
+    nsCOMPtr<nsIEventListenerManager> man;                                    \
+    if (NS_SUCCEEDED(mInner.GetListenerManager(this, getter_AddRefs(man)))) { \
+      return man->QueryInterface(NS_GET_IID(nsIDOMEventReceiver),             \
+                                 (void**)aInstancePtr);                       \
+    }                                                                         \
+    return NS_NOINTERFACE;                                                    \
+  } else                                                                      \
+  if (aIID.Equals(NS_GET_IID(nsIDOMEventTarget))) {                           \
+    nsCOMPtr<nsIEventListenerManager> man;                                    \
+    if (NS_SUCCEEDED(mInner.GetListenerManager(this, getter_AddRefs(man)))){  \
+      return man->QueryInterface(NS_GET_IID(nsIDOMEventTarget),               \
+                                 (void**)aInstancePtr);                       \
+    }                                                                         \
+    return NS_NOINTERFACE;                                                    \
+  } else                                                                      \
+  NS_INTERFACE_MAP_ENTRY(nsIContent)
 
 #endif /* nsGenericDOMDataNode_h___ */

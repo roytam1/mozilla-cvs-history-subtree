@@ -27,19 +27,15 @@
 #include "nsIScriptContext.h"
 #include "nsVoidArray.h"
 
-class nsScriptNameSetRegistry : public nsIScriptNameSetRegistry {
- public:  
+class nsScriptNameSetRegistry
+{
+public:  
   nsScriptNameSetRegistry();
   virtual ~nsScriptNameSetRegistry();
   
-  NS_DECL_ISUPPORTS
-
-  NS_IMETHOD AddExternalNameSet(nsIScriptExternalNameSet* aNameSet);
-  NS_IMETHOD RemoveExternalNameSet(nsIScriptExternalNameSet* aNameSet);
   NS_IMETHOD InitializeClasses(nsIScriptContext* aContext);
-  NS_IMETHOD PopulateNameSpace(nsIScriptContext* aScriptContext);
 
- protected:
+protected:
   nsVoidArray mNameSets;
 };
 

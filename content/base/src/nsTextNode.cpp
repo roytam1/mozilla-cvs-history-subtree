@@ -32,8 +32,8 @@
 #include "nsDOMClassInfo.h"
 
 
-class nsTextNode : public nsIDOMText,
-                   public nsITextContent
+class nsTextNode : public nsITextContent,
+                   public nsIDOMText
 {
 public:
   nsTextNode();
@@ -95,43 +95,22 @@ NS_IMPL_ADDREF(nsTextNode)
 NS_IMPL_RELEASE(nsTextNode)
 
 
-// XPConnect interface list for nsGenericDOMNodeList
+// XPConnect interface list for nsTextNode
 NS_CLASINFO_MAP_BEGIN(Text)
   NS_CLASINFO_MAP_ENTRY(nsIDOMText)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMEventTarget)
 NS_CLASINFO_MAP_END
 
 
-// QueryInterface implementation for nsGenericDOMNodeList
+// QueryInterface implementation for nsTextNode
+NS_INTERFACE_MAP_BEGIN(nsTextNode)
+  NS_INTERFACE_MAP_ENTRY_DOM_DATA()
+  NS_INTERFACE_MAP_ENTRY(nsITextContent)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMText)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMCharacterData)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(Text)
+NS_INTERFACE_MAP_END
 
-// This really needs to use the map!
-NS_IMETHODIMP
-nsTextNode::QueryInterface(REFNSIID aIID, void** aInstancePtr)
-{
-  NS_IMPL_DOM_DATA_QUERY_INTERFACE(aIID, aInstancePtr, this)
-  if (aIID.Equals(NS_GET_IID(nsIDOMText))) {
-    nsIDOMText* tmp = this;
-    *aInstancePtr = (void*) tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsITextContent))) {
-    nsITextContent* tmp = this;
-    *aInstancePtr = (void*) tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {
-    nsISupports *inst =
-      nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::eText_id,
-                                           GetTextIIDs,
-                                           "Text");
-    NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);
-    NS_ADDREF(inst);
-    *aInstancePtr = inst;
-    return NS_OK;
-  }
-  return NS_NOINTERFACE;
-}
 
 NS_IMETHODIMP 
 nsTextNode::GetTag(nsIAtom*& aResult) const

@@ -1,3 +1,4 @@
+# Generated automatically from Makefile.in by configure.
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.1 (the "NPL"); you may not use this file except in
@@ -17,16 +18,22 @@
 
 #! gmake
 
-MOD_DEPTH = ../../..
+MOD_DEPTH	= ../../..
+topsrcdir	= ../../..
+srcdir		= .
 
-include $(MOD_DEPTH)/config/config.mk
+include $(MOD_DEPTH)/config/autoconf.mk
 
+include $(topsrcdir)/config/config.mk
+
+ifndef USE_AUTOCONF
 # Disable optimization of the nspr on SunOS4.1.3
 ifeq ($(OS_ARCH),SunOS)
 ifeq ($(OS_RELEASE),4.1.3_U1)
 OPTIMIZER =
 endif
 endif
+endif #!USE_AUTOCONF
 
 INCLUDES = -I$(includedir)
 
@@ -72,7 +79,8 @@ endif
 endif
 endif
 
-else
+ifndef USE_AUTOCONF
+
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
 EXTRA_LIBS = $(libdir)/nspr$(MOD_VERSION).$(LIB_SUFFIX)
 
@@ -102,8 +110,15 @@ endif
 ifeq ($(OS_ARCH),SCOOS)
 EXTRA_LIBS =
 endif
+endif #!USE_AUTOCONF
 
-include $(MOD_DEPTH)/config/rules.mk
+ifdef RESOLVE_LINK_SYMBOLS
+EXTRA_LIBS := -L$(libdir) -lnspr$(MOD_VERSION) $(OS_LIBS)
+endif
+
+GARBAGE += $(TINC)
+
+include $(topsrcdir)/config/rules.mk
 
 #
 # Version information generation (begin)
@@ -121,8 +136,6 @@ else
 	SUF = LL
 endif
 
-GARBAGE += $(TINC)
-
 $(TINC):
 	@$(MAKE_OBJDIR)
 	@$(ECHO) '#define _BUILD_STRING "$(SH_DATE)"' > $(TINC)
@@ -136,12 +149,12 @@ $(TINC):
 
 $(OBJDIR)/plvrsion.$(OBJ_SUFFIX): plvrsion.c $(TINC)
 ifeq ($(OS_ARCH), WINNT)
-	$(CC) -Fo$@ -c $(CFLAGS) -I$(OBJDIR) plvrsion.c
+	$(CC) -Fo$@ -c $(CFLAGS) -I$(OBJDIR) $<
 else
 ifeq ($(MOZ_OS2_TOOLS), VACPP)
-	$(CC) -Fo$@ -c $(CFLAGS) -I$(OBJDIR) plvrsion.c
+	$(CC) -Fo$@ -c $(CFLAGS) -I$(OBJDIR) $<
 else
-	$(CC) -o $@ -c $(CFLAGS) -I$(OBJDIR) plvrsion.c
+	$(CC) -o $@ -c $(CFLAGS) -I$(OBJDIR) $<
 endif
 endif
 #

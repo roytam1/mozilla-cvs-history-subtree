@@ -26,6 +26,8 @@ LIBRARY_NAME=jsdombase_s
 
 DEFINES=-D_IMPL_NS_DOM -DWIN32_LEAN_AND_MEAN
 
+LINCS= -I..\build
+
 CPPSRCS =			 \
 	nsBarProps.cpp           \
 	nsDOMException.cpp 	 \
@@ -42,9 +44,7 @@ CPPSRCS =			 \
 	nsWindowRoot.cpp	 \
 	$(NULL)
 
-EXPORTS=nsJSUtils.h
-
-MODULE=raptor 
+MODULE=dom
 
 
 CPP_OBJS= \

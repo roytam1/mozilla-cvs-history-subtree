@@ -1,3 +1,4 @@
+# Generated automatically from Makefile.in by configure.
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.1 (the "NPL"); you may not use this file except in
@@ -17,15 +18,19 @@
 
 #! gmake
 
-MOD_DEPTH = ..
+MOD_DEPTH	= ..
+topsrcdir	= ..
+srcdir		= .
+
+include $(MOD_DEPTH)/config/autoconf.mk
 
 export NSPR20=1
 
-include $(MOD_DEPTH)/config/config.mk
+include $(topsrcdir)/config/config.mk
 
 DIRS = ds libc
 
-include $(MOD_DEPTH)/config/rules.mk
+include $(topsrcdir)/config/rules.mk
 
 export:: $(TARGETS)
 

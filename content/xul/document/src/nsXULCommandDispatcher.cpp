@@ -49,6 +49,7 @@
 #include "nsXULCommandDispatcher.h"
 #include "prlog.h"
 #include "nsIDOMEventTarget.h"
+#include "nsDOMClassInfo.h"
 
 #ifdef PR_LOGGING
 static PRLogModuleInfo* gLog;
@@ -76,30 +77,23 @@ nsXULCommandDispatcher::~nsXULCommandDispatcher()
   }
 }
 
+// XPConnect interface list for nsXULCommandDispatcher
+NS_CLASINFO_MAP_BEGIN(XULCommandDispatcher)
+    NS_CLASINFO_MAP_ENTRY(nsIDOMXULCommandDispatcher)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsXULCommandDispatcher
+NS_INTERFACE_MAP_BEGIN(nsXULCommandDispatcher)
+    NS_INTERFACE_MAP_ENTRY(nsIDOMXULCommandDispatcher)
+    NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMXULCommandDispatcher)
+    NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(XULCommandDispatcher)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(nsXULCommandDispatcher)
 NS_IMPL_RELEASE(nsXULCommandDispatcher)
-
-NS_IMETHODIMP
-nsXULCommandDispatcher::QueryInterface(REFNSIID iid, void** result)
-{
-  if (! result)
-    return NS_ERROR_NULL_POINTER;
-
-  *result = nsnull;
-  if (iid.Equals(NS_GET_IID(nsISupports)) ||
-      iid.Equals(NS_GET_IID(nsIDOMXULCommandDispatcher))) {
-    *result = NS_STATIC_CAST(nsIDOMXULCommandDispatcher*, this);
-  }
-  else if (iid.Equals(NS_GET_IID(nsISupportsWeakReference))) {
-    *result = NS_STATIC_CAST(nsISupportsWeakReference*, this);
-  }
-  else {
-    return NS_NOINTERFACE;
-  }
-
-  NS_ADDREF_THIS();
-  return NS_OK;
-}
 
 
 NS_IMETHODIMP

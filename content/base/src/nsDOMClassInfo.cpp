@@ -61,6 +61,16 @@
 #include "nsIDOMLoadListener.h"
 #include "nsIDOMPaintListener.h"
 
+// XBL related includes.
+#include "nsIXBLService.h"
+#include "nsIXBLBinding.h"
+#include "nsIBindingManager.h"
+#include "nsIFrame.h"
+#include "nsIPresShell.h"
+#include "nsIDOMViewCSS.h"
+#include "nsIDOMElement.h"
+#include "nsIDOMCSSStyleDeclaration.h"
+#include "nsIScriptGlobalObject.h"
 
 // ClassInfo data helper macros
 #define NS_DEFINE_CLASSINFO_DATA_HEAD                                         \
@@ -103,6 +113,7 @@
 #define ELEMENT_SCRIPTABLE_FLAGS                                              \
   DEFAULT_SCRIPTABLE_FLAGS |                                                  \
   WANT_PRECREATE |                                                            \
+  WANT_CREATE |                                                               \
   WANT_GETPROPERTY |                                                          \
   WANT_SETPROPERTY
 
@@ -439,6 +450,9 @@ nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfoID aID,
     data.mName = aName;
   }
 
+  NS_ABORT_IF_FALSE(sClassInfoData[aID].mGetIIDsFptr == aGetIIDsFptr,
+                    "Multiple GetIIDs function for the same nsDOMClassInfoID");
+
   nsISupports *classinfo = sClassInfoData[aID].mCachedClassInfo;
 
   return classinfo;
@@ -530,11 +544,6 @@ public:
   NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                          JSObject *obj, jsval id, jsval *vp,
                          PRBool *_retval);
-
-  static nsIClassInfo *Create(nsDOMClassInfoID aID)
-  {
-    return new nsEventPropSH(aID);
-  }
 };
 
 NS_IMETHODIMP
@@ -553,12 +562,6 @@ nsEventPropSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     }
   }
 
-
-
-
-
-           *_retval = PR_TRUE;
-
   return NS_OK;
 }
 
@@ -568,11 +571,6 @@ nsEventPropSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                            PRBool *_retval)
 {
   if (::JS_TypeOfValue(cx, *vp) != JSTYPE_FUNCTION || !JSVAL_IS_STRING(id)) {
-
-
-
-    *_retval = PR_TRUE;
-
     return NS_OK;
   }
 
@@ -642,8 +640,6 @@ nsEventPropSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                                                     *iid);
 
           if (NS_FAILED(rv)) {
-            *_retval = PR_FALSE;
-
             return rv;
           }
         }
@@ -651,12 +647,128 @@ nsEventPropSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     }
   }
 
-
-
-
-        *_retval = PR_TRUE;
   return NS_OK;
 }
+
+
+// Element scriptable helper
+
+class nsElementSH : public nsEventPropSH
+{
+protected:
+  nsElementSH(nsDOMClassInfoID aID) : nsEventPropSH(aID)
+  {
+  }
+
+  virtual ~nsElementSH()
+  {
+  }
+
+public:
+  NS_IMETHOD Create(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                    JSObject *obj);
+
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsElementSH(aID);
+  }
+};
+
+NS_IMETHODIMP
+nsElementSH::Create(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                    JSObject *obj)
+{
+  // Root???  aContext->AddNamedReference((void *)&slots->mScriptObject, slots->mScriptObject, "nsGenericElement::mScriptObject");
+
+  nsCOMPtr<nsISupports> native;
+
+  wrapper->GetNative(getter_AddRefs(native));
+
+  nsCOMPtr<nsIContent> content(do_QueryInterface(native));
+  NS_ENSURE_TRUE(content, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsIDocument> doc;
+
+  content->GetDocument(*getter_AddRefs(doc));
+
+  if (!doc) {
+    // There's not baseclass that cares about this call so we just
+    // return here.
+
+    return NS_OK;
+  }
+
+  // See if we have a frame.
+  nsCOMPtr<nsIPresShell> shell = getter_AddRefs(doc->GetShellAt(0));
+
+  if (!shell) {
+    return NS_OK;
+  }
+
+  nsIFrame* frame = nsnull;
+  shell->GetPrimaryFrameFor(content, &frame);
+
+  if (frame) {
+    // If we have a frame the frame has already loaded the binding.
+
+    return NS_OK;
+  }
+
+  // We must ensure that the XBL Binding is installed before we hand
+  // back this object.
+
+  nsCOMPtr<nsIBindingManager> bindingManager;
+  doc->GetBindingManager(getter_AddRefs(bindingManager));
+  NS_ENSURE_TRUE(bindingManager, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsIXBLBinding> binding;
+  bindingManager->GetBinding(content, getter_AddRefs(binding));
+
+  if (binding) {
+    // There's already a binding for this element so nothing left to
+    // be done here.
+
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIScriptGlobalObject> global;
+  doc->GetScriptGlobalObject(getter_AddRefs(global));
+
+  nsCOMPtr<nsIDOMViewCSS> viewCSS(do_QueryInterface(global));
+  NS_ENSURE_TRUE(viewCSS, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsIDOMCSSStyleDeclaration> cssDecl;
+
+  nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(native));
+
+  viewCSS->GetComputedStyle(elt, nsString(), getter_AddRefs(cssDecl));
+  NS_ENSURE_TRUE(cssDecl, NS_ERROR_UNEXPECTED);
+
+  nsAutoString value;
+  cssDecl->GetPropertyValue(NS_LITERAL_STRING("-moz-binding"), value);
+
+  if (value.IsEmpty()) {
+    // No binding, nothing left to do here.
+
+    return NS_OK;
+  }
+
+  // We have a binding that must be installed.
+  PRBool dummy;
+
+  nsCOMPtr<nsIXBLService> xblService(do_GetService("@mozilla.org/xbl;1"));
+  NS_ENSURE_TRUE(xblService, NS_ERROR_NOT_AVAILABLE);
+
+  xblService->LoadBindings(content, value, PR_FALSE, getter_AddRefs(binding),
+                           &dummy);
+
+  if (binding) {
+    binding->ExecuteAttachedHandler();
+  }
+
+  return NS_OK;
+}
+
 
 // NodeList scriptable helper
 
@@ -721,21 +833,53 @@ nsNodeListSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     }
   }
 
-
-
-
-
-  *_retval = PR_TRUE;
-
   return NS_OK;
 }
 
+
+
+
+
+// for document.location and document.on*
+
+class nsDocumentSH : public nsEventPropSH
+{
+public:
+  nsDocumentSH(nsDOMClassInfoID aID) : nsEventPropSH(aID)
+  {
+  }
+
+  virtual ~nsDocumentSH()
+  {
+  }
+
+public:
+  NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
+
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsDocumentSH(aID);
+  }
+};
+
+
+NS_IMETHODIMP
+nsDocumentSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                          JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
+{
+  // document.location = "http://..."; code goes here.
+
+  return nsEventPropSH::SetProperty(wrapper, cx, obj, id, vp, _retval);
+}
+
+
 // HTMLDocument scriptable helper
 
-class nsHTMLDocumentSH : public nsEventPropSH
+class nsHTMLDocumentSH : public nsDocumentSH
 {
 private:
-  nsHTMLDocumentSH(nsDOMClassInfoID aID) : nsEventPropSH(aID)
+  nsHTMLDocumentSH(nsDOMClassInfoID aID) : nsDocumentSH(aID)
   {
   }
 
@@ -789,24 +933,16 @@ nsHTMLDocumentSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
       NS_ENSURE_SUCCESS(rv, rv);
 
       JSObject* prop_obj = nsnull;
-      holder->GetJSObject(&prop_obj);
+      rv = holder->GetJSObject(&prop_obj);
+      NS_ENSURE_SUCCESS(rv, rv);
 
-      if (prop_obj) {
-        *vp = OBJECT_TO_JSVAL(prop_obj);
+      *vp = OBJECT_TO_JSVAL(prop_obj);
 
-*_retval = PR_TRUE;
-
-
-        return NS_OK;
-      }
+      return NS_OK;
     }
   }
 
-
-
-
-
-  return nsEventPropSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
+  return nsDocumentSH::GetProperty(wrapper, cx, obj, id, vp, _retval);
 }
 
 
@@ -902,18 +1038,11 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
 
       JSObject* prop_obj = nsnull;
       holder->GetJSObject(&prop_obj);
+      NS_ENSURE_SUCCESS(rv, rv);
 
-      if (prop_obj) {
-        *vp = OBJECT_TO_JSVAL(prop_obj);
-      }
+      *vp = OBJECT_TO_JSVAL(prop_obj);
     }
   }
-
-
-
-
-
-  *_retval = PR_TRUE;
 
   return NS_OK;
 }
@@ -977,126 +1106,165 @@ nsDOMClassInfo::Init()
                            DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY);
 
   // HTML element classes
-  NS_DEFINE_CLASSINFO_DATA(HTMLAnchorElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLAnchorElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLAppletElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLAppletElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLAreaElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLAreaElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLBRElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLBRElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLBaseElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLBaseElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLBaseFontElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLBaseFontElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLBodyElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLBodyElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLButtonElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLButtonElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLDListElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLDListElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLDelElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLDelElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLDirectoryElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLDirectoryElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLDivElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLDivElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLEmbedElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLEmbedElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLFieldSetElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLFieldSetElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLFontElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLFontElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLFormElement, nsHTMLFormElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLFrameElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLFrameElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLFrameSetElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLFrameSetElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLHRElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLHRElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLHeadElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLHeadElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLHeadingElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLHeadingElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLHtmlElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLHtmlElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLIFrameElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLIFrameElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLImageElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLImageElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLInputElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLInputElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLInsElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLInsElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLIsIndexElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLIsIndexElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLLIElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLLIElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLLabelElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLLabelElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLLegendElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLLegendElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLLinkElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLLinkElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLMapElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLMapElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLMenuElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLMenuElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLMetaElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLMetaElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLModElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLModElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLOListElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLOListElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLObjectElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLObjectElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLOptGroupElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLOptGroupElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLOptionElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLOptionElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLParagraphElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLParagraphElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLParamElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLParamElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLPreElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLPreElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLQuoteElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLQuoteElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLScriptElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLScriptElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLSelectElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLSelectElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLSpacerElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLSpacerElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLSpanElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLSpanElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLStyleElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLStyleElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLTableCaptionElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLTableCaptionElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLTableCellElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLTableCellElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLTableColElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLTableColElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLTableColGroupElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLTableColGroupElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLTableElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLTableElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLTableRowElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLTableRowElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLTableSectionElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLTableSectionElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLTextAreaElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLTextAreaElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLTitleElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLTitleElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLUListElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLUListElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLUnknownElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLUnknownElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(HTMLWBRElement, nsEventPropSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(HTMLWBRElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
+
+  // CSS classes
+  NS_DEFINE_CLASSINFO_DATA(CSSStyleRule, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(CSSRuleList, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(MediaList, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(StyleSheetList, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(CSSStyleSheet, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(CSSStyleDeclaration, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(ComputedCSSStyleDeclaration, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(ROCSSPrimitiveValue, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+
+  // Range classes
+  NS_DEFINE_CLASSINFO_DATA(Range, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(Selection, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+
+  // XUL classes
+  NS_DEFINE_CLASSINFO_DATA(XULDocument, nsDocumentSH::Create,
+                           ELEMENT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(XULElement, nsElementSH::Create,
+                           ELEMENT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(XULCommandDispatcher, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(XULNodeList, nsNodeListSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(XULNamedNodeMap, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(XULAttr, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
+
   NS_DEFINE_CLASSINFO_DATA_TAIL
 
 #ifdef NS_DEBUG

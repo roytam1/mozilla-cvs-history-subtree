@@ -206,17 +206,26 @@ nsDocumentFragment::nsDocumentFragment(nsIDocument* aOwnerDocument)
 nsDocumentFragment::~nsDocumentFragment()
 {
 }
- 
-NS_IMPL_ADDREF(nsDocumentFragment)
-NS_IMPL_RELEASE(nsDocumentFragment)
 
 
+// XPConnect interface list for nsDocumentFragment
+NS_CLASINFO_MAP_BEGIN(DocumentFragment)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMDocumentFragment)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsDocumentFragment
 NS_INTERFACE_MAP_BEGIN(nsDocumentFragment)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentFragment)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNode)
   NS_INTERFACE_MAP_ENTRY(nsIContent)
   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIContent)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(DocumentFragment)
 NS_INTERFACE_MAP_END
+
+
+NS_IMPL_ADDREF(nsDocumentFragment)
+NS_IMPL_RELEASE(nsDocumentFragment)
 
 
 NS_IMETHODIMP    

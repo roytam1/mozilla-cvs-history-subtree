@@ -1,3 +1,4 @@
+# Generated automatically from Makefile.in by configure.
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.1 (the "NPL"); you may not use this file except in
@@ -17,11 +18,18 @@
 
 #! gmake
 
-MOD_DEPTH = ../../..
+MOD_DEPTH	= ../../..
+topsrcdir	= ../../..
+srcdir		= .
 
-HEADERS = $(wildcard *.h)
+include $(MOD_DEPTH)/config/autoconf.mk
 
-include $(MOD_DEPTH)/config/rules.mk
+HEADERS = $(wildcard $(srcdir)/*.h)
+CONFIGS = $(wildcard $(srcdir)/*.cfg)
+
+include $(topsrcdir)/config/rules.mk
+
+ifndef USE_AUTOCONF
 
 ifeq ($(OS_ARCH),IRIX)
 ifeq ($(USE_64), 1)
@@ -159,13 +167,16 @@ ifeq ($(OS_ARCH),BeOS)
 MDCPUCFG_H = _beos.cfg
 endif
 
+endif # ! USE_AUTOCONF
+
 export:: $(MDCPUCFG_H)
-	$(INSTALL) -m 444 $(MDCPUCFG_H) $(includedir)
 ifeq ($(MOZ_BITS),16)
 	cp $(includedir)/$(MDCPUCFG_H) $(includedir)/prcpucfg.h
 	$(INSTALL) -m 444 $(MDCPUCFG_H) $(MOZ_INCL)
 	mv -f $(includedir)/$(MDCPUCFG_H) $(MOZ_INCL)/prcpucfg.h
 else
+	$(INSTALL) -m 444 $(CONFIGS) $(includedir)/md
+	$(INSTALL) -m 444 $(srcdir)/$(MDCPUCFG_H) $(includedir)
 ifneq ($(OS_ARCH),OpenVMS)
 	mv -f $(includedir)/$(MDCPUCFG_H) $(includedir)/prcpucfg.h
 else

@@ -38,6 +38,7 @@
 #include "nsIDOMWindowInternal.h"
 #include "nsAppShellCIDs.h"
 #include "nsIAppShellService.h"
+#include "jsapi.h"
 
 static const char* kLoadAsData = "loadAsData";
 

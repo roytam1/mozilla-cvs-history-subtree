@@ -26,7 +26,6 @@
 
 nsScriptNameSetRegistry::nsScriptNameSetRegistry()
 {
-  NS_INIT_REFCNT();
 }
 
 nsScriptNameSetRegistry::~nsScriptNameSetRegistry()
@@ -34,39 +33,22 @@ nsScriptNameSetRegistry::~nsScriptNameSetRegistry()
   PRInt32 i, count = mNameSets.Count();
 
   for(i = 0; i < count; i++) {
-    nsIScriptExternalNameSet* ns = (nsIScriptExternalNameSet*)mNameSets.ElementAt(i);
+    nsIScriptExternalNameSet* ns =
+      (nsIScriptExternalNameSet*)mNameSets.ElementAt(i);
     
     NS_RELEASE(ns);
   }
   mNameSets.Clear();
 }
-  
-static NS_DEFINE_IID(kIScriptNameSetRegistry, NS_ISCRIPTNAMESETREGISTRY_IID);
 
-NS_IMPL_ISUPPORTS(nsScriptNameSetRegistry, kIScriptNameSetRegistry);
 
-NS_IMETHODIMP 
-nsScriptNameSetRegistry::AddExternalNameSet(nsIScriptExternalNameSet* aNameSet)
+#if 0
+nsScriptNameSetRegistry::Init()
 {
-  if (-1 == mNameSets.IndexOf(aNameSet)) {
-    NS_ADDREF(aNameSet);
-    mNameSets.AppendElement(aNameSet);
-  }
-  
-  return NS_OK;
-}
 
-NS_IMETHODIMP 
-nsScriptNameSetRegistry::RemoveExternalNameSet(nsIScriptExternalNameSet* aNameSet)
-{
-  if (mNameSets.RemoveElement(aNameSet)) {
-    NS_RELEASE(aNameSet);
-    return NS_OK;
-  }
-  else {
-    return NS_ERROR_INVALID_ARG;
-  }
 }
+#endif
+
 
 NS_IMETHODIMP 
 nsScriptNameSetRegistry::InitializeClasses(nsIScriptContext* aContext)
@@ -88,6 +70,7 @@ nsScriptNameSetRegistry::InitializeClasses(nsIScriptContext* aContext)
   return result;
 }
 
+#if 0
 NS_IMETHODIMP 
 nsScriptNameSetRegistry::PopulateNameSpace(nsIScriptContext* aContext)
 {
@@ -107,3 +90,4 @@ nsScriptNameSetRegistry::PopulateNameSpace(nsIScriptContext* aContext)
   }
   return result;
 }
+#endif

@@ -27,6 +27,8 @@
 #include "nsINameSpaceManager.h"
 #include "nsGenericElement.h"
 
+#include "nsDOMClassInfo.h"
+
 #include "nsLayoutAtoms.h"
 #include "nsHTMLAtoms.h" // XXX until atoms get factored into nsLayoutAtoms
 
@@ -108,28 +110,22 @@ nsContentList::~nsContentList()
   }
 }
 
-nsresult nsContentList::QueryInterface(REFNSIID aIID, void** aInstancePtr)
-{
-  if (nsnull == aInstancePtr) {
-    return NS_ERROR_NULL_POINTER;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMNodeList))) {
-    *aInstancePtr = (void*)(nsIDOMNodeList*)this;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMHTMLCollection))) {
-    *aInstancePtr = (void*)(nsIDOMHTMLCollection*)this;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsISupports))) {
-    *aInstancePtr = (void*)(nsISupports*)(nsIDOMNodeList*)this;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  return NS_NOINTERFACE;
-}
+
+// XPConnect interface list for nsContentList
+NS_CLASINFO_MAP_BEGIN(NodeList)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNodeList)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMHTMLCollection)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsContentList
+NS_INTERFACE_MAP_BEGIN(nsContentList)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNodeList)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLCollection)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMNodeList)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(NodeList)
+NS_INTERFACE_MAP_END
+
 
 NS_IMPL_ADDREF(nsContentList)
 NS_IMPL_RELEASE(nsContentList)
@@ -167,7 +163,7 @@ nsContentList::Item(PRUint32 aIndex, nsIDOMNode** aReturn)
   return result;
 }
 
-NS_IMETHODIMP 
+NS_IMETHODIMP
 nsContentList::NamedItem(const nsAReadableString& aName, nsIDOMNode** aReturn)
 {
   nsresult result = CheckDocumentExistence();

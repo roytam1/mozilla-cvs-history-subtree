@@ -31,6 +31,8 @@
 #include "nsIXMLContent.h"
 #include "nsString.h"
 
+#include "nsDOMClassInfo.h"
+
 
 class nsXMLCDATASection : public nsIDOMCDATASection,
                           public nsITextContent
@@ -90,33 +92,26 @@ nsXMLCDATASection::~nsXMLCDATASection()
 {
 }
 
+
+// XPConnect interface list for nsXMLCDATASection
+NS_CLASINFO_MAP_BEGIN(CDATASection)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMCDATASection)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMEventTarget)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsXMLCDATASection
+NS_INTERFACE_MAP_BEGIN(nsXMLCDATASection)
+  NS_INTERFACE_MAP_ENTRY_DOM_DATA()
+  NS_INTERFACE_MAP_ENTRY(nsIDOMCDATASection)
+  NS_INTERFACE_MAP_ENTRY(nsITextContent)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(CDATASection)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(nsXMLCDATASection)
 NS_IMPL_RELEASE(nsXMLCDATASection)
 
-NS_IMETHODIMP
-nsXMLCDATASection::QueryInterface(REFNSIID aIID, void** aInstancePtr)
-{
-  NS_IMPL_DOM_DATA_QUERY_INTERFACE(aIID, aInstancePtr, this)
-  if (aIID.Equals(NS_GET_IID(nsIDOMCDATASection))) {
-    nsIDOMCDATASection* tmp = this;
-    *aInstancePtr = (void*) tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMText))) {
-    nsIDOMText* tmp = this;
-    *aInstancePtr = (void*) tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsITextContent))) {
-    nsITextContent* tmp = this;
-    *aInstancePtr = (void*) tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  return NS_NOINTERFACE;
-}
 
 NS_IMETHODIMP 
 nsXMLCDATASection::GetTag(nsIAtom*& aResult) const

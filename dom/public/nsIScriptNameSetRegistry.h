@@ -42,42 +42,15 @@ class nsIScriptExternalNameSet;
 class nsIScriptNameSetRegistry : public nsISupports {
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTNAMESETREGISTRY_IID);
-  
-  /** 
-   * Add a new name set to the list. Each name set will be asked
-   * to register itself with a namespace registry for each new
-   * script context.
-   *
-   * @param aNameSet the name set to register
-   * @result NS_OK if successful
-   */
-  NS_IMETHOD AddExternalNameSet(nsIScriptExternalNameSet* aNameSet) = 0;
 
-  /**
-   * Remove a name set from the manager's list.
-   *
-   * @param aNameSet the name set to unregister.
-   * @result NS_OK if successful
-   */
-  NS_IMETHOD RemoveExternalNameSet(nsIScriptExternalNameSet* aNameSet) = 0;
-  
   /**
    * Intialize classes associated with the name sets.
    *
    * @param aScriptContext the script context within which to initialize
    * @result NS_OK if successful
    */
-  NS_IMETHOD InitializeClasses(nsIScriptContext* aContext) = 0;
-
-  /**
-   * Populate the specified script context with all of the
-   * name sets in the registry. Will generally be called when the
-   * script context first needs to create a name space manager.
-   *
-   * @param aScriptContext the script context to populate
-   * @result NS_OK if successful
-   */
-  NS_IMETHOD PopulateNameSpace(nsIScriptContext* aContext) = 0;
+  NS_IMETHOD ResolveName(const nsAReadableString& aName,
+                         nsIScriptContext* aContext) = 0;
 };
 
 #endif /* nsIScriptNameSetRegistry_h__ */

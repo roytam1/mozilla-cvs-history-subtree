@@ -1,3 +1,4 @@
+# Generated automatically from Makefile.in by configure.
 #! gmake
 
 #
@@ -17,7 +18,11 @@
 # Reserved.
 #
 
-MOD_DEPTH = .
+MOD_DEPTH	= .
+topsrcdir	= .
+srcdir		= .
+
+include $(MOD_DEPTH)/config/autoconf.mk
 
 DIRS = config pr lib
 
@@ -26,7 +31,18 @@ PR_CLIENT_BUILD = 1
 PR_CLIENT_BUILD_UNIX = 1
 endif
 
-include $(MOD_DEPTH)/config/rules.mk
+DIST_GARBAGE = config.cache config.log config.status
+
+all:: config.status export
+
+include $(topsrcdir)/config/rules.mk
+
+config.status:: configure
+ifeq ($(OS_ARCH),WINNT)
+	sh $(srcdir)/configure --no-create --no-recursion
+else
+	./config.status --recheck && ./config.status
+endif
 
 #
 # The -ll option of zip converts CR LF to LF.
@@ -44,10 +60,11 @@ ifdef PR_CLIENT_BUILD_UNIX
 endif
 endif
 
+# Delete config/autoconf.mk last because it is included by every makefile.
 distclean::
 	@echo "cd pr/tests; $(MAKE) $@"
 	@$(MAKE) -C pr/tests $@
-	rm -f config/my_config.mk config/my_overrides.mk
+	rm -f config/autoconf.mk
 
 release::
 	echo $(BUILD_NUMBER) > $(RELEASE_DIR)/$(BUILD_NUMBER)/version.df

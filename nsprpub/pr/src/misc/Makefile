@@ -1,3 +1,4 @@
+# Generated automatically from Makefile.in by configure.
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.1 (the "NPL"); you may not use this file except in
@@ -17,16 +18,22 @@
 
 #! gmake
 
-MOD_DEPTH = ../../..
+MOD_DEPTH	= ../../..
+topsrcdir	= ../../..
+srcdir		= .
 
-include $(MOD_DEPTH)/config/config.mk
+include $(MOD_DEPTH)/config/autoconf.mk
 
+include $(topsrcdir)/config/config.mk
+
+ifndef USE_AUTOCONF
 # Disable optimization of the nspr on SunOS4.1.3
 ifeq ($(OS_ARCH),SunOS)
 ifeq ($(OS_RELEASE),4.1.3_U1)
 OPTIMIZER =
 endif
 endif
+endif #!USE_AUTOCONF
 
 CSRCS = \
 	pralarm.c  \
@@ -44,7 +51,7 @@ CSRCS = \
 	prlong.c   \
 	prnetdb.c  \
 	prolock.c  \
-	prrng.c  \
+	prrng.c    \
 	prsystem.c \
 	prtime.c   \
 	prthinfo.c \
@@ -60,14 +67,15 @@ endif
 
 TARGETS	= $(OBJS)
 
-INCLUDES = -I$(includedir) -I$(MOD_DEPTH)/pr/include -I$(MOD_DEPTH)/pr/include/private
+INCLUDES = -I$(includedir) -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
 
-DEFINES     += -D_NSPR_BUILD_
+DEFINES	+= -D_NSPR_BUILD_
 
 RELEASE_BINS = compile-et.pl prerr.properties
 
-include $(MOD_DEPTH)/config/rules.mk
+include $(topsrcdir)/config/rules.mk
 
+ifndef USE_AUTOCONF
 # An AIX Optimization bug causes PR_dtoa() to produce wrong result.
 # This suppresses optimization for this single compilation unit.
 ifeq ($(OS_ARCH), AIX)
@@ -75,12 +83,13 @@ $(OBJDIR)/prdtoa.o:
 	@$(MAKE_OBJDIR)
 	$(CC) -o $@ -c $(filter-out -O, $(CFLAGS)) prdtoa.c
 endif
+endif #!USE_AUTOCONF
 
 #
 # Generate prerr.h, prerr.c, and prerr.properties from prerr.et.
 #
 build_prerr:
-	perl compile-et.pl prerr.et
+	$(PERL) $(srcdir)/compile-et.pl prerr.et
 
 export:: $(TARGETS)
 

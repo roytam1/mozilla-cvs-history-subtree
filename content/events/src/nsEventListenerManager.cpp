@@ -227,7 +227,9 @@ void nsEventListenerManager::ReleaseListeners(nsVoidArray** aListeners, PRBool a
   }
 }
 
-nsresult nsEventListenerManager::GetEventListeners(nsVoidArray **aListeners, const nsIID& aIID)
+NS_IMETHODIMP
+nsEventListenerManager::GetEventListeners(nsVoidArray **aListeners,
+                                          const nsIID& aIID)
 {
   nsVoidArray** mListeners = GetListenersByIID(aIID);
 
@@ -240,10 +242,11 @@ nsresult nsEventListenerManager::GetEventListeners(nsVoidArray **aListeners, con
 * Sets events listeners of all types. 
 * @param an event listener
 */
-nsresult nsEventListenerManager::AddEventListener(nsIDOMEventListener *aListener, 
-                                                  const nsIID& aIID, 
-                                                  PRInt32 aFlags,
-                                                  PRInt32 aSubType)
+nsresult
+nsEventListenerManager::AddEventListener(nsIDOMEventListener *aListener, 
+                                         const nsIID& aIID, 
+                                         PRInt32 aFlags,
+                                         PRInt32 aSubType)
 {
   nsVoidArray** listeners = GetListenersByIID(aIID);
 
@@ -318,10 +321,11 @@ nsresult nsEventListenerManager::AddEventListener(nsIDOMEventListener *aListener
   return NS_OK;
 }
 
-nsresult nsEventListenerManager::RemoveEventListener(nsIDOMEventListener *aListener, 
-                                                     const nsIID& aIID, 
-                                                     PRInt32 aFlags,
-                                                     PRInt32 aSubType)
+nsresult
+nsEventListenerManager::RemoveEventListener(nsIDOMEventListener *aListener, 
+                                            const nsIID& aIID, 
+                                            PRInt32 aFlags,
+                                            PRInt32 aSubType)
 {
   nsVoidArray** listeners = GetListenersByIID(aIID);
 
@@ -371,8 +375,10 @@ nsresult nsEventListenerManager::AddEventListenerByIID(nsIDOMEventListener *aLis
   return NS_OK;
 }
 
-nsresult nsEventListenerManager::RemoveEventListenerByIID(nsIDOMEventListener *aListener, 
-                                                          const nsIID& aIID, PRInt32 aFlags)
+NS_IMETHODIMP
+nsEventListenerManager::RemoveEventListenerByIID(nsIDOMEventListener *aListener, 
+                                                 const nsIID& aIID,
+                                                 PRInt32 aFlags)
 {
   RemoveEventListener(aListener, aIID, aFlags, NS_EVENT_BITS_NONE);
   return NS_OK;
@@ -566,8 +572,10 @@ nsresult nsEventListenerManager::GetIdentifiersForType(nsIAtom* aType, nsIID& aI
   return NS_OK;
 }
 
-nsresult nsEventListenerManager::AddEventListenerByType(nsIDOMEventListener *aListener, 
-                                                        const nsAReadableString& aType, PRInt32 aFlags)
+NS_IMETHODIMP
+nsEventListenerManager::AddEventListenerByType(nsIDOMEventListener *aListener, 
+                                               const nsAReadableString& aType,
+                                               PRInt32 aFlags)
 {
   PRInt32 subType;
   nsIID iid;
@@ -586,8 +594,10 @@ nsresult nsEventListenerManager::AddEventListenerByType(nsIDOMEventListener *aLi
   return NS_OK;
 }
 
-nsresult nsEventListenerManager::RemoveEventListenerByType(nsIDOMEventListener *aListener, 
-                                                          const nsAReadableString& aType, PRInt32 aFlags)
+NS_IMETHODIMP
+nsEventListenerManager::RemoveEventListenerByType(nsIDOMEventListener *aListener, 
+                                                  const nsAReadableString& aType,
+                                                  PRInt32 aFlags)
 {
   PRInt32 subType;
   nsIID iid;
@@ -682,7 +692,7 @@ nsEventListenerManager::SetJSEventListener(nsIScriptContext *aContext,
   return rv;
 }
 
-nsresult
+NS_IMETHODIMP
 nsEventListenerManager::AddScriptEventListener(nsIScriptContext* aContext,
                                                nsISupports *aObject,
                                                nsIAtom *aName,
@@ -699,10 +709,8 @@ nsEventListenerManager::AddScriptEventListener(nsIScriptContext* aContext,
 
     nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
-    JSObject *parent = ::JS_GetGlobalObject(cx); // Is this correct?
-
-    rv = xpc->WrapNative(cx, parent, aObject, NS_GET_IID(nsISupports),
-                         getter_AddRefs(holder));
+    rv = xpc->WrapNative(cx, ::JS_GetGlobalObject(cx), aObject,
+                         NS_GET_IID(nsISupports), getter_AddRefs(holder));
     NS_ENSURE_SUCCESS(rv, rv);
 
     JSObject *scriptObject = nsnull;
@@ -710,7 +718,9 @@ nsEventListenerManager::AddScriptEventListener(nsIScriptContext* aContext,
     rv = holder->GetJSObject(&scriptObject);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    nsCOMPtr<nsIScriptEventHandlerOwner> handlerOwner(do_QueryInterface(aObject));
+    nsCOMPtr<nsIScriptEventHandlerOwner> handlerOwner =
+      do_QueryInterface(aObject);
+
     void *handler = nsnull;
     PRBool done = PR_FALSE;
 
@@ -741,7 +751,7 @@ nsEventListenerManager::AddScriptEventListener(nsIScriptContext* aContext,
   return SetJSEventListener(aContext, aObject, aName, aIID, aDeferCompilation);
 }
 
-nsresult
+NS_IMETHODIMP
 nsEventListenerManager::RegisterScriptEventListener(nsIScriptContext *aContext,
                                                     nsISupports *aObject,
                                                     nsIAtom *aName,
@@ -766,11 +776,9 @@ nsEventListenerManager::RegisterScriptEventListener(nsIScriptContext *aContext,
 
   nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
-  JSObject *XXXXXparent = ::JS_GetGlobalObject(cx); // Is this correct?
-
   nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID()));
-  rv = xpc->WrapNative(cx, XXXXXparent, aObject, NS_GET_IID(nsISupports),
-                         getter_AddRefs(holder));
+  rv = xpc->WrapNative(current_cx, ::JS_GetGlobalObject(current_cx), aObject,
+                       NS_GET_IID(nsIDOMNode), getter_AddRefs(holder));
   NS_ENSURE_SUCCESS(rv, rv);
 
   JSObject *jsobj = nsnull;
@@ -835,9 +843,7 @@ nsEventListenerManager::HandleEventSubType(nsListenerStruct* aListenerStruct,
 
           nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
-          JSObject *XXXXXparent = ::JS_GetGlobalObject(cx); // This is wrong!
-          
-          result = xpc->WrapNative(cx, XXXXXparent, target,
+          result = xpc->WrapNative(cx, ::JS_GetGlobalObject(cx), target,
                                    NS_GET_IID(nsISupports),
                                    getter_AddRefs(holder));
           NS_ENSURE_SUCCESS(result, result);
@@ -1914,10 +1920,11 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
 * Creates a DOM event
 */
 
-nsresult nsEventListenerManager::CreateEvent(nsIPresContext* aPresContext,
-                                             nsEvent* aEvent,
-                                             const nsAReadableString& aEventType,
-                                             nsIDOMEvent** aDOMEvent)
+NS_IMETHODIMP
+nsEventListenerManager::CreateEvent(nsIPresContext* aPresContext,
+                                    nsEvent* aEvent,
+                                    const nsAReadableString& aEventType,
+                                    nsIDOMEvent** aDOMEvent)
 {
   nsAutoString str(aEventType);
   if (!aEvent && !str.EqualsIgnoreCase("MouseEvent") && !str.EqualsIgnoreCase("KeyEvent") &&
@@ -1935,7 +1942,8 @@ nsresult nsEventListenerManager::CreateEvent(nsIPresContext* aPresContext,
 * @param an event listener
 */
 
-nsresult nsEventListenerManager::CaptureEvent(PRInt32 aEventTypes)
+NS_IMETHODIMP
+nsEventListenerManager::CaptureEvent(PRInt32 aEventTypes)
 {
   return FlipCaptureBit(aEventTypes, PR_TRUE);
 }             
@@ -1945,7 +1953,8 @@ nsresult nsEventListenerManager::CaptureEvent(PRInt32 aEventTypes)
 * @param an event listener
 */
 
-nsresult nsEventListenerManager::ReleaseEvent(PRInt32 aEventTypes)
+NS_IMETHODIMP
+nsEventListenerManager::ReleaseEvent(PRInt32 aEventTypes)
 {
   return FlipCaptureBit(aEventTypes, PR_FALSE);
 }
@@ -2174,7 +2183,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
   return NS_OK;
 }
 
-nsresult nsEventListenerManager::RemoveAllListeners(PRBool aScriptOnly)
+NS_IMETHODIMP
+nsEventListenerManager::RemoveAllListeners(PRBool aScriptOnly)
 {
   ReleaseListeners(&mEventListeners, aScriptOnly);
   ReleaseListeners(&mMouseListeners, aScriptOnly);
@@ -2192,7 +2202,8 @@ nsresult nsEventListenerManager::RemoveAllListeners(PRBool aScriptOnly)
   return NS_OK;
 }
 
-nsresult nsEventListenerManager::SetListenerTarget(nsISupports* aTarget)
+NS_IMETHODIMP
+nsEventListenerManager::SetListenerTarget(nsISupports* aTarget)
 {
   //WEAK reference, must be set back to nsnull when done
   mTarget = aTarget;
@@ -2287,7 +2298,8 @@ nsEventListenerManager::HandleEvent(nsIDOMEvent *aEvent)
   return DispatchEvent(aEvent);
 }
 
-NS_HTML nsresult NS_NewEventListenerManager(nsIEventListenerManager** aInstancePtrResult) 
+NS_HTML nsresult
+NS_NewEventListenerManager(nsIEventListenerManager** aInstancePtrResult) 
 {
   nsIEventListenerManager* l = new nsEventListenerManager();
 

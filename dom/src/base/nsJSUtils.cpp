@@ -88,20 +88,24 @@ nsJSUtils::nsGetCallingLocation(JSContext* aContext,
   JSStackFrame* frame = nsnull;
   JSScript* script = nsnull;
   do {
-    frame = JS_FrameIterator(aContext, &frame);
+    frame = ::JS_FrameIterator(aContext, &frame);
+
     if (frame) {
-      script = JS_GetFrameScript(aContext, frame);
+      script = ::JS_GetFrameScript(aContext, frame);
     }
   } while ((nsnull != frame) && (nsnull == script));
 
   if (script) {
-    const char* filename = JS_GetScriptFilename(aContext, script);
+    const char* filename = ::JS_GetScriptFilename(aContext, script);
+
     if (filename) {
       PRUint32 lineno = 0;
-      jsbytecode* bytecode = JS_GetFramePC(aContext, frame);
+      jsbytecode* bytecode = ::JS_GetFramePC(aContext, frame);
+
       if (bytecode) {
-        lineno = JS_PCToLineNumber(aContext, script, bytecode);
+        lineno = ::JS_PCToLineNumber(aContext, script, bytecode);
       }
+
       *aFilename = filename;
       *aLineno = lineno;
       return JS_TRUE;
@@ -153,7 +157,7 @@ nsJSUtils::nsReportError(JSContext* aContext,
         JSObject* obj;
         rv = owner->GetScriptObject(scriptCX, (void**)&obj);
         if (NS_SUCCEEDED(rv)) {
-          JS_SetPendingException(aContext, OBJECT_TO_JSVAL(obj));
+          ::JS_SetPendingException(aContext, OBJECT_TO_JSVAL(obj));
         }
       }
     }
@@ -270,7 +274,11 @@ nsJSUtils::nsConvertStringToJSVal(const nsString& aProp,
                                   JSContext* aContext,
                                   jsval* aReturn)
 {
-  JSString *jsstring = JS_NewUCStringCopyN(aContext, NS_REINTERPRET_CAST(const jschar*, aProp.GetUnicode()), aProp.Length());
+  JSString *jsstring =
+    ::JS_NewUCStringCopyN(aContext, NS_REINTERPRET_CAST(const jschar*,
+                                                        aProp.GetUnicode()),
+                          aProp.Length());
+
   // set the return value
   *aReturn = STRING_TO_JSVAL(jsstring);
 }
@@ -289,27 +297,32 @@ nsJSUtils::nsConvertJSValToObject(nsISupports** aSupports,
   }
   else if (JSVAL_IS_OBJECT(aValue)) {
     JSObject* jsobj = JSVAL_TO_OBJECT(aValue); 
-    JSClass* jsclass = JS_GetClass(aContext, jsobj);
+    JSClass* jsclass = ::JS_GetClass(aContext, jsobj);
+
     if ((nsnull != jsclass) && 
         (jsclass->flags & JSCLASS_HAS_PRIVATE) &&
         (jsclass->flags & JSCLASS_PRIVATE_IS_NSISUPPORTS)) {
-      nsISupports *supports = (nsISupports *)JS_GetPrivate(aContext, jsobj);
+      nsISupports *supports = (nsISupports *)::JS_GetPrivate(aContext, jsobj);
+
       if (NS_OK != supports->QueryInterface(aIID, (void **)aSupports)) {
         char buf[128];
         char typeName[128];
         aTypeName.ToCString(typeName, sizeof(typeName));
         sprintf(buf, "Parameter must of type %s", typeName);
-        JS_ReportError(aContext, buf);
+        ::JS_ReportError(aContext, buf);
+
         return JS_FALSE;
       }
     }
     else {
-      JS_ReportError(aContext, "Parameter isn't a object");
+      ::JS_ReportError(aContext, "Parameter isn't a object");
+
       return JS_FALSE;
     }
   }
   else {
-    JS_ReportError(aContext, "Parameter must be an object");
+    ::JS_ReportError(aContext, "Parameter must be an object");
+
     return JS_FALSE;
   }
 
@@ -349,8 +362,10 @@ nsJSUtils::nsConvertJSValToString(nsAWritableString& aString,
                                   jsval aValue)
 {
   JSString *jsstring;
-  if ((jsstring = JS_ValueToString(aContext, aValue)) != nsnull) {
-    aString.Assign(NS_REINTERPRET_CAST(const PRUnichar*, JS_GetStringChars(jsstring)));
+  if ((jsstring = ::JS_ValueToString(aContext, aValue)) != nsnull) {
+    aString.Assign(NS_REINTERPRET_CAST(const PRUnichar*,
+                                       ::JS_GetStringChars(jsstring)),
+                   ::JS_GetStringLength(jsstring));
   }
   else {
     aString.Truncate();
@@ -364,11 +379,11 @@ nsJSUtils::nsConvertJSValToBool(PRBool* aProp,
                                 jsval aValue)
 {
   JSBool temp;
-  if (JS_ValueToBoolean(aContext, aValue, &temp)) {
+  if (::JS_ValueToBoolean(aContext, aValue, &temp)) {
     *aProp = (PRBool)temp;
   }
   else {
-    JS_ReportError(aContext, "Parameter must be a boolean");
+    ::JS_ReportError(aContext, "Parameter must be a boolean");
     return JS_FALSE;
   }
   
@@ -382,11 +397,11 @@ nsJSUtils::nsConvertJSValToUint32(PRUint32* aProp,
                                   jsval aValue)
 {
   uint32 temp;
-  if (JS_ValueToECMAUint32(aContext, aValue, &temp)) {
+  if (::JS_ValueToECMAUint32(aContext, aValue, &temp)) {
     *aProp = (PRUint32)temp;
   }
   else {
-    JS_ReportError(aContext, "Parameter must be an integer");
+    ::JS_ReportError(aContext, "Parameter must be an integer");
     return JS_FALSE;
   }
   
@@ -403,24 +418,24 @@ nsJSUtils::nsConvertJSValToFunc(nsIDOMEventListener** aListener,
     *aListener = nsnull;
   }
   else if (JSVAL_IS_OBJECT(aValue)) {
-    if (JS_TypeOfValue(aContext, aValue) == JSTYPE_FUNCTION){
-      nsIScriptContext* scriptContext = (nsIScriptContext*)JS_GetContextPrivate(aContext);
+    if (::JS_TypeOfValue(aContext, aValue) == JSTYPE_FUNCTION){
+      nsIScriptContext* scriptContext =
+        (nsIScriptContext*)::JS_GetContextPrivate(aContext);
       
-#if 0
       if (NS_OK == NS_NewScriptEventListener(aListener, scriptContext, (void*)aObj, (void*)JSVAL_TO_OBJECT(aValue))) {
         return JS_TRUE;
       }
-#endif
-      JS_ReportError(aContext, "Out of memory");
+
+      ::JS_ReportError(aContext, "Out of memory");
       return JS_FALSE;
     }
     else {
-      JS_ReportError(aContext, "Parameter isn't a callable object");
+      ::JS_ReportError(aContext, "Parameter isn't a callable object");
       return JS_FALSE;
     }
   }
   else {
-    JS_ReportError(aContext, "Parameter must be an object");
+    ::JS_ReportError(aContext, "Parameter must be an object");
     return JS_FALSE;
   }
 
@@ -432,8 +447,7 @@ NS_EXPORT void PR_CALLBACK
 nsJSUtils::nsGenericFinalize(JSContext* aContext,
                              JSObject* aObj)
 {
-  nsISupports *nativeThis = (nsISupports*)JS_GetPrivate(aContext, 
-                                                        aObj);
+  nsISupports *nativeThis = (nsISupports*)::JS_GetPrivate(aContext, aObj);
   
   if (nsnull != nativeThis) {
     // get the js object
@@ -454,8 +468,7 @@ nsJSUtils::nsGenericEnumerate(JSContext* aContext,
                               JSObject* aObj,
                               JSPropertySpec* aLazyPropSpec)
 {
-  nsISupports* nativeThis = (nsISupports*)JS_GetPrivate(aContext, 
-                                                        aObj);
+  nsISupports* nativeThis = (nsISupports*)::JS_GetPrivate(aContext, aObj);
   
   if (nsnull != nativeThis) {
     // get the js object
@@ -497,10 +510,10 @@ StubConstructor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
   JSFunction *fun;
   const char *name;
   
-  fun = JS_ValueToFunction(cx, argv[-2]);
+  fun = ::JS_ValueToFunction(cx, argv[-2]);
   if (!fun)
     return JS_FALSE;
-  name = JS_GetFunctionName(fun);
+  name = ::JS_GetFunctionName(fun);
  
   nsCOMPtr<nsIScriptNameSpaceManager> manager;
   nsIID interfaceID, classID;
@@ -564,7 +577,8 @@ nsJSUtils::nsGlobalResolve(JSContext* aContext,
 
   if (JSVAL_IS_STRING(aId)) {
     JSString* jsstring = JSVAL_TO_STRING(aId);
-    nsAutoString name(NS_REINTERPRET_CAST(const PRUnichar*, JS_GetStringChars(jsstring)));
+    nsAutoString name(NS_REINTERPRET_CAST(const PRUnichar*,
+                                          ::JS_GetStringChars(jsstring)));
     nsIID interfaceID, classID;
     nsISupports* native;
 
@@ -578,11 +592,11 @@ nsJSUtils::nsGlobalResolve(JSContext* aContext,
         result = manager->LookupName(name, isConstructor, interfaceID, classID);
         if (NS_SUCCEEDED(result)) {
           if (isConstructor) {
-            // XXX would like JS_DefineUCFunction in jsapi.h...
-            return (NULL != JS_DefineFunction(aContext, aObj, 
-                                              JS_GetStringBytes(jsstring),
-                                              StubConstructor, 0,
-                                              JSPROP_READONLY));
+            // XXX would like ::JS_DefineUCFunction in jsapi.h...
+            return (NULL != ::JS_DefineFunction(aContext, aObj, 
+                                                JS_GetStringBytes(jsstring),
+                                                StubConstructor, 0,
+                                                JSPROP_READONLY));
           }
           result = nsComponentManager::CreateInstance(classID,
                                                       nsnull,
@@ -591,7 +605,7 @@ nsJSUtils::nsGlobalResolve(JSContext* aContext,
           if (NS_FAILED(result)) {
             return JS_FALSE;
           }
-    
+
           if (interfaceID.Equals(kIScriptObjectOwnerIID)) {
             nsConvertObjectToJSVal(native, aContext, aObj, &val);
           }
@@ -600,15 +614,16 @@ nsJSUtils::nsGlobalResolve(JSContext* aContext,
                                       aObj, &val);
           }
     
-          return JS_DefineUCProperty(aContext, aObj, 
-                                     JS_GetStringChars(jsstring),
-                                     JS_GetStringLength(jsstring),
-                                     val, nsnull, nsnull, 
-                                     JSPROP_ENUMERATE | JSPROP_READONLY);
+          return ::JS_DefineUCProperty(aContext, aObj, 
+                                       JS_GetStringChars(jsstring),
+                                       JS_GetStringLength(jsstring),
+                                       val, nsnull, nsnull, 
+                                       JSPROP_ENUMERATE | JSPROP_READONLY);
         }
       }
     }
   }
+
   return nsGenericResolve(aContext, aObj, aId, aLazyPropSpec);
 }
 
@@ -618,8 +633,7 @@ nsJSUtils::nsGenericResolve(JSContext* aContext,
                             jsval aId,
                             JSPropertySpec* aLazyPropSpec)
 {
-  nsISupports* nativeThis = (nsISupports*)JS_GetPrivate(aContext, 
-                                                        aObj);
+  nsISupports* nativeThis = (nsISupports*)::JS_GetPrivate(aContext,  aObj);
 
   if (nsnull != nativeThis) {
     // get the js object
@@ -670,13 +684,16 @@ NS_EXPORT nsISupports*
 nsJSUtils::nsGetNativeThis(JSContext* aContext, JSObject* aObj)
 {
   while (aObj != nsnull) {
-    JSClass* js_class = JS_GetClass(aContext, aObj);
+    JSClass* js_class = ::JS_GetClass(aContext, aObj);
     if (js_class != nsnull &&
-       (js_class->flags & JSCLASS_HAS_PRIVATE) &&
-       (js_class->flags & JSCLASS_PRIVATE_IS_NSISUPPORTS))
-      return (nsISupports*) JS_GetPrivate(aContext, aObj);
-    aObj = JS_GetPrototype(aContext, aObj);
+        (js_class->flags & JSCLASS_HAS_PRIVATE) &&
+        (js_class->flags & JSCLASS_PRIVATE_IS_NSISUPPORTS)) {
+      return (nsISupports*)::JS_GetPrivate(aContext, aObj);
+    }
+
+    aObj = ::JS_GetPrototype(aContext, aObj);
   }
+
   return nsnull;
 }
 #endif
@@ -694,19 +711,19 @@ nsJSUtils::nsGetStaticScriptGlobal(JSContext* aContext,
   if (!glob)
     return NS_ERROR_FAILURE;
 
-  while (nsnull != (parent = JS_GetParent(aContext, glob)))
+  while ((parent = ::JS_GetParent(aContext, glob)))
     glob = parent;
 
 #ifdef JS_THREADSAFE
-  clazz = JS_GetClass(aContext, glob);
+  clazz = ::JS_GetClass(aContext, glob);
 #else
-  clazz = JS_GetClass(glob);
+  clazz = ::JS_GetClass(glob);
 #endif
 
   if (!clazz ||
       !(clazz->flags & JSCLASS_HAS_PRIVATE) ||
       !(clazz->flags & JSCLASS_PRIVATE_IS_NSISUPPORTS) ||
-      !(supports = (nsISupports*) JS_GetPrivate(aContext, glob))) {
+      !(supports = (nsISupports*)::JS_GetPrivate(aContext, glob))) {
     return NS_ERROR_FAILURE;
   }
 
@@ -753,7 +770,7 @@ nsJSUtils::nsGetDynamicScriptContext(JSContext *aContext,
 {
   // XXX We rely on the rule that if any JSContext in our JSRuntime has a 
   // private set then that private *must* be a pointer to an nsISupports.
-  nsISupports *supports = (nsIScriptContext*) JS_GetContextPrivate(aContext);
+  nsISupports *supports = (nsIScriptContext*)::JS_GetContextPrivate(aContext);
   if (!supports)
       return nsnull;
   return supports->QueryInterface(NS_GET_IID(nsIScriptContext),
@@ -767,13 +784,17 @@ nsJSUtils::nsCheckAccess(JSContext *cx, JSObject *obj,
 {
   if (mode == JSACC_WATCH) {
     jsval value, dummy;
-    if (!JS_IdToValue(cx, id, &value))
+    if (!::JS_IdToValue(cx, id, &value))
       return JS_FALSE;
-    JSString *str = JS_ValueToString(cx, value);
+    JSString *str = ::JS_ValueToString(cx, value);
+
     if (!str)
       return JS_FALSE;
-    return JS_GetUCProperty(cx, obj, JS_GetStringChars(str), JS_GetStringLength(str), &dummy);
+
+    return ::JS_GetUCProperty(cx, obj, ::JS_GetStringChars(str),
+                              ::JS_GetStringLength(str), &dummy);
   }
+
   return JS_TRUE;
 }
 

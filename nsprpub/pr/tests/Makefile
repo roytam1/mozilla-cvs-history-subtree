@@ -1,3 +1,4 @@
+# Generated automatically from Makefile.in by configure.
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.1 (the "NPL"); you may not use this file except in
@@ -17,9 +18,13 @@
 
 #! gmake
 
-MOD_DEPTH = ../..
+MOD_DEPTH	= ../..
+topsrcdir	= ../..
+srcdir		= .
 
-include $(MOD_DEPTH)/config/config.mk
+include $(MOD_DEPTH)/config/autoconf.mk
+
+include $(topsrcdir)/config/config.mk
 
 ifeq ($(OS_TARGET), WIN16)
 OS_CFLAGS = $(OS_EXE_CFLAGS)
@@ -85,7 +90,6 @@ CSRCS =             \
 	lockfile.c      \
 	logger.c		\
 	makedir.c		\
-	mbcs.c          \
 	multiacc.c		\
 	multiwait.c		\
 	many_cv.c		\
@@ -192,13 +196,15 @@ PROGS = $(addprefix $(OBJDIR)/, $(CSRCS:.c=$(PROG_SUFFIX)))
 
 TARGETS = $(PROGS)
 
-INCLUDES = -I$(includedir) -I$(MOD_DEPTH)/pr/include -I$(MOD_DEPTH)/pr/include/private
+INCLUDES = -I$(includedir) -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
 
 # Setting the variables LDOPTS and LIBPR.  We first initialize
 # them to the default values, then adjust them for some platforms.
 LDOPTS = -L$(libdir)
 LIBPR = -lnspr$(MOD_VERSION)
 LIBPLC = -lplc$(MOD_VERSION)
+
+ifndef USE_AUTOCONF
 
 ifeq ($(OS_ARCH), WINNT)
 ifeq ($(OS_TARGET), WIN16)
@@ -412,6 +418,19 @@ LDOPTS += -pthread
 endif
 endif
 
+ifeq ($(OS_ARCH),FreeBSD)
+ifeq ($(USE_PTHREADS),1)
+LDOPTS += -pthread
+endif
+LDOPTS += -Xlinker -R $(ABSOLUTE_LIB_DIR)
+endif
+
+ifeq ($(OS_ARCH),OpenBSD)
+ifeq ($(USE_PTHREADS),1)
+LDOPTS += -pthread
+endif
+endif
+
 ifeq ($(OS_ARCH),BSD_OS)
 ifneq ($(OS_RELEASE),1.1)
 EXTRA_LIBS = -ldl
@@ -431,14 +450,21 @@ LIBPTHREAD = -ldce
 endif
 endif
 
+endif # !USE_AUTOCONF
+
 #####################################################
 #
 # The rules
 #
 #####################################################
 
-include $(MOD_DEPTH)/config/rules.mk
+include $(topsrcdir)/config/rules.mk
 
+ifdef USE_AUTOCONF
+$(OBJDIR)/%$(PROG_SUFFIX): %.c
+	$(CC) $< -o $@ $(CFLAGS) $(LDOPTS) $(LIBPLC) $(LIBPR) $(OS_LIBS)
+
+else
 AIX_PRE_4_2 = 0
 ifeq ($(OS_ARCH),AIX)
 ifeq ($(OS_RELEASE),4.1)
@@ -499,10 +525,13 @@ endif
 endif
 endif
 
+endif # !USE_AUTOCONF
+
 export:: $(TARGETS)
 clean::
 	rm -f $(TARGETS)
 
+ifndef USE_AUTOCONF
 # The following tests call BSD socket functions, so they need to link
 # with -lsocket on some platforms.
 ifeq ($(OS_ARCH),SunOS)
@@ -528,6 +557,8 @@ $(OBJDIR)/socket: $(OBJDIR)/socket.o
 $(OBJDIR)/testfile: $(OBJDIR)/testfile.o
 	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
 endif
+
+endif # !USE_AUTOCONF
 
 #
 # Run the test programs with no arguments

@@ -1,3 +1,4 @@
+# Generated automatically from Makefile.in by configure.
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.1 (the "NPL"); you may not use this file except in
@@ -17,15 +18,19 @@
 
 #! gmake
 
-MOD_DEPTH = ../../..
-include $(MOD_DEPTH)/config/config.mk
+MOD_DEPTH	= ../../..
+topsrcdir	= ../../..
+srcdir		= .
 
-HEADERS = $(wildcard *.h)
+include $(MOD_DEPTH)/config/autoconf.mk
+include $(topsrcdir)/config/config.mk
+
+HEADERS = $(wildcard $(srcdir)/*.h)
 
 RELEASE_HEADERS = $(HEADERS)
 RELEASE_HEADERS_DEST = $(RELEASE_INCLUDE_DIR)
 
-include $(MOD_DEPTH)/config/rules.mk
+include $(topsrcdir)/config/rules.mk
 
 export:: $(HEADERS)
 	$(INSTALL) -m 444 $(HEADERS) $(includedir)

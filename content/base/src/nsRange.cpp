@@ -44,6 +44,8 @@
 // XXX Temporary inclusion to deal with fragment parsing
 #include "nsHTMLParts.h"
 
+#include "nsDOMClassInfo.h"
+
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kCParserCID, NS_PARSER_IID);
 
@@ -313,38 +315,27 @@ void nsRange::Shutdown()
 /******************************************************
  * nsISupports
  ******************************************************/
- 
+
+
+// XPConnect interface list for nsRange
+NS_CLASINFO_MAP_BEGIN(Range)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMRange)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNSRange)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsRange
+NS_INTERFACE_MAP_BEGIN(nsRange)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMRange)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMNSRange)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMRange)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(Range)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(nsRange)
 NS_IMPL_RELEASE(nsRange)
 
-nsresult nsRange::QueryInterface(const nsIID& aIID,
-                                     void** aInstancePtrResult)
-{
-  NS_PRECONDITION(aInstancePtrResult, "null pointer");
-  if (!aInstancePtrResult) 
-  {
-    return NS_ERROR_NULL_POINTER;
-  }
-  if (aIID.Equals(kISupportsIID)) 
-  {
-    *aInstancePtrResult = (void*)(nsISupports*)(nsIDOMRange *)this;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMRange))) 
-  {
-    *aInstancePtrResult = (void*)(nsIDOMRange*)this;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMNSRange)))
-  {
-    *aInstancePtrResult = (void*)(nsIDOMNSRange*)this;
-    NS_ADDREF_THIS();
-    return NS_OK;    
-  }
-  return NS_NOINTERFACE;
-}
 
 /********************************************************
  * Utilities for comparing points: API from nsIDOMNSRange

@@ -19,10 +19,10 @@
  * Contributor(s):
  */
 
-#include "nsIDOMCSSStyleDeclaration.idl"
+#include "domstubs.idl"
 
 [scriptable, uuid(a6cf90d1-15b3-11d2-932e-00805f8add32)]
-interface nsIDOMCSS2Properties : nsIDOMCSSStyleDeclaration
+interface nsIDOMCSS2Properties : nsISupports
 {
            attribute DOMString        azimuth;
                                         // raises(DOMException) on setting

@@ -31,6 +31,9 @@
 #include "nsCOMPtr.h"
 #include "nsIDOMRange.h"
 
+#include "nsDOMClassInfo.h"
+
+
 class nsCommentNode : public nsIDOMComment,
                       public nsITextContent
 {
@@ -235,28 +238,27 @@ nsCommentNode::~nsCommentNode()
 {
 }
 
-NS_IMPL_ADDREF(nsCommentNode)
 
+// XPConnect interface list for nsCommentNode
+NS_CLASINFO_MAP_BEGIN(Comment)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMComment)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMEventTarget)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsCommentNode
+NS_INTERFACE_MAP_BEGIN(nsCommentNode)
+  NS_INTERFACE_MAP_ENTRY_DOM_DATA()
+  NS_INTERFACE_MAP_ENTRY(nsITextContent)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMComment)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMCharacterData)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(Comment)
+NS_INTERFACE_MAP_END
+
+
+NS_IMPL_ADDREF(nsCommentNode)
 NS_IMPL_RELEASE(nsCommentNode)
 
-NS_IMETHODIMP
-nsCommentNode::QueryInterface(REFNSIID aIID, void** aInstancePtr)
-{
-  NS_IMPL_DOM_DATA_QUERY_INTERFACE(aIID, aInstancePtr, this)
-  if (aIID.Equals(NS_GET_IID(nsIDOMComment))) {
-    nsIDOMComment* tmp = this;
-    *aInstancePtr = (void*) tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsITextContent))) {
-    nsITextContent* tmp = this;
-    *aInstancePtr = (void*) tmp;
-    NS_ADDREF_THIS();
-    return NS_OK;
-  }
-  return NS_NOINTERFACE;
-}
 
 NS_IMETHODIMP 
 nsCommentNode::GetTag(nsIAtom*& aResult) const

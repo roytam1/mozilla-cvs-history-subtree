@@ -66,11 +66,11 @@ public:
   NS_IMETHOD GetControllers(nsIControllers** aResult);
 
   // nsIDOMFocusListener
-  virtual nsresult Focus(nsIDOMEvent* aEvent);
-  virtual nsresult Blur(nsIDOMEvent* aEvent);
+  NS_IMETHOD Focus(nsIDOMEvent* aEvent);
+  NS_IMETHOD Blur(nsIDOMEvent* aEvent);
 
   // nsIDOMEventListener
-  virtual nsresult HandleEvent(nsIDOMEvent* anEvent) { return NS_OK; };
+  NS_IMETHOD HandleEvent(nsIDOMEvent* anEvent) { return NS_OK; };
 
 protected:
   NS_IMETHOD UpdateCommands(const nsAReadableString& aEventName);

@@ -26,6 +26,7 @@
 #include "nsDOMError.h"
 #include "prprf.h"
 
+#include "nsDOMClassInfo.h"
 
 nsROCSSPrimitiveValue::nsROCSSPrimitiveValue(nsISupports *aOwner, float aT2P)
   : mType(CSS_PX), mTwips(0), mString(), mOwner(aOwner), mT2P(aT2P)
@@ -43,10 +44,18 @@ NS_IMPL_ADDREF(nsROCSSPrimitiveValue);
 NS_IMPL_RELEASE(nsROCSSPrimitiveValue);
 
 
+// XPConnect interface list for nsROCSSPrimitiveValue
+NS_CLASINFO_MAP_BEGIN(ROCSSPrimitiveValue)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMCSSPrimitiveValue)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsROCSSPrimitiveValue
 NS_INTERFACE_MAP_BEGIN(nsROCSSPrimitiveValue)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMCSSPrimitiveValue)
-   NS_INTERFACE_MAP_ENTRY(nsIDOMCSSValue)
-   NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMCSSPrimitiveValue)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMCSSPrimitiveValue)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMCSSValue)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMCSSPrimitiveValue)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(ROCSSPrimitiveValue)
 NS_INTERFACE_MAP_END
 
 

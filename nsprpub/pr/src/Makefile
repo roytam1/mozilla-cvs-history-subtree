@@ -1,3 +1,4 @@
+# Generated automatically from Makefile.in by configure.
 #
 # The contents of this file are subject to the Netscape Public License
 # Version 1.1 (the "NPL"); you may not use this file except in
@@ -17,9 +18,13 @@
 
 #! gmake
 
-MOD_DEPTH = ../..
+MOD_DEPTH	= ../..
+topsrcdir	= ../..
+srcdir		= .
 
-include $(MOD_DEPTH)/config/config.mk
+include $(MOD_DEPTH)/config/autoconf.mk
+
+include $(topsrcdir)/config/config.mk
 
 DIRS = io linking malloc md memory misc threads
 
@@ -39,6 +44,8 @@ endif
 ifeq ($(USE_CPLUS), 1)
 	DIRS += cplus
 endif
+
+ifndef USE_AUTOCONF
 
 #
 # Define platform-dependent OS_LIBS
@@ -139,14 +146,16 @@ ifeq ($(OS_ARCH),NEWS-OS)
 OS_LIBS		= -lsocket -lnsl -lgen -lresolv
 endif
 
+ifdef GC_LEAK_DETECTOR
+OS_LIBS		+= -L$(libdir) -lboehm
+endif
+
+endif # USE_AUTOCONF
+
 ifeq ($(OS_ARCH),WINNT)
 ifneq ($(OS_TARGET),WIN16)
 OS_LIBS		= advapi32.lib wsock32.lib
 endif
-endif
-
-ifdef GC_LEAK_DETECTOR
-OS_LIBS		+= -L$(libdir) -lboehm
 endif
 
 #
@@ -261,7 +270,18 @@ EXTRA_LIBS += $(GLOWDIR)/glowcode.lib
 endif
 endif
 endif
+endif # WINNT
 
+ifdef USE_AUTOCONF
+
+include $(srcdir)/md/$(PR_MD_ARCH_DIR)/objs.mk
+ifdef USE_BTHREADS
+include $(srcdir)/bthreads/objs.mk
+endif
+
+else
+
+ifeq ($(OS_ARCH), WINNT)
 ifeq ($(OS_TARGET), WIN16)
 OBJS +=	md/windows/$(OBJDIR)/w16null.$(OBJ_SUFFIX) \
 	md/windows/$(OBJDIR)/w16proc.$(OBJ_SUFFIX)      \
@@ -319,8 +339,6 @@ OBJS +=	md/windows/$(OBJDIR)/ntdllmn.$(OBJ_SUFFIX) \
 endif
 endif
 
-else
-
 ifeq ($(OS_ARCH),OS2)
 OBJS +=	md/os2/$(OBJDIR)/os2io.$(OBJ_SUFFIX) \
 	md/os2/$(OBJDIR)/os2sock.$(OBJ_SUFFIX) \
@@ -336,21 +354,24 @@ OBJS +=	md/os2/$(OBJDIR)/os2io.$(OBJ_SUFFIX) \
 else
 
 ifeq ($(OS_ARCH), BeOS)
-	include md/beos/objs.mk
-	include bthreads/objs.mk
+	include $(srcdir)/md/beos/objs.mk
+	include $(srcdir)/bthreads/objs.mk
 else
 	# Unix
-	include md/unix/objs.mk
-endif
-endif
-endif
+	include $(srcdir)/md/unix/objs.mk
+endif # BeOS
+endif # OS2
+endif # WINNT
+endif # !USE_AUTOCONF
 
 LIBRARY_NAME = nspr
 LIBRARY_VERSION = $(MOD_VERSION)
 
 RELEASE_LIBS = $(TARGETS)
 
-include $(MOD_DEPTH)/config/rules.mk
+include $(topsrcdir)/config/rules.mk
+
+EXTRA_LIBS = $(OS_LIBS)
 
 ifeq ($(BUILD_AIX_RTL_LIBC),1)
 TARGETS		+= $(AIX_RTL_LIBC)
@@ -361,7 +382,7 @@ endif
 # Version information generation (begin)
 #
 ECHO = echo
-INCLUDES = -I$(includedir) -I$(MOD_DEPTH)/pr/include -I$(MOD_DEPTH)/pr/include/private
+INCLUDES = -I$(includedir) -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
 TINC = $(OBJDIR)/_pr_bld.h
 
 ifeq ($(OS_TARGET),OS2)
@@ -380,9 +401,9 @@ else
 	SUF = LL
 endif
 
-DEFINES     += -D_NSPR_BUILD_
+DEFINES		+= -D_NSPR_BUILD_
 
-GARBAGE     += $(TINC)
+GARBAGE		+= $(TINC)
 
 $(TINC):
 	@$(MAKE_OBJDIR)
@@ -397,12 +418,12 @@ $(TINC):
 
 $(OBJDIR)/prvrsion.$(OBJ_SUFFIX): prvrsion.c $(TINC)
 ifeq ($(OS_ARCH), WINNT)
-	$(CC) -Fo$@ -c $(CFLAGS) -I$(OBJDIR) prvrsion.c
+	$(CC) -Fo$@ -c $(CFLAGS) -I$(OBJDIR) $<
 else
 ifeq ($(MOZ_OS2_TOOLS), VACPP)
-	$(CC) -Fo$@ -c $(CFLAGS) -I$(OBJDIR) prvrsion.c
+	$(CC) -Fo$@ -c $(CFLAGS) -I$(OBJDIR) $<
 else
-	$(CC) -o $@ -c $(CFLAGS) -I$(OBJDIR) prvrsion.c
+	$(CC) -o $@ -c $(CFLAGS) -I$(OBJDIR) $<
 endif
 endif
 #
@@ -411,7 +432,7 @@ endif
 
 
 #
-# The Client build wants the shared libraries in $(bindir),
+# The Client build wants the shared libraries in $(bindir)
 # so we also install them there.
 #
 
@@ -437,4 +458,5 @@ ifeq ($(BUILD_AIX_RTL_LIBC),1)
 $(AIX_RTL_LIBC): /usr/ccs/lib/libc.a
 	rtl_enable -o $@ $<
 endif
+
 

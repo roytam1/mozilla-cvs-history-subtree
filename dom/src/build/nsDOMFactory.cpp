@@ -40,7 +40,6 @@
 #include "nsDOMCID.h"
 #include "nsIDOMScriptObjectFactory.h"
 #include "nsIDOMNativeObjectRegistry.h"
-#include "nsScriptNameSetRegistry.h"
 #include "nsIScriptEventListener.h"
 #include "nsIJSEventListener.h"
 #include "nsIScriptContext.h"
@@ -55,81 +54,6 @@ extern nsresult NS_NewJSEventListener(nsIDOMEventListener **aInstancePtrResult,
 
 extern nsresult NS_NewScriptGlobalObject(nsIScriptGlobalObject **aGlobal);
 
-
-class nsDOMNativeObjectRegistry : public nsIDOMNativeObjectRegistry {
-public:
-  nsDOMNativeObjectRegistry();
-  virtual ~nsDOMNativeObjectRegistry();
-
-  NS_DECL_ISUPPORTS
-
-  NS_IMETHOD RegisterFactory(const nsString& aClassName, const nsIID& aCID);
-  NS_IMETHOD GetFactoryCID(const nsString& aClassName, nsIID& aCID);
-
-private:
-  static PRIntn PR_CALLBACK RemoveStrings(PLHashEntry *he, PRIntn i, void *arg);
-
-  PLHashTable *mFactories;
-};
-
-nsDOMNativeObjectRegistry::nsDOMNativeObjectRegistry()
-{
-  NS_INIT_REFCNT();
-  mFactories = nsnull;
-}
-
-PRIntn 
-nsDOMNativeObjectRegistry::RemoveStrings(PLHashEntry *he, PRIntn i, void *arg)
-{
-  char *str = (char *)he->key;
-
-  nsCRT::free(str);
-  return HT_ENUMERATE_REMOVE;
-}
-
-nsDOMNativeObjectRegistry::~nsDOMNativeObjectRegistry()
-{
-  if (nsnull != mFactories) {
-    PL_HashTableEnumerateEntries(mFactories, RemoveStrings, nsnull);
-    PL_HashTableDestroy(mFactories);
-    mFactories = nsnull;
-  }
-}
-
-NS_IMPL_ISUPPORTS(nsDOMNativeObjectRegistry,
-                  NS_GET_IID(nsIDOMNativeObjectRegistry));
-
-NS_IMETHODIMP 
-nsDOMNativeObjectRegistry::RegisterFactory(const nsString& aClassName, 
-                                           const nsIID& aCID)
-{
-  if (nsnull == mFactories) {
-    mFactories = PL_NewHashTable(4, PL_HashString, PL_CompareStrings,
-                                 PL_CompareValues, nsnull, nsnull);
-  }
-
-  char *name = aClassName.ToNewCString();
-  PL_HashTableAdd(mFactories, name, (void *)&aCID);
-  
-  return NS_OK;
-}
- 
-NS_IMETHODIMP 
-nsDOMNativeObjectRegistry::GetFactoryCID(const nsString& aClassName, 
-                                         nsIID& aCID)
-{
-  if (nsnull == mFactories) {
-    return NS_ERROR_FAILURE;
-  }
-  
-  char *name = aClassName.ToNewCString();
-  nsIID *classId = (nsIID *)PL_HashTableLookup(mFactories, name);
-  nsCRT::free(name);
-
-  aCID = *classId;
-
-  return NS_OK;
-}
 
 //////////////////////////////////////////////////////////////////////
 
@@ -160,7 +84,16 @@ nsDOMSOFactory::~nsDOMSOFactory()
 {
 }
 
-NS_IMPL_ISUPPORTS(nsDOMSOFactory, NS_GET_IID(nsIDOMScriptObjectFactory));
+
+NS_INTERFACE_MAP_BEGIN(nsDOMSOFactory)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMScriptObjectFactory)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+NS_INTERFACE_MAP_END
+
+
+NS_IMPL_ADDREF(nsDOMSOFactory);
+NS_IMPL_RELEASE(nsDOMSOFactory);
+
 
 NS_IMETHODIMP
 nsDOMSOFactory::NewScriptContext(nsIScriptGlobalObject *aGlobal,
@@ -185,21 +118,9 @@ nsDOMSOFactory::NewScriptGlobalObject(nsIScriptGlobalObject **aGlobal)
 
 //////////////////////////////////////////////////////////////////////
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsDOMNativeObjectRegistry);
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsScriptNameSetRegistry);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDOMSOFactory);
 
 static nsModuleComponentInfo gDOMModuleInfo[] = {
-    { "Native Object Registry",
-      NS_DOM_NATIVE_OBJECT_REGISTRY_CID,
-      nsnull,
-      nsDOMNativeObjectRegistryConstructor
-    },
-    { "Script Nameset Registry",
-      NS_SCRIPT_NAMESET_REGISTRY_CID,
-      nsnull,
-      nsScriptNameSetRegistryConstructor
-    },
     { "Script Object Factory",
       NS_DOM_SCRIPT_OBJECT_FACTORY_CID,
       nsnull,

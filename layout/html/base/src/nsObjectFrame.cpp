@@ -164,20 +164,20 @@ public:
  /** nsIDOMMouseListener interfaces 
   * @see nsIDOMMouseListener
   */
-  virtual nsresult MouseDown(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseUp(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseClick(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseDblClick(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseOver(nsIDOMEvent* aMouseEvent);
-  virtual nsresult MouseOut(nsIDOMEvent* aMouseEvent);
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);     
+  NS_IMETHOD MouseDown(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseUp(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseClick(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseDblClick(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseOver(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD MouseOut(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);     
   /* END interfaces from nsIDOMMouseListener*/
   
   // nsIDOMKeyListener interfaces
 
-    virtual nsresult KeyDown(nsIDOMEvent* aKeyEvent);
-    virtual nsresult KeyUp(nsIDOMEvent* aKeyEvent);
-    virtual nsresult KeyPress(nsIDOMEvent* aKeyEvent);
+  NS_IMETHOD KeyDown(nsIDOMEvent* aKeyEvent);
+  NS_IMETHOD KeyUp(nsIDOMEvent* aKeyEvent);
+  NS_IMETHOD KeyPress(nsIDOMEvent* aKeyEvent);
   // end nsIDOMKeyListener interfaces
 
   nsresult Destroy();  

@@ -184,9 +184,9 @@ public:
   NS_DECL_ISUPPORTS
 
 /*BEGIN implementations of focus event handler interface*/
-  virtual nsresult HandleEvent(nsIDOMEvent* aEvent);
-  virtual nsresult Focus(nsIDOMEvent* aEvent);
-  virtual nsresult Blur(nsIDOMEvent* aEvent);
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
+  NS_IMETHOD Focus(nsIDOMEvent* aEvent);
+  NS_IMETHOD Blur(nsIDOMEvent* aEvent);
 /*END implementations of focus event handler interface*/
   nsresult             Init(DocumentViewerImpl *aDocViewer);
 
@@ -2951,7 +2951,7 @@ nsDocViewerFocusListener::HandleEvent(nsIDOMEvent* aEvent)
   return NS_OK;
 }
 
-nsresult
+NS_IMETHODIMP
 nsDocViewerFocusListener::Focus(nsIDOMEvent* aEvent)
 {
   nsCOMPtr<nsIPresShell> shell;
@@ -2975,8 +2975,8 @@ nsDocViewerFocusListener::Focus(nsIDOMEvent* aEvent)
   }
   return result;
 }
- 
-nsresult
+
+NS_IMETHODIMP
 nsDocViewerFocusListener::Blur(nsIDOMEvent* aEvent)
 {
   nsCOMPtr<nsIPresShell> shell;

@@ -116,6 +116,14 @@ nsXMLElement::~nsXMLElement()
   NS_IF_RELEASE(mNameSpace);
 }
 
+
+// XPConnect interface list for nsXMLElement
+NS_CLASINFO_MAP_BEGIN(Element)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMElement)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for nsXMLElement
 NS_IMETHODIMP 
 nsXMLElement::QueryInterface(REFNSIID aIID, void** aInstancePtr)
 {
@@ -135,6 +143,11 @@ nsXMLElement::QueryInterface(REFNSIID aIID, void** aInstancePtr)
     inst = NS_STATIC_CAST(nsIDOMElement *, this);
   } else if (aIID.Equals(NS_GET_IID(nsIXMLContent))) {
     inst = NS_STATIC_CAST(nsIXMLContent *, this);
+  } else if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {
+    inst = nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::eElement_id,
+                                                GetElementIIDs,
+                                                "Element");
+    NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);
   } else {
     return NS_NOINTERFACE;
   }
@@ -146,8 +159,10 @@ nsXMLElement::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   return NS_OK;
 }
 
+
 NS_IMPL_ADDREF_INHERITED(nsXMLElement, nsGenericElement)
 NS_IMPL_RELEASE_INHERITED(nsXMLElement, nsGenericElement)
+
 
 static inline nsresult MakeURI(const char *aSpec, nsIURI *aBase, nsIURI **aURI)
 {

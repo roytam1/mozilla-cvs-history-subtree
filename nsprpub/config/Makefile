@@ -1,3 +1,4 @@
+# Generated automatically from Makefile.in by configure.
 #! gmake
 
 #
@@ -18,11 +19,19 @@
 #
 
 MOD_DEPTH	= ..
+topsrcdir	= ..
+srcdir		= .
+
+include $(MOD_DEPTH)/config/autoconf.mk
 
 # Indicate that this directory builds build tools.
 INTERNAL_TOOLS	= 1
 
-include $(MOD_DEPTH)/config/config.mk
+# autoconf.mk must be deleted last (from the top-level directory)
+# because it is included by every makefile.
+DIST_GARBAGE	= nsprincl.mk nsprincl.sh
+
+include $(topsrcdir)/config/config.mk
 
 CSRCS	= now.c
 
@@ -85,7 +94,7 @@ ifeq ($(MOZ_OS2_TOOLS),VACPP)
 OS_CFLAGS = $(OS_EXE_CFLAGS)
 endif
 
-include $(MOD_DEPTH)/config/rules.mk
+include $(topsrcdir)/config/rules.mk
 
 PROGS	= $(OBJDIR)/now$(PROG_SUFFIX)
 
@@ -115,4 +124,3 @@ ifeq ($(MOZ_OS2_TOOLS),VACPP)
 else
 	$(CC) $(XCFLAGS) $< $(XLDOPTS) $(OUTOPTION)$@
 endif
-

@@ -29,6 +29,9 @@
 #include "nsCOMPtr.h"
 #include "nsIURL.h"
 
+#include "nsDOMClassInfo.h"
+
+
 nsDOMCSSDeclaration::nsDOMCSSDeclaration()
 {
   NS_INIT_REFCNT();
@@ -38,40 +41,46 @@ nsDOMCSSDeclaration::~nsDOMCSSDeclaration()
 {
 }
 
+
+// XPConnect interface list for nsDOMCSSDeclaration
+NS_CLASINFO_MAP_BEGIN(CSSStyleDeclaration)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMCSSStyleDeclaration)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMCSS2Properties)
+  NS_CLASINFO_MAP_ENTRY(nsIDOMNSCSS2Properties)
+NS_CLASINFO_MAP_END
+
+
+// QueryInterface implementation for CSSStyleSheetImpl
+NS_INTERFACE_MAP_BEGIN(nsDOMCSSDeclaration)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMCSSStyleDeclaration)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMCSS2Properties)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMCSS2Properties)
+  NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(CSSStyleDeclaration)
+NS_INTERFACE_MAP_END
+
+
 NS_IMPL_ADDREF(nsDOMCSSDeclaration);
 NS_IMPL_RELEASE(nsDOMCSSDeclaration);
 
-static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
-NS_IMETHODIMP
-nsDOMCSSDeclaration::QueryInterface(REFNSIID aIID,
-                                      void** aInstancePtr)
-{
-  NS_PRECONDITION(nsnull != aInstancePtr, "null ptr");
-  if (nsnull == aInstancePtr) {
-    return NS_ERROR_NULL_POINTER;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMCSS2Properties))) {
-    nsIDOMCSS2Properties *tmp = this;
-    AddRef();
-    *aInstancePtr = (void*) tmp;
-    return NS_OK;
-  }
-  if (aIID.Equals(NS_GET_IID(nsIDOMCSSStyleDeclaration))) {
-    nsIDOMCSSStyleDeclaration *tmp = this;
-    AddRef();
-    *aInstancePtr = (void*) tmp;
-    return NS_OK;
-  }
-  if (aIID.Equals(kISupportsIID)) {
-    nsIDOMCSSStyleDeclaration *tmp = this;
-    nsISupports *tmp2 = tmp;
-    AddRef();
-    *aInstancePtr = (void*) tmp2;
-    return NS_OK;
-  }
-  return NS_NOINTERFACE;
-}
+
+
+
+
+
+
+
+
+
+
+// Do we need to special case the parent in the scriptable helper for
+// this class???
+
+
+
+
+
+
 
 NS_IMETHODIMP
 nsDOMCSSDeclaration::GetCssText(nsAWritableString& aCssText)
