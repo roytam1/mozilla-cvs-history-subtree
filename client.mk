@@ -378,7 +378,7 @@ endif
 # CVS defines for standalone mail (pulled and built if MOZ_MINOTAUR is set)
 #
 CVSCO_MINOTAUR := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/mailnews/app
-ifdef MOZ_XRE_APP
+ifdef MOZ_MINOTAUR
 CHECKOUT_MINOTAUR := cvs_co $(CVSCO_MINOTAUR)
 FASTUPDATE_MINOTAUR := fast_update $(CVSCO_MINOTAUR)
 else
