@@ -27,6 +27,12 @@
 #include "nsReadableUtils.h"
 #include "nsCOMPtr.h"
 #include "nsIServiceManager.h"
+#include "nsIServiceManagerUtils.h"
+#include "nsIInterfaceRequestor.h"
+#include "nsIStringBundle.h"
+#include "nsIPrefService.h"
+#include "nsIPrompt.h"
+#include "nsEventQueueUtils.h"
 #include "nsIChannel.h"
 #include "nsNetCID.h"
 #include "netCore.h"
@@ -36,6 +42,7 @@
 #include "nsIExternalProtocolService.h"
 
 static NS_DEFINE_CID(kSimpleURICID, NS_SIMPLEURI_CID);
+
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -50,18 +57,20 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSICHANNEL
     NS_DECL_NSIREQUEST
-	
+
     nsExtProtocolChannel();
     virtual ~nsExtProtocolChannel();
 
     nsresult SetURI(nsIURI*);
 
-protected:
-  nsCOMPtr<nsIURI> mUrl;
-  nsCOMPtr<nsIURI> mOriginalURI;
-  nsresult mStatus;
+    nsresult OpenURL();
 
-  nsresult OpenURL();
+private:
+    nsCOMPtr<nsIURI> mUrl;
+    nsCOMPtr<nsIURI> mOriginalURI;
+    nsresult mStatus;
+
+    nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
 };
 
 NS_IMPL_THREADSAFE_ADDREF(nsExtProtocolChannel)
@@ -88,18 +97,21 @@ NS_IMETHODIMP nsExtProtocolChannel::GetLoadGroup(nsILoadGroup * *aLoadGroup)
 
 NS_IMETHODIMP nsExtProtocolChannel::SetLoadGroup(nsILoadGroup * aLoadGroup)
 {
-	return NS_OK;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsExtProtocolChannel::GetNotificationCallbacks(nsIInterfaceRequestor* *aNotificationCallbacks)
 {
-  *aNotificationCallbacks = nsnull;
+  NS_ENSURE_ARG_POINTER(aNotificationCallbacks);
+  *aNotificationCallbacks = mCallbacks;
+  NS_IF_ADDREF(*aNotificationCallbacks);
   return NS_OK;
 }
 
 NS_IMETHODIMP nsExtProtocolChannel::SetNotificationCallbacks(nsIInterfaceRequestor* aNotificationCallbacks)
 {
-	return NS_OK;       // don't fail when trying to set this
+  mCallbacks = aNotificationCallbacks;
+  return NS_OK;       // don't fail when trying to set this
 }
 
 NS_IMETHODIMP 
@@ -137,20 +149,27 @@ nsresult nsExtProtocolChannel::SetURI(nsIURI* aURI)
  
 nsresult nsExtProtocolChannel::OpenURL()
 {
-  nsCOMPtr<nsIExternalProtocolService> extProtService (do_GetService(NS_EXTERNALPROTOCOLSERVICE_CONTRACTID));
-  nsCAutoString urlScheme;
-  mUrl->GetScheme(urlScheme);
+  nsCOMPtr<nsPIExternalProtocolService> extProtService (do_GetService(NS_EXTERNALPROTOCOLSERVICE_CONTRACTID));
 
   if (extProtService)
   {
 #ifdef DEBUG
+    nsCAutoString urlScheme;
+    mUrl->GetScheme(urlScheme);
     PRBool haveHandler = PR_FALSE;
     extProtService->ExternalProtocolHandlerExists(urlScheme.get(), &haveHandler);
     NS_ASSERTION(haveHandler, "Why do we have a channel for this url if we don't support the protocol?");
 #endif
-    return extProtService->LoadUrl(mUrl);
+
+    // get an nsIPrompt from the channel if we can
+    nsCOMPtr<nsIPrompt> prompt;
+    if (mCallbacks)
+    {
+      mCallbacks->GetInterface(NS_GET_IID(nsIPrompt), getter_AddRefs(prompt));
+    }
+
+    return extProtService->LoadURI(mUrl, prompt);
   }
-  
   return NS_ERROR_FAILURE;
 }
 
@@ -169,17 +188,17 @@ NS_IMETHODIMP nsExtProtocolChannel::AsyncOpen(nsIStreamListener *listener, nsISu
 NS_IMETHODIMP nsExtProtocolChannel::GetLoadFlags(nsLoadFlags *aLoadFlags)
 {
   *aLoadFlags = 0;
-	return NS_OK;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsExtProtocolChannel::SetLoadFlags(nsLoadFlags aLoadFlags)
 {
-	return NS_OK;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsExtProtocolChannel::GetContentType(nsACString &aContentType)
 {
-	return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP nsExtProtocolChannel::SetContentType(const nsACString &aContentType)
@@ -268,8 +287,8 @@ NS_IMETHODIMP nsExtProtocolChannel::Resume()
 
 nsExternalProtocolHandler::nsExternalProtocolHandler()
 {
-	m_schemeName = "default";
-	m_extProtService = do_GetService(NS_EXTERNALPROTOCOLSERVICE_CONTRACTID);
+  m_schemeName = "default";
+  m_extProtService = do_GetService(NS_EXTERNALPROTOCOLSERVICE_CONTRACTID);
 }
 
 
@@ -288,13 +307,13 @@ NS_INTERFACE_MAP_END_THREADSAFE
 
 NS_IMETHODIMP nsExternalProtocolHandler::GetScheme(nsACString &aScheme)
 {
-	aScheme = m_schemeName;
-	return NS_OK;
+  aScheme = m_schemeName;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsExternalProtocolHandler::GetDefaultPort(PRInt32 *aDefaultPort)
 {
-	*aDefaultPort = 0;
+  *aDefaultPort = 0;
     return NS_OK;
 }
 

@@ -42,7 +42,7 @@ public:
 
   // override nsIExternalProtocolService methods
   NS_IMETHOD ExternalProtocolHandlerExists(const char * aProtocolScheme, PRBool * aHandlerExists);
-  NS_IMETHOD LoadUrl(nsIURI * aURL);
+  nsresult   LoadUriInternal(nsIURI * aURL);
 
   // method overrides for windows registry look up steps....
   already_AddRefed<nsIMIMEInfo> GetMIMEInfoFromOS(const char *aMIMEType, const char *aFileExt, PRBool *aFound);

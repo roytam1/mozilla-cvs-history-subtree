@@ -437,10 +437,15 @@ pref("image.animation_mode",                "normal");
 // prevents necko connecting to ports 1-5 unless the protocol
 // overrides.
 
+// Default action for unlisted external protocol handlers
+pref("network.protocol-handler.external-default", true);      // OK to load
+pref("network.protocol-handler.warn-external-default", true); // warn before load
+
 // Prevent using external protocol handlers for these schemes
 pref("network.protocol-handler.external.hcp", false);
 pref("network.protocol-handler.external.vbscript", false);
 pref("network.protocol-handler.external.javascript", false);
+pref("network.protocol-handler.external.data", false);
 pref("network.protocol-handler.external.ms-help", false);
 pref("network.protocol-handler.external.shell", false);
 pref("network.protocol-handler.external.vnd.ms.radio", false);
