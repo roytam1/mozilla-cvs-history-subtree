@@ -50,6 +50,7 @@
 #include "nsIObserver.h"
 #include "nsCRT.h"
 #include "nsString.h"
+#include "nsNetUtil.h"
 #include "nsReadableUtils.h"
 #include "nsUnicharUtils.h"
 #include "nsIWindowWatcher.h"
@@ -192,6 +193,9 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 {
   if ( !outItemRef )
     return false;
+  if ( !realm || ![realm length] )
+    return false;
+
   const int kBufferLen = 255;
   OSStatus status;
 
@@ -347,26 +351,50 @@ KeychainPrompt::~KeychainPrompt()
   // NSLog(@"Keychain prompt died.");
 }
 
+
+//
+// TODO: add support for ftp username/password. The given realm for
+// an ftp server has the form ftp://<username>@<server>/<path>, see
+// netwerk/protocol/ftp/src/nsFtpConnectionThread.cpp.
+//
+// Get server name and port from the realm ("hostname:port (realm)",
+// see nsHttpChannel.cpp). we can't use CFURL routines or nsIURI
+// routines because they require a protocol, and we don't have one.
+//
+void
+KeychainPrompt::ExtractHostAndPort(const PRUnichar* inRealm, NSString** outHost, PRInt32* outPort)
+{
+  if ( !outHost || !outPort )
+    return;
+  *outHost = @"";
+  *outPort = kAnyPort;
+  
+  // strip off the "(realm)" part
+  NSString* realmStr = [NSString stringWithPRUnichars:inRealm];
+  NSRange firstParen = [realmStr rangeOfString:@"("];
+  if ( firstParen.location == NSNotFound )
+    firstParen.location = [realmStr length];
+  realmStr = [realmStr substringToIndex:firstParen.location-1];
+  
+  // separate the host and the port
+  NSRange endOfHost = [realmStr rangeOfString:@":"];
+  if ( endOfHost.location == NSNotFound )
+    *outHost = realmStr;
+  else {
+    *outHost = [realmStr substringToIndex:endOfHost.location];
+    *outPort = [[realmStr substringFromIndex:endOfHost.location+1] intValue];
+  }
+}
+
 void
 KeychainPrompt::PreFill(const PRUnichar *realm, PRUnichar **user, PRUnichar **pwd)
 {
   if(![mKeychain isEnabled] || ![mKeychain isAutoFillEnabled])
     return;
 
-  //
-  // TODO: add support for ftp username/password. The given realm for
-  // an ftp server has the form ftp://<username>@<server>/<path>, see
-  // netwerk/protocol/ftp/src/nsFtpConnectionThread.cpp.
-  //
-  // Get server name from the realm ("hostname:port (realm)",
-  // see nsHttpChannel.cpp). We can use CFURL routines to do this nicely.
-  //
-  NSString* realmStr = [NSString stringWithPRUnichars:realm];
-  CFURLRef url = CFURLCreateWithString(kCFAllocatorDefault, (CFStringRef)realmStr, NULL);
-  if ( !url )
-    return;
-  PRInt32 port = CFURLGetPortNumber(url);
-  CFStringRef host = CFURLCopyHostName(url);
+  NSString* host = nil;
+  PRInt32 port = -1;
+  ExtractHostAndPort(realm, &host, &port);
 
   NSMutableString* username = nil;
   NSMutableString* password = nil;
@@ -385,24 +413,14 @@ KeychainPrompt::PreFill(const PRUnichar *realm, PRUnichar **user, PRUnichar **pw
     if ( pwd )
       *pwd = [password createNewUnicodeBuffer];
   }
-  
-  CFRelease(url);
-  CFRelease(host);
 }
 
 void
 KeychainPrompt::ProcessPrompt(const PRUnichar* realm, bool checked, PRUnichar* user, PRUnichar *pwd)
 {
-  //
-  // Get server name from the realm ("hostname:port (realm)",
-  // see nsHttpChannel.cpp). We can use CFURL routines to do this nicely.
-  //
-  NSString* realmStr = [NSString stringWithPRUnichars:realm];
-  CFURLRef url = CFURLCreateWithString(kCFAllocatorDefault, (CFStringRef)realmStr, NULL);
-  if ( !url )
-    return;
-  PRInt32 port = CFURLGetPortNumber(url);
-  CFStringRef host = CFURLCopyHostName(url);
+  NSString* host = nil;
+  PRInt32 port = -1;
+  ExtractHostAndPort(realm, &host, &port);
   
   NSString* username = [NSString stringWithPRUnichars:user];
   NSString* password = [NSString stringWithPRUnichars:pwd];
@@ -423,9 +441,6 @@ KeychainPrompt::ProcessPrompt(const PRUnichar* realm, bool checked, PRUnichar* u
     [mKeychain updateUsernameAndPassword:(NSString*)host port:port user:username password:password item:itemRef];
   else if(!checked && found)
     [mKeychain removeUsernameAndPassword:(NSString*)host port:port item:itemRef];
-
-  CFRelease(url);
-  CFRelease(host);
 }
 
 //

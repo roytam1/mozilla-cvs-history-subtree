@@ -92,6 +92,7 @@ protected:
   
   void PreFill(const PRUnichar *, PRUnichar **, PRUnichar **);
   void ProcessPrompt(const PRUnichar *, bool, PRUnichar *, PRUnichar *);
+  static void ExtractHostAndPort(const PRUnichar* inRealm, NSString** outHost, PRInt32* outPort);
 
   nsCOMPtr<nsIPrompt>   mPrompt;
   KeychainService*    mKeychain;
