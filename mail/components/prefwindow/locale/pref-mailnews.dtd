@@ -30,3 +30,7 @@
 <!ENTITY reuseExpRadio1.accesskey         "e">
 <!ENTITY reuseExpRadio2.label             "A tab in an existing message window">
 <!ENTITY reuseExpRadio2.accesskey         "t">
+
+<!-- General -->
+<!ENTITY bounceSystemDockIcon.label "Animate the dock icon">
+<!ENTITY bounceSystemDockIcon.accesskey "A">
