@@ -3393,7 +3393,6 @@ inline PRBool IsEventPseudo(nsIAtom* aAtom)
 {
   return PRBool ((nsCSSAtoms::activePseudo == aAtom)   || 
                  (nsCSSAtoms::dragOverPseudo == aAtom) || 
-//               (nsCSSAtoms::dragPseudo == aAtom)     ||   XXX not real yet
                  (nsCSSAtoms::focusPseudo == aAtom)    || 
                  (nsCSSAtoms::hoverPseudo == aAtom)); 
                  // XXX selected, enabled, disabled, selection?
@@ -4259,12 +4258,10 @@ PRBool IsStateSelector(nsCSSSelector& aSelector)
         (pseudoClass->mAtom == nsCSSAtoms::checkedPseudo) ||
         (pseudoClass->mAtom == nsCSSAtoms::disabledPseudo) || 
         (pseudoClass->mAtom == nsCSSAtoms::dragOverPseudo) || 
-        (pseudoClass->mAtom == nsCSSAtoms::dragPseudo) || 
         (pseudoClass->mAtom == nsCSSAtoms::enabledPseudo) || 
         (pseudoClass->mAtom == nsCSSAtoms::focusPseudo) || 
         (pseudoClass->mAtom == nsCSSAtoms::hoverPseudo) || 
         (pseudoClass->mAtom == nsCSSAtoms::linkPseudo) ||
-        (pseudoClass->mAtom == nsCSSAtoms::selectionPseudo) ||
         (pseudoClass->mAtom == nsCSSAtoms::visitedPseudo)) {
       return PR_TRUE;
     }
