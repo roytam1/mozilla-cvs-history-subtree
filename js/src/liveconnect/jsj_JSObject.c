@@ -683,10 +683,6 @@ jsj_enter_js(JNIEnv *jEnv, void* applet_obj, jobject java_wrapper_obj,
     if (!jsj_env)
         goto error;
 
-    /* If a JSContext was passed by caller, use it. */
-    if (jsj_env->cx == NULL)
-        jsj_env->cx = *cxp;
-
     /* Get the JSContext that we're supposed to use for this Java thread */
     cx = jsj_env->cx;
     if (!cx) {
