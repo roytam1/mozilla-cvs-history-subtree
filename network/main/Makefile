@@ -64,7 +64,7 @@ endif # MOZ_MAIL_NEWS
 
 REQUIRES	= ldapurl imap4url jtools progress nspr2 dbm util js parse lay style pref htmldlgs java \
 	libfont netcache httpurl cnetinit security img layer netcnvts network \
-	mimetype ldap net
+	mimetype ldap net perf
 
 ifdef MOZ_MAIL_NEWS
 REQUIRES += mailbxurl nntpurl pop3url
