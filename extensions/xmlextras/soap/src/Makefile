@@ -34,6 +34,7 @@ CPPSRCS	= 				\
 		nsSOAPCall.cpp	        \
 		nsSOAPFault.cpp	        \
 		nsSOAPJSResponseListener.cpp	\
+		nsSOAPJSValue.cpp	\
 		nsSOAPMessage.cpp	\
 		nsSOAPParameter.cpp	\
 		nsSOAPResponse.cpp	\
