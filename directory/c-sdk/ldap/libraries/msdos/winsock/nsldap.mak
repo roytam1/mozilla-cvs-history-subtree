@@ -332,7 +332,7 @@ LFLAGS=$(LINKFLAGS_RELEASE)
 
 DIST_XP = $(MOZ_SRC)\mozilla\dist
 DIST=$(DIST_XP)\$(DISTBASE)
-DIST_PUBLIC=$(DIST_XP)\public
+DIST_PUBLIC=$(DIST_XP)\include
 
 #
 #       Edit these in order to control 16 bit
@@ -506,7 +506,7 @@ $(OUTDIR)\nsldap.dep: $(BUILDDIR)\\nsldap.mak
         @rem <<$(PROD)$(VERSTR).dep
         $(CINCLUDES) -O $(OUTDIR)\nsldap.dep
 <<
-	$(MOZ_TOOLS)\makedep @$(PROD)$(VERSTR).dep -F <<
+	$(MOZ_SRC)\mozilla\config\makedep @$(PROD)$(VERSTR).dep -F <<
                 $(LIBLDAP)\abandon.c
                 $(LIBLDAP)\add.c
                 $(LIBLDAP)\bind.c
@@ -813,7 +813,7 @@ $(STATICLIB) : "$(OUTDIR)" $(OBJ_FILES)
 
 #
 dynamic:	$(DYNAMICLIB)
-	
+
 "$(OUTDIR)\nsldap$(DLL_BITS)v$(MOZ_LDAP_VER).dll" : "$(OUTDIR)" $(OBJ_FILES) $(OUTDIR)\nsldap.res
    @rem <<$(PROD)$(VERSTR).lk
 !if "$(MOZ_BITS)"=="32"
@@ -979,3 +979,4 @@ $(VERFILE) : $(VERPROG)
 $(VERPROG) : $(VERSRC)
         cl $(VERSRC) -link -out:$@
 !endif
+
