@@ -365,7 +365,7 @@ endif
 ####################################
 # CVS defines for codesighs (pulled and built if MOZ_MAPINFO is set)
 #
-CVSCO_CODESIGHS := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/tools/codesighs
+CVSCO_CODESIGHS := $(CVS) $(CVS_FLAGS) co -A $(CVS_CO_DATE_FLAGS) mozilla/tools/codesighs
 
 ifdef MOZ_MAPINFO
 FASTUPDATE_CODESIGHS := fast_update $(CVSCO_CODESIGHS)
