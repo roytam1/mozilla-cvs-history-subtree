@@ -596,8 +596,15 @@ const int kReuseWindowOnAE = 2;
   // our window.
   BrowserWindowController* controller = [self getMainWindowBrowserController];
   if (reuseWindow > kOpenNewWindowOnAE && controller) {
-    if (reuseWindow == kOpenNewTabOnAE && [controller newTabsAllowed])
-      [controller openNewTabWithURL:inURLString referrer:aReferrer loadInBackground:loadInBackground];
+    if (reuseWindow == kOpenNewTabOnAE) {
+      // if we have room for a new tab, open one, otherwise open a new window. if
+      // we don't do this, and just reuse the current tab, people will lose the urls
+      // as they get replaced in the current tab.
+      if ([controller newTabsAllowed])
+        [controller openNewTabWithURL:inURLString referrer:aReferrer loadInBackground:loadInBackground];
+      else
+        controller = [self openBrowserWindowWithURL: inURLString andReferrer:aReferrer];
+    }
     else
       [controller loadURL: inURLString referrer:nil activate:YES];
   }
