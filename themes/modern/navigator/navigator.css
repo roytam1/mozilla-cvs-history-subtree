@@ -258,7 +258,6 @@ window[chromehidden~="extrachrome"] .chromeclass-extrachrome {
 	height                            : 18px;                               
   }
 
-
 #page-proxy-button 
   {
   	margin-left			  : 0px;
@@ -330,16 +329,6 @@ window[chromehidden~="extrachrome"] .chromeclass-extrachrome {
     width                 : 100px;
   }
 
-#statusbar-display
-  {
-    list-style-image      : url("chrome://communicator/skin/document.gif");
-  }
-  
-#statusbar-display[error="true"]
-  {
-    list-style-image      : url("chrome://communicator/skin/document-error.gif");
-  }  
-  
 #search-button
   {
     margin-right          : 4px;
