@@ -60,6 +60,11 @@
 #include "rdf.h"
 #include "rdfutil.h"
 
+// XXX These are needed as scaffolding until we get to a more
+// DOM-based solution.
+#include "nsHTMLParts.h"
+#include "nsIHTMLContent.h"
+
 ////////////////////////////////////////////////////////////////////////
 
 static NS_DEFINE_IID(kIContentIID,                NS_ICONTENT_IID);
@@ -634,8 +639,11 @@ RDFXULBuilderImpl::CreateHTMLElement(nsIRDFResource* aResource,
 {
     nsresult rv;
 
-    nsCOMPtr<nsIContent> element;
-    if (NS_FAILED(rv = NS_CreateHTMLElement(aTag->GetUnicode(), getter_AddRefs(element)))) {
+    // XXX This is where we go out and create the HTML content. It's a
+    // bit of a hack: a bridge until we get to a more DOM-based
+    // solution.
+    nsCOMPtr<nsIHTMLContent> element;
+    if (NS_FAILED(rv = NS_CreateHTMLElement(getter_AddRefs(element), aTag->GetUnicode()))) {
         NS_ERROR("unable to create HTML element");
         return rv;
     }

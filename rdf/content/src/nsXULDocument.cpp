@@ -282,16 +282,16 @@ public:
 
 
 ////////////////////////////////////////////////////////////////////////
-// RDFDocumentImpl
+// XULDocumentImpl
 
-class RDFDocumentImpl : public nsIDocument,
+class XULDocumentImpl : public nsIDocument,
                         public nsIRDFDocument,
                         public nsIRDFXMLDataSourceObserver,
                         public nsIHTMLContentContainer
 {
 public:
-    RDFDocumentImpl();
-    virtual ~RDFDocumentImpl();
+    XULDocumentImpl();
+    virtual ~XULDocumentImpl();
 
     // nsISupports interface
     NS_DECL_ISUPPORTS
@@ -525,11 +525,11 @@ protected:
 class DummyListener : public nsIStreamListener
 {
 private:
-    RDFDocumentImpl* mRDFDocument;
+    XULDocumentImpl* mRDFDocument;
     PRBool mWasNotifiedOnce; // XXX why do we get _two_ OnStart/StopBinding() calls?
 
 public:
-    DummyListener(RDFDocumentImpl* aRDFDocument)
+    DummyListener(XULDocumentImpl* aRDFDocument)
         : mRDFDocument(aRDFDocument),
           mWasNotifiedOnce(PR_FALSE)
     {
@@ -612,7 +612,7 @@ DummyListener::QueryInterface(REFNSIID aIID, void** aResult)
 ////////////////////////////////////////////////////////////////////////
 // ctors & dtors
 
-RDFDocumentImpl::RDFDocumentImpl(void)
+XULDocumentImpl::XULDocumentImpl(void)
     : mArena(nsnull),
       mDocumentURL(nsnull),
       mDocumentURLGroup(nsnull),
@@ -644,7 +644,7 @@ RDFDocumentImpl::RDFDocumentImpl(void)
     
 }
 
-RDFDocumentImpl::~RDFDocumentImpl()
+XULDocumentImpl::~XULDocumentImpl()
 {
     if (mDocumentDataSource) {
         mDocumentDataSource->RemoveXMLStreamObserver(this);
@@ -674,7 +674,7 @@ RDFDocumentImpl::~RDFDocumentImpl()
 // nsISupports interface
 
 NS_IMETHODIMP 
-RDFDocumentImpl::QueryInterface(REFNSIID iid, void** result)
+XULDocumentImpl::QueryInterface(REFNSIID iid, void** result)
 {
     if (! result)
         return NS_ERROR_NULL_POINTER;
@@ -700,21 +700,21 @@ RDFDocumentImpl::QueryInterface(REFNSIID iid, void** result)
     return NS_NOINTERFACE;
 }
 
-NS_IMPL_ADDREF(RDFDocumentImpl);
-NS_IMPL_RELEASE(RDFDocumentImpl);
+NS_IMPL_ADDREF(XULDocumentImpl);
+NS_IMPL_RELEASE(XULDocumentImpl);
 
 ////////////////////////////////////////////////////////////////////////
 // nsIDocument interface
 
 nsIArena*
-RDFDocumentImpl::GetArena()
+XULDocumentImpl::GetArena()
 {
     NS_IF_ADDREF(mArena);
     return mArena;
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL, 
+XULDocumentImpl::StartDocumentLoad(nsIURL *aURL, 
                                    nsIContentViewerContainer* aContainer,
                                    nsIStreamListener **aDocListener,
                                    const char* aCommand)
@@ -943,27 +943,27 @@ RDFDocumentImpl::StartDocumentLoad(nsIURL *aURL,
 }
 
 const nsString*
-RDFDocumentImpl::GetDocumentTitle() const
+XULDocumentImpl::GetDocumentTitle() const
 {
     return &mDocumentTitle;
 }
 
 nsIURL* 
-RDFDocumentImpl::GetDocumentURL() const
+XULDocumentImpl::GetDocumentURL() const
 {
     NS_IF_ADDREF(mDocumentURL);
     return mDocumentURL;
 }
 
 nsIURLGroup* 
-RDFDocumentImpl::GetDocumentURLGroup() const
+XULDocumentImpl::GetDocumentURLGroup() const
 {
     NS_IF_ADDREF(mDocumentURLGroup);
     return mDocumentURLGroup;
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::GetBaseURL(nsIURL*& aURL) const
+XULDocumentImpl::GetBaseURL(nsIURL*& aURL) const
 {
     NS_IF_ADDREF(mDocumentURL);
     aURL = mDocumentURL;
@@ -971,32 +971,32 @@ RDFDocumentImpl::GetBaseURL(nsIURL*& aURL) const
 }
 
 nsString* 
-RDFDocumentImpl::GetDocumentCharacterSet() const
+XULDocumentImpl::GetDocumentCharacterSet() const
 {
     return mCharSetID;
 }
 
 void 
-RDFDocumentImpl::SetDocumentCharacterSet(nsString* aCharSetID)
+XULDocumentImpl::SetDocumentCharacterSet(nsString* aCharSetID)
 {
     mCharSetID = aCharSetID;
 }
 
 NS_IMETHODIMP
-RDFDocumentImpl::GetHeaderData(nsIAtom* aHeaderField, nsString& aData) const
+XULDocumentImpl::GetHeaderData(nsIAtom* aHeaderField, nsString& aData) const
 {
   return NS_OK;
 }
 
 NS_IMETHODIMP
-RDFDocumentImpl:: SetHeaderData(nsIAtom* aheaderField, const nsString& aData)
+XULDocumentImpl:: SetHeaderData(nsIAtom* aheaderField, const nsString& aData)
 {
   return NS_OK;
 }
 
 
 nsresult 
-RDFDocumentImpl::CreateShell(nsIPresContext* aContext,
+XULDocumentImpl::CreateShell(nsIPresContext* aContext,
                              nsIViewManager* aViewManager,
                              nsIStyleSet* aStyleSet,
                              nsIPresShell** aInstancePtrResult)
@@ -1026,19 +1026,19 @@ RDFDocumentImpl::CreateShell(nsIPresContext* aContext,
 }
 
 PRBool 
-RDFDocumentImpl::DeleteShell(nsIPresShell* aShell)
+XULDocumentImpl::DeleteShell(nsIPresShell* aShell)
 {
     return mPresShells.RemoveElement(aShell);
 }
 
 PRInt32 
-RDFDocumentImpl::GetNumberOfShells()
+XULDocumentImpl::GetNumberOfShells()
 {
     return mPresShells.Count();
 }
 
 nsIPresShell* 
-RDFDocumentImpl::GetShellAt(PRInt32 aIndex)
+XULDocumentImpl::GetShellAt(PRInt32 aIndex)
 {
     nsIPresShell* shell = NS_STATIC_CAST(nsIPresShell*, mPresShells[aIndex]);
     NS_IF_ADDREF(shell);
@@ -1046,14 +1046,14 @@ RDFDocumentImpl::GetShellAt(PRInt32 aIndex)
 }
 
 nsIDocument* 
-RDFDocumentImpl::GetParentDocument()
+XULDocumentImpl::GetParentDocument()
 {
     NS_IF_ADDREF(mParentDocument);
     return mParentDocument;
 }
 
 void 
-RDFDocumentImpl::SetParentDocument(nsIDocument* aParent)
+XULDocumentImpl::SetParentDocument(nsIDocument* aParent)
 {
     // Note that we do *not* AddRef our parent because that would
     // create a circular reference.
@@ -1061,20 +1061,20 @@ RDFDocumentImpl::SetParentDocument(nsIDocument* aParent)
 }
 
 void 
-RDFDocumentImpl::AddSubDocument(nsIDocument* aSubDoc)
+XULDocumentImpl::AddSubDocument(nsIDocument* aSubDoc)
 {
     // we don't do subdocs.
     PR_ASSERT(0);
 }
 
 PRInt32 
-RDFDocumentImpl::GetNumberOfSubDocuments()
+XULDocumentImpl::GetNumberOfSubDocuments()
 {
     return 0;
 }
 
 nsIDocument* 
-RDFDocumentImpl::GetSubDocumentAt(PRInt32 aIndex)
+XULDocumentImpl::GetSubDocumentAt(PRInt32 aIndex)
 {
     // we don't do subdocs.
     PR_ASSERT(0);
@@ -1082,14 +1082,14 @@ RDFDocumentImpl::GetSubDocumentAt(PRInt32 aIndex)
 }
 
 nsIContent* 
-RDFDocumentImpl::GetRootContent()
+XULDocumentImpl::GetRootContent()
 {
     NS_IF_ADDREF(mRootContent);
     return mRootContent;
 }
 
 void 
-RDFDocumentImpl::SetRootContent(nsIContent* aRoot)
+XULDocumentImpl::SetRootContent(nsIContent* aRoot)
 {
     if (mRootContent) {
         mRootContent->SetDocument(nsnull, PR_TRUE);
@@ -1103,13 +1103,13 @@ RDFDocumentImpl::SetRootContent(nsIContent* aRoot)
 }
 
 PRInt32 
-RDFDocumentImpl::GetNumberOfStyleSheets()
+XULDocumentImpl::GetNumberOfStyleSheets()
 {
     return mStyleSheets.Count();
 }
 
 nsIStyleSheet* 
-RDFDocumentImpl::GetStyleSheetAt(PRInt32 aIndex)
+XULDocumentImpl::GetStyleSheetAt(PRInt32 aIndex)
 {
     nsIStyleSheet* sheet = NS_STATIC_CAST(nsIStyleSheet*, mStyleSheets[aIndex]);
     NS_IF_ADDREF(sheet);
@@ -1117,13 +1117,13 @@ RDFDocumentImpl::GetStyleSheetAt(PRInt32 aIndex)
 }
 
 PRInt32 
-RDFDocumentImpl::GetIndexOfStyleSheet(nsIStyleSheet* aSheet)
+XULDocumentImpl::GetIndexOfStyleSheet(nsIStyleSheet* aSheet)
 {
   return mStyleSheets.IndexOf(aSheet);
 }
 
 void 
-RDFDocumentImpl::AddStyleSheet(nsIStyleSheet* aSheet)
+XULDocumentImpl::AddStyleSheet(nsIStyleSheet* aSheet)
 {
     NS_PRECONDITION(aSheet, "null arg");
     if (!aSheet)
@@ -1160,7 +1160,7 @@ RDFDocumentImpl::AddStyleSheet(nsIStyleSheet* aSheet)
 }
 
 void 
-RDFDocumentImpl::SetStyleSheetDisabledState(nsIStyleSheet* aSheet,
+XULDocumentImpl::SetStyleSheetDisabledState(nsIStyleSheet* aSheet,
                                           PRBool aDisabled)
 {
     NS_PRECONDITION(nsnull != aSheet, "null arg");
@@ -1193,14 +1193,14 @@ RDFDocumentImpl::SetStyleSheetDisabledState(nsIStyleSheet* aSheet,
 }
 
 nsIScriptContextOwner *
-RDFDocumentImpl::GetScriptContextOwner()
+XULDocumentImpl::GetScriptContextOwner()
 {
     NS_IF_ADDREF(mScriptContextOwner);
     return mScriptContextOwner;
 }
 
 void 
-RDFDocumentImpl::SetScriptContextOwner(nsIScriptContextOwner *aScriptContextOwner)
+XULDocumentImpl::SetScriptContextOwner(nsIScriptContextOwner *aScriptContextOwner)
 {
     // XXX HACK ALERT! If the script context owner is null, the document
     // will soon be going away. So tell our content that to lose its
@@ -1216,7 +1216,7 @@ RDFDocumentImpl::SetScriptContextOwner(nsIScriptContextOwner *aScriptContextOwne
 }
 
 NS_IMETHODIMP
-RDFDocumentImpl::GetNameSpaceManager(nsINameSpaceManager*& aManager)
+XULDocumentImpl::GetNameSpaceManager(nsINameSpaceManager*& aManager)
 {
   aManager = mNameSpaceManager;
   NS_IF_ADDREF(aManager);
@@ -1227,7 +1227,7 @@ RDFDocumentImpl::GetNameSpaceManager(nsINameSpaceManager*& aManager)
 // Note: We don't hold a reference to the document observer; we assume
 // that it has a live reference to the document.
 void 
-RDFDocumentImpl::AddObserver(nsIDocumentObserver* aObserver)
+XULDocumentImpl::AddObserver(nsIDocumentObserver* aObserver)
 {
     // XXX Make sure the observer isn't already in the list
     if (mObservers.IndexOf(aObserver) == -1) {
@@ -1236,13 +1236,13 @@ RDFDocumentImpl::AddObserver(nsIDocumentObserver* aObserver)
 }
 
 PRBool 
-RDFDocumentImpl::RemoveObserver(nsIDocumentObserver* aObserver)
+XULDocumentImpl::RemoveObserver(nsIDocumentObserver* aObserver)
 {
     return mObservers.RemoveElement(aObserver);
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::BeginLoad()
+XULDocumentImpl::BeginLoad()
 {
     PRInt32 i, count = mObservers.Count();
     for (i = 0; i < count; i++) {
@@ -1253,7 +1253,7 @@ RDFDocumentImpl::BeginLoad()
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::EndLoad()
+XULDocumentImpl::EndLoad()
 {
     PRInt32 i, count = mObservers.Count();
     for (i = 0; i < count; i++) {
@@ -1265,7 +1265,7 @@ RDFDocumentImpl::EndLoad()
 
 
 NS_IMETHODIMP 
-RDFDocumentImpl::ContentChanged(nsIContent* aContent,
+XULDocumentImpl::ContentChanged(nsIContent* aContent,
                               nsISupports* aSubContent)
 {
     PRInt32 count = mObservers.Count();
@@ -1277,7 +1277,7 @@ RDFDocumentImpl::ContentChanged(nsIContent* aContent,
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::AttributeChanged(nsIContent* aChild,
+XULDocumentImpl::AttributeChanged(nsIContent* aChild,
                                 nsIAtom* aAttribute,
                                 PRInt32 aHint)
 {
@@ -1290,7 +1290,7 @@ RDFDocumentImpl::AttributeChanged(nsIContent* aChild,
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::ContentAppended(nsIContent* aContainer,
+XULDocumentImpl::ContentAppended(nsIContent* aContainer,
                                PRInt32 aNewIndexInContainer)
 {
     PRInt32 count = mObservers.Count();
@@ -1302,7 +1302,7 @@ RDFDocumentImpl::ContentAppended(nsIContent* aContainer,
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::ContentInserted(nsIContent* aContainer,
+XULDocumentImpl::ContentInserted(nsIContent* aContainer,
                                nsIContent* aChild,
                                PRInt32 aIndexInContainer)
 {
@@ -1316,7 +1316,7 @@ RDFDocumentImpl::ContentInserted(nsIContent* aContainer,
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::ContentReplaced(nsIContent* aContainer,
+XULDocumentImpl::ContentReplaced(nsIContent* aContainer,
                                nsIContent* aOldChild,
                                nsIContent* aNewChild,
                                PRInt32 aIndexInContainer)
@@ -1331,7 +1331,7 @@ RDFDocumentImpl::ContentReplaced(nsIContent* aContainer,
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::ContentRemoved(nsIContent* aContainer,
+XULDocumentImpl::ContentRemoved(nsIContent* aContainer,
                               nsIContent* aChild,
                               PRInt32 aIndexInContainer)
 {
@@ -1345,7 +1345,7 @@ RDFDocumentImpl::ContentRemoved(nsIContent* aContainer,
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::StyleRuleChanged(nsIStyleSheet* aStyleSheet,
+XULDocumentImpl::StyleRuleChanged(nsIStyleSheet* aStyleSheet,
                               nsIStyleRule* aStyleRule,
                               PRInt32 aHint)
 {
@@ -1358,7 +1358,7 @@ RDFDocumentImpl::StyleRuleChanged(nsIStyleSheet* aStyleSheet,
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::StyleRuleAdded(nsIStyleSheet* aStyleSheet,
+XULDocumentImpl::StyleRuleAdded(nsIStyleSheet* aStyleSheet,
                             nsIStyleRule* aStyleRule)
 {
     PRInt32 count = mObservers.Count();
@@ -1370,7 +1370,7 @@ RDFDocumentImpl::StyleRuleAdded(nsIStyleSheet* aStyleSheet,
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::StyleRuleRemoved(nsIStyleSheet* aStyleSheet,
+XULDocumentImpl::StyleRuleRemoved(nsIStyleSheet* aStyleSheet,
                               nsIStyleRule* aStyleRule)
 {
     PRInt32 count = mObservers.Count();
@@ -1382,7 +1382,7 @@ RDFDocumentImpl::StyleRuleRemoved(nsIStyleSheet* aStyleSheet,
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::GetSelection(nsICollection** aSelection)
+XULDocumentImpl::GetSelection(nsICollection** aSelection)
 {
     if (!mSelection) {
         PR_ASSERT(0);
@@ -1395,7 +1395,7 @@ RDFDocumentImpl::GetSelection(nsICollection** aSelection)
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::SelectAll()
+XULDocumentImpl::SelectAll()
 {
 
     nsIContent * start = nsnull;
@@ -1466,44 +1466,44 @@ RDFDocumentImpl::SelectAll()
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::FindNext(const nsString &aSearchStr, PRBool aMatchCase, PRBool aSearchDown, PRBool &aIsFound)
+XULDocumentImpl::FindNext(const nsString &aSearchStr, PRBool aMatchCase, PRBool aSearchDown, PRBool &aIsFound)
 {
     aIsFound = PR_FALSE;
     return NS_ERROR_FAILURE;
 }
 
 void 
-RDFDocumentImpl::CreateXIF(nsString & aBuffer, nsISelection* aSelection)
+XULDocumentImpl::CreateXIF(nsString & aBuffer, nsISelection* aSelection)
 {
     PR_ASSERT(0);
 }
 
 void 
-RDFDocumentImpl::ToXIF(nsXIFConverter& aConverter, nsIDOMNode* aNode)
+XULDocumentImpl::ToXIF(nsXIFConverter& aConverter, nsIDOMNode* aNode)
 {
     PR_ASSERT(0);
 }
 
 void 
-RDFDocumentImpl::BeginConvertToXIF(nsXIFConverter& aConverter, nsIDOMNode* aNode)
+XULDocumentImpl::BeginConvertToXIF(nsXIFConverter& aConverter, nsIDOMNode* aNode)
 {
     PR_ASSERT(0);
 }
 
 void 
-RDFDocumentImpl::ConvertChildrenToXIF(nsXIFConverter& aConverter, nsIDOMNode* aNode)
+XULDocumentImpl::ConvertChildrenToXIF(nsXIFConverter& aConverter, nsIDOMNode* aNode)
 {
     PR_ASSERT(0);
 }
 
 void 
-RDFDocumentImpl::FinishConvertToXIF(nsXIFConverter& aConverter, nsIDOMNode* aNode)
+XULDocumentImpl::FinishConvertToXIF(nsXIFConverter& aConverter, nsIDOMNode* aNode)
 {
     PR_ASSERT(0);
 }
 
 PRBool 
-RDFDocumentImpl::IsInRange(const nsIContent *aStartContent, const nsIContent* aEndContent, const nsIContent* aContent) const
+XULDocumentImpl::IsInRange(const nsIContent *aStartContent, const nsIContent* aEndContent, const nsIContent* aContent) const
 {
     PRBool  result;
 
@@ -1522,7 +1522,7 @@ RDFDocumentImpl::IsInRange(const nsIContent *aStartContent, const nsIContent* aE
 }
 
 PRBool 
-RDFDocumentImpl::IsBefore(const nsIContent *aNewContent, const nsIContent* aCurrentContent) const
+XULDocumentImpl::IsBefore(const nsIContent *aNewContent, const nsIContent* aCurrentContent) const
 {
     PRBool result = PR_FALSE;
 
@@ -1537,7 +1537,7 @@ RDFDocumentImpl::IsBefore(const nsIContent *aNewContent, const nsIContent* aCurr
 }
 
 PRBool 
-RDFDocumentImpl::IsInSelection(nsISelection* aSelection, const nsIContent *aContent) const
+XULDocumentImpl::IsInSelection(nsISelection* aSelection, const nsIContent *aContent) const
 {
     PRBool  result = PR_FALSE;
 
@@ -1560,7 +1560,7 @@ RDFDocumentImpl::IsInSelection(nsISelection* aSelection, const nsIContent *aCont
 }
 
 nsIContent* 
-RDFDocumentImpl::GetPrevContent(const nsIContent *aContent) const
+XULDocumentImpl::GetPrevContent(const nsIContent *aContent) const
 {
     nsIContent* result = nsnull;
  
@@ -1584,7 +1584,7 @@ RDFDocumentImpl::GetPrevContent(const nsIContent *aContent) const
 }
 
 nsIContent* 
-RDFDocumentImpl::GetNextContent(const nsIContent *aContent) const
+XULDocumentImpl::GetNextContent(const nsIContent *aContent) const
 {
     nsIContent* result = nsnull;
    
@@ -1623,19 +1623,19 @@ RDFDocumentImpl::GetNextContent(const nsIContent *aContent) const
 }
 
 void 
-RDFDocumentImpl::SetDisplaySelection(PRBool aToggle)
+XULDocumentImpl::SetDisplaySelection(PRBool aToggle)
 {
     mDisplaySelection = aToggle;
 }
 
 PRBool 
-RDFDocumentImpl::GetDisplaySelection() const
+XULDocumentImpl::GetDisplaySelection() const
 {
     return mDisplaySelection;
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::HandleDOMEvent(nsIPresContext& aPresContext, 
+XULDocumentImpl::HandleDOMEvent(nsIPresContext& aPresContext, 
                             nsEvent* aEvent, 
                             nsIDOMEvent** aDOMEvent,
                             PRUint32 aFlags,
@@ -1650,21 +1650,21 @@ RDFDocumentImpl::HandleDOMEvent(nsIPresContext& aPresContext,
 // nsIXMLDocument interface
 
 NS_IMETHODIMP
-RDFDocumentImpl::PrologElementAt(PRUint32 aOffset, nsIContent** aContent)
+XULDocumentImpl::PrologElementAt(PRUint32 aOffset, nsIContent** aContent)
 {
     PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-RDFDocumentImpl::PrologCount(PRUint32* aCount)
+XULDocumentImpl::PrologCount(PRUint32* aCount)
 {
     PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-RDFDocumentImpl::AppendToProlog(nsIContent* aContent)
+XULDocumentImpl::AppendToProlog(nsIContent* aContent)
 {
     PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -1672,21 +1672,21 @@ RDFDocumentImpl::AppendToProlog(nsIContent* aContent)
 
 
 NS_IMETHODIMP
-RDFDocumentImpl::EpilogElementAt(PRUint32 aOffset, nsIContent** aContent)
+XULDocumentImpl::EpilogElementAt(PRUint32 aOffset, nsIContent** aContent)
 {
     PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-RDFDocumentImpl::EpilogCount(PRUint32* aCount)
+XULDocumentImpl::EpilogCount(PRUint32* aCount)
 {
     PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
-RDFDocumentImpl::AppendToEpilog(nsIContent* aContent)
+XULDocumentImpl::AppendToEpilog(nsIContent* aContent)
 {
     PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -1696,7 +1696,7 @@ RDFDocumentImpl::AppendToEpilog(nsIContent* aContent)
 //
 
 NS_IMETHODIMP 
-RDFDocumentImpl::GetAttributeStyleSheet(nsIHTMLStyleSheet** aResult)
+XULDocumentImpl::GetAttributeStyleSheet(nsIHTMLStyleSheet** aResult)
 {
     NS_PRECONDITION(nsnull != aResult, "null ptr");
     if (nsnull == aResult) {
@@ -1713,7 +1713,7 @@ RDFDocumentImpl::GetAttributeStyleSheet(nsIHTMLStyleSheet** aResult)
 }
 
 NS_IMETHODIMP 
-RDFDocumentImpl::GetInlineStyleSheet(nsIHTMLCSSStyleSheet** aResult)
+XULDocumentImpl::GetInlineStyleSheet(nsIHTMLCSSStyleSheet** aResult)
 {
     NS_NOTYETIMPLEMENTED("get the inline stylesheet!");
 
@@ -1735,7 +1735,7 @@ RDFDocumentImpl::GetInlineStyleSheet(nsIHTMLCSSStyleSheet** aResult)
 // nsIRDFDocument interface
 
 NS_IMETHODIMP
-RDFDocumentImpl::SetContentType(const char* aContentType)
+XULDocumentImpl::SetContentType(const char* aContentType)
 {
 	mContentType = TEXT_RDF;
 	if (0 == PL_strcmp("text/xul", aContentType))
@@ -1747,7 +1747,7 @@ RDFDocumentImpl::SetContentType(const char* aContentType)
 }
 
 NS_IMETHODIMP
-RDFDocumentImpl::SetRootResource(nsIRDFResource* aResource)
+XULDocumentImpl::SetRootResource(nsIRDFResource* aResource)
 {
     NS_PRECONDITION(mXULBuilder != nsnull, "not initialized");
     if (! mXULBuilder)
@@ -1764,7 +1764,7 @@ RDFDocumentImpl::SetRootResource(nsIRDFResource* aResource)
 }
 
 NS_IMETHODIMP
-RDFDocumentImpl::SplitProperty(nsIRDFResource* aProperty,
+XULDocumentImpl::SplitProperty(nsIRDFResource* aProperty,
                                PRInt32* aNameSpaceID,
                                nsIAtom** aTag)
 {
@@ -1848,7 +1848,7 @@ RDFDocumentImpl::SplitProperty(nsIRDFResource* aProperty,
 
 
 NS_IMETHODIMP
-RDFDocumentImpl::AddElementForResource(nsIRDFResource* aResource, nsIRDFContent* aElement)
+XULDocumentImpl::AddElementForResource(nsIRDFResource* aResource, nsIRDFContent* aElement)
 {
     NS_PRECONDITION(aResource != nsnull, "null ptr");
     if (! aResource)
@@ -1864,7 +1864,7 @@ RDFDocumentImpl::AddElementForResource(nsIRDFResource* aResource, nsIRDFContent*
 
 
 NS_IMETHODIMP
-RDFDocumentImpl::RemoveElementForResource(nsIRDFResource* aResource, nsIRDFContent* aElement)
+XULDocumentImpl::RemoveElementForResource(nsIRDFResource* aResource, nsIRDFContent* aElement)
 {
     NS_PRECONDITION(aResource != nsnull, "null ptr");
     if (! aResource)
@@ -1880,7 +1880,7 @@ RDFDocumentImpl::RemoveElementForResource(nsIRDFResource* aResource, nsIRDFConte
 
 
 NS_IMETHODIMP
-RDFDocumentImpl::GetElementsForResource(nsIRDFResource* aResource, nsISupportsArray* aElements)
+XULDocumentImpl::GetElementsForResource(nsIRDFResource* aResource, nsISupportsArray* aElements)
 {
     NS_PRECONDITION(aElements != nsnull, "null ptr");
     if (! aElements)
@@ -1892,7 +1892,7 @@ RDFDocumentImpl::GetElementsForResource(nsIRDFResource* aResource, nsISupportsAr
 
 
 NS_IMETHODIMP
-RDFDocumentImpl::CreateContents(nsIRDFContent* aElement)
+XULDocumentImpl::CreateContents(nsIRDFContent* aElement)
 {
     NS_PRECONDITION(aElement != nsnull, "null ptr");
     if (! aElement)
@@ -1922,7 +1922,7 @@ RDFDocumentImpl::CreateContents(nsIRDFContent* aElement)
 
 
 NS_IMETHODIMP
-RDFDocumentImpl::AddContentModelBuilder(nsIRDFContentModelBuilder* aBuilder)
+XULDocumentImpl::AddContentModelBuilder(nsIRDFContentModelBuilder* aBuilder)
 {
     NS_PRECONDITION(aBuilder != nsnull, "null ptr");
     if (! aBuilder)
@@ -1946,14 +1946,14 @@ RDFDocumentImpl::AddContentModelBuilder(nsIRDFContentModelBuilder* aBuilder)
 // nsIRDFXMLDataSourceObserver interface
 
 NS_IMETHODIMP
-RDFDocumentImpl::OnBeginLoad(nsIRDFXMLDataSource* aDataSource)
+XULDocumentImpl::OnBeginLoad(nsIRDFXMLDataSource* aDataSource)
 {
     return BeginLoad();
 }
 
 
 NS_IMETHODIMP
-RDFDocumentImpl::OnInterrupt(nsIRDFXMLDataSource* aDataSource)
+XULDocumentImpl::OnInterrupt(nsIRDFXMLDataSource* aDataSource)
 {
     // flow any content that we have up until now.
     return NS_OK;
@@ -1961,14 +1961,14 @@ RDFDocumentImpl::OnInterrupt(nsIRDFXMLDataSource* aDataSource)
 
 
 NS_IMETHODIMP
-RDFDocumentImpl::OnResume(nsIRDFXMLDataSource* aDataSource)
+XULDocumentImpl::OnResume(nsIRDFXMLDataSource* aDataSource)
 {
     return NS_OK;
 }
 
 
 NS_IMETHODIMP
-RDFDocumentImpl::OnEndLoad(nsIRDFXMLDataSource* aDataSource)
+XULDocumentImpl::OnEndLoad(nsIRDFXMLDataSource* aDataSource)
 {
     // XXX this is a temporary hack...please forgive...
     StartLayout();
@@ -1978,7 +1978,7 @@ RDFDocumentImpl::OnEndLoad(nsIRDFXMLDataSource* aDataSource)
 
 
 NS_IMETHODIMP
-RDFDocumentImpl::OnRootResourceFound(nsIRDFXMLDataSource* aDataSource, nsIRDFResource* aResource)
+XULDocumentImpl::OnRootResourceFound(nsIRDFXMLDataSource* aDataSource, nsIRDFResource* aResource)
 {
     nsresult rv;
     if (NS_SUCCEEDED(rv = SetRootResource(aResource))) {
@@ -1990,13 +1990,13 @@ RDFDocumentImpl::OnRootResourceFound(nsIRDFXMLDataSource* aDataSource, nsIRDFRes
 
 
 NS_IMETHODIMP
-RDFDocumentImpl::OnCSSStyleSheetAdded(nsIRDFXMLDataSource* aDataSource, nsIURL* aStyleSheetURL)
+XULDocumentImpl::OnCSSStyleSheetAdded(nsIRDFXMLDataSource* aDataSource, nsIURL* aStyleSheetURL)
 {
     return LoadCSSStyleSheet(aStyleSheetURL);
 }
 
 NS_IMETHODIMP
-RDFDocumentImpl::OnNamedDataSourceAdded(nsIRDFXMLDataSource* aDataSource, const char* aNamedDataSourceURI)
+XULDocumentImpl::OnNamedDataSourceAdded(nsIRDFXMLDataSource* aDataSource, const char* aNamedDataSourceURI)
 {
     return AddNamedDataSource(aNamedDataSourceURI);
 }
@@ -2006,7 +2006,7 @@ RDFDocumentImpl::OnNamedDataSourceAdded(nsIRDFXMLDataSource* aDataSource, const 
 // Implementation methods
 
 nsIContent*
-RDFDocumentImpl::FindContent(const nsIContent* aStartNode,
+XULDocumentImpl::FindContent(const nsIContent* aStartNode,
                              const nsIContent* aTest1, 
                              const nsIContent* aTest2) const
 {
@@ -2034,7 +2034,7 @@ RDFDocumentImpl::FindContent(const nsIContent* aStartNode,
 
 
 nsresult
-RDFDocumentImpl::LoadCSSStyleSheet(nsIURL* url)
+XULDocumentImpl::LoadCSSStyleSheet(nsIURL* url)
 {
     nsresult rv;
     nsIInputStream* iin;
@@ -2081,7 +2081,7 @@ RDFDocumentImpl::LoadCSSStyleSheet(nsIURL* url)
 
 
 nsresult
-RDFDocumentImpl::AddNamedDataSource(const char* uri)
+XULDocumentImpl::AddNamedDataSource(const char* uri)
 {
     NS_PRECONDITION(mXULBuilder != nsnull, "not initialized");
     if (! mXULBuilder)
@@ -2111,7 +2111,7 @@ RDFDocumentImpl::AddNamedDataSource(const char* uri)
 
 
 nsresult
-RDFDocumentImpl::Init(void)
+XULDocumentImpl::Init(void)
 {
     nsresult rv;
 
@@ -2138,7 +2138,7 @@ RDFDocumentImpl::Init(void)
 
 
 nsresult
-RDFDocumentImpl::StartLayout(void)
+XULDocumentImpl::StartLayout(void)
 {
     PRInt32 count = GetNumberOfShells();
     for (PRInt32 i = 0; i < count; i++) {
@@ -2174,13 +2174,13 @@ RDFDocumentImpl::StartLayout(void)
 ////////////////////////////////////////////////////////////////////////
 
 nsresult
-NS_NewRDFDocument(nsIRDFDocument** result)
+NS_NewXULDocument(nsIRDFDocument** result)
 {
     NS_PRECONDITION(result != nsnull, "null ptr");
     if (! result)
         return NS_ERROR_NULL_POINTER;
 
-    RDFDocumentImpl* doc = new RDFDocumentImpl();
+    XULDocumentImpl* doc = new XULDocumentImpl();
     if (! doc)
         return NS_ERROR_OUT_OF_MEMORY;
 
