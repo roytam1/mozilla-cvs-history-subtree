@@ -43,11 +43,11 @@
 # include <sys/types.h>
 # include <sys/socket.h>
 # include <netinet/in.h>
-#ifndef XP_OS2
+#if !defined(XP_OS2) && !defined(XP_BEOS)
 # include <arpa/inet.h>
 #endif
 # include <netdb.h>
-#if !defined(hpux) && !defined(SUNOS4)
+#if !defined(hpux) && !defined(SUNOS4) && !defined(XP_BEOS)
 # include <sys/select.h>
 #endif /* !defined(hpux) and others */
 #endif /* _WINDOWS */
@@ -82,7 +82,7 @@
 #  include <unistd.h>
 #endif /* USE_SYSCONF */
 
-#if !defined(_WINDOWS) && !defined(macintosh) && !defined(BSDI) && !defined(XP_OS2)
+#if !defined(_WINDOWS) && !defined(macintosh) && !defined(BSDI) && !defined(XP_OS2) && !defined(XP_BEOS)
 #define NSLDAPI_HAVE_POLL	1
 #endif
 
