@@ -170,6 +170,7 @@ ifdef MOZ_PSM
 STATIC_MAKEFILES += security/nss 
 endif
 
+GARBAGE	+= $(FINAL_LINK_LIBS) $(FINAL_LINK_COMPS)
 GARBAGE_DIRS += dist
 DIST_GARBAGE = config.cache config.log config.status config-defs.h \
    dependencies.beos config/autoconf.mk config/myrules.mk config/myconfig.mk \

@@ -52,15 +52,15 @@ CFLAGS		+= $(LIBIDL_CFLAGS)
 
 # Compile directly against the static lib, so we can use xpidl during the build
 # without the shared library path being set.
-LIBS		= $(DIST)/lib/libxpt.$(LIB_SUFFIX) $(LIBIDL_LIBS)
+LIBS		= ../xpt/src/libxpt.$(LIB_SUFFIX) $(LIBIDL_LIBS)
 
 # Tell the $(PROGRAM) target that we need to be recompiled when libxpt changes.
-EXTRA_DEPS	= $(wildcard $(DIST)/lib/libxpt.*)
+EXTRA_DEPS	= $(wildcard ../xpt/src/libxpt.*)
 
 ifdef CROSS_COMPILE
 HOST_CFLAGS	+= $(HOST_LIBIDL_CFLAGS)
-HOST_LIBS	= $(DIST)/host/lib/libhostxpt.$(LIB_SUFFIX) $(HOST_LIBIDL_LIBS)
-HOST_EXTRA_DEPS	= $(wildcard $(DIST)/host/lib/libhostxpt.*)
+HOST_LIBS	= ../xpt/src/libhostxpt.$(LIB_SUFFIX) $(HOST_LIBIDL_LIBS)
+HOST_EXTRA_DEPS	= $(wildcard ../xpt/src/libhostxpt.*)
 
 ifdef HOST_NSPR_MDCPUCFG
 HOST_CFLAGS	+= -DMDCPUCFG=$(HOST_NSPR_MDCPUCFG)

@@ -35,111 +35,12 @@ else
 PROGRAM		= mozilla-bin
 endif
 
+ifndef NO_STATIC_LIB
 EXTRA_DSO_LDOPTS = -L$(DEPTH)/dist/lib/components
-
-EXTRA_DSO_LIBS	= \
-		absyncsvc \
-		addrbook \
-		appcomps \
-		caps \
-		chardet \
-		chrome \
-		cookie \
-		docshell \
-		editor \
-		embedcomponents \
-		gfx_gtk \
-		gfxps \
-		gkcontent \
-		gkgfx \
-		gklayout \
-		gkplugin \
-		gkview \
-		gtkembedmoz \
-		gtksuperwin \
-		gtkxtbin \
-		htmlpars \
-		impText \
-		import \
-		jar50 \
-		jsdom \
-		jsj \
-		jsloader \
-		jsurl \
-		localmail \
-		lwbrk \
-		mailnews \
-		mime \
-		mimeemitter \
-		mork \
-		mozbrwsr \
-		mozfind \
-		mozjs \
-		mozucth \
-		mozxfer \
-		mozz_s \
-		msgcompose \
-		msgdb \
-		msgimap \
-		msgnews \
-		necko \
-		necko2 \
-		nsappshell \
-		nsgif \
-		nsjpg \
-		nslocale \
-		nsmng \
-		nspng \
-		nspr4 \
-		nsprefm \
-		nullplugin \
-		oji \
-		plc4 \
-		plds4 \
-		pref \
-		profile \
-		rdf \
-		regviewer \
-		shistory \
-		signed \
-		smime \
-		strres \
-		timer_gtk \
-		txmgr \
-		txtsvc \
-		uconv \
-		ucvcn \
-		ucvibm \
-		ucvja \
-		ucvko \
-		ucvlatin \
-		ucvtw \
-		ucvtw2 \
-		unicharutil \
-		uriloader \
-		vcard \
-		wallet \
-		walletviewers \
-		webbrwsr \
-		widget_gtk \
-		xmlextras \
-		xpcom \
-		xpconnect \
-		xpinstall \
-		xpistub \
-		xremote_client \
-		mozmng \
-		gtksuperwin \
-		gkgfx \
-		gfx2 \
-		imggif \
-		imgjpeg \
-		imgpng \
-		imgppm \
-		imglib2 \
-		nkcache \
-		accessibility \
-		msgbaseutil
+EXTRA_DSO_LIBS = $(shell cat $(FINAL_LINK_COMPS) $(FINAL_LINK_LIBS))
+else
+EXTRA_DSO_LIBS = $(shell cat $(FINAL_LINK_LIBS))
+endif
 
 CPPSRCS		= \
 		nsAppRunner.cpp \
@@ -150,14 +51,13 @@ CPPSRCS		= \
 
 XP_LIBS		= \
 		$(EXTRA_DSO_LDOPTS) \
-		--start-group \
+		-Wl,--start-group \
 		$(EXTRA_DSO_LIBS) \
-		$(XPCOM_LIBS) \
-		$(MOZ_JS_LIBS) \
+		-Wl,--end-group \
 		$(OJI_LIBS) \
 		$(NSPR_LIBS) \
-		--end-group \
 		-L/usr/X11R6/lib \
+		-lgdk_pixbuf \
 		-lXIE \
 		-lICE \
 		-lSM \
@@ -259,6 +159,8 @@ EXTRA_DEPS	= \
 		$(addprefix $(DIST)/,$(patsubst -l%,bin/lib%$(DLL_SUFFIX),$(XP_DIST_DEP_LIBS:-l%_s=lib/lib%_s.a))) \
 		$(NULL)
 endif
+
+EXTRA_DEPS	+= $(FINAL_LINK_COMPS) $(FINAL_LINK_LIBS)
 
 CXXFLAGS	+= $(MOZ_TOOLKIT_REGISTRY_CFLAGS)
 

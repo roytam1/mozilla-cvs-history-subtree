@@ -45,9 +45,9 @@ SHORT_LIBNAME	= xpctools
 REQUIRES	= xpcom xpconnect js string
 
 CPPSRCS		= \
-        	nsXPCToolsCompiler.o \
-        	nsXPCToolsProfiler.o \
-        	nsXPCToolsModule.o \
+		nsXPCToolsCompiler.o \
+		nsXPCToolsProfiler.o \
+		nsXPCToolsModule.o \
 		$(NULL)
 
 include $(topsrcdir)/config/config.mk
