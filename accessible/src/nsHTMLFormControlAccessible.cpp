@@ -180,7 +180,7 @@ NS_IMETHODIMP nsHTMLCheckboxAccessible::GetAccActionName(PRUint8 index, nsAWrita
 /* void accDoAction (in PRUint8 index); */
 NS_IMETHODIMP nsHTMLCheckboxAccessible::AccDoAction(PRUint8 index)
 {
-  if (index == 0) {
+  if (index == 0) {   // 0 is the magic value for default action
     nsCOMPtr<nsIDOMHTMLInputElement> element(do_QueryInterface(mDOMNode));
     PRBool checked = PR_FALSE;
     element->GetChecked(&checked);

@@ -101,12 +101,12 @@ SimpleDOMNode::~SimpleDOMNode()
 //-----------------------------------------------------
 STDMETHODIMP SimpleDOMNode::QueryInterface(REFIID iid, void** ppv)
 {
-  *ppv = NULL;
+  *ppv = nsnull;
 
   if (IID_IUnknown == iid || IID_ISimpleDOMNode == iid)
     *ppv = NS_STATIC_CAST(ISimpleDOMNode*, this);
 
-  if (NULL == *ppv)
+  if (nsnull == *ppv)
     return E_NOINTERFACE;      //iid not supported.
    
   (NS_REINTERPRET_CAST(IUnknown*, *ppv))->AddRef(); 
@@ -143,7 +143,7 @@ STDMETHODIMP SimpleDOMNode::get_nodeInfo(
     /* [out] */ unsigned int __RPC_FAR *aNumChildren,
     /* [out] */ unsigned short __RPC_FAR *aNodeType)
 {
-  *aNodeName = NULL;
+  *aNodeName = nsnull;
   nsCOMPtr<nsIDOMElement> domElement;
   nsCOMPtr<nsIContent> content;
   GetElementAndContentFor(domElement, content);
@@ -204,7 +204,7 @@ STDMETHODIMP SimpleDOMNode::get_attributes(
   nsCOMPtr<nsIAtom> nameAtom, prefixAtom;
 
   for (index = 0; index < numAttribs; index++) {
-    aNameSpaceIDs[index] = 0; aAttribValues[index] = aAttribNames[index] = NULL;
+    aNameSpaceIDs[index] = 0; aAttribValues[index] = aAttribNames[index] = nsnull;
     nsAutoString attributeValue;
     const PRUnichar *pszAttributeName; 
 
@@ -238,7 +238,7 @@ NS_IMETHODIMP SimpleDOMNode::GetComputedStyleDeclaration(nsIDOMCSSStyleDeclarati
     shell = dont_AddRef(doc->GetShellAt(0)); // Use line below when merging to trunk
     //doc->GetShellAt(0, getter_AddRefs(shell)); 
 
-  if (!shell || !doc)
+  if (!shell)
     return NS_ERROR_FAILURE;   
 
   nsCOMPtr<nsIScriptGlobalObject> global;

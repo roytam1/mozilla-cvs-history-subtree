@@ -373,7 +373,9 @@ NS_IMETHODIMP nsDocAccessibleMixin::GetURL(nsAWritableString& aURL)
   // mDocument->GetDocumentURL(getter_AddRefs(pURI));
   nsXPIDLCString path;
   pURI->GetSpec(getter_Copies(path));
-  CopyASCIItoUCS2(nsDependentCString(path), aURL);
+  aURL.Assign(NS_ConvertUTF8toUCS2(path).get());
+  //XXXaaronl Need to use CopyUTF8toUCS2(nsDependentCString(path), aURL); when it's written
+  
   return NS_OK;
 }
 
