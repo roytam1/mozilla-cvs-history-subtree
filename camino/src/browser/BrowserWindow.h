@@ -52,4 +52,6 @@
 - (BOOL)suppressMakeKeyFront;
 - (void)setSuppressMakeKeyFront:(BOOL)inSuppress;
 
+- (NSString*)getURL;
+
 @end

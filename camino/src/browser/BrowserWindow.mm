@@ -79,5 +79,16 @@ static const int kEscapeKeyCode = 53;
 	mSuppressMakeKeyFront = inSuppress;
 }
 
+// accessor for the 'URL' Apple Event attribute
+- (NSString*)getURL
+{
+  BrowserWindowController* windowController = (BrowserWindowController*)[self delegate];
+  
+  NSString* titleString = nil;
+  NSString* urlString = nil;
+
+  [[windowController getBrowserWrapper] getTitle:&titleString andHref:&urlString];
+  return urlString;
+}
 
 @end
