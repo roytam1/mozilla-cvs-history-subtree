@@ -24,6 +24,7 @@
 
 interface nsIDOMNode;
 interface nsISOAPMessage;
+interface nsISOAPParameter;
 
 /**
  * This interface supplies unmarshalling of a specific
@@ -39,7 +40,7 @@ interface nsISOAPUnmarshaller : nsISupports {
  *
  * @param aMessage The message supplying the data to be unmarshalled
  *
- * @param aSource The DOM node or data to be unmarshalled
+ * @param aSource The DOM node to be unmarshalled.
  *
  * @param aEncodingStyleURI The encoding style
  *
@@ -54,8 +55,8 @@ interface nsISOAPUnmarshaller : nsISupports {
  *   the operation failed or did not return a result.  In case of 
  *   failure, a more complete status is recorded in the message.
  */
-nsISupports unmarshall(
-    in nsISOAPMessage aMessage, in nsISupports aSource,
+nsISOAPParameter unmarshall(
+    in nsISOAPMessage aMessage, in nsIDOMNode aSource,
     in AString aEncodingStyleURI, in AString aSchemaID, 
     in AString aTypeID, in nsISupports aConfiguration);
 };

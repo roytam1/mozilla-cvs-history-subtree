@@ -25,7 +25,7 @@
 #include "nsIXPConnect.h"
 #include "nsSOAPUtils.h"
 #include "nsSOAPMessage.h"
-#include "nsISOAPParameter.h"
+#include "nsSOAPParameter.h"
 #include "nsSOAPTypeRegistry.h"
 #include "nsISOAPMarshaller.h"
 #include "nsISOAPUnmarshaller.h"
@@ -180,17 +180,34 @@ NS_IMETHODIMP nsSOAPMessage::SetTargetObjectURI(const nsAReadableString & aTarge
 /* void marshallParameters (in nsISupportsArray SOAPParameters); */
 NS_IMETHODIMP nsSOAPMessage::MarshallParameters(nsISupportsArray *SOAPParameters)
 {
-  nsCOMPtr<nsISupports> ignore;
-  return mTypes->Marshall(this, SOAPParameters, mEncodingStyleURI, nsSOAPUtils::kSOAPCallType, nsnull, getter_AddRefs(ignore));
+  nsCOMPtr<nsISOAPParameter> param = new nsSOAPParameter();
+  nsresult rc = param->SetValue(SOAPParameters);
+  if (NS_FAILED(rc)) return rc;
+
+//  We ought to set the type, but no one checks anyway.
+
+  return mTypes->Marshall(this, param, mEncodingStyleURI, nsSOAPUtils::kSOAPCallType, nsnull);
 }
 
 /* nsISupportsArray unmarshallParameters (); */
 NS_IMETHODIMP nsSOAPMessage::UnmarshallParameters(nsISupportsArray **_retval)
 {
-  nsCOMPtr<nsISupports> result;
+  *_retval = nsnull;
+  nsCOMPtr<nsISOAPParameter> result;
   nsresult rc = mTypes->Unmarshall(this, mMessage, mEncodingStyleURI, nsSOAPUtils::kSOAPCallSchemaType, getter_AddRefs(result));
-  if (result)
-    return result->QueryInterface(NS_GET_IID(nsISupportsArray), (void**)_retval);
+  if (NS_FAILED(rc)) return rc;
+  if (result) {
+    //  We ought to check the type here, but no one is setting it right now.
+    nsCOMPtr<nsISupports> value;
+    rc = result->GetValue(getter_AddRefs(result));
+    if (value) {
+      nsCOMPtr<nsISupportsArray> array = do_QueryInterface(value);
+      if (array) {
+	*_retval = array;
+	NS_ADDREF(*_retval);
+      }
+    }
+  }
   return rc;
 }
 

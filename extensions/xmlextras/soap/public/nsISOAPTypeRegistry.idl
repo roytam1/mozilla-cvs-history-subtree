@@ -23,8 +23,10 @@
 #include "nsISupports.idl"
 
 interface nsIDOMElement;
+interface nsIDOMNode;
 interface nsISOAPType;
 interface nsISOAPMessage;
+interface nsISOAPParameter;
 
 /**
  * This interface keeps track of all the known types and how
@@ -103,10 +105,10 @@ interface nsISOAPTypeRegistry : nsISupports {
    *   result itself into the destination.  In case of failure, 
    *   a more complete status is recorded in the message.
    */
-  nsISupports marshall(
-      in nsISOAPMessage aMessage, in nsISupports aSource, 
+  void marshall(
+      in nsISOAPMessage aMessage, in nsISOAPParameter aSource, 
       in AString aEncodingStyleURI, in AString aTypeID,
-      in nsIDOMElement aScope);
+      in nsIDOMNode aDestination);
 
   /**
    * Unmarshall the source node into the specified
@@ -125,8 +127,8 @@ interface nsISOAPTypeRegistry : nsISupports {
    *   operation failed or did not return a result.  In case of failure, 
    *   a more complete status is recorded in the message.
    */
-  nsISupports unmarshall(
-      in nsISOAPMessage aMessage, in nsISupports aSource, 
+  nsISOAPParameter unmarshall(
+      in nsISOAPMessage aMessage, in nsIDOMNode aSource, 
       in AString aEncodingStyleURI, in AString aSchemaID);
   };
 

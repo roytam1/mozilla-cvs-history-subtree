@@ -136,8 +136,16 @@ NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"h
 "</SOAP-ENV:Envelope>");
 
 //  The default serializers below assume that the above declarations are in place, without bothering to check.
- 
-NS_IMETHODIMP nsSOAPCallEncoder::Marshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsIDOMElement* aScope, nsISupports *aConfiguration, nsISupports **_retval)
+
+//  Here is the main SOAP call
+
+NS_IMETHODIMP nsSOAPCallEncoder::Marshall(nsISOAPMessage *aMessage, 
+		                          nsISOAPParameter *aSource, 
+					  const nsAReadableString & aEncodingStyleURI, 
+					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aSchemaID, 
+					  nsISupports *aConfiguration, 
+					  nsIDOMNode* aDestination)
 {
   nsresult rv;
   
@@ -165,6 +173,9 @@ NS_IMETHODIMP nsSOAPCallEncoder::Marshall(nsISOAPMessage *aMessage, nsISupports 
 
   nsCOMPtr<nsIDOMDocument> document;
   nsCOMPtr<nsIDOMParser> parser = do_CreateInstance(kDOMParserCID, &rv);
+  if (NS_FAILED(rv)) return rv;
+
+  rv = aMessage->SetMessage(document);
   if (NS_FAILED(rv)) return rv;
 
   nsAutoString docstr;
@@ -196,7 +207,6 @@ NS_IMETHODIMP nsSOAPCallEncoder::Marshall(nsISOAPMessage *aMessage, nsISupports 
 
   nsCOMPtr<nsISupports> next;
   nsCOMPtr<nsISOAPParameter> param;
-  nsCOMPtr<nsISupports> result;
   nsCOMPtr<nsIDOMElement> element;
   nsAutoString type;
   PRBool isHeader;
@@ -208,28 +218,19 @@ NS_IMETHODIMP nsSOAPCallEncoder::Marshall(nsISOAPMessage *aMessage, nsISupports 
     if (NS_FAILED(rv)) return rv;
     rv = param->GetHeader(&isHeader);
     if (NS_FAILED(rv)) return rv;
-    rv = types->Marshall(aMessage, next, encodingStyleURI, type, element, getter_AddRefs(result));
+    rv = types->Marshall(aMessage, param, encodingStyleURI, type, isHeader ? header : body);
     if (NS_FAILED(rv)) return rv;
-    if (result != nsnull) {
-      element = do_QueryInterface(result);
-      if (element == nsnull) return NS_ERROR_FAILURE;
-      if (!header) {
-        rv = body->AppendChild(element, getter_AddRefs(ignored));
-      }
-      else {
-        rv = header->AppendChild(element, getter_AddRefs(ignored));
-      }
-      if (NS_FAILED(rv)) return rv;
-    }
   }
-
-  *_retval = document;
-  NS_IF_ADDREF(*_retval);
-
   return NS_OK;
 }
 
-NS_IMETHODIMP nsSOAPCallEncoder::Unmarshall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aSchemaID, const nsAReadableString & aTypeID, nsISupports *aConfiguration, nsISupports **_retval)
+NS_IMETHODIMP nsSOAPCallEncoder::Unmarshall(nsISOAPMessage *aMessage, 
+		                            nsIDOMNode *aSource, 
+					    const nsAReadableString & aEncodingStyleURI, 
+					    const nsAReadableString & aSchemaID, 
+					    const nsAReadableString & aTypeID, 
+					    nsISupports *aConfiguration, 
+					    nsISOAPParameter **_retval)
 {
   nsresult rv;
   nsCOMPtr<nsISOAPTypeRegistry> types;
@@ -262,7 +263,7 @@ NS_IMETHODIMP nsSOAPCallEncoder::Unmarshall(nsISOAPMessage *aMessage, nsISupport
   nsCOMPtr<nsIDOMElement> next;
   nsCOMPtr<nsIDOMNamedNodeMap> attrs;
   nsCOMPtr<nsIDOMNode> attr;
-  nsCOMPtr<nsISupports> result;
+  nsCOMPtr<nsISOAPParameter> param;
   nsAutoString encoding;
   nsAutoString type;
   PRBool isHeader = header != nsnull;
@@ -306,16 +307,13 @@ NS_IMETHODIMP nsSOAPCallEncoder::Unmarshall(nsISOAPMessage *aMessage, nsISupport
 	current->GetLocalName(t1);
 	type.Append(t1);
       }
-      rv = types->Unmarshall(aMessage, current, encoding, type, getter_AddRefs(result));
+      rv = types->Unmarshall(aMessage, current, encoding, type, getter_AddRefs(param));
       if (NS_FAILED(rv)) return rv;
-      if (result) {
-	nsCOMPtr<nsISOAPParameter> param = do_QueryInterface(result);
-	if (param) {
-	  rv = param->SetHeader(isHeader);
-          if (NS_FAILED(rv)) return rv;
-	  rv = array->InsertElementAt(param, count++);
-          if (NS_FAILED(rv)) return rv;
-	}
+      if (param) {
+	rv = param->SetHeader(isHeader);
+        if (NS_FAILED(rv)) return rv;
+	rv = array->InsertElementAt(param, count++);
+        if (NS_FAILED(rv)) return rv;
       }
       nsSOAPUtils::GetNextSiblingElement(current, getter_AddRefs(next));
       current = next;
@@ -325,9 +323,34 @@ NS_IMETHODIMP nsSOAPCallEncoder::Unmarshall(nsISOAPMessage *aMessage, nsISupport
     else
       break;
   }
-  *_retval = result;
-  NS_ADDREF(*_retval);
+  *_retval = new nsSOAPParameter();
+  (*_retval)->SetValue(array);
+//  We probably ought to set the type, etc., but no one will see it.
   return NS_OK;
+}
+
+//  String
+
+NS_IMETHODIMP nsStringEncoder::Marshall(nsISOAPMessage *aMessage, 
+		                          nsISOAPParameter *aSource, 
+					  const nsAReadableString & aEncodingStyleURI, 
+					  const nsAReadableString & aTypeID, 
+					  const nsAReadableString & aSchemaID, 
+					  nsISupports *aConfiguration,
+					  nsIDOMNode* aDestination)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP nsStringEncoder::Unmarshall(nsISOAPMessage *aMessage, 
+		                            nsIDOMNode *aSource, 
+					    const nsAReadableString & aEncodingStyleURI, 
+					    const nsAReadableString & aSchemaID, 
+					    const nsAReadableString & aTypeID, 
+					    nsISupports *aConfiguration, 
+					    nsISOAPParameter **_retval)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 #if 0
