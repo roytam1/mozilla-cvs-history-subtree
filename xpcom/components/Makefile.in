@@ -42,9 +42,10 @@ CPPSRCS		= \
 		xcDll.cpp \
 		$(NULL)
 
-# ifdef MOZ_BIG_BALL_OF_MUD
+# XXX not really right.
+ifdef NO_SHARED_LIB
 CPPSRCS         += nsStaticComponentLoader.cpp
-# endif
+endif
 
 EXPORTS		= \
 		nsComponentManagerUtils.h \
