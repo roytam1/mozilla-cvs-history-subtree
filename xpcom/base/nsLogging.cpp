@@ -649,25 +649,27 @@ nsFileLogEventSink::Print(nsILog* log, const char* msg)
 
     if (!mBeginningOfLine) {
         ::fputc('\n', mOutput);
+        mBeginningOfLine = PR_TRUE;
     }
 
     // print preamble
     PRUint32 flags;
     rv = log->GetControlFlags(&flags);
     if (NS_FAILED(rv)) return rv;
+
     if (flags & nsILog::PRINT_THREAD_ID) {
         ::fprintf(mOutput, "%8x ", (PRInt32)PR_CurrentThread());
-    }
-    else {
-        ::fprintf(mOutput, "%8s ", "");
+        mBeginningOfLine = PR_FALSE;
     }
 
-    char* name;
-    rv = log->GetName(&name);
-    ::fprintf(mOutput, "%-8.8s ",
-              flags & nsILog::PRINT_LOG_NAME ? name : "");
-    nsCRT::free(name);
-    mBeginningOfLine = PR_FALSE;
+    if (flags & nsILog::PRINT_LOG_NAME) {
+        char* name;
+        rv = log->GetName(&name);
+        ::fprintf(mOutput, "%-8.8s ",
+                  flags & nsILog::PRINT_LOG_NAME ? name : "");
+        nsCRT::free(name);
+        mBeginningOfLine = PR_FALSE;
+    }
 
     PRUint32 indentLevel;
     rv = log->GetIndentLevel(&indentLevel);
@@ -677,6 +679,7 @@ nsFileLogEventSink::Print(nsILog* log, const char* msg)
         // do indentation
         for (PRUint32 i = 0; i < indentLevel; i++) {
             ::fputs("|  ", mOutput);
+            mBeginningOfLine = PR_FALSE;
         }
 
         char c;
@@ -690,13 +693,20 @@ nsFileLogEventSink::Print(nsILog* log, const char* msg)
                 }
                 else {
                     ::fputs("\n                    ", mOutput);
+                    mBeginningOfLine = PR_FALSE;
                     goto indent;
                 }
               default:
                 ::fputc(c, mOutput);
+                mBeginningOfLine = PR_FALSE;
             }
         }
     } while (0);
+
+    if (!mBeginningOfLine) {
+        ::fputc('\n', mOutput);
+        mBeginningOfLine = PR_TRUE;
+    }
     return NS_OK;
 }
 
