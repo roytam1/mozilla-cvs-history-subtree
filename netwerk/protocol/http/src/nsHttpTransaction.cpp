@@ -220,11 +220,7 @@ nsHttpTransaction::ParseHead(char *buf,
 {
     char *eol;
 
-    nsCAutoString copy;
-    copy.Assign(buf, count);
-
     LOG(("nsHttpTransaction::ParseHead [count=%u]\n", count));
-    printf("\n[\n%s\n]\n", copy.get());
 
     *countRead = 0;
 
