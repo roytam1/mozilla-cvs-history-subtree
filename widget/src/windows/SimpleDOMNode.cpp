@@ -316,7 +316,7 @@ STDMETHODIMP SimpleDOMNode::get_computedStyleForProperties(
   for (index = 0; index < aNumStyleProperties; index ++) {
     nsAutoString value;
     if (aStyleProperties[index])
-      cssDecl->GetPropertyValue(nsString((PRUnichar*)aStyleProperties[index]), value);  // Get property value
+      cssDecl->GetPropertyValue(nsDependentString((PRUnichar*)aStyleProperties[index]), value);  // Get property value
     PRUnichar *pszValue = value.ToNewUnicode();
     aStyleValues[index] = ::SysAllocString(pszValue);
     delete pszValue;
