@@ -8180,7 +8180,7 @@ nsCSSFrameConstructor::ContentAppended(nsIPresContext* aPresContext,
           treeRowGroup->RegenerateRowGroupInfo(0);
          
           if (!treeRowGroup->IsBatching())
-            shell->FlushPendingNotifications();
+            shell->FlushPendingNotifications(PR_FALSE);
 
           return NS_OK;
         }
@@ -8652,7 +8652,7 @@ nsCSSFrameConstructor::ContentInserted(nsIPresContext* aPresContext,
           }
 
           if (!treeRowGroup->IsBatching())
-            shell->FlushPendingNotifications();
+            shell->FlushPendingNotifications(PR_FALSE);
           return NS_OK;
         }
       }
@@ -9334,7 +9334,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
             treeRowGroup->MarkDirtyChildren(state);
 
             if (!treeRowGroup->IsBatching())
-              shell->FlushPendingNotifications();
+              shell->FlushPendingNotifications(PR_FALSE);
           }
           return NS_OK;
         }

@@ -384,6 +384,7 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            nsIXPCScriptable::WANT_FINALIZE |
                            nsIXPCScriptable::WANT_ADDPROPERTY |
                            nsIXPCScriptable::WANT_DELPROPERTY |
+                           nsIXPCScriptable::WANT_ENUMERATE |
                            nsIXPCScriptable::DONT_ENUM_QUERY_INTERFACE)
   NS_DEFINE_CLASSINFO_DATA(Location, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
@@ -406,7 +407,8 @@ static nsDOMClassInfoData sClassInfoData[] = {
 
   // Core classes
   NS_DEFINE_CLASSINFO_DATA(Document, nsDocumentSH,
-                           NODE_SCRIPTABLE_FLAGS)
+                           NODE_SCRIPTABLE_FLAGS |
+                           nsIXPCScriptable::WANT_ENUMERATE)
   NS_DEFINE_CLASSINFO_DATA(DocumentType, nsNodeSH,
                            NODE_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(DOMImplementation, nsDOMGenericSH,
@@ -447,7 +449,8 @@ static nsDOMClassInfoData sClassInfoData[] = {
   // Misc HTML classes
   NS_DEFINE_CLASSINFO_DATA(HTMLDocument, nsHTMLDocumentSH,
                            NODE_SCRIPTABLE_FLAGS |
-                           nsIXPCScriptable::WANT_GETPROPERTY)
+                           nsIXPCScriptable::WANT_GETPROPERTY |
+                           nsIXPCScriptable::WANT_ENUMERATE)
   NS_DEFINE_CLASSINFO_DATA(HTMLCollection, nsHTMLCollectionSH,
                            ARRAY_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(HTMLOptionCollection,
@@ -619,7 +622,8 @@ static nsDOMClassInfoData sClassInfoData[] = {
 
   // XUL classes
   NS_DEFINE_CLASSINFO_DATA(XULDocument, nsDocumentSH,
-                           NODE_SCRIPTABLE_FLAGS)
+                           NODE_SCRIPTABLE_FLAGS |
+                           nsIXPCScriptable::WANT_ENUMERATE)
   NS_DEFINE_CLASSINFO_DATA(XULElement, nsElementSH,
                            ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(XULTreeElement, nsElementSH,
@@ -2221,9 +2225,20 @@ NS_IMETHODIMP
 nsDOMClassInfo::Enumerate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                           JSObject *obj, PRBool *_retval)
 {
-  NS_ERROR("Don't call me!");
+  if (!sSecMan)
+    return NS_OK;
 
-  return NS_ERROR_UNEXPECTED;
+  // Ask the security manager if it's OK to enumerate
+  nsresult rv =
+    sSecMan->CheckPropertyAccess(cx, obj, sClassInfoData[mID].mName,
+                                 "enumerateProperties",
+                                 nsIXPCSecurityManager::ACCESS_GET_PROPERTY);
+
+  if (NS_FAILED(rv)) {
+    // Let XPConnect know that the access was not granted.
+    *_retval = PR_FALSE;
+  }
+  return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -4782,6 +4797,33 @@ nsStringArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
 // History helper
 
+NS_IMETHODIMP
+nsHistorySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
+{
+  PRBool is_number = PR_FALSE;
+  GetArrayIndexFromId(cx, id, &is_number);
+
+  if (!is_number) {
+    return NS_OK;
+  }
+
+  nsresult rv =
+    sSecMan->CheckPropertyAccess(cx, obj, sClassInfoData[mID].mName, "item",
+                                 nsIXPCSecurityManager::ACCESS_CALL_METHOD);
+
+  if (NS_FAILED(rv)) {
+    // Let XPConnect know that the access was not granted.
+    *_retval = PR_FALSE;
+
+    return NS_OK;
+  }
+
+  // sec check
+
+  return nsStringArraySH::GetProperty(wrapper, cx, obj, id, vp, _retval);
+}
+
 nsresult
 nsHistorySH::GetStringAt(nsISupports *aNative, PRInt32 aIndex,
                          nsAWritableString& aResult)
@@ -4792,7 +4834,7 @@ nsHistorySH::GetStringAt(nsISupports *aNative, PRInt32 aIndex,
 
   nsCOMPtr<nsIDOMHistory> history(do_QueryInterface(aNative));
 
-  return history->Item(NS_PTR_TO_INT32(aNative), aResult);
+  return history->Item(aIndex, aResult);
 }
 
 

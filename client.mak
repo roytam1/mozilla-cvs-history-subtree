@@ -50,6 +50,75 @@ MOZ_CO_FLAGS=-f
 MOZ_CO_FLAGS= $(MOZ_CO_FLAGS) -f
 !endif
 
+# list of all tagged files on the svg mini-branch. we use it for the
+# branch maintenance targets below
+SVG_BRANCH_FILES = \
+	content/svg \
+	layout/svg \
+	dom/public/idl/svg \
+	\
+	aclocal.m4 \
+	allmakefiles.sh \
+	build/autoconf/libart.m4 \
+	build/mac/build_scripts/MozillaBuildList.pm \
+	client.mk \
+	client.mak \
+	config/autoconf.mk.in \
+	configure \
+	configure.in \
+	content/Makefile.in \
+	content/base/public/nsIDocument.h \
+	content/base/public/nsIElementFactory.h \
+	content/base/src/nsStyleContext.cpp \
+	content/build/Makefile.in \
+	content/build/makefile.win \
+	content/build/nsContentCID.h \
+	content/build/nsContentDLF.cpp \
+	content/build/nsContentModule.cpp \
+	content/html/document/src/nsHTMLDocument.cpp \
+	content/html/style/public/nsIRuleNode.h \
+	content/html/style/src/nsCSSDeclaration.cpp \
+	content/html/style/src/nsCSSParser.cpp \
+	content/html/style/src/nsCSSStyleRule.cpp \
+	content/html/style/src/nsICSSDeclaration.h \
+	content/html/style/src/nsRuleNode.cpp \
+	content/html/style/src/nsRuleNode.h \
+	content/makefile.win \
+	content/shared/public/MANIFEST \
+	content/shared/public/Makefile.in \
+	content/shared/public/makefile.win \
+	content/shared/public/nsCSSPropList.h \
+	content/shared/public/nsSVGAtomList.h \
+	content/shared/public/nsSVGAtoms.h \
+	content/shared/public/nsStyleStruct.h \
+	content/shared/src/Makefile.in \
+	content/shared/src/makefile.win \
+	content/shared/src/nsCSSProps.cpp \
+	content/shared/src/nsSVGAtoms.cpp \
+	content/shared/src/nsStyleStruct.cpp \
+	content/shared/src/nsStyleUtil.cpp \
+	content/xml/document/src/nsXMLDocument.cpp \
+	content/xml/document/src/nsXMLDocument.h \
+	dom/public/idl/Makefile.in \
+	dom/public/idl/makefile.win \
+	dom/public/nsIDOMClassInfo.h \
+	dom/src/base/nsDOMClassInfo.cpp \
+	gfx/public/nsTransform2D.h \
+	htmlparser/public/nsIParser.h \
+	htmlparser/src/nsExpatTokenizer.cpp \
+	htmlparser/src/nsViewSourceHTML.cpp \
+	layout/build/Makefile.in \
+	layout/build/makefile.win \
+	layout/html/style/src/Makefile.in \
+	layout/html/style/src/makefile.win \
+	layout/html/style/src/nsCSSFrameConstructor.cpp \
+	layout/html/style/src/nsCSSFrameConstructor.h \
+	layout/html/tests/makefile.win \
+	netwerk/mime/src/nsXMLMIMEDataSource.cpp \
+	uriloader/exthandler/nsExternalHelperAppService.cpp \
+	xpfe/browser/src/nsBrowserInstance.cpp
+
+
 #NSPR_CO_TAG=SeaMonkey_M17_BRANCH
 #PSM_CO_TAG=SeaMonkey_M17_BRANCH
 #NSS_CO_TAG=SeaMonkey_M17_BRANCH
@@ -309,7 +378,7 @@ distclean:
 	@cd $(MOZ_SRC)\$(MOZ_TOP)
 	nmake /f client.mak clobber_psm
 	nmake /f client.mak clobber_seamonkey
-		
+
 clobber_nspr: 
 	@cd $(MOZ_SRC)\$(MOZ_TOP)\nsprpub
 	gmake -f gmakefile.win clobber_all MOZ_SRC_FLIPPED=$(MOZ_SRC_FLIPPED)
@@ -458,6 +527,20 @@ deliver::
 	set LAYOUT_DIRS=1
 	set CLIENT_DIRS=1
 	nmake /f makefile.win splitsymbols
+
+
+# svg mini-branch maintenance targets:
+merge:
+	cvs -z3 up -dP -jSVG_20010721_TAG -jHEAD $(SVG_BRANCH_FILES)
+
+statictag:
+	cvs -z3 tag -F -rHEAD SVG_20010721_TAG $(SVG_BRANCH_FILES)
+
+commitmerge:
+	cvs -z3 ci $(SVG_BRANCH_FILES)
+
+diffsvg:
+	cvs -z3 diff -u $(SVG_BRANCH_FILES)
 
 #//------------------------------------------------------------------------
 #// Utility stuff...
