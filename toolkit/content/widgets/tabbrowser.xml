@@ -920,7 +920,7 @@
             this.mTabListeners[position] = tabListener;
             this.mTabFilters[position] = filter;
             
-            b._fastFind = this._fastFind;
+            b._fastFind = this.fastFind;
 
             if (!blank) {
               // pretend the user typed this so it'll be available till
