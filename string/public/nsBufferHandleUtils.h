@@ -92,7 +92,7 @@ NS_AllocateContiguousHandleWithData( const HandleT* aDummyHandlePtr, const Strin
         char_ptr data_end_ptr   = data_start_ptr + data_length;
         char_ptr buffer_end_ptr = data_start_ptr + buffer_length;
 
-        StringT::const_iterator fromBegin, fromEnd;
+        typename StringT::const_iterator fromBegin, fromEnd;
         char_ptr toBegin = data_start_ptr;
         copy_string(aDataSource.BeginReading(fromBegin), aDataSource.EndReading(fromEnd), toBegin);
 
