@@ -36,8 +36,9 @@
 #include "nsIMIMEInfo.h"
 #include "prtypes.h"
 #include "prerror.h"
-#ifdef MACOSX
 #include "nsEscape.h"
+
+#ifdef MACOSX
 #include "nsXPIDLString.h"
 
 #include "private/pprio.h"
@@ -408,19 +409,6 @@ static nsresult	ConvertMacTimeToMilliseconds( PRInt64* aLastModificationDate, PR
 }
 
 static nsresult ConvertMillisecondsToMacTime(PRInt64 aTime, PRUint32 *aOutMacTime)
-static void SwapSlashColon(char * s)
-{
-	while (*s)
-	{
-		if (*s == '/')
-			*s++ = ':';
-		else if (*s == ':')
-			*s++ = '/';
-		else
-			*s++;
-	}
-} 
-
 {
 	NS_ENSURE_ARG( aOutMacTime );
 		
@@ -434,6 +422,19 @@ static void SwapSlashColon(char * s)
 
 	return NS_OK;
 }
+
+static void SwapSlashColon(char * s)
+{
+	while (*s)
+	{
+		if (*s == '/')
+			*s++ = ':';
+		else if (*s == ':')
+			*s++ = '/';
+		else
+			*s++;
+	}
+} 
 
 
 #pragma mark -
