@@ -315,13 +315,6 @@ modules/mpfilelocprovider/src/Makefile
 
 MAKEFILES_libimg="
 modules/libimg/Makefile
-modules/libimg/public/Makefile
-modules/libimg/public_com/Makefile
-modules/libimg/src/Makefile
-modules/libimg/gifcom/Makefile
-modules/libimg/jpgcom/Makefile
-modules/libimg/pngcom/Makefile
-modules/libimg/mngcom/Makefile
 "
 
 MAKEFILES_libjar="
@@ -355,11 +348,11 @@ modules/oji/src/Makefile
 
 MAKEFILES_plugin="
 modules/plugin/Makefile
-modules/plugin/nglsrc/Makefile
-modules/plugin/public/Makefile
-modules/plugin/test/Makefile
-modules/plugin/SanePlugin/Makefile
-modules/plugin/default/unix/Makefile
+modules/plugin/base/src/Makefile
+modules/plugin/base/public/Makefile
+modules/plugin/samples/simple/Makefile
+modules/plugin/samples/SanePlugin/Makefile
+modules/plugin/samples/default/unix/Makefile
 "
 
 MAKEFILES_access_builtin="

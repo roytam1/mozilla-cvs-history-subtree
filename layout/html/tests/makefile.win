@@ -61,7 +61,6 @@ LLIBS=				\
 !ifdef MOZ_SVG
  $(DIST)\lib\layoutsvgbase_s.lib      \
 !endif
- $(DIST)\lib\img32$(VERSION_NUMBER).lib	\
  $(DIST)\lib\util.lib		\
  $(DIST)\lib\xpcom.lib	\
  $(DIST)\lib\timer_s.lib \

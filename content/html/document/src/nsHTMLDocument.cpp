@@ -1184,8 +1184,7 @@ nsHTMLDocument::ContentReplaced(nsIContent* aContainer, nsIContent* aOldChild,
                                 nsIContent* aNewChild,
                                 PRInt32 aIndexInContainer)
 {
-  NS_ABORT_IF_FALSE(aContainer && aOldChild && aNewChild,
-                    "Null container, new child, or old child!");
+  NS_ABORT_IF_FALSE(aOldChild && aNewChild, "Null new or old child!");
 
   nsresult rv = UnregisterNamedItems(aOldChild);
 
@@ -1207,7 +1206,7 @@ NS_IMETHODIMP
 nsHTMLDocument::ContentRemoved(nsIContent* aContainer, nsIContent* aContent,
                                PRInt32 aIndexInContainer)
 {
-  NS_ABORT_IF_FALSE(aContainer && aContent, "Null container or content!");
+  NS_ABORT_IF_FALSE(aContent, "Null content!");
 
   nsresult rv = UnregisterNamedItems(aContent);
 
@@ -2011,6 +2010,7 @@ nsHTMLDocument::SetCookie(const nsAReadableString& aCookie)
   return result;
 }
 
+// static
 nsresult
 nsHTMLDocument::GetSourceDocumentURL(JSContext* cx,
                                      nsIURI** sourceURL)
@@ -2022,9 +2022,10 @@ nsHTMLDocument::GetSourceDocumentURL(JSContext* cx,
   // I wish there were a better way.
   *sourceURL = nsnull;
 
-  // XXX Question, why does this return NS_OK on failure?
-  nsresult result = NS_OK;
-      
+  if (!cx) {
+    return NS_OK;
+  }
+
   // We need to use the dynamically scoped global and assume that the 
   // current JSContext is a DOM context with a nsIScriptGlobalObject so
   // that we can get the url of the caller.
@@ -2032,23 +2033,25 @@ nsHTMLDocument::GetSourceDocumentURL(JSContext* cx,
 
   nsCOMPtr<nsIScriptGlobalObject> global;
   nsContentUtils::GetDynamicScriptGlobal(cx, getter_AddRefs(global));
-  if (global) {
-    nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(global, &result));
 
-    if (window) {
-      nsCOMPtr<nsIDOMDocument> document;
-      
-      result = window->GetDocument(getter_AddRefs(document));
-      if (NS_SUCCEEDED(result)) {
-        nsCOMPtr<nsIDocument> doc(do_QueryInterface(document, &result));
-        if (doc) { 
-          doc->GetDocumentURL(sourceURL); 
-          result = sourceURL ? NS_OK : NS_ERROR_FAILURE; 
-        } 
-      }
-    }
+  nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(global));
+
+  if (!window) {
+    return NS_OK; // Can't get the source URI if we can't get the window.
   }
-  return result;
+
+  nsCOMPtr<nsIDOMDocument> dom_doc;
+  window->GetDocument(getter_AddRefs(dom_doc));
+
+  nsCOMPtr<nsIDocument> doc(do_QueryInterface(dom_doc));
+
+  if (!doc) {
+    return NS_OK; // No document in the window
+  }
+
+  doc->GetDocumentURL(sourceURL); 
+
+  return sourceURL ? NS_OK : NS_ERROR_FAILURE; 
 }
 
 
@@ -2193,7 +2196,8 @@ nsHTMLDocument::OpenCommon(nsIURI* aSourceURL)
     }
   }
 
-  // Prepare the docshell and the document viewer for the impending out of band document.write()
+  // Prepare the docshell and the document viewer for the impending
+  // out of band document.write()
   if (docshell) {
     docshell->PrepareForNewContentModel();
     nsCOMPtr<nsIContentViewer> cv;
@@ -2222,7 +2226,7 @@ NS_IMETHODIMP
 nsHTMLDocument::Open(nsIDOMDocument** aReturn)
 {
   nsresult result = NS_OK;
-  nsIURI* sourceURL;
+  nsCOMPtr<nsIURI> sourceURL;
 
   // XXX The URL of the newly created document will match
   // that of the source document. Is this right?
@@ -2239,16 +2243,14 @@ nsHTMLDocument::Open(nsIDOMDocument** aReturn)
   if (NS_FAILED(stack->Peek(&cx)))
     return NS_ERROR_FAILURE;
 
-
-  result = GetSourceDocumentURL(cx, &sourceURL);
+  result = GetSourceDocumentURL(cx, getter_AddRefs(sourceURL));
   // Recover if we had a problem obtaining the source URL
-  if (nsnull == sourceURL) {
-      result = NS_NewURI(&sourceURL, "about:blank");
+  if (!sourceURL) {
+    result = NS_NewURI(getter_AddRefs(sourceURL), "about:blank");
   }
 
   if (NS_SUCCEEDED(result)) {
     result = OpenCommon(sourceURL);
-    NS_RELEASE(sourceURL);
   }
 
   QueryInterface(NS_GET_IID(nsIDOMDocument), (void **)aReturn);
@@ -2393,10 +2395,6 @@ nsHTMLDocument::ScriptWriteCommon(PRBool aNewlineTerminate)
         nsCOMPtr<nsIURI> subjectURI;
         rv = codebase->GetURI(getter_AddRefs(subjectURI));
         NS_ENSURE_SUCCESS(rv, rv);
-
-        nsXPIDLCString spec;
-        subjectURI->GetSpec(getter_Copies(spec));
-        printf("Document.write is setting stuff: %s\n",spec.get());
 
         NS_IF_RELEASE(mDocumentURL);
         mDocumentURL = subjectURI;
