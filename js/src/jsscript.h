@@ -82,7 +82,6 @@ struct JSScript {
                 if (tn_->catchStart)                                          \
                     catchpc_ = (script)->main + tn_->catchStart;              \
             }                                                                 \
-
         }                                                                     \
         catchpc = catchpc_;                                                   \
     JS_END_MACRO
