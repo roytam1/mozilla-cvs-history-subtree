@@ -91,19 +91,14 @@ void String::ensureCapacity(const PRUint32 aCapacity)
   mString.SetCapacity(aCapacity);
 }
 
-PRInt32 String::indexOf(const UNICODE_CHAR aData, const PRUint32 aOffset) const
+PRInt32 String::indexOf(const UNICODE_CHAR aData, const PRInt32 aOffset) const
 {
   return mString.FindChar(aData, aOffset);
 }
 
-PRInt32 String::indexOf(const String& aData, const PRUint32 aOffset) const
+PRInt32 String::indexOf(const String& aData, const PRInt32 aOffset) const
 {
-  return mString.Find(aData.mString, 0);
-}
-
-PRInt32 String::lastIndexOf(const UNICODE_CHAR aData, const PRUint32 aOffset) const
-{
-  return mString.RFindChar(aData, aOffset);
+  return mString.Find(aData.mString, aOffset);
 }
 
 MBool String::isEqual(const String& aData) const
@@ -201,12 +196,12 @@ void String::append(const char* aSource)
   mString.AppendWithConversion(aSource);
 }
 
-PRInt32 String::indexOf(const char aData, const PRUint32 aOffset) const
+PRInt32 String::indexOf(const char aData, const PRInt32 aOffset) const
 {
   return mString.FindChar((const PRUnichar)aData, aOffset);
 }
 
-PRInt32 String::lastIndexOf(const char aData, const PRUint32 aOffset) const
+PRInt32 String::lastIndexOf(const char aData, const PRInt32 aOffset) const
 {
   return mString.RFindChar((const PRUnichar)aData, aOffset);
 }

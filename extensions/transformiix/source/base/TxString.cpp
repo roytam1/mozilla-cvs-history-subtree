@@ -182,9 +182,9 @@ void String::ensureCapacity(const PRUint32 aCapacity)
   mBuffer = tempBuffer;
 }
 
-PRInt32 String::indexOf(const UNICODE_CHAR aData, const PRUint32 aOffset) const
+PRInt32 String::indexOf(const UNICODE_CHAR aData, const PRInt32 aOffset) const
 {
-  PRUint32 searchIndex = aOffset;
+  PRInt32 searchIndex = aOffset;
 
   while (searchIndex < mLength) {
     if (mBuffer[searchIndex] == aData) {
@@ -195,10 +195,10 @@ PRInt32 String::indexOf(const UNICODE_CHAR aData, const PRUint32 aOffset) const
   return NOT_FOUND;
 }
 
-PRInt32 String::indexOf(const String& aData, const PRUint32 aOffset) const
+PRInt32 String::indexOf(const String& aData, const PRInt32 aOffset) const
 {
-  PRUint32 searchIndex = aOffset;
-  PRUint32 searchLimit = mLength - aData.mLength;
+  PRInt32 searchIndex = aOffset;
+  PRInt32 searchLimit = mLength - aData.mLength;
 
   while (searchIndex <= searchLimit) {
     if (memcmp(&mBuffer[searchIndex], aData.mBuffer,
@@ -206,21 +206,6 @@ PRInt32 String::indexOf(const String& aData, const PRUint32 aOffset) const
       return searchIndex;
     }
     ++searchIndex;
-  }
-  return NOT_FOUND;
-}
-
-PRInt32 String::lastIndexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
-{
-  if (aOffset >= mLength) {
-     return NOT_FOUND;
-  }
-
-  PRUint32 searchIndex = aOffset + 1;
-  while (--searchIndex > 0) {
-    if (mBuffer[searchIndex] == aData) {
-      return searchIndex;
-    }
   }
   return NOT_FOUND;
 }
@@ -381,14 +366,24 @@ void String::append(const char* aSource)
   mLength += length;
 }
 
-PRInt32 String::indexOf(const char aData, const PRUint32 aOffset) const
+PRInt32 String::indexOf(const char aData, const PRInt32 aOffset) const
 {
   return indexOf((UNICODE_CHAR)aData, aOffset);
 }
 
-PRInt32 String::lastIndexOf(const char aData, const PRUint32 aOffset) const
+PRInt32 String::lastIndexOf(const char aData, const PRInt32 aOffset) const
 {
-  return lastIndexOf((UNICODE_CHAR)aData, aOffset);
+  if (aOffset < 0) {
+     return NOT_FOUND;
+  }
+
+  PRUint32 searchIndex = mLength - aOffset;
+  while (--searchIndex >= 0) {
+    if (mBuffer[searchIndex] == (UNICODE_CHAR)aData) {
+      return searchIndex;
+    }
+  }
+  return NOT_FOUND;
 }
 
 MBool String::isEqual(const char* aData) const

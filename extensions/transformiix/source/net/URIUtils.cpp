@@ -92,7 +92,7 @@ istream* URIUtils::getInputStream
 **/
 void URIUtils::getDocumentBase(const String& href, String& dest) {
     //-- use temp str so the subString method doesn't destroy dest
-    String docBase("");
+    String docBase();
 
     if (!href.isEmpty()) {
 
