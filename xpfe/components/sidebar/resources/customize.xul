@@ -106,6 +106,8 @@
               </treechildren>
             </template>
 
+            <treecol />
+
             <!-- We explicitly create a 'treechildren' so we can refer
                  to it from the script -->
             <treechildren id="selected-panels-root"/> 
