@@ -133,19 +133,25 @@ if (!$silent)
 }
 
 
+# Include directories etc.
+$my_includes = "";
+$my_includes .= " -I$include_ldap" unless ($include_ldap eq "/usr/include");
+
+
+# Add system dependant stuff here...
+@extras = ();
 if ($osname =~ /mswin/i)
 {
-   $myextlib = "$lib_ldap\\$ldaplib[0]";
-   if ($lber_lib)
-   {
-      $myextlib .= " $lib_ldap\\$lberlib[0]";
-   }
+   $my_extlib = "$lib_ldap\\$ldaplib[0]";
+   $my_extlib .= " $lib_ldap\\$lberlib[0]" if $lber_lib;
+   push(@extras,
+	'OTHERLDFLAGS'	=>	"kernel32.lib oldnames.lib");
 } else {
-   $myextlib = "";
+   $my_extlib = "";
 }
 
-@extras = ();
-
+push(@extras,
+     CAPI => 'TRUE');
 push(@extras,
      CAPI => 'TRUE')
     if ($] >= 5.005 and $^O eq 'MSWin32'
@@ -156,18 +162,17 @@ push(@extras,
      AUTHOR   => 'Netscape Communications Corp., Inc. and Clayton Donley')
     if ($ExtUtils::MakeMaker::Version >= 5.4301);
 
+#
+# Ok, let's do it!
+#
 WriteMakefile(
-	'NAME'		=> 	'Mozilla::LDAP::API',
-        'DISTNAME'	=>  'PerLDAP',
-	'VERSION_FROM'	=> 	'API.pm',
-	($include_ldap ne "/usr/include" ? (
-	'INC'		=> 	"-I$include_ldap",
-	) : (
-	'INC'		=> 	"",
-	)),
-	'LIBS'		=> 	[$lib_line],
-	'MYEXTLIB'	=>	$myextlib,
-	'DEFINE'	=> 	"$v3_def $ssl_def",
-	'XSOPT'		=>	"-nolinenumbers",
-    @extras
+	      'NAME'		=> 	'Mozilla::LDAP::API',
+	      'DISTNAME'	=>	'PerLDAP',
+	      'VERSION_FROM'	=> 	'API.pm',
+	      'INC'		=>	$my_includes,
+	      'LIBS'		=> 	[$lib_line],
+	      'MYEXTLIB'	=>	$my_extlib,
+	      'DEFINE'		=> 	"$v3_def $ssl_def",
+	      'XSOPT'		=>	"-nolinenumbers",
+	      @extras
 );
