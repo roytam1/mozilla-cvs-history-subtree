@@ -48,6 +48,7 @@
 #include "jsstddef.h"
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 #include "jstypes.h"
 #include "jsprf.h"
 #include "prmjtime.h"
@@ -1498,7 +1499,7 @@ date_format(JSContext *cx, jsdouble date, jsval *rval)
     JSString *str;
     char tzbuf[100];
     JSBool usetz;
-    uintN i, tzlen;
+    size_t i, tzlen;
     PRMJTime split;
 
     if (!JSDOUBLE_IS_FINITE(date)) {
