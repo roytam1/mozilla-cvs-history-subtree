@@ -165,7 +165,7 @@ public:
   NS_IMETHOD ContentStatesChanged(nsIDocument* aDocument,
                                   nsIContent* aContent1,
                                   nsIContent* aContent2,
-                                  nsIAtom* aChangedPseudoClass) { return NS_OK; }
+                                  PRInt32 aStateMask) { return NS_OK; }
   NS_IMETHOD AttributeChanged(nsIDocument *aDocument,
                               nsIContent*  aContent,
                               PRInt32      aNameSpaceID,
@@ -456,7 +456,7 @@ public:
                             nsISupports* aSubContent);
   NS_IMETHOD ContentStatesChanged(nsIContent* aContent1,
                                   nsIContent* aContent2,
-                                  nsIAtom* aChangedPseudoClass);
+                                  PRInt32 aStateMask);
 
   NS_IMETHOD AttributeWillChange(nsIContent* aChild,
                                  PRInt32 aNameSpaceID,

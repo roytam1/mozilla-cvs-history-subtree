@@ -10138,7 +10138,7 @@ NS_IMETHODIMP
 nsCSSFrameConstructor::ContentStatesChanged(nsIPresContext* aPresContext, 
                                             nsIContent* aContent1,
                                             nsIContent* aContent2,
-                                            nsIAtom* aChangedPseudoClass)
+                                            PRInt32 aStateMask) 
 {
   nsresult  result = NS_OK;
 
@@ -10164,9 +10164,14 @@ nsCSSFrameConstructor::ContentStatesChanged(nsIPresContext* aPresContext,
         app1 = disp->mAppearance;
       }
 
-      if (!app1 && (NS_OK != styleSet->HasStateDependentStyle(aPresContext, aContent1))) {
-        primaryFrame1 = nsnull;
-        aContent1 = nsnull;
+      if (!app1) {
+        PRBool depends = PR_FALSE;
+        styleSet->HasStateDependentStyle(aPresContext, aContent1,
+                                         aStateMask, &depends);
+        if (!depends) {
+          primaryFrame1 = nsnull;
+          aContent1 = nsnull;
+        }
       }
 
       if (aContent2 == aContent1)
@@ -10179,9 +10184,14 @@ nsCSSFrameConstructor::ContentStatesChanged(nsIPresContext* aPresContext,
           app2 = disp2->mAppearance;
         }
 
-        if (!app2 && (NS_OK != styleSet->HasStateDependentStyle(aPresContext, aContent2))) {
-          primaryFrame2 = nsnull;
-          aContent2 = nsnull;
+        if (!app2) {
+          PRBool depends = PR_FALSE;
+          styleSet->HasStateDependentStyle(aPresContext, aContent2,
+                                           aStateMask, &depends);
+          if (!depends) {
+            primaryFrame2 = nsnull;
+            aContent2 = nsnull;
+          }
         }
       }
 
