@@ -39,7 +39,7 @@
 #include "nsXPIDLString.h"
 #include "nslog.h"
 
-NS_IMPL_LOG(nsLocalFileUnixLog, 0)
+NS_DECL_LOG(nsLocalFileUnixLog)
 #define FILE_PRINTF NS_LOG_PRINTF(nsLocalFileUnixLog)
 #define FILE_FLUSH  NS_LOG_FLUSH(nsLocalFileUnixLog)
 

@@ -52,10 +52,10 @@ NS_DEFINE_CID(kLoggingServiceCID, NS_LOGGINGSERVICE_CID);
 static nsLoggingService* gLoggingService = nsnull;
 
 nsLoggingService::nsLoggingService()
-    : mDefaultControlFlags(nsILog::DEFAULT_DISABLED |
+    : mLogs(16),
+      mDefaultControlFlags(nsILog::DEFAULT_DISABLED |
                            nsILog::PRINT_THREAD_ID |
-                           nsILog::PRINT_LOG_NAME),
-      mLogs(16)
+                           nsILog::PRINT_LOG_NAME)
 {
     NS_INIT_ISUPPORTS();
 }
@@ -662,7 +662,7 @@ nsFileLogEventSink::Print(nsILog* log, const char* msg)
     rv = log->GetControlFlags(&flags);
     if (NS_FAILED(rv)) return rv;
     if (flags & nsILog::PRINT_THREAD_ID) {
-        ::fprintf(mOutput, "%8x ", PR_CurrentThread());
+        ::fprintf(mOutput, "%8x ", (PRInt32)PR_CurrentThread());
     }
     else {
         ::fprintf(mOutput, "%8s ", "");

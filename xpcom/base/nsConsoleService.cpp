@@ -34,7 +34,7 @@
 #include "nsConsoleMessage.h"
 #include "nslog.h"
 
-NS_IMPL_LOG(nsConsoleServiceLog, 0)
+NS_IMPL_LOG(nsConsoleServiceLog)
 #define PRINTF NS_LOG_PRINTF(nsConsoleServiceLog)
 #define FLUSH  NS_LOG_FLUSH(nsConsoleServiceLog)
 

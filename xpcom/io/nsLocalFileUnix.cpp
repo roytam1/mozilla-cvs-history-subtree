@@ -53,11 +53,10 @@
 #include "nsIComponentManager.h"
 #include "nsXPIDLString.h"
 #include "prproces.h"
-#include "nslog.h"
 
-NS_IMPL_LOG(nsLocalFileUnixLog, 0)
-#define PRINTF NS_LOG_PRINTF(nsLocalFileUnixLog)
-#define FLUSH  NS_LOG_FLUSH(nsLocalFileUnixLog)
+NS_IMPL_LOG(nsLocalFileUnixLog)
+#define PRINTF FILE_PRINTF
+#define FLUSH  FILE_FLUSH
 
 // we need these for statfs()
 

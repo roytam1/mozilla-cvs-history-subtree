@@ -91,7 +91,7 @@
 #endif
 
 #include "nslog.h"
-
+#undef fprintf
 #undef ERROR
 #undef WARN
 #undef BREAK
