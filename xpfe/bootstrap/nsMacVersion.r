@@ -83,6 +83,15 @@ resource 'STR#' (1001, "OSVersCheckStrings") {
     "Quit",
     "CarbonLib 1.4 or later required",
     "This application requires at least version 1.4 of the CarbonLib library be installed.  "
-    "It will now quit.",
+    "It will now quit."
+  }
+};
+
+resource 'STR#' (1002, "DefaultBrowserStrings") {
+  {
+    "Would you like your default browser to be set to Mozilla?",
+    "Yes",
+    "No",
+    "Do not ask again"
   }
 };
