@@ -24,17 +24,23 @@
 #include "nsIGenericFactory.h"
 #include "nsIModule.h"
 
+#include "nsImageContainer.h"
 #include "nsImageFrame.h"
 
 // objects that just require generic constructors
 
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsImageContainer)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsImageFrame)
 
 static nsModuleComponentInfo components[] =
 {
-  { "windows image",
-    NS_IMAGEFRAME_CID,
+  { "windows image container",
+    NS_IMAGECONTAINER_CID,
     "@mozilla.org/gfx/image;2",
+    nsImageContainerConstructor, },
+  { "windows image frame",
+    NS_IMAGEFRAME_CID,
+    "@mozilla.org/gfx/image/frame;2",
     nsImageFrameConstructor, },
 };
 
