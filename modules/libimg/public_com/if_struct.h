@@ -179,8 +179,6 @@ struct il_container_struct {
     enum icstate state;
     int sized;
 
-    int moz_type;               /* TYPE_CHROME, etc. */
-
     int is_alone;               /* only image on a page */
     int is_in_use;              /* Used by some context */
     int32 loop_count;           /* Remaining number of times to repeat image,

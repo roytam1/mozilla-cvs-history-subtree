@@ -112,11 +112,6 @@ extern PRLogModuleInfo *il_log_module;
 #endif
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 
-/* types that can be used to, for example, differentiate chrome
-   images from others */
-
-#define TYPE_DEFAULT 0		// unspecified
-#define TYPE_CHROME 1		// chrome URL
 
 /* Conversion of imglib errors to XPCOM errors */
 #define NS_CONVERT_ERROR_CODE(e)  \
@@ -194,7 +189,6 @@ struct il_container_struct {
     enum icstate state;
     int sized;
 
-    int moz_type;		/* TYPE_CHROME, etc. */
     int is_alone;               /* only image on a page */
     int is_in_use;              /* Used by some context */
     int32 loop_count;           /* Remaining number of times to repeat image,
