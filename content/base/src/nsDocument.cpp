@@ -1555,6 +1555,18 @@ nsDocument::EndLoad()
       i--;
     }
   }
+
+  // Fire a DOM event notifying listeners that this document has been
+  // loaded (excluding images and other loads initiated by this
+  // document).
+  nsCOMPtr<nsIDOMEvent> event;
+  CreateEvent(NS_LITERAL_STRING("Events"),
+              getter_AddRefs(event));
+  if (event) {
+    event->InitEvent(NS_LITERAL_STRING("DOMContentLoaded"), PR_TRUE, PR_TRUE);
+    DispatchEvent(event);
+  }
+
   return NS_OK;
 }
 
