@@ -78,6 +78,8 @@ Rights Reserved.
 <!ENTITY printCmd.label "Print...">
 <!ENTITY printCmd.accesskey "P">
 <!ENTITY printCmd.key "p">
+<!ENTITY passwordMgr.label "Manage Passwords">
+<!ENTITY passwordMgr.accesskey "P">
 
 <!-- Edit Menu -->
 <!ENTITY deleteMsgCmd.label "Delete Message">

@@ -43,6 +43,12 @@
       {
         window.openDialog("chrome://messenger/content/importDialog.xul","importDialog","chrome, modal, titlebar", {importType: "addressbook"});
       }
+
+    function passwordMgr()
+      {
+        window.openDialog("chrome://communicator/content/wallet/SignonViewer.xul",
+                          "_blank","chrome,resizable=yes","S");
+      }
       
     function MsgSearchMessages()
     {

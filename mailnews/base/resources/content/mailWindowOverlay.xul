@@ -1363,6 +1363,7 @@ Rights Reserved.
               accesskey="&filtersCmd.accesskey;"
               oncommand="MsgFilters(null);"/>
     <menuitem label="&importCmd.label;" accesskey="&importCmd.accesskey;" oncommand="toImport();"/>
+    <menuitem label="&passwordMgr.label;" accesskey="&passwordMgr.accesskey;" oncommand="passwordMgr();"/>
   </menupopup>
 </menu>
 <!-- removing windowMenu since the menu items are moved to tasksMenu
