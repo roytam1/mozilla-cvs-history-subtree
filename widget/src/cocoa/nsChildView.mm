@@ -2407,6 +2407,10 @@ nsChildView::Idle()
     mGeckoChild->LiveResizeEnded();
 }
 
+- (BOOL)mouseDownCanMoveWindow
+{
+  return NO;
+}
 
 //
 // -drawRect:
