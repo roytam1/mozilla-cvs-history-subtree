@@ -164,7 +164,7 @@ XPCThrower::Verbosify(XPCCallContext& ccx,
         XPCNativeInterface* interface = ccx.GetInterface();
         sz = JS_smprintf("%s [%s.%s]",
                          *psz,
-                         interface->GetName(),
+                         interface->GetNameString(),
                          interface->GetMemberName(ccx, ccx.GetMember()));
     }
 
