@@ -92,7 +92,7 @@
 		#if TARGET_CARBON
 			#pragma traceback		on					/* should always be ON for Carbon builds */
 		#else
-			#pragma traceback		on					/* leave on until the final release, so MacsBug logs are interpretable */
+			#pragma traceback		off					/* leave on until the final release, so MacsBug logs are interpretable */
 		#endif
 		
 		#pragma global_optimizer 	on
