@@ -136,7 +136,7 @@ if (empty($reqItemGuid) || empty($reqItemVersion) || empty($reqTargetAppGuid)) {
 }
 
 // XXX PUT VALUES IN
-$db = mysql_connect($db_server, $db_user, $db_pass);
+$db = mysql_connect($db_server, $db_user, $db_pass)
     || bail ("Failed to connect to database.");
 
 mysql_select_db ($db_name)
@@ -150,7 +150,7 @@ mysql_select_db ($db_name)
 //  - $reqItemGuid
 //  - $reqItemVersion
 //  - $reqTargetAppGuid
-//  - $reqTargetAppVersion (do we care?)
+//  - $reqTargetAppVersion
 //
 // We need to get:
 //  - extension GUID
@@ -189,8 +189,15 @@ while ($line = mysql_fetch_array($result, MYSQL_ASSOC)) {
     if ($line['extversion'] == $reqItemVersion) {
         $thisVersionData = $line;
     } else if (vercmp ($reqItemVersion, $line['extversion']) > 0) {
+        // did we already see an update with a higher version than this?
         if ($highestVersion != '' && vercmp ($highestVersion, $line['extversion']) < 0)
             continue;
+
+        // does this update support my current app version?
+        if (vercmp($line['appmaxver'], $reqTargetAppVersion) > 0 ||
+            vercmp($reqTargetAppVersion, $line['appminver']) > 0)
+            continue;
+
         $highestVersion = $line['extversion'];
         $highestVersionData = $line;
     }
@@ -234,6 +241,7 @@ function print_update ($data) {
     print "   <em:updateLink>{$data['exturi']}</em:updateLink>\n";
     print "  </RDF:Description>\n";
     print " </em:targetApplication>\n";
+    print "</RDF:Description>\n";
 }
 
 if (!empty($thisVersionData))
