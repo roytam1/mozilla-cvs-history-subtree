@@ -401,16 +401,14 @@ js_AtomizeDouble(JSContext *cx, jsdouble d, uintN flags)
     JSHashTable *table;
     JSHashEntry *he, **hep;
     JSAtom *atom;
-
-#if JS_ALIGN_OF_DOUBLE == 8
-    dp = &d;
-#else
-    char alignbuf[16];
-
-    dp = (jsdouble *)&alignbuf[8 - ((jsuword)&alignbuf & 7)];
+#define AlignNum (1<<JSVAL_TAGBITS)
+    char alignbuf[2*AlignNum];
+    int alignint = (int)alignbuf;
+    int xtra = AlignNum-(alignint%AlignNum);
+    JS_ASSERT(AlignNum >= sizeof(double));
+#undef AlignNum
+    dp = (jsdouble *)&alignbuf[xtra];
     *dp = d;
-#endif
-
     keyHash = HASH_DOUBLE(dp);
     key = DOUBLE_TO_JSVAL(dp);
     state = &cx->runtime->atomState;
@@ -513,16 +511,13 @@ js_Atomize(JSContext *cx, const char *bytes, size_t length, uintN flags)
     jschar *chars;
     JSString *str;
     JSAtom *atom;
-#if JS_ALIGN_OF_DOUBLE == 8
-    union { jsdouble d; JSString s; } u;
-
-    str = &u.s;
-#else
-    char alignbuf[16];
-
-    str = (JSString *)&alignbuf[8 - ((jsuword)&alignbuf & 7)];
-#endif
-
+#define AlignNum (1<<JSVAL_TAGBITS)
+    char alignbuf[2*AlignNum];
+    int alignint = (int)alignbuf;
+    int xtra = AlignNum-(alignint%AlignNum);
+    JS_ASSERT(AlignNum >= sizeof(double));
+#undef AlignNum
+    str = (JSString *)&alignbuf[xtra];
     chars = js_InflateString(cx, bytes, length);
     if (!chars)
 	return NULL;
@@ -538,16 +533,13 @@ JS_FRIEND_API(JSAtom *)
 js_AtomizeChars(JSContext *cx, const jschar *chars, size_t length, uintN flags)
 {
     JSString *str;
-#if JS_ALIGN_OF_DOUBLE == 8
-    union { jsdouble d; JSString s; } u;
-
-    str = &u.s;
-#else
-    char alignbuf[16];
-
-    str = (JSString *)&alignbuf[8 - ((jsuword)&alignbuf & 7)];
-#endif
-
+#define AlignNum (1<<JSVAL_TAGBITS)
+    char alignbuf[2*AlignNum];
+    int alignint = (int)alignbuf;
+    int xtra = AlignNum-(alignint%AlignNum);
+    JS_ASSERT(AlignNum >= sizeof(double));
+#undef AlignNum
+    str = (JSString *)&alignbuf[xtra];
     str->chars = (jschar *)chars;
     str->length = length;
     return js_AtomizeString(cx, str, ATOM_TMPSTR | flags);
