@@ -36,10 +36,10 @@ OPTIMIZER = -O6
 endif
 else
 ifeq ($(OS_RELEASE),6.2)
-CC	= cc -32 -DIRIX6_2
+CC	= cc -n32 -DIRIX6_2
 endif
 ifeq ($(OS_RELEASE),6.3)
-CC	= cc -32 -DIRIX6_3
+CC	= cc -n32 -DIRIX6_3
 endif
 CCC = CC
 ODD_CFLAGS = -fullwarn -xansi
@@ -55,4 +55,4 @@ PURE_OS_CFLAGS = $(ODD_CFLAGS) -DXP_UNIX -DSVR4 -DSW_THREADS -DIRIX
 OS_CFLAGS = $(PURE_OS_CFLAGS) -MDupdate $(DEPENDENCIES)
 
 BSDECHO	= echo
-MKSHLIB = $(LD) -shared
+MKSHLIB = $(LD) -n32 -shared
