@@ -261,8 +261,8 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   // Update item username and password.
   //
   attr.tag = kAccountKCItemAttr;
-  attr.length = strlen([username UTF8String];
   attr.data = (char*)[username UTF8String];
+  attr.length = strlen(attr.data);
   status = KCSetAttribute(inItemRef, &attr);
   if(status != noErr)
     NSLog(@"Couldn't update keychain item account");
