@@ -28,6 +28,10 @@
 
 #include "structs.h" // for MWContext
 
+/**
+ * An <tt>nsProgressManager</tt> object is used to manage the progress
+ * bar and status bar for a context.
+ */
 class nsProgressManager : public nsITransferListener
 {
 protected:
