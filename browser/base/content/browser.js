@@ -3663,7 +3663,8 @@ function toggleSidebar(aCommandID, forceOpen) {
     sidebarBox.setAttribute("sidebarcommand", "");
     sidebarTitle.setAttribute("value", "");
     sidebarBox.hidden = true;
-    sidebarSplitter.hidden = true;    
+    sidebarSplitter.hidden = true;
+    _content.focus();
     return;
   }
   
