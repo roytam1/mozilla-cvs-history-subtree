@@ -154,9 +154,11 @@ var gPrefs = Components.classes["@mozilla.org/preferences-service;1"];
 gPrefs = gPrefs.getService();
 gPrefs = gPrefs.QueryInterface(Components.interfaces.nsIPrefBranch);
 	
+var gAddrbookSession = Components.classes["@mozilla.org/addressbook/services/session;1"].getService().QueryInterface(Components.interfaces.nsIAddrBookSession);
+
 function DisplayCardViewPane(card)
 {
-  var generatedName = card.getGeneratedName(gPrefs.getIntPref("mail.addr_book.lastnamefirst"));
+  var generatedName = gAddrbookSession.generateNameFromCard(card, gPrefs.getIntPref("mail.addr_book.lastnamefirst"));
 		
   var data = top.cvData;
   var visible;

@@ -85,11 +85,6 @@ interface nsIAbCard : nsISupports {
 	attribute wstring notes;
 	attribute unsigned long lastModifiedDate;
 
-	/** 
-	 * format is value of "mail.addr_book.lastnamefirst" pref
-	 */
-	wstring getGeneratedName(in long format);
-
 	attribute unsigned long preferMailFormat;
 	attribute boolean isMailList;
 	/**

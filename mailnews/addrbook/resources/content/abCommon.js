@@ -498,8 +498,6 @@ function ChangeDirectoryByDOMNode(dirNode)
   return;
 }
 
-var addrbooksession = Components.classes["@mozilla.org/addressbook/services/session;1"].getService().QueryInterface(Components.interfaces.nsIAddrBookSession);
-
 function AbSortAscending()
 {
   var sortColumn = kDefaultSortColumn;

@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Seth Spitzer <sspitzer@netscape.com>
  *   Pierre Phaneuf <pp@ludusdesign.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -466,8 +467,10 @@ nsAddbookProtocolHandler::BuildSingleHTML(nsIAddrDatabase *aDatabase, nsIAbDirec
   rv = prefBranch->GetIntPref(PREF_MAIL_ADDR_BOOK_LASTNAMEFIRST, &format);
   NS_ENSURE_SUCCESS(rv,rv);
 
-  // XXX is GetGeneratedName() correct?
-  if (NS_SUCCEEDED(workCard->GetGeneratedName(format, &aName)) && (aName))
+  nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv,rv);
+  
+  if (NS_SUCCEEDED(abSession->GenerateNameFromCard(workCard, format, &aName)) && (aName))
   {
     workBuffer.AppendWithConversion("<caption><b>");
     workBuffer.Append(aName);

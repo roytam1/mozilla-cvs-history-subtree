@@ -105,8 +105,10 @@ NS_IMETHODIMP nsAbView::Close()
   NS_ENSURE_SUCCESS(rv,rv);
   
   nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv); 
-  if(NS_SUCCEEDED(rv))
-    abSession->RemoveAddressBookListener(this);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  rv = abSession->RemoveAddressBookListener(this);
+	NS_ENSURE_SUCCESS(rv,rv);
 
   PRInt32 i = mCards.Count();
   while(i-- > 0)
@@ -419,10 +421,15 @@ nsresult nsAbView::GetCardValue(nsIAbCard *card, const PRUnichar *colID, PRUnich
   nsresult rv;
   
   // "G" == "GeneratedName"
-  // "_" == generic column (like _ScreenName)
+  // "_" == generic column (like _AimScreenName)
   // else, standard column (like PrimaryEmail)
-  if (colID[0] == 'G')
-    rv = card->GetGeneratedName(mGeneratedNameFormat, _retval);
+  if (colID[0] == 'G') {
+    nsCOMPtr<nsIAddrBookSession> abSession = do_GetService(NS_ADDRBOOKSESSION_CONTRACTID, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+ 
+    rv = abSession->GenerateNameFromCard(card, mGeneratedNameFormat, _retval);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
   else {
     // XXX do this conversion once, and cache it.
     nsCAutoString column;

@@ -157,3 +157,65 @@ NS_IMETHODIMP nsAddrBookSession::GetUserProfileDirectory(nsFileSpec * *userDir)
 
   return rv;
 }
+
+#define kDisplayName 0
+#define kLastFirst   1
+#define kFirstLast   2
+
+NS_IMETHODIMP nsAddrBookSession::GenerateNameFromCard(nsIAbCard *card, PRInt32 generateFormat, PRUnichar **aName)
+{
+  nsresult rv = NS_OK;
+	
+  if (generateFormat == kDisplayName) {
+    rv = card->GetDisplayName(aName);
+  }
+  else  {
+    nsXPIDLString firstName;
+    nsXPIDLString lastName;
+    
+    rv = card->GetFirstName(getter_Copies(firstName));
+    NS_ENSURE_SUCCESS(rv, rv);       
+    
+    rv = card->GetLastName(getter_Copies(lastName));
+    NS_ENSURE_SUCCESS(rv,rv);
+    
+    if (lastName.Length() && firstName.Length()) {
+      if (!mBundle) {       
+        nsCOMPtr<nsIStringBundleService> stringBundleService = do_GetService(NS_STRINGBUNDLE_CONTRACTID, &rv); 
+        NS_ENSURE_SUCCESS(rv,rv);
+        
+        rv = stringBundleService->CreateBundle("chrome://messenger/locale/addressbook/addressBook.properties", getter_AddRefs(mBundle));
+        NS_ENSURE_SUCCESS(rv,rv);
+      }
+
+      nsXPIDLString generatedName;
+
+      if (generateFormat == kLastFirst) {
+        const PRUnichar *stringParams[2] = {lastName.get(), firstName.get()};
+        
+        rv = mBundle->FormatStringFromName(NS_LITERAL_STRING("lastFirstFormat").get(), stringParams, 2, 
+          getter_Copies(generatedName));
+      }
+      else {
+        const PRUnichar *stringParams[2] = {firstName.get(), lastName.get()};
+        
+        rv = mBundle->FormatStringFromName(NS_LITERAL_STRING("firstLastFormat").get(), stringParams, 2, 
+          getter_Copies(generatedName));
+        
+      }
+      
+      NS_ENSURE_SUCCESS(rv,rv);
+      *aName = nsCRT::strdup(generatedName.get());
+    }
+    else {
+      if (lastName.Length())
+        *aName = nsCRT::strdup(lastName.get());
+      else if (firstName.Length())
+        *aName = nsCRT::strdup(firstName.get());
+      else
+        *aName = nsCRT::strdup(NS_LITERAL_STRING("").get());
+    }
+  }
+
+  return NS_OK;
+}

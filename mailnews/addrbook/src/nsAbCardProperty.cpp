@@ -49,7 +49,6 @@
 #include "rdf.h"
 #include "nsCOMPtr.h"
 #include "nsReadableUtils.h"
-
 #include "nsIPref.h"
 #include "nsIAbDirectory.h"
 
@@ -737,56 +736,9 @@ NS_IMETHODIMP nsAbCardProperty::EditCardToDatabase(const char *uri)
 	return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-#define kDisplayName 0
-#define kLastFirst   1
-#define kFirstLast   2
-
-NS_IMETHODIMP nsAbCardProperty::GetGeneratedName(PRInt32 generateFormat, PRUnichar **aName)
-{
-  nsresult rv = NS_OK;
-	
-  if (generateFormat == kDisplayName) {
-    rv = GetDisplayName(aName);
-  }
-  else  {
-    nsXPIDLString firstName;
-    nsXPIDLString lastName;
-    
-    rv = GetFirstName(getter_Copies(firstName));
-    NS_ENSURE_SUCCESS(rv, rv);       
-    
-    rv = GetLastName(getter_Copies(lastName));
-    NS_ENSURE_SUCCESS(rv,rv);
-    
-    if (lastName.Length() && firstName.Length()) {
-      nsAutoString nameStr;
-      if (generateFormat == kLastFirst) {
-        nameStr = lastName.get();
-        nameStr += NS_LITERAL_STRING(", ").get();  // XXX i18n get ", " from addressBook.properties
-        nameStr += firstName.get();
-      }
-      else {
-        nameStr = firstName.get();
-        nameStr += NS_LITERAL_STRING(" ").get(); // XXX i18n get " " from addressBook.properties
-        nameStr += lastName.get();
-      }
-      *aName = nsCRT::strdup(nameStr.get());
-    }
-    else {
-      if (lastName.Length())
-        *aName = nsCRT::strdup(lastName.get());
-      else if (firstName.Length())
-        *aName = nsCRT::strdup(firstName.get());
-      else
-        *aName = nsCRT::strdup(NS_LITERAL_STRING("").get());
-    }
-  }
-
-  return NS_OK;
-}
-
 NS_IMETHODIMP nsAbCardProperty::Equals(nsIAbCard *card, PRBool *result)
 {
+  printf("fix this\n");
   *result = (this == card);
   return NS_OK;
 }

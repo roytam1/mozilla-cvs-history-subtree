@@ -51,8 +51,6 @@
 #include "nsIAbDirectory.idl"
 #include "nsIAbCard.idl"
 
-interface nsIDOMXULDocument;
-
 [scriptable, uuid(C5339441-303F-11d3-9E13-00A0C92B5F0D)]
 interface nsIAddrBookSession : nsISupports {
 
@@ -66,5 +64,18 @@ interface nsIAddrBookSession : nsISupports {
   void notifyDirectoryItemDeleted(in nsIAbDirectory directory, in nsISupports item);
 
   [noscript] readonly attribute nsFileSpec userProfileDirectory;
+
+  /**
+   * generate the name from the card, using the firstName and lastName and the displayName
+   *
+   * format follows the "mail.addr_book.lastnamefirst" pref values
+   *
+   * 0 = generated name is displayName
+   * 1 = lastFirst, formatted following lastFirstFormat (see addressBook.properties)
+   * 2 = firstLast, formatted following firstLastFormat (see addressBook.properties)
+   *
+   * we allow the caller to cache the pref value, so we don't have to go to prefs every time.
+   */
+  wstring generateNameFromCard(in nsIAbCard card, in long generateFormat);
 };
 
