@@ -4604,17 +4604,18 @@ nsCSSFrameConstructor::ContentRemoved(nsIPresContext* aPresContext,
 
 #ifdef INCLUDE_XUL
     nsCOMPtr<nsIAtom> tag;
-    if (!aContainer) return NS_ERROR_NULL_POINTER;
-    aContainer->GetTag(*getter_AddRefs(tag));
-    if (tag.get() == nsXULAtoms::treechildren ||
-        tag.get() == nsXULAtoms::treeitem) {
-      // Convert to a tree row group frame.
-      nsIFrame* parentFrame;
-      childFrame->GetParent(&parentFrame);
-      nsTreeRowGroupFrame* treeRowGroup = (nsTreeRowGroupFrame*)parentFrame;
-      if (treeRowGroup && treeRowGroup->IsLazy()) {
-        treeRowGroup->OnContentRemoved(*aPresContext, childFrame);
-        return NS_OK;
+    if (aContainer) {
+      aContainer->GetTag(*getter_AddRefs(tag));
+      if (tag.get() == nsXULAtoms::treechildren ||
+          tag.get() == nsXULAtoms::treeitem) {
+        // Convert to a tree row group frame.
+        nsIFrame* parentFrame;
+        childFrame->GetParent(&parentFrame);
+        nsTreeRowGroupFrame* treeRowGroup = (nsTreeRowGroupFrame*)parentFrame;
+        if (treeRowGroup && treeRowGroup->IsLazy()) {
+          treeRowGroup->OnContentRemoved(*aPresContext, childFrame);
+          return NS_OK;
+        }
       }
     }
 #endif // INCLUDE_XUL
