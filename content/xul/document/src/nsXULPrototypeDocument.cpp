@@ -56,6 +56,7 @@
 #include "nsIScriptSecurityManager.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
+#include "nsITimelineService.h"
 #include "nsIURI.h"
 #include "nsIXULDocument.h"
 #include "nsIXULPrototypeDocument.h"
