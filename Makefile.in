@@ -186,6 +186,7 @@ tier_9_dirs	+= \
 		content \
 		layout \
 		db \
+		xpfe/components/shistory \
 		docshell \
 		webshell \
 		profile \

@@ -48,8 +48,6 @@ plugins\npmozax.dll
 components\xpcom_base.xpt
 components\xpcom_components.xpt
 components\xpcom_ds.xpt
-components\xpcom_eventloop_windows.xpt
-components\xpcom_eventloop_xp.xpt
 components\xpcom_io.xpt
 components\xpcom_nativeapp.xpt
 components\xpcom_thread.xpt
@@ -128,7 +126,6 @@ components\profile.dll
 components\profile.xpt
 
 ; session history
-components\shistory.dll
 components\shistory.xpt
 
 ; optional typeaheadfind 

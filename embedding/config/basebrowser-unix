@@ -115,7 +115,6 @@ components/libprofile.so
 components/profile.xpt
 
 ; session history
-components/libshistory.so
 components/shistory.xpt
 
 ; optional typeaheadfind 

@@ -186,7 +186,6 @@ Components:RDFLibraryDebug.shlb
 Components:rdf.xpt
 
 ; session history
-Components:shistoryDebug.shlb
 Components:shistory.xpt
 
 ; optional typeaheadfind 

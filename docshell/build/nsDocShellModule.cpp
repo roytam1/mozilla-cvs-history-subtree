@@ -32,6 +32,11 @@
 #include "nsExternalProtocolHandler.h"
 #include "nsPrefetchService.h"
 
+// session history
+#include "nsSHEntry.h"
+#include "nsSHistory.h"
+#include "nsSHTransaction.h"
+
 // docshell
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsWebShell);
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDefaultURIFixup);
@@ -47,6 +52,11 @@ NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsPrefetchService, Init)
 #include "nsInternetConfigService.h"
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsInternetConfigService);
 #endif
+
+// session history
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsSHEntry)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsSHTransaction)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsSHistory, Init)
 
 // Currently no-one is instantiating docshell's directly because
 // nsWebShell is still our main "shell" class. nsWebShell is a subclass
@@ -88,6 +98,17 @@ static const nsModuleComponentInfo gDocShellModuleInfo[] = {
     nsInternetConfigServiceConstructor, },
 #endif
     
+    // session history
+   { "nsSHEntry", NS_SHENTRY_CID,
+      NS_SHENTRY_CONTRACTID, nsSHEntryConstructor },
+   { "nsSHEntry", NS_HISTORYENTRY_CID,
+      NS_HISTORYENTRY_CONTRACTID, nsSHEntryConstructor },
+   { "nsSHTransaction", NS_SHTRANSACTION_CID,
+      NS_SHTRANSACTION_CONTRACTID, nsSHTransactionConstructor },
+   { "nsSHistory", NS_SHISTORY_CID,
+      NS_SHISTORY_CONTRACTID, nsSHistoryConstructor },
+   { "nsSHistory", NS_SHISTORY_INTERNAL_CID,
+      NS_SHISTORY_INTERNAL_CONTRACTID, nsSHistoryConstructor }
 };
 
 // "docshell provider" to illustrate that this thing really *should*
