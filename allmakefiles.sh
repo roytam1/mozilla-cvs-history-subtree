@@ -876,6 +876,7 @@ embedding/xre/Makefile
 MAKEFILES_minotaur="
 mailnews/app/Makefile
 mailnews/app/profile/Makefile
+xpfe/components/build2/Makefile
 "
 
 MAKEFILES_sql="
