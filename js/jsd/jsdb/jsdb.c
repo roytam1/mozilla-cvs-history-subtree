@@ -1,0 +1,437 @@
+/* -*- Mode: C; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
+ *
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
+ */
+
+/*                                   
+* JSDB public and callback functions 
+*/                                   
+
+#include "jsdbpriv.h"
+
+
+/***************************************************************************/
+
+STATIC_DLL_CALLBACK(void)
+_ErrorReporter(JSContext *cx, const char *message, JSErrorReport *report)
+{
+    int i, j, k, n;
+
+    fputs("jsdb: ", stderr);
+    if (!report) {
+        fprintf(stderr, "%s\n", message);
+        return;
+    }
+
+    if (report->filename)
+        fprintf(stderr, "%s, ", report->filename);
+    if (report->lineno)
+        fprintf(stderr, "line %u: ", report->lineno);
+    fputs(message, stderr);
+    if (!report->linebuf) {
+        putc('\n', stderr);
+        return;
+    }
+
+    fprintf(stderr, ":\n%s\n", report->linebuf);
+    n = report->tokenptr - report->linebuf;
+    for (i = j = 0; i < n; i++) {
+        if (report->linebuf[i] == '\t') {
+            for (k = (j + 8) & ~7; j < k; j++)
+                putc('.', stderr);
+            continue;
+        }
+        putc('.', stderr);
+        j++;
+    }
+    fputs("^\n", stderr);
+}
+
+STATIC_DLL_CALLBACK(void)
+jsdb_ScriptHookProc(JSDContext* jsdc,
+                    JSDScript*  jsdscript,
+                    JSBool      creating,
+                    void*       callerdata)
+{
+    JSDB_Data* data = (JSDB_Data*) callerdata;
+    JSFunction* fun;
+
+    if(data->jsScriptHook &&
+       NULL != (fun = JS_ValueToFunction(data->cxDebugger, data->jsScriptHook)))
+    {
+        jsval result;
+        jsval args[2] = {jsdb_PointerToNewHandleVal(data->cxDebugger, jsdscript),
+                         creating ? JSVAL_TRUE : JSVAL_FALSE };
+        JS_CallFunction(data->cxDebugger, NULL, fun, 2, args, &result);
+    }
+}
+
+uintN DLL_CALLBACK
+jsdb_ExecHookHandler(JSDContext*     jsdc,
+                     JSDThreadState* jsdthreadstate,
+                     uintN           type,
+                     void*           callerdata,
+                     jsval*          rval)
+{
+    uintN ourRetVal = JSD_HOOK_RETURN_CONTINUE;
+    jsval result;
+    JSFunction* fun;
+    int answer;
+    JSDB_Data* data = (JSDB_Data*) callerdata;
+    JS_ASSERT(data);
+
+    /* if we're already stopped, then don't stop */
+    if(data->jsdthreadstate)
+        return JSD_HOOK_RETURN_CONTINUE;
+
+    if(!jsdb_SetThreadState(data, jsdthreadstate))
+        goto label_bail;
+
+    if(data->jsExecutionHook &&
+       NULL != (fun = JS_ValueToFunction(data->cxDebugger, data->jsExecutionHook)))
+    {
+        jsval arg = INT_TO_JSVAL((int)type);
+        if(!JS_CallFunction(data->cxDebugger, NULL, fun, 1, &arg, &result))
+            goto label_bail;
+        if(!JSVAL_IS_INT(result))
+            goto label_bail;
+        answer = JSVAL_TO_INT(result);
+
+        if(answer >= JSD_HOOK_RETURN_HOOK_ERROR &&
+           answer <= JSD_HOOK_RETURN_RET_WITH_VAL)
+            ourRetVal = answer;
+        else
+            ourRetVal = JSD_HOOK_RETURN_CONTINUE;
+    }
+
+label_bail:
+    jsdb_SetThreadState(data, NULL);
+    return ourRetVal;
+}
+
+typedef enum
+{
+    ARG_MSG = 0,
+    ARG_FILENAME,
+    ARG_LINENO,
+    ARG_LINEBUF,
+    ARG_TOKEN_OFFSET,
+    ARG_LIMIT
+} ER_ARGS;
+
+uintN DLL_CALLBACK
+jsdb_ErrorReporter(JSDContext*     jsdc,
+                   JSContext*      cx,
+                   const char*     message,
+                   JSErrorReport*  report,
+                   void*           callerdata)
+{
+    uintN ourRetVal = JSD_ERROR_REPORTER_PASS_ALONG;
+    jsval result;
+    JSFunction* fun;
+    int32 answer;
+    JSDB_Data* data = (JSDB_Data*) callerdata;
+    JS_ASSERT(data);
+
+    if(data->jsErrorReporterHook &&
+       NULL != (fun = JS_ValueToFunction(data->cxDebugger,
+                                         data->jsErrorReporterHook)))
+    {
+        jsval args[ARG_LIMIT] = {JSVAL_NULL};
+
+        if(message)
+            args[ARG_MSG] =
+                    STRING_TO_JSVAL(JS_NewStringCopyZ(cx, message));
+        if(report && report->filename)
+            args[ARG_FILENAME] =
+                    STRING_TO_JSVAL(JS_NewStringCopyZ(cx, report->filename));
+        if(report && report->linebuf)
+            args[ARG_LINEBUF] =
+                    STRING_TO_JSVAL(JS_NewStringCopyZ(cx, report->linebuf));
+        if(report)
+            args[ARG_LINENO] =
+                    INT_TO_JSVAL(report->lineno);
+        if(report && report->linebuf && report->tokenptr)
+            args[ARG_TOKEN_OFFSET] =
+                    INT_TO_JSVAL((int)(report->tokenptr - report->linebuf));
+
+        if(!JS_CallFunction(data->cxDebugger, NULL, fun, ARG_LIMIT, args, &result))
+            return ourRetVal;
+
+        if(JS_ValueToInt32(data->cxDebugger, result, &answer))
+            ourRetVal = (uintN) answer;
+    }
+    return ourRetVal;
+}
+
+/*                                                         
+* static JSContext*                                        
+* _cloneContext(JSContext *cx)                             
+* {                                                        
+*     JSVersion version;                                   
+*     JSContext *cx2;                                      
+*     cx2 = JS_NewContext(JS_GetRuntime(cx), 8192);        
+*     if (!cx2)                                            
+*         return NULL;                                     
+*     JS_SetErrorReporter(cx2, _ErrorReporter);            
+*     JS_SetGlobalObject(cx2, JS_GetGlobalObject(cx));     
+*     JS_SetContextPrivate(cx2, JS_GetContextPrivate(cx)); 
+*     version = JS_GetVersion(cx);                         
+*     if (version != JSVERSION_DEFAULT)                    
+*         JS_SetVersion(cx2, version);                     
+*     return cx2;                                          
+* }                                                        
+*/                                                         
+
+STATIC_DLL_CALLBACK(JSBool)
+Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+/*     JSContext *cx2; */
+    uintN i;
+    JSString *str;
+    const char *filename;
+    JSScript *script;
+    JSBool ok;
+    jsval result;
+
+    /*
+     * Create new context to execute in so that gc will still find
+     * roots for the script that called load().
+     */
+/*      cx2 = _cloneContext(cx); */
+
+    ok = JS_TRUE;
+    for (i = 0; i < argc; i++) {
+        str = JS_ValueToString(cx, argv[i]);
+        if (!str) {
+            ok = JS_FALSE;
+            break;
+        }
+        argv[i] = STRING_TO_JSVAL(str);
+        filename = JS_GetStringBytes(str);
+        errno = 0;
+        script = JS_CompileFile(cx, obj, filename);
+        if (!script)
+            continue;
+/*         ok = JS_ExecuteScript(cx2, obj, script, &result); */
+        ok = JS_ExecuteScript(cx, obj, script, &result);
+        JS_DestroyScript(cx, script);
+        if (!ok)
+            break;
+    }
+/*     JS_DestroyContext(cx2); */
+    JS_GC(cx);
+    *rval = STRING_TO_JSVAL(JS_NewStringCopyZ(cx,""));
+    return ok;
+}
+
+STATIC_DLL_CALLBACK(JSBool)
+Write(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSString *str = JS_ValueToString(cx, argv[0]);
+    if (!str)
+        return JS_FALSE;
+    printf(JS_GetStringBytes(str));
+    *rval = STRING_TO_JSVAL(JS_NewStringCopyZ(cx,""));
+    return JS_TRUE;
+}    
+
+STATIC_DLL_CALLBACK(JSBool)
+Gets(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    char buf[1024];
+    if(! gets(buf))
+        return JS_FALSE;
+    *rval = STRING_TO_JSVAL(JS_NewStringCopyZ(cx, buf));
+    return JS_TRUE;
+}    
+
+STATIC_DLL_CALLBACK(JSBool)
+Version(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    if (argc > 0 && JSVAL_IS_INT(argv[0]))
+        *rval = INT_TO_JSVAL(JS_SetVersion(cx, JSVAL_TO_INT(argv[0])));
+    else
+        *rval = INT_TO_JSVAL(JS_GetVersion(cx));
+    return JS_TRUE;
+}
+
+
+STATIC_DLL_CALLBACK(JSBool)
+SafeEval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    static char default_filename[] = "jsdb_eval";
+/*     JSContext *cx2; */
+    JSString* textJSString;
+    char* filename;
+    int32 lineno;
+    JSDB_Data* data = (JSDB_Data*) JS_GetContextPrivate(cx);
+    JS_ASSERT(data);
+
+    if(argc < 1 ||
+       NULL == (textJSString = JS_ValueToString(cx, argv[0])))
+    {
+        JS_ReportError(cx, "safeEval requires source text as a first argument");
+        return JS_FALSE;
+    }
+
+    if(argc < 2)
+        filename = default_filename;
+    else
+    {
+        JSString* filenameJSString;
+        if(NULL == (filenameJSString = JS_ValueToString(cx, argv[1])))
+        {
+            JS_ReportError(cx, "safeEval passed non-string filename as 2nd param");
+            return JS_FALSE;
+        }
+        filename = JS_GetStringBytes(filenameJSString);
+    }
+
+    if(argc < 3)
+        lineno = 1;
+    else
+    {
+        if(!JS_ValueToInt32(cx, argv[2], &lineno))
+        {
+            JS_ReportError(cx, "safeEval passed non-int lineno as 3rd param");
+            return JS_FALSE;
+        }
+    }
+
+/*     if(NULL == (cx2 = _cloneContext(cx)))              */
+/*     {                                                  */
+/*         JS_ReportError(cx, "failed to clone context"); */
+/*         return JS_FALSE;                               */
+/*     }                                                  */
+
+    if(! JS_EvaluateScript(cx, obj, 
+                           JS_GetStringBytes(textJSString),
+                           JS_GetStringLength(textJSString),
+                           filename, lineno, rval))
+        *rval = STRING_TO_JSVAL(JS_NewStringCopyZ(cx,""));
+/*     JS_GC(cx);              */
+/*     JS_DestroyContext(cx2); */
+                
+    return JS_TRUE;
+}
+
+STATIC_DLL_CALLBACK(JSBool)
+NativeBreak(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+#ifdef _WINDOWS
+    _asm int 3;
+    *rval = STRING_TO_JSVAL(JS_NewStringCopyZ(cx,"did _asm int 3;"));
+#else
+    *rval = STRING_TO_JSVAL(JS_NewStringCopyZ(cx,"only supported for Windows"));
+#endif
+    return JS_TRUE;
+}    
+
+static JSFunctionSpec debugger_functions[] = {
+    {"version",         Version,        0},
+    {"load",            Load,           1},
+    {"write",           Write,          0},
+    {"gets",            Gets,           0},
+    {"safeEval",        SafeEval,       3},
+    {"nativeBreak",     NativeBreak,    0},
+    {0}
+};
+
+static JSClass debugger_global_class = {
+    "debugger_global", 0,
+    JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,  JS_PropertyStub,
+    JS_EnumerateStub, JS_ResolveStub,   JS_ConvertStub,   JS_FinalizeStub
+};
+
+/***************************************************************************/
+
+static JSBool
+_initReturn(const char* str, JSBool retval)
+{
+    if(str)
+        printf("%s\n", str);
+    if(retval)
+        ; /* printf("debugger initialized\n"); */
+    else
+    {
+        JS_ASSERT(0);
+        printf("debugger FAILED to initialize\n");
+    }
+    return retval;
+}
+
+#define MAX_DEBUGGER_DEPTH 3
+
+PUBLIC_API(JSBool)
+JSDB_InitDebugger(JSRuntime* rt, JSDContext* jsdc, int depth)
+{
+    jsval rvalIgnore;
+    static char load_deb[] = "load('debugger.js')";
+
+    JSDB_Data* data = (JSDB_Data*) calloc(1, sizeof(JSDB_Data));
+    if(!data)
+        return _initReturn("memory alloc error", JS_FALSE);
+
+    data->rtTarget   = rt;
+    data->jsdcTarget = jsdc;
+    data->debuggerDepth = depth+1;
+
+    if(NULL == (data->rtDebugger = JS_NewRuntime(8L * 1024L * 1024L)))
+        return _initReturn("debugger runtime creation error", JS_FALSE);
+
+    if(NULL == (data->cxDebugger = JS_NewContext(data->rtDebugger, 8192)))
+        return _initReturn("debugger creation error", JS_FALSE);
+
+    JS_SetContextPrivate(data->cxDebugger, data);
+
+    JS_SetErrorReporter(data->cxDebugger, _ErrorReporter);
+
+    if(NULL == (data->globDebugger =
+            JS_NewObject(data->cxDebugger, &debugger_global_class, NULL, NULL)))
+        return _initReturn("debugger global object creation error", JS_FALSE);
+
+    if(!JS_InitStandardClasses(data->cxDebugger, data->globDebugger))
+        return _initReturn("debugger InitStandardClasses error", JS_FALSE);
+
+    if(!JS_DefineFunctions(data->cxDebugger, data->globDebugger, debugger_functions))
+        return _initReturn("debugger DefineFunctions error", JS_FALSE);
+
+    if(!jsdb_ReflectJSD(data))
+        return _initReturn("debugger reflection of JSD API error", JS_FALSE);
+
+    if(data->debuggerDepth < MAX_DEBUGGER_DEPTH)
+    {
+        JSDContext* jsdc;
+        if(NULL == (jsdc = JSD_DebuggerOnForUser(data->rtDebugger, NULL, NULL)))
+            return _initReturn("failed to create jsdc for nested debugger", JS_FALSE);
+        JSD_JSContextInUse(jsdc, data->cxDebugger);
+        if(!JSDB_InitDebugger(data->rtDebugger, jsdc, data->debuggerDepth))
+            return _initReturn("failed to init nested debugger", JS_FALSE);
+    }
+
+    JSD_SetScriptHook(jsdc, jsdb_ScriptHookProc, data);
+    JSD_SetDebuggerHook(jsdc, jsdb_ExecHookHandler, data);
+    JSD_SetDebugBreakHook(jsdc, jsdb_ExecHookHandler, data);
+    JSD_SetErrorReporter(jsdc, jsdb_ErrorReporter, data);
+
+    JS_EvaluateScript(data->cxDebugger, data->globDebugger,
+                      load_deb, sizeof(load_deb)-1, "jsdb_autoload", 1,
+                      &rvalIgnore);
+
+    return _initReturn(NULL, JS_TRUE);
+}
+
