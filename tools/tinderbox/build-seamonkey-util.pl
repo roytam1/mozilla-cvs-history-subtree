@@ -346,7 +346,7 @@ sub SetupPath {
 
     if ($Settings::OS eq 'Darwin') {
         $ENV{PATH} = "/bin:/usr/bin:$ENV{PATH}";
-        $Settings::ConfigureEnvArgs = 'CC=cc CXX=cpp';
+        $Settings::ConfigureEnvArgs = 'CC=cc CXX=c++';
         $Settings::Compiler = 'cc';
     }
 
