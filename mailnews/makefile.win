@@ -25,7 +25,10 @@ DIRS=public base db local news imap mime compose addrbook import absync mapi ext
 
 include <$(DEPTH)\config\rules.mak>
 
+export:: mailbase
+
 mailbase::
+  echo "building mailbase.js..."
   cat base/prefs/resources/content/accountUtils.js > base/resources/content/mailbase.js 
   cat base/resources/content/commandglue.js >> base/resources/content/mailbase.js 
   cat base/resources/content/mail-offline.js >> base/resources/content/mailbase.js 
