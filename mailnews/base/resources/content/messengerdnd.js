@@ -454,6 +454,9 @@ function DropOnFolderTree(event)
             messenger.CopyMessages(sourcefolder, targetfolder, list, false);
           }
           else {
+            if (!ctrlKeydown) {
+                SetNextMessageAfterDelete();
+            }
 	        messenger.CopyMessages(sourcefolder, targetfolder, list, !ctrlKeydown);
           }
         }
