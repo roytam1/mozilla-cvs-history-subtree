@@ -229,7 +229,7 @@ nsHttpHandler::AddStandardRequestHeaders(nsHttpHeaderArray *request,
     LOG(("nsHttpHandler::AddStandardRequestHeaders\n"));
 
     // Add the User-Agent header:
-    rv = request->SetHeader(nsHttp::User_Agent, UserAgent().get());
+    rv = request->SetHeader(nsHttp::User_Agent, UserAgent());
     if (NS_FAILED(rv)) return rv;
 
     // Add the Accept header:
@@ -582,14 +582,14 @@ nsHttpHandler::OnExamineResponse(nsIHttpChannel *chan)
 // nsHttpHandler <private>
 //-----------------------------------------------------------------------------
 
-const nsCString &
+const char *
 nsHttpHandler::UserAgent()
 {
     if (mUserAgentIsDirty) {
         BuildUserAgent();
         mUserAgentIsDirty = PR_FALSE;
     }
-    return mUserAgent;
+    return mUserAgent.get();
 }
 
 void
@@ -1452,7 +1452,7 @@ nsHttpHandler::NewProxyChannel(nsIURI *uri,
 NS_IMETHODIMP
 nsHttpHandler::GetUserAgent(char **aUserAgent)
 {
-    return DupString(UserAgent().get(), aUserAgent);
+    return DupString(UserAgent(), aUserAgent);
 }
 
 NS_IMETHODIMP

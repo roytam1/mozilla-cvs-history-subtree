@@ -81,6 +81,7 @@ public:
     nsresult AddStandardRequestHeaders(nsHttpHeaderArray *,
                                        PRUint32 capabilities);
 
+    const char   *UserAgent();
     nsHttpVersion DefaultVersion() { return (nsHttpVersion) mHttpVersion; }
     PRUint32      ReferrerLevel()  { return mReferrerLevel; }
 
@@ -170,8 +171,6 @@ private:
     nsresult SetAcceptLanguages(const char *);
     nsresult SetAcceptEncodings(const char *);
     nsresult SetAcceptCharsets(const char *);
-
-    const nsCString &UserAgent();
 
     static PRInt32 PR_CALLBACK PrefsCallback(const char *, void *);
 

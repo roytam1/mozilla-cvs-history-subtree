@@ -151,8 +151,14 @@ nsHttpChannel::Init(nsIURI *uri,
     // Set request headers
     //
     nsCString hostLine;
-    hostLine.Assign(host.get());
-    if (port != -1) {
+    if (port == -1)
+        hostLine.Assign(host.get());
+    else if (PL_strchr(host.get(), ':')) {
+        hostLine.Assign('[');
+        hostLine.Append(host.get());
+        hostLine.Append(']');
+    } else {
+        hostLine.Assign(host.get());
         hostLine.Append(':');
         hostLine.AppendInt(port);
     }
@@ -283,9 +289,10 @@ nsHttpChannel::SetupTransaction()
         return NS_ERROR_OUT_OF_MEMORY;
     NS_ADDREF(mTransaction);
 
-    // use the URI path if not proxying
+    // use the URI path if not proxying (transparent proxying such as SSL proxy
+    // does not count here).
     nsXPIDLCString requestURI;
-    if (mConnectionInfo->ProxyHost() == nsnull) {
+    if ((mConnectionInfo->ProxyHost() == nsnull) || mConnectionInfo->UsingSSL()) {
         rv = mURI->GetPath(getter_Copies(requestURI));
         if (NS_FAILED(rv)) return rv;
     }

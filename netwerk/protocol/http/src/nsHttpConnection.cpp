@@ -443,6 +443,7 @@ nsHttpConnection::SetupSSLProxyConnect()
     request.SetMethod(nsHttp::Connect);
     request.SetVersion(nsHttpHandler::get()->DefaultVersion());
     request.SetRequestURI(buf.get());
+    request.SetHeader(nsHttp::User_Agent, nsHttpHandler::get()->UserAgent());
 
     buf.Truncate(0);
     request.Flatten(buf);
@@ -560,6 +561,8 @@ nsHttpConnection::OnDataWritable(nsIRequest *request, nsISupports *context,
         LOG(("done writing proxy connect stream\n"));
         return NS_BASE_STREAM_WOULD_BLOCK;
     }
+
+    LOG(("calling mTransaction->OnDataWritable\n"));
 
     // in the normal case, we just want to defer to the transaction to write
     // out the request.
