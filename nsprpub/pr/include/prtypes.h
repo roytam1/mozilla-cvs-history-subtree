@@ -64,6 +64,7 @@
 #if defined(WIN32)
 
 #if defined(__GNUC__)
+#undef _declspec
 #define _declspec(x) __declspec(x)
 #endif
 
