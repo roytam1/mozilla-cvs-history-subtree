@@ -1928,7 +1928,7 @@ void * nsWindow::GetNativeData(PRUint32 aDataType)
         return NULL;
       }
     }
-    return (void *)mSuperWin;
+    return (void *)GDK_WINDOW_XWINDOW(mSuperWin->bin_window);
   }
 
   return nsWidget::GetNativeData(aDataType);
