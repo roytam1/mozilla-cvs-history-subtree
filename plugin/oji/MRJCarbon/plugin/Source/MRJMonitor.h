@@ -53,7 +53,7 @@ class MRJSession;
 class MRJMonitor : public Monitor {
 public:
 	MRJMonitor(MRJSession* session, jobject monitor = NULL);
-	~MRJMonitor();
+	virtual ~MRJMonitor();
 	
 	virtual void enter();
 	virtual void exit();

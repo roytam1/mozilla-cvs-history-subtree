@@ -43,7 +43,7 @@ class nsILiveconnect;
 class MRJSecurityContext : public nsISecurityContext {
 public:
 	MRJSecurityContext(const char* location);
-	~MRJSecurityContext();
+	virtual ~MRJSecurityContext();
 
 	NS_DECL_ISUPPORTS
     

@@ -107,7 +107,7 @@ nsresult InitLiveConnectSupport(MRJPlugin* jvmPlugin)
         "eval", "(Ljava/lang/String;)Ljava/lang/Object;", (void*)&Java_netscape_javascript_JSObject_eval,
         "toString", "()Ljava/lang/String;", (void*)&Java_netscape_javascript_JSObject_toString,
         "getWindow", "(Ljava/applet/Applet;)Lnetscape/javascript/JSObject;", (void*)&Java_netscape_javascript_JSObject_getWindow,
-        "finalize", "()V", (void*)&Java_netscape_javascript_JSObject_finalize,
+        "finalize", "()V", (void*)&Java_netscape_javascript_JSObject_finalize
     };
     
     MRJSession* session = jvmPlugin->getSession();
@@ -207,7 +207,7 @@ static jobject GetCurrentThread(JNIEnv* env)
 MRJSecurityContext::MRJSecurityContext(const char* location)
     :   mLocation(nsnull), mConnection(nsnull)
 {
-    NS_INIT_REFCNT();
+    NS_INIT_ISUPPORTS();
     
     mLocation = ::strdup(location);
     if (mLocation) {

@@ -346,6 +346,14 @@ static void CreateNativeThread(CSecureEnv* secureEnv)
 NS_IMETHODIMP CSecureEnv::Run()
 {
 	jboolean isRunning = true;
+  
+#if TARGET_RT_MAC_MACHO
+  // we need to attach this thread to a Java thread
+  JavaVM* jvm = mSession->getJavaVM();
+  JNIEnv* env;
+  jvm->AttachCurrentThread((void**)&env, NULL);
+#endif
+
 	NativeMonitor requestMonitor(mSession, mThreadManager);
 	MRJMonitor replyMonitor(mSession);
 	JavaMessageQueue requests(&requestMonitor), replies(&replyMonitor);
@@ -359,9 +367,9 @@ NS_IMETHODIMP CSecureEnv::Run()
 	mNativeQueue = &requests;
 	mJavaQueue = &replies;
 	
-	// when this thread is running, no other thread can enter the request queue monitor.
+  // when this thread is running, no other thread can enter the request queue monitor.
 	requests.enter();
-	
+  
 	while (isRunning) {
 		// the protocol for now is dead simple:  get a message from the
 		// requests message queue, process it, and then put it back in
@@ -381,6 +389,10 @@ NS_IMETHODIMP CSecureEnv::Run()
 	}
 	
 	requests.exit();
+
+#if TARGET_RT_MAC_MACHO
+  jvm->DetachCurrentThread();
+#endif
 
 	return NS_OK;
 }

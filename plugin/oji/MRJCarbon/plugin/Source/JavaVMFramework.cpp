@@ -116,3 +116,14 @@ JNI_CreateJavaVM(JavaVM **pvm, void **penv, void *args)
     if (_JNI_CreateJavaVM) return _JNI_CreateJavaVM(pvm, penv, args);
     return -1;
 }
+
+extern void * _NSLoadJavaVirtualMachine(const char *jvm_name, const char *jvm_version);
+
+typedef void* (*_NSLoadJavaVirtualMachine_proc_ptr) (const char *jvm_name, const char *jvm_version);
+static _NSLoadJavaVirtualMachine_proc_ptr __NSLoadJavaVirtualMachine = (_NSLoadJavaVirtualMachine_proc_ptr) getJavaVMFunction(CFSTR("_NSLoadJavaVirtualMachine"));
+
+void * _NSLoadJavaVirtualMachine(const char *jvm_name, const char *jvm_version)
+{
+    if (__NSLoadJavaVirtualMachine) return __NSLoadJavaVirtualMachine(jvm_name, jvm_version);
+    return reinterpret_cast<void*>(-1);
+}

@@ -218,6 +218,9 @@ MRJSession::~MRJSession()
     close();
 }
 
+// see http://bugzilla.mozilla.org/show_bug.cgi?id=178329 for more info.
+extern "C" void * _NSLoadJavaVirtualMachine(const char *jvm_name, const char *jvm_version);
+
 OSStatus MRJSession::open(const char* consolePath)
 {
     // Use vanilla JNI invocation API to fire up a fresh JVM.
@@ -238,11 +241,14 @@ OSStatus MRJSession::open(const char* consolePath)
     	JNI_TRUE
     };
 
-    mStatus = ::JNI_CreateJavaVM(&mJavaVM, (void**) &mMainEnv, &theInitArgs);
-    
+    if (::_NSLoadJavaVirtualMachine("hotspot", "1.3.1"))
+        mStatus = ::JNI_CreateJavaVM(&mJavaVM, (void**) &mMainEnv, &theInitArgs);
+    else
+        mStatus = unimpErr;
+      
     if (mStatus == noErr) {
        	// create a monitor for the message queue to unblock Java threads.
-		mMessageMonitor = new MRJMonitor(this);
+       	mMessageMonitor = new MRJMonitor(this);
     }
 
     JNIEnv* env = mMainEnv;
@@ -317,7 +323,7 @@ JNIEnv* MRJSession::getCurrentEnv()
 	JNIEnv* env;
 	if (mJavaVM->GetEnv((void**)&env, JNI_VERSION_1_2) == JNI_OK)
 		return env;
-    return NULL;
+	return NULL;
 }
 
 JNIEnv* MRJSession::getMainEnv()

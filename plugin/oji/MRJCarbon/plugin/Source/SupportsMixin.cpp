@@ -60,7 +60,7 @@ SupportsMixin::SupportsMixin(void* instance, const InterfaceInfo interfaces[], U
 SupportsMixin::~SupportsMixin()
 {
     if (mRefCount > 0) {
-        ::DebugStr("\pmRefCount > 0!");
+        // ::DebugStr("\pmRefCount > 0!");
     }
     if (mInner != NULL)
         delete mInner;
@@ -116,7 +116,7 @@ SupportsMixin::SupportsMixin(void* instance, const InterfaceInfo interfaces[], U
 SupportsMixin::~SupportsMixin()
 {
     if (mRefCount > 0) {
-        ::DebugStr("\pmRefCount > 0!");
+        //::DebugStr("\pmRefCount > 0!");
     }
 }
 

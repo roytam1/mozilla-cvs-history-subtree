@@ -36,10 +36,12 @@
 
 #include <string.h>
 #include <stdlib.h>
+
 #include <Appearance.h>
 #include <Gestalt.h>
 #include <TextCommon.h>
 
+#if TARGET_CARBON
 #include <CarbonEvents.h>
 #include <JavaControl.h>
 #include <JavaApplet.h>
@@ -66,6 +68,8 @@ private:
     // cfref(const cfref<RefType>& other) {}
 };
 
+#endif
+
 #include "MRJSession.h"
 #include "MRJContext.h"
 #include "MRJPlugin.h"
@@ -75,6 +79,10 @@ private:
 #include "LocalPort.h"
 #include "StringUtils.h"
 #include "TimedMessage.h"
+#if !TARGET_CARBON
+#include "TopLevelFrame.h"
+#include "EmbeddedFrame.h"
+#endif
 
 #include "nsIPluginManager2.h"
 #include "nsIPluginInstancePeer.h"
@@ -1130,12 +1138,15 @@ Boolean MRJContext::loadApplet()
             status = ::RegisterStatusCallback(env, mAppletFrame, &setStatusCallback, this);
             status = ::RegisterShowDocumentCallback(env, mAppletFrame, &showDocumentCallback, this);
 
+            WindowRef window  = ::GetWindowFromPort(mPluginPort);
+
             // wrap applet in a control.
             Rect bounds = { 0, 0, 100, 100 };
-            status = ::CreateJavaControl(env, GetWindowFromPort(mPluginPort), &bounds, mAppletFrame, true, &mAppletControl);
+            status = ::CreateJavaControl(env, window, &bounds, mAppletFrame, true, &mAppletControl);
             if (status == noErr) {
                 status = ::SetJavaAppletState(env, mAppletFrame, kAppletStart);
             }
+
         }
     }
 #else
@@ -1213,29 +1224,41 @@ jobject MRJContext::getApplet()
 {
 #if TARGET_CARBON
     if (appletLoaded() && mAppletObject == NULL) {
-        // mAppletFrame implements the interface java.applet.AppletContext, as of Mac OS X 10.1.
-        // This code simply looks for the getApplet(String) accessor method of whatever class the object happens
-        // to be. Hopefully Apple will maintain this level of compatibility.
+        // mAppletFrame is an instance of javap com.apple.mrj.JavaEmbedding.JE_AppletViewer, as of Mac OS X 10.1.
+        // In Mac OS X 10.1, it implemented the java.applet.AppletContext interface, but this is no longer true
+        // in Mac OS X 10.2 (Jaguar). However both versions of JE_AppletViewer have a public field panel, which
+        // is an instance of com.apple.mrj.JavaEmbedding.JE_AppletViewerPanel, which extends sun.applet.AppletPanel,
+        // which contains the method public java.applet.Applet getApplet(). Apple needs to provide us with an API
+        // that we can use, but for now this is the best that we can do.
         JNIEnv* env = mSession->getCurrentEnv();
         jclass frameClass = env->GetObjectClass(mAppletFrame);
         if (frameClass) {
-            jmethodID getAppletMethod = env->GetMethodID(frameClass, "getApplet", "(Ljava/lang/String;)Ljava/applet/Applet;");
-            if (getAppletMethod) {
-                jstring name = env->NewStringUTF(getAttribute(mPeer, "name"));
-                if (name) {
-                    jobject applet = env->CallObjectMethod(mAppletFrame, getAppletMethod, name);
-                    env->DeleteLocalRef(name);
-                    if (applet) {
-                        mAppletObject = env->NewGlobalRef(applet);
-                        env->DeleteLocalRef(applet);
+            jfieldID panelID = env->GetFieldID(frameClass, "panel", "Lcom/apple/mrj/JavaEmbedding/JE_AppletViewerPanel;");
+            if (panelID) {
+                jobject appletPanel = env->GetObjectField(mAppletFrame, panelID);
+                if (appletPanel) {
+                    jclass panelClass = env->GetObjectClass(appletPanel);
+                    jmethodID getAppletMethod = env->GetMethodID(panelClass, "getApplet", "()Ljava/applet/Applet;");
+                    if (getAppletMethod) {
+                        jobject applet = env->CallObjectMethod(appletPanel, getAppletMethod);
+                        if (applet) {
+                            mAppletObject = env->NewGlobalRef(applet);
+                            env->DeleteLocalRef(applet);
+                        }
+                    } else {
+                        env->ExceptionClear();
                     }
+                    env->DeleteLocalRef(panelClass);
+                    env->DeleteLocalRef(appletPanel);
                 } else {
-                    // FIXME:  use the getApplets() call when we don't have the name of the apple in question.
+                    env->ExceptionClear();
                 }
             } else {
                 env->ExceptionClear();
             }
             env->DeleteLocalRef(frameClass);
+        } else {
+            env->ExceptionClear();
         }
     }
     return mAppletObject;
@@ -1420,11 +1443,10 @@ void MRJContext::mouseClick(const EventRecord* event)
     SInt32 contentOffset = 0;
 #endif
 
-    ::HandleControlClick(mAppletControl, localWhere, event->modifiers, NULL);
+    ControlPartCode clickedPart = ::HandleControlClick(mAppletControl, localWhere, event->modifiers, NULL);
 
-    localWhere = event->where;
-    
     // To fix some major browser problems, just handle tracking right here.
+    // XXX this does not work
     MouseTrackingResult trackingResult;
     do {
         UInt32 modifiers;
@@ -1463,7 +1485,7 @@ void MRJContext::mouseClick(const EventRecord* event)
             }
         }
     } while (trackingResult != kMouseTrackingMouseUp);
-    
+
     // the Java control seems to focus itself automatically when clicked in.
     mIsFocused = true;
     
@@ -1507,29 +1529,43 @@ void MRJContext::mouseRelease(const EventRecord* event)
     }
 }
 
-static OSStatus createRawKeyboardEvent(const EventRecord* event, UInt32 kind, EventRef* outEvent)
+static OSStatus CreateRawKeyboardEvent(const EventRecord* event, UInt32 kind, EventRef* outEvent)
 {
     OSStatus err = CreateEvent(NULL, kEventClassKeyboard, kind,
-                               event->when, kEventAttributeNone, outEvent);
+                               event->when, kEventAttributeUserEvent, outEvent);
     if (err == noErr) {
         char keyChar = (event->message & charCodeMask);
-        SetEventParameter(*outEvent, kEventParamKeyMacCharCodes, typeChar,
-                          sizeof(keyChar), &keyChar);
+        err = SetEventParameter(*outEvent, kEventParamKeyMacCharCodes, typeChar, sizeof(keyChar), &keyChar);
         // -->     kEventParamKeyCode          typeUInt32
         UInt32 keyCode = (event->message & keyCodeMask) >> 8;
-        SetEventParameter(*outEvent, kEventParamKeyCode, typeUInt32,
-                          sizeof(keyCode), &keyCode);
+        err = SetEventParameter(*outEvent, kEventParamKeyCode, typeUInt32, sizeof(keyCode), &keyCode);
         // -->     kEventParamKeyModifiers     typeUInt32
         UInt32 modifiers = event->modifiers;
-        SetEventParameter(*outEvent, kEventParamKeyModifiers, typeUInt32,
-                          sizeof(modifiers), &modifiers);
+        err = SetEventParameter(*outEvent, kEventParamKeyModifiers, typeUInt32, sizeof(modifiers), &modifiers);
         // -->     kEventParamKeyboardType     typeUInt32
-        UInt32 keyboardType = KBGetLayoutType(LMGetKbdType()); // XXX is this correct?
-        SetEventParameter(*outEvent, kEventParamKeyboardType, typeUInt32,
-                          sizeof(keyboardType), &keyboardType);
+        UInt32 keyboardType = 0;  // KBGetLayoutType(LMGetKbdType()); // XXX is this correct?
+        err = SetEventParameter(*outEvent, kEventParamKeyboardType, typeUInt32, sizeof(keyboardType), &keyboardType);
     }
+
     return err;
 }
+
+/*
+  The Java control current reports that it supports these features:
+  
+  kControlSupportsEmbedding
+  kControlWantsIdle
+  kControlHandlesTracking
+  kControlSupportsDataAccess
+  kControlGetsFocusOnClick
+  kControlSupportsCalcBestRect
+  kControlSupportsDragAndDrop
+  kControlAutoToggles
+  16 ??
+  kControlSupportsGetRegion
+
+*/
+
 
 Boolean MRJContext::keyPress(const EventRecord* event)
 {
@@ -1537,8 +1573,9 @@ Boolean MRJContext::keyPress(const EventRecord* event)
     // Evidently not. If we are inside a Cocoa application, we have
     // to generate all of the Carbon events ourselves.
     EventRef carbonEvent;
-    OSStatus err = createRawKeyboardEvent(event, kEventRawKeyDown, &carbonEvent);
-    if (err == noErr) {
+    OSStatus err = CreateRawKeyboardEvent(event, kEventRawKeyDown, &carbonEvent);
+    if (err == noErr)
+    {
         err = SendEventToControl(carbonEvent, mAppletControl);
         ReleaseEvent(carbonEvent);
         return (err == noErr);
@@ -1550,7 +1587,7 @@ Boolean MRJContext::keyRelease(const EventRecord* event)
 {
     // won't Carbon events just take care of everything?
     EventRef carbonEvent;
-    OSStatus err = createRawKeyboardEvent(event, kEventRawKeyUp, &carbonEvent);
+    OSStatus err = CreateRawKeyboardEvent(event, kEventRawKeyUp, &carbonEvent);
     if (err == noErr) {
         err = SendEventToControl(carbonEvent, mAppletControl);
         ReleaseEvent(carbonEvent);
@@ -1585,7 +1622,12 @@ Boolean MRJContext::handleEvent(EventRecord* event)
     Boolean eventHandled = false;
     if (mAppletControl) {
         eventHandled = true;
-        switch (event->what) {
+
+        switch (event->what)
+        {
+        case activateEvt:
+            break;
+
         case updateEvt:
             drawApplet();
             break;
@@ -1595,7 +1637,7 @@ Boolean MRJContext::handleEvent(EventRecord* event)
 #if TARGET_RT_MAC_MACHO
                 eventHandled = keyPress(event);
 #else
-                ::HandleControlKey(mAppletControl,
+                ControlPartCode partCode = ::HandleControlKey(mAppletControl,
                                    (event->message & keyCodeMask) >> 8,
                                    (event->message & charCodeMask),
                                    event->modifiers);
@@ -1609,6 +1651,10 @@ Boolean MRJContext::handleEvent(EventRecord* event)
                 eventHandled = keyRelease(event);
             break;
         
+        case autoKey:
+            // XXX write me
+            break;
+            
         case mouseDown:
             mouseClick(event);
             eventHandled = mIsFocused;
@@ -1618,9 +1664,19 @@ Boolean MRJContext::handleEvent(EventRecord* event)
             mouseRelease(event);
             break;
 
+        case nullEvent:
+            // handle mouse motion
+            
+            
+            break;
+            
         case nsPluginEventType_GetFocusEvent:
-            if (!mIsFocused) {
-                ::SetKeyboardFocus(::GetWindowFromPort(mPluginPort), mAppletControl, kControlFocusNextPart);
+            if (!mIsFocused)
+            {
+                WindowRef nativeWindow = ::GetWindowFromPort(mPluginPort);
+                // this doesn't seem to work with the Java control, probably because
+                // it doesn't report kControlSupportsFocus in its control features.
+                ::SetKeyboardFocus(nativeWindow, mAppletControl, kControlFocusNextPart);
                 mIsFocused = true;
             }
             break;
@@ -1681,6 +1737,7 @@ OSStatus MRJContext::installEventHandlers(WindowRef window)
 {
     // install mouseDown/mouseUp handlers for this window, so we can disable
     // async updates during mouse tracking.
+    // also install window resize handlers, to turn off drawing during resize
     return noErr;
 }
 
