@@ -53,6 +53,7 @@
   persist="width height screenX screenY" title="&MainWindow.title;"
   windowtype="mozapp:venkman:floater">
 
+  <script src="chrome://venkman/content/venkman-utils.js"/>
   <script>
     <![CDATA[
     var console = opener.console;
@@ -90,6 +91,8 @@
     function onUnload()
     {
         console.destroyViews(document);
+        var idx = arrayIndexOf(console.floatingWindows, window);
+        arrayRemoveAt (console.floatingWindows, idx);
     }
     ]]>
   </script>

@@ -73,6 +73,13 @@ function initDebugger()
     console.fbreaks = new Object();
     console.sbreaks = new Object();
     
+    var cm = console.commandManager;
+    console.coManagerCreated    = cm.commands["hook-script-manager-created"];
+    console.coManagerDestroyed  = cm.commands["hook-script-manager-destroyed"];
+    console.coInstanceCreated   = cm.commands["hook-script-instance-created"];
+    console.coInstanceSealed    = cm.commands["hook-script-instance-sealed"];
+    console.coInstanceDestroyed = cm.commands["hook-script-instance-destroyed"];
+    
     /* create the debugger instance */
     if (!Components.classes[JSD_CTRID])
         throw new BadMojo (ERR_NO_DEBUGGER);
@@ -125,7 +132,7 @@ function initDebugger()
 
     console.throwMode = TMODE_IGNORE;
     console.errorMode = EMODE_IGNORE;
-
+    
     console.jsds.enumerateScripts({ enumerateScript: jsdScriptCreated });
 
     dd ("} initDebugger");
@@ -276,7 +283,7 @@ function jsdScriptCreated (jsdScript)
     if (!(url in console.scriptManagers))
     {
         manager = console.scriptManagers[url] = new ScriptManager(url);
-        dispatch ("hook-script-manager-created", { scriptManager: manager });
+        //dispatchCommand (console.coManagerCreated, { scriptManager: manager });
     }
     else
     {
@@ -295,8 +302,8 @@ function jsdScriptDestroyed (jsdScript)
         scriptWrapper.scriptManager.transientCount == 0)
     {
         delete console.scriptManagers[scriptWrapper.scriptManager.url];
-        dispatch ("hook-script-manager-destroyed",
-                  { scriptManager: scriptWrapper.scriptManager });
+        //dispatchCommand (console.coManagerDestroyed,
+        //                 { scriptManager: scriptWrapper.scriptManager });
     }
 }
 
@@ -320,7 +327,8 @@ function smgr_created (jsdScript)
          * sealed. */
         instance = new ScriptInstance(this);
         this.instances.push(instance);
-        dispatch ("hook-script-instance-created", { scriptInstance: instance });
+        dispatchCommand (console.coInstanceCreated,
+                         { scriptInstance: instance });
     }
     else
     {
@@ -338,7 +346,8 @@ function smgr_created (jsdScript)
         this.transients[tag] = scriptWrapper;
         scriptWrapper.scriptInstance = null;
         scriptWrapper.functionName = MSG_VAL_EVSCRIPT;
-        dispatch ("hook-transient-script", { scriptWrapper: scriptWrapper });
+        dd ("transient created");
+        //dispatch ("hook-transient-script", { scriptWrapper: scriptWrapper });
     }
     else
     {
@@ -368,8 +377,8 @@ function smgr_invalidated (scriptWrapper)
         {
             var i = arrayIndexOf(this.instances, scriptWrapper.scriptInstance);
             arrayRemoveAt(this.instances, i);
-            dispatch ("hook-script-instance-destroyed",
-                      { scriptInstance: scriptWrapper.scriptInstance });
+            dispatchCommand (console.coInstanceDestroyed,
+                             { scriptInstance: scriptWrapper.scriptInstance });
         }
     }
 }    
@@ -402,7 +411,7 @@ ScriptManager.prototype.setBreakpoint =
 function smgr_break (line)
 {
     for (var i in instances)
-        instance[i].setBreakpoint(line, fbreak);
+        instance[i].setBreakpoint(line);
 }
 
 ScriptManager.prototype.clearBreakpoint =
@@ -463,10 +472,14 @@ function smgr_clear (line)
         return;
     }
 
+    var i;
     var fbreak = console.fbreaks[key];
     delete console.fbreaks[key];
 
-    for (var i in this.instances)
+    for (i in fbreak.childrenBP)
+        fbreak.childrenBP[i].parentBP = null;
+    
+    for (i in this.instances)
     {
         if (this.instances[i]._lineMapInited)
             arrayAndFlag (this.instances[i]._lineMap, line - 1, ~LINE_FBREAK);
@@ -547,7 +560,7 @@ function si_linemap()
         {
             var fbreak = console.fbreaks[fbp];
             if (fbreak.url == this.url)
-                arrayOrFlag (this._lineMap, fbreak.line - 1, LINE_FBREAK);
+                arrayOrFlag (this._lineMap, fbreak.lineNumber - 1, LINE_FBREAK);
         }
         
         this._lineMapInited = true;
@@ -559,32 +572,22 @@ function si_linemap()
 ScriptInstance.prototype.hasBreakpoint =
 function si_hasbp (line)
 {
-    function hasBP (scriptWrapper)
-    {        
-        var jsdScript = scriptWrapper.jsdScript;
-        if (!jsdScript.isValid)
-            return false;
-
-        if (line >= jsdScript.baseLineNumber &&
-            line <= jsdScript.baseLineNumber + jsdScript.lineExtent &&
-            scriptWrapper.hasBreakpoint(jsdScript.lineToPc(line,
-                                                           PCMAP_SOURCETEXT)))
-        {
-            return true;
-        }
-
-        return false;
-    };
-    
-    if (hasBP(this.topLevel))
-        return true;
-
-    for (var f in this.functions)
+    for (var b in console.breaks)
     {
-        if (hasBP(this.functions[f]))
-            return true;
+        if (console.breaks[b].scriptWrapper.scriptInstance == this)
+        {
+            if (typeof line == "undefined")
+                return true;
+            
+            var jsdScript = console.breaks[b].scriptWrapper.jsdScript;
+            if (jsdScript.pcToLine(console.breaks[b].pc, PCMAP_SOURCETEXT) ==
+                line)
+            {
+                return true;
+            }
+        }
     }
-    
+
     return false;
 }
 
@@ -741,7 +744,7 @@ function sw_setbp (pc, parentBP)
 {
     var key = this.jsdScript.tag + ":" + pc;
     
-    dd ("setting breakpoint in " + this.jsdScript.functionName + " " + key);
+    //dd ("setting breakpoint in " + this.functionName + " " + key);
     
     if (key in console.breaks)
     {
@@ -755,6 +758,9 @@ function sw_setbp (pc, parentBP)
         pc: pc
     };
 
+    console.breaks[key] = brk;
+    this.breaks[key] = brk;
+    
     if (parentBP)
     {
         parentBP.childrenBP[key] = brk;
@@ -767,12 +773,15 @@ function sw_setbp (pc, parentBP)
         arrayOrFlag (this._sourceText.lineMap, line - 1, LINE_BREAK);
     }
 
-    console.breaks[key] = brk;
-    this.breaks[key] = brk;
-    
     ++this.scriptInstance.breakpointCount;
     ++this.breakpointCount;
     
+    if (this.scriptInstance._lineMapInited)
+    {
+        line = this.jsdScript.pcToLine (pc, PCMAP_SOURCETEXT);
+        arrayOrFlag (this.scriptInstance._lineMap, line - 1, LINE_BREAK);
+    }
+
     dispatch ("hook-break-set", { breakInstance: brk });
     
     this.jsdScript.setBreakpoint (pc);    
@@ -796,14 +805,23 @@ function sw_clearbp (pc)
     if (brk.parentBP)
         delete brk.parentBP.childrenBP[key];
 
+    var line;
+    
     if ("_sourceText" in this)
     {
-        var line = this.jsdScript.pcToLine(brk.pc, PCMAP_PRETTYPRINT);
-        arrayAndFlag (this._sourceText.lineMap, line - 1, ~LINE_BREAK);
+        line = this.jsdScript.pcToLine(brk.pc, PCMAP_PRETTYPRINT);
+        this._sourceText.lineMap[line - 1] &= ~LINE_BREAK;
     }
     
     --this.scriptInstance.breakpointCount;
     --this.breakpointCount;
+
+    if (this.scriptInstance._lineMapInited)
+    {
+        line = this.jsdScript.pcToLine (pc, PCMAP_SOURCETEXT);
+        if (!this.scriptInstance.hasBreakpoint(line))
+            this.scriptInstance._lineMap[line - 1] &= ~LINE_BREAK;
+    }
 
     dispatch ("hook-break-clear", { breakInstance: brk });
     
@@ -853,13 +871,13 @@ function debugTrap (frame, type, rv)
     switch (type)
     {
         case jsdIExecutionHook.TYPE_BREAKPOINT:
-            tn = MSG_WORD_BREAKPOINT;
+            tn = MSG_VAL_BREAKPOINT;
             break;
         case jsdIExecutionHook.TYPE_DEBUG_REQUESTED:
-            tn = MSG_WORD_DEBUG;
+            tn = MSG_VAL_DEBUG;
             break;
         case jsdIExecutionHook.TYPE_DEBUGGER_KEYWORD:
-            tn = MSG_WORD_DEBUGGER;
+            tn = MSG_VAL_DEBUGGER;
             break;
         case jsdIExecutionHook.TYPE_THROW:
             display (getMsg(MSN_EXCP_TRACE, [formatValue(rv.value),
@@ -872,7 +890,7 @@ function debugTrap (frame, type, rv)
 
             $[0] = rv.value;
             retcode = jsdIExecutionHook.RETURN_CONTINUE_THROW;
-            tn = MSG_WORD_THROW;
+            tn = MSG_VAL_THROW;
             break;
         case jsdIExecutionHook.TYPE_INTERRUPTED:
             var line;
@@ -1166,7 +1184,7 @@ function displaySource (url, line, contextLines)
             displaySource (url, line, contextLines);
     }
     
-    var rec = console.scripts[url];
+    var scriptWrapper = console.scripts[url];
  
     if (!rec)
     {

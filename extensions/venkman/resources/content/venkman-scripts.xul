@@ -74,6 +74,7 @@
     <script src="chrome://venkman/content/venkman-msg.js"/>
     <script src="chrome://venkman/content/venkman-munger.js"/>
     <script src="chrome://venkman/content/venkman-views.js"/>
+    <script src="chrome://venkman/content/venkman-records.js"/>
   
   </overlaytarget>
 

@@ -88,6 +88,7 @@ function initMainMenus()
     _M("mainmenu:view", "toggle-views");
     __m("toggle-breaks",  {type: "checkbox", checkedif: isVisible("breaks")});
     __m("toggle-stack",   {type: "checkbox", checkedif: isVisible("stack")});
+    __m("toggle-session", {type: "checkbox", checkedif: isVisible("session")});
     __m("toggle-locals",  {type: "checkbox", checkedif: isVisible("locals")});
     __m("toggle-scripts", {type: "checkbox", checkedif: isVisible("scripts")});
     __m("toggle-windows", {type: "checkbox", checkedif: isVisible("windows")});

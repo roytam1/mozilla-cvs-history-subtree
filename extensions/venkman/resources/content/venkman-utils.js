@@ -198,6 +198,89 @@ function getWindowByType (windowType)
     return windowManager.getMostRecentWindow(windowType);
 }
 
+function htmlVA (attribs, href, contents)
+{
+    if (!attribs)
+        attribs = {"class": "venkman-link", target: "_content"};
+    else if (attribs["class"])
+        attribs["class"] += " venkman-link";
+    else
+        attribs["class"] = "venkman-link";
+
+    if (!contents)
+    {
+        contents = htmlSpan();
+        insertHyphenatedWord (href, contents);
+    }
+    
+    return htmlA (attribs, href, contents);
+}
+
+function insertHyphenatedWord (longWord, containerTag)
+{
+    var wordParts = splitLongWord (longWord, MAX_WORD_LEN);
+    containerTag.appendChild (htmlSpacer());
+    for (var i = 0; i < wordParts.length; ++i)
+    {
+        containerTag.appendChild (document.createTextNode (wordParts[i]));
+        if (i != wordParts.length)
+            containerTag.appendChild (htmlSpacer());
+    }
+}
+
+function insertLink (matchText, containerTag)
+{
+    var href;
+    
+    if (matchText.indexOf ("://") == -1)
+        href = "http://" + matchText;
+    else
+        href = matchText;
+    
+    var anchor = htmlVA (null, href);
+    containerTag.appendChild (anchor);    
+}
+
+function matchFileName (pattern)
+{
+    var rv = new Array();
+    
+    for (var scriptName in console.scripts)
+        if (scriptName.search(pattern) != -1)
+            rv.push (scriptName);
+
+    return rv;
+}
+
+/* some of the drag and drop code has an annoying appetite for exceptions.  any
+ * exception raised during a dnd operation causes the operation to fail silently.
+ * passing the function through one of these adapters lets you use "return
+ * false on planned failure" symantics, and dumps any exceptions caught
+ * to the console. */
+function Prophylactic (parent, fun)
+{
+    function adapter ()
+    {
+        var ex;
+        var rv = false;
+
+        try
+        {
+            rv = fun.apply (parent, arguments);
+        }
+        catch (ex)
+        {
+            dd ("Prophylactic caught an exception:\n" +
+                dumpObjectTree(ex));
+        }
+
+        if (!rv)
+            throw "goodger";
+    }
+        
+    return adapter;
+}    
+
 function argumentsAsArray (args, start)
 {
     if (typeof start == "undefined")

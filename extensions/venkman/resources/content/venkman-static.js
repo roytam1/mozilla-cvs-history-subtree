@@ -197,6 +197,7 @@ function dispatch (text, e, flags)
                 display (getMsg(MSN_ERR_INTERNAL_DISPATCH, ary[0].name),
                          MT_ERROR);
                 display (formatException(ex), MT_ERROR);
+                dd (ex.stack);
             }
             break;
             
@@ -327,34 +328,8 @@ function display(message, msgtype)
         !(message instanceof Components.interfaces.nsIDOMHTMLElement))
         throw new InvalidParam ("message", message);
 
-    if (typeof msgtype == "undefined")
-        msgtype = MT_INFO;
-    
-    function setAttribs (obj, c, attrs)
-    {
-        if (attrs)
-        {
-            for (var a in attrs)
-                obj.setAttribute (a, attrs[a]);
-        }
-        obj.setAttribute("class", c);
-        obj.setAttribute("msg-type", msgtype);
-    }
-
-    var msgRow = htmlTR("msg");
-    setAttribs(msgRow, "msg");
-
-    var msgData = htmlTD();
-    setAttribs(msgData, "msg-data");
-    if (typeof message == "string")
-        msgData.appendChild(stringToDOM(message));
-    else
-        msgData.appendChild(message);
-
-    msgRow.appendChild(msgData);
-
-    console._outputElement.appendChild(msgRow);
-    console.scrollDown();
+    dispatchCommand(console.coDisplayHook, 
+                    { message: message, msgtype: msgtype });
 }
 
 function evalInDebuggerScope (script)
@@ -414,24 +389,6 @@ function formatEvalException (ex)
     return getMsg (MSN_EVAL_THREW,  String(ex));
 }
 
-function htmlVA (attribs, href, contents)
-{
-    if (!attribs)
-        attribs = {"class": "venkman-link", target: "_content"};
-    else if (attribs["class"])
-        attribs["class"] += " venkman-link";
-    else
-        attribs["class"] = "venkman-link";
-
-    if (!contents)
-    {
-        contents = htmlSpan();
-        insertHyphenatedWord (href, contents);
-    }
-    
-    return htmlA (attribs, href, contents);
-}
-
 function init()
 {    
     var ary = navigator.userAgent.match (/;\s*([^;\s]+\s*)\).*\/(\d+)/);
@@ -452,12 +409,20 @@ function init()
         Components.classes[WW_CTRID].getService(nsIWindowWatcher);
 
     console.debuggerWindow = getBaseWindowFromWindow(window);
-
+    console.floatingWindows = new Array();
+    
     initMsgs();
     initPrefs();
     initCommands();
     initMainMenus();
     initViews();
+    initRecords();
+    initDebugger();
+    initHandlers();
+
+    /* save a reference to this to make calls to display() slightly faster. */
+    console.coDisplayHook = 
+        console.commandManager.commands["hook-session-display"];
 
     console.commandManager.addHooks (console.hooks);
 
@@ -465,35 +430,13 @@ function init()
     
     console.files = new Object();
 
-    console._outputDocument = 
-        document.getElementById("output-iframe").contentDocument;
-
-    console._outputElement = 
-        console._outputDocument.getElementById("output-tbody");    
-
-    console._slInputElement = 
-        document.getElementById("input-single-line");
-    console._slInputElement.focus();
- 
-    console._munger = new CMunger();
-    console._munger.enabled = true;
-    console._munger.addRule
-        ("link", /((\w+):\/\/[^<>()\'\"\s:]+|www(\.[^.<>()\'\"\s:]+){2,})/,
-         insertLink);
-    console._munger.addRule ("word-hyphenator",
-                             new RegExp ("(\\S{" + MAX_WORD_LEN + ",})"),
-                             insertHyphenatedWord);
-
     console._lastStackDepth = -1;
-
-    initDebugger(); /* debugger may need display() to init */
-    initViews();
 
     console.ui = new Object();
     console.ui["status-text"] = document.getElementById ("status-text");
-    console.ui["sl-input"] = document.getElementById ("input-single-line");
     console._statusStack = new Array();
     console.pluginState = new Object();
+
     dispatch("version");
 
     ary = console.prefs["initialScripts"].split();
@@ -509,8 +452,7 @@ function init()
     dispatch("commands");
     dispatch("help");
 
-    initHandlers();
-
+    dispatch ("toggle-view session");
     dispatch ("toggle-view windows");
     dispatch ("toggle-view source");
     dispatch ("toggle-view watches");
@@ -605,85 +547,6 @@ function hookEval()
         $[i].refresh();
 }
     
-function insertHyphenatedWord (longWord, containerTag)
-{
-    var wordParts = splitLongWord (longWord, MAX_WORD_LEN);
-    containerTag.appendChild (htmlSpacer());
-    for (var i = 0; i < wordParts.length; ++i)
-    {
-        containerTag.appendChild (document.createTextNode (wordParts[i]));
-        if (i != wordParts.length)
-            containerTag.appendChild (htmlSpacer());
-    }
-}
-
-function insertLink (matchText, containerTag)
-{
-    var href;
-    
-    if (matchText.indexOf ("://") == -1)
-        href = "http://" + matchText;
-    else
-        href = matchText;
-    
-    var anchor = htmlVA (null, href);
-    containerTag.appendChild (anchor);    
-}
-
-function matchFileName (pattern)
-{
-    var rv = new Array();
-    
-    for (var scriptName in console.scripts)
-        if (scriptName.search(pattern) != -1)
-            rv.push (scriptName);
-
-    return rv;
-}
-
-function stringToDOM (message)
-{
-    var ary = message.split ("\n");
-    var span = htmlSpan();
-    
-    for (var l in ary)
-    {
-        console._munger.munge(ary[l], span);
-        span.appendChild (htmlBR());
-    }
-
-    return span;
-}
-
-/* some of the drag and drop code has an annoying appetite for exceptions.  any
- * exception raised during a dnd operation causes the operation to fail silently.
- * passing the function through one of these adapters lets you use "return
- * false on planned failure" symantics, and dumps any exceptions caught
- * to the console. */
-function Prophylactic (parent, fun)
-{
-    function adapter ()
-    {
-        var ex;
-        var rv = false;
-
-        try
-        {
-            rv = fun.apply (parent, arguments);
-        }
-        catch (ex)
-        {
-            dd ("Prophylactic caught an exception:\n" +
-                dumpObjectTree(ex));
-        }
-
-        if (!rv)
-            throw "goodger";
-    }
-        
-    return adapter;
-}    
-
 /* exceptions */
 
 /* keep this list in sync with exceptionMsgNames in venkman-msg.js */
@@ -742,14 +605,6 @@ function RequiredParam (name)
 }
 
 /* console object */
-
-/* input history (up/down arrow) related vars */
-console.inputHistory = new Array();
-console.lastHistoryReferenced = -1;
-console.incompleteLine = "";
-
-/* tab complete */
-console._lastTabUp = new Date();
 
 console.display = display;
 console.dispatch = dispatch;
@@ -1039,12 +894,6 @@ console.popStatus =
 function con_popstatus ()
 {
     console.status = console._statusStack.pop();
-}
-
-console.scrollDown =
-function con_scrolldn ()
-{
-    window.frames[0].scrollTo(0, window.frames[0].document.height);
 }
 
 function SourceText (scriptInstance)

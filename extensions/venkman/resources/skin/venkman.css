@@ -39,8 +39,8 @@ floatingview {
     -moz-binding: url(chrome://venkman/content/venkman-bindings.xml#floatingview);
 }
 
-#output-iframe {
-    margin: 5px 5px 0px 5px;
+#session-output-iframe {
+    margin: 0px 5px 0px 5px;
     border: thin silver inset;
 }
 

@@ -55,6 +55,10 @@
         <children/>
       </xul:vbox>
     </content>
+
+    <implementation>
+      <property name="ownerWindow" onget="return window;"/>
+    </implementation>
   </binding>
 
 </bindings>

@@ -60,6 +60,9 @@
 <!ENTITY LocalsCol2.header  "Value">
 <!ENTITY LocalsCol3.header  "Flags">
 
+<!-- session view -->
+<!ENTITY Session.label      "Session View">
+
 <!-- script view -->
 <!ENTITY Scripts.label      "Loaded Scripts">
 <!ENTITY ScriptsCol0.header "Name">

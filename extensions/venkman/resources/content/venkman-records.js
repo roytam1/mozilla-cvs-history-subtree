@@ -63,16 +63,16 @@ function BPRecord (breakInstance)
     this.setColumnPropertyName ("col-0", "name");
     this.setColumnPropertyName ("col-1", "line");
 
+    this.breakInstance = breakInstance;
+    
     if ("pc" in breakInstance)
     {
-        dd ("breakpoint instance record");
         this.type = "instance";
         this.name = breakInstance.scriptWrapper.functionName;
         this.line = getMsg(MSN_FMT_PC, String(breakInstance.pc));
     }
     else if (breakInstance instanceof FutureBreakpoint)
     {
-        dd ("future breakpoint record");
         this.type = "future";
         var ary = breakInstance.url.match(/\/([^\/?]+)(\?|$)/);
         if (ary)

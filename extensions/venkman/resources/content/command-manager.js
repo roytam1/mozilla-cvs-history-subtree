@@ -211,7 +211,6 @@ function cmgr_showpop (id)
         if (!expr)
             return true;
         
-        expr = expr.replace (/\Wor\W/gi, " || ");
         expr = expr.replace (/\Wand\W/gi, " && ");
         try
         {
@@ -234,8 +233,6 @@ function cmgr_showpop (id)
         cx = this.cx = this.contextFunction (id);
     else
         cx = new Object();
-
-    /* make this a member of cx so the |this| value is useful to attriutes. */
 
     var popup = document.getElementById (id);
     var menuitem = popup.firstChild;
@@ -786,7 +783,7 @@ function parse_parseargsraw (e)
         }
     }
         
-    if (e.inputData)
+    if ("inputData" in e && e.inputData)
     {
         /* if data has been provided, parse it */
         e.unparsedData = e.inputData;

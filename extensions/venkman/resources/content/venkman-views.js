@@ -55,6 +55,7 @@ function initViews()
 }
 
 console.destroyViews = destroyViews;
+
 function destroyViews(doc)
 {
     for (var v in console.views)
@@ -67,6 +68,15 @@ function destroyViews(doc)
             console.dispatch ("hide-view", {viewId: v});
         }
     }
+}
+
+console.realizeView =
+function con_realizeview (view, key)
+{
+    console.views[key] = view;
+    console.views[key].init();
+    if ("hooks" in console.views[key])
+        console.commandManager.addHooks (console.views[key].hooks, key);
 }
 
 /**
@@ -105,24 +115,13 @@ function syncTreeView (treeContent, treeView, cb)
         cb();
 }
 
-console.realizeView =
-function con_realizeview (view, key)
-{
-    console.views[key] = view;
-    console.views[key].init();
-    if ("hooks" in console.views[key])
-        console.commandManager.addHooks (console.views[key].hooks, key);
-}
-
 console.views = new Object();
 
 /*******************************************************************************
  * Breakpoints View
  *******************************************************************************/
 
-var breaksShare = new Object();
-
-console.views.breaks = new XULTreeView(breaksShare);
+console.views.breaks = new XULTreeView();
 
 console.views.breaks.vewId = "breaks";
 
@@ -144,7 +143,9 @@ function bv_hookFBreakClear (e)
     delete e.fbreak.breakRecord;
     console.views.breaks.childData.removeChildAtIndex(breakRecord.childIndex);
     for (var i in breakRecord.childData)
+    {
         console.views.breaks.childData.appendChild(breakRecord.childData[i]);
+    }
 }
 
 console.views.breaks.hooks["hook-break-set"] =
@@ -284,56 +285,19 @@ function bv_cellprops (index, colID, properties)
     }
 }
 
-function BPRecord (breakInstance)
-{
-    this.setColumnPropertyName ("col-0", "name");
-    this.setColumnPropertyName ("col-1", "line");
-
-    if ("pc" in breakInstance)
-    {
-        dd ("breakpoint instance record");
-        this.type = "instance";
-        this.name = breakInstance.scriptWrapper.functionName;
-        this.line = getMsg(MSN_FMT_PC, String(breakInstance.pc));
-    }
-    else if (breakInstance instanceof FutureBreakpoint)
-    {
-        dd ("future breakpoint record");
-        this.type = "future";
-        var ary = breakInstance.url.match(/\/([^\/?]+)(\?|$)/);
-        if (ary)
-            this.name = ary[1];
-        else
-            this.name = breakInstance.url;
-
-        this.line = breakInstance.lineNumber;
-    }    
-}
-
-BPRecord.prototype = new XULTreeViewRecord(breaksShare);
-
 /*******************************************************************************
  * Locals View
  *******************************************************************************/
+
 var localsShare = new Object();
 
-console.views.locals = new XULTreeView(localsShare);
+console.views.locals = new XULTreeView();
 
 console.views.locals.viewId = "locals";
 
 console.views.locals.init =
 function lv_init ()
 {
-    var atomsvc = console.atomService;
-    
-    ValueRecord.prototype.atomVoid     = atomsvc.getAtom("item-void");
-    ValueRecord.prototype.atomNull     = atomsvc.getAtom("item-null");
-    ValueRecord.prototype.atomBool     = atomsvc.getAtom("item-bool");
-    ValueRecord.prototype.atomInt      = atomsvc.getAtom("item-int");
-    ValueRecord.prototype.atomDouble   = atomsvc.getAtom("item-double");
-    ValueRecord.prototype.atomString   = atomsvc.getAtom("item-string");
-    ValueRecord.prototype.atomFunction = atomsvc.getAtom("item-function");
-    ValueRecord.prototype.atomObject   = atomsvc.getAtom("item-object");
 }
 
 console.views.locals.onShow =
@@ -369,354 +333,21 @@ function lv_refresh()
     this.syncTreeView();
 }
 
-function ValueRecord (value, name, flags)
-{
-    if (!(value instanceof jsdIValue))
-        throw new BadMojo (ERR_INVALID_PARAM, "value", String(value));
-
-    this.setColumnPropertyName ("col-0", "displayName");
-    this.setColumnPropertyName ("col-1", "displayType");
-    this.setColumnPropertyName ("col-2", "displayValue");
-    this.setColumnPropertyName ("col-3", "displayFlags");    
-    this.displayName = name;
-    this.displayFlags = flags;
-    this.value = value;
-    this.jsType = null;
-    this.refresh();
-}
-
-ValueRecord.prototype = new XULTreeViewRecord (null);
-
-ValueRecord.prototype.__defineGetter__("_share", vr_getshare);
-function vr_getshare()
-{
-    if ("__share" in this)
-        return this.__share;
-     
-    if ("parentRecord" in this)
-        return this.__share = this.parentRecord._share;
- 
-    ASSERT (0, "ValueRecord cannot be the root of a visible tree.");
-    return null;
-}
-
-ValueRecord.prototype.hiddenFunctionCount = 0;
-ValueRecord.prototype.showFunctions = false;
-
-ValueRecord.prototype.resort =
-function cr_resort()
-{
-    /*
-     * we want to override the prototype's resort() method with this empty one
-     * because we take care of the sorting business ourselves in onPreOpen()
-     */
-}
-
-ValueRecord.prototype.refresh =
-function vr_refresh ()
-{
-    if ("onPreRefresh" in this)
-        this.onPreRefresh();    
-
-    var sizeDelta = 0;
-    var lastType = this.jsType;
-    this.jsType = this.value.jsType;
-    
-    if (0 && lastType != this.jsType && lastType == jsdIValue.TYPE_FUNCTION)
-    {
-        /* we changed from a non-function to a function */
-        --this.hiddenFunctionCount;
-        ++sizeDelta;
-    }
-    
-    if (this.jsType != jsdIValue.TYPE_OBJECT && "childData" in this)
-    {
-        /* if we're not an object but we have child data, then we must have just
-         * turned into something other than an object. */
-        delete this.childData;
-        this.isContainerOpen = false;
-        sizeDelta = 1 - this.visualFootprint;
-    }
-    
-    switch (this.jsType)
-    {
-        case jsdIValue.TYPE_VOID:
-            this.displayValue = MSG_TYPE_VOID
-            this.displayType  = MSG_TYPE_VOID;
-            this.property     = this.atomVoid;
-            break;
-        case jsdIValue.TYPE_NULL:
-            this.displayValue = MSG_TYPE_NULL;
-            this.displayType  = MSG_TYPE_NULL;
-            this.property     = this.atomNull;
-            break;
-        case jsdIValue.TYPE_BOOLEAN:
-            this.displayValue = this.value.stringValue;
-            this.displayType  = MSG_TYPE_BOOLEAN;
-            this.property     = this.atomBool;
-            break;
-        case jsdIValue.TYPE_INT:
-            this.displayValue = this.value.intValue;
-            this.displayType  = MSG_TYPE_INT;
-            this.property     = this.atomInt;
-            break;
-        case jsdIValue.TYPE_DOUBLE:
-            this.displayValue = this.value.doubleValue;
-            this.displayType  = MSG_TYPE_DOUBLE;
-            this.property     = this.atomDouble;
-            break;
-        case jsdIValue.TYPE_STRING:
-            var strval = this.value.stringValue.quote();
-            if (strval.length > MAX_STR_LEN)
-                strval = getMsg(MSN_FMT_LONGSTR, strval.length);
-            this.displayValue = strval;
-            this.displayType  = MSG_TYPE_STRING;
-            this.property     = this.atomString;
-            break;
-        case jsdIValue.TYPE_FUNCTION:
-            this.displayType  = MSG_TYPE_FUNCTION;
-            this.displayValue = (this.value.isNative) ? MSG_WORD_NATIVE :
-                MSG_WORD_SCRIPT;
-            this.property = this.atomFunction;
-            break;
-        case jsdIValue.TYPE_OBJECT:
-            this.value.refresh();
-            var ctor = this.value.jsClassName;
-            if (ctor == "Object")
-            {
-                if (this.value.jsConstructor)
-                    ctor = this.value.jsConstructor.jsFunctionName;
-            }
-            else if (ctor == "XPCWrappedNative_NoHelper")
-            {
-                ctor = MSG_CLASS_XPCOBJ;
-            }
-
-            this.displayValue = "{" + ctor + ":" + this.value.propertyCount +
-                "}";
-
-            this.displayType = MSG_TYPE_OBJECT;
-            this.property = this.atomObject;
-            /* if we had children, and were open before, then we need to descend
-             * and refresh our children. */
-            if ("childData" in this && this.childData.length > 0)
-            {
-                var rc = 0;
-                rc = this.refreshChildren();
-                sizeDelta += rc;
-                //dd ("refreshChildren returned " + rc);
-                this.visualFootprint += rc;
-            }
-            else
-            {
-                this.childData = new Array();
-                this.isContainerOpen = false;
-            }
-            break;
-            
-
-        default:
-            ASSERT (0, "invalid value");
-    }
-
-    //dd ("refresh returning " + sizeDelta);
-    return sizeDelta;
-
-}
-
-ValueRecord.prototype.refreshChildren =
-function vr_refreshkids ()
-{
-    /* XXX add identity check to see if we are a totally different object */
-    /* if we now have more properties than we used to, we're going to have
-     * to close any children we may have open, because we can't tell where the
-     * new property is in any efficient way. */
-    if (this.value.propertyCount > this.lastPropertyCount)
-    {
-        this.onPreOpen();
-        return (this.childData.length + 1) - this.visualFootprint;
-    }
-
-    /* otherwise, we had children before.  we've got to update each of them
-     * in turn. */
-    var sizeDelta    = 0; /* total change in size */
-    var idx          = 0; /* the new position of the child in childData */
-    var deleteCount  = 0; /* number of children we've lost */
-    var specialProps = 0; /* number of special properties in this object */
-
-    for (var i = 0; i < this.childData.length; ++i)
-    {
-        //dd ("refreshing child #" + i);
-        var name = this.childData[i]._colValues["col-0"];
-        var value;
-        switch (name)
-        {
-            case MSG_VAL_PARENT:
-                /* "special" property, doesn't actually exist
-                 * on the object */
-                value = this.value.jsParent;
-                specialProps++;
-                break;
-            case MSG_VAL_PROTO:
-                /* "special" property, doesn't actually exist
-                 * on the object */
-                value = this.value.jsPrototype;
-                specialProps++;
-                break;
-            default:
-                var prop = this.value.getProperty(name);
-                if (prop)
-                    value = prop.value;
-                break;
-        }
-        
-        if (value)
-        {
-            if (this.showFunctions || value.jsType != jsdIValue.TYPE_FUNCTION)
-            {
-                /* if this property still has a value, sync it in its (possibly)
-                 * new position in the childData array, and refresh it */
-                this.childData[idx] = this.childData[i];
-                this.childData[idx].childIndex = idx;
-                this.childData[idx].value = value;
-                sizeDelta += this.childData[idx].refresh();
-                ++idx;
-                value = null;
-            }
-            else
-            {
-                /* if we changed from a non-function to a function, and we're in
-                 * "hide function" mode, we need to consider this child deleted
-                 */
-                ++this.hiddenFunctionCount;
-                ++deleteCount;
-                sizeDelta -= this.childData[i].visualFootprint;
-            }
-        }
-        else
-        {
-            /* if the property isn't here anymore, make a note of
-             * it */
-            ++deleteCount;
-            sizeDelta -= this.childData[i].visualFootprint;
-        }
-    }
-    
-    /* if we've deleted some kids, adjust the length of childData to
-     * match */
-    if (deleteCount != 0)
-        this.childData.length -= deleteCount;
-    
-    if ((this.childData.length + this.hiddenFunctionCount - specialProps) !=
-        this.value.propertyCount)
-    {
-        /* if the two lengths *don't* match, then we *must* be in
-         * a state where the user added and deleted the same
-         * number of properties.  if this is the case, then
-         * everything we just did was a totally
-         * useless waste of time.  throw it out and re-init
-         * whatever children we have.  see the "THESE COMMENTS"
-         * comments above for the description of what we're doing
-         * here. */
-        this.onPreOpen();
-        sizeDelta = (this.childData.length + 1) - this.visualFootprint;
-    }
-
-    return sizeDelta;
-}
-
-ValueRecord.prototype.onPreOpen =
-function vr_create()
-{
-    if (this.value.jsType != jsdIValue.TYPE_OBJECT)
-        return;
-    
-    function vr_compare (a, b)
-    {
-        aType = a.value.jsType;
-        bType = b.value.jsType;
-        
-        if (aType < bType)
-            return -1;
-        
-        if (aType > bType)
-            return 1;
-        
-        aVal = a.displayName;
-        bVal = b.displayName;
-        
-        if (aVal < bVal)
-            return -1;
-        
-        if (aVal > bVal)
-            return 1;
-        
-        return 0;
-    }
-    
-    this.childData = new Array();
-    
-    var p = new Object();
-    this.value.getProperties (p, {});
-    this.lastPropertyCount = p.value.length;
-    /* we'll end up with the 0 from the prototype */
-    delete this.hiddenFunctionCount;
-    for (var i = 0; i < p.value.length; ++i)
-    {
-        var prop = p.value[i];
-        if (this.showFunctions ||
-            prop.value.jsType != jsdIValue.TYPE_FUNCTION)
-        {
-            this.childData.push(new ValueRecord(prop.value,
-                                                prop.name.stringValue,
-                                                formatFlags(prop.flags)));
-        }
-        else
-        {
-            ++this.hiddenFunctionCount;
-        }
-    }
-
-    this.childData.sort (vr_compare);
-
-    if (this.value.jsPrototype)
-        this.childData.unshift (new ValueRecord(this.value.jsPrototype,
-                                                MSG_VAL_PROTO));
-
-    if (this.value.jsParent)
-        this.childData.unshift (new ValueRecord(this.value.jsParent,
-                                                MSG_VAL_PARENT));
-    
-    for (i = 0; i < this.childData.length; ++i)
-    {
-        var cd = this.childData[i];
-        cd.parentRecord = this;
-        cd.childIndex = i;
-        cd.isHidden = false;
-    }
-}
-
-ValueRecord.prototype.onPostClose =
-function vr_destroy()
-{
-    this.childData = new Array();
-}
-
 /*******************************************************************************
  * Scripts View
  *******************************************************************************/
 
-var scriptShare = new Object();
-
-console.views.scripts = new XULTreeView (scriptShare);
+console.views.scripts = new XULTreeView ();
 
 console.views.scripts.viewId = "scripts";
 
 console.views.scripts.init =
 function scv_init ()
 {
+    console.addPref ("scriptsView.groupFiles", true);    
+
     this.childData.setSortColumn("baseLineNumber");
-    this.groupFiles = true;
+    this.groupFiles = console.prefs["scriptsView.groupFiles"];
 
     var atomsvc = console.atomService;
     this.atomUnknown    = atomsvc.getAtom("item-unk");
@@ -809,10 +440,11 @@ function scv_hookScriptInstanceSealed (e)
 }
 
 console.views.scripts.hooks["hook-script-instance-destroyed"] =
-function scv_hookScriptInstanceCreated (e)
+function scv_hookScriptInstanceDestroyed (e)
 {
     if (!ASSERT("scriptInstanceRecord" in e.scriptInstance,
-                "Script instance destroyed, but never sealed"))
+                "Script instance destroyed, but never sealed " +
+                e.scriptInstance.url))
     {
         return;
     }
@@ -846,7 +478,7 @@ function scv_hide ()
 }
 
 console.views.scripts.onDblClick =
-function scv_select (e)
+function scv_dblclick (e)
 {
     var scriptsView = console.views.scripts;
     var rowIndex = scriptsView.tree.selection.currentIndex;
@@ -865,9 +497,10 @@ function scv_select (e)
     ASSERT (row, "bogus row");
 
     if (row instanceof ScriptRecord)
-        dispatch ("find-script", {scriptWrapper: row.scriptWrapper});
+        dispatch ("find-script", { scriptWrapper: row.scriptWrapper });
     else if (row instanceof ScriptInstanceRecord)
-        dispatch ("find-url", {url: row.url});
+        dispatch ("find-sourcetext",
+                  { sourceText: row.scriptInstance.sourceText });
 }
 
 console.views.scripts.onClick =
@@ -1043,166 +676,346 @@ function scv_getcx(cx)
     return cx;
 }    
 
-function ScriptInstanceRecord(scriptInstance)
-{
-    if (!ASSERT(scriptInstance.isSealed,
-                "Attempt to create ScriptInstanceRecord for unsealed instance"))
-    {
-        return null;
-    }
-    
-    this.setColumnPropertyName ("col-0", "displayName");
-    this.setColumnPropertyValue ("col-1", "");
-    this.setColumnPropertyValue ("col-2", "");
-    this.reserveChildren();
-    this.url = scriptInstance.url;
-    var sv = console.views.scripts;
-    this.fileType = sv.atomUnknown;
-    this.shortName = this.url;
-    this.group = 4;
-    this.scriptInstance = scriptInstance;
+/*******************************************************************************
+ * Session View
+ *******************************************************************************/
 
-    this.shortName = getFileFromPath(this.url);
-    ary = this.shortName.match (/\.(js|html|xul|xml)$/i);
-    if (ary)
+console.views.session = new Object();
+
+console.views.session.viewId = "session";
+
+console.views.session.init =
+function ss_init ()
+{
+    console.addPref ("sessionView.commandHistory", 20);
+    console.addPref ("sessionView.dtabTime", 500);
+
+    /* input history (up/down arrow) related vars */
+    this.inputHistory = new Array();
+    this.lastHistoryReferenced = -1;
+    this.incompleteLine = "";
+
+    /* tab complete */
+    this.lastTabUp = new Date();
+
+    this.outputTBody = new htmlTBody({ id: "session-output-tbody" })
+    this.outputTable = null;
+    this.outputWindow = null;
+    this.outputDocument = null;
+    this.outputElement = null;
+    this.intputElement = null;
+
+    this.munger = new CMunger();
+    this.munger.enabled = true;
+    this.munger.addRule
+        ("link", /((\w+):\/\/[^<>()\'\"\s:]+|www(\.[^.<>()\'\"\s:]+){2,})/,
+         insertLink);
+    this.munger.addRule ("word-hyphenator",
+                         new RegExp ("(\\S{" + MAX_WORD_LEN + ",})"),
+                         insertHyphenatedWord);
+
+}
+
+console.views.session.hooks = new Object();
+
+console.views.session.hooks["focus-input"] =
+function ss_hookFocus(e)
+{
+    var sessionView = console.views.session;
+    
+    if ("inputElement" in sessionView)
+        sessionView.inputElement.focus();
+}
+
+console.views.session.hooks["hook-session-display"] =
+function ss_hookDisplay (e)
+{
+    var message = e.message;
+    var msgtype = ("msgtype" in e) ? e.msgtype : MT_INFO;
+    
+    function setAttribs (obj, c, attrs)
     {
-        switch (ary[1].toLowerCase())
+        if (attrs)
         {
-            case "js":
-                this.fileType = sv.atomJS;
-                this.group = 0;
-                break;
-            
-            case "html":
-                this.group = 1;
-                this.fileType = sv.atomHTML;
-                break;
-            
-            case "xul":
-                this.group = 2;
-                this.fileType = sv.atomXUL;
-                break;
-            
-            case "xml":
-                this.group = 3;
-                this.fileType = sv.atomXML;
-                break;
+            for (var a in attrs)
+                obj.setAttribute (a, attrs[a]);
         }
+        obj.setAttribute("class", c);
+        obj.setAttribute("msg-type", msgtype);
     }
-    
-    this.displayName = this.shortName;
 
-    return this;
+    var msgRow = htmlTR("msg");
+    setAttribs(msgRow, "msg");
+
+    var msgData = htmlTD();
+    setAttribs(msgData, "msg-data");
+    if (typeof message == "string")
+        msgData.appendChild(console.views.session.stringToDOM(message));
+    else
+        msgData.appendChild(message);
+
+    msgRow.appendChild(msgData);
+
+    var sessionView = console.views.session;
+    sessionView.outputTBody.appendChild(msgRow);
+    sessionView.scrollDown();
 }
 
-ScriptInstanceRecord.prototype = new XULTreeViewRecord(scriptShare);
-
-ScriptInstanceRecord.prototype.onDragStart =
-function scr_dragstart (e, transferData, dragAction)
-{        
-    transferData.data = new TransferData();
-    transferData.data.addDataForFlavour("text/x-venkman-file", this.fileName);
-    transferData.data.addDataForFlavour("text/x-moz-url", this.fileName);
-    transferData.data.addDataForFlavour("text/unicode", this.fileName);
-    transferData.data.addDataForFlavour("text/html",
-                                        "<a href='" + this.fileName +
-                                        "'>" + this.fileName + "</a>");
-    return true;
-}    
-
-ScriptInstanceRecord.prototype.super_resort = XTRootRecord.prototype.resort;
-
-ScriptInstanceRecord.prototype.resort =
-function scr_resort ()
+console.views.session.hooks["hook-window-resized"] =
+function ss_hookResize (e)
 {
-    console._groupFiles = console.prefs["scriptsView.groupFiles"];
-    this.super_resort();
-    delete console._groupFiles;
+    console.views.session.scrollDown();
 }
 
-ScriptInstanceRecord.prototype.sortCompare =
-function scr_compare (a, b)
+console.views.session.scrollDown =
+function ss_scroll()
 {
-    if (console._groupFiles)
+    if (this.outputWindow)
+        this.outputWindow.scrollTo(0, this.outputDocument.height);
+}
+
+console.views.session.onShow =
+function ss_show ()
+{
+    var sessionView = this;
+    function tryAgain ()
     {
-        if (a.group < b.group)
-            return -1;
-    
-        if (a.group > b.group)
-            return 1;
-    }
-    
-    if (a.displayName < b.displayName)
-        return -1;
+        dd ("session view trying again...");
+        sessionView.onShow();
+    };
 
-    if (a.displayName > b.displayName)
-        return 1;
+    var doc = this.currentContent.ownerDocument;
     
-    return 0;
-}
-
-ScriptInstanceRecord.prototype.onPreOpen =
-function scr_preopen ()
-{
-    if (this.childData.length == 0)
+    try
     {
-        console.views.scripts.freeze();
-        var scriptWrapper = this.scriptInstance.topLevel;
-        var sr = new ScriptRecord(scriptWrapper);
-        scriptWrapper.scriptRecord = sr;
-        this.appendChild(sr);
+        this.outputDocument = 
+            doc.getElementById("session-output-iframe").contentDocument;
 
-        var functions = this.scriptInstance.functions;
-        for (var f in functions)
+        var win = this.currentContent.ownerWindow;
+        for (var f = 0; f < win.frames.length; ++f)
         {
-            sr = new ScriptRecord(functions[f]);
-            functions[f].scriptRecord = sr;
-            this.appendChild(sr);
+            if (win.frames[f].document == this.outputDocument)
+            {
+                this.outputWindow = win.frames[f];
+                break;
+            }
         }
-        console.views.scripts.thaw();
+
+        this.outputTable =
+            this.outputDocument.getElementById("session-output-table");
+        this.inputElement = doc.getElementById("session-sl-input");
+    }
+    catch (ex)
+    {
+        //dd ("caught exception showing session view...");
+        //dd (dumpObjectTree(ex));
+    }
+    
+    if (!this.outputDocument || !this.outputTable || !this.inputElement)
+    {
+        setTimeout (tryAgain, 500);
+        return;
+    }
+
+    if (this.outputTable.firstChild)
+        this.outputTable.removeChild (this.outputTable.firstChild);
+
+    this.outputTable.appendChild (this.outputTBody);
+    this.scrollDown();
+    this.hooks["focus-input"]();
+}
+
+console.views.session.onHide =
+function ss_hide ()
+{
+    this.outputTBody.parentNode.removeChild(this.outputTBody);
+    this.outputTable = null;
+    this.outputWindow = null;
+    this.outputDocument = null;
+    this.outputElement = null;
+    this.intputElement = null;
+}
+
+console.views.session.stringToDOM = 
+function ss_stringToDOM (message)
+{
+    var ary = message.split ("\n");
+    var span = htmlSpan();
+    
+    for (var l in ary)
+    {
+        this.munger.munge(ary[l], span);
+        span.appendChild (htmlBR());
+    }
+
+    return span;
+}
+
+console.views.session.onInputCompleteLine =
+function ss_icline (e)
+{    
+    if (this.inputHistory.length == 0 || this.inputHistory[0] != e.line)
+        this.inputHistory.unshift (e.line);
+    
+    if (this.inputHistory.length > console.prefs["sessionView.commandHistory"])
+        this.inputHistory.pop();
+    
+    this.lastHistoryReferenced = -1;
+    this.incompleteLine = "";
+    
+    var ev = {isInteractive: true, initialEvent: e};
+    dispatch (e.line, ev, CMD_CONSOLE);
+}
+
+console.views.session.onSLKeyPress =
+function ss_slkeypress (e)
+{
+    var w = this.outputWindow;
+    var newOfs;
+    
+    switch (e.keyCode)
+    {
+        case 13:
+            if (!e.target.value)
+                return;
+            e.line = e.target.value;
+            this.onInputCompleteLine (e);
+            e.target.value = "";
+            break;
+
+        case 38: /* up */
+            if (this.lastHistoryReferenced == -2)
+            {
+                this.lastHistoryReferenced = -1;
+                e.target.value = this.incompleteLine;
+            }
+            else if (this.lastHistoryReferenced <
+                     this.inputHistory.length - 1)
+            {
+                e.target.value =
+                    this.inputHistory[++this.lastHistoryReferenced];
+            }
+            break;
+
+        case 40: /* down */
+            if (this.lastHistoryReferenced > 0)
+                e.target.value =
+                    this.inputHistory[--this.lastHistoryReferenced];
+            else if (this.lastHistoryReferenced == -1)
+            {
+                e.target.value = "";
+                this.lastHistoryReferenced = -2;
+            }
+            else
+            {
+                this.lastHistoryReferenced = -1;
+                e.target.value = this.incompleteLine;
+            }
+            break;
+            
+        case 33: /* pgup */
+            newOfs = w.pageYOffset - (w.innerHeight / 2);
+            if (newOfs > 0)
+                w.scrollTo (w.pageXOffset, newOfs);
+            else
+                w.scrollTo (w.pageXOffset, 0);
+            break;
+            
+        case 34: /* pgdn */
+            newOfs = w.pageYOffset + (w.innerHeight / 2);
+            if (newOfs < (w.innerHeight + w.pageYOffset))
+                w.scrollTo (w.pageXOffset, newOfs);
+            else
+                w.scrollTo (w.pageXOffset, (w.innerHeight + w.pageYOffset));
+            break;
+
+        case 9: /* tab */
+            e.preventDefault();
+            this.onTabCompleteRequest(e);
+            break;       
+
+        default:
+            this.lastHistoryReferenced = -1;
+            this.incompleteLine = e.target.value;
+            break;
     }
 }
-        
-function ScriptRecord(scriptWrapper) 
+
+
+console.views.session.onTabCompleteRequest =
+function ss_tabcomplete (e)
 {
-    this.setColumnPropertyName ("col-0", "functionName");
-    this.setColumnPropertyName ("col-1", "baseLineNumber");
-    this.setColumnPropertyName ("col-2", "lineExtent");
+    var selStart = e.target.selectionStart;
+    var selEnd   = e.target.selectionEnd;            
+    var v        = e.target.value;
+    
+    if (selStart != selEnd) 
+    {
+        /* text is highlighted, just move caret to end and exit */
+        e.target.selectionStart = e.target.selectionEnd = v.length;
+        return;
+    }
 
-    this.functionName = scriptWrapper.functionName
-    this.baseLineNumber = scriptWrapper.jsdScript.baseLineNumber;
-    this.lineExtent = scriptWrapper.jsdScript.lineExtent;
-    this.scriptWrapper = scriptWrapper;
+    var firstSpace = v.indexOf(" ");
+    if (firstSpace == -1)
+        firstSpace = v.length;
 
-    this.jsdurl = "jsd:sourcetext?url=" +
-        escape(this.scriptWrapper.jsdScript.fileName) + 
-        "&base=" + this.baseLineNumber + "&extent=" + this.lineExtent +
-        "&name=" + this.functionName;
-}
+    var pfx;
+    var d;
+    
+    if ((selStart <= firstSpace))
+    {
+        /* The cursor is positioned before the first space, so we're completing
+         * a command
+         */
+        var partialCommand = v.substring(0, firstSpace).toLowerCase();
+        var cmds = console.commandManager.listNames(partialCommand, CMD_CONSOLE);
 
-ScriptRecord.prototype = new XULTreeViewRecord(scriptShare);
+        if (!cmds)
+            /* partial didn't match a thing */
+            display (getMsg(MSN_NO_CMDMATCH, partialCommand), MT_ERROR);
+        else if (cmds.length == 1)
+        {
+            /* partial matched exactly one command */
+            pfx = cmds[0];
+            if (firstSpace == v.length)
+                v =  pfx + " ";
+            else
+                v = pfx + v.substr (firstSpace);
+            
+            e.target.value = v;
+            e.target.selectionStart = e.target.selectionEnd = pfx.length + 1;
+        }
+        else if (cmds.length > 1)
+        {
+            /* partial matched more than one command */
+            d = new Date();
+            if ((d - this.lastTabUp) <= console.prefs["sessionView.dtabTime"])
+                display (getMsg (MSN_CMDMATCH,
+                                 [partialCommand, cmds.join(MSG_COMMASP)]));
+            else
+                this.lastTabUp = d;
+            
+            pfx = getCommonPfx(cmds);
+            if (firstSpace == v.length)
+                v =  pfx;
+            else
+                v = pfx + v.substr (firstSpace);
+            
+            e.target.value = v;
+            e.target.selectionStart = e.target.selectionEnd = pfx.length;
+            
+        }
+                
+    }
 
-ScriptRecord.prototype.onDragStart =
-function sr_dragstart (e, transferData, dragAction)
-{        
-    var fileName = this.script.fileName;
-    transferData.data = new TransferData();
-    transferData.data.addDataForFlavour("text/x-jsd-url", this.jsdurl);
-    transferData.data.addDataForFlavour("text/x-moz-url", fileName);
-    transferData.data.addDataForFlavour("text/unicode", fileName);
-    transferData.data.addDataForFlavour("text/html",
-                                        "<a href='" + fileName +
-                                        "'>" + fileName + "</a>");
-    return true;
 }
 
 /*******************************************************************************
  * Stack View
  *******************************************************************************/
 
-var stackShare = new Object();
-
-console.views.stack = new XULTreeView(stackShare);
+console.views.stack = new XULTreeView();
 
 console.views.stack.viewId = "stack";
 
@@ -1332,42 +1145,6 @@ function sv_cellprops (index, colID, properties)
 
     return;
 }
-
-function FrameRecord (frame)
-{
-    if (!(frame instanceof jsdIStackFrame))
-        throw new BadMojo (ERR_INVALID_PARAM, "value");
-
-    this.setColumnPropertyName ("col-0", "functionName");
-    this.setColumnPropertyName ("col-2", "location");
-
-    var fn = frame.functionName;
-    if (!fn)
-        fn = MSG_VAL_TLSCRIPT;
-
-    if (!frame.isNative)
-    {
-        var sourceRec = console.scripts[frame.script.fileName];
-        if (sourceRec)
-        {
-            this.location = sourceRec.shortName + ":" + frame.line;
-            var scriptRec = sourceRec.locateChildByScript(frame.script);
-            if (fn == "anonymous")
-                fn = scriptRec.functionName;
-        }
-        else
-            dd ("no sourcerec");
-    }
-    else
-    {
-        this.location = MSG_URL_NATIVE;
-    }
-    
-    this.functionName = fn;
-    this.frame = frame;
-}
-
-FrameRecord.prototype = new XULTreeViewRecord (stackShare);
 
 /*******************************************************************************
  * Source View
@@ -1545,7 +1322,7 @@ function sv_sync(skipScrollRestore)
 
         if (!("lastRowCount" in state) || state.lastRowCount != this.rowCount)
         {
-            dd ("notifying new row count " + this.rowCount);
+            //dd ("notifying new row count " + this.rowCount);
             this.tree.rowCountChanged(0, this.rowCount);
         }
 
@@ -1810,9 +1587,7 @@ function sv_getcelltext (row, colID)
  * Watch View
  *******************************************************************************/
 
-var watchShare = new Object();
-
-console.views.watches = new XULTreeView(watchShare);
+console.views.watches = new XULTreeView();
 
 console.views.watches.viewId = "watches";
 
@@ -1882,19 +1657,13 @@ function wv_refresh()
  * Windows View
  *******************************************************************************/
 
-var windowsShare = new Object();
-
-console.views.windows = new XULTreeView(windowsShare);
+console.views.windows = new XULTreeView();
 
 console.views.windows.viewId = "windows";
 
 console.views.windows.init = 
 function winv_init ()
 {
-    var atomsvc = console.atomService;
-    WindowRecord.prototype.property         = atomsvc.getAtom("item-window");
-    FileContainerRecord.prototype.property  = atomsvc.getAtom("item-files");
-    FileRecord.prototype.property           = atomsvc.getAtom("item-file");
 }
 
 console.views.windows.hooks = new Object();
@@ -1992,88 +1761,6 @@ function winv_find (win)
 
     return null;
 }
-
-function WindowRecord (win, baseURL)
-{
-    function none() { return ""; };
-    this.setColumnPropertyName ("col-0", "shortName");
-
-    this.window = win;
-    this.url = win.location.href;
-    if (this.url.search(/^\w+:/) == -1 && "url")
-    {
-        this.url = baseURL + url;
-        this.baseURL = baseURL;
-    }
-    else
-    {
-        this.baseURL = getPathFromURL(this.url);
-    }
-    
-    this.shortName = getFileFromPath (this.url);
-    
-    this.reserveChildren();
-    this.filesRecord = new FileContainerRecord();
-}
-
-WindowRecord.prototype = new XULTreeViewRecord(windowsShare);
-
-WindowRecord.prototype.onPreOpen =
-function wr_preopen()
-{   
-    this.childData = new Array();
-
-    this.appendChild(this.filesRecord);    
-
-    var framesLength = this.window.frames.length;
-    for (var i = 0; i < framesLength; ++i)
-    {
-        this.appendChild(new WindowRecord(this.window.frames[i].window,
-                                          this.baseURL));
-    }
-}
-    
-function FileContainerRecord ()
-{
-    function files() { return MSG_FILES_REC; }
-    function none() { return ""; }
-    this.setColumnPropertyName ("col-0", files);
-    this.reserveChildren();
-}
-
-FileContainerRecord.prototype = new XULTreeViewRecord(windowsShare);
-
-FileContainerRecord.prototype.onPreOpen =
-function fcr_preopen ()
-{
-    if (!this.parentRecord)
-        return;
-    
-    this.childData = new Array();
-    var doc = this.parentRecord.window.document;
-    var nodeList = doc.getElementsByTagName("script");
-    
-    for (var i = 0; i < nodeList.length; ++i)
-    {
-        var url = nodeList.item(i).getAttribute("src");
-        if (url)
-        {
-            if (url.search(/^\w+:/) == -1)
-                url = getPathFromURL (this.parentRecord.url) + url;
-            this.appendChild(new FileRecord(url));
-        }
-    }
-}
-
-function FileRecord (url)
-{
-    function none() { return ""; }
-    this.setColumnPropertyName ("col-0", "shortName");
-    this.url = url;
-    this.shortName = getFileFromPath(url);
-}
-
-FileRecord.prototype = new XULTreeViewRecord(windowsShare);
 
 /************************/
 

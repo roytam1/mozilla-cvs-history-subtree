@@ -72,7 +72,7 @@ function initCommands()
          ["find-url-soft",  cmdFindURL,            0],
          ["finish",         cmdFinish,             CMD_CONSOLE | CMD_NEED_STACK],
          ["float",          cmdFloat,              CMD_CONSOLE],
-         ["focus-input",    cmdFocusInput,         0],
+         ["focus-input",    cmdHook,               0],
          ["frame",          cmdFrame,              CMD_CONSOLE | CMD_NEED_STACK],
          ["grout-container",cmdGroutContainer,     0],
          ["help",           cmdHelp,               CMD_CONSOLE],
@@ -117,6 +117,7 @@ function initCommands()
          ["toggle-breaks",  "toggle-view breaks",   0],
          ["toggle-locals",  "toggle-view locals",   0],
          ["toggle-scripts", "toggle-view scripts",  0],
+         ["toggle-session", "toggle-view session",  0],
          ["toggle-source",  "toggle-view source",   0],
          ["toggle-stack",   "toggle-view stack",    0],
          ["toggle-watch",   "toggle-view watches",  0],
@@ -142,10 +143,12 @@ function initCommands()
          ["hook-script-instance-created",  cmdHook, 0],
          ["hook-script-instance-sealed",   cmdHook, 0],
          ["hook-script-instance-destroyed",cmdHook, 0],
+         ["hook-session-display",          cmdHook, 0],
          ["hook-source-load-complete",     cmdHook, 0],
          ["hook-window-closed",            cmdHook, 0],
          ["hook-window-loaded",            cmdHook, 0],
          ["hook-window-opened",            cmdHook, 0],
+         ["hook-window-resized",           cmdHook, 0],
          ["hook-window-unloaded",          cmdHook, 0],
          ["hook-venkman-exit",             cmdHook, 0],
          ["hook-venkman-query-exit",       cmdHook, 0],
@@ -645,11 +648,14 @@ function cmdFindScript (e)
     }
     else
     {
-        rv = dispatch("find-url", { url: jsdScript.fileName,
-                                    rangeStart: jsdScript.baseLineNumber,
-                                    rangeEnd: jsdScript.baseLineNumber + 
-                                              jsdScript.lineExtent - 1,
-                                    details: e.scriptWrapper });
+        var params = {
+            sourceText: e.scriptWrapper.scriptInstance.sourceText,
+            rangeStart: jsdScript.baseLineNumber,
+            rangeEnd: jsdScript.baseLineNumber + 
+                      jsdScript.lineExtent - 1,
+            details: e.scriptWrapper
+        };
+        rv = dispatch("find-sourcetext", params);
     }
 
     return rv;
@@ -762,12 +768,8 @@ function cmdFloat (e)
     
     var win = openDialog ("chrome://venkman/content/venkman-floater.xul?id=" +
                           escape(e.windowId), "", e.windowId, e.viewId);
+    console.floatingWindows.push(win);
     return win;
-}
-
-function cmdFocusInput (e)
-{
-    console.ui["sl-input"].focus();
 }
 
 function cmdFrame (e)
@@ -842,7 +844,7 @@ function cmdHelp (e)
  
         if (ary.length == 0)
         {
-            display (getMsg(MSN_ERR_NO_COMMAND, e.pattern), MT_ERROR);
+            display (getMsg(MSN_ERR_NOCOMMAND, e.pattern), MT_ERROR);
             return false;
         }
 

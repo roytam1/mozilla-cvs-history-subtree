@@ -61,29 +61,21 @@
 
   <vbox flex="1">
     <hbox flex="1" id="top-hbox" persist="height">
-      <vbox id="view-container-1" flex="1" view-container="true"/>
+      <vbox id="view-container-1" flex="1" view-container="true"
+        persist="width height"/>
+      
       <splitter collapse="before"><grippy/></splitter>
 
       <vbox flex="1">
 
-        <hbox id="view-container-2" flex="1" view-container="true"/>
+        <hbox id="view-container-2" flex="1" view-container="true"
+          persist="width height"/>
+
         <splitter collapse="after" persist="top"><grippy/></splitter>
 
-        <hbox id="view-container-3" persist="height" view-container="true">
+        <hbox id="view-container-3" view-container="true"
+          persist="width height"/>
 
-          <!-- console view -->
-
-          <vbox id="console-box" flex="50" persist="width"
-            splitter-collapse="after">
-            <iframe id="output-iframe" flex="1"
-              ondraggesture=
-                "nsDragAndDrop.startDrag(event, contentAreaDNDObserver);"
-              src="chrome://venkman/content/venkman-output-window.html"
-              type="content"/>
-            <textbox id="input-single-line" class="input-widget"
-              onkeypress="console.onSingleLineKeypress(event);"/>
-          </vbox>
-        </hbox>
       </vbox>
     </hbox>
   </vbox>

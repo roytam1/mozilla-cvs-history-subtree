@@ -48,17 +48,11 @@ function initMsgs ()
             var constValue;
             var constName = prop.key.toUpperCase().replace (/\./g, "_");
             if (ary[1] == "msn")
-            {
-                constName  = constName;
                 constValue = prop.key;
-            }
             else
-            {
-                constName  = constName;
                 constValue = prop.value.replace (/^\"/, "").replace (/\"$/, "");
-            }
-
-            eval ("window." + constName + " = " + constValue.quote());
+            
+            window[constName] = String(constValue);
         }
     }
 }
@@ -135,9 +129,12 @@ const exceptionMsgNames = ["err.notimplemented",
                            "err.failure",
                            "err.no.stack"];
 
-if (0) {
+/*
+ * these consts aren't used, they're being kept around as a reference for a
+ * little while.
+ *
 
-/* message values for non-parameterized messages */
+// message values for non-parameterized messages
 const MSG_ERR_NO_STACK     = getMsg("msg.err.nostack");
 const MSG_ERR_DISABLED     = getMsg("msg.err.disabled");
 const MSG_ERR_INTERNAL_BPT = getMsg("msg.err.internal.bpt");
@@ -222,7 +219,7 @@ const MSG_OPEN_URL         = getMsg("msg.open.url");
 const MSG_SAVE_PROFILE     = getMsg("msg.save.profile");
 const MSG_SAVE_SOURCE      = getMsg("msg.save.source");
 
-/* message names for parameterized messages */
+// message names for parameterized messages
 const MSN_ERR_INTERNAL_DISPATCH = "msg.err.internal.dispatch";
 const MSN_CHROME_FILTER    = "msg.chrome.filter";
 const MSN_ERR_NO_SCRIPT    = "msg.err.noscript";
@@ -240,8 +237,8 @@ const MSN_ERR_BP_NOSCRIPT    = "msg.err.bp.noscript";
 const MSN_ERR_BP_NOLINE      = "msg.err.bp.noline";
 const MSN_ERR_BP_NODICE      = "msg.err.bp.nodice";
 const MSN_ERR_BP_NOINDEX     = "msg.err.bp.noindex";
-const MSN_ERR_REQUIRED_PARAM = "err.required.param"; /* also used as exception */
-const MSN_ERR_INVALID_PARAM  = "err.invalid.param";  /* also used as exception */
+const MSN_ERR_REQUIRED_PARAM = "err.required.param"; // also used as exception
+const MSN_ERR_INVALID_PARAM  = "err.invalid.param";  // also used as exception
 const MSN_ERR_SOURCE_LOAD_FAILED = "msg.err.source.load.failed";
 
 
@@ -297,4 +294,5 @@ const MSN_SUBSCRIPT_LOADED = "msg.subscript.load";
 const MSN_STATUS_LOADING   = "msg.status.loading";
 const MSN_STATUS_MARKING   = "msg.status.marking";
 const MSN_STATUS_STOPPED   = "msg.status.stopped";
-}
+
+*/

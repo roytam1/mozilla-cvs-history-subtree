@@ -556,12 +556,16 @@ function xtvr_resort (leafSort)
  * sure to call it before adding your first child.
  */
 XULTreeViewRecord.prototype.reserveChildren =
-function xtvr_rkids ()
+function xtvr_rkids (always)
 {
     if (!("childData" in this))
         this.childData = new Array();
     if (!("isContainerOpen" in this))
         this.isContainerOpen = false;
+    if (always)
+        this.alwaysHasChildren = true;
+    else
+        delete this.alwaysHasChildren;
 }
 
 /*
@@ -1066,9 +1070,12 @@ function torr_vfpchange (start, amount)
 
 function XULTreeView(share)
 {
+    if (!share)
+        share = new Object();
     this.childData = new XTRootRecord(this, share);
     this.childData.invalidateCache();
     this.tree = null;
+    this.share = share;
     this.frozen = 0;
 }
 
@@ -1218,7 +1225,13 @@ function xtv_isctrempt (index)
     dd ("isContainerEmpty: row " + index + " returning " + rv);
     return rv;
     */
-    return !row || !row.childData;
+    if (!row || !("childData" in row))
+        return true;
+
+    if ("alwaysHasChildren" in row)
+        return false;
+
+    return !row.childData.length;
 }
 
 XULTreeView.prototype.isSeparator =

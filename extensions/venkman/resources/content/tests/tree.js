@@ -33,8 +33,7 @@
  *
  */
 
-var sampleShare = new Object();
-var sampleTree = new TreeOView(sampleShare);
+var sampleTree = new XULTreeView();
 
 function SampleRecord (name, gender) 
 {
@@ -44,7 +43,7 @@ function SampleRecord (name, gender)
     this.gender = gender;
 }
 
-SampleRecord.prototype = new TreeOViewRecord(sampleShare);
+SampleRecord.prototype = new XULTreeRecord(sampleTree.share);
 
 sampleTree.childData.appendChild (new SampleRecord ("vinnie", "male"));
 var betty = new SampleRecord ("betty", "female");
