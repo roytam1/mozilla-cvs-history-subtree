@@ -84,9 +84,9 @@ LLIBS	= \
 
 DEFFILE	= $(DLL1NAME).def
 !else
-!if defined(MOZ_DEBUG) && defined(GLOWCODE)
-	$(GLOWDIR)\glowcode.lib \
+DEFFILE	= $(DLLNAME).def
 !endif
+!else
 LLIBS	= \
 	$(DIST)\lib\libplc21.lib \
 	$(LIBNSPR) \

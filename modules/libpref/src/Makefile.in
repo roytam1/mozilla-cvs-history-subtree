@@ -95,13 +95,14 @@ CONFIG_FILES	:= $(addprefix $(srcdir)/, $(CONFIG_FILES))
 $(LIBRARY): $(OBJS)
 
 unix/unixpref.c: unix/jsbuffer.h
-	@if test ! -d unix; then rm -f unix && mkdir unix; fi
+	@if test ! -d unix; then rm -f unix && mkdir -p unix; fi
 	@if test ! -f $@; then $(INSTALL) $(srcdir)/unix/unixpref.c unix/; fi
 
 unix/jsbuffer.h: Makefile $(CONFIG_FILES)
-	@if test ! -d unix; then rm -f unix && mkdir unix; fi
-	@echo "/* This is an automatically generated file */" > $@
-	@echo >> $@
-	@echo "static char* pref_init_buffer = " >> $@
-	@cat $(CONFIG_FILES) | sed 's/\\/\\\\/g' | sed 's/\\r/\\n/' | sed 's/\"/\\\"/g' | sed 's/^M//g' | sed 's/^/"/' | sed 's/$$/\\n"/' >> $@
-	@echo \; >> $@
+	@if test ! -d unix; then rm -f unix && mkdir -p unix; fi
+	@(echo "/* This is an automatically generated file */" > $@; \
+	 echo >> $@; \
+	 echo "static char* pref_init_buffer = " >> $@; \
+	 cat $(CONFIG_FILES) | sed 's/\\/\\\\/g' | sed 's/\\r/\\n/' | sed 's/\"/\\\"/g' | sed 's/^M//g' | sed 's/^/"/' | sed 's/$$/\\n"/' >> $@; \
+	echo \; >> $@; \
+	)

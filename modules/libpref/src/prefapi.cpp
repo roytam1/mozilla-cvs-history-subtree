@@ -51,7 +51,7 @@
 #if defined(XP_PC) || defined(XP_OS2)
 #define LINEBREAK "\n"
 #endif
-#ifdef MOZ_SECURITY
+#ifndef NO_SECURITY
 #include "sechash.h"
 #endif
 #include "plstr.h"
@@ -60,6 +60,8 @@
 #include "prlog.h"
 #include "prmem.h"
 #include "prprf.h"
+#include "xpassert.h"
+#include "xp_str.h"
 
 /* WHS TEMPORARY */
 #define XP_QSORT qsort
@@ -284,7 +286,7 @@ int pref_OpenFile(const char* filename, PRBool is_error_fatal, PRBool verifyHash
    where each 'xx' is a hex value. */
 PRBool pref_VerifyLockFile(char* buf, long buflen)
 {
-#ifdef MOZ_SECURITY
+#ifndef NO_SECURITY
 	PRBool success = FALSE;
 	const int obscure_value = 7;
 	const long hash_length = 51;		/* len = 48 chars of MD5 + // + EOL */
@@ -1825,8 +1827,6 @@ PREF_NextChild(char *child_list, int *index)
 	return child;
 }
 
-/* HACK until I can fix this. */
-#if 0
 /*----------------------------------------------------------------------------------------
 *	pref_copyTree
 *
@@ -1941,6 +1941,7 @@ int pref_copyTree(const char *srcPrefix, const char *destPrefix, const char *cur
 	return result;
 }
 
+
 PR_IMPLEMENT(int)
 PREF_CopyPrefsTree(const char *srcRoot, const char *destRoot)
 {
@@ -1949,7 +1950,7 @@ PREF_CopyPrefsTree(const char *srcRoot, const char *destRoot)
 	
 	return pref_copyTree(srcRoot, destRoot, srcRoot);
 }
-#endif /* HACK  */
+
 
 /* Adds a node to the beginning of the callback list. */
 PR_IMPLEMENT(void)
