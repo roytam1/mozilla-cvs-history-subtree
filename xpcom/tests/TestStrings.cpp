@@ -53,6 +53,15 @@ PRBool test_assign()
     return r;
   }
 
+PRBool test_assign_c()
+  {
+    nsCString c('c');
+    PRBool r = strcmp(c.get(), "c") == 0;
+    if (!r)
+      printf("[result=%s]\n", c.get());
+    return r;
+  }
+
 PRBool test1()
   {
     NS_NAMED_LITERAL_STRING(empty, "");
@@ -259,6 +268,7 @@ static const struct Test
 tests[] =
   {
     { "test_assign", test_assign },
+    { "test_assign_c", test_assign_c },
     { "test1", test1 },
     { "test2", test2 },
     { "test_find", test_find },
