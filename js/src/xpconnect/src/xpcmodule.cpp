@@ -36,8 +36,9 @@
 /* Module level methods. */
 
 #include "xpcprivate.h"
-
+#ifdef MOZ_JSLOADER
 #include "mozJSLoaderConstructors.h"
+#endif
 
 /* Module implementation for the xpconnect library. */
 
