@@ -459,7 +459,6 @@
       <method name="getIndexOfItem">
         <parameter name="item"/>
         <body>
-          dump("*** item = " + item.id + "\n");
           return this.listBoxObject.getIndexOfItem(item);
         </body>
       </method>

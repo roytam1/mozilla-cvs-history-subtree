@@ -4,20 +4,26 @@ var gLanguagesDialog = {
   _availableLanguagesList : [],
   _acceptLanguages        : { },
   
+  _selectedItemID         : null,
   
-  _activeLanguages        : null,
-  _availableLanguages     : null,
   init: function ()
   {
-    this._activeLanguages     = document.getElementById("activeLanguages");
-    this._availableLanguages  = document.getElementById("availableLanguages");
-
     var os = Components.classes["@mozilla.org/observer-service;1"]
                        .getService(Components.interfaces.nsIObserverService);
     os.notifyObservers(null, "charsetmenu-selected", "other");
     
     if (!this._availableLanguagesList.length)
       this._loadAvailableLanguages();
+  },
+  
+  get _activeLanguages()
+  {
+    return document.getElementById("activeLanguages");
+  },
+  
+  get _availableLanguages()
+  {
+    return document.getElementById("availableLanguages");
   },
   
   _loadAvailableLanguages: function ()
@@ -80,7 +86,6 @@ var gLanguagesDialog = {
         }
       }
     }
-    dump("*** intergoat\n");
     this._buildAvailableLanguageList();
   },
   
@@ -99,7 +104,9 @@ var gLanguagesDialog = {
                                   
     // Load the UI with the data
     for (var i = 0; i < this._availableLanguagesList.length; ++i) {
-      if (this._availableLanguagesList[i].isVisible) {
+      var abCD = this._availableLanguagesList[i].abcd;
+      if (this._availableLanguagesList[i].isVisible && 
+          (!(abCD in this._acceptLanguages) || !this._acceptLanguages[abCD])) {
         var menuitem = document.createElement("menuitem");
         menuitem.id = this._availableLanguagesList[i].abcd;
         availableLanguagesPopup.appendChild(menuitem);
@@ -110,10 +117,10 @@ var gLanguagesDialog = {
   
   readAcceptLanguages: function ()
   {
-    var activeLanguages = document.getElementById("activeLanguages");
-    while (activeLanguages.hasChildNodes())
-      activeLanguages.removeChild(activeLanguages.firstChild);
-      
+    while (this._activeLanguages.hasChildNodes())
+      this._activeLanguages.removeChild(this._activeLanguages.firstChild);
+    
+    var selectedIndex = 0;
     var preference = document.getElementById("intl.accept_languages");
     var languages = preference.value.split(/\s*,\s*/);
     for (var i = 0; i < languages.length; ++i) {
@@ -122,13 +129,19 @@ var gLanguagesDialog = {
         name = "[" + languages[i] + "]";
       var listitem = document.createElement("listitem");
       listitem.id = languages[i];
-      activeLanguages.appendChild(listitem);
+      if (languages[i] == this._selectedItemID)
+        selectedIndex = i;
+      this._activeLanguages.appendChild(listitem);
       listitem.label = name;
 
       // Hash this language as an "Active" language so we don't
       // show it in the list that can be added. 
       this._acceptLanguages[languages[i]] = true;
     }
+
+    if (this._activeLanguages.childNodes.length > 0) 
+      this._activeLanguages.selectedIndex = selectedIndex;
+    
     return undefined;
   },
   
@@ -141,6 +154,8 @@ var gLanguagesDialog = {
   {
     var addButton = document.getElementById("addButton");
     addButton.disabled = false;
+    
+    this._availableLanguages.removeAttribute("accesskey");
   },
   
   addLanguage: function ()
@@ -149,6 +164,8 @@ var gLanguagesDialog = {
     var preference = document.getElementById("intl.accept_languages");
     if (preference.value.indexOf(selectedID) >= 0)
       return;
+      
+    this._selectedItemID = selectedID;
     
     if (preference.value == "") 
       preference.value = selectedID;
@@ -156,11 +173,13 @@ var gLanguagesDialog = {
       preference.value += "," + selectedID;
   
     this._acceptLanguages[selectedID] = true;
+    this._availableLanguages.selectedItem = null;
     
-    var lastItem = document.getElementById(selectedID);
-    dump("*** lastItem = " + lastItem + "\n");
-    this._activeLanguages.selectItem(lastItem);
-    this._activeLanguages.ensureElementIsVisible(lastItem);
+    // Reuild the available list with the added item removed...
+    this._buildAvailableLanguageList(); 
+    
+    this._availableLanguages.setAttribute("label", this._availableLanguages.getAttribute("label2"));
+    this._availableLanguages.setAttribute("accesskey", this._availableLanguages.getAttribute("accesskey2"));
   },
   
   removeLanguage: function ()
@@ -180,13 +199,14 @@ var gLanguagesDialog = {
     var lastSelected = selection[selection.length-1];
     var selectItem = lastSelected.nextSibling || lastSelected.previousSibling;
     selectItem = selectItem ? selectItem.id : null;
+    
+    this._selectedItemID = selectItem;
 
     // Update the preference and force a UI rebuild
     var preference = document.getElementById("intl.accept_languages");
     preference.value = string;
-    
-    if (selectItem)
-      this._activeLanguages.selectItem(document.getElementById(selectItem));
+
+    this._buildAvailableLanguageList(); 
   },
   
   _getLanguageName: function (aABCD)
@@ -217,13 +237,11 @@ var gLanguagesDialog = {
         string += item.id;
     }
     
-    var selectedItemID = selectedItem.id;
+    this._selectedItemID = selectedItem.id;
 
     // Update the preference and force a UI rebuild
     var preference = document.getElementById("intl.accept_languages");
     preference.value = string;
-    
-    this._activeLanguages.selectItem(document.getElementById(selectedItemID));
   },
   
   moveDown: function ()
@@ -243,13 +261,11 @@ var gLanguagesDialog = {
         string += item.id;
     }
     
-    var selectedItemID = selectedItem.id;
+    this._selectedItemID = selectedItem.id;
 
     // Update the preference and force a UI rebuild
     var preference = document.getElementById("intl.accept_languages");
     preference.value = string;
-    
-    this._activeLanguages.selectItem(document.getElementById(selectedItemID));
   },
   
   onLanguageSelect: function ()
