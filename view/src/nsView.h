@@ -299,6 +299,8 @@ public: // NOT in nsIView, so only available in view module
   nsViewManager* GetViewManager() const { return mViewManager; }
   nsViewVisibility GetVisibility() const { return mVis; }
   void* GetClientData() const { return mClientData; }
+  PRBool GetFloating() const { return (mVFlags & NS_VIEW_FLAG_FLOATING) != 0; }
+  PRBool GetClipChildren() const { return (mVFlags & NS_VIEW_FLAG_CLIPCHILDREN) != 0; }
 
   PRInt32 GetChildCount() const { return mNumKids; }
   nsView* GetChild(PRInt32 aIndex) const;
@@ -313,8 +315,8 @@ public: // NOT in nsIView, so only available in view module
   PRUint32 GetViewFlags() const { return mVFlags; }
   void SetViewFlags(PRUint32 aFlags) { mVFlags = aFlags; }
 
-  void ConvertToParentCoords(nscoord* aX, nscoord* aY) { *aX += mPosX; *aY += mPosY; }
-  void ConvertFromParentCoords(nscoord* aX, nscoord* aY) { *aX -= mPosX; *aY -= mPosY; }
+  void ConvertToParentCoords(nscoord* aX, nscoord* aY) const { *aX += mPosX; *aY += mPosY; }
+  void ConvertFromParentCoords(nscoord* aX, nscoord* aY) const { *aX -= mPosX; *aY -= mPosY; }
 
 protected:
   virtual ~nsView();
