@@ -462,6 +462,7 @@ PRInt32 nsBlockingStream::Read(PRInt32 *aErrorCode,
 
     LockStream();
 
+/*    printf("--- Reading from stream\n"); */
     NS_PRECONDITION((m_Buffer || m_bIsClosed), "m_Buffer is NULL!");
 
     /* Check for initial error conditions... */
@@ -469,6 +470,7 @@ PRInt32 nsBlockingStream::Read(PRInt32 *aErrorCode,
         *aErrorCode = NS_INPUTSTREAM_ILLEGAL_ARGS;
         goto done;
     } else if (m_bIsClosed && (0 == m_DataLength)) {
+/*        printf("--- Stream EOF\n"); */
         *aErrorCode = NS_INPUTSTREAM_EOF;
         goto done;
     } else {
@@ -486,7 +488,7 @@ PRInt32 nsBlockingStream::Read(PRInt32 *aErrorCode,
             UnlockStream();
             do {
                 NET_PollSockets();
-                bytesRead += ReadBuffer(aBuf, aCount);
+                bytesRead += ReadBuffer(aBuf, aCount-bytesRead);
                 /* XXX m_bIsClosed is checked outside of the lock! */
             } while ((aCount > bytesRead) && !m_bIsClosed); 
             LockStream();
@@ -506,6 +508,7 @@ PRInt32 nsBlockingStream::Read(PRInt32 *aErrorCode,
 done:
     UnlockStream();
 
+/*    printf("--- read: %d bytes... Requested %d bytes... Error code: %d\n", bytesRead, aCount, *aErrorCode); */
     return bytesRead;
 }
 
