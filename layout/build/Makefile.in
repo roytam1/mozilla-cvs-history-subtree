@@ -82,6 +82,16 @@ ifdef MOZ_SVG
 SHARED_LIBRARY_LIBS += \
                 $(DIST)/lib/$(LIB_PREFIX)gksvgbase_s.$(LIB_SUFFIX) \
                 $(NSNULL)
+
+ifdef MOZ_SVG_RENDERER_GDIPLUS
+SHARED_LIBRARY_LIBS += \
+                $(DIST)/lib/$(LIB_PREFIX)gksvgrenderergdiplus_s.$(LIB_SUFFIX) \
+                $(NSNULL)
+
+OS_LIBS += \
+	Gdiplus.lib \
+	$(NULL)
+endif
 endif
 
 EXTRA_DSO_LDOPTS = \
@@ -92,7 +102,7 @@ EXTRA_DSO_LDOPTS = \
 		$(MOZ_JS_LIBS) \
 		$(NULL)
 
-ifdef MOZ_SVG
+ifdef MOZ_SVG_RENDERER_LIBART
 EXTRA_DSO_LDOPTS += $(MOZ_LIBART_LIBS)
 endif
 

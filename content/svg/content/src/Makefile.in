@@ -43,6 +43,7 @@ REQUIRES	= xpcom \
 
 CPPSRCS		= \
 		nsSVGAnimatedLength.cpp \
+		nsSVGAnimatedLengthList.cpp \
 		nsSVGAnimatedRect.cpp \
 		nsSVGAnimatedTransformList.cpp \
 		nsSVGAttributes.cpp \
@@ -55,8 +56,10 @@ CPPSRCS		= \
 		nsSVGGenericStringValue.cpp \
 		nsSVGGraphicElement.cpp \
 		nsSVGLength.cpp \
+		nsSVGLengthList.cpp \
 		nsSVGLineElement.cpp \
 		nsSVGMatrix.cpp \
+		nsSVGNumber.cpp \
 		nsSVGPathDataParser.cpp \
 		nsSVGPathElement.cpp \
 		nsSVGPathSeg.cpp \
@@ -69,9 +72,12 @@ CPPSRCS		= \
 		nsSVGRectElement.cpp \
 		nsSVGSVGElement.cpp \
 		nsSVGStyleValue.cpp \
+		nsSVGTSpanElement.cpp \
+		nsSVGTextElement.cpp \
 		nsSVGTransform.cpp \
 		nsSVGTransformList.cpp \
 		nsSVGValue.cpp \
+		nsSVGViewportRect.cpp \
 		$(NULL)
 
 include $(topsrcdir)/config/config.mk
@@ -81,12 +87,12 @@ FORCE_STATIC_LIB = 1
 
 EXPORTS =  			\
 	nsISVGAttribute.h       \
-	nsISVGValue.h           \
 	nsISVGStyleValue.h      \
+	nsISVGValue.h           \
+	nsISVGValueObserver.h   \
+	nsISVGValueUtils.h      \
 	$(NULL)
 
-CFLAGS		+= $(MOZ_LIBART_CFLAGS)
-CXXFLAGS	+= $(MOZ_LIBART_CFLAGS)
 
 include $(topsrcdir)/config/rules.mk
 
