@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #include "primpl.h"
@@ -219,15 +203,12 @@ ForkAndExec(
          */
 
         if (attr) {
-            /* the osfd's to redirect stdin, stdout, and stderr to */
-            int in_osfd = -1, out_osfd = -1, err_osfd = -1;
-
             if (attr->stdinFd
                     && attr->stdinFd->secret->md.osfd != 0) {
-                in_osfd = attr->stdinFd->secret->md.osfd;
-                if (dup2(in_osfd, 0) != 0) {
+                if (dup2(attr->stdinFd->secret->md.osfd, 0) != 0) {
                     _exit(1);  /* failed */
                 }
+                close(attr->stdinFd->secret->md.osfd);
                 flags = fcntl(0, F_GETFL, 0);
                 if (flags & O_NONBLOCK) {
                     fcntl(0, F_SETFL, flags & ~O_NONBLOCK);
@@ -235,10 +216,10 @@ ForkAndExec(
             }
             if (attr->stdoutFd
                     && attr->stdoutFd->secret->md.osfd != 1) {
-                out_osfd = attr->stdoutFd->secret->md.osfd;
-                if (dup2(out_osfd, 1) != 1) {
+                if (dup2(attr->stdoutFd->secret->md.osfd, 1) != 1) {
                     _exit(1);  /* failed */
                 }
+                close(attr->stdoutFd->secret->md.osfd);
                 flags = fcntl(1, F_GETFL, 0);
                 if (flags & O_NONBLOCK) {
                     fcntl(1, F_SETFL, flags & ~O_NONBLOCK);
@@ -246,24 +227,14 @@ ForkAndExec(
             }
             if (attr->stderrFd
                     && attr->stderrFd->secret->md.osfd != 2) {
-                err_osfd = attr->stderrFd->secret->md.osfd;
-                if (dup2(err_osfd, 2) != 2) {
+                if (dup2(attr->stderrFd->secret->md.osfd, 2) != 2) {
                     _exit(1);  /* failed */
                 }
+                close(attr->stderrFd->secret->md.osfd);
                 flags = fcntl(2, F_GETFL, 0);
                 if (flags & O_NONBLOCK) {
                     fcntl(2, F_SETFL, flags & ~O_NONBLOCK);
                 }
-            }
-            if (in_osfd != -1) {
-                close(in_osfd);
-            }
-            if (out_osfd != -1 && out_osfd != in_osfd) {
-                close(out_osfd);
-            }
-            if (err_osfd != -1 && err_osfd != in_osfd
-                    && err_osfd != out_osfd) {
-                close(err_osfd);
             }
             if (attr->currentDirectory) {
                 if (chdir(attr->currentDirectory) < 0) {

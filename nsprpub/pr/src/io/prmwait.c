@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #include "primpl.h"
@@ -58,19 +42,8 @@ typedef struct TimerEvent {
 struct {
     PRLock *ml;
     PRCondVar *new_timer;
-    PRCondVar *cancel_timer;  /* The cancel_timer condition variable is
-                               * used to cancel a timer (i.e., remove a
-                               * timer event from the timer queue). At
-                               * startup I'm borrowing this condition
-                               * variable for a different purpose (to
-                               * tell the primordial thread that the
-                               * timer manager thread has started) so
-                               * that I don't need to create a new
-                               * condition variable just for this one
-                               * time use.
-                               */
+    PRCondVar *cancel_timer;
     PRThread *manager_thread;
-    PRBool manager_started;
     PRCList timer_queue;
 } tm_vars;
 
@@ -88,11 +61,6 @@ static void TimerManager(void *arg)
     TimerEvent *timer;
 
     PR_Lock(tm_vars.ml);
-    /* tell the primordial thread that we have started */
-    tm_vars.manager_started = PR_TRUE;
-    if (!_native_threads_only) {
-        PR_NotifyCondVar(tm_vars.cancel_timer);
-    }
     while (1)
     {
         if (PR_CLIST_IS_EMPTY(&tm_vars.timer_queue))
@@ -215,16 +183,6 @@ static PRStatus TimerInit(void)
     if (NULL == tm_vars.manager_thread)
     {
         goto failed;
-    }
-    /*
-     * Need to wait until the timer manager thread starts
-     * if the timer manager thread is a local thread.
-     */
-    if (!_native_threads_only) {
-        PR_Lock(tm_vars.ml);
-        while (!tm_vars.manager_started)
-            PR_WaitCondVar(tm_vars.cancel_timer, PR_INTERVAL_NO_TIMEOUT);
-        PR_Unlock(tm_vars.ml);
     }
     return PR_SUCCESS;
 
@@ -977,7 +935,7 @@ PR_IMPLEMENT(PRRecvWait*) PR_WaitRecvReady(PRWaitGroup *group)
                 ** it is still full of if's with continue and goto.
                 */
                 PRStatus st;
-                do 
+                while (PR_CLIST_IS_EMPTY(&group->io_ready))
                 {
                     st = PR_WaitCondVar(group->io_complete, PR_INTERVAL_NO_TIMEOUT);
                     if (_prmw_running != group->state)
@@ -986,7 +944,7 @@ PR_IMPLEMENT(PRRecvWait*) PR_WaitRecvReady(PRWaitGroup *group)
                         goto aborted;
                     }
                     if (_MW_ABORTED(st) || (NULL == group->poller)) break;
-                } while (PR_CLIST_IS_EMPTY(&group->io_ready));
+                }
 
                 /*
                 ** The thread is interrupted and has to leave.  It might
