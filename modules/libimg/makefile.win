@@ -24,4 +24,4 @@ DIRS = png public src
 DIRS = png classes public src
 !endif
 
-!include $(MOZ_SRC)\ns\config\rules.mak
+!include $(DEPTH)\config\rules.mak

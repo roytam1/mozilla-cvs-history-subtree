@@ -31,7 +31,7 @@ LOCAL_JMC_SUBDIR = .
 
 #LIBRARY_NAME = img$(MOZ_BITS)
 !ifndef STANDALONE_IMAGE_LIB
-IMGSRC=	$(MOZ_SRC)\ns\modules\libimg\src\_jmc
+IMGSRC=	$(DEPTH)\modules\libimg\src\_jmc
 !endif
 
 #
@@ -156,7 +156,7 @@ LINCS=-I$(XPDIST)\public\jtools -I$(XPDIST)\public\java \
 !endif
 !endif
 
-include <$(MOZ_SRC)\ns\config\rules.mak> 
+include <$(DEPTH)\config\rules.mak> 
 
 !ifdef STANDALONE_IMAGE_LIB
 install:: $(DLL)
