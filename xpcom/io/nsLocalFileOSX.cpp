@@ -1406,7 +1406,7 @@ NS_IMETHODIMP nsLocalFile::GetPersistentDescriptor(nsACString& aPersistentDescri
    char* buf = PL_Base64Encode((const char*)*aliasH, bytes, nsnull);
    ::DisposeHandle((Handle) aliasH);
    NS_ENSURE_TRUE(buf, NS_ERROR_OUT_OF_MEMORY);
-
+   
    aPersistentDescriptor = buf;
    PR_Free(buf);
 
@@ -1417,26 +1417,37 @@ NS_IMETHODIMP nsLocalFile::SetPersistentDescriptor(const nsACString& aPersistent
 {
   if (aPersistentDescriptor.IsEmpty())
     return NS_ERROR_INVALID_ARG;
-   
+
   nsresult rv = NS_OK;
   
-  PRUint32 dataSize = aPersistentDescriptor.Length();
+  PRUint32 dataSize = aPersistentDescriptor.Length();    
   char* decodedData = PL_Base64Decode(PromiseFlatCString(aPersistentDescriptor).get(), dataSize, nsnull);
+
   // Cast to an alias record and resolve.
-  AliasHandle aliasH = nsnull;
+  PRInt32		aliasSize = (dataSize * 3) / 4;
+  AliasRecord	aliasHeader = *(AliasPtr)decodedData;
+  if (aliasHeader.aliasSize > aliasSize) {		// be paranoid about having too few data
+    PR_Free(decodedData);
+    return NS_ERROR_FAILURE;
+  }
+  
+  aliasSize = aliasHeader.aliasSize;
+  
   // Move the now-decoded data into the Handle.
   // The size of the decoded data is 3/4 the size of the encoded data. See plbase64.h
-  if (::PtrToHand(decodedData, &(Handle)aliasH, (dataSize * 3) / 4) != noErr)
+  Handle	newHandle = nsnull;
+  if (::PtrToHand(decodedData, &newHandle, aliasSize) != noErr)
     rv = NS_ERROR_OUT_OF_MEMORY;
   PR_Free(decodedData);
   if (NS_FAILED(rv))
     return rv;
-    
+
   Boolean changed;
   FSRef resolvedFSRef;
-  OSErr err = ::FSResolveAlias(nsnull, aliasH, &resolvedFSRef, &changed);
+  OSErr err = ::FSResolveAlias(nsnull, (AliasHandle)newHandle, &resolvedFSRef, &changed);
+    
   rv = MacErrorMapper(err);
-  DisposeHandle((Handle) aliasH);
+  DisposeHandle(newHandle);
   if (NS_FAILED(rv))
     return rv;
  
