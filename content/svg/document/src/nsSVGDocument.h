@@ -44,8 +44,6 @@ class nsSVGDocument : public nsXMLDocument,
                                nsIStreamListener **aDocListener,
                                PRBool aReset = PR_TRUE);
 
-  NS_IMETHOD GetContentType(nsAWritableString& aContentType) const;
-
   NS_DECL_NSIDOMSVGDOCUMENT
   NS_FORWARD_NSIDOMDOCUMENT(nsXMLDocument::)
   NS_FORWARD_NSIDOMNODE(nsXMLDocument::)

@@ -70,14 +70,6 @@ nsSVGDocument::StartDocumentLoad(const char* aCommand,
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsSVGDocument::GetContentType(nsAWritableString& aContentType) const
-{
-  // XXX Should get document type from incoming stream
-  aContentType.Assign(NS_LITERAL_STRING("image/svg+xml"));
-  return NS_OK;
-}
-
 // nsIDOMSVGDocument
 
 NS_IMETHODIMP
