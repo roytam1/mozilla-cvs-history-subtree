@@ -60,10 +60,11 @@ public:
      * (Corresponds to NPP_HandleEvent.)
      *
      * @param event - the event to be handled
-     * @result - NS_OK if the event was handled
+     * @param handled - set to PR_TRUE if event was handled
+     * @result - NS_OK if this operation was successful
      */
     NS_IMETHOD
-    HandleEvent(nsPluginEvent* event) = 0;
+    HandleEvent(nsPluginEvent* event, PRBool* handled) = 0;
 
 };
 
