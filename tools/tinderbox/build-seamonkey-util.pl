@@ -827,7 +827,7 @@ sub run_all_tests {
 
 	  $test_result = AliveTest("LayoutPerformanceTest", $build_dir,
 							   $binary, 
-							   "\"http://cowtools.mcom.com/page-loader/loader.pl?delay=1000&nocache=0&maxcycle=0\"",
+							   "\"http://jrgm.mcom.com/page-loader/loader.pl?delay=1000&nocache=0&maxcycle=0\"",
 							   $Settings::LayoutPerformanceTestTimeout);
     }
 
