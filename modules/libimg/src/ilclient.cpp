@@ -664,6 +664,11 @@ il_delete_container(il_container *ic)
           ic->imgdcb->SetContainer(nsnull);
           NS_RELEASE(ic->imgdcb);
         }
+        
+        if (ic->imgdec) {
+          ic->imgdec->SetContainer(nsnull);
+          NS_RELEASE(ic->imgdec);
+        }
 
         FREE_IF_NOT_NULL(ic->comment);
         FREE_IF_NOT_NULL(ic->url_address);
