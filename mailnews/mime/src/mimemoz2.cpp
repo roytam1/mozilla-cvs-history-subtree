@@ -510,6 +510,7 @@ MimeGetAttachmentList(MimeObject *tobj, const char *aMessageURL, nsMsgAttachment
   MimeContainer         *cobj;
   PRInt32               n;
   PRBool                isAlternativeOrRelated = PR_FALSE;
+  PRBool                isAnInlineMessage;
 
   if (!data) 
     return 0;
@@ -528,8 +529,12 @@ MimeGetAttachmentList(MimeObject *tobj, const char *aMessageURL, nsMsgAttachment
   if (isAlternativeOrRelated)
     return 0;
   
+  isAnInlineMessage = mime_typep(obj, (MimeObjectClass *) &mimeMessageClass);
+
   cobj = (MimeContainer*) obj;
   n = CountTotalMimeAttachments(cobj);
+  if (isAnInlineMessage)
+    n ++;
   if (n <= 0) 
     return n;
 
@@ -544,7 +549,7 @@ MimeGetAttachmentList(MimeObject *tobj, const char *aMessageURL, nsMsgAttachment
 
   nsresult rv;
 
-  if (mime_typep(obj, (MimeObjectClass *) &mimeMessageClass))
+  if (isAnInlineMessage)
   {
     rv = GenerateAttachmentData(obj, aMessageURL, obj->options, PR_FALSE, *data);
     NS_ENSURE_SUCCESS(rv, rv);
