@@ -127,6 +127,7 @@ typedef int PRInt32;
 #define DSR_DESTINATION                 0
 #define DSR_SYSTEM                      1
 #define DSR_TEMP                        2
+#define DSR_DOWNLOAD_SIZE               3
 
 typedef HRESULT (_cdecl *SDI_NETINSTALL) (LPSDISTRUCT);
 
