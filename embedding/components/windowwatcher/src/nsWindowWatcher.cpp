@@ -1625,7 +1625,7 @@ nsWindowWatcher::AddSupportsTojsvals(nsISupports *aArg,
       p->GetDataIID(&iid);
       NS_ENSURE_TRUE(iid, NS_ERROR_UNEXPECTED);
 
-      AutoFree((void *)iid); // Free iid upon destruction.
+      AutoFree iidGuard(iid); // Free iid upon destruction.
 
       nsresult rv;
       nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
