@@ -20,33 +20,32 @@
 # Contributor(s): 
 #
 
-MOD_DEPTH	= ../../..
-srcdir		= @srcdir@
-topsrcdir 	= @top_srcdir@
+MOD_DEPTH = ../../..
+srcdir = @srcdir@
+topsrcdir = @top_srcdir@
 
 include $(MOD_DEPTH)/config/autoconf.mk
 include $(topsrcdir)/build.mk
 
-SRCS		= decode.c \
-		  encode.c \
-		  io.c \
-		  bprint.c
+SRCS		= line64.c
 
-REALOBJS        = $(SRCS:.c=.$(OBJ_SUFFIX))
+REALOBJS	= $(SRCS:.c=.$(OBJ_SUFFIX))
 OBJS		= $(addprefix $(OBJDIR_NAME)/, $(REALOBJS))
+
 HDIR		= $(topsrcdir)/ldap/include
 
 ifeq ($(OS_ARCH), WINNT)
-LIBLBER		= $(addprefix $(OBJDIR_NAME)/, $(LBER_LIBNAME).$(LIB_SUFFIX))
+LIBLDIF		= $(addprefix $(OBJDIR_NAME)/, $(LDIF_LIBNAME).$(LIB_SUFFIX))
 else
-LIBLBER		= $(addprefix $(OBJDIR_NAME)/, lib$(LBER_LIBNAME).$(LIB_SUFFIX))
+LIBLDIF		= $(addprefix $(OBJDIR_NAME)/, lib$(LDIF_LIBNAME).$(LIB_SUFFIX))
 endif
-INSTALLDIR	= $(DIST)/$(OBJDIR_NAME)
+
+INSTALLDIR      = $(DIST)/$(OBJDIR_NAME)
 
 include $(topsrcdir)/config/rules.mk
 
-LOCAL_INCLUDES  =
-INCLUDES	+= -I$(HDIR)  -I$(INSTALLDIR)/include 
+LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
+INCLUDES	+= -I$(HDIR) -I$(INSTALLDIR)/include -I$(DIST)/include
 DEFINES		+= $(DEFS)
 
 PLATFORMCFLAGS	= -DUSE_WAITPID -DNEEDPROTOS
@@ -64,16 +63,16 @@ versiont.c:	Makefile.client Version.c
 	-e "s|%VERSION%|$${v}|" \
 	< Version.c > $@)
 
-all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(LIBLBER)
+all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(LIBLDIF)
 
 $(LIBDIR):
 	$(MKDIR) $(LIBDIR)
 
-$(LIBLBER): $(OBJS) $(LIBDIR)
-	@echo ======= making $(LIBLBER)
-#ifdef SO_FILES_TO_REMOVE
+$(LIBLDIF): $(OBJS) $(LIBDIR)
+	@echo ======= making $(LIBLDIF)
+ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
-#endif
+endif
 	$(LINK_LIB)
 
 veryclean:: clean
@@ -81,6 +80,5 @@ veryclean:: clean
 $(OBJDEST):
 	$(MKDIR) $(OBJDEST)
 
-install::  $(LIBLBER)
-	$(INSTALL) -m 444 $(LIBLBER) $(INSTALLDIR)/lib
-
+install::	$(LIBLDIF)
+	$(INSTALL) -m 444 $(LIBLDIF) $(INSTALLDIR)/lib

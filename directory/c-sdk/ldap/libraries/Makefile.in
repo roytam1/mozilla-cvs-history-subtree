@@ -1,34 +1,41 @@
-DEPTH	 = ../../../..
-srcdir = @srcdir
-ldaptopsrcdir = @top_srcdir@
+# 
+# The contents of this file are subject to the Netscape Public
+# License Version 1.1 (the "License"); you may not use this file
+# except in compliance with the License. You may obtain a copy of
+# the License at http://www.mozilla.org/NPL/
+#  
+# Software distributed under the License is distributed on an "AS
+# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+# implied. See the License for the specific language governing
+# rights and limitations under the License.
+#  
+# The Original Code is Mozilla Communicator client code, released
+# March 31, 1998.
+# 
+# The Initial Developer of the Original Code is Netscape
+# Communications Corporation. Portions created by Netscape are
+# Copyright (C) 1998-1999 Netscape Communications Corporation. All
+# Rights Reserved.
+# 
+# Contributor(s): 
+#
 
-UNIXDIRLIST	= liblber libldap libprldap
+MOD_DEPTH = ../..
+srcdir = @srcdir@
+topsrcdir = @top_srcdir@
 
-include ../build/autoconf.mk
-include $(NSPR_TREE)/config/rules.mk
+include $(MOD_DEPTH)/config/autoconf.mk
 
-all export::	FORCE
-	@for i in $(UNIXDIRLIST); do \
-		echo "  cd $$i; $(MAKE) $(MFLAGS) export"; \
-		( cd $$i; $(MAKE) $(MFLAGS) export ); \
-	done
+DIRS		= liblber libldif libiutil libldap libprldap libssldap
 
-libs install::	FORCE
-	@for i in $(UNIXDIRLIST); do \
-		echo "  cd $$i; $(MAKE) $(MFLAGS) install"; \
-		( cd $$i; $(MAKE) $(MFLAGS) install ); \
-	done
+ifeq ($(OS_ARCH),WINNT)
+DIRS		+= libutil 
+endif
 
-clean clobber::	FORCE
-	@for i in $(UNIXDIRLIST); do \
-		echo "  cd $$i; $(MAKE) $(MFLAGS) clean"; \
-		( cd $$i; $(MAKE) $(MFLAGS) clean ); \
-	done
+all:: export install
 
-realclean clobber_all::	FORCE
-	@for i in $(UNIXDIRLIST); do \
-		echo "  cd $$i; $(MAKE) $(MFLAGS) realclean"; \
-		( cd $$i; $(MAKE) $(MFLAGS) realclean ); \
-	done
+install::
+	+$(LOOP_OVER_DIRS)
 
-FORCE:
+include $(topsrcdir)/config/rules.mk
+

@@ -20,7 +20,13 @@
 # Contributor(s): 
 #
 
-COMPVERSIONDIR	= $(DEPTH)/directory/c-sdk
+# some vendors may wish to override COMPVERSIONDIR from the command-line
+#
+ifdef USE_AUTOCONF
+COMPVERSIONDIR = $(topsrcdir)
+else
+COMPVERSIONDIR = $(DEPTH)/directory/c-sdk
+endif
 
 DEFAULT_VENDOR_NAME=mozilla.org
 DEFAULT_VENDOR_VERSION=500
@@ -37,10 +43,8 @@ ifeq ($(OS_ARCH), WINNT)
 	COMPONENT_PULL_METHOD=FTP
 endif
 
-ifdef HAVE_CCONF
 # component tags for internal build only
-include	$(COMPVERSIONDIR)/component_versions.mk
-endif
+include $(COMPVERSIONDIR)/component_versions.mk
 
 # Ldap library
 ifeq ($(OS_ARCH), WINNT)
@@ -362,7 +366,7 @@ else # WINNT
 #
 # UNIX link commands
 #
-LINK_LIB        = $(RM) $@; $(AR) $(OBJS); $(RANLIB) $@
+LINK_LIB        = $(RM) $@; $(AR) $(AR_FLAGS) $(OBJS); $(RANLIB) $@
 LINK_LIB2       = $(RM) $@; $(AR) $@ $(OBJS2); $(RANLIB) $@
 ifdef SONAMEFLAG_PREFIX
 LINK_DLL        = $(LD) $(DSO_LDOPTS) $(ALDFLAGS) $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \

@@ -20,6 +20,7 @@
 # Contributor(s): 
 #
 
+
 MOD_DEPTH	= ../../..
 srcdir		= @srcdir@
 topsrcdir 	= @top_srcdir@
@@ -27,26 +28,35 @@ topsrcdir 	= @top_srcdir@
 include $(MOD_DEPTH)/config/autoconf.mk
 include $(topsrcdir)/build.mk
 
-SRCS		= decode.c \
-		  encode.c \
-		  io.c \
-		  bprint.c
+ifeq ($(HAVE_CCONF), 1)
+SRCS		= iutil-lock.c
+else
+SRCS		= iutil-lock.c
+endif
 
 REALOBJS        = $(SRCS:.c=.$(OBJ_SUFFIX))
-OBJS		= $(addprefix $(OBJDIR_NAME)/, $(REALOBJS))
+
+IUTILOBJDEST	= $(OBJDIR_NAME)
+OBJS		= $(addprefix $(IUTILOBJDEST)/, $(REALOBJS))
+
+DISTHDIR	= $(DIST)/public/ldap
 HDIR		= $(topsrcdir)/ldap/include
 
 ifeq ($(OS_ARCH), WINNT)
-LIBLBER		= $(addprefix $(OBJDIR_NAME)/, $(LBER_LIBNAME).$(LIB_SUFFIX))
+LIBIUTIL	= $(addprefix $(IUTILOBJDEST)/, $(IUTIL_LIBNAME).$(LIB_SUFFIX))
 else
-LIBLBER		= $(addprefix $(OBJDIR_NAME)/, lib$(LBER_LIBNAME).$(LIB_SUFFIX))
+LIBIUTIL	= $(addprefix $(IUTILOBJDEST)/, \
+		  lib$(IUTIL_LIBNAME).$(LIB_SUFFIX))
 endif
-INSTALLDIR	= $(DIST)/$(OBJDIR_NAME)
+INSTALLDIR      = $(DIST)/$(OBJDIR_NAME)
 
 include $(topsrcdir)/config/rules.mk
 
-LOCAL_INCLUDES  =
-INCLUDES	+= -I$(HDIR)  -I$(INSTALLDIR)/include 
+LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
+INCLUDES	+= -I$(DISTHDIR) -I$(HDIR) -I$(INSTALLDIR)/include -I$(DIST)/include
+ifeq ($(HAVE_CCONF), 1)
+INCLUDES	+= -I$(srcdir)/../libldap/
+endif
 DEFINES		+= $(DEFS)
 
 PLATFORMCFLAGS	= -DUSE_WAITPID -DNEEDPROTOS
@@ -64,16 +74,16 @@ versiont.c:	Makefile.client Version.c
 	-e "s|%VERSION%|$${v}|" \
 	< Version.c > $@)
 
-all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(LIBLBER)
+all::    $(OBJDEST) $(LIBDIR) $(OBJS) $(LIBIUTIL)
 
 $(LIBDIR):
 	$(MKDIR) $(LIBDIR)
 
-$(LIBLBER): $(OBJS) $(LIBDIR)
-	@echo ======= making $(LIBLBER)
-#ifdef SO_FILES_TO_REMOVE
+$(LIBIUTIL): $(OBJS) $(LIBDIR)
+	@echo ======= making $(LIBIUTIL)
+ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
-#endif
+endif
 	$(LINK_LIB)
 
 veryclean:: clean
@@ -81,6 +91,5 @@ veryclean:: clean
 $(OBJDEST):
 	$(MKDIR) $(OBJDEST)
 
-install::  $(LIBLBER)
-	$(INSTALL) -m 444 $(LIBLBER) $(INSTALLDIR)/lib
-
+install::	$(LIBIUTIL)
+	$(INSTALL) -m 444 $(LIBIUTIL) $(INSTALLDIR)/lib
