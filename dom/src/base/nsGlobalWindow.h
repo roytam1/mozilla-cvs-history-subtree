@@ -374,7 +374,7 @@ struct nsTimeoutImpl
   {
 #ifdef DEBUG_jst
     {
-      extern gTimeoutCnt;
+      extern PRInt32 gTimeoutCnt;
 
       ++gTimeoutCnt;
     }
@@ -389,7 +389,7 @@ struct nsTimeoutImpl
   {
 #ifdef DEBUG_jst
     {
-      extern gTimeoutCnt;
+      extern PRInt32 gTimeoutCnt;
 
       --gTimeoutCnt;
     }
