@@ -710,8 +710,13 @@ nsJSUtils::nsGetStaticScriptGlobal(JSContext* aContext,
     return NS_ERROR_FAILURE;
   }
 
-  return supports->QueryInterface(NS_GET_IID(nsIScriptGlobalObject),
-                                  (void**) aNativeGlobal);
+  nsCOMPtr<nsIXPConnectWrappedNative> wrapper(do_QueryInterface(supports));
+  NS_ENSURE_TRUE(wrapper, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
+  return CallQueryInterface(native, aNativeGlobal);
 }
 
 NS_EXPORT nsresult 

@@ -33,22 +33,28 @@
  *                               use in OS2
  */
 #include "nscore.h"
-#include "nsIFactory.h"
-#include "nsISupports.h"
+#include "nsIGenericFactory.h"
 
 #include "nsJSEnvironment.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsDOMCID.h"
+#include "nsIDOMScriptObjectFactory.h"
 #include "nsIDOMNativeObjectRegistry.h"
 #include "nsScriptNameSetRegistry.h"
 #include "nsIScriptEventListener.h"
 #include "nsIJSEventListener.h"
 #include "nsIScriptContext.h"
 #include "plhash.h"
-#include "nsIPref.h"
 
-static NS_DEFINE_IID(kIDOMNativeObjectRegistry, NS_IDOM_NATIVE_OBJECT_REGISTRY_IID);
-static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
+extern nsresult NS_CreateScriptContext(nsIScriptGlobalObject *aGlobal,
+                                       nsIScriptContext **aContext);
+
+extern nsresult NS_NewJSEventListener(nsIDOMEventListener **aInstancePtrResult,
+                                      nsIScriptContext *aContext,
+                                      nsISupports *aObject);
+
+extern nsresult NS_NewScriptGlobalObject(nsIScriptGlobalObject **aGlobal);
+
 
 class nsDOMNativeObjectRegistry : public nsIDOMNativeObjectRegistry {
 public:
@@ -90,7 +96,8 @@ nsDOMNativeObjectRegistry::~nsDOMNativeObjectRegistry()
   }
 }
 
-NS_IMPL_ISUPPORTS(nsDOMNativeObjectRegistry, kIDOMNativeObjectRegistry);
+NS_IMPL_ISUPPORTS(nsDOMNativeObjectRegistry,
+                  NS_GET_IID(nsIDOMNativeObjectRegistry));
 
 NS_IMETHODIMP 
 nsDOMNativeObjectRegistry::RegisterFactory(const nsString& aClassName, 
@@ -124,120 +131,83 @@ nsDOMNativeObjectRegistry::GetFactoryCID(const nsString& aClassName,
   return NS_OK;
 }
 
+//////////////////////////////////////////////////////////////////////
+
+class nsDOMSOFactory : public nsIDOMScriptObjectFactory
+{
+public:
+  nsDOMSOFactory();
+  virtual ~nsDOMSOFactory();
+
+  NS_DECL_ISUPPORTS
+
+  NS_IMETHOD NewScriptContext(nsIScriptGlobalObject *aGlobal,
+                              nsIScriptContext **aContext);
+
+  NS_IMETHOD NewJSEventListener(nsIScriptContext *aContext,
+                                nsISupports* aObject,
+                                nsIDOMEventListener ** aInstancePtrResult);
+
+  NS_IMETHOD NewScriptGlobalObject(nsIScriptGlobalObject **aGlobal);
+};
+
+nsDOMSOFactory::nsDOMSOFactory()
+{
+  NS_INIT_REFCNT();
+}
+
+nsDOMSOFactory::~nsDOMSOFactory()
+{
+}
+
+NS_IMPL_ISUPPORTS(nsDOMSOFactory, NS_GET_IID(nsIDOMScriptObjectFactory));
+
+NS_IMETHODIMP
+nsDOMSOFactory::NewScriptContext(nsIScriptGlobalObject *aGlobal,
+                                 nsIScriptContext **aContext)
+{
+  return NS_CreateScriptContext(aGlobal, aContext);
+}
+
+NS_IMETHODIMP
+nsDOMSOFactory::NewJSEventListener(nsIScriptContext *aContext,
+                                   nsISupports *aObject,
+                                   nsIDOMEventListener **aInstancePtrResult)
+{
+  return NS_NewJSEventListener(aInstancePtrResult, aContext, aObject);
+}
+
+NS_IMETHODIMP
+nsDOMSOFactory::NewScriptGlobalObject(nsIScriptGlobalObject **aGlobal)
+{
+  return NS_NewScriptGlobalObject(aGlobal);
+}
 
 //////////////////////////////////////////////////////////////////////
 
-static NS_DEFINE_CID(kCDOMScriptObjectFactory, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
-static NS_DEFINE_CID(kCDOMNativeObjectRegistry, NS_DOM_NATIVE_OBJECT_REGISTRY_CID);
-static NS_DEFINE_CID(kCScriptNameSetRegistry, NS_SCRIPT_NAMESET_REGISTRY_CID);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsDOMNativeObjectRegistry);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsScriptNameSetRegistry);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsDOMSOFactory);
 
-class nsDOMFactory : public nsIFactory
-{   
-  public:   
-    NS_DECL_ISUPPORTS
+static nsModuleComponentInfo gDOMModuleInfo[] = {
+    { "Native Object Registry",
+      NS_DOM_NATIVE_OBJECT_REGISTRY_CID,
+      nsnull,
+      nsDOMNativeObjectRegistryConstructor
+    },
+    { "Script Nameset Registry",
+      NS_SCRIPT_NAMESET_REGISTRY_CID,
+      nsnull,
+      nsScriptNameSetRegistryConstructor
+    },
+    { "Script Object Factory",
+      NS_DOM_SCRIPT_OBJECT_FACTORY_CID,
+      nsnull,
+      nsDOMSOFactoryConstructor
+    }
+};
 
-    NS_DECL_NSIFACTORY
-
-    nsDOMFactory(const nsCID &aClass);   
-
-  protected:
-    virtual ~nsDOMFactory();   
-
-  private:   
-    nsCID     mClassID;
-};   
-
-nsDOMFactory::nsDOMFactory(const nsCID &aClass)   
-{   
-  NS_INIT_ISUPPORTS();
-  mClassID = aClass;
-}   
-
-nsDOMFactory::~nsDOMFactory()   
-{   
-}   
-
-NS_IMPL_ISUPPORTS(nsDOMFactory, NS_GET_IID(nsIFactory))
-
-nsresult nsDOMFactory::CreateInstance(nsISupports *aOuter,  
-                                      const nsIID &aIID,  
-                                      void **aResult)  
-{  
-  if (aResult == NULL) {  
-    return NS_ERROR_NULL_POINTER;  
-  }  
-
-  *aResult = NULL;  
-  
-  nsISupports *inst = nsnull;
-
-  if (mClassID.Equals(kCDOMNativeObjectRegistry)) {
-    inst = (nsISupports *)new nsDOMNativeObjectRegistry();
-  }
-  else if (mClassID.Equals(kCScriptNameSetRegistry)) {
-    inst = (nsISupports *)new nsScriptNameSetRegistry();
-  }
-
-  if (inst == NULL) {  
-    return NS_ERROR_OUT_OF_MEMORY;  
-  }  
-
-  NS_ADDREF(inst);  // Stabilize
-  
-  nsresult res = inst->QueryInterface(aIID, aResult);
-
-  NS_RELEASE(inst); // Destabilize and avoid leaks. Avoid calling delete <interface pointer>    
-
-  return res;  
-}  
-
-nsresult nsDOMFactory::LockFactory(PRBool aLock)  
-{  
-  // Not implemented in simplest case.  
-  return NS_OK;
-}  
-
-// return the proper factory to the caller
-#if defined(XP_MAC) && defined(MAC_STATIC)
-extern "C" NS_DOM nsresult
-NSGetFactory_DOM_DLL(nsISupports* servMgr,
-                     const nsCID &aClass, 
-                     const char *aClassName,
-                     const char *aContractID,
-                     nsIFactory **aFactory)
-#else
-extern "C" NS_DOM nsresult
-NSGetFactory(nsISupports* servMgr,
-             const nsCID &aClass, 
-             const char *aClassName,
-             const char *aContractID,
-             nsIFactory **aFactory)
-#endif
-{
-  if (nsnull == aFactory) {
-    return NS_ERROR_NULL_POINTER;
-  }
-
-  *aFactory = new nsDOMFactory(aClass);
-
-  if (nsnull == aFactory) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-
-  return (*aFactory)->QueryInterface(NS_GET_IID(nsIFactory), (void**)aFactory);
-}
-
-void XXXDomNeverCalled();
-void XXXDomNeverCalled()
-{
-  NS_CreateScriptContext(nsnull, nsnull);
-  NS_NewJSEventListener(nsnull, nsnull, nsnull);
-
-  //  nsJSContext* jcx = new nsJSContext(0);
-  //  if (jcx) {
-  NS_NewScriptGlobalObject(0);
-  //  }
-}
+NS_IMPL_NSGETMODULE("DOM components", gDOMModuleInfo)
 
 
 #ifdef DEBUG

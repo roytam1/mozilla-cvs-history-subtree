@@ -168,7 +168,7 @@ nsJSEventListener::GetEventTarget(nsIScriptContext**aContext,
  * Factory functions
  */
 
-extern "C" NS_DOM nsresult
+nsresult
 NS_NewJSEventListener(nsIDOMEventListener ** aInstancePtrResult,
                       nsIScriptContext *aContext, nsISupports *aObject)
 {

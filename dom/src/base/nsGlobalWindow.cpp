@@ -38,6 +38,7 @@
 #include "jsdbgapi.h"           // for JS_ClearWatchPointsForObject
 #include "nsReadableUtils.h"
 #include "nsISupportsPrimitives.h"
+#include "nsIClassInfo.h"
 
 // Other Classes
 #include "nsIEventListenerManager.h"
@@ -119,22 +120,6 @@
 static nsIEntropyCollector* gEntropyCollector = nsnull;
 static PRInt32              gRefCnt           = 0;
 nsIXPConnect *GlobalWindowImpl::sXPConnect    = nsnull;
-
-jsid GlobalWindowImpl::sTop_id = nsnull;
-jsid GlobalWindowImpl::sScrollbars_id = nsnull;
-jsid GlobalWindowImpl::sLocation_id = nsnull;
-jsid GlobalWindowImpl::s_content_id = nsnull;
-jsid GlobalWindowImpl::sContent_id = nsnull;
-jsid GlobalWindowImpl::sSidebar_id = nsnull;
-jsid GlobalWindowImpl::sPrompter_id = nsnull;
-jsid GlobalWindowImpl::sMenubar_id = nsnull;
-jsid GlobalWindowImpl::sToolbar_id = nsnull;
-jsid GlobalWindowImpl::sLocationbar_id = nsnull;
-jsid GlobalWindowImpl::sPersonalbar_id = nsnull;
-jsid GlobalWindowImpl::sStatusbar_id = nsnull;
-jsid GlobalWindowImpl::sDirectories_id = nsnull;
-jsid GlobalWindowImpl::sControllers_id = nsnull;
-jsid GlobalWindowImpl::sLength_id = nsnull;
 
 
 // CIDs
@@ -218,6 +203,484 @@ void GlobalWindowImpl::CleanUp()
 // GlobalWindowImpl::nsISupports
 //*****************************************************************************
 
+
+class nsDOMScriptableHelper : public nsIXPCScriptable
+{
+public:
+  // nsISupports
+  NS_DECL_ISUPPORTS
+
+  // nsIXPCScriptable
+  NS_DECL_NSIXPCSCRIPTABLE
+
+  nsDOMScriptableHelper();
+  virtual ~nsDOMScriptableHelper();
+
+protected:
+  static nsIXPConnect* sXPConnect;
+
+  static PRUint32 sInstanceCount;
+
+  // nsIXPCScriptable code
+  nsresult DefineStaticJSIds(JSContext *cx);
+  PRBool DidDefineStaticJSIds()
+  {
+    return !!sLocation_id;
+  }
+
+  static JSString *sTop_id;
+  static JSString *sScrollbars_id;
+  static JSString *sLocation_id;
+  static JSString *s_content_id;
+  static JSString *sContent_id;
+  static JSString *sSidebar_id;
+  static JSString *sPrompter_id;
+  static JSString *sMenubar_id;
+  static JSString *sToolbar_id;
+  static JSString *sLocationbar_id;
+  static JSString *sPersonalbar_id;
+  static JSString *sStatusbar_id;
+  static JSString *sDirectories_id;
+  static JSString *sControllers_id;
+  static JSString *sLength_id;
+};
+
+JSString *nsDOMScriptableHelper::sTop_id = nsnull;
+JSString *nsDOMScriptableHelper::sScrollbars_id = nsnull;
+JSString *nsDOMScriptableHelper::sLocation_id = nsnull;
+JSString *nsDOMScriptableHelper::s_content_id = nsnull;
+JSString *nsDOMScriptableHelper::sContent_id = nsnull;
+JSString *nsDOMScriptableHelper::sSidebar_id = nsnull;
+JSString *nsDOMScriptableHelper::sPrompter_id = nsnull;
+JSString *nsDOMScriptableHelper::sMenubar_id = nsnull;
+JSString *nsDOMScriptableHelper::sToolbar_id = nsnull;
+JSString *nsDOMScriptableHelper::sLocationbar_id = nsnull;
+JSString *nsDOMScriptableHelper::sPersonalbar_id = nsnull;
+JSString *nsDOMScriptableHelper::sStatusbar_id = nsnull;
+JSString *nsDOMScriptableHelper::sDirectories_id = nsnull;
+JSString *nsDOMScriptableHelper::sControllers_id = nsnull;
+JSString *nsDOMScriptableHelper::sLength_id = nsnull;
+
+PRUint32 nsDOMScriptableHelper::sInstanceCount = 0;
+nsIXPConnect* nsDOMScriptableHelper::sXPConnect = nsnull;
+
+nsDOMScriptableHelper::nsDOMScriptableHelper()
+{
+  NS_INIT_REFCNT();
+
+  if (!sXPConnect) {
+    nsServiceManager::GetService(nsIXPConnect::GetCID(),
+                                 nsIXPConnect::GetIID(),
+                                 (nsISupports **)&sXPConnect);
+  }
+
+  sInstanceCount++;
+}
+
+nsDOMScriptableHelper::~nsDOMScriptableHelper()
+{
+  sInstanceCount--;
+
+  if (!sInstanceCount) {
+    NS_IF_RELEASE(sXPConnect);
+  }
+}
+
+NS_IMPL_ADDREF(nsDOMScriptableHelper);
+NS_IMPL_RELEASE(nsDOMScriptableHelper);
+
+NS_INTERFACE_MAP_BEGIN(nsDOMScriptableHelper)
+  NS_INTERFACE_MAP_ENTRY(nsIXPCScriptable)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+NS_INTERFACE_MAP_END
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::GetClassName(char * *aClassName)
+{
+  *aClassName = nsCRT::strdup("Window");
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::GetScriptableFlags(PRUint32 *aFlags)
+{
+  *aFlags = USE_JSSTUB_FOR_ADDPROPERTY | USE_JSSTUB_FOR_DELPROPERTY |
+    USE_JSSTUB_FOR_SETPROPERTY | ALLOW_PROP_MODS_DURING_RESOLVE |
+    WANT_GETPROPERTY;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::PreCreate(nsISupports *nativeObj, JSContext * cx,
+                                 JSObject * globalObj, JSObject * *parentObj)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::Create(nsIXPConnectWrappedNative *wrapper,
+                              JSContext * cx, JSObject * obj)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::AddProperty(nsIXPConnectWrappedNative *wrapper,
+                                   JSContext * cx, JSObject * obj, jsval id,
+                                   jsval * vp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::DelProperty(nsIXPConnectWrappedNative *wrapper,
+                                   JSContext * cx, JSObject * obj, jsval id,
+                                   jsval * vp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::GetProperty(nsIXPConnectWrappedNative *wrapper,
+                                   JSContext * cx, JSObject * obj, jsval id,
+                                   jsval * vp, PRBool *_retval)
+{
+  *_retval = PR_TRUE;
+
+  if (!DidDefineStaticJSIds()) {
+    DefineStaticJSIds(cx);
+  }
+
+  if (JSVAL_IS_STRING(id)) {
+    // Look for a child frame with the name of the property we're
+    // getting, if we find one we'll return that child frame.
+
+    NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
+
+
+
+    // This code really needs to be in ::Resolve(), this will suck ass
+    // performace wise
+
+    nsCOMPtr<nsISupports> native;
+    wrapper->GetNative(getter_AddRefs(native));
+
+    nsCOMPtr<nsIScriptGlobalObject> global(do_QueryInterface(native));
+
+    nsCOMPtr<nsIDocShell> docShell;
+
+    global->GetDocShell(getter_AddRefs(docShell));
+
+    nsCOMPtr<nsIDocShellTreeNode> dsn(do_QueryInterface(docShell));
+
+    PRInt32 count;
+
+    nsresult rv = dsn->GetChildCount(&count);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (count) {
+      nsCOMPtr<nsIDocShellTreeItem> child;
+
+      JSString *str = JSVAL_TO_STRING(id);
+      const jschar *chars = ::JS_GetStringChars(str);
+
+      rv = dsn->FindChildWithName(NS_REINTERPRET_CAST(const PRUnichar*, chars),
+                                  PR_FALSE, PR_FALSE, nsnull,
+                                  getter_AddRefs(child));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      if (child) {
+        // We found a subframe of the right name.  The rest of this code
+        // is to get its script object.
+
+        nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+
+        rv = sXPConnect->WrapNative(cx, obj, child,
+                                    NS_GET_IID(nsIDOMWindow),
+                                    getter_AddRefs(holder));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        JSObject* child_obj = nsnull; // XPConnect-wrapped property value.
+
+        rv = holder->GetJSObject(&child_obj);
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        *vp = OBJECT_TO_JSVAL(child_obj);
+
+        if (!::JS_DefineUCProperty(cx, obj, chars, ::JS_GetStringLength(str),
+                                   *vp, nsnull, nsnull, 0)) {
+          return NS_ERROR_OUT_OF_MEMORY;
+        }
+
+        return NS_OK;
+      }
+    }
+
+    if (JSVAL_TO_STRING(id) == s_content_id) {
+      // Map window._content to window.content for backwards
+      // compatibility, this should spit out an message on the JS
+      // console.
+
+      nsCOMPtr<nsISupports> native;
+      wrapper->GetNative(getter_AddRefs(native));
+
+      nsCOMPtr<nsIDOMWindowInternal> window(do_QueryInterface(native));
+      nsCOMPtr<nsIDOMWindow> content;
+
+      nsresult rv = window->GetContent(getter_AddRefs(content));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      if (content) {
+        nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+
+        rv = sXPConnect->WrapNative(cx, obj, content, NS_GET_IID(nsISupports),
+                                    getter_AddRefs(holder));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        JSObject* content_obj = nsnull; // XPConnect-wrapped property value.
+
+        rv = holder->GetJSObject(&content_obj);
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        *vp = OBJECT_TO_JSVAL(content_obj);
+      }
+    }
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::SetProperty(nsIXPConnectWrappedNative *wrapper,
+                                   JSContext * cx, JSObject * obj, jsval id,
+                                   jsval * vp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::Enumerate(nsIXPConnectWrappedNative *wrapper,
+                                 JSContext * cx, JSObject * obj,
+                                 PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
+                                    JSContext * cx, JSObject * obj,
+                                    PRUint32 enum_op, jsval * statep,
+                                    jsid *idp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::NewResolve(nsIXPConnectWrappedNative *wrapper,
+                                  JSContext * cx, JSObject * obj, jsval id,
+                                  PRUint32 flags, JSObject * *objp,
+                                  PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::Convert(nsIXPConnectWrappedNative *wrapper,
+                               JSContext * cx, JSObject * obj, PRUint32 type,
+                               jsval * vp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::Finalize(nsIXPConnectWrappedNative *wrapper,
+                                JSContext * cx, JSObject * obj)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::CheckAccess(nsIXPConnectWrappedNative *wrapper,
+                                   JSContext * cx, JSObject * obj, jsval id,
+                                   PRUint32 mode, jsval * vp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::Call(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                            JSObject * obj, PRUint32 argc, jsval * argv,
+                            jsval * vp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::Construct(nsIXPConnectWrappedNative *wrapper,
+                                 JSContext * cx, JSObject * obj, PRUint32 argc,
+                                 jsval * argv, jsval * vp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::HasInstance(nsIXPConnectWrappedNative *wrapper,
+                                   JSContext * cx, JSObject * obj, jsval val,
+                                   PRBool *bp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+nsDOMScriptableHelper::Mark(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                            JSObject * obj, void * arg, PRUint32 *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+
+class nsDOMClassInfo : public nsIClassInfo
+{
+public:
+  nsDOMClassInfo();
+  virtual ~nsDOMClassInfo();
+
+  NS_DECL_ISUPPORTS
+
+  NS_DECL_NSICLASSINFO
+
+  virtual void GetIIDs(nsVoidArray& aArray);
+};
+
+nsDOMClassInfo::nsDOMClassInfo()
+{
+  NS_INIT_REFCNT();
+}
+
+nsDOMClassInfo::~nsDOMClassInfo()
+{
+}
+
+NS_IMPL_ADDREF(nsDOMClassInfo);
+NS_IMPL_RELEASE(nsDOMClassInfo);
+
+NS_INTERFACE_MAP_BEGIN(nsDOMClassInfo)
+  NS_INTERFACE_MAP_ENTRY(nsIClassInfo)
+  NS_INTERFACE_MAP_ENTRY(nsISupports)
+NS_INTERFACE_MAP_END
+
+NS_IMETHODIMP
+nsDOMClassInfo::GetInterfaces(PRUint32 *aCount, nsIID * **aArray)
+{
+  nsAutoVoidArray void_array;
+
+  GetIIDs(void_array);
+
+  PRInt32 i, count = void_array.Count();
+
+  if (!count) {
+    *aCount = 0;
+    *aArray = nsnull;
+
+    return NS_OK;
+  }
+
+  *aArray = NS_STATIC_CAST(nsIID **, nsMemory::Alloc(count * sizeof(nsIID *)));
+  NS_ENSURE_TRUE(*aArray, NS_ERROR_OUT_OF_MEMORY);
+
+  for (i = 0; i < count; i++) {
+    nsIID *iid = NS_STATIC_CAST(nsIID *, nsMemory::Alloc(sizeof(nsIID)));
+
+    if (!iid) {
+      NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(i, *aArray);
+
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    *iid = *NS_STATIC_CAST(nsIID *, void_array.ElementAt(i));
+
+    *((*aArray) + i) = iid;
+  }
+
+  *aCount = count;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMClassInfo::GetHelperForLanguage(PRUint32 language, nsISupports **_retval)
+{
+//  if (language == ...
+  *_retval = new nsDOMScriptableHelper;
+  NS_ADDREF(*_retval);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMClassInfo::GetContractID(char * *aContractID)
+{
+  *aContractID = nsnull;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMClassInfo::GetClassID(nsCID * *aClassID)
+{
+  *aClassID = nsnull;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMClassInfo::GetImplementationLanguage(PRUint32 *aImplLanguage)
+{
+  *aImplLanguage = LANGUAGE_CPP;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMClassInfo::GetFlags(PRUint32 *aFlags)
+{
+  *aFlags = MAIN_THREAD_ONLY;
+
+  return NS_OK;
+}
+
 NS_IMPL_ADDREF(GlobalWindowImpl)
 NS_IMPL_RELEASE(GlobalWindowImpl)
 
@@ -227,7 +690,6 @@ NS_INTERFACE_MAP_BEGIN(GlobalWindowImpl)
   NS_INTERFACE_MAP_ENTRY(nsIDOMWindowInternalEx)
   NS_INTERFACE_MAP_ENTRY(nsIDOMWindow)
   NS_INTERFACE_MAP_ENTRY(nsIDOMJSWindow)
-  NS_INTERFACE_MAP_ENTRY(nsIXPCScriptable)
   NS_INTERFACE_MAP_ENTRY(nsIScriptGlobalObject)
   NS_INTERFACE_MAP_ENTRY(nsIScriptObjectPrincipal)
   NS_INTERFACE_MAP_ENTRY(nsIDOMEventReceiver)
@@ -237,23 +699,200 @@ NS_INTERFACE_MAP_BEGIN(GlobalWindowImpl)
   NS_INTERFACE_MAP_ENTRY(nsIDOMAbstractView)
   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
   NS_INTERFACE_MAP_ENTRY(nsIDOMEventProp)
+  if (aIID.Equals(NS_GET_IID(nsIClassInfo))) {
+    static nsIClassInfo *foo = nsnull;
+
+    if (!foo) {
+      foo = new nsDOMClassInfo;
+      NS_ENSURE_TRUE(foo, NS_ERROR_OUT_OF_MEMORY);
+      NS_ADDREF(foo);
+    }
+
+    foundInterface = foo;
+  } else
 NS_INTERFACE_MAP_END
 
 
-XPC_IMPLEMENT_FORWARD_CREATE(GlobalWindowImpl)
-XPC_IMPLEMENT_FORWARD_GETFLAGS(GlobalWindowImpl)
-XPC_IMPLEMENT_FORWARD_LOOKUPPROPERTY(GlobalWindowImpl)
-XPC_IMPLEMENT_FORWARD_DEFINEPROPERTY(GlobalWindowImpl)
-XPC_IMPLEMENT_FORWARD_GETATTRIBUTES(GlobalWindowImpl)
-XPC_IMPLEMENT_FORWARD_SETATTRIBUTES(GlobalWindowImpl)
-XPC_IMPLEMENT_FORWARD_DELETEPROPERTY(GlobalWindowImpl)
-XPC_IMPLEMENT_FORWARD_DEFAULTVALUE(GlobalWindowImpl)
-XPC_IMPLEMENT_FORWARD_ENUMERATE(GlobalWindowImpl)
-XPC_IMPLEMENT_FORWARD_CHECKACCESS(GlobalWindowImpl)
-XPC_IMPLEMENT_FORWARD_CALL(GlobalWindowImpl)
-XPC_IMPLEMENT_FORWARD_CONSTRUCT(GlobalWindowImpl)
-XPC_IMPLEMENT_FORWARD_HASINSTANCE(GlobalWindowImpl)
-XPC_IMPLEMENT_FORWARD_FINALIZE(GlobalWindowImpl)
+void nsDOMClassInfo::GetIIDs(nsVoidArray& aArray)
+{
+  aArray.AppendElement((void *)&NS_GET_IID(nsIDOMWindowInternalEx));
+  aArray.AppendElement((void *)&NS_GET_IID(nsIDOMJSWindow));
+}
+
+#if 0
+NS_IMETHODIMP
+GlobalWindowImpl::GetClassName(char * *aClassName)
+{
+  *aClassName = nsCRT::strdup("Window");
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::GetFlags(PRUint32 *aFlags)
+{
+  *aFlags = USE_JSSTUB_FOR_ADDPROPERTY | USE_JSSTUB_FOR_DELPROPERTY |
+    USE_JSSTUB_FOR_SETPROPERTY | ALLOW_PROP_MODS_DURING_RESOLVE;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::PreCreate(nsISupports *nativeObj, JSContext * cx,
+                            JSObject * globalObj, JSObject * *parentObj)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::Create(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                         JSObject * obj)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::AddProperty(nsIXPConnectWrappedNative *wrapper,
+                              JSContext * cx, JSObject * obj, jsval id,
+                              jsval * vp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::DelProperty(nsIXPConnectWrappedNative *wrapper,
+                              JSContext * cx, JSObject * obj, jsval id,
+                              jsval * vp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::GetProperty(nsIXPConnectWrappedNative *wrapper,
+                              JSContext * cx, JSObject * obj, jsval id,
+                              jsval * vp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::SetProperty(nsIXPConnectWrappedNative *wrapper,
+                              JSContext * cx, JSObject * obj, jsval id,
+                              jsval * vp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::Enumerate(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                            JSObject * obj, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
+                               JSContext * cx, JSObject * obj,
+                               PRUint32 enum_op, jsval * statep, jsid *idp,
+                               PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::NewResolve(nsIXPConnectWrappedNative *wrapper,
+                             JSContext * cx, JSObject * obj, jsval id,
+                             PRUint32 flags, JSObject * *objp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::Convert(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                          JSObject * obj, PRUint32 type, jsval * vp,
+                          PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::Finalize(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                           JSObject * obj)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::CheckAccess(nsIXPConnectWrappedNative *wrapper,
+                              JSContext * cx, JSObject * obj, jsval id,
+                              PRUint32 mode, jsval * vp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::Call(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                       JSObject * obj, PRUint32 argc, jsval * argv, jsval * vp,
+                       PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::Construct(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                            JSObject * obj, PRUint32 argc, jsval * argv,
+                            jsval * vp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::HasInstance(nsIXPConnectWrappedNative *wrapper,
+                              JSContext * cx, JSObject * obj, jsval val,
+                              PRBool *bp, PRBool *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::Mark(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
+                       JSObject * obj, void * arg, PRUint32 *_retval)
+{
+  NS_ERROR("Don't call me!");
+
+  return NS_ERROR_UNEXPECTED;
+}
+#endif
 
 
 static JSContext * GetCurrentContext()
@@ -286,57 +925,43 @@ DefineJSId(JSContext *cx, const char *str, jsval *val)
 
 // static
 nsresult
-GlobalWindowImpl::DefineStaticJSIds(JSContext *cx)
+nsDOMScriptableHelper::DefineStaticJSIds(JSContext *cx)
 {
-  if (!DefineJSId(cx, "top", &sTop_id))
-    return NS_ERROR_FAILURE;
+  sTop_id = ::JS_InternString(cx, "top");
 
-  if (!DefineJSId(cx, "scrollbars", &sScrollbars_id))
-    return NS_ERROR_FAILURE;
+  sScrollbars_id = ::JS_InternString(cx, "scrollbars");
 
-  if (!DefineJSId(cx, "location", &sLocation_id))
-    return NS_ERROR_FAILURE;
+  sLocation_id = ::JS_InternString(cx, "location");
 
-  if (!DefineJSId(cx, "_content", &s_content_id))
-    return NS_ERROR_FAILURE;
+  s_content_id = ::JS_InternString(cx, "_content");
 
-  if (!DefineJSId(cx, "content", &sContent_id))
-    return NS_ERROR_FAILURE;
+  sContent_id = ::JS_InternString(cx, "content");
 
-  if (!DefineJSId(cx, "sidebar", &sSidebar_id))
-    return NS_ERROR_FAILURE;
+  sSidebar_id = ::JS_InternString(cx, "sidebar");
 
-  if (!DefineJSId(cx, "prompter", &sPrompter_id))
-    return NS_ERROR_FAILURE;
+  sPrompter_id = ::JS_InternString(cx, "prompter");
 
-  if (!DefineJSId(cx, "menubar", &sMenubar_id))
-    return NS_ERROR_FAILURE;
+  sMenubar_id = ::JS_InternString(cx, "menubar");
 
-  if (!DefineJSId(cx, "toolbar", &sToolbar_id))
-    return NS_ERROR_FAILURE;
+  sToolbar_id = ::JS_InternString(cx, "toolbar");
 
-  if (!DefineJSId(cx, "locationbar", &sLocationbar_id))
-    return NS_ERROR_FAILURE;
+  sLocationbar_id = ::JS_InternString(cx, "locationbar");
 
-  if (!DefineJSId(cx, "personalbar", &sPersonalbar_id))
-    return NS_ERROR_FAILURE;
+  sPersonalbar_id = ::JS_InternString(cx, "personalbar");
 
-  if (!DefineJSId(cx, "statusbar", &sStatusbar_id))
-    return NS_ERROR_FAILURE;
+  sStatusbar_id = ::JS_InternString(cx, "statusbar");
 
-  if (!DefineJSId(cx, "directories", &sDirectories_id))
-    return NS_ERROR_FAILURE;
+  sDirectories_id = ::JS_InternString(cx, "directories");
 
-  if (!DefineJSId(cx, "controllers", &sControllers_id))
-    return NS_ERROR_FAILURE;
+  sControllers_id = ::JS_InternString(cx, "controllers");
 
-  if (!DefineJSId(cx, "length", &sLength_id))
-    return NS_ERROR_FAILURE;
+  sLength_id = ::JS_InternString(cx, "length");
 
   return NS_OK;
 }
 
 
+#if 0
 NS_IMETHODIMP
 GlobalWindowImpl::GetProperty(JSContext *cx, JSObject *obj,
                               jsid id, jsval *vp,
@@ -521,6 +1146,7 @@ GlobalWindowImpl::SetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp,
 
   return arbitrary->SetProperty(cx, obj, id, vp, wrapper, NULL, retval);
 }
+#endif
 
 
 //*****************************************************************************
@@ -3515,16 +4141,15 @@ GlobalWindowImpl::OpenInternal(const nsAReadableString& aUrl,
 
 
 
-      /*
-      nsJSUtils::nsGetStaticScriptContext(cx, mScriptObject,
-                                          getter_AddRefs(scriptCX));
-      if (!scriptCX ||
-          NS_FAILED(scriptCX->GetSecurityManager(getter_AddRefs(secMan))) ||
-          ((!aDialog && NS_FAILED(secMan->CheckLoadURIFromScript(cx, uriToLoad)))))
-        return NS_ERROR_FAILURE;
-      */
+    nsJSUtils::nsGetStaticScriptContext(ccx, mScriptObject,
+                                        getter_AddRefs(scriptCX));
+    if (!scriptCX ||
+        NS_FAILED(scriptCX->GetSecurityManager(getter_AddRefs(secMan))) ||
+        ((!aDialog && NS_FAILED(secMan->CheckLoadURIFromScript(ccx,
+                                                               uriToLoad)))))
+      return NS_ERROR_FAILURE;
 
-
+    /*
     if (ccx) {
       nsISupports *cxprivate = (nsISupports *)::JS_GetContextPrivate(ccx);
 
@@ -3535,6 +4160,7 @@ GlobalWindowImpl::OpenInternal(const nsAReadableString& aUrl,
           ((!aDialog && NS_FAILED(secMan->CheckLoadURIFromScript(ccx, uriToLoad)))))
         return NS_ERROR_FAILURE;
     }
+    */
   }
 
   newDocShellItem->SetName(nameSpecified ? name.GetUnicode() : nsnull);
@@ -5239,8 +5865,7 @@ GlobalWindowImpl::SetOnscroll(nsISupports* aOnscroll)
 // GlobalWindowImpl: Creator Function (This should go away)
 //*****************************************************************************
 
-extern
-"C" NS_DOM nsresult NS_NewScriptGlobalObject(nsIScriptGlobalObject **aResult)
+nsresult NS_NewScriptGlobalObject(nsIScriptGlobalObject **aResult)
 {
   NS_ENSURE_ARG_POINTER(aResult);
 

@@ -83,7 +83,8 @@
     d->mName = nsnull;                                                        \
     d->mGetIIDsFptr = nsnull;                                                 \
     d->mConstructorFptr = _ctor;                                              \
-    d->mFlags = _flags
+    d->mClassInfoFlags = nsIClassInfo::MAIN_THREAD_ONLY;                      \
+    d->mScriptableFlags = _flags
 
 #define NS_DEFINE_CLASSINFO_DATA_TAIL                                         \
   }
@@ -110,7 +111,8 @@ struct nsDOMClassInfoData
   GetDOMClassIIDsFnc mGetIIDsFptr;
   nsDOMClassInfoConstructorFnc mConstructorFptr;
   nsIClassInfo *mCachedClassInfo;
-  PRUint32 mFlags;
+  PRUint32 mClassInfoFlags;
+  PRUint32 mScriptableFlags; // Do we need this here?
 };
 
 
@@ -230,7 +232,7 @@ nsDOMClassInfo::GetImplementationLanguage(PRUint32 *aImplLanguage)
 NS_IMETHODIMP
 nsDOMClassInfo::GetFlags(PRUint32 *aFlags)
 {
-  *aFlags = sClassInfoData[mID].mFlags;
+  *aFlags = sClassInfoData[mID].mClassInfoFlags;
 
   return NS_OK;
 }
@@ -241,6 +243,14 @@ NS_IMETHODIMP
 nsDOMClassInfo::GetClassName(char * *aClassName)
 {
   *aClassName = nsCRT::strdup(sClassInfoData[mID].mName);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMClassInfo::GetScriptableFlags(PRUint32 *aFlags)
+{
+  *aFlags = sClassInfoData[mID].mScriptableFlags;
 
   return NS_OK;
 }

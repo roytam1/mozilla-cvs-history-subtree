@@ -88,8 +88,7 @@ class GlobalWindowImpl : public nsIScriptGlobalObject,
                          public nsPIDOMWindow,
                          public nsIDOMViewCSS,
                          public nsSupportsWeakReference,
-                         public nsIDOMEventProp,
-                         public nsIXPCScriptable
+                         public nsIDOMEventProp
 {
 public:
   // nsISupports
@@ -123,8 +122,6 @@ public:
 
   // nsIDOMJSWindow
   NS_DECL_NSIDOMJSWINDOW
-
-  XPC_DECLARE_IXPCSCRIPTABLE
 
   // nsIJSScriptObject
   virtual PRBool AddProperty(JSContext *aContext, JSObject *aObj,
@@ -282,31 +279,8 @@ protected:
   nsCOMPtr<nsIDOMPkcs11>        mPkcs11;
   nsCOMPtr<nsIPrincipal>        mDocumentPrincipal;
 
-  // nsIXPCScriptable code
-  nsresult DefineStaticJSIds(JSContext *cx);
-  PRBool DidDefineStaticJSIds()
-  {
-    return sLocation_id;
-  }
-
+  friend class nsDOMScriptableHelper;
   static nsIXPConnect *sXPConnect;
-  static PRUint32 sInstanceCount;
-
-  static jsid sTop_id;
-  static jsid sScrollbars_id;
-  static jsid sLocation_id;
-  static jsid s_content_id;
-  static jsid sContent_id;
-  static jsid sSidebar_id;
-  static jsid sPrompter_id;
-  static jsid sMenubar_id;
-  static jsid sToolbar_id;
-  static jsid sLocationbar_id;
-  static jsid sPersonalbar_id;
-  static jsid sStatusbar_id;
-  static jsid sDirectories_id;
-  static jsid sControllers_id;
-  static jsid sLength_id;
 };
 
 /*

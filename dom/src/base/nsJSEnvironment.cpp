@@ -1029,21 +1029,34 @@ nsJSContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
     return NS_ERROR_OUT_OF_MEMORY;
 
   nsresult rv;
-  //  nsCOMPtr<nsIScriptObjectOwner> owner = do_QueryInterface(aGlobalObject, &rv);
-  JSObject *global;
   mIsInitialized = PR_FALSE;
 
-  nsCOMPtr<nsIXPConnect> xpc = do_GetService(kXPConnectServiceContractID);
-  if (!xpc)
-    return nsnull;
+  nsCOMPtr<nsIXPConnect> xpc = do_GetService(kXPConnectServiceContractID, &rv);
+  if (NS_FAILED(rv))
+    return rv;
 
   nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
   rv = xpc->InitClassesWithNewWrappedGlobal(mContext, aGlobalObject,
-                                            NS_GET_IID(nsIDOMWindowInternal),
+                                            NS_GET_IID(nsISupports),
+
+
+
+
+
+
+                                            PR_TRUE,
+
+
+
+
+
+
+
                                             getter_AddRefs(holder));
   if (NS_FAILED(rv))
     return nsnull;
 
+  JSObject *global = nsnull;
   rv = holder->GetJSObject(&global);
   if (NS_FAILED(rv))
     return nsnull;
@@ -1577,8 +1590,9 @@ nsIScriptContext* nsJSEnvironment::GetNewContext()
   return context;
 }
 
-extern "C" NS_DOM nsresult NS_CreateScriptContext(nsIScriptGlobalObject *aGlobal,
-                                                  nsIScriptContext **aContext)
+nsresult
+NS_CreateScriptContext(nsIScriptGlobalObject *aGlobal,
+                       nsIScriptContext **aContext)
 {
   nsJSEnvironment *environment = nsJSEnvironment::GetScriptingEnvironment();
   if (!environment)

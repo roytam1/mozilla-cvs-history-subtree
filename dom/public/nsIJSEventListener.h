@@ -45,8 +45,4 @@ public:
   NS_IMETHOD SetEventName(nsIAtom* aName) = 0;
 };
 
-extern "C" NS_DOM nsresult
-NS_NewJSEventListener(nsIDOMEventListener ** aInstancePtrResult,
-                      nsIScriptContext *aContext, nsISupports* aObject);
-
 #endif // nsIJSEventListener_h__

@@ -82,6 +82,4 @@ public:
   NS_IMETHOD_(JSObject *) GetGlobalJSObject() = 0;
 };
 
-extern "C" NS_DOM nsresult NS_NewScriptGlobalObject(nsIScriptGlobalObject **aGlobal);
-
 #endif

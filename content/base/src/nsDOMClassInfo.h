@@ -134,13 +134,7 @@ public:
 
   NS_DECL_ISUPPORTS
 
-  // NS_DECL_NSICLASSINFO, can't use the macro since GetFlags is
-  // defined in both NS_DECL_NSICLASSINFO and NS_DECL_NSIXPCSCRIPTABLE.
-  NS_IMETHOD GetInterfaces(PRUint32 *count, nsIID * **array);
-  NS_IMETHOD GetHelperForLanguage(PRUint32 language, nsISupports **_retval);
-  NS_IMETHOD GetContractID(char * *aContractID);
-  NS_IMETHOD GetClassID(nsCID * *aClassID);
-  NS_IMETHOD GetImplementationLanguage(PRUint32 *aImplementationLanguage);
+  NS_DECL_NSICLASSINFO
 
   // Helper class that returns a *non* refcounted pointer to a
   // helper. So please note, don't release this pointer, if you do,
