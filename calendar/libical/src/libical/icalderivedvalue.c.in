@@ -39,13 +39,8 @@
 #include "icalvalueimpl.h"
 
 #include <stdlib.h> /* for malloc */
-#include <stdio.h> /* for sprintf */
 #include <string.h> /* For memset, others */
-#include <stddef.h> /* For offsetof() macro */
 #include <errno.h>
-#include <time.h> /* for mktime */
-#include <stdlib.h> /* for atoi and atof */
-#include <limits.h> /* for SHRT_MAX */         
 
 struct icalvalue_impl*  icalvalue_new_impl(icalvalue_kind kind);
 

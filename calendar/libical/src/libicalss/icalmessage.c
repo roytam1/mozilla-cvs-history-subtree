@@ -115,7 +115,7 @@ icalcomponent *icalmessage_new_reply_base(icalcomponent* c,
 					    const char* msg)
 {
     icalproperty *attendee;
-    char tmp[45];
+    char tmp[1024];
 
     icalcomponent *reply = icalcomponent_vanew(
 	ICAL_VCALENDAR_COMPONENT,
@@ -159,10 +159,10 @@ icalcomponent *icalmessage_new_reply_base(icalcomponent* c,
     icalcomponent_add_property(reply,icalproperty_new_version("2.0"));
     
 #ifndef WIN32    
-    sprintf(tmp,
+    snprintf(tmp,sizeof(tmp),
            "-//SoftwareStudio//NONSGML %s %s //EN",PACKAGE,VERSION);
 #else
-    sprintf(tmp,
+    snprintf(tmp,sizeof(tmp),
            "-//SoftwareStudio//NONSGML %s %s //EN",ICAL_PACKAGE,ICAL_VERSION);
 #endif
     icalcomponent_add_property(reply,icalproperty_new_prodid(tmp));

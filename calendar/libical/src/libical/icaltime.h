@@ -206,6 +206,10 @@ int icaltime_start_doy_of_week(const struct icaltimetype t);
 
 /** Return the day of the year for the first day of the week that the
    given time is within. */
+int icaltime_start_doy_in_week(const struct icaltimetype t, int fdow);
+
+/** Return the day of the year for the first day of the week that the
+   given time is within. */
 int icaltime_start_doy_week(const struct icaltimetype t, int fdow);
 
 /** Return the week number for the week the given time is within */
