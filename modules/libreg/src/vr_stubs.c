@@ -20,16 +20,14 @@
  * into a stand-alone library for use with our installers
  */
 
-#include "vr_stubs.h"
-
-#ifdef STANDALONE_REGISTRY
 #include <stdio.h>
 #include <string.h>
-#else
+
+#ifndef STANDALONE_REGISTRY
 #include "prtypes.h"
-#include "plstr.h"
-#include "prmem.h"
 #endif
+
+#include "vr_stubs.h"
 
 #ifdef XP_MAC
 #include <Folders.h>
@@ -49,8 +47,6 @@ extern char* globalRegName;
 #define INCL_DOS
 #include <os2.h>
 
-
-#ifdef STANDALONE_REGISTRY
 extern XP_File vr_fileOpen (const char *name, const char * mode)
 {
     XP_File fh = NULL;
@@ -65,24 +61,24 @@ extern XP_File vr_fileOpen (const char *name, const char * mode)
 
     return fh;
 }
-#endif /*STANDALONE_REGISTRY*/
 
 extern void vr_findGlobalRegName ()
 {
     char    path[ CCHMAXPATH ];
     int     pathlen;
+    XP_File fh = NULL;
     struct stat st;
 
 #ifdef XP_OS2_HACK
     /*DSR050197 - at this point, I need some front-end call to get the install directory of*/
     /*communicator... for now I will let it default to the current directory...*/
 #endif
-    PL_strcpy(path, ".");
+    XP_STRCPY(path, ".");
     pathlen = strlen(path);
 
     if ( pathlen > 0 ) {
-        PL_strcpy( path+pathlen, "\\nsreg.dat" );
-        globalRegName = PL_strdup(path);
+        XP_STRCPY( path+pathlen, "\\nsreg.dat" );
+        globalRegName = XP_STRDUP(path);
     }
 }
 #endif /* XP_OS2 */
@@ -96,7 +92,6 @@ extern void vr_findGlobalRegName ()
 #include "windows.h"
 #define PATHLEN 260
 
-#ifdef STANDALONE_REGISTRY
 extern XP_File vr_fileOpen (const char *name, const char * mode)
 {
     XP_File fh = NULL;
@@ -111,7 +106,6 @@ extern XP_File vr_fileOpen (const char *name, const char * mode)
 
     return fh;
 }
-#endif /*STANDALONE_REGISTRY*/
 
 extern void vr_findGlobalRegName ()
 {
@@ -120,8 +114,8 @@ extern void vr_findGlobalRegName ()
    
     pathlen = GetWindowsDirectory(path, PATHLEN);
     if ( pathlen > 0 ) {
-        PL_strcpy( path+pathlen, "\\nsreg.dat" );
-        globalRegName = PL_strdup(path);
+        XP_STRCPY( path+pathlen, "\\nsreg.dat" );
+        globalRegName = XP_STRDUP(path);
     }
 }
 
@@ -129,22 +123,17 @@ extern void vr_findGlobalRegName ()
 #if !defined(WIN32) && !defined(__BORLANDC__)
 int FAR PASCAL _export WEP(int);
 
-#ifdef STANDALONE_REGISTRY
 int FAR PASCAL LibMain(HANDLE hInst, WORD wDataSeg, WORD wHeapSize, LPSTR lpszCmdLine)
 {
     if ( wHeapSize > 0 )
         UnlockData(0);
     return 1;
 }
-#endif /*STANDALONE_REGISTRY*/
 
-#ifdef STANDALONE_REGISTRY
 int FAR PASCAL _export WEP(int nParam)
 { 
     return 1; 
 }
-#endif /*STANDALONE_REGISTRY*/
-
 #endif /* not WIN32 */
 
 #endif /* XP_PC */
@@ -159,7 +148,6 @@ int FAR PASCAL _export WEP(int nParam)
 #include <Files.h>
 #include "FullPath.h"
 
-#ifdef STANDALONE_REGISTRY
 extern XP_File vr_fileOpen (const char *name, const char * mode)
 {
     XP_File fh = NULL;
@@ -192,7 +180,6 @@ extern XP_File vr_fileOpen (const char *name, const char * mode)
 	}
     return fh;
 }
-#endif /*STANDALONE_REGISTRY*/
 
 extern void vr_findGlobalRegName ()
 {
@@ -200,12 +187,15 @@ extern void vr_findGlobalRegName ()
     OSErr	err;
     short	foundVRefNum;
     long	foundDirID;
+    short	pathLen;
+    Handle	thePath;
     int     bCreate = 0;
+	Ptr		finalPath;
 	
-	err = FindFolder(kOnSystemDisk, kPreferencesFolderType, false, &foundVRefNum, &foundDirID);
+	err = FindFolder(kOnSystemDisk,'pref', false, &foundVRefNum, &foundDirID);
 
-	if (!err)
-	{
+	if (!err) {
+
 		err = FSMakeFSSpec(foundVRefNum, foundDirID, "\pNetscape Registry", &regSpec);
 
 		if (err == -43) { /* if file doesn't exist */
@@ -213,42 +203,17 @@ extern void vr_findGlobalRegName ()
             bCreate = 1;
 		}
 
-		if (err == noErr)
-		{
-		    Handle thePath;
-		    short pathLen;
-	#if 1
-			const char* src;
-			char* dst;
+		if (err == noErr) {
 			err = FSpGetFullPath(&regSpec, &pathLen, &thePath);
-			if (err == noErr && thePath)
-			{
-				/* Since we're now using NSPR, this HAS to be a unix path! */
-				globalRegName = (char*)PR_Malloc(pathLen + 2);
-				src = *(char**)thePath;
-				dst = globalRegName;
-				*dst++ = '/';
-				while (pathLen--)
-				{
-					char c = *src++;
-					*dst++ = (c == ':') ? '/' : c;
-				}
-				*dst = '\0';
-			}
-	#else
-			Ptr finalPath;
-			err = FSpGetFullPath(&regSpec, &pathLen, &thePath);
-			finalPath = NewPtrClear(pathLen + 1);
+			
+			finalPath = NewPtrClear(pathLen+1);
 			BlockMoveData(*thePath, finalPath, pathLen);
-			globalRegName = PL_strdup(finalPath);			
-	        DisposePtr(finalPath);
-	#endif
-			DisposeHandle(thePath);
-	}
+			globalRegName = XP_STRDUP(finalPath);			
+            DisposePtr(finalPath);
+		}
 	}
 }
 
-#ifdef STANDALONE_REGISTRY
 /* Moves and renames a file or directory.
    Returns 0 on success, -1 on failure (errno contains mac error code).
  */
@@ -290,10 +255,9 @@ extern int nr_RenameFile(char *from, char *to)
 		errno = err;
 	return (err == noErr ? 0 : -1);
 }
-#endif /*STANDALONE_REGISTRY*/
 
 
-#if 0
+#if 1
 /* Uncomment the following for older Mac build environments
  * that don't support these functions
  */
@@ -304,7 +268,7 @@ char *strdup(const char *source)
 
         stringLength = strlen(source) + 1;
 
-        newAllocation = (char *)PR_Malloc(stringLength);
+        newAllocation = (char *)XP_ALLOC(stringLength);
         if (newAllocation == NULL)
                 return NULL;
         BlockMoveData(source, newAllocation, stringLength);
@@ -410,7 +374,6 @@ int main(int argc, char *argv[]);
 
 #define DEF_REG "/.netscape/registry"
 
-#ifdef STANDALONE_REGISTRY
 extern XP_File vr_fileOpen (const char *name, const char * mode)
 {
     XP_File fh = NULL;
@@ -425,7 +388,6 @@ extern XP_File vr_fileOpen (const char *name, const char * mode)
 
     return fh;
 }
-#endif /*STANDALONE_REGISTRY*/
 
 extern void vr_findGlobalRegName ()
 {
@@ -433,18 +395,18 @@ extern void vr_findGlobalRegName ()
     char *def = NULL;
     char *home = getenv("HOME");
     if (home != NULL) {
-        def = (char *) PR_Malloc(PL_strlen(home) + PL_strlen(DEF_REG)+1);
+        def = (char *) XP_ALLOC(XP_STRLEN(home) + XP_STRLEN(DEF_REG)+1);
         if (def != NULL) {
-          PL_strcpy(def, home);
-          PL_strcat(def, DEF_REG);
+          XP_STRCPY(def, home);
+          XP_STRCAT(def, DEF_REG);
         }
     }
     if (def != NULL) {
-        globalRegName = PL_strdup(def);
+        globalRegName = XP_STRDUP(def);
     } else {
         globalRegName = TheRegistry;
     }
-    PR_FREEIF(def);
+    XP_FREEIF(def);
 #else
     globalRegName = TheRegistry;
 #endif
