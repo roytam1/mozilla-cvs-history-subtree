@@ -52,7 +52,6 @@
 
 /* -------- local defines --------------- 
 */
-#define MAXREGVERLEN 32	/* Version=12345.12345.12345.12345 */
 
 #define VERSTR	"Version"
 #define CHKSTR	"Check"
@@ -120,8 +119,8 @@ static REGERR vr_GetPathname(HREG reg, RKEY key, char *entry, char *buf, uint32 
 static REGERR vr_FindKey(char *name, HREG *hreg, RKEY *key);
 
 static REGERR vr_GetUninstallItemPath(char *regPackageName, char *regbuf, uint32 regbuflen);
-static REGERR vr_convertPackageName(char *regPackageName, char *convertedPackageName, uint32 convertedDataLength);
-static REGERR vr_unmanglePackageName(char *mangledPackageName, char *regPackageName, uint32 regPackageLength);
+static REGERR vr_EncodePackageName(char *regPackageName, char *convertedPackageName, uint32 convertedDataLength);
+static REGERR vr_DecodePackageName(char *mangledPackageName, char *regPackageName, uint32 regPackageLength);
 
 #ifdef XP_MAC
 static void vr_MacAliasFromPath(const char * fileName, void ** alias, int32 * length);
@@ -532,7 +531,7 @@ static REGERR vr_SetCurrentNav( char *installation, char *programPath, char *ver
                 bFound = TRUE;
             }
         }
-        
+        err = 0; /* ??? */
         /* Look for an existing installation if not found */
         state = 0;
         while (!bFound && ((err == REGERR_OK) || (err == REGERR_NOFILE)) ) {
@@ -631,6 +630,8 @@ static REGERR vr_FindKey(char *component_path, HREG *hreg, RKEY *key)
 
 
 
+
+
 /* ---------------------------------------------------------------------
  * Interface
  * ---------------------------------------------------------------------
@@ -647,6 +648,10 @@ VR_INTERFACE(REGERR) VR_PackRegistry(void *userData, nr_RegPackCallbackFunc fn)
 
     /* make sure vreg (src) is open */
     err = vr_Init();
+    if (err != REGERR_OK)
+        return err;
+
+    err = VR_DeleteMissingFileNodes();
     if (err != REGERR_OK)
         return err;
 
@@ -803,6 +808,11 @@ VR_INTERFACE(REGERR) VR_GetPath(char *component_path, uint32 sizebuf, char *buf)
 	RKEY key;
     HREG hreg;
 
+    if ( component_path == NULL )
+    {
+        return REGERR_PARAM;
+    }
+
 	err = vr_Init();
 	if (err != REGERR_OK)
 		return err;
@@ -883,7 +893,7 @@ VR_INTERFACE(REGERR) VR_Install(char *component_path, char *filepath, char *vers
 	REGERR err;
 	RKEY rootKey;
 	RKEY key;
-
+    
 	/* Initialize the registry in case this is first call */
 	err = vr_Init();
 	if (err != REGERR_OK)
@@ -933,6 +943,11 @@ VR_INTERFACE(REGERR) VR_Remove(char *component_path)
 	REGERR err;
 	RKEY rootkey;
 
+    if ( component_path == NULL )
+    {
+        return REGERR_PARAM;
+    }
+
 	err = vr_Init();
 	if (err != REGERR_OK)
 		return err;
@@ -955,13 +970,13 @@ VR_INTERFACE(REGERR) VR_Enum(char *component_path, REGENUM *state,
 		return err;
 
     if ( component_path == NULL )
-        rootkey = ROOTKEY_VERSIONS;
-    else
+        key = ROOTKEY_VERSIONS;
+    else {
         rootkey = PATH_ROOT(component_path);
-
-    err = NR_RegGetKey( vreg, rootkey, component_path, &key );
-	if (err != REGERR_OK)
-		return err;
+        err = NR_RegGetKey( vreg, rootkey, component_path, &key );
+	    if (err != REGERR_OK)
+		    return err;
+    }
 
     err = NR_RegEnumSubkeys( vreg, key, state, buffer, buflen, REGENUM_DEPTH_FIRST);
 
@@ -975,6 +990,11 @@ VR_INTERFACE(REGERR) VR_InRegistry(char *component_path)
 	RKEY rootkey;
 	RKEY key;
     HREG hreg;
+    
+    if ( component_path == NULL )
+    {
+        return REGERR_PARAM;
+    }
 
 	err = vr_Init();
 	if (err != REGERR_OK)
@@ -1124,6 +1144,11 @@ VR_INTERFACE(REGERR) VR_GetRefCount(char *component_path, int *result)
 	char    buf[MAXREGNAMELEN];
 
     *result = -1; 
+    
+    if ( component_path == NULL )
+    {
+        return REGERR_PARAM;
+    }
 
 	err = vr_Init();
 	if (err != REGERR_OK)
@@ -1224,7 +1249,7 @@ static REGERR vr_GetUninstallItemPath(char *regPackageName, char *regbuf, uint32
  * Replaces all '/' with '_',in the given string.If an '_' already exists in the
  * given string, it is escaped by adding another '_' to it.
  */
-static REGERR vr_convertPackageName(char *regPackageName, char *convertedPackageName, uint32 convertedDataLength)
+static REGERR vr_EncodePackageName(char *regPackageName, char *convertedPackageName, uint32 convertedDataLength)
 {
     int32 length = 0;
     int i;
@@ -1284,7 +1309,7 @@ static REGERR vr_convertPackageName(char *regPackageName, char *convertedPackage
     return REGERR_OK;
 }
 
-static REGERR vr_unmanglePackageName(char *mangledPackageName, char *regPackageName, uint32 regPackageLength)
+static REGERR vr_DecodePackageName(char *mangledPackageName, char *regPackageName, uint32 regPackageLength)
 {
     int32 length = 0;
     int i = 0;
@@ -1337,24 +1362,39 @@ VR_INTERFACE(REGERR) VR_UninstallCreateNode(char *regPackageName, char *userPack
 	RKEY key;
     char *regbuf;
     uint32 regbuflen = 0;
+    
+    char *convertedName = NULL;
+    uint32 convertedDataLength = 0;
 
     err = vr_Init();
 	if (err != REGERR_OK)
 		return err;
 
-    if ( regPackageName == NULL )
-        err = REGERR_PARAM;
-   
-    if ( userPackageName == NULL)
-        err = REGERR_PARAM;
+    if ( regPackageName == NULL || userPackageName == NULL)
+        return REGERR_PARAM;
 
-    regbuflen = 256 + XP_STRLEN(regPackageName);
+    convertedDataLength = 2 * XP_STRLEN(regPackageName) + 1;
+    convertedName = (char*)XP_ALLOC(convertedDataLength);
+    if (convertedName == NULL ) {
+        err = REGERR_MEMORY;
+        return err;
+    }
+  
+    err = vr_EncodePackageName(regPackageName, convertedName, convertedDataLength);
+    if (err != REGERR_OK) {
+        XP_FREE(convertedName);
+		return err;
+    }
+
+
+    regbuflen = 256 + XP_STRLEN(convertedName);
     regbuf = (char*)XP_ALLOC( regbuflen );
     if (regbuf != NULL )
     {
-        err = vr_GetUninstallItemPath(regPackageName, regbuf, regbuflen);  
+        err = vr_GetUninstallItemPath(convertedName, regbuf, regbuflen);  
         if (err != REGERR_OK)
         {
+            XP_FREEIF(convertedName);
             XP_FREE(regbuf);
 		    return err;
         }
@@ -1369,6 +1409,8 @@ VR_INTERFACE(REGERR) VR_UninstallCreateNode(char *regPackageName, char *userPack
 	if (err == REGERR_OK)
         err = NR_RegSetEntryString( vreg, key, PACKAGENAMESTR, userPackageName );
   
+    XP_FREEIF(convertedName);
+
    	return err;
 
 }	/* UninstallCreateNode */
@@ -1396,7 +1438,7 @@ VR_INTERFACE(REGERR) VR_GetUninstallUserName(char *regPackageName, char *outbuf,
         return err;
     }
   
-    err = vr_convertPackageName(regPackageName, convertedName, convertedDataLength);
+    err = vr_EncodePackageName(regPackageName, convertedName, convertedDataLength);
     if (err != REGERR_OK) {
         XP_FREE(convertedName);
 		return err;
@@ -1429,22 +1471,36 @@ VR_INTERFACE(REGERR) VR_UninstallAddFileToList(char *regPackageName, char *vrNam
     uint32 regbuflen = 0;
     uint32 curregbuflen = 0;
     uint32 len = 0;
-   	
+   	char *convertedName = NULL;
+    uint32 convertedDataLength = 0;
+
+
     err = vr_Init();
 	if (err != REGERR_OK)
 		return err;
 
-    if ( regPackageName == NULL )
+    if ( regPackageName == NULL || vrName == NULL )
         err = REGERR_PARAM;
 
-    if ( vrName == NULL )
-        err = REGERR_PARAM;
 
-    regbuflen = 256 + XP_STRLEN(regPackageName);
+    convertedDataLength = 2 * XP_STRLEN(regPackageName) + 1;
+    convertedName = (char*)XP_ALLOC(convertedDataLength);
+    if (convertedName == NULL ) {
+        err = REGERR_MEMORY;
+        return err;
+    }
+  
+    err = vr_EncodePackageName(regPackageName, convertedName, convertedDataLength);
+    if (err != REGERR_OK) {
+        XP_FREEIF(convertedName);
+		return err;
+    }
+
+    regbuflen = 256 + XP_STRLEN(convertedName);
     regbuf = (char*)XP_ALLOC( regbuflen );
     if (regbuf != NULL )
     {
-        err = vr_GetUninstallItemPath(regPackageName, regbuf, regbuflen);
+        err = vr_GetUninstallItemPath(convertedName, regbuf, regbuflen);
         if (err == REGERR_OK)
         {
             curregbuflen = XP_STRLEN(regbuf);
@@ -1458,6 +1514,7 @@ VR_INTERFACE(REGERR) VR_UninstallAddFileToList(char *regPackageName, char *vrNam
                 err = REGERR_BUFTOOSMALL;
         }
         XP_FREEIF(regbuf);
+
     }
     else
     {
@@ -1471,6 +1528,8 @@ VR_INTERFACE(REGERR) VR_UninstallAddFileToList(char *regPackageName, char *vrNam
 
     err = NR_RegSetEntryString( vreg, key, vrName, "");
   
+    XP_FREEIF(convertedName);
+
     return err;
 
 }	/* UninstallAddFileToList */
@@ -1485,6 +1544,10 @@ VR_INTERFACE(REGERR) VR_UninstallFileExistsInList(char *regPackageName, char *vr
     uint32 curregbuflen = 0;
     uint32 len = 0;
    	
+    char *convertedName = NULL;
+    uint32 convertedDataLength = 0;
+
+
     err = vr_Init();
 	if (err != REGERR_OK)
 		return err;
@@ -1495,11 +1558,24 @@ VR_INTERFACE(REGERR) VR_UninstallFileExistsInList(char *regPackageName, char *vr
     if ( vrName == NULL )
         err = REGERR_PARAM;
 
-    regbuflen = 256 + XP_STRLEN(regPackageName);
+    convertedDataLength = 2 * XP_STRLEN(regPackageName) + 1;
+    convertedName = (char*)XP_ALLOC(convertedDataLength);
+    if (convertedName == NULL ) {
+        err = REGERR_MEMORY;
+        return err;
+    }
+  
+    err = vr_EncodePackageName(regPackageName, convertedName, convertedDataLength);
+    if (err != REGERR_OK) {
+        XP_FREE(convertedName);
+		return err;
+    }
+
+    regbuflen = 256 + XP_STRLEN(convertedName);
     regbuf = (char*)XP_ALLOC( regbuflen );
     if (regbuf != NULL )
     {
-        err = vr_GetUninstallItemPath(regPackageName, regbuf, regbuflen);
+        err = vr_GetUninstallItemPath(convertedName, regbuf, regbuflen);
         if (err == REGERR_OK)
         {
             curregbuflen = XP_STRLEN(regbuf);
@@ -1526,6 +1602,9 @@ VR_INTERFACE(REGERR) VR_UninstallFileExistsInList(char *regPackageName, char *vr
    
     err = NR_RegGetEntryString( vreg, key, vrName, sharedfilesstr,
                                     sizeof(sharedfilesstr) );
+    
+    XP_FREEIF(convertedName);
+
     return err;
 
 }	/* UninstallFileExistsInList */
@@ -1555,7 +1634,7 @@ VR_INTERFACE(REGERR) VR_UninstallEnumSharedFiles(char *component_path, REGENUM *
         err = REGERR_MEMORY;
         return err;
     }
-    err = vr_convertPackageName(component_path, converted_component_path, convertedDataLength);
+    err = vr_EncodePackageName(component_path, converted_component_path, convertedDataLength);
     if (err != REGERR_OK)
     {
         XP_FREEIF(converted_component_path);
@@ -1624,7 +1703,7 @@ VR_INTERFACE(REGERR) VR_UninstallDeleteFileFromList(char *component_path, char *
         err = REGERR_MEMORY;
         return err;
     }
-    err = vr_convertPackageName(component_path, converted_component_path, convertedDataLength);
+    err = vr_EncodePackageName(component_path, converted_component_path, convertedDataLength);
     if (err != REGERR_OK)
     {
         XP_FREEIF(converted_component_path);
@@ -1690,7 +1769,7 @@ VR_INTERFACE(REGERR) VR_UninstallDeleteSharedFilesKey(char *component_path)
         err = REGERR_MEMORY;
         return err;
     }
-    err = vr_convertPackageName(component_path, converted_component_path, convertedDataLength);
+    err = vr_EncodePackageName(component_path, converted_component_path, convertedDataLength);
     if (err != REGERR_OK)
     {
         XP_FREEIF(converted_component_path);
@@ -1747,7 +1826,7 @@ VR_INTERFACE(REGERR) VR_UninstallDestroy(char *component_path)
         err = REGERR_MEMORY;
         return err;
     }
-    err = vr_convertPackageName(component_path, converted_component_path, convertedDataLength);
+    err = vr_EncodePackageName(component_path, converted_component_path, convertedDataLength);
     if (err != REGERR_OK)
     {
         XP_FREEIF(converted_component_path);
@@ -1849,10 +1928,67 @@ VR_INTERFACE(REGERR) VR_EnumUninstall(REGENUM *state, char* userPackageName,
         XP_STRCPY(regbuf, temp);
     }
 
-    err = vr_unmanglePackageName(regbuf, regPackageName, len2);
+    err = vr_DecodePackageName(regbuf, regPackageName, len2);
     return err;
 
 }   /* EnumUninstall */
+
+VR_INTERFACE(REGERR) VR_DeleteMissingFileNodes( void )
+{
+    char dirname[MAXREGPATHLEN+1]   = {0};
+    char buffer[MAXREGPATHLEN+1]    = {0};
+    REGENUM state = 0;
+    int err = REGERR_OK;
+    RKEY key;
+    XP_StatStruct st;
+
+
+    err = vr_Init();
+	if (err != REGERR_OK)
+		return err;
+    
+    buffer[0] = '/';
+
+    while (err == REGERR_OK)
+    {
+        err = VR_Enum(NULL, &state, &buffer[1], MAXREGPATHLEN );
+        if ( err != REGERR_OK )
+    	    break;
+        
+        err = VR_ValidateComponent(buffer);
+
+        if ( err == REGERR_NOFILE )
+        {
+            VR_Remove(buffer);
+            err = REGERR_OK;
+        }
+        else if ( err == REGERR_NOPATH )
+        {
+            /* This really isn't an err */
+            /* Check to see if there's a directory entry, and stat that */
+            
+            err = VR_GetDefaultDirectory(buffer, MAXREGPATHLEN, dirname);
+            if ( err == REGERR_OK )
+            {
+                if ( stat ( dirname, &st ) != 0 ) 
+                {
+                    VR_Remove(buffer);
+                }
+            }
+            else if (err == REGERR_NOFIND)
+            {
+                /* not a real error */
+                err = REGERR_OK;
+            }
+        }
+    }
+ 
+    if ( err == REGERR_NOMORE )
+        err = REGERR_OK;
+
+    return err;
+}
+
 
 #ifdef XP_MAC
 #pragma export reset
