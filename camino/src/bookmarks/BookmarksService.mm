@@ -615,34 +615,36 @@ BookmarksService::FlushBookmarks()
 NSImage*
 BookmarksService::CreateIconForBookmark(nsIDOMElement* aElement)
 {
-  nsCOMPtr<nsIAtom> tagName;
   nsCOMPtr<nsIContent> content = do_QueryInterface(aElement);
-  content->GetTag(*getter_AddRefs(tagName));
-
-  nsAutoString group;
-  content->GetAttr(kNameSpaceID_None, gGroupAtom, group);
-  if (!group.IsEmpty())
-    return [NSImage imageNamed:@"groupbookmark"];
-
-  if (tagName == BookmarksService::gFolderAtom)
-    return [NSImage imageNamed:@"folder"];
-  
-  // fire off a site icon load
-  if ([[PreferenceManager sharedInstance] getBooleanPref:"browser.chrome.favicons" withSuccess:NULL])
+  if (content)
   {
-    nsAutoString href;
-    content->GetAttr(kNameSpaceID_None, gHrefAtom, href);
-    if (href.Length() > 0)
+    nsCOMPtr<nsIAtom> tagName;
+    content->GetTag(*getter_AddRefs(tagName));
+  
+    nsAutoString group;
+    content->GetAttr(kNameSpaceID_None, gGroupAtom, group);
+    if (!group.IsEmpty())
+      return [NSImage imageNamed:@"groupbookmark"];
+  
+    if (tagName == BookmarksService::gFolderAtom)
+      return [NSImage imageNamed:@"folder"];
+    
+    // fire off a site icon load
+    if ([[PreferenceManager sharedInstance] getBooleanPref:"browser.chrome.favicons" withSuccess:NULL])
     {
-      BookmarkItem* contentItem = BookmarksService::GetWrapperFor(content);
-      if ([contentItem siteIcon])
-        return [contentItem siteIcon];
-      
-      if (contentItem && ![contentItem siteIcon])
-        [[BookmarksManager sharedBookmarksManager] loadProxyImageFor:contentItem withURI:[NSString stringWith_nsAString:href]];
+      nsAutoString href;
+      content->GetAttr(kNameSpaceID_None, gHrefAtom, href);
+      if (href.Length() > 0)
+      {
+        BookmarkItem* contentItem = BookmarksService::GetWrapperFor(content);
+        if ([contentItem siteIcon])
+          return [contentItem siteIcon];
+        
+        if (contentItem && ![contentItem siteIcon])
+          [[BookmarksManager sharedBookmarksManager] loadProxyImageFor:contentItem withURI:[NSString stringWith_nsAString:href]];
+      }
     }
   }
-  
   return [NSImage imageNamed:@"smallbookmark"];
 }
 
@@ -933,7 +935,7 @@ static void CreateBookmark(nsIDOMElement* aSrc, nsIDOMElement* aDst,
   nsAutoString title;
   GetImportTitle(aSrc, title);
   CleanControlChars(title);
-  
+
   (*aResult)->SetAttribute(NS_LITERAL_STRING("name"), title);
 
   if (!aIsFolder) {
