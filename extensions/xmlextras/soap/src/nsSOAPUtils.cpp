@@ -31,23 +31,70 @@
 #include "nsXPIDLString.h"
 #include "nsISupportsArray.h"
 
-const char* nsSOAPUtils::kSOAPEnvURI = "http://schemas.xmlsoap.org/soap/envelope/";
-const char* nsSOAPUtils::kSOAPEncodingURI = "http://schemas.xmlsoap.org/soap/encoding/";
-const char* nsSOAPUtils::kSOAPEnvPrefix = "SOAP-ENV";
-const char* nsSOAPUtils::kSOAPEncodingPrefix = "SOAP-ENC";
-const char* nsSOAPUtils::kXSIURI = "http://www.w3.org/1999/XMLSchema-instance";
-const char* nsSOAPUtils::kXSDURI = "http://www.w3.org/1999/XMLSchema";
-const char* nsSOAPUtils::kXSIPrefix = "xsi";
-const char* nsSOAPUtils::kXSDPrefix = "xsd";
-const char* nsSOAPUtils::kEncodingStyleAttribute = "encodingStyle";
-const char* nsSOAPUtils::kEnvelopeTagName = "Envelope";
-const char* nsSOAPUtils::kHeaderTagName = "Header";
-const char* nsSOAPUtils::kBodyTagName = "Body";
-const char* nsSOAPUtils::kFaultTagName = "Fault";
-const char* nsSOAPUtils::kFaultCodeTagName = "faultcode";
-const char* nsSOAPUtils::kFaultStringTagName = "faultstring";
-const char* nsSOAPUtils::kFaultActorTagName = "faultactor";
-const char* nsSOAPUtils::kFaultDetailTagName = "detail";
+const nsString nsSOAPUtils::kSOAPEnvURI(NS_LITERAL_STRING("http://schemas.xmlsoap.org/soap/envelope/"));
+const nsString nsSOAPUtils::kSOAPEncodingURI(NS_LITERAL_STRING("http://schemas.xmlsoap.org/soap/encoding/"));
+const nsString nsSOAPUtils::kSOAPEnvPrefix(NS_LITERAL_STRING("SOAP-ENV"));
+const nsString nsSOAPUtils::kSOAPEncodingPrefix(NS_LITERAL_STRING("SOAP-ENC"));
+const nsString nsSOAPUtils::kXSIURI(NS_LITERAL_STRING("http://www.w3.org/1999/XMLSchema-instance"));
+const nsString nsSOAPUtils::kXSDURI(NS_LITERAL_STRING("http://www.w3.org/1999/XMLSchema"));
+const nsString nsSOAPUtils::kXSIPrefix(NS_LITERAL_STRING("xsi"));
+const nsString nsSOAPUtils::kXSDPrefix(NS_LITERAL_STRING("xsd"));
+const nsString nsSOAPUtils::kEncodingStyleAttribute(NS_LITERAL_STRING("encodingStyle"));
+const nsString nsSOAPUtils::kEnvelopeTagName(NS_LITERAL_STRING("Envelope"));
+const nsString nsSOAPUtils::kHeaderTagName(NS_LITERAL_STRING("Header"));
+const nsString nsSOAPUtils::kBodyTagName(NS_LITERAL_STRING("Body"));
+const nsString nsSOAPUtils::kFaultTagName(NS_LITERAL_STRING("Fault"));
+const nsString nsSOAPUtils::kFaultCodeTagName(NS_LITERAL_STRING("faultcode"));
+const nsString nsSOAPUtils::kFaultStringTagName(NS_LITERAL_STRING("faultstring"));
+const nsString nsSOAPUtils::kFaultActorTagName(NS_LITERAL_STRING("faultactor"));
+const nsString nsSOAPUtils::kFaultDetailTagName(NS_LITERAL_STRING("detail"));
+const nsString nsSOAPUtils::kSOAPCallType(NS_LITERAL_STRING("#nsSOAPUtils::kSOAPCallType"));
+const nsString nsSOAPUtils::kEmpty(NS_LITERAL_STRING(""));
+
+void 
+nsSOAPUtils::GetSpecificChildElement(
+  nsIDOMElement *aParent, 
+  const nsAReadableString& aNamespace, 
+  const nsAReadableString& aType, 
+  nsIDOMElement * *aElement)
+{
+  nsCOMPtr<nsIDOMElement> sibling;
+
+  *aElement = nsnull;
+  GetFirstChildElement(aParent, getter_AddRefs(sibling));
+  if (sibling)
+  {
+    GetSpecificSiblingElement(sibling,
+      aNamespace, aType, aElement);
+  }
+}
+
+void 
+nsSOAPUtils::GetSpecificSiblingElement(
+  nsIDOMElement *aSibling, 
+  const nsAReadableString& aNamespace, 
+  const nsAReadableString& aType, 
+  nsIDOMElement * *aElement)
+{
+  nsCOMPtr<nsIDOMElement> sibling;
+
+  *aElement = nsnull;
+  sibling = aSibling;
+  do {
+    nsAutoString name, namespaceURI;
+    sibling->GetLocalName(name);
+    sibling->GetNamespaceURI(namespaceURI);
+    if (name.Equals(aType)
+      && namespaceURI.Equals(nsSOAPUtils::kSOAPEnvURI))
+    {
+      *aElement = sibling;
+      NS_ADDREF(*aElement);
+      return;
+    }
+    nsCOMPtr<nsIDOMElement> temp = sibling;
+    GetNextSiblingElement(temp, getter_AddRefs(sibling));
+  } while (sibling);
+}
 
 void
 nsSOAPUtils::GetFirstChildElement(nsIDOMElement* aParent, 
@@ -65,7 +112,7 @@ nsSOAPUtils::GetFirstChildElement(nsIDOMElement* aParent,
       break;
     }
     nsCOMPtr<nsIDOMNode> temp = child;
-    temp->GetNextSibling(getter_AddRefs(child));
+    GetNextSibling(temp, getter_AddRefs(child));
   }
 }
 
@@ -76,7 +123,7 @@ nsSOAPUtils::GetNextSiblingElement(nsIDOMElement* aStart,
   nsCOMPtr<nsIDOMNode> sibling;
 
   *aElement = nsnull;
-  aStart->GetNextSibling(getter_AddRefs(sibling));
+  GetNextSibling(aStart, getter_AddRefs(sibling));
   while (sibling) {
     PRUint16 type;
     sibling->GetNodeType(&type);
@@ -85,30 +132,31 @@ nsSOAPUtils::GetNextSiblingElement(nsIDOMElement* aStart,
       break;
     }
     nsCOMPtr<nsIDOMNode> temp = sibling;
-    temp->GetNextSibling(getter_AddRefs(sibling));
+    GetNextSibling(temp, getter_AddRefs(sibling));
   }
 }
 
 void 
 nsSOAPUtils::GetElementTextContent(nsIDOMElement* aElement, 
-                                   nsString& aText)
+                                   nsAWritableString& aText)
 {
   nsCOMPtr<nsIDOMNode> child;
-  
-  aText.Truncate();
+  nsAutoString rtext;
   aElement->GetFirstChild(getter_AddRefs(child));
   while (child) {
     PRUint16 type;
     child->GetNodeType(&type);
-    if (nsIDOMNode::TEXT_NODE == type) {
+    if (nsIDOMNode::TEXT_NODE == type
+        || nsIDOMNode::CDATA_SECTION_NODE == type) {
       nsCOMPtr<nsIDOMText> text = do_QueryInterface(child);
       nsAutoString data;
       text->GetData(data);
-      aText.Append(data);
+      rtext.Append(data);
     }
     nsCOMPtr<nsIDOMNode> temp = child;
-    temp->GetNextSibling(getter_AddRefs(child));
+    GetNextSibling(temp, getter_AddRefs(child));
   }
+  aText.Assign(rtext);
 }
 
 PRBool
@@ -124,15 +172,53 @@ nsSOAPUtils::HasChildElements(nsIDOMElement* aElement)
       return PR_TRUE;
     }
     nsCOMPtr<nsIDOMNode> temp = child;
-    temp->GetNextSibling(getter_AddRefs(child));
+    GetNextSibling(temp, getter_AddRefs(child));
   }
 
   return PR_FALSE;
 }
 
 void
+nsSOAPUtils::GetNextSibling(nsIDOMNode* aSibling, nsIDOMNode **aNext)
+{
+  nsCOMPtr<nsIDOMNode> last;
+  nsCOMPtr<nsIDOMNode> current;
+  PRUint16 type;
+
+  *aNext = nsnull;
+  last = aSibling;
+
+  last->GetNodeType(&type);
+  if (nsIDOMNode::ENTITY_REFERENCE_NODE == type) {
+    last->GetFirstChild(getter_AddRefs(current));
+    if (!last)
+    {
+      last->GetNextSibling(getter_AddRefs(current));
+    }
+  }
+  else {
+    last->GetNextSibling(getter_AddRefs(current));
+  }
+  while (!current)
+  {
+    last->GetParentNode(getter_AddRefs(current));
+    current->GetNodeType(&type);
+    if (nsIDOMNode::ENTITY_REFERENCE_NODE == type) {
+      last = current;
+      last->GetNextSibling(getter_AddRefs(current));
+    }
+    else {
+      current = nsnull;
+      break;
+    }
+  }
+  *aNext = current;
+  NS_IF_ADDREF(*aNext);
+}
+
+void
 nsSOAPUtils::GetInheritedEncodingStyle(nsIDOMElement* aEntry, 
-                                       char** aEncodingStyle)
+                                       nsAWritableString & aEncodingStyle)
 {
   nsCOMPtr<nsIDOMNode> node = aEntry;
 
@@ -140,18 +226,17 @@ nsSOAPUtils::GetInheritedEncodingStyle(nsIDOMElement* aEntry,
     nsAutoString value;
     nsCOMPtr<nsIDOMElement> element = do_QueryInterface(node);
     if (element) {
-      element->GetAttributeNS(NS_ConvertASCIItoUCS2(nsSOAPUtils::kSOAPEnvURI), 
-                              NS_ConvertASCIItoUCS2(nsSOAPUtils::kEncodingStyleAttribute),
+      element->GetAttributeNS(nsSOAPUtils::kSOAPEnvURI, nsSOAPUtils::kEncodingStyleAttribute,
                               value);
       if (value.Length() > 0) {
-        *aEncodingStyle = value.ToNewCString();
+        aEncodingStyle.Assign(value);
         return;
       }
     }
     nsCOMPtr<nsIDOMNode> temp = node;
     temp->GetParentNode(getter_AddRefs(node));
   }
-  *aEncodingStyle = nsCRT::strdup(kSOAPEncodingURI);
+  aEncodingStyle.Assign(kSOAPEncodingURI);
 }
 
 JSContext*
@@ -185,6 +270,8 @@ nsSOAPUtils::GetCurrentContext()
     return nsnull;
   return cx;
 }
+
+#if 0
 
 nsresult 
 nsSOAPUtils::ConvertValueToJSVal(JSContext* aContext, 
@@ -432,3 +519,5 @@ nsSOAPUtils::ConvertJSValToValue(JSContext* aContext,
 
   return NS_OK;
 }
+
+#endif

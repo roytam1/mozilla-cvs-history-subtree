@@ -23,6 +23,7 @@
 #ifndef nsSOAPFault_h__
 #define nsSOAPFault_h__
 
+#include "nsString.h"
 #include "nsISOAPFault.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIDOMElement.h"

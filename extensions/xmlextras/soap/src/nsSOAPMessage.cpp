@@ -20,6 +20,7 @@
  * Contributor(s): 
  */
 
+#include "nsSOAPUtils.h"
 #include "nsSOAPMessage.h"
 #include "nsCRT.h"
 #include "jsapi.h"
@@ -66,9 +67,6 @@ NS_IMETHODIMP nsSOAPMessage::SetMessage(nsIDOMDocument * aMessage)
   return NS_OK;
 }
 
-static const nsString SOAPNS(NS_LITERAL_STRING("http://schemas.xmlsoap.org/soap/envelope/"));
-static const nsString SOAPEnvelope(NS_LITERAL_STRING("Envelope"));
-
 /* readonly attribute nsIDOMElement envelope; */
 NS_IMETHODIMP nsSOAPMessage::GetEnvelope(nsIDOMElement * *aEnvelope)
 {
@@ -81,8 +79,8 @@ NS_IMETHODIMP nsSOAPMessage::GetEnvelope(nsIDOMElement * *aEnvelope)
       nsAutoString name, namespaceURI;
       root->GetLocalName(name);
       root->GetNamespaceURI(namespaceURI);
-      if (name.Equals(SOAPEnvelope)
-        && namespaceURI.Equals(SOAPNS))
+      if (name.Equals(nsSOAPUtils::kEnvelopeTagName)
+        && namespaceURI.Equals(nsSOAPUtils::kSOAPEnvURI))
       {
         *aEnvelope = root;
         NS_ADDREF(*aEnvelope);
@@ -95,48 +93,38 @@ NS_IMETHODIMP nsSOAPMessage::GetEnvelope(nsIDOMElement * *aEnvelope)
   return NS_OK;
 }
 
-nsresult nsSOAPMessage::GetSOAPElementOf(nsIDOMElement *aParent, const nsAReadableString& aType, nsIDOMElement * *aElement)
-{
-  NS_ENSURE_ARG_POINTER(aElement);
-  if (aParent)
-  {
-    nsCOMPtr<nsIDOMNode> element;
-    aParent->GetFirstChild(getter_AddRefs(element));
-    while (element)
-    {
-      PRUint16 type;
-      nsAutoString name, namespaceURI;
-      element->GetNodeType(&type);
-      element->GetLocalName(name);
-      element->GetNamespaceURI(namespaceURI);
-      if (type == nsIDOMNode::ELEMENT_NODE
-        && name.Equals(aType)
-        && namespaceURI.Equals(SOAPNS))
-      {
-        return element->QueryInterface(NS_GET_IID(nsIDOMElement), (void**)aElement);
-      }
-    }
-  }
-  *aElement = nsnull;
-  return NS_OK;
-}
-
-static const nsString SOAPHeader(NS_LITERAL_STRING("Header"));
 /* readonly attribute nsIDOMElement header; */
 NS_IMETHODIMP nsSOAPMessage::GetHeader(nsIDOMElement * *aHeader)
 {
+  NS_ENSURE_ARG_POINTER(aHeader);
   nsCOMPtr<nsIDOMElement> env;
   GetEnvelope(getter_AddRefs(env));
-  return GetSOAPElementOf(env, SOAPHeader, aHeader);
+  if (env) {
+    nsSOAPUtils::GetSpecificChildElement(env, 
+      nsSOAPUtils::kSOAPEnvURI, nsSOAPUtils::kHeaderTagName, 
+      aHeader);
+  }
+  else {
+    *aHeader = nsnull;
+  }
+  return NS_OK;
 }
 
-static const nsString SOAPBody(NS_LITERAL_STRING("Body"));
 /* readonly attribute nsIDOMElement body; */
 NS_IMETHODIMP nsSOAPMessage::GetBody(nsIDOMElement * *aBody)
 {
+  NS_ENSURE_ARG_POINTER(aBody);
   nsCOMPtr<nsIDOMElement> env;
   GetEnvelope(getter_AddRefs(env));
-  return GetSOAPElementOf(env, SOAPBody, aBody);
+  if (env) {
+    nsSOAPUtils::GetSpecificChildElement(env, 
+      nsSOAPUtils::kSOAPEnvURI, nsSOAPUtils::kBodyTagName, 
+      aBody);
+  }
+  else {
+    *aBody = nsnull;
+  }
+  return NS_OK;
 }
 
 /* attribute DOMString actionURI; */
@@ -191,13 +179,11 @@ NS_IMETHODIMP nsSOAPMessage::SetTargetObjectURI(const nsAReadableString & aTarge
   return NS_OK;
 }
 
-static const nsString SOAPCall(NS_LITERAL_STRING("#SOAPCall"));
-static const nsString SOAPNull(NS_LITERAL_STRING(""));
 /* void marshallParameters (in nsISupportsArray SOAPParameters); */
 NS_IMETHODIMP nsSOAPMessage::MarshallParameters(nsISupportsArray *SOAPParameters)
 {
   nsCOMPtr<nsISupports> ignore;
-  return Marshall(SOAPNull, SOAPNull, SOAPCall, SOAPParameters, getter_AddRefs(ignore));
+  return Marshall(nsSOAPUtils::kEmpty, nsSOAPUtils::kEmpty, nsSOAPUtils::kSOAPCallType, SOAPParameters, getter_AddRefs(ignore));
 }
 
 /* nsISupportsArray unmarshallParameters (); */
@@ -205,7 +191,7 @@ NS_IMETHODIMP nsSOAPMessage::UnmarshallParameters(nsISupportsArray **_retval)
 {
   nsCOMPtr<nsISupports> result;
   nsAutoString name;
-  nsresult rv = Unmarshall(name, SOAPNull, SOAPNull, SOAPCall, nsnull, getter_AddRefs(result));
+  nsresult rv = Unmarshall(name, nsSOAPUtils::kEmpty, nsSOAPUtils::kEmpty, nsSOAPUtils::kSOAPCallType, nsnull, getter_AddRefs(result));
 
   if (NS_SUCCEEDED(rv))
     return rv;

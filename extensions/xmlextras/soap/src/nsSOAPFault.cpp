@@ -46,101 +46,48 @@ NS_IMETHODIMP nsSOAPFault::GetElement(nsIDOMElement * *aElement)
 }
 
 /* readonly attribute wstring faultCode; */
-NS_IMETHODIMP nsSOAPFault::GetFaultCode(PRUnichar * *aFaultCode)
+NS_IMETHODIMP nsSOAPFault::GetFaultCode(nsAWritableString & aFaultCode)
 {
-  NS_ENSURE_ARG_POINTER(aFaultCode);
-  
-  *aFaultCode = nsnull;
-  if (mFaultElement) {
-    nsCOMPtr<nsIDOMNodeList> list;
-
-    nsAutoString tagname;
-    tagname.AssignWithConversion(nsSOAPUtils::kFaultCodeTagName);
-    mFaultElement->GetElementsByTagName(tagname, getter_AddRefs(list));
-    PRUint32 length;
-    list->GetLength(&length);
-    if (length > 0) {
-      nsCOMPtr<nsIDOMNode> node;
-      nsCOMPtr<nsIDOMElement> element;
-      
-      list->Item(0, getter_AddRefs(node));
-      element = do_QueryInterface(node);
-
-      nsAutoString text;
-      nsSOAPUtils::GetElementTextContent(element, text);
-      if (text.Length() > 0) {
-	*aFaultCode = text.ToNewUnicode();
-	if (!*aFaultCode) return NS_ERROR_OUT_OF_MEMORY;
-      }
-    }
+  NS_ENSURE_ARG_POINTER(&aFaultCode);
+  aFaultCode.Truncate();
+  nsCOMPtr<nsIDOMElement> faultcode;
+  nsSOAPUtils::GetSpecificChildElement(mFaultElement, 
+                                       nsSOAPUtils::kSOAPEnvURI, 
+                                       nsSOAPUtils::kFaultCodeTagName, 
+                                       getter_AddRefs(faultcode));
+  if (faultcode) {
+    nsSOAPUtils::GetElementTextContent(faultcode, aFaultCode);
   }
-
   return NS_OK;
 }
 
 /* readonly attribute wstring faultString; */
-NS_IMETHODIMP nsSOAPFault::GetFaultString(PRUnichar * *aFaultString)
+NS_IMETHODIMP nsSOAPFault::GetFaultString(nsAWritableString & aFaultString)
 {
-  NS_ENSURE_ARG_POINTER(aFaultString);
-  
-  *aFaultString = nsnull;
-  if (mFaultElement) {
-    nsCOMPtr<nsIDOMNodeList> list;
+  NS_ENSURE_ARG_POINTER(&aFaultString);
 
-    nsAutoString tagname;
-    tagname.AssignWithConversion(nsSOAPUtils::kFaultStringTagName);
-    mFaultElement->GetElementsByTagName(tagname, getter_AddRefs(list));
-    PRUint32 length;
-    list->GetLength(&length);
-    if (length > 0) {
-      nsCOMPtr<nsIDOMNode> node;
-      nsCOMPtr<nsIDOMElement> element;
-      
-      list->Item(0, getter_AddRefs(node));
-      element = do_QueryInterface(node);
-
-      nsAutoString text;
-      nsSOAPUtils::GetElementTextContent(element, text);
-      if (text.Length() > 0) {
-	*aFaultString = text.ToNewUnicode();
-	if (!*aFaultString) return NS_ERROR_OUT_OF_MEMORY;
-      }
-    }
+  aFaultString.Truncate();
+  nsCOMPtr<nsIDOMElement> element;
+  nsSOAPUtils::GetSpecificChildElement(mFaultElement, nsSOAPUtils::kSOAPEnvURI,
+    nsSOAPUtils::kFaultStringTagName, getter_AddRefs(element));
+  if (element) {
+    nsSOAPUtils::GetElementTextContent(element, aFaultString);
   }
-
   return NS_OK;
 }
 
 /* readonly attribute wstring faultActor; */
-NS_IMETHODIMP nsSOAPFault::GetFaultActor(PRUnichar * *aFaultActor)
+NS_IMETHODIMP nsSOAPFault::GetFaultActor(nsAWritableString & aFaultActor)
 {
-  NS_ENSURE_ARG_POINTER(aFaultActor);
-  
-  *aFaultActor = nsnull;
-  if (mFaultElement) {
-    nsCOMPtr<nsIDOMNodeList> list;
+  NS_ENSURE_ARG_POINTER(&aFaultActor);
 
-    nsAutoString tagname;
-    tagname.AssignWithConversion(nsSOAPUtils::kFaultActorTagName);
-    mFaultElement->GetElementsByTagName(tagname, getter_AddRefs(list));
-    PRUint32 length;
-    list->GetLength(&length);
-    if (length > 0) {
-      nsCOMPtr<nsIDOMNode> node;
-      nsCOMPtr<nsIDOMElement> element;
-      
-      list->Item(0, getter_AddRefs(node));
-      element = do_QueryInterface(node);
-
-      nsAutoString text;
-      nsSOAPUtils::GetElementTextContent(element, text);
-      if (text.Length() > 0) {
-	*aFaultActor = text.ToNewUnicode();
-	if (!*aFaultActor) return NS_ERROR_OUT_OF_MEMORY;
-      }
-    }
+  aFaultActor.Truncate();
+  nsCOMPtr<nsIDOMElement> element;
+  nsSOAPUtils::GetSpecificChildElement(mFaultElement, nsSOAPUtils::kSOAPEnvURI,
+    nsSOAPUtils::kFaultActorTagName, getter_AddRefs(element));
+  if (element) {
+    nsSOAPUtils::GetElementTextContent(element, aFaultActor);
   }
-
   return NS_OK;
 }
 
@@ -149,23 +96,9 @@ NS_IMETHODIMP nsSOAPFault::GetDetail(nsIDOMElement * *aDetail)
 {
   NS_ENSURE_ARG_POINTER(aDetail);
 
-  *aDetail = nsnull;
-  if (mFaultElement) {
-    nsCOMPtr<nsIDOMNodeList> list;
-
-    nsAutoString tagname;
-    tagname.AssignWithConversion(nsSOAPUtils::kFaultDetailTagName);
-    mFaultElement->GetElementsByTagName(tagname, getter_AddRefs(list));
-    PRUint32 length;
-    list->GetLength(&length);
-    if (length > 0) {
-      nsCOMPtr<nsIDOMNode> node;
-      nsCOMPtr<nsIDOMElement> element;
-      
-      list->Item(0, getter_AddRefs(node));
-      return node->QueryInterface(NS_GET_IID(nsIDOMElement), (void**)aDetail);
-    }
-  }
+  nsCOMPtr<nsIDOMElement> element;
+  nsSOAPUtils::GetSpecificChildElement(mFaultElement, nsSOAPUtils::kSOAPEnvURI,
+    nsSOAPUtils::kFaultDetailTagName, aDetail);
   return NS_OK;
 }
 

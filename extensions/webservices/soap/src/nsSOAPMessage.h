@@ -57,9 +57,6 @@ protected:
   nsString mTargetObjectURI;
   nsString mMethodName;
   PRUint32 mStatus;
- 
-  static nsresult GetSOAPElementOf(nsIDOMElement *aParent, const nsAReadableString& aType, nsIDOMElement * *aElement);
-
 };
 
 #endif

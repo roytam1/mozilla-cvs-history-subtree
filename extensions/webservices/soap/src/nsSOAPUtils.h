@@ -28,15 +28,26 @@
 
 class nsSOAPUtils {
 public:
+  static void GetSpecificChildElement(nsIDOMElement *aParent, 
+                                      const nsAReadableString& aNamespace, 
+                                      const nsAReadableString& aType, 
+                                      nsIDOMElement * *aElement);
+  static void GetSpecificSiblingElement(nsIDOMElement *aSibling, 
+                                        const nsAReadableString& aNamespace, 
+                                        const nsAReadableString& aType, 
+                                        nsIDOMElement * *aElement);
   static void GetFirstChildElement(nsIDOMElement* aParent, 
                                    nsIDOMElement** aElement);
   static void GetNextSiblingElement(nsIDOMElement* aStart, 
                                     nsIDOMElement** aElement);
   static void GetElementTextContent(nsIDOMElement* aElement, 
-                                    nsString& aText);
+                                    nsAWritableString& aText);
   static PRBool HasChildElements(nsIDOMElement* aElement);
+
+  static void GetNextSibling(nsIDOMNode* aSibling, 
+                             nsIDOMNode **aNext);
   static void GetInheritedEncodingStyle(nsIDOMElement* aEntry, 
-                                        char** aEncodingStyle);
+                                        nsAWritableString & aEncodingStyle);
   static JSContext* GetSafeContext();
   static JSContext* GetCurrentContext();
   static nsresult ConvertValueToJSVal(JSContext* aContext, 
@@ -50,23 +61,25 @@ public:
                                       JSObject** aJSValue,
                                       PRInt32* aType);
 
-  static const char* kSOAPEnvURI;
-  static const char* kSOAPEncodingURI;
-  static const char* kSOAPEnvPrefix;
-  static const char* kSOAPEncodingPrefix;
-  static const char* kXSIURI;
-  static const char* kXSDURI;
-  static const char* kXSIPrefix;
-  static const char* kXSDPrefix;
-  static const char* kEncodingStyleAttribute;
-  static const char* kEnvelopeTagName;
-  static const char* kHeaderTagName;
-  static const char* kBodyTagName;
-  static const char* kFaultTagName;
-  static const char* kFaultCodeTagName;
-  static const char* kFaultStringTagName;
-  static const char* kFaultActorTagName;
-  static const char* kFaultDetailTagName;
+  static const nsString kSOAPEnvURI;
+  static const nsString kSOAPEncodingURI;
+  static const nsString kSOAPEnvPrefix;
+  static const nsString kSOAPEncodingPrefix;
+  static const nsString kXSIURI;
+  static const nsString kXSDURI;
+  static const nsString kXSIPrefix;
+  static const nsString kXSDPrefix;
+  static const nsString kEncodingStyleAttribute;
+  static const nsString kEnvelopeTagName;
+  static const nsString kHeaderTagName;
+  static const nsString kBodyTagName;
+  static const nsString kFaultTagName;
+  static const nsString kFaultCodeTagName;
+  static const nsString kFaultStringTagName;
+  static const nsString kFaultActorTagName;
+  static const nsString kFaultDetailTagName;
+  static const nsString kSOAPCallType;
+  static const nsString kEmpty;
 };
 
 #endif

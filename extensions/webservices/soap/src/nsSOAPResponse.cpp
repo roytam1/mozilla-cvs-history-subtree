@@ -66,15 +66,14 @@ NS_IMETHODIMP nsSOAPResponse::GetGeneratedFault(PRBool *aGeneratedFault)
   return NS_OK;
 }
 
-static const nsString SOAPFault(NS_LITERAL_STRING("Fault"));
 /* readonly attribute nsISOAPFault fault; */
 NS_IMETHODIMP nsSOAPResponse::GetFault(nsISOAPFault * *aFault)
 {
   nsCOMPtr<nsIDOMElement> body;
   GetBody(getter_AddRefs(body));
-  nsresult rc = GetSOAPElementOf(body, SOAPFault, getter_AddRefs(body));
-  if (NS_FAILED(rc))
-    return rc;
+  nsSOAPUtils::GetSpecificChildElement(body, 
+    nsSOAPUtils::kSOAPEnvURI, nsSOAPUtils::kFaultTagName, 
+    getter_AddRefs(body));
   if (body) {
     *aFault = new nsSOAPFault(body);
     if (!*aFault)
