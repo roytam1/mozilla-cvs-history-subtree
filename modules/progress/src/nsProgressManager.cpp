@@ -247,7 +247,7 @@ FreeEntry(void* pool, PLHashEntry* he, PRUintn flag)
 {
     if (flag == HT_FREE_VALUE) {
         if (he->value) {
-            nsISupports* obj = (nsISupports*) he->value;
+            nsTransfer* obj = (nsTransfer*) he->value;
             obj->Release();
         }
     }
@@ -255,7 +255,7 @@ FreeEntry(void* pool, PLHashEntry* he, PRUintn flag)
         // we don't own the key, so leave it alone...
 
         if (he->value) {
-            nsISupports* obj = (nsISupports*) he->value;
+            nsTransfer* obj = (nsTransfer*) he->value;
             obj->Release();
         }
         PR_DELETE(he);
