@@ -2117,12 +2117,38 @@ nsDOMClassInfo::ShutDown()
 }
 
 
+static const nsIXPConnectWrappedNative *cached_wrapper;
+static const JSContext *cached_cx;
+
+void InvalidateContextAndWrapperCache()
+{
+  cached_wrapper = nsnull;
+  cached_cx = nsnull;
+}
+
 // static helper that determines if a security manager check is needed
 // by checking if the callee's context is the same as the caller's
 // context
 
-static inline PRBool needsSecurityCheck(JSContext *cx, nsISupports *native)
+static inline PRBool
+needsSecurityCheck(JSContext *cx, nsIXPConnectWrappedNative *wrapper)
 {
+  // Cache a pointer to a wrapper and a context and set these pointers
+  // to point to the wrapper and context that doesn't need a security
+  // check, thus we avoid doing all this work to find out if we need
+  // to do the security check, in most cases this check would end up
+  // being two pointer compares.
+
+  if (cx == cached_cx && wrapper == cached_wrapper) {
+    return PR_FALSE;
+  }
+
+  cached_cx = nsnull;
+  cached_wrapper = nsnull;
+
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
   nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(native));
 
   if (!sgo) {
@@ -2142,7 +2168,14 @@ static inline PRBool needsSecurityCheck(JSContext *cx, nsISupports *native)
   // they have the same origin, and we can allow the call without an
   // additional security check.
 
-  return cx != (JSContext *)otherScriptContext->GetNativeContext();
+  if (cx == (JSContext *)otherScriptContext->GetNativeContext()) {
+    cached_cx = cx;
+    cached_wrapper = wrapper;
+
+    return PR_FALSE;
+  }
+
+  return PR_TRUE;
 }
 
 
@@ -2150,15 +2183,14 @@ static inline PRBool needsSecurityCheck(JSContext *cx, nsISupports *native)
 
 nsresult
 nsWindowSH::doCheckWriteAccess(JSContext *cx, JSObject *obj, jsval id,
-                               nsISupports *native, PRBool aForceCheck)
+                               nsIXPConnectWrappedNative *wrapper)
 {
-  if (!sSecMan || (!aForceCheck && !needsSecurityCheck(cx, native))) {
+  if (!sSecMan) {
     return NS_OK;
   }
 
-  nsresult rv;
-
-  PRBool isLocation = (id == STRING_TO_JSVAL(sLocation_id));
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
 
   nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(native));
   NS_ENSURE_TRUE(sgo, NS_ERROR_UNEXPECTED);
@@ -2170,24 +2202,24 @@ nsWindowSH::doCheckWriteAccess(JSContext *cx, JSObject *obj, jsval id,
     return NS_OK;
   }
 
+  PRBool isLocation = (id == STRING_TO_JSVAL(sLocation_id));
   JSObject *global = sgo->GetGlobalJSObject();
 
-  rv = sSecMan->CheckPropertyAccess(cx, global, "Window",
-                                    isLocation ? "location" : "scriptglobals",
-                                    nsIXPCSecurityManager::ACCESS_SET_PROPERTY);
+  nsresult rv =
+    sSecMan->CheckPropertyAccess(cx, global, "Window",
+                                 isLocation ? "location" : "scriptglobals",
+                                 nsIXPCSecurityManager::ACCESS_SET_PROPERTY);
 
   return rv; // rv is from CheckPropertyAccess()
 }
 
 nsresult
 nsWindowSH::doCheckReadAccess(JSContext *cx, JSObject *obj, jsval id,
-                              nsISupports *native)
+                              nsIXPConnectWrappedNative *wrapper)
 {
-  if (!sSecMan || !needsSecurityCheck(cx, native)) {
+  if (!sSecMan) {
     return NS_OK;
   }
-
-  nsresult rv;
 
   // Don't check the Components property, since we check its
   // properties anyway. This will help performance.
@@ -2195,8 +2227,10 @@ nsWindowSH::doCheckReadAccess(JSContext *cx, JSObject *obj, jsval id,
     return NS_OK;
   }
 
-  PRBool isLocation = JSVAL_IS_STRING(id) &&
-    JSVAL_TO_STRING(id) == sLocation_id;
+  PRBool isLocation = (id == STRING_TO_JSVAL(sLocation_id));
+
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
 
   nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(native));
   NS_ENSURE_TRUE(sgo, NS_ERROR_UNEXPECTED);
@@ -2210,9 +2244,10 @@ nsWindowSH::doCheckReadAccess(JSContext *cx, JSObject *obj, jsval id,
 
   JSObject *global = sgo->GetGlobalJSObject();
 
-  rv = sSecMan->CheckPropertyAccess(cx, global, "Window",
-                                    isLocation ? "location" : "scriptglobals",
-                                    nsIXPCSecurityManager::ACCESS_GET_PROPERTY);
+  nsresult rv =
+    sSecMan->CheckPropertyAccess(cx, global, "Window",
+                                 isLocation ? "location" : "scriptglobals",
+                                 nsIXPCSecurityManager::ACCESS_GET_PROPERTY);
 
   return rv; // rv is from CheckPropertyAccess()
 }
@@ -2258,21 +2293,25 @@ NS_IMETHODIMP
 nsWindowSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
-  nsCOMPtr<nsISupports> native;
-  wrapper->GetNative(getter_AddRefs(native));
+  nsresult rv = NS_OK;
 
-  nsresult rv = doCheckReadAccess(cx, obj, id, native);
+  if (needsSecurityCheck(cx, wrapper)) {
+    doCheckReadAccess(cx, obj, id, wrapper);
 
-  if (NS_FAILED(rv)) {
-    // Security check failed. The security manager set a JS
-    // exception, we must make sure that exception is propagated.
+    if (NS_FAILED(rv)) {
+      // Security check failed. The security manager set a JS
+      // exception, we must make sure that exception is propagated.
 
-    *_retval = PR_FALSE;
+      *_retval = PR_FALSE;
 
-    return NS_OK;
+      return NS_OK;
+    }
   }
 
   if (JSVAL_IS_NUMBER(id)) {
+    nsCOMPtr<nsISupports> native;
+    wrapper->GetNative(getter_AddRefs(native));
+
     nsCOMPtr<nsIDOMWindowInternal> win(do_QueryInterface(native));
 
     nsCOMPtr<nsIDOMWindowCollection> frames;
@@ -2296,18 +2335,17 @@ NS_IMETHODIMP
 nsWindowSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
-  nsCOMPtr<nsISupports> native;
-  wrapper->GetNative(getter_AddRefs(native));
+  if (needsSecurityCheck(cx, wrapper)) {
+    nsresult rv = doCheckWriteAccess(cx, obj, id, wrapper);
 
-  nsresult rv = doCheckWriteAccess(cx, obj, id, native, PR_FALSE);
+    if (NS_FAILED(rv)) {
+      // Security check failed. The security manager set a JS
+      // exception, we must make sure that exception is propagated.
 
-  if (NS_FAILED(rv)) {
-    // Security check failed. The security manager set a JS
-    // exception, we must make sure that exception is propagated.
+      *_retval = PR_FALSE;
 
-    *_retval = PR_FALSE;
-
-    return NS_OK;
+      return NS_OK;
+    }
   }
 
   if (JSVAL_IS_STRING(id)) {
@@ -2350,10 +2388,7 @@ nsWindowSH::AddProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   // to do anything more than the security check then make sure
   // ::DelProperty() is changed to cope with that.
 
-  nsCOMPtr<nsISupports> native;
-  wrapper->GetNative(getter_AddRefs(native));
-
-  nsresult rv = doCheckWriteAccess(cx, obj, id, native, PR_TRUE);
+  nsresult rv = doCheckWriteAccess(cx, obj, id, wrapper);
 
   if (NS_FAILED(rv)) {
     // Security check failed. The security manager set a JS
