@@ -3834,8 +3834,8 @@ BEGIN_MESSAGE_MAP(CRDFContentView, CView)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
-CRDFContentView::CRDFContentView(CRDFOutlinerParent* pParent)
-{ m_pOutlinerParent = pParent; m_pHTMLView = NULL; }
+CRDFContentView::CRDFContentView()
+{ m_pOutlinerParent = NULL; m_pHTMLView = NULL; }
 
 BOOL CRDFContentView::PreCreateWindow(CREATESTRUCT& cs)
 {
@@ -3906,16 +3906,17 @@ CRDFOutliner* CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos,
 	// Construct the pane and give it our notification struct
 	HT_Pane thePane = HT_NewPersonalToolbarPane(ns);
 	
-	// Build our FE windows.
-	CRDFOutlinerParent* newParent = new CRDFOutlinerParent(thePane, HT_GetSelectedView(thePane));
-	CRDFContentView* newView = new CRDFContentView(newParent);
-
 	// Create the windows
 	CRect rClient(xPos, yPos, width, height);
+	
+	CRDFContentView* newView = new CRDFContentView();
 	newView->Create( NULL, "", WS_CHILD | WS_VISIBLE, rClient, pParent, NC_IDW_OUTLINER);
 
+	// Get the parent
+	COutlinerParent* newParent = newView->GetOutlinerParent();
+
 	// Initialize the columns, etc.
-	newParent->Initialize();
+	((CRDFOutlinerParent*)newParent)->Initialize();
 
 	// Set our FE data to be the outliner.
 	HT_SetViewFEData(HT_GetSelectedView(thePane), newParent->GetOutliner());

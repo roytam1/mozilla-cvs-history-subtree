@@ -408,7 +408,7 @@ public:
 
 // Construction
 public:
-	CRDFContentView(CRDFOutlinerParent* pParent);
+	CRDFContentView();
 	
 	~CRDFContentView() 
 	{

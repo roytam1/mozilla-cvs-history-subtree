@@ -199,7 +199,7 @@ void CNSNavFrame::DeleteNavCenter()
 
 BOOL CNSNavFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 {
-	m_nsContent = new CRDFContentView(NULL);
+	m_nsContent = new CRDFContentView();
 	m_pSelector = new CSelector(m_nsContent);
 	m_pNavMenu = new CNavMenuBar();
 
