@@ -38,10 +38,9 @@
 #include "nsISupports.idl"
 #include "nsIMsgRecipientArray.idl"
 
-
 [scriptable, uuid(3E89CAE3-BD2D-11d2-8293-000000000000)]
-interface nsIMsgCompFields : nsISupports {
-
+interface nsIMsgCompFields : nsISupports 
+{
 	attribute wstring from;
 	attribute wstring replyTo;
 	attribute wstring to;
@@ -60,7 +59,7 @@ interface nsIMsgCompFields : nsISupports {
 	attribute string  attachments;
 	attribute wstring organization;
 	attribute string  references;
-  attribute string  priority;
+    attribute string  priority;
 	attribute string  messageId;
 	attribute string  characterSet;
 
@@ -69,21 +68,20 @@ interface nsIMsgCompFields : nsISupports {
 
 	attribute boolean returnReceipt;
 	attribute boolean attachVCard;
-  attribute boolean forcePlainText;
-  attribute boolean useMultipartAlternative;
-  attribute boolean uuEncodeAttachments;
+    attribute boolean forcePlainText;
+    attribute boolean useMultipartAlternative;
+    attribute boolean uuEncodeAttachments;
 
-  attribute boolean signMessage;
-  attribute boolean alwaysEncryptMessage;
+	attribute nsISupports securityInfo;
 
-  attribute wstring otherRandomHeaders;
+    attribute wstring otherRandomHeaders;
 
 	attribute wstring body;
 
 	attribute string  temporaryFiles;	// a list of temp files to remove
 	
 	/* some utility functions */
-  nsIMsgRecipientArray SplitRecipients(in wstring recipients, in boolean emailAddressOnly);    
-  void ConvertBodyToPlainText();
+    nsIMsgRecipientArray SplitRecipients(in wstring recipients, in boolean emailAddressOnly);    
+    void ConvertBodyToPlainText();
 };
 
