@@ -114,6 +114,9 @@ endif
 	fi
 
 pkgLdapSDK: FORCE
+	@echo
+	@echo ==== Starting iPlanet LDAP Client SDK packaging ===
+	@echo
 	@if [ -d $(DIST_TREE)/ ]; then \
 		cd $(LDAP_DEPTH)/c-sdk/; \
 		$(MAKE) -f package.mk $(MFLAGS) all; \
