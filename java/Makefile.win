@@ -35,19 +35,9 @@ IGNORE_MANIFEST=1
 #//------------------------------------------------------------------------
 DEPTH = ..
 
-DIRS  = util \
+DIRS  = external \
+	util \
 	dom \
 	webclient 
 
-export:: unjar_dom
-
 include <$(DEPTH)\config\rules.mak>
-
-unjar_dom:
-	if not exist $(DEPTH)\dist\classes $(MKDIR) $(DEPTH)\dist\classes
-	cd $(DEPTH)\dist\classes
-	$(JDKHOME)\bin\jar -xf ..\..\java\external\dom2.jar
-	cd ..\..\java
-
-clobber_all::
-	$(RM) -rf $(DEPTH)\dist\classes\org\w3c
