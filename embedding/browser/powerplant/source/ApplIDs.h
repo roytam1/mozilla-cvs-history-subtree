@@ -49,11 +49,25 @@ const PP_PowerPlant::ResIDT dlog_Prompt = 1285;
 const PP_PowerPlant::ResIDT dlog_PromptNameAndPass = 1286;
 const PP_PowerPlant::ResIDT dlog_PromptPassword = 1287;
 
+// Profile Mgmt
+const PP_PowerPlant::ResIDT dlog_ManageProfiles = 1300;
+const PP_PowerPlant::ResIDT dlog_NewProfile = 1301;
+
+// Alerts
+const PP_PowerPlant::ResIDT alrt_ConfirmProfileSwitch = 1500;
+
+
 //*****************************************************************************
 //***    Message IDs
 //*****************************************************************************
 
 const MessageT    msg_OnStartLoadDocument 	= 1000;
-const MessageT    msg_OnEndLoadDocument 		= 1001;
+const MessageT    msg_OnEndLoadDocument 	= 1001;
+
+//*****************************************************************************
+//***    Command IDs
+//*****************************************************************************
+
+const MessageT    cmd_ManageProfiles        = 'MPrf';
 
 #endif // __ApplIDs__
