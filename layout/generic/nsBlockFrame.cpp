@@ -5925,27 +5925,8 @@ nsBlockFrame::ReflowBullet(nsBlockReflowState& aState,
   // XXXwaterson Should this look just like the logic in
   // nsBlockReflowContext::ReflowBlock and nsLineLayout::ReflowFrame?
   const nsHTMLReflowState &rs = aState.mReflowState;
-  nsReflowReason reason = rs.reason;
-  if (reason == eReflowReason_Incremental) {
-    if (! rs.path->HasChild(mBullet)) {
-      // An incremental reflow not explicitly destined to (or through)
-      // the child should be treated as a resize...
-      reason = eReflowReason_Resize;
-    }
-
-    // ...unless its an incremental `style changed' reflow targeted at
-    // the block, in which case, we propagate that to its children.
-    nsHTMLReflowCommand *command = rs.path->mReflowCommand;
-    if (command) {
-      nsReflowType type;
-      command->GetType(type);
-      if (type == eReflowType_StyleChanged)
-        reason = eReflowReason_StyleChange;
-    }
-  }
-
   nsHTMLReflowState reflowState(aState.mPresContext, rs,
-                                mBullet, availSize, reason);
+                                mBullet, availSize);
   nsReflowStatus  status;
   mBullet->WillReflow(aState.mPresContext);
   mBullet->Reflow(aState.mPresContext, aMetrics, reflowState, status);
