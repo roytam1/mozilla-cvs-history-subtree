@@ -99,15 +99,25 @@ nsresult fromNPError[] = {
 nsPluginManager* thePluginManager = NULL;
 
 nsPluginManager::nsPluginManager(nsISupports* outer)
-    : fJVMMgr(NULL), fMalloc(NULL), fAllocatedMenuIDs(NULL)
+    : 
+#if 0
+    fJVMMgr(NULL), 
+#endif
+    fMalloc(NULL), fAllocatedMenuIDs(NULL)
 {
+#if 0
     NS_INIT_AGGREGATED(outer);
+#else
+    NS_INIT_REFCNT();
+#endif
 }
 
 nsPluginManager::~nsPluginManager(void)
 {
+#if 0
     fJVMMgr->Release();
     fJVMMgr = NULL;
+#endif
     fMalloc->Release();
     fMalloc = NULL;
 
@@ -119,9 +129,11 @@ nsPluginManager::~nsPluginManager(void)
 #endif
 }
 
+#if 0
 NS_IMPL_AGGREGATED(nsPluginManager);
-
-#include "nsRepository.h"
+#else
+//NS_IMPL_ISUPPORTS(nsPluginManager, kIPluginManagerIID);
+#endif
 
 NS_METHOD
 nsPluginManager::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
@@ -151,7 +163,11 @@ nsPluginManager::UserAgent(const char* *resultingAgentString)
 }
 
 NS_METHOD
+#if 0
 nsPluginManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr) 
+#else
+nsPluginManager::QueryInterface(const nsIID& aIID, void** aInstancePtr) 
+#endif
 {
     if (NULL == aInstancePtr) {                                            
         return NS_ERROR_NULL_POINTER;                                        
@@ -184,11 +200,13 @@ nsPluginManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr
         return NS_OK; 
     } 
     // Aggregates...
+#if 0
     nsIJVMManager* jvmMgr = GetJVMMgr(aIID);
     if (jvmMgr) {
         *aInstancePtr = (void*) ((nsISupports*)jvmMgr);
         return NS_OK; 
     }
+#endif
     if (fMalloc == NULL) {
         if (nsMalloc::Create((nsIPluginManager*)this, kISupportsIID,
                              (void**)&fMalloc) != NS_OK)
@@ -197,6 +215,7 @@ nsPluginManager::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr
     return fMalloc->QueryInterface(aIID, aInstancePtr);
 }
 
+#if 0
 nsIJVMManager*
 nsPluginManager::GetJVMMgr(const nsIID& aIID)
 {
@@ -213,6 +232,7 @@ nsPluginManager::GetJVMMgr(const nsIID& aIID)
 #endif
     return result;
 }
+#endif
 
 NS_METHOD
 nsPluginManager::BeginWaitCursor(void)
