@@ -26,12 +26,11 @@
 #include "nsBarProps.h"
 #include "nsIWebBrowserChrome.h"
 #include "nsIDOMWindowInternal.h"
-#include "nsIScriptGlobalObject.h"
 
 //
 //  Basic (virtual) BarProp class implementation
 //
-BarPropImpl::BarPropImpl() : mBrowserChrome(nsnull), mScriptObject(nsnull)
+BarPropImpl::BarPropImpl() : mBrowserChrome(nsnull)
 {
   NS_INIT_REFCNT();
 }
@@ -45,33 +44,8 @@ NS_IMPL_RELEASE(BarPropImpl)
 
 NS_INTERFACE_MAP_BEGIN(BarPropImpl)
    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIDOMBarProp)
-   NS_INTERFACE_MAP_ENTRY(nsIScriptObjectOwner)
    NS_INTERFACE_MAP_ENTRY(nsIDOMBarProp)
 NS_INTERFACE_MAP_END
-
-NS_IMETHODIMP BarPropImpl::GetScriptObject(nsIScriptContext *aContext, 
-   void** aScriptObject)
-{
-   NS_ENSURE_ARG_POINTER(aScriptObject);
-   if(!mScriptObject)
-      {
-      nsCOMPtr<nsIScriptGlobalObject> global;
-      global = aContext->GetGlobalObject();
-      nsCOMPtr<nsIDOMWindowInternal> domWindow(do_QueryInterface(global));
-      NS_ENSURE_SUCCESS(NS_NewScriptBarProp(aContext, 
-         NS_STATIC_CAST(nsIDOMBarProp*, this), domWindow, &mScriptObject),
-         NS_ERROR_FAILURE);
-      }
-   *aScriptObject = mScriptObject;
-   return NS_OK;
-}
-
-NS_IMETHODIMP BarPropImpl::SetScriptObject(void *aScriptObject)
-{
-   // Weak Reference
-   mScriptObject = aScriptObject;
-   return NS_OK;
-}
 
 NS_IMETHODIMP BarPropImpl::SetWebBrowserChrome(nsIWebBrowserChrome* aBrowserChrome)
 {

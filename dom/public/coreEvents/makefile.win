@@ -22,14 +22,9 @@
 DEPTH=..\..\..
 
 
-DEFINES=-D_IMPL_NS_DOM 
+DEFINES=-D_IMPL_NS_DOM
 
 EXPORTS =				\
-	nsIDOMEvent.h			\
-	nsIDOMUIEvent.h			\
-	nsIDOMKeyEvent.h			\
-	nsIDOMMouseEvent.h			\
-  nsIDOMMutationEvent.h \
 	nsIDOMEventListener.h		\
 	nsIDOMEventCapturer.h		\
 	nsIDOMEventReceiver.h		\
@@ -39,15 +34,13 @@ EXPORTS =				\
 	nsIDOMLoadListener.h		\
 	nsIDOMMouseListener.h		\
 	nsIDOMMouseMotionListener.h	\
-  nsIDOMMutationListener.h \
+	nsIDOMMutationListener.h	\
 	nsIDOMPaintListener.h		\
 	nsIDOMDragListener.h		\
-	nsIDOMNSUIEvent.h			\
-	nsIDOMEventTarget.h		\
 	nsIDOMTextListener.h		\
 	nsIDOMCompositionListener.h	\
-	nsIDOMMenuListener.h        \
-	nsIDOMScrollListener.h        \
+	nsIDOMMenuListener.h		\
+	nsIDOMScrollListener.h		\
 	$(NULL)
 
 MODULE=dom

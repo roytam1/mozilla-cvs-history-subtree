@@ -92,7 +92,6 @@ interface WindowInternal : Window {
 
         WindowInternal open(/* ... */);
         WindowInternal openDialog(/* ... */);
-        noscript void  close();
         void  close(/* ... */);
 
         void updateCommands(in DOMString action);

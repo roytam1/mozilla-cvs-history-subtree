@@ -27,5 +27,5 @@ interface nsIDOMNSHTMLFormElement : nsISupports
   readonly attribute DOMString        encoding;
 
   nsISupports               namedItem(in DOMString name);
-  nsIDOMElement             item(in unsigned long index);
+  nsIDOMHTMLElement         item(in unsigned long index);
 };

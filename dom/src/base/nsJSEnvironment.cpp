@@ -21,10 +21,10 @@
  */
 
 #include "nsJSEnvironment.h"
-#include "nsIScriptObjectOwner.h"
 #include "nsIScriptContextOwner.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptGlobalObjectOwner.h"
+#include "nsIScriptObjectOwner.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMElement.h"
@@ -71,6 +71,8 @@ static NS_DEFINE_IID(kPrefServiceCID, NS_PREF_CID);
 #ifdef PR_LOGGING
 static PRLogModuleInfo* gJSDiagnostics = nsnull;
 #endif
+
+const char kXPConnectServiceContractID[] = "@mozilla.org/js/xpc/XPConnect;1";
 
 void PR_CALLBACK
 NS_ScriptErrorReporter(JSContext *cx,
@@ -1012,34 +1014,58 @@ nsJSContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
     return NS_ERROR_OUT_OF_MEMORY;
 
   nsresult rv;
-  nsCOMPtr<nsIScriptObjectOwner> owner = do_QueryInterface(aGlobalObject, &rv);
+  //  nsCOMPtr<nsIScriptObjectOwner> owner = do_QueryInterface(aGlobalObject, &rv);
   JSObject *global;
   mIsInitialized = PR_FALSE;
 
+  nsCOMPtr<nsIXPConnect> xpc = do_GetService(kXPConnectServiceContractID);
+  if (!xpc)
+    return nsnull;
+
+  nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+  rv = xpc->InitClassesWithNewWrappedGlobal(mContext, aGlobalObject,
+                                            NS_GET_IID(nsIDOMWindowInternal),
+                                            getter_AddRefs(holder));
+  if (NS_FAILED(rv))
+    return nsnull;
+
+  rv = holder->GetJSObject(&global);
+  if (NS_FAILED(rv))
+    return nsnull;
+
+  if (!JS_InitStandardClasses(mContext, global) 
+
+      /*
+        ||
+        !JS_DefineFunctions(mContext, global, gGlobalFun)
+
+      */
+
+      ) {
+    return nsnull;
+  }
+
+  //#if 0
+  //  // init standard classes
+
+  //  // Window uses JS_ResolveStandardClass for lazy class initialization.
+  //  if (JS_GetClass(mContext, global) == &WindowClass) {
+  //    // No JS_InitStandardClasses, so we must JS_SetGlobalObject explicitly.
+    ::JS_SetGlobalObject(mContext, global);
+  //  }
+  //  else {
+  //    // JS_InitStandardClasses does JS_SetGlobalObject for us, if necessary.
+  //    if (!::JS_InitStandardClasses(mContext, global))
+  //      rv = NS_ERROR_FAILURE;
+  //  }
+  //#endif
+
   if (NS_SUCCEEDED(rv)) {
-    rv = owner->GetScriptObject(this, (void **)&global);
+    rv = InitClasses(); // this will complete global object initialization
+  }
 
-    // init standard classes
-    if (NS_SUCCEEDED(rv)) {
-      extern JSClass WindowClass;
-
-      // Window uses JS_ResolveStandardClass for lazy class initialization.
-      if (JS_GetClass(mContext, global) == &WindowClass) {
-        // No JS_InitStandardClasses, so we must JS_SetGlobalObject explicitly.
-        ::JS_SetGlobalObject(mContext, global);
-      }
-      else {
-        // JS_InitStandardClasses does JS_SetGlobalObject for us, if necessary.
-        if (!::JS_InitStandardClasses(mContext, global))
-          rv = NS_ERROR_FAILURE;
-      }
-      if (NS_SUCCEEDED(rv))
-        rv = InitClasses(); // this will complete global object initialization
-    }
-
-    if (NS_SUCCEEDED(rv)) {
-      ::JS_SetErrorReporter(mContext, NS_ScriptErrorReporter);
-    }
+  if (NS_SUCCEEDED(rv)) {
+    ::JS_SetErrorReporter(mContext, NS_ScriptErrorReporter);
   }
 
   return rv;
@@ -1250,17 +1276,13 @@ NS_IMETHODIMP
 nsJSContext::InitClasses()
 {
   nsresult rv = NS_OK;
-  nsCOMPtr<nsIScriptGlobalObject> global = dont_AddRef(GetGlobalObject());
+//  nsCOMPtr<nsIScriptGlobalObject> global = dont_AddRef(GetGlobalObject());
   JSObject *globalObj = ::JS_GetGlobalObject(mContext);
+
+  /*
 
   if (NS_FAILED(NS_InitWindowClass(this, global)) ||
       NS_FAILED(NS_InitNodeClass(this, nsnull)) ||
-      NS_FAILED(NS_InitElementClass(this, nsnull)) ||
-      NS_FAILED(NS_InitDocumentClass(this, nsnull)) ||
-      NS_FAILED(NS_InitTextClass(this, nsnull)) ||
-      NS_FAILED(NS_InitAttrClass(this, nsnull)) ||
-      NS_FAILED(NS_InitNamedNodeMapClass(this, nsnull)) ||
-      NS_FAILED(NS_InitNodeListClass(this, nsnull)) ||
       NS_FAILED(NS_InitKeyEventClass(this, nsnull)) ||
       NS_FAILED(InitializeLiveConnectClasses()) ||
       NS_FAILED(InitializeExternalClasses()) ||
@@ -1269,6 +1291,7 @@ nsJSContext::InitClasses()
       NS_FAILED(NS_InitHTMLOptionElementClass(this, nsnull))) {
     rv = NS_ERROR_FAILURE;
   }
+  */
 
   // Initialize XPConnect classes
   if (NS_SUCCEEDED(rv)) {

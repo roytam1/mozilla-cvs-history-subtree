@@ -398,9 +398,11 @@ nsJSUtils::nsConvertJSValToFunc(nsIDOMEventListener** aListener,
     if (JS_TypeOfValue(aContext, aValue) == JSTYPE_FUNCTION){
       nsIScriptContext* scriptContext = (nsIScriptContext*)JS_GetContextPrivate(aContext);
       
+#if 0
       if (NS_OK == NS_NewScriptEventListener(aListener, scriptContext, (void*)aObj, (void*)JSVAL_TO_OBJECT(aValue))) {
         return JS_TRUE;
       }
+#endif
       JS_ReportError(aContext, "Out of memory");
       return JS_FALSE;
     }

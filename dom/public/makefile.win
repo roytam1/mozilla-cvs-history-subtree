@@ -23,17 +23,14 @@ DEPTH=..\..
 
 include <$(DEPTH)\config\config.mak>
 
-DIRS=base coreDom coreEvents range events html css
+DIRS=idl coreEvents base
+MODULE=dom 
 
-!ifdef MOZ_XUL
-DIRS=$(DIRS) xul
-!endif
-
-XPIDLSRCS = .\domstubs.idl \
-				.\nsIScriptContextOwner.idl \
-				.\nsIScriptGlobalObjectOwner.idl \
-				.\nsIEntropyCollector.idl \
-				$(NULL)
+XPIDLSRCS = \
+	.\nsIScriptContextOwner.idl \
+	.\nsIScriptGlobalObjectOwner.idl \
+	.\nsIEntropyCollector.idl \
+	$(NULL)
 
 
 DEFINES=-D_IMPL_NS_DOM 
@@ -53,8 +50,6 @@ EXPORTS=nsIScriptContext.h 		\
 	nsIScriptNameSpaceManager.h \
 	nsDOMError.h \
 	nsIJSEventListener.h
-
-MODULE=dom 
 
 include <$(DEPTH)\config\rules.mak>
 
