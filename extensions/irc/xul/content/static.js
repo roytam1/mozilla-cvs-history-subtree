@@ -36,7 +36,7 @@ const MSG_UNKNOWN   = getMsg ("unknown");
 
 client.defaultNick = getMsg( "defaultNick" );
 
-client.version = "0.8.6";
+client.version = "0.8.7";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -1668,11 +1668,14 @@ function setCurrentObject (obj)
     if (userList.treeBoxObject.selection)
       userList.treeBoxObject.selection.clearSelection ();
 
-    if (obj.TYPE == "IRCChannel")
-        client.rdf.setTreeRoot ("user-list", obj.getGraphResource());
-    else
-        client.rdf.setTreeRoot ("user-list", client.rdf.resNullChan);
-
+    if (isVisible("user-list-box"))
+    {
+        if (obj.TYPE == "IRCChannel")
+            client.rdf.setTreeRoot ("user-list", obj.getGraphResource());
+        else
+            client.rdf.setTreeRoot ("user-list", client.rdf.resNullChan);
+    }
+    
     client.currentObject = obj;
     tb = getTabForObject(obj);
     if (tb)
