@@ -751,22 +751,29 @@ nsJVMMgr::AddToClassPath(const char* dirPath)
         while ((dirent = PR_ReadDir(dir, PR_SKIP_BOTH)) != NULL) {
             PRFileInfo info;
             char* path = PR_smprintf("%s%c%s", dirPath, PR_DIRECTORY_SEPARATOR, PR_DirName(dirent));
+			if (path != NULL) {
+        		PRBool freePath = PR_TRUE;
+	            if ((PR_GetFileInfo(path, &info) == PR_SUCCESS)
+	                && (info.type == PR_FILE_FILE)) {
+	                int len = PL_strlen(path);
 
-            if ((PR_GetFileInfo(path, &info) == PR_SUCCESS)
-                && (info.type == PR_FILE_FILE)) {
-                int len = PL_strlen(path);
-
-                /* Is it a zip or jar file? */
-                if ((len > 4) && 
-                    ((PL_strcasecmp(path+len-4, ".zip") == 0) || 
-                     (PL_strcasecmp(path+len-4, ".jar") == 0))) {
-                    fClassPathAdditions->Add((void*)path);
-                    if (jvm) {
-                        /* Add this path to the classpath: */
-                        jvm->AddToClassPath(path);
-                    }
-                }
-            }
+	                /* Is it a zip or jar file? */
+	                if ((len > 4) && 
+	                    ((PL_strcasecmp(path+len-4, ".zip") == 0) || 
+	                     (PL_strcasecmp(path+len-4, ".jar") == 0))) {
+	                    fClassPathAdditions->Add((void*)path);
+	                    if (jvm) {
+	                        /* Add this path to the classpath: */
+	                        jvm->AddToClassPath(path);
+	                    }
+	                    freePath = PR_FALSE;
+	                }
+	            }
+	            
+	            // Don't leak the path!
+	            if (freePath)
+		            PR_smprintf_free(path);
+	        }
         }
         PR_CloseDir(dir);
     }
