@@ -446,6 +446,10 @@ NS_IMETHODIMP nsMsgDatabase::AddListener(nsIDBChangeListener *listener)
         if (!m_ChangeListeners) 
 			return NS_ERROR_OUT_OF_MEMORY;
     }
+  // check if this listener is already registered
+  // if already registered, do nothing (not an error)
+  else if (m_ChangeListeners->IndexOf(listener) != -1)
+    return NS_OK;
 	return m_ChangeListeners->AppendElement(listener);
 }
 
@@ -1069,6 +1073,11 @@ NS_IMETHODIMP nsMsgDatabase::ForceClosed()
   {
     m_mdbStore->Release();
     m_mdbStore = nsnull;
+  }
+  if (m_ChangeListeners) 
+  {
+    // better not be any listeners, because we're going away.
+    NS_ASSERTION(m_ChangeListeners->Count() == 0, "shouldn't have any listeners left");
   }
   Release();
   return err;
