@@ -11954,7 +11954,7 @@ else
 MOZ_EXTENSIONS=`${CYGWIN_WRAPPER} ${PERL} ${srcdir}/build/unix/uniq.pl ${MOZ_EXTENSIONS}`
 fi
 
-MOZ_IMG_DECODERS_DEFAULT="ppm png gif jpeg bmp mng xbm"
+MOZ_IMG_DECODERS_DEFAULT="png gif jpeg bmp mng xbm"
 case "$target_os" in
 cygwin*|mingw*|msvc*|mks*|os2*)
     MOZ_IMG_DECODERS_DEFAULT="$MOZ_IMG_DECODERS_DEFAULT icon"
