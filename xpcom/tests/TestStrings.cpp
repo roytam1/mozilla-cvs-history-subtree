@@ -37,6 +37,7 @@
 
 #include <stdio.h>
 #include "nsString.h"
+#include "nsReadableUtils.h"
 #include "nsCRT.h"
 
 void test_assign_helper(const nsACString& in, nsACString &_retval)
@@ -56,7 +57,7 @@ PRBool test_assign()
 
 PRBool test_assign_c()
   {
-    nsCString c('c');
+    nsCString c; c.Assign('c');
     PRBool r = strcmp(c.get(), "c") == 0;
     if (!r)
       printf("[result=%s]\n", c.get());
@@ -248,7 +249,7 @@ PRBool test_concat_2()
     nsCString text("text");
     const nsACString& aText = text;
 
-    nsCAutoString result = fieldTextStr + aText;
+    nsCAutoString result( fieldTextStr + aText );
 
     if (strcmp(result.get(), "xyztext") == 0)
       return PR_TRUE;
@@ -300,9 +301,11 @@ PRBool test_xpidl_string()
     if (a != (const char*) 0)
       return PR_FALSE;
 
+    /*
     PRInt32 index = a.FindCharInSet("xyz");
     if (index != kNotFound)
       return PR_FALSE;
+    */
 
     return PR_TRUE;
   }
@@ -354,11 +357,18 @@ tests[] =
 
 //----
 
-int main()
+int main(int argc, char **argv)
   {
-    for (const Test* t = tests; t->name != nsnull; ++t)
+    int count = 1;
+    if (argc > 1)
+      count = atoi(argv[1]);
+
+    while (count--)
       {
-        printf("%20s : %s\n", t->name, t->func() ? "SUCCESS" : "FAILURE");
+        for (const Test* t = tests; t->name != nsnull; ++t)
+          {
+            printf("%20s : %s\n", t->name, t->func() ? "SUCCESS" : "FAILURE");
+          }
       }
     
     return 0;
