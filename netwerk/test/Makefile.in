@@ -45,6 +45,7 @@ CPPSRCS		= \
 		TestCallbacks.cpp \
         TestSyncHTTP.cpp \
 		TestDBMAccess.cpp \
+        TestHttp.cpp \
 		$(NULL)
 
 ifdef MOZ_NEW_CACHE
