@@ -730,17 +730,10 @@ NS_IMETHODIMP nsMsgDBFolder::OnKeyChange(nsMsgKey aKeyChanged, PRUint32 aOldFlag
 	nsresult rv = mDatabase->GetMsgHdrForKey(aKeyChanged, getter_AddRefs(pMsgDBHdr));
 	if(NS_SUCCEEDED(rv) && pMsgDBHdr)
 	{
-		nsCOMPtr<nsIMessage> message;
-		rv = CreateMessageFromMsgDBHdr(pMsgDBHdr, getter_AddRefs(message));
+		nsCOMPtr<nsISupports> msgSupports(do_QueryInterface(pMsgDBHdr, &rv));
 		if(NS_SUCCEEDED(rv))
-		{
-			nsCOMPtr<nsISupports> msgSupports(do_QueryInterface(message, &rv));
-			if(NS_SUCCEEDED(rv))
-			{
-				SendFlagNotifications(msgSupports, aOldFlags, aNewFlags);
-			}
-		  UpdateSummaryTotals(PR_TRUE);
-		}
+			SendFlagNotifications(msgSupports, aOldFlags, aNewFlags);
+		UpdateSummaryTotals(PR_TRUE);
 	}
 
 	// The old state was new message state
@@ -820,12 +813,7 @@ nsresult nsMsgDBFolder::OnKeyAddedOrDeleted(nsMsgKey aKeyChanged, nsMsgKey  aPar
 
 	if(msgDBHdr)
 	{
-		nsCOMPtr<nsIMessage> message;
-		rv = CreateMessageFromMsgDBHdr(msgDBHdr, getter_AddRefs(message));
-		if(NS_FAILED(rv))
-			return rv;
-
-		nsCOMPtr<nsISupports> msgSupports(do_QueryInterface(message));
+		nsCOMPtr<nsISupports> msgSupports(do_QueryInterface(msgDBHdr));
 		nsCOMPtr<nsISupports> folderSupports;
 		rv = QueryInterface(NS_GET_IID(nsISupports), getter_AddRefs(folderSupports));
 		if(msgSupports && NS_SUCCEEDED(rv) && doFlat)
@@ -835,36 +823,12 @@ nsresult nsMsgDBFolder::OnKeyAddedOrDeleted(nsMsgKey aKeyChanged, nsMsgKey  aPar
 			else
 				NotifyItemDeleted(folderSupports, msgSupports, "flatMessageView");
 		}
-		if(doThread)
+		if(msgSupports && folderSupports)
 		{
-			if(parentDBHdr)
-			{
-				nsCOMPtr<nsIMessage> parentMessage;
-				rv = CreateMessageFromMsgDBHdr(parentDBHdr, getter_AddRefs(parentMessage));
-				if(NS_FAILED(rv))
-					return rv;
-
-				nsCOMPtr<nsISupports> parentSupports(do_QueryInterface(parentMessage));
-				if(msgSupports && NS_SUCCEEDED(rv))
-				{
-					if(added)
-						NotifyItemAdded(parentSupports, msgSupports, "threadMessageView");
-					else
-						NotifyItemDeleted(parentSupports, msgSupports, "threadMessageView");
-
-				}
-			}
-			//if there's not a header then in threaded view the folder is the parent.
+			if(added)
+				NotifyItemAdded(folderSupports, msgSupports, "threadMessageView");
 			else
-			{
-				if(msgSupports && folderSupports)
-				{
-					if(added)
-						NotifyItemAdded(folderSupports, msgSupports, "threadMessageView");
-					else
-						NotifyItemDeleted(folderSupports, msgSupports, "threadMessageView");
-				}
-			}
+				NotifyItemDeleted(folderSupports, msgSupports, "threadMessageView");
 		}
 		UpdateSummaryTotals(PR_TRUE);
 	}

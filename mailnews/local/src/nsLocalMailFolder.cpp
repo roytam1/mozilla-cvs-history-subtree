@@ -1507,7 +1507,9 @@ nsMsgLocalMailFolder::DeleteMessages(nsISupportsArray *messages,
           EnableNotifications(allMessageCountNotifications, PR_FALSE);
           for(PRUint32 i = 0; i < messageCount; i++)
           {
-            DeleteMessage(msgSupport, msgWindow, PR_TRUE);
+            msgSupport = getter_AddRefs(messages->ElementAt(i));
+            if (msgSupport)
+              DeleteMessage(msgSupport, msgWindow, PR_TRUE);
           }
           EnableNotifications(allMessageCountNotifications, PR_TRUE);
 		  if(!isMove)
@@ -1998,15 +2000,9 @@ nsresult nsMsgLocalMailFolder::DeleteMessage(nsISupports *message,
   if (deleteStorage)
 	{
 		nsCOMPtr <nsIMsgDBHdr> msgDBHdr(do_QueryInterface(message, &rv));
-		nsCOMPtr<nsIDBMessage> dbMessage(do_QueryInterface(message, &rv));
 
 		if(NS_SUCCEEDED(rv))
-		{
-      if (!msgDBHdr)
-			  rv = dbMessage->GetMsgDBHdr(getter_AddRefs(msgDBHdr));
-			if(NS_SUCCEEDED(rv))
-				rv = mDatabase->DeleteHeader(msgDBHdr, nsnull, PR_TRUE, PR_TRUE);
-		}
+			rv = mDatabase->DeleteHeader(msgDBHdr, nsnull, PR_TRUE, PR_TRUE);
 	}
 	return rv;
 }
@@ -2305,8 +2301,6 @@ NS_IMETHODIMP nsMsgLocalMailFolder::EndCopy(PRBool copySucceeded)
     //  the mCopyState->m_message will be always null for file message
 
     nsCOMPtr<nsIMsgDBHdr> newHdr;
-    nsCOMPtr<nsIMsgDBHdr> msgDBHdr (do_QueryInterface(mCopyState->m_message,
-                                                       &rv));
     
     if(!mCopyState->m_parseMsgState)
     {
@@ -2317,17 +2311,17 @@ NS_IMETHODIMP nsMsgLocalMailFolder::EndCopy(PRBool copySucceeded)
       if(NS_SUCCEEDED(rv))
       {
         rv = mDatabase->CopyHdrFromExistingHdr(mCopyState->m_curDstKey,
-                                               msgDBHdr, PR_TRUE,
+                                               mCopyState->m_message, PR_TRUE,
                                                getter_AddRefs(newHdr));
         msgDatabase->SetSummaryValid(PR_TRUE);
         msgDatabase->Commit(nsMsgDBCommitType::kLargeCommit);
       }
     }
 
-    if (NS_SUCCEEDED(rv) && localUndoTxn && msgDBHdr)
+    if (NS_SUCCEEDED(rv) && localUndoTxn && mCopyState->m_message)
     {
       nsMsgKey aKey;
-      msgDBHdr->GetMessageKey(&aKey);
+      mCopyState->m_message->GetMessageKey(&aKey);
       localUndoTxn->AddSrcKey(aKey);
       localUndoTxn->AddDstKey(mCopyState->m_curDstKey);
     }
