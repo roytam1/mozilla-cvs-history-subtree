@@ -20,10 +20,6 @@
  * Contributor(s): 
  */
 /*
- *  Copyright (c) 1990 Regents of the University of Michigan.
- *  All rights reserved.
- */
-/*
  *  bind.c
  */
 
@@ -36,7 +32,7 @@ static char copyright[] = "@(#) Copyright (c) 1990 Regents of the University of 
 #include "ldap-int.h"
 
 /*
- * ldap_bind - bind to the ldap server (and X.500).  The dn and password
+ * ldap_bind - bind to the ldap server. The dn and password
  * of the entry to which to bind are supplied, along with the authentication
  * method to use.  The msgid of the bind request is returned on success,
  * -1 if there's trouble.  Note, the kerberos support assumes the user already
@@ -81,7 +77,7 @@ ldap_bind( LDAP *ld, const char *dn, const char *passwd, int authmethod )
 }
 
 /*
- * ldap_bind_s - bind to the ldap server (and X.500).  The dn and password
+ * ldap_bind_s - bind to the ldap server.  The dn and password
  * of the entry to which to bind are supplied, along with the authentication
  * method to use.  This routine just calls whichever bind routine is
  * appropriate and returns the result of the bind (e.g. LDAP_SUCCESS or

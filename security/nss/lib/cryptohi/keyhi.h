@@ -46,7 +46,7 @@
 #include "secdert.h"
 #include "keythi.h"
 #include "certt.h"
-/*#include "secpkcs5.h" */
+#include "secpkcs5.h"
 
 SEC_BEGIN_PROTOS
 
@@ -108,7 +108,7 @@ SECKEYPrivateKey *SECKEY_CreateRSAPrivateKey(int keySizeInBits,
 /*
  * create a new DH key pair. The private Key is returned...
  */
-SECKEYPrivateKey *SECKEY_CreateDHPrivateKey(SECKEYDHParams *param,
+SECKEYPrivateKey *SECKEY_CreateDHPrivateKey(DHParams *param,
 					   SECKEYPublicKey **pubk, void *cx);
 /*
 ** Create a subject-public-key-info based on a public key.
@@ -250,23 +250,6 @@ SECKEY_AddPrivateKeyToListTail( SECKEYPrivateKeyList *list,
 #define PRIVKEY_LIST_HEAD(l) ((SECKEYPrivateKeyListNode*)PR_LIST_HEAD(&l->list))
 #define PRIVKEY_LIST_NEXT(n) ((SECKEYPrivateKeyListNode *)n->links.next)
 #define PRIVKEY_LIST_END(n,l) (((void *)n) == ((void *)&l->list))
-
-SECKEYPublicKeyList*
-SECKEY_NewPublicKeyList(void);
-
-void
-SECKEY_DestroyPublicKeyList(SECKEYPublicKeyList *keys);
-
-void
-SECKEY_RemovePublicKeyListNode(SECKEYPublicKeyListNode *node);
-
-SECStatus
-SECKEY_AddPublicKeyToListTail( SECKEYPublicKeyList *list,
-                                SECKEYPublicKey *key);
-
-#define PUBKEY_LIST_HEAD(l) ((SECKEYPublicKeyListNode*)PR_LIST_HEAD(&l->list))
-#define PUBKEY_LIST_NEXT(n) ((SECKEYPublicKeyListNode *)n->links.next)
-#define PUBKEY_LIST_END(n,l) (((void *)n) == ((void *)&l->list))
 
 SEC_END_PROTOS
 

@@ -30,61 +30,59 @@
  * may use your version of this file under either the MPL or the
  * GPL.
  */
-#include "lowkeyi.h"
+#include "keylow.h"
 #include "secoid.h"
 #include "secitem.h"
 #include "secder.h"
 #include "base64.h"
 #include "secasn1.h"
-#include "pcert.h"
+#include "cert.h"
 #include "secerr.h"
 
 
-const SEC_ASN1Template nsslowkey_PQGParamsTemplate[] = {
-    { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(PQGParams) },
-    { SEC_ASN1_INTEGER, offsetof(PQGParams,prime) },
-    { SEC_ASN1_INTEGER, offsetof(PQGParams,subPrime) },
-    { SEC_ASN1_INTEGER, offsetof(PQGParams,base) },
-    { 0, }
-};
-
-const SEC_ASN1Template nsslowkey_RSAPrivateKeyTemplate[] = {
-    { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(NSSLOWKEYPrivateKey) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.rsa.version) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.rsa.modulus) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.rsa.publicExponent) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.rsa.privateExponent) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.rsa.prime1) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.rsa.prime2) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.rsa.exponent1) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.rsa.exponent2) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.rsa.coefficient) },
+const SEC_ASN1Template SECKEY_RSAPrivateKeyTemplate[] = {
+    { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SECKEYPrivateKey) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.rsa.version) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.rsa.modulus) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.rsa.publicExponent) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.rsa.privateExponent) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.rsa.prime1) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.rsa.prime2) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.rsa.exponent1) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.rsa.exponent2) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.rsa.coefficient) },
     { 0 }                                                                     
 };                                                                            
 
 
-const SEC_ASN1Template nsslowkey_DSAPrivateKeyTemplate[] = {
-    { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(NSSLOWKEYPrivateKey) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.dsa.publicValue) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.dsa.privateValue) },
+const SEC_ASN1Template SECKEY_DSAPrivateKeyTemplate[] = {
+    { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SECKEYLowPrivateKey) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dsa.publicValue) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dsa.privateValue) },
     { 0, }
 };
 
-const SEC_ASN1Template nsslowkey_DSAPrivateKeyExportTemplate[] = {
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.dsa.privateValue) },
+const SEC_ASN1Template SECKEY_DSAPrivateKeyExportTemplate[] = {
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dsa.privateValue) },
 };
 
-const SEC_ASN1Template nsslowkey_DHPrivateKeyTemplate[] = {
-    { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(NSSLOWKEYPrivateKey) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.dh.publicValue) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.dh.privateValue) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.dh.base) },
-    { SEC_ASN1_INTEGER, offsetof(NSSLOWKEYPrivateKey,u.dh.prime) },
+const SEC_ASN1Template SECKEY_DHPrivateKeyTemplate[] = {
+    { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SECKEYLowPrivateKey) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dh.publicValue) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dh.privateValue) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dh.base) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dh.prime) },
     { 0, }
+};
+
+const SEC_ASN1Template SECKEY_DHPrivateKeyExportTemplate[] = {
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dh.privateValue) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dh.base) },
+    { SEC_ASN1_INTEGER, offsetof(SECKEYLowPrivateKey,u.dh.prime) },
 };
 
 void
-nsslowkey_DestroyPrivateKey(NSSLOWKEYPrivateKey *privk)
+SECKEY_LowDestroyPrivateKey(SECKEYLowPrivateKey *privk)
 {
     if (privk && privk->arena) {
 	PORT_FreeArena(privk->arena, PR_TRUE);
@@ -92,14 +90,14 @@ nsslowkey_DestroyPrivateKey(NSSLOWKEYPrivateKey *privk)
 }
 
 void
-nsslowkey_DestroyPublicKey(NSSLOWKEYPublicKey *pubk)
+SECKEY_LowDestroyPublicKey(SECKEYLowPublicKey *pubk)
 {
     if (pubk && pubk->arena) {
 	PORT_FreeArena(pubk->arena, PR_FALSE);
     }
 }
 unsigned
-nsslowkey_PublicModulusLen(NSSLOWKEYPublicKey *pubk)
+SECKEY_LowPublicModulusLen(SECKEYLowPublicKey *pubk)
 {
     unsigned char b0;
 
@@ -107,7 +105,7 @@ nsslowkey_PublicModulusLen(NSSLOWKEYPublicKey *pubk)
      * fortezza that's the public key length */
 
     switch (pubk->keyType) {
-    case NSSLOWKEYRSAKey:
+    case rsaKey:
     	b0 = pubk->u.rsa.modulus.data[0];
     	return b0 ? pubk->u.rsa.modulus.len : pubk->u.rsa.modulus.len - 1;
     default:
@@ -117,13 +115,13 @@ nsslowkey_PublicModulusLen(NSSLOWKEYPublicKey *pubk)
 }
 
 unsigned
-nsslowkey_PrivateModulusLen(NSSLOWKEYPrivateKey *privk)
+SECKEY_LowPrivateModulusLen(SECKEYLowPrivateKey *privk)
 {
 
     unsigned char b0;
 
     switch (privk->keyType) {
-    case NSSLOWKEYRSAKey:
+    case rsaKey:
 	b0 = privk->u.rsa.modulus.data[0];
 	return b0 ? privk->u.rsa.modulus.len : privk->u.rsa.modulus.len - 1;
     default:
@@ -132,10 +130,10 @@ nsslowkey_PrivateModulusLen(NSSLOWKEYPrivateKey *privk)
     return 0;
 }
 
-NSSLOWKEYPublicKey *
-nsslowkey_ConvertToPublicKey(NSSLOWKEYPrivateKey *privk)
+SECKEYLowPublicKey *
+SECKEY_LowConvertToPublicKey(SECKEYLowPrivateKey *privk)
 {
-    NSSLOWKEYPublicKey *pubk;
+    SECKEYLowPublicKey *pubk;
     PLArenaPool *arena;
 
 
@@ -146,16 +144,16 @@ nsslowkey_ConvertToPublicKey(NSSLOWKEYPrivateKey *privk)
     }
 
     switch(privk->keyType) {
-      case NSSLOWKEYRSAKey:
-      case NSSLOWKEYNullKey:
-	pubk = (NSSLOWKEYPublicKey *)PORT_ArenaZAlloc(arena,
-						sizeof (NSSLOWKEYPublicKey));
+      case rsaKey:
+      case nullKey:
+	pubk = (SECKEYLowPublicKey *)PORT_ArenaZAlloc(arena,
+						sizeof (SECKEYLowPublicKey));
 	if (pubk != NULL) {
 	    SECStatus rv;
 
 	    pubk->arena = arena;
 	    pubk->keyType = privk->keyType;
-	    if (privk->keyType == NSSLOWKEYNullKey) return pubk;
+	    if (privk->keyType == nullKey) return pubk;
 	    rv = SECITEM_CopyItem(arena, &pubk->u.rsa.modulus,
 				  &privk->u.rsa.modulus);
 	    if (rv == SECSuccess) {
@@ -164,14 +162,14 @@ nsslowkey_ConvertToPublicKey(NSSLOWKEYPrivateKey *privk)
 		if (rv == SECSuccess)
 		    return pubk;
 	    }
-	    nsslowkey_DestroyPublicKey (pubk);
+	    SECKEY_LowDestroyPublicKey (pubk);
 	} else {
 	    PORT_SetError (SEC_ERROR_NO_MEMORY);
 	}
 	break;
-      case NSSLOWKEYDSAKey:
-	pubk = (NSSLOWKEYPublicKey *)PORT_ArenaZAlloc(arena,
-						    sizeof(NSSLOWKEYPublicKey));
+      case dsaKey:
+	pubk = (SECKEYLowPublicKey *)PORT_ArenaZAlloc(arena,
+						    sizeof(SECKEYLowPublicKey));
 	if (pubk != NULL) {
 	    SECStatus rv;
 
@@ -191,9 +189,9 @@ nsslowkey_ConvertToPublicKey(NSSLOWKEYPrivateKey *privk)
 	    if (rv == SECSuccess) return pubk;
 	}
 	break;
-      case NSSLOWKEYDHKey:
-	pubk = (NSSLOWKEYPublicKey *)PORT_ArenaZAlloc(arena,
-						    sizeof(NSSLOWKEYPublicKey));
+      case dhKey:
+	pubk = (SECKEYLowPublicKey *)PORT_ArenaZAlloc(arena,
+						    sizeof(SECKEYLowPublicKey));
 	if (pubk != NULL) {
 	    SECStatus rv;
 
@@ -220,10 +218,10 @@ nsslowkey_ConvertToPublicKey(NSSLOWKEYPrivateKey *privk)
     return NULL;
 }
 
-NSSLOWKEYPrivateKey *
-nsslowkey_CopyPrivateKey(NSSLOWKEYPrivateKey *privKey)
+SECKEYLowPrivateKey *
+SECKEY_CopyLowPrivateKey(SECKEYLowPrivateKey *privKey)
 {
-    NSSLOWKEYPrivateKey *returnKey = NULL;
+    SECKEYLowPrivateKey *returnKey = NULL;
     SECStatus rv = SECFailure;
     PLArenaPool *poolp;
 
@@ -236,7 +234,7 @@ nsslowkey_CopyPrivateKey(NSSLOWKEYPrivateKey *privKey)
 	return NULL;
     }
 
-    returnKey = (NSSLOWKEYPrivateKey*)PORT_ArenaZAlloc(poolp, sizeof(NSSLOWKEYPrivateKey));
+    returnKey = (SECKEYLowPrivateKey*)PORT_ArenaZAlloc(poolp, sizeof(SECKEYLowPrivateKey));
     if(!returnKey) {
 	rv = SECFailure;
 	goto loser;
@@ -246,7 +244,7 @@ nsslowkey_CopyPrivateKey(NSSLOWKEYPrivateKey *privKey)
     returnKey->arena = poolp;
 
     switch(privKey->keyType) {
-	case NSSLOWKEYRSAKey:
+	case rsaKey:
 	    rv = SECITEM_CopyItem(poolp, &(returnKey->u.rsa.modulus), 
 	    				&(privKey->u.rsa.modulus));
 	    if(rv != SECSuccess) break;
@@ -275,7 +273,7 @@ nsslowkey_CopyPrivateKey(NSSLOWKEYPrivateKey *privKey)
 	    				&(privKey->u.rsa.coefficient));
 	    if(rv != SECSuccess) break;
 	    break;
-	case NSSLOWKEYDSAKey:
+	case dsaKey:
 	    rv = SECITEM_CopyItem(poolp, &(returnKey->u.dsa.publicValue),
 	    				&(privKey->u.dsa.publicValue));
 	    if(rv != SECSuccess) break;
@@ -293,7 +291,7 @@ nsslowkey_CopyPrivateKey(NSSLOWKEYPrivateKey *privKey)
 					&(privKey->u.dsa.params.base));
 	    if(rv != SECSuccess) break;
 	    break;
-	case NSSLOWKEYDHKey:
+	case dhKey:
 	    rv = SECITEM_CopyItem(poolp, &(returnKey->u.dh.publicValue),
 	    				&(privKey->u.dh.publicValue));
 	    if(rv != SECSuccess) break;
@@ -307,6 +305,15 @@ nsslowkey_CopyPrivateKey(NSSLOWKEYPrivateKey *privKey)
 	    rv = SECITEM_CopyItem(poolp, &(returnKey->u.dh.base),
 					&(privKey->u.dh.base));
 	    if(rv != SECSuccess) break;
+	    break;
+	case fortezzaKey:
+	    returnKey->u.fortezza.certificate = 
+	    				privKey->u.fortezza.certificate;
+	    returnKey->u.fortezza.socket = 
+	    				privKey->u.fortezza.socket;
+	    PORT_Memcpy(returnKey->u.fortezza.serial, 
+	    				privKey->u.fortezza.serial, 8);
+	    rv = SECSuccess;
 	    break;
 	default:
 	    rv = SECFailure;

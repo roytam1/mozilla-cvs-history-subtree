@@ -38,14 +38,13 @@
 #include "nss.h"
 #include "blapi.h"
 #include "plgetopt.h"
-#include "lowkeyi.h"
 
 
 #define MAX_RSA_MODULUS_BYTES (1024/8)
 #define DEFAULT_ITERS 10
 
-extern NSSLOWKEYPrivateKey * getDefaultRSAPrivateKey(void);
-extern NSSLOWKEYPublicKey  * getDefaultRSAPublicKey(void);
+extern SECKEYLowPrivateKey * getDefaultRSAPrivateKey(void);
+extern SECKEYLowPublicKey  * getDefaultRSAPublicKey(void);
 
 typedef struct TimingContextStr TimingContext;
 
@@ -196,7 +195,7 @@ dumpItem( SECItem * item, const char * description)
 }
 
 void
-printPrivKey(NSSLOWKEYPrivateKey * privKey)
+printPrivKey(SECKEYLowPrivateKey * privKey)
 {
     RSAPrivateKey *rsa = &privKey->u.rsa;
 
@@ -226,9 +225,10 @@ int
 main(int argc, char **argv)
 {
     TimingContext *	  timeCtx;
+    SECKEYKeyDBHandle *	  keydb;
     SECKEYPublicKey *	  pubHighKey;
-    NSSLOWKEYPrivateKey * privKey;
-    NSSLOWKEYPublicKey *  pubKey;
+    SECKEYLowPrivateKey * privKey;
+    SECKEYLowPublicKey *  pubKey;
     CERTCertificate *	  cert;
     char *		  progName;
     char *		  secDir 	= NULL;
@@ -291,6 +291,7 @@ main(int argc, char **argv)
 	    exit(1);
 	}
 	certdb = CERT_GetDefaultCertDB();
+	keydb  = SECKEY_GetDefaultKeyDB();
     } else {
 	rv = NSS_NoDB_Init(secDir);
 	if (rv != SECSuccess) {
@@ -340,6 +341,9 @@ main(int argc, char **argv)
 	    exit(1);
 	}
 
+#if 0
+	printPrivKey(privKey);
+#endif
 	fn = (RSAOp)RSA_PrivateKeyOp;
 	rsaKey = (void *)(&privKey->u.rsa);
     }

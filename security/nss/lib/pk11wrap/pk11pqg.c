@@ -42,11 +42,7 @@
  */
 extern SECStatus
 PK11_PQG_ParamGen(unsigned int j, PQGParams **pParams, PQGVerify **pVfy) {
-#ifdef notdef
     return PQG_ParamGen(j, pParams, pVfy);
-#else
-    return SECFailure;
-#endif
 }
 
 /* Generate PQGParams and PQGVerify structs.
@@ -57,11 +53,7 @@ PK11_PQG_ParamGen(unsigned int j, PQGParams **pParams, PQGVerify **pVfy) {
 extern SECStatus
 PK11_PQG_ParamGenSeedLen( unsigned int j, unsigned int seedBytes,
 				 PQGParams **pParams, PQGVerify **pVfy) {
-#ifdef notdef
     return PQG_ParamGenSeedLen(j, seedBytes, pParams, pVfy);
-#else
-    return SECFailure;
-#endif
 }
 
 /*  Test PQGParams for validity as DSS PQG values.
@@ -93,11 +85,7 @@ PK11_PQG_ParamGenSeedLen( unsigned int j, unsigned int seedBytes,
 extern SECStatus
 PK11_PQG_VerifyParams(const PQGParams *params, 
                                     const PQGVerify *vfy, SECStatus *result) {
-#ifdef notdef
     return PQG_VerifyParams(params, vfy, result);
-#else
-    return SECFailure;
-#endif
 }
 
 

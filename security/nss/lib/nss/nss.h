@@ -49,11 +49,11 @@ SEC_BEGIN_PROTOS
  * The format of the version string should be
  *     "<major version>.<minor version>[.<patch level>] [<Beta>]"
  */
-#define NSS_VERSION  "3.4 Beta"
+#define NSS_VERSION  "3.3.2"
 #define NSS_VMAJOR   3
-#define NSS_VMINOR   4
-#define NSS_VPATCH   0
-#define NSS_BETA     PR_TRUE
+#define NSS_VMINOR   3
+#define NSS_VPATCH   2
+#define NSS_BETA     PR_FALSE
 
 
 /*
@@ -108,8 +108,6 @@ extern SECStatus NSS_InitReadWrite(const char *configdir);
  *			initialize the 	PKCS #11 module.
  *      NSS_INIT_FORCEOPEN - Continue to force initializations even if the 
  * 			databases cannot be opened.
- *      NSS_INIT_NOROOTINIT - Don't try to look for the root certs module
- *			automatically.
  *
  * Also NOTE: This is not the recommended method for initializing NSS. 
  * The prefered method is NSS_init().
@@ -118,7 +116,6 @@ extern SECStatus NSS_InitReadWrite(const char *configdir);
 #define NSS_INIT_NOCERTDB	0x2
 #define NSS_INIT_NOMODDB	0x4
 #define NSS_INIT_FORCEOPEN	0x8
-#define NSS_INIT_NOROOTINIT     0x10
 
 extern SECStatus NSS_Initialize(const char *configdir, 
 	const char *certPrefix, const char *keyPrefix, 
@@ -133,20 +130,6 @@ SECStatus NSS_NoDB_Init(const char *configdir);
  * Close the Cert, Key databases.
  */
 extern void NSS_Shutdown(void);
-
-/*
- * set the PKCS #11 strings for the internal token.
- */
-void PK11_ConfigurePKCS11(const char *man, const char *libdes, 
-	const char *tokdes, const char *ptokdes, const char *slotdes, 
-	const char *pslotdes, const char *fslotdes, const char *fpslotdes,
-        int minPwd, int pwRequired);
-
-/*
- * Dump the contents of the certificate cache and the temporary cert store.
- * Use to detect leaked references of certs at shutdown time.
- */
-void nss_DumpCertificateCacheInfo();
 
 SEC_END_PROTOS
 

@@ -536,7 +536,7 @@ sec_asn1d_init_state_based_on_template (sec_asn1d_state *state)
 
     /* XXX is this the right set of bits to test here? */
     PORT_Assert ((under_kind & (SEC_ASN1_EXPLICIT | SEC_ASN1_OPTIONAL
-				| SEC_ASN1_MAY_STREAM
+				| SEC_ASN1_DYNAMIC | SEC_ASN1_MAY_STREAM
 				| SEC_ASN1_INLINE | SEC_ASN1_POINTER)) == 0);
 
     if (encode_kind & (SEC_ASN1_ANY | SEC_ASN1_SKIP)) {
@@ -893,10 +893,7 @@ sec_asn1d_prepare_for_contents (sec_asn1d_state *state)
 	 * below under cases SET_OF and SEQUENCE_OF; it will be cleaner.
 	 */
 	PORT_Assert (state->underlying_kind == SEC_ASN1_SET_OF
-	   || state->underlying_kind == SEC_ASN1_SEQUENCE_OF
-	   || state->underlying_kind == (SEC_ASN1_SEQUENCE_OF|SEC_ASN1_DYNAMIC)
-	   || state->underlying_kind == (SEC_ASN1_SEQUENCE_OF|SEC_ASN1_DYNAMIC)
-		     );
+		     || state->underlying_kind == SEC_ASN1_SEQUENCE_OF);
 	if (state->contents_length != 0 || state->indefinite) {
 	    const SEC_ASN1Template *subt;
 
@@ -1324,7 +1321,6 @@ sec_asn1d_parse_leaf (sec_asn1d_state *state,
 		      const char *buf, unsigned long len)
 {
     SECItem *item;
-    unsigned long bufLen;
 
     if (len == 0) {
 	state->top->status = needBytes;
@@ -1334,27 +1330,16 @@ sec_asn1d_parse_leaf (sec_asn1d_state *state,
     if (state->pending < len)
 	len = state->pending;
 
-    bufLen = len;
-
     item = (SECItem *)(state->dest);
     if (item != NULL && item->data != NULL) {
-	/* Strip leading zeroes */
-	if (state->underlying_kind == SEC_ASN1_INTEGER && /* INTEGER   */
-	    item->len == 0)                               /* MSB       */
-	{
-	    while (len > 1 && buf[0] == 0) {              /* leading 0 */
-		buf++;
-		len--;
-	    }
-	}
 	PORT_Memcpy (item->data + item->len, buf, len);
 	item->len += len;
     }
-    state->pending -= bufLen;
+    state->pending -= len;
     if (state->pending == 0)
 	state->place = beforeEndOfContents;
 
-    return bufLen;
+    return len;
 }
 
 
@@ -1364,18 +1349,8 @@ sec_asn1d_parse_bit_string (sec_asn1d_state *state,
 {
     unsigned char byte;
 
-    /*PORT_Assert (state->pending > 0); */
+    PORT_Assert (state->pending > 0);
     PORT_Assert (state->place == beforeBitString);
-
-    if (state->pending == 0) {
-	if (state->dest != NULL) {
-	    SECItem *item = (SECItem *)(state->dest);
-	    item->data = NULL;
-	    item->len = 0;
-	    state->place = beforeEndOfContents;
-	    return 0;
-	}
-    }
 
     if (len == 0) {
 	state->top->status = needBytes;
@@ -2323,7 +2298,7 @@ SEC_ASN1DecoderUpdate (SEC_ASN1DecoderContext *cx,
     sec_asn1d_state *state = NULL;
     unsigned long consumed;
     SEC_ASN1EncodingPart what;
-    sec_asn1d_state *stateEnd = cx->current;
+
 
     if (cx->status == needBytes)
 	cx->status = keepGoing;
@@ -2496,7 +2471,7 @@ SEC_ASN1DecoderUpdate (SEC_ASN1DecoderContext *cx,
     }
 
     if (cx->status == decodeError) {
-	while (state != NULL && stateEnd->parent!=state) {
+	while (state != NULL) {
 	    sec_asn1d_free_child (state, PR_TRUE);
 	    state = state->parent;
 	}
@@ -2980,17 +2955,14 @@ const SEC_ASN1Template SEC_SkipTemplate[] = {
 */
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_AnyTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_BMPStringTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SEC_BooleanTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_BitStringTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_IA5StringTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_GeneralizedTimeTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_IntegerTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SEC_NullTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_ObjectIDTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_OctetStringTemplate)
+SEC_ASN1_CHOOSER_IMPLEMENT(SEC_UTCTimeTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_PointerToAnyTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_PointerToOctetStringTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_SetOfAnyTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SEC_UTCTimeTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SEC_UTF8StringTemplate)
 

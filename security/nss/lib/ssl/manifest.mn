@@ -42,14 +42,12 @@ PRIVATE_EXPORTS = \
 
 EXPORTS = \
 	ssl.h \
-	sslt.h \
 	sslerr.h \
 	sslproto.h \
 	preenc.h \
 	$(NULL)
 
 MODULE = security
-MAPFILE = $(OBJDIR)/ssl.def
 
 CSRCS = \
 	emulate.c \
@@ -62,7 +60,6 @@ CSRCS = \
 	sslenum.c \
 	sslerr.c \
 	sslgathr.c \
-	sslmutex.c \
 	sslnonce.c \
 	sslreveal.c \
 	sslsecur.c \
@@ -73,9 +70,7 @@ CSRCS = \
 	authcert.c \
 	cmpcert.c \
 	nsskea.c \
-	sslinfo.c \
 	$(NULL)
-
 
 REQUIRES = security dbm
 

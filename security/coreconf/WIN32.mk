@@ -91,12 +91,6 @@ else
 endif
 
 DEFINES += -DWIN32
-ifdef MAPFILE
-DLLFLAGS += -DEF:$(MAPFILE)
-endif
-# Change PROCESS to put the mapfile in the correct format for this platform
-PROCESS_MAP_FILE = cp $(LIBRARY_NAME).def $@
-
 
 #
 #  The following is NOT needed for the NSPR 2.0 library.

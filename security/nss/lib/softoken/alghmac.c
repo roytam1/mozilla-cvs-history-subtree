@@ -31,10 +31,10 @@
  * GPL.
  */
 
-#include "sechash.h"
-#include "secport.h"
 #include "alghmac.h"
-/*#include "secoid.h"*/
+#include "sechash.h"
+#include "secoid.h"
+#include "secport.h"
 
 #define HMAC_PAD_SIZE 64
 
@@ -57,7 +57,8 @@ HMAC_Destroy(HMACContext *cx)
 }
 
 HMACContext *
-HMAC_Create(const SECHashObject *hash_obj, const unsigned char *secret, 
+HMAC_Create(SECOidTag      hash_alg, 
+      const unsigned char *secret, 
             unsigned int   secret_len)
 {
     HMACContext *cx;
@@ -67,7 +68,20 @@ HMAC_Create(const SECHashObject *hash_obj, const unsigned char *secret,
     cx = (HMACContext*)PORT_ZAlloc(sizeof(HMACContext));
     if (cx == NULL)
 	return NULL;
-    cx->hashobj = hash_obj;
+
+    switch (hash_alg) {
+      case SEC_OID_MD5:
+	cx->hashobj = &SECRawHashObjects[HASH_AlgMD5];
+	break;
+      case SEC_OID_MD2:
+	cx->hashobj = &SECRawHashObjects[HASH_AlgMD2];
+	break;
+      case SEC_OID_SHA1:
+	cx->hashobj = &SECRawHashObjects[HASH_AlgSHA1];
+	break;
+      default:
+	goto loser;
+    }
 
     cx->hash = cx->hashobj->create();
     if (cx->hash == NULL)

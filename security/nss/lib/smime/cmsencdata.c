@@ -46,7 +46,6 @@
 #include "pk11func.h"
 #include "prtime.h"
 #include "secerr.h"
-#include "secpkcs5.h"
 
 /*
  * NSS_CMSEncryptedData_Create - create an empty encryptedData object.
@@ -114,7 +113,6 @@ void
 NSS_CMSEncryptedData_Destroy(NSSCMSEncryptedData *encd)
 {
     /* everything's in a pool, so don't worry about the storage */
-    NSS_CMSContentInfo_Destroy(&(encd->contentInfo));
     return;
 }
 

@@ -117,11 +117,6 @@ fips_140_1()
   pk12util -d ${R_FIPSDIR} -o fips140.p12 -n ${FIPSCERTNICK} -w ${R_FIPSP12PWFILE} -k ${R_FIPSPWFILE} 2>&1
   html_msg $? 0 "Export the certificate and key as a PKCS#12 file (pk12util -o)"
 
-  echo "$SCRIPTNAME: Export the certificate as a DER-encoded file ------"
-  echo "certutil -d ${R_FIPSDIR} -L -n ${FIPSCERTNICK} -r -o fips140.crt"
-  certutil -d ${R_FIPSDIR} -L -n ${FIPSCERTNICK} -r -o fips140.crt 2>&1
-  html_msg $? 0 "Export the certificate as a DER (certutil -L -r)"
-
   echo "$SCRIPTNAME: List the FIPS module certificates -----------------"
   echo "certutil -d ${R_FIPSDIR} -L"
   certutil -d ${R_FIPSDIR} -L 2>&1
@@ -132,7 +127,6 @@ fips_140_1()
   certutil -d ${R_FIPSDIR} -F -n ${FIPSCERTNICK} -f ${R_FIPSPWFILE} 2>&1
   html_msg $? 0 "Delete the certificate and key from the FIPS module (certutil -D)"
 
-
   echo "$SCRIPTNAME: List the FIPS module certificates -----------------"
   echo "certutil -d ${R_FIPSDIR} -L"
   certutil -d ${R_FIPSDIR} -L 2>&1
@@ -141,9 +135,7 @@ fips_140_1()
   echo "$SCRIPTNAME: List the FIPS module keys."
   echo "certutil -d ${R_FIPSDIR} -K -f ${R_FIPSPWFILE}"
   certutil -d ${R_FIPSDIR} -K -f ${R_FIPSPWFILE} 2>&1
-  # certutil -K now returns a failure if no keys are found. This verifies that
-  # our delete succeded.
-  html_msg $? 255 "List the FIPS module keys (certutil -K)"
+  html_msg $? 0 "List the FIPS module keys (certutil -K)"
 
   echo "$SCRIPTNAME: Import the certificate and key from the PKCS#12 file"
   echo "pk12util -d ${R_FIPSDIR} -i fips140.p12 -w ${R_FIPSP12PWFILE} -k ${R_FIPSPWFILE}"
@@ -159,6 +151,11 @@ fips_140_1()
   echo "certutil -d ${R_FIPSDIR} -K -f ${R_FIPSPWFILE}"
   certutil -d ${R_FIPSDIR} -K -f ${R_FIPSPWFILE} 2>&1
   html_msg $? 0 "List the FIPS module keys (certutil -K)"
+
+  echo "$SCRIPTNAME: Export the certificate as a DER-encoded file ------"
+  echo "certutil -d ${R_FIPSDIR} -L -n ${FIPSCERTNICK} -r -o fips140.crt"
+  certutil -d ${R_FIPSDIR} -L -n ${FIPSCERTNICK} -r -o fips140.crt 2>&1
+  html_msg $? 0 "Export the certificate as a DER (certutil -L -r)"
 }
 
 ############################## fips_cleanup ############################

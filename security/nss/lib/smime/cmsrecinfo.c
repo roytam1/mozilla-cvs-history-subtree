@@ -206,7 +206,7 @@ int
 NSS_CMSRecipientInfo_GetVersion(NSSCMSRecipientInfo *ri)
 {
     unsigned long version;
-    SECItem *versionitem = NULL;
+    SECItem *versionitem;
 
     switch (ri->recipientInfoType) {
     case NSSCMSRecipientInfoID_KeyTrans:
@@ -221,11 +221,6 @@ NSS_CMSRecipientInfo_GetVersion(NSSCMSRecipientInfo *ri)
 	versionitem = &(ri->ri.keyAgreeRecipientInfo.version);
 	break;
     }
-
-    PORT_Assert(versionitem);
-    if (versionitem == NULL) 
-	return 0;
-
     /* always take apart the SECItem */
     if (SEC_ASN1DecodeInteger(versionitem, &version) != SECSuccess)
 	return 0;
@@ -236,7 +231,7 @@ NSS_CMSRecipientInfo_GetVersion(NSSCMSRecipientInfo *ri)
 SECItem *
 NSS_CMSRecipientInfo_GetEncryptedKey(NSSCMSRecipientInfo *ri, int subIndex)
 {
-    SECItem *enckey = NULL;
+    SECItem *enckey;
 
     switch (ri->recipientInfoType) {
     case NSSCMSRecipientInfoID_KeyTrans:
@@ -258,7 +253,7 @@ NSS_CMSRecipientInfo_GetEncryptedKey(NSSCMSRecipientInfo *ri, int subIndex)
 SECOidTag
 NSS_CMSRecipientInfo_GetKeyEncryptionAlgorithmTag(NSSCMSRecipientInfo *ri)
 {
-    SECOidTag encalgtag = SEC_OID_SHA1; /* set to not a valid encryption alg */
+    SECOidTag encalgtag;
 
     switch (ri->recipientInfoType) {
     case NSSCMSRecipientInfoID_KeyTrans:

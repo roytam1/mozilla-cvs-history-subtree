@@ -684,34 +684,6 @@ sec_asn1e_contents_length (const SEC_ASN1Template *theTemplate, void *src,
 	    len++;
 	break;
 
-      case SEC_ASN1_INTEGER:
-	/* ASN.1 INTEGERs are signed.  PKCS#11 BigIntegers are unsigned.  NSS
-	 * will treat numbers going in and out of the ASN.1 encoder as
-	 * unsigned, so the encoder must handle the conversion.
-	 */
-	{
-	    unsigned char *buf = ((SECItem *)src)->data;
-	    len = ((SECItem *)src)->len;
-	    while (len > 0) {
-		if (*buf != 0) {
-		    if (*buf & 0x80) {
-			len++; /* leading zero needed */
-		    }
-		    break; /* reached beginning of number */
-		}
-		if (len == 1) {
-		    break; /* the number 0 */
-		}
-		if (buf[1] & 0x80) {
-		    break; /* leading zero already present */
-		} 
-		/* extraneous leading zero, keep going */
-		buf++;
-		len--;
-	    }
-	}
-	break;
-
       default:
 	len = ((SECItem *)src)->len;
 	if (may_stream && len == 0 && !ignoresubstream)
@@ -1005,41 +977,6 @@ sec_asn1e_write_contents (sec_asn1e_state *state,
 	    }
 	    /* otherwise, fall through to write the content */
 	    goto process_string;
-
-	  case SEC_ASN1_INTEGER:
-	   /* ASN.1 INTEGERs are signed.  PKCS#11 BigIntegers are unsigned.  
-	    * NSS will treat numbers going in and out of the ASN.1 encoder as
-	    * unsigned, so the encoder must handle the conversion.
-	    */
-	    {
-		unsigned int blen;
-		unsigned char *buf;
-		blen = ((SECItem *)state->src)->len;
-		buf = ((SECItem *)state->src)->data;
-		while (blen > 0) {
-		    if (*buf & 0x80) {
-			char zero = 0; /* write a leading 0 */
-			sec_asn1e_write_contents_bytes(state, &zero, 1);
-			/* and then the remaining buffer */
-			sec_asn1e_write_contents_bytes(state, 
-			                               (char *)buf, blen); 
-			break;
-		    } 
-		    if (*buf != 0 || blen == 1) {
-			/* no leading zeros, msb of MSB is not 1, so write
-			 * the remaining buffer (0 itself also goes here)
-			 */
-			sec_asn1e_write_contents_bytes(state, 
-			                               (char *)buf, blen); 
-			break;
-		    }
-		    /* byte is 0, continue */
-		    buf++;
-		    blen--;
-		}
-	    }
-	    /* done with this content */
-	    break;
 			
 process_string:			
 	  default:

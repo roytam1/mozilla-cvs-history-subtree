@@ -68,6 +68,9 @@ pk11_FindRSAPubKey(PK11SlotInfo *slot)
     return pk11_FindObjectByTemplate(slot,theTemplate,template_count);
 }
 
+SECKEYPublicKey *PK11_ExtractPublicKey(PK11SlotInfo *slot, KeyType keyType,
+					 CK_OBJECT_HANDLE id);
+
 PK11SymKey *
 pk11_KeyExchange(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
 		 	CK_ATTRIBUTE_TYPE operation, PK11SymKey *symKey)
@@ -82,8 +85,8 @@ pk11_KeyExchange(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
     /* RSA */
     if (PK11_DoesMechanism(symKey->slot, CKM_RSA_PKCS) && 
 				PK11_DoesMechanism(slot,CKM_RSA_PKCS)) {
-	CK_OBJECT_HANDLE pubKeyHandle = CK_INVALID_HANDLE;
-	CK_OBJECT_HANDLE privKeyHandle = CK_INVALID_HANDLE;
+	CK_OBJECT_HANDLE pubKeyHandle = CK_INVALID_KEY;
+	CK_OBJECT_HANDLE privKeyHandle = CK_INVALID_KEY;
 	SECKEYPublicKey *pubKey = NULL;
 	SECKEYPrivateKey *privKey = NULL;
 	SECItem wrapData;
@@ -92,12 +95,12 @@ pk11_KeyExchange(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
 
 	/* find RSA Public Key on target */
 	pubKeyHandle = pk11_FindRSAPubKey(slot);
-	if (pubKeyHandle != CK_INVALID_HANDLE) {
+	if (pubKeyHandle != CK_INVALID_KEY) {
 	    privKeyHandle = PK11_MatchItem(slot,pubKeyHandle,CKO_PRIVATE_KEY);
 	}
 
 	/* if no key exists, generate a key pair */
-	if (privKeyHandle == CK_INVALID_HANDLE) {
+	if (privKeyHandle == CK_INVALID_KEY) {
 	    unsigned int     symKeyLength = PK11_GetKeyLength(symKey);
 	    PK11RSAGenParams rsaParams;
 
@@ -122,7 +125,7 @@ pk11_KeyExchange(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
 		if (pubKey && pubKey->pkcs11Slot) {
 		    PK11_FreeSlot(pubKey->pkcs11Slot);
 		    pubKey->pkcs11Slot = NULL;
-		    pubKey->pkcs11ID = CK_INVALID_HANDLE;
+		    pubKey->pkcs11ID = CK_INVALID_KEY;
 		}
 	    }
 	}

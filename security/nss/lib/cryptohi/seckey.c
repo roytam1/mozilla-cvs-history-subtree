@@ -77,10 +77,10 @@ const SEC_ASN1Template SECKEY_DSAPublicKeyTemplate[] = {
 };
 
 const SEC_ASN1Template SECKEY_PQGParamsTemplate[] = {
-    { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SECKEYPQGParams) },
-    { SEC_ASN1_INTEGER, offsetof(SECKEYPQGParams,prime) },
-    { SEC_ASN1_INTEGER, offsetof(SECKEYPQGParams,subPrime) },
-    { SEC_ASN1_INTEGER, offsetof(SECKEYPQGParams,base) },
+    { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(PQGParams) },
+    { SEC_ASN1_INTEGER, offsetof(PQGParams,prime) },
+    { SEC_ASN1_INTEGER, offsetof(PQGParams,subPrime) },
+    { SEC_ASN1_INTEGER, offsetof(PQGParams,base) },
     { 0, }
 };
 
@@ -99,32 +99,32 @@ const SEC_ASN1Template SECKEY_DHParamKeyTemplate[] = {
 };
 
 const SEC_ASN1Template SECKEY_FortezzaParameterTemplate[] = {
-    { SEC_ASN1_SEQUENCE,  0, NULL, sizeof(SECKEYPQGParams) },
-    { SEC_ASN1_OCTET_STRING, offsetof(SECKEYPQGParams,prime), },
-    { SEC_ASN1_OCTET_STRING, offsetof(SECKEYPQGParams,subPrime), },
-    { SEC_ASN1_OCTET_STRING, offsetof(SECKEYPQGParams,base), },
+    { SEC_ASN1_SEQUENCE,  0, NULL, sizeof(PQGParams) },
+    { SEC_ASN1_OCTET_STRING, offsetof(PQGParams,prime), },
+    { SEC_ASN1_OCTET_STRING, offsetof(PQGParams,subPrime), },
+    { SEC_ASN1_OCTET_STRING, offsetof(PQGParams,base), },
     { 0 },
 };
  
 const SEC_ASN1Template SECKEY_FortezzaDiffParameterTemplate[] = {
-    { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(SECKEYDiffPQGParams) },
-    { SEC_ASN1_INLINE, offsetof(SECKEYDiffPQGParams,DiffKEAParams), 
+    { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(DiffPQGParams) },
+    { SEC_ASN1_INLINE, offsetof(DiffPQGParams,DiffKEAParams), 
                        SECKEY_FortezzaParameterTemplate},
-    { SEC_ASN1_INLINE, offsetof(SECKEYDiffPQGParams,DiffDSAParams), 
+    { SEC_ASN1_INLINE, offsetof(DiffPQGParams,DiffDSAParams), 
                        SECKEY_FortezzaParameterTemplate},
     { 0 },
 };
 
 const SEC_ASN1Template SECKEY_FortezzaPreParamTemplate[] = {
     { SEC_ASN1_EXPLICIT | SEC_ASN1_CONSTRUCTED |
-      SEC_ASN1_CONTEXT_SPECIFIC | 1, offsetof(SECKEYPQGDualParams,CommParams),
+      SEC_ASN1_CONTEXT_SPECIFIC | 1, offsetof(PQGDualParams,CommParams),
                 SECKEY_FortezzaParameterTemplate},
     { 0, }
 };
 
 const SEC_ASN1Template SECKEY_FortezzaAltPreParamTemplate[] = {
     { SEC_ASN1_EXPLICIT | SEC_ASN1_CONSTRUCTED |
-      SEC_ASN1_CONTEXT_SPECIFIC | 0, offsetof(SECKEYPQGDualParams,DiffParams),
+      SEC_ASN1_CONTEXT_SPECIFIC | 0, offsetof(PQGDualParams,DiffParams),
                 SECKEY_FortezzaDiffParameterTemplate},
     { 0, }
 };
@@ -139,15 +139,11 @@ const SEC_ASN1Template SECKEY_KEAParamsTemplate[] = {
     { 0, }
 };
 
-SEC_ASN1_CHOOSER_IMPLEMENT(SECKEY_DSAPublicKeyTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SECKEY_RSAPublicKeyTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(CERT_SubjectPublicKeyInfoTemplate)
 
-
-/* Create an RSA key pair is any slot able to do so.
-** The created keys are "session" (temporary), not "token" (permanent), 
-** and they are "sensitive", which makes them costly to move to another token.
-*/
+/*
+ * NOTE: This only generates RSA Private Key's. If you need more,
+ * We need to pass in some more params...
+ */
 SECKEYPrivateKey *
 SECKEY_CreateRSAPrivateKey(int keySizeInBits,SECKEYPublicKey **pubk, void *cx)
 {
@@ -164,25 +160,14 @@ SECKEY_CreateRSAPrivateKey(int keySizeInBits,SECKEYPublicKey **pubk, void *cx)
     return(privk);
 }
 
-/* Create a DH key pair in any slot able to do so, 
-** This is a "session" (temporary), not "token" (permanent) key. 
-** Because of the high probability that this key will need to be moved to
-** another token, and the high cost of moving "sensitive" keys, we attempt
-** to create this key pair without the "sensitive" attribute, but revert to 
-** creating a "sensitive" key if necessary.
-*/
 SECKEYPrivateKey *
-SECKEY_CreateDHPrivateKey(SECKEYDHParams *param, SECKEYPublicKey **pubk, void *cx)
+SECKEY_CreateDHPrivateKey(DHParams *param, SECKEYPublicKey **pubk, void *cx)
 {
     SECKEYPrivateKey *privk;
     PK11SlotInfo *slot = PK11_GetBestSlot(CKM_DH_PKCS_KEY_PAIR_GEN,cx);
-
-    privk = PK11_GenerateKeyPair(slot, CKM_DH_PKCS_KEY_PAIR_GEN, param, 
-                                 pubk, PR_FALSE, PR_FALSE, cx);
-    if (!privk) 
-	privk = PK11_GenerateKeyPair(slot, CKM_DH_PKCS_KEY_PAIR_GEN, param, 
-	                             pubk, PR_FALSE, PR_TRUE, cx);
-
+    
+    privk = PK11_GenerateKeyPair(slot,CKM_DH_PKCS_KEY_PAIR_GEN,param,pubk,
+					PR_FALSE, PR_TRUE, cx);
     PK11_FreeSlot(slot);
     return(privk);
 }
@@ -209,9 +194,7 @@ SECKEY_DestroyPublicKey(SECKEYPublicKey *pubk)
 {
     if (pubk) {
 	if (pubk->pkcs11Slot) {
-	    if (!PK11_IsPermObject(pubk->pkcs11Slot,pubk->pkcs11ID)) {
-		PK11_DestroyObject(pubk->pkcs11Slot,pubk->pkcs11ID);
-	    }
+	    PK11_DestroyObject(pubk->pkcs11Slot,pubk->pkcs11ID);
 	    PK11_FreeSlot(pubk->pkcs11Slot);
 	}
     	if (pubk->arena) {
@@ -235,7 +218,7 @@ SECKEY_CopySubjectPublicKeyInfo(PRArenaPool *arena,
 }
 
 SECStatus
-SECKEY_KEASetParams(SECKEYKEAParams * params, SECKEYPublicKey * pubKey) {
+SECKEY_KEASetParams(KEAParams * params, SECKEYPublicKey * pubKey) {
 
     if (pubKey->keyType == fortezzaKey) {
         /* the key is a fortezza V1 public key  */
@@ -266,12 +249,16 @@ SECKEY_KEAParamCompare(CERTCertificate *cert1,CERTCertificate *cert2)
 {
 
     SECStatus rv;
+    SECOidData *oid=NULL;
+    CERTSubjectPublicKeyInfo * subjectSpki=NULL;
+    CERTSubjectPublicKeyInfo * issuerSpki=NULL;
+    CERTCertificate *issuerCert = NULL;
 
     SECKEYPublicKey *pubKey1 = 0;
     SECKEYPublicKey *pubKey2 = 0;
 
-    SECKEYKEAParams params1;
-    SECKEYKEAParams params2;
+    KEAParams params1;
+    KEAParams params2;
 
 
     rv = SECFailure;
@@ -390,8 +377,7 @@ seckey_UpdateCertPQGChain(CERTCertificate * subjectCert, int count)
              (tag != SEC_OID_MISSI_DSS) &&               
              (tag != SEC_OID_ANSIX9_DSA_SIGNATURE) &&
              (tag != SEC_OID_ANSIX9_DSA_SIGNATURE_WITH_SHA1_DIGEST) &&
-             (tag != SEC_OID_BOGUS_DSA_SIGNATURE_WITH_SHA1_DIGEST) &&
-             (tag != SEC_OID_SDN702_DSA_SIGNATURE) ) {
+             (tag != SEC_OID_BOGUS_DSA_SIGNATURE_WITH_SHA1_DIGEST) ) {
             
             return SECSuccess;
         }
@@ -437,8 +423,7 @@ seckey_UpdateCertPQGChain(CERTCertificate * subjectCert, int count)
              (tag != SEC_OID_MISSI_DSS) &&               
              (tag != SEC_OID_ANSIX9_DSA_SIGNATURE) &&
              (tag != SEC_OID_ANSIX9_DSA_SIGNATURE_WITH_SHA1_DIGEST) &&
-             (tag != SEC_OID_BOGUS_DSA_SIGNATURE_WITH_SHA1_DIGEST) &&
-             (tag != SEC_OID_SDN702_DSA_SIGNATURE) ) {
+             (tag != SEC_OID_BOGUS_DSA_SIGNATURE_WITH_SHA1_DIGEST) ) {
             
             return SECFailure;
         }
@@ -491,7 +476,7 @@ SECStatus
 SECKEY_FortezzaDecodePQGtoOld(PRArenaPool *arena, SECKEYPublicKey *pubk,
                               SECItem *params) {
         SECStatus rv;
-	SECKEYPQGDualParams dual_params;
+	PQGDualParams dual_params;
 
     if (params == NULL) return SECFailure; 
     
@@ -612,7 +597,7 @@ SECKEY_FortezzaDecodePQGtoOld(PRArenaPool *arena, SECKEYPublicKey *pubk,
 SECStatus
 SECKEY_DSADecodePQG(PRArenaPool *arena, SECKEYPublicKey *pubk, SECItem *params) {
         SECStatus rv;
-	SECKEYPQGDualParams dual_params;
+	PQGDualParams dual_params;
 
     if (params == NULL) return SECFailure; 
     
@@ -863,7 +848,7 @@ seckey_ExtractPublicKey(CERTSubjectPublicKeyInfo *spki)
 
     pubk->arena = arena;
     pubk->pkcs11Slot = 0;
-    pubk->pkcs11ID = CK_INVALID_HANDLE;
+    pubk->pkcs11ID = CK_INVALID_KEY;
 
 
     /* Convert bit string length from bits to bytes */
@@ -880,7 +865,6 @@ seckey_ExtractPublicKey(CERTSubjectPublicKeyInfo *spki)
 	    return pubk;
 	break;
       case SEC_OID_ANSIX9_DSA_SIGNATURE:
-      case SEC_OID_SDN702_DSA_SIGNATURE:
 	pubk->keyType = dsaKey;
 	rv = SEC_ASN1DecodeItem(arena, pubk, SECKEY_DSAPublicKeyTemplate, &os);
 	if (rv != SECSuccess) break;
@@ -925,7 +909,7 @@ seckey_ExtractPublicKey(CERTSubjectPublicKeyInfo *spki)
 	if (rv == SECSuccess)
 	    return pubk;
 
-        break;
+      break;
 
       case SEC_OID_MISSI_ALT_KEA:
 	pubk->keyType = keaKey;
@@ -939,7 +923,7 @@ seckey_ExtractPublicKey(CERTSubjectPublicKeyInfo *spki)
 	if (rv == SECSuccess)
 	    return pubk;
 
-        break;
+      break;
 
 
       default:
@@ -1040,7 +1024,7 @@ SECKEY_CopyPrivateKey(SECKEYPrivateKey *privk)
 	if (privk->pkcs11IsTemp) {
 	    copyk->pkcs11ID = 
 			PK11_CopyKey(privk->pkcs11Slot,privk->pkcs11ID);
-	    if (copyk->pkcs11ID == CK_INVALID_HANDLE) goto fail;
+	    if (copyk->pkcs11ID == CK_INVALID_KEY) goto fail;
 	} else {
 	    copyk->pkcs11ID = privk->pkcs11ID;
 	}
@@ -1074,14 +1058,8 @@ SECKEY_CopyPublicKey(SECKEYPublicKey *pubk)
 
 	copyk->arena = arena;
 	copyk->keyType = pubk->keyType;
-	if (pubk->pkcs11Slot && 
-			PK11_IsPermObject(pubk->pkcs11Slot,pubk->pkcs11ID)) {
-	    copyk->pkcs11Slot = PK11_ReferenceSlot(pubk->pkcs11Slot);
-	    copyk->pkcs11ID = pubk->pkcs11ID;
-	} else {
-	    copyk->pkcs11Slot = NULL;	/* go get own reference */
-	    copyk->pkcs11ID = CK_INVALID_HANDLE;
-	}
+	copyk->pkcs11Slot = NULL;	/* go get own reference */
+	copyk->pkcs11ID = CK_INVALID_KEY;
 	switch (pubk->keyType) {
 	  case rsaKey:
 	    rv = SECITEM_CopyItem(arena, &copyk->u.rsa.modulus,
@@ -1210,7 +1188,7 @@ SECKEY_ConvertToPublicKey(SECKEYPrivateKey *privk)
     }
     pubk->keyType = privk->keyType;
     pubk->pkcs11Slot = NULL;
-    pubk->pkcs11ID = CK_INVALID_HANDLE;
+    pubk->pkcs11ID = CK_INVALID_KEY;
     pubk->arena = arena;
 
     /*
@@ -1512,7 +1490,7 @@ SECKEY_ConvertAndDecodePublicKeyAndChallenge(char *pkacstr, char *challenge,
     CERTSignedData sd;
     SECItem sig;
     SECKEYPublicKey *pubKey = NULL;
-    unsigned int len;
+    int len;
     
     signedItem.data = NULL;
     
@@ -1729,23 +1707,16 @@ SECKEY_ImportDERPublicKey(SECItem *derKey, CK_KEY_TYPE type)
     pubk->arena = NULL;
     pubk->pkcs11Slot = NULL;
     pubk->pkcs11ID = CK_INVALID_HANDLE;
+    pubk->keyType = (type == CKK_RSA) ? rsaKey : dsaKey;
 
-    switch( type ) {
-      case CKK_RSA:
-        rv = SEC_ASN1DecodeItem(NULL, pubk, SECKEY_RSAPublicKeyTemplate,derKey);
-        pubk->keyType = rsaKey;
-        break;
-      case CKK_DSA:
-        rv = SEC_ASN1DecodeItem(NULL, pubk, SECKEY_DSAPublicKeyTemplate,derKey);
-        pubk->keyType = dsaKey;
-        break;
-      case CKK_DH:
-        rv = SEC_ASN1DecodeItem(NULL, pubk, SECKEY_DHPublicKeyTemplate, derKey);
-        pubk->keyType = dhKey;
-        break;
-      default:
+    if( type == CKK_RSA) {
+        rv = SEC_ASN1DecodeItem(NULL, pubk, SECKEY_RSAPublicKeyTemplate,
+                                derKey);
+    } else if( type == CKK_DSA) {
+        rv = SEC_ASN1DecodeItem(NULL, pubk, SECKEY_DSAPublicKeyTemplate,
+                                derKey);
+    } else {
         rv = SECFailure;
-        break;
     }
 
 finish:
@@ -1820,83 +1791,6 @@ SECKEY_AddPrivateKeyToListTail( SECKEYPrivateKeyList *list,
 
     node = (SECKEYPrivateKeyListNode *)PORT_ArenaZAlloc(list->arena,
                 sizeof(SECKEYPrivateKeyListNode));
-    if ( node == NULL ) {
-        goto loser;
-    }
-
-    PR_INSERT_BEFORE(&node->links, &list->list);
-    node->key = key;
-    return(SECSuccess);
-
-loser:
-    return(SECFailure);
-}
-
-
-SECKEYPublicKeyList*
-SECKEY_NewPublicKeyList(void)
-{
-    PRArenaPool *arena = NULL;
-    SECKEYPublicKeyList *ret = NULL;
-
-    arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
-    if ( arena == NULL ) {
-        goto loser;
-    }
-
-    ret = (SECKEYPublicKeyList *)PORT_ArenaZAlloc(arena,
-                sizeof(SECKEYPublicKeyList));
-    if ( ret == NULL ) {
-        goto loser;
-    }
-
-    ret->arena = arena;
-
-    PR_INIT_CLIST(&ret->list);
-
-    return(ret);
-
-loser:
-    if ( arena != NULL ) {
-        PORT_FreeArena(arena, PR_FALSE);
-    }
-
-    return(NULL);
-}
-
-void
-SECKEY_DestroyPublicKeyList(SECKEYPublicKeyList *keys)
-{
-    while( !PR_CLIST_IS_EMPTY(&keys->list) ) {
-        SECKEY_RemovePublicKeyListNode(
-            (SECKEYPublicKeyListNode*)(PR_LIST_HEAD(&keys->list)) );
-    }
-
-    PORT_FreeArena(keys->arena, PR_FALSE);
-
-    return;
-}
-
-
-void
-SECKEY_RemovePublicKeyListNode(SECKEYPublicKeyListNode *node)
-{
-    PR_ASSERT(node->key);
-    SECKEY_DestroyPublicKey(node->key);
-    node->key = NULL;
-    PR_REMOVE_LINK(&node->links);
-    return;
-
-}
-
-SECStatus
-SECKEY_AddPublicKeyToListTail( SECKEYPublicKeyList *list,
-                                SECKEYPublicKey *key)
-{
-    SECKEYPublicKeyListNode *node;
-
-    node = (SECKEYPublicKeyListNode *)PORT_ArenaZAlloc(list->arena,
-                sizeof(SECKEYPublicKeyListNode));
     if ( node == NULL ) {
         goto loser;
     }

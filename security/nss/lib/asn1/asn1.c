@@ -316,7 +316,7 @@ nssASN1Decoder_Update
   PRUint32 amount
 )
 {
-  SECStatus rv;
+  PRStatus rv;
 
 #ifdef DEBUG
   if( PR_SUCCESS != nssASN1Decoder_verify(decoder) ) {
@@ -332,7 +332,7 @@ nssASN1Decoder_Update
   rv = SEC_ASN1DecoderUpdate((SEC_ASN1DecoderContext *)decoder, 
                              (const char *)data,
                              (unsigned long)amount);
-  if( SECSuccess != rv ) {
+  if( PR_SUCCESS != rv ) {
     nss_SetError(PORT_GetError()); /* ugly */
     return PR_FAILURE;
   }
@@ -361,8 +361,7 @@ nssASN1Decoder_Finish
   nssASN1Decoder *decoder
 )
 {
-  PRStatus rv = PR_SUCCESS;
-  SECStatus srv;
+  PRStatus rv;
 
 #ifdef DEBUG
   if( PR_SUCCESS != nssASN1Decoder_verify(decoder) ) {
@@ -370,11 +369,10 @@ nssASN1Decoder_Finish
   }
 #endif /* DEBUG */
 
-  srv = SEC_ASN1DecoderFinish((SEC_ASN1DecoderContext *)decoder);
+  rv = SEC_ASN1DecoderFinish((SEC_ASN1DecoderContext *)decoder);
 
-  if( SECSuccess != srv ) {
+  if( PR_SUCCESS != rv ) {
     nss_SetError(PORT_GetError()); /* ugly */
-    rv = PR_FAILURE;
   }
 
 #ifdef DEBUG
@@ -765,7 +763,7 @@ nssASN1Encoder_Update
   PRUint32 length
 )
 {
-  SECStatus rv;
+  PRStatus rv;
 
 #ifdef DEBUG
   if( PR_SUCCESS != nssASN1Encoder_verify(encoder) ) {
@@ -780,7 +778,7 @@ nssASN1Encoder_Update
   rv = SEC_ASN1EncoderUpdate((SEC_ASN1EncoderContext *)encoder,
                              (const char *)data, 
                              (unsigned long)length);
-  if( SECSuccess != rv ) {
+  if( PR_SUCCESS != rv ) {
     nss_SetError(PORT_GetError()); /* ugly */
     return PR_FAILURE;
   }
@@ -1189,6 +1187,7 @@ nssASN1_EncodeItem
   NSSASN1EncodingType encoding
 )
 {
+  PLArenaPool *hack = (PLArenaPool *)arenaOpt;
   NSSDER *rv;
   PRUint32 len = 0;
   PRStatus status;

@@ -542,8 +542,6 @@ nssArena_Destroy
   return PR_SUCCESS;
 }
 
-static void *nss_zalloc_arena_locked(NSSArena *arena, PRUint32 size);
-
 /*
  * nssArena_Mark
  *
@@ -606,7 +604,7 @@ nssArena_Mark
   /* No error possible */
 
   /* Do this after the mark */
-  rv = (nssArenaMark *)nss_zalloc_arena_locked(arena, sizeof(nssArenaMark));
+  rv = nss_ZNEW(arena, nssArenaMark);
   if( (nssArenaMark *)NULL == rv ) {
     PR_Unlock(arena->lock);
     nss_SetError(NSS_ERROR_NO_MEMORY);
@@ -614,13 +612,8 @@ nssArena_Mark
   }
 
 #ifdef ARENA_THREADMARK
-  if ( (nssArenaMark *)NULL == arena->first_mark) {
-    arena->first_mark = rv;
-    arena->last_mark = rv;
-  } else {
-    arena->last_mark->next = rv;
-    arena->last_mark = rv;
-  }
+  arena->last_mark->next = rv;
+  arena->last_mark = rv;
 #endif /* ARENA_THREADMARK */
 
   rv->mark = p;
@@ -813,35 +806,6 @@ struct pointer_header {
   PRUint32 size;
 };
 
-static void *
-nss_zalloc_arena_locked
-(
-  NSSArena *arena,
-  PRUint32 size
-)
-{
-  void *p;
-  void *rv;
-  struct pointer_header *h;
-  PRUint32 my_size = size + sizeof(struct pointer_header);
-  PR_ARENA_ALLOCATE(p, &arena->pool, my_size);
-  if( (void *)NULL == p ) {
-    nss_SetError(NSS_ERROR_NO_MEMORY);
-    return (void *)NULL;
-  }
-  /* 
-   * Do this before we unlock.  This way if the user is using
-   * an arena in one thread while destroying it in another, he'll
-   * fault/FMR in his code, not ours.
-   */
-  h = (struct pointer_header *)p;
-  h->arena = arena;
-  h->size = size;
-  rv = (void *)((char *)h + sizeof(struct pointer_header));
-  (void)nsslibc_memset(rv, 0, size);
-  return rv;
-}
-
 /*
  * nss_ZAlloc
  *
@@ -895,6 +859,7 @@ nss_ZAlloc
 
     return (void *)((char *)h + sizeof(struct pointer_header));
   } else {
+    void *p;
     void *rv;
     /* Arena allocation */
 #ifdef NSSDEBUG
@@ -920,9 +885,26 @@ nss_ZAlloc
     }
 #endif /* ARENA_THREADMARK */
 
-    rv = nss_zalloc_arena_locked(arenaOpt, size);
+    PR_ARENA_ALLOCATE(p, &arenaOpt->pool, my_size);
+    if( (void *)NULL == p ) {
+      PR_Unlock(arenaOpt->lock);
+      nss_SetError(NSS_ERROR_NO_MEMORY);
+      return (void *)NULL;
+    }
+
+    /* 
+     * Do this before we unlock.  This way if the user is using
+     * an arena in one thread while destroying it in another, he'll
+     * fault/FMR in his code, not ours.
+     */
+    h = (struct pointer_header *)p;
+    h->arena = arenaOpt;
+    h->size = size;
+    rv = (void *)((char *)h + sizeof(struct pointer_header));
+    (void)nsslibc_memset(rv, 0, size);
 
     PR_Unlock(arenaOpt->lock);
+
     return rv;
   }
   /*NOTREACHED*/

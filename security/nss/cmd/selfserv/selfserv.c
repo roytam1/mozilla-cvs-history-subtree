@@ -83,16 +83,11 @@
 #define PORT_Malloc PR_Malloc
 #endif
 
-#define NUM_SID_CACHE_ENTRIES 1024
-
 static int handle_connection( PRFileDesc *, PRFileDesc *, int );
 
 static const char envVarName[] = { SSL_ENV_VAR_NAME };
 static const char inheritableSockName[] = { "SELFSERV_LISTEN_SOCKET" };
 
-static PRBool logStats = PR_FALSE;
-static int logPeriod = 30;
-static PRUint32 loggerOps = 0;
 
 const int ssl2CipherSuites[] = {
     SSL_EN_RC4_128_WITH_MD5,			/* A */
@@ -119,17 +114,6 @@ const int ssl3CipherSuites[] = {
     TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA,	/* l */
     TLS_RSA_EXPORT1024_WITH_RC4_56_SHA,	        /* m */
     SSL_RSA_WITH_RC4_128_SHA,			/* n */
-    TLS_DHE_DSS_WITH_RC4_128_SHA,		/* o */
-    SSL_DHE_RSA_WITH_3DES_EDE_CBC_SHA,		/* p */
-    SSL_DHE_DSS_WITH_3DES_EDE_CBC_SHA,		/* q */
-    SSL_DHE_RSA_WITH_DES_CBC_SHA,		/* r */
-    SSL_DHE_DSS_WITH_DES_CBC_SHA,		/* s */
-    TLS_DHE_DSS_WITH_AES_128_CBC_SHA, 	    	/* t */
-    TLS_DHE_RSA_WITH_AES_128_CBC_SHA,       	/* u */
-    TLS_RSA_WITH_AES_128_CBC_SHA,     	    	/* v */
-    TLS_DHE_DSS_WITH_AES_256_CBC_SHA, 	    	/* w */
-    TLS_DHE_RSA_WITH_AES_256_CBC_SHA,       	/* x */
-    TLS_RSA_WITH_AES_256_CBC_SHA,     	    	/* y */
     0
 };
 
@@ -173,7 +157,7 @@ Usage(const char *progName)
 
 "Usage: %s -n rsa_nickname -p port [-3DRTmrvx] [-w password] [-t threads]\n"
 "         [-i pid_file] [-c ciphers] [-d dbdir] [-f fortezza_nickname] \n"
-"         [-M maxProcs] [-l]\n"
+"         [-M maxProcs] \n"
 "-3 means disable SSL v3\n"
 "-D means disable Nagle delays in TCP\n"
 "-T means disable TLS\n"
@@ -190,7 +174,6 @@ Usage(const char *progName)
 "-t threads -- specify the number of threads to use for connections.\n"
 "-i pid_file file to write the process id of selfserve\n"
 "-c ciphers   Letter(s) chosen from the following list\n"
-"-l means use local threads instead of global threads"
 "A    SSL2 RC4 128 WITH MD5\n"
 "B    SSL2 RC4 128 EXPORT40 WITH MD5\n"
 "C    SSL2 RC2 128 CBC WITH MD5\n"
@@ -212,8 +195,6 @@ Usage(const char *progName)
 "l    SSL3 RSA EXPORT WITH DES CBC SHA\t(new)\n"
 "m    SSL3 RSA EXPORT WITH RC4 56 SHA\t(new)\n"
 "n    SSL3 RSA WITH RC4 128 SHA\n"
-"v    TLS_RSA_WITH_AES_128_CBC_SHA\n"
-"y    TLS_RSA_WITH_AES_256_CBC_SHA\n"
 	,progName);
 }
 
@@ -277,7 +258,7 @@ mySSLAuthCertificate(void *arg, PRFileDesc *fd, PRBool checkSig,
     rv = SSL_AuthCertificate(arg, fd, checkSig, isServer);
 
     if (rv == SECSuccess) {
-	PRINTF("selfserv: -- SSL3: Certificate Validated.\n");
+	fputs("selfserv: -- SSL3: Certificate Validated.\n", stderr);
     } else {
     	int err = PR_GetError();
 	FPRINTF(stderr, "selfserv: -- SSL3: Certificate Invalid, err %d.\n%s\n", 
@@ -288,70 +269,35 @@ mySSLAuthCertificate(void *arg, PRFileDesc *fd, PRBool checkSig,
     return rv;  
 }
 
-void 
-printSecurityInfo(PRFileDesc *fd)
+void printSecurityInfo(PRFileDesc *fd)
 {
-    CERTCertificate * cert      = NULL;
-    SSL3Statistics *  ssl3stats = SSL_GetStatistics();
-    SECStatus         result;
-    SSLChannelInfo    channel;
-    SSLCipherSuiteInfo suite;
+    char * cp;	/* bulk cipher name */
+    char * ip;	/* cert issuer DN */
+    char * sp;	/* cert subject DN */
+    int    op;	/* High, Low, Off */
+    int    kp0;	/* total key bits */
+    int    kp1;	/* secret key bits */
+    int    result;
+    SSL3Statistics * ssl3stats = SSL_GetStatistics();
 
-    PRINTF(
-    	"selfserv: %ld cache hits; %ld cache misses, %ld cache not reusable\n",
+    PRINTF("selfserv: %ld cache hits; %ld cache misses, %ld cache not reusable\n",
     	ssl3stats->hch_sid_cache_hits, ssl3stats->hch_sid_cache_misses,
 	ssl3stats->hch_sid_cache_not_ok);
 
-    result = SSL_GetChannelInfo(fd, &channel, sizeof channel);
-    if (result == SECSuccess && 
-        channel.length == sizeof channel && 
-	channel.cipherSuite) {
-	result = SSL_GetCipherSuiteInfo(channel.cipherSuite, 
-					&suite, sizeof suite);
-	if (result == SECSuccess) {
-	    FPRINTF(stderr, 
-	    "selfserv: SSL version %d.%d using %d-bit %s with %d-bit %s MAC\n",
-	       channel.protocolVersion >> 8, channel.protocolVersion & 0xff,
-	       suite.effectiveKeyBits, suite.symCipherName, 
-	       suite.macBits, suite.macAlgorithmName);
-	    FPRINTF(stderr, 
-	    "selfserv: Server Auth: %d-bit %s, Key Exchange: %d-bit %s\n",
-	       channel.authKeyBits, suite.authAlgorithmName,
-	       channel.keaKeyBits,  suite.keaTypeName);
-    	}
-    }
-    if (requestCert)
-	cert = SSL_PeerCertificate(fd);
-    else
-	cert = SSL_LocalCertificate(fd);
-    if (cert) {
-	char * ip = CERT_NameToAscii(&cert->issuer);
-	char * sp = CERT_NameToAscii(&cert->subject);
-        if (sp) {
-	    FPRINTF(stderr, "selfserv: subject DN: %s\n", sp);
-	    PR_Free(sp);
+    result = SSL_SecurityStatus(fd, &op, &cp, &kp0, &kp1, &ip, &sp);
+    if (result == SECSuccess) {
+	PRINTF(
+    "selfserv: bulk cipher %s, %d secret key bits, %d key bits, status: %d\n",
+		cp, kp1, kp0, op);
+	if (requestCert) {
+	    PRINTF("selfserv: subject DN: %s\n"
+		   "selfserv: issuer  DN: %s\n",  sp, ip);
 	}
-        if (ip) {
-	    FPRINTF(stderr, "selfserv: issuer  DN: %s\n", ip);
-	    PR_Free(ip);
-	}
-	CERT_DestroyCertificate(cert);
-	cert = NULL;
+	PR_Free(cp);
+	PR_Free(ip);
+	PR_Free(sp);
     }
     FLUSH;
-}
-
-static int MakeCertOK;
-
-static SECStatus
-myBadCertHandler( void *arg, PRFileDesc *fd)
-{
-    int err = PR_GetError();
-    if (!MakeCertOK)
-	fprintf(stderr, 
-	    "selfserv: -- SSL: Client Certificate Invalid, err %d.\n%s\n", 
-            err, SECU_Strerror(err));
-    return (MakeCertOK ? SECSuccess : SECFailure);
 }
 
 /**************************************************************************
@@ -376,6 +322,7 @@ static PZCondVar * jobQNotEmptyCv;
 static PZCondVar * freeListNotEmptyCv;
 static PZCondVar * threadCountChangeCv;
 static int  threadCount;
+static int  qCount;
 static PRCList  jobQ;
 static PRCList  freeJobs;
 static JOB *jobTable;
@@ -466,8 +413,7 @@ launch_threads(
     startFn    *startFunc,
     PRFileDesc *a,
     PRFileDesc *b,
-    int         c,
-    PRBool      local)
+    int         c)
 {
     int i;
     SECStatus rv = SECSuccess;
@@ -503,8 +449,7 @@ launch_threads(
 	slot->startFunc = startFunc;
 	slot->prThread = PR_CreateThread(PR_USER_THREAD, 
 			thread_wrapper, slot, PR_PRIORITY_NORMAL, 
-                        (PR_TRUE==local)?PR_LOCAL_THREAD:PR_GLOBAL_THREAD,
-                        PR_UNJOINABLE_THREAD, 0);
+			PR_GLOBAL_THREAD, PR_UNJOINABLE_THREAD, 0);
 	if (slot->prThread == NULL) {
 	    printf("selfserv: Failed to launch thread!\n");
 	    slot->state = rs_idle;
@@ -543,36 +488,6 @@ terminateWorkerThreads(void)
     DESTROY_LOCK(qLock);
     PR_Free(jobTable);
     PR_Free(threads);
-}
-
-static void 
-logger(void *arg)
-{
-    PRFloat64 seconds;
-    PRFloat64 opsPerSec;
-    PRIntervalTime period;
-    PRIntervalTime previousTime;
-    PRIntervalTime latestTime;
-    PRUint32 previousOps;
-    PRUint32 ops;
-    PRIntervalTime logPeriodTicks = PR_SecondsToInterval(logPeriod);
-    PRFloat64 secondsPerTick = 1.0 / (PRFloat64)PR_TicksPerSecond();
-
-    previousOps = loggerOps;
-    previousTime = PR_IntervalNow();
- 
-    for (;;) {
-    	PR_Sleep(logPeriodTicks);
-        latestTime = PR_IntervalNow();
-        ops = loggerOps;
-        period = latestTime - previousTime;
-        seconds = (PRFloat64) period*secondsPerTick;
-        opsPerSec = (ops - previousOps) / seconds;
-        printf("%.2f ops/second, %d threads\n", opsPerSec, threadCount);
-        fflush(stdout);
-        previousOps = ops;
-        previousTime = latestTime;
-    }
 }
 
 
@@ -996,7 +911,7 @@ handle_connection(
 	    iovs[numIOVs].iov_len  = reqLen;
 	    numIOVs++;
 
-/*	    printSecurityInfo(ssl_sock); */
+	    printSecurityInfo(ssl_sock);
 	}
 
 	iovs[numIOVs].iov_base = (char *)EOFmsg;
@@ -1063,10 +978,6 @@ do_accepts(
 	}
 
         VLOG(("selfserv: do_accept: Got connection\n"));
-
-        if (logStats) {
-            loggerOps++;
-        }
 
 	PZ_Lock(qLock);
 	while (PR_CLIST_IS_EMPTY(&freeJobs) && !stopping) {
@@ -1242,10 +1153,6 @@ server_main(
 	    }
 	}
     }
-
-    if (MakeCertOK)
-	SSL_BadCertHook(model_sock, myBadCertHandler, NULL);
-
     /* end of ssl configuration. */
 
 
@@ -1357,34 +1264,6 @@ beAGoodParent(int argc, char **argv, int maxProcs, PRFileDesc * listen_sock)
     exit(0);
 }
 
-#ifdef DEBUG_nelsonb
-void
-WaitForDebugger(void)
-{
-
-    int waiting       = 12;
-    int myPid         = _getpid();
-    PRIntervalTime    nrval = PR_SecondsToInterval(5);
-
-    while (waiting) {
-    	printf("child %d is waiting to be debugged!\n", myPid);
-	PR_Sleep(nrval); 
-	--waiting;
-    }
-}
-#endif
-
-#ifdef LINUX  /* bug 119340 */
-#include <signal.h>
-
-static void sigterm_handler(int signum)
-{
-    static char err_msg[] = "selfserv: received SIGTERM\n";
-    write(1, err_msg, sizeof(err_msg) - 1);
-    _exit(1);
-}
-#endif /* LINUX */
-
 int
 main(int argc, char **argv)
 {
@@ -1407,22 +1286,8 @@ main(int argc, char **argv)
     SECStatus            rv;
     PRStatus             prStatus;
     PRBool               useExportPolicy = PR_FALSE;
-    PRBool               useLocalThreads = PR_FALSE;
     PLOptState		*optstate;
     PLOptStatus          status;
-    PRThread             *loggerThread;
-    PRBool               debugCache = PR_FALSE; /* bug 90518 */
-#ifdef LINUX  /* bug 119340 */
-    struct sigaction     act;
-
-    act.sa_handler = sigterm_handler;
-    sigemptyset(&act.sa_mask);
-    act.sa_flags = 0;
-    if (sigaction(SIGTERM, &act, NULL) == -1) {
-        fprintf(stderr, "selfserv: sigaction failed: %d\n", errno);
-        exit(1);
-    }
-#endif /* LINUX */
 
 
     tmp = strrchr(argv[0], '/');
@@ -1432,11 +1297,7 @@ main(int argc, char **argv)
 
     PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
 
-    /* please keep this list of options in ASCII collating sequence.
-    ** numbers, then capital letters, then lower case, alphabetical. 
-    */
-    optstate = PL_CreateOptState(argc, argv, 
-    	"2:3DL:M:RTc:d:f:hi:lmn:op:rt:vw:xy");
+    optstate = PL_CreateOptState(argc, argv, "2:3DM:RTc:d:p:mn:hi:f:rt:vw:x");
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	++optionsFound;
 	switch(optstate->option) {
@@ -1445,12 +1306,6 @@ main(int argc, char **argv)
 	case '3': disableSSL3 = PR_TRUE; break;
 
 	case 'D': noDelay = PR_TRUE; break;
-
-        case 'L':
-            logStats = PR_TRUE;
-            logPeriod  = PORT_Atoi(optstate->value);
-            if (logPeriod < 0) logPeriod = 30;
-            break;
 
 	case 'M': 
 	    maxProcs = PORT_Atoi(optstate->value); 
@@ -1470,15 +1325,11 @@ main(int argc, char **argv)
 
 	case 'h': Usage(progName); exit(0); break;
 
-	case 'i': pidFile = optstate->value; break;
-
-        case 'l': useLocalThreads = PR_TRUE; break;
-
 	case 'm': useModelSocket = PR_TRUE; break;
 
 	case 'n': nickName = strdup(optstate->value); break;
 
-	case 'o': MakeCertOK = 1; break;
+	case 'i': pidFile = optstate->value; break;
 
 	case 'p': port = PORT_Atoi(optstate->value); break;
 
@@ -1495,8 +1346,6 @@ main(int argc, char **argv)
 	case 'w': passwd = strdup(optstate->value); break;
 
 	case 'x': useExportPolicy = PR_TRUE; break;
-
-	case 'y': debugCache = PR_TRUE; break;
 
 	default:
 	case '?':
@@ -1548,29 +1397,16 @@ main(int argc, char **argv)
 	listen_sock = PR_GetInheritedFD(inheritableSockName);
 	if (!listen_sock)
 	    errExit("PR_GetInheritedFD");
-#ifndef WINNT
-	/* we can't do this on NT because it breaks NSPR and
-	PR_Accept will fail on the socket in the child process if
-	the socket state is change to non inheritable
-	It is however a security issue to leave it accessible,
-	but it is OK for a test server such as selfserv.
-	NSPR should fix it eventually . see bugzilla 101617
-	and 102077
-	*/
 	prStatus = PR_SetFDInheritable(listen_sock, PR_FALSE);
 	if (prStatus != PR_SUCCESS)
 	    errExit("PR_SetFDInheritable");
-#endif
-#ifdef DEBUG_nelsonb
-	WaitForDebugger();
-#endif
 	rv = SSL_InheritMPServerSIDCache(envString);
 	if (rv != SECSuccess)
 	    errExit("SSL_InheritMPServerSIDCache");
     } else if (maxProcs > 1) {
 	/* we're going to be the parent in a multi-process server.  */
 	listen_sock = getBoundListenSocket(port);
-	rv = SSL_ConfigMPServerSIDCache(NUM_SID_CACHE_ENTRIES, 0, 0, tmp);
+	rv = SSL_ConfigMPServerSIDCache(32 * 1024, 0, 0, tmp);
 	if (rv != SECSuccess)
 	    errExit("SSL_ConfigMPServerSIDCache");
 	beAGoodParent(argc, argv, maxProcs, listen_sock);
@@ -1581,7 +1417,7 @@ main(int argc, char **argv)
 	prStatus = PR_SetFDInheritable(listen_sock, PR_FALSE);
 	if (prStatus != PR_SUCCESS)
 	    errExit("PR_SetFDInheritable");
-	rv = SSL_ConfigServerSessionIDCache(NUM_SID_CACHE_ENTRIES, 0, 0, tmp);
+	rv = SSL_ConfigServerSessionIDCache(32 * 1024, 0, 0, tmp);
 	if (rv != SECSuccess)
 	    errExit("SSL_ConfigServerSessionIDCache");
     }
@@ -1658,43 +1494,15 @@ main(int argc, char **argv)
     }
 
     /* allocate the array of thread slots, and launch the worker threads. */
-    rv = launch_threads(&jobLoop, 0, 0, requestCert, useLocalThreads);
+    rv = launch_threads(&jobLoop, 0, 0, requestCert);
 
-    if (rv == SECSuccess && logStats) {
-	loggerThread = PR_CreateThread(PR_SYSTEM_THREAD, 
-			logger, NULL, PR_PRIORITY_NORMAL, 
-                        useLocalThreads ? PR_LOCAL_THREAD:PR_GLOBAL_THREAD,
-                        PR_UNJOINABLE_THREAD, 0);
-	if (loggerThread == NULL) {
-	    fprintf(stderr, "selfserv: Failed to launch logger thread!\n");
-	    rv = SECFailure;
-	} 
-    }
-
-    if (rv == SECSuccess) {
+    if ( rv == SECSuccess) {
 	server_main(listen_sock, requestCert, privKey, cert);
     }
 
     VLOG(("selfserv: server_thread: exiting"));
 
-    {
-	int i;
-	for (i=0; i<kt_kea_size; i++) {
-	    if (cert[i]) {
-		CERT_DestroyCertificate(cert[i]);
-	    }
-	    if (privKey[i]) {
-		SECKEY_DestroyPrivateKey(privKey[i]);
-	    }
-	}
-    }
-
-    if (debugCache) {
-	nss_DumpCertificateCacheInfo();
-    }
-
     NSS_Shutdown();
     PR_Cleanup();
-    printf("selfserv: normal termination\n");
     return 0;
 }

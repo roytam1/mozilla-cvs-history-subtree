@@ -50,7 +50,6 @@
 #include "nsslocks.h"
 #include "secport.h"
 #include "prvrsion.h"
-#include "prenv.h"
 
 #ifdef DEBUG
 #define THREADMARK
@@ -266,7 +265,7 @@ PORT_FreeArena(PLArenaPool *arena, PRBool zero)
     size_t         len  = sizeof *arena;
     extern const PRVersionDescription * libVersionPoint(void);
     static const PRVersionDescription * pvd;
-    static PRBool  doFreeArenaPool = PR_FALSE;
+    static PRBool  doFreeArenaPool;
 
     if (ARENAPOOL_MAGIC == pool->magic ) {
 	len  = sizeof *pool;
@@ -279,15 +278,12 @@ PORT_FreeArena(PLArenaPool *arena, PRBool zero)
 	if ((pvd->vMajor > 4) || 
 	    (pvd->vMajor == 4 && pvd->vMinor > 1) ||
 	    (pvd->vMajor == 4 && pvd->vMinor == 1 && pvd->vPatch >= 1)) {
-	    const char *ev = PR_GetEnv("NSS_DISABLE_ARENA_FREE_LIST");
-	    if (!ev) doFreeArenaPool = PR_TRUE;
+	    doFreeArenaPool = PR_TRUE;
 	}
     }
-    if (doFreeArenaPool) {
+    if (doFreeArenaPool)
 	PL_FreeArenaPool(arena);
-    } else {
-	PL_FinishArenaPool(arena);
-    }
+    PL_FinishArenaPool(arena);
     PORT_ZFree(arena, len);
     if (lock) {
 	PZ_Unlock(lock);

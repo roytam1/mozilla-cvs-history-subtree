@@ -1038,7 +1038,7 @@ TagTypeToString(TAG_TYPE type)
 	case STYLE_TAG:
 		return "STYLE";
 	default:
-		break;
+		return "unknown";
 	}
 	return "unknown";
 }

@@ -44,7 +44,6 @@
 
 extern void FC_GetFunctionList(void);
 extern void NSC_GetFunctionList(void);
-extern void NSC_ModuleDBFunc(void);
 
 
 /* build the PKCS #11 2.01 lock files */
@@ -123,9 +122,9 @@ SECMOD_SetRootCerts(PK11SlotInfo *slot, SECMODModule *mod) {
  * load a new module into our address space and initialize it.
  */
 SECStatus
-SECMOD_LoadPKCS11Module(SECMODModule *mod) {
+SECMOD_LoadModule(SECMODModule *mod) {
     PRLibrary *library = NULL;
-    CK_C_GetFunctionList entry = NULL;
+    CK_C_GetFunctionList entry;
     char * full_name;
     CK_INFO info;
     CK_ULONG slotCount = 0;
@@ -140,13 +139,6 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
 	    entry = (CK_C_GetFunctionList) FC_GetFunctionList;
 	} else {
 	    entry = (CK_C_GetFunctionList) NSC_GetFunctionList;
-	}
-	if (mod->isModuleDB) {
-	    mod->moduleDBFunc = (void *) NSC_ModuleDBFunc;
-	}
-	if (mod->moduleDBOnly) {
-	    mod->loaded = PR_TRUE;
-	    return SECSuccess;
 	}
     } else {
 	/* Not internal, load the DLL and look up C_GetFunctionList */
@@ -177,21 +169,9 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
 	/*
 	 * now we need to get the entry point to find the function pointers
 	 */
-	if (!mod->moduleDBOnly) {
-	    entry = (CK_C_GetFunctionList)
+	entry = (CK_C_GetFunctionList)
 			PR_FindSymbol(library, "C_GetFunctionList");
-	}
-	if (mod->isModuleDB) {
-	    mod->moduleDBFunc = (void *)
-			PR_FindSymbol(library, "NSS_ReturnModuleSpecData");
-	}
-	if (mod->moduleDBFunc == NULL) mod->isModuleDB = PR_FALSE;
 	if (entry == NULL) {
-	    if (mod->isModuleDB) {
-		mod->loaded = PR_TRUE;
-		mod->moduleDBOnly = PR_TRUE;
-		return SECSuccess;
-	    }
 	    PR_UnloadLibrary(library);
 	    return SECFailure;
 	}
@@ -205,11 +185,6 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
 
     mod->isThreadSafe = PR_TRUE;
     /* Now we initialize the module */
-    if (mod->libraryParams) {
-	secmodLockFunctions.LibraryParameters = (void *) mod->libraryParams;
-    } else {
-	secmodLockFunctions.LibraryParameters = NULL;
-    }
     if (PK11_GETTAB(mod)->C_Initialize(&secmodLockFunctions) != CKR_OK) {
 	mod->isThreadSafe = PR_FALSE;
     	if (PK11_GETTAB(mod)->C_Initialize(NULL) != CKR_OK) goto fail;
@@ -262,6 +237,9 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
 	mod->slotInfoCount = 0;
 	PORT_Free(slotIDs);
     }
+	
+
+
     
     mod->loaded = PR_TRUE;
     mod->moduleID = nextModuleID++;
@@ -282,7 +260,7 @@ SECMOD_UnloadModule(SECMODModule *mod) {
 	return SECFailure;
     }
 
-    if (!mod->moduleDBOnly) PK11_GETTAB(mod)->C_Finalize(NULL);
+    PK11_GETTAB(mod)->C_Finalize(NULL);
     mod->moduleID = 0;
     mod->loaded = PR_FALSE;
     

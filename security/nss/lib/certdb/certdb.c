@@ -58,13 +58,7 @@
 #include "secerr.h"
 #include "sslerr.h"
 #include "nsslocks.h"
-#include "pk11func.h"
-
-#ifndef NSS_3_4_CODE
-#define NSS_3_4_CODE
-#endif /* NSS_3_4_CODE */
-#include "pki.h"
-#include "pki3hack.h"
+#include "cdbhdl.h"
 
 /*
  * Certificate database handling code
@@ -214,7 +208,6 @@ const SEC_ASN1Template CERT_CertKeyTemplate[] = {
 };
 
 SEC_ASN1_CHOOSER_IMPLEMENT(CERT_CertificateTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SEC_SignedCertificateTemplate)
 
 SECStatus
 CERT_KeyFromIssuerAndSN(PRArenaPool *arena, SECItem *issuer, SECItem *sn,
@@ -464,7 +457,7 @@ fortezzaIsCA( CERTCertificate *cert) {
 	unsigned char *end;
 	int len;
 
-	rawkey = spki->subjectPublicKey;
+        rawkey = spki->subjectPublicKey;
 	DER_ConvertBitString(&rawkey);
 	rawptr = rawkey.data;
 	end = rawkey.data + rawkey.len;
@@ -491,7 +484,7 @@ fortezzaIsCA( CERTCertificate *cert) {
 
 	/* DSSPrivilege (the string up to the first byte with the hi-bit on */
 	if (*rawptr & 0x30) isCA = PR_TRUE;
-	
+        
    }
    return isCA;
 }
@@ -629,12 +622,12 @@ CERT_GetCertType(CERTCertificate *cert)
 	cert->nsCertType = NS_CERT_TYPE_SSL_CLIENT | NS_CERT_TYPE_SSL_SERVER |
 	    NS_CERT_TYPE_EMAIL;
 
-	/* if the basic constraint extension says the cert is a CA, then
+        /* if the basic constraint extension says the cert is a CA, then
 	   allow SSL CA and EMAIL CA and Status Responder */
 	if ((basicConstraintPresent == PR_TRUE)
 	    && (basicConstraint.isCA)) {
-		cert->nsCertType |= NS_CERT_TYPE_SSL_CA;
-		cert->nsCertType |= NS_CERT_TYPE_EMAIL_CA;
+	        cert->nsCertType |= NS_CERT_TYPE_SSL_CA;
+	        cert->nsCertType |= NS_CERT_TYPE_EMAIL_CA;
 		cert->nsCertType |= EXT_KEY_USAGE_STATUS_RESPONDER;
 	} else if (CERT_IsCACert(cert, NULL) == PR_TRUE) {
 		cert->nsCertType |= EXT_KEY_USAGE_STATUS_RESPONDER;
@@ -642,8 +635,8 @@ CERT_GetCertType(CERTCertificate *cert)
 
 	/* if the cert is a fortezza CA cert, then allow SSL CA and EMAIL CA */
 	if (fortezzaIsCA(cert)) {
-		cert->nsCertType |= NS_CERT_TYPE_SSL_CA;
-		cert->nsCertType |= NS_CERT_TYPE_EMAIL_CA;
+	        cert->nsCertType |= NS_CERT_TYPE_SSL_CA;
+	        cert->nsCertType |= NS_CERT_TYPE_EMAIL_CA;
 	}
     }
 
@@ -690,9 +683,9 @@ cert_GetKeyID(CERTCertificate *cert)
 
 	    cert->subjectKeyID.data = (unsigned char *)PORT_ArenaAlloc(cert->arena, 8);
 	    if ( cert->subjectKeyID.data != NULL ) {
-		PORT_Memcpy(cert->subjectKeyID.data, key->u.fortezza.KMID, 8);
-		cert->subjectKeyID.len = 8;
-		cert->keyIDGenerated = PR_FALSE;
+	        PORT_Memcpy(cert->subjectKeyID.data, key->u.fortezza.KMID, 8);
+	        cert->subjectKeyID.len = 8;
+	        cert->keyIDGenerated = PR_FALSE;
 	    }
 	}
 		
@@ -707,7 +700,7 @@ cert_GetKeyID(CERTCertificate *cert)
 	 */
 	cert->subjectKeyID.data = (unsigned char *)PORT_ArenaAlloc(cert->arena, SHA1_LENGTH);
 	if ( cert->subjectKeyID.data != NULL ) {
-	    rv = PK11_HashBuf(SEC_OID_SHA1,cert->subjectKeyID.data,
+	    rv = SHA1_HashBuf(cert->subjectKeyID.data,
 			      cert->derPublicKey.data,
 			      cert->derPublicKey.len);
 	    if ( rv == SECSuccess ) {
@@ -727,7 +720,7 @@ cert_GetKeyID(CERTCertificate *cert)
  * take a DER certificate and decode it into a certificate structure
  */
 CERTCertificate *
-CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
+__CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
 			 char *nickname)
 {
     CERTCertificate *cert;
@@ -835,7 +828,7 @@ CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
     
     cert->referenceCount = 1;
     cert->slot = NULL;
-    cert->pkcs11ID = CK_INVALID_HANDLE;
+    cert->pkcs11ID = CK_INVALID_KEY;
     cert->dbnickname = NULL;
     
     return(cert);
@@ -850,12 +843,11 @@ loser:
 }
 
 CERTCertificate *
-__CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
+CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
 			 char *nickname)
 {
-    return CERT_DecodeDERCertificate(derSignedCert, copyDER, nickname);
+    return(__CERT_DecodeDERCertificate(derSignedCert, copyDER, nickname));
 }
-
 
 /*
 ** Amount of time that a certifiate is allowed good before it is actually
@@ -912,7 +904,7 @@ CERT_CheckCertValidTimes(CERTCertificate *c, PRTime t, PRBool allowOverride)
 
     /* if cert is already marked OK, then don't bother to check */
     if ( allowOverride && c->timeOK ) {
-	return(secCertTimeValid);
+        return(secCertTimeValid);
     }
 
     rv = CERT_GetCertTimes(c, &notBefore, &notAfter);
@@ -1160,14 +1152,9 @@ CERTCertificate *
 CERT_DupCertificate(CERTCertificate *c)
 {
     if (c) {
-#ifdef NSS_CLASSIC
 	CERT_LockCertRefCount(c);
 	++c->referenceCount;
 	CERT_UnlockCertRefCount(c);
-#else
-	NSSCertificate *tmp = STAN_GetNSSCertificate(c);
-	nssCertificate_AddRef(tmp);
-#endif
     }
     return c;
 }
@@ -1190,6 +1177,68 @@ CERTCertDBHandle *
 CERT_GetDefaultCertDB(void)
 {
     return(default_cert_db_handle);
+}
+
+/*
+ * Open volatile certificate database and index databases.  This is a
+ * fallback if the real databases can't be opened or created.  It is only
+ * resident in memory, so it will not be persistent.  We do this so that
+ * we don't crash if the databases can't be created.
+ */
+SECStatus
+CERT_OpenVolatileCertDB(CERTCertDBHandle *handle)
+{
+#define DBM_DEFAULT 0
+    static const HASHINFO hashInfo = {
+        DBM_DEFAULT,    /* bucket size */
+        DBM_DEFAULT,    /* fill factor */
+        DBM_DEFAULT,    /* number of elements */
+        256 * 1024, 	/* bytes to cache */
+        DBM_DEFAULT,    /* hash function */
+        DBM_DEFAULT     /* byte order */
+    };
+    /*
+     * Open the memory resident perm cert database.
+     */
+    handle->permCertDB = dbopen(0, O_RDWR | O_CREAT, 0600, DB_HASH, &hashInfo);
+    if ( !handle->permCertDB ) {
+	goto loser;
+    }
+
+    /*
+     * Open the memory resident decoded cert database.
+     */
+    handle->tempCertDB = dbopen(0, O_RDWR | O_CREAT, 0600, DB_HASH, &hashInfo);
+    if ( !handle->tempCertDB ) {
+	goto loser;
+    }
+
+    handle->dbMon = PZ_NewMonitor(nssILockCertDB);
+    PORT_Assert(handle->dbMon != NULL);
+
+    handle->spkDigestInfo = NULL;
+    handle->statusConfig = NULL;
+
+    /* initialize the cert database */
+    (void) CERT_InitCertDB(handle);
+
+    return (SECSuccess);
+    
+loser:
+
+    PORT_SetError(SEC_ERROR_BAD_DATABASE);
+
+    if ( handle->permCertDB ) {
+	(* handle->permCertDB->close)(handle->permCertDB);
+	handle->permCertDB = 0;
+    }
+
+    if ( handle->tempCertDB ) {
+	(* handle->tempCertDB->close)(handle->tempCertDB);
+	handle->tempCertDB = 0;
+    }
+
+    return(SECFailure);
 }
 
 /* XXX this would probably be okay/better as an xp routine? */
@@ -1216,14 +1265,14 @@ SECStatus
 CERT_AddOKDomainName(CERTCertificate *cert, const char *hn)
 {
     CERTOKDomainName *domainOK;
-    int	       newNameLen;
+    int               newNameLen;
 
     if (!hn || !(newNameLen = strlen(hn))) {
     	PORT_SetError(SEC_ERROR_INVALID_ARGS);
 	return SECFailure;
     }
     domainOK = (CERTOKDomainName *)PORT_ArenaZAlloc(cert->arena, 
-				  (sizeof *domainOK) + newNameLen);
+                                  (sizeof *domainOK) + newNameLen);
     if (!domainOK) 
     	return SECFailure;	/* error code is already set. */
 
@@ -1600,24 +1649,20 @@ CERT_IsCACert(CERTCertificate *cert, unsigned int *rettype)
     ret = PR_FALSE;
     type = 0;
     
-    if ( cert->trust ) {
+    if ( cert->isperm ) {
 	trust = cert->trust;
-	if ( ( ( trust->sslFlags & CERTDB_VALID_CA ) == CERTDB_VALID_CA ) ||
-	   ( ( trust->sslFlags & CERTDB_TRUSTED_CA ) == CERTDB_TRUSTED_CA ) ) {
+	if ( ( trust->sslFlags & CERTDB_VALID_CA ) == CERTDB_VALID_CA ) {
 	    ret = PR_TRUE;
 	    type |= NS_CERT_TYPE_SSL_CA;
 	}
 	
-	if ( ( ( trust->emailFlags & CERTDB_VALID_CA ) == CERTDB_VALID_CA ) ||
-	  ( ( trust->emailFlags & CERTDB_TRUSTED_CA ) == CERTDB_TRUSTED_CA ) ) {
+	if ( ( trust->emailFlags & CERTDB_VALID_CA ) == CERTDB_VALID_CA ) {
 	    ret = PR_TRUE;
 	    type |= NS_CERT_TYPE_EMAIL_CA;
 	}
 	
-	if ( ( ( trust->objectSigningFlags & CERTDB_VALID_CA ) 
-						== CERTDB_VALID_CA ) ||
-          ( ( trust->objectSigningFlags & CERTDB_TRUSTED_CA ) 
-						== CERTDB_TRUSTED_CA ) ) {
+	if ( ( trust->objectSigningFlags & CERTDB_VALID_CA ) ==
+	    CERTDB_VALID_CA ) {
 	    ret = PR_TRUE;
 	    type |= NS_CERT_TYPE_OBJECT_SIGNING_CA;
 	}
@@ -1653,13 +1698,15 @@ CERT_IsCACert(CERTCertificate *cert, unsigned int *rettype)
     return(ret);
 }
 
+
 PRBool
 CERT_IsCADERCert(SECItem *derCert, unsigned int *type) {
     CERTCertificate *cert;
     PRBool isCA;
 
-    cert = CERT_DecodeDERCertificate(derCert, PR_FALSE, NULL);
-    if (cert == NULL) return PR_FALSE;
+    cert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(), derCert, NULL,
+	                                   PR_FALSE, PR_TRUE);
+    if (cert == NULL) return NULL;
 
     isCA = CERT_IsCACert(cert,type);
     CERT_DestroyCertificate (cert);
@@ -1888,114 +1935,6 @@ CERT_EncodeTrustString(CERTCertTrust *trust)
     return(retstr);
 }
 
-/* in 3.4, this will only set trust */
-SECStatus
-CERT_SaveImportedCert(CERTCertificate *cert, SECCertUsage usage,
-		      PRBool caOnly, char *nickname)
-{
-    SECStatus rv;
-    PRBool saveit;
-    CERTCertTrust trust;
-    PRBool isCA;
-    unsigned int certtype;
-    
-    isCA = CERT_IsCACert(cert, NULL);
-    if ( caOnly && ( !isCA ) ) {
-	return(SECSuccess);
-    }
-    
-    saveit = PR_TRUE;
-    
-    PORT_Memset((void *)&trust, 0, sizeof(trust));
-
-    certtype = cert->nsCertType;
-
-    /* if no CA bits in cert type, then set all CA bits */
-    if ( isCA && ( ! ( certtype & NS_CERT_TYPE_CA ) ) ) {
-	certtype |= NS_CERT_TYPE_CA;
-    }
-
-    /* if no app bits in cert type, then set all app bits */
-    if ( ( !isCA ) && ( ! ( certtype & NS_CERT_TYPE_APP ) ) ) {
-	certtype |= NS_CERT_TYPE_APP;
-    }
-
-    switch ( usage ) {
-      case certUsageEmailSigner:
-      case certUsageEmailRecipient:
-	if ( isCA ) {
-	    if ( certtype & NS_CERT_TYPE_EMAIL_CA ) {
-		trust.emailFlags = CERTDB_VALID_CA;
-	    }
-	} else {
-	    if ( cert->emailAddr == NULL ) {
-		saveit = PR_FALSE;
-	    }
-	    
-	    if ( certtype & NS_CERT_TYPE_EMAIL ) {
-		trust.emailFlags = CERTDB_VALID_PEER;
-		if ( ! ( cert->rawKeyUsage & KU_KEY_ENCIPHERMENT ) ) {
-		    /* don't save it if KeyEncipherment is not allowed */
-		    saveit = PR_FALSE;
-		}
-	    }
-	}
-	break;
-      case certUsageUserCertImport:
-	if ( isCA ) {
-	    if ( certtype & NS_CERT_TYPE_SSL_CA ) {
-		trust.sslFlags = CERTDB_VALID_CA;
-	    }
-	    
-	    if ( certtype & NS_CERT_TYPE_EMAIL_CA ) {
-		trust.emailFlags = CERTDB_VALID_CA;
-	    }
-	    
-	    if ( certtype & NS_CERT_TYPE_OBJECT_SIGNING_CA ) {
-		trust.objectSigningFlags = CERTDB_VALID_CA;
-	    }
-	    
-	} else {
-	    if ( certtype & NS_CERT_TYPE_SSL_CLIENT ) {
-		trust.sslFlags = CERTDB_VALID_PEER;
-	    }
-	    
-	    if ( certtype & NS_CERT_TYPE_EMAIL ) {
-		trust.emailFlags = CERTDB_VALID_PEER;
-	    }
-	    
-	    if ( certtype & NS_CERT_TYPE_OBJECT_SIGNING ) {
-		trust.objectSigningFlags = CERTDB_VALID_PEER;
-	    }
-	}
-	break;
-      case certUsageAnyCA:
-	trust.sslFlags = CERTDB_VALID_CA;
-	break;
-      case certUsageSSLCA:
-	trust.sslFlags = CERTDB_VALID_CA | 
-			CERTDB_TRUSTED_CA | CERTDB_TRUSTED_CLIENT_CA;
-	break;
-      default:	/* XXX added to quiet warnings; no other cases needed? */
-	break;
-    }
-
-    if ( saveit ) {
-	rv = CERT_ChangeCertTrust(cert->dbhandle, cert, &trust);
-	if ( rv != SECSuccess ) {
-	    goto loser;
-	}
-    }
-
-    rv = SECSuccess;
-    goto done;
-
-loser:
-    rv = SECFailure;
-done:
-    return(rv);
-}
-
 SECStatus
 CERT_ImportCerts(CERTCertDBHandle *certdb, SECCertUsage usage,
 		 unsigned int ncerts, SECItem **derCerts,
@@ -2005,7 +1944,7 @@ CERT_ImportCerts(CERTCertDBHandle *certdb, SECCertUsage usage,
     int i;
     CERTCertificate **certs = NULL;
     SECStatus rv;
-    int fcerts = 0;
+    int fcerts;
 
     if ( ncerts ) {
 	certs = (CERTCertificate**)PORT_ZAlloc(sizeof(CERTCertificate *) * ncerts );
@@ -2015,8 +1954,8 @@ CERT_ImportCerts(CERTCertDBHandle *certdb, SECCertUsage usage,
     
 	/* decode all of the certs into the temporary DB */
 	for ( i = 0, fcerts= 0; i < ncerts; i++) {
-	    certs[fcerts] = CERT_DecodeDERCertificate(derCerts[i], PR_FALSE,
-						NULL);
+	    certs[fcerts] = CERT_NewTempCertificate(certdb, derCerts[i], NULL,
+					       PR_FALSE, PR_TRUE);
 	    if (certs[fcerts]) fcerts++;
 	}
 
@@ -2029,14 +1968,10 @@ CERT_ImportCerts(CERTCertDBHandle *certdb, SECCertUsage usage,
 		     * otherwise if there are more than one cert, we don't
 		     * know which cert it belongs to.
 		     */
-		    rv = PK11_ImportCert(PK11_GetInternalKeySlot(),certs[i],
-				CK_INVALID_HANDLE,NULL,PR_TRUE);
+		    rv = CERT_SaveImportedCert(certs[i], usage, caOnly, NULL);
 		} else {
-		    rv = PK11_ImportCert(PK11_GetInternalKeySlot(),certs[i],
-				CK_INVALID_HANDLE,nickname,PR_TRUE);
-		}
-		if (rv == SECSuccess) {
-		    CERT_SaveImportedCert(certs[i], usage, caOnly, NULL);
+		    rv = CERT_SaveImportedCert(certs[i], usage, caOnly, 
+                			       nickname);
 		}
 		/* don't care if it fails - keep going */
 	    }
@@ -2046,9 +1981,7 @@ CERT_ImportCerts(CERTCertDBHandle *certdb, SECCertUsage usage,
     if ( retCerts ) {
 	*retCerts = certs;
     } else {
-	if (certs) {
-	    CERT_DestroyCertArray(certs, fcerts);
-	}
+	CERT_DestroyCertArray(certs, fcerts);
     }
 
     return(SECSuccess);
@@ -2149,7 +2082,7 @@ loser:
 SECStatus
 CERT_AddCertToListTail(CERTCertList *certs, CERTCertificate *cert)
 {
-    return CERT_AddCertToListTailWithData(certs, cert, NULL);
+    CERT_AddCertToListTailWithData(certs, cert, NULL);
 }
 
 SECStatus
@@ -2379,6 +2312,36 @@ loser:
     return(SECFailure);
 }
 
+/*
+ * Acquire the global lock on the cert database.
+ * This lock is currently used for the following operations:
+ *	adding or deleting a cert to either the temp or perm databases
+ *	converting a temp to perm or perm to temp
+ *	changing(maybe just adding????) the trust of a cert
+ *      chaning the DB status checking Configuration
+ */
+void
+CERT_LockDB(CERTCertDBHandle *handle)
+{
+    PZ_EnterMonitor(handle->dbMon);
+    return;
+}
+
+/*
+ * Free the global cert database lock.
+ */
+void
+CERT_UnlockDB(CERTCertDBHandle *handle)
+{
+    PRStatus prstat;
+    
+    prstat = PZ_ExitMonitor(handle->dbMon);
+    
+    PORT_Assert(prstat == PR_SUCCESS);
+    
+    return;
+}
+
 static PZLock *certRefCountLock = NULL;
 
 /*
@@ -2471,5 +2434,6 @@ void
 CERT_SetStatusConfig(CERTCertDBHandle *handle, CERTStatusConfig *statusConfig)
 {
   PORT_Assert(handle->statusConfig == NULL);
+
   handle->statusConfig = statusConfig;
 }

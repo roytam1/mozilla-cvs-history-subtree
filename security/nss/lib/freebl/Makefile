@@ -72,21 +72,11 @@ ifneq ($(OS_ARCH),WINNT)
 endif
 endif
 
-ifeq ($(OS_ARCH),OSF1)
-    DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_NO_MP_WORD
-    MPI_SRCS += mpvalpha.c
-endif
-
 ifeq ($(OS_ARCH),WINNT)
 ifneq ($(OS_TARGET),WIN16)
     ASFILES  = mpi_x86.asm
     DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE -DMP_ASSEMBLY_DIV_2DX1D
 endif
-endif
-
-ifdef XP_OS2_VACPP
-    ASFILES  = mpi_x86.asm
-    DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE -DMP_ASSEMBLY_DIV_2DX1D -DMP_USE_UINT_DIGIT -DMP_NO_MP_WORD
 endif
 
 ifeq ($(OS_ARCH),IRIX)
@@ -150,7 +140,16 @@ ifdef USE_HYBRID
     OS_CFLAGS += -xchip=ultra2
 endif
 endif
-ifeq (5.5.1,$(firstword $(sort 5.5.1 $(OS_RELEASE))))
+ifeq ($(OS_RELEASE),5.5.1)
+    SYSV_SPARC = 1
+endif
+ifeq ($(OS_RELEASE),5.6)
+    SYSV_SPARC = 1
+endif
+ifeq ($(OS_RELEASE),5.7)
+    SYSV_SPARC = 1
+endif
+ifeq ($(OS_RELEASE),5.8)
     SYSV_SPARC = 1
 endif
 ifeq ($(SYSV_SPARC),1)

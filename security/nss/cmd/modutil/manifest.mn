@@ -54,7 +54,6 @@ REQUIRES = seccmd security dbm
 
 DEFINES = -DNSPR20
 
-# sigh
-INCLUDES += -I$(CORE_DEPTH)/nss/lib/pk11wrap
+INCLUDES =
 
-USE_STATIC_LIBS = 1 
+USE_STATIC_LIBS = 1

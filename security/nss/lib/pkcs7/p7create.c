@@ -43,6 +43,7 @@
 #include "secasn1.h"
 #include "secitem.h"
 #include "secoid.h"
+#include "secpkcs5.h"
 #include "pk11func.h"
 #include "prtime.h"
 #include "secerr.h"

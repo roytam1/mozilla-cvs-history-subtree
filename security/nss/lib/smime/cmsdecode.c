@@ -160,9 +160,6 @@ nss_cms_decoder_notify(void *arg, PRBool before, void *dest, int depth)
 	    case SEC_OID_PKCS7_ENCRYPTED_DATA:
 		p7dcx->content.encryptedData->cmsg = p7dcx->cmsg;
 		break;
-	    default:
-		PORT_Assert(0);
-		break;
 	    }
 	}
 
@@ -317,7 +314,7 @@ nss_cms_after_data(NSSCMSDecoderContext *p7dcx)
 {
     PLArenaPool *poolp;
     NSSCMSDecoderContext *childp7dcx;
-    SECStatus rv = SECFailure;
+    SECStatus rv;
 
     poolp = p7dcx->cmsg->poolp;
 
@@ -487,7 +484,7 @@ nss_cms_decoder_work_data(NSSCMSDecoderContext *p7dcx,
     }
 
     if (len == 0)
-	goto done;		/* nothing more to do */
+	return;		/* nothing more to do */
 
     /*
      * Update the running digests with plaintext bytes (if we need to).
@@ -533,7 +530,6 @@ nss_cms_decoder_work_data(NSSCMSDecoderContext *p7dcx,
 	PORT_Memcpy(storage->data + offset, data, len);
     }
 
-done:
 loser:
     if (buf)
 	PORT_Free (buf);

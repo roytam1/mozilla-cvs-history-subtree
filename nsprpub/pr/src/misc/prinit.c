@@ -161,7 +161,7 @@ static void _pr_SetNativeThreadsOnlyMode(void)
 #endif
 
 #if !defined(_PR_INET6) || defined(_PR_INET6_PROBE)
-extern PRStatus _pr_init_ipv6(void);
+extern PRStatus _pr_init_ipv6();
 #endif
 
 static void _PR_InitStuff(void)
@@ -169,9 +169,6 @@ static void _PR_InitStuff(void)
 
     if (_pr_initialized) return;
     _pr_initialized = PR_TRUE;
-#ifdef _PR_ZONE_ALLOCATOR
-    _PR_InitZones();
-#endif
 #ifdef WINNT
     _pr_SetNativeThreadsOnlyMode();
 #endif
@@ -223,6 +220,10 @@ static void _PR_InitStuff(void)
 	_PR_InitCPUs();
 #endif
 
+#ifdef _PR_ZONE_ALLOCATOR
+    _PR_InitZones();
+#endif
+
 /*
  * XXX: call _PR_InitMem only on those platforms for which nspr implements
  *	malloc, for now.
@@ -250,7 +251,7 @@ static void _PR_InitStuff(void)
     _PR_MD_FINAL_INIT();
 }
 
-void _PR_ImplicitInitialization(void)
+void _PR_ImplicitInitialization()
 {
 	_PR_InitStuff();
 
@@ -416,10 +417,9 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup()
     	PR_ASSERT((_PR_IS_NATIVE_THREAD(me)) || (me->cpu->id == 0));
 #endif
 
-        _PR_CleanupMW();
-        _PR_CleanupDtoa();
-        _PR_CleanupCallOnce();
+#if defined(WIN16)
 		_PR_ShutdownLinker();
+#endif
         /* Release the primordial thread's private data, etc. */
         _PR_CleanupThread(me);
 
@@ -428,6 +428,7 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup()
 	    PR_LOG(_pr_thread_lm, PR_LOG_MIN,
 	            ("PR_Cleanup: clean up before destroying thread"));
 	    _PR_LogCleanup();
+        _PR_CleanupFdCache();
 
         /*
          * This part should look like the end of _PR_NativeRunThread
@@ -449,14 +450,6 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup()
          * Ideally, for each _PR_InitXXX(), there should be a corresponding
          * _PR_XXXCleanup() that we can call here.
          */
-        _PR_CleanupNet();
-        _PR_CleanupIO();
-        _PR_CleanupThreads();
-        PR_DestroyLock(_pr_sleeplock);
-        _pr_sleeplock = NULL;
-        _PR_CleanupLayerCache();
-        _PR_CleanupEnv();
-        _PR_CleanupStacks();
         _PR_CleanupBeforeExit();
         _pr_initialized = PR_FALSE;
         return PR_SUCCESS;
@@ -777,20 +770,13 @@ static struct {
     PRCondVar *cv;
 } mod_init;
 
-static void _PR_InitCallOnce(void) {
+static void _PR_InitCallOnce() {
     mod_init.ml = PR_NewLock();
     PR_ASSERT(NULL != mod_init.ml);
     mod_init.cv = PR_NewCondVar(mod_init.ml);
     PR_ASSERT(NULL != mod_init.cv);
 }
 
-void _PR_CleanupCallOnce()
-{
-    PR_DestroyLock(mod_init.ml);
-    mod_init.ml = NULL;
-    PR_DestroyCondVar(mod_init.cv);
-    mod_init.cv = NULL;
-}
 
 PR_IMPLEMENT(PRStatus) PR_CallOnce(
     PRCallOnceType *once,

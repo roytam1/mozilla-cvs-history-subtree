@@ -31,14 +31,12 @@
  * GPL.
  */
 
-#include "nssrenam.h"
 #include "cmmf.h"
 #include "cmmfi.h"
 
 SEC_ASN1_MKSUB(SECOID_AlgorithmIDTemplate)
 SEC_ASN1_MKSUB(SEC_AnyTemplate)
 SEC_ASN1_MKSUB(SEC_IntegerTemplate)
-SEC_ASN1_MKSUB(SEC_SignedCertificateTemplate)
 
 static const SEC_ASN1Template CMMFCertResponseTemplate[] = {
     { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(CMMFCertResponse)},
@@ -82,8 +80,7 @@ const SEC_ASN1Template CMMFPKIStatusInfoTemplate[] = {
 };
 
 const SEC_ASN1Template CMMFSequenceOfCertsTemplate[] = {
-    { SEC_ASN1_SEQUENCE_OF| SEC_ASN1_XTRN, 0, 
-			SEC_ASN1_SUB(SEC_SignedCertificateTemplate)}
+    { SEC_ASN1_SEQUENCE_OF, 0, SEC_SignedCertificateTemplate}
 };
 
 const SEC_ASN1Template CMMFRandTemplate[] = {
@@ -109,9 +106,9 @@ const SEC_ASN1Template CMMFCertOrEncCertEncryptedCertTemplate[] = {
 };
 
 const SEC_ASN1Template CMMFCertOrEncCertCertificateTemplate[] = {
-    { SEC_ASN1_CONTEXT_SPECIFIC | SEC_ASN1_XTRN | 0,
+    { SEC_ASN1_CONTEXT_SPECIFIC | 0,
       0,
-      SEC_ASN1_SUB(SEC_SignedCertificateTemplate)},
+      SEC_SignedCertificateTemplate},
     { 0 }
 };
 

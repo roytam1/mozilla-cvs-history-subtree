@@ -413,11 +413,8 @@ signed_data(struct signOptionsStr *signOptions)
         "ERROR: please indicate the nickname of a certificate to sign with.\n");
 	return NULL;
     }
-    if ((cert = CERT_FindUserCertByUsage(signOptions->options->certHandle, 
-                                         signOptions->nickname,
-                                         certUsageEmailSigner,
-                                         PR_FALSE,
-                                         NULL)) == NULL) {
+    if ((cert = CERT_FindCertByNickname(signOptions->options->certHandle, 
+                                        signOptions->nickname)) == NULL) {
 	SECU_PrintError(progName, 
 	                "the corresponding cert for key \"%s\" does not exist",
 	                signOptions->nickname);
@@ -490,21 +487,18 @@ signed_data(struct signOptionsStr *signOptions)
 	    goto loser;
 	}
     }
-
     if (signOptions->encryptionKeyPreferenceNick) {
 	/* get the cert, add it to the message */
-	if ((ekpcert = CERT_FindUserCertByUsage(
-                                     signOptions->options->certHandle, 
-	                             signOptions->encryptionKeyPreferenceNick,
-                                     certUsageEmailRecipient, PR_FALSE, NULL))
+	if ((ekpcert = CERT_FindCertByNickname(signOptions->options->certHandle, 
+	                               signOptions->encryptionKeyPreferenceNick))
 	      == NULL) {
 	    SECU_PrintError(progName, 
-	               "the corresponding cert for key \"%s\" does not exist",
-	                signOptions->encryptionKeyPreferenceNick);
+	                 "the corresponding cert for key \"%s\" does not exist",
+	                    signOptions->encryptionKeyPreferenceNick);
 	    goto loser;
 	}
 	if (NSS_CMSSignerInfo_AddSMIMEEncKeyPrefs(signerinfo, ekpcert, 
-	                                     signOptions->options->certHandle)
+	                                        signOptions->options->certHandle)
 	      != SECSuccess) {
 	    fprintf(stderr, "ERROR: cannot add SMIMEEncKeyPrefs attribute.\n");
 	    goto loser;
@@ -515,47 +509,15 @@ signed_data(struct signOptionsStr *signOptions)
 	}
     } else {
 	/* check signing cert for fitness as encryption cert */
-        SECStatus FitForEncrypt = CERT_CheckCertUsage(cert,
-                                                      certUsageEmailRecipient);
-
-        if (SECSuccess == FitForEncrypt) {
-            /* if yes, add signing cert as EncryptionKeyPreference */
-            if (NSS_CMSSignerInfo_AddSMIMEEncKeyPrefs(signerinfo, cert, 
-                                              signOptions->options->certHandle)
-                  != SECSuccess) {
-                fprintf(stderr, 
-                    "ERROR: cannot add default SMIMEEncKeyPrefs attribute.\n");
-                goto loser;
-            }
-        } else {
-            /* this is a dual-key cert case, we need to look for the encryption
-               certificate under the same nickname as the signing cert */
-            /* get the cert, add it to the message */
-            if ((ekpcert = CERT_FindUserCertByUsage(
-                                              signOptions->options->certHandle,
-                                              signOptions->nickname,
-                                              certUsageEmailRecipient,
-                                              PR_FALSE,
-                                              NULL)) == NULL) {
-                SECU_PrintError(progName, 
-                         "the corresponding cert for key \"%s\" does not exist",
-                         signOptions->encryptionKeyPreferenceNick);
-                goto loser;
-            }
-            if (NSS_CMSSignerInfo_AddSMIMEEncKeyPrefs(signerinfo, ekpcert, 
-                                              signOptions->options->certHandle)
-                  != SECSuccess) {
-                fprintf(stderr, 
-                        "ERROR: cannot add SMIMEEncKeyPrefs attribute.\n");
-                goto loser;
-            }
-            if (NSS_CMSSignedData_AddCertificate(sigd, ekpcert) != SECSuccess) {
-                fprintf(stderr, "ERROR: cannot add encryption certificate.\n");
-                goto loser;
-            }
-        }
+	/* if yes, add signing cert as EncryptionKeyPreference */
+	if (NSS_CMSSignerInfo_AddSMIMEEncKeyPrefs(signerinfo, cert, 
+	                                        signOptions->options->certHandle)
+	      != SECSuccess) {
+	    fprintf(stderr, 
+	            "ERROR: cannot add default SMIMEEncKeyPrefs attribute.\n");
+	    goto loser;
+	}
     }
-
     if (NSS_CMSSignedData_AddSignerInfo(sigd, signerinfo) != SECSuccess) {
 	fprintf(stderr, "ERROR: cannot add CMS signerInfo object.\n");
 	goto loser;
@@ -1325,8 +1287,7 @@ main(int argc, char **argv)
 	Usage(progName);
 	exitstatus = 1;
     }
-    if ( (mode == SIGN || mode == ENVELOPE || mode == CERTSONLY)
-         && (!exitstatus) ) {
+    if (mode == SIGN || mode == ENVELOPE || mode == CERTSONLY) {
 	PLArenaPool *arena = PORT_NewArena(1024);
 	NSSCMSEncoderContext *ecx;
 	SECItem output = { 0, 0, 0 };
@@ -1371,7 +1332,7 @@ main(int argc, char **argv)
 	}
 	rv = NSS_CMSEncoder_Finish(ecx);
 	if (rv) {
-            SECU_PrintError(progName, "failed to encode data");
+	    fprintf(stderr, "%s: failed to encode data.\n", progName);
 	    exit(1);
 	}
 

@@ -355,7 +355,6 @@ $saveRS = $/;
 $/ = undef;
 $mimebody = <STDIN>;
 $/ = $saveRS;
-chomp($mimebody);
 
 if (defined $opt_D) {
     #

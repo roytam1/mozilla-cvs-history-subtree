@@ -204,6 +204,8 @@ SECU_FilePasswd(PK11SlotInfo *slot, PRBool retry, void *arg)
     if (nb == 0) {
 	fprintf(stderr,"password file contains no data\n");
 	return NULL;
+    } else {
+	return (char*) PORT_Strdup((char*)phrase);
     }
     return (char*) PORT_Strdup((char*)phrase);
 }
@@ -677,7 +679,6 @@ SECU_PrintAsHex(FILE *out, SECItem *data, char *m, int level)
 {
     unsigned i;
     int column;
-    PRBool isString = PR_TRUE;
 
     if ( m ) {
 	SECU_Indent(out, level); fprintf(out, "%s:\n", m);
@@ -686,11 +687,6 @@ SECU_PrintAsHex(FILE *out, SECItem *data, char *m, int level)
     
     SECU_Indent(out, level); column = level*INDENT_MULT;
     for (i = 0; i < data->len; i++) {
-	unsigned char val = data->data[i];
-
-        if (isString && val && !isprint(val)) {
-	    isString = PR_FALSE;
-	}
 	if (i != data->len - 1) {
 	    fprintf(out, "%02x:", data->data[i]);
 	    column += 4;
@@ -704,25 +700,6 @@ SECU_PrintAsHex(FILE *out, SECItem *data, char *m, int level)
 	    SECU_Indent(out, level); column = level*INDENT_MULT;
 	}
     }
-    if (isString) {
-	secu_Newline(out);
-        SECU_Indent(out, level); column = level*INDENT_MULT;
-	for (i = 0; i < data->len; i++) {
-	    unsigned char val = data->data[i];
-
-	    if (val) {
-		fprintf(out,"%c",val);
-		column++;
-	    } else {
-		column = 77;
-	    }
-	    if (column > 76) {
-		secu_Newline(out);
-        	SECU_Indent(out, level); column = level*INDENT_MULT;
-	    }
-	}
-    }
-	    
     level--;
     if (column != level*INDENT_MULT) {
 	secu_Newline(out);
@@ -923,7 +900,7 @@ static void secu_PrintAny(FILE *out, SECItem *i, char *m, int level);
 void
 SECU_PrintSet(FILE *out, SECItem *t, char *m, int level)
 {
-    int type= t->data[0] & SEC_ASN1_TAGNUM_MASK;
+    int type= t->data[0] & 0x1f;
     int start;
     unsigned char *bp;
 
@@ -931,12 +908,12 @@ SECU_PrintSet(FILE *out, SECItem *t, char *m, int level)
     if (m) {
     	fprintf(out, "%s: ", m);
     }
-
-    fprintf(out,"%s {\n", type == SEC_ASN1_SET ? "Set" : "Sequence"); /* } */
+    fprintf(out,"%s {\n", 
+		type == SEC_ASN1_SET ? "Set" : "Sequence");
 
     start = 2;
     if (t->data[1] & 0x80) {
-	start += (t->data[1] & 0x7f);
+	start = (t->data[1] & 0x7f) +1;
     }
     for (bp=&t->data[start]; bp < &t->data[t->len]; ) {
 	SECItem tmp;
@@ -953,41 +930,19 @@ SECU_PrintSet(FILE *out, SECItem *t, char *m, int level)
 	    len = bp[1];
 	}
 	tmp.len = len+lenlen+1;
-	if (tmp.len > &t->data[t->len] - bp) {
-	    tmp.len = &t->data[t->len] - bp;
-	}
 	tmp.data = bp;
 	bp += tmp.len;
 	secu_PrintAny(out,&tmp,NULL,level+1);
     }
-    /* { */SECU_Indent(out, level); fprintf(out, "}\n");
+    SECU_Indent(out, level); fprintf(out, "}\n");
+
 }
+
 static void
-secu_PrintContextSpecific(FILE *out, SECItem *i, char *m, int level)
+secu_PrintAny(FILE *out, SECItem *i, char *m, int level)
 {
-    int type= i->data[0] & SEC_ASN1_TAGNUM_MASK;
-    SECItem tmp;
-    int start;
-
-    SECU_Indent(out, level);
-    if (m) {
-    	fprintf(out, "%s: ", m);
-    }
-
-    fprintf(out,"Option %d\n", type);
-    start = 2;
-    if (i->data[1] & 0x80) {
-	start = (i->data[1] & 0x7f) +1;
-    }
-    tmp.data = &i->data[start];
-    tmp.len = i->len -start;
-    SECU_PrintAsHex(out, &tmp, m, level+1);
-}
-
-static
-secu_PrintUniversal(FILE *out, SECItem *i, char *m, int level)
-{
-	switch (i->data[0] & SEC_ASN1_TAGNUM_MASK) {
+    if ( i->len ) {
+	switch (i->data[0] & 0x1f) {
 	  case SEC_ASN1_INTEGER:
 	    SECU_PrintInteger(out, i, m, level);
 	    break;
@@ -1021,23 +976,6 @@ secu_PrintUniversal(FILE *out, SECItem *i, char *m, int level)
 	    break;
 	    
 	  default:
-	    SECU_PrintAsHex(out, i, m, level);
-	    break;
-	}
-}
-
-static void
-secu_PrintAny(FILE *out, SECItem *i, char *m, int level)
-{
-    if ( i->len ) {
-	switch (i->data[0] & SEC_ASN1_CLASS_MASK) {
-	case SEC_ASN1_CONTEXT_SPECIFIC:
-	    secu_PrintContextSpecific(out, i, m, level);
-	    break;
-	case SEC_ASN1_UNIVERSAL:
-	    secu_PrintUniversal(out, i, m, level);
-	    break;
-	default:
 	    SECU_PrintAsHex(out, i, m, level);
 	    break;
 	}
@@ -1582,6 +1520,20 @@ SECU_PrintCertNickname(CERTCertificate *cert, void *data)
     PORT_Memset (trusts, 0, sizeof (trusts));
     out = (FILE *)data;
     
+    if ( cert->dbEntry ) {
+	name = cert->dbEntry->nickname;
+	if ( name == NULL ) {
+	    name = cert->emailAddr;
+	}
+	
+        trust = &cert->dbEntry->trust;
+	printflags(trusts, trust->sslFlags);
+	PORT_Strcat(trusts, ",");
+	printflags(trusts, trust->emailFlags);
+	PORT_Strcat(trusts, ",");
+	printflags(trusts, trust->objectSigningFlags);
+	fprintf(out, "%-60s %-5s\n", name, trusts);
+    } else {
 	name = cert->nickname;
 	if ( name == NULL ) {
 	    name = cert->emailAddr;
@@ -1598,6 +1550,7 @@ SECU_PrintCertNickname(CERTCertificate *cert, void *data)
 	    PORT_Memcpy(trusts,",,",3);
 	}
 	fprintf(out, "%-60s %-5s\n", name, trusts);
+    }
 
     return (SECSuccess);
 }
@@ -1715,7 +1668,6 @@ SECU_PrintPublicKey(FILE *out, SECItem *der, char *m, int level)
     return 0;
 }
 
-#ifdef HAVE_EPV_TEMPLATE
 int
 SECU_PrintPrivateKey(FILE *out, SECItem *der, char *m, int level)
 {
@@ -1744,7 +1696,6 @@ SECU_PrintPrivateKey(FILE *out, SECItem *der, char *m, int level)
     PORT_FreeArena(arena, PR_TRUE);
     return 0;
 }
-#endif
 
 int
 SECU_PrintFingerprints(FILE *out, SECItem *derCert, char *m, int level)

@@ -477,7 +477,6 @@ CERT_ImportCAChainTrusted;
 CERT_ImportCRL;
 CERT_IsCACert;
 CERT_IsCADERCert;
-CERT_KeyFromDERCrl;
 CERT_SetOCSPDefaultResponder;
 PBE_CreateContext;
 PBE_DestroyContext;
@@ -556,99 +555,6 @@ VFY_EndWithSignature;
 ;+#
 PK11_CreatePBEParams;
 PK11_DestroyPBEParams;
-;+    local:
-;+       *;
-;+};
-;+NSS_3.4 { 	# NSS 3.4 release
-;+    global:
-SECMOD_LoadModule;
-SECMOD_GetModuleSpecList;
-SECMOD_FreeModuleSpecList;
-SECMOD_UpdateModule;
-SECMOD_DeleteModule;
-;+# for PKCS #12
-PK11_RawPBEKeyGen;
-;+# for PSM
-__CERT_AddTempCertToPerm;
-CERT_AddOKDomainName;
-CERT_CopyName;
-CERT_CreateSubjectCertList;
-CERT_DecodeAVAValue;
-;+#CERT_DecodeCertFromPackage;
-cert_DecodeGeneralName;
-CERT_DecodeTrustString;
-CERT_DerNameToAscii;
-CERT_FilterCertListByCANames;
-CERT_FilterCertListByUsage;
-CERT_FindCertExtension;
-CERT_FindUserCertByUsage;
-CERT_FindUserCertsByUsage;
-CERT_GetCertChainFromCert;
-CERT_GetOCSPAuthorityInfoAccessLocation;
-CERT_NicknameStringsFromCertList;
-CERT_MakeCANickname;
-CERT_VerifySignedData;
-DER_Encode;
-HASH_Begin;
-HASH_Create;
-HASH_Destroy;
-HASH_End;
-HASH_ResultLen;
-HASH_Update;
-NSSBase64_DecodeBuffer;   # from Stan
-NSSBase64_EncodeItem;   # from Stan
-PK11_GetKeyGen;
-PK11_GetMinimumPwdLength;
-PK11_GetNextSafe;
-PK11_GetPadMechanism;
-PK11_GetSlotInfo;
-PK11_HasRootCerts;
-PK11_IsDisabled;
-PK11_LoadPrivKey;
-PK11_LogoutAll;
-PK11_MechanismToAlgtag;
-PK11_ResetToken;
-PK11_TraverseSlotCerts;
-SEC_ASN1Decode;
-SECKEY_CopySubjectPublicKeyInfo;
-SECMOD_CreateModule;
-SECMOD_FindModule;
-SECMOD_FindSlot;
-SECMOD_PubCipherFlagstoInternal;
-SECMOD_PubMechFlagstoInternal;
-;;CERT_NameTemplate DATA ;
-;;CERT_SubjectPublicKeyInfoTemplate DATA ;
-;;SEC_BooleanTemplate DATA ;
-;;SEC_NullTemplate DATA ;
-;;SEC_SignedCertificateTemplate DATA ;
-;;SEC_UTF8StringTemplate DATA ;
-NSS_Get_CERT_NameTemplate;
-NSS_Get_CERT_SubjectPublicKeyInfoTemplate;
-NSS_Get_SEC_BooleanTemplate;
-NSS_Get_SEC_NullTemplate;
-NSS_Get_SEC_SignedCertificateTemplate;
-NSS_Get_SEC_UTF8StringTemplate;
-;+# for JSS
-PK11_ImportDERPrivateKeyInfoAndReturnKey;
-PK11_ImportPublicKey;
-PK11_ImportPrivateKeyInfoAndReturnKey;
-PK11_ImportSymKeyWithFlags;
-PK11_ListPublicKeysInSlot;
-PK11_ListPrivKeysInSlot;
-PK11_ListFixedKeysInSlot;
-PK11_DeleteTokenPrivateKey;
-PK11_DeleteTokenPublicKey;
-PK11_DeleteTokenSymKey;
-PK11_GetSymKeyNickname;
-PK11_GetPQGParamsFromPrivateKey;
-PK11_GetPublicKeyNickname;
-PK11_GetPrivateKeyNickname;
-PK11_SetSymKeyNickname;
-PK11_SetPublicKeyNickname;
-PK11_SetPrivateKeyNickname;
-SECKEY_DecodeDERSubjectPublicKeyInfo;
-;+# for debugging
-nss_DumpCertificateCacheInfo;
 ;+    local:
 ;+       *;
 ;+};

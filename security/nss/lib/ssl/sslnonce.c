@@ -44,9 +44,7 @@
 #include "sslproto.h"
 #include "nssilock.h"
 #include "nsslocks.h"
-#if defined(XP_UNIX) || defined(XP_WIN) || defined(_WINDOWS)
-#include <time.h>
-#endif
+
 
 PRUint32 ssl_sid_timeout = 100;
 PRUint32 ssl3_sid_timeout = 86400L; /* 24 hours */
@@ -100,9 +98,6 @@ ssl_DestroySID(sslSessionID *sid)
 
     if ( sid->peerCert ) {
 	CERT_DestroyCertificate(sid->peerCert);
-    }
-    if ( sid->localCert ) {
-	CERT_DestroyCertificate(sid->localCert);
     }
     
     PORT_ZFree(sid, sizeof(sslSessionID));
@@ -165,13 +160,13 @@ ssl_LookupSID(const PRIPv6Addr *addr, PRUint16 port, const char *peerID,
 
 	SSL_TRC(8, ("SSL: Lookup1: sid=0x%x", sid));
 
-	if (sid->expirationTime < now || !sid->references) {
+	if (sid->time < now || !sid->references) {
 	    /*
 	    ** This session-id timed out, or was orphaned.
 	    ** Don't even care who it belongs to, blow it out of our cache.
 	    */
 	    SSL_TRC(7, ("SSL: lookup1, throwing sid out, age=%d refs=%d",
-			now - sid->creationTime, sid->references));
+			now - sid->time, sid->references));
 
 	    *sidp = sid->next; 			/* delink it from the list. */
 	    sid->cached = invalid_cache;	/* mark not on list. */
@@ -196,7 +191,6 @@ ssl_LookupSID(const PRIPv6Addr *addr, PRUint16 port, const char *peerID,
 		      CERT_VerifyCertName(sid->peerCert, urlSvrName))) )
 		  ) {
 	    /* Hit */
-	    sid->lastAccessTime = now;
 	    sid->references++;
 	    break;
 	} else {
@@ -219,7 +213,7 @@ CacheSID(sslSessionID *sid)
 		"time=%x cached=%d",
 		sid, sid->cached, sid->addr.pr_s6_addr32[0], 
 		sid->addr.pr_s6_addr32[1], sid->addr.pr_s6_addr32[2],
-		sid->addr.pr_s6_addr32[3],  sid->port, sid->creationTime,
+		sid->addr.pr_s6_addr32[3],  sid->port, sid->time,
 		sid->cached));
 
     if (sid->cached == in_client_cache)
@@ -241,11 +235,6 @@ CacheSID(sslSessionID *sid)
 	PRINT_BUF(8, (0, "sessionID:",
 		      sid->u.ssl3.sessionID, sid->u.ssl3.sessionIDLength));
     }
-    PORT_Assert(sid->creationTime != 0 && sid->expirationTime != 0);
-    if (!sid->creationTime)
-	sid->lastAccessTime = sid->creationTime = ssl_Time();
-    if (!sid->expirationTime)
-	sid->expirationTime = sid->creationTime + expirationPeriod;
 
     /*
      * Put sid into the cache.  Bump reference count to indicate that
@@ -257,6 +246,7 @@ CacheSID(sslSessionID *sid)
     sid->cached = in_client_cache;
     sid->next   = cache;
     cache       = sid;
+    sid->time   = ssl_Time() + expirationPeriod;
     UNLOCK_CACHE;
 }
 
@@ -279,7 +269,7 @@ UncacheSID(sslSessionID *zap)
 	       "time=%x cipher=%d",
 	       zap, zap->cached, zap->addr.pr_s6_addr32[0],
 	       zap->addr.pr_s6_addr32[1], zap->addr.pr_s6_addr32[2],
-	       zap->addr.pr_s6_addr32[3], zap->port, zap->creationTime,
+	       zap->addr.pr_s6_addr32[3], zap->port, zap->time,
 	       zap->u.ssl2.cipherType));
     if (zap->version < SSL_LIBRARY_VERSION_3_0) {
 	PRINT_BUF(8, (0, "sessionID:",
@@ -347,19 +337,14 @@ SSL_ClearSessionCache(void)
 PRUint32
 ssl_Time(void)
 {
-    PRUint32 myTime;
-#if defined(XP_UNIX) || defined(XP_WIN) || defined(_WINDOWS)
-    myTime = time(NULL);	/* accurate until the year 2038. */
-#else
-    /* portable, but possibly slower */
     PRTime now;
     PRInt64 ll;
+    PRUint32 time;
 
     now = PR_Now();
     LL_I2L(ll, 1000000L);
     LL_DIV(now, now, ll);
-    LL_L2UI(myTime, now);
-#endif
-    return myTime;
+    LL_L2UI(time, now);
+    return time;
 }
 

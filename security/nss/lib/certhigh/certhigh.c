@@ -40,54 +40,6 @@
 #include "cert.h"
 #include "certxutl.h"
 
-#ifndef NSS_3_4_CODE
-#define NSS_3_4_CODE
-#endif
-#include "nsspki.h"
-#include "pkit.h"
-#include "pkitm.h"
-#include "pki3hack.h"
-
-PRBool
-CERT_MatchNickname(char *name1, char *name2) {
-    char *nickname1= NULL;
-    char *nickname2 = NULL;
-    char *token1;
-    char *token2;
-    char *token = NULL;
-    int len;
-
-    /* first deal with the straight comparison */
-    if (PORT_Strcmp(name1, name2) == 0) {
-	return PR_TRUE;
-    }
-    /* we need to handle the case where one name has an explicit token and the other
-     * doesn't */
-    token1 = PORT_Strchr(name1,':');
-    token2 = PORT_Strchr(name2,':');
-    if ((token1 && token2) || (!token1 && !token2)) {
-	/* either both token names are specified or neither are, not match */
-	return PR_FALSE;
-    }
-    if (token1) {
-	token=name1;
-	nickname1=token1;
-	nickname2=name2;
-    } else {
-	token=name2;
-	nickname1=token2;
-	nickname2=name1;
-    }
-    len = nickname1-token;
-    nickname1++;
-    if (PORT_Strcmp(nickname1,nickname2) != 0) {
-	return PR_FALSE;
-    }
-    /* compare the other token with the internal slot here */
-    return PR_TRUE;
-}
-
-
 /*
  * Find all user certificates that match the given criteria.
  * 
@@ -188,7 +140,7 @@ CERT_FindUserCertsByUsage(CERTCertDBHandle *handle,
 
 	    /* find matching nickname index */
 	    for ( n = 0; n < nn; n++ ) {
-		if ( CERT_MatchNickname(nnptr[n], node->cert->nickname) ) {
+		if ( PORT_Strcmp(nnptr[n], node->cert->nickname) == 0 ) {
 		    /* We found a match.  If this is the first one, then
 		     * set the flag and move on to the next cert.  If this
 		     * is not the first one then delete it from the list.
@@ -466,9 +418,16 @@ CERT_GetCertNicknames(CERTCertDBHandle *handle, int what, void *wincx)
     names->what = what;
     names->totallen = 0;
     
-    rv = PK11_TraverseSlotCerts(CollectNicknames, (void *)names, wincx);
+    rv = SEC_TraversePermCerts(handle, CollectNicknames, (void *)names);
     if ( rv ) {
 	goto loser;
+    }
+
+    if ( wincx != NULL ) {
+	rv = PK11_TraverseSlotCerts(CollectNicknames, (void *)names, wincx);
+	if ( rv ) {
+	    goto loser;
+	}
     }
 
     if ( names->numnicknames ) {
@@ -537,7 +496,9 @@ CollectDistNames( CERTCertificate *cert, SECItem *k, void *data)
 	trust = cert->trust;
 	
 	/* only collect names of CAs trusted for issuing SSL clients */
-	if (  trust->sslFlags &  CERTDB_TRUSTED_CLIENT_CA )  {
+	if ( ( trust->sslFlags &
+	      ( CERTDB_VALID_CA | CERTDB_TRUSTED_CLIENT_CA ) ) ==
+	       ( CERTDB_VALID_CA | CERTDB_TRUSTED_CLIENT_CA ) ) {
 	    saveit = PR_TRUE;
 	}
     }
@@ -601,7 +562,7 @@ CERT_GetSSLCACerts(CERTCertDBHandle *handle)
     names->names = NULL;
     
     /* collect the names from the database */
-    rv = PK11_TraverseSlotCerts(CollectDistNames, (void *)names, NULL);
+    rv = SEC_TraversePermCerts(handle, CollectDistNames, (void *)names);
     if ( rv ) {
 	goto loser;
     }
@@ -779,12 +740,10 @@ CERTSignedCrl * CERT_ImportCRL
 	    break;
 	}
 
-#ifdef FIXME
 	/* Do CRL validation and add to the dbase if this crl is more present then the one
 	   in the dbase, if one exists.
 	 */
 	crl = cert_DBInsertCRL (handle, url, newCrl, derCRL, type);
-#endif
 
     } while (0);
 
@@ -798,6 +757,7 @@ cert_ImportCAChain(SECItem *certs, int numcerts, SECCertUsage certUsage, PRBool 
 {
     SECStatus rv;
     SECItem *derCert;
+    SECItem certKey;
     PRArenaPool *arena;
     CERTCertificate *cert = NULL;
     CERTCertificate *newcert = NULL;
@@ -819,6 +779,22 @@ cert_ImportCAChain(SECItem *certs, int numcerts, SECCertUsage certUsage, PRBool 
     while (numcerts--) {
 	derCert = certs;
 	certs++;
+	
+	/* get the key (issuer+cn) from the cert */
+	rv = CERT_KeyFromDERCert(arena, derCert, &certKey);
+	if ( rv != SECSuccess ) {
+	    goto loser;
+	}
+
+	/* same cert already exists in the database, don't need to do
+	 * anything more with it
+	 */
+	cert = CERT_FindCertByKey(handle, &certKey);
+	if ( cert ) {
+	    CERT_DestroyCertificate(cert);
+	    cert = NULL;
+	    continue;
+	}
 
 	/* decode my certificate */
 	newcert = CERT_DecodeDERCertificate(derCert, PR_FALSE, NULL);
@@ -882,7 +858,7 @@ cert_ImportCAChain(SECItem *certs, int numcerts, SECCertUsage certUsage, PRBool 
 	    }
 	}
 	
-	cert = CERT_DecodeDERCertificate(derCert, PR_FALSE, NULL);
+	cert = CERT_NewTempCertificate(handle, derCert, NULL, PR_FALSE, PR_TRUE);
 	if ( cert == NULL ) {
 	    goto loser;
 	}
@@ -890,10 +866,7 @@ cert_ImportCAChain(SECItem *certs, int numcerts, SECCertUsage certUsage, PRBool 
 	/* get a default nickname for it */
 	nickname = CERT_MakeCANickname(cert);
 
-	cert->trust = &trust;
-	rv = PK11_ImportCert(PK11_GetInternalKeySlot(), cert, 
-			CK_INVALID_HANDLE, nickname, PR_TRUE);
-
+	rv = CERT_AddTempCertToPerm(cert, nickname, &trust);
 	/* free the nickname */
 	if ( nickname ) {
 	    PORT_Free(nickname);
@@ -967,7 +940,6 @@ CERTCertificateList *
 CERT_CertChainFromCert(CERTCertificate *cert, SECCertUsage usage,
 		       PRBool includeRoot)
 {
-#ifdef NSS_CLASSIC
     CERTCertificateList *chain = NULL;
     CERTCertificate *c;
     SECItem *p;
@@ -1059,73 +1031,6 @@ loser:
     }
 
     return NULL;
-#else
-    CERTCertificateList *chain = NULL;
-    NSSCertificate **stanChain;
-    NSSCertificate *stanCert;
-    PRArenaPool *arena;
-    NSSUsage nssUsage;
-    int i, len;
-
-    stanCert = STAN_GetNSSCertificate(cert);
-    nssUsage.anyUsage = PR_FALSE;
-    nssUsage.nss3usage = usage;
-    stanChain = NSSCertificate_BuildChain(stanCert, NULL, &nssUsage, NULL,
-                                                    NULL, 0, NULL, NULL);
-    if (!stanChain) {
-	return NULL;
-    }
-
-    len = 0;
-    stanCert = stanChain[0];
-    while (stanCert) {
-	stanCert = stanChain[++len];
-    }
-
-    arena = PORT_NewArena(4096);
-    if (arena == NULL) {
-	goto loser;
-    }
-
-    chain = (CERTCertificateList *)PORT_ArenaAlloc(arena, 
-                                                 sizeof(CERTCertificateList));
-    if (!chain) goto loser;
-    chain->certs = (SECItem*)PORT_ArenaAlloc(arena, len * sizeof(SECItem));
-    if (!chain->certs) goto loser;
-    i = 0;
-    stanCert = stanChain[i];
-    while (stanCert) {
-	SECItem derCert;
-	CERTCertificate *cCert = STAN_GetCERTCertificate(stanCert);
-	derCert.len = (unsigned int)stanCert->encoding.size;
-	derCert.data = (unsigned char *)stanCert->encoding.data;
-	SECITEM_CopyItem(arena, &chain->certs[i], &derCert);
-	CERT_DestroyCertificate(cCert);
-	stanCert = stanChain[++i];
-    }
-    if ( !includeRoot && len > 1) {
-	chain->len = len - 1;
-    } else {
-	chain->len = len;
-    }
-    
-    chain->arena = arena;
-    nss_ZFreeIf(stanChain);
-    return chain;
-loser:
-    i = 0;
-    stanCert = stanChain[i];
-    while (stanCert) {
-	CERTCertificate *cCert = STAN_GetCERTCertificate(stanCert);
-	CERT_DestroyCertificate(cCert);
-	stanCert = stanChain[++i];
-    }
-    nss_ZFreeIf(stanChain);
-    if (arena) {
-	PORT_FreeArena(arena, PR_FALSE);
-    }
-    return NULL;
-#endif
 }
 
 /* Builds a CERTCertificateList holding just one DER-encoded cert, namely

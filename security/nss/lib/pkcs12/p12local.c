@@ -60,10 +60,9 @@ sec_pkcs12_algtag_to_mech(SECOidTag algtag)
 	return CKM_MD5_HMAC;
     case SEC_OID_SHA1:
 	return CKM_SHA_1_HMAC;
-    default:
-	break;
     }
-    return CKM_INVALID_MECHANISM;
+    /* get rid of compiler warnings... isn't there an INVALID? */
+    return CKM_SHA_1_HMAC;
 }
 
 /* helper functions */

@@ -42,18 +42,22 @@ PRIVATE_EXPORTS = \
 	genname.h \
 	xconst.h \
 	certxutl.h \
+	cdbhdl.h \
 	$(NULL)
 
 MODULE = security
+
+CERTINIT=certinit.c
 
 CSRCS = \
 	alg1485.c \
 	certdb.c \
 	certv3.c \
+	$(CERTINIT) \
 	certxutl.c \
 	crl.c \
 	genname.c \
-	stanpcertdb.c \
+	pcertdb.c \
 	polcyxtn.c \
 	secname.c \
 	xauthkid.c \

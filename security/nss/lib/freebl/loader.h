@@ -256,8 +256,6 @@ struct FREEBLVectorStr {
 
   SECStatus (* p_RSA_PrivateKeyCheck)(RSAPrivateKey *key);
 
-  void (* p_BL_Cleanup)(void);
-
 };
 
 typedef struct FREEBLVectorStr FREEBLVector;

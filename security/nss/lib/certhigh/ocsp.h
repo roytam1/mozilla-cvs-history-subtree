@@ -353,8 +353,6 @@ CERT_GetEncodedOCSPResponse(PRArenaPool *arena, CERTCertList *certList,
  *     Pointer to CERTCertDBHandle for certificate DB to use for verification.
  *   void *pwArg
  *     Pointer to argument for password prompting, if needed.
- *   CERTCertificate *issuerCert
- *     Issuer of the certificate that generated the OCSP request.
  * OUTPUTS:
  *   CERTCertificate **pSignerCert
  *     Pointer in which to store signer's certificate; only filled-in if
@@ -373,8 +371,7 @@ CERT_GetEncodedOCSPResponse(PRArenaPool *arena, CERTCertList *certList,
 extern SECStatus
 CERT_VerifyOCSPResponseSignature(CERTOCSPResponse *response,	
 				 CERTCertDBHandle *handle, void *pwArg,
-				 CERTCertificate **pSignerCert,
-				 CERTCertificate *issuerCert);
+				 CERTCertificate **pSignerCert);
 
 /*
  * FUNCTION: CERT_GetOCSPAuthorityInfoAccessLocation

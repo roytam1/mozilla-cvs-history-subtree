@@ -40,7 +40,7 @@
 #include "softoken.h"
 #include "sechash.h"
 
-#include "lowkeyi.h"
+#include "keylow.h"
 #include "secerr.h"
 
 #define RSA_BLOCK_MIN_PAD_LEN		8
@@ -182,8 +182,8 @@ oaep_xor_with_h2(unsigned char *salt, unsigned int saltlen,
  * Format one block of data for public/private key encryption using
  * the rules defined in PKCS #1.
  */
-static unsigned char *
-rsa_FormatOneBlock(unsigned modulusLen, RSA_BlockType blockType,
+unsigned char *
+RSA_FormatOneBlock(unsigned modulusLen, RSA_BlockType blockType,
 		   SECItem *data)
 {
     unsigned char *block;
@@ -341,8 +341,8 @@ rsa_FormatOneBlock(unsigned modulusLen, RSA_BlockType blockType,
     return block;
 }
 
-static SECStatus
-rsa_FormatBlock(SECItem *result, unsigned modulusLen,
+SECStatus
+RSA_FormatBlock(SECItem *result, unsigned modulusLen,
 		RSA_BlockType blockType, SECItem *data)
 {
     /*
@@ -370,7 +370,7 @@ rsa_FormatBlock(SECItem *result, unsigned modulusLen,
 	 */
 	PORT_Assert (data->len <= (modulusLen - (3 + RSA_BLOCK_MIN_PAD_LEN)));
 
-	result->data = rsa_FormatOneBlock(modulusLen, blockType, data);
+	result->data = RSA_FormatOneBlock(modulusLen, blockType, data);
 	if (result->data == NULL) {
 	    result->len = 0;
 	    return SECFailure;
@@ -390,7 +390,7 @@ rsa_FormatBlock(SECItem *result, unsigned modulusLen,
 	PORT_Assert (data->len <= (modulusLen - (2 + OAEP_SALT_LEN
 						 + OAEP_PAD_LEN)));
 
-	result->data = rsa_FormatOneBlock(modulusLen, blockType, data);
+	result->data = RSA_FormatOneBlock(modulusLen, blockType, data);
 	if (result->data == NULL) {
 	    result->len = 0;
 	    return SECFailure;
@@ -420,9 +420,193 @@ rsa_FormatBlock(SECItem *result, unsigned modulusLen,
     return SECSuccess;
 }
 
+/*
+ * Takes a formatted block and returns the data part.
+ * (This is the inverse of RSA_FormatOneBlock().)
+ * In some formats the start of the data is ambiguous;
+ * if it is non-zero, expectedLen will disambiguate.
+ *
+ * NOTE: this routine is not yet used/tested! (XXX please
+ * remove this comment once that is no longer the case ;-)
+ */
+unsigned char *
+RSA_DecodeOneBlock(unsigned char *data,
+		   unsigned int modulusLen,
+		   unsigned int expectedLen,
+		   RSA_BlockType *pResultType,
+		   unsigned int *pResultLen)
+{
+    RSA_BlockType blockType;
+    unsigned char *dp, *res;
+    unsigned int i, len, padLen;
+
+    dp = data;
+    if (*dp++ != RSA_BLOCK_FIRST_OCTET) {
+	PORT_SetError (SEC_ERROR_BAD_DATA);
+	return NULL;
+    }
+
+    blockType = (RSA_BlockType)*dp++;
+    switch (blockType) {
+      case RSA_BlockPrivate0:
+	if (expectedLen) {
+	    padLen = modulusLen - expectedLen - 3;
+	    PORT_Assert (padLen >= RSA_BLOCK_MIN_PAD_LEN);
+	    for (i = 0; i < padLen; i++) {
+		if (*dp++ != RSA_BLOCK_PRIVATE0_PAD_OCTET)
+		    break;
+	    }
+	    if ((i != padLen) || (*dp != RSA_BLOCK_AFTER_PAD_OCTET)) {
+		PORT_SetError (SEC_ERROR_BAD_DATA);
+		return NULL;
+	    }
+	    dp++;
+	    len = expectedLen;
+	} else {
+	    for (i = 0; i < modulusLen; i++) {
+		if (*dp++ != RSA_BLOCK_PRIVATE0_PAD_OCTET)
+		    break;
+	    }
+	    if (i == modulusLen) {
+		PORT_SetError (SEC_ERROR_BAD_DATA);
+		return NULL;
+	    }
+	    if (RSA_BLOCK_PRIVATE0_PAD_OCTET == RSA_BLOCK_AFTER_PAD_OCTET)
+		dp--;
+	    padLen = dp - data - 2;
+	    if ((padLen < RSA_BLOCK_MIN_PAD_LEN)
+		|| (*dp != RSA_BLOCK_AFTER_PAD_OCTET)) {
+		PORT_SetError (SEC_ERROR_BAD_DATA);
+		return NULL;
+	    }
+	    dp++;
+	    len = modulusLen - (dp - data);
+	}
+	res = (unsigned char *) PORT_Alloc(len);
+	if (res == NULL) {
+	    return NULL;
+	}
+	PORT_Memcpy (res, dp, len);
+	break;
+
+      case RSA_BlockPrivate:
+	for (i = 0; i < modulusLen; i++) {
+	    if (*dp++ != RSA_BLOCK_PRIVATE_PAD_OCTET)
+		break;
+	}
+	if ((i == modulusLen) || (*dp != RSA_BLOCK_AFTER_PAD_OCTET)) {
+	    PORT_SetError (SEC_ERROR_BAD_DATA);
+	    return NULL;
+	}
+	padLen = dp - data - 2;
+	dp++;
+	len = modulusLen - (dp - data);
+	if ((padLen < RSA_BLOCK_MIN_PAD_LEN) || (expectedLen
+						 && (expectedLen != len))) {
+	    PORT_SetError (SEC_ERROR_BAD_DATA);
+	    return NULL;
+	}
+	res = (unsigned char *) PORT_Alloc(len);
+	if (res == NULL) {
+	    return NULL;
+	}
+	PORT_Memcpy (res, dp, len);
+	break;
+
+      case RSA_BlockPublic:
+	for (i = 0; i < modulusLen; i++) {
+	    if (*dp++ == RSA_BLOCK_AFTER_PAD_OCTET)
+		break;
+	}
+	if (i == modulusLen) {
+	    PORT_SetError (SEC_ERROR_BAD_DATA);
+	    return NULL;
+	}
+	padLen = dp - data - 2;
+	dp++;
+	len = modulusLen - (dp - data);
+	if ((padLen < RSA_BLOCK_MIN_PAD_LEN) || (expectedLen
+						 && (expectedLen != len))) {
+	    PORT_SetError (SEC_ERROR_BAD_DATA);
+	    return NULL;
+	}
+	res = (unsigned char *) PORT_Alloc(len);
+	if (res == NULL) {
+	    return NULL;
+	}
+	PORT_Memcpy (res, dp, len);
+	break;
+
+      case RSA_BlockOAEP:
+	{
+	    unsigned char *salt, *tmp_res;
+	    SECStatus rv;
+
+	    len = modulusLen - 2 - OAEP_SALT_LEN;
+	    /*
+	     * dp points to:
+	     *	Modified2(Salt) || Modified1(PaddedData)
+	     * To recover Salt we need to XOR it with the low-order hash
+	     * of Modified1.
+	     */
+	    salt = (unsigned char *) PORT_Alloc(OAEP_SALT_LEN);
+	    if (salt == NULL) {
+		return NULL;
+	    }
+	    PORT_Memcpy (salt, dp, OAEP_SALT_LEN);
+	    dp += OAEP_SALT_LEN;
+	    rv = oaep_xor_with_h2 (salt, OAEP_SALT_LEN, dp, len);
+	    if (rv != SECSuccess) {
+		PORT_Free (salt);
+		return NULL;
+	    }
+	    if (expectedLen) {
+		PORT_Assert (expectedLen <= len);
+		len = expectedLen;
+	    }
+	    tmp_res = (unsigned char *) PORT_Alloc(len);
+	    if (tmp_res == NULL) {
+		PORT_Free (salt);
+		return NULL;
+	    }
+	    PORT_Memcpy (tmp_res, dp, len);
+	    rv = oaep_xor_with_h1 (tmp_res, len, salt, OAEP_SALT_LEN);
+	    PORT_Free (salt);
+	    if (rv != SECSuccess) {
+		return NULL;
+	    }
+	    for (i = 0; i < OAEP_PAD_LEN; i++) {
+		if (tmp_res[i] != OAEP_PAD_OCTET) {
+		    PORT_SetError (SEC_ERROR_BAD_DATA);
+		    PORT_Free (tmp_res);
+		    return NULL;
+		}
+	    }
+	    len -= OAEP_PAD_LEN;
+	    res = (unsigned char *) PORT_Alloc(len);
+	    if (res == NULL) {
+		PORT_Free (tmp_res);
+		return NULL;
+	    }
+	    PORT_Memcpy (res, tmp_res + OAEP_PAD_LEN, len);
+	    PORT_Free (tmp_res);
+	}
+	break;
+
+      default:
+	PORT_SetError (SEC_ERROR_BAD_DATA);
+	return NULL;
+    }
+
+    PORT_Assert (res != NULL);
+    *pResultLen = len;
+    *pResultType = blockType;
+    return res;
+}
+
 /* XXX Doesn't set error code */
 SECStatus
-RSA_Sign(NSSLOWKEYPrivateKey *key, 
+RSA_Sign(SECKEYLowPrivateKey *key, 
          unsigned char *      output, 
 	 unsigned int *       output_len,
          unsigned int         maxOutputLen, 
@@ -430,20 +614,20 @@ RSA_Sign(NSSLOWKEYPrivateKey *key,
 	 unsigned int         input_len)
 {
     SECStatus     rv          = SECSuccess;
-    unsigned int  modulus_len = nsslowkey_PrivateModulusLen(key);
+    unsigned int  modulus_len = SECKEY_LowPrivateModulusLen(key);
     SECItem       formatted;
     SECItem       unformatted;
 
     if (maxOutputLen < modulus_len) 
     	return SECFailure;
-    PORT_Assert(key->keyType == NSSLOWKEYRSAKey);
-    if (key->keyType != NSSLOWKEYRSAKey)
+    PORT_Assert(key->keyType == rsaKey);
+    if (key->keyType != rsaKey)
     	return SECFailure;
 
     unformatted.len  = input_len;
     unformatted.data = input;
     formatted.data   = NULL;
-    rv = rsa_FormatBlock(&formatted, modulus_len, RSA_BlockPrivate,
+    rv = RSA_FormatBlock(&formatted, modulus_len, RSA_BlockPrivate,
 			 &unformatted);
     if (rv != SECSuccess) 
     	goto done;
@@ -461,24 +645,24 @@ done:
 
 /* XXX Doesn't set error code */
 SECStatus
-RSA_CheckSign(NSSLOWKEYPublicKey *key,
+RSA_CheckSign(SECKEYLowPublicKey *key,
               unsigned char *     sign, 
 	      unsigned int        sign_len, 
 	      unsigned char *     hash, 
 	      unsigned int        hash_len)
 {
     SECStatus       rv;
-    unsigned int    modulus_len = nsslowkey_PublicModulusLen(key);
+    unsigned int    modulus_len = SECKEY_LowPublicModulusLen(key);
     unsigned int    i;
     unsigned char * buffer;
 
-    modulus_len = nsslowkey_PublicModulusLen(key);
+    modulus_len = SECKEY_LowPublicModulusLen(key);
     if (sign_len != modulus_len) 
     	goto failure;
     if (hash_len > modulus_len - 8) 
     	goto failure;
-    PORT_Assert(key->keyType == NSSLOWKEYRSAKey);
-    if (key->keyType != NSSLOWKEYRSAKey)
+    PORT_Assert(key->keyType == rsaKey);
+    if (key->keyType != rsaKey)
     	goto failure;
 
     buffer = (unsigned char *)PORT_Alloc(modulus_len + 1);
@@ -518,7 +702,7 @@ failure:
 
 /* XXX Doesn't set error code */
 SECStatus
-RSA_CheckSignRecover(NSSLOWKEYPublicKey *key,
+RSA_CheckSignRecover(SECKEYLowPublicKey *key,
                      unsigned char *     data,
                      unsigned int *      data_len, 
 		     unsigned int        max_output_len, 
@@ -526,14 +710,14 @@ RSA_CheckSignRecover(NSSLOWKEYPublicKey *key,
 		     unsigned int        sign_len)
 {
     SECStatus       rv;
-    unsigned int    modulus_len = nsslowkey_PublicModulusLen(key);
+    unsigned int    modulus_len = SECKEY_LowPublicModulusLen(key);
     unsigned int    i;
     unsigned char * buffer;
 
     if (sign_len != modulus_len) 
     	goto failure;
-    PORT_Assert(key->keyType == NSSLOWKEYRSAKey);
-    if (key->keyType != NSSLOWKEYRSAKey)
+    PORT_Assert(key->keyType == rsaKey);
+    if (key->keyType != rsaKey)
     	goto failure;
 
     buffer = (unsigned char *)PORT_Alloc(modulus_len + 1);
@@ -579,7 +763,7 @@ failure:
 
 /* XXX Doesn't set error code */
 SECStatus
-RSA_EncryptBlock(NSSLOWKEYPublicKey *key, 
+RSA_EncryptBlock(SECKEYLowPublicKey *key, 
                  unsigned char *     output, 
 		 unsigned int *      output_len,
                  unsigned int        max_output_len, 
@@ -587,21 +771,21 @@ RSA_EncryptBlock(NSSLOWKEYPublicKey *key,
 		 unsigned int        input_len)
 {
     SECStatus     rv;
-    unsigned int  modulus_len = nsslowkey_PublicModulusLen(key);
+    unsigned int  modulus_len = SECKEY_LowPublicModulusLen(key);
     SECItem       formatted;
     SECItem       unformatted;
 
     formatted.data = NULL;
     if (max_output_len < modulus_len) 
     	goto failure;
-    PORT_Assert(key->keyType == NSSLOWKEYRSAKey);
-    if (key->keyType != NSSLOWKEYRSAKey)
+    PORT_Assert(key->keyType == rsaKey);
+    if (key->keyType != rsaKey)
     	goto failure;
 
     unformatted.len  = input_len;
     unformatted.data = input;
     formatted.data   = NULL;
-    rv = rsa_FormatBlock(&formatted, modulus_len, RSA_BlockPublic,
+    rv = RSA_FormatBlock(&formatted, modulus_len, RSA_BlockPublic,
 			 &unformatted);
     if (rv != SECSuccess) 
 	goto failure;
@@ -622,7 +806,7 @@ failure:
 
 /* XXX Doesn't set error code */
 SECStatus
-RSA_DecryptBlock(NSSLOWKEYPrivateKey *key, 
+RSA_DecryptBlock(SECKEYLowPrivateKey *key, 
                  unsigned char *      output, 
 		 unsigned int *       output_len,
                  unsigned int         max_output_len, 
@@ -630,12 +814,12 @@ RSA_DecryptBlock(NSSLOWKEYPrivateKey *key,
 		 unsigned int         input_len)
 {
     SECStatus       rv;
-    unsigned int    modulus_len = nsslowkey_PrivateModulusLen(key);
+    unsigned int    modulus_len = SECKEY_LowPrivateModulusLen(key);
     unsigned int    i;
     unsigned char * buffer;
 
-    PORT_Assert(key->keyType == NSSLOWKEYRSAKey);
-    if (key->keyType != NSSLOWKEYRSAKey)
+    PORT_Assert(key->keyType == rsaKey);
+    if (key->keyType != rsaKey)
     	goto failure;
     if (input_len != modulus_len)
     	goto failure;
@@ -679,7 +863,7 @@ failure:
  *   RAW is RSA_X_509
  */
 SECStatus
-RSA_SignRaw(NSSLOWKEYPrivateKey *key, 
+RSA_SignRaw(SECKEYLowPrivateKey *key, 
             unsigned char *      output, 
 	    unsigned int *       output_len,
             unsigned int         maxOutputLen, 
@@ -687,20 +871,20 @@ RSA_SignRaw(NSSLOWKEYPrivateKey *key,
 	    unsigned int         input_len)
 {
     SECStatus    rv          = SECSuccess;
-    unsigned int modulus_len = nsslowkey_PrivateModulusLen(key);
+    unsigned int modulus_len = SECKEY_LowPrivateModulusLen(key);
     SECItem      formatted;
     SECItem      unformatted;
 
     if (maxOutputLen < modulus_len) 
     	return SECFailure;
-    PORT_Assert(key->keyType == NSSLOWKEYRSAKey);
-    if (key->keyType != NSSLOWKEYRSAKey)
+    PORT_Assert(key->keyType == rsaKey);
+    if (key->keyType != rsaKey)
     	return SECFailure;
 
     unformatted.len  = input_len;
     unformatted.data = input;
     formatted.data   = NULL;
-    rv = rsa_FormatBlock(&formatted, modulus_len, RSA_BlockRaw, &unformatted);
+    rv = RSA_FormatBlock(&formatted, modulus_len, RSA_BlockRaw, &unformatted);
     if (rv != SECSuccess) 
     	goto done;
 
@@ -715,22 +899,22 @@ done:
 
 /* XXX Doesn't set error code */
 SECStatus
-RSA_CheckSignRaw(NSSLOWKEYPublicKey *key,
+RSA_CheckSignRaw(SECKEYLowPublicKey *key,
                  unsigned char *     sign, 
 		 unsigned int        sign_len, 
 		 unsigned char *     hash, 
 		 unsigned int        hash_len)
 {
     SECStatus       rv;
-    unsigned int    modulus_len = nsslowkey_PublicModulusLen(key);
+    unsigned int    modulus_len = SECKEY_LowPublicModulusLen(key);
     unsigned char * buffer;
 
     if (sign_len != modulus_len) 
     	goto failure;
     if (hash_len > modulus_len) 
     	goto failure;
-    PORT_Assert(key->keyType == NSSLOWKEYRSAKey);
-    if (key->keyType != NSSLOWKEYRSAKey)
+    PORT_Assert(key->keyType == rsaKey);
+    if (key->keyType != rsaKey)
     	goto failure;
 
     buffer = (unsigned char *)PORT_Alloc(modulus_len + 1);
@@ -759,7 +943,7 @@ failure:
 
 /* XXX Doesn't set error code */
 SECStatus
-RSA_CheckSignRecoverRaw(NSSLOWKEYPublicKey *key,
+RSA_CheckSignRecoverRaw(SECKEYLowPublicKey *key,
                         unsigned char *     data,
                         unsigned int *      data_len, 
 			unsigned int        max_output_len, 
@@ -767,14 +951,14 @@ RSA_CheckSignRecoverRaw(NSSLOWKEYPublicKey *key,
 			unsigned int        sign_len)
 {
     SECStatus      rv;
-    unsigned int   modulus_len = nsslowkey_PublicModulusLen(key);
+    unsigned int   modulus_len = SECKEY_LowPublicModulusLen(key);
 
     if (sign_len != modulus_len) 
     	goto failure;
     if (max_output_len < modulus_len) 
     	goto failure;
-    PORT_Assert(key->keyType == NSSLOWKEYRSAKey);
-    if (key->keyType != NSSLOWKEYRSAKey)
+    PORT_Assert(key->keyType == rsaKey);
+    if (key->keyType != rsaKey)
     	goto failure;
 
     rv = RSA_PublicKeyOp(&key->u.rsa, data, sign);
@@ -791,7 +975,7 @@ failure:
 
 /* XXX Doesn't set error code */
 SECStatus
-RSA_EncryptRaw(NSSLOWKEYPublicKey *key, 
+RSA_EncryptRaw(SECKEYLowPublicKey *key, 
 	       unsigned char *     output, 
 	       unsigned int *      output_len,
                unsigned int        max_output_len, 
@@ -799,21 +983,21 @@ RSA_EncryptRaw(NSSLOWKEYPublicKey *key,
 	       unsigned int        input_len)
 {
     SECStatus rv;
-    unsigned int  modulus_len = nsslowkey_PublicModulusLen(key);
+    unsigned int  modulus_len = SECKEY_LowPublicModulusLen(key);
     SECItem       formatted;
     SECItem       unformatted;
 
     formatted.data = NULL;
     if (max_output_len < modulus_len) 
     	goto failure;
-    PORT_Assert(key->keyType == NSSLOWKEYRSAKey);
-    if (key->keyType != NSSLOWKEYRSAKey)
+    PORT_Assert(key->keyType == rsaKey);
+    if (key->keyType != rsaKey)
     	goto failure;
 
     unformatted.len  = input_len;
     unformatted.data = input;
     formatted.data   = NULL;
-    rv = rsa_FormatBlock(&formatted, modulus_len, RSA_BlockRaw, &unformatted);
+    rv = RSA_FormatBlock(&formatted, modulus_len, RSA_BlockRaw, &unformatted);
     if (rv != SECSuccess)
 	goto failure;
 
@@ -833,7 +1017,7 @@ failure:
 
 /* XXX Doesn't set error code */
 SECStatus
-RSA_DecryptRaw(NSSLOWKEYPrivateKey *key, 
+RSA_DecryptRaw(SECKEYLowPrivateKey *key, 
                unsigned char *      output, 
 	       unsigned int *       output_len,
                unsigned int         max_output_len, 
@@ -841,14 +1025,14 @@ RSA_DecryptRaw(NSSLOWKEYPrivateKey *key,
 	       unsigned int         input_len)
 {
     SECStatus     rv;
-    unsigned int  modulus_len = nsslowkey_PrivateModulusLen(key);
+    unsigned int  modulus_len = SECKEY_LowPrivateModulusLen(key);
 
     if (modulus_len <= 0) 
     	goto failure;
     if (modulus_len > max_output_len) 
     	goto failure;
-    PORT_Assert(key->keyType == NSSLOWKEYRSAKey);
-    if (key->keyType != NSSLOWKEYRSAKey)
+    PORT_Assert(key->keyType == rsaKey);
+    if (key->keyType != rsaKey)
     	goto failure;
     if (input_len != modulus_len) 
     	goto failure;

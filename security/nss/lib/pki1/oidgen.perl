@@ -32,8 +32,7 @@
 # GPL.
 #
 $cvs_id = '@(#) $RCSfile$ $Revision$ $Date$ $Name$';
-$cfile = shift;
-$hfile = shift;
+
 $count = -1;
 while(<>) {
   s/^((?:[^"#]+|"[^"]*")*)(\s*#.*$)/$1/;
@@ -61,8 +60,7 @@ while(<>) {
 }
 
 # dodump();
-
-doprint($cfile,$hfile);
+doprint();
 
 sub dodump {
 for( $i = 0; $i <= $count; $i++ ) {
@@ -75,8 +73,8 @@ for( $i = 0; $i <= $count; $i++ ) {
 }
 
 sub doprint {
-open(CFILE, "> $cfile") || die "Can't open $cfile: $!"; 
-open(HFILE, "> $hfile") || die "Can't open $hfile: $!";
+open(CFILE, ">oiddata.c") || die "Can't open oiddata.c: $!"; 
+open(HFILE, ">oiddata.h") || die "Can't open oiddata.h: $!";
 
 print CFILE <<EOD
 /* THIS IS A GENERATED FILE */

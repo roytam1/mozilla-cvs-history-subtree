@@ -194,12 +194,6 @@ struct CERTOCSPCertIDStr {
     SECItem issuerNameHash;		/* an OCTET STRING */
     SECItem issuerKeyHash;		/* an OCTET STRING */
     SECItem serialNumber;		/* an INTEGER */
-    SECItem issuerSHA1NameHash;		/* keep other hashes around when */
-    SECItem issuerMD5NameHash;              /* we have them */
-    SECItem issuerMD2NameHash;
-    SECItem issuerSHA1KeyHash;		/* keep other hashes around when */
-    SECItem issuerMD5KeyHash;              /* we have them */
-    SECItem issuerMD2KeyHash;
 };
 
 /*

@@ -115,7 +115,6 @@ static const struct FREEBLVectorStr vector = {
     PQG_VerifyParams,
     RSA_PrivateKeyOpDoubleChecked,
     RSA_PrivateKeyCheck,
-    BL_Cleanup,
 };
 
 

@@ -135,12 +135,6 @@ struct SEC_PKCS12DecoderContextStr {
 
     /* import information */
     PRBool bagsVerified;
-
-    /* buffer management for the default callbacks implementation */
-    void        *buffer;      /* storage area */
-    PRInt32     filesize;     /* actual data size */
-    PRInt32     allocated;    /* total buffer size allocated */
-    PRInt32     currentpos;   /* position counter */
 };
 
 
@@ -1025,114 +1019,6 @@ loser:
     p12dcx->error = PR_TRUE;
 }
 
-/*  default implementations of the open/close/read/write functions for
-    SEC_PKCS12DecoderStart 
-*/
-
-#define DEFAULT_TEMP_SIZE 4096
-
-static SECStatus
-p12u_DigestOpen(void *arg, PRBool readData)
-{
-    SEC_PKCS12DecoderContext* p12cxt = arg;
-
-    p12cxt->currentpos = 0;
-
-    if (PR_FALSE == readData) {
-        /* allocate an initial buffer */
-        p12cxt->filesize = 0;
-        p12cxt->allocated = DEFAULT_TEMP_SIZE;
-        p12cxt->buffer = PORT_Alloc(DEFAULT_TEMP_SIZE);
-        PR_ASSERT(p12cxt->buffer);
-    }
-    else
-    {
-        PR_ASSERT(p12cxt->buffer);
-        if (!p12cxt->buffer) {
-            return SECFailure; /* no data to read */
-        }
-    }
-
-    return SECSuccess;
-}
-
-static SECStatus
-p12u_DigestClose(void *arg, PRBool removeFile)
-{
-    SEC_PKCS12DecoderContext* p12cxt = arg;
-
-    PR_ASSERT(p12cxt);
-    if (!p12cxt) {
-        return SECFailure;
-    }
-    p12cxt->currentpos = 0;
-
-    if (PR_TRUE == removeFile) {
-        PR_ASSERT(p12cxt->buffer);
-        if (!p12cxt->buffer) {
-            return SECFailure;
-        }
-        if (p12cxt->buffer) {
-            PORT_Free(p12cxt->buffer);
-            p12cxt->buffer = NULL;
-            p12cxt->allocated = 0;
-            p12cxt->filesize = 0;
-        }
-    }
-
-    return SECSuccess;
-}
-
-static int
-p12u_DigestRead(void *arg, unsigned char *buf, unsigned long len)
-{
-    int toread = len;
-    SEC_PKCS12DecoderContext* p12cxt = arg;
-
-    if(!buf || len == 0) {
-	return -1;
-    }
-
-    if (!p12cxt->buffer || ((p12cxt->filesize-p12cxt->currentpos)<len) ) {
-        /* trying to read past the end of the buffer */
-        toread = p12cxt->filesize-p12cxt->currentpos;
-    }
-    memcpy(buf, (void*)((char*)p12cxt->buffer+p12cxt->currentpos), toread);
-    p12cxt->currentpos += toread;
-    return toread;
-}
-
-static int
-p12u_DigestWrite(void *arg, unsigned char *buf, unsigned long len)
-{
-    SEC_PKCS12DecoderContext* p12cxt = arg;
-
-    if(!buf || len == 0) {
-        return -1;
-    }
-
-    if (p12cxt->currentpos+len > p12cxt->filesize) {
-        p12cxt->filesize = p12cxt->currentpos + len;
-    }
-    else {
-        p12cxt->filesize += len;
-    }
-    if (p12cxt->filesize > p12cxt->allocated) {
-        void* newbuffer;
-        size_t newsize = p12cxt->filesize + DEFAULT_TEMP_SIZE;
-        newbuffer  = PORT_Realloc(p12cxt->buffer, newsize);
-        if (NULL == newbuffer) {
-            return -1; /* can't extend the buffer */
-        }
-        p12cxt->buffer = newbuffer;
-        p12cxt->allocated = newsize;
-    }
-    PR_ASSERT(p12cxt->buffer);
-    memcpy((void*)((char*)p12cxt->buffer+p12cxt->currentpos), buf, len);
-    p12cxt->currentpos += len;
-    return len;
-}
-
 /* SEC_PKCS12DecoderStart
  *	Creates a decoder context for decoding a PKCS 12 PDU objct.
  *	This function sets up the initial decoding context for the
@@ -1152,9 +1038,6 @@ p12u_DigestWrite(void *arg, unsigned char *buf, unsigned long len)
  *		 and decoding to be single pass, thus the need for these
  *		 routines.
  *	dArg - the argument for dOpen, etc.
- *
- *      if NULL == dOpen == dClose == dRead == dWrite == dArg, then default
- *      implementations using a memory buffer are used
  *
  *	This function returns the decoder context, if it was successful.
  *	Otherwise, null is returned.
@@ -1179,16 +1062,6 @@ SEC_PKCS12DecoderStart(SECItem *pwitem, PK11SlotInfo *slot, void *wincx,
 	PORT_SetError(SEC_ERROR_NO_MEMORY);
 	goto loser;
     }
-
-    if (!dOpen && !dClose && !dRead && !dWrite && !dArg) {
-        /* use default implementations */
-        dOpen = p12u_DigestOpen;
-        dClose = p12u_DigestClose;
-        dRead = p12u_DigestRead;
-        dWrite = p12u_DigestWrite;
-        dArg = (void*)p12dcx;
-    }
-
     p12dcx->arena = arena;
     p12dcx->pwitem = pwitem;
     p12dcx->slot = (slot ? slot : PK11_GetInternalKeySlot());
@@ -1283,7 +1156,7 @@ sec_pkcs12_decoder_verify_mac(SEC_PKCS12DecoderContext *p12dcx)
     unsigned char buf[IN_BUF_LEN];
     unsigned int bufLen;
     int iteration;
-    PK11Context *pk11cx = NULL;
+    PK11Context *pk11cx;
     SECItem ignore = {0};
     PK11SymKey *symKey;
     SECItem *params;
@@ -1432,6 +1305,8 @@ SEC_PKCS12DecoderVerify(SEC_PKCS12DecoderContext *p12dcx)
 void
 SEC_PKCS12DecoderFinish(SEC_PKCS12DecoderContext *p12dcx)
 {
+    void *freedCtxt = NULL;
+
     if(!p12dcx) {
 	return;
     }
@@ -1976,7 +1851,8 @@ sec_pkcs12_get_existing_nick_for_dn(sec_PKCS12SafeBag *cert, void *wincx)
 	return NULL;
     }
 
-    tempCert = CERT_DecodeDERCertificate(derCert, PR_FALSE, NULL);
+    tempCert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(), derCert, NULL,
+				   PR_FALSE, PR_TRUE);
     if(!tempCert) {
 	returnDn = NULL;
 	goto loser;
@@ -2001,6 +1877,15 @@ sec_pkcs12_get_existing_nick_for_dn(sec_PKCS12SafeBag *cert, void *wincx)
     /* if the token is local, first traverse the cert database 
      * then traverse the token.
      */
+    if(PK11_IsInternal(cert->slot)) {
+	if(CERT_TraversePermCertsForSubject(CERT_GetDefaultCertDB(), 
+					&tempCert->derSubject, gatherNicknames,
+					nickArg) != SECSuccess) {
+	    returnDn = NULL;
+	    goto loser;
+	}
+    }
+
     if(PK11_TraverseCertsForSubjectInSlot(tempCert, cert->slot, gatherNicknames,
 			(void *)nickArg) != SECSuccess) {
 	returnDn = NULL;
@@ -2061,6 +1946,12 @@ sec_pkcs12_certs_for_nickname_exist(SECItem *nickname, PK11SlotInfo *slot)
     }
 
     /* we want to check the local database first if we are importing to it */
+    if(PK11_IsInternal(slot)) {
+	CERT_TraversePermCertsForNickname(CERT_GetDefaultCertDB(), 
+				      (char *)nickname->data,
+				      countCertificate, (void *)&nCerts);
+    }
+
     PK11_TraverseCertsForNicknameInSlot(nickname, slot, countCertificate, 
 					(void *)&nCerts);
     if(nCerts) return PR_TRUE;
@@ -2227,8 +2118,9 @@ sec_pkcs12_validate_cert(sec_PKCS12SafeBag *cert,
     cert->problem = PR_FALSE;
     cert->error = 0;
 
-    leafCert = CERT_DecodeDERCertificate(
-	 &cert->safeBagContent.certBag->value.x509Cert, PR_FALSE, NULL);
+    leafCert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(),
+				&cert->safeBagContent.certBag->value.x509Cert,
+				NULL, PR_FALSE, PR_TRUE);
     if(!leafCert) {
 	cert->noInstall = PR_TRUE;
 	cert->problem = PR_TRUE;
@@ -2280,8 +2172,9 @@ sec_pkcs12_validate_key_by_cert(sec_PKCS12SafeBag *cert, sec_PKCS12SafeBag *key,
 	return;
     }
 
-    leafCert = CERT_DecodeDERCertificate(
-	&(cert->safeBagContent.certBag->value.x509Cert), PR_FALSE, NULL);
+    leafCert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(),
+				&(cert->safeBagContent.certBag->value.x509Cert),
+				NULL, PR_FALSE, PR_TRUE);
     if(!leafCert) {
 	key->problem = PR_TRUE;
 	key->noInstall = PR_TRUE;
@@ -2309,6 +2202,7 @@ sec_pkcs12_remove_existing_cert(sec_PKCS12SafeBag *cert,
     SECItem *derCert = NULL;
     CERTCertificate *tempCert = NULL;
     CK_OBJECT_HANDLE certObj;
+    PK11SlotInfo *slot = NULL;
     PRBool removed = PR_FALSE;
 
     if(!cert) {
@@ -2319,7 +2213,8 @@ sec_pkcs12_remove_existing_cert(sec_PKCS12SafeBag *cert,
 
     cert->removeExisting = PR_FALSE;
     derCert = &cert->safeBagContent.certBag->value.x509Cert;
-    tempCert = CERT_DecodeDERCertificate(derCert, PR_FALSE, NULL);
+    tempCert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(), derCert,
+				       NULL, PR_FALSE, PR_TRUE);
     if(!tempCert) {
 	return SECFailure;
     }
@@ -2328,7 +2223,7 @@ sec_pkcs12_remove_existing_cert(sec_PKCS12SafeBag *cert,
     CERT_DestroyCertificate(tempCert);
     tempCert = NULL;
 
-    if(certObj != CK_INVALID_HANDLE) {
+    if(certObj != CK_INVALID_KEY) {
 	PK11_DestroyObject(cert->slot, certObj);
 	removed = PR_TRUE;
     } else if(PK11_IsInternal(cert->slot)) {
@@ -2389,7 +2284,8 @@ sec_pkcs12_add_cert(sec_PKCS12SafeBag *cert, PRBool keyExists, void *wincx)
     if(keyExists) {
 	CERTCertificate *newCert;
 
-	newCert = CERT_DecodeDERCertificate( derCert, PR_FALSE, NULL);
+	newCert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(),
+					  derCert, NULL, PR_FALSE, PR_TRUE);
 	if(!newCert) {
 	     if(nickName) SECITEM_ZfreeItem(nickName, PR_TRUE);
 	     cert->error = SEC_ERROR_NO_MEMORY;
@@ -2571,7 +2467,8 @@ SEC_PKCS12DecoderGetCerts(SEC_PKCS12DecoderContext *p12dcx)
 		CERTCertificate *tempCert = NULL;
 
 		if (derCert == NULL) continue;
-    		tempCert=CERT_DecodeDERCertificate(derCert, PR_TRUE, NULL);
+    		tempCert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(), 
+			derCert, NULL, PR_FALSE, PR_TRUE);
 
 		if (tempCert) {
 		    CERT_AddCertToListTail(certList,tempCert);
@@ -2756,8 +2653,9 @@ sec_pkcs12_get_public_value_and_type(sec_PKCS12SafeBag *certBag,
 	return NULL;
     }
 
-    cert = CERT_DecodeDERCertificate(
-	 &certBag->safeBagContent.certBag->value.x509Cert, PR_FALSE, NULL);
+    cert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(), 
+			&certBag->safeBagContent.certBag->value.x509Cert,
+			NULL, PR_FALSE, PR_FALSE);
     if(!cert) {
 	return NULL;
     }

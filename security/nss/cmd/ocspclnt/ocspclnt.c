@@ -859,7 +859,7 @@ print_response (FILE *out_file, SECItem *data, CERTCertDBHandle *handle)
 	}
 
 	sigStatus = CERT_VerifyOCSPResponseSignature (response, handle,
-						      NULL, &signerCert, NULL);
+						      NULL, &signerCert);
 	SECU_Indent (out_file, level);
 	fprintf (out_file, "Signature verification ");
 	if (sigStatus != SECSuccess) {
@@ -1209,6 +1209,7 @@ nssdone:
 
     if (handle != NULL) {
 	(void) CERT_DisableOCSPChecking (handle);
+	CERT_ClosePermCertDB (handle);
     }
 
     NSS_Shutdown ();

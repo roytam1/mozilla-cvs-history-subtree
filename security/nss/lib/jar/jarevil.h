@@ -68,7 +68,7 @@ extern SECStatus jar_moz_perm
   (CERTCertificate *cert, char *nickname, CERTCertTrust *trust);
  
 extern CERTCertificate *jar_moz_certkey 
-  (CERTCertDBHandle *certdb, CERTIssuerAndSN *seckey);
+  (CERTCertDBHandle *certdb, SECItem *seckey);
 
 extern CERTCertificate *jar_moz_issuer (CERTCertificate *cert);
 

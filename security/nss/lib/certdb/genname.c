@@ -959,14 +959,12 @@ CERT_GetCertificateNames(CERTCertificate *cert, PRArenaPool *arena)
 	return DN;
     }
     altName = CERT_DecodeAltNameExtension(arena, &altNameExtension);
-    PORT_Free(altNameExtension.data);
     if (altName == NULL) {
 	goto loser;
     }
     DN = cert_CombineNamesLists(DN, altName);
     return DN;
 loser:
-
     return NULL;
 }
 
@@ -1139,7 +1137,7 @@ cert_CompareNameWithConstraints(CERTGeneralName     *name,
 	        nameString = (char*)PORT_ZAlloc(name->name.other.len + 1);
 		nameString = PORT_Strncpy(nameString, (char *) name->name.other.data, 
 					  name->name.other.len);
-		start = 0;
+                start = 0;
 		while(PORT_Strncmp(nameString + start, "://", 3) != 0 && 
 		      nameString[start + 3] != '\0') {
 		    start++;

@@ -45,7 +45,6 @@
 #include "jarjart.h"
 #include "blapi.h"	/* JAR is supposed to be above the line!! */
 #include "pk11func.h"	/* PK11 wrapper funcs are all above the line. */
-#include "certdb.h"
 
 /* from certdb.h */
 #define CERTDB_USER (1<<6)
@@ -113,7 +112,7 @@ static SECStatus jar_list_cert_callback
 
 char *JAR_JAR_list_certs (void)
   {
-  SECStatus status = SECFailure;
+  SECStatus status;
   CERTCertDBHandle *certdb;
 
   char *ugly_list;
@@ -133,7 +132,7 @@ char *JAR_JAR_list_certs (void)
 
   JAR_close_database (certdb);
 
-  return (status != SECSuccess) ? NULL : ugly_list;
+  return status ? NULL : ugly_list;
   }
 
 int JAR_JAR_validate_archive (char *filename)
@@ -313,7 +312,7 @@ int JAR_JAR_sign_archive
   JAR_FILE out_fp;
 
   CERTCertDBHandle *certdb;
-  void *keydb;
+  SECKEYKeyDBHandle *keydb;
 
   CERTCertificate *cert;
 
