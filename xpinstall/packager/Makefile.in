@@ -18,6 +18,7 @@
 # Rights Reserved.
 #
 # Contributor(s): 
+#  Chase Phillips <cmp@mozilla.org>
 #
 
 DEPTH		= ../..
