@@ -149,7 +149,7 @@ public void initialize(String verifiedBinDirAbsolutePath) throws Exception
 {
     synchronized(this) {
         if (!hasBeenInitialized()) {
-            nativeInitialize(verifiedBinDirAbsolutePath);
+            nativeAppInitialize(verifiedBinDirAbsolutePath);
             initialized = true;
         }
     }
@@ -185,7 +185,7 @@ public boolean hasBeenInitialized()
 
  */
 
-private native void nativeInitialize (String verifiedBinDirAbsolutePath) throws Exception;
+private native void nativeAppInitialize (String verifiedBinDirAbsolutePath) throws Exception;
 
 /**
 

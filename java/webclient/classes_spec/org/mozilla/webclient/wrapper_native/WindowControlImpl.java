@@ -113,7 +113,7 @@ public void createWindow(int nativeWindow, Rectangle bounds)
         synchronized(this) {
             nativeWebShell = nativeCreateInitContext(nativeWindow, bounds.x, 
                                                      bounds.y, bounds.width, 
-                                                     bounds.height);
+                                                     bounds.height, myBrowserControl);
             eventThread = new NativeEventThread("EventThread-" +
                                                 nativeWebShell,
                                                 myBrowserControl);
@@ -208,7 +208,7 @@ public native void nativeSetBounds(int webShellPtr, int x, int y,
  */
 
 public native int nativeCreateInitContext(int nativeWindow, 
-                                          int x, int y, int width, int height);
+                                          int x, int y, int width, int height, BrowserControl myBrowserControlImpl);
 
 public native void nativeMoveWindowTo(int webShellPtr, int x, int y);
 
