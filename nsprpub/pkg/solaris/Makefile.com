@@ -20,7 +20,8 @@ FILES = $(DATAFILES) pkginfo prototype
 
 PACKAGE = $(shell basename `pwd`)
 
-PRODUCT_VERSION =  $(MOD_MAJOR_VERSION).$(MOD_MINOR_VERSION).$(MOD_REVISION_VERSION)
+PRODUCT_VERSION =  $(shell echo `grep PR_VERSION $(MOD_DEPTH)/dist/include/nspr/prinit.h \
+                       | sed -e 's/"$$//' -e 's/.*"//' -e 's/ .*//'`)
 
 LN = /usr/bin/ln
 
@@ -29,3 +30,6 @@ CLOBBERFILES = $(FILES)
 include $(topsrcdir)/config/rules.mk
 
 # vim: ft=make
+
+
+
