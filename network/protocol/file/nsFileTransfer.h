@@ -39,7 +39,7 @@ public:
     // Methods specific to nsHTTPTransfer
 
     virtual void
-    SetState(State state);
+    SetState(TransferState state);
 
 protected:
     virtual PRUint32 GetFileTimeRemainingMSec(void);

@@ -33,16 +33,16 @@
 
 typedef void (*nsITransferDisplayStatusFunc)(void* data, char* message);
 
+enum TransferState {
+    TransferState_Start,
+    TransferState_Running,
+    TransferState_Complete,
+    TransferState_Error
+};
+
 class nsITransfer : public nsISupports
 {
 public:
-    enum State {
-        Start,
-        Running,
-        Complete,
-        Error
-    };
-
     /**
      * Return the transfer's object
      */
@@ -52,7 +52,7 @@ public:
     /**
      * Return the transfer's state
      */
-    virtual State
+    virtual TransferState
     GetState(void) = 0;
 
     /**

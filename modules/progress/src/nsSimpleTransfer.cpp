@@ -22,7 +22,7 @@
 static NS_DEFINE_IID(kITransferIID, NS_ITRANSFER_IID);
 
 nsSimpleTransfer::nsSimpleTransfer(const char* url)
-    : fState(Start), fURL(NULL), fStart(PR_Now())
+    : fState(TransferState_Start), fURL(NULL), fStart(PR_Now())
 {
     NS_INIT_REFCNT();
 
@@ -51,7 +51,7 @@ nsSimpleTransfer::GetURL(void)
 }
 
 
-nsITransfer::State
+TransferState
 nsSimpleTransfer::GetState(void)
 {
     return fState;
@@ -60,7 +60,7 @@ nsSimpleTransfer::GetState(void)
 
 
 void
-nsSimpleTransfer::SetState(State state)
+nsSimpleTransfer::SetState(TransferState state)
 {
     fState = state;
 };

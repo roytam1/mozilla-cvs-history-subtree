@@ -40,7 +40,7 @@ public:
     /**
      * Return the transfer's state
      */
-    virtual State
+    virtual TransferState
     GetState(void);
 
     /**
@@ -59,13 +59,13 @@ public:
 
     // Other public methods
     virtual void
-    SetState(State state);
+    SetState(TransferState state);
 
 protected:
     virtual PRUint32 GetElapsedTimeMSec(void);
     
-    State        fState;
-    char*        fURL;
+    TransferState fState;
+    char*         fURL;
 
     /**
      * The time at which the transfer began.

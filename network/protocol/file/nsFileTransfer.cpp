@@ -31,14 +31,14 @@ PRUint32
 nsFileTransfer::GetTimeRemainingMSec(void)
 {
     switch (fState) {
-    case Start:
+    case TransferState_Start:
         return REMAINING_TIME_UNKNOWN;
 
-    case Running:
+    case TransferState_Running:
         return GetFileTimeRemainingMSec();
 
-    case Complete:
-    case Error:
+    case TransferState_Complete:
+    case TransferState_Error:
         return 0;
     }
 
@@ -54,11 +54,11 @@ nsFileTransfer::DisplayStatusMessage(void* closure, nsITransferDisplayStatusFunc
 
 
 void
-nsFileTransfer::SetState(State state)
+nsFileTransfer::SetState(TransferState state)
 {
     switch (state) {
-    case Complete:
-    case Error:
+    case TransferState_Complete:
+    case TransferState_Error:
         // The ActiveEntry struct is no longer valid...
         fEntry = NULL;
         break;

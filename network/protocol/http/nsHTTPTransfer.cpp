@@ -17,6 +17,7 @@
  */
 
 #include "nsHTTPTransfer.h"
+#include "mkutils.h"
 #include "mkhttp.h"
 
 nsHTTPTransfer::nsHTTPTransfer(ActiveEntry* entry)
@@ -29,14 +30,14 @@ PRUint32
 nsHTTPTransfer::GetTimeRemainingMSec(void)
 {
     switch (fState) {
-    case Start:
+    case TransferState_Start:
         return REMAINING_TIME_UNKNOWN;
 
-    case Running:
+    case TransferState_Running:
         return GetHTTPTimeRemainingMSec();
 
-    case Complete:
-    case Error:
+    case TransferState_Complete:
+    case TransferState_Error:
         return 0;
     }
 
@@ -52,11 +53,11 @@ nsHTTPTransfer::DisplayStatusMessage(void* closure, nsITransferDisplayStatusFunc
 
 
 void
-nsHTTPTransfer::SetState(State state)
+nsHTTPTransfer::SetState(TransferState state)
 {
     switch (state) {
-    case Complete:
-    case Error:
+    case TransferState_Complete:
+    case TransferState_Error:
         // The ActiveEntry struct is no longer valid...
         fEntry = NULL;
         break;

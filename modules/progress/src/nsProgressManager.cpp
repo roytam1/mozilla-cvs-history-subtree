@@ -108,8 +108,8 @@ public:
         return NULL;
     };
 
-    virtual State GetState(void) {
-        return Error;
+    virtual TransferState GetState(void) {
+        return TransferState_Error;
     };
 
     virtual PRUint32 GetTimeRemainingMSec(void) {
@@ -263,11 +263,11 @@ pm_AggregateTransferInfo(nsISupports* obj, void* closure)
     AggregateTransferInfo* info = (AggregateTransferInfo*) closure;
 
     switch (transfer->GetState()) {
-    case nsITransfer::State::Complete:
+    case TransferState_Complete:
         ++info->CompleteCount;
         break;
 
-    case nsITransfer::State::Error:
+    case TransferState_Error:
         ++info->ErrorCount;
         break;
 
@@ -298,7 +298,7 @@ pm_AggregateObjectInfo(PLHashEntry* he, PRIntn i, void* closure)
     if (he->value) {
         nsITransfer* transfer = (nsITransfer*) he->value;
 
-        if (transfer->GetState() == nsITransfer::State::Complete)
+        if (transfer->GetState() == TransferState_Complete)
             ++(objInfo->CompleteCount);
     }
 

@@ -3254,7 +3254,7 @@ net_HTTPLoad (ActiveEntry * ce)
             nsITransferObserver* observer = ce->window_id->progressManager;
             observer->NotifyBegin(transfer);
 
-            transfer->SetState(nsITransfer::State::Running);
+            transfer->SetState(TransferState_Running);
         }
     }
 #endif
@@ -3368,7 +3368,7 @@ HG51096
 
 #if defined(SMOOTH_PROGRESS)
             if (cd->transfer)
-                cd->transfer->SetState(nsITransfer::State::Complete);
+                cd->transfer->SetState(TransferState_Complete);
 #endif /* defined(SMOOTH_PROGRESS) */
 
             cd->next_state = HTTP_FREE;
@@ -3446,7 +3446,7 @@ HG51096
 
 #if defined(SMOOTH_PROGRESS)
             if (cd->transfer)
-                cd->transfer->SetState(nsITransfer::State::Error);
+                cd->transfer->SetState(TransferState_Error);
 #endif /* defined(SMOOTH_PROGRESS) */
 
             break; /* HTTP_ERROR_DONE */

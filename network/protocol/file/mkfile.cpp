@@ -1178,7 +1178,7 @@ net_FileLoad (ActiveEntry * cur_entry)
             nsITransferObserver* observer = cur_entry->window_id->progressManager;
             observer->NotifyBegin(transfer);
 
-            transfer->SetState(nsITransfer::State::Running);
+            transfer->SetState(TransferState_Running);
         }
     }
 #endif
@@ -1273,7 +1273,7 @@ net_ProcessFile (ActiveEntry * cur_entry)
                		COMPLETE_STREAM;
 #if defined(SMOOTH_PROGRESS)
                 if (connection_data->transfer)
-                    connection_data->transfer->SetState(nsITransfer::State::Complete);
+                    connection_data->transfer->SetState(TransferState_Complete);
 #endif
                 CD_NEXT_STATE = NET_FILE_FREE;
                 break;
@@ -1292,7 +1292,7 @@ net_ProcessFile (ActiveEntry * cur_entry)
                 CD_NEXT_STATE = NET_FILE_FREE;
 #if defined(SMOOTH_PROGRESS)
                 if (connection_data->transfer)
-                    connection_data->transfer->SetState(nsITransfer::State::Error);
+                    connection_data->transfer->SetState(TransferState_Error);
 #endif
                 break;
     
