@@ -35,7 +35,6 @@
 #include "nsISHistory.h"
 #include "nsIWebNavigation.h"
 #include "nsPIDOMWindow.h"
-#include "nsIHTTPChannel.h"
 
 ///  Unsorted Includes
 
