@@ -36,14 +36,16 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "nsBrowserProfileMigratorUtils.h"
-#include "nsSeamonkeyProfileMigrator.h"
+#include "nsDirectoryServiceDefs.h"
 #include "nsIObserverService.h"
 #include "nsIPrefService.h"
 #include "nsIProfile.h"
 #include "nsIProfileInternal.h"
+#include "nsIRegistry.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsISupportsPrimitives.h"
+#include "nsSeamonkeyProfileMigrator.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 // nsSeamonkeyProfileMigrator
@@ -102,15 +104,112 @@ nsSeamonkeyProfileMigrator::Migrate(PRUint32 aItems, PRBool aReplace, const PRUn
 NS_IMETHODIMP
 nsSeamonkeyProfileMigrator::GetSourceHasMultipleProfiles(PRBool* aResult)
 {
-  *aResult = PR_FALSE;
+  nsCOMPtr<nsISupportsArray> profiles;
+  GetSourceProfiles(getter_AddRefs(profiles));
+
+  if (profiles) {
+    PRUint32 count;
+    profiles->Count(&count);
+    *aResult = count > 1;
+  }
+  else
+    *aResult = PR_FALSE;
+
   return NS_OK;
 }
 
 NS_IMETHODIMP
 nsSeamonkeyProfileMigrator::GetSourceProfiles(nsISupportsArray** aResult)
 {
-  *aResult = nsnull;
+  if (!mProfileNames && !mProfileLocations) {
+    nsresult rv = NS_NewISupportsArray(getter_AddRefs(mProfileNames));
+    if (NS_FAILED(rv)) return rv;
+
+    rv = NS_NewISupportsArray(getter_AddRefs(mProfileLocations));
+    if (NS_FAILED(rv)) return rv;
+
+    GetProfileDataFromSeamonkeyRegistry(mProfileNames, mProfileLocations);
+  }
+  
+  NS_IF_ADDREF(*aResult = mProfileNames);
   return NS_OK;
+}
+
+nsresult
+nsSeamonkeyProfileMigrator::GetProfileDataFromSeamonkeyRegistry(nsISupportsArray* aProfileNames,
+                                                                nsISupportsArray* aProfileLocations)
+{
+  nsresult rv = NS_OK;
+
+  // Find the Seamonkey Registry
+  nsCOMPtr<nsIProperties> fileLocator(do_GetService("@mozilla.org/file/directory_service;1"));
+  nsCOMPtr<nsILocalFile> seamonkeyRegistry;
+  fileLocator->Get(NS_WIN_APPDATA_DIR, NS_GET_IID(nsILocalFile), getter_AddRefs(seamonkeyRegistry));
+
+  seamonkeyRegistry->Append(NS_LITERAL_STRING("Mozilla"));
+  seamonkeyRegistry->Append(NS_LITERAL_STRING("registry.dat"));
+
+  // Open It
+  nsCOMPtr<nsIRegistry> reg(do_CreateInstance("@mozilla.org/registry;1"));
+  reg->Open(seamonkeyRegistry);
+
+  nsRegistryKey profilesTree;
+  rv = reg->GetKey(nsIRegistry::Common, NS_LITERAL_STRING("Profiles").get(), &profilesTree);
+  if (NS_FAILED(rv)) return rv;
+
+  nsCOMPtr<nsIEnumerator> keys;
+  reg->EnumerateSubtrees(profilesTree, getter_AddRefs(keys));
+
+  keys->First();
+  while (keys->IsDone() != NS_OK) {
+    nsCOMPtr<nsISupports> key;
+    keys->CurrentItem(getter_AddRefs(key));
+
+    nsCOMPtr<nsIRegistryNode> node(do_QueryInterface(key));
+
+    nsRegistryKey profile;
+    node->GetKey(&profile);
+
+    // "migrated" is "yes" for all valid Seamonkey profiles. It is only "no"
+    // for 4.x profiles. 
+    nsXPIDLString isMigrated;
+    reg->GetString(profile, NS_LITERAL_STRING("migrated").get(), getter_Copies(isMigrated));
+
+    if (isMigrated.Equals(NS_LITERAL_STRING("no"))) {
+      keys->Next();
+      continue;
+    }
+
+    // Get the profile name and add it to the names array
+    nsXPIDLString profileName;
+    node->GetName(getter_Copies(profileName));
+
+    nsCOMPtr<nsISupportsString> profileNameString(do_CreateInstance("@mozilla.org/supports-string;1"));
+    profileNameString->SetData(profileName);
+    mProfileNames->AppendElement(profileNameString);
+
+    // Get the profile location and add it to the locations array
+    nsXPIDLString directory;
+    reg->GetString(profile, NS_LITERAL_STRING("directory").get(), getter_Copies(directory));
+
+    nsCOMPtr<nsILocalFile> dir;
+#ifdef XP_MACOSX
+    rv = NS_NewNativeLocalFile(nsCString(), PR_TRUE, getter_AddRefs(dir));
+    if (NS_FAILED(rv)) return rv;
+    dir->SetPersistentDescriptor(NS_LossyConvertUCS2toASCII(directory));
+#else
+    rv = NS_NewLocalFile(directory, PR_TRUE, getter_AddRefs(dir));
+    if (NS_FAILED(rv)) return rv;
+#endif
+
+    PRBool exists;
+    dir->Exists(&exists);
+
+    if (exists)
+      mProfileLocations->AppendElement(dir);
+
+    keys->Next();
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -63,6 +63,9 @@ public:
   static nsresult SetDownloadManager(void* aTransform, nsIPrefBranch* aBranch);
 
 protected:
+  nsresult GetProfileDataFromSeamonkeyRegistry(nsISupportsArray* aProfileNames,
+                                               nsISupportsArray* aProfileLocations);
+
   nsresult CopyPreferences(PRBool aReplace);
   nsresult TransformPreferences(const nsAString& aSourcePrefFileName,
                                 const nsAString& aTargetPrefFileName);
@@ -75,6 +78,8 @@ protected:
   nsresult CopyBookmarks(PRBool aReplace);
 
 private:
+  nsCOMPtr<nsISupportsArray> mProfileNames;
+  nsCOMPtr<nsISupportsArray> mProfileLocations;
 };
  
 #endif

@@ -45,6 +45,7 @@ MODULE		= migration
 LIBRARY_NAME	= migration_s
 
 REQUIRES	= xpcom \
+      xpcom_obsolete \
 		  string \
 		  necko \
 		  history \
