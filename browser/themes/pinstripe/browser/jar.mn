@@ -20,6 +20,7 @@ classic.jar:
   skin/classic/browser/livemark-item.png
   skin/classic/browser/pageInfo.css
   skin/classic/browser/Popup-blocked.png
+  skin/classic/browser/searchbar.css
   skin/classic/browser/search-bar-background.png
   skin/classic/browser/Search-bar.png
   skin/classic/browser/Secure.png

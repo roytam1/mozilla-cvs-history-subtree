@@ -236,99 +236,27 @@ nsFormHistory::RemoveEntryAt(PRUint32 index)
 }
 
 NS_IMETHODIMP
-nsFormHistory::RemoveEntriesForName(const nsAString & name)
+nsFormHistory::EntryExists(const nsAString &aName, const nsAString &aValue, PRBool *_retval)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  return EntriesExistInternal(&aName, &aValue, _retval);
+}
+
+NS_IMETHODIMP
+nsFormHistory::NameExists(const nsAString &aName, PRBool *_retval)
+{
+  return EntriesExistInternal(&aName, nsnull, _retval);
+}
+
+NS_IMETHODIMP
+nsFormHistory::RemoveEntriesForName(const nsAString &aName)
+{
+  return RemoveEntriesInternal(&aName);
 }
 
 NS_IMETHODIMP
 nsFormHistory::RemoveAllEntries()
 {
-  nsresult rv = OpenDatabase(); // lazily ensure that the database is open
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  if (!mTable) return NS_OK;
-
-  mdb_err err;
-  mdb_count count;
-  err = mTable->GetCount(mEnv, &count);
-  if (err != 0) return NS_ERROR_FAILURE;
-
-  // Begin the batch.
-  int marker;
-  err = mTable->StartBatchChangeHint(mEnv, &marker);
-  NS_ASSERTION(err == 0, "unable to start batch");
-  if (err != 0) return NS_ERROR_FAILURE;
-
-  // XXX from here until end batch, no early returns!
-  for (mdb_pos pos = count - 1; pos >= 0; --pos) {
-    nsCOMPtr<nsIMdbRow> row;
-    err = mTable->PosToRow(mEnv, pos, getter_AddRefs(row));
-    NS_ASSERTION(err == 0, "unable to get row");
-    if (err != 0)
-      break;
-
-    NS_ASSERTION(row != nsnull, "no row");
-    if (! row)
-      continue;
-
-    // Officially cut the row *now*, before notifying any observers:
-    // that way, any re-entrant calls won't find the row.
-    err = mTable->CutRow(mEnv, row);
-    NS_ASSERTION(err == 0, "couldn't cut row");
-    if (err != 0)
-      continue;
-  
-    // possibly avoid leakage
-    err = row->CutAllColumns(mEnv);
-    NS_ASSERTION(err == 0, "couldn't cut all columns");
-    // we'll notify regardless of whether we could successfully
-    // CutAllColumns or not.
-  }
-  
-  // Finish the batch.
-  err = mTable->EndBatchChangeHint(mEnv, &marker);
-  NS_ASSERTION(err == 0, "error ending batch");
-
-  return (err == 0) ? NS_OK : NS_ERROR_FAILURE;
-}
-
-NS_IMETHODIMP
-nsFormHistory::EntryExists(const nsAString &aName, const nsAString &aValue, PRBool *_retval)
-{
-  // Unfortunately we have to do a brute force search through the database
-  // because mork didn't bother to implement any indexing functionality
-  
-  *_retval = PR_FALSE;
-  
-  nsresult rv = OpenDatabase(); // lazily ensure that the database is open
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  // Get a cursor to iterate through all rows in the database
-  nsCOMPtr<nsIMdbTableRowCursor> rowCursor;
-  mdb_err err = mTable->GetTableRowCursor(mEnv, -1, getter_AddRefs(rowCursor));
-  NS_ENSURE_TRUE(!err, NS_ERROR_FAILURE);
-  
-  nsIMdbRow *row = nsnull;
-  mdb_pos pos;
-  do {
-    rowCursor->NextRow(mEnv, &row, &pos);
-    NS_ENSURE_TRUE(row != nsnull, NS_ERROR_FAILURE);
-
-    // Check if the name and value combination match this row
-    nsAutoString name;
-    GetRowValue(row, kToken_NameColumn, name);
-    if (Compare(name, aName, nsCaseInsensitiveStringComparator()) == 0) {
-      nsAutoString value;
-      GetRowValue(row, kToken_ValueColumn, value);
-      if (Compare(value, aValue, nsCaseInsensitiveStringComparator()) == 0) {
-        *_retval = PR_TRUE;
-        break;
-      }
-    }
-  } while (row);
-  
-  return NS_OK;
+  return RemoveEntriesInternal(nsnull);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -904,4 +832,104 @@ nsFormHistory::RowMatch(nsIMdbRow *aRow, const nsAString &aInputName, const nsAS
   }
   
   return PR_FALSE;
+}
+
+nsresult
+nsFormHistory::EntriesExistInternal(const nsAString *aName, const nsAString *aValue, PRBool *_retval)
+{
+  // Unfortunately we have to do a brute force search through the database
+  // because mork didn't bother to implement any indexing functionality
+  
+  *_retval = PR_FALSE;
+  
+  nsresult rv = OpenDatabase(); // lazily ensure that the database is open
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // Get a cursor to iterate through all rows in the database
+  nsCOMPtr<nsIMdbTableRowCursor> rowCursor;
+  mdb_err err = mTable->GetTableRowCursor(mEnv, -1, getter_AddRefs(rowCursor));
+  NS_ENSURE_TRUE(!err, NS_ERROR_FAILURE);
+  
+  nsIMdbRow *row = nsnull;
+  mdb_pos pos;
+  do {
+    rowCursor->NextRow(mEnv, &row, &pos);
+    if (!row)
+      break;
+
+    // Check if the name and value combination match this row
+    nsAutoString name;
+    GetRowValue(row, kToken_NameColumn, name);
+
+    if (Compare(name, *aName, nsCaseInsensitiveStringComparator()) == 0) {
+      nsAutoString value;
+      GetRowValue(row, kToken_ValueColumn, value);
+      if (!aValue || Compare(value, *aValue, nsCaseInsensitiveStringComparator()) == 0) {
+        *_retval = PR_TRUE;
+        break;
+      }
+    }
+  } while (1);
+  
+  return NS_OK;
+}
+
+nsresult
+nsFormHistory::RemoveEntriesInternal(const nsAString *aName)
+{
+  nsresult rv = OpenDatabase(); // lazily ensure that the database is open
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (!mTable) return NS_OK;
+
+  mdb_err err;
+  mdb_count count;
+  nsAutoString name;
+  err = mTable->GetCount(mEnv, &count);
+  if (err != 0) return NS_ERROR_FAILURE;
+
+  // Begin the batch.
+  int marker;
+  err = mTable->StartBatchChangeHint(mEnv, &marker);
+  NS_ASSERTION(err == 0, "unable to start batch");
+  if (err != 0) return NS_ERROR_FAILURE;
+
+  for (mdb_pos pos = count - 1; pos >= 0; --pos) {
+    nsCOMPtr<nsIMdbRow> row;
+    err = mTable->PosToRow(mEnv, pos, getter_AddRefs(row));
+    NS_ASSERTION(err == 0, "unable to get row");
+    if (err != 0)
+      break;
+
+    NS_ASSERTION(row != nsnull, "no row");
+    if (! row)
+      continue;
+
+    // Check if the name matches this row
+    GetRowValue(row, kToken_NameColumn, name);
+    
+    if (!aName || Compare(name, *aName, nsCaseInsensitiveStringComparator()) == 0) {
+
+      // Officially cut the row *now*, before notifying any observers:
+      // that way, any re-entrant calls won't find the row.
+      err = mTable->CutRow(mEnv, row);
+      NS_ASSERTION(err == 0, "couldn't cut row");
+      if (err != 0)
+        continue;
+  
+      // possibly avoid leakage
+      err = row->CutAllColumns(mEnv);
+      NS_ASSERTION(err == 0, "couldn't cut all columns");
+      // we'll notify regardless of whether we could successfully
+      // CutAllColumns or not.
+    }
+
+  }
+  
+  // Finish the batch.
+  err = mTable->EndBatchChangeHint(mEnv, &marker);
+  NS_ASSERTION(err == 0, "error ending batch");
+
+  return (err == 0) ? NS_OK : NS_ERROR_FAILURE;
+
 }

@@ -643,10 +643,6 @@ toolbar[iconsize="small"] #mail-button[disabled="true"] {
   margin: 2px 3px;
 }
 
-#search-bar {
-  width: 12em;
-}
-
 /* ::::: page proxy icon ::::: */
 
 #page-proxy-deck,
@@ -677,24 +673,6 @@ toolbar[iconsize="small"] #mail-button[disabled="true"] {
 
 statusbarpanel#statusbar-display {
   padding-left: 0;
-}
-
-/* ::::: search-bar ::::: */
-
-#search-proxy-button {
-  margin-top: 2px;
-  margin-bottom: 1px;
-}
-
-.search-proxy-button-image {
-  margin: 0px;
-  list-style-image: url("chrome://browser/skin/Search-bar.png");
-}
-
-.search-proxy-button-dropmarker {
-  margin-left: 12px;
-  margin-top: 8px;
-  list-style-image: url("chrome://browser/skin/search-arrow.gif");
 }
 
 /* ::::: autocomplete ::::: */

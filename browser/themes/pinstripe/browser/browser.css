@@ -638,8 +638,7 @@ toolbar[iconsize="small"] #paste-button[disabled="true"] {
 
 #page-proxy-deck,
 #page-proxy-favicon,
-#page-proxy-button, 
-#search-proxy-button {
+#page-proxy-button {
   width: 16px;
   height: 16px;
   margin: 0px;
@@ -666,49 +665,6 @@ toolbar[iconsize="small"] #paste-button[disabled="true"] {
 
 statusbarpanel#statusbar-display {
   padding-left: 0;
-}
-
-/* ::::: search-bar ::::: */
-
-#search-proxy-button {
-	min-width: 22px;
-	margin: 0px 3px 0px 5px;  
-}
-
-.search-proxy-button-image {
- padding: 0px;
- list-style-image: url("chrome://browser/skin/Search-bar.png");
-}
-
-.search-proxy-button-dropmarker {
-	list-style-image: url("chrome://global/skin/arrow/arrow-dn.png");
-	padding: 6px 0px 5px 17px;
-
-}
-
-#miSearchModeFind, #__PhoenixFindInPage {
-	list-style-image: url("chrome://browser/skin/Search-bar.png");
-}
-
-#miSearchModeFind[checked="true"] {
-  list-style-image: url("chrome://global/skin/menu/menu-check.png");
-}
-
-#search-bar > .autocomplete-textbox-container  {
-  border: none;
-  padding-right: 10px;
-  height: 21px !important;
-  margin: 0px;
-}
-
-#search-bar {
-  background: url("chrome://browser/skin/search-bar-background.png") no-repeat;
-  margin: 4px 3px 4px 3px;
-  -moz-appearance: none;
-  font: icon;
-  height: 22px !important;
-  width: 182px !important;
-  border: none !important;
 }
 
 /* ::::: autocomplete ::::: */

@@ -14,6 +14,7 @@ classic.jar:
         skin/classic/browser/page-themes.png
         skin/classic/browser/page-livemarks.png
         skin/classic/browser/livemark-item.png
+        skin/classic/browser/searchbar.css
         skin/classic/browser/search-arrow.gif
         skin/classic/browser/Search-bar.png
         skin/classic/browser/Secure.png

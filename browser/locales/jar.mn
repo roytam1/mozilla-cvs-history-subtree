@@ -18,6 +18,7 @@
     locale/browser/pageInfo.properties             (@AB_CD@/chrome/browser/pageInfo.properties)
     locale/browser/pageReport.dtd                  (@AB_CD@/chrome/browser/pageReport.dtd)
     locale/browser/pageReportFirstTime.dtd         (@AB_CD@/chrome/browser/pageReportFirstTime.dtd)
+    locale/browser/searchbar.properties            (@AB_CD@/chrome/browser/searchbar.properties)
     locale/browser/setWallpaper.dtd                (@AB_CD@/chrome/browser/setWallpaper.dtd)
     locale/browser/shellservice.properties         (@AB_CD@/chrome/browser/shellservice.properties)
 *   locale/browser/bookmarks/bookmarks.dtd         (@AB_CD@/chrome/browser/bookmarks/bookmarks.dtd)

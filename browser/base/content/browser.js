@@ -1194,10 +1194,6 @@ function delayedStartup()
   if (gURLBar)
     gURLBar.addEventListener("dragdrop", URLBarOnDrop, true);
 
-  var searchBar = document.getElementById("search-bar");
-  if(searchBar)
-    searchBar.addEventListener("dragdrop", SearchBarOnDrop, true);
-
   // loads the services
   initServices();
   initBMService();
@@ -1462,12 +1458,12 @@ FormFillPrefListener.prototype =
     var formController = Components.classes["@mozilla.org/satchel/form-fill-controller;1"].getService(Components.interfaces.nsIAutoCompleteInput);
     formController.disableAutoComplete = !gFormFillEnabled;
 
-    var searchBar = document.getElementById("search-bar");
-    if (searchBar) {
+    var searchBar = document.getElementsByTagName("searchbar");
+    for (var i=0; i<searchBar.length;i++) {
       if (gFormFillEnabled)
-        searchBar.removeAttribute("disableautocomplete");
+        searchBar[i].removeAttribute("disableautocomplete");
       else
-        searchBar.setAttribute("disableautocomplete", "true");
+        searchBar[i].setAttribute("disableautocomplete", "true");
     }
   }
 }
@@ -2397,66 +2393,6 @@ var urlbarObserver = {
     }
 }
 
-function SearchBarOnDrop(evt)
-{
-  nsDragAndDrop.drop(evt, searchbarObserver);
-}
-
-var searchbarObserver = {
-  onDrop: function (aEvent, aXferData, aDragSession)
-    {
-      var data = transferUtils.retrieveURLFromData(aXferData.data, aXferData.flavour.contentType);
-      if (data) {
-        // XXXBlake Workaround caret crash when you try to set the textbox's value on dropping
-        var field = document.getElementById("search-bar");
-        setTimeout(function(field, data, evt) { field.value = data; field.onTextEntered(evt); }, 0, field, data, aEvent);      
-      }
-    },
-  getSupportedFlavours: function ()
-    {
-      var flavourSet = new FlavourSet();
-
-      flavourSet.appendFlavour("text/unicode");
-      flavourSet.appendFlavour("text/x-moz-url");
-      flavourSet.appendFlavour("application/x-moz-file", "nsIFile");     
-      return flavourSet;
-    }
-}
-
-function SearchBarPopupShowing(aEvent)
-{
-  var currItem = document.getElementById("miAddEngines");
-  if (currItem)
-    aEvent.target.removeChild(currItem);
-
-  var browserBundle = document.getElementById("bundle_browser");  
-  var menuitem = document.createElementNS(kXULNS, "menuitem");
-  menuitem.setAttribute("label", browserBundle.getString("addEngines"));
-  menuitem.id = "miAddEngines";
-  aEvent.target.appendChild(menuitem);
-}
-  
-function SearchBarPopupCommand(aEvent)
-{
-  if (!aEvent.target.id)
-    return;  
-
-  if (aEvent.target.id == "miAddEngines") {
-    var regionBundle = document.getElementById("bundle_browser_region");
-    loadURI(regionBundle.getString("searchEnginesURL"), null, null);
-    return;
-  }
-
-  document.getElementById("search-bar").currentEngine = aEvent.target.id;
-}
-
-function showSearchEnginePopup()
-{
-  var searchEnginePopup = document.getElementById("SearchBarPopup");
-  var searchEngineButton = document.getElementById("search-proxy-button");
-  searchEnginePopup.showPopup(searchEngineButton);
-}
-
 function updateToolbarStates(toolbarMenuElt)
 {
   if (!gHaveUpdatedToolbarState) {
@@ -2813,10 +2749,10 @@ var DownloadsButtonDNDObserver = {
 
 function focusSearchBar()
 {
-  var searchBar = document.getElementById("search-bar");
-  if (searchBar) {
-    searchBar.select();
-    searchBar.focus();
+  var searchBar = document.getElementsByTagName("searchbar");
+  if (searchBar.length > 0) {
+    searchBar[0].select();
+    searchBar[0].focus();
   }
 }
 

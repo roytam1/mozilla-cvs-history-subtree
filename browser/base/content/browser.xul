@@ -72,18 +72,6 @@
            onclick="checkForMiddleClick(this, event);"/>
     <tooltip id="aHTMLTooltip" onpopupshowing="return FillInHTMLTooltip(document.tooltipNode);"/>
 
-    <popup id="SearchBarPopup" position="after_start"
-           datasources="rdf:internetsearch" ref="NC:SearchEngineRoot" 
-           oncommand="return SearchBarPopupCommand(event);"
-           onpopupshowing="SearchBarPopupShowing(event);">
-      <template>
-        <menuitem type="checkbox"
-                  uri="..." value="..."
-                  src="rdf:http://home.netscape.com/NC-rdf#Icon"
-                  label="rdf:http://home.netscape.com/NC-rdf#Name"/>
-      </template>
-    </popup>
-
     <popup type="autocomplete" id="PopupAutoComplete"/>
 
     <popup id="toolbar-context-menu"
@@ -222,19 +210,9 @@
         </textbox>
       </toolbaritem>
 
-      <toolbaritem id="search-container" align="center" class="chromeclass-toolbar-additional"
-                   title="&searchItem.title;">
-        <textbox id="search-bar" type="autocomplete" flex="1"
-                 autocompletepopup="PopupAutoComplete"
-                 autocompletesearch="form-history"
-                 tabscrolling="true"
-                 onfocus="URLBarFocusHandler(event, this);"
-                 onmousedown="URLBarMouseDownHandler(event, this);"
-                 onclick="URLBarClickHandler(event, this);"
-                 persist="searchengine,autocompletesearchparam">
-          <button id="search-proxy-button" type="menu"
-                  popup="SearchBarPopup" persist="src"/>
-        </textbox>
+      <toolbaritem id="search-container" title="&searchItem.title;" 
+                   align="center" class="chromeclass-toolbar-additional">
+        <searchbar id="searchbar"/>
       </toolbaritem>
       
       <toolbaritem id="go-container" align="center" class="chromeclass-toolbar">

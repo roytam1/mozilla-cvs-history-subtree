@@ -1,4 +1,4 @@
-#search-bar {
+searchbar {
   -moz-binding: url("chrome://browser/content/search.xml#searchbar");
 }
 
@@ -6,11 +6,6 @@
 
 toolbar[printpreview="true"] {
   -moz-binding: url("chrome://global/content/printPreviewBindings.xml#printpreviewtoolbar");
-}
-
-#search-proxy-button {
-  -moz-binding: url("chrome://browser/content/search.xml#searchBarDropMarker");
-  -moz-user-focus: none;
 }
 
 toolbarbutton[type="updates"] {
