@@ -1093,17 +1093,19 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
                     setter = NULL;
                 }
 		atom = js_Atomize(xdr->cx, propname, strlen(propname), 0);
+                JS_free(xdr->cx, propname);
 		if (!atom ||
-		    !OBJ_DEFINE_PROPERTY(xdr->cx, fun->object, (jsid)atom,
-					 JSVAL_VOID, getter, setter,
-					 JSPROP_ENUMERATE | JSPROP_PERMANENT,
-					 (JSProperty **)&sprop) ||
-		    !sprop){
-		    JS_free(xdr->cx, propname);
-		    return JS_FALSE;
-		}
-		sprop->id = propid;
-		JS_free(xdr->cx, propname);
+                    !OBJ_DEFINE_PROPERTY(xdr->cx, fun->object, (jsid)atom,
+                                         JSVAL_VOID, getter, setter,
+                                         JSPROP_ENUMERATE | JSPROP_PERMANENT,
+                                         (JSProperty **)&sprop))
+                    return JS_FALSE;
+                /* can sprop be NULL without O_D_P returning false? */
+                if (sprop)
+                    sprop->id = propid;
+                JS_UNLOCK_OBJ(xdr->cx, fun->object);
+                if (!sprop)
+                    return JS_FALSE;
 	    }
 	}
     }
@@ -1123,6 +1125,7 @@ fun_xdrObject(JSXDRState *xdr, JSObject **objp)
 				 NULL, NULL, JSPROP_ENUMERATE,
 				 (JSProperty **)&sprop))
 	    return JS_FALSE;
+        JS_UNLOCK_OBJ(xdr->cx, xdr->cx->globalObject);
     }
 
     return JS_TRUE;
