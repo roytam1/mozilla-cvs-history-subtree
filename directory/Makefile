@@ -25,6 +25,7 @@ NSPR_TREE	= ../nsprpub
 NSS_TREE	= ../security
 MOD_DEPTH	= ../nsprpub
 CORECONFDIR	= ../coreconf
+ALTCORECONFDIR	= ../../coreconf
 NSPR_VERSION	= 4.1
 NSS_VERSION	= 3.2
 DEPTH		= ..
@@ -85,6 +86,18 @@ ifneq ($(HAVE_CCONF), 1)
 	fi
 else
 	@if [ -d $(CORECONFDIR)/ ]; then \
+		echo "coreconf $(CORECONFDIR) directory found"; \
+	else \
+		echo "No $(CORECONFDIR) found checking for alternate location"; \
+		if [ -d $(ALTCORECONFDIR)/ ]; then \
+			echo "found $(ALTCORECONFDIR)....copying to $(CORECONFDIR)/"; \
+			cp -r $(ALTCORECONFDIR) $(CORECONFDIR); \
+		else \
+			echo "No coreconf directory found"; \
+			exit 0; \
+		fi \
+	fi
+	@if [ -d $(CORECONFDIR)/ ]; then \
 		cd $(CORECONFDIR); \
 		gmake; \
 	else \
@@ -114,13 +127,25 @@ buildAndPkgLdapSDK: buildLdapClientSDK pkgLdapSDK
 PullSDKComponents: FORCE
 ifneq ($(DONT_REPULL), 1) 
 ifeq ($(HAVE_CCONF), 1)
+	@if [ -d $(CORECONFDIR)/ ]; then \
+		echo "coreconf $(CORECONFDIR) directory found"; \
+	else \
+		echo "No $(CORECONFDIR) found checking for alternate location"; \
+		if [ -d $(ALTCORECONFDIR)/ ]; then \
+			echo "found $(ALTCORECONFDIR)....copying to $(CORECONFDIR)/"; \
+			cp -r $(ALTCORECONFDIR) $(CORECONFDIR); \
+		else \
+			echo "No coreconf directory found"; \
+			exit 0; \
+		fi \
+	fi
 	@if [  -d $(CORECONFDIR)/ ]; then \
 		echo "coreconf directory found"; \
 	else \
 		echo "No coreconf directory found"; \
 		exit 0; \
 	fi
-  ifeq ($(OS_ARCH), WINNT)
+ifeq ($(OS_ARCH), WINNT)
 	cd $(CORECONFDIR)/dbm; \
 	$(MAKE) VERSION=$(DBM_RELEASE_TAG)     $(MFLAGS) USE_FTP=YES import
 	cd $(CORECONFDIR)/nspr20; \
@@ -129,7 +154,7 @@ ifeq ($(HAVE_CCONF), 1)
 	$(MAKE) VERSION=$(NSS_RELEASE_TAG)     $(MFLAGS) USE_FTP=YES import
 	cd $(CORECONFDIR)/svrcore; \
 	$(MAKE) VERSION=$(SVRCORE_RELEASE_TAG) $(MFLAGS) USE_FTP=YES import
-  else
+else
 	cd $(CORECONFDIR)/dbm; \
 	$(MAKE) VERSION=$(DBM_RELEASE_TAG)     $(MFLAGS) import
 	cd $(CORECONFDIR)/nspr20; \
@@ -138,7 +163,7 @@ ifeq ($(HAVE_CCONF), 1)
 	$(MAKE) VERSION=$(NSS_RELEASE_TAG)     $(MFLAGS) import
 	cd $(CORECONFDIR)/svrcore; \
 	$(MAKE) VERSION=$(SVRCORE_RELEASE_TAG) $(MFLAGS) import
-  endif
+endif
 endif
 endif
 
