@@ -4291,7 +4291,7 @@ nsresult nsEditor::EndUpdateViewBatch()
 
       PRUint32 flags = 0;
 
-      rv = GetFlags(&flags);
+      nsresult rv = GetFlags(&flags);
 
       if (NS_SUCCEEDED(rv))
       {
