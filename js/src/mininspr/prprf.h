@@ -36,7 +36,9 @@
 **	%g - float
 */
 #include "prtypes.h"
-#ifndef MINI_NSPR
+#ifdef MINI_NSPR
+#include "prstubs.h"
+#else
 #include "prio.h"
 #endif
 #include <stdio.h>

@@ -17,9 +17,9 @@
  */
 
 /*
- * This file contains declarations for some functions that are normally implemented
- * in NSPR, but which are stubbed out or changed in mini-NSPR (the NSPR subset
- * required to run JS).
+ * This file contains declarations for some functions that are normally
+ * implemented in NSPR, but which are stubbed out or changed in mini-NSPR
+ * (mini-NSPR is the subset of NSPR required to run JS).
  */
 #ifndef prstubs_h___
 #define prstubs_h___
@@ -28,17 +28,22 @@
 
 PR_BEGIN_EXTERN_C
 
+/* Dummy typedefs */
 typedef struct PRLock {int dummy;} PRLock;
+typedef struct PRFileDesc {int dummy;} PRFileDesc;
+typedef struct PRThread {int dummy;} PRThread;
 
 PR_EXTERN(PRLock*) PR_NewLock(void);
 PR_EXTERN(void) PR_DestroyLock(PRLock *lock);
 PR_EXTERN(void) PR_Lock(PRLock *lock);
 PR_EXTERN(PRStatus) PR_Unlock(PRLock *lock);
+PR_EXTERN(PRThread*) PR_GetCurrentThread(void);
 
 extern PRBool _pr_initialized;
 extern void _PR_ImplicitInitialization(void);
 
 #define PR_SetError(x, y)
+#define PR_GetEnv getenv
 
 /*
 ** Abort the process in a non-graceful manner. This will cause a core file,
