@@ -4533,7 +4533,7 @@ nsXULElement::SetBindingParent(nsIContent* aParent)
 NS_IMETHODIMP_(PRBool)
 nsXULElement::IsContentOfType(PRUint32 aFlags)
 {
-  return !(aFlags & ~eELEMENT);
+  return !(aFlags & ~(eELEMENT | eXUL));
 }
 
 void nsXULElement::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSize)

@@ -2637,25 +2637,8 @@ SelectorMatchesData::SelectorMatchesData(nsIPresContext* aPresContext, nsIConten
     aContent->GetAttributeCount(attrCount);
     mHasAttributes = PRBool(attrCount > 0);
 
-    PRBool isXUL = PR_FALSE;
-
     // check for HTMLContent and Link status
-    //
-#ifdef MOZ_XUL
-#ifndef DONT_OPTIMIZE_ISHTMLCONTENT_FOR_XUL
-    // check for HTML content
-    // NOTE: optimization to first check for XULContent since asking a XUL element to 
-    //       QI for HTMLContent is very slow
-    nsIXULContent *xc;
-    if (NS_SUCCEEDED(aContent->QueryInterface(NS_GET_IID(nsIXULContent), (void**)&xc))) {
-      NS_RELEASE(xc);
-      isXUL = PR_TRUE;
-    }
-#endif
-#endif
-    nsIHTMLContent* hc;
-    if (PR_FALSE == isXUL &&
-        aContent->IsContentOfType(nsIContent::eHTML)) 
+    if (aContent->IsContentOfType(nsIContent::eHTML)) 
       mIsHTMLContent = PR_TRUE;
 
     // if HTML content and it has some attributes, check for an HTML link
