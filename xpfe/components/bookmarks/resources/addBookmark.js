@@ -130,9 +130,10 @@ function Startup()
     case "selectFolder":
       // If we're being opened as a folder selection window
       document.getElementById("bookmarknamegrid").hidden = true;
-      document.getElementById("createinseparator").hidden = true;
+      document.getElementById("showaddgroup").hidden = true;
+      document.getElementById("destinationSeparator").hidden = true;
       document.getElementById("nameseparator").hidden = true;
-      dialogElement.setAttribute("title", dialogElement.getAttribute("title-selectFolder"));
+      dialogElement.setAttribute("title", dialogElement.getAttribute("selectFolderTitle"));
       shouldSetOKButton = false;
       if (window.arguments[2])
         folderItem = bookmarkView.rdf.GetResource(window.arguments[2]);
@@ -143,10 +144,11 @@ function Startup()
       break;
     case "newBookmark":
       document.getElementById("showaddgroup").hidden = true;
+      document.getElementById("destinationSeparator").hidden = true;
+      document.getElementById("folderbox").hidden = true;
       setupFields();
       if (window.arguments[2])
         gCreateInFolder = window.arguments[2];
-      document.getElementById("folderbox").hidden = true;
       break;
     case "addGroup":
       setupFields();
@@ -217,8 +219,9 @@ function onOK()
   }
   // In Select Folder Mode, do nothing but tell our caller what
   // folder was selected. 
-  if (window.arguments.length > 4 && window.arguments[4] == "selectFolder")
-    window.arguments[5].selectedFolder = gCreateInFolder;
+  if (window.arguments.length > 4 && window.arguments[4] == "selectFolder") {
+    window.arguments[5].target = BookmarksUtils.getTargetFromFolder(bookmarkView.treeBuilder.getResourceAtIndex(currentIndex));
+  }
   else {
     // Otherwise add a bookmark to the selected folder. 
 
