@@ -66,17 +66,6 @@ public:
                                     nsICacheListener *         listener,
                                     nsICacheEntryDescriptor ** result);
 
-#if 0
-    nsresult       OpenCacheEntry(nsCacheSession *           session,
-                                  const char *               clientKey, 
-                                  nsCacheAccessMode          accessRequested,
-                                  nsICacheEntryDescriptor ** result);
-
-    nsresult       AsyncOpenCacheEntry(nsCacheSession *   session,
-                                       const char *       key, 
-                                       nsCacheAccessMode  accessRequested,
-                                       nsICacheListener * listener);
-#endif
     /**
      * Methods called by nsCacheEntryDescriptor
      */
@@ -93,7 +82,6 @@ public:
 
     nsresult         GetFileForEntry(nsCacheEntry *         entry,
                                      nsIFile **             result);
-
 
     /**
      * Methods called by any cache classes

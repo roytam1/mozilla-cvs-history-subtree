@@ -35,7 +35,9 @@
 
 static NS_DEFINE_CID(kStorageTransportCID, NS_STORAGETRANSPORT_CID);
 
+const char *gMemoryDeviceID      = "memory";
 const char *gMemoryCacheSizePref = "browser.cache.memory_cache_size";
+
 
 nsMemoryCacheDevice::nsMemoryCacheDevice()
     : mHardLimit(0),
@@ -121,7 +123,7 @@ nsMemoryCacheDevice::Init()
 const char *
 nsMemoryCacheDevice::GetDeviceID()
 {
-    return "memory";
+    return gMemoryDeviceID;
 }
 
 
@@ -264,7 +266,16 @@ nsMemoryCacheDevice::OnDataSizeChange( nsCacheEntry * entry, PRInt32 deltaSize)
 nsresult
 nsMemoryCacheDevice::Visit(nsICacheVisitor * visitor)
 {
-    //    visitor->VisitDevice(GetDeviceID(), deviceInfo);
+    nsMemoryCacheDeviceInfo * deviceInfo = new nsMemoryCacheDeviceInfo(this);
+    nsCOMPtr<nsICacheDeviceInfo> ref(deviceInfo);
+
+    PRBool keepGoing;
+    nsresult rv = visitor->VisitDevice(gMemoryDeviceID, deviceInfo, &keepGoing);
+    if (NS_FAILED(rv)) return rv;
+
+    if (keepGoing)
+        return NS_OK; // XXX  visitEntries(visitor);
+
     return NS_OK;
 }
 
@@ -321,23 +332,6 @@ nsMemoryCacheDevice::EvictEntriesIfNecessary(void)
  * nsMemoryCacheDeviceInfo - for implementing about:cache
  *****************************************************************************/
 
-class nsMemoryCacheDeviceInfo : public nsICacheDeviceInfo {
-public:
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSICACHEDEVICEINFO
-
-    nsMemoryCacheDeviceInfo(nsMemoryCacheDevice* device)
-        :   mDevice(device)
-    {
-        NS_INIT_ISUPPORTS();
-    }
-
-    virtual ~nsMemoryCacheDeviceInfo() {}
-    
-private:
-    nsMemoryCacheDevice* mDevice;
-};
-
 
 NS_IMPL_ISUPPORTS1(nsMemoryCacheDeviceInfo, nsICacheDeviceInfo);
 
@@ -367,7 +361,8 @@ nsMemoryCacheDeviceInfo::GetEntryCount(PRUint32 * result)
 {
     NS_ENSURE_ARG_POINTER(result);
     // XXX compare calculated count vs. mEntryCount
-    return NS_ERROR_NOT_IMPLEMENTED;
+    *result = mDevice->mEntryCount;
+    return NS_OK;
 }
 
 
@@ -375,7 +370,7 @@ NS_IMETHODIMP
 nsMemoryCacheDeviceInfo::GetTotalSize(PRUint32 * result)
 {
     NS_ENSURE_ARG_POINTER(result);
-    // *aTotalSize = mDevice->getCacheSize();
+    *result = mDevice->mTotalSize;
     return NS_OK;
 }
 
@@ -384,7 +379,7 @@ NS_IMETHODIMP
 nsMemoryCacheDeviceInfo::GetMaximumSize(PRUint32 * result)
 {
     NS_ENSURE_ARG_POINTER(result);
-    // *aMaximumSize = mDevice->getCacheCapacity();
+    *result = mDevice->mHardLimit;
     return NS_OK;
 }
 

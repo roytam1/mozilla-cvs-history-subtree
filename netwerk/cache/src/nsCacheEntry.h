@@ -61,6 +61,7 @@ public:
 
     PRInt32  FetchCount(void)                          { return mFetchCount;}
     void     SetFetchCount( PRInt32   count)           { mFetchCount = count;}
+    void     IncrementFetchCount(void)                 { ++mFetchCount; }
 
     PRUint32 LastFetched(void)                         { return mLastFetched;}
     void     SetLastFetched( PRUint32  lastFetched)    { mLastFetched = lastFetched;}
