@@ -1776,7 +1776,8 @@ ProcessNSCertTypeExtensions(SECItem  *extData,
   SECItem decoded;
   decoded.data = nsnull;
   decoded.len  = 0;
-  SEC_ASN1DecodeItem(nsnull, &decoded, SEC_BitStringTemplate, extData);
+  SEC_ASN1DecodeItem(nsnull, &decoded, 
+		SEC_ASN1_GET(SEC_BitStringTemplate), extData);
   unsigned char nsCertType = decoded.data[0];
   nsString local;
   nsMemory::Free(decoded.data);
@@ -1832,7 +1833,8 @@ ProcessKeyUsageExtension(SECItem *extData, nsString &text,
   SECItem decoded;
   decoded.data = nsnull;
   decoded.len  = 0;
-  SEC_ASN1DecodeItem(nsnull, &decoded, SEC_BitStringTemplate, extData);
+  SEC_ASN1DecodeItem(nsnull, &decoded, 
+				SEC_ASN1_GET(SEC_BitStringTemplate), extData);
   unsigned char keyUsage = decoded.data[0];
   nsString local;
   nsMemory::Free(decoded.data);  
@@ -3720,7 +3722,7 @@ nsNSSCertificateDB::ImportCrl (char *aData, PRUint32 aLength, nsIURI * aURI, PRU
     }
   } else {
     sec_rv = SEC_ASN1DecodeItem(arena,
-                            &sd, CERT_SignedDataTemplate, 
+                            &sd, SEC_ASN1_GET(CERT_SignedDataTemplate), 
                             &derCrl);
     if (sec_rv != SECSuccess) {
       goto loser;
