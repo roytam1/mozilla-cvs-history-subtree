@@ -674,6 +674,8 @@ xpfe/components/ucth/public/Makefile
 xpfe/components/ucth/src/Makefile
 xpfe/components/autocomplete/Makefile
 xpfe/components/autocomplete/public/Makefile
+xpfe/components/autocomplete/resources/Makefile
+xpfe/components/autocomplete/resources/content/Makefile
 xpfe/components/autocomplete/src/Makefile
 xpfe/components/urlbarhistory/Makefile
 xpfe/components/urlbarhistory/public/Makefile
