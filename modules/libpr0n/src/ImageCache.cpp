@@ -91,4 +91,3 @@ PRBool ImageCache::Remove(nsIURI *aKey)
   nsIURIKey key(aKey);
   return mCache.Remove(&key);
 }
-
