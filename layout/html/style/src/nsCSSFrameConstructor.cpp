@@ -1600,20 +1600,17 @@ nsCSSFrameConstructor::TableProcessChildren(nsIPresContext*          aPresContex
 
   const nsStyleDisplay* display = (const nsStyleDisplay*)
         parentStyleContext->GetStyleData(eStyleStruct_Display);
-      
+  if (aTableCreator.IsTreeCreator() &&
+      (display->mDisplay == NS_STYLE_DISPLAY_TABLE_ROW_GROUP)) {
+      // Stop the processing. The tree row group frame builds its children
+      // as needed.
+      return NS_OK;
+  }
+  
   aContent->ChildCount(count);
   for (PRInt32 i = 0; i < count; i++) {
     nsCOMPtr<nsIContent> childContent;
-    
     aContent->ChildAt(i, *getter_AddRefs(childContent));
-
-    if (aTableCreator.IsTreeCreator() &&
-        (display->mDisplay == NS_STYLE_DISPLAY_TABLE_ROW_GROUP) &&
-        i > 74) {
-      // Stop the processing. We never build more than 75 children initially.
-      break;
-    }
-
     rv = TableProcessChild(aPresContext, aState, childContent, aParentFrame, parentStyleContext,
                            aChildItems, aTableCreator);
   }
