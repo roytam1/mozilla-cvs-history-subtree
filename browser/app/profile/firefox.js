@@ -340,7 +340,11 @@ pref("plugin.default_plugin_disabled", true);
 // plugin finder service
 pref("pfs.datasource.url", "chrome://mozapps/locale/plugins/plugins.properties");
 
+#ifdef XP_WIN
 pref("browser.preferences.instantApply", false);
+#else
+pref("browser.preferences.instantApply", true);
+#endif
 #ifdef XP_MACOSX
 pref("browser.preferences.animateFadeIn", true);
 #else

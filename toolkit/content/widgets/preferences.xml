@@ -393,6 +393,8 @@
       <stylesheet src="chrome://global/skin/preferences.css"/>
     </resources>
     <content xul:dlgbuttons="accept,cancel" xul:persist="lastSelected screenX screenY"
+             xul:closebuttonlabel="&preferencesCloseButton.label;"
+             xul:closebuttonaccesskey="&preferencesCloseButton.accesskey;"
 #ifdef XP_WIN
              xul:title="&preferencesDefaultTitleWin.title;">
 #else
@@ -428,9 +430,17 @@
                                .getService(Components.interfaces.nsIPrefBranch);
           this.instantApply = psvc.getBoolPref("browser.preferences.instantApply");
           if (this.instantApply) {
+#ifdef XP_MACOSX
             var dlgButtons = document.getAnonymousElementByAttribute(this, "anonid", "dlg-buttons");
             dlgButtons.hidden = true;
-            // XXXtodo: Set up Close button for GNOME
+#else
+            var docElt = document.documentElement;
+            var acceptButton = docElt.getButton("accept");
+            acceptButton.hidden = true;
+            var cancelButton  = docElt.getButton("cancel");
+            cancelButton.label = docElt.getAttribute("closebuttonlabel");
+            cancelButton.accesskey = docElt.getAttribute("closebuttonaccesskey");
+#endif
           }
         }
         var panes = this.preferencePanes;
