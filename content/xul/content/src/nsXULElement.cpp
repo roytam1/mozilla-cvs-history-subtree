@@ -5258,12 +5258,14 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
         // XXXbe temporary, until we serialize/deserialize everything from the
         //       nsXULPrototypeDocument on down...
         nsCOMPtr<nsIFastLoadService> fastLoadService(do_GetFastLoadService());
-        nsCOMPtr<nsIObjectOutputStream> objectOutput;
-        fastLoadService->GetOutputStream(getter_AddRefs(objectOutput));
-        if (objectOutput) {
-            rv = Serialize(objectOutput, context);
-            if (NS_FAILED(rv))
-                nsXULDocument::AbortFastLoads();
+        if (fastLoadService) {
+            nsCOMPtr<nsIObjectOutputStream> objectOutput;
+            fastLoadService->GetOutputStream(getter_AddRefs(objectOutput));
+            if (objectOutput) {
+                rv = Serialize(objectOutput, context);
+                if (NS_FAILED(rv))
+                    nsXULDocument::AbortFastLoads();
+            }
         }
     }
 
