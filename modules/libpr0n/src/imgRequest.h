@@ -68,11 +68,18 @@ public:
   virtual ~imgRequest();
 
   /* additional members */
-  nsresult Init(nsIChannel *aChannel, nsICacheEntryDescriptor *aCacheEntry);
+  nsresult Init(nsIChannel *aChannel,
+                nsICacheEntryDescriptor *aCacheEntry,
+                void * aCacheId);
   nsresult AddProxy(imgRequestProxy *proxy);
   nsresult RemoveProxy(imgRequestProxy *proxy, nsresult aStatus);
 
   void SniffMimeType(const char *buf, PRUint32 len);
+
+  // a request is "reusable" if it has already been loaded, or it is
+  // currently being loaded on the same event queue as the new request
+  // being made...
+  PRBool IsReusable(void *aCacheId) { return !mLoading || (aCacheId == mCacheId); }
 
 protected:
   void RemoveFromCache();
@@ -104,6 +111,8 @@ private:
   nsCString mContentType;
 
   nsCOMPtr<nsICacheEntryDescriptor> mCacheEntry; /* we hold on to this to this so long as we have observers */
+
+  void *mCacheId;
 };
 
 #endif
