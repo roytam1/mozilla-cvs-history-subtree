@@ -20,7 +20,7 @@
 
 DEPTH = ..
 
-ifdef JS_THREADSAFE
+ifdef USE_NSPR
 OTHER_LIBS += -L$(DEPTH)/../../dist/$(OBJDIR)/lib -lnspr21
 endif
 

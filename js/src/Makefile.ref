@@ -24,7 +24,7 @@ include config.mk
 
 #NS_USE_NATIVE = 1
 
-ifdef JS_THREADSAFE
+ifdef USE_NSPR
 DEFINES += -DJS_THREADSAFE
 NSPR_LIBRARY = -L../../dist/$(OBJDIR)/lib -lnspr21
 INCLUDES += -I../../dist/$(OBJDIR)/include
