@@ -510,30 +510,31 @@
 - (id)outlineView:(NSOutlineView *)outlineView objectValueForTableColumn:(NSTableColumn *)tableColumn byItem:(id)item
 {
     NSString *columnName = [tableColumn identifier];
-    NSMutableAttributedString *cellValue = [[NSMutableAttributedString alloc] init];
-    NSFileWrapper *fileWrapper = [[NSFileWrapper alloc] initRegularFileWithContents:nil];
-    NSTextAttachment *textAttachment = [[NSTextAttachment alloc] initWithFileWrapper:fileWrapper];
-    NSMutableAttributedString *attachmentAttrString = nil;
-    NSCell *attachmentAttrStringCell;
+    NSMutableAttributedString *cellValue = nil;
 
-    if ([columnName isEqualToString: @"name"]) {
+    if ([columnName isEqualToString: @"name"])
+    {
+        NSFileWrapper     *fileWrapper       = [[NSFileWrapper alloc] initRegularFileWithContents:nil];
+        NSTextAttachment  *textAttachment    = [[NSTextAttachment alloc] initWithFileWrapper:fileWrapper];
+
         nsIContent* content = [item contentNode];
         nsAutoString nameAttr;
         content->GetAttr(kNameSpaceID_None, BookmarksService::gNameAtom, nameAttr);
         
         //Set cell's textual contents
-        [cellValue replaceCharactersInRange:NSMakeRange(0, [cellValue length]) withString:[NSString stringWith_nsAString: nameAttr]];
+        //[cellValue replaceCharactersInRange:NSMakeRange(0, [cellValue length]) withString:[NSString stringWith_nsAString: nameAttr]];
+        cellValue = [[NSMutableAttributedString alloc] initWithString:[NSString stringWith_nsAString: nameAttr]];
         
         //Create an attributed string to hold the empty attachment, then release the components.
-        attachmentAttrString = [[NSMutableAttributedString attributedStringWithAttachment:textAttachment] retain];
+        NSMutableAttributedString* attachmentAttrString = [NSMutableAttributedString attributedStringWithAttachment:textAttachment];
         [textAttachment release];
         [fileWrapper release];
 
         //Get the cell of the text attachment.
-        attachmentAttrStringCell = (NSCell *)[(NSTextAttachment *)[attachmentAttrString attribute:NSAttachmentAttributeName atIndex:0 effectiveRange:nil] attachmentCell];
+        NSCell* attachmentAttrStringCell = (NSCell *)[(NSTextAttachment *)[attachmentAttrString attribute:NSAttachmentAttributeName atIndex:0 effectiveRange:nil] attachmentCell];
 
         nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(content));
-        NSImage* bookmarkImage = mBookmarks->CreateIconForBookmark(elt);
+        NSImage* bookmarkImage = BookmarksService::CreateIconForBookmark(elt);
         [attachmentAttrStringCell setImage:bookmarkImage];
         
         //Insert the image
