@@ -1,0 +1,297 @@
+<!ENTITY taskbarCmd.label "Vrstica stanja">
+<!ENTITY printSetupCmd.accesskey "r">
+<!ENTITY saveLinkCmd.label "Shrani povezavo na disk ...">
+<!ENTITY copyEmailCmd.label "Kopiraj e-poštni naslov">
+<!ENTITY newNavigatorCmd.label "Novo okno">
+<!ENTITY editMenu.accesskey "e">
+<!ENTITY showOnlyThisFrameCmd.label "Pokaži le ta okvir">
+<!ENTITY releaseCmd.accesskey "i">
+<!ENTITY selectAllCmd.accesskey "v">
+<!ENTITY findAgainCmd.label "Ponovno najdi">
+<!ENTITY saveImageCmd.accesskey "s">
+<!ENTITY historyButton.tooltip "Prikaže strani, ki ste jih obiskali v bližnji preteklosti">
+<!ENTITY pasteCmd.key "V">
+<!ENTITY bookmarkPageCmd.label "Dodaj stran med zaznamke ...">
+<!ENTITY tabCmd.label "Nov zavihek">
+<!ENTITY printButton.label "Natisni">
+<!ENTITY viewFrameSourceCmd.accesskey "V">
+<!ENTITY javaScriptConsoleCmd.accesskey "C">
+<!ENTITY viewCustomizeToolbar.label "Po meri ...">
+<!ENTITY copyEmailCmd.accesskey "E">
+<!ENTITY pageThemeNoTheme.label "Brez sloga">
+<!ENTITY goHomeCmd.label "Domov">
+<!ENTITY printPreviewCmd.label "Predogled tiskanja">
+<!ENTITY cutCmd.label "Izreži">
+<!ENTITY urlbar.accesskey "d">
+<!ENTITY stopCmd.label "Ustavi">
+<!ENTITY copyCmd.label "Kopiraj">
+<!ENTITY closeCmd.accesskey "z">
+<!ENTITY openFileCmd.label "Odpri datoteko ...">
+<!ENTITY pageThemeNoTheme.accesskey "b">
+<!ENTITY quitApplicationCmd.accesskey "i">
+<!ENTITY sendImageCmd.label "Pošlji sliko ...">
+<!ENTITY editMenu.label "Urejanje">
+<!ENTITY openFrameCmd.label "Odpri okvir v novem oknu">
+<!ENTITY pageReportIcon.tooltip "Spremeni nastavitve prepovedovanja nezahtevanih oken za to stran">
+<!ENTITY setWallpaperCmd.label "Nastavi za sliko ozadja namizja">
+<!ENTITY reloadFrameCmd.accesskey "R">
+<!ENTITY pageSourceCmd.label "Izvorna koda strani">
+<!ENTITY navbarCmd.accesskey "N">
+<!ENTITY goButton.tooltip "V naslovno polje vpišite spletno mesto, nato pa kliknite na gumb Pojdi">
+<!ENTITY quitApplicationCmdWin.accesskey "i">
+<!ENTITY metadataCmd.label "Lastnosti">
+<!ENTITY textZoomEnlargeCmd.label "Povečaj velikost besedila">
+<!ENTITY openLinkCmd.label "Odpri povezavo v novem oknu">
+<!ENTITY newMenu.label "Novo">
+<!ENTITY setWallpaperCmd.accesskey "S">
+<!ENTITY proxyIcon.tooltip "Povlecite in spustite to ikono, da se ustvari povezava do te strani">
+<!ENTITY aboutCmd.accesskey "A">
+<!ENTITY stopCmd.accesskey "S">
+<!ENTITY viewToolbarsMenu.accesskey "T">
+<!ENTITY copyLinkCmd.label "Kopiraj mesto povezave">
+<!ENTITY sendPageCmd.label "Pošlji stran ...">
+<!ENTITY newNavigatorCmd.key "N">
+<!ENTITY toolsMenu.accesskey "r">
+<!ENTITY bringAllToFront.label "Prinesi vse v ospredje">
+<!ENTITY selectAllCmd.label "Izberi vse">
+<!ENTITY bookmarkLinkCmd.accesskey "p">
+<!ENTITY viewFrameInfoCmd.label "Pokaži podatke o okvirju">
+<!ENTITY mainWindow.title "&brandFullName;">
+<!ENTITY preferencesCmd.accesskey "M">
+<!ENTITY quitApplicationCmdWin.label "Izhod">
+<!ENTITY textZoomReduceCmd.commandkey "-">
+<!ENTITY zoomWindow.label "Povečevalno okno">
+<!ENTITY viewSidebarMenu.accesskey "v">
+<!ENTITY forwardCmd.accesskey "p">
+<!ENTITY forwardButton.tooltip "Pojdi na naslednjo stran">
+<!ENTITY openFrameCmdInTab.label "Odpri okvir v novem zavihku">
+<!ENTITY throbber.tooltip "Pojdi na spletno stran &brandShortName;">
+<!ENTITY manBookmarksCmd.accesskey "u">
+<!ENTITY locationItem.title "Lokacija">
+<!ENTITY pageThemePersistentOnly.accesskey "O">
+<!ENTITY closeCmd.key "W">
+<!ENTITY openFileCmd.commandkey "o">
+<!ENTITY viewPartialSourceForSelectionCmd.label "Pokaži izvorno kodo izbora">
+<!ENTITY sendPageCmd.accesskey "S">
+<!ENTITY undoCmd.label "Razveljavi ...">
+<!ENTITY pageThemeIcon.tooltip "Uporabi drug slog strani">
+<!ENTITY earlierHistory.label "Prejšnja zgodovina">
+<!ENTITY cutCmd.key "X">
+<!ENTITY helpMenu.label "Pomoč">
+<!ENTITY addCurPageAsCmd.label "Dodaj med zaznamke ...">
+<!ENTITY reloadCmd.commandkey "r">
+<!ENTITY backCmd.accesskey "N">
+<!ENTITY goHomeCmd.accesskey "d">
+<!ENTITY reloadButton.tooltip "Ponovno naloži trenutno stran">
+<!ENTITY goButton.label "Pojdi">
+<!ENTITY pageSourceCmd.commandkey "u">
+<!ENTITY viewBGImageCmd.accesskey "o">
+<!ENTITY findOnCmd.accesskey "d">
+<!ENTITY goMenu.accesskey "o">
+<!ENTITY fileMenu.accesskey "D">
+<!ENTITY viewPageSourceCmd.label "Pokaži izvorno kodo strani">
+<!ENTITY javaConsoleCmd.accesskey "J">
+<!ENTITY textZoomResetCmd.commandkey "0">
+<!ENTITY savePageCmd.commandkey "s">
+<!ENTITY printCmd.commandkey "p">
+<!ENTITY viewPartialSourceForMathMLCmd.label "Pokaži izvorno kodo MathML">
+<!ENTITY searchItem.title "Iskanje">
+<!ENTITY bookmarksButton.tooltip "Prikaže vaše zaznamke">
+<!ENTITY printButton.tooltip "Natisni to stran">
+<!ENTITY saveImageCmd.label "Shrani sliko kot ...">
+<!ENTITY saveFrameCmd.accesskey "t">
+<!ENTITY viewToolbarsMenu.label "Orodne vrstice">
+<!ENTITY javaConsoleCmd.label "Javanska konzola">
+<!ENTITY findOnCmd.commandkey "f">
+<!ENTITY searchFocus.commandkey "k">
+<!ENTITY navbarCmd.label "Orodna vrstica za brskanje">
+<!ENTITY savePageCmd.label "Shrani stran kot ...">
+<!ENTITY cutCmd.accesskey "i">
+<!ENTITY saveLinkCmd.accesskey "k">
+<!ENTITY pasteCmd.accesskey "P">
+<!ENTITY copyImageCmd.accesskey "o">
+<!ENTITY deleteCmd.accesskey "b">
+<!ENTITY findOnSearchBarCmd.label "Najdi na tej strani">
+<!ENTITY bookmarkFrameCmd.label "Dodaj okvir med zaznamke ...">
+<!ENTITY helpMenu.accesskey "m">
+<!ENTITY openLinkInWindowCmd.label "Odpri">
+<!ENTITY preferencesCmd.label "Možnosti ...">
+<!ENTITY viewCustomizeToolbar.accesskey "p">
+<!ENTITY aboutCmd.label "O programu &brandFullName;">
+<!ENTITY backButton.tooltip "Pojdi na prejšnjo stran">
+<!ENTITY throbberItem.title "Merilec dejavnosti">
+<!ENTITY releaseCmd.label "Opombe ob izdaji">
+<!ENTITY newTabButton.tooltip "Odpre nov zavihek">
+<!ENTITY taskbarCmd.accesskey "v">
+<!ENTITY viewPartialSourceCmd.accesskey "r">
+<!ENTITY pageThemePersistentOnly.label "Osnovni slog">
+<!ENTITY viewsourcetitle.preface "Izvorna koda strani: ">
+<!ENTITY selectAllCmd.key "A">
+<!ENTITY viewPageInfoCmd.label "Pokaži podatke o strani">
+<!ENTITY historyButton.label "Zgodovina">
+<!ENTITY showOnlyThisFrameCmd.accesskey "l">
+<!ENTITY findAgainCmd.commandkey "g">
+<!ENTITY fullScreenCmd.label "Celozaslonski način">
+<!ENTITY stopButton.tooltip "Prenehaj z nalaganjem te strani">
+<!ENTITY redoCmd.accesskey "o">
+<!ENTITY closeCmd.label "Zapri">
+<!ENTITY javaScriptConsoleCmd.label "Konzola JavaScript">
+<!ENTITY textZoomReduceCmd.accesskey "Z">
+<!ENTITY reloadFrameCmd.label "Ponovno naloži okvir">
+<!ENTITY findAgainCmd.commandkey2 "VK_F3">
+<!ENTITY bookmarksMenu.accesskey "Z">
+<!ENTITY pageInfoCmd.accesskey "I">
+<!ENTITY deleteCmd.label "Izbriši">
+<!ENTITY openFileCmd.accesskey "O">
+<!ENTITY viewFrameInfoCmd.accesskey "i">
+<!ENTITY fullScreenCmd.accesskey "C">
+<!ENTITY redoCmd.label "Ponovi">
+<!ENTITY toolsMenu.label "Orodja">
+<!ENTITY viewMenu.label "Pogled">
+<!ENTITY newWindowButton.tooltip "Odpre novo okno">
+<!ENTITY textZoomReduceCmd.label "Zmanjšaj velikost besedila">
+<!ENTITY printSetupCmd.label "Priprava strani ...">
+<!ENTITY pageSourceCmd.accesskey "o">
+<!ENTITY viewBGImageCmd.label "Pokaži sliko za ozadje">
+<!ENTITY textZoomEnlargeCmd.commandkey2 "=">
+<!ENTITY reloadCmd.accesskey "P">
+<!ENTITY goBackCmd.commandKey "[">
+<!ENTITY bookmarksButton.label "Zaznamki">
+<!ENTITY findOnCmd.label "Najdi na tej strani ...">
+<!ENTITY deleteCmd.key "D">
+<!ENTITY viewImageCmd.label "Pokaži sliko">
+<!ENTITY search.accesskey "o">
+<!ENTITY pageInfoCmd.label "Podatki o strani">
+<!ENTITY tabCmd.accesskey "z">
+<!ENTITY pasteCmd.label "Prilepi">
+<!ENTITY bookmarkLinkCmd.label "Dodaj povezavo med zaznamke ...">
+<!ENTITY tabCmd.commandkey "t">
+<!ENTITY mainWindow.titlemodifiermenuseparator " - ">
+<!ENTITY metadataCmd.accesskey "l">
+<!ENTITY copyImageCmd.label "Kopiraj mesto slike">
+<!ENTITY viewFrameSourceCmd.label "Pokaži izvorno kodo okvirja">
+<!ENTITY bookmarkPageCmd.accesskey "m">
+<!ENTITY openLinkCmdInTab.accesskey "z">
+<!ENTITY openFrameCmdInTab.accesskey "z">
+<!ENTITY printCmd.label "Natisni ...">
+<!ENTITY openLinkInWindowCmd.accesskey "p">
+<!ENTITY closeWindow.label "Zapri okno">
+<!ENTITY textZoomEnlargeCmd.accesskey "P">
+<!ENTITY viewPageSourceCmd.accesskey "V">
+<!ENTITY personalbarCmd.label "Orodna vrstica zaznamkov">
+<!ENTITY manBookmarksCmd.label "Upravljanje zaznamkov ...">
+<!ENTITY thisFrameMenu.accesskey "a">
+<!ENTITY saveFrameCmd.label "Shrani okvir kot ...">
+<!ENTITY viewImageCmd.accesskey "I">
+<!ENTITY pageThemeButton.label "Slogi strani">
+<!ENTITY printCmd.accesskey "N">
+<!ENTITY thisFrameMenu.label "Ta okvir">
+<!ENTITY newMenu.accesskey "N">
+<!ENTITY undoCmd.accesskey "z">
+<!ENTITY newNavigatorCmd.accesskey "N">
+<!ENTITY openLinkCmd.accesskey "n">
+<!ENTITY sendLinkCmd.accesskey "v">
+<!ENTITY redoCmd.key "Y">
+<!ENTITY mainWindow.titlemodifier "&brandFullName;">
+<!ENTITY sendLinkCmd.label "Pošlji povezavo ...">
+<!ENTITY viewSidebarMenu.label "Stranska vrstica">
+<!ENTITY copyLinkCmd.accesskey "i">
+<!ENTITY copyCmd.key "a">
+<!ENTITY goMenu.label "Pojdi">
+<!ENTITY sendImageCmd.accesskey "k">
+<!ENTITY forwardCmd.label "Naprej">
+<!ENTITY copyButton.tooltip "Kopiraj">
+<!ENTITY minimizeWindow.label "Minimiziraj okno">
+<!ENTITY quitApplicationCmd.label "Izhod">
+<!ENTITY pasteButton.tooltip "Prilepi">
+<!ENTITY viewPageInfoCmd.accesskey "I">
+<!ENTITY openLinkCmdInTab.label "Odpri povezavo v novem zavihku">
+<!ENTITY openCmd.commandkey "l">
+<!ENTITY bookmarksMenu.label "Zaznamki">
+<!ENTITY printPreviewCmd.accesskey "d">
+<!ENTITY minimizeWindow.key "m">
+<!ENTITY backCmd.label "Nazaj">
+<!ENTITY fileMenu.label "Datoteka">
+<!ENTITY pageInfoCmd.commandkey "i">
+<!ENTITY addCurPageAsCmd.commandkey "d">
+<!ENTITY reloadCmd.label "Ponovno naloži">
+<!ENTITY textZoomEnlargeCmd.commandkey "+">
+<!ENTITY goForwardCmd.commandKey "]">
+<!ENTITY cutButton.tooltip "Izreži">
+<!ENTITY bookmarkFrameCmd.accesskey "k">
+<!ENTITY nothingAvailable.label "(Ničesar ni na voljo)">
+<!ENTITY personalbarCmd.accesskey "z">
+<!ENTITY homeButton.label "Domov">
+<!ENTITY bookmarksItem.title "Zaznamki">
+<!ENTITY savePageCmd.accesskey "A">
+<!ENTITY undoCmd.key "Z">
+<!ENTITY addCurPageAsCmd.accesskey "a">
+<!ENTITY openFrameCmd.accesskey "v">
+<!ENTITY copyCmd.accesskey "a">
+<!ENTITY viewMenu.accesskey "P">
+<!ENTITY findAgainCmd.accesskey "j">
+<!ENTITY bookmarksToolbarItem.label "Predmeti orodne vrstice z zaznamki">
+<!ENTITY searchFocusUnix.commandkey "j">
+<!ENTITY pageInfoWinCmd.commandkey "j">
+<!ENTITY goOfflineCmd.accesskey "b">
+<!ENTITY downloads.label "Prenosi">
+<!ENTITY windowMenu.label "Okno">
+<!ENTITY downloads.accesskey "P">
+<!ENTITY helpMenuWin.label "Pomoč">
+<!ENTITY downloads.commandkey "y">
+<!ENTITY goOfflineCmd.label "Delaj v brezpovezavnem načinu">
+<!ENTITY helpMenuWin.accesskey "m">
+<!ENTITY downloads.tooltip "Prikaže napredek trenutnih prenosov">
+<!ENTITY mailButton.readMail.label "Preberi pošto">
+<!ENTITY search.label "Spletno iskanje">
+<!ENTITY mailButton.tooltip "Branje in sestavljanje pošte">
+<!ENTITY extensions.accesskey "R">
+<!ENTITY extensions.label "Razširitve">
+<!ENTITY import.label "Uvozi ...">
+<!ENTITY copyImageContentsCmd.label "Kopiraj sliko">
+<!ENTITY keywordfield.accesskey "K">
+<!ENTITY sendMessage.commandkey "m">
+<!ENTITY mailButton.newMessage.label "Novo sporočilo">
+<!ENTITY sidebarCloseButton.tooltip "Zapri stransko vrstico">
+<!ENTITY mailButton.newMessage.accesskey "s">
+<!ENTITY preferencesCmdUnix.label "Nastavitve">
+<!ENTITY mailButton.readNews.accesskey "N">
+<!ENTITY themes.tooltip "Zamenja temo">
+<!ENTITY preferencesCmdUnix.accesskey "n">
+<!ENTITY keywordfield.label "Dodaj ključno besedo k iskanju ...">
+<!ENTITY mailButton.sendLink.accesskey "p">
+<!ENTITY import.accesskey "I">
+<!ENTITY copyImageContentsCmd.accesskey "a">
+<!ENTITY mailButton.readNews.label "Preberi novice">
+<!ENTITY mailButton.readMail.accesskey "p">
+<!ENTITY themes.accesskey "T">
+<!ENTITY blockImageCmd.accesskey "k">
+<!ENTITY themes.label "Teme">
+<!ENTITY mailButton.sendLink.label "Pošlji povezavo ...">
+<!ENTITY mailButton.label "Pošta">
+<!ENTITY extensions.tooltip "Prikaže nameščene razširitve">
+
+<!ENTITY openLocationCmd.label "Odpri mesto ...">
+<!ENTITY openLocationCmd.accesskey "m">
+<!ENTITY bookmarksSidebarCmd.accesskey "Z">
+<!ENTITY bookmarksSidebarCmd.commandkey "b">
+<!ENTITY bookmarksSidebarWinCmd.commandkey "i">
+<!ENTITY historySidebarCmd.accesskey "Z">
+<!ENTITY historySidebarCmd.commandKey "h">
+<!ENTITY searchFocus.commandkey2 "e">
+<!ENTITY search.accesskey "i">
+<!ENTITY mailMenu.label "Pošta in novice">
+<!ENTITY mailMenu.accesskey "P">
+<!ENTITY find.label "Najdi:">
+<!ENTITY findNext.label "Najdi naprej">
+<!ENTITY findNext.tooltip "Najde naslednji pojav fraze">
+<!ENTITY findPrevious.label "Najdi nazaj">
+<!ENTITY findPrevious.tooltip "Najde prejšnji pojav fraze">
+<!ENTITY findCloseButton.tooltip "Zapri vrstico iskanja">
+<!ENTITY highlight.label "Označi">
+<!ENTITY highlight.tooltip "Označi vsak pojav fraze">
+
+<!ENTITY allowPopups.accesskey "d">
+<!ENTITY editPopupSettings.label "Uredi možnosti blokiranja nezahtevanih oken ...">
+<!ENTITY editPopupSettings.accesskey "U">
+<!ENTITY dontShowMessage.accesskey "N">

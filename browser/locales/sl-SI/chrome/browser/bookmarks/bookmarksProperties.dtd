@@ -1,0 +1,62 @@
+<!ENTITY PMnine.label "21:00">
+<!ENTITY PMfour.label "16:00">
+<!ENTITY AMeleven.label "11:00">
+<!ENTITY generalInfo.accesskey "P">
+<!ENTITY bookmarks.location.label "Mesto:">
+<!ENTITY checkfridays.label "Ob petkih">
+<!ENTITY generalInfo.label "Podatki">
+<!ENTITY checknever.label "Nikoli">
+<!ENTITY bookmarks.information.label "Informacije:">
+<!ENTITY checkthursdays.label "Ob četrtkih">
+<!ENTITY checkweekdays.label "Vsak delovni dan">
+<!ENTITY AMfive.label "05:00">
+<!ENTITY AMone.label "01:00">
+<!ENTITY AMnine.label "09:00">
+<!ENTITY AMfour.label "04:00">
+<!ENTITY every.label "vsakih">
+<!ENTITY PMone.label "13:00">
+<!ENTITY when.label "Kdaj:">
+<!ENTITY bookmarks.windowtitle.label "Lastnosti zaznamka &quot;**bm_title**&quot;">
+<!ENTITY notification.alert.label "Prikaži opozorilo">
+<!ENTITY checkmondays.label "Ob ponedeljkih">
+<!ENTITY bookmarks.webpanels.label "Ta zaznamek nalagaj v stranski vrstici">
+<!ENTITY bookmarks.shortcut.label "Ključna beseda:">
+<!ENTITY AMten.label "10:00">
+<!ENTITY schedule.description "&brandShortName; lahko to spletno stran periodično spremlja, in vas obvesti, če se spremeni. Uporabite sledeče nastavitve, če želite biti obveščeni o spremembah spletne strani zaznamka.">
+<!ENTITY notification.sound.label "Zaigraj zvok">
+<!ENTITY AMsix.label "06:00">
+<!ENTITY checksundays.label "Ob nedeljah">
+<!ENTITY PMten.label "22:00">
+<!ENTITY minutes.label "minut">
+<!ENTITY bookmarks.name.label "Ime:">
+<!ENTITY PMsix.label "18:00">
+<!ENTITY checkweekends.label "Vsak konec tedna">
+<!ENTITY checkforupdates.legend.label "Preglej to spletno mesto za spremembe:">
+<!ENTITY notifications.legend.label "Obveščanje:">
+<!ENTITY noon.label "12:00">
+<!ENTITY PMthree.label "15:00">
+<!ENTITY PMeight.label "20:00">
+<!ENTITY AMtwo.label "02:00">
+<!ENTITY notification.icon.label "Spremeni ikono zaznamka">
+<!ENTITY PMeleven.label "23:00">
+<!ENTITY to.label "do">
+<!ENTITY notification.window.label "Odpri to spletno stran v novem oknu">
+<!ENTITY PMseven.label "19:00">
+<!ENTITY checksaturdays.label "Ob sobotah">
+<!ENTITY PMtwo.label "14:00">
+<!ENTITY AMthree.label "03:00">
+<!ENTITY AMeight.label "08:00">
+<!ENTITY notification.label "Obvestila">
+<!ENTITY schedule.label "Urnik">
+<!ENTITY from.label "od">
+<!ENTITY schedule.accesskey "U">
+<!ENTITY notification.accesskey "O">
+<!ENTITY AMseven.label "07:00">
+<!ENTITY notification.description "Ko se spletna stran v zaznamku spremeni, vas lahko &brandShortName; o tem obvesti. Uporabite te nastavitve, če želite prejemati obvestila o spremembah.">
+<!ENTITY checkwednesdays.label "Ob sredah">
+<!ENTITY bookmarks.description.label "Opis:">
+<!ENTITY midnight.label "00:00">
+<!ENTITY checkeveryday.label "Vsak dan">
+<!ENTITY PMfive.label "17:00">
+<!ENTITY checktuesdays.label "Ob torkih">
+<!ENTITY bookmarks.feedurl.label "Nalagalno mesto:">

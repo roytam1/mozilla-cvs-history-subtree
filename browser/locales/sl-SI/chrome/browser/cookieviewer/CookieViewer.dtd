@@ -1,0 +1,14 @@
+<!ENTITY treehead.cookiedomain.label "Stran">
+<!ENTITY props.domain.label "Gostitelj:">
+<!ENTITY props.name.label "Ime:">
+<!ENTITY props.value.label "Vsebina:">
+<!ENTITY treehead.cookiename.label "Ime piškota">
+<!ENTITY button.removecookie.label "Odstrani piškot">
+<!ENTITY treehead.infoselected.label "Podatki o izbranem piškotu">
+<!ENTITY button.removeallcookies.label "Odstrani vse piškote">
+<!ENTITY props.expires.label "Velja do:">
+<!ENTITY props.secure.label "Strežnik varen:">
+<!ENTITY div.cookiesonsystem.label "Preglejte in odstranite piškote, ki so shranjeni na vašem računalniku.">
+<!ENTITY props.path.label "Pot:">
+<!ENTITY checkbox.label "Prepovej stranem, ki so nastavile odstanjene piškote, da nastavljajo piškote v prihodnje">
+<!ENTITY window.title "Upravitelj piškotov">

@@ -1,0 +1,9 @@
+<!ENTITY allowScripts.label "Dovoli skriptam, da:">
+<!ENTITY allowWindowOpen.label "odprejo nezahtevana okna">
+<!ENTITY allowWindowStatusChange.label "spremenijo besedilo vrstice stanja">
+<!ENTITY allowWindowFlip.label "dvignejo ali spustijo okna">
+<!ENTITY allowWindowMoveResize.label "premikajo ali večajo (manjšajo) okna">
+<!ENTITY allowScripts.title "Napredne možnosti JavaScript">
+<!ENTITY allowHideStatusBar.label "skrijejo vrstico stanja">
+<!ENTITY allowWindowImageSrcChange.label "spremenijo slike">
+<!ENTITY allowControlContextMenu.label "Onemogoči ali zamenjaj vsebinske menije">

@@ -1,0 +1,28 @@
+<!ENTITY name.accesskey "I">
+<!ENTITY alwayscreateinfolder.label "Tega pogovornega okna ne prikaži več">
+<!ENTITY button.defaultfolder.accesskey "z">
+<!ENTITY selectFolder.label "Izbira imenika">
+<!ENTITY createin.label "Ustvari v:">
+<!ENTITY button.createin.label "Ustvari v &gt;&gt;">
+<!ENTITY createin.accesskey "U">
+<!ENTITY url.label "Mesto:">
+<!ENTITY newbookmark.label "Program &brandShortName; bo dodal zaznamek, ki kaže na to stran.">
+<!ENTITY newBookmark.title "Dodajanje zaznamka">
+<!ENTITY button.createin2.label "Ustvari v &lt;&lt;">
+<!ENTITY button.defaultfolder.label "Uporabi privzeto">
+<!ENTITY button.createin.accesskey "v">
+<!ENTITY button.newfolder.label "Nov imenik ...">
+<!ENTITY addGroup.accesskey "D">
+<!ENTITY name.label "Ime:">
+<!ENTITY button.newfolder.accesskey "i">
+<!ENTITY dontshowmessage.tooltip "Ko je izbrana ta možnost, bodo novi zaznamki uporabljali naslov, ki ga poda spletna stran.">
+<!ENTITY url.accesskey "M">
+<!ENTITY addGroup.label "Dodaj vse zavihke v en imenik zaznamkov">
+<!ENTITY alwayscreateinfolder.accesskey "a">
+<!ENTITY acceptButton.label "Dodaj">
+<!ENTITY newFolder.label "Nov imenik">
+<!ENTITY expanderDown.tooltip "Prikaži vse imenike zaznamkov">
+<!ENTITY expanderUp.tooltip "Skrij">
+<!ENTITY newFolder.accesskey "N">
+<!ENTITY keyword.label "Ključna beseda:">
+<!ENTITY keyword.accesskey "K">

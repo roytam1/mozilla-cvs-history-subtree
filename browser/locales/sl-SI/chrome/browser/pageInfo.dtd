@@ -1,0 +1,64 @@
+<!ENTITY mediaAltHeader "Nadomestno besedilo:">
+<!ENTITY frameAddress "Naslov">
+<!ENTITY linkName "Ime">
+<!ENTITY linkType "Tip">
+<!ENTITY formEncoding "Kodiranje:">
+<!ENTITY mediaURL "URI:">
+<!ENTITY formName "Ime">
+<!ENTITY mediaAlt "Nadomestno besedilo:">
+<!ENTITY formType "Vrsta">
+<!ENTITY mediaCharset "Kodiranje:">
+<!ENTITY generalExpires "Velja do:">
+<!ENTITY mediaAddress "Naslov">
+<!ENTITY generalType "Vrsta:">
+<!ENTITY formNo "Št.">
+<!ENTITY generalTitle "Naslov:">
+<!ENTITY mediaEncryption "Šifriranje:">
+<!ENTITY generalReferrer "Pobudni URI:">
+<!ENTITY generalMeta "Meta:">
+<!ENTITY formCValue "Trenutna vrednost">
+<!ENTITY pageInfoWindow.width "430">
+<!ENTITY mediaNo "Št.">
+<!ENTITY mediaBase "Osnovni URI:">
+<!ENTITY mediaHeader "Slike na tej strani">
+<!ENTITY formFields "Polja:">
+<!ENTITY linkNo "Št.">
+<!ENTITY generalEncoding "Kodiranje:">
+<!ENTITY formAction "Dejanje obrazca">
+<!ENTITY generalMetaName "Ime">
+<!ENTITY framesTab "Okvirji">
+<!ENTITY mediaTitle "Naslovni atribut:">
+<!ENTITY generalSource "Izvorna koda:">
+<!ENTITY formMethod "Metoda">
+<!ENTITY linkAddress "Naslov">
+<!ENTITY generalTab "Splošno">
+<!ENTITY mediaSaveAsAccesskey "k">
+<!ENTITY generalMode "Upodobitveni način:">
+<!ENTITY linksTab "Povezave">
+<!ENTITY mediaLongdesc "Dolg opis:">
+<!ENTITY closeWindow "z">
+<!ENTITY generalMetaContent "Vsebina">
+<!ENTITY formsTab "Obrazci">
+<!ENTITY generalSize "Velikost:">
+<!ENTITY generalURL "URI:">
+<!ENTITY mediaName "Ime">
+<!ENTITY generalModified "Spremenjeno:">
+<!ENTITY mediaType "Vrsta">
+<!ENTITY mediaPlugin "Dodatek:">
+<!ENTITY linkTarget "Tarča">
+<!ENTITY formTarget "Tarča:">
+<!ENTITY frameType "Vrsta">
+<!ENTITY frameName "Ime">
+<!ENTITY formLabel "Oznaka">
+<!ENTITY mediaTab "Večpredstavnost">
+<!ENTITY mediaSaveAs "Shrani kot ...">
+<!ENTITY generalSent "Poslano:">
+<!ENTITY mediaDimensions "Dimenzije:">
+<!ENTITY pageInfoWindow.height "475">
+<!ENTITY formFName "Ime polja">
+<!ENTITY title "Podatki o strani">
+<!ENTITY linkAccessKey "Tipka za dostop">
+<!ENTITY unknown "Neznano">
+<!ENTITY description "Podatki o trenutni strani">
+<!ENTITY preface "Podatki za:">
+<!ENTITY helpButton "Pomoč">

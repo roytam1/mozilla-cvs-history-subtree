@@ -1,0 +1,27 @@
+<!ENTITY byLastVisited.accesskey "z">
+<!ENTITY view.label "Razvrsti">
+<!ENTITY find.label "Išči">
+<!ENTITY openInNewWindow.accesskey "k">
+<!ENTITY openInNewWindow.label "Odpri v novem oknu">
+<!ENTITY openInNewTab.accesskey "z">
+<!ENTITY byMostVisited.label "Po številu obiskov">
+<!ENTITY byDayAndSite.label "Po datumu in času">
+<!ENTITY byLastVisited.label "Po datumu zadnjega obiska">
+<!ENTITY bySite.label "Po strani">
+<!ENTITY bySite.accesskey "S">
+<!ENTITY byDayAndSite.accesskey "t">
+<!ENTITY byDate.accesskey "D">
+<!ENTITY byMostVisited.accesskey "b">
+<!ENTITY byDate.label "Po datumu">
+<!ENTITY openInNewTab.label "Odpri v novem zavihku">
+<!ENTITY find.accesskey "I">
+<!ENTITY collapse.label "Skrči">
+<!ENTITY openLinkInWindow.accesskey "O">
+<!ENTITY expand.accesskey "r">
+<!ENTITY expand.label "Razširi">
+<!ENTITY copyLink.accesskey "m">
+<!ENTITY bookmarkLink.accesskey "z">
+<!ENTITY openLinkInWindow.label "Odpri">
+<!ENTITY bookmarkLink.label "Dodaj povezavo med zaznamke">
+<!ENTITY copyLink.label "Kopiraj mesto povezave">
+<!ENTITY collapse.accesskey "k">

@@ -1,0 +1,50 @@
+<!ENTITY clearHistory.label "Počisti">
+<!ENTITY enableCookies.label "Omogoči piškote">
+<!ENTITY viewPasswords.label "Preglej shranjena gesla">
+<!ENTITY pageHis.accesskey "m">
+<!ENTITY cookies.label "Piškoti">
+<!ENTITY formfill.label "Shranjeni podatki obrazcev">
+<!ENTITY passwordsEnable.accesskey "g">
+<!ENTITY formfillEnable.accesskey "f">
+<!ENTITY clearAllDescription.label "Počisti vse podatke, shranjene med brskanjem:">
+<!ENTITY clearCache.label "Počisti">
+<!ENTITY pageHis.label "Zapomni si obiskane strani zadnjih">
+<!ENTITY downloads.label "Zgodovina upravitelja prenosov">
+<!ENTITY forCurrentSessionOnly.accesskey "s">
+<!ENTITY downloadsRemoveManually.label "Ročno">
+<!ENTITY downloadsRetentionPolicy.label "Odstrani datoteke iz upravitelja prenosov:">
+<!ENTITY clearAll.label "Počisti vse">
+<!ENTITY history.label "Zgodovina">
+<!ENTITY passwords.label "Shranjena gesla">
+<!ENTITY cache.label "Predpomnilnik">
+<!ENTITY kbytes "kB prostora na disku za predpomnilnik.">
+<!ENTITY passwordsDescription.label "Podatki o prijavah na spletnih straneh se lahko hranijo v upravitelju gesel, tako da vam ni potrebno ob vsakem naslednjem obisku vnašati podatkov o prijavi.">
+<!ENTITY downloadsRemoveExit.label "Ob izhodu iz programa">
+<!ENTITY viewCookies.label "Preglej piškote">
+<!ENTITY diskCache.label "Uporabi največ do:">
+<!ENTITY passwordsEnable.label "Zapomni si gesla">
+<!ENTITY cacheExplanation.label "Strani, ki si jih ogledate, so shranjene v predpomnilniku, zato da se ob naslednjem ogledu naložijo hitreje.">
+<!ENTITY forCurrentSessionOnly.label "le za trenutno sejo">
+<!ENTITY forOriginatingSiteOnly.accesskey "z">
+<!ENTITY clearDownloads.label "Počisti">
+<!ENTITY diskCache.accesskey "U">
+<!ENTITY enableCookies.accesskey "p">
+<!ENTITY privacyDescription.label "Ko brskate po spletu, se podatki o tem, kje ste bili, kaj ste počeli itd. shranjujejo v sledečih področjih.">
+<!ENTITY cookieExplanation.label "Piškoti so okusne dobrine.">
+<!ENTITY downloadsDescription.label "Upravitelj prenosov si beleži, katere datoteke ste pred kratkim shranili.">
+<!ENTITY clearPasswords.label "Počisti">
+<!ENTITY clearCookies.label "Počisti">
+<!ENTITY clearFormfill.label "Počisti">
+<!ENTITY lHeader "Zasebnost">
+<!ENTITY days.label "dni">
+<!ENTITY forOriginatingSiteOnly.label "le z izvirnega strežnika">
+<!ENTITY formfillDescription.label "Podatki, vnešeni v obrazce spletnih strani in v vrstico iskanja, so shranjeni, zato da lahko v prihodnje izpolnjujete obrazce in iščete hitreje.">
+<!ENTITY butAskFirst.label "a vprašaj pred sprejemom">
+<!ENTITY downloadsRemoveImmediately.label "Ob uspešnem prenosu">
+<!ENTITY formfillEnable.label "Shrani informacije, ki jih vnesem v obrazce na spletnih straneh in v vrstici iskanja">
+<!ENTITY butAskFirst.accesskey "a">
+<!ENTITY exceptions.label "Izjeme ...">
+<!ENTITY acceptNormally.label "do preteka">
+<!ENTITY askAboutCookies.label "vprašaj me vsakokrat posebej">
+<!ENTITY acceptForSession.label "dokler ne zaprem programa">
+<!ENTITY cookieRetention.label "Obdrži piškote:">

@@ -1,0 +1,17 @@
+<!ENTITY dialog.title "Potrditev nastavitve piškota">
+<!ENTITY button.deny.label "Zanikaj">
+<!ENTITY props.path.label "Pot:">
+<!ENTITY props.value.label "Vsebina:">
+<!ENTITY props.domain.label "Gostitelj:">
+<!ENTITY props.name.label "Ime:">
+<!ENTITY props.policy.label "Polica:">
+<!ENTITY dialog.remember.label "Uporabi mojo izbiro za vse piškote s te strani">
+<!ENTITY props.secure.label "Varen strežnik:">
+<!ENTITY button.allow.label "Dovoli">
+<!ENTITY props.box.label "O tem piškotu">
+<!ENTITY dialog.remember.accesskey "U">
+<!ENTITY props.expires.label "Preteče:">
+<!ENTITY button.allow.accesskey "d">
+<!ENTITY button.deny.accesskey "z">
+<!ENTITY button.session.accesskey "S">
+<!ENTITY button.session.label "Dovoli za sejo">

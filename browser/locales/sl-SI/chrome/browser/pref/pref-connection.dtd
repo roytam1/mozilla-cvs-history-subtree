@@ -1,0 +1,37 @@
+<!ENTITY manualTypeRadio.accesskey "r">
+<!ENTITY socks.accesskey "c">
+<!ENTITY SSLport.accesskey "a">
+<!ENTITY directTypeRadio.accesskey "d">
+<!ENTITY noproxyExplain.label "Primer: .mozilla.org, .net.nz">
+<!ENTITY socks.label "Gostitelj SOCKS:">
+<!ENTITY gopher.accesskey "g">
+<!ENTITY reload.label "Ponovno naloži">
+<!ENTITY configAutoconfigText.accesskey "u">
+<!ENTITY gopher.label "Proxy Gopher:">
+<!ENTITY gopherPort.accesskey "">
+<!ENTITY manualTypeRadio.label "Ročna nastavitev proxy">
+<!ENTITY socks4.label "SOCKS v4">
+<!ENTITY configAutoconfigText.label "Mesto nastavitev (URI):">
+<!ENTITY port.label "Vrata:">
+<!ENTITY autoTypeRadio.label "URI samodejne nastavitve za proxy:">
+<!ENTITY ftp.label "Proxy FTP:">
+<!ENTITY socks4.accesskey "k">
+<!ENTITY ssl.accesskey "s">
+<!ENTITY autoTypeRadio.accesskey "a">
+<!ENTITY noproxy.accesskey "n">
+<!ENTITY noproxy.label "Ni proxyja za:">
+<!ENTITY FTPport.accesskey "r">
+<!ENTITY reload.accesskey "i">
+<!ENTITY SOCKSport.accesskey "t">
+<!ENTITY http.accesskey "h">
+<!ENTITY ftp.accesskey "f">
+<!ENTITY lHeader "Nastavitve povezave">
+<!ENTITY http.label "Proxy HTTP:">
+<!ENTITY directTypeRadio.label "Neposredna povezava do interneta">
+<!ENTITY socks5.accesskey "v">
+<!ENTITY proxyTitle.label "Nastavitev proxyjev za dostop do interneta">
+<!ENTITY socks5.label "SOCKS v5">
+<!ENTITY ssl.label "Proxy SSL:">
+<!ENTITY HTTPport.accesskey "v">
+<!ENTITY shareproxy.label "Uporabi isti proxy za vse protokole">
+<!ENTITY shareproxy.accesskey "x">

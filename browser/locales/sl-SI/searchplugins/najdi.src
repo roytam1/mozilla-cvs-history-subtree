@@ -1,0 +1,62 @@
+# Najdi.si Mozilla/Netscape Sherlock Search Plug-in
+
+<search 
+    name         = "Najdi.si"
+    description  = "Najdi.si"
+    routeType    = "Internet"
+    version      = "0.0.5"
+    method       = "GET"
+    queryCharset ="ISO-8859-2"
+    action       = "http://www.najdi.si/search.jsp"
+    actionButton = "http://www.najdi.si/search-redirect.jsp?sourceid=mozilla-actionButton&charset=UTF-8&q="
+    actionBar    = "http://www.najdi.si/search-redirect.jsp?sourceid=mozilla-actionBar&charset=UTF-8&q="
+    searchForm   = "http://www.najdi.si/search.jsp?q=najdi"
+>
+
+    <input name = "q" user>
+    <input name = "g" value = "0">
+    <input name = "sourceid" value = "mozilla-search">
+    <inputnext name="fh" factor="10">
+    <inputprev>
+
+    <interpret 
+        browserResultType   = "result" 
+        charset             = "ISO-8859-2"
+
+        resultListStart     = "<!--a-->" 
+        resultListEnd       = "<!--z-->" 
+
+        resultItemStart     = "<!--m-->" 
+        resultItemEnd       = "<!--n-->"
+
+        bannerStart         = ""
+        bannerEnd           = ""
+
+        relevanceStart      = ""
+        relevanceEnd        = ""
+        resultItemSiteTag   = ""  
+    />
+    
+#   <interpret 
+#       browserResultType   = "category" 
+#       charset             = "ISO-8859-2"
+#
+#       resultListStart     = "<!--a-->" 
+#       resultListEnd       = "<!--z-->" 
+#
+#       resultItemStart     = "<!--m-->" 
+#       resultItemEnd       = "<!--n-->"
+#
+#       bannerStart         = ""
+#       bannerEnd           = ""
+#
+#       relevanceStart      = ""
+#       relevanceEnd        = ""
+#       resultItemSiteTag   = ""  
+#   />
+
+</search>
+
+<browser
+    alsomatch   = "http://najdi.si/search.jsp"
+/>

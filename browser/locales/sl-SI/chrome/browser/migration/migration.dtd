@@ -1,0 +1,38 @@
+<!ENTITY selectProfile.label "Sledeči profili so na voljo za uvoz iz:">
+<!ENTITY importFromCamino.label "Camino">
+<!ENTITY importFromEpiphany.accesskey "E">
+<!ENTITY importFromSafari.accesskey "Safari">
+<!ENTITY importFrom.label "Uvozi možnosti, zaznamke, zgodovino, gesla in ostale podatke od:">
+<!ENTITY importFromIE.label "Microsoft Internet Explorer">
+<!ENTITY importFromKonqueror.label "Konqueror">
+<!ENTITY importFromSeamonkey.accesskey "N">
+<!ENTITY importItems.label "Izberite elemente za uvoz:">
+<!ENTITY importFromEpiphany.label "Epiphany">
+<!ENTITY importFromOmniWeb.accesskey "W">
+<!ENTITY done.title "Uvoz končan">
+<!ENTITY migrating.title "Uvoz ...">
+<!ENTITY importFromNetscape4.accesskey "4">
+<!ENTITY importFromNothing.label "Ne uvozi ničesar">
+<!ENTITY importFromICab.label "iCab">
+<!ENTITY importFromNetscape4.label "Netscape 4.x">
+<!ENTITY importFromNothing.accesskey "n">
+<!ENTITY importFromOpera.accesskey "O">
+<!ENTITY importFromKonqueror.accesskey "K">
+<!ENTITY importFromSafari.label "Safari">
+<!ENTITY selectProfile.title "Izbira profila">
+<!ENTITY done.label "Sledeči elementi so bili uspešno uvoženi:">
+<!ENTITY importFromIE.accesskey "M">
+<!ENTITY migrating.label "Trenutno se uvaža sledeče elemente ...">
+<!ENTITY importItems.title "Elementi za uvoz">
+<!ENTITY importFromICab.accesskey "i">
+<!ENTITY importFromGaleon.label "Galeon">
+<!ENTITY migrationWizard.title "Čarovnik za uvoz">
+<!ENTITY importFromSeamonkey.label "Netscape 6, 7 ali Mozilla 1.x">
+<!ENTITY importFromCamino.accesskey "Camino">
+<!ENTITY importSource.title "Uvoz nastavitev in podatkov">
+<!ENTITY importFromOpera.label "Opera">
+<!ENTITY importFromUnix.label "Uvozi nastavitve, zaznamke, zgodovino, gesla in ostale podatke od:">
+<!ENTITY importFromPhoenix.label "Firefox 0.8, Firebird ali Phoenix">
+<!ENTITY importFromGaleon.accesskey "G">
+<!ENTITY importFromPhoenix.accesskey "P">
+<!ENTITY importFromOmniWeb.label "OmniWeb">

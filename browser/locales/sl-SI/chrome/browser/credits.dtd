@@ -1,0 +1,24 @@
+<!ENTITY brandMotto       "Brskalnik, Reloaded">
+<!ENTITY credit.leads     "Vodje tehnologije">
+<!ENTITY credit.core      "Nadzor temeljnega razvoja">
+<!ENTITY credit.gecko     "Upodobitveni program Gecko">
+<!ENTITY credit.thanks    "Posebne zahvale">
+
+<!ENTITY credit.translation "<h3>Prevod</h3><ul><li>Aleks Reinhardt</li><li>Urška Colner</li><li>Gašper Žejn</li><li>glej http://mozilla.lugos.si/</li></ul>">
+
+<!ENTITY credit.visuals     "Koordinator vizualnega designa">
+<!ENTITY credit.theme       "Design teme">
+<!ENTITY credit.brand       "Identiteta znamke">
+<!ENTITY credit.web         "Spletna stran">
+<!ENTITY credit.update      "Posodobitveni program">
+<!ENTITY credit.qalead      "Vodja zagotavljanja kakovosti">
+<!ENTITY credit.qa          "Zagotavljanje kakovosti">
+<!ENTITY credit.build       "Gradnja in izdaja">
+<!ENTITY credit.infra       "Infrastrukturna podpora">
+<!ENTITY credit.support     "Podpora">
+<!ENTITY credit.manage      "Vodenje projekta">
+<!ENTITY credit.marketleads "Vodje trženja">
+<!ENTITY credit.market      "Trženje">
+<!ENTITY credit.creators    "Avtorji">
+<!ENTITY credit.memory      "V spomin na">
+<!ENTITY credit.powered     "Upodobitev s programom">

@@ -1,0 +1,8 @@
+<!ENTITY copyright "O avtorjih">
+<!ENTITY aboutDialog.title "O programu &brandFullName;">
+<!ENTITY aboutVersion "različice &version;">
+<!ENTITY copyrightText "©1998-2004 Sodelavci. Vse pravice pridržane. Firefox in logotip 
+                                 Firefox sta zaščiteni znamki The Mozilla Foundation.  Vse pravice 
+                                 pridržane. Nekatere pravice zaščitenih znamk so uporabljene pod
+                                 licenco The Charlton Group. ">
+<!ENTITY aboutLink "&lt; O programu &brandFullName;">

@@ -1,0 +1,26 @@
+# Mozilla/Slowwwenia vstavek  odyn@email.si
+
+<search
+   name="Slowwwenia"
+   description="Slowwwenia"
+   method="GET"
+   action="http://www.slowwwenia.com/iskanje.asp"
+   update="http://mozilla.lugos.si/plugins/Slowwwenia.src"
+   updateCheckDays=1
+>
+
+
+<input type="text" name="txt_Phrase" user>
+<input tyoe="hidden" name="lst_Mode">
+
+
+
+
+<interpret
+charset=ISO-8859-2
+browserResultType="result"
+resultListStart = "<ul>"
+resultListEnd = "</ul>"
+resultItemStart = "<li>"
+>
+</search>

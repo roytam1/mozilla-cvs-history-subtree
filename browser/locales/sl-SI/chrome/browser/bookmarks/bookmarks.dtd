@@ -1,0 +1,67 @@
+<!ENTITY treecol.lastvisit.accesskey "b">
+<!ENTITY command.manageBookmarks.label "Upravljaj">
+<!ENTITY menuitem.find.label "Išči po zaznamkih">
+<!ENTITY treecol.shortcut.label "Ključna beseda">
+<!ENTITY treecol.lastmod.label "Nazadnje spremenjeno">
+<!ENTITY menuitem.view.descending.accesskey "Ž">
+<!ENTITY search.label "Iskanje:">
+<!ENTITY treecol.shortcut.accesskey "k">
+<!ENTITY command.delete.label "Izbriši">
+<!ENTITY treecol.name.accesskey "I">
+<!ENTITY menuitem.view.ascending.accesskey "a">
+<!ENTITY menuitem.view.ascending.label "Razvrščanje od A do Ž">
+<!ENTITY edit.find.keybinding "f">
+<!ENTITY treecol.url.accesskey "M">
+<!ENTITY menuitem.personaltoolbarfolder.label "Nastavi za osebno orodno vrstico">
+<!ENTITY fileMenu.accesskey "D">
+<!ENTITY treecol.description.accesskey "O">
+<!ENTITY treecol.addedon.accesskey "D">
+<!ENTITY command.rename.accesskey "P">
+<!ENTITY menuitem.newBookmark.accesskey "N">
+<!ENTITY selectBookmark.label "Izberite zaznamek, ki naj bo vaša domača stran. Če izberete imenik, se bodo zaznamki v tem imeniku odprli kot zavihki.">
+<!ENTITY treecol.lastmod.accesskey "s">
+<!ENTITY menuitem.personaltoolbarfolder.accesskey "b">
+<!ENTITY menuitem.view.command.toolbar.accesskey "O">
+<!ENTITY menuitem.newSeparator.label "Nova ločilna črta">
+<!ENTITY menuitem.view.descending.label "Razvrščanje od Ž do A">
+<!ENTITY command.moveBookmark.accesskey "M">
+<!ENTITY menuitem.import.label "Uvozi ...">
+<!ENTITY command.properties.accesskey "L">
+<!ENTITY treecol.description.label "Opis">
+<!ENTITY menuitem.view.show_columns.label "Pokaži stolpce">
+<!ENTITY command.findBookmarks.label "Išči ...">
+<!ENTITY command.rename.label "Preimenuj ...">
+<!ENTITY command.properties.label "Lastnosti ...">
+<!ENTITY menuitem.view.command.toolbar.label "Orodna vrstica">
+<!ENTITY menuitem.newSeparator.accesskey "l">
+<!ENTITY edit.properties.keybinding "i">
+<!ENTITY menuitem.newFolder.label "Nov imenik ...">
+<!ENTITY command.moveBookmark.label "Premakni zaznamke">
+<!ENTITY treecol.lastvisit.label "Nazadnje obiskano">
+<!ENTITY menuitem.view.show_columns.accesskey "c">
+<!ENTITY command.delete.accesskey "b">
+<!ENTITY menuitem.newBookmark.label "Nov zaznamek ...">
+<!ENTITY bookmarksWindowTitle.label "Upravitelj zaznamkov">
+<!ENTITY command.moveBookmarkShort.label "Premakni ...">
+<!ENTITY fileMenu.label "Datoteka">
+<!ENTITY treecol.addedon.label "Dodano">
+<!ENTITY treecol.name.label "Ime">
+<!ENTITY menuitem.newFolder.accesskey "i">
+<!ENTITY menuitem.import.accesskey "U">
+<!ENTITY menuitem.view.unsorted.label "Nerazvrščeno">
+<!ENTITY treecol.url.label "Mesto">
+<!ENTITY menuitem.find.accesskey "I">
+<!ENTITY search.accesskey "I">
+<!ENTITY menuitem.export.accesskey "z">
+<!ENTITY command.addBookmark.label "Dodaj ...">
+<!ENTITY menuitem.export.label "Izvozi ...">
+<!ENTITY selectBookmark.title "Nastavitev domače strani">
+<!ENTITY menuitem.view.unsorted.accesskey "N">
+<!ENTITY viewMenu.label "Pogled">
+<!ENTITY closeCmd.accesskey "Z">
+<!ENTITY viewMenu.accesskey "P">
+<!ENTITY closeCmd.commandkey "W">
+<!ENTITY closeCmd.label "Zapri">
+<!ENTITY menuitem.newLivemark.label    "Nov živ zaznamek ...">
+<!ENTITY menuitem.newLivemark.accesskey "i">
+<!ENTITY command.refreshLivemark.label "Osveži živ zaznamek">

@@ -1,0 +1,7 @@
+<!ENTITY unblock.accesskey "O">
+<!ENTITY done.accesskey "K">
+<!ENTITY unblock.label "Odstrani prepoved strani">
+<!ENTITY done.label "Končaj">
+<!ENTITY intro.label "Sledeče strani so poskušale prikazovati nezahtevana
+okna, a jim je bilo to prepovedano:">
+<!ENTITY caption.label "Prepovedana nezahtevana okna">

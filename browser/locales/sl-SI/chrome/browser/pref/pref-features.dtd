@@ -1,0 +1,16 @@
+<!ENTITY advancedJavaScript.accesskey "a">
+<!ENTITY forOriginatingSiteOnly.accesskey "z">
+<!ENTITY enableJavaScript.accesskey "s">
+<!ENTITY advancedJavaScript.label "Napredno ...">
+<!ENTITY enableJavaScript.label "Omogoči JavaScript">
+<!ENTITY forOriginatingSiteOnly.label "le z izvirnega strežnika">
+<!ENTITY enbJavaCheck.label "Omogoči Javo">
+<!ENTITY popupReject.accesskey "P">
+<!ENTITY popupReject.label "Prepovej nezahtevana okna">
+<!ENTITY enableImages.accesskey "i">
+<!ENTITY lHeader "Spletne možnosti">
+<!ENTITY enableImages.label "Nalagaj slike">
+<!ENTITY enbJavaCheck.accesskey "j">
+<!ENTITY enableSoftwareUpdate.label "Dovoli spletnim stranem, da nameščajo programsko opremo">
+<!ENTITY enableSoftwareUpdate.accesskey "i">
+<!ENTITY exceptions.label "Izjeme">

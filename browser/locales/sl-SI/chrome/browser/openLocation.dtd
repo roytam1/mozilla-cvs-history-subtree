@@ -1,0 +1,9 @@
+<!ENTITY newTab.label "Nov zavihek Navigatorja">
+<!ENTITY enter.label "Vnesite URI spletnega mesta ali navedite lokalno datoteko, ki jo želite odpreti:">
+<!ENTITY topWindow.label "Trenutno okno">
+<!ENTITY openWhere.label "Odpri v:">
+<!ENTITY example.label "Primer: &vendorURL;">
+<!ENTITY newWindow.label "Novo okno Navigatorja">
+<!ENTITY chooseFile.label "Izberite datoteko ...">
+<!ENTITY caption.label "Odpri spletno mesto">
+<!ENTITY openBtn.label "Odpri">

@@ -1,0 +1,25 @@
+<!ENTITY quote-cite.label "Informacije:">
+<!ENTITY insdel-cite.label "Podatki:">
+<!ENTITY misc-tblsummary.label "Povzetek tabele:">
+<!ENTITY misc-lang.label "Jezik besedila:">
+<!ENTITY insdel-sec.label "Vstavi/Izbriši lastnosti">
+<!ENTITY quote-sec.label "Lastnosti citiranja">
+<!ENTITY image-height.label "Višina:">
+<!ENTITY link-url.label "Naslov:">
+<!ENTITY link-target.label "Odpreti v:">
+<!ENTITY link-rev.label "Obratni odnos:">
+<!ENTITY link-type.label "Vrsta tarče:">
+<!ENTITY no-properties.label "Nobena lastnost ni nastavljena.">
+<!ENTITY image-url.label "Lokacija:">
+<!ENTITY insdel-date.label "Datum:">
+<!ENTITY link-sec.label "Lastnosti povezave">
+<!ENTITY image-width.label "Dolžina:">
+<!ENTITY image-desc.label "Opis:">
+<!ENTITY image-sec.label "Lastnosti slike">
+<!ENTITY image-alt.label "Nadomestno (alternativno) besedilo:">
+<!ENTITY image-filesize.label "Velikost datoteke:">
+<!ENTITY link-lang.label "Jezik tarče:">
+<!ENTITY link-rel.label "Odnos:">
+<!ENTITY misc-title.label "Naslov:">
+<!ENTITY misc-sec.label "Razne lastnosti">
+<!ENTITY caption.label "Lastnosti elementa">

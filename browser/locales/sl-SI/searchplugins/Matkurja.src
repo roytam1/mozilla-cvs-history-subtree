@@ -1,0 +1,32 @@
+# Mozilla/Matkurja vstavek  odyn@email.si
+
+<search 
+   name="Matkurja"
+   description="Matkurja"
+   method="GET"
+   action="http://www.matkurja.com/slo/search"
+   update="http://mozilla.lugos.si/plugins/Matkurja.src"
+   updateCheckDays=1
+>
+
+
+<input type="text" name="keys" user>
+
+
+<interpret
+charset=ISO-8859-2
+browserResultType="category"
+resultListStart = "<ul>"
+resultListEnd = "</ul>"
+resultItemStart = "<li>"
+>
+
+
+<interpret
+charset=ISO-8859-2
+browserResultType="result"
+resultListStart = "<ol start=1>"
+resultListEnd = "</ol>"
+resultItemStart = "<li>"
+>
+</search>

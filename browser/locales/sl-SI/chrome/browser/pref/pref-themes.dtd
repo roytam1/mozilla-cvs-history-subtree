@@ -1,0 +1,13 @@
+<!ENTITY getnew.url "http://texturizer.net/firefox/themes/">
+<!ENTITY preview.label "Predogled slike">
+<!ENTITY general.label "Splošno">
+<!ENTITY selectSkin.accesskey "u">
+<!ENTITY lHeader "Teme">
+<!ENTITY installedThemes.label "Nameščene teme:">
+<!ENTITY author.tooltip "Zapre možnosti in obišče spletno stran avtorja">
+<!ENTITY getnew.tooltip "Zapre možnosti in obišče spletno stran s seznamom tem">
+<!ENTITY getNewThemes.label "Poišči nove teme">
+<!ENTITY uninstallSkin.label "Odstrani temo">
+<!ENTITY skinIntro.label "Če izberete novo temo, se spremeni izgled gumbov, pogovornih oken, menijev, orodnih vrstic in vseh drugih elementov.">
+<!ENTITY selectSkin.label "Uporabi temo">
+<!ENTITY uninstallSkin.accesskey "O">

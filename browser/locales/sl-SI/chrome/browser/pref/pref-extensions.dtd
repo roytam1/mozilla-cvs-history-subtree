@@ -1,0 +1,9 @@
+<!ENTITY getnew.url "http://texturizer.net/firefox/extensions/">
+<!ENTITY disableExtension.label "Onemogoči razširitev">
+<!ENTITY getNewExtensions.label "Poišči nove razširitve">
+<!ENTITY uninstallExtension.label "Odstrani razširitev">
+<!ENTITY lHeader "Razširitve">
+<!ENTITY extensionTitle.label "Nameščene so sledeče razširitve:">
+<!ENTITY author.tooltip "Zapre možnosti in obišče spletno stran avtorja">
+<!ENTITY getnew.tooltip "Zapre možnosti in obišče spletno stran s seznamom razširitev">
+<!ENTITY extensionSettings.label "Možnosti ...">

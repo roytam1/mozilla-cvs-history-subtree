@@ -1,0 +1,30 @@
+<!ENTITY useBlank.label "Uporabi prazno stran">
+<!ENTITY useBookmark.label "Uporabi zaznamek ...">
+<!ENTITY useBookmark.accesskey "z">
+<!ENTITY location.accesskey "m">
+<!ENTITY useCurrentMultiple.label "Uporabi trenutne strani">
+<!ENTITY connectionsInfo.caption "Povezava">
+<!ENTITY useCurrent.accesskey "t">
+<!ENTITY lHeader "Splošno">
+<!ENTITY location.label "Mesto:">
+<!ENTITY useCurrent.label "Uporabi trenutno stran">
+<!ENTITY showConnections.accesskey "o">
+<!ENTITY proxiesInfo.label "Nastavite strežnike proxy za dostop do interneta.">
+<!ENTITY header2.label "Domača stran">
+<!ENTITY showConnections.label "Nastavitve povezave ...">
+<!ENTITY useBlank.accesskey "p">
+<!ENTITY showFontsAndColors.label "Pisave in barve ...">
+<!ENTITY showFontsAndColors.accesskey "P">
+<!ENTITY makeDefaultText "Nastavi &brandShortName; za moj privzeti brskalnik.">
+<!ENTITY defaultBrowserButton.label "Nastavi privzeti brskalnik">
+<!ENTITY defaultBrowserGroup.label "Privzeti brskalnik">
+<!ENTITY fontsInfo.label "Izberi privzete pisave in barve, uporabljene pri upodabljanju strani.">
+<!ENTITY languagesInfo.label "Izberite privzete jezike in kodiranja znakov za spletne strani.">
+<!ENTITY checkNow.label "Preveri zdaj">
+<!ENTITY checkForDefault.accesskey "d">
+<!ENTITY fonts.caption "Pisave in barve">
+<!ENTITY languages.caption "Jeziki">
+<!ENTITY checkNow.accesskey "z">
+<!ENTITY showLanguages.accesskey "j">
+<!ENTITY checkForDefault.label "&brandShortName; naj ob zagonu preveri, če je privzeti brskalnik.">
+<!ENTITY showLanguages.label "Jeziki ...">

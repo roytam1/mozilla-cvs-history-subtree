@@ -1,0 +1,28 @@
+# Mozilla/Si.Gov vstavek odyn@email.si
+
+<search 
+   name="Si.GOV"
+   description="Si.GOV"
+   method="GET"
+   action="http://iskalnik1.gov.si/compass"
+   update="http://mozilla.lugos.si/plugins/sigov.src"
+   updateCheckDays=1   
+>
+
+<input type="text" name="scope" user>
+ 
+<input value="Search">
+<input name="ui" value="sr">
+<input name="view-template" value="simple1">
+
+<interpret
+charset=ISO-8859-2
+browserResultType="result"
+resultListStart = "<ol>"
+resultListEnd = "</ol>"
+resultItemStart = "<li value"
+>
+
+
+
+</search>

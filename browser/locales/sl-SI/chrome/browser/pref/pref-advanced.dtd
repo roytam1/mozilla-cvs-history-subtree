@@ -1,0 +1,85 @@
+<!ENTITY useAutoScrolling.label "Uporabljaj samodrsenje">
+<!ENTITY useSSL3.label "Uporabljaj SSL 3.0">
+<!ENTITY enableAutoImageResizing.label "Skrči velike slike, tako da bodo v celoti prikazane v oknu brskalnika">
+<!ENTITY moveSystemCaret.label "Premikaj sistemsko kazalko s spreminjanjem izbora">
+<!ENTITY lHeader "Napredno">
+<!ENTITY useSmoothScrolling.label "Uporabljaj gladko drsenje">
+<!ENTITY useTLS1.label "Uporabljaj TLS 1.0">
+<!ENTITY security.label "Varnost">
+<!ENTITY hideTabBar.label "Skrij vrstico z zavihki, če je odprta le ena spletna stran">
+<!ENTITY browsing.label "Brskanje">
+<!ENTITY accessibility.label "Dostopnost">
+<!ENTITY useSSL2.label "Uporabljaj SSL 2.0">
+<!ENTITY loadInBackground.label "Izberi nove zavihke, odprte prek povezav">
+<!ENTITY multimedia.label "Večpredstavnost">
+<!ENTITY useTypeAheadFind.label "Uporabljaj iskanje med tipkanjem">
+<!ENTITY linksOnlyTypeAheadFind.label "le za iskanje povezav">
+<!ENTITY SSLClientAuthMethod "Izbira odjemalčevega certifikata">
+<!ENTITY validation.crllastupdate.label "Zadnja posodobitev">
+<!ENTITY managedevices.accesskey "v">
+<!ENTITY validation.managecrls.button "Upravljaj s CRL-ji ...">
+<!ENTITY validation.title "Preverjanje">
+<!ENTITY crl.autoupdate.fail.cnt.label "Prejšnji zaporedni neuspehi pri posodobitvi:">
+<!ENTITY crl.issuer.org.label "Podjetje:">
+<!ENTITY validation.crl.autoupdate.enable.label "Omogoči samodejno posodobitev za ta CRL">
+<!ENTITY managedevices.button "Upravljaj z varnostnimi napravami ...">
+<!ENTITY serviceURL.label "Storitveni URI:">
+<!ENTITY help.button "Pomoč">
+<!ENTITY validation.crlautoupdatestatus.label "Stanje samodejne posodobitve">
+<!ENTITY disableOCSP.label "Ne uporabljaj OCSP-ja za preverjanje certifikatov">
+<!ENTITY securityUIDisclaimer.label "To področje je ZAČASNO in se bo spremenilo ali izginilo v prihodnjih izdajah. Trenutno je tu le zato, da omogoča funkcionalnost, ki še nima druge možnosti dostopa.">
+<!ENTITY validation.updatecrl.label "Posodobitev">
+<!ENTITY crl.import.status.title "Stanje uvoza CRL">
+<!ENTITY certselect.description "Odločite se lahko, kako &brandShortName; izbere varnostni certifikat, ki ga potrebuje za prikaz spletnim stranem:">
+<!ENTITY validation.crl.autoupdate.time.label2 "Število dni do naslednje posodobitve">
+<!ENTITY validation.crl.autoupdate.time.label1 "Posodobitev">
+<!ENTITY signingCA.accesskey "R">
+<!ENTITY validation.deletecrl.label "Izbriši">
+<!ENTITY cancel.button "Prekliči">
+<!ENTITY validation.ocsp.description "&brandShortName; lahko uporablja Online Certificate Status Protocol (OCSP) za preverjanje certifikatov. Če želite uporabljati OCSP, nastavite sledeče:">
+<!ENTITY crl.autoupdate.fail.reason.label "Podrobnosti o zadnjem neuspehu posodobitve:">
+<!ENTITY validation.crl.label "CRL">
+<!ENTITY managecerts.button "Upravljaj s certifikati ...">
+<!ENTITY validation.crlautoupdateenabled.label "Samodejna posodobitev">
+<!ENTITY certs.label "Certifikati">
+<!ENTITY edit.button "Nastavitve">
+<!ENTITY crl.issuer.label "Izdajatelj CRL-ja:">
+<!ENTITY certOCSP.label "Uporabi OCSP le za preverjanje certifikatov, ki določijo URI storitve OCSP">
+<!ENTITY crl.issuer.orgunit.label "Enota:">
+<!ENTITY validation.crl.autoupdate.title "Nastavitve samodejnega posodabljanja CRL">
+<!ENTITY validation.managecrls.accesskey "M">
+<!ENTITY ok.button "V redu">
+<!ENTITY validation.crlname.label "Ime">
+<!ENTITY validation.label "Preverjanje">
+<!ENTITY managedevices.label "Upravljaj z varnostnimi napravami">
+<!ENTITY validation.crlmanager.label "Upravljaj s CRL-ji">
+<!ENTITY validation.advanced.label "Nastavitve">
+<!ENTITY validation.crl.autoupdate.url.label "CRL bi se uvozil iz:">
+<!ENTITY serviceURL.accesskey "S">
+<!ENTITY managecerts.label "Upravljaj s certifikati ...">
+<!ENTITY validation.crlnextupdate.label "Naslednja posodobitev">
+<!ENTITY proxyOCSP.label "Uporabi OCSP za preverjanje vseh certifikatov, uporabljujoč ta URI in podpisnik:">
+<!ENTITY certselect.auto "Izberi samodejno">
+<!ENTITY certselect.ask "Vprašaj vsakokrat">
+<!ENTITY validation.crl.autoupdate.freq.label2 "Dni">
+<!ENTITY validation.crl.autoupdate.freq.label1 "Posodobi vsakih">
+<!ENTITY validation.ocsp.label "OCSP">
+<!ENTITY validation.crl.description "Uporabite upravitelja CRL-jev za upravljanje s seznami certifikatnih zavrnitev (Certificate Revocation Lists - CRL), ki so shranjeni v vaši bazi certifikatov.">
+<!ENTITY managecerts.accesskey "u">
+<!ENTITY signingCA.label "Podpisnik odgovora:">
+<!ENTITY crl.import.success.message "CRL je uspešno uvožen.">
+<!ENTITY crl.import.nextupdate.label "Naslednja posodobitev:">
+<!ENTITY managecerts.text "Uporabite Upravitelja certifikatov za urejanje vaših osebnih certifikatov, pa tudi certifikatov drugih ljudi in avtoritet.">
+<!ENTITY managedevices.text "Uporabite ta gumb za upravljanje z vašimi varnostnimi napravami, kot so pametne kartice.">
+<!ENTITY checkNow.accesskey "z">
+<!ENTITY softwareupdateinfo.label "Periodično pregleduj za posodobitve:">
+<!ENTITY enableExtensionUpdate.accesskey "j">
+<!ENTITY enableAutoInstall.label "Samodejno prenesi in namesti posodobitve razširitev.">
+<!ENTITY checkNow.label "Preveri zdaj">
+<!ENTITY softwareupdate.label "Posodobitev programske opreme">
+<!ENTITY enableExtensionUpdate.label "Moje razširitve">
+<!ENTITY enableSmartUpdate.label "&brandShortName;">
+<!ENTITY enableSmartUpdate.accesskey "F">
+<!ENTITY enableAutoInstall.accesskey "d">
+<!ENTITY xpinstall.allowedSites.label "Dovoljene strani">
+<!ENTITY xpinstall.allowedSites.accesskey "s">

@@ -1,0 +1,73 @@
+<!ENTITY alwaysUseMy.label "Vselej uporabi moje:">
+<!ENTITY backgroundColor.accesskey "O">
+<!ENTITY backgroundColor.label "Ozadje:">
+<!ENTITY sans-serif.label "Sans-serif:">
+<!ENTITY font.langGroup.japanese "Japonsko">
+<!ENTITY resolution.accesskey "r">
+<!ENTITY underlineLinks.label "Podčrtaj povezave">
+<!ENTITY newLanguages.label "Nove jezike lahko nastavite v paneli z jeziki.">
+<!ENTITY useSystemColors.accesskey "s">
+<!ENTITY typefaces.label "Typeface">
+<!ENTITY prefFontsDialog.title "Pisave in barve">
+<!ENTITY font.langGroup.devanagari "Devanagari">
+<!ENTITY useSystemColors.label "Uporabi sistemske barve">
+<!ENTITY font.langGroup.thai "Tajsko">
+<!ENTITY proportional.label "Spremenljiva pisava:">
+<!ENTITY visitedLinkColor.accesskey "O">
+<!ENTITY font.langGroup.hebrew "Hebrejsko">
+<!ENTITY units.centimetres "centimetri">
+<!ENTITY useDefaultFontSerif.label "Serif">
+<!ENTITY sizes.label "Velikost (v pikah)">
+<!ENTITY resolution.system.label "Sistemska nastavitev">
+<!ENTITY resolution.other "Drugo ...">
+<!ENTITY minSize.accesskey "m">
+<!ENTITY useMyColors.label "Barve">
+<!ENTITY links "Barve povezav">
+<!ENTITY textColor.accesskey "b">
+<!ENTITY serif.accesskey "s">
+<!ENTITY calibrateDialog.title "Kalibriraj ločljivost">
+<!ENTITY resolution.dpival "$val &resolution.dpi;">
+<!ENTITY font.langGroup.trad-chinese "Tradicionalno kitajsko (Tajvan)">
+<!ENTITY monospace.accesskey "e">
+<!ENTITY color "Besedilo in ozadje">
+<!ENTITY calibrate.instructions "Dolžina zgornje črte je:">
+<!ENTITY visitedLinkColor.label "Obiskane povezave:">
+<!ENTITY serif.label "Serif:">
+<!ENTITY font.langGroup.cyrillic "Cirilica">
+<!ENTITY font.langGroup.tamil "Tamil">
+<!ENTITY someProvColors "Ko spletna stran ponudi lastne barve in ozadje">
+<!ENTITY language.label "Pisave za:">
+<!ENTITY fantasy.label "Fantazijsko:">
+<!ENTITY header2 "Ko spletna stran izbere lastne pisave">
+<!ENTITY minSize.none "Nič">
+<!ENTITY underlineLinks.accesskey "P">
+<!ENTITY resolution.label "Prikazovalna ločljivost:">
+<!ENTITY font.langGroup.arabic "Arabsko">
+<!ENTITY useMyColors.accesskey "b">
+<!ENTITY cursive.label "Kurzivno:">
+<!ENTITY useMyFonts.label "Pisave">
+<!ENTITY font.langGroup.unicode "Unicode">
+<!ENTITY font.langGroup.turkish "Turško">
+<!ENTITY units.inches "inči">
+<!ENTITY font.langGroup.user-def "Uporabniško določeno">
+<!ENTITY fantasy.accesskey "f">
+<!ENTITY cursive.accesskey "k">
+<!ENTITY monospace.label "Enoširinska pisava:">
+<!ENTITY language.accesskey "v">
+<!ENTITY textColor.label "Besedilo:">
+<!ENTITY useDefaultFontSansSerif.label "Sans Serif">
+<!ENTITY font.langGroup.baltic "Baltsko">
+<!ENTITY font.langGroup.el "Grško">
+<!ENTITY resolution.dpi "dpi">
+<!ENTITY proportional.accesskey "s">
+<!ENTITY fontsize.units "pike">
+<!ENTITY sans-serif.accesskey "n">
+<!ENTITY font.langGroup.simpl-chinese "Poenostavljeno kitajsko">
+<!ENTITY linkColor.label "Neobiskane povezave:">
+<!ENTITY font.langGroup.korean "Korejsko">
+<!ENTITY font.langGroup.latin2 "Srednjeevropsko">
+<!ENTITY font.langGroup.latin1 "Zahodno">
+<!ENTITY minSize.label "Najmanjša velikost pisav:">
+<!ENTITY useMyFonts.accesskey "P">
+<!ENTITY linkColor.accesskey "N">
+<!ENTITY font.langGroup.trad-chinese-hk "Tradicionalno kitajsko (Hong Kong)">

@@ -1,0 +1,17 @@
+<!ENTITY languages.customize.selectLanguage.accesskey "z">
+<!ENTITY languages.customize.DefaultCharset.accesskey "k">
+<!ENTITY languages.customize.DefaultCharset.label "Privzeto kodiranje znakov">
+<!ENTITY languages.customize.label "Jeziki">
+<!ENTITY languages.customize.selectLanguage.label "Izberite jezik ...">
+<!ENTITY languages.customize.moveDown.accesskey "d">
+<!ENTITY languages.customize.prefLangDescript "Spletne strani so včasih na voljo v več kot enem jeziku. Izberite jezike za prikazovanje teh spletnih strani v preferenčnem vrstnem redu.">
+<!ENTITY languages.customize.Header "Jeziki in kodiranje znakov">
+<!ENTITY languages.customize.active.label "Jeziki v preferenčnem vrstnem redu:">
+<!ENTITY languages.customize.moveUp.accesskey "g">
+<!ENTITY languages.customize.Charset.grouplabel "Kodiranje znakov">
+<!ENTITY languages.customize.addButton.accesskey "A">
+<!ENTITY languages.customize.moveUp.label "Premakni gor">
+<!ENTITY languages.customize.moveDown.label "Premakni dol">
+<!ENTITY languages.customize.deleteButton.label "Odstrani">
+<!ENTITY languages.customize.addButton.label "Dodaj">
+<!ENTITY languages.customize.deleteButton.accesskey "R">

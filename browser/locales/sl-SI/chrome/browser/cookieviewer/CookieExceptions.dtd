@@ -1,0 +1,9 @@
+<!ENTITY allow.label "Dovoli">
+<!ENTITY removeallpermissions.label "Odstrani vse strani">
+<!ENTITY addpermission.label "Nova stran">
+<!ENTITY window.title "Izjeme">
+<!ENTITY address.label "Naslov strani:">
+<!ENTITY treehead.sitename.label "Stran">
+<!ENTITY block.label "Prepovej">
+<!ENTITY removepermission.label "Odstrani stran">
+<!ENTITY treehead.status.label "Stanje">

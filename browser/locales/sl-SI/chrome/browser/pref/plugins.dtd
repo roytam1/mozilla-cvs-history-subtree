@@ -1,0 +1,6 @@
+<!ENTITY pluginInfo2.label "Če onemogočite dodatek za določeno vrsto datotek, bodo datoteke, ki bi se drugače odprle z dodatkom, prenešene na vaš računalnik.">
+<!ENTITY typeHeader.label "Vrsta datoteke">
+<!ENTITY enabledHeader.label "Omogočeno">
+<!ENTITY extensionsHeader.label "Razširitev">
+<!ENTITY plugins.title "Dodatki">
+<!ENTITY pluginInfo.label "Trenutno so na voljo dodatki za naslednje vrste datotek:">
