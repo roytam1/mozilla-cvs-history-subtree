@@ -4062,7 +4062,7 @@ nsGlobalHistory::OnStartLookup(const PRUnichar *searchString,
   
   // pass string through filter and then determine which prefixes to exclude
   // when chopping prefixes off of history urls during comparison
-  nsSharableString filtered = AutoCompletePrefilter(nsDependentString(searchString));
+  nsString filtered = AutoCompletePrefilter(nsDependentString(searchString));
   AutocompleteExclude exclude;
   AutoCompleteGetExcludeInfo(filtered, &exclude);
   
@@ -4305,7 +4305,7 @@ nsGlobalHistory::AutoCompleteCutPrefix(nsAString& aURL, AutocompleteExclude* aEx
     aURL.Cut(0, idx);
 }
 
-nsSharableString
+nsString
 nsGlobalHistory::AutoCompletePrefilter(const nsAString& aSearchString)
 {
   nsAutoString url(aSearchString);
@@ -4324,7 +4324,7 @@ nsGlobalHistory::AutoCompletePrefilter(const nsAString& aSearchString)
     ToLowerCase(url);
   }
   
-  return nsSharableString(url);
+  return nsString(url);
 }
 
 PRBool

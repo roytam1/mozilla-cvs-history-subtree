@@ -71,17 +71,11 @@ class nsXPIDLCString;
    * typedefs for backwards compatibility
    */
 
-typedef nsString              nsSharableString;
 typedef nsString              nsAFlatString;
 typedef nsSubstring           nsASingleFragmentString;
-typedef nsSubstringTuple      nsDependentConcatenation;
-typedef nsDependentSubstring  nsDependentSingleFragmentSubstring;
 
-typedef nsCString             nsSharableCString;
 typedef nsCString             nsAFlatCString;
 typedef nsCSubstring          nsASingleFragmentCString;
-typedef nsCSubstringTuple     nsDependentCConcatenation;
-typedef nsDependentCSubstring nsDependentSingleFragmentCSubstring;
 
   
 #endif /* !defined(nsStringFwd_h___) */
