@@ -56,7 +56,9 @@ AC_PROG_CPP
 AC_PROG_CXXCPP
 AC_PROG_INSTALL
 AC_PROG_LN_S
+AC_PROG_RANLIB
 AC_PATH_PROGS(PERL, perl5 perl, :)
+AC_PATH_PROGS(AR, ar, :)
 
 if test "$cross_compiling" = "no"; then
     if test "$HOSTCC" = ""; then
@@ -90,6 +92,7 @@ case "$target" in
     MDCPUCFG_H=_linux.cfg
     PR_MD_CSRCS=linux.c
     PR_MD_ASFILES=
+    PR_MD_ARCH_DIR=unix
     if test "$USE_PTHREADS" = 1 ; then
 	CFLAGS="$CFLAGS -D_REENTRANT"
     else
@@ -195,8 +198,12 @@ AC_SUBST(USE_CPLUS)
 AC_SUBST(USE_IPV6)
 AC_SUBST(PR_MD_CSRCS)
 AC_SUBST(PR_MD_ASFILES)
+AC_SUBST(PR_MD_ARCH_DIR)
 
 AC_SUBST(DEFS)
+AC_SUBST(AR)
+AC_SUBST(RANLIB)
+AC_SUBST(PERL)
 
 AC_OUTPUT(
 Makefile 
