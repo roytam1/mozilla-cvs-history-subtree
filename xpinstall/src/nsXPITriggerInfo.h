@@ -59,7 +59,7 @@ class nsXPITriggerItem
     nsString    mArguments;
     PRInt32     mFlags;
 
-    nsCOMPtr<nsIFileSpec>  mFile;
+    nsCOMPtr<nsILocalFile>  mFile;
 
     PRBool  IsFileURL() { return mURL.Equals("file:/",PR_FALSE,6); }
     PRBool  IsRelativeURL();

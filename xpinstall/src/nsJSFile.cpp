@@ -119,7 +119,7 @@ JSBool PR_CALLBACK
 InstallFileOpDirGetParent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall*   nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  nsFileSpec   nativeRet;
+  nsCOMPtr<nsIFile>   nativeRet;
   nsString     nativeRetNSStr;
   JSObject *jsObj;
   nsInstallFolder *folder;
@@ -151,13 +151,16 @@ InstallFileOpDirGetParent(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
 
   folder = (nsInstallFolder*)JS_GetPrivate(cx, jsObj);
   
-  if(!folder || NS_OK != nativeThis->FileOpDirGetParent(*folder, &nativeRet))
+  if(!folder || NS_OK != nativeThis->FileOpDirGetParent(*folder, getter_AddRefs(nativeRet)))
   {
     // error, return NULL
     return JS_TRUE;
   }
 
-  nativeRetNSStr = nativeRet.GetNativePathCString();
+  char* temp;
+  nativeRet->GetPath(&temp);
+  nativeRetNSStr = temp;
+
   *rval = STRING_TO_JSVAL(JS_NewUCStringCopyN(cx, nativeRetNSStr.GetUnicode(), nativeRetNSStr.Length()));
 
   return JS_TRUE;
@@ -664,7 +667,7 @@ JSBool PR_CALLBACK
 InstallFileOpFileGetSize(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsInstall*   nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
-  PRUint32     nativeRet;
+  PRInt64     nativeRet;
   JSObject *jsObj;
   nsInstallFolder *folder;
 
@@ -1014,10 +1017,10 @@ InstallFileOpFileWindowsShortcut(JSContext *cx, JSObject *obj, uintN argc, jsval
   nsAutoString b3;
   nsAutoString b4;
   nsAutoString b5;
-  nsFileSpec   nsfsB0;
-  nsFileSpec   nsfsB1;
-  nsFileSpec   nsfsB3;
-  nsFileSpec   nsfsB5;
+  nsCOMPtr<nsILocalFile> nsfsB0;
+  nsCOMPtr<nsILocalFile> nsfsB1;
+  nsCOMPtr<nsILocalFile> nsfsB3;
+  nsCOMPtr<nsILocalFile> nsfsB5;
   PRInt32      b6;
 
   //JSObject *jsObj;
@@ -1042,15 +1045,15 @@ InstallFileOpFileWindowsShortcut(JSContext *cx, JSObject *obj, uintN argc, jsval
     //                                 Number aIconId);
 
     ConvertJSValToStr(b0, cx, argv[0]);
-    nsfsB0 = b0;
+    nsfsB0->InitWithPath(b0.ToNewCString());
     ConvertJSValToStr(b1, cx, argv[1]);
-    nsfsB1 = b1;
+    nsfsB1->InitWithPath(b1.ToNewCString());
     ConvertJSValToStr(b2, cx, argv[2]);
     ConvertJSValToStr(b3, cx, argv[3]);
-    nsfsB3 = b3;
+    nsfsB3->InitWithPath(b3.ToNewCString());
     ConvertJSValToStr(b4, cx, argv[4]);
     ConvertJSValToStr(b5, cx, argv[5]);
-    nsfsB5 = b5;
+    nsfsB5->InitWithPath(b5.ToNewCString());
 
     if(JSVAL_IS_NULL(argv[6]))
     {
@@ -1301,7 +1304,7 @@ static JSFunctionSpec FileOpMethods[] =
   {"dirRemove",                 InstallFileOpDirRemove,                2},
   {"dirRename",                 InstallFileOpDirRename,                2},
   {"copy",                      InstallFileOpFileCopy,                 2},
-  {"delete",                    InstallFileOpFileDelete,               2},
+  {"delete",                    InstallFileOpFileDelete,               1},
   {"exists",                    InstallFileOpFileExists,               1},
   {"execute",                   InstallFileOpFileExecute,              2},
   {"nativeVersion",             InstallFileOpFileGetNativeVersion,     1},

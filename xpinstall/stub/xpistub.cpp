@@ -178,9 +178,10 @@ PR_PUBLIC_API(nsresult) XPI_Init(
     //--------------------------------------------------------------------
     nsCOMPtr<nsPIXPIStubHook>   hook = do_QueryInterface(gXPI);
     nsFileSpec                  dirSpec( aProgramDir );
-    nsCOMPtr<nsIFileSpec>       iDirSpec;
+    nsCOMPtr<nsILocalFile>           iDirSpec;
 
-    NS_NewFileSpecWithSpec( dirSpec, getter_AddRefs(iDirSpec) );    
+    //NS_NewFileSpecWithSpec( dirSpec, getter_AddRefs(iDirSpec) );    
+    NS_NewLocalFile(aProgramDir, getter_AddRefs(iDirSpec));
     
     if (hook && iDirSpec)
         hook->StubInitialize( iDirSpec );
@@ -238,14 +239,15 @@ PR_PUBLIC_API(PRInt32) XPI_Install(
 {
     nsresult                rv = NS_ERROR_NULL_POINTER;
     nsString                args(aArgs);
-    nsCOMPtr<nsIFileSpec>   iFile;
+    nsCOMPtr<nsILocalFile>  iFile;
     nsFileSpec              file(aFile);
     nsFileURL               URL(file);
     nsString                URLstr(URL.GetURLString());
 
     gInstallStatus = -322; // unique stub error code
 
-    NS_NewFileSpecWithSpec( file, getter_AddRefs(iFile) );
+    //NS_NewFileSpecWithSpec( file, getter_AddRefs(iFile) );
+    NS_NewLocalFile(aFile, getter_AddRefs(iFile));
 
     if (iFile && gXPI)
         rv = gXPI->InstallJar( iFile, URLstr.GetUnicode(), args.GetUnicode(), 

@@ -35,6 +35,7 @@
 #include "nsNetUtil.h"
 #include "nsIBufferInputStream.h"
 #include "nsIInputStream.h"
+#include "nsIFileStreams.h"
 #include "nsIStreamListener.h"
 
 #include "nsISoftwareUpdate.h"
@@ -45,9 +46,10 @@
 #include "nsInstallProgressDialog.h"
 #include "nsInstallResources.h"
 #include "nsSpecialSystemDirectory.h"
-#include "nsFileStream.h"
+//#include "nsFileStream.h"
 #include "nsProxyObjectManager.h"
 #include "nsIDOMWindow.h"
+#include "nsDirectoryService.h"
 
 #include "nsIAppShellComponentImpl.h"
 #include "nsIPrompt.h"
@@ -303,8 +305,9 @@ NS_IMETHODIMP nsXPInstallManager::DownloadNext()
         else if ( mItem->IsFileURL() )
         {
             // don't need to download, just point at local file
-            rv = NS_NewFileSpecWithSpec( nsFileSpec(nsFileURL(mItem->mURL)),
-                    getter_AddRefs(mItem->mFile) );
+            //rv = NS_NewFileSpecWithSpec( nsFileSpec(nsFileURL(mItem->mURL)),
+            //        getter_AddRefs(mItem->mFile) );
+            NS_NewLocalFile(mItem->mURL.ToNewCString(), getter_AddRefs(mItem->mFile));
             if (NS_FAILED(rv))
             {
                 // serious problem with trigger! try to carry on
@@ -319,20 +322,24 @@ NS_IMETHODIMP nsXPInstallManager::DownloadNext()
         {
             // We have one to download
             // --- figure out a temp file name
-            nsSpecialSystemDirectory temp(nsSpecialSystemDirectory::OS_TemporaryDirectory);
+            nsCOMPtr<nsILocalFile> temp;
+            NS_WITH_SERVICE(nsIProperties, directoryService, NS_DIRECTORY_SERVICE_PROGID, &rv);
+
+            directoryService->Get("system.OS_TemporaryDirectory", NS_GET_IID(nsIFile), getter_AddRefs(temp));
+
             PRInt32 pos = mItem->mURL.RFindChar('/');
             if ( pos != -1 )
             {
                 nsString jarleaf;
-                mItem->mURL.Right( jarleaf, mItem->mURL.Length() - pos);
-                temp += jarleaf;
+                mItem->mURL.Right( jarleaf, mItem->mURL.Length() - (pos + 1));
+                temp->Append(jarleaf.ToNewCString());
             }
             else
-                temp += "xpinstall.xpi";
+                temp->Append("xpinstall.xpi");
 
-            temp.MakeUnique();
+            MakeUnique(temp); //nsIFileXXX: need MakeUnique function.
 
-            rv = NS_NewFileSpecWithSpec( temp, getter_AddRefs(mItem->mFile) );
+            mItem->mFile = temp;
             if (NS_SUCCEEDED(rv))
             {
                  // --- start the download
@@ -421,18 +428,21 @@ void nsXPInstallManager::Shutdown()
         // proxy exists: we're being called from script thread
         mProxy->Close();
     }
+//    else if (mDlg)
+//        mDlg->Close();
+
+//    mDlg = 0;
 
     // Clean up downloaded files
     nsXPITriggerItem* item;
-    nsFileSpec        tmpSpec;
+    nsCOMPtr<nsIFile> tmpSpec;
     for (PRUint32 i = 0; i < mTriggers->Size(); i++ )
     {
         item = NS_STATIC_CAST(nsXPITriggerItem*, mTriggers->Get(i));
 
         if ( item && item->mFile && !item->IsFileURL() )
         {
-            item->mFile->GetFileSpec(&tmpSpec);
-            tmpSpec.Delete(PR_FALSE);
+            item->mFile->Delete(PR_FALSE);
         }
     }
 
@@ -508,7 +518,11 @@ nsXPInstallManager::OnStartRequest(nsIChannel* channel, nsISupports *ctxt)
     NS_ASSERTION( mItem && mItem->mFile, "XPIMgr::OnStartRequest bad state");
     if ( mItem && mItem->mFile )
     {
-        rv = mItem->mFile->OpenStreamForWriting();
+        //rv = mItem->mFile->OpenStreamForWriting(); //nsIFileXXX: what is nsIFile comparable operation?
+        rv = NS_NewLocalFileOutputStream(getter_AddRefs(mOutStream),
+                                                       mItem->mFile,
+                                                       PR_CREATE_FILE | PR_WRONLY,
+                                                       0664);
     }
 
     return rv;
@@ -540,17 +554,18 @@ nsXPInstallManager::OnStopRequest(nsIChannel* channel, nsISupports *ctxt,
     }
 
     if ( mItem->mFile )
-        mItem->mFile->CloseStream();
+        mOutStream->Close();
 
     if (!NS_SUCCEEDED(rv))
     {
         if ( mItem->mFile )
         {
+            PRBool flagExists;
             nsFileSpec fspec;
             nsresult rv2 ;
-            rv2 = mItem->mFile->GetFileSpec(&fspec);
-            if ( NS_SUCCEEDED(rv2) && fspec.Exists() )
-                fspec.Delete(0);
+            rv2 = mItem->mFile->Exists(&flagExists);
+            if (NS_SUCCEEDED(rv2) && flagExists)
+                mItem->mFile->Delete(PR_FALSE);
 
             mItem->mFile = 0;
         }
@@ -571,9 +586,10 @@ nsXPInstallManager::OnDataAvailable(nsIChannel* channel, nsISupports *ctxt,
                                     PRUint32 length)
 {
     PRUint32 amt;
-    PRInt32  result;
+    //PRInt32  result;
     nsresult err;
     char buffer[8*1024];
+    PRUint32 writeCount;
     
     if (mCancelled)
     {
@@ -591,9 +607,10 @@ nsXPInstallManager::OnDataAvailable(nsIChannel* channel, nsISupports *ctxt,
             //printf("pIStream->Read Failed!  %d", err);   
             return err;
         }
-        err = mItem->mFile->Write( buffer, amt, &result);
+        err = mOutStream->Write( buffer, amt, &writeCount);
+        //err = mItem->mFile->Write( buffer, amt, &result);
         //printf("mItem->mFile->Write err:%d   amt:%d    result:%d\n", err, amt, result);
-        if (NS_FAILED(err) || result != (PRInt32)amt) 
+        if (NS_FAILED(err) || writeCount != (PRInt32)amt) 
         {
             //printf("mItem->mFile->Write Failed!  err:%d   amt:%d    result:%d\n", err, amt, result);
             return NS_ERROR_FAILURE;

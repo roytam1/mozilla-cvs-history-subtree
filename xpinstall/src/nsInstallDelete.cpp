@@ -57,21 +57,21 @@ nsInstallDelete::nsInstallDelete( nsInstall* inInstall,
     mFinalFile      = nsnull;
     mRegistryName   = "";
     
-    nsFileSpec* tmp = folderSpec->GetFileSpec();
+    nsCOMPtr<nsIFile> tmp = folderSpec->GetFileSpec();
     if (!tmp)
     {
         *error = nsInstall::INVALID_ARGUMENTS;
         return;
     }
 
-    mFinalFile = new nsFileSpec(*tmp);
+    tmp->Clone(getter_AddRefs(mFinalFile));;
     if (mFinalFile == nsnull)
     {
         *error = nsInstall::OUT_OF_MEMORY;
         return;
     }
     
-    *mFinalFile += inPartialPath;
+    mFinalFile->Append(inPartialPath.ToNewCString());
 
     *error = ProcessInstallDelete();
 }
@@ -100,8 +100,6 @@ nsInstallDelete::nsInstallDelete( nsInstall* inInstall,
 
 nsInstallDelete::~nsInstallDelete()
 {
-    if (mFinalFile == nsnull)
-        delete mFinalFile;
 
     MOZ_COUNT_DTOR(nsInstallDelete);
 }
@@ -176,7 +174,9 @@ char* nsInstallDelete::toString()
 
             if (rsrcVal)
             {
-                sprintf( buffer, rsrcVal, mFinalFile->GetCString());
+              char* temp;
+              mFinalFile->GetPath(&temp);
+              sprintf( buffer, rsrcVal, temp);
                 nsCRT::free(rsrcVal);
             }
         }
@@ -232,10 +232,12 @@ PRInt32 nsInstallDelete::ProcessInstallDelete()
             
             if (err == REGERR_OK)
             {
-                if (mFinalFile)
-                    delete mFinalFile;
+                //if (mFinalFile)
+                //    delete mFinalFile;
 
-                mFinalFile = new nsFileSpec(tempRegistryString);
+                nsCOMPtr<nsILocalFile> tempLocalFile;
+                tempLocalFile->InitWithPath(tempRegistryString);//nsIFileXXX: should we be doing this?
+                mFinalFile = tempLocalFile;
                 
                 if (mFinalFile == nsnull)
                     return nsInstall::OUT_OF_MEMORY;
@@ -249,9 +251,13 @@ PRInt32 nsInstallDelete::ProcessInstallDelete()
     if(tempCString)
         Recycle(tempCString);
 
-    if (mFinalFile->Exists())
+    PRBool flagExists, flagIsFile;
+
+    mFinalFile->Exists(&flagExists);
+    if (flagExists)
     {
-        if (mFinalFile->IsFile())
+        mFinalFile->IsFile(&flagIsFile);
+        if (flagIsFile)
         {
             err = nsInstall::SUCCESS;
         }
@@ -272,12 +278,16 @@ PRInt32 nsInstallDelete::ProcessInstallDelete()
 
 PRInt32 nsInstallDelete::NativeComplete()
 {
-    NS_WARN_IF_FALSE(mFinalFile->Exists(),"nsInstallDelete::Complete -- file should exist!");
-    if (mFinalFile->Exists())
+    PRBool flagExists, flagIsFile;
+
+    mFinalFile->Exists(&flagExists);
+    NS_WARN_IF_FALSE(flagExists,"nsInstallDelete::Complete -- file should exist!");
+    if (flagExists)
     {
-        if (mFinalFile->IsFile())
+        mFinalFile->IsFile(&flagIsFile);
+        if (flagIsFile)
         {
-           return DeleteFileNowOrSchedule(*mFinalFile);
+           return DeleteFileNowOrSchedule(mFinalFile);
         }
         else
         {
