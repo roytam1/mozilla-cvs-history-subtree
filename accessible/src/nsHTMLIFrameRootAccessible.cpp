@@ -48,8 +48,35 @@ NS_INTERFACE_MAP_END_INHERITING(nsRootAccessible)
 NS_IMPL_ADDREF_INHERITED(nsHTMLIFrameRootAccessible, nsRootAccessible);
 NS_IMPL_RELEASE_INHERITED(nsHTMLIFrameRootAccessible, nsRootAccessible);
 
-NS_IMPL_ISUPPORTS2(nsHTMLIFrameAccessible, nsIAccessibleDocument, nsIAccessibleDocumentInternal);
+/*
+NS_INTERFACE_MAP_BEGIN(nsHTMLIFrameAccessible)
+  NS_INTERFACE_MAP_ENTRY(nsIAccessibleDocument)
+  NS_INTERFACE_MAP_ENTRY(nsIAccessibleDocumentInternal)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIAccessibleDocument)
+NS_INTERFACE_MAP_END_INHERITING(nsHTMLBlockAccessible)
+*/
 
+NS_IMPL_ADDREF_INHERITED(nsHTMLIFrameAccessible, nsHTMLBlockAccessible);
+NS_IMPL_RELEASE_INHERITED(nsHTMLIFrameAccessible, nsHTMLBlockAccessible);
+
+NS_IMETHODIMP
+nsHTMLIFrameAccessible::QueryInterface(const nsIID& aIID, void** aInstancePtr)
+{
+  NS_ASSERTION(aInstancePtr, "QueryInterface requires a non-NULL destination!");
+  if ( !aInstancePtr )
+    return NS_ERROR_NULL_POINTER;
+  if (aIID.Equals(NS_GET_IID(nsIAccessibleDocument))) {
+    *aInstancePtr = (void*)(nsIAccessibleDocument*) this;
+    NS_IF_ADDREF(this);
+    return NS_OK;
+  }
+  if (aIID.Equals(NS_GET_IID(nsIAccessibleDocumentInternal))) {
+    *aInstancePtr = (void*)(nsIAccessibleDocumentInternal*) this;
+    NS_IF_ADDREF(this);
+    return NS_OK;
+  }
+  return nsHTMLBlockAccessible::QueryInterface(aIID, aInstancePtr); 
+}
 
 nsHTMLIFrameAccessible::nsHTMLIFrameAccessible(nsIDOMNode* aNode, nsIAccessible* aRoot, nsIWeakReference* aShell, nsIDocument *aDoc):
   nsHTMLBlockAccessible(aNode, aShell), mRootAccessible(aRoot), nsDocAccessible(aDoc)

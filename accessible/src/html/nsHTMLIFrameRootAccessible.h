@@ -31,11 +31,11 @@ class nsIWebShell;
 class nsIWeakReference;
 
 class nsHTMLIFrameAccessible : public nsHTMLBlockAccessible, 
-                               public nsDocAccessible,
                                public nsIAccessibleDocument,
-                               public nsIAccessibleDocumentInternal
+                               public nsIAccessibleDocumentInternal,
+                               public nsDocAccessible
 {
-  NS_DECL_ISUPPORTS_INHERITED
+  NS_DECL_ISUPPORTS
   NS_DECL_NSIACCESSIBLEDOCUMENT
   NS_DECL_NSIACCESSIBLEDOCUMENTINTERNAL
 

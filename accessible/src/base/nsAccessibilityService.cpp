@@ -105,7 +105,7 @@ nsAccessibilityService::CreateHTMLSelectAccessible(nsIDOMNode* node, nsISupports
   nsCOMPtr<nsIPresShell> s;
   c->GetShell(getter_AddRefs(s)); 
 
-  nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(s));
+  nsCOMPtr<nsIWeakReference> wr(getter_AddRefs(NS_GetWeakReference(s)));
 
   *_retval = new nsHTMLSelectAccessible(node, wr);
   if (*_retval) {
@@ -126,7 +126,7 @@ nsAccessibilityService::CreateHTMLSelectOptionAccessible(nsIDOMNode* node, nsIAc
   nsCOMPtr<nsIPresShell> s;
   c->GetShell(getter_AddRefs(s)); 
 
-  nsCOMPtr<nsIWeakReference> wr = getter_AddRefs(NS_GetWeakReference(s));
+  nsCOMPtr<nsIWeakReference> wr(getter_AddRefs(NS_GetWeakReference(s)));
 
   *_retval = new nsHTMLSelectOptionAccessible(aAccParent, node, wr);
   if (*_retval) {
@@ -431,7 +431,8 @@ nsAccessibilityService::CreateHTMLIFrameAccessible(nsIDOMNode* node, nsISupports
               //printf("################################## CreateHTMLIFrameAccessible\n");
 
               nsCOMPtr<nsIAccessible> root = new nsHTMLIFrameRootAccessible(node, wr);
-              *_retval = new nsHTMLIFrameAccessible(node, root, weakRef, innerDoc);
+              nsHTMLIFrameAccessible *frameAcc = new nsHTMLIFrameAccessible(node, root, weakRef, innerDoc);
+              *_retval = (nsIAccessible*)frameAcc;
               NS_ADDREF(*_retval);
               return NS_OK;
             }
@@ -442,44 +443,6 @@ nsAccessibilityService::CreateHTMLIFrameAccessible(nsIDOMNode* node, nsISupports
   }
   return NS_ERROR_FAILURE;
 }
-
-/*
-PRBool nsDOMTreeWalker::GetAccessible()
-{
-  mAccessible = nsnull;
-
-  nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
-
-  if (!content)
-    return PR_FALSE;
-
-  nsCOMPtr<nsIDOMHTMLAreaElement> areaContent(do_QueryInterface(mDOMNode));
-  if (areaContent)   // Area elements are implemented in nsHTMLImageAccessible as children of the image
-    return PR_FALSE; // Return, otherwise the image frame looks like an accessible object in the wrong place
-
-  nsIFrame* frame = GetPrimaryFrame();
-  if (!frame)
-    return PR_FALSE;
-
-  frame->GetAccessible(getter_AddRefs(mAccessible));
-
-  if (!mAccessible)
-    mAccessible = do_QueryInterface(mDOMNode);
-
-  if (!mAccessible) {
-    // is it a link?
-    nsCOMPtr<nsILink> link(do_QueryInterface(mDOMNode));
-    if (link) {
-       mAccessible = new nsHTMLLinkAccessible(mDOMNode, mPresShell);
-    }
-  }
-
-  if (mAccessible)
-    return PR_TRUE;
-  else
-    return PR_FALSE;
-}
-*/
 
 
 //-----------------------------------------------------------------------
@@ -596,7 +559,6 @@ NS_IMETHODIMP nsAccessibilityService::GetAccessibleFor(nsIWeakReference *aPresSh
     shell = ownerShell;
     content = ownerContent;
   }
-
   if (!content)
     return PR_FALSE;
 
