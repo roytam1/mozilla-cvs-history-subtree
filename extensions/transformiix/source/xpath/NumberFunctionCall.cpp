@@ -111,14 +111,14 @@ NumberFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
         }
         case SUM:
         {
-            nsRefPtr<NodeSet> nodes;
+            nsRefPtr<txNodeSet> nodes;
             nsresult rv = evaluateToNodeSet((Expr*)iter.next(), aContext,
                                             getter_AddRefs(nodes));
             NS_ENSURE_SUCCESS(rv, rv);
 
             double res = 0;
-            int i;
-            for (i = 0; i < nodes->size(); i++) {
+            PRInt32 i;
+            for (i = 0; i < nodes->size(); ++i) {
                 nsAutoString resultStr;
                 txXPathNodeUtils::getNodeValue(nodes->get(i), resultStr);
                 res += Double::toDouble(resultStr);
