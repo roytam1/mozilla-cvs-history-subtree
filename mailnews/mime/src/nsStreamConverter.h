@@ -20,7 +20,9 @@
 
 #include "nsCOMPtr.h"
 #include "nsIStreamConverter.h" 
+#include "nsIOutputStream.h"
 #include "nsIMimeEmitter.h" 
+#include "nsIURI.h"
 
 class nsStreamConverter : public nsIStreamConverter { 
 public: 
