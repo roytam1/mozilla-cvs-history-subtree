@@ -22,6 +22,8 @@
  */
  
 #include "stdafx.h"
+
+#include "rosetta.h"
 #include "edt.h"
 #include "compbar.h"
 #include "compfrm.h"
@@ -58,7 +60,7 @@ static UINT ComposeCodes[] = {
    IDM_ADDRESSPICKER,
    ID_CHECK_SPELLING,
    IDM_SAVEASDRAFT,
-   ID_SECURITY,
+   HG26722
    ID_NAVIGATE_INTERRUPT
     };
 
@@ -337,8 +339,7 @@ void CComposeFrame::CreatePlainTextEditor()
 // status bar format
 static const UINT BASED_CODE indicators[] =
 {
-	IDS_SECURITY_STATUS,
-	IDS_SIGNED_STATUS,
+	HG27811
     IDS_TRANSFER_STATUS,    
     ID_SEPARATOR,
 	IDS_ONLINE_STATUS,

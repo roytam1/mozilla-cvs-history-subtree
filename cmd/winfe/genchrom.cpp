@@ -452,11 +452,11 @@ CNetscapeStatusBar *CGenericStatusBar::GetNetscapeStatusBar()
     return m_pStatusBar;
 }
 
-BOOL CGenericStatusBar::Create( CWnd* pParentWnd, DWORD dwStyle, UINT nID, BOOL bSecurityStatus /*=TRUE*/, BOOL bTaskbar /*=TRUE*/ )
+BOOL CGenericStatusBar::Create( CWnd* pParentWnd, DWORD dwStyle, UINT nID, BOOL bxxx /*=TRUE*/, BOOL bTaskbar /*=TRUE*/ )
 {
 	m_pCreatedBar = new CNetscapeStatusBar;
 
-    if( !m_pCreatedBar->Create( pParentWnd, bSecurityStatus, bTaskbar ) )
+    if( !m_pCreatedBar->Create( pParentWnd, bxxx, bTaskbar ) )
 	{
 		delete m_pCreatedBar;
 		m_pCreatedBar = NULL;

@@ -23,6 +23,8 @@
  */
  
 #include "stdafx.h"
+
+#include "rosetta.h"
 #include "resource.h"
 #include "compstd.h"
 #include "compbar.h"
@@ -1049,8 +1051,7 @@ void CComposeBar::UpdateHeaderInfo ( void )
 										  untranslatedPriority, 32);
         MSG_SetCompHeader(pComposePane, MSG_PRIORITY_HEADER_MASK, untranslatedPriority);
         MSG_SetCompBoolHeader(pComposePane, MSG_RETURN_RECEIPT_BOOL_HEADER_MASK, m_bReceipt);
-        MSG_SetCompBoolHeader(pComposePane, MSG_ENCRYPTED_BOOL_HEADER_MASK, m_bEncrypted);
-        MSG_SetCompBoolHeader(pComposePane, MSG_SIGNED_BOOL_HEADER_MASK, m_bSigned);
+        HG87211
       	MSG_SetCompBoolHeader(pComposePane, MSG_UUENCODE_BINARY_BOOL_HEADER_MASK, m_bUseUUENCODE);
         MSG_SetCompBoolHeader(pComposePane, MSG_ATTACH_VCARD_BOOL_HEADER_MASK, m_bAttachVCard);
 
