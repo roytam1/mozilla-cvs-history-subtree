@@ -1507,11 +1507,12 @@ $(PACKAGE_DIR)::
 	@if test ! -d $@; then echo Creating $@; rm -rf $@; $(NSINSTALL) -D $@; else true; fi
 
 # vars to be passed from the Makefile to the manifest preprocessor
-PACKAGE_VARS +=     \
+PACKAGE_VARS +=      \
 	SHARED_LIBRARY		 \
 	OS_ARCH            \
 	MOZ_WIDGET_TOOLKIT \
-	topsrcdir \
+	topsrcdir          \
+	srcdir             \
 	$(NULL)
 
 # these are shortened to make manifest files readable
