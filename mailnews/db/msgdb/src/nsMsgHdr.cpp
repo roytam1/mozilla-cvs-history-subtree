@@ -182,7 +182,10 @@ NS_IMETHODIMP nsMsgHdr::GetProperty(const char *propertyName, nsString &resultPr
 	nsresult err = NS_OK;
 	mdb_token	property_token;
 
-	err = m_mdb->GetStore()->StringToToken(m_mdb->GetEnv(),  propertyName, &property_token);
+	if (m_mdb->GetStore())
+		err = m_mdb->GetStore()->StringToToken(m_mdb->GetEnv(),  propertyName, &property_token);
+	else
+		err = NS_ERROR_NULL_POINTER;
 	if (err == NS_OK)
 		err = m_mdb->RowCellColumnTonsString(GetMDBRow(), property_token, resultProperty);
 
@@ -478,17 +481,17 @@ NS_IMETHODIMP nsMsgHdr::GetMessageId(nsString &resultMessageId)
 
 NS_IMETHODIMP nsMsgHdr::GetMime2EncodedAuthor(nsString &resultAuthor)
 {
-	return m_mdb->RowCellColumnToMime2EncodedString(GetMDBRow(), m_mdb->m_senderColumnToken, resultAuthor);
+	return m_mdb->RowCellColumnToMime2DecodedString(GetMDBRow(), m_mdb->m_senderColumnToken, resultAuthor);
 }
 
 NS_IMETHODIMP nsMsgHdr::GetMime2EncodedSubject(nsString &resultSubject)
 {
-	return m_mdb->RowCellColumnToMime2EncodedString(GetMDBRow(), m_mdb->m_subjectColumnToken, resultSubject);
+	return m_mdb->RowCellColumnToMime2DecodedString(GetMDBRow(), m_mdb->m_subjectColumnToken, resultSubject);
 }
 
 NS_IMETHODIMP nsMsgHdr::GetMime2EncodedRecipients(nsString &resultRecipients)
 {
-	return m_mdb->RowCellColumnToMime2EncodedString(GetMDBRow(), m_mdb->m_recipientsColumnToken, resultRecipients);
+	return m_mdb->RowCellColumnToMime2DecodedString(GetMDBRow(), m_mdb->m_recipientsColumnToken, resultRecipients);
 }
 
 
