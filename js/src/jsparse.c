@@ -721,18 +721,9 @@ ImportExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	    pn2->pn_pos.begin = pn->pn_pos.begin;
 	    pn2->pn_pos.end = ts->token.pos.end;
 
-	    /* Optimize o['p'] to o.p by rewriting pn2. */
-	    if (pn3->pn_type == TOK_STRING) {
-		pn2->pn_type = TOK_DOT;
-		pn2->pn_op = JSOP_GETPROP;
-		pn2->pn_arity = PN_NAME;
-		pn2->pn_expr = pn;
-		pn2->pn_atom = pn3->pn_atom;
-	    } else {
-		pn2->pn_op = JSOP_GETELEM;
-		pn2->pn_left = pn;
-		pn2->pn_right = pn3;
-	    }
+            pn2->pn_op = JSOP_GETELEM;
+            pn2->pn_left = pn;
+            pn2->pn_right = pn3;
 	}
 
 	pn = pn2;
@@ -2205,18 +2196,9 @@ MemberExpr(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
 	    pn2->pn_pos.begin = pn->pn_pos.begin;
 	    pn2->pn_pos.end = ts->token.pos.end;
 
-	    /* Optimize o['p'] to o.p by rewriting pn2. */
-	    if (pn3->pn_type == TOK_STRING) {
-		pn2->pn_type = TOK_DOT;
-		pn2->pn_op = JSOP_GETPROP;
-		pn2->pn_arity = PN_NAME;
-		pn2->pn_expr = pn;
-		pn2->pn_atom = pn3->pn_atom;
-	    } else {
-		pn2->pn_op = JSOP_GETELEM;
-		pn2->pn_left = pn;
-		pn2->pn_right = pn3;
-	    }
+            pn2->pn_op = JSOP_GETELEM;
+            pn2->pn_left = pn;
+            pn2->pn_right = pn3;
 	} else if (allowCallSyntax && tt == TOK_LP) {
 	    pn2 = NewParseNode(cx, &ts->token, PN_LIST);
 	    if (!pn2)
