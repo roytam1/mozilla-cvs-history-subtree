@@ -430,6 +430,7 @@ sub update
 	  else
 	    {
 	      @arr = ();
+	      undef %new;
 	      grep(($new{$_} = 1), @vals);
 	      foreach (@{$entry->{"_${key}_save_"}})
 		{
