@@ -22,8 +22,7 @@ abs_dist_includedir := $(shell (cd $(dist_includedir);pwd))
 
 ifeq ($(USE_64), 1)
 DIRS = \
-	SUNWprx \
-	SUNWprdx
+	SUNWprx
 else
 DIRS = \
 	SUNWpr \
