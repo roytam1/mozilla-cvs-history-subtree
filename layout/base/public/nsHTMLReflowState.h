@@ -39,10 +39,11 @@
 
 #include "nsMargin.h"
 #include "nsStyleCoord.h"
-#include "nsHTMLReflowCommand.h"
+#include "nsReflowTree.h" // XXX we may not end up exporting this
 
 class nsIFrame;
 class nsIPresContext;
+class nsHTMLReflowCommand;
 class nsIRenderingContext;
 class nsSpaceManager;
 class nsLineLayout;
