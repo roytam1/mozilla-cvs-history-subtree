@@ -299,6 +299,36 @@ sub searchURL
 
 
 #############################################################################
+# Browse an LDAP entry, very much like the regular search, except we set
+# some defaults (like scope=BASE, filter=(objectclass=*) and so on). Note
+# that this method does not support the attributesOnly flag.
+#
+sub browse
+{
+  my ($self, $basedn, @attrs) = @_;
+  my ($scope, $filter);
+
+  $scope = Mozilla::LDAP::Utils::str2Scope("BASE");
+  $filter = "(objectclass=*)" ;
+
+  return  $self->search($basedn, $scope, $filter, 0, @attrs);
+}
+
+
+#############################################################################
+# Compare an attribute value against a DN in the server (without having to
+# do a search first).
+#
+sub compare
+{
+  my ($self, $dn, $attr, $value) = @_;
+
+  return ldap_compare_s($self->{"ld"}, $dn, $attr, $value) ==
+    LDAP_COMPARE_TRUE;
+}
+
+
+#############################################################################
 # Get an entry from the search, either the first entry, or the next entry,
 # depending on the call order.
 #
@@ -709,7 +739,8 @@ There's also a term called RDN, which stands for Relative Distinguished
 Name. In the above examples, C<uid=leif>, C<cn=gene-staff> and C<dc=data>
 are all RDNs. One particular property for a RDN is that they must be
 unique within it's sub-tree. Hence, there can only be one user with
-C<uid=leif> within the ou=people tree, there can never be a name conflict.
+C<uid=leif> within the C<ou=people> tree, there can never be a name
+conflict.
 
 =head1 CREATING A NEW OBJECT INSTANCE
 
@@ -1052,10 +1083,27 @@ directly, the destructor for the object instance will do the job for you.
 =item B<modifyRDN>
 
 This will rename the specified LDAP entry, by modifying it's RDN. For
-example:
+example, assuming you have a DN of
+
+    uid=leif, ou=people, dc=netscape, dc=com
+
+and you wish to rename to
+
+    uid=fiel, ou=people, dc=netscape, dc=com
+
+you'd do something like
 
     $rdn = "uid=fiel";
     $conn->modifyRDN($rdn, $entry->getDN());
+
+
+Note that this can only be done on the RDN, you could not change say
+C<ou=people> to be C<ou=hackers> in the example above. To do that, you have
+to add a new entry (a copy of the old one), and then remove the old
+entry.
+
+The last argument is a boolean (0 or 1), which indicates if the old RDN
+value should be removed from the entry. The default is TRUE ("1").
 
 =back
 
