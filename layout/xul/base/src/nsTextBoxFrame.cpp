@@ -262,13 +262,84 @@ nsTextBoxFrame::PaintTitle(nsIPresContext*      aPresContext,
         return NS_OK;
 
     // paint the title
-    // XXX This is a total hack.  We should really support all the text decorations by painting
-    // them ourselves.
-    nsStyleFont* fontStyle = (nsStyleFont*)mStyleContext->GetStyleData(eStyleStruct_Font);
-    const nsStyleTextReset* textStyle = (const nsStyleTextReset*)mStyleContext->GetStyleData(eStyleStruct_TextReset);
-    PRUint8 oldDec = fontStyle->mFont.decorations;
-    fontStyle->mFont.decorations = textStyle->mTextDecoration;
+    nscolor overColor;
+    nscolor underColor;
+    nscolor strikeColor;
+    nsIStyleContext*  context = mStyleContext;
+  
+    PRUint8 decorations = NS_STYLE_TEXT_DECORATION_NONE; // Begin with no decorations
+    PRUint8 decorMask = NS_STYLE_TEXT_DECORATION_UNDERLINE | NS_STYLE_TEXT_DECORATION_OVERLINE |
+                        NS_STYLE_TEXT_DECORATION_LINE_THROUGH; // A mask of all possible decorations.
+    PRBool hasDecorations = context->HasTextDecorations();
 
+    NS_ADDREF(context);
+    do {  // find decoration colors
+      const nsStyleTextReset* styleText = 
+        (const nsStyleTextReset*)context->GetStyleData(eStyleStruct_TextReset);
+      
+      if (decorMask & styleText->mTextDecoration) {  // a decoration defined here
+        const nsStyleColor* styleColor =
+          (const nsStyleColor*)context->GetStyleData(eStyleStruct_Color);
+    
+        if (NS_STYLE_TEXT_DECORATION_UNDERLINE & decorMask & styleText->mTextDecoration) {
+          underColor = styleColor->mColor;
+          decorMask &= ~NS_STYLE_TEXT_DECORATION_UNDERLINE;
+          decorations |= NS_STYLE_TEXT_DECORATION_UNDERLINE;
+        }
+        if (NS_STYLE_TEXT_DECORATION_OVERLINE & decorMask & styleText->mTextDecoration) {
+          overColor = styleColor->mColor;
+          decorMask &= ~NS_STYLE_TEXT_DECORATION_OVERLINE;
+          decorations |= NS_STYLE_TEXT_DECORATION_OVERLINE;
+        }
+        if (NS_STYLE_TEXT_DECORATION_LINE_THROUGH & decorMask & styleText->mTextDecoration) {
+          strikeColor = styleColor->mColor;
+          decorMask &= ~NS_STYLE_TEXT_DECORATION_LINE_THROUGH;
+          decorations |= NS_STYLE_TEXT_DECORATION_LINE_THROUGH;
+        }
+      }
+      if (0 != decorMask) {
+        nsIStyleContext*  lastContext = context;
+        context = context->GetParent();
+        hasDecorations = context->HasTextDecorations();
+        NS_RELEASE(lastContext);
+      }
+    } while ((nsnull != context) && hasDecorations && (0 != decorMask));
+    NS_IF_RELEASE(context);
+
+    nsStyleFont* fontStyle = (nsStyleFont*)mStyleContext->GetStyleData(eStyleStruct_Font);
+    
+    nscoord offset;
+    nscoord size;
+    nscoord baseline;
+    if (decorations & (NS_FONT_DECORATION_OVERLINE | NS_FONT_DECORATION_UNDERLINE)) {
+      nsCOMPtr<nsIDeviceContext> deviceContext;
+      aPresContext->GetDeviceContext(getter_AddRefs(deviceContext));
+
+      nsCOMPtr<nsIFontMetrics> fontMet;
+      deviceContext->GetMetricsFor(fontStyle->mFont, *getter_AddRefs(fontMet));
+      fontMet->GetMaxAscent(baseline);
+      fontMet->GetUnderline(offset, size);
+      if (decorations & NS_FONT_DECORATION_OVERLINE) {
+        aRenderingContext.SetColor(overColor);
+        aRenderingContext.FillRect(textRect.x, textRect.y, mRect.width, size);
+      }
+      if (decorations & NS_FONT_DECORATION_UNDERLINE) {
+        aRenderingContext.SetColor(underColor);
+        aRenderingContext.FillRect(textRect.x, textRect.y + baseline - offset, mRect.width, size);
+      }
+    }
+    if (decorations & NS_FONT_DECORATION_LINE_THROUGH) {
+      nsCOMPtr<nsIDeviceContext> deviceContext;
+      aPresContext->GetDeviceContext(getter_AddRefs(deviceContext));
+
+      nsCOMPtr<nsIFontMetrics> fontMet;
+      deviceContext->GetMetricsFor(fontStyle->mFont, *getter_AddRefs(fontMet));
+      fontMet->GetMaxAscent(baseline);
+      fontMet->GetStrikeout(offset, size);
+      aRenderingContext.SetColor(strikeColor);
+      aRenderingContext.FillRect(textRect.x, textRect.y + baseline - offset, mRect.width, size);
+    }
+ 
     aRenderingContext.SetFont(fontStyle->mFont);
 
     CalculateUnderline(aRenderingContext);
@@ -285,7 +356,6 @@ nsTextBoxFrame::PaintTitle(nsIPresContext*      aPresContext,
                                    mAccessKeyInfo->mAccessUnderlineSize);
     }
 
-    fontStyle->mFont.decorations = oldDec;
     return NS_OK;
 }
 
