@@ -416,19 +416,22 @@ nsIOService::GetProtocolHandler(const char* scheme, nsIProtocolHandler* *result)
     rv = GetCachedProtocolHandler(scheme, result);
     if (NS_SUCCEEDED(rv)) return NS_OK;
 
-    PRBool externalProtocol = PR_FALSE;
-    PRBool useAnyExternal = PR_TRUE;
+    PRBool externalProtocol  = PR_FALSE;
+    PRBool useSystemDefaults = PR_TRUE;
+    PRBool listedProtocol    = PR_TRUE;
     nsCOMPtr<nsIPrefBranch> prefBranch;
     GetPrefBranch(getter_AddRefs(prefBranch));
     if (prefBranch) {
         nsCAutoString externalProtocolPref("network.protocol-handler.external.");
         externalProtocolPref += scheme;
         rv = prefBranch->GetBoolPref(externalProtocolPref.get(), &externalProtocol);
-        if (NS_FAILED(rv))
+        if (NS_FAILED(rv)) {
             externalProtocol = PR_FALSE;
-
-        rv = prefBranch->GetBoolPref("network.protocol-handler.useAnyExternal",
-                                     &useAnyExternal);
+            listedProtocol   = PR_FALSE;
+        }
+        rv = prefBranch->GetBoolPref(
+                                  "network.protocol-handler.useSystemDefaults",
+                                  &useSystemDefaults);
     }
 
     nsresult gotHandler = NS_ERROR_UNEXPECTED;
@@ -439,10 +442,17 @@ nsIOService::GetProtocolHandler(const char* scheme, nsIProtocolHandler* *result)
         ToLowerCase(contractID);
 
         gotHandler = CallGetService(contractID.get(), result);
+
+        // If the pref for this protocol was explicitly set to false,
+        // stop here and do not invoke the default handler.
+        if (NS_FAILED(gotHandler) && listedProtocol)
+            return NS_ERROR_UNKNOWN_PROTOCOL;
     }
 
-    if (externalProtocol || (NS_FAILED(gotHandler) && useAnyExternal))
+    if (externalProtocol || (NS_FAILED(gotHandler) && useSystemDefaults))
     {
+      // use default handler (from OS)
+
       // okay we don't have a protocol handler to handle this url type, so use the default protocol handler.
       // this will cause urls to get dispatched out to the OS ('cause we can't do anything with them) when 
       // we try to read from a channel created by the default protocol handler.
@@ -713,11 +723,7 @@ nsIOService::NewURI(const nsACString &aSpec, const char *aCharset, nsIURI *aBase
     nsCAutoString scheme;
 
     rv = ExtractScheme(aSpec, scheme);
-    if (NS_SUCCEEDED(rv)) {
-        // then aSpec is absolute... ignore aBaseURI in this case
-        aBaseURI = nsnull;
-    }
-    else {
+    if (NS_FAILED(rv)) {
         // then aSpec is relative
         if (!aBaseURI)
             return NS_ERROR_MALFORMED_URI;
