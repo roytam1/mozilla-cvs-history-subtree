@@ -2782,7 +2782,9 @@ NS_METHOD nsTableFrame::IR_StyleChanged(nsIPresContext*      aPresContext,
   nsTableReflowState reflowState(*aPresContext, aReflowState.reflowState, *this, eReflowReason_StyleChange,
                                  aReflowState.availSize.width, aReflowState.availSize.height); 
   nsIFrame* lastReflowed;
-  return ReflowChildren(aPresContext, reflowState, PR_FALSE, PR_FALSE, aStatus, lastReflowed);
+  nsresult rv = ReflowChildren(aPresContext, reflowState, PR_FALSE, PR_FALSE, aStatus, lastReflowed);
+  SetNeedStrategyInit(PR_TRUE);
+  return rv;
 }
 
 static void
