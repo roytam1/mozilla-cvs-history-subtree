@@ -1005,14 +1005,18 @@ nsComponentManagerImpl::ReadPersistentRegistry()
 
     nsCOMPtr<nsIFile> componentReg;
 
-    rv = mComponentsDir->Clone(getter_AddRefs(componentReg));
+    // Can't use NS_GetSpecialDirectory here.  Called before service manager is initialized.
+    nsCOMPtr<nsIProperties> directoryService;
+    rv = nsDirectoryService::Create(nsnull, 
+                                    NS_GET_IID(nsIProperties), 
+                                    getter_AddRefs(directoryService));
     if (NS_FAILED(rv))
         return rv;
-
-    rv = componentReg->AppendNative(nsDependentCString(persistentRegistryFilename));
+    rv = directoryService->Get(NS_XPCOM_COMPONENT_REGISTRY_FILE, NS_GET_IID(nsIFile), 
+                                  getter_AddRefs(componentReg));
     if (NS_FAILED(rv))
         return rv;
-
+    
     nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(componentReg, &rv);
     if (NS_FAILED(rv))
         return rv;
@@ -1429,11 +1433,14 @@ out:
         return rv;
 
     nsCOMPtr<nsIFile> mainFile;
-    rv = mComponentsDir->Clone(getter_AddRefs(mainFile));       
+    nsCOMPtr<nsIProperties> directoryService;
+    rv = nsDirectoryService::Create(nsnull, 
+                                    NS_GET_IID(nsIProperties), 
+                                    getter_AddRefs(directoryService));
     if (NS_FAILED(rv))
         return rv;
-
-    rv = mainFile->AppendNative(nsDependentCString(persistentRegistryFilename));     
+    rv = directoryService->Get(NS_XPCOM_COMPONENT_REGISTRY_FILE, NS_GET_IID(nsIFile), 
+                                  getter_AddRefs(mainFile));
     if (NS_FAILED(rv))
         return rv;
 
@@ -1448,7 +1455,14 @@ out:
         if (NS_FAILED(rv))
             return rv;
     }
-    rv = componentReg->MoveToNative(nsnull, nsDependentCString(persistentRegistryFilename));
+    
+    nsCAutoString leafName; 
+    rv = mainFile->GetNativeLeafName(leafName); 
+    
+    if (NS_FAILED(rv)) return rv; 
+    
+    rv = componentReg->MoveToNative(nsnull, leafName); 
+
     mRegistryDirty = PR_FALSE;
 
     return rv;
