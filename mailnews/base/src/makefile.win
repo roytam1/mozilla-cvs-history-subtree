@@ -56,9 +56,6 @@ EXPORTS=						\
 	nsMsgPrintEngine.h	\
 	nsMsgRDFUtils.h		\
 	nsStatusBarBiffManager.h \
-	nsMsgDBView.h \
-	nsMsgThreadedDBView.h \
-	nsMsgSpecialViews.h \
 	$(NULL)
 
 
@@ -100,6 +97,7 @@ CPP_OBJS=									\
 	.\$(OBJDIR)\nsMsgDBView.obj \
 	.\$(OBJDIR)\nsMsgThreadedDBView.obj \
 	.\$(OBJDIR)\nsMsgSpecialViews.obj \
+	.\$(OBJDIR)\nsMsgSearchDBView.obj \
 	$(NULL)
 
 

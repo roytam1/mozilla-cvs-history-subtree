@@ -449,6 +449,9 @@
 #define NS_MSGWATCHEDTHREADSWITHUNREADDBVIEW_CONTRACTID \
   NS_MSGDBVIEW_CONTRACTID_PREFIX "watchedthreadswithunread"
 
+#define NS_MSGSEARCHDBVIEW_CONTRACTID \
+  NS_MSGDBVIEW_CONTRACTID_PREFIX "search"
+
 /* 52f860e0-1dd2-11b2-aa72-bb751981bd00 */
 #define NS_MSGTHREADEDDBVIEW_CID \
   {0x52f860e0, 0x1dd2, 0x11b2, \
@@ -463,5 +466,10 @@
 #define NS_MSGWATCHEDTHREADSWITHUNREADDBVIEW_CID \
   {0x597e1ffe, 0x0123, 0x11d5, \
     {0xa5, 0xbe, 0x00, 0x60, 0xb0, 0xfc, 0x04, 0xb7 }}
+
+/* aeac118c-0823-11d5-a5bf-0060b0fc04b7 */
+#define NS_MSGSEARCHDBVIEW_CID \
+  {0xaeac118c, 0x0823, 0x11d5, \
+    {0xa5, 0xbf, 0x00, 0x60, 0xb0, 0xfc, 0x04, 0xb7}}
 
 #endif // nsMessageBaseCID_h__

@@ -64,6 +64,7 @@ CPPSRCS		= \
 		nsMsgDBView.cpp \
 		nsMsgThreadedDBView.cpp \
 		nsMsgSpecialViews.cpp \
+		nsMsgSearchDBView.cpp \
 		$(NULL)
 
 EXPORTS		= \

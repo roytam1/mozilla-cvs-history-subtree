@@ -346,19 +346,22 @@ NS_IMETHODIMP nsMsgDBView::SelectionChanged()
 
 nsresult nsMsgDBView::GetSelectedIndices(nsUInt32Array *selection)
 {
-  PRInt32 selectionCount; 
-  nsresult rv = mOutlinerSelection->GetRangeCount(&selectionCount);
-  for (PRInt32 i = 0; i < selectionCount; i++)
+  if (mOutlinerSelection)
   {
-    PRInt32 startRange;
-    PRInt32 endRange;
-    rv = mOutlinerSelection->GetRangeAt(i, &startRange, &endRange);
-    NS_ENSURE_SUCCESS(rv, NS_OK); 
-    PRInt32 viewSize = GetSize();
-    if (startRange >= 0 && startRange < viewSize)
+    PRInt32 selectionCount; 
+    nsresult rv = mOutlinerSelection->GetRangeCount(&selectionCount);
+    for (PRInt32 i = 0; i < selectionCount; i++)
     {
-      for (PRInt32 rangeIndex = startRange; rangeIndex <= endRange && rangeIndex < viewSize; rangeIndex++)
-        selection->Add(rangeIndex);
+      PRInt32 startRange;
+      PRInt32 endRange;
+      rv = mOutlinerSelection->GetRangeAt(i, &startRange, &endRange);
+      NS_ENSURE_SUCCESS(rv, NS_OK); 
+      PRInt32 viewSize = GetSize();
+      if (startRange >= 0 && startRange < viewSize)
+      {
+        for (PRInt32 rangeIndex = startRange; rangeIndex <= endRange && rangeIndex < viewSize; rangeIndex++)
+          selection->Add(rangeIndex);
+      }
     }
   }
   return NS_OK;
@@ -2449,9 +2452,7 @@ NS_IMETHODIMP nsMsgDBView::SetViewFlags(nsMsgViewFlagsTypeValue aViewFlags)
 nsresult nsMsgDBView::MarkThreadOfMsgRead(nsMsgKey msgId, nsMsgViewIndex msgIndex, nsMsgKeyArray &idsMarkedRead, PRBool bRead)
 {
     nsCOMPtr <nsIMsgThread> threadHdr;
-    nsresult rv;
-
-    GetThreadContainingIndex(msgIndex, getter_AddRefs(threadHdr));
+    nsresult rv = GetThreadContainingIndex(msgIndex, getter_AddRefs(threadHdr));
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsMsgViewIndex threadIndex;

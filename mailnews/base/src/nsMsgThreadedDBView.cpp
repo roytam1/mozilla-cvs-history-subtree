@@ -25,8 +25,6 @@
 #include "nsIMsgHdr.h"
 #include "nsIMsgThread.h"
 
-// "imap://bienvenu@nsmail-1/INBOX"
-// chrome://messenger/content/dbviewtest.xul
 nsMsgThreadedDBView::nsMsgThreadedDBView()
 {
   /* member initializers and constructor code */
@@ -90,7 +88,7 @@ nsresult nsMsgThreadedDBView::InitThreadedView(PRInt32 *pCount)
 
 	if (NS_SUCCEEDED(getSortrv))
 	{
-		InitSort(m_sortType, m_sortOrder);
+		rv = InitSort(m_sortType, m_sortOrder);
 	}
 	return rv;
 }
