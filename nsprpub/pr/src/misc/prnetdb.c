@@ -2059,9 +2059,6 @@ PRStatus PR_GetAddrInfoByName(const char  *hostname,
                               PRIntn       flags,
                               PRAddrInfo **result)
 {
-    PRADDRINFO *res, hints;
-    PRStatus rv;
-
     /* restrict input to supported values */
     if (af != 0 || flags != 0) {
         PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
@@ -2078,26 +2075,29 @@ PRStatus PR_GetAddrInfoByName(const char  *hostname,
         return pr_GetAddrInfoByNameFB(hostname, af, flags, result);
     }
 #endif
+    {
+        PRADDRINFO *res, hints;
+        PRStatus rv;
 
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_flags = AI_CANONNAME;
-    hints.ai_family = AF_UNSPEC;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_flags = AI_CANONNAME;
+        hints.ai_family = AF_UNSPEC;
 
 #ifdef AI_ADDRCONFIG
-    /* By default, only look up addresses using address types for
-     * which a local interface is configured (i.e. no IPv6 if no IPv6
-     * interfaces. NOTE: do this only if ai_family is PF_UNSPEC. */
-    hints.ai_flags |= AI_ADDRCONFIG;
+        /* By default, only look up addresses using address types for
+         * which a local interface is configured (i.e. no IPv6 if no IPv6
+         * interfaces. NOTE: do this only if ai_family is PF_UNSPEC. */
+        hints.ai_flags |= AI_ADDRCONFIG;
 #endif
-    
-    rv = GETADDRINFO(hostname, NULL, &hints, &res);
+        
+        rv = GETADDRINFO(hostname, NULL, &hints, &res);
 
-    if (rv == 0) {
-        *result = (PRAddrInfo *) res;
-        return PR_SUCCESS;
+        if (rv == 0) {
+            *result = (PRAddrInfo *) res;
+            return PR_SUCCESS;
+        }
+        PR_SetError(PR_DIRECTORY_LOOKUP_ERROR, rv);
     }
-
-    PR_SetError(PR_DIRECTORY_LOOKUP_ERROR, rv);
     return PR_FAILURE;
 #endif
 }
@@ -2121,9 +2121,8 @@ void *PR_EnumerateAddrInfo(void             *iterPtr,
                            PRUint16          port,
                            PRNetAddr        *result)
 {
-    PRADDRINFO *ai;
-
 #if defined(_PR_HAVE_GETADDRINFO)
+    PRADDRINFO *ai;
 #if defined(_PR_INET6_PROBE)
     if (!_pr_ipv6_is_present) {
         /* using PRAddrInfoFB */
