@@ -431,7 +431,7 @@ public:
 
     // (Corresponds to NPP_New's mode argument.)
     NS_IMETHOD
-    GetMode(nsPluginType *result);
+    GetMode(nsPluginMode *result);
 
     // (Corresponds to NPN_NewStream.)
     NS_IMETHOD

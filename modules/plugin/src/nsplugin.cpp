@@ -626,10 +626,10 @@ nsPluginInstancePeer::GetMIMEType(nsMIMEType *result)
 }
 
 NS_METHOD
-nsPluginInstancePeer::GetMode(nsPluginType *result)
+nsPluginInstancePeer::GetMode(nsPluginMode *result)
 {
     np_instance* instance = (np_instance*)fNPP->ndata;
-    *result = (nsPluginType)instance->type;
+    *result = (nsPluginMode)instance->type;
     return NS_OK;
 }
 
