@@ -432,10 +432,11 @@ sub Checkout()
     # activate MacCVS
     ActivateApplication('Mcvs');
 
-    my($nsprpub_tag) = "NSPRPUB_CLIENT_BRANCH";
-    my($nss_tab) = "NSS_30_BRANCH";
-    my($psm_tag) = "SECURITY_MAC_BRANCH";
-    my($ldapsdk_tag) = "LDAPCSDK_40_BRANCH";
+    my($nsprpub_tag) = "Netscape_20000922_BRANCH";
+    my($nss_tab) = "Netscape_20000922_SECURITY_MAC_BRANCH";
+    my($psm_tag) = "Netscape_20000922_SECURITY_MAC_BRANCH";
+    my($ldapsdk_tag) = "Netscape_20000922_BRANCH";
+    my($sma_tag) = "Netscape_20000922_BRANCH";
     
     #//
     #// Checkout commands
@@ -450,7 +451,7 @@ sub Checkout()
         # we need this jar.mn file on the jar branch
         # $session->checkout("mozilla/security/base/res/jar.mn", $jars_branch_tag) || print "checkout of jar.mn failed\n";
 
-        $session->checkout("SeaMonkeyAll")           || 
+        $session->checkout("SeaMonkeyAll", $sma_tag)           || 
             print "MacCVS reported some errors checking out SeaMonkeyAll, but these are probably not serious.\n";
     }
     elsif ($main::pull{runtime})
