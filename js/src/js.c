@@ -339,9 +339,10 @@ Load(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	script = JS_CompileFile(cx, obj, filename);
 	if (!script)
             ok = JS_FALSE;
-        else
+        else {
             ok = JS_ExecuteScript(cx, obj, script, &result);
-	JS_DestroyScript(cx, script);
+	    JS_DestroyScript(cx, script);
+        }
 	if (!ok)
 	    return JS_FALSE;
     }
