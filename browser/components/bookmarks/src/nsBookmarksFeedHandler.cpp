@@ -513,6 +513,10 @@ nsFeedLoadListener::HandleRDFItem (nsIRDFDataSource *aDS, nsIRDFResource *aItem,
     nsCOMPtr<nsIRDFLiteral> linkLiteral(do_QueryInterface(linkNode));
     nsCOMPtr<nsIRDFLiteral> titleLiteral(do_QueryInterface(titleNode));
 
+    // if the link/title points to something other than a literal skip it.
+    if (!linkLiteral || !titleLiteral)
+        return NS_ERROR_FAILURE;
+
     const PRUnichar *linkStr, *titleStr;
     rv = linkLiteral->GetValueConst(&linkStr);
     rv |= titleLiteral->GetValueConst(&titleStr);
