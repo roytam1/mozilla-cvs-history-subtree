@@ -1,15 +1,13 @@
-packages/xmlterm.jar:
-	xmlterm/content/xmlterm.xul            (xul/content/xmlterm.xul)
-	xmlterm/content/XMLTermOverlay.xul     (xul/contentXMLTermOverlay.xul)
-	xmlterm/content/XMLTermChrome.js       (xul/contentXMLTermChrome.js)
-	xmlterm/content/XMLTermCommands.js     (xul/contentXMLTermCommands.js)
-	xmlterm/content/XMLTermOverlay.js      (xul/contentXMLTermOverlay.js)
-	xmlterm/content/xmlterm.html           (xul/content/xmlterm.html)
-	xmlterm/content/xmltermAbout.html      (xul/content/xmltermAbout.html)
-	xmlterm/content/xmltermTips.html       (xul/content/xmltermTips.html)
-
-	xmlterm/skin/xmlterm.css               (xul/skin/xmlterm.css)
-	xmlterm/skin/xmltpage.css              (xul/skin/xmltpage.css)
-	xmlterm/skin/wheel.gif                 (xul/skin/wheel.gif)
-
-	manifest.rdf                           (xul/manifest.rdf)
+xmlterm.jar:
+	content/xmlterm/xmlterm.xul            (ui/content/xmlterm.xul)
+	content/xmlterm/XMLTermOverlay.xul     (ui/contentXMLTermOverlay.xul)
+	content/xmlterm/XMLTermChrome.js       (ui/contentXMLTermChrome.js)
+	content/xmlterm/XMLTermCommands.js     (ui/contentXMLTermCommands.js)
+	content/xmlterm/XMLTermOverlay.js      (ui/contentXMLTermOverlay.js)
+	content/xmlterm/xmlterm.html           (ui/content/xmlterm.html)
+	content/xmlterm/xmltermAbout.html      (ui/content/xmltermAbout.html)
+	content/xmlterm/xmltermTips.html       (ui/content/xmltermTips.html)
+	skin/modern/xmlterm/xmlterm.css        (ui/skin/xmlterm.css)
+	skin/modern/xmlterm/xmltpage.css       (ui/skin/xmltpage.css)
+	skin/modern/xmlterm/wheel.gif          (ui/skin/wheel.gif)
+	manifest.rdf                           (ui/manifest.rdf)
