@@ -43,7 +43,8 @@ int main(int argc, char *argv[])
     void *iter;
     PRNetAddr addr;
 
-    if (PR_GetAddrInfoByName(argv[1], 0, 0, &ai) == PR_FAILURE) {
+    ai = PR_GetAddrInfoByName(argv[1], PR_AF_UNSPEC, PR_AI_ADDRCONFIG);
+    if (ai == NULL) {
         fprintf(stderr, "PR_GetAddrInfoByName failed: (%d, %d)\n",
             PR_GetError(), PR_GetOSError());
         exit(1);
