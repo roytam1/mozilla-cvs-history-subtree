@@ -16,6 +16,22 @@
  * Reserved.
  */
 
+/*
+
+  Implementation for an in-memory RDF data store.
+
+  TO DO:
+
+  1) There is no implementation for walking property arcs backwards;
+     i.e., GetSource(), GetSources(), and ArcLabelsIn(). Gotta fix
+     this. Or maybe factor the API so that you don't always need to
+     implement that crap. I can see that being a real headache for
+     some implementations.
+
+  2) Need to hook up observer mechanisms.
+
+ */
+
 #include "nsMemoryDataSource.h"
 #include "nsIRDFCursor.h"
 #include "nsIRDFNode.h"
@@ -481,6 +497,7 @@ nsMemoryDataSource::GetSource(nsIRDFNode* property,
                               PRBool tv,
                               nsIRDFNode*& source)
 {
+    PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED; // XXX
 }
 
@@ -490,6 +507,7 @@ nsMemoryDataSource::GetSources(nsIRDFNode* property,
                                PRBool tv,
                                nsIRDFCursor*& sources)
 {
+    PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED; // XXX
 }
 
@@ -508,6 +526,8 @@ nsMemoryDataSource::GetTarget(nsIRDFNode* source,
         return NS_OK;
 
     target = u->GetProperty(property, tv);
+    NS_IF_ADDREF(target); // need to AddRef()
+
     return NS_OK;
 }
 
@@ -589,12 +609,14 @@ nsMemoryDataSource::HasAssertion(nsIRDFNode* source,
 NS_IMETHODIMP
 nsMemoryDataSource::AddObserver(nsIRDFObserver* n)
 {
+    PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP
 nsMemoryDataSource::RemoveObserver(nsIRDFObserver* n)
 {
+    PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -602,6 +624,7 @@ NS_IMETHODIMP
 nsMemoryDataSource::ArcLabelsIn(nsIRDFNode* node,
                                 nsIRDFCursor*& labels)
 {
+    PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -626,7 +649,7 @@ nsMemoryDataSource::ArcLabelsOut(nsIRDFNode* source,
 NS_IMETHODIMP
 nsMemoryDataSource::Flush()
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_OK; // nothing to flush!
 }
 
 
