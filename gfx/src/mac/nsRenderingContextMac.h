@@ -151,6 +151,12 @@ public:
                                 PRInt32*           aFontID);
 #endif /* MOZ_MATHML */
 
+  NS_IMETHOD DrawImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint);
+  NS_IMETHOD DrawScaledImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect);
+  NS_IMETHOD DrawTile(nsIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, const nsRect * aTargetRect);
+  NS_IMETHOD DrawScaledTile(nsIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, nscoord aTileWidth, nscoord aTileHeight, const nsRect * aTargetRect);
+
+
   //locals
   NS_IMETHOD SetPortTextState();
   nsresult   Init(nsIDeviceContext* aContext, GrafPtr aPort);
