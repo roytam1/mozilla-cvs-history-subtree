@@ -42,7 +42,9 @@
 #include "nsLocalFile.h"
 #include "nsDebug.h"
 
+#ifdef XP_MACOSX
 #include <CoreServices/CoreServices.h>
+#endif
 
 #if defined(XP_MAC)
 #include <Folders.h>
