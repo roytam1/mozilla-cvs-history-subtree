@@ -2541,7 +2541,7 @@ nsFrame::DumpBaseRegressionData(nsIPresContext* aPresContext, FILE* out, PRInt32
       fprintf(out, "<stylecontext va=\"%ld\">\n", PRUptrdiff(mStyleContext));
       aIndent++;
       // Dump style context regression data
-      mStyleContext->DumpRegressionData(aPresContext, out, aIndent);
+      //mStyleContext->DumpRegressionData(aPresContext, out, aIndent);
       aIndent--;
       IndentBy(out, aIndent);
       fprintf(out, "</stylecontext>\n");
