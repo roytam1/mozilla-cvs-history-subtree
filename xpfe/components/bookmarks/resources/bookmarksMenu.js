@@ -102,7 +102,6 @@ var BookmarksMenu = {
     switch (aNode.id) {
     case "bookmarks-ptf":
       parent = "NC:PersonalToolbarFolder";
-      item = BookmarksToolbar.getLastVisibleBookmark();
       break;
     case "BookmarksMenu":
       parent = "NC:BookmarksRoot";
@@ -190,8 +189,7 @@ var BookmarksMenu = {
         target.parentNode.localName != "menupopup")
       return BookmarksUtils.DROP_ON;
     if (target.id == "bookmarks-ptf") {
-      return target.hasChildNodes()?
-             BookmarksUtils.DROP_AFTER:BookmarksUtils.DROP_ON;
+      return BookmarksUtils.DROP_ON;
     }
 
     var overButtonBoxObject = target.boxObject.QueryInterface(Components.interfaces.nsIBoxObject);
@@ -621,13 +619,12 @@ var BookmarksMenuDNDObserver = {
             break;
         }
         break;
-      case "hbox"     : 
-        // hit between the last visible bookmark and the chevron
-        var newTarget = BookmarksToolbar.getLastVisibleBookmark();
+      case "toolbar": 
+        var newTarget = document.getElementById("bookmarks-ptf").lastChild;
         if (newTarget)
           newTarget.setAttribute("dragover-right", "true");
         break;
-      case "stack"    :
+      case "hbox":
       case "menupopup": break; 
      default: dump("No feedback for: "+aTarget.localName+"\n");
     }
@@ -637,15 +634,10 @@ var BookmarksMenuDNDObserver = {
   { 
     var newTarget;
     var bt;
-    if (aTarget.id == "bookmarks-ptf") { 
-      // hit when dropping in the bt or between the last visible bookmark 
-      // and the chevron
-      newTarget = BookmarksToolbar.getLastVisibleBookmark();
+    if (aTarget.id == "PersonalToolbar" || aTarget.id == "bookmarks-ptf") { 
+      newTarget = document.getElementById("bookmarks-ptf").lastChild;
       if (newTarget)
         newTarget.removeAttribute("dragover-right");
-    } else if (aTarget.id == "bookmarks-stack") {
-      newTarget = BookmarksToolbar.getLastVisibleBookmark();
-      newTarget.removeAttribute("dragover-right");
     } else {
       aTarget.removeAttribute("dragover-left");
       aTarget.removeAttribute("dragover-right");
