@@ -846,14 +846,14 @@ function GetSelectedMsgFolders()
 	return folderArray;
 }
 
-function GetSelectedMessage(index)
+function GetFirstSelectedMessage()
 {
-  // this isn't going to work anymore.
-}
-
-function GetNumSelectedMessages()
-{
-  // this needs to be re-written
+    try {
+        return gDBView.URIForFirstSelectedMessage;
+    }
+    catch (ex) {
+        return null;
+    }
 }
 
 function GetSelectedMessages()
@@ -912,12 +912,10 @@ function GetCompositeDataSource(command)
 
 function SetNextMessageAfterDelete()
 {
-  // this needs re-written
     var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
     var selection = outlinerView.selection;
     dump("setting next msg view index after delete to " + selection.currentIndex + "\n");
     gNextMessageViewIndexAfterDelete = selection.currentIndex;
-
 /*
 	var tree = GetThreadTree();
 

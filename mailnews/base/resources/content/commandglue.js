@@ -72,6 +72,7 @@ function GetServer(uri)
 
 function LoadMessage(messageNode)
 {
+    dump("remove this?  LoadMessage()\n");
 	var uri = messageNode.getAttribute('id');
 	LoadMessageByUri(uri);
 }
@@ -80,6 +81,8 @@ function LoadMessageByUri(uri)
 {  
 	if(uri != gCurrentDisplayedMessage)
 	{
+        dump("fix this, get the nsIMsgDBHdr and the nsIMsgFolder from the uri...\n");
+/*
 		var resource = RDF.GetResource(uri);
 		var message = resource.QueryInterface(Components.interfaces.nsIMessage); 
 		if (message)
@@ -88,6 +91,7 @@ function LoadMessageByUri(uri)
 		var nsIMsgFolder = Components.interfaces.nsIMsgFolder;
 		if (message.msgFolder.server.downloadOnBiff)
 			message.msgFolder.biffState = nsIMsgFolder.nsMsgBiffState_NoMail;
+*/
 
 		gCurrentDisplayedMessage = uri;
 		gHaveLoadedMessage = true;

@@ -549,7 +549,6 @@ NS_IMETHODIMP nsMsgDBView::GetLevel(PRInt32 index, PRInt32 *_retval)
 // search view will override this since headers can span db's
 nsresult nsMsgDBView::GetMsgHdrForViewIndex(nsMsgViewIndex index, nsIMsgDBHdr **msgHdr)
 {
-  nsresult rv = NS_OK;
   nsMsgKey key = m_keys.GetAt(index);
   return m_db->GetMsgHdrForKey(key, msgHdr);
 }
@@ -3290,4 +3289,66 @@ NS_IMETHODIMP nsMsgDBView::GetMsgFolder(nsIMsgFolder **aMsgFolder)
   *aMsgFolder = m_folder;
   NS_IF_ADDREF(*aMsgFolder);
   return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsMsgDBView::GetNumSelected(PRUint32 *numSelected)
+{
+  NS_ENSURE_ARG_POINTER(numSelected);
+  *numSelected = 0;
+  if (!mOutlinerSelection) {
+    return NS_OK;
+  }
+   
+  // we could just use GetSelectedIndices(), we don't for performance
+  // we don't need to know the rows that are selected, just
+  // how many of them.  no need to allocate a nsUInt32Array
+  // just to throw it away.  we call this a lot from the 
+  // front end JS, so make it fast.
+  PRInt32 selectionCount;
+  nsresult rv = mOutlinerSelection->GetRangeCount(&selectionCount);
+  for (PRInt32 i = 0; i < selectionCount; i++) {
+    PRInt32 startRange;
+    PRInt32 endRange;
+    rv = mOutlinerSelection->GetRangeAt(i, &startRange, &endRange);
+    NS_ENSURE_SUCCESS(rv, rv);
+    PRInt32 viewSize = GetSize();
+    if (startRange >= 0 && startRange < viewSize) {
+      for (PRInt32 rangeIndex = startRange; rangeIndex <= endRange && rangeIndex < viewSize; rangeIndex++) {
+        (*numSelected)++;
+      }
+    }
+  }
+  return NS_OK;
+}
+
+// if nothing selected, return an NS_ERROR
+NS_IMETHODIMP 
+nsMsgDBView::GetURIForFirstSelectedMessage(char **uri)
+{
+  NS_ENSURE_ARG_POINTER(uri);
+
+  if (!mOutlinerSelection) return NS_ERROR_UNEXPECTED;
+
+  PRInt32 selectionCount; 
+  nsresult rv = mOutlinerSelection->GetRangeCount(&selectionCount);
+  NS_ENSURE_SUCCESS(rv, rv); 
+
+  if (selectionCount < 0) return NS_ERROR_UNEXPECTED;
+
+  PRInt32 startRange;
+  PRInt32 endRange;
+  rv = mOutlinerSelection->GetRangeAt(0, &startRange, &endRange);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  if (startRange >= 0 && startRange == endRange && startRange < GetSize()) {
+    // get the msgkey for the message
+    nsMsgKey msgkey = m_keys.GetAt(startRange);
+    rv = GenerateURIForMsgKey(msgkey, m_folder, uri);
+    NS_ENSURE_SUCCESS(rv,rv);
+    return NS_OK;
+  }
+  else {
+    return NS_ERROR_UNEXPECTED;
+  }
 }

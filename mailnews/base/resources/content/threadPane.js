@@ -191,11 +191,14 @@ function ChangeThreadView()
 
 function IsSpecialFolderSelected(folderName)
 {
-	var selectedFolder = GetThreadTreeFolder();
-	var id = selectedFolder.getAttribute('ref');
+	var selectedFolder = GetThreadPaneFolder();
+    if (!selectedFolder) return false;
+
+    dump("fix this, we don't need to use RDF for this.\n");
+
+	var id = selectedFolder.URI;
 	var folderResource = RDF.GetResource(id);
-	if(!folderResource)
-		return false;
+	if(!folderResource) return false;
 
     var db = GetFolderDatasource();
 
@@ -220,13 +223,11 @@ function ThreadPaneSelectionChange(fromDeleteOrMoveHandler)
 
 	var collapsed = IsThreadAndMessagePaneSplitterCollapsed();
 
-    var tree = GetThreadTree();
-	var selectedMessages = tree.selectedItems;
-	var numSelected = selectedMessages.length;
+	var numSelected = GetNumSelectedMessages();
     var messageUriToLoad = null;
 
-    if (!gNextMessageAfterDelete && selectedMessages && (numSelected == 1) ) {
-        messageUriToLoad = selectedMessages[0].getAttribute('id');
+    if (!gNextMessageAfterDelete && (numSelected == 1) ) {
+        messageUriToLoad =  GetFirstSelectedMessage();
     }
 
     // if the message pane isn't collapsed, and we have a message to load
@@ -260,11 +261,6 @@ function ThreadPaneSelectionChange(fromDeleteOrMoveHandler)
     gLastMessageUriToLoad = messageUriToLoad;
 }
 
-function GetThreadTree()
-{
-  return null;
-}
-
 function GetThreadOutliner()
 {
   if (gThreadOutliner) return gThreadOutliner;
@@ -272,10 +268,14 @@ function GetThreadOutliner()
 	return gThreadOutliner;
 }
 
-function GetThreadTreeFolder()
+function GetThreadPaneFolder()
 {
-  var tree = GetThreadTree();
-  return tree;
+  try {
+    return gDBView.msgFolder;
+  }
+  catch (ex) {
+    return null;
+  }
 }
 
 function EnsureRowInThreadOutlinerIsVisible(index)
@@ -283,3 +283,14 @@ function EnsureRowInThreadOutlinerIsVisible(index)
   var outliner = GetThreadOutliner();
   outliner.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject).ensureRowIsVisible(index); 
 }
+
+function GetThreadTree()
+{
+    dump("GetThreadTree, fix this\n");
+}
+
+function GetThreadTreeFolder() 
+{
+    dump("GetThreadTreeFolder, fix this\n");
+}
+

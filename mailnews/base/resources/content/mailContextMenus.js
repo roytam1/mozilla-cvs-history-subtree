@@ -27,10 +27,9 @@ function fillThreadPaneContextMenu()
 
 	var isNewsgroup = false;
 	var selectedMessage = null;
-	if(numSelected >= 0)
-	{
+	if(numSelected >= 0) {
 		selectedMessage = selectedMessages[0];
-		isNewsgroup = GetMessageType(selectedMessage) == "news";
+		isNewsgroup = IsNewsMessage(selectedMessage);
 	}
 
 
@@ -59,26 +58,6 @@ function fillThreadPaneContextMenu()
 	ShowMenuItem("threadPaneContext-sep-edit", (numSelected <= 1));
 
 	return(true);
-}
-
-function GetMessageType(message)
-{
-	var compositeDataSource = GetCompositeDataSource("MessageProperty");
-	var messageResource = message.QueryInterface(Components.interfaces.nsIRDFResource);
-	if(messageResource && compositeDataSource)
-	{
-		var property =
-			RDF.GetResource('http://home.netscape.com/NC-rdf#MessageType');
-		if (!property) return null;
-		var result = compositeDataSource.GetTarget(messageResource, property , true);
-		if (!result) return null;
-		result = result.QueryInterface(Components.interfaces.nsIRDFLiteral);
-		if (!result) return null;
-		return result.Value;
-	}
-
-	return null;
-
 }
 
 function SetupNewMessageWindowMenuItem(menuID, numSelected, forceHide)
@@ -334,8 +313,9 @@ function fillMessagePaneContextMenu(contextMenu)
 
 	var isNewsgroup = false;
 
-	if(numSelected == 1)
-		isNewsgroup = GetMessageType(message) == "news";
+	if(numSelected == 1) {
+		isNewsgroup = IsNewsMessage(message);
+    }
 
 	var hideMailItems = AreBrowserItemsShowing();
 

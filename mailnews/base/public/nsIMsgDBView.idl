@@ -232,6 +232,10 @@ interface nsIMsgDBView : nsISupports
 
     void getURIsForSelection([array, size_is(count)] out string uris, out unsigned long count);
 
+    readonly attribute string URIForFirstSelectedMessage;
+
+    readonly attribute unsigned long numSelected;
+
     /**
      * temporary, so we can inspect from js
      */

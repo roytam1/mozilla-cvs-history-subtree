@@ -85,11 +85,10 @@ function InitViewMessagesMenu()
 
 function InitMessageMenu()
 {
-    var aMessage = GetSelectedMessage(0);
+    var aMessage = GetFirstSelectedMessage();
     var isNews = false;
-    if(aMessage)
-    {
-        isNews = GetMessageType(aMessage) == "news";
+    if(aMessage) {
+        isNews = IsNewsMessage(aMessage);
     }
 
     //We show reply to Newsgroups only for news messages.
@@ -122,15 +121,10 @@ function InitMessageMenu()
         copyMenu.setAttribute("disabled", !aMessage);
 }
 
-function GetMessageType(message)
+function IsNewsMessage(messageUri)
 {
-
-    var compositeDS = GetCompositeDataSource("MessageProperty");
-    var property = RDF.GetResource('http://home.netscape.com/NC-rdf#MessageType');
-    var result = compositeDS.GetTarget(message, property, true);
-    result = result.QueryInterface(Components.interfaces.nsIRDFLiteral);
-    return result.Value;
-
+    if (!messageUri) return false;
+    return (messageUri.substring(0,14) == "news_message:/")
 }
 
 function InitMessageMark()
@@ -160,7 +154,7 @@ function InitMarkFlaggedItem(id)
 
 function SelectedMessagesAreRead()
 {
-    var aMessage = GetSelectedMessage(0);
+    var aMessage = GetFirstSelectedMessage();
 
     var compositeDS = GetCompositeDataSource("MarkMessageRead");
     var property = RDF.GetResource('http://home.netscape.com/NC-rdf#IsUnread');
@@ -181,7 +175,7 @@ function SelectedMessagesAreRead()
 
 function SelectedMessagesAreFlagged()
 {
-    var aMessage = GetSelectedMessage(0);
+    var aMessage = GetFirstSelectedMessage();
 
     var compositeDS = GetCompositeDataSource("MarkMessageFlagged");
     var property = RDF.GetResource('http://home.netscape.com/NC-rdf#Flagged');
@@ -674,30 +668,19 @@ function MsgOpenSelectedMessages()
 
 function MsgOpenNewWindowForMessage(messageUri, folderUri)
 {
-    var message;
-
-    if(!messageUri)
-    {
-        message = GetSelectedMessage(0);
-        var messageResource = message.QueryInterface(Components.interfaces.nsIRDFResource);
-        messageUri = messageResource.Value;
+    if (!messageUri) {
+        messageUri = GetFirstSelectedMessage();
     }
 
-    if(!folderUri)
-    {
-        message = RDF.GetResource(messageUri);
-        message = message.QueryInterface(Components.interfaces.nsIMessage);
-        var folder = message.msgFolder;
-        var folderResource = folder.QueryInterface(Components.interfaces.nsIRDFResource);
-        folderUri = folderResource.Value;
+    if (!folderUri) {
+        dump("fix this, need a way to turn messageUri into a msg folder from JS\n");
+        var folder = null; 
+        folderUri = folder.URI;
     }
 
-    if(messageUri && folderUri)
-    {
+    if (messageUri && folderUri) {
         window.openDialog( "chrome://messenger/content/messageWindow.xul", "_blank", "chrome,all,dialog=no", messageUri, folderUri );
     }
-
-
 }
 
 function CloseMailWindow() 

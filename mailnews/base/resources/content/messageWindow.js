@@ -257,7 +257,7 @@ function GetSelectedMsgFolders()
 	return folderArray;
 }
 
-function GetSelectedMessage(index)
+function GetFirstSelectedMessage()
 {
 	return GetLoadedMessage();
 }

@@ -243,6 +243,23 @@ var DefaultController =
 		{
 			case "button_delete":
 			case "cmd_delete":
+              var uri = GetFirstSelectedMessage();
+              if ( GetNumSelectedMessages() < 2 ) {
+                if (IsNewsMessage(uri)) {
+                  goSetMenuValue(command, 'valueNewsMessage');
+                }
+                else {
+                  goSetMenuValue(command, 'valueMessage');
+                }
+              }
+              else {
+                if (IsNewsMessage(uri)) {
+                  goSetMenuValue(command, 'valueNewsMessage');
+                }
+                else {
+                  goSetMenuValue(command, 'valueMessages');
+                }
+              }
         if (gDBView)
           gDBView.getCommandStatus(nsMsgViewCommandType.deleteMsg, enabled, checkStatus);
         return enabled.value;
@@ -276,36 +293,9 @@ var DefaultController =
 			case "cmd_markThreadAsRead":
 			case "cmd_markAsFlagged":
 			case "cmd_file":
+				return ( GetNumSelectedMessages() > 0 );
 			case "cmd_editDraft":
-				var numSelected = GetNumSelectedMessages();
-
-				if ( command == "cmd_delete")
-				{
-                    var uri = GetUriForFirstSelectedMessage();
-
-					if ( numSelected < 2 ) {
-                        if (isNewsURI(uri)) {
-						    goSetMenuValue(command, 'valueNewsMessage');    
-                        }
-                        else {
-						    goSetMenuValue(command, 'valueMessage');
-                        }
-                    }
-					else {
-                        if (isNewsURI(uri)) {
-						    goSetMenuValue(command, 'valueNewsMessage');    
-                            return false;
-                        }
-                        else {
-						    goSetMenuValue(command, 'valueMessages');
-                        }
-                    }
-				}
-				else if (command == "cmd_editDraft")
-        {
-          return (gIsEditableMsgFolder && numSelected > 0);
-        }
-				return ( numSelected > 0 );
+                return (gIsEditableMsgFolder && (GetNumSelectedMessages() > 0));
 			case "cmd_nextMsg":
 			case "cmd_nextUnreadMsg":
 			case "cmd_nextUnreadThread":
@@ -546,26 +536,14 @@ function MailAreaHasFocus()
 	return true;
 }
 
-function GetUriForFirstSelectedMessage()
-{
-    try {
-	    var threadTree = GetThreadTree();
-        return threadTree.selectedItems[0].getAttribute('id');
-    }
-    catch (ex) {
-        return null;
-    }
-}
-
 function GetNumSelectedMessages()
 {
-	var threadTree = GetThreadOutliner(); // GetThreadTree();
-	var numSelected = 0;
-  var selection = threadTree.selection;
-  if (selection)
-    numSelected = selection.rangeCount;
-
-	return numSelected;
+    try {
+        return gDBView.numSelected;
+    }
+    catch (ex) {
+        return 0;
+    }
 }
 
 function CommandUpdate_Mail()
