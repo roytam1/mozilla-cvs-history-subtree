@@ -40,6 +40,9 @@ PRLogModuleInfo *gHttpLog = nsnull;
 struct HttpHeapAtom {
     char                *value;
     struct HttpHeapAtom *next;
+
+    HttpHeapAtom(const char *v) : value(PL_strdup(v)), next(0) {}
+   ~HttpHeapAtom() { PL_strfree(value); }
 };
 
 static struct PLHashTable  *gHttpAtomTable = nsnull;
@@ -133,21 +136,19 @@ nsHttp::ResolveAtom(const char *str)
 
     nsHttpAtom atom = { nsnull };
 
-    if (gHttpAtomTable) {
+    if (gHttpAtomTable && str) {
         atom._val = (const char *) PL_HashTableLookup(gHttpAtomTable, str);
 
         // if the atom could not be found in the atom table, then we'll go
         // and allocate a new atom on the heap.
         if (!atom) {
-            HttpHeapAtom *heapAtom = new HttpHeapAtom;
+            HttpHeapAtom *heapAtom = new HttpHeapAtom(str);
             if (!heapAtom)
                 return atom;
-            heapAtom->value = PL_strdup(str);
             if (!heapAtom->value) {
                 delete heapAtom;
                 return atom;
             }
-            heapAtom->next = 0;
 
             // append this heap atom to the list of all heap atoms
             if (!gHeapAtomsHead) {
