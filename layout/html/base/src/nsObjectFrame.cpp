@@ -2653,6 +2653,8 @@ NS_IMETHODIMP nsPluginInstanceOwner::GetURL(const char *aURL, const char *aTarge
     }
   }
 
+  nsAutoPopupStatePusher popupStatePusher(openAllowed);
+
   rv = lh->OnLinkClick(content, eLinkVerb_Replace, 
                        uri, unitarget.get(), 
                        postDataStream, headersDataStream);

@@ -125,6 +125,7 @@ public:
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptContext.h"
 #include "nsIPrincipal.h"
+#include "nsPIDOMWindow.h"
 
 #include "XPConnect.h"
 #include "XPCBrowser.h"
@@ -1833,6 +1834,12 @@ END_COM_MAP()
                     nsCOMPtr<nsILinkHandler> lh = do_QueryInterface(webNav);
                     if (lh)
                     {
+                        nsCOMPtr<nsPIDOMWindow> window =
+                            do_GetInterface(mDOMWindow);
+
+                        nsAutoPopupStatePusher popupStatePusher(window,
+                                                                openAllowed);
+
                         lh->OnLinkClick(nsnull, eLinkVerb_Replace,
                             uri, szTargetFrame ? szTargetFrame : mUseTarget);
                     }

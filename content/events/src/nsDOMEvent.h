@@ -49,6 +49,7 @@
 #include "nsIPrivateCompositionEvent.h"
 #include "nsIPrivateTextEvent.h"
 #include "nsIPrivateTextRange.h"
+#include "nsPIDOMWindow.h"
 #include "nsIDOMEvent.h"
 #include "nsCOMPtr.h"
 #include "nsIDOMEventTarget.h"
@@ -217,6 +218,12 @@ public:
     */
   void operator delete(void* aPtr);
 
+  static PopupControlState GetEventPopupControlState(nsEvent *aEvent);
+
+  static void PopupAllowedEventsChanged();
+
+  static void Shutdown();
+
 protected:
 
   nsDOMEvent() {}; // private constructor for pool, not for general use
@@ -233,7 +240,7 @@ protected:
   nsresult GetScrollInfo(nsIScrollableView** aScrollableView, float* aP2T,
                          float* aT2P);
   nsresult SetEventType(const nsAString& aEventTypeArg);
-  const char* GetEventName(PRUint32 aEventType);
+  static const char* GetEventName(PRUint32 aEventType);
   already_AddRefed<nsIDOMEventTarget> GetTargetFromFrame();
   void AllocateEvent(const nsAString& aEventType);
 
@@ -247,7 +254,6 @@ protected:
   nsString*	mText;
   nsCOMPtr<nsIPrivateTextRangeList> mTextRange;
   PRPackedBool mEventIsInternal;
-  PRPackedBool mEventIsTrusted;
 
   //These are use for internal data for user created events
   PRInt16 mButton;
