@@ -704,7 +704,9 @@ protected:
   // document management data
   //   these items are specific to markup documents (html and xml)
   //   may consider splitting these out into a subclass
-  PRBool   mAllowPlugins;
+  PRPackedBool mAllowPlugins;
+  PRPackedBool mIsSticky;
+
   /* character set member data */
   nsString mDefaultCharacterSet;
   nsString mHintCharset;
@@ -1087,11 +1089,10 @@ void DocumentViewerImpl::PrepareToStartLoad() {
 }
 
 DocumentViewerImpl::DocumentViewerImpl(nsIPresContext* aPresContext)
-  : mPresContext(aPresContext)
+  : mPresContext(aPresContext), mAllowPlugins(PR_TRUE), mIsSticky(PR_FALSE)
 {
   NS_INIT_ISUPPORTS();
   mHintCharsetSource = kCharsetUninitialized;
-  mAllowPlugins      = PR_TRUE;
   PrepareToStartLoad();
 }
 
@@ -6124,6 +6125,14 @@ DocumentViewerImpl::PrintPreview(nsIPrintSettings* aPrintSettings)
   mPrt->mPrintDC->SetTextZoom(1.0f);
   mPrt->mPrintDC->SetZoom(1.0f);
 
+  if (mIsSticky) {
+    // This window is sticky, that means that it might be shown again
+    // and we don't want the presshell n' all that to be thrown away
+    // just because the window is hidden.
+
+    return NS_OK;
+  }
+
   if (mDeviceContext) {
     mDeviceContext->SetUseAltDC(kUseAltDCFor_FONTMETRICS, PR_TRUE);
     mDeviceContext->SetUseAltDC(kUseAltDCFor_CREATERC_REFLOW, PR_TRUE);
@@ -6900,6 +6909,22 @@ DocumentViewerImpl::CallChildren(CallChildFunc aFunc, void* aClosure)
       }
     }
   }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+DocumentViewerImpl::GetSticky(PRBool *aSticky)
+{
+  *aSticky = mIsSticky;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+DocumentViewerImpl::SetSticky(PRBool aSticky)
+{
+  mIsSticky = aSticky;
+
   return NS_OK;
 }
 
