@@ -23,4 +23,5 @@ browser.jar:
   
 en-US.jar:
    locale/en-US/browser/migration/migration.dtd               (locale/migration.dtd)
+   locale/en-US/browser/migration/migration.properties        (locale/migration.properties)
 

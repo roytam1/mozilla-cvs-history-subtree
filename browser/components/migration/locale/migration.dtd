@@ -12,3 +12,10 @@
 <!ENTITY importFromOpera.label          "Opera">
 <!ENTITY importFromOpera.accesskey      "O">
 
+<!ENTITY importSource.title             "Import Settings and Data From">
+<!ENTITY dataSource.title               "Items to Import">
+<!ENTITY importData.label               "Select which items to import:">
+
+<!ENTITY migrating.title                "Migrating...">
+<!ENTITY migrating.label                "The following items are currently being migrated...">
+

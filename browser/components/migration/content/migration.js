@@ -1,5 +1,29 @@
+const nsIBPM = Components.interfaces.nsIBrowserProfileMigrator;
+
+function MigrationItem(aID, aKey)
+{
+  this._id = aID;
+  this._key = aKey;
+}
 
 var MigrationWizard = {
+  _items:    [new MigrationItem(nsIBPM.SETTINGS,  "settings"),
+              new MigrationItem(nsIBPM.COOKIES,   "cookies"),
+              new MigrationItem(nsIBPM.HISTORY,   "history"),
+              new MigrationItem(nsIBPM.FORMDATA,  "formdata"),
+              new MigrationItem(nsIBPM.PASSWORDS, "passwords"),
+              new MigrationItem(nsIBPM.BOOKMARKS, "bookmarks"),
+              new MigrationItem(nsIBPM.DOWNLOADS, "downloads")],
+
+  _dataSources: { 
+    "ie":     [0, 1, 2, 3, 4, 5], 
+    "opera":  [0, 1, 2, 5, 6],
+  },
+  
+  _source: "",
+  _itemsFlags: 0,
+  _selectedIndices: [],
+
   init: function ()
   {
     var importSource = document.getElementById("importSource");
@@ -23,26 +47,94 @@ var MigrationWizard = {
   
   migrate: function ()
   {
+    setTimeout(this._migrate, 0, this);
+  },
+  
+  _migrate: function(aOuter) 
+  {
+    var me = aOuter
     var contractID = "@mozilla.org/profile/migrator;1?app=browser&type=";
-    var importSource = document.getElementById("importSource");
-    contractID += importSource.selectedItem.id;
+    contractID += me._source;
     
     const nsIBPM = Components.interfaces.nsIBrowserProfileMigrator;
     var bpm = Components.classes[contractID].createInstance(nsIBPM);
-    bpm.migrate(nsIBPM.SETTINGS, true);
+    bpm.migrate(me._itemsFlags, true);
+  },
+  
+  sourceSelected: function ()
+  {
+    this._source = document.getElementById("importSource").selectedItem.id;
+    this._initDataSources();
+  },
+  
+  itemsSelected: function ()
+  {
+    var dataSources = document.getElementById("dataSources");
+    var params = 0;
+    this._selectedIndices = [];
+    for (var i = 0; i < dataSources.childNodes.length; ++i) {
+      var checkbox = dataSources.childNodes[i];
+      if (checkbox.localName == "checkbox") {
+        if (checkbox.checked) {
+          params |= parseInt(checkbox.id);
+          this._selectedIndices.push(i);
+        }
+      }
+    }
+    this._itemsFlags = params;
+  },
+  
+  _initDataSources: function ()
+  {
+    var dataSources = document.getElementById("dataSources");
+    while (dataSources.hasChildNodes())
+      dataSources.removeChild(dataSources.firstChild);
+    
+    var bundle = document.getElementById("bundle");
+    
+    var ds = this._dataSources[this._source];
+    for (var i = 0; i < ds.length; ++i) {
+      var item = this._items[ds[i]];
+      var checkbox = document.createElement("checkbox");
+      checkbox.id = item._id;
+      checkbox.setAttribute("label", bundle.getString(item._key));
+      dataSources.appendChild(checkbox);
+      checkbox.checked = true;
+    }
   },
   
   observe: function (aSubject, aTopic, aData)
   {
+    var itemToIndex = { "settings": 0, "cookies": 1, "history": 2, "formdata": 3, "passwords": 4, "bookmarks": 5, "downloads": 6 };
     switch (aTopic) {
     case "Migration:Started":
       dump("*** migration started\n");
+      var items = document.getElementById("items");
+      while (items.hasChildNodes())
+        items.removeChild(items.firstChild);
+      
+      var bundle = document.getElementById("bundle");
+      for (var i = 0; i < this._selectedIndices.length; ++i) {
+        var index = this._selectedIndices[i];
+        var label = document.createElement("label");
+        label.id = this._items[index]._key;
+        label.setAttribute("value", bundle.getString(this._items[index]._key));
+        items.appendChild(label);
+      } 
       break;
     case "Migration:ItemBeforeMigrate":
       dump("*** item about to be migrated...\n");
+      var index = itemToIndex[aData];
+      var item = this._items[index];
+      var checkbox = document.getElementById(item._key);
+      checkbox.setAttribute("style", "font-weight: bold");
       break;
     case "Migration:ItemAfterMigrate":
       dump("*** item was migrated...\n");
+      var index = itemToIndex[aData];
+      var item = this._items[index];
+      var checkbox = document.getElementById(item._key);
+      checkbox.removeAttribute("style");
       break;
     case "Migration:Ended":
       dump("*** migration ended\n");
