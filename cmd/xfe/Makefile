@@ -272,7 +272,6 @@ BASIC_LIBS	+= \
 		  $(DIST)/lib/libmsg.a \
 		  $(DIST)/lib/libnet.a \
 		  $(DIST)/lib/libns_mime.a \
-		  $(DIST)/lib/libns_net.a \
 		  $(NULL)
 endif
 
