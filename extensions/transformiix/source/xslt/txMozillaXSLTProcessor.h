@@ -48,6 +48,7 @@
 #include "nsWeakPtr.h"
 #include "txExpandedNameMap.h"
 #include "XSLTProcessor.h"
+#include "nsIDOMNode.h"
 
 /* bacd8ad0-552f-11d3-a9f7-000064657374 */
 #define TRANSFORMIIX_XSLT_PROCESSOR_CID   \

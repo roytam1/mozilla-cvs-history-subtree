@@ -45,6 +45,7 @@
 #include "nsCOMPtr.h"
 #include "nsWeakPtr.h"
 #include "txOutputFormat.h"
+#include "nsIDOMDocument.h"
 
 class nsITransformObserver;
 
