@@ -498,15 +498,18 @@ reflect_java_methods_and_fields(JSContext *cx,
     PR_EnterMonitor(java_reflect_monitor);
 #endif
 
-    /* See if we raced with another thread to reflect members of this class */
+    /* See if we raced with another thread to reflect members of this class.
+       If the status is REFLECT_COMPLETE, another thread beat us to it.  If
+       the status is REFLECT_IN_PROGRESS, we've recursively called this
+       function within a single thread.  Either way, we're done. */
     if (reflect_statics_only) {
-        if (class_descriptor->static_members_reflected)
+        if (class_descriptor->static_members_reflected != REFLECT_NO)
             goto done;
-        class_descriptor->static_members_reflected = JS_TRUE;
+        class_descriptor->static_members_reflected = REFLECT_IN_PROGRESS;
     } else {
-        if (class_descriptor->instance_members_reflected)
+        if (class_descriptor->instance_members_reflected != REFLECT_NO)
             goto done;
-        class_descriptor->instance_members_reflected = JS_TRUE;
+        class_descriptor->instance_members_reflected = REFLECT_IN_PROGRESS;
     }
     
     if (!jsj_ReflectJavaMethods(cx, jEnv, class_descriptor, reflect_statics_only))
@@ -520,12 +523,14 @@ reflect_java_methods_and_fields(JSContext *cx,
             class_descriptor->num_static_members++;
             member_descriptor = member_descriptor->next;
         }
+        class_descriptor->static_members_reflected = REFLECT_COMPLETE;
     } else {
         member_descriptor = class_descriptor->instance_members;
         while (member_descriptor) {
             class_descriptor->num_instance_members++;
             member_descriptor = member_descriptor->next;
         }
+        class_descriptor->instance_members_reflected = REFLECT_COMPLETE;
     }
 
 done:
@@ -544,7 +549,7 @@ jsj_GetClassStaticMembers(JSContext *cx,
                           JNIEnv *jEnv,
                           JavaClassDescriptor *class_descriptor)
 {
-    if (!class_descriptor->static_members_reflected)
+    if (class_descriptor->static_members_reflected != REFLECT_COMPLETE)
         reflect_java_methods_and_fields(cx, jEnv, class_descriptor, JS_TRUE);
     return class_descriptor->static_members;
 }
@@ -554,7 +559,7 @@ jsj_GetClassInstanceMembers(JSContext *cx,
                             JNIEnv *jEnv,
                             JavaClassDescriptor *class_descriptor)
 {
-    if (!class_descriptor->instance_members_reflected)
+    if (class_descriptor->instance_members_reflected != REFLECT_COMPLETE)
         reflect_java_methods_and_fields(cx, jEnv, class_descriptor, JS_FALSE);
     return class_descriptor->instance_members;
 }
@@ -639,7 +644,7 @@ JavaMemberDescriptor *
 jsj_LookupJavaClassConstructors(JSContext *cx, JNIEnv *jEnv,
                                 JavaClassDescriptor *class_descriptor)
 {
-    if (!class_descriptor->static_members_reflected)
+    if (class_descriptor->static_members_reflected != REFLECT_COMPLETE)
         reflect_java_methods_and_fields(cx, jEnv, class_descriptor, JS_TRUE);
     return class_descriptor->constructors;
 }

@@ -151,6 +151,13 @@ struct JavaMemberDescriptor {
     JSObject *              invoke_func_obj; /* If non-null, JSFunction obj to invoke method */
 };
 
+/* Status of Class member reflection.  See JavaClassDescriptor. */
+typedef enum {
+    REFLECT_NO,
+    REFLECT_IN_PROGRESS,
+    REFLECT_COMPLETE
+} ReflectStatus;
+
 /* This is the native portion of a reflected Java class */
 struct JavaClassDescriptor {
     const char *            name;       /* Name of class, e.g. "java.lang.Byte" */
@@ -158,9 +165,9 @@ struct JavaClassDescriptor {
     jclass                  java_class; /* Opaque JVM handle to corresponding java.lang.Class */
     int                     num_instance_members;
     int                     num_static_members;
-    JSBool                  instance_members_reflected;
+    volatile ReflectStatus  instance_members_reflected;
     JavaMemberDescriptor *  instance_members;
-    JSBool                  static_members_reflected;
+    volatile ReflectStatus  static_members_reflected;
     JavaMemberDescriptor *  static_members;
     JavaMemberDescriptor *  constructors;
     int                     modifiers;  /* Class declaration qualifiers,
