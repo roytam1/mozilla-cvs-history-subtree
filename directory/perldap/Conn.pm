@@ -971,6 +971,7 @@ Add a new entry to the LDAP server. Make sure you use the B<new> method
 for the Mozilla::LDAP::Entry object, to create a proper entry.
 
 =item B<simpleAuth>
+
 This method will rebind the LDAP connection using new credentials (i.e. a
 new user-DN and password). To rebind "anonymously", just don't pass a DN
 and password, and it will default to binding as the unprivleged user. For
