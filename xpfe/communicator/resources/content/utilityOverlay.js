@@ -315,12 +315,6 @@ function NewEditorFromDraft()
 //   and we need a delay to let dialog close)
 function editPage(url, launchWindow, delay)
 {
-  var webNav = null;
-  if ("getWebNavigation" in window)
-    webNav = getWebNavigation();
-  if (webNav && webNav.postData)
-    return;
-
   // User may not have supplied a window
   if (!launchWindow)
   {
@@ -334,6 +328,12 @@ function editPage(url, launchWindow, delay)
       return;
     }
   }
+
+  var webNav = null;
+  if (launchWindow && "getWebNavigation" in launchWindow)
+    webNav = launchWindow.getWebNavigation();
+  if (webNav && webNav.postData)
+    return;
 
   // if the current window is a browser window, then extract the current charset menu setting from the current 
   // document and use it to initialize the new composer window...

@@ -145,6 +145,8 @@ nsContextMenu.prototype = {
             else if ( viewSourceElt.getAttribute( "disabled" ) )
               viewSourceElt.removeAttribute( "disabled" );
           }
+          catch(ex) {
+          }
         } 
 
 
