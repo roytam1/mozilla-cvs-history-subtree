@@ -114,9 +114,9 @@ txQNameParser::parse(const nsAString::const_iterator& aStart,
     return eBrokenName;
 }
 
-nsresult txExpandedName::init(const nsAString& aQName,
-                              txNamespaceMap* aResolver,
-                              MBool aUseDefault)
+nsresult
+txExpandedName::init(const nsAString& aQName, txNamespaceMap* aResolver,
+                     MBool aUseDefault)
 {
     nsAString::const_iterator start, end;
     aQName.BeginReading(start);
@@ -152,19 +152,28 @@ nsresult txExpandedName::init(const nsAString& aQName,
  //- Implementation of XMLUtils -/
 //------------------------------/
 
-void XMLUtils::splitXMLName(const nsAString& aName, nsIAtom** aPrefix,
-                            nsIAtom** aLocalName)
+nsresult
+XMLUtils::splitXMLName(const nsAString& aName, nsIAtom** aPrefix,
+                       nsIAtom** aLocalName)
 {
-    PRInt32 idx = aName.FindChar(':');
-    if (idx == kNotFound) {
+    nsAString::const_iterator start, end;
+    aName.BeginReading(start);
+    aName.EndReading(end);
+    txQNameParser p;
+    txQNameParser::QResult qr = p.parse(start, end);
+
+    if (qr == txQNameParser::eBrokenName) {
+        return NS_ERROR_FAILURE;
+    }
+    if (qr == txQNameParser::eTwoNames) {
+        *aPrefix = NS_NewAtom(Substring(start, p.mColon));
+        *aLocalName = NS_NewAtom(Substring(++p.mColon, end));
+    }
+    else {
         *aPrefix = nsnull;
         *aLocalName = NS_NewAtom(aName);
     }
-    else {
-        *aPrefix = NS_NewAtom(Substring(aName, 0, idx));
-        *aLocalName = NS_NewAtom(Substring(aName, idx + 1,
-                                           aName.Length() - (idx + 1)));
-    }
+    return NS_OK;
 }
 
 void XMLUtils::getPrefix(const nsAString& src, nsIAtom** dest)

@@ -920,11 +920,38 @@ txFnStartStripSpace(PRInt32 aNamespaceID,
 
     txTokenizer tokenizer(attr->mValue);
     while (tokenizer.hasMoreTokens()) {
-        const nsAString& name = tokenizer.nextToken();
+        const nsASingleFragmentString& name = tokenizer.nextToken();
         PRInt32 ns = kNameSpaceID_None;
         nsCOMPtr<nsIAtom> prefix, localName;
-        XMLUtils::splitXMLName(name, getter_AddRefs(prefix),
-                               getter_AddRefs(localName));
+        rv = XMLUtils::splitXMLName(name, getter_AddRefs(prefix),
+                                    getter_AddRefs(localName));
+        if (NS_FAILED(rv)) {
+            // check for "*" or "prefix:*"
+            PRUint32 length = name.Length();
+            const PRUnichar* c;
+            name.BeginReading(c);
+            if (length == 2 || c[length-1] != '*') {
+                // these can't work
+                return NS_ERROR_XSLT_PARSE_FAILURE;
+            }
+            if (length > 1) {
+                // Check for a valid prefix, that is, the returned prefix
+                // should be empty and the real prefix is returned in
+                // localName.
+                if (c[length-2] != ':') {
+                    return NS_ERROR_XSLT_PARSE_FAILURE;
+                }
+                rv = XMLUtils::splitXMLName(Substring(name, 0, length-2), 
+                                            getter_AddRefs(prefix),
+                                            getter_AddRefs(localName));
+                if (NS_FAILED(rv) || prefix) {
+                    // bad chars or two ':'
+                    return NS_ERROR_XSLT_PARSE_FAILURE;
+                }
+                prefix = localName;
+            }
+            localName = txXPathAtoms::_asterix;
+        }
         if (prefix) {
             ns = aState.mElementContext->mMappings->lookupNamespace(prefix);
             NS_ENSURE_TRUE(ns != kNameSpaceID_Unknown, NS_ERROR_FAILURE);

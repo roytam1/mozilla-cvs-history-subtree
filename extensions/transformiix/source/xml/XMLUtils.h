@@ -100,8 +100,8 @@ public:
 class XMLUtils {
 
 public:
-    static void splitXMLName(const nsAString& aName, nsIAtom** aPrefix,
-                             nsIAtom** aLocalName);
+    static nsresult splitXMLName(const nsAString& aName, nsIAtom** aPrefix,
+                                 nsIAtom** aLocalName);
     static void getPrefix(const nsAString& src, nsIAtom** dest);
     static const nsDependentSubstring getLocalPart(const nsAString& src);
     static void getLocalPart(const nsAString& src, nsIAtom** dest);

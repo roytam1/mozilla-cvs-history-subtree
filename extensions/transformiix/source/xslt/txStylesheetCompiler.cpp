@@ -140,10 +140,10 @@ txStylesheetCompiler::startElement(const PRUnichar *aName,
     PRBool hasOwnNamespaceMap = PR_FALSE;
     PRInt32 i;
     for (i = 0; i < aAttrCount; ++i) {
-        XMLUtils::splitXMLName(nsDependentString(aAttrs[i * 2]),
-                               getter_AddRefs(atts[i].mPrefix),
-                               getter_AddRefs(atts[i].mLocalName));
-
+        rv = XMLUtils::splitXMLName(nsDependentString(aAttrs[i * 2]),
+                                    getter_AddRefs(atts[i].mPrefix),
+                                    getter_AddRefs(atts[i].mLocalName));
+        NS_ENSURE_SUCCESS(rv, rv);
         atts[i].mValue.Append(aAttrs[i * 2 + 1]);
 
         nsCOMPtr<nsIAtom> prefixToBind;
@@ -190,8 +190,10 @@ txStylesheetCompiler::startElement(const PRUnichar *aName,
     }
 
     nsCOMPtr<nsIAtom> prefix, localname;
-    XMLUtils::splitXMLName(nsDependentString(aName), getter_AddRefs(prefix),
-                           getter_AddRefs(localname));
+    rv = XMLUtils::splitXMLName(nsDependentString(aName),
+                                getter_AddRefs(prefix),
+                                getter_AddRefs(localname));
+    NS_ENSURE_SUCCESS(rv, rv);
 
     PRInt32 namespaceID = mElementContext->mMappings->lookupNamespace(prefix);
 
