@@ -1675,6 +1675,8 @@ sub AliveTestReturnToken {
     # Look for and return token
     if ($status) {
         $rv = extract_token_from_file($binary_log, $token, $delimiter);
+        chomp($rv);
+        chop($rv) if ($^O eq 'cygwin'); # cygwin perl doesn't chomp dos-newlinesproperly so use chop.
         if ($rv) {
             print "AliveTestReturnToken: token value = $rv\n";
         }
