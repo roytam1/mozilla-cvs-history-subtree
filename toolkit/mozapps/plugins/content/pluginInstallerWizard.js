@@ -132,7 +132,7 @@ nsPluginInstallerWizard.prototype.showPluginList = function (){
     var myCheckbox = document.createElement("checkbox");
     myCheckbox.setAttribute("checked", "true");
     myCheckbox.setAttribute("oncommand", "gPluginInstaller.toggleInstallPlugin('" + pluginInfo.pid + "', this)");
-    myCheckbox.setAttribute("label", pluginInfo.name + " " + (pluginInfo.version + ""));
+    myCheckbox.setAttribute("label", pluginInfo.name + " " + (pluginInfo.version ? pluginInfo.version : ""));
     myCheckbox.setAttribute("src", pluginInfo.IconUrl);
 
     myRow.appendChild(myCheckbox);
@@ -195,13 +195,19 @@ nsPluginInstallerWizard.prototype.showLicenses = function (){
     this.advancePage(null, true, false, false);
   } else {
     this.licenseAcceptCounter = 0;
+    document.getElementById("licenseIFrame").contentWindow.addEventListener("load", gPluginInstaller.enableNext, false);
     this.showLicense();
   }
 } 
 
+nsPluginInstallerWizard.prototype.enableNext = function (){
+  gPluginInstaller.canAdvance(true);
+}
+
 nsPluginInstallerWizard.prototype.showLicense = function (){
   var pluginInfo = this.mPluginInfoArray[this.mPluginLicenseArray[this.licenseAcceptCounter]];
 
+  this.canAdvance(false);
   document.getElementById("licenseIFrame").setAttribute("src", pluginInfo.licenseURL);
 
   document.getElementById("pluginLicenseLabel").firstChild.nodeValue = 
@@ -343,6 +349,7 @@ nsPluginInstallerWizard.prototype.pluginInstallationProgressMeter = function (aP
 }
 
 nsPluginInstallerWizard.prototype.showPluginResults = function (){
+  var needsRestart = false;
   var myRows = document.getElementById("pluginResultList");
 
   // clear children
@@ -353,6 +360,9 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
     // [plugin image] [Plugin_Name Plugin_Version] [Success/Failed] [Manual Install (if Failed)]
 
     var myPluginItem = this.mPluginInfoArray[pluginInfoItem];
+    
+    if (myPluginItem.needsRestart)
+      needsRestart = true;
 
     if (myPluginItem.toBeInstalled) {
 
@@ -368,7 +378,7 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
     
       // create the labels
       var myLabel = document.createElement("label");
-      myLabel.setAttribute("value", myPluginItem.name + " " + (myPluginItem.version + ""));
+      myLabel.setAttribute("value", myPluginItem.name + " " + (myPluginItem.version ? myPluginItem.version : ""));
       myRow.appendChild(myLabel)
 
       myLabel = document.createElement("label");
@@ -415,6 +425,8 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
     document.getElementById("pluginSummaryDescription").setAttribute("value", noPluginsFound);
   }
 
+  document.getElementById("pluginSummaryRestartNeeded").hidden = !needsRestart;
+  
   // clear the tab's plugin list
   this.mTab.missingPlugins = null;
 
@@ -463,6 +475,7 @@ function PluginInfo(aResult) {
   this.manualInstallationURL = aResult.manualInstallationURL;
   this.requestedMimetype = aResult.requestedMimetype;
   this.licenseURL = aResult.licenseURL;
+  this.needsRestart = (aResult.needsRestart == "true");
 
   this.error = null;
   this.toBeInstalled = true;

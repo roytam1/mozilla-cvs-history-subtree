@@ -88,6 +88,7 @@ nsRDFItemUpdater.prototype = {
         pluginInfo.manualInstallationURL = getPFSValueFromRDF("manualInstallationURL", aDatasource, this._rdfService);
         pluginInfo.requestedMimetype = getPFSValueFromRDF("requestedMimetype", aDatasource, this._rdfService);
         pluginInfo.licenseURL = getPFSValueFromRDF("licenseURL", aDatasource, this._rdfService);
+        pluginInfo.needsRestart = getPFSValueFromRDF("needsRestart", aDatasource, this._rdfService);
       }
       catch (ex){}
     }

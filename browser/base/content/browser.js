@@ -5891,10 +5891,24 @@ missingPluginInstaller.prototype.newMissingPlugin = function(aEvent){
   if (!gMissingPluginInstaller.missingPlugins[tab])
     gMissingPluginInstaller.missingPlugins[tab] = new Object();
 
-  gMissingPluginInstaller.missingPlugins[tab][aEvent.target.type] = {mimetype: aEvent.target.type, pluginsPage: aEvent.target.getAttribute("pluginspage")};
+  var tagMimetype;
+  var pluginsPage;
+  if (aEvent.target.localName.toLowerCase() == "applet") {
+    tagMimetype = "application/x-java-vm";
+  } else if (aEvent.target.localName.toLowerCase() == "object") {
+    tagMimetype = aEvent.target.type;
+    pluginsPage = aEvent.target.getAttribute("codebase");
+  } else {
+    tagMimetype = aEvent.target.type;
+    pluginsPage = aEvent.target.getAttribute("pluginspage");
+  }
+
+  gMissingPluginInstaller.missingPlugins[tab][tagMimetype] = {
+    mimetype: tagMimetype,
+    pluginsPage: pluginsPage
+  };
 
   var browser = tabbrowser.getBrowserAtIndex(i);
-
   var iconURL = "chrome://mozapps/skin/xpinstall/xpinstallItemGeneric.png";
   
   var bundle_browser = document.getElementById("bundle_browser");
