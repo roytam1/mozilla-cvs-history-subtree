@@ -60,7 +60,7 @@ LDAPCSDK_CO_TAG = CHIMERA_M1_0_1_BRANCH
 ACCESSIBLE_CO_TAG = CHIMERA_M1_0_1_BRANCH
 GFX2_CO_TAG = CHIMERA_M1_0_1_BRANCH
 IMGLIB2_CO_TAG = CHIMERA_M1_0_1_BRANCH
-CHIMERA_CO_TAG = CHIMERA_M1_0_1_BRANCH
+CAMINO_CO_TAG = CHIMERA_M1_0_1_BRANCH
 BUILD_MODULES = all
 
 #######################################################################
@@ -364,17 +364,17 @@ FASTUPDATE_CALENDAR := true
 endif
 
 ####################################
-# CVS defines for Chimera
+# CVS defines for Camino
 #
-CHIMERA_CO_MODULE = mozilla/chimera
-CHIMERA_CO_FLAGS := -P
+CAMINO_CO_MODULE = mozilla/camino
+CAMINO_CO_FLAGS := -P
 ifdef MOZ_CO_FLAGS
-  CHIMERA_CO_FLAGS := $(MOZ_CO_FLAGS)
+  CAMINO_CO_FLAGS := $(MOZ_CO_FLAGS)
 endif
-ifdef CHIMERA_CO_TAG
-  CHIMERA_CO_FLAGS := $(CHIMERA_CO_FLAGS) -r $(CHIMERA_CO_TAG)
+ifdef CAMINO_CO_TAG
+  CAMINO_CO_FLAGS := $(CAMINO_CO_FLAGS) -r $(CAMINO_CO_TAG)
 endif
-CVSCO_CHIMERA = $(CVS) $(CVS_FLAGS) co $(CHIMERA_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(CHIMERA_CO_MODULE)
+CVSCO_CAMINO = $(CVS) $(CVS_FLAGS) co $(CAMINO_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(CAMINO_CO_MODULE)
 
 
 # because some cygwin tools can't handle native dos-drive paths & vice-versa
@@ -451,7 +451,7 @@ real_checkout:
         cvs_co $(CVSCO_ACCESSIBLE) && \
         cvs_co $(CVSCO_GFX2) && \
         cvs_co $(CVSCO_IMGLIB2) && \
-	cvs_co $(CVSCO_CHIMERA) && \
+	cvs_co $(CVSCO_CAMINO) && \
 	$(CHECKOUT_CALENDAR) && \
 	$(CHECKOUT_LIBART) && \
 	cvs_co $(CVSCO_SEAMONKEY) && \
@@ -512,7 +512,7 @@ real_fast-update:
 	fast_update $(CVSCO_ACCESSIBLE) && \
 	fast_update $(CVSCO_GFX2) && \
 	fast_update $(CVSCO_IMGLIB2) && \
-	fast_update $(CVSCO_CHIMERA) && \
+	fast_update $(CVSCO_CAMINO) && \
 	$(FASTUPDATE_CALENDAR) && \
 	$(FASTUPDATE_LIBART) && \
 	fast_update $(CVSCO_SEAMONKEY) && \

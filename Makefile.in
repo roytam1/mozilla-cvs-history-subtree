@@ -65,7 +65,7 @@ endif
 	$(MAKE) tier_99
 ifeq ($(OS_ARCH),Darwin)
 	$(MAKE) -C embedding/config
-	$(MAKE) -C chimera
+	$(MAKE) -C camino
 endif
 
 # Make sure that the existing rulesets work
