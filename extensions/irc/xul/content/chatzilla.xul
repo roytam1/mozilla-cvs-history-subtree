@@ -270,6 +270,8 @@
               <menupopup id="menu-munger">
                 <menuitem id="menu-munger-global" label="&DisableMunger.label;"
                   oncommand="onToggleMunger()" type="checkbox"/>
+                <menuitem id="menu-colors" label="&EnableColors.label;"
+                  oncommand="onToggleColors();" type="checkbox"/>
                 <menuseparator/>
               </menupopup>
             </menu>
