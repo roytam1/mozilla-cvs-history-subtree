@@ -1061,13 +1061,7 @@ nsBlockFrame::ComputeFinalSize(const nsHTMLReflowState& aReflowState,
          borderPadding.top, borderPadding.bottom);
 #endif
 
-  // XXXldb Handling min-width/max-width stuff after reflowing children
-  // seems wrong.  But IIRC this function only does more than a little
-  // bit in rare cases (or something like that, I'm not really sure).
-  // What are those cases, and do we get the wrong behavior?
-
   // Compute final width
-  // Use style defined width
   aMetrics.width = borderPadding.left + aReflowState.mComputedWidth +
     borderPadding.right;
 
