@@ -689,7 +689,7 @@
 				F5F94B930332532801026D5D,
 				F5B34B15034A605401A80166,
 				F529788F0371820B01026DCE,
-				F53D36BB037843B801A80166,
+				F5B63094037A41E301A80166,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3289,13 +3289,13 @@
 			isa = PBXFileReference;
 			name = BrowserContentViews.h;
 			path = src/browser/BrowserContentViews.h;
-			refType = 4;
+			refType = 2;
 		};
 		F53C1CD7032FF3B301A96654 = {
 			isa = PBXFileReference;
 			name = BrowserContentViews.mm;
 			path = src/browser/BrowserContentViews.mm;
-			refType = 4;
+			refType = 2;
 		};
 		F53C1CD8032FF3B301A96654 = {
 			fileRef = F53C1CD6032FF3B301A96654;
@@ -3325,33 +3325,15 @@
 			isa = PBXFileReference;
 			name = BookmarksMenu.mm;
 			path = src/bookmarks/BookmarksMenu.mm;
-			refType = 4;
-		};
-		F53D36BB037843B801A80166 = {
-			fileRef = F53D36BA037843B801A80166;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F53D36BC037843B801A80166 = {
-			fileRef = F53D36BA037843B801A80166;
-			isa = PBXBuildFile;
-			settings = {
-			};
+			refType = 2;
 		};
 		F53D36BD037843C201A80166 = {
 			isa = PBXFileReference;
 			name = BookmarksMenu.h;
 			path = src/bookmarks/BookmarksMenu.h;
-			refType = 4;
+			refType = 2;
 		};
 		F53D36BE037843C201A80166 = {
-			fileRef = F53D36BD037843C201A80166;
-			isa = PBXBuildFile;
-			settings = {
-			};
-		};
-		F53D36BF037843C201A80166 = {
 			fileRef = F53D36BD037843C201A80166;
 			isa = PBXBuildFile;
 			settings = {
@@ -6518,6 +6500,24 @@
 			settings = {
 			};
 		};
+		F5B63090037A3A7501A80166 = {
+			fileRef = F53D36BA037843B801A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5B63092037A3AAC01A80166 = {
+			fileRef = F53D36BD037843C201A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5B63094037A41E301A80166 = {
+			fileRef = F53D36BA037843B801A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		F5B8CC460209D1B601A967DF = {
 			isa = PBXFileReference;
 			name = libstring_obsolete_s.a;
@@ -6896,7 +6896,7 @@
 				F5F94B940332532801026D5D,
 				F5B34B06034A50C901A80166,
 				F529788C0371820B01026DCE,
-				F53D36BF037843C201A80166,
+				F5B63092037A3AAC01A80166,
 			);
 			isa = PBXHeadersBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -7047,7 +7047,7 @@
 				F5F94B950332532901026D5D,
 				F5A30033034B8B1A01A96660,
 				F529788D0371820B01026DCE,
-				F53D36BC037843B801A80166,
+				F5B63090037A3A7501A80166,
 			);
 			isa = PBXSourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -9209,7 +9209,7 @@
 			isa = PBXFileReference;
 			name = KeychainService.mm;
 			path = src/browser/KeychainService.mm;
-			refType = 4;
+			refType = 2;
 		};
 		F5F94B920332532801026D5D = {
 			fileRef = F5F94B900332532801026D5D;
