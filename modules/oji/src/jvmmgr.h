@@ -19,8 +19,7 @@
 #ifndef jvmmgr_h___
 #define jvmmgr_h___
 
-#include "nsIJVM.h"
-#include "nsscd.h"
+#include "nsjvm.h"
 #include "nsAgg.h"
 #include "jsjava.h"
 #include "nsVector.h"
@@ -54,14 +53,6 @@ public:
     NS_IMETHOD_(void)
     NotifyJVMStatusChange(nsJVMError error);
 
-    // ====> These are usually only called by the plugin, not the browser...
-#if 0
-    NS_IMETHOD_(PRBool)
-    HandOffJSLock(PRThread* oldOwner, PRThread* newOwner);
-
-    NS_IMETHOD_(void)
-    ReportJVMError(void* env, nsJVMError err);
-#endif
     ////////////////////////////////////////////////////////////////////////////
     // JVMMgr specific methods:
 

@@ -30,7 +30,7 @@ public:
 
     /** Return the number of bytes in the stream */
     NS_IMETHOD_(PRInt32)
-    GetLength(void);            // XXX bogus
+    GetLength(void);
 
     /** Read data from the stream.
      *  @param aErrorCode the error code if an error occurs

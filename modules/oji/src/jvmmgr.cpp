@@ -58,7 +58,6 @@ void stopAsyncCursors(void);
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIJVMManagerIID, NS_IJVMMANAGER_IID);
 static NS_DEFINE_IID(kIJVMPluginIID, NS_IJVMPLUGIN_IID);
-static NS_DEFINE_IID(kIJNIPluginIID, NS_IJNIPLUGIN_IID);
 static NS_DEFINE_IID(kISymantecDebugManagerIID, NS_ISYMANTECDEBUGMANAGER_IID);
 static NS_DEFINE_IID(kIJVMPluginInstanceIID, NS_IJVMPLUGININSTANCE_IID);
 static NS_DEFINE_IID(kIJVMPluginTagInfoIID, NS_IJVMPLUGINTAGINFO_IID);
@@ -658,8 +657,8 @@ nsJVMMgr::StartupJVM(void)
     if (err == nsJVMError_Ok) {
 #if defined(XP_MAC)
 		// On the MacOS, MRJ uses JNI exclusively.
-        nsIJNIPlugin* jniJVM;
-        if (fJVM->QueryInterface(kIJNIPluginIID, (void**)&jniJVM) == NS_OK) {
+        nsIJVMPlugin* jniJVM;
+        if (fJVM->QueryInterface(kIJVMPluginIID, (void**)&jniJVM) == NS_OK) {
             JNIEnv* env = jniJVM->GetJNIEnv();
             if (env) {
                 if (env->ExceptionOccurred()) {
@@ -1144,13 +1143,13 @@ JVM_StartDebugger(void)
 PR_IMPLEMENT(JavaVM*)
 JVM_GetJavaVM(void)
 {
-    JavaVM* jnijvm = NULL;
+    JavaVM* javaVM = NULL;
     nsIJVMPlugin* jvm = GetRunningJVM();
     if (jvm) {
-        jnijvm = jvm->GetJavaVM();
+        javaVM = jvm->GetJavaVM();
         jvm->Release();
     }
-    return jnijvm;
+    return javaVM;
 }
 
 static void PR_CALLBACK detach_JNIEnv(void* env)
@@ -1172,12 +1171,8 @@ JVM_GetJNIEnv(void)
 		return env;
 
     nsIJVMPlugin* jvm = GetRunningJVM();
-    nsIJNIPlugin* jnijvm = NULL;
     if (jvm) {
-        if (jvm->QueryInterface(kIJNIPluginIID, (void**)&jnijvm) == NS_OK) {
-            env = jnijvm->GetJNIEnv();
-            jnijvm->Release();
-        }
+        env = jvm->GetJNIEnv();
         jvm->Release();
     }
 

@@ -2835,13 +2835,11 @@ np_newinstance(np_handle *handle, MWContext *cx, NPEmbeddedApp *app,
 
         /* tell the mocha thread to set us up with the window when it can */
         if (
-#if 0
             // XXX This is what we really want here, because it doesn't actually
             // start up the jvm, it just checks that the plugin is LiveConnected.
             // The problem is that by deferring the jvm startup, we cause it to 
             // happen later on the wrong thread. 
-            np_IsLiveConnected(handle)
-#elif defined(JAVA)
+#if defined(JAVA) || defined(OJI)
             npn_getJavaClass(handle)
 #else
             FALSE

@@ -357,6 +357,7 @@ LINK_LIBS= \
 !ifdef MOZ_JAVA
     $(DIST)\lib\libapplet32.lib \
 !endif
+    $(DIST)\lib\plug.lib \
 !ifdef MOZ_OJI
     $(DIST)\lib\oji32.lib \
 !endif
@@ -557,7 +558,6 @@ CINCLUDES= \
     /I$(DEPTH)\lib\libcnv \
     /I$(DEPTH)\lib\libi18n \
     /I$(DEPTH)\lib\libparse \
-    /I$(DEPTH)\lib\plugin \
 !ifdef MOZ_MAIL_NEWS
     /I$(DEPTH)\lib\libmsg \
     /I$(DEPTH)\lib\libaddr \
@@ -581,8 +581,11 @@ CDISTINCLUDES1= \
     /I$(DIST)\include \
     /I$(XPDIST)\public\dbm \
     /I$(XPDIST)\public\java \
+    /I$(XPDIST)\public\plugin \
+    /I$(XPDIST)\public\plugimpl \
 !if defined(MOZ_OJI)
     /I$(XPDIST)\public\oji \
+    /I$(XPDIST)\public\ojiimpl \
     /I$(XPDIST)\public\npj \
     /I$(XPDIST)\public\softupdt \
 !elseif defined(MOZ_JAVA)
@@ -1113,10 +1116,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 !endif
 
 !ifndef MOZ_NGLAYOUT
-	$(DEPTH)\lib\plugin\npassoc.c 
-	$(DEPTH)\lib\plugin\npglue.cpp
-	$(DEPTH)\lib\plugin\npwplat.cpp 
-	$(DEPTH)\lib\plugin\nsplugin.cpp 
+	$(DEPTH)\cmd\winfe\npwplat.cpp 
 
 	$(DEPTH)\lib\xlate\isotab.c   
 	$(DEPTH)\lib\xlate\stubs.c
@@ -2802,7 +2802,6 @@ exports:
     -xcopy $(DEPTH)\modules\edtplug\include\*.h $(EXPORTINC) $(XCF)
 !endif
 !endif
-    -xcopy $(DEPTH)\lib\plugin\*.h $(EXPORTINC) $(XCF)
 !if defined(MOZ_JAVA)
     -xcopy $(DEPTH)\modules\applet\include\*.h $(EXPORTINC) $(XCF)
 !endif
