@@ -56,6 +56,7 @@ XPIDLSRCS =					\
 	nsIWebFormsLabelElement.idl		\
 	nsIWebFormsOutputElement.idl		\
 	nsIWebFormsRepetitionElement.idl	\
+	nsIWebFormsRepetitionEvent.idl		\
 	nsIWebFormsSelectElement.idl		\
 	nsIWebFormsTextAreaElement.idl		\
 	$(NULL)
