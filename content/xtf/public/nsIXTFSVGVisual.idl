@@ -44,6 +44,11 @@ interface nsIDOMElement;
 [scriptable, uuid(6e051a6a-9ac3-4f3a-b701-d794761c47d9)]
 interface nsIXTFSVGVisual : nsIXTFElement
 {
+  // onCreated: Will be called before any notifications are sent to
+  // the xtf element or before the element will be asked for its
+  // visualContent. Parameter 'wrapper' is a weak proxy to the
+  // wrapping element (i.e. it can safely be addrefed by the xtf
+  // element without creating cyclic XPCOM referencing).
   void onCreated(in nsIXTFSVGVisualWrapper wrapper);
 
   readonly attribute nsIDOMElement visualContent;

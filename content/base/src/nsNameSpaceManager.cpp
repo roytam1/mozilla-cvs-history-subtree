@@ -47,6 +47,7 @@
 #ifdef MOZ_XTF
 #include "nsIServiceManager.h"
 #include "nsIXTFService.h"
+#include "nsContentUtils.h"
 static NS_DEFINE_CID(kXTFServiceCID, NS_XTFSERVICE_CID);
 #endif
 
@@ -474,10 +475,11 @@ NS_NewElement(nsIContent** aResult, PRInt32 aElementType,
     return NS_NewXMLEventsElement(aResult, aNodeInfo);
   }
 #ifdef MOZ_XTF
-  {
-    nsCOMPtr<nsIXTFService> xtfService = do_GetService(kXTFServiceCID); // XXX we should cache this somehow
-    NS_ASSERTION(xtfService, "could not get XTF service!");
-    if (NS_SUCCEEDED(xtfService->CreateElement(aResult, aNodeInfo)))
+  if (aElementType > kNameSpaceID_LastBuiltin) {
+    nsIXTFService* xtfService = nsContentUtils::GetXTFServiceWeakRef();
+    NS_ASSERTION(xtfService, "could not get xtf service");
+    if (xtfService &&
+        NS_SUCCEEDED(xtfService->CreateElement(aResult, aNodeInfo)))
       return NS_OK;
   }
 #endif

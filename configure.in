@@ -3556,6 +3556,17 @@ then
     AC_SUBST(MOZ_LIBGNOME_CFLAGS)
     AC_SUBST(MOZ_LIBGNOME_LIBS)
 
+    # The GNOME component is built if gtk2, gconf, gnome-vfs, and libgnome
+    # are all available.
+
+    if test "$MOZ_ENABLE_GTK2" -a "$MOZ_ENABLE_GCONF" -a \
+            "$MOZ_ENABLE_GNOMEVFS" -a "$MOZ_ENABLE_LIBGNOME"; then
+      MOZ_ENABLE_GNOME_COMPONENT=1
+    else
+      MOZ_ENABLE_GNOME_COMPONENT=
+    fi
+
+    AC_SUBST(MOZ_ENABLE_GNOME_COMPONENT)
 fi
 
 dnl ========================================================
@@ -3920,16 +3931,9 @@ if test -n "$USE_GSSAPI" && test `echo "$MOZ_EXTENSIONS" | grep -c negotiateauth
     dnl
     if test -z "$GSSAPI_LIBS" ; then
         dnl
-        dnl Some operating systems (like AIX) don't ship the k5crypto
-        dnl and com_err libraries with their Kerberos implementation,
-        dnl so check for their existance before including them in
-        dnl GSSAPI_LIBS.
+        dnl We only need to link to libgssapi_krb5.so
         dnl
-        _GSS_LIBS="-L$GSSAPI_DIR/lib -lgssapi_krb5 -lkrb5"
-        AC_CHECK_LIB(k5crypto, main, 
-            [AC_CHECK_LIB(com_err, main,
-                [_GSS_LIBS="$_GSS_LIBS -lk5crypto -lcom_err"],)]
-            ,)
+        _GSS_LIBS="-L$GSSAPI_DIR/lib -lgssapi_krb5"
         LIBS="$LIBS $_GSS_LIBS"
         AC_CHECK_FUNC(gss_init_sec_context, 
             [GSSAPI_LIBS="$_GSS_LIBS"],)
@@ -5407,6 +5411,19 @@ AC_SUBST(NECKO_SMALL_BUFFERS)
 if test "$NECKO_SMALL_BUFFERS"; then
     AC_DEFINE(NECKO_SMALL_BUFFERS)
 fi 
+
+dnl
+dnl option to disable cookies
+dnl
+NECKO_COOKIES=1
+MOZ_ARG_DISABLE_BOOL(cookies,
+[  --disable-cookies       Disable cookie support],
+    NECKO_COOKIES=,
+    NECKO_COOKIES=1)
+AC_SUBST(NECKO_COOKIES)
+if test "$NECKO_COOKIES"; then
+    AC_DEFINE(NECKO_COOKIES)
+fi
 
 dnl NECKO_ configuration options are not global
 _NON_GLOBAL_ACDEFINES="$_NON_GLOBAL_ACDEFINES NECKO_"

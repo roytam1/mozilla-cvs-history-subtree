@@ -50,7 +50,9 @@ MOZ_EXPORTED_SYMBOLS = [ "XHTML_NS", "SVG_NS", "XUL_NS",
                          "XTFXMLVisual",
                          "XTFXULVisual",
                          "XTFElementFactory",
-                         "XTFMappedAttributes"];
+                         "XTFMappedAttributeHandler",
+                         "XTFUnwrappable",
+                         "unwrapXTFElement" ];
 
 //----------------------------------------------------------------------
 // Global constants
@@ -67,58 +69,68 @@ var ContentBuilder = makeTemplate("ContentBuilder");
 
 ContentBuilder.mergeTemplate(ErrorTemplate);
 
-ContentBuilder.appendInitializer("ContentBuilder",
+ContentBuilder.appendInitializer(
+  "ContentBuilder",
   function() {
     this.builder = Components.classes["@mozilla.org/xtf/xml-contentbuilder;1"].createInstance(Components.interfaces.nsIXMLContentBuilder);
   });
 
-ContentBuilder.addProtoObj("clear",
+ContentBuilder.addProtoObj(
+  "clear",
   function() {
     this.builder.clear();
   });
 
-ContentBuilder.addProtoObj("setElementNamespace",
+ContentBuilder.addProtoObj(
+  "setElementNamespace",
   function(ns) {
     this.builder.setElementNamespace(ns);
     return this;
   });
 
-ContentBuilder.addProtoObj("beginElement",
+ContentBuilder.addProtoObj(
+  "beginElement",
   function(tagname) {
     this.builder.beginElement(tagname);
     return this;
   });
 
-ContentBuilder.addProtoObj("endElement",
+ContentBuilder.addProtoObj(
+  "endElement",
   function() {
     this.builder.endElement();
     return this;
   });
 
-ContentBuilder.addProtoObj("attrib",
+ContentBuilder.addProtoObj(
+  "attrib",
   function(name, value) {
     this.builder.attrib(name, value);
     return this;
   });
 
-ContentBuilder.addProtoObj("textNode",
-  function(text) {
-    this.builder.textNode(text);
-    return this;
-  });
-
-ContentBuilder.addProtoObj("attribs",
+ContentBuilder.addProtoObj(
+  "attribs",
   function(obj) {
     for (var a in obj)
       this.builder.attrib(a, obj[a]);
   });
 
-ContentBuilder.addProtoGetter("root",
+ContentBuilder.addProtoObj(
+  "textNode",
+  function(text) {
+    this.builder.textNode(text);
+    return this;
+  });
+
+ContentBuilder.addProtoGetter(
+  "root",
   function() {
     return this.builder.root;
   });
 
-ContentBuilder.addProtoGetter("current",
+ContentBuilder.addProtoGetter(
+  "current",
   function() {
     return this.builder.current;
   });
@@ -132,74 +144,73 @@ var XTFElement = makeTemplate("XTFElement");
 XTFElement.mergeTemplate(ErrorTemplate);
 XTFElement.mergeTemplate(SupportsTemplate);
 
-XTFElement.appendInitializer("XTFElement",
-                             function(args) {
+XTFElement.appendInitializer(
+  "XTFElement",
+  function(args) {
     if (!args || args.type === undefined) this._error("initializer arg 'type' missing");
     this._elementType = args.type;
   });
     
 XTFElement.addInterface(Components.interfaces.nsIXTFElement);
 
-XTFElement.addProtoGetter("elementType",
+XTFElement.addProtoGetter(
+  "elementType",
   function () {
     return this._elementType;
   });
 
-var _nsIXTFElement_stubs = ["willChangeDocument", "documentChanged",
-                            "willChangeParent", "parentChanged",
-                            "willInsertChild", "childInserted",
-                            "willRemoveChild", "childRemoved",
-                            "setAttribute", "unsetAttribute", "getAttribute",
-                            "hasAttribute", "getAttributeCount", "getAttributeNameAt"];
-for (var m=0; m<_nsIXTFElement_stubs.length; ++m) {
-  XTFElement.addProtoObj(_nsIXTFElement_stubs[m],
-    (function(m) {
-      return function() {
-        var args = "";
-        for (var i=0; i<arguments.length; ++i) {
-          if (i!=0) args+=", ";
-          args+=arguments[i];
-        }
-        this._dump(_nsIXTFElement_stubs[m]+"("+args+") called");
-      };})(m));
-}
-
-XTFElement.addProtoObj("willAppendChild",
-  function(child) {
-    return this.willInsertChild(child, -1);
+XTFElement.addProtoGetter(
+  "isAttributeHandler",
+  function () {
+    return false;
   });
 
-XTFElement.addProtoObj("childAppended",
-  function(child) {
-    return this.childInserted(child, -1);
-  });
-
-XTFElement.addProtoObj("getScriptingInterfaces",
+XTFElement.addProtoObj(
+  "getScriptingInterfaces",
   function(count) {
     count.value = this._scriptingInterfaces.length;
     return this._scriptingInterfaces;
   });
 
-XTFElement.addProtoObj("_scriptingInterfaces",
-                       [],
-                       { mergenew:  cloneArray,
-                         mergeover: appendUnique });
+XTFElement.addProtoObj(
+  "_scriptingInterfaces",
+  [],
+  { mergenew:  cloneArray,
+    mergeover: appendUnique });
 
-XTFElement.addOpsObject("addScriptingInterface",
+XTFElement.addOpsObject(
+  "addScriptingInterface",
   function(itf) {
     this.getProtoObj("_scriptingInterfaces").push(itf);
+  });
+
+XTFElement.addProtoGetter(
+  "notificationMask",
+  function() { return this._notificationMask; });
+
+XTFElement.addProtoObj(
+  "_notificationMask",
+  0,
+  { mergeover: function(d,s) { return d|s; } });
+
+XTFElement.addOpsObject(
+  "addNotification",
+  function(n) {
+    this._proto._notificationMask |= n;
   });
 
 // onCreated really belongs to sub-interfaces of nsIXMLElement, but it
 // makes sense to implement this here, because JS isn't typed and the
 // different signatures of onCreate only differ in argument type:
 
-XTFElement.addProtoObj("onCreated",
+XTFElement.addProtoObj(
+  "onCreated",
   function(wrapper) {
     this._wrapper = wrapper;
   });
 
-XTFElement.addProtoObj("onDestroyed",
+XTFElement.addProtoObj(
+  "onDestroyed",
   function() {
     delete this._wrapper;
   });
@@ -225,7 +236,8 @@ XTFVisual.addScriptingInterface(Components.interfaces.nsIDOMElement);
 
 XTFVisual.addProtoObj("XTFElement$onCreated",
                       XTFVisual.getProtoObj("onCreated"));
-XTFVisual.addProtoObj("onCreated",
+XTFVisual.addProtoObj(
+  "onCreated",
   function(wrapper) {
     var builder = ContentBuilder.instantiate();
     this._buildVisualContent(builder);
@@ -234,17 +246,21 @@ XTFVisual.addProtoObj("onCreated",
     return this.XTFElement$onCreated(wrapper);
   });
 
-XTFVisual.addProtoGetter("visualContent",
-                         function() {
+XTFVisual.addProtoGetter(
+  "visualContent",
+  function() {
     return this._visualContent;
   });
 
-XTFVisual.addProtoObj("_buildVisualContent",
-                      function(builder) {});
+XTFVisual.addProtoObj(
+  "_buildVisualContent",
+  function(builder) {});
 
-XTFVisual.addProtoObj("XTFElement$onDestroyed",
-                      XTFVisual.getProtoObj("onDestroyed"));
-XTFVisual.addProtoObj("onDestroyed",
+XTFVisual.addProtoObj(
+  "XTFElement$onDestroyed",
+  XTFVisual.getProtoObj("onDestroyed"));
+XTFVisual.addProtoObj(
+  "onDestroyed",
   function() {
     delete this._visualContent;
     this.XTFElement$onDestroyed();
@@ -302,13 +318,20 @@ XTFElementFactory.addOpsObject("addElement",
     this.getProtoObj("_elements")[name] = instantiator;
   });
 
-
 //----------------------------------------------------------------------
-// XTFMappedAttributes
+// XTFMappedAttributeHandler
 
-var XTFMappedAttributes = makeTemplate("XTFMappedAttributes");
+var XTFMappedAttributeHandler = makeTemplate("XTFMappedAttributeHandler");
+XTFMappedAttributeHandler.mergeTemplate(ErrorTemplate);
+XTFMappedAttributeHandler.mergeTemplate(SupportsTemplate);
+XTFMappedAttributeHandler.addInterface(Components.interfaces.nsIXTFAttributeHandler);
 
-XTFMappedAttributes.addProtoObj("setAttribute",
+XTFMappedAttributeHandler.addProtoGetter(
+  "isAttributeHandler",
+  function() {return true;});
+
+XTFMappedAttributeHandler.addProtoObj(
+  "setAttribute",
   function(name, value) {
     this._dump("setAttribute "+name+" "+value);
     var attr;
@@ -317,6 +340,12 @@ XTFMappedAttributes.addProtoObj("setAttribute",
         attr.set.apply(this, arguments);
       else if ("varname" in attr)
         this[attr.varname] = value;
+      else if ("delegate" in attr) {
+        var hadAttr = this[attr.delegate].hasAttribute(name);
+        this[attr.delegate].setAttribute(name, value);
+        if (!hadAttr)
+          this._attributeCountChanged();
+      }
       else
         this._error("setAttribute: corrupt attribute descriptor for attrib '"+name+"'");
     }
@@ -326,11 +355,13 @@ XTFMappedAttributes.addProtoObj("setAttribute",
       else
         this._error("setAttribute: corrupt '*' attribute descriptor on setting '"+name+"'");
     }
-    else
+    else {
       this._error("setAttribute: unknown attribute '"+name+"'");
+    }
   });
 
-XTFMappedAttributes.addProtoObj("unsetAttribute",
+XTFMappedAttributeHandler.addProtoObj(
+  "unsetAttribute",
   function(name) {
     this._dump("unsetAttribute "+name);
     var attr;
@@ -342,6 +373,12 @@ XTFMappedAttributes.addProtoObj("unsetAttribute",
           delete this[attr.varname];
         else
           this._error("unsetAttribute: attribute '"+name+"' is already unset");
+      }
+      else if ("delegate" in attr) {
+        var hadAttr = this[attr.delegate].hasAttribute(name);
+        this[attr.delegate].unsetAttribute(name);
+        if (hadAttr)
+          this._attributeCountChanged();
       }
       else
         this._error("unsetAttribute: corrupt attribute descriptor for attrib '"+name+"'");
@@ -356,7 +393,8 @@ XTFMappedAttributes.addProtoObj("unsetAttribute",
       this._error("unsetAttribute: unknown attribute '"+name+"'");
   });
 
-XTFMappedAttributes.addProtoObj("getAttribute",
+XTFMappedAttributeHandler.addProtoObj(
+  "getAttribute",
   function(name) {
     this._dump("getAttribute "+name);
     var attr;
@@ -365,6 +403,8 @@ XTFMappedAttributes.addProtoObj("getAttribute",
         return attr.get.apply(this, arguments);
       else if ("varname" in attr)
         return this[attr.varname];
+      else if ("delegate" in attr)
+        return this[attr.delegate].getAttribute(name);
       else
         this._error("getAttribute: corrupt attribute descriptor for attrib '"+name+"'");
     }
@@ -374,11 +414,12 @@ XTFMappedAttributes.addProtoObj("getAttribute",
       else
         this._error("getAttribute: corrupt '*' attribute descriptor on getting '"+name+"'");
     }
-    else
+    else 
       this._error("getAttribute: unknown attribute '"+name+"'");
   });
 
-XTFMappedAttributes.addProtoObj("hasAttribute",
+XTFMappedAttributeHandler.addProtoObj(
+  "hasAttribute",
   function(name) {
     this._dump("hasAttribute "+name);
     var attr;
@@ -387,6 +428,8 @@ XTFMappedAttributes.addProtoObj("hasAttribute",
         return attr.has.apply(this, arguments);
       else if ("varname" in attr)
         return this.hasOwnProperty(this[attr.varname]);
+      else if ("delegate" in attr)
+        return this[attr.delegate].hasAttribute(name);
       else
         this._error("hasAttribute: corrupt attribute descriptor for attrib '"+name+"'");
     }
@@ -400,24 +443,28 @@ XTFMappedAttributes.addProtoObj("hasAttribute",
       this._error("hasAttribute: unknown attribute '"+name+"'");
   });
 
-XTFMappedAttributes.addProtoObj("getAttributeCount",
+XTFMappedAttributeHandler.addProtoObj(
+  "getAttributeCount",
   function() {
     this._dump("getAttributeCount");
     return this._getAttributelist().length;
   });
 
-XTFMappedAttributes.addProtoObj("getAttributeNameAt",
+XTFMappedAttributeHandler.addProtoObj(
+  "getAttributeNameAt",
   function(index) {
     this._dump("getAttributeNameAt "+index);
     return this._getAttributelist()[index];
   });
 
-XTFMappedAttributes.addProtoObj("_attributeCountChanged",
+XTFMappedAttributeHandler.addProtoObj(
+  "_attributeCountChanged",
   function() {
     delete this.__attributelist;
   });
 
-XTFMappedAttributes.addProtoObj("_getAttributelist",
+XTFMappedAttributeHandler.addProtoObj(
+  "_getAttributelist",
   function() {
     if (!this.__attributelist) {
       // count the attribs and store names in array
@@ -440,10 +487,33 @@ XTFMappedAttributes.addProtoObj("_getAttributelist",
     return this.__attributelist;
   });
 
-XTFMappedAttributes.addProtoObj("_attributemap", {} /*, XXX merge flag */);
+XTFMappedAttributeHandler.addProtoObj("_attributemap", {} /*, XXX merge flag */);
 
-XTFMappedAttributes.addOpsObject("mapAttribute",
+XTFMappedAttributeHandler.addOpsObject("mapAttribute",
   function(name, descriptor) {
     this.getProtoObj("_attributemap")[name] = descriptor;
   });
 
+//----------------------------------------------------------------------
+// XTFUnwrappable: a template to implement the nsIXTFPrivate interface
+// and 'wrappedJSObject' property, giving access to the underlying JS XTF
+// object via its wrapper.
+
+var XTFUnwrappable = makeTemplate("XTFUnwrappable");
+XTFUnwrappable.mergeTemplate(SupportsTemplate);
+XTFUnwrappable.addInterface(Components.interfaces.nsIXTFPrivate);
+XTFUnwrappable.addProtoGetter("inner",
+  function() {
+    return this;
+  });
+XTFUnwrappable.addProtoGetter("wrappedJSObject",
+  function() {
+    return this;
+  });
+
+// utility for unwrapping an unwrappable wrapped js-implemented xtf
+// element:
+function unwrapXTFElement(element) {
+  element.QueryInterface(Components.interfaces.nsIXTFPrivate);
+  return element.inner.wrappedJSObject;
+}

@@ -41,6 +41,7 @@
 
 #include "nsIXTFElementWrapper.h"
 #include "nsXMLElement.h"
+#include "nsIXTFAttributeHandler.h"
 
 class nsIXTFElement;
 
@@ -52,6 +53,7 @@ class nsXTFElementWrapper : public nsXTFElementWrapperBase,
 {
 protected:
   nsXTFElementWrapper(nsINodeInfo* aNodeInfo);
+  nsresult Init();
   
 public:
   // nsISupports interface
@@ -91,7 +93,9 @@ protected:
   
   // implementation helpers:  
   PRBool AggregatesInterface(REFNSIID aIID);
-  
+
+  PRUint32 mNotificationMask;
+  nsCOMPtr<nsIXTFAttributeHandler> mAttributeHandler;
 };
 
 #endif // __NS_XTFELEMENTWRAPPER_H__

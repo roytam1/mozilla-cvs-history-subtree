@@ -88,6 +88,9 @@ XTF_BRANCH_MODIFIED_FILES = \
 	config/autoconf.mk.in \
 	config/rules.mk \
 	content/Makefile.in \
+	content/base/public/nsContentUtils.h \
+	content/base/public/nsINameSpaceManager.h \
+	content/base/src/nsContentUtils.cpp \
 	content/base/src/nsNameSpaceManager.cpp \
 	js/src/xpconnect/Makefile.in \
 	js/src/xpconnect/loader/Makefile.in \
@@ -108,11 +111,13 @@ XTF_BRANCH_NEW_FILES = \
 	content/xtf/js/xtf.js \
 	content/xtf/public/Makefile.in \
 	content/xtf/public/nsIXMLContentBuilder.idl \
+	content/xtf/public/nsIXTFAttributeHandler.idl \
 	content/xtf/public/nsIXTFElement.idl \
 	content/xtf/public/nsIXTFElementFactory.idl \
 	content/xtf/public/nsIXTFElementWrapper.idl \
 	content/xtf/public/nsIXTFGenericElement.idl \
 	content/xtf/public/nsIXTFGenericElementWrapper.idl \
+	content/xtf/public/nsIXTFPrivate.idl \
 	content/xtf/public/nsIXTFSVGVisual.idl \
 	content/xtf/public/nsIXTFSVGVisualWrapper.idl \
 	content/xtf/public/nsIXTFXMLVisual.idl \
@@ -128,6 +133,8 @@ XTF_BRANCH_NEW_FILES = \
 	content/xtf/src/nsXTFSVGVisualWrapper.cpp \
 	content/xtf/src/nsXTFSVGVisualWrapper.h \
 	content/xtf/src/nsXTFService.cpp \
+	content/xtf/src/nsXTFVisualWrapper.cpp \
+	content/xtf/src/nsXTFVisualWrapper.h \
 	content/xtf/src/nsXTFWeakTearoff.cpp \
 	content/xtf/src/nsXTFWeakTearoff.h \
 	content/xtf/src/nsXTFXMLVisualWrapper.cpp \
@@ -153,6 +160,7 @@ XTF_BRANCH_NEW_FILES = \
 	js/src/xpconnect/codelib/mozIJSCodeLib.idl \
 	js/src/xpconnect/codelib/mozJSCodeLib.cpp \
 	js/src/xpconnect/codelib/mozJSCodeLib.h \
+	js/src/xpconnect/codelib/IntrospectionLib.js \
 	js/src/xpconnect/codelib/IOLib.js \
 	js/src/xpconnect/codelib/ProfileLib.js \
 	js/src/xpconnect/codelib/StdLib.js \

@@ -11,12 +11,19 @@ importModule("resource:/jscodelib/TemplateLib.js");
 importModule("resource:/jscodelib/xtf.js");
 
 //----------------------------------------------------------------------
+// docElement
+
+var docElement = makeTemplate("docElement");
+docElement.mergeTemplate(XTFGenericElement);
+
+//----------------------------------------------------------------------
 // canvasElement
 
 var canvasElement = makeTemplate("canvasElement");
 canvasElement.mergeTemplate(XTFXMLVisual);
 
-canvasElement.addProtoObj("_buildVisualContent",
+canvasElement.addProtoObj(
+  "_buildVisualContent",
   function(builder) {
     builder.setElementNamespace(SVG_NS);
     builder.beginElement("svg");
@@ -28,7 +35,11 @@ canvasElement.addProtoObj("_buildVisualContent",
     builder.endElement();
   });
 
-canvasElement.addProtoObj("childInserted",
+canvasElement.addNotification(Components.interfaces.nsIXTFElement.NOTIFY_CHILD_INSERTED);
+canvasElement.addNotification(Components.interfaces.nsIXTFElement.NOTIFY_CHILD_APPENDED);
+
+canvasElement.addProtoObj(
+  "childInserted",
   function(child, index) {
     try {
       child.QueryInterface(Components.interfaces.nsIXTFWidget);
@@ -41,24 +52,31 @@ canvasElement.addProtoObj("childInserted",
     this._svg.appendChild(child.visual);
   });
 
-canvasElement.addProtoObj("_XTFXMLVisual$documentChanged",
-                          canvasElement.getProtoObj("documentChanged"));
-canvasElement.addProtoObj("documentChanged",
+canvasElement.addProtoObj(
+  "childAppended",
+  function(child) { this.childInserted(child, -1); });
+
+canvasElement.addNotification(Components.interfaces.nsIXTFElement.NOTIFY_DOCUMENT_CHANGED);
+
+canvasElement.addProtoObj(
+  "documentChanged",
   function(doc) {
-    this._XTFXMLVisual$documentChanged(doc);
     this._dump(" documentFrameElement:"+this._wrapper.documentFrameElement);
   });
 
-canvasElement.addProtoObj("_XTFXMLVisual$onCreated",
-                          canvasElement.getProtoObj("onCreated"));
-canvasElement.addProtoObj("onCreated",
+canvasElement.addProtoObj(
+  "_XTFXMLVisual$onCreated",
+  canvasElement.getProtoObj("onCreated"));
+canvasElement.addProtoObj(
+  "onCreated",
   function(wrapper) {
     this._XTFXMLVisual$onCreated(wrapper);
     this._dump("elementNode:"+this._wrapper.elementNode+" documentFrameElement:"+this._wrapper.documentFrameElement);
   });
 
-canvasElement.addProtoObj("_XTFXMLVisual$onDestroyed",
-                          canvasElement.getProtoObj("onDestroyed"));
+canvasElement.addProtoObj(
+  "_XTFXMLVisual$onDestroyed",
+  canvasElement.getProtoObj("onDestroyed"));
 canvasElement.addProtoObj("onDestroyed",
   function() {
     this._dump("onDestroyed");
@@ -97,6 +115,7 @@ lineElement.addProtoGetter("visual",
 var canvasFactory = makeTemplate("canvasFactory");
 canvasFactory.mergeTemplate(XTFElementFactory);
 
+canvasFactory.addElement("doc", docElement);
 canvasFactory.addElement("canvas", canvasElement);
 canvasFactory.addElement("line", lineElement);
 

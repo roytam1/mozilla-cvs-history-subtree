@@ -36,20 +36,16 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#include "nsIXTFElement.idl"
+#include "nsISupports.idl"
+interface nsIAtom;
 
-interface nsIXTFXMLVisualWrapper;
-interface nsIDOMElement;
-
-[scriptable, uuid(f6e8a067-a3ec-450f-b1e1-3f14ac2b369e)]
-interface nsIXTFXMLVisual : nsIXTFElement
+[scriptable, uuid(72152f7f-7e8d-43fd-8477-3f29ae8d240d)]
+interface nsIXTFAttributeHandler : nsISupports
 {
-  // onCreated: Will be called before any notifications are sent to
-  // the xtf element or before the element will be asked for its
-  // visualContent. Parameter 'wrapper' is a weak proxy to the
-  // wrapping element (i.e. it can safely be addrefed by the xtf
-  // element without creating cyclic XPCOM referencing).
-  void onCreated(in nsIXTFXMLVisualWrapper wrapper);
-
-  readonly attribute nsIDOMElement visualContent;
+  void setAttribute(in nsIAtom name, in AString newValue);
+  void unsetAttribute(in nsIAtom name);
+  AString getAttribute(in nsIAtom name);
+  boolean hasAttribute(in nsIAtom name);
+  unsigned long getAttributeCount();
+  nsIAtom getAttributeNameAt(in unsigned long index);
 };

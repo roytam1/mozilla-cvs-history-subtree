@@ -36,20 +36,20 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#include "nsIXTFElement.idl"
+#include "nsISupports.idl"
 
-interface nsIXTFXMLVisualWrapper;
-interface nsIDOMElement;
+/*
+ * This interface can be used to give access to a private 'inner'
+ * interface when an xtf element is accessed through its wrapper (or
+ * more precisely: accessed through one of the wrapper-generated
+ * nsXTFInterfaceAggregator proxies). For JS-implemented XTF elements
+ * the inner interface can be used to gain access to the underlying
+ * JSObject using xpconnect's "wrappedJSObject" mechanism (see
+ * nsIXPConnect.idl).
+ */
 
-[scriptable, uuid(f6e8a067-a3ec-450f-b1e1-3f14ac2b369e)]
-interface nsIXTFXMLVisual : nsIXTFElement
+[scriptable, uuid(13ef3d54-1dd1-4a5c-a8d5-a04a327fb9b6)]
+interface nsIXTFPrivate : nsISupports
 {
-  // onCreated: Will be called before any notifications are sent to
-  // the xtf element or before the element will be asked for its
-  // visualContent. Parameter 'wrapper' is a weak proxy to the
-  // wrapping element (i.e. it can safely be addrefed by the xtf
-  // element without creating cyclic XPCOM referencing).
-  void onCreated(in nsIXTFXMLVisualWrapper wrapper);
-
-  readonly attribute nsIDOMElement visualContent;
+  readonly attribute nsISupports inner;
 };

@@ -55,7 +55,7 @@ function time(fct) {
   return end.getTime() - start.getTime();
 };
     
-time._helpstr_ = "Returns the execution time (ms) of the function passed as argument.";
+time._doc_ = "Returns the execution time (ms) of the function passed as argument.";
 
 //----------------------------------------------------------------------
 // calculateMoments(). See Press et. al., Numerical Recipes, Chapter 14.
@@ -99,7 +99,7 @@ function calculateMoments(data, obj) {
   return obj;
 }
 
-calculateMoments._helpstr_ =
+calculateMoments._doc_ =
 "Given an array 'data', returns an object with the data's mean, \
 average_deviation, standard_deviation, variance, skewness and \
 kurtosis. If the optional argument 'obj' is given, the moments will be \

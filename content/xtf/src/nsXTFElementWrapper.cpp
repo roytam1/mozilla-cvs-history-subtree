@@ -45,12 +45,22 @@
 #include "nsPIDOMWindow.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsIDocument.h"
-//XXX get rid of this:
-#include "nsSVGAtoms.h"
+#include "nsHTMLAtoms.h" // XXX only needed for nsHTMLAtoms::id
 
 nsXTFElementWrapper::nsXTFElementWrapper(nsINodeInfo* aNodeInfo)
     : nsXTFElementWrapperBase(aNodeInfo)
 {
+}
+
+nsresult
+nsXTFElementWrapper::Init()
+{
+  PRBool innerHandlesAttribs = PR_FALSE;
+  GetXTFElement()->GetIsAttributeHandler(&innerHandlesAttribs);
+  if (innerHandlesAttribs)
+    mAttributeHandler = do_QueryInterface(GetXTFElement());
+  GetXTFElement()->GetNotificationMask(&mNotificationMask);
+  return NS_OK;
 }
 
 //----------------------------------------------------------------------
@@ -95,7 +105,6 @@ void
 nsXTFElementWrapper::SetDocument(nsIDocument* aDocument, PRBool aDeep,
                                  PRBool aCompileEventHandlers)
 {
-  GetXTFElement()->WillChangeDocument(aDocument);
   // XXX For some reason we often get 2 SetDocument notifications with
   // identical aDocument (one when expat encounters the element and
   // another when the element is appended to its parent). We want to
@@ -104,20 +113,23 @@ nsXTFElementWrapper::SetDocument(nsIDocument* aDocument, PRBool aDeep,
   bool docReallyChanged = false;
   if (aDocument!=mDocument) docReallyChanged = true;
 
-  if (docReallyChanged)
+  if (docReallyChanged &&
+      (mNotificationMask & nsIXTFElement::NOTIFY_WILL_CHANGE_DOCUMENT))
     GetXTFElement()->WillChangeDocument(aDocument);
   nsXTFElementWrapperBase::SetDocument(aDocument, aDeep, aCompileEventHandlers);
-  GetXTFElement()->DocumentChanged(aDocument);
-  if (docReallyChanged)
+  if (docReallyChanged &&
+      (mNotificationMask & nsIXTFElement::NOTIFY_DOCUMENT_CHANGED))
     GetXTFElement()->DocumentChanged(aDocument);
 }
 
 void
 nsXTFElementWrapper::SetParent(nsIContent* aParent)
 {
-  GetXTFElement()->WillChangeParent(aParent);
+  if (mNotificationMask & nsIXTFElement::NOTIFY_WILL_CHANGE_PARENT)
+    GetXTFElement()->WillChangeParent(aParent);
   nsXTFElementWrapperBase::SetParent(aParent);
-  GetXTFElement()->ParentChanged(aParent);
+  if (mNotificationMask & nsIXTFElement::NOTIFY_PARENT_CHANGED)
+    GetXTFElement()->ParentChanged(aParent);
 }
 
 nsresult
@@ -125,9 +137,12 @@ nsXTFElementWrapper::InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
                                    PRBool aNotify, PRBool aDeepSetDocument)
 {
   nsresult rv;
-  GetXTFElement()->WillInsertChild(aKid, aIndex);
+  
+  if (mNotificationMask & nsIXTFElement::NOTIFY_WILL_INSERT_CHILD)
+    GetXTFElement()->WillInsertChild(aKid, aIndex);
   rv = nsXTFElementWrapperBase::InsertChildAt(aKid, aIndex, aNotify, aDeepSetDocument);
-  GetXTFElement()->ChildInserted(aKid, aIndex);
+  if (mNotificationMask & nsIXTFElement::NOTIFY_CHILD_INSERTED)
+    GetXTFElement()->ChildInserted(aKid, aIndex);
   return rv;
 }
 
@@ -136,9 +151,12 @@ nsXTFElementWrapper::AppendChildTo(nsIContent* aKid, PRBool aNotify,
                                    PRBool aDeepSetDocument)
 {
   nsresult rv;
-  GetXTFElement()->WillAppendChild(aKid);
+  
+  if (mNotificationMask & nsIXTFElement::NOTIFY_WILL_APPEND_CHILD)
+    GetXTFElement()->WillAppendChild(aKid);
   rv = nsXTFElementWrapperBase::AppendChildTo(aKid, aNotify, aDeepSetDocument);
-  GetXTFElement()->ChildAppended(aKid);
+  if (mNotificationMask & nsIXTFElement::NOTIFY_CHILD_APPENDED)
+    GetXTFElement()->ChildAppended(aKid);
   return rv;
 }
 
@@ -146,9 +164,11 @@ nsresult
 nsXTFElementWrapper::RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
 {
   nsresult rv;
-  GetXTFElement()->WillRemoveChild(aIndex);
+  if (mNotificationMask & nsIXTFElement::NOTIFY_WILL_REMOVE_CHILD)
+    GetXTFElement()->WillRemoveChild(aIndex);
   rv = nsXTFElementWrapperBase::RemoveChildAt(aIndex, aNotify);
-  GetXTFElement()->ChildRemoved(aIndex);
+  if (mNotificationMask & nsIXTFElement::NOTIFY_CHILD_REMOVED)
+    GetXTFElement()->ChildRemoved(aIndex);
   return rv;
 }
 
@@ -156,7 +176,7 @@ nsIAtom *
 nsXTFElementWrapper::GetIDAttributeName() const
 {
   // XXX:
-  return nsSVGAtoms::id;
+  return nsHTMLAtoms::id;
 }
 
 nsresult
@@ -164,12 +184,26 @@ nsXTFElementWrapper::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                              nsIAtom* aPrefix, const nsAString& aValue,
                              PRBool aNotify)
 {
-  nsAutoString name;
-  aName->ToString(name);
+  nsresult rv;
   
-  nsresult rv = GetXTFElement()->SetAttribute(name, aValue);
-
-  // XXX mutation events?
+  if (mNotificationMask & nsIXTFElement::NOTIFY_WILL_SET_ATTRIBUTE)
+    GetXTFElement()->WillSetAttribute(aName, aValue);
+  
+  if (mAttributeHandler) {
+    // XXX we don't do namespaced attributes yet
+    if (aNameSpaceID != kNameSpaceID_None) {
+      NS_WARNING("setattr: xtf elements don't do namespaced attribs yet!");
+      return NS_ERROR_FAILURE;
+    }  
+    rv = mAttributeHandler->SetAttribute(aName, aValue);
+    // XXX mutation events?
+  }
+  else { // wrapper handles attribs
+    rv = nsXTFElementWrapperBase::SetAttr(aNameSpaceID, aName, aPrefix, aValue, aNotify);
+  }
+  
+  if (mNotificationMask & nsIXTFElement::NOTIFY_ATTRIBUTE_SET)
+    GetXTFElement()->AttributeSet(aName, aValue);
   
   return rv;
 }
@@ -178,39 +212,62 @@ nsresult
 nsXTFElementWrapper::GetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, 
                              nsAString& aResult)const
 {
-  nsAutoString name;
-  aName->ToString(name);
-  nsresult rv = GetXTFElement()->GetAttribute(name, aResult);
-  if (NS_FAILED(rv)) return rv;
-  if (aResult.IsVoid()) return NS_CONTENT_ATTR_NOT_THERE;
-  // XXX when should we return NS_CONTENT_ATTR_NO_VALUE ???
-  
-  return NS_CONTENT_ATTR_HAS_VALUE;
+  if (mAttributeHandler) {
+    // XXX we don't do namespaced attributes yet
+    if (aNameSpaceID != kNameSpaceID_None) {
+      NS_WARNING("getattr: xtf elements don't do namespaced attribs yet!");
+      return NS_CONTENT_ATTR_NOT_THERE;
+    }
+    nsresult rv = mAttributeHandler->GetAttribute(aName, aResult);
+    if (NS_FAILED(rv)) return NS_CONTENT_ATTR_NOT_THERE;
+    if (aResult.IsVoid()) return NS_CONTENT_ATTR_NO_VALUE;
+    
+    return NS_CONTENT_ATTR_HAS_VALUE;
+  }
+  else { // wrapper handles attribs
+    return nsXTFElementWrapperBase::GetAttr(aNameSpaceID, aName, aResult);
+  }
 }
 
 PRBool
 nsXTFElementWrapper::HasAttr(PRInt32 aNameSpaceID, nsIAtom* aName) const
 {
-  nsAutoString name;
-  aName->ToString(name);
-  PRBool rval = PR_FALSE;
-  GetXTFElement()->HasAttribute(name, &rval);
-  
-  return rval;
+  if (mAttributeHandler) {
+    PRBool rval = PR_FALSE;
+    mAttributeHandler->HasAttribute(aName, &rval);
+    return rval;
+  }
+  else { // wrapper handles attribs
+    return nsXTFElementWrapperBase::HasAttr(aNameSpaceID, aName);
+  }
 }
 
 
 nsresult
 nsXTFElementWrapper::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr, 
-                                      PRBool aNotify)
+                               PRBool aNotify)
 {
-  nsAutoString name;
-  aAttr->ToString(name);
-  
-  nsresult rv = GetXTFElement()->UnsetAttribute(name);
+  nsresult rv;
 
-  // XXX mutation events?
+  if (mNotificationMask & nsIXTFElement::NOTIFY_WILL_UNSET_ATTRIBUTE)
+    GetXTFElement()->WillUnsetAttribute(aAttr);
   
+  if (mAttributeHandler) {
+    // XXX we don't do namespaced attributes yet
+    if (aNameSpaceID != kNameSpaceID_None) {
+      NS_WARNING("setattr: xtf elements don't do namespaced attribs yet!");
+      return NS_ERROR_FAILURE;
+    }  
+    rv = mAttributeHandler->UnsetAttribute(aAttr);
+    // XXX mutation events?
+  }
+  else { // wrapper handles attribs
+    rv = nsXTFElementWrapperBase::UnsetAttr(aNameSpaceID, aAttr, aNotify);
+  }
+
+  if (mNotificationMask & nsIXTFElement::NOTIFY_ATTRIBUTE_UNSET)
+    GetXTFElement()->AttributeUnset(aAttr);
+
   return rv;
 }
 
@@ -218,25 +275,28 @@ nsresult
 nsXTFElementWrapper::GetAttrNameAt(PRUint32 aIndex, PRInt32* aNameSpaceID,
                                    nsIAtom** aName, nsIAtom** aPrefix) const
 {
-  *aNameSpaceID = kNameSpaceID_None;
-  *aPrefix = nsnull;
-  
-  nsAutoString name;
-  nsresult rv = GetXTFElement()->GetAttributeNameAt(aIndex, name);
-  if (NS_SUCCEEDED(rv))
-    *aName = NS_NewAtom(name);
-  else
-    *aName = nsnull;
-  
-  return rv;
+  if (mAttributeHandler) {
+    *aNameSpaceID = kNameSpaceID_None;
+    *aPrefix = nsnull;
+    return mAttributeHandler->GetAttributeNameAt(aIndex, aName);
+  }
+  else { // wrapper handles attribs
+    return nsXTFElementWrapperBase::GetAttrNameAt(aIndex, aNameSpaceID,
+                                                  aName, aPrefix);
+  }
 }
 
 PRUint32
 nsXTFElementWrapper::GetAttrCount() const
 {
-  PRUint32 rval = 0;
-  GetXTFElement()->GetAttributeCount(&rval);
-  return rval;
+  if (mAttributeHandler) {
+    PRUint32 rval = 0;
+    mAttributeHandler->GetAttributeCount(&rval);
+    return rval;
+  }
+  else { // wrapper handles attribs
+    return nsXTFElementWrapperBase::GetAttrCount();
+  }
 }
 
 
@@ -354,24 +414,4 @@ nsXTFElementWrapper::AggregatesInterface(REFNSIID aIID)
   nsCOMPtr<nsISupports> inst;
   GetXTFElement()->QueryInterface(aIID, getter_AddRefs(inst));
   return (inst!=nsnull);
-//   // we aggregate all interfaces declared as 'public' in our inner
-//   // object:
-//   // XXX we call this so often, it should almost certainly be hashed.
-//   PRUint32 count=0;
-//   nsIID **iids=nsnull;
-  
-//   GetXTFElement()->GetPublicInterfaces(&count, &iids);
-//   for (int i=0; i<count; ++i) {
-//     if(aIID.Equals(*(iids[i]))) {
-// #ifdef DEBUG
-//       printf("nsXTFElementWrapper::AggregatesInterface(): found!\n");
-// #endif
-//       break;
-//     }
-//   }
-
-//   if (iids!=nsnull)
-//     NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(count, iids);
-  
-//   return i!=count;
 }

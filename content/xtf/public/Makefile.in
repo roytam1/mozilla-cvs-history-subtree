@@ -46,19 +46,26 @@ MODULE		= content
 XPIDL_MODULE    = content_xtf
 
 XPIDLSRCS = \
-	nsIXTFElementFactory.idl \
-	nsIXTFElement.idl \
-	nsIXTFElementWrapper.idl \
-	nsIXTFSVGVisual.idl \
-	nsIXTFXMLVisual.idl \
-	nsIXTFXULVisual.idl \
-	nsIXTFGenericElement.idl \
-	nsIXTFSVGVisualWrapper.idl \
-	nsIXTFXMLVisualWrapper.idl \
-	nsIXTFXULVisualWrapper.idl \
-	nsIXTFGenericElementWrapper.idl \
 	nsIXMLContentBuilder.idl \
+	nsIXTFAttributeHandler.idl \
+	nsIXTFElement.idl \
+	nsIXTFElementFactory.idl \
+	nsIXTFElementWrapper.idl \
+	nsIXTFGenericElement.idl \
+	nsIXTFGenericElementWrapper.idl \
+	nsIXTFPrivate.idl \
+	nsIXTFXMLVisual.idl \
+	nsIXTFXMLVisualWrapper.idl \
+	nsIXTFXULVisual.idl \
+	nsIXTFXULVisualWrapper.idl \
 	$(NULL)
+
+ifdef MOZ_SVG
+XPIDLSRCS += \
+	nsIXTFSVGVisual.idl \
+	nsIXTFSVGVisualWrapper.idl \
+	$(NULL)
+endif
 
 include $(topsrcdir)/config/rules.mk
 

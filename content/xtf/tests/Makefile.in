@@ -43,6 +43,5 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 DIRS		=  smiley canvas perf
-
 include $(topsrcdir)/config/rules.mk
 

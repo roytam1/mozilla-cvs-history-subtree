@@ -60,16 +60,22 @@ REQUIRES	= xpcom \
 		  webshell
 
 CPPSRCS		= \
-		nsXTFService.cpp \
-		nsXTFInterfaceAggregator.cpp \
-		nsXTFWeakTearoff.cpp \
+		nsXMLContentBuilder.cpp \
 		nsXTFElementWrapper.cpp \
 		nsXTFGenericElementWrapper.cpp \
-		nsXTFSVGVisualWrapper.cpp \
+		nsXTFInterfaceAggregator.cpp \
+		nsXTFService.cpp \
+		nsXTFVisualWrapper.cpp \
+		nsXTFWeakTearoff.cpp \
 		nsXTFXMLVisualWrapper.cpp \
 		nsXTFXULVisualWrapper.cpp \
-		nsXMLContentBuilder.cpp \
 		$(NULL)
+
+ifdef MOZ_SVG
+CPPSRCS		+= \
+		nsXTFSVGVisualWrapper.cpp \
+		$(NULL)
+endif
 
 include $(topsrcdir)/config/config.mk
 
@@ -82,16 +88,6 @@ EXPORTS 	=  \
 
 
 include $(topsrcdir)/config/rules.mk
-
-#INCLUDES += 	\
-#		-I$(srcdir)/../../../shared/public \
-#		-I$(srcdir)/../../../html/base/src \
-#		-I$(srcdir)/../../../xml/content/src \
-#		-I$(srcdir)/../../../../dom \
-#		-I$(srcdir)/../../../base/src \
-#		-I$(srcdir)/../../../../layout/svg/base/src \
-#		-I$(srcdir)/../../../../layout/html/base/src \
-#		$(NULL)
 
 INCLUDES += 	\
 		-I$(srcdir)/../../shared/public \

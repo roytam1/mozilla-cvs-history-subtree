@@ -76,5 +76,5 @@ function readURL(url) {
   return data;
 };
 
-readFile._helpstr_ = "readURL(url): Returns contents of 'url' as string. *Note* This function blocks until all data is read. It is potetially dangerous to call it on the main UI thread for network urls.";
+readFile._doc_ = "readURL(url): Returns contents of 'url' as string. *Note* This function blocks until all data is read. It is potentially dangerous to call it on the main UI thread for network urls.";
 

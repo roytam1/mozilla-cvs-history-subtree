@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ----- BEGIN LICENSE BLOCK -----
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -36,20 +36,42 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#include "nsIXTFElement.idl"
+#ifndef __NS_XTFVISUALWRAPPER_H__
+#define __NS_XTFVISUALWRAPPER_H__
 
-interface nsIXTFXMLVisualWrapper;
-interface nsIDOMElement;
+#include "nsXTFElementWrapper.h"
+#include "nsIDOMElement.h"
+#include "nsIAnonymousContentCreator.h"
 
-[scriptable, uuid(f6e8a067-a3ec-450f-b1e1-3f14ac2b369e)]
-interface nsIXTFXMLVisual : nsIXTFElement
+typedef nsXTFElementWrapper nsXTFVisualWrapperBase;
+
+class nsXTFVisualWrapper : public nsXTFVisualWrapperBase,
+                           public nsIAnonymousContentCreator
 {
-  // onCreated: Will be called before any notifications are sent to
-  // the xtf element or before the element will be asked for its
-  // visualContent. Parameter 'wrapper' is a weak proxy to the
-  // wrapping element (i.e. it can safely be addrefed by the xtf
-  // element without creating cyclic XPCOM referencing).
-  void onCreated(in nsIXTFXMLVisualWrapper wrapper);
+protected:
+  nsXTFVisualWrapper(nsINodeInfo* aNodeInfo);
+  
+public:
+  // nsISupports interface
+  NS_DECL_ISUPPORTS_INHERITED
 
-  readonly attribute nsIDOMElement visualContent;
+  // nsIAnonymousContentCreator
+  NS_IMETHOD CreateAnonymousContent(nsIPresContext* aPresContext,
+                                    nsISupportsArray& aAnonymousItems);
+  
+  // If the creator doesn't want to create special frame for frame hierarchy
+  // then it should null out the style content arg and return NS_ERROR_FAILURE
+  NS_IMETHOD CreateFrameFor(nsIPresContext*   aPresContext,
+                            nsIContent *      aContent,
+                            nsIFrame**        aFrame) {
+    if (aFrame) *aFrame = nsnull; return NS_ERROR_FAILURE; }
+
+  
+protected:
+  // to be implemented by subclasses:
+  virtual void CreateVisualContent(nsIDOMElement **content)=0;
+  
+  nsCOMPtr<nsIDOMElement> mVisualContent;
 };
+
+#endif // __NS_XTFVISUALWRAPPER_H__

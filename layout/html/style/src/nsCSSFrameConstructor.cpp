@@ -146,8 +146,10 @@ static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
 
 #ifdef MOZ_XTF
 #include "nsIXTFElement.h"
+#ifdef MOZ_SVG
 nsresult
 NS_NewXTFSVGDisplayFrame(nsIPresShell*, nsIContent*, nsIFrame**);
+#endif
 #endif
 
 #ifdef MOZ_SVG
@@ -3503,24 +3505,9 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
   PRBool isBlockFrame = PR_FALSE;
   nsresult rv;
 
-  // CSS2.1 section 9.2.4 specifies fixups for the 'display' property
-  // of the root element.  We can't implement them in nsRuleNode because
-  // it doesn't (and shouldn't, for nodes that can have siblings) know
-  // the content node.  So do them here if needed, by changing the style
-  // data, so that other code doesn't get confused by looking at the style
-  // data.
-  if (display->mDisplay != NS_STYLE_DISPLAY_NONE &&
-      display->mDisplay != NS_STYLE_DISPLAY_BLOCK &&
-      display->mDisplay != NS_STYLE_DISPLAY_TABLE) {
-    nsStyleDisplay *mutable_display = NS_STATIC_CAST(nsStyleDisplay*,
-      styleContext->GetUniqueStyleData(eStyleStruct_Display));
-    display = mutable_display;
-
-    if (mutable_display->mDisplay == NS_STYLE_DISPLAY_INLINE_TABLE)
-      mutable_display->mDisplay = NS_STYLE_DISPLAY_TABLE;
-    else
-      mutable_display->mDisplay = NS_STYLE_DISPLAY_BLOCK;
-  }
+  // The rules from CSS 2.1, section 9.2.4, have already been applied
+  // by the style system, so we can assume that display->mDisplay is
+  // either NONE, BLOCK, or TABLE.
 
   PRBool docElemIsTable = display->mDisplay == NS_STYLE_DISPLAY_TABLE;
 
@@ -4139,12 +4126,11 @@ nsCSSFrameConstructor::ConstructSelectFrame(nsIPresShell*        aPresShell,
      // Construct a combobox if size=1 or no size is specified and its multiple select
     if (((1 == size || 0 == size) || (kNoSizeSpecified  == size)) && (PR_FALSE == multipleSelect)) {
         // Construct a frame-based combo box.
-        // The frame-based combo box is built out of tree parts. A display area, a button and
+        // The frame-based combo box is built out of three parts. A display area, a button and
         // a dropdown list. The display area and button are created through anonymous content.
         // The drop-down list's frame is created explicitly. The combobox frame shares it's content
         // with the drop-down list.
-      PRUint32 flags = NS_BLOCK_SHRINK_WRAP | 
-          ((aIsAbsolutelyPositioned | aIsFixedPositioned)?NS_BLOCK_SPACE_MGR:0);
+      PRUint32 flags = NS_BLOCK_SHRINK_WRAP | NS_BLOCK_SPACE_MGR;
       nsIFrame * comboboxFrame;
       rv = NS_NewComboboxControlFrame(aPresShell, &comboboxFrame, flags);
 
@@ -6913,7 +6899,11 @@ nsCSSFrameConstructor::ConstructXTFFrame(nsIPresShell*            aPresShell,
   xtfElem->GetElementType(&elementType);
   switch(elementType) {
     case nsIXTFElement::ELEMENT_TYPE_SVG_VISUAL:
+#ifdef MOZ_SVG
       rv = NS_NewXTFSVGDisplayFrame(aPresShell, aContent, &newFrame);
+#else
+      NS_ERROR("xtf svg visuals are only supported in mozilla builds with native svg");
+#endif
       break;
     case nsIXTFElement::ELEMENT_TYPE_XML_VISUAL:
       // XXX examine display style
@@ -7532,59 +7522,10 @@ nsCSSFrameConstructor::GetFrameFor(nsIPresShell*    aPresShell,
   nsIFrame* frame;
   aPresShell->GetPrimaryFrameFor(aContent, &frame);
 
-  if (nsnull != frame) {
-    // Check to see if the content is a select and 
-    // then if it has a drop down (thus making it a combobox)
-    // The drop down is a ListControlFrame derived from a 
-    // nsHTMLScrollFrame then get the area frame and that will be the parent
-    // What is unclear here, is if any of this fails, should it return
-    // the nsComboboxControlFrame or null?
-    nsCOMPtr<nsIDOMHTMLSelectElement> selectElement;
-    nsresult res = aContent->QueryInterface(NS_GET_IID(nsIDOMHTMLSelectElement),
-                                                 (void**)getter_AddRefs(selectElement));
-    if (NS_SUCCEEDED(res) && selectElement) {
-      nsIComboboxControlFrame * comboboxFrame;
-      res = frame->QueryInterface(NS_GET_IID(nsIComboboxControlFrame),
-                                               (void**)&comboboxFrame);
-      nsIFrame * listFrame;
-      if (NS_SUCCEEDED(res) && comboboxFrame) {
-        comboboxFrame->GetDropDown(&listFrame);
-      } else {
-        listFrame = frame;
-      }
+  if (!frame)
+    return nsnull;
 
-      if (listFrame != nsnull) {
-        nsIListControlFrame * list;
-        res = listFrame->QueryInterface(NS_GET_IID(nsIListControlFrame),
-                                                 (void**)&list);
-        if (NS_SUCCEEDED(res) && list) {
-          list->GetOptionsContainer(aPresContext, &frame);
-        } 
-      }
-    } else {
-      // If the primary frame is a scroll frame, then get the scrolled frame.
-      // That's the frame that gets the reflow command
-      const nsStyleDisplay* display = frame->GetStyleDisplay();
-
-      // If the primary frame supports IScrollableFrame, then get the scrolled frame.
-      // That's the frame that gets the reflow command                          
-      nsIScrollableFrame *pScrollableFrame = nsnull;                            
-      if (NS_SUCCEEDED( frame->QueryInterface(NS_GET_IID(nsIScrollableFrame),     
-                                              (void **)&pScrollableFrame) ))    
-      {                                                                         
-        pScrollableFrame->GetScrolledFrame( aPresContext, frame );              
-      } 
-
-      // if we get an outer table frame use its 1st child which is a table inner frame
-      // if we get a table cell frame   use its 1st child which is an area frame
-      else if ((NS_STYLE_DISPLAY_TABLE      == display->mDisplay) ||
-               (NS_STYLE_DISPLAY_TABLE_CELL == display->mDisplay)) {
-        frame = frame->GetFirstChild(nsnull);
-      }
-    }
-  }
-
-  return frame;
+  return frame->GetContentInsertionFrame();
 }
 
 nsIFrame*
