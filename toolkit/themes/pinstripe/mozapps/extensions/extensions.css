@@ -24,7 +24,7 @@ view {
   padding: 5px 8px 6px 8px;
 }
 
-#uninstallButton, #updateButton, #useThemeButton, #optionsButton {
+#uninstallButton, #updateButton, #useThemeButton, #optionsButton, #installButton {
   -moz-user-focus: normal !important;
   -moz-appearance: none !important;
   width: 32px !important;
