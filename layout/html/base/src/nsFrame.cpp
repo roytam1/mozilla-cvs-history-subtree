@@ -3385,6 +3385,13 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
               const nsStyleDisplay* display;
               aPos->mInlineFrameStop = PR_FALSE; //default to fail
               resultFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
+
+              //declarations for check for content with href.
+              nsCOMPtr<nsIContent> content;
+              PRBool isLink(PR_FALSE);
+              nsCOMPtr<nsIDOMHTMLAnchorElement> a;
+              nsAutoString href;
+              
               //check that we are on the last frame
               nsIFrame *inFlow;
 
@@ -3400,6 +3407,7 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
               {
                 resultFrame->GetPrevInFlow(&inFlow);
               }
+              //end check that we were in the last frame in flow
               if (display->mDisplay == NS_STYLE_DISPLAY_INLINE && !inFlow) 
               {
                 //we need to look for the nearest parent that does NOT have the inline style...
@@ -3408,19 +3416,27 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
                 currentFrame->GetParent(&resultFrameParent);
 
                 resultFrameParent->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
-                while (display->mDisplay == NS_STYLE_DISPLAY_INLINE) 
+                do
                 {
                   currentFrame = resultFrameParent;
                   currentFrame->GetParent(&resultFrameParent);
                   if (!resultFrameParent)
                     break;
+                  //check for a link. if we hit one we know we have 1 more level to go
+                  currentFrame->GetContent(getter_AddRefs(content));
+                  nsCOMPtr<nsIDOMHTMLAnchorElement> a(do_QueryInterface(content));
+                  if (a)
+                  {
+                    a->GetHref(href);
+                    isLink = !href.IsEmpty();
+                  }
                   resultFrameParent->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
-                }
+                } while (display->mDisplay == NS_STYLE_DISPLAY_INLINE && !isLink);
                 //get next in flow...
-                if (currentFrame)
+                if (isLink)
                 {
-                  nsCOMPtr<nsIContent> content;
                   nsCOMPtr<nsIContent> parentContent;
+                  //reuse the content variable here
                   currentFrame->GetContent(getter_AddRefs(content));
                   if (content)
                   {
