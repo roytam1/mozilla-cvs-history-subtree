@@ -824,46 +824,6 @@ public:
   NS_IMETHOD DrawTile(imgIContainer *aImage,
                       nscoord aXImageStart, nscoord aYImageStart,
                       const nsRect * aTargetRect) = 0;
-
-  /**
-   * Render the provided postscript fragment to the current rendering
-   * surface.
-   *
-   * If the device does not support rendering postscript fragments, then
-   * NS_ERROR_NOT_IMPLEMENTED is returned. Otherwise, the device will
-   * attempt to incorporate the provided PostScript into the document.
-   *
-   * The provided postscript runs within the following environment:
-   *
-   * 1) The coordinate system is scaled to points (1/72th of an inch).
-   * 2) The origin (coordinate [0,0]) is at the top left corner of the 
-   *    page's printable region.
-   * 3) The Y axis increases downward.
-   *
-   * This must be called after nsIDeviceContext::BeginPage() and
-   * before nsIDeviceContext::EndPage(). Before calling this function, the
-   * caller must call PushState(), which effectively performs a "gsave".
-   * After calling this function, the caller must call PopState(), which
-   * effectively performs a "grestore". There may be at most one call to
-   * RenderPostScriptDataFragment() between any PushState()/PopState() pair.
-   *    
-   * The caller may draw to any part of the page, though well-behaved
-   * callers will limit themselves to a region designated to them in
-   * cooperation with the layout module. The PostScript code fragment
-   * MUST NOT contain any code which begins a new page.
-   *
-   * Mozilla currently targets level 2 PostScript. The PostScript code
-   * fragment should not make use of any level 3 (or later) PostScript
-   * features.
-   *
-   * The PostScript fragment may be included more than once in the output,
-   * e.g. if the region it's expected to render is split over two pages.
-   *
-   * @param aData - PostScript fragment data
-   * @param aLength - Length of PostScript fragment data
-   * @return error status
-   */
-  NS_IMETHOD RenderPostScriptDataFragment(const unsigned char *aData, unsigned long aDatalen) = 0;
 };
 
 //modifiers for text rendering

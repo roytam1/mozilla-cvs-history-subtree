@@ -1997,71 +1997,10 @@ nsObjectFrame::Paint(nsIPresContext*      aPresContext,
      * printer.
      */
 
-    PR_LOG(nsObjectFrameLM, PR_LOG_DEBUG, ("nsObjectFrame::Paint() start for X11 platforms\n"));
-           
-    FILE *plugintmpfile = tmpfile();
-    if( !plugintmpfile ) {
-      PR_LOG(nsObjectFrameLM, PR_LOG_DEBUG, ("error: could not open tmp. file, errno=%d\n", errno));
-      return NS_ERROR_FAILURE;
-    }
- 
-    /* Send off print info to plugin */
-    NPPrintCallbackStruct npPrintInfo;
-    npPrintInfo.type = NP_PRINT;
-    npPrintInfo.fp   = plugintmpfile;
-    npprint.print.embedPrint.platformPrint = (void *)&npPrintInfo;
-    npprint.print.embedPrint.window        = window;
-    rv = pi->Print(&npprint);
-    if (NS_FAILED(rv)) {
-      PR_LOG(nsObjectFrameLM, PR_LOG_DEBUG, ("error: plugin returned failure %lx\n", (long)rv));
-      fclose(plugintmpfile);
-      return rv;
-    }
-
-    unsigned char *pluginbuffer;
-    long           fileLength;
-
-    /* Get file size */
-    fseek(plugintmpfile, 0, SEEK_END);
-    fileLength = ftell(plugintmpfile);
-    
-    /* Safeguard against bogus values
-     * (make sure we clamp the size to a reasonable value (say... 128 MB)) */
-    if( fileLength <= 0 || fileLength > (128 * 1024 * 1024) ) {
-      PR_LOG(nsObjectFrameLM, PR_LOG_DEBUG, ("error: file size %ld too large\n", fileLength));
-      fclose(plugintmpfile);
-      return NS_ERROR_FAILURE;
-    }
-
-    pluginbuffer = new unsigned char[fileLength+1];
-    if (!pluginbuffer) {
-      PR_LOG(nsObjectFrameLM, PR_LOG_DEBUG, ("error: no buffer memory for %ld bytes\n", fileLength+1));
-      fclose(plugintmpfile);
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
-
-    /* Read data into temp. buffer */
-    long numBytesRead = 0;
-    fseek(plugintmpfile, 0, SEEK_SET);
-    numBytesRead = fread(pluginbuffer, 1, fileLength, plugintmpfile);
-    
-    if( numBytesRead == fileLength ) {
-      PR_LOG(nsObjectFrameLM, PR_LOG_DEBUG, ("sending %ld bytes of PostScript data to printer\n", numBytesRead));
-
-      /* Send data to printer */
-      aRenderingContext.RenderPostScriptDataFragment(pluginbuffer, numBytesRead);
-    }
-    else
-    {
-      PR_LOG(nsObjectFrameLM, PR_LOG_DEBUG,
-             ("error: bytes read in buffer (%ld) does not match file length (%ld)\n",
-             numBytesRead, fileLength));
-    }
-
-    fclose(plugintmpfile);
-    delete [] pluginbuffer;
-
-    PR_LOG(nsObjectFrameLM, PR_LOG_DEBUG, ("plugin printing done, return code is %lx\n", (long)rv));
+    /* The old unix plugin printing API has been removed to avoid potential
+     * problems with plugins implementing the new API. See bug 234470 and
+     * bug 261589.
+     */
 
 #else  // Windows and non-UNIX, non-Mac(Classic) cases
 

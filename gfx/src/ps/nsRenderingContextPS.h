@@ -275,17 +275,6 @@ public:
                                 PRInt32*           aFontID = nsnull);
 #endif /* MOZ_MATHML */
 
-  /** ---------------------------------------------------
-   *  Output postscript supplied by the caller to the print job. The
-   *  caller should have already called PushState() (and preferably
-   *  SetClipRect()).
-   *    @update  9/31/2003 kherron
-   *    @param   aData    Buffer containing postscript to be output
-   *             aDataLen Number of characters in aData
-   *    @return  NS_OK
-   */
-  NS_IMETHOD RenderPostScriptDataFragment(const unsigned char *aData, unsigned long aDatalen);
-
 private:
   nsresult CommonInit(void);
   void PushClipState(void);

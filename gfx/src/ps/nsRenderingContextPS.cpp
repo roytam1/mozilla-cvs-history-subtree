@@ -1324,26 +1324,6 @@ NS_IMETHODIMP nsRenderingContextPS::RetrieveCurrentNativeGraphicData(PRUint32 * 
   return NS_OK;
 }
 
-/** ---------------------------------------------------
- *  Output postscript supplied by the caller to the print job. The
- *  caller should have already called PushState() (and preferably
- *  SetClipRect()).
- *    @update  9/31/2003 kherron
- *    @param   aData    Buffer containing postscript to be output
- *             aDataLen Number of characters in aData
- *    @return  NS_OK
- */
-NS_IMETHODIMP nsRenderingContextPS::RenderPostScriptDataFragment(const unsigned char *aData, unsigned long aDatalen)
-{
-  NS_ASSERTION(mPSObj != NULL, "No nsPostScriptObj");
-
-  // Reset the coordinate system to point-sized. The origin and Y axis
-  // orientation are already correct.
-  mPSObj->scale(TWIPS_PER_POINT_FLOAT, TWIPS_PER_POINT_FLOAT);
-  fwrite(aData, aDatalen, 1, mPSObj->mPrintSetup->tmpBody);
-
-  return NS_OK;
-}
 
 #ifdef NOTNOW
 HPEN nsRenderingContextPS :: SetupSolidPen(void)
