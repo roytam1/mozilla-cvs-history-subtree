@@ -29,6 +29,7 @@ LIBRARY_NAME = rdfbase_s
 CPPSRCS =				\
 	nsContainerCursor.cpp		\
 	nsDataBase.cpp                  \
+	nsDefaultResourceFactory.cpp	\
 	nsEmptyCursor.cpp               \
 	nsInMemoryDataSource.cpp        \
 	nsRDFService.cpp                \

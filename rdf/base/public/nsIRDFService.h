@@ -25,6 +25,7 @@ class nsIRDFDataBase;
 class nsIRDFDataSource;
 class nsIRDFLiteral;
 class nsIRDFResource;
+class nsIRDFResourceFactory;
 
 /**
  * The RDF service interface. This should be a singleton object, obtained
@@ -37,7 +38,9 @@ public:
     // Resource management routines
 
     /**
-     * Construct an RDF resource from a single-byte URI.
+     * Construct an RDF resource from a single-byte URI. <tt>nsIRDFSerivce</tt>
+     * caches resources that are in-use, so multiple calls to <tt>GetResource()</tt>
+     * for the same <tt>uri</tt> will return identical pointers.
      */
     NS_IMETHOD GetResource(const char* uri, nsIRDFResource** resource) = 0;
 
@@ -55,20 +58,54 @@ public:
     NS_IMETHOD GetLiteral(const PRUnichar* value, nsIRDFLiteral** literal) = 0;
 
     /**
-     * Get the data source corresponding to the uri
-     */ 
-    NS_IMETHOD GetDataSource(const char* uri, nsIRDFDataSource** dataSource) = 0;
+     * Called to notify the resource manager that a resource is no longer in use.
+     */
+    NS_IMETHOD UnCacheResource(nsIRDFResource* resource) = 0;
 
     /**
-     * Get the database corresponding to the uri sequence
+     * Registers the specified resource factory as the producer for resources that
+     * have the specified <i>URI prefix</i>.
+     */
+    NS_IMETHOD RegisterResourceFactory(const char* aURIPrefix, nsIRDFResourceFactory* aFactory) = 0;
+
+    /**
+     * Unregsters the specified resource factory from producing resources that have
+     * the specified <i>URI prefix</i>.
+     */
+    NS_IMETHOD UnRegisterResourceFactory(const char* aURIPrefix) = 0;
+
+
+    // Data source management routines
+
+    /**
+     * Register a <i>named data source</i> with the specified URI.
+     */
+    NS_IMETHOD RegisterNamedDataSource(const char* uri, nsIRDFDataSource* dataSource) = 0;
+
+    /**
+     * Unregister a <i>named data source</i>.
+     */
+    NS_IMETHOD UnRegisterNamedDataSource(const char* uri) = 0;
+
+    /**
+     * Get the <i>named data source</i> corresponding to the URI.
      */ 
-    NS_IMETHOD GetDatabase(const char** uri, nsIRDFDataBase** dataBase) = 0;
+    NS_IMETHOD GetNamedDataSource(const char* uri, nsIRDFDataSource** dataSource) = 0;
+
+    /**
+     * Create a database that contains the specified named data
+     * sources. This is a convenience method whose functionality is
+     * equivalent to (1) constructing a new nsIRDFDataBase object from
+     * the repository, and (2) iteratively adding the named data sources
+     * to it, in order.
+     */ 
+    NS_IMETHOD CreateDatabase(const char** uris, nsIRDFDataBase** dataBase) = 0;
 
     /**
      * Get the database aggregating all the stuff that Navigator sees as a default,
-     * including a per window store.
+     * including a "local" store.
      */ 
-    NS_IMETHOD GetBrowserDatabase(nsIRDFDataBase** dataBase) = 0;
+    NS_IMETHOD CreateBrowserDatabase(nsIRDFDataBase** dataBase) = 0;
 
 };
 

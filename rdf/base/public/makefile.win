@@ -28,6 +28,7 @@ EXPORTS=\
 	nsIRDFDataSource.h      \
         nsIRDFNode.h            \
 	nsIRDFObserver.h        \
+        nsIRDFResourceFactory.h \
         nsIRDFService.h         \
         nsIRDFXMLSource.h       \
 	$(NULL)

@@ -18,8 +18,10 @@
 
 
 #include "nsIAtom.h"
+#include "nsIRDFDataSource.h"
 #include "nsIRDFNode.h"
 #include "nsIRDFService.h"
+#include "nsIRDFResourceFactory.h"
 #include "nsString.h"
 #include "plhash.h"
 #include "plstr.h"
@@ -35,150 +37,151 @@ static NS_DEFINE_IID(kISupportsIID,           NS_ISUPPORTS_IID);
 
 ////////////////////////////////////////////////////////////////////////
 
-
-class ResourceImpl;
-
-class ServiceImpl : public nsIRDFService {
-protected:
-    PLHashTable* mResources;
-    virtual ~ServiceImpl(void);
-
-public:
-    ServiceImpl(void);
-
-    // nsISupports
-    NS_DECL_ISUPPORTS
-
-    // nsIRDFService
-    NS_IMETHOD GetResource(const char* uri, nsIRDFResource** resource);
-    NS_IMETHOD GetUnicodeResource(const PRUnichar* uri, nsIRDFResource** resource);
-    NS_IMETHOD GetLiteral(const PRUnichar* value, nsIRDFLiteral** literal);
-
-    NS_IMETHOD GetDataSource(const char* uri, nsIRDFDataSource** dataSource);
-    NS_IMETHOD GetDatabase(const char** uri, nsIRDFDataBase** dataBase);
-    NS_IMETHOD GetBrowserDatabase(nsIRDFDataBase** dataBase);
-
-    void ReleaseNode(const ResourceImpl* resource);
-};
-
-
-////////////////////////////////////////////////////////////////////////
-
-class ResourceImpl : public nsIRDFResource {
-public:
-    ResourceImpl(ServiceImpl* mgr, const char* uri, char** inturi);
-    virtual ~ResourceImpl(void);
-
-    // nsISupports
-    NS_DECL_ISUPPORTS
-
-    // nsIRDFNode
-    NS_IMETHOD EqualsNode(nsIRDFNode* node, PRBool* result) const;
-
-    // nsIRDFResource
-    NS_IMETHOD GetValue(const char* *uri) const;
-    NS_IMETHOD EqualsResource(const nsIRDFResource* resource, PRBool* result) const;
-    NS_IMETHOD EqualsString(const char* uri, PRBool* result) const;
-
-    // Implementation methods
-    const char* GetURI(void) const {
-        return mURI;
-    }
-
+/**
+ * A simple map from a string prefix to a value.
+ */
+class PrefixMap
+{
 private:
-    char*                mURI;
-    ServiceImpl* mMgr;
+    struct PrefixMapEntry
+    {
+        const char*     mPrefix;
+        PRInt32         mPrefixLen;
+        const void*     mValue;
+        PrefixMapEntry* mNext;
+    };
+
+    PrefixMapEntry* mHead;
+
+public:
+    PrefixMap();
+    ~PrefixMap();
+
+    PRBool Add(const char* aPrefix, const void* aValue);
+    const void* Remove(const char* aPrefix);
+
+    /**
+     * Find the most specific value matching the specified string.
+     */
+    const void* Find(const char* aString);
 };
 
 
-ResourceImpl::ResourceImpl(ServiceImpl* mgr, const char* uri, char** inturi)
-    : mMgr(mgr)
+PrefixMap::PrefixMap()
+    : mHead(nsnull)
 {
-    NS_INIT_REFCNT();
-    NS_IF_ADDREF(mMgr);
-    mURI = PL_strdup(uri);
-    *inturi = mURI;
 }
 
-
-ResourceImpl::~ResourceImpl(void)
+PrefixMap::~PrefixMap()
 {
-    mMgr->ReleaseNode(this);
-    PL_strfree(mURI);
-    NS_IF_RELEASE(mMgr);
-}
-
-
-NS_IMPL_ADDREF(ResourceImpl);
-NS_IMPL_RELEASE(ResourceImpl);
-
-nsresult
-ResourceImpl::QueryInterface(REFNSIID iid, void** result)
-{
-    if (! result)
-        return NS_ERROR_NULL_POINTER;
-
-    *result = nsnull;
-    if (iid.Equals(kIRDFResourceIID) ||
-        iid.Equals(kIRDFNodeIID) ||
-        iid.Equals(kISupportsIID)) {
-        *result = NS_STATIC_CAST(nsIRDFResource*, this);
-        AddRef();
-        return NS_OK;
+    while (mHead) {
+        PrefixMapEntry* doomed = mHead;
+        mHead = mHead->mNext;
+        PL_strfree(NS_CONST_CAST(char*, doomed->mPrefix));
+        delete doomed;
     }
-    return NS_NOINTERFACE;
 }
 
-NS_IMETHODIMP
-ResourceImpl::EqualsNode(nsIRDFNode* node, PRBool* result) const
+PRBool
+PrefixMap::Add(const char* aPrefix, const void* aValue)
 {
-    nsresult rv;
-    nsIRDFResource* resource;
-    if (NS_SUCCEEDED(node->QueryInterface(kIRDFResourceIID, (void**) &resource))) {
-        rv = EqualsResource(resource, result);
-        NS_RELEASE(resource);
+    PRInt32 newPrefixLen = PL_strlen(aPrefix);
+    PrefixMapEntry* entry = mHead;
+    PrefixMapEntry* last = nsnull;
+
+    while (entry != nsnull) {
+        // check for exact equality: if so, the prefix is already
+        // registered, so fail (?)
+        if (PL_strcmp(entry->mPrefix, aPrefix) == 0)
+            return PR_FALSE;
+
+
+        // check to see if the prefix of the entry we are looking
+        // at is a substring of the new prefix. If so, then we'll
+        // insert the new prefix *before* the current entry to
+        // enforce specificity
+        if (PL_strncmp(entry->mPrefix, aPrefix, entry->mPrefixLen) <= 0)
+            break;
+
+        last = entry;
+        entry = entry->mNext;
+    }
+
+    PrefixMapEntry* newEntry = new PrefixMapEntry;
+    if (! newEntry)
+        return PR_FALSE;
+
+
+    newEntry->mPrefix    = PL_strdup(aPrefix);
+    newEntry->mPrefixLen = newPrefixLen;
+    newEntry->mValue     = aValue;
+
+    if (entry) {
+        // we found an entry to insert the new entry before
+        newEntry->mNext = entry;
+        entry->mNext = newEntry;
+    }
+    else if (last) {
+        // we made it all the way to the end of the list
+        newEntry->mNext = nsnull;
+        last->mNext = newEntry;
     }
     else {
-        *result = PR_FALSE;
-        rv = NS_OK;
+        // there is no head! insert at the start
+        newEntry->mNext = nsnull;
+        mHead = newEntry;
     }
-    return rv;
+    return PR_TRUE;
 }
 
-NS_IMETHODIMP
-ResourceImpl::GetValue(const char* *uri) const
+const void*
+PrefixMap::Remove(const char* aPrefix)
 {
-    if (!uri)
-        return NS_ERROR_NULL_POINTER;
+    PrefixMapEntry* entry = mHead;
+    PrefixMapEntry* last = nsnull;
 
-    *uri = mURI;
-    return NS_OK;
+    while (entry != nsnull) {
+        if (PL_strcmp(entry->mPrefix, aPrefix) == 0) {
+            if (last) {
+                last->mNext = entry->mNext;
+            }
+            else {
+                mHead = entry->mNext;
+            }
+
+            const void* value = entry->mValue;
+
+            PL_strfree(NS_CONST_CAST(char*, entry->mPrefix));
+            delete entry;
+
+            return value;
+        }
+        last = entry;
+        entry = entry->mNext;
+    }
+    return nsnull;
 }
 
-NS_IMETHODIMP
-ResourceImpl::EqualsResource(const nsIRDFResource* resource, PRBool* result) const
+/**
+ * Find the most specific value matching the specified string.
+ */
+const void*
+PrefixMap::Find(const char* aString)
 {
-    if (!resource || !result)
-        return NS_ERROR_NULL_POINTER;
+    for (PrefixMapEntry* entry = mHead; entry != nsnull; entry = entry->mNext) {
+        PRInt32 cmp = PL_strncmp(entry->mPrefix, aString, entry->mPrefixLen);
+        if (cmp == 0)
+            return entry->mValue;
 
-    *result = (resource == this);
-    return NS_OK;
-}
-
-
-NS_IMETHODIMP
-ResourceImpl::EqualsString(const char* uri, PRBool* result) const
-{
-    if (!uri || !result)
-        return NS_ERROR_NULL_POINTER;
-
-    *result = (PL_strcmp(uri, mURI) == 0);
-    return NS_OK;
+        if (cmp < 0)
+            break;
+    }
+    return nsnull;
 }
 
 
 ////////////////////////////////////////////////////////////////////////
-//
+// LiteralImpl
 
 class LiteralImpl : public nsIRDFLiteral {
 public:
@@ -277,11 +280,53 @@ LiteralImpl::EqualsLiteral(const nsIRDFLiteral* literal, PRBool* result) const
 }
 
 ////////////////////////////////////////////////////////////////////////
+
+class ServiceImpl : public nsIRDFService
+{
+protected:
+    PrefixMap    mResourceFactories;
+    PLHashTable* mNamedDataSources;
+    PLHashTable* mResources;
+
+    ServiceImpl(void);
+    virtual ~ServiceImpl(void);
+
+    static nsIRDFService* gRDFService; // The one-and-only RDF service
+
+    static void RegisterBuiltInResourceFactories();
+    static void RegisterBuiltInNamedDataSources();
+
+public:
+
+    static nsresult GetRDFService(nsIRDFService** result);
+
+    // nsISupports
+    NS_DECL_ISUPPORTS
+
+    // nsIRDFService
+    NS_IMETHOD GetResource(const char* uri, nsIRDFResource** resource);
+    NS_IMETHOD GetUnicodeResource(const PRUnichar* uri, nsIRDFResource** resource);
+    NS_IMETHOD GetLiteral(const PRUnichar* value, nsIRDFLiteral** literal);
+    NS_IMETHOD UnCacheResource(nsIRDFResource* resource);
+
+    NS_IMETHOD RegisterResourceFactory(const char* aURIPrefix, nsIRDFResourceFactory* aFactory);
+    NS_IMETHOD UnRegisterResourceFactory(const char* aURIPrefix);
+
+    NS_IMETHOD RegisterNamedDataSource(const char* uri, nsIRDFDataSource* dataSource);
+    NS_IMETHOD UnRegisterNamedDataSource(const char* uri);
+    NS_IMETHOD GetNamedDataSource(const char* uri, nsIRDFDataSource** dataSource);
+    NS_IMETHOD CreateDatabase(const char** uris, nsIRDFDataBase** dataBase);
+    NS_IMETHOD CreateBrowserDatabase(nsIRDFDataBase** dataBase);
+};
+
+nsIRDFService* ServiceImpl::gRDFService = nsnull;
+
+////////////////////////////////////////////////////////////////////////
 // ServiceImpl
 
 
 ServiceImpl::ServiceImpl(void)
-    : mResources(nsnull)
+    : mResources(nsnull), mNamedDataSources(nsnull)
 {
     NS_INIT_REFCNT();
     mResources = PL_NewHashTable(1023,              // nbuckets
@@ -289,51 +334,94 @@ ServiceImpl::ServiceImpl(void)
                                  PL_CompareStrings, // key compare fn
                                  PL_CompareValues,  // value compare fn
                                  nsnull, nsnull);   // alloc ops & priv
+
+    mNamedDataSources = PL_NewHashTable(23,
+                                        PL_HashString,
+                                        PL_CompareStrings,
+                                        PL_CompareValues,
+                                        nsnull, nsnull);
 }
 
 
 ServiceImpl::~ServiceImpl(void)
 {
-    PL_HashTableDestroy(mResources);
+    if (mResources) {
+        PL_HashTableDestroy(mResources);
+        mResources = nsnull;
+    }
+    if (mNamedDataSources) {
+        PL_HashTableDestroy(mNamedDataSources);
+        mNamedDataSources = nsnull;
+    }
+    gRDFService = nsnull;
 }
 
 
-NS_IMPL_ISUPPORTS(ServiceImpl, kIRDFServiceIID);
+nsresult
+ServiceImpl::GetRDFService(nsIRDFService** mgr)
+{
+    if (! gRDFService) {
+        gRDFService = new ServiceImpl();
+        if (! gRDFService)
+            return NS_ERROR_OUT_OF_MEMORY;
 
-nsIRDFResource* MakeMailAccount(const char* uri, char** key);
-nsIRDFResource* MakeMailFolder(const char* uri, char** key);
-nsIRDFResource* MakeMailMessage(const char* uri, char** key);
+        RegisterBuiltInResourceFactories();
+        RegisterBuiltInNamedDataSources();
+    }
+
+    NS_ADDREF(gRDFService);
+    *mgr = gRDFService;
+    return NS_OK;
+}
+
+
+
+NS_IMETHODIMP_(nsrefcnt)
+ServiceImpl::AddRef(void)
+{
+    return 2;
+}
+
+NS_IMETHODIMP_(nsrefcnt)
+ServiceImpl::Release(void)
+{
+    return 1;
+}
+
+
+NS_IMPL_QUERY_INTERFACE(ServiceImpl, kIRDFServiceIID);
+
 
 NS_IMETHODIMP
 ServiceImpl::GetResource(const char* uri, nsIRDFResource** resource)
 {
     nsIRDFResource* result =
-        NS_STATIC_CAST(ResourceImpl*, PL_HashTableLookup(mResources, uri));
+        NS_STATIC_CAST(nsIRDFResource*, PL_HashTableLookup(mResources, uri));
 
     if (! result) {
-        char* key;
-        if (strncmp(uri, "mailaccount:", 12) == 0) {
-            result = MakeMailAccount(uri, &key);
-        } else if (strncmp(uri, "mailbox:", 8) == 0) {
-            if (uri[strlen(uri)-1] == '/') {
-                result = MakeMailFolder(uri, &key);
-            } else {
-                result = MakeMailMessage(uri, &key);
-            }
-        } else {
-            result = new ResourceImpl(this, uri, &key);
-        }
+        nsIRDFResourceFactory* factory =
+            NS_STATIC_CAST(nsIRDFResourceFactory*,
+                           NS_CONST_CAST(void*, mResourceFactories.Find(uri)));
 
-        if (! result)
-            return NS_ERROR_OUT_OF_MEMORY;
+        PR_ASSERT(factory != nsnull);
+        if (! factory)
+            return NS_ERROR_FAILURE; // XXX
+
+        nsresult rv;
+
+        if (NS_FAILED(factory->CreateResource(uri, &result)))
+            return rv;
+
+        const char* uri;
+        result->GetValue(&uri);
 
         // This is a little trick to make storage more efficient. For
         // the "key" in the table, we'll use the string value that's
-        // stored as a member variable of the ResourceImpl object.
-        PL_HashTableAdd(mResources, key, result);
+        // stored as a member variable of the nsIRDFResource object.
+        PL_HashTableAdd(mResources, uri, result);
 
-        // *We* don't AddRef() the resource, because the resource
-        // AddRef()s *us*.
+        // *We* don't AddRef() the resource: that way, the resource
+        // can be garbage collected when the last refcount goes away.
     }
 
     result->AddRef();
@@ -367,14 +455,81 @@ ServiceImpl::GetLiteral(const PRUnichar* uri, nsIRDFLiteral** literal)
 }
 
 NS_IMETHODIMP
-ServiceImpl::GetDataSource(const char* uri, nsIRDFDataSource** dataSource)
+ServiceImpl::UnCacheResource(nsIRDFResource* resource)
 {
-    PR_ASSERT(0);
-    return NS_ERROR_NOT_IMPLEMENTED;
+    nsresult rv;
+
+    const char* uri;
+    if (NS_FAILED(rv = resource->GetValue(&uri)))
+        return rv;
+
+    PL_HashTableRemove(mResources, uri);
+    return NS_OK;
 }
 
 NS_IMETHODIMP
-ServiceImpl::GetDatabase(const char** uri, nsIRDFDataBase** dataBase)
+ServiceImpl::RegisterResourceFactory(const char* aURIPrefix, nsIRDFResourceFactory* aFactory)
+{
+    if (! mResourceFactories.Add(aURIPrefix, aFactory))
+        return NS_ERROR_ILLEGAL_VALUE;
+
+    NS_ADDREF(aFactory); // XXX should we addref?
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+ServiceImpl::UnRegisterResourceFactory(const char* aURIPrefix)
+{
+    nsIRDFResourceFactory* factory =
+        NS_STATIC_CAST(nsIRDFResourceFactory*,
+                       NS_CONST_CAST(void*, mResourceFactories.Remove(aURIPrefix)));
+
+    if (! factory)
+        return NS_ERROR_ILLEGAL_VALUE;
+
+    NS_RELEASE(factory); // XXX should we addref?
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+ServiceImpl::RegisterNamedDataSource(const char* uri, nsIRDFDataSource* dataSource)
+{
+    // XXX check for dups, etc.
+    NS_ADDREF(dataSource); // XXX is this the right thing to do?
+    PL_HashTableAdd(mNamedDataSources, uri, dataSource);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+ServiceImpl::UnRegisterNamedDataSource(const char* uri)
+{
+    nsIRDFDataSource* ds = 
+        NS_STATIC_CAST(nsIRDFDataSource*, PL_HashTableLookup(mNamedDataSources, uri));
+
+    if (! ds)
+        return NS_ERROR_ILLEGAL_VALUE;
+
+    PL_HashTableRemove(mNamedDataSources, uri);
+    NS_RELEASE(ds);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+ServiceImpl::GetNamedDataSource(const char* uri, nsIRDFDataSource** dataSource)
+{
+    nsIRDFDataSource* ds =
+        NS_STATIC_CAST(nsIRDFDataSource*, PL_HashTableLookup(mNamedDataSources, uri));
+
+    if (! ds)
+        return NS_ERROR_ILLEGAL_VALUE;
+
+    NS_ADDREF(ds);
+    *dataSource = ds;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+ServiceImpl::CreateDatabase(const char** uri, nsIRDFDataBase** dataBase)
 {
     PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
@@ -382,29 +537,98 @@ ServiceImpl::GetDatabase(const char** uri, nsIRDFDataBase** dataBase)
 
 
 NS_IMETHODIMP
-ServiceImpl::GetBrowserDatabase(nsIRDFDataBase** dataBase)
+ServiceImpl::CreateBrowserDatabase(nsIRDFDataBase** dataBase)
 {
     PR_ASSERT(0);
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+
+////////////////////////////////////////////////////////////////////////
+
+struct ResourceFactoryTable {
+    const char* mPrefix;
+    nsresult (*mFactoryConstructor)(nsIRDFResourceFactory** result);
+};
 
 void
-ServiceImpl::ReleaseNode(const ResourceImpl* resource)
+ServiceImpl::RegisterBuiltInResourceFactories(void)
 {
-    PL_HashTableRemove(mResources, resource->GetURI());
+    extern nsresult NS_NewRDFDefaultResourceFactory(nsIRDFResourceFactory** result);
+    extern nsresult NS_NewRDFMailResourceFactory(nsIRDFResourceFactory** result);
+    extern nsresult NS_NewRDFMailAccountResourceFactory(nsIRDFResourceFactory** result);
+    extern nsresult NS_NewRDFFileResourceFactory(nsIRDFResourceFactory** result);
+
+    static ResourceFactoryTable gTable[] = {
+        "",                NS_NewRDFDefaultResourceFactory,
+        "mailbox:",        NS_NewRDFMailResourceFactory,
+        "mailaccount:",    NS_NewRDFMailAccountResourceFactory,
+#if 0
+        "file:",           NS_NewRDFFileResourceFactory,
+#endif
+        nsnull,     nsnull
+    };
+
+    nsresult rv;
+    for (ResourceFactoryTable* entry = gTable; entry->mPrefix != nsnull; ++entry) {
+        nsIRDFResourceFactory* factory;
+    
+        if (NS_FAILED(rv = (entry->mFactoryConstructor)(&factory)))
+            continue;
+
+        rv = gRDFService->RegisterResourceFactory(entry->mPrefix, factory);
+        PR_ASSERT(NS_SUCCEEDED(rv));
+
+        NS_RELEASE(factory);
+    }
 }
+
+////////////////////////////////////////////////////////////////////////
+
+struct DataSourceTable {
+    const char* mURI;
+    nsresult (*mDataSourceConstructor)(nsIRDFDataSource** result);
+};
+
+void
+ServiceImpl::RegisterBuiltInNamedDataSources(void)
+{
+    extern nsresult NS_NewRDFBookmarkDataSource(nsIRDFDataSource** result);
+    extern nsresult NS_NewRDFHistoryDataSource(nsIRDFDataSource** result);
+    extern nsresult NS_NewRDFLocalFileSystemDataSource(nsIRDFDataSource** result);
+    extern nsresult NS_NewRDFMailDataSource(nsIRDFDataSource** result);
+
+    static DataSourceTable gTable[] = {
+        "rdf:bookmarks",      NS_NewRDFBookmarkDataSource,
+        "rdf:mail",           NS_NewRDFMailDataSource,
+#if 0
+        "rdf:history",        NS_NewRDFHistoryDataSource,
+        "rdf:lfs",            NS_NewRDFLocalFileSystemDataSource,
+#endif
+        nsnull,               nsnull
+    };
+
+    nsresult rv;
+    for (DataSourceTable* entry = gTable; entry->mURI != nsnull; ++entry) {
+        nsIRDFDataSource* ds;
+
+        if (NS_FAILED(rv = (entry->mDataSourceConstructor)(&ds)))
+            continue;
+
+        if (NS_SUCCEEDED(rv = ds->Init(entry->mURI))) {
+            rv = gRDFService->RegisterNamedDataSource(entry->mURI, ds);
+            PR_ASSERT(NS_SUCCEEDED(rv));
+        }
+
+        NS_RELEASE(ds);
+    }
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 
 nsresult
 NS_NewRDFService(nsIRDFService** mgr)
 {
-    ServiceImpl* result = new ServiceImpl();
-    if (! result)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    *mgr = result;
-    NS_ADDREF(result);
-    return NS_OK;
+    return ServiceImpl::GetRDFService(mgr);
 }
