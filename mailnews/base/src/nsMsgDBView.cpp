@@ -3522,6 +3522,12 @@ nsMsgDBView::GetKeyForFirstSelectedMessage(nsMsgKey *key)
   PRInt32 endRange;
   rv = mOutlinerSelection->GetRangeAt(0, &startRange, &endRange);
   NS_ENSURE_SUCCESS(rv, rv);
-  *key = m_keys.GetAt(startRange);
+  // check that the first index is valid, it may not be if nothing is selected
+  if (startRange >= 0 && startRange < GetSize()) {
+    *key = m_keys.GetAt(startRange);
+  }
+  else {
+    return NS_ERROR_UNEXPECTED;
+  }
   return NS_OK;
 }
