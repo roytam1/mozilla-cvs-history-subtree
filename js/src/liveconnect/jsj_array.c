@@ -94,7 +94,7 @@ jsj_GetJavaArrayElement(JSContext *cx, JNIEnv *jEnv, jarray java_array, jsize in
 
 #undef GET_ELEMENT_FROM_PRIMITIVE_JAVA_ARRAY
     default:
-        PR_ASSERT(0);        /* Unknown java type signature */
+        JS_ASSERT(0);        /* Unknown java type signature */
         return JS_FALSE;
     }
 
@@ -171,7 +171,7 @@ jsj_SetJavaArrayElement(JSContext *cx, JNIEnv *jEnv, jarray java_array, jsize in
 
 #undef SET_ELEMENT_FROM_PRIMITIVE_JAVA_ARRAY
     default:
-        PR_ASSERT(0);        /* Unknown java type signature */
+        JS_ASSERT(0);        /* Unknown java type signature */
         return JS_FALSE;
     }
 

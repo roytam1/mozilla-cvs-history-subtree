@@ -52,11 +52,11 @@ report_java_initialization_error(JNIEnv *jEnv, const char *js_error_msg)
     }
 #endif
     if (java_error_msg) { 
-        error_msg = PR_smprintf("initialization error: %s (%s)\n",
+        error_msg = JS_smprintf("initialization error: %s (%s)\n",
                                 js_error_msg, java_error_msg);
         free((void*)java_error_msg);
     } else {
-        error_msg = PR_smprintf("initialization error: %s\n",
+        error_msg = JS_smprintf("initialization error: %s\n",
                                 js_error_msg);
     }
 
@@ -350,10 +350,10 @@ JSJ_ConnectToJavaVM(SystemJavaVM *java_vm_arg, void* initargs)
     JSJavaVM *jsjava_vm;
     JNIEnv *jEnv;
 
-    PR_ASSERT(JSJ_callbacks);
-    PR_ASSERT(JSJ_callbacks->attach_current_thread);
-    PR_ASSERT(JSJ_callbacks->detach_current_thread);
-    PR_ASSERT(JSJ_callbacks->get_java_vm);
+    JS_ASSERT(JSJ_callbacks);
+    JS_ASSERT(JSJ_callbacks->attach_current_thread);
+    JS_ASSERT(JSJ_callbacks->detach_current_thread);
+    JS_ASSERT(JSJ_callbacks->get_java_vm);
 
     jsjava_vm = (JSJavaVM*)malloc(sizeof(JSJavaVM));
     if (!jsjava_vm)
@@ -372,9 +372,9 @@ JSJ_ConnectToJavaVM(SystemJavaVM *java_vm_arg, void* initargs)
         }
     }
     else {
-        PRBool ok;
-        PR_ASSERT(JSJ_callbacks->create_java_vm);
-        PR_ASSERT(JSJ_callbacks->destroy_java_vm);
+        JSBool ok;
+        JS_ASSERT(JSJ_callbacks->create_java_vm);
+        JS_ASSERT(JSJ_callbacks->destroy_java_vm);
 
         ok = JSJ_callbacks->create_java_vm(&java_vm, &jEnv, initargs);
         if (!ok || java_vm == NULL) {
@@ -419,7 +419,7 @@ JSJCallbacks *JSJ_callbacks = NULL;
 void
 JSJ_Init(JSJCallbacks *callbacks)
 {
-    PR_ASSERT(callbacks);
+    JS_ASSERT(callbacks);
     JSJ_callbacks = callbacks;
 }
 
@@ -512,7 +512,7 @@ JSJ_DisconnectFromJavaVM(JSJavaVM *jsjava_vm)
             break;
         }
     }
-    PR_ASSERT(j);
+    JS_ASSERT(j);
     
     free(jsjava_vm);
 }
@@ -566,7 +566,7 @@ find_jsjava_thread(JNIEnv *jEnv)
     return jsj_env;
 }
 
-PR_IMPLEMENT(JSJavaThreadState *)
+JS_EXPORT_API(JSJavaThreadState *)
 JSJ_AttachCurrentThreadToJava(JSJavaVM *jsjava_vm, const char *name, JNIEnv **java_envp)
 {
     JNIEnv *jEnv;
@@ -636,7 +636,7 @@ jsj_MapJavaThreadToJSJavaThreadState(JNIEnv *jEnv, char **errp)
     /* Get our private JavaVM data */
     jsjava_vm = map_java_vm_to_jsjava_vm(java_vm);
     if (!jsjava_vm) {
-        *errp = PR_smprintf("Total weirdness:   No JSJavaVM wrapper ever created "
+        *errp = JS_smprintf("Total weirdness:   No JSJavaVM wrapper ever created "
                             "for JavaVM 0x%08x", java_vm);
         return NULL;
     }
@@ -657,7 +657,7 @@ jsj_MapJavaThreadToJSJavaThreadState(JNIEnv *jEnv, char **errp)
  * before Java is invoked on that thread.)  The return value is the previous
  * context associated with the given Java thread.
  */
-PR_IMPLEMENT(JSContext *)
+JS_EXPORT_API(JSContext *)
 JSJ_SetDefaultJSContextForJavaThread(JSContext *cx, JSJavaThreadState *jsj_env)
 {
     JSContext *old_context;
@@ -666,7 +666,7 @@ JSJ_SetDefaultJSContextForJavaThread(JSContext *cx, JSJavaThreadState *jsj_env)
     return old_context;
 }
 
-PR_IMPLEMENT(JSBool)
+JS_EXPORT_API(JSBool)
 JSJ_DetachCurrentThreadFromJava(JSJavaThreadState *jsj_env)
 {
     SystemJavaVM *java_vm;
@@ -743,7 +743,7 @@ default_map_java_object_to_js_object(JNIEnv *jEnv, jobject hint, char **errp)
     return the_global_js_obj;
 }
 
-static PRBool PR_CALLBACK
+static JSBool JS_DLL_CALLBACK
 default_create_java_vm(SystemJavaVM* *jvm, JNIEnv* *initialEnv, void* initargs)
 {
     jint err;
@@ -759,12 +759,12 @@ default_create_java_vm(SystemJavaVM* *jvm, JNIEnv* *initialEnv, void* initargs)
     /* Prepend the classpath argument to the default JVM classpath */
     if (user_classpath) {
 #ifdef XP_UNIX
-        const char *full_classpath = PR_smprintf("%s:%s", user_classpath, vm_args.classpath);
+        const char *full_classpath = JS_smprintf("%s:%s", user_classpath, vm_args.classpath);
 #else
-        const char *full_classpath = PR_smprintf("%s;%s", user_classpath, vm_args.classpath);
+        const char *full_classpath = JS_smprintf("%s;%s", user_classpath, vm_args.classpath);
 #endif
         if (!full_classpath) {
-            return PR_FALSE;
+            return JS_FALSE;
         }
         vm_args.classpath = (char*)full_classpath;
     }
@@ -773,7 +773,7 @@ default_create_java_vm(SystemJavaVM* *jvm, JNIEnv* *initialEnv, void* initargs)
     return err == 0;
 }
 
-static PRBool PR_CALLBACK
+static JSBool JS_DLL_CALLBACK
 default_destroy_java_vm(SystemJavaVM* jvm, JNIEnv* initialEnv)
 {
     JavaVM* java_vm = (JavaVM*)jvm;
@@ -781,7 +781,7 @@ default_destroy_java_vm(SystemJavaVM* jvm, JNIEnv* initialEnv)
     return err == 0;
 }
 
-static JNIEnv* PR_CALLBACK
+static JNIEnv* JS_DLL_CALLBACK
 default_attach_current_thread(SystemJavaVM* jvm)
 {
     JavaVM* java_vm = (JavaVM*)jvm;
@@ -790,7 +790,7 @@ default_attach_current_thread(SystemJavaVM* jvm)
     return env;
 }
 
-static PRBool PR_CALLBACK
+static JSBool JS_DLL_CALLBACK
 default_detach_current_thread(SystemJavaVM* jvm, JNIEnv* env)
 {
     JavaVM* java_vm = (JavaVM*)jvm;
@@ -799,7 +799,7 @@ default_detach_current_thread(SystemJavaVM* jvm, JNIEnv* env)
     return err == 0;
 }
 
-static SystemJavaVM* PR_CALLBACK
+static SystemJavaVM* JS_DLL_CALLBACK
 default_get_java_vm(JNIEnv* env)
 {
     JavaVM* java_vm = NULL;
@@ -835,7 +835,7 @@ JSJ_SimpleInit(JSContext *cx, JSObject *global_obj, SystemJavaVM *java_vm, const
 {
     JNIEnv *jEnv;
 
-    PR_ASSERT(!the_jsj_vm);
+    JS_ASSERT(!the_jsj_vm);
     the_jsj_vm = JSJ_ConnectToJavaVM(java_vm, (void*)classpath);
     if (!the_jsj_vm)
         return JS_FALSE;
@@ -862,10 +862,10 @@ error:
  * Free up all LiveConnect resources.  Destroy the Java VM if it was
  * created by LiveConnect.
  */
-PR_IMPLEMENT(void)
+JS_EXPORT_API(void)
 JSJ_SimpleShutdown()
 {
-    PR_ASSERT(the_jsj_vm);
+    JS_ASSERT(the_jsj_vm);
     JSJ_DisconnectFromJavaVM(the_jsj_vm);
     the_jsj_vm = NULL;
     the_cx = NULL;

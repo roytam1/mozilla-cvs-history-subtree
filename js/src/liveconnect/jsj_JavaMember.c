@@ -107,7 +107,7 @@ JavaMember_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
         return JS_TRUE;
 
     default:
-        PR_ASSERT(0);
+        JS_ASSERT(0);
         return JS_FALSE;
     }
 }
@@ -119,7 +119,7 @@ JSClass JavaMember_class = {
     JavaMember_convert, JavaMember_finalize
 };
 
-extern PR_IMPORT_DATA(JSObjectOps) js_ObjectOps;
+extern JS_IMPORT_DATA(JSObjectOps) js_ObjectOps;
 
 JSBool
 jsj_init_JavaMember(JSContext *cx, JSObject *global_obj)

@@ -65,7 +65,7 @@ init_java_obj_reflections_table()
 #ifdef JS_THREADSAFE
     java_obj_reflections_monitor = PR_NewNamedMonitor("java_obj_reflections");
     if (!java_obj_reflections_monitor) {
-        PR_HashTableDestroy(java_obj_reflections);
+        JS_HashTableDestroy(java_obj_reflections);
         return JS_FALSE;
     }
 #endif
@@ -110,7 +110,7 @@ jsj_WrapJavaObject(JSContext *cx,
     if (class_descriptor->type == JAVA_SIGNATURE_ARRAY) {
         js_class = &JavaArray_class;
     } else {
-        PR_ASSERT(class_descriptor->type == JAVA_SIGNATURE_CLASS);
+        JS_ASSERT(class_descriptor->type == JAVA_SIGNATURE_CLASS);
         js_class = &JavaObject_class;
     }
     
@@ -172,7 +172,7 @@ remove_java_obj_reflection_from_hashtable(jobject java_obj, JNIEnv *jEnv)
                                  java_obj, (void*)jEnv);
     he = *hep;
 
-    PR_ASSERT(he);
+    JS_ASSERT(he);
     if (he)
         JSJ_HashTableRawRemove(java_obj_reflections, hep, he, (void*)jEnv);
 
@@ -206,8 +206,8 @@ JavaObject_finalize(JSContext *cx, JSObject *obj)
 }
 
 /* Trivial helper for jsj_DiscardJavaObjReflections(), below */
-static PRIntn
-enumerate_remove_java_obj(JSJHashEntry *he, PRIntn i, void *arg)
+static JSIntn
+enumerate_remove_java_obj(JSJHashEntry *he, JSIntn i, void *arg)
 {
     JNIEnv *jEnv = (JNIEnv*)arg;
     jobject java_obj;
@@ -237,7 +237,7 @@ jsj_DiscardJavaObjReflections(JNIEnv *jEnv)
     }
 }
 
-PR_CALLBACK JSBool
+JS_DLL_CALLBACK JSBool
 JavaObject_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
 {
     JavaObjectWrapper *java_wrapper;
@@ -288,7 +288,7 @@ JavaObject_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
         return jsj_ConvertJavaObjectToJSBoolean(cx, jEnv, class_descriptor, java_obj, vp);
 
     default:
-        PR_ASSERT(0);
+        JS_ASSERT(0);
         return JS_FALSE;
     }
 }
@@ -320,7 +320,7 @@ lookup_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
     }
 
     class_descriptor = java_wrapper->class_descriptor;
-    PR_ASSERT(class_descriptor->type == JAVA_SIGNATURE_CLASS ||
+    JS_ASSERT(class_descriptor->type == JAVA_SIGNATURE_CLASS ||
               class_descriptor->type == JAVA_SIGNATURE_ARRAY);
 
     member_descriptor = jsj_LookupJavaMemberDescriptorById(cx, jEnv, class_descriptor, id);
@@ -348,7 +348,7 @@ lookup_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
     return JS_TRUE;
 }
 
-PR_CALLBACK JSBool
+JS_DLL_CALLBACK JSBool
 JavaObject_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 {
     jobject java_obj;
@@ -429,7 +429,7 @@ JavaObject_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
     return JS_TRUE;
 }
 
-PR_STATIC_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 JavaObject_setPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 {
     jobject java_obj;
@@ -526,7 +526,7 @@ JavaObject_setAttributes(JSContext *cx, JSObject *obj, jsid id,
 {
     /* We don't maintain JS property attributes for Java class members */
     if (*attrsp != (JSPROP_PERMANENT|JSPROP_ENUMERATE)) {
-        PR_ASSERT(0);
+        JS_ASSERT(0);
         return JS_FALSE;
     }
 
@@ -607,7 +607,7 @@ JavaObject_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
         return JS_TRUE;
 
     default:
-        PR_ASSERT(0);
+        JS_ASSERT(0);
         return JS_FALSE;
     }
 }
@@ -667,7 +667,7 @@ JSClass JavaObject_class = {
     JavaObject_getObjectOps,
 };
 
-extern PR_IMPORT_DATA(JSObjectOps) js_ObjectOps;
+extern JS_IMPORT_DATA(JSObjectOps) js_ObjectOps;
 
 
 JSBool

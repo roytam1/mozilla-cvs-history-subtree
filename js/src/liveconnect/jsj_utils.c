@@ -35,10 +35,10 @@
  * This is a hash-table utility routine that computes the hash code of a Java
  * object by calling java.lang.System.identityHashCode()
  */
-PR_CALLBACK JSJHashNumber
+JS_DLL_CALLBACK JSJHashNumber
 jsj_HashJavaObject(const void *key, void* env)
 {
-    PRHashNumber hash_code;
+    JSHashNumber hash_code;
     jobject java_obj;
     JNIEnv *jEnv;
 
@@ -46,7 +46,7 @@ jsj_HashJavaObject(const void *key, void* env)
     jEnv = (JNIEnv*) env;
     hash_code = (*jEnv)->CallStaticIntMethod(jEnv, jlSystem,
                                              jlSystem_identityHashCode, java_obj);
-    PR_ASSERT(!(*jEnv)->ExceptionOccurred(jEnv));
+    JS_ASSERT(!(*jEnv)->ExceptionOccurred(jEnv));
     return hash_code;
 }
 
@@ -57,7 +57,7 @@ jsj_HashJavaObject(const void *key, void* env)
  * or handles (though they may be in some JVM implementations).  Instead,
  * use the JNI routine for comparing the two objects.
  */
-PR_CALLBACK intN
+JS_DLL_CALLBACK intN
 jsj_JavaObjectComparator(const void *v1, const void *v2, void *arg)
 {
     jobject java_obj1, java_obj2;
@@ -129,7 +129,7 @@ jsj_ClassNameOfJavaObject(JSContext *cx, JNIEnv *jEnv, jobject java_object)
     java_class = (*jEnv)->GetObjectClass(jEnv, java_object);
 
     if (!java_class) {
-        PR_ASSERT(0);
+        JS_ASSERT(0);
         return NULL;
     }
 
@@ -223,10 +223,10 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
         return;
     }
 
-    js_error_msg = PR_vsmprintf(format, ap);
+    js_error_msg = JS_vsmprintf(format, ap);
 
     if (!js_error_msg) {
-        PR_ASSERT(0);       /* Out-of-memory */
+        JS_ASSERT(0);       /* Out-of-memory */
         return;
     }
 
@@ -234,10 +234,10 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
 
     java_stack_trace = get_java_stack_trace(cx, jEnv, java_exception);
     if (java_stack_trace) {
-        error_msg = PR_smprintf("%s\n%s", js_error_msg, java_stack_trace);
+        error_msg = JS_smprintf("%s\n%s", js_error_msg, java_stack_trace);
         free((char*)java_stack_trace);
         if (!error_msg) {
-            PR_ASSERT(0);       /* Out-of-memory */
+            JS_ASSERT(0);       /* Out-of-memory */
             return;
         }
     } else
@@ -246,7 +246,7 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
     {
         java_error_msg = jsj_GetJavaErrorMessage(jEnv);
         if (java_error_msg) {
-            error_msg = PR_smprintf("%s (%s)\n", js_error_msg, java_error_msg);
+            error_msg = JS_smprintf("%s (%s)\n", js_error_msg, java_error_msg);
             free((char*)java_error_msg);
             free(js_error_msg);
         } else {
@@ -284,7 +284,7 @@ jsj_UnexpectedJavaError(JSContext *cx, JNIEnv *env, const char *format, ...)
     const char *format2;
 
     va_start(ap, format);
-    format2 = PR_smprintf("internal error: %s", format);
+    format2 = JS_smprintf("internal error: %s", format);
     if (format2) {
         vreport_java_error(cx, env, format2, ap);
         free((void*)format2);

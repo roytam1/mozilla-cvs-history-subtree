@@ -104,7 +104,7 @@ access_java_array_element(JSContext *cx,
     class_descriptor = java_wrapper->class_descriptor;
     java_array = java_wrapper->java_obj;
     
-    PR_ASSERT(class_descriptor->type == JAVA_SIGNATURE_ARRAY);
+    JS_ASSERT(class_descriptor->type == JAVA_SIGNATURE_ARRAY);
 
     JS_IdToValue(cx, id, &idval);
 
@@ -181,7 +181,7 @@ access_java_array_element(JSContext *cx,
     }
 }
 
-PR_STATIC_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 JavaArray_getPropertyById(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
     JNIEnv *jEnv;
@@ -191,7 +191,7 @@ JavaArray_getPropertyById(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
     return access_java_array_element(cx, jEnv, obj, id, vp, JS_FALSE);
 }
 
-PR_STATIC_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 JavaArray_setPropertyById(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
     JNIEnv *jEnv;
@@ -241,7 +241,7 @@ JavaArray_setAttributes(JSContext *cx, JSObject *obj, jsid id,
 {
     /* We don't maintain JS property attributes for Java class members */
     if (*attrsp != (JSPROP_PERMANENT|JSPROP_ENUMERATE)) {
-        PR_ASSERT(0);
+        JS_ASSERT(0);
         return JS_FALSE;
     }
 
@@ -323,7 +323,7 @@ JavaArray_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
         return JS_TRUE;
 
     default:
-        PR_ASSERT(0);
+        JS_ASSERT(0);
         return JS_FALSE;
     }
 }
@@ -383,7 +383,7 @@ JSClass JavaArray_class = {
     JavaArray_getObjectOps,
 };
 
-extern PR_IMPORT_DATA(JSObjectOps) js_ObjectOps;
+extern JS_IMPORT_DATA(JSObjectOps) js_ObjectOps;
 
 
 /* Initialize the JS JavaArray class */

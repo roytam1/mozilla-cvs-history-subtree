@@ -29,22 +29,15 @@
 #ifndef _JSJAVA_PVT_H
 #define _JSJAVA_PVT_H
 
-#include "prtypes.h"
+#include "jstypes.h"
 
 /* NSPR1 compatibility definitions */
-#ifdef NSPR20
-#   include "prprf.h"
-#   include "prlog.h"
-#   include "plhash.h"          /* NSPR hash-tables      */
-#else
-#   include "prprintf.h"
-#   include "prassert.h"
-#   include "prhash.h"          /* NSPR hash-tables      */
-#   define PRHashNumber prhashcode
-#endif
+#   include "jsprf.h"
+#   include "jsutil.h"
+#   include "jshash.h"
 
 #ifdef XP_MAC
-#    include "prosdep.h"
+#    include "jsosdep.h"
 #endif
 
 #include "jsj_hash.h"        /* Hash tables */
@@ -333,7 +326,7 @@ extern JSBool
 jsj_remove_js_obj_reflection_from_hashtable(JSContext *cx, JSObject *js_obj);
 
 extern JSBool
-jsj_init_js_obj_reflections_table();
+jsj_init_js_obj_reflections_table(void);
 
 /************************ Java package reflection **************************/
 extern JSBool
@@ -399,7 +392,7 @@ jsj_GetClassStaticMembers(JSContext *cx, JNIEnv *jEnv,
                           JavaClassDescriptor *class_descriptor);
 
 extern JSBool
-jsj_InitJavaClassReflectionsTable();
+jsj_InitJavaClassReflectionsTable(void);
 
 /************************* Java field reflection ***************************/
 
@@ -509,10 +502,10 @@ jsj_GetJavaErrorMessage(JNIEnv *env);
 extern void
 jsj_LogError(const char *error_msg);
 
-PR_CALLBACK JSJHashNumber
+JS_DLL_CALLBACK JSJHashNumber
 jsj_HashJavaObject(const void *key, void* env);
 
-PR_CALLBACK intN
+JS_DLL_CALLBACK intN
 jsj_JavaObjectComparator(const void *v1, const void *v2, void *arg);
 
 extern JSJavaThreadState *
@@ -544,9 +537,9 @@ jsj_SetJavaJSJEnv(JSJavaThreadState* java_jsj_env);
 #endif
 
 #define JS_FREE_IF(cx, x)                                                   \
-    PR_BEGIN_MACRO                                                          \
+    JS_BEGIN_MACRO                                                          \
         if (x)                                                              \
             JS_free(cx, x);                                                 \
-    PR_END_MACRO
+    JS_END_MACRO
 
 #endif   /* _JSJAVA_PVT_H */

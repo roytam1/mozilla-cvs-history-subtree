@@ -238,7 +238,7 @@ jsj_GetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
     is_static_field = field_spec->modifiers & ACC_STATIC;
 
 #define GET_JAVA_FIELD(Type,member)                                          \
-    PR_BEGIN_MACRO                                                           \
+    JS_BEGIN_MACRO                                                           \
     if (is_static_field)                                                     \
         java_value.member =                                                  \
             (*jEnv)->GetStatic##Type##Field(jEnv, java_obj, fieldID);        \
@@ -249,7 +249,7 @@ jsj_GetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
         jsj_UnexpectedJavaError(cx, jEnv, "Error reading Java field");           \
         return JS_FALSE;                                                     \
     }                                                                        \
-    PR_END_MACRO
+    JS_END_MACRO
 
     signature = field_spec->signature;
     field_type = signature->type;
@@ -293,7 +293,7 @@ jsj_GetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
 
 #undef GET_JAVA_FIELD
     default:
-        PR_ASSERT(0);        /* Unknown java type signature */
+        JS_ASSERT(0);        /* Unknown java type signature */
         return JS_FALSE;
     }
 
@@ -314,7 +314,7 @@ jsj_SetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
     is_static_field = field_spec->modifiers & ACC_STATIC;
 
 #define SET_JAVA_FIELD(Type,member)                                          \
-    PR_BEGIN_MACRO                                                           \
+    JS_BEGIN_MACRO                                                           \
     if (is_static_field) {                                                   \
         (*jEnv)->SetStatic##Type##Field(jEnv, java_obj, fieldID,             \
                                         java_value.member);                  \
@@ -325,7 +325,7 @@ jsj_SetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
         jsj_UnexpectedJavaError(cx, jEnv, "Error assigning to Java field");      \
         return JS_FALSE;                                                     \
     }                                                                        \
-    PR_END_MACRO
+    JS_END_MACRO
 
     signature = field_spec->signature;
     if (!jsj_ConvertJSValueToJavaValue(cx, jEnv, js_val, signature, &dummy_cost,
@@ -375,7 +375,7 @@ jsj_SetJavaFieldValue(JSContext *cx, JNIEnv *jEnv, JavaFieldSpec *field_spec,
 
 #undef SET_JAVA_FIELD
     default:
-        PR_ASSERT(0);        /* Unknown java type signature */
+        JS_ASSERT(0);        /* Unknown java type signature */
         return JS_FALSE;
     }
     

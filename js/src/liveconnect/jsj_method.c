@@ -66,7 +66,7 @@ convert_java_method_arg_signatures_to_string(JSContext *cx,
 
     /* Concatenate the signature string of this argument with the signature
        strings of all the remaining arguments. */
-    sig = PR_smprintf("%s%s", first_arg_signature, rest_arg_signatures);
+    sig = JS_smprintf("%s%s", first_arg_signature, rest_arg_signatures);
     free((void*)first_arg_signature);
     free((void*)rest_arg_signatures);
     if (!sig) {
@@ -114,10 +114,10 @@ jsj_ConvertJavaMethodSignatureToString(JSContext *cx,
 
     /* Compose method arg signatures string and return val signature string */
     if (arg_sigs_cstr) {
-        sig_cstr = PR_smprintf("(%s)%s", arg_sigs_cstr, return_val_sig_cstr);
+        sig_cstr = JS_smprintf("(%s)%s", arg_sigs_cstr, return_val_sig_cstr);
         free((void*)arg_sigs_cstr);
     } else {
-        sig_cstr = PR_smprintf("()%s", return_val_sig_cstr);
+        sig_cstr = JS_smprintf("()%s", return_val_sig_cstr);
     }
 
     free((void*)return_val_sig_cstr);
@@ -164,7 +164,7 @@ convert_java_method_arg_signatures_to_hr_string(JSContext *cx,
 
     /* Concatenate the signature string of this argument with the signature
        strings of all the remaining arguments. */
-    sig = PR_smprintf("%s, %s", first_arg_signature, rest_arg_signatures);
+    sig = JS_smprintf("%s, %s", first_arg_signature, rest_arg_signatures);
     free((void*)first_arg_signature);
     free((void*)rest_arg_signatures);
     if (!sig) {
@@ -214,10 +214,10 @@ jsj_ConvertJavaMethodSignatureToHRString(JSContext *cx,
 
     /* Compose method arg signatures string and return val signature string */
     if (arg_sigs_cstr) {
-        sig_cstr = PR_smprintf("%s %s(%s)", return_val_sig_cstr, method_name, arg_sigs_cstr);
+        sig_cstr = JS_smprintf("%s %s(%s)", return_val_sig_cstr, method_name, arg_sigs_cstr);
         free((void*)arg_sigs_cstr);
     } else {
-        sig_cstr = PR_smprintf("%s %s()", return_val_sig_cstr, method_name);
+        sig_cstr = JS_smprintf("%s %s()", return_val_sig_cstr, method_name);
     }
 
     free((void*)return_val_sig_cstr);
@@ -583,7 +583,7 @@ get_js_arg_types_as_string(JSContext *cx, uintN argc, jsval *argv)
         goto out_of_memory;
     for (i = 0; i < argc; i++) {
         arg_type = JS_GetTypeName(cx, JS_TypeOfValue(cx, argv[i]));
-        tmp = PR_smprintf("%s%s%s%s", arg_string,  i ? ", " : "", arg_type,
+        tmp = JS_smprintf("%s%s%s%s", arg_string,  i ? ", " : "", arg_type,
                          (i == argc-1) ? ")" : "");
         free((char*)arg_string);
         if (!tmp)
@@ -618,12 +618,12 @@ report_method_match_failure(JSContext *cx,
         goto out_of_memory;
 
     if (is_constructor) {
-        err =  PR_smprintf("There is no Java constructor for class %s that matches "
+        err =  JS_smprintf("There is no Java constructor for class %s that matches "
                            "JavaScript argument types %s.\n", class_descriptor->name,
                            js_arg_string);
         method_name = class_descriptor->name;
     } else {
-        err =  PR_smprintf("There is no %sJava method %s.%s that matches "
+        err =  JS_smprintf("There is no %sJava method %s.%s that matches "
                            "JavaScript argument types %s.\n",
                            is_static_method ? "static ": "",
                            class_descriptor->name, member_descriptor->name, js_arg_string);
@@ -632,7 +632,7 @@ report_method_match_failure(JSContext *cx,
     if (!err)
         goto out_of_memory;
 
-    tmp = PR_smprintf("%sCandidate methods with the same name are:\n", err);
+    tmp = JS_smprintf("%sCandidate methods with the same name are:\n", err);
     if (!tmp)
         goto out_of_memory;
     err = tmp;
@@ -643,7 +643,7 @@ report_method_match_failure(JSContext *cx,
             jsj_ConvertJavaMethodSignatureToHRString(cx, method_name, &method->signature);
         if (!method_str)
             goto out_of_memory;
-        tmp = PR_smprintf("%s   %s\n", err, method_str);
+        tmp = JS_smprintf("%s   %s\n", err, method_str);
         free((char*)method_str);
         if (!tmp)
             goto out_of_memory;
@@ -721,7 +721,7 @@ convert_JS_method_args_to_java_argv(JSContext *cx, JNIEnv *jEnv, jsval *argv,
     
     signature = &method->signature;
     argc = signature->num_args;
-    PR_ASSERT(argc != 0);
+    JS_ASSERT(argc != 0);
     arg_signatures = signature->arg_signatures;
     
     jargv = (jvalue *)JS_malloc(cx, sizeof(jvalue) * argc);
@@ -814,7 +814,7 @@ invoke_java_method(JSContext *cx, JSJavaThreadState *jsj_env,
     }
 
 #define CALL_JAVA_METHOD(type, member)                                       \
-    PR_BEGIN_MACRO                                                           \
+    JS_BEGIN_MACRO                                                           \
     if (is_static_method) {                                                  \
         java_value.member = (*jEnv)->CallStatic##type##MethodA(jEnv, java_class, methodID, jargv);\
     } else {                                                                 \
@@ -826,7 +826,7 @@ invoke_java_method(JSContext *cx, JSJavaThreadState *jsj_env,
         error_occurred = JS_TRUE;                                            \
         goto out;                                                            \
     }                                                                        \
-    PR_END_MACRO
+    JS_END_MACRO
 
     return_val_signature = signature->return_val_signature;
     switch(return_val_signature->type) {
@@ -881,7 +881,7 @@ invoke_java_method(JSContext *cx, JSJavaThreadState *jsj_env,
         break;
         
     default:
-        PR_ASSERT(0);
+        JS_ASSERT(0);
         return JS_FALSE;
     }
 
@@ -927,7 +927,7 @@ invoke_overloaded_java_method(JSContext *cx, JSJavaThreadState *jsj_env,
                               method, is_static_method, argv, vp);
 }
 
-PR_CALLBACK JSBool
+JS_DLL_CALLBACK JSBool
 jsj_JavaStaticMethodWrapper(JSContext *cx, JSObject *obj,
                             uintN argc, jsval *argv, jsval *vp)
 {
@@ -950,14 +950,14 @@ jsj_JavaStaticMethodWrapper(JSContext *cx, JSObject *obj,
         return JS_FALSE;
     java_class = class_descriptor->java_class;
     
-    PR_ASSERT(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION);
+    JS_ASSERT(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION);
     function = JS_GetPrivate(cx, JSVAL_TO_OBJECT(argv[-2]));
     idval = STRING_TO_JSVAL(JS_InternString(cx, JS_GetFunctionName(function)));
     JS_ValueToId(cx, idval, &id);
     
     member_descriptor = jsj_LookupJavaStaticMemberDescriptorById(cx, jEnv, class_descriptor, id);
     if (!member_descriptor) {
-        PR_ASSERT(0);
+        JS_ASSERT(0);
         return JS_FALSE;
     }
 
@@ -965,7 +965,7 @@ jsj_JavaStaticMethodWrapper(JSContext *cx, JSObject *obj,
                                          java_class, class_descriptor, argc, argv, vp);
 }
 
-PR_CALLBACK JSBool
+JS_DLL_CALLBACK JSBool
 jsj_JavaInstanceMethodWrapper(JSContext *cx, JSObject *obj,
                               uintN argc, jsval *argv, jsval *vp)
 {
@@ -973,7 +973,7 @@ jsj_JavaInstanceMethodWrapper(JSContext *cx, JSObject *obj,
     JavaMemberDescriptor *member_descriptor;
     JavaObjectWrapper *java_wrapper;
     JavaClassDescriptor *class_descriptor;
-    jsint id;
+    jsid id;
     jsval idval;
     JSJavaThreadState *jsj_env;
     JNIEnv *jEnv;
@@ -989,7 +989,7 @@ jsj_JavaInstanceMethodWrapper(JSContext *cx, JSObject *obj,
         return JS_FALSE;
     java_obj = java_wrapper->java_obj;
     
-    PR_ASSERT(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION);
+    JS_ASSERT(JS_TypeOfValue(cx, argv[-2]) == JSTYPE_FUNCTION);
     function = JS_GetPrivate(cx, JSVAL_TO_OBJECT(argv[-2]));
     idval = STRING_TO_JSVAL(JS_InternString(cx, JS_GetFunctionName(function)));
     JS_ValueToId(cx, idval, &id);
@@ -1000,7 +1000,7 @@ jsj_JavaInstanceMethodWrapper(JSContext *cx, JSObject *obj,
     if (!member_descriptor) {
         member_descriptor = jsj_LookupJavaStaticMemberDescriptorById(cx, jEnv, class_descriptor, id);
         if (!member_descriptor) {
-            PR_ASSERT(0);
+            JS_ASSERT(0);
             return JS_FALSE;
         }
         java_class = class_descriptor->java_class;
@@ -1099,7 +1099,7 @@ invoke_overloaded_java_constructor(JSContext *cx,
     jEnv = jsj_env->jEnv;
 
     class_descriptor = JS_GetPrivate(cx, obj);
-    PR_ASSERT(class_descriptor);
+    JS_ASSERT(class_descriptor);
     if (!class_descriptor)
         return JS_FALSE;
 
@@ -1114,7 +1114,7 @@ invoke_overloaded_java_constructor(JSContext *cx,
 }
 
 
-PR_CALLBACK JSBool
+JS_DLL_CALLBACK JSBool
 jsj_JavaConstructorWrapper(JSContext *cx, JSObject *obj,
                            uintN argc, jsval *argv, jsval *vp)
 {

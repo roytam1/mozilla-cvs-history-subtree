@@ -137,7 +137,7 @@ JavaPackage_resolve(JSContext *cx, JSObject *obj, jsval id)
         return JS_FALSE;
 
     path = package->path;
-    newPath = PR_smprintf("%s%s%s", path, (path[0] ? "/" : ""), subPath);
+    newPath = JS_smprintf("%s%s%s", path, (path[0] ? "/" : ""), subPath);
     if (!newPath) {
         JS_ReportOutOfMemory(cx);
         return JS_FALSE;
@@ -206,7 +206,7 @@ JavaPackage_resolve(JSContext *cx, JSObject *obj, jsval id)
             if (package->flags & PKG_SYSTEM) {
                 char *msg, *cp;
 
-                msg = PR_smprintf("No Java system package with name \"%s\" was identified "
+                msg = JS_smprintf("No Java system package with name \"%s\" was identified "
                                   "and no Java class with that name exists either",
                                   newPath);
 
@@ -262,7 +262,7 @@ JavaPackage_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
         /* Convert '/' to '.' so that it looks like Java language syntax. */
         if (!package->path)
             break;
-        name = PR_smprintf("[JavaPackage %s]", package->path);
+        name = JS_smprintf("[JavaPackage %s]", package->path);
         if (!name) {
             JS_ReportOutOfMemory(cx);
             return JS_FALSE;

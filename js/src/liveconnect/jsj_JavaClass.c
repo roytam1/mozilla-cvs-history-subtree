@@ -57,7 +57,7 @@ JavaClass_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
         /* Convert '/' to '.' so that it looks like Java language syntax. */
         if (!class_descriptor->name)
             break;
-        name = PR_smprintf("[JavaClass %s]", class_descriptor->name);
+        name = JS_smprintf("[JavaClass %s]", class_descriptor->name);
         if (!name) {
             JS_ReportOutOfMemory(cx);
             return JS_FALSE;
@@ -126,7 +126,7 @@ lookup_static_member_by_id(JSContext *cx, JNIEnv *jEnv, JSObject *obj,
     return JS_TRUE;
 }
 
-PR_STATIC_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 JavaClass_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 {
     jsval idval;
@@ -156,7 +156,7 @@ JavaClass_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
         if (!member_descriptor->methods) {
             return jsj_GetJavaFieldValue(cx, jEnv, member_descriptor->field, java_class, vp);
         } else {
-            PR_ASSERT(0);
+            JS_ASSERT(0);
         }
     } else {
         JSFunction *function;
@@ -174,7 +174,7 @@ JavaClass_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
     return JS_TRUE;
 }
 
-PR_STATIC_CALLBACK(JSBool)
+JS_STATIC_DLL_CALLBACK(JSBool)
 JavaClass_setPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 {
     jclass java_class;
@@ -217,7 +217,7 @@ no_such_field:
 /*
  * Free the private native data associated with the JavaPackage object.
  */
-PR_STATIC_CALLBACK(void)
+JS_STATIC_DLL_CALLBACK(void)
 JavaClass_finalize(JSContext *cx, JSObject *obj)
 {
     JNIEnv *jEnv;
@@ -291,7 +291,7 @@ JavaClass_setAttributes(JSContext *cx, JSObject *obj, jsid id,
 {
     /* We don't maintain JS property attributes for Java class members */
     if (*attrsp != (JSPROP_PERMANENT|JSPROP_ENUMERATE)) {
-        PR_ASSERT(0);
+        JS_ASSERT(0);
         return JS_FALSE;
     }
 
@@ -367,7 +367,7 @@ JavaClass_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
         return JS_TRUE;
 
     default:
-        PR_ASSERT(0);
+        JS_ASSERT(0);
         return JS_FALSE;
     }
 }
@@ -565,7 +565,7 @@ getClass(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
-extern PR_IMPORT_DATA(JSObjectOps) js_ObjectOps;
+extern JS_IMPORT_DATA(JSObjectOps) js_ObjectOps;
 
 JSBool
 jsj_init_JavaClass(JSContext *cx, JSObject *global_obj)

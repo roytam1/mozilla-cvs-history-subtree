@@ -100,7 +100,7 @@ jsj_ConvertJSValueToJavaObject(JSContext *cx, JNIEnv *jEnv, jsval v, JavaSignatu
     JSString *jsstr;
     jclass target_java_class;
     
-    PR_ASSERT(signature->type == JAVA_SIGNATURE_CLASS ||
+    JS_ASSERT(signature->type == JAVA_SIGNATURE_CLASS ||
         signature->type == JAVA_SIGNATURE_ARRAY);
 
     /* Initialize to default case, in which no new Java object is
@@ -492,7 +492,7 @@ jsj_ConvertJSValueToJavaValue(JSContext *cx, JNIEnv *jEnv, jsval v,
         break;
 
     default:
-        PR_ASSERT(0);
+        JS_ASSERT(0);
         return JS_FALSE;
     }
 
@@ -720,7 +720,7 @@ jsj_ConvertJavaObjectToJSValue(JSContext *cx, JNIEnv *jEnv,
 #else
         js_obj = jsj_UnwrapJSObjectWrapper(jEnv, java_obj);
 #endif
-        PR_ASSERT(js_obj);
+        JS_ASSERT(js_obj);
         if (!js_obj)
             return JS_FALSE;
         *vp = OBJECT_TO_JSVAL(js_obj);
@@ -799,7 +799,7 @@ jsj_ConvertJavaValueToJSValue(JSContext *cx, JNIEnv *jEnv,
         return jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_value->l, vp);
 
     default:
-        PR_ASSERT(0);
+        JS_ASSERT(0);
         return JS_FALSE;
     }
 }
