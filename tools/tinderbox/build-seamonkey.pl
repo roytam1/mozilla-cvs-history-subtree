@@ -763,8 +763,8 @@ sub RunBloatTest {
   # Set up a timer with a signal handler.
   $SIG{ALRM} = \&killer;
 
-  # Wait 300 seconds, then kill the process if it's still alive.
-  alarm 300;
+  # Wait 120 seconds, then kill the process if it's still alive.
+  alarm 120;
 
   $status = waitpid($pid, 0);
 
