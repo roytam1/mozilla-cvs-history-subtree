@@ -122,6 +122,8 @@ class nsTObsoleteAString_CharT
       friend class nsTAString_CharT;
       friend class nsTSubstring_CharT;
 
+      /** here's the old nsAC?String vtable **/
+
       virtual ~nsTObsoleteAString_CharT() { }
 
       virtual PRUint32                          GetImplementationFlags() const = 0;

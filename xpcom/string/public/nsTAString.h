@@ -69,17 +69,36 @@ class NS_COM nsTDefaultStringComparator_CharT
 
 
   /**
-   * XXX FIXME
-   * |nsTAString| is the most abstract class in the string hierarchy.
-   * Strings implementing |nsTAString| may be stored in multiple
-   * fragments.  They need not be null-terminated and they may contain
-   * embedded null characters.  They may be dependent objects that
-   * depend on other strings.
+   * nsTAString is the most abstract class in the string hierarchy.
    *
-   * See also |nsASingleFragmentC?String| and |nsAFlatC?String|, the
-   * other main abstract classes in the string hierarchy.
+   * In its original inception, nsTAString was designed to allow the data
+   * storage for a string to be separated into multiple fragments.  This was
+   * intended to enable lazy string flattening or avoid string flattening
+   * altogether in some cases.  This abstraction, however, meant that every
+   * single string operation (including simple operations such as IsEmpty() and
+   * BeginReading()) required virtual function calls.  A virtual destructor was
+   * also required.  This not only meant additional overhead for invoking
+   * string methods but also added to additional codesize at every callsite (to
+   * load and derefence the virtual function pointer).
+   *
+   * Today nsTAString exists mainly for backwards compatibility of the string
+   * API.  It is restricted to representing a single contiguous storage of
+   * characters, where the character array is not necessarily null-terminated.
+   * Moreover, since nsTAString's virtual function table was frozen for Mozilla
+   * 1.0, nsTAString necessarily maintains ABI compatibility with older
+   * versions of Gecko.  (nsTObsoleteAString provides that frozen ABI.  See
+   * nsObsoleteAString.h for a description of how we solve the ABI
+   * compatibility requirement while eliminating virtual function calls on
+   * nsTAString.)
+   *
+   * XPIDL still generates C++ header files with references to nsTAStrings, so
+   * nsTAString will still be heavily used in real code.
+   *
+   * If the opportunity to break ABI compatibility with Mozilla 1.0 were to
+   * ever arise, our first move should be to make nsTAString equate to
+   * nsTSubstring.  This may in fact be an option today for some Gecko-based
+   * products.
    */
-
 class nsTAString_CharT
   {
     public:
@@ -108,6 +127,14 @@ class nsTAString_CharT
         // this acts like a virtual destructor
       NS_COM ~nsTAString_CharT();
 
+
+        /**
+         * BeginReading/EndReading can be used to get immutable access to the
+         * string's underlying buffer.  EndReading returns a pointer to the
+         * end of the string's buffer.  nsReadableUtils.h provides a collection
+         * of utility functions that work with these iterators.
+         */
+
       inline const_iterator& BeginReading( const_iterator& iter ) const
         {
           size_type len = GetReadableBuffer(&iter.mStart);
@@ -123,6 +150,14 @@ class nsTAString_CharT
           iter.mPosition = iter.mEnd;
           return iter;
         }
+
+
+        /**
+         * BeginWriting/EndWriting can be used to get mutable access to the
+         * string's underlying buffer.  EndWriting returns a pointer to the
+         * end of the string's buffer.  This iterator API cannot be used to
+         * grow a buffer.  Use SetLength to resize the string's buffer.
+         */
 
       inline iterator& BeginWriting( iterator& iter )
         {
@@ -140,38 +175,87 @@ class nsTAString_CharT
           return iter;
         }
 
+
+        /**
+         * Length checking functions.  IsEmpty is a helper function to avoid
+         * writing code like: |if (str.Length() == 0)|
+         */
+
       NS_COM size_type Length() const;
       PRBool IsEmpty() const { return Length() == 0; }
+
+
+        /**
+         * String equality tests.  Pass a string comparator if you want to
+         * control how the strings are compared.  By default, a binary
+         * "case-sensitive" comparision is performed.
+         */
 
       NS_COM PRBool Equals( const self_type& ) const;
       NS_COM PRBool Equals( const self_type&, const comparator_type& ) const;
       NS_COM PRBool Equals( const char_type* ) const;
       NS_COM PRBool Equals( const char_type*, const comparator_type& ) const;
 
+
+        /**
+         * A string always references a non-null data pointer.  In some
+         * applications (e.g., the DOM) it is necessary for a string class
+         * to have some way to distinguish an empty string from a null (or
+         * void) string.  These methods enable support for the concept of
+         * a void string.
+         */
+
       NS_COM PRBool IsVoid() const;
       NS_COM void SetIsVoid( PRBool );
 
-      NS_COM PRBool IsTerminated() const;
 
         /**
-         * these are contant time since nsTAString_CharT uses flat storage
+         * This method returns true if the string's underlying buffer is
+         * null-terminated.  This should rarely be needed by applications.
+         * The PromiseFlatTString method should be used to ensure that a
+         * string's underlying buffer is null-terminated.
+         */
+
+      NS_COM PRBool IsTerminated() const;
+
+
+        /**
+         * These are contant time since nsTAString uses flat storage
          */
       NS_COM char_type First() const;
       NS_COM char_type Last() const;
 
+
+        /**
+         * Returns the number of occurances of the given character.
+         */
       NS_COM size_type CountChar( char_type ) const;
+
+
+        /**
+         * Locates the offset of the first occurance of the character.  Pass a
+         * non-zero offset to control where the search begins.
+         */
 
       NS_COM PRInt32 FindChar( char_type, index_type offset = 0 ) const;
 
+
         /**
-         * |SetCapacity| is not required to do anything; however, it can be
-         * used as a hint to the implementation to reduce allocations.
-         * |SetCapacity(0)| is a suggestion to discard all associated storage.
+         * SetCapacity is not required to do anything; however, it can be used
+         * as a hint to the implementation to reduce allocations.
+         *
+         * SetCapacity(0) is a suggestion to discard all associated storage.
          */
       NS_COM void SetCapacity( size_type );
 
+
         /**
-         * |SetLength| is used in two ways:
+         * XXX talk to dbaron about this comment.  we do need a method that
+         * XXX allows someone to resize a string's buffer so that it can be
+         * XXX populated using writing iterators.  SetLength seems to be the
+         * XXX right method for the job.
+         *
+         * SetLength is used in two ways:
          *   1) to |Cut| a suffix of the string;
          *   2) to prepare to |Append| or move characters around.
          *
@@ -194,16 +278,18 @@ class nsTAString_CharT
 
 
         /**
-         * Can't use Truncate to make a string longer!
+         * Can't use |Truncate| to make a string longer!
          */
-      NS_COM void Truncate( size_type aNewLength=0 ) { SetLength(aNewLength); }
+      void Truncate( size_type aNewLength=0 )
+        {
+          SetLength(aNewLength);
+        }
 
 
         /**
-         * |Assign()| and |operator=()| make |this| equivalent to the
-         * string or buffer given as an argument.  If possible, they do
-         * this by sharing a refcounted buffer (see
-         * |nsSharableC?String|, |nsXPIDLC?String|.  If not, they copy
+         * |Assign| and |operator=| make |this| equivalent to the string or
+         * buffer given as an argument.  If possible, they do this by sharing
+         * a reference counted buffer (see |nsTSubstring|).  If not, they copy
          * the buffer into their own buffer.
          */
 
@@ -222,7 +308,7 @@ class nsTAString_CharT
 
 
         /**
-         * |Append()|, |operator+=()|
+         * |Append|, |operator+=| are used to add characters to the end of this string.
          */ 
 
       NS_COM void Append( const self_type& readable );
@@ -236,9 +322,10 @@ class nsTAString_CharT
       self_type& operator+=( const char_type* data )                                                { Append(data); return *this; }
       self_type& operator+=( char_type c )                                                          { Append(c); return *this; }
 
+
         /**
-         * |Insert()|
-         *  Note: I would really like to move the |pos| parameter to the front of the argument list
+         * |Insert| is used to add characters into this string at a given position.
+         * NOTE: It's a shame the |pos| parameter isn't at the front of the arg list.
          */ 
 
       NS_COM void Insert( const self_type& readable, index_type pos );
@@ -247,26 +334,40 @@ class nsTAString_CharT
       NS_COM void Insert( const char_type* data, index_type pos, size_type length );
       NS_COM void Insert( char_type c, index_type pos );
 
+
+        /**
+         * |Cut| is used to remove a range of characters from this string.
+         */
+
       NS_COM void Cut( index_type cutStart, size_type cutLength );
+
+      
+        /**
+         * |Replace| is used overwrite a range of characters from this string.
+         */
 
       NS_COM void Replace( index_type cutStart, size_type cutLength, const self_type& readable );
       NS_COM void Replace( index_type cutStart, size_type cutLength, const substring_tuple_type& readable );
 
-    private:
-        // NOT TO BE IMPLEMENTED
-      //size_type  CountChar( incompatible_char_type );
-      void operator=  ( incompatible_char_type );
-      void Assign     ( incompatible_char_type );
-      void operator+= ( incompatible_char_type );
-      void Append     ( incompatible_char_type );
-      void Insert     ( incompatible_char_type, index_type );
+      
+        /**
+         * this is public to support automatic conversion of tuple to abstract
+         * string, which is necessary to support our API.
+         */
+      nsTAString_CharT(const substring_tuple_type& tuple)
+        : mVTable(obsolete_string_type::sCanonicalVTable)
+        , mData(nsnull)
+        , mLength(0)
+        , mFlags(0)
+        {
+          Assign(tuple);
+        }
 
     protected:
 
       friend class nsTSubstringTuple_CharT;
 
-      // XXX still needed now that these aren't template types??
-      // GCC 3.2 erroneously needs these (they are subclasses!)
+      // GCC 3.2 erroneously needs these (even though they are subclasses!)
       friend class nsTSubstring_CharT;
       friend class nsTDependentSubstring_CharT;
       friend class nsTPromiseFlatString_CharT;
@@ -278,15 +379,17 @@ class nsTAString_CharT
       const void* mVTable;
 
         /**
-         * these fields are "here" only when mVTable == sCanonicalVTable
-         * XXX add comments explaining why these are here!!
+         * these fields are "here" only when mVTable == sCanonicalVTable.
+         *
+         * they exist to support automatic construction of a nsTAString
+         * from a nsTSubstringTuple.
          */
       char_type*  mData;
       size_type   mLength;
       PRUint32    mFlags;
 
         /**
-         * nsTAString_CharT must be subclassed before it can be instantiated.
+         * nsTAString must be subclassed before it can be instantiated.
          */
       nsTAString_CharT(char_type* data, size_type length, PRUint32 flags)
         : mVTable(obsolete_string_type::sCanonicalVTable)
@@ -306,23 +409,6 @@ class nsTAString_CharT
         , mFlags(flags)
         {}
 
-    public:
-      
-        /**
-         * this is public to support automatic conversion of tuple to abstract
-         * string, which is necessary to support our API.
-         */
-      nsTAString_CharT(const substring_tuple_type& tuple)
-        : mVTable(obsolete_string_type::sCanonicalVTable)
-        , mData(nsnull)
-        , mLength(0)
-        , mFlags(0)
-        {
-          Assign(tuple);
-        }
-
-    protected:
-
         /**
          * get pointer to internal string buffer (may not be null terminated).
          * return length of buffer.
@@ -340,8 +426,6 @@ class nsTAString_CharT
          * we can be converted to a const nsTSubstring (dependent on this)
          */
       const substring_type ToSubstring() const;
-
-    private:
 
         /**
          * type cast helpers
@@ -366,6 +450,16 @@ class nsTAString_CharT
         {
           return NS_REINTERPRET_CAST(substring_type*, this);
         }
+
+    private:
+
+        // NOT TO BE IMPLEMENTED
+      size_type CountChar( incompatible_char_type );
+      void operator=     ( incompatible_char_type );
+      void Assign        ( incompatible_char_type );
+      void operator+=    ( incompatible_char_type );
+      void Append        ( incompatible_char_type );
+      void Insert        ( incompatible_char_type, index_type );
   };
 
 

@@ -38,14 +38,19 @@
 
 
   /**
-   * nsTSubstring_CharT
+   * nsTSubstring
    *
    * The base string type.  This type is not instantiated directly.  A sub-
    * class is instantiated instead.  For example, see nsTString.
    *
-   * NOTE: This class name should never be referenced outside the string
-   * codebase.  If you need to refer to this string class, use the typedef
-   * nsASingleFragment[C]String instead.
+   * This type works like nsTAString except that it does not have the ABI
+   * requirements of that interface.  Like nsTAString, nsTSubstring
+   * represents a single contiguous array of characters that may or may not
+   * be null-terminated.
+   *
+   * Many of the accessors on nsTSubstring are inlined as an optimization.
+   *
+   * This class is also known as "nsASingleFragmentC?String".
    */
 class nsTSubstring_CharT : public nsTAString_CharT
   {
@@ -265,7 +270,7 @@ class nsTSubstring_CharT : public nsTAString_CharT
 
         /**
          * string data is never null, but can be marked void.  if true, the
-         * string will be truncated.  @see nsTSubstring_CharT::IsVoid
+         * string will be truncated.  @see nsTSubstring::IsVoid
          */
 
       NS_COM void SetIsVoid( PRBool );

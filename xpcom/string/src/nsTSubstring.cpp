@@ -405,8 +405,6 @@ nsTSubstring_CharT::SetCapacity( size_type capacity )
 
     if (oldData)
       {
-        NS_ASSERTION(capacity > 0, "MutatePrep should have returned null oldData");
-
         // compute new string length
         size_type newLen = NS_MIN(mLength, capacity);
 
