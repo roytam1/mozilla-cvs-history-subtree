@@ -172,7 +172,7 @@ DEFINE_GETTER_AND_SETTER( HaveBeenSet,      mHaveBeenSet  )
 
 // Implementation of the nsIWindowsHooks interface.
 // Use standard implementation of nsISupports stuff.
-NS_IMPL_ISUPPORTS1( nsWindowsHooks, nsIWindowsHooks );
+NS_IMPL_ISUPPORTS2( nsWindowsHooks, nsIWindowsHooks, nsIWindowsRegistry );
 
 nsWindowsHooks::nsWindowsHooks() {
   NS_INIT_ISUPPORTS();
@@ -291,6 +291,48 @@ static PRBool isAccessRestricted() {
 
 
 
+// Implementation of method that checks whether the settings match what's in the
+// Windows registry.
+NS_IMETHODIMP
+nsWindowsHooksSettings::GetRegistryMatches( PRBool *_retval ) {
+    NS_ENSURE_ARG( _retval );
+    *_retval = PR_TRUE;
+    // Test registry for all selected attributes.
+    if ( misMatch( mHandleHTTP,   http )
+         ||
+         misMatch( mHandleHTTPS,  https )
+         ||
+         misMatch( mHandleFTP,    ftp )
+         ||
+         misMatch( mHandleCHROME, chrome )
+         ||
+         misMatch( mHandleGOPHER, gopher )
+         ||
+         misMatch( mHandleHTML,   mozillaMarkup )
+         ||
+         misMatch( mHandleJPEG,   jpg )
+         ||
+         misMatch( mHandleGIF,    gif )
+         ||
+         misMatch( mHandlePNG,    png )
+         ||
+         misMatch( mHandleMNG,    mng )
+         ||
+         misMatch( mHandleBMP,    bmp )
+         ||
+         misMatch( mHandleICO,    ico )
+         ||
+         misMatch( mHandleXML,    xml )
+         ||
+         misMatch( mHandleXHTML,  xhtml )
+         ||
+         misMatch( mHandleXUL,    xul ) ) {
+        // Registry is out of synch.
+        *_retval = PR_FALSE;
+    }
+    return NS_OK;
+}
+
 // Implementation of method that checks settings versus registry and prompts user
 // if out of synch.
 NS_IMETHODIMP
@@ -357,35 +399,9 @@ nsWindowsHooks::CheckSettings( nsIDOMWindowInternal *aParent,
         // First, make sure the user cares.
         if ( settings->mShowDialog || installing ) {
             // Look at registry setting for all things that are set.
-            if ( misMatch( settings->mHandleHTTP,   http )
-                 ||
-                 misMatch( settings->mHandleHTTPS,  https )
-                 ||
-                 misMatch( settings->mHandleFTP,    ftp )
-                 ||
-                 misMatch( settings->mHandleCHROME, chrome )
-                 ||
-                 misMatch( settings->mHandleGOPHER, gopher )
-                 ||
-                 misMatch( settings->mHandleHTML,   mozillaMarkup )
-                 ||
-                 misMatch( settings->mHandleJPEG,   jpg )
-                 ||
-                 misMatch( settings->mHandleGIF,    gif )
-                 ||
-                 misMatch( settings->mHandlePNG,    png )
-                 ||
-                 misMatch( settings->mHandleMNG,    mng )
-                 ||
-                 misMatch( settings->mHandleBMP,    bmp )
-                 ||
-                 misMatch( settings->mHandleICO,    ico )
-                 ||
-                 misMatch( settings->mHandleXML,    xml )
-                 ||
-                 misMatch( settings->mHandleXHTML,  xhtml )
-                 ||
-                 misMatch( settings->mHandleXUL,    xul )) {
+            PRBool matches = PR_TRUE;
+            settings->GetRegistryMatches( &matches );
+            if ( !matches ) {
                 // Need to prompt user.
                 // First:
                 //   o We need the common dialog service to show the dialog.
@@ -647,6 +663,40 @@ nsWindowsHooks::SetRegistry() {
     return NS_OK;
 }
 
+NS_IMETHODIMP nsWindowsHooks::GetRegistryEntry( PRInt32 aHKEYConstant, const char *aSubKeyName, const char *aValueName, char **aResult ) {
+    NS_ENSURE_ARG( aResult );
+    *aResult = 0;
+    // Calculate HKEY_* starting point based on input nsIWindowsHooks constant.
+    HKEY hKey;
+    switch ( aHKEYConstant ) {
+        case HKCR:
+            hKey = HKEY_CLASSES_ROOT;
+            break;
+        case HKCC:
+            hKey = HKEY_CURRENT_CONFIG;
+            break;
+        case HKCU:
+            hKey = HKEY_CURRENT_USER;
+            break;
+        case HKLM:
+            hKey = HKEY_LOCAL_MACHINE;
+            break;
+        case HKU:
+            hKey = HKEY_USERS;
+            break;
+        default:
+            return NS_ERROR_INVALID_ARG;
+    }
+
+    // Get requested registry entry.
+    nsCAutoString entry( RegistryEntry( hKey, aSubKeyName, aValueName, 0 ).currentSetting() );
+
+    // Copy to result.
+    *aResult = PL_strdup( entry.get() );
+
+    return *aResult ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+}
+
 // nsIWindowsHooks.idl for documentation
 
 /*
@@ -742,6 +792,7 @@ NS_IMETHODIMP nsWindowsHooks::StartupAddOption(const char* option) {
     newsetting.Append(option);
     startup.setting = newsetting;
     startup.set();    
+    return NS_OK;
 }
 
 /*
@@ -846,18 +897,20 @@ WriteBitmap(nsString& aPath, gfxIImageFrame* aImage)
 
   // write the bitmap headers and rgb pixel data to the file
   nsresult rv = NS_ERROR_FAILURE;
-  PRUint32 written;
-  stream->Write((const char*)&bf, sizeof(BITMAPFILEHEADER), &written);
-  if (written == sizeof(BITMAPFILEHEADER)) {
-    stream->Write((const char*)bmi, sizeof(BITMAPINFOHEADER), &written);
-    if (written == sizeof(BITMAPINFOHEADER)) {
-      stream->Write((const char*)bits, length, &written);
-      if (written == length)
-        rv = NS_OK;
+  if (stream) {
+    PRUint32 written;
+    stream->Write((const char*)&bf, sizeof(BITMAPFILEHEADER), &written);
+    if (written == sizeof(BITMAPFILEHEADER)) {
+      stream->Write((const char*)bmi, sizeof(BITMAPINFOHEADER), &written);
+      if (written == sizeof(BITMAPINFOHEADER)) {
+        stream->Write((const char*)bits, length, &written);
+        if (written == length)
+          rv = NS_OK;
+      }
     }
-  }
   
-  stream->Close();
+    stream->Close();
+  }
   
   return rv;
 }
@@ -944,9 +997,3 @@ nsWindowsHooks::SetImageAsWallpaper(nsIDOMElement* aElement, PRBool aUseBackgrou
 
   return rv;
 }
-
-#if (_MSC_VER == 1100)
-#define INITGUID
-#include "objbase.h"
-DEFINE_OLEGUID(IID_IPersistFile, 0x0000010BL, 0, 0);
-#endif
