@@ -208,9 +208,13 @@ JSBool PR_CALLBACK asd_start_update
 		char* url = JS_GetStringBytes(JSVAL_TO_STRING(argv[0]));
 		/* Bookmarks is a hack, you should really get some SmartUpdate context */
 		MWContext* cx = XP_FindContextOfType(NULL, MWContextBookmarks);
-		
+
+#ifdef JAVA
 		XP_Bool result = SU_StartSoftwareUpdate( cx, url,
 			NULL, NULL, NULL, JSVAL_TO_INT(argv[1]) );
+#else
+		XP_Bool result = false;
+#endif
 		*rval = BOOLEAN_TO_JSVAL(result);
 		return JS_TRUE;
 	}
@@ -246,8 +250,12 @@ JSBool PR_CALLBACK asd_conditional_update
 				char* url = JS_GetStringBytes(JSVAL_TO_STRING(argv[0]));
 				MWContext* cx = XP_FindContextOfType(NULL, MWContextBookmarks);
 
+#ifdef JAVA
 				XP_Bool result = SU_StartSoftwareUpdate( cx, url,
 					NULL, NULL, NULL, JSVAL_TO_INT(argv[3]) );
+#else
+				XP_Bool result = false;
+#endif
 				*rval = BOOLEAN_TO_JSVAL(result);
 				return JS_TRUE;
 			}
