@@ -75,8 +75,11 @@ sub DESTROY
 {
   my ($self) = shift;
 
-  undef %{$self};
-  undef $self;
+  if (defined($self))
+    {
+      undef %{$self} if (%{$self});
+      undef $self;
+    }
 }
 
 
@@ -134,7 +137,8 @@ sub FETCH
 
 #############################################################################
 # Delete method, to keep track of changes. Note that we actually don't
-# delete the attribute, just mark it as deleted.
+# delete the attribute, just mark it as deleted. Now, the $1M question is,
+# why don't we delete this? Seriously guys, this looks wrong...
 #
 sub DELETE
 {
@@ -396,7 +400,6 @@ sub unRemove
   if (defined($self->{"_${attr}_save_"}))
     {
       undef @{$self->{$attr}};
-      delete $self->{$attr};
       $self->{$attr} = [ @{$self->{"_${attr}_save_"}} ];
       undef @{$self->{"_${attr}_save_"}};
       delete $self->{"_${attr}_save_"};
