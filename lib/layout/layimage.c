@@ -42,8 +42,6 @@ extern int MK_OUT_OF_MEMORY;
 #include "libevent.h"
 #endif /* MOCHA */
 
-#include "timing.h"
-
 #ifdef PROFILE
 #pragma profile on
 #endif
@@ -61,6 +59,11 @@ typedef struct lo_ImageObsClosure {
     LO_ImageStruct *lo_image;
     XP_ObserverList obs_list;
 } lo_ImageObsClosure;
+
+/*	ebb - begin */
+static PRBool
+lo_MakeURLFromParam(PA_Block buff, lo_DocState *state, PA_Block *url_buff);
+/*	ebb - end */
 
 extern LO_TextStruct *lo_AltTextElement(MWContext *context);
 
@@ -145,7 +148,10 @@ lo_new_image_element(MWContext *context, lo_DocState *state,
 
     image->is_icon = FALSE;
 	image->image_status = IL_START_URL;
-	
+/*	ebb - begin	*/
+	image->icc_profile_url = NULL;
+/*	ebb - end	*/
+
     return image; 
 }
 
@@ -695,6 +701,9 @@ lo_BodyBackground(MWContext *context, lo_DocState *state, PA_Tag *tag,
 {
     LO_Color rgb;
 	PA_Block buff=NULL;
+/*	ebb - begin */
+	PA_Block url_buff=NULL;
+/*	ebb - end */
 	char *color_str = NULL;
 	char *image_url = NULL;
     CL_Layer *layer;
@@ -787,8 +796,103 @@ lo_BodyBackground(MWContext *context, lo_DocState *state, PA_Tag *tag,
 	}
     }
     
+/*	ebb - begin */
+	/*
+	 * Don't do this if we had an ICCPROFILE from a previous BODY tag.
+	 */
+	if ((state->top_state->body_attr & BODY_ATTR_ICCPROFILE) == 0)
+	{
+		/*
+		 * Get the active anchor ICCPROFILE parameter.
+		 */
+		buff = lo_FetchParamValue(context, tag, PARAM_ICCPROFILE);
+		if (buff != NULL)
+		{
+			if (lo_MakeURLFromParam(buff,state,&url_buff))
+			{
+				state->top_state->icc_profile_url = url_buff;
+				state->top_state->body_attr |= BODY_ATTR_ICCPROFILE;
+			}
+			PA_FREE(buff);
+		}
+	}
+/*	ebb - end */
+
     lo_BodyForeground(context, state, tag);
 }
+
+/*	ebb - begin */
+/*
+	lo_MakeURLFromParam
+	
+	Desc:		Combines several tedious operations into one unit:
+				1. Trys to create a url from a passed string
+				2. If successful it allocates a new buffer and copies
+					the new url into it.
+					
+				The caller is responsible for deleting the new block.
+				
+				buff		contains the url string
+				state		document state, gives access to absolute url
+				url_buff	what we'll pass back if successful
+*/
+static PRBool
+lo_MakeURLFromParam(PA_Block buff, lo_DocState *state, PA_Block *url_buff)
+{
+	char		*str;		// Holds locked PA_Block
+	char		*new_str;	// Holds ptr to complete URL
+	char		*url;
+	int32		len;
+	PA_Block	new_buff = NULL;
+
+    PA_LOCK(str, char *, buff);
+    if (str != NULL)
+    {
+    	/*
+    		If the url = "NONE", we don't want to make an
+    		absolute url, we just want to copy it.
+    	*/
+    	if (strcasecomp(str,"NONE") == 0)
+    	{
+		    new_str = XP_ALLOC(XP_STRLEN(str) + 1);
+			XP_STRNCPY_SAFE(new_str, str, XP_STRLEN(str)+1);
+    	}
+    	else
+		{
+			len = lo_StripTextWhitespace(str, XP_STRLEN(str));
+	    	new_str = NET_MakeAbsoluteURL(state->top_state->base_url, str);
+	    }
+	    
+	    if (new_str != NULL)
+	    {
+			// Allocate a block
+		    new_buff = PA_ALLOC(XP_STRLEN(new_str) + 1);
+		    if (new_buff != NULL)
+		    {
+		    	// Lock the new_buff and copy the new_str into it
+			    PA_LOCK(url, char *, new_buff);
+				XP_STRNCPY_SAFE(url, new_str, XP_STRLEN(new_str)+1);
+			    PA_UNLOCK(new_buff);
+		    }
+		    else
+		    {
+		    	// Tell everybody there's no more mem
+			    state->top_state->out_of_memory = TRUE;
+		    }
+		    XP_FREE(new_str);
+	    }
+	}
+
+	PA_UNLOCK(buff);
+
+	/*
+		Send back what we got, if anything.
+		Return whether we did.
+	*/
+	*url_buff = new_buff;
+	return (new_buff != NULL);
+}
+/*	ebb - end */
 
 static void lo_edt_AvoidImageBlock(LO_ImageStruct *image);
 
@@ -822,6 +926,10 @@ lo_BlockedImageLayout(MWContext *context, lo_DocState *state, PA_Tag *tag,
 {
 	LO_ImageStruct *image;
 	PA_Block buff;
+/*	ebb - begin */
+	PA_Block url_buff;
+	char *url_str;
+/*	ebb - end */
 	char *str;
 	int32 val;
 	/* int32 doc_width; */
@@ -1291,6 +1399,69 @@ lo_BlockedImageLayout(MWContext *context, lo_DocState *state, PA_Tag *tag,
 	image->border_horiz_space = FEUNITS_X(image->border_horiz_space,
 						context);
 
+/*	ebb - begin	*/
+	/*
+	 * Get the optional icc profile parameter.
+	 * First check the top state's body attributes
+	 * to see if it has a profile url, and if it = "NONE".
+	 * If so, we want to write over this URL.
+	 */
+	url_buff = NULL;
+	buff = lo_FetchParamValue(context, tag, PARAM_ICCPROFILE);
+	if (buff != NULL)
+	{
+		/* If we made a url */
+		if (lo_MakeURLFromParam(buff,state,&url_buff))
+		{
+			/* If the BODY tag contained a profile param */
+			if ((state->top_state->body_attr & BODY_ATTR_ICCPROFILE) != 0)
+			{
+				/* If the BODY tag's profile param == "NONE" */
+				PA_LOCK(str, char *, state->top_state->icc_profile_url);
+				if (strcasecomp(str,"NONE") == 0)
+				{
+					/*
+						Write over the image's profile param, which is
+						always going to be longer than "NONE".
+					*/
+					PA_LOCK(url_str, char *, url_buff);
+					XP_STRNCPY_SAFE(url_str, str, XP_STRLEN(str)+1);
+					PA_UNLOCK(buff);
+				}
+				PA_UNLOCK(state->top_state->icc_profile_url);
+			}
+			image->icc_profile_url = url_buff;
+		}
+		PA_FREE(buff);
+	}
+	else
+	{
+		/* If the BODY tag contained a profile param */
+		if ((state->top_state->body_attr & BODY_ATTR_ICCPROFILE) != 0)
+		{
+			/* Allocate a buffer for this profile url */
+			PA_LOCK(str, char *, state->top_state->icc_profile_url);
+			url_buff = PA_ALLOC(XP_STRLEN(str) + 1);
+			if (url_buff)
+			{
+				/*
+					Give the image a copy of the body's url
+				*/
+				PA_LOCK(url_str, char *, url_buff);
+				XP_STRNCPY_SAFE(url_str, str, XP_STRLEN(str)+1);
+				PA_UNLOCK(url_buff);
+			}
+			else
+			{
+				state->top_state->out_of_memory = TRUE;
+			}
+			PA_UNLOCK(state->top_state->icc_profile_url);
+		}
+	}
+	image->icc_profile_url = url_buff;
+
+/*	ebb - end	*/
+
 	lo_FillInImageGeometry( state, image );
 
 	/*
@@ -1499,6 +1670,10 @@ lo_FormatImage(MWContext *context, lo_DocState *state, PA_Tag *tag)
 	LO_ImageStruct *image;
     LO_TextAttr *tptr = NULL;
 	PA_Block buff;
+/*	ebb - begin */
+	PA_Block url_buff;
+	char *url_str;
+/*	ebb - end */
 	char *str;
 	int32 val;
 	/* int32 doc_width; */
@@ -2032,6 +2207,67 @@ lo_FormatImage(MWContext *context, lo_DocState *state, PA_Tag *tag)
 	image->border_horiz_space = FEUNITS_X(image->border_horiz_space,
 						context);
 
+/*	ebb - begin	*/
+	/*
+	 * Get the optional icc profile parameter.
+	 * First check the top state's body attributes
+	 * to see if it has a profile url, and if it = "NONE".
+	 * If so, we want to write over this URL.
+	 */
+	url_buff = NULL;
+	buff = lo_FetchParamValue(context, tag, PARAM_ICCPROFILE);
+	if (buff != NULL)
+	{
+		/* If we made a url */
+		if (lo_MakeURLFromParam(buff,state,&url_buff))
+		{
+			/* If the BODY tag contained a profile param */
+			if ((state->top_state->body_attr & BODY_ATTR_ICCPROFILE) != 0)
+			{
+				/* If the BODY tag's profile param == "NONE" */
+				PA_LOCK(str, char *, state->top_state->icc_profile_url);
+				if (strcasecomp(str,"NONE") == 0)
+				{
+					/*
+						Write over the image's profile param, which is
+						always going to be longer than "NONE".
+					*/
+					PA_LOCK(url_str, char *, url_buff);
+					XP_STRNCPY_SAFE(url_str, str, XP_STRLEN(str)+1);
+					PA_UNLOCK(buff);
+				}
+				PA_UNLOCK(state->top_state->icc_profile_url);
+			}
+			image->icc_profile_url = url_buff;
+		}
+		PA_FREE(buff);
+	}
+	else
+	{
+		/* If the BODY tag contained a profile param */
+		if ((state->top_state->body_attr & BODY_ATTR_ICCPROFILE) != 0)
+		{
+			/* Allocate a buffer for this profile url */
+			PA_LOCK(str, char *, state->top_state->icc_profile_url);
+			url_buff = PA_ALLOC(XP_STRLEN(str) + 1);
+			if (url_buff)
+			{
+				/*
+					Give the image a copy of the body's url
+				*/
+				PA_LOCK(url_str, char *, url_buff);
+				XP_STRNCPY_SAFE(url_str, str, XP_STRLEN(str)+1);
+				PA_UNLOCK(url_buff);
+			}
+			else
+			{
+				state->top_state->out_of_memory = TRUE;
+			}
+			PA_UNLOCK(state->top_state->icc_profile_url);
+		}
+	}
+	image->icc_profile_url = url_buff;
+/*	ebb - end	*/
 
 	lo_FillInImageGeometry( state, image );
 
@@ -3099,6 +3335,9 @@ void lo_GetImage(MWContext *context, IL_GroupContext *img_cx,
     IL_NetContext *net_cx = NULL;
     IL_IRGB *trans_pixel;
     char *image_url, *lowres_image_url, *url_to_fetch;
+/*	ebb - begin */
+    char *icc_profile_url = NULL;
+/*	ebb - begin */
 	IL_ImageReq *dummy_ireq;
 
     /* Safety checks. */
@@ -3207,15 +3446,36 @@ void lo_GetImage(MWContext *context, IL_GroupContext *img_cx,
         }
     }
 
+/*	ebb - begin */
+	/*
+		If we got an icc profile url, load that, but ony
+		if this is not a lowsrc image load.  We don't
+		want to slow down the lowsrc load, and we don't
+		want IL_GetImage to attempt to get the profile twice.
+	*/
+	if (lo_image->icc_profile_url && (lo_image->lowres_image_url == NULL))
+	{
+    	PA_LOCK(icc_profile_url, char *, lo_image->icc_profile_url);
+	}
+/*	ebb - end */			
+
     /* Fetch the image.  We ignore the return value and only set the lo_image's
        image handle in the observer.  Any context-specific scaling of images,
        e.g. for printing, should be handled by the Front End, so we divide the
        image dimensions by the context scaling factors. */
-		dummy_ireq = IL_GetImage(url_to_fetch, img_cx, obs_list,
-                                      trans_pixel,
-                                      lo_image->width / context->convertPixX,
-                                      lo_image->height / context->convertPixY,
-                                      0, net_cx);
+		dummy_ireq = IL_GetImage(	url_to_fetch,
+/*	ebb - begin */
+									icc_profile_url,
+/*	ebb - end */			
+									img_cx,
+									obs_list,
+									trans_pixel,
+									lo_image->width / context->convertPixX,
+									lo_image->height / context->convertPixY,
+									/* Special flag for Editor so the correct stream
+									 converter is used (see IL_ViewStream in libimg/src/external.c */
+									context->is_editor ? 0x000000ED : 0, 
+									net_cx);
 
 		if(( dummy_ireq != lo_image->lowres_image_req ) && url_to_fetch )
 			lo_image->image_req = dummy_ireq;
@@ -3231,6 +3491,16 @@ void lo_GetImage(MWContext *context, IL_GroupContext *img_cx,
     if (lo_image->lowres_image_url)
         PA_UNLOCK(lo_image->lowres_image_url);
     PA_UNLOCK(lo_image->image_url);
+
+/*	ebb - begin */
+	/*
+		Unlock the icc_profile_url PA_Block if it was locked above.
+	*/
+	if (lo_image->icc_profile_url && (lo_image->lowres_image_url == NULL))
+	{
+		PA_UNLOCK(lo_image->icc_profile_url);
+	}
+/*	ebb - end */
 }
 
 /* 
