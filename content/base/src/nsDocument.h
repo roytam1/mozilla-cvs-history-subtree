@@ -521,6 +521,8 @@ public:
 
   NS_IMETHOD SetDocumentURL(nsIURI* aURI);
 
+  virtual nsresult Init();
+
 protected:
   NS_IMETHOD GetDTD(nsIDTD** aDTD) const;
 
@@ -530,7 +532,6 @@ protected:
 
   nsDocument();
   virtual ~nsDocument(); 
-  nsresult Init();
 
   nsIArena* mArena;
   nsString mDocumentTitle;

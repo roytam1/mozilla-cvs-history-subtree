@@ -30,11 +30,11 @@
 #include "nsIDOMNSHTMLDocument.h"
 #include "nsIDOMHTMLBodyElement.h"
 #include "nsIHTMLContentContainer.h"
-#include "nsHashtable.h"
 #include "jsapi.h"
 #include "rdf.h"
 #include "nsRDFCID.h"
 #include "nsIRDFService.h"
+#include "pldhash.h"
 
 // Doc write dummy request
 #include "nsIChannel.h"
@@ -58,6 +58,7 @@ class nsHTMLDocument : public nsMarkupDocument,
 public:
   nsHTMLDocument();
   virtual ~nsHTMLDocument();
+  virtual nsresult Init();
 
   NS_IMETHOD QueryInterface(REFNSIID aIID, void** aInstancePtr);
 
@@ -161,20 +162,17 @@ protected:
 
   nsresult RegisterNamedItems(nsIContent *aContent);
   nsresult UnregisterNamedItems(nsIContent *aContent);
-  nsresult AddToNameTable(const nsAReadableString& aName,
-                          nsIContent *aContent);
-  nsresult AddToIdTable(const nsAReadableString& aId, nsIContent *aContent,
-                        PRBool aPutInTable);
-  nsresult RemoveFromNameTable(const nsAReadableString& aName,
-                               nsIContent *aContent);
+  nsresult UpdateNameTableEntry(const nsAString& aName,
+                                nsIContent *aContent);
+  nsresult AddToIdTable(const nsAString& aId, nsIContent *aContent);
+  nsresult UpdateIdTableEntry(const nsAString& aId, nsIContent *aContent);
+  nsresult RemoveFromNameTable(const nsAString& aName, nsIContent *aContent);
   nsresult RemoveFromIdTable(nsIContent *aContent);
 
   void InvalidateHashTables();
   nsresult PrePopulateHashTables();
 
   nsIContent *MatchId(nsIContent *aContent, const nsAReadableString& aId);
-  void FindNamedItems(const nsAReadableString& aName, nsIContent *aContent,
-                      nsBaseContentList& aList);
 
   virtual void InternalAddStyleSheet(nsIStyleSheet* aSheet);
   virtual void InternalInsertStyleSheetAt(nsIStyleSheet* aSheet,
@@ -235,10 +233,11 @@ protected:
   /*
    * Bug 13871: Frameset spoofing - find out if document.domain was set
    */
-  PRBool       mDomainWasSet;
+  PRPackedBool mDomainWasSet;
+  PRPackedBool mIdAndNameHashIsLive;
 
-  nsHashtable mNameHashTable;
-  nsHashtable mIdHashTable;
+  PLDHashTable mIdAndNameHashTable;
+
   nsCOMPtr<nsIRequest> mDocWriteDummyRequest;
 };
 
