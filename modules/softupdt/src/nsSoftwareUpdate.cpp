@@ -33,7 +33,6 @@
 #include "nsInstallExecute.h"
 #include "nsInstallPatch.h"
 #include "nsUninstallObject.h"
-#include "nsVersionRegistry.h"
 #include "nsSUError.h"
 #include "nsWinProfile.h"
 #include "nsWinReg.h"
@@ -49,7 +48,7 @@
 #include "xpgetstr.h"
 #include "pw_public.h"
 
-#include "NSReg.h"
+#include "VerReg.h"
 
 #ifdef XP_MAC
 #include "su_aplsn.h"
@@ -246,6 +245,7 @@ nsFolderSpec* nsSoftwareUpdate::GetFolder(char* folderID, char* *errorMsg)
  */
 nsFolderSpec* nsSoftwareUpdate::GetComponentFolder(char* component)
 {
+  int err;
   char* dir;
   char* qualifiedComponent;
   
@@ -258,10 +258,25 @@ nsFolderSpec* nsSoftwareUpdate::GetComponentFolder(char* component)
         return NULL;
   }
   
-  dir = nsVersionRegistry::getDefaultDirectory( qualifiedComponent );
+  dir = (char*)XP_CALLOC(MAXREGPATHLEN, sizeof(char));
+  err = VR_GetDefaultDirectory( qualifiedComponent, MAXREGPATHLEN, dir );
+  if (err != REGERR_OK)
+  {
+     XP_FREEIF(dir);
+     dir = NULL;
+  }
 
-  if ( dir == NULL ) {
-    dir = nsVersionRegistry::componentPath( qualifiedComponent );
+  if ( dir == NULL ) 
+  {
+    dir = (char*)XP_CALLOC(MAXREGPATHLEN, sizeof(char));
+    err = VR_GetPath( qualifiedComponent, MAXREGPATHLEN, dir );
+    if (err != REGERR_OK)
+    {
+        XP_FREEIF(dir);
+        dir = NULL;
+    }
+    
+
     if ( dir != NULL ) {
       int i;
 
@@ -552,7 +567,16 @@ PRInt32 nsSoftwareUpdate::StartInstall(char* vrPackageName,
 	}
       
   // set up default package folder, if any
-  char* path = nsVersionRegistry::getDefaultDirectory( packageName );
+  int err;
+
+  char*  path = (char*)XP_CALLOC(MAXREGPATHLEN, sizeof(char));
+  err = VR_GetDefaultDirectory( packageName, MAXREGPATHLEN, path );
+  if (err != REGERR_OK)
+  {
+     XP_FREEIF(path);
+     path = NULL;
+  }
+
   if ( path !=  NULL ) {
     packageFolder = new nsFolderSpec("Installed", path, userPackageName);
     XP_FREEIF(path); 
@@ -674,7 +698,7 @@ PRInt32 nsSoftwareUpdate::FinalizeInstall(char* *errorMsg)
   
   if ( bUninstallPackage )
   {
-	  nsVersionRegistry::uninstallCreate(packageName, userPackageName);
+	  VR_UninstallCreateNode( packageName, userPackageName );
   }
 
   PRUint32 i=0;
@@ -692,13 +716,11 @@ PRInt32 nsSoftwareUpdate::FinalizeInstall(char* *errorMsg)
   // add overall version for package
   if ( (versionInfo != NULL) && (bRegisterPackage)) 
   {
-    result = nsVersionRegistry::installComponent(packageName, NULL, 
-                                                 versionInfo);
-  
+    result = VR_Install( packageName, NULL, versionInfo->toString(), PR_FALSE );
     // Register default package folder if set
 	if ( packageFolder != NULL )
 	{
-		nsVersionRegistry::setDefaultDirectory( packageName, packageFolder->toString() );
+		VR_SetDefaultDirectory( packageName, packageFolder->toString() );
 	}
   
   }
@@ -805,6 +827,7 @@ PRInt32 nsSoftwareUpdate::AddSubcomponent(char* name,
 {
   nsInstallFile* ie;
   int result = nsSoftwareUpdate_SUCCESS;
+  int err;  /* does not get saved */
   *errorMsg = NULL;
   char *new_name;
 
@@ -851,9 +874,18 @@ PRInt32 nsSoftwareUpdate::AddSubcomponent(char* name,
   PRBool versionNewer = PR_FALSE;
   if ( (forceInstall == PR_FALSE ) &&
        (version !=  NULL) &&
-       ( nsVersionRegistry::validateComponent( new_name ) == 0 ) ) 
+       ( VR_ValidateComponent( new_name ) == 0 ) ) 
   {
-    nsVersionInfo* oldVersion = nsVersionRegistry::componentVersion(new_name);
+
+    VERSION versionStruct;
+
+    err = VR_GetVersion( new_name, &versionStruct );
+        
+    nsVersionInfo* oldVersion = new nsVersionInfo(versionStruct.major,
+                                                  versionStruct.minor,
+                                                  versionStruct.release,
+                                                  versionStruct.build,
+                                                  versionStruct.check);
     
 	if ( version->compareTo( oldVersion ) != nsVersionEnum_EQUAL )
       versionNewer = PR_TRUE;
@@ -1314,14 +1346,24 @@ PRInt32 nsSoftwareUpdate::AddDirectory(char* name,
     char* fullRegName = XP_Cat(qualified_name, "/", matchingFiles[i]);
           
     if ( (forceInstall == PR_FALSE) && (version != NULL) &&
-         (nsVersionRegistry::validateComponent(fullRegName) == 0) ) {
+         (VR_ValidateComponent(fullRegName) == 0) ) 
+    {
       // Only install if newer
-      nsVersionInfo* oldVer = nsVersionRegistry::componentVersion(fullRegName);
+      VERSION versionStruct;
+      VR_GetVersion( fullRegName, &versionStruct );
+
+      
+      nsVersionInfo* oldVer = new nsVersionInfo(versionStruct.major,
+                                                versionStruct.minor,
+                                                versionStruct.release,
+                                                versionStruct.build,
+                                                versionStruct.check);
+         
       bInstall = ( version->compareTo(oldVer) > 0 );
       
 	  if (oldVer)
 		  delete oldVer;
-	  
+
     } else {
       // file doesn't exist or "forced" install
       bInstall = PR_TRUE;

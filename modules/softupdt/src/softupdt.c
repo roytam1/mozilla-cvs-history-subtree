@@ -1554,7 +1554,12 @@ XP_Bool su_RegPackTime()
         su_SetLastRegPackTime(nowSecInt);
         return FALSE;
     }
-
+GetPathname( vreg, curver, NAVHOME, dirbuf, sizeof(dirbuf) );
+D:\gromit_classic\mozilla\modules\libreg\src\VerReg.c(530):                err = vr_SetPathname( vreg, curver, NAVHOME, programPath );
+D:\gromit_classic\mozilla\modules\libreg\src\VerReg.c(542):                err = vr_GetPathname( vreg, state, NAVHOME, dirbuf, sizeof(dirbuf) );
+D:\gromit_classic\mozilla\modules\libreg\src\VerReg.c(587):            err = vr_SetPathname( vreg, curver, NAVHOME, programPath );
+D:\gromit_classic\mozilla\modules\libreg\src\VerReg.c(1970):         err = vr_GetPathname( vreg, key, NAVHOME, dirbuf, sizeof(dirbuf) );
+7 occurrence(s) have been found.
     i = nowSecInt - lastRegPackTime;
     if ((i > intervalSec) || (i < 0))
     {

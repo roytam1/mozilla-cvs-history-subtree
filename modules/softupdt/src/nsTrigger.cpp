@@ -21,7 +21,7 @@
 #include "prlog.h"
 #include "xp.h"
 
-#include "NSReg.h"
+#include "VerReg.h"
 #include "softupdt.h"
 #include "su_folderspec.h"
 #define NEW_FE_CONTEXT_FUNCS
@@ -30,7 +30,6 @@
 #include "prefapi.h"
 
 #include "nsTrigger.h"
-#include "nsVersionRegistry.h"
 
 PR_BEGIN_EXTERN_C
 
@@ -58,9 +57,21 @@ PRBool nsTrigger::UpdateEnabled(void)
 nsVersionInfo* nsTrigger::GetVersionInfo( char* componentName )
 {
   if (UpdateEnabled())
-    return nsVersionRegistry::componentVersion( componentName );
-  else
-    return NULL;
+  {
+    VERSION versionStruct;
+    VR_GetVersion( componentName, &versionStruct );
+    nsVersionInfo* oldVersion = new nsVersionInfo(versionStruct.major,
+                                                  versionStruct.minor,
+                                                  versionStruct.release,
+                                                  versionStruct.build,
+                                                  versionStruct.check);
+    
+
+
+    return oldVersion;
+  }
+  
+  return NULL;
 }
 
 /**
@@ -123,15 +134,23 @@ nsTrigger::ConditionalSoftwareUpdate(char* url,
   if ((versionInfo == NULL) || (componentName == NULL))
     needJar = PR_TRUE;
   else {
-    int stat = nsVersionRegistry::validateComponent( componentName );
+    int stat = VR_ValidateComponent( componentName );
     if ( stat == REGERR_NOFIND ||
          stat == REGERR_NOFILE ) {
       // either component is not in the registry or it's a file
       // node and the physical file is missing
       needJar = PR_TRUE;
-    } else {
-      nsVersionInfo* oldVer = 
-        nsVersionRegistry::componentVersion( componentName );
+    } 
+    else 
+    {
+      VERSION versionStruct;
+      VR_GetVersion( componentName, &versionStruct );
+      nsVersionInfo* oldVer = new nsVersionInfo(versionStruct.major,
+                                                  versionStruct.minor,
+                                                  versionStruct.release,
+                                                  versionStruct.build,
+                                                  versionStruct.check);
+          
 
       if ( oldVer == NULL )
         needJar = PR_TRUE;
@@ -184,7 +203,7 @@ PRInt32 nsTrigger::CompareVersion( char* regName, nsVersionInfo* version )
   nsVersionInfo* regVersion = GetVersionInfo( regName );
 
   if ( regVersion == NULL ||
-       nsVersionRegistry::validateComponent( regName ) == REGERR_NOFILE ) {
+       VR_ValidateComponent( regName ) == REGERR_NOFILE ) {
 
     if (regVersion) delete regVersion;
     regVersion = new nsVersionInfo(0,0,0,0,0);

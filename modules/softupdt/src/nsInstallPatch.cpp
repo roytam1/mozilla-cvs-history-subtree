@@ -32,11 +32,12 @@
 
 #include "nsInstallPatch.h"
 #include "nsSoftUpdateEnums.h"
-#include "nsVersionRegistry.h"
 #include "nsSUError.h"
 
 #include "nsTarget.h"
 #include "nsPrivilegeManager.h"
+
+#include "VerReg.h"
 
 extern int SU_ERROR_NO_SUCH_COMPONENT;
 extern int SU_ERROR_INSTALL_FILE_UNEXPECTED;
@@ -61,6 +62,8 @@ nsInstallPatch::nsInstallPatch(nsSoftwareUpdate* inSoftUpdate,
                                char* inJarLocation,
                                char* *errorMsg) : nsInstallObject(inSoftUpdate)
 {
+  int err;
+
   vrName = NULL;
   versionInfo = NULL;
   jarLocation = NULL;
@@ -70,7 +73,16 @@ nsInstallPatch::nsInstallPatch(nsSoftwareUpdate* inSoftUpdate,
   *errorMsg = checkPrivileges();
   if (*errorMsg != NULL)
     return;
-  targetfile = nsVersionRegistry::componentPath( vrName );
+  
+  targetfile = (char*)XP_CALLOC(MAXREGPATHLEN, sizeof(char));
+  err = VR_GetPath( vrName, MAXREGPATHLEN, targetfile );
+  
+  if (err != REGERR_OK)
+  {
+     XP_FREEIF(targetfile);
+     targetfile = NULL;
+  }
+
   if ( targetfile == NULL ) {
     *errorMsg = SU_GetErrorMsg4(SU_ERROR_NO_SUCH_COMPONENT, 
                                 nsSoftUpdateError_NO_SUCH_COMPONENT);
@@ -262,8 +274,7 @@ char* nsInstallPatch::Complete(void)
     err = NativeReplace( targetfile, patchedfile );
     
     if ( 0 == err || nsSoftwareUpdate_REBOOT_NEEDED == err ) {
-      err = nsVersionRegistry::installComponent( vrName, targetfile, versionInfo);
-
+      err = VR_Install( vrName, targetfile, versionInfo->toString(), PR_FALSE );
       if ( err != 0 ) {
         char *msg = XP_Cat("Install component failed ", targetfile);
         errorMsg = SU_GetErrorMsg3(msg, err);

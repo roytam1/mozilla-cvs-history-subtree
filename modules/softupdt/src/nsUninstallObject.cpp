@@ -24,7 +24,6 @@
 #include "xp.h"
 #include "NSReg.h"
 #include "softupdt.h"
-#include "nsVersionRegistry.h"
 #include "nsPrivilegeManager.h"
 #include "nsTarget.h"
 #include "nsSUError.h"
@@ -39,6 +38,8 @@ nsUninstallObject::nsUninstallObject(nsSoftwareUpdate* inSoftUpdate,
                                      char* inRegName, 
                                      char* *errorMsg) : nsInstallObject(inSoftUpdate)
 {
+  int err;
+
   regName = NULL;
   userName = NULL;
   if ( (inRegName == NULL) || (XP_STRLEN(inRegName) == 0) ) {
@@ -73,8 +74,16 @@ nsUninstallObject::nsUninstallObject(nsSoftwareUpdate* inSoftUpdate,
     }
   }
 
-  userName = nsVersionRegistry::getUninstallUserName( regName );
-  if ( userName == NULL ) {
+  userName = (char*)XP_CALLOC(MAXREGPATHLEN, sizeof(char));
+  err = VR_GetUninstallUserName( regName, userName, MAXREGPATHLEN );
+  if (err != REGERR_OK)
+  {
+     XP_FREEIF(userName);
+     userName = NULL;
+  }
+
+  if ( userName == NULL ) 
+  {
     char *msg = NULL;
     msg = PR_sprintf_append(msg, "No such component %s", regName);
     *errorMsg = SU_GetErrorMsg3(msg, nsSoftUpdateError_NO_SUCH_COMPONENT);
@@ -163,7 +172,7 @@ char* nsUninstallObject::NativeComplete(char* regname)
 */
 protected boolean CanUninstall()
 {
-    return false;
+    return PR_FALSE;
 }
 
 /* RegisterPackageNode
@@ -172,7 +181,7 @@ protected boolean CanUninstall()
 */
 protected boolean RegisterPackageNode()
 {
-    return false;
+    return PR_FALSE;
 }
 
 PR_END_EXTERN_C
