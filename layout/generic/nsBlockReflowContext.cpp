@@ -356,6 +356,10 @@ nsBlockReflowContext::ReflowBlock(const nsRect&       aSpace,
   mX = x;
   mY = y;
 
+  // XXX We should always be doing AlignBlockHorizontally here now, if we
+  // need the function at all.  It should probably be replaced by code in
+  // nsHTMLReflowState, though.
+
   // If it's an auto-width table, then it doesn't behave like other blocks
   // XXX why not for a floating table too?
   if (aFrameRS.mStyleDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE &&
