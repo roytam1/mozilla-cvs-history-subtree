@@ -269,7 +269,7 @@ RDFTreeBuilderImpl::RDFTreeBuilderImpl(void)
         kContainerAtom         = NS_NewAtom("container");
         kContentsGeneratedAtom = NS_NewAtom("contentsGenerated");
 
-        kIdAtom              = NS_NewAtom("id");
+        kIdAtom              = NS_NewAtom("ID");
         kOpenAtom            = NS_NewAtom("open");
         kResourceAtom        = NS_NewAtom("resource");
 
