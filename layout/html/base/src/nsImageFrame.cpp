@@ -1095,6 +1095,22 @@ nsImageFrame::GetAnchorHREFAndTarget(nsString& aHref, nsString& aTarget)
   return status;
 }
 
+NS_IMETHODIMP
+nsImageFrame::CanContinueTextRun(PRBool& aContinueTextRun) const
+{
+  NS_ASSERTION(mStyleContext, "null style context is really really bad");
+
+  // check for block element: 
+  // we only contine a text run if we are NOT acting as a block
+  const nsStyleDisplay* display =
+    (const nsStyleDisplay*)mStyleContext->GetStyleData(eStyleStruct_Display);
+  NS_ASSERTION(display, "null display style struct - how?");
+
+  aContinueTextRun = !(display->IsBlockLevel());
+  return NS_OK;
+}
+
+
 NS_IMETHODIMP  
 nsImageFrame::GetContentForEvent(nsIPresContext* aPresContext,
                                  nsEvent* aEvent,
@@ -1242,6 +1258,11 @@ nsImageFrame::AttributeChanged(nsIPresContext* aPresContext,
   if (nsHTMLAtoms::src == aAttribute) {
     nsAutoString newSRC;
     aChild->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::src, newSRC);
+
+    PRUint32 loadStatus = imgIRequest::STATUS_ERROR;
+
+    if (mImageRequest)
+      mImageRequest->GetImageStatus(&loadStatus);
 
     if (mImageRequest) {
       mFailureReplace = PR_FALSE; // don't cause a CantRenderReplacedElement call
