@@ -27,9 +27,9 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <time.h>
-#ifdef hpux
+#ifdef HPUX
 #include <strings.h>
-#endif /* hpux */
+#endif /* HPUX */
 
 #ifdef _WINDOWS
 #  define FD_SETSIZE		256	/* number of connections we support */
@@ -46,9 +46,9 @@
 # include <arpa/inet.h>
 #endif
 # include <netdb.h>
-#if !defined(hpux) && !defined(SUNOS4) && !defined(LINUX) && !defined(XP_BEOS)
+#if !defined(HPUX) && !defined(SUNOS4) && !defined(LINUX) && !defined(XP_BEOS)
 # include <sys/select.h>
-#endif /* !defined(hpux) and others */
+#endif /* !defined(HPUX) and others */
 #endif /* _WINDOWS */
 
 #if defined(IRIX)
@@ -685,11 +685,11 @@ void ldap_add_result_entry( LDAPMessage **list, LDAPMessage *e );
 /*
  * in compat.c
  */
-#ifdef hpux
+#ifdef HPUX
 char *nsldapi_compat_ctime_r( const time_t *clock, char *buf, int buflen );
 struct hostent *nsldapi_compat_gethostbyname_r( const char *name,
 	struct hostent *result, char *buffer, int buflen, int *h_errnop );
-#endif /* hpux */
+#endif /* HPUX */
 
 /*
  * in control.c
