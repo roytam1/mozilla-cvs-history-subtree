@@ -2834,7 +2834,6 @@ nsresult MakeUnique(nsILocalFile* file)
         if (NS_FAILED(rv))
             break;
     }
-    Recycle(leafName);
     return rv;
 }
 
