@@ -39,7 +39,6 @@ pref("editor.hrule.shading",                true);
 pref("editor.hrule.align",                  1); // center
 
 pref("editor.table.maintain_structure", true);
-pref("editor.table.delete_key", 0);
 
 pref("editor.prettyprint", true);
 
