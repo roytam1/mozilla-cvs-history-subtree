@@ -271,7 +271,7 @@ public:
     Node* popCurrentNode();
 
     void processAttrValueTemplate(const String& aAttValue,
-                                  Element* aContext,
+                                  Node* aContext,
                                   String& aResult);
 
     /**

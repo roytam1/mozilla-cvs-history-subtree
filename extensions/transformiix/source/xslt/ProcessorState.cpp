@@ -606,13 +606,31 @@ Node* ProcessorState::popCurrentNode() {
 } //-- popCurrentNode
 
 void ProcessorState::processAttrValueTemplate(const String& aAttValue,
-                                              Element* aContext,
+                                              Node* aContext,
                                               String& aResult)
 {
     aResult.clear();
-    txPSParseContext pContext(this, aContext);
+    Element* xpathParse = 0;
+    switch (aContext->getNodeType()) {
+        case Node::ELEMENT_NODE:
+            xpathParse = (Element*)aContext;
+            break;
+        case Node::ATTRIBUTE_NODE:
+        case Node::TEXT_NODE:
+        case Node::CDATA_SECTION_NODE:
+        case Node::COMMENT_NODE:
+            xpathParse = (Element*)(aContext->getXPathParent());
+            break;
+        case Node::DOCUMENT_NODE:
+            xpathParse = ((Document*)aContext)->getDocumentElement();
+            break;
+        default:
+            NS_ASSERTION(0, "unexpected Nodetype for aContext");
+            return;
+    }
+    txPSParseContext pContext(this, xpathParse);
     Element* oldXPath = mXPathParseContext;
-    mXPathParseContext = aContext;
+    mXPathParseContext = xpathParse;
     AttributeValueTemplate* avt =
         exprParser.createAttributeValueTemplate(aAttValue, &pContext);
     mXPathParseContext = oldXPath;
