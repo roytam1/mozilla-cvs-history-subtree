@@ -993,9 +993,18 @@ chase_one_referral( LDAP *ld, LDAPRequest *lr, LDAPRequest *origreq,
 		srv->lsrv_host = NULL;
 	} else {
 		if ( ludp->lud_host == NULL ) {
-			srv->lsrv_host = nsldapi_strdup( ld->ld_defhost );
+		  srv->lsrv_host =
+		    nsldapi_strdup( origreq->lr_conn->lconn_server->lsrv_host );
+		  LDAPDebug( LDAP_DEBUG_TRACE,
+		    "chase_one_referral: using hostname '%s' from original "
+		    "request on new request\n",
+		    srv->lsrv_host, 0, 0);
 		} else {
-			srv->lsrv_host = nsldapi_strdup( ludp->lud_host );
+		  srv->lsrv_host = nsldapi_strdup( ludp->lud_host );
+		  LDAPDebug( LDAP_DEBUG_TRACE,
+		    "chase_one_referral: using hostname '%s' as specified "
+		    "on new request\n",
+		    srv->lsrv_host, 0, 0);
 		}
 
 		if ( srv->lsrv_host == NULL ) {
@@ -1006,10 +1015,18 @@ chase_one_referral( LDAP *ld, LDAPRequest *lr, LDAPRequest *origreq,
 		}
 	}
 
-	if ( ludp->lud_port == 0 ) {
-		srv->lsrv_port = ( secure ) ? LDAPS_PORT : LDAP_PORT;
+	if ( ludp->lud_port == 0 && ludp->lud_host == NULL ) {
+		srv->lsrv_port = origreq->lr_conn->lconn_server->lsrv_port;
+		LDAPDebug( LDAP_DEBUG_TRACE,
+		    "chase_one_referral: using port (%d) from original "
+		    "request on new request\n",
+		    srv->lsrv_port, 0, 0);
 	} else {
 		srv->lsrv_port = ludp->lud_port;
+		LDAPDebug( LDAP_DEBUG_TRACE,
+		    "chase_one_referral: using port (%d) as specified on "
+		    "new request\n",
+		    srv->lsrv_port, 0, 0);
 	}
 
 	if ( secure ) {
