@@ -268,7 +268,7 @@ pref("ldap_2.prefs_migrated",      false);
 pref("mailnews.confirm.moveFoldersToTrash", true);
 
 pref("mailnews.start_page.url", "chrome://messenger-region/locale/region.properties");
-pref("mailnews.start_page.enabled", true);
+pref("mailnews.start_page.enabled", false);
 
 pref("mailnews.account_central_page.url", "chrome://messenger/locale/messenger.properties");
 
