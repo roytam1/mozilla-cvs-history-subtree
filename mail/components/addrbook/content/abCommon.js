@@ -677,6 +677,14 @@ function CloseAbView()
 function SetAbView(uri, searchView, sortColumn, sortDirection)
 {
   var actualSortColumn;
+  
+  // make sure sortColumn and sortDirection have non null values before calling gAbView.init
+  if (!sortColumn)
+		sortColumn = kDefaultSortColumn;
+
+  if (!sortDirection)
+		sortDirection = kDefaultAscending;
+
   if (gAbView && gCurDirectory == GetSelectedDirectory())
   {
     // re-init the view
@@ -687,11 +695,6 @@ function SetAbView(uri, searchView, sortColumn, sortDirection)
   CloseAbView();
 
 		gCurDirectory = GetSelectedDirectory();
-  if (!sortColumn)
-    sortColumn = kDefaultSortColumn;
-
-  if (!sortDirection)
-    sortDirection = kDefaultAscending;
 
   gAbView = Components.classes["@mozilla.org/addressbook/abview;1"].createInstance(Components.interfaces.nsIAbView);
 
