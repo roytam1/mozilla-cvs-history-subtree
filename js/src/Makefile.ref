@@ -130,6 +130,7 @@ OTHER_HFILES =		\
 	jsopcode.tbl	\
 	js.msg		\
 	jsshell.msg	\
+	$(OBJDIR)/jsautocfg.h	\
 	$(NULL)
 
 HFILES = $(JS_HFILES) $(API_HFILES) $(OTHER_HFILES)
