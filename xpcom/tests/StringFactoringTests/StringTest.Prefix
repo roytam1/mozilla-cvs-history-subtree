@@ -1,4 +1,0 @@
-// StringTest.Prefix
-
-#define SCC_TESTS
-#define NEW_STRING_APIS
