@@ -1004,9 +1004,7 @@ nsComboboxControlFrame::ReflowCombobox(nsIPresContext *         aPresContext,
   // it to a resize reflow.
   nsReflowReason reason = aReflowState.reason;
   if (reason == eReflowReason_Incremental) {
-    nsIFrame* target;
-    aReflowState.reflowCommand->GetTarget(target);
-    if (target == this)
+    if (aReflowState.path->mReflowCommand)
       reason = eReflowReason_Resize;
   }
 
@@ -1014,10 +1012,9 @@ nsComboboxControlFrame::ReflowCombobox(nsIPresContext *         aPresContext,
   // set up a new reflow state and reflow the area frame at that size
   nsSize availSize(dispWidth + aBorderPadding.left + aBorderPadding.right, 
                    dispHeight + aBorderPadding.top + aBorderPadding.bottom);
-  nsHTMLReflowState kidReflowState(aPresContext, aReflowState, this, availSize);
+  nsHTMLReflowState kidReflowState(aPresContext, aReflowState, this, availSize, reason);
   kidReflowState.mComputedWidth  = dispWidth;
   kidReflowState.mComputedHeight = dispHeight;
-  kidReflowState.reason = reason;
 
 #ifdef IBMBIDI
   const nsStyleVisibility* vis;
@@ -1045,8 +1042,7 @@ nsComboboxControlFrame::ReflowCombobox(nsIPresContext *         aPresContext,
   // and it is completely anonymous, so we must manually reflow it
   nsSize txtAvailSize(dispWidth - aBtnWidth, dispHeight);
   nsHTMLReflowMetrics txtKidSize(&txtAvailSize);
-  nsHTMLReflowState   txtKidReflowState(aPresContext, aReflowState, aDisplayFrame, txtAvailSize);
-  txtKidReflowState.reason = reason;
+  nsHTMLReflowState   txtKidReflowState(aPresContext, aReflowState, aDisplayFrame, txtAvailSize, reason);
 
   aDisplayFrame->WillReflow(aPresContext);
   //aDisplayFrame->MoveTo(aPresContext, dspBorderPadding.left + aBorderPadding.left, dspBorderPadding.top + aBorderPadding.top);
@@ -1334,10 +1330,17 @@ nsComboboxControlFrame::Reflow(nsIPresContext*          aPresContext,
   // Only reflow the display and button 
   // if they are the target of the incremental reflow, unless they change size. 
   if (eReflowReason_Incremental == aReflowState.reason) {
-    nsIFrame* targetFrame;
-    firstPassState.reflowCommand->GetTarget(targetFrame);
+    nsIFrame* targetFrame = nsnull;
+    nsHTMLReflowCommand *command = firstPassState.path->mReflowCommand;
+    // XXXwaterson It would seem like we need to deal with incremental
+    // reflows targeted at mDropdownFrame, etc. Possibly do this by
+    // targeting _this_ frame and using the `child' field?  (Like
+    // tables...) However, comboboxes appear to work fine with this
+    // code completely `broken'. At some point, we probably ought to
+    // track down why this code is necessary, or remove it.
+
     // Check to see if we are the target of the Incremental Reflow
-    if (targetFrame == this) {
+    if (command) {
       // We need to check here to see if we can get away with just reflowing
       // the combobox and not the dropdown
       REFLOW_DEBUG_MSG("-----------------Target is Combobox------------\n");
@@ -1368,7 +1371,7 @@ nsComboboxControlFrame::Reflow(nsIPresContext*          aPresContext,
       // so we need to do a full reflow and resize ourself
       REFLOW_DEBUG_MSG("------------Do Full Reflow----\n\n");
       firstPassState.reason = eReflowReason_StyleChange;
-      firstPassState.reflowCommand = nsnull;
+      firstPassState.path = nsnull;
       forceReflow = PR_TRUE;
 
     } else {
@@ -1423,8 +1426,6 @@ nsComboboxControlFrame::Reflow(nsIPresContext*          aPresContext,
           plainLstFrame->FirstChild(aPresContext, nsnull, &frame);
           nsIScrollableFrame * scrollFrame;
           if (NS_SUCCEEDED(frame->QueryInterface(NS_GET_IID(nsIScrollableFrame), (void**)&scrollFrame))) {
-            nsIFrame * incrementalChild;
-            aReflowState.reflowCommand->GetNext(incrementalChild);
             nsRect rect;
             plainLstFrame->GetRect(rect);
             plainLstFrame->Reflow(aPresContext, aDesiredSize, aReflowState, aStatus);
@@ -1452,7 +1453,7 @@ nsComboboxControlFrame::Reflow(nsIPresContext*          aPresContext,
         REFLOW_DEBUG_MSG("---- Doing Reflow as StyleChange\n");
       }
       firstPassState.reason = eReflowReason_StyleChange;
-      firstPassState.reflowCommand = nsnull;
+      firstPassState.path = nsnull;
       mListControlFrame->SetOverrideReflowOptimization(PR_TRUE);
       forceReflow = PR_TRUE;
     }

@@ -102,7 +102,7 @@ nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*      aPresContext,
   parentReflowState = nsnull;
   frame = aFrame;
   reason = aReason;
-  reflowCommand = nsnull;
+  path = nsnull;
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
   rendContext = aRenderingContext;
@@ -121,7 +121,7 @@ nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*      aPresContext,
 // reflow.
 nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*      aPresContext,
                                      nsIFrame*            aFrame,
-                                     nsHTMLReflowCommand& aReflowCommand,
+                                     nsReflowPath*        aReflowPath,
                                      nsIRenderingContext* aRenderingContext,
                                      const nsSize&        aAvailableSpace)
   : mReflowDepth(0)
@@ -130,9 +130,9 @@ nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*      aPresContext,
 
   mFlags.mSpecialHeightReflow = mFlags.mUnused = 0;
   reason = eReflowReason_Incremental;
+  path = aReflowPath;
   parentReflowState = nsnull;
   frame = aFrame;
-  reflowCommand = &aReflowCommand;
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
   rendContext = aRenderingContext;
@@ -162,9 +162,13 @@ nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*          aPresContext,
   parentReflowState = &aParentReflowState;
   frame = aFrame;
   reason = aReason;
-  reflowCommand = (reason == eReflowReason_Incremental)
-    ? aParentReflowState.reflowCommand
-    : nsnull;
+  if (reason == eReflowReason_Incremental) {
+    path = aParentReflowState.path->GetSubtreeFor(aFrame);
+    NS_ASSERTION(path != nsnull, "frame not on incremental reflow path");
+  }
+  else
+    path = nsnull;
+
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
 
@@ -198,7 +202,13 @@ nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*          aPresContext,
   parentReflowState = &aParentReflowState;
   frame = aFrame;
   reason = aParentReflowState.reason;
-  reflowCommand = aParentReflowState.reflowCommand;
+  if (reason == eReflowReason_Incremental) {
+    path = aParentReflowState.path->GetSubtreeFor(aFrame);
+    NS_ASSERTION(path != nsnull, "frame not on incremental reflow path");
+  }
+  else
+    path = nsnull;
+
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
 
@@ -224,14 +234,21 @@ nsHTMLReflowState::nsHTMLReflowState(nsIPresContext*          aPresContext,
                                      nsIFrame*                aFrame,
                                      const nsSize&            aAvailableSpace,
                                      nscoord                  aContainingBlockWidth,
-                                     nscoord                  aContainingBlockHeight)
+                                     nscoord                  aContainingBlockHeight,
+                                     nsReflowReason           aReason)
   : mReflowDepth(aParentReflowState.mReflowDepth + 1),
     mFlags(aParentReflowState.mFlags)
 {
   parentReflowState = &aParentReflowState;
   frame = aFrame;
-  reason = aParentReflowState.reason;
-  reflowCommand = aParentReflowState.reflowCommand;
+  reason = aReason;
+  if (reason == eReflowReason_Incremental) {
+    path = aParentReflowState.path->GetSubtreeFor(aFrame);
+    NS_ASSERTION(path != nsnull, "frame not on incremental reflow path");
+  }
+  else
+    path = nsnull;
+
   availableWidth = aAvailableSpace.width;
   availableHeight = aAvailableSpace.height;
 
