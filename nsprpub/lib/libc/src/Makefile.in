@@ -26,7 +26,7 @@ include $(MOD_DEPTH)/config/autoconf.mk
 
 include $(topsrcdir)/config/config.mk
 
-INCLUDES = -I$(includedir)
+INCLUDES = -I$(dist_includedir)
 
 CSRCS =\
 	plvrsion.c  \
@@ -108,22 +108,22 @@ endif
 #
 
 #
-# The Client build wants the shared libraries in $(bindir),
+# The Client build wants the shared libraries in $(dist_bindir),
 # so we also install them there.
 #
 
 export:: $(TARGETS)
-	$(INSTALL) -m 444 $(TARGETS) $(libdir)
+	$(INSTALL) -m 444 $(TARGETS) $(dist_libdir)
 ifdef SHARED_LIBRARY
 ifeq ($(OS_ARCH),HP-UX)
-	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(libdir)
-	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(bindir)
+	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(dist_libdir)
+	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(dist_bindir)
 else
-	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(bindir)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(dist_bindir)
 endif
 ifeq ($(OS_ARCH), OpenVMS)
-	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(libdir)
-	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(bindir)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(dist_libdir)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(dist_bindir)
 endif
 endif
 ifeq ($(MOZ_BITS),16)

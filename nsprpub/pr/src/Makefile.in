@@ -147,7 +147,7 @@ OS_LIBS		= advapi32.lib wsock32.lib
 endif
 
 ifdef GC_LEAK_DETECTOR
-EXTRA_LIBS	= -L$(libdir) -lboehm
+EXTRA_LIBS	= -L$(dist_libdir) -lboehm
 endif
 
 EXTRA_LIBS += $(OS_LIBS)
@@ -280,7 +280,7 @@ endif
 # Version information generation (begin)
 #
 ECHO = echo
-INCLUDES = -I$(includedir) -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
+INCLUDES = -I$(dist_includedir) -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
 TINC = $(OBJDIR)/_pr_bld.h
 
 ifeq ($(OS_TARGET),OS2)
@@ -330,22 +330,22 @@ endif
 
 
 #
-# The Client build wants the shared libraries in $(bindir)
+# The Client build wants the shared libraries in $(dist_bindir)
 # so we also install them there.
 #
 
 export:: $(TARGETS)
-	$(INSTALL) -m 444 $(TARGETS) $(libdir)
+	$(INSTALL) -m 444 $(TARGETS) $(dist_libdir)
 ifdef SHARED_LIBRARY
 ifeq ($(OS_ARCH),HP-UX)
-	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(libdir)
-	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(bindir)
+	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(dist_libdir)
+	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(dist_bindir)
 else
-	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(bindir)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(dist_bindir)
 endif
 ifeq ($(OS_ARCH), OpenVMS)
-	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(libdir)
-	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(bindir)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(dist_libdir)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(dist_bindir)
 endif
 endif
 ifeq ($(MOZ_BITS),16)

@@ -26,7 +26,7 @@ include $(MOD_DEPTH)/config/autoconf.mk
 
 include $(topsrcdir)/config/config.mk
 
-INCLUDES = -I$(includedir) -I../include
+INCLUDES = -I$(dist_includedir) -I../include
 
 CSRCS = prgcapi.c prmsgc.c
 
@@ -63,14 +63,14 @@ RELEASE_LIBS = $(TARGETS)
 include $(topsrcdir)/config/rules.mk
 
 #
-# The Client build wants the shared libraries in $(bindir),
+# The Client build wants the shared libraries in $(dist_bindir),
 # so we also install them there.
 #
 
 export:: $(TARGETS)
-	$(INSTALL) -m 444 $(TARGETS) $(libdir)
+	$(INSTALL) -m 444 $(TARGETS) $(dist_libdir)
 ifdef SHARED_LIBRARY
-	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(bindir)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(dist_bindir)
 endif
 ifeq ($(MOZ_BITS),16)
 	$(INSTALL) -m 444 $(TARGETS) $(MOZ_DIST)/lib

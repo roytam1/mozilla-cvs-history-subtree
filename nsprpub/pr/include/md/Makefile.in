@@ -31,19 +31,19 @@ include $(topsrcdir)/config/rules.mk
 
 export:: $(MDCPUCFG_H)
 ifeq ($(MOZ_BITS),16)
-	cp $(includedir)/$(MDCPUCFG_H) $(includedir)/prcpucfg.h
+	cp $(dist_includedir)/$(MDCPUCFG_H) $(dist_includedir)/prcpucfg.h
 	$(INSTALL) -m 444 $(MDCPUCFG_H) $(MOZ_INCL)
-	mv -f $(includedir)/$(MDCPUCFG_H) $(MOZ_INCL)/prcpucfg.h
+	mv -f $(dist_includedir)/$(MDCPUCFG_H) $(MOZ_INCL)/prcpucfg.h
 else
-	$(INSTALL) -m 444 $(CONFIGS) $(includedir)/md
-	$(INSTALL) -m 444 $(srcdir)/$(MDCPUCFG_H) $(includedir)
+	$(INSTALL) -m 444 $(CONFIGS) $(dist_includedir)/md
+	$(INSTALL) -m 444 $(srcdir)/$(MDCPUCFG_H) $(dist_includedir)
 ifneq ($(OS_ARCH),OpenVMS)
-	mv -f $(includedir)/$(MDCPUCFG_H) $(includedir)/prcpucfg.h
+	mv -f $(dist_includedir)/$(MDCPUCFG_H) $(dist_includedir)/prcpucfg.h
 else
 # mv'ing a link causes the file itself to move, not the link.
-	rm -f $(includedir)/$(MDCPUCFG_H)
-	rm -f $(includedir)/prcpucfg.h
-	ln -fs $(srcdir)/$(MDCPUCFG_H) $(includedir)/prcpucfg.h
+	rm -f $(dist_includedir)/$(MDCPUCFG_H)
+	rm -f $(dist_includedir)/prcpucfg.h
+	ln -fs $(srcdir)/$(MDCPUCFG_H) $(dist_includedir)/prcpucfg.h
 endif
 endif
 

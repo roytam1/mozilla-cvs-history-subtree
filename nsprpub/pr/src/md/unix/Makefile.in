@@ -59,7 +59,7 @@ ASFILES += $(PR_MD_ASFILES)
 
 TARGETS = $(OBJS)
 
-INCLUDES = -I$(includedir) -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
+INCLUDES = -I$(dist_includedir) -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
 
 DEFINES	+= -D_NSPR_BUILD_
 
@@ -72,7 +72,7 @@ ifneq ($(OS_RELEASE),4.1.3_U1)
 ifeq ($(OS_TEST),sun4u)
 $(SHARED_LIBRARY): $(ULTRASPARC_ASOBJS)
 	$(LD) -G -z text -o $@ $(ULTRASPARC_ASOBJS)
-	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(libdir)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(dist_libdir)
 
 $(ULTRASPARC_ASOBJS): $(ULTRASPARC_ASFILES)
 ifeq ($(USE_64),1)

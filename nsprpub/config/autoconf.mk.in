@@ -1,13 +1,21 @@
+# -*- Mode: Makefile -*-
 
 INCLUDED_AUTOCONF_MK = 1
 USE_AUTOCONF	= 1
 MOZILLA_CLIENT	= @MOZILLA_CLIENT@
-DIST		= @prefix@
+
 prefix		= @prefix@
 exec_prefix	= @exec_prefix@
 bindir		= @bindir@
 includedir	= @includedir@
 libdir		= @libdir@
+
+dist_prefix	= @dist_prefix@
+dist_bindir	= @dist_bindir@
+dist_includedir = @dist_includedir@
+dist_libdir	= @dist_libdir@
+
+DIST		= $(dist_prefix)
 
 OBJDIR_NAME	= @OBJDIR_NAME@
 OBJDIR		= @OBJDIR@

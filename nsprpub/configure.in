@@ -25,7 +25,6 @@ AC_INIT(config/libc_r.h)
 
 AC_CONFIG_AUX_DIR(${srcdir}/build/autoconf)
 AC_CANONICAL_SYSTEM
-AC_PREFIX_DEFAULT(\${MOD_DEPTH}/dist)
 
 dnl Set this define to make fixes w/o breaking anything else.
 AC_DEFINE(USE_AUTOCONF)
@@ -52,8 +51,8 @@ OBJDIR=.
 OBJDIR_NAME=.
 NSINSTALL='$(MOD_DEPTH)/config/$(OBJDIR_NAME)/nsinstall'
 NOSUCHFILE=/no-such-file
-LIBNSPR='-L$(libdir) -lnspr$(MOD_VERSION)'
-LIBPLC='-L$(libdir) -lplc$(MOD_VERSION)'
+LIBNSPR='-L$(dist_libdir) -lnspr$(MOD_VERSION)'
+LIBPLC='-L$(dist_libdir) -lplc$(MOD_VERSION)'
 
 dnl Link in libraries necessary to resolve all symbols for shared libs
 RESOLVE_LINK_SYMBOLS=
@@ -107,6 +106,34 @@ dnl =
 dnl = Check options that may affect the compiler
 dnl =
 dnl ========================================================
+dist_prefix='${MOD_DEPTH}/dist'
+dist_bindir='${dist_prefix}/bin'
+dist_includedir='${dist_prefix}/include'
+dist_libdir='${dist_prefix}/lib'
+
+AC_ARG_WITH(dist-prefix,
+    [  --with-dist-prefix=DIST_PREFIX
+                          place build files in DIST_PREFIX [dist]],
+    dist_prefix=$withval)
+
+AC_ARG_WITH(dist-bindir,
+    [  --with-dist-bindir=DIR  build execuatables in DIR [DIST_PREFIX/bin]],
+    dist_bindir=$withval)
+
+AC_ARG_WITH(dist-includedir,
+    [  --with-dist-includedir=DIR
+                          build include files in DIR [DIST_PREFIX/include]],
+    dist_includedir=$withval)
+
+AC_ARG_WITH(dist-libdir,
+    [  --with-dist-libdir=DIR  build library files in DIR [DIST_PREFIX/lib]],
+    dist_libdir=$withval)
+
+AC_SUBST(dist_prefix)
+AC_SUBST(dist_bindir)
+AC_SUBST(dist_includedir)
+AC_SUBST(dist_libdir)
+
 dnl Check if NSPR is being compiled for Mozilla
 dnl Let --with-arg override environment setting
 dnl
@@ -123,7 +150,7 @@ AC_ARG_WITH(mozilla,
 	    fi])
 
 AC_ARG_ENABLE(optimize,
-    [  --enable-optimize(=flag) Enable code optimizations (flag, ie. -O2) ],
+    [  --enable-optimize(=val) Enable code optimizations (val, ie. -O2) ],
     [ if test "$enableval" != "no"; then
         MOZ_OPTIMIZE=1
         if test -n "$enableval" && test "$enableval" != "yes"; then
@@ -138,12 +165,9 @@ AC_ARG_ENABLE(debug,
     	    MOZ_DEBUG=
 	    fi])
 
-AC_ARG_ENABLE(shared,
-    [  --disable-shared        Do not compile into shared libraries])
-
 AC_ARG_ENABLE(win32-target,
     [  --enable-win32-target=\$t
-                               Specify win32 flavor. (WIN95 or WINNT)],
+                          Specify win32 flavor. (WIN95 or WINNT)],
     MOZ_WIN32_TARGET=`echo $enableval | tr a-z A-Z`,
     MOZ_WIN32_TARGET=)
 
@@ -502,7 +526,7 @@ case "$target" in
         DSO_LDOPTS=
         USE_PTHREADS=1
         AIX_LINK_OPTS='-bnso -berok'
-        LIBNSPR='-L$(libdir) -lnspr$(MOD_VERSION)_shr'
+        LIBNSPR='-L$(dist_libdir) -lnspr$(MOD_VERSION)_shr'
         ;;
     aix4.3*)
         AC_DEFINE(AIX_HAVE_ATOMIC_OP_H)
@@ -979,11 +1003,11 @@ case "$target" in
         
         if test "$OS_TARGET" = "WINNT"; then
             CFLAGS="$CFLAGS -GT"
-            LIBNSPR='$(libdir)/libnspr$(MOD_VERSION).$(LIB_SUFFIX)'
-            LIBPLC='$(libdir)/libplc$(MOD_VERSION).$(LIB_SUFFIX)'
+            LIBNSPR='$(dist_libdir)/libnspr$(MOD_VERSION).$(LIB_SUFFIX)'
+            LIBPLC='$(dist_libdir)/libplc$(MOD_VERSION).$(LIB_SUFFIX)'
         else
-            LIBNSPR='$(libdir)/nspr$(MOD_VERSION).$(LIB_SUFFIX)'
-            LIBPLC='$(libdir)/plc$(MOD_VERSION).$(LIB_SUFFIX)'
+            LIBNSPR='$(dist_libdir)/nspr$(MOD_VERSION).$(LIB_SUFFIX)'
+            LIBPLC='$(dist_libdir)/plc$(MOD_VERSION).$(LIB_SUFFIX)'
         fi
     fi # GNU_CC
 
@@ -1505,8 +1529,8 @@ mips-sony-newsos*)
           DLLFLAGS='/O:$@ /DLL /INC:_dllentry /MAP:$(@:.dll=.map) /nologo'
           EXEFLAGS='/OUT:$@ /PMTYPE:VIO /MAP:$(@:.exe=.map) /nologo'
         fi
-        LIBNSPR='$(libdir)/nspr$(MOD_VERSION).$(LIB_SUFFIX)'
-        LIBPLC='$(libdir)/plc$(MOD_VERSION).$(LIB_SUFFIX)'
+        LIBNSPR='$(dist_libdir)/nspr$(MOD_VERSION).$(LIB_SUFFIX)'
+        LIBPLC='$(dist_libdir)/plc$(MOD_VERSION).$(LIB_SUFFIX)'
         ;;
     esac
 
@@ -1707,7 +1731,7 @@ esac
 fi # SKIP_LIBRARY_CHECKS
 
 AC_ARG_ENABLE(cplus,
-    [  --enable-cplus          Use cplus for whatever reason],
+    [  --enable-cplus          Enable some c++ api routines],
     [ if test "$enableval" = "yes"; then
 	    USE_CPLUS=1
       fi]) 

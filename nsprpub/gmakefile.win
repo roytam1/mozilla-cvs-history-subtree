@@ -1,4 +1,5 @@
 #!gmake
+# -*- Mode: Makefile -*-
 #
 # The contents of this file are subject to the Mozilla Public License
 # Version 1.1 (the "MPL"); you may not use this file except in
@@ -34,10 +35,10 @@ MOZ_OBJDIR = WIN32_O.OBJ
 endif
 
 NSPR_CONFIGURE := ../configure \
-		 --with-mozilla \
-                 --includedir=$(MOZ_DIST_FLIPPED)/include \
-                 --bindir=$(MOZ_DIST_FLIPPED)/$(MOZ_OBJDIR)/bin \
-                 --libdir=$(MOZ_DIST_FLIPPED)/$(MOZ_OBJDIR)/lib
+		--with-mozilla \
+		--with-dist-prefix=$(MOZ_DIST_FLIPPED) \
+		--with-dist-bindir=$(MOZ_DIST_FLIPPED)/$(MOZ_OBJDIR)/bin \
+		--with-dist-libdir=$(MOZ_DIST_FLIPPED)/$(MOZ_OBJDIR)/lib
 
 ifeq (,$(MOZ_DEBUG))
 NSPR_CONFIGURE := $(NSPR_CONFIGURE) --enable-optimize --disable-debug

@@ -53,7 +53,7 @@ ifeq ($(OS_ARCH), BeOS)
     CFLAGS += -frtti -fexceptions
 endif
 
-INCLUDES = -I$(includedir)
+INCLUDES = -I$(dist_includedir)
 
 HEADERS = $(wildcard $(srcdir)/*.h)
 
@@ -112,7 +112,7 @@ ifeq ($(OS_ARCH),SCOOS)
     EXTRA_LIBS =
 endif
 ifeq ($(OS_ARCH),BeOS)
-    EXTRA_LIBS = -lstdc++.r4 -L$(libdir) -lnspr$(MOD_VERSION)
+    EXTRA_LIBS = -lstdc++.r4 -L$(dist_libdir) -lnspr$(MOD_VERSION)
 endif
 
 ifeq ($(OS_ARCH), UNIXWARE)
@@ -172,21 +172,21 @@ endif
 #
 
 export:: $(TARGETS) $(HEADERS)
-	$(INSTALL) -m 444 $(HEADERS) $(includedir)
-	$(INSTALL) -m 444 $(TARGETS) $(libdir)
+	$(INSTALL) -m 444 $(HEADERS) $(dist_includedir)
+	$(INSTALL) -m 444 $(TARGETS) $(dist_libdir)
 ifeq ($(OS_ARCH),OS2)
-	$(INSTALL) -m 444 $(TARGETS) $(bindir)
+	$(INSTALL) -m 444 $(TARGETS) $(dist_bindir)
 endif
 ifeq ($(OS_ARCH),HP-UX)
 ifdef SHARED_LIBRARY
-	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(libdir)
+	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(dist_libdir)
 endif
 endif
 ifeq ($(OS_ARCH),OpenVMS)
-	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(libdir)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(dist_libdir)
 ifdef SHARED_LIBRARY
-	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(libdir)
-	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(bindir)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(dist_libdir)
+	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(dist_bindir)
 endif
 endif
 

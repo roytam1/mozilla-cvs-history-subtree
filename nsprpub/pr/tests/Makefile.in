@@ -187,7 +187,7 @@ PROGS = $(addprefix $(OBJDIR)/, $(CSRCS:.c=$(PROG_SUFFIX)))
 
 TARGETS = $(PROGS)
 
-INCLUDES = -I$(includedir) -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
+INCLUDES = -I$(dist_includedir) -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
 
 ifeq ($(OS_ARCH), WINNT)
   LDOPTS = -NOLOGO -DEBUG -DEBUGTYPE:CV -INCREMENTAL:NO
@@ -211,11 +211,11 @@ ifneq ($(OS_ARCH), WINNT)
 # or -rpath linker option or the LD_RUN_PATH environment variable).
 ifeq (,$(patsubst /%,,$(DIST)))
 # $(DIST) is already an absolute pathname.
-ABSOLUTE_LIB_DIR = $(libdir)
+ABSOLUTE_LIB_DIR = $(dist_libdir)
 else
 # $(DIST) is a relative pathname: prepend the current directory.
 PWD = $(shell pwd)
-ABSOLUTE_LIB_DIR = $(PWD)/$(libdir)
+ABSOLUTE_LIB_DIR = $(PWD)/$(dist_libdir)
 endif
 endif
 
@@ -247,8 +247,8 @@ ifeq ($(OS_ARCH), OSF1)
 # I haven't figured out how to pass -rpath to cc on OSF1 V3.2, so
 # we do static linking.
     ifeq (,$(filter-out V2.0 V3.2,$(OS_RELEASE)))
-        LIBNSPR = $(libdir)/libnspr$(MOD_VERSION).a
-        LIBPLC = $(libdir)/libplc$(MOD_VERSION).a
+        LIBNSPR = $(dist_libdir)/libnspr$(MOD_VERSION).a
+        LIBPLC = $(dist_libdir)/libplc$(MOD_VERSION).a
         EXTRA_LIBS = -lc_r
     else
         LDOPTS += -rpath $(ABSOLUTE_LIB_DIR)
@@ -336,8 +336,8 @@ ifeq ($(OS_ARCH), NEWS-OS)
 # libnspr.so etc. at program startup.  Equivalent to the -R or -rpath 
 # option for ld on other platforms.
 #export LD_RUN_PATH = $(ABSOLUTE_LIB_DIR)
-    LIBNSPR = $(libdir)/libnspr$(MOD_VERSION).a
-    LIBPLC = $(libdir)/libplc$(MOD_VERSION).a
+    LIBNSPR = $(dist_libdir)/libnspr$(MOD_VERSION).a
+    LIBPLC = $(dist_libdir)/libplc$(MOD_VERSION).a
     EXTRA_LIBS = -lsocket -lnsl -lgen -lresolv
 endif
 
@@ -450,7 +450,7 @@ ifeq ($(AIX_PRE_4_2),1)
 $(OBJDIR)/%: $(OBJDIR)/%.$(OBJ_SUFFIX)
 	@$(MAKE_OBJDIR)
 	rm -f $@ $(AIX_TMP)
-	$(CC) $(AIX_LINK_OPTS) -o $(AIX_TMP) $< $(libdir)/libnspr$(MOD_VERSION).a
+	$(CC) $(AIX_LINK_OPTS) -o $(AIX_TMP) $< $(dist_libdir)/libnspr$(MOD_VERSION).a
 	$(CC) -o $@ $(AIX_TMP) $(AIX_WRAP)
 	rm -f $(AIX_TMP)
 
