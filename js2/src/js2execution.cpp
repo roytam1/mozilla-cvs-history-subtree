@@ -484,6 +484,13 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
 
                     if (!target->isNative()) {
                         uint32 expectedArgCount = target->getExpectedArgs();
+
+                        // we didn't know the target function at compile time
+                        // and so we couldn't allocate space for these
+                        // 'missing' arguments.
+                        if (expectedArgCount > argCount)
+                            assureStackSpace(expectedArgCount - argCount);
+                                                
                         for (uint32 i = argCount; i < expectedArgCount; i++) {
                             pushValue(kUndefinedValue);
                             cleanUp++;
@@ -520,7 +527,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     Activation *prev = mActivationStack.top();
                     if (prev->mPC == NULL)     // NULL is used to indicate that we want the loop to exit
                         return result;         // (even though there is more activation stack to go
-                                               // - used to implement Xetters from XProperty ops.)
+                                               // - used to implement Xetters from XProperty ops. e.g.)
                     mActivationStack.pop();
 
                     mCurModule = prev->mModule;

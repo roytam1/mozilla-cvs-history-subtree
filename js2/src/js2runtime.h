@@ -1503,6 +1503,19 @@ static const double two31 = 2147483648.0;
             return &mStack[n];
         }
 
+        void assureStackSpace(uint32 s)
+        {
+            if ((mStackMax - mStackTop) < s) {
+                JSValue *newStack = new JSValue[mStackMax + s];
+                memcpy(newStack, mStack, sizeof(JSValue *) * mStackTop);
+                delete[] mStack;
+                mStack = newStack;
+                mStackMax += s;
+            }
+        }
+
+
+
         // the activation stack
         std::stack<Activation *> mActivationStack;
 
