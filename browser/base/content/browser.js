@@ -1996,7 +1996,7 @@ function getShortcutOrURI(aURL, aPostDataRef)
             //          enctypes.
             aPostDataRef.value = unescape(aPostDataRef.value);
             if (aPostDataRef.value.match(/%s/))
-              aPostDataRef.value = getPostDataStream(aPostDataRef.value, text, 
+              aPostDataRef.value = getPostDataStream(aPostDataRef.value, encodeURIComponent(text), 
                                                      "application/x-www-form-urlencoded");
             else {
               shortcutURL = null;
@@ -2004,7 +2004,7 @@ function getShortcutOrURI(aURL, aPostDataRef)
             }
           }
           else
-            shortcutURL = shortcutURL.match(/%s/) ? shortcutURL.replace(/%s/, text) : null;
+            shortcutURL = shortcutURL.match(/%s/) ? shortcutURL.replace(/%s/g, encodeURIComponent(text)) : null;
         }
       }
     }
@@ -2036,7 +2036,7 @@ function getPostDataStream(aStringData, aKeyword, aType)
 {
   var dataStream = Components.classes["@mozilla.org/io/string-input-stream;1"]
                             .createInstance(Components.interfaces.nsIStringInputStream);
-  aStringData = aStringData.replace(/%s/, aKeyword);
+  aStringData = aStringData.replace(/%s/g, encodeURIComponent(aKeyword));
   dataStream.setData(aStringData, aStringData.length);
 
   var mimeStream = Components.classes["@mozilla.org/network/mime-input-stream;1"]
