@@ -347,6 +347,12 @@ ipcService::CancelQuery(PRUint32 queryID)
 }
 
 NS_IMETHODIMP
+ipcService::WaitQuery(PRUint32 queryID)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
 ipcService::SetClientObserver(ipcIClientObserver *observer)
 {
     return NS_ERROR_NOT_IMPLEMENTED;

@@ -73,6 +73,10 @@ interface ipcIClientQueryHandler;
 [scriptable, uuid(53d3e3a7-528f-4b09-9eab-9416272568c0)]
 interface ipcIService : nsISupports
 {
+    /**************************************************************************
+     * properties of this process
+     */
+
     /**
      * returns the "client ID" assigned to this process by the IPC daemon.
      *
@@ -93,6 +97,11 @@ interface ipcIService : nsISupports
      */
     void addClientName(in string aName);
     void removeClientName(in string aName);
+
+
+    /**************************************************************************
+     * client query methods
+     */
 
     /**
      * query info about a particular client given its client name. the
@@ -135,6 +144,15 @@ interface ipcIService : nsISupports
     void cancelQuery(in unsigned long aQueryID);
 
     /**
+     * called to wait for the query to complete.  returns after the client
+     * query handler has been called or on error.
+     *
+     * @param aQueryID
+     *        the return value from one of the "query" methods.
+     */
+    void waitQuery(in unsigned long aQueryID);
+
+    /**
      * set client observer.  observer's onClientUp method is called whenever 
      * a new client comes online, and the observer's onClientDown method is
      * called whenever a client goes offline.
@@ -145,6 +163,11 @@ interface ipcIService : nsISupports
     void setClientObserver(in ipcIClientObserver aObserver);
 
     // XXX need other functions to enumerate clients, clients implementing targets, etc.
+
+
+    /**************************************************************************
+     * message methods
+     */
 
     /**
      * set a message observer for a particular message target.
