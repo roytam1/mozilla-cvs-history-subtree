@@ -138,14 +138,14 @@ void startElement(void *userData, const XML_Char *name, const XML_Char **atts)
   XML_Char* attValue;
   XML_Char** theAtts = (XML_Char**)atts;
 
-  String nodeName(name);
+  String nodeName((UNICODE_CHAR *)name);
   newElement = ps->document->createElement(nodeName);
 
   while (*theAtts)
     {
       attName  = *theAtts++;
       attValue = *theAtts++;
-      newElement->setAttribute(attName, attValue);
+      newElement->setAttribute((UNICODE_CHAR *)attName, (UNICODE_CHAR *)attValue);
     }
 
     ps->currentNode->appendChild(newElement);
@@ -173,8 +173,8 @@ void charData(void* userData, const XML_Char* s, int len)
 **/
 void piHandler(void *userData, const XML_Char *target, const XML_Char *data) {
     ParserState* ps = (ParserState*)userData;
-    String targetStr(target);
-    String dataStr(data);
+    String targetStr((UNICODE_CHAR *)target);
+    String dataStr((UNICODE_CHAR *)data);
 
     ps->currentNode->appendChild(
         ps->document->createProcessingInstruction(targetStr, dataStr));
