@@ -1147,13 +1147,13 @@ nsXBLBinding::ChangeDocument(nsIDocument* aOldDocument, nsIDocument* aNewDocumen
         mInsertionPointTable->Enumerate(ChangeDocumentForDefaultContent,
                                         nsnull);
 
+      anonymous->SetDocument(nsnull, PR_TRUE, PR_TRUE); // Kill it.
+
 #ifdef MOZ_XUL
       // To make XUL templates work (and other XUL-specific stuff),
       // we'll need to notify it using its add & remove APIs. Grab the
       // interface now...
       nsCOMPtr<nsIXULDocument> xuldoc(do_QueryInterface(aOldDocument));
-
-      anonymous->SetDocument(nsnull, PR_TRUE, PR_TRUE); // Kill it.
       if (xuldoc)
         xuldoc->RemoveSubtreeFromDocument(anonymous);
 #endif
