@@ -1447,7 +1447,8 @@ function stylesheetSwitchAll(frameset, title) {
 
 function applyTheme(themeName)
 {
-  var name = themeName.getAttribute("name");
+  var id = themeName.getAttribute('id'); 
+  var name=id.substring('urn:mozilla.skin.'.length, id.length);
   if (!name)
     return;
 
@@ -1493,7 +1494,7 @@ function applyTheme(themeName)
  // we STILL haven't fixed editor skin switch problems                         
  // hacking around it yet again                                                
 
- str.data = themeName.getAttribute("name");
+ str.data = name;
  pref.setComplexValue("general.skins.selectedSkin", Components.interfaces.nsISupportsWString, str);
 
  // shut down quicklaunch so the next launch will have the new skin
@@ -1801,4 +1802,23 @@ function toHistory()
 
 }
 
+function checkTheme()
+{
+  var theSkinKids = document.getElementById("theme");
+  var chromeRegistry = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
+      .getService(Components.interfaces.nsIChromeRegistry); 
+  for (var i = 0; i < theSkinKids.childNodes.length; ++i) {
+    var child = theSkinKids.childNodes[i];
+    var id=child.getAttribute("id");
+    if (id.length > 0) {
+      var themeName = id.substring('urn:mozilla:skin:'.length, id.length);       
+      var selected = chromeRegistry.isSkinSelected(themeName, true);
+      if (selected == Components.interfaces.nsIChromeRegistry.FULL) {
+        var menuitem=document.getElementById(id);
+        menuitem.setAttribute("checked", true);
+        break;
+      }
+    }
+  } 
+}
 
