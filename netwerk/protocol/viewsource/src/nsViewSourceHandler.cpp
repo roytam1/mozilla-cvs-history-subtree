@@ -42,6 +42,7 @@
 #include "nsCRT.h"
 #include "nsIComponentManager.h"
 #include "nsXPIDLString.h"
+#include "nsNetUtil.h"
 
 static NS_DEFINE_CID(kSimpleURICID,     NS_SIMPLEURI_CID);
 
@@ -96,19 +97,41 @@ NS_IMETHODIMP
 nsViewSourceHandler::NewURI(const nsACString &aSpec,
                             const char *aCharset, // ignore charset info
                             nsIURI *aBaseURI,
-                            nsIURI **result) {
+                            nsIURI **aResult)
+{
     nsresult rv;
-    nsIURI* uri;
 
-    rv = nsComponentManager::CreateInstance(kSimpleURICID, nsnull, NS_GET_IID(nsIURI), (void**)&uri);
-    if (NS_FAILED(rv)) return rv;
-    rv = uri->SetSpec(aSpec);
-    if (NS_FAILED(rv)) {
-      NS_RELEASE(uri);
-      return rv;
-    }
+    // Extract inner URL and normalize to ASCII.  This is done to properly
+    // support IDN in cases like "view-source:http://www.szalagavató.hu/"
 
-    *result = uri;
+    PRInt32 colon = aSpec.FindChar(':');
+    if (colon == kNotFound)
+        return NS_ERROR_MALFORMED_URI;
+
+    nsCOMPtr<nsIURI> innerURI;
+    rv = NS_NewURI(getter_AddRefs(innerURI), Substring(aSpec, colon + 1), aCharset);
+    if (NS_FAILED(rv))
+        return rv;
+
+    nsCAutoString asciiSpec;
+    rv = innerURI->GetAsciiSpec(asciiSpec);
+    if (NS_FAILED(rv))
+        return rv;
+
+    // put back our scheme and construct a simple-uri wrapper
+
+    asciiSpec.Insert("view-source:", 0);
+                                                                                                           
+    nsIURI *uri;
+    rv = CallCreateInstance(NS_SIMPLEURI_CONTRACTID, nsnull, &uri);
+    if (NS_FAILED(rv))
+        return rv;
+
+    rv = uri->SetSpec(asciiSpec);
+    if (NS_FAILED(rv))
+        NS_RELEASE(uri);
+    else
+        *aResult = uri;
     return rv;
 }
 
