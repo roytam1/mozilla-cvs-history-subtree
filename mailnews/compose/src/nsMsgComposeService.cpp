@@ -126,7 +126,7 @@ nsMsgComposeService::nsMsgComposeService()
   _just_to_be_sure_we_create_only_on_compose_service_ = PR_TRUE;
 #endif
   
-  NS_INIT_REFCNT();
+  NS_INIT_ISUPPORTS();
 
 // Defaulting the value of mLogComposePerformance to FALSE to prevent logging.
   mLogComposePerformance = PR_FALSE;

@@ -238,7 +238,7 @@ nsMsgCompose::nsMsgCompose()
   printf("CREATE nsMsgCompose: %x\n", this);
 #endif
 
-  NS_INIT_REFCNT();
+  NS_INIT_ISUPPORTS();
 
   mQuotingToFollow = PR_FALSE;
   mWhatHolder = 1;
@@ -1847,7 +1847,7 @@ QuotingOutputStreamListener::QuotingOutputStreamListener(const char * originalMs
     }
   }
   
-  NS_INIT_REFCNT(); 
+  NS_INIT_ISUPPORTS(); 
 }
 
 /**
@@ -2520,7 +2520,7 @@ nsMsgComposeSendListener::nsMsgComposeSendListener(void)
 #endif
   mDeliverMode = 0;
 
-  NS_INIT_REFCNT(); 
+  NS_INIT_ISUPPORTS(); 
 }
 
 nsMsgComposeSendListener::~nsMsgComposeSendListener(void) 
@@ -3023,7 +3023,7 @@ NS_IMPL_ISUPPORTS1(nsMsgDocumentStateListener, nsIDocumentStateListener)
 
 nsMsgDocumentStateListener::nsMsgDocumentStateListener(void)
 {
-  NS_INIT_REFCNT();
+  NS_INIT_ISUPPORTS();
 }
 
 nsMsgDocumentStateListener::~nsMsgDocumentStateListener(void)
