@@ -4728,7 +4728,7 @@ nsDocShell::GetPromptAndStringBundle(nsIPrompt ** aPrompt,
 
     NS_ENSURE_SUCCESS(stringBundleService->
                       CreateBundle(DIALOG_STRING_URI,
-                                   getter_AddRefs(aStringBundle)),
+                                   aStringBundle),
                       NS_ERROR_FAILURE);
 
     return NS_OK;
