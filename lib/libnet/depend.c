@@ -249,16 +249,21 @@ XP_FileOpen(const char * name, XP_FileType type, const XP_FilePerm perm)
 {
     MOZ_FUNCTION_STUB;
 
-    if (type == xpURL) {
-        XP_File fp;
-        char* newName = WH_FileName(name, type);
+    switch (type) {
+        case xpURL:
+        case xpFileToPost: {
+            XP_File fp;
+            char* newName = WH_FileName(name, type);
 
-        if (!newName) return NULL;
+            if (!newName) return NULL;
 
-    	fp = fopen(newName, (char *) perm);
-        XP_FREE(newName);
+        	fp = fopen(newName, (char *) perm);
+            XP_FREE(newName);
 
-        return fp;
+            return fp;
+        }
+        default:
+            break;
     }
 
     return NULL;
@@ -289,12 +294,18 @@ XP_Stat(const char * name, XP_StatStruct * info, XP_FileType type)
     int result = -1;
     MOZ_FUNCTION_STUB;
 
-    if (type == xpURL) {
-        char *newName = WH_FileName(name, type);
+    switch (type) {
+        case xpURL:
+        case xpFileToPost: {
+            char *newName = WH_FileName(name, type);
     	
-        if (!newName) return -1;
-        result = stat( newName, info );
-        XP_FREE(newName);
+            if (!newName) return -1;
+            result = stat( newName, info );
+            XP_FREE(newName);
+            break;
+        }
+        default:
+            break;
     }
     return result;
 }
@@ -307,7 +318,7 @@ WH_FileName (const char *NetName, XP_FileType type)
 {
     MOZ_FUNCTION_STUB;
 
-    if (type == xpURL) {
+    if ((type == xpURL) || (type == xpFileToPost)) {
         /*
          * This is the body of XP_NetToDosFileName(...) which is implemented 
          * for Windows only in fegui.cpp
@@ -375,7 +386,6 @@ XP_OpenDir(const char * name, XP_FileType type)
 //
 */
 
-#ifdef XP_PC
 PUBLIC void 
 XP_CloseDir(XP_Dir dir)
 {
@@ -388,7 +398,6 @@ XP_ReadDir(XP_Dir dir)
     MOZ_FUNCTION_STUB;
     return NULL;
 }
-#endif
 
 #endif /* XP_PC */
 
