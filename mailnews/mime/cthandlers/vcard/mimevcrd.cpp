@@ -33,6 +33,7 @@
 #include "mimexpcom.h"
 #include "mimevcrd.h"
 #include "nsEscape.h"
+#include "nsIURI.h"
 
 #include "nsIEventQueueService.h"
 #include "nsIStringBundle.h"
