@@ -753,36 +753,34 @@ function FolderPaneOnClick(event)
 	}
 */
     if (event.detail == 2)
-        FolderPaneDoubleClick(folderResource);
+        FolderPaneDoubleClick(row.value);
 }
 
-function FolderPaneDoubleClick(resource)
+function FolderPaneDoubleClick(folderIndex)
 {
-	var isServer = false;
-
-	if (treeitem) {
-		isServer = (treeitem.getAttribute('IsServer') == "true");
-		if (isServer) {
-			var open = treeitem.getAttribute('open');
-			if (open == "true") {
-				var uri = treeitem.getAttribute("id");
-				server = GetServer(uri);
-				if (server) {
-					// double clicking open, PerformExpand()
-					server.PerformExpand(msgWindow);
-				}
-			}
-			else {
-				// double clicking close, don't PerformExpand()
-			}
-		}
-	}
-
-	// don't open a new msg window if we are double clicking on a server.
-	// only do it for folders or newsgroups
-	if (!isServer) {
-		MsgOpenNewWindowForFolder(treeitem.getAttribute('id'));
-	}
+    var folderResource = GetFolderResource(folderIndex);
+    var isServer = GetFolderAttribute(folderResource, "IsServer");
+    if (isServer == "true")
+    {
+        var folderOutliner = GetFolderOutliner();
+        var view = folderOutliner.outlinerBoxObject.view;
+        if (view.isContainerOpen(folderIndex))
+        {
+            // double clicking open, don't PerformExpand()
+        }
+        else {
+            // double clicking open, PerformExpand()
+            var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
+            var server = msgFolder.server;
+            server.PerformExpand(msgWindow);
+        }
+    }
+    else
+    {
+        // Open a new msg window only if we are double clicking on folders or
+        // newsgorups.
+        MsgOpenNewWindowForFolder(folderResource.Value);
+    }
 }
 
 function ChangeSelection(outliner, newIndex)
