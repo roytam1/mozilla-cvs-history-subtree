@@ -468,7 +468,7 @@ ldap_mods_free_perl(LDAPMod **mods, int freemods)
 	{
 	  if (mods[i]->mod_bvalues != NULL)
 	    {
-	      ber_bvecfree(mods[i]->mod_bvalues);
+	      Safefree(mods[i]->mod_bvalues);
 	    }
 	}
       else if (mods[i]->mod_values != NULL)
