@@ -64,8 +64,7 @@ GenerateIdFunctionCall::evaluate(txIEvalContext* aContext,
         txXPathNodeUtils::getXSLTId(aContext->getContextNode(),
                                     strRes->mValue);
 
-        *aResult = strRes;
-        NS_ADDREF(*aResult);
+        NS_ADDREF(*aResult = strRes);
  
         return NS_OK;
     }
@@ -98,8 +97,7 @@ GenerateIdFunctionCall::evaluate(txIEvalContext* aContext,
 
     txXPathNodeUtils::getXSLTId(nodes->get(0), strRes->mValue);
 
-    *aResult = strRes;
-    NS_ADDREF(*aResult);
+    NS_ADDREF(*aResult = strRes);
  
     return NS_OK;
 }
