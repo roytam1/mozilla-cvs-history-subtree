@@ -357,7 +357,7 @@
         <splitter id="threadpane-splitter" collapse="after" persist="state"
                   onmouseup="OnMouseUpThreadAndMessagePaneSplitter()"/>
 
-        <vbox id="messagepanebox" height="200" flex="3" persist="collapsed height width">
+        <vbox id="messagepanebox" height="200" persist="collapsed height width">
           <hbox id="junkBar"/>
           <hbox id="msgHeaderView"/>
           <browser id="messagepane" context="messagePaneContext" autofind="false"
