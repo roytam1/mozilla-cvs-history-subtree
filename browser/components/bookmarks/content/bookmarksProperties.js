@@ -215,8 +215,8 @@ function Init()
       showScheduling = true;
   }
 
-  if (!showScheduling) {
-    // only allow scheduling of http/https URLs
+  if (!showScheduling || isLivemark) {
+    // only allow scheduling of http/https URLs that are not livemarks
     document.getElementById("ScheduleTab").setAttribute("hidden", "true");
     document.getElementById("NotifyTab").setAttribute("hidden", "true");
   }
@@ -229,7 +229,6 @@ function Init()
   // set initial focus
   nameNode.focus();
   nameNode.select();
-
 }
 
 

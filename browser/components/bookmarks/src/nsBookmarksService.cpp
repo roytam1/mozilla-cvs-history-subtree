@@ -28,6 +28,7 @@
  *   Pierre Chanial           <chanial@noos.fr>
  *   Jan Varga                <varga@nixcorp.com>
  *   Benjamin Smedberg        <bsmedberg@covad.net>
+ *   Vladimir Vukicevic       <vladimir@pobox.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -135,6 +136,7 @@ nsIRDFResource      *kNC_BookmarkCommand_DeleteBookmarkSeparator;
 nsIRDFResource      *kNC_BookmarkCommand_SetPersonalToolbarFolder;
 nsIRDFResource      *kNC_BookmarkCommand_Import;
 nsIRDFResource      *kNC_BookmarkCommand_Export;
+nsIRDFResource      *kNC_BookmarkCommand_RefreshLivemark;
 
 /* RDF Resources for RSS parsing */
 #ifndef RSS09_NAMESPACE_URI
@@ -319,6 +321,8 @@ bm_AddRefGlobals()
                           &kNC_BookmarkCommand_Import);
         gRDF->GetResource(NS_LITERAL_CSTRING(NC_NAMESPACE_URI "command?cmd=export"),
                           &kNC_BookmarkCommand_Export);
+        gRDF->GetResource(NS_LITERAL_CSTRING(NC_NAMESPACE_URI "command?cmd=refreshlivemark"),
+                          &kNC_BookmarkCommand_RefreshLivemark);
 
         /* RSS Resources */
         gRDF->GetResource(NS_LITERAL_CSTRING(RSS09_NAMESPACE_URI "channel"),
@@ -414,6 +418,7 @@ bm_ReleaseGlobals()
         NS_IF_RELEASE(kNC_BookmarkCommand_SetPersonalToolbarFolder);
         NS_IF_RELEASE(kNC_BookmarkCommand_Import);
         NS_IF_RELEASE(kNC_BookmarkCommand_Export);
+        NS_IF_RELEASE(kNC_BookmarkCommand_RefreshLivemark);
 
         NS_IF_RELEASE(kRSS09_channel);
         NS_IF_RELEASE(kRSS09_item);
@@ -3102,7 +3107,7 @@ nsBookmarksService::UpdateBookmarkIcon(const char *aURL, const PRUnichar *aIconU
             nsCOMPtr<nsIRDFNode> iconNode;
             rv = mInner->GetTarget(bookmark, kNC_Icon, PR_TRUE, getter_AddRefs(iconNode));
             if (NS_SUCCEEDED(rv) && rv != NS_RDF_NO_VALUE) {
-                (void) mInner->Unassert (bookmark, kNC_Icon, iconNode);
+                (void) mInner->Unassert(bookmark, kNC_Icon, iconNode);
             }
 
             // create a new literal for the url
@@ -3111,7 +3116,15 @@ nsBookmarksService::UpdateBookmarkIcon(const char *aURL, const PRUnichar *aIconU
             if (NS_FAILED(rv))
                 return rv;
 
-            rv = mInner->Assert(bookmark, kNC_Icon, urlLiteral, PR_TRUE);
+            if (nsDependentString(aIconURL).Equals(NS_LITERAL_STRING("data:"))) {
+                // if it's just "data:", then don't send notifications, otherwise
+                // things will update with a null icon
+                BeginUpdateBatch();
+                rv = mInner->Assert(bookmark, kNC_Icon, urlLiteral, PR_TRUE);
+                EndUpdateBatch();
+            } else {
+                rv = mInner->Assert(bookmark, kNC_Icon, urlLiteral, PR_TRUE);
+            }
             if (NS_FAILED(rv))
                 return rv;
 
@@ -3568,21 +3581,6 @@ nsBookmarksService::GetURI(char* *aURI)
     return NS_OK;
 }
 
-static PRBool
-isBookmarkCommand(nsIRDFResource *aResource)
-{
-
-    PRBool      isBookmarkCommandFlag = PR_FALSE;
-    const char  *uri = nsnull;
-    
-    if (NS_SUCCEEDED(aResource->GetValueConst(&uri)) && (uri))
-    {
-        if (!strncmp(uri, kBookmarkCommand, sizeof(kBookmarkCommand) - 1))
-            isBookmarkCommandFlag = PR_TRUE;
-    }
-    return isBookmarkCommandFlag;
-}
-
 NS_IMETHODIMP
 nsBookmarksService::GetTarget(nsIRDFResource* aSource,
                               nsIRDFResource* aProperty,
@@ -3605,39 +3603,6 @@ nsBookmarksService::GetTarget(nsIRDFResource* aSource,
     {
         rv = GetSynthesizedType(aSource, aTarget);
         return rv;
-    }
-    else if (aTruthValue && isBookmarkCommand(aSource) && (aProperty == kNC_Name))
-    {
-        nsAutoString    name;
-        if (aSource == kNC_BookmarkCommand_NewBookmark)
-            getLocaleString("NewBookmark", name);
-        else if (aSource == kNC_BookmarkCommand_NewFolder)
-            getLocaleString("NewFolder", name);
-        else if (aSource == kNC_BookmarkCommand_NewSeparator)
-            getLocaleString("NewSeparator", name);
-        else if (aSource == kNC_BookmarkCommand_DeleteBookmark)
-            getLocaleString("DeleteBookmark", name);
-        else if (aSource == kNC_BookmarkCommand_DeleteBookmarkFolder)
-            getLocaleString("DeleteFolder", name);
-        else if (aSource == kNC_BookmarkCommand_DeleteBookmarkSeparator)
-            getLocaleString("DeleteSeparator", name);
-        else if (aSource == kNC_BookmarkCommand_SetPersonalToolbarFolder)
-            getLocaleString("SetPersonalToolbarFolder", name);
-        else if (aSource == kNC_BookmarkCommand_Import)
-            getLocaleString("Import", name);
-        else if (aSource == kNC_BookmarkCommand_Export)
-            getLocaleString("Export", name);
-
-        if (!name.IsEmpty())
-        {
-            *aTarget = nsnull;
-            nsCOMPtr<nsIRDFLiteral> literal;
-            if (NS_FAILED(rv = gRDF->GetLiteral(name.get(), getter_AddRefs(literal))))
-                return rv;
-            *aTarget = literal;
-            NS_IF_ADDREF(*aTarget);
-            return rv;
-        }
     }
     else if (aProperty == kNC_Icon)
     {
@@ -3665,8 +3630,19 @@ nsBookmarksService::GetTarget(nsIRDFResource* aSource,
             nsDependentString urlStr(url);
 
             // if it's a data: url, all is well
-            if (Substring(urlStr, 0, 5).Equals(NS_LITERAL_STRING("data:")))
+            if (Substring(urlStr, 0, 5).Equals(NS_LITERAL_STRING("data:"))) {
+                // XXX hack warning!  Sometimes we want to indicate that a site
+                // should have no favicon even though it wants to feed us goop.
+                // To avoid reloading said goop each time, we stick in a URL
+                // consisting of purely "data:".  So, if that's what we have,
+                // we pretend it has no icon.
+                if (urlStr.Length() == 5) {
+                    aTarget = nsnull;
+                    return NS_RDF_NO_VALUE;
+                }
+
                 return NS_OK;
+            }
 
             // no data:? no icon!
             aTarget = nsnull;
@@ -3986,9 +3962,13 @@ nsBookmarksService::GetAllCmds(nsIRDFResource* source,
         cmdArray->AppendElement(kNC_BookmarkCommand_NewSeparator);
         cmdArray->AppendElement(kNC_BookmarkSeparator);
     }
-    if (isBookmark || isLivemark) // FIXME - isLivemark needs a "Delete Live Feed" menu item
+    if (isBookmark || isLivemark)
     {
         cmdArray->AppendElement(kNC_BookmarkCommand_DeleteBookmark);
+    }
+    if (isLivemark)
+    {
+        cmdArray->AppendElement(kNC_BookmarkCommand_RefreshLivemark);
     }
     if (isBookmarkFolder && (source != kNC_BookmarksRoot) && (source != kNC_IEFavoritesRoot))
     {
@@ -4593,6 +4573,12 @@ nsBookmarksService::LoadBookmarks()
         nsXPIDLString brName;
         rv = mBundle->GetStringFromName(NS_LITERAL_STRING("BookmarksRoot").get(), getter_Copies(brName));
         if NS_SUCCEEDED(rv) {
+            // remove any previous NC_Name assertion
+            nsCOMPtr<nsIRDFNode> oldName;
+            rv = mInner->GetTarget(kNC_BookmarksRoot, kNC_Name, PR_TRUE, getter_AddRefs(oldName));
+            if (NS_SUCCEEDED(rv) && rv != NS_RDF_NO_VALUE)
+                (void) mInner->Unassert(kNC_BookmarksRoot, kNC_Name, oldName);
+
             nsCOMPtr<nsIRDFLiteral> brNameLiteral;
             rv = gRDF->GetLiteral(brName.get(), getter_AddRefs(brNameLiteral));
             if (NS_SUCCEEDED(rv))

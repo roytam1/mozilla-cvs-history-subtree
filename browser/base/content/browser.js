@@ -2221,36 +2221,28 @@ function SetPageProxyState(aState, aURI)
 
   gProxyButton.setAttribute("pageproxystate", aState);
 
-  var theBrowser = gBrowser.mCurrentBrowser;
+  // the page proxy state is set to valid via OnLocationChange, which
+  // gets called when we switch tabs.  We'll let updatePageFavIcon
+  // take care of updating the mFavIconURL because it knows exactly
+  // for which tab to update things, instead of confusing the issue
+  // here.
   if (aState == "valid") {
     gLastValidURLStr = gURLBar.value;
     gURLBar.addEventListener("input", UpdatePageProxyState, false);
-    if (gBrowser.shouldLoadFavIcon(aURI)) {
-      // only attempt to load the generic favicon url (/favicon.ico) if
-      // we didn't find a specific <link>'d one
-      if (theBrowser.mFavIconURL == null) {
-        var favStr = gBrowser.buildFavIconString(aURI);
-        if (favStr != gProxyFavIcon.src) {
-          gBrowser.loadFavIcon(aURI, "src", gProxyFavIcon);
-          gProxyDeck.selectedIndex = 0;
-        }
-        else {
-          gProxyDeck.selectedIndex = 1;
-        }
-        // store what we think is the current favicon
-        theBrowser.mFavIconURL = favStr;
-      }
-    }
-    else {
+
+    if (gBrowser.mCurrentBrowser.mFavIconURL != null) {
+      gProxyFavIcon.setAttribute("src", gBrowser.mCurrentBrowser.mFavIconURL);
+      gProxyDeck.selectedIndex = 1;
+    } else {
       gProxyDeck.selectedIndex = 0;
       gProxyFavIcon.removeAttribute("src");
-      theBrowser.mFavIconURL = null;
     }
   } else if (aState == "invalid") {
     gURLBar.removeEventListener("input", UpdatePageProxyState, false);
     gProxyDeck.selectedIndex = 0;
-    theBrowser.mFavIconURL = null;
+    gProxyFavIcon.removeAttribute("src");
   }
+
 }
 
 function PageProxyDragGesture(aEvent)
@@ -5539,13 +5531,10 @@ function livemarkOnLinkAdded(event)
     // should there be a getTabForDocument method on tabbedbrowser?
     var browserForLink = null;
     if (gBrowser.mTabbedMode) {
-      for (i = 0; i < gBrowser.mTabListeners.length; i++) {
-        var theTab = gBrowser.getBrowserAtIndex(i);
-        if (theTab.contentDocument == targetDoc) {
-          browserForLink = theTab;
-          break;
-        }
-      }
+      var browserIndex = gBrowser.getBrowserIndexForDocument(targetDoc);
+      if (browserIndex == -1)
+        return;
+      browserForLink = gBrowser.getBrowserAtIndex(browserIndex);
     } else if (gBrowser.mCurrentBrowser.contentDocument == targetDoc) {
       browserForLink = gBrowser.mCurrentBrowser;
     }
@@ -5592,6 +5581,13 @@ function livemarkFillPopup(menuPopup)
 {
   var livemarkLinks = gBrowser.mCurrentBrowser.livemarkLinks;
   if (livemarkLinks == null) {
+    // XXX hack -- menu opening depends on setting of an "open"
+    // attribute, and the menu refuses to open if that attribute is
+    // set (because it thinks it's already open).  onpopupshowing gets
+    // called after the attribute is unset, and it doesn't get unset
+    // if we return false.  so we unset it here; otherwise, the menu
+    // refuses to work past this point.
+    menuPopup.parentNode.removeAttribute("open");
     return false;
   }
 
@@ -5618,8 +5614,26 @@ function livemarkAddMark(wincontent, data) {
 }
 
 function updatePageFavIcon(aBrowser) {
+  var uri = aBrowser.currentURI;
+
+  if (!gBrowser.shouldLoadFavIcon(uri))
+    return;
+
+  // if we made it here with this null, then no <link> was found for
+  // the page load.  We try to fetch a generic favicon.ico.
+  if (aBrowser.mFavIconURL == null)
+    aBrowser.mFavIconURL = gBrowser.buildFavIconString(uri);
+
+  if (aBrowser == gBrowser.mCurrentBrowser) {
+      if (gProxyFavIcon.src != aBrowser.mFavIconURL) {
+          gProxyFavIcon.setAttribute("src", aBrowser.mFavIconURL);
+          gProxyDeck.selectedIndex = 0;
+      } else {
+          gProxyDeck.selectedIndex = 1;
+      }
+  }
+
   if (aBrowser.mFavIconURL != null) {
-    var url = aBrowser.currentURI.spec;
-    BookmarksUtils.loadFavIcon(url, aBrowser.mFavIconURL);
+    BookmarksUtils.loadFavIcon(uri.spec, aBrowser.mFavIconURL);
   }
 }

@@ -132,6 +132,10 @@ function initBMService()
 }
 
 /**
+ * XXX - 24 Jul 04
+ * If you add a command that needs to run from the main browser window,
+ * it needs to be added to browser/base/content/browser-sets.inc as well!
+ *
  * XXX - 04/16/01
  *  ACK! massive command name collision problems are causing big issues
  *  in getting this stuff to work in the Navigator window. For sanity's 
@@ -221,6 +225,7 @@ var BookmarksCommand = {
       if (element) 
         popup.appendChild(element);
     }
+
     switch (popup.firstChild.getAttribute("command")) {
     case "cmd_bm_open":
     case "cmd_bm_expandfolder":
@@ -289,6 +294,8 @@ var BookmarksCommand = {
     // ---------------------
     // delete
     // ---------------------
+    // bm_refreshlivemark
+    // ---------------------
     // bm_properties
     switch (type) {
     case "BookmarkSeparator":
@@ -305,14 +312,9 @@ var BookmarksCommand = {
                   "bm_properties"];
       break;
     case "Folder":
+    case "PersonalToolbarFolder":
       commands = ["bm_expandfolder", "bm_openfolder", "bm_managefolder", "bm_separator", 
                   "bm_newbookmark", "bm_newfolder", "bm_newseparator", "bm_separator",
-                  "cut", "copy", "paste", "bm_separator",
-                  "delete", "bm_separator",
-                  "bm_properties"];
-      break;
-    case "PersonalToolbarFolder":
-      commands = ["bm_newfolder", "bm_separator",
                   "cut", "copy", "paste", "bm_separator",
                   "delete", "bm_separator",
                   "bm_properties"];
@@ -329,8 +331,7 @@ var BookmarksCommand = {
                   "copy"];
       break;
     case "Livemark":
-      commands = ["bm_newfolder", "bm_separator",
-                  "cut", "copy", "paste", "bm_separator",
+      commands = ["cut", "copy", "bm_separator",
                   "delete", "bm_separator",
                   "bm_refreshlivemark", "bm_separator",
                   "bm_properties"];
@@ -353,24 +354,6 @@ var BookmarksCommand = {
   {
     var cmdName = aCommand.substring(NC_NS_CMD.length);
     return BookmarksUtils.getLocaleString ("cmd_" + cmdName);
-    /*
-    try {
-      // Note: this will succeed only if there's a string in the bookmarks
-      //       string bundle for this command name. Otherwise, <xul:stringbundle/>
-      //       will throw, we'll catch & stifle the error, and look up the command
-      //       name in the datasource. 
-      return BookmarksUtils.getLocaleString ("cmd_" + cmdName);
-    }
-    catch (e) {
-    }   
-    // XXX - WORK TO DO HERE! (rjc will cry if we don't fix this) 
-    // need to ask the ds for the commands for this node, however we don't
-    // have the right params. This is kind of a problem. 
-    dump("*** BAD! EVIL! WICKED! NO! ACK! ARGH! ORGH!"+aCommand+"\n");
-    const rName = RDF.GetResource(NC_NS + "Name");
-    const rSource = RDF.GetResource(aNodeID);
-    return BMDS.GetTarget(rSource, rName, true).Value;
-    */
   },
     
   ///////////////////////////////////////////////////////////////////////////
@@ -516,7 +499,7 @@ var BookmarksCommand = {
    
     var selection = {item: items, parent:Array(items.length), length: items.length};
     BookmarksUtils.checkSelection(selection);
-    BookmarksUtils.insertAndCheckSelection("paste", selection, aTarget);
+    BookmarksUtils.insertAndCheckSelection("paste", selection, aTarget, -1);
   },
   
   deleteBookmark: function (aSelection)
@@ -531,7 +514,6 @@ var BookmarksCommand = {
                "centerscreen,chrome,modal=yes,dialog=yes,resizable=yes", null, null, null, null, "selectFolder", rv);
     if (!rv.target)
       return;
-
     BookmarksUtils.moveAndCheckSelection("move", aSelection, rv.target);
   },
 
@@ -688,7 +670,7 @@ var BookmarksCommand = {
   createNewResource: function(aResource, aTarget, aTxnType)
   {
     var selection = BookmarksUtils.getSelectionFromResource(aResource, aTarget.parent);
-    var ok        = BookmarksUtils.insertAndCheckSelection(aTxnType, selection, aTarget);
+    var ok        = BookmarksUtils.insertAndCheckSelection(aTxnType, selection, aTarget, -1);
     if (ok && aTxnType != "newseparator") {
       ok = this.openBookmarkProperties(selection);
       if (!ok)
@@ -898,7 +880,9 @@ var BookmarksController = {
       return (aTarget && BookmarksUtils.isValidTargetContainer(aTarget.parent));
     case "cmd_bm_properties":
     case "cmd_bm_rename":
-      if (length != 1 || BookmarksUtils.resolveType(aSelection.parent[0]) == "Livemark")
+      if (length != 1 ||
+          aSelection.item[0].Value == "NC:BookmarksRoot" ||
+          BookmarksUtils.resolveType(aSelection.parent[0]) == "Livemark")
         return false;
       return true;
     case "cmd_bm_setpersonaltoolbarfolder":
@@ -1001,7 +985,7 @@ var BookmarksController = {
     var commands = ["cmd_bm_newbookmark", "cmd_bm_newlivemark", "cmd_bm_newfolder", "cmd_bm_newseparator",
                     "cmd_undo", "cmd_redo", "cmd_bm_properties", "cmd_bm_rename", 
                     "cmd_copy", "cmd_paste", "cmd_cut", "cmd_delete",
-                    "cmd_bm_setpersonaltoolbarfolder", "cmd_bm_movebookmark", 
+                    "cmd_bm_setpersonaltoolbarfolder", "cmd_bm_movebookmark",
                     "cmd_bm_openfolder", "cmd_bm_managefolder", "cmd_bm_refreshlivemark"];
     for (var i = 0; i < commands.length; ++i) {
       var enabled = this.isCommandEnabled(commands[i], aSelection, aTarget);
@@ -1171,7 +1155,7 @@ var BookmarksUtils = {
 
   isSelectionValidForDeletion: function (aSelection)
   {
-    return !aSelection.containsImmutable;
+    return !aSelection.containsImmutable && !aSelection.containsPTF;
   },
 
   /////////////////////////////////////////////////////////////////////////////
@@ -1181,7 +1165,7 @@ var BookmarksUtils = {
     var folder = aContainer;
     do {
       for (var i=0; i<aSelection.length; ++i) {
-        if (aSelection.isContainer[i] && aSelection.item[i] == folder)
+        if (aSelection.isContainer[i] && aSelection.item[i].Value == folder.Value)
           return true;
       }
       folder = BMSVC.getParent(folder);
@@ -1250,32 +1234,34 @@ var BookmarksUtils = {
     return true;
   },
         
-  insertAndCheckSelection: function (aAction, aSelection, aTarget)
+  insertAndCheckSelection: function (aAction, aSelection, aTarget, aTargetIndex)
   {
     isValid = BookmarksUtils.isSelectionValidForInsertion(aSelection, aTarget);
     if (!isValid) {
       SOUND.beep();
       return false;
     }
-    this.insertSelection(aAction, aSelection, aTarget);
+    this.insertSelection(aAction, aSelection, aTarget, aTargetIndex);
     BookmarksUtils.flushDataSource();
     return true;
   },
 
-  insertSelection: function (aAction, aSelection, aTarget)
+  insertSelection: function (aAction, aSelection, aTarget, aTargetIndex)
   {
     var transaction    = new BookmarkInsertTransaction(aAction);
     transaction.item   = new Array(aSelection.length);
     transaction.parent = new Array(aSelection.length);
     transaction.index  = new Array(aSelection.length);
-    var index = aTarget.index;
+    // the -1 business is a hack for 252133; it should go away once we can
+    // consistently add things after a given element.
+    var index = aTargetIndex ? aTargetIndex : aTarget.index;
     for (var i=0; i<aSelection.length; ++i) {
       var rSource = aSelection.item[i];
       if (BMSVC.isBookmarkedResource(rSource))
         rSource = BMSVC.cloneResource(rSource);
       transaction.item  [i] = rSource;
       transaction.parent[i] = aTarget.parent;
-      transaction.index [i] = index++;
+      transaction.index [i] = ((index == -1) ? -1 : index++);
     }
     BMSVC.transactionManager.doTransaction(transaction);
   },
@@ -1445,15 +1431,23 @@ var BookmarksUtils = {
   loadFavIcon: function (aURL, aFavIconURL) {
     var urlLiteral = RDF.GetLiteral(aURL);
     // don't do anything if this URI isn't bookmarked
-    var bmResource = BMSVC.GetSource(RDF.GetResource(NC_NS+"URL"), urlLiteral, true);
-    if (!bmResource)
-      return;
+    var bmResources = BMSVC.GetSources(RDF.GetResource(NC_NS+"URL"), urlLiteral, true);
+    var toUpdate = 0;
+
+    while (bmResources.hasMoreElements()) {
+      var bmResource = bmResources.getNext();
  
-    // don't do anything if there's already a data: url set
-    var oldIcon = BMDS.GetTarget(bmResource, RDF.GetResource(NC_NS+"Icon"), true);
-    if (oldIcon && (oldIcon.QueryInterface(kRDFLITIID).Value.substring(0,5) == "data:"))
+      // don't flag this as needing update if it already has a data: icon url set
+      var oldIcon = BMDS.GetTarget(bmResource, RDF.GetResource(NC_NS+"Icon"), true);
+      if (oldIcon && (oldIcon.QueryInterface(kRDFLITIID).Value.substring(0,5) == "data:"))
+        continue;
+
+      toUpdate++;
+    }
+
+    if (toUpdate == 0)
       return;
- 
+
     var chan = IOSVC.newChannel(aFavIconURL, null, null);
     var listener = new bookmarksFavIconLoadListener (aURL, aFavIconURL, chan);
     chan.asyncOpen(listener, null);
@@ -1510,7 +1504,14 @@ BookmarkInsertTransaction.prototype =
     this.beginUpdateBatch();
     for (var i=0; i<this.item.length; ++i) {
       this.RDFC.Init(this.BMDS, this.parent[i]);
-      this.RDFC.InsertElementAt(this.item[i], this.index[i], true);
+      // if the index is -1, we use appendElement, and then update the
+      // index so that undoTransaction can still function
+      if (this.index[i] == -1) {
+        this.RDFC.AppendElement(this.item[i]);
+        this.index[i] = this.RDFC.GetCount();
+      } else {
+        this.RDFC.InsertElementAt(this.item[i], this.index[i], true);
+      }
     }
     this.endUpdateBatch();
   },
@@ -1754,8 +1755,17 @@ bookmarksFavIconLoadListener.prototype = {
         Components.isSuccessCode(aStatusCode) &&
         this.mCountRead > 0)
     {
-      // build a data URL for the favicon
-      var dataurl = "data:" + this.mChannel.contentType + ";base64," + btoa(this.mBytes);
+      var dataurl;
+      // XXX - arbitrary size beyond which we won't store a favicon.  This is /extremely/
+      // generous, and is probably too high.
+      if (this.mCountRead > 16384) {
+        dataurl = "data:";      // hack meaning "pretend this doesn't exist"
+      } else {
+        // build a data URL for the favicon
+        // we can't really trust contentType, but then, the image loader doesn't
+        // trust it either.
+        dataurl = "data:" + this.mChannel.contentType + ";base64," + btoa(this.mBytes);
+      }
       BMSVC.updateBookmarkIcon(this.mURI, dataurl);
     }
   },

@@ -217,6 +217,7 @@
                             event.stopPropagation();
                             event.preventBubble();"
                     onerror="gBrowser.addToMissedIconCache(this.src);
+                             this.removeAttribute('src');
                              this.parentNode.selectedIndex = 0;"
                     tooltiptext="&proxyIcon.tooltip;"/>
           </deck>
