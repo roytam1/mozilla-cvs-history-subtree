@@ -41,9 +41,11 @@
 #include "txIXPathContext.h"
 #include "txExpandedNameMap.h"
 #include "XSLTFunctions.h"
+#include "txError.h"
 
 class txOutputXMLEventHandler;
 class txXSLKey;
+class txVariableMap;
 
 class txIProcessorHelper
 {
@@ -102,10 +104,12 @@ public:
         // ImportFrame which is the first one *not* imported by this frame
         ImportFrame* mFirstNotImported;
 
+        // Map of top-level variables/parameters
+        txExpandedNameMap mVariables;
+
         // The following stuff is missing here:
 
         // Namespace aliases (xsl:namespace-alias)
-        // Toplevel variables/parameters
     };
     // To be able to do some cleaning up in destructor
     friend class ImportFrame;
@@ -162,9 +166,25 @@ public:
     **/
     txOutputFormat* getOutputFormat();
 
+    /*
+     * Add a global variable
+     */
+    nsresult addGlobalVariable(Element* aVarElem,
+                               ImportFrame* aImportFrame);
 
-    Stack* getVariableSetStack();
+    /*
+     * Returns map on top of the stack of local variable-bindings
+     */
+    txVariableMap* getLocalVariables();
+    
+    /*
+     * Sets top map of the local variable-bindings stack
+     */
+    void setLocalVariables(txVariableMap* aMap);
 
+    /*
+     * Enums for the getExpr and getPattern functions
+     */
     enum ExprAttr {
         SelectAttr = 0,
         TestAttr,
@@ -239,7 +259,7 @@ public:
     struct TemplateRule {
         ImportFrame* mFrame;
         const txExpandedName* mMode;
-        NamedMap* mParams;
+        txVariableMap* mParams;
     };
 
     /*
@@ -373,6 +393,14 @@ private:
         txPattern* mMatch;
         double mPriority;
     };
+    
+    class GlobalVariableValue : public TxObject {
+    public:
+        virtual ~GlobalVariableValue();
+      
+        ExprResult* mValue;
+        MBool mEvaluating;
+    };
 
     /**
      * The list of ErrorObservers registered with this ProcessorState
@@ -437,6 +465,16 @@ private:
      */
     TemplateRule*  mCurrentTemplateRule;
 
+    /*
+     * Top of stack of local variable-bindings
+     */
+    txVariableMap* mLocalVariables;
+    
+    /*
+     * Map of values of global variables
+     */
+    txExpandedNameMap mGlobalVariableValues;
+
     Document*      mSourceDocument;
     Document*      xslDocument;
     
@@ -450,8 +488,6 @@ private:
      * creating a temporary document for RTFs
      */
     txIProcessorHelper* mHelper;
-
-    Stack          variableSets;
 
     /**
      * Returns the closest xml:space value for the given node
