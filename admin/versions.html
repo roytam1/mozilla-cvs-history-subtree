@@ -1,0 +1,123 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"><html><head><title>Versioning scheme</title><meta http-equiv="content-type" content="text/html; charset=ISO-8859-1"></head><body>This document explains the versioning scheme used by Beonex.
+<h1>Requirements</h1>
+There are several requirements for versioning schemes:<br>
+<ol>
+  <li>It should be clear to users, at least which version is more current,
+i.e. which version is bigger/higher, given 2 version numbers.</li>
+  <li>Whenever we change *anything* and upload it to public ftp servers, the filename must change</li>
+  <li>We issue Development and Preview releases.</li>
+  <ol>
+    <li>Development releases are currently issued when we changed something
+bigger and/or likely to fail and want a broader testing. For example, I changed
+the build environment on Linux and want to check, if the library dependencies
+are OK and work on all distros. Or we added the spellchecker, but it's still
+rough and we want to get bug reports.</li>
+    <li>Preview releases are sometimes issued as "release candidates", meaning
+that we are comfortable with a build and would like to release it, but are
+not sure, ifi there are bugs lurking, which other people might find, because
+they are testing different things or use a different environment.</li>
+    <li>In other cases, Preview releases are issued to give users a build
+based on a certain Mozilla milestone. For example, our current, official
+stable release is 0.8, which is based on the Mozilla 1.0 branch, and we are
+comfortable with it. However, mozilla.org already released Mozilla 1.1final,
+which isn't that much better, has new features with a several bugs etc..
+Some people might see that Mozilla 1.1 has a new release and want to get
+a Beonex Communicator based on it. Other people take it as proof that Beonex
+is "behind" Mozilla. For those people, we issue a Beonex Communicator based
+on Mozilla 1.1, while the official stable release is still 0.8 (based on
+Mozilla 1.0.x).</li>
+  </ol>
+</ol>
+<h1>Current scheme</h1>
+The currently used scheme is this:<br>
+We have "majorrelease.minorrelease.maintainancerelease-quality-buildnumber",
+e.g. 0.8-stable-1, 0.8-stable-2, 0.8.1-stable-1 (in that chronological order).<br>
+<h2>majorrelease</h2>
+will be changed, if there are really, really, really big changes, something
+which doesn't look like the old one anymore. Happens every few years. (We
+will at some point of course switch from 0.x to 1.x, which will not be such
+a big change. 1.x to 2.x.)<br>
+<h2>minorrelease</h2>
+is changed, if there are major changes, e.g. when we move to a new Mozilla
+release (e.g. 0.6 to 0.9.2.1, 0.9.4.1 to 1.0 or 1.0 to 1.2).<br>
+<h2>maintainancerelease</h2>
+is changed, if we issue a major bugfixes within one release, not many new
+features. Happens, when we merge the latest Mozilla changes within one Mozilla
+branch, e.g. Mozilla 1.0 to Mozilla 1.0.1, or when we add new features on
+our own, e.g. integrate a spellchecker or roaming.<br>
+<h2>quality</h2>
+states, if the version has alpha, beta or final status. "dev" are Development
+builds (see Requirements), "pre" are Preview builds (see Requirements and
+below).<br>
+<br>
+In reponse to requirement 3.3. (see above), we don't want to call the Mozilla 1.1-based release "0.9-stable", because
+that would imply that the current version is 0.9, which is wrong. It would
+also make it impossible to call the next "real" stable release 0.9. So, I
+called the Mozilla 1.1-based release "0.9-pre-1". A build based on Mozilla
+1.2RC1 would then probably called "0.9-pre-2" and the Mozilla 1.2final-based
+version would be called "0.9-stable-1"<br>
+<h2>buildnumber</h2>
+is changed whenever we have to change a release, but we don't think it deserves
+to increase the maintainancerelease. Usually, when we issue a build with
+a certain security bug fixed or when we fix something were we foobared (e.g.
+I notice after the release that the library dependencies on Linux are screwed
+and Redhat users can't use the build without a lot of hassle, so I fix it,
+rebuild and increase the build number).<br>
+<br>
+For Preview builds, however, the buildnumber can have the meaning of a minorrelease
+or maintainancerelease, see the example under "quality".<br>
+<h1>Problems</h1>
+The current versioning scheme is very confusing for many people and even took me some time to get used to it <i>myself</i>, although I invented it. This probably means that it's broken. The major problems:<br>
+<h2>minorreleases</h2>
+We use minor releases when commercial vendors often use major releases. To
+some people, this gives the impression of inferiourity, especially the fact
+that we're still at 0.x. More on that in the FAQ.<br>
+<h2>buildnumbers</h2>
+The difference between minorreleases and buildnumbers is not clear to many people<br>
+<h2>quality</h2>
+Many people miss that as well. Not only consider they the 0.x releases as
+"beta" and 'not suitable for general use', depsite the "stable" in the version
+name. But some appearantly completely miss the difference between "pre" builds
+and "stable" builds, thinking that "0.9-pre" is <i>the</i> (final) 0.9, which is it not.
+<h1>Suggestions</h1>
+We could move the buildnumber (then starting at 0) after the minornumber,
+i.e. "majorrelease.minorrelease.maintainancerelease.buildnumber-quality",
+e.g.<br>
+<ul>
+  <li>0.8-stable-1 becomes 0.8.0.0-stable</li>
+  <li>0.8-stable-2 becomes 0.8.0.1</li>
+  <li>0.8.1-stable-1 becomes 0.8.1.0 etc..</li>
+</ul>
+Tha does not solve the problem with preview releases, though. In fact, it makes it worse: How do we call them, then?<br>
+<br>
+Other suggestions are welcome.<br>
+<h1>FAQ</h1>
+<h2>0.x</h2>
+Why are you still at 0.x, while Mozilla is at 1.x? That implies that your
+builds are less unstable.<br>
+<br>
+A bit history: When Beonex started, Mozilla was
+at 0.6 and Netscape at 6.0, which was very unstable and buggy and IMO alpha-(at
+beast beta-)quality. IMO, the 0.9.2.1 and later the 0.9.4.1 versions, on
+which Netscape based some releases, started being usable. But I had no Windows
+builds at that time, so I could not move to 1.0. When Mozilla moved over
+to 1.0, I had no time for the PR that such a switch requires.<br>
+<br>
+I think that
+the switch to 1.0 is a unique opportunity for public relations (press coverage
+etc.). It signifies something brand-"new" and new things are always good
+for press articles. But right now, I don't have the time to do all that PR
+work. OTOH, if we don't manage to generate considerable press coverage with
+the 1.0 release, we did not just miss a good opportunity, but we risk that
+press reporters think at release 1.0.1 or 1.1 "Why didn't I hear about that
+earlier, when 1.0 came out? Must be something unimportant, if not even 1.0
+was worth to report about. -&gt; Trash".<br>
+<br>
+
+Also, I'd like to have some fun release stuff, like a virtual release party
+and other goodies (ideas welcome!), which I don't have time for either atm.<br>
+<br>
+
+That's why I am so scared about 1.0 and why I push it out atm. Of course,
+it all looks different with more helping hands, so feel free to step up!
+:-)</body></html>
