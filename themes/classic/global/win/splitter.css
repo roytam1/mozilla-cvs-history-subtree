@@ -39,7 +39,7 @@ splitter {
   -moz-border-bottom-colors: ThreeDShadow ThreeDLightShadow;
   -moz-border-left-colors: ThreeDDarkShadow ThreeDHighlight;
   min-width: 8px;
-  background-color: ThreeDFace;
+  background: #3398cc;
 }
 
 splitter[state="dragging"] {

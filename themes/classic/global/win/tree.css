@@ -140,11 +140,11 @@ treecolpicker {
   -moz-box-align: center;
   -moz-box-pack: center;
   border: 2px solid;
-  -moz-border-top-colors: ThreeDHighlight ThreeDLightShadow;
-  -moz-border-right-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-bottom-colors: ThreeDDarkShadow ThreeDShadow;
-  -moz-border-left-colors: ThreeDHighlight ThreeDLightShadow;
-  background-color: -moz-Dialog;
+  -moz-border-top-colors: 1px solid #84affd;
+  -moz-border-right-colors: 1px solid #02659c;
+  -moz-border-bottom-colors: 1px solid #02659c;
+  -moz-border-left-colors: 1px solid #84affd;
+  background-color: #3398cc;
   color: -moz-DialogText;
   padding: 0px 4px;
 }
