@@ -203,7 +203,7 @@ NS_IMETHODIMP nsMsgDBView::DumpView()
                 printf("+");
             }
             else {
-                printf(" ");
+                printf("-");
             }
             for (j=0;j<level;j++) {
                 printf(".");
