@@ -428,7 +428,7 @@ _IMGCB_DestroyPixmap(IMGCB* img_cb, jint op, void* dpy_cx, IL_Pixmap* pixmap)
     }
 }
 
-/*	ebb - begin */
+#if defined (COLORSYNC)
 /************************ ICC Profile & ColorSync Support ************************/
 /*	******************************************************************************
 	OpenICCProfileFromMem
@@ -453,8 +453,7 @@ _IMGCB_OpenICCProfileFromMem(	struct IMGCB*	/*self*/,
 	Desc:		This is the most efficient (in terms of memory) way of 'opening'
 	 			an icc profile, vs. having ColorSync create an in-memory copy
 	 			of some of the contents.  The filename param must contain a full
-	 			path name, wehich will be converted internally to a Mac FSSpec.
-				If the resulting FSSpec isn't valid or the file doesn't contain
+	 			path name, which if isn't valid or the file doesn't contain a
 				a valid profile, we'll retun NULL.
 */
 JMC_PUBLIC_API(void*)
@@ -582,7 +581,7 @@ _IMGCB_IsColorSyncAvailable(	struct IMGCB*	/*self*/,
 {
 	return (false);
 }
-/*	ebb - end */
+#endif /* (COLORSYNC) */
 
 /**************************** Pixmap display *********************************/
 typedef struct 
