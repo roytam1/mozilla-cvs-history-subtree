@@ -542,12 +542,13 @@ FindLastBlock(nsIPresContext* aPresContext, nsIFrame* aKid)
 
 /*
  * Unlike the special (next) sibling, the special previous sibling
- * property points only from the anonymous block to the original inline
- * that preceded it.  It is useful for finding the "special parent" of a
- * frame (i.e., a frame from which a good parent style context can be
- * obtained), one looks at the special previous sibling annotation of
- * the real parent of the frame (if the real parent has
- * NS_FRAME_IS_SPECIAL).
+ * property points only from the anonymous block to the original
+ * inline that preceded it.  DO NOT CHANGE THAT -- the
+ * GetParentStyleContextFrame code depends on it!  It is useful for
+ * finding the "special parent" of a frame (i.e., a frame from which a
+ * good parent style context can be obtained), one looks at the
+ * special previous sibling annotation of the real parent of the frame
+ * (if the real parent has NS_FRAME_IS_SPECIAL).
  */
 inline void
 MarkIBSpecialPrevSibling(nsIPresContext* aPresContext,
@@ -589,6 +590,11 @@ nsFrameItems::AddChild(nsIFrame* aChild)
   {
     lastChild->SetNextSibling(aChild);
     lastChild = aChild;
+  }
+  // if aChild has siblings, lastChild needs to be the last one
+  nsIFrame* sib;
+  for (lastChild->GetNextSibling(&sib); sib; sib->GetNextSibling(&sib)) {
+    lastChild = sib;
   }
 }
 
@@ -2819,16 +2825,15 @@ nsCSSFrameConstructor::ConstructTableColFrame(nsIPresShell*            aPresShel
   if (cgContent) { 
     cgContent->GetSpan(&span);
     nsIFrame* lastCol = aNewFrame;
+    nsCOMPtr<nsIStyleContext> styleContext;
     for (PRInt32 spanX = 1; spanX < span; spanX++) {
-      nsCOMPtr<nsIStyleContext> styleContext;
-      aPresContext->ResolvePseudoStyleContextFor(aContent, nsHTMLAtoms::tableColPseudo, aStyleContext, 
-                                                 getter_AddRefs(styleContext));
+      // The same content node should always resolve to the same style context.
+      if (1 == spanX)
+        aNewFrame->GetStyleContext(getter_AddRefs(styleContext));
       nsIFrame* newCol;
       rv = aTableCreator.CreateTableColFrame(&newCol); if (NS_FAILED(rv)) return rv;
-      InitAndRestoreFrame(aPresContext, aState, aContent, parentFrame, styleContext, nsnull, newCol);
-      if (aIsPseudoParent) {
-        aPresContext->ReParentStyleContext(newCol, aStyleContext);
-      }
+      InitAndRestoreFrame(aPresContext, aState, aContent, parentFrame,
+                          styleContext, nsnull, newCol);
       ((nsTableColFrame*)newCol)->SetType(eColAnonymousCol);
       lastCol->SetNextSibling(newCol);
       lastCol = newCol;
@@ -2839,13 +2844,14 @@ nsCSSFrameConstructor::ConstructTableColFrame(nsIPresShell*            aPresShel
     nsFrameItems childItems;
     nsIFrame* captionFrame;
     rv = TableProcessChildren(aPresShell, aPresContext, aState, aContent, aNewFrame,
-                              aTableCreator, childItems, captionFrame); if (NS_FAILED(rv)) return rv;
+                              aTableCreator, childItems, captionFrame);
+    if (NS_FAILED(rv)) return rv;
     aNewFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
     if (aIsPseudoParent) {
       aState.mPseudoFrames.mColGroup.mChildList.AddChild(aNewFrame);
     }
   }
-
+  
   return rv;
 }
 
@@ -3223,7 +3229,7 @@ nsCSSFrameConstructor::TableProcessChild(nsIPresShell*            aPresShell,
 
   // for every table related frame except captions and ones with pseudo parents, 
   // link into the child list
-  if (childFrame && !childIsCaption && !isPseudoParent) { 
+  if (childFrame && !childIsCaption && !isPseudoParent) {
     aChildItems.AddChild(childFrame);
   }
   return rv;
@@ -4872,6 +4878,15 @@ nsCSSFrameConstructor::ConstructHTMLFrame(nsIPresShell*            aPresShell,
     }
     if (allowSubframes) {
       rv = NS_NewHTMLFrameOuterFrame(aPresShell, &newFrame);
+      if (newFrame) {
+        // the nsFrameOuterFrame needs to know about its content parent during ::Init.
+        // there is no reasonable way to get the value there.
+        // so we store it as a frame property.
+        nsCOMPtr<nsIAtom> contentParentAtom = do_GetAtom("contentParent");
+        aState.mFrameManager->SetFrameProperty(newFrame,
+                                               contentParentAtom, 
+                                               aParentFrame, nsnull);
+      }
     }
   }
   else if (nsHTMLAtoms::noframes == aTag) {
@@ -10696,7 +10711,7 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
     if (disp && disp->mAppearance) {
       nsCOMPtr<nsITheme> theme;
       aPresContext->GetTheme(getter_AddRefs(theme));
-      if (theme && theme->ThemeSupportsWidget(aPresContext, disp->mAppearance)) {
+      if (theme && theme->ThemeSupportsWidget(aPresContext, primaryFrame, disp->mAppearance)) {
         PRBool repaint = PR_FALSE;
         theme->WidgetStateChanged(primaryFrame, disp->mAppearance, aAttribute, &repaint);
         if (repaint)
@@ -10735,24 +10750,6 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
         frameManager->ComputeStyleChangeFor(aPresContext, primaryFrame, 
                                             aNameSpaceID, aAttribute,
                                             changeList, aHint, maxHint);
-
-        if (IsFrameSpecial(primaryFrame)) {
-          // Block-in-inline construction, oh no! Compute style
-          // changes for the IB siblings, too.
-          // XXXwaterson ComputeStyleChangeFor is broken when
-          // re-resolving the style for the anonymous block. Don't
-          // know why yet: deep magic there.
-          nsIFrame *sibling = primaryFrame;
-          while (1) {
-            GetSpecialSibling(frameManager, sibling, &sibling);
-            if (! sibling)
-              break;
-
-            frameManager->ComputeStyleChangeFor(aPresContext, sibling,
-                                                aNameSpaceID, aAttribute,
-                                                changeList, aHint, maxHint);
-          }
-        }
       } else {
 #ifdef DEBUG_shaver
         fputc('-', stderr);

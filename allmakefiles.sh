@@ -872,12 +872,6 @@ fi
         modules/libpr0n/decoders/xbm/Makefile
 "
 
-    MAKEFILES_gfx2="
-        gfx2/Makefile
-        gfx2/public/Makefile
-        gfx2/src/Makefile
-"
- 
     MAKEFILES_accessible="
        accessible/Makefile
        accessible/public/Makefile
@@ -1191,7 +1185,6 @@ $MAKEFILES_expat
 $MAKEFILES_extensions
 $MAKEFILES_gc
 $MAKEFILES_gfx
-$MAKEFILES_gfx2
 $MAKEFILES_accessible
 $MAKEFILES_htmlparser
 $MAKEFILES_intl

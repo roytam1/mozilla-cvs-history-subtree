@@ -920,7 +920,10 @@ static const PRInt32 kBackgroundYPositionKTable[] = {
 
   case eCSSProperty__moz_border_radius:
     break;
-  
+
+  case eCSSProperty_appearance:
+    return SearchKeywordTable(aValue, kAppearanceKTable);
+
   case eCSSProperty_azimuth:
     return SearchKeywordTable(aValue, kAzimuthKTable);
 

@@ -90,7 +90,7 @@ EXPORT_RESOURCE_CONTENT = \
 libs::
 	$(INSTALL) $(EXPORT_RESOURCE_CONTENT) $(DIST)/bin/res/dtd
 	$(INSTALL) $(srcdir)/svg.css $(DIST)/bin/res
-	$(PERL) install-svg-css.pl $(DIST)/bin/res/ua.css
+	$(PERL) $(srcdir)/install-svg-css.pl $(DIST)/bin/res/ua.css
 
 install::
 	$(SYSINSTALL) $(IFLAGS1) $(EXPORT_RESOURCE_CONTENT) $(DESTDIR)$(mozappdir)/res/dtd
