@@ -4852,7 +4852,7 @@ nsXULPrototypeScript::Serialize(nsIObjectOutputStream* aStream,
         // stream, when control returns here from ::JS_XDRScript, we'll have
         // one last buffer of data to write to aStream.
 
-        PRUint32 size;
+        uint32 size;
         const char* data = NS_REINTERPRET_CAST(const char*,
                                                ::JS_XDRMemGetData(xdr, &size));
         NS_ASSERTION(data, "no decoded JSXDRState data!");
@@ -4935,7 +4935,8 @@ nsXULPrototypeScript::Deserialize(nsIObjectInputStream* aStream,
             // the JSXDRState.  So we steal it back, nulling xdr's buffer so it
             // doesn't get passed to ::JS_free by ::JS_XDRDestroy.
 
-            data = (char*) ::JS_XDRMemGetData(xdr, &size);
+            uint32 junk;
+            data = (char*) ::JS_XDRMemGetData(xdr, &junk);
             if (data)
                 ::JS_XDRMemSetData(xdr, NULL, 0);
             ::JS_XDRDestroy(xdr);
