@@ -361,69 +361,6 @@
 #define HG99882
 
 
-#if 0
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-#define 
-
-#endif /* 0 */
-
-
-
-
-
-
-
-
 #define HG53784
 #define HG78478
 #define HG89984
