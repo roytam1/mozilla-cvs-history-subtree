@@ -51,6 +51,10 @@
 // for profiles
 #include <nsProfileDirServiceProvider.h>
 
+// app component registration
+#include <nsIGenericFactory.h>
+#include <nsIComponentRegistrar.h>
+
 // all of our local includes
 #include "EmbedPrivate.h"
 #include "EmbedWindow.h"
@@ -59,6 +63,9 @@
 #include "EmbedEventListener.h"
 #include "EmbedWindowCreator.h"
 #include "EmbedStream.h"
+#ifdef MOZ_WIDGET_GTK2
+#include "GtkPromptService.h"
+#endif
 
 #ifdef _BUILD_STATIC_BIN
 #include "nsStaticComponent.h"
@@ -78,6 +85,27 @@ nsIPref     *EmbedPrivate::sPrefs       = nsnull;
 GtkWidget   *EmbedPrivate::sOffscreenWindow = 0;
 GtkWidget   *EmbedPrivate::sOffscreenFixed  = 0;
 nsIDirectoryServiceProvider *EmbedPrivate::sAppFileLocProvider = nsnull;
+
+#define NS_PROMPTSERVICE_CID \
+ {0x95611356, 0xf583, 0x46f5, {0x81, 0xff, 0x4b, 0x3e, 0x01, 0x62, 0xc6, 0x19}}
+
+#ifdef MOZ_WIDGET_GTK2
+NS_GENERIC_FACTORY_CONSTRUCTOR(GtkPromptService)
+#endif
+
+static const nsModuleComponentInfo defaultAppComps[] = {
+#ifdef MOZ_WIDGET_GTK2
+  {
+    "Prompt Service",
+    NS_PROMPTSERVICE_CID,
+    "@mozilla.org/embedcomp/prompt-service;1",
+    GtkPromptServiceConstructor
+  }
+#endif
+};
+
+const nsModuleComponentInfo *EmbedPrivate::sAppComps = defaultAppComps;
+int   EmbedPrivate::sNumAppComps = sizeof(defaultAppComps) / sizeof(nsModuleComponentInfo);
 
 EmbedPrivate::EmbedPrivate(void)
 {
@@ -377,6 +405,10 @@ EmbedPrivate::PushStartup(void)
       NS_WARNING("Warning: Failed to start up profiles.\n");
     
 
+    rv = RegisterAppComponents();
+    if (NS_FAILED(rv))
+      NS_WARNING("Warning: Failed to register app compoentns.\n");
+
     // XXX startup appshell service?
     // XXX create offscreen window for appshell service?
     // XXX remove X prop from offscreen window?
@@ -429,6 +461,15 @@ EmbedPrivate::SetCompPath(char *aPath)
     sCompPath = strdup(aPath);
   else
     sCompPath = nsnull;
+}
+
+/* static */
+void
+EmbedPrivate::SetAppComponents(const nsModuleComponentInfo* aComps,
+                               int aNumComponents)
+{
+  sAppComps = aComps;
+  sNumAppComps = aNumComponents;
 }
 
 /* static */
@@ -828,6 +869,31 @@ EmbedPrivate::ShutdownProfile(void)
   }
 }
 
+/* static */
+nsresult
+EmbedPrivate::RegisterAppComponents(void)
+{
+  nsCOMPtr<nsIComponentRegistrar> cr;
+  nsresult rv = NS_GetComponentRegistrar(getter_AddRefs(cr));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  for (int i = 0; i < sNumAppComps; ++i) {
+    nsCOMPtr<nsIGenericFactory> componentFactory;
+    rv = NS_NewGenericFactory(getter_AddRefs(componentFactory),
+                              &(sAppComps[i]));
+    if (NS_FAILED(rv)) {
+      NS_WARNING("Unable to create factory for component");
+      continue;  // don't abort registering other components
+    }
+
+    rv = cr->RegisterFactory(sAppComps[i].mCID, sAppComps[i].mDescription,
+                             sAppComps[i].mContractID, componentFactory);
+    NS_ASSERTION(NS_SUCCEEDED(rv), "Unable to register factory for component");
+  }
+
+  return rv;
+}
+			     
 /* static */
 void
 EmbedPrivate::EnsureOffscreenWindow(void)

@@ -46,6 +46,7 @@ class EmbedStream;
 
 class nsPIDOMWindow;
 class nsIDirectoryServiceProvider;
+struct nsModuleComponentInfo;
 
 class EmbedPrivate {
 
@@ -67,6 +68,8 @@ class EmbedPrivate {
   static void PushStartup     (void);
   static void PopStartup      (void);
   static void SetCompPath     (char *aPath);
+  static void SetAppComponents (const nsModuleComponentInfo* aComps,
+                                int aNumComponents);
   static void SetProfilePath  (char *aDir, char *aName);
   static void SetDirectoryServiceProvider (nsIDirectoryServiceProvider * appFileLocProvider);
 
@@ -126,6 +129,9 @@ class EmbedPrivate {
   static PRUint32                sWidgetCount;
   // the path to components
   static char                   *sCompPath;
+  // the list of application-specific components to register
+  static const nsModuleComponentInfo  *sAppComps;
+  static int                     sNumAppComps;
   // the appshell we have created
   static nsIAppShell            *sAppShell;
   // the list of all open windows
@@ -163,6 +169,8 @@ class EmbedPrivate {
   
   static nsresult StartupProfile (void);
   static void     ShutdownProfile(void);
+
+  static nsresult RegisterAppComponents();
 
   // offscreen window methods and the offscreen widget
   static void       EnsureOffscreenWindow(void);
