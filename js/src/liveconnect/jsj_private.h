@@ -204,7 +204,7 @@ struct JSJavaThreadState {
     JNIEnv *            jEnv;           /* Per-thread opaque handle to Java VM */
     CapturedJSError *   pending_js_errors; /* JS errors to be thrown as Java exceptions */
     JSContext *         cx;             /* current JS context for thread */
-    int			recursion_depth;/* # transitions into JS from Java */
+    int			recursion_depth;/* # transitions into Java from JS */
     JSJavaThreadState * next;           /* next thread state among all created threads */
 };
 
@@ -578,8 +578,11 @@ JavaStringToId(JSContext *cx, JNIEnv *jEnv, jstring jstr, jsid *idp);
 extern const char *
 jsj_DupJavaStringUTF(JSContext *cx, JNIEnv *jEnv, jstring jstr);
 
-JSJavaThreadState *
-jsj_MapJSContextToJSJThread(JSContext *cx, JNIEnv **envp);
+extern JSJavaThreadState *
+jsj_EnterJava(JSContext *cx, JNIEnv **envp);
+
+extern void
+jsj_ExitJava(JSJavaThreadState *jsj_env);
 
 #ifdef DEBUG
 #define DEBUG_LOG(args) printf args

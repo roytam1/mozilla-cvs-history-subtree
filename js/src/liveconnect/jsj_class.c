@@ -396,10 +396,34 @@ jsj_DiscardJavaClassReflections(JNIEnv *jEnv)
 {
     JSJavaThreadState *jsj_env;
     char *err_msg;
+    JSContext *cx;
 
     /* Get the per-thread state corresponding to the current Java thread */
     jsj_env = jsj_MapJavaThreadToJSJavaThreadState(jEnv, &err_msg);
     JS_ASSERT(jsj_env);
+    if (!jsj_env)
+	return;
+
+    /* Get the JSContext that we're supposed to use for this Java thread */
+    cx = jsj_env->cx;
+    if (!cx) {
+        /* We called spontaneously into JS from Java, rather than from JS into
+           Java and back into JS.  Invoke a callback to obtain/create a
+           JSContext for us to use. */
+        if (JSJ_callbacks->map_jsj_thread_to_js_context) {
+            cx = JSJ_callbacks->map_jsj_thread_to_js_context(jsj_env, jEnv, &err_msg);
+	    JS_ASSERT(cx);
+            if (!cx)
+                return;
+        } else {
+            err_msg = JS_smprintf("Unable to find/create JavaScript execution "
+                                  "context for JNI thread 0x%08x", jEnv);
+	    jsj_LogError(err_msg);
+	    free(err_msg);
+            return;
+        }
+        jsj_env->cx = cx;
+    }
 
     if (java_class_reflections) {
         JSJ_HashTableEnumerateEntries(java_class_reflections,

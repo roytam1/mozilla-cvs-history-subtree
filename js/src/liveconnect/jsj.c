@@ -744,6 +744,9 @@ JSJ_SetDefaultJSContextForJavaThread(JSContext *cx, JSJavaThreadState *jsj_env)
     JSContext *old_context;
     old_context = jsj_env->cx;
     jsj_env->cx = cx;
+
+    /* The following line prevents clearing of jsj_env->cx by jsj_ExitJava() */
+    jsj_env->recursion_depth++;
     return old_context;
 }
 
@@ -788,13 +791,17 @@ JSBool
 JSJ_ConvertJavaObjectToJSValue(JSContext *cx, jobject java_obj, jsval *vp)
 {
     JNIEnv *jEnv;
+    JSBool result;
+    JSJavaThreadState *jsj_env;
             
     /* Get the Java per-thread environment pointer for this JSContext */
-    jsj_MapJSContextToJSJThread(cx, &jEnv);
+    jsj_env = jsj_EnterJava(cx, &jEnv);
     if (!jEnv)
         return JS_FALSE;
 
-    return jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_obj, vp);
+    result = jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_obj, vp);
+    jsj_ExitJava(jsj_env);
+    return result;
 }
 
 

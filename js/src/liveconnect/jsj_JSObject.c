@@ -366,7 +366,7 @@ capture_js_error_reports_for_java(JSContext *cx, const char *message,
     }
 
     /* Get the head of the list of pending JS errors */
-    jsj_env = jsj_MapJSContextToJSJThread(cx, &jEnv);
+    jsj_env = jsj_EnterJava(cx, &jEnv);
     if (!jsj_env)
         goto abort;
 
@@ -383,6 +383,7 @@ capture_js_error_reports_for_java(JSContext *cx, const char *message,
     /* Push this error onto the list of pending JS errors */
     new_error->next = jsj_env->pending_js_errors;
     jsj_env->pending_js_errors = new_error;
+    jsj_ExitJava(jsj_env);
     return;
 
 abort:
@@ -700,7 +701,6 @@ jsj_enter_js(JNIEnv *jEnv, jobject java_wrapper_obj,
         jsj_env->cx = cx;
     }
     *cxp = cx;
-    jsj_env->recursion_depth++;
 
     /*
      * Capture all JS error reports so that they can be thrown into the Java
@@ -769,9 +769,6 @@ jsj_exit_js(JSContext *cx, JSJavaThreadState *jsj_env, JSErrorReporter original_
     if (JSJ_callbacks->exit_js)
         JSJ_callbacks->exit_js(jEnv);
 
-    jsj_env->recursion_depth--;
-    if (!jsj_env->recursion_depth)
-	jsj_env->cx = NULL;
     return JS_TRUE;
 }
 

@@ -411,7 +411,7 @@ jsj_GetJavaArrayLength(JSContext *cx, JNIEnv *jEnv, jarray java_array)
 static JSJavaThreadState *the_java_jsj_env = NULL;
 
 JSJavaThreadState *
-jsj_MapJSContextToJSJThread(JSContext *cx, JNIEnv **envp)
+jsj_EnterJava(JSContext *cx, JNIEnv **envp)
 {
     JSJavaThreadState *jsj_env;
     char *err_msg;
@@ -429,11 +429,22 @@ jsj_MapJSContextToJSJThread(JSContext *cx, JNIEnv **envp)
         }
         return NULL;
     }
-    /* need to assign the context field. */
+
+    JS_ASSERT((jsj_env->recursion_depth == 0) || (jsj_env->cx == cx));
+    jsj_env->recursion_depth++;
     jsj_env->cx = cx;
+
     if (envp)
         *envp = jsj_env->jEnv;
     return jsj_env;
+}
+
+extern void
+jsj_ExitJava(JSJavaThreadState *jsj_env)
+{
+    JS_ASSERT(jsj_env->recursion_depth > 0);
+    if (--jsj_env->recursion_depth == 0)
+	jsj_env->cx = NULL;
 }
 
 /**

@@ -192,20 +192,30 @@ JS_STATIC_DLL_CALLBACK(JSBool)
 JavaArray_getPropertyById(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
     JNIEnv *jEnv;
-    jsj_MapJSContextToJSJThread(cx, &jEnv);
+    JSJavaThreadState *jsj_env;
+    JSBool result;
+
+    jsj_env = jsj_EnterJava(cx, &jEnv);
     if (!jEnv)
         return JS_FALSE;
-    return access_java_array_element(cx, jEnv, obj, id, vp, JS_FALSE);
+    result = access_java_array_element(cx, jEnv, obj, id, vp, JS_FALSE);
+    jsj_ExitJava(jsj_env);
+    return result;
 }
 
 JS_STATIC_DLL_CALLBACK(JSBool)
 JavaArray_setPropertyById(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
     JNIEnv *jEnv;
-    jsj_MapJSContextToJSJThread(cx, &jEnv);
+    JSJavaThreadState *jsj_env;
+    JSBool result;
+    
+    jsj_env = jsj_EnterJava(cx, &jEnv);
     if (!jEnv)
         return JS_FALSE;
-    return access_java_array_element(cx, jEnv, obj, id, vp, JS_TRUE);
+    result = access_java_array_element(cx, jEnv, obj, id, vp, JS_TRUE);
+    jsj_ExitJava(jsj_env);
+    return result;
 }
 
 static JSBool
@@ -219,13 +229,16 @@ JavaArray_lookupProperty(JSContext *cx, JSObject *obj, jsid id,
     JNIEnv *jEnv;
     JSBool result;
     JSErrorReporter old_reporter;
-    jsj_MapJSContextToJSJThread(cx, &jEnv);
+    JSJavaThreadState *jsj_env;
+
+    jsj_env = jsj_EnterJava(cx, &jEnv);
     if (!jEnv)
         return JS_FALSE;
 
     old_reporter = JS_SetErrorReporter(cx, NULL);
     result = access_java_array_element(cx, jEnv, obj, id, NULL, JS_FALSE);
     JS_SetErrorReporter(cx, old_reporter);
+    jsj_ExitJava(jsj_env);
     return result;
 }
 
@@ -292,6 +305,7 @@ JavaArray_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
                        jsval *statep, jsid *idp)
 {
     JavaObjectWrapper *java_wrapper;
+    JSJavaThreadState *jsj_env;
     JNIEnv *jEnv;
     jsize array_length, index;
 
@@ -305,13 +319,15 @@ JavaArray_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
     }
         
     /* Get the Java per-thread environment pointer for this JSContext */
-    jsj_MapJSContextToJSJThread(cx, &jEnv);
+    jsj_env = jsj_EnterJava(cx, &jEnv);
     if (!jEnv)
         return JS_FALSE;
 
     array_length = jsj_GetJavaArrayLength(cx, jEnv, java_wrapper->java_obj);
-    if (array_length < 0)
+    if (array_length < 0) {
+	jsj_ExitJava(jsj_env);
         return JS_FALSE;
+    }
 
     switch(enum_op) {
     case JSENUMERATE_INIT:
@@ -319,6 +335,7 @@ JavaArray_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
 
         if (idp)
             *idp = INT_TO_JSVAL(array_length);
+	jsj_ExitJava(jsj_env);
         return JS_TRUE;
         
     case JSENUMERATE_NEXT:
@@ -334,10 +351,12 @@ JavaArray_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
 
     case JSENUMERATE_DESTROY:
         *statep = JSVAL_NULL;
+	jsj_ExitJava(jsj_env);
         return JS_TRUE;
 
     default:
         JS_ASSERT(0);
+	jsj_ExitJava(jsj_env);
         return JS_FALSE;
     }
 }

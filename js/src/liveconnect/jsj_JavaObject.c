@@ -193,13 +193,14 @@ JavaObject_finalize(JSContext *cx, JSObject *obj)
     JavaObjectWrapper *java_wrapper;
     jobject java_obj;
     JNIEnv *jEnv;
+    JSJavaThreadState *jsj_env;
 
     java_wrapper = JS_GetPrivate(cx, obj);
     if (!java_wrapper)
         return;
     java_obj = java_wrapper->java_obj;
 
-    jsj_MapJSContextToJSJThread(cx, &jEnv);
+    jsj_env = jsj_EnterJava(cx, &jEnv);
     if (!jEnv)
         return;
 
@@ -209,6 +210,7 @@ JavaObject_finalize(JSContext *cx, JSObject *obj)
     }
     jsj_ReleaseJavaClassDescriptor(cx, jEnv, java_wrapper->class_descriptor);
     JS_free(cx, java_wrapper);
+    jsj_ExitJava(jsj_env);
 }
 
 /* Trivial helper for jsj_DiscardJavaObjReflections(), below */
@@ -255,11 +257,8 @@ JavaObject_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
     JavaClassDescriptor *class_descriptor;
     jobject java_obj;
     JNIEnv *jEnv;
-    
-    /* Get the Java per-thread environment pointer for this JSContext */
-    jsj_MapJSContextToJSJThread(cx, &jEnv);
-    if (!jEnv)
-        return JS_FALSE;
+    JSJavaThreadState *jsj_env;
+    JSBool result;
         
     java_wrapper = JS_GetPrivate(cx, obj);
     if (!java_wrapper) {
@@ -269,10 +268,10 @@ JavaObject_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
         }
         
         JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                                JSJMSG_BAD_OP_JOBJECT);
+                             JSJMSG_BAD_OP_JOBJECT);
         return JS_FALSE;
     }
-
+        
     java_obj = java_wrapper->java_obj;
     class_descriptor = java_wrapper->class_descriptor;
 
@@ -283,22 +282,43 @@ JavaObject_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
 
     case JSTYPE_FUNCTION:
         JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                                JSJMSG_CONVERT_TO_FUNC);
+                             JSJMSG_CONVERT_TO_FUNC);
         return JS_FALSE;
 
     case JSTYPE_VOID:
     case JSTYPE_STRING:
+	/* Get the Java per-thread environment pointer for this JSContext */
+	jsj_env = jsj_EnterJava(cx, &jEnv);
+	if (!jEnv)
+	    return JS_FALSE;
+
         /* Either extract a C-string from the java.lang.String object
            or call the Java toString() method */
-        return jsj_ConvertJavaObjectToJSString(cx, jEnv, class_descriptor, java_obj, vp);
+        result = jsj_ConvertJavaObjectToJSString(cx, jEnv, class_descriptor, java_obj, vp);
+	jsj_ExitJava(jsj_env);
+	return result;
 
     case JSTYPE_NUMBER:
-        /* Call Java doubleValue() method, if applicable */
-        return jsj_ConvertJavaObjectToJSNumber(cx, jEnv, class_descriptor, java_obj, vp);
+	/* Get the Java per-thread environment pointer for this JSContext */
+	jsj_env = jsj_EnterJava(cx, &jEnv);
+	if (!jEnv)
+	    return JS_FALSE;
+	
+	/* Call Java doubleValue() method, if applicable */
+        result = jsj_ConvertJavaObjectToJSNumber(cx, jEnv, class_descriptor, java_obj, vp);
+	jsj_ExitJava(jsj_env);
+	return result;
 
     case JSTYPE_BOOLEAN:
+	/* Get the Java per-thread environment pointer for this JSContext */
+	jsj_env = jsj_EnterJava(cx, &jEnv);
+	if (!jEnv)
+	    return JS_FALSE;
+
         /* Call booleanValue() method, if applicable */
-        return jsj_ConvertJavaObjectToJSBoolean(cx, jEnv, class_descriptor, java_obj, vp);
+        result = jsj_ConvertJavaObjectToJSBoolean(cx, jEnv, class_descriptor, java_obj, vp);
+	jsj_ExitJava(jsj_env);
+	return result;
 
     default:
         JS_ASSERT(0);
@@ -460,23 +480,28 @@ JavaObject_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
     JSObject *funobj;
     jsval field_val, method_val;
     JSBool success;
+    JSJavaThreadState *jsj_env;
 
     /* printf("In JavaObject_getProperty\n"); */
 
     /* Get the Java per-thread environment pointer for this JSContext */
-    jsj_MapJSContextToJSJThread(cx, &jEnv);
+    jsj_env = jsj_EnterJava(cx, &jEnv);
     if (!jEnv)
         return JS_FALSE;
         
     if (vp)
 	*vp = JSVAL_VOID;
-    if (!lookup_member_by_id(cx, jEnv, obj, &java_wrapper, id, &member_descriptor, vp))
+    if (!lookup_member_by_id(cx, jEnv, obj, &java_wrapper, id, &member_descriptor, vp)) {
+	jsj_ExitJava(jsj_env);
         return JS_FALSE;
+    }
 
     /* Handle access to special, non-Java properties of JavaObjects, e.g. the 
        "constructor" property of the prototype object */
-    if (!member_descriptor)
+    if (!member_descriptor) {
+	jsj_ExitJava(jsj_env);
         return JS_TRUE;
+    }
 
     java_obj = java_wrapper->java_obj;
     field_val = method_val = JSVAL_VOID;
@@ -484,8 +509,10 @@ JavaObject_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
     /* If a field member, get the value of the field */
     if (member_descriptor->field) {
         success = jsj_GetJavaFieldValue(cx, jEnv, member_descriptor->field, java_obj, &field_val);
-        if (!success)
+        if (!success) {
+	    jsj_ExitJava(jsj_env);
             return JS_FALSE;
+	}
     }
 
     /* If a method member, build a wrapper around the Java method */
@@ -493,16 +520,20 @@ JavaObject_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
         /* Create a function object with this JavaObject as its parent, so that
            JSFUN_BOUND_METHOD binds it as the default 'this' for the function. */
         funobj = JS_CloneFunctionObject(cx, member_descriptor->invoke_func_obj, obj);
-        if (!funobj)
+        if (!funobj) {
+	    jsj_ExitJava(jsj_env);
             return JS_FALSE;
+	}
         method_val = OBJECT_TO_JSVAL(funobj);
     }
 
 #if TEST_JAVAMEMBER
     /* Always create a JavaMember object, even though it's inefficient */
     obj = jsj_CreateJavaMember(cx, method_val, field_val);
-    if (!obj)
+    if (!obj) {
+	jsj_ExitJava(jsj_env);
         return JS_FALSE;
+    }
     *vp = OBJECT_TO_JSVAL(obj);
 #else   /* !TEST_JAVAMEMBER */
 
@@ -516,8 +547,10 @@ JavaObject_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
                In Java, such ambiguity is not possible because the compiler 
                can statically determine which is being accessed. */
             obj = jsj_CreateJavaMember(cx, method_val, field_val);
-            if (!obj)
+            if (!obj) {
+		jsj_ExitJava(jsj_env);
                 return JS_FALSE;
+	    }
             *vp = OBJECT_TO_JSVAL(obj);
         }
 
@@ -527,7 +560,8 @@ JavaObject_getPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
     }
 
 #endif  /* !TEST_JAVAMEMBER */
-
+    
+    jsj_ExitJava(jsj_env);
     return JS_TRUE;
 }
 
@@ -541,16 +575,20 @@ JavaObject_setPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
     JavaMemberDescriptor *member_descriptor;
     jsval idval;
     JNIEnv *jEnv;
+    JSJavaThreadState *jsj_env;
+    JSBool result;
 
     /* printf("In JavaObject_setProperty\n"); */
 
     /* Get the Java per-thread environment pointer for this JSContext */
-    jsj_MapJSContextToJSJThread(cx, &jEnv);
+    jsj_env = jsj_EnterJava(cx, &jEnv);
     if (!jEnv)
         return JS_FALSE;
     
-    if (!lookup_member_by_id(cx, jEnv, obj, &java_wrapper, id, &member_descriptor, NULL))
+    if (!lookup_member_by_id(cx, jEnv, obj, &java_wrapper, id, &member_descriptor, NULL)) {
+	jsj_ExitJava(jsj_env);
         return JS_FALSE;
+    }
 
     /* Could be assignment to magic JS __proto__ property rather than a Java field */
     if (!member_descriptor) {
@@ -563,9 +601,11 @@ JavaObject_setPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
         if (!JSVAL_IS_OBJECT(*vp)) {
             JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
                                  JSJMSG_BAD_PROTO_ASSIGNMENT);
+	    jsj_ExitJava(jsj_env);
             return JS_FALSE;
         }
         JS_SetPrototype(cx, obj, JSVAL_TO_OBJECT(*vp));
+	jsj_ExitJava(jsj_env);
         return JS_TRUE;
     }
 
@@ -575,11 +615,15 @@ JavaObject_setPropertyById(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
         goto no_such_field;
 
     /* Silently fail if field value is final (immutable), as required by ECMA spec */
-    if (member_descriptor->field->modifiers & ACC_FINAL)
+    if (member_descriptor->field->modifiers & ACC_FINAL) {
+	jsj_ExitJava(jsj_env);
         return JS_TRUE;
+    }
     
     java_obj = java_wrapper->java_obj;
-    return jsj_SetJavaFieldValue(cx, jEnv, member_descriptor->field, java_obj, *vp);
+    result = jsj_SetJavaFieldValue(cx, jEnv, member_descriptor->field, java_obj, *vp);
+    jsj_ExitJava(jsj_env);
+    return result;
 
 no_such_field:
         JS_IdToValue(cx, id, &idval);
@@ -588,6 +632,7 @@ no_such_field:
         JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
                        JSJMSG_NO_NAME_IN_CLASS,
                        member_name, class_descriptor->name);
+	jsj_ExitJava(jsj_env);
         return JS_FALSE;
 }
 
@@ -602,11 +647,12 @@ JavaObject_lookupProperty(JSContext *cx, JSObject *obj, jsid id,
     JNIEnv *jEnv;
     JSErrorReporter old_reporter;
     jsval dummy_val;
+    JSJavaThreadState *jsj_env;
 
     /* printf("In JavaObject_lookupProperty()\n"); */
     
     /* Get the Java per-thread environment pointer for this JSContext */
-    jsj_MapJSContextToJSJThread(cx, &jEnv);
+    jsj_env = jsj_EnterJava(cx, &jEnv);
     if (!jEnv)
         return JS_FALSE;
 
@@ -624,6 +670,7 @@ JavaObject_lookupProperty(JSContext *cx, JSObject *obj, jsid id,
     }
 
     JS_SetErrorReporter(cx, old_reporter);
+    jsj_ExitJava(jsj_env);
     return JS_TRUE;
 }
 
@@ -693,6 +740,7 @@ JavaObject_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
     JavaMemberDescriptor *member_descriptor;
     JavaClassDescriptor *class_descriptor;
     JNIEnv *jEnv;
+    JSJavaThreadState *jsj_env;
 
     java_wrapper = JS_GetPrivate(cx, obj);
     /* Check for prototype object */
@@ -709,7 +757,7 @@ JavaObject_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
     case JSENUMERATE_INIT:
         
         /* Get the Java per-thread environment pointer for this JSContext */
-        jsj_MapJSContextToJSJThread(cx, &jEnv);
+        jsj_env = jsj_EnterJava(cx, &jEnv);
         if (!jEnv)
             return JS_FALSE;
 
@@ -717,6 +765,7 @@ JavaObject_newEnumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
         *statep = PRIVATE_TO_JSVAL(member_descriptor);
         if (idp)
             *idp = INT_TO_JSVAL(class_descriptor->num_instance_members);
+	jsj_ExitJava(jsj_env);
         return JS_TRUE;
         
     case JSENUMERATE_NEXT:
