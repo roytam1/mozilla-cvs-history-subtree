@@ -47,9 +47,9 @@
 <tabbox>
   <tabs>
     <tab id="GeneralTab" label="&generalInfo.label;"/>
-    <tab hidefor="movemail,pop3,none" hidable="true" id="OfflineTab" label="&folderOfflineTab.label;"/>
-    <tab hidefor="movemail,pop3,none,nntp" hidable="true" id="SharingTab" label="&folderSharingTab.label;"/>
-    <tab hidefor="movemail,pop3,none,nntp" hidable="true" id="QuotaTab" label="&folderQuotaTab.label;"/>
+    <tab hidefor="movemail,pop3,rss,none" hidable="true" id="OfflineTab" label="&folderOfflineTab.label;"/>
+    <tab hidefor="movemail,pop3,rss,none,nntp" hidable="true" id="SharingTab" label="&folderSharingTab.label;"/>
+    <tab hidefor="movemail,pop3,rss,none,nntp" hidable="true" id="QuotaTab" label="&folderQuotaTab.label;"/>
   </tabs>
   <tabpanels id="folderPropTabPanel">
     <vbox>
@@ -76,7 +76,7 @@
       </vbox>
     </vbox>
  
-    <vbox hidable="true" hidefor="movemail,pop3,none" valign="top" align="start">
+    <vbox hidable="true" hidefor="movemail,pop3,rss,none" valign="top" align="start">
       <vbox>
         <checkbox iscontrolcontainer="true" hidable="true"  
                   wsm_persist="true" id="offline.selectForOfflineFolder"  
@@ -92,7 +92,7 @@
               oncommand="onOfflineFolderDownload();" 
               id="offline.offlineNewsgroupDownloadButton" hidefor="imap" orient="right"/>
     </vbox>
-    <vbox hidable="true" hidefor="movemail,pop3,none,nntp" valign="top" align="start">
+    <vbox hidable="true" hidefor="movemail,pop3,none,rss,nntp" valign="top" align="start">
       <hbox>
       <label value="&folderType.label;" id="folderTypeLabel"/>
       <label value="" id="folderType.text"/>
@@ -106,7 +106,7 @@
               oncommand="onFolderPrivileges();" 
               id="imap.FolderPrivileges" hidefor="movemail,pop3,none,nntp" orient="right"/>
     </vbox>
-    <vbox hidable="true" hidefor="pop3,none,nntp" valign="top">
+    <vbox hidable="true" hidefor="pop3,rss,none,nntp" valign="top">
       <label id="folderQuotaStatus" flex="1"/>
 
       <grid id="folderQuotaData" hidden="true" flex="1">
