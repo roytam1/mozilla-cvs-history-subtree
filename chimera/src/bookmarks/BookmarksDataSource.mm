@@ -532,12 +532,11 @@ const int kBookmarksRootItemTag = -2;
 // outlineView:shouldEditTableColumn:item: (delegate method)
 //
 // Called by the outliner to determine whether or not we should allow the 
-// user to edit this item. For now, Cocoa doesn't correctly handle editing
-// of attributed strings with icons, so we can't turn this on. :(
-//
+// user to edit this item. We're leaving it off for now, becaue there are
+// some usability issues with inline editing (no undo, Escape doesn't work).
 - (BOOL)outlineView:(NSOutlineView *)outlineView shouldEditTableColumn:(NSTableColumn *)tableColumn item:(id)item
 {
-  return NO;
+  return NO;	//([[tableColumn identifier] isEqualToString:@"name"]);
 }
 
 - (id)outlineView:(NSOutlineView *)outlineView child:(int)index ofItem:(id)item
@@ -629,38 +628,27 @@ const int kBookmarksRootItemTag = -2;
 
 - (void)outlineView:(NSOutlineView *)outlineView setObjectValue:(id)object forTableColumn:(NSTableColumn *)tableColumn byItem:(id)item
 {
-#if NOT_USED
-  // ignore all this. It doesn't work, but i'm leaving it here just in case we ever try to turn 
-  // this code back on. We have to remove the attributes from the string in order to correctly
-  // set it in the DOM.
-  
+  // object is really an NSString, even though objectValueForTableColumn returns NSAttributedStrings.
   NSString *columnName = [tableColumn identifier];
-  if ( [columnName isEqualTo:@"name"] ) {
-    // remove the attributes
-    int strLen = [object length];
-    NSMutableAttributedString *cellValue = [[NSMutableAttributedString alloc] initWithAttributedString:object];
-    [cellValue removeAttribute:NSBaselineOffsetAttributeName range:NSMakeRange(0,1)];
-    [cellValue removeAttribute:NSAttachmentAttributeName range:NSMakeRange(0,strLen)];
+  if ( [columnName isEqualTo:@"name"] )
+  {
+    const unichar kAttachmentCharacter = NSAttachmentCharacter;
+    
+    NSMutableString* mutableString = [NSMutableString stringWithString:object];
+    [mutableString replaceOccurrencesOfString:[NSString stringWithCharacters:&kAttachmentCharacter length:1] withString:@"" options:0 range:NSMakeRange(0, [mutableString length])];
 
-    // extract the unicode
-    strLen = [cellValue length];
-    PRUnichar* buffer = new PRUnichar[strLen + 1];
-    buffer[strLen] = '\0';
-    if ( !buffer )
-      return;
-    [cellValue getCharacters: buffer];
     nsAutoString nameAttr;
-    nameAttr.Adopt(buffer);
+    [mutableString assignTo_nsAString:nameAttr];
     
-    // stash it into the dom.
-    nsIContent* content = [item contentNode];
-    content->SetAttr(kNameSpaceID_None, BookmarksService::gNameAtom, nameAttr, PR_TRUE);
+    // stash it into the DOM
+    BookmarkItem* bmItem = (BookmarkItem*)item;
+    nsIContent* content = [bmItem contentNode];
+    if (content)
+      content->SetAttr(kNameSpaceID_None, BookmarksService::gNameAtom, nameAttr, PR_TRUE);
     
-    [cellValue release];
+    [bmItem itemChanged:YES];
   }
-#endif
 }
-
 
 - (BOOL)outlineView:(NSOutlineView *)ov writeItems:(NSArray*)items toPasteboard:(NSPasteboard*)pboard 
 {
