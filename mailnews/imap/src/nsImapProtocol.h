@@ -501,7 +501,10 @@ private:
 	void List(const char *mailboxPattern, PRBool addDirectoryIfNecessary);
 	void Subscribe(const char *mailboxName);
 	void Unsubscribe(const char *mailboxName);
-  PRBool DeleteSubFolders(const char* mailboxName);
+        // some imap servers include the mailboxName following the dir-separator in the list of 
+        // subfolders of the mailboxName. in fact, they are the same. so we should dicide if
+        // we should delete such subfolder and provide feedback if the delete operation succeed.
+        PRBool DeleteSubFolders(const char* aMailboxName, PRBool & aDeleteSelf);
 	PRBool  RenameHierarchyByHand(const char *oldParentMailboxName, 
                                   const char *newParentMailboxName);
 

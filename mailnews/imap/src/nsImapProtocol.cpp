@@ -1981,7 +1981,8 @@ void nsImapProtocol::ProcessSelectedStateURL()
             }
               
           }
-          DeleteSubFolders(mailboxName);
+          PRBool deleteSelf = PR_FALSE;
+          DeleteSubFolders(mailboxName, deleteSelf);	// don't delete self
         }
         break;
       case nsIImapUrl::nsImapAppendDraftFromFile:
@@ -5367,13 +5368,15 @@ PRBool nsImapProtocol::RenameHierarchyByHand(const char *oldParentMailboxName,
   return renameSucceeded;
 }
 
-PRBool nsImapProtocol::DeleteSubFolders(const char* selectedMailbox)
+PRBool nsImapProtocol::DeleteSubFolders(const char* selectedMailbox, PRBool &aDeleteSelf)
 {
   PRBool deleteSucceeded = PR_TRUE;
   m_deletableChildren = new nsVoidArray();
   
   if (m_deletableChildren)
   {
+    PRBool folderDeleted = PR_FALSE;
+
     m_hierarchyNameState = kDeleteSubFoldersInProgress;
         nsCString pattern(selectedMailbox);
         char onlineDirSeparator = kOnlineHierarchySeparatorUnknown;
@@ -5393,6 +5396,28 @@ PRBool nsImapProtocol::DeleteSubFolders(const char* selectedMailbox)
         // ** jt - why? I don't understand this.
     PRInt32 numberToDelete = m_deletableChildren->Count();
     PRInt32 outerIndex, innerIndex;
+
+    // intelligently decide if myself(either plain format or following the dir-separator)
+    // is in the sub-folder list
+    PRBool folderInSubfolderList = PR_FALSE;	// For Performance
+    char *selectedMailboxDir = nsnull;
+    {
+        PRInt32 length = strlen(selectedMailbox);
+        selectedMailboxDir = (char *)PR_MALLOC(length+2);
+        if( selectedMailboxDir )    // just do the intelligent test if there is enough memory
+        {
+            strcpy(selectedMailboxDir, selectedMailbox);
+            selectedMailboxDir[length] = onlineDirSeparator;
+            selectedMailboxDir[length+1] = '\0';
+            PRInt32 i;
+            for( i=0; i<numberToDelete && !folderInSubfolderList; i++ )
+            {
+                char *currentName = (char *) m_deletableChildren->ElementAt(i);
+                if( !strcmp(currentName, selectedMailbox) || !strcmp(currentName, selectedMailboxDir) )
+                    folderInSubfolderList = PR_TRUE;
+            }
+        }
+    }
 		
     deleteSucceeded = GetServerStateParser().LastCommandSuccessful();
     for (outerIndex = 0; 
@@ -5407,7 +5432,7 @@ PRBool nsImapProtocol::DeleteSubFolders(const char* selectedMailbox)
             char *currentName = 
                 (char *) m_deletableChildren->ElementAt(innerIndex);
             if (!longestName || 
-                PL_strlen(longestName) < PL_strlen(currentName))
+                strlen(longestName) < strlen(currentName))
             {
                 longestName = currentName;
             }
@@ -5434,22 +5459,56 @@ PRBool nsImapProtocol::DeleteSubFolders(const char* selectedMailbox)
             // string passed to the list command.  Be defensive and make sure
             // we only delete children of the trash
       if (longestName && 
-        PL_strcmp(selectedMailbox, longestName) &&
-        !PL_strncmp(selectedMailbox, longestName,
-                            PL_strlen(selectedMailbox)))
+        strcmp(selectedMailbox, longestName) &&
+        !strncmp(selectedMailbox, longestName, strlen(selectedMailbox)))
       {
-          nsCOMPtr<nsIImapIncomingServer> imapServer =
-              do_QueryReferent(m_server);
-          if (imapServer)
-              imapServer->ResetConnection(longestName);
-          PRBool deleted =
-              DeleteMailboxRespectingSubscriptions(longestName);
-          if (deleted)
-              FolderDeleted(longestName);
-          deleteSucceeded = deleted;
+          if( !strcmp(selectedMailboxDir, longestName) )	// just self
+          {
+              if( aDeleteSelf )
+              {
+                  PRBool deleted = DeleteMailboxRespectingSubscriptions(longestName);
+                  if (deleted)
+                      FolderDeleted(longestName);
+                  folderDeleted = deleted;
+                  deleteSucceeded = deleted;
+              }
+          }
+          else
+          {
+              nsCOMPtr<nsIImapIncomingServer> imapServer = do_QueryReferent(m_server);
+              if (imapServer)
+                  imapServer->ResetConnection(longestName);
+              PRBool deleted = PR_FALSE;
+              if( folderInSubfolderList )	// for performance
+              {
+                  nsVoidArray* pDeletableChildren = m_deletableChildren;
+                  m_deletableChildren = nsnull;
+                  PRBool folderDeleted = PR_TRUE;
+                  deleted = DeleteSubFolders(longestName, folderDeleted);
+                  // longestName may have subfolder list including itself
+                  if( !folderDeleted )
+                  {
+                      if (deleted)
+                          deleted = DeleteMailboxRespectingSubscriptions(longestName);
+                      if (deleted)
+                          FolderDeleted(longestName);
+                  }
+                  m_deletableChildren = pDeletableChildren;
+              }
+              else
+              {
+                  deleted = DeleteMailboxRespectingSubscriptions(longestName);
+                  if (deleted)
+                      FolderDeleted(longestName);
+              }
+              deleteSucceeded = deleted;
+          }
       }
       PR_FREEIF(longestName);
     }
+
+    aDeleteSelf = folderDeleted;  // feedback if myself is deleted
+    PR_Free(selectedMailboxDir);
   
     delete m_deletableChildren;
     m_deletableChildren = nsnull;
@@ -5502,11 +5561,16 @@ void nsImapProtocol::FolderRenamed(const char *oldName,
 
 void nsImapProtocol::OnDeleteFolder(const char * sourceMailbox)
 {
-    PRBool deleted = DeleteSubFolders(sourceMailbox);
-    if (deleted)
-        deleted = DeleteMailboxRespectingSubscriptions(sourceMailbox);
-  if (deleted)
-    FolderDeleted(sourceMailbox);
+    // intelligently delete the folder
+    PRBool folderDeleted = PR_TRUE;
+    PRBool deleted = DeleteSubFolders(sourceMailbox, folderDeleted);
+    if( !folderDeleted )
+    {
+        if (deleted)
+            deleted = DeleteMailboxRespectingSubscriptions(sourceMailbox);
+        if (deleted)
+            FolderDeleted(sourceMailbox);
+    }
 }
 
 void nsImapProtocol::OnRenameFolder(const char * sourceMailbox)
