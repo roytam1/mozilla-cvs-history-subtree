@@ -1,3 +1,6 @@
+#ifndef MOZ_XUL_APP
 en-US.jar:
-        locale/en-US/communicator/dom/dom.properties          (resources/locale/dom.properties)
+  locale/en-US/global/dom/dom.properties   (/toolkit/locales/en-US/chrome/global/dom/dom.properties)
+#endif
+
 

@@ -2,6 +2,13 @@
 
 @AB_CD@.jar:
   locale/en-US/global/plugins.properties             (@AB_CD@/chrome/global/plugins.properties)
+  locale/en-US/global/dom/dom.properties             (@AB_CD@/chrome/global/dom/dom.properties)
+  locale/en-US/global/layout/HtmlForm.properties     (@AB_CD@/chrome/global/layout/HtmlForm.properties)
+  locale/en-US/global/layout/MediaDocument.properties (@AB_CD@/chrome/global/layout/MediaDocument.properties)
+  locale/en-US/global/layout/xmlparser.properties    (@AB_CD@/chrome/global/layout/xmlparser.properties)
+  locale/en-US/global/layout/xslt.properties         (@AB_CD@/chrome/global/layout/xslt.properties)
+  locale/en-US/global/security/caps.properties       (@AB_CD@/chrome/global/security/caps.properties)
+  locale/en-US/global/webservices/security.properties (@AB_CD@/chrome/global/webservices/security.properties)
   locale/en-US/global/xpinstall/xpinstall.properties (@AB_CD@/chrome/global/xpinstall/xpinstall.properties)
 * locale/necko/contents.rdf        (@AB_CD@/chrome/necko/contents.rdf)
   locale/necko/necko.properties    (@AB_CD@/chrome/necko/necko.properties)

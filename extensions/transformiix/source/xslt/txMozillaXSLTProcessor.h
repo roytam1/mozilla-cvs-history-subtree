@@ -65,7 +65,7 @@ class nsIDOMNode;
 #define TRANSFORMIIX_XSLT_PROCESSOR_CONTRACTID \
 "@mozilla.org/document-transformer;1?type=xslt"
 
-#define XSLT_MSGS_URL  "chrome://communicator/locale/layout/xslt.properties"
+#define XSLT_MSGS_URL  "chrome://global/locale/layout/xslt.properties"
 
 class txVariable : public txIGlobalParameter
 {

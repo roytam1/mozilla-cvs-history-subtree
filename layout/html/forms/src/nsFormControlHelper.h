@@ -59,7 +59,7 @@ class nsStyleContext;
 #define NS_STRING_FALSE  NS_LITERAL_STRING("0")
 
 // for localization
-#define FORM_PROPERTIES "chrome://communicator/locale/layout/HtmlForm.properties"
+#define FORM_PROPERTIES "chrome://global/locale/layout/HtmlForm.properties"
 
 
 /**

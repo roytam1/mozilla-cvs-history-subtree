@@ -1102,7 +1102,7 @@ SendJSWarning(nsIHTMLContent* aContent,
   NS_ENSURE_SUCCESS(rv, rv);
   nsCOMPtr<nsIStringBundle> bundle;
   rv = bundleService->CreateBundle(
-      "chrome://communicator/locale/layout/HtmlForm.properties",
+      "chrome://global/locale/layout/HtmlForm.properties",
       getter_AddRefs(bundle));
   NS_ENSURE_SUCCESS(rv, rv);
 
