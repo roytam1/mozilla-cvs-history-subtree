@@ -420,22 +420,16 @@ void XSLTProcessor::processTopLevel
                     //-- get document base
                     String realHref;
                     String thisDocBase = ps->getDocumentBase();
-                    URIUtils::resolveHref(href,thisDocBase,realHref);
-		    
-                    String errMsg,voidBase;
-                    istream* xslInput = URIUtils::getInputStream(realHref,voidBase,errMsg);
-
-                    Document* xslDoc = 0;
+                    String errMsg;
                     XMLParser xmlParser;
-                    if ( xslInput ) {
-                        xslDoc = xmlParser.parse(*xslInput);
-                        delete xslInput;
-                    }
+
+                    Document* xslDoc = xmlParser.getDocumentFromURI(realHref, thisDocBase, errMsg);
+
                     if (!xslDoc) {
                         String err("error including XSL stylesheet: ");
                         err.append(href);
                         err.append("; ");
-                        err.append(xmlParser.getErrorString());
+                        err.append(errMsg);
                         notifyError(err);
                     }
                     else {
