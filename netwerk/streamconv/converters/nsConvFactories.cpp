@@ -23,6 +23,7 @@
 #include "nsCOMPtr.h"
 #include "nsIModule.h"
 #include "nsIGenericFactory.h"
+#include "nsICategoryManager.h"
 
 #include "nsFTPDirListingConv.h"
 #include "nsMultiMixedConv.h"
@@ -38,6 +39,8 @@ nsresult MOZ_NewTXTToHTMLConv (mozTXTToHTMLConv** result);
 nsresult NS_NewHTTPChunkConv  (nsHTTPChunkConv ** result);
 nsresult NS_NewHTTPCompressConv  (nsHTTPCompressConv ** result);
 nsresult NS_NewNSTXTToHTMLConv(nsTXTToHTMLConv** result);
+
+
 
 static NS_IMETHODIMP                 
 CreateNewFTPDirListingConv(nsISupports* aOuter, REFNSIID aIID, void **aResult) 
@@ -221,80 +224,7 @@ CreateNewNSTXTToHTMLConvFactory(nsISupports *aOuter, REFNSIID aIID, void **aResu
 // The list of components we register
 static nsModuleComponentInfo components[] =
 {
-    { "FTPDirListingConverter", 
-      NS_FTPDIRLISTINGCONVERTER_CID,
-      NS_ISTREAMCONVERTER_KEY "?from=text/ftp-dir-unix&to=application/http-index-format", 
-      CreateNewFTPDirListingConv
-    },
 
-    { "FTPDirListingConverter", 
-      NS_FTPDIRLISTINGCONVERTER_CID,
-      NS_ISTREAMCONVERTER_KEY "?from=text/ftp-dir-nt&to=application/http-index-format", 
-      CreateNewFTPDirListingConv
-    },
-    
-    { "MultiMixedConverter", 
-      NS_MULTIMIXEDCONVERTER_CID,
-      NS_ISTREAMCONVERTER_KEY "?from=multipart/x-mixed-replace&to=*/*", 
-      CreateNewMultiMixedConvFactory
-    },
-
-    // There are servers that hand back "multipart/mixed" to
-    // indicate they want x-mixed-replace behavior.
-    { "MultiMixedConverter2",
-      NS_MULTIMIXEDCONVERTER_CID,
-      NS_ISTREAMCONVERTER_KEY "?from=multipart/mixed&to=*/*",
-      CreateNewMultiMixedConvFactory
-    },
-    { "Unknown Content-Type Decoder",
-      NS_UNKNOWNDECODER_CID,
-      NS_ISTREAMCONVERTER_KEY "?from=application/x-unknown-content-type&to=*/*",
-      CreateNewUnknownDecoderFactory
-    },
-
-    { "HttpChunkConverter", 
-      NS_HTTPCHUNKCONVERTER_CID,
-      NS_ISTREAMCONVERTER_KEY "?from=chunked&to=unchunked",
-      CreateNewHTTPChunkConvFactory
-    },
-
-    { "HttpChunkConverter", 
-      NS_HTTPCHUNKCONVERTER_CID,
-      NS_ISTREAMCONVERTER_KEY "?from=unchunked&to=chunked",
-      CreateNewHTTPChunkConvFactory
-    },
-
-    { "HttpCompressConverter", 
-      NS_HTTPCOMPRESSCONVERTER_CID,
-      NS_ISTREAMCONVERTER_KEY "?from=gzip&to=uncompressed",
-      CreateNewHTTPCompressConvFactory
-    },
-
-    { "HttpCompressConverter", 
-      NS_HTTPCOMPRESSCONVERTER_CID,
-      NS_ISTREAMCONVERTER_KEY "?from=x-gzip&to=uncompressed",
-      CreateNewHTTPCompressConvFactory
-    },
-    { "HttpCompressConverter", 
-      NS_HTTPCOMPRESSCONVERTER_CID,
-      NS_ISTREAMCONVERTER_KEY "?from=compress&to=uncompressed",
-      CreateNewHTTPCompressConvFactory
-    },
-    { "HttpCompressConverter", 
-      NS_HTTPCOMPRESSCONVERTER_CID,
-      NS_ISTREAMCONVERTER_KEY "?from=x-compress&to=uncompressed",
-      CreateNewHTTPCompressConvFactory
-    },
-    { "HttpCompressConverter", 
-      NS_HTTPCOMPRESSCONVERTER_CID,
-      NS_ISTREAMCONVERTER_KEY "?from=deflate&to=uncompressed",
-      CreateNewHTTPCompressConvFactory
-    },
-    { "NSTXTToHTMLConverter",
-      NS_NSTXTTOHTMLCONVERTER_CID,
-      NS_ISTREAMCONVERTER_KEY "?from=text/plain&to=text/html",
-      CreateNewNSTXTToHTMLConvFactory
-	},
 	// This is not a real stream converter, it's just
 	// registering it's cid factory here.
 	{ "HACK-TXTToHTMLConverter", 

@@ -43,6 +43,8 @@
 #include "nsIOutputStream.h"
 #include "nsIStreamConverter.h"
 #include "nsICategoryManager.h"
+#include "nsISupportsPrimitives.h"
+#include "nsXPIDLString.h"
 #include "nsCOMPtr.h"
 
 ////////////////////////////////////////////////////////////
@@ -123,19 +125,17 @@ nsStreamConverterService::BuildGraph() {
     rv = entries->GetNext(getter_AddRefs(entry));
     while (NS_SUCCEEDED(rv)) {
 
-        // get the entry string so we can lookup the entry value
+        // get the entry string
         nsXPIDLCString entryString;
         rv = entry->GetData(getter_Copies(entryString));
         if (NS_FAILED(rv)) return rv;
         
-        // entryValue must equal the entire, fully qualified contract ID of
-        // the converter component.
-        nsXPIDLCString contractIDString;
-        rv = catmgr->GetCategoryEntry(NS_ISTREAMCONVERTER_KEY, entryString, getter_Copies(contractIDString));
-        if (NS_FAILED(rv)) return rv;
+        // cobble the entry string w/ the converter key to produce a full contractID.
+        nsCString contractID(NS_ISTREAMCONVERTER_KEY);
+        contractID.Append((const char *)entryString);
 
         // now we've got the CONTRACTID, let's parse it up.
-        rv = AddAdjacency(contractIDString);
+        rv = AddAdjacency(contractID.GetBuffer());
         if (NS_FAILED(rv)) return rv;
 
         rv = entries->GetNext(getter_AddRefs(entry));
@@ -363,12 +363,10 @@ nsStreamConverterService::FindConverter(const char *aContractID, nsCStringArray 
         for (int i = 0; i < edgeCount; i++) {
             
             nsIAtom *curVertexAtom = (nsIAtom*)edges->ElementAt(i);
-            nsString2 curVertexStr;
-            nsStr::Initialize(curVertexStr, eOneByte);
+            nsAutoString curVertexStr;
             curVertexAtom->ToString(curVertexStr);
             char * curVertexCString = curVertexStr.ToNewCString();
             nsCStringKey *curVertex = new nsCStringKey(curVertexCString);
-            nsMemory::Free(curVertexCString);
 
             SCTableData *data3 = (SCTableData*)lBFSTable.Get(curVertex);
             BFSState *curVertexState = (BFSState*)data3->data;
@@ -382,6 +380,8 @@ nsStreamConverterService::FindConverter(const char *aContractID, nsCStringArray 
                 delete curVertex; // if this vertex has already been discovered, we don't want
                                   // to leak it. (non-discovered vertex's get cleaned up when
                                   // they're popped).
+                nsMemory::Free(curVertexCString);
+
             }
         }
         headVertexState->color = black;
