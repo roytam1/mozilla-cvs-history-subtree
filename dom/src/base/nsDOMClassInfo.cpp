@@ -957,6 +957,71 @@ const JSClass *nsDOMClassInfo::sObjectClass = nsnull;
 PRBool nsDOMClassInfo::sDoSecurityCheckInAddProperty = PR_TRUE;
 
 
+static void
+PrintWarningOnConsole(JSContext *cx, const char *stringBundleProperty)
+{
+  nsCOMPtr<nsIStringBundleService>
+    stringService(do_GetService(NS_STRINGBUNDLE_CONTRACTID));
+  if (!stringService) {
+    return;
+  }
+
+  nsCOMPtr<nsIStringBundle> bundle;
+  stringService->CreateBundle(kDOMStringBundleURL, getter_AddRefs(bundle));
+  if (!bundle) {
+    return;
+  }
+
+  nsXPIDLString msg;
+  bundle->GetStringFromName(NS_ConvertASCIItoUTF16(stringBundleProperty).get(),
+                            getter_Copies(msg));
+
+  if (msg.IsEmpty()) {
+    NS_ERROR("Failed to get strings from dom.properties!");
+    return;
+  }
+
+  nsCOMPtr<nsIConsoleService> consoleService
+    (do_GetService("@mozilla.org/consoleservice;1"));
+  if (!consoleService) {
+    return;
+  }
+
+  nsCOMPtr<nsIScriptError> scriptError =
+    do_CreateInstance(NS_SCRIPTERROR_CONTRACTID);
+  if (!scriptError) {
+    return;
+  }
+
+  JSStackFrame *fp, *iterator = nsnull;
+  fp = ::JS_FrameIterator(cx, &iterator);
+  PRUint32 lineno = 0;
+  nsAutoString sourcefile;
+  if (fp) {
+    JSScript* script = ::JS_GetFrameScript(cx, fp);
+    if (script) {
+      const char* filename = ::JS_GetScriptFilename(cx, script);
+      if (filename) {
+        CopyUTF8toUTF16(nsDependentCString(filename), sourcefile);
+      }
+      jsbytecode* pc = ::JS_GetFramePC(cx, fp);
+      if (pc) {
+        lineno = ::JS_PCToLineNumber(cx, script, pc);
+      }
+    }
+  }
+  nsresult rv = scriptError->Init(msg.get(),
+                                  sourcefile.get(),
+                                  EmptyString().get(),
+                                  lineno,
+                                  0, // column for error is not available
+                                  nsIScriptError::warningFlag,
+                                  "DOM:HTML");
+  if (NS_SUCCEEDED(rv)){
+    consoleService->LogMessage(scriptError);
+  }
+}
+
 static inline JSObject *
 GetGlobalJSObject(JSContext *cx, JSObject *obj)
 {
@@ -3150,6 +3215,8 @@ nsWindowSH::PreCreate(nsISupports *nativeObj, JSContext *cx,
 }
 
 
+// This JS class piggybacks on nsHTMLDocumentSH::ReleaseDocument()...
+
 static JSClass sGlobalScopePolluterClass = {
   "Global Scope Polluter",
   JSCLASS_HAS_PRIVATE | JSCLASS_PRIVATE_IS_NSISUPPORTS | JSCLASS_NEW_RESOLVE,
@@ -3173,9 +3240,18 @@ nsWindowSH::GlobalScopePolluterGetProperty(JSContext *cx, JSObject *obj,
     sSecMan->CheckPropertyAccess(cx, GetGlobalJSObject(cx, obj), "Window", id,
                                  nsIXPCSecurityManager::ACCESS_GET_PROPERTY);
 
-  // If !NS_SUCCEEDED(rv) the security check failed. The security
-  // manager set a JS exception for us.
-  return NS_SUCCEEDED(rv);
+  if (NS_FAILED(rv)) {
+    // The security check failed. The security manager set a JS
+    // exception for us.
+
+    return JS_FALSE;
+  }
+
+  // Print a warning on the console so developers have a chance to
+  // catch and fix these mistakes.
+  PrintWarningOnConsole(cx, "GlobalScopeElementReference");
+
+  return JS_TRUE;
 }
 
 // static
@@ -3201,11 +3277,12 @@ nsWindowSH::GlobalScopePolluterNewResolve(JSContext *cx, JSObject *obj,
                                           jsval id, uintN flags,
                                           JSObject **objp)
 {
-  if (flags & (JSRESOLVE_ASSIGNING | JSRESOLVE_QUALIFIED |
-               JSRESOLVE_DECLARING | JSRESOLVE_CLASSNAME) ||
+  if (flags & (JSRESOLVE_ASSIGNING | JSRESOLVE_DECLARING |
+               JSRESOLVE_CLASSNAME | JSRESOLVE_QUALIFIED) ||
       JSVAL_IS_INT(id)) {
-    // Nothing to do here if we're assigning, or if we're doing a
-    // qualified resolve, or resolving a number
+    // Nothing to do here if we're either assigning or declaring,
+    // resolving a class name, doing a qualified resolve, or
+    // resolving a number.
 
     return JS_TRUE;
   }
@@ -5894,6 +5971,7 @@ nsHTMLDocumentSH::DocumentAllNewResolve(JSContext *cx, JSObject *obj, jsval id,
 
 // Finalize hook used by document related JS objects, but also by
 // sGlobalScopePolluterClass!
+
 void JS_DLL_CALLBACK
 nsHTMLDocumentSH::ReleaseDocument(JSContext *cx, JSObject *obj)
 {
@@ -5948,71 +6026,6 @@ GetDocumentAllHelper(JSContext *cx, JSObject *obj)
   return obj;
 }
 
-static void
-PrintDocumentAllWarningOnConsole(JSContext *cx)
-{
-  nsCOMPtr<nsIStringBundleService>
-    stringService(do_GetService(NS_STRINGBUNDLE_CONTRACTID));
-  if (!stringService) {
-    return;
-  }
-
-  nsCOMPtr<nsIStringBundle> bundle;
-  stringService->CreateBundle(kDOMStringBundleURL, getter_AddRefs(bundle));
-  if (!bundle) {
-    return;
-  }
-
-  nsXPIDLString msg;
-  bundle->GetStringFromName(NS_LITERAL_STRING("DocumentAllUsed").get(),
-                            getter_Copies(msg));
-
-  if (msg.IsEmpty()) {
-    NS_ERROR("Failed to get strings from dom.properties!");
-    return;
-  }
-
-  nsCOMPtr<nsIConsoleService> consoleService
-    (do_GetService("@mozilla.org/consoleservice;1"));
-  if (!consoleService) {
-    return;
-  }
-
-  nsCOMPtr<nsIScriptError> scriptError =
-    do_CreateInstance(NS_SCRIPTERROR_CONTRACTID);
-  if (!scriptError) {
-    return;
-  }
-
-  JSStackFrame *fp, *iterator = nsnull;
-  fp = ::JS_FrameIterator(cx, &iterator);
-  PRUint32 lineno = 0;
-  nsAutoString sourcefile;
-  if (fp) {
-    JSScript* script = ::JS_GetFrameScript(cx, fp);
-    if (script) {
-      const char* filename = ::JS_GetScriptFilename(cx, script);
-      if (filename) {
-        CopyUTF8toUTF16(nsDependentCString(filename), sourcefile);
-      }
-      jsbytecode* pc = ::JS_GetFramePC(cx, fp);
-      if (pc) {
-        lineno = ::JS_PCToLineNumber(cx, script, pc);
-      }
-    }
-  }
-  nsresult rv = scriptError->Init(msg.get(),
-                                  sourcefile.get(),
-                                  EmptyString().get(),
-                                  lineno,
-                                  0, // column for error is not available
-                                  nsIScriptError::warningFlag,
-                                  "DOM:HTML");
-  if (NS_SUCCEEDED(rv)){
-    consoleService->LogMessage(scriptError);
-  }
-}
-
 JSBool JS_DLL_CALLBACK
 nsHTMLDocumentSH::DocumentAllHelperGetProperty(JSContext *cx, JSObject *obj,
                                                jsval id, jsval *vp)
@@ -6044,7 +6057,7 @@ nsHTMLDocumentSH::DocumentAllHelperGetProperty(JSContext *cx, JSObject *obj,
     // qualified name. Expose the document.all collection.
 
     // Print a warning so developers can stop using document.all
-    PrintDocumentAllWarningOnConsole(cx);
+    PrintWarningOnConsole(cx, "DocumentAllUsed");
 
     if (!JSVAL_IS_OBJECT(*vp)) {
       // First time through, create the collection, and set the
