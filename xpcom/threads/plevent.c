@@ -135,7 +135,11 @@ ULONG _pr_PostEventMsgId;
 #else
 UINT _pr_PostEventMsgId;
 #endif /* OS2 */
+#if !defined(WINCE)
 static char *_pr_eventWindowClass = "XPCOM:EventWindow";
+#else
+static LPTSTR _pr_eventWindowClass = _T("XPCOM:EventWindow");
+#endif
 #endif /* Win32, Win16, OS2 */
 
 /*******************************************************************************
@@ -1126,7 +1130,7 @@ static void _md_CreateEventQueue( PLEventQueue *eventQueue )
 
 
     /* Register the windows message for XPCOM Event notification */
-    _pr_PostEventMsgId = RegisterWindowMessage("XPCOM_PostEvent");
+    _pr_PostEventMsgId = RegisterWindowMessage(_T("XPCOM_PostEvent"));
 
     /* Register the class for the event receiver window */
     if (!GetClassInfo(_pr_hInstance, _pr_eventWindowClass, &wc)) {
@@ -1145,10 +1149,10 @@ static void _md_CreateEventQueue( PLEventQueue *eventQueue )
         
     /* Create the event receiver window */
     eventQueue->eventReceiverWindow = CreateWindow(_pr_eventWindowClass,
-                                        "XPCOM:EventReceiver",
-                                            0, 0, 0, 10, 10,
-                                            NULL, NULL, _pr_hInstance,
-                                            NULL);
+                                                   _T("XPCOM:EventReceiver"),
+                                                   0, 0, 0, 10, 10,
+                                                   NULL, NULL, _pr_hInstance,
+                                                   NULL);
     PR_ASSERT(eventQueue->eventReceiverWindow);
 
     return;    

@@ -230,6 +230,7 @@ nsProcess::Run(PRBool blocking, const char **args, PRUint32 count, PRUint32 *pid
     ZeroMemory(&startupInfo, sizeof(startupInfo));
     startupInfo.cb = sizeof(startupInfo);
 
+#if !defined(WINCE)
     retVal = CreateProcess(NULL,
                            // NS_CONST_CAST(char*, mTargetPath.get()),
                            cmdLine,
@@ -244,6 +245,28 @@ nsProcess::Run(PRBool blocking, const char **args, PRUint32 count, PRUint32 *pid
                            &startupInfo,
                            &procInfo
                           );
+#else /* WINCE */
+    LPTSTR freeMe = a2w_malloc(cmdLine, -1, NULL);
+
+    retVal = CreateProcess( NULL,
+                            freeMe,
+                            NULL,
+                            NULL,
+                            FALSE,
+                            0,
+                            NULL,
+                            NULL,
+                            NULL,
+                            &procInfo
+                            );
+    
+    if(NULL != freeMe)
+    {
+        free(freeMe);
+        freeMe = NULL;
+    }
+#endif /* WINCE */
+
     PR_FREEIF( cmdLine );
     if (blocking) {
  

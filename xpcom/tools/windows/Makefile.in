@@ -26,11 +26,13 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+ifneq ($(OS_TARGET),WINCE)
 SIMPLE_PROGRAMS	= rebasedlls$(BIN_SUFFIX)
 
 CPPSRCS		= rebasedlls.cpp
 
 OS_LIBS		+= imagehlp.lib
+endif # WINCE
 
 include $(topsrcdir)/config/rules.mk
 

@@ -776,9 +776,8 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
 
         case Win_WindowsDirectory:
         {    
-#if !defined(WINCE)
             char path[_MAX_PATH];
-            PRInt32 len = GetWindowsDirectory( path, _MAX_PATH );
+            PRInt32 len = GetWindowsDirectoryA( path, _MAX_PATH );
             
             // Need enough space to add the trailing backslash
             if (len > _MAX_PATH-2)
@@ -788,9 +787,6 @@ void nsSpecialSystemDirectory::operator = (SystemDirectories aSystemSystemDirect
             path[len+1] = '\0';
 
             *this = MakeUpperCase(path);
-#else /* WINCE */
-            *this = _T("\\WINDOWS\\");
-#endif /* WINCE */
             break;
         }
 

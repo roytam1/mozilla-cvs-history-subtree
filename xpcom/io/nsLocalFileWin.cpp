@@ -991,9 +991,9 @@ nsLocalFile::CopySingleFile(nsIFile *sourceFile, nsIFile *destParent, const nsAC
     int copyOK;
 
     if (!move)
-        copyOK = CopyFile(filePath.get(), destPath.get(), PR_TRUE);
+        copyOK = CopyFileA(filePath.get(), destPath.get(), PR_TRUE);
     else
-        copyOK = MoveFile(filePath.get(), destPath.get());
+        copyOK = MoveFileA(filePath.get(), destPath.get());
     
     if (!copyOK)  // CopyFile and MoveFile returns non-zero if succeeds (backward if you ask me).
         rv = ConvertWinError(GetLastError());
@@ -1366,7 +1366,7 @@ nsLocalFile::SetModDate(PRInt64 aLastModifiedTime, PRBool resolveTerminal)
     
     const char *filePath = mResolvedPath.get();
     
-    HANDLE file = CreateFile(  filePath,          // pointer to name of the file
+    HANDLE file = CreateFileA( filePath,          // pointer to name of the file
                                GENERIC_WRITE,     // access (write) mode
                                0,                 // share mode
                                NULL,              // pointer to security attributes
@@ -1501,13 +1501,13 @@ nsLocalFile::SetFileSize(PRInt64 aFileSize)
 
     // Leave it to Microsoft to open an existing file with a function
     // named "CreateFile".
-    hFile = CreateFile(filePath,
-                       GENERIC_WRITE, 
-                       FILE_SHARE_READ, 
-                       NULL, 
-                       OPEN_EXISTING, 
-                       FILE_ATTRIBUTE_NORMAL, 
-                       NULL); 
+    hFile = CreateFileA(filePath,
+                        GENERIC_WRITE, 
+                        FILE_SHARE_READ, 
+                        NULL, 
+                        OPEN_EXISTING, 
+                        FILE_ATTRIBUTE_NORMAL, 
+                        NULL); 
 
     if (hFile == INVALID_HANDLE_VALUE)
     {
@@ -1559,9 +1559,10 @@ NS_IMETHODIMP
 nsLocalFile::GetDiskSpaceAvailable(PRInt64 *aDiskSpaceAvailable)
 {
     NS_ENSURE_ARG(aDiskSpaceAvailable);
-    
+
     ResolveAndStat(PR_FALSE);
     
+#if !defined(WINCE)
     PRInt64 int64;
     
     LL_I2L(int64 , LONG_MAX);
@@ -1576,7 +1577,7 @@ nsLocalFile::GetDiskSpaceAvailable(PRInt64 *aDiskSpaceAvailable)
                                        PULARGE_INTEGER lpTotalNumberOfBytes,    
                                        PULARGE_INTEGER lpTotalNumberOfFreeBytes) = NULL;
 
-    HINSTANCE hInst = LoadLibrary("KERNEL32.DLL");
+    HINSTANCE hInst = LoadLibrary(_T("KERNEL32.DLL"));
     NS_ASSERTION(hInst != NULL, "COULD NOT LOAD KERNEL32.DLL");
     if (hInst != NULL)
     {
@@ -1584,7 +1585,11 @@ nsLocalFile::GetDiskSpaceAvailable(PRInt64 *aDiskSpaceAvailable)
                                                PULARGE_INTEGER lpFreeBytesAvailableToCaller,
                                                PULARGE_INTEGER lpTotalNumberOfBytes,    
                                                PULARGE_INTEGER lpTotalNumberOfFreeBytes)) 
-        GetProcAddress(hInst, "GetDiskFreeSpaceExA");
+#if defined(UNICODE)
+        GetProcAddress(hInst, _T("GetDiskFreeSpaceExW"));
+#else
+        GetProcAddress(hInst, _T("GetDiskFreeSpaceExA"));
+#endif
         FreeLibrary(hInst);
     }
 
@@ -1608,7 +1613,28 @@ nsLocalFile::GetDiskSpaceAvailable(PRInt64 *aDiskSpaceAvailable)
     LL_D2L(*aDiskSpaceAvailable, nBytes);
 
     return NS_OK;
+#else /* WINCE */
+    ULARGE_INTEGER freeBytesAvailableToCaller;
+    ULARGE_INTEGER totalNumberOfBytes;
+    ULARGE_INTEGER totalNumberOfFreeBytes;
 
+    //
+    // This will only target the object store (NULL path).
+    // There could be UNC paths to memory cards, remote UNC paths, whatever.
+    // May need to be fixed one day.
+    //
+    BOOL gotten = GetDiskFreeSpaceEx(NULL, &freeBytesAvailableToCaller, &totalNumberOfBytes, &totalNumberOfFreeBytes);
+ 
+    if(FALSE != gotten)
+    {
+        *aDiskSpaceAvailable = (PRInt64)freeBytesAvailableToCaller.QuadPart;
+        return NS_OK;
+    }
+    else
+    {
+        return NS_ERROR_FAILURE;
+    }
+#endif /* WINCE */
 }
 
 NS_IMETHODIMP  
@@ -1664,7 +1690,7 @@ nsLocalFile::IsWritable(PRBool *_retval)
         return rv;  
     
     const char *workingFilePath = mWorkingPath.get();
-    DWORD word = GetFileAttributes(workingFilePath);
+    DWORD word = GetFileAttributesA(workingFilePath);
 
     *_retval = !((word & FILE_ATTRIBUTE_READONLY) != 0); 
 
@@ -1714,9 +1740,15 @@ nsLocalFile::IsExecutable(PRBool *_retval)
     if ( ext ) {
         // Convert extension to lower case.
         for( char *p = ext; *p; p++ ) {
+#if !defined(WINCE)
             if ( ::isupper( *p ) ) {
                 *p = ::tolower( *p );
             }
+#else /* WINCE */
+            if ( isupper( *p ) ) {
+                *p = tolower( *p );
+            }
+#endif /* WINCE */
         }
         // Search for any of the set of executable extensions.
         const char * const executableExts[] = { ".exe",
@@ -1786,7 +1818,7 @@ nsLocalFile::IsHidden(PRBool *_retval)
         return rv;
     
     const char *workingFilePath = mWorkingPath.get();
-    DWORD word = GetFileAttributes(workingFilePath);
+    DWORD word = GetFileAttributesA(workingFilePath);
 
     *_retval =  ((word & FILE_ATTRIBUTE_HIDDEN)  != 0); 
 
@@ -1827,7 +1859,7 @@ nsLocalFile::IsSpecial(PRBool *_retval)
         return rv;
     
     const char *workingFilePath = mWorkingPath.get();
-    DWORD word = GetFileAttributes(workingFilePath);
+    DWORD word = GetFileAttributesA(workingFilePath);
 
     *_retval = ((word & FILE_ATTRIBUTE_SYSTEM)  != 0); 
 
@@ -1988,6 +2020,7 @@ nsLocalFile::Reveal()
   origWin = fgWin = ::GetForegroundWindow();
 
   // use the app registry name to launch a shell execute....
+#if !defined(WINCE)
   LONG r = (LONG) ::ShellExecute( NULL, "open", path.get(), NULL, NULL, SW_SHOWNORMAL);
   if (r < 32) 
     return NS_ERROR_FAILURE;
@@ -2071,7 +2104,7 @@ nsLocalFile::Reveal()
       break;
 
     // We need the module handle for shell32.dll.
-    shell32 = ::GetModuleHandle("shell32.dll");
+    shell32 = ::GetModuleHandle(_T("shell32.dll"));
     if (!shell32)
       break;
 
@@ -2132,6 +2165,31 @@ nsLocalFile::Reveal()
     shellMalloc->Release();
   if (desktopFolder)
     desktopFolder->Release();
+#else /* WINCE */
+    SHELLEXECUTEINFO sei;
+
+    memset(&sei, 0, sizeof(sei));
+    sei.nShow = SW_SHOWNORMAL;
+    sei.cbSize = sizeof(sei);
+    sei.lpVerb = _T("open");
+
+    rv = NS_ERROR_FAILURE;
+
+    TCHAR wpath[MAX_PATH];
+    if(0 != a2w_buffer(path.get(), -1, wpath, sizeof(wpath) / sizeof(TCHAR)))
+    {
+        sei.lpFile = wpath;
+        
+        if(FALSE == ShellExecuteEx(&sei))
+        {
+            return NS_ERROR_FAILURE;
+        }
+    }
+    else
+    {
+        return NS_ERROR_FAILURE;
+    }
+#endif /* WINCE */
 
   return rv;
 }
@@ -2143,6 +2201,7 @@ nsLocalFile::Launch()
   nsresult rv = NS_OK;
   const nsCString &path = mWorkingPath;
 
+#if !defined(WINCE)
   // use the app registry name to launch a shell execute....
   LONG r = (LONG) ::ShellExecute( NULL, NULL, path.get(), NULL, NULL, SW_SHOWNORMAL);
 
@@ -2157,6 +2216,31 @@ nsLocalFile::Launch()
     rv = NS_ERROR_FAILURE;
 	else
     rv = NS_OK;
+#else /* WINCE */
+    SHELLEXECUTEINFO sei;
+
+    memset(&sei, 0, sizeof(sei));
+    sei.nShow = SW_SHOWNORMAL;
+    sei.cbSize = sizeof(sei);
+    sei.lpVerb = _T("open");
+
+    rv = NS_ERROR_FAILURE;
+
+    TCHAR wpath[MAX_PATH];
+    if(0 != a2w_buffer(path.get(), -1, wpath, sizeof(wpath) / sizeof(TCHAR)))
+    {
+        sei.lpFile = wpath;
+        
+        if(FALSE == ShellExecuteEx(&sei))
+        {
+            rv = NS_ERROR_FAILURE;
+        }
+    }
+    else
+    {
+        rv = NS_ERROR_FAILURE;
+    }
+#endif /* WINCE */
 
   return rv;
 }

@@ -164,7 +164,7 @@ extern void vr_findGlobalRegName ()
     char    path[ PATHLEN ];
     int     pathlen;
    
-    pathlen = GetWindowsDirectory(path, PATHLEN);
+    pathlen = GetWindowsDirectoryA(path, PATHLEN);
     if ( pathlen > 0 ) {
         XP_FREEIF(globalRegName);
         XP_STRCPY( path+pathlen, WIN_REG );
@@ -179,7 +179,7 @@ char* vr_findVerRegName()
    
     if ( verRegName == NULL )
     {
-        pathlen = GetWindowsDirectory(path, PATHLEN);
+        pathlen = GetWindowsDirectoryA(path, PATHLEN);
         if ( pathlen > 0 ) {
             XP_STRCPY( path+pathlen, WIN_VERREG );
             verRegName = XP_STRDUP(path);

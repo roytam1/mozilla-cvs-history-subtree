@@ -39,17 +39,22 @@
 
 int WINAPI 
 WinMain(HINSTANCE  hInstance, HINSTANCE  hPrevInstance, 
-        LPSTR  lpszCmdLine, int  nCmdShow)
+        LPTSTR  lpszCmdLine, int  nCmdShow)
 {
-    static char msg[4048];
+    static TCHAR msg[4048];
 
     wsprintf(msg,
-             "%s\n\nClick Abort to exit the Application.\n"
-             "Click Retry to Debug the Application..\n"
-             "Click Ignore to continue running the Application.", 
+             _T("%s\n\nClick Abort to exit the Application.\n")
+             _T("Click Retry to Debug the Application..\n")
+             _T("Click Ignore to continue running the Application."), 
              lpszCmdLine);
              
-    return MessageBox(NULL, msg, "nsDebug::Assertion",
-                      MB_ICONSTOP | MB_SYSTEMMODAL| 
+    return MessageBox(NULL, msg, _T("nsDebug::Assertion"),
+                      MB_ICONSTOP |
+#if !defined(WINCE)
+                      MB_SYSTEMMODAL |
+#else /* WINCE */
+                      MB_APPLMODAL | MB_TOPMOST | MB_SETFOREGROUND |
+#endif /* WINCE */
                       MB_ABORTRETRYIGNORE | MB_DEFBUTTON3);
 }
