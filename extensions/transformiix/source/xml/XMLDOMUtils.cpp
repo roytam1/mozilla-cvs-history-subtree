@@ -21,7 +21,6 @@
  * Keith Visco 
  *    -- original author.
  *
- * $Id$
  */
 
 /**
@@ -63,7 +62,7 @@ Node* XMLDOMUtils::copyNode(Node* node, Document* owner, NamespaceResolver* reso
             Document* newDoc = new Document();
             if (!newDoc)
                 break;
-#ifdef MOZ_XSL
+#ifndef TX_EXE
             owner->addWrapper(newDoc);
 #endif
             NodeList* nl = doc->getChildNodes();
@@ -86,7 +85,7 @@ Node* XMLDOMUtils::copyNode(Node* node, Document* owner, NamespaceResolver* reso
         case Node::ELEMENT_NODE :
         {
             Element* element = (Element*)node;
-#ifdef MOZ_XSL
+#ifndef TX_EXE
             String name, nameSpaceURI;
             name = element->getNodeName();
             resolver->getResultNameSpaceURI(name, nameSpaceURI);
@@ -100,7 +99,7 @@ Node* XMLDOMUtils::copyNode(Node* node, Document* owner, NamespaceResolver* reso
             if ( attList ) {
                 for ( i = 0; i < attList->getLength(); i++ ) {
                     Attr* attr = (Attr*) attList->item(i);
-#ifdef MOZ_XSL
+#ifndef TX_EXE
                     resolver->getResultNameSpaceURI(attr->getName(), nameSpaceURI);
                     newElement->setAttributeNS(nameSpaceURI, attr->getName(), attr->getValue());
 #else

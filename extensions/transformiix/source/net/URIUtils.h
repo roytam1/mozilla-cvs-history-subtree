@@ -31,7 +31,6 @@
  *   -- 20000326
  *     -- added Mozilla integration code
  *
- * $Id$
  */
 
 #ifndef TRANSFRMX_URIUTILS_H
@@ -39,7 +38,7 @@
 
 #include "TxString.h"
 #include "baseutils.h"
-#ifndef MOZ_XSL
+#ifdef TX_EXE
 #include <fstream.h>
 #endif
 
