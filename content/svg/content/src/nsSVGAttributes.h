@@ -173,8 +173,7 @@ public:
                      PRBool aNotify);
   NS_IMETHOD_(PRBool) HasAttr(PRInt32 aNameSpaceID,
                               nsIAtom* aName) const;
-  nsresult NormalizeAttrString(const nsAString& aStr,
-                               nsINodeInfo** aNodeInfo);
+  NS_IMETHOD_(already_AddRefed<nsINodeInfo>) GetExistingAttrNameFromQName(const nsAString& aStr);
   nsresult GetAttrNameAt(PRInt32 aIndex,
                          PRInt32* aNameSpaceID, 
                          nsIAtom** aName,

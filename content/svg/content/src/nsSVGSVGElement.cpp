@@ -925,7 +925,7 @@ nsSVGSVGElement::GetCTM(nsIDOMSVGMatrix **_retval)
   if (!parent) {
     // if we didn't find an anonymous parent, use the explicit one,
     // whether it's null or not...
-    parent = mParent;
+    parent = GetParent();
   }
   
   while (parent) {
@@ -998,7 +998,7 @@ nsSVGSVGElement::GetScreenCTM(nsIDOMSVGMatrix **_retval)
   if (!parent) {
     // if we didn't find an anonymous parent, use the explicit one,
     // whether it's null or not...
-    parent = mParent;
+    parent = GetParent();
   }
   
   while (parent) {

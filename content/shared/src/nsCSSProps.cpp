@@ -1251,6 +1251,7 @@ static const PRInt32 kBackgroundYPositionKTable[] = {
 
   case eCSSProperty_pitch_range:
   case eCSSProperty_play_during:
+  case eCSSProperty_play_during_uri:
     break;
 
   case eCSSProperty_play_during_flags:
@@ -1615,6 +1616,12 @@ static const nsCSSProperty gPaddingSubpropTable[] = {
 static const nsCSSProperty gPauseSubpropTable[] = {
   eCSSProperty_pause_after,
   eCSSProperty_pause_before,
+  eCSSProperty_UNKNOWN
+};
+
+static const nsCSSProperty gPlayDuringSubpropTable[] = {
+  eCSSProperty_play_during_uri,
+  eCSSProperty_play_during_flags,
   eCSSProperty_UNKNOWN
 };
 

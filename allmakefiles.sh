@@ -440,7 +440,6 @@ netwerk/testserver/Makefile
 netwerk/resources/Makefile
 netwerk/resources/content/contents.rdf
 netwerk/resources/locale/en-US/contents.rdf
-
 uriloader/exthandler/Makefile
 intl/strres/public/Makefile
 intl/locale/idl/Makefile
@@ -599,7 +598,6 @@ xpcom/tools/Makefile
 xpcom/tools/registry/Makefile
 xpcom/tools/windows/Makefile
 xpcom/windbgdlg/Makefile
-
 $MAKEFILES_libreg
 $MAKEFILES_libjar
 intl/unicharutil/public/Makefile
@@ -927,6 +925,7 @@ browser/components/security/Makefile
 browser/components/sidebar/Makefile
 browser/components/sidebar/public/Makefile
 browser/components/sidebar/src/Makefile
+browser/extensions/inspector/content/contents.rdf
 "
 
 MAKEFILES_xulapp="
@@ -956,11 +955,30 @@ toolkit/components/satchel/public/Makefile
 toolkit/components/satchel/src/Makefile
 toolkit/components/viewconfig/Makefile
 toolkit/components/viewsource/Makefile
+toolkit/mozapps/Makefile
+toolkit/mozapps/downloads/Makefile
+toolkit/mozapps/installer/Makefile
+toolkit/mozapps/installer/windows/Makefile
+toolkit/mozapps/installer/windows/wizard/Makefile
+toolkit/mozapps/installer/windows/wizard/setup/Makefile
+toolkit/mozapps/installer/windows/wizard/setuprsc/Makefile
+toolkit/mozapps/installer/windows/wizard/uninstall/Makefile
 toolkit/skin/mac/Makefile
 toolkit/skin/unix/Makefile
 toolkit/skin/win/Makefile
 toolkit/xre/Makefile
+toolkit/content/contents-platform.rdf
+toolkit/content/contents-region.rdf
+toolkit/content/contents.rdf
+toolkit/locale/contents-platform.rdf
+toolkit/locale/contents-region.rdf
+toolkit/locale/contents.rdf
+toolkit/components/passwordmgr/resources/content/contents.rdf
+toolkit/components/passwordmgr/resources/locale/contents.rdf
+toolkit/mozapps/contents-content.rdf
+toolkit/mozapps/contents-locale.rdf
 "
+
 
 MAKEFILES_thunderbird="
 mail/Makefile
@@ -974,8 +992,16 @@ mail/components/prefwindow/Makefile
 mail/extensions/Makefile
 mail/extensions/smime/Makefile
 mail/extensions/offline/Makefile
+mail/extensions/inspector/Makefile
 mail/config/Makefile
 xpfe/components/build2/Makefile
+mail/base/content/contents.rdf
+mail/base/content/help.rdf
+mail/base/content/messenger-views.rdf
+mail/base/content/navigator.rdf
+mail/extensions/offline/content/contents.rdf
+mail/extensions/offline/locale/contents.rdf
+mail/extensions/inspector/content/contents.rdf
 "
 
 MAKEFILES_standalone_composer="
@@ -1239,7 +1265,6 @@ for extension in $MOZ_EXTENSIONS; do
             " ;;
         cookie ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/cookie/Makefile
-            extensions/cookie/tests/Makefile
             extensions/cookie/resources/content/contents.rdf
             extensions/cookie/resources/locale/en-US/contents.rdf
             " ;;

@@ -111,9 +111,9 @@ public:
                    nsIURI*                aInputURL,
                    nsICSSStyleSheet*&     aResult);
 
-  NS_IMETHOD ParseStyleAttribute(const nsAString& aAttributeValue,
-                                 nsIURI*          aBaseURL,
-                                 nsIStyleRule**   aResult);
+  NS_IMETHOD ParseStyleAttribute(const nsAString&  aAttributeValue,
+                                 nsIURI*           aBaseURL,
+                                 nsICSSStyleRule** aResult);
   
   NS_IMETHOD ParseAndAppendDeclaration(const nsAString&  aBuffer,
                                        nsIURI*           aBaseURL,
@@ -596,7 +596,7 @@ CSSParserImpl::Parse(nsIUnicharInputStream* aInput,
 NS_IMETHODIMP
 CSSParserImpl::ParseStyleAttribute(const nsAString& aAttributeValue,
                                    nsIURI*                  aBaseURL,
-                                   nsIStyleRule**           aResult)
+                                   nsICSSStyleRule**        aResult)
 {
   NS_ASSERTION(nsnull != aBaseURL, "need base URL");
 
@@ -1541,7 +1541,8 @@ PRBool CSSParserImpl::ParseSelectorGroup(PRInt32& aErrorCode,
   PRUnichar     combinator = PRUnichar(0);
   PRInt32       weight = 0;
   PRBool        havePseudoElement = PR_FALSE;
-  for (;;) {
+  PRBool        done = PR_FALSE;
+  while (!done) {
     nsCSSSelector selector;
     if (! ParseSelector(aErrorCode, selector)) {
       break;
@@ -1607,15 +1608,27 @@ PRBool CSSParserImpl::ParseSelectorGroup(PRInt32& aErrorCode,
     }
 
     combinator = PRUnichar(0);
-    if (GetToken(aErrorCode, PR_TRUE)) {
-      if ((eCSSToken_Symbol == mToken.mType) && 
-          (('+' == mToken.mSymbol) || ('>' == mToken.mSymbol))) {
-        combinator = mToken.mSymbol;
-        list->mSelectors->SetOperator(combinator);
+    if (!GetToken(aErrorCode, PR_FALSE)) {
+      break;
+    }
+
+    // Assume we are done unless we find a combinator here.
+    done = PR_TRUE;
+    if (eCSSToken_WhiteSpace == mToken.mType) {
+      if (!GetToken(aErrorCode, PR_TRUE)) {
+        break;
       }
-      else {
-        UngetToken(); // give it back to selector
-      }
+      done = PR_FALSE;
+    }
+
+    if (eCSSToken_Symbol == mToken.mType && 
+        ('+' == mToken.mSymbol || '>' == mToken.mSymbol)) {
+      done = PR_FALSE;
+      combinator = mToken.mSymbol;
+      list->mSelectors->SetOperator(combinator);
+    }
+    else {
+      UngetToken(); // give it back to selector
     }
 
     if (havePseudoElement) {
@@ -3522,11 +3535,14 @@ PRBool CSSParserImpl::ParseAttr(PRInt32& aErrorCode, nsCSSValue& aValue)
             mNameSpace->FindNameSpaceID(prefix, &nameSpaceID);
           } // else, no declared namespaces
           if (kNameSpaceID_Unknown == nameSpaceID) {  // unknown prefix, dump it
+            REPORT_UNEXPECTED(NS_LITERAL_STRING("Unknown namespace prefix '") +
+                              holdIdent + NS_LITERAL_STRING("'."));
             return PR_FALSE;
           }
           attr.AppendInt(nameSpaceID, 10);
           attr.Append(PRUnichar('|'));
           if (! GetToken(aErrorCode, PR_FALSE)) {
+            REPORT_UNEXPECTED_EOF(NS_LITERAL_STRING("attribute name"));
             return PR_FALSE;
           }
           if (eCSSToken_Ident == mToken.mType) {
@@ -3539,6 +3555,8 @@ PRBool CSSParserImpl::ParseAttr(PRInt32& aErrorCode, nsCSSValue& aValue)
             }
           }
           else {
+            REPORT_UNEXPECTED_TOKEN(
+              NS_LITERAL_STRING("Expected attribute name but found"));
             UngetToken();
             return PR_FALSE;
           }
@@ -3553,26 +3571,15 @@ PRBool CSSParserImpl::ParseAttr(PRInt32& aErrorCode, nsCSSValue& aValue)
         }
       }
       else if (mToken.IsSymbol('*')) {  // namespace wildcard
-        if (ExpectSymbol(aErrorCode, '|', PR_FALSE)) {
-          attr.AppendInt(kNameSpaceID_Unknown, 10);
-          attr.Append(PRUnichar('|'));
-          if (! GetToken(aErrorCode, PR_FALSE)) {
-            return PR_FALSE;
-          }
-          if (eCSSToken_Ident == mToken.mType) {
-            attr.Append(mToken.mIdent);
-          }
-          else {
-            UngetToken();
-            return PR_FALSE;
-          }
-        }
-        else {
-          return PR_FALSE;
-        }
+        // Wildcard namespace makes no sense here and is not allowed
+        REPORT_UNEXPECTED_TOKEN(
+          NS_LITERAL_STRING("Expected attribute name but found"));
+        UngetToken();
+        return PR_FALSE;
       }
       else if (mToken.IsSymbol('|')) {  // explicit NO namespace
         if (! GetToken(aErrorCode, PR_FALSE)) {
+          REPORT_UNEXPECTED_EOF(NS_LITERAL_STRING("attribute name"));
           return PR_FALSE;
         }
         if (eCSSToken_Ident == mToken.mType) {
@@ -3585,11 +3592,15 @@ PRBool CSSParserImpl::ParseAttr(PRInt32& aErrorCode, nsCSSValue& aValue)
           }
         }
         else {
+          REPORT_UNEXPECTED_TOKEN(
+            NS_LITERAL_STRING("Expected attribute name but found"));
           UngetToken();
           return PR_FALSE;
         }
       }
       else {
+        REPORT_UNEXPECTED_TOKEN(
+          NS_LITERAL_STRING("Expected attribute name or namespace but found"));
         UngetToken();
         return PR_FALSE;
       }
@@ -3612,12 +3623,17 @@ PRBool CSSParserImpl::ParseURL(PRInt32& aErrorCode, nsCSSValue& aValue)
     if ((eCSSToken_String == tk->mType) || (eCSSToken_URL == tk->mType)) {
       // Translate url into an absolute url if the url is relative to
       // the style sheet.
-      // XXX editors won't like this - too bad for now
-      nsCOMPtr<nsIURI> url;
-      NS_NewURI(getter_AddRefs(url), tk->mIdent, nsnull, mURL);
+      nsCOMPtr<nsIURI> uri;
+      NS_NewURI(getter_AddRefs(uri), tk->mIdent, nsnull, mURL);
       if (ExpectSymbol(aErrorCode, ')', PR_TRUE)) {
         // Set a null value on failure.  Most failure cases should be
         // NS_ERROR_MALFORMED_URI.
+        nsCSSValue::URL *url = new nsCSSValue::URL(uri, tk->mIdent.get());
+        if (!url || !url->mString) {
+          aErrorCode = NS_ERROR_OUT_OF_MEMORY;
+          delete url;
+          return PR_FALSE;
+        }
         aValue.SetURLValue(url);
         return PR_TRUE;
       }
@@ -3843,6 +3859,7 @@ PRBool CSSParserImpl::ParseProperty(PRInt32& aErrorCode,
   case eCSSProperty_border_x_spacing:
   case eCSSProperty_border_y_spacing:
   case eCSSProperty_play_during_flags:
+  case eCSSProperty_play_during_uri:
   case eCSSProperty_size_height:
   case eCSSProperty_size_width:
     // The user can't use these
@@ -3936,6 +3953,7 @@ PRBool CSSParserImpl::ParseSingleValueProperty(PRInt32& aErrorCode,
   case eCSSProperty_border_x_spacing:
   case eCSSProperty_border_y_spacing:
   case eCSSProperty_play_during_flags:
+  case eCSSProperty_play_during_uri:
   case eCSSProperty_size_height:
   case eCSSProperty_size_width:
     NS_ERROR("not currently parsed here");
@@ -5341,7 +5359,7 @@ PRBool CSSParserImpl::ParsePlayDuring(PRInt32& aErrorCode)
       }
     }
     if (ExpectEndProperty(aErrorCode, PR_TRUE)) {
-      AppendValue(eCSSProperty_play_during, playDuring);
+      AppendValue(eCSSProperty_play_during_uri, playDuring);
       AppendValue(eCSSProperty_play_during_flags, flags);
       return PR_TRUE;
     }

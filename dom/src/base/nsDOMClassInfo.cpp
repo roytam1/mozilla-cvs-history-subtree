@@ -1338,6 +1338,7 @@ nsDOMClassInfo::Init()
 
   nsCOMPtr<nsIComponentRegistrar> cr;
   NS_GetComponentRegistrar(getter_AddRefs(cr));
+
   const nsIID* xpathEvaluatorIID = nsnull;
   if (cr) {
     PRBool haveXPathDOM;
@@ -3760,8 +3761,13 @@ nsWindowSH::GlobalResolve(nsISupports *native, JSContext *cx, JSObject *obj,
     // We're resolving a name of a DOM interface for which there is no
     // direct DOM class, create a constructor object...
 
+    sDoSecurityCheckInAddProperty = PR_FALSE;
+
     JSObject* class_obj = ::JS_DefineObject(cx, obj, ::JS_GetStringBytes(str),
                                             &sDOMJSClass, 0, 0);
+
+    sDoSecurityCheckInAddProperty = PR_TRUE;
+
     if (!class_obj) {
       return NS_ERROR_UNEXPECTED;
     }
@@ -3807,8 +3813,13 @@ nsWindowSH::GlobalResolve(nsISupports *native, JSContext *cx, JSObject *obj,
       }
     }
 
+    sDoSecurityCheckInAddProperty = PR_FALSE;
+
     JSObject* class_obj = ::JS_DefineObject(cx, obj, ::JS_GetStringBytes(str),
                                             &sDOMJSClass, 0, 0);
+
+    sDoSecurityCheckInAddProperty = PR_TRUE;
+
     if (!class_obj) {
       return NS_ERROR_UNEXPECTED;
     }
@@ -4852,7 +4863,7 @@ nsArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                        JSObject *obj, jsval id, jsval *vp, PRBool *_retval)
 {
   PRBool is_number = PR_FALSE;
-  int32 n = GetArrayIndexFromId(cx, id, &is_number);
+  PRInt32 n = GetArrayIndexFromId(cx, id, &is_number);
 
   if (is_number) {
     if (n < 0) {
@@ -5756,7 +5767,7 @@ nsHTMLSelectElementSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
                                    JSContext *cx, JSObject *obj, jsval id,
                                    jsval *vp, PRBool *_retval)
 {
-  int32 n = GetArrayIndexFromId(cx, id);
+  PRInt32 n = GetArrayIndexFromId(cx, id);
 
   if (n >= 0) {
     nsCOMPtr<nsISupports> native;
@@ -6214,7 +6225,7 @@ nsHTMLOptionsCollectionSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
                                        JSContext *cx, JSObject *obj, jsval id,
                                        jsval *vp, PRBool *_retval)
 {
-  int32 n = GetArrayIndexFromId(cx, id);
+  PRInt32 n = GetArrayIndexFromId(cx, id);
 
   if (n < 0) {
     return NS_OK;

@@ -161,165 +161,16 @@ nsSVGElement::IndexOf(nsIContent* aPossibleChild) const
   return mChildren.IndexOf(aPossibleChild);
 }
 
-NS_IMETHODIMP
-nsSVGElement::InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
-                            PRBool aNotify,
-                            PRBool aDeepSetDocument)
-{
-  NS_PRECONDITION(nsnull != aKid, "null ptr");
-  nsIDocument* doc = mDocument;
-  mozAutoDocUpdate updateBatch(doc, UPDATE_CONTENT_MODEL, aNotify);
-  
-  PRBool rv = mChildren.InsertElementAt(aKid, aIndex);/* XXX fix up void array api to use nsresult's*/
-  if (rv) {
-    NS_ADDREF(aKid);
-    aKid->SetParent(this);
-    nsRange::OwnerChildInserted(this, aIndex);
-    if (nsnull != doc) {
-      aKid->SetDocument(doc, aDeepSetDocument, PR_TRUE);
-      if (aNotify) {
-        doc->ContentInserted(this, aKid, aIndex);
-      }
-
-      if (nsGenericElement::HasMutationListeners(this, NS_EVENT_BITS_MUTATION_NODEINSERTED)) {
-        nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(aKid));
-        nsMutationEvent mutation;
-        mutation.eventStructType = NS_MUTATION_EVENT;
-        mutation.message = NS_MUTATION_NODEINSERTED;
-        mutation.mTarget = node;
-
-        nsCOMPtr<nsIDOMNode> relNode(do_QueryInterface(NS_STATIC_CAST(nsIContent *, this)));
-        mutation.mRelatedNode = relNode;
-
-        nsEventStatus status = nsEventStatus_eIgnore;
-        nsCOMPtr<nsIDOMEvent> domEvent;
-        aKid->HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent), NS_EVENT_FLAG_INIT, &status);
-      }
-    }
-  }
-  
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSVGElement::ReplaceChildAt(nsIContent* aKid, PRUint32 aIndex,
-                             PRBool aNotify,
-                             PRBool aDeepSetDocument)
-{
-  NS_PRECONDITION(nsnull != aKid, "null ptr");
-  nsIDocument* doc = mDocument;
-  mozAutoDocUpdate updateBatch(doc, UPDATE_CONTENT_MODEL, aNotify);
-
-  nsIContent* oldKid = (nsIContent *)mChildren.ElementAt(aIndex);
-  nsRange::OwnerChildReplaced(this, aIndex, oldKid);
-  PRBool rv = mChildren.ReplaceElementAt(aKid, aIndex);
-  if (rv) {
-    NS_ADDREF(aKid);
-    aKid->SetParent(this);
-    if (nsnull != doc) {
-      aKid->SetDocument(doc, aDeepSetDocument, PR_TRUE);
-      if (aNotify) {
-        doc->ContentReplaced(this, oldKid, aKid, aIndex);
-      }
-    }
-    oldKid->SetDocument(nsnull, PR_TRUE, PR_TRUE);
-    oldKid->SetParent(nsnull);
-    NS_RELEASE(oldKid);
-  }
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSVGElement::AppendChildTo(nsIContent* aKid, PRBool aNotify,
-                            PRBool aDeepSetDocument)
-{
-  NS_PRECONDITION(nsnull != aKid && this != aKid, "null ptr");
-  nsIDocument* doc = mDocument;
-  mozAutoDocUpdate updateBatch(doc, UPDATE_CONTENT_MODEL, aNotify);
-
-  PRBool rv = mChildren.AppendElement(aKid);
-  if (rv) {
-    NS_ADDREF(aKid);
-    aKid->SetParent(this);
-    // ranges don't need adjustment since new child is at end of list
-    if (nsnull != doc) {
-      aKid->SetDocument(doc, aDeepSetDocument, PR_TRUE);
-      if (aNotify) {
-        doc->ContentAppended(this, mChildren.Count() - 1);
-      }
-
-      if (nsGenericElement::HasMutationListeners(this, NS_EVENT_BITS_MUTATION_NODEINSERTED)) {
-        nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(aKid));
-        nsMutationEvent mutation;
-        mutation.eventStructType = NS_MUTATION_EVENT;
-        mutation.message = NS_MUTATION_NODEINSERTED;
-        mutation.mTarget = node;
-
-        nsCOMPtr<nsIDOMNode> relNode(do_QueryInterface(NS_STATIC_CAST(nsIContent *, this)));
-        mutation.mRelatedNode = relNode;
-
-        nsEventStatus status = nsEventStatus_eIgnore;
-        nsCOMPtr<nsIDOMEvent> domEvent;
-        aKid->HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent), NS_EVENT_FLAG_INIT, &status);
-      }
-    }
-  }
-  
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSVGElement::RemoveChildAt(PRUint32 aIndex, PRBool aNotify)
-{
-  nsIDocument* doc = mDocument;
-
-  nsIContent* oldKid = (nsIContent *)mChildren.ElementAt(aIndex);
-  if (nsnull != oldKid ) {
-    mozAutoDocUpdate updateBatch(doc, UPDATE_CONTENT_MODEL, aNotify);
-
-    if (nsGenericElement::HasMutationListeners(this, NS_EVENT_BITS_MUTATION_NODEREMOVED)) {
-      nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(oldKid));
-      nsMutationEvent mutation;
-      mutation.eventStructType = NS_MUTATION_EVENT;
-      mutation.message = NS_MUTATION_NODEREMOVED;
-      mutation.mTarget = node;
-
-      nsCOMPtr<nsIDOMNode> relNode(do_QueryInterface(NS_STATIC_CAST(nsIContent *, this)));
-      mutation.mRelatedNode = relNode;
-
-      nsEventStatus status = nsEventStatus_eIgnore;
-      nsCOMPtr<nsIDOMEvent> domEvent;
-      oldKid->HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent),
-                             NS_EVENT_FLAG_INIT, &status);
-    }
-
-    nsRange::OwnerChildRemoved(this, aIndex, oldKid);
-
-    mChildren.RemoveElementAt(aIndex);
-    if (aNotify) {
-      if (nsnull != doc) {
-        doc->ContentRemoved(this, oldKid, aIndex);
-      }
-    }
-    oldKid->SetDocument(nsnull, PR_TRUE, PR_TRUE);
-    oldKid->SetParent(nsnull);
-    NS_RELEASE(oldKid);
-  }
-
-  return NS_OK;  
-}
-
 NS_IMETHODIMP_(nsIAtom*)
 nsSVGElement::GetIDAttributeName() const
 {
   return nsSVGAtoms::id;
 }
 
-NS_IMETHODIMP
-nsSVGElement::NormalizeAttrString(const nsAString& aStr,
-                                  nsINodeInfo** aNodeInfo)
+NS_IMETHODIMP_(already_AddRefed<nsINodeInfo>)
+nsSVGElement::GetExistingAttrNameFromQName(const nsAString& aStr)
 {
-  return mAttributes->NormalizeAttrString(aStr, aNodeInfo);
+  return mAttributes->GetExistingAttrNameFromQName(aStr);
 }
 
 NS_IMETHODIMP
@@ -496,8 +347,8 @@ nsSVGElement::GetNodeType(PRUint16* aNodeType)
 NS_IMETHODIMP
 nsSVGElement::GetParentNode(nsIDOMNode** aParentNode)
 {
-  if (mParent) {
-    return CallQueryInterface(mParent, aParentNode);
+  if (GetParent()) {
+    return CallQueryInterface(GetParent(), aParentNode);
   }
   if (mDocument) {
     // we're the root content
@@ -709,7 +560,7 @@ nsSVGElement::GetOwnerSVGElement(nsIDOMSVGSVGElement * *aOwnerSVGElement)
   if (!parent) {
     // if we didn't find an anonymous parent, use the explicit one,
     // whether it's null or not...
-    parent = mParent;
+    parent = GetParent();
   }
 
   while (parent) {    

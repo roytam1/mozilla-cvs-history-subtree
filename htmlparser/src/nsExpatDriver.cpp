@@ -346,9 +346,20 @@ nsExpatDriver::HandleStartElement(const PRUnichar *aValue,
 { 
   NS_ASSERTION(mSink, "content sink not found!");
 
+  // Calculate the total number of elements in aAtts.
+  // XML_GetSpecifiedAttributeCount will only give us the number of specified
+  // attrs (twice that number, actually), so we have to check for default attrs
+  // ourselves.
+  PRUint32 attrArrayLength;
+  for (attrArrayLength = XML_GetSpecifiedAttributeCount(mExpatParser);
+       aAtts[attrArrayLength];
+       attrArrayLength += 2) {
+    // Just looping till we find out what the length is
+  }
+  
   if (mSink){
     mSink->HandleStartElement(aValue, aAtts, 
-                              XML_GetSpecifiedAttributeCount(mExpatParser) / 2, 
+                              attrArrayLength,
                               XML_GetIdAttributeIndex(mExpatParser), 
                               XML_GetCurrentLineNumber(mExpatParser));
   }
@@ -1184,6 +1195,12 @@ nsExpatDriver::StringTagToIntTag(const nsAString &aTag, PRInt32* aIntTag) const
 
 NS_IMETHODIMP_(const PRUnichar *)
 nsExpatDriver::IntTagToStringTag(PRInt32 aIntTag) const
+{
+  return 0;
+}
+
+NS_IMETHODIMP_(nsIAtom *)
+nsExpatDriver::IntTagToAtom(PRInt32 aIntTag) const
 {
   return 0;
 }
