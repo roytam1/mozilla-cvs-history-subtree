@@ -56,12 +56,14 @@
   </RDF:Seq>
 
   <!-- messenger items for Messenger -->
+<!-- doing it manually
   <RDF:Seq about="chrome://messenger/content/messenger.xul">
     <RDF:li>chrome://messenger/content/mailMessengerOverlay.xul</RDF:li>
   </RDF:Seq>
   <RDF:Seq about="chrome://messenger/content/mail3PaneWindowVertLayout.xul">
     <RDF:li>chrome://messenger/content/mailMessengerOverlay.xul</RDF:li>
   </RDF:Seq>
+-->
 
   <!-- messenger items for Mail Compose -->
   <RDF:Seq about="chrome://messenger/content/messengercompose/messengercompose.xul">

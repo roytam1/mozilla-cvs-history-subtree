@@ -136,7 +136,6 @@ messenger.jar:
     content/messenger/mailNavigatorOverlay.xul                                 (base/resources/content/mailNavigatorOverlay.xul)
     content/messenger/mailEditorOverlay.xul                                    (base/resources/content/mailEditorOverlay.xul)
     content/messenger/mailABOverlay.xul                                        (base/resources/content/mailABOverlay.xul)
-    content/messenger/mailMessengerOverlay.xul                                 (base/resources/content/mailMessengerOverlay.xul)
     content/messenger/mailMessengerComposeOverlay.xul                          (base/resources/content/mailMessengerComposeOverlay.xul)
     content/messenger/mailOverlay.xul                                          (base/resources/content/mailOverlay.xul)
     content/messenger/mailWidgets.xml                                          (base/resources/content/mailWidgets.xml)
