@@ -410,7 +410,6 @@
                   contentcontextmenu="contentAreaContextMenu"
                   onnewtab="BrowserOpenTab();" onkeypress="onBrowserKeyPress(event);"
                   onkeyup="onBrowserKeyUp(event);"
-                  autocompleteenabled="true"
                   autocompletepopup="PopupAutoComplete"
                   ondragdrop="nsDragAndDrop.drop(event, contentAreaDNDObserver);"
                   onclick="return contentAreaClick(event, false);"
