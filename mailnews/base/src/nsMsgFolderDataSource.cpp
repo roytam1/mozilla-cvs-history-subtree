@@ -1133,6 +1133,7 @@ nsresult nsMsgFolderDataSource::createFolderTreeSimpleNameNode(nsIMsgFolder * fo
 
 nsresult nsMsgFolderDataSource::CreateMessagesNameString(PRInt32 aNumMessages, nsAutoString &nameString)
 {
+#ifdef FOLDER_TOTALS
   //Only do this if num messages is positive
   if(aNumMessages > 0)
   {
@@ -1140,6 +1141,7 @@ nsresult nsMsgFolderDataSource::CreateMessagesNameString(PRInt32 aNumMessages, n
     nameString.AppendInt(aNumMessages);
     nameString.Append(NS_LITERAL_STRING(")").get());
   }
+#endif
   return NS_OK;
 }
 
