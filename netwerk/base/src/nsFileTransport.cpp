@@ -1,19 +1,23 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL. You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
  *
- * The Initial Developer of this code under the NPL is Netscape
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is Netscape
  * Communications Corporation. Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation. All Rights
- * Reserved.
+ * Copyright (C) 1998 Netscape Communications Corporation. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
  */
 
 #include "nsFileTransport.h"
@@ -285,55 +289,55 @@ nsresult
 nsFileTransport::Init(nsFileSpec& spec, const char* command, nsIEventSinkGetter* getter)
 {
     nsresult rv;
-    if (mMonitor == nsnull) {
-        mMonitor = nsAutoMonitor::NewMonitor("nsFileTransport");
-        if (mMonitor == nsnull)
-            return NS_ERROR_OUT_OF_MEMORY;
-    }
     mSpec = spec;
-    rv = nsLocalFileSystem::Create(spec, getter_AddRefs(mFileObject));
-    if (NS_FAILED(rv))
-        return rv;
-    if (getter) {
-        nsCOMPtr<nsISupports> sink;
-        (void)getter->GetEventSink(command, 
-            nsIProgressEventSink::GetIID(), getter_AddRefs(sink));
-        if (sink) 
-        {
-            // Now generate a proxied event sink-
-            NS_WITH_SERVICE(nsIProxyObjectManager, 
-                    proxyMgr, kProxyObjectManagerCID, &rv);
-            if (NS_SUCCEEDED(rv))
-            {
-                rv = proxyMgr->GetProxyObject(
-                                nsnull, // primordial thread - should change?
-                                NS_GET_IID(nsIProgressEventSink),
-                                sink,
-                                PROXY_ASYNC | PROXY_ALWAYS,
-                                getter_AddRefs(mProgress));
-            }
-        }
-    }
-    return NS_OK;
+    nsCOMPtr<nsIFileSystem> fsObj;
+    rv = nsLocalFileSystem::Create(spec, getter_AddRefs(fsObj));
+    if (NS_FAILED(rv)) return rv;
+    return Init(fsObj, command, getter);
 }
 
 nsresult
 nsFileTransport::Init(nsIInputStream* fromStream, const char* contentType,
                       PRInt32 contentLength, const char* command, nsIEventSinkGetter* getter)
 {
+    nsresult rv;
+    nsCOMPtr<nsIFileSystem> fsObj;
+    rv = nsInputStreamFileSystem::Create(fromStream, contentType, contentLength,
+                                         getter_AddRefs(fsObj));
+    if (NS_FAILED(rv)) return rv;
+    return Init(fsObj, command, getter);
+}
+
+nsresult
+nsFileTransport::Init(nsIFileSystem* fsObj,
+                      const char* command,
+                      nsIEventSinkGetter* getter)
+{
+    nsresult rv = NS_OK;
     if (mMonitor == nsnull) {
         mMonitor = nsAutoMonitor::NewMonitor("nsFileTransport");
         if (mMonitor == nsnull)
             return NS_ERROR_OUT_OF_MEMORY;
     }
-    nsInputStreamFileSystem::Create(fromStream, contentType, contentLength,
-                                    getter_AddRefs(mFileObject));
+    mFileObject = fsObj;
     if (getter) {
         nsCOMPtr<nsISupports> sink;
-        (void)getter->GetEventSink(command, nsIProgressEventSink::GetIID(), getter_AddRefs(sink));
-        mProgress = (nsIProgressEventSink*)sink.get();
+        rv = getter->GetEventSink(command, 
+                                  nsIProgressEventSink::GetIID(), getter_AddRefs(sink));
+        if (NS_FAILED(rv)) return NS_OK;        // don't need a progress event sink
+
+        // Now generate a proxied event sink
+        NS_WITH_SERVICE(nsIProxyObjectManager, 
+                        proxyMgr, kProxyObjectManagerCID, &rv);
+        if (NS_FAILED(rv)) return rv;
+        
+        rv = proxyMgr->GetProxyObject(nsnull, // primordial thread - should change?
+                                      NS_GET_IID(nsIProgressEventSink),
+                                      sink,
+                                      PROXY_ASYNC | PROXY_ALWAYS,
+                                      getter_AddRefs(mProgress));
     }
-    return NS_OK;
+    return rv;
 }
 
 nsFileTransport::~nsFileTransport()
@@ -982,10 +986,12 @@ nsFileTransport::Process(void)
                  ("nsFileTransport: END_WRITE [this=%x %s] status=%x",
                   this, (const char*)mSpec, mStatus));
 
-          mSink->Flush();
+          if (mSink) {
+              mSink->Flush();
+          }
           if (mBufferInputStream)
               mBufferInputStream = null_nsCOMPtr();
-          else {
+          else if (mBuffer) {
               delete mBuffer;
               mBuffer = nsnull;
           }
