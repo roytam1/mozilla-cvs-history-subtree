@@ -29,6 +29,8 @@
 
 #include "nsCache.h"
 
+NS_IMPL_THREADSAFE_ISUPPORTS0(nsDiskCacheEntry);
+
 
 /******************************************************************************
  *  nsDiskCacheEntry
