@@ -267,14 +267,17 @@ MITREObject* NamedMap::remove(String& key) {
 
     BucketItem* bktItem = elements[idx];
 
-    while ( bktItem ) {
-        if ( bktItem->key.isEqual(key) ) break;
+    while ( bktItem && !(key.isEqual(bktItem->key))) {
         bktItem = bktItem->next;
     }
 
     if ( bktItem ) {
         if (bktItem == elements[idx]) elements[idx] = bktItem->next;
-        else bktItem->prev->next = bktItem->next;
+        else {
+            bktItem->prev->next = bktItem->next;
+            if (bktItem->next)
+                bktItem->next->prev = bktItem->prev;
+        };
         numberOfElements--;
         MITREObject* mObject = bktItem->item;
         bktItem->item = 0;
