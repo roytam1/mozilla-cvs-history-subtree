@@ -677,8 +677,7 @@ function IsCardViewAndAbResultsPaneSplitterCollapsed()
 function loadThrobberUrl(urlPref)
 {
   var url;
-  gPrefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
-  url = pref.getComplexValue(urlPref, Components.interfaces.nsIPrefLocalizedString).data;
+  url = gPrefs.getComplexValue(urlPref, Components.interfaces.nsIPrefLocalizedString).data;
   var messenger = Components.classes["@mozilla.org/messenger;1"].createInstance();
   messenger = messenger.QueryInterface(Components.interfaces.nsIMessenger);
   messenger.loadURL(window, url);
