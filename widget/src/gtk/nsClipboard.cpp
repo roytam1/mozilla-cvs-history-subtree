@@ -622,6 +622,11 @@ nsClipboard::SelectionReceiver (GtkWidget *aWidget,
     // get the decoder
     nsCOMPtr<nsICharsetConverterManager> ccm = do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &rv);
     rv = ccm->GetUnicodeDecoder(&platformCharset, getter_AddRefs(decoder));
+    NS_ASSERTION(NS_SUCCEEDED(rv), "GetUnicodeEncoder failed");
+    if (NS_FAILED(rv)) {
+      if (tmpData) XFreeStringList(tmpData);
+      return;
+    }
       
     // Estimate out length and allocate the buffer based on a worst-case estimate, then do
     // the conversion. 
@@ -643,6 +648,7 @@ nsClipboard::SelectionReceiver (GtkWidget *aWidget,
 
     mSelectionData.data = NS_REINTERPRET_CAST(guchar*,unicodeData);
     mSelectionData.length = outUnicodeLen * 2;
+    if (tmpData) XFreeStringList(tmpData);
   }
   else if (type.Equals("UTF8_STRING")) {
     mSelectionData = *aSD;
@@ -666,6 +672,8 @@ nsClipboard::SelectionReceiver (GtkWidget *aWidget,
     // get the decoder
     nsCOMPtr<nsICharsetConverterManager> ccm = do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &rv);
     rv = ccm->GetUnicodeDecoder(&platformCharset, getter_AddRefs(decoder));
+
+    g_return_if_fail(NS_SUCCEEDED(rv));
 
     decoder->GetMaxLength(data, numberOfBytes, &outUnicodeLen);   // |outUnicodeLen| is number of chars
     if (outUnicodeLen) {
@@ -973,6 +981,11 @@ void nsClipboard::SelectionGetCB(GtkWidget        *widget,
       // get the encoder
       nsCOMPtr<nsICharsetConverterManager> ccm = do_GetService(NS_CHARSETCONVERTERMANAGER_CONTRACTID, &rv);
       rv = ccm->GetUnicodeEncoder(&platformCharset, getter_AddRefs(encoder));
+      NS_ASSERTION(NS_SUCCEEDED(rv), "GetUnicodeEncoder failed");
+      if (NS_FAILED(rv)) {
+        nsMemory::Free(NS_REINTERPRET_CAST(char*, clipboardData));
+        return;
+      }
 
       encoder->SetOutputErrorBehavior(nsIUnicodeEncoder::kOnError_Replace, nsnull, '?');
 
@@ -1037,7 +1050,7 @@ void nsClipboard::SelectionGetCB(GtkWidget        *widget,
       gtk_selection_data_set(aSelectionData,
                              gdk_atom_intern("NULL", FALSE), 8,
                              nsnull, 0);
-    nsCRT::free ( NS_REINTERPRET_CAST(char*, clipboardData) );
+    nsMemory::Free ( NS_REINTERPRET_CAST(char*, clipboardData) );
   }
 #ifdef DEBUG_pavlov
   else
