@@ -2376,8 +2376,11 @@ NS_IMETHODIMP nsImapIncomingServer::PromptForPassword(char ** aPassword,
 
     GetRealHostName(getter_Copies(hostName));
     GetRealUsername(getter_Copies(userName));
-
+#if 0
     passwordText = nsTextFormatter::smprintf(passwordTemplate, (const char *) userName, (const char *) hostName);
+#else
+    passwordText = nsTextFormatter::smprintf(passwordTemplate, (const char *) userName);
+#endif
     nsresult rv =  GetPasswordWithUI(passwordText, passwordTitle, aMsgWindow,
                                      &okayValue, aPassword);
     nsTextFormatter::smprintf_free(passwordText);

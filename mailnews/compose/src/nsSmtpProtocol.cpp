@@ -1554,9 +1554,14 @@ nsSmtpProtocol::GetPassword(char **aPassword)
     rv = smtpServer->GetHostname(getter_Copies(hostname));
     if (NS_FAILED(rv)) goto done;
 
-    passwordPromptString = nsTextFormatter::smprintf(passwordTemplate,
+#if 0
+        passwordPromptString = nsTextFormatter::smprintf(passwordTemplate,
                                                      (const char *) username,
                                                      (const char *) hostname);
+#else
+        passwordPromptString = nsTextFormatter::smprintf(passwordTemplate,
+                                                     (const char *) username);
+#endif
     if (!passwordPromptString)
     {
         rv = NS_ERROR_NULL_POINTER;
