@@ -35,7 +35,7 @@ const MSG_UNKNOWN   = getMsg ("unknown");
 
 client.defaultNick = getMsg( "defaultNick" );
 
-client.version = "0.8.5-pre5";
+client.version = "0.8.5-pre6";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -134,7 +134,7 @@ function initStatic()
         client.userAgent = "ChatZilla " + client.version + " [Mozilla " + 
             ary[1] + "/" + ary[2] + "]";
     else
-        client.userAgent = "ChatZilla " + client.version + "[" + 
+        client.userAgent = "ChatZilla " + client.version + " [" + 
             navigator.userAgent + "]";
 
     obj = document.getElementById("input");
@@ -326,12 +326,12 @@ function initHost(obj)
        /((mailto:)?[^<>\[\]()\'\"\s]+@[^.<>\[\]()\'\"\s]+\.[^<>\[\]()\'\"\s]+)/i,
                         insertMailToLink);
     obj.munger.addRule ("link", obj.linkRE, insertLink);
+    obj.munger.addRule ("bugzilla-link", /(?:\s|^)(bug\s+#?\d{3,6})/i,
+                        insertBugzillaLink);
     obj.munger.addRule ("channel-link",
                         /[@+]?(#[^<>\[\]()\'\"\s]+[^:,.<>\[\]()\'\"\s])/i,
                         insertChannelLink);
     
-    obj.munger.addRule ("bugzilla-link", /(?:\s|^)(bug\s+\d{3,6})/i,
-                        insertBugzillaLink);
     obj.munger.addRule ("face",
          /((^|\s)[\<\>]?[\;\=\:]\~?[\-\^\v]?[\)\|\(pP\<\>oO0\[\]\/\\](\s|$))/,
          insertSmiley);
@@ -401,9 +401,9 @@ function insertMailToLink (matchText, containerTag)
 
 function insertChannelLink (matchText, containerTag, eventData)
 {
-    if (!eventData.network || 
+    if (!("network" in eventData) || 
         matchText.search
-            (/^#(include|error|define|if|ifdef|else|elsif|endif)$/i) != -1)
+            (/^#(include|error|define|if|ifdef|else|elsif|endif|\d+)$/i) != -1)
 
     {
         containerTag.appendChild (document.createTextNode(matchText));
@@ -539,7 +539,7 @@ function msgIsImportant (msg, sourceNick, myNick)
     return false;    
 }
 
-function fillInHTMLTooltip(tipElement)
+function fillInTooltip(tipElement, id)
 {
     const XULNS =
         "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul";
@@ -547,7 +547,7 @@ function fillInHTMLTooltip(tipElement)
     const Node = { ELEMENT_NODE : 1 }; // XXX Components.interfaces.Node;
     
     var retVal = false;
-    var tipNode = document.getElementById("HTML_TOOLTIP_tooltipBox");
+    var tipNode = document.getElementById(id);
     try {
         while (tipNode.hasChildNodes())
             tipNode.removeChild(tipNode.firstChild);
@@ -1075,15 +1075,9 @@ function gotoIRCURL (url)
         {
             /* url points to a person. */
             var nick = url.target;
-            var ary = url.target.split("%21");
+            var ary = url.target.split("!");
             if (ary)
             {
-                if (ary[0].indexOf("!") != -1)
-                {
-                    client.display (getMsg("gotoIRCURLCharWarning",
-                                           ["!", "%21", url.spec]), "WARNING");
-                    ary = ary[0].split("!");
-                }
                 nick = ary[0];
             }    
 
@@ -1094,11 +1088,6 @@ function gotoIRCURL (url)
         else
         {
             /* url points to a channel */
-            if (url.target.indexOf("#") != -1)
-            {
-                client.display (getMsg("gotoIRCURLCharWarning", 
-                                       ["#", "%23", url.spec]), "WARNING");
-            }
             var key = "";
             if (url.needkey)
                 key = window.prompt (getMsg("gotoIRCURLMsg3", url.spec));
@@ -1151,6 +1140,10 @@ function updateNetwork(obj)
     }
     client.statusBar["header-url"].setAttribute("value", 
                                                  client.currentObject.getURL());
+    client.statusBar["header-url"].setAttribute("href", 
+                                                 client.currentObject.getURL());
+    client.statusBar["header-url"].setAttribute("name", 
+                                                 client.currentObject.name);
     client.statusBar["server-nick"].setAttribute("value", nick);
 }
 
@@ -1602,8 +1595,8 @@ function getTabForObject (source, create)
         tb.setAttribute ("ondraggesture",
                          "nsDragAndDrop.startDrag(event, tabDNDObserver);");
         tb.setAttribute ("href", source.getURL());
-        tb.setAttribute ("tooltip", "aTooltip");
-        tb.setAttribute ("tooltiptext", source.getURL());
+        tb.setAttribute ("tooltip", "aTabTooltip");
+        tb.setAttribute ("title", source.getURL());
         tb.setAttribute ("name", source.name);
         tb.setAttribute ("onclick", "onTabClick('" + id + "');");
         tb.setAttribute ("crop", "right");

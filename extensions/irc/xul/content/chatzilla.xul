@@ -106,6 +106,19 @@
     oncommand="onPopupSimulateCommand('/kick $nick');"/>
 </commandset>
 
+<!-- Edit Menu -->
+<commandset id="selectEditMenuItems"/>
+<commandset id="globalEditMenuItems"/>
+<commandset id="undoEditMenuItems"/>
+<commandset id="clipboardEditMenuItems"/>
+<command id="cmd_undo"/>
+<command id="cmd_redo"/>
+<command id="cmd_cut"/>
+<command id="cmd_copy"/>
+<command id="cmd_paste"/>
+<command id="cmd_delete"/>
+<command id="cmd_selectAll"/>
+
 <keyset id="chatzillaKeys">
   <key id="key_focus_input" observes="cmd_focus_input" keycode="VK_ESCAPE"/>
 
@@ -129,6 +142,16 @@
     modifiers="accel" key="S"/>
   <key id="key_status" observes="cmd_status"
     modifiers="accel shift" key="S"/>
+
+  <!-- Edit Menu -->
+  <key id="key_undo"/>
+  <key id="key_redo"/>
+  <key id="key_cut"/>
+  <key id="key_copy"/>
+  <key id="key_paste"/>
+  <key id="key_delete"/>
+  <key id="key_selectAll"/>
+
 </keyset>
 
 <keyset id="tasksKeys">
@@ -136,14 +159,26 @@
   <!-- nobody needs to quit that quickly.  key id="key_quit"/ -->
 </keyset>
 
+<!-- xul tooltips -->
+<popupset id="aTooltipSet"/>
+
+<!-- html tooltips -->
 <popupset id="aHTMLTooltipSet">
   <popup id="aHTMLTooltip" class="tooltip" 
-    onpopupshowing="return fillInHTMLTooltip(document.tooltipNode);">
-    <vbox id="HTML_TOOLTIP_tooltipBox"/>
+    onpopupshowing="return fillInTooltip(document.tooltipNode,'htmlTTBox');">
+    <vbox id="htmlTTBox"/>
   </popup>
 </popupset>
 
-<popupset id="aTooltipSet"/>
+<!--
+ tab tooltips, always show above the tab, so we don't draw over the input box
+ -->
+<popupset id="aTabTooltipSet">
+  <popup id="aTabTooltip" class="tooltip" position="end_after"
+    onpopupshowing="return fillInTooltip(document.tooltipNode,'tabTTBox');">
+    <vbox id="tabTTBox"/>
+  </popup>
+</popupset>
 
 <popupset id="contextMenus">
     <popup id="userlistPopup" oncommand="onUserListPopupClick(event)">
@@ -259,6 +294,22 @@
         <menuitem id="menu_close"/>
       </menupopup>
     </menu>
+    <menu id="menu_Edit">
+      <menupopup id="menu_Edit_Popup">
+        <menuitem id="menu_undo"/>
+        <menuitem id="menu_redo"/>
+        <menuseparator/>
+        <menuitem id="menu_cut"/>
+        <menuitem id="menu_copy"/>
+        <menuitem id="menu_paste"/>
+        <menuitem id="menu_delete"/>
+        <menuseparator/>
+        <menuitem id="menu_selectAll"/>
+        <menuseparator/>
+         <menuitem id="menu_preferences"
+            oncommand="goPreferences('navigator.xul', 'chrome://communicator/content/pref/pref-navigator.xul', 'navigator')"/>
+      </menupopup>
+    </menu> 
     <menu label="&ViewCmd.label;" accesskey="&ViewCmd.aKey;">
       <menupopup>
 
@@ -384,34 +435,41 @@
       </splitter>
 
       <vbox flex="1">
-        <toolbox id="header-bar-tbox" crop="right">
-          <toolbar id="header-bar-tbar" persist="collapsed"
+        <toolbox id="header-bar-tbox" crop="right" persist="collapsed">
+          <toolbar id="header-bar-tbar"
             grippytooltip="aTooltip"
             grippytooltiptext="&header.tooltip;" crop="right">
-            <vbox flex="1" class="header-box">
-              <hbox flex="1">
-                <hbox flex="50%">
-                  <text class="header-label" flex="5%" value="&url.label;"/>
-                  <text class="header-data" flex="95%" id="header-url"
-                    crop="right"/>
+            <hbox flex="1" class="header-box">
+              <vbox flex="1%">
+                  <text class="header-label" value="&url.label;"/>
+                  <text class="header-label" value="&topic.label;"/>
+              </vbox>
+              <vbox flex="99%">
+                <hbox flex="1">
+                  <hbox flex="1">
+                    <text class="header-data" id="header-url"
+                      ondraggesture="nsDragAndDrop.startDrag(event, tabDNDObserver);"
+                      crop="right"/>
+                  </hbox>
+                  <hbox flex="1">
+                    <text class="header-label" value="&mode.label;"/>
+                    <text class="header-data" id="channel-mode"
+                      crop="right"/>
+                  </hbox>
+                  <hbox flex="1">
+                    <text class="header-label" value="&users.label;"/>
+                    <text class="header-data" id="channel-users"/>
+                  </hbox>
                 </hbox>
-                <hbox flex="25%">
-                  <text class="header-label" flex="5%" value="&mode.label;"/>
-                  <text class="header-data" flex="95%" id="channel-mode" value="(none)" crop="right"/>
+                <hbox flex="1">
+                  <hbox flex="1">
+                    <text class="header-data" id="channel-topic"
+                      crop="right" onclick="onTopicEditStart()"/>
+                    <textbox flex="1" id="channel-topicedit" collapsed="true"/>
+                  </hbox>
                 </hbox>
-                <hbox flex="25%">
-                  <text class="header-label" flex="5%" value="&users.label;"/>
-                  <text class="header-data" flex="95%" id="channel-users" value="(none)"/>
-                </hbox>
-              </hbox>
-              <hbox flex="1">
-                <text class="header-label" flex="5%" value="&topic.label;"/>
-                <text class="header-data" flex="95%" id="channel-topic"
-                  value="(none)" crop="right" onclick="onTopicEditStart()"/>
-                <textbox flex="1" id="channel-topicedit" collapsed="true"
-                  onblur="onTopicEditEnd();"/>
-              </hbox>
-            </vbox>
+              </vbox>
+            </hbox>
 
           </toolbar>
         </toolbox>
@@ -449,8 +507,10 @@
   <hbox id="input-widgets">
     <text id="server-nick" value=""/>
     <textbox id="multiline-input" multiline="true" flex="1" height="100px"
-      class="multiline-input-widget" collapsed="true" autostretch="true"/>
-    <textbox id="input" class="input-widget" flex="1" autostretch="true"/>
+      class="multiline-input-widget" collapsed="true" autostretch="true"
+      onfocus="onInputFocus();"/>
+    <textbox id="input" class="input-widget" flex="1" autostretch="true"
+      onfocus="onInputFocus();"/>
   </hbox>
 
 </vbox> <!-- outer-box -->

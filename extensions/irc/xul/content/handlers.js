@@ -62,6 +62,17 @@ function onTopicKeyPress (e)
     }
 }
 
+function onInputFocus ()
+{
+    if (!("statusBar" in client))
+        return;
+    
+    var edit = client.statusBar["channel-topicedit"];
+    var text = client.statusBar["channel-topic"];
+    edit.setAttribute("collapsed", "true");
+    text.removeAttribute("collapsed");
+}
+
 function onLoad()
 {
     
@@ -783,7 +794,7 @@ function onWindowKeyPress (e)
         case 120:
         case 121: /* F10 */
             var idx = code - 112;
-            if ((client.viewsArray[idx]) && (client.viewsArray[idx].source))
+            if ((idx in client.viewsArray) && (client.viewsArray[idx].source))
                 setCurrentObject(client.viewsArray[idx].source);
             break;
 

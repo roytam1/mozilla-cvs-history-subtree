@@ -1631,7 +1631,7 @@ CIRCChannel.prototype.topic = "";
 CIRCChannel.prototype.getURL =
 function chan_geturl ()
 {
-    return this.parent.parent.getURL() + escape(this.name) + "/";
+    return this.parent.parent.getURL() + escape(this.name);
 }
 
 CIRCChannel.prototype.addUser = 

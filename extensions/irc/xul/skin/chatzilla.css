@@ -40,6 +40,10 @@ window {
     margin: 3px;
 }
 
+#header-url:hover {
+    text-decoration: underline;
+}
+
 #outer-box {
     margin: 5px;
 }
