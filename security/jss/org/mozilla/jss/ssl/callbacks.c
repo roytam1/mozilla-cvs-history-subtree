@@ -1,35 +1,38 @@
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
- * 
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
  * The Original Code is the Netscape Security Services for Java.
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2001 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
+ *
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1998-2001
+ * the Initial Developer. All Rights Reserved.
+ *
  * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
- */
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
 
 #include <jni.h>
 
@@ -340,7 +343,7 @@ SECStatus
 JSSL_DefaultCertAuthCallback(void *arg, PRFileDesc *fd, PRBool checkSig,
              PRBool isServer)
 {
-    char *          hostname;
+    char *          hostname = NULL;
     SECStatus         rv    = SECFailure;
     SECCertUsage      certUsage;
     CERTCertificate   *peerCert=NULL;
@@ -373,9 +376,10 @@ JSSL_DefaultCertAuthCallback(void *arg, PRFileDesc *fd, PRBool checkSig,
      * NB: This is our only defense against Man-In-The-Middle (MITM) attacks!
      */
     hostname = SSL_RevealURL(fd);    /* really is a hostname, not a URL */
-    if (hostname && hostname[0])
+    if (hostname && hostname[0]) {
         rv = CERT_VerifyCertName(peerCert, hostname);
-    else
+        PORT_Free(hostname); 
+    } else
         rv = SECFailure;
 
     if (peerCert) CERT_DestroyCertificate(peerCert);
@@ -508,6 +512,7 @@ JSSL_JavaCertAuthCallback(void *arg, PRFileDesc *fd, PRBool checkSig,
     hostname = SSL_RevealURL(fd);    /* really is a hostname, not a URL */
     if (hostname && hostname[0]) {
         checkcn_rv = CERT_VerifyCertName(peerCert, hostname);
+        PORT_Free(hostname);
     } else {
         checkcn_rv = SECFailure;
     }
@@ -610,9 +615,6 @@ finish:
     if( peerCert != NULL ) {
         CERT_DestroyCertificate(peerCert);
     }
-    if( hostname != NULL) {
-        PR_Free(hostname);
-    }
     PORT_FreeArena(log.arena, PR_FALSE);
     return retval;
 }
@@ -652,7 +654,6 @@ SECStatus
 JSSL_ConfirmExpiredPeerCert(void *arg, PRFileDesc *fd, PRBool checkSig,
              PRBool isServer)
 {
-    char* hostname;
     SECStatus rv=SECFailure;
     SECCertUsage certUsage;
     CERTCertificate* peerCert=NULL;
@@ -686,9 +687,11 @@ JSSL_ConfirmExpiredPeerCert(void *arg, PRFileDesc *fd, PRBool checkSig,
         if( peerCert == NULL ) {
             rv = SECFailure;
         } else {
+            char* hostname = NULL;
             hostname = SSL_RevealURL(fd); /* really is a hostname, not a URL */
             if (hostname && hostname[0]) {
                 rv = CERT_VerifyCertName(peerCert, hostname);
+                PORT_Free(hostname);
             } else {
                 rv = SECFailure;
             }
