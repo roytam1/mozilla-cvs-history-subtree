@@ -41,6 +41,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 
 #define PORT 8000
 #define DEFAULT_COUNT 10
@@ -64,7 +65,7 @@ PRInt32 count;
 ***********************************************************************/
 
 
-static Test_Result (int result)
+static void Test_Result (int result)
 {
 	switch (result)
 	{
