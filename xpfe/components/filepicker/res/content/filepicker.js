@@ -98,6 +98,9 @@ function filepickerLoad() {
     outlinerView.showOnlyDirectories = true;
   }
 
+  // start out with a filename sort
+  handleColumnClick("FilenameColumn");
+
   try {
     var buttonLabel;
     switch (filePickerMode) {
@@ -331,9 +334,9 @@ function handleColumnClick(columnID) {
   var sortType = convertColumnIDtoSortType(columnID);
   if (outlinerView.sortType == sortType) {
     // reverse the current sort
-    outlinerView.sort(outlinerView.sortType, !outlinerView.reverseSort);
+    outlinerView.sort(outlinerView.sortType, !outlinerView.reverseSort, false);
   } else {
-    outlinerView.sort(sortType, false);
+    outlinerView.sort(sortType, false, false);
   }
   
   // set the sort indicator on the column we are sorted by

@@ -41,13 +41,15 @@ const sortType_date = 3;
 function nsFileView() {
   this.mShowHiddenFiles = false;
   this.mDirectoryFilter = false;
-  this.mEntryArray = [];
-  this.mFilteredList = [];
+  this.mFileList = [];
+  this.mDirList = [];
+  this.mFilteredFiles = [];
   this.mCurrentFilter = ".*";
   this.mSelectionCallback = null;
   this.mOutliner = null;
   this.mReverseSort = false;
-  this.mSortType = sortType_name;
+  this.mSortType = 0;
+  this.mTotalRows = 0;
 
   if (!gDateService) {
     gDateService = Components.classes[nsScriptableDateFormat_CONTRACTID]
@@ -66,45 +68,33 @@ function numMatchingChars(str1, str2) {
 }
 
 function sortFilename(a, b) {
-  /* directories always come before files */
-  var aDirectory = a[0].isDirectory();
-  var bDirectory = b[0].isDirectory();
-
-  if (aDirectory && !bDirectory) {
-    return -1;
-  } else if (!aDirectory && bDirectory) {
-    return 1;
+  if (! ("cachedName" in a)) {
+    a.cachedName = a.file.unicodeLeafName;
+  }
+  if (! ("cachedName" in b)) {
+    b.cachedName = b.file.unicodeLeafName;
   }
 
-  var aName = a[0].unicodeLeafName;
-  var bName = b[0].unicodeLeafName;
-
-  if (aName < bName) {
+  if (a.cachedName < b.cachedName) {
     return -1;
-  } else if (aName > bName) {
+  } else if (a.cachedName > b.cachedName) {
     return 1;
   } else {
     return 0;
   }
 }
-
+  
 function sortSize(a, b) {
-  /* directories always come before files */
-  var aDirectory = a[0].isDirectory();
-  var bDirectory = b[0].isDirectory();
-
-  if (aDirectory && !bDirectory) {
-    return -1;
-  } else if (!aDirectory && bDirectory) {
-    return 1;
+  if (! ("cachedSize" in a)) {
+    a.cachedSize = a.file.fileSize;
+  }
+  if (! ("cachedSize" in b)) {
+    b.cachedSize = b.file.fileSize;
   }
 
-  var aSize = a[0].fileSize;
-  var bSize = b[0].fileSize;
-
-  if (aSize < bSize) {
+  if (a.cachedSize < b.cachedSize) {
     return -1;
-  } else if (aSize > bSize) {
+  } else if (a.cachedSize > b.cachedSize) {
     return 1;
   } else {
     return 0;
@@ -112,22 +102,16 @@ function sortSize(a, b) {
 }
 
 function sortDate(a, b) {
-  /* directories always come before files */
-  var aDirectory = a[0].isDirectory();
-  var bDirectory = b[0].isDirectory();
-
-  if (aDirectory && !bDirectory) {
-    return -1;
-  } else if (!aDirectory && bDirectory) {
-    return 1;
+  if (! ("cachedDate" in a)) {
+    a.cachedDate = a.file.lastModificationDate;
+  }
+  if (! ("cachedDate" in b)) {
+    b.cachedDate = b.file.lastModificationDate;
   }
 
-  var aDate = a[0].lastModificationDate;
-  var bDate = b[0].lastModificationDate;
-
-  if (aDate < bDate) {
+  if (a.cachedDate < b.cachedDate) {
     return -1;
-  } else if (aDate > bDate) {
+  } else if (a.cachedDate > b.cachedDate) {
     return 1;
   } else {
     return 0;
@@ -138,7 +122,7 @@ nsFileView.prototype = {
 
   /* readonly attribute long rowCount; */
   set rowCount(c) { throw "readonly property"; },
-  get rowCount() { return this.mFilteredList.length; },
+  get rowCount() { return this.mTotalRows; },
 
   /* attribute nsIOutlinerSelection selection; */
   set selection(s) { this.mSelection = s; },
@@ -166,15 +150,11 @@ nsFileView.prototype = {
 
   /* void getCellProperties(in long row, in wstring colID, in nsISupportsArray properties); */
   getCellProperties: function(row, colID, properties) {
-    if (row >= this.mFilteredList.length)
-      return;
-
-    var file = this.mFilteredList[row][0];
-    if (file.isDirectory())
+    if (row < this.mDirList.length)
       properties.AppendElement(this.mDirectoryAtom);
-    else
+    else if ((row - this.mDirList.length) < this.mFilteredFiles.length)
       properties.AppendElement(this.mFileAtom);
-},
+  },
 
   /* void getColumnProperties(in wstring colID, in nsIDOMElement colElt,
      in nsISupportsArray properties); */
@@ -194,7 +174,7 @@ nsFileView.prototype = {
 
   /* boolean hasNextSibling(in long rowIndex, in long afterIndex); */
   hasNextSibling: function(rowIndex, afterIndex) {
-    if (afterIndex < (this.rowCount -1)) {
+    if (afterIndex < (this.mTotalRows -1)) {
       return true;
     } else {
       return false;
@@ -209,29 +189,39 @@ nsFileView.prototype = {
     /* we cache the file size and last modified dates -
        this function must be very fast since it's called
        whenever the cell needs repainted */
-    var file = this.mFilteredList[row];
+    var file, isdir = false;
+    if (row < this.mDirList.length) {
+      isdir = true;
+      file = this.mDirList[row];
+    } else {
+      file = this.mFilteredFiles[row - this.mDirList.length];
+    }
+
     if (colID == "FilenameColumn") {
-      return file[0].unicodeLeafName;
+      if (!file.cachedName) {
+        file.cachedName = file.file.unicodeLeafName;
+      }
+      return file.cachedName;
+    } else if (colID == "LastModifiedColumn") {
+      if (!file.cachedDate) {
+        // perhaps overkill, but lets get the right locale handling
+        var modDate = new Date(file.file.lastModificationDate);
+        file.cachedDate = gDateService.FormatDateTime("", gDateService.dateFormatShort,
+                                                      gDateService.timeFormatSeconds,
+                                                      modDate.getFullYear(), modDate.getMonth()+1,
+                                                      modDate.getDate(), modDate.getHours(),
+                                                      modDate.getMinutes(), modDate.getSeconds());
+      }
+      return file.cachedDate;
     } else if (colID == "FileSizeColumn") {
-      if (!file[1]) {
-        if (file[0].isFile()) {
-          file[1] = String(file[0].fileSize);
-        } else {
-          file[1] = "";
+      if (isdir) {
+        return "";
+      } else {
+        if (!file.cachedSize) {
+          file.cachedSize = String(file.file.fileSize);
         }
       }
-      return file[1];
-    } else if (colID == "LastModifiedColumn") {
-      if (!file[2]) {
-        // perhaps overkill, but lets get the right locale handling
-        var modDate = new Date(file[0].lastModificationDate);
-        file[2] = gDateService.FormatDateTime("", gDateService.dateFormatShort,
-                                              gDateService.timeFormatSeconds,
-                                              modDate.getFullYear(), modDate.getMonth()+1,
-                                              modDate.getDate(), modDate.getHours(),
-                                              modDate.getMinutes(), modDate.getSeconds());
-      }
-      return file[2];
+      return file.cachedSize;
     }
     return "";
   },
@@ -247,10 +237,17 @@ nsFileView.prototype = {
 
   /* void selectionChanged(); */
   selectionChanged: function() {
-    if (this.mSelectionCallback &&
-        this.mSelection.currentIndex <= this.mFilteredList.length - 1) {
-      var file = this.mFilteredList[this.mSelection.currentIndex][0];
-      this.mSelectionCallback(file);
+    if (this.mSelectionCallback) {
+      var file;
+      if (this.mSelection.currentIndex < this.mDirList.length) {
+        file = this.mDirList[this.mSelection.currentIndex].file;
+      } else if ((this.mSelection.currentIndex - this.mDirList.length) < this.mFilteredFiles.length) {
+        file = this.mFilteredFiles[this.mSelection.currentIndex - this.mDirList.length].file;
+      }
+
+      if (file) {
+        this.mSelectionCallback(file);
+      }
     }
   },
 
@@ -277,7 +274,8 @@ nsFileView.prototype = {
   /* attribute boolean showHiddenFiles */
   set showHiddenFiles(s) {
     this.mShowHiddenFiles = s;
-    this.filterFiles();
+    //    this.filterFiles();
+    this.setDirectory(this.mDirectoryPath);
   },
 
   get showHiddenFiles() { return this.mShowHiddenFiles; },
@@ -299,43 +297,84 @@ nsFileView.prototype = {
   get reverseSort() { return this.mReverseSort; },
 
   /* private methods */
-  sort: function(sortType, reverseSort) {
-    this.mSortType = sortType;
-    this.mReverseSort = reverseSort;
-
-    var compareFunc;
-
-    switch (sortType) {
-    case sortType_name:
-      compareFunc = sortFilename;
-      break;
-    case sortType_size:
-      compareFunc = sortSize;
-      break;
-    case sortType_date:
-      compareFunc = sortDate;
-      break;
-    default:
-      throw("Unsupported sort type " + sortType);
-      break;
+  sort: function(sortType, reverseSort, forceSort) {
+    if (sortType == this.mSortType && reverseSort != this.mReverseSort && !forceSort) {
+      this.mDirList.reverse();
+      this.mFilteredFiles.reverse();
+    } else {
+      var compareFunc;
+      
+      switch (sortType) {
+      case 0:
+        /* no sort has been set yet */
+        return;
+      case sortType_name:
+        compareFunc = sortFilename;
+        break;
+      case sortType_size:
+        compareFunc = sortSize;
+        break;
+      case sortType_date:
+        compareFunc = sortDate;
+        break;
+      default:
+        throw("Unsupported sort type " + sortType);
+        break;
+      }
+      this.mDirList.sort(compareFunc);
+      this.mFilteredFiles.sort(compareFunc);
     }
 
-    this.mFilteredList.sort(compareFunc);
+    this.mSortType = sortType;
+    this.mReverseSort = reverseSort;
+    if (this.mOutliner) {
+      this.mOutliner.invalidate();
+    }
   },
 
   setDirectory: function(directory) {
     this.mDirectoryPath = directory;
-    this.mEntryArray = [];
+    this.mFileList = [];
+    this.mDirList = [];
 
     var dir = Components.classes[nsILocalFile_CONTRACTID].createInstance(nsILocalFile);
     dir.followLinks = false;
     dir.initWithUnicodePath(directory);
     var dirEntries = dir.QueryInterface(nsIFile).directoryEntries;
+    var nextFile;
+    var fileobj;
+    var time = new Date();
+
     while (dirEntries.hasMoreElements()) {
-      this.mEntryArray[this.mEntryArray.length] = dirEntries.getNext().QueryInterface(nsIFile);
+      nextFile = dirEntries.getNext().QueryInterface(nsIFile);
+      if (nextFile.isDirectory()) {
+        if (!nextFile.isHidden() || this.mShowHiddenFiles) {
+          fileobj = new Object();
+          fileobj.file = nextFile;
+          this.mDirList[this.mDirList.length] = fileobj;
+        }
+      } else if (!this.mDirectoryFilter) {
+        this.mFileList[this.mFileList.length] = nextFile;
+      }
     }
 
+    time = new Date() - time;
+    dump("load time: " + time/1000 + " seconds\n");
+
+    if (this.mOutliner) {
+      dump("setDirectory: mTotalRows = "+this.mTotalRows+", dir length = "+this.mDirList.length+"\n");
+      this.mOutliner.rowCountChanged(0, -this.mTotalRows);
+      this.mOutliner.rowCountChanged(0, this.mDirList.length);
+    }
+
+    time = new Date();
     this.filterFiles();
+    time = new Date() - time;
+    dump("filter time: " + time/1000 + " seconds\n");
+    time = new Date();
+    this.sort(this.mSortType, this.mReverseSort);
+    time = new Date() - time;
+    dump("sort time: " + time/1000 + " seconds\n");
   },
 
   setFilter: function(filter) {
@@ -369,37 +408,44 @@ nsFileView.prototype = {
 
     this.mCurrentFilter = new RegExp(filterStr.substr(0, (filterStr.length) - 1) + ")");
     this.filterFiles();
+    this.sort(this.mSortType, this.mReverseSort, true);
   },
 
   filterFiles: function() {
     // Tell the outliner that all the old rows are going away
-    if (this.mOutliner) {
-      this.mOutliner.rowCountChanged(0, -this.mFilteredList.length);
-    }
+    //    if (this.mOutliner) {
+    //      this.mOutliner.rowCountChanged(this.mDirList.length, -this.mFilteredFiles.length);
+    //    }
 
-    this.mFilteredList = [];
+    this.mFilteredFiles = [];
 
-    for(var i = 0; i < this.mEntryArray.length; i++) {
-      var file = this.mEntryArray[i];
-      var dirOrSymlink = file.isSymlink() || file.isDirectory();
+    for(var i = 0; i < this.mFileList.length; i++) {
+      var file = this.mFileList[i];
+      var fileobj;
 
       if ((this.mShowHiddenFiles || !file.isHidden()) &&
-          (!this.mDirectoryFilter || dirOrSymlink) &&
-          (dirOrSymlink || file.unicodeLeafName.search(this.mCurrentFilter) == 0)) {
-        this.mFilteredList[this.mFilteredList.length] = [file, null, null];
+          file.unicodeLeafName.search(this.mCurrentFilter) == 0) {
+        fileobj = new Object();
+        fileobj.file = file;
+        this.mFilteredFiles[this.mFilteredFiles.length] = fileobj;
       }
     }
 
     // Tell the outliner how many rows we just added
     if (this.mOutliner) {
-      this.mOutliner.rowCountChanged(0, this.mFilteredList.length);
+      this.mOutliner.rowCountChanged(this.mDirList.length, this.mFilteredFiles.length);
     }
+
+    this.mTotalRows = this.mDirList.length + this.mFilteredFiles.length;
   },
 
   getSelectedFile: function() {
-    if (0 <= this.mSelection.currentIndex &&
-        this.mSelection.currentIndex <= this.mFilteredList.length - 1) {
-      return this.mFilteredList[this.mSelection.currentIndex][0];
+    if (0 <= this.mSelection.currentIndex) {
+      if (this.mSelection.currentIndex < this.mDirList.length) {
+        return this.mDirList[this.mSelection.currentIndex].file;
+      } else if ((this.mSelection.currentIndex - this.mDirList.length) < this.mFilteredFiles.length) {
+        return this.mFilteredFiles[this.mSelection.currentIndex - this.mDirList.length].file;
+      }
     }
 
     return null;
