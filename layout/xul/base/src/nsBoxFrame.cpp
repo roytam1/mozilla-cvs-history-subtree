@@ -1156,8 +1156,8 @@ nsBoxFrame::RemoveFrame(nsPresContext* aPresContext,
   aOldFrame->Destroy(aPresContext);
 
   // mark us dirty and generate a reflow command
-  MarkDirtyChildren(state);
-  MarkDirty(state);
+  mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
+  aPresShell.FrameNeedsReflow(this, PR_TRUE); // XXX s/PR_TRUE/ancestors_only/
   return NS_OK;
 }
 
@@ -1183,9 +1183,8 @@ nsBoxFrame::InsertFrames(nsPresContext* aPresContext,
        SetDebugOnChildList(state, mFrames.FirstChild(), PR_TRUE);
 #endif
 
-   // mark us dirty and generate a reflow command
-   MarkDirtyChildren(state);
-   MarkDirty(state);
+   mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
+   aPresShell.FrameNeedsReflow(this, PR_TRUE); // XXX s/PR_TRUE/ancestors_only/
    return NS_OK;
 }
 
@@ -1211,8 +1210,8 @@ nsBoxFrame::AppendFrames(nsPresContext* aPresContext,
        SetDebugOnChildList(state, mFrames.FirstChild(), PR_TRUE);
 #endif
 
-   MarkDirtyChildren(state);
-   MarkDirty(state);
+   mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
+   aPresShell.FrameNeedsReflow(this, PR_TRUE); // XXX s/PR_TRUE/ancestors_only/
    return NS_OK;
 }
 
@@ -1321,8 +1320,8 @@ nsBoxFrame::AttributeChanged(nsIContent* aChild,
       UpdateMouseThrough();
     }
 
-    nsBoxLayoutState state(GetPresContext());
-    MarkDirty(state);
+    mState |= NS_FRAME_IS_DIRTY;
+    aPresShell.FrameNeedsReflow(this, PR_TRUE);
   }
   else if (aAttribute == nsXULAtoms::ordinal) {
     nsBoxLayoutState state(GetPresContext()->PresShell());
@@ -1330,7 +1329,8 @@ nsBoxFrame::AttributeChanged(nsIContent* aChild,
     nsIBox* parent;
     GetParentBox(&parent);
     parent->RelayoutChildAtOrdinal(state, this);
-    parent->MarkDirty(state);
+    mState |= NS_FRAME_IS_DIRTY;
+    aPresShell.FrameNeedsReflow(this, PR_TRUE);
   }
   // If the accesskey changed, register for the new value
   // The old value has been unregistered in nsXULElement::SetAttr
@@ -1345,20 +1345,6 @@ nsBoxFrame::AttributeChanged(nsIContent* aChild,
 #ifdef DEBUG_COELESCED
 static PRInt32 StyleCoelesced = 0;
 #endif
-
-PRBool
-nsBoxFrame::HasStyleChange()
-{
-  return mState & NS_STATE_STYLE_CHANGE;
-}
-
-void
-nsBoxFrame::SetStyleChangeFlag()
-{
-  nsBox::SetStyleChangeFlag();
-
-  mState |= (NS_STATE_STYLE_CHANGE);
-}
 
 #ifdef DEBUG_LAYOUT
 void

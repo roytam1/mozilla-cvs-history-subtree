@@ -9986,21 +9986,14 @@ nsCSSFrameConstructor::StyleChangeReflow(nsPresContext* aPresContext,
   }
 #endif
 
-  // Is it a box? If so we can coelesce.
-  if (aFrame->IsBoxFrame()) {
-    nsBoxLayoutState state(aPresContext);
-    aFrame->MarkStyleChange(state);
-  }
-  else {
-    // If the frame is part of a split block-in-inline hierarchy, then
-    // target the style-change reflow at the first ``normal'' ancestor
-    // so we're sure that the style change will propagate to any
-    // anonymously created siblings.
-    if (IsFrameSpecial(aFrame))
-      aFrame = GetIBContainingBlockFor(aFrame);
+  // If the frame is part of a split block-in-inline hierarchy, then
+  // target the style-change reflow at the first ``normal'' ancestor
+  // so we're sure that the style change will propagate to any
+  // anonymously created siblings.
+  if (IsFrameSpecial(aFrame))
+    aFrame = GetIBContainingBlockFor(aFrame);
 
-    aPresContext->PresShell()->FrameNeedsReflow(aFrame, PR_TRUE);
-  }
+  aPresContext->PresShell()->FrameNeedsReflow(aFrame, PR_TRUE);
 
   return NS_OK;
 }

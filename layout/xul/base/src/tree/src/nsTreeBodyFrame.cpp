@@ -1376,8 +1376,8 @@ nsTreeBodyFrame::MarkDirtyIfSelect()
     // XXX optimize this more
 
     mStringWidth = -1;
-    nsBoxLayoutState state(mPresContext);
-    MarkDirty(state);
+    AddStateBits(NS_FRAME_IS_DIRTY);
+    mPresContext->PresShell()->FrameNeedsReflow(this, PR_TRUE); // XXX ancestors only
   }
 }
 
@@ -2103,8 +2103,8 @@ nsTreeBodyFrame::Paint(nsPresContext*      aPresContext,
 
     if (oldPageCount != mPageLength) {
       // Schedule a ResizeReflow that will update our page count properly.
-      nsBoxLayoutState state(mPresContext);
-      MarkDirty(state);
+      AddStateBits(NS_FRAME_IS_DIRTY);
+      state.PresShell()->FrameNeedsReflow(this, PR_FALSE);
     }
 
 #ifdef DEBUG

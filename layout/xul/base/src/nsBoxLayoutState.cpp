@@ -141,6 +141,7 @@ nsBoxLayoutState::HandleReflow(nsIBox* aRootBox)
 void
 nsBoxLayoutState::Unwind(nsReflowPath* aReflowPath, nsIBox* aRootBox)
 {
+#error "This needs to be removed."
   // If incremental, unwind the reflow path, updating dirty bits
   // appropriately. We recursively descend through the reflow tree,
   // clearing the NS_FRAME_HAS_DIRTY_CHILDREN bit on each frame until
@@ -228,27 +229,9 @@ nsBoxLayoutState::Unwind(nsReflowPath* aReflowPath, nsIBox* aRootBox)
 nsIBox*
 nsBoxLayoutState::GetBoxForFrame(nsIFrame* aFrame, PRBool& aIsAdaptor)
 {
+#error "This needs to be removed."
   if (aFrame && !aFrame->IsBoxFrame())
     aIsAdaptor = PR_TRUE;
 
   return aFrame;
 }
-
-/*
-void
-nsBoxLayoutState::DirtyAllChildren(nsBoxLayoutState& aState, nsIBox* aBox)
-{
-    aBox->MarkDirty(aState);
-
-    nsIBox* first = nsnull;
-    aBox->GetChildBox(&first);
-    if (first)
-       aBox->MarkDirtyChildren(aState);
-
-    while(first)
-    {
-      DirtyAllChildren(aState, first);
-      first->GetNextBox(&first);
-    }
-}
-*/

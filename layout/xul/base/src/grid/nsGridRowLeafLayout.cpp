@@ -376,7 +376,8 @@ nsGridRowLeafLayout::DirtyRows(nsIBox* aBox, nsBoxLayoutState& aState)
 {
   if (aBox) {
     // mark us dirty
-    aBox->MarkDirty(aState);
+    aBox->AddStateBits(NS_FRAME_IS_DIRTY);
+    aState.PresShell()->FrameNeedsReflow(aBox, PR_TRUE); // XXX ancestors only
   }
 
   return NS_OK;

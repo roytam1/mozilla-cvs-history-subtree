@@ -255,8 +255,8 @@ nsImageBoxFrame::AttributeChanged(nsIContent* aChild,
 
   if (aAttribute == nsHTMLAtoms::src) {
     UpdateImage();
-    nsBoxLayoutState state(GetPresContext());
-    MarkDirty(state);
+    mState |= NS_FRAME_IS_DIRTY;
+    aPresShell.FrameNeedsReflow(this, PR_TRUE);
   }
   else if (aAttribute == nsXULAtoms::validate)
     UpdateLoadFlags();
@@ -591,8 +591,8 @@ NS_IMETHODIMP nsImageBoxFrame::OnStartContainer(imgIRequest *request,
 
   mIntrinsicSize.SizeTo(NSIntPixelsToTwips(w, p2t), NSIntPixelsToTwips(h, p2t));
 
-  nsBoxLayoutState state(presContext);
-  this->MarkDirty(state);
+  mState |= NS_FRAME_IS_DIRTY;
+  aPresShell.FrameNeedsReflow(this, PR_TRUE);
 
   return NS_OK;
 }

@@ -133,8 +133,8 @@ nsTextBoxFrame::AttributeChanged(nsIContent*     aChild,
     UpdateAttributes(presContext, aAttribute, aResize, aRedraw);
 
     if (aResize) {
-        nsBoxLayoutState state(presContext);
-        MarkDirty(state);
+        AddStateBits(NS_FRAME_IS_DIRTY);
+        presContext->PresShell()->FrameNeedsReflow(this, PR_TRUE);
     } else if (aRedraw) {
         nsBoxLayoutState state(presContext);
         Redraw(state);

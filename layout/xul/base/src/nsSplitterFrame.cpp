@@ -1021,8 +1021,8 @@ nsSplitterFrameInner::AdjustChildren(nsPresContext* aPresContext)
     aPresContext->PresShell()->FlushPendingNotifications(Flush_Display);
   }
   else {
-    nsBoxLayoutState state(aPresContext);
-    mOuter->MarkDirty(state);
+    AddStateBits(NS_FRAME_IS_DIRTY);
+    aPresContext->PresShell()->FrameNeedsReflow(this, PR_TRUE);
   }
 }
 
@@ -1103,7 +1103,8 @@ nsSplitterFrameInner::SetPreferredSize(nsBoxLayoutState& aState, nsIBox* aChildB
      return;
 
   content->SetAttr(kNameSpaceID_None, attribute, prefValue, PR_TRUE);
-  aChildBox->MarkDirty(aState);
+  aChildBox->AddStateBits(NS_FRAME_IS_DIRTY);
+  aState.PresShell()->FrameNeedsReflow(aChildBox, PR_TRUE);
 }
 
 

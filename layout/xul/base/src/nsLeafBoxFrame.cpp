@@ -204,17 +204,12 @@ nsLeafBoxFrame::DidReflow(nsPresContext*           aPresContext,
                           const nsHTMLReflowState*  aReflowState,
                           nsDidReflowStatus         aStatus)
 {
-  PRBool isDirty = mState & NS_FRAME_IS_DIRTY;
-  PRBool hasDirtyChildren = mState & NS_FRAME_HAS_DIRTY_CHILDREN;
+#error "Should we really preserve these bits?"
+  nsFrameState preserveBits =
+    GetStateBits() & (NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN);
   nsresult rv = nsFrame::DidReflow(aPresContext, aReflowState, aStatus);
-  if (isDirty)
-    mState |= NS_FRAME_IS_DIRTY;
-
-  if (hasDirtyChildren)
-    mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
-
+  AddStateBits(preserveBits);
   return rv;
-
 }
 
 
@@ -441,18 +436,6 @@ NS_IMETHODIMP
 nsLeafBoxFrame::DoLayout(nsBoxLayoutState& aState)
 {
     return nsBox::DoLayout(aState);
-}
-
-PRBool
-nsLeafBoxFrame::HasStyleChange()
-{
-    return nsBox::HasStyleChange();
-}
-
-void
-nsLeafBoxFrame::SetStyleChangeFlag()
-{
-    nsBox::SetStyleChangeFlag();
 }
 
 PRBool

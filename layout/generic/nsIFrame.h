@@ -1404,8 +1404,6 @@ NS_PTR_TO_INT32(frame->GetProperty(nsLayoutAtoms::embeddingLevel))
   NS_IMETHOD SetBounds(nsBoxLayoutState& aBoxLayoutState, const nsRect& aRect,
                        PRBool aRemoveOverflowArea = PR_FALSE)=0;
   NS_HIDDEN_(nsresult) Layout(nsBoxLayoutState& aBoxLayoutState);
-  NS_IMETHOD MarkDirty(nsBoxLayoutState& aState)=0;
-  NS_HIDDEN_(nsresult) MarkDirtyChildren(nsBoxLayoutState& aState);
   nsresult GetChildBox(nsIBox** aBox)
   {
     // box layout ends at box-wrapped frames, so don't allow these frames
@@ -1444,11 +1442,8 @@ NS_PTR_TO_INT32(frame->GetProperty(nsLayoutAtoms::embeddingLevel))
   { aIsNormal = IsNormalDirection(); return NS_OK; }
 
   NS_HIDDEN_(nsresult) Redraw(nsBoxLayoutState& aState, const nsRect* aRect = nsnull, PRBool aImmediate = PR_FALSE);
-  NS_IMETHOD RelayoutDirtyChild(nsBoxLayoutState& aState, nsIBox* aChild)=0;
   NS_IMETHOD RelayoutChildAtOrdinal(nsBoxLayoutState& aState, nsIBox* aChild)=0;
   NS_IMETHOD GetMouseThrough(PRBool& aMouseThrough)=0;
-  NS_IMETHOD MarkChildrenStyleChange()=0;
-  NS_IMETHOD MarkStyleChange(nsBoxLayoutState& aState)=0;
   NS_IMETHOD SetIncludeOverflow(PRBool aInclude) = 0;
   NS_IMETHOD GetOverflow(nsSize& aOverflow) = 0;
 

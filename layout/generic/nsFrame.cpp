@@ -130,7 +130,6 @@ struct nsBoxLayoutMetrics
 
   PRPackedBool mIncludeOverflow;
   PRPackedBool mWasCollapsed;
-  PRPackedBool mStyleChange;
 };
 
 // Some Misc #defines
@@ -4719,19 +4718,6 @@ void nsFrame::FillCursorInformationFromStyle(const nsStyleUserInterface* ui,
   }
 }
 
-PRBool
-nsFrame::HasStyleChange()
-{
-  return BoxMetrics()->mStyleChange;
-}
-
-void
-nsFrame::SetStyleChangeFlag()
-{
-  nsBox::SetStyleChangeFlag();
-  BoxMetrics()->mStyleChange = PR_TRUE;
-}
-
 NS_IMETHODIMP
 nsFrame::GetOverflow(nsSize& aOverflow)
 {
@@ -5287,6 +5273,7 @@ nsFrame::BoxReflow(nsBoxLayoutState& aState,
     // 2) If the command is incremental. See if its style change. If it is everything is ok if not
     //    we need to do a second reflow with the style change.
     // XXXwaterson This logic seems _very_ squirrely.
+#error "metrics->mStyleChange is no longer set"
     if (metrics->mStyleChange) {
       if (reflowState.reason == eReflowReason_Resize) {
          // maxElementSize does not work on style change reflows.

@@ -534,8 +534,8 @@ nsPopupSetFrame::OpenPopup(nsPopupFrameList* aEntry, PRBool aActivateFlag)
     OnDestroyed(aEntry->mPopupContent);
   }
 
-  nsBoxLayoutState state(mPresContext);
-  MarkDirtyChildren(state); // Mark ourselves dirty.
+  AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
+  mPresContext->PresShell()->FrameNeedsReflow(this, PR_TRUE); // XXX s/PR_TRUE/ancestors_only/
 }
 
 void
