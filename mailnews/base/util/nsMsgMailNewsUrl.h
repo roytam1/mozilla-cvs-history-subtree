@@ -97,8 +97,10 @@ public:
 	/* nsIURI Clone (); */
 	NS_IMETHOD Clone(nsIURI **_retval);
 
+	NS_IMETHOD SetRelativePath(const char *i_RelativePath);
+
 	//////////////////////////////////////////////////////////////////////////////////
-	// nsIURI support
+	// nsIURL support
 	NS_IMETHOD GetDirectory(char * *aDirectory);
 	NS_IMETHOD SetDirectory(char * aDirectory);
 
@@ -113,6 +115,8 @@ public:
 	/* attribute string Ref; */
 	NS_IMETHOD GetRef(char * *aRef);
 	NS_IMETHOD SetRef(char * aRef);
+
+	NS_IMETHOD DirFile(char **o_DirFile);
 
 protected:
 	virtual ~nsMsgMailNewsUrl();
