@@ -208,7 +208,9 @@ ns4xPluginStreamListener::OnDataAvailable(nsIPluginStreamInfo* pluginInfo,
                                                 npp,
                                                 &mNPStream), lib);
 #endif
-		    
+		    if (numtowrite <= 0)
+                            return NS_ERROR_FAILURE;
+
 		    if (numtowrite > amountRead)
 			    numtowrite = amountRead;
 		  }
