@@ -51,6 +51,7 @@ class txToplevelItem;
 class txTemplateItem;
 class txDecimalFormat;
 class txVariableItem;
+class txStripSpaceItem;
 
 class txStylesheet
 {
@@ -90,6 +91,7 @@ public:
     nsresult getGlobalVariable(const txExpandedName& aName, Expr*& aExpr,
                                txInstruction*& aInstr);
     const txExpandedNameMap& getKeyMap();
+    PRBool isStripSpaceAllowed(Node* aNode, txIMatchContext* aContext);
 
     /**
      * Called by the stylesheet compiler once all stylesheets has been read.
@@ -155,6 +157,8 @@ private:
     nsresult addTemplate(txTemplateItem* aTemplate, ImportFrame* aImportFrame);
     nsresult addGlobalVariable(txVariableItem* aVariable);
     nsresult addFrames(txListIterator& aInsertIter);
+    nsresult addStripSpace(txStripSpaceItem* aStripSpaceItem,
+                           nsVoidArray& frameStripSpaceTests);
 
     // Refcount
     nsAutoRefCnt mRefCnt;
@@ -187,6 +191,9 @@ private:
     // Map with all keys
     txExpandedNameMap mKeys;
     
+    // Array of all txStripSpaceTests, sorted in acending order
+    nsVoidArray mStripSpaceTests;
+    
     // Default templates
     txInstruction* mContainerTemplate;
     txInstruction* mCharactersTemplate;
@@ -195,12 +202,12 @@ private:
 
 
 /**
- * txNameTestItem holds both an txNameTest and a bool for use in
+ * txStripSpaceTest holds both an txNameTest and a bool for use in
  * whitespace stripping.
  */
-class txNameTestItem {
+class txStripSpaceTest {
 public:
-    txNameTestItem(nsIAtom* aLocalName, PRInt32 aNSID, MBool stripSpace)
+    txStripSpaceTest(nsIAtom* aLocalName, PRInt32 aNSID, MBool stripSpace)
         : mNameTest(0, aLocalName, aNSID, Node::ELEMENT_NODE),
           mStrips(stripSpace)
     {

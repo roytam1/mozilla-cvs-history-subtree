@@ -270,6 +270,44 @@ txStylesheet::getKeyMap()
     return mKeys;
 }
 
+PRBool
+txStylesheet::isStripSpaceAllowed(Node* aNode, txIMatchContext* aContext)
+{
+    if (!aNode) {
+        return MB_FALSE;
+    }
+
+    switch (aNode->getNodeType()) {
+        case Node::ELEMENT_NODE:
+        {
+            // check Whitespace stipping handling list against given Node
+            PRInt32 i, frameCount = mStripSpaceTests.Count();
+            for (i = 0; i < frameCount; ++i) {
+                txStripSpaceTest* sst = (txStripSpaceTest*)mStripSpaceTests[i];
+                if (sst->matches(aNode, aContext)) {
+                    if (sst->stripsSpace() && 
+                        !XMLUtils::getXMLSpacePreserve(aNode)) {
+                        return MB_TRUE;
+                    }
+                    return MB_FALSE;
+                }
+            }
+            break;
+        }
+        case Node::TEXT_NODE:
+        case Node::CDATA_SECTION_NODE:
+        {
+            if (!XMLUtils::isWhitespace(aNode))
+                return MB_FALSE;
+            return isStripSpaceAllowed(aNode->getParentNode(), aContext);
+        }
+        case Node::DOCUMENT_NODE:
+        {
+            return MB_TRUE;
+        }
+    }
+    return MB_FALSE;
+}
 
 nsresult
 txStylesheet::doneCompiling()
@@ -290,6 +328,8 @@ txStylesheet::doneCompiling()
     frameIter.reset();
     ImportFrame* frame;
     while ((frame = (ImportFrame*)frameIter.next())) {
+        nsVoidArray frameStripSpaceTests;
+
         txListIterator itemIter(&frame->mToplevelItems);
         itemIter.resetToEnd();
         txToplevelItem* item;
@@ -298,13 +338,17 @@ txStylesheet::doneCompiling()
                 case txToplevelItem::dummy:
                 case txToplevelItem::import:
                 {
-                    delete item;
                     break;
                 }
                 case txToplevelItem::output:
                 {
                     mOutputFormat.merge(((txOutputItem*)item)->mFormat);
-                    delete item;
+                    break;
+                }
+                case txToplevelItem::stripSpace:
+                {
+                    rv = addStripSpace((txStripSpaceItem*)item,
+                                       frameStripSpaceTests);
                     break;
                 }
                 case txToplevelItem::templ:
@@ -312,7 +356,6 @@ txStylesheet::doneCompiling()
                     rv = addTemplate((txTemplateItem*)item, frame);
                     NS_ENSURE_SUCCESS(rv, rv);
 
-                    delete item;
                     break;
                 }
                 case txToplevelItem::variable:
@@ -320,13 +363,18 @@ txStylesheet::doneCompiling()
                     rv = addGlobalVariable((txVariableItem*)item);
                     NS_ENSURE_SUCCESS(rv, rv);
 
-                    delete item;
                     break;
                 }
             }
+            delete item;
             itemIter.remove(); //remove() moves to the previous
             itemIter.next();
         }
+        if (!mStripSpaceTests.AppendElements(frameStripSpaceTests)) {
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+        
+        frameStripSpaceTests.Clear();
     }
 
     if (!mDecimalFormats.get(txExpandedName())) {
@@ -447,6 +495,33 @@ txStylesheet::addFrames(txListIterator& aInsertIter)
         }
     }
     
+    return NS_OK;
+}
+
+nsresult
+txStylesheet::addStripSpace(txStripSpaceItem* aStripSpaceItem,
+                            nsVoidArray& frameStripSpaceTests)
+{
+    
+    PRInt32 testCount = aStripSpaceItem->mStripSpaceTests.Count();
+    for (; testCount > 0; --testCount) {
+        txStripSpaceTest* sst =
+            (txStripSpaceTest*)aStripSpaceItem->mStripSpaceTests[testCount-1];
+        double priority = sst->getDefaultPriority();
+        PRInt32 i, frameCount = frameStripSpaceTests.Count();
+        for (i = 0; i < frameCount; ++i) {
+            txStripSpaceTest* fsst = (txStripSpaceTest*)frameStripSpaceTests[i];
+            if (fsst->getDefaultPriority() < priority) {
+                break;
+            }
+        }
+        if (!frameStripSpaceTests.InsertElementAt(sst, i)) {
+            return NS_ERROR_OUT_OF_MEMORY;
+        }
+
+        aStripSpaceItem->mStripSpaceTests.RemoveElementAt(testCount-1);
+    }
+
     return NS_OK;
 }
 

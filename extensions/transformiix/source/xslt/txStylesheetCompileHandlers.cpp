@@ -843,6 +843,60 @@ txFnEndOutput(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+// xsl:strip-space/xsl:preserve-space
+nsresult
+txFnStartStripSpace(PRInt32 aNamespaceID,
+                    nsIAtom* aLocalName,
+                    nsIAtom* aPrefix,
+                    txStylesheetAttr* aAttributes,
+                    PRInt32 aAttrCount,
+                    txStylesheetCompilerState& aState)
+{
+    txStylesheetAttr* attr = nsnull;
+    nsresult rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                               txXSLTAtoms::elements, PR_TRUE, &attr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    PRBool strip = aLocalName == txXSLTAtoms::stripSpace;
+
+    txStripSpaceItem* stripItem = new txStripSpaceItem;
+    NS_ENSURE_TRUE(stripItem, NS_ERROR_OUT_OF_MEMORY);
+
+    txTokenizer tokenizer(attr->mValue);
+    while (tokenizer.hasMoreTokens()) {
+        const nsAString& name = tokenizer.nextToken();
+        PRInt32 ns = kNameSpaceID_None;
+        nsCOMPtr<nsIAtom> prefix, localName;
+        XMLUtils::splitXMLName(name, getter_AddRefs(prefix),
+                               getter_AddRefs(localName));
+        if (prefix) {
+            ns = aState.mElementContext->mMappings->lookupNamespace(prefix);
+            NS_ENSURE_TRUE(ns != kNameSpaceID_Unknown, NS_ERROR_FAILURE);
+        }
+        nsAutoPtr<txStripSpaceTest> sst = new txStripSpaceTest(localName, ns,
+                                                               strip);
+        NS_ENSURE_TRUE(sst, NS_ERROR_OUT_OF_MEMORY);
+
+        rv = stripItem->addStripSpaceTest(sst);
+        NS_ENSURE_SUCCESS(rv, rv);
+        
+        sst.forget();
+    }
+
+    rv = aState.addToplevelItem(stripItem);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aState.pushHandlerTable(gTxIgnoreHandler);
+}
+
+nsresult
+txFnEndStripSpace(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+
+    return NS_OK;
+}
+
 // xsl:template
 nsresult
 txFnStartTemplate(PRInt32 aNamespaceID,
@@ -2318,6 +2372,8 @@ txHandlerTableData gTxTopTableData = {
     { kNameSpaceID_XSLT, "key", txFnStartKey, txFnEndKey },
     { kNameSpaceID_XSLT, "output", txFnStartOutput, txFnEndOutput },
     { kNameSpaceID_XSLT, "param", txFnStartTopVariable, txFnEndTopVariable },
+    { kNameSpaceID_XSLT, "preserve-space", txFnStartStripSpace, txFnEndStripSpace },
+    { kNameSpaceID_XSLT, "strip-space", txFnStartStripSpace, txFnEndStripSpace },
     { kNameSpaceID_XSLT, "template", txFnStartTemplate, txFnEndTemplate },
     { kNameSpaceID_XSLT, "variable", txFnStartTopVariable, txFnEndTopVariable },
     { 0, 0, 0, 0 } },

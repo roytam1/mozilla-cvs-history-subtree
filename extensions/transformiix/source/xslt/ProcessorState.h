@@ -514,36 +514,6 @@ private:
 };
 
 /**
- * txNameTestItem holds both an ElementExpr and a bool for use in
- * whitespace stripping.
- */
-class txNameTestItem {
-public:
-    txNameTestItem(nsIAtom* aPrefix, nsIAtom* aLocalName, PRInt32 aNSID,
-                   MBool stripSpace)
-        : mNameTest(aPrefix, aLocalName, aNSID, Node::ELEMENT_NODE),
-          mStrips(stripSpace)
-    {
-    }
-
-    MBool matches(Node* aNode, txIMatchContext* aContext) {
-        return mNameTest.matches(aNode, aContext);
-    }
-
-    MBool stripsSpace() {
-        return mStrips;
-    }
-
-    double getDefaultPriority() {
-        return mNameTest.getDefaultPriority();
-    }
-
-protected:
-    txNameTest mNameTest;
-    MBool mStrips;
-};
-
-/**
  * txPSParseContext
  * a txIParseContext forwarding all but resolveNamespacePrefix
  * to a ProcessorState

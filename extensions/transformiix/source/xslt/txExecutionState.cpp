@@ -270,8 +270,7 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
 PRBool
 txExecutionState::isStripSpaceAllowed(Node* aNode)
 {
-    // XXX implement me
-    return PR_FALSE;
+    return mStylesheet->isStripSpaceAllowed(aNode, this);
 }
 
 void*

@@ -43,11 +43,19 @@
 
 txStripSpaceItem::~txStripSpaceItem()
 {
-    txListIterator iter(&mNameTestItems);
-    txNameTestItem* item;
-    while ((item = (txNameTestItem*)iter.next())) {
-        delete item;
+    PRInt32 i, count = mStripSpaceTests.Count();
+    for (i = 0; i < count; ++i) {
+        delete (txStripSpaceTest*)mStripSpaceTests[0];
     }
+}
+
+txStripSpaceItem::addStripSpaceTest(txStripSpaceTest* aStripSpaceTest)
+{
+    if (!mStripSpaceTests.AppendElement(aStripSpaceTest)) {
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    return NS_OK;
 }
 
 txTemplateItem::txTemplateItem(nsAutoPtr<txPattern> aMatch,

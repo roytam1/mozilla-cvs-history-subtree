@@ -136,11 +136,9 @@ public:
         return txToplevelItem::stripSpace;
     }
 
-// XXXXXXXX
-//    addNameTest(nsIAtom* aLocalName, PRInt32 aNSID, MBool stripSpace);
+    addStripSpaceTest(txStripSpaceTest* aStripSpaceTest);
 
-private:
-    txList mNameTestItems;
+    nsVoidArray mStripSpaceTests;
 };
 
 // xsl:template
