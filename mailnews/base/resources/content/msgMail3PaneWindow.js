@@ -440,7 +440,6 @@ function OnLoadMessenger()
 	  dump("Time in OnLoadMessger is " +  timeToLoad + " seconds\n");
 	}
 	
-  addEventListener("click",FolderPaneOnClick,true);
 }
 
 function OnUnloadMessenger()
@@ -681,6 +680,8 @@ function OnLoadFolderPane()
 
     var folderOutlinerBuilder = folderOutliner.outlinerBoxObject.outlinerBody.builder.QueryInterface(Components.interfaces.nsIXULOutlinerBuilder);
     folderOutlinerBuilder.addObserver(folderObserver);
+
+    folderOutliner.addEventListener("click",FolderPaneOnClick,true);
 }
 
 function GetFolderDatasource()
@@ -843,44 +844,45 @@ function FolderPaneOnClick(event)
 						}
 					}
 				}
-    else if ((event.originalTarget.localName == "outlinercol") &&
-             (event.originalTarget.id == "folderNameCol")) {
+    else if ((event.originalTarget.localName == "outlinercol") || 
+             (event.originalTarget.localName == "scrollbarbutton")) {
       // clicking on the name column in the folder pane should not sort
       event.preventBubble();
 			}
     else if (event.detail == 2) {
-      FolderPaneDoubleClick(row.value);
-      // double clicking should not toggle the open / close state of the
-      // folder.  this will happen if we don't prevent the event from
-      // bubbling to the default handler in outliner.xml
-      event.preventBubble();
-		}
+      FolderPaneDoubleClick(row.value, event);
     }
+}
 
-function FolderPaneDoubleClick(folderIndex)
+function FolderPaneDoubleClick(folderIndex, event)
 {
     var folderOutliner = GetFolderOutliner();
     var folderResource = GetFolderResource(folderOutliner, folderIndex);
     var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);
-    if (folderOutliner.outlinerBoxObject.view.isContainerOpen(folderIndex))
-        msgFolder.clearFlag(MSG_FOLDER_FLAG_ELIDED);
-    else
-{
-        msgFolder.setFlag(MSG_FOLDER_FLAG_ELIDED);
+    var isServer = GetFolderAttribute(folderOutliner, folderResource, "IsServer");
 
-        var isServer = GetFolderAttribute(folderOutliner, folderResource, "IsServer");
-        if (isServer == "true")
-        {
-            var server = msgFolder.server;
-					server.PerformExpand(msgWindow);
-			}
-        else
-        {
-            // Open a new msg window only if we are double clicking on folders or
-            // newsgroups.
-            MsgOpenNewWindowForFolder(folderResource.Value);
-		}
-	}
+    if (isServer == "true")
+    {
+      if (folderOutliner.outlinerBoxObject.view.isContainerOpen(folderIndex))
+        msgFolder.clearFlag(MSG_FOLDER_FLAG_ELIDED);
+      else 
+      {
+        msgFolder.setFlag(MSG_FOLDER_FLAG_ELIDED);
+        var server = msgFolder.server;
+        server.PerformExpand(msgWindow);
+      }
+    }
+    else 
+    {
+      // Open a new msg window only if we are double clicking on 
+      // folders or newsgroups.
+      MsgOpenNewWindowForFolder(folderResource.Value);
+
+      // double clicking should not toggle the open / close state of the
+      // folder.  this will happen if we don't prevent the event from
+      // bubbling to the default handler in outliner.xml
+      event.preventBubble();
+    }
 }
 
 function ChangeSelection(outliner, newIndex)

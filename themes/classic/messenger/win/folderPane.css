@@ -110,12 +110,12 @@ outlinerbody:-moz-outliner-image(folderNameCol, serverType-nntp) {
   list-style-image: url("chrome://messenger/skin/folder-newsgroup.gif");
   }
 
-outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-nntp, isSecure-true) {
-    list-style-image      : url("chrome://messenger/skin/server-news-lock.gif");
-  }
-
 outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-nntp) {
     list-style-image      : url("chrome://messenger/skin/server-news.gif");
+  }
+
+outlinerbody:-moz-outliner-image(folderNameCol, isServer-true, serverType-nntp, isSecure-true) {
+    list-style-image      : url("chrome://messenger/skin/server-news-lock.gif");
   }
 
 /*All Servers*/

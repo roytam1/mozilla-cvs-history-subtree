@@ -298,3 +298,11 @@ function EnsureRowInThreadOutlinerIsVisible(index)
   var outliner = GetThreadOutliner();
   outliner.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject).ensureRowIsVisible(index); 
 }
+
+function ThreadPaneOnLoad()
+{
+  var outliner = GetThreadOutliner();
+  outliner.addEventListener("click",ThreadPaneOnClick,true);
+}
+
+addEventListener("load",ThreadPaneOnLoad,true);
