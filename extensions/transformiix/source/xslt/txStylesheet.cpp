@@ -308,7 +308,7 @@ txStylesheet::isStripSpaceAllowed(const txXPathNode& aNode, txIMatchContext* aCo
             return sst->stripsSpace() && !XMLUtils::getXMLSpacePreserve(node);
         }
     }
-    
+
     return PR_FALSE;
 }
 

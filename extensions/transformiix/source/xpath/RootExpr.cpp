@@ -47,6 +47,7 @@ RootExpr::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 {
     const txXPathNode& context = aContext->getContextNode();
     nsAutoPtr<txXPathNode> document(txXPathNodeUtils::getOwnerDocument(context));
+
     return aContext->recycler()->getNodeSet(*document, aResult);
 } //-- evaluate
 
