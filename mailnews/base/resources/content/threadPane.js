@@ -279,10 +279,17 @@ function ThreadPaneSelectionChange(fromDeleteOrMoveHandler)
 
 function GetThreadTree()
 {
-    if (gThreadTree) return gThreadTree;
+  if (gThreadTree) return gThreadTree;
 	var threadTree = document.getElementById('threadTree');
-    gThreadTree = threadTree;
+  gThreadTree = threadTree;
 	return threadTree;
+}
+
+function GetThreadOutliner()
+{
+  if (gThreadOutliner) return gThreadOutliner;
+	gThreadOutliner = document.getElementById('threadOutliner');
+	return gThreadOutliner;
 }
 
 function GetThreadTreeFolder()

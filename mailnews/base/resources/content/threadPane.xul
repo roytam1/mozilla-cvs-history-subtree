@@ -31,6 +31,16 @@ Rights Reserved.
 <script src="chrome://global/content/treePopups.js"/>
 <script src="chrome://messenger/content/threadPane.js"/>
 
+  <outliner id="threadOutliner" flex="1">
+    <outlinercol id="subjectCol" value="Subject" flex="1"/>
+    <splitter class="tree-splitter"/>
+    <outlinercol id="senderCol" value="Sender" flex="1"/>
+    <splitter class="tree-splitter"/>
+    <outlinercol id="dateCol" value="Date" flex="1"/>
+
+    <outlinerbody flex="1"/>
+  </outliner>
+
 <tree datasources="rdf:null" id="threadTree"
 	          class="window-focusborder"
               onclick="ThreadPaneOnClick(event);"
@@ -126,4 +136,5 @@ Rights Reserved.
 	</treerow>
   </treehead>
 </tree>
+
 </overlay>
