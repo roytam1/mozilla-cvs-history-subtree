@@ -42,7 +42,7 @@
 #define nsHTMLEditor_h__
 
 #include "nsCOMPtr.h"
-
+#include "nsCOMArray.h"
 #include "nsPlaintextEditor.h"
 #include "nsIEditor.h"
 #include "nsIHTMLEditor.h"
@@ -409,7 +409,7 @@ public:
                                 PRInt32 *outOffset = 0);
 
   /* ------------ Overrides of nsEditor interface methods -------------- */
-  
+
   nsresult EndUpdateViewBatch();
 
   /** prepare the editor for use */
@@ -509,7 +509,6 @@ public:
                        PRBool aMozBRDoesntCount = PR_FALSE,
                        PRBool aListOrCellNotEmpty = PR_FALSE,
                        PRBool aSafeToAskFrames = PR_FALSE);
-
   nsresult IsEmptyNodeImpl(nsIDOMNode *aNode,
                            PRBool *outIsEmptyBlock, 
                            PRBool aMozBRDoesntCount,
@@ -723,6 +722,7 @@ protected:
   // factored methods for handling insertion of data from transferables (drag&drop or clipboard)
   NS_IMETHOD PrepareTransferable(nsITransferable **transferable);
   NS_IMETHOD PrepareHTMLTransferable(nsITransferable **transferable, PRBool havePrivFlavor);
+  nsresult   PutDragDataInTransferable(nsITransferable **aTransferable);
   NS_IMETHOD InsertFromTransferable(nsITransferable *transferable, 
                                     const nsAString & aContextStr,
                                     const nsAString & aInfoStr,

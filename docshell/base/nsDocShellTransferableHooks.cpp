@@ -45,6 +45,7 @@
 
 nsTransferableHookData::nsTransferableHookData()
 {
+    NS_INIT_ISUPPORTS();
 }
 
 

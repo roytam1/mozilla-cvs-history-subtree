@@ -61,6 +61,8 @@ NS_IMPL_ISUPPORTS4(nsComposerCommandsUpdater, nsISelectionListener, nsIDocumentS
 NS_IMETHODIMP
 nsComposerCommandsUpdater::NotifyDocumentCreated()
 {
+  // Trigger an nsIObserve notification that the document has been created
+  UpdateOneCommand("obs_documentCreated");
   return NS_OK;
 }
 
@@ -69,7 +71,10 @@ nsComposerCommandsUpdater::NotifyDocumentWillBeDestroyed()
 {
   // cancel any outstanding udpate timer
   if (mUpdateTimer)
+  {
     mUpdateTimer->Cancel();
+    mUpdateTimer = nsnull;
+  }
   
   return NS_OK;
 }
@@ -318,6 +323,20 @@ nsComposerCommandsUpdater::CallUpdateCommands(const nsAString& aCommandGroup)
     // save commands (none in C++)
   }
   
+  return NS_OK;  
+}
+
+nsresult
+nsComposerCommandsUpdater::UpdateOneCommand(const char *aCommand)
+{
+  if (!mDocShell) return NS_ERROR_FAILURE;
+  
+  nsCOMPtr<nsICommandManager>  	commandManager = do_GetInterface(mDocShell);
+  nsCOMPtr<nsPICommandUpdater>	commandUpdater = do_QueryInterface(commandManager);
+  if (!commandUpdater) return NS_ERROR_FAILURE;
+
+  commandUpdater->CommandStatusChanged(aCommand);
+
   return NS_OK;  
 }
 

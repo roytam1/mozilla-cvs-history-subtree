@@ -212,6 +212,7 @@ protected:
   // Object Management
   virtual ~GlobalWindowImpl();
   void CleanUp();
+  void ClearControllers();
 
   // Get the parent, returns null if this is a toplevel window
   void GetParentInternal(nsIDOMWindowInternal **parent);
@@ -438,35 +439,5 @@ protected:
 
   nsIDocShell *mDocShell; // Weak Reference
 };
-
-#define DOM_CONTROLLER
-#ifdef DOM_CONTROLLER
-class nsIContentViewerEdit;
-
-class nsISelectionController;
-
-class nsDOMWindowController : public nsIController
-{
-public:
-	nsDOMWindowController( nsIDOMWindowInternal* aWindow );
-  virtual ~nsDOMWindowController();
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSICONTROLLER
-
-private:
-  nsresult GetEventStateManager(nsIEventStateManager **esm);
-  static int PR_CALLBACK BrowseWithCaretPrefCallback(const char* aPrefName, void* instance_data);
-  nsresult GetPresShell(nsIPresShell **aPresShell);
-	nsresult GetEditInterface( nsIContentViewerEdit** aEditInterface);
-  nsresult GetSelectionController(nsISelectionController ** aSelCon);
-
-  nsresult DoCommandWithWebNavigationInterface(const char * aCommandName);
-  nsresult DoCommandWithEditInterface(const char * aCommandName);
-  nsresult DoCommandWithSelectionController(const char * aCommandName);
-
-	nsIDOMWindowInternal *mWindow;
-  PRBool mBrowseWithCaret;
-};
-#endif // DOM_CONTROLLER
 
 #endif /* nsGlobalWindow_h___ */

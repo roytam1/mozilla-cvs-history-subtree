@@ -43,7 +43,6 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsIInterfaceRequestorUtils.h"
 #include "nsCRT.h"
-#include "nsString.h"
 
 #include "nsIControllerCommandTable.h"
 #include "nsICommandParams.h"
@@ -112,6 +111,7 @@ const char * const sSelectMoveBottomString = "cmd_selectMoveBottom";
 class nsSelectionCommandsBase : public nsIControllerCommand
 {
 public:
+  nsSelectionCommandsBase() { NS_INIT_ISUPPORTS(); }
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSICONTROLLERCOMMAND
@@ -395,6 +395,7 @@ nsSelectCommand::DoSelectCommand(const char *aCommandName, nsIDOMWindow *aWindow
 class nsClipboardBaseCommand : public nsIControllerCommand
 {
 public:
+  nsClipboardBaseCommand() { NS_INIT_ISUPPORTS(); }
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSICONTROLLERCOMMAND
@@ -402,7 +403,7 @@ public:
 protected:
 
   virtual nsresult    IsClipboardCommandEnabled(const char * aCommandName, nsIContentViewerEdit* aEdit, PRBool *outCmdEnabled) = 0;
-  virtual nsresult    DoClipboardCommand(const char *aCommandName, nsIContentViewerEdit* aEdit, nsICommandParams* aParams) = 0;
+  virtual nsresult    DoClipboardCommand(const char *aCommandName, nsIContentViewerEdit* aEdit) = 0;
   
   static nsresult     GetContentViewerEditFromContext(nsISupports *aContext, nsIContentViewerEdit **aEditInterface);
   
@@ -442,7 +443,7 @@ nsClipboardBaseCommand::DoCommand(const char *aCommandName,
   GetContentViewerEditFromContext(aCommandContext,  getter_AddRefs(contentEdit));
   NS_ENSURE_TRUE(contentEdit, NS_ERROR_NOT_INITIALIZED);
 
-  return DoClipboardCommand(aCommandName, contentEdit, nsnull);
+  return DoClipboardCommand(aCommandName, contentEdit);
 }
 
 NS_IMETHODIMP
@@ -458,11 +459,7 @@ nsClipboardBaseCommand::DoCommandParams(const char *aCommandName,
                                         nsICommandParams *aParams,
                                         nsISupports *aCommandContext)
 {
-  nsCOMPtr<nsIContentViewerEdit> contentEdit;
-  GetContentViewerEditFromContext(aCommandContext,  getter_AddRefs(contentEdit));
-  NS_ENSURE_TRUE(contentEdit, NS_ERROR_NOT_INITIALIZED);
-
-  return DoClipboardCommand(aCommandName, contentEdit, aParams);
+  return DoCommand(aCommandName, aCommandContext);
 }
 
 nsresult
@@ -504,7 +501,7 @@ protected:                                                                      
   virtual nsresult    IsClipboardCommandEnabled(const char* aCommandName,                   \
                                   nsIContentViewerEdit* aEdit, PRBool *outCmdEnabled);      \
   virtual nsresult    DoClipboardCommand(const char* aCommandName,                          \
-                                  nsIContentViewerEdit* aEdit, nsICommandParams* aParams);  \
+                                  nsIContentViewerEdit* aEdit);                             \
   /* no member variables, please, we're stateless! */                                       \
 };
 
@@ -514,7 +511,6 @@ NS_DECL_CLIPBOARD_COMMAND(nsClipboardPasteCommand)
 NS_DECL_CLIPBOARD_COMMAND(nsClipboardCopyLinkCommand)
 NS_DECL_CLIPBOARD_COMMAND(nsClipboardImageCommands)
 NS_DECL_CLIPBOARD_COMMAND(nsClipboardSelectAllNoneCommands)
-NS_DECL_CLIPBOARD_COMMAND(nsClipboardGetContentsCommand)
 
 #if 0
 #pragma mark -
@@ -528,7 +524,7 @@ nsClipboardCutCommand::IsClipboardCommandEnabled(const char* aCommandName, nsICo
 }
 
 nsresult
-nsClipboardCutCommand::DoClipboardCommand(const char *aCommandName, nsIContentViewerEdit* aEdit, nsICommandParams* aParams)
+nsClipboardCutCommand::DoClipboardCommand(const char* aCommandName, nsIContentViewerEdit* aEdit)
 {
   return aEdit->CutSelection();
 }
@@ -544,7 +540,7 @@ nsClipboardCopyCommand::IsClipboardCommandEnabled(const char* aCommandName, nsIC
 }
 
 nsresult
-nsClipboardCopyCommand::DoClipboardCommand(const char *aCommandName, nsIContentViewerEdit* aEdit, nsICommandParams* aParams)
+nsClipboardCopyCommand::DoClipboardCommand(const char* aCommandName, nsIContentViewerEdit* aEdit)
 {
   return aEdit->CopySelection();
 }
@@ -560,7 +556,7 @@ nsClipboardPasteCommand::IsClipboardCommandEnabled(const char* aCommandName, nsI
 }
 
 nsresult
-nsClipboardPasteCommand::DoClipboardCommand(const char *aCommandName, nsIContentViewerEdit* aEdit, nsICommandParams* aParams)
+nsClipboardPasteCommand::DoClipboardCommand(const char* aCommandName, nsIContentViewerEdit* aEdit)
 {
   return aEdit->Paste();
 }
@@ -577,7 +573,7 @@ nsClipboardCopyLinkCommand::IsClipboardCommandEnabled(const char* aCommandName, 
 }
 
 nsresult
-nsClipboardCopyLinkCommand::DoClipboardCommand(const char *aCommandName, nsIContentViewerEdit* aEdit, nsICommandParams* aParams)
+nsClipboardCopyLinkCommand::DoClipboardCommand(const char* aCommandName, nsIContentViewerEdit* aEdit)
 {
   return aEdit->CopyLinkLocation();
 }
@@ -593,7 +589,7 @@ nsClipboardImageCommands::IsClipboardCommandEnabled(const char* aCommandName, ns
 }
 
 nsresult
-nsClipboardImageCommands::DoClipboardCommand(const char *aCommandName, nsIContentViewerEdit* aEdit, nsICommandParams* aParams)
+nsClipboardImageCommands::DoClipboardCommand(const char* aCommandName, nsIContentViewerEdit* aEdit)
 {
   if (!nsCRT::strcmp(sCopyImageLocationString, aCommandName))
     return aEdit->CopyImageLocation();
@@ -613,7 +609,7 @@ nsClipboardSelectAllNoneCommands::IsClipboardCommandEnabled(const char* aCommand
 }
 
 nsresult
-nsClipboardSelectAllNoneCommands::DoClipboardCommand(const char *aCommandName, nsIContentViewerEdit* aEdit, nsICommandParams* aParams)
+nsClipboardSelectAllNoneCommands::DoClipboardCommand(const char* aCommandName, nsIContentViewerEdit* aEdit)
 {
   if (!nsCRT::strcmp(sSelectAllString, aCommandName))
     return aEdit->SelectAll();
@@ -626,42 +622,10 @@ nsClipboardSelectAllNoneCommands::DoClipboardCommand(const char *aCommandName, n
 #pragma mark -
 #endif
 
-nsresult
-nsClipboardGetContentsCommand::IsClipboardCommandEnabled(const char* aCommandName, nsIContentViewerEdit* aEdit, PRBool *outCmdEnabled)
-{
-  return aEdit->GetCanGetContents(outCmdEnabled);
-}
-
-nsresult
-nsClipboardGetContentsCommand::DoClipboardCommand(const char *aCommandName, nsIContentViewerEdit* aEdit, nsICommandParams* aParams)
-{
-  NS_ENSURE_ARG(aParams);
-
-  nsCAutoString mimeType("text/plain");
-
-  nsXPIDLCString format;    // nsICommandParams needs to use nsACString
-  if (NS_SUCCEEDED(aParams->GetCStringValue("format", getter_Copies(format))))
-    mimeType.Assign(format);
-  
-  PRBool selectionOnly = PR_FALSE;
-  aParams->GetBooleanValue("selection_only", &selectionOnly);
-  
-  nsAutoString contents;
-  nsresult rv = aEdit->GetContents(mimeType.get(), selectionOnly, contents);
-  if (NS_FAILED(rv))
-    return rv;
-    
-  return aParams->SetStringValue("result", contents);
-}
-
-
-#if 0
-#pragma mark -
-#endif
-
 class nsWebNavigationBaseCommand : public nsIControllerCommand
 {
 public:
+  nsWebNavigationBaseCommand() { NS_INIT_ISUPPORTS(); }
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSICONTROLLERCOMMAND
@@ -792,6 +756,7 @@ nsGoBackCommand::DoWebNavCommand(const char *aCommandName, nsIWebNavigation* aWe
 class nsClipboardDragDropHookCommand : public nsIControllerCommand
 {
 public:
+  nsClipboardDragDropHookCommand() { NS_INIT_ISUPPORTS(); }
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSICONTROLLERCOMMAND
@@ -956,8 +921,6 @@ nsWindowCommandRegistration::RegisterWindowCommands(
   NS_REGISTER_LAST_COMMAND(nsClipboardImageCommands, sCopyImageContentsString);
   NS_REGISTER_FIRST_COMMAND(nsClipboardSelectAllNoneCommands, sSelectAllString);
   NS_REGISTER_LAST_COMMAND(nsClipboardSelectAllNoneCommands, sSelectNoneString);
-
-  NS_REGISTER_ONE_COMMAND(nsClipboardGetContentsCommand, "cmd_getContents");
 
   NS_REGISTER_ONE_COMMAND(nsGoBackCommand, "cmd_browserBack");
   NS_REGISTER_ONE_COMMAND(nsGoForwardCommand, "cmd_browserForward");

@@ -657,7 +657,10 @@ nsTextEditorDragListener::DragOver(nsIDOMEvent* aDragEvent)
 
   PRBool canDrop = CanDrop(aDragEvent);
   dragSession->SetCanDrop(canDrop);
-    
+
+  // We need to consume the event to prevent the browser's
+  // default drag listeners from being fired. (Bug 199133)
+
   aDragEvent->PreventDefault(); // consumed
 
   if (canDrop)
@@ -779,7 +782,6 @@ nsTextEditorDragListener::CanDrop(nsIDOMEvent* aEvent)
   dragService->GetCurrentSession(getter_AddRefs(dragSession));
   if (!dragSession) return PR_FALSE;
 
-  // XXX should we filter out some types for plaintext-only editors?
   PRBool flavorSupported = PR_FALSE;
   dragSession->IsDataFlavorSupported(kUnicodeMime, &flavorSupported);
 

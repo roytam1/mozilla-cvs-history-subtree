@@ -2578,10 +2578,12 @@ nsEditor::NotifyDocumentListeners(TDocumentListenerNotification aNotificationTyp
   
     case eDocumentStateChanged:
       {
+        printf("document state change is possible\n");
         PRBool docIsDirty;
         rv = GetDocumentModified(&docIsDirty);
         if (NS_FAILED(rv)) return rv;
         
+        printf("document is dirty=%d, mDocDirtyState=%d\n", docIsDirty, mDocDirtyState);
         if (docIsDirty == mDocDirtyState)
           return NS_OK;
         
@@ -2589,10 +2591,12 @@ nsEditor::NotifyDocumentListeners(TDocumentListenerNotification aNotificationTyp
         
         for (i = 0; i < numListeners;i++)
         {
+          printf("listener for loop %d\n", i);
           nsCOMPtr<nsISupports> iSupports = getter_AddRefs(mDocStateListeners->ElementAt(i));
           nsCOMPtr<nsIDocumentStateListener> thisListener = do_QueryInterface(iSupports);
           if (thisListener)
           {
+            printf("listener found\n");
             rv = thisListener->NotifyDocumentStateChanged(mDocDirtyState);
             if (NS_FAILED(rv))
               break;

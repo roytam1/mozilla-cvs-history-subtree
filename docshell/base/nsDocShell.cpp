@@ -425,6 +425,12 @@ NS_IMETHODIMP nsDocShell::GetInterface(const nsIID & aIID, void **aSink)
 
       return NS_NOINTERFACE;   
     }
+    else if (aIID.Equals(NS_GET_IID(nsIClipboardDragDropHookList)) 
+            && NS_SUCCEEDED(EnsureTransferableHookData())) {
+      *aSink = mTransferableHookData;
+      NS_ADDREF((nsISupports *)*aSink);
+      return NS_OK;
+    }
     else if (aIID.Equals(NS_GET_IID(nsISelectionDisplay))) {
       nsCOMPtr<nsIPresShell> shell;
       nsresult rv = GetPresShell(getter_AddRefs(shell));
@@ -2965,6 +2971,8 @@ nsDocShell::Destroy()
 
 	delete mEditorData;
 	mEditorData = 0;
+
+    mTransferableHookData = nsnull;
 
     // Save the state of the current document, before destroying the window.
     // This is needed to capture the state of a frameset when the new document
@@ -6560,6 +6568,17 @@ nsDocShell::EnsureEditorData()
   }
   
   return mEditorData ? NS_OK : NS_ERROR_FAILURE;
+}
+
+nsresult
+nsDocShell::EnsureTransferableHookData()
+{
+    if (!mTransferableHookData) {
+        mTransferableHookData = new nsTransferableHookData();   // owning addref
+        if (!mTransferableHookData) return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    return NS_OK;
 }
 
 
