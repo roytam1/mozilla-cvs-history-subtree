@@ -1873,7 +1873,7 @@ jsdStackFrame::Eval (const nsAString &bytes, const char *fileName,
     // get pointer to buffer contained in |bytes|
     nsAString::const_iterator h;
     bytes.BeginReading(h);
-    const jschar *char_bytes = NS_STATIC_CAST(const jschar *, h.get());
+    const jschar *char_bytes = NS_REINTERPRET_CAST(const jschar *, h.get());
 
     JSExceptionState *estate = 0;
     jsval jv;
