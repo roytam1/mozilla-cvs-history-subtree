@@ -70,6 +70,10 @@ var gChangeActionDialog = {
 
     var defaultApp = document.getElementById("defaultApp");
     defaultApp.file = this._item.mimeInfo.defaultApplicationHandler;
+    if (defaultApp.label == "") {
+      defaultApp.label = this._item.mimeInfo.defaultDescription;
+      defaultApp.image = "moz-icon://goat?contentType=" + this._item.type + "&size=16";  
+    }     
       
     var pluginName = document.getElementById("pluginName");
     var foundPlugin = false;

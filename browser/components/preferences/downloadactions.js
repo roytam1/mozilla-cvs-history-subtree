@@ -321,7 +321,7 @@ var gDownloadActionsWindow = {
         continue;
       var saveToDisk        = this._getLiteralValue(handler, "saveToDisk") == "true";
       var useSystemDefault  = this._getLiteralValue(handler, "useSystemDefault") == "true";
-      var editable          = this._getLiteralValue(handler, "editable") == "true";
+      var editable          = this._getLiteralValue(type, "editable") == "true";
       var handledInternally = this._getLiteralValue(handler, "handleInternal") == "true";
       var externalApp       = this._getChildResource(handler, "externalApplication");
       var externalAppPath   = this._getLiteralValue(externalApp, "path");
@@ -528,12 +528,11 @@ var gDownloadActionsWindow = {
       
       handlerResource = this._rdf.GetResource(HANDLER_URI(aItem.type));
       this._setLiteralValue(handlerResource, "alwaysAsk", "false");
-      this._setLiteralValue(handlerResource, "editable", "true");
       var handlerProp = this._rdf.GetResource(NC_URI("handlerProp"));
       this._mimeDS.Assert(itemResource, handlerProp, handlerResource, true);
       
       var extAppResource = this._rdf.GetResource(APP_URI(aItem.type));
-      this._setLiteralValue(handlerResource, "path", "");
+      this._setLiteralValue(extAppResource, "path", "");
       var extAppProp = this._rdf.GetResource(NC_URI("externalApplication"));
       this._mimeDS.Assert(handlerResource, extAppProp, extAppResource, true);
     }
