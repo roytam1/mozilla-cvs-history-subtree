@@ -25,7 +25,7 @@
 
 #ifdef IS_LITTLE_ENDIAN
 #    define SWAP16(x) ((((x) & 0xff) << 8) | (((x) >> 8) & 0xff))
-#    define SWAP32(x) (SWAP16(((x) & 0xffff) << 16) | SWAP16(((x) >> 16) & 0xffff))
+#    define SWAP32(x) ((SWAP16((x) & 0xffff) << 16) | (SWAP16((x) >> 16)))
 #else
 #    ifndef IS_BIG_ENDIAN
 #        error "Unknown endianness"
@@ -34,7 +34,7 @@
 #    define SWAP32(x) (x)
 #endif
 
-nsBinaryOutputStream::nsBinaryOutputStream(nsIOutputStream* aStream): mOutputStream(aStream) {}
+nsBinaryOutputStream::nsBinaryOutputStream(nsIOutputStream* aStream): mOutputStream(aStream) { NS_INIT_REFCNT(); }
 
 NS_IMPL_ISUPPORTS(nsBinaryOutputStream, NS_GET_IID(nsIBinaryOutputStream))
 
@@ -61,13 +61,7 @@ nsBinaryOutputStream::SetOutputStream(nsIOutputStream *aOutputStream)
 NS_IMETHODIMP
 nsBinaryOutputStream::WriteBoolean(PRBool aBoolean)
 {
-    nsresult rv;
-    PRUint32 bytesWritten;
-
-    rv = Write((const char*)&aBoolean, sizeof aBoolean, &bytesWritten);
-    if (bytesWritten != sizeof aBoolean)
-        return NS_ERROR_FAILURE;
-    return rv;
+    return Write8(aBoolean);
 }
 
 NS_IMETHODIMP
@@ -171,7 +165,7 @@ nsBinaryOutputStream::WriteBytes(const char *aString, PRUint32 aLength)
     return rv;
 }
 
-nsBinaryInputStream::nsBinaryInputStream(nsIInputStream* aStream): mInputStream(aStream) {}
+nsBinaryInputStream::nsBinaryInputStream(nsIInputStream* aStream): mInputStream(aStream) { NS_INIT_REFCNT(); }
 
 NS_IMPL_ISUPPORTS(nsBinaryInputStream, NS_GET_IID(nsIBinaryInputStream))
 
@@ -198,18 +192,20 @@ nsBinaryInputStream::SetInputStream(nsIInputStream *aInputStream)
 NS_IMETHODIMP
 nsBinaryInputStream::ReadBoolean(PRBool* aBoolean)
 {
-    return Read8((PRUint8*)aBoolean);
+    PRUint8 byteResult;
+    nsresult rv = Read8(&byteResult);
+    *aBoolean = byteResult;
+    return rv;
 }
 
 NS_IMETHODIMP
 nsBinaryInputStream::Read8(PRUint8* aByte)
 {
     nsresult rv;
-    PRBool byte;
     PRUint32 bytesRead;
     
-    rv = Read((char*)&byte, sizeof byte, &bytesRead);
-    if (bytesRead != sizeof byte)
+    rv = Read((char*)aByte, sizeof(*aByte), &bytesRead);
+    if (bytesRead != sizeof (*aByte))
         return NS_ERROR_FAILURE;
     return rv;
 }
