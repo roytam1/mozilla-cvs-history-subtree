@@ -61,7 +61,8 @@
 
 // On a powerPC, plugins depend on being able to find qd in our symbol table
 #ifdef powerc
-#pragma export qd
+// #pragma export qd
+// beard:  this seems to be an illegal pragma
 #endif
 
 const ResIDT nsPluginSig = 128;	// STR#, MIME type is #1
@@ -206,8 +207,12 @@ CPluginHandler::CPluginHandler(FSSpec& plugFile)
 		if (descCount <= 1 || ResError())
 			fPluginName = plugFile.name;
 
-		cstring fileName((const unsigned char*) plugFile.name);
+		// cstring fileName((const unsigned char*) plugFile.name);
+		char* fileName = CFileMgr::EncodedPathNameFromFSSpec(plugFile, TRUE);
+		ThrowIfNil_(fileName);
+		fileName = NET_UnEscape(fileName);
 		NPError err = NPL_RegisterPluginFile(fPluginName, fileName, pluginDescription, this);
+		XP_FREE(fileName);
 		ThrowIfOSErr_(err);
 
 		CStringListRsrc mimeList(128);
