@@ -529,7 +529,9 @@ nsPKCS12Blob::inputToDecoder(SEC_PKCS12DecoderContext *dcx, nsILocalFile *file)
       return rv;
     }
     // feed the file data into the decoder
-    srv = SEC_PKCS12DecoderUpdate(dcx, buf, amount);
+    srv = SEC_PKCS12DecoderUpdate(dcx, 
+				  (unsigned char*) buf, 
+				  amount);
     if (srv) {
       // don't allow the close call to overwrite our precious error code
       int pr_err = PORT_GetError();
