@@ -2885,6 +2885,8 @@ PRInt32 nsMsgDBView::GetLevelInUnreadView(nsIMsgDBHdr *msgHdr, nsMsgViewIndex st
           parentIndexInView = indexToTry;
           break;
         }
+        if (indexToTry == 0)
+          break;
       }
       if (parentIndexInView != nsMsgViewIndex_None)
       {

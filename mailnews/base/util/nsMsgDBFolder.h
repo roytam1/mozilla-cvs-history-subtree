@@ -92,6 +92,8 @@ public:
   NS_IMETHOD DownloadAllForOffline(nsIUrlListener *listener, nsIMsgWindow *msgWindow);
   NS_IMETHOD GetRetentionSettings(nsIMsgRetentionSettings **settings);
   NS_IMETHOD SetRetentionSettings(nsIMsgRetentionSettings *settings);
+  NS_IMETHOD GetDownloadSettings(nsIMsgDownloadSettings **settings);
+  NS_IMETHOD SetDownloadSettings(nsIMsgDownloadSettings *settings);
 
 protected:
 	virtual nsresult ReadDBFolderInfo(PRBool force);
@@ -128,6 +130,7 @@ protected:
 	nsCOMPtr<nsIOutputStream> m_tempMessageStream;
 
   nsCOMPtr <nsIMsgRetentionSettings> m_retentionSettings;
+  nsCOMPtr <nsIMsgDownloadSettings> m_downloadSettings;
   static nsIAtom* mFolderLoadedAtom;
   static nsIAtom* mDeleteOrMoveMsgCompletedAtom;
   static nsIAtom* mDeleteOrMoveMsgFailedAtom;

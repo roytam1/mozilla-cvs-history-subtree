@@ -31,6 +31,8 @@
 #include "nsIMsgWindow.h"
 #include "nsIMsgSearchNotify.h"
 
+// base class for downloading articles in a single newsgroup. Keys to download are passed in
+// to DownloadArticles method.
 class nsNewsDownloader : public nsIUrlListener, public nsIMsgSearchNotify
 {
 public:
@@ -53,6 +55,7 @@ protected:
 	virtual nsresult DownloadNext(PRBool firstTimeP);
 	virtual PRInt32 FinishDownload() {return 0;}
 	virtual PRInt32	StartDownload() {return 0;}
+  virtual nsresult ShowProgress(const PRUnichar *progressString, PRInt32 percent);
 
 	nsMsgKeyArray			m_keysToDownload;
 	PRBool			m_downloadFromKeys;
@@ -65,19 +68,13 @@ protected:
 	PRInt32			m_numwrote;
 	nsMsgKey    m_keyToDownload;
 	nsCOMPtr <nsIMsgWindow>		m_window;
+  nsCOMPtr <nsIMsgStatusFeedback> m_statusFeedback;
 	nsresult				m_status;
 	PRBool			m_abort;
 };
 
-typedef struct MSG_RetrieveArtInfo
-{
-	PRBool		m_useDefaults;
-	PRBool		m_byReadness;
-	PRBool		m_unreadOnly;
-	PRBool		m_byDate;
-	PRInt32		m_daysOld;
-} MSG_RetrieveArtInfo;
 
+// class for downloading articles in a single newsgroup to the offline store.
 class DownloadNewsArticlesToOfflineStore : public nsNewsDownloader
 {
 public:
@@ -96,13 +93,44 @@ protected:
 //	MsgDocument		*m_dbWriteDocument;
 };
 
+// class for downloading all the articles that match the passed in search criteria
+// for a single newsgroup.
 class DownloadMatchingNewsArticlesToNewsDB : public DownloadNewsArticlesToOfflineStore
 {
 public:
-	DownloadMatchingNewsArticlesToNewsDB(nsIMsgWindow *window, nsIMsgFolder *folder, nsIMsgDatabase *newsDB,  nsISupportsArray *termArray);
+	DownloadMatchingNewsArticlesToNewsDB(nsIMsgWindow *window, nsIMsgFolder *folder, nsIMsgDatabase *newsDB,  nsIUrlListener *listener);
 	virtual ~DownloadMatchingNewsArticlesToNewsDB();
-static nsresult	SaveMatchingMessages(nsIMsgWindow *window, nsIMsgFolder *folder, nsIMsgDatabase *newsDB, nsISupportsArray *terms);
+  nsresult RunSearch(nsIMsgFolder *folder, nsIMsgDatabase *newsDB, nsIMsgSearchSession *searchSession);
 protected:
+};
+
+// this class iterates all the news servers for each group on the server that's configured for
+// offline use, downloads the messages that meet the download criteria for that newsgroup/server
+class nsMsgDownloadAllNewsgroups : public nsIUrlListener
+{
+public:
+  nsMsgDownloadAllNewsgroups(nsIMsgWindow *window, nsIUrlListener *listener);
+  virtual ~nsMsgDownloadAllNewsgroups();
+
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIURLLISTENER
+
+  nsresult ProcessNextGroup();
+
+protected:
+  nsresult AdvanceToNextServer();
+  nsresult AdvanceToNextGroup();
+
+  DownloadMatchingNewsArticlesToNewsDB *m_downloaderForGroup;
+
+	nsCOMPtr <nsIMsgFolder>	m_currentFolder;
+  nsCOMPtr <nsIMsgWindow> m_window;
+  nsCOMPtr <nsISupportsArray> m_allServers;
+  nsCOMPtr <nsISupportsArray> m_allFolders;
+  nsCOMPtr <nsIMsgIncomingServer> m_currentServer;
+  nsCOMPtr <nsIEnumerator> m_serverEnumerator;
+  nsCOMPtr <nsIUrlListener> m_listener;
+  nsCOMPtr <nsISupportsArray> m_termList;
 };
 
 #endif

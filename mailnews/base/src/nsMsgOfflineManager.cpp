@@ -34,11 +34,14 @@
 #include "nsIMsgAccountManager.h"
 #include "nsMsgCompCID.h"
 #include "nsIIOService.h"
+#include "nsMsgNewsCID.h"
+#include "nsINntpService.h"
 
 static NS_DEFINE_CID(kCImapService, NS_IMAPSERVICE_CID);
 static NS_DEFINE_CID(kCMsgAccountManagerCID, NS_MSGACCOUNTMANAGER_CID);
 static NS_DEFINE_CID(kMsgSendLaterCID, NS_MSGSENDLATER_CID); 
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
+static NS_DEFINE_CID(kNntpServiceCID, NS_NNTPSERVICE_CID);
 
 NS_IMPL_THREADSAFE_ISUPPORTS5(nsMsgOfflineManager,
                               nsIMsgOfflineManager,
@@ -49,11 +52,11 @@ NS_IMPL_THREADSAFE_ISUPPORTS5(nsMsgOfflineManager,
 
 nsMsgOfflineManager::nsMsgOfflineManager() :
   m_inProgress (PR_FALSE),
-  m_sendUnsentMessage(PR_FALSE),
+  m_sendUnsentMessages(PR_FALSE),
   m_downloadNews(PR_FALSE),
   m_downloadMail(PR_FALSE),
   m_playbackOfflineImapOps(PR_FALSE),
-  m_goOffineWhenDone(PR_FALSE),
+  m_goOfflineWhenDone(PR_FALSE),
   m_curState(eNoState),
   m_curOperation(eNoOp)
 {
@@ -114,7 +117,7 @@ nsresult nsMsgOfflineManager::AdvanceToNextState(nsresult exitStatus)
     {
     case eNoState:
 
-      if (m_sendUnsentMessage)
+      if (m_sendUnsentMessages)
       {
         m_curState = eSendingUnsent;
         SendUnsentMessages();
@@ -141,8 +144,32 @@ nsresult nsMsgOfflineManager::AdvanceToNextState(nsresult exitStatus)
   {
     switch (m_curState)
     {
+      case eNoState:
+        m_curState = eDownloadingNews;
+        if (m_downloadNews)
+          DownloadOfflineNewsgroups();
+        else
+          AdvanceToNextState(NS_OK);
+        break;
       case eSendingUnsent:
-      break;
+        if (m_goOfflineWhenDone)
+        {
+          SetOnlineState(PR_FALSE);
+        }
+        break;
+      case eDownloadingNews:
+        m_curState = eDownloadingMail;
+        if (m_sendUnsentMessages)
+          SendUnsentMessages();
+        else
+          AdvanceToNextState(NS_OK);
+        break;
+      case eDownloadingMail:
+        if (m_downloadMail)
+          DownloadMail();
+        else
+          AdvanceToNextState(NS_OK);
+        break;
       default:
         NS_ASSERTION(PR_FALSE, "unhandled current state when downloading for offline");
     }
@@ -220,15 +247,37 @@ nsresult nsMsgOfflineManager::SendUnsentMessages()
 
 }
 
+nsresult nsMsgOfflineManager::DownloadOfflineNewsgroups()
+{
+	nsresult rv;
+  NS_WITH_SERVICE(nsINntpService, nntpService, kNntpServiceCID, &rv);
+  if (NS_SUCCEEDED(rv) && nntpService)
+    rv = nntpService->DownloadNewsgroupsForOffline(m_window, this);
+
+  if (!NS_SUCCEEDED(rv))
+    return AdvanceToNextState(rv);
+  return rv;
+}
+
+nsresult nsMsgOfflineManager::DownloadMail()
+{
+  nsresult rv = NS_OK;
+	NS_WITH_SERVICE(nsIImapService, imapService, kCImapService, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+  return imapService->DownloadAllOffineImapFolders(m_window, this);
+  // ### we should do get new mail on pop servers, and download imap messages for offline use.
+}
+
 /* void goOnline (in boolean sendUnsentMessages, in boolean playbackOfflineImapOperations, in nsIMsgWindow aMsgWindow); */
 NS_IMETHODIMP nsMsgOfflineManager::GoOnline(PRBool sendUnsentMessages, PRBool playbackOfflineImapOperations, nsIMsgWindow *aMsgWindow)
 {
-  m_sendUnsentMessage = sendUnsentMessages;
+  m_sendUnsentMessages = sendUnsentMessages;
   m_playbackOfflineImapOps = playbackOfflineImapOperations;
   m_curOperation = eGoingOnline;
   SetWindow(aMsgWindow);
-  if (!m_sendUnsentMessage && !playbackOfflineImapOperations)
+  if (!m_sendUnsentMessages && !playbackOfflineImapOperations)
   {
+    return SetOnlineState(PR_TRUE);
   }
   else
     AdvanceToNextState(NS_OK);
@@ -240,15 +289,30 @@ NS_IMETHODIMP nsMsgOfflineManager::SynchronizeForOffline(PRBool downloadNews, PR
 {
   m_curOperation = eDownloadingForOffline;
 	nsresult rv = NS_OK;
-  if (goOfflineWhenDone)
+  m_downloadNews = downloadNews;
+  m_downloadMail = downloadMail;
+  m_sendUnsentMessages = sendUnsentMessages;
+  m_window = aMsgWindow;
+  m_goOfflineWhenDone = goOfflineWhenDone;
+  if (!downloadNews && !downloadMail && !sendUnsentMessages)
   {
-    NS_WITH_SERVICE(nsIIOService, netService, kIOServiceCID, &rv);
-    if (NS_SUCCEEDED(rv) && netService)
-    {
-      netService->SetOffline(PR_TRUE);
-    }
+    if (goOfflineWhenDone)
+      return SetOnlineState(PR_FALSE);
   }
+  else
+    return AdvanceToNextState(NS_OK);
   return NS_OK;
+}
+
+nsresult nsMsgOfflineManager::SetOnlineState(PRBool online)
+{
+  nsresult rv;
+  NS_WITH_SERVICE(nsIIOService, netService, kIOServiceCID, &rv);
+  if (NS_SUCCEEDED(rv) && netService)
+  {
+    rv = netService->SetOffline(online);
+  }
+  return rv;
 }
 
   // nsIUrlListener methods

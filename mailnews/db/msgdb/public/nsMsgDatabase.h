@@ -183,6 +183,7 @@ protected:
 	nsCOMPtr <nsICollation> m_collationKeyGenerator;
 	nsCOMPtr <nsIMimeConverter> m_mimeConverter;
   nsCOMPtr <nsIMsgRetentionSettings> m_retentionSettings;
+  nsCOMPtr <nsIMsgDownloadSettings> m_downloadSettings;
 
   nsresult PurgeMessagesOlderThan(PRUint32 daysToKeepHdrs, PRBool keepUnreadMessagesOnly);
   nsresult PurgeExcessMessages(PRUint32 numHeadersToKeep, PRBool keepUnreadMessagesOnly);
@@ -279,7 +280,23 @@ protected:
   PRUint32                m_numHeadersToKeep;
   PRUint32                m_keepUnreadMessagesProp;
   PRBool                  m_keepUnreadMessagesOnly;
+  PRBool                  m_useServerDefaults;
   PRUint32                m_daysToKeepBodies;
+};
+
+class nsMsgDownloadSettings : public nsIMsgDownloadSettings
+{
+public:
+  nsMsgDownloadSettings();
+  virtual ~nsMsgDownloadSettings();
+
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIMSGDOWNLOADSETTINGS
+protected:
+  PRBool m_useServerDefaults;
+	PRBool m_downloadUnreadOnly;
+	PRBool m_downloadByDate;
+	PRInt32 m_ageLimitOfMsgsToDownload;
 };
 
 #endif

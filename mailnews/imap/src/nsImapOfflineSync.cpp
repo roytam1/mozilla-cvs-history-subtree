@@ -798,3 +798,36 @@ void nsImapOfflineSync::DeleteAllOfflineOpsForCurrentDB()
 	if (m_currentFolder)
 		m_currentFolder->ClearFlag(MSG_FOLDER_FLAG_OFFLINEEVENTS);
 }
+
+nsImapOfflineDownloader::nsImapOfflineDownloader(nsIMsgWindow *aMsgWindow, nsIUrlListener *aListener) : nsImapOfflineSync(aMsgWindow, aListener)
+{
+}
+
+nsImapOfflineDownloader::~nsImapOfflineDownloader()
+{
+}
+
+nsresult nsImapOfflineDownloader::ProcessNextOperation()
+{
+  nsresult rv = NS_OK;
+  AdvanceToFirstIMAPFolder();
+	while (m_currentFolder)
+	{
+    PRUint32 folderFlags;
+
+    m_currentDB = nsnull;
+    m_currentFolder->GetFlags(&folderFlags);
+		// need to check if folder has offline events, or is configured for offline
+		if (folderFlags & MSG_FOLDER_FLAG_OFFLINE)
+      return m_currentFolder->DownloadAllForOffline(this, m_window);
+    else
+      AdvanceToNextFolder();
+  }
+//  if (aListener)
+//    aListener->OnStopRunningUrl(nsnull, NS_OK);
+  return rv;
+}
+
+
+
+

@@ -3701,23 +3701,85 @@ NS_IMETHODIMP nsMsgDatabase::GetMsgRetentionSettings(nsIMsgRetentionSettings **r
       PRUint32 numHeadersToKeep = 0;
       PRUint32 keepUnreadMessagesProp = 0;
       PRBool keepUnreadMessagesOnly = PR_FALSE;
+      PRBool useServerDefaults;
       PRUint32 daysToKeepBodies = 0;
 
-      rv = m_dbFolderInfo->GetUint32Property("retainBy", &retainByPreference, nsIMsgRetentionSettings::nsMsgRetainByServerDefaults);
+      rv = m_dbFolderInfo->GetUint32Property("retainBy", &retainByPreference, nsIMsgRetentionSettings::nsMsgRetainAll);
       m_dbFolderInfo->GetUint32Property("daysToKeepHdrs", &daysToKeepHdrs, 0);
       m_dbFolderInfo->GetUint32Property("numHdrsToKeep", &numHeadersToKeep, 0);
       m_dbFolderInfo->GetUint32Property("daysToKeepBodies", &daysToKeepBodies, 0);
       m_dbFolderInfo->GetUint32Property("keepUnreadOnly", &keepUnreadMessagesProp, 0);
+      m_dbFolderInfo->GetBooleanProperty("useServerDefaults", &useServerDefaults, PR_TRUE);
       keepUnreadMessagesOnly = (keepUnreadMessagesProp == 1);
       m_retentionSettings->SetRetainByPreference(retainByPreference);
       m_retentionSettings->SetDaysToKeepHdrs(daysToKeepHdrs);
       m_retentionSettings->SetNumHeadersToKeep(numHeadersToKeep);
       m_retentionSettings->SetKeepUnreadMessagesOnly(keepUnreadMessagesOnly);
       m_retentionSettings->SetDaysToKeepBodies(daysToKeepBodies);
+      m_retentionSettings->SetUseServerDefaults(useServerDefaults);
     }
   }
   *retentionSettings = m_retentionSettings;
   NS_IF_ADDREF(*retentionSettings);
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDatabase::SetMsgDownloadSettings(nsIMsgDownloadSettings *downloadSettings)
+{
+  m_downloadSettings = downloadSettings;
+  if (downloadSettings && m_dbFolderInfo)
+  {
+    nsresult rv;
+
+    PRBool useServerDefaults;
+    PRBool downloadByDate;
+    PRUint32 ageLimitOfMsgsToDownload;
+    PRBool downloadUnreadOnly;
+
+    rv = downloadSettings->GetUseServerDefaults(&useServerDefaults);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = downloadSettings->GetDownloadByDate(&downloadByDate);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = downloadSettings->GetDownloadUnreadOnly(&downloadUnreadOnly);
+    NS_ENSURE_SUCCESS(rv, rv);
+    rv = downloadSettings->GetAgeLimitOfMsgsToDownload(&ageLimitOfMsgsToDownload);
+    NS_ENSURE_SUCCESS(rv, rv);
+    // need to write this to the db. We'll just use the dbfolderinfo to write properties.
+    m_dbFolderInfo->SetBooleanProperty("useServerDefaults", useServerDefaults);
+    m_dbFolderInfo->SetBooleanProperty("downloadByDate", downloadByDate);
+    m_dbFolderInfo->SetBooleanProperty("downloadUnreadOnly", downloadUnreadOnly);
+    m_dbFolderInfo->SetUint32Property("ageLimit", ageLimitOfMsgsToDownload);
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDatabase::GetMsgDownloadSettings(nsIMsgDownloadSettings **downloadSettings)
+{
+  NS_ENSURE_ARG_POINTER(downloadSettings);
+  if (!m_downloadSettings)
+  {
+    // create a new one, and initialize it from the db.
+    m_downloadSettings = new nsMsgDownloadSettings;
+    if (m_downloadSettings && m_dbFolderInfo)
+    {
+      PRBool useServerDefaults;
+      PRBool downloadByDate;
+      PRUint32 ageLimitOfMsgsToDownload;
+      PRBool downloadUnreadOnly;
+
+      m_dbFolderInfo->GetBooleanProperty("useServerDefaults", &useServerDefaults, PR_FALSE);
+      m_dbFolderInfo->GetBooleanProperty("downloadByDate", &downloadByDate, PR_FALSE);
+      m_dbFolderInfo->GetBooleanProperty("downloadUnreadOnly", &downloadUnreadOnly, PR_FALSE);
+      m_dbFolderInfo->GetUint32Property("ageLimit", &ageLimitOfMsgsToDownload, 0);
+
+      m_downloadSettings->SetUseServerDefaults(useServerDefaults);
+      m_downloadSettings->SetDownloadByDate(downloadByDate);
+      m_downloadSettings->SetDownloadUnreadOnly(downloadUnreadOnly);
+      m_downloadSettings->SetAgeLimitOfMsgsToDownload(ageLimitOfMsgsToDownload);
+    }
+  }
+  *downloadSettings = m_downloadSettings;
+  NS_IF_ADDREF(*downloadSettings);
   return NS_OK;
 }
 
@@ -3737,8 +3799,6 @@ NS_IMETHODIMP nsMsgDatabase::ApplyRetentionSettings(nsIMsgRetentionSettings *msg
 
   switch (retainByPreference)
   {
-  case nsIMsgRetentionSettings::nsMsgRetainByServerDefaults:
-    NS_ASSERTION(PR_FALSE, "shouldn't be passing this in here"); // fall through and ignore
   case nsIMsgRetentionSettings::nsMsgRetainAll:
     break;
   case nsIMsgRetentionSettings::nsMsgRetainByAge:
@@ -3919,6 +3979,18 @@ NS_IMETHODIMP nsMsgRetentionSettings::SetNumHeadersToKeep(PRUint32 aNumHeadersTo
   m_numHeadersToKeep = aNumHeadersToKeep;
   return NS_OK;
 }
+/* attribute boolean useServerDefaults; */
+NS_IMETHODIMP nsMsgRetentionSettings::GetUseServerDefaults(PRBool *aUseServerDefaults)
+{
+  NS_ENSURE_ARG_POINTER(aUseServerDefaults);
+  *aUseServerDefaults = m_useServerDefaults;
+  return NS_OK;
+}
+NS_IMETHODIMP nsMsgRetentionSettings::SetUseServerDefaults(PRBool aUseServerDefaults)
+{
+  m_useServerDefaults = aUseServerDefaults;
+  return NS_OK;
+}
 
 /* attribute boolean keepUnreadMessagesOnly; */
 NS_IMETHODIMP nsMsgRetentionSettings::GetKeepUnreadMessagesOnly(PRBool *aKeepUnreadMessagesOnly)
@@ -3946,4 +4018,73 @@ NS_IMETHODIMP nsMsgRetentionSettings::SetDaysToKeepBodies(PRUint32 aDaysToKeepBo
   return NS_OK;
 }
 
+NS_IMPL_ISUPPORTS1(nsMsgDownloadSettings, nsIMsgDownloadSettings)
+
+nsMsgDownloadSettings::nsMsgDownloadSettings()
+{
+  NS_INIT_ISUPPORTS();
+  m_useServerDefaults = PR_FALSE;
+	m_downloadUnreadOnly = PR_FALSE;
+	m_downloadByDate = PR_FALSE;
+	m_ageLimitOfMsgsToDownload = 0;
+}
+
+nsMsgDownloadSettings::~nsMsgDownloadSettings()
+{
+}
+
+/* attribute boolean useServerDefaults; */
+NS_IMETHODIMP nsMsgDownloadSettings::GetUseServerDefaults(PRBool *aUseServerDefaults)
+{
+  NS_ENSURE_ARG_POINTER(aUseServerDefaults);
+  *aUseServerDefaults = m_useServerDefaults;
+  return NS_OK;
+}
+NS_IMETHODIMP nsMsgDownloadSettings::SetUseServerDefaults(PRBool aUseServerDefaults)
+{
+  m_useServerDefaults = aUseServerDefaults;
+  return NS_OK;
+}
+
+
+/* attribute boolean keepUnreadMessagesOnly; */
+NS_IMETHODIMP nsMsgDownloadSettings::GetDownloadUnreadOnly(PRBool *aDownloadUnreadOnly)
+{
+  NS_ENSURE_ARG_POINTER(aDownloadUnreadOnly);
+  *aDownloadUnreadOnly = m_downloadUnreadOnly;
+  return NS_OK;
+}
+NS_IMETHODIMP nsMsgDownloadSettings::SetDownloadUnreadOnly(PRBool aDownloadUnreadOnly)
+{
+  m_downloadUnreadOnly = aDownloadUnreadOnly;
+  return NS_OK;
+}
+
+/* attribute boolean keepUnreadMessagesOnly; */
+NS_IMETHODIMP nsMsgDownloadSettings::GetDownloadByDate(PRBool *aDownloadByDate)
+{
+  NS_ENSURE_ARG_POINTER(aDownloadByDate);
+  *aDownloadByDate = m_downloadByDate;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgDownloadSettings::SetDownloadByDate(PRBool aDownloadByDate)
+{
+  m_downloadByDate = aDownloadByDate;
+  return NS_OK;
+}
+
+
+/* attribute long ageLimitOfMsgsToDownload; */
+NS_IMETHODIMP nsMsgDownloadSettings::GetAgeLimitOfMsgsToDownload(PRUint32 *ageLimitOfMsgsToDownload)
+{
+  NS_ENSURE_ARG_POINTER(ageLimitOfMsgsToDownload);
+  *ageLimitOfMsgsToDownload = m_ageLimitOfMsgsToDownload;
+  return NS_OK;
+}
+NS_IMETHODIMP nsMsgDownloadSettings::SetAgeLimitOfMsgsToDownload(PRUint32 ageLimitOfMsgsToDownload)
+{
+  m_ageLimitOfMsgsToDownload = ageLimitOfMsgsToDownload;
+  return NS_OK;
+}
 

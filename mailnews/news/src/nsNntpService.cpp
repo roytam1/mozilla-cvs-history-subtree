@@ -58,7 +58,7 @@
 #include "nsIIOService.h"
 #include "nsIPrompt.h"
 #include "nsIRDFService.h"
-
+#include "nsNewsDownloader.h"
 #undef GetPort  // XXX Windows!
 #undef SetPort  // XXX Windows!
 
@@ -1444,3 +1444,16 @@ nsNntpService::MessageURIToMsgHdr(const char *uri, nsIMsgDBHdr **_retval)
   NS_ENSURE_SUCCESS(rv,rv);
   return NS_OK;
 }
+
+NS_IMETHODIMP
+nsNntpService::DownloadNewsgroupsForOffline(nsIMsgWindow *aMsgWindow, nsIUrlListener *aListener)
+{
+  nsresult rv = NS_OK;
+  nsMsgDownloadAllNewsgroups *newsgroupDownloader = new nsMsgDownloadAllNewsgroups(aMsgWindow, aListener);
+  if (newsgroupDownloader)
+    rv = newsgroupDownloader->ProcessNextGroup();
+  else
+    rv = NS_ERROR_OUT_OF_MEMORY;
+  return rv;
+}
+

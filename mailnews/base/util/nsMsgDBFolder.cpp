@@ -1170,9 +1170,10 @@ NS_IMETHODIMP nsMsgDBFolder::GetRetentionSettings(nsIMsgRetentionSettings **sett
       rv = mDatabase->GetMsgRetentionSettings(getter_AddRefs(m_retentionSettings));
       if (NS_SUCCEEDED(rv) && m_retentionSettings)
       {
-        nsMsgRetainByPreference retainBy;
-        m_retentionSettings->GetRetainByPreference(&retainBy);
-        if (retainBy == nsIMsgRetentionSettings::nsMsgRetainByServerDefaults)
+        PRBool useServerDefaults;
+        m_retentionSettings->GetUseServerDefaults(&useServerDefaults);
+
+        if (useServerDefaults)
         {
           nsCOMPtr <nsIMsgIncomingServer> incomingServer;
           rv = GetServer(getter_AddRefs(incomingServer));
@@ -1193,6 +1194,47 @@ NS_IMETHODIMP nsMsgDBFolder::SetRetentionSettings(nsIMsgRetentionSettings *setti
   m_retentionSettings = settings;
   return NS_OK;
 }
+
+NS_IMETHODIMP nsMsgDBFolder::GetDownloadSettings(nsIMsgDownloadSettings **settings)
+{
+  NS_ENSURE_ARG_POINTER(settings);
+  nsresult rv = NS_OK;
+  if (!m_downloadSettings)
+  {
+    GetDatabase(nsnull);
+    if (mDatabase)
+    {
+      // get the settings from the db - if the settings from the db say the folder
+      // is not overriding the incoming server settings, get the settings from the
+      // server.
+      rv = mDatabase->GetMsgDownloadSettings(getter_AddRefs(m_downloadSettings));
+      if (NS_SUCCEEDED(rv) && m_downloadSettings)
+      {
+        PRBool useServerDefaults;
+        m_downloadSettings->GetUseServerDefaults(&useServerDefaults);
+
+        if (useServerDefaults)
+        {
+          nsCOMPtr <nsIMsgIncomingServer> incomingServer;
+          rv = GetServer(getter_AddRefs(incomingServer));
+          if (NS_SUCCEEDED(rv) && incomingServer)
+            incomingServer->GetDownloadSettings(getter_AddRefs(m_downloadSettings));
+        }
+
+      }
+    }
+  }
+  *settings = m_downloadSettings;
+  NS_IF_ADDREF(*settings);
+  return rv;
+}
+
+NS_IMETHODIMP nsMsgDBFolder::SetDownloadSettings(nsIMsgDownloadSettings *settings)
+{
+  m_downloadSettings = settings;
+  return NS_OK;
+}
+
 
 nsresult nsMsgDBFolder::NotifyStoreClosedAllHeaders()
 {

@@ -222,5 +222,6 @@ interface nsIImapService : nsISupports
   void getListOfFoldersOnServer(in nsIImapIncomingServer aServer, in nsIMsgWindow aMsgWindow);
   void getListOfFoldersWithPath(in nsIImapIncomingServer aServer, in nsIMsgWindow aMsgWindow, in string folderPath);
 
-  void PlaybackAllOfflineOperations(in nsIMsgWindow aMsgWindow, in nsIUrlListener aListener);
+  void playbackAllOfflineOperations(in nsIMsgWindow aMsgWindow, in nsIUrlListener aListener);
+  void downloadAllOffineImapFolders(in nsIMsgWindow aMsgWindow, in nsIUrlListener aListener);
 };

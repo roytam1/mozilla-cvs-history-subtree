@@ -30,8 +30,12 @@
 #include "nsMsgNewsCID.h"
 #include "nsIMsgSearchSession.h"
 #include "nsIMsgSearchTerm.h"
-
+#include "nsRDFCID.h"
+#include "nsIMsgAccountManager.h"
+#include "nsMsgFolderFlags.h"
 // This file contains the news article download state machine.
+
+static NS_DEFINE_CID(kNntpServiceCID,	NS_NNTPSERVICE_CID);
 
 
 // if pIds is not null, download the articles whose id's are passed in. Otherwise,
@@ -99,7 +103,11 @@ nsresult nsNewsDownloader::DownloadNext(PRBool firstTimeP)
   nsresult rv;
   PRBool moreHeaders = GetNextHdrToRetrieve();
   if (!moreHeaders)
+  {
+    if (m_listener)
+      m_listener->OnStopRunningUrl(nsnull, NS_OK);
     return NS_OK;
+  }
 //		return 0;
 //	char *url = m_folder->BuildUrl(m_newsDB, m_keyToDownload);
 	m_numwrote++;
@@ -175,7 +183,7 @@ PRBool nsNewsDownloader::GetNextHdrToRetrieve()
 	{
 		if (m_numwrote >= (PRInt32) m_keysToDownload.GetSize())
 			return PR_FALSE;
-		m_keyToDownload = m_keysToDownload.GetAt(m_numwrote);
+		m_keyToDownload = m_keysToDownload.GetAt(m_numwrote++);
 #ifdef DEBUG_bienvenu
 //		XP_Trace("downloading %ld index = %ld\n", m_keyToDownload, m_numwrote);
 #endif
@@ -203,10 +211,26 @@ PRBool nsNewsDownloader::GetNextHdrToRetrieve()
 		PRInt32 percent;
 		percent = (100 * m_numwrote) / (PRInt32) m_keysToDownload.GetSize();
 		// FE_SetProgressBarPercent (m_context, percent);
+    ShowProgress(statusString, percent);
 		return PR_TRUE;
 	}
 	NS_ASSERTION(PR_FALSE, "shouldn't get here if we're not downloading from keys.");
 	return PR_FALSE;	// shouldn't get here if we're not downloading from keys.
+}
+
+nsresult nsNewsDownloader::ShowProgress(const PRUnichar *progressString, PRInt32 percent)
+{
+  if (!m_statusFeedback)
+  {
+    if (m_window)
+      m_window->GetStatusFeedback(getter_AddRefs(m_statusFeedback));
+  }
+  if (m_statusFeedback)
+  {
+    m_statusFeedback->ShowStatusString(progressString);
+    m_statusFeedback->ShowProgress(percent);
+  }
+  return NS_OK;
 }
 
 NS_IMETHODIMP DownloadNewsArticlesToOfflineStore::OnStartRunningUrl(nsIURI* url)
@@ -268,6 +292,7 @@ NS_IMETHODIMP nsNewsDownloader::OnSearchHit(nsIMsgDBHdr *header, nsIMsgFolder *f
 
 NS_IMETHODIMP nsNewsDownloader::OnSearchDone(nsresult status)
 {
+  DownloadArticles(m_window, m_folder, &m_keysToDownload);
   // kick off download process?
   return NS_OK;
 }
@@ -292,34 +317,10 @@ DownloadNewsArticlesToOfflineStore::~DownloadNewsArticlesToOfflineStore()
 {
 }
 
-/*static*/ nsresult DownloadMatchingNewsArticlesToNewsDB::SaveMatchingMessages(nsIMsgWindow *window, nsIMsgFolder *folder, nsIMsgDatabase *newsDB,
-							nsISupportsArray *termArray)
-{
-  nsresult rv;
-  NS_ENSURE_ARG(termArray);
-  nsCOMPtr <nsIMsgSearchSession> searchSession = do_CreateInstance(NS_MSGSEARCHSESSION_CONTRACTID, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
-	DownloadMatchingNewsArticlesToNewsDB *downloadState = 
-		new DownloadMatchingNewsArticlesToNewsDB(window, folder, newsDB, termArray);
-
-  searchSession->RegisterListener(downloadState);
-  searchSession->AddScopeTerm(nsMsgSearchScope::OfflineNewsgroup, folder);
-  PRUint32 termCount;
-  termArray->Count(&termCount);
-	for (PRUint32 i = 0; i < termCount; i++)
-	{
-    nsCOMPtr<nsIMsgSearchTerm> term;
-    termArray->QueryElementAt(i, NS_GET_IID(nsIMsgSearchTerm),
-                               (void **)getter_AddRefs(term));
-		searchSession->AppendTerm(term);
-	}
-	return searchSession->Search(window);
-}
-
 DownloadMatchingNewsArticlesToNewsDB::DownloadMatchingNewsArticlesToNewsDB
 	(nsIMsgWindow *window, nsIMsgFolder *folder, nsIMsgDatabase *newsDB,
-	 nsISupportsArray * /*termArray*/) :
-	 DownloadNewsArticlesToOfflineStore(window, newsDB, nsnull /* url listener */)
+	 nsIUrlListener *listener) :
+	 DownloadNewsArticlesToOfflineStore(window, newsDB, listener)
 {
 	m_window = window;
 	m_folder = folder;
@@ -331,4 +332,212 @@ DownloadMatchingNewsArticlesToNewsDB::~DownloadMatchingNewsArticlesToNewsDB()
 {
 }
 
+static NS_DEFINE_CID(kMsgAccountManagerCID, NS_MSGACCOUNTMANAGER_CID);
+static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 
+NS_IMPL_ISUPPORTS1(nsMsgDownloadAllNewsgroups, nsIUrlListener)
+
+
+nsMsgDownloadAllNewsgroups::nsMsgDownloadAllNewsgroups(nsIMsgWindow *window, nsIUrlListener *listener)
+{
+  NS_INIT_REFCNT();
+  m_window = window;
+  m_listener = listener;
+  m_downloaderForGroup = new DownloadMatchingNewsArticlesToNewsDB(window, nsnull, nsnull, this);
+}
+
+nsMsgDownloadAllNewsgroups::~nsMsgDownloadAllNewsgroups()
+{
+}
+
+NS_IMETHODIMP nsMsgDownloadAllNewsgroups::OnStartRunningUrl(nsIURI* url)
+{
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsMsgDownloadAllNewsgroups::OnStopRunningUrl(nsIURI* url, nsresult exitCode)
+{
+  nsresult rv = exitCode;
+  if (NS_SUCCEEDED(exitCode))
+    rv = ProcessNextGroup();
+  else if (m_listener)  // notify main observer.
+    m_listener->OnStopRunningUrl(url, exitCode);
+   
+  return rv;
+}
+
+// leaves m_currentServer at the next nntp "server" that
+// might have folders to download for offline use. If no more servers,
+// m_currentServer will be left at nsnull.
+// Also, sets up m_serverEnumerator to enumerate over the server
+nsresult nsMsgDownloadAllNewsgroups::AdvanceToNextServer()
+{
+  nsresult rv;
+
+  if (!m_allServers)
+  {
+    NS_WITH_SERVICE(nsIMsgAccountManager, accountManager,
+                      NS_MSGACCOUNTMANAGER_CONTRACTID, &rv);
+    NS_ASSERTION(accountManager && NS_SUCCEEDED(rv), "couldn't get account mgr");
+    if (!accountManager || NS_FAILED(rv)) return rv;
+
+    rv = accountManager->GetAllServers(getter_AddRefs(m_allServers));
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+  PRUint32 serverIndex = (m_currentServer) ? m_allServers->IndexOf(m_currentServer) + 1 : 0;
+  m_currentServer = nsnull;
+  PRUint32 numServers; 
+  m_allServers->Count(&numServers);
+  nsCOMPtr <nsIFolder> rootFolder;
+
+  while (serverIndex < numServers)
+  {
+    nsISupports* serverSupports = m_allServers->ElementAt(serverIndex);
+    serverIndex++;
+
+    nsCOMPtr<nsIMsgIncomingServer> server = do_QueryInterface(serverSupports);
+    NS_RELEASE(serverSupports);
+    nsCOMPtr <nsINntpIncomingServer> newsServer = do_QueryInterface(server);
+    if (!newsServer) // news servers aren't involved in offline imap
+      continue;
+    if (server)
+    {
+      m_currentServer = server;
+      server->GetRootFolder(getter_AddRefs(rootFolder));
+      if (rootFolder)
+      {
+        NS_NewISupportsArray(getter_AddRefs(m_allFolders));
+        rv = rootFolder->ListDescendents(m_allFolders);
+        if (NS_SUCCEEDED(rv))
+          m_allFolders->Enumerate(getter_AddRefs(m_serverEnumerator));
+        if (NS_SUCCEEDED(rv) && m_serverEnumerator)
+        {
+          rv = m_serverEnumerator->First();
+          if (NS_SUCCEEDED(rv))
+            break;
+        }
+      }
+    }
+  }
+  return rv;
+}
+
+nsresult nsMsgDownloadAllNewsgroups::AdvanceToNextGroup()
+{
+  nsresult rv;
+
+  if (m_currentFolder)
+  {
+    nsCOMPtr <nsIMsgNewsFolder> newsFolder = do_QueryInterface(m_currentFolder);
+    if (newsFolder)
+      newsFolder->SetSaveArticleOffline(PR_FALSE);
+  
+    m_currentFolder = nsnull;
+  }
+
+  if (!m_currentServer)
+     rv = AdvanceToNextServer();
+  else
+    rv = m_serverEnumerator->Next();
+  if (!NS_SUCCEEDED(rv))
+    rv = AdvanceToNextServer();
+
+  if (NS_SUCCEEDED(rv))
+  {
+    nsCOMPtr <nsISupports> supports;
+    rv = m_serverEnumerator->CurrentItem(getter_AddRefs(supports));
+    m_currentFolder = do_QueryInterface(supports);
+  }
+  return rv;
+}
+
+nsresult DownloadMatchingNewsArticlesToNewsDB::RunSearch(nsIMsgFolder *folder, nsIMsgDatabase *newsDB, nsIMsgSearchSession *searchSession)
+{
+  m_folder = folder;
+  m_newsDB = newsDB;
+
+  m_keysToDownload.RemoveAll();
+  nsresult rv;
+  NS_ENSURE_ARG(searchSession);
+  NS_ENSURE_ARG(folder);
+
+  searchSession->RegisterListener(this);
+  rv = searchSession->AddScopeTerm(nsMsgSearchScope::OfflineNewsgroup, folder);
+	return searchSession->Search(m_window);
+}
+
+nsresult nsMsgDownloadAllNewsgroups::ProcessNextGroup()
+{
+  nsresult rv = NS_OK;
+
+  while (NS_SUCCEEDED(rv))
+  {
+    rv = AdvanceToNextGroup(); 
+    if (m_currentFolder)
+    {
+      PRUint32 folderFlags;
+      m_currentFolder->GetFlags(&folderFlags);
+      if (folderFlags & MSG_FOLDER_FLAG_OFFLINE)
+        break;
+    }
+  }
+  if (!NS_SUCCEEDED(rv))
+  {
+    if (m_listener)
+      return m_listener->OnStopRunningUrl(nsnull, NS_OK);
+  }
+
+  nsCOMPtr <nsIMsgDatabase> db;
+  nsCOMPtr <nsISupportsArray> termList;
+  nsCOMPtr <nsIMsgDownloadSettings> downloadSettings;
+  m_currentFolder->GetMsgDatabase(m_window, getter_AddRefs(db));
+  rv = m_currentFolder->GetDownloadSettings(getter_AddRefs(downloadSettings));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr <nsIMsgNewsFolder> newsFolder = do_QueryInterface(m_currentFolder);
+  if (newsFolder)
+    newsFolder->SetSaveArticleOffline(PR_TRUE);
+
+  if (!m_termList)
+  {
+    rv = NS_NewISupportsArray(getter_AddRefs(m_termList));
+    NS_ENSURE_SUCCESS(rv, rv);
+  }
+
+  nsCOMPtr <nsIMsgSearchSession> searchSession = do_CreateInstance(NS_MSGSEARCHSESSION_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  PRBool downloadByDate, downloadUnreadOnly;
+  PRUint32 ageLimitOfMsgsToDownload;
+
+  downloadSettings->GetDownloadByDate(&downloadByDate);
+	downloadSettings->GetDownloadUnreadOnly(&downloadUnreadOnly);
+	downloadSettings->GetAgeLimitOfMsgsToDownload(&ageLimitOfMsgsToDownload);
+
+  nsCOMPtr <nsIMsgSearchTerm> term;
+	nsCOMPtr <nsIMsgSearchValue>		value;
+
+  rv = searchSession->CreateTerm(getter_AddRefs(term));
+  NS_ENSURE_SUCCESS(rv, rv);
+  term->GetValue(getter_AddRefs(value));
+
+  if (downloadUnreadOnly)
+  {
+    value->SetAttrib(nsMsgSearchAttrib::MsgStatus);
+    value->SetStatus(MSG_FLAG_READ);
+    searchSession->AddSearchTerm(nsMsgSearchAttrib::MsgStatus, nsMsgSearchOp::Isnt, value, PR_TRUE, nsnull);
+  }
+	if (downloadByDate)
+	{
+    value->SetAttrib(nsMsgSearchAttrib::AgeInDays);
+		value->SetAge(ageLimitOfMsgsToDownload);
+		searchSession->AddSearchTerm(nsMsgSearchAttrib::AgeInDays, nsMsgSearchOp::IsLowerThan, value, nsMsgSearchBooleanOp::BooleanAND, nsnull);
+	}
+  value->SetAttrib(nsMsgSearchAttrib::MsgStatus);
+	value->SetStatus(MSG_FLAG_OFFLINE);
+  searchSession->AddSearchTerm(nsMsgSearchAttrib::MsgStatus, nsMsgSearchOp::Isnt, value, nsMsgSearchBooleanOp::BooleanAND, nsnull);
+
+  m_downloaderForGroup->RunSearch(m_currentFolder, db, searchSession);
+  return rv;
+}

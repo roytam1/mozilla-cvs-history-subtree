@@ -76,13 +76,17 @@ private:
   nsresult SynchronizeOfflineImapChanges();
   nsresult StopRunning(nsresult exitStatus);
   nsresult SendUnsentMessages();
+  nsresult DownloadOfflineNewsgroups();
+  nsresult DownloadMail();
+
+  nsresult SetOnlineState(PRBool online);
 
   PRBool m_inProgress;
-  PRBool m_sendUnsentMessage;
+  PRBool m_sendUnsentMessages;
   PRBool m_downloadNews;
   PRBool m_downloadMail;
   PRBool m_playbackOfflineImapOps;
-  PRBool m_goOffineWhenDone;
+  PRBool m_goOfflineWhenDone;
   offlineManagerState m_curState;
   offlineManagerOperation m_curOperation;
   nsCOMPtr <nsIMsgWindow> m_window;

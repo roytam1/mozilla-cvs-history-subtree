@@ -1166,6 +1166,41 @@ NS_IMETHODIMP nsMsgIncomingServer::SetRetentionSettings(nsIMsgRetentionSettings 
   return NS_OK;
 }
 
+NS_IMETHODIMP nsMsgIncomingServer::GetDownloadSettings(nsIMsgDownloadSettings **settings)
+{
+  NS_ENSURE_ARG_POINTER(settings);
+  PRBool downloadUnreadOnly = PR_FALSE;
+  PRBool downloadByDate = PR_FALSE;
+  PRUint32 ageLimitOfMsgsToDownload = 0;
+  nsresult rv = NS_OK;
+  if (!m_downloadSettings)
+  {
+    m_downloadSettings = do_CreateInstance(NS_MSG_DOWNLOADSETTINGS_CONTRACTID);
+    if (m_downloadSettings)
+    {
+      rv = GetBoolValue("downloadUnreadOnly", &downloadUnreadOnly);
+      rv = GetBoolValue("downloadByDate", &downloadByDate);
+      rv = GetIntValue("ageLimit", (PRInt32 *) &ageLimitOfMsgsToDownload);
+      m_downloadSettings->SetDownloadUnreadOnly(downloadUnreadOnly);
+      m_downloadSettings->SetDownloadByDate(downloadByDate);
+      m_downloadSettings->SetAgeLimitOfMsgsToDownload(ageLimitOfMsgsToDownload);
+    }
+    else
+      rv = NS_ERROR_OUT_OF_MEMORY;
+    // Create an empty download settings object, 
+    // get the settings from the server prefs, and init the object from the prefs.
+  }
+  *settings = m_downloadSettings;
+  NS_IF_ADDREF(*settings);  return rv;
+}
+
+NS_IMETHODIMP nsMsgIncomingServer::SetDownloadSettings(nsIMsgDownloadSettings *settings)
+{
+  m_downloadSettings = settings;
+  return NS_OK;
+}
+
+
 #define BASE_MSGS_URL       "chrome://messenger/locale/messenger.properties"
 
 NS_IMETHODIMP nsMsgIncomingServer::DisplayOfflineMsg(nsIMsgWindow *aMsgWindow)

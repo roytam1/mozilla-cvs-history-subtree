@@ -3176,6 +3176,7 @@ NS_IMETHODIMP nsImapMailFolder::DownloadAllForOffline(nsIUrlListener *listener, 
     nsCAutoString messageIdsToDownload;
     nsMsgKeyArray msgsToDownload;
 
+    GetDatabase(msgWindow);
     GetBodysToDownload(&msgsToDownload);
     rv = AllocateUidStringFromKeys(msgsToDownload.GetArray(), msgsToDownload.GetSize(), messageIdsToDownload);
     NS_ENSURE_SUCCESS(rv, rv);

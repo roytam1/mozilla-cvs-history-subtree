@@ -28,6 +28,7 @@ interface nsIMsgFolderCache;
 interface nsIMsgWindow;
 interface nsIMsgFilterList;
 interface nsIMsgRetentionSettings;
+interface nsIMsgDownloadSettings;
 
 /*
  * Interface for incoming mail/news host
@@ -204,6 +205,7 @@ interface nsIMsgIncomingServer : nsISupports {
   attribute long maxMessageSize;
 
   attribute nsIMsgRetentionSettings retentionSettings;
+  attribute nsIMsgDownloadSettings downloadSettings;
 };
 
 %{C++

@@ -50,10 +50,10 @@ interface nsINntpService : nsISupports {
 
   nsIURI fetchMessage(in nsIMsgFolder newsFolder, in nsMsgKey key, in nsIMsgWindow aMsgWindow, in nsISupports aConsumer, in nsIUrlListener aUrlListener);
 
+  void downloadNewsgroupsForOffline(in nsIMsgWindow aMsgWindow, in nsIUrlListener aListener);
   /** 
    * can handle news_message:// and news:// 
    */
   void decomposeNewsURI(in string uri, out nsIMsgFolder folder, out nsMsgKey key);
-
 };
 

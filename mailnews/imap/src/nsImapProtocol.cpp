@@ -1787,8 +1787,7 @@ void nsImapProtocol::ProcessSelectedStateURL()
             else
             {
               // downloading a single message: try to do it by bodystructure, and/or do it by chunks
-              PRUint32 messageSize = GetMessageSize(messageIdString,
-                bMessageIdsAreUids);
+              PRUint32 messageSize = GetMessageSize(messageIdString, bMessageIdsAreUids);
               // We need to check the format_out bits to see if we are allowed to leave out parts,
               // or if we are required to get the whole thing.  Some instances where we are allowed
               // to do it by parts:  when viewing a message, or its source
@@ -3410,7 +3409,7 @@ PRUint32 nsImapProtocol::GetMessageSize(const char * messageId,
                                         PRBool idsAreUids)
 {
   const char *folderFromParser = GetServerStateParser().GetSelectedMailboxName(); 
-  if (folderFromParser)
+  if (folderFromParser && messageId)
   {
     char *id = (char *)PR_CALLOC(nsCRT::strlen(messageId) + 1);
     char *folderName;

@@ -37,11 +37,14 @@ static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
 static NS_DEFINE_CID(kCNewsDB, NS_NEWSDB_CID);
 static NS_DEFINE_CID(kCImapDB, NS_IMAPDB_CID);
 static NS_DEFINE_CID(kCMsgRetentionSettings, NS_MSG_RETENTIONSETTINGS_CID);
+static NS_DEFINE_CID(kCMsgDownloadSettings, NS_MSG_DOWNLOADSETTINGS_CID);
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMailDatabase)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsNewsDatabase)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsImapMailDatabase)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgRetentionSettings)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgDownloadSettings)
+
 
 // Module implementation for the msg db library
 class nsMsgDBModule : public nsIModule
@@ -64,6 +67,7 @@ protected:
     nsCOMPtr<nsIGenericFactory> mNewsDBFactory;
     nsCOMPtr<nsIGenericFactory> mImapDBFactory;
     nsCOMPtr<nsIGenericFactory> mMsgRetentionSettingsFactory;
+    nsCOMPtr<nsIGenericFactory> mMsgDownloadSettingsFactory;
 };
 
 
@@ -99,6 +103,7 @@ void nsMsgDBModule::Shutdown()
     mNewsDBFactory = null_nsCOMPtr();
     mImapDBFactory = null_nsCOMPtr();
     mMsgRetentionSettingsFactory = null_nsCOMPtr();
+    mMsgDownloadSettingsFactory = null_nsCOMPtr();
 }
 
 // Create a factory object for creating instances of aClass.
@@ -151,6 +156,12 @@ NS_IMETHODIMP nsMsgDBModule::GetClassObject(nsIComponentManager *aCompMgr,
         rv = NS_NewGenericFactory(getter_AddRefs(mMsgRetentionSettingsFactory), &nsMsgRetentionSettingsConstructor);
       fact = mMsgRetentionSettingsFactory;
     }
+    else if (aClass.Equals(kCMsgDownloadSettings))
+    {
+      if (!mMsgDownloadSettingsFactory)
+        rv = NS_NewGenericFactory(getter_AddRefs(mMsgDownloadSettingsFactory), &nsMsgDownloadSettingsConstructor);
+      fact = mMsgDownloadSettingsFactory;
+    }
     if (fact)
         rv = fact->QueryInterface(aIID, r_classObj);
 
@@ -173,8 +184,11 @@ static Components gComponents[] = {
     { "Imap DB", &kCImapDB,
       nsnull },
     { "Msg Retention Settings", &kCMsgRetentionSettings,
-    NS_MSG_RETENTIONSETTINGS_CONTRACTID}
+    NS_MSG_RETENTIONSETTINGS_CONTRACTID},
+    { "Msg Download Settings", &kCMsgDownloadSettings,
+    NS_MSG_DOWNLOADSETTINGS_CONTRACTID}
 };
+
 
 #define NUM_COMPONENTS (sizeof(gComponents) / sizeof(gComponents[0]))
 

@@ -37,7 +37,7 @@ public:												// set to one folder to playback one folder only
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSIURLLISTENER
-	nsresult		ProcessNextOperation(); // this kicks off playback
+	virtual nsresult		ProcessNextOperation(); // this kicks off playback
 	
 	PRInt32		GetCurrentUIDValidity() { return mCurrentUIDValidity; }
 	void		SetCurrentUIDValidity(PRInt32 uidvalidity) { mCurrentUIDValidity = uidvalidity; }
@@ -47,7 +47,7 @@ public:												// set to one folder to playback one folder only
 
 	PRBool		CreateOfflineFolder(nsIMsgFolder *folder);
   void      SetWindow(nsIMsgWindow *window);
-private:
+protected:
 	PRBool		CreateOfflineFolders();
   nsresult  AdvanceToNextServer();
 	nsresult  AdvanceToNextFolder();
@@ -79,6 +79,14 @@ private:
 	PRBool				m_pseudoOffline;		// for queueing online events in offline db
 	PRBool				m_createdOfflineFolders;
 
+};
+
+class nsImapOfflineDownloader : public nsImapOfflineSync
+{
+public:
+  nsImapOfflineDownloader(nsIMsgWindow *window, nsIUrlListener *listener);
+  virtual ~nsImapOfflineDownloader();
+	virtual nsresult		ProcessNextOperation(); // this kicks off download
 };
 
 #endif
