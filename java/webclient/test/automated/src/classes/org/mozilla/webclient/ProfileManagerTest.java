@@ -117,6 +117,10 @@ public class ProfileManagerTest extends WebclientTestCase {
 	}
 	assertTrue(!hasExpectedProfile);
 
+	// switch back to the base profile
+	profiles = profileManager.getProfileList();
+	profileManager.setCurrentProfile(profiles[0]);
+
 	// test that we can delete the new profile
 	profileManager.deleteProfile(newName, true);
 
