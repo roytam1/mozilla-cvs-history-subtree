@@ -318,8 +318,7 @@ main(int argc, char ** argv)
 	    }
 	    continue;
 	}
-	cert = (CERTCertificate *)
-		__CERT_NewTempCertificate(certhandle,derCert, NULL, 
+	cert = CERT_NewTempCertificate(certhandle,derCert, NULL, 
 							PR_FALSE, PR_TRUE);
 	if (cert == NULL) {
 	    if (verbose) {

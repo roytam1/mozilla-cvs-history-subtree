@@ -261,8 +261,6 @@ void _PR_InitLog(void)
 
 void _PR_LogCleanup(void)
 {
-    PRLogModuleInfo *lm = logModules;
-
     PR_LogFlush();
 
 #ifdef _PR_USE_STDIO_FOR_LOGGING
@@ -274,14 +272,6 @@ void _PR_LogCleanup(void)
         PR_Close(logFile);
     }
 #endif
-
-    while (lm != NULL) {
-        PRLogModuleInfo *next = lm->next;
-        PR_Free((/*const*/ char *)lm->name);
-        PR_Free(lm);
-        lm = next;
-    }
-    logModules = NULL;
 }
 
 static void _PR_SetLogModuleLevel( PRLogModuleInfo *lm )

@@ -50,13 +50,6 @@
 #include "secmpi.h"
 #include "secitem.h"
 
-#if 0
-/* The cutoff for determining whether a private key operation double check
- * should be performed by a public key operation or Shamir's test.
- */
-#define MAX_BITS_IN_E_FOR_PUBKEY_SIG_CHECK ???
-#endif
-
 /*
 ** Number of times to attempt to generate a prime (p or q) from a random
 ** seed (the seed changes for each iteration).
@@ -450,95 +443,13 @@ cleanup:
 }
 
 /*
- * Perform a check on the received private key CRT parameters.  An attack
- * against RSA CRT was described by Boneh, DeMillo, and Lipton in:
- * "On the Importance of Eliminating Errors in Cryptographic Computations",
- * http://theory.stanford.edu/~dabo/papers/faults.ps.gz
- *
- * The check used to prevent this attack was demonstrated by Shamir in:
- * "How to check modular exponentiation", Rump Session of EUROCRYPT '97
- */
-static SECStatus 
-rsa_PrivateKeyOpCRTCheckedShamir(RSAPrivateKey *key, mp_int *m, mp_int *c)
-{
-    /* XXX
-     * This is not implemented.  Open issues are how to store/maintain a
-     * set of { r(p), r(q) } values, where r is a 32-bit prime number used
-     * in the test.
-     * Also, we must determine when this test should be performed in favor
-     * of a simple public key operation.
-     */
-#if 0
-    mp_int p, q, qInv;
-    mp_int m1, m2, h, ctmp, res1, res2;
-    mp_err   err = MP_OKAY;
-    SECStatus rv = SECSuccess;
-    MP_DIGITS(&p)    = 0;
-    MP_DIGITS(&q)    = 0;
-    MP_DIGITS(&qInv) = 0;
-    MP_DIGITS(&m1)   = 0;
-    MP_DIGITS(&m2)   = 0;
-    MP_DIGITS(&h)    = 0;
-    MP_DIGITS(&ctmp) = 0;
-    MP_DIGITS(&res1) = 0;
-    MP_DIGITS(&res2) = 0;
-    CHECK_MPI_OK( mp_init(&p)    );
-    CHECK_MPI_OK( mp_init(&q)    );
-    CHECK_MPI_OK( mp_init(&qInv) );
-    CHECK_MPI_OK( mp_init(&m1)   );
-    CHECK_MPI_OK( mp_init(&m2)   );
-    CHECK_MPI_OK( mp_init(&h)    );
-    CHECK_MPI_OK( mp_init(&ctmp) );
-    CHECK_MPI_OK( mp_init(&res1) );
-    CHECK_MPI_OK( mp_init(&res2) );
-    /* copy private key parameters into mp integers */
-    SECITEM_TO_MPINT(key->prime1,      &p);    /* p */
-    SECITEM_TO_MPINT(key->prime2,      &q);    /* q */
-    SECITEM_TO_MPINT(key->coefficient, &qInv); /* qInv = q**-1 mod p */
-    /* s1 = M**d mod pr */
-    CHECK_MPI_OK( mp_exptmod(m, d, &pr, s1) );
-    /* s2 = M**d mod qr */
-    CHECK_MPI_OK( mp_exptmod(m, d, &qr, s2) );
-    /* perform the check: s1 mod r = s2 mod r */
-    CHECK_MPI_OK( mp_mod_d(s1, r, &res1) );
-    CHECK_MPI_OK( mp_mod_d(s2, r, &res2) );
-    if (res1 != res2) {
-	rv = SECFailure;
-	goto cleanup;
-    }
-    /* reduce s1 = s1 mod p */
-    CHECK_MPI_OK( mp_mod(s1, p, &s1) );
-    /* reduce s2 = s2 mod q */
-    CHECK_MPI_OK( mp_mod(s2, q, &s2) );
-    /* 3.  h = (m1 - m2) * qInv mod p */
-    CHECK_MPI_OK( mp_submod(&m1, &m2, &p, &h) );
-    CHECK_MPI_OK( mp_mulmod(&h, &qInv, &p, &h)  );
-    /* 4.  m = m2 + h * q */
-    CHECK_MPI_OK( mp_mul(&h, &q, m) );
-    CHECK_MPI_OK( mp_add(m, &m2, m) );
-cleanup:
-    mp_clear(&p);
-    mp_clear(&q);
-    mp_clear(&qInv);
-    mp_clear(&m1);
-    mp_clear(&m2);
-    mp_clear(&h);
-    mp_clear(&ctmp);
-    mp_clear(&res1);
-    mp_clear(&res2);
-    if (err) {
-	MP_TO_SEC_ERROR(err);
-	rv = SECFailure;
-    }
-    return rv;
-#endif
-    return SECFailure;
-}
-
-/*
-**  As a defense against the same attack mentioned above, carry out the
-**  private key operation.  Follow up with a public key operation to invert
-**  the result.  Verify that result against the input.
+** An attack against RSA CRT was described by Boneh, DeMillo, and Lipton in:
+** "On the Importance of Eliminating Errors in Cryptographic Computations",
+** http://theory.stanford.edu/~dabo/papers/faults.ps.gz
+**
+** As a defense against the attack, carry out the private key operation, 
+** followed up with a public key operation to invert the result.  
+** Verify that result against the input.
 */
 static SECStatus 
 rsa_PrivateKeyOpCRTCheckedPubKey(RSAPrivateKey *key, mp_int *m, mp_int *c)
@@ -553,9 +464,6 @@ rsa_PrivateKeyOpCRTCheckedPubKey(RSAPrivateKey *key, mp_int *m, mp_int *c)
     CHECK_MPI_OK( mp_init(&e) );
     CHECK_MPI_OK( mp_init(&s) );
     CHECK_SEC_OK( rsa_PrivateKeyOpCRTNoCheck(key, m, c) );
-    /* Perform the CRT parameters check for the small e case.
-     * Simply verify that a public key op inverts this operation.
-     */
     SECITEM_TO_MPINT(key->modulus,        &n);
     SECITEM_TO_MPINT(key->publicExponent, &e);
     /* Perform a public key operation c = m ** e mod n */
@@ -755,7 +663,7 @@ rsa_PrivateKeyOp(RSAPrivateKey *key,
 {
     unsigned int modLen;
     unsigned int offset;
-    SECStatus rv = SECSuccess;
+    SECStatus rv;
     mp_err err;
     mp_int n, c, m;
     mp_int f, g;
@@ -798,14 +706,7 @@ rsa_PrivateKeyOp(RSAPrivateKey *key,
          key->coefficient.len == 0) {
 	CHECK_SEC_OK( rsa_PrivateKeyOpNoCRT(key, &m, &c, &n, modLen) );
     } else if (check) {
-	/* until the implementation of Shamir's check is complete, all
-	 * double-checks will be done via a public key operation.
-	 */
-	if (PR_TRUE) {
-	    CHECK_SEC_OK( rsa_PrivateKeyOpCRTCheckedPubKey(key, &m, &c) );
-	} else {
-	    CHECK_SEC_OK( rsa_PrivateKeyOpCRTCheckedShamir(key, &m, &c) );
-	}
+	CHECK_SEC_OK( rsa_PrivateKeyOpCRTCheckedPubKey(key, &m, &c) );
     } else {
 	CHECK_SEC_OK( rsa_PrivateKeyOpCRTNoCheck(key, &m, &c) );
     }
@@ -967,40 +868,3 @@ cleanup:
     return rv;
 }
 
-/* cleanup at shutdown */
-void RSA_Cleanup(void)
-{
-    if (!coBPInit.initialized)
-	return;
-
-    while (!PR_CLIST_IS_EMPTY(&blindingParamsList.head))
-    {
-	struct RSABlindingParamsStr * rsabp = (struct RSABlindingParamsStr *)
-	    PR_LIST_HEAD(&blindingParamsList.head);
-	PR_REMOVE_LINK(&rsabp->link);
-	mp_clear(&rsabp->f);
-	mp_clear(&rsabp->g);
-	SECITEM_FreeItem(&rsabp->modulus,PR_FALSE);
-	PORT_Free(rsabp);
-    }
-
-    if (blindingParamsList.lock)
-    {
-	PZ_DestroyLock(blindingParamsList.lock);
-	blindingParamsList.lock = NULL;
-    }
-
-    coBPInit.initialized = 0;
-    coBPInit.inProgress = 0;
-    coBPInit.status = 0;
-}
-
-/*
- * need a central place for this function to free up all the memory that
- * free_bl may have allocated along the way. Currently only RSA does this,
- * so I've put it here for now.
- */
-void BL_Cleanup(void)
-{
-    RSA_Cleanup();
-}

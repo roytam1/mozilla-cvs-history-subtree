@@ -238,7 +238,7 @@ SetupAVAValue(PRArenaPool *arena, int valueType, char *value, SECItem *it,
     }
 
     if (((valueType != SEC_ASN1_UNIVERSAL_STRING) && (valueLen > maxLen)) ||
-      ((valueType == SEC_ASN1_UNIVERSAL_STRING) && (valueLen > (maxLen * 4)))) {
+	(valueType == SEC_ASN1_UNIVERSAL_STRING) && (valueLen > (maxLen * 4))) {
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
 	return SECFailure;
     } 
@@ -371,8 +371,6 @@ const SEC_ASN1Template CERT_NameTemplate[] = {
     { SEC_ASN1_SEQUENCE_OF,
 	  offsetof(CERTName,rdns), CERT_RDNTemplate, sizeof(CERTName) }
 };
-
-SEC_ASN1_CHOOSER_IMPLEMENT(CERT_NameTemplate)
 
 CERTName *
 CERT_CreateName(CERTRDN *rdn0, ...)

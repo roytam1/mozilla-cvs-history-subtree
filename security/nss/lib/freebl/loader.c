@@ -949,11 +949,3 @@ PQG_DestroyVerify(PQGVerify *vfy)
   (vector->p_PQG_DestroyVerify)( vfy);
 }
 #endif
-
-void 
-BL_Cleanup(void)
-{
-  if (!vector && PR_SUCCESS != freebl_RunLoaderOnce())
-      return;
-  (vector->p_BL_Cleanup)();
-}

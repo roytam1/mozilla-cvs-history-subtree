@@ -271,8 +271,8 @@ RNG_RNGInit(void)
 ** material
 */
 SECStatus 
-prng_RandomUpdate(RNGContext *rng, const void *data, size_t bytes, 
-	unsigned char *q)
+prng_RandomUpdate(RNGContext *rng, 
+		  const void *data, size_t bytes, unsigned char *q)
 {
     SECStatus rv = SECSuccess;
     unsigned char inputhash[BSIZE];
