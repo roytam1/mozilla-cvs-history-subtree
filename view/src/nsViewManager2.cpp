@@ -2275,92 +2275,47 @@ NS_IMETHODIMP nsViewManager2::GetRootScrollableView(nsIScrollableView **aScrolla
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsViewManager2::Display(nsIView* aView)
+NS_IMETHODIMP nsViewManager2::Display(nsIView* aView, nscoord aX, nscoord aY)
 {
-	nsIRenderingContext *localcx = nsnull;
-	nsRect              trect;
+  nsIRenderingContext *localcx = nsnull;
+  nsRect              trect;
 
-	if (PR_FALSE == mRefreshEnabled)
-		return NS_OK;
+  if (PR_FALSE == mRefreshEnabled)
+    return NS_OK;
 
-	NS_ASSERTION(!(PR_TRUE == mPainting), "recursive painting not permitted");
+  NS_ASSERTION(!(PR_TRUE == mPainting), "recursive painting not permitted");
 
-	mPainting = PR_TRUE;
+  mPainting = PR_TRUE;
 
-	mContext->CreateRenderingContext(localcx);
+  mContext->CreateRenderingContext(localcx);
 
-	//couldn't get rendering context. this is ok if at startup
-	if (nsnull == localcx)
-		{
-			mPainting = PR_FALSE;
-			return NS_ERROR_FAILURE;
-		}
+  //couldn't get rendering context. this is ok if at startup
+  if (nsnull == localcx)
+    {
+      mPainting = PR_FALSE;
+      return NS_ERROR_FAILURE;
+    }
 
-	aView->GetBounds(trect);
-	nscoord x = trect.x, y = trect.y;
+  aView->GetBounds(trect);
+  nscoord x = trect.x, y = trect.y;
 
-	// XXX Temporarily reset the position to (0, 0), that way when we paint
-	// we won't end up translating incorrectly
-	aView->SetPosition(0, 0);
+  localcx->Translate(aX, aY);
 
-	PRBool  result;
+  PRBool  result;
 
-	trect.x = trect.y = 0;
-//    printf("page size = %d, %d\n",trect.width,trect.height);
+  trect.x = trect.y = 0;
+  localcx->SetClipRect(trect, nsClipCombine_kReplace, result);
 
-      int bandheight = 0;
-      mContext->GetBandHeight(bandheight);
-      if (bandheight != 0)
-      {
-        int pageheight = trect.height;
-        int numbands = pageheight/bandheight;
-        if (pageheight%bandheight != 0) numbands++;
+  // Paint the view. The clipping rect was set above set don't clip again.
+  //aView->Paint(*localcx, trect, NS_VIEW_FLAG_CLIP_SET, result);
+  RenderViews(aView,*localcx,trect,result);
 
-//      printf("bandheight=%d, pageheight=%d, numbands=%d\n",bandheight,pageheight,numbands);
-        trect.height = bandheight+1; //+1 else we lose a row at bottom of clip rectangle
-        for (int i = 0; i<numbands; i++)
-        {
-//        printf("Band[%d], ",i);
+  NS_RELEASE(localcx);
 
-          mContext->StartBand();
+  mPainting = PR_FALSE;
 
-          trect.y = 0; //i * bandheight;
+  return NS_OK;
 
-          localcx->SetClipRect(trect, nsClipCombine_kReplace, result);
-
-            // Set the offset for this band so we will always origin to 0,0
-            // of our clipping pixmap regardless of where the band is on the 'page'.
-            mOffsetY = i * bandheight;
-//             printf("mOffsetY=%d\n",mOffsetY);
-
-          // Paint the view. The clipping rect was set above set don't clip again.
-          //aView->Paint(*localcx, trect, NS_VIEW_FLAG_CLIP_SET, result);
-          RenderViews(aView,*localcx,trect,result);
-
-            // Make sure we restore the offset to 0 else the display gets corrupted
-            mOffsetY = 0;
-
-          mContext->EndBand();
-        }
-      }
-      else
-      {
-        localcx->SetClipRect(trect, nsClipCombine_kReplace, result);
-
-        // Paint the view. The clipping rect was set above set don't clip again.
-        //aView->Paint(*localcx, trect, NS_VIEW_FLAG_CLIP_SET, result);
-        RenderViews(aView,*localcx,trect,result);
-      }
-
-
-	// XXX Reset the view's origin
-	aView->SetPosition(x, y);
-
-	NS_RELEASE(localcx);
-
-	mPainting = PR_FALSE;
-
-	return NS_OK;
 }
 
 NS_IMETHODIMP nsViewManager2::AddCompositeListener(nsICompositeListener* aListener)

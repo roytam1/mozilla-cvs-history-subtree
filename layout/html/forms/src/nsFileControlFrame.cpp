@@ -265,7 +265,8 @@ nsFileControlFrame::MouseClick(nsIDOMEvent* aMouseEvent)
 
   // Get Loc title
   nsString title;
-  nsFormControlHelper::GetLocalizedString("FileUpload", title);
+  nsFormControlHelper::GetLocalizedString(nsFormControlHelper::GetHTMLPropertiesFileName(),
+                                          "FileUpload", title);
 
   nsCOMPtr<nsIFilePicker> filePicker = do_CreateInstance("@mozilla.org/filepicker;1");
   if (!filePicker)
@@ -654,6 +655,10 @@ nsFileControlFrame::Paint(nsIPresContext* aPresContext,
                           const nsRect& aDirtyRect,
                           nsFramePaintLayer aWhichLayer)
 {
+  PRBool isVisible;
+  if (NS_SUCCEEDED(IsVisibleForPainting(aPresContext, aRenderingContext, PR_TRUE, &isVisible)) && !isVisible) {
+    return NS_OK;
+  }
   return nsAreaFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
 }
 
