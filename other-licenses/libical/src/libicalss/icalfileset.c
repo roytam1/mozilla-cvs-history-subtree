@@ -130,7 +130,7 @@ icalfileset* icalfileset_new_open(const char* path, int flags, mode_t mode)
 #ifndef WIN32
     impl->fd = open(impl->path,flags, mode);
 #else
-	impl->fd = sopen(impl->path,flags, _SH_DENYWR, _S_IREAD | _S_IWRITE);
+	impl->fd = sopen(impl->path,flags | O_BINARY, _SH_DENYWR, _S_IREAD | _S_IWRITE);
 #endif
     
     if (impl->fd < 0){
