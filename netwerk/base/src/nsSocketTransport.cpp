@@ -1932,17 +1932,17 @@ nsSocketIS::Read(char *aBuf, PRUint32 aCount, PRUint32 *aBytesRead)
     NS_ENSURE_ARG_POINTER(aBytesRead);
     NS_ENSURE_TRUE(mSock, NS_ERROR_NOT_INITIALIZED);
     PRInt32 result = PR_Read(mSock, aBuf, aCount);
-    LOG(("nsSocketTransport: PR_Read(count=%u) returned %d\n", aCount, result));
+    LOG(("nsSocketIS: PR_Read(count=%u) returned %d\n", aCount, result));
     mError = 0;
     nsresult rv = NS_OK;
     if (result < 0) {
         mError = PR_GetError();
         if (PR_WOULD_BLOCK_ERROR == mError) {
-            LOG(("nsSocketTransport: PR_Read() failed with PR_WOULD_BLOCK_ERROR\n"));
+            LOG(("nsSocketIS: PR_Read() failed with PR_WOULD_BLOCK_ERROR\n"));
             rv = NS_BASE_STREAM_WOULD_BLOCK;
         }
         else {
-            LOG(("nsSocketTransport: PR_Read() failed [error=%x, os_error=%x]\n",
+            LOG(("nsSocketIS: PR_Read() failed [error=%x, os_error=%x]\n",
                 mError, PR_GetOSError()));
             rv = NS_ERROR_FAILURE;
         }
@@ -2260,7 +2260,20 @@ nsSocketReadRequest::OnRead()
     rv = mInputStream->Available(&amount);
     if (NS_FAILED(rv)) return rv;
 
-    amount = PR_MIN(amount, MAX_IO_TRANSFER_SIZE);
+ // Hack below:
+ // So, there are two cases that we are worried about:
+ // On the mac, the impl of PR_Poll is a timeout.  What this means
+ // for us is that Available might return zero.  If we passed zero,
+ // this we may cause read to terminate prematurely.
+ // The other case is SSL which might require PR_Read to be called
+ // even if there were no bytes to read. (for handshaking).
+ // Therefore, we will lie and say that there is data to read when
+ // available return zero.  -- dougt/darin
+
+ if (amount == 0)
+  amount = MAX_IO_TRANSFER_SIZE;
+ else
+     amount = PR_MIN(amount, MAX_IO_TRANSFER_SIZE);
 
     LOG(("nsSocketReadRequest: [this=%x] calling listener [offset=%u, count=%u]\n",
         this, offset, amount));
@@ -2286,7 +2299,7 @@ nsSocketReadRequest::OnRead()
         LOG(("nsSocketReadRequest: [this=%x] error reading socket.\n", this));
     }
     else {
-        PRUint32 total = offset - mInputStream->GetOffset();
+        PRUint32 total = mInputStream->GetOffset() - offset;
         offset += total;
 
         if ((0 == total) && !mInputStream->GotWouldBlock())
@@ -2373,7 +2386,7 @@ nsSocketWriteRequest::OnWrite()
         LOG(("nsSocketWriteRequest: [this=%x] provider failed, rv=%x.\n", this, rv));
     }
     else {
-        PRUint32 total = offset - mOutputStream->GetOffset();
+        PRUint32 total = mOutputStream->GetOffset() - offset;
         offset += total;
 
         if ((0 == total) && !mOutputStream->GotWouldBlock())
