@@ -2813,6 +2813,7 @@ NS_IMETHODIMP nsPluginHostImpl::LoadPlugins()
 static nsresult
 LoadXPCOMPlugin(nsIComponentManager* aComponentManager,
                 nsIRegistry* aRegistry,
+                const char* aCID,
                 nsRegistryKey aPluginKey,
                 nsPluginTag** aResult)
 {
@@ -2841,11 +2842,8 @@ LoadXPCOMPlugin(nsIComponentManager* aComponentManager,
   // To figure out the filename of the plugin, we'll need to get the
   // plugin's CID, and then navigate through the XPCOM registry to
   // pull out the DLL name to which the CID is registered.
-  nsXPIDLCString cid;
-  aRegistry->GetStringUTF8(aPluginKey, "cid", getter_Copies(cid));
-
   nsAutoString path = NS_LITERAL_STRING("software/mozilla/XPCOM/classID/");
-  path += NS_ConvertASCIItoUCS2(cid);
+  path += NS_ConvertASCIItoUCS2(aCID);
 
   nsRegistryKey cidKey;
   rv = aRegistry->GetKey(nsIRegistry::Common, path.GetUnicode(), &cidKey);
@@ -2932,11 +2930,14 @@ nsPluginHostImpl::LoadXPCOMPlugins(nsIComponentManager* aComponentManager, nsIFi
 
     // Pull out the information for an individual plugin, and link it
     // in to the mPlugins list.
+    nsXPIDLCString cid;
+    node->GetNameUTF8(getter_Copies(cid));
+
     nsRegistryKey key;
     node->GetKey(&key);
 
     nsPluginTag* tag;
-    rv = LoadXPCOMPlugin(aComponentManager, registry, key, &tag);
+    rv = LoadXPCOMPlugin(aComponentManager, registry, cid, key, &tag);
     if (NS_FAILED(rv)) return rv;
 
     tag->mNext = mPlugins;

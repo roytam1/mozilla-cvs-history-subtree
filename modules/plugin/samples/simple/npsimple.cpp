@@ -47,6 +47,7 @@
 #include "nsIFactory.h"
 #include "nsIRegistry.h"
 #include "nsMemory.h"
+#include "nsString.h"
 #include "simpleCID.h"
 
 #include "nsISimplePluginInstance.h"
@@ -545,23 +546,20 @@ RegisterPluginInfo(nsIComponentManager* aComponentManager)
         rv = registry->OpenWellKnownRegistry(nsIRegistry::ApplicationComponentRegistry);
 
         if (NS_SUCCEEDED(rv)) {
-            static const char kSimpleKey[] = "software/plugins/simple";
+            nsCAutoString path = "software/plugins/";
+            char* cid = kSimplePluginCID.ToString();
+            path += cid;
+            nsMemory::Free(cid);
 
-            nsRegistryKey simple;
-            rv = registry->AddSubtree(nsIRegistry::Common, kSimpleKey, &simple);
+            nsRegistryKey key;
+            rv = registry->AddSubtree(nsIRegistry::Common, cid, &key);
 
             if (NS_SUCCEEDED(rv)) {
-                char* cid = kSimplePluginCID.ToString();
-                if (cid) {
-                    registry->SetStringUTF8(simple, "cid", cid);
-                    nsMemory::Free(cid);
-                }
-
-                registry->SetStringUTF8(simple, "name", PLUGIN_NAME);
-                registry->SetStringUTF8(simple, "description", PLUGIN_DESCRIPTION);
-                registry->SetStringUTF8(simple, "mimetypes", PLUGIN_MIME_TYPE);
-                registry->SetStringUTF8(simple, "mimedescriptions", "Simple Sample Plugin-in");
-                registry->SetStringUTF8(simple, "extenstions", "smp");
+                registry->SetStringUTF8(key, "name", PLUGIN_NAME);
+                registry->SetStringUTF8(key, "description", PLUGIN_DESCRIPTION);
+                registry->SetStringUTF8(key, "mimetypes", PLUGIN_MIME_TYPE);
+                registry->SetStringUTF8(key, "mimedescriptions", "Simple Sample Plugin-in");
+                registry->SetStringUTF8(key, "extenstions", "smp");
             }
         }
 
