@@ -2033,15 +2033,20 @@ nsPostScriptObj::end_document()
         
 #ifdef VMS
     // VMS can't print to a pipe, so issue a print command for the
-    // mDocProlog file.
+    // mDocProlog file. Also, we do not delete the print file here since
+    // on OpenVMS we can not delete the file until after it has actually
+    // printed (we use a default print command of "print /delete" to take
+    // care of it).
 
     fclose(mPrintSetup->out);
 
     nsCAutoString prologFile;
     rv = mDocProlog->GetNativePath(prologFile);
     if (NS_SUCCEEDED(rv)) {
+      char *prologFileExternal = GENERIC_EXTERNAL_NAME(prologFile.get(),0);
       char *VMSPrintCommand =
-        PR_smprintf("%s %s.", mPrintSetup->print_cmd, prologFile.get());
+        PR_smprintf("%s %s", mPrintSetup->print_cmd, prologFileExternal);
+      free(prologFileExternal);
       if (!VMSPrintCommand)
         rv = NS_ERROR_OUT_OF_MEMORY;
       else {
@@ -2080,8 +2085,8 @@ nsPostScriptObj::end_document()
       int exitStatus = pclose(pipe);
       rv = WIFEXITED(exitStatus) ? NS_OK : NS_ERROR_GFX_PRINTER_CMD_FAILURE;
     }
-#endif
     mDocProlog->Remove(PR_FALSE);
+#endif
   }
   mPrintSetup->out = nsnull;
   mDocProlog = nsnull;
