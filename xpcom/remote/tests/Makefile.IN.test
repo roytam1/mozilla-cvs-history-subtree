@@ -19,8 +19,8 @@
 #
 # Contributor(s): 
 
-DEPTH           = ../..
-topsrcdir	= ../..
+DEPTH           = ../../..
+topsrcdir	= ../../..
 srcdir		= .
 VPATH		= .
 
@@ -28,11 +28,11 @@ include $(DEPTH)/config/autoconf.mk
 
 include $(topsrcdir)/config/config.mk
 
-SIMPLE_PROGRAMS = client server
+SIMPLE_PROGRAMS = clientIn serverIn
 
 XPIDL_MODULE = rpctest
 
-XPIDLSRCS =  nsIRPCTest.idl
+XPIDLSRCS =  nsIRPCTestIn.idl
 
 INCLUDES += -I../common -I../server -I../client
 
