@@ -599,6 +599,8 @@ rdf_BlockingParse(nsIURI* aURL, nsIStreamListener* aConsumer)
     // should be able to do by itself.
     
     nsCOMPtr<nsIChannel> channel;
+    nsCOMPtr<nsIRequest> request;
+
     // Null LoadGroup ?
     rv = NS_OpenURI(getter_AddRefs(channel), aURL, nsnull);
     if (NS_FAILED(rv)) return rv;
@@ -617,7 +619,7 @@ rdf_BlockingParse(nsIURI* aURL, nsIStreamListener* aConsumer)
     if (! proxy)
         goto done;
 
-    nsCOMPtr<nsIRequest> request = do_QueryInterface(channel);
+    request = do_QueryInterface(channel);
 
     aConsumer->OnStartRequest(request, nsnull);
     while (PR_TRUE) {
