@@ -1507,8 +1507,7 @@ nsMenuPopupFrame::FindMenuWithShortcut(nsIDOMKeyEvent* aKeyEvent, PRBool& doActi
   if (parentContent) {
     nsCOMPtr<nsIAtom> tag;
     parentContent->GetTag(*getter_AddRefs(tag));
-    // toolbarbutton is for the "Bookmarks" button on the toolbar
-    if (tag == nsXULAtoms::menu || tag == nsXULAtoms::toolbarbutton) 
+    if (tag != nsXULAtoms::menulist)
       isMenu = PR_TRUE;
   }
 
