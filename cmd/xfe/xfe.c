@@ -5171,5 +5171,5 @@ FEU_StayingAlive(void)
 	}
 
 	/* Service network connections */
-	NET_ProcessNet(-1, NET_EVERYTIME_TYPE);
+	NET_ProcessNet(0, NET_EVERYTIME_TYPE);
 }
