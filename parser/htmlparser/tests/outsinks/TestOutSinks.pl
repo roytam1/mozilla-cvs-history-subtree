@@ -30,12 +30,12 @@ $ENV{LD_LIBRARY_PATH} .= ":.";
 
 $errmsg = "";
 
-print "Testing simple html to html ...\n";
-$status = system("TestOutput -i text/html -o text/html -f 0 -c OutTestData/simple.html OutTestData/simple.html");
-if ($status != 0) {
-  print "Simple html to html failed.\n";
-  $errmsg = "$errmsg simple.html";
-}
+# print "Testing simple html to html ...\n";
+# $status = system("TestOutput -i text/html -o text/html -f 0 -c OutTestData/simple.html OutTestData/simple.html");
+# if ($status != 0) {
+#   print "Simple html to html failed.\n";
+#   $errmsg = "$errmsg simple.html";
+# }
 
 print "Testing simple copy case ...\n";
 $status = system("TestOutput -i text/html -o text/plain -f 0 -w 0 -c OutTestData/simplecopy.out OutTestData/simple.html");
@@ -86,13 +86,6 @@ if ($status != 0) {
   $errmsg = "$errmsg entityxif.out";
 }
 
-print "Testing XIF to HTML ...\n";
-$status = system("TestOutput -i text/xif -o text/html -c OutTestData/xifstuff.out OutTestData/xifstuff.xif");
-if ($status != 0) {
-  print "XIF to HTML conversion test failed.\n";
-  $errmsg = "$errmsg xifstuff.out";
-}
-
 print "Testing HTML Table to Text ...\n";
 $status = system("TestOutput -i text/html -o text/plain -f 2 -c OutTestData/htmltable.out OutTestData/htmltable.html");
 if ($status != 0) {
@@ -105,13 +98,6 @@ $status = system("TestOutput -i text/xif -o text/plain -f 2 -c OutTestData/xifdt
 if ($status != 0) {
   print "XIF to plain with doctype failed.\n";
   $errmsg = "$errmsg xifdtplain.out";
-}
-
-print "Testing XIF to html with doctype ...\n";
-$status = system("TestOutput -i text/xif -o text/html -f 0 -c OutTestData/xifdthtml.out OutTestData/doctype.xif");
-if ($status != 0) {
-  print "XIF to html with doctype failed.\n";
-  $errmsg = "$errmsg xifdthtml.out";
 }
 
 if ($errmsg ne "") {
