@@ -33,8 +33,8 @@
  *                               use in OS2
  */
 
-#ifndef nsScriptNameSetRegistry_h__
-#define nsScriptNameSetRegistry_h__
+#ifndef nsScriptNameSpaceManager_h__
+#define nsScriptNameSpaceManager_h__
 
 #include "nsIScriptNameSpaceManager.h"
 #include "nsHashtable.h"
@@ -77,4 +77,4 @@ protected:
   nsHashtable mGlobalNames;
 };
 
-#endif /* nsScriptNameSetRegistry_h__ */
+#endif /* nsScriptNameSpaceManager_h__ */
