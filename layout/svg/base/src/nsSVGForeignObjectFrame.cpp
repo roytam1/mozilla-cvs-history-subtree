@@ -415,7 +415,7 @@ nsSVGForeignObjectFrame::Paint(nsSVGRenderingContext* renderingContext)
   if (mIsDirty) {
     ArtUta* dirtyRegion = DoReflow();
     if (dirtyRegion) {
-      art_free(dirtyRegion);
+      art_uta_free(dirtyRegion);
     }
   }
   
@@ -459,14 +459,14 @@ nsSVGForeignObjectFrame::InvalidateRegion(ArtUta* uta, PRBool bRedraw)
   if (!mParent) {
     NS_ERROR("invalidating region without parent");
     if (uta)
-      art_free(uta);
+      art_uta_free(uta);
     return NS_OK;
   }
 
   nsCOMPtr<nsISVGFrame> SVGFrame = do_QueryInterface(mParent);
   if (!SVGFrame) {
     if (uta)
-      art_free(uta);
+      art_uta_free(uta);
     return NS_OK;
   }
 
@@ -692,7 +692,7 @@ void nsSVGForeignObjectFrame::AccumulateUta(ArtUta** accu, ArtUta* uta)
   
   ArtUta* temp = *accu;
   *accu = art_uta_union(*accu, uta);
-  art_free(temp);
-  art_free(uta);  
+  art_uta_free(temp);
+  art_uta_free(uta);  
 }
 

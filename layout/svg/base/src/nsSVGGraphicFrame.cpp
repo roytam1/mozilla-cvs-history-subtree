@@ -227,7 +227,7 @@ nsSVGGraphicFrame::InvalidateRegion(ArtUta* uta, PRBool bRedraw)
   NS_ASSERTION(mParent, "need parent to invalidate!");
   if (!mParent) {
     if (uta)
-      art_free(uta);
+      art_uta_free(uta);
     return NS_OK;
   }
 
@@ -235,7 +235,7 @@ nsSVGGraphicFrame::InvalidateRegion(ArtUta* uta, PRBool bRedraw)
   NS_ASSERTION(SVGFrame, "wrong frame type!");
   if (!SVGFrame) {
     if (uta)
-      art_free(uta);
+      art_uta_free(uta);
     return NS_OK;
   }
 

@@ -212,8 +212,8 @@ void nsSVGGraphic::AccumulateUta(ArtUta** accu, ArtUta* uta)
   
   ArtUta* temp = *accu;
   *accu = art_uta_union(*accu, uta);
-  art_free(temp);
-  art_free(uta);  
+  art_uta_free(temp);
+  art_uta_free(uta);  
 }
 
 double nsSVGGraphic::GetBezierFlatness()

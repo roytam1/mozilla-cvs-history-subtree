@@ -45,7 +45,7 @@ void
 nsSVGFill::Build(ArtVpath* path, const nsSVGFillStyle& style)
 {
   if (mSvp) {
-    art_free(mSvp);
+    art_svp_free(mSvp);
     mSvp = nsnull;
   }
   

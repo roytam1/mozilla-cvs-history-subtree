@@ -35,7 +35,7 @@ void
 nsSVGStroke::Build(ArtVpath* path, const nsSVGStrokeStyle& style)
 {
   if (mSvp)
-    art_free(mSvp);
+    art_svp_free(mSvp);
 
   ArtPathStrokeCapType captype;
   switch(style.linecap) {

@@ -890,8 +890,9 @@ nsSVGOuterSVGFrame::InvalidateRegion(ArtUta* uta, PRBool bRedraw)
                   (rectList[i].y1 - rectList[i].y0) * twipsPerPx);
       vm->UpdateView(view, rect, NS_VMREFRESH_NO_SYNC);
     }
+        
     art_free(rectList);
-    art_free(uta);    
+    art_uta_free(uta);    
   }
   vm->EndUpdateViewBatch(bRedraw ? NS_VMREFRESH_IMMEDIATE : NS_VMREFRESH_NO_SYNC);
   

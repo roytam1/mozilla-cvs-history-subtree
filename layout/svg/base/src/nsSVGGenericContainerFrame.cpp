@@ -319,14 +319,14 @@ nsSVGGenericContainerFrame::InvalidateRegion(ArtUta* uta, PRBool bRedraw)
   
   if (!mParent) {
     if (uta)
-      art_free(uta);
+      art_uta_free(uta);
     return NS_OK;
   }
 
   nsCOMPtr<nsISVGFrame> SVGFrame = do_QueryInterface(mParent);
   if (!SVGFrame) {
     if (uta)
-      art_free(uta);
+      art_uta_free(uta);
     return NS_OK;
   }
 
