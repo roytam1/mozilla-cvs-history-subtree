@@ -10,6 +10,7 @@ messenger.jar:
 *+  content/messenger/messageWindow.js              (content/messageWindow.js)
 *+   content/messenger/mailContextMenus.js          (content/mailContextMenus.js)
 *+  content/messenger/messenger.xul                 (content/messenger.xul)
+*+  content/messenger/searchBar.js                  (content/searchBar.js)
 *   content/messenger/hiddenWindow.xul              (content/hiddenWindow.xul)
 *   content/messenger/hiddenWindow.js               (content/hiddenWindow.js)
 *+  content/messenger/msgHdrViewOverlay.js          (content/msgHdrViewOverlay.js)
