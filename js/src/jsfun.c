@@ -1659,10 +1659,10 @@ bad:
 
 JSBool
 js_InitArgsCallClosureClasses(JSContext *cx, JSObject *obj,
-			      JSObject *arrayProto)
+			      JSObject *objProto)
 {
 #if JS_HAS_ARGS_OBJECT
-    if (!JS_InitClass(cx, obj, arrayProto, &js_ArgumentsClass, Arguments, 0,
+    if (!JS_InitClass(cx, obj, objProto, &js_ArgumentsClass, Arguments, 0,
 		      args_props, NULL, NULL, NULL)) {
 	return JS_FALSE;
     }

@@ -688,7 +688,7 @@ JS_InitStandardClasses(JSContext *cx, JSObject *obj)
 
     /* Initialize the rest of the standard objects and functions. */
     return (array_proto = js_InitArrayClass(cx, obj)) != NULL &&
-	   js_InitArgsCallClosureClasses(cx, obj, array_proto) &&
+	   js_InitArgsCallClosureClasses(cx, obj, obj_proto) &&
 	   js_InitBooleanClass(cx, obj) &&
 	   js_InitMathClass(cx, obj) &&
 	   js_InitNumberClass(cx, obj) &&

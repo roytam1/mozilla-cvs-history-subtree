@@ -62,7 +62,7 @@ js_InitFunctionClass(JSContext *cx, JSObject *obj);
 
 extern JSBool
 js_InitArgsCallClosureClasses(JSContext *cx, JSObject *obj,
-			      JSObject *arrayProto);
+			      JSObject *objProto);
 
 extern JSFunction *
 js_NewFunction(JSContext *cx, JSObject *funobj, JSNative call, uintN nargs,
