@@ -31,6 +31,7 @@
 #include "nsISupportsPrimitives.h"
 #include "nsXPIDLString.h"
 #include "nsISupportsArray.h"
+#include "nsIClassInfo.h"
 
 NS_IMPL_ISUPPORTS1(nsSOAPJSValue, nsISOAPStruct)
 
@@ -409,6 +410,7 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
                                  nsISupports** aValue,
                                  nsAWritableString & aType)
 {
+  aType.Truncate();
   *aValue = nsnull;
   if (JSVAL_IS_NULL(val)) {
     aType = nsSOAPUtils::kNullType;
@@ -536,24 +538,68 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
 	rc = wrapper->GetNative(getter_AddRefs(native));
         if (NS_FAILED(rc)) return rc;
 
-//  First, check for a DOM node, and return it if that is what JS gave us.
-	nsCOMPtr<nsIDOMNode> node = do_QueryInterface(native);
-	if (node) {
-	  aType = nsSOAPUtils::kLiteralType;
-	  *aValue = node;
-          NS_ADDREF(*aValue);
-	  return NS_OK;
+//  Check for a DOM node, and return it if that is what JS gave us.
+	{
+	  nsCOMPtr<nsIDOMNode> node = do_QueryInterface(native);
+	  if (node) {
+	    aType = nsSOAPUtils::kLiteralType;
+	    *aValue = node;
+            NS_ADDREF(*aValue);
+	    return NS_OK;
+	  }
 	}
-//  We should be able to get a better name if we know it is wrapped, but how?
+//  Check for a nsISOAPStruct and return it if that is what JS gave us.
+	{
+	  nsCOMPtr<nsISOAPStruct> str = do_QueryInterface(native);
+	  if (str) {
+	    aType = nsSOAPUtils::kStructTypePrefix;
+//  We might be able to get a better struct name, in any case...
+            nsCOMPtr<nsIClassInfo> info = do_QueryInterface(native);
+	    if (info) {
+	      char* cname = nsnull;
+	      info->GetClassDescription(&cname);
+	      if (cname) {
+                 aType.Append(NS_ConvertASCIItoUCS2(cname).get());
+	         nsMemory::Free(cname);
+	      }
+	    }
+	    *aValue = str;
+            NS_ADDREF(*aValue);
+	    return NS_OK;
+	  }
+	}
+//  Check for a nsISupportsArray and return it if that is what JS gave us.
+	{
+	  nsCOMPtr<nsISupportsArray> array = do_QueryInterface(native);
+	  if (array) {
+	    aType = nsSOAPUtils::kArrayType;
+	    *aValue = array;
+            NS_ADDREF(*aValue);
+	    return NS_OK;
+	  }
+	}
+
+//  We might be able to get a better struct name, in any case...
+        nsCOMPtr<nsIClassInfo> info = do_QueryInterface(native);
+	if (info) {
+	  char* cname = nsnull;
+	  info->GetClassDescription(&cname);
+	  if (cname) {
+             aType = nsSOAPUtils::kStructTypePrefix;
+             aType.Append(NS_ConvertASCIItoUCS2(cname).get());
+	     nsMemory::Free(cname);
+	  }
+	}
       }
 	
-      {
-        nsCOMPtr<nsISOAPJSValue> value = do_CreateInstance(NS_SOAPJSVALUE_CONTRACTID);
-        if (NS_FAILED(rc)) return rc;
+      nsCOMPtr<nsISOAPJSValue> value = do_CreateInstance(NS_SOAPJSVALUE_CONTRACTID);
+      if (NS_FAILED(rc)) return rc;
+      value->SetContext(aContext);
+      value->SetObject(jsobj);
 
 // Look for a constructor name on the current object or a prototype
 
-
+      if (aType.IsEmpty()) {
         for (;;) {
           JSObject* constructor = JS_GetConstructor(aContext, jsobj);
           jsobj = JS_GetPrototype(aContext, jsobj);
