@@ -709,8 +709,8 @@ nsXFormsModelElement::FinishConstruction()
   NS_ASSERTION(systemGroup, "system event group must exist");
   
   nsCOMPtr<nsIDOM3EventTarget> targ = do_QueryInterface(mContent);
-  for (unsigned int i = 0; i < NS_ARRAY_LENGTH(sModelEvents); ++i) {
-    targ->AddGroupedEventListener(NS_ConvertUTF8toUTF16(sModelEvents[i].name),
+  for (unsigned int j = 0; j < NS_ARRAY_LENGTH(sModelEvents); ++j) {
+    targ->AddGroupedEventListener(NS_ConvertUTF8toUTF16(sModelEvents[j].name),
                                   this, PR_FALSE, systemGroup);
   }
 
