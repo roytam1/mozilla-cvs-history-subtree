@@ -683,6 +683,14 @@ NS_CLASINFO_MAP_BEGIN(XULElement)
 NS_CLASINFO_MAP_END
 
 
+// XPConnect interface list for nsXULElement
+NS_CLASINFO_MAP_BEGIN(XULTreeElement)
+    NS_CLASINFO_MAP_ENTRY(nsIDOMXULElement)
+    NS_CLASINFO_MAP_ENTRY(nsIDOMXULTreeElement)
+    NS_CLASINFO_MAP_ENTRY(nsIDOMEventTarget)
+NS_CLASINFO_MAP_END
+
+
 NS_IMPL_ADDREF(nsXULElement);
 NS_IMPL_RELEASE(nsXULElement);
 
@@ -752,10 +760,22 @@ nsXULElement::QueryInterface(REFNSIID iid, void** result)
         //                                                 iid, result);
 //    }
     else if (iid.Equals(NS_GET_IID(nsIClassInfo))) {
-        nsISupports *inst =
-          nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::eXULElement_id,
-                                               GetXULElementIIDs,
-                                               "XULElement");
+        nsISupports *inst = nsnull;
+
+        nsCOMPtr<nsIAtom> tag;
+        PRInt32 dummy;
+        NS_WITH_SERVICE(nsIXBLService, xblService, "@mozilla.org/xbl;1", &rv);
+        xblService->ResolveTag(NS_STATIC_CAST(nsIStyledContent*, this), &dummy, getter_AddRefs(tag));
+        if (tag.get() == nsXULAtoms::tree) {
+            inst = nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::eXULTreeElement_id,
+                                                        GetXULTreeElementIIDs,
+                                                        "XULTreeElement");
+        } else {
+            inst = nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfo::eXULElement_id,
+                                                        GetXULElementIIDs,
+                                                        "XULElement");
+        }
+
         NS_ENSURE_TRUE(inst, NS_ERROR_OUT_OF_MEMORY);
 
         NS_ADDREF(inst);

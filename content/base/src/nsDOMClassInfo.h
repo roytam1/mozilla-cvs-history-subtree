@@ -141,6 +141,7 @@ public:
     // XUL classes
     eXULDocument_id,
     eXULElement_id,
+    eXULTreeElement_id,
     eXULCommandDispatcher_id,
     eXULNodeList_id,
     eXULNamedNodeMap_id,
