@@ -464,6 +464,20 @@ function RestoreThreadPaneSelection(selectionArray)
 
 }
 
+function FindOutlinerColumnBySortType(sortKey)
+{
+	if(sortKey == nsMsgViewSortType.byDate)
+		return "dateCol";
+	else if(sortKey == nsMsgViewSortType.byAuthor)
+		return "senderCol";
+	else if(sortKey == nsMsgViewSortType.bySubject)
+		return "subjectCol";
+	else if(sortKey == nsMsgViewSortType.byUnread)
+		return "UnreadButtonColumn";
+
+	return "dateCol";
+}
+
 function FindThreadPaneColumnBySortResource(sortID)
 {
 
@@ -495,8 +509,6 @@ function FindThreadPaneColumnBySortResource(sortID)
 		return "OrderReceivedColumn";
 
 	return null;
-
-
 }
 
 //If toggleCurrentDirection is true, then get current direction and flip to opposite.
@@ -602,7 +614,15 @@ function CreateDBView(msgFolder, isThreaded, viewType, sortKey, sortDirection)
     }
 
     var count = new Object;
+    gDBView.init(messenger, msgWindow);
     gDBView.open(msgFolder, sortType, sortOrder, viewFlags, count);
+
+    var colID = FindOutlinerColumnBySortType(sortType);
+    if (colID)
+    {
+      var column = document.getElementById(colID);
+      gDBView.sortedColumn = column;
+    }
 
     dump("XXX count = " + count.value + "\n");
 }
