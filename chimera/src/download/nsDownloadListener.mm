@@ -285,7 +285,25 @@ nsDownloadListener::InitDialog()
   if (mURI)
   {
     nsCAutoString spec;
-    mURI->GetSpec(spec);
+
+    // we need to be careful not to show a password in the url
+    nsCAutoString userPassword;
+    mURI->GetUserPass(userPassword);
+    if (!userPassword.IsEmpty())
+    {
+      // ugh, build it by hand
+      nsCAutoString hostport, path;
+      mURI->GetScheme(spec);
+      mURI->GetHostPort(hostport);
+      mURI->GetPath(path);
+      
+      spec.Append("://");
+      spec.Append(hostport);
+      spec.Append(path);
+    }
+    else
+      mURI->GetSpec(spec);
+
     [mDownloadDisplay setSourceURL: [NSString stringWithUTF8String:spec.get()]];
   }
 
