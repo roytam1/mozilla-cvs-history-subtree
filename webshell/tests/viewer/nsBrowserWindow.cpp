@@ -52,6 +52,7 @@
 #include "nsXIFDTD.h"
 #include "nsIParser.h"
 #include "nsHTMLContentSinkStream.h"
+#include "nsEditorMode.h"
 
 #include "resources.h"
 
@@ -318,6 +319,13 @@ nsBrowserWindow::DispatchMenuItem(PRInt32 aID)
       LoadURL(url);
     }
     break;
+  case JS_CONSOLE:
+    DoJSConsole();
+    break;
+
+  case EDITOR_MODE:
+    DoEditorMode();
+    break;
   }
   return nsEventStatus_eIgnore;
 }
@@ -427,6 +435,31 @@ nsBrowserWindow::DoSelectAll()
     if (nsnull != doc) {
       doc->SelectAll();
       ForceRefresh();
+      NS_RELEASE(doc);
+    }
+    NS_RELEASE(shell);
+  }
+}
+
+void
+nsBrowserWindow::DoJSConsole()
+{
+  mApp->CreateJSConsole(this);
+}
+
+void
+nsBrowserWindow::DoEditorMode()
+{
+  nsIPresShell* shell = GetPresShell();
+  if (nsnull != shell) {
+    nsIDocument* doc = shell->GetDocument();
+    if (nsnull != doc) {
+      nsIDOMDocument *domdoc = nsnull;
+      doc->QueryInterface(kIDOMDocumentIID, (void**) &domdoc);
+      if (nsnull != domdoc) {
+        NS_InitEditorMode(domdoc);
+        NS_RELEASE(domdoc);
+      }
       NS_RELEASE(doc);
     }
     NS_RELEASE(shell);
@@ -1515,32 +1548,6 @@ nsBrowserWindow::DoSiteWalker()
   mApp->CreateSiteWalker(this);
 }
 
-void
-nsBrowserWindow::DoJSConsole()
-{
-  mApp->CreateJSConsole(this);
-}
-
-#include "nsEditorMode.h"
-void
-nsBrowserWindow::DoEditorMode()
-{
-  nsIPresShell* shell = GetPresShell();
-  if (nsnull != shell) {
-    nsIDocument* doc = shell->GetDocument();
-    if (nsnull != doc) {
-      nsIDOMDocument *domdoc = nsnull;
-      doc->QueryInterface(kIDOMDocumentIID, (void**) &domdoc);
-      if (nsnull != domdoc) {
-        NS_InitEditorMode(domdoc);
-        NS_RELEASE(domdoc);
-      }
-      NS_RELEASE(doc);
-    }
-    NS_RELEASE(shell);
-  }
-}
-
 nsEventStatus
 nsBrowserWindow::DispatchDebugMenu(PRInt32 aID)
 {
@@ -1627,13 +1634,6 @@ nsBrowserWindow::DispatchDebugMenu(PRInt32 aID)
     DoSiteWalker();
     break;
 
-  case JS_CONSOLE:
-    DoJSConsole();
-    break;
-
-  case EDITOR_MODE:
-    DoEditorMode();
-    break;
   }
   return(result);
 }

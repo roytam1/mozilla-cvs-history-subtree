@@ -116,6 +116,8 @@ public:
 
   void DoFileOpen();
   void DoCopy();
+  void DoJSConsole();
+  void DoEditorMode();
   nsIPresShell* GetPresShell();
 
   void DoSelectAll();
@@ -136,8 +138,6 @@ public:
   void DoToggleSelection();
   void DoDebugRobot();
   void DoSiteWalker();
-  void DoJSConsole();
-  void DoEditorMode();
   nsEventStatus DispatchDebugMenu(PRInt32 aID);
 #endif
 
