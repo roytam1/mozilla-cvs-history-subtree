@@ -86,7 +86,7 @@ function onServerClick(event)
     //
     hPrefWindow.switchPage(
         "chrome://messenger-junkmail/content/JunkMailPane.xul", 
-        event.target.id);
+        event.target.id, createSubstObj(event.target.id));
 }
 
 /**
@@ -130,24 +130,18 @@ function getSelectedServerForFilters()
     {
         var msgFolder = selectedFolder.QueryInterface(
             Components.interfaces.nsIMsgFolder);
-        try
-        {
+        try {
             var rootFolder = msgFolder.rootFolder;
-            if (rootFolder.isServer)
-            {
+            if (rootFolder.isServer) {
                 var server = rootFolder.server;
 
-                if (server.canHaveFilters)
-                {
+                if (server.canHaveFilters) {
                     firstItem = rootFolder.URI;
                 }
             }
-        }
-        catch (ex)
-        {
+        } catch (ex) {
         }
     }
-
     return firstItem;
 }
 
@@ -169,18 +163,15 @@ function getServerThatCanHaveFilters()
     }
     // if it cannot, check all accounts to find a server
     // that can have filters
-    else
-    {
+    else {
         var allServers = gAccountManager.allServers;
         var numServers = allServers.Count();
         var index = 0;
-        for (index = 0; index < numServers; index++)
-        {
+        for (index = 0; index < numServers; index++) {
             var currentServer = allServers.GetElementAt(index)
                 .QueryInterface(Components.interfaces.nsIMsgIncomingServer);
 
-            if (currentServer.canHaveFilters)
-            {
+            if (currentServer.canHaveFilters) {
                 firstItem = currentServer.serverURI;
                 break;
             }
