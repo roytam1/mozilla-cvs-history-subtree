@@ -311,6 +311,7 @@ protected:
   nsRefPtr<BarPropImpl>         mPersonalbar;
   nsRefPtr<BarPropImpl>         mStatusbar;
   nsRefPtr<BarPropImpl>         mScrollbars;
+  nsCOMPtr<nsIWeakReference>    mWindowUtils;
   nsTimeoutImpl*                mTimeouts;
   nsTimeoutImpl**               mTimeoutInsertionPoint;
   nsTimeoutImpl*                mRunningTimeout;
@@ -348,6 +349,7 @@ protected:
   nsIDOMElement*                mFrameElement; // WEAK
 
   friend class nsDOMScriptableHelper;
+  friend class nsDOMWindowUtils;
   static nsIXPConnect *sXPConnect;
   static nsIScriptSecurityManager *sSecMan;
   static nsIFactory *sComputedDOMStyleFactory;
