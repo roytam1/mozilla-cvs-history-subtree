@@ -54,7 +54,11 @@ include $(CORE_DEPTH)/coreconf/config.mk
 # (4) Include "local" platform-dependent assignments (OPTIONAL).      #
 #######################################################################
 
-
+ifeq ($(OS_TARGET),WINNT)
+NSPR_IMPORT_VERSION = v4.0.1
+else
+NSPR_IMPORT_VERSION = v4.0
+endif
 
 #######################################################################
 # (5) Execute "global" rules. (OPTIONAL)                              #
@@ -91,8 +95,6 @@ build_dbm:
 
 moz_import::
 ifeq ($(OS_ARCH),WINNT)
-	$(NSINSTALL) -D $(DIST)/include/nspr
-	cp $(DIST)/../include/nspr/*.h $(DIST)/include/nspr
 	cp $(DIST)/../include/* $(DIST)/include
 ifdef BUILD_OPT
 	cp $(DIST)/../WIN32_O.OBJ/lib/* $(DIST)/lib

@@ -35,11 +35,7 @@
 #######################################################################
 # (1) Include initial platform-independent assignments (MANDATORY).   #
 #######################################################################
-ifeq ($(OS_ARCH), WINNT)
-EXTRA_LIBS += $(DIST)/lib/crmf.lib
-else
-EXTRA_LIBS += $(DIST)/lib/libcrmf.$(LIB_SUFFIX) 
-endif
+
 include manifest.mn
 
 #######################################################################
@@ -57,6 +53,22 @@ include $(CORE_DEPTH)/coreconf/config.mk
 #######################################################################
 # (4) Include "local" platform-dependent assignments (OPTIONAL).      #
 #######################################################################
+
+include config.mk
+
+ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.2)
+OS_LIBS += -lsvld 
+endif 
+
+ifeq ($(OS_ARCH)$(OS_RELEASE), SunOS5.6)
+OS_LIBS += -ldl -lxnet -lposix4 -lsocket -lnsl
+endif
+
+ifeq ($(OS_ARCH), WINNT)
+EXTRA_LIBS += $(DIST)/lib/crmf.lib
+else
+EXTRA_LIBS += $(DIST)/lib/libcrmf.$(LIB_SUFFIX)
+endif
 
 include ../platlibs.mk
 
@@ -77,5 +89,8 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 # (7) Execute "local" rules. (OPTIONAL).                              #
 #######################################################################
 
-include ../platrules.mk
 
+lame:
+	echo $(CPU_ARCH)
+
+include ../platrules.mk
