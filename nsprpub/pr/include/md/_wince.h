@@ -541,29 +541,6 @@ struct stat {
 #define ENOMEM 12 /* errno, out of memory */
 
 /*
- * struct tm
- *
- * And related windows specific functions to mimic LIBC's tm funcs.
- */
-struct tm {
-    int tm_sec;
-    int tm_min;
-    int tm_hour;
-    int tm_mday;
-    int tm_mon;
-    int tm_year;
-    int tm_wday;
-    int tm_yday;
-    int tm_isdst;
-};
-extern struct tm* Wingmtime(const time_t* inTimeT);
-extern struct tm* Winlocaltime(const time_t* inTimeT);
-extern struct tm* Wingmtime_r(const time_t* inTimeT, struct tm* outRetval);
-extern struct tm* Winlocaltime_r(const time_t* inTimeT, struct tm* outRetval);
-extern time_t Winmktime(struct tm* inTM);
-extern size_t Winstrftime(char *strDest, size_t maxsize, const char *format, const struct tm *timeptr);
-
-/*
  * struct protoent is actually defined, but the functions that use it are not.
  *
  * And related windows specific functions to mimic these absent sockets funcs.

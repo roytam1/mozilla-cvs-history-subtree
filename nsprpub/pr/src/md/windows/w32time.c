@@ -53,11 +53,11 @@ static const int sDaysOfYear[12] = {
 static struct tm tmStorage;
 
 /*
- *  Winlocaltime
+ *  localtime
  *
  *  As LIBC localtime
  */
-struct tm* Winlocaltime_r(const time_t* inTimeT, struct tm* outRetval)
+struct tm* localtime_r(const time_t* inTimeT,struct tm* outRetval)
 {
     struct tm* retval = NULL;
 
@@ -100,17 +100,19 @@ struct tm* Winlocaltime_r(const time_t* inTimeT, struct tm* outRetval)
 
     return retval;
 }
-struct tm* Winlocaltime(const time_t* inTimeT)
+
+__declspec(dllexport)
+struct tm* localtime(const time_t* inTimeT)
 {
-    return Winlocaltime_r(inTimeT, &tmStorage);
+    return localtime_r(inTimeT, &tmStorage);
 }
 
 /*
- *  Wingmtime
+ *  gmtime
  *
  *  As LIBC gmtime
  */
-struct tm* Wingmtime_r(const time_t* inTimeT, struct tm* outRetval)
+struct tm* gmtime_r(const time_t* inTimeT, struct tm* outRetval)
 {
     struct tm* retval = NULL;
 
@@ -153,18 +155,21 @@ struct tm* Wingmtime_r(const time_t* inTimeT, struct tm* outRetval)
 
     return retval;
 }
-struct tm* Wingmtime(const time_t* inTimeT)
+
+__declspec(dllexport)
+struct tm* gmtime(const time_t* inTimeT)
 {
-    return Wingmtime_r(inTimeT, &tmStorage);
+    return gmtime_r(inTimeT, &tmStorage);
 }
 
 /*
- *  Winmktime
+ *  mktime
  *
  *  As LIBCs mktime
  *  We likely have a deficiency with the handling of tm_isdst...
  */
-time_t Winmktime(struct tm* inTM)
+__declspec(dllexport)
+time_t mktime(struct tm* inTM)
 {
     time_t retval = (time_t)-1;
 
@@ -193,13 +198,18 @@ time_t Winmktime(struct tm* inTM)
         /*
          * Now overwrite the struct passed in with what we believe it should be.
          */
-        gmTime = Wingmtime_r(&retval, inTM);
+        gmTime = gmtime_r(&retval, inTM);
     }
 
     return retval;
 }
 
-static void helper_Winstrftime(LPCWSTR inWStr, char** outAStr, int* outAStrMax, PRBool* outHadError, PRBool* outEnoughSpace, char inTestEnd)
+static void helper_Winstrftime(LPCWSTR inWStr,
+                               char** outAStr,
+                               int* outAStrMax,
+                               PRBool* outHadError,
+                               PRBool* outEnoughSpace,
+                               char inTestEnd)
 {
     char *w2aRes = NULL;
 
@@ -224,12 +234,16 @@ static void helper_Winstrftime(LPCWSTR inWStr, char** outAStr, int* outAStrMax, 
 }
 
 /*
- *  Winstrftime
+ *  strftime
  *
  *  As LIBCs strftime
  *  Use GetTimeFormat and GetDateFormat to implement.
  */
-size_t Winstrftime(char *strDest, size_t maxsize, const char *format, const struct tm *timeptr)
+__declspec(dllexport)
+size_t strftime(char *strDest,
+                size_t maxsize,
+                const char *format,
+                const struct tm *timeptr)
 {
     size_t retval = 0;
 
@@ -249,7 +263,7 @@ size_t Winstrftime(char *strDest, size_t maxsize, const char *format, const stru
          * The SYSTEMTIME will be used in the API calls.
          */
         memcpy(&convertTM, timeptr, sizeof(convertTM));
-        convertT = Winmktime(&convertTM);
+        convertT = mktime(&convertTM);
         _MD_time_t_2_SYSTEMTIME(sysTime, convertT);
 
         /*

@@ -607,8 +607,6 @@ static struct tm *MT_safe_localtime(const time_t *clock, struct tm *result)
     
 #if defined(XP_MAC)
     tmPtr = Maclocaltime(clock);
-#elif defined(WINCE)
-    tmPtr = Winlocaltime(clock);
 #else
     tmPtr = localtime(clock);
 #endif
@@ -1589,11 +1587,7 @@ PR_ParseTimeString(
                      date you are handing it is in daylight savings mode or not;
                      and if you're wrong, it will "fix" it for you. */
                   localTime.tm_isdst = -1;
-#if !defined(WINCE)
                   secs = mktime(&localTime);
-#else
-                  secs = Winmktime(&localTime);
-#endif
                   if (secs != (time_t) -1)
                     {
 #if defined(XP_MAC) && (__MSL__ < 0x6000)
@@ -1686,11 +1680,7 @@ PR_FormatTime(char *buf, int buflen, const char *fmt, const PRExplodedTime *tm)
     }
 #endif
 
-#if !defined(WINCE)
     return strftime(buf, buflen, fmt, &a);
-#else
-    return Winstrftime(buf, buflen, fmt, &a);
-#endif
 }
 
 
