@@ -73,6 +73,7 @@
 #include "nsFastLoadService.h"
 
 #include "nsAtomService.h"
+#include "nsAtomTable.h"
 #include "nsTraceRefcnt.h"
 #include "nsTimelineService.h"
 

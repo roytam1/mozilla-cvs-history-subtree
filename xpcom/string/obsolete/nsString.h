@@ -585,6 +585,33 @@ private:
   void operator=( PRUnichar ); // NOT TO BE IMPLEMENTED
 };
 
+/**
+ * A helper class that converts a UCS2 string to ASCII in a lossy manner
+ */
+class NS_COM NS_LossyConvertUCS2toASCII
+      : public nsCAutoString
+    /*
+      ...
+    */
+  {
+    public:
+      explicit
+      NS_LossyConvertUCS2toASCII( const PRUnichar* aString )
+        {
+          AppendWithConversion( aString, ~PRUint32(0) /* MAXINT */);
+        }
+
+      NS_LossyConvertUCS2toASCII( const PRUnichar* aString, PRUint32 aLength )
+        {
+          AppendWithConversion( aString, aLength );
+        }
+
+      explicit NS_LossyConvertUCS2toASCII( const nsAString& aString );
+
+    private:
+        // NOT TO BE IMPLEMENTED
+      NS_LossyConvertUCS2toASCII( char );
+  };
 
 #endif
 
