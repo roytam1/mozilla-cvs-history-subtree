@@ -1058,7 +1058,7 @@ nsresult nsImapProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
 
 			if (!TestFlag(IMAP_CONNECTION_IS_OPEN))
 			{
-				m_channel->AsyncRead(0, -1, aURL,this /* stream observer */, nsnull /* load group */  );
+				m_channel->AsyncRead(0, -1, aURL,this /* stream observer */);
 				SetFlag(IMAP_CONNECTION_IS_OPEN);
 			}
 
