@@ -21,6 +21,7 @@
  */
 
 #include "nsISupports.idl"
+#include "nsICommandParams.idl"
 
 /**
  * nsIControllerCommand
@@ -85,6 +86,13 @@ interface nsIStateUpdatingControllerCommand : nsISupports
    *                  The contents of this cookie are implementation-defined.
    */
   void    updateCommandState(in DOMString aCommandName, in nsISupports aCommandRefCon);
+
+  /**
+   * Gets the command states based on the input parameters
+   * @param aCommandParams   this will pass in the states that need to beupdated. the results will be
+   *                  placed in the value portion of the command Params
+   */
+  void    getCommandState(in nsICommandParams aCommandParams, in nsISupports aCommandRefCon);
 };
 
 

@@ -232,7 +232,7 @@ nsCommandManager::DoCommand(const nsAString & aCommandName, /* const */ nsIComma
     return NS_ERROR_FAILURE;
 
   nsCOMPtr<nsICommandController>  commandController = do_QueryInterface(controller);
-  if (commandController)
+  if (aCommandParams && commandController)
     rv = commandController->DoCommand(aCommandName, aCommandParams);
   else
     rv = controller->DoCommand(aCommandName);
