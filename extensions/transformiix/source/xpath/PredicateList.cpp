@@ -61,9 +61,7 @@ PredicateList::evaluatePredicates(txNodeSet* nodes,
                                   txIMatchContext* aContext)
 {
     NS_ASSERTION(nodes, "called evaluatePredicates with NULL NodeSet");
-    nsRefPtr<txNodeSet> newNodes;
-    nsresult rv = aContext->recycler()->getNodeSet(getter_AddRefs(newNodes));
-    NS_ENSURE_SUCCESS(rv, rv);
+    nsresult rv = NS_OK;
 
     txListIterator iter(&predicates);
     while (iter.hasNext() && !nodes->isEmpty()) {
@@ -74,7 +72,7 @@ PredicateList::evaluatePredicates(txNodeSet* nodes,
          * or, if the result is a number, add the node with the right
          * position
          */
-        newNodes->clear();
+        PRInt32 index = 0;
         while (predContext.hasNext()) {
             predContext.next();
             nsRefPtr<txAExprResult> exprResult;
@@ -84,16 +82,16 @@ PredicateList::evaluatePredicates(txNodeSet* nodes,
             // handle default, [position() == numberValue()]
             if (exprResult->getResultType() == txAExprResult::NUMBER) {
                 if ((double)predContext.position() == exprResult->numberValue()) {
-                    newNodes->append(predContext.getContextNode());
+                    nodes->mark(index);
                 }
             }
             else if (exprResult->booleanValue()) {
-                newNodes->append(predContext.getContextNode());
+                nodes->mark(index);
             }
+            ++index;
         }
-        // Move new NodeSet to the current one
-        nodes->clear();
-        nodes->append(*newNodes);
+        // sweep the non-marked nodes
+        nodes->sweep();
     }
 
     return NS_OK;

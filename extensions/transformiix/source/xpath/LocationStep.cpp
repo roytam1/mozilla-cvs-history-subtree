@@ -64,7 +64,6 @@ LocationStep::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
     nsresult rv = aContext->recycler()->getNodeSet(getter_AddRefs(nodes));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    PRBool reverse = PR_FALSE;
     txXPathTreeWalker walker(aContext->getContextNode());
 
     switch (mAxisIdentifier) {
@@ -77,7 +76,7 @@ LocationStep::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
         }
         case ANCESTOR_OR_SELF_AXIS:
         {
-            reverse = PR_TRUE;
+            nodes->setReverse();
 
             if (mNodeTest->matches(walker.getCurrentPosition(), aContext)) {
                 nodes->append(walker.getCurrentPosition());
@@ -156,7 +155,7 @@ LocationStep::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
         }
         case PRECEDING_AXIS:
         {
-            reverse = PR_TRUE;
+            nodes->setReverse();
 
             PRBool hasPreceding = walker.moveToFirstPreceding();
             while (hasPreceding) {
@@ -169,7 +168,7 @@ LocationStep::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
         }
         case PRECEDING_SIBLING_AXIS:
         {
-            reverse = PR_TRUE;
+            nodes->setReverse();
 
             PRBool hasSibling = walker.moveToFirstPrecedingSibling();
             while (hasSibling) {
@@ -206,9 +205,7 @@ LocationStep::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
         NS_ENSURE_SUCCESS(rv, rv);
     }
 
-    if (reverse) {
-        nodes->reverse();
-    }
+    nodes->unsetReverse();
 
     *aResult = nodes;
     NS_ADDREF(*aResult);
