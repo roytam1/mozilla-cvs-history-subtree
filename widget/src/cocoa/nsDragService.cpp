@@ -43,6 +43,7 @@
 // See associated header file for details
 //
 
+#include <Gestalt.h>
 
 #include "nsDragService.h"
 
@@ -59,8 +60,6 @@
 #include "nsILocalFileMac.h"
 #include "nsWatchTask.h"
 
-// rjc
-#include <Gestalt.h>
 #include "nsIContent.h"
 #include "nsIDOMNode.h"
 #include "nsIDocument.h"
@@ -99,7 +98,8 @@ nsDragService::nsDragService()
     mImageDraggingSupported = PR_TRUE;
   }
 #endif
-  
+
+  //printf("Making drag service %X\n", this);
   mDragSendDataUPP = NewDragSendDataUPP(DragSendDataProc);
 }
 
@@ -109,6 +109,8 @@ nsDragService::nsDragService()
 //
 nsDragService::~nsDragService()
 {
+  //printf("Deleting drag service %X\n", this);
+
   if ( mDragSendDataUPP )
     ::DisposeDragSendDataUPP(mDragSendDataUPP);
 }
@@ -229,14 +231,10 @@ nsDragService :: InvokeDragSession (nsIDOMNode *aDOMNode, nsISupportsArray * aTr
   if ( result != noErr )
     return NS_ERROR_FAILURE;
   mDragRef = theDragRef;
-#if 1
-printf("**** created drag ref %ld\n", theDragRef);
+#if DEBUG
+  printf("**** created drag ref 0x%08X\n", theDragRef);
 #endif
-  
-  // add the flavors from the transferables. Cache this array for the send data proc
-  mDataItems = aTransferableArray;
-  RegisterDragItemsAndFlavors ( aTransferableArray ) ;
-    
+      
   Rect frameRect = { 0, 0, 0, 0 };
   RgnHandle theDragRgn = ::NewRgn();
   ::RectRgn(theDragRgn, &frameRect);
@@ -254,13 +252,17 @@ printf("**** created drag ref %ld\n", theDragRef);
   else
     BuildDragRegion ( aDragRgn, aDOMNode, theDragRgn );
 
+  // add the flavors from the transferables. Cache this array for the send data proc
+  mDataItems = aTransferableArray;
+  RegisterDragItemsAndFlavors ( aTransferableArray, theDragRgn ) ;
+
   // we have to synthesize the native event because we may be called from JavaScript
   // through XPConnect. In that case, we only have a DOM event and no way to
   // get to the native event. As a consequence, we just always fake it.
   EventRecord theEvent;
   theEvent.what = mouseDown;
   theEvent.message = 0L;
-  theEvent.when = 0L;
+  theEvent.when = TickCount();
   theEvent.modifiers = 0L;
 
   // since we don't have the original mouseDown location, just assume the drag
@@ -270,6 +272,7 @@ printf("**** created drag ref %ld\n", theDragRef);
   // see it if you're paying attention, but who pays such close attention?
   Rect dragRect;
   ::GetRegionBounds(theDragRgn, &dragRect);
+
   theEvent.where.v = rint(dragRect.top + (dragRect.bottom - dragRect.top) / 2);
   theEvent.where.h = rint(dragRect.left + (dragRect.right - dragRect.left) / 2);
 
@@ -286,8 +289,8 @@ printf("**** created drag ref %ld\n", theDragRef);
   // clean up after ourselves 
   ::DisposeRgn ( theDragRgn );
   result = ::DisposeDrag ( theDragRef );
-#if DEBUG_DD
-printf("**** disposing drag ref %ld\n", theDragRef);
+#if DEBUG
+  printf("**** disposing drag ref 0x%08X\n", theDragRef);
 #endif
   NS_ASSERTION ( result == noErr, "Error disposing drag" );
   mDragRef = 0L;
@@ -336,11 +339,21 @@ nsDragService :: BuildDragRegion ( nsIScriptableRegion* inRegion, nsIDOMNode* in
       ::CopyRgn ( dragRegion, ioDragRgn );
       ::InsetRgn ( ioDragRgn, 1, 1 );
       ::DiffRgn ( dragRegion, ioDragRgn, ioDragRgn ); 
-
+      
       // now shift the region into global coordinates.
       Point offsetFromLocalToGlobal = { 0, 0 };
       ::LocalToGlobal ( &offsetFromLocalToGlobal );
       ::OffsetRgn ( ioDragRgn, offsetFromLocalToGlobal.h, offsetFromLocalToGlobal.v );
+
+      // for cocoa, we have to transform this region into cocoa screen coordinates
+      Rect regionBounds;
+      GetRegionBounds(ioDragRgn, &regionBounds);
+      
+      GDHandle  screenDevice = ::GetMaxDevice(&regionBounds);
+      Rect      screenRect   = (**screenDevice).gdRect;
+      // offset the rect
+      short screenHeight = screenRect.bottom - screenRect.top;
+      ::OffsetRgn(ioDragRgn, 0, screenRect.top + (screenHeight - regionBounds.top) - regionBounds.top);
     }
   }
   else {
@@ -351,10 +364,19 @@ nsDragService :: BuildDragRegion ( nsIScriptableRegion* inRegion, nsIDOMNode* in
     Point currMouse;
     ::GetMouse(&currMouse);
     Rect frameRect = { currMouse.v, currMouse.h, currMouse.v + 25, currMouse.h + 100 };
-    if ( inNode )
+    if ( inNode ) {
       useRectFromFrame = ComputeGlobalRectFromFrame ( inNode, frameRect );
-    else
+    }
+    else {
       NS_WARNING ( "Can't find anything to get a drag rect from. I'm dyin' out here!" );
+    }
+    
+    // for cocoa, we have to transform this rect into cocoa screen coordinates
+    GDHandle  screenDevice = ::GetMaxDevice(&frameRect);
+    Rect      screenRect   = (**screenDevice).gdRect;
+    // offset the rect
+    short screenHeight = screenRect.bottom - screenRect.top;
+    ::OffsetRect(&frameRect, 0, screenRect.top + (screenHeight - frameRect.top) - frameRect.top);
 
     if ( ioDragRgn ) {
       RgnHandle frameRgn = ::NewRgn();
@@ -387,10 +409,14 @@ nsDragService :: BuildDragRegion ( nsIScriptableRegion* inRegion, nsIDOMNode* in
 // requested.
 //
 void
-nsDragService :: RegisterDragItemsAndFlavors ( nsISupportsArray * inArray )
+nsDragService :: RegisterDragItemsAndFlavors ( nsISupportsArray * inArray, RgnHandle inDragRgn )
 {
   const FlavorFlags flags = 0;
   
+  Rect      dragRgnBounds = {0, 0, 0, 0};
+  if (inDragRgn)
+    GetRegionBounds(inDragRgn, &dragRgnBounds);
+
   unsigned int numDragItems = 0;
   inArray->Count ( &numDragItems ) ;
   for ( int itemIndex = 0; itemIndex < numDragItems; ++itemIndex ) {
@@ -409,19 +435,19 @@ nsDragService :: RegisterDragItemsAndFlavors ( nsISupportsArray * inArray )
           nsCOMPtr<nsISupports> genericWrapper;
           flavorList->GetElementAt ( flavorIndex, getter_AddRefs(genericWrapper) );
           nsCOMPtr<nsISupportsString> currentFlavor ( do_QueryInterface(genericWrapper) );
-	      if ( currentFlavor ) {
-	        nsXPIDLCString flavorStr;
-	        currentFlavor->ToString ( getter_Copies(flavorStr) );
-	        FlavorType macOSFlavor = theMapper.MapMimeTypeToMacOSType(flavorStr);
-	        ::AddDragItemFlavor ( mDragRef, itemIndex, macOSFlavor, NULL, 0, flags );
-	        
-	        // If we advertise text/unicode, then make sure we add 'TEXT' to the list
-	        // of flavors supported since we will do the conversion ourselves in GetDataForFlavor()
-	        if ( strcmp(flavorStr, kUnicodeMime) == 0 ) {
-	          theMapper.MapMimeTypeToMacOSType(kTextMime);
-	          ::AddDragItemFlavor ( mDragRef, itemIndex, 'TEXT', NULL, 0, flags );	        
-	        }
-	      }
+          if ( currentFlavor ) {
+            nsXPIDLCString flavorStr;
+            currentFlavor->ToString ( getter_Copies(flavorStr) );
+            FlavorType macOSFlavor = theMapper.MapMimeTypeToMacOSType(flavorStr);
+            ::AddDragItemFlavor ( mDragRef, itemIndex, macOSFlavor, NULL, 0, flags );
+            
+            // If we advertise text/unicode, then make sure we add 'TEXT' to the list
+            // of flavors supported since we will do the conversion ourselves in GetDataForFlavor()
+            if ( strcmp(flavorStr, kUnicodeMime) == 0 ) {
+              theMapper.MapMimeTypeToMacOSType(kTextMime);
+              ::AddDragItemFlavor ( mDragRef, itemIndex, 'TEXT', NULL, 0, flags );          
+            }
+          }
           
         } // foreach flavor in item              
       } // if valid flavor list
@@ -436,13 +462,14 @@ nsDragService :: RegisterDragItemsAndFlavors ( nsISupportsArray * inArray )
     if ( mapping && mappingLen ) {
       ::AddDragItemFlavor ( mDragRef, itemIndex, nsMimeMapperMac::MappingFlavor(), 
                                mapping, mappingLen, flags );
-	  nsCRT::free ( mapping );
-	}
+      nsCRT::free ( mapping );
+    
+      SetDragItemBounds(mDragRef, itemIndex, &dragRgnBounds);
+    }
     
   } // foreach drag item 
 
 } // RegisterDragItemsAndFlavors
-
 
 //
 // GetData
@@ -679,6 +706,7 @@ nsDragService :: DragSendDataProc ( FlavorType inFlavor, void* inRefCon, ItemRef
   OSErr retVal = noErr;
   nsDragService* self = NS_STATIC_CAST(nsDragService*, inRefCon);
   NS_ASSERTION ( self, "Refcon not set correctly for DragSendDataProc" );
+  
   if ( self ) {
     void* data = nsnull;
     PRUint32 dataSize = 0;
@@ -686,7 +714,7 @@ nsDragService :: DragSendDataProc ( FlavorType inFlavor, void* inRefCon, ItemRef
     if ( retVal == noErr ) {      
         // make the data accessable to the DragManager
         retVal = ::SetDragItemFlavorData ( inDragRef, inItemRef, inFlavor, data, dataSize, 0 );
-        NS_ASSERTION ( retVal == noErr, "SDIFD failed in DragSendDataProc" );
+        NS_ASSERTION ( retVal == noErr, "SetDragItemFlavorData failed in DragSendDataProc" );
     }
     nsMemory::Free ( data );
   } // if valid refcon
@@ -743,7 +771,6 @@ nsDragService :: GetDataForFlavor ( nsISupportsArray* inDragItems, DragReference
     nsCOMPtr<nsISupports> data;
     if ( NS_SUCCEEDED(item->GetTransferData(actualFlavor, getter_AddRefs(data), outDataSize)) ) {
       nsPrimitiveHelpers::CreateDataFromPrimitive ( actualFlavor, data, outData, *outDataSize );
-      
       // if required, do the extra work to convert unicode to plain text and replace the output
       // values with the plain text.
       if ( needToDoConversionToPlainText ) {
