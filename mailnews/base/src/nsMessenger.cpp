@@ -280,8 +280,6 @@ nsMessenger::Open3PaneWindow()
                                    NS_SIZETOCONTENT,           // width
                                    NS_SIZETOCONTENT,           // height
                                    getter_AddRefs(newWindow)); // result widget
-	done:
-	NS_IF_RELEASE(url);
 	return rv;
 }
 
