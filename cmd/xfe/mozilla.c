@@ -4336,7 +4336,7 @@ FE_MakeAppletSecurityChrome(Widget parent, char* warning)
     label = XmCreateLabelGadget (form, "mouseDocumentation", av, ac);
     XmStringFree(cwarning);
 
-#ifndef NO_SECURITY
+#if defined(JAVA) && !defined(NO_SECURITY)
     /*
     ** This section of displays security logos.  It won't compile
     ** properly if security is turned off.  Instead of ifdef'ing
@@ -4356,7 +4356,7 @@ FE_MakeAppletSecurityChrome(Widget parent, char* warning)
 	XtSetArg (av [ac], XmNshadowThickness, 2); ac++;
 	sec_logo = XmCreatePushButtonGadget (form, "javaSecLogo", av, ac);
     }
-#endif /* ! NO_SECURITY */
+#endif /* JAVA && ! NO_SECURITY */
 
     /* Now that widgets have been created, do the form attachments */
     XtVaSetValues(skinnyDrawingArea,
