@@ -691,6 +691,22 @@ void RemoveQuotes(LPSTR lpszSrc, LPSTR lpszDest, int iDestSize)
     lpszDest[lstrlen(lpszDest) - 1] = '\0';
 }
 
+int WizCopyStr(LPSTR szDest, LPSTR szSrc, DWORD dwDestBufSize)
+{
+  DWORD length;
+  DWORD lengthOfSrc;
+
+  ZeroMemory(szDest, dwDestBufSize);
+  lengthOfSrc = lstrlen(szSrc);
+  length = lengthOfSrc < dwDestBufSize ? lengthOfSrc : dwDestBufSize;
+  strncpy(szDest, szSrc, length);
+
+  // strncpy() does not append a NULL byte if the src len is > src buf size
+  szDest[dwDestBufSize - 1] = '\0';
+
+  return(lstrlen(szDest));
+}
+
 /* Function to locate the first non space character in a string,
  * and return a pointer to it. */
 LPSTR GetFirstNonSpace(LPSTR lpszString)
@@ -2237,10 +2253,14 @@ void DeInitDlgQuickLaunch(diQL *diDialog)
 HRESULT InitDlgSetupType(diST *diDialog)
 {
   diDialog->bShowDialog = FALSE;
+  diDialog->bHideAllSetupTypes = FALSE;
+  diDialog->bShowAlternateMessage = FALSE;
 
   if((diDialog->szTitle = NS_GlobalAlloc(MAX_BUF)) == NULL)
     return(1);
   if((diDialog->szMessage0 = NS_GlobalAlloc(MAX_BUF)) == NULL)
+    return(1);
+  if((diDialog->szAlternateMessage = NS_GlobalAlloc(MAX_BUF)) == NULL)
     return(1);
   if((diDialog->szReadmeFilename = NS_GlobalAlloc(MAX_BUF)) == NULL)
     return(1);
@@ -2278,6 +2298,7 @@ void DeInitDlgSetupType(diST *diDialog)
 {
   FreeMemory(&(diDialog->szTitle));
   FreeMemory(&(diDialog->szMessage0));
+  FreeMemory(&(diDialog->szAlternateMessage));
 
   FreeMemory(&(diDialog->szReadmeFilename));
   FreeMemory(&(diDialog->szReadmeApp));
@@ -5909,10 +5930,17 @@ HRESULT ParseConfigIni(LPSTR lpszCmdLine)
   GetPrivateProfileString("Dialog Setup Type",          "Show Dialog",     "", szShowDialog,                  sizeof(szShowDialog), szFileIniConfig);
   GetPrivateProfileString("Dialog Setup Type",          "Title",           "", diSetupType.szTitle,           MAX_BUF, szFileIniConfig);
   GetPrivateProfileString("Dialog Setup Type",          "Message0",        "", diSetupType.szMessage0,        MAX_BUF, szFileIniConfig);
+  GetPrivateProfileString("Dialog Setup Type",          "Alternate Message", "", diSetupType.szAlternateMessage, MAX_BUF, szFileIniConfig);
   GetPrivateProfileString("Dialog Setup Type",          "Readme Filename", "", diSetupType.szReadmeFilename,  MAX_BUF, szFileIniConfig);
   GetPrivateProfileString("Dialog Setup Type",          "Readme App",      "", diSetupType.szReadmeApp,       MAX_BUF, szFileIniConfig);
   if(lstrcmpi(szShowDialog, "TRUE") == 0)
     diSetupType.bShowDialog = TRUE;
+  GetPrivateProfileString("Dialog Setup Type",          "Hide All Setup Types", "", szBuf, sizeof(szBuf), szFileIniConfig);
+  if(lstrcmpi(szBuf, "TRUE") == 0)
+    diSetupType.bHideAllSetupTypes = TRUE;  // default is FALSE
+  GetPrivateProfileString("Dialog Setup Type",          "Show Alternate Message", "", szBuf, sizeof(szBuf), szFileIniConfig);
+  if(lstrcmpi(szBuf, "TRUE") == 0)
+    diSetupType.bShowAlternateMessage = TRUE;  // default is FALSE
 
   /* Get Setup Types info */
   GetPrivateProfileString("Setup Type0", "Description Short", "", diSetupType.stSetupType0.szDescriptionShort, MAX_BUF, szFileIniConfig);

@@ -43,6 +43,10 @@ if($ENV{MOZ_SRC} eq "")
 $inXpiURL = "";
 $inRedirIniURL = "";
 
+$gProductName = "minotaur";
+$gProductPackagerDir = "win_$gProductName";
+$gProductPackagerFile = "pkgs-$gProductName-win";
+
 ParseArgv(@ARGV);
 if($inXpiURL eq "")
 {
@@ -62,21 +66,24 @@ $cwdDist       = GetCwd("dist",     $DEPTH, $cwdBuilder);
 $cwdDistWin    = GetCwd("distwin",  $DEPTH, $cwdBuilder);
 $cwdInstall    = GetCwd("install",  $DEPTH, $cwdBuilder);
 $cwdPackager   = GetCwd("packager", $DEPTH, $cwdBuilder);
-$verPartial    = "5.0.0.";
+$verPartial    = "1.0.0.";
 $ver           = $verPartial . GetVersion($DEPTH);
 
-if(-d "$cwdDist\\stage")
+if(-d "$DEPTH\\stage")
 {
-  system("perl $cwdPackager\\windows\\rdir.pl $cwdDist\\stage");
+  system("perl $cwdPackager\\$gProductPackagerDir\\rdir.pl $DEPTH\\stage");
 }
 
-mkdir("$cwdDist\\stage", 775);
-system("perl $cwdPackager\\pkgcp.pl -s $cwdDistWin -d $cwdDist\\stage -f $cwdPackager\\packages-win -o dos -v");
+# The destination cannot be a sub directory of the source.
+# pkgcp.pl will get very unhappy.
 
-chdir("$cwdPackager\\windows");
-if(system("perl makeall.pl $ver $cwdDist\\stage $cwdDistWin\\install -aurl $inXpiURL -rurl $inRedirIniURL"))
+mkdir("$DEPTH\\stage", 775);
+system("perl $cwdPackager\\pkgcp.pl -s $cwdDistWin -d $DEPTH\\stage -f $cwdPackager\\$gProductPackagerFile -o dos -v");
+
+chdir("$cwdPackager\\$gProductPackagerDir");
+if(system("perl makeall.pl $ver $DEPTH\\stage $cwdDistWin\\install -aurl $inXpiURL -rurl $inRedirIniURL"))
 {
-  print "\n Error: perl makeall.pl $ver $cwdDist\\stage $cwdDistWin\\install $inXpiURL $inRedirIniURL\n";
+  print "\n Error: perl makeall.pl $ver $DEPTH\\stage $cwdDistWin\\install $inXpiURL $inRedirIniURL\n";
   exit(1);
 }
 
@@ -100,7 +107,7 @@ print "**\n";
 print "*\n";
 print "*  A self-extracting installer has been built and delivered:\n";
 print "*\n";
-print "*      $cwdDistWin\\install\\mozilla-win32-install.exe\n";
+print "*      $cwdDistWin\\install\\$gProductName-win32-install.exe\n";
 print "*\n";
 print "**\n";
 print "\n";
@@ -165,14 +172,23 @@ sub GetCwd
   my($distWinPathName);
   my($distPath);
 
-  # determine if build is debug or optimized
-  if($ENV{MOZ_DEBUG} eq "")
+  # determine if build was built via gmake
+  if(-e "$depthPath\\dist\\install")
   {
-    $distWinPathName = "Win32_o.obj";
+    $distWinPathName = "dist";
   }
   else
   {
-    $distWinPathName = "Win32_d.obj";
+    # determine if build is debug or optimized
+    # (used only for nmake builds)
+    if($ENV{MOZ_DEBUG} eq "")
+    {
+      $distWinPathName = "dist\\Win32_o.obj";
+    }
+    else
+    {
+      $distWinPathName = "dist\\Win32_d.obj";
+    }
   }
 
   if($whichPath eq "dist")
@@ -189,24 +205,24 @@ sub GetCwd
   elsif($whichPath eq "distwin")
   {
     # verify the existance of path
-    if(!(-e "$depthPath\\dist\\$distWinPathName"))
+    if(!(-e "$depthPath\\$distWinPathName"))
     {
-      print "path not found: $depthPath\\dist\\$distWinPathName\n";
+      print "path not found: $depthPath\\$distWinPathName\n";
       exit(1);
     }
 
-    $distPath = "$depthPath\\dist\\$distWinPathName";
+    $distPath = "$depthPath\\$distWinPathName";
   }
   elsif($whichPath eq "install")
   {
     # verify the existance of path
-    if(!(-e "$depthPath\\dist\\$distWinPathName\\install"))
+    if(!(-e "$depthPath\\$distWinPathName\\install"))
     {
-      print "path not found: $depthPath\\dist\\$distWinPathName\\install\n";
+      print "path not found: $depthPath\\$distWinPathName\\install\n";
       exit(1);
     }
 
-    $distPath = "$depthPath\\dist\\$distWinPathName\\install";
+    $distPath = "$depthPath\\$distWinPathName\\install";
   }
   elsif($whichPath eq "packager")
   {
@@ -236,17 +252,27 @@ sub GetVersion
   my($dd);
   my($hh);
 
-  # determine if build is debug or optimized
-  if($ENV{MOZ_DEBUG} eq "")
+  # determine if build was built via gmake
+  if(-e "$depthPath\\dist\\install")
   {
-    $distWinPathName = "Win32_o.obj";
+    $distWinPathName = "dist";
   }
   else
   {
-    $distWinPathName = "Win32_d.obj";
+    # determine if build is debug or optimized
+    # (used only for nmake builds)
+    if($ENV{MOZ_DEBUG} eq "")
+    {
+      $distWinPathName = "dist\\Win32_o.obj";
+    }
+    else
+    {
+      $distWinPathName = "dist\\Win32_d.obj";
+    }
   }
 
-  $fileMozilla = "$depthPath\\dist\\$distWinPathName\\bin\\mozilla.exe";
+
+  $fileMozilla = "$depthPath\\$distWinPathName\\bin\\$gProductName.exe";
   # verify the existance of file
   if(!(-e "$fileMozilla"))
   {

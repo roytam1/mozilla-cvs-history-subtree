@@ -24,3 +24,5 @@ trees.c
 uncompr.c
 zutil.c
 Makefile
+none.pdb
+nsinstall.res

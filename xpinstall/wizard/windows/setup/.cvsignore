@@ -1,1 +1,5 @@
 Makefile
+none.pdb
+setup.exp
+setup.lib
+setup.res

@@ -55,6 +55,10 @@ void        ProcessFileOps(DWORD dwTiming, char *szSectionPrefix);
 void        DeleteWinRegValue(HKEY hkRootKey, LPSTR szKey, LPSTR szName);
 void        DeleteWinRegKey(HKEY hkRootKey, LPSTR szKey, BOOL bAbsoluteDelete);
 DWORD       GetWinReg(HKEY hkRootKey, LPSTR szKey, LPSTR szName, LPSTR szReturnValue, DWORD dwSize);
+DWORD       CreateWinRegKey(HKEY hkRootKey,
+                            LPSTR szKey,
+                            BOOL bLogForUninstall,
+                            BOOL bDnu);
 void        SetWinReg(HKEY hkRootKey,
                       LPSTR szKey,
                       BOOL bOverwriteKey,

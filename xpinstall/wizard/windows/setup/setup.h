@@ -285,8 +285,11 @@ typedef struct stStruct
 typedef struct dlgSetupType
 {
   BOOL  bShowDialog;
+  BOOL  bHideAllSetupTypes;
+  BOOL  bShowAlternateMessage;
   LPSTR szTitle;
   LPSTR szMessage0;
+  LPSTR szAlternateMessage;
   LPSTR szReadmeFilename;
   LPSTR szReadmeApp;
   st    stSetupType0;

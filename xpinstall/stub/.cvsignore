@@ -1,1 +1,7 @@
 Makefile
+module.rc
+module.res
+none.pdb
+xpistub.dll
+xpistub.exp
+xpistub.lib

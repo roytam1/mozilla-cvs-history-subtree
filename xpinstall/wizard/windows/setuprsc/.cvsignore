@@ -1,3 +1,7 @@
 .cvsignore
 setuprsc.aps
 Makefile
+none.pdb
+setuprsc.dll
+setuprsc.lib
+setuprsc.res

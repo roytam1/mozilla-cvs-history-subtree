@@ -1646,6 +1646,62 @@ DWORD GetWinReg(HKEY hkRootKey, LPSTR szKey, LPSTR szName, LPSTR szReturnValue, 
   return(dwType);
 }
 
+DWORD _CreateWinRegKey(HKEY hkRootKey,
+                       LPSTR szKey,
+                       BOOL bLogForUninstall,
+                       BOOL bDnu)
+{
+  HKEY    hkResult;
+  DWORD   dwErr;
+  DWORD   dwDisp;
+  char    szBuf[MAX_BUF];
+  char    szRootKey[MAX_BUF_TINY];
+
+  if(!WinRegKeyExists(hkRootKey, szKey))
+  {
+    dwErr = RegCreateKeyEx(hkRootKey, szKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hkResult, &dwDisp);
+    /* log the win reg command */
+    if(bLogForUninstall &&
+       ParseRootKeyString(hkRootKey, szRootKey, sizeof(szRootKey)))
+    {
+      wsprintf(szBuf, "%s\\%s []", szRootKey, szKey);
+      UpdateInstallLog(KEY_CREATE_REG_KEY, szBuf, bDnu);
+    }
+    RegCloseKey(hkResult);
+  }
+
+  return(dwErr);
+}
+
+DWORD CreateWinRegKey(HKEY hkRootKey,
+                      LPSTR szKey,
+                      BOOL bLogForUninstall,
+                      BOOL bDnu)
+{
+  char    szTempKeyPath[MAX_BUF];
+  char    saveChar;
+  LPSTR   pointerToBackslashChar = NULL;
+  LPSTR   pointerToStrWalker = NULL;
+
+  // Make sure that we create all the keys (starting from the root) that
+  // do not exist.  We need to do this in order to log it for uninstall.
+  // If this was not done, then only the last key in the key path would be
+  // uninstalled.
+  WizCopyStr(szTempKeyPath, szKey, sizeof(szTempKeyPath));
+  RemoveBackSlash(szTempKeyPath);
+  pointerToStrWalker = szTempKeyPath;
+  while((pointerToBackslashChar = strstr(pointerToStrWalker, "\\")) != NULL)
+  {
+    saveChar = *pointerToBackslashChar;
+    *pointerToBackslashChar = '\0';
+    _CreateWinRegKey(hkRootKey, szTempKeyPath, bLogForUninstall, bDnu);
+    *pointerToBackslashChar = saveChar;
+    pointerToStrWalker = &pointerToBackslashChar[1];
+  }
+
+  return(_CreateWinRegKey(hkRootKey, szKey, bLogForUninstall, bDnu));
+}
+
 void SetWinReg(HKEY hkRootKey,
                LPSTR szKey,
                BOOL bOverwriteKey,
@@ -1659,29 +1715,16 @@ void SetWinReg(HKEY hkRootKey,
 {
   HKEY    hkResult;
   DWORD   dwErr;
-  DWORD   dwDisp;
-  BOOL    bKeyExists;
   BOOL    bNameExists;
   char    szBuf[MAX_BUF];
   char    szRootKey[MAX_BUF_TINY];
 
-
-  bKeyExists  = WinRegKeyExists(hkRootKey, szKey);
   bNameExists = WinRegNameExists(hkRootKey, szKey, szName);
-  dwErr       = RegOpenKeyEx(hkRootKey, szKey, 0, KEY_WRITE, &hkResult);
 
-  if(dwErr != ERROR_SUCCESS)
-  {
-    dwErr = RegCreateKeyEx(hkRootKey, szKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &hkResult, &dwDisp);
-    /* log the win reg command */
-    if(bLogForUninstall &&
-       ParseRootKeyString(hkRootKey, szRootKey, sizeof(szRootKey)))
-    {
-      wsprintf(szBuf, "%s\\%s []", szRootKey, szKey);
-      UpdateInstallLog(KEY_CREATE_REG_KEY, szBuf, bDnu);
-    }
-  }
+  if(!WinRegKeyExists(hkRootKey, szKey))
+    CreateWinRegKey(hkRootKey, szKey, bLogForUninstall, bDnu);
 
+  dwErr = RegOpenKeyEx(hkRootKey, szKey, 0, KEY_WRITE, &hkResult);
   if(dwErr == ERROR_SUCCESS)
   {
     if((bNameExists == FALSE) ||

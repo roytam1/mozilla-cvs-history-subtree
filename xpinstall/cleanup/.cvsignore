@@ -1,2 +1,7 @@
 xpicleanup
 Makefile
+xpicleanup.exp
+xpicleanup.lib
+module.rc
+module.res
+none.pdb

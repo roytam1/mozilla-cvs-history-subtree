@@ -278,6 +278,22 @@ void RemoveQuotes(LPSTR lpszSrc, LPSTR lpszDest, int iDestSize)
     lpszDest[lstrlen(lpszDest) - 1] = '\0';
 }
 
+int WizCopyStr(LPSTR szDest, LPSTR szSrc, DWORD dwDestBufSize)
+{
+  DWORD length;
+  DWORD lengthOfSrc;
+
+  ZeroMemory(szDest, dwDestBufSize);
+  lengthOfSrc = lstrlen(szSrc);
+  length = lengthOfSrc < dwDestBufSize ? lengthOfSrc : dwDestBufSize;
+  strncpy(szDest, szSrc, length);
+
+  // strncpy() does not append a NULL byte if the src len is > src buf size
+  szDest[dwDestBufSize - 1] = '\0';
+
+  return(lstrlen(szDest));
+}
+
 /* Function to locate the first non space character in a string,
  * and return a pointer to it. */
 LPSTR GetFirstNonSpace(LPSTR lpszString)

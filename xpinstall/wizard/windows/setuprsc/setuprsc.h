@@ -70,6 +70,7 @@
 #define IDC_STATIC_ST2_DESCRIPTION      1044
 #define IDC_STATIC_ST3_DESCRIPTION      1045
 #define IDC_STATIC_MSG0                 1046
+#define IDC_STATIC_MSG1                 1048
 #define IDC_MESSAGE                     1049
 #define IDC_LIST1                       1053
 #define IDC_BUTTON1                     1055

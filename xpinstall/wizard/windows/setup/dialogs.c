@@ -540,58 +540,82 @@ LRESULT CALLBACK DlgProcSetupType(HWND hDlg, UINT msg, WPARAM wParam, LONG lPara
       TruncateString(hDestinationPath, szTempSetupPath, szBuf, sizeof(szBuf));
 
       SetDlgItemText(hDlg, IDC_EDIT_DESTINATION, szBuf);
-      SetDlgItemText(hDlg, IDC_STATIC_MSG0, diSetupType.szMessage0);
 
-      if(diSetupType.stSetupType0.bVisible)
-      {
-        SetDlgItemText(hDlg, IDC_RADIO_ST0, diSetupType.stSetupType0.szDescriptionShort);
-        SetDlgItemText(hDlg, IDC_STATIC_ST0_DESCRIPTION, diSetupType.stSetupType0.szDescriptionLong);
-        ShowWindow(hRadioSt0, SW_SHOW);
-        ShowWindow(hStaticSt0, SW_SHOW);
-      }
-      else
+      if(diSetupType.bHideAllSetupTypes)
       {
         ShowWindow(hRadioSt0, SW_HIDE);
         ShowWindow(hStaticSt0, SW_HIDE);
-      }
-
-      if(diSetupType.stSetupType1.bVisible)
-      {
-        SetDlgItemText(hDlg, IDC_RADIO_ST1, diSetupType.stSetupType1.szDescriptionShort);
-        SetDlgItemText(hDlg, IDC_STATIC_ST1_DESCRIPTION, diSetupType.stSetupType1.szDescriptionLong);
-        ShowWindow(hRadioSt1, SW_SHOW);
-        ShowWindow(hStaticSt1, SW_SHOW);
-      }
-      else
-      {
         ShowWindow(hRadioSt1, SW_HIDE);
         ShowWindow(hStaticSt1, SW_HIDE);
-      }
-
-      if(diSetupType.stSetupType2.bVisible)
-      {
-        SetDlgItemText(hDlg, IDC_RADIO_ST2, diSetupType.stSetupType2.szDescriptionShort);
-        SetDlgItemText(hDlg, IDC_STATIC_ST2_DESCRIPTION, diSetupType.stSetupType2.szDescriptionLong);
-        ShowWindow(hRadioSt2, SW_SHOW);
-        ShowWindow(hStaticSt2, SW_SHOW);
-      }
-      else
-      {
         ShowWindow(hRadioSt2, SW_HIDE);
         ShowWindow(hStaticSt2, SW_HIDE);
-      }
+        ShowWindow(hRadioSt3, SW_HIDE);
+        ShowWindow(hStaticSt3, SW_HIDE);
+        ShowWindow(hStaticSt3, SW_HIDE);
+        ShowWindow(GetDlgItem(hDlg, IDC_STATIC_MSG0), SW_HIDE);
 
-      if(diSetupType.stSetupType3.bVisible)
-      {
-        SetDlgItemText(hDlg, IDC_RADIO_ST3, diSetupType.stSetupType3.szDescriptionShort);
-        SetDlgItemText(hDlg, IDC_STATIC_ST3_DESCRIPTION, diSetupType.stSetupType3.szDescriptionLong);
-        ShowWindow(hRadioSt3, SW_SHOW);
-        ShowWindow(hStaticSt3, SW_SHOW);
+        if(diSetupType.bShowAlternateMessage)
+        {
+          SetDlgItemText(hDlg, IDC_STATIC_MSG1, diSetupType.szAlternateMessage);
+          ShowWindow(GetDlgItem(hDlg, IDC_STATIC_MSG1), SW_SHOW);
+        }
       }
       else
       {
-        ShowWindow(hRadioSt3, SW_HIDE);
-        ShowWindow(hStaticSt3, SW_HIDE);
+        SetDlgItemText(hDlg, IDC_STATIC_MSG0, diSetupType.szMessage0);
+        ShowWindow(GetDlgItem(hDlg, IDC_STATIC_MSG0), SW_SHOW);
+        ShowWindow(GetDlgItem(hDlg, IDC_STATIC_MSG1), SW_HIDE);
+        if(diSetupType.stSetupType0.bVisible)
+        {
+          SetDlgItemText(hDlg, IDC_RADIO_ST0, diSetupType.stSetupType0.szDescriptionShort);
+          SetDlgItemText(hDlg, IDC_STATIC_ST0_DESCRIPTION, diSetupType.stSetupType0.szDescriptionLong);
+          ShowWindow(hRadioSt0, SW_SHOW);
+          ShowWindow(hStaticSt0, SW_SHOW);
+        }
+        else
+        {
+          ShowWindow(hRadioSt0, SW_HIDE);
+          ShowWindow(hStaticSt0, SW_HIDE);
+        }
+
+        if(diSetupType.stSetupType1.bVisible)
+        {
+          SetDlgItemText(hDlg, IDC_RADIO_ST1, diSetupType.stSetupType1.szDescriptionShort);
+          SetDlgItemText(hDlg, IDC_STATIC_ST1_DESCRIPTION, diSetupType.stSetupType1.szDescriptionLong);
+          ShowWindow(hRadioSt1, SW_SHOW);
+          ShowWindow(hStaticSt1, SW_SHOW);
+        }
+        else
+        {
+          ShowWindow(hRadioSt1, SW_HIDE);
+          ShowWindow(hStaticSt1, SW_HIDE);
+        }
+
+        if(diSetupType.stSetupType2.bVisible)
+        {
+          SetDlgItemText(hDlg, IDC_RADIO_ST2, diSetupType.stSetupType2.szDescriptionShort);
+          SetDlgItemText(hDlg, IDC_STATIC_ST2_DESCRIPTION, diSetupType.stSetupType2.szDescriptionLong);
+          ShowWindow(hRadioSt2, SW_SHOW);
+          ShowWindow(hStaticSt2, SW_SHOW);
+        }
+        else
+        {
+          ShowWindow(hRadioSt2, SW_HIDE);
+          ShowWindow(hStaticSt2, SW_HIDE);
+        }
+
+        if(diSetupType.stSetupType3.bVisible)
+        {
+          SetDlgItemText(hDlg, IDC_RADIO_ST3, diSetupType.stSetupType3.szDescriptionShort);
+          SetDlgItemText(hDlg, IDC_STATIC_ST3_DESCRIPTION, diSetupType.stSetupType3.szDescriptionLong);
+          ShowWindow(hRadioSt3, SW_SHOW);
+          ShowWindow(hStaticSt3, SW_SHOW);
+        }
+        else
+        {
+          ShowWindow(hRadioSt3, SW_HIDE);
+          ShowWindow(hStaticSt3, SW_HIDE);
+        }
       }
 
       /* enable the appropriate radio button */
