@@ -36,7 +36,7 @@ const MSG_UNKNOWN   = getMsg ("unknown");
 
 client.defaultNick = getMsg( "defaultNick" );
 
-client.version = "0.8.5-pre6";
+client.version = "0.8.5-pre9";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -877,7 +877,7 @@ function addDynamicRule (rule)
 function setClientOutput(doc) 
 {
     client.output = frames[0].document.getElementById("output");
-    createHighlightMenu();
+    //XXXcreateHighlightMenu();
 }
 
 function createHighlightMenu()
@@ -1542,7 +1542,7 @@ function scrollDown ()
     window.frames[0].scrollTo(0, window.frames[0].document.height);
 }
 
-function addHistory (source, obj)
+function addHistory (source, obj, mergeData, collapseRow)
 {
     var tbody;
     
@@ -1568,10 +1568,48 @@ function addHistory (source, obj)
     
     if (client.PRINT_DIRECTION == 1)
     {
-        if ((w.document.height - (w.innerHeight + w.pageYOffset)) <
-            (w.innerHeight / 3))
-            needScroll = true;
+        if (mergeData || collapseRow)
+        {
+            var thisUserCol = obj.firstChild;
+            var thisMessageCol = thisUserCol.nextSibling;
+            var nickColumns = findPreviousNickColumns(source.messages);
+            var nickColumnCount = nickColumns.length;
+            var sameNick = (nickColumnCount > 0 &&
+                            nickColumns[nickColumnCount - 1].
+                            getAttribute("msg-user") ==
+                            thisUserCol.getAttribute("msg-user"));
+        
+            if (mergeData && sameNick)
+            {
+                /* message is from the same person as last time,
+                 * strip the nick first... */
+                obj.removeChild(obj.firstChild);
+                /* then add padding cells, if required. */
+                for (i = 0; i < nickColumns.length - 1; ++i)
+                    obj.insertBefore (document.createElementNS 
+                                      ("http://www.w3.org/1999/xhtml",
+                                       "html:td"),
+                                      obj.firstChild);
+                /* then add one to the colspan for the previous user columns */
+                var lastRowSpan = Number(nickColumns[0].getAttribute("rowspan"));
+                if (!lastRowSpan)
+                    lastRowSpan = 1;
+                for (var i = 0; i < nickColumns.length; ++i)
+                    nickColumns[i].setAttribute ("rowspan", lastRowSpan + 1);
+            }
+            /*
+            else if (collapseRow && !sameNick &&
+                     nickColumnCount < source.MAX_MSG_PER_ROW)
+            {
+            */
+        }
+        
         tbody.appendChild (obj);
+
+        
+        //if ((w.document.height - (w.innerHeight + w.pageYOffset)) <
+        //    (w.innerHeight))
+            needScroll = true;
     }
     else
         tbody.insertBefore (obj, source.messages.firstChild);
@@ -1596,6 +1634,32 @@ function addHistory (source, obj)
     
 }
 
+function findPreviousNickColumns (table)
+{
+    var tr = table.firstChild.lastChild;
+    var className = tr.firstChild.getAttribute("class");
+    while (tr && className.search(/msg-user|msg-type|msg-nested-td/) == -1)
+    {
+        tr = tr.previousSibling;
+        if (tr)
+            className = tr.firstChild.getAttribute("class");
+    }
+    
+    if (!tr || className != "msg-user")
+        return [];
+    
+    var nickCol = tr.firstChild;
+    var ary = new Array();
+    while (nickCol)
+    {
+        if (nickCol.getAttribute("class") == "msg-user")
+            ary.push (nickCol);
+        nickCol = nickCol.nextSibling.nextSibling;
+    }
+
+    return ary;
+}
+    
 function notifyActivity (source)
 {
     if (typeof source != "object")
@@ -2000,6 +2064,8 @@ CIRCChannel.prototype.displayHere =
 CIRCUser.prototype.displayHere =
 function __display(message, msgtype, sourceObj, destObj)
 {            
+    var canMergeData = false;
+    var canCollapseRow = false;
     var d = new Date();
     var mins = d.getMinutes();
     if (mins < 10)
@@ -2035,7 +2101,7 @@ function __display(message, msgtype, sourceObj, destObj)
     var fromType = (sourceObj && sourceObj.TYPE) ? sourceObj.TYPE : "unk";
     
     var fromAttr;
-    if      (sourceObj && sourceObj == me)       fromAttr = "ME!";
+    if      (sourceObj && sourceObj == me)       fromAttr = me.nick + " ME!";
     else if (fromType.search(/IRC.*User/) != -1) fromAttr = sourceObj.nick;
     else if (typeof sourceObj == "object")       fromAttr = sourceObj.name;
         
@@ -2131,6 +2197,8 @@ function __display(message, msgtype, sourceObj, destObj)
             msgSource.appendChild (newInlineText (nick));
         }
         msgRow.appendChild (msgSource);
+        canMergeData = true;
+        canCollapseRow = true;
 
     }
     else
@@ -2205,9 +2273,11 @@ function __display(message, msgtype, sourceObj, destObj)
         tbody.appendChild (msgRow);
         table.appendChild (tbody);
         msgRow = tr;
+        canMergeData = false;
+        canCollapseRow = false;
     }
 
-    addHistory (this, msgRow);
+    addHistory (this, msgRow, canMergeData, canCollapseRow);
     if (isImportant || getAttention)
         notifyAttention(this);
     else
