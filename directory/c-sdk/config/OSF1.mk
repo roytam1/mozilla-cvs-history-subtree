@@ -97,7 +97,7 @@ NON_LD_FLAGS		= -ieee_with_inexact
 OS_CFLAGS		= -DOSF1 -D_REENTRANT
 
 ifeq ($(HAVE_CCONF), 1)
-OS_CFLAGS		+= -DIS_64
+OS_CFLAGS		+= -DIS_64 -DOSF1V4D -DOSF1
 endif
 
 ifneq (,$(filter-out V2.0 V3.2,$(OS_RELEASE)))
