@@ -323,6 +323,10 @@ function deleteCerts()
   {
     params.SetString(1,bundle.GetStringFromName("deleteCaCertFlag"));
   }
+  else if (selTabID == "others_tab") 
+  {
+    params.SetString(1,bundle.GetStringFromName("deleteEmailCertFlag"));
+  }
   else
   {
     return;
