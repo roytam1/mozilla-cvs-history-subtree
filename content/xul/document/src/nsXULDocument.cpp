@@ -748,10 +748,11 @@ nsXULDocument::StartDocumentLoad(const char* aCommand,
     // certain hacks (cough, the directory viewer) need to be able to
     // StartDocumentLoad() before the channel's content type has been
     // detected.
+    
     nsXPIDLCString contentType;
-    nsCOMPtr<nsIMIMEService> MIMEService (do_GetService(NS_MIMESERVICE_CONTRACTID, &rv));
-    if (NS_FAILED(rv)) return rv;
-    rv = MIMEService->GetTypeFromURI(mDocumentURL, getter_Copies(contentType));
+    nsCOMPtr<nsIStreamContentInfo> contentInfo = do_QueryInterface(aChannel);
+    if (contentInfo)
+        contentInfo->GetContentType(getter_Copies(contentType));
 
     if (contentType && PL_strcmp(contentType, "text/cached-xul") == 0) {
         // Look in the chrome cache: we've got this puppy loaded

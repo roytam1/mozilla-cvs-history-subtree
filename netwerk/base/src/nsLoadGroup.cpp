@@ -498,7 +498,7 @@ nsLoadGroup::RemoveRequest(nsIRequest *request, nsISupports* ctxt,
     nsLoadFlags flags;
     nsCOMPtr<nsIChannel> aChannel;
     rv = request->GetParent(getter_AddRefs(aChannel));
-    if (NS_FAILED(rv) || aChannel) 
+    if (NS_FAILED(rv) || !aChannel) 
       return NS_ERROR_FAILURE;
 
     rv = aChannel->GetLoadAttributes(&flags);

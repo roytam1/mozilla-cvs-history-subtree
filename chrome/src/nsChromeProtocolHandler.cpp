@@ -80,7 +80,7 @@ static NS_DEFINE_CID(kXULPrototypeCacheCID,      NS_XULPROTOTYPECACHE_CID);
 //  For logging information, NSPR_LOG_MODULES=nsCachedChromeChannel:5
 //
 
-class nsCachedChromeChannel : public nsIChannel, public nsIRequest
+class nsCachedChromeChannel : public nsIChannel, public nsIRequest, public nsIStreamContentInfo
 {
 protected:
     nsCachedChromeChannel(nsIURI* aURI);
@@ -117,29 +117,28 @@ public:
     NS_DECL_ISUPPORTS
 
     // nsIRequest
-    NS_IMETHOD GetName(PRUnichar* *result) { 
-        NS_NOTREACHED("nsCachedChromeChannel::GetName");
-        return NS_ERROR_NOT_IMPLEMENTED;
-    }
+    NS_IMETHOD GetName(PRUnichar* *result) { return NS_ERROR_NOT_IMPLEMENTED; }
     NS_IMETHOD IsPending(PRBool *_retval) { *_retval = PR_TRUE; return NS_OK; }
     NS_IMETHOD GetStatus(nsresult *status) { *status = mStatus; return NS_OK; }
     NS_IMETHOD Cancel(nsresult status)  { mStatus = status; return NS_OK; }
     NS_IMETHOD Suspend(void) { return NS_OK; }
     NS_IMETHOD Resume(void)  { return NS_OK; }
-    NS_IMETHOD GetParent(nsISupports * *aParent) { *aParent = nsnull; return NS_OK; }
+    NS_IMETHOD GetParent(nsISupports * *aParent) { NS_ADDREF(*aParent = (nsIChannel*)this); return NS_OK; }
     NS_IMETHOD SetParent(nsISupports * aParent) { return NS_ERROR_NOT_IMPLEMENTED; }
     
 // nsIChannel    
     NS_DECL_NSICHANNEL
+    NS_DECL_NSISTREAMCONTENTINFO
 };
 
 #ifdef PR_LOGGING
 PRLogModuleInfo* nsCachedChromeChannel::gLog;
 #endif
 
-NS_IMPL_ADDREF(nsCachedChromeChannel);
-NS_IMPL_RELEASE(nsCachedChromeChannel);
-NS_IMPL_QUERY_INTERFACE2(nsCachedChromeChannel, nsIRequest, nsIChannel);
+NS_IMPL_ISUPPORTS3(nsCachedChromeChannel, 
+                     nsIRequest, 
+                     nsIChannel,
+                     nsIStreamContentInfo);
 
 nsresult
 nsCachedChromeChannel::Create(nsIURI* aURI, nsIChannel** aResult)
@@ -345,6 +344,36 @@ nsCachedChromeChannel::GetSecurityInfo(nsISupports * *aSecurityInfo)
 {
     *aSecurityInfo = nsnull;
     return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsCachedChromeChannel::GetContentType(char * *aContentType)
+{
+    *aContentType = nsXPIDLCString::Copy("text/cached-xul");
+    return *aContentType ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+}
+
+NS_IMETHODIMP
+nsCachedChromeChannel::SetContentType(const char *aContentType)
+{
+    // Do not allow the content-type to be changed.
+    NS_NOTREACHED("don't do that");
+    return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP
+nsCachedChromeChannel::GetContentLength(PRInt32 *aContentLength)
+{
+    NS_NOTREACHED("don't do that");
+    *aContentLength = 0;
+    return NS_ERROR_FAILURE;
+}
+
+NS_IMETHODIMP
+nsCachedChromeChannel::SetContentLength(PRInt32 aContentLength)
+{
+    NS_NOTREACHED("nsCachedChromeChannel::SetContentLength");
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 nsresult

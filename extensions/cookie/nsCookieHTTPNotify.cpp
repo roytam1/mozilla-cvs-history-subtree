@@ -164,8 +164,8 @@ nsCookieHTTPNotify::ModifyRequest(nsISupports *aContext)
     if (pLoadGroup) {
       nsCOMPtr<nsIRequest> pRequest;
       rv = pLoadGroup->GetDefaultLoadRequest(getter_AddRefs(pRequest));
-      if (NS_FAILED(rv)) return rv;
-      pRequest->GetParent(getter_AddRefs(pChannel));
+      if (pRequest)
+        pRequest->GetParent(getter_AddRefs(pChannel));
     }
 
     nsCOMPtr<nsIURI> pFirstURL;

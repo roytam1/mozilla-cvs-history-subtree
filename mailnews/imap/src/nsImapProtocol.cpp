@@ -7094,7 +7094,6 @@ NS_IMETHODIMP nsImapMockChannel::SetOwner(nsISupports * aPrincipal)
 
 NS_IMETHODIMP nsImapMockChannel::GetName(PRUnichar* *result)
 {
-    NS_NOTREACHED("nsImapMockChannel::GetName");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
