@@ -611,47 +611,47 @@ PRBool nsScrollingView :: Paint(nsIRenderingContext& rc, const nsRect& rect,
 
 void nsScrollingView :: HandleScrollEvent(nsGUIEvent *aEvent, PRUint32 aEventFlags)
 {
-  static NS_DEFINE_IID(kIViewIID, NS_IVIEW_IID);
-
-  nsIView       *scview = nsnull;
-  aEvent->widget->QueryInterface(kIViewIID, (void**)&scview);
-
+  nsIView         *scview = nsnull;
   nsIPresContext  *px = mViewManager->GetPresContext();
   float           scale = px->GetTwipsToPixels();
   nscoord         dx = 0, dy = 0;
+  nsRect          bounds;
+
+  static NS_DEFINE_IID(kIViewIID, NS_IVIEW_IID);
+
+  aEvent->widget->QueryInterface(kIViewIID, (void**)&scview);
+
+  GetBounds(bounds);
 
   if ((nsnull != mVScrollBarView) && (scview == mVScrollBarView))
   {
-    nscoord oy;
-
-    oy = mOffsetY;
+    nscoord oy = mOffsetY;
+    nscoord newpos;
 
     //now, this horrible thing makes sure that as we scroll
     //the document a pixel at a time, we keep the logical position of
     //our scroll bar at the top edge of the same pixel that
     //is displayed.
 
-    mOffsetY = NSIntPixelsToTwips(NSTwipsToIntPixels(((nsScrollbarEvent *)aEvent)->position, scale), px->GetPixelsToTwips());
+    newpos = ((nsScrollbarEvent *)aEvent)->position;
+
+    if ((newpos + bounds.height) > mSizeY)
+      newpos = mSizeY - bounds.height;
+
+    mOffsetY = NSIntPixelsToTwips(NSTwipsToIntPixels(newpos, scale), px->GetPixelsToTwips());
 
     dy = NSTwipsToIntPixels((oy - mOffsetY), scale);
 
     if (dy != 0)
     {
-      nsRect  clip;
       nscoord sx, sy;
 
       mVScrollBarView->GetDimensions(&sx, &sy);
-
-      clip.x = 0;
-      clip.y = 0;
-      clip.width = NSTwipsToIntPixels((mBounds.width - sx), scale);
 
       if ((nsnull != mHScrollBarView) && (mHScrollBarView->GetVisibility() == nsViewVisibility_kShow))
         mHScrollBarView->GetDimensions(&sx, &sy);
       else
         sy = 0;
-
-      clip.height = NSTwipsToIntPixels((mBounds.height - sy), scale);
 
       mViewManager->ClearDirtyRegion();
 
@@ -672,10 +672,7 @@ void nsScrollingView :: HandleScrollEvent(nsGUIEvent *aEvent, PRUint32 aEventFla
 
       if (dy != 0)
       {
-//        AdjustChildWidgets(this, this, 0, 0, px->GetTwipsToPixels());
-
         if (nsnull != mWindow)
-//          mWindow->Scroll(0, dy, &clip);
           mWindow->Scroll(0, dy, nsnull);
         else
           mViewManager->UpdateView(this, nsnull, 0);
@@ -690,37 +687,33 @@ void nsScrollingView :: HandleScrollEvent(nsGUIEvent *aEvent, PRUint32 aEventFla
   }
   else if ((nsnull != mHScrollBarView) && (scview == mHScrollBarView))
   {
-    nscoord ox;
-
-    ox = mOffsetX;
+    nscoord ox = mOffsetX;
+    nscoord newpos;
 
     //now, this horrible thing makes sure that as we scroll
     //the document a pixel at a time, we keep the logical position of
     //our scroll bar at the top edge of the same pixel that
     //is displayed.
 
-    mOffsetX = NSIntPixelsToTwips(NSTwipsToIntPixels(((nsScrollbarEvent *)aEvent)->position, scale), px->GetPixelsToTwips());
+    newpos = ((nsScrollbarEvent *)aEvent)->position;
+
+    if ((newpos + bounds.width) > mSizeX)
+      newpos = mSizeX - bounds.width;
+
+    mOffsetX = NSIntPixelsToTwips(NSTwipsToIntPixels(newpos, scale), px->GetPixelsToTwips());
 
     dx = NSTwipsToIntPixels((ox - mOffsetX), scale);
 
     if (dx != 0)
     {
-      nsRect  clip;
       nscoord sx, sy;
-
-      clip.x = 0;
-      clip.y = 0;
 
       if ((nsnull != mVScrollBarView) && (mVScrollBarView->GetVisibility() == nsViewVisibility_kShow))
         mVScrollBarView->GetDimensions(&sx, &sy);
       else
         sx = 0;
 
-      clip.width = NSTwipsToIntPixels((mBounds.width - sx), scale);
-
       mHScrollBarView->GetDimensions(&sx, &sy);
-
-      clip.height = NSTwipsToIntPixels((mBounds.height - sy), scale);
 
       mViewManager->ClearDirtyRegion();
 
@@ -741,10 +734,7 @@ void nsScrollingView :: HandleScrollEvent(nsGUIEvent *aEvent, PRUint32 aEventFla
 
       if (dx != 0)
       {
-//        AdjustChildWidgets(this, this, 0, 0, px->GetTwipsToPixels());
-
         if (nsnull != mWindow)
-//          mWindow->Scroll(dx, 0, &clip);
           mWindow->Scroll(dx, 0, nsnull);
         else
           mViewManager->UpdateView(this, nsnull, 0);
