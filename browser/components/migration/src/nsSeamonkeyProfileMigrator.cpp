@@ -499,7 +499,7 @@ nsSeamonkeyProfileMigrator::WriteFontsBranch(nsIPrefService* aPrefService,
     }
     nsCRT::free(pref->prefName);
     pref->prefName = nsnull;
-    free(pref);
+    delete pref;
     pref = nsnull;
   }
   aPrefs->Clear();
