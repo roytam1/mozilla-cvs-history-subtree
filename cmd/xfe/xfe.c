@@ -76,6 +76,9 @@
 
 #include "prefapi.h"
 #include "NSReg.h"
+#ifdef MOZ_SMARTUPDATE
+#include "softupdt.h"
+#endif
 
 #if defined(_HPUX_SOURCE)
 /* I don't know where this is coming from...  "ld -y Error" says
@@ -1643,6 +1646,10 @@ FE_MakeGridWindow (MWContext *old_context, void *history, int32 x, int32 y,
   CONTEXT_DATA (context)->backdrop_pixmap = (Pixmap) ~0;
   CONTEXT_DATA (context)->grid_scrolling = scrolling;
 
+  // Set the image library callbacks 
+  CONTEXT_DATA(context)->DisplayPixmap = DisplayPixmap;
+  CONTEXT_DATA(context)->NewPixmap = (NewPixmapPtr)NULL;
+
   /* FRAMES_HAVE_THEIR_OWN_COLORMAP was an unfinished
 	 experiment by kevina. */
 #ifdef FRAMES_HAVE_THEIR_OWN_COLORMAP
@@ -2574,6 +2581,9 @@ fe_MinimalNoUICleanup()
 
   PREF_SavePrefFile();
   NR_ShutdownRegistry();
+#ifdef MOZ_SMARTUPDATE
+  SU_Shutdown();
+#endif
 
   RDF_Shutdown();
   GH_SaveGlobalHistory ();
