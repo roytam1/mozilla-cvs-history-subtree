@@ -82,7 +82,7 @@ foreach $search (@srch)
 
   while($entry)
     {
-      Mozilla::LDAP::Utils::printEntry($entry);
+      $entry->printLDIF();
       $entry = $conn->entry;
     }
   print "\n";
