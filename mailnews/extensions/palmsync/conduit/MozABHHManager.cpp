@@ -64,7 +64,8 @@ MozABHHManager::MozABHHManager(DWORD dwGenericFlags,
 
     m_dwMaxRecordCount = 0;
     m_pCatMgr = NULL;
-
+    // since we are dealing with AB which is a Record DB in Palm
+    m_bRecordDB = TRUE;
 
     m_szName[0] = '\0';
     SetName( pName);
