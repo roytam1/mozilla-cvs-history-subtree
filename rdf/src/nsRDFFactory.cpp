@@ -22,6 +22,7 @@
 #include "nsMemoryDataSource.h"
 #include "nsBookmarkDataSource.h"
 #include "nsSimpleDataBase.h"
+#include "nsRDFDocument.h"
 #include "nsRDFRegistryImpl.h"
 #include "nsRDFCID.h"
 
@@ -33,6 +34,7 @@ static NS_DEFINE_CID(kRDFMemoryDataSourceCID,   NS_RDFMEMORYDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFRegistryCID,           NS_RDFREGISTRY_CID);
 static NS_DEFINE_CID(kRDFResourceManagerCID,    NS_RDFRESOURCEMANAGER_CID);
 static NS_DEFINE_CID(kRDFSimpleDataBaseCID,     NS_RDFSIMPLEDATABASE_CID);
+static NS_DEFINE_CID(kRDFDocumentCID,           NS_RDFDOCUMENT_CID);
 
 class nsRDFFactory : public nsIFactory
 {
@@ -123,6 +125,9 @@ nsRDFFactory::CreateInstance(nsISupports *aOuter,
     }
     else if (mClassID.Equals(kRDFSimpleDataBaseCID)) {
         inst = static_cast<nsISupports*>(new nsSimpleDataBase());
+    }
+    else if (mClassID.Equals(kRDFDocumentCID)) {
+        inst = static_cast<nsIRDFDocument*>(new nsRDFDocument());
     }
 
     if (! inst)
