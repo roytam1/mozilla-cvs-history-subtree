@@ -84,7 +84,8 @@ nsIRDFService* gRDFService;
 
 NS_IMPL_ISUPPORTS3(nsDownloadManager, nsIDownloadManager, nsIDOMEventListener, nsIObserver)
 
-nsDownloadManager::nsDownloadManager() : mCurrDownloads(nsnull)
+nsDownloadManager::nsDownloadManager() : mCurrDownloads(nsnull),
+                                         mBatches(0)
 {
   NS_INIT_ISUPPORTS();
 }
@@ -183,24 +184,28 @@ nsDownloadManager::GetProfileDownloadsFileURL(nsCString& aDownloadsFileURL)
 nsresult
 nsDownloadManager::GetDownloadsContainer(nsIRDFContainer** aResult)
 {
+  if (mDownloadsContainer) {
+    *aResult = mDownloadsContainer;
+    NS_ADDREF(*aResult);
+    return NS_OK;
+  }
+
   PRBool isContainer;
   nsresult rv = mRDFContainerUtils->IsContainer(mDataSource, gNC_DownloadsRoot, &isContainer);
   if (NS_FAILED(rv)) return rv;
 
-  nsCOMPtr<nsIRDFContainer> ctr;
-
   if (!isContainer) {
-    rv = mRDFContainerUtils->MakeSeq(mDataSource, gNC_DownloadsRoot, getter_AddRefs(ctr));
+    rv = mRDFContainerUtils->MakeSeq(mDataSource, gNC_DownloadsRoot, getter_AddRefs(mDownloadsContainer));
     if (NS_FAILED(rv)) return rv;
   }
   else {
-    ctr = do_CreateInstance(NS_RDF_CONTRACTID "/container;1", &rv);
+    mDownloadsContainer = do_CreateInstance(NS_RDF_CONTRACTID "/container;1", &rv);
     if (NS_FAILED(rv)) return rv;
-    rv = ctr->Init(mDataSource, gNC_DownloadsRoot);
+    rv = mDownloadsContainer->Init(mDataSource, gNC_DownloadsRoot);
     if (NS_FAILED(rv)) return rv;
   }
 
-  *aResult = ctr;
+  *aResult = mDownloadsContainer;
   NS_IF_ADDREF(*aResult);
 
   return rv;
@@ -625,9 +630,26 @@ nsDownloadManager::RemoveDownload(const char* aPath)
   rv = downloads->RemoveElementAt(itemIndex, PR_TRUE, getter_AddRefs(node));
   if (NS_FAILED(rv)) return rv;
   
+  // if a mass removal is being done, we don't want to flush every time
+  if (mBatches) return rv;
+
   nsCOMPtr<nsIRDFRemoteDataSource> remote = do_QueryInterface(mDataSource);
   return remote->Flush();
 }  
+
+NS_IMETHODIMP
+nsDownloadManager::StartBatchUpdate()
+{
+  ++mBatches;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDownloadManager::EndBatchUpdate()
+{
+  --mBatches;
+  return NS_OK;
+}
 
 NS_IMETHODIMP
 nsDownloadManager::Open(nsIDOMWindow* aParent)

@@ -21,7 +21,7 @@
  *
  * Contributor(s):
  *   Ben Goodger <ben@netscape.com> (Original Author)
- *   Blake Ross <blakeross@telocity.com>
+ *   Blake Ross <blaker@netscape.com>
  *   Jan Varga <varga@utcru.sk>
  *
  * Alternatively, the contents of this file may be used under the terms of
@@ -204,8 +204,22 @@ var downloadViewController = {
       break;
     case "cmd_remove":
       selectedItems = getSelectedItems();
-      for (i = 0; i < selectedItems.length; i++)
+      gDownloadManager.startBatchUpdate();
+      
+      // Notify the datasource that we're about to begin a batch operation
+      var observer = gDownloadView.builder.QueryInterface(Components.interfaces.nsIRDFObserver);
+      var ds = gDownloadView.database;
+      observer.beginUpdateBatch(ds);
+      
+      for (i = 0; i <= selectedItems.length - 1; ++i) {
         gDownloadManager.removeDownload(selectedItems[i].id);
+      }
+
+      gDownloadManager.endBatchUpdate();
+      observer.endUpdateBatch(ds);
+      var remote = window.arguments[0].QueryInterface(Components.interfaces.nsIRDFRemoteDataSource);
+      remote.Flush();
+      gDownloadView.builder.rebuild();
       window.updateCommands("tree-select");
       break;
     case "cmd_selectAll":
