@@ -67,7 +67,7 @@ ifdef BUILD_STATIC_LIBS
 STATIC_COMPONENTS_LINKER_PATH = -L$(DIST)/lib/components
 endif
 
-ifeq ($(MOZ_WIDGET_TOOLKIT),cocoa)
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 TK_LIBS := -framework Cocoa $(TK_LIBS)
 endif
 

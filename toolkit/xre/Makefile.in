@@ -112,6 +112,9 @@ CPPSRCS += nsNativeAppSupportDefault.cpp
 endif
 endif
 
+ifeq ($(MOZ_WIDGET_TOOLKIT),mac)
+CMSRCS = MacLaunchHelper.m
+endif
 
 ifneq (,$(filter-out OS2 WINNT,$(OS_ARCH)))
 STACKWALK_SRC_LCSRCS =               \

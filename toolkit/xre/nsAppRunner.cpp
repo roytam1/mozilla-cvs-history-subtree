@@ -41,6 +41,10 @@
 
 #include "nsAppRunner.h"
 
+#ifdef XP_MACOSX
+#include "MacLaunchHelper.h"
+#endif
+
 #ifdef XP_OS2
 #include "private/pprthred.h"
 #endif
@@ -1223,8 +1227,6 @@ static nsresult LaunchChild(nsINativeAppSupport* aNative)
   CFBundleRef appBundle = CFBundleGetMainBundle();
   if (!appBundle) return NS_ERROR_FAILURE;
 
-  nsresult rv = NS_ERROR_FAILURE;
-
   CFURLRef bundleURL = CFBundleCopyExecutableURL(appBundle);
   if (!bundleURL) return NS_ERROR_FAILURE;
 
@@ -1271,6 +1273,8 @@ static nsresult LaunchChild(nsINativeAppSupport* aNative)
 #if defined(XP_WIN)
   if (_execv(exePath, gRestartArgv) == -1)
     return NS_ERROR_FAILURE;
+#elif defined(XP_MACOSX)
+  LaunchChildMac(gRestartArgc, gRestartArgv);
 #elif defined(XP_UNIX)
   if (execv(exePath, gRestartArgv) == -1)
     return NS_ERROR_FAILURE;
