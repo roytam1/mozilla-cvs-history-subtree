@@ -93,6 +93,7 @@
 #define IDS_MEMORY_CACHE                113
 #define IDS_HISTORY                     114
 #define IDS_CONTINUE_CLEAR_HISTORY      115
+#define IDD_DISK_SPACE                  116
 #define IDD_CACHE16                     117
 #define IDS_FILTER_HTM32                118
 #define IDS_BROWSE_HOMEPAGE             119
@@ -103,6 +104,7 @@
 #define IDS_CONTINUE_CLEAR_MEM_CACHE    124
 #define IDS_DISK_CACHE                  125
 #define IDD_APPLICATIONS                126
+#define IDD_DISK_SPACE_MORE             127
 #define IDS_TELNET                      127
 #define IDD_EDIT_TYPE                   128
 #define IDS_TN3270                      128
