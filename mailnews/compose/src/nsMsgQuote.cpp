@@ -232,7 +232,11 @@ SaveQuoteMessageCompleteCallback(nsIURI *aURL, nsresult aExitCode, void *tagData
   }
   
   // Set us as the output stream for HTML data from libmime...
-  if (NS_FAILED(mimeParser->SetOutputStream(ptr->mOutStream, ptr->mURI)))
+  // SHERRY --> rhp, i need you to verify the arguments for this call...
+  // i just hacked them up to get it to build. 
+  char * contentType = nsnull;
+  nsMimeOutputType outType;
+  if (NS_FAILED(mimeParser->SetOutputStream(ptr->mOutStream, nsnull /* uri */, nsMimeOutput::nsMimeMessageQuoting, &outType, &contentType )))
   {
     NS_RELEASE(ptr);
     printf("Unable to set the output stream for the mime parser...\ncould be failure to create internal libmime data\n");
