@@ -449,8 +449,6 @@ nsSVGOuterSVGFrame::Reflow(nsIPresContext*          aPresContext,
   CalculateAvailableSpace(&maxRect, &preferredRect, aPresContext, aReflowState);
   float preferredWidth = preferredRect.width * pxPerTwips;
   float preferredHeight = preferredRect.height * pxPerTwips;
-  float maxWidth  = maxRect.width * pxPerTwips;
-  float maxHeight = maxRect.height * pxPerTwips;
 
   SuspendRedraw(); 
   
@@ -512,8 +510,6 @@ nsSVGOuterSVGFrame::Reflow(nsIPresContext*          aPresContext,
     NS_ENSURE_TRUE(length, NS_ERROR_FAILURE);
     
     length->GetValue(&width);
-    if (width > maxWidth)
-      width = maxWidth;
     
     aDesiredSize.width = (int)(width*twipsPerPx);
   }
@@ -528,8 +524,6 @@ nsSVGOuterSVGFrame::Reflow(nsIPresContext*          aPresContext,
     NS_ENSURE_TRUE(length, NS_ERROR_FAILURE);
     
     length->GetValue(&height);
-    if (height > maxHeight)
-      height = maxHeight;
     
     aDesiredSize.height = (int)(height*twipsPerPx);
   }
