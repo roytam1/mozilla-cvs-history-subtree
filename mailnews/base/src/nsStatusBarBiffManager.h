@@ -42,7 +42,7 @@
 
 #include "msgCore.h"
 #include "nsCOMPtr.h"
-
+#include "nsISound.h"
 
 class nsStatusBarBiffManager : public nsIFolderListener
 {
@@ -64,6 +64,7 @@ private:
 
 protected:
 	  static nsIAtom* kBiffStateAtom;
+        nsCOMPtr <nsISound> mSound;
 };
 
 

@@ -51,7 +51,6 @@
 #include "MailNewsTypes.h"
 #include "nsIMsgFolder.h" // TO include biffState enum. Change to bool later...
 #include "nsIFileChannel.h"
-#include "nsISound.h"
 #include "nsIPref.h"
 #include "nsXPIDLString.h"
 #include "nsIURL.h"
@@ -122,15 +121,17 @@ nsresult nsStatusBarBiffManager::PerformStatusBarBiff(PRUint32 newBiffFlag)
         PRBool playSoundOnBiff = PR_FALSE;
         rv = pref->GetBoolPref(PREF_PLAY_SOUND_ON_NEW_MAIL, &playSoundOnBiff);
         if (NS_SUCCEEDED(rv) && playSoundOnBiff) {
-          nsCOMPtr<nsISound> sound = do_CreateInstance("@mozilla.org/sound;1");
-          if (sound) {
+          if (!mSound)
+            mSound = do_CreateInstance("@mozilla.org/sound;1");
+
+          if (mSound) {
 #ifdef PLAY_INTERNAL_SOUND
             nsCOMPtr<nsIURL> soundURL = do_CreateInstance("@mozilla.org/network/standard-url;1");
             soundURL->SetSpec(NS_LITERAL_CSTRING("chrome://messenger/content/newmail.wav"));
             printf("play sound\n");
-            rv = sound->Play(soundURL);
+            rv = mSound->Play(soundURL);
 #else
-            rv = sound->PlaySystemSound("_moz_mailbeep");
+            rv = mSound->PlaySystemSound("_moz_mailbeep");
 #endif
           } 
         }
