@@ -166,7 +166,7 @@ NS_IMETHODIMP nsMessageViewDataSource::GetTarget(nsIRDFResource* source,
 NS_IMETHODIMP nsMessageViewDataSource::GetSources(nsIRDFResource* property,
 						nsIRDFNode* target,
 						PRBool tv,
-						nsIRDFEnumerator** sources)
+						nsISimpleEnumerator** sources)
 {
 	if(mDataSource)
 		return mDataSource->GetSources(property, target, tv, sources);
@@ -177,7 +177,7 @@ NS_IMETHODIMP nsMessageViewDataSource::GetSources(nsIRDFResource* property,
 NS_IMETHODIMP nsMessageViewDataSource::GetTargets(nsIRDFResource* source,
 						nsIRDFResource* property,    
 						PRBool tv,
-						nsIRDFEnumerator** targets)
+						nsISimpleEnumerator** targets)
 {
 	nsresult rv = NS_ERROR_FAILURE;
 
@@ -328,7 +328,7 @@ NS_IMETHODIMP nsMessageViewDataSource::RemoveObserver(nsIRDFObserver* n)
 }
 
 NS_IMETHODIMP nsMessageViewDataSource::ArcLabelsIn(nsIRDFNode* node,
-						 nsIRDFEnumerator** labels)
+						 nsISimpleEnumerator** labels)
 {
 	if(mDataSource)
 		return mDataSource->ArcLabelsIn(node, labels);
@@ -337,7 +337,7 @@ NS_IMETHODIMP nsMessageViewDataSource::ArcLabelsIn(nsIRDFNode* node,
 }
 
 NS_IMETHODIMP nsMessageViewDataSource::ArcLabelsOut(nsIRDFResource* source,
-						  nsIRDFEnumerator** labels)
+						  nsISimpleEnumerator** labels)
 {
 	
 	nsIMessage *message;
@@ -392,7 +392,7 @@ NS_IMETHODIMP nsMessageViewDataSource::ArcLabelsOut(nsIRDFResource* source,
 		return NS_OK;
 } 
 
-NS_IMETHODIMP nsMessageViewDataSource::GetAllResources(nsIRDFEnumerator** aCursor)
+NS_IMETHODIMP nsMessageViewDataSource::GetAllResources(nsISimpleEnumerator** aCursor)
 {
 	if(mDataSource)
 		return mDataSource->GetAllResources(aCursor);

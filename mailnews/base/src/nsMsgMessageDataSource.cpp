@@ -201,7 +201,7 @@ nsresult nsMsgMessageDataSource::GetSenderName(nsAutoString& sender, nsAutoStrin
 NS_IMETHODIMP nsMsgMessageDataSource::GetSources(nsIRDFResource* property,
                                                 nsIRDFNode* target,
                                                 PRBool tv,
-                                                nsIRDFEnumerator** sources)
+                                                nsISimpleEnumerator** sources)
 {
   PR_ASSERT(0);
   return NS_ERROR_NOT_IMPLEMENTED;
@@ -210,7 +210,7 @@ NS_IMETHODIMP nsMsgMessageDataSource::GetSources(nsIRDFResource* property,
 NS_IMETHODIMP nsMsgMessageDataSource::GetTargets(nsIRDFResource* source,
                                                 nsIRDFResource* property,    
                                                 PRBool tv,
-                                                nsIRDFEnumerator** targets)
+                                                nsISimpleEnumerator** targets)
 {
 	nsresult rv = NS_RDF_NO_VALUE;
 
@@ -290,14 +290,14 @@ NS_IMETHODIMP nsMsgMessageDataSource::RemoveObserver(nsIRDFObserver* n)
 
 
 NS_IMETHODIMP nsMsgMessageDataSource::ArcLabelsIn(nsIRDFNode* node,
-                                                 nsIRDFEnumerator** labels)
+                                                 nsISimpleEnumerator** labels)
 {
   PR_ASSERT(0);
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP nsMsgMessageDataSource::ArcLabelsOut(nsIRDFResource* source,
-                                                  nsIRDFEnumerator** labels)
+                                                  nsISimpleEnumerator** labels)
 {
   nsISupportsArray *arcs=nsnull;
   nsresult rv = NS_RDF_NO_VALUE;
@@ -345,7 +345,7 @@ nsMsgMessageDataSource::getMessageArcLabelsOut(nsIMessage *folder,
 
 
 NS_IMETHODIMP
-nsMsgMessageDataSource::GetAllResources(nsIRDFEnumerator** aCursor)
+nsMsgMessageDataSource::GetAllResources(nsISimpleEnumerator** aCursor)
 {
   NS_NOTYETIMPLEMENTED("sorry!");
   return NS_ERROR_NOT_IMPLEMENTED;
