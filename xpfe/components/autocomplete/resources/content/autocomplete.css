@@ -1,8 +1,0 @@
-
-.outliner-scrollbar[hidescrollbar="true"] {
-  visibility: collapse;
-}
-
-.autocomplete-result-popup {
-  display: -moz-popup !important;
-}
