@@ -46,7 +46,7 @@ public:
 };
 */
 
-class CNavMenuBar : public CWnd, public CCustomImageObject
+class CNavTitleBar : public CWnd, public CCustomImageObject
 {
 	//CNavMenuButton* m_pMenuButton;	// Pointer to the button
 	CSelectorButton* m_pSelectorButton; // Selector button
@@ -61,15 +61,16 @@ class CNavMenuBar : public CWnd, public CCustomImageObject
 	HT_View m_View; // The current HT_View.
 
 public:
-	CNavMenuBar();
-	~CNavMenuBar();
+	CNavTitleBar();
+	~CNavTitleBar();
 
+	void SetHTView(HT_View theView);
 	void UpdateView(CSelectorButton* pButton, HT_View view); 
 	void NotifyFocus(BOOL hasFocus) { m_bHasFocus = hasFocus; Invalidate(); }
 
 	void LoadComplete(HT_Resource r) { Invalidate(); }
 
-	//{{AFX_MSG(CNavMenuBar)
+	//{{AFX_MSG(CNavTitleBar)
 	
 		// NOTE - the ClassWizard will add and remove member functions here.
 		//    DO NOT EDIT what you see in these blocks of generated code!

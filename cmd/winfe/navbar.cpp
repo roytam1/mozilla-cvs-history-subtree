@@ -152,8 +152,8 @@ void CNavMenuButton::UpdateButtonText(CRect rect)
 
 extern void DrawUpButton(HDC dc, CRect& rect);
 
-BEGIN_MESSAGE_MAP(CNavMenuBar, CWnd)
-	//{{AFX_MSG_MAP(CNavMenuBar)
+BEGIN_MESSAGE_MAP(CNavTitleBar, CWnd)
+	//{{AFX_MSG_MAP(CNavTitleBar)
 		// NOTE - the ClassWizard will add and remove mapping macros here.
 		//    DO NOT EDIT what you see in these blocks of generated code !
 	ON_WM_CREATE()
@@ -165,19 +165,19 @@ BEGIN_MESSAGE_MAP(CNavMenuBar, CWnd)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
-CNavMenuBar::CNavMenuBar()
+CNavTitleBar::CNavTitleBar()
 :m_pSelectorButton(NULL), m_bHasFocus(FALSE) // ,m_pMenuButton(NULL)
 {
 	m_pBackgroundImage = NULL;
 	m_View = NULL;
 }
 
-CNavMenuBar::~CNavMenuBar()
+CNavTitleBar::~CNavTitleBar()
 {
 //	delete m_pMenuButton;
 }
 
-void CNavMenuBar::OnPaint( )
+void CNavTitleBar::OnPaint( )
 {
 	CPaintDC dc(this);
 	CRect rect;
@@ -246,9 +246,18 @@ void CNavMenuBar::OnPaint( )
 	}
 
 	// Draw the text.
-	HFONT font = WFE_GetUIFont(dc.m_hDC);
+	//HFONT font = WFE_GetUIFont(dc.m_hDC);
+	CFont arialFont;
+	LOGFONT lf;
+	XP_MEMSET(&lf,0,sizeof(LOGFONT));
+	lf.lfHeight = 100;
+	lf.lfWeight = 700;
+	strcpy(lf.lfFaceName, "Times New Roman");
+	arialFont.CreatePointFontIndirect(&lf, &dc);
+	HFONT font = (HFONT)arialFont.GetSafeHandle();
+
 	HFONT hOldFont = (HFONT)::SelectObject(dc.m_hDC, font);
-	CRect sizeRect(0,0,150,0);
+	CRect sizeRect(0,0,10000,0);
 	int height = ::DrawText(dc.m_hDC, titleText, titleText.GetLength(), &sizeRect, DT_CALCRECT | DT_WORDBREAK);
 	
 	if (sizeRect.Width() > rect.Width() - NAVBAR_CLOSEBOX - 9)
@@ -256,8 +265,8 @@ void CNavMenuBar::OnPaint( )
 		// Don't write into the close box area!
 		sizeRect.right = sizeRect.left + (rect.Width() - NAVBAR_CLOSEBOX - 9);
 	}
-	sizeRect.left += 2;	// indent slightly horizontally
-	sizeRect.right += 5;
+	sizeRect.left += 4;	// indent slightly horizontally
+	sizeRect.right += 4;
 
 	// Center the text vertically.
 	sizeRect.top = (rect.Height() - height) / 2;
@@ -266,19 +275,20 @@ void CNavMenuBar::OnPaint( )
 	// Draw the text
 	int nOldBkMode = dc.SetBkMode(TRANSPARENT);
 
-	UINT nFormat = DT_SINGLELINE | DT_VCENTER;
+	UINT nFormat = DT_SINGLELINE | DT_VCENTER | DT_EXTERNALLEADING;
 	COLORREF oldColor;
 
 	oldColor = dc.SetTextColor(m_ForegroundColor);
-	dc.DrawText((LPCSTR)titleText, -1, &sizeRect, DT_CENTER | DT_EXTERNALLEADING | nFormat);
+	dc.DrawText((LPCSTR)titleText, -1, &sizeRect, nFormat);
 
 	dc.SetTextColor(oldColor);
 	dc.SetBkMode(nOldBkMode);
 
+/*
 	// Draw the close box at the edge of the bar.
 	CNSNavFrame* navFrameParent = (CNSNavFrame*)GetParentFrame();
 	if (XP_IsNavCenterDocked(navFrameParent->GetHTPane()))
-	{
+*/	{
 	
 		int left = rect.right - NAVBAR_CLOSEBOX - 5;
 		int right = left + NAVBAR_CLOSEBOX;
@@ -302,7 +312,7 @@ void CNavMenuBar::OnPaint( )
 
 		VERIFY(::DeleteObject(hPen));
 	}
-
+		
 	if (sysInfo.m_iBitsPerPixel < 16 && (::GetDeviceCaps(dc.m_hDC, RASTERCAPS) & RC_PALETTE))
 	{
 		::SelectPalette(dc.m_hDC, pOldPalette, FALSE);
@@ -319,7 +329,7 @@ void CNavMenuBar::OnPaint( )
 
 }
 
-int CNavMenuBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
+int CNavTitleBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 {
 //	m_pMenuButton = new CNavMenuButton();
 //	BOOKMARKITEM dummy;
@@ -331,7 +341,7 @@ int CNavMenuBar::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	return 0;
 }
 
-void CNavMenuBar::OnLButtonDown (UINT nFlags, CPoint point )
+void CNavTitleBar::OnLButtonDown (UINT nFlags, CPoint point )
 {
 	// Called when the user clicks on the menu bar.  Start a drag or collapse the view.
 	CRect rect;
@@ -365,8 +375,9 @@ void CNavMenuBar::OnLButtonDown (UINT nFlags, CPoint point )
 }
 
 
-void CNavMenuBar::OnMouseMove(UINT nFlags, CPoint point)
+void CNavTitleBar::OnMouseMove(UINT nFlags, CPoint point)
 {
+/*
 	if (GetCapture() == this)
 	{
 		CNSNavFrame* navFrameParent = (CNSNavFrame*)GetParentFrame();
@@ -381,9 +392,10 @@ void CNavMenuBar::OnMouseMove(UINT nFlags, CPoint point)
 			navFrameParent->StartDrag(point);
 		}
 	}
+*/
 }
 
-void CNavMenuBar::OnLButtonUp(UINT nFlags, CPoint point)
+void CNavTitleBar::OnLButtonUp(UINT nFlags, CPoint point)
 {
 	if (GetCapture() == this) 
 	{
@@ -391,7 +403,7 @@ void CNavMenuBar::OnLButtonUp(UINT nFlags, CPoint point)
 	}
 }
 
-void CNavMenuBar::OnSize( UINT nType, int cx, int cy )
+void CNavTitleBar::OnSize( UINT nType, int cx, int cy )
 {	
 /*	if (m_pMenuButton)
 	{
@@ -402,7 +414,7 @@ void CNavMenuBar::OnSize( UINT nType, int cx, int cy )
 */
 }
 
-void CNavMenuBar::UpdateView(CSelectorButton* pButton, HT_View view)
+void CNavTitleBar::UpdateView(CSelectorButton* pButton, HT_View view)
 { 
 	m_pSelectorButton = pButton; 
 /*
@@ -416,10 +428,25 @@ void CNavMenuBar::UpdateView(CSelectorButton* pButton, HT_View view)
 */
 	if (pButton && pButton->GetContentView())
 	{
-		((CRDFOutliner*)(pButton->GetContentView()->GetOutlinerParent()->GetOutliner()))->SetDockedMenuBar(this);
+		((CRDFOutliner*)(pButton->GetContentView()->GetOutlinerParent()->GetOutliner()))->SetTitleBar(this);
 	}
 
 	titleText = "No View Selected.";
+	m_View = view;
+	if (view)
+	{
+		HT_Resource r = HT_TopNode(view);
+		if (r)
+		{
+			titleText = HT_GetNodeName(r);
+		}
+		Invalidate();
+	}
+}
+
+void CNavTitleBar::SetHTView(HT_View view)
+{
+	titleText = "";
 	m_View = view;
 	if (view)
 	{

@@ -207,7 +207,7 @@ CRDFOutliner::CRDFOutliner (CRDFOutlinerParent* theParent, HT_Pane thePane, HT_V
 :COutliner(FALSE), m_pAncestor(NULL), m_Pane(thePane), m_View(theView), m_Parent(theParent), m_EditField(NULL),
 m_nSortType(HT_NO_SORT), m_nSortColumn(HT_NO_SORT), m_hEditTimer(0), m_hDragRectTimer(0),
 m_bNeedToClear(FALSE), m_nSelectedColumn(0), m_bDoubleClick(FALSE), m_Node(NULL), 
-m_bDataSourceInWindow(FALSE), m_NavMenuBar(NULL)
+m_bDataSourceInWindow(FALSE), m_NavTitleBar(NULL)
 {
     ApiApiPtr(api);
     m_pUnkUserImage = api->CreateClassInstance(APICLASS_IMAGEMAP,NULL,(APISIGNATURE)IDB_BOOKMARKS);
@@ -1649,17 +1649,17 @@ void CRDFOutliner::OnKillFocus ( CWnd * pNewWnd )
 	
 void CRDFOutliner::FocusCheck(CWnd* pWnd, BOOL gotFocus)
 {
-	if (m_NavMenuBar)
+	if (m_NavTitleBar)
 	{
 		if (gotFocus)
-			m_NavMenuBar->NotifyFocus(TRUE);
+			m_NavTitleBar->NotifyFocus(TRUE);
 		else
 		{
 			CFrameWnd* pFrame = GetParentFrame();
 			if (pFrame && !pFrame->IsChild(pWnd))
 			{
 				// Invalidate for a redraw
-				m_NavMenuBar->NotifyFocus(FALSE);
+				m_NavTitleBar->NotifyFocus(FALSE);
 			}
 		}
 	}
@@ -3829,8 +3829,8 @@ void CRDFEditWnd::OnKillFocus( CWnd* pNewWnd )
 
 // =========================================================================
 // RDF Content View
-IMPLEMENT_DYNAMIC(CRDFContentView, CView)
-BEGIN_MESSAGE_MAP(CRDFContentView, CView)
+IMPLEMENT_DYNAMIC(CRDFContentView, CWnd)
+BEGIN_MESSAGE_MAP(CRDFContentView, CWnd)
 	//{{AFX_MSG_MAP(CMainFrame)
 		// NOTE - the ClassWizard will add and remove mapping macros here.
 		//    DO NOT EDIT what you see in these blocks of generated code !
@@ -3841,23 +3841,14 @@ BEGIN_MESSAGE_MAP(CRDFContentView, CView)
 END_MESSAGE_MAP()
 
 CRDFContentView::CRDFContentView()
-{ m_pOutlinerParent = NULL; m_pHTMLView = NULL; }
-
-BOOL CRDFContentView::PreCreateWindow(CREATESTRUCT& cs)
-{
-	cs.style |= WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
-
-	return CView::PreCreateWindow(cs);
-}
-
-void CRDFContentView::OnDraw ( CDC * pDC )
-{
-}
+{ m_pOutlinerParent = NULL; m_pHTMLView = NULL; m_pNavBar = NULL; }
 
 int CRDFContentView::OnCreate ( LPCREATESTRUCT lpCreateStruct )
 {
-    int iRetVal = CView::OnCreate ( lpCreateStruct );
+    int iRetVal = CWnd::OnCreate ( lpCreateStruct );
 	LPCTSTR lpszClass = AfxRegisterWndClass( CS_VREDRAW, ::LoadCursor(NULL, IDC_ARROW));
+
+	m_pNavBar = new CNavTitleBar();
 
 	m_pOutlinerParent = new CRDFOutlinerParent();
     m_pOutlinerParent->Create( lpszClass, _T("NSOutlinerParent"), 
@@ -3866,15 +3857,18 @@ int CRDFContentView::OnCreate ( LPCREATESTRUCT lpCreateStruct )
 
 	m_pHTMLView = NULL; //wfe_CreateNavCenterHTMLPain(m_hWnd);
 
+	m_pNavBar->Create(NULL, "", WS_CHILD | WS_VISIBLE, CRect(0,0,100,100), this, NC_IDW_NAVMENU);
+	
     return iRetVal;
 }
 
 void CRDFContentView::OnSize ( UINT nType, int cx, int cy )
 {
-	CView::OnSize ( nType, cx, cy );
+	CWnd::OnSize ( nType, cx, cy );
 	if (IsWindow(m_pOutlinerParent->m_hWnd)) 
 	{
-		m_pOutlinerParent->MoveWindow ( 0, 0, cx, cy );
+		m_pNavBar->MoveWindow(0,0, cx, NAVBAR_HEIGHT);
+		m_pOutlinerParent->MoveWindow ( 0, NAVBAR_HEIGHT, cx, cy-NAVBAR_HEIGHT);
 	}
 }
 
@@ -3902,21 +3896,14 @@ void embeddedTreeNotifyProcedure (HT_Notification ns, HT_Resource n, HT_Event wh
 		theOutliner->HandleEvent(ns, n, whatHappened);
 }
 
-CRDFOutliner* CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height, char* url, int32 param_count, char** param_names, char** param_values)
+CRDFOutliner* CRDFContentView::DisplayRDFTreeFromPane(CWnd* pParent, int xPos, int yPos, int width, int height, HT_Pane thePane)
 {
-	HT_Notification ns = new HT_NotificationStruct;
-	XP_BZERO(ns, sizeof(HT_NotificationStruct));
-	ns->notifyProc = embeddedTreeNotifyProcedure;
-	ns->data = NULL;
-	theApp.m_pRDFCX->TrackRDFWindow(pParent);
-	// Construct the pane and give it our notification struct
-	HT_Pane thePane = HT_PaneFromURL(url, ns, 0, param_count, param_names, param_values);  
-	
 	// Create the windows
 	CRect rClient(xPos, yPos, width, height);
 	
 	CRDFContentView* newView = new CRDFContentView();
-	newView->Create( NULL, "", WS_CHILD | WS_VISIBLE, rClient, pParent, NC_IDW_OUTLINER);
+
+	newView->Create( "", NULL, WS_VISIBLE, rClient, pParent, NC_IDW_OUTLINER);
 
 	// Get the parent
 	COutlinerParent* newParent = newView->GetOutlinerParent();
@@ -3925,10 +3912,47 @@ CRDFOutliner* CRDFContentView::DisplayRDFTree(CWnd* pParent, int xPos, int yPos,
 	// Initialize the columns, etc.
 	((CRDFOutlinerParent*)newParent)->Initialize();
 
+	// Retrieve the RDF Outliner.
+	CRDFOutliner* pOutliner = (CRDFOutliner*)newParent->GetOutliner();
+
 	// Set our FE data to be the outliner.
-	HT_SetViewFEData(HT_GetSelectedView(thePane), newParent->GetOutliner());
+	HT_SetViewFEData(HT_GetSelectedView(thePane), pOutliner);
     
+	// Explain who the title bar belongs to.
+	CNavTitleBar* pTitleBar = newView->GetTitleBar();
+	pTitleBar->SetHTView(HT_GetSelectedView(thePane));
+	pOutliner->SetTitleBar(pTitleBar);
+
 	return (CRDFOutliner*)newParent->GetOutliner();
+}
+
+CRDFOutliner* CRDFContentView::DisplayRDFTreeFromResource(CWnd* pParent, int xPos, int yPos, int width, int height, HT_Resource node)
+{
+	HT_Notification ns = new HT_NotificationStruct;
+	XP_BZERO(ns, sizeof(HT_NotificationStruct));
+	ns->notifyProc = embeddedTreeNotifyProcedure;
+	ns->data = NULL;
+	theApp.m_pRDFCX->TrackRDFWindow(pParent);
+
+	HT_Pane thePane = HT_PaneFromResource(HT_GetRDFResource(node), ns, PR_FALSE);
+
+	// Now call our helper function
+	return DisplayRDFTreeFromPane(pParent, xPos, yPos, width, height, thePane);
+}
+
+CRDFOutliner* CRDFContentView::DisplayRDFTreeFromSHACK(CWnd* pParent, int xPos, int yPos, int width, int height, char* url, int32 param_count, char** param_names, char** param_values)
+{
+	HT_Notification ns = new HT_NotificationStruct;
+	XP_BZERO(ns, sizeof(HT_NotificationStruct));
+	ns->notifyProc = embeddedTreeNotifyProcedure;
+	ns->data = NULL;
+	theApp.m_pRDFCX->TrackRDFWindow(pParent);
+	
+	// Construct the pane and give it our notification struct
+	HT_Pane thePane = HT_PaneFromURL(url, ns, 0, param_count, param_names, param_values);  
+	
+	// Now call our helper function
+	return DisplayRDFTreeFromPane(pParent, xPos, yPos, width, height, thePane);
 }
 
 // Function to grab an RDF context

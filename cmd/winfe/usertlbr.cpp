@@ -731,7 +731,7 @@ LRESULT CRDFToolbarButton::OnFillInMenu(WPARAM wParam, LPARAM lParam)
 	if (isOpen)
 		FillInMenu(theNode);
 	else HT_SetOpenState(theNode, (PRBool)TRUE);
-	
+
 	return 1;
 }
 
@@ -863,6 +863,14 @@ void CRDFToolbarButton::OnSysColorChange( )
 
 void CRDFToolbarButton::FillInMenu(HT_Resource theNode)
 {
+	// Determine our position
+/*	CWnd* frame = GetTopLevelFrame();
+	CPoint point(0, GetRequiredButtonSize().cy);
+	MapWindowPoints(frame, &point, 1);
+*/
+	CPoint point = RequestMenuPlacement();
+	CRDFContentView::DisplayRDFTreeFromResource(NULL, point.x, point.y, 300, 500, m_Node);
+	/*
 	m_pCachedDropMenu->CreateOverflowMenuItem(ID_HOTLIST_VIEW, CString(szLoadString(IDS_MORE_BOOKMARKS)), NULL, NULL );
 
 	HT_Cursor theCursor = HT_NewCursor(theNode);
@@ -907,6 +915,7 @@ void CRDFToolbarButton::FillInMenu(HT_Resource theNode)
 	
 	HT_DeleteCursor(theCursor);
 	m_pCachedDropMenu = NULL;
+	*/
 }
 
 UINT CRDFToolbarButton::GetBitmapID(void)
@@ -1528,7 +1537,7 @@ void CRDFToolbar::AddHTButton(HT_Resource item)
 	
 	m_nNumButtons++;
 
-	if(CheckMaxButtonSizeChanged(pButton, TRUE))
+	if(CheckMaxButtonSizeChanged(pButton, TRUE) && !HT_IsURLBar(item) && !HT_IsSeparator(item))
 	{
 		ChangeButtonSizes();
 	}
@@ -1597,7 +1606,7 @@ void CRDFToolbar::SetMinimumRows(int rowWidth)
 	if (!cursor)
 		return;
 	HT_Resource item;
-    while (rowCount < MAX_TOOLBAR_ROWS && (item = HT_GetNextItem(cursor)))
+    while ((item = HT_GetNextItem(cursor)))
 	{
         // Get the current button
 		CRDFToolbarButton* pButton = (CRDFToolbarButton*)(HT_GetNodeFEData(item));
@@ -1620,7 +1629,8 @@ void CRDFToolbar::SetMinimumRows(int rowWidth)
     SetRows(rowCount); 
 }
     
-void CRDFToolbar::ComputeLayoutInfo(CRDFToolbarButton* pButton, int numChars, int rowWidth, int& usedSpace)
+void CRDFToolbar::ComputeLayoutInfo(CRDFToolbarButton* pButton, int numChars, int rowWidth, 
+									int& usedSpace)
 {
    CString originalText = HT_GetNodeName(pButton->GetNode());
 
@@ -1660,7 +1670,6 @@ void CRDFToolbar::ComputeLayoutInfo(CRDFToolbarButton* pButton, int numChars, in
         currentRow--;
 
     pButton->SetRow(currentRow);
-
 }
 
 void CRDFToolbar::LayoutButtons(int nIndex)
@@ -1740,13 +1749,100 @@ void CRDFToolbar::LayoutButtons(int nIndex)
 		HT_DeleteCursor(cursor);
     }
 
-    // That's it.  lay them out with this number of characters.
-    
-    int nStartX = LEFT_TOOLBAR_MARGIN;
+	int nStartX = LEFT_TOOLBAR_MARGIN;
     int nStartY = SPACE_BETWEEN_ROWS;
 
     int row = 0;
 
+	// Now we have to handle springs
+	// Initialize our spring counter (we're using this to track the number of springs
+	// on each toolbar row).
+	int* springCounter = new int[newRows];
+	int* rowPadding = new int[newRows];
+	for (int init=0; init < newRows; init++) { springCounter[init] = 0; }
+	for (int init2=0; init2 < newRows; init2++) { rowPadding[init2] = 0; }
+
+	// Count the springs on each row, as well as the padding on each row.
+	cursor = HT_NewCursor(HT_TopNode(m_ToolbarView));
+	if (!cursor)
+		return;
+	while ((item = HT_GetNextItem(cursor)))
+	{
+        // Get the current button
+		CRDFToolbarButton* pButton = (CRDFToolbarButton*)(HT_GetNodeFEData(item));
+        if (!pButton)
+			continue;
+		
+		if (pButton->IsSpring())
+		{
+			springCounter[row]++;
+		}
+
+		CSize buttonSize = pButton->GetButtonSize();  // The size we must be
+        
+        int tempTotal = nStartX + buttonSize.cx;
+        if (tempTotal > (width - RIGHT_TOOLBAR_MARGIN))
+        {
+			// Compute row padding
+			int rowPad = width - RIGHT_TOOLBAR_MARGIN - nStartX;
+
+			// Store the row padding information
+			rowPadding[row] = rowPad;
+
+			// Move to the next row.
+            nStartX = LEFT_TOOLBAR_MARGIN;
+            nStartY += m_nRowHeight + SPACE_BETWEEN_ROWS;
+			row++;
+        }
+
+		nStartX += buttonSize.cx + SPACE_BETWEEN_BUTTONS;
+	}
+	rowPadding[row] = width - RIGHT_TOOLBAR_MARGIN - nStartX;
+	HT_DeleteCursor(cursor);
+	
+	// Now we know the number of springs on each row, and we know how much available padding
+	// we have on each row.  Expand the springs' sizes so that all space on rows with springs
+	// is consumed.
+	cursor = HT_NewCursor(HT_TopNode(m_ToolbarView));
+	if (!cursor)
+		return;
+	while ((item = HT_GetNextItem(cursor)))
+	{
+        // Get the current button
+		CRDFToolbarButton* pButton = (CRDFToolbarButton*)(HT_GetNodeFEData(item));
+        if (!pButton)
+			continue;
+		
+		CSize buttonSize = pButton->GetButtonSize();  // The size we must be
+        int row = pButton->GetRow();
+
+		if (pButton->IsSpring())
+		{
+			// Expand the spring
+			int numSprings = springCounter[row];
+			int rowPad = rowPadding[row];
+			int addPadding = rowPad;
+			if (numSprings > 1)
+			{
+				springCounter[row]--;
+				addPadding = rowPad / numSprings;
+				rowPadding[row] -= addPadding;
+			}
+
+			pButton->SetButtonSize(CSize(buttonSize.cx + addPadding, buttonSize.cy));
+
+		}
+	}
+	HT_DeleteCursor(cursor);
+
+	// Clean up.  Delete our temporary arrays.
+	delete []springCounter;
+	delete []rowPadding;
+
+    // That's it.  lay them out with this number of characters.
+    nStartX = LEFT_TOOLBAR_MARGIN;
+    nStartY = SPACE_BETWEEN_ROWS;
+	row = 0;
 	CSize buttonSize;
     CString strTxt;
 
@@ -1757,7 +1853,7 @@ void CRDFToolbar::LayoutButtons(int nIndex)
 	{
         // Get the current button
 		CRDFToolbarButton* pButton = (CRDFToolbarButton*)(HT_GetNodeFEData(item));
-        if (!pButton)  // Separator
+        if (!pButton)
 			continue;
 
         buttonSize = pButton->GetButtonSize();  // The size we must be
@@ -1782,11 +1878,7 @@ void CRDFToolbar::LayoutButtons(int nIndex)
 	}
 	HT_DeleteCursor(cursor);
 
-	//record the width of our toolbar
-    //if (nStartY == SPACE_BETWEEN_ROWS && nStartX < (width - RIGHT_TOOLBAR_MARGIN))
-	//  m_nWidth = nStartX;
-    //else 
-       m_nWidth = width;
+	m_nWidth = width;
 
     if (oldRows != newRows)
         GetParentFrame()->RecalcLayout();    
@@ -1871,6 +1963,95 @@ void CRDFToolbar::WidthChanged(int animWidth)
 
     int row = 0;
 
+	// Now we have to handle springs
+	// Initialize our spring counter (we're using this to track the number of springs
+	// on each toolbar row).
+	int* springCounter = new int[newRows];
+	int* rowPadding = new int[newRows];
+	for (int init=0; init < newRows; init++) { springCounter[init] = 0; }
+	for (int init2=0; init2 < newRows; init2++) { rowPadding[init2] = 0; }
+
+	// Count the springs on each row, as well as the padding on each row.
+	cursor = HT_NewCursor(HT_TopNode(m_ToolbarView));
+	if (!cursor)
+		return;
+	while ((item = HT_GetNextItem(cursor)))
+	{
+        // Get the current button
+		CRDFToolbarButton* pButton = (CRDFToolbarButton*)(HT_GetNodeFEData(item));
+        if (!pButton)
+			continue;
+		
+		if (pButton->IsSpring())
+		{
+			springCounter[row]++;
+		}
+
+		CSize buttonSize = pButton->GetButtonSize();  // The size we must be
+        
+        int tempTotal = nStartX + buttonSize.cx;
+        if (tempTotal > (width - RIGHT_TOOLBAR_MARGIN))
+        {
+			// Compute row padding
+			int rowPad = width - RIGHT_TOOLBAR_MARGIN - nStartX;
+
+			// Store the row padding information
+			rowPadding[row] = rowPad;
+
+			// Move to the next row.
+            nStartX = LEFT_TOOLBAR_MARGIN;
+            nStartY += m_nRowHeight + SPACE_BETWEEN_ROWS;
+			row++;
+        }
+
+		nStartX += buttonSize.cx + SPACE_BETWEEN_BUTTONS;
+	}
+	rowPadding[row] = width - RIGHT_TOOLBAR_MARGIN - nStartX;
+	HT_DeleteCursor(cursor);
+
+	// Now we know the number of springs on each row, and we know how much available padding
+	// we have on each row.  Expand the springs' sizes so that all space on rows with springs
+	// is consumed.
+	cursor = HT_NewCursor(HT_TopNode(m_ToolbarView));
+	if (!cursor)
+		return;
+	while ((item = HT_GetNextItem(cursor)))
+	{
+        // Get the current button
+		CRDFToolbarButton* pButton = (CRDFToolbarButton*)(HT_GetNodeFEData(item));
+        if (!pButton)
+			continue;
+		
+		CSize buttonSize = pButton->GetButtonSize();  // The size we must be
+        int row = pButton->GetRow();
+
+		if (pButton->IsSpring())
+		{
+			// Expand the spring
+			int numSprings = springCounter[row];
+			int rowPad = rowPadding[row];
+			int addPadding = rowPad;
+			if (numSprings > 1)
+			{
+				springCounter[row]--;
+				addPadding = rowPad / numSprings;
+				rowPadding[row] -= addPadding;
+			}
+
+			pButton->SetButtonSize(CSize(buttonSize.cx + addPadding, buttonSize.cy));
+
+		}
+	}
+	HT_DeleteCursor(cursor);
+
+	// Clean up.  Delete our temporary arrays.
+	delete []springCounter;
+	delete []rowPadding;
+
+	nStartX = LEFT_TOOLBAR_MARGIN;
+    nStartY = SPACE_BETWEEN_ROWS;
+	row = 0;
+
 	CSize buttonSize;
     CString strTxt;
 
@@ -1941,7 +2122,14 @@ void CRDFToolbar::OnPaint(void)
 		WFE_ParseColor((char*)data, &backgroundColor);
 	}
 	Compute3DColors(backgroundColor, highlightColor, shadowColor);
-	SetBackgroundColor(backgroundColor);
+
+	if (m_BackgroundColor != backgroundColor)
+	{
+		// Ensure proper filling in of parent space with the background color.
+		SetBackgroundColor(backgroundColor);
+		GetParent()->Invalidate();
+	}
+
 	SetShadowColor(shadowColor);
 	SetHighlightColor(highlightColor);
 
@@ -2118,6 +2306,15 @@ void CRDFDragToolbar::OnPaint(void)
 	CRect rect;
 
 	GetClientRect(&rect);
+
+	// Use our toolbar background color (or background image TODO)
+	CRDFToolbar* pToolbar = (CRDFToolbar*)m_pToolbar->GetToolbar();
+
+	HBRUSH brFace = (HBRUSH) ::CreateSolidBrush(pToolbar->GetBackgroundColor());
+				
+	::FillRect(dcPaint.m_hDC, &rect, brFace);
+
+	VERIFY(::DeleteObject(brFace));
 
 	CDC *pDC = &dcPaint;
 	HPALETTE hOldPal = ::SelectPalette(pDC->m_hDC, WFE_GetUIPalette(GetParentFrame()), FALSE);

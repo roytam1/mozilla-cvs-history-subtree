@@ -90,7 +90,7 @@ CNSNavFrame::~CNSNavFrame()
 		PREF_SetRectPref(gPrefFloatRect, (int16)m_rectFloat.left, (int16)m_rectFloat.top, (int16)m_rectFloat.right, (int16)m_rectFloat.bottom);
 	}
 
-	delete m_pNavMenu;
+	delete m_pNavTitle;
 }
 
 void CNSNavFrame::UpdateTitleBar(HT_View pView)
@@ -201,7 +201,7 @@ BOOL CNSNavFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 {
 	m_nsContent = new CRDFContentView();
 	m_pSelector = new CSelector(m_nsContent);
-	m_pNavMenu = new CNavMenuBar();
+	m_pNavTitle = new CNavTitleBar();
 
 	CRect  rect1;
 	rect1.left = rect1.top = 0;
@@ -211,10 +211,10 @@ BOOL CNSNavFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 		this, NC_IDW_SELECTOR, pContext );
 
 	rect1.right = rect1.bottom = 1;
-	m_pNavMenu->Create(NULL, "", WS_CHILD | WS_VISIBLE, rect1, this, NC_IDW_NAVMENU, pContext);
+	m_pNavTitle->Create(NULL, "", WS_CHILD | WS_VISIBLE, rect1, this, NC_IDW_NAVMENU, pContext);
 
 	m_nsContent->Create( NULL, "", WS_CHILD | WS_VISIBLE, rect1, 
-		this, NC_IDW_OUTLINER, pContext );
+		this , NC_IDW_OUTLINER, pContext);
 
 	return TRUE;
 }
@@ -258,8 +258,8 @@ void CNSNavFrame::OnSize( UINT nType, int cx, int cy )
 			m_pSelector->InvalidateRect( &tempRect, TRUE);
 		}
 
-		m_pNavMenu->ShowWindow(SW_SHOW);
-		m_pNavMenu->SetWindowPos(NULL, MIN_CATEGORY_WIDTH+2, top, cx - MIN_CATEGORY_WIDTH, NAVBAR_HEIGHT, SWP_NOREPOSITION);
+		m_pNavTitle->ShowWindow(SW_SHOW);
+		m_pNavTitle->SetWindowPos(NULL, MIN_CATEGORY_WIDTH+2, top, cx - MIN_CATEGORY_WIDTH, NAVBAR_HEIGHT, SWP_NOREPOSITION);
 		m_nsContent->SetWindowPos( NULL, MIN_CATEGORY_WIDTH+2, top+NAVBAR_HEIGHT, cx - MIN_CATEGORY_WIDTH - 2, cy - STARTY - top - NAVBAR_HEIGHT, 0);
 	}
 	else 
@@ -585,11 +585,6 @@ void CNSNavFrame::DockFrame(CNSGenFrame* pParent, short dockStyle)
 			rect.right = m_parentRect.right;
 		}
 
-		// Now move the window to the correct location.
-		ShowWindow(SW_HIDE);
-		SetWindowPos( &wndBottom, rect.left, rect.top, rect.right - rect.left, 
-								rect.bottom - rect.top,0 );
-		
 		// Figure out the correct location to display the resize bar.
 		CRect dragBarRect(rect);
 		if (m_dwOverDockStyle == DOCKSTYLE_VERTLEFT) {
@@ -628,6 +623,11 @@ void CNSNavFrame::DockFrame(CNSGenFrame* pParent, short dockStyle)
 		m_DragWnd->SetRect(dragBarRect); 
 		m_DragWnd->SetParent(GetParentFrame());
 
+		// Now move the window to the correct location.
+		ShowWindow(SW_HIDE);
+		SetWindowPos( &wndBottom, rect.left, rect.top, rect.right - rect.left, 
+								rect.bottom - rect.top,0 );
+		
 		ShowWindow(SW_SHOW);
     }
     

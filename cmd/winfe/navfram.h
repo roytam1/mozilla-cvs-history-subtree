@@ -103,7 +103,7 @@ public:
 
 public:
     HT_Pane GetHTPane();
-	CNavMenuBar* GetNavMenuBar() { return m_pNavMenu; }
+	CNavTitleBar* GetNavTitleBar() { return m_pNavTitle; }
 	BOOL IsTreeVisible() { return m_pSelector->IsTreeVisible(); }
 
 protected:  // control bar embedded members
@@ -130,7 +130,7 @@ protected:  // control bar embedded members
 
 	CSelector* m_pSelector;		// the selector pane.
 	CRDFContentView *m_nsContent;	// the content pane.
-	CNavMenuBar* m_pNavMenu;	// the embedded menu bar.
+	CNavTitleBar* m_pNavTitle;	// the embedded title strip.
 
 // Generated message map functions
 protected:

@@ -1019,19 +1019,28 @@ CSize CURLBarButton::GetButtonSizeFromChars(CString s, int c)
 {
 	// Get our width
 	void* data;
-	BOOL percent = TRUE;
+	BOOL percent = FALSE;
 	int width = 100;
 
 	if (m_Node == NULL)
 		return CSize(0,0);
 
+	m_bIsSpring = FALSE;
 	HT_GetNodeData(m_Node, gNavCenter->urlBarWidth, HT_COLUMN_STRING, &data);
 	if (data)
 	{
 		CString strData((char*)data);
 		int length = strData.GetLength();
 		if (strData[length-1] == '%')
+		{
+			percent = TRUE;
 			strData = strData.Left(length-1);
+		}
+		else if (strData[0] == '*')
+		{
+			m_bIsSpring = TRUE;
+			strData = "0";
+		}
 		else
 			percent = FALSE;
 			
@@ -1114,7 +1123,9 @@ void CURLBarButton::OnSize(UINT nType, int x, int y)
 		pDC->DrawText(text, -1, &textRect, DT_CENTER | DT_EXTERNALLEADING | DT_CALCRECT);
 		ReleaseDC(pDC);
 
-		m_pURLBar->MoveWindow(textRect.right, 3, rect.Width() - textRect.Width() - 3, rect.Height()-6);
+		int startY = (rect.Height() - 27)/2;
+		m_pURLBar->MoveWindow(textRect.right, startY, rect.Width() - textRect.Width() - 3, 
+								27);
 	}
 }
 
@@ -1125,7 +1136,7 @@ void CURLBarButton::UpdateURLBar(char* url)
 }
 
 CURLBarButton::CURLBarButton() 
-:m_pURLBar(NULL)
+:m_pURLBar(NULL), m_bIsSpring(FALSE)
 {}
 
 CURLBarButton::~CURLBarButton()

@@ -100,7 +100,7 @@ private:
 	
 	CRDFCommandMap m_MenuCommandMap;  // The command mapping for menus
 
-	CNavMenuBar* m_NavMenuBar;	// A pointer to the title nav menu. NULL if no menu button is present.
+	CNavTitleBar* m_NavTitleBar;	// A pointer to the title strip.
 
 	// Tree colors, fonts, and backgrounds
 	COLORREF m_ForegroundColor;				// The foreground color.  Used for text, separators, etc.
@@ -149,7 +149,7 @@ public:
 	void SetSortType(int sortType) { m_nSortType = sortType; }
 	void SetSortColumn(int sortColumn) { m_nSortColumn = sortColumn; }
     void SetSelectedColumn(int nColumn) { m_nSelectedColumn = nColumn; }
-	void SetDockedMenuBar(CNavMenuBar* bar) { m_NavMenuBar = bar; }
+	void SetTitleBar(CNavTitleBar* bar) { m_NavTitleBar = bar; }
 
 // I am explicitly labeling as virtual any functions that have been
 // overridden.  That is, unless I state otherwise, all virtual functions
@@ -404,11 +404,12 @@ protected:
 };
 
 
-class CRDFContentView : public CView
+class CRDFContentView : public CWnd
 {
 public:
     CRDFOutlinerParent * m_pOutlinerParent;
 	CPaneCX* m_pHTMLView;
+	CNavTitleBar* m_pNavBar;
 
 // Construction
 public:
@@ -431,16 +432,25 @@ public:
 
 	void SwitchHTViews(HT_View htView);
 
-	static CRDFOutliner* DisplayRDFTree(CWnd* pParent, int xPos, int yPos, int width, int height, char* url,  int32 param_count, char** param_names, char** param_values);
-		// This function can be called to create an embedded RDF tree view inside another window.
-		// Used to embed the tree in HTML.
+	CNavTitleBar* GetTitleBar() { return m_pNavBar; }
+
+	static CRDFOutliner* DisplayRDFTreeFromSHACK(CWnd* pParent, int xPos, int yPos, int width, 
+		int height, char* url,  int32 param_count, char** param_names, char** param_values);
+		// This function can be called to create an embedded RDF tree view using an
+		// external URL and specified targeting.
+	
+	static CRDFOutliner* DisplayRDFTreeFromResource(CWnd* pParent, int xPos, int yPos, int width, 
+		int height, HT_Resource node);
+		// This function creates an embedded RDF tree view from an existing resource.
+
+	static CRDFOutliner* DisplayRDFTreeFromPane(CWnd* pParent, int xPos, int yPos, int width,
+		int height, HT_Pane pane);
+		// This function creates an embedded RDF tree view once the pane has been constructed.
 
 protected:
-    virtual void OnDraw(CDC *pDC);
-	virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
 
     DECLARE_DYNCREATE(CRDFContentView)
-	//{{AFX_MSG(CMainFrame)
+	//{{AFX_MSG(CRDFContentView)
 	afx_msg LRESULT OnNavCenterQueryPosition(WPARAM wParam, LPARAM lParam);
 	afx_msg int OnCreate ( LPCREATESTRUCT );
     afx_msg void OnSize ( UINT, int, int );

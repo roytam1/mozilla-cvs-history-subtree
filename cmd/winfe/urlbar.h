@@ -173,7 +173,7 @@ class CURLBarButton : public CRDFToolbarButton
 {
 protected:
 	CURLBar* m_pURLBar; // A pointer to the URL bar object.
-
+	BOOL m_bIsSpring; // Whether or not the url bar wants to expand to consume as much space as it can.
 public:
 	CURLBarButton();
 	~CURLBarButton();
@@ -185,6 +185,8 @@ public:
 	virtual void DrawButtonText(HDC hDC, CRect rcTxt, CSize sizeTxt, CString strTxt);
 
 	virtual void UpdateURLBar(char* url);
+
+	virtual BOOL IsSpring() { return m_bIsSpring; }
 
 	int Create(CWnd *pParent, int nToolbarStyle, CSize noviceButtonSize, CSize advancedButtonSize,
 			   LPCTSTR pButtonText, LPCTSTR pToolTipText, 

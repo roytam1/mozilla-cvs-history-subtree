@@ -90,6 +90,9 @@ public:
     virtual CSize GetMinimalButtonSize();
     virtual CSize GetMaximalButtonSize();
 
+	virtual BOOL IsSpring() { return FALSE; } // Whether or not the button will expand to consume
+											  // all remaining space on a row.
+
 	virtual BOOL UseLargeIcons() { return FALSE; }
 	virtual void UpdateIconInfo();
 

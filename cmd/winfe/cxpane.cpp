@@ -1522,7 +1522,7 @@ void CPaneCX::DisplayBuiltin(MWContext *pContext, int iLocation, LO_BuiltinStruc
 	
 	if (builtin_struct->FE_Data == NULL)
 	{
-		CRDFOutliner* pWnd = CRDFContentView::DisplayRDFTree(CWnd::FromHandle(cView), xPos, yPos, width, height, url, builtin_struct->attribute_cnt, builtin_struct->attribute_list, builtin_struct->value_list);
+		CRDFOutliner* pWnd = CRDFContentView::DisplayRDFTreeFromSHACK(CWnd::FromHandle(cView), xPos, yPos, width, height, url, builtin_struct->attribute_cnt, builtin_struct->attribute_list, builtin_struct->value_list);
 		pWnd->SetWindowTarget(target);
 		builtin_struct->FE_Data = pWnd;
 	}

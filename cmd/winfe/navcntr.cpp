@@ -128,7 +128,7 @@ void notifyProcedure (HT_Notification ns, HT_Resource n, HT_Event whatHappened,
 				if (pNavFrame)
 				{
 					// Invalidate the title bar.
-					CNavMenuBar* pBar = pNavFrame->GetNavMenuBar();
+					CNavTitleBar* pBar = pNavFrame->GetNavTitleBar();
 					if (pBar)
 						pBar->Invalidate();
 					
@@ -482,7 +482,7 @@ void CSelector::SetCurrentButton(CSelectorButton* pButton)
 	m_pCurButton = pButton;
 	m_pCurButton->SetDepressed(TRUE);
 
-	((CNSNavFrame*)GetParentFrame())->GetNavMenuBar()->UpdateView(m_pCurButton, m_pCurButton->GetHTView());
+	((CNSNavFrame*)GetParentFrame())->GetNavTitleBar()->UpdateView(m_pCurButton, m_pCurButton->GetHTView());
 	((CNSNavFrame*)GetParentFrame())->UpdateTitleBar(m_pCurButton->GetHTView());
 			
 	// adjust the window. here.
