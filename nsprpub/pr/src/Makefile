@@ -255,8 +255,7 @@ OBJS +=	md/os2/$(OBJDIR)/os2io.o \
 	md/os2/$(OBJDIR)/os2sem.o	\
 	md/os2/$(OBJDIR)/os2_errors.o \
 	md/os2/$(OBJDIR)/os2poll.o \
-	md/os2/$(OBJDIR)/ramsem.o \
-	md/os2/$(OBJDIR)/sem_x86.o
+    $(NULL)
 else
 OBJS +=	md/windows/$(OBJDIR)/ntio.o \
 	md/windows/$(OBJDIR)/ntgc.o \
