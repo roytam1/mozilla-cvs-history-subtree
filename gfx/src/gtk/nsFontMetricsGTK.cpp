@@ -33,7 +33,6 @@
 #include "nsIPref.h"
 #include "nsCOMPtr.h"
 #include "nspr.h"
-#include "nsHashtable.h"
 #include "nsStringMap.h"
 #include "nsReadableUtils.h"
 #include "nsAWritableString.h"
@@ -214,13 +213,13 @@ static nsIUnicodeEncoder* gUserDefinedConverter = nsnull;
 static nsStringMap* gAliases = nsnull;
 static nsStringMap* gCharSetMaps = nsnull;
 static nsStringMap* gFamilies = nsnull;
-static nsHashtable* gNodes = nsnull;
+static nsStringMap* gNodes = nsnull;
 // gCachedFFRESearches holds the "already looked up"
 // FFRE (Foundry Family Registry Encoding) font searches
-static nsHashtable* gCachedFFRESearches = nsnull;
-static nsHashtable* gSpecialCharSets = nsnull;
-static nsHashtable* gStretches = nsnull;
-static nsHashtable* gWeights = nsnull;
+static nsStringMap* gCachedFFRESearches = nsnull;
+static nsStringMap* gSpecialCharSets = nsnull;
+static nsStringMap* gStretches = nsnull;
+static nsStringMap* gWeights = nsnull;
 nsISaveAsCharset* gFontSubConverter = nsnull;
 
 static nsFontNodeArray* gGlobalList = nsnull;
@@ -676,7 +675,7 @@ FreeStyle(nsFontStyle* aStyle)
 }
 
 static PRBool
-FreeNode(nsHashKey* aKey, void* aData, void* aClosure)
+FreeNode(const char*, void* aData, void* aClosure)
 {
   nsFontNode* node = (nsFontNode*) aData;
   for (int i = 0; i < 3; i++) {
@@ -695,7 +694,7 @@ FreeNode(nsHashKey* aKey, void* aData, void* aClosure)
 }
 
 static PRBool
-FreeNodeArray(nsHashKey* aKey, void* aData, void* aClosure)
+FreeNodeArray(const char*, void* aData, void* aClosure)
 {
   nsFontNodeArray* nodes = (nsFontNodeArray*) aData;
   delete nodes;
@@ -835,12 +834,12 @@ InitGlobals(void)
     SIZE_FONT_PRINTF(("gBitmapUndersize = %g", gBitmapUndersize));
   }
 
-  gNodes = new nsHashtable();
+  gNodes = new nsStringMap;
   if (!gNodes) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
-  gCachedFFRESearches = new nsHashtable();
+  gCachedFFRESearches = new nsStringMap;
   if (!gCachedFFRESearches) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
@@ -860,26 +859,24 @@ InitGlobals(void)
     gAliases->Put(f->mName, f->mXName);
     f++;
   }
-  gWeights = new nsHashtable();
+  gWeights = new nsStringMap;
   if (!gWeights) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
   nsFontPropertyName* p = gWeightNames;
   while (p->mName) {
-    nsCStringKey key(p->mName);
-    gWeights->Put(&key, (void*) p->mValue);
+    gWeights->Put(p->mName, (void*) p->mValue);
     p++;
   }
-  gStretches = new nsHashtable();
+  gStretches = new nsStringMap;
   if (!gStretches) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
   p = gStretchNames;
   while (p->mName) {
-    nsCStringKey key(p->mName);
-    gStretches->Put(&key, (void*) p->mValue);
+    gStretches->Put(p->mName, (void*) p->mValue);
     p++;
   }
   gCharSetMaps = new nsStringMap;
@@ -892,15 +889,14 @@ InitGlobals(void)
     gCharSetMaps->Put(charSetMap->mName, charSetMap);
     charSetMap++;
   }
-  gSpecialCharSets = new nsHashtable();
+  gSpecialCharSets = new nsStringMap;
   if (!gSpecialCharSets) {
     FreeGlobals();
     return NS_ERROR_OUT_OF_MEMORY;
   }
   nsFontCharSetMap* specialCharSetMap = gSpecialCharSetMap;
   while (specialCharSetMap->mName) {
-    nsCStringKey key(specialCharSetMap->mName);
-    gSpecialCharSets->Put(&key, specialCharSetMap);
+    gSpecialCharSets->Put(specialCharSetMap->mName, specialCharSetMap);
     specialCharSetMap++;
   }
 
@@ -3093,8 +3089,7 @@ GetFontNames(const char* aPattern, nsFontNodeArray* aNodes)
       nsCAutoString familyCharSetName(familyName);
       familyCharSetName.Append('-');
       familyCharSetName.Append(charSetName);
-      nsCStringKey familyCharSetKey(familyCharSetName);
-      charSetMap = NS_STATIC_CAST(nsFontCharSetMap*, gSpecialCharSets->Get(&familyCharSetKey));
+      charSetMap = NS_STATIC_CAST(nsFontCharSetMap*, gSpecialCharSets->Get(familyCharSetName));
       if (!charSetMap)
         charSetMap = gNoneCharSetMap;
       charSetInfo = charSetMap->mInfo;
@@ -3113,14 +3108,13 @@ GetFontNames(const char* aPattern, nsFontNodeArray* aNodes)
     nodeName.Append(familyName);
     nodeName.Append('-');
     nodeName.Append(charSetName);
-    nsCStringKey key(nodeName);
-    nsFontNode* node = (nsFontNode*) gNodes->Get(&key);
+    nsFontNode* node = (nsFontNode*) gNodes->Get(nodeName.get());
     if (!node) {
       node = new nsFontNode;
       if (!node) {
         continue;
       }
-      gNodes->Put(&key, node);
+      gNodes->Put(nodeName.get(), node, PR_TRUE);
       node->mName = nodeName;
       node->mCharSetInfo = charSetInfo;
     }
@@ -3159,8 +3153,7 @@ GetFontNames(const char* aPattern, nsFontNodeArray* aNodes)
       node->mStyles[styleIndex] = style;
     }
 
-    nsCStringKey weightKey(weightName);
-    int weightNumber = NS_PTR_TO_INT32(gWeights->Get(&weightKey));
+    int weightNumber = NS_PTR_TO_INT32(gWeights->Get(weightName));
     if (!weightNumber) {
 #ifdef NOISY_FONTS
       printf("cannot find weight %s\n", weightName);
@@ -3177,8 +3170,7 @@ GetFontNames(const char* aPattern, nsFontNodeArray* aNodes)
       style->mWeights[weightIndex] = weight;
     }
   
-    nsCStringKey setWidthKey(setWidth);
-    int stretchIndex = NS_PTR_TO_INT32(gStretches->Get(&setWidthKey));
+    int stretchIndex = NS_PTR_TO_INT32(gStretches->Get(setWidth));
     if (!stretchIndex) {
 #ifdef NOISY_FONTS
       printf("cannot find stretch %s\n", setWidth);
@@ -3383,8 +3375,8 @@ nsFontMetricsGTK::TryNodes(nsAWritableCString &aFFREName, PRUnichar aChar)
 {
   FIND_FONT_PRINTF(("        TryNodes aFFREName = %s", 
                         PromiseFlatCString(aFFREName).get()));
-  nsCStringKey key(PromiseFlatCString(aFFREName).get());
-  nsFontNodeArray* nodes = (nsFontNodeArray*) gCachedFFRESearches->Get(&key);
+  const char* key = PromiseFlatCString(aFFREName).get();
+  nsFontNodeArray* nodes = (nsFontNodeArray*) gCachedFFRESearches->Get(key);
   if (!nodes) {
     nsCAutoString pattern;
     FFREToXLFDPattern(aFFREName, pattern);
@@ -3392,7 +3384,7 @@ nsFontMetricsGTK::TryNodes(nsAWritableCString &aFFREName, PRUnichar aChar)
     if (!nodes)
       return nsnull;
     GetFontNames(pattern.get(), nodes);
-    gCachedFFRESearches->Put(&key, nodes);
+    gCachedFFRESearches->Put(key, nodes, PR_TRUE);
   }
   int i, cnt = nodes->Count();
   for (i=0; i<cnt; i++) {
@@ -3414,8 +3406,7 @@ nsFontMetricsGTK::TryNode(nsCString* aName, PRUnichar aChar)
   //
   nsFontGTK* font;
  
-  nsCStringKey key(*aName);
-  nsFontNode* node = (nsFontNode*) gNodes->Get(&key);
+  nsFontNode* node = (nsFontNode*) gNodes->Get(aName->get());
   if (!node) {
     nsCAutoString pattern;
     FFREToXLFDPattern(*aName, pattern);
@@ -3435,7 +3426,7 @@ nsFontMetricsGTK::TryNode(nsCString* aName, PRUnichar aChar)
       if (!node) {
         return nsnull;
       }
-      gNodes->Put(&key, node);
+      gNodes->Put(aName->get(), node);
       node->mDummy = 1;
     }
   }
