@@ -19,23 +19,6 @@
 #ifndef nsCom_h__
 #define nsCom_h__
 
-/*
- * API Import/Export macros
- */
-
-#ifdef _IMPL_NS_COM
-#ifdef XP_PC
-#define NS_COM _declspec(dllexport)
-#else  /* !XP_PC */
-#define NS_COM
-#endif /* !XP_PC */
-#else  /* !_IMPL_NS_COM */
-#ifdef XP_PC
-#define NS_COM _declspec(dllimport)
-#else  /* !XP_PC */
-#define NS_COM
-#endif /* !XP_PC */
-#endif /* !_IMPL_NS_COM */
 
 /*
  * DLL Export macro
@@ -90,6 +73,16 @@
 #define NS_CALLBACK(_name) nsresult (* _name)
 
 #endif /* !XP_PC */
+
+/*
+ * API Import/Export macros
+ */
+
+#ifdef _IMPL_NS_COM
+#define NS_COM NS_EXPORT
+#else  /* !_IMPL_NS_COM */
+#define NS_COM NS_IMPORT
+#endif /* !_IMPL_NS_COM */
 
 /* use these functions to associate get/set methods with a
    C++ member variable
