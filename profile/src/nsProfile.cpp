@@ -109,7 +109,7 @@
 // A default profile name, in case automigration 4x profile fails
 #define DEFAULT_PROFILE_NAME           (NS_LITERAL_STRING("default").get())
 
-#define PROFILE_SELECTION_URL          "chrome://communicator/content/profile/profileSelection.xul"
+#define PROFILE_SELECTION_URL          "chrome://skyline/content/skyline-login.xul"
 #define PROFILE_SELECTION_CMD_LINE_ARG "-SelectProfile"
 #define PROFILE_MANAGER_URL            "chrome://communicator/content/profile/profileSelection.xul?manage=true"
 #define PROFILE_MANAGER_CMD_LINE_ARG   "-ProfileManager"
