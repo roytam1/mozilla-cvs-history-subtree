@@ -917,6 +917,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       nsFileChannel::Create
     },
 
+#ifdef USE_DEFAULT_BROWSER
     { "HTTP Handler",
       NS_HTTPPROTOCOLHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "http",
@@ -926,6 +927,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_HTTPPROTOCOLHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "https",
       nsHttpHandler::Create },
+#endif /* USE_DEFAULT_BROWSER */
 
     { "HTTP Basic Auth Encoder",
       NS_HTTPBASICAUTH_CID,
