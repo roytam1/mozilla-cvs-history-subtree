@@ -624,6 +624,13 @@ function RevealSearchPanel()
     window.openDialog( "chrome://navigator/content/openLocation.xul", "_blank", "chrome,modal", appCore );
   }
   
+  /* Called from the openLocation dialog. This allows that dialog to instruct
+     its opener to open a new window and then step completely out of the way.
+     Anything less byzantine is causing horrible crashes on Linux. */
+  function delayedOpenWindow(chrome,flags,url) {
+    setTimeout("window.openDialog('"+chrome+"','_blank','"+flags+"','"+url+"')", 10);
+  }
+
   function createInstance( progid, iidName ) {
       var iid = eval( "Components.interfaces." + iidName );
       return Components.classes[ progid ].createInstance( iid );
