@@ -7,8 +7,9 @@
  -->
 
 <?xml version="1.0"?>
-<!-- use a processing instruction to add datasources? -->
-<!-- add a style sheet? -->
+<?xml-stylesheet href="LocalStore.css" type="text/css"?>
+<?rdf-datasource href="rdf:mail"?>
+<?rdf-datasource href="rdf:bookmarks"?>
 
 <RDF:RDF xmlns:RDF="http://www.w3.org/TR/WD-rdf-syntax#" 
 	 xmlns:nc="http://home.netscape.com/NC-rdf#"
