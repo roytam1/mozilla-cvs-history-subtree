@@ -792,6 +792,8 @@ nsDocLoaderImpl::GetDOMWindow(nsIDOMWindow **aResult)
 
     *aResult = window;
     NS_IF_ADDREF(*aResult);
+  } else {
+      rv = NS_ERROR_FAILURE;
   }
 
   return rv;

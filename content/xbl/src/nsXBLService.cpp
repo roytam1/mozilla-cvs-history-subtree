@@ -200,11 +200,11 @@ public:
   NS_DECL_NSISTREAMLISTENER
   NS_DECL_NSIREQUESTOBSERVER
 
-  nsresult Load(nsIDOMEvent* aEvent);
-  nsresult Unload(nsIDOMEvent* aEvent) { return NS_OK; };
-  nsresult Abort(nsIDOMEvent* aEvent) { return NS_OK; };
-  nsresult Error(nsIDOMEvent* aEvent) { return NS_OK; };
-  nsresult HandleEvent(nsIDOMEvent* aEvent) { return NS_OK; };
+  NS_IMETHOD Load(nsIDOMEvent* aEvent);
+  NS_IMETHOD Unload(nsIDOMEvent* aEvent) { return NS_OK; };
+  NS_IMETHOD Abort(nsIDOMEvent* aEvent) { return NS_OK; };
+  NS_IMETHOD Error(nsIDOMEvent* aEvent) { return NS_OK; };
+  NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent) { return NS_OK; };
 
   static nsIXULPrototypeCache* gXULCache;
   static PRInt32 gRefCnt;
@@ -1334,10 +1334,9 @@ nsXBLService::StripWhitespaceNodes(nsIContent* aElement)
     aElement->ChildAt(i, *getter_AddRefs(child));
     nsCOMPtr<nsITextContent> text = do_QueryInterface(child);
     if (text) {
-      nsAutoString result;
-      text->CopyText(result);
-      result.StripWhitespace();
-      if (result.IsEmpty()) {
+      PRBool isEmpty;
+      text->IsOnlyWhitespace(&isEmpty);
+      if (isEmpty) {
         // This node contained nothing but whitespace.
         // Remove it from the content model.
         aElement->RemoveChildAt(i, PR_TRUE);
