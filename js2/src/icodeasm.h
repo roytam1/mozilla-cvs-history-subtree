@@ -32,8 +32,9 @@
  */
 
 
-#ifdef _WIN32	// Microsoft Visual C++ 6.0 whines about name lengths over 255 getting truncated in the browser database
-#pragma warning( disable : 4786) 
+#ifdef _WIN32
+// Microsoft Visual C++ 6.0 whines about name lengths over 255 getting truncated in the browser database
+#pragma warning(disable : 4786) 
 #endif
 
 
