@@ -612,7 +612,11 @@ int ModifyJS2(CString xpifile, CString entity, CString newvalue, BOOL bLockPref)
 	remove(xpifile);
 	rename(newfile, xpifile);
 	if (prefDoesntExist)
-		AddPref(xpifile,entity,newvalue, FALSE, bLockPref);
+	{
+		// AddPref expects pref name to be surrounded in quotes. 
+		CString prefName = "\"" + entity + "\"";
+		AddPref(xpifile, prefName, newvalue, FALSE, bLockPref);
+	}
 
 	return TRUE;
 }
@@ -631,6 +635,8 @@ BOOL CreateNewFile(CString& Filename, CString Contents)
 			return FALSE;
 		fprintf(f,Contents);
 		fclose(f);
+
+		return TRUE;
 }
 
 // Modifies a preference in a hashed prefs file.
