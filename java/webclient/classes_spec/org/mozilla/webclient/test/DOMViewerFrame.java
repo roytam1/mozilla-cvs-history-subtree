@@ -208,6 +208,7 @@ protected void selectNodeInTree(Node node)
     
     tree.clearSelection();
     tree.setSelectionPath(nodePath);
+    tree.scrollPathToVisible(nodePath);
 }
 
 protected void populatePathStackFromNode(Node node)
