@@ -22,15 +22,209 @@
 DEPTH		= ..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
+VPATH       = @srcdir@$(VPS)@srcdir@/idl
 
-DIRS		= public idl src
+MODULE		= gfx
+LIBRARY_NAME	= gkgfx
+EXPORT_LIBRARY	= 1
+
+REQUIRES	= xpcom \
+		  windowwatcher \
+		  dom \
+		  string \
+		  widget \
+		  locale \
+		  view \
+		  pref \
+		  imglib2 \
+		  unicharutil \
+		  $(NULL)
+
+DIRS        = src/shared
+
+ifdef MOZ_ENABLE_POSTSCRIPT
+DIRS        += src/ps
+endif
+
+ifeq ($(MOZ_GFX_TOOLKIT),cocoa)
+DIRS	    += src/mac
+endif
+
+ifneq (,$(filter beos os2 mac windows,$(MOZ_GFX_TOOLKIT)))
+DIRS        += src/$(MOZ_GFX_TOOLKIT)
+endif
+
+# Build xlibrgb only for X toolkits and/or Xprint
+ifneq (,$(filter xlib,$(MOZ_WIDGET_TOOLKIT))$(MOZ_ENABLE_XLIB)$(MOZ_ENABLE_XPRINT))
+DIRS        += src/xlibrgb
+endif
+
+ifdef MOZ_ENABLE_GTK
+DIRS        += src/gtk
+endif
+ifdef MOZ_ENABLE_GTK2
+DIRS        += src/gtk
+endif
+ifdef MOZ_ENABLE_QT
+DIRS        += src/qt
+endif
+ifdef MOZ_ENABLE_XLIB
+DIRS        += src/xlib
+endif
+
+ifdef MOZ_ENABLE_PHOTON
+DIRS        += src/photon
+endif
+
+ifdef MOZ_ENABLE_XPRINT
+DIRS        += src/xprint 
+endif
+
+CPPSRCS		= \
+		src/nsBlender.cpp \
+		src/nsColor.cpp \
+		src/nsColorNames.cpp \
+		src/nsDeviceContext.cpp \
+		src/nsFont.cpp \
+		src/nsFontList.cpp \
+		src/nsNameValuePairDB.cpp \
+		src/nsRect.cpp \
+		src/nsRegion.cpp \
+		src/nsTransform2D.cpp \
+		src/nsScriptableRegion.cpp \
+		src/nsGraphicsImpl.cpp \
+		src/nsPrintOptionsImpl.cpp \
+		src/nsPrintSettingsImpl.cpp \
+		src/nsPrintSession.cpp \
+		$(NULL)
+
+ifeq (,$(filter windows,$(MOZ_WIDGET_TOOLKIT)))
+REQUIRES	+= uconv
+CPPSRCS		+= src/nsCompressedCharMap.cpp
+endif
+
+ifneq (,$(filter gtk gtk2 xlib os2,$(MOZ_WIDGET_TOOLKIT)))
+CPPSRCS		+= src/nsRegionImpl.cpp
+endif
+
+ifneq (,$(filter gtk gtk2 xlib beos,$(MOZ_WIDGET_TOOLKIT)))
+CPPSRCS		+= src/imgScaler.cpp
+endif
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+CPPSRCS 	+= src/mac/nsRegionPool.cpp
+endif
+
+EXPORTS         = \
+		src/nsFontList.h \
+		src/nsRegion.h \
+		public/imgScaler.h \
+		public/gfxcompat.h \
+		public/nsColor.h \
+		public/nsColorNames.h \
+		public/nsColorNameList.h \
+		public/nsCompressedCharMap.h \
+		public/nsCoord.h \
+		public/nsFont.h \
+		public/nsRect.h \
+		public/nsRepeater.h \
+		public/nsPoint.h \
+		public/nsSize.h \
+		public/nsMargin.h \
+		public/nsNameValuePairDB.h \
+		public/nsTransform2D.h \
+		public/nsIRenderingContext.h \
+		public/nsRenderingContextImpl.h \
+		public/nsIFontMetrics.h \
+		public/nsIDeviceContext.h \
+		public/nsIImage.h \
+		public/nsIBlender.h \
+		public/nsGfxCIID.h \
+		public/nsIRegion.h \
+		public/nsDeviceContext.h \
+		public/nsIDeviceContextSpec.h \
+		public/nsIDeviceContextSpecFactory.h \
+		public/nsIDrawingSurface.h \
+		public/nsITheme.h \
+		public/nsThemeConstants.h \
+		$(NULL)
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+EXPORTS		+= \
+		public/nsIPrintingContext.h \
+		public/nsPDECommon.h \
+		$(NULL)
+endif
+
+XPIDLSRCS	= \
+		nsIFontEnumerator.idl \
+		nsIFontList.idl \
+		nsIScriptableRegion.idl \
+		nsIGraphics.idl \
+		nsIScreen.idl \
+		nsIScreenManager.idl \
+		nsIPrintOptions.idl \
+		nsIPrintSettings.idl \
+		nsIPrintSettingsService.idl \
+		nsIPrintSession.idl \
+		gfxIFormats.idl \
+		gfxIImageFrame.idl \
+		gfxtypes.idl \
+		gfx2types.idl \
+		$(NULL)
+
+ifneq (,$(filter mac cocoa,$(MOZ_GFX_TOOLKIT)))
+XPIDLSRCS	+= \
+		nsIPrintSettingsX.idl \
+		nsIPrintSessionX.idl \
+		$(NULL)
+endif
+
+ifeq ($(MOZ_GFX_TOOLKIT),windows)
+XPIDLSRCS	+= nsIPrintSettingsWin.idl
+endif
+
+EXTRA_DSO_LDOPTS = \
+	$(DIST)/lib/$(LIB_PREFIX)mozutil_s.$(LIB_SUFFIX) \
+        $(MOZ_UNICHARUTIL_LIBS) \
+        $(MOZ_COMPONENT_LIBS) \
+        $(NULL)
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+EXTRA_DSO_LDOPTS += \
+        $(TK_LIBS) \
+        $(NULL)
+endif
 
 ifdef ENABLE_TESTS
-DIRS		+= tests
+SIMPLE_PROGRAMS	= \
+		tests/DumpColors$(BIN_SUFFIX) \
+		tests/TestColorNames$(BIN_SUFFIX) \
+		tests/TestRect$(BIN_SUFFIX) \
+		$(NULL)
+
+ifneq ($(OS_ARCH)_$(GNU_CC),WINNT_)
+PROG_LIBS	= -L.
+endif
+
+PROG_LIBS	+= \
+		$(call EXPAND_LIBNAME,gkgfx) \
+		$(MOZ_JS_LIBS) \
+		$(XPCOM_LIBS) \
+		$(NSPR_LIBS) \
+		$(TK_LIBS) \
+		$(NULL)
 endif
 
 include $(topsrcdir)/config/rules.mk
+
+DEFINES     += -D_IMPL_NS_GFX
+
+libs:: src/icon_0.gif src/icon_1.gif
+	$(INSTALL) -m 555 $^ $(DIST)/bin/res/gfx
+
+install:: src/icon_0.gif src/icon_1.gif
+	$(SYSINSTALL) -m 555 $^ $(DESTDIR)$(mozappdir)/res/gfx
 
