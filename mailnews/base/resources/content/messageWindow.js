@@ -36,23 +36,6 @@ var folderListener = {
 
 	OnItemRemoved: function(parentItem, item, view)
 	{
-		var parentFolderResource = parentItem.QueryInterface(Components.interfaces.nsIRDFResource);
-		if(!parentFolderResource)
-			return;
-
-		var parentURI = parentFolderResource.Value;
-		if(parentURI != gCurrentFolderUri)
-			return;
-
-		var deletedMessageResource = item.QueryInterface(Components.interfaces.nsIRDFResource);
-		var deletedUri = deletedMessageResource.Value;
-
-		//If the deleted message is our message then we know we're about to be deleted.
-		if(deletedUri == gCurrentMessageUri)
-		{
-			gCurrentMessageIsDeleted = true;
-		}
-
 	},
 
 	OnItemPropertyChanged: function(item, property, oldValue, newValue) {},
@@ -63,10 +46,10 @@ var folderListener = {
 
 	OnItemBoolPropertyChanged: function(item, property, oldValue, newValue) {},
 
-    OnItemUnicharPropertyChanged: function(item, property, oldValue, newValue){},
+  OnItemUnicharPropertyChanged: function(item, property, oldValue, newValue){},
 	OnItemPropertyFlagChanged: function(item, property, oldFlag, newFlag) {},
 
-    OnItemEvent: function(folder, event) {
+  OnItemEvent: function(folder, event) {
 		  if (event.GetUnicode() == "DeleteOrMoveMsgCompleted") {
 			  HandleDeleteOrMoveMsgCompleted(folder);
 		  }     
@@ -91,16 +74,17 @@ nsMsgDBViewCommandUpdater.prototype =
   displayMessageChanged : function(aFolder, aSubject)
   {
     setTitleFromFolder(aFolder, aSubject);
+    gCurrentMessageUri = gDBView.URIForFirstSelectedMessage;
   },
 
   QueryInterface : function(iid)
-   {
-     if(iid.equals(Components.interfaces.nsIMsgDBViewCommandUpdater))
+  {
+    if(iid.equals(Components.interfaces.nsIMsgDBViewCommandUpdater))
 	    return this;
 	  
-     throw Components.results.NS_NOINTERFACE;
-     return null;
-    }
+    throw Components.results.NS_NOINTERFACE;
+    return null;
+  }
 }
 
 function HandleDeleteOrMoveMsgCompleted(folder)
@@ -111,11 +95,19 @@ function HandleDeleteOrMoveMsgCompleted(folder)
 		return;
 
 	var folderUri = folderResource.Value;
-	if((folderUri == gCurrentFolderUri) && gCurrentMessageIsDeleted)
+	if((folderUri == gCurrentFolderUri))
 	{
-		gCurrentMessageIsDeleted = false;
-    // navigate to the next message....
-    performNavigation(nsMsgNavigationType.nextMessage);
+    if (gNextMessageViewIndexAfterDelete != -1) 
+    {
+      var nextMstKey = gDBView.getKeyAt(gNextMessageViewIndexAfterDelete);
+      gDBView.loadMessageByMsgKey(nextMstKey);
+
+    }
+    else
+    {
+      // close the stand alone window because there are no more messages in the folder
+      window.close();
+    }
 	}
 }
 
@@ -202,7 +194,7 @@ function OnLoadMessageWindow()
     SetUpToolbarButtons(gCurrentFolderUri);
   }
     
-  setTimeout("var msgKey = extractMsgKeyFromURI(gCurrentMessageUri); gDBView.loadMessageByMsgKey(msgKey);", 0);
+  setTimeout("var msgKey = extractMsgKeyFromURI(gCurrentMessageUri); gDBView.loadMessageByMsgKey(msgKey); gNextMessageViewIndexAfterDelete = gDBView.firstSelected;", 0);
   SetupCommandUpdateHandlers();
 
 }
@@ -352,7 +344,7 @@ function GetCompositeDataSource(command)
 
 function SetNextMessageAfterDelete()
 {
-	gCurrentMessageIsDeleted = true;
+  gNextMessageViewIndexAfterDelete = gDBView.firstSelected;
 }
 
 function SelectFolder(folderUri)
@@ -360,15 +352,31 @@ function SelectFolder(folderUri)
 	gCurrentFolderUri = folderUri;
 }
 
-function SelectMessage(messageUri)
-{
-	gCurrentMessageUri = messageUri;
-	OpenURL(gCurrentMessageUri);
-}
-
 function ReloadMessage()
 {
 	OpenURL(gCurrentMessageUri);
+}
+
+function MsgDeleteMessageFromMessageWindow(reallyDelete, fromToolbar)
+{
+  // if from the toolbar, return right away if this is a news message
+  // only allow cancel from the menu:  "Edit | Cancel / Delete Message"
+  if (fromToolbar)
+  {
+    if (isNewsURI(gCurrentFolderUri)) 
+    {
+        // if news, don't delete
+        return;
+    }
+  }
+  
+  // before we delete 
+  SetNextMessageAfterDelete();
+
+  if (reallyDelete)
+      gDBView.doCommand(nsMsgViewCommandType.deleteNoTrash);
+  else
+      gDBView.doCommand(nsMsgViewCommandType.deleteMsg);
 }
 
 // MessageWindowController object (handles commands when one of the trees does not have focus)
@@ -439,7 +447,6 @@ var MessageWindowController =
       if (gDBView)
       {
          gDBView.getCommandStatus(nsMsgViewCommandType.deleteMsg, enabled, checkStatus);
-         dump("mw enabled value = " + enabled.value + "\n");
          return enabled.value;
       }
 			case "cmd_reply":
@@ -540,13 +547,13 @@ var MessageWindowController =
 				MsgEditMessageAsNew();
 				break;
 			case "cmd_delete":
-				MsgDeleteMessage(false, false);
+				MsgDeleteMessageFromMessageWindow(false, false);
 				break;
 			case "cmd_shiftDelete":
-				MsgDeleteMessage(true, false);
+				MsgDeleteMessageFromMessageWindow(true, false);
 				break;
 			case "button_delete":
-				MsgDeleteMessage(false, true);
+				MsgDeleteMessageFromMessageWindow(false, true);
 				break;
 			case "cmd_print":
 				PrintEnginePrint();
@@ -632,9 +639,7 @@ function performNavigation(type)
   if ((resultId.value != -1) && (resultIndex.value != -1)) 
   {
     // load the message key
-    // we need to reset the global URI too.
     gDBView.loadMessageByMsgKey(resultId.value);
-    gCurrentMessageUri = gDBView.URIForFirstSelectedMessage;
     return;
   }
    
