@@ -1,3 +1,8 @@
+1999-08-13  Leif Hedstrom  <leif@netscape.com>
+
+	* Makefile.PL: Cleaned up code, and added support for linking in
+	the missing libraries need for some missing symbols.
+
 1999-08-13  Michelle Wyner  <mwyner@netscape.com>
 
 	* Entry.pm: Updated documentation, and cleaned it up.
