@@ -6888,10 +6888,10 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
     // a standard xml element, and not be of the right type.
     // The best we can do here is to create a generic svg container frame.
 #ifdef DEBUG
-    printf("Warning: Creating SVGGenericContainerFrame for tag <");
-    nsAutoString str;
-    aTag->ToString(str);
-    printf("%s>\n", NS_ConvertUCS2toUTF8(str).get());
+//    printf("Warning: Creating SVGGenericContainerFrame for tag <");
+//    nsAutoString str;
+//    aTag->ToString(str);
+//    printf("%s>\n", NS_ConvertUCS2toUTF8(str).get());
 #endif
     processChildren = PR_TRUE;
     rv = NS_NewSVGGenericContainerFrame(aPresShell, aContent, &newFrame);
