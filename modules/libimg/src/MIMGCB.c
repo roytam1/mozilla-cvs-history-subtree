@@ -113,8 +113,8 @@ const struct IMGCBInterface IMGCBVtable = {
 	_IMGCB_DestroyPixmap,
 	_IMGCB_DisplayPixmap,
 	_IMGCB_DisplayIcon,
+#if defined (COLORSYNC)
 	_IMGCB_GetIconDimensions,
-/*	ebb - begin */
 	_IMGCB_OpenICCProfileFromMem,
 	_IMGCB_OpenICCProfileFromDisk,
 	_IMGCB_CloneICCProfileRef,
@@ -123,7 +123,9 @@ const struct IMGCBInterface IMGCBVtable = {
 	_IMGCB_ColorMatchRGBPixels,
 	_IMGCB_DisposeICCColorMatching,
 	_IMGCB_IsColorSyncAvailable
-/*	ebb - end */
+#else
+	_IMGCB_GetIconDimensions
+#endif /* (COLORSYNC) */
 };
 
 /*******************************************************************************
