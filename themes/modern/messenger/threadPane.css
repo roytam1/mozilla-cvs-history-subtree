@@ -21,12 +21,12 @@
 
 /* temporary outliner styles */
 
-outliner:focus > outlinerbody
+outliner:focus > outliner-bodybox
 {
   border: 1px solid black;
 }
 
-outliner > outlinerbody
+outliner > outliner-bodybox
 {
   border: 1px solid transparent;
 }
