@@ -60,6 +60,7 @@ CPPSRCS		+= dlldeps.cpp
 endif
 
 EXPORTS		= \
+		xpcomobsolete.h    \
 		nsFileSpec.h    \
 		nsFileStream.h  \
 		nsIFileStream.h \
