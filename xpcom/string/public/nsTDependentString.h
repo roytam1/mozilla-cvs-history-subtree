@@ -52,16 +52,7 @@ class nsTDependentString_CharT : public nsTString_CharT
   {
     public:
 
-      typedef CharT                                char_type;
-
-      typedef nsTDependentString_CharT             self_type;
-      typedef nsTString_CharT                      string_type;
-
-      typedef string_type::char_traits             char_traits;
-      typedef string_type::substring_type          substring_type;
-      typedef string_type::substring_tuple_type    substring_tuple_type;
-      typedef string_type::abstract_string_type    abstract_string_type;
-      typedef string_type::size_type               size_type;
+      typedef nsTDependentString_CharT    self_type;
 
     public:
 

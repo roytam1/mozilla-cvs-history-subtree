@@ -49,14 +49,7 @@ class NS_COM nsTString_CharT : public nsTSubstring_CharT
   {
     public:
 
-      typedef CharT                                     char_type;
-
-      typedef nsTString_CharT                           self_type;
-      typedef nsTSubstring_CharT                        substring_type;
-
-      typedef substring_type::substring_tuple_type      substring_tuple_type;
-      typedef substring_type::abstract_string_type      abstract_string_type;
-      typedef substring_type::size_type                 size_type;
+      typedef nsTString_CharT    self_type;
 
     public:
 
@@ -450,15 +443,7 @@ class nsTAutoString_CharT : public nsTString_CharT
   {
     public:
 
-      typedef CharT                                char_type;
-
-      typedef nsTAutoString_CharT                  self_type;
-      typedef nsTString_CharT                      string_type;
-
-      typedef string_type::substring_type          substring_type;
-      typedef string_type::substring_tuple_type    substring_tuple_type;
-      typedef string_type::abstract_string_type    abstract_string_type;
-      typedef string_type::size_type               size_type;
+      typedef nsTAutoString_CharT    self_type;
 
     public:
 
@@ -544,16 +529,7 @@ class nsTXPIDLString_CharT : public nsTString_CharT
   {
     public:
 
-      typedef CharT                                char_type;
-
-      typedef nsTXPIDLString_CharT                 self_type;
-      typedef nsTString_CharT                      string_type;
-
-      typedef string_type::substring_type          substring_type;
-      typedef string_type::substring_tuple_type    substring_tuple_type;
-      typedef string_type::abstract_string_type    abstract_string_type;
-      typedef string_type::size_type               size_type;
-      typedef string_type::index_type              index_type;
+      typedef nsTXPIDLString_CharT    self_type;
 
     public:
 

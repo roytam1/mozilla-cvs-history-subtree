@@ -44,14 +44,7 @@ class nsTDependentSubstring_CharT : public nsTSubstring_CharT
   {
     public:
 
-      typedef CharT                                     char_type;
-
-      typedef nsTDependentSubstring_CharT               self_type;
-      typedef nsTSubstring_CharT                        substring_type;
-
-      typedef substring_type::abstract_string_type    abstract_string_type;
-      typedef substring_type::const_iterator          const_iterator;
-      typedef substring_type::size_type               size_type;
+      typedef nsTDependentSubstring_CharT    self_type;
 
     public:
 

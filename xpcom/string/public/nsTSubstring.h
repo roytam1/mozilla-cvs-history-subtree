@@ -51,25 +51,11 @@ class NS_COM nsTSubstring_CharT : public nsTAString_CharT
   {
     public:
 
-      typedef CharT                                  char_type;
-      typedef nsCharTraits<char_type>                char_traits;
+      typedef nsTSubstring_CharT    self_type;
+      typedef nsTString_CharT       string_type;
 
-      typedef char_traits::incompatible_char_type    incompatible_char_type;
-
-      typedef nsTSubstring_CharT                     self_type;
-      typedef nsTString_CharT                        string_type;
-      typedef nsTSubstringTuple_CharT                substring_tuple_type;
-      typedef nsTAString_CharT                       abstract_string_type;
-
-      typedef nsReadingIterator<char_type>           const_iterator;
-      typedef nsWritingIterator<char_type>           iterator;
-      typedef char_type*                             char_iterator;
-      typedef const char_type*                       const_char_iterator;
-
-      typedef nsTStringComparator_CharT              comparator_type;
-
-      typedef PRUint32                               size_type;
-      typedef PRUint32                               index_type;
+      typedef char_type*            char_iterator;
+      typedef const char_type*      const_char_iterator;
 
     public:
 

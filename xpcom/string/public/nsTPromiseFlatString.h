@@ -95,14 +95,7 @@ class nsTPromiseFlatString_CharT : public nsTString_CharT
   {
     public:
 
-      typedef CharT                                     char_type;
-
-      typedef nsTPromiseFlatString_CharT                self_type;
-      typedef nsTString_CharT                           string_type;
-      typedef nsTSubstring_CharT                        substring_type;
-
-      typedef substring_type::substring_tuple_type    substring_tuple_type;
-      typedef substring_type::abstract_string_type    abstract_string_type;
+      typedef nsTPromiseFlatString_CharT    self_type;
 
     private:
 

@@ -84,24 +84,24 @@ class NS_COM nsTAString_CharT
   {
     public:
 
-      typedef CharT                                           char_type;
-      typedef nsCharTraits<char_type>                         char_traits;
+      typedef CharT                                  char_type;
+      typedef nsCharTraits<char_type>                char_traits;
 
-      typedef char_traits::incompatible_char_type             incompatible_char_type;
+      typedef char_traits::incompatible_char_type    incompatible_char_type;
 
-      typedef nsTAString_CharT                                self_type;
-      typedef nsTAString_CharT                                abstract_string_type;
-      typedef nsTObsoleteAString_CharT                        obsolete_string_type;
-      typedef nsTSubstring_CharT                              substring_type;
-      typedef nsTSubstringTuple_CharT                         substring_tuple_type;
+      typedef nsTAString_CharT                       self_type;
+      typedef nsTAString_CharT                       abstract_string_type;
+      typedef nsTObsoleteAString_CharT               obsolete_string_type;
+      typedef nsTSubstring_CharT                     substring_type;
+      typedef nsTSubstringTuple_CharT                substring_tuple_type;
 
-      typedef nsReadingIterator<char_type>                    const_iterator;
-      typedef nsWritingIterator<char_type>                    iterator;
+      typedef nsReadingIterator<char_type>           const_iterator;
+      typedef nsWritingIterator<char_type>           iterator;
 
-      typedef nsTStringComparator_CharT                       comparator_type;
+      typedef nsTStringComparator_CharT              comparator_type;
 
-      typedef PRUint32                                        size_type;
-      typedef PRUint32                                        index_type;
+      typedef PRUint32                               size_type;
+      typedef PRUint32                               index_type;
 
     public:
 
