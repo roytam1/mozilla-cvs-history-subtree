@@ -16,33 +16,24 @@
  * Reserved.
  */
 
-#ifndef nsMemoryDataSource_h__
-#define nsMemoryDataSource_h__
+#ifndef nsSimpleDataBase_h__
+#define nsSimpleDataBase_h__
 
-#include "prtypes.h"
-#include "nsIRDFDataSource.h"
-#include "nsHashtable.h"
+#include "nsIRDFDataBase.h"
+#include "nsVoidArray.h"
 
-class nsIRDFNode;
-class nsIRDFCursor;
-class nsIRDFRegistry;
-class NodeImpl;
-
-class nsMemoryDataSource : public nsIRDFDataSource {
+class nsSimpleDataBase : public nsIRDFDataBase {
 protected:
-    nsHashtable mNodes;
-    nsIRDFRegistry* mRegistry;
-
-    NodeImpl* Ensure(nsIRDFNode* node);
+    nsVoidArray mDataSources;
+    virtual ~nsSimpleDataBase(void);
 
 public:
-    nsMemoryDataSource(void);
-    virtual ~nsMemoryDataSource(void);
+    nsSimpleDataBase(void);
 
-    // nsISupports
+    // nsISupports interface
     NS_DECL_ISUPPORTS
 
-    // nsIRDFDataSource methods
+    // nsIRDFDataSource interface
     NS_IMETHOD Initialize(const nsString& uri);
 
     NS_IMETHOD GetSource(nsIRDFNode* property,
@@ -91,7 +82,11 @@ public:
                             nsIRDFCursor*& labels);
 
     NS_IMETHOD Flush();
+
+    // nsIRDFDataBase interface
+    NS_IMETHOD AddDataSource(nsIRDFDataSource* source);
 };
 
 
-#endif // nsMemoryDataSource_h__
+#endif // nsSimpleDataBase_h__
+

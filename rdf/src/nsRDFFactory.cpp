@@ -20,28 +20,29 @@
 #include "nsIFactory.h"
 #include "nsRDFResourceManager.h"
 #include "nsMemoryDataSource.h"
+#include "nsBookmarkDataSource.h"
+#include "nsSimpleDataBase.h"
+#include "nsRDFRegistryImpl.h"
 #include "nsRDFCID.h"
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIFactoryIID,  NS_IFACTORY_IID);
 
-static NS_DEFINE_CID(kRDFResourceManagerCID,  NS_RDFRESOURCEMANAGER_CID);
-static NS_DEFINE_CID(kRDFMemoryDataSourceCID, NS_RDFMEMORYDATASOURCE_CID);
+static NS_DEFINE_CID(kRDFBookmarkDataSourceCID, NS_RDFBOOKMARKDATASOURCE_CID);
+static NS_DEFINE_CID(kRDFMemoryDataSourceCID,   NS_RDFMEMORYDATASOURCE_CID);
+static NS_DEFINE_CID(kRDFRegistryCID,           NS_RDFREGISTRY_CID);
+static NS_DEFINE_CID(kRDFResourceManagerCID,    NS_RDFRESOURCEMANAGER_CID);
+static NS_DEFINE_CID(kRDFSimpleDataBaseCID,     NS_RDFSIMPLEDATABASE_CID);
 
 class nsRDFFactory : public nsIFactory
 {
 public:
     nsRDFFactory(const nsCID &aClass);
 
-    ////////////////////////////////////////
     // nsISupports methods
-    //
-
     NS_DECL_ISUPPORTS
 
-    ////////////////////////////////////////
     // nsIFactory methods
-    //
     NS_IMETHOD CreateInstance(nsISupports *aOuter,
                               const nsIID &aIID,
                               void **aResult);
@@ -114,6 +115,15 @@ nsRDFFactory::CreateInstance(nsISupports *aOuter,
     else if (mClassID.Equals(kRDFMemoryDataSourceCID)) {
         inst = static_cast<nsISupports*>(new nsMemoryDataSource());
     }
+    else if (mClassID.Equals(kRDFBookmarkDataSourceCID)) {
+        inst = static_cast<nsISupports*>(new nsBookmarkDataSource());
+    }
+    else if (mClassID.Equals(kRDFRegistryCID)) {
+        inst = static_cast<nsISupports*>(new nsRDFRegistryImpl());
+    }
+    else if (mClassID.Equals(kRDFSimpleDataBaseCID)) {
+        inst = static_cast<nsISupports*>(new nsSimpleDataBase());
+    }
 
     if (! inst)
         return NS_ERROR_OUT_OF_MEMORY;
@@ -132,18 +142,14 @@ nsresult nsRDFFactory::LockFactory(PRBool aLock)
     return NS_OK;
 }
 
+////////////////////////////////////////////////////////////////////////
+
+
+
 // return the proper factory to the caller
 extern "C" PR_EXTERN(nsresult)
 NSGetFactory(const nsCID &aClass, nsIFactory **aFactory)
 {
-    static PRBool gInitialized = PR_FALSE;
-    if (! gInitialized) {
-        gInitialized = PR_TRUE;
-
-        // do one-time library initialization
-        //RDF_Init();
-    }
-
     if (! aFactory)
         return NS_ERROR_NULL_POINTER;
 
@@ -153,3 +159,4 @@ NSGetFactory(const nsCID &aClass, nsIFactory **aFactory)
 
     return (*aFactory)->QueryInterface(kIFactoryIID, (void**)aFactory);
 }
+

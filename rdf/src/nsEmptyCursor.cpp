@@ -37,7 +37,7 @@ public:
 };
 
 nsIRDFCursor* gEmptyCursor;
-static EmptyCursorImpl gEmptyCursorImpl();
+static EmptyCursorImpl gEmptyCursorImpl;
 
 EmptyCursorImpl::EmptyCursorImpl(void)
 {

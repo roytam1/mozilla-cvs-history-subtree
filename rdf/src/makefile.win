@@ -24,23 +24,14 @@ DLLNAME=rdf
 DLL=.\$(OBJDIR)\$(DLLNAME).dll
 
 
-C_OBJS=\
-        .\$(OBJDIR)\vocab.obj    \
-        .\$(OBJDIR)\core.obj     \
-        .\$(OBJDIR)\remstore.obj \
-        .\$(OBJDIR)\utils.obj    \
-        .\$(OBJDIR)\rdfparse.obj \
-        .\$(OBJDIR)\bmk2rdf.obj  \
-        .\$(OBJDIR)\columns.obj  \
-        .\$(OBJDIR)\rdfht.obj    \
-        $(NULL)
-
 CPP_OBJS=\
-        .\$(OBJDIR)\netglue.obj                   \
+        .\$(OBJDIR)\nsBookmarkDataSource.obj      \
         .\$(OBJDIR)\nsEmptyCursor.obj             \
         .\$(OBJDIR)\nsMemoryDataSource.obj        \
         .\$(OBJDIR)\nsRDFFactory.obj              \
+        .\$(OBJDIR)\nsRDFRegistryImpl.obj         \
         .\$(OBJDIR)\nsRDFResourceManager.obj      \
+        .\$(OBJDIR)\nsSimpleDataBase.obj          \
 	$(NULL)
 
 LLIBS=\

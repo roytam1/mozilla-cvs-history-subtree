@@ -16,22 +16,27 @@
  * Reserved.
  */
 
-#ifndef nsIRDFResourceManager_h__
-#define nsIRDFResourceManager_h__
+#ifndef nsRDFRegistryImpl_h__
+#define nsRDFRegistryImpl_h__
 
-#include "nsISupports.h"
-class nsString;
-class nsIRDFNode;
+#include "nsIRDFRegistry.h"
+#include "nsVoidArray.h"
 
-// {BFD05261-834C-11d2-8EAC-00805F29F370}
-#define NS_IRDFRESOURCEMANAGER_IID \
-{ 0xbfd05261, 0x834c, 0x11d2, { 0x8e, 0xac, 0x0, 0x80, 0x5f, 0x29, 0xf3, 0x70 } }
+class nsRDFRegistryImpl : public nsIRDFRegistry {
+protected:
+    nsVoidArray mDataSources;
+    ~nsRDFRegistryImpl(void);
 
-
-class nsIRDFResourceManager : public nsISupports {
 public:
-    NS_IMETHOD GetNode(const nsString& uri, nsIRDFNode*& resource) = 0;
+    nsRDFRegistryImpl(void);
+
+    // nsISupports interface
+    NS_DECL_ISUPPORTS
+
+    // nsIRDFRegistry interface
+    NS_IMETHOD Register(const nsString& prefix, nsIRDFDataSource* dataSource);
+    NS_IMETHOD Unregister(const nsIRDFDataSource* dataSource);
+    NS_IMETHOD Find(const nsString& uri, nsIRDFDataSource*& result);
 };
 
-
-#endif // nsIRDFResourceManager_h__
+#endif // nsRDFRegistryImpl_h__

@@ -33,6 +33,7 @@ class nsIRDFNode;
 class nsIRDFCursor;
 class nsIRDFObserver;
 class nsIRDFDataBase;
+class nsString;
 
 // XXX I didn't make any of these methods "const" because it's
 // probably pretty likely that many data sources will just make stuff
@@ -40,6 +41,13 @@ class nsIRDFDataBase;
 
 class nsIRDFDataSource : public nsISupports {
 public:
+    /**
+     * Specify the URI for the data source: this is the prefix
+     * that will be used to register the data source in the
+     * data source registry.
+     */
+    NS_IMETHOD Initialize(const nsString& uri) = 0;
+
     /**
      * Find an RDF resource that points to a given node over the
      * specified arc & truth value

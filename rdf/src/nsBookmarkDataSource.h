@@ -16,22 +16,24 @@
  * Reserved.
  */
 
-#ifndef nsIRDFResourceManager_h__
-#define nsIRDFResourceManager_h__
 
-#include "nsISupports.h"
-class nsString;
-class nsIRDFNode;
+#ifndef nsBookmarkDataSource_h__
+#define nsBookmarkDataSource_h__
 
-// {BFD05261-834C-11d2-8EAC-00805F29F370}
-#define NS_IRDFRESOURCEMANAGER_IID \
-{ 0xbfd05261, 0x834c, 0x11d2, { 0x8e, 0xac, 0x0, 0x80, 0x5f, 0x29, 0xf3, 0x70 } }
+#include "nsMemoryDataSource.h"
 
+class nsBookmarkDataSource : public nsMemoryDataSource {
+protected:
+    static const char* kBookmarksFilename;
 
-class nsIRDFResourceManager : public nsISupports {
+    nsresult ReadBookmarks(void);
+    nsresult WriteBookmarks(void);
+
 public:
-    NS_IMETHOD GetNode(const nsString& uri, nsIRDFNode*& resource) = 0;
+    nsBookmarkDataSource(void);
+    virtual ~nsBookmarkDataSource(void);
+
+    NS_IMETHOD Flush(void);
 };
 
-
-#endif // nsIRDFResourceManager_h__
+#endif nsBookmarkDataSource_h__

@@ -35,14 +35,20 @@
 #include "nsMemoryDataSource.h"
 #include "nsIRDFCursor.h"
 #include "nsIRDFNode.h"
+#include "nsIRDFRegistry.h"
+#include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
+#include "nsRDFCID.h"
 
 extern nsIRDFCursor* gEmptyCursor;
 
-static NS_DEFINE_IID(kISupportsIID,      NS_ISUPPORTS_IID);
-static NS_DEFINE_IID(kIRDFDataSourceIID, NS_IRDFDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFCursorIID,     NS_IRDFCURSOR_IID);
+static NS_DEFINE_IID(kIRDFDataSourceIID, NS_IRDFDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFNodeIID,       NS_IRDFNODE_IID);
+static NS_DEFINE_IID(kIRDFRegistryIID,   NS_IRDFREGISTRY_IID);
+static NS_DEFINE_IID(kISupportsIID,      NS_ISUPPORTS_IID);
+
+static NS_DEFINE_CID(kRDFRegistryCID,    NS_RDFREGISTRY_CID);
 
 ////////////////////////////////////////////////////////////////////////
 // PropertyListElement
@@ -462,7 +468,7 @@ NodeImpl::GetProperties(nsIRDFNode* property, PRBool tv)
     PropertyListElement* head
         = static_cast<PropertyListElement*>(mProperties.Get(&key));
 
-    return new PropertyCursorImpl(head, tv);
+    return (head) ? (new PropertyCursorImpl(head, tv)) : gEmptyCursor;
 }
 
 
@@ -476,6 +482,7 @@ NodeImpl::GetArcLabelsOut(void)
 // nsMemoryDataSource implementation
 
 nsMemoryDataSource::nsMemoryDataSource(void)
+    : mRegistry(NULL)
 {
     NS_INIT_REFCNT();
 }
@@ -485,11 +492,31 @@ nsMemoryDataSource::nsMemoryDataSource(void)
 nsMemoryDataSource::~nsMemoryDataSource(void)
 {
     // XXX LEAK! make sure that you release the nodes
+    if (mRegistry) {
+        mRegistry->Unregister(this);
+        nsServiceManager::ReleaseService(kRDFRegistryCID, mRegistry);
+        mRegistry = NULL;
+    }
 }
 
 NS_IMPL_ISUPPORTS(nsMemoryDataSource, kIRDFDataSourceIID);
 
 
+NS_IMETHODIMP
+nsMemoryDataSource::Initialize(const nsString& uri)
+{
+    nsresult rv;
+
+    if (mRegistry)
+        return NS_ERROR_ALREADY_INITIALIZED;
+
+    if (NS_FAILED(rv = nsServiceManager::GetService(kRDFRegistryCID,
+                                                    kIRDFRegistryIID,
+                                                    (nsISupports**) &mRegistry)))
+        return rv;
+
+    return mRegistry->Register(uri, this);
+}
 
 NS_IMETHODIMP
 nsMemoryDataSource::GetSource(nsIRDFNode* property,
@@ -523,11 +550,13 @@ nsMemoryDataSource::GetTarget(nsIRDFNode* source,
     NodeImpl *u;
 
     if (! (u = static_cast<NodeImpl*>(mNodes.Get(&key))))
-        return NS_OK;
+        return NS_ERROR_FAILURE;
 
     target = u->GetProperty(property, tv);
-    NS_IF_ADDREF(target); // need to AddRef()
+    if (! target)
+        return NS_ERROR_FAILURE;
 
+    NS_ADDREF(target); // need to AddRef()
     return NS_OK;
 }
 

@@ -28,6 +28,7 @@ EXPORTS	= rdf.h \
 	nsIRDFDataSource.h \
         nsIRDFNode.h \
 	nsIRDFObserver.h \
+        nsIRDFRegistry.h \
         nsIRDFResourceManager.h \
 	nsIRDFService.h \
         nsRDFCID.h \
