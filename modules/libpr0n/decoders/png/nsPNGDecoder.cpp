@@ -329,12 +329,6 @@ nsPNGDecoder::info_callback(png_structp png_ptr, png_infop info_ptr)
     return NS_ERROR_FAILURE;
 #endif
 
-  decoder->mImage->AppendFrame(decoder->mFrame);
-
-  if (decoder->mObserver)
-    decoder->mObserver->OnStartFrame(nsnull, nsnull, decoder->mFrame);
-
-
   // then initalize the frame (which was appended above in nsPNGDecoder::Init())
   if (channels == 3) {
     decoder->mFrame->Init(0, 0, width, height, nsIGFXFormat::RGB);
@@ -345,6 +339,11 @@ nsPNGDecoder::info_callback(png_structp png_ptr, png_infop info_ptr)
       decoder->mFrame->Init(0, 0, width, height, nsIGFXFormat::RGB_A1);
     }
   }
+
+  decoder->mImage->AppendFrame(decoder->mFrame);
+
+  if (decoder->mObserver)
+    decoder->mObserver->OnStartFrame(nsnull, nsnull, decoder->mFrame);
 
   return;
 }

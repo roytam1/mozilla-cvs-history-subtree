@@ -224,9 +224,8 @@ NS_IMETHODIMP nsImageRequest::OnStartRequest(nsIChannel *channel, nsISupports *c
   channel->GetContentType(getter_Copies(contentType));
   printf("content type is %s\n", contentType.get());
 
-  nsCAutoString conid("@mozilla.org/image/decoder?");
+  nsCAutoString conid("@mozilla.org/image/decoder;2?type=");
   conid += contentType.get();
-  conid += ";1";
 
   mDecoder = do_CreateInstance(conid);
 
@@ -250,7 +249,11 @@ NS_IMETHODIMP nsImageRequest::OnStopRequest(nsIChannel *channel, nsISupports *ct
 
   if (!mDecoder) return NS_ERROR_FAILURE;
 
-  return mDecoder->Close();
+  nsresult rv = mDecoder->Close();
+
+  mDecoder = nsnull; // release the decoder so that it can rest peacefully ;)
+
+  return rv;
 }
 
 

@@ -20,10 +20,6 @@
  * Contributor(s):
  *   Stuart Parmenter <pavlov@netscape.com>
  *
- *
- * the ppm decoding function is from Tim Rowley <tor@cs.brown.edu>
- *  i dunno its license
- *
  */
 
 #include "nsPPMDecoder.h"
@@ -36,6 +32,8 @@
 #include "nsUnitConverters.h"
 
 #include "nsIComponentManager.h"
+
+#include "nsRect2.h"
 
 NS_IMPL_ISUPPORTS2(nsPPMDecoder, nsIImageDecoder, nsIOutputStream)
 
@@ -63,14 +61,13 @@ NS_IMETHODIMP nsPPMDecoder::Init(nsIImageRequest *aRequest)
 {
   mRequest = aRequest;
 
-  nsCOMPtr<nsIImageContainer> container;
-  aRequest->GetImage(getter_AddRefs(container));
+  mObserver = do_QueryInterface(aRequest);  // we're holding 2 strong refs to the request.
 
-  mImage = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
-  if (!mImage)
+  aRequest->GetImage(getter_AddRefs(mImage));
+
+  mFrame = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
+  if (!mFrame)
     return NS_ERROR_FAILURE;
-
-  container->AppendFrame(mImage);
 
   return NS_OK;
 }
@@ -93,11 +90,11 @@ NS_IMETHODIMP nsPPMDecoder::GetRequest(nsIImageRequest * *aRequest)
 /* void close (); */
 NS_IMETHODIMP nsPPMDecoder::Close()
 {
-  printf("nsPPMDecoder::Close()\n");
-
-  // XXX hack
-  gfx_format format;
-  mImage->GetFormat(&format);
+  if (mObserver) {
+    mObserver->OnStopFrame(nsnull, nsnull, mFrame);
+    mObserver->OnStopContainer(nsnull, nsnull, mImage);
+    mObserver->OnStopDecode(nsnull, nsnull, NS_OK, nsnull);
+  }
   
   return NS_OK;
 }
@@ -185,6 +182,8 @@ NS_IMETHODIMP nsPPMDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PRU
 
   if (mDataReceived == 0) {
 
+    mObserver->OnStartDecode(nsnull, nsnull);
+
     // Check the magic number
     char type;
     if ((sscanf(data, "P%c\n", &type) !=1) || (type != '6')) {
@@ -217,17 +216,23 @@ NS_IMETHODIMP nsPPMDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PRU
     readLen -= i + j;
     dataLen = readLen; // since this is the first pass, we don't have any data waiting that we need to keep track of
 
-    // XXX this isn't the width/height that was actually requested.. get that from mRequest.
-    mImage->Init(0, 0, w, h, nsIGFXFormat::RGB);
+    mImage->Init(w, h);
+    if (mObserver)
+      mObserver->OnStartContainer(nsnull, nsnull, mImage);
 
+    mFrame->Init(0, 0, w, h, nsIGFXFormat::RGB);
+    mImage->AppendFrame(mFrame);
+    if (mObserver)
+      mObserver->OnStartFrame(nsnull, nsnull, mFrame);
   }
 
   PRUint32 bpr;
   gfx_dimension width;
-  mImage->GetBytesPerRow(&bpr);
-  mImage->GetWidth(&width);
+  mFrame->GetBytesPerRow(&bpr);
+  mFrame->GetWidth(&width);
 
-  PRUint32 real_bpr = GFXCoordToIntCeil(width) * 3;
+  // XXX ceil?
+  PRUint32 real_bpr = GFXCoordToIntRound(width) * 3;
   
   PRUint32 i = 0;
   PRUint32 rownum = mDataWritten / real_bpr;  // XXX this better not have a decimal
@@ -238,7 +243,12 @@ NS_IMETHODIMP nsPPMDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PRU
 
     do {
       PRUint8 *line = (PRUint8*)data + i*real_bpr;
-      mImage->SetBits(line, real_bpr, (rownum++)*bpr);
+      mFrame->SetBits(line, real_bpr, (rownum++)*bpr);
+
+      nsRect2 r(0, rownum, width, 1);
+      mObserver->OnDataAvailable(nsnull, nsnull, mFrame, &r);
+
+
       wroteLen += real_bpr ;
       i++;
     } while(dataLen >= real_bpr * (i+1));

@@ -28,6 +28,8 @@
 
 #include "nsCOMPtr.h"
 
+#include "nsIImageContainer.h"
+#include "nsIImageDecoderObserver.h"
 #include "nsIImageFrame.h"
 #include "nsIImageRequest.h"
 
@@ -50,8 +52,11 @@ public:
   virtual ~nsPPMDecoder();
 
 private:
-  nsCOMPtr<nsIImageFrame> mImage;
+  nsCOMPtr<nsIImageContainer> mImage;
+  nsCOMPtr<nsIImageFrame> mFrame;
   nsCOMPtr<nsIImageRequest> mRequest;
+  nsCOMPtr<nsIImageDecoderObserver> mObserver; // this is just qi'd from mRequest for speed
+
   PRUint32 mDataReceived;
   PRUint32 mDataWritten;
 
