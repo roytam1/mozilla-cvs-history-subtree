@@ -702,6 +702,21 @@ var BookmarksCommand = {
 
   importBookmarks: function ()
   {
+#ifdef XP_MACOSX
+      var features = "centerscreen,chrome,resizable=no";
+#else
+      var features = "modal,centerscreen,chrome,resizable=no";
+#endif
+      window.fromFile = false;
+      window.openDialog("chrome://browser/content/migration/migration.xul", "migration", features, "bookmarks");
+      if(window.fromFile)
+      {
+        this.importBookmarksFromFile();
+      }
+  },
+
+  importBookmarksFromFile: function ()
+  {
     ///transaction...
     try {
       const kFilePickerContractID = "@mozilla.org/filepicker;1";

@@ -56,10 +56,11 @@
               onpageshow="MigrationWizard.onImportSourcePageShow();"
               onpageadvanced="MigrationWizard.onImportSourcePageAdvanced();">
 #ifdef XP_WIN
-    <description>&importFrom.label;</description>
+    <description id="importAll">&importFrom.label;</description>
 #else
-    <description>&importFromUnix.label;</description>
+    <description id="importAll">&importFromUnix.label;</description>
 #endif
+    <description id="importBookmarks" hidden="true">&importFromBookmarks.label;</description>
     
     <radiogroup id="importSourceGroup">
       <radio id="phoenix"   label="&importFromPhoenix.label;"   accesskey="&importFromPhoenix.accesskey;" hidden="true"/>
@@ -100,6 +101,7 @@
       <radio id="dogbert"   label="&importFromNetscape4.label;" accesskey="&importFromNetscape4.accesskey;"/>
 #endif
 #endif
+      <radio id="fromfile"  label="&importFromFile.label;"      accesskey="&importFromFile.accesskey;" hidden="true"/>
       <radio id="nothing"   label="&importFromNothing.label;"   accesskey="&importFromNothing.accesskey;" hidden="true"/>
     </radiogroup>
   </wizardpage>
