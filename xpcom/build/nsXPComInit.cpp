@@ -584,7 +584,7 @@ nsresult NS_COM NS_InitXPCOM2(nsIServiceManager* *result,
                                   nsnull,
                                   NS_XPCOM_STARTUP_OBSERVER_ID);
     
-    return rv;
+    return NS_OK;
 }
 
 
