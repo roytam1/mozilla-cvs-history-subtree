@@ -595,8 +595,10 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
              command == @selector(deleteForward:)) {
     // if the user deletes characters, we need to know so that
     // we can prevent autocompletion later when search results come in
-    if ([[textView string] length] > 1)
-      mBackspaced = YES;    
+    if ([[textView string] length] > 1) {
+    	[mTableView deselectAll:self];
+      mBackspaced = YES;
+    }
   }
   
   return NO;
