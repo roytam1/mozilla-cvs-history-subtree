@@ -377,7 +377,10 @@ PR_EXTERN(PRBool) PREF_IsAutoAdminEnabled(void);
 #ifdef XP_UNIX
 typedef void* XmStringPtr;
 typedef void* KeySymPtr;
+#if 0
+/* This code no longer works -cls */
 PR_EXTERN(void) PREF_AlterSplashIcon(struct fe_icon_data*);
+#endif
 PR_EXTERN(PRBool) PREF_GetLabelAndMnemonic(char*, char**, XmStringPtr xmstring, KeySymPtr keysym);
 PR_EXTERN(PRBool) PREF_GetUrl(char*, char**);
 #endif

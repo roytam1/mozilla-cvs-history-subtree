@@ -73,6 +73,8 @@ pref_InitInitialObjects(void)
 }
 
 
+#if 0
+/* This code no longer works. - cls */
 /*
  * PREF_AlterSplashIcon
  */
@@ -88,6 +90,7 @@ PREF_AlterSplashIcon(struct fe_icon_data* icon)
         memcpy(icon, splash_screen, sizeof(*icon));
     }
 }
+#endif
 
 #ifndef B1M
 /*
