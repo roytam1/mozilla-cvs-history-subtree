@@ -614,6 +614,9 @@ var gExtensionsViewController = {
       pref.setCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN, gCurrentTheme);
       cr.selectSkin(gCurrentTheme, true);
       cr.refreshSkins();
+
+      // disable the useThemeButton
+      gExtensionsViewController.onCommandUpdate();</pre>
     },
       
     cmd_options: function ()
