@@ -4046,7 +4046,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
           point.x = (short) LOWORD(lParam);
           point.y = (short) HIWORD(lParam);
           HWND destWnd = ::WindowFromPoint(point);
-          
+
           // Since we receive mousewheel events for as long as
           // we are focused, it's entirely possible that there
           // is another app's window or no window under the
@@ -4056,7 +4056,16 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
             // No window is under the pointer
             break;
           }
-          
+
+          // We don't care about windows belonging to other processes.
+          DWORD processId = 0;
+          GetWindowThreadProcessId(destWnd, &processId);
+          if (processId != GetCurrentProcessId())
+          {
+            // Somebody elses window
+            break;
+          }
+
           LONG proc = ::GetWindowLong(destWnd, GWL_WNDPROC);
           if (proc != (LONG)&nsWindow::WindowProc)  {
             // Some other app, or a plugin window.
@@ -4098,6 +4107,7 @@ PRBool nsWindow::ProcessMessage(UINT msg, WPARAM wParam, LPARAM lParam, LRESULT 
           }
           if (destWnd == nsnull)
               break; // done with this message.
+
           if (destWnd != mWnd) {
             nsWindow* destWindow = GetNSWindowPtr(destWnd);
             if (destWindow) {
