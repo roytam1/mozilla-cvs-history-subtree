@@ -1199,10 +1199,11 @@ nsSmallVoidArray::nsSmallVoidArray()
 
 nsSmallVoidArray::~nsSmallVoidArray()
 {
-  if (HasVector())
+  if (mChildren)
   {
-    nsVoidArray* vector = GetChildVector();
-    delete vector;
+    delete ((nsVoidArray*)mChildren);
+    mChildren = nsnull;
+
   }
 }
 
