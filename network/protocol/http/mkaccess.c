@@ -2748,7 +2748,7 @@ NET_AskForProxyAuth(MWContext * context,
 MODULE_PRIVATE void 
 NET_DisplayCookieInfoAsHTML(ActiveEntry * cur_entry) {
 	char *buffer=(char*)PR_Malloc(BUFLEN), *expireDate=NULL;
-   	NET_StreamClass *stream;
+   	NET_VoidStreamClass *stream;
 	int i, g, numOfCookies;
 	XP_List *list=net_cookie_list;
 	net_CookieStruct *cookie;
@@ -2762,7 +2762,7 @@ NET_DisplayCookieInfoAsHTML(ActiveEntry * cur_entry) {
 	StrAllocCopy(cur_entry->URL_s->content_type, TEXT_HTML);
 
 	cur_entry->format_out = CLEAR_CACHE_BIT(cur_entry->format_out);
-	stream = NET_StreamBuilder(cur_entry->format_out, 
+	stream = NET_VoidStreamBuilder(cur_entry->format_out, 
 							   cur_entry->URL_s, 
 							   cur_entry->window_id);
 
@@ -2775,7 +2775,7 @@ NET_DisplayCookieInfoAsHTML(ActiveEntry * cur_entry) {
 
 /* define a macro to push a string up the stream and handle errors */
 #define PUT_PART(part)													\
-cur_entry->status = (*stream->put_block)(stream,			\
+cur_entry->status = NET_StreamPutBlock(stream,			\
 										part ? part : "Unknown",		\
 										part ? PL_strlen(part) : 7);	\
 	if(cur_entry->status < 0)												\
@@ -2917,9 +2917,11 @@ cur_entry->status = (*stream->put_block)(stream,			\
 END:
 	PR_Free(buffer);
 	if(cur_entry->status < 0)
-		(*stream->abort)(stream, cur_entry->status);
+		NET_StreamAbort(stream, cur_entry->status);
 	else
-		(*stream->complete)(stream);
+		NET_StreamComplete(stream);
+
+	NET_StreamFree(stream);
 	return;
 }
 

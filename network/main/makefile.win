@@ -95,7 +95,7 @@ LIBRARY_NAME=network
 EXTRA_LIBS=
 
 REQUIRES= foo parse jtools java zlib nspr dbm util network js security
-EXPORTS= mkstream.h \
+EXPORTS= netstream.h \
 	 mkformat.h \
 	 mkparse.h \
 	 mkfsort.h \
@@ -133,6 +133,7 @@ LINCS=-I$(PUBLIC)\jtools	\
     -I$(PUBLIC)\netcnvts	\
     -I$(PUBLIC)\httpurl		\
     -I$(PUBLIC)\cnetinit	\
+    -I$(PUBLIC)\cstream		\
     -I$(PUBLIC)\security 
 #!endif
 
