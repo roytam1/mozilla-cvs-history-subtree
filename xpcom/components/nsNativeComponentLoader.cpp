@@ -33,6 +33,7 @@
 #ifdef  XP_MAC  // sdagley dougt fix
 #include <Files.h>
 #include <Errors.h>
+#include "nsLocalFileMac.h"
 #endif
 
 #define PRINT_CRITICAL_ERROR_TO_SCREEN 1
@@ -672,26 +673,25 @@ nsNativeComponentLoader::AutoRegisterComponent(PRInt32 when,
 #ifdef  XP_MAC  // sdagley dougt fix
 
     // rjc - on Mac, check the file's type code (skip checking the creator code)
-    nsCOMPtr<nsIFile>  fs = component;
 
-/*
-!!!!!!!!!!!! Danger Will Robinson !!!!!!!!!!!!!
-*/
-DebugStr("\pnsLocalFile doesn't have a GetCatInfo call - yet");
+	nsCOMPtr<nsILocalFileMac> localFileMac = do_QueryInterface(component);
+	if (localFileMac)
+	{
+		OSType	type;
+		OSType	creator;
+		rv = localFileMac->GetFileTypeAndCreator(&type, &creator);
+		if (NS_SUCCEEDED(rv))
+		{
+	        // on Mac, Mozilla shared libraries are of type 'shlb'
+	        // Note: we don't check the creator (which for Mozilla is 'MOZZ')
+	        // so that 3rd party shared libraries will be noticed!
+			if (type == 'shlb')
+			{
+            	validExtension = PR_TRUE;
+			}
+		}
+	}
 
-    CInfoPBRec  catInfo;
-    OSErr       err = fnfErr; // fs.GetCatInfo(catInfo);	Stub to fnfErr for now
-    if (!err)
-    {
-        // on Mac, Mozilla shared libraries are of type 'shlb'
-        // Note: we don't check the creator (which for Mozilla is 'MOZZ')
-        // so that 3rd party shared libraries will be noticed!
-        if ((catInfo.hFileInfo.ioFlFndrInfo.fdType == 'shlb')
-            /* && (catInfo.hFileInfo.ioFlFndrInfo.fdCreator == 'MOZZ') */ )
-        {
-            validExtension = PR_TRUE;
-        }
-    }
 #else
     char *leafName = NULL;
     rv = component->GetLeafName(&leafName);

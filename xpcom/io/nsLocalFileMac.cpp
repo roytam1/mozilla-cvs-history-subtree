@@ -34,6 +34,7 @@
 #include "prtypes.h"
 #include "prerror.h"
 #include "pprio.h" // Include this rather than prio.h so we get def of PR_ImportFile
+#include "prmem.h"
 
 #include "FullPath.h"
 #include "FileCopy.h"
@@ -100,6 +101,107 @@ static void myPLstrncpy(Str255 dst, const char* src, int inMax)
 	memcpy(&dst[1], src, srcLength);
 }
 
+// Aaargh!!!!  Gotta roll my own equivalents of PR_OpenDir, PR_ReadDir and PR_CloseDir
+// I can't use the NSPR versions as they expect a unix path and I can't easily adapt
+// the directory iterator fucntion from MoreFIles as it wants to iterate things itself
+// and use a callback function to operate on the iterated entries
+
+typedef struct
+{
+	short		ioVRefNum;
+	long		ioDirID;
+	short		ioFDirIndex;
+	char		*currentEntryName;
+} MyPRDir;
+
+static MyPRDir * My_OpenDir(FSSpec *fileSpec)
+{
+	MyPRDir		*dir = NULL;
+	OSErr 		err;
+	long		theDirID;
+	Boolean		isDirectory;
+	
+	err = ::FSpGetDirectoryID(fileSpec, &theDirID, &isDirectory);
+	if (err == noErr)
+	{
+		if (isDirectory)
+		{
+			/* This is a directory, store away the pertinent information.
+			** We post increment.  I.e. index is always the nth. item we 
+			** should get on the next call
+			*/
+			dir = PR_NEW(MyPRDir);
+			if (dir)
+			{
+				dir->ioVRefNum = fileSpec->vRefNum;
+				dir->ioDirID = theDirID;
+				dir->currentEntryName = NULL;
+				dir->ioFDirIndex = 1;
+			}
+		}
+	}
+	
+	return dir;
+
+}
+
+static char * My_ReadDir(MyPRDir *mdDir, PRIntn flags)
+{
+	OSErr			err;
+	CInfoPBRec		pb;
+	char			*returnedCStr;
+	Str255			pascalName = "\p";
+	PRBool			foundEntry;
+	
+	do
+	{
+		// Release the last name read
+		if (mdDir->currentEntryName)
+		{
+			PR_DELETE(mdDir->currentEntryName);
+			mdDir->currentEntryName = NULL;
+		}
+			
+		// WeÕve got all the info we need, just get info about this guy.
+		pb.hFileInfo.ioNamePtr = pascalName;
+		pb.hFileInfo.ioVRefNum = mdDir->ioVRefNum;
+		pb.hFileInfo.ioFDirIndex = mdDir->ioFDirIndex;
+		pb.hFileInfo.ioDirID = mdDir->ioDirID;
+		err = ::PBGetCatInfoSync(&pb);
+		if (err != noErr)
+			goto ErrorExit;
+		
+		// Convert the Pascal string to a C string (actual allocation occurs in CStrFromPStr)
+		unsigned long len = pascalName[0];
+		returnedCStr = (char *)PR_MALLOC(len);
+		if (returnedCStr)
+		{
+			::BlockMoveData(&pascalName[1], returnedCStr, len);
+			returnedCStr[len] = NULL;
+		}
+		
+		mdDir->currentEntryName = returnedCStr;
+		mdDir->ioFDirIndex++;
+		
+		// If it is not a hidden file and the flags did not specify skipping, we are done.
+		if ((flags & PR_SKIP_HIDDEN) && (pb.hFileInfo.ioFlFndrInfo.fdFlags & fInvisible))
+			foundEntry = PR_FALSE;
+		else
+			foundEntry = PR_TRUE;	
+		
+	} while (!foundEntry);
+	
+	return (mdDir->currentEntryName);
+
+ErrorExit:
+    return NULL;
+}
+
+static void My_CloseDir(MyPRDir *mdDir)
+{
+	if (mdDir->currentEntryName)
+		PR_DELETE(mdDir->currentEntryName);
+}
 
 class nsDirEnumerator : public nsISimpleEnumerator
 {
@@ -114,20 +216,22 @@ class nsDirEnumerator : public nsISimpleEnumerator
 
         nsresult Init(nsILocalFile* parent) 
         {
-            char* filepath;
-            parent->GetTarget(&filepath);
-        
-            if (filepath == nsnull)
+        	FSSpec fileSpec;
+        	fileSpec.vRefNum = 0;
+        	fileSpec.parID = 0;
+        	
+        	nsCOMPtr<nsILocalFileMac> localFileMac = do_QueryInterface(parent);
+			if (localFileMac) {
+            	localFileMac->GetFSSpec(&fileSpec);
+            }
+        	
+        	// See if we managed to get a FSSpec
+            if (!fileSpec.vRefNum && !fileSpec.parID)
             {
-                parent->GetPath(&filepath);
+                return NS_ERROR_FAILURE;
             }
             
-            if (filepath == nsnull)
-            {
-                return NS_ERROR_OUT_OF_MEMORY;
-            }
-
-            mDir = PR_OpenDir(filepath);
+            mDir = My_OpenDir(&fileSpec);
             if (mDir == nsnull)    // not a directory?
                 return NS_ERROR_FAILURE;
         
@@ -140,24 +244,20 @@ class nsDirEnumerator : public nsISimpleEnumerator
             nsresult rv;
             if (mNext == nsnull && mDir) 
             {
-                PRDirEntry* entry = PR_ReadDir(mDir, PR_SKIP_BOTH);
-                if (entry == nsnull) 
+                char* name = My_ReadDir(mDir, PR_SKIP_BOTH);
+                if (name == nsnull) 
                 {
                     // end of dir entries
-
-                    PRStatus status = PR_CloseDir(mDir);
-                    if (status != PR_SUCCESS)
-                        return NS_ERROR_FAILURE;
+					My_CloseDir(mDir);
                     mDir = nsnull;
-
                     *result = PR_FALSE;
                     return NS_OK;
                 }
 
                 nsCOMPtr<nsIFile> file;
                 mParent->Clone(getter_AddRefs(file));
-            
-                rv = file->Append(entry->name);
+
+                rv = file->SetLeafName(name);
                 if (NS_FAILED(rv)) 
                     return rv;
             
@@ -185,15 +285,14 @@ class nsDirEnumerator : public nsISimpleEnumerator
         {
             if (mDir) 
             {
-                PRStatus status = PR_CloseDir(mDir);
-                NS_ASSERTION(status == PR_SUCCESS, "close failed");
+                My_CloseDir(mDir);
             }
         }
 
     protected:
-        PRDir*                  mDir;
-        nsCOMPtr<nsILocalFile>  mParent;
-        nsCOMPtr<nsILocalFile>  mNext;
+        MyPRDir*				mDir;
+        nsCOMPtr<nsILocalFile>	mParent;
+        nsCOMPtr<nsILocalFile>	mNext;
 };
 
 NS_IMPL_ISUPPORTS(nsDirEnumerator, NS_GET_IID(nsISimpleEnumerator));
@@ -247,12 +346,13 @@ nsLocalFile::MakeDirty()
 
 // If we were initted with a path then this routine can create mSpec for us
 NS_IMETHODIMP
-nsLocalFile::ResolvePath()
+nsLocalFile::ConstructDirectoryTree()
 {
 	OSErr	err = noErr;
     char*	filePath = (char*) nsAllocator::Clone( mWorkingPath, strlen(mWorkingPath)+1 );
 	size_t	inLength = strlen(filePath);
-
+	
+	// Try making an FSSpec from the path
 	if (inLength < 255)
 	{
 		Str255 pascalpath;
@@ -260,8 +360,19 @@ nsLocalFile::ResolvePath()
 		err = ::FSMakeFSSpec(0, 0, pascalpath, &mSpec);
 	}
 	else
-		err = FSpLocationFromFullPath(inLength, filePath, &mSpec);
-
+	{
+		err = ::FSpLocationFromFullPath(inLength, filePath, &mSpec);
+	}
+	
+	// If we successfully created a spec then set the flag and leave
+	if (err == noErr)
+	{
+		mHaveValidSpec = PR_TRUE;
+		return NS_OK;
+	}
+	
+	// If we couldn't create the FSSpec then the directory hierarchy doesn't exist
+	// so we'll need to create it
 	if ((err == dirNFErr || err == bdNamErr))
 	{
 		const char* path = filePath;
@@ -570,8 +681,25 @@ nsLocalFile::Append(const char *node)
     MakeDirty();
 
     // Yee Hah!  We only get a single node at a time so just append it
-    mAppendedPath.Append(":");		// Stuff in the directory delimeter
-    mAppendedPath.Append(node);
+    // to either the mWorkingPath or mAppendedPath, after adding the ':'
+    // directory delimeter, depending on how we were initialized
+    switch (mInitType)
+    {
+    	case eInitWithPath:
+		    mWorkingPath.Append(":");
+		    mWorkingPath.Append(node);
+    		break;
+    	
+    	case eInitWithFSSpec:
+		    mAppendedPath.Append(":");
+		    mAppendedPath.Append(node);
+    		break;
+    		
+    	default:
+    		// !!!!! Danger Will Robinson !!!!!
+    		// we really shouldn't get here
+    		break;
+    }
     
     return NS_OK;
 }
@@ -587,19 +715,54 @@ nsLocalFile::GetLeafName(char * *aLeafName)
 {
     NS_ENSURE_ARG_POINTER(aLeafName);
 
-    const char* temp = mWorkingPath.GetBuffer();
-    if(temp == nsnull)
-        return NS_ERROR_FILE_UNRECOGNIZED_PATH;
+    switch (mInitType)
+    {
+    	case eInitWithPath:
+		    const char* temp = mWorkingPath.GetBuffer();
+		    if (temp == nsnull)
+		        return NS_ERROR_FILE_UNRECOGNIZED_PATH;
 
-    const char* leaf = strrchr(temp, '\\');
-    
-    // if the working path is just a node without any lashes.
-    if (leaf == nsnull)
-        leaf = temp;
-    else
-        leaf++;
+		    const char* leaf = strrchr(temp, ':');
+		    
+		    // if the working path is just a node without any directory delimeters.
+		    if (leaf == nsnull)
+		        leaf = temp;
+		    else
+		        leaf++;
 
-    *aLeafName = (char*) nsAllocator::Clone(leaf, strlen(leaf)+1);
+		    *aLeafName = (char*) nsAllocator::Clone(leaf, strlen(leaf)+1);
+    		break;
+    	
+    	case eInitWithFSSpec:
+		    // See if we've had a path appended
+		    if (mAppendedPath.Length())
+		    {
+			    const char* temp = mAppendedPath.GetBuffer();
+			    if (temp == nsnull)
+			        return NS_ERROR_FILE_UNRECOGNIZED_PATH;
+
+			    const char* leaf = strrchr(temp, ':');
+			    
+			    // if the working path is just a node without any directory delimeters.
+			    if (leaf == nsnull)
+			        leaf = temp;
+			    else
+			        leaf++;
+
+			    *aLeafName = (char*) nsAllocator::Clone(leaf, strlen(leaf)+1);
+			}
+			else
+			{
+				// We don't have an appended path so grab the leaf name from the FSSpec
+			}
+    		break;
+    		
+    	default:
+    		// !!!!! Danger Will Robinson !!!!!
+    		// we really shouldn't get here
+    		break;
+    }
+
     return NS_OK;
 }
 
@@ -608,28 +771,64 @@ nsLocalFile::SetLeafName(const char * aLeafName)
 {
     NS_ENSURE_ARG_POINTER(aLeafName);
     
-    // See if we've had a path appended
-    if (mAppendedPath.Length())
-    {	// Lop off the end of the appended path and replace it with the new leaf name
-		PRInt32 offset = mAppendedPath.RFindChar(':');
-		if (offset)
-		{
-			mAppendedPath.Truncate(offset + 1);
-		}
-		mAppendedPath.Append(aLeafName);
-	}
-	else
-	{
-	}
+    switch (mInitType)
+    {
+    	case eInitWithPath:
+			PRInt32 offset = mWorkingPath.RFindChar(':');
+			if (offset)
+			{
+				mWorkingPath.Truncate(offset + 1);
+			}
+			mWorkingPath.Append(aLeafName);
+    		break;
+    	
+    	case eInitWithFSSpec:
+		    // See if we've had a path appended
+		    if (mAppendedPath.Length())
+		    {	// Lop off the end of the appended path and replace it with the new leaf name
+				PRInt32 offset = mAppendedPath.RFindChar(':');
+				if (offset)
+				{
+					mAppendedPath.Truncate(offset + 1);
+				}
+				mAppendedPath.Append(aLeafName);
+			}
+			else
+			{
+				// We don't have an appended path so directly modify the FSSpec
+			}
+    		break;
+    		
+    	default:
+    		// !!!!! Danger Will Robinson !!!!!
+    		// we really shouldn't get here
+    		break;
+    }
 	
-	return NS_ERROR_NOT_IMPLEMENTED;
+    return NS_OK;
 }
 
 NS_IMETHODIMP  
 nsLocalFile::GetPath(char **_retval)
 {
     NS_ENSURE_ARG_POINTER(_retval);
-    *_retval = (char*) nsAllocator::Clone(mWorkingPath, strlen(mWorkingPath)+1);
+    
+    switch (mInitType)
+    {
+    	case eInitWithPath:
+    		*_retval = (char*) nsAllocator::Clone(mWorkingPath, strlen(mWorkingPath)+1);
+    		break;
+    	
+    	case eInitWithFSSpec:
+    		// Now would be a good time to call the code that makes an FSSpec into a path
+    		break;
+    		
+    	default:
+    		// !!!!! Danger Will Robinson !!!!!
+    		// we really shouldn't get here
+    		break;
+    }
+
     return NS_OK;
 }
 
@@ -1307,24 +1506,41 @@ NS_IMETHODIMP nsLocalFile::GetFSSpec(FSSpec *fileSpec)
 
 }
 
-NS_IMETHODIMP nsLocalFile::GetType(OSType *type)
+NS_IMETHODIMP nsLocalFile::GetFileTypeAndCreator(OSType *type, OSType *creator)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_ENSURE_ARG(type);
+    NS_ENSURE_ARG(creator);
+    
+    ResolveAndStat(PR_TRUE);
+    
+	FInfo info;
+	OSErr err = ::FSpGetFInfo(&mSpec, &info);
+	if (err != noErr)
+		return NS_ERROR_FILE_NOT_FOUND;
+	*type = info.fdType;
+	*creator = info.fdCreator;	
+    
+    return NS_OK;
 }
 
-NS_IMETHODIMP nsLocalFile::SetType(OSType type)
+NS_IMETHODIMP nsLocalFile::SetFileTypeAndCreator(OSType type, OSType creator)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-  
-NS_IMETHODIMP nsLocalFile::GetCreator(OSType *creator)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsLocalFile::SetCreator(OSType creator)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
+	FInfo info;
+	OSErr err = ::FSpGetFInfo(&mSpec, &info);
+	if (err != noErr)
+		return NS_ERROR_FILE_NOT_FOUND;
+	
+	// See if the user specified a type or creator before changing from what was read
+	if (type)
+		info.fdType = type;
+	if (creator)
+		info.fdCreator = creator;
+	
+	err = ::FSpSetFInfo(&mSpec, &info);
+	if (err != noErr)
+		return NS_ERROR_FILE_ACCESS_DENIED;
+	
+    return NS_OK;
 }
 
 

@@ -65,11 +65,8 @@ public:
 
   NS_IMETHOD GetFSSpec(FSSpec *fileSpec);
 
-  NS_IMETHOD GetType(OSType *type);
-  NS_IMETHOD SetType(OSType type);
-  
-  NS_IMETHOD GetCreator(OSType *creator);
-  NS_IMETHOD SetCreator(OSType creator);
+  NS_IMETHOD GetFileTypeAndCreator(OSType *type, OSType *creator);
+  NS_IMETHOD SetFileTypeAndCreator(OSType type, OSType creator);
 
 private:
 
@@ -99,8 +96,10 @@ private:
     PRBool	mMustCreate;
     
     void MakeDirty();
-    nsresult ResolvePath();
     nsresult ResolveAndStat(PRBool resolveTerminal);
+    
+    // Routine to walk a path constructing directory nodes as it goes
+    nsresult ConstructDirectoryTree();
 
     nsresult CopyMove(nsIFile *newParentDir, const char *newName, PRBool followSymlinks, PRBool move);
     nsresult CopySingleFile(nsIFile *source, nsIFile* dest, const char * newName, PRBool followSymlinks, PRBool move);

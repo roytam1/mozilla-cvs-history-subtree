@@ -51,13 +51,11 @@ class nsILocalFileMac : public nsISupports
   // In case we need to get the FSSpec at the heart of an nsLocalFIleMac
   NS_IMETHOD GetFSSpec(FSSpec *fileSpec) = 0;
 
-  // Get/Set methods for the file type
-  NS_IMETHOD GetType(OSType *type) = 0;
-  NS_IMETHOD SetType(OSType type) = 0;
-
-  // Get/Set methods for the file creator
-  NS_IMETHOD GetCreator(OSType *creator) = 0;
-  NS_IMETHOD SetCreator(OSType creator) = 0;
+  // Get/Set methods for the file type and creator codes
+  // Note that passing null for either the type or creator in the
+  // SetFileTypeAndCreator call will preserve the existing code
+  NS_IMETHOD GetFileTypeAndCreator(OSType *type, OSType *creator) = 0;
+  NS_IMETHOD SetFileTypeAndCreator(OSType type, OSType creator) = 0;
 };
 
 #endif
