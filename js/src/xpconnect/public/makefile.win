@@ -36,7 +36,6 @@
 DEPTH=..\..\..\..
 
 EXPORTS = \
-#    nsIXPCScriptable.h \
     xpc_map_end.h \
     $(NULL)
 
