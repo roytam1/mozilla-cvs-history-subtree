@@ -8,4 +8,5 @@ nsIWindowMediator.idl
 nsIXULWindow.idl
 nsIUserInfo.idl
 nsINativeAppSupport.idl
+nsIPopupWindowManager.idl
 

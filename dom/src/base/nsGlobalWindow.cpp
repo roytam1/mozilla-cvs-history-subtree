@@ -143,6 +143,9 @@
 #include "nsIBindingManager.h"
 #include "nsIXBLService.h"
 
+// used for popup blocking, needs to be converted to something
+// belonging to the back-end like nsIContentPolicy
+#include "nsIPopupWindowManager.h"
 
 static nsIEntropyCollector* gEntropyCollector       = nsnull;
 static PRInt32              gRefCnt                 = 0;
@@ -2746,6 +2749,40 @@ GlobalWindowImpl::DisableExternalCapture()
   return NS_ERROR_FAILURE;
 }
 
+static
+PRBool IsPopupBlocked(nsIDOMDocument* aDoc)
+{
+  PRBool blocked = PR_FALSE;
+  nsCOMPtr<nsIDocument> doc(do_QueryInterface(aDoc));
+  nsCOMPtr<nsIPopupWindowManager> pm(do_GetService(NS_POPUPWINDOWMANAGER_CONTRACTID));
+  if (pm && doc) {
+    nsCOMPtr<nsIURI> uri;
+    doc->GetDocumentURL(getter_AddRefs(uri));
+
+    PRUint32 permission = nsIPopupWindowManager::ALLOW_POPUP;
+    pm->TestPermission(uri, &permission);
+    blocked = (permission == nsIPopupWindowManager::DENY_POPUP);
+  }
+  return blocked;
+}
+
+static 
+void FirePopupBlockedEvent(nsIDOMDocument* aDoc)
+{
+  if (aDoc) {
+    // Fire a "DOMPopupBlocked" event so that the UI can hear about blocked popups.
+    nsCOMPtr<nsIDOMDocumentEvent> docEvent(do_QueryInterface(aDoc));
+    nsCOMPtr<nsIDOMEvent> event;
+    docEvent->CreateEvent(NS_LITERAL_STRING("Events"), getter_AddRefs(event));
+    if (event) {
+      event->InitEvent(NS_LITERAL_STRING("DOMPopupBlocked"), PR_TRUE, PR_TRUE);
+      PRBool noDefault;
+      nsCOMPtr<nsIDOMEventTarget> targ(do_QueryInterface(aDoc));
+      targ->DispatchEvent(event, &noDefault);
+    }
+  }
+}
+
 /*
  * Examine the current document state to see if we're in a way that is
  * typically abused by web designers.  This routine returns PR_TRUE if
@@ -2772,34 +2809,31 @@ GlobalWindowImpl::CheckForAbusePoint ()
     return PR_FALSE;
   
   if (!mIsDocumentLoaded || mRunningTimeout) {
-    PRBool blockOpenOnLoad = PR_FALSE;
-    prefs->GetBoolPref("dom.disable_open_during_load", &blockOpenOnLoad);
-    if (blockOpenOnLoad) {        
-#ifdef DEBUG
-      printf ("*** Scripts executed during (un)load or as a result of "
-              "setTimeout() are potential javascript abuse points.\n");
-#endif
-      return PR_TRUE;
-    }
-  } else {
-    PRInt32 clickDelay = 0;
-    prefs->GetIntPref("dom.disable_open_click_delay", &clickDelay);
-    if (clickDelay) {
-      PRTime now, ll_delta;
-      PRInt32 delta;
-      now = PR_Now();
-      LL_SUB(ll_delta, now, mLastMouseButtonAction);
-      LL_L2I(delta, ll_delta);
-      delta /= 1000;
-      if (delta > clickDelay)
-      {
+    PRBool blocked = IsPopupBlocked(mDocument);
+    if (blocked)
+      FirePopupBlockedEvent(mDocument);
+    return blocked;
+  } 
+  
+  PRInt32 clickDelay = 0;
+  prefs->GetIntPref("dom.disable_open_click_delay", &clickDelay);
+  if (clickDelay) {
+    PRTime now, ll_delta;
+    PRInt32 delta;
+    now = PR_Now();
+    LL_SUB(ll_delta, now, mLastMouseButtonAction);
+    LL_L2I(delta, ll_delta);
+    delta /= 1000;
+    if (delta > clickDelay) {
 #ifdef DEBUG
         printf ("*** Scripts executed more than %ims after a mouse button "
                 "action are potential javascript abuse points (%i.)\n",
                 clickDelay, delta);
 #endif
-        return PR_TRUE;
-      }
+      PRBool blocked = IsPopupBlocked(mDocument);
+      if (blocked)
+        FirePopupBlockedEvent(mDocument);
+      return blocked;
     }
   }
 

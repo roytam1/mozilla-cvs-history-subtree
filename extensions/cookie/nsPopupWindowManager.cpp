@@ -40,6 +40,7 @@
 #include "nsCOMPtr.h"
 #include "nsCRT.h"
 #include "nsPermissions.h"
+#include "nsReadableUtils.h"
 
 #include "nsIObserverService.h"
 #include "nsIPrefBranch.h"
@@ -121,8 +122,8 @@ nsPopupWindowManager::Add(nsIURI *aURI, PRBool aPermit)
 {
   NS_ENSURE_ARG_POINTER(aURI);
   if (!mPermManager)
-    // if we couldn't initialize the permission manager Permission_AddHost()
-    // will create a new list that could stomp an existing cookperm.txt
+  // if we couldn't initialize the permission manager Permission_AddHost()
+  // will create a new list that could stomp an existing cookperm.txt
     return NS_ERROR_FAILURE;
 
   nsCAutoString uri;
@@ -130,8 +131,11 @@ nsPopupWindowManager::Add(nsIURI *aURI, PRBool aPermit)
   if (uri.IsEmpty())
     return NS_ERROR_FAILURE;
 
-  if (NS_SUCCEEDED(Permission_AddHost(uri, aPermit, WINDOWPERMISSION, PR_TRUE)))
+  // Permission_AddHost takes ownership so don't need to free
+  char* uriString = ToNewCString(uri);
+  if (NS_SUCCEEDED(Permission_AddHost(uriString, aPermit, WINDOWPERMISSION, PR_TRUE)))
     return NotifyObservers(aURI);
+
   return NS_ERROR_FAILURE;
 }
 
@@ -145,7 +149,7 @@ nsPopupWindowManager::Remove(nsIURI *aURI)
   if (uri.IsEmpty())
     return NS_ERROR_FAILURE;
 
-  PERMISSION_Remove(uri, WINDOWPERMISSION);
+  PERMISSION_Remove(uri.get(), WINDOWPERMISSION);
   return NotifyObservers(aURI);
 }
 
@@ -243,7 +247,7 @@ nsPopupWindowManager::Observe(nsISupports *aSubject, const char *aTopic,
     if (mPopupPrefBranch) {
       mPopupPrefBranch->GetBoolPref(sPopupDisablePref, &permission);
     }
-    mPolicy = permission ? DENY_POPUP : ALLOW_POPUP;
+    mPolicy = permission ? DENY_POPUP: ALLOW_POPUP;
   } else if (nsCRT::strcmp(aTopic, sXPCOMShutdownTopic) == 0) {
     // unhook cyclical references
     StopObservingThings();
