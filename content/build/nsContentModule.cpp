@@ -36,11 +36,13 @@
  * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-#include "nsXBLAtoms.h"     // to addref/release table
-#include "nsCSSAtoms.h"     // to addref/release table
-#include "nsCSSKeywords.h"  // to addref/release table
-#include "nsCSSProps.h"     // to addref/release table
-#include "nsColorNames.h"   // to addref/release table
+#include "nsXBLAtoms.h"                 // to addref/release table
+#include "nsCSSPseudoElements.h"        // to addref/release table
+#include "nsCSSPseudoClasses.h"         // to addref/release table
+#include "nsCSSAnonBoxes.h"             // to addref/release table
+#include "nsCSSKeywords.h"              // to addref/release table
+#include "nsCSSProps.h"                 // to addref/release table
+#include "nsColorNames.h"               // to addref/release table
 #include "nsContentCID.h"
 #include "nsContentHTTPStartup.h"
 #include "nsContentDLF.h"
@@ -190,7 +192,9 @@ Initialize(nsIModule* aSelf)
   gInitialized = PR_TRUE;
     
   // Register all of our atoms once
-  nsCSSAtoms::AddRefAtoms();
+  nsCSSAnonBoxes::AddRefAtoms();
+  nsCSSPseudoClasses::AddRefAtoms();
+  nsCSSPseudoElements::AddRefAtoms();
   nsCSSKeywords::AddRefTable();
   nsCSSProps::AddRefTable();
   nsColorNames::AddRefTable();
@@ -245,7 +249,9 @@ Shutdown(nsIModule* aSelf)
   nsColorNames::ReleaseTable();
   nsCSSProps::ReleaseTable();
   nsCSSKeywords::ReleaseTable();
-  nsCSSAtoms::ReleaseAtoms();
+  nsCSSAnonBoxes::ReleaseAtoms();
+  nsCSSPseudoClasses::ReleaseAtoms();
+  nsCSSPseudoElements::ReleaseAtoms();
   nsHTMLAtoms::ReleaseAtoms();
   nsXBLAtoms::ReleaseAtoms();
   nsLayoutAtoms::ReleaseAtoms();
