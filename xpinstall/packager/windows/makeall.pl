@@ -467,16 +467,16 @@ sub MakeUninstall
     print "\n Error: copy uninstall.ini $inDistPath/uninstall\n";
     return(1);
   }
-  if(!copy("defaults_info.ini", "$inDistPath"))
-  {
-    print "\n Error: copy defaults_info.ini $inDistPath\n";
-    return(1);
-  }
-  if(!copy("defaults_info.ini", "$inDistPath/uninstall"))
-  {
-    print "\n Error: copy defaults_info.ini $inDistPath/uninstall\n";
-    return(1);
-  }
+  #if(!copy("defaults_info.ini", "$inDistPath"))
+  #{
+  #  print "\n Error: copy defaults_info.ini $inDistPath\n";
+  #  return(1);
+  #}
+  #if(!copy("defaults_info.ini", "$inDistPath/uninstall"))
+  #{
+  #  print "\n Error: copy defaults_info.ini $inDistPath/uninstall\n";
+  #  return(1);
+  #}
   if(!copy("$inDistPath/uninstall.exe", "$inDistPath/uninstall"))
   {
     print "\n Error: copy $inDistPath/uninstall.exe $inDistPath/uninstall\n";
