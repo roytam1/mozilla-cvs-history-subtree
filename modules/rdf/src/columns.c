@@ -83,7 +83,9 @@ ColumnsGetSlotValue(RDFT rdf, RDF_Resource u, RDF_Resource s, RDF_ValueType type
 			val = (void *)HT_COLUMN_STRING;
 		}
 		else if (u == gWebData->RDF_size ||
-			 u == gWebData->RDF_numAccesses)
+			 u == gWebData->RDF_numAccesses ||
+			 u == gNavCenter->cookieDomain ||
+			 u == gNavCenter->cookieSecure)
 		{
 			val = (void *)HT_COLUMN_INT;
 		}
@@ -166,14 +168,14 @@ ColumnsNextValue (RDFT rdf, RDF_Cursor c)
 		}
 		break;
 
-      case   COOKIE_RT:
-      switch(c->count) 
-        {
+		case   COOKIE_RT:
+		switch(c->count) 
+	        {
 			case	0:	arc = gCoreVocab->RDF_name;		break;
 			case	1:	arc = gNavCenter->cookieHost;		break;
 			case	2:	arc = gNavCenter->cookiePath;		break;
 			case	3:	arc = gNavCenter->cookieValue;		break;
-			case	4:	arc = gNavCenter->cookieExpires;		break;
+			case	4:	arc = gNavCenter->cookieExpires;	break;
 			case	5:	arc = gNavCenter->cookieDomain;		break;
 			case	6:	arc = gNavCenter->cookieSecure;		break;
 		}
