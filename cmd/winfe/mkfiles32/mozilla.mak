@@ -422,6 +422,7 @@ LINK_LIBS= \
     $(DIST)\lib\pop3url.lib \
     $(DIST)\lib\mailbxurl.lib \
     $(DIST)\lib\imap4url.lib \
+    $(DIST)\lib\certurl.lib \
 !endif
 !ifdef MOZ_LDAP
     $(DIST)\lib\ldapurl.lib \
@@ -2472,6 +2473,7 @@ BUILD_SOURCE: $(OBJ_FILES)
     $(DIST)\lib\pop3url.lib +
     $(DIST)\lib\mailbxurl.lib +
     $(DIST)\lib\imap4url.lib +
+    $(DIST)\lib\certurl.lib +
 !endif
 !ifdef MOZ_LDAP
     $(DIST)\lib\ldapurl.lib +
