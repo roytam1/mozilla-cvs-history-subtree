@@ -735,17 +735,13 @@ NS_IMETHODIMP nsNntpService::CancelMessages(const char *hostname, const char *ne
   if (!hostname) return NS_ERROR_NULL_POINTER;
   if (PL_strlen(hostname) == 0) return NS_ERROR_FAILURE;
 
-#ifdef NECKO
   NS_WITH_SERVICE(nsIPrompt, dialog, kCNetSupportDialogCID, &rv);
-#else
-  NS_WITH_SERVICE(nsINetSupportDialogService,dialog,kCNetSupportDialogCID,&rv);
-#endif
   if (NS_FAILED(rv)) return rv;
     
   if (!messages) {
     nsAutoString alertText("No articles are selected.");
     if (dialog)
-      rv = dialog->Alert(alertText);
+      rv = dialog->Alert(alertText.GetUnicode());
     
     return NS_ERROR_NULL_POINTER;
   }
@@ -761,7 +757,7 @@ NS_IMETHODIMP nsNntpService::CancelMessages(const char *hostname, const char *ne
   if (count != 1) {
     nsAutoString alertText("You can only cancel one article at a time.");
     if (dialog)
-      rv = dialog->Alert(alertText);
+      rv = dialog->Alert(alertText.GetUnicode());
     return NS_ERROR_FAILURE;
   }
   
