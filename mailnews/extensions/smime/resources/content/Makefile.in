@@ -19,14 +19,14 @@
 # Contributor(s): 
 #
 
-DEPTH		= ../../..
+DEPTH		= ../../../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
 VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= public src build resources
+install::
+    $(INSTALL) smime.js $(DIST)/bin/defaults/pref
 
 include $(topsrcdir)/config/rules.mk
-

@@ -1,4 +1,4 @@
- #
+#
 # The contents of this file are subject to the Netscape Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
@@ -25,6 +25,10 @@ srcdir		= @srcdir@
 VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
+
+ifdef MOZ_PSM
+DEFINES		+= -DENABLE_SMIME
+endif
 
 MODULE		= mime
 LIBRARY_NAME	= mime_s
@@ -95,9 +99,15 @@ CPPSRCS		= \
 		nsStreamConverter.cpp \
 		mimedrft.cpp \
 		nsMimeHeaders.cpp \
-                mimecryp.cpp \
+                mimecryp.cpp
+
+ifdef MOZ_PSM
+CPPSRCS += \
                 mimecms.cpp \
-                mimemcms.cpp \
+                mimemcms.cpp
+endif
+
+CPPSRCS += \
 		$(NULL)
 
 EXPORTS		= \
