@@ -145,14 +145,14 @@ NS_NewXTFSVGDisplayFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFram
 nsXTFSVGDisplayFrame::nsXTFSVGDisplayFrame()
 {
 #ifdef DEBUG
-  printf("nsXTFSVGDisplayFrame CTOR\n");
+//  printf("nsXTFSVGDisplayFrame CTOR\n");
 #endif
 }
 
 nsXTFSVGDisplayFrame::~nsXTFSVGDisplayFrame()
 {
 #ifdef DEBUG
-  printf("~nsXTFSVGDisplayFrame\n");
+//  printf("~nsXTFSVGDisplayFrame\n");
 #endif
 }
 
