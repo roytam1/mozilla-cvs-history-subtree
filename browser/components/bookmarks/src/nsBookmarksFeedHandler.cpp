@@ -52,6 +52,8 @@
 #include "nsUnicharUtils.h"
 #include "nsInt64.h"
 
+#include "nsIScriptSecurityManager.h"
+
 #include "nsIURL.h"
 #include "nsIInputStream.h"
 #include "nsNetUtil.h"
@@ -145,11 +147,14 @@ protected:
                              nsIRDFResource *aLinkResource, nsIRDFResource *aTitleResource);
     NS_METHOD FindTextInNode (nsIDOMNode *aParentNode, nsAString &aString);
 
+    PRBool IsLinkValid(const PRUnichar *aURI);
+
     nsBookmarksService *mBMSVC;
     nsCOMPtr<nsIRDFDataSource> mInnerBMDataSource;
     nsCOMPtr<nsIURI> mURI;
     nsCOMPtr<nsIRDFResource> mResource;
     nsCOMPtr<nsIOutputStream> mCacheStream;
+    nsCOMPtr<nsIScriptSecurityManager> mSecMan;
     PRBool mAborted;
     nsCString mBody;
     nsCOMPtr<nsIRDFContainer> mLivemarkContainer;
@@ -240,6 +245,11 @@ nsFeedLoadListener::OnStopRequest(nsIRequest *aRequest,
         mBMSVC->Unassert (mResource, kNC_LivemarkLock, kTrueLiteral);
         return rv;
     }
+
+    /*
+     * Grab the security manager
+     */
+    mSecMan = do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
 
     /* We need to parse the returned data here, stored in mBody.  We
      * try parsing as RDF first, then as Atom and the "simple" RSS
@@ -522,6 +532,9 @@ nsFeedLoadListener::HandleRDFItem (nsIRDFDataSource *aDS, nsIRDFResource *aItem,
     rv |= titleLiteral->GetValueConst(&titleStr);
     if (NS_FAILED(rv)) return rv;
 
+    if (!IsLinkValid(linkStr))
+        return NS_OK;
+
     nsCOMPtr<nsIRDFResource> newBM;
     rv = mBMSVC->CreateBookmark (titleStr, linkStr, nsnull, nsnull, nsnull, nsnull,
                                  getter_AddRefs(newBM));
@@ -708,7 +721,7 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
                 if (titleStr.IsEmpty() && !dateStr.IsEmpty())
                     titleStr.Assign(dateStr);
 
-                if (!titleStr.IsEmpty() && !linkStr.IsEmpty()) {
+                if (!titleStr.IsEmpty() && !linkStr.IsEmpty() && IsLinkValid(linkStr.get())) {
                     nsCOMPtr<nsIRDFResource> newBM;
                     rv = mBMSVC->CreateBookmark (titleStr.get(), linkStr.get(),
                                                  nsnull, nsnull, nsnull, nsnull,
@@ -738,6 +751,30 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
     }
 
     return NS_ERROR_FAILURE;
+}
+
+
+// return true if this link is valid and a livemark should be created;
+// otherwise, false.
+PRBool
+nsFeedLoadListener::IsLinkValid(const PRUnichar *aURI)
+{
+    nsCOMPtr<nsIURI> linkuri;
+    nsresult rv = NS_NewURI(getter_AddRefs(linkuri), nsDependentString(aURI));
+    if (NS_FAILED(rv))
+        return PR_FALSE;
+
+    // Er, where'd our security manager go?
+    if (!mSecMan)
+        return PR_FALSE;
+
+    rv = mSecMan->CheckLoadURI(mURI, linkuri,
+                               nsIScriptSecurityManager::DISALLOW_FROM_MAIL |
+                               nsIScriptSecurityManager::DISALLOW_SCRIPT_OR_DATA);
+    if (NS_FAILED(rv))
+        return PR_FALSE;
+
+    return PR_TRUE;
 }
 
 

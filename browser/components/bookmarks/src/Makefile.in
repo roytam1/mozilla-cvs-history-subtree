@@ -45,6 +45,9 @@ REQUIRES	= xpcom \
 		  unicharutil \
 		  txmgr \
 		  xmlextras \
+		  caps \
+		  xpconnect \
+		  js \
 		  $(NULL)
 
 CPPSRCS		= nsBookmarksService.cpp \
