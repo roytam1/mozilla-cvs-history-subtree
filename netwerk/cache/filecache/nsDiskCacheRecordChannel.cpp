@@ -145,9 +145,11 @@ nsDiskCacheRecordChannel::Init(void)
                         nsnull,    // no base uri
                         mLoadGroup,
                         nsnull,    // no eventsink getter
-                        nsnull,    // original uri same as uri
-			0,
-                        getter_AddRefs(mFileTransport)) ;
+                        0,
+                        nsnull,    // no original URI
+                        0,
+                        0,
+                        getter_AddRefs(mFileTransport));
   return rv ;
 }
 
