@@ -78,6 +78,7 @@ XP_BEGIN_PROTOS
 #define	ATALK_RT 12
 #define	ATALKVIRTUAL_RT 13
 #define COOKIE_RT       14
+#define JSEC_RT 15
 
 
 #define CHECK_VAR(var, return_value) {if (var == NULL) {XP_ASSERT(var); return return_value;}}
