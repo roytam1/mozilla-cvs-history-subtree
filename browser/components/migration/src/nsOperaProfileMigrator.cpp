@@ -736,34 +736,6 @@ done:
   return NS_OK;
 }
 
-#if 0
-line == "#FOLDER"
-	ParseFolderContents()
-
-ParseFolderContents(root) {
-static PRBool foundPT = PR_FALSE;
-
-var parent = root;
-switch (line) {
-case "#FOLDER":
-  read lines, Assert Name
-  parent->Append(item);
-  ctr = makeContainer;
-  if (!foundPT && ON PERSONAL BAR) {
-    parent->SetAsPersonalToolbarFolder
-    foundPT = TRUE;
-  }
-  ParseFolderContents(ctr);
-case "#URL":
-  read lines, Assert Name, URL
-  parent->append(item);
-  if (!foundPT && ON PERSONAL BAR) {
-    parent->SetAsPersonalToolbarFolder
-    foundPT = TRUE;
-  }
-
-#endif
-
 nsresult
 nsOperaProfileMigrator::CopyOtherData(PRBool aReplace)
 {
