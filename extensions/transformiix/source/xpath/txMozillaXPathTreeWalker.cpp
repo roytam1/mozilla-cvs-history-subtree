@@ -265,6 +265,10 @@ txXPathTreeWalker::moveToFirstPreceding()
         return PR_FALSE;
     }
 
+    // Find the first preceding sibling of the current content
+    // or one of its ancestors.
+    // Attributes behave just like their ownerElement, as the element is
+    // part of the ancestor axis.
     nsCOMPtr<nsIContent> parent;
     nsCOMPtr<nsIDocument> document;
     PRInt32 index;
@@ -306,6 +310,7 @@ txXPathTreeWalker::moveToFirstPreceding()
         document->ChildAt(--index, getter_AddRefs(descendant));
     }
 
+    // Find the last child of the preceding sibling.
     PRInt32 total;
     descendant->ChildCount(total);
     while (total > 0) {
@@ -336,6 +341,7 @@ txXPathTreeWalker::moveToFirstPrecedingInDocOrder()
         return PR_FALSE;
     }
 
+    // find previous sibling or parent
     nsCOMPtr<nsIContent> parent;
     nsCOMPtr<nsIDocument> document;
     PRInt32 index = mCurrentIndex;
@@ -385,6 +391,7 @@ txXPathTreeWalker::moveToFirstPrecedingInDocOrder()
         document->ChildAt(--index, getter_AddRefs(descendant));
     }
 
+    // find last child
     PRInt32 total;
     descendant->ChildCount(total);
 
@@ -1215,7 +1222,8 @@ txXPathNodeUtils::getNodeValue(const txXPathNode& aNode, nsAString& aResult)
     }
 
     if (content->IsContentOfType(nsIContent::eELEMENT)) {
-        return getTextContent(content, aResult);
+        getTextContent(content, aResult);
+        return;
     }
 
     nsCOMPtr<nsIDOMNode> node = do_QueryInterface(content);
@@ -1366,7 +1374,7 @@ txXPathNodeUtils::comparePosition(const txXPathNode& aNode,
     // If the nodes have different ownerdocuments, compare the document
     // pointers.
     if (document != otherDocument) {
-        return (document > otherDocument ? 1 : -1);
+        return (document.get() > otherDocument.get() ? 1 : -1);
     }
 
     // Every node comes after its ownerdocument.
