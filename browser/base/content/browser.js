@@ -120,7 +120,7 @@ function loadEventHandlers(event)
     checkForDirectoryListing();
     charsetLoadListener(event);
     updatePageTheme();
-    checkForLivemark();
+    updatePageLivemarks();
   }
 }
 
@@ -740,6 +740,7 @@ function prepareForStartup()
   gNavigatorBundle = document.getElementById("bundle_browser");
   gProgressMeterPanel = document.getElementById("statusbar-progresspanel");
   gBrowser.addEventListener("DOMUpdatePageReport", UpdatePageReport, false);
+  gBrowser.addEventListener("DOMLinkAdded", livemarkOnLinkAdded, false);
 
   var webNavigation;
   try {
@@ -2801,7 +2802,7 @@ nsBrowserStatusHandler.prototype =
         // This (thanks to the filter) is a network start or the first
         // stray request (the first request outside of the document load),
         // initialize the throbber and his friends.
-        
+
         // Call start document load listeners (only if this is a network load)
         if (aStateFlags & nsIWebProgressListener.STATE_IS_NETWORK &&
             aRequest && aWebProgress.DOMWindow == content)
@@ -2931,7 +2932,7 @@ nsBrowserStatusHandler.prototype =
     }
     UpdateBackForwardButtons();
     
-    setTimeout(function () { updatePageTheme(); checkForLivemark(); }, 0);
+    setTimeout(function () { updatePageTheme(); updatePageLivemarks(); }, 0);
   },
 
   onStatusChange : function(aWebProgress, aRequest, aStatus, aMessage)
@@ -2980,6 +2981,9 @@ nsBrowserStatusHandler.prototype =
     // Reset so we can see if the user typed between the document load
     // starting and the location changing.
     getBrowser().userTypedValue = null;
+
+    // clear out livemark data
+    gBrowser.mCurrentBrowser.livemarkLinks = null;
 
     const nsIChannel = Components.interfaces.nsIChannel;
     var urlStr = aRequest.QueryInterface(nsIChannel).URI.spec;
@@ -5105,44 +5109,86 @@ function AddKeywordForSearchField()
              false, "", true, postData);
 }
 
-// check _content.document for RSS link tags
-function checkForLivemark()
+/////////////// livemark handling
+
+// XXX this event listener can/should probably be combined with the onLinkAdded
+// listener in tabbrowser.xml, which only listens for favicons and then passes
+// them to onLinkIconAvailable in the ProgressListener.  We could extend the
+// progress listener to have a generic onLinkAvailable and have tabbrowser pass
+// along all events.  It should give us the browser for the tab, as well as
+// the actual event.
+function livemarkOnLinkAdded(event)
 {
   if (!gLivemarksButton)
     gLivemarksButton = document.getElementById("livemark-button");
 
-  // XXX - we should probably hook into DOMLinkAdded instead of this
-  var head = _content.document.getElementsByTagName("head");
-  if (head == null || head.length == 0)
-    return;
-
-  var livemarkLinks = [];
-
-  var links = head[0].getElementsByTagName("link");
-  for (var i = 0; i < links.length; i++) {
-    // hooray for no standards
-    if (links[i].type == "application/rss+xml" ||
-        links[i].type == "application/atom+xml" ||
-        links[i].type == "application/x.atom+xml" || // this is, apparently, the "official" Atom type.
-        links[i].title == "rss" ||
-        links[i].title == "RSS" ||
-        links[i].title == "Atom")
-    {
-      //dump ("Page has RSS link: " + links[i].href + "\n");
-      livemarkLinks.push({ href: links[i].href,
-                           type: links[i].type,
-                          title: links[i].title});
-    }
+  // from tabbrowser.xml
+  // mechanism for reading properties of the underlying XPCOM object
+  // (ignoring potential getters/setters added by malicious content)
+  var safeGetProperty = function(obj, propname) {
+    return Components.lookupMethod(obj, propname).call(obj);
   }
 
-  // show the livemarks icon in the status bar area if there were any
-  // found
-  if (livemarkLinks.length > 0) {
-    gBrowser.mCurrentBrowser.livemarkLinks = livemarkLinks;
-    gLivemarksButton.setAttribute("livemarks", "true");
-  } else {
-    gBrowser.mCurrentBrowser.livemarkLinks = null;
+  var etype = event.target.type;
+  var etitle = event.target.title;
+
+  if (etype == "application/rss+xml" ||
+      etype == "application/atom+xml" ||
+      etype == "application/x.atom+xml" || // this is, apparently, the "official" Atom type.
+      etitle == "rss" ||
+      etitle == "RSS" ||
+      etitle == "Atom")
+  {
+    const targetDoc = safeGetProperty(event.target, "ownerDocument");
+
+    // find which tab this is for, and set the attribute on the browser
+    // should there be a getTabForDocument method on tabbedbrowser?
+    var browserForLink = null;
+    if (gBrowser.mTabbedMode) {
+      for (i = 0; i < gBrowser.mTabListeners.length; i++) {
+        var theTab = gBrowser.getBrowserAtIndex(i);
+        if (theTab.contentDocument == targetDoc) {
+          browserForLink = theTab;
+          break;
+        }
+      }
+    } else if (gBrowser.mCurrentBrowser.contentDocument == targetDoc) {
+      browserForLink = gBrowser.mCurrentBrowser;
+    }
+
+    if (!browserForLink) {
+      // ??? this really shouldn't happen..
+      return;
+    }
+
+    var livemarkLinks = [];
+    if (browserForLink.livemarkLinks != null) {
+      livemarkLinks = browserForLink.livemarkLinks;
+    }
+
+    livemarkLinks.push({ href: event.target.href,
+                         type: event.target.type,
+                        title: event.target.title});
+
+    browserForLink.livemarkLinks = livemarkLinks;
+    if (browserForLink == gBrowser || browserForLink == gBrowser.mCurrentBrowser)
+      gLivemarksButton.setAttribute("livemarks", "true");
+  }
+}
+
+// this is called both from onload and also whenever the user
+// switches tabs; we update whether we show or hide the livemark
+// button based on whether the window has livemarks set.
+function updatePageLivemarks()
+{
+  if (!gLivemarksButton)
+    gLivemarksButton = document.getElementById("livemark-button");
+
+  var livemarkLinks = gBrowser.mCurrentBrowser.livemarkLinks;
+  if (!livemarkLinks || livemarkLinks.length == 0) {
     gLivemarksButton.removeAttribute("livemarks");
+  } else {
+    gLivemarksButton.setAttribute("livemarks", "true");
   }
 }
 
