@@ -87,26 +87,32 @@ WrappedJSDyingJSObjectFinder(JSHashEntry *he, intN i, void *arg)
     return HT_ENUMERATE_NEXT;
 }
 
+struct CX_AND_XPCRT_Data
+{
+    JSContext* cx; 
+    XPCJSRuntime* rt;      
+};
+
 JS_STATIC_DLL_CALLBACK(intN)
 NativeInterfaceGC(JSHashEntry *he, intN i, void *arg)
 {
-    XPCCallContext* ccx = (XPCCallContext*) arg;
-    ((XPCNativeInterface*)he->value)->DealWithDyingGCThings(*ccx);
+    CX_AND_XPCRT_Data* data = (CX_AND_XPCRT_Data*) arg;
+    ((XPCNativeInterface*)he->value)->DealWithDyingGCThings(data->cx, data->rt);
     return HT_ENUMERATE_NEXT;
 }
 
 JS_STATIC_DLL_CALLBACK(intN)
 NativeInterfaceSweeper(JSHashEntry *he, intN i, void *arg)
 {
+    CX_AND_XPCRT_Data* data = (CX_AND_XPCRT_Data*) arg;
     XPCNativeInterface* iface = (XPCNativeInterface*) he->value;
-    XPCCallContext* ccx = (XPCCallContext*) arg;
     if(iface->IsMarked())
     {
         iface->Unmark();
         return HT_ENUMERATE_NEXT;
     }
 
-    XPCNativeInterface::DestroyInstance(*ccx, iface);
+    XPCNativeInterface::DestroyInstance(data->cx, data->rt, iface);
     return HT_ENUMERATE_REMOVE;
 }
 
@@ -155,29 +161,28 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
             }
             case JSGC_MARK_END:
             {
-                XPCCallContext ccx(JS_CALLER, cx);
-                if(!ccx.IsValid())
-                    break;
-
                 {
-                nsAutoLock lock(self->mMapLock); // lock the wrapper map
-                JSDyingJSObjectData data = {cx, dyingWrappedJSArray};
+                    nsAutoLock lock(self->mMapLock); // lock the wrapper map
+                    JSDyingJSObjectData data = {cx, dyingWrappedJSArray};
 
-                // Add any wrappers whose JSObjects are to be finalized to
-                // this array. Note that this is a nsVoidArray because
-                // we do not want to be changing the refcount of these wrappers.
-                // We add them to the array now and Release the array members
-                // later to avoid the posibility of doing any JS GCThing
-                // allocations during the gc cycle.
-                self->mWrappedJSMap->Enumerate(WrappedJSDyingJSObjectFinder,
-                                               &data);
+                    // Add any wrappers whose JSObjects are to be finalized to
+                    // this array. Note that this is a nsVoidArray because
+                    // we do not want to be changing the refcount of these wrappers.
+                    // We add them to the array now and Release the array members
+                    // later to avoid the posibility of doing any JS GCThing
+                    // allocations during the gc cycle.
+                    self->mWrappedJSMap->
+                        Enumerate(WrappedJSDyingJSObjectFinder, &data);
                 }
 
                 // Do cleanup in NativeInterfaces
-                self->mIID2NativeInterfaceMap->Enumerate(NativeInterfaceGC, &ccx);
+                CX_AND_XPCRT_Data data = {cx, self};
+
+                self->mIID2NativeInterfaceMap->
+                    Enumerate(NativeInterfaceGC, &data);
 
                 // Find dying scopes...
-                XPCWrappedNativeScope::FinishedMarkPhaseOfGC(ccx);
+                XPCWrappedNativeScope::FinishedMarkPhaseOfGC(cx, self);
                 
                 break;
             }        
@@ -186,22 +191,20 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
                 // We use this occasion to mark and sweep NativeInterfaces
                 // and NativeSets...
 
-                XPCCallContext ccx(JS_CALLER, cx);
-                if(!ccx.IsValid())
-                    break;
+                CX_AND_XPCRT_Data data = {cx, self};
 
                 // Do the marking...
                 XPCWrappedNativeScope::MarkAllInterfaceSets();
                 
                 // Do the sweeping...
-                self->mClassInfo2NativeSetMap->Enumerate(
-                    NativeUnMarkedSetRemover, nsnull);
+                self->mClassInfo2NativeSetMap->
+                    Enumerate(NativeUnMarkedSetRemover, nsnull);
 
-                self->mNativeSetMap->Enumerate(
-                    NativeSetSweeper, nsnull);
+                self->mNativeSetMap->
+                    Enumerate(NativeSetSweeper, nsnull);
 
-                self->mIID2NativeInterfaceMap->Enumerate(
-                    NativeInterfaceSweeper, &ccx);
+                self->mIID2NativeInterfaceMap->
+                    Enumerate(NativeInterfaceSweeper, &data);
 
 #ifdef DEBUG
                 XPCWrappedNativeScope::ASSERT_NoInterfaceSetsAreMarked();
@@ -225,7 +228,7 @@ JSBool XPCJSRuntime::GCCallback(JSContext *cx, JSGCStatus status)
 
                 // Skip this part if XPConnect is shutting down. We get into
                 // bad locking problems with the thread iteration otherwise.
-                if(ccx.GetXPConnect()->IsShuttingDown())
+                if(self->GetXPConnect()->IsShuttingDown())
                     break;
 
                 // Do the marking...

@@ -127,11 +127,8 @@ XPCWrappedNativeScope::~XPCWrappedNativeScope()
 
 // static 
 void 
-XPCWrappedNativeScope::FinishedMarkPhaseOfGC(XPCCallContext& ccx)
+XPCWrappedNativeScope::FinishedMarkPhaseOfGC(JSContext* cx, XPCJSRuntime* rt)
 {
-    XPCJSRuntime* rt = ccx.GetRuntime();
-    JSContext* cx = ccx.GetJSContext();
-
     // Hold the lock until return...
     nsAutoLock lock(rt->GetMapLock());  
 

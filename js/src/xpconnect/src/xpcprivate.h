@@ -604,7 +604,7 @@ public:
     SystemIsBeingShutDown(XPCCallContext& ccx);
 
     static void
-    FinishedMarkPhaseOfGC(XPCCallContext& ccx);
+    FinishedMarkPhaseOfGC(JSContext* cx, XPCJSRuntime* rt);
 
     static void
     FinishedFinalizationPhaseOfGC(JSContext* cx);
@@ -1480,7 +1480,8 @@ private:
 class XPCNativeMember
 {
 public:
-    static XPCCallableInfo* GetCallableInfo(XPCCallContext& ccx, JSObject* funobj);
+    static XPCCallableInfo* GetCallableInfo(XPCCallContext& ccx, 
+                                            JSObject* funobj);
 
     jsval   GetName() const {return mName;}
 
@@ -1524,18 +1525,19 @@ public:
     XPCNativeMember() {}
     ~XPCNativeMember() {}
 
-    void Cleanup(XPCCallContext& ccx);
+    void Cleanup(JSContext* cx, XPCJSRuntime* rt);
 
-    void DealWithDyingGCThings(XPCCallContext& ccx)
+    void DealWithDyingGCThings(JSContext* cx, XPCJSRuntime* rt)
         {if(IsResolved() && JSVAL_IS_GCTHING(mVal) &&
-           JS_IsAboutToBeFinalized(ccx.GetJSContext(), JSVAL_TO_GCTHING(mVal)))
-           {Cleanup(ccx); mVal = JSVAL_NULL; mFlags &= ~RESOLVED;}}
+           JS_IsAboutToBeFinalized(cx, JSVAL_TO_GCTHING(mVal)))
+           {Cleanup(cx, rt); mVal = JSVAL_NULL; mFlags &= ~RESOLVED;}}
 
 private:
     JSBool IsResolved() const {return mFlags & RESOLVED;}
     JSBool Resolve(XPCCallContext& ccx, XPCNativeInterface* iface);
 
-    void   CleanupCallableInfo(XPCCallContext& ccx, JSObject* funobj);
+    void   CleanupCallableInfo(JSContext* cx, XPCJSRuntime* rt, 
+                               JSObject* funobj);
 
     enum {
         RESOLVED    = 0x01,
@@ -1582,9 +1584,9 @@ public:
     XPCNativeMember* GetMemberAt(PRUint16 i)
         {NS_ASSERTION(i < mMemberCount, "bad index"); return &mMembers[i];}
 
-    void DealWithDyingGCThings(XPCCallContext& ccx)
+    void DealWithDyingGCThings(JSContext* cx, XPCJSRuntime* rt)
         {for(PRUint16 i = 0; i < mMemberCount; i++) 
-            mMembers[i].DealWithDyingGCThings(ccx);}
+            mMembers[i].DealWithDyingGCThings(cx, rt);}
 
     void DebugDump(PRInt16 depth);
 
@@ -1592,7 +1594,8 @@ public:
     void Unmark()     {mMemberCount &= ~0x8000;}
     JSBool IsMarked() const {return (JSBool)(mMemberCount & 0x8000);}
 
-    static void DestroyInstance(XPCCallContext& ccx, XPCNativeInterface* inst);
+    static void DestroyInstance(JSContext* cx, XPCJSRuntime* rt,
+                                XPCNativeInterface* inst);
 
 private:
     static XPCNativeInterface* NewInstance(XPCCallContext& ccx,

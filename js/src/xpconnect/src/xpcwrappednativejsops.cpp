@@ -41,9 +41,6 @@
 
 static JSBool Throw(uintN errNum, JSContext* cx)
 {
-#ifdef DEBUG_jband
-    NS_ERROR("throwing...");
-#endif
     XPCThrower::Throw(errNum, cx);
     return JS_FALSE;
 }

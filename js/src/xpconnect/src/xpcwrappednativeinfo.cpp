@@ -64,16 +64,15 @@ XPCNativeMember::GetCallableInfo(XPCCallContext& ccx, JSObject* funobj)
 }
 
 void
-XPCNativeMember::CleanupCallableInfo(XPCCallContext& ccx, JSObject* funobj)
+XPCNativeMember::CleanupCallableInfo(JSContext* cx, XPCJSRuntime* rt, 
+                                     JSObject* funobj)
 {
-    JSContext* cx;
     jsid id;
     jsval val;
 
     // We know this must be the *real* function object - not a clone.
 
-    cx = ccx.GetJSContext();
-    id = ccx.GetRuntime()->GetStringID(XPCJSRuntime::IDX_CALLABLE_INFO_PROP_NAME);
+    id = rt->GetStringID(XPCJSRuntime::IDX_CALLABLE_INFO_PROP_NAME);
 
     if(OBJ_GET_PROPERTY(cx, funobj, id, &val) && JSVAL_IS_INT(val))
         delete ((XPCCallableInfo*) JSVAL_TO_PRIVATE(val));
@@ -189,10 +188,10 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
 
 
 void
-XPCNativeMember::Cleanup(XPCCallContext& ccx)
+XPCNativeMember::Cleanup(JSContext* cx, XPCJSRuntime* rt)
 {
     if(IsResolved() && !JSVAL_IS_PRIMITIVE(mVal))
-        CleanupCallableInfo(ccx, JSVAL_TO_OBJECT(mVal));
+        CleanupCallableInfo(cx, rt, JSVAL_TO_OBJECT(mVal));
 }
 
 /***************************************************************************/
@@ -451,12 +450,13 @@ XPCNativeInterface::NewInstance(XPCCallContext& ccx,
 
 // static
 void
-XPCNativeInterface::DestroyInstance(XPCCallContext& ccx, XPCNativeInterface* inst)
+XPCNativeInterface::DestroyInstance(JSContext* cx, XPCJSRuntime* rt,
+                                    XPCNativeInterface* inst)
 {
     int count = (int) inst->mMemberCount;
     XPCNativeMember* cur = inst->mMembers;
     for(int i = 0; i < count; i++, cur++)
-        cur->Cleanup(ccx);
+        cur->Cleanup(cx, rt);
 
     inst->~XPCNativeInterface();
     delete [] (char*) inst;
