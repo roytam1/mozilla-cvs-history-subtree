@@ -40,7 +40,7 @@ extern PRLogModuleInfo *_pr_shm_lm;
 extern PRSharedMemory*  _MD_OpenSharedMemory( const char *name, PRSize size, PRIntn flags, PRIntn mode )
 {
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
-    return PR_FAILURE;
+    return NULL;
 }    
 
 extern void * _MD_AttachSharedMemory( PRSharedMemory *shm, PRIntn flags )
