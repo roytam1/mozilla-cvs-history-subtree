@@ -103,6 +103,12 @@ public:
                     Expr* aUse);
 
     /**
+     * Add a decimal-format to the stylesheet
+     */
+    nsresult addDecimalFormat(const txExpandedName& aName,
+                              txDecimalFormat* aFormat);
+
+    /**
      * Contain information that is import precedence dependant.
      */
     class ImportFrame {

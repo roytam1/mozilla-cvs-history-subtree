@@ -48,6 +48,7 @@
 #include "txPatternParser.h"
 #include "txNamespaceMap.h"
 #include "txURIUtils.h"
+#include "XSLTFunctions.h"
 
 txHandlerTable* gTxIgnoreHandler = 0;
 txHandlerTable* gTxRootHandler = 0;
@@ -263,7 +264,7 @@ getNumberAttr(txStylesheetAttr* aAttributes,
     aNumber = Double::toDouble(attr->mValue);
     if (Double::isNaN(aNumber) && (aRequired || !aState.fcp())) {
         // XXX ErrorReport: number parse failure
-        return NS_ERROR_XPATH_PARSE_FAILURE;
+        return NS_ERROR_XSLT_PARSE_FAILURE;
     }
 
     return NS_OK;
@@ -315,6 +316,33 @@ getYesNoAttr(txStylesheetAttr* aAttributes,
     }
     else if (aRequired || !aState.fcp()) {
         // XXX ErrorReport: unknown values
+        return NS_ERROR_XSLT_PARSE_FAILURE;
+    }
+
+    return NS_OK;
+}
+
+nsresult
+getCharAttr(txStylesheetAttr* aAttributes,
+            PRInt32 aAttrCount,
+            nsIAtom* aName,
+            PRBool aRequired,
+            txStylesheetCompilerState& aState,
+            PRUnichar& aChar)
+{
+    // Don't reset aChar since it contains the default value
+    txStylesheetAttr* attr = nsnull;
+    nsresult rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                               aName, aRequired, &attr);
+    if (!attr) {
+        return rv;
+    }
+
+    if (attr->mValue.Length() == 1) {
+        aChar = attr->mValue.CharAt(0);
+    }
+    else if (aRequired || !aState.fcp()) {
+        // XXX ErrorReport: not a character
         return NS_ERROR_XSLT_PARSE_FAILURE;
     }
 
@@ -511,6 +539,87 @@ txFnEndOtherTop(txStylesheetCompilerState& aState)
 }
 
 
+// xsl:decimal-format
+nsresult
+txFnStartDecimalFormat(PRInt32 aNamespaceID,
+                       nsIAtom* aLocalName,
+                       nsIAtom* aPrefix,
+                       txStylesheetAttr* aAttributes,
+                       PRInt32 aAttrCount,
+                       txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+    txExpandedName name;
+    rv = getQNameAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_FALSE,
+                      aState, name);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txDecimalFormat* format = new txDecimalFormat;
+    NS_ENSURE_TRUE(format, NS_ERROR_OUT_OF_MEMORY);
+
+    rv = getCharAttr(aAttributes, aAttrCount, txXSLTAtoms::decimalSeparator,
+                     PR_FALSE, aState, format->mDecimalSeparator);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = getCharAttr(aAttributes, aAttrCount, txXSLTAtoms::groupingSeparator,
+                     PR_FALSE, aState, format->mGroupingSeparator);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txStylesheetAttr* attr = nsnull;
+    rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                      txXSLTAtoms::infinity, PR_FALSE, &attr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (attr) {
+        format->mInfinity = attr->mValue;
+    }
+
+    rv = getCharAttr(aAttributes, aAttrCount, txXSLTAtoms::minusSign,
+                     PR_FALSE, aState, format->mMinusSign);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                      txXSLTAtoms::NaN, PR_FALSE, &attr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    if (attr) {
+        format->mNaN = attr->mValue;
+    }
+
+    rv = getCharAttr(aAttributes, aAttrCount, txXSLTAtoms::percent,
+                     PR_FALSE, aState, format->mPercent);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = getCharAttr(aAttributes, aAttrCount, txXSLTAtoms::perMille,
+                     PR_FALSE, aState, format->mPerMille);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = getCharAttr(aAttributes, aAttrCount, txXSLTAtoms::zeroDigit,
+                     PR_FALSE, aState, format->mZeroDigit);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = getCharAttr(aAttributes, aAttrCount, txXSLTAtoms::digit,
+                     PR_FALSE, aState, format->mDigit);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = getCharAttr(aAttributes, aAttrCount, txXSLTAtoms::patternSeparator,
+                     PR_FALSE, aState, format->mPatternSeparator);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = aState.mStylesheet->addDecimalFormat(name, format);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aState.pushHandlerTable(gTxIgnoreHandler);
+}
+
+nsresult
+txFnEndDecimalFormat(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+
+    return NS_OK;
+}
+
 // xsl:import
 nsresult
 txFnStartImport(PRInt32 aNamespaceID,
@@ -574,6 +683,45 @@ txFnStartInclude(PRInt32 aNamespaceID,
 
 nsresult
 txFnEndInclude(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+
+    return NS_OK;
+}
+
+// xsl:key
+nsresult
+txFnStartKey(PRInt32 aNamespaceID,
+             nsIAtom* aLocalName,
+             nsIAtom* aPrefix,
+             txStylesheetAttr* aAttributes,
+             PRInt32 aAttrCount,
+             txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+    txExpandedName name;
+    rv = getQNameAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_TRUE,
+                      aState, name);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txPattern* match = nsnull;
+    rv = getPatternAttr(aAttributes, aAttrCount, txXSLTAtoms::match, PR_TRUE,
+                        aState, match);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* use = nsnull;
+    rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::use, PR_TRUE,
+                     aState, use);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = aState.mStylesheet->addKey(name, match, use);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    return aState.pushHandlerTable(gTxIgnoreHandler);
+}
+
+nsresult
+txFnEndKey(txStylesheetCompilerState& aState)
 {
     aState.popHandlerTable();
 
@@ -845,45 +993,6 @@ txFnTextStartTopVar(const nsAString& aStr, txStylesheetCompilerState& aState)
     aState.mHandlerTable = gTxTemplateHandler;
 
     return NS_ERROR_XSLT_GET_NEW_HANDLER;
-}
-
-// xsl:key
-nsresult
-txFnStartKey(PRInt32 aNamespaceID,
-             nsIAtom* aLocalName,
-             nsIAtom* aPrefix,
-             txStylesheetAttr* aAttributes,
-             PRInt32 aAttrCount,
-             txStylesheetCompilerState& aState)
-{
-    nsresult rv = NS_OK;
-    txExpandedName name;
-    rv = getQNameAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_TRUE,
-                      aState, name);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    txPattern* match = nsnull;
-    rv = getPatternAttr(aAttributes, aAttrCount, txXSLTAtoms::match, PR_TRUE,
-                        aState, match);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    Expr* use = nsnull;
-    rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::use, PR_TRUE,
-                     aState, use);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    rv = aState.mStylesheet->addKey(name, match, use);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
-    return aState.pushHandlerTable(gTxIgnoreHandler);
-}
-
-nsresult
-txFnEndKey(txStylesheetCompilerState& aState)
-{
-    aState.popHandlerTable();
-
-    return NS_OK;
 }
 
 /**
@@ -2204,7 +2313,8 @@ txHandlerTableData gTxRootTableData = {
 
 txHandlerTableData gTxTopTableData = {
   // Handlers
-  { { kNameSpaceID_XSLT, "include", txFnStartInclude, txFnEndInclude },
+  { { kNameSpaceID_XSLT, "decimal-format", txFnStartDecimalFormat, txFnEndDecimalFormat },
+    { kNameSpaceID_XSLT, "include", txFnStartInclude, txFnEndInclude },
     { kNameSpaceID_XSLT, "key", txFnStartKey, txFnEndKey },
     { kNameSpaceID_XSLT, "output", txFnStartOutput, txFnEndOutput },
     { kNameSpaceID_XSLT, "param", txFnStartTopVariable, txFnEndTopVariable },

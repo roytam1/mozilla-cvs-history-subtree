@@ -42,6 +42,7 @@
 #include "txToplevelItems.h"
 #include "txInstructions.h"
 #include "primitives.h"
+#include "XSLTFunctions.h"
 
 txStylesheet::txStylesheet()
     : mRootFrame(nsnull),
@@ -328,6 +329,16 @@ txStylesheet::doneCompiling()
         }
     }
 
+    if (!mDecimalFormats.get(txExpandedName())) {
+        nsAutoPtr<txDecimalFormat> format = new txDecimalFormat;
+        NS_ENSURE_TRUE(format, NS_ERROR_OUT_OF_MEMORY);
+        
+        rv = mDecimalFormats.add(txExpandedName(), format);
+        NS_ENSURE_SUCCESS(rv, rv);
+        
+        format.forget();
+    }
+
     return NS_OK;
 }
 
@@ -480,6 +491,23 @@ txStylesheet::addKey(const txExpandedName& aName,
         return NS_ERROR_OUT_OF_MEMORY;
     }
     return NS_OK;
+}
+
+nsresult
+txStylesheet::addDecimalFormat(const txExpandedName& aName,
+                               txDecimalFormat* aFormat)
+{
+    txDecimalFormat* existing = (txDecimalFormat*)mDecimalFormats.get(aName);
+    if (existing) {
+        NS_ENSURE_TRUE(existing->isEqual(aFormat),
+                       NS_ERROR_XSLT_PARSE_FAILURE);
+
+        delete aFormat;
+
+        return NS_OK;
+    }
+
+    return mDecimalFormats.add(aName, aFormat);
 }
 
 txStylesheet::ImportFrame::ImportFrame()
