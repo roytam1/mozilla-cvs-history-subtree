@@ -225,7 +225,7 @@ $(LIBLDAP): $(OBJS) $(LIBDIR) $(LDAP_EXPORT_DEFS)
 ifdef SO_FILES_TO_REMOVE
 	-$(RM) $(SO_FILES_TO_REMOVE)
 endif
-ifneq (,$(filter AIX Linux HP-UX, $(OS_ARCH)))
+ifneq (,$(filter AIX Linux HP-UX Darwin, $(OS_ARCH)))
 	$(LINK_LIB) ../liblber/$(OBJDIR_NAME)/*.a
 else
 	$(LINK_LIB) $(EXTRA_LIBS)
