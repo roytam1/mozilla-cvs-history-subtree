@@ -493,21 +493,19 @@ void nsFileWidget::GetFilterListArray(nsString& aFilterList)
 
 NS_IMETHODIMP nsFileWidget::SetFilterList(PRUint32 aNumberOfFilters,const nsString aTitles[],const nsString aFilters[])
 {
-	unsigned char	typeTemp[256];
-	unsigned char	tempChar;
-	OSType			tempOSType;
-	ICInstance		icInstance;
-	ICError			icErr;
-	Handle			mappings = NewHandleClear(4);
-	ICAttr			attr;
-	ICMapEntry		icEntry;
-	
 	mNumberOfFilters  = aNumberOfFilters;
 	mTitles           = aTitles;
 	mFilters          = aFilters;
 	
 #if 0  // FOR NOW JUST BYPASS ALL THIS CODE
-	icErr = ICStart(&icInstance, 'MOZZ');
+	unsigned char	typeTemp[256];
+	unsigned char	tempChar;
+	OSType			tempOSType;
+	ICInstance		icInstance;
+	Handle			mappings = NewHandleClear(4);
+	ICAttr			attr;
+	ICMapEntry		icEntry;
+	ICError icErr = ICStart(&icInstance, 'MOZZ');
 	if (icErr == noErr)
 	{
 		icErr = ICFindConfigFile(icInstance, 0, nil);
