@@ -226,12 +226,13 @@ nsMsgLocalMailFolder::Init(const char* aURI)
 nsresult
 nsMsgLocalMailFolder::CreateSubFolders(nsFileSpec &path)
 {
-	nsresult rv = NS_OK;
-	nsAutoString currentFolderNameStr;
-	nsCOMPtr<nsIMsgFolder> child;
+  nsresult rv = NS_OK;
+  nsAutoString currentFolderNameStr;
+  nsCOMPtr<nsIMsgFolder> child;
 
-	for (nsDirectoryIterator dir(path, PR_FALSE); dir.Exists(); dir++) {
-		nsFileSpec currentFolderPath = dir.Spec();
+  for (nsDirectoryIterator dir(path, PR_FALSE); dir.Exists(); dir++) 
+  {
+    nsFileSpec currentFolderPath = dir.Spec();
 
     char *leafName = currentFolderPath.GetLeafName();
     nsMsgGetNativePathString(leafName, currentFolderNameStr);
@@ -242,24 +243,9 @@ nsMsgLocalMailFolder::CreateSubFolders(nsFileSpec &path)
 
     rv = AddSubfolder(&currentFolderNameStr, getter_AddRefs(child));
     if (child)
-    {
-      nsCOMPtr<nsIDBFolderInfo> folderInfo;
-      nsCOMPtr<nsIMsgDatabase> db; 
-      child->GetDBFolderInfoAndDB(getter_AddRefs(folderInfo), getter_AddRefs(db));
-      if (folderInfo)
-      {
-        nsAutoString mailboxName;
-        folderInfo->GetMailboxName(&mailboxName);
-        if (!mailboxName.IsEmpty())
-          child->SetPrettyName(mailboxName.get());
-        else
       child->SetPrettyName(currentFolderNameStr.get());
   }
-      else
-        child->SetPrettyName(currentFolderNameStr.get());
-    }
-  }
-	return rv;
+  return rv;
 }
 
 NS_IMETHODIMP nsMsgLocalMailFolder::AddSubfolder(nsAutoString *name,
