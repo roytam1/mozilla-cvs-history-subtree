@@ -1734,8 +1734,13 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
   gArgc = argc;
   gArgv = argv;
 
-  if (!aAppData)
+  if (!aAppData) {
     aAppData = LoadAppData();  
+    if (!aAppData) {
+      PR_fprintf(PR_STDERR, "Error loading xulapp.ini\n");
+      return 1;
+    }
+  }
   gAppData = aAppData;
 
   gRestartArgc = argc;
@@ -1793,10 +1798,8 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
     nsCOMPtr<nsILocalFile> lf;
 
     const char *app;
-    if (CheckArg("app", &app)) {
-      printf("app=%s\n", app);
+    if (CheckArg("app", &app))
       NS_GetFileFromPath(app, getter_AddRefs(lf));
-    }
 
     rv = dirProvider.Initialize(lf);
     if (NS_FAILED(rv))
