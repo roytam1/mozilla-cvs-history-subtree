@@ -414,8 +414,6 @@ nsresult nsMsgDBFolder::ReadDBFolderInfo(PRBool force)
 			}
 		}
 	}
-//	if (m_master->InitFolderFromCache (this))
-//		return err;
 
 	if (force || !mInitializedFromCache)
     {
@@ -1705,9 +1703,10 @@ nsMsgDBFolder::CallFilterPlugins(nsIMsgWindow *aMsgWindow)
     // imap folder, don't analyze for spam, because
     // it's not ours to analyze
     if (mFlags & (MSG_FOLDER_FLAG_JUNK | MSG_FOLDER_FLAG_TRASH |
-                 MSG_FOLDER_FLAG_SENTMAIL | MSG_FOLDER_FLAG_QUEUE |
-                 MSG_FOLDER_FLAG_DRAFTS | MSG_FOLDER_FLAG_TEMPLATES |
-                 MSG_FOLDER_FLAG_IMAP_PUBLIC | MSG_FOLDER_FLAG_IMAP_OTHER_USER))
+                 MSG_FOLDER_FLAG_NEWSGROUP |MSG_FOLDER_FLAG_SENTMAIL | 
+                 MSG_FOLDER_FLAG_QUEUE |MSG_FOLDER_FLAG_DRAFTS | 
+                 MSG_FOLDER_FLAG_TEMPLATES |MSG_FOLDER_FLAG_IMAP_PUBLIC | 
+                 MSG_FOLDER_FLAG_IMAP_OTHER_USER))
       return NS_OK;
 
     nsresult rv = GetServer(getter_AddRefs(server));
