@@ -80,7 +80,7 @@ nsNoIncomingServer::GetLocalStoreType(char **type)
 NS_IMETHODIMP 
 nsNoIncomingServer::GetAccountManagerChrome(nsAString& aResult)
 {
-    aResult = ToNewUnicode(NS_LITERAL_STRING("am-serverwithnoidentities.xul"));
+    aResult = NS_LITERAL_STRING("am-serverwithnoidentities.xul");
     return NS_OK;
 }
 
