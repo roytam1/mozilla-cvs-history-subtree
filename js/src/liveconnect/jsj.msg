@@ -58,3 +58,4 @@ MSG_DEF(JSJMSG_IS_INTERFACE,        41, 1, "{0} is a Java interface and therefor
 MSG_DEF(JSJMSG_NOT_PUBLIC,          42, 1, "Java class {0} is not public and therefore may not be instantiated")
 MSG_DEF(JSJMSG_NO_CONSTRUCTORS,     43, 1, "No public constructors defined for Java class {0}")
 MSG_DEF(JSJMSG_BAD_PROTO_ASSIGNMENT,44, 0, "Only objects can be assigned as the value of the __proto__ property")
+MSG_DEF(JSJMSG_NEED_JCLASS_ARG,     45, 0, "The JavaClass constructor expects an instance of java.lang.Class as an argument")

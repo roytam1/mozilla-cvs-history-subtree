@@ -296,8 +296,16 @@ JavaClass_defineProperty(JSContext *cx, JSObject *obj, jsid id, jsval value,
                          JSPropertyOp getter, JSPropertyOp setter,
                          uintN attrs, JSProperty **propp)
 {
+    JavaClassDescriptor *class_descriptor;
+    
+    class_descriptor = JS_GetPrivate(cx, obj);
+
+    /* Check for prototype JavaClass object */
+    if (!class_descriptor)
+	return JS_TRUE;
+
     JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
-                                    JSJMSG_JCLASS_PROP_DEFINE);
+                         JSJMSG_JCLASS_PROP_DEFINE);
     return JS_FALSE;
 }
 
@@ -520,7 +528,7 @@ JSClass JavaClass_class = {
     "JavaClass", JSCLASS_HAS_PRIVATE,
     NULL, NULL, NULL, NULL,
     NULL, NULL, JavaClass_convert, JavaClass_finalize,
-    JavaClass_getObjectOps,
+    JavaClass_getObjectOps
 };
 
 static JSObject *
@@ -612,6 +620,43 @@ getClass(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
+static JSBool
+JavaClass_construct(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    JSObject *obj_arg, *JavaClass_obj;
+    JavaObjectWrapper *java_wrapper;
+    JavaClassDescriptor *class_descriptor;
+    JNIEnv *jEnv;
+
+    jsj_MapJSContextToJSJThread(cx, &jEnv);
+    if (!jEnv)
+        return JS_FALSE;
+
+    if (argc != 1 ||
+	!JSVAL_IS_OBJECT(argv[0]) ||
+	!(obj_arg = JSVAL_TO_OBJECT(argv[0])) ||
+	!JS_InstanceOf(cx, obj_arg, &JavaObject_class, 0) ||
+	((java_wrapper = JS_GetPrivate(cx, obj_arg)) == NULL)) {
+        JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
+                             JSJMSG_NEED_JCLASS_ARG);
+        return JS_FALSE;
+    }
+
+    class_descriptor = java_wrapper->class_descriptor;
+    if (!(*jEnv)->IsSameObject(jEnv, class_descriptor->java_class, jlClass)) {
+	JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
+                             JSJMSG_NEED_JCLASS_ARG);
+        return JS_FALSE;
+    }
+
+    class_descriptor = jsj_GetJavaClassDescriptor(cx, jEnv, java_wrapper->java_obj);
+    JavaClass_obj = jsj_new_JavaClass(cx, jEnv, NULL, class_descriptor);
+    if (!JavaClass_obj)
+        return JS_FALSE;
+    *rval = OBJECT_TO_JSVAL(JavaClass_obj);
+    return JS_TRUE;
+}
+
 extern JS_IMPORT_DATA(JSObjectOps) js_ObjectOps;
 
 JSBool
@@ -621,7 +666,7 @@ jsj_init_JavaClass(JSContext *cx, JSObject *global_obj)
     JavaClass_ops.destroyObjectMap = js_ObjectOps.destroyObjectMap;
     
     /* Define JavaClass class */
-    if (!JS_InitClass(cx, global_obj, 0, &JavaClass_class, 0, 0, 0, 0, 0, 0))
+    if (!JS_InitClass(cx, global_obj, 0, &JavaClass_class, JavaClass_construct, 0, 0, 0, 0, 0))
         return JS_FALSE;
 
     if (!JS_DefineFunction(cx, global_obj, "getClass", getClass, 0,
