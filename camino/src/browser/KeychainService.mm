@@ -112,7 +112,6 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 
 - (id) init
 {
-NSLog(@"Keychain Service INIT");
   if ( (self = [super init]) ) {
     // Add a new form submit observer. We explicitly hold a ref in case the
     // observer service uses a weakref.
