@@ -641,26 +641,29 @@
 #define HG13181
 #define HG14871 FALSE
 #define HG19861 FALSE
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#define HG21511
+#define HG19721
+#define HG19511
+#define HG17271
+#define HG18671
+#define HG19616
+#define HG19879
+#define HG17922
+#define HG98219 SetDlgItemInt(IDC_EDIT_PORT_NO, LDAP_PORT);
+#define HG92710
+#define HG27626
+#define HG28981
+#define HG72186
+#define HG92672
+#define HG90271
+#define HG92177
+#define HG98216
+#define HG91761 SetDlgItemInt(IDC_EDIT_PORT_NO, LDAP_PORT);
 
 
 
 #endif /* _ROSETTA_H_ */
+
+
+
+
