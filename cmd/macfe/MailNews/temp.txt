@@ -1,3 +1,0 @@
-CVS
-build
-temp.txt
