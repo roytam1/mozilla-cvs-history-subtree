@@ -1454,6 +1454,7 @@ nsHttpChannel::GetStatus(nsresult *aStatus)
 NS_IMETHODIMP
 nsHttpChannel::Cancel(nsresult status)
 {
+    LOG(("nsHttpChannel::Cancel [this=%x status=%x]\n", this, status));
     if (mTransaction)
         mTransaction->Cancel(status);
     else if (mCacheReadRequest)
@@ -1632,6 +1633,8 @@ nsHttpChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *context)
 
     nsresult rv = Connect();
     if (NS_FAILED(rv)) {
+        LOG(("Connect failed [rv=%x]\n", rv));
+
         AsyncAbort(mStatus);
 
         mListener = 0;
@@ -1873,10 +1876,8 @@ nsHttpChannel::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult st
         mTransaction = nsnull;
     }
 
-    // if we got this far, we can be sure there is no reason to doom the cache
-    // entry... so always close it with success.
     if (mCacheEntry)
-        CloseCacheEntry(NS_OK);
+        CloseCacheEntry(status);
 
     if (mListener)
         mListener->OnStopRequest(this, mListenerContext, status);

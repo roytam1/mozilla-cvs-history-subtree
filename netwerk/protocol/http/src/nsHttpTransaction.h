@@ -104,24 +104,11 @@ private:
     nsHttpChunkedDecoder           *mChunkedDecoder;
 
     PRInt32                         mTransactionDone; // set atomically
+    nsresult                        mStatus;
 
     PRPackedBool                    mHaveStatusLine;
     PRPackedBool                    mHaveAllHeaders;
     PRPackedBool                    mFiredOnStart;
 };
 
-#if 0
-//-----------------------------------------------------------------------------
-// nsAHttpTransactionSink recieves notifications from the transaction.  This
-// is, for example, implemented by nsHttpConnection.
-//-----------------------------------------------------------------------------
-
-class nsAHttpTransactionSink : public nsISupports
-{
-public:
-    virtual nsresult OnHeadersAvailable(nsHttpTransaction *) = 0;
-    virtual nsresult OnTransactionComplete(nsHttpTransaction *, nsresult) = 0;
-};
-#endif
-
-#endif
+#endif // nsHttpTransaction_h__

@@ -442,7 +442,6 @@ nsHttpHandler::CancelPendingTransaction(nsHttpTransaction *trans,
         }
     }
 
-
     LOG(("CancelPendingTransaction failed: transaction not in pending queue\n"));
     return NS_ERROR_NOT_AVAILABLE;
 }

@@ -44,6 +44,7 @@ nsHttpTransaction::nsHttpTransaction(nsIStreamListener *listener,
     , mContentRead(0)
     , mChunkedDecoder(nsnull)
     , mTransactionDone(0)
+    , mStatus(NS_OK)
     , mHaveStatusLine(0)
     , mHaveAllHeaders(0)
     , mFiredOnStart(0)
@@ -172,6 +173,7 @@ nsHttpTransaction::OnStopTransaction(nsresult status)
 
     // make sure that this flag is set.
     mTransactionDone = PR_TRUE;
+    mStatus = status;
 
 	if (mListener) {
 		if (!mFiredOnStart) {
@@ -408,7 +410,7 @@ nsHttpTransaction::IsPending(PRBool *_retval)
 NS_IMETHODIMP
 nsHttpTransaction::GetStatus(nsresult *aStatus)
 {
-    *aStatus = NS_OK;
+    *aStatus = mStatus;
     return NS_OK;
 }
 
@@ -416,6 +418,17 @@ nsHttpTransaction::GetStatus(nsresult *aStatus)
 NS_IMETHODIMP
 nsHttpTransaction::Cancel(nsresult status)
 {
+    LOG(("nsHttpTransaction::Cancel [this=%x status=%x]\n", this, status));
+
+    // if the transaction is already "done" then there is nothing more to do.
+    // ie., our consumer _will_ eventually receive their OnStopRequest.
+    if (mTransactionDone)
+        return NS_OK;
+
+    // the status must be set immediately as the following routines may
+    // take action asynchronously.
+    mStatus = status;
+
     if (!mConnection) {
         // the connection is not assigned to a connection yet, so we must
         // notify the HTTP handler, so it can process the cancelation. 
