@@ -39,6 +39,7 @@ LLIBS=\
 	$(DIST)\lib\xpcom.lib \
 	$(DIST)\lib\png.lib \
 	$(DIST)\lib\zlib.lib \
+	$(DIST)\lib\gkgfxwin.lib \
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>

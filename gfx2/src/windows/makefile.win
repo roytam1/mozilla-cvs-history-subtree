@@ -25,7 +25,7 @@ DEPTH=..\..\..
 include <$(DEPTH)/config/config.mak>
 
 MODULE		= gfx2
-LIBRARY_NAME= gfx2 #_s
+LIBRARY_NAME= gfx2
 DLL		    = $(OBJDIR)\$(LIBRARY_NAME).dll
 MAKE_OBJ_TYPE = DLL
 
@@ -37,6 +37,7 @@ OBJS	= \
 
 LLIBS	= \
  	$(DIST)\lib\xpcom.lib \
+	$(DIST)\lib\gkgfxwin.lib \
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>

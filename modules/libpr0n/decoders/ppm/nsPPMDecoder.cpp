@@ -227,12 +227,12 @@ NS_IMETHODIMP nsPPMDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PRU
   }
 
   PRUint32 bpr;
-  gfx_dimension width;
+  nscoord width;
   mFrame->GetImageBytesPerRow(&bpr);
   mFrame->GetWidth(&width);
 
   // XXX ceil?
-  PRUint32 real_bpr = GFXCoordToIntRound(width) * 3;
+  PRUint32 real_bpr = width * 3;
   
   PRUint32 i = 0;
   PRUint32 rownum = mDataWritten / real_bpr;  // XXX this better not have a decimal

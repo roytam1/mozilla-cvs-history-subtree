@@ -3872,12 +3872,12 @@ NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const 
 
   LPBITMAPINFOHEADER mBHead = (LPBITMAPINFOHEADER)new char[sizeof(BITMAPINFO)];
 
-  gfx_dimension frHeight;
+  nscoord frHeight;
   img->GetHeight(&frHeight);
 
   PRInt32 height = sr.height;
 
-  gfx_dimension frWidth;
+  nscoord frWidth;
   img->GetWidth(&frWidth);
   PRInt32 width = frWidth;
 
@@ -3894,7 +3894,7 @@ NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const 
 	mBHead->biClrImportant = 0;
 
 #if 0
-  HBITMAP memBM = ::CreateDIBitmap(mDC,mBHead,CBM_INIT, bits + PRInt32(GFXCoordToIntFloor(sr.y) * bpr), (LPBITMAPINFO)mBHead,
+  HBITMAP memBM = ::CreateDIBitmap(mDC,mBHead,CBM_INIT, bits + PRInt32(sr.y * bpr), (LPBITMAPINFO)mBHead,
 				                           DIB_RGB_COLORS);
 #endif
 //  void* oldThing = ::SelectObject(mDC, memBM);
@@ -3904,16 +3904,16 @@ NS_IMETHODIMP nsRenderingContextWin::DrawImage(nsIImageContainer *aImage, const 
   if (abits) {
     MONOBITMAPINFO bmi(width, -height);
     bmi.bmiHeader.biSizeImage = alen;
-    ::StretchDIBits(mDC, PRInt32(pt.x + sr.x), PRInt32(pt.y + sr.y), width, height,
-                    GFXCoordToIntFloor(sr.x), 0, width, height,
-                    abits + (GFXCoordToIntFloor(sr.y) * abpr), 
+    ::StretchDIBits(mDC, (pt.x + sr.x), (pt.y + sr.y), width, height,
+                    sr.x, 0, width, height,
+                    abits + (sr.y * abpr), 
                     (LPBITMAPINFO)&bmi, DIB_RGB_COLORS, SRCAND);
     rop = SRCPAINT;
   }
 
-  ::StretchDIBits(mDC, PRInt32(pt.x + sr.x), PRInt32(pt.y + sr.y), width, height,
-                  GFXCoordToIntFloor(sr.x), 0, width, height,
-                  bits + (GFXCoordToIntFloor(sr.y) * bpr), 
+  ::StretchDIBits(mDC, (pt.x + sr.x), (pt.y + sr.y), width, height,
+                  sr.x, 0, width, height,
+                  bits + (sr.y * bpr), 
                   (LPBITMAPINFO)mBHead, DIB_RGB_COLORS, rop);
 
 

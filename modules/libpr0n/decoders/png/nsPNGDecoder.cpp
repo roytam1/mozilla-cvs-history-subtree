@@ -436,7 +436,7 @@ nsPNGDecoder::row_callback(png_structp png_ptr, png_bytep new_row,
     line = new_row;
 
   if (new_row) {
-    gfx_dimension width;
+    nscoord width;
     decoder->mFrame->GetWidth(&width);
     PRUint32 iwidth = width;
 

@@ -28,6 +28,10 @@ interface nsIImageRequest;
 interface nsIImageContainer;
 interface nsIImageFrame;
 
+%{C++
+#include "nsRect.h"
+%}
+
 /**
  * nsIImageDecoderObserver interface
  *
