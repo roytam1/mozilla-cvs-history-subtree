@@ -937,6 +937,8 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
       reason = eReflowReason_Dirty;
   }
   else {
+    // XXX the code above assumes that if there's a 'next' in the reflowtree,
+    // that this isn't a target.  This may not be correct.
     const nsHTMLReflowState* rs = psd->mReflowState;
     if (rs->reason == eReflowReason_Incremental) {
       // If the incremental reflow command is a StyleChanged reflow and
@@ -952,15 +954,17 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
             psd->mFrame->mFrame : mBlockReflowState->frame;
           if (rc->IsATarget(parentFrame)) {
             reason = eReflowReason_StyleChange;
-            rs->SetCurrentReflowNode(nsnull); // XXX probably correct
           }
         }
         else if (type == eReflowType_ReflowDirty &&
                  (state & NS_FRAME_IS_DIRTY)) {          
           reason = eReflowReason_Dirty;
-          rs->SetCurrentReflowNode(nsnull); // XXX probably correct
         }
       }
+      // in all cases here, we switched from incremental to something else.
+      // stop processing the reflow tree and do a reflow of stylechanged,
+      // dirty (XXX? should this also process children?), or resize.
+      rs->SetCurrentReflowNode(nsnull); // XXX probably correct
     }
   }
 
