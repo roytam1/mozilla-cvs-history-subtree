@@ -269,6 +269,7 @@ PRBool _pr_ipv6_is_present;
 PR_EXTERN(PRBool) _pr_test_ipv6_socket();
 #if defined(_PR_HAVE_GETIPNODEBYNAME)
 void *_pr_getipnodebyname_fp;
+void *_pr_getipnodebyaddr_fp;
 void *_pr_freehostent_fp;
 #endif
 #endif
@@ -283,10 +284,14 @@ PRStatus _pr_init_ipv6()
 	PRLibrary *lib;	
 	_pr_getipnodebyname_fp = PR_FindSymbolAndLibrary("getipnodebyname", &lib);
 	if (NULL != _pr_getipnodebyname_fp) {
-		_pr_freehostent_fp = PR_FindSymbolAndLibrary("freehostent", &lib);
-		if (NULL != _pr_freehostent_fp)
-			_pr_ipv6_is_present = PR_TRUE;
-		else
+		_pr_freehostent_fp = PR_FindSymbol(lib, "freehostent");
+		if (NULL != _pr_freehostent_fp) {
+			_pr_getipnodebyaddr_fp = PR_FindSymbol(lib, "getipnodebyaddr");
+			if (NULL != _pr_getipnodebyaddr_fp)
+				_pr_ipv6_is_present = PR_TRUE;
+			else
+				_pr_ipv6_is_present = PR_FALSE;
+		} else
 			_pr_ipv6_is_present = PR_FALSE;
 		(void)PR_UnloadLibrary(lib);
 	} else

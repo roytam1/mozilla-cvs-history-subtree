@@ -126,6 +126,25 @@ int main(int argc, char **argv)
         exit(1);
     }
     PrintHostent(&he);
+    idx = 0;
+    printf("PR_GetHostByAddr with PR_AF_INET6\n");
+    while (1) {
+        idx = PR_EnumerateHostEnt(idx, &he, 0, &addr);
+        if (idx == -1) {
+            fprintf(stderr, "PR_EnumerateHostEnt failed\n");
+            exit(1);
+        }
+        if (idx == 0) break;  /* normal loop termination */
+        printf("reverse lookup\n");
+        if (PR_GetHostByAddr(&addr, reversebuf, sizeof(reversebuf),
+                &reversehe) == PR_FAILURE) {
+            fprintf(stderr, "PR_GetHostByAddr failed\n");
+            exit(1);
+        }
+        PrintHostent(&reversehe);
+    }
+    printf("PR_GetHostByAddr with PR_AF_INET6 done\n");
+  
     PR_StringToNetAddr("::1", &addr);
     if (PR_IsNetAddrType(&addr, PR_IpAddrV4Mapped) == PR_TRUE) {
         fprintf(stderr, "addr should not be ipv4 mapped address\n");

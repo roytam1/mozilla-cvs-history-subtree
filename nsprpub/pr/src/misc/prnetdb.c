@@ -268,7 +268,7 @@ static PRStatus CopyHostent(
 		to->h_addrtype = PR_AF_INET6;
 		to->h_length = 16;
 	} else {
-#if defined(_PR_INET6)
+#if defined(_PR_INET6) || defined(_PR_INET6_PROBE)
 		if (AF_INET6 == from->h_addrtype)
 			to->h_addrtype = PR_AF_INET6;
 		else
@@ -416,8 +416,11 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByName(
 #if defined(_PR_INET6_PROBE) && defined(_PR_HAVE_GETIPNODEBYNAME)
 typedef struct hostent  * (*_pr_getipnodebyname_t)(const char *, int,
 										int, int *);
+typedef struct hostent  * (*_pr_getipnodebyaddr_t)(const void *, size_t,
+													int, int *);
 typedef void (*_pr_freehostent_t)(struct hostent *);
 extern void * _pr_getipnodebyname_fp;
+extern void * _pr_getipnodebyaddr_fp;
 extern void * _pr_freehostent_fp;
 #endif
 
@@ -576,12 +579,13 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByAddr(
 	struct hostent *h;
 	PRStatus rv = PR_FAILURE;
 	const void *addr;
+	PRUint32 tmp_ip;
 	int addrlen;
 	PRInt32 af;
 #ifdef XP_UNIX
 	sigset_t oldset;
 #endif
-#if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYADDR)
+#if defined(_PR_HAVE_GETIPNODEBYADDR)
 	int error_num;
 #endif
 
@@ -593,34 +597,68 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByAddr(
 	LOCK_DNS();
 	if (hostaddr->raw.family == PR_AF_INET6)
 	{
-		addr = &hostaddr->ipv6.ip;
-		addrlen = sizeof(hostaddr->ipv6.ip);
+#if defined(_PR_INET6_PROBE)
+		if (_pr_ipv6_is_present == PR_TRUE)
+			af = AF_INET6;
+		else
+			af = AF_INET;
+#elif defined(_PR_INET6)
+		af = AF_INET6;
+#else
+		af = AF_INET;
+#endif
 	}
 	else
 	{
 		PR_ASSERT(hostaddr->raw.family == AF_INET);
+		af = AF_INET;
+	}
+	if (hostaddr->raw.family == PR_AF_INET6) {
+		if (af == AF_INET6) {
+			addr = &hostaddr->ipv6.ip;
+			addrlen = sizeof(hostaddr->ipv6.ip);
+		} else {
+			PR_ASSERT(af == AF_INET);
+			if (!_PR_IN6_IS_ADDR_V4MAPPED(&hostaddr->ipv6.ip)) {
+				PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
+				return rv;
+			}
+			tmp_ip = _PR_IN6_V4MAPPED_TO_IPADDR((PRIPv6Addr *)
+												&hostaddr->ipv6.ip);
+			addr = &tmp_ip;
+			addrlen = sizeof(tmp_ip);
+		}
+	} else {
+		PR_ASSERT(hostaddr->raw.family == AF_INET);
+		PR_ASSERT(af == AF_INET);
 		addr = &hostaddr->inet.ip;
 		addrlen = sizeof(hostaddr->inet.ip);
 	}
-#if defined(_PR_INET6)
-	if (PR_AF_INET6 == hostaddr->raw.family)
-		af = AF_INET6;
-	else
-#endif
-		af = hostaddr->raw.family;
-#if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYADDR)
+
+#if defined(_PR_HAVE_GETIPNODEBYADDR) && defined(_PR_INET6)
 	h = getipnodebyaddr(addr, addrlen, af, &error_num);
-#else
+#elif defined(_PR_HAVE_GETIPNODEBYADDR) && defined(_PR_INET6_PROBE)
+    if (_pr_ipv6_is_present == PR_TRUE)
+    	h = (*((_pr_getipnodebyaddr_t)_pr_getipnodebyaddr_fp))(addr, addrlen,
+				af, &error_num);
+	else
+		h = gethostbyaddr(addr, addrlen, af);
+#else	/* _PR_HAVE_GETIPNODEBYADDR */
 #ifdef XP_OS2_VACPP
 	h = gethostbyaddr((char *)addr, addrlen, af);
 #else
 	h = gethostbyaddr(addr, addrlen, af);
 #endif
-#endif /* _PR_INET6 && _PR_HAVE_GETIPNODEBYADDR */
+#endif /* _PR_HAVE_GETIPNODEBYADDR */
 	if (NULL == h)
 	{
 #if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYADDR)
 		PR_SetError(PR_DIRECTORY_LOOKUP_ERROR, error_num);
+#elif defined(_PR_INET6_PROBE) && defined(_PR_HAVE_GETIPNODEBYADDR)
+    	if (_pr_ipv6_is_present == PR_TRUE)
+	    	PR_SetError(PR_DIRECTORY_LOOKUP_ERROR, error_num);
+		else
+	    	PR_SetError(PR_DIRECTORY_LOOKUP_ERROR, _MD_GETHOST_ERRNO());
 #else
 		PR_SetError(PR_DIRECTORY_LOOKUP_ERROR, _MD_GETHOST_ERRNO());
 #endif
@@ -628,21 +666,26 @@ PR_IMPLEMENT(PRStatus) PR_GetHostByAddr(
 	else
 	{
 		_PRIPAddrConversion conversion = _PRIPAddrNoConversion;
-#if defined(_PR_INET6)
 		if (hostaddr->raw.family == PR_AF_INET6) {
-			if (IN6_IS_ADDR_V4MAPPED((struct in6_addr*)addr)) {
-				conversion = _PRIPAddrIPv4Mapped;
-			} else if (IN6_IS_ADDR_V4COMPAT((struct in6_addr*)addr)) {
-				conversion = _PRIPAddrIPv4Compat;
+			if (af == AF_INET) {
+				if (_PR_IN6_IS_ADDR_V4MAPPED((PRIPv6Addr*)
+												&hostaddr->ipv6.ip)) {
+					conversion = _PRIPAddrIPv4Mapped;
+				} else if (_PR_IN6_IS_ADDR_V4COMPAT((PRIPv6Addr *)
+													&hostaddr->ipv6.ip)) {
+					conversion = _PRIPAddrIPv4Compat;
+				}
 			}
 		}
-#endif
 		rv = CopyHostent(h, &buf, &bufsize, conversion, hostentry);
 		if (PR_SUCCESS != rv) {
 		    PR_SetError(PR_INSUFFICIENT_RESOURCES_ERROR, 0);
 		}
 #if defined(_PR_INET6) && defined(_PR_HAVE_GETIPNODEBYADDR)
 		freehostent(h);
+#elif defined(_PR_INET6_PROBE) && defined(_PR_HAVE_GETIPNODEBYADDR)
+    	if (_pr_ipv6_is_present == PR_TRUE)
+			(*((_pr_freehostent_t)_pr_freehostent_fp))(h);
 #endif
 	}
 	UNLOCK_DNS();
