@@ -291,7 +291,6 @@ nsresult txPatternParser::createStepPattern(ExprLexer& aLexer,
     if (Token::CNAME == tok->type) {
         // resolve QName
         String prefix, lName;
-        nsresult res = NS_OK;
         PRInt32 nspace;
         rv = resolveQName(tok->value, prefix, lName, nspace);
         if (NS_FAILED(rv)) {
