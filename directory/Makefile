@@ -29,16 +29,17 @@
 LDAP_DEPTH	= .
 NSPR_TREE	= ../nsprpub
 MOD_DEPTH	= ../nsprpub
+NSPR_VERSION	= 3.5.1
 DEPTH		= ..
 
 include $(NSPR_TREE)/config/rules.mk
 
 all export::	FORCE
-	@if [ -d $(NSPR_TREE)/config ]; then \
-		cd $(NSPR_TREE)/config; \
+	@if [ -d $(NSPR_TREE)/ ]; then \
+		cd $(NSPR_TREE); \
 		$(MAKE); \
 	else \
-		echo "No NSPR directory found"; \
+		echo "No NSPR $(NSPR_VERSION) directory found"; \
 		exit 0; \
 	fi
 	@if [ -d $(LDAP_DEPTH)/c-sdk/ldap ]; then \
@@ -59,6 +60,13 @@ libs install::	FORCE
 	fi
 
 clean clobber::	FORCE
+	@if [ -d $(NSPR_TREE)/ ]; then \
+		cd $(NSPR_TREE); \
+		$(MAKE) clean; \
+	else \
+		echo "No NSPR $(NSPR_VERSION) directory found"; \
+		exit 0; \
+	fi
 	@if [ -d $(LDAP_DEPTH)/c-sdk/ldap ]; then \
 		cd $(LDAP_DEPTH)/c-sdk/ldap; \
 		$(MAKE) -f Makefile.client $(MFLAGS) clean; \
