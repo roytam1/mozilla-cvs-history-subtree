@@ -441,6 +441,11 @@ NS_IMETHODIMP nsMsgDBFolder::ClearNewMessages()
   //If there's no db then there's nothing to clear.
   if(mDatabase)
   {
+    nsMsgKeyArray *newMessageKeys = nsnull;
+    rv = mDatabase->GetNewList(&newMessageKeys);
+    if (NS_SUCCEEDED(rv))
+      m_saveNewMsgs.CopyArray(newMessageKeys);
+    NS_DELETEXPCOM (newMessageKeys);
     rv = mDatabase->ClearNewList(PR_TRUE);
   }
   return rv;
@@ -1854,7 +1859,10 @@ nsMsgDBFolder::CallFilterPlugins(nsIMsgWindow *aMsgWindow, PRBool *aFiltersRun)
   nsMsgKeyArray *newMessageKeys;
   rv = mDatabase->GetNewList(&newMessageKeys);
   NS_ENSURE_SUCCESS(rv, rv);
+  if (!newMessageKeys && m_saveNewMsgs.GetSize() > 0)
+    newMessageKeys = new nsMsgKeyArray;
 
+  newMessageKeys->InsertAt(0, &m_saveNewMsgs);
   // if there weren't any, just return 
   //
   if (!newMessageKeys || !newMessageKeys->GetSize()) 
@@ -1953,6 +1961,7 @@ nsMsgDBFolder::CallFilterPlugins(nsIMsgWindow *aMsgWindow, PRBool *aFiltersRun)
     PR_Free(messageURIs);
 
   }
+  m_saveNewMsgs.RemoveAll();
   NS_DELETEXPCOM(newMessageKeys);
   return rv;
 }
