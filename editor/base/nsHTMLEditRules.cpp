@@ -1015,15 +1015,14 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection,
                 {
                   PRUint8 currentCursorLevel;
                   PRUint8 frameLevel;
-                  void *value;
 
                   res = deleteInFrame->GetChildFrameContainingOffset(offset, nsIEditor::eNext==aAction, &frameOffset, &deleteInFrame);
                   if NS_SUCCEEDED(res)
                   {
                     shell->GetCursorBidiLevel(&currentCursorLevel);
                     nsIAtom* embeddingLevel = NS_NewAtom("EmbeddingLevel");
-                    deleteInFrame->GetBidiProperty(context, embeddingLevel, &value);
-                    frameLevel = (PRUint8)value;
+                    deleteInFrame->GetBidiProperty(context, embeddingLevel,
+                                                   (void**)&frameLevel, sizeof(PRUint8) );
                     shell->SetCursorBidiLevel(frameLevel);
                     if (currentCursorLevel != frameLevel)
                     {

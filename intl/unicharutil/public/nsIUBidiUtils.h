@@ -172,9 +172,15 @@ class nsIUBidiUtils : public nsISupports {
 	virtual void numbers_to_hindi (PRUnichar* uch)=0;
 	virtual void HandleNumbers (PRUnichar* Buffer, PRUint32 size, PRUint32  Num_Flag)=0;
 	virtual void Conv_FE_06 (const nsString aSrc, nsString & aDst) = 0;
+//ahmed	
+ virtual void Conv_FE_06_WithReverse (const nsString aSrc, nsString & aDst) = 0;
+ virtual void Conv_06_FE_WithReverse (const nsString aSrc, nsString & aDst,PRUint32* map) = 0;
+ virtual PRBool NeedReverseHandling(const PRUnichar *aString, PRUint32 aLen)=0;
+ virtual void GetSystem()=0;
+ virtual PRBool IsWin95()=0;
+ virtual PRBool IsWin98()=0;
+ virtual PRBool IsWinNT()=0;
 // IBMBIDI - EGYPT - End
-
-
 };
 
 #define IS_RTL_LEVEL(x) (x&1)

@@ -2022,19 +2022,32 @@ FoundFont:
             HebrewReordering(&pstr[start], i-start, buf, len);
           }
 #endif
-					//ahmed
-          if (IsNeedShaping() &&(BidiEngine->NeedComplexScriptHandling(&pstr[start], i-start,
+//ahmed
+         if (IsNeedShaping() &&(BidiEngine->NeedComplexScriptHandling(&pstr[start], i-start,
                                         HAS_HEBREW_GLYPH(prevFont), &bHebrew,
                                         HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic) )) {
             //XXX TODO: Handle BDO for both Arabic and Hebrew here
-
-						  if (bArabic) {
-              //shape the arabic string
-                len = 8192;
-                BidiEngine->ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
-              }
+           if (bArabic) {
+             //shape the arabic string
+             len = 8192;
+             BidiEngine->ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
            }
-         if (len > 0) {
+         }
+         if(BidiEngine->NeedReverseHandling(&pstr[start], i-start) ){
+          //reverse the visualrtl buffer
+          if(mContext->isArabicVisRTL==PR_TRUE){
+           PRUnichar aRevBuf [8192];
+            PRInt32 aRevBufLen,j;
+            nsresult rv1 = NS_OK;
+            NS_WITH_SERVICE(nsIBidi, BidiEngine2, kBidiCID, &rv1);
+            BidiEngine2->writeReverse(&pstr[start],i-start, aRevBuf, UBIDI_KEEP_BASE_COMBINING|UBIDI_DO_MIRRORING, &aRevBufLen);
+            for(j=0;j<aRevBufLen;j++){
+              pstr[j] = aRevBuf[j];
+            }
+          }
+        }
+        mContext->map=prevFont->mMap;
+          if (len > 0) {
             width += prevFont->GetWidth(mDC, buf, len);
           }
           else
@@ -2067,18 +2080,31 @@ FoundFont:
         HebrewReordering(&pstr[start], i-start, buf, len);
       }
 #endif
-			//ahmed
-      if (IsNeedShaping() && (BidiEngine->NeedComplexScriptHandling(&pstr[start], i-start,
+//ahmed
+         if (IsNeedShaping() && (BidiEngine->NeedComplexScriptHandling(&pstr[start], i-start,
                                     HAS_HEBREW_GLYPH(prevFont), &bHebrew,
                                     HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic) ) ){
-               
-				     if (bArabic) {
-							 //shape the arabic string
-               len = 8192;
-               BidiEngine->ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
-            }
+           if (bArabic) {
+           //shape the arabic string
+             len = 8192;
+             BidiEngine->ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
+           }
          }
-      if (len > 0) {
+      //reverse the visualrtl buffer
+         if(BidiEngine->NeedReverseHandling(&pstr[start], i-start)){
+           if(mContext->isArabicVisRTL==PR_TRUE){
+             PRUnichar aRevBuf [8192];
+             PRInt32 aRevBufLen,j;
+             nsresult rv1 = NS_OK;
+             NS_WITH_SERVICE(nsIBidi, BidiEngine2, kBidiCID, &rv1);
+   	     BidiEngine2->writeReverse(&pstr[start],i-start, aRevBuf,UBIDI_KEEP_BASE_COMBINING|UBIDI_DO_MIRRORING, &aRevBufLen);
+             for(j=0;j<aRevBufLen;j++){
+               pstr[j] = aRevBuf[j];
+             }
+           }
+         }
+         mContext->map=prevFont->mMap;
+         if (len > 0) {
          width += prevFont->GetWidth(mDC, buf, len);
       }
       else
@@ -2514,18 +2540,31 @@ FoundFont:
                HebrewReordering(&pstr[start], i-start, buf, len);
              }
 #endif
-						 //ahmed
+//ahmed
              if (IsNeedShaping() && (BidiEngine->NeedComplexScriptHandling(&pstr[start], i-start,
                                            HAS_HEBREW_GLYPH(prevFont), &bHebrew,
                                            HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic) ) ){
                 
-							 if (bArabic) {       
-							   //shape the arabic string
-                      len = 8192;
-                      BidiEngine->ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
-                   }
-                }
-             
+      	       if (bArabic) {       
+               //shape the arabic string
+                 len = 8192;
+                 BidiEngine->ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
+               }
+             }
+             //reverse the visualrtl buffer
+             if(BidiEngine->NeedReverseHandling(&pstr[start], i-start)){
+               if(mContext->isArabicVisRTL==PR_TRUE){
+               PRUnichar aRevBuf [8192];
+               PRInt32 aRevBufLen,j;
+               nsresult rv1 = NS_OK;
+               NS_WITH_SERVICE(nsIBidi, BidiEngine2, kBidiCID, &rv1);
+               BidiEngine2->writeReverse(&pstr[start],i-start, aRevBuf, UBIDI_KEEP_BASE_COMBINING|UBIDI_DO_MIRRORING, &aRevBufLen);
+               for(j=0;j<aRevBufLen;j++){
+                 pstr[j] = aRevBuf[j];
+               }
+             }
+           }
+           mContext->map=prevFont->mMap;
              if (len > 0) {
                prevFont->DrawString(mDC, x, y, buf, len);
                x += prevFont->GetWidth(mDC, buf, len);
@@ -2586,13 +2625,26 @@ FoundFont:
          if (IsNeedShaping() &&(BidiEngine->NeedComplexScriptHandling(&pstr[start], i-start,
                                        HAS_HEBREW_GLYPH(prevFont), &bHebrew,
                                        HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic) ) ){
-               if (bArabic) {      
-					       //shape the arabic string
-                  len = 8192;
-                  BidiEngine->ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
-               }
-            }
-         
+           if (bArabic) {      
+           //shape the arabic string
+             len = 8192;
+             BidiEngine->ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
+           }
+         }
+         //reverse the visualrtl buffer
+         if(BidiEngine->NeedReverseHandling(&pstr[start], i-start)){
+           if(mContext->isArabicVisRTL==PR_TRUE){
+             PRUnichar aRevBuf [8192];
+             PRInt32 aRevBufLen,j;
+             nsresult rv1 = NS_OK;
+             NS_WITH_SERVICE(nsIBidi, BidiEngine2, kBidiCID, &rv1);
+             BidiEngine2->writeReverse(&pstr[start],i-start, aRevBuf, UBIDI_KEEP_BASE_COMBINING|UBIDI_DO_MIRRORING, &aRevBufLen);
+             for(j=0;j<aRevBufLen;j++){
+               pstr[j] = aRevBuf[j];
+             }
+           }
+         }
+         mContext->map=prevFont->mMap;
          if (len > 0) {
            prevFont->DrawString(mDC, x, y, buf, len);
          }
@@ -3842,10 +3894,10 @@ nsRenderingContextWin::ConditionRect(nsRect& aSrcRect, RECT& aDestRect)
 PRBool nsRenderingContextWin::IsNeedShaping()
 {
   PRBool rv = PR_FALSE;
-	PRBool isBidi;
-	IsShapingSystem(isBidi);
- // rv= !IsBidiSystem() && !mContext->mIsVisual;
-	 rv= !isBidi && !mContext->mIsVisual;
+  PRBool isBidi;
+  IsShapingSystem(isBidi);
+  // rv= !IsBidiSystem() && !mContext->mIsVisual;
+  rv= !isBidi && !mContext->mIsVisual;
   return rv;
 }
 

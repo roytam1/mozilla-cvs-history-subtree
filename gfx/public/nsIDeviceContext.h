@@ -432,7 +432,10 @@ public:
   NS_IMETHOD EndPage(void) = 0;
 
 #ifdef IBMBIDI
-  PRPackedBool          mIsVisual;
+  //ahmed
+  PRPackedBool mIsVisual;
+  PRBool       isArabicVisRTL;
+  PRUint32*    map;
 #endif // IBMBIDI
 };
 

@@ -3392,12 +3392,12 @@ nsFrame::GetFrameFromDirection(nsIPresContext* aPresContext, nsPeekOffsetStruct 
 #ifdef IBMBIDI // Simon
   if (aPos->mAmount != eSelectNoAmount)
   {
-    void* level;
-    newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, &level);
+    int level;
+    newFrame->GetBidiProperty(aPresContext, nsLayoutAtoms::embeddingLevel, (void**)&level);
     if (aPos->mDirection == eDirNext)
-      aPos->mStartOffset = ((PRUint8)level & 1) ? -1 : 0;
+      aPos->mStartOffset = (level & 1) ? -1 : 0;
     else
-      aPos->mStartOffset = ((PRUint8)level & 1) ? 0 : -1;
+      aPos->mStartOffset = (level & 1) ? 0 : -1;
   }
   else
 #endif
@@ -3640,9 +3640,18 @@ nsFrame::IsMouseCaptured(nsIPresContext* aPresContext)
 
 nsresult nsFrame::GetBidiProperty(nsIPresContext* aPresContext,
                                   nsIAtom*        aPropertyName,
-                                  void**          aPropertyValue) const
+                                  void**          aPropertyValue,
+                                  PRInt32         aSize)          const
 {
-  *aPropertyValue = nsnull;
+  if (!aPropertyValue || !aPropertyName) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  if ( (aSize < 1) || (aSize > sizeof(void*) ) ) {
+    return NS_ERROR_ILLEGAL_VALUE;
+  }
+
+  nsCRT::zero(aPropertyValue, aSize);
+  void* val = nsnull;
 
   nsCOMPtr<nsIPresShell> presShell;
   aPresContext->GetShell(getter_AddRefs(presShell) );
@@ -3652,7 +3661,10 @@ nsresult nsFrame::GetBidiProperty(nsIPresContext* aPresContext,
     presShell->GetFrameManager(getter_AddRefs(frameManager) );
   
     if (frameManager) {
-      frameManager->GetFrameProperty( (nsIFrame*)this, aPropertyName, 0, aPropertyValue);
+      frameManager->GetFrameProperty( (nsIFrame*)this, aPropertyName, 0, &val);
+      if (val) {
+        nsCRT::memcpy(aPropertyValue, &val, aSize);
+      }
     }
   }
   return NS_OK;

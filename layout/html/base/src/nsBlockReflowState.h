@@ -2655,7 +2655,6 @@ nsBlockFrame::PrepareResizeReflow(nsBlockReflowState& aState)
           // Then we must reflow it.
           line->MarkDirty();
         }
-
 #ifdef DEBUG
         if (gNoisyReflow && !line->IsDirty() && !notWrapping) {
           IndentBy(stdout, gNoiseIndent + 1);

@@ -709,11 +709,6 @@ public:
   NS_IMETHOD GetEventTargetFrame(nsIFrame** aFrame);
 
   NS_IMETHOD IsReflowLocked(PRBool* aIsLocked);  
-#ifdef IBMBIDI
-  NS_IMETHOD SetCursorBidiLevel(PRUint8 aLevel);
-  NS_IMETHOD GetCursorBidiLevel(PRUint8 *aOutLevel);
-  NS_IMETHOD UndefineCursorBidiLevel();
-#endif
 
   //nsIViewObserver interface
 
@@ -757,6 +752,9 @@ public:
   NS_IMETHOD CompleteMove(PRBool aForward, PRBool aExtend);
   NS_IMETHOD SelectAll();
   NS_IMETHOD CheckVisibility(nsIDOMNode *node, PRInt16 startOffset, PRInt16 EndOffset, PRBool *_retval);
+  NS_IMETHOD SetCursorBidiLevel(PRUint8 aLevel);
+  NS_IMETHOD GetCursorBidiLevel(PRUint8 *aOutLevel);
+  NS_IMETHOD UndefineCursorBidiLevel();
 
   // nsIDocumentObserver
   NS_IMETHOD BeginUpdate(nsIDocument *aDocument);
@@ -1053,6 +1051,7 @@ PresShell::PresShell():mStackArena(nsnull),
   mReflowCountMgr = new ReflowCountMgr();
 #endif
 #ifdef IBMBIDI
+//  mBidiLevel = nsISelectionController::BIDI_LEVEL_UNDEFINED;
   mBidiLevel = BIDI_LEVEL_UNDEFINED;
 #endif
 }
@@ -2235,6 +2234,40 @@ PresShell::CheckVisibility(nsIDOMNode *node, PRInt16 startOffset, PRInt16 EndOff
   return NS_OK;//dont worry about other return val
 }
 
+NS_IMETHODIMP
+   PresShell::SetCursorBidiLevel(PRUint8 aLevel)
+{
+#ifdef IBMBIDI
+  mBidiLevel = aLevel;
+
+//  PRBool parityChange = ((mBidiLevel ^ aLevel) & 1); // is the parity of the new level different from the current level?
+//  if (parityChange)                                  // if so, change the keyboard language
+  if (mBidiKeyboard)
+    mBidiKeyboard->SetLangFromBidiLevel(aLevel);
+#endif // IBMBIDI
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+   PresShell::GetCursorBidiLevel(PRUint8 *aOutLevel)
+{
+#ifdef IBMBIDI
+  if (!aOutLevel) { return NS_ERROR_INVALID_ARG; }
+  *aOutLevel = mBidiLevel;
+#endif
+  return NS_OK;    
+}
+
+NS_IMETHODIMP
+   PresShell::UndefineCursorBidiLevel()
+{
+#ifdef IBMBIDI
+//  mBidiLevel |= nsISelectionController::BIDI_LEVEL_UNDEFINED;
+  mBidiLevel |= BIDI_LEVEL_UNDEFINED;
+#endif
+  return NS_OK;
+}
+
 //end implementations nsISelectionController
 
 
@@ -2923,17 +2956,47 @@ PresShell::DoCopy()
 
   doc->CreateXIF(buffer,sel);
 
-#ifdef IBMBIDI_NOT
+#ifdef IBMBIDI//ahmed
   rv = NS_OK;
   NS_WITH_SERVICE(nsIUBidiUtils, BidiEngine, kUBidiUtilCID, &rv);
   nsBidiOptions mBidioptions;
   mPresContext->GetBidi(&mBidioptions);
-  if (mBidioptions.mclipboardtextmode == IBMBIDI_CLIPBOARDTEXTMODE_LOGICAL){
-    nsString NewBuffer;
-    PRUint32 txtSizeChange = 0;
-    BidiEngine->Conv_FE_06 (buffer, NewBuffer);
+  PRBool mIsvisual;
+  PRBool ArabicCharset;
+  mPresContext->IsVisualMode(mIsvisual);
+  mPresContext->IsArabicEncoding(ArabicCharset);
+  
+  if (ArabicCharset==PR_TRUE){
+    if ( (mBidioptions.mclipboardtextmode == IBMBIDI_CLIPBOARDTEXTMODE_LOGICAL)&&(mIsvisual) ) {
+      nsString NewBuffer;
+      if (mBidioptions.mdirection==IBMBIDI_TEXTDIRECTION_LTR){
+      BidiEngine->Conv_FE_06_WithReverse(buffer, NewBuffer);
+    }
+    if (mBidioptions.mdirection==IBMBIDI_TEXTDIRECTION_RTL){
+     BidiEngine->Conv_FE_06 (buffer, NewBuffer);
+    }
     buffer = NewBuffer;
+    }
+    else if (mIsvisual) {
+     if ( (mBidioptions.mclipboardtextmode == IBMBIDI_CLIPBOARDTEXTMODE_VISUAL)|| (mBidioptions.mclipboardtextmode == IBMBIDI_CLIPBOARDTEXTMODE_SOURCE) ){
+#ifdef _WIN32
+       if ( (BidiEngine->IsWin95())||(BidiEngine->IsWin98()) ){
+         nsString NewBuffer;
+         BidiEngine->Conv_FE_06 (buffer, NewBuffer);
+         buffer = NewBuffer;
+       }
+#endif//_win32
+     }
+   }
+   else if (!mIsvisual) {
+     if (mBidioptions.mclipboardtextmode == IBMBIDI_CLIPBOARDTEXTMODE_VISUAL) {
+       nsString NewBuffer;
+       BidiEngine->Conv_06_FE_WithReverse(buffer, NewBuffer,mPresContext->map);
+       buffer = NewBuffer;
+      }
+    }
   }
+	
 #endif // IBMBIDI
 
   // Get the Clipboard
@@ -3722,38 +3785,6 @@ PresShell::GetPlaceholderFrameFor(nsIFrame*  aFrame,
 
   return rv;
 }
-
-#ifdef IBMBIDI
-NS_IMETHODIMP
-   PresShell::SetCursorBidiLevel(PRUint8 aLevel)
-{
-  // If the current level is undefined, we have just inserted new text.
-  // In this case, we don't want to reset the keyboard language
-  PRBool afterInsert = mBidiLevel & BIDI_LEVEL_UNDEFINED;
-  mBidiLevel = aLevel;
-
-//  PRBool parityChange = ((mBidiLevel ^ aLevel) & 1); // is the parity of the new level different from the current level?
-//  if (parityChange)                                  // if so, change the keyboard language
-  if (mBidiKeyboard && !afterInsert)
-    mBidiKeyboard->SetLangFromBidiLevel(aLevel);
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-   PresShell::GetCursorBidiLevel(PRUint8 *aOutLevel)
-{
-  if (!aOutLevel) { return NS_ERROR_INVALID_ARG; }
-  *aOutLevel = mBidiLevel;
-  return NS_OK;    
-}
-
-NS_IMETHODIMP
-   PresShell::UndefineCursorBidiLevel()
-{
-  mBidiLevel |= BIDI_LEVEL_UNDEFINED;
-  return NS_OK;
-}
-#endif // IBMBIDI
 
 //nsIViewObserver
 

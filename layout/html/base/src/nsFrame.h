@@ -363,7 +363,8 @@ public:
 #ifdef IBMBIDI
   NS_IMETHOD GetBidiProperty(nsIPresContext* aPresContext,
                              nsIAtom*        aPropertyName,
-                             void**          aPropertyValue) const;
+                             void**          aPropertyValue,
+                             PRInt32         aSize = sizeof(void*) ) const;
   NS_IMETHOD SetBidiProperty(nsIPresContext* aPresContext,
                              nsIAtom*        aPropertyName,
                              void*           aPropertyValue) const ;

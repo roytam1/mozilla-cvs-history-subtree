@@ -75,20 +75,37 @@ public:
    NS_IMETHOD SymmSwap( PRUnichar* aChar);
 
 // IBMBIDI - EGYPT - Start
-	void HebrewReordering(const PRUnichar *aString, PRUint32 aLen,
-							PRUnichar* aBuf, PRUint32 &aBufLen);
-	void ArabicShaping(const PRUnichar* aString, PRUint32 aLen,
-             PRUnichar* aBuf, PRUint32 &aBufLen, PRUint32* map);
-	PRBool NeedComplexScriptHandling(const PRUnichar *aString, PRUint32 aLen,
-       PRBool bFontSupportHebrew, PRBool* oHebrew,
-       PRBool bFontSupportArabic, PRBool* oArabic);
+   void HebrewReordering(const PRUnichar *aString, PRUint32 aLen,
+   PRUnichar* aBuf, PRUint32 &aBufLen);
+   void ArabicShaping(const PRUnichar* aString, PRUint32 aLen,
+   PRUnichar* aBuf, PRUint32 &aBufLen, PRUint32* map);
+   PRBool NeedComplexScriptHandling(const PRUnichar *aString, PRUint32 aLen,
+   PRBool bFontSupportHebrew, PRBool* oHebrew,
+   PRBool bFontSupportArabic, PRBool* oArabic);
 
-	void numbers_to_arabic (PRUnichar* uch);
-	void numbers_to_hindi (PRUnichar* uch);
-	void HandleNumbers (PRUnichar* Buffer, PRUint32 size, PRUint32  Num_Flag);
-	void Conv_FE_06 (const nsString aSrc, nsString & aDst );
+   void numbers_to_arabic (PRUnichar* uch);
+   void numbers_to_hindi (PRUnichar* uch);
+   void HandleNumbers (PRUnichar* Buffer, PRUint32 size, PRUint32  Num_Flag);
+   void Conv_FE_06 (const nsString aSrc, nsString & aDst );
+//ahmed
+   void Conv_FE_06_WithReverse(const nsString aSrc, nsString & aDst );
+   void Conv_06_FE_WithReverse(const nsString aSrc, nsString & aDst,PRUint32* map );
+   PRBool NeedReverseHandling(const PRUnichar *aString, PRUint32 aLen);
+   void GetSystem();
+   PRBool IsWin95();
+   PRBool IsWin98();
+   PRBool IsWinNT();
+   PRBool m_bWin32s;
+   PRBool m_bWinNT;
+   PRBool m_bWin4;
+   PRBool m_bWin98;
+   PRBool m_bWin95;
+   PRBool m_bWin5;
+ //	Init os version major, minor, build.
+   PRInt32 m_dwMajor;
+   PRInt32 m_dwMinor;
+   PRInt32 m_dwBuild;
 // IBMBIDI - EGYPT - End
-
 };
 
 #endif  /* nsBidiUtilsImp_h__ */

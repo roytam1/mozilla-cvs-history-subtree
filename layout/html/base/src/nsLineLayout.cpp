@@ -877,7 +877,7 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
           }
         }
         else if (type == nsIReflowCommand::ReflowDirty &&
-                 (state & NS_FRAME_IS_DIRTY)) {
+                 (state & NS_FRAME_IS_DIRTY)) {          
           reason = eReflowReason_Dirty;
         }
       }
@@ -965,10 +965,6 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
 
 #ifdef IBMBIDI
   PRInt32 start, end;
-  PRBool isBidiFrame = PR_FALSE;
-  nsIAtom* frameType;
-
-  aFrame->GetFrameType(&frameType);
 
   PRBool bidiEnabled;
   mPresContext->BidiEnabled(bidiEnabled);
@@ -978,11 +974,8 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
   if (bidiEnabled) {
     nsIFrame* formFrame;
   
-    if (frameType == nsLayoutAtoms::textFrame) {
+    if (state & NS_FRAME_IS_BIDI) {
       aFrame->GetOffsets(start, end);
-      if (start < end) {
-        isBidiFrame = PR_TRUE;
-      }
     }
     else if (NS_SUCCEEDED(aFrame->QueryInterface(nsIFormControlFrame::GetIID(),
                           (void**) &formFrame) )
@@ -1016,10 +1009,8 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
 
   // XXX See if the frame is a placeholderFrame and if it is process
   // the floater.
-#ifndef IBMBIDI
   nsIAtom* frameType;
   aFrame->GetFrameType(&frameType);
-#endif // !defined IBMBIDI
   if (frameType) {
     if (frameType == nsLayoutAtoms::placeholderFrame) {
       nsIFrame* outOfFlowFrame = ((nsPlaceholderFrame*)aFrame)->GetOutOfFlowFrame();
@@ -1219,23 +1210,22 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
 #endif
 
 #ifdef IBMBIDI
-  if (isBidiFrame) {
+  if (state & NS_FRAME_IS_BIDI) {
     // Since aReflowStatus may change, check it at the end
     if (NS_INLINE_IS_BREAK_BEFORE(aReflowStatus) ) {
       NS_SetContentLengthAndOffsetForBidi(aFrame, start, end);
     }
     else if (!NS_FRAME_IS_COMPLETE(aReflowStatus) ) {
-      PRInt32 newStart, newEnd;
-      aFrame->GetOffsets(newStart, newEnd);
-      PRInt32 delta = newEnd - end;
-      if (delta) {
+      PRInt32 newEnd;
+      aFrame->GetOffsets(start, newEnd);
+      if (newEnd != end) {
         nsIFrame* nextInFlow;
         aFrame->GetNextInFlow(&nextInFlow);
         if (nextInFlow) {
           nextInFlow->GetOffsets(start, end);
-          NS_SetContentLengthAndOffsetForBidi(nextInFlow, newEnd, end + delta);
+          NS_SetContentLengthAndOffsetForBidi(nextInFlow, newEnd, end);
         } // nextInFlow
-      } // delta
+      } // newEnd != end
     } // !NS_FRAME_IS_COMPLETE(aReflowStatus)
   } // isBidiFrame
 #endif // IBMBIDI

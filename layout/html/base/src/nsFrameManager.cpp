@@ -717,6 +717,15 @@ FrameManager::RemoveFrame(nsIPresContext* aPresContext,
                           nsIAtom*        aListName,
                           nsIFrame*       aOldFrame)
 {
+#ifdef IBMBIDI
+  // Don't let the parent remove next bidi. In the other cases the it should NOT be removed.
+  nsIFrame* nextBidi;
+  GetFrameProperty(aOldFrame, nsLayoutAtoms::nextBidi, 0, (void**) &nextBidi);
+  if (nextBidi) {
+    RemoveFrame(aPresContext, aPresShell, aParentFrame, aListName, nextBidi);
+  }
+#endif // IBMBIDI
+
   return aParentFrame->RemoveFrame(aPresContext, aPresShell, aListName,
                                    aOldFrame);
 }
