@@ -138,7 +138,7 @@ nsldapi_send_initial_request( LDAP *ld, int msgid, unsigned long msgtype,
 	} else {
 #endif /* LDAP_DNS */
 		/*
-		 * use of DNS is turned off or this is an X.500 DN...
+		 * use of DNS is turned off or this is an LDAP DN...
 		 * use our default connection
 		 */
 		servers = NULL;
@@ -249,7 +249,7 @@ nsldapi_send_server_request(
 			NSLDAPI_FREE( lr );
 		}
 		LDAP_SET_LDERRNO( ld, LDAP_NO_MEMORY, NULL, NULL );
-		nsldapi_free_connection( ld, lc, 0, 0 );
+		nsldapi_free_connection( ld, lc, NULL, NULL, 0, 0 );
 		ber_free( ber, 1 );
 		if ( incparent ) {
 			/* Forget about the bind */
@@ -273,8 +273,10 @@ nsldapi_send_server_request(
 		lr->lr_origid = parentreq->lr_origid;
 		lr->lr_parentcnt = parentreq->lr_parentcnt + 1;
 		lr->lr_parent = parentreq;
-		lr->lr_refnext = parentreq->lr_refnext;
-		parentreq->lr_refnext = lr;
+		if ( parentreq->lr_child != NULL ) {
+			lr->lr_sibling = parentreq->lr_child;
+		}
+		parentreq->lr_child = lr;
 	} else {			/* original request */
 		lr->lr_origid = lr->lr_msgid;
 	}
@@ -296,7 +298,7 @@ nsldapi_send_server_request(
 
 			LDAP_SET_LDERRNO( ld, LDAP_SERVER_DOWN, NULL, NULL );
 			nsldapi_free_request( ld, lr, 0 );
-			nsldapi_free_connection( ld, lc, 0, 0 );
+			nsldapi_free_connection( ld, lc, NULL, NULL, 0, 0 );
 			LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
 			LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
 			return( -1 );
@@ -516,7 +518,7 @@ nsldapi_new_connection( LDAP *ld, LDAPServer **srvlistp, int use_ldsb,
 		}
 
 		if ( err != 0 ) {
-			nsldapi_free_connection( ld, lc, 1, 0 );
+			nsldapi_free_connection( ld, lc, NULL, NULL, 1, 0 );
 			lc = NULL;
 		}
 	}
@@ -568,7 +570,8 @@ use_connection( LDAP *ld, LDAPConn *lc )
 
 
 void
-nsldapi_free_connection( LDAP *ld, LDAPConn *lc, int force, int unbind )
+nsldapi_free_connection( LDAP *ld, LDAPConn *lc, LDAPControl **serverctrls,
+    LDAPControl **clientctrls, int force, int unbind )
 {
 	LDAPConn	*tmplc, *prevlc;
 
@@ -578,7 +581,8 @@ nsldapi_free_connection( LDAP *ld, LDAPConn *lc, int force, int unbind )
 		if ( lc->lconn_status == LDAP_CONNST_CONNECTED ) {
 			nsldapi_mark_select_clear( ld, lc->lconn_sb );
 			if ( unbind ) {
-				nsldapi_send_unbind( ld, lc->lconn_sb );
+				nsldapi_send_unbind( ld, lc->lconn_sb,
+				    serverctrls, clientctrls );
 			}
 			nsldapi_close_connection( ld, lc->lconn_sb );
 		}
@@ -733,21 +737,22 @@ nsldapi_free_request( LDAP *ld, LDAPRequest *lr, int free_conn )
 {
 	LDAPRequest	*tmplr, *nextlr;
 
-	LDAPDebug( LDAP_DEBUG_TRACE, "nsldapi_free_request (origid %d, msgid %d)\n",
-		lr->lr_origid, lr->lr_msgid, 0 );
+	LDAPDebug( LDAP_DEBUG_TRACE,
+		"nsldapi_free_request 0x%x (origid %d, msgid %d)\n",
+		lr, lr->lr_origid, lr->lr_msgid );
 
 	if ( lr->lr_parent != NULL ) {
 		--lr->lr_parent->lr_outrefcnt;
-	} else {
-		/* free all referrals (child requests) */
-		for ( tmplr = lr->lr_refnext; tmplr != NULL; tmplr = nextlr ) {
-			nextlr = tmplr->lr_refnext;
-			nsldapi_free_request( ld, tmplr, free_conn );
-		}
+	}
+
+	/* free all of our spawned referrals (child requests) */
+	for ( tmplr = lr->lr_child; tmplr != NULL; tmplr = nextlr ) {
+		nextlr = tmplr->lr_sibling;
+		nsldapi_free_request( ld, tmplr, free_conn );
 	}
 
 	if ( free_conn ) {
-		nsldapi_free_connection( ld, lr->lr_conn, 0, 1 );
+		nsldapi_free_connection( ld, lr->lr_conn, NULL, NULL, 0, 1 );
 	}
 
 	if ( lr->lr_prev == NULL ) {
@@ -1143,7 +1148,8 @@ re_encode_request( LDAP *ld, BerElement *origber, int msgid, LDAPURLDesc *ludp,
         }
 
 	if ( tag == LDAP_REQ_BIND ) {
-		rc = ber_printf( ber, "{it{is", msgid, tag, ver, dn );
+		rc = ber_printf( ber, "{it{is", msgid, tag,
+		    (int)ver /* XXX lossy cast */, dn );
 	} else if ( tag == LDAP_REQ_DELETE ) {
 		rc = ber_printf( ber, "{its}", msgid, tag, dn );
 	} else {

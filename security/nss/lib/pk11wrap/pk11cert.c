@@ -842,7 +842,7 @@ typedef struct pk11TraverseSlotStr {
     void *callbackArg;
     CK_ATTRIBUTE *findTemplate;
     int templateCount;
-} pk11TraverseSlot;
+} pk11TraverseSlotCert;
 
 /*
  * Extract all the certs on a card from a slot.
@@ -854,7 +854,7 @@ PK11_TraverseSlot(PK11SlotInfo *slot, void *arg)
     CK_OBJECT_HANDLE *objID = NULL;
     int object_count = 0;
     CK_ULONG returned_count = 0;
-    pk11TraverseSlot *slotcb = (pk11TraverseSlot*) arg;
+    pk11TraverseSlotCert *slotcb = (pk11TraverseSlotCert *) arg;
 
     objID = pk11_FindObjectsByTemplate(slot,slotcb->findTemplate,
 		slotcb->templateCount,&object_count);
@@ -982,7 +982,7 @@ pk11_UpdateSlotPQG(PK11SlotInfo *slot)
 static SECStatus
 pk11_ExtractCertsFromSlot(PK11SlotInfo *slot, void *arg)
 {
-    pk11TraverseSlot *slotcb = (pk11TraverseSlot*) arg;
+    pk11TraverseSlotCert *slotcb = (pk11TraverseSlotCert *) arg;
     int object_count;
     SECStatus rv;
 
@@ -1023,7 +1023,7 @@ PK11_ReadSlotCerts(PK11SlotInfo *slot)
     /* build slot list */
     pk11CertCallback caller;
     pk11DoCertCallback saver;
-    pk11TraverseSlot creater;
+    pk11TraverseSlotCert creater;
     CK_ATTRIBUTE theTemplate;
     CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
 
@@ -1083,7 +1083,7 @@ PK11_TraverseSlotCerts(SECStatus(* callback)(CERTCertificate*,SECItem *,void *),
 						void *arg, void *wincx) {
     pk11CertCallback caller;
     pk11DoCertCallback saver;
-    pk11TraverseSlot creater;
+    pk11TraverseSlotCert creater;
     CK_ATTRIBUTE theTemplate;
     CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
 
@@ -1101,48 +1101,6 @@ PK11_TraverseSlotCerts(SECStatus(* callback)(CERTCertificate*,SECItem *,void *),
 
     return pk11_TraverseAllSlots(PR_FALSE, pk11_ExtractCertsFromSlot, 
 							&creater, wincx);
-}
-
-/***********************************************************************
- * PK11_TraversePrivateKeysInSlot
- *
- * Traverses all the private keys on a slot.
- *
- * INPUTS
- *      slot
- *          The PKCS #11 slot whose private keys you want to traverse.
- *      callback
- *          A callback function that will be called for each key.
- *      arg
- *          An argument that will be passed to the callback function.
- */
-SECStatus
-PK11_TraversePrivateKeysInSlot( PK11SlotInfo *slot,
-    SECStatus(* callback)(SECKEYPrivateKey*, void*), void *arg)
-{
-    pk11KeyCallback perKeyCB;
-    pk11TraverseSlot perObjectCB;
-    CK_OBJECT_CLASS privkClass = CKO_PRIVATE_KEY;
-    CK_ATTRIBUTE theTemplate[1];
-    int templateSize = 1;
-
-    theTemplate[0].type = CKA_CLASS;
-    theTemplate[0].pValue = &privkClass;
-    theTemplate[0].ulValueLen = sizeof(privkClass);
-
-    if(slot==NULL) {
-        return SECSuccess;
-    }
-
-    perObjectCB.callback = pk11_DoKeys;
-    perObjectCB.callbackArg = &perKeyCB;
-    perObjectCB.findTemplate = theTemplate;
-    perObjectCB.templateCount = templateSize;
-    perKeyCB.callback = callback;
-    perKeyCB.callbackArg = arg;
-    perKeyCB.wincx = NULL;
-
-    return PK11_TraverseSlot(slot, &perObjectCB);
 }
 
 CK_OBJECT_HANDLE *
@@ -1588,24 +1546,6 @@ PK11_KeyForCertExists(CERTCertificate *cert, CK_OBJECT_HANDLE *keyPtr,
     return slot;
 
 }
-/*
- * import a cert for a private key we have already generated. Set the label
- * on both to be the nickname. This is for the Key Gen, orphaned key case.
- */
-PK11SlotInfo *
-PK11_KeyForDERCertExists(SECItem *derCert, CK_OBJECT_HANDLE *keyPtr, 
-								void *wincx) {
-    CERTCertificate *cert;
-    PK11SlotInfo *slot = NULL;
-
-    cert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(), derCert, NULL,
-	                                   PR_FALSE, PR_TRUE);
-    if (cert == NULL) return NULL;
-
-    slot = PK11_KeyForCertExists(cert, keyPtr, wincx);
-    CERT_DestroyCertificate (cert);
-    return slot;
-}
 
 PK11SlotInfo *
 PK11_ImportCertForKey(CERTCertificate *cert, char *nickname,void *wincx) {
@@ -1623,20 +1563,6 @@ PK11_ImportCertForKey(CERTCertificate *cert, char *nickname,void *wincx) {
 	PORT_SetError(SEC_ERROR_ADDING_CERT);
     }
 
-    return slot;
-}
-
-PK11SlotInfo *
-PK11_ImportDERCertForKey(SECItem *derCert, char *nickname,void *wincx) {
-    CERTCertificate *cert;
-    PK11SlotInfo *slot = NULL;
-
-    cert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(), derCert, NULL,
-	                                   PR_FALSE, PR_TRUE);
-    if (cert == NULL) return NULL;
-
-    slot = PK11_ImportCertForKey(cert, nickname, wincx);
-    CERT_DestroyCertificate (cert);
     return slot;
 }
 
@@ -2159,7 +2085,7 @@ PK11_TraverseCertsForSubjectInSlot(CERTCertificate *cert, PK11SlotInfo *slot,
 	SECStatus(* callback)(CERTCertificate*, void *), void *arg)
 {
     pk11DoCertCallback caller;
-    pk11TraverseSlot callarg;
+    pk11TraverseSlotCert callarg;
     CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
     CK_ATTRIBUTE theTemplate[] = {
 	{ CKA_CLASS, NULL, 0 },
@@ -2190,7 +2116,7 @@ PK11_TraverseCertsForNicknameInSlot(SECItem *nickname, PK11SlotInfo *slot,
 	SECStatus(* callback)(CERTCertificate*, void *), void *arg)
 {
     pk11DoCertCallback caller;
-    pk11TraverseSlot callarg;
+    pk11TraverseSlotCert callarg;
     CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
     CK_ATTRIBUTE theTemplate[] = {
 	{ CKA_CLASS, NULL, 0 },
@@ -2226,7 +2152,7 @@ PK11_TraverseCertsInSlot(PK11SlotInfo *slot,
 	SECStatus(* callback)(CERTCertificate*, void *), void *arg)
 {
     pk11DoCertCallback caller;
-    pk11TraverseSlot callarg;
+    pk11TraverseSlotCert callarg;
     CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
     CK_ATTRIBUTE theTemplate[] = {
 	{ CKA_CLASS, NULL, 0 },
@@ -2648,7 +2574,7 @@ pk11ListCertCallback(CERTCertificate *cert, SECItem *derCert, void *arg)
     CERTCertTrust *trust;
     PRBool isUnique = PR_FALSE;
     char *nickname = NULL;
-    unsigned int certType;
+
 
     if ((type == PK11CertListUnique) || (type == PK11CertListRootUnique)) {
 	isUnique = PR_TRUE;
@@ -2691,11 +2617,6 @@ pk11ListCertCallback(CERTCertificate *cert, SECItem *derCert, void *arg)
 	return SECSuccess;
     }
 
-    /* if we want CA certs and it ain't one, skip it */
-    if( type == PK11CertListCA  && (!CERT_IsCACert(newCert, &certType)) ) {
-	CERT_DestroyCertificate(newCert);
-	return SECSuccess;
-    }
 
     /* put slot certs at the end */
     if (newCert->slot && !PK11_IsInternal(newCert->slot)) {
@@ -2728,81 +2649,3 @@ PK11_ListCerts(PK11CertListType type, void *pwarg)
     }
     return certList;
 }
-
-static SECItem *
-pk11_GetLowLevelKeyFromHandle(PK11SlotInfo *slot, CK_OBJECT_HANDLE handle) {
-    CK_ATTRIBUTE theTemplate[] = {
-	{ CKA_ID, NULL, 0 },
-    };
-    int tsize = sizeof(theTemplate)/sizeof(theTemplate[0]);
-    CK_RV crv;
-    SECItem *item;
-
-    item = SECITEM_AllocItem(NULL, NULL, 0);
-
-    if (item == NULL) {
-	return NULL;
-    }
-
-    crv = PK11_GetAttributes(NULL,slot,handle,theTemplate,tsize);
-    if (crv != CKR_OK) {
-	SECITEM_FreeItem(item,PR_TRUE);
-	PORT_SetError( PK11_MapError(crv) );
-	return NULL;
-    }
-
-    item->data = theTemplate[0].pValue;
-    item->len =theTemplate[0].ulValueLen;
-
-    return item;
-}
-    
-SECItem *
-PK11_GetLowLevelKeyIDForCert(PK11SlotInfo *slot,
-					CERTCertificate *cert, void *wincx)
-{
-    CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
-    CK_ATTRIBUTE theTemplate[] = {
-	{ CKA_VALUE, NULL, 0 },
-	{ CKA_CLASS, NULL, 0 }
-    };
-    /* if you change the array, change the variable below as well */
-    int tsize = sizeof(theTemplate)/sizeof(theTemplate[0]);
-    CK_OBJECT_HANDLE certHandle;
-    CK_ATTRIBUTE *attrs = theTemplate;
-    PK11SlotInfo *slotRef = NULL;
-    SECItem *item;
-    SECStatus rv;
-
-    if (slot) {
-	PK11_SETATTRS(attrs, CKA_VALUE, cert->derCert.data, 
-						cert->derCert.len); attrs++;
-
-	rv = PK11_Authenticate(slot, PR_TRUE, wincx);
-	if (rv != SECSuccess) {
-	    return NULL;
-	}
-        certHandle = pk11_getcerthandle(slot,cert,theTemplate,tsize);
-    } else {
-    	certHandle = PK11_FindObjectForCert(cert, wincx, &slotRef);
-	if (certHandle == CK_INVALID_KEY) {
-	   return pk11_mkcertKeyID(cert);
-	}
-	slot = slotRef;
-    }
-
-    if (certHandle == CK_INVALID_KEY) {
-	 return NULL;
-    }
-
-    item = pk11_GetLowLevelKeyFromHandle(slot,certHandle);
-    if (slotRef) PK11_FreeSlot(slotRef);
-    return item;
-}
-
-SECItem *
-PK11_GetLowLevelKeyIDForPrivateKey(SECKEYPrivateKey *privKey)
-{
-    return pk11_GetLowLevelKeyFromHandle(privKey->pkcs11Slot,privKey->pkcs11ID);
-}
-

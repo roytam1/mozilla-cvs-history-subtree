@@ -59,7 +59,7 @@ NSS_CMSRecipientInfo_Create(NSSCMSMessage *cmsg, CERTCertificate *cert)
     NSSCMSRecipientInfo *ri;
     void *mark;
     SECOidTag certalgtag;
-    SECStatus rv = SECSuccess;
+    SECStatus rv;
     NSSCMSRecipientEncryptedKey *rek;
     NSSCMSOriginatorIdentifierOrKey *oiok;
     unsigned long version;
@@ -274,7 +274,7 @@ NSS_CMSRecipientInfo_WrapBulkKey(NSSCMSRecipientInfo *ri, PK11SymKey *bulkkey, S
 {
     CERTCertificate *cert;
     SECOidTag certalgtag;
-    SECStatus rv = SECSuccess;
+    SECStatus rv;
     SECItem *params = NULL;
     NSSCMSRecipientEncryptedKey *rek;
     NSSCMSOriginatorIdentifierOrKey *oiok;

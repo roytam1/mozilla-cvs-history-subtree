@@ -72,35 +72,15 @@ static PRBool secmod_ModuleHasRoots(SECMODModule *module)
  * The following code is an attempt to automagically find the external root
  * module. NOTE: This code should be checked out on the MAC! There must be
  * some cross platform support out there to help out with this?
- * Note: Keep the #if-defined chunks in order. HPUX must select before UNIX.
  */
 
 static char *dllnames[]= {
-#if defined(XP_WIN32)
-	"nssckbi.dll",
-	"roots.dll", 
-	"netckbi.dll",
-	"mozckbi.dll",
-#elif defined(HPUX)
-	"libnssckbi.sl",
-	"libroots.sl",
-	"libnetckbi.sl",
-	"libmozckbi.sl",
-#elif defined(XP_UNIX)
-	"libnssckbi.so",
-	"libroots.so",
-	"libnetckbi.so",
-	"libmozckbi.so",
-#elif defined(XP_MAC)
-	"NSS Builtin Root Certs",
-	"Root Certs",
-	"Netscape Builtin Root Certs",
-	"Mozilla Builtin Root Certs",
-#else
-	#error "Uh! Oh! I don't know about this platform."
-#endif
+	"roots.dll", "libroots.so","libroots.sl","Root Certs",
+	"roots.dll", "libroots.so","libroots.sl","Root Certs",
+	"nssckbi.dll","libnssckbi.so","libnssckbi.sl","NSS Builtin Root Certs",
+	"mozckbi.dll","libmozckbi.so","libmozckbi.sl","Mozilla Builtin Root Certs",
+	"netckbi.dll","libnetckbi.so","libnetckbi.sl","Netscape Builtin Root Certs",
 	0 };
-	
 
 #define MAXDLLNAME 40
 

@@ -1,50 +1,40 @@
 dnl -*- Mode: Autoconf; tab-width: 4; indent-tabs-mode: nil; -*-
-dnl 
 dnl The contents of this file are subject to the Mozilla Public
 dnl License Version 1.1 (the "License"); you may not use this file
 dnl except in compliance with the License. You may obtain a copy of
 dnl the License at http://www.mozilla.org/MPL/
-dnl 
+dnl
 dnl Software distributed under the License is distributed on an "AS
 dnl IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
 dnl implied. See the License for the specific language governing
 dnl rights and limitations under the License.
-dnl 
-dnl The Original Code is the Netscape Portable Runtime (NSPR).
-dnl 
-dnl The Initial Developer of the Original Code is Netscape
-dnl Communications Corporation.  Portions created by Netscape are 
-dnl Copyright (C) 1998o-2000 Netscape Communications Corporation.  All
+dnl
+dnl The Original Code is the configure.in script for NSPR.
+dnl
+dnl The Initial Developer of the Original Code is Christopher
+dnl Seawood. Portions created by Christopher Seawood are
+dnl Copyright (C) 1999 Christopher Seawood. All
 dnl Rights Reserved.
-dnl 
+dnl
 dnl Contributor(s):
-dnl     Christopher Seawood <cls@seawood.org>
-dnl 
-dnl Alternatively, the contents of this file may be used under the
-dnl terms of the GNU General Public License Version 2 or later (the
-dnl "GPL"), in which case the provisions of the GPL are applicable 
-dnl instead of those above.  If you wish to allow use of your 
-dnl version of this file only under the terms of the GPL and not to
-dnl allow others to use your version of this file under the MPL,
-dnl indicate your decision by deleting the provisions above and
-dnl replace them with the notice and other provisions required by
-dnl the GPL.  If you do not delete the provisions above, a recipient
-dnl may use your version of this file under either the MPL or the
-dnl GPL.
-dnl 
-
+dnl
+dnl Process this file with autoconf to produce a configure script.
+dnl
 AC_PREREQ(2.12)
 AC_INIT(config/libc_r.h)
 
 AC_CONFIG_AUX_DIR(${srcdir}/build/autoconf)
 AC_CANONICAL_SYSTEM
 
+dnl Set this define to make fixes w/o breaking anything else.
+AC_DEFINE(USE_AUTOCONF)
+
 dnl ========================================================
 dnl = Defaults
 dnl ========================================================
 MOD_MAJOR_VERSION=4
-MOD_MINOR_VERSION=2
-MOD_REVISION_VERSION=0
+MOD_MINOR_VERSION=0
+MOD_REVISION_VERSION=1
 NSPR_MODNAME=nspr20
 _HAVE_PTHREADS=
 USE_PTHREADS=
@@ -61,7 +51,6 @@ MOZ_DEBUG=1
 MOZ_OPTIMIZE=
 OBJDIR=.
 OBJDIR_NAME=.
-OBJDIR_SUFFIX=OBJ
 NSINSTALL='$(MOD_DEPTH)/config/$(OBJDIR_NAME)/nsinstall'
 NOSUCHFILE=/no-such-file
 LIBNSPR='-L$(dist_libdir) -lnspr$(MOD_MAJOR_VERSION)'
@@ -83,7 +72,12 @@ LDFLAGS="${LDFLAGS=}"
 HOST_CFLAGS="${HOST_CFLAGS=}"
 HOST_LDFLAGS="${HOST_LDFLAGS=}"
 
+dnl ========================================================
+dnl = Irix 6.x should use n32 ABI by default
+dnl ========================================================
 case "$target" in
+*-irix6*)
+	USE_N32=1 ;;
 *-cygwin*)
     # Check to see if we are really running in a msvc environemnt
     _WIN32_MSVC=
@@ -176,14 +170,8 @@ AC_ARG_ENABLE(debug,
 AC_ARG_ENABLE(win32-target,
     [  --enable-win32-target=\$t
                           Specify win32 flavor. (WIN95 or WINNT)],
-    OS_TARGET=`echo $enableval | tr a-z A-Z`,
-    OS_TARGET=)
-
-AC_ARG_ENABLE(debug-rtl,
-    [  --enable-debug-rtl      Use the MSVC debug runtime library],
-    [ if test "$enableval" = "yes"; then
-	    USE_DEBUG_RTL=1
-      fi ])
+    MOZ_WIN32_TARGET=`echo $enableval | tr a-z A-Z`,
+    MOZ_WIN32_TARGET=)
 
 AC_ARG_ENABLE(n32,
     [  --enable-n32            Enable n32 ABI support (IRIX only)],
@@ -206,106 +194,6 @@ AC_ARG_ENABLE(mdupdate,
 	    USE_MDUPDATE=1
       fi ])
 
-dnl ========================================================
-dnl =
-dnl = Set the threading model
-dnl =
-dnl ========================================================
-case "$target" in
-
-*-aix*)
-    case "${target_os}" in
-    aix3.2*)
-        USE_NSPR_THREADS=1
-        ;;
-    *)
-        USE_PTHREADS=1
-        ;;
-    esac
-    ;;
-
-esac
-
-dnl ========================================================
-dnl =
-dnl = Set the default C compiler
-dnl =
-dnl ========================================================
-if test -z "$CC"; then
-    case "$target" in
-
-    *-aix*)
-        if test -z "$USE_NSPR_THREADS"; then
-            CC=xlC_r
-        else
-            CC=xlC
-        fi
-    ;;
-
-    *-hpux*)
-        CC=cc
-    ;;
-
-    *-irix*)
-        CC=cc
-    ;;
-
-    *-osf*)
-        CC=cc
-    ;;
-
-    *-solaris*)
-        CC=cc
-    ;;
-
-    esac
-fi
-
-dnl ========================================================
-dnl =
-dnl = Set the default C++ compiler
-dnl =
-dnl ========================================================
-if test -z "$CXX"; then
-    case "$target" in
-
-    *-aix*)
-        if test -z "$USE_NSPR_THREADS"; then
-            CXX=xlC_r
-        else
-            CXX=xlC
-        fi
-    ;;
-
-    *-hpux*)
-        case "${target_os}" in
-        hpux10.30)
-            CXX=aCC
-            ;;
-        hpux11.*)
-            CXX=aCC
-            ;;
-        *)
-            CXX=CC
-            ;;
-        esac
-    ;;
-
-    *-irix*)
-        CXX=CC
-    ;;
-
-    *-osf*)
-        CXX=cxx
-    ;;
-
-    *-solaris*)
-        CXX=CC
-    ;;
-
-    esac
-fi
-
 if test -z "$SKIP_PATH_CHECKS"; then
     AC_PATH_PROG(WHOAMI, $WHOAMI whoami, echo not_whoami)
 elif test -z "$WHOAMI"; then
@@ -318,7 +206,7 @@ if test -n "$MOZ_DEBUG"; then
     DEFINES="$DEFINES -UNDEBUG"
 else
     AC_DEFINE(NDEBUG)
-    DEFINES="$DEFINES -UDEBUG"
+    DEFINES="$DEFINES -U_DEBUG -UDEBUG"
 fi
 
 if test -z "$SKIP_COMPILER_CHECKS"; then
@@ -400,7 +288,6 @@ else
     else        
         AC_PROG_CC
     fi
-    AC_PROG_CPP
     AC_PROG_RANLIB
     AC_PATH_PROGS(AS, as, $CC)
     AC_PATH_PROGS(AR, ar, echo not_ar)
@@ -453,7 +340,6 @@ PR_MD_CSRCS=
 PR_MD_ARCH_DIR=unix
 AR_FLAGS='cr $@'
 AS='$(CC)'
-ASFLAGS='$(CFLAGS)'
 
 OS_ARCH=`uname -s | sed -e 's|/|_|g'`
 OS_RELEASE=`uname -r`
@@ -461,10 +347,6 @@ OS_TEST=`uname -m`
 
 if test "$OS_ARCH" = "IRIX64"; then
     OS_ARCH=IRIX
-fi
-
-if test "$OS_ARCH" = "Linux"; then
-    OS_RELEASE=`echo $OS_RELEASE | sed 's/-.*//'`
 fi
 
 if test "$OS_ARCH" = "POSIX_for_OpenVMS_AXP"; then
@@ -580,6 +462,7 @@ fi
 
 if test -n "$MOZILLA_CLIENT" && test "$OS_ARCH" = "WINNT"; then
     OS_TARGET=WIN95
+    MOZ_WIN32_TARGET=WIN95
     if test -n "$MOZ_DEBUG"; then
         USE_DEBUG_RTL=1
     fi
@@ -592,6 +475,9 @@ if test "$OS_TARGET" = "WIN95"; then
 fi
 if test "$OS_TARGET" = "WIN16"; then
     OS_RELEASE=
+fi
+if test -z "$MOZ_WIN32_TARGET"; then
+    MOZ_WIN32_TARGET=$OS_TARGET
 fi
 OS_CONFIG="${OS_TARGET}${OS_RELEASE}"
 
@@ -623,44 +509,41 @@ case "$target" in
     AC_DEFINE(AIX)
     AC_DEFINE(SYSV)
     DSO_LDOPTS='-brtl -bM:SRE -bnoentry -bexpall'
-    AC_CHECK_HEADER(sys/atomic_op.h, AC_DEFINE(AIX_HAVE_ATOMIC_OP_H))
     case "${target_os}" in
     aix3.2*)
+        USE_NSPR_THREADS=1
+        AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
         AC_DEFINE(AIX_RENAME_SELECT)
         AC_DEFINE(_PR_NO_LARGE_FILES)
         AIX_LINK_OPTS='-bnso -berok'
         PR_MD_ASFILES=os_AIX.s
         ;;
     aix4.1*)
+        AC_DEFINE(AIX_RENAME_SELECT)
+        AC_DEFINE(AIX_HAVE_ATOMIC_OP_H)
         AC_DEFINE(AIX_TIMERS)
         AC_DEFINE(_PR_NO_LARGE_FILES)
         AC_DEFINE(AIX4_1)
         MKSHLIB=
         DSO_LDOPTS=
+        USE_PTHREADS=1
         AIX_LINK_OPTS='-bnso -berok'
         LIBNSPR='-L$(dist_libdir) -lnspr$(MOD_MAJOR_VERSION)_shr'
-        LIBPLC='-L$(dist_libdir) -lplc$(MOD_MAJOR_VERSION)_shr'
-        ;;
-    aix4.2*)
-        AC_DEFINE(AIX_TIMERS)
-        AC_DEFINE(_PR_HAVE_OFF64_T)
-        AIX_LINK_OPTS='-brtl -bnso -berok'
         ;;
     aix4.3*)
+        AC_DEFINE(AIX_HAVE_ATOMIC_OP_H)
         AC_DEFINE(AIX_TIMERS)
         AC_DEFINE(_PR_HAVE_OFF64_T)
         AC_DEFINE(AIX4_3)
         AC_DEFINE(HAVE_SOCKLEN_T)
-        AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
         USE_IPV6=1
+        USE_PTHREADS=1
         AIX_LINK_OPTS='-brtl -bnso -berok'
         ;;
     *)
+        AC_DEFINE(AIX_HAVE_ATOMIC_OP_H)
         AC_DEFINE(AIX_TIMERS)
         AC_DEFINE(_PR_HAVE_OFF64_T)
-        AC_DEFINE(HAVE_SOCKLEN_T)
-        AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
-        USE_IPV6=1
         AIX_LINK_OPTS='-brtl -bnso -berok'
         ;;
     esac
@@ -672,7 +555,6 @@ case "$target" in
     AIX_TMP='./_aix_tmp.o'
     if test -n "$USE_64"; then
         MDCPUCFG_H=_aix64.cfg
-        OBJECT_MODE=64
     else
         if test -n "$USE_IPV6"; then
             MDCPUCFG_H=_aix32in6.cfg
@@ -793,9 +675,6 @@ case "$target" in
     ;;
 
 *-freebsd*)
-    if test -z "$USE_NSPR_THREADS"; then
-        USE_PTHREADS=1
-    fi
     AC_DEFINE(XP_UNIX)
     AC_DEFINE(FREEBSD)
     AC_DEFINE(HAVE_BSD_FLOCK)
@@ -817,6 +696,7 @@ case "$target" in
     AC_DEFINE(HPUX)
     AC_DEFINE(_HPUX_SOURCE)
     AC_DEFINE(hppa)
+    AC_DEFINE(hpux)
     DLL_SUFFIX=sl
     DSO_LDOPTS='-b +h $(notdir $@)'
     PR_MD_CSRCS=hpux.c
@@ -877,17 +757,18 @@ case "$target" in
     if test "$OS_RELEASE" = "B.10.20"; then
         AC_DEFINE(HPUX10)
         AC_DEFINE(HPUX10_20)
-        if test -z "$GNU_CC"; then
+        if test -z "$GNU_CC" && test 0 = 1; then
             CFLAGS="$CFLAGS +DAportable +DS1.1"
             CXXFLAGS="$CXXFLAGS +DAportable +DS1.1"
         fi
-        DEFAULT_IMPL_STRATEGY=_PTH
+        DEFAULT_IMPL_STRATEGY=_EMU
     fi
 
     if test "$OS_RELEASE" = "B.10.30"; then
         AC_DEFINE(HPUX10)
         AC_DEFINE(HPUX10_30)
-        if test -z "$GNU_CC"; then
+        #CXX="/opt/aCC/bin/aCC -ext"
+        if test -z "$GNU_CC" && test 0 = 1; then
             CFLAGS="$CFLAGS +DAportable +DS1.1"
             CXXFLAGS="$CXXFLAGS +DAportable +DS1.1"
         fi
@@ -899,14 +780,16 @@ case "$target" in
         AC_DEFINE(HPUX11)
         AC_DEFINE(_LARGEFILE64_SOURCE)
         AC_DEFINE(_PR_HAVE_OFF64_T)
-        AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
+        AC_DEFINE(HAVE_POINTER_LOCALTIME_R)
         if test -z "$GNU_CC"; then
+            if test 0 = 1; then
             if test -z "$USE_64"; then
                 CFLAGS="$CFLAGS +DAportable +DS2.0"
                 CXXFLAGS="$CXXFLAGS +DAportable +DS2.0"
             else
                 CFLAGS="$CFLAGS +DA2.0W +DS2.0"
                 CXXFLAGS="$CXXFLAGS +DA2.0W +DS2.0"
+            fi
             fi
         fi
         DEFAULT_IMPL_STRATEGY=_PTH
@@ -918,7 +801,7 @@ case "$target" in
         USE_USER_THREADS=
     elif test "$DEFAULT_IMPL_STRATEGY" = "_PTH"; then
         USE_PTHREADS=1
-        if test "$USE_NSPR_THREADS"; then
+        if test "$MOZILLA_CLIENT"; then
             USE_PTHREADS=
         fi
         if test "$USE_USER_PTHREADS"; then
@@ -932,12 +815,11 @@ case "$target" in
     AC_DEFINE(IRIX)
     AC_DEFINE(SVR4)
     AC_DEFINE(_SGI_MP_SOURCE)
-    AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
     PR_MD_CSRCS=irix.c
     PR_MD_ASFILES=os_Irix.s
     MKSHLIB='$(LD) $(DSO_LDOPTS) -rdata_shared -shared -soname $(notdir $@) -o $@'
+    #DSO_LDOPTS='-elf -shared -all'
     STRIP="$STRIP -f"
-    RESOLVE_LINK_SYMBOLS=1
     if test -n "$USE_64"; then
         MDCPUCFG_H=_irix64.cfg
     else
@@ -945,29 +827,18 @@ case "$target" in
     fi
     case "${target_os}" in
     irix6*)
-        AC_DEFINE(IRIX6)
-        USE_PTHREADS=1
-        USE_N32=1
-        COMPILER_TAG=_n32
-        IMPL_STRATEGY=_PTH
-        ;;
+           AC_DEFINE(IRIX6)
+	   USE_PTHREADS=1
+           ;;
     irix5*)
-        AC_DEFINE(IRIX5)
-        USE_NSPR_THREADS=1
-        ;;
+           AC_DEFINE(IRIX5)
+	   USE_NSPR_THREADS=1
+	   ;;
     *)
-        USE_PTHREADS=1
-        USE_N32=1
-        ;;
-    esac
+	   USE_PTHREADS=1
+	   ;;
+ 	esac
     if test "$GNU_CC"; then
-        dnl
-        dnl If we are using gcc with native binutils, we need to
-        dnl suppress the
-        dnl #lineno "filename" num num
-        dnl lines, which confuse IRIX native as.  Add -Wp,-P to the
-        dnl gcc command line, which passes -P to the preprocessor.
-        dnl
 	    AS='$(CC) -Wp,-P -x assembler-with-cpp -D_ASM -mips2 $(INCLUDES)'
 	    CFLAGS="$CFLAGS -Wall -Wno-format"
 	    _OPTIMIZE_FLAGS="-O6"
@@ -984,7 +855,7 @@ case "$target" in
 	        _OPTIMIZE_FLAGS="-O -Olimit 4000"
 	    fi
 	    if test "$USE_MDUPDATE"; then
-                CFLAGS="$CFLAGS -MDupdate \$(DEPENDENCIES)"
+	        $CFLAGS="$CFLAGS -MDupdate"
 	    fi
 	    case "$target}" in
 	    *-irix6.*)
@@ -992,7 +863,12 @@ case "$target" in
 	        DSO_LDOPTS="-no_unresolved"
 	        if test "$USE_N32"; then
 		        CFLAGS="$CFLAGS -n32 -woff 1209"
+		        LDFLAGS="$LDFLAGS -n32"
 		        DSO_LDOPTS="$DSO_LDOPTS -n32"
+		        if test "${target_os}" = "irix6.2"; then
+		            LDFLAGS="$LDFLAGS -Wl,-woff,85"
+		            DSO_LDOPTS="$DSO_LDOPTS -woff 85"
+		        fi
 	        else
 		        if test "$USE_64"; then
 		            CFLAGS="$CFLAGS -64"
@@ -1010,7 +886,7 @@ case "$target" in
 	    AC_DEFINE(IRIX5_3)
     fi
     case "${target_os}" in
-	irix6.5)
+	irix6.5*)
 	    if test -z "$GNU_CC"; then
 		    CFLAGS="$CFLAGS -mips3"
 	    fi
@@ -1024,59 +900,47 @@ case "$target" in
 	    AC_DEFINE(_PR_HAVE_SGI_PRDA_PROCMASK)
 	    ;;
 	esac
+    case "${target_cpu}" in
+    alpha*)
+	    AC_DEFINE(_POSIX_SOURCE)
+	    AC_DEFINE(_BSD_SOURCE)
+	    ;;
+    esac
     ;;
 
 *-linux*)
-    if test -z "$USE_NSPR_THREADS"; then
-        USE_PTHREADS=1
-        IMPL_STRATEGY=_PTH
-    fi
     AC_DEFINE(XP_UNIX)
     AC_DEFINE(_POSIX_SOURCE)
     AC_DEFINE(_BSD_SOURCE)
     AC_DEFINE(_SVID_SOURCE)
-    AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
     AC_DEFINE(LINUX)
-    AC_DEFINE(linux)
-    CFLAGS="$CFLAGS -ansi -Wall -pipe"
-    CXXFLAGS="$CXXFLAGS -ansi -Wall -pipe"
+    CFLAGS="$CFLAGS -pipe -ansi"
+    CXXFLAGS="$CXXFLAGS -pipe -ansi"
     MDCPUCFG_H=_linux.cfg
     PR_MD_CSRCS=linux.c
-    MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
+    MKSHLIB='$(LD) $(DSO_LDOPTS) -soname $(notdir $@) -o $@'
     DSO_CFLAGS=-fPIC
-    DSO_LDOPTS='-shared -Wl,-soname -Wl,$(notdir $@)'
+    DSO_LDOPTS=-shared
     OS_LIBS="$OS_LIBS -lc"
-    _OPTIMIZE_FLAGS=-O2
-    COMPILER_TAG=_glibc
-    if echo "$OS_TEST" | grep -c 86 >/dev/null; then
-        CPU_ARCH=x86
-    else
-        CPU_ARCH=$OS_TEST
-    fi
-    CPU_ARCH_TAG=_${CPU_ARCH}
     case "${target_cpu}" in
     alpha)
         AC_DEFINE(_ALPHA_)
         AC_DEFINE(__alpha)
         CFLAGS="$CFLAGS -mieee"
         CXXFLAGS="$CXXFLAGS -mieee"
+        _OPTIMIZE_FLAGS=-O2
         ;;
     i?86)
-        AC_DEFINE(i386)
         PR_MD_ASFILES=os_Linux_x86.s
-        ;;
-    ia64)
-        PR_MD_ASFILES=os_Linux_ia64.s
+        _OPTIMIZE_FLAGS=-O2
         ;;
     m68k)
+        _OPTIMIZE_FLAGS=-O
         CFLAGS="$CFLAGS -m68020-40"
         CXXFLAGS="$CXXFLAGS -m68020-40"
-        #
-        # gcc on Linux/m68k either has a bug or triggers a code-sequence
-        # bug in the 68060 which causes gcc to crash.  The simplest way to
-        # avoid this is to enable a minimum level of optimization.
-        #
-        _DEBUG_FLAGS="$_DEBUG_FLAGS -O"
+        ;;
+    *)
+        _OPTIMIZE_FLAGS=-O2
         ;;
     esac    
     ;;
@@ -1108,16 +972,11 @@ case "$target" in
         CFLAGS="$CFLAGS -W3 -nologo -GF -Gy"
         _DEBUG_FLAGS=
 
-        if test -n "$MOZ_DEBUG"; then
-            AC_DEFINE(_DEBUG)
-        else
-            DEFINES="$DEFINES -U_DEBUG"
-        fi
-
         if test -n "$MOZ_OPTIMIZE"; then
             CFLAGS="$CFLAGS -MD"
             OPTIMIZER=-O2
             DLLFLAGS='-OUT:"$@"'
+            OBJDIR_TAG=_OPT
 
             if test -n "$MOZ_PROFILE"; then
                 OPTIMIZER="$OPTIMIZER -Z7"
@@ -1136,7 +995,8 @@ case "$target" in
                 DLLFLAGS='-DEBUG -DEBUGTYPE:both -INCLUDE:_GlowCode -OUT:"$@"'
                 DLL_LIBS='$(GLOWDIR)/glowcode.lib'
             fi
-            LDFLAGS="-DEBUG -DEBUGTYPE:CV"
+            OBJDIR_TAG=_DBG
+            LDFLAGS="$LDFLAGS -DEBUG -DEBUGTYPE:CV"
             if test -n "$PROFILE"; then
                 LDFLAGS="$LDFLAGS -PROFILE -MAP"
                 DLLFLAGS="$DLLFLAGS -PROFILE -MAP"
@@ -1145,9 +1005,6 @@ case "$target" in
         
         if test "$OS_TARGET" = "WINNT"; then
             CFLAGS="$CFLAGS -GT"
-            if test "$CPU_ARCH" = "x86"; then
-                CFLAGS="$CFLAGS -G5"
-            fi
             LIBNSPR='$(dist_libdir)/libnspr$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
             LIBPLC='$(dist_libdir)/libplc$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
         else
@@ -1161,6 +1018,9 @@ case "$target" in
     fi
 
     if test "$OS_TARGET" = "WINNT"; then
+        if test "$CPU_ARCH" = "x86"; then
+            CFLAGS="$CFLAGS -G5"
+        fi
         AC_DEFINE(WINNT)
     else
         AC_DEFINE(WIN95)
@@ -1175,11 +1035,16 @@ case "$target" in
 
     if test -n "$USE_DEBUG_RTL"; then
         OBJDIR_SUFFIX=OBJD
+    else
+        OBJDIR_SUFFIX=OBJ
     fi
+
+    OBJDIR_NAME="${OS_CONFIG}${CPU_ARCH_TAG}${OBJDIR_TAG}.${OBJDIR_SUFFIX}"
+    OBJDIR='${OBJDIR_NAME}'
 
     OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE'
 
-    case "$OS_TARGET" in
+    case "$MOZ_WIN32_TARGET" in
     WINNT)
 	    MDCPUCFG_H=_winnt.cfg
 	    ;;
@@ -1190,7 +1055,7 @@ case "$target" in
 	    MDCPUCFG_H=_win16.cfg
 	    ;;
     *)
-	    AC_MSG_ERROR([Missing OS_TARGET for ${target}.  Use --enable-win32-target to set.])
+	    AC_MSG_ERROR([Missing MOZ_WIN32_TARGET for ${target}.  Use --enable-win32-target to set.])
    	;;
     esac
 
@@ -1324,6 +1189,7 @@ mips-sony-newsos*)
     OS_LIBS="$OS_LIBS -lsocket"
     _OPTIMIZE_FLAGS="-O1"
     _DEBUG_FLAGS="-O1 -gstabs"
+    COMPILER_TAG="_qcc"
     CC="qcc -Vgcc_ntox86 -w"
     CXX='$(CC)'
     LD="qcc -Vgcc_ntox86 -nostdlib"
@@ -1373,11 +1239,8 @@ mips-sony-newsos*)
     ;;
 
 *-osf*)
-    SHELL_OVERRIDE="SHELL		= /usr/bin/ksh"
     AC_DEFINE(XP_UNIX)
     AC_DEFINE(OSF1)
-    AC_DEFINE(_REENTRANT)
-    AC_CHECK_HEADER(machine/builtins.h, AC_DEFINE(OSF1_HAVE_MACHINE_BUILTINS_H))
 
     if echo "$OS_RELEASE" | egrep -c '(V2.0|V3.2)' 2>/dev/null ; then
         USE_NSPR_THREADS=1
@@ -1385,20 +1248,17 @@ mips-sony-newsos*)
 
     if test -z "$GNU_CC"; then
         CC="$CC -std1 -ieee_with_inexact"
-        if test "$OS_RELEASE" != "V2.0"; then
+        if test "$OS_RELEASE" = "V2.0"; then
             CC="$CC -readonly_strings"
         fi
-        _OPTIMIZE_FLAGS="$_OPTIMIZE_FLAGS -Olimit 4000"
+        _OPTIMIZE_FLAGS='-Olimit 4000'
     fi
 
     if echo $OS_RELEASE | egrep -c '(V2.0|V3.2)' 2>/dev/null; then
         AC_DEFINE(HAVE_INT_LOCALTIME_R)
     else
-        AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
         AC_DEFINE(HAVE_POINTER_LOCALTIME_R)
-    fi
-    if echo $OS_RELEASE | grep -c V4.0 >/dev/null; then
-        AC_DEFINE(OSF1V4_MAP_PRIVATE_BUG)
+        AC_DEFINE(OSF1_HAVE_MACHINE_BUILTINS_H)
     fi
     DSO_LDOPTS='-shared -all -expect_unresolved "*" -soname $(notdir $@)'
     MDCPUCFG_H=_osf1.cfg
@@ -1513,16 +1373,12 @@ mips-sony-newsos*)
     ;;
 
 *-solaris*)
-    if test -z "$USE_USER_THREADS" && test -z "$USE_NATIVE_THREADS"; then
-        USE_PTHREADS=1
-    fi
     AC_DEFINE(XP_UNIX)
     AC_DEFINE(SVR4)
     AC_DEFINE(SYSV)
     AC_DEFINE(__svr4)
     AC_DEFINE(__svr4__)
     AC_DEFINE(SOLARIS)
-    AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
     if test -n "$USE_64"; then
         MDCPUCFG_H=_solaris64.cfg
     else
@@ -1535,12 +1391,11 @@ mips-sony-newsos*)
     else
         DSO_CFLAGS=-KPIC
     fi
+    AS='$(CC)'
     if test -z "$GNU_AS"; then
         ASFLAGS="$ASFLAGS -Wa,-P"
     fi
     if test -n "$GNU_CC"; then
-        CFLAGS="$CFLAGS -Wall"
-        CXXFLAGS="$CXXFLAGS -Wall"
         if test -n "$USE_MDUPDATE"; then
             CFLAGS="$CFLAGS -MDupdate \$(DEPENDENCIES)"
             CXXFLAGS="$CXXFLAGS -MDupdate \$(DEPENDENCIES)"
@@ -1548,10 +1403,10 @@ mips-sony-newsos*)
     else
         CC="$CC -xstrconst"
         CXX="$CXX -Qoption cg -xstrconst"
-        if test -z "$MOZ_OPTIMIZE"; then
-            CFLAGS="$CFLAGS -xs"
-            CXXFLAGS="$CXXFLAGS -xs"
-        fi
+    fi
+    if test -n "$BUILD_NUMBER" && test -z "$MOZ_OPTIMIZE"; then
+        CFLAGS="$CFLAGS -xs"
+        CXXFLAGS="$CXXFLAGS -xs"
     fi
     if test -n "$USE_64" && test -z "$GNU_CC"; then
         CC="$CC -xarch=v9"
@@ -1559,13 +1414,8 @@ mips-sony-newsos*)
     fi
     if test "$OS_TEST" = "i86pc"; then
         AC_DEFINE(i386)
-        CPU_ARCH_TAG=_$OS_TEST
-        # The default debug format, DWARF (-g), is not supported by gcc
-        # on i386-ANY-sysv4/solaris, but the stabs format is.  It is
-        # assumed that the Solaris assembler /usr/ccs/bin/as is used.
-        # If your gcc uses GNU as, you do not need the -Wa,-s option.
         if test -n "$MOZ_DEBUG" && test -n "$GNU_CC"; then
-            _DEBUG_FLAGS=-gstabs
+            _DEBUG_FLAGS="$_DEBUG_FLAGS -gstabs"
             if test -z "$GNU_AS"; then
                 _DEBUG_FLAGS="$_DEBUG_FLAGS -Wa,-s"
             fi
@@ -1583,13 +1433,6 @@ mips-sony-newsos*)
         ;;
     *)
         AC_DEFINE(_PR_HAVE_OFF64_T)
-        # The lfcompile64(5) man page on Solaris 2.6 says:
-        #     For applications that do not wish to conform to the POSIX or
-        #     X/Open  specifications,  the  64-bit transitional interfaces
-        #     are available by default.  No compile-time flags need to  be
-        #     set.
-        # But gcc 2.7.2.x fails to define _LARGEFILE64_SOURCE by default.
-        # The native compiler, gcc 2.8.x, and egcs don't have this problem.
         if test -n "$GNU_CC"; then
             AC_DEFINE(_LARGEFILE64_SOURCE)
         fi
@@ -1946,21 +1789,25 @@ if test -n "$USE_PTHREADS"; then
     fi
 
     case "$target" in
+    *-mingw*|*-cygwin*|*-uwin*|*-msvc*)
+	    ;;
     *-solaris*)
+	    AC_DEFINE(_REENTRANT)
         if test "$ac_cv_have_dash_pthreads" = "yes"; then
             _PTHREAD_LDFLAGS=
         fi
 	    ;;
     *-freebsd*|*-openbsd*|*-bsdi*|*-netbsd*)
+	    AC_DEFINE(_REENTRANT)
 	    AC_DEFINE(_THREAD_SAFE)
 	    dnl -pthread links in -lc_r, so don't specify it explicitly.
 	    if test "$ac_cv_have_dash_pthread" = "yes"; then
 	        _PTHREAD_LDFLAGS=
 	    fi
 	    ;;
-    *-linux*)
-        AC_DEFINE(_REENTRANT)
-        ;;
+    *)
+	    AC_DEFINE(_REENTRANT)
+	    ;;
     esac
 
 else 
@@ -1969,6 +1816,9 @@ else
 	    USE_NSPR_THREADS=
     else
         _PTHREAD_LDFLAGS=
+        if test -n "$USE_NSPR_THREADS"; then
+    	    AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
+        fi
     fi
 fi
 dnl Special thread exceptions
@@ -1976,7 +1826,9 @@ dnl Special thread exceptions
 case "$target" in
 *-aix*)
     if test -n "$USE_NSPR_THREADS"; then
-        AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
+        OS_LIBS="$OS_LIBS -lc"
+    else
+        OS_LIBS="$OS_LIBS -lc_r"
     fi
     case "$target_os" in
     aix4.1*)
@@ -1984,17 +1836,9 @@ case "$target" in
             AC_DEFINE(AIX_RENAME_SELECT)
         fi
         ;;
-    aix4.2*)
+    aix4.[23]*)
         if test -z "$USE_NSPR_THREADS"; then
             AC_DEFINE(HAVE_POINTER_LOCALTIME_R)
-        fi
-        ;;
-    aix4.3*)
-        if test -z "$USE_NSPR_THREADS"; then
-            AC_DEFINE(HAVE_POINTER_LOCALTIME_R)
-        fi
-        if test -n "$USE_PTHREADS"; then
-            AC_DEFINE(_PR_HAVE_THREADSAFE_GETHOST)
         fi
         ;;
     esac
@@ -2004,39 +1848,17 @@ case "$target" in
         AC_DEFINE(_PR_NEED_PTHREAD_INIT)
     fi
     ;;
-*-freebsd*)
-    if test -n "$USE_NSPR_THREADS"; then
-        AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
-    fi
-    ;;
 *-hpux*)
-    if test -n "$USE_NSPR_THREADS"; then
-        AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
-    fi 
     if test "$USE_PTHREADS"; then
         if echo "$OS_RELEASE" | egrep '^(B.10.10|B.10.20)' >/dev/null; then
-            AC_DEFINE(_REENTRANT)
+            AC_DEFINE(REENTRANT)
             AC_DEFINE(_PR_DCETHREADS)
         else
             AC_DEFINE_UNQUOTED(_POSIX_C_SOURCE,199506L)
-            AC_DEFINE(_PR_HAVE_THREADSAFE_GETHOST)
         fi
     fi
     if test "$USE_USER_PTHREADS"; then
         AC_DEFINE_UNQUOTED(_POSIX_C_SOURCE,199506L)
-    fi
-    ;;
-*-irix*)
-    if test "${target_os}" = "irix6.5"; then
-        if test -n "$USE_PTHREADS"; then
-            AC_DEFINE(_PR_HAVE_GETHOST_R)
-            AC_DEFINE(_PR_HAVE_GETHOST_R_POINTER)
-        fi
-    fi
-    ;;
-*-linux*)
-    if test -n "$USE_NSPR_THREADS"; then
-        AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
     fi
     ;;
 *-mingw*|*-cygwin*|*-uwin*|*-msvc*)
@@ -2045,32 +1867,15 @@ case "$target" in
     _PTHREAD_LDFLAGS=
     USE_USER_PTHREADS=
     ;;
-*-netbsd*)
-    if test -n "$USE_NSPR_THREADS"; then
-        AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
-    fi
-    ;;
-*-osf*)
-    if test -n "$USE_NSPR_THREADS"; then
-        AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
-    fi
-    if test -n "$USE_PTHREADS"; then
-        if echo $OS_RELEASE | egrep -c '(V2.0|V3.2)' 2>/dev/null; then
-            :
-        else
-            AC_DEFINE(_PR_HAVE_THREADSAFE_GETHOST)
-        fi
-    fi
-    ;;
 *-solaris*)
     if test -n "$USE_NATIVE_THREADS"; then
         AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
     else
-        if test -n "$USE_NSPR_THREADS"; then
+        if test -n "$USE_USER_PTHREADS"; then
             AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
         fi
     fi
-    if test -z "$USE_NSPR_THREADS"; then
+    if test -z "$USE_USER_PTHREADS"; then
         AC_DEFINE(_REENTRANT)
         AC_DEFINE(HAVE_POINTER_LOCALTIME_R)
         if test "$OS_TEST" = "i86pc"; then
@@ -2103,23 +1908,9 @@ if test -n "$MOZ_DEBUG"; then
     CXXFLAGS="$CXXFLAGS $_DEBUG_FLAGS"
 fi
 
-if test -n "$MOZ_OPTIMIZE"; then
-    OBJDIR_TAG=_OPT
-else
-    OBJDIR_TAG=_DBG
-fi
-
-if test -n "$USE_64"; then
-    COMPILER_TAG=_64
-fi
-
-RELEASE_OBJDIR_NAME="${OS_CONFIG}${CPU_ARCH_TAG}${COMPILER_TAG}${IMPL_STRATEGY}${OBJDIR_TAG}.${OBJDIR_SUFFIX}"
-
 dnl ========================================================
 dnl Substitution of found variables.
 dnl ========================================================
-AC_SUBST(SHELL_OVERRIDE)
-
 AC_SUBST(MOZILLA_CLIENT)
 AC_SUBST(CC)
 AC_SUBST(CXX)
@@ -2138,7 +1929,6 @@ AC_SUBST(USE_CPLUS)
 AC_SUBST(USE_IPV6)
 AC_SUBST(USE_N32)
 AC_SUBST(USE_64)
-AC_SUBST(OBJECT_MODE)
 AC_SUBST(GC_LEAK_DETECTOR)
 
 AC_SUBST(USE_PTHREADS)
@@ -2155,6 +1945,7 @@ AC_SUBST(MOD_MINOR_VERSION)
 AC_SUBST(MOD_REVISION_VERSION)
 AC_SUBST(NSPR_MODNAME)
 AC_SUBST(MDCPUCFG_H)
+AC_SUBST(MOZ_WIN32_TARGET)
 AC_SUBST(PR_MD_CSRCS)
 AC_SUBST(PR_MD_ASFILES)
 AC_SUBST(PR_MD_ARCH_DIR)
@@ -2197,10 +1988,10 @@ AC_SUBST(ULTRASPARC_FILTER_LIBRARY)
 
 AC_SUBST(OBJDIR)
 AC_SUBST(OBJDIR_NAME)
-AC_SUBST(RELEASE_OBJDIR_NAME)
 AC_SUBST(NSINSTALL)
 AC_SUBST(OPTIMIZER)
 AC_SUBST(RC)
+AC_SUBST(CPU_ARCH_TAG)
 AC_SUBST(DLLFLAGS)
 AC_SUBST(EXEFLAGS)
 AC_SUBST(OS_DLLFLAGS)
