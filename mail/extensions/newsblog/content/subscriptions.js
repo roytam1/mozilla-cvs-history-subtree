@@ -45,6 +45,12 @@ function doLoad() {
   var tree = document.getElementById('subscriptions');
   tree.database.AddDataSource(ds);
   tree.builder.rebuild();
+
+  var docshell = window.QueryInterface(Components.interfaces.nsIInterfaceRequestor)
+        .getInterface(Components.interfaces.nsIWebNavigation)
+        .QueryInterface(Components.interfaces.nsIDocShell);
+        
+  docshell.allowAuth = true;
 }
 
 function onAccept()
