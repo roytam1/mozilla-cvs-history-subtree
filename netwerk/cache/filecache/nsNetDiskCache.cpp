@@ -313,7 +313,6 @@ nsNetDiskCache::GetCachedNetDataByID(PRInt32 RecordID, nsINetDataCacheRecord **_
       return rv ;
     }
   } else {
-    NS_ERROR("Error: RecordID not in DB\n") ;
     return rv ;
   }
 }
