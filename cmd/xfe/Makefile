@@ -106,6 +106,7 @@ REQUIRES	=\
 		  java \
 		  ldap \
 		  xfeicons \
+		  progress \
 		  $(NULL)
 
 CSRCS		= \
@@ -127,7 +128,6 @@ CSRCS		= \
 		  strings.c \
 		  visual.c \
 		  MozillaWm.c \
-		  lite_stubs.c \
 		  commands.c \
 		  dialogs.c \
 		  hot.c \
@@ -137,6 +137,7 @@ CSRCS		= \
 		  mozilla.c \
 		  prefs.c \
 		  prefdialogs.c \
+		  progress.c \
 		  remote-s.c \
 		  scroll.c \
 		  selection.c \
@@ -144,6 +145,11 @@ CSRCS		= \
 		  editor.c \
 		  editordialogs.c \
 		  $(NULL)
+
+ifndef MOZ_MAIL_NEWS
+CSRCS		+= lite_stubs.c \
+		  $(NULL)
+endif
 
 ifdef MOZ_MAIL_NEWS
 CSRCS		+= \
@@ -284,30 +290,29 @@ BASIC_LIBS_2	= \
 
 ifdef MOZ_MAIL_NEWS
 BASIC_LIBS	+= \
-		  $(DIST)/lib/libmsg.a \
 		  $(DIST)/lib/libnet.a \
+		  $(DIST)/lib/libns_mime.a \
 		  $(NULL)
 endif
 
 BASIC_LIBS	+= \
 		  $(DIST)/lib/libmisc.a \
+		  $(DIST)/lib/libprgrss.a \
 		  $(NULL)
 
 ifdef MOZ_MAIL_NEWS
 BASIC_LIBS	+= \
-		  $(DIST)/lib/libaddr.a \
-		  $(NULL)
-endif
-
-ifdef MOZ_NEO
-BASIC_LIBS	+= \
-		  $(DIST)/lib/libneo.a \
-		  $(NULL)
-endif
-
-ifdef MOZ_MAIL_NEWS
-BASIC_LIBS	+= \
+		  $(DIST)/lib/libmozmsg.a \
+		  $(DIST)/lib/libmsg.a \
 		  $(DIST)/lib/libmime.a \
+		  $(DIST)/lib/libnet.a \
+		  $(DIST)/lib/libjulian.a \
+		  $(DIST)/lib/libnscnv30.a \
+		  $(DIST)/lib/libnsuni30.a \
+		  $(DIST)/lib/libnsfmt30.a \
+		  $(DIST)/lib/libaddr.a \
+		  $(DIST)/lib/libneo.a \
+		  $(DIST)/lib/libaddr.a \
 		  $(NULL)
 endif
 
@@ -363,6 +368,7 @@ ifdef MOZ_MAIL_NEWS
 BASIC_LIBS	+= $(DIST)/lib/libjsl.a
 endif
 
+<<<<<<< Makefile
 BASIC_LIBS	+= $(DIST)/lib/libjrt.a
 
 else  # MOZ_JAVA
@@ -377,6 +383,15 @@ endif
 BASIC_LIBS      += $(DIST)/lib/libsoftupdate.a
 
 endif # MOZ_JAVA
+=======
+ifdef MOZ_MAIL_NEWS
+ifndef NO_SECURITY
+BASIC_LIBS	+= $(DIST)/lib/libsecnav.a
+endif
+endif
+
+BASIC_LIBS	+= $(DIST)/lib/libjrt.a
+>>>>>>> 3.9.2.16
 
 else  # JAVA_OR_OJI
 
@@ -468,7 +483,12 @@ ifdef USE_ABCOM
 DEFINES		+= -DUSE_ABCOM
 endif
 
+<<<<<<< Makefile
 INCLUDES	+= -Isrc -I.
+=======
+INCLUDES	+= -Isrc -I. -I$(DEPTH)/dist/public/nls -I$(DEPTH)/dist/public/security \
+		-I$(DEPTH)/lib/libmsg -I$(DEPTH)/dist/public/ldap
+>>>>>>> 3.9.2.16
 
 
 #######################################################################
@@ -518,7 +538,11 @@ DSO_EX_LIBS	= $(EXPORT_LDFLAGS:$(DIST)/lib/lib%.a=-l%)
 ifeq ($(OS_ARCH),AIX)
 CCLD		= svxlC -+
 #LDFLAGS		= -bGhooksyslibs -bGlibpathexec -bGnoproc
-LDFLAGS		=  -bGnoproc
+#LDFLAGS		=  -bGnoproc
+#
+# ??? need to double check
+#
+LDFLAGS		= -bE:aix_exports -bGhooksyslibs -bGlibpathexec -bGnoproc -bmaxdata:20000000
 OTHER_LIBS	= $(MOTIFLIB) -lXt -lXmu -lX11 $(OS_LIBS)
 US_LDFLAGS	+= $(AIX_NSPR_LINK)
 EXPORT_LDFLAGS	+= $(AIX_NSPR_LINK)
@@ -647,7 +671,9 @@ ifeq ($(OS_RELEASE),2.0)
 ifeq ($(CPU_ARCH),ppc)
 MOTIFLIB	= /usr/local/lib/libXm.a
 else
-
+#
+# Ramiro: pls double check this block
+#
 MOTIFLIB	=\
 			$(MOTIFPATCH_LIB) \
 			$(MOZILLA_XM_2_1_BROKEN_LOCALE_FLAGS) \
@@ -1000,6 +1026,17 @@ $(OBJDIR)/strids.o:	xfe_err.h
 $(OBJDIR)/strings.o:	xfe_err.h
 
 ifeq ($(OS_ARCH),AIX)
+
+#
+# In first. Need to double check
+#
+# This fixes a 4.5-specific problem caused by including /usr/include/strings.h unnecessarily.
+$(OBJDIR)/mozilla.o: mozilla.c
+	@$(MAKE_OBJDIR)
+	$(CC) -o $@ -c $(CFLAGS) -D_H_STRINGS $<
+#
+# end 
+#
 AIX_HACK	:= $(notdir $(AIX_NSPR))
 
 # Install nspr dynamic library for AIX.

@@ -22,7 +22,12 @@
  */
 #include "lm.h"
 #include "lo_ele.h"
+<<<<<<< lm_form.c
 #include "netutils.h"
+=======
+/* #include "netutils.h" */
+#include "mkutils.h"
+>>>>>>> 3.1.18.1
 #include "layout.h"
 #include "pa_tags.h"
 #include "shist.h"

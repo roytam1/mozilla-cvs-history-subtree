@@ -93,7 +93,6 @@
 #define IDS_MEMORY_CACHE                113
 #define IDS_HISTORY                     114
 #define IDS_CONTINUE_CLEAR_HISTORY      115
-#define IDD_DISK_SPACE                  116
 #define IDD_CACHE16                     117
 #define IDS_FILTER_HTM32                118
 #define IDS_BROWSE_HOMEPAGE             119
@@ -104,7 +103,6 @@
 #define IDS_CONTINUE_CLEAR_MEM_CACHE    124
 #define IDS_DISK_CACHE                  125
 #define IDD_APPLICATIONS                126
-#define IDD_DISK_SPACE_MORE             127
 #define IDS_TELNET                      127
 #define IDD_EDIT_TYPE                   128
 #define IDS_TN3270                      128
@@ -121,6 +119,7 @@
 #define IDS_EXT_IN_USE                  137
 #define IDS_FILTER_PROGRAM              138
 #define IDS_SAVE_TO_DISK                139
+<<<<<<< resource.h
 #define IDS_DISK_SPACE                  140
 #define IDS_NUMERIC_ONLY                141
 #define IDS_MORE_DISK_SPACE             142
@@ -131,6 +130,8 @@
 #define IDS_ERROR_UNINSTALL             146
 #endif /* MOZ_SMARTUPDATE */
 #define IDD_SMARTBROWSING               147
+=======
+>>>>>>> 3.1.16.1
 #define IDC_EXTENSION                   309
 #define IDC_ICON1                       316
 #define IDC_ICON2                       317
@@ -201,6 +202,7 @@
 #define IDC_LIST3                       1050
 #define IDC_LANGUAGE_HEADING            1051
 #define IDC_DESCRIPTION                 1052
+#define IDC_USEASDEFAULT                1053
 #define IDC_MIME_TYPE                   1254
 #define IDC_HANDLED_BY                  1256
 #define IDC_BUTTON_MORE                 1395

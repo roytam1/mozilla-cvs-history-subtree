@@ -38,6 +38,8 @@
 #include "secnav.h"
 #include "secrng.h"
 #include "mozjava.h"
+#include "nlsxp.h"
+#include "softupdt.h"
 #ifdef NSPR20
 #include "private/prpriv.h"	/* for PR_NewNamedMonitor */
 #endif /* NSPR20 */
@@ -142,7 +144,11 @@ extern int XFE_RESOURCES_NOT_INSTALLED_CORRECTLY;
 extern int XFE_USAGE_MSG1;
 extern int XFE_USAGE_MSG2;
 extern int XFE_USAGE_MSG3;
+<<<<<<< mozilla.c
 #if defined(MOZ_MAIL_NEWS) || defined(EDITOR) || defined(MOZ_TASKBAR)
+=======
+#if defined(MOZ_MAIL_NEWS) && defined(EDITOR) && defined(MOZ_TASKBAR)
+>>>>>>> 3.4.14.6
 extern int XFE_USAGE_MSG4;
 #endif
 extern int XFE_USAGE_MSG5;
@@ -2047,6 +2053,7 @@ main
 
   fe_hack_uid();	/* Do this real early */
 
+  
   /* 
    * Check the environment for MOZILLA_NO_ASYNC_DNS.  It would be nice to
    * make this either a pref or a resource/option.  But, at this point in
@@ -2117,6 +2124,7 @@ main
   mozilla_thread = PR_CurrentThread();
   fdset_lock = PR_NewNamedMonitor("mozilla-fdset-lock");
 
+  NLS_EncInitialize(NULL,NULL);
   /*
   ** Create a pipe used to wakeup mozilla from select. A problem we had
   ** to solve is the case where a non-mozilla thread uses the netlib to
@@ -2376,6 +2384,10 @@ main
     }
 {
     char buf [1024];
+    int32 profile_age;
+    XP_StatStruct statPrefs;
+    int status;
+    
     PR_snprintf (buf, sizeof (buf), "%s/%s", fe_home_dir,
 #ifdef OLD_UNIX_FILES
         ".netscape-preferences"
@@ -2385,13 +2397,24 @@ main
 		);
 
     fe_globalData.user_prefs_file = strdup (buf);
-
+    /* check if preferences previously existed */
+    status=XP_Stat(buf, &statPrefs, xpUserPrefs);
+    
+    /* moved this here because NET_InitNetLib needs to happen
+     * before PREF_Init
+     */
+    NET_InitNetLib(fe_globalPrefs.network_buffer_size,50);
+    
     PREF_Init((char*) fe_globalData.user_prefs_file);
+#ifdef MOZ_MAIL_NEWS
+    if (status!=0)              /* stuff to run the first time a user starts */
+        MSG_WriteNewProfileAge();
+#endif /* MOZ_MAIL_NEWS */
 }
 
 #ifdef MOZ_MAIL_NEWS
   fe_mailNewsPrefs = MSG_CreatePrefs();
-#endif
+#endif /* MOZ_MAIL_NEWS */
 
   toplevel = XtAppInitialize (&fe_XtAppContext, (char *) fe_progclass, options,
 			      sizeof (options) / sizeof (options [0]),
@@ -2799,10 +2822,22 @@ main
   if (fe_globalData.show_splash)
     fe_splashUpdateText(XP_GetString(XFE_SPLASH_REGISTERING_CONVERTERS));
 #endif
+<<<<<<< mozilla.c
 
 #ifdef MOZ_SMARTUPDATE
   SU_Startup();
 #endif
+=======
+
+
+#ifdef JAVA
+  /* Startup softupdate */
+#if defined(MOZ_SMARTUPDATE)
+  SU_Startup();
+#endif /* MOZ_SMARTUPDATE */
+#endif /* MOZ_MAIL_NEWS */
+
+>>>>>>> 3.4.14.6
   NR_StartupRegistry();
   fe_RegisterConverters ();  /* this must be before InstallPreferences(),
 				and after fe_InitializeGlobalResources(). */
@@ -2853,8 +2888,9 @@ main
   if (fe_globalData.show_splash)
     fe_splashUpdateText(XP_GetString(XFE_SPLASH_INITIALIZING_NETWORK_LIBRARY));
 #endif
-  /* The unit for tcp buffer size is changed from ktypes to btyes */
-  NET_InitNetLib (fe_globalPrefs.network_buffer_size, 50);
+
+  /* NET_InitNetLib has been moved before PREF_Init */
+  NET_FinishInitNetLib();
 
 #ifdef UNIX_ASYNC_DNS
   if (fe_UseAsyncDNS())
@@ -4204,7 +4240,7 @@ fe_create_composition_widgets(MWContext* context, Widget pane, int *numkids)
     }
  
     *((Widget*) ((char*) data + description[i].offset)) = widget[i];
- 
+
     ac = 0;
     XtSetArg(av[ac], XmNleftAttachment, XmATTACH_FORM); ac++;
     XtSetArg(av[ac], XmNtopAttachment, XmATTACH_FORM); ac++;

@@ -42,8 +42,11 @@
 
 #ifndef _RESBUND
 #define _RESBUND
-  
+
+#if 0  
 #include <iostream.h>
+#endif
+
 #include "ptypes.h"
 #include "unistring.h"
 #include "locid.h"
@@ -595,7 +598,11 @@ private:
 	static Transition& getTransition(ENode row, short col);
 
 public:
+<<<<<<< resbund.h
 #if 0
+=======
+#ifdef 0
+>>>>>>> 1.1.2.1
 	// This is used for debugging
 	friend ostream& operator<<(ostream&, const ResourceBundle&);
 #endif

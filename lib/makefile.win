@@ -29,6 +29,8 @@
 #//------------------------------------------------------------------------
 DEPTH=..
 
+include <$(DEPTH)\config\config.mak>
+
 #//------------------------------------------------------------------------
 #//
 #// Specify any "command" targets. (ie. DIRS, INSTALL_FILES, ...)
@@ -38,11 +40,22 @@ DEPTH=..
 #//
 #//------------------------------------------------------------------------
 #DIRS=libi18n layout libstyle liblayer libmocha
+<<<<<<< makefile.win
 DIRS=   libi18n htmldlgs libparse layout libstyle
 
 !ifdef MOZ_OJI
 DIRS=   $(DIRS) plugin
 !endif
+=======
+DIRS= \
+	libi18n \
+	htmldlgs \
+!ifdef MOZ_MAIL_NEWS
+	libaddr \
+!endif
+	libparse
+
+>>>>>>> 3.2.6.1
 
 #//------------------------------------------------------------------------
 #//

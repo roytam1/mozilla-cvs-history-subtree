@@ -374,7 +374,6 @@ public:
 	static void			UnsubscribeToPrefChanges( LListener *listener);
 
 private:
-friend class CUserProfile;		// For ReadAllPreferences hack right now
 	static void			ReadAllPreferences();
 	static void			ReadPreference(short index);
 	static void			InitializeUnsavedPref(short index);
@@ -550,6 +549,10 @@ enum pref_Strings {	prefFolderName = 1
 				,	profileTemplateDir = 49
 				,	cryptoPolicy = 50
 				,	signedAppletDb = 51
+<<<<<<< uprefd.h
 				,	cookiePermissions = 52
 				,	singleSignons = 53
+=======
+				,	jsConfig = 52		//autoadmin
+>>>>>>> 3.1.14.1
 				};

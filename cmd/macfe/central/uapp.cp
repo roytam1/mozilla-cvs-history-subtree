@@ -18,11 +18,19 @@
 
 /* Portions copyright Metrowerks Corporation. */
 
+
+// A a temporary solution, some lines have been out-commented
+// with the tag //••• REVISIT NOVA MERGE •••
+//
+
 // ===========================================================================
 // UApp.cp
 // main and CFrontApp's methods
 // Created by atotic, June 6th, 1994
 // ===========================================================================
+
+//#define DONT_DO_MOZILLA_PROFILE
+//#define PROFILE_UPDATE_MENUS
 
 #include "fullsoft.h"
 
@@ -31,7 +39,6 @@
 #include "CAppleEventHandler.h"
 //#include "shist.h"
 
-//#include <QAP_Assist.h>
 #include <LGARadioButton.h>
 #include <LGACheckbox.h>
 
@@ -61,10 +68,12 @@
 #include "ufilemgr.h"
 #include "msv2dsk.h"
 #include "mversion.h"
+#include "xp_sec.h"
 #include "xp_trace.h"
 #include "CTargetedUpdateMenuRegistry.h"
 #include "UDesktop.h"
 #include "CNavCenterWindow.h"
+#include "UDeferredTask.h"
 #include "URobustCreateWindow.h"
 #include "URDFUtilities.h"
 #ifdef MOZ_MAIL_NEWS
@@ -85,6 +94,7 @@
 #include "CNSMenuBarManager.h"
 #ifdef MOZ_MAIL_NEWS
 #include "CThreadWindow.h"
+#include "CMailProgressWindow.h"
 #include "UMailFolderMenus.h"
 #endif
 
@@ -105,6 +115,7 @@
 
 #include "CEditorWindow.h"
 #include "CEditView.h"
+#include "meditdlg.h"
 
 #ifdef MOZ_MAIL_NEWS
 #include "MailNewsSearch.h"
@@ -139,7 +150,7 @@
 #include "CSharedPatternWorld.h"
 
 #include "InternetConfig.h"
-
+#include "il_strm.h"            /* Image Library stream converters. */
 #ifdef MOCHA
 //#include "libmocha.h"
 #include "CMochaHacks.h"
@@ -165,9 +176,13 @@ PREventQueue *mozilla_event_queue = NULL;
 #include "m_cvstrm.h"
 #include "prefapi.h"
 #include "NSReg.h"
+<<<<<<< uapp.cp
 #ifdef MOZ_SMARTUPDATE
 #include "softupdt.h"
 #endif
+=======
+#include "softupdt.h"
+>>>>>>> 3.5.14.2
 #include <Balloons.h>
 
 // HERE ONLY UNTIL NAV SERVICES CODE MERGED INTO TIP
@@ -175,11 +190,34 @@ Boolean SimpleOpenDlog ( short numTypes, const OSType typeList[], FSSpec* outFSS
 
 
 CAutoPtr<CNSContext> CFrontApp::sRDFContext;
+
+
+
+// Now we modify the frequency with which we call WaitNextEvent to try
+// to minimize the time we spend in this expensive function. The strategy
+// is two-fold:
+//	1. 	If we are in the foreground, and there are no pending user
+//		events (determined with OSEventAvail), then only call WNE every
+//		kWNETicksInterval (4) ticks.
+//		Note that OSEvent avail only knows about the Operating System
+//		event queue, which contains these events:
+//			mouseDown, mouseUp, keyDown, keyUp, autoKey, diskEvent
+//
+//		If we are in the background, we are nice to front apps and
+//		call WNE every time.
+//
+//	2.	We also adjust the sleep time (the value passed to WNE to determine
+//		how long it is before the Event Manager returns control to us).
+//		This is done on EventSuspend and EventResume. We set the sleep time
+//		to 0 in the foreground, and 4 in the background.
+
+#define DAVIDM_SPEED2 	// Comment out to remove this WNE wrapper code
 //======================================================================================
 //									PROFILE
 //======================================================================================
 
-#ifdef PROFILE
+//#define PROFILE_LOCALLY 1
+#if defined(PROFILE) || defined (PROFILE_LOCALLY)
 #include <profiler.h>
 
 		// Define this if you want to start profiling when the Caps Lock
@@ -307,6 +345,8 @@ static void		AssertSystem7();
 
 static const OSType kConferenceAppSig = 'Ncqπ';
 static const OSType kCalendarAppSig = 'NScl';
+static const OSType kImportAppSig = 'NSi2';
+static const OSType kAOLInstantMessengerSig = 'Oscr';
 
 #ifdef EDITOR
 static void OpenEditURL(const char* url){
@@ -652,11 +692,17 @@ static void DisplayExceptionCodeDialog ( ExceptionCode err )
 				stringIndex = 2;  //"of an unknown error."
 				break;
 		}
+<<<<<<< uapp.cp
 		CStr255 p0, p1;
 		
 		::NumToString(err, p1);     // The error is supposed to be numeric, not an OSType
 									// Initializing it in the CStr255 constructor doesn't handle this properly
 
+=======
+		CStr255		p0, p1;				// initialized to empty
+		
+		::NumToString(err, p1);
+>>>>>>> 3.5.14.2
 		::GetIndString(p0, 7098, stringIndex);
 		::ParamText(p0, p1, nil, nil);
 		::CautionAlert(ALRT_ErrorOccurred, nil);
@@ -838,10 +884,17 @@ CFrontApp::CFrontApp()
 
 	UHTMLPrinting::InitCustomPageSetup();
 	
+<<<<<<< uapp.cp
 #ifdef MOZ_SMARTUPDATE
     SU_Startup();
 #endif
     NR_StartupRegistry();
+=======
+#ifdef MOZ_SMARTUPDATE
+   SU_Startup();
+#endif // MOZ_SMARTUPDATE
+	NR_StartupRegistry();
+>>>>>>> 3.5.14.2
     
 	// • PowerPlant initialization
 	UScreenPort::Initialize();
@@ -879,7 +932,9 @@ CFrontApp::CFrontApp()
 	NET_RegisterContentTypeConverter ("*", FO_PRESENT, nil, NewFilePipe);
 	NET_RegisterContentTypeConverter ("*", FO_SAVE_AS, nil, NewFilePipe);
 
-
+	FSSpec spec;
+	mImportModuleExists = CFileMgr::FindApplication(kImportAppSig, spec) == noErr;
+	mAOLMessengerExists = CFileMgr::FindApplication(kAOLInstantMessengerSig, spec) == noErr;
 	// Record whether the conference application exists. We do this once here
 	// instead of lots 'o times in FindCommandStatus so searching for an app
 	// doesn't slow us to a crawl (especially when searchin on network volumes).
@@ -888,9 +943,6 @@ CFrontApp::CFrontApp()
 	// the app. This behavior is different than the pref panel for controlling
 	// whether conference launches on startup or not (but that occurence of
 	// FindApplication isn't called many times/sec either).
-
-	FSSpec spec;
-				
 	mConferenceApplicationExists = (CFileMgr::FindApplication(kConferenceAppSig, spec) == noErr);
 	mNetcasterContext = NULL;
 }
@@ -1035,10 +1087,19 @@ CFrontApp::~CFrontApp()
 
 	SetCursor( &qd.arrow );
 
+	// remove anything we left in the Temporary Items:nscomm40 folder
+	CFileMgr::DeleteCommTemporaryItems();
+	
 	NR_ShutdownRegistry();
+<<<<<<< uapp.cp
 #ifdef MOZ_SMARTUPDATE
     SU_Shutdown();
 #endif
+=======
+#ifdef MOZ_SMARTUPDATE
+   	SU_Shutdown();
+#endif // MOZ_SMARTUPDATE
+>>>>>>> 3.5.14.2
 
 	ET_FinishMocha();
 
@@ -1058,6 +1119,7 @@ void CFrontApp::Initialize()
 {
 	// Insert commands to update before seleting menu into list
 	
+	sCommandsToUpdateBeforeSelectingMenu.push_front(cmd_Redo);
 	sCommandsToUpdateBeforeSelectingMenu.push_front(cmd_Close);
 	sCommandsToUpdateBeforeSelectingMenu.push_front(cmd_Undo);
 	sCommandsToUpdateBeforeSelectingMenu.push_front(cmd_Cut);
@@ -1079,8 +1141,7 @@ void CFrontApp::Initialize()
 
 	// 97-09-11 pchen -- setup prefs proxy for CToolbarModeManager so that knows
 	// how to get Communicator toolbar style pref
-	CMozillaToolbarPrefsProxy* prefsProxy =
-		new CMozillaToolbarPrefsProxy();
+	CMozillaToolbarPrefsProxy* prefsProxy = new CMozillaToolbarPrefsProxy();
 	CToolbarModeManager::SetPrefsProxy(prefsProxy);
 
 	// Register callback function when browser.chrome.toolbar_style
@@ -1114,10 +1175,10 @@ void CFrontApp::RegisterMimeType(CMimeMapper * mapper)
 			// Disable the previous plug-in, if any
 			if (pdesc)
 				NPL_EnablePluginType(mimeName, pdesc, false);
-#ifdef OLD_IMAGE_LIB
-			if (mimeName == IMAGE_GIF || mimeName == IMAGE_JPG || mimeName == IMAGE_XBM)
+
+			if (mimeName == IMAGE_GIF || mimeName == IMAGE_JPG || mimeName == IMAGE_XBM || mimeName == IMAGE_PNG)
 				NET_RegisterContentTypeConverter(mimeName, FO_PRESENT, nil, IL_ViewStream);
-#endif
+
 #ifdef MOZ_MAIL_NEWS // BinHex decoder is in mail/news code, right?
 			else if (mimeName == APPLICATION_BINHEX)
 				NET_RegisterContentTypeConverter(APPLICATION_BINHEX, FO_PRESENT, nil, fe_MakeBinHexDecodeStream);
@@ -1235,16 +1296,18 @@ int CFrontApp::SetBooleanWithPref(const char *prefName, void *boolPtr)
 // spec. Otherwise it's nil (normal startup)
 void CFrontApp::ProperStartup( FSSpec* file, short fileType ) 
 {
-	LFile*		prefsFile = NULL;
-	Boolean		gotPrefsFile = false;
-	static		properStartup = FALSE;
+	LFile*			prefsFile = NULL;
+	Boolean			gotPrefsFile = false;
+	static Boolean	properStartup = FALSE;
 	
 	if ( fStartupAborted )
 		return;
 	
 	if ( properStartup )
 	{
-		if ( fileType == FILE_TYPE_ODOC || fileType == FILE_TYPE_GETURL )
+		if ( fileType == FILE_TYPE_ODOC
+		|| fileType == FILE_TYPE_GETURL
+		|| fileType == FILE_TYPE_LDIF)
 			DoOpenDoc( file, fileType );
 		
 		// Cannot open the Profile Manager while app is running
@@ -1275,6 +1338,18 @@ void CFrontApp::ProperStartup( FSSpec* file, short fileType )
 	// Once we get to this point it's safe to quit
 	fSafeToQuit = true;
 
+#ifdef DEBUG
+	// hack to show the profile manager stuff when a modifier key is down
+	KeyMap		theKeys;
+	GetKeys(theKeys);
+	
+	if (theKeys[1] & 0x00008000)		// is the command key down
+	{
+		prefsFile = NULL;
+		fileType = FILE_TYPE_PROFILES;
+	}
+#endif
+
 	abortStartup = CPrefs::DoRead( prefsFile, fileType );
 	
 	if (( abortStartup == CPrefs::eAbort ) || fUserWantsToQuit)
@@ -1291,25 +1366,33 @@ void CFrontApp::ProperStartup( FSSpec* file, short fileType )
 	mHasFrontierMenuSharing = (!(PREF_GetBoolPref("browser.mac.no_menu_sharing", &startupFlag) == PREF_NOERROR && startupFlag));
 	mHasBookmarksMenu = (!(PREF_GetBoolPref("browser.mac.no_bookmarks_menu", &startupFlag) == PREF_NOERROR && startupFlag));
 
-	// do this after we read prefs
-#ifdef MOZ_MAIL_NEWS
-	// check to see what mail.server_type is and what mail.server_type_on_restart is
-	// must be careful because our auto admin tool may have created a "Big Brother"
-	// preference file that locks mail.server_type. if this is the case we must
-	// discard whatever mail.server_type_on_restart is. if the admin hasn't
-	// locked this preference then we use mail.server_type_on_restart (this is what
-	// gets set in the preference dialog)
-	int32	mailServerType, mailServerTypeOnRestart;
-	PREF_GetIntPref("mail.server_type" , &mailServerType);
-	PREF_GetIntPref("mail.server_type_on_restart" , &mailServerTypeOnRestart);
-	
-	if (-1 == mailServerTypeOnRestart)
-		PREF_SetIntPref("mail.server_type_on_restart" , mailServerType);
-	if (PREF_PrefIsLocked("mail.server_type"))
-		PREF_SetIntPref("mail.server_type_on_restart" , mailServerType);
-	else
-		PREF_SetIntPref("mail.server_type" , mailServerTypeOnRestart);
-#endif // MOZ_MAIL_NEWS
+#ifndef MOZ_MAIL_NEWS
+#ifdef SERVER_ON_RESTART_HACK // not needed in Nova.
+	// Do this after we read prefs:
+	{
+		// Check to see what mail.server_type is and what mail.server_type_on_restart is.
+		// Must be careful because our auto admin tool may have created a "Big Brother"
+		// preference file that locks mail.server_type. If this is the case we must
+		// discard whatever mail.server_type_on_restart is. If the admin hasn't
+		// locked this preference then we use mail.server_type_on_restart (this is what
+		// gets set in the preference dialog).
+		int32	mailServerType, mailServerTypeOnRestart;
+		PREF_GetIntPref("mail.server_type" , &mailServerType);
+		PREF_GetIntPref("mail.server_type_on_restart" , &mailServerTypeOnRestart);
+		
+		// The default value of the latter is -1, of the former, 0 (POP3).
+		// Neither of these should NEVER be set to -1 after we run the first time.
+		if (-1 == mailServerTypeOnRestart)
+			mailServerTypeOnRestart = mailServerType;
+		else
+			mailServerType = mailServerTypeOnRestart;
+		// Write the adjusted values back to the prefs database.
+		if (!PREF_PrefIsLocked("mail.server_type"))
+			PREF_SetIntPref("mail.server_type" , mailServerType);
+		PREF_SetIntPref("mail.server_type_on_restart" , mailServerTypeOnRestart);
+	}
+#endif
+#endif // MOZ_MAIL_NEWS	
 
 	// Set the state of network.online to match offline.startup_mode
 	Int32 startupNetworkState;
@@ -1408,27 +1491,6 @@ void CFrontApp::ProperStartup( FSSpec* file, short fileType )
 		}
 	}
 
-	// Install Help and Directory menus
-	InstallMenus();
-	
-	// Polaris: remove Calendar/3270 items if they're not installed
-	//	(?? maybe these are always available for Polaris (autoadmin lib)
-	//	so users get helpful error messages if they try them..?)
-	if (CWindowMenu::sWindowMenu)
-	{
-		FSSpec fspec;
-			
-		if ( CFileMgr::FindApplication(kCalendarAppSig, fspec) != noErr )
-			(CWindowMenu::sWindowMenu)->RemoveCommand(cmd_LaunchCalendar);
-			
-		if ( ! Find3270Applet(fspec) )
-			(CWindowMenu::sWindowMenu)->RemoveCommand(cmd_Launch3270);
-
-		if ( ! FE_IsNetcasterInstalled() ) {
-			(CWindowMenu::sWindowMenu)->RemoveCommand(cmd_LaunchNetcaster);
-		}
-
-	}
 	
 	// NETLIB wait until we've read prefs to determine what to set up
 	CStr255		tmp;
@@ -1485,6 +1547,8 @@ void CFrontApp::ProperStartup( FSSpec* file, short fileType )
 	SplashProgress( GetPString(MAC_PROGRESS_NET) );
 	
 	NET_InitNetLib (CPrefs::GetLong( CPrefs::BufferSize ), CPrefs::GetLong( CPrefs::Connections ) );
+
+	SECNAV_EarlyInit();
 	NET_ChangeMaxNumberOfConnections(50);
 	RNG_SystemInfoForRNG();
 
@@ -1493,6 +1557,33 @@ void CFrontApp::ProperStartup( FSSpec* file, short fileType )
 	// history.  Looks like History initialization has been changed to work
 	// correctly. Also, GH_InitGlobalHistory() can be safely called twice. 
 	URDFUtilities::StartupRDF(); 
+
+	// Load the .jsc startup file, if necessary (autoadmin added 2/11/98 arshad)
+//••• REVISIT NOVA MERGE •••	NET_DownloadAutoAdminCfgFile();	
+	
+	// Install Help and Directory menus
+	InstallMenus();  //  arshad - taken from line 1317, moved here for autoadmin to update menus (re: bug 88421)
+	
+	// 1998-03-17 pchen -- Moved this code here to fix Communicator menu
+	// Polaris: remove Calendar/3270 items if they're not installed
+	//	(?? maybe these are always available for Polaris (autoadmin lib)
+	//	so users get helpful error messages if they try them..?)
+	if (CWindowMenu::sWindowMenu)
+	{
+		FSSpec fspec;
+			
+		if ( CFileMgr::FindApplication(kCalendarAppSig, fspec) != noErr )
+			(CWindowMenu::sWindowMenu)->RemoveCommand(cmd_LaunchCalendar);
+
+		if ( CFileMgr::FindApplication(kAOLInstantMessengerSig, fspec) != noErr )
+			(CWindowMenu::sWindowMenu)->RemoveCommand(cmd_LaunchAOLInstantMessenger);
+
+		if ( ! Find3270Applet(fspec) )
+			(CWindowMenu::sWindowMenu)->RemoveCommand(cmd_Launch3270);
+
+		if ( ! FE_IsNetcasterInstalled() )
+			(CWindowMenu::sWindowMenu)->RemoveCommand(cmd_LaunchNetcaster);
+	}
 
 	SECNAV_Init();
 	SECNAV_RunInitialSecConfig();		// call after SECNAV_Init()
@@ -1579,9 +1670,10 @@ void CFrontApp::ProperStartup( FSSpec* file, short fileType )
 	InitializeLocationIndependence();
 #endif
 #ifdef MOZ_MAIL_NEWS
-//	SplashProgress( GetPString(MAC_PROGRESS_ADDRESS) );
+	SplashProgress( GetPString(MAC_PROGRESS_ADDRESS) );
 	CAddressBookManager::OpenAddressBookManager();
 #endif // MOZ_MAIL_NEWS
+	NET_FinishInitNetLib();
 	if (agreedToLicense)
 		CreateStartupEnvironment(! gotPrefsFile);
 	
@@ -1603,7 +1695,7 @@ Boolean CFrontApp::AgreedToLicense( FSSpec* fileSpec, short fileType )
 // Reads in the default preferences doc, and then creates a default browser window
 void CFrontApp::StartUp()
 {
-	ProperStartup( NULL, FILE_TYPE_NONE );
+	ProperStartup( NULL, FILE_TYPE_PREFS );
 //	CMailNewsFolderWindow::FindAndShow(true);
 }
 
@@ -1708,6 +1800,13 @@ void CFrontApp::CreateStartupEnvironment(Boolean openStartupWindows)
 		if (openStartupWindows && startupFlag)
 			ObeyCommand(cmd_LaunchCalendar, NULL);
 	}
+
+	// check to see if we need to launch AOL Instant Messenger at startup
+	if (PREF_GetBoolPref("general.startup.AIM", &startupFlag) == PREF_NOERROR)
+	{
+		if (openStartupWindows && startupFlag)
+			ObeyCommand(cmd_LaunchAOLInstantMessenger, NULL);
+	}
 #endif // !MOZ_LITE && !MOZ_MEDIUM
 #ifdef MOZ_TASKBAR
 	if (PREF_GetBoolPref("taskbar.mac.is_open", &startupFlag) == PREF_NOERROR)
@@ -1737,6 +1836,8 @@ void CFrontApp::OpenDocument( FSSpec* inFileSpec )
 		fileType = FILE_TYPE_PROFILES;
 	else if ( 'ASWl' == fndrInfo.fdType )
 		fileType = FILE_TYPE_ASW;
+	else if ( emLDIFType == fndrInfo.fdType)
+		fileType = FILE_TYPE_LDIF;
 	else if (emNetprofileType == fndrInfo.fdType)
 		fileType = STARTUP_TYPE_NETPROFILE;
 	else
@@ -1753,6 +1854,12 @@ void CFrontApp::DoOpenDoc( FSSpec* inFileSpec, short fileType )
 			if ( inFileSpec )
 				OpenLocalURL(inFileSpec );
 			break;
+		case FILE_TYPE_LDIF:
+#ifdef MOZ_MAIL_NEWS
+			if (inFileSpec)
+				CAddressBookManager::ImportLDIF(*inFileSpec);
+			break;
+#endif // MOZ_MAIL_NEWS
 		case FILE_TYPE_PREFS:
 		case FILE_TYPE_PROFILES:
 			break;
@@ -1815,6 +1922,21 @@ void CFrontApp::OpenLocalURL( FSSpec* inFileSpec ,
 		FREEIF( map_file_url );
 		return;
 	}
+	
+
+#ifdef MOZ_MAIL_NEWS
+// If we are mailbox file at the root of the local mail hierarchy, we can assume that it's an
+// imported mailbox created by the import module. Then just update the folder tree (the new mailbox
+// will appear in the folder hierarchy).
+	FSSpec mailFolderSpec = CPrefs::GetFilePrototype(CPrefs::MailFolder);
+	if (mailFolderSpec.vRefNum == inFileSpec->vRefNum
+	&& mailFolderSpec.parID == inFileSpec->parID)
+	{
+		Assert_(false);
+		//MSG_UpdateFolderTree(); not checked in yet by phil.
+		return;
+	}
+#endif //MOZ_MAIL_NEWS
 	
 // Open it by loading the URL into specified window
 
@@ -2337,7 +2459,7 @@ void CFrontApp::FindCommandStatus( CommandT command, Boolean& enabled,
 #ifdef MOZ_MAIL_NEWS
 		case cmd_MailNewsFolderWindow:
 		case cmd_NewsGroups:
-		case cmd_GetNewMail:
+	//	case cmd_GetNewMail:
 		case cmd_Inbox:
 		case cmd_MailNewsSearch:
 		case cmd_MailFilters:
@@ -2387,6 +2509,10 @@ void CFrontApp::FindCommandStatus( CommandT command, Boolean& enabled,
 			enabled = !Memory_MemoryIsLow();
 			break;
 			
+		case cmd_LaunchImportModule:
+			enabled = mImportModuleExists;
+			break;
+
 		case cmd_New:
 		case cmd_Open:
 			enabled = !Memory_MemoryIsLow();
@@ -2663,11 +2789,19 @@ Boolean CFrontApp::ObeyCommand(CommandT inCommand, void* ioParam)
 			LaunchExternalApp(kConferenceAppSig, CONFERENCE_APP_NAME);
 			break;
 
+		case cmd_LaunchImportModule:
+			LaunchExternalApp(kImportAppSig, IMPORT_APP_NAME);
+			break;
+
 		// --ML Polaris
 		case cmd_LaunchCalendar:
 			LaunchExternalApp(kCalendarAppSig, CALENDAR_APP_NAME);
 			break;
-		
+
+		case cmd_LaunchAOLInstantMessenger:
+			LaunchExternalApp(kAOLInstantMessengerSig, AIM_APP_NAME);
+			break;
+	
 		case cmd_Launch3270:
 			Launch3270Applet();
 			break;
@@ -2766,23 +2900,6 @@ Boolean CFrontApp::ObeyCommand(CommandT inCommand, void* ioParam)
 	return bCommandHandled;
 } // CFrontApp::ObeyCommand
 
-#ifdef QAP_BUILD
-//-----------------------------------
-//void CFrontApp::PutOnDuty()
-//-----------------------------------
-//{
-//	QAP_AssistHook (kQAPAppToForeground, 0, NULL, 0, 0);
-//	LCommander::PutOnDuty ();
-//}
-
-//-----------------------------------
-//void CFrontApp::TakeOffDuty()
-//-----------------------------------
-//{
-//	LCommander::TakeOffDuty ();
-//	QAP_AssistHook (kQAPAppToBackground, 0, NULL, 0, 0);
-//}
-#endif //QAP_BUILD
 
 //-----------------------------------
 void CFrontApp::DoOpenDirectoryURL( CommandT menuCommand )
@@ -3538,11 +3655,16 @@ void main( void )
 	}
 	else
 	{
+#if defined(PROFILE) || defined (PROFILE_LOCALLY)
+#ifndef DONT_DO_MOZILLA_PROFILE
+	StartProfiling();	
+#endif
+#endif
+	
 	//	NET_ToggleTrace();
 		
 		app = new CFrontApp;
 #if defined(QAP_BUILD)		
-		//QAPCheck();		
 		QAP_AssistHook (kQAPAppToForeground, 0, NULL, 0, 0);
 #endif
 		app->Run();
@@ -3552,6 +3674,11 @@ void main( void )
 #endif
 
 		delete app;
+#if defined(PROFILE) || defined (PROFILE_LOCALLY)
+#ifndef DONT_DO_MOZILLA_PROFILE
+	StopProfiling();
+#endif
+#endif
 	}
 	
 	Memory_DoneWithMemory();
@@ -3604,7 +3731,44 @@ static Boolean NetscapeIsRunning(ProcessSerialNumber& psn)
 				return TRUE;
 	} while (err == noErr);
 	return FALSE;
-} 
+}
+ 
+//-----------------------------------
+Boolean	CFrontApp::AttemptQuitSelf(long	/*inSaveOption*/)
+//-----------------------------------
+{
+#ifdef MOZ_OFFLINE
+	XP_Bool	value;
+	PREF_GetBoolPref("offline.prompt_synch_on_exit", &value);
+	if (value)
+	{
+		// Put up dialog
+		StDialogHandler aHandler(20004, NULL);
+		LWindow* dialog = aHandler.GetDialog();
+
+		// Get the window title to use later in the progress dialog.
+		Str255	windowTitle;
+		dialog->GetDescriptor(windowTitle);
+
+		// Run the dialog
+		MessageT message;
+		do
+		{
+			message = aHandler.DoDialog();
+
+		} while ((message != 'Yes ') && (message != 'No  ') && (message != msg_Cancel));
+		
+		// Use the result
+		if (message == 'Yes ')
+			UOffline::ObeySynchronizeCommand(UOffline::syncModal);
+
+		if (message == msg_Cancel)
+			return false;
+	}
+#endif // MOZ_OFFLINE
+	return true;
+}
+
 //-----------------------------------
 void CFrontApp::DoQuit(
 	Int32	inSaveOption)
@@ -3612,7 +3776,9 @@ void CFrontApp::DoQuit(
 {
 	LDocApplication::DoQuit(inSaveOption);
 
-//	if(mState == programState_Quitting)
+	if (mState == programState_Quitting)
+		CDeferredTaskManager::DoQuit(inSaveOption);
+//	if (mState == programState_Quitting)
 //		LTSMSupport::DoQuit(inSaveOption);
 }
 
@@ -3722,6 +3888,11 @@ CFrontApp::EventSuspend	(const EventRecord &inMacEvent)
 #if defined(QAP_BUILD)	
 	QAP_AssistHook (kQAPAppToBackground, 0, NULL, 0, 0);
 #endif
+
+#ifdef DAVIDM_SPEED2
+	SetSleepTime(4);		// be more friendly in the background
+#endif
+
 }
 	
 void
@@ -3737,6 +3908,10 @@ CFrontApp::EventResume(const EventRecord &inMacEvent)
 
 #if defined(QAP_BUILD)	
 	QAP_AssistHook (kQAPAppToForeground, 0, NULL, 0, 0);
+#endif
+
+#ifdef DAVIDM_SPEED2
+	SetSleepTime(1);		// let's go faster
 #endif
 }
 
@@ -3772,27 +3947,93 @@ CFrontApp::EventKeyUp(const EventRecord	&inMacEvent)
 	}
 }
 
+
+// A C interface to ProcessNextEvent, which needs to be called when waiting for
+// the .jsc file to load at startup
+extern "C" {
+void FEU_StayingAlive();
+}
+
+
+void FEU_StayingAlive()
+{
+	CFrontApp::GetApplication()->ProcessNextEvent();
+}
+
 void
 CFrontApp::ProcessNextEvent()
-{
-#ifdef PROFILE
-#ifdef PROFILE_ON_CAPSLOCK
-	if (IsThisKeyDown(0x39)) // caps lock
-		ProfileStart();
-	else
-		ProfileStop();
-#endif // PROFILE_ON_CAPSLOCK
-#endif // PROFILE
-	try
-	{
-			// Handle all pending NSPR events
-		PR_ProcessPendingEvents(mozilla_event_queue);
-	}
+{ 
+#ifdef PROFILE 
+#ifdef PROFILE_ON_CAPSLOCK 
+	if (IsThisKeyDown(0x39)) // caps lock 
+		ProfileStart(); 
+	else 
+		ProfileStop(); 
+#endif // PROFILE_ON_CAPSLOCK 
+#endif // PROFILE 
 
+#ifdef DAVIDM_SPEED2
+	static	UInt32		sNextWNETicks  = 0;
+	const	UInt32		kWNETicksInterval = 4;
+#endif
+ 
+	try 
+	{ 
+		// Handle all pending NSPR events 
+		PR_ProcessPendingEvents(mozilla_event_queue); 
+	}
+	catch (OSErr err) 
+	{ 
+		DisplayErrorDialog ( err ); 
+	} 
+	catch (ExceptionCode err) 
+	{ 
+		DisplayExceptionCodeDialog ( err ); 
+	}
+ 
+	 // The block surrounded by *** ... from LApplication::ProcessNextEvent() *** 
+	 // is identical to LApplication::ProcessNextEvent with one exception: 
+	 // the EventRecord is declared static in order to persist across calls 
+	 // to ProcessNextEvent to prevent dangling references to the event 
+	 // recorded by CApplicationEventAttachment (read the usage notes for 
+	 // CApplicationEventAttachment). 
+	  
+	 // *** Begin block from LApplication::ProcessNextEvent() *** 
+	  
+	static EventRecord	macEvent;
+	Boolean				haveUserEvent = true;			// so we call WNE every time in the background
+	
+	  // When on duty (application is in the foreground), adjust the 
+	  // cursor shape before waiting for the next event. Except for the 
+	  // very first time, this is the same as adjusting the cursor 
+	  // after every event. 
+	  
+	if (IsOnDuty()) { 
+
+		// Plug-ins and Java need key up events, which are masked by default 
+		// (the event mask lomem is set to everyEvent - keyUp).  To ensure 
+		// that it’s always set to mask out nothing, reset it here every time 
+		// before we call WaitNextEvent. 
+		// 
+
+		SetEventMask(everyEvent);
+
+		// Calling OSEventAvail with a zero event mask will always 
+		// pass back a null event. However, it fills the EventRecord 
+		// with the information we need to set the cursor shape-- 
+		// the mouse location in global coordinates and the state 
+		// of the modifier keys. 
+
+<<<<<<< uapp.cp
 	catch (OSErr err)
 	{
 		DisplayErrorDialog ( err );
+=======
+		haveUserEvent = ::OSEventAvail(everyEvent, &macEvent);
+		AdjustCursor(macEvent); 
+>>>>>>> 3.5.14.2
 	}
+<<<<<<< uapp.cp
 	catch (ExceptionCode err)
 	{
 		DisplayExceptionCodeDialog ( err );
@@ -3816,64 +4057,62 @@ CFrontApp::ProcessNextEvent()
 	// *** Begin block from LApplication::ProcessNextEvent() ***
 	
 	static EventRecord		macEvent;
+=======
+>>>>>>> 3.5.14.2
 
-		// When on duty (application is in the foreground), adjust the
-		// cursor shape before waiting for the next event. Except for the
-		// very first time, this is the same as adjusting the cursor
-		// after every event.
-	
-	if (IsOnDuty()) {
-			
-			// Calling OSEventAvail with a zero event mask will always
-			// pass back a null event. However, it fills the EventRecord
-			// with the information we need to set the cursor shape--
-			// the mouse location in global coordinates and the state
-			// of the modifier keys.
-			
-		::OSEventAvail(0, &macEvent);
-		AdjustCursor(macEvent);
-	}
-	
-		// Retrieve the next event. Context switch could happen here.
-	
+#ifdef DAVIDM_SPEED2
+#ifndef NSPR20
+	CSelectObject socketToCallWith;
+	Boolean	doWNE = haveUserEvent || ::LMGetTicks() > sNextWNETicks || ( gNetDriver && !gNetDriver->CanCallNetlib(socketToCallWith) );
+#else
+	Boolean	doWNE = haveUserEvent || ::LMGetTicks() > sNextWNETicks || NET_PollSockets();
+#endif // NSPR_20	
 	SetUpdateCommandStatus(false);
-
-#ifdef PROFILE
-#ifndef PROFILE_WAITNEXTEVENT
-	ProfileSuspend();
-#endif // PROFILE_WAITNEXTEVENT
-#endif // PROFILE
-
-	Boolean	gotEvent = ::WaitNextEvent(everyEvent, &macEvent, mSleepTime,
-										mMouseRgnH);
-
-#ifdef PROFILE
-#ifndef PROFILE_WAITNEXTEVENT
-	ProfileResume();
-#endif // PROFILE_WAITNEXTEVENT
-#endif // PROFILE
-		
-
-		// Let Attachments process the event. Continue with normal
-		// event dispatching unless suppressed by an Attachment.
 	
-	if (LAttachable::ExecuteAttachments(msg_Event, &macEvent)) {
-		if (gotEvent) {
-			DispatchEvent(macEvent);
-		} else {
-			UseIdleTime(macEvent);
-		}
-	}
+	if ( doWNE )
+	{
+#endif // DAVIDM_SPEED2
 
-									// Repeaters get time after every event
-	LPeriodical::DevoteTimeToRepeaters(macEvent);
+	// Retrieve the next event. Context switch could happen here. 
 	
-									// Update status of menu items
-	if (IsOnDuty() && GetUpdateCommandStatus()) {
-		UpdateMenus();
+#ifdef PROFILE 
+#ifndef PROFILE_WAITNEXTEVENT 
+	 ProfileSuspend(); 
+#endif // PROFILE_WAITNEXTEVENT 
+#endif // PROFILE 
+
+	 Boolean gotEvent = ::WaitNextEvent(everyEvent, &macEvent, mSleepTime, mMouseRgnH); 
+	
+#ifdef PROFILE 
+#ifndef PROFILE_WAITNEXTEVENT 
+	 ProfileResume(); 
+#endif // PROFILE_WAITNEXTEVENT 
+#endif // PROFILE 
+	  
+	// Let Attachments process the event. Continue with normal 
+	// event dispatching unless suppressed by an Attachment. 
+
+	if (LAttachable::ExecuteAttachments(msg_Event, &macEvent)) { 
+		if (gotEvent) { 
+			DispatchEvent(macEvent); 
+		} else { 
+			UseIdleTime(macEvent); 
+		} 
 	}
 	
-	// *** End block from LApplication::ProcessNextEvent() ***
+#ifdef DAVIDM_SPEED2
+		sNextWNETicks = ::LMGetTicks() + kWNETicksInterval;
+	}
+#endif // DAVIDM_SPEED2
+
+  	LPeriodical::DevoteTimeToRepeaters(macEvent);
+ 
+	// Update status of menu items
+	if (IsOnDuty() && GetUpdateCommandStatus()) { 
+		UpdateMenus(); 
+	}
+
+ // *** End block from LApplication::ProcessNextEvent() *** 
 }
 
 
@@ -3971,6 +4210,9 @@ void CFrontApp::ListenToMessage(MessageT inMessage, void * ioParam)
 		case cmd_NewWindowEditorIFF:
 //		case cmd_NewMailMessage:
 #endif // EDITOR
+#ifdef MOZ_MAIL_NEWS
+		case cmd_ToggleOffline:
+#endif // MOZ_MAIL_NEWS
 		case cmd_BrowserWindow:
 			ObeyCommand(inMessage);
 			break;
@@ -4087,7 +4329,7 @@ Boolean CFrontApp::LaunchAccountSetup()
 	Boolean			wasChanged;
 	
 #ifdef DEBUG
-	Try_
+	try
 	{
 #endif
 
@@ -4095,7 +4337,7 @@ Boolean CFrontApp::LaunchAccountSetup()
 
 #ifdef DEBUG
 	}
-	Catch_( inErr )
+	catch ( ... )
 	{
 		StandardFileReply		reply;
 		AliasHandle				alias;
@@ -4118,7 +4360,6 @@ Boolean CFrontApp::LaunchAccountSetup()
 			aswFile.OpenResourceFork( fsRdPerm );
 		}
 	}
-	EndCatch_
 	
 #endif DEBUG
 

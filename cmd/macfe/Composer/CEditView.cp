@@ -2948,6 +2948,7 @@ CEditView::ReceiveDragItem ( DragReference inDragRef, DragAttributes inDragAttr,
 
 	FocusDraw();
 	
+<<<<<<< CEditView.cp
 	Point mouseLoc;
 	::GetDragMouse( inDragRef, &mouseLoc, NULL );
 	::GlobalToLocal( &mouseLoc );
@@ -2999,6 +3000,56 @@ CEditView :: HandleDropOfPageProxy ( const char* inURL, const char* inTitle )
 	
 } // HandleDropOfPageProxy
 
+=======
+	try
+	{	
+		HFSFlavor	fileData;
+		Size		dataSize = sizeof(fileData);
+		OSErr		err;
+		Point		mouseLoc;
+		SPoint32	imagePt;
+		Size		size;
+		FlavorFlags	flags;
+		SInt16		mods, mouseDownModifiers, mouseUpModifiers;
+
+		err = ::GetDragModifiers( inDragRef, &mods, &mouseDownModifiers, &mouseUpModifiers );
+		if (err != noErr)
+			mouseDownModifiers = 0;
+		Boolean doCopy = ( (mods & optionKey) == optionKey ) || ( (mouseDownModifiers & optionKey) == optionKey );
+		
+		FocusDraw();
+		::GetDragMouse( inDragRef, &mouseLoc, NULL );
+		::GlobalToLocal( &mouseLoc );
+		LocalToImagePoint( mouseLoc, imagePt );
+				
+		if ( ::GetFlavorData( inDragRef, inItemRef, flavorTypeHFS, &fileData, &dataSize, 0 ) == noErr )
+		{
+			switch ( fileData.fileType )
+			{
+				case 'GIFf':
+				case 'JPEG':
+					isImageDropped = true;
+					isURLDroppedString = CFileMgr::GetURLFromFileSpec( fileData.fileSpec );
+					isTitleDroppedString = NULL;
+					break;
+				
+				case 'clpt':
+					/* This implements support for text clippings.  Note: I assume that 
+					   the text clippings are of type 'clpt' and store the text in 'TEXT' 
+					   resource ID 256.  All the examples I found fit this criteria.  
+					   Unfortunately, I couldn't find any Apple documentation that
+					   verified this.  The actual pasting is done below.
+					*/
+					
+					/* ??? If someone drags in a text clipping, we should receive a
+						TEXT flavor drag. Opening the Clipping file like this is not good,
+						and probably unecessary.
+					*/
+					short resnum = ::FSpOpenResFile( &fileData.fileSpec, fsRdPerm );
+					if ( -1 != resnum )
+					{
+						Handle clipping_text = ::Get1Resource ( 'TEXT', 256 );
+>>>>>>> 3.3.6.1
 
 //
 // HandleDropOfLocalFile

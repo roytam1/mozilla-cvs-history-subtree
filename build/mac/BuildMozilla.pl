@@ -20,8 +20,30 @@
 	use Moz;
 	use BuildList;
 
+<<<<<<< BuildMozilla.pl
 $DEBUG = 0;
 $MOZ_LITE = 0;		# build moz medium. This will come from a config file at some stage.
+=======
+$DEBUG = 0;
+>>>>>>> 1.1.2.5
+
+<<<<<<< BuildMozilla.pl
+Moz::OpenErrorLog(":::Mozilla.BuildLog");
+Moz::StopForErrors();
+
+chdir("::::");
+
+# Make and popuplate the dist directory
+DistMozilla();
+
+# Now build the projects
+BuildMozilla();
+=======
+	# One of them should be 1. This will come from a config file at some stage.
+	# In the meanwhile, it should match mozilla/config/mac/MacConfig.h
+$MOZ_LITE   = 0;
+$MOZ_MEDIUM = 1;
+$MOZ_DARK   = 0;
 
 Moz::OpenErrorLog(":::Mozilla.BuildLog");
 Moz::StopForErrors();
@@ -33,3 +55,4 @@ DistMozilla();
 
 # Now build the projects
 BuildMozilla();
+>>>>>>> 1.1.2.5
