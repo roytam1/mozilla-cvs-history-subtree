@@ -1,0 +1,68 @@
+{\rtf1\mac\ansicpg10000\cocoartf102
+\readonlydoc1{\fonttbl\f0\fswiss\fcharset77 Optima-Bold;\f1\fswiss\fcharset77 Optima-Regular;\f2\fswiss\fcharset77 Helvetica;
+\f3\fnil\fcharset77 Monaco;\f4\fmodern\fcharset77 Courier;}
+{\colortbl;\red255\green255\blue255;\red4\green16\blue255;}
+\margl1440\margr1440\vieww14520\viewh17340\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+
+\f0\b\fs48 \cf0 Chimera Read Me\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+
+\f1\b0\fs24 \cf2 http://www.mozilla.org/projects/chimera/\cf0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+
+\f2 \cf0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+
+\f1 \cf0 Thank you for downloading Chimera 0.5! Please take a moment to read this information to find out about what\'d5s new in Chimera, and to learn about knows issues.\
+\
+Chimera is still under development. It is stable enough to use day-to-day, but you may still encounter bugs. You should always keep backup copies of important data that you use with Chimera (e.g. your bookmarks file). \
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+
+\f0\b\fs36 \cf0 Known issues
+\f1\b0\fs24 \
+\
+\pard\tx360\tx1080\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\li360\fi-360\ql\qnatural
+\cf0 \'a5	Cosmetic issues occur with many plugins, especially if you switch tabs on pages with plugins. Some stability issues affect plugins; visiting pages with some plugins can crash.\
+\'a5	Sometimes, on Mac OS 10.2 (Jaguar), Navigator won\'d5t stick as your default browser. If you have this problem, try removing the following files:\
+\pard\tx360\tx1080\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\li360\fi-360\ql\qnatural
+
+\f3\fs20 \cf0  		~/Library/Caches/com.apple.LaunchServices.UserCache.csstore (where ~ is your home directory)\
+		/Library/Caches/com.apple.LaunchServices.LocalCache.csstore\
+\pard\tx360\tx1080\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\li360\fi-360\ql\qnatural
+
+\f1\fs24 \cf0 	and reboot your machine.\
+\'a5	Typing in Japanese, and other multi-byte languages, is not fully implemented yet.\
+\'a5	You may see some redraw issues when pasting into textareas, and doing Find Again. Resizing the window will correct these.\
+\'a5	Sometimes, a background window will pop to the front when its page finishes loading.\
+\'a5	For reasons not yet understood, Chimera will sometimes use a lot of CPU time for a few minutes, then gradually reduce to its usual low CPU usage. This seems to happen mostly after waking from sleep.\
+\'a5	The Fonts tab of the Appearance prefs pane is work in progress. In particular, the font sizes can interfere with eachother, and sometimes  the fonts default back  to Lucida Grande.\
+\'a5	Services support isn\'d5t fully implemented in the web content yet.\
+\'a5	There is no way to export bookmarks to HTML at present.\
+\'a5	Dragging an image to the Finder doesn\'d5t do the right thing.\
+\'a5	In Mac OS 10.2 (Jaguar), form buttons sometimes draw incorrectly (with a horizontal stripe).\
+\'a5	Trying to import a large bookmarks file sometimes fails to import all of the bookmarks. Breaking the file into a number of smaller files should help.\
+\'a5	After doing a \'d2View Source\'d3\'caon a page, you can\'d5t save the page source. As a workaround, Select All and Copy.\
+\'a5	There is no History visible in the UI by default. You can make the History tab in the sidebar visible by adding this line to your prefs.js file in the Chimera profile folder:\
+\pard\tx360\tx1080\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\li360\fi-360\ql\qnatural
+
+\f3\fs20 \cf0 		user_pref("chimera.show_history", true);\
+\pard\tx360\tx1080\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\li360\fi-360\ql\qnatural
+
+\f1\fs24 \cf0 \'a5	The search page (loaded in response to Go->Search Page) uses Internet Config, but, Apple removed UI for that setting from the Internet system preferences pane in Mac OS 10.2 (Jaguar). \
+\pard\tx360\tx1080\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\li360\fi-360\sl320\ql\qnatural
+\cf0 \'a5	The Go->Search Page command always loads an excite.com url in Mac OS 10.2 (Jaguar), and there is no system UI to change it. As a workaround, you can edit a string in the Navigator package to set your preferred search page. Context-click on the Navigator icon, and choose \'d2Show Package Contents\'d3. In the resulting Finder window, go down into Contents/Resources, and open the \'d2WebsiteDefaults.strings\'d3\'cafile in your favorite text editor. On the line containing \'d4SearchPageDefault\'d5, remove the 
+\f4 /*
+\f1  at the start, change \'d2www.dmoz.org\'d3 to your preferred search site, and delete everything after the semicolon. Then save the file.\
+\pard\tx360\tx1080\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\li360\fi-360\ql\qnatural
+\cf0 \'a5	After blocking popups for the first time, there is no way to have popups show up again. If you need popups to work (say, to access a site that requires them, edit your prefs.js file, changing the line that contains \'d4
+\f3\fs20 dom.disable_open_during_load
+\f1\fs24 \'d5 to:\
+\pard\tx360\tx1080\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\li360\fi-360\ql\qnatural
+
+\f3\fs20 \cf0 		user_pref("dom.disable_open_during_load", false);\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\ql\qnatural
+
+\f1\fs24 \cf0 \
+}
