@@ -179,7 +179,7 @@ CFLAGS=$(CFLAGS) -DCookieManagement -DSingleSignon
 !endif
 
 # Defines for new privacy features...
-!ifdef PRIVACY_FEATURES
+!ifdef MOZ_PRIVACY 
 CFLAGS=$(CFLAGS) -DPRIVACY_POLICIES -DTRANSACTION_RECEIPTS
 !endif
 
