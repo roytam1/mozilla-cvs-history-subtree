@@ -29,7 +29,7 @@
 #include "TxString.h"
 #include "List.h"
 #include "dom.h"
-#include "HashTable.h"
+#include "Map.h"
 #include "MITREObject.h"
 #include "primitives.h"
 
@@ -137,12 +137,12 @@ private:
     /**
      * A Hashtable of attribute's parent nodes
     **/
-    HashTable parents;
+    Map parents;
 
     /**
      * A Hashtable of Node/OrderInfo mappings
     **/
-    HashTable orders;
+    Map orders;
 
     /**
      * A list of IndexState objects (one for each Document)
