@@ -339,6 +339,9 @@ MimeInlineTextPlainFlowed_parse_line (char *line, PRInt32 length, MimeObject *ob
 
   if (!skipConversion)
   {
+    // Convert only if the source string is not empty
+    if (length - (linep - line) > 0)
+    {
     PRBool whattodo = obj->options->whattodo;
     if (plainHTML)
     {
@@ -377,6 +380,7 @@ MimeInlineTextPlainFlowed_parse_line (char *line, PRInt32 length, MimeObject *ob
     // escaping (very important), eventually recognizing etc.
     rv = conv->ScanTXT(lineSource.get(), whattodo, getter_Copies(lineResult));
     NS_ENSURE_SUCCESS(rv, -1);
+    }
   }
   else
   {
