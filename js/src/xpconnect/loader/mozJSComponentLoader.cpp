@@ -894,6 +894,9 @@ JSObject *
 mozJSComponentLoader::GlobalForLocation(const char *aLocation,
                                         nsIFile *component)
 {
+#ifdef DEBUG
+    printf("GlobalForLocation(%s)\n", aLocation);
+#endif
     JSObject *global = nsnull;
     PRBool needRelease = PR_FALSE;
     JSScript *script = nsnull;

@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: javascript; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 moz-jssh-buffer-globalobj: "Components.classes['@mozilla.org/jscodelib;1'].getService(Components.interfaces.mozIJSCodeLib).probeModule('resource:/jscodelib/StdLib.js', true)" -*- */
 /* ----- BEGIN LICENSE BLOCK -----
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -12,11 +12,11 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the Mozilla XTF project.
+ * The Original Code is the Mozilla code.
  *
- * The Initial Developer of the Original Code is 
- * Alex Fritze.
- * Portions created by the Initial Developer are Copyright (C) 2004
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1999
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -36,15 +36,35 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#include "nsIXTFElement.idl"
+/**
+ * Library of useful functions.
+ *
+ * 
+ */
 
-interface nsIXTFSVGVisualWrapper;
-interface nsIDOMElement;
+MOZ_EXPORTED_SYMBOLS = [ "appendUnique" ];
 
-[scriptable, uuid(6e051a6a-9ac3-4f3a-b701-d794761c47d9)]
-interface nsIXTFSVGVisual : nsIXTFElement
-{
-  void onCreated(in nsIXTFSVGVisualWrapper wrapper);
 
-  readonly attribute nsIDOMElement visualContent;
-};
+//----------------------------------------------------------------------
+// appendUnique
+
+function appendUnique(target, src, /*[optional]*/ equals) {
+  var sl = src.length;
+  var tl = target.length;
+  for (var i=0; i<sl; ++i) {
+    for (var j=0; j<tl; ++j) {
+      if (!equals) {
+        if (src[i] == target[j]) break;
+      }
+      else if (equals(src[i],target[j])) break;
+    }
+    if (j==tl)
+      target.push(src[i]);
+  }
+  return target;
+}
+
+appendUnique._helpstr_ = "append array 'src' to array 'target', \
+ommiting elements that are already present in 'target' and equal under \
+the relation 'equals' (default: '=='). Returns target array";
+

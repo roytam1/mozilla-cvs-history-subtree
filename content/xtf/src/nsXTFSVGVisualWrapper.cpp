@@ -47,6 +47,7 @@
 #include "nsIXTFSVGVisualWrapper.h"
 //XXX get rid of this:
 #include "nsSVGAtoms.h"
+#include "nsISupportsArray.h"
 
 typedef nsXMLElement nsXTFSVGVisualWrapperBase;
 
@@ -384,11 +385,12 @@ nsXTFSVGVisualWrapper::GetElementNode(nsIDOMElement * *aElementNode)
 
 NS_IMETHODIMP
 nsXTFSVGVisualWrapper::CreateAnonymousContent(nsIPresContext* aPresContext,
-                                            nsISupportsArray& aAnonymousItems)
+                                              nsISupportsArray& aAnonymousItems)
 {
-  nsCOMPtr<nsISupportsArray> arr;
-  mXTFElement->GetVisualContent(getter_AddRefs(arr));
-  aAnonymousItems.AppendElements(arr);
+  nsCOMPtr<nsIDOMElement> element;
+  mXTFElement->GetVisualContent(getter_AddRefs(element));
+  
+  aAnonymousItems.AppendElement(element);
   
 //   NS_ASSERTION(mDocument, "no document; cannot create anonymous content");
 

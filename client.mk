@@ -86,6 +86,8 @@ XTF_BRANCH_MODIFIED_FILES = \
 # List of new files on branch
 XTF_BRANCH_NEW_FILES = \
 	content/xtf/Makefile.in \
+	content/xtf/js/Makefile.in \
+	content/xtf/js/xtf.js \
 	content/xtf/public/Makefile.in \
 	content/xtf/public/nsIXMLContentBuilder.idl \
 	content/xtf/public/nsIXMLContentFragment.idl \
@@ -120,6 +122,8 @@ XTF_BRANCH_NEW_FILES = \
 	js/src/xpconnect/codelib/mozIJSCodeLib.idl \
 	js/src/xpconnect/codelib/mozJSCodeLib.cpp \
 	js/src/xpconnect/codelib/mozJSCodeLib.h \
+	js/src/xpconnect/codelib/StdLib.js \
+	js/src/xpconnect/codelib/TemplateLib.js \
 	js/src/xpconnect/shared/Makefile.in \
 	js/src/xpconnect/shared/JSAutoContext.cpp \
 	js/src/xpconnect/shared/JSAutoContext.h \
@@ -484,7 +488,9 @@ ifdef MAIL_CO_TAG
   MAIL_CO_FLAGS := $(MAIL_CO_FLAGS) -r $(MAIL_CO_TAG)
 endif
 
-CVSCO_THUNDERBIRD := $(CVS) $(CVS_FLAGS) co $(MAIL_CO_FLAGS) $(CVS_CO_DATE_FLAGS) mozilla/mail
+MAIL_CO_DIRS := mozilla/mail mozilla/other-licenses/branding/thunderbird
+
+CVSCO_THUNDERBIRD := $(CVS) $(CVS_FLAGS) co $(MAIL_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(MAIL_CO_DIRS)
 ifdef MOZ_THUNDERBIRD
 FASTUPDATE_THUNDERBIRD := fast_update $(CVSCO_THUNDERBIRD)
 CHECKOUT_THUNDERBIRD := cvs_co $(CVSCO_THUNDERBIRD)

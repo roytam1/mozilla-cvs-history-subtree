@@ -1,8 +1,10 @@
+// -*- moz-jssh-buffer-globalobj: "Components.classes['@mozilla.org/moz/jsloader;1'].getService(Components.interfaces.mozIJSComponentLib).probeComponent('rel:smiley.js')" -*-
 // smiley.js
 // sample implementation of simple svg-compatible tag in xtf
 
-const SVG_NS = "http://www.w3.org/2000/svg";
+var SVG_NS = "http://www.w3.org/2000/svg";
 
+debug("*** loading smiley.js \n");
 //----------------------------------------------------------------------
 // base element class
 // (nsIXTFElement implementation to fall through to)
@@ -40,37 +42,41 @@ var genericElement = {
 //----------------------------------------------------------------------
 // smiley element
 
-function xtfSmiley() {
-  this.fragment =
-    Components.classes["@mozilla.org/xtf/xml-contentfragment;1"]
-              .createInstance(Components.interfaces.nsIXMLContentFragment);
-  this.g = this.fragment.beginElement(SVG_NS, "g");
-      this.fragment.attrib("style", "fill:yellow;");
-    this.fragment.beginElement(SVG_NS, "circle");
-      this.fragment.attrib("cx", "100");
-      this.fragment.attrib("cy", "100");
-      this.fragment.attrib("r", "120");
-    this.fragment.endElement();
-    this.fragment.beginElement(SVG_NS, "circle");
-      this.fragment.attrib("cx", "50");
-      this.fragment.attrib("cy", "50");
-      this.fragment.attrib("r", "10");
-      this.fragment.attrib("style", "fill:black;");
-    this.fragment.endElement();
-    this.fragment.beginElement(SVG_NS, "circle");
-      this.fragment.attrib("cx", "150");
-      this.fragment.attrib("cy", "50");
-      this.fragment.attrib("r", "10");
-      this.fragment.attrib("style", "fill:black;");
-    this.fragment.endElement();
-    this.mouth = this.fragment.beginElement(SVG_NS, "path");
-      this.fragment.attrib("d", "M50,150 Q100,200 150,150");
-      this.fragment.attrib("style", "fill:none;stroke:black;stroke-width:10;");
-    this.fragment.endElement();
-  this.fragment.endElement();
+var frag = {g:{ns:SVG_NS, attribs:{style:"fill:yellow"},
+              children:[
+              ]}};
 
-  var instance = this;
-  this.g.addEventListener("mousedown", function(){instance.makeSad()}, true);
+function xtfSmiley() {
+//   this.fragment =
+//     Components.classes["@mozilla.org/xtf/xml-contentfragment;1"]
+//               .createInstance(Components.interfaces.nsIXMLContentFragment);
+//   this.g = this.fragment.beginElement(SVG_NS, "g");
+//       this.fragment.attrib("style", "fill:yellow;");
+//     this.fragment.beginElement(SVG_NS, "circle");
+//       this.fragment.attrib("cx", "100");
+//       this.fragment.attrib("cy", "100");
+//       this.fragment.attrib("r", "120");
+//     this.fragment.endElement();
+//     this.fragment.beginElement(SVG_NS, "circle");
+//       this.fragment.attrib("cx", "50");
+//       this.fragment.attrib("cy", "50");
+//       this.fragment.attrib("r", "10");
+//       this.fragment.attrib("style", "fill:black;");
+//     this.fragment.endElement();
+//     this.fragment.beginElement(SVG_NS, "circle");
+//       this.fragment.attrib("cx", "150");
+//       this.fragment.attrib("cy", "50");
+//       this.fragment.attrib("r", "10");
+//       this.fragment.attrib("style", "fill:black;");
+//     this.fragment.endElement();
+//     this.mouth = this.fragment.beginElement(SVG_NS, "path");
+//       this.fragment.attrib("d", "M50,150 Q100,200 150,150");
+//       this.fragment.attrib("style", "fill:none;stroke:black;stroke-width:10;");
+//     this.fragment.endElement();
+//   this.fragment.endElement();
+
+//   var instance = this;
+//   this.g.addEventListener("mousedown", function(){instance.makeSad()}, true);
 }
 
 xtfSmiley.prototype = {
@@ -89,8 +95,8 @@ xtfSmiley.prototype = {
   // nsIXTFElement implementation:
   onDestroyed: function() {
     // clean up:
-    delete this.fragment;
-    delete this.g;
+//    delete this.fragment;
+//    delete this.g;
     delete this.wrapper;
   },
   get elementType() {
@@ -98,7 +104,7 @@ xtfSmiley.prototype = {
   },
   AttributeSet: function(name, newValue) {
     // let our 'g' element inherit all attribs:
-    this.g.setAttribute(name, newValue);
+    //this.g.setAttribute(name, newValue);
   },
   
   // nsIXTFSVGVisual implementation:
@@ -106,7 +112,17 @@ xtfSmiley.prototype = {
     this.wrapper = wrapper;
   },
   get visualContent() {
-    return this.fragment.content;
+    var doc = this.wrapper.elementNode.ownerDocument;
+    if (!this.visual) {
+      this.visual = doc.createElementNS(SVG_NS, "circle");
+      this.visual.setAttribute("style", "fill:red; stroke:blue; stroke-width:10px;"); 
+      this.visual.setAttribute("cx", "100");
+      this.visual.setAttribute("cy", "100");
+      this.visual.setAttribute("r", "100");
+    }
+    dump("****-> "+this.e+" doc="+this.e.ownerDocument+" parent="+this.e.parentNode+"\n");
+    return this.e;
+//    return this.fragment.content;
   },
 
   // implementation helpers:
@@ -121,8 +137,8 @@ xtfSmiley.prototype = {
 //----------------------------------------------------------------------
 // xtfSmileyFactory
 
-const XTF_SHAPE_FACTORY_CID = Components.ID("{7d2bff65-6d03-4d0e-ae9f-b3102c5e606e}");
-const XTF_SHAPE_FACTORY_PROGID = "@mozilla.org/xtf/element-factory;1?namespace=urn:mozilla:xtf:tests:smiley";
+var XTF_SHAPE_FACTORY_CID = Components.ID("{7d2bff65-6d03-4d0e-ae9f-b3102c5e606e}");
+var XTF_SHAPE_FACTORY_PROGID = "@mozilla.org/xtf/element-factory;1?namespace=urn:mozilla:xtf:tests:smiley";
 
 function xtfSmileyFactory() { debug("xtfSmileyFactory CTOR \n"); }
 

@@ -37,9 +37,6 @@
  * ----- END LICENSE BLOCK ----- */
 
 #include "nsISupports.idl"
-#include "nsISupportsArray.idl"
-
-interface nsIXTFElementWrapper;
 
 [scriptable, uuid(f0617ed1-db6a-4704-ac4b-67bf15a77788)]
 interface nsIXTFElement : nsISupports

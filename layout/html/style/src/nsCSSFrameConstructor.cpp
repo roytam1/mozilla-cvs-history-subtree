@@ -91,8 +91,6 @@
 #include "nsISupportsArray.h"
 #include "nsIAnonymousContentCreator.h"
 #include "nsFrameManager.h"
-#include "nsIPrefBranch.h"
-#include "nsIPrefService.h"
 #include "nsLegendFrame.h"
 #include "nsIContentIterator.h"
 #include "nsBoxLayoutState.h"
@@ -101,6 +99,7 @@
 #include "nsIElementFactory.h"
 #include "nsITheme.h"
 #include "nsContentCID.h"
+#include "nsContentUtils.h"
 #include "nsIDocShell.h"
 #include "nsFormControlHelper.h"
 #include "nsObjectFrame.h"
@@ -121,7 +120,6 @@ static NS_DEFINE_CID(kTextNodeCID,   NS_TEXTNODE_CID);
 static NS_DEFINE_CID(kHTMLElementFactoryCID,   NS_HTML_ELEMENT_FACTORY_CID);
 
 #include "nsIDOMWindowInternal.h"
-#include "nsPIDOMWindow.h"
 #include "nsIMenuFrame.h"
 
 #include "nsBox.h"
@@ -334,7 +332,7 @@ nsresult
 NS_NewScrollPortFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
 
 nsresult
-NS_NewGfxScrollFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame, nsIDocument* aDocument, PRBool aIsRoot);
+NS_NewGfxScrollFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame, PRBool aIsRoot);
 
 nsresult
 NS_NewSliderFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame );
@@ -1271,12 +1269,8 @@ nsCSSFrameConstructor::nsCSSFrameConstructor(nsIDocument *aDocument)
   if (!gGotXBLFormPrefs) {
     gGotXBLFormPrefs = PR_TRUE;
 
-    nsCOMPtr<nsIPrefBranch> prefBranch(do_GetService(NS_PREFSERVICE_CONTRACTID));
-    if (prefBranch) {
-      prefBranch->GetBoolPref("nglayout.debug.enable_xbl_forms",
-                              &gUseXBLForms);
-
-    }
+    gUseXBLForms =
+      nsContentUtils::GetBoolPref("nglayout.debug.enable_xbl_forms");
   }
 
 #ifdef DEBUG
@@ -1681,15 +1675,15 @@ nsCSSFrameConstructor::CreateInputFrame(nsIPresShell    *aPresShell,
 }
 
 static PRBool
-IsOnlyWhiteSpace(nsIContent* aContent)
+IsOnlyWhitespace(nsIContent* aContent)
 {
   PRBool onlyWhiteSpace = PR_FALSE;
   if (aContent->IsContentOfType(nsIContent::eTEXT)) {
     nsCOMPtr<nsITextContent> textContent = do_QueryInterface(aContent);
-    if (textContent) {
-      textContent->IsOnlyWhitespace(&onlyWhiteSpace);
-    }
+
+    onlyWhiteSpace = textContent->IsOnlyWhitespace();
   }
+
   return onlyWhiteSpace;
 }
     
@@ -2897,7 +2891,14 @@ nsCSSFrameConstructor::ConstructTableCellFrame(nsIPresShell*            aPresShe
     // pass in null tableCreator so ProcessChildren will not call TableProcessChildren
     rv = ProcessChildren(aPresShell, aPresContext, aState, aContent, aNewCellInnerFrame, 
                          PR_TRUE, childItems, PR_TRUE, nsnull);
-    if (NS_FAILED(rv)) return rv;
+    if (NS_FAILED(rv)) {
+      // Clean up
+      aNewCellInnerFrame->Destroy(aPresContext);
+      aNewCellInnerFrame = nsnull;
+      aNewCellOuterFrame->Destroy(aPresContext);
+      aNewCellOuterFrame = nsnull;
+      return rv;
+    }
 
     aNewCellInnerFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
     if (aState.mFloatedItems.childList) {
@@ -2930,7 +2931,7 @@ nsCSSFrameConstructor::MustGeneratePseudoParent(nsIPresContext*  aPresContext,
   // check tags first
 
   if ((nsLayoutAtoms::textTagName == aTag)) {
-    return !IsOnlyWhiteSpace(aContent);
+    return !IsOnlyWhitespace(aContent);
   }
 
   // exclude tags
@@ -3014,7 +3015,7 @@ NeedFrameFor(nsIFrame*   aParentFrame,
 {
   // don't create a whitespace frame if aParentFrame doesn't want it
   if ((NS_FRAME_EXCLUDE_IGNORABLE_WHITESPACE & aParentFrame->GetStateBits())
-      && IsOnlyWhiteSpace(aChildContent)) {
+      && IsOnlyWhitespace(aChildContent)) {
     return PR_FALSE;
   }
   return PR_TRUE;
@@ -3657,9 +3658,8 @@ nsCSSFrameConstructor::ConstructRootFrame(nsIPresShell*        aPresShell,
 
   // Bind the viewport frame to the root view
   nsIViewManager* viewManager = aPresContext->GetViewManager();
-  nsIView*        rootView;
+  nsIView*        rootView = viewManager->RootView();
 
-  viewManager->GetRootView(rootView);
   viewportFrame->SetView(rootView);
 
   nsContainerFrame::SyncFrameViewProperties(aPresContext, viewportFrame,
@@ -4476,7 +4476,7 @@ nsCSSFrameConstructor::ConstructTextFrame(nsIPresShell*            aPresShell,
                                           nsFrameItems&            aFrameItems)
 {
   // process pending pseudo frames. whitespace doesn't have an effect.
-  if (!aState.mPseudoFrames.IsEmpty() && !IsOnlyWhiteSpace(aContent))
+  if (!aState.mPseudoFrames.IsEmpty() && !IsOnlyWhitespace(aContent))
     ProcessPseudoFrames(aPresContext, aState.mPseudoFrames, aFrameItems);
 
   nsIFrame* newFrame = nsnull;
@@ -5811,7 +5811,7 @@ nsCSSFrameConstructor::BeginBuildingScrollFrame(nsIPresShell*            aPresSh
   nsRefPtr<nsStyleContext> contentStyle = aContentStyle;
 
   if (!gfxScrollFrame) {
-    NS_NewGfxScrollFrame(aPresShell, &gfxScrollFrame, aDocument, aIsRoot);
+    NS_NewGfxScrollFrame(aPresShell, &gfxScrollFrame, aIsRoot);
 
     InitAndRestoreFrame(aPresContext, aState, aContent, 
                         aParentFrame, contentStyle, nsnull, gfxScrollFrame);
@@ -6398,7 +6398,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
       rv = ConstructTableCaptionFrame(aPresShell, aPresContext, aState, aContent, 
                                       parentFrame, aStyleContext, tableCreator, 
                                       aFrameItems, newFrame, pseudoParent);
-      if (!pseudoParent) {
+      if (NS_SUCCEEDED(rv) && !pseudoParent) {
         aFrameItems.AddChild(newFrame);
       }
       return rv;
@@ -6410,7 +6410,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
       rv = ConstructTableRowGroupFrame(aPresShell, aPresContext, aState, aContent, 
                                        adjParentFrame, aStyleContext, tableCreator, 
                                        PR_FALSE, aFrameItems, newFrame, pseudoParent);
-      if (!pseudoParent) {
+      if (NS_SUCCEEDED(rv) && !pseudoParent) {
         aFrameItems.AddChild(newFrame);
       }
       return rv;
@@ -6419,7 +6419,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
       rv = ConstructTableColGroupFrame(aPresShell, aPresContext, aState, aContent, 
                                        adjParentFrame, aStyleContext, tableCreator, 
                                        PR_FALSE, aFrameItems, newFrame, pseudoParent);
-      if (!pseudoParent) {
+      if (NS_SUCCEEDED(rv) && !pseudoParent) {
         aFrameItems.AddChild(newFrame);
       }
       return rv;
@@ -6428,7 +6428,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
       rv = ConstructTableColFrame(aPresShell, aPresContext, aState, aContent, 
                                   adjParentFrame, aStyleContext, tableCreator, 
                                   PR_FALSE, aFrameItems, newFrame, pseudoParent);
-      if (!pseudoParent) {
+      if (NS_SUCCEEDED(rv) && !pseudoParent) {
         aFrameItems.AddChild(newFrame);
       }
       return rv;
@@ -6437,7 +6437,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
       rv = ConstructTableRowFrame(aPresShell, aPresContext, aState, aContent, 
                                   adjParentFrame, aStyleContext, tableCreator, 
                                   PR_FALSE, aFrameItems, newFrame, pseudoParent);
-      if (!pseudoParent) {
+      if (NS_SUCCEEDED(rv) && !pseudoParent) {
         aFrameItems.AddChild(newFrame);
       }
       return rv;
@@ -6448,7 +6448,7 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsIPresShell*            aPre
         rv = ConstructTableCellFrame(aPresShell, aPresContext, aState, aContent, 
                                      adjParentFrame, aStyleContext, tableCreator, 
                                      PR_FALSE, aFrameItems, newFrame, innerTable, pseudoParent);
-        if (!pseudoParent) {
+        if (NS_SUCCEEDED(rv) && !pseudoParent) {
           aFrameItems.AddChild(newFrame);
         }
         return rv;
@@ -10416,17 +10416,8 @@ HasDisplayableChildren(nsIPresContext* aPresContext, nsIFrame* aContainerFrame)
     if (frame->GetType() != nsLayoutAtoms::textFrame)
       return PR_TRUE;
 
-    nsCOMPtr<nsITextContent> text = do_QueryInterface(frame->GetContent());
-    NS_ASSERTION(text != nsnull, "oops, not an nsITextContent");
-    if (! text)
-      return PR_TRUE;
-    
-    // Is it only whitespace?
-    PRBool onlyWhitespace;
-    text->IsOnlyWhitespace(&onlyWhitespace);
-    
-    // If not, then we have displayable content here.
-    if (! onlyWhitespace)
+    // If not only whitespace, then we have displayable content here.
+    if (! IsOnlyWhitespace(frame->GetContent()))
       return PR_TRUE;
     
     // Otherwise, on to the next frame...
@@ -12036,8 +12027,7 @@ NeedFirstLetterContinuation(nsIContent* aContent)
   if (aContent) {
     nsCOMPtr<nsITextContent> tc(do_QueryInterface(aContent));
     if (tc) {
-      const nsTextFragment* frag = nsnull;
-      tc->GetText(&frag);
+      const nsTextFragment* frag = tc->Text();
       PRInt32 flc = FirstLetterCount(frag);
       PRInt32 tl = frag->GetLength();
       if (flc < tl) {
@@ -12053,14 +12043,8 @@ static PRBool IsFirstLetterContent(nsIContent* aContent)
   PRBool result = PR_FALSE;
 
   nsCOMPtr<nsITextContent> textContent = do_QueryInterface(aContent);
-  if (textContent) {
-    PRInt32 textLength;
-    textContent->GetTextLength(&textLength);
-    if (textLength) {
-      PRBool onlyWhiteSpace;
-      textContent->IsOnlyWhitespace(&onlyWhiteSpace);
-      result = !onlyWhiteSpace;
-    }
+  if (textContent && textContent->TextLength()) {
+    result = !textContent->IsOnlyWhitespace();
   }
 
   return result;
@@ -12666,7 +12650,7 @@ nsCSSFrameConstructor::ConstructBlock(nsIPresShell*            aPresShell,
   // ...and that we're the absolute containing block.
   nsFrameConstructorSaveState absoluteSaveState;
   if (aRelPos || !aState.mAbsoluteItems.containingBlock) {
-    NS_ASSERTION(aRelPos, "should have made area frame for this");
+    //    NS_ASSERTION(aRelPos, "should have made area frame for this");
     aState.PushAbsoluteContainingBlock(aPresContext, aNewFrame, absoluteSaveState);
   }
 

@@ -37,14 +37,14 @@
  * ----- END LICENSE BLOCK ----- */
 
 #include "nsIXTFElement.idl"
-#include "nsISupportsArray.idl"
 
 interface nsIXTFXMLVisualWrapper;
+interface nsIDOMElement;
 
 [scriptable, uuid(f6e8a067-a3ec-450f-b1e1-3f14ac2b369e)]
 interface nsIXTFXMLVisual : nsIXTFElement
 {
   void onCreated(in nsIXTFXMLVisualWrapper wrapper);
 
-  readonly attribute nsISupportsArray visualContent;
+  readonly attribute nsIDOMElement visualContent;
 };
