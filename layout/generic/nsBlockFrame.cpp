@@ -6218,104 +6218,36 @@ nsBlockFrame::GetFrameForPoint(const nsPoint& aPoint,
   return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP
-nsBlockFrame::ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild)
+/* virtual */ PRBool
+nsBlockFrame::ChildIsDirty(nsIFrame* aChild)
 {
-#ifdef DEBUG
-  if (gNoisyReflow) {
-    IndentBy(stdout, gNoiseIndent);
-    ListTag(stdout);
-    printf(": ReflowDirtyChild (");
-    if (aChild)
-      nsFrame::ListTag(stdout, aChild);
-    else
-      printf("null");
-    printf(")\n");
-
-    gNoiseIndent++;
-  }
-#endif
-
-  if (aChild) {
-    // See if the child is absolutely positioned
-    if (aChild->GetStateBits() & NS_FRAME_OUT_OF_FLOW) {
-      const nsStyleDisplay* disp = aChild->GetStyleDisplay();
-
-      if (disp->IsAbsolutelyPositioned()) {
-        // Generate a reflow command to reflow our dirty absolutely
-        // positioned child frames.
-        // XXX Note that we don't currently try and coalesce the reflow commands,
-        // although we should. We can't use the NS_FRAME_HAS_DIRTY_CHILDREN
-        // flag, because that's used to indicate whether in-flow children are
-        // dirty...
-        nsHTMLReflowCommand* reflowCmd;
-        nsresult          rv = NS_NewHTMLReflowCommand(&reflowCmd, this,
-                                                       eReflowType_ReflowDirty);
-        if (NS_SUCCEEDED(rv)) {
-          reflowCmd->SetChildListName(mAbsoluteContainer.GetChildListName());
-          aPresShell->AppendReflowCommand(reflowCmd);
-        }
-
-#ifdef DEBUG
-        if (gNoisyReflow) {
-          IndentBy(stdout, gNoiseIndent);
-          printf("scheduled reflow command for absolutely positioned frame\n");
-          --gNoiseIndent;
-        }
-#endif
-
-        return rv;
-      }
+  // See if the child is absolutely positioned
+  if (aChild->GetStateBits() & NS_FRAME_OUT_OF_FLOW &&
+      aChild->GetStyleDisplay()->IsAbsolutelyPositioned()) {
+    // do nothing
+  } else if (aChild == mBullet && HaveOutsideBullet()) {
+    // The bullet lives in the first line, unless the first line has
+    // height 0 and there is a second line, in which case it lives
+    // in the second line.
+    line_iterator bulletLine = begin_lines();
+    if (bulletLine != end_lines() && bulletLine->mBounds.height == 0 &&
+        bulletLine != mLines.back()) {
+      bulletLine = bulletLine.next();
     }
-
-    if (aChild == mBullet && HaveOutsideBullet()) {
-      // The bullet lives in the first line, unless the first line has
-      // height 0 and there is a second line, in which case it lives
-      // in the second line.
-      line_iterator bulletLine = begin_lines();
-      if (bulletLine != end_lines() && bulletLine->mBounds.height == 0 &&
-          bulletLine != mLines.back()) {
-        bulletLine = bulletLine.next();
-      }
-      
-      if (bulletLine != end_lines()) {
-        MarkLineDirty(bulletLine);
-      }
-      // otherwise we have an empty line list, and ReflowDirtyLines
-      // will handle reflowing the bullet.
-    } else {
-      // Mark the line containing the child frame dirty.
-      line_iterator fline = FindLineFor(aChild);
-      if (fline != end_lines())
-        MarkLineDirty(fline);
+    
+    if (bulletLine != end_lines()) {
+      MarkLineDirty(bulletLine);
     }
+    // otherwise we have an empty line list, and ReflowDirtyLines
+    // will handle reflowing the bullet.
+  } else {
+    // Mark the line containing the child frame dirty.
+    line_iterator fline = FindLineFor(aChild);
+    if (fline != end_lines())
+      MarkLineDirty(fline);
   }
 
-  // Either generate a reflow command to reflow the dirty child or 
-  // coalesce this reflow request with an existing reflow command    
-  if (!(mState & NS_FRAME_HAS_DIRTY_CHILDREN)) {
-    // If this is the first dirty child, 
-    // post a dirty children reflow command targeted at yourself
-    mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
-
-    nsFrame::CreateAndPostReflowCommand(aPresShell, this, 
-      eReflowType_ReflowDirty, nsnull, nsnull, nsnull);
-
-#ifdef DEBUG
-    if (gNoisyReflow) {
-      IndentBy(stdout, gNoiseIndent);
-      printf("scheduled reflow command targeted at self\n");
-    }
-#endif
-  }
-
-#ifdef DEBUG
-  if (gNoisyReflow) {
-    --gNoiseIndent;
-  }
-#endif
-  
-  return NS_OK;
+  return nsBlockFrameSuper::ChildIsDirty(aChild);
 }
 
 //////////////////////////////////////////////////////////////////////

@@ -131,7 +131,7 @@ public:
                        nsIFrame::Cursor& aCursor);
 
 
-  NS_IMETHOD ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild);
+  virtual PRBool ChildIsDirty(nsIFrame* aChild);
 
   NS_IMETHOD  Init(nsPresContext*  aPresContext,
                    nsIContent*      aContent,

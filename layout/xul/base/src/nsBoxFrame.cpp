@@ -669,13 +669,14 @@ nsBoxFrame::GetInitialAutoStretch(PRBool& aStretch)
 }
 
 
-NS_IMETHODIMP
-nsBoxFrame::ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild)
+/* virtual */ PRBool
+nsBoxFrame::ChildIsDirty(nsIFrame* aChild)
 {
+#error "This code needs to be rewritten."
    // if we receive a ReflowDirtyChild it is because there is an HTML frame 
    // just inside us. So must find the adaptor that contains the child and
    // tell it that things are dirty.
-   nsBoxLayoutState state(aPresShell->GetPresContext());
+   nsBoxLayoutState state(GetPresContext());
 
    nsIBox* box = nsnull;
    GetChildBox(&box);

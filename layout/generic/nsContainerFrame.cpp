@@ -408,19 +408,12 @@ nsContainerFrame::ReplaceFrame(nsPresContext* aPresContext,
   return rv;
 }
 
-NS_IMETHODIMP
-nsContainerFrame::ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild)
+/* virtual */ PRBool
+nsContainerFrame::ChildIsDirty(nsIFrame* aChild)
 {
-  // The container frame always generates a reflow command
-  // targeted at its child
-  // Note that even if this flag is already set, we still need to reflow the
-  // child because the frame may have more than one child
-  mState |= NS_FRAME_HAS_DIRTY_CHILDREN;
-
-  nsFrame::CreateAndPostReflowCommand(aPresShell, aChild, 
-    eReflowType_ReflowDirty, nsnull, nsnull, nsnull);
-
-  return NS_OK;
+  PRBool result = (GetStateBits() & NS_FRAME_HAS_DIRTY_CHILDREN) != 0;
+  AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
+  return result;
 }
 
 

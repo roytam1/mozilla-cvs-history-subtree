@@ -3244,15 +3244,24 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame)
   }  
 #endif
 
-  // Add to the set of roots needing reflow and set dirty bits.
-  nsIFrame *reflowRoot = aFrame;
-  do {
-    reflowRoot = reflowRoot->GetParent();
-    reflowRoot->AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
-  } while (!(reflowRoot->GetStateBits() & NS_FRAME_REFLOW_ROOT) &&
-           (reflowRoot = reflowRoot->GetParent()) != nsnull);
-  if (mDirtyRoots.IndexOf(reflowRoot) == -1)
-    mDirtyRoots.AppendElement(reflowRoot);
+  // Set NS_FRAME_HAS_DIRTY_CHILDREN bits (via nsIFrame::HasDirtyChild) up the
+  // tree until we reach either a frame that's already dirty or a reflow root.
+  nsIFrame *f = aFrame;
+  for (;;) {
+    nsIFrame *child = f;
+    f = f->GetParent();
+    if (f->HasDirtyChild(child)) {
+      // This frame was already marked dirty.
+      break;
+    }
+
+    if ((f->GetStateBits() & NS_FRAME_REFLOW_ROOT) || !f->GetParent()) {
+      // we've hit a reflow root or the root frame
+      NS_ASSERTION(mDirtyRoots.IndexOf(reflowRoot) == -1, "HasDirtyChild lied");
+      mDirtyRoots.AppendElement(reflowRoot);
+      break;
+    }
+  }
 
   if (gAsyncReflowDuringDocLoad && mDocumentLoading && !mDummyLayoutRequest)
     AddDummyLayoutRequest();

@@ -4259,11 +4259,12 @@ nsIView* nsIFrame::GetClosestView(nsPoint* aOffset) const
 }
 
 
-NS_IMETHODIMP
-nsFrame::ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild)
+/* virtual */ PRBool
+nsFrame::ChildIsDirty(nsIFrame* aChild)
 {
-  NS_ASSERTION(0, "nsFrame::ReflowDirtyChild() should never be called.");  
-  return NS_ERROR_NOT_IMPLEMENTED;    
+  NS_NOTREACHED("should never be called on a frame that doesn't inherit from "
+                "nsContainerFrame");
+  return PR_FALSE;
 }
 
 

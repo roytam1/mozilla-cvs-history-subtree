@@ -1208,12 +1208,20 @@ public:
   NS_IMETHOD CheckVisibility(nsPresContext* aContext, PRInt32 aStartIndex, PRInt32 aEndIndex, PRBool aRecurse, PRBool *aFinished, PRBool *_retval)=0;
 
   /**
-   *  Called by a child frame on a parent frame to tell the parent frame that the child needs
-   *  to be reflowed.  The parent should either propagate the request to its parent frame or 
-   *  handle the request by generating a eReflowType_ReflowDirtyChildren reflow command.
+   * Called to tell a frame that one of its child frames is dirty (i.e.,
+   * has the NS_FRAME_IS_DIRTY *or* NS_FRAME_HAS_DIRTY_CHILDREN bit
+   * set).  This should always set the NS_FRAME_HAS_DIRTY_CHILDREN on
+   * the frame, and may do other work.
+   *
+   * @return PR_TRUE if the frame was already marked as dirty (i.e., the
+   *         caller does not need to continue making calls up the
+   *         ancestor chain)
+   *         PR_FALSE if the frame was not already marked as dirty
+   *         (which means it's the callers responsibility to call
+   *         this->GetParent()->ReflowDirtyChild or add to the set of
+   *         reflow roots that need reflow)
    */
-
-  NS_IMETHOD ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild) = 0;
+  virtual PRBool ChildIsDirty(nsIFrame* aChild) = 0;
 
   /**
    * Called to retrieve this frame's accessible.

@@ -78,7 +78,7 @@ public:
                           nsIAtom*        aListName,
                           nsIFrame*       aOldFrame,
                           nsIFrame*       aNewFrame);
-  NS_IMETHOD ReflowDirtyChild(nsIPresShell* aPresShell, nsIFrame* aChild);
+  virtual PRBool ChildIsDirty(nsIFrame* aChild);
 
 #ifdef DEBUG
   NS_IMETHOD List(nsPresContext* aPresContext, FILE* out, PRInt32 aIndent) const;
