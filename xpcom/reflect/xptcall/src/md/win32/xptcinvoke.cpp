@@ -95,6 +95,9 @@ XPTC_InvokeByIndex(nsISupports* that, PRUint32 methodIndex,
         push    ecx                 // paramCount
         push    edx
         call    invoke_copy_to_stack // stdcall
+#if defined(WINCE)
+        add     esp,0Ch
+#endif /* WINCE */
 noparams:
         mov     ecx,that            // instance in ecx
         push    ecx                 // push this
