@@ -39,7 +39,9 @@
  * int32, and uint32 typedefs conflict with those 
  * in this file. 
  */ 
+#ifndef NO_NSPR_10_SUPPORT
 #define NO_NSPR_10_SUPPORT
+#endif
 #include "jri.h"                /* Java Runtime Interface */
 
 #if defined (__OS2__ ) || defined (OS2)
