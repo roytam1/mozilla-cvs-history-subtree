@@ -49,10 +49,25 @@ enum {
 // to JVM plugins for browsers that support JVM plugins.
 
 class nsIJVMPlugin;
+class nsISecureJNI2;
 
 class nsIJVMManager : public nsISupports {
 public:
-
+    /**
+     * Creates a proxy JNI with an optional secure environment (which can be NULL).
+     * There is a one-to-one correspondence between proxy JNIs and threads, so
+     * calling this method multiple times from the same thread will return
+     * the same proxy JNI.
+     */
+	NS_IMETHOD
+	CreateProxyJNI(nsISecureJNI2* inSecureEnv, JNIEnv** outProxyEnv) = 0;
+	
+	/**
+	 * Returns the proxy JNI associated with the current thread, or NULL if no
+	 * such association exists.
+	 */
+	NS_IMETHOD
+	GetProxyJNI(JNIEnv** outProxyEnv) = 0;
 };
 
 #define NS_IJVMMANAGER_IID                           \

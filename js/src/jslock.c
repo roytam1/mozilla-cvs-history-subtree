@@ -241,7 +241,9 @@ js_GetSlotWhileLocked(JSContext *cx, JSObject *obj, uint32 slot)
 
     JS_ASSERT(obj->slots && slot < obj->map->freeslot);
 #ifndef NSPR_LOCK
+    /*
     JS_ASSERT(me == CurrentThreadId());
+    */
     if (js_CompareAndSwap(&p->owner, 0, me)) {
 	if (scp == (JSScope *)obj->map) {
 	    v = obj->slots[slot];
@@ -275,7 +277,9 @@ js_SetSlotWhileLocked(JSContext *cx, JSObject *obj, uint32 slot, jsval v)
 
     JS_ASSERT(obj->slots && slot < obj->map->freeslot);
 #ifndef NSPR_LOCK
+    /*
     JS_ASSERT(me == CurrentThreadId());
+    */
     if (js_CompareAndSwap(&p->owner, 0, me)) {
 	if (scp == (JSScope *)obj->map) {
 	    obj->slots[slot] = v;
@@ -613,7 +617,9 @@ js_Dequeue(JSThinLock *p)
 JS_INLINE void
 js_Lock(JSThinLock *p, jsword me)
 {
+    /*
     JS_ASSERT(me == CurrentThreadId());
+    */
     if (js_CompareAndSwap(&p->owner, 0, me))
 	return;
     if (Thin_RemoveWait(ReadWord(p->owner)) != me)
@@ -627,7 +633,9 @@ js_Lock(JSThinLock *p, jsword me)
 JS_INLINE void
 js_Unlock(JSThinLock *p, jsword me)
 {
+    /*
     JS_ASSERT(me == CurrentThreadId());
+    */
     if (js_CompareAndSwap(&p->owner, me, 0))
 	return;
     if (Thin_RemoveWait(ReadWord(p->owner)) == me)
@@ -735,7 +743,9 @@ js_LockObj(JSContext *cx, JSObject *obj)
 {
     JSScope *scope;
     jsword me = cx->thread;
+    /*
     JS_ASSERT(me == CurrentThreadId());
+    */
     for (;;) {
 		scope = (JSScope *) obj->map;
 		js_LockScope1(cx, scope, me);

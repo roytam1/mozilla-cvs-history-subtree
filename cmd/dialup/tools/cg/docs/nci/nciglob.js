@@ -23,7 +23,6 @@
 
 //THE FOLLOWING FUNCTION IS LOCATION DEPENDANT
 
-
 function refreshConfigFrame(fileName)
 {
 	if (parent.nci)
@@ -39,8 +38,6 @@ function refreshConfigFrame(fileName)
 			parent.parent.nci.setNCIList(fileName);
 	
 	}
-	if (fileName != null)
-		setGlobal("NciFileName", fileName);
 }
 
 //THE FOLLOWING FUNCTION IS LOCATION DEPENDANT
@@ -328,7 +325,7 @@ function isAlphaNumeric(inLetter)
 	if ((inLetter != null) && (inLetter != ""))
 	{
 
-		if ((!isNaN(parseInt(inLetter))) && (parseInt(inLetter) >= 0) && (parseInt(inLetter) <= 9))
+		if ((!isNaN(parseInt(inLetter))) && (parseInt(inLetter >= 0)) && (parseInt(inLetter <=9)))
 			outValue = true;
 		else
 		{
@@ -401,8 +398,6 @@ function askNCIFileNameAndSave()
 	var sName 	= 	getGlobal("SiteName");
 	var save 	= 	null;
 	
-	netscape.security.PrivilegeManager.enablePrivilege( "AccountSetup" );
-
 	//flush data from currenly open tab into globals
 	if (parent.tabs && parent.tabs.tabbody && parent.tabs.tabbody.saveData)
 	{
@@ -436,14 +431,13 @@ function askNCIFileNameAndSave()
 			if ((sgName == null) || (sgName == "") || (sgName == "_new_"))
 				sgName = suggestNCIFileName(null);
 
-			var fName = prompt("Enter the file name for this configuration (must end with .NCI). Do not specify a path name. Account Setup Editor saves the file to " + top.globals.getConfigFolder(top.globals), sgName);
-
-			//if they entered an improper suffix or path, prompt again, and again
-			//NCI files are to be saved only in the config folder. 
-			while ((fName != null) && (((fName.substring(fName.length-4, fName.length)  != ".NCI") && (fName.substring(fName.length-4, fName.length)  != ".nci")) || (pathMentioned(fName))))
+			var fName = prompt("Enter the file name for this configuration (must end with .NCI)", sgName);
+			
+			//if they entered an improper suffix, prompt again, and again
+			while ((fName != null) && (fName.substring(fName.length-4, fName.length)  != ".NCI"))
 			{
 				sgName = suggestNCIFileName(fName);
-				fName = prompt("Please enter file name only (must end with .NCI). This file will be saved by default to " + top.globals.getConfigFolder(top.globals), sgName);
+				fName = prompt("Enter the fileName for this configuration (must end with .NCI)", sgName);
 			}
 			
 			// if the name exists, prompt to replace
@@ -477,8 +471,6 @@ function askNCIFileNameAndSave()
 	{
 		//save the file
 		writeToFile(fName);
-		top.globals.document.setupPlugin.FlushCache();
-		alert("This file is saved as " + top.globals.getConfigFolder(top.globals) + fName);
 		refreshConfigFrame(fName);
 		return fName;
 	}
@@ -487,21 +479,6 @@ function askNCIFileNameAndSave()
 		//alert("Could not save this configuration because you did not provide a Name");
 		return null;
 	}
-}
-
-// Checks if user mentioned path name in the filename field.
-function pathMentioned(fileName)
-{
-
-	var isAPath = false;
-
-	if ((fileName != null) && (fileName != ""))
-	{
-		if ((fileName.charAt(1) == ':') && (fileName.charAt(2) == '\\'))
-			isAPath = true;
-	}
-
-	return isAPath;	
 }
 
 
@@ -642,8 +619,6 @@ function saveIfDirty()
 // else saves over an old file (no prompting)
 function saveNewOrOldFile()
 {
-	netscape.security.PrivilegeManager.enablePrivilege( "AccountSetup" );
-
 	//flush data from currenly open tab into globals
 	if (parent.tabs && parent.tabs.tabbody && parent.tabs.tabbody.saveData)
 	{
@@ -663,8 +638,6 @@ function saveNewOrOldFile()
 	{
 		//debug("Saving: without asking to: " + fileName);
 		writeToFile(fileName);
-		top.globals.document.setupPlugin.FlushCache();
-		// alert("This file is saved as " + top.globals.getConfigFolder(top.globals) + fName);
 	}
 	return fileName;
 }

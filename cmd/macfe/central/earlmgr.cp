@@ -43,6 +43,10 @@ extern "C" {
 }
 #endif
 
+#ifdef OJI
+#include "jvmmgr.h"
+#endif
+
 #include "resgui.h"
 
 #include "prthread.h"
@@ -111,6 +115,11 @@ void EarlManager::SpendTime( const EventRecord& /*inMacEvent*/)
 		NET_InterruptWindow( fInterruptContext );
 		fInterruptContext = NULL;
 	}
+
+#ifdef OJI
+	if (JVM_GetJVMStatus() == nsJVMStatus_Running)
+		JVM_SpendTime(100);
+#endif
 }
 
 void EarlManager::InterruptThis(MWContext * context)

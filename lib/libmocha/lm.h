@@ -549,6 +549,9 @@ lm_InitEventClasses(MochaDecoder *decoder);
 extern JSBool
 lm_InitRectClass(MochaDecoder *decoder);
 
+extern JSBool
+lm_InitBackgroundClass(MochaDecoder *decoder);
+
 /* Create an image context for anonymous images. */
 extern JSBool
 lm_NewImageContext(MWContext *context, MochaDecoder *decoder);
@@ -650,6 +653,8 @@ typedef enum JSTarget {
     JSTARGET_UNIVERSAL_PREFERENCES_READ,
     JSTARGET_UNIVERSAL_PREFERENCES_WRITE,
     JSTARGET_UNIVERSAL_DIALER_ACCESS,
+    JSTARGET_ALL_JAVA_PERMISSIONS,
+    JSTARGET_ALL_JAVASCRIPT_PERMISSIONS,
     JSTARGET_MAX
 } JSTarget;
 

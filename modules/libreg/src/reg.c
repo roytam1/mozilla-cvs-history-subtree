@@ -51,6 +51,7 @@
 
 #include "reg.h"
 #include "NSReg.h"
+#include "VerReg.h"
 
 #if defined(XP_UNIX)
 #ifndef MAX_PATH
@@ -2166,6 +2167,7 @@ bail:
     PR_ExitMonitor(reglist_monitor);
 #endif
 
+    
     return status;
 
 }   /* NR_RegOpen */
@@ -3266,12 +3268,15 @@ VR_INTERFACE(REGERR) NR_RegEnumSubkeys( HREG hReg, RKEY key, REGENUM *state,
             {
                 /* get last position */
                 err = nr_ReadDesc( reg, *state, &desc );
-                if ( REGERR_OK != err && REGERR_DELETED != err ) 
+                if ( REGERR_OK != err ) 
                 {
                     /* it is OK for the state node to be deleted
                      * (the *next* node MUST be "live", though).
                      * bail out on any other error */
-                    break;
+                    if ( REGERR_DELETED == err )
+                        err = REGERR_OK;
+                    else
+                        break;
                 }
 
                 if ( desc.down != 0 ) {
@@ -3326,12 +3331,15 @@ VR_INTERFACE(REGERR) NR_RegEnumSubkeys( HREG hReg, RKEY key, REGENUM *state,
             {
                 /* get last position */
                 err = nr_ReadDesc( reg, *state, &desc );
-                if ( REGERR_OK != err && REGERR_DELETED != err ) 
+                if ( REGERR_OK != err ) 
                 {
                     /* it is OK for the state node to be deleted
                      * (the *next* node MUST be "live", though).
                      * bail out on any other error */
-                    break;
+                    if ( REGERR_DELETED == err )
+                        err = REGERR_OK;
+                    else
+                        break;
                 }
 
                 if ( desc.left != 0 )
@@ -3511,6 +3519,9 @@ VR_INTERFACE(void) NR_StartupRegistry(void)
     /* check to see that we have a valid registry */
     if (REGERR_OK == NR_RegOpen("", &reg))
     {
+        /* XXX think about leaving this open the whole time. gecko and the 
+           profile manager open and close the registry many times at start-up,
+           and each results in a physical file open if we don't */
         NR_RegClose(reg);
     }
     else {

@@ -24,9 +24,8 @@
 #include "softupdt.h"
 #include "su_instl.h"
 #include "nsInstallDelete.h"
-#include "nsVersionRegistry.h"
 #include "nsSUError.h"
-#include "NSReg.h"
+#include "VerReg.h"
 
 #include "nsPrivilegeManager.h"
 #include "nsTarget.h"
@@ -136,7 +135,7 @@ char* nsInstallDelete::Complete()
   }
 
   if (deleteStatus == DELETE_COMPONENT) {
-    err = nsVersionRegistry::deleteComponent(registryName);
+    err = VR_Remove( registryName );
   }
   char *msg = NULL;
   if ((deleteStatus == DELETE_FILE) || (err == REGERR_OK)) {
@@ -197,15 +196,23 @@ void nsInstallDelete::processInstallDelete(char* *errorMsg)
   
   if (deleteStatus == DELETE_COMPONENT) {
     /* Check if the component is in the registry */
-    err = nsVersionRegistry::inRegistry(registryName);
+    err = VR_InRegistry(registryName);
     if (err != REGERR_OK) {
       char *msg = NULL;
       msg = SU_GetString1(SU_ERROR_NOT_IN_REGISTRY, registryName);
       *errorMsg = SU_GetErrorMsg3(msg, nsSoftUpdateError_NO_SUCH_COMPONENT);
       XP_FREEIF(msg);
       return;
-    } else {
-      finalFile = nsVersionRegistry::componentPath(registryName);
+    } 
+    else 
+    {
+      finalFile = (char*)XP_CALLOC(MAXREGPATHLEN, sizeof(char));
+      err = VR_GetPath( registryName, MAXREGPATHLEN, finalFile );
+      if (err != REGERR_OK)
+      {
+        XP_FREEIF(finalFile);
+        finalFile=NULL;
+      }
     }
   }
   

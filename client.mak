@@ -121,7 +121,7 @@ repull_include:
 pull_client_source_product:
     @echo +++ client.mak: checking out the client with "$(CVS_BRANCH)"
     cd $(MOZ_SRC)\.
-    -cvs -q co $(CVS_BRANCH)      MozillaSourceWin
+    -cvs -q co -r MozillaSourceClassic_19981026_BRANCH MozillaSourceWin
 
 
 !if defined(MOZ_NGLAYOUT)

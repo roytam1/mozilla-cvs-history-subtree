@@ -884,7 +884,10 @@ NET_ChangeMaxNumberOfConnections(int max_number_of_connections)
 
 	/* close any open connections to prevent deadlock
 	 */
+#ifndef XP_MAC
+	/* beard: this just breaks the mkabout module, since it trashes a hash table. It's no-op otherwise. */
 	net_cleanup_reg_protocol_impls();
+#endif
 }
 
 /* set the maximum allowable number of open connections at any one

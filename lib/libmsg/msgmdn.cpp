@@ -21,7 +21,6 @@
 #include "xp_time.h"
 #include "prtime.h"
 #include "prtypes.h"
-#include "prsystem.h"
 #include "fe_proto.h"
 #include "msg.h"
 #include "msgfinfo.h"
@@ -750,10 +749,6 @@ MSG_ProcessMdnNeededState::CreateSecondPart()
 	char *tmpBuffer = NULL;
 	char *convbuf = NULL;
 	int32 status = 0;
-    char hostName[256];
-    *hostName = '\0';
-
-    PR_GetSystemInfo(PR_SI_HOSTNAME, hostName, 254);
 	
 	tmpBuffer = PR_smprintf("--%s" CRLF, m_mimeSeparator);
 	PUSH_N_FREE_STRING(tmpBuffer);
@@ -768,7 +763,7 @@ MSG_ProcessMdnNeededState::CreateSecondPart()
 	PUSH_N_FREE_STRING(tmpBuffer);
 
 	tmpBuffer = PR_smprintf("Reporting-UA: %s; %s %s" CRLF,
-				hostName, XP_AppCodeName, XP_AppVersion);
+				NET_HostName(), XP_AppCodeName, XP_AppVersion);
 	PUSH_N_FREE_STRING(tmpBuffer);
 
 	if (m_originalRecipient && *m_originalRecipient)

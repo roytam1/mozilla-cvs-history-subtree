@@ -28,7 +28,6 @@ parent.ondblclick = cancelEvent;
 var oneStepSemaphore = false;
 var selectedISP = null;
 var supportWindow = null;
-var currentProfileDirectory = null;
 
 function getSelectedISPName()
 {
@@ -123,7 +122,7 @@ function loadUserInput()
 				}
 			}
 	
-		userInputFile = currentProfileDirectory;
+		var userInputFile = document.setupPlugin.GetCurrentProfileDirectory();
 		if (userInputFile != null && userInputFile != "")	{
 			userInputFile = userInputFile + "ACCTSET.DAT";
 			var theSection="Account Setup User Input";
@@ -257,16 +256,6 @@ function loadUserInput()
 
 function loadGlobalData()
 {
-	if (document.vars.debugMode.value.toLowerCase() != "yes")
-	{
-		debug ("debugMode Flag is OFF");
-	}
-	else
-	{
-		debug ("debugMode Flag is ON");
-		top.debugFlag = true;
-	}
-
 	netscape.security.PrivilegeManager.enablePrivilege("AccountSetup");
 
 	if ( document.setupPlugin == null )
@@ -319,8 +308,6 @@ function loadGlobalData()
 			else if ( existingPathFlag == "yes" && newPathFlag != "yes" )
 				document.vars.path.value = "Existing Path";
 
-			// debug("***PATH VALUE = " + document.vars.path.value);
-
 			document.vars.oneStepMode.value = "";
 			var oneStepModeFlag = parent.parent.globals.GetNameValuePair( acctSetupFile, "Mode Selection", "OneStepMode" );
 			oneStepModeFlag = oneStepModeFlag.toLowerCase();
@@ -334,8 +321,7 @@ function loadGlobalData()
 		
 		
 		// load in user input (if any)
-		currentProfileDirectory = document.setupPlugin.GetCurrentProfileDirectory();
-		var userInputFile = currentProfileDirectory;
+		var userInputFile = document.setupPlugin.GetCurrentProfileDirectory();
 		if ( userInputFile != null && userInputFile != "" )
 		{
 
@@ -401,7 +387,7 @@ function saveExternalEditor()
 	// as a preference in ACCTSET.DAT.  This is it.
 	
 	netscape.security.PrivilegeManager.enablePrivilege( "AccountSetup" );
-	var userInputFile = currentProfileDirectory;
+	var userInputFile = document.setupPlugin.GetCurrentProfileDirectory();
 	if ( userInputFile != null && userInputFile != "" )
 	{
 		userInputFile = userInputFile + "ACCTSET.DAT";
@@ -449,7 +435,7 @@ function saveGlobalData()
 
 
 	// save user input (if any)
-	var userInputFile = currentProfileDirectory;
+	var userInputFile = document.setupPlugin.GetCurrentProfileDirectory();
 	if (userInputFile != null && userInputFile != "")
 	{
 		userInputFile = userInputFile + "ACCTSET.DAT";

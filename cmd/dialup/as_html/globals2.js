@@ -409,8 +409,7 @@ function configureNewAccount()
 	navigator.preference( "browser.mac.use_internet_config", false );
 
 
-	//var profileDir = document.setupPlugin.GetCurrentProfileDirectory();
-	var profileDir = currentProfileDirectory;
+	var profileDir = document.setupPlugin.GetCurrentProfileDirectory();
 	if ( profileDir != null && profileDir != "" )
 	{
 
@@ -817,8 +816,7 @@ function saveAccountInfo(promptFlag)
 
 	var savedFlag=false;
 	if (promptFlag==false)	{
-		//var profileDir = document.setupPlugin.GetCurrentProfileDirectory();
-		var profileDir = currentProfileDirectory;
+		var profileDir = document.setupPlugin.GetCurrentProfileDirectory();
 		if (profileDir != null && profileDir != "")	{
 			if (thePlatform == "Macintosh")	{
 				newProfileName = profileDir + "Account Info";

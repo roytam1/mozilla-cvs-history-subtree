@@ -205,10 +205,12 @@ statusDlgcallback(HWND hWnd,
 					dwRet = RasHangUp(hRasConn);
 
 					if (dwRet == ERROR_INVALID_HANDLE) {
-						trace("dialer.cpp : statusDlgcallback - Can't hangup. Invalid Connection Handle.");
+						trace("dialer.cpp : statusDlgcallback - Can't hangup. Invalid Connection Handle. (r)");
+						return FALSE;
 					}
-					else if (dwRet) {
-						trace("dialer.cpp : statusDlgcallback - Can't hangup. Error %d.", dwRet);
+					else if (dwRet && dwRet != ERROR_INVALID_HANDLE) {
+						trace("dialer.cpp : statusDlgcallback - Can't hangup. Error %d. (r)", dwRet);
+						return FALSE;
 					}
 
 					Sleep(3000);
@@ -401,7 +403,7 @@ void ProcessRasDialEvent(RASCONNSTATE rasconnstate, DWORD dwError)
 				if (dwRet == ERROR_INVALID_HANDLE) {
 					trace("dialer.cpp : ProcessRasDialEvent (stateConnected) - Can't hangup. Invalid Connection Handle.");
 				}
-				else if (dwRet) {
+				else if (dwRet && dwRet != ERROR_INVALID_HANDLE) {
 					trace("dialer.cpp : ProcessRasDialEvent (stateConnected) - Can't hangup. Error %d", dwRet);
 				}
 				
@@ -422,7 +424,7 @@ void ProcessRasDialEvent(RASCONNSTATE rasconnstate, DWORD dwError)
 				{
 					trace("dialer.cpp : ProcessRasDialEvent (stateConnecting) - Can't hangup. Invalid Connection Handle.");
 				}
-				else if (dwRet)
+				else if (dwRet && dwRet != ERROR_INVALID_HANDLE)
 				{
 					trace("dialer.cpp : ProcessRasDialEvent (stateConnecting) - Can't hangup. Error %d", dwRet);
 				}
@@ -590,7 +592,7 @@ static BOOL IsDialerConnected()
 		if (ret == ERROR_INVALID_NAME) {
 			trace("dialer.cpp : isDialerConnected - Can't delete regi phonebook entry. Invalid phonebook entry name");
 		}
-		else if (ret) {
+		else if (ret && ret != ERROR_INVALID_NAME) {
 			trace("dialer.cpp : isDialerConnected - Can't delete regi phone book entry. Error = %d", ret);
 		}
 
@@ -648,7 +650,7 @@ native_netscape_npasw_SetupPlugin_SECURE_0005fDialerConnect(JRIEnv* env,
 		if (dwError == ERROR_NOT_ENOUGH_MEMORY){
 			trace("dialer.cpp : [native] DialerConnect - Not enough memory for dialing activity. Dialing failed.");
 		}
-		else if (dwError){
+		else if (dwError && dwError != ERROR_NOT_ENOUGH_MEMORY){
 			trace("dialer.cpp : [native] DialerConnect - Dialing failed. Error code = %d",dwError);
 		}
     } 
@@ -763,7 +765,7 @@ native_netscape_npasw_SetupPlugin_SECURE_0005fDialerConnect(JRIEnv* env,
 			if (dwRet == ERROR_INVALID_HANDLE) {
 				trace("dialer.cpp : [native] DialerConnect - Can't hangup. Invalid Connection Handle.");
 			}
-			else if (dwRet) {
+			else if (dwRet && dwRet != ERROR_INVALID_HANDLE) {
 				trace("dialer.cpp : [native] DialerConnect - Can't hangup. Error %d", dwRet);
 			}
 
@@ -788,7 +790,7 @@ native_netscape_npasw_SetupPlugin_SECURE_0005fDialerConnect(JRIEnv* env,
 		if (ret == ERROR_INVALID_NAME) {
 			trace("dialer.cpp : [native] DialerConnect - Can't delete regi phonebook entry. Invalid phonebook entry name");
 		}
-		else if (ret) {
+		else if (ret && ret != ERROR_INVALID_NAME) {
 			trace("dialer.cpp : [native] DialerConnect - Can't delete regi phone book entry. Error  %d", ret);
 		}
 #else
@@ -905,7 +907,7 @@ void DialerHangup()
 		if (dwRet == ERROR_INVALID_HANDLE) {
 			trace("dialer.cpp : DialerHangup - Can't hangup. Invalid Connection Handle.");
 		}
-		else if (dwRet) {
+		else if (dwRet && dwRet != ERROR_INVALID_HANDLE) {
 			trace("dialer.cpp : DialerHangup - Can't hangup. Error %d.", dwRet);
 		}
 
@@ -933,7 +935,7 @@ void DialerHangup()
 		if (ret == ERROR_INVALID_NAME) {
 			trace("dialer.cpp : DialerHangup - Can't delete regi phonebook entry. Invalid phonebook entry name");
 		}
-		else if (ret) {
+		else if (ret && ret != ERROR_INVALID_NAME) {
 			trace("dialer.cpp : DialerHangup - Can't delete regi phone book entry. Error code %d", ret);
 		}
 
@@ -1690,32 +1692,39 @@ void EnableDialOnDemandNT(LPSTR lpProfileName)
 	rtn = (*m_lpfnRasSetAutodialParam)(RASADP_DisableConnectionQuery, &val, sizeof(int));
 
 	if (rtn == ERROR_INVALID_PARAMETER) {
-		trace("dialer.cpp : EnableDialOnDemandNT - Invalid Parameter. Can't set Autodial Parameters.");
+		trace("dialer.cpp : EnableDialOnDemandNT - Invalid Parameter. Can't set Autodial Parameters. (r)");
+		return;
 	}	 
 	else if (rtn == ERROR_INVALID_SIZE) {
-		trace("dialer.cpp : EnableDialOnDemandNT - Invalid size. Can't set Autodial Parameters.");
+		trace("dialer.cpp : EnableDialOnDemandNT - Invalid size. Can't set Autodial Parameters. (r)");
+		return;
 	}	 
 	else if (rtn) {
-		trace("dialer.cpp : EnableDialOnDemandNT - Can't set Autodial Parameters. Error %d.", rtn);
+		trace("dialer.cpp : EnableDialOnDemandNT - Can't set Autodial Parameters. Error %d. (r)", rtn);
+		return;
 	}	 
 
 	rtn = (*m_lpfnRasSetAutodialAddress)("www.netscape.com", 0, &rasAutodialEntry, 
 	          sizeof(RASAUTODIALENTRY), 1);                          
 
 	if (rtn == ERROR_INVALID_PARAMETER) {
-		trace("dialer.cpp : EnableDialOnDemandNT - Invalid Parameter. Can't set Autodial Address.");
+		trace("dialer.cpp : EnableDialOnDemandNT - Invalid Parameter. Can't set Autodial Address. (r)");
+		return;
 	}	 
 	else if (rtn == ERROR_INVALID_SIZE) {
-		trace("dialer.cpp : EnableDialOnDemandNT - Invalid size. Can't set Autodial Address.");
+		trace("dialer.cpp : EnableDialOnDemandNT - Invalid size. Can't set Autodial Address. (r)");
+		return;
 	}	 
 	else if (rtn) {
-		trace("dialer.cpp : EnableDialOnDemandNT - Can't set Autodial Address. Error %d.", rtn);
+		trace("dialer.cpp : EnableDialOnDemandNT - Can't set Autodial Address. Error %d. (r)", rtn);
+		return;
 	}	 
 
 	rtn = (*m_lpfnRasSetAutodialEnable)(rasAutodialEntry.dwDialingLocation, TRUE);
 
 	if (rtn) {
-		trace("dialer.cpp : EnableDialOnDemandNT - Can't set Autodial Enable. Error %d.", rtn);
+		trace("dialer.cpp : EnableDialOnDemandNT - Can't set Autodial Enable. Error %d. (r)", rtn);
+		return;
 	}	 
 }
 
@@ -2088,10 +2097,28 @@ static BOOL CreateRNAEntry( ACCOUNTPARAMS account, const LOCATIONPARAMS& locatio
 		EnableDialOnDemand( (LPSTR)(LPCSTR)account.ISPName );
 #endif //WIN32
 	
+	dwRet = (*m_lpfnRasValidateEntryName)( NULL, (LPSTR)(LPCSTR)account.ISPName );	
+
+	assert( dwRet == 0 );
+	if (dwRet == ERROR_INVALID_NAME) {
+		trace ("dialer.cpp : CreateRNAEntry (RasValidateEntryName) - Invalid Name. Can't set RasEntry properties. (r)");
+		return FALSE;
+	}
+	else if (dwRet == ERROR_ALREADY_EXISTS) {
+		trace ("dialer.cpp : CreateRNAEntry (RasValidateEntryName) - This name already exists. (r)");
+		return FALSE;
+	}
+	else if (dwRet) {
+		trace ("dialer.cpp : CreateRNAEntry (RasValidateEntryName) - Can't Validate account name. Error %d. (r)", dwRet);
+		return FALSE;
+	}
+
+
 	dwRet = (*m_lpfnRasSetEntryProperties)( NULL, (LPSTR)(LPCSTR)account.ISPName,
 										  (LPBYTE)&rasEntry, stRASENTRY, NULL, 0 );
 	assert( dwRet == 0 );
-	
+	//if ( dwRet )
+		//return -1;		// ??? this is going to return TRUE
 	if (dwRet == ERROR_BUFFER_INVALID) {
 		trace ("dialer.cpp : CreateRNAEntry (RasSetEntryProperties) - Invalid Buffer. Can't set RasEntry properties. (r)");
 		return FALSE;
@@ -2163,7 +2190,7 @@ static BOOL CreateRNAEntry( ACCOUNTPARAMS account, const LOCATIONPARAMS& locatio
 				strcat( pbPath, "\\ras\\rasphone.pbk" );
 				strcat( pbPath, "\0" );
 				
-				dwRet = RasSetEntryDialParams( pbPath, &dialParams, FALSE );
+				ret = ( RasSetEntryDialParams( pbPath, &dialParams, FALSE ) == 0 );
 				
 				if (dwRet == ERROR_BUFFER_INVALID) {
 					trace ("dialer.cpp : CreateRNAEntry (RasSetEntryDialParams) - Invalid Buffer. Can't set RasEntry Dial properties. (r)");
@@ -2181,8 +2208,6 @@ static BOOL CreateRNAEntry( ACCOUNTPARAMS account, const LOCATIONPARAMS& locatio
 					trace ("dialer.cpp : CreateRNAEntry (RasSetEntryDialParams) - Can't set RasEntry Dial properties. Error %d. (r)", dwRet);
 					return FALSE;
 				}
-
-				ret = (dwRet == 0);
 
 				// sets up user login info for new phonebook entry
 				memset( &credentials, 0, sizeof( RASCREDENTIALS ) );
@@ -2228,12 +2253,14 @@ static BOOL CreateRNAEntry( ACCOUNTPARAMS account, const LOCATIONPARAMS& locatio
 			{
 				free( sysDir );
 				// Err: not enough memory for pbPath!
+				//return -2;	// ??? 
 				return FALSE;
 			}
 		}
 		else
 		{
 			// Err: not enough memory for sysDir;
+			//return -3;	// ???
 			return FALSE;
  		} // if (sysDir)
 	} // else if (platformOS == VER_PLATFORM_WIN32_NT

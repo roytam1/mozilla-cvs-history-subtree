@@ -21,7 +21,6 @@
 
 // iasglob.js
 
-
 //THE FOLLOWING FUNCTION IS LOCATION DEPENDANT
 
 function refreshConfigFrame(fileName)
@@ -49,8 +48,6 @@ function refreshConfigFrame(fileName)
 			debug("parent.parent: " + parent.parent + " ["+parent.parent.name+"]: " + parent.parent.ias);
 			debug("this document: " + document.location + document.name + document.ias);
 	}
-	if (fileName != null)
-		setGlobal("IASFileName", fileName);
 }
 
 
@@ -302,7 +299,7 @@ function isAlphaNumeric(inLetter)
 	if ((inLetter != null) && (inLetter != ""))
 	{
 
-		if ((!isNaN(parseInt(inLetter))) && (parseInt(inLetter) >= 0) && (parseInt(inLetter) <=9))
+		if ((!isNaN(parseInt(inLetter))) && (parseInt(inLetter >= 0)) && (parseInt(inLetter <=9)))
 			outValue = true;
 		else
 		{
@@ -355,12 +352,11 @@ function checkIfIASFileExists(inFileName)
 	{	
 		fileList = getFileListFromConfigFolder(".IAS");
 		
-
 		if (fileList != null)	
 		{
 			for (var i=0; i<fileList.length; i++)	
 			{
-				if (fileList[i] == inFileName) 
+				if (fileList[i] == inFileName)
 					outValue = true;
 			}
 		}
@@ -374,7 +370,6 @@ function askIASFileNameAndSave()
 	var sName 	= 	getGlobal("SiteName");
 	var save 	= 	null;
 	
-	netscape.security.PrivilegeManager.enablePrivilege( "AccountSetup" );
 
 	//flush data from currenly open tab into globals
 	if (parent.tabs && parent.tabs.tabbody && parent.tabs.tabbody.saveData)
@@ -410,14 +405,13 @@ function askIASFileNameAndSave()
 			if ((sgName == null) || (sgName == "") || (sgName == "_new_"))
 				sgName = suggestIASFileName(null);
 			
-			var fName = prompt("Enter the file name for this configuration (must end with .IAS). Do not specify a path name. Account Setup Editor saves the file to " + top.globals.getConfigFolder(top.globals), sgName);
+			var fName = prompt("Enter the file name for this configuration (must end with .IAS)", sgName);
 			
-			//if they entered an improper suffix or path, prompt again, and again
-			//IAS files are to be saved only in the config folder. 
-			while ((fName != null) && (((fName.substring(fName.length-4, fName.length)  != ".IAS") && (fName.substring(fName.length-4, fName.length)  != ".ias")) || pathMentioned(fName)))
+			//if they entered an improper suffix, prompt again, and again
+			while ((fName != null) && (fName.substring(fName.length-4, fName.length)  != ".IAS"))
 			{
 				sgName = suggestIASFileName(fName);
-				fName = prompt("Please enter file name only (must end with .IAS). This file will be saved by default to " + top.globals.getConfigFolder(top.globals), sgName);
+				fName = prompt("Enter the fileName for this configuration (must end with .IAS)", sgName);
 			}
 			
 			// if the name exists, prompt to replace
@@ -450,8 +444,6 @@ function askIASFileNameAndSave()
 	{
 		//save the file
 		writeToFile(fName);
-		top.globals.document.setupPlugin.FlushCache();
-		alert("This file is saved as " + top.globals.getConfigFolder(top.globals) + fName);
 		refreshConfigFrame(fName);
 		return fName;
 	}
@@ -462,21 +454,7 @@ function askIASFileNameAndSave()
 	}
 }
 
-// Checks if user mentioned path name in the filename field.
-function pathMentioned(fileName)
-{
-	debug("In pathMentioned");
 
-	var isAPath = false;
-
-	if ((fileName != null) && (fileName != ""))
-	{
-		if ((fileName.charAt(1) == ':') && (fileName.charAt(2) == '\\'))
-			isAPath = true;
-	}
-
-	return isAPath;	
-}
 
 //EVENT HANDLERS
 
@@ -551,7 +529,6 @@ function saveNewOrOldFile()
 	if (fileName == false)
 		return fileName;
 
-	netscape.security.PrivilegeManager.enablePrivilege( "AccountSetup" );
 
 	//flush data from currenly open tab into globals
 	if(parent.tabs && parent.tabs.tabbody && parent.tabs.tabbody.saveData)
@@ -573,8 +550,6 @@ function saveNewOrOldFile()
 	{
 		//debug("Saving: without asking to: " + fileName);
 		writeToFile(fileName);
-		top.globals.document.setupPlugin.FlushCache();
-		//alert("This file is saved as " + top.globals.getConfigFolder(top.globals) + fileName);
 	}
 	return fileName;
 }

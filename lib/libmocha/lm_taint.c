@@ -45,6 +45,9 @@
 #include "jsatom.h"
 #include "jsscope.h"
 
+#ifdef OJI
+#include "jvmmgr.h"
+#endif
 #include "nsCaps.h"
 
 extern JRIEnv * LJ_JSJ_CurrentEnv(JSContext * cx);
@@ -584,24 +587,38 @@ lm_GetPrincipalsFromStackFrame(JSContext *cx)
     /*
      * Get principals from script of innermost interpreted frame.
      */
-    JSStackFrame *fp;
+    JSStackFrame *fp = NULL;
     JSScript *script;
+#ifdef OJI
+    JSStackFrame *pFrameToStartLooking = *JVM_GetStartJSFrameFromParallelStack();
+    JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
+    if( pFrameToStartLooking == NULL)
+    {
+       pFrameToStartLooking = JS_FrameIterator(cx, &pFrameToStartLooking);
+       if ( pFrameToStartLooking == NULL )
+       {
+         /*
+         ** There are no frames or scripts at this point.
+         */
+         pFrameToEndLooking = NULL;
+       }
+    }
+#else
+    JSStackFrame *pFrameToStartLooking = JS_FrameIterator(cx, &fp);
+    JSStackFrame *pFrameToEndLooking   = NULL;
+#endif
 
-    fp = NULL;
-    while ((fp = JS_FrameIterator(cx, &fp)) != NULL) {
+    fp = pFrameToStartLooking;
+    while (fp  != pFrameToEndLooking) {
         script = JS_GetFrameScript(cx, fp);
         if (script) {
             return JS_GetScriptPrincipals(cx, script);
         }
+        fp = JS_FrameIterator(cx, &fp);
     }
-#ifdef JAVA
-    /* =-= sudu: What do we do here for OJI? Ask raman.
-    */
-    if (JSJ_IsCalledFromJava(cx)) {
-        return LM_GetJSPrincipalsFromJavaCaller(cx, 0);
-    }
+#ifdef OJI
+    return JVM_GetJavaPrincipalsFromStack(pFrameToStartLooking);
 #endif
-
     return NULL;
 }
 
@@ -615,13 +632,27 @@ lm_GetSubjectOriginURL(JSContext *cx)
     JSStackFrame *fp;
     JSScript *script;
     MochaDecoder *running;
-#ifdef JAVA
-    JRIEnv *env;
-    char *str;
+#ifdef OJI
+    JSStackFrame *pFrameToStartLooking = *JVM_GetStartJSFrameFromParallelStack();
+    JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
+    if( pFrameToStartLooking == NULL)
+    {
+       pFrameToStartLooking = JS_FrameIterator(cx, &pFrameToStartLooking);
+       if ( pFrameToStartLooking == NULL )
+       {
+         /*
+         ** There are no frames or scripts at this point.
+         */
+         pFrameToEndLooking = NULL;
+       }
+    }
+#else
+    JSStackFrame *pFrameToStartLooking = JS_FrameIterator(cx, &fp);
+    JSStackFrame *pFrameToEndLooking   = NULL;
 #endif
 
-    fp = NULL;
-    while ((fp = JS_FrameIterator(cx, &fp)) != NULL) {
+    fp = pFrameToStartLooking;
+    while (fp  != pFrameToEndLooking) {
         script = JS_GetFrameScript(cx, fp);
         if (script) {
             principals = JS_GetScriptPrincipals(cx, script);
@@ -629,21 +660,13 @@ lm_GetSubjectOriginURL(JSContext *cx)
                 ? principals->codebase
                 : JS_GetScriptFilename(cx, script);
         }
+        fp = JS_FrameIterator(cx, &fp);
     }
-
-#ifdef JAVA
-    /* fell off the js stack, look to see if there's a java
-     * classloader above us that has MAYSCRIPT set on it */
-    if (JSJ_IsCalledFromJava(cx)) {
-        env = LJ_JSJ_CurrentEnv(cx);
-        if (!env) {
-            return NULL;
-        }
-
-        str = LJ_GetAppletScriptOrigin(env);
-        if (!str)
-            return NULL;
-        return str;
+#ifdef OJI
+    principals = JVM_GetJavaPrincipalsFromStack(pFrameToStartLooking);
+    if( principals != NULL )
+    {
+       return principals->codebase;
     }
 #endif
 
@@ -1508,6 +1531,7 @@ lm_CanAccessTarget(JSContext *cx, JSTarget target)
     return JS_TRUE;
 }
 
+
 /* This array must be kept in sync with the JSTarget enum in jsapi.h */
 static char *targetStrings[] = {
     "UniversalBrowserRead",
@@ -1518,9 +1542,45 @@ static char *targetStrings[] = {
     "UniversalPreferencesRead",
     "UniversalPreferencesWrite",
     "AccountSetup",
+    "AllJavaPermission",
+    "AllJavaScriptPermission"
     /* See Target.java for more targets */
 };
 
+int
+findTarget(const char *target)
+{ 
+   int i=0;
+   for(i=0; i<JSTARGET_MAX; i++)
+   {
+      if (XP_STRCMP(target, targetStrings[i]) == 0)
+      {
+         return i;
+      }
+   }
+   return -1;
+}
+/*
+** Exported entry point to support nsISecurityContext::Implies method.
+*/
+JSBool
+LM_CanAccessTargetStr(JSContext *cx, const char *target)
+{
+    int      intTarget = findTarget(target);
+    JSTarget jsTarget;
+    if(intTarget < 0)
+    {
+      return PR_FALSE;
+    }
+    jsTarget = (JSTarget)intTarget;
+    return lm_CanAccessTarget(cx, jsTarget);
+}
+
+const char *
+LM_GetCodebaseFromTopOfJSStack(JSContext *cx)
+{
+   return lm_GetSubjectOriginURL(cx);
+}
 
 /*
  * If given principals can access the given target, return true. Otherwise
@@ -1537,6 +1597,24 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
     JSStackFrame *fp;
     void *annotationRef;
     void *principalArray = NULL;
+#ifdef OJI
+    JSStackFrame *pFrameToStartLooking = *JVM_GetStartJSFrameFromParallelStack();
+    JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
+    if( pFrameToStartLooking == NULL)
+    {
+       pFrameToStartLooking = JS_FrameIterator(cx, &pFrameToStartLooking);
+       if ( pFrameToStartLooking == NULL )
+       {
+         /*
+         ** There are no frames or scripts at this point.
+         */
+         pFrameToEndLooking = NULL;
+       }
+    }
+#else
+    JSStackFrame *pFrameToStartLooking = JS_FrameIterator(cx, &fp);
+    JSStackFrame *pFrameToEndLooking   = NULL;
+#endif
 
     setupJSCapsCallbacks();
 
@@ -1548,11 +1626,14 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
     /* Find annotation */
     annotationRef = NULL;
     principalArray = NULL;
-    fp = NULL;
-    while ((fp = JS_FrameIterator(cx, &fp)) != NULL) {
+    fp = pFrameToStartLooking;
+    while (fp  != pFrameToEndLooking) {
         void *current;
         if (JS_GetFrameScript(cx, fp) == NULL)
-            continue;
+        {
+          fp = JS_FrameIterator(cx, &fp);
+          continue;
+        }
         current = JS_GetFramePrincipalArray(cx, fp);
         if (current == NULL) {
             return JS_FALSE;
@@ -1569,40 +1650,36 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
         principalArray = principalArray
             ? nsCapsIntersectPrincipalArray(principalArray, current)
             : current;
+        fp = JS_FrameIterator(cx, &fp);
     }
 
     if (annotationRef) {
         annotation = (struct nsPrivilegeTable *)annotationRef;
     } else {
-#ifdef JAVA
-        if (JSJ_IsCalledFromJava(cx)) {
-            /*
-             * Call from Java into JS. Just call the Java routine for checking
-             * privileges.
-             */
+#ifdef OJI
+         /*
+          * Call from Java into JS. Just call the Java routine for checking
+          * privileges.
+          */
+          if (pFrameToEndLooking != NULL)
+          {
             if (principalArray) {
                 /*
                  * Must check that the principals that signed the Java applet are
                  * a subset of the principals that signed this script.
                  */
-                void *javaPrincipals = NULL;
+                void *javaPrincipals = JVM_GetJavaPrincipalsFromStackAsNSVector(pFrameToStartLooking);
 
-                /* XXX: The following is a LiveConnect call. We need to find
-                 * out from the VM who the principal is (may be get the
-                 * certificate from VM and create a principal from it).
-                 * Pass that principal to canExtendTrust call. Until this is
-                 * fixed deny the privileged operations from Java to JS.
-                 */
-                /* XXX: raman: We need to fix this with LiveConnect integration.
-                 *  javaPrincipals = nsCapsGetClassPrincipalsFromStack(cx, 0);
-                 */
                 if (!canExtendTrust(cx, javaPrincipals, principalArray)) {
                     return JS_FALSE;
                 }
             }
-            return (JSBool)nsCapsIsPrivilegeEnabled(cx, capsTarget, 0);
-        }
-#endif /* JAVA */
+           /*
+            * XXX sudu: TODO: Setup the parameters representing a target.
+            */
+            return JVM_NSISecurityContextImplies(pFrameToStartLooking, targetStrings[target], NULL);
+          }
+#endif /* OJI */
         /* No annotation in stack */
         return JS_FALSE;
     }

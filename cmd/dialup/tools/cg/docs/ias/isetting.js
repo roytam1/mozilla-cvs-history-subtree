@@ -150,8 +150,7 @@ function saveNewConfigFile(fileName, inValue, doPrompt)
 
 function debug(theString)
 {
-	if (top.debugFlag == true)
-		top.globals.debug(theString);
+	top.globals.debug(theString);
 }
 
 
@@ -222,9 +221,9 @@ function fillSelectListWithConfigFiles(formName, selectListName, fileSuffix, off
 				curConfigDescription 	= GetNameValuePair(fileList[i], "Dial-In Configuration", "Description");
 
 				if ((curConfigName != null)  && (curConfigName != ""))
-					parent.tabs.tabbody.document[formName][selectListName].options[parent.tabs.tabbody.document[formName][selectListName].length] = new Option(curConfigName + " (" + fileList[i] + ")",fileList[i], false, false);
+					parent.tabs.tabbody.document[formName][selectListName].options[parent.tabs.tabbody.document[formName][selectListName].length] = new Option(curConfigName,fileList[i], false, false);
 				else if ((curConfigDescription != null) && (curConfigDescription != ""))
-					parent.tabs.tabbody.document[formName][selectListName].options[parent.tabs.tabbody.document[formName][selectListName].length] = new Option(curConfigDescription + " (" + fileList[i] + ")",fileList[i], false, false);
+					parent.tabs.tabbody.document[formName][selectListName].options[parent.tabs.tabbody.document[formName][selectListName].length] = new Option(curConfigDescription,fileList[i], false, false);
 				else
 					parent.tabs.tabbody.document[formName][selectListName].options[parent.tabs.tabbody.document[formName][selectListName].length] = new Option(fileList[i],fileList[i], false, false);
 					

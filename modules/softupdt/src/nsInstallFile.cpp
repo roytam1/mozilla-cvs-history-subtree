@@ -22,9 +22,8 @@
 #include "su_instl.h"
 
 #include "nsSoftUpdateEnums.h"
-#include "NSReg.h"
+#include "VerReg.h"
 #include "nsInstallFile.h"
-#include "nsVersionRegistry.h"
 #include "nsSUError.h"
 
 #include "nsPrivilegeManager.h"
@@ -301,47 +300,71 @@ char* nsInstallFile::Complete()
       int found;
       if (regPackageName) {
         char *reg_package_name = regPackageName->ToNewCString();
-        found = nsVersionRegistry::uninstallFileExists(reg_package_name, vr_name);
+        found = VR_UninstallFileExistsInList( reg_package_name, vr_name );
         delete reg_package_name;
       } else {
-        found = nsVersionRegistry::uninstallFileExists("", vr_name);
+        found = VR_UninstallFileExistsInList( "", vr_name );
       }
       if (found != REGERR_OK)
         bUpgrade = PR_FALSE;
       else
         bUpgrade = PR_TRUE;
-    } else if (REGERR_OK == nsVersionRegistry::inRegistry(vr_name)) {
+    } else if (REGERR_OK == VR_InRegistry(vr_name)) {
       bUpgrade = PR_TRUE;
     } else {
       bUpgrade = PR_FALSE;
     }
     
-    refCount = nsVersionRegistry::getRefCount(vr_name);
+    err = VR_GetRefCount( vr_name, &refCount );
+    if ( err != REGERR_OK ) 
+    {
+      refCount = 0;
+    }
+
+
     if (!bUpgrade) {
-      if (refCount != 0) {
+      if (refCount != 0) 
+      {
         rc = 1 + refCount;
-        nsVersionRegistry::installComponent(vr_name, final_file, versionInfo, rc );
-      } else {
+        VR_Install( vr_name, final_file, versionInfo->toString(), PR_FALSE );
+        VR_SetRefCount( vr_name, rc );
+      } 
+      else 
+      {
         if (replace)
-          nsVersionRegistry::installComponent(vr_name, final_file, versionInfo, 2);
+        {
+            VR_Install( vr_name, final_file, versionInfo->toString(), PR_FALSE);
+            VR_SetRefCount( vr_name, 2 );
+        }
         else
-          nsVersionRegistry::installComponent(vr_name, final_file, versionInfo, 1);
+        {
+            VR_Install( vr_name, final_file, versionInfo->toString(), PR_FALSE );
+            VR_SetRefCount( vr_name, 1 );
+      
+        }
       }
-    } else if (bUpgrade) {
-      if (refCount == 0) {
-        nsVersionRegistry::installComponent(vr_name, final_file, versionInfo, 1);
-      } else {
-        nsVersionRegistry::installComponent(vr_name, final_file, versionInfo );
+    } 
+    else if (bUpgrade) 
+    {
+      if (refCount == 0) 
+      {
+          VR_Install( vr_name, final_file, versionInfo->toString(), PR_FALSE );
+          VR_SetRefCount( vr_name, 1 );
+      } 
+      else 
+      {
+          VR_Install( vr_name, final_file, versionInfo->toString(), PR_FALSE );
+          VR_SetRefCount( vr_name, 0 );
       }
     }
     
     if ( !bChild && !bUpgrade ) {
       if (regPackageName) {
         char *reg_package_name = regPackageName->ToNewCString();
-        nsVersionRegistry::uninstallAddFile(reg_package_name, vr_name);
+        VR_UninstallAddFileToList( reg_package_name, vr_name );
         delete reg_package_name;
       } else {
-        nsVersionRegistry::uninstallAddFile("", vr_name);
+        VR_UninstallAddFileToList( "", vr_name );
       }
     }
   }

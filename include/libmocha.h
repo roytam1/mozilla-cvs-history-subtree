@@ -120,6 +120,7 @@ typedef struct MochaDecoder {
 	JSObject	    *environment;
     JSObject	    *crypto;
     JSObject        *pkcs11;
+    JSObject        *background_update;
 
     /*
      * Ad-hoc GC roots.
@@ -564,6 +565,12 @@ LM_SetUntransformedSource(JSPrincipals *principals, char *original,
 
 extern JSPrincipals * PR_CALLBACK
 LM_GetJSPrincipalsFromJavaCaller(JSContext *cx, void *principalsArray, void *pNSISecurityContext);
+
+extern JSBool
+LM_CanAccessTargetStr(JSContext *cx, const char *target);
+
+extern const char *
+LM_GetCodebaseFromTopOfJSStack(JSContext *cx);
 
 /*
  * LM_RegisterPrincipals will verify and register a set of principals 

@@ -87,9 +87,7 @@ function loadData()
 	
 		var thePlatform = parent.parent.globals.getPlatform();
 	
-		//var profileDir = parent.parent.globals.document.setupPlugin.GetCurrentProfileDirectory();
-		var profileDir = parent.parent.globals.currentProfileDirectory;
-		parent.parent.globals.debug("****Priofile Dir = " + profileDir);
+		var profileDir = parent.parent.globals.document.setupPlugin.GetCurrentProfileDirectory();
 		if ( profileDir != null && profileDir != "" )
 		{
 			if ( thePlatform == "Macintosh" )				// Macintosh support
@@ -126,7 +124,7 @@ function loadData()
 		{
 			document.layers[ "Clean_Installation" ].visibility = ( ( cleanFlag == true ) ? "show" : "hide" );
 			document.layers[ "Profile_Configured" ].visibility = ( ( configuredFlag == true ) ? "show" : "hide" );
-			document.layers[ "Profile_Manager_Entrance" ].visibility = ( ( newProfileFlag == true ) ? "show" : "hide" );			
+			document.layers[ "Profile_Manager_Entrance" ].visibility = ( ( newProfileFlag == true ) ? "show" : "hide" );
 		}
 	
 		parent.parent.globals.loadUserInput();
@@ -134,12 +132,7 @@ function loadData()
 	
 	
 	if ( document && document.layers )
-	{
-		document.layers[ "buttontext" ].visibility = "show";
-			
-		var showIntroScreens = parent.parent.globals.document.setupPlugin.GetNameValuePair( acctSetupFile, "Mode Selection", "Show_Intro_Screens" );
-		document.layers[ "Intro_Screens" ].visibility = ( ( showIntroScreens == "yes" ) ? "show" : "hide" );
-	}
+			document.layers[ "buttontext" ].visibility = "show";
 
 	if ( parent && parent.controls && parent.controls.generateControls )
 		parent.controls.generateControls();

@@ -32,6 +32,7 @@ typedef struct _version
    int32   check;
 } VERSION;
 
+#define MAXREGVERLEN 32	/* Version=12345.12345.12345.12345 */
 
 /* CreateRegistry flags */
 #define CR_NEWREGISTRY 1
@@ -73,6 +74,8 @@ VR_INTERFACE(REGERR) VR_UninstallDestroy(char *regPackageName);
 VR_INTERFACE(REGERR) VR_EnumUninstall(REGENUM *state, char* userPackageName,
                                     int32 len1, char*regPackageName, int32 len2, Bool bSharedList);
 VR_INTERFACE(REGERR) VR_GetUninstallUserName(char *regPackageName, char *outbuf, uint32 buflen);
+
+VR_INTERFACE(REGERR) VR_DeleteMissingFileNodes( void );
 
 XP_END_PROTOS
 

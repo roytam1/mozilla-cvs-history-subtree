@@ -918,7 +918,7 @@ void FE_PluginProgress(MWContext* cx, const char* message)
 //
 void FE_ResetRefreshURLTimer(MWContext* )
 {
-Assert_(false);
+// Assert_(false);
 //	if (NETSCAPEVIEW(context))
 //		NETSCAPEVIEW(context)->ResetRefreshURLTimer();
 }
@@ -1413,6 +1413,7 @@ CPluginView::CPluginView(LStream *inStream) : LView(inStream), LDragAndDrop(nil,
 	fIsPrinting = false;
 	fWindowList = NULL;
 	fMenuList = NULL;
+	fPluginClipping = ::NewRgn();
 		
 	//
 	// Add the new plug-in to a global list of all plug-ins.
@@ -1465,7 +1466,10 @@ CPluginView::~CPluginView()
 			sPluginList = NULL;
 		}
 	}
-};
+	
+	if (fPluginClipping != NULL)
+		::DisposeRgn(fPluginClipping);
+}
 
 
 void CPluginView::EmbedSize(LO_EmbedStruct* embed_struct, SDimension16 hyperSize)
@@ -1747,6 +1751,20 @@ Boolean CPluginView::FocusDraw(LPane *inSubPane)
 	// Make sure that any exposed popdown view is clipped out before drawing occurs.
 	//
 	CBrowserWindow::ClipOutPopdown(this);
+
+	//
+	// If the clipping has changed, send an event to the plugin to notify it.
+	//
+	GrafPtr currentPort;
+	::GetPort(&currentPort);
+	if (!::EqualRgn(currentPort->clipRgn, fPluginClipping)) {
+		::CopyRgn(currentPort->clipRgn, fPluginClipping);
+		EventRecord clippingEvent;
+		::OSEventAvail(0, &clippingEvent);
+		clippingEvent.what = nsPluginEventType_ClippingChangedEvent;
+		clippingEvent.message = SInt32(fPluginClipping);
+		PassEvent(clippingEvent);
+	}
 
 	return revealed;
 }
