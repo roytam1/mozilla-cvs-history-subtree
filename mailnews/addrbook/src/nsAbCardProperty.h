@@ -112,6 +112,7 @@ protected:
 	PRUint32 m_PreferMailFormat;
 
 	PRBool   m_IsMailList;
+  PRInt16  m_Primary;
 	char*    m_MailListURI;
 
 private:

@@ -100,6 +100,8 @@ interface nsIAbCard : nsISupports {
 	 */
 	attribute string mailListURI;
 
+	attribute unsigned short primary;
+
 	wstring getCardValue(in string name);
 
 	void setCardValue(in string attrname, in wstring value);

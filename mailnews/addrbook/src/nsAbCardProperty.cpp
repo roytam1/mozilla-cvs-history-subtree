@@ -122,6 +122,7 @@ nsAbCardProperty::nsAbCardProperty(void)
 
 	m_PreferMailFormat = nsIAbPreferMailFormat::unknown;
 	m_IsMailList = PR_FALSE;
+  m_Primary = 0;
 	m_MailListURI = nsnull;
 }
 
@@ -165,6 +166,18 @@ NS_IMETHODIMP nsAbCardProperty::GetPreferMailFormat(PRUint32 *aFormat)
 NS_IMETHODIMP nsAbCardProperty::SetPreferMailFormat(PRUint32 aFormat)
 {
 	m_PreferMailFormat = aFormat;
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsAbCardProperty::GetPrimary(PRUint16 *aPrimary)
+{
+	*aPrimary = m_Primary;	
+	return NS_OK;
+}
+
+NS_IMETHODIMP nsAbCardProperty::SetPrimary(PRUint16 aPrimary)
+{
+	m_Primary = aPrimary;
 	return NS_OK;
 }
 
