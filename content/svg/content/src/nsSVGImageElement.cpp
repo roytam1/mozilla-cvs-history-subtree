@@ -415,7 +415,7 @@ void nsSVGImageElement::GetSrc(nsAString& src)
   // resolve href attribute
 
   nsCOMPtr<nsIURI> baseURL;
-  GetBaseURL(*getter_AddRefs(baseURL));
+  GetBaseURL(getter_AddRefs(baseURL));
 
   nsAutoString relURLStr;
   mHref->GetAnimVal(relURLStr);

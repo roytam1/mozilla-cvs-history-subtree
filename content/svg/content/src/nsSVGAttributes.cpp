@@ -543,7 +543,7 @@ nsSVGAttributes::UpdateContentStyleRule()
 {
   NS_ASSERTION(!mContentStyleRule, "we already have a content style rule");
 
-  NS_NewCSSStyleRule(getter_AddRefs(mContentStyleRule), nsCSSSelector());
+  NS_NewCSSStyleRule(getter_AddRefs(mContentStyleRule), nsnull);
   NS_ASSERTION(mContentStyleRule, "could not create contentstylerule");
 
   nsCSSDeclaration* declaration = new nsCSSDeclaration();
@@ -557,9 +557,9 @@ nsSVGAttributes::UpdateContentStyleRule()
   {
     NS_ASSERTION(mContent, "null owner");
     nsCOMPtr<nsIDocument> document;
-    mContent->GetDocument(*getter_AddRefs(document));
+    mContent->GetDocument(getter_AddRefs(document));
     NS_ASSERTION(document, "null document");
-    document->GetBaseURL(*getter_AddRefs(baseURL));
+    document->GetBaseURL(getter_AddRefs(baseURL));
   }
 
   nsCOMPtr<nsICSSParser> parser;
@@ -567,8 +567,7 @@ nsSVGAttributes::UpdateContentStyleRule()
 
   for (int i = 0; i< mAttributes.Count(); ++i) {
     nsSVGAttribute* attr = (nsSVGAttribute*) mAttributes[i];
-    nsCOMPtr<nsIAtom> nameatom;
-    attr->GetNodeInfo()->GetNameAtom(*getter_AddRefs(nameatom));
+    nsCOMPtr<nsIAtom> nameatom = attr->GetNodeInfo()->GetNameAtom();
 
     if (!AffectsContentStyleRule(nameatom)) continue;
 
