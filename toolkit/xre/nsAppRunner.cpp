@@ -384,17 +384,13 @@ CheckArg(const char* aArg, const char **aParam = nsnull)
 }
 
 
-static nsXREAppData *LoadAppData()
+static nsXREAppData *LoadAppData(const char *appDataFile)
 {
   static nsXREAppData data;
   static char vendor[256], name[256], version[32], buildID[32], copyright[256];
   
-  const char *app;
-  if (!CheckArg("app", &app))
-    return nsnull;
-
   nsCOMPtr<nsILocalFile> lf;
-  NS_GetFileFromPath(app, getter_AddRefs(lf));
+  NS_GetFileFromPath(appDataFile, getter_AddRefs(lf));
   if (!lf)
     return nsnull;
   lf->AppendNative(NS_LITERAL_CSTRING("xulapp.ini"));
@@ -1734,12 +1730,14 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
   gArgc = argc;
   gArgv = argv;
 
+  // allow -app argument to override default app data
+  const char *appDataFile;
+  if (CheckArg("app", &appDataFile))
+    aAppData = LoadAppData(appDataFile);
+
   if (!aAppData) {
-    aAppData = LoadAppData();  
-    if (!aAppData) {
-      PR_fprintf(PR_STDERR, "Error loading xulapp.ini\n");
-      return 1;
-    }
+    printf("Error: no application data!\n");
+    return 1;
   }
   gAppData = aAppData;
 
