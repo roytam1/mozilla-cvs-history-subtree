@@ -29,7 +29,7 @@
 #include "nsIObserver.h"
 #include "nsIDOMWindow.h"
 #include "nsIScriptGlobalObject.h"
-#include "nsNeckoUtil.h"
+#include "nsNetUtil.h"
 #include "nsIURL.h"
 #include "nsIChannel.h"
 #include "nsIEventQueueService.h"

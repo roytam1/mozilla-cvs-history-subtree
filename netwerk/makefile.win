@@ -29,7 +29,6 @@ DIRS=            \
 	build    \
 	protocol \
 	socket   \
-	util     \
 	mime     \
 	streamconv \
 	test     \

@@ -103,7 +103,7 @@
 #include "nsIXULPrototypeCache.h"
 #include "nsLWBrkCIID.h"
 #include "nsLayoutCID.h"
-#include "nsNeckoUtil.h"
+#include "nsNetUtil.h"
 #include "nsParserCIID.h"
 #include "nsRDFCID.h"
 #include "nsRDFDOMNodeList.h"

@@ -40,7 +40,7 @@
 #include "nsIPipe.h"
 #include "nsMimeStringResources.h"
 #include "nsIPref.h"
-#include "nsIIOService.h"
+#include "nsNetUtil.h"
 #include "nsIMsgQuote.h"
 #include "nsIScriptSecurityManager.h"
 
@@ -421,16 +421,15 @@ NS_IMETHODIMP nsStreamConverter::Init(nsIURI *aURI, nsIStreamListener * aOutList
 
 	// the following output channel stream is used to fake the content type for people who later
 	// call into us..
-	NS_WITH_SERVICE(nsIIOService, netService, kIOServiceCID, &rv);
-	rv = netService->NewInputStreamChannel(aURI, mOutputFormat,
-                                         -1,    // XXX fix contentLength
-                                         nsnull, nsnull, nsnull, getter_AddRefs(mOutgoingChannel));
+	rv = NS_NewInputStreamChannel(aURI, mOutputFormat,
+                                -1,    // XXX fix contentLength
+                                nsnull, nsnull, nsnull, getter_AddRefs(mOutgoingChannel));
 	if (NS_FAILED(rv)) 
 		return rv;
 
 	// Set system principal for this document, which will be dynamically generated 
 	NS_WITH_SERVICE(nsIScriptSecurityManager, securityManager, 
-					NS_SCRIPTSECURITYMANAGER_PROGID, &rv);
+                  NS_SCRIPTSECURITYMANAGER_PROGID, &rv);
 	if (NS_FAILED(rv)) 
 		return rv;
 	nsCOMPtr<nsIPrincipal> principal;

@@ -30,7 +30,7 @@
 #include "nsIScriptObjectOwner.h"
 #include "nsIURL.h"
 #include "nsIURL.h"
-#include "nsNeckoUtil.h"
+#include "nsNetUtil.h"
 #include "nsIWebShell.h"
 #include "nsIContent.h"
 #include "nsITextContent.h"

@@ -28,7 +28,7 @@
 #include "nsIHTMLContentContainer.h"
 #include "nsIURL.h"
 #include "nsIUnicharStreamLoader.h"
-#include "nsNeckoUtil.h"
+#include "nsNetUtil.h"
 #include "nsIPresShell.h"
 #include "nsIPresContext.h"
 #include "nsIViewManager.h"

@@ -45,6 +45,7 @@
 #include "nsIMIMEService.h"
 #include "prlog.h"
 #include "nsProxyObjectManager.h"
+#include "nsNetUtil.h"
 
 static NS_DEFINE_CID(kMIMEServiceCID, NS_MIMESERVICE_CID);
 static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
@@ -545,11 +546,8 @@ nsFileTransport::AsyncOpen(nsIStreamObserver *observer, nsISupports* ctxt)
     if (mState != CLOSED)
         return NS_ERROR_IN_PROGRESS;
 
-    NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
-
     NS_ASSERTION(observer, "need to supply an nsIStreamObserver");
-    rv = serv->NewAsyncStreamObserver(observer, nsnull, getter_AddRefs(mOpenObserver));
+    rv = NS_NewAsyncStreamObserver(observer, nsnull, getter_AddRefs(mOpenObserver));
     if (NS_FAILED(rv)) return rv;
 
     NS_ASSERTION(mOpenContext == nsnull, "context not released");
@@ -583,11 +581,8 @@ nsFileTransport::AsyncRead(PRUint32 startPosition, PRInt32 readCount,
         || mCommand != NONE)
         return NS_ERROR_IN_PROGRESS;
 
-    NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
-
     NS_ASSERTION(listener, "need to supply an nsIStreamListener");
-    rv = serv->NewAsyncStreamListener(listener, nsnull, getter_AddRefs(mListener));
+    rv = NS_NewAsyncStreamListener(listener, nsnull, getter_AddRefs(mListener));
     if (NS_FAILED(rv)) return rv;
 
     rv = NS_NewPipe(getter_AddRefs(mBufferInputStream),
@@ -637,11 +632,8 @@ nsFileTransport::AsyncWrite(nsIInputStream *fromStream,
         || mCommand != NONE)
         return NS_ERROR_IN_PROGRESS;
 
-    NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
-
     if (observer) {
-        rv = serv->NewAsyncStreamObserver(observer, nsnull, getter_AddRefs(mObserver));
+        rv = NS_NewAsyncStreamObserver(observer, nsnull, getter_AddRefs(mObserver));
         if (NS_FAILED(rv)) return rv;
     }
 

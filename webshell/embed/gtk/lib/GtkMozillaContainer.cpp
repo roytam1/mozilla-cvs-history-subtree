@@ -21,7 +21,7 @@
 #include "nsIURL.h"
 #include "nsIIOService.h"
 #include "nsIServiceManager.h"
-#include "nsNeckoUtil.h"
+#include "nsNetUtil.h"
 #include "nsFileSpec.h"
 #include "nsIDocumentLoader.h"
 #include "nsIContentViewer.h"

@@ -179,4 +179,110 @@ NS_NewUnicharStreamLoader(nsIUnicharStreamLoader* *result,
     return rv;
 }
 
+inline nsresult
+NS_NewInputStreamChannel(nsIURI* uri,
+                         const char* contentType, 
+                         PRUint32 contentLength,
+                         nsIInputStream* inStr,
+                         nsILoadGroup* group,
+                         nsIURI* originalURI,
+                         nsIChannel* *result)
+{
+    nsresult rv;
+    nsCOMPtr<nsIInputStreamChannel> channel;
+    static NS_DEFINE_CID(kInputStreamChannelCID, NS_INPUTSTREAMCHANNEL_CID);
+    rv = nsComponentManager::CreateInstance(kInputStreamChannelCID,
+                                            nsnull, 
+                                            NS_GET_IID(nsIInputStreamChannel),
+                                            getter_AddRefs(channel));
+    if (NS_FAILED(rv)) return rv;
+    rv = channel->Init(uri, contentType, contentLength, inStr, group, originalURI);
+    if (NS_FAILED(rv)) return rv;
+
+    *result = channel;
+    NS_ADDREF(*result);
+    return NS_OK;
+}
+
+inline nsresult
+NS_NewAsyncStreamObserver(nsIStreamObserver *receiver, nsIEventQueue *eventQueue,
+                          nsIStreamObserver **result)
+{
+    nsresult rv;
+    nsCOMPtr<nsIAsyncStreamObserver> obs;
+    static NS_DEFINE_CID(kAsyncStreamObserverCID, NS_ASYNCSTREAMOBSERVER_CID);
+    rv = nsComponentManager::CreateInstance(kAsyncStreamObserverCID,
+                                            nsnull, 
+                                            NS_GET_IID(nsIAsyncStreamObserver),
+                                            getter_AddRefs(obs));
+    if (NS_FAILED(rv)) return rv;
+    rv = obs->Init(receiver, eventQueue);
+    if (NS_FAILED(rv)) return rv;
+
+    *result = obs;
+    NS_ADDREF(*result);
+    return NS_OK;
+}
+
+inline nsresult
+NS_NewAsyncStreamListener(nsIStreamListener *receiver, nsIEventQueue *eventQueue,
+                          nsIStreamListener **result)
+{
+    nsresult rv;
+    nsCOMPtr<nsIAsyncStreamListener> lsnr;
+    static NS_DEFINE_CID(kAsyncStreamListenerCID, NS_ASYNCSTREAMLISTENER_CID);
+    rv = nsComponentManager::CreateInstance(kAsyncStreamListenerCID,
+                                            nsnull, 
+                                            NS_GET_IID(nsIAsyncStreamListener),
+                                            getter_AddRefs(lsnr));
+    if (NS_FAILED(rv)) return rv;
+    rv = lsnr->Init(receiver, eventQueue);
+    if (NS_FAILED(rv)) return rv;
+
+    *result = lsnr;
+    NS_ADDREF(*result);
+    return NS_OK;
+}
+
+inline nsresult
+NS_NewSyncStreamListener(nsIInputStream **inStream, 
+                         nsIBufferOutputStream **outStream,
+                         nsIStreamListener **listener)
+{
+    nsresult rv;
+    nsCOMPtr<nsISyncStreamListener> lsnr;
+    static NS_DEFINE_CID(kSyncStreamListenerCID, NS_SYNCSTREAMLISTENER_CID);
+    rv = nsComponentManager::CreateInstance(kSyncStreamListenerCID,
+                                            nsnull, 
+                                            NS_GET_IID(nsISyncStreamListener),
+                                            getter_AddRefs(lsnr));
+    if (NS_FAILED(rv)) return rv;
+    rv = lsnr->Init(inStream, outStream);
+    if (NS_FAILED(rv)) return rv;
+
+    *listener = lsnr;
+    NS_ADDREF(*listener);
+    return NS_OK;
+}
+
+inline nsresult
+NS_NewLoadGroup(nsISupports* outer, nsIStreamObserver* observer,
+                nsILoadGroup* parent, nsILoadGroup* *result)
+{
+    nsresult rv;
+    nsCOMPtr<nsILoadGroup> group;
+    static NS_DEFINE_CID(kLoadGroupCID, NS_LOADGROUP_CID);
+    rv = nsComponentManager::CreateInstance(kLoadGroupCID,
+                                            outer, 
+                                            NS_GET_IID(nsILoadGroup),
+                                            getter_AddRefs(group));
+    if (NS_FAILED(rv)) return rv;
+    rv = group->Init(observer, parent);
+    if (NS_FAILED(rv)) return rv;
+
+    *result = group;
+    NS_ADDREF(*result);
+    return NS_OK;
+}
+
 #endif // nsNetUtil_h__

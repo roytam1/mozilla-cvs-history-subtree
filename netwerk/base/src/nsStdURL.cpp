@@ -889,13 +889,56 @@ nsStdURL::SetRelativePath(const char* i_Relative)
     }
 }
 
+// XXX copied from nsIOService.cpp (for now):
+static nsresult
+_GetScheme(const char* inURI, char* *scheme)
+{
+    // search for something up to a colon, and call it the scheme
+    NS_ASSERTION(inURI, "null pointer");
+    if (!inURI) return NS_ERROR_NULL_POINTER;
+    char c;
+    const char* URI = inURI;
+    PRUint8 length = 0;
+    // skip leading white space
+    while (nsString::IsSpace(*URI))
+        URI++;
+    while ((c = *URI++) != '\0') {
+        if (c == ':') {
+            char* newScheme = (char *)nsAllocator::Alloc(length+1);
+            if (newScheme == nsnull)
+                return NS_ERROR_OUT_OF_MEMORY;
+
+            nsCRT::memcpy(newScheme, inURI, length);
+            newScheme[length] = '\0';
+            *scheme = newScheme;
+            return NS_OK;
+        }
+        else if (nsString::IsAlpha(c)) {
+            length++;
+        }
+        else 
+            break;
+    }
+    return NS_ERROR_MALFORMED_URI;
+}
+
 NS_IMETHODIMP
 nsStdURL::Resolve(const char *relativePath, char **result) 
 {
     nsresult rv;
 
-    if (!relativePath) return NS_ERROR_NULL_POINTER;
-
+    if (relativePath == nsnull)
+        return GetSpec(result);
+     
+    char* scheme;
+    rv = _GetScheme(relativePath, &scheme);
+    if (NS_SUCCEEDED(rv)) {
+        nsAllocator::Free(scheme);
+        // if aSpec has a scheme, then it's already absolute
+        *result = nsCRT::strdup(relativePath);
+        return (*result == nsnull) ? NS_ERROR_OUT_OF_MEMORY : NS_OK;
+    }
+     
     // Make sure that if there is a : its before other delimiters
     // If not then its an absolute case
     static const char delimiters[] = "/;?#:";

@@ -38,7 +38,7 @@
 
 #include "nsILoadGroup.h"
 //#include "nsILoadGroupObserver.h"
-#include "nsNeckoUtil.h"
+#include "nsNetUtil.h"
 #include "nsIURL.h"
 #include "nsIDNSService.h"
 #include "nsIChannel.h"

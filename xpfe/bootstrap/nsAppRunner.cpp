@@ -22,7 +22,7 @@
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
 #include "nsIURL.h"
-#include "nsNeckoUtil.h"
+#include "nsNetUtil.h"
 #include "nsIWidget.h"
 #include "nsIBrowserWindow.h"
 #include "nsIWebShellWindow.h"
@@ -498,6 +498,7 @@ static nsresult main1(int argc, char* argv[])
 
   // Initialize the cmd line service
   NS_WITH_SERVICE(nsICmdLineService, cmdLineArgs, kCmdLineServiceCID, &rv);
+  NS_ASSERTION(NS_SUCCEEDED(rv), "failed to get command line service");
  
   if (NS_FAILED(rv)) {
     fprintf(stderr, "Could not obtain CmdLine processing service\n");
@@ -505,6 +506,7 @@ static nsresult main1(int argc, char* argv[])
   }
  
   rv = cmdLineArgs->Initialize(argc, argv);
+  NS_ASSERTION(NS_SUCCEEDED(rv), "failed to initialize command line args");
   if (rv  == NS_ERROR_INVALID_ARG) {
     PrintUsage();
     return rv;
@@ -512,11 +514,13 @@ static nsresult main1(int argc, char* argv[])
 
   // Create the Application Shell instance...
   NS_WITH_SERVICE(nsIAppShellService, appShell, kAppShellServiceCID, &rv);
+  NS_ASSERTION(NS_SUCCEEDED(rv), "failed to get the appshell service");
   if (NS_FAILED(rv)) {
     return rv;
   }
 
   rv = appShell->Initialize( cmdLineArgs );
+  NS_ASSERTION(NS_SUCCEEDED(rv), "failed to initialize appshell");
   if ( NS_FAILED(rv) ) return rv; 
 
 #ifdef DEBUG
@@ -524,9 +528,11 @@ static nsresult main1(int argc, char* argv[])
 #endif
 
   NS_WITH_SERVICE(nsIProfile, profileMgr, kProfileCID, &rv);
+  NS_ASSERTION(NS_SUCCEEDED(rv), "failed to get profile manager");
   if ( NS_FAILED(rv) ) return rv; 
 
   rv = profileMgr->StartupWithArgs(cmdLineArgs);
+  NS_ASSERTION(NS_SUCCEEDED(rv), "failed profile manager StartupWithArgs");
   if (NS_FAILED(rv)) {
 	return rv;
   }
@@ -535,6 +541,7 @@ static nsresult main1(int argc, char* argv[])
   // this can happen, if the user hits Cancel or Exit in the profile manager dialogs
   char *currentProfileStr = nsnull;
   rv = profileMgr->GetCurrentProfile(&currentProfileStr);
+  NS_ASSERTION(NS_SUCCEEDED(rv), "failed to get current profile");
   if (NS_FAILED(rv) || !currentProfileStr || (PL_strlen(currentProfileStr) == 0)) {
   	return NS_ERROR_FAILURE;
   }
@@ -563,13 +570,15 @@ static nsresult main1(int argc, char* argv[])
 	// "general.startup.*" prefs
 	// if we had no command line arguments, argc == 1.
 	rv = DoCommandLines( cmdLineArgs, (argc == 1) );
+    NS_ASSERTION(NS_SUCCEEDED(rv), "failed to process command line");
 	if ( NS_FAILED(rv) )
     return rv;
      
   // Make sure there exists at least 1 window. 
-	rv = Ensure1Window( cmdLineArgs );
-  if (NS_FAILED(rv))
-    return rv;
+  rv = Ensure1Window( cmdLineArgs );
+  NS_ASSERTION(NS_SUCCEEDED(rv), "failed to Ensure1Window");
+  if (NS_FAILED(rv)) return rv;
+
   // Fire up the walletService
   NS_WITH_SERVICE(nsIWalletService, walletService, kWalletServiceCID, &rv);
   if ( NS_SUCCEEDED(rv) )
@@ -578,6 +587,7 @@ static nsresult main1(int argc, char* argv[])
   NS_HideSplashScreen();
   // Start main event loop
   rv = appShell->Run();
+  NS_ASSERTION(NS_SUCCEEDED(rv), "failed to run appshell");
   
   /*
    * Shut down the Shell instance...  This is done even if the Run(...)

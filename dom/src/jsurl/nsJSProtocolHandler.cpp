@@ -26,7 +26,7 @@
 #include "nsIComponentManager.h"
 #include "nsIGenericFactory.h"
 #include "nsIServiceManager.h"
-#include "nsIIOService.h"
+#include "nsNetUtil.h"
 #include "nsIInputStream.h"
 #include "nsIStringStream.h"
 #include "nsIURI.h"
@@ -333,13 +333,6 @@ nsJSProtocolHandler::NewChannel(const char* verb, nsIURI* uri,
     }
 #endif
 
-    NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv);
-    if (NS_FAILED(rv)) {
-        if (retString)
-            Recycle(retString);
-        return rv;
-    }
-
     nsCOMPtr<nsISupports> s;
     rv = NS_NewStringInputStream(getter_AddRefs(s), retString);
     int length = PL_strlen(retString);
@@ -353,8 +346,8 @@ nsJSProtocolHandler::NewChannel(const char* verb, nsIURI* uri,
 
     nsIChannel* channel;
 
-    rv = serv->NewInputStreamChannel(uri, "text/html", length,
-                                     in, aGroup, originalURI, &channel);
+    rv = NS_NewInputStreamChannel(uri, "text/html", length,
+                                  in, aGroup, originalURI, &channel);
     if (NS_FAILED(rv))
         return rv;
 

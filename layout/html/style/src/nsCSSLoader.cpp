@@ -37,7 +37,7 @@
 #include "nsIURL.h"
 #include "nsIURL.h"
 #include "nsIServiceManager.h"
-#include "nsNeckoUtil.h"
+#include "nsNetUtil.h"
 #include "nsCRT.h"
 #include "nsVoidArray.h"
 #include "nsISupportsArray.h"

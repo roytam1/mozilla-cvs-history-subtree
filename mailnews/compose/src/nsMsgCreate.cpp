@@ -50,7 +50,7 @@
 #include "nsMsgCopy.h"
 #include "nsIRDFService.h"
 #include "nsRDFCID.h"
-#include "nsIIOService.h"
+#include "nsNetUtil.h"
 #include "nsMsgMimeCID.h"
 
 // CID's needed
@@ -191,18 +191,17 @@ nsresult  rv;
   }  
 
   nsCOMPtr<nsIChannel> dummyChannel;
-  NS_WITH_SERVICE(nsIIOService, netService, kIOServiceCID, &rv);
 
   nsCOMPtr<nsIURI> aURL;
   rv = CreateStartupUrl(mURI, getter_AddRefs(aURL));
 
-  rv = netService->NewInputStreamChannel(aURL, 
-                                         nsnull,      // contentType
-                                         -1,          // contentLength
-                                         nsnull,      // inputStream
-                                         nsnull,      // loadGroup
-                                         nsnull,      // originalURI
-                                         getter_AddRefs(dummyChannel));
+  rv = NS_NewInputStreamChannel(aURL, 
+                                nsnull,      // contentType
+                                -1,          // contentLength
+                                nsnull,      // inputStream
+                                nsnull,      // loadGroup
+                                nsnull,      // originalURI
+                                getter_AddRefs(dummyChannel));
   if (NS_FAILED(mimeParser->AsyncConvertData(nsnull, nsnull, nsnull, dummyChannel)))
   {
     Release();

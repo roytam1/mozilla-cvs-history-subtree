@@ -94,6 +94,7 @@
 #include "nsIMsgComposeService.h"
 #include "nsMsgCompFieldsFact.h"
 #include "nsMsgI18N.h"
+#include "nsNetUtil.h"
 
 static NS_DEFINE_CID(kIStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
@@ -460,14 +461,13 @@ nsMessenger::OpenAttachment(const char * url, const char * displayName,
               goto done;
             }
             aListener->m_channel = null_nsCOMPtr();
-            NS_WITH_SERVICE(nsIIOService, netService, kIOServiceCID, &rv);
-            rv = netService->NewInputStreamChannel(aURL,
-                                                   nsnull,      // contentType
-                                                   -1,          // contentLength
-                                                   nsnull,      // inputStream
-                                                   nsnull,      // loadGroup
-                                                   nsnull,      // originalURI
-                                                   getter_AddRefs(aListener->m_channel));
+            rv = NS_NewInputStreamChannel(aURL,
+                                          nsnull,      // contentType
+                                          -1,          // contentLength
+                                          nsnull,      // inputStream
+                                          nsnull,      // loadGroup
+                                          nsnull,      // originalURI
+                                          getter_AddRefs(aListener->m_channel));
             nsAutoString from, to;
             from = "message/rfc822";
             to = "text/xul";
@@ -587,15 +587,13 @@ nsMessenger::SaveAs(const char* url, PRBool asFile)
                     goto done;
                   }
                   aListener->m_channel = null_nsCOMPtr();
-                  NS_WITH_SERVICE(nsIIOService, netService, kIOServiceCID,
-                                  &rv);
-                  rv = netService->NewInputStreamChannel(aURL, 
-                                                         nsnull,      // contentType
-                                                         -1,          // contentLength
-                                                         nsnull,      // inputStream
-                                                         nsnull,      // loadGroup
-                                                         nsnull,      // originalURI
-                                                         getter_AddRefs(aListener->m_channel));
+                  rv = NS_NewInputStreamChannel(aURL, 
+                                                nsnull,      // contentType
+                                                -1,          // contentLength
+                                                nsnull,      // inputStream
+                                                nsnull,      // loadGroup
+                                                nsnull,      // originalURI
+                                                getter_AddRefs(aListener->m_channel));
                   nsAutoString from, to;
                   from = "message/rfc822";
                   to = saveAsFileType == 1 ? "text/html" : "text/plain";

@@ -29,7 +29,7 @@
 #include "nsIServiceManager.h"
 #include "nsIGenericFactory.h"
 #include "nsCOMPtr.h"
-#include "nsIIOService.h"
+#include "nsNetUtil.h"
 #include "nsXPIDLString.h"
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
@@ -257,8 +257,8 @@ nsMultiMixedConv::OnDataAvailable(nsIChannel *channel, nsISupports *context,
 
                     if (mContentType.Length() < 1)
                         mContentType = "text/html"; // default to text/html, that's all we'll ever see anyway
-                    rv = serv->NewInputStreamChannel(partURI, mContentType.GetBuffer(), mContentLength,
-                                                     nsnull, nsnull, nsnull, getter_AddRefs(mPartChannel));
+                    rv = NS_NewInputStreamChannel(partURI, mContentType.GetBuffer(), mContentLength,
+                                                  nsnull, nsnull, nsnull, getter_AddRefs(mPartChannel));
                     if (NS_FAILED(rv)) {
                         nsAllocator::Free(buffer);
                         return rv;

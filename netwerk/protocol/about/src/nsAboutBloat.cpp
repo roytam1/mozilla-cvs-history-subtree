@@ -30,6 +30,7 @@
 #include "prtime.h"
 #include "nsCOMPtr.h"
 #include "nsIFileStream.h"
+#include "nsNetUtil.h"
 
 #ifdef XP_MAC
 extern "C" void GC_gcollect(void);
@@ -136,12 +137,9 @@ nsAboutBloat::NewChannel(const char *verb,
         if (NS_FAILED(rv)) return rv;
     }
 
-    NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
-
     nsIChannel* channel;
-    rv = serv->NewInputStreamChannel(aURI, "text/plain", 
-                                     size, inStr, aGroup, originalURI, &channel);
+    rv = NS_NewInputStreamChannel(aURI, "text/plain", 
+                                  size, inStr, aGroup, originalURI, &channel);
     if (NS_FAILED(rv)) return rv;
 
     *result = channel;

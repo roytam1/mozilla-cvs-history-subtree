@@ -39,7 +39,7 @@
 #include "nsIMsgMessageService.h"
 #include "nsMsgUtils.h"
 #include "nsMsgDeliveryListener.h"
-#include "nsIIOService.h"
+#include "nsNetUtil.h"
 #include "nsMsgMimeCID.h"
 #include "nsMsgCompCID.h"
 #include "nsMsgCompose.h"
@@ -185,14 +185,13 @@ nsMsgQuote::QuoteMessage(const PRUnichar *msgURI, PRBool quoteHeaders, nsIStream
                       getter_AddRefs(quoteSupport));
 
   mQuoteChannel = null_nsCOMPtr();
-  NS_WITH_SERVICE(nsIIOService, netService, kIOServiceCID, &rv);
-  rv = netService->NewInputStreamChannel(aURL, 
-                                         nsnull,      // contentType
-                                         -1,          // contentLength
-                                         nsnull,      // inputStream
-                                         nsnull,      // loadGroup
-                                         nsnull,      // originalURI
-                                         getter_AddRefs(mQuoteChannel));
+  rv = NS_NewInputStreamChannel(aURL, 
+                                nsnull,      // contentType
+                                -1,          // contentLength
+                                nsnull,      // inputStream
+                                nsnull,      // loadGroup
+                                nsnull,      // originalURI
+                                getter_AddRefs(mQuoteChannel));
 
   NS_WITH_SERVICE(nsIStreamConverterService, streamConverterService, kIStreamConverterServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
@@ -208,6 +207,7 @@ nsMsgQuote::QuoteMessage(const PRUnichar *msgURI, PRBool quoteHeaders, nsIStream
 
   // now we want to create a necko channel for this url and we want to open it
   nsCOMPtr<nsIChannel> aChannel;
+  NS_WITH_SERVICE(nsIIOService, netService, kIOServiceCID, &rv);
   rv = netService->NewChannelFromURI(nsnull, aURL, nsnull, nsnull, nsnull, getter_AddRefs(aChannel));
   if (NS_FAILED(rv)) return rv;
   nsCOMPtr<nsISupports> aCtxt = do_QueryInterface(aURL);

@@ -23,7 +23,6 @@
 #include "nsUnicharStreamLoader.h"
 #include "nsIInputStream.h"
 #include "nsIURL.h"
-#include "nsNeckoUtil.h"
 #include "nsIBufferInputStream.h"
 #include "nsCOMPtr.h"
 #include "nsILoadGroup.h"

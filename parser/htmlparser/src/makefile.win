@@ -153,9 +153,6 @@ LCFLAGS = \
 LLIBS=        \
  $(DIST)\lib\xpcom.lib  \
  $(DIST)\lib\expat.lib			\
-!ifdef NECKO
- $(DIST)\lib\neckoutil_s.lib			\
-!endif
 !ifdef MOZ_PERF
  $(DIST)\lib\util.lib			\
 !endif
