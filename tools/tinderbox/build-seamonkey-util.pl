@@ -243,6 +243,7 @@ sub GetSystemInfo {
             }
         }
     }
+    $Settings::BuildName .= " $Settings::BuildNameExtra";
 }
 
 sub LoadConfig {
@@ -556,7 +557,7 @@ sub BuildIt {
             my $make = "$Settings::Make -f client.mk";
             my $targets = $TreeSpecific::checkout_target;
             $targets = $TreeSpecific::checkout_clobber_target unless $Settings::BuildDepend;
-            mkdir $Settings::ObjDir, 0777 if ($Settings::ObjDir && ! -e $Settings::ObjDir);
+	    mkdir $Settings::ObjDir, 0777 if ($Settings::ObjDir && ! -e $Settings::ObjDir);
 
             my $status = run_shell_command "$make $targets";
             if ($status != 0) {
