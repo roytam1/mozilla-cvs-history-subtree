@@ -968,7 +968,8 @@ nsresult nsAbSync::AddNewMailingLists()
         // Ok, "val" could still be URL Encoded, so we need to decode
         // first and then pass into the call...
         //
-        char *ret = nsUnescape((char *)NS_ConvertUCS2toUTF8(*val).get());
+        NS_ConvertUCS2toUTF8 utf8Str(*val);
+        char *ret = nsUnescape(NS_CONST_CAST(char *, utf8Str.get()));
         if (ret)
           *val = NS_ConvertUTF8toUCS2(ret);
 
@@ -1161,7 +1162,8 @@ nsresult nsAbSync::AddNewMailingListMembers()
         nsString *tagVal = mNewRecordTags->StringAt(j);
 
         // Ok, "val" could still be URL Encoded, so we need to decode first.
-        char *ret = nsUnescape((char *)NS_ConvertUCS2toUTF8(*val).get());
+        NS_ConvertUCS2toUTF8 utf8Str(*val);
+        char *ret = nsUnescape(NS_CONST_CAST(char *, utf8Str.get()));
         if (ret)
           *val = NS_ConvertUTF8toUCS2(ret);
 
@@ -1607,7 +1609,8 @@ nsresult nsAbSync::AddNewGroups()
         }
 
         // Ok, "val" could still be URL Encoded, so we need to decode it first.
-        char *ret = nsUnescape((char *)NS_ConvertUCS2toUTF8(*val).get());
+        NS_ConvertUCS2toUTF8 utf8Str(*val);
+        char *ret = nsUnescape(NS_CONST_CAST(char *, utf8Str.get()));
         if (ret)
           *val = NS_ConvertUTF8toUCS2(ret);
 
@@ -1827,7 +1830,8 @@ nsresult nsAbSync::AddNewMailingListEmailMembers()
         else if (tagVal->Equals(NS_LITERAL_STRING("email_string")))
         {
           // Ok, "val" could still be URL Encoded, so we need to decode it first.
-          char *ret = nsUnescape((char *)NS_ConvertUCS2toUTF8(*val).get());
+          NS_ConvertUCS2toUTF8 utf8Str(*val);
+          char *ret = nsUnescape(NS_CONST_CAST(char *, utf8Str.get()));
           if (ret)
             *val = NS_ConvertUTF8toUCS2(ret);
           ParseEmailMemberAddresses(val, memberAddresses);

@@ -881,8 +881,7 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
   nsXPIDLString nameStr;
   nsString      tProtLine;
   PRInt32       phoneCount = 1;
-  PRBool        foundPhone = PR_FALSE;
-  const char    *phoneType;
+  const char    *phoneType = nsnull;
 
   protLine.Truncate();
 
@@ -951,39 +950,24 @@ nsAbSync::GenerateProtocolForCard(nsIAbCard *aCard, PRBool aAddId, nsString &pro
     }
 
     // Reset this flag...
-    foundPhone = PR_FALSE;
+    phoneType = nsnull;
     // If this is a phone number, we have to special case this because
     // phone #'s are handled differently than all other tags...sigh!
     //
     if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kWorkPhoneColumn, strlen(kWorkPhoneColumn)))
-    {
-      foundPhone = PR_TRUE;
       phoneType = ABSYNC_WORK_PHONE_TYPE;
-    }
     else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kHomePhoneColumn, strlen(kHomePhoneColumn)))
-    {
-      foundPhone = PR_TRUE;
       phoneType = ABSYNC_HOME_PHONE_TYPE;
-    }
     else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kFaxColumn, strlen(kFaxColumn)))
-    {
-      foundPhone = PR_TRUE;
       phoneType = ABSYNC_FAX_PHONE_TYPE;
-    }
     else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kPagerColumn, strlen(kPagerColumn)))
-    {
-      foundPhone = PR_TRUE;
       phoneType = ABSYNC_PAGER_PHONE_TYPE;
-    }
     else if (!nsCRT::strncasecmp(mSchemaMappingList[i].abField, kCellularColumn, strlen(kCellularColumn)))
-    {
-      foundPhone = PR_TRUE;
       phoneType = ABSYNC_CELL_PHONE_TYPE;
-    }
 
-    if (foundPhone)
+    if (phoneType)
     {
-      tProtLine.Append(NS_LITERAL_STRING("&")); 
+      tProtLine.Append(NS_LITERAL_STRING("&phone")); 
       tProtLine.AppendInt(phoneCount);
       tProtLine.Append(NS_LITERAL_STRING("="));
 
@@ -1536,9 +1520,8 @@ GetOut:
   // Log the data to be sent to servers.
   if (!mPostString.IsEmpty())
   {
-    nsCAutoString str;
-    str.AssignWithConversion(mPostString.get());
-    char *unescapedStr = nsUnescape((char *)str.get());
+    NS_ConvertUCS2toUTF8 utf8Str(mPostString);
+    char *unescapedStr = nsUnescape(NS_CONST_CAST(char *, utf8Str.get()));
     Log("  Protocol data sent to server:", unescapedStr);
   }
   else
@@ -2340,7 +2323,7 @@ nsAbSync::ProcessServerResponse(const char *aProtocolResponse, PRBool *needResyn
     // preapring your server data in a text file.
     char str[4*1024];
     PRInt32 numread;
-    FILE *fd = fopen("d:\\temp\\abserverInput.txt", "r");
+    FILE *fd = fopen("c:\\temp\\abserverInput.txt", "r");
     numread = fread(str, sizeof(char), 4*1024-1, fd);
     mProtocolOffset = str;
     fclose(fd);
@@ -2609,7 +2592,7 @@ nsAbSync::FindCardByClientID(PRInt32           aClientID,
       // Found IT!
       if ((PRInt32) key == aClientID)
       {
-        *aReturnCard = card;
+        NS_IF_ADDREF(*aReturnCard = card);
         rv = NS_OK;
         break;
       }
@@ -2836,7 +2819,8 @@ nsAbSync::AddNewUsers()
         // Ok, "val" could still be URL Encoded, so we need to decode
         // first and then pass into the call...
         //
-        char *ret = nsUnescape((char *)NS_ConvertUCS2toUTF8(*val).get());
+        NS_ConvertUCS2toUTF8 utf8Str(*val);
+        char *ret = nsUnescape(NS_CONST_CAST(char *, utf8Str.get()));
         if (ret)
           *val = NS_ConvertUTF8toUCS2(ret);
         AddValueToNewCard(newCard, mNewRecordTags->StringAt(j), val);
