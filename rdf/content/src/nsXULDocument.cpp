@@ -431,7 +431,6 @@ public:
     // nsIXULParentDocument interface
     NS_IMETHOD    GetContentViewerContainer(nsIContentViewerContainer** aContainer);
     NS_IMETHOD    GetCommand(nsString& aCommand);
-    NS_IMETHOD    CreatePopupDocument(nsIContent* aPopupElement, nsIDocument** aResult); 
     
     // nsIXULChildDocument Interface
     NS_IMETHOD    SetContentSink(nsIXULContentSink* aContentSink);
@@ -891,26 +890,34 @@ XULDocumentImpl::GetContentType(nsString& aContentType) const
 static
 nsresult
 generate_RDF_seed( nsString* result, nsIURI* aOptionalURL )
-{
-    nsresult status = NS_OK;
+	{
+		nsresult status = NS_OK;
 
-    if (aOptionalURL) {
-        char* s = 0;
-        status = aOptionalURL->GetSpec(&s);
-        if ( NS_SUCCEEDED(status) ) {
-            (*result) = s;      // copied by nsString
-            nsCRT::free(s);
-        }
-    }
-    else {
-        static int unique_per_session_index = 0;
+		if ( aOptionalURL )
+			{
+#ifdef NECKO
+                char* s = 0;
+#else
+				const char* s = 0;
+#endif
+                status = aOptionalURL->GetSpec(&s);
+				if ( NS_SUCCEEDED(status) ) {
+					(*result) = s;      // copied by nsString
+#ifdef NECKO
+                    nsCRT::free(s);
+#endif
+                }
+			}
+		else
+			{
+				static int unique_per_session_index = 0;
 
-        result->Append("x-anonymous-xul://");
-        result->Append(PRInt32(++unique_per_session_index), /*base*/ 10);
-    }
+				result->Append("x-anonymous-xul://");
+				result->Append(PRInt32(++unique_per_session_index), /*base*/ 10);
+			}
 
-    return status;
-}
+		return status;
+	}
 
 nsresult
 XULDocumentImpl::PrepareToLoad(nsCOMPtr<nsIParser>* created_parser,
@@ -1659,7 +1666,7 @@ XULDocumentImpl::EndLoad()
         nsIDocumentObserver* observer = (nsIDocumentObserver*) mObservers[i];
         observer->EndLoad(this);
         if (observer != (nsIDocumentObserver*)mObservers.ElementAt(i)) {
-            i--;
+          i--;
         }
     }
 
@@ -2475,6 +2482,7 @@ XULDocumentImpl::AddForwardReference(nsForwardReference* aRef)
         mForwardReferences.AppendElement(aRef);
     }
     else {
+        NS_ERROR("forward references have already been resolved");
         delete aRef;
     }
         
@@ -2977,33 +2985,19 @@ XULDocumentImpl::GetElementById(const nsString& aId, nsIDOMElement** aReturn)
 {
     nsresult rv;
 
-    // XXX Pool?
-    nsCOMPtr<nsISupportsArray> elements;
-    rv = NS_NewISupportsArray(getter_AddRefs(elements));
+    nsCOMPtr<nsIContent> element;
+    rv = mElementMap.FindFirst(aId, getter_AddRefs(element));
     if (NS_FAILED(rv)) return rv;
 
-    rv = GetElementsForID(aId, elements);
-    if (NS_FAILED(rv)) return rv;
-
-    PRUint32 cnt = 0;
-    rv = elements->Count(&cnt);
-    NS_ASSERTION(NS_SUCCEEDED(rv), "Count failed");
-    if (cnt > 0) {
-        if (cnt > 1) {
-            // This is a scary case that our API doesn't deal with well.
-            NS_WARNING("more than one element found with specified ID; returning first");
-        }
-
-        nsISupports* element = elements->ElementAt(0);
-        rv = element->QueryInterface(nsIDOMElement::GetIID(), (void**) aReturn);
-        NS_ASSERTION(NS_SUCCEEDED(rv), "not a DOM element");
-        NS_RELEASE(element);
-        return rv;
+    if (element) {
+        rv = element->QueryInterface(NS_GET_IID(nsIDOMElement), (void**) aReturn);
+    }
+    else {
+        *aReturn = nsnull;
+        rv = NS_OK;
     }
 
-    // Didn't find it in our element map.
-    *aReturn = nsnull;
-    return NS_OK;
+    return rv;
 }
 
 nsresult
@@ -3191,6 +3185,7 @@ XULDocumentImpl::LayoutPopupDocument()
     return NS_OK;
 }
 
+#if 0
 NS_IMETHODIMP
 XULDocumentImpl::CreatePopupDocument(nsIContent* aPopupElement, nsIDocument** aResult)
 {
@@ -3271,6 +3266,7 @@ XULDocumentImpl::CreatePopupDocument(nsIContent* aPopupElement, nsIDocument** aR
 
     return NS_OK;
 }
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 // nsIXULChildDocument interface
