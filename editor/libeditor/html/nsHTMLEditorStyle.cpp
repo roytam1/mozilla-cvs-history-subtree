@@ -119,29 +119,6 @@ NS_IMETHODIMP nsHTMLEditor::RemoveAllDefaultProperties()
 }
 
 
-
-NS_IMETHODIMP nsHTMLEditor::AddDefaultProperty(nsIAtom *aProperty, 
-                              const nsAString & aAttribute, 
-                              const nsAString & aValue)
-{
-  NS_ERROR("Not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsHTMLEditor::RemoveDefaultProperty(nsIAtom *aProperty, 
-                                 const nsAString & aAttribute, 
-                                 const nsAString & aValue)
-{
-  NS_ERROR("Not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsHTMLEditor::RemoveAllDefaultProperties()
-{
-  NS_ERROR("Not implemented");
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
 NS_IMETHODIMP nsHTMLEditor::AddAlternateProperty(nsIAtom *aProperty, 
                               const nsAString & aAttribute, 
                               const nsAString & aValue)
