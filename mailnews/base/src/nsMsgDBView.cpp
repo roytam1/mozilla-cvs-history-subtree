@@ -594,7 +594,12 @@ NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, P
         *aValue = nsCRT::strdup(NS_LITERAL_STRING("-"));      
     }
     break;
-      
+  case 'f':
+    if (m_flags[aRow] & MSG_FLAG_MARKED)
+      *aValue = nsCRT::strdup(NS_LITERAL_STRING("*"));
+    else
+      *aValue = nsCRT::strdup(NS_LITERAL_STRING("'"));
+    break;      
   case 'u': // unread button column
     if (m_flags[aRow] & MSG_FLAG_READ)
       *aValue = nsCRT::strdup(NS_LITERAL_STRING("'"));
@@ -718,6 +723,13 @@ NS_IMETHODIMP nsMsgDBView::CycleCell(PRInt32 row, const PRUnichar *colID)
 
       mOutliner->RowCountChanged(row, numChanged * multiplier);
     }
+    break;
+  case 'f': // flagged column
+    // toggle the flagged status of the element at row.
+    if (m_flags[row] & MSG_FLAG_MARKED)
+      SetFlaggedByIndex(row, PR_FALSE);
+    else
+      SetFlaggedByIndex(row, PR_TRUE);
     break;
   default:
     break;
