@@ -20,12 +20,12 @@
  * Contributor(s): 
  */
 
-#ifndef nsSOAPParameter_h__
-#define nsSOAPParameter_h__
+#ifndef nsSOAPHeaderBlock_h__
+#define nsSOAPHeaderBlock_h__
 
 #include "nsString.h"
 #include "nsIVariant.h"
-#include "nsISOAPParameter.h"
+#include "nsISOAPHeaderBlock.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIXPCScriptable.h"
 #include "nsIJSNativeInitializer.h"
@@ -35,19 +35,19 @@
 #include "nsISOAPAttachments.h"
 #include "nsCOMPtr.h"
 
-class nsSOAPParameter : public nsISOAPParameter,
+class nsSOAPHeaderBlock : public nsISOAPHeaderBlock,
                         public nsISecurityCheckedComponent,
                         public nsIXPCScriptable,
                         public nsIJSNativeInitializer
 {
 public:
-  nsSOAPParameter();
-  virtual ~nsSOAPParameter();
+  nsSOAPHeaderBlock();
+  virtual ~nsSOAPHeaderBlock();
 
   NS_DECL_ISUPPORTS
 
-  // nsISOAPParameter
-  NS_DECL_NSISOAPPARAMETER
+  // nsISOAPHeaderBlock
+  NS_DECL_NSISOAPHEADERBLOCK
 
   // nsISecurityCheckedComponent
   NS_DECL_NSISECURITYCHECKEDCOMPONENT
@@ -62,6 +62,7 @@ public:
 protected:
   nsString mNamespaceURI;
   nsString mName;
+  nsString mActorURI;
   nsCOMPtr<nsISOAPEncoding> mEncoding;
   nsCOMPtr<nsISchemaType> mSchemaType;
   nsCOMPtr<nsISOAPAttachments> mAttachments;

@@ -34,14 +34,14 @@ CPPSRCS	= 				\
 		nsSOAPCall.cpp	        \
 		nsDefaultSOAPEncoder.cpp\
 		nsSOAPFault.cpp	        \
+		nsSOAPHeaderBlock.cpp	\
 		nsSOAPJSValue.cpp	\
 		nsSOAPMessage.cpp	\
 		nsSOAPParameter.cpp	\
 		nsSOAPResponse.cpp	\
 		nsSOAPStruct.cpp	\
 		nsSOAPUtils.cpp		\
-		nsSOAPType.cpp		\
-		nsSOAPTypeRegistry.cpp		\
+		nsSOAPEncodingRegistry.cpp		\
 		$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a

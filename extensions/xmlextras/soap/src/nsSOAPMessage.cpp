@@ -21,15 +21,13 @@
  */
 
 #include "nsIServiceManager.h"
+#include "nsMemory.h"
 #include "nsIComponentManager.h"
-#include "nsIXPConnect.h"
 #include "nsSOAPUtils.h"
 #include "nsSOAPMessage.h"
 #include "nsSOAPParameter.h"
-#include "nsSOAPEncodingRegistry.h"
-#include "nsISOAPEncoder.h"
-#include "nsISOAPDecoder.h"
-#include "nsSOAPJSValue.h"
+#include "nsSOAPHeaderBlock.h"
+#include "nsISOAPEncoding.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMParser.h"
 #include "nsIDOMElement.h"
@@ -41,10 +39,9 @@ static NS_DEFINE_CID(kDOMParserCID, NS_DOMPARSER_CID);
 //
 /////////////////////////////////////////////
   
-nsSOAPMessage::nsSOAPMessage(): mEncodings(new nsSOAPEncodingRegistry())
+nsSOAPMessage::nsSOAPMessage()
 {
   NS_INIT_ISUPPORTS();
-  mStatus = 0;
 }
 
 nsSOAPMessage::~nsSOAPMessage()
@@ -143,57 +140,53 @@ NS_IMETHODIMP nsSOAPMessage::SetActionURI(const nsAReadableString & aActionURI)
   return NS_OK;
 }
 
-/* attribute DOMString encodingStyleURI; */
-NS_IMETHODIMP nsSOAPMessage::GetEncodingStyleURI(nsAWritableString & aEncodingsStyleURI)
+/* readonly attribute AString methodName; */
+NS_IMETHODIMP nsSOAPMessage::GetMethodName(nsAString & aMethodName)
 {
-  NS_ENSURE_ARG_POINTER(&aEncodingsStyleURI);
-  aEncodingsStyleURI.Assign(mEncodingStyleURI);
-  return NS_OK;
-}
-NS_IMETHODIMP nsSOAPMessage::SetEncodingStyleURI(const nsAReadableString & aEncodingsStyleURI)
-{
-  mEncodingStyleURI.Assign(aEncodingsStyleURI);
-  return NS_OK;
-}
-
-/* attribute DOMString methodName; */
-NS_IMETHODIMP nsSOAPMessage::GetMethodName(nsAWritableString & aMethodName)
-{
-  NS_ENSURE_ARG_POINTER(&aMethodName);
-  aMethodName.Assign(mMethodName);
-  return NS_OK;
-}
-NS_IMETHODIMP nsSOAPMessage::SetMethodName(const nsAReadableString & aMethodName)
-{
-  mMethodName.Assign(aMethodName);
+  nsCOMPtr<nsIDOMElement> body;
+  GetBody(getter_AddRefs(body));
+  if (body) {
+    nsCOMPtr<nsIDOMElement> method;
+    nsSOAPUtils::GetFirstChildElement(body, getter_AddRefs(method));
+    if (method) {
+      body->GetLocalName(aMethodName);
+      return NS_OK;
+    }
+  }
+  aMethodName.SetLength(0);
   return NS_OK;
 }
 
-/* attribute DOMString targetObjectURI; */
-NS_IMETHODIMP nsSOAPMessage::GetTargetObjectURI(nsAWritableString & aTargetObjectURI)
+/* readonly attribute AString targetObjectURI; */
+NS_IMETHODIMP nsSOAPMessage::GetTargetObjectURI(nsAString & aTargetObjectURI)
 {
-  NS_ENSURE_ARG_POINTER(&aTargetObjectURI);
-  aTargetObjectURI.Assign(mTargetObjectURI);
-  return NS_OK;
-}
-NS_IMETHODIMP nsSOAPMessage::SetTargetObjectURI(const nsAReadableString & aTargetObjectURI)
-{
-  mTargetObjectURI.Assign(aTargetObjectURI);
+  nsCOMPtr<nsIDOMElement> body;
+  GetBody(getter_AddRefs(body));
+  if (body) {
+    nsCOMPtr<nsIDOMElement> method;
+    nsSOAPUtils::GetFirstChildElement(body, getter_AddRefs(method));
+    if (method) {
+      body->GetNamespaceURI(aTargetObjectURI);
+      return NS_OK;
+    }
+  }
+  aTargetObjectURI.SetLength(0);
   return NS_OK;
 }
 
-NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://schemas.xmlsoap.org/soap/envelope/\" SOAP-ENV:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:SOAP-ENC=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:xsi=\"http://www.w3.org/1999/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/1999/XMLSchema\">"
+NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:SOAP-ENC=\"http://schemas.xmlsoap.org/soap/encoding/\" xmlns:xsi=\"http://www.w3.org/1999/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/1999/XMLSchema\">"
 "<SOAP-ENV:Header>"
 "</SOAP-ENV:Header>"
 "<SOAP-ENV:Body>"
 "</SOAP-ENV:Body>"
 "</SOAP-ENV:Envelope>");
 
-//  The default encoders assume that the above declarations are in place, without bothering to check.
-
-/* void encodeParameters (in nsISupportsArray SOAPParameters); */
-NS_IMETHODIMP nsSOAPMessage::EncodeParameters(nsISupportsArray *SOAPParameters)
+/* void encode (in AString aMethodName, in AString aTargetObjectURI, in PRUint32 aHeaderBlockCount, [array, size_is (aHeaderBlockCount)] in nsISOAPHeaderBlock aHeaderBlocks, in PRUint32 aParameterCount, [array, size_is (aParameterCount)] in nsISOAPParameter aParameters); */
+NS_IMETHODIMP nsSOAPMessage::Encode(const nsAString & aMethodName, const nsAString & aTargetObjectURI, PRUint32 aHeaderBlockCount, nsISOAPHeaderBlock **aHeaderBlocks, PRUint32 aParameterCount, nsISOAPParameter **aParameters)
 {
+
+//  Construct the message skeleton
+
   nsresult rv;
   nsCOMPtr<nsIDOMNode> ignored;
   nsCOMPtr<nsIDOMParser> parser = do_CreateInstance(kDOMParserCID, &rv);
@@ -204,23 +197,93 @@ NS_IMETHODIMP nsSOAPMessage::EncodeParameters(nsISupportsArray *SOAPParameters)
 		               getter_AddRefs(mMessage));
   if (NS_FAILED(rv)) return rv;
 
-  nsCOMPtr<nsIDOMElement> header;
+//  Declare the default encoding if one exists
+
+  if (mEncoding) {
+    nsCOMPtr<nsIDOMElement> envelope;
+    rv = GetEnvelope(getter_AddRefs(envelope));
+    if (NS_FAILED(rv)) return rv;
+    if (envelope) {
+      nsAutoString enc;
+      mEncoding->GetStyleURI(enc);
+      envelope->SetAttributeNS(nsSOAPUtils::kSOAPEncodingURI, nsSOAPUtils::kEncodingStyleAttribute, enc);
+    }
+  }
+
+//  Encode and add headers, if any were specified 
+
+  if (aHeaderBlockCount) {
+    nsCOMPtr<nsIDOMElement> parent;
+    rv = GetHeader(getter_AddRefs(parent));
+    if (NS_FAILED(rv)) return rv;
+    nsCOMPtr<nsISupports> next;
+    nsCOMPtr<nsISOAPHeaderBlock> header;
+    nsCOMPtr<nsIDOMElement> element;
+    nsCOMPtr<nsISOAPEncoding> encoding;
+    nsCOMPtr<nsISchemaType> schemaType;
+    nsCOMPtr<nsIVariant> value;
+    nsAutoString name;
+    nsAutoString namespaceURI;
+    nsAutoString actorURI;
+    for (PRUint32 i = 0; i < aHeaderBlockCount; i++) {
+      header = aHeaderBlocks[i];
+      if (!header) return NS_ERROR_FAILURE;
+      rv = header->GetElement(getter_AddRefs(element));
+      if (element) {
+        nsCOMPtr<nsIDOMNode> node1 = (nsIDOMElement*)element;
+        nsCOMPtr<nsIDOMNode> node2;
+        rv = mMessage->ImportNode(node1, PR_TRUE, getter_AddRefs(node1));
+        if (NS_FAILED(rv)) return rv;
+        rv = parent->AppendChild(node2, getter_AddRefs(node1));
+        if (NS_FAILED(rv)) return rv;
+	element = do_QueryInterface(node1);
+      }
+      else {
+        rv = header->GetNamespaceURI(namespaceURI);
+        if (NS_FAILED(rv)) return rv;
+        rv = header->GetName(name);
+        if (NS_FAILED(rv)) return rv;
+        rv = header->GetActorURI(actorURI);
+        if (NS_FAILED(rv)) return rv;
+        rv = header->GetEncoding(getter_AddRefs(encoding));
+        if (NS_FAILED(rv)) return rv;
+        if (!encoding) {
+          encoding = mEncoding;
+        }
+        rv = header->GetSchemaType(getter_AddRefs(schemaType));
+        if (NS_FAILED(rv)) return rv;
+	rv = header->GetValue(getter_AddRefs(value));
+        if (NS_FAILED(rv)) return rv;
+        rv = encoding->Encode(value, namespaceURI, name,
+		        schemaType, nsnull, parent, getter_AddRefs(element));
+        if (NS_FAILED(rv)) return rv;
+        if (!actorURI.IsEmpty()) {
+	  element->SetAttributeNS(nsSOAPUtils::kSOAPEnvPrefix, nsSOAPUtils::kActorAttribute, actorURI);
+        }
+        if (mEncoding != encoding) {
+          nsAutoString enc;
+          encoding->GetStyleURI(enc);
+          element->SetAttributeNS(nsSOAPUtils::kSOAPEncodingURI, nsSOAPUtils::kEncodingStyleAttribute, enc);
+        }
+      }
+    }
+  }
   nsCOMPtr<nsIDOMElement> body;
-  rv = GetHeader(getter_AddRefs(header));
-  if (NS_FAILED(rv)) return rv;
   rv = GetBody(getter_AddRefs(body));
   if (NS_FAILED(rv)) return rv;
 
-  if (!mMethodName.IsEmpty()) {  //  Only produce a call element if mMethodName was non-empty
+//  Only produce a call element if mMethodName was non-empty
+
+  if (!aMethodName.IsEmpty()) {
     nsCOMPtr<nsIDOMElement> call;
-    rv = mMessage->CreateElementNS(mTargetObjectURI, mMethodName, getter_AddRefs(call));
+    rv = mMessage->CreateElementNS(aTargetObjectURI, aMethodName, getter_AddRefs(call));
     if (NS_FAILED(rv)) return rv;
     nsCOMPtr<nsIDOMNode> ignored;
     rv = body->AppendChild(call, getter_AddRefs(ignored));
     if (NS_FAILED(rv)) return rv;
     body = call;
     nsAutoString prefix;
-    rv = nsSOAPUtils::MakeNamespacePrefixFixed(body, mTargetObjectURI, prefix);
+    rv = nsSOAPUtils::MakeNamespacePrefixFixed(body, aTargetObjectURI, prefix);
     if (NS_FAILED(rv)) return rv;
     if (!prefix.IsEmpty()) {
       rv = body->SetPrefix(prefix);
@@ -228,247 +291,141 @@ NS_IMETHODIMP nsSOAPMessage::EncodeParameters(nsISupportsArray *SOAPParameters)
     }
   }
 
-  PRUint32 count;
-  rv = SOAPParameters->Count(&count);
-  if (NS_FAILED(rv)) return rv;
+//  Encode and add all of the parameters into the body
 
   nsCOMPtr<nsISupports> next;
   nsCOMPtr<nsISOAPParameter> param;
   nsCOMPtr<nsIDOMElement> element;
+  nsCOMPtr<nsISOAPEncoding> encoding;
+  nsCOMPtr<nsISchemaType> schemaType;
+  nsCOMPtr<nsIVariant> value;
   nsAutoString name;
-  PRBool isHeader;
-  for (PRUint32 i = 0; i < count; i++) {
-    next = dont_AddRef(SOAPParameters->ElementAt(i));
-    param = do_QueryInterface(next);
-    if (!param) return NS_ERROR_FAILURE;
-    rv = param->GetName(name);
-    if (NS_FAILED(rv)) return rv;
-    rv = param->GetHeader(&isHeader);
-    if (NS_FAILED(rv)) return rv;
- //  Need a callback here to get type?
-    rv = mEncodings->Encode(mEncodings, mEncodingStyleURI, param, 
-		    nsSOAPUtils::kEmpty, name,
-		    nsnull,
-		    isHeader ? header : body, nsnull);
-    if (NS_FAILED(rv)) return rv;
-  }
-  return NS_OK;
-}
-
-/* nsISupportsArray decodeParameters (); */
-NS_IMETHODIMP nsSOAPMessage::DecodeParameters(nsISupportsArray **_retval)
-{
-  nsresult rv;
-  nsCOMPtr<nsIDOMElement> header;
-  nsCOMPtr<nsIDOMElement> body;
-  nsCOMPtr<nsISupportsArray> array = do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID);
-  rv = GetHeader(getter_AddRefs(header));
-  if (NS_FAILED(rv)) return rv;
-  rv = GetBody(getter_AddRefs(body));
-  if (NS_FAILED(rv)) return rv;
-  if (!body) return NS_ERROR_FAILURE;
-  nsCOMPtr<nsIDOMElement> current;
-
-  if (NS_FAILED(rv)) return rv;
-  if (!mMethodName.IsEmpty()) {
-    nsSOAPUtils::GetFirstChildElement(body, getter_AddRefs(current));
-    body = current;
-    if (!body) return NS_ERROR_FAILURE;
-    rv = current->GetNamespaceURI(mTargetObjectURI);
-    if (NS_FAILED(rv)) return rv;
-    rv = current->GetLocalName(mMethodName);
-    if (NS_FAILED(rv)) return rv;
-  }
-  nsCOMPtr<nsIDOMElement> next;
-  nsCOMPtr<nsIDOMNamedNodeMap> attrs;
-  nsCOMPtr<nsIDOMNode> attr;
-  nsCOMPtr<nsISOAPParameter> param;
-  nsAutoString encoding;
   nsAutoString namespaceURI;
-  PRBool isHeader = header != nsnull;
-  if (!isHeader)
-    header = body;
-  PRUint32 count = 0;
-  for (;;) {
-    nsSOAPUtils::GetFirstChildElement(header, getter_AddRefs(current));
-    while (current) {
-      rv = current->GetAttributes(getter_AddRefs(attrs));
+  for (PRUint32 i = 0; i < aParameterCount; i++) {
+    param = aParameters[i];
+    if (!param) return NS_ERROR_FAILURE;
+    rv = param->GetElement(getter_AddRefs(element));
+    if (element) {
+      nsCOMPtr<nsIDOMNode> node1 = (nsIDOMElement*)element;
+      nsCOMPtr<nsIDOMNode> node2;
+      rv = mMessage->ImportNode(node1, PR_TRUE, getter_AddRefs(node1));
       if (NS_FAILED(rv)) return rv;
-// Get the encoding
-      rv = attrs->GetNamedItemNS(nsSOAPUtils::kSOAPEnvURI, 
-		                 nsSOAPUtils::kEncodingStyleAttribute, 
-				 getter_AddRefs(attr));
+      rv = body->AppendChild(node2, getter_AddRefs(node1));
       if (NS_FAILED(rv)) return rv;
-      if (attr) {
-	attr->GetNodeValue(encoding);
-      }
-      else {
-	encoding = mEncodingStyleURI;
-      }
- //  Need a callback here to get type.
-      rv = mEncodings->Decode(mEncodings, encoding, current, nsnull, nsnull, getter_AddRefs(param));
+      element = do_QueryInterface(node1);
+    }
+    else {
+      rv = param->GetNamespaceURI(namespaceURI);
       if (NS_FAILED(rv)) return rv;
-      if (param) {
-	rv = param->SetHeader(isHeader);
-        if (NS_FAILED(rv)) return rv;
-	rv = array->InsertElementAt(param, count++);
-        if (NS_FAILED(rv)) return rv;
+      rv = param->GetName(name);
+      if (NS_FAILED(rv)) return rv;
+      rv = param->GetEncoding(getter_AddRefs(encoding));
+      if (NS_FAILED(rv)) return rv;
+      if (!encoding) {
+        encoding = mEncoding;
       }
-      nsSOAPUtils::GetNextSiblingElement(current, getter_AddRefs(next));
-      current = next;
-    }
-    if (isHeader)
-      header = body;
-    else
-      break;
-  }
-  *_retval = array;
-  NS_IF_ADDREF(*_retval);
-  return NS_OK;
-}
-
-/* readonly attribute unsigned long status; */
-NS_IMETHODIMP nsSOAPMessage::GetStatus(PRUint32 *aStatus)
-{
-  NS_ENSURE_ARG_POINTER(aStatus);
-  *aStatus = mStatus;
-  return NS_OK;
-}
-
-/* attribute nsISupportsArray protocol; */
-NS_IMETHODIMP nsSOAPMessage::GetProtocolParameters(nsISupportsArray * *aProtocol)
-{
-  NS_ENSURE_ARG_POINTER(aProtocol);
-  *aProtocol = mProtocol;
-  NS_IF_ADDREF(*aProtocol);
-  return NS_OK;
-}
-NS_IMETHODIMP nsSOAPMessage::SetProtocolParameters(nsISupportsArray * aProtocol)
-{
-  mProtocol = aProtocol;
-  return NS_OK;
-}
-
-/* attribute nsISOAPEncodingRegistry types; */
-NS_IMETHODIMP nsSOAPMessage::GetEncodings(nsISOAPEncodingRegistry * *aEncodings)
-{
-  NS_ENSURE_ARG_POINTER(aEncodings);
-  *aEncodings = mEncodings;
-  NS_IF_ADDREF(*aEncodings);
-  return NS_OK;
-}
-NS_IMETHODIMP nsSOAPMessage::SetEncodings(nsISOAPEncodingRegistry * aEncodings)
-{
-  mEncodings = aEncodings;
-  return NS_OK;
-}
-
-// The nsIXPCScriptable map declaration that will generate stubs for us...
-#define XPC_MAP_CLASSNAME           nsSOAPMessage
-#define XPC_MAP_QUOTED_CLASSNAME   "SOAPMessage"
-#define                             XPC_MAP_WANT_NEWRESOLVE
-#define XPC_MAP_FLAGS       nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY   | \
-                            nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY   | \
-                            nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY
-#include "xpc_map_end.h" /* This will #undef the above */
-
-NS_NAMED_LITERAL_STRING(encodeparameters, "encodeparameters");
-NS_NAMED_LITERAL_STRING(decodeparameters, "decodeparameters");
-
-static JSBool PR_CALLBACK
-encodeJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
-                jsval *rval)
-{
-  nsCOMPtr<nsISupports> value;
-  nsAutoString type;
-  nsresult rc = nsSOAPJSValue::ConvertJSArgsToValue(cx, argc, argv, PR_TRUE, getter_AddRefs(value), type);
-  if (NS_FAILED(rc))
-    return JS_FALSE;
-
-//  Unwrap "this" pointer to call original function
-
-  nsCOMPtr<nsIXPConnect> xpc = do_GetService(nsIXPConnect::GetCID(), &rc); 
-  if (NS_FAILED(rc))
-    return JS_FALSE;
-  nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
-  xpc->GetWrappedNativeOfJSObject(cx, obj, getter_AddRefs(wrapper));
-  if (wrapper) {
-    nsCOMPtr<nsISupports> native;
-    wrapper->GetNative(getter_AddRefs(native));
-    if (native) {
-      nsCOMPtr<nsISOAPMessage> message;
-      nsCOMPtr<nsISupportsArray> array;
-      message = do_QueryInterface(native);
-      if (message) {
-        array = do_QueryInterface(value);
-        nsresult rc = message->EncodeParameters(array);
-        if (!NS_FAILED(rc))
-          return JS_TRUE;
+      rv = param->GetSchemaType(getter_AddRefs(schemaType));
+      if (NS_FAILED(rv)) return rv;
+      rv = param->GetValue(getter_AddRefs(value));
+      if (NS_FAILED(rv)) return rv;
+      rv = encoding->Encode(value, namespaceURI, name,
+		      schemaType, nsnull, body, getter_AddRefs(element));
+      if (NS_FAILED(rv)) return rv;
+      if (mEncoding != encoding) {
+        nsAutoString enc;
+        encoding->GetStyleURI(enc);
+        element->SetAttributeNS(nsSOAPUtils::kSOAPEncodingURI, nsSOAPUtils::kEncodingStyleAttribute, enc);
       }
     }
   }
-  return JS_FALSE;
+  return NS_OK;
+}
+/* void getHeaderBlocks (out PRUint32 aCount, [array, size_is (aCount), retval] out nsISOAPHeaderBlock aHeaderBlocks); */
+NS_IMETHODIMP nsSOAPMessage::GetHeaderBlocks(PRUint32 *aCount, nsISOAPHeaderBlock ***aHeaderBlocks)
+{
+  nsCOMPtr<nsIMemory> memory = do_GetService(NS_MEMORY_CONTRACTID);
+  *aCount = 0;
+  *aHeaderBlocks = nsnull;
+  int count = 0;
+  int length = 0;
+  nsCOMPtr<nsIDOMElement> element;
+  nsresult rv = GetHeader(getter_AddRefs(element));
+  if (NS_FAILED(rv)) return rv;
+  nsCOMPtr<nsIDOMElement> next;
+  nsCOMPtr<nsISOAPHeaderBlock> header;
+  nsSOAPUtils::GetFirstChildElement(element, getter_AddRefs(next));
+  while (next) {
+    if (length == count) {
+      length = length ? 2 * length : 10;
+      *aHeaderBlocks = (nsISOAPHeaderBlock* *)memory->Realloc(*aHeaderBlocks, length * sizeof(**aHeaderBlocks));
+    }
+    element = next;
+    header = new nsSOAPHeaderBlock();
+    if (NS_FAILED(rv)) return rv;
+    NS_ADDREF(header);
+    (*aHeaderBlocks)[(*aCount)++] = header;
+    rv = header->SetElement(element);
+    if (NS_FAILED(rv)) return rv;
+    nsSOAPUtils::GetNextSiblingElement(element, getter_AddRefs(next));
+  }
+  if (*aCount) {
+    *aHeaderBlocks = (nsISOAPHeaderBlock* *)memory->Realloc(*aHeaderBlocks, (*aCount) * sizeof(**aHeaderBlocks));
+  }
+  return NS_OK;
 }
 
-static JSBool PR_CALLBACK
-DecodeJSParameters(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
-                jsval *rval)
+/* void getParameters (in boolean aDocumentStyle, out PRUint32 aCount, [array, size_is (aCount), retval] out nsISOAPParameter aParameters); */
+NS_IMETHODIMP nsSOAPMessage::GetParameters(PRBool aDocumentStyle, PRUint32 *aCount, nsISOAPParameter ***aParameters)
 {
-  nsCOMPtr<nsISupportsArray> value;
-
-//  Unwrap "this" pointer to call original function
-
-  nsresult rc;
-  nsCOMPtr<nsIXPConnect> xpc = do_GetService(nsIXPConnect::GetCID(), &rc); 
-  if (NS_FAILED(rc))
-    return JS_FALSE;
-  nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
-  xpc->GetWrappedNativeOfJSObject(cx, obj, getter_AddRefs(wrapper));
-  rc = NS_ERROR_FAILURE;
-  if (wrapper) {
-    nsCOMPtr<nsISupports> native;
-    wrapper->GetNative(getter_AddRefs(native));
-    if (native) {
-      nsCOMPtr<nsISOAPMessage> message;
-      message = do_QueryInterface(native);
-      if (message) {
-        rc = message->DecodeParameters(getter_AddRefs(value));
-      }
+  nsCOMPtr<nsIMemory> memory = do_GetService(NS_MEMORY_CONTRACTID);
+  *aCount = 0;
+  *aParameters = nsnull;
+  int count = 0;
+  int length = 0;
+  nsCOMPtr<nsIDOMElement> element;
+  nsresult rv = GetHeader(getter_AddRefs(element));
+  if (NS_FAILED(rv)) return rv;
+  nsCOMPtr<nsIDOMElement> next;
+  nsCOMPtr<nsISOAPParameter> param;
+  nsSOAPUtils::GetFirstChildElement(element, getter_AddRefs(next));
+  while (next) {
+    if (length == count) {
+      length = length ? 2 * length : 10;
+      *aParameters = (nsISOAPParameter* *)memory->Realloc(*aParameters, length * sizeof(**aParameters));
     }
+    element = next;
+    param = new nsSOAPParameter();
+    if (NS_FAILED(rv)) return rv;
+    NS_ADDREF(param);
+    (*aParameters)[(*aCount)++] = param;
+    rv = param->SetElement(element);
+    if (NS_FAILED(rv)) return rv;
+    nsSOAPUtils::GetNextSiblingElement(element, getter_AddRefs(next));
   }
-  if (NS_FAILED(rc))
-    return JS_FALSE;
-  rc = nsSOAPJSValue::ConvertValueToJSVal(cx, value, nsSOAPUtils::kArrayType, rval);
-  if (NS_FAILED(rc))
-    return JS_FALSE;
-  return JS_TRUE;
+  if (*aCount) {
+    *aParameters = (nsISOAPParameter* *)memory->Realloc(*aParameters, (*aCount) * sizeof(**aParameters));
+  }
+  return NS_OK;
 }
 
-NS_IMETHODIMP
-nsSOAPMessage::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-  JSObject *obj, jsval id, PRUint32 flags,
-  JSObject **objp, PRBool *_retval)
+/* attribute nsISOAPEncoding encoding; */
+NS_IMETHODIMP nsSOAPMessage::GetEncoding(nsISOAPEncoding* * aEncoding)
 {
-  if (!JSVAL_IS_STRING(id)) {
-    return NS_OK;
+  NS_ENSURE_ARG_POINTER(aEncoding);
+  if (!mEncoding) {
+    nsresult rv;
+    mEncoding = do_CreateInstance(NS_SOAPENCODING_CONTRACTID, &rv);
+    if (NS_FAILED(rv))
+      return rv;
   }
-
-  JSString *str = JSVAL_TO_STRING(id);
-  nsDependentString name(JS_GetStringChars(str));
-  if (name.Equals(encodeparameters)) {
-    JSFunction *f = ::JS_DefineFunction(cx, obj, ::JS_GetStringBytes(str),
-                                        encodeJSParameters, 0, JSPROP_READONLY);
-    if (!f) {
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
-
-  } else if (name.Equals(decodeparameters)) {
-    JSFunction *f = ::JS_DefineFunction(cx, obj, ::JS_GetStringBytes(str),
-                                        DecodeJSParameters, 0, JSPROP_READONLY);
-    if (!f) {
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
-  }
+  *aEncoding = mEncoding;
+  NS_IF_ADDREF(*aEncoding);
+  return NS_OK;
+}
+NS_IMETHODIMP nsSOAPMessage::SetEncoding(nsISOAPEncoding* aEncoding)
+{
+  NS_ENSURE_ARG_POINTER(aEncoding);
+  mEncoding = aEncoding;
   return NS_OK;
 }
 

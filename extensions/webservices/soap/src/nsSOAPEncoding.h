@@ -24,40 +24,54 @@
 #define nsSOAPEncodingRegistry_h__
 
 #include "nsString.h"
-#include "nsISOAPEncodingRegistry.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIDOMElement.h"
+#include "nsISOAPEncoding.h"
 #include "nsISOAPEncoder.h"
 #include "nsISOAPDecoder.h"
 #include "nsCOMPtr.h"
 #include "nsHashtable.h"
+#include "nsISchemaLoader.h"
 
-class nsSOAPEncodingRegistry : public nsISOAPEncodingRegistry,
+class nsSOAPEncoding;
+
+/* Header file */
+class nsSOAPEncodingRegistry : public nsISOAPEncoding
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSISOAPENCODING
+  nsSOAPEncodingRegistry() {}
+  nsSOAPEncodingRegistry(nsISOAPEncoding* aEncoding);
+  virtual ~nsSOAPEncodingRegistry();
+protected:
+  nsSupportsHashtable* mEncodings;
+  nsCOMPtr<nsISchemaLoader> mSchemaLoader;
+};
+
+class nsSOAPEncoding : public nsISOAPEncoding,
 		    public nsISecurityCheckedComponent
 {
 public:
-  nsSOAPEncodingRegistry();
-  virtual ~nsSOAPEncodingRegistry();
-
   NS_DECL_ISUPPORTS
 
-  // nsISOAPEncodingRegistry
-  NS_DECL_NSISOAPENCODINGREGISTRY
+  NS_DECL_NSISOAPENCODING
 
   // nsISecurityCheckedComponent
   NS_DECL_NSISECURITYCHECKEDCOMPONENT
 
+  nsSOAPEncoding();
+  nsSOAPEncoding(const nsAString& aStyleURI, nsSOAPEncodingRegistry * aRegistry);
+  virtual ~nsSOAPEncoding();
+  /* additional members */
+
 protected:
-  nsSupportsHashtable* mNativeTypes;
-  nsSupportsHashtable* mSchemaTypes;
-  nsCOMPtr<nsISOAPEncodingRegistry> mDefault;
-
+  nsString mStyleURI;
+  nsSupportsHashtable* mEncoders;
+  nsSupportsHashtable* mDecoders;
+  nsCOMPtr<nsISOAPEncoding> mRegistry;
+  nsCOMPtr<nsISOAPEncoding> mDefaultEncoding;
+  nsCOMPtr<nsISOAPEncoder> mDefaultEncoder;
+  nsCOMPtr<nsISOAPDecoder> mDefaultDecoder;
 };
-
-class nsSOAPDefaultEncodingRegistry : nsSOAPEncodingRegistry
-{
-public:
-  nsSOAPDefaultEncodingRegistry();
-};
-
 #endif

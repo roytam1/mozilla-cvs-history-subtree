@@ -24,11 +24,15 @@
 #define nsSOAPParameter_h__
 
 #include "nsString.h"
-#include "jsapi.h"
+#include "nsIVariant.h"
 #include "nsISOAPParameter.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIXPCScriptable.h"
 #include "nsIJSNativeInitializer.h"
+#include "nsISOAPEncoding.h"
+#include "nsISchema.h"
+#include "nsIDOMElement.h"
+#include "nsISOAPAttachments.h"
 #include "nsCOMPtr.h"
 
 class nsSOAPParameter : public nsISOAPParameter,
@@ -56,15 +60,15 @@ public:
                         PRUint32 argc, jsval *argv);
 
 protected:
-  nsString mEncodingStyleURI;
+  nsString mNamespaceURI;
   nsString mName;
-  nsString mType;
-  nsString mSchemaNamespaceURI;
-  nsString mSchemaType;
-  nsCOMPtr<nsISupports> mValue;
-  PRBool mHeader;
-  PRBool mMustUnderstand;
-  nsString mActorURI;
+  nsCOMPtr<nsISOAPEncoding> mEncoding;
+  nsCOMPtr<nsISchemaType> mSchemaType;
+  nsCOMPtr<nsISOAPAttachments> mAttachments;
+  nsCOMPtr<nsIDOMElement> mElement;
+  nsCOMPtr<nsIVariant> mValue;
+  nsresult mStatus;
+  PRBool mComputeValue;
 };
 
 #endif

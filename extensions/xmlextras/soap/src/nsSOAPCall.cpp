@@ -76,7 +76,7 @@ nsSOAPCall::GetTransport(nsISOAPTransport** aTransport)
   transportContractid.Assign(NS_SOAPTRANSPORT_CONTRACTID_PREFIX);
   transportContractid.Append(protocol);
 
-  nsCOMPtr<nsISOAPTransport> transport = do_GetService(transportContractid, &rv);
+  nsCOMPtr<nsISOAPTransport> transport = do_GetService(transportContractid.get(), &rv);
   if (NS_FAILED(rv)) return rv;
 
   *aTransport = transport.get();

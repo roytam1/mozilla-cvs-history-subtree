@@ -20,45 +20,58 @@
  * Contributor(s): 
  */
 
-#ifndef nsSOAPMessage_h__
-#define nsSOAPMessage_h__
+#ifndef nsSOAPEncodingRegistry_h__
+#define nsSOAPEncodingRegistry_h__
 
 #include "nsString.h"
-#include "nsISOAPEncoding.h"
-#include "nsISOAPMessage.h"
 #include "nsISecurityCheckedComponent.h"
-#include "nsIXPCScriptable.h"
 #include "nsIDOMElement.h"
-#include "nsIDOMDocument.h"
-#include "nsISupportsArray.h"
+#include "nsISOAPEncoding.h"
+#include "nsISOAPEncoder.h"
+#include "nsISOAPDecoder.h"
 #include "nsCOMPtr.h"
-#include "nsIVariant.h"
+#include "nsHashtable.h"
 #include "nsISchemaLoader.h"
 
-class nsSOAPMessage : public nsISOAPMessage, 
-  public nsISecurityCheckedComponent,
-  public nsIXPCScriptable 
+class nsSOAPEncoding;
+
+/* Header file */
+class nsSOAPEncodingRegistry : public nsISOAPEncoding
 {
 public:
-  nsSOAPMessage();
-  virtual ~nsSOAPMessage();
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSISOAPENCODING
+  nsSOAPEncodingRegistry() {}
+  nsSOAPEncodingRegistry(nsISOAPEncoding* aEncoding);
+  virtual ~nsSOAPEncodingRegistry();
+protected:
+  nsSupportsHashtable* mEncodings;
+  nsCOMPtr<nsISchemaLoader> mSchemaLoader;
+};
 
+class nsSOAPEncoding : public nsISOAPEncoding,
+		    public nsISecurityCheckedComponent
+{
+public:
   NS_DECL_ISUPPORTS
 
-  // nsISOAPMessage
-  NS_DECL_NSISOAPMESSAGE
+  NS_DECL_NSISOAPENCODING
 
   // nsISecurityCheckedComponent
   NS_DECL_NSISECURITYCHECKEDCOMPONENT
 
-  // nsIXPCScriptable
-  NS_DECL_NSIXPCSCRIPTABLE
+  nsSOAPEncoding();
+  nsSOAPEncoding(const nsAString& aStyleURI, nsSOAPEncodingRegistry * aRegistry);
+  virtual ~nsSOAPEncoding();
+  /* additional members */
 
 protected:
-
-  nsCOMPtr<nsIDOMDocument> mMessage;
-  nsCOMPtr<nsISOAPEncoding> mEncoding;
-  nsString mActionURI;
+  nsString mStyleURI;
+  nsSupportsHashtable* mEncoders;
+  nsSupportsHashtable* mDecoders;
+  nsCOMPtr<nsISOAPEncoding> mRegistry;
+  nsCOMPtr<nsISOAPEncoding> mDefaultEncoding;
+  nsCOMPtr<nsISOAPEncoder> mDefaultEncoder;
+  nsCOMPtr<nsISOAPDecoder> mDefaultDecoder;
 };
-
 #endif

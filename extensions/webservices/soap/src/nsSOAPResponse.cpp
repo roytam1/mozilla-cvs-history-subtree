@@ -74,25 +74,6 @@ NS_IMETHODIMP nsSOAPResponse::GetFault(nsISOAPFault * *aFault)
   return NS_OK;
 }
 
-/* readonly attribute nsISOAPParameter returnValue; */
-NS_IMETHODIMP nsSOAPResponse::GetReturnValue(nsISOAPParameter * *aReturnValue)
-{
-  nsCOMPtr<nsISupportsArray> params;
-  nsresult rc = DecodeParameters(getter_AddRefs(params));
-  if (NS_FAILED(rc))
-    return rc;
-  if (params)
-  {
-    nsCOMPtr<nsISupports> retval = dont_AddRef(params->ElementAt(0));
-    return retval->QueryInterface(NS_GET_IID(nsISOAPParameter), (void**)aReturnValue);
-  }
-  else
-  {
-    *aReturnValue = nsnull;
-  }
-  return nsnull;
-}
-
 static const char* kAllAccess = "AllAccess";
 
 /* string canCreateWrapper (in nsIIDPtr iid); */

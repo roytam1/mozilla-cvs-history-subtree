@@ -23,59 +23,12 @@
 #ifndef nsDefaultSOAPEncoder_h__
 #define nsDefaultSOAPEncoder_h__
 
-#include "nsString.h"
-#include "nsISupportsArray.h"
-#include "jsapi.h"
-#include "nsISOAPMessage.h"
-#include "nsISOAPEncoder.h"
-#include "nsISOAPDecoder.h"
+#include "nsSOAPEncoding.h"
 
-class nsDefaultSOAPEncoder
+class nsDefaultSOAPEncoder : nsSOAPEncoding
 {
 public:
-  static nsresult RegisterEncoders(nsISOAPEncodingRegistry* aRegistry);
-
-protected:
-  static nsresult MakeNamespacePrefix(nsIDOMElement* aScope,
-		                      nsAReadableString & aURI,
-				      nsAWritableString & aPrefix);
-  static nsresult EncodeSimpleValue(
-	                              const nsAReadableString & aValue, 
-				      const nsAReadableString & aNamespaceURI, 
-				      const nsAReadableString & aName, 
-				      const nsAReadableString & aSchemaNamespaceURI, 
-				      const nsAReadableString & aSchemaType, 
-				      nsIDOMElement* aDestination);
-#if 0
-  nsresult StartEmptyMessage(nsISOAPMessage* message);
-  nsresult EncodeParameter(nsISOAPParameter* parameter,
-                           nsIDOMDocument* document,
-                           nsIDOMElement** element);
-  nsresult SerializeSupportsArray(nsISupportsArray* array,
-                                  nsIDOMElement* element, 
-                                  nsIDOMDocument* document);
-  nsresult SerializeJavaScriptArray(JSObject* arrayobj,
-                                    nsIDOMElement* element, 
-                                    nsIDOMDocument* document);
-  nsresult SerializeJavaScriptObject(JSObject* obj,
-                                     nsIDOMElement* element, 
-                                     nsIDOMDocument* document);
-  nsresult SerializeParameterValue(nsISOAPParameter* parameter, 
-                                   nsIDOMElement* element, 
-                                   nsIDOMDocument* document);
-
-
-  nsresult DecodeParameter(nsIDOMElement* element,
-                           PRInt32 type,
-                           nsISOAPParameter **_retval);
-  nsresult DeserializeSupportsArray(nsIDOMElement *element,
-                                    nsISupportsArray **_retval);
-  nsresult DeserializeJavaScriptObject(nsIDOMElement *element,
-                                       JSObject** obj);
-  nsresult DeserializeParameter(nsIDOMElement *element,
-                                PRInt32 type,
-                                nsISOAPParameter **_retval);
-#endif
+  nsDefaultSOAPEncoder();
 };
 
 #endif

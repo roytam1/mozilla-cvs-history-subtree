@@ -23,11 +23,10 @@
 #include "nsString.h"
 #include "nsReadableUtils.h"
 #include "nsSOAPParameter.h"
-#include "nsSOAPJSValue.h"
 #include "nsSOAPUtils.h"
 #include "nsIXPConnect.h"
 #include "nsIServiceManager.h"
-#include "nsISupportsPrimitives.h"
+#include "nsISOAPAttachments.h"
 
 nsSOAPParameter::nsSOAPParameter()
 {
@@ -44,278 +43,159 @@ NS_IMPL_ISUPPORTS4(nsSOAPParameter,
                    nsIXPCScriptable,
                    nsIJSNativeInitializer)
 
+/* attribute AString namespaceURI; */
+NS_IMETHODIMP nsSOAPParameter::GetNamespaceURI(nsAWritableString & aNamespaceURI)
+{
+  NS_ENSURE_ARG_POINTER(&aNamespaceURI);
+  if (mElement) {
+    return mElement->GetNamespaceURI(aNamespaceURI);
+  }
+  else {
+    aNamespaceURI.Assign(mNamespaceURI);
+  }
+  return NS_OK;
+}
+NS_IMETHODIMP nsSOAPParameter::SetNamespaceURI(const nsAReadableString & aNamespaceURI)
+{
+  if (mElement) {
+    return NS_ERROR_FAILURE;
+  }
+  mNamespaceURI.Assign(aNamespaceURI);
+  return NS_OK;
+}
+
 /* attribute AString name; */
 NS_IMETHODIMP nsSOAPParameter::GetName(nsAWritableString & aName)
 {
   NS_ENSURE_ARG_POINTER(&aName);
-  aName.Assign(mName);
+  if (mElement) {
+    return mElement->GetLocalName(aName);
+  }
+  else {
+    aName.Assign(mName);
+  }
   return NS_OK;
 }
 NS_IMETHODIMP nsSOAPParameter::SetName(const nsAReadableString & aName)
 {
+  if (mElement) {
+    return NS_ERROR_FAILURE;
+  }
   mName.Assign(aName);
   return NS_OK;
 }
 
-/* attribute AString encodingStyleURI; */
-NS_IMETHODIMP nsSOAPParameter::GetEncodingStyleURI(nsAWritableString & aEncodingStyleURI)
+/* attribute nsISOAPEncoding encoding; */
+NS_IMETHODIMP nsSOAPParameter::GetEncoding(nsISOAPEncoding* * aEncoding)
 {
-  NS_ENSURE_ARG_POINTER(&aEncodingStyleURI);
-  aEncodingStyleURI.Assign(mEncodingStyleURI);
+  NS_ENSURE_ARG_POINTER(aEncoding);
+  *aEncoding = mEncoding;
+  NS_IF_ADDREF(*aEncoding);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPParameter::SetEncodingStyleURI(const nsAReadableString & aEncodingStyleURI)
+NS_IMETHODIMP nsSOAPParameter::SetEncoding(nsISOAPEncoding* aEncoding)
 {
-  mEncodingStyleURI.Assign(aEncodingStyleURI);
-  return NS_OK;
-}
-
-/* attribute AString type; */
-NS_IMETHODIMP nsSOAPParameter::GetType(nsAWritableString & aType)
-{
-  NS_ENSURE_ARG_POINTER(&aType);
-  aType.Assign(mType);
-  return NS_OK;
-}
-NS_IMETHODIMP nsSOAPParameter::SetType(const nsAReadableString & aType)
-{
-  mType.Assign(aType);
+  NS_ENSURE_ARG_POINTER(aEncoding);
+  mEncoding = aEncoding;
+  if (mElement) {
+    mComputeValue = PR_TRUE;
+    mValue = nsnull;
+    mStatus = NS_OK;
+  }
   return NS_OK;
 }
 
-/* attribute AString schemaNamespaceURI; */
-NS_IMETHODIMP nsSOAPParameter::GetSchemaNamespaceURI(nsAWritableString & aSchemaNamespaceURI)
+/* attribute nsISchemaType schemaType; */
+NS_IMETHODIMP nsSOAPParameter::GetSchemaType(nsISchemaType* * aSchemaType)
 {
-  NS_ENSURE_ARG_POINTER(&aSchemaNamespaceURI);
-  aSchemaNamespaceURI.Assign(mSchemaNamespaceURI);
+  NS_ENSURE_ARG_POINTER(aSchemaType);
+  *aSchemaType = mSchemaType;
+  NS_IF_ADDREF(*aSchemaType);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPParameter::SetSchemaNamespaceURI(const nsAReadableString & aSchemaNamespaceURI)
+NS_IMETHODIMP nsSOAPParameter::SetSchemaType(nsISchemaType* aSchemaType)
 {
-  mSchemaNamespaceURI.Assign(aSchemaNamespaceURI);
-  return NS_OK;
-}
-
-/* attribute AString schemaType; */
-NS_IMETHODIMP nsSOAPParameter::GetSchemaType(nsAWritableString & aSchemaType)
-{
-  NS_ENSURE_ARG_POINTER(&aSchemaType);
-  aSchemaType.Assign(mSchemaType);
-  return NS_OK;
-}
-NS_IMETHODIMP nsSOAPParameter::SetSchemaType(const nsAReadableString & aSchemaType)
-{
-  mType.Assign(aSchemaType);
+  NS_ENSURE_ARG_POINTER(aSchemaType);
+  mSchemaType = aSchemaType;
+  if (mElement) {
+    mComputeValue = PR_TRUE;
+    mValue = nsnull;
+    mStatus = NS_OK;
+  }
   return NS_OK;
 }
 
-/* [noscript] readonly attribute nsISupports value; */
-NS_IMETHODIMP nsSOAPParameter::GetValue(nsISupports * *aValue)
+/* attribute nsISOAPAttachments attachments; */
+NS_IMETHODIMP nsSOAPParameter::GetAttachments(nsISOAPAttachments* * aAttachments)
+{
+  NS_ENSURE_ARG_POINTER(aAttachments);
+  *aAttachments = mAttachments;
+  NS_IF_ADDREF(*aAttachments);
+  return NS_OK;
+}
+NS_IMETHODIMP nsSOAPParameter::SetAttachments(nsISOAPAttachments* aAttachments)
+{
+  NS_ENSURE_ARG_POINTER(aAttachments);
+  mAttachments = aAttachments;
+  if (mElement) {
+    mComputeValue = PR_TRUE;
+    mValue = nsnull;
+    mStatus = NS_OK;
+  }
+  return NS_OK;
+}
+
+/* attribute nsIDOMElement element; */
+NS_IMETHODIMP nsSOAPParameter::GetElement(nsIDOMElement* * aElement)
+{
+  NS_ENSURE_ARG_POINTER(aElement);
+  *aElement = mElement;
+  NS_IF_ADDREF(*aElement);
+  return NS_OK;
+}
+NS_IMETHODIMP nsSOAPParameter::SetElement(nsIDOMElement* aElement)
+{
+  NS_ENSURE_ARG_POINTER(aElement);
+  mElement = aElement;
+  mNamespaceURI.SetLength(0);
+  mName.SetLength(0);
+  mComputeValue = PR_TRUE;
+  mValue = nsnull;
+  mStatus = NS_OK;
+  return NS_OK;
+}
+
+/* attribute nsIVariant value; */
+NS_IMETHODIMP nsSOAPParameter::GetValue(nsIVariant* * aValue)
 {
   NS_ENSURE_ARG_POINTER(aValue);
+  if (mElement    //  Check for auto-computation
+    && mComputeValue
+    && mEncoding)
+  {
+    mComputeValue = PR_FALSE;
+    mStatus = mEncoding->Decode(mElement, mSchemaType, mAttachments, getter_AddRefs(mValue));
+  }
   *aValue = mValue;
   NS_IF_ADDREF(*aValue);
-  return NS_OK;
+  return mElement ? mStatus : NS_OK;
 }
-/* void setValue (in nsISupports aValue); */
-NS_IMETHODIMP nsSOAPParameter::SetValue(nsISupports *aValue)
+NS_IMETHODIMP nsSOAPParameter::SetValue(nsIVariant* aValue)
 {
+  NS_ENSURE_ARG_POINTER(aValue);
   mValue = aValue;
+  mComputeValue = PR_FALSE;
+  mElement = nsnull;
   return NS_OK;
-}
-
-/* attribute boolean header; */
-NS_IMETHODIMP nsSOAPParameter::GetHeader(PRBool *aHeader)
-{
-  NS_ENSURE_ARG_POINTER(aHeader);
-  *aHeader = mHeader;
-  return NS_OK;
-}
-NS_IMETHODIMP nsSOAPParameter::SetHeader(PRBool aHeader)
-{
-  mHeader = aHeader;
-  return NS_OK;
-}
-
-/* void setAsString (in AString aValue); */
-NS_IMETHODIMP nsSOAPParameter::SetAsString(const nsAReadableString & aValue)
-{
-    mType.Assign(nsSOAPUtils::kStringType);
-    nsCOMPtr<nsISupportsWString> value = do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID);
-    value->SetData(ToNewUnicode(aValue));
-    mValue = value;
-    return NS_OK;
-}
-
-/* void setAsBoolean (in PRBool aValue); */
-NS_IMETHODIMP nsSOAPParameter::SetAsBoolean(PRBool aValue)
-{
-    mType.Assign(nsSOAPUtils::kBooleanType);
-    nsCOMPtr<nsISupportsPRBool> value = do_CreateInstance(NS_SUPPORTS_PRBOOL_CONTRACTID);
-    value->SetData(aValue);
-    mValue = value;
-    return NS_OK;
-}
-
-/* void setAsDouble (in double aValue); */
-NS_IMETHODIMP nsSOAPParameter::SetAsDouble(double aValue)
-{
-    mType.Assign(nsSOAPUtils::kDoubleType);
-    nsCOMPtr<nsISupportsDouble> value = do_CreateInstance(NS_SUPPORTS_DOUBLE_CONTRACTID);
-    value->SetData(aValue);
-    mValue = value;
-    return NS_OK;
-}
-
-/* void setAsFloat (in float aValue); */
-NS_IMETHODIMP nsSOAPParameter::SetAsFloat(float aValue)
-{
-    mType.Assign(nsSOAPUtils::kFloatType);
-    nsCOMPtr<nsISupportsFloat> value = do_CreateInstance(NS_SUPPORTS_FLOAT_CONTRACTID);
-    value->SetData(aValue);
-    mValue = value;
-    return NS_OK;
-}
-
-/* void setAsLong (in PRInt64 aValue); */
-NS_IMETHODIMP nsSOAPParameter::SetAsLong(PRInt64 aValue)
-{
-    mType.Assign(nsSOAPUtils::kLongType);
-    nsCOMPtr<nsISupportsPRInt64> value = do_CreateInstance(NS_SUPPORTS_PRINT64_CONTRACTID);
-    value->SetData(aValue);
-    mValue = value;
-    return NS_OK;
-}
-
-/* void setAsInt (in PRInt32 aValue); */
-NS_IMETHODIMP nsSOAPParameter::SetAsInt(PRInt32 aValue)
-{
-    mType.Assign(nsSOAPUtils::kIntType);
-    nsCOMPtr<nsISupportsPRInt32> value = do_CreateInstance(NS_SUPPORTS_PRINT32_CONTRACTID);
-    value->SetData(aValue);
-    mValue = value;
-    return NS_OK;
-}
-
-/* void setAsShort (in PRInt16 aValue); */
-NS_IMETHODIMP nsSOAPParameter::SetAsShort(PRInt16 aValue)
-{
-    mType.Assign(nsSOAPUtils::kShortType);
-    nsCOMPtr<nsISupportsPRInt16> value = do_CreateInstance(NS_SUPPORTS_PRINT16_CONTRACTID);
-    value->SetData(aValue);
-    mValue = value;
-    return NS_OK;
-}
-
-/* void setAsByte (in PRUint8 aValue); */
-NS_IMETHODIMP nsSOAPParameter::SetAsByte(PRUint8 aValue)
-{
-    mType.Assign(nsSOAPUtils::kByteType);
-    nsCOMPtr<nsISupportsPRInt16> value = do_CreateInstance(NS_SUPPORTS_PRINT16_CONTRACTID);
-    value->SetData(aValue);
-    mValue = value;
-    return NS_OK;
-}
-
-/* void setAsArray (in nsISupportsArray aValue); */
-NS_IMETHODIMP nsSOAPParameter::SetAsArray(nsISupportsArray *aValue)
-{
-    mType.Assign(nsSOAPUtils::kArrayType);
-    mValue = NS_REINTERPRET_CAST(nsISupports*, aValue);
-    return NS_OK;
-}
-
-/* void setAsArray (in AString structType, in nsISOAPStruct aValue); */
-NS_IMETHODIMP nsSOAPParameter::SetAsStruct(const nsAReadableString & aStructType, nsISOAPStruct *aValue)
-{
-    mType.Assign(nsSOAPUtils::kStructTypePrefix);
-    mType.Append(aStructType);
-    mValue = NS_REINTERPRET_CAST(nsISupports*, aValue);
-    return NS_OK;
-}
-
-/* void setAsLiteral (in nsIDOMNode aValue); */
-NS_IMETHODIMP nsSOAPParameter::SetAsLiteral(nsIDOMNode *aValue)
-{
-    mType.Assign(nsSOAPUtils::kLiteralType);
-    mValue = NS_REINTERPRET_CAST(nsISupports*, aValue);
-    return NS_OK;
 }
 
 NS_IMETHODIMP 
 nsSOAPParameter::Initialize(JSContext *cx, JSObject *obj, 
                             PRUint32 argc, jsval *argv)
 {
-  if (argc > 0) {
-    JSString* namestr = JS_ValueToString(cx, argv[0]);
-    if (namestr) {
-      SetName(nsString(NS_REINTERPRET_CAST(PRUnichar*, JS_GetStringChars(namestr))));
-    }
-    if (argc > 1) {
-      nsCOMPtr<nsISupports> value;
-      nsAutoString type;
-      nsresult rc = nsSOAPJSValue::ConvertJSArgsToValue(cx,
-                                        argc - 1,
-                                        argv + 1,
-                                        PR_FALSE,
-                                        getter_AddRefs(value),
-                                        type);
-      mType = type;
-      mValue = value;
-      return rc;
-    }
-  }
-  return NS_OK;
+// unimplemented, waiting for support for AStrings and variants in JSConvertArguments
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
-
-// The nsIXPCScriptable map declaration that will generate stubs for us...
-#define XPC_MAP_CLASSNAME           nsSOAPParameter
-#define XPC_MAP_QUOTED_CLASSNAME   "SOAPParameter"
-#define                             XPC_MAP_WANT_SETPROPERTY
-#define                             XPC_MAP_WANT_GETPROPERTY
-#define XPC_MAP_FLAGS       nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY   | \
-                            nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY   | \
-                            nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY
-#include "xpc_map_end.h" /* This will #undef the above */
-
-NS_IMETHODIMP 
-nsSOAPParameter::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                             JSObject *obj, jsval id, jsval *vp,
-                             PRBool *_retval)
-{
-  if (JSVAL_IS_STRING(id)) {
-    JSString* str = JSVAL_TO_STRING(id);
-    const PRUnichar* name = NS_REINTERPRET_CAST(const PRUnichar *,
-                                                JS_GetStringChars(str));
-    if (NS_LITERAL_STRING("value").Equals(name)) {
-      return nsSOAPJSValue::ConvertValueToJSVal(cx,
-                                        mValue,
-                                        mType,
-                                        vp);
-    }
-  }
-  return NS_OK;
-}
-
-NS_IMETHODIMP 
-nsSOAPParameter::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
-                             JSObject *obj, jsval id, jsval *vp,
-                             PRBool *_retval)
-{
-  if (JSVAL_IS_STRING(id)) {
-    JSString* str = JSVAL_TO_STRING(id);
-    const PRUnichar* name = NS_REINTERPRET_CAST(const PRUnichar *,
-                                                JS_GetStringChars(str));
-    if (NS_LITERAL_STRING("value").Equals(name)) {
-      return nsSOAPJSValue::ConvertJSValToValue(cx,
-                                        *vp,
-                                        getter_AddRefs(mValue),
-                                        mType);
-    }
-  }
-  return NS_OK;
-}
-
 
 static const char* kAllAccess = "AllAccess";
 

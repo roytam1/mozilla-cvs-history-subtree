@@ -22,7 +22,6 @@
 
 #include "nsDefaultSOAPEncoder.h"
 #include "nsSOAPUtils.h"
-#include "nsSOAPJSValue.h"
 #include "nsSOAPParameter.h"
 #include "nsISOAPAttachments.h"
 #include "nsXPIDLString.h"
@@ -36,15 +35,54 @@
 #include "nsISupportsPrimitives.h"
 #include "nsIDOMParser.h"
 #include "nsSOAPUtils.h"
-#include "nsISOAPEncodingRegistry.h"
+#include "nsISOAPEncoding.h"
+#include "nsISOAPEncoder.h"
+#include "nsISOAPDecoder.h"
 #include "prprf.h"
 #include "nsReadableUtils.h"
 #include "nsIDOMNamedNodeMap.h"
 #include "nsIDOMAttr.h"
 
-
 NS_NAMED_LITERAL_STRING(kOne,"1");
 NS_NAMED_LITERAL_STRING(kZero,"0");
+
+NS_NAMED_LITERAL_STRING(kEmpty,"");
+
+NS_NAMED_LITERAL_STRING(kStringSchemaNamespaceURI,"http://www.w3.org/1999/XMLSchema");
+NS_NAMED_LITERAL_STRING(kBooleanSchemaNamespaceURI,"http://www.w3.org/1999/XMLSchema");
+NS_NAMED_LITERAL_STRING(kDoubleSchemaNamespaceURI,"http://www.w3.org/1999/XMLSchema");
+NS_NAMED_LITERAL_STRING(kFloatSchemaNamespaceURI,"http://www.w3.org/1999/XMLSchema");
+NS_NAMED_LITERAL_STRING(kLongSchemaNamespaceURI,"http://www.w3.org/1999/XMLSchema");
+NS_NAMED_LITERAL_STRING(kIntSchemaNamespaceURI,"http://www.w3.org/1999/XMLSchema");
+NS_NAMED_LITERAL_STRING(kShortSchemaNamespaceURI,"http://www.w3.org/1999/XMLSchema");
+NS_NAMED_LITERAL_STRING(kByteSchemaNamespaceURI,"http://www.w3.org/1999/XMLSchema");
+NS_NAMED_LITERAL_STRING(kArraySchemaNamespaceURI,"http://www.w3.org/1999/XMLSchema");
+NS_NAMED_LITERAL_STRING(kStructSchemaNamespaceURI,"http://www.w3.org/1999/XMLSchema");
+NS_NAMED_LITERAL_STRING(kLiteralSchemaNamespaceURI,"");
+NS_NAMED_LITERAL_STRING(kNullSchemaNamespaceURI,"");
+NS_NAMED_LITERAL_STRING(kVoidSchemaNamespaceURI,"");
+NS_NAMED_LITERAL_STRING(kUnknownSchemaNamespaceURI,"");
+
+NS_NAMED_LITERAL_STRING(kStringSchemaType,"string");
+NS_NAMED_LITERAL_STRING(kBooleanSchemaType,"boolean");
+NS_NAMED_LITERAL_STRING(kDoubleSchemaType,"double");
+NS_NAMED_LITERAL_STRING(kFloatSchemaType,"float");
+NS_NAMED_LITERAL_STRING(kLongSchemaType,"long");
+NS_NAMED_LITERAL_STRING(kIntSchemaType,"int");
+NS_NAMED_LITERAL_STRING(kShortSchemaType,"short");
+NS_NAMED_LITERAL_STRING(kByteSchemaType,"byte");
+NS_NAMED_LITERAL_STRING(kArraySchemaType,"array");
+NS_NAMED_LITERAL_STRING(kStructSchemaType,"struct");
+NS_NAMED_LITERAL_STRING(kLiteralSchemaType,"literal");
+NS_NAMED_LITERAL_STRING(kNullSchemaType,"null");
+NS_NAMED_LITERAL_STRING(kVoidSchemaType,"void");
+NS_NAMED_LITERAL_STRING(kUnknownSchemaType,"unknown");
+
+NS_NAMED_LITERAL_STRING(kTrue, "true");
+NS_NAMED_LITERAL_STRING(kFalse, "1");
+
+NS_NAMED_LITERAL_STRING(kTrueA, "false");
+NS_NAMED_LITERAL_STRING(kFalseA, "0");
 
 #define DECLARE_ENCODER(name) \
 class ns##name##Encoder : \
@@ -65,11 +103,12 @@ ns##name##Encoder::~ns##name##Encoder() {}
 #define REGISTER_ENCODER(name) \
 {\
   ns##name##Encoder *handler = new ns##name##Encoder();\
-  registry->AddEncoder(nsSOAPUtils::kSOAPEncodingURI, nsSOAPUtils::k##name##Type, handler);\
-  registry->AddDecoder(nsSOAPUtils::kSOAPEncodingURI, nsSOAPUtils::k##name##SchemaNamespaceURI, nsSOAPUtils::k##name##SchemaType, handler);\
+  SetEncoder(k##name##SchemaNamespaceURI, k##name##SchemaType, handler);\
+  SetDecoder(k##name##SchemaNamespaceURI, k##name##SchemaType, handler);\
 }
 
 // All encoders must be first declared and then registered.
+DECLARE_ENCODER(Default)
 DECLARE_ENCODER(String)
 DECLARE_ENCODER(Boolean)
 DECLARE_ENCODER(Double)
@@ -79,8 +118,13 @@ DECLARE_ENCODER(Int)
 DECLARE_ENCODER(Short)
 DECLARE_ENCODER(Byte)
 
-NS_IMETHODIMP nsDefaultSOAPEncoder::RegisterEncoders(nsISOAPEncodingRegistry* registry)
+nsDefaultSOAPEncoder::nsDefaultSOAPEncoder(): nsSOAPEncoding(kSOAPEncodingURI, nsnull) 
 {
+  {
+    nsDefaultEncoder *handler = new nsDefaultEncoder();
+    SetDefaultEncoder(handler);
+    SetDefaultDecoder(handler);
+  }
   REGISTER_ENCODER(String)
   REGISTER_ENCODER(Boolean)
   REGISTER_ENCODER(Double)
@@ -130,16 +174,150 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::EncodeSimpleValue(
   return rc;
 }
 
-//  String
+//  Default
 
-NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
-					  const nsAReadableString & aEncodingStyleURI, 
-		                          nsISOAPParameter* aSource,
+NS_IMETHODIMP nsDefaultEncoder::Encode(nsISOAPEncoding* aEncoding,
+		                          nsIVariant* aSource,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
+					  nsISOAPAttachments* aAttachments,
 					  nsIDOMElement* aDestination,
-					  nsISOAPAttachments* aAttachments)
+					  nsIDOMElement* * aReturnValue)
+{
+  nsAutoString schemaURI;
+  nsAutoString schemaType;
+  PRUint16 type;
+  aSource->GetDataType(&type);
+  switch(type) {
+    case TYPE_INT8:
+      schemaURI.Assign(kByteSchemaNamespaceURI);
+      schemaType.Assign(kByteSchemaType);
+      break;
+    case TYPE_INT16:
+      schemaURI.Assign(kShortSchemaNamespaceURI);
+      schemaType.Assign(kShortSchemaType);
+      break;
+    case TYPE_INT32:
+      schemaURI.Assign(kIntSchemaNamespaceURI);
+      schemaType.Assign(kIntSchemaType);
+      break;
+    case TYPE_INT64:
+      schemaURI.Assign(kLongSchemaNamespaceURI);
+      schemaType.Assign(kLongSchemaType);
+      break;
+    case TYPE_UINT8:
+      schemaURI.Assign(kUByteSchemaNamespaceURI);
+      schemaType.Assign(kUByteSchemaType);
+      break;
+    case TYPE_UINT16:
+      schemaURI.Assign(kUShortSchemaNamespaceURI);
+      schemaType.Assign(kUShortSchemaType);
+      break;
+    case TYPE_UINT32:
+      schemaURI.Assign(kUIntSchemaNamespaceURI);
+      schemaType.Assign(kUIntSchemaType);
+      break;
+    case TYPE_UINT64:
+      schemaURI.Assign(kULongSchemaNamespaceURI);
+      schemaType.Assign(kULongSchemaType);
+      break;
+    case TYPE_FLOAT:
+      schemaURI.Assign(kFloatSchemaNamespaceURI);
+      schemaType.Assign(kFloatSchemaType);
+      break;
+    case TYPE_DOUBLE:
+      schemaURI.Assign(kDoubleSchemaNamespaceURI);
+      schemaType.Assign(kDoubleSchemaType);
+      break;
+    case TYPE_BOOL:
+      schemaURI.Assign(kBooleanSchemaNamespaceURI);
+      schemaType.Assign(kBooleanSchemaType);
+      break;
+    case TYPE_CHAR:
+      schemaURI.Assign(kCharSchemaNamespaceURI);
+      schemaType.Assign(kCharSchemaType);
+      break;
+    case TYPE_WCHAR:
+      schemaURI.Assign(kWCharSchemaNamespaceURI);
+      schemaType.Assign(kWCharSchemaType);
+      break;
+    case TYPE_VOID:
+      schemaURI.Assign(kVoidSchemaNamespaceURI);
+      schemaType.Assign(kVoidSchemaType);
+      break;
+    case TYPE_ID:
+      schemaURI.Assign(kIDSchemaNamespaceURI);
+      schemaType.Assign(kIDSchemaType);
+      break;
+    case TYPE_ASTRING:
+      schemaURI.Assign(kStringSchemaNamespaceURI);
+      schemaType.Assign(kStringSchemaType);
+      break;
+    case TYPE_CHAR_STR:
+      schemaURI.Assign(k???SchemaNamespaceURI);
+      schemaType.Assign(k???SchemaType);
+      break;
+    case TYPE_WCHAR_STR:
+      schemaURI.Assign(k???SchemaNamespaceURI);
+      schemaType.Assign(k???SchemaType);
+      break;
+    case TYPE_INTERFACE:
+      schemaURI.Assign(k???SchemaNamespaceURI);
+      schemaType.Assign(k???SchemaType);
+      break;
+    case TYPE_ARRAY:
+      schemaURI.Assign(k???SchemaNamespaceURI);
+      schemaType.Assign(k???SchemaType);
+      break;
+    case TYPE_EMPTY:
+      schemaURI.Assign(k???SchemaNamespaceURI);
+      schemaType.Assign(k???SchemaType);
+      break;
+    default:
+      schemaURI.Assign(k???SchemaNamespaceURI);
+      schemaType.Assign(k???SchemaType);
+      break;
+  }
+  nsresult rc;
+  nsCOMPtr<nsISupports> value;
+  rc = aSource->GetValue(getter_AddRefs(value));
+  if (NS_FAILED(rc)) return rc;
+  nsCOMPtr<nsISupportsWString> object = do_QueryInterface(value);
+  if (!object) return NS_ERROR_FAILURE;
+  PRUnichar* pointer;
+  rc = object->GetData(&pointer);
+  if (NS_FAILED(rc)) return rc;
+  nsAutoString string(pointer);// Get the textual representation into string
+  nsAutoString schemaType;
+  nsAutoString schemaNamespaceURI;
+  if (aSchemaType) {
+    rc = aSchemaType->GetTargetNamespace(schemaNamespaceURI);
+    if (NS_FAILED(rc)) return rc;
+    rc = aSchemaType->GetName(schemaType);
+    if (NS_FAILED(rc)) return rc;
+  }
+  else {
+    schemaType = kStringSchemaType;
+    schemaNamespaceURI = kStringSchemaNamespaceURI;
+  }
+  return EncodeSimpleValue(string, 
+		       aNamespaceURI,
+		       aName,
+		       schemaType,
+		       schemaNamespaceURI,
+		       aDestination);
+}
+//  String
+
+NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPEncoding* aEncoding,
+		                          nsIVariant* aSource,
+		                          const nsAReadableString & aNamespaceURI, 
+		                          const nsAReadableString & aName, 
+					  nsISchemaType *aSchemaType,
+					  nsISOAPAttachments* aAttachments,
+					  nsIDOMElement* aDestination,
+					  nsIDOMElement* * aReturnValue)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -160,8 +338,8 @@ NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
     if (NS_FAILED(rc)) return rc;
   }
   else {
-    schemaType = nsSOAPUtils::kStringSchemaType;
-    schemaNamespaceURI = nsSOAPUtils::kStringSchemaNamespaceURI;
+    schemaType = kStringSchemaType;
+    schemaNamespaceURI = kStringSchemaNamespaceURI;
   }
   return EncodeSimpleValue(string, 
 		       aNamespaceURI,
@@ -173,14 +351,14 @@ NS_IMETHODIMP nsStringEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 
 //  PRBool
 
-NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
-					  const nsAReadableString & aEncodingStyleURI, 
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPEncoding* aEncoding,
+		                          nsIVariant* aSource,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
-					  nsIDOMElement* aDestination, 
-					  nsISOAPAttachments* aAttachments)
+					  nsISOAPAttachments* aAttachments,
+					  nsIDOMElement* aDestination,
+					  nsIDOMElement* * aReturnValue)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -198,8 +376,8 @@ NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
   if (schemaType.IsEmpty()) {
-    schemaType = nsSOAPUtils::kBooleanSchemaType;
-    schemaNamespaceURI = nsSOAPUtils::kBooleanSchemaNamespaceURI;
+    schemaType = kBooleanSchemaType;
+    schemaNamespaceURI = kBooleanSchemaNamespaceURI;
   }
   return EncodeSimpleValue(b ? kOne : kZero, 
 		       aNamespaceURI,
@@ -211,14 +389,14 @@ NS_IMETHODIMP nsBooleanEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 
 //  Double
 
-NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
-					  const nsAReadableString & aEncodingStyleURI, 
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPEncoding* aEncoding,
+		                          nsIVariant* aSource,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
+					  nsISOAPAttachments* aAttachments,
 					  nsIDOMElement* aDestination,
-					  nsISOAPAttachments* aAttachments)
+					  nsIDOMElement* * aReturnValue)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -238,8 +416,8 @@ NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
   if (schemaType.IsEmpty()) {
-    schemaType = nsSOAPUtils::kDoubleSchemaType;
-    schemaNamespaceURI = nsSOAPUtils::kDoubleSchemaNamespaceURI;
+    schemaType = kDoubleSchemaType;
+    schemaNamespaceURI = kDoubleSchemaNamespaceURI;
   }
   return EncodeSimpleValue(string, 
 		       aNamespaceURI,
@@ -251,14 +429,14 @@ NS_IMETHODIMP nsDoubleEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 
 //  Float
 
-NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
-					  const nsAReadableString & aEncodingStyleURI, 
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPEncoding* aEncoding,
+		                          nsIVariant* aSource,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
+					  nsISOAPAttachments* aAttachments,
 					  nsIDOMElement* aDestination,
-					  nsISOAPAttachments* aAttachments)
+					  nsIDOMElement* * aReturnValue)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -278,8 +456,8 @@ NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
   if (schemaType.IsEmpty()) {
-    schemaType = nsSOAPUtils::kFloatSchemaType;
-    schemaNamespaceURI = nsSOAPUtils::kFloatSchemaNamespaceURI;
+    schemaType = kFloatSchemaType;
+    schemaNamespaceURI = kFloatSchemaNamespaceURI;
   }
   return EncodeSimpleValue(string, 
 		       aNamespaceURI,
@@ -291,14 +469,14 @@ NS_IMETHODIMP nsFloatEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 
 //  PRInt64
 
-NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
-					  const nsAReadableString & aEncodingStyleURI, 
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPEncoding* aEncoding,
+		                          nsIVariant* aSource,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
+					  nsISOAPAttachments* aAttachments,
 					  nsIDOMElement* aDestination,
-					  nsISOAPAttachments* aAttachments)
+					  nsIDOMElement* * aReturnValue)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -318,8 +496,8 @@ NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
   if (schemaType.IsEmpty()) {
-    schemaType = nsSOAPUtils::kLongSchemaType;
-    schemaNamespaceURI = nsSOAPUtils::kLongSchemaNamespaceURI;
+    schemaType = kLongSchemaType;
+    schemaNamespaceURI = kLongSchemaNamespaceURI;
   }
   return EncodeSimpleValue(string, 
 		       aNamespaceURI,
@@ -331,14 +509,14 @@ NS_IMETHODIMP nsLongEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 
 //  PRInt32
 
-NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
-					  const nsAReadableString & aEncodingStyleURI, 
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPEncoding* aEncoding,
+		                          nsIVariant* aSource,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
+					  nsISOAPAttachments* aAttachments,
 					  nsIDOMElement* aDestination,
-					  nsISOAPAttachments* aAttachments)
+					  nsIDOMElement* * aReturnValue)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -358,8 +536,8 @@ NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
   if (schemaType.IsEmpty()) {
-    schemaType = nsSOAPUtils::kIntSchemaType;
-    schemaNamespaceURI = nsSOAPUtils::kIntSchemaNamespaceURI;
+    schemaType = kIntSchemaType;
+    schemaNamespaceURI = kIntSchemaNamespaceURI;
   }
   return EncodeSimpleValue(string, 
 		       aNamespaceURI,
@@ -371,14 +549,14 @@ NS_IMETHODIMP nsIntEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 
 //  PRInt16
 
-NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
-					  const nsAReadableString & aEncodingStyleURI, 
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPEncoding* aEncoding,
+		                          nsIVariant* aSource,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
+					  nsISOAPAttachments* aAttachments,
 					  nsIDOMElement* aDestination,
-					  nsISOAPAttachments* aAttachments)
+					  nsIDOMElement* * aReturnValue)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -398,8 +576,8 @@ NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
   if (schemaType.IsEmpty()) {
-    schemaType = nsSOAPUtils::kShortSchemaType;
-    schemaNamespaceURI = nsSOAPUtils::kShortSchemaNamespaceURI;
+    schemaType = kShortSchemaType;
+    schemaNamespaceURI = kShortSchemaNamespaceURI;
   }
   return EncodeSimpleValue(string, 
 		       aNamespaceURI,
@@ -411,14 +589,14 @@ NS_IMETHODIMP nsShortEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
 
 //  Byte
 
-NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
-					  const nsAReadableString & aEncodingStyleURI, 
-		                          nsISOAPParameter *aSource, 
+NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPEncoding* aEncoding,
+		                          nsIVariant* aSource,
 		                          const nsAReadableString & aNamespaceURI, 
 		                          const nsAReadableString & aName, 
 					  nsISchemaType *aSchemaType,
+					  nsISOAPAttachments* aAttachments,
 					  nsIDOMElement* aDestination,
-					  nsISOAPAttachments* aAttachments)
+					  nsIDOMElement* * aReturnValue)
 {
   nsresult rc;
   nsCOMPtr<nsISupports> value;
@@ -438,8 +616,8 @@ NS_IMETHODIMP nsByteEncoder::Encode(nsISOAPEncodingRegistry* aEncodings,
   rc = aSource->GetSchemaType(schemaType);
   if (NS_FAILED(rc)) return rc;
   if (schemaType.IsEmpty()) {
-    schemaType = nsSOAPUtils::kByteSchemaType;
-    schemaNamespaceURI = nsSOAPUtils::kByteSchemaNamespaceURI;
+    schemaType = kByteSchemaType;
+    schemaNamespaceURI = kByteSchemaNamespaceURI;
   }
   return EncodeSimpleValue(string, 
 		       aNamespaceURI,
@@ -461,43 +639,41 @@ Void
 Unknown
 */
 
-NS_IMETHODIMP nsStringEncoder::Decode(nsISOAPEncodingRegistry* aEncodings,
-					    const nsAReadableString & aEncodingStyleURI, 
+NS_IMETHODIMP nsStringEncoder::Decode(nsISOAPEncoding* aEncoding,
 		                            nsIDOMElement *aSource, 
 					    nsISchemaType *aSchemaType,
 					    nsISOAPAttachments* aAttachments,
-					    nsISOAPParameter **_retval)
+					    nsIVariant **_retval)
 {
   nsAutoString value;
   nsresult rc = nsSOAPUtils::GetElementTextContent(aSource, value);
   if (NS_FAILED(rc)) return rc;
-  nsCOMPtr<nsISOAPParameter> p = new nsSOAPParameter();
+  nsCOMPtr<nsIVariant> p = new nsSOAPParameter();
   p->SetAsString(value);
   *_retval = p;
   NS_ADDREF(*_retval);
   return NS_OK;
 }
 
-NS_IMETHODIMP nsBooleanEncoder::Decode(nsISOAPEncodingRegistry* aEncodings,
-					    const nsAReadableString & aEncodingStyleURI, 
+NS_IMETHODIMP nsBooleanEncoder::Decode(nsISOAPEncoding* aEncoding,
 		                            nsIDOMElement *aSource, 
 					    nsISchemaType *aSchemaType,
 					    nsISOAPAttachments* aAttachments,
-					    nsISOAPParameter **_retval)
+					    nsIVariant **_retval)
 {
   nsAutoString value;
   nsresult rc = nsSOAPUtils::GetElementTextContent(aSource, value);
   if (NS_FAILED(rc)) return rc;
   bool b;
-  if (value.Equals(nsSOAPUtils::kTrue)
-    || value.Equals(nsSOAPUtils::kTrueA)) {
+  if (value.Equals(kTrue)
+    || value.Equals(kTrueA)) {
     b = PR_TRUE;
-  } else if (value.Equals(nsSOAPUtils::kFalse)
-    || value.Equals(nsSOAPUtils::kFalseA)) {
+  } else if (value.Equals(kFalse)
+    || value.Equals(kFalseA)) {
     b = PR_FALSE;
   } else return NS_ERROR_ILLEGAL_VALUE;
 
-  nsCOMPtr<nsISOAPParameter> p = new nsSOAPParameter();
+  nsCOMPtr<nsIVariant> p = new nsSOAPParameter();
   p->SetAsBoolean(b);
   *_retval = p;
   NS_ADDREF(*_retval);
@@ -517,91 +693,6 @@ NS_NAMED_LITERAL_STRING(kXSDByteName, "byte");
 NS_NAMED_LITERAL_STRING(kSOAPEncArrayAttrName, "Array");
 NS_NAMED_LITERAL_STRING(kXSDStructName, "complexType");
 NS_NAMED_LITERAL_STRING(kXSDUrTypeName, "ur-type");
-
-static void
-GetXSDTypeForType(const nsAReadableString & aType, nsAWritableString & aNamespace, nsAWritableString & aLocalName)
-{
-  if (aType.Equals(nsSOAPUtils::kStringType)) {
-    aNamespace = nsSOAPUtils::kXSDURI;
-    aLocalName = kXSDStringName;
-  }
-  else if (aType.Equals(nsSOAPUtils::kBooleanType)) {
-    aNamespace = nsSOAPUtils::kXSDURI;
-    aLocalName = kXSDBooleanName;
-  }
-  else if (aType.Equals(nsSOAPUtils::kDoubleType)) {
-    aNamespace = nsSOAPUtils::kXSDURI;
-    aLocalName = kXSDDoubleName;
-  }
-  else if (aType.Equals(nsSOAPUtils::kFloatType)) {
-    aNamespace = nsSOAPUtils::kXSDURI;
-    aLocalName = kXSDFloatName;
-  }
-  else if (aType.Equals(nsSOAPUtils::kLongType)) {
-    aNamespace = nsSOAPUtils::kXSDURI;
-    aLocalName = kXSDLongName;
-  }
-  else if (aType.Equals(nsSOAPUtils::kIntType)) {
-    aNamespace = nsSOAPUtils::kXSDURI;
-    aLocalName = kXSDIntName;
-  }
-  else if (aType.Equals(nsSOAPUtils::kShortType)) {
-    aNamespace = nsSOAPUtils::kXSDURI;
-    aLocalName = kXSDShortName;
-  }
-  else if (aType.Equals(nsSOAPUtils::kByteType)) {
-    aNamespace = nsSOAPUtils::kXSDURI;
-    aLocalName = kXSDByteName;
-  }
-  else if (aType.Equals(nsSOAPUtils::kArrayType)) {
-    aNamespace = nsSOAPUtils::kSOAPEncodingURI;
-    aLocalName = kSOAPEncArrayAttrName;
-  }
-  else if (nsSOAPUtils::StartsWith(aType,nsSOAPUtils::kStructTypePrefix)) {
-    aNamespace = nsSOAPUtils::kXSDURI;
-    aLocalName = kXSDStructName;
-  }
-  else {
-    aNamespace = nsSOAPUtils::kEmpty;
-    aLocalName = nsSOAPUtils::kEmpty;
-  }
-}
-
-static void
-GetTypeForXSDType(const nsAReadableString & aNamespace, const nsAReadableString & aLocalName, nsAWritableString & aType)
-{
-  if (aNamespace.Equals(nsSOAPUtils::kXSDURI)) {
-    if (aLocalName.Equals(kXSDStringName))
-      aType = nsSOAPUtils::kStringType;
-    else if (aLocalName.Equals(kXSDBooleanName))
-      aType = nsSOAPUtils::kBooleanType;
-    else if (aLocalName.Equals(kXSDDoubleName))
-      aType = nsSOAPUtils::kDoubleType;
-    else if (aLocalName.Equals(kXSDFloatName))
-      aType = nsSOAPUtils::kFloatType;
-    else if (aLocalName.Equals(kXSDLongName))
-      aType = nsSOAPUtils::kLongType;
-    else if (aLocalName.Equals(kXSDIntName))
-      aType = nsSOAPUtils::kIntType;
-    else if (aLocalName.Equals(kXSDShortName))
-      aType = nsSOAPUtils::kShortType;
-    else if (aLocalName.Equals(kXSDByteName))
-      aType = nsSOAPUtils::kByteType;
-    else if (aLocalName.Equals(kXSDStructName))
-      aType = nsSOAPUtils::kStructTypePrefix;
-    else if (aLocalName.Equals(kXSDUrTypeName))
-      aType = nsSOAPUtils::kUnknownType;
-    else
-      aType = nsSOAPUtils::kNullType;
-  }
-  else if (aNamespace.Equals(nsSOAPUtils::kSOAPEncodingURI)) {
-    if (aLocalName.Equals(kSOAPEncArrayAttrName))
-      aType = nsSOAPUtils::kArrayType;
-    else
-      aType = nsSOAPUtils::kNullType;
-  }
-}
-
 
 static const char* kArrayTypeQualifiedName = "SOAP-ENC:arrayType";
 static const char* kArrayTypeName = "arrayType";
@@ -625,7 +716,7 @@ nsDefaultSOAPEncoder::SerializeSupportsArray(nsISupportsArray* array,
   
   for (index = 0; index < count; index++) {
     nsCOMPtr<nsISupports> elemisup = getter_AddRefs(array->ElementAt(index));
-    nsCOMPtr<nsISOAPParameter> param = do_QueryInterface(elemisup);
+    nsCOMPtr<nsIVariant> param = do_QueryInterface(elemisup);
     
     if (param) {
       nsCOMPtr<nsIDOMElement> child;
@@ -641,7 +732,7 @@ nsDefaultSOAPEncoder::SerializeSupportsArray(nsISupportsArray* array,
 }
 
 nsresult
-nsDefaultSOAPEncoder::EncodeParameter(nsISOAPParameter* parameter,
+nsDefaultSOAPEncoder::EncodeParameter(nsIVariant* parameter,
                                       nsIDOMDocument* document,
                                       nsIDOMElement** element)
 {
@@ -699,7 +790,7 @@ nsDefaultSOAPEncoder::SerializeJavaScriptArray(JSObject* arrayobj,
 
   // For each element in the array
   for (index = 0; index < count; index++) {
-    nsCOMPtr<nsISOAPParameter> param;
+    nsCOMPtr<nsIVariant> param;
     jsval val;
     if (!JS_GetElement(cx, arrayobj, (jsint)index, &val)) {
       return NS_ERROR_FAILURE;
@@ -729,7 +820,7 @@ nsDefaultSOAPEncoder::SerializeJavaScriptArray(JSObject* arrayobj,
       nsSOAPParameter* newparam = new nsSOAPParameter();
       if (!newparam) return NS_ERROR_OUT_OF_MEMORY;
       
-      param = (nsISOAPParameter*)newparam;
+      param = (nsIVariant*)newparam;
       rv = newparam->SetValue(cx, val);
       if (NS_FAILED(rv)) return rv;
     }
@@ -759,7 +850,7 @@ nsDefaultSOAPEncoder::SerializeJavaScriptObject(JSObject* obj,
 
     // For each property
     for (index = 0; index < count; index++) {
-      nsCOMPtr<nsISOAPParameter> param;
+      nsCOMPtr<nsIVariant> param;
       jsid id = idarray->vector[index];
       jsval idval;
         
@@ -774,7 +865,7 @@ nsDefaultSOAPEncoder::SerializeJavaScriptObject(JSObject* obj,
           nsSOAPParameter* newparam = new nsSOAPParameter();
           if (!newparam) return NS_ERROR_OUT_OF_MEMORY;
           
-          param = (nsISOAPParameter*)newparam;
+          param = (nsIVariant*)newparam;
           nsresult rv = newparam->SetValue(cx, val);
           if (NS_FAILED(rv)) return rv;
 
@@ -795,7 +886,7 @@ nsDefaultSOAPEncoder::SerializeJavaScriptObject(JSObject* obj,
 }
   
 nsresult
-nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter, 
+nsDefaultSOAPEncoder::SerializeParameterValue(nsIVariant* parameter, 
                                               nsIDOMElement* element, 
                                               nsIDOMDocument* document)
 {
@@ -811,8 +902,8 @@ nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter,
   parameter->GetJSValue(&obj);
 
   switch(type) {
-    case nsISOAPParameter::PARAMETER_TYPE_NULL:
-    case nsISOAPParameter::PARAMETER_TYPE_VOID:
+    case nsIVariant::PARAMETER_TYPE_NULL:
+    case nsIVariant::PARAMETER_TYPE_VOID:
     {
       nsAutoString attrNameStr, attrNameSpace, attrValueStr;
       attrNameStr.AssignWithConversion("xsi:null");
@@ -823,7 +914,7 @@ nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter,
       break;
     }
     
-    case nsISOAPParameter::PARAMETER_TYPE_STRING:
+    case nsIVariant::PARAMETER_TYPE_STRING:
     {
       nsCOMPtr<nsISupportsWString> wstr = do_QueryInterface(isup);
       if (wstr) {
@@ -832,7 +923,7 @@ nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter,
       break;
     }
     
-    case nsISOAPParameter::PARAMETER_TYPE_BOOLEAN:
+    case nsIVariant::PARAMETER_TYPE_BOOLEAN:
     {
       nsCOMPtr<nsISupportsPRBool> prb = do_QueryInterface(isup);
       if (prb) {
@@ -841,7 +932,7 @@ nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_DOUBLE:
+    case nsIVariant::PARAMETER_TYPE_DOUBLE:
     {
       nsCOMPtr<nsISupportsDouble> dub = do_QueryInterface(isup);
       if (dub) {
@@ -850,7 +941,7 @@ nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_FLOAT:
+    case nsIVariant::PARAMETER_TYPE_FLOAT:
     {
       nsCOMPtr<nsISupportsFloat> flt = do_QueryInterface(isup);
       if (flt) {
@@ -859,7 +950,7 @@ nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_LONG:
+    case nsIVariant::PARAMETER_TYPE_LONG:
     {
       nsCOMPtr<nsISupportsPRInt64> val64 = do_QueryInterface(isup);
       if (val64) {
@@ -868,7 +959,7 @@ nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_INT:
+    case nsIVariant::PARAMETER_TYPE_INT:
     {
       nsCOMPtr<nsISupportsPRInt32> val32 = do_QueryInterface(isup);
       if (val32) {
@@ -877,7 +968,7 @@ nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_SHORT:
+    case nsIVariant::PARAMETER_TYPE_SHORT:
     {
       nsCOMPtr<nsISupportsPRInt16> val16 = do_QueryInterface(isup);
       if (val16) {
@@ -886,7 +977,7 @@ nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_BYTE:
+    case nsIVariant::PARAMETER_TYPE_BYTE:
     {
       nsCOMPtr<nsISupportsPRInt16> val8 = do_QueryInterface(isup);
       if (val8) {
@@ -895,7 +986,7 @@ nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_ARRAY:
+    case nsIVariant::PARAMETER_TYPE_ARRAY:
     {
       nsCOMPtr<nsISupportsArray> array = do_QueryInterface(isup);
       if (!array) return NS_ERROR_INVALID_ARG;
@@ -906,7 +997,7 @@ nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_JAVASCRIPT_ARRAY:
+    case nsIVariant::PARAMETER_TYPE_JAVASCRIPT_ARRAY:
     {
       rv = SerializeJavaScriptArray(obj, element, document);
       if (NS_FAILED(rv)) return rv;
@@ -914,7 +1005,7 @@ nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_JAVASCRIPT_OBJECT:
+    case nsIVariant::PARAMETER_TYPE_JAVASCRIPT_OBJECT:
     {
       rv = SerializeJavaScriptObject(obj, element, document);
       if (NS_FAILED(rv)) return rv;
@@ -946,9 +1037,9 @@ nsDefaultSOAPEncoder::SerializeParameterValue(nsISOAPParameter* parameter,
   return NS_OK;
 }
 
-/* nsIDOMElement parameterToElement (in nsISOAPParameter parameter, in string encodingStyle, in nsIDOMDocument document); */
+/* nsIDOMElement parameterToElement (in nsIVariant parameter, in string encodingStyle, in nsIDOMDocument document); */
 NS_IMETHODIMP 
-nsDefaultSOAPEncoder::ParameterToElement(nsISOAPParameter *parameter, 
+nsDefaultSOAPEncoder::ParameterToElement(nsIVariant *parameter, 
                                          const char *encodingStyle, 
                                          nsIDOMDocument *document, 
                                          nsIDOMElement **_retval)
@@ -1033,7 +1124,7 @@ nsDefaultSOAPEncoder::ParameterToElement(nsISOAPParameter *parameter,
 nsresult
 nsDefaultSOAPEncoder::DecodeParameter(nsIDOMElement* element,
                                       PRInt32 type,
-                                      nsISOAPParameter **_retval)
+                                      nsIVariant **_retval)
 {
   // If the element doesn't have its own encoding style attribute or 
   // it has one that is the default SOAP encoding style, just call
@@ -1078,7 +1169,7 @@ nsDefaultSOAPEncoder::DeserializeSupportsArray(nsIDOMElement *element,
   element->GetAttributeNS(attrNS, attrName, attrVal);
 
   // See if the type can be predetermined from the arrayType attribute
-  PRInt32 type = nsISOAPParameter::PARAMETER_TYPE_UNKNOWN;
+  PRInt32 type = nsIVariant::PARAMETER_TYPE_UNKNOWN;
   if (attrVal.Length() > 0) {
     PRInt32 offset = attrVal.Find("[");
     if (-1 != offset) {
@@ -1091,7 +1182,7 @@ nsDefaultSOAPEncoder::DeserializeSupportsArray(nsIDOMElement *element,
   nsCOMPtr<nsIDOMElement> child;
   nsSOAPUtils::GetFirstChildElement(element, getter_AddRefs(child));
   while (child) {
-    nsCOMPtr<nsISOAPParameter> param;
+    nsCOMPtr<nsIVariant> param;
 
     nsresult rv = DecodeParameter(child, type, getter_AddRefs(param));
     if (NS_FAILED(rv)) return rv;
@@ -1121,9 +1212,9 @@ nsDefaultSOAPEncoder::DeserializeJavaScriptObject(nsIDOMElement *element,
   nsSOAPUtils::GetFirstChildElement(element, getter_AddRefs(child));
   PRInt32 index = 0;
   while (child) {
-    nsCOMPtr<nsISOAPParameter> param;
+    nsCOMPtr<nsIVariant> param;
     rv = DecodeParameter(child, 
-                         nsISOAPParameter::PARAMETER_TYPE_UNKNOWN,
+                         nsIVariant::PARAMETER_TYPE_UNKNOWN,
                          getter_AddRefs(param));
     if (NS_FAILED(rv)) return rv;
 
@@ -1160,7 +1251,7 @@ nsDefaultSOAPEncoder::DeserializeJavaScriptObject(nsIDOMElement *element,
 nsresult
 nsDefaultSOAPEncoder::DeserializeParameter(nsIDOMElement *element,
                                            PRInt32 type,
-                                           nsISOAPParameter **_retval)
+                                           nsIVariant **_retval)
 {
   nsresult rv;
   nsAutoString text;
@@ -1169,17 +1260,17 @@ nsDefaultSOAPEncoder::DeserializeParameter(nsIDOMElement *element,
   nsSOAPParameter* param = new nsSOAPParameter();
   if (!param) return NS_ERROR_OUT_OF_MEMORY;
 
-  param->QueryInterface(NS_GET_IID(nsISOAPParameter), (void**)_retval);
+  param->QueryInterface(NS_GET_IID(nsIVariant), (void**)_retval);
   
   switch (type) {
-    case nsISOAPParameter::PARAMETER_TYPE_NULL:
-    case nsISOAPParameter::PARAMETER_TYPE_VOID:
+    case nsIVariant::PARAMETER_TYPE_NULL:
+    case nsIVariant::PARAMETER_TYPE_VOID:
     {
       param->SetValueAndType(nsnull, type);
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_STRING:
+    case nsIVariant::PARAMETER_TYPE_STRING:
     {
       nsCOMPtr<nsISupportsWString> wstr = do_CreateInstance(NS_SUPPORTS_WSTRING_CONTRACTID);
       if (!wstr) return NS_ERROR_FAILURE;
@@ -1191,7 +1282,7 @@ nsDefaultSOAPEncoder::DeserializeParameter(nsIDOMElement *element,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_BOOLEAN:
+    case nsIVariant::PARAMETER_TYPE_BOOLEAN:
     {
       nsCOMPtr<nsISupportsPRBool> isupbool = do_CreateInstance(NS_SUPPORTS_PRBOOL_CONTRACTID);
       if (!isupbool) return NS_ERROR_FAILURE;
@@ -1208,7 +1299,7 @@ nsDefaultSOAPEncoder::DeserializeParameter(nsIDOMElement *element,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_DOUBLE:
+    case nsIVariant::PARAMETER_TYPE_DOUBLE:
     {
       nsCOMPtr<nsISupportsDouble> dub = do_CreateInstance(NS_SUPPORTS_DOUBLE_CONTRACTID);
       if (!dub) return NS_ERROR_FAILURE;
@@ -1222,7 +1313,7 @@ nsDefaultSOAPEncoder::DeserializeParameter(nsIDOMElement *element,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_FLOAT:
+    case nsIVariant::PARAMETER_TYPE_FLOAT:
     {
       nsCOMPtr<nsISupportsFloat> flt = do_CreateInstance(NS_SUPPORTS_FLOAT_CONTRACTID);
       if (!flt) return NS_ERROR_FAILURE;
@@ -1236,7 +1327,7 @@ nsDefaultSOAPEncoder::DeserializeParameter(nsIDOMElement *element,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_LONG:
+    case nsIVariant::PARAMETER_TYPE_LONG:
     {
       nsCOMPtr<nsISupportsPRInt64> isup64 = do_CreateInstance(NS_SUPPORTS_PRINT64_CONTRACTID);
       if (!isup64) return NS_ERROR_FAILURE;
@@ -1250,7 +1341,7 @@ nsDefaultSOAPEncoder::DeserializeParameter(nsIDOMElement *element,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_INT:
+    case nsIVariant::PARAMETER_TYPE_INT:
     {
       nsCOMPtr<nsISupportsPRInt32> isup32 = do_CreateInstance(NS_SUPPORTS_PRINT32_CONTRACTID);
       if (!isup32) return NS_ERROR_FAILURE;
@@ -1264,7 +1355,7 @@ nsDefaultSOAPEncoder::DeserializeParameter(nsIDOMElement *element,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_SHORT:
+    case nsIVariant::PARAMETER_TYPE_SHORT:
     {
       nsCOMPtr<nsISupportsPRInt16> isup16 = do_CreateInstance(NS_SUPPORTS_PRINT16_CONTRACTID);
       if (!isup16) return NS_ERROR_FAILURE;
@@ -1278,7 +1369,7 @@ nsDefaultSOAPEncoder::DeserializeParameter(nsIDOMElement *element,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_BYTE:
+    case nsIVariant::PARAMETER_TYPE_BYTE:
     {
       nsCOMPtr<nsISupportsPRInt16> isup8 = do_CreateInstance(NS_SUPPORTS_PRInt16_CONTRACTID);
       if (!isup8) return NS_ERROR_FAILURE;
@@ -1292,7 +1383,7 @@ nsDefaultSOAPEncoder::DeserializeParameter(nsIDOMElement *element,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_ARRAY:
+    case nsIVariant::PARAMETER_TYPE_ARRAY:
     {
       nsCOMPtr<nsISupportsArray> array;
       
@@ -1303,7 +1394,7 @@ nsDefaultSOAPEncoder::DeserializeParameter(nsIDOMElement *element,
       break;
     }
 
-    case nsISOAPParameter::PARAMETER_TYPE_JAVASCRIPT_OBJECT:
+    case nsIVariant::PARAMETER_TYPE_JAVASCRIPT_OBJECT:
     {
       rv = DeserializeJavaScriptObject(element, &jsvalue);
       if (NS_FAILED(rv)) return rv;
@@ -1322,12 +1413,12 @@ nsDefaultSOAPEncoder::DeserializeParameter(nsIDOMElement *element,
   return NS_OK;
 }
 
-/* nsISOAPParameter elementToParameter (in nsIDOMElement element, in string encodingStyle); */
+/* nsIVariant elementToParameter (in nsIDOMElement element, in string encodingStyle); */
 NS_IMETHODIMP 
 nsDefaultSOAPEncoder::ElementToParameter(nsIDOMElement *element, 
                                          const char *encodingStyle, 
                                          PRInt32 hintType,
-                                         nsISOAPParameter **_retval)
+                                         nsIVariant **_retval)
 {
   NS_ENSURE_ARG(element);
   NS_ENSURE_ARG_POINTER(_retval);
@@ -1341,13 +1432,13 @@ nsDefaultSOAPEncoder::ElementToParameter(nsIDOMElement *element,
   // This will be the name of the parameter
   element->GetLocalName(name);
 
-  if (nsISOAPParameter::PARAMETER_TYPE_UNKNOWN == hintType) {
+  if (nsIVariant::PARAMETER_TYPE_UNKNOWN == hintType) {
     // See if the element has a xsi:null attribute
     attrNS.AssignWithConversion(nsSOAPUtils::kXSIURI);
     attrName.AssignWithConversion("null");
     element->GetAttributeNS(attrNS, attrName, attrVal);
     if (attrVal.Length() > 0) {
-      type = nsISOAPParameter::PARAMETER_TYPE_NULL;
+      type = nsIVariant::PARAMETER_TYPE_NULL;
     }
     // Look for xsi:type attributes to figure out what it is
     else {
@@ -1371,16 +1462,16 @@ nsDefaultSOAPEncoder::ElementToParameter(nsIDOMElement *element,
         // If we still don't know, assume that it is a string if 
         // it has no children and a struct if it does have children
         else if (nsSOAPUtils::HasChildElements(element)) {
-          type = nsISOAPParameter::PARAMETER_TYPE_JAVASCRIPT_OBJECT;
+          type = nsIVariant::PARAMETER_TYPE_JAVASCRIPT_OBJECT;
         }
         else {
-          type = nsISOAPParameter::PARAMETER_TYPE_STRING;
+          type = nsIVariant::PARAMETER_TYPE_STRING;
         }
       }
     }
   }
 
-  nsCOMPtr<nsISOAPParameter> parameter;
+  nsCOMPtr<nsIVariant> parameter;
   rv = DeserializeParameter(element, type, getter_AddRefs(parameter));
   if (NS_FAILED(rv)) return rv;
 

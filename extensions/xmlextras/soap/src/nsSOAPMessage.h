@@ -24,7 +24,7 @@
 #define nsSOAPMessage_h__
 
 #include "nsString.h"
-#include "nsISOAPEncodingRegistry.h"
+#include "nsISOAPEncoding.h"
 #include "nsISOAPMessage.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIXPCScriptable.h"
@@ -32,6 +32,8 @@
 #include "nsIDOMDocument.h"
 #include "nsISupportsArray.h"
 #include "nsCOMPtr.h"
+#include "nsIVariant.h"
+#include "nsISchemaLoader.h"
 
 class nsSOAPMessage : public nsISOAPMessage, 
   public nsISecurityCheckedComponent,
@@ -55,13 +57,8 @@ public:
 protected:
 
   nsCOMPtr<nsIDOMDocument> mMessage;
-  nsCOMPtr<nsISupportsArray> mProtocol;
-  nsCOMPtr<nsISOAPEncodingRegistry> mEncodings;
+  nsCOMPtr<nsISOAPEncoding> mEncoding;
   nsString mActionURI;
-  nsString mEncodingStyleURI;
-  nsString mTargetObjectURI;
-  nsString mMethodName;
-  PRUint32 mStatus;
 };
 
 #endif

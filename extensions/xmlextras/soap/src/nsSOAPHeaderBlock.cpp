@@ -22,29 +22,29 @@
 
 #include "nsString.h"
 #include "nsReadableUtils.h"
-#include "nsSOAPParameter.h"
+#include "nsSOAPHeaderBlock.h"
 #include "nsSOAPUtils.h"
 #include "nsIXPConnect.h"
 #include "nsIServiceManager.h"
 #include "nsISOAPAttachments.h"
 
-nsSOAPParameter::nsSOAPParameter()
+nsSOAPHeaderBlock::nsSOAPHeaderBlock()
 {
   NS_INIT_ISUPPORTS();
 }
 
-nsSOAPParameter::~nsSOAPParameter()
+nsSOAPHeaderBlock::~nsSOAPHeaderBlock()
 {
 }
 
-NS_IMPL_ISUPPORTS4(nsSOAPParameter, 
-                   nsISOAPParameter, 
+NS_IMPL_ISUPPORTS4(nsSOAPHeaderBlock, 
+                   nsISOAPHeaderBlock, 
                    nsISecurityCheckedComponent,
                    nsIXPCScriptable,
                    nsIJSNativeInitializer)
 
 /* attribute AString namespaceURI; */
-NS_IMETHODIMP nsSOAPParameter::GetNamespaceURI(nsAWritableString & aNamespaceURI)
+NS_IMETHODIMP nsSOAPHeaderBlock::GetNamespaceURI(nsAWritableString & aNamespaceURI)
 {
   NS_ENSURE_ARG_POINTER(&aNamespaceURI);
   if (mElement) {
@@ -55,7 +55,7 @@ NS_IMETHODIMP nsSOAPParameter::GetNamespaceURI(nsAWritableString & aNamespaceURI
   }
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPParameter::SetNamespaceURI(const nsAReadableString & aNamespaceURI)
+NS_IMETHODIMP nsSOAPHeaderBlock::SetNamespaceURI(const nsAReadableString & aNamespaceURI)
 {
   if (mElement) {
     return NS_ERROR_FAILURE;
@@ -65,7 +65,7 @@ NS_IMETHODIMP nsSOAPParameter::SetNamespaceURI(const nsAReadableString & aNamesp
 }
 
 /* attribute AString name; */
-NS_IMETHODIMP nsSOAPParameter::GetName(nsAWritableString & aName)
+NS_IMETHODIMP nsSOAPHeaderBlock::GetName(nsAWritableString & aName)
 {
   NS_ENSURE_ARG_POINTER(&aName);
   if (mElement) {
@@ -76,7 +76,7 @@ NS_IMETHODIMP nsSOAPParameter::GetName(nsAWritableString & aName)
   }
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPParameter::SetName(const nsAReadableString & aName)
+NS_IMETHODIMP nsSOAPHeaderBlock::SetName(const nsAReadableString & aName)
 {
   if (mElement) {
     return NS_ERROR_FAILURE;
@@ -85,15 +85,36 @@ NS_IMETHODIMP nsSOAPParameter::SetName(const nsAReadableString & aName)
   return NS_OK;
 }
 
+/* attribute AString actorURI; */
+NS_IMETHODIMP nsSOAPHeaderBlock::GetActorURI(nsAWritableString & aActorURI)
+{
+  NS_ENSURE_ARG_POINTER(&aActorURI);
+  if (mElement) {
+    return mElement->GetAttributeNS(nsSOAPUtils::kSOAPEnvURI,nsSOAPUtils::kActorAttribute,aActorURI);
+  }
+  else {
+    aActorURI.Assign(mActorURI);
+  }
+  return NS_OK;
+}
+NS_IMETHODIMP nsSOAPHeaderBlock::SetActorURI(const nsAReadableString & aActorURI)
+{
+  if (mElement) {
+    return NS_ERROR_FAILURE;
+  }
+  mActorURI.Assign(aActorURI);
+  return NS_OK;
+}
+
 /* attribute nsISOAPEncoding encoding; */
-NS_IMETHODIMP nsSOAPParameter::GetEncoding(nsISOAPEncoding* * aEncoding)
+NS_IMETHODIMP nsSOAPHeaderBlock::GetEncoding(nsISOAPEncoding* * aEncoding)
 {
   NS_ENSURE_ARG_POINTER(aEncoding);
   *aEncoding = mEncoding;
   NS_IF_ADDREF(*aEncoding);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPParameter::SetEncoding(nsISOAPEncoding* aEncoding)
+NS_IMETHODIMP nsSOAPHeaderBlock::SetEncoding(nsISOAPEncoding* aEncoding)
 {
   NS_ENSURE_ARG_POINTER(aEncoding);
   mEncoding = aEncoding;
@@ -106,14 +127,14 @@ NS_IMETHODIMP nsSOAPParameter::SetEncoding(nsISOAPEncoding* aEncoding)
 }
 
 /* attribute nsISchemaType schemaType; */
-NS_IMETHODIMP nsSOAPParameter::GetSchemaType(nsISchemaType* * aSchemaType)
+NS_IMETHODIMP nsSOAPHeaderBlock::GetSchemaType(nsISchemaType* * aSchemaType)
 {
   NS_ENSURE_ARG_POINTER(aSchemaType);
   *aSchemaType = mSchemaType;
   NS_IF_ADDREF(*aSchemaType);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPParameter::SetSchemaType(nsISchemaType* aSchemaType)
+NS_IMETHODIMP nsSOAPHeaderBlock::SetSchemaType(nsISchemaType* aSchemaType)
 {
   NS_ENSURE_ARG_POINTER(aSchemaType);
   mSchemaType = aSchemaType;
@@ -126,14 +147,14 @@ NS_IMETHODIMP nsSOAPParameter::SetSchemaType(nsISchemaType* aSchemaType)
 }
 
 /* attribute nsISOAPAttachments attachments; */
-NS_IMETHODIMP nsSOAPParameter::GetAttachments(nsISOAPAttachments* * aAttachments)
+NS_IMETHODIMP nsSOAPHeaderBlock::GetAttachments(nsISOAPAttachments* * aAttachments)
 {
   NS_ENSURE_ARG_POINTER(aAttachments);
   *aAttachments = mAttachments;
   NS_IF_ADDREF(*aAttachments);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPParameter::SetAttachments(nsISOAPAttachments* aAttachments)
+NS_IMETHODIMP nsSOAPHeaderBlock::SetAttachments(nsISOAPAttachments* aAttachments)
 {
   NS_ENSURE_ARG_POINTER(aAttachments);
   mAttachments = aAttachments;
@@ -146,19 +167,20 @@ NS_IMETHODIMP nsSOAPParameter::SetAttachments(nsISOAPAttachments* aAttachments)
 }
 
 /* attribute nsIDOMElement element; */
-NS_IMETHODIMP nsSOAPParameter::GetElement(nsIDOMElement* * aElement)
+NS_IMETHODIMP nsSOAPHeaderBlock::GetElement(nsIDOMElement* * aElement)
 {
   NS_ENSURE_ARG_POINTER(aElement);
   *aElement = mElement;
   NS_IF_ADDREF(*aElement);
   return NS_OK;
 }
-NS_IMETHODIMP nsSOAPParameter::SetElement(nsIDOMElement* aElement)
+NS_IMETHODIMP nsSOAPHeaderBlock::SetElement(nsIDOMElement* aElement)
 {
   NS_ENSURE_ARG_POINTER(aElement);
   mElement = aElement;
   mNamespaceURI.SetLength(0);
   mName.SetLength(0);
+  mActorURI.SetLength(0);
   mComputeValue = PR_TRUE;
   mValue = nsnull;
   mStatus = NS_OK;
@@ -166,7 +188,7 @@ NS_IMETHODIMP nsSOAPParameter::SetElement(nsIDOMElement* aElement)
 }
 
 /* attribute nsIVariant value; */
-NS_IMETHODIMP nsSOAPParameter::GetValue(nsIVariant* * aValue)
+NS_IMETHODIMP nsSOAPHeaderBlock::GetValue(nsIVariant* * aValue)
 {
   NS_ENSURE_ARG_POINTER(aValue);
   if (mElement    //  Check for auto-computation
@@ -180,7 +202,7 @@ NS_IMETHODIMP nsSOAPParameter::GetValue(nsIVariant* * aValue)
   NS_IF_ADDREF(*aValue);
   return mElement ? mStatus : NS_OK;
 }
-NS_IMETHODIMP nsSOAPParameter::SetValue(nsIVariant* aValue)
+NS_IMETHODIMP nsSOAPHeaderBlock::SetValue(nsIVariant* aValue)
 {
   NS_ENSURE_ARG_POINTER(aValue);
   mValue = aValue;
@@ -190,7 +212,7 @@ NS_IMETHODIMP nsSOAPParameter::SetValue(nsIVariant* aValue)
 }
 
 NS_IMETHODIMP 
-nsSOAPParameter::Initialize(JSContext *cx, JSObject *obj, 
+nsSOAPHeaderBlock::Initialize(JSContext *cx, JSObject *obj, 
                             PRUint32 argc, jsval *argv)
 {
 // unimplemented, waiting for support for AStrings and variants in JSConvertArguments
@@ -201,9 +223,9 @@ static const char* kAllAccess = "AllAccess";
 
 /* string canCreateWrapper (in nsIIDPtr iid); */
 NS_IMETHODIMP 
-nsSOAPParameter::CanCreateWrapper(const nsIID * iid, char **_retval)
+nsSOAPHeaderBlock::CanCreateWrapper(const nsIID * iid, char **_retval)
 {
-  if (iid->Equals(NS_GET_IID(nsISOAPParameter))) {
+  if (iid->Equals(NS_GET_IID(nsISOAPHeaderBlock))) {
     *_retval = nsCRT::strdup(kAllAccess);
   }
 
@@ -212,9 +234,9 @@ nsSOAPParameter::CanCreateWrapper(const nsIID * iid, char **_retval)
 
 /* string canCallMethod (in nsIIDPtr iid, in wstring methodName); */
 NS_IMETHODIMP 
-nsSOAPParameter::CanCallMethod(const nsIID * iid, const PRUnichar *methodName, char **_retval)
+nsSOAPHeaderBlock::CanCallMethod(const nsIID * iid, const PRUnichar *methodName, char **_retval)
 {
-  if (iid->Equals(NS_GET_IID(nsISOAPParameter))) {
+  if (iid->Equals(NS_GET_IID(nsISOAPHeaderBlock))) {
     *_retval = nsCRT::strdup(kAllAccess);
   }
 
@@ -223,9 +245,9 @@ nsSOAPParameter::CanCallMethod(const nsIID * iid, const PRUnichar *methodName, c
 
 /* string canGetProperty (in nsIIDPtr iid, in wstring propertyName); */
 NS_IMETHODIMP 
-nsSOAPParameter::CanGetProperty(const nsIID * iid, const PRUnichar *propertyName, char **_retval)
+nsSOAPHeaderBlock::CanGetProperty(const nsIID * iid, const PRUnichar *propertyName, char **_retval)
 {
-  if (iid->Equals(NS_GET_IID(nsISOAPParameter))) {
+  if (iid->Equals(NS_GET_IID(nsISOAPHeaderBlock))) {
     *_retval = nsCRT::strdup(kAllAccess);
   }
 
@@ -234,9 +256,9 @@ nsSOAPParameter::CanGetProperty(const nsIID * iid, const PRUnichar *propertyName
 
 /* string canSetProperty (in nsIIDPtr iid, in wstring propertyName); */
 NS_IMETHODIMP 
-nsSOAPParameter::CanSetProperty(const nsIID * iid, const PRUnichar *propertyName, char **_retval)
+nsSOAPHeaderBlock::CanSetProperty(const nsIID * iid, const PRUnichar *propertyName, char **_retval)
 {
-  if (iid->Equals(NS_GET_IID(nsISOAPParameter))) {
+  if (iid->Equals(NS_GET_IID(nsISOAPHeaderBlock))) {
     *_retval = nsCRT::strdup(kAllAccess);
   }
 
