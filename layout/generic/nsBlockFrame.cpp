@@ -550,60 +550,58 @@ nsBlockFrame::MarkIntrinsicWidthsDirty()
   mPrefWidth = NS_INTRINSIC_WIDTH_UNKNOWN;
 }
 
-/* virtual */ nscoord
-nsBlockFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+void
+nsBlockFrame::CalcIntrinsicWidths(nsIRenderingContext *aRenderingContext)
 {
-  if (mMinWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
-    return mMinWidth;
+  nscoord min_result = 0, pref_result = 0;
 
-  nscoord result = 0;
-
+#error "Handle floats"
   // XXX Don't forget floats.  They're the hard part.
 
   for (line_iterator line = begin_lines(), line_end = end_lines();
        line != line_end; ++line)
   {
-    nscoord line_result;
+    nscoord line_pref, line_min;
     if (line->IsBlock()) {
-      line_result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                        line->mFirstChild, nsLayoutUtils::MIN_WIDTH);
+      line_min = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                     line->mFirstChild, nsLayoutUtils::MIN_WIDTH);
+      line_pref = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
+                      line->mFirstChild, nsLayoutUtils::PREF_WIDTH);
     } else {
+      // This may not be the best way of doing things, but it's the
+      // easiest way given the current code.  We'll say that the frame
+      // needs reflow for completeness, but this shouldn't ever lead to
+      // additional reflow.
+
       // XXX WRITE ME
       // Refactor nsLineLayout::VerticalAlignLine's computation of
       // maxElementWidth into something else.
+#error "write me"
     }
-    if (line_result > result)
-      result = line_result;
+    if (line_min > min_result)
+      min_result = line_min;
+    if (line_pref > pref_result)
+      pref_result = line_pref;
   }
 
-  return (mMinWidth = result);
+  mMinWidth = min_result;
+  mPrefWidth = pref_result;
+}
+
+/* virtual */ nscoord
+nsBlockFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
+{
+  if (mMinWidth == NS_INTRINSIC_WIDTH_UNKNOWN)
+    CalcIntrinsicWidths(aRenderingContext);
+  return mMinWidth;
 }
 
 /* virtual */ nscoord
 nsBlockFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
 {
-  if (mPrefWidth != NS_INTRINSIC_WIDTH_UNKNOWN)
-    return mPrefWidth;
-
-  nscoord result = 0;
-
-  // XXX Don't forget floats.  They're the hard part.
-
-  for (line_iterator line = begin_lines(), line_end = end_lines();
-       line != line_end; ++line)
-  {
-    nscoord line_result;
-    if (line->IsBlock()) {
-      line_result = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
-                        line->mFirstChild, nsLayoutUtils::PREF_WIDTH);
-    } else {
-      // XXX WRITE ME
-    }
-    if (line_result > result)
-      result = line_result;
-  }
-
-  return (mPrefWidth = result);
+  if (mPrefWidth == NS_INTRINSIC_WIDTH_UNKNOWN)
+    CalcIntrinsicWidths(aRenderingContext);
+  return mPrefWidth;
 }
 
 static void
