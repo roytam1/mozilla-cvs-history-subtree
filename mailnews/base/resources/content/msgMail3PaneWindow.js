@@ -19,7 +19,7 @@
  *
  * Contributor(s):
  *   Jan Varga (varga@utcru.sk)
- *   Hakan Waara (hwaara@chello.se)
+ *   Håkan Waara (hwaara@chello.se)
  */
 
 /* This is where functions related to the 3 pane window are kept */
@@ -699,7 +699,7 @@ function FolderPaneOnClick(event)
         {
             msgFolder.setFlag(MSG_FOLDER_FLAG_ELIDED);
             var isServer = GetFolderAttribute(folderResource, "IsServer");
-            if (isServer == "true")
+            if (isServer)
             {
                 var server = msgFolder.server;
                 server.PerformExpand(msgWindow);
@@ -739,7 +739,7 @@ function FolderPaneDoubleClick(folderIndex)
         else
         {
             // Open a new msg window only if we are double clicking on folders or
-            // newsgorups.
+            // newsgroups.
             MsgOpenNewWindowForFolder(folderResource.Value);
         }
     }
@@ -883,16 +883,13 @@ function ClearMessageSelection()
 function GetCompositeDataSource(command)
 {
 	if (command == "GetNewMessages" || command == "NewFolder" || command == "MarkAllMessagesRead")
-	{
         return GetFolderDatasource();
-	}
 
 	return null;
 }
 
 function SetNextMessageAfterDelete()
 {
-    //dump("setting next msg view index after delete to " + gDBView.msgToSelectAfterDelete + "\n");
     gNextMessageViewIndexAfterDelete = gDBView.msgToSelectAfterDelete;
 }
 
@@ -924,9 +921,7 @@ function SetBusyCursor(window, enable)
 
 	var numFrames = window.frames.length;
 	for(var i = 0; i < numFrames; i++)
-	{
 		SetBusyCursor(window.frames[i], enable);
-	}
 }
 
 function GetDBView()
