@@ -50,6 +50,8 @@ my($flat)             = 0;    # copy everything into the package dir, not into s
 sub Copy {
   ($srcdir, $destdir, $package, $os, $flat, $help, $debug, @components) = @_;
   
+  $srcdir =~ s/\\/\//g; // convert win to unix paths
+
   check_arguments();
   open (MANIFEST,"<$package") ||
   	die "Error: couldn't open file $package for reading: $!.  Exiting...\n";
@@ -151,6 +153,7 @@ sub Copy {
   	# if we hit this, it's either a file in the package file that is
   	# not in the src directory, or it is not a valid entry.
     warn "Warning: package error or possible missing or unnecessary file: $line ($package, $lineno).\n";
+    warn "searched in $srcdir.\n";
 
   } # LINE
 
@@ -264,10 +267,8 @@ sub do_copyfile
 				$srcdir =~ s/\\/\//g;
 				$PD = "/";
 				$destpath =~ s/$srcdir$PD//g;
-				$destpath =~ s/\//\\/g;
-				$srcdir =~ s/\//\\/g;
-				$PD = "\\";
-                        } elsif ( $os eq "OS2") {
+        # AAAAAAAAAAAHHHHHHHHHHHHHHHHHHHHHHH. 3 lines removed.
+      } elsif ( $os eq "OS2") {
 				#Don't Look!  Seriously...
 				$destpath =~ s/\\/\//g;
 				$srcdir =~ s/\\/\//g;                                                 
@@ -442,7 +443,7 @@ sub do_component
 	  if ( -d "$destdir$PD$component" ) {
 	    warn "Warning: component directory \"$component\" already exists in \"$destdir\".\n";
 	  } else {
-	    ($debug >= 4) && print " mkdir $destdir$PD$component\n";
+	    ($debug >= 4) && print " mkdir $destdir/$component\n";
 	    mkdir ("$destdir$PD$component") ||
 	      die "Error: couldn't create component directory \"$component\": $!.  Exiting...\n";
 	  }
