@@ -63,6 +63,7 @@ class nsHTTPChannel;
 
 #define DEFAULT_HTTP_REQUEST_TIMEOUT    30
 #define DEFAULT_HTTP_CONNECT_TIMEOUT    30
+#define DEFAULT_MAX_ALLOWED_KEEPALIVES  30
 
 class   nsHTTPPipelinedRequest;
 class   nsIHTTPChannel;
@@ -130,9 +131,12 @@ protected:
     char*               mAcceptEncodings;
     PRUint32			mHttpVersion;
     nsAuthEngine        mAuthEngine;
+    
     PRUint32            mCapabilities;
     PRInt32             mKeepAliveTimeout;
     PRInt32             mMaxConnections;
+    PRInt32             mMaxAllowedKeepAlives;
+
     nsCOMPtr<nsIPref>   mPrefs;
     nsCOMPtr<nsIProtocolProxyService>       mProxySvc;
     PRUint32            mReferrerLevel;

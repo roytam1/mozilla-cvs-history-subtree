@@ -603,7 +603,8 @@ nsHTTPHandler::nsHTTPHandler():
     mMaxConnections   (MAX_NUMBER_OF_OPEN_TRANSPORTS),
     mReferrerLevel  (0),
     mRequestTimeout (DEFAULT_HTTP_REQUEST_TIMEOUT),
-    mConnectTimeout (DEFAULT_HTTP_CONNECT_TIMEOUT)
+    mConnectTimeout (DEFAULT_HTTP_CONNECT_TIMEOUT),
+    mMaxAllowedKeepAlives (DEFAULT_MAX_ALLOWED_KEEPALIVES)
 {
     NS_INIT_REFCNT ();
     SetAcceptEncodings (DEFAULT_ACCEPT_ENCODINGS);
@@ -1025,6 +1026,12 @@ nsresult nsHTTPHandler::ReleaseTransport (nsIChannel* i_pTrans, PRUint32 aCapabi
         
             if (NS_SUCCEEDED (rv) && alive)
             {
+                // remove the oldest connection when we hit the maximum
+                mIdleTransports -> Count (&count);
+
+                if (count >= (PRUint32) mMaxAllowedKeepAlives)
+                    mIdleTransports -> RemoveElementAt (0);
+
                 PRBool added = mIdleTransports -> AppendElement (i_pTrans);
                 NS_ASSERTION(added, 
                     "Failed to add a socket to idle transports list!");
@@ -1052,8 +1059,9 @@ nsresult nsHTTPHandler::ReleaseTransport (nsIChannel* i_pTrans, PRUint32 aCapabi
         // it's taken off the pending list, so we loop until there are no
         // pending channels or all transports are in use
 
-        mPendingChannelList->Count(&count);
-        mTransportList->Count(&transportsInUseCount);
+        count = 0;
+        mPendingChannelList->Count (&count);
+        mTransportList->Count (&transportsInUseCount);
 
         PR_LOG (gHTTPLog, PR_LOG_ALWAYS, ("nsHTTPHandler::ReleaseTransport ():"
                 "pendingChannels=%d, InUseCount=%d\n", count, transportsInUseCount));
@@ -1250,6 +1258,7 @@ nsHTTPHandler::PrefsChanged(const char* pref)
 
     mPrefs -> GetIntPref ("network.http.connect.timeout", &mConnectTimeout);
     mPrefs -> GetIntPref ("network.http.request.timeout", &mRequestTimeout);
+    mPrefs -> GetIntPref ("network.http.keep-alive.max-connections", &mMaxAllowedKeepAlives);
 
     // Things read only during initialization...
     if (bChangedAll) // intl.accept_languages

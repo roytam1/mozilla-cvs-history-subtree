@@ -483,6 +483,8 @@ nsHTTPRequest::formBuffer (nsCString * requestBuffer)
     return NS_OK;
 }
 
+static  PRUint32 sPipelinedRequestCreated = 0;
+static  PRUint32 sPipelinedRequestDeleted = 0;
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsHTTPPipelinedRequest, nsIStreamObserver)
 
@@ -501,9 +503,12 @@ nsHTTPPipelinedRequest::nsHTTPPipelinedRequest (nsHTTPHandler* i_Handler, const 
 {   
     NS_INIT_REFCNT ();
 
-    mHost = host;
-    
+    mHost = host;    
+    PR_LOG (gHTTPLog, PR_LOG_DEBUG, ("Creating nsHTTPPipelinedRequest [this=%x], created=%d, deleted=%d\n",
+                this, ++sPipelinedRequestCreated, sPipelinedRequestDeleted));
+
     NS_NewISupportsArray (getter_AddRefs (mRequests));
+
 }
     
 
@@ -511,6 +516,9 @@ nsHTTPPipelinedRequest::~nsHTTPPipelinedRequest ()
 {
     PRUint32 count = 0;
     PRInt32  index;
+
+    PR_LOG (gHTTPLog, PR_LOG_DEBUG, ("Deleting nsHTTPPipelinedRequest [this=%x], created=%d, deleted=%d\n",
+                this, sPipelinedRequestCreated, ++sPipelinedRequestDeleted));
 
     if (mRequests)
     {
@@ -919,6 +927,7 @@ nsHTTPPipelinedRequest::AddToPipeline (nsHTTPRequest *aRequest)
     if (! ( mCapabilities & (nsIHTTPProtocolHandler::ALLOW_PROXY_PIPELINING|nsIHTTPProtocolHandler::ALLOW_PIPELINING) ))
         mMustCommit = PR_TRUE;
 
+    aRequest -> mPipelinedRequest  = this;
     mRequests -> AppendElement (aRequest);
 
     if (mBufferSegmentSize < aRequest -> mBufferSegmentSize)

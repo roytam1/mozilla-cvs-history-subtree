@@ -115,6 +115,9 @@ PRLogModuleInfo* gSocketLog = nsnull;
 
 #endif /* PR_LOGGING */
 
+static  PRUint32    sTotalTransportsCreated = 0;
+static  PRUint32    sTotalTransportsDeleted = 0;
+
 nsSocketTransport::nsSocketTransport():
     mCancelStatus(NS_OK),
     mCloseConnectionOnceDone(PR_FALSE),
@@ -179,15 +182,15 @@ nsSocketTransport::nsSocketTransport():
 #endif /* PR_LOGGING */
 
   PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("Creating nsSocketTransport [%x].\n", this));
+         ("Creating nsSocketTransport [%x], TotalCreated=%d, TotalDeleted=%d\n", this, ++sTotalTransportsCreated, sTotalTransportsDeleted));
 }
 
 
 nsSocketTransport::~nsSocketTransport()
 {
   PR_LOG(gSocketLog, PR_LOG_DEBUG, 
-         ("Deleting nsSocketTransport [%s:%d %x].\n", 
-          mHostName, mPort, this));
+         ("Deleting nsSocketTransport [%s:%d %x], TotalCreated=%d, TotalDeleted=%d\n", 
+          mHostName, mPort, this, sTotalTransportsCreated, ++sTotalTransportsDeleted));
 
   // Release the nsCOMPtrs...
   //
