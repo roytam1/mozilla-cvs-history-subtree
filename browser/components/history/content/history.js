@@ -121,13 +121,23 @@ function openURL(aEvent)
 
 function handleHistoryClick(aEvent)
 {
-  if (aEvent.originalTarget.localName == 'treechildren' && (aEvent.button == 0 || aEvent.button == 1)) {
-    var row = {};
-    var col = {};
-    var obj = {};
-    gHistoryTree.treeBoxObject.getCellAt(aEvent.clientX, aEvent.clientY, row, col, obj);
+  var tbo = gHistoryTree.treeBoxObject;
   
-    if (obj.value != "twisty" && row.value == gHistoryTree.currentIndex)
+  var row = { }, col = { }, obj = { };
+  tbo.getCellAt(aEvent.clientX, aEvent.clientY, row, col, obj);
+  
+  if (row.value == -1 || obj.value == "twisty")
+    return;
+  var modifKey = aEvent.shiftKey || aEvent.ctrlKey || aEvent.altKey || 
+                 aEvent.metaKey  || aEvent.button == 1;
+  if (!modifKey) {
+    
+    if (tbo.view.isContainer(row.value)) {
+      tbo.view.toggleOpenState(row.value);
+      return;
+    }
+    if (aEvent.originalTarget.localName == "treechildren" && 
+        (aEvent.button == 0 || aEvent.button == 1))
       openURL(aEvent);
   }
 }
