@@ -251,7 +251,8 @@ typedef enum XP_FileType {
     xpPKCS12File,		/* used for PKCS 12 certificate transport */
 	xpJSCookieFilters,			/* Opens personal js cookie filters */
     xpLIClientDB,
-	xpLIPrefs
+	xpLIPrefs,
+	xpJSConfig                  /* Javascript 'jsc' config cache file */
 } XP_FileType;
 
 

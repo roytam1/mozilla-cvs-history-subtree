@@ -118,6 +118,10 @@ extern void             NPL_Abort(NET_StreamClass *stream, int status);
 extern XP_Bool          NPL_IsEmbedWindowed(NPEmbeddedApp *app);
 extern void				NPL_URLExit(URL_Struct *urls, int status, MWContext *cx);
 
+#ifdef XP_MAC
+extern XP_Bool			NPL_IsForcingRedraw();
+#endif
+
 #ifdef ANTHRAX
 extern char**			NPL_FindAppletsForType(const char* typeToFind);
 extern char* 			NPL_FindAppletEnabledForMimetype(const char* mimetype);
