@@ -155,18 +155,22 @@ returning the first area of an image map if there is one, otherwise nsnull.
 <p>
 When an accessibility-related event occurs within an application such as Mozilla, it must use NotifyWinEvent from
 the Win32 API. NotifyWinEvent is passed arguments for the window the event occured in, and the number of the child
-within that window. Accessibility aids use a WIN32 call to register as a listener for these events.
+within that window. Accessibility aids use the Win32 call SetWinEventHook() to register as a listener for these events.
 </p>
 <p>
-The accessibility aid is choose which events it is interested in learning more about by sending a window a WM_????
-event requesting the IAccessible to the node corresponding to the 
-child number that had been indicated from NotifyWinEvent. In Mozilla, this creates a problem. We cannot 
+The accessibility aid is choose which events it is interested in learning more about by using the Win32 API call 
+AccessibleObjectFromEvent, requesting the IAccessible to the node corresponding to the 
+child number that had been indicated from NotifyWinEvent(). This ends up asking our RootAccessible for the child
+IAccessible that matches the window handle and child id we indicated through NotofyWinEvent().
+</p>
+<p>
+In Mozilla, this creates a problem. We cannot 
 keep track of a child number for every important accessible node in a document. We deal with this by generating fake
 child IDs for the most recent accessibile events that we have generated, in a circular array.
 </p>
 <p>
 Since there is a RootAccessible for each top level window that might generate MSAA events, that's where we do the bookkeeping
-for these events and their nsIAccessible's. Whenever NotifyWinEvent is called, a new fake ID is generated (We use 
+for these events and their nsIAccessible's. Whenever NotifyWinEvent() is called, a new fake ID is generated (We use 
 negative numbers for the fake IDs). When the callback comes to request the IAccessible for that child number,
 we check the circular array for that ID, and voila, we have the corresponding nsIAccessible to proxy.
 </p>
