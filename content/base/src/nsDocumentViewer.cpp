@@ -202,7 +202,7 @@ static const char sPrintOptionsContractID[]         = "@mozilla.org/gfx/printset
 static NS_DEFINE_CID(kGalleyContextCID,  NS_GALLEYCONTEXT_CID);
 
 static const char kDOMStringBundleURL[] =
-  "chrome://communicator/locale/dom/dom.properties";
+  "chrome://global/locale/dom/dom.properties";
 
 
 #ifdef NS_DEBUG
