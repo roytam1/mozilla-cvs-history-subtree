@@ -489,6 +489,10 @@ ifdef MOZ_COOKIEMANAGE
 DEFINES		+= -DCookieManagement
 endif
 
+ifdef MOZ_SMOOTH_PROGRESS
+DEFINES         += -DSMOOTH_PROGRESS
+endif
+
 ifdef EDITOR
 #
 # Enable HTMLArea form element support.
