@@ -48,7 +48,7 @@ REQUIRES = \
   ipcd \
   nspr \
   string \
-  transaction_manager \
+  transmngr \
   xpcom \
   $(NULL)
 

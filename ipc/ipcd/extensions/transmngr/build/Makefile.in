@@ -51,7 +51,7 @@ MODULE_NAME = transmngr
 REQUIRES = \
   ipcd \
   string \
-  transaction_manager \
+  transmngr \
   xpcom \
   $(NULL)
 
