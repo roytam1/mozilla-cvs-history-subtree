@@ -62,32 +62,32 @@ class SimpleDOMNode : public ISimpleDOMNode
 
   public:
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_nodeInfo( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_nodeInfo( 
         /* [out] */ BSTR __RPC_FAR *tagName,
         /* [out] */ short __RPC_FAR *nameSpaceID,
-        /* [out] */ unsigned short __RPC_FAR *nodeType,
         /* [out] */ BSTR __RPC_FAR *nodeValue,
-        /* [out] */ unsigned int __RPC_FAR *numChildren);
+        /* [out] */ unsigned int __RPC_FAR *numChildren,
+        /* [out][retval] */ unsigned short __RPC_FAR *nodeType);
   
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_attributes( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_attributes( 
         /* [in] */ unsigned short maxAttribs,
-        /* [out] */ unsigned short __RPC_FAR *numAttribs,
         /* [length_is][size_is][out] */ BSTR __RPC_FAR *attribNames,
         /* [length_is][size_is][out] */ short __RPC_FAR *nameSpaceID,
-        /* [length_is][size_is][out] */ BSTR __RPC_FAR *attribValues);
+        /* [length_is][size_is][out] */ BSTR __RPC_FAR *attribValues,
+        /* [out][retval] */ unsigned short __RPC_FAR *numAttribs);
   
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_computedStyle( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_computedStyle( 
         /* [in] */ unsigned short maxStyleProperties,
-        /* [out] */ unsigned short __RPC_FAR *numStyleProperties,
         /* [in] */ boolean useAlternateView,
         /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleProperties,
-        /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleValues);
+        /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleValues,
+        /* [out][retval] */ unsigned short __RPC_FAR *numStyleProperties);
   
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_computedStyleForProperties( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_computedStyleForProperties( 
         /* [in] */ unsigned short numStyleProperties,
         /* [in] */ boolean useAlternateView,
         /* [length_is][size_is][in] */ BSTR __RPC_FAR *styleProperties,
-        /* [length_is][size_is][out] */ BSTR __RPC_FAR *styleValues);
+        /* [length_is][size_is][out][retval] */ BSTR __RPC_FAR *styleValues);
         
     virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_parentNode(ISimpleDOMNode __RPC_FAR *__RPC_FAR *node);
     virtual /* [propget] */ HRESULT STDMETHODCALLTYPE get_firstChild(ISimpleDOMNode __RPC_FAR *__RPC_FAR *node);

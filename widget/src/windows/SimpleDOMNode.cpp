@@ -137,9 +137,9 @@ STDMETHODIMP_(ULONG) SimpleDOMNode::Release()
 STDMETHODIMP SimpleDOMNode::get_nodeInfo( 
     /* [out] */ BSTR __RPC_FAR *aNodeName,
     /* [out] */ short __RPC_FAR *aNameSpaceID,
-    /* [out] */ unsigned short __RPC_FAR *aNodeType,
     /* [out] */ BSTR __RPC_FAR *aNodeValue,
-    /* [out] */ unsigned int __RPC_FAR *aNumChildren)
+    /* [out] */ unsigned int __RPC_FAR *aNumChildren,
+    /* [out] */ unsigned short __RPC_FAR *aNodeType)
 {
   *aNodeName = NULL;
   nsCOMPtr<nsIDOMElement> domElement;
@@ -184,10 +184,10 @@ STDMETHODIMP SimpleDOMNode::get_nodeInfo(
        
 STDMETHODIMP SimpleDOMNode::get_attributes( 
     /* [in] */ unsigned short aMaxAttribs,
-    /* [out] */ unsigned short __RPC_FAR *aNumAttribs,
     /* [length_is][size_is][out] */ BSTR __RPC_FAR *aAttribNames,
     /* [length_is][size_is][out] */ short __RPC_FAR *aNameSpaceIDs,
-    /* [length_is][size_is][out] */ BSTR __RPC_FAR *aAttribValues)
+    /* [length_is][size_is][out] */ BSTR __RPC_FAR *aAttribValues,
+    /* [out] */ unsigned short __RPC_FAR *aNumAttribs)
 {
   nsCOMPtr<nsIDOMElement> domElement;
   nsCOMPtr<nsIContent> content;
@@ -268,10 +268,10 @@ NS_IMETHODIMP SimpleDOMNode::GetComputedStyleDeclaration(nsIDOMCSSStyleDeclarati
 /* To do: use media type if not null */
 STDMETHODIMP SimpleDOMNode::get_computedStyle( 
     /* [in] */ unsigned short aMaxStyleProperties,
-    /* [out] */ unsigned short __RPC_FAR *aNumStyleProperties,
     /* [in] */ boolean aUseAlternateView,
     /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleProperties,
-    /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleValues)
+    /* [length_is][size_is][out] */ BSTR __RPC_FAR *aStyleValues,
+    /* [out] */ unsigned short __RPC_FAR *aNumStyleProperties)
 {
   *aNumStyleProperties = 0;
   PRUint32 length;

@@ -61,88 +61,88 @@ class Accessible : public SimpleDOMNode, public IAccessible
 
   public: 
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accParent( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accParent( 
         /* [retval][out] */ IDispatch __RPC_FAR *__RPC_FAR *ppdispParent);
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accChildCount( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accChildCount( 
         /* [retval][out] */ long __RPC_FAR *pcountChildren);
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accChild( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accChild( 
         /* [in] */ VARIANT varChild,
         /* [retval][out] */ IDispatch __RPC_FAR *__RPC_FAR *ppdispChild);
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accName( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accName( 
         /* [optional][in] */ VARIANT varChild,
         /* [retval][out] */ BSTR __RPC_FAR *pszName);
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accValue( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accValue( 
         /* [optional][in] */ VARIANT varChild,
         /* [retval][out] */ BSTR __RPC_FAR *pszValue);
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accDescription( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accDescription( 
         /* [optional][in] */ VARIANT varChild,
         /* [retval][out] */ BSTR __RPC_FAR *pszDescription);
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accRole( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accRole( 
         /* [optional][in] */ VARIANT varChild,
         /* [retval][out] */ VARIANT __RPC_FAR *pvarRole);
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accState( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accState( 
         /* [optional][in] */ VARIANT varChild,
         /* [retval][out] */ VARIANT __RPC_FAR *pvarState);
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accHelp( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accHelp( 
         /* [optional][in] */ VARIANT varChild,
         /* [retval][out] */ BSTR __RPC_FAR *pszHelp);
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accHelpTopic( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accHelpTopic( 
         /* [out] */ BSTR __RPC_FAR *pszHelpFile,
         /* [optional][in] */ VARIANT varChild,
         /* [retval][out] */ long __RPC_FAR *pidTopic);
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accKeyboardShortcut( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accKeyboardShortcut( 
         /* [optional][in] */ VARIANT varChild,
         /* [retval][out] */ BSTR __RPC_FAR *pszKeyboardShortcut);
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accFocus( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accFocus( 
         /* [retval][out] */ VARIANT __RPC_FAR *pvarChild);
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accSelection( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accSelection( 
         /* [retval][out] */ VARIANT __RPC_FAR *pvarChildren);
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_accDefaultAction( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_accDefaultAction( 
         /* [optional][in] */ VARIANT varChild,
         /* [retval][out] */ BSTR __RPC_FAR *pszDefaultAction);
 
-    virtual /* [id][hidden] */ HRESULT STDMETHODCALLTYPE accSelect( 
+    virtual /* [id] */ HRESULT STDMETHODCALLTYPE accSelect( 
         /* [in] */ long flagsSelect,
         /* [optional][in] */ VARIANT varChild);
 
-    virtual /* [id][hidden] */ HRESULT STDMETHODCALLTYPE accLocation( 
+    virtual /* [id] */ HRESULT STDMETHODCALLTYPE accLocation( 
         /* [out] */ long __RPC_FAR *pxLeft,
         /* [out] */ long __RPC_FAR *pyTop,
         /* [out] */ long __RPC_FAR *pcxWidth,
         /* [out] */ long __RPC_FAR *pcyHeight,
         /* [optional][in] */ VARIANT varChild);
 
-    virtual /* [id][hidden] */ HRESULT STDMETHODCALLTYPE accNavigate( 
+    virtual /* [id] */ HRESULT STDMETHODCALLTYPE accNavigate( 
         /* [in] */ long navDir,
         /* [optional][in] */ VARIANT varStart,
         /* [retval][out] */ VARIANT __RPC_FAR *pvarEndUpAt);
 
-    virtual /* [id][hidden] */ HRESULT STDMETHODCALLTYPE accHitTest( 
+    virtual /* [id] */ HRESULT STDMETHODCALLTYPE accHitTest( 
         /* [in] */ long xLeft,
         /* [in] */ long yTop,
         /* [retval][out] */ VARIANT __RPC_FAR *pvarChild);
 
-    virtual /* [id][hidden] */ HRESULT STDMETHODCALLTYPE accDoDefaultAction( 
+    virtual /* [id] */ HRESULT STDMETHODCALLTYPE accDoDefaultAction( 
         /* [optional][in] */ VARIANT varChild);
 
-    virtual /* [id][propput][hidden] */ HRESULT STDMETHODCALLTYPE put_accName( 
+    virtual /* [id][propput] */ HRESULT STDMETHODCALLTYPE put_accName( 
         /* [optional][in] */ VARIANT varChild,
         /* [in] */ BSTR szName);
 
-    virtual /* [id][propput][hidden] */ HRESULT STDMETHODCALLTYPE put_accValue( 
+    virtual /* [id][propput] */ HRESULT STDMETHODCALLTYPE put_accValue( 
         /* [optional][in] */ VARIANT varChild,
         /* [in] */ BSTR szValue);
 
@@ -202,23 +202,23 @@ public:
 
     // ISimpleDOMDocument
 
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_URL( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_URL( 
         /* [out] */ BSTR __RPC_FAR *url);
     
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_title( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_title( 
         /* [out] */ BSTR __RPC_FAR *title);
     
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_mimeType( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_mimeType( 
         /* [out] */ BSTR __RPC_FAR *mimeType);
     
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_docType( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_docType( 
         /* [out] */ BSTR __RPC_FAR *docType);
     
-    virtual /* [id][propget][hidden] */ HRESULT STDMETHODCALLTYPE get_nameSpaceURIForID( 
+    virtual /* [id][propget] */ HRESULT STDMETHODCALLTYPE get_nameSpaceURIForID( 
         /* [in] */ short nameSpaceID,
         /* [out] */ BSTR __RPC_FAR *nameSpaceURI);
 
-    virtual /* [id][hidden] */ HRESULT STDMETHODCALLTYPE set_alternateViewMediaTypes( 
+    virtual /* [id] */ HRESULT STDMETHODCALLTYPE put_alternateViewMediaTypes( 
         /* [in] */ BSTR __RPC_FAR *commaSeparatedMediaTypes);
         
 };

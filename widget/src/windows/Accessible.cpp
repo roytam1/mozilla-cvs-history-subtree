@@ -810,7 +810,7 @@ STDMETHODIMP DocAccessible::get_nameSpaceURIForID(/* [in] */  short aNameSpaceID
 }
 
 
-STDMETHODIMP DocAccessible::set_alternateViewMediaTypes( /* [in] */ BSTR __RPC_FAR *commaSeparatedMediaTypes)
+STDMETHODIMP DocAccessible::put_alternateViewMediaTypes( /* [in] */ BSTR __RPC_FAR *commaSeparatedMediaTypes)
 {
   return S_FALSE;
 }

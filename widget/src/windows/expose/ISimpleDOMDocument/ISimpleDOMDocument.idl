@@ -86,23 +86,23 @@ const long DISPID_DOC_MEDIATYPES  = -5909;
 [object, uuid(0D68D6D0-D93D-4d08-A30D-F00DD1F45B24)]
 interface ISimpleDOMDocument : IUnknown
 {
-  [hidden, propget, id(DISPID_DOC_URL)] HRESULT URL(
-    [out] BSTR * url
+  [propget, id(DISPID_DOC_URL)] HRESULT URL(
+    [out, retval] BSTR * url
   );
-  [hidden, propget, id(DISPID_DOC_TITLE)] HRESULT title(
-    [out] BSTR * title
+  [propget, id(DISPID_DOC_TITLE)] HRESULT title(
+    [out, retval] BSTR * title
   );
-  [hidden, propget, id(DISPID_DOC_MIMETYPE)] HRESULT mimeType(
-    [out] BSTR * mimeType
+  [propget, id(DISPID_DOC_MIMETYPE)] HRESULT mimeType(
+    [out, retval] BSTR * mimeType
   );
-  [hidden, propget, id(DISPID_DOC_DOCTYPE)] HRESULT docType(
-    [out] BSTR * docType
+  [propget, id(DISPID_DOC_DOCTYPE)] HRESULT docType(
+    [out, retval] BSTR * docType
   );
-  [hidden, propget, id(DISPID_DOC_NAMESPACE)] HRESULT nameSpaceURIForID(
+  [propget, id(DISPID_DOC_NAMESPACE)] HRESULT nameSpaceURIForID(
     [in]  short nameSpaceID,
-    [out] BSTR * nameSpaceURI
+    [out, retval] BSTR * nameSpaceURI
   );
-  [hidden, id(DISPID_DOC_MEDIATYPES)] HRESULT set_alternateViewMediaTypes(
+  [propput, id(DISPID_DOC_MEDIATYPES)] HRESULT alternateViewMediaTypes(
     [in] BSTR * commaSeparatedMediaTypes
 	);
 }

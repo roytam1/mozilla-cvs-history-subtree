@@ -104,42 +104,42 @@ interface ISimpleDOMNode : IUnknown
   const unsigned short NODETYPE_DOCUMENT_FRAGMENT = 11;
   const unsigned short NODETYPE_NOTATION = 12;
 
-  [hidden, propget, id(DISPID_NODE_NODEINFO)] HRESULT nodeInfo(
+  [propget, id(DISPID_NODE_NODEINFO)] HRESULT nodeInfo(
     [out] BSTR *nodeName,   // for performance returns NULL for text nodes (true nodeName would be "#text")
     [out] short *nameSpaceID,
-    [out] unsigned short *nodeType,
     [out] BSTR *nodeValue,
-    [out] unsigned int *numChildren
+    [out] unsigned int *numChildren,
+    [out, retval] unsigned short *nodeType
   );
 
-  [hidden, propget, id(DISPID_NODE_ATTRIBUTES)] HRESULT attributes(  
+  [propget, id(DISPID_NODE_ATTRIBUTES)] HRESULT attributes(  
     [in] unsigned short maxAttribs,
-    [out] unsigned short *numAttribs, 
     [out, size_is(maxAttribs), length_is(*numAttribs)] BSTR *attribNames, 
     [out, size_is(maxAttribs), length_is(*numAttribs)] short *nameSpaceID,  
-    [out, size_is(maxAttribs), length_is(*numAttribs)] BSTR *attribValues
+    [out, size_is(maxAttribs), length_is(*numAttribs)] BSTR *attribValues,
+    [out, retval] unsigned short *numAttribs
   );
 
-  [hidden, propget, id(DISPID_NODE_COMPSTYLE)] HRESULT computedStyle(  
+  [propget, id(DISPID_NODE_COMPSTYLE)] HRESULT computedStyle(  
     [in] unsigned short maxStyleProperties,
-    [out] unsigned short *numStyleProperties, 
     [in] boolean useAlternateView,  // If TRUE, returns properites for media as set in nsIDOMDocument::set_alternateViewMediaTypes
     [out, size_is(maxStyleProperties), length_is(*numStyleProperties)] BSTR *styleProperties, 
-    [out, size_is(maxStyleProperties), length_is(*numStyleProperties)] BSTR *styleValues
+    [out, size_is(maxStyleProperties), length_is(*numStyleProperties)] BSTR *styleValues,
+    [out, retval] unsigned short *numStyleProperties
   );
 
-  [hidden, propget, id(DISPID_NODE_COMPSTYLEFORPROPS)] HRESULT computedStyleForProperties(  
+  [propget, id(DISPID_NODE_COMPSTYLEFORPROPS)] HRESULT computedStyleForProperties(  
     [in] unsigned short numStyleProperties, 
     [in] boolean useAlternateView,  // If TRUE, returns properites for media as set in nsIDOMDocument::set_alternateViewMediaTypes
     [in, size_is(numStyleProperties), length_is(numStyleProperties)] BSTR *styleProperties, 
-    [out, size_is(numStyleProperties), length_is(numStyleProperties)] BSTR *styleValues
+    [out, retval, size_is(numStyleProperties), length_is(numStyleProperties)] BSTR *styleValues
   );
 
-  [propget] HRESULT parentNode([out] ISimpleDOMNode **node);
-  [propget] HRESULT firstChild([out] ISimpleDOMNode **node);
-  [propget] HRESULT lastChild([out] ISimpleDOMNode **node);
-  [propget] HRESULT previousSibling([out] ISimpleDOMNode **node);
-  [propget] HRESULT nextSibling([out] ISimpleDOMNode **node);
+  [propget] HRESULT parentNode([out, retval] ISimpleDOMNode **node);
+  [propget] HRESULT firstChild([out, retval] ISimpleDOMNode **node);
+  [propget] HRESULT lastChild([out, retval] ISimpleDOMNode **node);
+  [propget] HRESULT previousSibling([out, retval] ISimpleDOMNode **node);
+  [propget] HRESULT nextSibling([out, retval] ISimpleDOMNode **node);
 }
         
 
