@@ -176,7 +176,7 @@ endif
 	cp -f $(DEPTH)/java/webclient/src_moz/runem_unix_commercial $(PACKAGE_EXAMPLE)/runem
 
 	chmod 775  $(PACKAGE_EXAMPLE)/runem
-	cp -f $(DEPTH)/java/webclient/src_moz/install_unix.js $(DIST)/install.js
+	cp -f $(DEPTH)/java/webclient/src_moz/install_win32.js $(DIST)/install.js
 ifeq ($(OS_ARCH),Linux)
 	cd $(DIST); zip -r $(LIBRARY_NAME)_$(PACKAGE_VER)_linux.xpi install.js javadev
 else
