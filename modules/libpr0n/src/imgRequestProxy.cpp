@@ -61,21 +61,24 @@ imgRequestProxy::~imgRequestProxy()
 {
   /* destructor code */
 
-  if (!mCanceled) {
-    PR_Lock(mLock);
+  if (mOwner) {
+    if (!mCanceled) {
+      PR_Lock(mLock);
 
-    mCanceled = PR_TRUE;
+      mCanceled = PR_TRUE;
 
-    /* set mListener to null so that we don't forward any callbacks that RemoveObserver might generate */
-    mListener = nsnull;
+      /* set mListener to null so that we don't forward any callbacks that RemoveObserver might generate */
+      mListener = nsnull;
 
-    PR_Unlock(mLock);
+      PR_Unlock(mLock);
 
-    /* Call RemoveObserver with a successful status.  This will keep the channel, if still downloading data,
-       from being canceled if 'this' is the last observer.  This allows the image to continue to download and
-       be cached even if no one is using it currently.
-     */
-    NS_REINTERPRET_CAST(imgRequest*, mOwner.get())->RemoveProxy(this, NS_OK);
+      /* Call RemoveObserver with a successful status.  This will keep the channel, if still downloading data,
+         from being canceled if 'this' is the last observer.  This allows the image to continue to download and
+         be cached even if no one is using it currently.
+       */
+      NS_REINTERPRET_CAST(imgRequest*, mOwner.get())->RemoveProxy(this, NS_OK);
+    }
+    mOwner = nsnull;
   }
 
   PR_DestroyLock(mLock);
@@ -151,7 +154,7 @@ NS_IMETHODIMP imgRequestProxy::GetStatus(nsresult *aStatus)
 /* void cancel (in nsresult status); */
 NS_IMETHODIMP imgRequestProxy::Cancel(nsresult status)
 {
-  if (mCanceled)
+  if (mCanceled || !mOwner)
     return NS_ERROR_FAILURE;
 
   LOG_SCOPE(gImgLog, "imgRequestProxy::Cancel");
