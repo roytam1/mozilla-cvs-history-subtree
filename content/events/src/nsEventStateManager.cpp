@@ -4560,9 +4560,9 @@ nsEventStateManager::DispatchNewEvent(nsISupports* aTarget, nsIDOMEvent* aEvent,
       nsContentUtils::GetSecurityManager();
 
     PRBool enabled;
-    nsresult res =
+    nsresult secman_res =
       securityManager->IsCapabilityEnabled("UniversalBrowserWrite", &enabled);
-    privEvt->SetTrusted(NS_SUCCEEDED(res) && enabled);
+    privEvt->SetTrusted(NS_SUCCEEDED(secman_res) && enabled);
 
     nsEvent * innerEvent;
     privEvt->GetInternalNSEvent(&innerEvent);
