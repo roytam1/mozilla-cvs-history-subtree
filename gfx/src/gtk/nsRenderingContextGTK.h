@@ -171,6 +171,13 @@ public:
                                const nsRect &aDestBounds, PRUint32 aCopyFlags);
   NS_IMETHOD RetrieveCurrentNativeGraphicData(PRUint32 * ngd);
 
+
+  NS_IMETHOD DrawImage(nsIImageContainer *aImage, const nsRect2 * aSrcRect, const nsPoint2 * aDestPoint);
+  NS_IMETHOD DrawScaledImage(nsIImageContainer *aImage, const nsRect2 * aSrcRect, const nsRect2 * aDestRect);
+  NS_IMETHOD DrawTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, const nsRect2 * aTargetRect);
+  NS_IMETHOD DrawScaledTile(nsIImageContainer *aImage, gfx_coord aXOffset, gfx_coord aYOffset, gfx_dimension aTileWidth, gfx_dimension aTileHeight, const nsRect2 * aTargetRect);
+
+
 #ifdef MOZ_MATHML
   /**
    * Returns metrics (in app units) of an 8-bit character string
