@@ -1975,6 +1975,11 @@ nsresult nsExternalAppHandler::ExecuteDesiredAction()
       // XXX Put progress dialog in barber-pole mode
       //     and change text to say "Copying from:".
       rv = MoveFile(mFinalFileDestination);
+      if (NS_SUCCEEDED(rv) && action == nsIMIMEInfo::saveToDisk)
+      {
+        nsCOMPtr<nsILocalFile> destfile(do_QueryInterface(mFinalFileDestination));
+        sSrv->FixFilePermissions(destfile);
+      }
     }
     
     // Notify dialog that download is complete.
@@ -2141,7 +2146,6 @@ nsresult nsExternalAppHandler::MoveFile(nsIFile * aNewFileLocation)
      if (directoryLocation)
      {
        rv = mTempFile->MoveToNative(directoryLocation, fileName);
-       sSrv->FixFilePermissions(fileToUse);
      }
      if (NS_FAILED(rv))
      {
