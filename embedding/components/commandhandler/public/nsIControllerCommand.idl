@@ -92,7 +92,7 @@ interface nsIStateUpdatingControllerCommand : nsISupports
    * @param aCommandParams   this will pass in the states that need to beupdated. the results will be
    *                  placed in the value portion of the command Params
    */
-  void    getCommandState(in nsICommandParams aCommandParams, in nsISupports aCommandRefCon);
+  void    getCommandState(inout nsICommandParams aCommandParams, in nsISupports aCommandRefCon);
 };
 
 

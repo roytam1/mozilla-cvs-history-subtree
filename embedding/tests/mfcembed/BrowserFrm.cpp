@@ -515,6 +515,8 @@ void CBrowserFrame::OnItalics()
   }	
 }
 
+
+
 void CBrowserFrame::OnUpdateItalics(CCmdUI* pCmdUI) 
 {
 	// TODO: Add your command update UI handler code here
@@ -523,8 +525,12 @@ void CBrowserFrame::OnUpdateItalics(CCmdUI* pCmdUI)
   if (editimpl)
   {
     PRBool retval;
-    if (NS_SUCCEEDED(editimpl->IsCommandEnabled("cmd_italic",&retval)) && retval)
-    	pCmdUI->Enable(TRUE);
+    nsCOMPtr<nsICommandParams> params;
+    if (NS_SUCCEEDED(editimpl->GetCommandState("cmd_italic",getter_AddRefs(params))) && retval)
+    {
+
+      pCmdUI->Enable(TRUE);
+    }
     else
       pCmdUI->Enable(FALSE);
   }
