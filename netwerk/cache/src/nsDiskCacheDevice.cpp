@@ -292,20 +292,16 @@ NS_IMPL_ISUPPORTS1(nsDiskCacheDeviceInfo, nsICacheDeviceInfo);
 NS_IMETHODIMP nsDiskCacheDeviceInfo::GetDescription(char ** aDescription)
 {
     NS_ENSURE_ARG_POINTER(aDescription);
-    char* result = nsCRT::strdup("Disk cache device");
-    if (!result) return NS_ERROR_OUT_OF_MEMORY;
-    *aDescription = result;
-    return NS_OK;
+    *aDescription = nsCRT::strdup("Disk cache device");
+    return *aDescription ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 /* readonly attribute string usageReport; */
 NS_IMETHODIMP nsDiskCacheDeviceInfo::GetUsageReport(char ** aUsageReport)
 {
     NS_ENSURE_ARG_POINTER(aUsageReport);
-    char* result = nsCRT::strdup("disk cache usage report");
-    if (!result) return NS_ERROR_OUT_OF_MEMORY;
-    *aUsageReport = result;
-    return NS_OK;
+    *aUsageReport = nsCRT::strdup("disk cache usage report");
+    return *aUsageReport ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 /* readonly attribute unsigned long entryCount; */
@@ -520,6 +516,13 @@ NS_IMETHODIMP nsDiskCacheEntryInfo::GetClientID(char ** clientID)
     return ClientIDFromCacheKey(nsLiteralCString(mMetaDataFile.mKey), clientID);
 }
 
+NS_IMETHODIMP nsDiskCacheEntryInfo::GetDeviceID(char ** deviceID)
+{
+    NS_ENSURE_ARG_POINTER(deviceID);
+    *deviceID = nsCRT::strdup(DISK_CACHE_DEVICE_ID);
+    return *deviceID ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
+}
+
 NS_IMETHODIMP nsDiskCacheEntryInfo::GetKey(char ** clientKey)
 {
     NS_ENSURE_ARG_POINTER(clientKey);
@@ -702,6 +705,10 @@ nsDiskCacheDevice::FindEntry(nsCString * key)
     // XXX look in entry hashtable first, if not found, then look on
     // disk, to see if we have a disk cache entry that maches.
     nsCacheEntry * entry = nsnull;
+
+    // XXX checking the bound hash table should only be a debug check
+    // XXX - the cache service shouldn't bother calling the device
+    // XXX - if the entry is already active (bound or not).
     nsDiskCacheEntry * diskEntry = mBoundEntries.GetEntry(key->get());
     if (!diskEntry) {
         PLDHashNumber hashNumber = nsDiskCacheEntry::Hash(key->get());
@@ -921,7 +928,7 @@ nsDiskCacheDevice::EvictEntries(const char * clientID)
 {
     nsresult rv;
     
-    PRUint32 prefixLength = (clientID ? nsCRT::strlen(clientID) : 0);
+    PRUint32 prefixLength = nsCRT::strlen(clientID);
     PRUint32 newDataSize = mCacheMap->DataSize();
     PRUint32 newEntryCount = mCacheMap->EntryCount();
 
@@ -1122,7 +1129,7 @@ nsresult nsDiskCacheDevice::openOutputStream(nsIFile * file, nsIOutputStream ** 
         return NS_OK;
     } else {
         nsCOMPtr<nsITransport> transport;
-        nsresult rv = getTransportForFile(file, nsICache::ACCESS_WRITE, getter_AddRefs(transport));
+        rv = getTransportForFile(file, nsICache::ACCESS_WRITE, getter_AddRefs(transport));
         if (NS_FAILED(rv)) return rv;
         return transport->OpenOutputStream(0, ULONG_MAX, 0, result);
     }
