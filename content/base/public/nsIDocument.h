@@ -82,8 +82,8 @@ class nsIScriptEventManager;
 
 // IID for the nsIDocument interface
 #define NS_IDOCUMENT_IID      \
-{ 0x94c6ceb0, 0x9447, 0x11d1, \
-  {0x93, 0x23, 0x00, 0x80, 0x5f, 0x8a, 0xdd, 0x32} }
+{ 0x21c6a9cb, 0x163f, 0x3dc2, \
+  {0x33, 0x20, 0x1c, 0xb1, 0x7f, 0xa0, 0x17, 0xc4} }
 
 // The base value for the content ID counter.
 // This counter is used by the document to 
@@ -475,6 +475,20 @@ public:
                                nsAString& Standalone) = 0;
 
   NS_IMETHOD_(PRBool) IsCaseSensitive() = 0;
+
+  // Get the security info (i.e. SSL state etc) that the document got
+  // from the channel/document that created the content of the
+  // document.
+  //
+  // @see nsIChannel
+  nsISupports *GetSecurityInfo()
+  {
+    return mSecurityInfo;
+  }
+
+protected:
+  // The document's security info
+  nsCOMPtr<nsISupports> mSecurityInfo;
 };
 
 
