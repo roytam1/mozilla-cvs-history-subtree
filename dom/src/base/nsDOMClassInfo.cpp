@@ -1148,10 +1148,10 @@ nsDOMClassInfo::RegisterExternalClasses()
   nsCOMPtr<nsISupports> entry;
 
   while (NS_SUCCEEDED(e->GetNext(getter_AddRefs(entry)))) {
-    nsCOMPtr<nsISupportsString> category(do_QueryInterface(entry));
+    nsCOMPtr<nsISupportsCString> category(do_QueryInterface(entry));
 
     if (!category) {
-      NS_WARNING("Category entry not an nsISupportsString!");
+      NS_WARNING("Category entry not an nsISupportsCString!");
       continue;
     }
 
@@ -1750,7 +1750,7 @@ nsDOMClassInfo::Init()
   DOM_CLASSINFO_MAP_END
 
   DOM_CLASSINFO_MAP_BEGIN(CSSCharsetRule, nsIDOMCSSCharsetRule)
-    DOM_CLASSINFO_MAP_ENTRY(nsIDOMCSSRule)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMCSSCharsetRule)
   DOM_CLASSINFO_MAP_END
 
   DOM_CLASSINFO_MAP_BEGIN(CSSImportRule, nsIDOMCSSImportRule)
