@@ -481,8 +481,6 @@ nsMsgAccountManagerDataSource::GetTarget(nsIRDFResource *source,
       if (sourceValue && (strncmp(sourceValue, NC_RDF_PAGETITLE_PREFIX, strlen(NC_RDF_PAGETITLE_PREFIX)) == 0)) {
         if (source == kNC_PageTitleSMTP)
           str = NS_LITERAL_STRING("4000");
-        else if (source == kNC_PageTitleFakeAccount)
-          str = NS_LITERAL_STRING("5000");
         else if (source == kNC_PageTitleServer)
           str = NS_LITERAL_STRING("1");
         else if (source == kNC_PageTitleCopies)
