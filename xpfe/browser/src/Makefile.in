@@ -68,6 +68,10 @@ REQUIRES	= xpcom \
 
 ifdef MOZ_PHOENIX
 REQUIRES += toolkitcomps history
+else
+ifdef MOZ_XULRUNNER
+REQUIRES += toolkitcomps history
+endif
 endif
 
 CPPSRCS		= \

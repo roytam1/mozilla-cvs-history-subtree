@@ -59,6 +59,10 @@ ifdef MOZ_PHOENIX
 NO_DIST_INSTALL=1
 NO_INSTALL=1
 endif
+ifdef MOZ_XULRUNNER
+NO_DIST_INSTALL=1
+NO_INSTALL=1
+endif
 
 ifdef MOZ_HAVE_BROWSER
 DIRS	= \
@@ -74,6 +78,7 @@ DIRS	= \
 			$(NULL)
 
 ifndef MOZ_PHOENIX
+ifndef MOZ_XULRUNNER
 DIRS += \
 		related \
 		prefwindow \
@@ -86,10 +91,13 @@ DIRS += \
 		sidebar \
 		$(NULL)
 endif
+endif
 
 ifeq ($(OS_ARCH),WINNT)
 ifndef MOZ_PHOENIX
+ifndef MOZ_XULRUNNER
 DIRS    += urlwidget winhooks alerts
+endif
 endif
 endif
 

@@ -85,6 +85,7 @@
 #include "nsIWindowCreator.h"
 #include "nsIWindowMediator.h"
 #include "nsIWindowWatcher.h"
+#include "nsIResProtocolHandler.h"
 
 #include "nsCRT.h"
 #include "nsCOMPtr.h"
@@ -1739,9 +1740,19 @@ int xre_main(int argc, char* argv[], const nsXREAppData* aAppData)
 #endif
 
   nsXREDirProvider dirProvider;
-  rv = dirProvider.Initialize();
-  if (NS_FAILED(rv))
-    return 1;
+  {
+    nsCOMPtr<nsILocalFile> lf;
+
+    const char *app;
+    if (CheckArg("app", &app)) {
+      printf("app=%s\n", app);
+      NS_GetFileFromPath(app, getter_AddRefs(lf));
+    }
+
+    rv = dirProvider.Initialize(lf);
+    if (NS_FAILED(rv))
+      return 1;
+  }
 
   // Check for -register, which registers chrome and then exits immediately.
   if (CheckArg("register")) {

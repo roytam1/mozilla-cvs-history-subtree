@@ -897,6 +897,14 @@ browser/installer/unix/Makefile
 browser/installer/windows/Makefile
 "
 
+MAKEFILES_xulrunner="
+xulrunner/Makefile
+xulrunner/app/Makefile
+xulrunner/app/profile/Makefile
+xulrunner/app/profile/chrome/Makefile
+xulrunner/app/profile/extensions/Makefile
+"
+
 MAKEFILES_xulapp="
 chrome/Makefile
 chrome/src/Makefile
@@ -1480,6 +1488,10 @@ fi
 
 if test -n "$MOZ_XUL_APP"; then
     add_makefiles "$MAKEFILES_xulapp"
+fi
+
+if test -n "$MOZ_XULRUNNER"; then
+    add_makefiles "$MAKEFILES_xulrunner"
 fi
 
 if test -n "$MOZ_THUNDERBIRD"; then

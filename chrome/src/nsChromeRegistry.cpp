@@ -3172,57 +3172,66 @@ nsChromeRegistry::CheckForNewChrome()
   nsresult rv;
 
   rv = LoadInstallDataSource();
-  if (NS_FAILED(rv)) return rv;
+  if (NS_FAILED(rv))
+    return rv;
 
   // open the installed-chrome file
-  nsCOMPtr<nsILocalFile> listFile;
   nsCOMPtr<nsIProperties> directoryService =
            do_GetService(NS_DIRECTORY_SERVICE_CONTRACTID, &rv);
   if (NS_FAILED(rv))
     return rv;
-  rv = directoryService->Get(NS_APP_CHROME_DIR, NS_GET_IID(nsILocalFile), getter_AddRefs(listFile));
-  if (NS_FAILED(rv))
-    return rv;
 
-  nsCOMPtr<nsIFile> chromeFile;
-  rv = listFile->Clone(getter_AddRefs(chromeFile));
-  if (NS_FAILED(rv)) return rv;
-  rv = chromeFile->AppendNative(kChromeFileName);
-  if (NS_FAILED(rv)) return rv;
-  // XXXldb For the case where the file is nonexistent, we're depending
-  // on the fact that the nsInt64 constructor initializes to 0 and
-  // |GetLastModifiedTime| doesn't touch the out parameter.
-  nsInt64 chromeDate;
-  (void)chromeFile->GetLastModifiedTime(&chromeDate.mValue);
+  static const char *dirs[] = { NS_APP_CHROME_DIR, "AppletChrom", nsnull };
+  for (const char **dir = dirs; *dir; ++dir) {
+    nsCOMPtr<nsILocalFile> listFile;
+    rv = directoryService->Get(*dir, NS_GET_IID(nsILocalFile), getter_AddRefs(listFile));
+    if (NS_FAILED(rv))
+      continue;
 
-  rv = listFile->AppendRelativeNativePath(kInstalledChromeFileName);
-  if (NS_FAILED(rv)) return rv;
-  nsInt64 listFileDate;
-  (void)listFile->GetLastModifiedTime(&listFileDate.mValue);
+    nsCOMPtr<nsIFile> chromeFile;
+    rv = listFile->Clone(getter_AddRefs(chromeFile));
+    if (NS_FAILED(rv))
+      continue;
+    rv = chromeFile->AppendNative(kChromeFileName);
+    if (NS_FAILED(rv))
+      continue;
+    // XXXldb For the case where the file is nonexistent, we're depending
+    // on the fact that the nsInt64 constructor initializes to 0 and
+    // |GetLastModifiedTime| doesn't touch the out parameter.
+    nsInt64 chromeDate;
+    (void)chromeFile->GetLastModifiedTime(&chromeDate.mValue);
 
-  if (listFileDate < chromeDate)
-    return NS_OK;
+    rv = listFile->AppendRelativeNativePath(kInstalledChromeFileName);
+    if (NS_FAILED(rv))
+      continue;
+    nsInt64 listFileDate;
+    (void)listFile->GetLastModifiedTime(&listFileDate.mValue);
 
-  PRFileDesc *file;
-  rv = listFile->OpenNSPRFileDesc(PR_RDONLY, 0, &file);
-  if (NS_FAILED(rv)) return rv;
+    if (listFileDate < chromeDate)
+      continue;
 
-  // file is open.
+    PRFileDesc *file;
+    rv = listFile->OpenNSPRFileDesc(PR_RDONLY, 0, &file);
+    if (NS_FAILED(rv))
+      continue;
 
-  PRFileInfo finfo;
+    // file is open.
 
-  if (PR_GetOpenFileInfo(file, &finfo) == PR_SUCCESS) {
-    char *dataBuffer = new char[finfo.size+1];
-    if (dataBuffer) {
-      PRInt32 bufferSize = PR_Read(file, dataBuffer, finfo.size);
-      if (bufferSize > 0) {
-        rv = ProcessNewChromeBuffer(dataBuffer, bufferSize);
+    PRFileInfo finfo;
+
+    if (PR_GetOpenFileInfo(file, &finfo) == PR_SUCCESS) {
+      char *dataBuffer = new char[finfo.size+1];
+      if (dataBuffer) {
+        PRInt32 bufferSize = PR_Read(file, dataBuffer, finfo.size);
+        if (bufferSize > 0) {
+          rv = ProcessNewChromeBuffer(dataBuffer, bufferSize);
+        }
+        delete [] dataBuffer;
       }
-      delete [] dataBuffer;
     }
+    PR_Close(file);
+    // listFile->Remove(PR_FALSE);
   }
-  PR_Close(file);
-  // listFile->Remove(PR_FALSE);
 
   return rv;
 }

@@ -412,6 +412,30 @@ FASTUPDATE_PHOENIX := true
 endif
 
 ####################################
+# CVS defines for Xul Runner (pulled and built if MOZ_XULRUNNER is set)
+#
+XULRUNNER_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  XULRUNNER_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
+ifdef XULRUNNER_CO_TAG
+  XULRUNNER_CO_FLAGS := $(XULRUNNER_CO_FLAGS) -r $(XULRUNNER_CO_TAG)
+endif
+
+XULRUNNER_CO_DIRS := mozilla/xulrunner
+
+CVSCO_XULRUNNER := $(CVS) $(CVS_FLAGS) co $(XULRUNNER_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(XULRUNNER_CO_DIRS)
+
+ifdef MOZ_XULRUNNER
+FASTUPDATE_XULRUNNER := fast_update $(CVSCO_XULRUNNER)
+CHECKOUT_XULRUNNER := cvs_co $(CVSCO_XULRUNNER)
+MOZ_XUL_APP = 1
+else
+CHECKOUT_XULRUNNER := true
+FASTUPDATE_XULRUNNER := true
+endif
+
+####################################
 # CVS defines for Thunderbird (pulled and built if MOZ_THUNDERBIRD is set)
 #
 
