@@ -69,6 +69,8 @@ NS_IMPL_AGGREGATED(nsPluginManager);
 
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 
+#include "nsRepository.h"
+
 NS_METHOD
 nsPluginManager::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
 {
@@ -212,7 +214,7 @@ nsPluginInstancePeer::AggregatedQueryInterface(const nsIID& aIID, void** aInstan
         np_data* ndata = (np_data*) app->np_data;
         nsresult result =
             JVMInstancePeer::Create((nsISupports*)this, kISupportsIID, (void**)&fJVMInstancePeer,
-                                    cx, (LO_ObjectStruct*)ndata->lo_struct); // XXX wrong kind of LO_Struct!
+                                    cx, (LO_CommonPluginStruct*)ndata->lo_struct);
         if (result != NS_OK) return result;
     }
 #endif

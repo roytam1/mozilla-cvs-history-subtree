@@ -1918,6 +1918,7 @@ $(OUTDIR)\libplds21.dll:   $(DIST)\bin\libplds21.dll
 $(OUTDIR)\libplc21.dll:   $(DIST)\bin\libplc21.dll
     @IF EXIST $(DIST)\bin\libplc21.dll copy $(DIST)\bin\libplc21.dll $(OUTDIR)\libplc21.dll
 $(JAVABIN_DIR)\libmsgc21.dll:   $(DIST)\bin\libmsgc21.dll
+    @IF NOT EXIST "$(JAVAPARENT_DIR)/$(NULL)" mkdir "$(JAVAPARENT_DIR)"
     @IF NOT EXIST "$(JAVABIN_DIR)/$(NULL)" mkdir "$(JAVABIN_DIR)"
     @IF EXIST $(DIST)\bin\libmsgc21.dll copy $(DIST)\bin\libmsgc21.dll $(JAVABIN_DIR)\libmsgc21.dll
 !endif
@@ -2003,8 +2004,10 @@ $(OUTDIR)\plds21.dll:   $(DIST)\lib\plds21.dll
     @IF EXIST $(DIST)\bin\plds21.dll copy $(DIST)\bin\plds21.dll $(OUTDIR)\plds21.dll
 $(OUTDIR)\plc21.dll:   $(DIST)\lib\plc21.dll
     @IF EXIST $(DIST)\bin\plc21.dll copy $(DIST)\bin\plc21.dll $(OUTDIR)\plc21.dll
-$(JVM_PLUGIN_DIR)\msgc21.dll:   $(DIST)\lib\msgc21.dll
-    @IF EXIST $(DIST)\bin\msgc21.dll copy $(DIST)\bin\msgc21.dll $(JVM_PLUGIN_DIR)\msgc21.dll
+$(JAVABIN_DIR)\msgc21.dll:   $(DIST)\lib\msgc21.dll
+    @IF NOT EXIST "$(JAVAPARENT_DIR)/$(NULL)" mkdir "$(JAVAPARENT_DIR)"
+    @IF NOT EXIST "$(JAVABIN_DIR)/$(NULL)" mkdir "$(JAVABIN_DIR)"
+    @IF EXIST $(DIST)\bin\msgc21.dll copy $(DIST)\bin\msgc21.dll $(JAVABIN_DIR)\msgc21.dll
 !endif
 
 $(OUTDIR)\js16$(VERSION_NUMBER).dll:   $(DIST)\bin\js16$(VERSION_NUMBER).dll

@@ -71,7 +71,6 @@ struct _np_handle {
     char *name;
     char *filename;
     char *description;
-    XP_Bool usesNewAPI;
     struct NPIPlugin* userPlugin;
 };
 

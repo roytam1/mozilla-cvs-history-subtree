@@ -635,7 +635,7 @@ void CWinCX::OnDeactivateEmbedCX()  {
     CGenericView *pView = GetView();
     if(pView != NULL && m_pSelected != NULL) {
 		//	Obtain the plugin structure.
-		NPEmbeddedApp *pPluginShim = (NPEmbeddedApp *)m_pSelected->FE_Data;
+		NPEmbeddedApp *pPluginShim = (NPEmbeddedApp *)m_pSelected->objTag.FE_Data;
 		//	Make sure it is not a plugin, but an OLE container item.
 		if(pPluginShim != NULL && wfe_IsTypePlugin(pPluginShim) == FALSE)	{
 			//	Get the container item, and deactivate it.
@@ -1258,7 +1258,7 @@ BOOL CWinCX::HandleEmbedEvent(LO_EmbedStruct *embed, CL_Event *pEvent)
 {
     NPEvent npEvent;
     fe_EventStruct *pFEEvent = (fe_EventStruct *)pEvent->fe_event;
-    NPEmbeddedApp *pEmbeddedApp = (NPEmbeddedApp *)embed->FE_Data;
+    NPEmbeddedApp *pEmbeddedApp = (NPEmbeddedApp *)embed->objTag.FE_Data;
 
     if (CL_IS_MOUSE_EVENT(pEvent)) {
         if (pFEEvent)
@@ -1569,7 +1569,7 @@ CWinCX::OnLButtonDblClkForLayerCX(UINT uFlags, CPoint& cpPoint,
 	if(pElement != NULL && pElement->type == LO_EMBED)	{
 		//	Any previous activated embed was deactivated in the button down event.
 		//	However, we should not reactivate an already active item.
-        NPEmbeddedApp* pEmbeddedApp = (NPEmbeddedApp*)pElement->lo_embed.FE_Data;
+        NPEmbeddedApp* pEmbeddedApp = (NPEmbeddedApp*)pElement->lo_embed.objTag.FE_Data;
         ASSERT(pEmbeddedApp);
 		CNetscapeCntrItem *pItem = (CNetscapeCntrItem *)pEmbeddedApp->fe_data;
 		if(pItem != NULL)	{
@@ -4008,7 +4008,7 @@ void CWinCX::CreateEmbedWindow(MWContext *pContext, NPEmbeddedApp *pApp)
 
     HWND hWnd = ::CreateWindow(szClassName,
                                "a Plugin Window",
-                               WS_CHILD | (pEmbed->ele_attrmask & LO_ELE_INVISIBLE ? 0 : WS_VISIBLE),
+                               WS_CHILD | (pEmbed->objTag.ele_attrmask & LO_ELE_INVISIBLE ? 0 : WS_VISIBLE),
                                rect.left,
                           rect.top,
                           rect.right - rect.left,
@@ -4369,8 +4369,8 @@ void CWinCX::GetJavaAppSize(MWContext *pContext, LO_JavaAppStruct *java_struct,
 #else
 // jevering: should this be inside ifdef JAVA?
 //    FE_DisplayNoJavaIcon(pContext, java_struct);
-    java_struct->width = 1;
-    java_struct->height = 1;
+    java_struct->objTag.width = 1;
+    java_struct->objTag.height = 1;
 #endif  /* ! JAVA */
 }
 
@@ -6245,8 +6245,8 @@ mouse_over_callback(MWContext * context, LO_Element * lo_element, int32 event,
 
     //  See if we are over an embedded item.
     pEmbed = (LO_EmbedStruct *)lo_element;
-    if(pEmbed && pEmbed->type == LO_EMBED && pEmbed->FE_Data)  {
-		NPEmbeddedApp *pPluginShim = (NPEmbeddedApp *)pEmbed->FE_Data;
+    if(pEmbed && pEmbed->objTag.type == LO_EMBED && pEmbed->objTag.FE_Data)  {
+		NPEmbeddedApp *pPluginShim = (NPEmbeddedApp *)pEmbed->objTag.FE_Data;
 		if(pPluginShim != NULL && wfe_IsTypePlugin(pPluginShim) == FALSE)	{
 	        CNetscapeCntrItem *pItem = (CNetscapeCntrItem *)pPluginShim->fe_data;
 	        if(pItem != NULL && pItem->m_bLoading == FALSE && pItem->m_bBroken == FALSE &&

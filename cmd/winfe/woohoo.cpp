@@ -1181,6 +1181,7 @@ void WFE_LJ_StartDebugger(void)
                 debugger->StartDebugger(NPSymantecDebugPort_SharedMemory);
                 debugger->Release();
             }
+            jvm->Release();
         }
         jvmMgr->Release();
     }

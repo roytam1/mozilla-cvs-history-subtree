@@ -1395,10 +1395,10 @@ lo_rl_FitFloat( lo_RelayoutState *relay_state, LO_Element *lo_ele )
 		lo_LayoutFloatEmbed( relay_state->context, relay_state->doc_state, embed, FALSE );
 
 		/* Determine the new position of the layer. */
-		x = embed->x + embed->x_offset + embed->border_width;
-		y = embed->y + embed->y_offset + embed->border_width;
+		x = embed->objTag.x + embed->objTag.x_offset + embed->objTag.border_width;
+		y = embed->objTag.y + embed->objTag.y_offset + embed->objTag.border_width;
 
-		layer = embed->layer;
+		layer = embed->objTag.layer;
 	}
 	else if (lo_ele->lo_float.float_ele->lo_any.type == LO_TABLE) {
 		LO_TableStruct *table_ele = (LO_TableStruct *)lo_ele->lo_float.float_ele;

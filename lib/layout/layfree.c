@@ -569,10 +569,10 @@ lo_ScrapeElement(MWContext *context, LO_Element *element)
 			 * Otherwise, save the NULL.
 			 */
 			lo_AddEmbedData(context,
-					element->lo_embed.session_data,
+					element->lo_embed.objTag.session_data,
 					NPL_DeleteSessionData,
-					element->lo_embed.embed_index);
-			element->lo_embed.session_data = NULL;
+					element->lo_embed.objTag.embed_index);
+			element->lo_embed.objTag.session_data = NULL;
 			break;
 #ifdef JAVA
 		case LO_JAVA:

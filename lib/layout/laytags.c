@@ -299,8 +299,8 @@ lo_FilterTag(MWContext *context, lo_DocState *state, PA_Tag *tag)
 		while (top != NULL)
 		{
 			if (top->object != NULL &&
-				top->object->lo_element.type != LO_NONE &&
-				top->object->lo_element.type != LO_UNKNOWN)
+				top->object->lo_element.lo_plugin.type != LO_NONE &&
+				top->object->lo_element.lo_plugin.type != LO_UNKNOWN)
 			{
 				/* The object was known, so filter out its contents */
 				return FALSE;

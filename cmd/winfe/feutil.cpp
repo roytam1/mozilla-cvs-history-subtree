@@ -1788,6 +1788,7 @@ void FEU_OpenNetcaster(void)
                 NPIJVMPlugin* jvm = jvmMgr->GetJVM();
                 if (jvm) {
                     javaEnabled = jvm->GetJVMEnabled();
+                    jvm->Release();
                 }
                 jvmMgr->Release();
             }

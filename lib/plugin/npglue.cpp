@@ -2053,7 +2053,7 @@ npn_reloadplugins(NPBool reloadPages)
     		
     		/*
     		 * In the case where we switch the handler (above), 
-    		 * "instance" already points to the next object.
+    		 * "instance" already points to the next objTag.
     		 */
     		if (!switchedHandler)
     			instance = instance->next;
@@ -2331,7 +2331,7 @@ XP_Bool NPL_IsLiveConnected(LO_EmbedStruct *embed)
 	if (embed == NULL)
 		return FALSE;
 
-	app = (NPEmbeddedApp*) embed->FE_Data;
+	app = (NPEmbeddedApp*) embed->objTag.FE_Data;
 	if (app == NULL)
 		return FALSE;
 
@@ -2368,7 +2368,7 @@ np_setwindow(np_instance *instance, NPWindow *appWin)
 			ndata = (np_data*) app->np_data;
 			lo_struct = ndata->lo_struct;
 #ifndef XP_MAC
-			if (lo_struct && lo_struct->ele_attrmask & LO_ELE_HIDDEN)
+			if (lo_struct && lo_struct->objTag.ele_attrmask & LO_ELE_HIDDEN)
 				return PR_TRUE;
 #endif
 		}
@@ -2385,7 +2385,7 @@ np_setwindow(np_instance *instance, NPWindow *appWin)
 
             // If this is the first time we're drawing this, then call
             // the plugin's Start() method.
-            if (lo_struct && ! (lo_struct->ele_attrmask & LO_ELE_DRAWN)) {
+            if (lo_struct && ! (lo_struct->objTag.ele_attrmask & LO_ELE_DRAWN)) {
                 NPPluginError err = userInst->Start();
                 if (err != NPPluginError_NoError) {
                     np_delete_instance(instance);
@@ -2539,7 +2539,7 @@ np_newinstance(np_handle *handle, MWContext *cx, NPEmbeddedApp *app,
 
 #ifdef LAYERS
         if (ndata)
-            instance->layer = ndata->lo_struct->layer;
+            instance->layer = ndata->lo_struct->objTag.layer;
 #endif /* LAYERS */
 
         /* invite the plugin */
@@ -2988,7 +2988,7 @@ NPL_NewPresentStream(FO_Present_Types format_out, void* type, URL_Struct* urls, 
 
 	/*
 	 * To actually create the instance we need to create a stream of
-	 * fake HTML to cause layout to create a new embedded object.
+	 * fake HTML to cause layout to create a new embedded objTag.
 	 * EmbedCreate will be called, which will created the NPEmbeddedApp
 	 * and put it into urls->fe_data, where we can retrieve it.
 	 */
@@ -3560,7 +3560,7 @@ np_delete_instance(np_instance *instance)
 #ifdef JAVA		
 			/*
 			** Break any association we have made between this instance and
-			** its corresponding Java object. That way other java objects
+			** its corresponding Java objTag. That way other java objects
 			** still referring to it will be able to detect that the plugin
 			** went away (by calling isActive).
 			*/
@@ -3756,7 +3756,7 @@ NPL_SameElement(LO_EmbedStruct* embed_struct)
 {
 	if (embed_struct)
 	{
-		NPEmbeddedApp* app = (NPEmbeddedApp*) embed_struct->FE_Data;
+		NPEmbeddedApp* app = (NPEmbeddedApp*) embed_struct->objTag.FE_Data;
 		if (app)
 		{
 			np_data* ndata = (np_data*) app->np_data;
@@ -3985,17 +3985,17 @@ NPL_EmbedDelete(MWContext* cx, LO_EmbedStruct* embed_struct)
 	NPEmbeddedApp* app;
 	np_data* ndata;
 	
-	if (!cx || !embed_struct || !embed_struct->FE_Data)
+	if (!cx || !embed_struct || !embed_struct->objTag.FE_Data)
 		return;
 		
-	app = (NPEmbeddedApp*) embed_struct->FE_Data;
-	embed_struct->FE_Data = NULL;
+	app = (NPEmbeddedApp*) embed_struct->objTag.FE_Data;
+	embed_struct->objTag.FE_Data = NULL;
 
     ndata = (np_data*) app->np_data;
 
     if (ndata)
     {
-        embed_struct->session_data = (void*) ndata;
+        embed_struct->objTag.session_data = (void*) ndata;
         	
     	ndata->refs--;
 
@@ -4060,7 +4060,7 @@ NPL_EmbedDelete(MWContext* cx, LO_EmbedStruct* embed_struct)
                     // the plugin failed to stop properly
                     // XXX is the following right?...
                     np_delete_instance(ndata->instance);
-                    embed_struct->session_data = NULL;
+                    embed_struct->objTag.session_data = NULL;
                     app->np_data = NULL;
                     XP_FREE(ndata);
                 }
@@ -4078,7 +4078,7 @@ NPL_EmbedDelete(MWContext* cx, LO_EmbedStruct* embed_struct)
         else
         {
         	/* If there's no instance, there's no need to save session data */
-        	embed_struct->session_data = NULL;
+        	embed_struct->objTag.session_data = NULL;
         	app->np_data = NULL;
         	XP_FREE(ndata);
         }
@@ -4256,10 +4256,10 @@ NPL_EmbedCreate(MWContext* cx, LO_EmbedStruct* embed_struct)
      * attach it to a new app.  If there is nothing in the session
      * data, then we must create both a np_data object and an app.
      */
-    if (embed_struct->session_data)
+    if (embed_struct->objTag.session_data)
     {
-        ndata = (np_data*) embed_struct->session_data;
-        embed_struct->session_data = NULL;
+        ndata = (np_data*) embed_struct->objTag.session_data;
+        embed_struct->objTag.session_data = NULL;
 
         if (ndata->state == NPDataCached)			/* We cached this app, so don't create another */
         {
@@ -4295,7 +4295,7 @@ NPL_EmbedCreate(MWContext* cx, LO_EmbedStruct* embed_struct)
 	            ndata->state = NPDataNormal;
 #ifdef LAYERS
                 if (ndata->instance) {
-                    ndata->instance->layer = embed_struct->layer;
+                    ndata->instance->layer = embed_struct->objTag.layer;
                     LO_SetEmbedType(ndata->lo_struct, 
                                     (PRBool)ndata->instance->windowed);
                 }
@@ -4320,11 +4320,11 @@ NPL_EmbedCreate(MWContext* cx, LO_EmbedStruct* embed_struct)
 
             /* Make the front-end restore the embedded window from
                it's saved context. */
-            if (! (embed_struct->ele_attrmask & LO_ELE_HIDDEN))
+            if (! (embed_struct->objTag.ele_attrmask & LO_ELE_HIDDEN))
                 FE_RestoreEmbedWindow(cx, ndata->app);
 
             /* Tie the app to the layout struct. */
-            embed_struct->FE_Data = ndata->app;
+            embed_struct->objTag.FE_Data = ndata->app;
 	        return ndata->app;
 	    }
 
@@ -4362,11 +4362,11 @@ NPL_EmbedCreate(MWContext* cx, LO_EmbedStruct* embed_struct)
 	np_bindContext(app, cx);
 
     /* Tell the front-end to create the plugin window for us. */
-    if (! (embed_struct->ele_attrmask & LO_ELE_HIDDEN))
+    if (! (embed_struct->objTag.ele_attrmask & LO_ELE_HIDDEN))
         FE_CreateEmbedWindow(cx, app);
     
     /* Attach the app to the layout info */
-    embed_struct->FE_Data = ndata->app;
+    embed_struct->objTag.FE_Data = ndata->app;
     return app;
 	
 error:	
@@ -4503,7 +4503,7 @@ NPL_EmbedStart(MWContext* cx, LO_EmbedStruct* embed_struct, NPEmbeddedApp* app)
 	    	 */
 	        app->pagePluginType = NP_Embedded;
 	        
-	        if ((embed_struct->ele_attrmask & LO_ELE_STREAM_STARTED) == 0)
+	        if ((embed_struct->objTag.ele_attrmask & LO_ELE_STREAM_STARTED) == 0)
 	        {
 		        URL_Struct* pURL;    
 		        pURL = NET_CreateURLStruct(theURL, NET_DONT_RELOAD);

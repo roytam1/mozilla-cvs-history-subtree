@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -2213,13 +2213,14 @@ void CGenericFrame::OnToggleJavaConsole()
         } else {
             jvm->ShowConsole();
         }
+        jvm->Release();
     }
     jvmMgr->Release();
 #else
     if( LJ_IsConsoleShowing() ) {
-	LJ_HideConsole();
+      LJ_HideConsole();
     } else {
-	LJ_ShowConsole();
+      LJ_ShowConsole();
     }
 #endif
 }
@@ -2238,6 +2239,7 @@ void CGenericFrame::OnUpdateJavaConsole(CCmdUI* pCmdUI)
         } else {
             pCmdUI->Enable(FALSE);
         }
+        jvm->Release();
     }
     jvmMgr->Release();
 #else

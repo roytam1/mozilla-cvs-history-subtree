@@ -1397,6 +1397,7 @@ BOOL CNetscapeApp::InitInstance()
             NPIJVMPlugin* jvm = jvmMgr->GetJVM();
             if (jvm) {
                 ee = jvm->EnsureExecEnv();
+                jvm->Release();
             }
             jvmMgr->Release();
         }

@@ -2152,8 +2152,8 @@ lo_window_layer_visibility_changed(CL_Layer *layer,
 	tptr->lo_form.ele_attrmask |= LO_ELE_INVISIBLE * !visible;
 	break;
     case LO_EMBED:
-	tptr->lo_embed.ele_attrmask &= ~LO_ELE_INVISIBLE;
-	tptr->lo_embed.ele_attrmask |= LO_ELE_INVISIBLE * !visible;
+	tptr->lo_embed.objTag.ele_attrmask &= ~LO_ELE_INVISIBLE;
+	tptr->lo_embed.objTag.ele_attrmask |= LO_ELE_INVISIBLE * !visible;
 	break;
 #ifdef JAVA
     case LO_JAVA:
@@ -2230,11 +2230,11 @@ lo_CreateEmbeddedObjectLayer(MWContext *context,
 	break;
     case LO_EMBED:
 	name = "_PLUGIN";
-	tptr->lo_embed.ele_attrmask |= LO_ELE_INVISIBLE;
+	tptr->lo_embed.objTag.ele_attrmask |= LO_ELE_INVISIBLE;
 	/* We don't commit to the type of a plugin layer until
 	   it's known whether or not the plugin is windowless. */
-	vspace = tptr->lo_embed.border_vert_space;
-	hspace = tptr->lo_embed.border_horiz_space;
+	vspace = tptr->lo_embed.objTag.border_vert_space;
+	hspace = tptr->lo_embed.objTag.border_horiz_space;
 	is_window = PR_FALSE;
 #ifdef SHACK
 	if (XP_STRNCASECMP (tptr->lo_embed.value_list[0], "builtin/", 8) == 0) {
@@ -2432,7 +2432,7 @@ LO_SetEmbedType(LO_EmbedStruct *embed, PRBool is_windowed)
     XP_Rect bbox;
     CL_LayerVTable vtable;
     lo_EmbeddedObjectClosure *closure;
-    CL_Layer *layer = embed->layer;
+    CL_Layer *layer = embed->objTag.layer;
     XP_ASSERT(layer);
     if (! layer)
 	return;
@@ -2463,8 +2463,8 @@ LO_SetEmbedType(LO_EmbedStruct *embed, PRBool is_windowed)
     /* At this point, the size of the plugin is known. */
     bbox.left = 0;
     bbox.top = 0;
-    bbox.right = embed->width;
-    bbox.bottom = embed->height;
+    bbox.right = embed->objTag.width;
+    bbox.bottom = embed->objTag.height;
     CL_SetLayerBbox(layer, &bbox);
 
     if (is_windowed && !CL_GetLayerHidden(layer))

@@ -84,16 +84,16 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 	 * Set up default fields for this object that are common
 	 * to all possible object types.
 	 */
-	object->lo_element.type = LO_NONE;
-	object->lo_element.lo_any.ele_id = NEXT_ELEMENT;
-	object->lo_element.lo_any.x = state->x;
-	object->lo_element.lo_any.x_offset = 0;
-	object->lo_element.lo_any.y = state->y;
-	object->lo_element.lo_any.y_offset = 0;
-	object->lo_element.lo_any.width = 0;
-	object->lo_element.lo_any.height = 0;
-	object->lo_element.lo_any.next = NULL;
-	object->lo_element.lo_any.prev = NULL;
+	object->lo_element.lo_plugin.type = LO_NONE;
+	object->lo_element.lo_plugin.ele_id = NEXT_ELEMENT;
+	object->lo_element.lo_plugin.x = state->x;
+	object->lo_element.lo_plugin.x_offset = 0;
+	object->lo_element.lo_plugin.y = state->y;
+	object->lo_element.lo_plugin.y_offset = 0;
+	object->lo_element.lo_plugin.width = 0;
+	object->lo_element.lo_plugin.height = 0;
+	object->lo_element.lo_plugin.next = NULL;
+	object->lo_element.lo_plugin.prev = NULL;
 
 	
 	/*
@@ -329,7 +329,7 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 
 	if (type == LO_EMBED)
 	{
-		object->lo_element.type = LO_EMBED;
+		object->lo_element.lo_plugin.type = LO_EMBED;
 	}
 #ifdef JAVA
 	else if (type == LO_JAVA)
@@ -343,7 +343,7 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 			if (state->current_java != NULL)
 				lo_CloseJavaApp(context, state, state->current_java);
 				
-			object->lo_element.type = LO_JAVA;
+			object->lo_element.lo_plugin.type = LO_JAVA;
 			lo_FormatJavaObject(context, state, tag, (LO_JavaAppStruct*) object);
 			
 			/* 
@@ -363,7 +363,7 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 #if 0
 	else if (type == LO_IMAGE)
 	{
-		object->type = LO_IMAGE;
+		object->lo_element.lo_plugin.type = LO_IMAGE;
 		lo_FormatImageObject(context, state, tag, (LO_ImageStruct*) object);
 	}
 #endif /* if 0 */
@@ -404,7 +404,7 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 			/*
 			 * Otherwise we just don't know what to do with this!
 			 */
-			object->lo_element.type = LO_UNKNOWN;
+			object->lo_element.lo_plugin.type = LO_UNKNOWN;
 		}
 	}
 }
@@ -762,13 +762,13 @@ lo_CheckObjectBlockage(MWContext* context, lo_DocState* state, lo_ObjectStack* t
 		 */
 		if (top->data_url != NULL)
 		{
-			XP_ASSERT(object->lo_element.type == LO_NONE);
+			XP_ASSERT(object->lo_element.lo_plugin.type == LO_NONE);
 			lo_FetchObjectData(context, state, top);
 		}
 		else
 		{
 			XP_ASSERT(FALSE);
-			object->lo_element.type = LO_UNKNOWN;
+			object->lo_element.lo_plugin.type = LO_UNKNOWN;
 		}
 		
 		return TRUE;	/* Yes, we're the cause of the blockage */
@@ -822,7 +822,7 @@ lo_ProcessObjectTag(MWContext* context, lo_DocState* state, PA_Tag* tag, XP_Bool
 		 */
 		if (blocked == FALSE)
 		{
-			if (object == NULL || object->lo_element.type == LO_UNKNOWN)
+			if (object == NULL || object->lo_element.lo_plugin.type == LO_UNKNOWN)
 			{
 				lo_FormatObject(context, state, tag);
 
@@ -878,7 +878,7 @@ lo_ProcessObjectTag(MWContext* context, lo_DocState* state, PA_Tag* tag, XP_Bool
 				 */
 				 if (object != NULL && top->formatted_object == FALSE)
 				 {
-					if (object->lo_element.type == LO_EMBED)
+					if (object->lo_element.lo_plugin.type == LO_EMBED)
 					{
 #ifdef OJI
 						lo_FormatEmbedObject(context,
@@ -909,7 +909,7 @@ lo_ProcessObjectTag(MWContext* context, lo_DocState* state, PA_Tag* tag, XP_Bool
 #endif /* OJI */
 					}
 #ifdef JAVA
-					else if (object->lo_element.type == LO_JAVA)
+					else if (object->lo_element.lo_plugin.type == LO_JAVA)
 					{
 						lo_CloseJavaApp(context, state, (LO_JavaAppStruct*) object);
 					}
@@ -1046,7 +1046,7 @@ LO_NewObjectStream(FO_Present_Types format_out, void* type,
 			XP_FREE(pluginName);
 
 			/* Now we know the object type */
-			top->object->lo_element.type = LO_EMBED;
+			top->object->lo_element.lo_plugin.type = LO_EMBED;
 			
 #ifdef OJI
 			lo_FormatEmbedObject(top->context,
@@ -1076,7 +1076,7 @@ LO_NewObjectStream(FO_Present_Types format_out, void* type,
 			top->formatted_object = TRUE;
 
 			/* Set the FE data that libplug expects */
-		    urls->fe_data = top->object->lo_element.lo_embed.FE_Data;
+		    urls->fe_data = top->object->lo_element.lo_plugin.FE_Data;
 
 		    /* Set the exit routine that libplug expects */
 		    NET_SetNewContext(urls, context, NPL_EmbedURLExit);
@@ -1117,7 +1117,7 @@ lo_ObjectURLExit(URL_Struct* urls, int status, MWContext* context)
     		LO_ObjectStruct* object = stack->object;
     		if (object != NULL)
     		{
-				object->lo_element.type = LO_UNKNOWN;
+				object->lo_element.lo_plugin.type = LO_UNKNOWN;
 				lo_ClearObjectBlock(context, object);
 			}
 		}
