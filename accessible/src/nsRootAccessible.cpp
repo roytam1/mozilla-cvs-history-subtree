@@ -44,6 +44,7 @@
 #include "nsIAccessibleSelectable.h"
 #include "nsIDOMHTMLCollection.h"
 #include "nsLayoutAtoms.h"
+#include "nsXPIDLString.h"
 
 NS_INTERFACE_MAP_BEGIN(nsRootAccessible)
   NS_INTERFACE_MAP_ENTRY(nsIAccessibleDocument)
@@ -368,8 +369,8 @@ nsDocAccessibleMixin::~nsDocAccessibleMixin()
 NS_IMETHODIMP nsDocAccessibleMixin::GetURL(PRUnichar **aURL)
 {  
   nsCOMPtr<nsIURI> pURI(mDocument->GetDocumentURL());
-  char *path;
-  pURI->GetSpec(&path);
+  nsXPIDLCString path;
+  pURI->GetSpec(getter_Copies(path));
   *aURL = ToNewUnicode(nsDependentCString(path));
   return NS_OK;
 }

@@ -39,17 +39,12 @@ nsLinkableAccessible(aDomNode, aShell), mAccParent(aAccParent)
 }
 
 /* wstring getAccName (); */
-NS_IMETHODIMP nsHTMLAreaAccessible::GetAccName(PRUnichar **_retval)
+NS_IMETHODIMP nsHTMLAreaAccessible::GetAccName(nsAWritableString & _retval)
 {
-  *_retval = 0;
   nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(mDOMNode));
   if (elt) {
     nsAutoString hrefString;
-    elt->GetAttribute(NS_LITERAL_STRING("title"), hrefString);
-    if (!hrefString.IsEmpty()) {
-      *_retval = hrefString.ToNewUnicode();
-      return NS_OK;
-    }
+    elt->GetAttribute(NS_LITERAL_STRING("title"), _retval);
   }
   return NS_OK;
 }

@@ -26,6 +26,7 @@
 
 #include "nsISupports.idl"
 #include "nsIDOMNode.idl"
+#include "domstubs.idl"
 
 [scriptable, uuid(B26FBE47-9A5F-42a1-822B-082461AE4D6D)]
 interface nsIAccessible : nsISupports
