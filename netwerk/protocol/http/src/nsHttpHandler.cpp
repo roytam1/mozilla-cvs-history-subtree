@@ -3,6 +3,7 @@
 #include "nsHttpChannel.h"
 #include "nsHttpConnection.h"
 #include "nsHttpResponseHead.h"
+#include "nsHttpTransaction.h"
 #include "nsIURL.h"
 #include "nsICacheService.h"
 #include "nsICategoryManager.h"
@@ -543,9 +544,9 @@ nsHttpHandler::InitUserAgentComponents()
     if (GetVersionEx(&info)) {
         if (info.dwPlatformId == VER_PLATFORM_WIN32_NT) {
             if (info.dwMajorVersion      == 3)
-                mAppOSCPU = "WinNT3.51";
+                mOscpu = "WinNT3.51";
             else if (info.dwMajorVersion == 4)
-                mAppOSCPU = "WinNT4.0";
+                mOscpu = "WinNT4.0";
             else if (info.dwMajorVersion >= 5) {
                 char *buf = PR_smprintf("Windows NT %ld.%ld",
                                         info.dwMajorVersion,

@@ -37,18 +37,15 @@ LIBRARY_NAME=nkhttp_s
 LCFLAGS = -DWIN32_LEAN_AND_MEAN -D_IMPL_NS_NET
 
 CPP_OBJS=		\
-	.\$(OBJDIR)\nsHTTPSHandler.obj		\
-	.\$(OBJDIR)\nsHTTPHandler.obj		\
-	.\$(OBJDIR)\nsHTTPChannel.obj		\
-	.\$(OBJDIR)\nsHTTPRequest.obj		\
-	.\$(OBJDIR)\nsHTTPResponseListener.obj	\
-	.\$(OBJDIR)\nsHTTPResponse.obj		\
-	.\$(OBJDIR)\nsHTTPHeaderArray.obj	\
-	.\$(OBJDIR)\nsHTTPAtoms.obj		\
-	.\$(OBJDIR)\nsHTTPEncodeStream.obj	\
-	.\$(OBJDIR)\nsBasicAuth.obj		\
-	.\$(OBJDIR)\nsAuth.obj          	\
-	.\$(OBJDIR)\nsAuthEngine.obj		\
+	.\$(OBJDIR)\nsHttpHandler.obj		\
+	.\$(OBJDIR)\nsHttpChannel.obj		\
+	.\$(OBJDIR)\nsHttpHeaderArray.obj	\
+	.\$(OBJDIR)\nsHttp.obj		\
+    .\$(OBJDIR)\nsHttpTransaction.obj \
+    .\$(OBJDIR)\nsHttpRequestHead.obj \
+    .\$(OBJDIR)\nsHttpResponseHead.obj \
+    .\$(OBJDIR)\nsHttpConnection.obj \
+    .\$(OBJDIR)\nsHttpChunkedDecoder.obj \
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak> 

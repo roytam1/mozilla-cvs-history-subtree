@@ -1,7 +1,6 @@
 #ifndef nsHttpHandler_h__
 #define nsHttpHandler_h__
 
-#include "nsHttpTransaction.h"
 #include "nsIHttpProtocolHandler.h"
 #include "nsIProtocolProxyService.h"
 #include "nsIPref.h"
@@ -14,6 +13,7 @@
 class nsHttpConnection;
 class nsHttpConnectionInfo;
 class nsHttpHeaderArray;
+class nsHttpTransaction;
 
 //-----------------------------------------------------------------------------
 // nsHttpHandler - protocol handler for HTTP and HTTPS

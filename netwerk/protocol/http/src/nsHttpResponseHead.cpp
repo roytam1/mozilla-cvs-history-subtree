@@ -1,5 +1,5 @@
 #include "nsHttpResponseHead.h"
-#include "nsPrintfCString.h"
+#include "prprf.h"
 
 //-----------------------------------------------------------------------------
 // nsHttpResponseHead
@@ -17,7 +17,10 @@ nsHttpResponseHead::Flatten(nsACString &buf)
     else
         buf.Append("1.0 ");
 
-    buf.Append(nsPrintfCString("%d", mStatus));
+    char b[32];
+    PR_snprintf(b, sizeof(b), "%d", mStatus);
+
+    buf.Append(b);
     buf.Append(' ');
     buf.Append(mStatusText);
     buf.Append("\r\n");
