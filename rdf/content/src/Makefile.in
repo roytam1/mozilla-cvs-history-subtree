@@ -41,6 +41,7 @@ CPPSRCS		= \
 		nsXULContentSink.cpp \
 		nsXULContentUtils.cpp \
 		nsXULDocument.cpp \
+		nsXULDocumentBuilder.cpp \
 		nsXULSortService.cpp \
 		nsXULDocumentInfo.cpp \
 		nsXULPopupListener.cpp \
@@ -49,6 +50,8 @@ CPPSRCS		= \
 		nsXULKeyListener.cpp \
 		nsXULTreeElement.cpp \
 		nsXULEditorElement.cpp \
+		nsXULPrototypeDocument.cpp \
+		nsXULPrototypeCache.cpp \
 		$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a static lib.
