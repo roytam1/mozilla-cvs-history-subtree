@@ -36,35 +36,24 @@ interface nsIStreamIO;
 typedef unsigned long nsLoadFlags;
 
 /**
- * The nsIChannel interface allows the user to construct I/O requests for
+ * The nsIChannel interface allows the user to construct get requests for
  * specific protocols, and manage them in a uniform way. Once a channel
  * is created (via nsIIOService::NewChannel), parameters for that request
  * may be set by using the channel attributes, or by QueryInterfacing to a
  * subclass of nsIChannel for protocol-specific parameters. Then the actual
  * request can be issued in one of several ways:
  *
- *      - AsyncRead and AsyncWrite allow for asynchronous requests, calling
- *        back the user's stream listener or provider,
- *      - OpenInputStream and OpenOutputStream allow for synchronous reads
- *        and writes on the underlying channel.
+ *      - AsyncOpen is used for asynchronous reading, calling back the
+ *        user's stream listener.
+ *      - Open is used for synchronous read on the underlying channel.
  *
  * After a request has been completed, the channel is still valid for
  * accessing protocol-specific results. For example, QueryInterfacing to 
  * nsIHTTPChannel allows response headers to be retrieved that result from
  * http transactions. 
  *
- * Note that a channel is really only valid for one request. Reusing a channel
- * after a request has completed for a subsequent request may have undefined
- * results, depending on the channel implementation.
- *
- * Also of note are a special kind of channel called "transports." Transports
- * also implement the nsIChannel interface, but operate at a lower level from
- * protocol channels. The socket and file transports are notable implementations
- * of transports and allow higher level channels to be implemented. The cache
- * may also behave as a transport, and possibly things like sound playing services
- * etc. Transports usually operate in a separate thread and often multiplex
- * multiple requests for the same kind of service or resources. 
  */
+
 [scriptable, uuid(1788e79e-f947-11d3-8cda-0060b0fc14a3)]
 interface nsIChannel : nsIRequest
 {
@@ -142,14 +131,19 @@ interface nsIChannel : nsIRequest
      */
     attribute long contentLength;
 
-
+    /**
+     * Open is used for synchronous read on the channel.
+     **/
     nsIInputStream open();
 
-    void asyncOpen(in nsIStreamListener listener,
-                   in nsISupports ctxt);
+    /** AsyncOpen is used for asynchronous reading, calling back the
+     *  user's stream listener.
+     **/
+    void asyncOpen(in nsIStreamListener listener, in nsISupports ctxt);
+
 
     ////////////////////////////////////////////////////////////////////////////
-    // Load attribute flags. These may be or'd together.
+    // Below are Load attribute flags which may be or'd together.
     ////////////////////////////////////////////////////////////////////////////
     /**
      * Note that more will follow for each protocol's implementation of a channel, 
@@ -180,14 +174,6 @@ interface nsIChannel : nsIRequest
      * it's content, this flag will be set:
      */
     const unsigned long LOAD_RETARGETED_DOCUMENT_URI = 1 << 2;
-
-    /**
-     * Causes the load of a URL (issued via AsyncRead or AsyncWrite) to be
-     * deferred in order to allow the request to be pipelined for greater
-     * throughput efficiency. Pipelined requests will be forced to load
-     * when the first non-pipelined request is issued.
-     */
-    const unsigned long ALLOW_PIPELINING = 1 << 3;
 
     ////////////////////////////////////////////////////////////////////////////
     /**
