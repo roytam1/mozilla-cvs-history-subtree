@@ -597,7 +597,7 @@ var BookmarksCommand = {
       var urlArc   = RDF.GetResource(NC_NS+"URL");
       RDFC.Init(BMDS, resource);
       var containerChildren = RDFC.GetElements();
-      var tabPanels = browser.mPanelContainer.childNodes;
+      var tabPanels = browser.browsers;
       var tabCount  = tabPanels.length;
       var doReplace = PREF.getBoolPref("browser.tabs.loadFolderAndReplace");
       var loadInBackground = PREF.getBoolPref("browser.tabs.loadBookmarksInBackground");
