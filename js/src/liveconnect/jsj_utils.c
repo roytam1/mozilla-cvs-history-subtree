@@ -209,10 +209,9 @@ get_java_stack_trace(JSContext *cx, JNIEnv *jEnv, jthrowable java_exception)
 static void
 vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
 {
-    JSObject *js_obj;
-    JavaObjectWrapper *java_wrapper; 
-    JavaClassDescriptor *class_descriptor;
     jobject java_obj;
+    jclass java_class;
+    JavaClassDescriptor *class_descriptor;
     char *error_msg, *js_error_msg;
     const char *java_stack_trace;
     const char *java_error_msg;
@@ -224,8 +223,11 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
     java_obj = NULL;
     java_error_msg = error_msg = NULL;
     java_exception = (*jEnv)->ExceptionOccurred(jEnv);
+
     if (java_exception) {
 
+        (*jEnv)->ExceptionClear(jEnv);
+        
         /* Check for JSException */
         if (njJSException && 
             (*jEnv)->IsInstanceOf(jEnv, java_exception, njJSException)) {
@@ -239,30 +241,66 @@ vreport_java_error(JSContext *cx, JNIEnv *jEnv, const char *format, va_list ap)
                     (*jEnv)->GetObjectField(jEnv, java_exception, 
                                             njJSException_wrappedException);
 
-                if (!jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_obj, 
-                                                        &js_exception)) 
-                    goto do_report;
-                
-            } else {
-                if (!JSJ_ConvertJavaObjectToJSValue(cx, java_exception,
-                                                    &js_exception))
-                    goto do_report;
+                java_class = (*jEnv)->GetObjectClass(jEnv, java_obj); 
+                class_descriptor = jsj_GetJavaClassDescriptor(cx, jEnv, java_class); 
+                (*jEnv)->DeleteLocalRef(jEnv, java_class); 
+
+                /* Convert native JS values back to native types. */
+                switch(wrapped_exception_type) {
+                case JSTYPE_NUMBER:
+                    if (!jsj_ConvertJavaObjectToJSNumber(cx, jEnv,
+                                                         class_descriptor,
+                                                         java_obj, 
+                                                         &js_exception))
+                        goto do_report;
+                    break;
+                case JSTYPE_BOOLEAN:
+                    if (!jsj_ConvertJavaObjectToJSBoolean(cx, jEnv,
+                                                          class_descriptor,
+                                                          java_obj, 
+                                                          &js_exception))
+                        goto do_report;
+                    break;
+                case JSTYPE_STRING:
+                    if (!jsj_ConvertJavaObjectToJSString(cx, jEnv,
+                                                         class_descriptor,
+                                                         java_obj, 
+                                                         &js_exception))
+                        goto do_report;
+                    break;
+                case JSTYPE_OBJECT:
+                case JSTYPE_VOID:
+                case JSTYPE_FUNCTION:
+                case JSTYPE_LIMIT:
+                default:
+                    if ((*jEnv)->IsInstanceOf(jEnv, java_obj, njJSObject)) {
+                        js_exception = OBJECT_TO_JSVAL(jsj_UnwrapJSObjectWrapper(jEnv, java_obj));
+                        if (!js_exception)
+                            goto do_report;                        
+                    } else {
+                        if (!jsj_ConvertJavaObjectToJSValue(cx, jEnv, java_obj, 
+                                                            &js_exception)) 
+                            goto do_report;
+                    }
+                }
             }
-            
         /* Check for internal exception */
         } else {
             if (!JSJ_ConvertJavaObjectToJSValue(cx, java_exception,
-                                                &js_exception))
+                                                &js_exception)) {
                 goto do_report;
+            }
         }
         
         /* Set pending JS exception and clear the java exception. */
+        jsj_ReleaseJavaClassDescriptor(cx, jEnv, class_descriptor);
         JS_SetPendingException(cx, js_exception);                        
         goto done;
     }
 
 do_report:
 
+    jsj_ReleaseJavaClassDescriptor(cx, jEnv, class_descriptor);
     js_error_msg = JS_vsmprintf(format, ap);
 
     if (!js_error_msg) {
