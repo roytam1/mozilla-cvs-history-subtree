@@ -26,6 +26,19 @@
 
 %{ C++
 #include "nsAWritableString.h"
+
+inline PRBool DOMStringIsNull(const nsAReadableString& aString)
+{
+  // Null string code goes here.
+
+  return PR_FALSE;
+}
+
+inline void SetDOMStringToNull(nsAWritableString& aString)
+{
+  // Set aString to null here.
+}
+
 %}
 
 
