@@ -343,25 +343,6 @@ nsHTMLEditRules::BeforeEdit(PRInt32 action, nsIEditor::EDirection aDirection)
     // clear deletion state bool
     mDidDeleteSelection = PR_FALSE;
     
-    // HACK:  all sorts of hurt for managing typeinstate.  If we are deleting,
-    // or doing a block operation, clear the type in state
-    if ((action == nsEditor::kOpDeleteText)          || 
-        (action == nsEditor::kOpDeleteSelection)     ||
-        (action == nsHTMLEditor::kOpMakeList)        ||
-        (action == nsHTMLEditor::kOpIndent)          ||
-        (action == nsHTMLEditor::kOpOutdent)         ||
-        (action == nsHTMLEditor::kOpAlign)           ||
-        (action == nsHTMLEditor::kOpMakeBasicBlock)  ||
-        (action == nsHTMLEditor::kOpRemoveList)      ||
-        (action == nsHTMLEditor::kOpMakeDefListItem) ||
-        (action == nsHTMLEditor::kOpInsertElement)   ||
-        (action == nsHTMLEditor::kOpInsertQuotation) ||
-        (action == nsHTMLEditor::kOpInsertBreak)     ||
-        (action == nsHTMLEditor::kOpInsertBreak))
-    {
-      mHTMLEditor->mTypeInState->Reset();
-    }
-    
     // clear out mDocChangeRange and mUtilRange
     nsCOMPtr<nsIDOMNSRange> nsrange;
     if(mDocChangeRange)
@@ -7099,6 +7080,12 @@ nsHTMLEditRules::ReapplyCachedStyles()
   // and see if any have been removed.  If so, add typeinstate
   // for them, so that they will be reinserted when new 
   // content is added.
+  
+  // When we apply cached styles to TypeInState, we always want
+  // to blow away prior TypeInState:
+  mHTMLEditor->mTypeInState->Reset();
+
+  // remember if we are in css mode
   PRBool useCSS;
   mHTMLEditor->GetIsCSSEnabled(&useCSS);
 
@@ -7118,6 +7105,8 @@ nsHTMLEditRules::ReapplyCachedStyles()
     if (mCachedStyles[j].mPresent)
     {
       PRBool bFirst, bAny, bAll;
+      bFirst = bAny = bAll = PR_FALSE;
+      
       nsAutoString curValue;
       if (useCSS) // check computed style first in css case
       {
