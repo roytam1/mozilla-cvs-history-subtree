@@ -4570,6 +4570,9 @@ nsXULDocument::EndFastLoad()
 nsresult
 nsXULDocument::AbortFastLoads()
 {
+#ifdef DEBUG_brendan
+    NS_BREAK();
+#endif
     while (gFastLoadList)
         gFastLoadList->EndFastLoad();
     NS_ASSERTION(gFastLoadDone, "not gFastLoadDone after Abort!");
@@ -5412,7 +5415,7 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
     PRBool useXULCache;
     gXULCache->GetEnabled(&useXULCache);
 
-    if (useXULCache && IsChromeURI(aScriptProto->mSrcURI)) {
+    if (useXULCache) {
         gXULCache->GetScript(aScriptProto->mSrcURI,
                              NS_REINTERPRET_CAST(void**, &aScriptProto->mJSObject));
 
@@ -5527,6 +5530,8 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
         // End muxing the .js file into the FastLoad file.  We don't Abort
         // the FastLoad process here, when writing, as we do when reading.
         // XXXbe maybe we should...
+        // NB: we don't need to re-select mDocumentURL either, because scripts
+        //     load after the including prototype document has fully loaded.
         if (mIsFastLoad)
             gFastLoadService->EndMuxedDocument(uri);
 
