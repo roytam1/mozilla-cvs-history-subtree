@@ -76,12 +76,6 @@ struct sec_pkcs7_cipher_object {
     unsigned char pending_buf[BLOCK_SIZE];
 };
 
-SEC_ASN1_MKSUB(CERT_IssuerAndSNTemplate)
-SEC_ASN1_MKSUB(CERT_SetOfSignedCrlTemplate)
-SEC_ASN1_MKSUB(SECOID_AlgorithmIDTemplate)
-SEC_ASN1_MKSUB(SEC_OctetStringTemplate)
-SEC_ASN1_MKSUB(SEC_SetOfAnyTemplate)
-
 /*
  * Create a cipher object to do decryption,  based on the given bulk
  * encryption key and algorithm identifier (which may include an iv).
@@ -906,7 +900,7 @@ sec_attr_choose_attr_value_template(void *src_or_dest, PRBool encoding)
     attribute = (SEC_PKCS7Attribute*)src_or_dest;
 
     if (encoding && attribute->encoded)
-	return SEC_ASN1_GET(SEC_AnyTemplate);
+	return SEC_AnyTemplate;
 
     oiddata = attribute->typeTag;
     if (oiddata == NULL) {
@@ -916,30 +910,30 @@ sec_attr_choose_attr_value_template(void *src_or_dest, PRBool encoding)
 
     if (oiddata == NULL) {
 	encoded = PR_TRUE;
-	theTemplate = SEC_ASN1_GET(SEC_AnyTemplate);
+	theTemplate = SEC_AnyTemplate;
     } else {
 	switch (oiddata->offset) {
 	  default:
 	    encoded = PR_TRUE;
-	    theTemplate = SEC_ASN1_GET(SEC_AnyTemplate);
+	    theTemplate = SEC_AnyTemplate;
 	    break;
 	  case SEC_OID_PKCS9_EMAIL_ADDRESS:
 	  case SEC_OID_RFC1274_MAIL:
 	  case SEC_OID_PKCS9_UNSTRUCTURED_NAME:
 	    encoded = PR_FALSE;
-	    theTemplate = SEC_ASN1_GET(SEC_IA5StringTemplate);
+	    theTemplate = SEC_IA5StringTemplate;
 	    break;
 	  case SEC_OID_PKCS9_CONTENT_TYPE:
 	    encoded = PR_FALSE;
-	    theTemplate = SEC_ASN1_GET(SEC_ObjectIDTemplate);
+	    theTemplate = SEC_ObjectIDTemplate;
 	    break;
 	  case SEC_OID_PKCS9_MESSAGE_DIGEST:
 	    encoded = PR_FALSE;
-	    theTemplate = SEC_ASN1_GET(SEC_OctetStringTemplate);
+	    theTemplate = SEC_OctetStringTemplate;
 	    break;
 	  case SEC_OID_PKCS9_SIGNING_TIME:
 	    encoded = PR_FALSE;
-	    theTemplate = SEC_ASN1_GET(SEC_UTCTimeTemplate);
+	    theTemplate = SEC_UTCTimeTemplate;
 	    break;
 	  /* XXX Want other types here, too */
 	}
@@ -964,7 +958,7 @@ sec_attr_choose_attr_value_template(void *src_or_dest, PRBool encoding)
     return theTemplate;
 }
 
-static const SEC_ASN1TemplateChooserPtr sec_attr_chooser
+static SEC_ChooseASN1TemplateFunc sec_attr_chooser
 	= sec_attr_choose_attr_value_template;
 
 static const SEC_ASN1Template sec_pkcs7_attribute_template[] = {
@@ -1152,7 +1146,7 @@ sec_PKCS7ReorderAttributes (SEC_PKCS7Attribute **attrs)
 static const SEC_ASN1Template *
 sec_pkcs7_choose_content_template(void *src_or_dest, PRBool encoding);
 
-static const SEC_ASN1TemplateChooserPtr sec_pkcs7_chooser
+static SEC_ChooseASN1TemplateFunc sec_pkcs7_chooser
 	= sec_pkcs7_choose_content_template;
 
 const SEC_ASN1Template sec_PKCS7ContentInfoTemplate[] = {
@@ -1174,18 +1168,18 @@ static const SEC_ASN1Template SEC_PKCS7SignerInfoTemplate[] = {
 	  0, NULL, sizeof(SEC_PKCS7SignerInfo) },
     { SEC_ASN1_INTEGER,
 	  offsetof(SEC_PKCS7SignerInfo,version) },
-    { SEC_ASN1_POINTER | SEC_ASN1_XTRN,
+    { SEC_ASN1_POINTER,
 	  offsetof(SEC_PKCS7SignerInfo,issuerAndSN),
-	  SEC_ASN1_SUB(CERT_IssuerAndSNTemplate) },
-    { SEC_ASN1_INLINE | SEC_ASN1_XTRN,
+	  CERT_IssuerAndSNTemplate },
+    { SEC_ASN1_INLINE,
 	  offsetof(SEC_PKCS7SignerInfo,digestAlg),
-	  SEC_ASN1_SUB(SECOID_AlgorithmIDTemplate) },
+	  SECOID_AlgorithmIDTemplate },
     { SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC | 0,
 	  offsetof(SEC_PKCS7SignerInfo,authAttr),
 	  sec_pkcs7_set_of_attribute_template },
-    { SEC_ASN1_INLINE | SEC_ASN1_XTRN,
+    { SEC_ASN1_INLINE,
 	  offsetof(SEC_PKCS7SignerInfo,digestEncAlg),
-	  SEC_ASN1_SUB(SECOID_AlgorithmIDTemplate) },
+	  SECOID_AlgorithmIDTemplate },
     { SEC_ASN1_OCTET_STRING,
 	  offsetof(SEC_PKCS7SignerInfo,encDigest) },
     { SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC | 1,
@@ -1199,20 +1193,18 @@ static const SEC_ASN1Template SEC_PKCS7SignedDataTemplate[] = {
 	  0, NULL, sizeof(SEC_PKCS7SignedData) },
     { SEC_ASN1_INTEGER,
 	  offsetof(SEC_PKCS7SignedData,version) },
-    { SEC_ASN1_SET_OF | SEC_ASN1_XTRN,
+    { SEC_ASN1_SET_OF,
 	  offsetof(SEC_PKCS7SignedData,digestAlgorithms),
-	  SEC_ASN1_SUB(SECOID_AlgorithmIDTemplate) },
+	  SECOID_AlgorithmIDTemplate },
     { SEC_ASN1_INLINE,
 	  offsetof(SEC_PKCS7SignedData,contentInfo),
 	  sec_PKCS7ContentInfoTemplate },
-    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC  |
-      SEC_ASN1_XTRN | 0,
+    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC | 0,
 	  offsetof(SEC_PKCS7SignedData,rawCerts),
-	  SEC_ASN1_SUB(SEC_SetOfAnyTemplate) },
-    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC  |
-      SEC_ASN1_XTRN | 1,
+	  SEC_SetOfAnyTemplate },
+    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC | 1,
 	  offsetof(SEC_PKCS7SignedData,crls),
-	  SEC_ASN1_SUB(CERT_SetOfSignedCrlTemplate) },
+	  CERT_SetOfSignedCrlTemplate },
     { SEC_ASN1_SET_OF,
 	  offsetof(SEC_PKCS7SignedData,signerInfos),
 	  SEC_PKCS7SignerInfoTemplate },
@@ -1228,12 +1220,12 @@ static const SEC_ASN1Template SEC_PKCS7RecipientInfoTemplate[] = {
 	  0, NULL, sizeof(SEC_PKCS7RecipientInfo) },
     { SEC_ASN1_INTEGER,
 	  offsetof(SEC_PKCS7RecipientInfo,version) },
-    { SEC_ASN1_POINTER | SEC_ASN1_XTRN,
+    { SEC_ASN1_POINTER,
 	  offsetof(SEC_PKCS7RecipientInfo,issuerAndSN),
-	  SEC_ASN1_SUB(CERT_IssuerAndSNTemplate) },
-    { SEC_ASN1_INLINE | SEC_ASN1_XTRN,
+	  CERT_IssuerAndSNTemplate },
+    { SEC_ASN1_INLINE,
 	  offsetof(SEC_PKCS7RecipientInfo,keyEncAlg),
-	  SEC_ASN1_SUB(SECOID_AlgorithmIDTemplate) },
+	  SECOID_AlgorithmIDTemplate },
     { SEC_ASN1_OCTET_STRING,
 	  offsetof(SEC_PKCS7RecipientInfo,encKey) },
     { 0 }
@@ -1244,13 +1236,12 @@ static const SEC_ASN1Template SEC_PKCS7EncryptedContentInfoTemplate[] = {
 	  0, NULL, sizeof(SEC_PKCS7EncryptedContentInfo) },
     { SEC_ASN1_OBJECT_ID,
 	  offsetof(SEC_PKCS7EncryptedContentInfo,contentType) },
-    { SEC_ASN1_INLINE | SEC_ASN1_XTRN,
+    { SEC_ASN1_INLINE,
 	  offsetof(SEC_PKCS7EncryptedContentInfo,contentEncAlg),
-	  SEC_ASN1_SUB(SECOID_AlgorithmIDTemplate) },
-    { SEC_ASN1_OPTIONAL | SEC_ASN1_MAY_STREAM | SEC_ASN1_CONTEXT_SPECIFIC |
-      SEC_ASN1_XTRN | 0,
+	  SECOID_AlgorithmIDTemplate },
+    { SEC_ASN1_OPTIONAL | SEC_ASN1_MAY_STREAM | SEC_ASN1_CONTEXT_SPECIFIC | 0,
 	  offsetof(SEC_PKCS7EncryptedContentInfo,encContent),
-	  SEC_ASN1_SUB(SEC_OctetStringTemplate) },
+	  SEC_OctetStringTemplate },
     { 0 }
 };
 
@@ -1280,20 +1271,18 @@ static const SEC_ASN1Template SEC_PKCS7SignedAndEnvelopedDataTemplate[] = {
     { SEC_ASN1_SET_OF,
 	  offsetof(SEC_PKCS7SignedAndEnvelopedData,recipientInfos),
 	  SEC_PKCS7RecipientInfoTemplate },
-    { SEC_ASN1_SET_OF | SEC_ASN1_XTRN,
+    { SEC_ASN1_SET_OF,
 	  offsetof(SEC_PKCS7SignedAndEnvelopedData,digestAlgorithms),
-	  SEC_ASN1_SUB(SECOID_AlgorithmIDTemplate) },
+	  SECOID_AlgorithmIDTemplate },
     { SEC_ASN1_INLINE,
 	  offsetof(SEC_PKCS7SignedAndEnvelopedData,encContentInfo),
 	  SEC_PKCS7EncryptedContentInfoTemplate },
-    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC |
-      SEC_ASN1_XTRN | 0,
+    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC | 0,
 	  offsetof(SEC_PKCS7SignedAndEnvelopedData,rawCerts),
-	  SEC_ASN1_SUB(SEC_SetOfAnyTemplate) },
-    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC |
-      SEC_ASN1_XTRN | 1,
+	  SEC_SetOfAnyTemplate },
+    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC | 1,
 	  offsetof(SEC_PKCS7SignedAndEnvelopedData,crls),
-	  SEC_ASN1_SUB(CERT_SetOfSignedCrlTemplate) },
+	  CERT_SetOfSignedCrlTemplate },
     { SEC_ASN1_SET_OF,
 	  offsetof(SEC_PKCS7SignedAndEnvelopedData,signerInfos),
 	  SEC_PKCS7SignerInfoTemplate },
@@ -1310,9 +1299,9 @@ static const SEC_ASN1Template SEC_PKCS7DigestedDataTemplate[] = {
 	  0, NULL, sizeof(SEC_PKCS7DigestedData) },
     { SEC_ASN1_INTEGER,
 	  offsetof(SEC_PKCS7DigestedData,version) },
-    { SEC_ASN1_INLINE | SEC_ASN1_XTRN,
+    { SEC_ASN1_INLINE,
 	  offsetof(SEC_PKCS7DigestedData,digestAlg),
-	  SEC_ASN1_SUB(SECOID_AlgorithmIDTemplate) },
+	  SECOID_AlgorithmIDTemplate },
     { SEC_ASN1_INLINE,
 	  offsetof(SEC_PKCS7DigestedData,contentInfo),
 	  sec_PKCS7ContentInfoTemplate },
@@ -1412,10 +1401,10 @@ sec_pkcs7_choose_content_template(void *src_or_dest, PRBool encoding)
     kind = SEC_PKCS7ContentType (cinfo);
     switch (kind) {
       default:
-	theTemplate = SEC_ASN1_GET(SEC_PointerToAnyTemplate);
+	theTemplate = SEC_PointerToAnyTemplate;
 	break;
       case SEC_OID_PKCS7_DATA:
-	theTemplate = SEC_ASN1_GET(SEC_PointerToOctetStringTemplate);
+	theTemplate = SEC_PointerToOctetStringTemplate;
 	break;
       case SEC_OID_PKCS7_SIGNED_DATA:
 	theTemplate = SEC_PointerToPKCS7SignedDataTemplate;

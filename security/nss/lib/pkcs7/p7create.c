@@ -47,7 +47,6 @@
 #include "pk11func.h"
 #include "prtime.h"
 #include "secerr.h"
-#include "secder.h"
 
 static SECStatus
 sec_pkcs7_init_content_info (SEC_PKCS7ContentInfo *cinfo, PRArenaPool *poolp,

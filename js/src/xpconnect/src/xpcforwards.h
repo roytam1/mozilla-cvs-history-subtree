@@ -43,20 +43,33 @@
 class nsXPConnect;
 class XPCJSRuntime;
 class XPCContext;
+class XPCCallContext;
+
+class XPCPerThreadData;
+class XPCJSThrower;
+class XPCJSStack;
+
+class nsXPCWrappedJS;
+class nsXPCWrappedJSClass;
+
+class XPCCallableInfo;
+class XPCNativeMember;
+class XPCNativeInterface;
+class XPCNativeSet;
+
+class XPCWrappedNative;
+class XPCWrappedNativeProto;
+class XPCWrappedNativeTearOff;
+class XPCNativeScriptableInfo;
+
 class JSObject2WrappedJSMap;
 class Native2WrappedNativeMap;
 class IID2WrappedJSClassMap;
-class IID2WrappedNativeClassMap;
 class JSContext2XPCContextMap;
-
-class nsXPCWrappedJS;
-class nsXPCWrappedNative;
-class nsXPCWrappedJSClass;
-class nsXPCWrappedNativeClass;
-class nsXPCWrappedNativeScope;
-class XPCJSThrower;
-class XPCJSStack;
-class XPCNativeMemberDescriptor;
+class IID2NativeInterfaceMap;
+class ClassInfo2NativeSetMap;
+class ClassInfo2WrappedNativeProtoMap;
+class NativeSetMap;
 
 class nsXPCComponents;
 class nsXPCComponents_Interfaces;

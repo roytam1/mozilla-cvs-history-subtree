@@ -39,34 +39,6 @@
 
 /***************************************************************************/
 
-AutoPushCallingLangType::AutoPushCallingLangType(JSContext* cx, 
-                                                 XPCContext::LangType type)
-    : mXPCContext(nsXPConnect::GetContext(cx))
-{
-    ctorCommon(type);
-}
-
-AutoPushCallingLangType::AutoPushCallingLangType(XPCContext* xpcc, 
-                                                 XPCContext::LangType type)
-    : mXPCContext(xpcc)
-{
-    ctorCommon(type);
-}
-
-AutoPushCallingLangType::~AutoPushCallingLangType()
-{
-    if(mXPCContext)
-    {
-#ifdef DEBUG
-        XPCContext::LangType type;
-        type = mXPCContext->SetCallingLangType(mOldCallingLangType);
-        NS_ASSERTION(type == mDebugPushedCallingLangType,"call type mismatch");
-#else
-        mXPCContext->SetCallingLangType(mOldCallingLangType);
-#endif
-    }
-}
-
 // static
 XPCContext*
 XPCContext::newXPCContext(XPCJSRuntime* aRuntime,
@@ -74,8 +46,10 @@ XPCContext::newXPCContext(XPCJSRuntime* aRuntime,
 {
     NS_PRECONDITION(aRuntime,"bad param");
     NS_PRECONDITION(aJSContext,"bad param");
+    NS_ASSERTION(JS_GetRuntime(aJSContext) == aRuntime->GetJSRuntime(), 
+                 "XPConnect can not be used on multiple JSRuntimes!");
 
-    return  new XPCContext(aRuntime, aJSContext);
+    return new XPCContext(aRuntime, aJSContext);
 }
 
 XPCContext::XPCContext(XPCJSRuntime* aRuntime,
@@ -123,6 +97,11 @@ XPCContext::DebugDump(PRInt16 depth)
         {
             // XXX show the exception here...                
         }
+
+        XPC_LOG_ALWAYS(("mCallingLangType of %s", 
+                         mCallingLangType == LANG_UNKNOWN ? "LANG_UNKNOWN" :
+                         mCallingLangType == LANG_JS      ? "LANG_JS" :
+                                                            "LANG_NATIVE"));
         XPC_LOG_OUTDENT();
 #endif
 }

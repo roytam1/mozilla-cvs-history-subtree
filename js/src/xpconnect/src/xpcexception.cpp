@@ -55,6 +55,8 @@ static struct ResultMap
     {0,0,0}   // sentinel to mark end of array
 };
 
+#define RESULT_COUNT ((sizeof(map) / sizeof(map[0]))-1)
+
 // static
 JSBool
 nsXPCException::NameAndFormatForNSResult(nsresult rv,
@@ -84,18 +86,28 @@ nsXPCException::IterateNSResults(nsresult* rv,
     ResultMap* p = (ResultMap*) *iterp;
     if(!p)
         p = map;
-    NS_ASSERTION(p->name, "iterated off the end of the array");
-    if(rv)
-        *rv = p->rv;
-    if(name)
-        *name = p->name;
-    if(format)
-        *format = p->format;
-    p++;
+    else
+        p++;
     if(!p->name)
         p = nsnull;
+    else
+    {
+        if(rv)
+            *rv = p->rv;
+        if(name)
+            *name = p->name;
+        if(format)
+            *format = p->format;
+    }
     *iterp = p;
     return p;
+}
+
+// static 
+PRUint32 
+nsXPCException::GetNSResultCount()
+{
+    return RESULT_COUNT;
 }
 
 /***************************************************************************/
@@ -235,11 +247,10 @@ nsXPCException::Initialize(const char *aMessage, nsresult aResult, const char *a
     else
     {
         nsresult rv;
-        nsXPConnect* xpc = nsXPConnect::GetXPConnect();
+        nsCOMPtr<nsXPConnect> xpc(dont_AddRef(nsXPConnect::GetXPConnect()));
         if(!xpc)
             return NS_ERROR_FAILURE;
         rv = xpc->GetCurrentJSStack(&mLocation);
-        NS_RELEASE(xpc);
         if(NS_FAILED(rv))
             return rv;
     }

@@ -131,6 +131,7 @@ interface nsIXPCComponents : nsISupports
     readonly attribute nsIXPCComponents_Constructor Constructor;
 
     boolean isSuccessCode(in nsresult result);
+
     /* 'lastResult' is accessable via JavaScript only */
     /* 'returnCode' is accessable via JavaScript only */
 };

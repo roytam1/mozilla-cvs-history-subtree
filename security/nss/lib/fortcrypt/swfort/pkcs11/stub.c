@@ -238,12 +238,6 @@ PR_Calloc(PRUint32 blocks, PRUint32 bytes) { return calloc(blocks,bytes); }
 PR_IMPLEMENT(void)
 PR_Free(void *ptr) { free(ptr); }
 
-PR_IMPLEMENT(void)
-PR_SetError(PRErrorCode errorCode, PRInt32 oserr) { return; }
-
-PR_IMPLEMENT(void)
-PR_SetErrorText(PRIntn textLength, const char *text) { return; }
-
 
 /* Old template; want to expunge it eventually. */
 #include "secasn1.h"
@@ -266,7 +260,7 @@ PR_IMPLEMENT(PRInt32) PR_AtomicDecrement(PRInt32 *val) { return --(*val); }
 
 PR_IMPLEMENT(PRStatus) PR_Sleep(PRIntervalTime ticks) { return PR_SUCCESS; }
 
-#include "nssilock.h"
+#include "prlock.h"
 #include "fmutex.h"
 PR_IMPLEMENT(PRLock *)
 PR_NewLock(void) {

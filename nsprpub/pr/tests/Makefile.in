@@ -1,36 +1,19 @@
+#
+# The contents of this file are subject to the Netscape Public License
+# Version 1.1 (the "NPL"); you may not use this file except in
+# compliance with the NPL.  You may obtain a copy of the NPL at
+# http://www.mozilla.org/NPL/
 # 
-# The contents of this file are subject to the Mozilla Public
-# License Version 1.1 (the "License"); you may not use this file
-# except in compliance with the License. You may obtain a copy of
-# the License at http://www.mozilla.org/MPL/
+# Software distributed under the NPL is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+# for the specific language governing rights and limitations under the
+# NPL.
 # 
-# Software distributed under the License is distributed on an "AS
-# IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
-# implied. See the License for the specific language governing
-# rights and limitations under the License.
-# 
-# The Original Code is the Netscape Portable Runtime (NSPR).
-# 
-# The Initial Developer of the Original Code is Netscape
-# Communications Corporation.  Portions created by Netscape are 
-# Copyright (C) 1998-2000 Netscape Communications Corporation.  All
-# Rights Reserved.
-# 
-# Contributor(s):
-# 
-# Alternatively, the contents of this file may be used under the
-# terms of the GNU General Public License Version 2 or later (the
-# "GPL"), in which case the provisions of the GPL are applicable 
-# instead of those above.  If you wish to allow use of your 
-# version of this file only under the terms of the GPL and not to
-# allow others to use your version of this file under the MPL,
-# indicate your decision by deleting the provisions above and
-# replace them with the notice and other provisions required by
-# the GPL.  If you do not delete the provisions above, a recipient
-# may use your version of this file under either the MPL or the
-# GPL.
-# 
-
+# The Initial Developer of this code under the NPL is Netscape
+# Communications Corporation.  Portions created by Netscape are
+# Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+# Reserved.
+#
 
 #! gmake
 
@@ -43,16 +26,7 @@ include $(MOD_DEPTH)/config/autoconf.mk
 
 include $(topsrcdir)/config/config.mk
 
-ifeq ($(OS_TARGET), WIN16)
-OS_CFLAGS = $(OS_EXE_CFLAGS)
-W16STDIO = $(MOD_DEPTH)/pr/src/md/windows/$(OBJDIR)/w16stdio.$(OBJ_SUFFIX)
-endif
-
-ifeq ($(OS_TARGET),WIN16)
-DIRS = dll w16gui
-else
 DIRS = dll
-endif
 
 ifeq ($(OS_TARGET),OS2)
 OS_CFLAGS = $(OS_EXE_CFLAGS)
@@ -61,7 +35,6 @@ endif
 CSRCS =             \
 	accept.c		\
 	acceptread.c	\
-	acceptreademu.c	\
 	addrstr.c		\
 	affinity.c		\
 	alarm.c			\
@@ -92,7 +65,6 @@ CSRCS =             \
 	initclk.c		\
 	inrval.c		\
 	instrumt.c      \
-	intrio.c        \
 	intrupt.c       \
 	io_timeout.c    \
 	ioconthr.c      \
@@ -118,7 +90,6 @@ CSRCS =             \
 	nonblock.c		\
 	ntioto.c        \
 	ntoh.c			\
-	obsints.c		\
 	op_2long.c      \
 	op_excl.c		\
 	op_filnf.c		\
@@ -127,12 +98,9 @@ CSRCS =             \
 	op_nofil.c		\
 	openfile.c		\
 	parent.c    	\
-	peek.c    		\
 	perf.c    		\
 	pipeping.c		\
-	pipeping2.c		\
 	pipepong.c		\
-	pipepong2.c		\
 	pipeself.c		\
 	poll_er.c		\
 	poll_nm.c		\
@@ -141,11 +109,9 @@ CSRCS =             \
 	prftest.c		\
 	prftest1.c		\
 	prftest2.c		\
-	primblok.c		\
 	priotest.c		\
 	provider.c		\
 	prpoll.c		\
-	prpollml.c		\
 	ranfile.c       \
 	randseed.c      \
 	rwlocktest.c    \
@@ -154,7 +120,6 @@ CSRCS =             \
 	selct_nm.c	    \
 	selct_to.c	    \
 	select2.c  		\
-	selintr.c  		\
 	sem.c 	  		\
 	sema.c 	  		\
 	semaerr.c 		\
@@ -224,38 +189,16 @@ TARGETS = $(PROGS)
 
 INCLUDES = -I$(includedir) -I$(topsrcdir)/pr/include -I$(topsrcdir)/pr/include/private
 
-# Setting the variables LDOPTS and LIBPR.  We first initialize
-# them to the default values, then adjust them for some platforms.
-LDOPTS = -L$(libdir)
-LIBPR = -lnspr$(MOD_VERSION)
-LIBPLC = -lplc$(MOD_VERSION)
-
-ifndef USE_AUTOCONF
-
 ifeq ($(OS_ARCH), WINNT)
-ifeq ($(OS_TARGET), WIN16)
-  LIBPR = $(libdir)/nspr$(MOD_VERSION).lib
-  LIBPLC= $(libdir)/plc$(MOD_VERSION).lib
-else
   LDOPTS = -NOLOGO -DEBUG -DEBUGTYPE:CV -INCREMENTAL:NO
-  ifeq ($(OS_TARGET), WIN95)
-    LIBPR = $(libdir)/nspr$(MOD_VERSION).$(LIB_SUFFIX)
-    LIBPLC= $(libdir)/plc$(MOD_VERSION).$(LIB_SUFFIX)
-  else
-    LIBPR = $(libdir)/libnspr$(MOD_VERSION).$(LIB_SUFFIX)
-    LIBPLC= $(libdir)/libplc$(MOD_VERSION).$(LIB_SUFFIX)
-  endif
   ifdef PROFILE                                                                              
     LDOPTS += -PROFILE -MAP                                                                  
   endif # profile
-endif
 endif
 
 ifeq ($(OS_ARCH),OS2)
 ifeq ($(MOZ_OS2_TOOLS),VACPP)
   LDOPTS = -NOE -DEBUG -nologo -PMTYPE:VIO
-  LIBPR  = $(libdir)/nspr$(MOD_VERSION).lib
-  LIBPLC = $(libdir)/plc$(MOD_VERSION).lib
 else
 ifeq ($(MOZ_OS2_EMX_OBJECTFORMAT),OMF)
   LDOPTS = -Zlinker /PM:VIO
@@ -304,7 +247,7 @@ ifeq ($(OS_ARCH), OSF1)
 # I haven't figured out how to pass -rpath to cc on OSF1 V3.2, so
 # we do static linking.
     ifeq (,$(filter-out V2.0 V3.2,$(OS_RELEASE)))
-        LIBPR = $(libdir)/libnspr$(MOD_VERSION).a
+        LIBNSPR = $(libdir)/libnspr$(MOD_VERSION).a
         LIBPLC = $(libdir)/libplc$(MOD_VERSION).a
         EXTRA_LIBS = -lc_r
     else
@@ -324,7 +267,7 @@ endif
 ifeq ($(OS_ARCH),AIX)
     LDOPTS += -blibpath:$(ABSOLUTE_LIB_DIR):/usr/lib:/lib
     ifeq ($(OS_ARCH)$(OS_RELEASE),AIX4.1)
-        LIBPR = -lnspr$(MOD_VERSION)_shr
+        LIBNSPR = -lnspr$(MOD_VERSION)_shr
         LIBPLC = -lplc$(MOD_VERSION)_shr
     else
         LDOPTS += -brtl
@@ -393,7 +336,7 @@ ifeq ($(OS_ARCH), NEWS-OS)
 # libnspr.so etc. at program startup.  Equivalent to the -R or -rpath 
 # option for ld on other platforms.
 #export LD_RUN_PATH = $(ABSOLUTE_LIB_DIR)
-    LIBPR = $(libdir)/libnspr$(MOD_VERSION).a
+    LIBNSPR = $(libdir)/libnspr$(MOD_VERSION).a
     LIBPLC = $(libdir)/libplc$(MOD_VERSION).a
     EXTRA_LIBS = -lsocket -lnsl -lgen -lresolv
 endif
@@ -476,7 +419,6 @@ LIBPTHREAD = -ldce
 endif
 endif
 
-endif # !USE_AUTOCONF
 
 #####################################################
 #
@@ -486,11 +428,6 @@ endif # !USE_AUTOCONF
 
 include $(topsrcdir)/config/rules.mk
 
-ifdef USE_AUTOCONF
-$(OBJDIR)/%$(PROG_SUFFIX): %.c
-	$(CC) $< -o $@ $(CFLAGS) $(LDOPTS) $(LIBPLC) $(LIBPR) $(OS_LIBS)
-
-else
 AIX_PRE_4_2 = 0
 ifeq ($(OS_ARCH),AIX)
 ifeq ($(OS_RELEASE),4.1)
@@ -524,67 +461,45 @@ else
 $(OBJDIR)/%$(PROG_SUFFIX): $(OBJDIR)/%.$(OBJ_SUFFIX)
 	@$(MAKE_OBJDIR)
 ifeq ($(OS_ARCH), WINNT)
-ifeq ($(OS_TARGET),WIN16)
-	echo system windows >w16link
-	echo name $@  >>w16link
-	echo option map >>w16link
-#	echo option CASEEXACT >>w16link
-	echo option stack=16K >>w16link
-	echo debug $(DEBUGTYPE) all >>w16link
-	echo file >>w16link
-	echo $< , >>w16link
-	echo $(W16STDIO) >>w16link
-	echo library  >>w16link
-	echo $(LIBPR),	     >>w16link
-	echo $(LIBPLC),		 >>w16link
-	echo winsock.lib     >>w16link
-	wlink @w16link.
-else
-	link $(LDOPTS) $(EXTRA_LDOPTS) $< $(LIBPLC) $(LIBPR) $(EXTRA_LIBS) wsock32.lib -out:$@
-endif
+	link $(LDOPTS) $(EXTRA_LDOPTS) $< $(LIBPLC) $(LIBNSPR) $(EXTRA_LIBS) wsock32.lib -out:$@
 else
 ifeq ($(OS_ARCH),OS2)
-	$(LINK) $(EXEFLAGS) $(LDOPTS) $< $(LIBPLC) $(LIBPR) $(OS_LIBS) $(EXTRA_LIBS)
+	$(LINK) $(EXEFLAGS) $(LDOPTS) $< $(LIBPLC) $(LIBNSPR) $(OS_LIBS) $(EXTRA_LIBS)
 else
-	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(EXTRA_LIBS) -o $@
-endif
-endif
-endif
-
-endif # !USE_AUTOCONF
+	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBNSPR) $(EXTRA_LIBS) -o $@
+endif # OS/2
+endif # WINNT
+endif # AIX_PRE_4_2
 
 export:: $(TARGETS)
 clean::
 	rm -f $(TARGETS)
 
-ifndef USE_AUTOCONF
 # The following tests call BSD socket functions, so they need to link
 # with -lsocket on some platforms.
 ifeq ($(OS_ARCH),SunOS)
 ifneq ($(OS_RELEASE),4.1.3_U1)
 ifeq ($(USE_IPV6),1)
 $(OBJDIR)/gethost: $(OBJDIR)/gethost.o
-	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) -lsocket $(EXTRA_LIBS) -o $@
+	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBNSPR) -lsocket $(EXTRA_LIBS) -o $@
 endif
 $(OBJDIR)/prpoll: $(OBJDIR)/prpoll.o
-	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) -lsocket $(EXTRA_LIBS) -o $@
+	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBNSPR) -lsocket $(EXTRA_LIBS) -o $@
 endif
 endif
 
 ifeq ($(USE_PTHREADS), 1)
 $(OBJDIR)/attach: $(OBJDIR)/attach.o
-	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
+	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBNSPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
 $(OBJDIR)/foreign: $(OBJDIR)/foreign.o
-	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
+	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBNSPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
 $(OBJDIR)/provider: $(OBJDIR)/provider.o
-	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
+	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBNSPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
 $(OBJDIR)/socket: $(OBJDIR)/socket.o
-	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
+	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBNSPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
 $(OBJDIR)/testfile: $(OBJDIR)/testfile.o
-	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
+	$(PURE) $(CC) $(XCFLAGS) $< $(LDOPTS) $(LIBPLC) $(LIBNSPR) $(LIBPTHREAD) $(EXTRA_LIBS) -o $@
 endif
-
-endif # !USE_AUTOCONF
 
 #
 # Run the test programs with no arguments

@@ -35,7 +35,6 @@
 #include "zip.h" 
 #include "prmem.h"
 #include "blapi.h"
-#include "sechash.h"	/* for HASH_GetHashObject() */
 
 static int create_pk7 (char *dir, char *keyName, int *keyType);
 static int jar_find_key_type (CERTCertificate *cert);
@@ -212,14 +211,23 @@ create_pk7 (char *dir, char *keyName, int *keyType)
   CERTCertificate *cert;
   CERTCertDBHandle *db;
 
+  SECKEYKeyDBHandle *keyHandle;
+
   FILE *in, *out;
 
   char sf_file [FNSIZE];
   char pk7_file [FNSIZE];
 
+  /* open key database */
+  keyHandle = SECU_OpenKeyDB(PR_TRUE /*readOnly*/);
+
+  if (keyHandle == NULL) 
+    return -1; 
+
+  SECKEY_SetDefaultKeyDB (keyHandle);
 
   /* open cert database */
-  db = CERT_GetDefaultCertDB();
+  db = OpenCertDB(PR_TRUE /*readOnly*/); 
 
   if (db == NULL) 
     return -1;
@@ -573,7 +581,7 @@ SignFile (FILE *outFile, FILE *inFile, CERTCertificate *cert)
 {
   int nb;
   char ibuf[4096], digestdata[32];
-  const SECHashObject *hashObj;
+  SECHashObject *hashObj;
   void *hashcx;
   unsigned int len;
 
@@ -585,7 +593,7 @@ SignFile (FILE *outFile, FILE *inFile, CERTCertificate *cert)
     return -1;
 
   /* XXX probably want to extend interface to allow other hash algorithms */
-  hashObj = HASH_GetHashObject(HASH_AlgSHA1);
+  hashObj = &SECHashObjects[HASH_AlgSHA1];
 
   hashcx = (* hashObj->create)();
   if (hashcx == NULL)
@@ -644,7 +652,7 @@ SignFile (FILE *outFile, FILE *inFile, CERTCertificate *cert)
 		rv = SEC_PKCS7Encode(cinfo, SignOut, outFile, NULL, password_hardcode,
 			NULL);
 	} else {
-		rv = SEC_PKCS7Encode(cinfo, SignOut, outFile, NULL, NULL,
+		rv = SEC_PKCS7Encode(cinfo, SignOut, outFile, NULL, SECU_GetPassword,
 			NULL);
 	}
 		

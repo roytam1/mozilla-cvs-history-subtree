@@ -34,6 +34,9 @@
  * $Id$
  */
 
+#ifndef _NS_PKCS12BLOB_H_
+#define _NS_PKCS12BLOB_H_
+
 #include "nsCOMPtr.h"
 #include "nsILocalFile.h"
 #include "nsIPK11TokenDB.h"
@@ -46,12 +49,11 @@ extern "C" {
 #include "p12plcy.h"
 }
 
-// Error codes that should be handled separately with dialogs
-typedef enum {
-  PIPNSS_PKCS12_OK = 0,
-  PIPNSS_PKCS12_Unknown
-} pkcs12Err;
-
+//
+// nsPKCS12Blob
+//
+// Class for importing/exporting PKCS#12 blobs
+//
 class nsPKCS12Blob
 {
 public:
@@ -65,8 +67,11 @@ public:
   nsresult ImportFromFile(nsILocalFile *file);
 
   // PKCS#12 Export
-  nsresult LoadCerts(const PRUnichar **certNames, int numCerts);
-  nsresult ExportToFile(nsILocalFile *file);
+#if 0
+  //nsresult LoadCerts(const PRUnichar **certNames, int numCerts);
+  nsresult LoadCerts(nsIX509Cert **certs, int numCerts);
+#endif
+  nsresult ExportToFile(nsILocalFile *file, nsIX509Cert **certs, int numCerts);
 
 private:
 
@@ -79,13 +84,11 @@ private:
   nsresult newPKCS12FilePassword(SECItem *);
   nsresult inputToDecoder(SEC_PKCS12DecoderContext *, nsILocalFile *);
   void unicodeToItem(PRUnichar *, SECItem *);
+  PRBool handleError();
 
-  // tracks error state of encoder/decoder
-  pkcs12Err mErr;
-
-  // NSPR file I/O for temporary digest file, should use Mozilla I/O streams?
-  PRFileDesc *__mTmp;
-  char       *__mTmpFilePath;
+  // NSPR file I/O for temporary digest file
+  PRFileDesc *mTmpFile;
+  char       *mTmpFilePath;
 
   // C-style callback functions for the NSS PKCS#12 library
   static SECStatus digest_open(void *, PRBool);
@@ -96,4 +99,6 @@ private:
   static void write_export_file(void *arg, const char *buf, unsigned long len);
 
 };
+
+#endif /* _NS_PKCS12BLOB_H_ */
 

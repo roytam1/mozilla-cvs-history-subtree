@@ -58,8 +58,6 @@
 #define VERSION_STRING "Version"
 #define KEYDB_PW_CHECK_STRING	"password-check"
 #define KEYDB_PW_CHECK_LEN	14
-#define KEYDB_FAKE_PW_CHECK_STRING	"fake-password-check"
-#define KEYDB_FAKE_PW_CHECK_LEN	19
 
 /* Size of the global salt for key database */
 #define SALT_LENGTH     16
@@ -310,11 +308,11 @@ get_dbkey(SECKEYKeyDBHandle *handle, DBT *index)
 {
     SECKEYDBKey *dbkey;
     DBT entry;
-    int ret;
+    SECStatus rv;
     
     /* get it from the database */
-    ret = (* handle->db->get)(handle->db, index, &entry, 0);
-    if ( ret ) {
+    rv = (SECStatus)(* handle->db->get)(handle->db, index, &entry, 0);
+    if ( rv ) {
 	PORT_SetError(SEC_ERROR_BAD_DATABASE);
 	return NULL;
     }
@@ -374,14 +372,14 @@ SECKEY_TraverseKeys(SECKEYKeyDBHandle *handle,
     DBT data;
     DBT key;
     SECStatus status;
-    int ret;
+    int rv;
 
     if (handle == NULL) {
 	return(SECFailure);
     }
 
-    ret = (* handle->db->seq)(handle->db, &key, &data, R_FIRST);
-    if ( ret ) {
+    rv = (* handle->db->seq)(handle->db, &key, &data, R_FIRST);
+    if ( rv ) {
 	return(SECFailure);
     }
     
@@ -562,8 +560,7 @@ SECKEY_OpenKeyDB(PRBool readOnly, SECKEYDBNameFunc namecb, void *cbarg)
     SECKEYKeyDBHandle *handle;
     DBT versionKey;
     DBT versionData;
-    int ret;
-    SECStatus rv;
+    int rv;
     int openflags;
     char *dbname = NULL;
     PRBool updated = PR_FALSE;
@@ -593,14 +590,14 @@ SECKEY_OpenKeyDB(PRBool readOnly, SECKEYDBNameFunc namecb, void *cbarg)
     /* check for correct version number */
     if (handle->db != NULL) {
 	/* lookup version string in database */
-	ret = (* handle->db->get)( handle->db, &versionKey, &versionData, 0 );
+	rv = (* handle->db->get)( handle->db, &versionKey, &versionData, 0 );
 
 	/* error accessing the database */
-	if ( ret < 0 ) {
+	if ( rv < 0 ) {
 	    goto loser;
 	}
 
-	if ( ret == 1 ) {
+	if ( rv == 1 ) {
 	    /* no version number record, reset the database */
 	    (* handle->db->close)( handle->db );
 	    handle->db = NULL;
@@ -680,8 +677,8 @@ newdb:
 	}
 	
 	/* sync the database */
-	ret = (* handle->db->sync)(handle->db, 0);
-	if ( ret ) {
+	rv = (* handle->db->sync)(handle->db, 0);
+	if ( rv ) {
 	    goto loser;
 	}
     }
@@ -759,7 +756,7 @@ SECStatus
 SECKEY_DeleteKey(SECKEYKeyDBHandle *handle, SECItem *pubkey)
 {
     DBT namekey;
-    int ret;
+    int rv;
 
     if (handle == NULL) {
 	PORT_SetError(SEC_ERROR_BAD_DATABASE);
@@ -771,15 +768,15 @@ SECKEY_DeleteKey(SECKEYKeyDBHandle *handle, SECItem *pubkey)
     namekey.size = pubkey->len;
 
     /* delete it from the database */
-    ret = (* handle->db->del)(handle->db, &namekey, 0);
-    if ( ret ) {
+    rv = (* handle->db->del)(handle->db, &namekey, 0);
+    if ( rv ) {
 	PORT_SetError(SEC_ERROR_BAD_DATABASE);
 	return(SECFailure);
     }
 
     /* sync the database */
-    ret = (* handle->db->sync)(handle->db, 0);
-    if ( ret ) {
+    rv = (* handle->db->sync)(handle->db, 0);
+    if ( rv ) {
 	PORT_SetError(SEC_ERROR_BAD_DATABASE);
 	return(SECFailure);
     }
@@ -897,7 +894,7 @@ SECStatus
 SECKEY_HasKeyDBPassword(SECKEYKeyDBHandle *handle)
 {
     DBT checkkey, checkdata;
-    int ret;
+    int rv;
 
     if (handle == NULL) {
 	return(SECFailure);
@@ -906,15 +903,9 @@ SECKEY_HasKeyDBPassword(SECKEYKeyDBHandle *handle)
     checkkey.data = KEYDB_PW_CHECK_STRING;
     checkkey.size = KEYDB_PW_CHECK_LEN;
     
-    ret = (* handle->db->get)(handle->db, &checkkey, &checkdata, 0 );
-    if ( ret ) {
-	/* see if this was an updated DB first */
-	checkkey.data = KEYDB_FAKE_PW_CHECK_STRING;
-	checkkey.size = KEYDB_FAKE_PW_CHECK_LEN;
-	ret = (* handle->db->get)(handle->db, &checkkey, &checkdata, 0 );
-    	if ( ret ) {
-	    return(SECFailure);
-	}
+    rv = (* handle->db->get)(handle->db, &checkkey, &checkdata, 0 );
+    if ( rv ) {
+	return(SECFailure);
     }
 
     return(SECSuccess);
@@ -1837,114 +1828,6 @@ loser:
     return(rv);
 }
 
-static PRBool
-seckey_HasAServerKey(DB *db)
-{
-    DBT checkKey;
-    DBT checkData;
-    DBT key;
-    DBT data;
-    int ret;
-    PRBool found = PR_FALSE;
-
-    ret = (* db->seq)(db, &key, &data, R_FIRST);
-    if ( ret ) {
-	return PR_FALSE;
-    }
-    
-    do {
-	/* skip version record */
-	if ( data.size > 1 ) {
-	    /* skip salt */
-	    if ( key.size == ( sizeof(SALT_STRING) - 1 ) ) {
-		if ( PORT_Memcmp(key.data, SALT_STRING, key.size) == 0 ) {
-		    continue;
-		}
-	    }
-	    /* skip pw check entry */
-	    if ( key.size == KEYDB_PW_CHECK_LEN ) {
-		if ( PORT_Memcmp(key.data, KEYDB_PW_CHECK_STRING, 
-						KEYDB_PW_CHECK_LEN) == 0 ) {
-		    continue;
-		}
-	    }
-
-	    /* keys stored by nickname will have 0 as the last byte of the
-	     * db key.  Other keys must be stored by modulus.  We will not
-	     * update those because they are left over from a keygen that
-	     * never resulted in a cert.
-	     */
-	    if ( ((unsigned char *)key.data)[key.size-1] != 0 ) {
-		continue;
-	    }
-
-	    if (PORT_Strcmp(key.data,"Server-Key") == 0) {
-		found = PR_TRUE;
-	        break;
-	    }
-	    
-	}
-    } while ( (* db->seq)(db, &key, &data, R_NEXT) == 0 );
-
-    return found;
-}
-
-static SECStatus
-seckey_CheckKeyDB1Password(SECKEYKeyDBHandle *handle, SECItem *pwitem)
-{
-    SECStatus rv = SECFailure;
-    keyList keylist;
-    keyNode *node = NULL;
-    SECKEYLowPrivateKey *privkey = NULL;
-
-
-    /*
-     * first find a key
-     */
-
-    /* traverse the database, collecting the keys of all records */
-    keylist.arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
-    if ( keylist.arena == NULL ) 
-    {
-	PORT_SetError(SEC_ERROR_NO_MEMORY);
-	return(SECFailure);
-    }
-    keylist.head = NULL;
-    
-    /* TNH - TraverseKeys should not be public, since it exposes
-       the underlying DBT data type. */
-    rv = SECKEY_TraverseKeys(handle, sec_add_key_to_list, (void *)&keylist);
-    if ( rv != SECSuccess ) 
-	goto done;
-
-    /* just get the first key from the list */
-    node = keylist.head;
-
-    /* no private keys, accept any password */
-    if (node == NULL) {
-	rv = SECSuccess;
-	goto done;
-    }
-    privkey = seckey_get_private_key(handle, &node->key, NULL, pwitem);
-    if (privkey == NULL) {
-	 rv = SECFailure;
-	 goto done;
-    }
-
-    /* if we can decrypt the private key, then we had the correct password */
-    rv = SECSuccess;
-    SECKEY_LowDestroyPrivateKey(privkey);
-
-done:
-
-    /* free the arena */
-    if ( keylist.arena ) {
-	PORT_FreeArena(keylist.arena, PR_FALSE);
-    }
-    
-    return(rv);
-}
-
 /*
  * check to see if the user has typed the right password
  */
@@ -1952,7 +1835,6 @@ SECStatus
 SECKEY_CheckKeyDBPassword(SECKEYKeyDBHandle *handle, SECItem *pwitem)
 {
     DBT checkkey;
-    DBT checkdata;
     SECAlgorithmID *algid = NULL;
     SECStatus rv = SECFailure;
     SECKEYDBKey *dbkey = NULL;
@@ -1962,7 +1844,6 @@ SECKEY_CheckKeyDBPassword(SECKEYKeyDBHandle *handle, SECItem *pwitem)
     SECItem oid;
     SECItem encstring;
     PRBool update = PR_FALSE;
-    int ret;
     
     if (handle == NULL) {
 	goto loser;
@@ -1974,22 +1855,7 @@ SECKEY_CheckKeyDBPassword(SECKEYKeyDBHandle *handle, SECItem *pwitem)
     dbkey = get_dbkey(handle, &checkkey);
     
     if ( dbkey == NULL ) {
-	checkkey.data = KEYDB_FAKE_PW_CHECK_STRING;
-	checkkey.size = KEYDB_FAKE_PW_CHECK_LEN;
-	ret = (* handle->db->get)(handle->db, &checkkey,
-				   &checkdata, 0 );
-	if (ret) {
-	    goto loser;
-	}
-	/* if we have the fake PW_CHECK, then try to decode the key
-	 * rather than the pwcheck item.
-	 */
-	rv = seckey_CheckKeyDB1Password(handle,pwitem);
-	if (rv == SECSuccess) {
-	    /* OK we have enough to complete our conversion */
-	    SECKEY_UpdateKeyDBPass2(handle,pwitem);
-	}
-	return rv;
+	goto loser;
     }
 
     /* build the oid item */
@@ -2279,68 +2145,41 @@ SECKEY_UpdateKeyDBPass1(SECKEYKeyDBHandle *handle)
     checkKey.data = KEYDB_PW_CHECK_STRING;
     checkKey.size = KEYDB_PW_CHECK_LEN;
     
-    ret = (* handle->updatedb->get)(handle->updatedb, &checkKey,
+    rv = (SECStatus)(* handle->updatedb->get)(handle->updatedb, &checkKey,
 				   &checkData, 0 );
-    if (ret) {
-	/*
-	 * if we have a key, but no KEYDB_PW_CHECK_STRING, then this must
-	 * be an old server database, and it does have a password associated
-	 * with it. Put a fake entry in so we can identify this db when we do
-	 * get the password for it.
-	 */
-	if (seckey_HasAServerKey(handle->updatedb)) {
-	    DBT fcheckKey;
-	    DBT fcheckData;
+    if (rv) {
+	/* no pw check, so old db never used */
+	goto done;
+    }
 
-	    /*
-	     * include a fake string
-	     */
-	    fcheckKey.data = KEYDB_FAKE_PW_CHECK_STRING;
-	    fcheckKey.size = KEYDB_FAKE_PW_CHECK_LEN;
-	    fcheckData.data = "1";
-	    fcheckData.size = 1;
-	    /* put global salt into the new database now */
-	    ret = (* handle->db->put)( handle->db, &saltKey, &saltData, 0);
-	    if ( ret ) {
-		goto done;
-	    }
-	    ret = (* handle->db->put)( handle->db, &fcheckKey, &fcheckData, 0);
-	    if ( ret ) {
-		goto done;
-	    }
-	} else {
-	    goto done;
-	}
-    } else {
-	/* put global salt into the new database now */
-	ret = (* handle->db->put)( handle->db, &saltKey, &saltData, 0);
-	if ( ret ) {
-	    goto done;
-	}
-
-	dbkey = decode_dbkey(&checkData, 2);
-	if ( dbkey == NULL ) {
-	    goto done;
-	}
-	checkitem = dbkey->derPK;
-	dbkey->derPK.data = NULL;
-    
-	/* format the new pw check entry */
-	rv = encodePWCheckEntry(NULL, &dbkey->derPK, SEC_OID_RC4, &checkitem);
-	if ( rv != SECSuccess ) {
-	    goto done;
-	}
-
-	rv = put_dbkey(handle, &checkKey, dbkey, PR_TRUE);
-	if ( rv != SECSuccess ) {
-	    goto done;
-	}
-
-	/* free the dbkey */
-	sec_destroy_dbkey(dbkey);
-	dbkey = NULL;
+    dbkey = decode_dbkey(&checkData, 2);
+    if ( dbkey == NULL ) {
+	goto done;
     }
     
+    /* put global salt into the new database now */
+    ret = (* handle->db->put)( handle->db, &saltKey, &saltData, 0);
+    if ( ret ) {
+	goto done;
+    }
+
+    checkitem = dbkey->derPK;
+    dbkey->derPK.data = NULL;
+    
+    /* format the new pw check entry */
+    rv = encodePWCheckEntry(NULL, &dbkey->derPK, SEC_OID_RC4, &checkitem);
+    if ( rv != SECSuccess ) {
+	goto done;
+    }
+
+    rv = put_dbkey(handle, &checkKey, dbkey, PR_TRUE);
+    if ( rv != SECSuccess ) {
+	goto done;
+    }
+
+    /* free the dbkey */
+    sec_destroy_dbkey(dbkey);
+    dbkey = NULL;
     
     /* now traverse the database */
     ret = (* handle->updatedb->seq)(handle->updatedb, &key, &data, R_FIRST);
@@ -2469,14 +2308,3 @@ done:
 
     return (errors == 0 ? SECSuccess : SECFailure);
 }
-
-/* These functions simply return the address of the above-declared templates.
-** This is necessary for Windows DLLs.  Sigh.
-*/
-SEC_ASN1_CHOOSER_IMPLEMENT(SECKEY_PrivateKeyInfoTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SECKEY_PointerToPrivateKeyInfoTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SECKEY_EncryptedPrivateKeyInfoTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SECKEY_PointerToEncryptedPrivateKeyInfoTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SECKEY_DSAPublicKeyTemplate)
-SEC_ASN1_CHOOSER_IMPLEMENT(SECKEY_RSAPublicKeyTemplate)
-

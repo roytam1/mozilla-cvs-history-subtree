@@ -74,7 +74,6 @@
  * Now that NSPR offers portable cross-process locking (semaphores) on Unix
  * and Win32, semaphores should be used here for all platforms.
  */
-#include "nssrenam.h"
 #include "seccomon.h"
 
 #if defined(XP_UNIX) || defined(XP_WIN32)
@@ -94,7 +93,6 @@
 #include <syslog.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <errno.h>
 #include "unix_err.h"
 
 #else /* XP_WIN32 */
@@ -111,7 +109,7 @@
 #include "nspr.h"
 #include "nsslocks.h"
 
-static PZLock *cacheLock;
+static PRLock *cacheLock;
 
 /*
 ** The server session-id cache uses a simple flat cache. The cache is
@@ -964,13 +962,13 @@ IOError(int rv, char *type)
 static void 
 lock_cache(void)
 {
-    PZ_Lock(cacheLock);
+    PR_Lock(cacheLock);
 }
 
 static void 
 unlock_cache(void)
 {
-    PZ_Unlock(cacheLock);
+    PR_Unlock(cacheLock);
 }
 
 /*
@@ -1349,7 +1347,7 @@ InitSessionIDCache(int maxCacheEntries, PRUint32 timeout,
 #endif /* XP_UNIX */
 
     if (!cacheLock)
-	nss_InitLock(&cacheLock, nssILockCache);
+	nss_InitLock(&cacheLock);
     if (!cacheLock) {
 	SET_ERROR_CODE
 	goto loser;
@@ -1403,7 +1401,7 @@ InitSessionIDCache(int maxCacheEntries, PRUint32 timeout,
 	destroyServerCacheSemaphore();
 #endif
     if (cacheLock) {
-	PZ_DestroyLock(cacheLock);
+	PR_DestroyLock(cacheLock);
 	cacheLock = NULL;
     }
     PORT_Free(cfn);
@@ -1504,7 +1502,7 @@ InitCertCache(const char *directory)
     return SECFailure;
 }
 
-SECStatus
+int
 SSL_ConfigServerSessionIDCache(	int      maxCacheEntries, 
 				PRUint32 timeout,
 			       	PRUint32 ssl3_timeout, 
@@ -1539,14 +1537,14 @@ SSL_ConfigServerSessionIDCache(	int      maxCacheEntries,
 /* Use this function, instead of SSL_ConfigServerSessionIDCache,
  * if the cache will be shared by multiple processes.
  */
-SECStatus
+int
 SSL_ConfigMPServerSIDCache(	int      maxCacheEntries, 
 				PRUint32 timeout,
 			       	PRUint32 ssl3_timeout, 
 		          const char *   directory)
 {
     char *	envValue;
-    SECStatus 	result;
+    int 	result;
     SECStatus	putEnvFailed;
 
     isMultiProcess = PR_TRUE;
@@ -1698,7 +1696,7 @@ SSL_InheritMPServerSIDCache(const char * envString)
 #endif
 
     if (!cacheLock) {
-	nss_InitLock(&cacheLock, nssILockCache);
+	nss_InitLock(&cacheLock);
 	if (!cacheLock) 
 	    goto loser;
     }
@@ -1898,40 +1896,13 @@ ssl_SetWrappingKey(SSLWrappedSymWrappingKey *wswk)
 #include "ssl.h"
 #include "sslimpl.h"
 
-SECStatus
-SSL_ConfigServerSessionIDCache(	int      maxCacheEntries, 
-				PRUint32 timeout,
-			       	PRUint32 ssl3_timeout, 
-			  const char *   directory)
-{
-    PR_ASSERT(!"SSL servers are not supported on the platform. (SSL_ConfigServerSessionIDCache)");    
-    return SECFailure;
-}
-
-SECStatus
-SSL_ConfigMPServerSIDCache(	int      maxCacheEntries, 
-				PRUint32 timeout,
-			       	PRUint32 ssl3_timeout, 
-		          const char *   directory)
-{
-    PR_ASSERT(!"SSL servers are not supported on the platform. (SSL_ConfigMPServerSIDCache)");    
-    return SECFailure;
-}
-
-SECStatus
-SSL_InheritMPServerSIDCache(const char * envString)
-{
-    PR_ASSERT(!"SSL servers are not supported on the platform. (SSL_InheritMPServerSIDCache)");    
-    return SECFailure;
-}
-
 PRBool
 ssl_GetWrappingKey( PRInt32                   symWrapMechIndex,
                     SSL3KEAType               exchKeyType, 
 		    SSLWrappedSymWrappingKey *wswk)
 {
     PRBool rv = PR_FALSE;
-    PR_ASSERT(!"SSL servers are not supported on the platform. (ssl_GetWrappingKey)");    
+    PR_ASSERT(!"SSL servers are not supported on the Mac. (ssl_GetWrappingKey)");    
     return rv;
 }
 
@@ -1948,7 +1919,7 @@ PRBool
 ssl_SetWrappingKey(SSLWrappedSymWrappingKey *wswk)
 {
     PRBool        rv = PR_FALSE;
-    PR_ASSERT(!"SSL servers are not supported on the platform. (ssl_SetWrappingKey)");
+    PR_ASSERT(!"SSL servers are not supported on the Mac. (ssl_SetWrappingKey)");
     return rv;
 }
 

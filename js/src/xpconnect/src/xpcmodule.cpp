@@ -46,7 +46,6 @@ NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsIJSContextStack, nsXPCThreadJSContext
 NS_GENERIC_FACTORY_SINGLETON_CONSTRUCTOR(nsIJSRuntimeService, nsJSRuntimeServiceImpl::GetSingleton)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsScriptError)
 
-// XXX contractids need to be standardized!
 static nsModuleComponentInfo components[] = {
   {nsnull, NS_JS_ID_CID,                      "@mozilla.org/js/xpc/ID;1",                   nsJSIDConstructor             },
   {nsnull, NS_XPCONNECT_CID,                  "@mozilla.org/js/xpc/XPConnect;1",           nsIXPConnectConstructor       },

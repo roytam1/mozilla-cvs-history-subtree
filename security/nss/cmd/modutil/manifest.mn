@@ -55,5 +55,3 @@ REQUIRES = seccmd security dbm
 DEFINES = -DNSPR20
 
 INCLUDES =
-
-USE_STATIC_LIBS = 1

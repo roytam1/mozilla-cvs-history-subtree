@@ -39,7 +39,7 @@
 interface nsIClassInfo : nsISupports
 {
     /**
-     * Identifiers for languages 
+     * Identifiers for languages.
      */
     const PRUint32 LANGUAGE_UNKNOWN     = 0;
     const PRUint32 LANGUAGE_CPP         = 1;
@@ -66,7 +66,7 @@ interface nsIClassInfo : nsISupports
      * Get a language mapping specific helper object that may assist in using
      * objects of this class in a specific lanaguage. For instance, if asked
      * for the helper for LANGUAGE_JAVASCRIPT this might return an object that
-     * can be QI'd into the nsIXPCScriptable interface to assist xpconnect in
+     * can be QI'd into the nsIXPCScriptable interface to assist XPConnect in
      * supplying JavaScript specific behavior to callers of the instance object.
      *
      * Should return null if no helper available for given language.
@@ -90,8 +90,9 @@ interface nsIClassInfo : nsISupports
     /**
      * Bitflags for 'flags' attribute.
      */
-    const PRUint32 THREADSAFE   = 1 << 0;
-    const PRUint32 SINGLETON    = 1 << 1;
+    const PRUint32 SINGLETON            = 1 << 0;
+    const PRUint32 THREADSAFE           = 1 << 1;
+    const PRUint32 MAIN_THREAD_ONLY     = 1 << 2;
     // XXX what else might we want to add?
 
     readonly attribute PRUint32 flags;
