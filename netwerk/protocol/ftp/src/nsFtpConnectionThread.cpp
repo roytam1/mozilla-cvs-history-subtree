@@ -52,6 +52,82 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 extern PRLogModuleInfo* gFTPLog;
 #endif /* PR_LOGGING */
 
+
+
+
+class DataRequestForwarder : public nsIChannel, public nsIStreamListener
+{
+public:
+    DataRequestForwarder();
+    virtual ~DataRequestForwarder();
+    nsresult Init(nsIRequest *request, nsIStreamListener *listener);
+
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSISTREAMLISTENER
+    NS_DECL_NSISTREAMOBSERVER
+    
+    NS_FORWARD_NSIREQUEST(mRequest->)
+    NS_FORWARD_NSICHANNEL(mChannel->)
+
+protected:
+    nsCOMPtr<nsIRequest> mRequest;
+    nsCOMPtr<nsIChannel> mChannel;
+    nsCOMPtr<nsIStreamListener> mListener;
+
+};
+
+
+NS_IMPL_THREADSAFE_ISUPPORTS4(DataRequestForwarder, 
+                              nsIStreamListener, 
+                              nsIStreamObserver, 
+                              nsIChannel,
+                              nsIRequest);
+
+
+DataRequestForwarder::DataRequestForwarder()
+{
+    NS_INIT_ISUPPORTS();
+}
+
+DataRequestForwarder::~DataRequestForwarder()
+{
+}
+
+nsresult 
+DataRequestForwarder::Init(nsIRequest *request, nsIStreamListener *listener)
+{
+    mRequest  = request;
+    mChannel  = do_QueryInterface(request);
+    mListener = listener;
+    
+    if (!mRequest || !mChannel || !mListener)
+        return NS_ERROR_FAILURE;
+    
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP 
+DataRequestForwarder::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
+{
+    return mListener->OnStartRequest(this, ctxt); 
+}
+
+NS_IMETHODIMP 
+DataRequestForwarder::OnStopRequest(nsIRequest *request, nsISupports *ctxt, nsresult statusCode, const PRUnichar *statusText)
+{
+    return mListener->OnStopRequest(this, ctxt, statusCode, statusText); 
+}
+
+NS_IMETHODIMP
+DataRequestForwarder::OnDataAvailable(nsIRequest *request, nsISupports *ctxt, nsIInputStream *input, PRUint32 offset, PRUint32 count)
+{ 
+    return mListener->OnDataAvailable(this, ctxt, input, offset, count); 
+} 
+
+
+
+
 NS_IMPL_THREADSAFE_ISUPPORTS3(nsFtpState, 
                               nsIStreamListener, 
                               nsIStreamObserver, 
@@ -1245,12 +1321,18 @@ nsFtpState::S_list() {
     }
     mFireCallbacks = PR_FALSE; // listener callbacks will be handled by the transport.
 
-#ifdef FTP_NO_HTTP_INDEX_FORMAT
-    return mDPipe->AsyncRead(mListener, nsnull, 0, -1, 0, getter_AddRefs(mDPipeRequest));
-#else
-    return mDPipe->AsyncRead(converterListener, mListenerContext, 0, -1, 0, getter_AddRefs(mDPipeRequest));
-#endif
+    DataRequestForwarder *forwarder = new DataRequestForwarder;
+    if (!forwarder) return NS_ERROR_FAILURE;
+    NS_ADDREF(forwarder);
 
+#ifdef FTP_NO_HTTP_INDEX_FORMAT
+    fowarder->Init(mChannel, mListener);
+#else
+    forwarder->Init(mChannel, converterListener);
+#endif
+    rv = mDPipe->AsyncRead(forwarder, mListenerContext, 0, -1, 0, getter_AddRefs(mDPipeRequest));
+    NS_RELEASE(forwarder); // let the transport worry about this objects lifespan
+    return rv;
 }
 
 FTP_STATE
@@ -1273,7 +1355,16 @@ nsFtpState::S_retr() {
     if (NS_FAILED(rv)) return rv;
 
     mFireCallbacks = PR_FALSE; // listener callbacks will be handled by the transport.
-    return mDPipe->AsyncRead(mListener, mListenerContext, 0, -1, 0, getter_AddRefs(mDPipeRequest));
+    
+    DataRequestForwarder *forwarder = new DataRequestForwarder;
+    if (!forwarder) return NS_ERROR_FAILURE;
+    NS_ADDREF(forwarder);
+    forwarder->Init(mChannel, mListener);
+
+    rv = mDPipe->AsyncRead(forwarder, mListenerContext, 0, -1, 0, getter_AddRefs(mDPipeRequest));
+    
+    NS_RELEASE(forwarder); // let the transport worry about this objects lifespan
+    return rv;
 }
 
 FTP_STATE
