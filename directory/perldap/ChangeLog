@@ -145,6 +145,7 @@
 1998-08-18  Leif Hedstrom  <leif@netscape.com>
 
 	* Conn.pm (setDefaultRebindProc): It's back!
+	Officially released PerLDAP v1.0.
 
 1998-08-13  Leif Hedstrom  <leif@netscape.com>
 
