@@ -225,29 +225,15 @@
             oncommand="goToggleToolbar('status-bar', 'menu_showTaskbar')"
             checked="true"/>
 
-  <!-- Help Menu -->
-  <menu id="menu_Help"
-        label="&helpMenu.label;"
-        accesskey="&helpMenu.accesskey;">
-    <menupopup id="helpPopup">
-      <menuitem accesskey="&releaseCmd.accesskey;"
-                label="&releaseCmd.label;"
-                id="releaseUrl"
-                oncommand="openTopWin('&releaseURL;');"/>
-      <menuitem class="about"
-                accesskey="&aboutCommPluginsCmd.accesskey;"
-                label="&aboutCommPluginsCmd.label;"
-                id="pluginInfo"
-                oncommand="openTopWin('about:plugins')"/>
-      <menuitem accesskey="&aboutCmd.accesskey;"
-                label="&aboutCmd.label;"
-                id="aboutName"
-                oncommand="goAboutDialog();"/>
-    </menupopup>
-  </menu>
-        
  <!-- Toolbar boxes -->
  <hbox id="toolbar_button_box"
        flex="100%"/>
+ 
+ <menu id="menu_Help" label="&menuHelp.label;" accesskey="&menuHelp.accesskey;">
+   <menupopup>
+     <menuitem label="About Ishmail" accesskey="A"
+               oncommand="alert('Ismail 1.0 - Copyright 2002 Netscape Communications Corporation\n' + navigator.userAgent);"/>
+   </menupopup>
+ </menu>    
 
 </overlay>
