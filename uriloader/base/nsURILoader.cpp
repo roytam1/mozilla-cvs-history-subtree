@@ -301,9 +301,19 @@ nsresult nsDocumentOpenInfo::DispatchContent(nsIRequest *request, nsISupports * 
           // or if it might be followed by a .gz suffix (but we don't explicitly test for .gz)
           PRInt32 nameLength = tempString.Length();
           if ((extPosition == nameLength - 4) || (extPosition == nameLength - 7))
-          {
-            aChannel->SetContentType(nsDependentCString("application/octet-stream"));
-            rv = aChannel->GetContentType(contentType);
+          { // Also check to see if the page we got was the result of an error like 404 in which case
+            // leave the content type alone so we display the error page rather than trying to download it 
+            nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(aChannel, &rv));
+            if (NS_SUCCEEDED(rv))
+            {
+              PRBool requestSucceeded;
+              rv = httpChannel->GetRequestSucceeded(&requestSucceeded);
+              if (NS_SUCCEEDED(rv) && requestSucceeded)
+              {
+                aChannel->SetContentType(nsDependentCString("application/octet-stream"));
+                rv = aChannel->GetContentType(contentType);
+              }
+            }
           }
         }
       }
