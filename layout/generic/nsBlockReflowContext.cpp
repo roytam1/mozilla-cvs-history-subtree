@@ -64,19 +64,14 @@
 #endif
 
 nsBlockReflowContext::nsBlockReflowContext(nsPresContext* aPresContext,
-                                           const nsHTMLReflowState& aParentRS,
-                                           PRBool aComputeMaxElementWidth,
-                                           PRBool aComputeMaximumWidth)
+                                           const nsHTMLReflowState& aParentRS)
   : mPresContext(aPresContext),
     mOuterReflowState(aParentRS),
-    mMetrics(aComputeMaxElementWidth),
-    mComputeMaximumWidth(aComputeMaximumWidth)
+    mMetrics()
 {
   mStyleBorder = nsnull;
   mStyleMargin = nsnull;
   mStylePadding = nsnull;
-  if (mComputeMaximumWidth)
-    mMetrics.mFlags |= NS_REFLOW_CALC_MAX_WIDTH;
 }
 
 PRBool
@@ -133,13 +128,10 @@ nsBlockReflowContext::ComputeCollapsedTopMargin(const nsHTMLReflowState& aRS,
         // generational collapse is required we need to compute the
         // child blocks margin and so in so that we can look into
         // it. For its margins to be computed we need to have a reflow
-        // state for it. Since the reflow reason is irrelevant, we'll
-        // arbitrarily make it a `resize' to avoid the path-plucking
-        // behavior if we're in an incremental reflow.
+        // state for it.
         nsSize availSpace(aRS.mComputedWidth, aRS.mComputedHeight);
         nsHTMLReflowState reflowState(kidBlock->GetPresContext(),
-                                      aRS, kidBlock,
-                                      availSpace, eReflowReason_Resize);
+                                      aRS, kidBlock, availSpace);
         // Record that we're being optimistic by assuming the kid
         // has no clearance
         if (kidBlock->GetStyleDisplay()->mBreakType != NS_STYLE_CLEAR_NONE) {
@@ -265,61 +257,6 @@ nsBlockReflowContext::AlignBlockHorizontally(nscoord                 aWidth,
 }
 
 static void
-ComputeShrinkwrapMargins(const nsStyleMargin* aStyleMargin, nscoord aWidth,
-                         nsMargin& aMargin, nscoord& aXToUpdate)
-{
-  nscoord boxWidth = aWidth;
-  float leftPct = 0.0, rightPct = 0.0;
-  const nsStyleSides& margin = aStyleMargin->mMargin;
-  
-  if (eStyleUnit_Percent == margin.GetLeftUnit()) {
-    nsStyleCoord coord;
-    leftPct = margin.GetLeft(coord).GetPercentValue();
-  } else {
-    boxWidth += aMargin.left;
-  }
-  
-  if (eStyleUnit_Percent == margin.GetRightUnit()) {
-    nsStyleCoord coord;
-    rightPct = margin.GetRight(coord).GetPercentValue();
-  } else {
-    boxWidth += aMargin.right;
-  }
-  
-  // The total shrink wrap width "sww" (i.e., the width that the
-  // containing block needs to be to shrink-wrap this block) is
-  // calculated by the expression:
-  //   sww = bw + (mp * sww)
-  // where "bw" is the box width (frame width plus margins that aren't
-  // percentage based) and "mp" are the total margin percentages (i.e.,
-  // the left percentage value plus the right percentage value).
-  // Solving for "sww" gives:
-  //  sww = bw / (1 - mp)
-  // Note that this is only well defined for "mp" less than 100% and 
-  // greater than -100% (XXXldb but we only accept 0 to 100%).
-
-  float marginPct = leftPct + rightPct;
-  if (marginPct >= 1.0) {
-    // Ignore the right percentage and just use the left percentage
-    // XXX Pay attention to direction property...
-    marginPct = leftPct;
-    rightPct = 0.0;
-  }
-  
-  if ((marginPct > 0.0) && (marginPct < 1.0)) {
-    double shrinkWrapWidth = float(boxWidth) / (1.0 - marginPct);
-    
-    if (eStyleUnit_Percent == margin.GetLeftUnit()) {
-      aMargin.left = NSToCoordFloor((float)(shrinkWrapWidth * leftPct));
-      aXToUpdate += aMargin.left;
-    }
-    if (eStyleUnit_Percent == margin.GetRightUnit()) {
-      aMargin.right = NSToCoordFloor((float)(shrinkWrapWidth * rightPct));
-    }
-  }
-}
-
-static void
 nsPointDtor(void *aFrame, nsIAtom *aPropertyName,
             void *aPropertyValue, void *aDtorData)
 {
@@ -340,48 +277,6 @@ nsBlockReflowContext::ReflowBlock(const nsRect&       aSpace,
   nsresult rv = NS_OK;
   mFrame = aFrameRS.frame;
   mSpace = aSpace;
-
-  // Get reflow reason set correctly. It's possible that a child was
-  // created and then it was decided that it could not be reflowed
-  // (for example, a block frame that isn't at the start of a
-  // line). In this case the reason will be wrong so we need to check
-  // the frame state.
-  aFrameRS.reason = eReflowReason_Resize;
-  if (NS_FRAME_FIRST_REFLOW & mFrame->GetStateBits()) {
-    aFrameRS.reason = eReflowReason_Initial;
-  }
-  else if (mOuterReflowState.reason == eReflowReason_Incremental) {
-    // If the frame we're about to reflow is on the reflow path, then
-    // propagate the reflow as `incremental' so it unwinds correctly
-    // to the target frames below us.
-    PRBool frameIsOnReflowPath = mOuterReflowState.path->HasChild(mFrame);
-    if (frameIsOnReflowPath)
-      aFrameRS.reason = eReflowReason_Incremental;
-
-    // But...if the incremental reflow command is a StyleChanged
-    // reflow and its target is the current block, change the reason
-    // to `style change', so that it propagates through the entire
-    // subtree.
-    nsHTMLReflowCommand* rc = mOuterReflowState.path->mReflowCommand;
-    if (rc) {
-      nsReflowType type;
-      rc->GetType(type);
-      if (type == eReflowType_StyleChanged)
-        aFrameRS.reason = eReflowReason_StyleChange;
-      else if (type == eReflowType_ReflowDirty &&
-               (mFrame->GetStateBits() & NS_FRAME_IS_DIRTY) &&
-               !frameIsOnReflowPath) {
-        aFrameRS.reason = eReflowReason_Dirty;
-      }
-    }
-  }
-  else if (mOuterReflowState.reason == eReflowReason_StyleChange) {
-    aFrameRS.reason = eReflowReason_StyleChange;
-  }
-  else if (mOuterReflowState.reason == eReflowReason_Dirty) {
-    if (mFrame->GetStateBits() & NS_FRAME_IS_DIRTY)
-      aFrameRS.reason = eReflowReason_Dirty;
-  }
 
   const nsStyleDisplay* display = mFrame->GetStyleDisplay();
 
@@ -511,34 +406,6 @@ nsBlockReflowContext::ReflowBlock(const nsRect&       aSpace,
 #endif
 
   mOuterReflowState.mSpaceManager->Translate(tx, ty);
-
-  // See if this is the child's initial reflow and we are supposed to
-  // compute our maximum width
-  if (mComputeMaximumWidth && (eReflowReason_Initial == aFrameRS.reason)) {
-    mOuterReflowState.mSpaceManager->PushState();
-
-    nscoord oldAvailableWidth = aFrameRS.availableWidth;
-    nscoord oldComputedWidth = aFrameRS.mComputedWidth;
-
-    aFrameRS.availableWidth = NS_UNCONSTRAINEDSIZE;
-    aFrameRS.mComputedWidth = NS_UNCONSTRAINEDSIZE;
-    rv = mFrame->Reflow(mPresContext, mMetrics, aFrameRS, aFrameReflowStatus);
-
-    // Update the reflow metrics with the maximum width
-    mMetrics.mMaximumWidth = mMetrics.width;
-#ifdef NOISY_REFLOW
-    printf("*** nsBlockReflowContext::ReflowBlock block %p returning max width %d\n", 
-           mFrame, mMetrics.mMaximumWidth);
-#endif
-    // The second reflow is just as a resize reflow with the constrained
-    // width
-    aFrameRS.availableWidth = oldAvailableWidth;
-    aFrameRS.mComputedWidth = oldComputedWidth;
-    aFrameRS.reason         = eReflowReason_Resize;
-
-    mOuterReflowState.mSpaceManager->PopState();
-  }
-
   rv = mFrame->Reflow(mPresContext, mMetrics, aFrameRS, aFrameReflowStatus);
   mOuterReflowState.mSpaceManager->Translate(-tx, -ty);
 
@@ -570,13 +437,6 @@ nsBlockReflowContext::ReflowBlock(const nsRect&       aSpace,
     mMetrics.mOverflowArea.height = mMetrics.height;
   }
 
-  // Now that frame has been reflowed at least one time make sure that
-  // the NS_FRAME_FIRST_REFLOW bit is cleared so that never give it an
-  // initial reflow reason again.
-  if (eReflowReason_Initial == aFrameRS.reason) {
-    mFrame->RemoveStateBits(NS_FRAME_FIRST_REFLOW);
-  }
-
   if (!NS_INLINE_IS_BREAK_BEFORE(aFrameReflowStatus) ||
       (mFrame->GetStateBits() & NS_FRAME_OUT_OF_FLOW)) {
     // If frame is complete and has a next-in-flow, we need to delete
@@ -594,13 +454,6 @@ nsBlockReflowContext::ReflowBlock(const nsRect&       aSpace,
           ->DeleteNextInFlowChild(mPresContext, kidNextInFlow);
       }
     }
-  }
-
-  // If the block is shrink wrapping its width, then see if we have percentage
-  // based margins. If so, we can calculate them now that we know the shrink
-  // wrap width
-  if (NS_SHRINKWRAPWIDTH == aFrameRS.mComputedWidth) {
-    ComputeShrinkwrapMargins(aFrameRS.mStyleMargin, mMetrics.width, mMargin, mX);
   }
 
   return rv;
