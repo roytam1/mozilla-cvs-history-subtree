@@ -91,19 +91,20 @@ LDAPMODIFY_OBJ		= $(addprefix $(OBJDEST)/, ldapmodify.o) \
 LDAPSEARCH_OBJ		= $(addprefix $(OBJDEST)/, ldapsearch.o) \
 			  $(addprefix $(OBJDEST)/, fileurl.o) 
 LDAPCMP_OBJ     	= $(addprefix $(OBJDEST)/, ldapcmp.o)
-
+ifeq ($(OS_ARCH), HP-UX)
+LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o)
+else
 LDAPTOOLCOMMON_OBJ	= $(addprefix $(OBJDEST)/, common.o) \
 			  $(addprefix $(OBJDEST)/, convutf8.o)
+endif
 ifeq ($(LDAP_TOOL_ARGPIN),1)
 LDAPTOOLCOMMON_OBJ	+= $(addprefix $(OBJDEST)/, argpin.o) \
 			   $(addprefix $(OBJDEST)/, ntuserpin.o)
 endif
-
-ifneq ($(OS_ARCH), HP-UX)
-LDAPTOOLCOMMON_OBJ	+= $(addprefix $(OBJDEST)/, convutf8.o)
-else
-LDAPTOOLCPPCOMMON_OBJ   = $(addprefix $(OBJDEST)/, convutf8.o)
 endif
+
+ifeq ($(OS_ARCH), HP-UX)
+LDAPTOOLCPPCOMMON_OBJ   = $(addprefix $(OBJDEST)/, convutf8.o)
 endif
 
 CLIENT_OBJS = $(LDAPDELETE_OBJ) $(LDAPMODIFY_OBJ) \
