@@ -114,15 +114,15 @@ PR_EXTERN(PRBool) _pr_ipv6_is_present;
                ((a)->pr_s6_addr[14] == 0)		&&	\
                ((a)->pr_s6_addr[15] == 0x1U))
  
-const PRIPv6Addr _pr_in6addr_any =	{{{ 0, 0, 0, 0,
+const PRIPv6Addr _pr_in6addr_any =	{   0, 0, 0, 0,
 										0, 0, 0, 0,
 										0, 0, 0, 0,
-										0, 0, 0, 0 }}};
+										0, 0, 0, 0 };
 
-const PRIPv6Addr _pr_in6addr_loopback = {{{ 0, 0, 0, 0,
+const PRIPv6Addr _pr_in6addr_loopback = {   0, 0, 0, 0,
 											0, 0, 0, 0,
 											0, 0, 0, 0,
-											0, 0, 0, 0x1U }}};
+											0, 0, 0, 0x1U };
 /*
  * The values at bytes 10 and 11 are compared using pointers to
  * 8-bit fields, and not 32-bit fields, to make the comparison work on
