@@ -48,7 +48,7 @@ static NS_DEFINE_IID(kIRDFNodeIID,       NS_IRDFNODE_IID);
 static NS_DEFINE_IID(kIRDFRegistryIID,   NS_IRDFREGISTRY_IID);
 static NS_DEFINE_IID(kISupportsIID,      NS_ISUPPORTS_IID);
 
-static NS_DEFINE_CID(kRDFRegistryCID,    NS_RDFREGISTRY_CID);
+static NS_DEFINE_CID(kRDFRegistryCID,        NS_RDFREGISTRY_CID);
 
 ////////////////////////////////////////////////////////////////////////
 // PropertyListElement
@@ -95,7 +95,7 @@ public:
     }
 
     PRBool UnlinkAndTestIfEmpty(void) {
-        if (mPrev = mNext)
+        if (mPrev == mNext)
             return PR_TRUE;
 
         mPrev->mNext = mNext;
@@ -544,6 +544,10 @@ nsMemoryDataSource::GetTarget(nsIRDFNode* source,
                               PRBool tv,
                               nsIRDFNode*& target)
 {
+    NS_PRECONDITION(source && property, "null ptr");
+    if (!source || !property)
+        return NS_ERROR_NULL_POINTER;
+
     target = NULL; // reasonable default
 
     NodeHashKey key(source);
@@ -566,6 +570,10 @@ nsMemoryDataSource::GetTargets(nsIRDFNode* source,
                                PRBool tv,
                                nsIRDFCursor*& targets)
 {
+    NS_PRECONDITION(source && property, "null ptr");
+    if (!source || !property)
+        return NS_ERROR_NULL_POINTER;
+
     targets = gEmptyCursor; // reasonable default
 
     NodeHashKey key(source);
@@ -586,6 +594,10 @@ nsMemoryDataSource::Assert(nsIRDFNode* source,
                            nsIRDFNode* target,
                            PRBool tv)
 {
+    NS_PRECONDITION(source && property && target, "null ptr");
+    if (!source || !property || !target)
+        return NS_ERROR_NULL_POINTER;
+
     NodeImpl *u;
 
     if (! (u = Ensure(source)))
@@ -606,6 +618,10 @@ nsMemoryDataSource::Unassert(nsIRDFNode* source,
                              nsIRDFNode* property,
                              nsIRDFNode* target)
 {
+    NS_PRECONDITION(source && property && target, "null ptr");
+    if (!source || !property || !target)
+        return NS_ERROR_NULL_POINTER;
+
     NodeHashKey key(source);
     NodeImpl *u;
 
@@ -623,6 +639,10 @@ nsMemoryDataSource::HasAssertion(nsIRDFNode* source,
                                  PRBool tv,
                                  PRBool& hasAssertion)
 {
+    NS_PRECONDITION(source && property && target, "null ptr");
+    if (!source || !property || !target)
+        return NS_ERROR_NULL_POINTER;
+
     hasAssertion = PR_FALSE; // reasonable default
 
     NodeHashKey key(source);
@@ -661,6 +681,10 @@ NS_IMETHODIMP
 nsMemoryDataSource::ArcLabelsOut(nsIRDFNode* source,
                                  nsIRDFCursor*& labels)
 {
+    NS_PRECONDITION(source, "null ptr");
+    if (! source)
+        return NS_ERROR_NULL_POINTER;
+
     labels = gEmptyCursor; // reasonable default
 
     NodeHashKey key(source);
@@ -701,4 +725,6 @@ nsMemoryDataSource::Ensure(nsIRDFNode* node)
     }
     return result;
 }
+
+
 
