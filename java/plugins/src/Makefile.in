@@ -49,7 +49,13 @@ CPPSRCS =  \
 	PlugletViewFactory.cpp \
 	$(NULL)
 
-CXXFLAGS := -I$(JDKHOME)/include -I$(JDKHOME)/include/solaris $(MOZ_TOOLKIT_REGISTRY_CFLAGS) -D_REENTRANT  -DOJI_DISABLE $(CXXFLAGS) 
+ifeq ($(OS_ARCH),Linux) 
+PLATFORM_CXXFLAGS = -I$(JDKHOME)/include/linux -I/usr/X11R6/LessTif/Motif2.0/include
+else
+PLATFORM_CXXFLAGS = -I$(JDKHOME)/include/solaris
+endif
+
+CXXFLAGS := -I$(JDKHOME)/include  $(PLATFORM_CXXFLAGS) $(MOZ_TOOLKIT_REGISTRY_CFLAGS) -D_REENTRANT  -DOJI_DISABLE $(CXXFLAGS) 
 
 DSO_LDOPTS += \
       -L$(JDKHOME)/jre/lib/$(HOSTTYPE)/ \
@@ -60,6 +66,8 @@ DSO_LDOPTS += \
 ifneq ($(OS_ARCH), Linux)
 DSO_LDOPTS      += \
                   -lthread
+else
+DSO_LDOPTS      += -L/usr/X11R6/LessTif/Motif2.0/lib -L/usr/X11R6/lib
 endif
 
 include $(topsrcdir)/config/rules.mk
