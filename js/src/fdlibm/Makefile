@@ -55,7 +55,6 @@ CSRCS		=	\
 	k_cos.c		\
 	k_sin.c		\
 	k_rem_pio2.c	\
-	k_standard.c 	\
 	k_tan.c 	\
 	s_atan.c	\
 	s_ceil.c	\
@@ -65,9 +64,7 @@ CSRCS		=	\
 	s_finite.c	\
 	s_floor.c	\
 	s_isnan.c	\
-	s_ldexp.c	\
 	s_lib_version.c	\
-	s_matherr.c	\
 	s_sin.c		\
 	s_tan.c		\
 	w_acos.c	\
@@ -77,7 +74,6 @@ CSRCS		=	\
 	w_fmod.c	\
 	w_log.c		\
 	w_pow.c		\
-	w_remainder.c	\
 	w_sqrt.c	\
 	$(NULL)
 
