@@ -128,6 +128,11 @@ typedef unsigned long HMTX;
 #include "nsIDocument.h"
 #include "nsITextToSubURI.h"
 
+#ifdef MOZ_MINOTAUR
+#include "nsIExternalProtocolService.h"
+#include "nsCExternalHandlerService.h"
+#endif
+
 #ifdef NS_DEBUG
 /**
  * Note: the log module is created during initialization which
@@ -566,6 +571,48 @@ nsWebShell::OnLinkClickSync(nsIContent *aContent,
   if (aRequest) {
     *aRequest = nsnull;
   }
+
+#ifdef MOZ_MINOTAUR
+  nsAutoString spec(aURLSpec);
+  nsAutoString scheme; 
+  PRInt32 pos = spec.FindChar(':');                                             
+  static const char kMailToURI[] = "mailto";                                    
+  static const char kNewsURI[] = "news";                                        
+  static const char kSnewsURI[] = "snews";                                      
+  static const char kNntpURI[] = "nntp";                                        
+  static const char kImapURI[] = "imap"; 
+  if ((pos == (PRInt32)(sizeof kMailToURI - 1)) && (spec.Left(scheme, pos) != -1) && scheme.EqualsIgnoreCase(kMailToURI)) 
+  {
+    // the scheme is mailto, we can handle it
+  } 
+  else if ((pos == (PRInt32)(sizeof kNewsURI - 1)) && (spec.Left(scheme, pos) != -1) && scheme.EqualsIgnoreCase(kNewsURI)) 
+  {
+    // the scheme is news, we can handle it
+  } 
+  else if ((pos == (PRInt32)(sizeof kSnewsURI - 1)) && (spec.Left(scheme, pos) != -1) && scheme.EqualsIgnoreCase(kSnewsURI)) 
+  {
+     // the scheme is snews, we can handle it
+  } 
+  else if ((pos == (PRInt32)(sizeof kNntpURI - 1)) && (spec.Left(scheme, pos) != -1) && scheme.EqualsIgnoreCase(kNntpURI)) 
+  {
+     // the scheme is nntp, we can handle it 
+  } else if ((pos == (PRInt32)(sizeof kImapURI - 1)) && (spec.Left(scheme, pos) != -1) && scheme.EqualsIgnoreCase(kImapURI)) 
+  {
+      // the scheme is imap, we can handle it
+  }
+  else 
+  {
+      // we don't handle this type, the the registered handler take it 
+      nsCOMPtr <nsIURI> uri;
+      rv = NS_NewURI(getter_AddRefs(uri), NS_ConvertUCS2toUTF8(aURLSpec).get());
+      NS_ENSURE_SUCCESS(rv,rv);
+      nsCOMPtr<nsIExternalProtocolService> extProtService = do_GetService(NS_EXTERNALPROTOCOLSERVICE_CONTRACTID, &rv);
+      NS_ENSURE_SUCCESS(rv,rv);
+      rv = extProtService->LoadUrl(uri);
+      NS_ENSURE_SUCCESS(rv,rv);
+      return rv;                                                                  
+  }                                                                               
+#endif
 
   switch(aVerb) {
     case eLinkVerb_New:
