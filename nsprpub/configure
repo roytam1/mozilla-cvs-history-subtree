@@ -4934,6 +4934,13 @@ EOF
             fi
         fi
     fi
+    if test -n "$USE_PTHREADS"; then
+        OS_LIBS="$OS_LIBS -lpthread -lthread -lposix4 -lsocket -lnsl -ldl"
+    elif test -n "$USE_USER_PTHREADS"; then
+        OS_LIBS="$OS_LIBS -lsocket -lnsl -ldl"
+    else
+        OS_LIBS="$OS_LIBS -lthread -lposix4 -lsocket -lnsl -ldl"
+    fi
     ;;
 esac
 
