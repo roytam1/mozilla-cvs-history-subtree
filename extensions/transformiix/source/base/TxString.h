@@ -123,10 +123,9 @@ public:
     // Convert string to uppercase
     void toUpperCase();
 
-    // Trim whitespace from both ends
-    void trim();
-
-#ifndef TX_EXE
+#ifdef TX_EXE
+    String& operator = (const String& aSource);
+#else
     nsString& getNSString();
     const nsString& getConstNSString() const;
 #endif

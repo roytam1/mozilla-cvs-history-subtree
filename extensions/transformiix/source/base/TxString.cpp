@@ -61,13 +61,13 @@ String::String(UNICODE_CHAR* aSource, const PRUint32 aLength) : mBuffer(0),
 
 String::~String()
 {
-  delete mBuffer;
+  delete [] mBuffer;
 }
 
 void String::append(const UNICODE_CHAR aSource)
 {
   ensureCapacity(1);
-  mBuffer[mLength + 1] = aSource;
+  mBuffer[mLength] = aSource;
   ++mLength;
 }
 
@@ -172,8 +172,13 @@ void String::ensureCapacity(const PRUint32 aCapacity)
 
   mBufferLength += aCapacity - freeSpace;
   UNICODE_CHAR* tempBuffer = new UNICODE_CHAR[mBufferLength];
-  memcpy(tempBuffer, mBuffer, mLength);
-  delete mBuffer;
+  if (mLength > 0) {
+    memcpy(tempBuffer, mBuffer, mLength * sizeof(UNICODE_CHAR));
+  }
+  else {
+    memset(tempBuffer, 0, mBufferLength * sizeof(UNICODE_CHAR));
+  }
+  delete [] mBuffer;
   mBuffer = tempBuffer;
 }
 
@@ -282,7 +287,8 @@ String& String::subString(const PRUint32 aStart, const PRUint32 aEnd, String& aD
     PRUint32 substrLength = end - aStart;
 
     aDest.ensureCapacity(substrLength);
-    memcpy(aDest.mBuffer, &mBuffer[aStart], substrLength);
+    memcpy(aDest.mBuffer, &mBuffer[aStart],
+           substrLength * sizeof(UNICODE_CHAR));
     aDest.mLength = substrLength;
   }
   return aDest;
@@ -310,63 +316,12 @@ void String::toUpperCase()
   }
 }
 
-void String::trim()
+String& String::operator = (const String& aSource)
 {
-  // As long as we are not working on an emtpy string, trim from the right
-  // first, so we don't have to move useless spaces when we trim from the left.
-  MBool done = MB_FALSE;
-  PRUint32 trimLoop = mLength - 1;
-
-  if (mLength > 0)
-  {
-    while (!done)
-    {
-      switch (mBuffer[trimLoop])
-      {
-        case ' ' :
-        case '\t' :
-        case '\n' :
-        case '\r' :
-          --mLength;
-          --trimLoop;
-          break;
-
-        default :
-          done = MB_TRUE;
-          break;
-      }
-    }
-  }
-
-  // Now, if there are any characters left to the string, Trim to the left.
-  // First count the number of "left" spaces.  Then move all characters to the
-  // left by that ammount.
-  if (mLength > 0)
-  {
-    done = MB_FALSE;
-    trimLoop = 0;
-    while (!done)
-    {
-      switch (mBuffer[trimLoop])
-      {
-        case ' ' :
-        case '\t' :
-        case '\n' :
-        case '\r' :
-          ++trimLoop;
-          break;
-
-        default :
-          done = MB_TRUE;
-          break;
-      }
-    }
-
-    if (trimLoop < mLength) {
-      memmove(mBuffer, &mBuffer[trimLoop], (mLength - trimLoop) * sizeof(UNICODE_CHAR));
-    }
-    mLength -= trimLoop;
-  }
+  mBuffer = aSource.toUnicode();
+  mBufferLength = aSource.mLength;
+  mLength = aSource.mLength;
+  return *this;
 }
 
 // XXX DEPRECATED
@@ -473,11 +428,13 @@ char* String::toCharArray() const
 
 UNICODE_CHAR* String::toUnicode() const
 {
-  UNICODE_CHAR* tmpBuffer = new UNICODE_CHAR[mLength + 1];
+  if (mLength == 0) {
+    return 0;
+  }
+  UNICODE_CHAR* tmpBuffer = new UNICODE_CHAR[mLength];
   NS_ASSERTION(tmpBuffer, "out of memory");
   if (tmpBuffer) {
-    memcpy(tmpBuffer, mBuffer, mLength);
-    tmpBuffer[mLength] = 0;
+    memcpy(tmpBuffer, mBuffer, mLength * sizeof(UNICODE_CHAR));
   }
   return tmpBuffer;
 }

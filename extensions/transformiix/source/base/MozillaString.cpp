@@ -169,11 +169,6 @@ void String::toUpperCase()
   ToUpperCase(mString);
 }
 
-void String::trim()
-{
-  mString.CompressWhitespace();
-}
-
 nsString& String::getNSString()
 {
   return mString;
