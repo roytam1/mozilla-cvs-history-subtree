@@ -68,8 +68,10 @@ else
 	$(NSINSTALL) $(LIBDIR)/$(NSPR_BASENAME).* $(INSTDIR)/lib
 ifneq ($(USE_64), 1)
 ifeq ($(OS_ARCH), SunOS)
+ifneq ($(OS_TEST),i86pc)
 	$(NSINSTALL) $(LIBDIR)/lib$(HYBRID_LIBNAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/lib$(PURE32_LIBNAME).* $(INSTDIR)/lib
+endif
 endif
 ifeq ($(OS_ARCH), HP-UX)
 	$(NSINSTALL) $(LIBDIR)/lib$(HYBRID_LIBNAME).* $(INSTDIR)/lib
