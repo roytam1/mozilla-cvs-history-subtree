@@ -2852,77 +2852,76 @@ nsPluginHostImpl::FindPluginEnabledForType(const char* aMimeType,
 
 NS_IMETHODIMP nsPluginHostImpl::GetPluginFactory(const char *aMimeType, nsIPlugin** aPlugin)
 {
-	nsresult rv = NS_ERROR_FAILURE;
-	*aPlugin = NULL;
+  nsresult rv = NS_ERROR_FAILURE;
+  *aPlugin = NULL;
 
-	if(!aMimeType)
-		return NS_ERROR_ILLEGAL_VALUE;
+  if(!aMimeType)
+    return NS_ERROR_ILLEGAL_VALUE;
 
-	// If plugins haven't been scanned yet, do so now
+  // If plugins haven't been scanned yet, do so now
   LoadPlugins();
 
-	nsPluginTag* pluginTag;
-	if((rv = FindPluginEnabledForType(aMimeType, pluginTag)) == NS_OK)
-	{
-
-#ifdef XP_WIN // actually load a dll on Windows
+  nsPluginTag* pluginTag;
+  if((rv = FindPluginEnabledForType(aMimeType, pluginTag)) == NS_OK)
+  {
 
 #ifdef NS_DEBUG
-  printf("For %s found plugin %s\n", aMimeType, pluginTag->mFileName);
+    printf("For %s found plugin %s\n", aMimeType, pluginTag->mFileName);
 #endif
 
-    nsFileSpec file(pluginTag->mFileName);
+    if (nsnull == pluginTag->mLibrary)		// if we haven't done this yet
+    {
+      nsFileSpec file(pluginTag->mFileName);
 
-    nsPluginFile pluginFile(file);
-    PRLibrary* pluginLibrary = NULL;
+      nsPluginFile pluginFile(file);
+      PRLibrary* pluginLibrary = NULL;
 
-    if (pluginFile.LoadPlugin(pluginLibrary) != NS_OK || pluginLibrary == NULL)
-      return NS_ERROR_FAILURE;
+      if (pluginFile.LoadPlugin(pluginLibrary) != NS_OK || pluginLibrary == NULL)
+        return NS_ERROR_FAILURE;
 
-    pluginTag->mLibrary = pluginLibrary;
+      pluginTag->mLibrary = pluginLibrary;
+    }
 
-#endif
-
-		nsIPlugin* plugin = pluginTag->mEntryPoint;
-		if(plugin == NULL)
-		{
+    nsIPlugin* plugin = pluginTag->mEntryPoint;
+    if(plugin == NULL)
+    {
       // No, this is not a leak. GetGlobalServiceManager() doesn't
       // addref the pointer on the way out. It probably should.
       nsIServiceManager* serviceManager;
       nsServiceManager::GetGlobalServiceManager(&serviceManager);
 
-			// need to get the plugin factory from this plugin.
-			nsFactoryProc nsGetFactory = nsnull;
-			nsGetFactory = (nsFactoryProc) PR_FindSymbol(pluginTag->mLibrary, "NSGetFactory");
-			if(nsGetFactory != nsnull)
-			{
-			    rv = nsGetFactory(serviceManager, kPluginCID, nsnull, nsnull,    // XXX fix ClassName/ContractID
+      // need to get the plugin factory from this plugin.
+      nsFactoryProc nsGetFactory = nsnull;
+      nsGetFactory = (nsFactoryProc) PR_FindSymbol(pluginTag->mLibrary, "NSGetFactory");
+      if(nsGetFactory != nsnull)
+      {
+        rv = nsGetFactory(serviceManager, kPluginCID, nsnull, nsnull,    // XXX fix ClassName/ContractID
                             (nsIFactory**)&pluginTag->mEntryPoint);
-			    plugin = pluginTag->mEntryPoint;
-			    if (plugin != NULL)
-				    plugin->Initialize();
-			}
-			else
-			{
-				rv = ns4xPlugin::CreatePlugin(serviceManager,
+        plugin = pluginTag->mEntryPoint;
+        if (plugin != NULL)
+          plugin->Initialize();
+      }
+      else
+      {
+        rv = ns4xPlugin::CreatePlugin(serviceManager,
                                       pluginTag->mFileName,
                                       pluginTag->mLibrary,
                                       &pluginTag->mEntryPoint);
 
-				plugin = pluginTag->mEntryPoint;
-                pluginTag->mFlags |= NS_PLUGIN_FLAG_OLDSCHOOL;
+        plugin = pluginTag->mEntryPoint;
+        pluginTag->mFlags |= NS_PLUGIN_FLAG_OLDSCHOOL;
 
-				// no need to initialize, already done by CreatePlugin()
-			}
-		}
+        // no need to initialize, already done by CreatePlugin()
+      }
+    }
 
-		if(plugin != nsnull)
-		{
-			*aPlugin = plugin;
-			plugin->AddRef();
-			return NS_OK;
-		}
-	}
+    if(plugin != nsnull)
+    {
+      *aPlugin = plugin;
+      plugin->AddRef();
+      return NS_OK;
+    }
+  }
 
 	return rv;
 }
