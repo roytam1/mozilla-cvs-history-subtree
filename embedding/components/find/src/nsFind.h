@@ -78,6 +78,8 @@ protected:
   static nsIAtom* sScriptAtom;
   static nsIAtom* sSelectAtom;
   static nsIAtom* sTextareaAtom;
+  static nsIAtom* sThAtom;
+  static nsIAtom* sTdAtom;
 
   // Parameters set from the interface:
   //nsCOMPtr<nsIDOMRange> mRange;   // search only in this range
