@@ -320,6 +320,8 @@ MODULE_PRIVATE CacheUseEnum NET_CacheUseMethod=CU_CHECK_PER_SESSION;
 
 MODULE_PRIVATE time_t NET_StartupTime=0;
 
+PRIVATE XP_Bool get_url_disabled = FALSE;
+
 MODULE_PRIVATE XP_Bool NET_ProxyAcLoaded = FALSE;
 MODULE_PRIVATE XP_Bool NET_GlobalAcLoaded = FALSE;
 MODULE_PRIVATE int NET_TotalNumberOfOpenConnections=0;
@@ -342,6 +344,11 @@ PRIVATE void net_cleanup_reg_protocol_impls(void);
 PRIVATE void NET_InitTotallyRandomStuffPeopleAddedProtocols(void);
 
 
+PUBLIC void
+NET_DisableGetURL(void)
+{
+	get_url_disabled = TRUE;
+}
 
 /* fix Mac warning for missing prototype */
 PUBLIC void
@@ -676,6 +683,26 @@ MODULE_PRIVATE int PR_CALLBACK NET_PrefChangedFunc(const char *pref, void *data)
 	return TRUE;
 } 
 
+/* finish the init of 'netlib'.  inits cookies, cache, history
+ *
+ */
+PUBLIC void 
+NET_FinishInitNetLib()
+{
+
+#ifdef MOZILLA_CLIENT
+    NET_ReadCacheFAT("", TRUE);
+
+	NET_ReadCookies("");
+
+#endif /* MOZILLA_CLIENT */
+
+	NET_RegisterEnableUrlMatchCallback();
+
+	NET_SetupPrefs(NULL);  /* setup initial proxy, socks, dnsExpiration and cache preference info */
+
+}
+
 /* initialize the netlibrary and set the socket buffer size
  */
 PUBLIC int
@@ -735,7 +762,6 @@ NET_InitNetLib(int socket_buffer_size, int max_number_of_connections)
 #ifdef JAVA
     libnet_asyncIO = PR_NewNamedMonitor("libnet");
 #endif
-	NET_SetupPrefs(NULL);  /* setup initial proxy, socks, dnsExpiration and cache preference info */
 	PREF_RegisterCallback("network.proxy",NET_PrefChangedFunc,NULL);
 	PREF_RegisterCallback("browser.cache",NET_PrefChangedFunc,NULL);
 	PREF_RegisterCallback("network.hosts.socks_server",NET_PrefChangedFunc,NULL);
@@ -743,9 +769,9 @@ NET_InitNetLib(int socket_buffer_size, int max_number_of_connections)
 	PREF_RegisterCallback("network.dnsCacheExpiration",NET_DNSExpirationPrefChanged,NULL);
 	NET_RegisterCookiePrefCallbacks(); /* simply inits cookie info in mkaccess.c */
 									   /* and registers the callbacks */
+
 	/* inits the proxy autodiscovery vars and registers their callbacks. */
 	NET_RegisterPadPrefCallbacks();
-	NET_RegisterEnableUrlMatchCallback();
 	PREF_RegisterCallback("mail.allow_at_sign_in_user_name", NET_PrefChangedFunc, NULL);
 
 	/* initialize protocol modules 
@@ -1847,6 +1873,12 @@ NET_GetURL (URL_Struct *URL_s,
 	Bool confirm;
 	Bool load_background;
 	char *confirmstring;
+	
+	if ( get_url_disabled ) {
+		/* So that external URL's can't be loaded */
+		return -1;
+	}
+
 	TRACEMSG(("Entering NET_GetURL"));
 	LIBNET_LOCK();
 
@@ -2061,6 +2093,7 @@ NET_GetURL (URL_Struct *URL_s,
 		StrAllocCopy(new_address, XP_STRCHR(URL_s->address, ':')+1);
 		FREE(URL_s->address);
 		URL_s->address = new_address;
+		URL_s->allow_content_change = TRUE;
 
 		type = NET_URL_Type(URL_s->address);
 
@@ -2112,6 +2145,9 @@ NET_GetURL (URL_Struct *URL_s,
 
 #ifdef MOZILLA_CLIENT
 	if(
+#if defined(MOZ_LITE) && defined(XP_UNIX)
+	   (type == NEWS_TYPE_URL && FE_AlternateNewsReader(URL_s->address)) ||
+#endif
 #if defined(XP_WIN) || defined(XP_MAC) || defined(XP_OS2)
 	   FE_UseExternalProtocolModule(window_id, output_format, URL_s, exit_routine) ||
 #endif
@@ -2381,8 +2417,10 @@ NET_GetURL (URL_Struct *URL_s,
     if(type == HTTP_TYPE_URL || type == FILE_TYPE_URL ||
 		type == SECURE_HTTP_TYPE_URL || type == GOPHER_TYPE_URL
 #ifdef JAVA
-	/* Castanet URLs don't work when there's no Java */
+#if 0
+/* DHIREN */ /* Kludge because castanet URLs don't work when there's no Java */
 		|| type == MARIMBA_TYPE_URL
+#endif
 #endif
 		)
 	add_slash_to_URL(URL_s);
@@ -2412,6 +2450,17 @@ NET_GetURL (URL_Struct *URL_s,
        (URL_s->force_reload == NET_CACHE_ONLY_RELOAD))
 		URL_s->force_reload = NET_DONT_RELOAD;
 
+	/* Before looking in the cache, make sure we check the
+	 * special cases to know if
+	 * we're allowed to use modified content.
+	 * Two cases so far: a view-source URL, and
+	 * any non-internal URL.  Non-internal URLs are
+	 * the result of link clicks, drag-and-drop, etc.
+	 */
+	if ((CLEAR_CACHE_BIT(output_format) == FO_VIEW_SOURCE) ||
+		(!URL_s->internal_url &&
+		 (CLEAR_CACHE_BIT(output_format) != FO_MAIL_TO)))
+		URL_s->allow_content_change = TRUE;
     /* check for the url in the cache
      */
     cache_method = NET_FindURLInCache(URL_s, window_id);
@@ -2761,16 +2810,16 @@ redo_load_switch:   /* come here on file/ftp retry */
 	pacf_status = TRUE;
 	if ((NET_ProxyAcLoaded || NET_GlobalAcLoaded) 
 		&& (this_entry->protocol == HTTP_TYPE_URL
-			|| this_entry->protocol == SECURE_HTTP_TYPE_URL
-			|| this_entry->protocol == GOPHER_TYPE_URL
-			|| this_entry->protocol == FTP_TYPE_URL
-			|| this_entry->protocol == WAIS_TYPE_URL
-			|| this_entry->protocol == URN_TYPE_URL
-			|| this_entry->protocol == NFS_TYPE_URL
-			|| (this_entry->protocol == NEWS_TYPE_URL 
-				&& !strncasecomp(URL_s->address, "snews:", 6)
-				)
+		 || this_entry->protocol == SECURE_HTTP_TYPE_URL
+		 || this_entry->protocol == GOPHER_TYPE_URL
+		 || this_entry->protocol == FTP_TYPE_URL
+		 || this_entry->protocol == WAIS_TYPE_URL
+		 || this_entry->protocol == URN_TYPE_URL
+		 || this_entry->protocol == NFS_TYPE_URL
+		 || (this_entry->protocol == NEWS_TYPE_URL 
+			 && !strncasecomp(URL_s->address, "snews:", 6)
 			)
+		)
 		&& (this_entry->proxy_conf =
 		     pacf_find_proxies_for_url(window_id, URL_s)) != NULL
 		&& (pacf_status = pacf_get_proxy_addr(window_id,
@@ -3383,7 +3432,7 @@ PUBLIC int NET_ProcessNet (PRFileDesc *ready_fd,  int fd_type)
  *      Also allows waiting urls into the active list.
  */
 PRIVATE int
-net_InterruptActiveStream (ActiveEntry *entry)
+net_InterruptActiveStream (ActiveEntry *entry, Bool show_warning)
 {
 	TRACEMSG(("Terminating transfer on port #%d, proto: %d",
 								entry->socket, entry->protocol));
@@ -3485,7 +3534,7 @@ NET_InterruptStream (URL_Struct *nurl)
 /*    assert (entryToKill);*/
     /* Kill it & free it */
 	if (entryToKill)
-	    status = net_InterruptActiveStream (entryToKill);
+	    status = net_InterruptActiveStream (entryToKill, TRUE);
 	else
 	    status = -1;
 
@@ -3525,7 +3574,7 @@ NET_InterruptSocket (PRFileDesc *socket)
     }
 
 	if (entryToKill)
-	    status = net_InterruptActiveStream (entryToKill);
+	    status = net_InterruptActiveStream (entryToKill, TRUE);
 	else
 	    status = -1;
 
@@ -3677,7 +3726,7 @@ net_InternalInterruptWindow(MWContext * window_id, Bool show_warning)
 			else
 		      {
 				FE_EnableClicking(window_id);
-				net_InterruptActiveStream (tmpEntry);
+				net_InterruptActiveStream (tmpEntry, show_warning);
 				number_killed += 1;
 
 				/* unset call_all_connections_complete here
@@ -4206,6 +4255,7 @@ NET_FreeURLStruct (URL_Struct * URL_s)
 	FREEIF(URL_s->window_chrome);
 	FREEIF(URL_s->refresh_url);
 	FREEIF(URL_s->wysiwyg_url);
+	FREEIF(URL_s->origin_url);
 	FREEIF(URL_s->error_msg);
 
     FREEIF(URL_s->sec_info);
@@ -4275,6 +4325,10 @@ net_FreeURLAllHeaders (URL_Struct * URL_s)
 
 /* if there is no slash in a URL besides the two that specify a host
  * then add one to the end.
+ * 
+ * this fails with file:// URLs of the form file:///Hard_disk
+ * because there are 3 leading slashes already. Fixed for Mac, to fix bug 113706
+ * 
  */
 PRIVATE void add_slash_to_URL (URL_Struct *URL_s)
 {
@@ -4283,6 +4337,14 @@ PRIVATE void add_slash_to_URL (URL_Struct *URL_s)
 
 	/* make sure there is a hostname
 	 */
+#if defined(XP_MAC) /* || defined(XP_WIN) || defined(XP_UNIX) - add when comfortable.*/
+	/* should probably be XP at some stage */
+	if (XP_STRNCMP("file://", URL_s->address, 7) == 0)
+	{
+		 slash = XP_STRCHR(colon + 4,'/');
+	}
+	else
+#endif
 	if(*(colon+1) == '/' && *(colon+2) == '/')
 	    slash = XP_STRCHR(colon+3,'/');
 	else
@@ -4561,9 +4623,9 @@ net_gen_pics_document(ActiveEntry *cur_entry)
 <FRAME src='%spicsfail.htm'> \
 </FRAMESET>"
 
-        rv = PR_smprintf(PICS_HTML, help_dir);
+	rv = PR_smprintf(PICS_HTML, help_dir);
 
-        FREE(help_dir);
+	FREE(help_dir);
     }
 
 #endif /* PICS_SUPPORT */
@@ -4605,11 +4667,11 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
 	else if(!strncasecomp(which, "pics", 4))
 	  {
 		data = net_gen_pics_document(cur_entry);
-   		if (data) {
+		if (data) {
 			length = XP_STRLEN(data);
 			content_type = XP_STRDUP(TEXT_HTML);
-            uses_fe_data = FALSE;
-        } 
+	    uses_fe_data = FALSE;
+	} 
 	  }
 	else if(!strcasecomp(which, "cookies"))
 	{
@@ -5156,6 +5218,7 @@ PRIVATE Bool net_about_kludge(URL_Struct *URL_s)
 	 !XP_STRCMP((char*)user, "\207\170\210\214\200\205") ||			/* paquin */
 	 !XP_STRCMP((char*)user, "\207\170\214\203\173") ||			/* pauld */
 	 !XP_STRCMP((char*)user, "\207\172\177\174\205") ||			/* pchen */
+	 !XP_STRCMP((char*)user, "\207\177\200\203") ||                 /* phil */
 	 !XP_STRCMP((char*)user, "\207\200\174\211\211\174") ||			/* pierre */
 	 !XP_STRCMP((char*)user, "\207\200\176\203\174\213") ||			/* piglet */
 	 !XP_STRCMP((char*)user, "\207\200\205\202\174\211\213\206\205") ||	/* pinkerton */
@@ -5167,6 +5230,7 @@ PRIVATE Bool net_about_kludge(URL_Struct *URL_s)
 	 !XP_STRCMP((char*)user, "\211\201\172") ||				/* rjc */
 	 !XP_STRCMP((char*)user, "\211\204\216") ||				/* rmw */
 	 !XP_STRCMP((char*)user, "\211\170\204\211\170\201") ||		/* ramraj */
+	 !XP_STRCMP((char*)user, "\211\200\172\170\211\173\206\171") ||  /* ricardob */
 	 !XP_STRCMP((char*)user, "\211\206\171\204") ||				/* robm */
 	 !XP_STRCMP((char*)user, "\211\206\174\171\174\211") ||			/* roeber */
 	 !XP_STRCMP((char*)user, "\211\207\206\213\213\212") ||			/* rpotts */
@@ -5582,31 +5646,31 @@ int32 net_MailtoLoad (ActiveEntry * cur_entry)
 {
 		char *parms = NET_ParseURL (CE_URL_S->address, GET_SEARCH_PART);
 		char *rest = parms;
-		char *from = 0;						/* internal only */
-		char *reply_to = 0;					/* internal only */
+		char *from = 0;                                         /* internal only */
+		char *reply_to = 0;                                     /* internal only */
 		char *to = 0;
 		char *cc = 0;
 		char *bcc = 0;
-		char *fcc = 0;						/* internal only */
+		char *fcc = 0;                                          /* internal only */
 		char *newsgroups = 0;
 		char *followup_to = 0;
-		char *html_part = 0;				/* internal only */
-		char *organization = 0;				/* internal only */
+		char *html_part = 0;                            /* internal only */
+		char *organization = 0;                         /* internal only */
 		char *subject = 0;
 		char *references = 0;
-		char *attachment = 0;				/* internal only */
+		char *attachment = 0;                           /* internal only */
 		char *body = 0;
-		char *other_random_headers = 0;		/* unused (for now) */
+		char *other_random_headers = 0;         /* unused (for now) */
 		char *priority = 0;
-		char *newshost = 0;					/* internal only */
+		char *newshost = 0;                                     /* internal only */
 		XP_Bool encrypt_p = FALSE;
-		XP_Bool sign_p = FALSE;				/* internal only */
+		XP_Bool sign_p = FALSE;                         /* internal only */
 		char *newspost_url = 0;
 		XP_Bool force_plain_text = FALSE;
 		to = NET_ParseURL (CE_URL_S->address, GET_PATH_PART);
 		if (rest && *rest == '?')
 		  {
- 			/* start past the '?' */
+			/* start past the '?' */
 			rest++;
 			rest = XP_STRTOK (rest, "&");
 			while (rest && *rest)
@@ -5787,9 +5851,9 @@ int32 net_MailtoLoad (ActiveEntry * cur_entry)
 				newspost_url = XP_STRDUP ("news:");
 		  }
 
-#if defined(XP_WIN) /* other FE's add here when Front end code added */
-        FE_AlternateCompose(
-            from, reply_to, to, cc, bcc, fcc,
+#if defined(XP_WIN) || defined(XP_UNIX) /* other FE's add here when Front end code added */
+	FE_AlternateCompose(
+	    from, reply_to, to, cc, bcc, fcc,
 			newsgroups, followup_to, organization,
 			subject, references, other_random_headers,
 			priority, attachment, newspost_url, body );
