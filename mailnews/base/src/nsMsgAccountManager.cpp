@@ -2778,7 +2778,9 @@ NS_IMETHODIMP nsMsgAccountManager::SaveVirtualFolders()
 NS_IMETHODIMP nsMsgAccountManager::OnItemAdded(nsISupports *parentItem, nsISupports *item, const char *viewString)
 {
   nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(item);
-  NS_ENSURE_TRUE(folder, NS_OK); // just kick out with a success code if the item in question is not a folder
+  // just kick out with a success code if the item in question is not a folder
+  if (!folder)
+    return NS_OK;
   PRUint32 folderFlags;
   folder->GetFlags(&folderFlags);
   nsresult rv = NS_OK;
@@ -2813,7 +2815,9 @@ NS_IMETHODIMP nsMsgAccountManager::OnItemAdded(nsISupports *parentItem, nsISuppo
 NS_IMETHODIMP nsMsgAccountManager::OnItemRemoved(nsISupports *parentItem, nsISupports *item, const char *viewString)
 {
   nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(item);
-  NS_ENSURE_TRUE(folder, NS_OK); // just kick out with a success code if the item in question is not a folder
+  // just kick out with a success code if the item in question is not a folder
+  if (!folder)
+    return NS_OK;
   nsresult rv = NS_OK;
   PRUint32 folderFlags;
   folder->GetFlags(&folderFlags);

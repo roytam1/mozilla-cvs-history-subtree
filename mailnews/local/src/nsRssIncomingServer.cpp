@@ -271,7 +271,9 @@ NS_IMETHODIMP nsRssIncomingServer::GetCanSearchMessages(PRBool *canSearchMessage
 NS_IMETHODIMP nsRssIncomingServer::OnItemAdded(nsISupports *parentItem, nsISupports *item, const char *viewString)
 {
   nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(item);
-  NS_ENSURE_TRUE(folder, NS_OK); // just kick out with a success code if the item in question is not a folder
+  // just kick out with a success code if the item in question is not a folder
+  if (!folder)
+    return NS_OK;
 
   nsCOMPtr<nsIMsgIncomingServer> server;
   nsresult rv = folder->GetServer(getter_AddRefs(server));
