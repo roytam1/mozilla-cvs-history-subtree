@@ -45,6 +45,11 @@ NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccName(PRUnichar * *aAccName)
   return mRootAccessible->GetAccName(aAccName);
 }
 
+NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccValue(PRUnichar * *aAccValue) 
+{ 
+  return mRootAccessible->GetAccValue(aAccValue);
+}
+
 /* nsIAccessible getAccFirstChild (); */
 NS_IMETHODIMP nsHTMLIFrameAccessible::GetAccFirstChild(nsIAccessible **_retval)
 {
@@ -106,6 +111,29 @@ NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetAccName(PRUnichar * *aAccName)
   }
   *aAccName = ToNewUnicode(NS_LITERAL_STRING("Frame"));
   return NS_OK;  
+}
+
+  /* attribute wstring accName; */
+NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetAccValue(PRUnichar * *aAccValue) 
+{ 
+  *aAccValue = nsnull;
+
+  nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+  if (!shell) {
+     return NS_ERROR_FAILURE;  
+  }
+
+  nsCOMPtr<nsIDocument> document;
+  if (shell)
+    shell->GetDocument(getter_AddRefs(document));
+  if (document) {
+    nsCOMPtr<nsIURI> pURI(mDocument->GetDocumentURL());
+    char *path;
+    pURI->GetSpec(&path);
+    *aAccValue = ToNewUnicode(nsDependentCString(path));
+    return NS_OK;
+  }
+  return NS_ERROR_NOT_IMPLEMENTED;  
 }
 
   /* readonly attribute nsIAccessible accParent; */
