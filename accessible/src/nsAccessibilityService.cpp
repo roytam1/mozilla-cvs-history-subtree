@@ -83,7 +83,7 @@ nsAccessibilityService::CreateRootAccessible(nsISupports* aPresContext, nsISuppo
 
   NS_ASSERTION(s,"Error not presshell!!");
 
-  nsCOMPtr<nsIWeakReference> wr (getter_AddRefs(NS_GetWeakReference(s)));
+  nsCOMPtr<nsIWeakReference> wr = do_GetWeakReference(s);
 
   *_retval = new nsRootAccessible(wr);
   if (*_retval) {
@@ -104,7 +104,7 @@ nsAccessibilityService::CreateHTMLSelectAccessible(nsIDOMNode* node, nsISupports
   nsCOMPtr<nsIPresShell> s;
   c->GetShell(getter_AddRefs(s)); 
 
-  nsCOMPtr<nsIWeakReference> wr(getter_AddRefs(NS_GetWeakReference(s)));
+  nsCOMPtr<nsIWeakReference> wr = do_GetWeakReference(s);
 
   *_retval = new nsHTMLSelectAccessible(node, wr);
   if (*_retval) {
@@ -124,7 +124,7 @@ nsAccessibilityService::CreateHTMLSelectOptionAccessible(nsIDOMNode* node, nsIAc
   nsCOMPtr<nsIPresShell> s;
   c->GetShell(getter_AddRefs(s)); 
 
-  nsCOMPtr<nsIWeakReference> wr(getter_AddRefs(NS_GetWeakReference(s)));
+  nsCOMPtr<nsIWeakReference> wr = do_GetWeakReference(s);
 
   *_retval = new nsHTMLSelectOptionAccessible(aAccParent, node, wr);
   if (*_retval) {
@@ -351,6 +351,10 @@ NS_IMETHODIMP nsAccessibilityService::GetInfo(nsISupports* aFrame, nsIFrame** aR
   NS_ASSERTION(shells > 0,"Error no shells!");
 #endif
 
+  // XXX need to change to the following on merge:
+  //  nsCOMPtr<nsIPresShell> tempShell;
+  //  document->GetShellAt(0, getter_AddRefs(tempShell));
+  //  *aShell = do_GetWeakReference(tempShell);
   *aShell = NS_GetWeakReference(document->GetShellAt(0));
   NS_IF_ADDREF(*aShell);
 
@@ -371,7 +375,11 @@ nsAccessibilityService::CreateAccessible(nsIDOMNode* node, nsISupports* document
   NS_ASSERTION(shells > 0,"Error no shells!");
 #endif
 
-  nsCOMPtr<nsIWeakReference> wr (getter_AddRefs(NS_GetWeakReference(d->GetShellAt(0))));
+  // XXX jgaunt need to change this on merge
+  //nsCOMPtr<nsIPresShell> tempShell;
+  //d->GetShellAt(0, getter_AddRefs(tempShell));
+  //*aShell = do_GetWeakReference(tempShell);
+  nsCOMPtr<nsIWeakReference> wr = do_GetWeakReference(d->GetShellAt(0));
 
   *_retval = new nsAccessible(node, wr);
   if ( *_retval ) {
@@ -395,7 +403,11 @@ nsAccessibilityService::CreateHTMLBlockAccessible(nsIDOMNode* node, nsISupports*
   NS_ASSERTION(shells > 0,"Error no shells!");
 #endif
 
-  nsCOMPtr<nsIWeakReference> wr (getter_AddRefs(NS_GetWeakReference(d->GetShellAt(0))));
+  // XXX jgaunt need to change this on merge
+  //nsCOMPtr<nsIPresShell> tempShell;
+  //d->GetShellAt(0, getter_AddRefs(tempShell));
+  //nsCOMPtr<nsIWeakReference> wr = do_GetWeakReference(tempShell);
+  nsCOMPtr<nsIWeakReference> wr = do_GetWeakReference(d->GetShellAt(0));
 
   *_retval = new nsAccessible(node, wr);
   if ( *_retval ) {
@@ -420,10 +432,13 @@ nsAccessibilityService::CreateHTMLIFrameAccessible(nsIDOMNode* node, nsISupports
   presContext->GetShell(getter_AddRefs(presShell)); 
   NS_ASSERTION(presShell,"Error non PresShell passed to accessible factory!!!");
 
-  nsCOMPtr<nsIWeakReference> weakRef (getter_AddRefs(NS_GetWeakReference(presShell)));
+  nsCOMPtr<nsIWeakReference> weakRef = do_GetWeakReference(presShell);
 
   nsCOMPtr<nsIDocument> doc;
   if (NS_SUCCEEDED(content->GetDocument(*getter_AddRefs(doc))) && doc) {
+    // XXX jgaunt need to change this on merge:
+    //nsCOMPtr<nsIPresShell> presShell;
+    //doc->GetShellAt(0, getter_AddRefs(presShell));
     nsCOMPtr<nsIPresShell> presShell(getter_AddRefs(doc->GetShellAt(0)));
     if (presShell) {
       nsCOMPtr<nsISupports> supps;
@@ -434,7 +449,7 @@ nsAccessibilityService::CreateHTMLIFrameAccessible(nsIDOMNode* node, nsISupports
           nsCOMPtr<nsIPresShell> ps;
           docShell->GetPresShell(getter_AddRefs(ps));
           if (ps) {
-            nsCOMPtr<nsIWeakReference> wr (getter_AddRefs(NS_GetWeakReference(ps)));
+            nsCOMPtr<nsIWeakReference> wr = do_GetWeakReference(ps);
             nsCOMPtr<nsIDocument> innerDoc;
             ps->GetDocument(getter_AddRefs(innerDoc)); 
             if (innerDoc) {
@@ -535,6 +550,9 @@ void nsAccessibilityService::GetOwnerFor(nsIPresShell *aPresShell, nsIPresShell 
   if (!parentDoc)
     return;
 
+  // XXX jgaunt need to change this on merge
+  //nsCOMPtr<nsIContent> rootContent;
+  //parentDoc->GetRootContent(getter_AddRefs(rootContent));
   nsCOMPtr<nsIContent> rootContent(getter_AddRefs(parentDoc->GetRootContent()));
   
   nsIContent *tempContent;

@@ -369,7 +369,7 @@ nsDocAccessibleMixin::~nsDocAccessibleMixin()
 NS_IMETHODIMP nsDocAccessibleMixin::GetURL(nsAWritableString& aURL)
 { 
   nsCOMPtr<nsIURI> pURI(dont_AddRef(mDocument->GetDocumentURL()));
-  // When merging, change above to:
+  // XXX aaronl When merging, change above to:
   // mDocument->GetDocumentURL(getter_AddRefs(pURI));
   nsXPIDLCString path;
   pURI->GetSpec(getter_Copies(path));

@@ -495,7 +495,7 @@ PRBool nsDOMTreeWalker::GetParent()
           if (!accessible)
             accessible = do_QueryInterface(content);
           if (accessible) {
-            nsCOMPtr<nsIWeakReference> wr (getter_AddRefs(NS_GetWeakReference(parentPresShell)));
+            nsCOMPtr<nsIWeakReference> wr = do_GetWeakReference(parentPresShell);
             accessible->AccGetDOMNode(getter_AddRefs(mDOMNode));
             mAccessible = accessible;
             mPresShell = wr;

@@ -238,7 +238,7 @@ NS_IMETHODIMP nsHTMLIFrameRootAccessible::GetHTMLIFrameAccessible(nsIAccessible*
               // OK, we found the content node in the parent doc
               // that corresponds to this sub-doc
               // Get the frame for that content
-              nsCOMPtr<nsIWeakReference> wr(getter_AddRefs(NS_GetWeakReference(parentPresShell)));
+              nsCOMPtr<nsIWeakReference> wr = do_GetWeakReference(parentPresShell);
               nsIFrame* frame = nsnull;
               parentPresShell->GetPrimaryFrameFor(content, &frame);
 #ifdef NS_DEBUG_X

@@ -33,10 +33,9 @@ CPP_OBJS=\
 LINCS = $(LINCS) -I..\src         # for implementation headers
 
 LLIBS=\
- $(DIST)\lib\xpcom.lib         \
+ $(DIST)\lib\xpcom.lib                \
  $(DIST)\lib\accessibility_s.lib      \
- $(DIST)\lib\timer_s.lib       \
- $(DIST)\lib\gkgfxwin.lib \
+ $(DIST)\lib\timer_s.lib              \
  $(DIST)\lib\contentshared_s.lib      \
  $(LIBNSPR)  
 
