@@ -701,8 +701,9 @@ function MsgOpenNewWindowForMessage(messageUri, folderUri)
         folderUri = gDBView.getFolderForViewIndex(currentIndex).URI;
     }
 
+    // be sure to pass in the current view....
     if (messageUri && folderUri) {
-        window.openDialog( "chrome://messenger/content/messageWindow.xul", "_blank", "chrome,all,dialog=no", messageUri, folderUri );
+        window.openDialog( "chrome://messenger/content/messageWindow.xul", "_blank", "chrome,all,dialog=no", messageUri, folderUri, gDBView );
     }
 }
 

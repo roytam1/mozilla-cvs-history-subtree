@@ -235,8 +235,8 @@ nsMsgStatusFeedback.prototype =
       if (!this.statusTextFld ) this.statusTextFld = document.getElementById("statusText");
       if (!this.statusBar) this.statusBar = document.getElementById("statusbar-icon");
       if(!this.throbber)   this.throbber = document.getElementById("navigator-throbber");
-	  if(!this.stopButton) this.stopButton = document.getElementById("button-stop");
-	  if(!this.stopMenu)   this.stopMenu = document.getElementById("stopMenuitem");
+	    if(!this.stopButton) this.stopButton = document.getElementById("button-stop");
+	    if(!this.stopMenu)   this.stopMenu = document.getElementById("stopMenuitem");
     },
 
   // nsIXULBrowserWindow implementation
