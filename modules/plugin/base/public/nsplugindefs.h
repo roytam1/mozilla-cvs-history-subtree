@@ -330,8 +330,8 @@ enum nsPluginReason {
 // incremented. When the struct changes in an incompatible way the major version
 // will be incremented. 
 
-#define nsMajorVersion(v)       (((v) >> 16) & 0xffff)
-#define nsMinorVersion(v)       ((v) & 0xffff)
+#define nsMajorVersion(v)       (((PRInt32)(v) >> 16) & 0xffff)
+#define nsMinorVersion(v)       ((PRInt32)(v) & 0xffff)
 
 #define nsVersionOK(suppliedV, requiredV)                   \
     (nsMajorVersion(suppliedV) == nsMajorVersion(requiredV) \

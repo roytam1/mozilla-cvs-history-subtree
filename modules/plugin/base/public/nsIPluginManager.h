@@ -83,7 +83,7 @@ struct nsURLInfo {
  * struct specified above. The nsVersionOk macro will be used when comparing
  * a supplied nsURLInfo struct against this version.
  */
-#define nsURLInfo_Version       0x00010000
+#define nsURLInfo_Version       0x00010000L
 
 /**
  * The nsIPluginManager interface defines the minimum set of functionality that

@@ -48,7 +48,7 @@ struct nsJVMInitArgs {
  * struct specified above. The nsVersionOk macro should be used when comparing
  * a supplied nsJVMInitArgs struct against this version.
  */
-#define nsJVMInitArgs_Version   0x00010000 
+#define nsJVMInitArgs_Version   0x00010000L
 
 class nsIJVMPlugin : public nsIPlugin {
 public:
