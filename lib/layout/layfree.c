@@ -603,8 +603,67 @@ lo_ScrapeElement(MWContext *context, LO_Element *element)
 				element->lo_java.base_url = NULL;
 			}
 
+#ifdef OJI
             lo_FreeNVListItems( &element->lo_java.attributes );
             lo_FreeNVListItems( &element->lo_java.parameters );
+#else
+ 			/* Free all the attribute names */
+ 			if (element->lo_embed.attribute_list != NULL)
+ 			{
+ 				int32 	current;
+ 				
+ 				for (current=0; current<element->lo_embed.attribute_cnt; current++)
+ 				{
+ 					PA_FREE(element->lo_embed.attribute_list[current]);
+ 					element->lo_embed.attribute_list[current] = NULL;
+ 				}
+ 						
+ 				PA_FREE(element->lo_embed.attribute_list);
+ 				element->lo_embed.attribute_list = NULL;
+ 			}
+
+ 			/* Free all the attribute values */
+ 			if (element->lo_embed.value_list != NULL)
+ 			{
+ 				int32 	current;
+ 				
+ 				for (current=0; current<element->lo_embed.attribute_cnt; current++)
+ 				{
+ 					PA_FREE(element->lo_embed.value_list[current]);
+ 					element->lo_embed.value_list[current] = NULL;
+ 				}
+ 
+ 				PA_FREE(element->lo_embed.value_list);
+ 				element->lo_embed.value_list = NULL;
+ 			}
+ 
+ 			if (element->lo_java.param_names != NULL)
+ 			{
+ 				int32 	current;
+ 				
+ 				for (current=0; current<element->lo_java.param_cnt; current++)
+ 				{
+ 					PA_FREE(element->lo_java.param_names[current]);
+ 					element->lo_java.param_names[current] = NULL;
+ 				}
+ 						
+ 				PA_FREE(element->lo_java.param_names);
+ 				element->lo_java.param_names = NULL;
+ 			}
+ 			if (element->lo_java.param_values != NULL)
+ 			{
+ 				int32 	current;
+ 				
+ 				for (current=0; current<element->lo_java.param_cnt; current++)
+ 				{
+ 					PA_FREE(element->lo_java.param_values[current]);
+ 					element->lo_java.param_values[current] = NULL;
+ 				}
+ 
+ 				PA_FREE(element->lo_java.param_values);
+ 				element->lo_java.param_values = NULL;
+ 			}
+#endif /* OJI */
 
 			/*
 			 * If there is session data here after we
