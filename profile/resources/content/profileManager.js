@@ -40,11 +40,10 @@ function CreateProfileWizard()
 function CreateProfile( aProfName, aProfDir )
 {
   var profile = new Profile( aProfName, aProfDir, "yes" );
-  var item = AddItem( "profiles", profile );
+  var item = AddItem( "profilesPopup", profile );
   var profileList = document.getElementById( "profiles" );
   if( item ) {
-    profileList.selectItem( item );
-    profileList.ensureElementIsVisible( item );
+    profileList.selectedItem = item;
   }
 }
 
@@ -55,7 +54,7 @@ function RenameProfile()
   if( renameButton.getAttribute("disabled") == "true" )
     return;
   var profileList = document.getElementById( "profiles" );
-  var selected = profileList.selectedItems[0];
+  var selected = profileList.selectedItem;
   var profilename = selected.getAttribute("profile_name");
   if( selected.getAttribute("rowMigrate") == "no" ) {
     // migrate if the user wants to
@@ -134,7 +133,7 @@ function ConfirmDelete()
     return;
   var profileList = document.getElementById( "profiles" );
 
-  var selected = profileList.selectedItems[0];
+  var selected = profileList.selectedItem;
   var name = selected.getAttribute("rowName");
   
   var dialogTitle = gProfileManagerBundle.getString("deletetitle");
@@ -182,8 +181,8 @@ function ConfirmDelete()
 function DeleteProfile( deleteFiles )
 {
   var profileList = document.getElementById( "profiles" );
-  if (profileList.selectedItems && profileList.selectedItems.length) {
-    var selected = profileList.selectedItems[0];
+  if (profileList.selectedItem) {
+    var selected = profileList.selectedItem;
     var firstAdjacent = selected.previousSibling;
     var name = selected.getAttribute( "rowName" );
     try {
@@ -193,8 +192,7 @@ function DeleteProfile( deleteFiles )
     catch (ex) {
     }
     if( firstAdjacent ) {
-      profileList.selectItem( firstAdjacent );
-      profileList.ensureElementIsVisible( firstAdjacent );
+      profileList.selectedItem = firstAdjacent;
     }
     // set the button state
     DoEnabling();
@@ -269,8 +267,8 @@ function DoEnabling()
   var start     = document.getElementById( "ok" );
   
   var profileList = document.getElementById( "profiles" );
-  var items = profileList.selectedItems;
-  if( items.length != 1 )
+  var item = profileList.selectedItem
+  if (!item)
   {
     renbutton.setAttribute( "disabled", "true" );
     delbutton.setAttribute( "disabled", "true" );

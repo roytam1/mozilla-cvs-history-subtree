@@ -84,7 +84,8 @@
     <separator class="thin" orient="vertical"/>
     
     <vbox flex="1">
-      <listbox id="profiles" flex="1" style="height: 0px;" seltype="single"
+<!-- old way, listbox, new way menulist
+      <listbox id="profiles" style="height: 0px;" seltype="single"
             onclick="HandleClickEvent( event );"
             onselect="DoEnabling();"
             onkeypress="HandleKeyEvent( event );">
@@ -92,9 +93,16 @@
           <listheader label="&availprofiles.label;"/>
         </listhead>
       </listbox>
+-->
+      <menulist id="profiles">
+        <menupopup id="profilesPopup"/>
+      </menulist>
+
+<!-- no offline checkbox anymore
       <hbox align="start">
         <checkbox id="offlineState" label="&offlineState.label;" accesskey="&offlineState.accesskey;"/> 
       </hbox>
+-->
     </vbox>
   </hbox>
   

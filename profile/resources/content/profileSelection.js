@@ -63,6 +63,7 @@ function StartUp()
   highlightCurrentProfile();
 
   // set the checkbox to reflect the current state.
+/* no offline checkbox
   var offlineState = document.getElementById("offlineState");
   try {
     var ioService = nsJSComponentManager.getServiceByID("{9ac9e770-18bc-11d3-9337-00104ba0fd40}",
@@ -71,6 +72,7 @@ function StartUp()
   }
   catch(e) {
   }
+*/
 
   var profileList = document.getElementById("profiles");
   profileList.focus();
@@ -88,12 +90,11 @@ function highlightCurrentProfile()
     var currentProfileItem = document.getElementById( ( "profileName_" + currentProfile ) );
     var profileList = document.getElementById( "profiles" );
     if( currentProfileItem ) {
-      profileList.selectItem( currentProfileItem );
-      profileList.ensureElementIsVisible( currentProfileItem );
+      profileList.selectedItem = currentProfileItem;
     }
   }
-  catch(e) {
-    dump("*** failed to select current profile in list\n");
+  catch(ex) {
+    dump("*** failed to select current profile in list: " + ex);
   }
 }
 
@@ -102,10 +103,10 @@ function highlightCurrentProfile()
 function AddItem( aChildren, aProfileObject )
 {
   var kids    = document.getElementById(aChildren);
-  var listitem = document.createElement("listitem");
+  var listitem = document.createElement("menuitems");
   listitem.setAttribute("label", aProfileObject.mName );
-  listitem.setAttribute("rowMigrate",  aProfileObject.mMigrated );
-  listitem.setAttribute("class", "listitem-iconic");
+  //listitem.setAttribute("rowMigrate",  aProfileObject.mMigrated );
+  //listitem.setAttribute("class", "listitem-iconic");
   listitem.setAttribute("profile_name", aProfileObject.mName );
   listitem.setAttribute("rowName", aProfileObject.mName );
   listitem.setAttribute("id", ( "profileName_" + aProfileObject.mName ) );
@@ -158,7 +159,7 @@ function loadElements()
 function onStart()
 {
   var profileList = document.getElementById("profiles");
-  var selected = profileList.selectedItems[0];
+  var selected = profileList.selectedItem;
   var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].
     getService(Components.interfaces.nsIPromptService);
 
@@ -190,10 +191,12 @@ function onStart()
   }
 
   // start in online or offline mode
+/* no offline checkbox
   var offlineState = document.getElementById("offlineState");
   var ioService = nsJSComponentManager.getServiceByID("{9ac9e770-18bc-11d3-9337-00104ba0fd40}",
                                                   "nsIIOService");
   ioService.offline = offlineState.checked;
+*/
 
   try {
     // All this really does is set the current profile.
