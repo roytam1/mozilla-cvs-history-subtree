@@ -601,11 +601,11 @@ ldap_x_hostlist_next( char **hostp, int *portp,
 	char	*q;
 	int		squarebrackets = 0;
 
-	if ( NULL == hostp || NULL == portp || NULL == status ) {
+	if ( NULL == hostp || NULL == portp ) {
 		return( LDAP_PARAM_ERROR );
 	}
 
-	if ( NULL == status->lhs_nexthost ) {
+	if ( NULL == status || NULL == status->lhs_nexthost ) {
 		*hostp = NULL;
 		return( LDAP_SUCCESS );
 	}
