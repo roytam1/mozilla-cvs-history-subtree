@@ -1,0 +1,11 @@
+<!ENTITY changeAction.title "Cambiar acción">
+<!ENTITY whenDownloading.label "Al descargar los archivos del tipo:">
+<!ENTITY always.label "automáticamente:">
+<!ENTITY openDefault.label "Abrir en la aplicación predeterminada:">
+<!ENTITY openApplication.label "Abrir en esta aplicación:">
+<!ENTITY changeApp.label "Cambiar...">
+<!ENTITY changeApp.accesskey "C">
+<!ENTITY customAppPath.label "Haga click en 'Cambiar...' para seleccionar una aplicación.">
+<!ENTITY saveToDisk.label "Guardar a disco">
+
+<!ENTITY  changeAppWindowTitle.label "Seleccionar aplicación...">

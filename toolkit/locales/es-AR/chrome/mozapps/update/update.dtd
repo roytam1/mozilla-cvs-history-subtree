@@ -1,0 +1,62 @@
+<!ENTITY updateWizard.title "Actualización de &brandShortName;">
+<!ENTITY mismatch.title "Componentes incompatibles">
+<!ENTITY mismatch.intro1.label "Los siguientes componentes no son compatibles con la nueva versión                                    de &brandShortName; que ha instalado:">
+<!ENTITY mismatch.intro2.label "Han sido deshabilitadas hasta que se instalen                                           versiones compatibles.">
+<!ENTITY mismatch.intro3.label "&brandShortName; puede verificar e instalar versiones más nuevas                                     y compatibles de estos componentes.">
+<!ENTITY checking.title "Verificar actualizaciones">
+<!ENTITY checking.intro.label "&brandShortName; está verificando si hay actualizaciones disponibles...">
+<!ENTITY  checking.status                 "Ésto puede tardar algunos minutos...">
+
+<!ENTITY  version.title                   "Buscando actualizaciones de compatibilidad">
+<!ENTITY  version.intro.label             "&brandShortName; está buscando actualizaciones de seguridad para sus extensiones y temas...">
+<!ENTITY  version.status                  "Ésto puede tardar algunos minutos...">
+<!ENTITY found.title "Actualizaciones encontradas">
+<!ENTITY found.intro.label "&brandShortName; encontroó las siguientes actualizaciones disponibles:">
+<!ENTITY from.label "de:">
+
+<!ENTITY  found.updatetype.patches.accesskey    "C">
+<!ENTITY  found.updatetype.components.accesskey "O">
+<!ENTITY  found.updatetype.addons.accesskey     "E">
+<!ENTITY  found.updatetype.languages.accesskey  "L">
+<!ENTITY  found.criticalUpdates.label           "Las siguientes actualizaciones críticas están disponibles para Firefox:">
+<!ENTITY  found.criticalUpdates.info            "Debería instalar estas actualizaciones inmediatamente para proteger su computadora de los ataques.">
+<!ENTITY  found.app.infoLink                    "Más información...">
+<!ENTITY  found.components.label                "Los siguientes componentes y plugins están disponibles para instalar:">
+<!ENTITY  found.components.info                 "Instalar estos componentes puede mejorar su experiencia de navegación.">
+<!ENTITY  found.addons.label                    "Las siguientes actualizaciones a temas y extensiones que ya tenía instalados están disponibles">
+<!ENTITY  found.languages.label                 "Los siguientes packs de lenguaje están disponibles: ">
+
+<!ENTITY installing.title "Instalando actualizaciones">
+<!ENTITY installing.intro.label "Descargando e instalando actualizaciones...">
+<!ENTITY installing.disclaimer.label "XXXben - this will not work until we have a scriptable API to XPInstall.">
+<!ENTITY noupdates.title "No se encontraron actualizaciones">
+<!ENTITY noupdates.intro.user.label "&brandShortName; no fue capaz de econtrar actualizaciones disponibles.">
+<!ENTITY noupdates.intro.mismatch.label "&brandShortName; no pudo encontrar ninguna actualización disponible -                                            versiones compatibles no están disponibles en este momento.">
+<!ENTITY noupdates.intro2.mismatch.label "&brandShortName; verificará periódicamente y le informará                                     cuando haya versiones compatibles disponibles.">
+<!ENTITY noupdates.intro3.mismatch.label "&brandShortName; puede verificar e informarle cuando                                      haya versiones compatibles disponibles.">
+<!ENTITY noupdates.enableChecking.label "Permitir a &brandShortName; verificar actualizaciones.">
+<!ENTITY finished.title "Actualización completa">
+<!ENTITY finished.updated.label "&brandShortName; ha instalado las siguientes actualizaciones disponibles.">
+<!ENTITY finished.remaining.label "Algunos componentes incompatibles no pueden ser actualizados,                                      quizás porque no hay versiones compatibles disponibles.                                      &brandShortName; verificará periódicamente y le informará                                      cuando haya versiones actualizadas disponibles.">
+<!ENTITY finished.remaining2.label "Algunos componentes incompatibles no pudieron actualizarse,                                   quizás porque no hay versiones compatibles en este momento.                                   &brandShortName;. puede chequear periódicamente e informarle                                   cuando haya una versión actualizada disponible.">
+<!ENTITY finished.error.label "&brandShortName; no pudo descargar e instalar                                           algunas actualizaciones.">
+<!ENTITY finished.enableChecking.label "Permitir a &brandShortName; verificar actualizaciones.">
+<!ENTITY finished.mismatch.label "Haga click en finalizar para inicial &brandShortName;.">
+
+<!ENTITY  optional.title                  "Componentes opcionales">
+<!ENTITY  optional.intro.label            "Seleccione componentes adicionales que desee instalar, y haga click en Instalar ahora.">
+
+<!ENTITY errors.title "Problemas al actualizar">
+<!ENTITY errors.intro.label "&brandShortName; encontró problemas al actualizar su                                           software, y como resultado no todos los componentes pudieron ser  actualizados.">
+<!ENTITY errors.details.label "Detalles">
+<!ENTITY errors.details.accesskey "D">
+<!ENTITY updateCheckError.description "&brandShortName; encontró problemas al tratar de encontrar                                    actualizaciones para algunos ítems.">
+<!ENTITY updateCheckError.label "Detalles">
+<!ENTITY updateCheckError.accesskey "D">
+
+<!ENTITY  resolveMaxVersion.title         "Buscar extensiones y temas compatibles...">
+<!ENTITY  resolveMaxVersion.intro1.label  "&brandShortName; está buscando actualizaciones de compatibilidad para sus extensiones y temas...">
+
+<!ENTITY  restart.title                   "Actualización completa">
+<!ENTITY  restart.updated.label           "&brandShortName; descargó e instaló exitosamente las actualizaciones. Debe reiniciar &brandShortName; para completar la actualización.">
+

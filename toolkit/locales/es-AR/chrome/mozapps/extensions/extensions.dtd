@@ -1,0 +1,59 @@
+<!ENTITY extensions.title "Extensiones">
+<!ENTITY cmd.info.commandKey "i">
+<!ENTITY cmd.options.commandKey ",">
+<!ENTITY cmd.close.commandKey "w">
+<!-- Command Bar items -->
+<!ENTITY cmd.uninstall.label "Uninstall">
+<!ENTITY cmd.uninstall.tooltip "Desinstalar la extensión seleccionada">
+<!ENTITY cmd.uninstall.accesskey "i">
+<!ENTITY cmd.update.label "Update">
+<!ENTITY cmd.update.accesskey "U">
+<!ENTITY cmd.update.tooltip "Verificar actualizaciones de sus extensiones">
+<!ENTITY cmd.useTheme.label "Usar tema">
+<!ENTITY cmd.useTheme.accesskey "U">
+<!ENTITY cmd.useTheme.tooltip "Cambiar el tema de &brandShortName;.">
+<!-- the following command bar items are used by thunderbird only -->
+<!ENTITY cmd.install.label "Instalar">
+<!ENTITY cmd.install.tooltip "Instalar una extensión">
+<!ENTITY cmd.install.accesskey "n">
+<!-- Context Menu Options: Extension -->
+<!ENTITY cmd.options.label "Opciones">
+<!ENTITY cmd.options.accesskey "O">
+<!ENTITY cmd.optionsUnix.label "Preferencias">
+<!ENTITY cmd.optionsUnix.accesskey "r">
+<!ENTITY cmd.homepage.label "Visitar página web">
+<!ENTITY cmd.homepage.accesskey "V">
+<!ENTITY cmd.about.label "Acerca de esta extensión">
+<!ENTITY cmd.about.accesskey "A">
+<!ENTITY cmd.uninstall.label "Desinstalar">
+<!ENTITY cmd.uninstall.accesskey "i">
+<!ENTITY cmd.update.label "Actualizar">
+<!ENTITY cmd.update.accesskey "u">
+<!ENTITY cmd.enable.label "Habilitar">
+<!ENTITY cmd.enable.accesskey "H">
+<!ENTITY cmd.disable.label "Deshabilitar">
+<!ENTITY cmd.disable.accesskey "D">
+<!ENTITY cmd.moveToTop.label "Mover al principio">
+<!ENTITY cmd.moveToTop.accesskey "p">
+<!ENTITY cmd.moveUp.label "Mover arriba">
+<!ENTITY cmd.moveUp.accesskey "r">
+<!ENTITY cmd.moveDn.label "Mover abajo">
+<!ENTITY cmd.moveDn.accesskey "j">
+<!-- Extension Items -->
+<!ENTITY options.tooltip "Opciones">
+<!ENTITY optionsUnix.tooltip "Preferencias">
+<!ENTITY about.tooltip "Acerca">
+<!ENTITY homepage.tooltip "Página de inicio">
+<!ENTITY extensionItem.toBeDisabled.label "Este ítem será deshabilitado después de reiniciar &brandShortName;.">
+<!ENTITY extensionItem.toBeEnabled.label "Este ítem será habilitado después de reiniciar &brandShortName;. ">
+<!ENTITY extensionItem.toBeInstalled.label "Este ítem será instalado después de reiniciar &brandShortName;.">
+<!ENTITY extensionItem.toBeUninstalled.label "Este ítem será desinstalado despues de reiniciar &brandShortName;.">
+<!ENTITY extensionItem.done.label "Instalación exitosa">
+<!ENTITY extensionItem.waiting.label "Esperando...">
+<!ENTITY extensionItem.installing.label "Instalando...">
+<!ENTITY getMoreExtensions.label "Obtener más extensiones">
+<!ENTITY getMoreExtensions.tooltip "Buscar más extensiones de update.mozilla.org">
+<!ENTITY getMoreThemes.label "Obtener más temas">
+<!ENTITY getMoreThemes.tooltip "Obtener más temas de update.mozilla.org">
+<!ENTITY previewNoThemeSelected.label "No hay tema seleccionado">
+<!ENTITY previewNoPreviewImage.label "Este tema no tiene una vista previa">

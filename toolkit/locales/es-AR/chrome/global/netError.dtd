@@ -1,0 +1,24 @@
+<!ENTITY loadError.label "Error al cargar la página">
+<!ENTITY retry.label "Intente de nuevo">
+<!-- Specific error messages -->
+<!ENTITY generic.longDesc "La página no pudo ser cargada, posiblemente porque no existe o porque la dirección es incorrecta.<br/>Debe verificar la ubicación para asegurarse que es válida y está correctamente formateada.">
+<!ENTITY malformedURI.title "Error de dirección inválida">
+<!ENTITY malformedURI.longDesc "La dirección (URL) no tiene un formato válido y no puede ser leída. Una dirección típica comenzará con &quot;http://&quot;, seguido por una dirección, (p. ej. www.netscape.com), seguido por la ruta al contenido (o solo &quot;/&quot;). Una causa común para el problema es usar barras invertidas (\) en vez de barras normales (/).">
+<!ENTITY fileNotFound.title "Error de archivo no encontrado">
+<!ENTITY fileNotFound.longDesc "El archivo especificado por la dirección (URL) no puede ser encontrado. Verifique que el archivo exista y que tiene permiso suficiente como para verlo.">
+<!ENTITY dnsNotFound.title "Error de dirección no encontrada">
+<!ENTITY dnsNotFound.longDesc "La dirección (URL) no corresponde a un sitio conocido y no puede ser cargada. Esto puede ser por un error al escribir la dirección o porque el sitio no existe. Si la dirección es válida, o el problema ocurre en demasiados sitios, puede ser un problema con su proxy (si usa uno) o servicio de búsqueda de nombres. En ambos casos debería consultar la documentación de su sistema, a su administrados o proveedor de internet (ISP) según corresponda para mayor ayuda. ">
+<!ENTITY protocolNotFound.title "Error de protocolo desconocido">
+<!ENTITY protocolNotFound.longDesc "La dirección (URL) comienza con un protocolo que no es reconocido por el navegador. Un protocolo es la parte del principio de la dirección, como http: o ftp: que le dice al navegador como conectarse al sitio. En este momento, el protocolo es desconocido así que la carga no puede continuar. Verifique que la dirección es correcta  antes de reintentar.">
+<!ENTITY connectionFailure.title "Error de falla de conexión">
+<!ENTITY connectionFailure.longDesc "El navegador no puede conectarse al sitio especificado, aunque existe. Esto puede deberse porque el sitio no acepta conexiones desde su computadora, el servicio puede estar caído, o el sitio no soporta el servicio o puerto al que trata de conectarse.">
+<!ENTITY netTimeout.title "Error de timeout en la red">
+<!ENTITY netTimeout.longDesc "Pasó demasiado tiempo tratando de conectar al sitio especificado. El sitio puede estar experimentando sobrecargas que lo están retardando, o hay problemas en la red que evitan que reciba los datos a tiempo. Si el sitio está ocupado, considere esperar unos momentos antes de volver a solicitar el pedido.">
+<!ENTITY redirectLoop.title "Error de loop de redirección">
+<!ENTITY redirectLoop.longDesc "El navegador ha cortado la conexión porque el sitio está redirigiendo pedidos en una forma que evita que pueda completarse.">
+<!ENTITY unknownSocketType.title "Error de socket desconocido">
+<!ENTITY unknownSocketType.longDesc "El sitio respondió al pedido de una forma inesperada. Esto puede deberse a que la dirección (URL) esté usando el protocolo erróneo para el puerto especificado, o una configuración no estándar en el sitio que está ejecutando servicios de una forma diferente a la esperada. ">
+<!ENTITY netReset.title "Error de restablecimiento de red">
+<!ENTITY netReset.longDesc "El enlace al sitio fue cortado inesperadamente al negociar una conexión o transferir datos. Esto puede deberse a una falla en la red en algún lugar entre el sitio y su computadora. Si el problema persiste, consulte la documentación de su sistema, al administrador o a su proveedor de Internet (ISP) según corresponda para posterior asistencia.">
+<!ENTITY netOffline.title "Error de fuera de línea">
+<!ENTITY netOffline.longDesc "El navegador está actualmente sin conexión y no puede abrir el sitio pedido. Vuelva a conectar el navegador e intente de nuevo.">

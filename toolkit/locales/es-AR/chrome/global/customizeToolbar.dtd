@@ -1,0 +1,11 @@
+<!ENTITY dialog.title "Personalizar barra de herramientas">
+<!ENTITY instructions.description "Arrastre un ítem a la barra de tareas para agregarlo.">
+<!ENTITY show.label "Mostrar:">
+<!ENTITY iconsAndText.label "Iconos y texto">
+<!ENTITY icons.label "Iconos">
+<!ENTITY text.label "Texto">
+<!ENTITY useSmallIcons.label "Usar íconos pequeños">
+<!ENTITY restoreDefaultSet.label "Restaurar predeterminado">
+<!ENTITY addNewToolbar.label "Agregar nueva barra">
+<!ENTITY saveChanges.label "Listo">
+<!ENTITY undoChanges.label "Deshacer cambios">

@@ -1,0 +1,22 @@
+<!ENTITY lHeader "Descargas">
+<!ENTITY askOnSave.label "Carpeta de descarga">
+<!ENTITY alwaysAsk.label "Preguntar donde guardar cada archivo">
+<!ENTITY neverAsk.label "Guardar todos los archivos en esta carpeta:">
+<!ENTITY desktop.label "Escritorio">
+<!ENTITY downloads.label "Mis descargas">
+<!ENTITY choose.label "Otro...">
+<!ENTITY showFolder.label "Mostrar carpeta">
+<!ENTITY downloadManagerWindow.label "Administrador de descargas">
+<!ENTITY showWhenStarting.label "Mostrar el administrador de descargas cuando comience una.">
+<!ENTITY closeWhenDone.label "Cerrar el administrador de descargas cuando todas las descargas se completen.">
+<!ENTITY fileTypes.label "Tipos de archivo">
+<!-- XXX this text string could improve -->
+<!ENTITY fileTypesDescription.label "Ejecutar la acción asociada automáticamente con cada uno de los siguientes tipos de archivo:">
+<!ENTITY fileTypeColName.label "Tipo de archivo">
+<!ENTITY fileHandlerColName.label "Aplicación">
+<!ENTITY editFileHandler.label "Cambiar acción...">
+<!ENTITY editFileHandler.accesskey "a">
+<!ENTITY removeFileHandler.label "Remover">
+<!ENTITY removeFileHandler.accesskey "R">
+<!ENTITY plugins.label "Plug-ins...">
+<!ENTITY plugins.accesskey "P">

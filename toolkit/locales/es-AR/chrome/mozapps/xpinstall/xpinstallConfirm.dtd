@@ -1,0 +1,5 @@
+<!-- extracted from institems.xul -->
+<!ENTITY dialog.title "Instalación de software">
+<!ENTITY warningText2.label "Software malicioso puede dañar su computadora o violar su privacidad.">
+<!ENTITY warningText3.label "Solo debería instalar software de fuentes en las que confíe">
+<!ENTITY from.label "de:">

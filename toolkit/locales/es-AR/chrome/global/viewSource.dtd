@@ -1,0 +1,39 @@
+<!-- extracted from content/viewSource.xul -->
+<!-- LOCALIZATION NOTE (mainWindow.title) : DONT_TRANSLATE -->
+<!ENTITY mainWindow.title "&brandFullName;">
+<!-- LOCALIZATION NOTE (mainWindow.titlemodifier) : DONT_TRANSLATE -->
+<!ENTITY mainWindow.titlemodifier "&brandFullName;">
+<!-- LOCALIZATION NOTE (mainWindow.titlemodifierseparator) : DONT_TRANSLATE -->
+<!ENTITY mainWindow.titlemodifierseparator " - ">
+<!ENTITY mainWindow.preface "Fuente de:">
+<!ENTITY fileMenu.label "Archivo">
+<!ENTITY fileMenu.accesskey "A">
+<!ENTITY savePageCmd.label "Guardar página como...">
+<!ENTITY savePageCmd.accesskey "o">
+<!ENTITY savePageCmd.commandkey "S">
+<!ENTITY pageSetupCmd.label "Configurar página...">
+<!ENTITY pageSetupCmd.accesskey "u">
+<!ENTITY printPreviewCmd.label "Vista previa">
+<!ENTITY printPreviewCmd.accesskey "V">
+<!ENTITY printCmd.label "Imprimir...">
+<!ENTITY printCmd.accesskey "p">
+<!ENTITY printCmd.commandkey "P">
+<!ENTITY closeCmd.label "Cerrar">
+<!ENTITY closeCmd.accesskey "C">
+<!ENTITY closeCmd.commandkey "W">
+<!ENTITY textEnlarge.commandkey "+">
+<!ENTITY textReduce.commandkey "-">
+<!ENTITY textReset.commandkey "0">
+<!ENTITY goToLineCmd.label "Ir a línea">
+<!ENTITY goToLineCmd.accesskey "I">
+<!ENTITY goToLineCmd.commandkey "l">
+<!ENTITY viewMenu.label "Ver">
+<!ENTITY viewMenu.accesskey "V">
+<!ENTITY menu_wrapLongLines.title "Ajustar líneas largas">
+<!ENTITY menu_wrapLongLines.accesskey "W">
+<!ENTITY menu_highlightSyntax.label "Resaltar sintaxis">
+<!ENTITY menu_highlightSyntax.accesskey "x">
+<!ENTITY menu_textEnlarge.label "Aumentar tamaño del texto">
+<!ENTITY menu_textEnlarge.accesskey "n">
+<!ENTITY menu_textReduce.label "Disminuir tamaño del texto">
+<!ENTITY menu_textReduce.accesskey "D">

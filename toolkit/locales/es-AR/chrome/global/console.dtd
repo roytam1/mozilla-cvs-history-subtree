@@ -1,0 +1,25 @@
+<!ENTITY console.title "Consola JavaScript">
+<!ENTITY errFile.label "Archivo Fuente: ">
+<!ENTITY errLine.label "Línea:">
+<!ENTITY errColumn.label "Columna: ">
+<!ENTITY all.label "Todo">
+<!ENTITY all.accesskey "T">
+<!ENTITY errors.label "Errores">
+<!ENTITY errors.accesskey "E">
+<!ENTITY warnings.label "Advertencias">
+<!ENTITY warnings.accesskey "d">
+<!ENTITY messages.label "Mensajes">
+<!ENTITY messages.accesskey "M">
+<!ENTITY clear.label "Limpiar">
+<!ENTITY clear.accesskey "L">
+<!ENTITY evaluate.label "Evaluar ">
+<!ENTITY copyCmd.label "Copiar">
+<!ENTITY copyCmd.accesskey "C">
+<!ENTITY copyCmd.commandkey "C">
+<!ENTITY sortFirst.label "Ordenado primero > último">
+<!ENTITY sortFirst.accesskey "p">
+<!ENTITY sortLast.label "Ordenado último > primero">
+<!ENTITY sortLast.accesskey "l">
+<!ENTITY closeCmd.commandkey "w">
+<!ENTITY focus1.commandkey "l">
+<!ENTITY focus2.commandkey "d">
