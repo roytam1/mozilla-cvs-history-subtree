@@ -42,7 +42,9 @@
 
 #include "nsILocalFile.h"
 
-#if defined (XP_UNIX)
+#if defined (XP_WIN)
+#include <windows.h>
+#elif defined (XP_UNIX)
 #include "prclist.h"
 #endif
 
