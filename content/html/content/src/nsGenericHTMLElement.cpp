@@ -4027,8 +4027,6 @@ nsGenericHTMLElement::SetFormControlAttribute(nsIForm* aForm,
     if (!tmp.IsEmpty()) {
       aForm->RemoveElementFromTable(thisControl, tmp);
     }
-
-    aForm->RemoveElement(thisControl);
   }
 
   if (aForm && aName == nsHTMLAtoms::type) {
@@ -4055,8 +4053,6 @@ nsGenericHTMLElement::SetFormControlAttribute(nsIForm* aForm,
     if (!tmp.IsEmpty()) {
       aForm->AddElementToTable(thisControl, tmp);
     }
-
-    aForm->AddElement(thisControl);
   }
 
   if (aForm && aName == nsHTMLAtoms::type) {
