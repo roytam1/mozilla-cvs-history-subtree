@@ -3815,7 +3815,7 @@ int CWinCX::GetUrl(URL_Struct *pUrl, FO_Present_Types iFormatOut, BOOL bReallyLo
     return MK_NO_ACTION;
   }
   nsAutoString str(pUrl->address);
-  ww->LoadURL(str);
+  ww->LoadURL(str,nsnull);
   return MK_DATA_LOADED; // some success code
 
   // Do we need to free pUrl
