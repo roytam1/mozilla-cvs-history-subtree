@@ -30,11 +30,11 @@
 #include "npglue.h"
 #include "plstr.h"
 #include "nsCaps.h"
+#include "nsPluginInputStream.h"
+#include "nsPluginInstancePeer.h"
 #ifdef OJI
 #include "jni.h"
 #include "jvmmgr.h"
-#include "nsPluginInputStream.h"
-#include "nsPluginInstancePeer.h"
 #include "nsIJVMPluginInstance.h"
 #endif
 
