@@ -684,10 +684,15 @@ ServiceImpl::RegisterResource(nsIRDFResource* aResource, PRBool replace)
         return NS_ERROR_FAILURE;    // already registered
     }
 
-    // This is a little trick to make storage more efficient. For
-    // the "key" in the table, we'll use the string value that's
-    // stored as a member variable of the nsIRDFResource object.
-    PL_HashTableAdd(mResources, uri, aResource);
+    if (prevRes) {
+        // XXXwaterson: LEAK! Release the previous key.
+    }
+
+    const char* key = PL_strdup(uri);
+    if (! key)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    PL_HashTableAdd(mResources, key, aResource);
 
     // *We* don't AddRef() the resource: that way, the resource
     // can be garbage collected when the last refcount goes
@@ -710,6 +715,8 @@ ServiceImpl::UnregisterResource(nsIRDFResource* resource)
     if (NS_FAILED(rv)) return rv;
 
     PL_HashTableRemove(mResources, uri);
+
+    // XXXwaterson: LEAK! Release the previous key.
 
     // N.B. that we _don't_ release the resource: we only held a weak
     // reference to it in the hashtable.
@@ -866,6 +873,7 @@ ServiceImpl::RegisterLiteral(nsIRDFLiteral* aLiteral, PRBool aReplace)
     if (prevLiteral) {
         if (aReplace) {
             NS_RELEASE(prevLiteral);
+            // XXXwaterson LEAK! free the previous key
         }
         else {
             NS_WARNING("literal already registered and replace not specified");
@@ -873,7 +881,11 @@ ServiceImpl::RegisterLiteral(nsIRDFLiteral* aLiteral, PRBool aReplace)
         }
     }
 
-    PL_HashTableAdd(mLiterals, value, aLiteral);
+    const PRUnichar* key = nsXPIDLString::Copy(value);
+    if (! key)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    PL_HashTableAdd(mLiterals, key, aLiteral);
     return NS_OK;
 }
 
@@ -891,6 +903,8 @@ ServiceImpl::UnregisterLiteral(nsIRDFLiteral* aLiteral)
     if (NS_FAILED(rv)) return rv;
 
     PL_HashTableRemove(mLiterals, value);
+
+    // XXXwaterson LEAK! free the key
     return NS_OK;
 }
 
