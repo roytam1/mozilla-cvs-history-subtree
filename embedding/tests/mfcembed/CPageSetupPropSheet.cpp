@@ -82,10 +82,10 @@ void CPageSetupPropSheet::AddControlPages()
 }
 
 /////////////////////////////////////////////////////////////////////////////
-static float GetFloatFromStr(const char* aStr, float aMaxVal = 1.0)
+static float GetFloatFromStr(LPCTSTR aStr, float aMaxVal = 1.0)
 {
     float val;
-    sscanf(aStr, "%f", &val);
+    _stscanf(aStr, _T("%f"), &val);
     if (val <= aMaxVal) 
     {
         return val;
@@ -100,7 +100,11 @@ static float GetFloatFromStr(const char* aStr, float aMaxVal = 1.0)
 static PRUnichar* GetUnicodeFromCString(const CString& aStr)
 {
     nsString str;
-    str.AssignWithConversion(LPCSTR(aStr));
+#if !defined(UNICODE)
+    str.AssignWithConversion(LPCTSTR(aStr));
+#else /* UNICODE */
+    str.Assign(LPCTSTR(aStr));
+#endif /* UNICODE */
     return ToNewUnicode(str);
 }
 

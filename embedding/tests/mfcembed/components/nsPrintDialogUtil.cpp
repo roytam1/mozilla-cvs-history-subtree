@@ -416,11 +416,15 @@ GetACPString(const nsAString& aStr)
 // Set a multi-byte string in the control
 static void SetTextOnWnd(HWND aControl, const nsString& aStr)
 {
+#if !defined(UNICODE)
   char* pStr = GetACPString(aStr);
   if (pStr) {
     ::SetWindowText(aControl, pStr);
     delete [] pStr;
   }
+#else
+  SetWindowText(aControl, aStr.get());
+#endif
 }
 
 //--------------------------------------------------------
@@ -779,7 +783,7 @@ static HGLOBAL CreateGlobalDevModeAndInit(LPTSTR aPrintName, nsIPrintSettings* a
 
     nsString prtName;
 #ifdef UNICODE
-    prtName.AppendWithConversion((PRUnichar *)aPrintName);
+    prtName.Assign(aPrintName);
 #else 
     prtName.AssignWithConversion((char*)aPrintName);
 #endif

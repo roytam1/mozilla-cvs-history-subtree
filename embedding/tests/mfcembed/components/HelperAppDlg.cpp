@@ -242,7 +242,13 @@ NS_IMETHODIMP CHelperAppLauncherDialog::Show(nsIHelperAppLauncher *aLauncher,
         m_FileName = dlg.m_OpenWithAppName;
 
         nsCOMPtr<nsILocalFile> openWith;
-        nsresult rv = NS_NewNativeLocalFile(nsDependentCString(m_FileName), PR_FALSE, getter_AddRefs(openWith));
+        nsresult rv = NS_OK;
+#if !defined(UNICODE)
+        rv = NS_NewNativeLocalFile(nsDependentCString(m_FileName), PR_FALSE, getter_AddRefs(openWith));
+#else /* UNICODE */
+        nsCString tempName; tempName.AssignWithConversion(m_FileName);
+        rv = NS_NewNativeLocalFile(tempName, PR_FALSE, getter_AddRefs(openWith));
+#endif /* UNICODE */
         if (NS_FAILED(rv))
             return aLauncher->LaunchWithApplication(nsnull, PR_FALSE);
         else
@@ -263,7 +269,7 @@ NS_IMETHODIMP CHelperAppLauncherDialog::PromptForSaveToFile(nsISupports *aWindow
 
     NS_ENSURE_ARG_POINTER(_retval);
 
-    char *lpszFilter = "All Files (*.*)|*.*||";
+    LPCTSTR lpszFilter = _T("All Files (*.*)|*.*||");
     CFileDialog cf(FALSE, W2T(aSuggestedFileExtension), W2T(aDefaultFile),
                     OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,
                     lpszFilter, GetParentFromContext(aWindowContext));
@@ -271,7 +277,12 @@ NS_IMETHODIMP CHelperAppLauncherDialog::PromptForSaveToFile(nsISupports *aWindow
     {
         m_FileName = cf.GetPathName(); // Will be like: c:\tmp\junk.exe
 
+#if !defined(UNICODE)
         return NS_NewNativeLocalFile(nsDependentCString(m_FileName), PR_FALSE, _retval);
+#else /* UNICODE */
+        nsCString tempFile; tempFile.AssignWithConversion(m_FileName);
+        return NS_NewNativeLocalFile(tempFile, PR_FALSE, _retval);
+#endif /* UNICODE */
     }
     else
         return NS_ERROR_FAILURE;
@@ -337,7 +348,14 @@ BOOL CChooseActionDlg::OnInitDialog()
         {
             CStatic *pMimeType = (CStatic *)GetDlgItem(IDC_CONTENT_TYPE);
             if(pMimeType)
+            {
+#if !defined(UNICODE)
                 pMimeType->SetWindowText(mimeType.get());
+#else /* UNICODE */
+                USES_CONVERSION;
+                pMimeType->SetWindowText(A2W(mimeType.get()));
+#endif /* UNICODE */
+            }
         }
 
         // See if we can get the preferred action from the mime info
@@ -451,9 +469,9 @@ void CChooseActionDlg::OnSaveToDiskRadioBtnClicked()
 
 void CChooseActionDlg::OnChooseAppClicked() 
 {	
-    char *lpszFilter =
-        "EXE Files Only (*.exe)|*.exe|"
-        "All Files (*.*)|*.*||";
+    LPCTSTR lpszFilter =
+        _T("EXE Files Only (*.exe)|*.exe|")
+        _T("All Files (*.*)|*.*||");
 
     CFileDialog cf(TRUE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,
                     lpszFilter, this);
@@ -476,8 +494,8 @@ void CChooseActionDlg::OnOK()
         //
         if(m_OpenWithAppName.IsEmpty())
         {
-            ::MessageBox(this->m_hWnd, "You have chosen to open the content with an external application, but,\nno application has been specified.\n\nPlease click the Choose... button to select an application",
-            "MfcEmbed", MB_OK);
+            ::MessageBox(this->m_hWnd, _T("You have chosen to open the content with an external application, but,\nno application has been specified.\n\nPlease click the Choose... button to select an application"),
+            _T("MfcEmbed"), MB_OK);
             return;
         }
         else
@@ -587,7 +605,12 @@ BOOL CProgressDlg::OnInitDialog()
             nsCAutoString uriString;
             srcUri->GetSpec(uriString);
 
+#if !defined(UNICODE)
             m_SavingFrom.SetWindowText(uriString.get());
+#else /* UNICODE */
+            USES_CONVERSION;
+            m_SavingFrom.SetWindowText(A2W(uriString.get()));
+#endif /* UNICODE */
         }
     }
 

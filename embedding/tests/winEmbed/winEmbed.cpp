@@ -231,7 +231,7 @@ NS_IMETHODIMP ProfileChangeObserver::Observe(nsISupports *aSubject, const char *
 		// The profile is about to change!
 
         // Ask the user if they want to
-        int result = ::MessageBox(NULL, "Do you want to close all windows in order to switch the profile?", "Confirm", MB_YESNO | MB_ICONQUESTION);
+        int result = ::MessageBox(NULL, _T("Do you want to close all windows in order to switch the profile?"), _T("Confirm"), MB_YESNO | MB_ICONQUESTION);
         if (result != IDYES)
         {
             nsCOMPtr<nsIProfileChangeStatus> status = do_QueryInterface(aSubject);
@@ -376,9 +376,13 @@ void SaveWebPage(nsIWebBrowser *aWebBrowser)
     fileName.ReplaceChar('/', L'-');   // Forward slashes become hyphens
 
     // Copy filename to a character buffer
-	char szFile[_MAX_PATH];
+	TCHAR szFile[_MAX_PATH];
     memset(szFile, 0, sizeof(szFile));
+#if !defined(UNICODE)
     PL_strncpyz(szFile, fileName.get(), sizeof(szFile) - 1); // XXXldb probably should be just sizeof(szfile)
+#else
+    MultiByteToWideChar(CP_ACP, 0, fileName.get(), -1, szFile, sizeof(szFile) / sizeof(TCHAR));
+#endif
 
     // Initialize the file save as information structure
     OPENFILENAME saveFileNameInfo;
@@ -387,14 +391,14 @@ void SaveWebPage(nsIWebBrowser *aWebBrowser)
 	saveFileNameInfo.hwndOwner = NULL;
 	saveFileNameInfo.hInstance = NULL;
 	saveFileNameInfo.lpstrFilter =
-        "Web Page, HTML Only (*.htm;*.html)\0*.htm;*.html\0"
-        "Web Page, Complete (*.htm;*.html)\0*.htm;*.html\0"
-        "Text File (*.txt)\0*.txt\0"; 
+        _T("Web Page, HTML Only (*.htm;*.html)\0*.htm;*.html\0")
+        _T("Web Page, Complete (*.htm;*.html)\0*.htm;*.html\0")
+        _T("Text File (*.txt)\0*.txt\0"); 
 	saveFileNameInfo.lpstrCustomFilter = NULL; 
 	saveFileNameInfo.nMaxCustFilter = NULL; 
 	saveFileNameInfo.nFilterIndex = 1; 
 	saveFileNameInfo.lpstrFile = szFile; 
-	saveFileNameInfo.nMaxFile = sizeof(szFile); 
+	saveFileNameInfo.nMaxFile = sizeof(szFile) / sizeof(TCHAR);
 	saveFileNameInfo.lpstrFileTitle = NULL;
 	saveFileNameInfo.nMaxFileTitle = 0; 
 	saveFileNameInfo.lpstrInitialDir = NULL; 
@@ -402,13 +406,17 @@ void SaveWebPage(nsIWebBrowser *aWebBrowser)
 	saveFileNameInfo.Flags = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT; 
 	saveFileNameInfo.nFileOffset = NULL; 
 	saveFileNameInfo.nFileExtension = NULL; 
-	saveFileNameInfo.lpstrDefExt = "htm"; 
+	saveFileNameInfo.lpstrDefExt = _T("htm"); 
 	saveFileNameInfo.lCustData = NULL; 
 	saveFileNameInfo.lpfnHook = NULL; 
 	saveFileNameInfo.lpTemplateName = NULL; 
 
 	if (GetSaveFileName(&saveFileNameInfo))
 	{
+#if defined(UNICODE)
+        nsCString szFileA; szFileA.AssignWithConversion(szFile);
+#endif /* UNICODE */
+
         // Does the user want to save the complete document including
         // all frames, images, scripts, stylesheets etc. ?
         char *pszDataPath = NULL;
@@ -421,7 +429,13 @@ void SaveWebPage(nsIWebBrowser *aWebBrowser)
             char fname[_MAX_FNAME];
             char ext[_MAX_EXT];
 
-            _splitpath(szFile, drive, dir, fname, ext);
+            _splitpath(
+#if !defined(UNICODE)
+                szFile,
+#else /* UNICODE */
+                szFileA.get(),
+#endif /* UNICODE */
+                drive, dir, fname, ext);
             sprintf(szDataFile, "%s_files", fname);
             _makepath(szDataPath, drive, dir, szDataFile, "");
 
@@ -432,7 +446,13 @@ void SaveWebPage(nsIWebBrowser *aWebBrowser)
         nsCOMPtr<nsIWebBrowserPersist> persist(do_QueryInterface(aWebBrowser));
 
         nsCOMPtr<nsILocalFile> file;
-        NS_NewNativeLocalFile(nsDependentCString(szFile), TRUE, getter_AddRefs(file));
+        NS_NewNativeLocalFile(
+#if !defined(UNICODE)
+            nsDependentCString(szFile),
+#else /* UNICODE */
+            szFileA,
+#endif /* UNICODE */
+            TRUE, getter_AddRefs(file));
 
         nsCOMPtr<nsILocalFile> dataPath;
         if (pszDataPath)
@@ -498,10 +518,16 @@ nsresult ResizeEmbedding(nsIWebBrowserChrome* chrome)
 //
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
+#if !defined(WINCE)
 	WNDCLASSEX wcex;
+#else /* WINCE */
+	WNDCLASS wcex;
+#endif /* WINCE */
 
     memset(&wcex, 0, sizeof(wcex));
+#if !defined(WINCE)
 	wcex.cbSize = sizeof(WNDCLASSEX); 
+#endif /* WINCE */
 
 	wcex.style			= CS_HREDRAW | CS_VREDRAW;
 	wcex.lpfnWndProc	= (WNDPROC) BrowserWndProc;
@@ -512,9 +538,16 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
 	wcex.hCursor		= LoadCursor(NULL, IDC_ARROW);
 	wcex.hbrBackground	= (HBRUSH)(COLOR_WINDOW+1);
 	wcex.lpszClassName	= szWindowClass;
+#if !defined(WINCE)
 	wcex.hIconSm		= LoadIcon(ghInstanceResources, (LPCTSTR)IDI_SMALL);
+#endif /* WINCE */
 
-	return RegisterClassEx(&wcex);
+    return
+#if !defined(WINCE)
+	    RegisterClassEx(&wcex);
+#else /* WINCE */
+	    RegisterClass(&wcex);
+#endif /* WINCE */
 }
 
 
@@ -551,6 +584,7 @@ void UpdateUI(nsIWebBrowserChrome *aChrome)
         clipCmds->CanPaste(&canPaste);
     }
 
+#if !defined(WINCE)
     HMENU hmenu = GetMenu(hwndDlg);
     if (hmenu)
     {
@@ -566,6 +600,7 @@ void UpdateUI(nsIWebBrowserChrome *aChrome)
         EnableMenuItem(hmenu, MOZ_Paste, MF_BYCOMMAND |
             ((canPaste) ? MF_ENABLED : (MF_DISABLED | MF_GRAYED)));
     }
+#endif /* WINCE */
 
     HWND button;
     button = GetDlgItem(hwndDlg, IDC_BACK);
@@ -617,9 +652,11 @@ BOOL CALLBACK BrowserDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
     case WM_INITDIALOG:
         return TRUE;
 
+#if defined(WM_INITMENU)
     case WM_INITMENU:
         UpdateUI(chrome);
         return TRUE;
+#endif /* WM_INITMENU */
 
     case WM_SYSCOMMAND:
         if (wParam == SC_CLOSE)
@@ -656,7 +693,11 @@ BOOL CALLBACK BrowserDlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lPar
                 GetDlgItemText(hwndDlg, IDC_ADDRESS, szURL,
                     sizeof(szURL) / sizeof(szURL[0]) - 1);
                 webNavigation->LoadURI(
+#if !defined(UNICODE)
                     NS_ConvertASCIItoUCS2(szURL).get(),
+#else
+                    szURL,
+#endif
                     nsIWebNavigation::LOAD_FLAGS_NONE,
                     nsnull,
                     nsnull,
@@ -1016,8 +1057,12 @@ LRESULT CALLBACK ChooseProfileDlgProc(HWND hDlg, UINT message, WPARAM wParam, LP
                 INT profileNameLen = SendMessage(hwndProfileList, LB_GETTEXTLEN, currentProfileIndex, 0);
                 TCHAR *profileName = new TCHAR[profileNameLen + 1];
                 SendMessage(hwndProfileList, LB_GETTEXT, currentProfileIndex, (LPARAM) profileName);
+#if !defined(UNICODE)
                 nsAutoString newProfile; newProfile.AssignWithConversion(profileName);
                 rv = profileService->SetCurrentProfile(newProfile.get());
+#else /* UNICODE */
+                rv = profileService->SetCurrentProfile(profileName);
+#endif /* UNICODE */
             }
 	        EndDialog(hDlg, IDOK);
         }
@@ -1190,10 +1235,21 @@ void WebBrowserChromeUI::SetFocus(nsIWebBrowserChrome *chrome)
 void WebBrowserChromeUI::UpdateStatusBarText(nsIWebBrowserChrome *aChrome, const PRUnichar* aStatusText)
 {
     HWND hwndDlg = GetBrowserDlgFromChrome(aChrome);
+#if !defined(UNICODE)
     nsCString status; 
     if (aStatusText)
         status.AssignWithConversion(aStatusText);
     SetDlgItemText(hwndDlg, IDC_STATUS, status.get());
+#else
+    if(NULL != aStatusText)
+    {
+        SetDlgItemText(hwndDlg, IDC_STATUS, aStatusText);
+    }
+    else
+    {
+        SetDlgItemText(hwndDlg, IDC_STATUS, _T(""));
+    }
+#endif
 }
 
 
@@ -1216,7 +1272,7 @@ void WebBrowserChromeUI::UpdateCurrentURI(nsIWebBrowserChrome *aChrome)
         nsCAutoString uriString;
         currentURI->GetAsciiSpec(uriString);
         HWND hwndDlg = GetBrowserDlgFromChrome(aChrome);
-        SetDlgItemText(hwndDlg, IDC_ADDRESS, uriString.get());
+        SetDlgItemTextA(hwndDlg, IDC_ADDRESS, uriString.get());
     }
 }
 

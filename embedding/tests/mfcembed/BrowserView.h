@@ -121,7 +121,7 @@ public:
 
     void Activate(UINT nState, CWnd* pWndOther, BOOL bMinimized);
 
-    BOOL OpenViewSourceWindow(const char* pUrl);
+    BOOL OpenViewSourceWindow(LPCTSTR pUrl);
     BOOL IsViewSourceUrl(CString& strUrl);
 
     enum _securityState {

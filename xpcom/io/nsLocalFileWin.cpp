@@ -733,8 +733,10 @@ nsLocalFile::InitWithNativePath(const nsACString &filePath)
     char *path = nsnull;
     PRInt32 pathLen = 0;
 
+#if !defined(WINCE)
     if ( ( (secondChar == ':') && !FindCharInReadable('/', begin, end) ) ||  // normal path
          ( (firstChar == '\\') && (secondChar == '\\') ) )  // network path
+#endif /* WINCE */
     {
         // This is a native path
         path = ToNewCString(filePath);

@@ -120,6 +120,8 @@ CXXFLAGS	+= /D "_AFXDLL" /D "USE_SINGLE_SIGN_ON"
 
 ifneq ($(OS_TARGET),WINCE)
 LDFLAGS		+= -SUBSYSTEM:windows
+else
+LDFLAGS		+= /entry:"wWinMainCRTStartup"
 endif # WINCE
 
 libs:: mfcembed.htm

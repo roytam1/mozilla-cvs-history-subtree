@@ -64,13 +64,13 @@ static void ValidateProfileName(const CString& profileName, CDataExchange* pDX)
     {
         CString errMsg;
 
-        errMsg.Format(_T("Error: A profile named \"%s\" already exists."), (const char *)profileName);
+        errMsg.Format(_T("Error: A profile named \"%s\" already exists."), (LPCTSTR)profileName);
         AfxMessageBox( errMsg, MB_ICONEXCLAMATION );
         errMsg.Empty();
         pDX->Fail();
     }
 
-    if (profileName.FindOneOf("\\/") != -1)
+    if (profileName.FindOneOf(_T("\\/")) != -1)
     {
         AfxMessageBox( _T("Error: A profile name cannot contain the characters \"\\\" or \"/\"."), MB_ICONEXCLAMATION );
         pDX->Fail();

@@ -166,5 +166,12 @@ WinMain(HINSTANCE instance, HINSTANCE prevInstance, LPTSTR cmdParam,
 {
   gInstance = instance;
   gPrevInstance = prevInstance;
+
+#if defined(WINCE)
+    FILE* redir_stdin = _wfreopen(_T("\\Temp\\stdin.txt"), _T("rb"), stdin);
+    FILE* redir_stdout = _wfreopen(_T("\\Temp\\stdout.txt"), _T("wb"), stdout);
+    FILE* redir_stderr = _wfreopen(_T("\\Temp\\stderr.txt"), _T("wb"), stderr);
+#endif /* WINCE */
+
   return main(0, nsnull);
 }

@@ -1163,7 +1163,11 @@ $(OBJ_PREFIX)%.$(OBJ_SUFFIX): %.mm Makefile.in
 ifeq ($(OS_ARCH),OS2)
 	$(RC) $(RCFLAGS) -i $(subst /,\,$(srcdir)) -r $< $@
 else
+ifneq ($(OS_TARGET),WINCE)
 	$(RC) $(RCFLAGS) -r $(DEFINES) $(INCLUDES) $(OUTOPTION)$@ $<
+else
+	$(RC) $(RCFLAGS) -r $(DEFINES) $(ACDEFINES) $(INCLUDES) $(OUTOPTION)$@ $<
+endif
 endif
 
 

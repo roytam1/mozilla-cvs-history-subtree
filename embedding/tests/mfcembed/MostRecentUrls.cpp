@@ -54,13 +54,13 @@ CMostRecentUrls::CMostRecentUrls() :
 		mURLs[i] = NULL;
 	}
 
-	FILE * fd = GetFD("r");
+	FILE * fd = GetFD(_T("r"));
 	if (fd) {
-		char line[512];
-		while (fgets(line, 512, fd)) {
-			if (strlen(line) > 1) {
-				line[strlen(line)-1] = 0;
-				mURLs[mNumURLs++] = _strdup(line);
+		TCHAR line[512];
+		while (_fgetts(line, 512, fd)) {
+			if (_tcslen(line) > 1) {
+				line[_tcslen(line)-1] = 0;
+				mURLs[mNumURLs++] = _tcsdup(line);
 			}
 		}
 		fclose(fd);
@@ -68,15 +68,25 @@ CMostRecentUrls::CMostRecentUrls() :
 
 }
 
-FILE * CMostRecentUrls::GetFD(const char * aMode) 
+FILE * CMostRecentUrls::GetFD(LPCTSTR aMode) 
 {
+#if defined(UNICODE)
+    USES_CONVERSION;
+#endif /* UNICODE */
+
     FILE * fd = nsnull;
     nsCOMPtr<nsIFile> file;
     nsresult rv = NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(file));
     if (NS_SUCCEEDED(rv)) {
         nsCOMPtr<nsILocalFile> local_file(do_QueryInterface(file));
         local_file->AppendNative(NS_LITERAL_CSTRING("urls.txt"));
-        local_file->OpenANSIFileDesc(aMode, &fd);
+        local_file->OpenANSIFileDesc(
+#if !defined(UNICODE)
+            aMode,
+#else /* UNICODE */
+            W2A(aMode),
+#endif /* UNICODE */
+            &fd);
     }
 
     return fd;
@@ -84,7 +94,7 @@ FILE * CMostRecentUrls::GetFD(const char * aMode)
 
 CMostRecentUrls::~CMostRecentUrls() 
 {
-    FILE * fd = GetFD("w");
+    FILE * fd = GetFD(_T("w"));
     if (fd) {
         for (int i=0;i<MAX_URLS;i++) {
             if(mURLs[i])
@@ -99,7 +109,7 @@ CMostRecentUrls::~CMostRecentUrls()
     }
 }
 
-char * CMostRecentUrls::GetURL(int aInx)
+LPTSTR CMostRecentUrls::GetURL(int aInx)
 {
     if (aInx < mNumURLs) {
         return mURLs[aInx];
@@ -108,17 +118,17 @@ char * CMostRecentUrls::GetURL(int aInx)
     return NULL;
 }
 
-void CMostRecentUrls::AddURL(const char * aURL)
+void CMostRecentUrls::AddURL(LPCTSTR aURL)
 {
 	TCHAR szTemp[512];
-	strcpy(szTemp, aURL);
+	_tcscpy(szTemp, aURL);
 
 	// check to see if an existing url matches the one passed in
 	for (int i=0; i<MAX_URLS-1; i++)
 	{
         if(mURLs[i])
         {
-            if(strcmpi(mURLs[i], szTemp) == 0)
+            if(_tcsicmp(mURLs[i], szTemp) == 0)
                 break; 
         }
 	}
@@ -133,11 +143,11 @@ void CMostRecentUrls::AddURL(const char * aURL)
           free(mURLs[i]);
 
         if(mURLs[i-1])  
-            mURLs[i] = _strdup(mURLs[i-1]);
+            mURLs[i] = _tcsdup(mURLs[i-1]);
 	}
 
 	// place this url at the top
     if(mURLs[0])
         free(mURLs[0]);
-    mURLs[0] = _strdup(szTemp);
+    mURLs[0] = _tcsdup(szTemp);
 }

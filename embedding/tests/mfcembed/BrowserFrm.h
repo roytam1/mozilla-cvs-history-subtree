@@ -45,11 +45,20 @@
 #include "MostRecentUrls.h"
 
 // A simple UrlBar class...
-class CUrlBar : public CComboBoxEx
+class CUrlBar :
+#if !defined(WINCE)
+public CComboBoxEx
+#else /* WINCE */
+public CComboBox
+#endif /* WINCE */
 {
 public:
 	inline void GetEnteredURL(CString& url) {
+#if !defined(WINCE)
 		GetEditCtrl()->GetWindowText(url);
+#else /* WINCE */
+        GetWindowText(url);
+#endif /* WINCE */
 	}
 	inline void GetSelectedURL(CString& url) {
 		GetLBText(GetCurSel(), url);
@@ -58,10 +67,14 @@ public:
 		SetWindowText(pUrl);
 	}
 	inline void AddURLToList(CString& url, bool bAddToMRUList = true) {
+#if !defined(WINCE)
 		COMBOBOXEXITEM ci;
 		ci.mask = CBEIF_TEXT; ci.iItem = -1;
 		ci.pszText = (LPTSTR)(LPCTSTR)url;
 		InsertItem(&ci);
+#else /* WINCE */
+        AddString(url);
+#endif /* WINCE */
 
         if(bAddToMRUList)
             m_MRUList.AddURL((LPTSTR)(LPCTSTR)url);
@@ -69,43 +82,73 @@ public:
     inline void LoadMRUList() {
         for (int i=0;i<m_MRUList.GetNumURLs();i++) 
         {
-            CString urlStr(_T(m_MRUList.GetURL(i)));
+            CString urlStr(m_MRUList.GetURL(i));
             AddURLToList(urlStr, false); 
         }
     }
     inline BOOL EditCtrlHasFocus() {
+#if !defined(WINCE)
         return (GetEditCtrl()->m_hWnd == CWnd::GetFocus()->m_hWnd);
+#else /* WINCE */
+        return GetSafeHwnd() == CWnd::GetFocus()->m_hWnd;
+#endif /* WINCE */
     }
     inline BOOL EditCtrlHasSelection() {
         int nStartChar = 0, nEndChar = 0;
         if(EditCtrlHasFocus())
+        {
+#if !defined(WINCE)
             GetEditCtrl()->GetSel(nStartChar, nEndChar);
+#else /* WINCE */
+            DWORD sel = GetEditSel();
+            if(CB_ERR != sel)
+            {
+                nStartChar = LOWORD(sel);
+                nEndChar = HIWORD(sel);
+            }
+#endif /* WINCE */
+        }
         return (nEndChar > nStartChar) ? TRUE : FALSE;
     }
     inline BOOL CanCutToClipboard() {
         return EditCtrlHasSelection();
     }
     inline void CutToClipboard() {
-        GetEditCtrl()->Cut();
+#if !defined(WINCE)
+        GetEditCtrl()->
+#endif /* WINCE */
+            Cut();
     }
     inline BOOL CanCopyToClipboard() {
         return EditCtrlHasSelection();
     }
     inline void CopyToClipboard() {
-        GetEditCtrl()->Copy();
+#if !defined(WINCE)
+        GetEditCtrl()->
+#endif /* WINCE */
+            Copy();
     }
     inline BOOL CanPasteFromClipboard() {
         return EditCtrlHasFocus();
     }
     inline void PasteFromClipboard() {
-        GetEditCtrl()->Paste();
+#if !defined(WINCE)
+        GetEditCtrl()->
+#endif /* WINCE */
+            Paste();
     }
     inline BOOL CanUndoEditOp() {
+#if !defined(WINCE)
         return EditCtrlHasFocus() ? GetEditCtrl()->CanUndo() : FALSE;
+#else /* WINCE */
+        return FALSE;
+#endif /* WINCE */
     }
     inline void UndoEditOp() {        
+#if !defined(WINCE)
         if(EditCtrlHasFocus())
             GetEditCtrl()->Undo();
+#endif /* WINCE */
     }
 
 protected:

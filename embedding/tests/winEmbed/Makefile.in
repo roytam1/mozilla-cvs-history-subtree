@@ -77,6 +77,10 @@ OS_LIBS		+= \
 		shell32.lib \
 		version.lib \
 		$(NULL)
+else
+OS_LIBS		+= \
+        wince_console.lib \
+		$(NULL)
 endif # WINCE
 
 #

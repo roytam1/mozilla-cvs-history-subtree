@@ -28,7 +28,8 @@
  *   Conrad Carlen <conrad@ingress.com>
  *
  * ***** END LICENSE BLOCK ***** */
- 
+
+#include "stdafx.h" 
 #include "winEmbedFileLocProvider.h"
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsDirectoryServiceDefs.h"
@@ -184,14 +185,14 @@ winEmbedFileLocProvider::GetFile(const char *prop, PRBool *persistant, nsIFile *
 // Get the location of the MRE version we're compatible with from 
 // the registry
 //
-static char * GetMreLocationFromRegistry()
+static LPTSTR GetMreLocationFromRegistry()
 {
-    char szKey[256];
+    TCHAR szKey[256];
     HKEY hRegKey = NULL;
-    DWORD dwLength = _MAX_PATH * sizeof(char);
+    DWORD dwLength = _MAX_PATH * sizeof(TCHAR);
     long rc;
-    char keyValue[_MAX_PATH + 1];
-    char *pMreLocation = NULL;
+    TCHAR keyValue[_MAX_PATH + 1];
+    LPTSTR pMreLocation = NULL;
 
     // A couple of key points here:
     // 1. Note the usage of the "Software\\Mozilla\\MRE" subkey - this allows
@@ -204,13 +205,13 @@ static char * GetMreLocationFromRegistry()
     // Please see http://www.mozilla.org/projects/embedding/MRE.html for
     // more info.
     //
-    strcpy(szKey, "Software\\Mozilla\\MRE\\1.0");
+    _tcscpy(szKey, _T("Software\\Mozilla\\MRE\\1.0"));
 
     if (::RegOpenKeyEx(HKEY_LOCAL_MACHINE, szKey, 0, KEY_QUERY_VALUE, &hRegKey) == ERROR_SUCCESS) 
     {
-        if ((rc = ::RegQueryValueEx(hRegKey, "MreHome", NULL, NULL, (BYTE *)keyValue, &dwLength))==ERROR_SUCCESS)
+        if ((rc = ::RegQueryValueEx(hRegKey, _T("MreHome"), NULL, NULL, (BYTE *)keyValue, &dwLength))==ERROR_SUCCESS)
         {
-            pMreLocation = ::strdup(keyValue);
+            pMreLocation = ::_tcsdup(keyValue);
             ::RegCloseKey(hRegKey);
         }
     }
@@ -237,17 +238,27 @@ static char * GetMreLocationFromRegistry()
 
 NS_METHOD winEmbedFileLocProvider::GetMreDirectory(nsILocalFile **aLocalFile)
 {
+#if defined(UNICODE)
+    USES_CONVERSION;
+#endif /* UNICODE */
+
     NS_ENSURE_ARG_POINTER(aLocalFile);
     nsresult rv = NS_ERROR_FAILURE;
 
     // Get the path of the MRE which is compatible with our embedding application
     // from the registry
     //
-    char *pMreDir = GetMreLocationFromRegistry();
+    LPTSTR pMreDir = GetMreLocationFromRegistry();
     if(pMreDir)
     {
         nsCOMPtr<nsILocalFile> tempLocal;
-	    rv = NS_NewNativeLocalFile(nsDependentCString(pMreDir), TRUE, getter_AddRefs(tempLocal));
+	    rv = NS_NewNativeLocalFile(
+#if !defined(UNICODE)
+            nsDependentCString(pMreDir),
+#else /* UNICODE */
+            nsDependentCString(W2A(pMreDir)),
+#endif /* UNICODE */
+            TRUE, getter_AddRefs(tempLocal));
 
         if (tempLocal)
         {

@@ -65,12 +65,16 @@ void CBrowserFrame::BrowserFrameGlueObj::UpdateStatusBarText(const PRUnichar *aM
 {
     METHOD_PROLOGUE(CBrowserFrame, BrowserFrameGlueObj)
 
+#if !defined(UNICODE)
     nsCString strStatus; 
 
     if(aMessage)
         strStatus.AssignWithConversion(aMessage);
 
     pThis->m_wndStatusBar.SetPaneText(0, strStatus.get());
+#else /* UNICODE */
+    pThis->m_wndStatusBar.SetPaneText(0, NULL != aMessage ? aMessage : _T(""));
+#endif /* UNICODE */
 }
 
 void CBrowserFrame::BrowserFrameGlueObj::UpdateProgress(PRInt32 aCurrent, PRInt32 aMax)
@@ -106,7 +110,12 @@ void CBrowserFrame::BrowserFrameGlueObj::UpdateCurrentURI(nsIURI *aLocation)
         nsCAutoString uriString;
         aLocation->GetSpec(uriString);
 
+#if !defined(UNICODE)
         pThis->m_wndUrlBar.SetCurrentURL(uriString.get());
+#else /* UNICODE */
+        USES_CONVERSION;
+        pThis->m_wndUrlBar.SetCurrentURL(A2W(uriString.get()));
+#endif /* UNICODE */
     }
 }
 
@@ -120,7 +129,11 @@ void CBrowserFrame::BrowserFrameGlueObj::GetBrowserFrameTitle(PRUnichar **aTitle
     if(!title.IsEmpty())
     {
         nsString nsTitle;
+#if !defined(UNICODE)
         nsTitle.AssignWithConversion(title.GetBuffer(0));
+#else /* UNICODE */
+        nsTitle.Assign(title.GetBuffer(0));
+#endif /* UNICODE */
 
         *aTitle = ToNewUnicode(nsTitle);
     }
@@ -268,6 +281,7 @@ void CBrowserFrame::BrowserFrameGlueObj::GetBrowserFrameVisibility(PRBool *aVisi
 
     // We're the active one
     //Return FALSE if we're minimized
+#if !defined(WINCE)
     WINDOWPLACEMENT wpl;
     pThis->GetWindowPlacement(&wpl);
 
@@ -275,6 +289,9 @@ void CBrowserFrame::BrowserFrameGlueObj::GetBrowserFrameVisibility(PRBool *aVisi
         *aVisible = PR_TRUE;
     else
         *aVisible = PR_FALSE;
+#else /* WINCE */
+    *aVisible = ::IsWindowEnabled(pThis->m_hWnd);
+#endif /* WINCE */
 }
 
 PRBool CBrowserFrame::BrowserFrameGlueObj::CreateNewBrowserFrame(PRUint32 chromeMask, 

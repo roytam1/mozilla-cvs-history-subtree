@@ -164,6 +164,7 @@ CPrintingPromptService::CWndForDOMWindow(nsIDOMWindow *aWindow)
 NS_IMETHODIMP 
 CPrintingPromptService::ShowPrintDialog(nsIDOMWindow *parent, nsIWebBrowserPrint *webBrowserPrint, nsIPrintSettings *printSettings)
 {
+#if !defined(WINCE)
     //NS_ENSURE_ARG(parent);
 
     CWnd* wnd = CWndForDOMWindow(parent);
@@ -174,6 +175,9 @@ CPrintingPromptService::ShowPrintDialog(nsIDOMWindow *parent, nsIWebBrowserPrint
     } else {
       return NS_ERROR_FAILURE;
     }
+#else /* WINCE */
+    return NS_ERROR_FAILURE;
+#endif /* WINCE */
 }
 
 

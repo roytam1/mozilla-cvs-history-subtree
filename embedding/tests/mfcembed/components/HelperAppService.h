@@ -44,11 +44,11 @@ class nsIFactory;
 // factory creator, in hard and soft link formats
 extern "C" NS_EXPORT nsresult NS_NewHelperAppDlgFactory(nsIFactory** aFactory);
 typedef nsresult (__cdecl *MakeFactoryType)(nsIFactory **);
-#define kHelperAppDlgFactoryFuncName "NS_NewHelperAppDlgFactory"
+#define kHelperAppDlgFactoryFuncName _T("NS_NewHelperAppDlgFactory")
 
 // initialization function, in hard and soft link formats
 extern "C" NS_EXPORT void InitHelperAppDlg(HINSTANCE instance);
 typedef nsresult (__cdecl *InitHelperAppDlgType)(HINSTANCE instance);
-#define kHelperAppDlgInitFuncName "InitHelperAppDlg"
+#define kHelperAppDlgInitFuncName _T("InitHelperAppDlg")
 
 #endif

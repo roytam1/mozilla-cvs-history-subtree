@@ -193,7 +193,7 @@ NS_IMETHODIMP CPromptService::ConfirmCheck(nsIDOMWindow *parent,
     CWnd *wnd = CWndForDOMWindow(parent);
     CConfirmCheckDialog dlg(wnd, W2T(dialogTitle), W2T(text),
                     W2T(checkboxMsg), checkValue ? *checkValue : 0,
-                    "Yes", "No", NULL);
+                    _T("Yes"), _T("No"), NULL);
 
     int iBtnClicked = dlg.DoModal();
 
@@ -227,7 +227,11 @@ NS_IMETHODIMP CPromptService::Prompt(nsIDOMWindow *parent,
       *value = nsnull;
     }
     nsString csPromptEditValue;
+#if !defined(UNICODE)
     csPromptEditValue.AssignWithConversion(dlg.m_csPromptAnswer.GetBuffer(0));
+#else
+    csPromptEditValue.Assign(dlg.m_csPromptAnswer.GetBuffer(0));
+#endif
 
     *value = ToNewUnicode(csPromptEditValue);
 
@@ -264,7 +268,11 @@ NS_IMETHODIMP CPromptService::PromptUsernameAndPassword(nsIDOMWindow *parent,
         *username = nsnull;
     }
     nsString csUserName;
+#if !defined(UNICODE)
     csUserName.AssignWithConversion(dlg.m_csUserName.GetBuffer(0));
+#else
+    csUserName.Assign(dlg.m_csUserName.GetBuffer(0));
+#endif
     *username = ToNewUnicode(csUserName);
 
     // Get the password entered
@@ -273,7 +281,11 @@ NS_IMETHODIMP CPromptService::PromptUsernameAndPassword(nsIDOMWindow *parent,
       *password = nsnull;
     }
     nsString csPassword;
+#if !defined(UNICODE)
     csPassword.AssignWithConversion(dlg.m_csPassword.GetBuffer(0));
+#else
+    csPassword.Assign(dlg.m_csPassword.GetBuffer(0));
+#endif
     *password = ToNewUnicode(csPassword);
 
     if(checkValue)		
@@ -309,7 +321,11 @@ NS_IMETHODIMP CPromptService::PromptPassword(nsIDOMWindow *parent,
         *password = nsnull;
     }
     nsString csPassword;
+#if !defined(UNICODE)
     csPassword.AssignWithConversion(dlg.m_csPassword.GetBuffer(0));
+#else
+    csPassword.Assign(dlg.m_csPassword.GetBuffer(0));
+#endif
     *password = ToNewUnicode(csPassword);
 
     if(checkValue)

@@ -1778,7 +1778,7 @@ nsresult nsProfileLock::Lock(nsILocalFile* aFile)
     rv = lockFile->GetNativePath(filePath);
     if (NS_FAILED(rv))
         return rv;
-    mLockFileHandle = CreateFile(filePath.get(),
+    mLockFileHandle = CreateFileA(filePath.get(),
                                  GENERIC_READ | GENERIC_WRITE,
                                  0, // no sharing - of course
                                  nsnull,

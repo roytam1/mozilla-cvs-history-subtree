@@ -43,11 +43,11 @@ class nsIFactory;
 // factory creator, in hard and soft link formats
 extern "C" NS_EXPORT nsresult NS_NewPromptServiceFactory(nsIFactory** aFactory);
 typedef nsresult (__cdecl *MakeFactoryType)(nsIFactory **);
-#define kPromptServiceFactoryFuncName "NS_NewPromptServiceFactory"
+#define kPromptServiceFactoryFuncName _T("NS_NewPromptServiceFactory")
 
 // initialization function, in hard and soft link formats
 extern "C" NS_EXPORT void InitPromptService(HINSTANCE instance);
 typedef nsresult (__cdecl *InitPromptServiceType)(HINSTANCE instance);
-#define kPromptServiceInitFuncName "InitPromptService"
+#define kPromptServiceInitFuncName _T("InitPromptService")
 
 #endif

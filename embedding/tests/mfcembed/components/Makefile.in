@@ -55,8 +55,13 @@ REQUIRES = \
 	mimetype \
 	$(NULL)
 
-CPPSRCS	= \
+ifneq ($(OS_TARGET),WINCE)
+CPPSRCS	+= \
 	nsPrintDialogUtil.cpp \
+	$(NULL)
+endif # WINCE
+
+CPPSRCS	+= \
 	nsPrintProgressParams.cpp \
 	PrintingPromptService.cpp \
 	PrintProgressDialog.cpp \
@@ -78,7 +83,9 @@ FORCE_SHARED_LIB = 1
 include $(topsrcdir)/config/rules.mk
 
 CXXFLAGS	+= /D "WIN32_LEAN_AND_MEAN" /D "_AFXDLL" /D "USE_SINGLE_SIGN_ON" /D "_WINDLL"
+ifneq ($(OS_TARGET),WINCE)
 LDFLAGS		+= -SUBSYSTEM:windows
+endif # WINCE
 
 Dialogs.res: Dialogs.rc resource.h
 

@@ -38,12 +38,12 @@ public:
     CMostRecentUrls();
     virtual ~CMostRecentUrls();
 
-    char * GetURL(int aInx);
-    void AddURL(const char * aURL);
+    LPTSTR GetURL(int aInx);
+    void AddURL(LPCTSTR aURL);
     inline int GetNumURLs() { return mNumURLs; }
-    FILE * CMostRecentUrls::GetFD(const char * aMode);
+    FILE * CMostRecentUrls::GetFD(LPCTSTR aMode);
 
 protected:
-    char * mURLs[MAX_URLS];
+    LPTSTR mURLs[MAX_URLS];
     int    mNumURLs;
 };

@@ -72,7 +72,7 @@ public:
 	void RemoveFrameFromList(CBrowserFrame* pFrm, BOOL bCloseAppOnLastFrame = TRUE);
 
     void ShowDebugConsole();
-    BOOL IsCmdLineSwitch(const char *pSwitch, BOOL bRemove = TRUE);
+    BOOL IsCmdLineSwitch(LPCTSTR pSwitch, BOOL bRemove = TRUE);
     void ParseCmdLine();
     nsresult OverrideComponents();
 

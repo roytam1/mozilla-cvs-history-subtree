@@ -67,7 +67,7 @@ static char THIS_FILE[] = __FILE__;
 
 // this is for overriding the Mozilla default PromptService component
 #include "PromptService.h"
-#define kComponentsLibname "mfcEmbedComponents.dll"
+#define kComponentsLibname _T("mfcEmbedComponents.dll")
 #define NS_PROMPTSERVICE_CID \
  {0xa2112d6a, 0x0e28, 0x421f, {0xb4, 0x6a, 0x25, 0xc0, 0xb3, 0x8, 0xcb, 0xd0}}
 static NS_DEFINE_CID(kPromptServiceCID, NS_PROMPTSERVICE_CID);
@@ -110,17 +110,22 @@ CMfcEmbedApp::CMfcEmbedApp() :
 
 CMfcEmbedApp theApp;
 
-BOOL CMfcEmbedApp::IsCmdLineSwitch(const char *pSwitch, BOOL bRemove)
+BOOL CMfcEmbedApp::IsCmdLineSwitch(LPCTSTR pSwitch, BOOL bRemove)
 {
     //  Search for the switch in the command line.
     //  Don't take it out of m_lpCmdLine by default
-    char *pFound = PL_strcasestr(m_lpCmdLine, pSwitch);
+    LPTSTR pFound =
+#if !defined(WINCE)
+        PL_strcasestr(m_lpCmdLine, pSwitch);
+#else /* WINCE */
+        _tcsstr(m_lpCmdLine, pSwitch);
+#endif /* WINCE */
     if(pFound == NULL ||
         // Switch must be at beginning of command line
         // or have a space in front of it to avoid
         // mangling filenames
         ( (pFound != m_lpCmdLine) &&
-          *(pFound-1) != ' ' ) ) 
+          *(pFound-1) != _T(' ') ) ) 
     {
         return(FALSE);
     }
@@ -128,11 +133,11 @@ BOOL CMfcEmbedApp::IsCmdLineSwitch(const char *pSwitch, BOOL bRemove)
     if (bRemove) 
     {
         // remove the flag from the command line
-        char *pTravEnd = pFound + strlen(pSwitch);
-        char *pTraverse = pFound;
+        LPTSTR pTravEnd = pFound + _tcslen(pSwitch);
+        LPTSTR pTraverse = pFound;
 
         *pTraverse = *pTravEnd;
-        while(*pTraverse != '\0')   
+        while(*pTraverse != _T('\0'))   
         {
             pTraverse++;
             pTravEnd++;
@@ -146,9 +151,9 @@ BOOL CMfcEmbedApp::IsCmdLineSwitch(const char *pSwitch, BOOL bRemove)
 void CMfcEmbedApp::ParseCmdLine()
 {
     // Show Debug Console?
-    if(IsCmdLineSwitch("-console"))
+    if(IsCmdLineSwitch(_T("-console")))
         ShowDebugConsole();
-    if(IsCmdLineSwitch("-chrome"))
+    if(IsCmdLineSwitch(_T("-chrome")))
         m_bChrome = TRUE;
 }
 
@@ -243,7 +248,7 @@ nsresult CMfcEmbedApp::OverrideComponents()
 
 void CMfcEmbedApp::ShowDebugConsole()
 {
-#ifdef _DEBUG
+#if defined(_DEBUG) && !defined(WINCE)
     // Show console only in debug mode
 
     if(! AllocConsole())
@@ -294,7 +299,9 @@ BOOL CMfcEmbedApp::InitInstance()
 {
     ParseCmdLine();
 
+#if !defined(WINCE)
 	Enable3dControls();
+#endif /* WINCE */
 
 	//
 	// 1. Determine the name of the dir from which the MRE based app is being run
@@ -306,7 +313,7 @@ BOOL CMfcEmbedApp::InitInstance()
 	// for more info. on MRE
 
 	char curDir[_MAX_PATH+1];
-	::GetCurrentDirectory(_MAX_PATH, curDir);
+	::GetCurrentDirectoryA(_MAX_PATH, curDir);
 	nsresult rv;
 	nsCOMPtr<nsILocalFile> mreAppDir;
 	rv = NS_NewNativeLocalFile(nsDependentCString(curDir), TRUE, getter_AddRefs(mreAppDir));
@@ -503,6 +510,9 @@ void CMfcEmbedApp::OnManageProfiles()
 
 void CMfcEmbedApp::OnEditPreferences()
 {
+#if defined(UNICODE)
+    USES_CONVERSION;
+#endif /* UNICODE */
     CPreferences prefs(_T("Preferences"));
     
     prefs.m_startupPage.m_iStartupPage = m_iStartupPage;
@@ -520,7 +530,13 @@ void CMfcEmbedApp::OnEditPreferences()
         if (NS_SUCCEEDED(rv)) 
         {
             prefs->SetIntPref("browser.startup.page", m_iStartupPage);
-            rv = prefs->SetCharPref("browser.startup.homepage", m_strHomePage);
+            rv = prefs->SetCharPref("browser.startup.homepage",
+#if !defined(UNICODE)
+                m_strHomePage
+#else /* UNICODE */
+                W2A(m_strHomePage)
+#endif /* UNICODE */
+                );
             if (NS_SUCCEEDED(rv))
                 rv = prefs->SavePrefFile(nsnull);
         }
@@ -559,7 +575,7 @@ BOOL CMfcEmbedApp::CreateHiddenWindow()
 		return FALSE;
 
     RECT bounds = { -10010, -10010, -10000, -10000 };
-    hiddenWnd->Create(NULL, "main", WS_DISABLED, bounds, NULL, NULL, 0, NULL);
+    hiddenWnd->Create(NULL, _T("main"), WS_DISABLED, bounds, NULL, NULL, 0, NULL);
     m_pMainWnd = hiddenWnd;
 
 	return TRUE;
@@ -567,6 +583,9 @@ BOOL CMfcEmbedApp::CreateHiddenWindow()
 
 nsresult CMfcEmbedApp::InitializePrefs()
 {
+#if defined(UNICODE)
+   USES_CONVERSION;
+#endif /* UNICODE */
    nsresult rv;
    nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID, &rv));
    if (NS_SUCCEEDED(rv)) {	  
@@ -583,7 +602,13 @@ nsresult CMfcEmbedApp::InitializePrefs()
             m_strHomePage = "http://www.mozilla.org/projects/embedding";
 
             prefs->SetIntPref("browser.startup.page", m_iStartupPage);
-            prefs->SetCharPref("browser.startup.homepage", m_strHomePage);
+            prefs->SetCharPref("browser.startup.homepage",
+#if !defined(UNICODE)
+                m_strHomePage
+#else /* UNICODE */
+                W2A(m_strHomePage)
+#endif /* UNICODE */
+                );
             prefs->SetIntPref("font.size.variable.x-western", 16);
             prefs->SetIntPref("font.size.fixed.x-western", 13);
             rv = prefs->SetBoolPref("mfcbrowser.prefs_inited", PR_TRUE);
@@ -596,10 +621,9 @@ nsresult CMfcEmbedApp::InitializePrefs()
 
             prefs->GetIntPref("browser.startup.page", &m_iStartupPage);
 
-            CString strBuf;
-            char *pBuf = strBuf.GetBuffer(_MAX_PATH);
+            char aBuffer[_MAX_PATH];
+            char* pBuf = aBuffer;
             prefs->CopyCharPref("browser.startup.homepage", &pBuf);
-            strBuf.ReleaseBuffer(-1);
             if(pBuf)
                 m_strHomePage = pBuf;
         }       
@@ -650,7 +674,7 @@ NS_IMETHODIMP CMfcEmbedApp::Observe(nsISupports *aSubject, const char *aTopic, c
     if (nsCRT::strcmp(aTopic, "profile-approve-change") == 0)
     {
         // Ask the user if they want to
-        int result = MessageBox(NULL, "Do you want to close all windows in order to switch the profile?", "Confirm", MB_YESNO | MB_ICONQUESTION);
+        int result = MessageBox(NULL, _T("Do you want to close all windows in order to switch the profile?"), _T("Confirm"), MB_YESNO | MB_ICONQUESTION);
         if (result != IDYES)
         {
             nsCOMPtr<nsIProfileChangeStatus> status = do_QueryInterface(aSubject);
