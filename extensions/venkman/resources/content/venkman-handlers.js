@@ -166,6 +166,36 @@ function con_unload (e)
     destroy();
 }
 
+console.onMouseOver =
+function con_mouseover (e)
+{
+    var element = e.originalTarget;
+    if (!("_lastElement" in console))
+        console._lastElement = null;
+    
+    while (element)
+    {
+        if (element == console._lastElement)
+            return;
+        
+        if ("hasAttribute" in element &&
+             element.hasAttribute ("venkmanstatustext"))
+        {
+            console.status = element.getAttribute ("venkmanstatustext");
+            console._lastElement = element;
+            return;
+        }
+        else if ("localName" in element && element.localName == "floatingview")
+        {
+            console.status = console.viewManager.computeLocation (element);
+            console._lastElement = element;
+            return;
+        }
+
+        element = element.parentNode;
+    }
+}
+
 window.onresize =
 function ()
 {

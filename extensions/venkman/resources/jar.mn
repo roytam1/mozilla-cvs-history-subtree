@@ -5,6 +5,7 @@ venkman.jar:
   content/venkman/venkman.xul           (content/venkman.xul)
   content/venkman/venkman-views.xul     (content/venkman-views.xul)
   content/venkman/venkman-floater.xul   (content/venkman-floater.xul)
+  content/venkman/venkman-floater.js    (content/venkman-floater.js)
   content/venkman/venkman-bindings.xml  (content/venkman-bindings.xml)
   content/venkman/venkman-menus.xul     (content/venkman-menus.xul)
   content/venkman/venkman-menus.js      (content/venkman-menus.js)

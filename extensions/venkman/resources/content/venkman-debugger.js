@@ -33,7 +33,7 @@
  *
  */
 
-const JSD_CTRID = "@mozilla.org/js/jsd/debugger-service;1";
+const JSD_CTRID           = "@mozilla.org/js/jsd/debugger-service;1";
 const jsdIDebuggerService = Components.interfaces.jsdIDebuggerService;
 const jsdIExecutionHook   = Components.interfaces.jsdIExecutionHook;
 const jsdIErrorHook       = Components.interfaces.jsdIErrorHook;
@@ -84,7 +84,7 @@ function initDebugger()
     console.sbreaks = new Object();
     
     /* create the debugger instance */
-    if (!Components.classes[JSD_CTRID])
+    if (!(JSD_CTRID in Components.classes))
         throw new BadMojo (ERR_NO_DEBUGGER);
     
     console.jsds = Components.classes[JSD_CTRID].getService(jsdIDebuggerService);
@@ -1080,11 +1080,6 @@ function debugTrap (frame, type, rv)
 
 function eventLoopNested ()
 {
-    setTimeout (paintHack, 500);
-    setTimeout (paintHack, 1000);
-    setTimeout (paintHack, 1500);
-    setTimeout (paintHack, 2000);
-    setTimeout (paintHack, 2500);
     dispatch ("hook-debug-stop");
 }
 

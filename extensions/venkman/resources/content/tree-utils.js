@@ -85,6 +85,9 @@ function bov_setcn (aryNames)
 BasicOView.prototype.scrollTo =
 function bov_scrollto (line, align)
 {
+    if (!this.tree)
+        return;
+    
     var headerRows = 1;
     
     var first = this.tree.getFirstVisibleRow();

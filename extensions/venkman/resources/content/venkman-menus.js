@@ -35,10 +35,21 @@
 
 function initMenus()
 {    
-    function onMenuCommand (event)
+    function onMenuCommand (event, window)
     {
+        var params;
         var commandName = event.originalTarget.getAttribute("commandname");
-        dispatch (commandName, console.menuManager.cx);
+        if ("cx" in console.menuManager && console.menuManager.cx)
+        {
+            console.menuManager.cx.sourceWindow = window;
+            params = console.menuManager.cx;
+        }
+        else
+        {
+            params = { sourceWindow: window };
+        }
+            
+        dispatch (commandName, params);
     };
     
     console.onMenuCommand = onMenuCommand;
@@ -47,7 +58,8 @@ function initMenus()
         console.menuManager = new MenuManager(console.commandManager,
                                               console.menuSpecs,
                                               getCommandContext,
-                                              "console.onMenuCommand(event);");
+                                              "console.onMenuCommand(event, " +
+                                              "window);");
 
     console.menuSpecs["maintoolbar"] = {
         items:
@@ -172,6 +184,7 @@ function initMenus()
     };
 }
 
+console.createMainMenu = createMainMenu;
 function createMainMenu(document)
 {
     var mainmenu = document.getElementById("mainmenu");
@@ -181,8 +194,13 @@ function createMainMenu(document)
         if (id.indexOf("mainmenu:") == 0)
             menuManager.createMenu (mainmenu, null, id);
     }
+
+    mainmenu.removeAttribute ("collapsed");
+    var toolbox = document.getElementById("main-toolbox");
+    toolbox.removeAttribute ("collapsed");
 }
 
+console.createMainToolbar = createMainToolbar;
 function createMainToolbar(document)
 {
     var maintoolbar = document.getElementById("maintoolbar");
@@ -192,6 +210,11 @@ function createMainToolbar(document)
     {
         menuManager.appendToolbarItem (maintoolbar, null, spec.items[i]);
     }
+
+    maintoolbar = document.getElementById("maintoolbar-outer");
+    maintoolbar.removeAttribute ("collapsed");
+    var toolbox = document.getElementById("main-toolbox");
+    toolbox.removeAttribute ("collapsed");
 }
 
 function getCommandContext (id)

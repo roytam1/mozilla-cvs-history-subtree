@@ -197,6 +197,7 @@ function dispatch (text, e, flags)
                 display (getMsg(MSN_ERR_INTERNAL_DISPATCH, ary[0].name),
                          MT_ERROR);
                 display (formatException(ex), MT_ERROR);
+                dd (formatException(ex), MT_ERROR);
                 if ("stack" in ex)
                     dd (ex.stack);
             }
@@ -522,15 +523,28 @@ function destroy ()
     detachDebugger();
 }
 
-function paintHack ()
+function paintHack (i)
 {
     /* when stopping at a timeout, we don't repaint correctly.
      * by jamming a character into this hidden text box, we can force
      * a repaint.
      */
-    var textbox = document.getElementById("paint-hack");
-    textbox.value = " ";
-    textbox.value = "";
+    for (var w in console.viewManager.windows)
+    {
+        var window = console.viewManager.windows[w];
+        var textbox = window.document.getElementById("paint-hack");
+        if (textbox)
+        {
+            textbox.value = " ";
+            textbox.value = "";
+        }
+    }
+    
+    if (!i)
+        i = 0;
+    
+    if (i < 4)
+        setTimeout (paintHack, 250, i + 1);
 }   
 
 function fetchLaunchCount()
@@ -610,7 +624,10 @@ function hookDebugStop (e)
 
     console._lastStackDepth = console.frames.length;
 
-    enableDebugCommands()
+    enableDebugCommands();
+
+    //XXX
+    paintHack();
 }
 
 console.hooks["hook-venkman-query-exit"] =

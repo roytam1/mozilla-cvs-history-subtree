@@ -385,7 +385,11 @@ function vmgr_remake (ary, startIndex)
         }
         else if (parsedLocation.target == "view")
         {
-            this.moveView (parsedLocation, parsedLocation.id);
+            var height = ("height" in parsedLocation ?
+                         parsedLocation.height : null);
+            var width = ("width" in parsedLocation ?
+                         parsedLocation.width : null);
+            this.moveView (parsedLocation, parsedLocation.id, height, width);
         }
         else
         {
@@ -537,7 +541,7 @@ function vmgr_moveurl (locationURL, viewId)
 }
 
 ViewManager.prototype.moveView =
-function vmgr_move (parsedLocation, viewId)
+function vmgr_move (parsedLocation, viewId, height, width)
 {
     var viewManager = this;
     
@@ -560,8 +564,6 @@ function vmgr_move (parsedLocation, viewId)
         if (newParent)
         {
             dd ("placing in new parent");
-            content.setAttribute ("containertype",
-                                  newParent.getAttribute("type"));
             newParent.insertBefore (content, before);
             viewManager.groutContainer (newParent);
         }
@@ -659,6 +661,10 @@ function vmgr_move (parsedLocation, viewId)
         
         moveContent (content, container, beforeNode);
         view.currentContent = content;
+        if (height)
+            content.setAttribute ("height", height);
+        if (width)
+            content.setAttribute ("width", width);
         
         if ("onShow" in view)
             view.onShow();
@@ -852,7 +858,7 @@ function vmgr_getdropdir (event, floatingView)
 ViewManager.prototype.onTitleDragStart =
 function vmgr_dragstart (event, transferData, action)
 {
-    var floatingView = this.findFloatingView (event.target);
+    var floatingView = this.findFloatingView (event.originalTarget);
     if (!floatingView)
         return false;
     

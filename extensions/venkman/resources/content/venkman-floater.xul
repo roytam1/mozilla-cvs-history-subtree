@@ -44,6 +44,7 @@
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
 
 <?xul-overlay href="chrome://venkman/content/venkman-views.xul"?>
+<?xul-overlay href="chrome://venkman/content/venkman-menus.xul"?>
 
 <window id="venkman-window"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
@@ -57,51 +58,18 @@
     var DEBUG = true;
   </script>
   <script src="chrome://venkman/content/venkman-utils.js"/>
-  <script>
-    <![CDATA[
-    var dd       = opener.dd;
-    var console  = opener.console;
-    var dispatch = console.dispatch;
-    var windowId;
-
-    function onLoad()
-    {
-        var ary = document.location.search.match(/(?:\?|&)id=([^&]+)/);
-        if (!ary)
-        {
-            dd ("No window id in url " + document.location);
-            return;
-        }
-
-        windowId = ary[1];
-
-        if ("arguments" in window && 0 in window.arguments &&
-            typeof window.arguments[0] == "function")
-        {
-            window.arguments[0](window);
-        }
-    }
-
-    function onClose()
-    {
-        window.isClosing = true;
-        return true;
-    }
-
-    function onUnload()
-    {
-        console.viewManager.destroyWindow (windowId);
-    }
-    ]]>
-  </script>
+  <script src="chrome://venkman/content/venkman-floater.js"/>
 
   <popupset id="dynamic-popups"/>
 
+  <overlaytarget id="menu-overlay-target"/>
   <overlaytarget id="views-overlay-target"/>
 
   <viewcontainer id="root-container" flex="1" type="horizontal">
     <viewcontainer id="initial-container" type="vertical" flex="1"/>
   </viewcontainer>
+
+  <overlaytarget id="statusbar-overlay-target" flex="1"/>
 
 </window>
 

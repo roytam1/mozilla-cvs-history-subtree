@@ -472,9 +472,12 @@ function cmdClearScript (e)
     return true;
 }
 
-function cmdClose()
+function cmdClose(e)
 {
-    window.close();
+    if ("sourceWindow" in e)
+        e.sourceWindow.close();
+    else
+        window.close();
 }
 
 function cmdCommands (e)
