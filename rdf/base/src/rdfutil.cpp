@@ -33,7 +33,6 @@
 
  */
 
-#include <stdlib.h>
 #include "nsCOMPtr.h"
 #include "nsIRDFCursor.h"
 #include "nsIRDFDataSource.h"
@@ -43,6 +42,7 @@
 #include "nsRDFCID.h"
 #include "nsString.h"
 #include "plstr.h"
+#include "prprf.h"
 #include "rdfutil.h"
 
 ////////////////////////////////////////////////////////////////////////
@@ -199,14 +199,15 @@ rdf_IndexToOrdinalResource(PRInt32 aIndex, nsIRDFResource** aOrdinal)
     if (aIndex <= 0)
         return NS_ERROR_ILLEGAL_VALUE;
 
-    // 15 digits should be plenty to hold a decimal version of a
+    // 16 digits should be plenty to hold a decimal version of a
     // PRInt32.
-    char buf[sizeof(kRDFNameSpaceURI) + 16];
+    char buf[sizeof(kRDFNameSpaceURI) + 16 + 1];
 
     PL_strcpy(buf, kRDFNameSpaceURI);
     buf[sizeof(kRDFNameSpaceURI) - 1] = '_';
-    itoa(aIndex, buf + sizeof(kRDFNameSpaceURI), 10);
-
+    
+    PR_snprintf(buf + sizeof(kRDFNameSpaceURI), 16, "%ld", aIndex);
+    
     nsresult rv;
     if (NS_FAILED(rv = rdf_EnsureRDFService()))
         return rv;
