@@ -1415,7 +1415,7 @@ static NSArray* sToolbarDefaults = nil;
   BookmarkItem*     item			= [bmManager getWrapperForContent:aFolderContent];
 
   NSArray* groupURLs = [bmManager getBookmarkGroupURIs:item];
-	[self openTabGroup:groupURLs replaceExistingTabs:YES];
+	[browser openTabGroup:groupURLs replaceExistingTabs:YES];
 }
 
 -(void)openNewTabWithURL: (NSString*)aURLSpec referrer:(NSString*)aReferrer loadInBackground: (BOOL)aLoadInBG
