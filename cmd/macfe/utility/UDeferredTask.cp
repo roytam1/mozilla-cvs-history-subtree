@@ -60,7 +60,7 @@ CDeferredTaskManager::~CDeferredTaskManager()
 } // CDeferredTaskManager::DoQuit
 
 //----------------------------------------------------------------------------------------
-/* static */ void CDeferredTaskManager::Post(CDeferredTask* inTask, LPane* inPane, bool inUnique)
+/* static */ void CDeferredTaskManager::Post(CDeferredTask* inTask, LPane* inPane)
 //----------------------------------------------------------------------------------------
 {
 	if (!inTask)
@@ -70,13 +70,30 @@ CDeferredTaskManager::~CDeferredTaskManager()
 		// If this is the first post, we'll make a new manager
 		if (!sManager)
 			new CDeferredTaskManager;
-		sManager->DoPost(inTask, inPane, inUnique);
+		sManager->DoPost(inTask, inPane, false);
 	}
 	catch(...)
 	{
 	}
 } // CDeferredTaskManager::Post
 
+//----------------------------------------------------------------------------------------
+/* static */ void CDeferredTaskManager::Post1(CDeferredTask* inTask, LPane* inPane)
+//----------------------------------------------------------------------------------------
+{
+	if (!inTask)
+		return;
+	try
+	{
+		// If this is the first post, we'll make a new manager
+		if (!sManager)
+			new CDeferredTaskManager;
+		sManager->DoPost(inTask, inPane, true);
+	}
+	catch(...)
+	{
+	}
+} // CDeferredTaskManager::Post1
 
 //----------------------------------------------------------------------------------------
 /* static */ void CDeferredTaskManager::Remove(CDeferredTask*& inTask, LPane* inPane)
