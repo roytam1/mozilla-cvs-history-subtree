@@ -904,15 +904,21 @@ nsProfile::ProcessArgs(nsICmdLineService *cmdLineArgs,
         }
     }
 
+#ifdef MOZ_MINOTAUR
+    // always start Profile Manager
+    foundProfileCommandArg = PR_TRUE;
+    profileURLStr = PROFILE_MANAGER_URL;
+#else
     // Start Profile Manager
     rv = cmdLineArgs->GetCmdLineValue(PROFILE_MANAGER_CMD_LINE_ARG, getter_Copies(cmdResult));
     if (NS_SUCCEEDED(rv))
     {        
-        if (cmdResult) {
-			foundProfileCommandArg = PR_TRUE;
-            profileURLStr = PROFILE_MANAGER_URL;
-        }
+      if (cmdResult) {
+        foundProfileCommandArg = PR_TRUE;
+        profileURLStr = PROFILE_MANAGER_URL;
+      }
     }
+#endif
     
     // Start Profile Selection
     rv = cmdLineArgs->GetCmdLineValue(PROFILE_SELECTION_CMD_LINE_ARG, getter_Copies(cmdResult));
