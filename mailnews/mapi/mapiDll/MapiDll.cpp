@@ -349,7 +349,11 @@ ULONG FAR PASCAL MAPISendMail (LHANDLE lhSession, ULONG ulUIParam, lpnsMapiMessa
     if (bComInitialized)
         ::CoUninitialize();
 
-    return hr ;
+    // return hr ; 
+    // this is a known problem we are trying to debug, 
+    // although the mapi support interface implementation in SendMail is returning ok,
+    // we are getting an error here. Trying to resolve this currently.
+    return SUCCESS_SUCCESS;
 }
 
 
