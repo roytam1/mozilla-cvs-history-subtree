@@ -38,6 +38,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "txMozillaXSLTProcessor.h"
+#include "nsContentCID.h"
 #include "nsDOMError.h"
 #include "nsIContent.h"
 #include "nsIDocument.h"
@@ -51,6 +52,8 @@
 #include "txSingleNodeContext.h"
 #include "txURIUtils.h"
 #include "XMLUtils.h"
+
+NS_DEFINE_CID(kNameSpaceManagerCID, NS_NAMESPACEMANAGER_CID);
 
 NS_IMPL_ADDREF(txMozillaXSLTProcessor)
 NS_IMPL_RELEASE(txMozillaXSLTProcessor)
@@ -289,9 +292,9 @@ txMozillaXSLTProcessor::SetParameter(const nsAString & aNamespaceURI,
         }        
     }
 
-    nsCOMPtr<nsINameSpaceManager> namespaceManager;
     nsresult rv;
-    //rv = document->GetNameSpaceManager(*getter_AddRefs(namespaceManager));
+    nsCOMPtr<nsINameSpaceManager> namespaceManager =
+        do_GetService(kNameSpaceManagerCID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
     PRInt32 nsId = kNameSpaceID_Unknown;
@@ -316,9 +319,9 @@ txMozillaXSLTProcessor::GetParameter(const nsAString& aNamespaceURI,
                                      const nsAString& aLocalName,
                                      nsIVariant **aResult)
 {
-    nsCOMPtr<nsINameSpaceManager> namespaceManager;
     nsresult rv;
-    //nsresult rv = document->GetNameSpaceManager(*getter_AddRefs(namespaceManager));
+    nsCOMPtr<nsINameSpaceManager> namespaceManager =
+        do_GetService(kNameSpaceManagerCID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
     PRInt32 nsId = kNameSpaceID_Unknown;
@@ -337,9 +340,9 @@ NS_IMETHODIMP
 txMozillaXSLTProcessor::RemoveParameter(const nsAString& aNamespaceURI,
                                         const nsAString& aLocalName)
 {
-    nsCOMPtr<nsINameSpaceManager> namespaceManager;
     nsresult rv;
-    //nsresult rv = document->GetNameSpaceManager(*getter_AddRefs(namespaceManager));
+    nsCOMPtr<nsINameSpaceManager> namespaceManager =
+        do_GetService(kNameSpaceManagerCID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
     PRInt32 nsId = kNameSpaceID_Unknown;
