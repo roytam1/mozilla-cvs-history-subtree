@@ -66,7 +66,8 @@ download[selected="true"] {
     background-image: none !important;
 }
 
-download[state="0"], download[state="-1"], download[state="4"] {
+download[state="0"], download[state="-1"], download[state="4"], 
+download[state="5"], download[state="6"] {
   font: icon !important;
   padding-bottom: 7px;
   padding-top: 7px;
