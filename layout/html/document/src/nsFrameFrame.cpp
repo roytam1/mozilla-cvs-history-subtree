@@ -209,6 +209,7 @@ public:
 #endif
 
   NS_IMETHOD GetFrameType(nsIAtom** aType) const;
+  NS_IMETHOD Destroy(nsIPresContext* aPresContext);
 
   /**
     * @see nsIFrame::Paint
@@ -254,8 +255,6 @@ protected:
   nsresult DoLoadURL(nsIPresContext* aPresContext);
   nsresult CreateViewAndWidget(nsIPresContext* aPresContext,
                                nsIWidget**     aWidget);
-
-  virtual ~nsHTMLFrameInnerFrame();
 
   virtual void GetDesiredSize(nsIPresContext* aPresContext,
                               const nsHTMLReflowState& aReflowState,
@@ -649,7 +648,9 @@ nsHTMLFrameInnerFrame::nsHTMLFrameInnerFrame()
   mPresShellWeak = nsnull;
 }
 
-nsHTMLFrameInnerFrame::~nsHTMLFrameInnerFrame()
+
+NS_IMETHODIMP
+nsHTMLFrameInnerFrame::Destroy(nsIPresContext* aPresContext)
 {
    //printf("nsHTMLFrameInnerFrame destructor %X \n", this);
 
@@ -674,6 +675,8 @@ nsHTMLFrameInnerFrame::~nsHTMLFrameInnerFrame()
   }
   mSubShell = nsnull; // This is the location it was released before...
                       // Not sure if there is ordering depending on this.
+
+  return nsLeafFrame::Destroy(aPresContext);
 }
 
 PRBool nsHTMLFrameInnerFrame::GetURL(nsIContent* aContent, nsString& aResult)
