@@ -693,15 +693,27 @@ const int kReuseWindowOnAE = 2;
 
 }
 
--(IBAction)manageBookmarks: (id)aSender
+//
+// manageSizebar:
+//
+// opens the appropriate sidebar panel (creating a new window if needed)
+// depending on the tag of the menu item
+//
+-(IBAction)manageSidebar: (id)aSender
 {
+  const kBookmarkTag = 0;
+  const kHistoryTag = 1;
+  
   NSWindow* browserWindow = [self getFrontmostBrowserWindow];
   if (!browserWindow) {
     [self newWindow:self];
     browserWindow = [mApplication mainWindow];
   }
 
-  [[browserWindow windowController] manageBookmarks: aSender];
+  if ( [aSender tag] == 0 )
+    [[browserWindow windowController] manageBookmarks: aSender];
+  else
+    [[browserWindow windowController] manageHistory: aSender];
 }
 
 - (PreferenceManager *)preferenceManager

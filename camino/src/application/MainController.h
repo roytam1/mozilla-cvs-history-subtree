@@ -120,13 +120,13 @@
 -(IBAction) biggerTextSize:(id)aSender;
 -(IBAction) smallerTextSize:(id)aSender;
 -(IBAction) viewSource:(id)aSender;
+-(IBAction) manageSidebar: (id)aSender;
 
 // Bookmarks menu actions.
 -(IBAction) importBookmarks:(id)aSender;
 -(IBAction) exportBookmarks:(id)aSender;
 -(IBAction) addBookmark:(id)aSender;
 -(IBAction) openMenuBookmark:(id)aSender;
--(IBAction) manageBookmarks: (id)aSender;
 -(IBAction) addFolder:(id)aSender;
 -(IBAction) addSeparator:(id)aSender;
 

@@ -232,6 +232,7 @@ typedef enum
 
 - (void)addBookmarkExtended: (BOOL)aIsFromMenu isFolder:(BOOL)aIsFolder URL:(NSString*)aURL title:(NSString*)aTitle;
 - (IBAction)manageBookmarks: (id)aSender;
+- (IBAction)manageHistory: (id)aSender;
 - (void)importBookmarks: (NSString*)aURLSpec;
 - (IBAction)toggleSidebar:(id)aSender;
 - (BOOL)bookmarksAreVisible:(BOOL)inRequireSelection;

@@ -899,6 +899,14 @@ static NSArray* sToolbarDefaults = nil;
   [mSidebarTabView selectFirstTabViewItem:self];
 }
 
+-(IBAction)manageHistory: (id)aSender
+{
+  if ([mSidebarDrawer state] == NSDrawerClosedState)
+    [self toggleSidebar: self];
+
+  [mSidebarTabView selectTabViewItemAtIndex:1];
+}
+
 - (void)importBookmarks: (NSString*)aURLSpec
 {
   // Open the bookmarks sidebar.

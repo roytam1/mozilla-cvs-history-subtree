@@ -292,11 +292,5 @@ const int kDisableAllCookies = 2;
     [[NSWorkspace sharedWorkspace] launchApplication:(NSString*)fileSystemURL];
     CFRelease(fileSystemURL);
   }
-#if 0
-  if ([[NSWorkspace sharedWorkspace] launchApplication:NSLocalizedString(@"Keychain Access", @"Keychain Access")] == NO) {
-    // XXXw. pop up a dialog warning that Keychain couldn't be launched?
-    NSLog(@"Failed to launch Keychain.");
-  }
-#endif
 }
 @end

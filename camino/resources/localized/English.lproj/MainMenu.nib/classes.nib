@@ -28,7 +28,7 @@
                 goHome = id; 
                 importBookmarks = id; 
                 infoLink = id; 
-                manageBookmarks = id; 
+                manageSidebar = id; 
                 newTab = id; 
                 newWindow = id; 
                 nextTab = id; 
