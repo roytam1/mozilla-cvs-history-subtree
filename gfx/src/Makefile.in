@@ -76,15 +76,7 @@ CPPSRCS		= \
 		nsDeviceContext.cpp \
 		nsFont.cpp \
 		nsFontList.cpp \
-		nsImageGroup.cpp \
-		nsImageManager.cpp \
-		nsImageNetContextAsync.cpp \
-		nsImageNetContextSync.cpp \
-		nsImageRenderer.cpp \
 	        nsRenderingContextImpl.cpp \
-		nsImageRequest.cpp \
-		nsImageSystemServices.cpp \
-		nsImageURL.cpp \
 		nsRect.cpp \
 		nsTransform2D.cpp \
 		nsScriptableRegion.cpp \
