@@ -11,7 +11,7 @@
 
   <script type="application/x-javascript">
   <![CDATA[
-    var _elementIDs = ["mailFixedWidthMessages", "mailQuotedStyle", "mailQuotedSize", "wrapLongLines", "displayGlyph", "mailCitationColor", "sendDefaultCharsetList", "forceCharsetOverride"];
+    var _elementIDs = ["mailFixedWidthMessages", "mailQuotedStyle", "mailQuotedSize", "wrapLongLines", "displayGlyph", "mailCitationColor"];
     var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
     observerService.notifyObservers(null, "charsetmenu-selected", "other");
 
@@ -40,15 +40,21 @@
   <groupbox>
     <caption label="&displayWidth.label;"/>
 
-      <description>&plainText.label;</description>
+  <description>&viewingPlainText.label;</description>
+    <vbox align="start">
+      <checkbox id="wrapLongLines" label="&wrapInMsg.label;"
+                prefstring="mail.wrap_long_lines" accesskey="&wrapInMsg.accesskey;"/>
+      <checkbox class="iconic" id="displayGlyph" label="&convertEmoticons.label;"
+                prefstring="mail.display_glyph" accesskey="&convertEmoticons.accesskey;"/>
+    </vbox>
+     
+    <description>&plainText.label;</description>
     
-    <hbox class="indent">
-      <radiogroup id="mailFixedWidthMessages" 
+    <radiogroup id="mailFixedWidthMessages" 
                   preftype="bool" prefstring="mail.fixed_width_messages">
-        <radio value="true" label="&fixedWidth.label;" accesskey="&fixedWidth.accesskey;"/>
-        <radio value="false" label="&variableWidth.label;" accesskey="&variableWidth.accesskey;"/>                
-      </radiogroup>
-    </hbox>
+      <radio value="true" label="&fixedWidth.label;" accesskey="&fixedWidth.accesskey;"/>
+      <radio value="false" label="&variableWidth.label;" accesskey="&variableWidth.accesskey;"/>                
+    </radiogroup>
 
     <separator class="thin"/>
 
@@ -78,32 +84,6 @@
       <broadcaster id="mailCitationColor" pref="true" preftype="color" prefstring="mail.citation_color" prefattribute="value" wsm_attributes="value"/>
     </hbox>    
 
-  <description>&viewingPlainText.label;</description>
-    <vbox align="start" class="indent">
-      <checkbox id="wrapLongLines" label="&wrapInMsg.label;"
-                prefstring="mail.wrap_long_lines" accesskey="&wrapInMsg.accesskey;"/>
-      <checkbox class="iconic" id="displayGlyph" label="&convertEmoticons.label;"
-                prefstring="mail.display_glyph" accesskey="&convertEmoticons.accesskey;"/>
-    </vbox>
-  </groupbox>
 
-  <groupbox align="start">
-    <caption label="&languagesTitle.label;"/>
-    <description>&coding.label;</description>
-    <hbox align="center">
-      <label control="sendDefaultCharsetList"
-             value="&sendDefaultCharset.label;" accesskey="&sendDefaultCharset.accesskey;"/>
-        <menulist id="sendDefaultCharsetList" ref="NC:DecodersRoot" datasources="rdf:charset-menu"
-                preftype="localizedstring" prefstring="mailnews.view_default_charset">
-        <template>
-          <menupopup>
-            <menuitem label="rdf:http://home.netscape.com/NC-rdf#Name" value="..." uri="..."/>
-          </menupopup>
-        </template>
-      </menulist> 
-    </hbox>      
-    <checkbox id="forceCharsetOverride" label="&forceCharsetOverride.label;"
-              prefstring="mailnews.force_charset_override"
-              accesskey="&forceCharsetOverride.accesskey;"/>
-  </groupbox>   
+  </groupbox>  
 </page>

@@ -21,3 +21,10 @@
 <!ENTITY return.label "Return Receipts">
 <!ENTITY disk.label "Disk Space">
 <!ENTITY labels.label "Labels">
+<!ENTITY category.label "Category">
+<!ENTITY mailonly.label "General">
+<!ENTITY languages.label "Languages">
+<!ENTITY themes.label "Themes">
+<!ENTITY fonts.label "Fonts">
+<!ENTITY privacy.label "Privacy &amp; Security">
+<!ENTITY offline.label "Offline &amp; Disk Space">

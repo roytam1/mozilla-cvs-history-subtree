@@ -1,7 +1,7 @@
 <?xml version="1.0"?> 
 <?xml-stylesheet href="chrome://communicator/skin/" type="text/css"?> 
 
-<?xul-overlay href="chrome://communicator/content/pref/preftree.xul"?>
+<?xul-overlay href="chrome://messenger/content/preftree.xul"?>
 
 <!DOCTYPE overlay [
   <!ENTITY % dtd1 SYSTEM "chrome://communicator/locale/pref/pref.dtd" > %dtd1;
@@ -55,11 +55,9 @@
   <script type="application/x-javascript" src="chrome://global/content/nsWidgetStateManager.js"/>
   <script type="application/x-javascript" src="chrome://communicator/content/pref/nsPrefWindow.js"/>
   <script type="application/x-javascript" src="chrome://communicator/content/pref/pref-help.js"/>
-  <script type="application/x-javascript" src="chrome://help/content/contextHelp.js"/>
 
   <hbox flex="1">
     <vbox>
-      <label value="&categoryHeader;"/>
       <!-- tree sidebar -->
       <tree id="prefsTree" style="width: 13em;" flex="1"/>
     </vbox>
