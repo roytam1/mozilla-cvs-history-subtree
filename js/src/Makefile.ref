@@ -19,7 +19,6 @@
 #
 
 DEPTH = .
-DIST = ../../dist/$(OBJDIR)
 
 include config.mk
 

@@ -1,3 +1,9 @@
+ifdef JS_DIST
+DIST = $(JS_DIST)
+else
+DIST = $(DEPTH)/../../dist/$(OBJDIR)
+endif
+
 # Set os+release dependent make variables
 OS_ARCH         := $(subst /,_,$(shell uname -s))
 
