@@ -47,14 +47,6 @@ void PR_CALLBACK il_error_exit (j_common_ptr cinfo);
 /* Normal JFIF markers can't have more bytes than this. */
 #define MAX_JPEG_MARKER_LENGTH  (((PRUint32)1 << 16) - 1)
 
-
-/* Possible states for JPEG source manager */
-enum data_source_state {
-    dss_consuming_backtrack_buffer = 0, /* Must be zero for init purposes */
-    dss_consuming_netlib_buffer
-};
-
-
 /*
  *  Implementation of a JPEG src object that understands our state machine
  */
@@ -62,26 +54,8 @@ typedef struct {
   /* public fields; must be first in this struct! */
   struct jpeg_source_mgr pub;
 
-
   nsJPEGDecoder *decoder;
 
-
-  int bytes_to_skip;            /* remaining bytes to skip */
-
-  JOCTET *netlib_buffer;        /* next buffer for fill_input_buffer */
-  PRUint32 netlib_buflen;
-
-  enum data_source_state state;
-
-
-  /*
-   * Buffer of "remaining" characters left over after a call to 
-   * fill_input_buffer(), when no additional data is available.
-   */ 
-  JOCTET *backtrack_buffer;
-  size_t backtrack_buffer_size; /* Allocated size of backtrack_buffer     */
-  size_t backtrack_buflen;      /* Offset of end of active backtrack data */
-  size_t backtrack_num_unread_bytes; /* Length of active backtrack data   */
 } decoder_source_mgr;
 
 
@@ -118,7 +92,7 @@ NS_IMETHODIMP nsJPEGDecoder::Init(nsIImageRequest *aRequest)
 
   NS_NewPipe(getter_AddRefs(mInStream),
              getter_AddRefs(mOutStream),
-             8192);
+             10240); // this could be a lot smaller (like 3-6k?)
 
   /* Step 1: allocate and initialize JPEG decompression object */
 
