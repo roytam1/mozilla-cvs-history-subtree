@@ -113,6 +113,8 @@ sub _continue_lines
 sub unpack_LDIF
 {
     my ($str, $read_ref, $option) = @_;
+    $str =~ s"\r$/"$/"g # SEP = ( CR LF | LF )
+			unless ($/ eq "\r"); # Macintosh
     $str =~ s"$/ ""g; # combine continuation lines
     $str =~ s"^#.*($/|$)""gm # ignore comments
 	unless ((defined $option) and ("comments" eq lc $option));
@@ -210,7 +212,9 @@ sub get_LDIF
 	    $str .= $line;
 	    if (not chomp $line) {
 		$$eof = 1; last; # EOF from a terminal
-	    } elsif ($line eq "") {
+	    } elsif (($line eq "")
+		 or (($line eq "\r")
+		    and ($/ ne "\r"))) {
 	        last;            # empty line
 	    }
 	}
