@@ -1686,16 +1686,16 @@ GlobalWindowImpl::Prompt(nsAWritableString& aReturn)
   ncc->GetArgvPtr(&argv);
 
   if (argc > 0) {
-    nsJSUtils::nsConvertJSValToString(message, cx, argv[0]);
+    nsJSUtils::ConvertJSValToString(message, cx, argv[0]);
 
     if (argc > 1) {
-      nsJSUtils::nsConvertJSValToString(initial, cx, argv[1]);
+      nsJSUtils::ConvertJSValToString(initial, cx, argv[1]);
 
       if (argc > 2) {
-        nsJSUtils::nsConvertJSValToString(title, cx, argv[2]);
+        nsJSUtils::ConvertJSValToString(title, cx, argv[2]);
 
         if (argc > 3) {
-          nsJSUtils::nsConvertJSValToUint32(&savePassword, cx, argv[3]);
+          nsJSUtils::ConvertJSValToUint32(&savePassword, cx, argv[3]);
         }
       }
     }
@@ -2201,13 +2201,13 @@ GlobalWindowImpl::Open(nsIDOMWindow **_retval)
   ncc->GetArgvPtr(&argv);
 
   if (argc > 0) {
-    nsJSUtils::nsConvertJSValToString(url, cx, argv[0]);
+    nsJSUtils::ConvertJSValToString(url, cx, argv[0]);
 
     if (argc > 1) {
-      nsJSUtils::nsConvertJSValToString(name, cx, argv[1]);
+      nsJSUtils::ConvertJSValToString(name, cx, argv[1]);
 
       if (argc > 2) {
-        nsJSUtils::nsConvertJSValToString(options, cx, argv[2]);
+        nsJSUtils::ConvertJSValToString(options, cx, argv[2]);
       }
     }
   }
@@ -2258,13 +2258,13 @@ GlobalWindowImpl::OpenDialog(nsIDOMWindow** _retval)
   ncc->GetArgvPtr(&argv);
 
   if (argc > 0) {
-    nsJSUtils::nsConvertJSValToString(url, cx, argv[0]);
+    nsJSUtils::ConvertJSValToString(url, cx, argv[0]);
 
     if (argc > 1) {
-      nsJSUtils::nsConvertJSValToString(name, cx, argv[1]);
+      nsJSUtils::ConvertJSValToString(name, cx, argv[1]);
 
       if (argc > 2) {
-        nsJSUtils::nsConvertJSValToString(options, cx, argv[2]);
+        nsJSUtils::ConvertJSValToString(options, cx, argv[2]);
       }
     }
   }
@@ -2866,8 +2866,8 @@ NS_IMETHODIMP GlobalWindowImpl::GetObjectProperty(const PRUnichar *aProperty,
     return NS_ERROR_FAILURE;
   }
 
-  if (!nsJSUtils::nsConvertJSValToXPCObject(aObject, NS_GET_IID(nsISupports),
-                                            cx, propertyVal)) {
+  if (!nsJSUtils::ConvertJSValToXPCObject(aObject, NS_GET_IID(nsISupports),
+                                          cx, propertyVal)) {
     return NS_ERROR_FAILURE;
   }
 
@@ -3281,7 +3281,7 @@ GlobalWindowImpl::SetTimeoutOrInterval(PRBool aIsInterval, PRInt32 *aReturn)
   }
 
   const char *filename;
-  if (nsJSUtils::nsGetCallingLocation(cx, &filename, &timeout->lineno)) {
+  if (nsJSUtils::GetCallingLocation(cx, &filename, &timeout->lineno)) {
     timeout->filename = PL_strdup(filename);
     if (!timeout->filename) {
       DropTimeout(timeout);

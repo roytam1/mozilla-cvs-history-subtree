@@ -41,59 +41,47 @@ class nsIScriptSecurityManager;
 
 class nsJSUtils {
 public:
-  static JSBool nsGetCallingLocation(JSContext* aContext,
-                                     const char* *aFilename,
-                                     PRUint32 *aLineno);
+  static JSBool GetCallingLocation(JSContext* aContext, const char* *aFilename,
+                                   PRUint32 *aLineno);
 
-  static JSBool nsReportError(JSContext* aContext, 
-                              JSObject* aObj,
-                              nsresult aResult,
-                              const char* aMessage=nsnull);
+  static JSBool ReportError(JSContext* aContext, JSObject* aObj,
+                            nsresult aResult, const char* aMessage=nsnull);
 
-  static void nsConvertStringToJSVal(const nsString& aProp,
-                                     JSContext* aContext,
-                                     jsval* aReturn);
+  static void ConvertStringToJSVal(const nsString& aProp, JSContext* aContext,
+                                   jsval* aReturn);
 
-  static PRBool nsConvertJSValToXPCObject(nsISupports** aSupports,
-                                          REFNSIID aIID,
-                                          JSContext* aContext,
-                                          jsval aValue);
+  static PRBool ConvertJSValToXPCObject(nsISupports** aSupports, REFNSIID aIID,
+                                        JSContext* aContext, jsval aValue);
 
-  static void nsConvertJSValToString(nsAWritableString& aString,
-                                     JSContext* aContext,
+  static void ConvertJSValToString(nsAWritableString& aString,
+                                   JSContext* aContext, jsval aValue);
+
+  static PRBool ConvertJSValToUint32(PRUint32* aProp, JSContext* aContext,
                                      jsval aValue);
 
-  static PRBool nsConvertJSValToUint32(PRUint32* aProp,
-                                       JSContext* aContext,
-                                       jsval aValue);
+  static PRBool ConvertJSValToFunc(nsIDOMEventListener** aListener,
+                                   JSContext* aContext, JSObject* aObj,
+                                   jsval aValue);
 
-  static PRBool nsConvertJSValToFunc(nsIDOMEventListener** aListener,
-                                     JSContext* aContext,
-                                     JSObject* aObj,
-                                     jsval aValue);
+  static nsresult GetStaticScriptGlobal(JSContext* aContext, JSObject* aObj,
+                                        nsIScriptGlobalObject** aGlobal);
 
-  static nsresult nsGetStaticScriptGlobal(JSContext* aContext,
-                                          JSObject* aObj,
-                                          nsIScriptGlobalObject** aGlobal);
+  static nsresult GetStaticScriptContext(JSContext* aContext, JSObject* aObj,
+                                         nsIScriptContext** aScriptContext);
 
-  static nsresult nsGetStaticScriptContext(JSContext* aContext,
-                                           JSObject* aObj,
-                                           nsIScriptContext** aScriptContext);
+  static nsresult GetDynamicScriptGlobal(JSContext *aContext,
+                                         nsIScriptGlobalObject** aGlobal);
 
-  static nsresult nsGetDynamicScriptGlobal(JSContext *aContext,
-                                           nsIScriptGlobalObject** aGlobal);
+  static nsresult GetDynamicScriptContext(JSContext *aContext,
+                                          nsIScriptContext** aScriptContext);
 
-  static nsresult nsGetDynamicScriptContext(JSContext *aContext,
-                                            nsIScriptContext** aScriptContext);
+  static JSBool PR_CALLBACK CheckAccess(JSContext *cx, JSObject *obj,
+                                        jsid id, JSAccessMode mode, jsval *vp);
 
-  static JSBool PR_CALLBACK nsCheckAccess(JSContext *cx, JSObject *obj,
-                                          jsid id, JSAccessMode mode,
-                                          jsval *vp);
+  static nsIScriptSecurityManager *GetSecurityManager(JSContext *cx,
+                                                      JSObject *obj);
 
-  static nsIScriptSecurityManager *nsGetSecurityManager(JSContext *cx,
-                                                        JSObject *obj);
-
-  static void nsClearCachedSecurityManager();
+  static void ClearCachedSecurityManager();
 
 protected:
   static PRBool NameAndFormatForNSResult(nsresult rv, const char** name,

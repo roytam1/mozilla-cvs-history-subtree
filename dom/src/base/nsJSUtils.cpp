@@ -79,8 +79,8 @@ nsJSUtils::NameAndFormatForNSResult(nsresult rv, const char** name,
 }
 
 JSBool
-nsJSUtils::nsGetCallingLocation(JSContext* aContext, const char* *aFilename,
-                                PRUint32 *aLineno)
+nsJSUtils::GetCallingLocation(JSContext* aContext, const char* *aFilename,
+                              PRUint32 *aLineno)
 {
   // Get the current filename and line number
   JSStackFrame* frame = nsnull;
@@ -114,8 +114,8 @@ nsJSUtils::nsGetCallingLocation(JSContext* aContext, const char* *aFilename,
 }
 
 JSBool
-nsJSUtils::nsReportError(JSContext* aContext, JSObject* aObj, nsresult aResult,
-                         const char* aMessage)
+nsJSUtils::ReportError(JSContext* aContext, JSObject* aObj, nsresult aResult,
+                       const char* aMessage)
 {
   const char* name = nsnull;
   const char* format = nsnull;
@@ -130,7 +130,7 @@ nsJSUtils::nsReportError(JSContext* aContext, JSObject* aObj, nsresult aResult,
   PRUint32 lineno;
   char* location = nsnull;
 
-  if (nsJSUtils::nsGetCallingLocation(aContext, &filename, &lineno))
+  if (nsJSUtils::GetCallingLocation(aContext, &filename, &lineno))
     location = PR_smprintf("%s Line: %d", filename, lineno);
   
   nsCOMPtr<nsIDOMDOMException> exc;
@@ -148,7 +148,7 @@ nsJSUtils::nsReportError(JSContext* aContext, JSObject* aObj, nsresult aResult,
     nsCOMPtr<nsIScriptObjectOwner> owner = do_QueryInterface(exc);
     if (owner) {
       nsCOMPtr<nsIScriptContext> scriptCX;
-      nsGetStaticScriptContext(aContext, aObj, getter_AddRefs(scriptCX));
+      GetStaticScriptContext(aContext, aObj, getter_AddRefs(scriptCX));
       if (scriptCX) {
         JSObject* obj;
         rv = owner->GetScriptObject(scriptCX, (void**)&obj);
@@ -163,8 +163,8 @@ nsJSUtils::nsReportError(JSContext* aContext, JSObject* aObj, nsresult aResult,
 }
 
 void 
-nsJSUtils::nsConvertStringToJSVal(const nsString& aProp, JSContext* aContext,
-                                  jsval* aReturn)
+nsJSUtils::ConvertStringToJSVal(const nsString& aProp, JSContext* aContext,
+                                jsval* aReturn)
 {
   JSString *jsstring =
     ::JS_NewUCStringCopyN(aContext, NS_REINTERPRET_CAST(const jschar*,
@@ -176,8 +176,8 @@ nsJSUtils::nsConvertStringToJSVal(const nsString& aProp, JSContext* aContext,
 }
 
 PRBool
-nsJSUtils::nsConvertJSValToXPCObject(nsISupports** aSupports, REFNSIID aIID,
-                                     JSContext* aContext, jsval aValue)
+nsJSUtils::ConvertJSValToXPCObject(nsISupports** aSupports, REFNSIID aIID,
+                                   JSContext* aContext, jsval aValue)
 {
   *aSupports = nsnull;
   if (JSVAL_IS_NULL(aValue)) {
@@ -203,9 +203,8 @@ nsJSUtils::nsConvertJSValToXPCObject(nsISupports** aSupports, REFNSIID aIID,
 }
 
 void 
-nsJSUtils::nsConvertJSValToString(nsAWritableString& aString,
-                                  JSContext* aContext,
-                                  jsval aValue)
+nsJSUtils::ConvertJSValToString(nsAWritableString& aString,
+                                JSContext* aContext, jsval aValue)
 {
   JSString *jsstring;
   if ((jsstring = ::JS_ValueToString(aContext, aValue)) != nsnull) {
@@ -219,8 +218,8 @@ nsJSUtils::nsConvertJSValToString(nsAWritableString& aString,
 }
 
 PRBool
-nsJSUtils::nsConvertJSValToUint32(PRUint32* aProp, JSContext* aContext,
-                                  jsval aValue)
+nsJSUtils::ConvertJSValToUint32(PRUint32* aProp, JSContext* aContext,
+                                jsval aValue)
 {
   uint32 temp;
   if (::JS_ValueToECMAUint32(aContext, aValue, &temp)) {
@@ -235,9 +234,9 @@ nsJSUtils::nsConvertJSValToUint32(PRUint32* aProp, JSContext* aContext,
 }
 
 PRBool 
-nsJSUtils::nsConvertJSValToFunc(nsIDOMEventListener** aListener,
-                                JSContext* aContext, JSObject* aObj,
-                                jsval aValue)
+nsJSUtils::ConvertJSValToFunc(nsIDOMEventListener** aListener,
+                              JSContext* aContext, JSObject* aObj,
+                              jsval aValue)
 {
   if (JSVAL_IS_NULL(aValue)) {
     *aListener = nsnull;
@@ -270,8 +269,8 @@ nsJSUtils::nsConvertJSValToFunc(nsIDOMEventListener** aListener,
 }
 
 nsresult 
-nsJSUtils::nsGetStaticScriptGlobal(JSContext* aContext, JSObject* aObj,
-                                   nsIScriptGlobalObject** aNativeGlobal)
+nsJSUtils::GetStaticScriptGlobal(JSContext* aContext, JSObject* aObj,
+                                 nsIScriptGlobalObject** aNativeGlobal)
 {
   nsISupports* supports;
   JSClass* clazz;
@@ -307,11 +306,11 @@ nsJSUtils::nsGetStaticScriptGlobal(JSContext* aContext, JSObject* aObj,
 }
 
 nsresult 
-nsJSUtils::nsGetStaticScriptContext(JSContext* aContext, JSObject* aObj,
-                                    nsIScriptContext** aScriptContext)
+nsJSUtils::GetStaticScriptContext(JSContext* aContext, JSObject* aObj,
+                                  nsIScriptContext** aScriptContext)
 {
   nsCOMPtr<nsIScriptGlobalObject> nativeGlobal;
-  nsGetStaticScriptGlobal(aContext, aObj, getter_AddRefs(nativeGlobal));
+  GetStaticScriptGlobal(aContext, aObj, getter_AddRefs(nativeGlobal));
   if (!nativeGlobal)    
     return NS_ERROR_FAILURE;
   nsIScriptContext* scriptContext = nsnull;
@@ -321,12 +320,12 @@ nsJSUtils::nsGetStaticScriptContext(JSContext* aContext, JSObject* aObj,
 }  
 
 nsresult 
-nsJSUtils::nsGetDynamicScriptGlobal(JSContext* aContext,
-                                    nsIScriptGlobalObject** aNativeGlobal)
+nsJSUtils::GetDynamicScriptGlobal(JSContext* aContext,
+                                  nsIScriptGlobalObject** aNativeGlobal)
 {
   nsIScriptGlobalObject* nativeGlobal = nsnull;
   nsCOMPtr<nsIScriptContext> scriptCX;
-  nsGetDynamicScriptContext(aContext, getter_AddRefs(scriptCX));
+  GetDynamicScriptContext(aContext, getter_AddRefs(scriptCX));
   if (scriptCX) {
     *aNativeGlobal = nativeGlobal = scriptCX->GetGlobalObject();
   }
@@ -334,8 +333,8 @@ nsJSUtils::nsGetDynamicScriptGlobal(JSContext* aContext,
 }  
 
 nsresult 
-nsJSUtils::nsGetDynamicScriptContext(JSContext *aContext,
-                                     nsIScriptContext** aScriptContext)
+nsJSUtils::GetDynamicScriptContext(JSContext *aContext,
+                                   nsIScriptContext** aScriptContext)
 {
   // XXX We rely on the rule that if any JSContext in our JSRuntime has a 
   // private set then that private *must* be a pointer to an nsISupports.
@@ -347,9 +346,8 @@ nsJSUtils::nsGetDynamicScriptContext(JSContext *aContext,
 }
 
 JSBool PR_CALLBACK
-nsJSUtils::nsCheckAccess(JSContext *cx, JSObject *obj, 
-                         jsid id, JSAccessMode mode,
-                         jsval *vp)
+nsJSUtils::CheckAccess(JSContext *cx, JSObject *obj, jsid id,
+                       JSAccessMode mode, jsval *vp)
 {
   if (mode == JSACC_WATCH) {
     jsval value, dummy;
@@ -368,14 +366,14 @@ nsJSUtils::nsCheckAccess(JSContext *cx, JSObject *obj,
 }
 
 nsIScriptSecurityManager * 
-nsJSUtils::nsGetSecurityManager(JSContext *cx, JSObject *obj)
+nsJSUtils::GetSecurityManager(JSContext *cx, JSObject *obj)
 {
   if (!mCachedSecurityManager) {
     nsresult rv;
     NS_WITH_SERVICE(nsIScriptSecurityManager, secMan,
                     NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
     if (NS_FAILED(rv)) {
-      nsJSUtils::nsReportError(cx, obj, NS_ERROR_DOM_SECMAN_ERR);
+      nsJSUtils::ReportError(cx, obj, NS_ERROR_DOM_SECMAN_ERR);
       return nsnull;
     }
     mCachedSecurityManager = secMan;
@@ -384,8 +382,8 @@ nsJSUtils::nsGetSecurityManager(JSContext *cx, JSObject *obj)
   return mCachedSecurityManager;
 }
 
-void 
-nsJSUtils::nsClearCachedSecurityManager()
+void
+nsJSUtils::ClearCachedSecurityManager()
 {
   if (mCachedSecurityManager) {
     NS_RELEASE(mCachedSecurityManager);

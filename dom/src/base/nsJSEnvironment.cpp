@@ -81,7 +81,7 @@ NS_ScriptErrorReporter(JSContext *cx,
   nsEventStatus status = nsEventStatus_eIgnore;
 
   // XXX this means we are not going to get error reports on non DOM contexts
-  nsJSUtils::nsGetDynamicScriptContext(cx, getter_AddRefs(context));
+  nsJSUtils::GetDynamicScriptContext(cx, getter_AddRefs(context));
   if (context) {
     nsCOMPtr<nsIScriptGlobalObject> globalObject( dont_AddRef( context->GetGlobalObject() ) );
 
@@ -1540,7 +1540,7 @@ nsJSEnvironment::nsJSEnvironment()
 nsJSEnvironment::~nsJSEnvironment()
 {
   if (--globalCount == 0) {
-    nsJSUtils::nsClearCachedSecurityManager();
+    nsJSUtils::ClearCachedSecurityManager();
 
     delete gNameSpaceManager;
     gNameSpaceManager = nsnull;

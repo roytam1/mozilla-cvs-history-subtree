@@ -1123,7 +1123,7 @@ nsWindowSH::StubConstructor(JSContext *cx, JSObject *obj, uintN argc,
   if (owner) {
     nsCOMPtr<nsIScriptContext> context;
 
-    nsJSUtils::nsGetStaticScriptContext(cx, obj, getter_AddRefs(context));
+    nsJSUtils::GetStaticScriptContext(cx, obj, getter_AddRefs(context));
 
     NS_ENSURE_TRUE(context, NS_ERROR_UNEXPECTED);
 
@@ -1159,8 +1159,7 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   nsIScriptContext *script_cx = (nsIScriptContext *)::JS_GetContextPrivate(cx);
 
   nsCOMPtr<nsIScriptContext> my_context;
-  nsJSUtils::nsGetStaticScriptContext(cx, obj,
-                                      getter_AddRefs(my_context));
+  nsJSUtils::GetStaticScriptContext(cx, obj, getter_AddRefs(my_context));
   NS_ENSURE_TRUE(my_context, NS_ERROR_UNEXPECTED);
 
   rv = my_context->IsContextInitialized();
@@ -1207,8 +1206,7 @@ nsWindowSH::GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     nsCOMPtr<nsIScriptObjectOwner> owner(do_QueryInterface(native));
     if (owner) {
       nsCOMPtr<nsIScriptContext> context;
-      nsJSUtils::nsGetStaticScriptContext(cx, obj,
-                                          getter_AddRefs(context));
+      nsJSUtils::GetStaticScriptContext(cx, obj, getter_AddRefs(context));
       NS_ENSURE_TRUE(context, NS_ERROR_UNEXPECTED);
 
       JSObject *prop_obj = nsnull;
@@ -1492,8 +1490,7 @@ nsEventRecieverSH::RegisterCompileHandler(nsIXPConnectWrappedNative *wrapper,
   if (IsEventName(str)) {
     nsCOMPtr<nsIScriptContext> script_cx;
     nsresult rv =
-      nsJSUtils::nsGetStaticScriptContext(cx, obj,
-                                          getter_AddRefs(script_cx));
+      nsJSUtils::GetStaticScriptContext(cx, obj, getter_AddRefs(script_cx));
 
     if (NS_FAILED(rv)) {
       return rv;

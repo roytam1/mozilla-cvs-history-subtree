@@ -711,6 +711,7 @@ LocationImpl::Reload()
 
   if (argc > 0) {
     jsval *argv = nsnull;
+
     ncc->GetArgvPtr(&argv);
     NS_ENSURE_TRUE(argv, NS_ERROR_UNEXPECTED);
 
@@ -793,7 +794,7 @@ LocationImpl::GetSourceURL(JSContext* cx, nsIURI** sourceURI)
   // XXX This will fail on non-DOM contexts :(
 
   nsCOMPtr<nsIScriptGlobalObject> nativeGlob;
-  nsJSUtils::nsGetDynamicScriptGlobal(cx, getter_AddRefs(nativeGlob));
+  nsJSUtils::GetDynamicScriptGlobal(cx, getter_AddRefs(nativeGlob));
 
   if (nativeGlob) {
     nsCOMPtr<nsIDOMWindow> window = do_QueryInterface(nativeGlob);
@@ -835,7 +836,7 @@ CheckHrefAccess(JSContext *aContext, JSObject *aObj, PRBool isWrite)
   }
 
   if (NS_FAILED(rv)) {
-    nsJSUtils::nsReportError(aContext, aObj, rv);
+    nsJSUtils::ReportError(aContext, aObj, rv);
   }
 
   return rv;
@@ -894,7 +895,7 @@ LocationImpl::SetProperty(JSContext *aContext, JSObject *aObj, jsval aID,
         return PR_FALSE;
 
       // Get the parameter passed in
-      nsJSUtils::nsConvertJSValToString(href, aContext, *aVp);
+      nsJSUtils::ConvertJSValToString(href, aContext, *aVp);
 
       // Get the source of the caller
       result = GetSourceURL(aContext, getter_AddRefs(base));
