@@ -16,6 +16,14 @@
   <button class="dialog" value="sort date decending" onclick="sortDateDescending()"/>
   <button class="dialog" value="sort thread ascending" onclick="sortThreadedAscending()"/>
   <button class="dialog" value="sort thread descending" onclick="sortThreadedDescending()"/>
+  <button class="dialog" value="sort priority ascending" onclick="sortPriorityAscending()"/>
+  <button class="dialog" value="sort priority descending" onclick="sortPriorityDescending()"/>
+  <button class="dialog" value="sort sender ascending" onclick="sortSenderAscending()"/>
+  <button class="dialog" value="sort sender descending" onclick="sortSenderDescending()"/>
+  <button class="dialog" value="sort subject ascending" onclick="sortSubjectAscending()"/>
+  <button class="dialog" value="sort subject descending" onclick="sortSubjectDescending()"/>
+  <button class="dialog" value="sort size ascending" onclick="sortSizeAscending()"/>
+  <button class="dialog" value="sort size descending" onclick="sortSizeDescending()"/>
 </box>
 
 </window>
