@@ -223,62 +223,70 @@ ldaptool_berval_from_ldif_value( const char *value, int vlen,
     struct stat	fstats;
 
     /* recognize "attr :< url" syntax if LDIF version is >= 1 */
+
+    if ( ldaptool_verbose ) {
+	fprintf( stderr, "%s: ldaptool_berval_from_ldif_value: value: %s\n",
+	    ldaptool_progname, value);
+    }
+
     if ( recognize_url_syntax && *value == '<' ) {
-	const char	*url;
-	char		*path;
+        const char	*url;
+        char		*path;
 
 	for ( url = value + 1; isspace( *url ); ++url ) {
 	    ;	/* NULL */
 	}
 
-	/*
-	 * We only support file:// URLs for now.
-	 */
-	rc = ldaptool_fileurl2path( url, &path );
-	switch( rc ) {
-	case LDAPTOOL_FILEURL_NOTAFILEURL:
-	    if ( reporterrs ) fprintf( stderr, "%s: unsupported URL \"%s\";"
-		" use a file:// URL instead.\n", ldaptool_progname, url );
-	    break;
+	if (strlen(url) > 7 && strncasecmp(url, "file://", 7) == 0) {
+	  /*
+	   * We only support file:// URLs for now.
+	   */
+	  rc = ldaptool_fileurl2path( url, &path );
+	  switch( rc ) {
+	  case LDAPTOOL_FILEURL_NOTAFILEURL:
+	      if ( reporterrs ) fprintf( stderr, "%s: unsupported URL \"%s\";"
+		  " use a file:// URL instead.\n", ldaptool_progname, url );
+	      break;
 
-	case LDAPTOOL_FILEURL_MISSINGPATH:
-	    if ( reporterrs ) fprintf( stderr,
+	  case LDAPTOOL_FILEURL_MISSINGPATH:
+	      if ( reporterrs ) fprintf( stderr,
 		    "%s: unable to process URL \"%s\" --"
 		    " missing path.\n", ldaptool_progname, url );
-	    break;
+	      break;
 
-	case LDAPTOOL_FILEURL_NONLOCAL:
-	    if ( reporterrs ) fprintf( stderr,
+	  case LDAPTOOL_FILEURL_NONLOCAL:
+	      if ( reporterrs ) fprintf( stderr,
 		    "%s: unable to process URL \"%s\" -- only"
 		    " local file:// URLs are supported.\n",
 		    ldaptool_progname, url );
-	    break;
+	      break;
 
-	case LDAPTOOL_FILEURL_NOMEMORY:
-	    if ( reporterrs ) perror( "ldaptool_fileurl2path" );
-	    break;
+	  case LDAPTOOL_FILEURL_NOMEMORY:
+	      if ( reporterrs ) perror( "ldaptool_fileurl2path" );
+	      break;
 
-	case LDAPTOOL_FILEURL_SUCCESS:
-	    if ( stat( path, &fstats ) != 0 ) {
-		if ( reporterrs ) perror( path );
-	    } else if ( fstats.st_mode & S_IFDIR ) {	
-		if ( reporterrs ) fprintf( stderr,
+	  case LDAPTOOL_FILEURL_SUCCESS:
+	      if ( stat( path, &fstats ) != 0 ) {
+		  if ( reporterrs ) perror( path );
+	      } else if ( fstats.st_mode & S_IFDIR ) {	
+		  if ( reporterrs ) fprintf( stderr,
 			"%s: %s is a directory, not a file\n",
 			ldaptool_progname, path );
-		rc = LDAPTOOL_FILEURL_FILEIOERROR;
-	    } else {
-		rc = berval_from_file( path, bvp, reporterrs );
-	    }
-	    free( path );
-	    break;
+		  rc = LDAPTOOL_FILEURL_FILEIOERROR;
+	      } else {
+		  rc = berval_from_file( path, bvp, reporterrs );
+	      }
+	      free( path );
+	      break;
 
-	default:
-	    if ( reporterrs ) fprintf( stderr,
+	  default:
+	      if ( reporterrs ) fprintf( stderr,
 		    "%s: unable to process URL \"%s\""
 		    " -- unknown error\n", ldaptool_progname, url );
+	  }
 	}
-
-    } else if ( always_try_file && (stat( value, &fstats ) == 0) &&
+    }
+    if ( always_try_file && (stat( value, &fstats ) == 0) &&
 	     !(fstats.st_mode & S_IFDIR)) {	/* get value from file */
 	rc = berval_from_file( value, bvp, reporterrs );
     } else {
