@@ -901,104 +901,104 @@ trimString (char* str)
 nsresult
 MailFolder::ReadSummaryFile (char* url)
 {
-  static const PRInt32 kBufferSize = 4096;
+    static const PRInt32 kBufferSize = 4096;
 
-  if (startsWith("mailbox://", url)) {
-    char* folderURL = &url[10];	
-	PRInt32 flen = PL_strlen("Mail") + PL_strlen(folderURL) + 4 + 1;
-    char* fileurl = (char*) PR_MALLOC(flen);
-    PRInt32 nurllen = PL_strlen(url) + 20 + 1;
-    char* nurl = (char*) PR_MALLOC(nurllen);
-    char* buff = (char*) PR_MALLOC(kBufferSize);
-    FILE *mf;
-    int   summOffset, messageOffset;
-    nsIRDFLiteral *rSubject, *rDate;
-    nsIRDFResource * rFrom;
-    PRBool summaryFileFound = PR_FALSE;
-    char* flags = 0;
+    if (startsWith("mailbox://", url)) {
+        char* folderURL = &url[10];	
+        PRInt32 flen = PL_strlen("Mail") + PL_strlen(folderURL) + 4 + 1;
+        char* fileurl = (char*) PR_MALLOC(flen);
+        PRInt32 nurllen = PL_strlen(url) + 20 + 1;
+        char* nurl = (char*) PR_MALLOC(nurllen);
+        char* buff = (char*) PR_MALLOC(kBufferSize);
+        FILE *mf;
+        int   summOffset, messageOffset;
+        nsIRDFLiteral *rSubject, *rDate;
+        nsIRDFResource * rFrom;
+        PRBool summaryFileFound = PR_FALSE;
+        char* flags = 0;
 
-    PR_snprintf(fileurl, flen, "Mail\\%sssf",  folderURL);
-	fileurl[PL_strlen(fileurl)-4] = '.'; //XXX how do you spell kludge?
-	convertSlashes(fileurl);
-    // fileurl = MCDepFileURL(fileurl);
-    mSummaryFile = openFileWR(fileurl);
-    PR_snprintf(fileurl, flen, "Mail\\%s",  folderURL);
-    //	fileurl = MCDepFileURL(fileurl);
-    mf = openFileWR(fileurl);
+        PR_snprintf(fileurl, flen, "Mail\\%sssf",  folderURL);
+        fileurl[PL_strlen(fileurl)-4] = '.'; //XXX how do you spell kludge?
+        convertSlashes(fileurl);
+        // fileurl = MCDepFileURL(fileurl);
+        mSummaryFile = openFileWR(fileurl);
+        PR_snprintf(fileurl, flen, "Mail\\%s",  folderURL);
+        //	fileurl = MCDepFileURL(fileurl);
+        mf = openFileWR(fileurl);
 
 
-    while (mSummaryFile && fgets(buff, kBufferSize, mSummaryFile)) {
-      if (startsWith("Status:", buff)) {
-          summaryFileFound = 1;
-          flags = PL_strdup(&buff[8]);
-          fgets(buff, kBufferSize, mSummaryFile);
-          sscanf(&buff[9], "%d", &summOffset);
-          fgets(buff, kBufferSize, mSummaryFile);
-          nsAutoString pfrom(trimString(&buff[6]));
-          gRDFService->GetUnicodeResource(pfrom, &rFrom);
+        while (mSummaryFile && fgets(buff, kBufferSize, mSummaryFile)) {
+            if (startsWith("Status:", buff)) {
+                summaryFileFound = 1;
+                flags = PL_strdup(&buff[8]);
+                fgets(buff, kBufferSize, mSummaryFile);
+                sscanf(&buff[9], "%d", &summOffset);
+                fgets(buff, kBufferSize, mSummaryFile);
+                nsAutoString pfrom(trimString(&buff[6]));
+                gRDFService->GetUnicodeResource(pfrom, &rFrom);
 
-          fgets(buff, kBufferSize, mSummaryFile);
-          nsAutoString psubject(trimString(&buff[8]));
-          gRDFService->GetLiteral(psubject, &rSubject);
+                fgets(buff, kBufferSize, mSummaryFile);
+                nsAutoString psubject(trimString(&buff[8]));
+                gRDFService->GetLiteral(psubject, &rSubject);
 
-          fgets(buff, kBufferSize, mSummaryFile);
-          nsAutoString pdate(trimString(&buff[6]));
-          gRDFService->GetLiteral(pdate, &rDate);
+                fgets(buff, kBufferSize, mSummaryFile);
+                nsAutoString pdate(trimString(&buff[6]));
+                gRDFService->GetLiteral(pdate, &rDate);
 
-          fgets(buff, kBufferSize, mSummaryFile);
-          sscanf(&buff[9], "%d", &messageOffset);
-          PR_snprintf(nurl, nurllen, "%s?%d", url, messageOffset); // XXX unsafe
-          nsAutoString purl(nurl);
-          AddMessage(purl, this, rFrom, rSubject, rDate, summOffset,
-                     messageOffset, flags, 0);
-          PL_strfree(flags);
-      }
-    }
-
-    rFrom = nsnull;
-    if (!summaryFileFound) {
-      /* either a new mailbox or need to read BMF to recreate */
-      while (mf && fgets(buff, kBufferSize, mf)) {
-        if (strncmp("From ", buff, 5) ==0)  {
-          if (rFrom) {
-              nsAutoString purl(nurl);
-              AddMessage(purl, this, rFrom, rSubject, rDate, messageOffset, flags, nsnull);
-
-          }
-          messageOffset = ftell(mf);
-          if (flags) PL_strfree(flags);
-          PR_snprintf(nurl, nurllen, "%s?%i", url, messageOffset); // XXX unsafe
-          flags = nsnull;
-          rFrom = nsnull;
-          rSubject = rDate = nsnull;
+                fgets(buff, kBufferSize, mSummaryFile);
+                sscanf(&buff[9], "%d", &messageOffset);
+                PR_snprintf(nurl, nurllen, "%s?%d", url, messageOffset); // XXX unsafe
+                nsAutoString purl(nurl);
+                AddMessage(purl, this, rFrom, rSubject, rDate, summOffset,
+                           messageOffset, flags, 0);
+                PL_strfree(flags);
+            }
         }
-		buff[PL_strlen(buff)-1] = '\0';
-        if ((!rFrom) && (startsWith("From:", buff))) {
-            nsAutoString pfrom(&buff[6]);
-            gRDFService->GetUnicodeResource(pfrom, &rFrom);
 
-        } else if ((!rDate) && (startsWith("Date:", buff))) {
-            nsAutoString pdate(&buff[6]);
-            gRDFService->GetLiteral(pdate, &rDate);
-        } else if ((!rSubject) && (startsWith("Subject:", buff))) {
-            nsAutoString psubject(&buff[8]);
-            gRDFService->GetLiteral(psubject, &rSubject);
+        rFrom = nsnull;
+        if (!summaryFileFound) {
+            /* either a new mailbox or need to read BMF to recreate */
+            while (mf && fgets(buff, kBufferSize, mf)) {
+                if (strncmp("From ", buff, 5) ==0)  {
+                    if (rFrom) {
+                        nsAutoString purl(nurl);
+                        AddMessage(purl, this, rFrom, rSubject, rDate, messageOffset, flags, nsnull);
 
-        } else if ((!flags) && (startsWith("X-Mozilla-Status:", buff))) {
-          flags = PL_strdup(&buff[17]);
+                    }
+                    messageOffset = ftell(mf);
+                    if (flags) PL_strfree(flags);
+                    PR_snprintf(nurl, nurllen, "%s?%i", url, messageOffset); // XXX unsafe
+                    flags = nsnull;
+                    rFrom = nsnull;
+                    rSubject = rDate = nsnull;
+                }
+                buff[PL_strlen(buff)-1] = '\0';
+                if ((!rFrom) && (startsWith("From:", buff))) {
+                    nsAutoString pfrom(&buff[6]);
+                    gRDFService->GetUnicodeResource(pfrom, &rFrom);
+
+                } else if ((!rDate) && (startsWith("Date:", buff))) {
+                    nsAutoString pdate(&buff[6]);
+                    gRDFService->GetLiteral(pdate, &rDate);
+                } else if ((!rSubject) && (startsWith("Subject:", buff))) {
+                    nsAutoString psubject(&buff[8]);
+                    gRDFService->GetLiteral(psubject, &rSubject);
+
+                } else if ((!flags) && (startsWith("X-Mozilla-Status:", buff))) {
+                    flags = PL_strdup(&buff[17]);
+                }
+            }
+            if (rFrom){
+                nsAutoString purl(nurl);
+                AddMessage(purl, this, rFrom, rSubject, rDate, messageOffset, flags, nsnull);
+            }
+            fflush(mSummaryFile);
         }
-      }
-     if (rFrom){
-         nsAutoString purl(nurl);
-         AddMessage(purl, this, rFrom, rSubject, rDate, messageOffset, flags, nsnull);
-     }
-      fflush(mSummaryFile);
-    }
 
-    PR_DELETE(buff);
-    PR_DELETE(nurl);
-  }
-  return NS_OK;
+        PR_DELETE(buff);
+        PR_DELETE(nurl);
+    }
+    return NS_OK;
 }
 
 /********************************** MailMessage **************************************
