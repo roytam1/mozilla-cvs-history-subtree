@@ -35,6 +35,7 @@ struct FilesTest
 	int CreateDirectory(nsFileSpec& victim);
 	int IterateDirectoryChildren(nsFileSpec& startChild);
 	int CanonicalPath(const char* relativePath);
+	int Persistence(const char* relativePath);
 
     int Copy(const char*  sourceFile, const char* targDir);
     int Move(const char*  sourceFile, const char*  targDir);
@@ -187,6 +188,48 @@ int FilesTest::IOStream(const char* relativePath)
 			testStream.seek(pos); // back to the start of the line
 		}
 	}
+	return 0;
+}
+
+//----------------------------------------------------------------------------------------
+int FilesTest::Persistence(
+	const char* relativePathToWrite)
+//----------------------------------------------------------------------------------------
+{
+	nsFilePath myTextFilePath(relativePathToWrite, true);
+	const char* pathAsString = (const char*)myTextFilePath;
+	nsFileSpec mySpec(myTextFilePath);
+
+	nsIOFileStream testStream(mySpec, (PR_WRONLY | PR_CREATE_FILE | PR_TRUNCATE));
+	if (!testStream.is_open())
+	{
+		mConsole
+		    << "ERROR: File "
+		    << pathAsString
+		    << " could not be opened for input+output"
+		    << nsEndl;
+		return -1;
+	}
+	
+	nsPersistentFileDescriptor myPersistent(mySpec);
+	mConsole
+		<< "Writing persistent file data " << pathAsString << nsEndl << nsEndl;
+	
+	testStream.seek(0); // check that the seek compiles
+	testStream << myPersistent;
+	
+	testStream.seek(0);
+	
+	nsPersistentFileDescriptor mySecondPersistent;
+	testStream >> mySecondPersistent;
+	
+	mySpec = mySecondPersistent;
+	if (mySpec.Error() || !mySpec.Exists())
+	{
+		Failed();
+		return -1;
+	}
+	Passed();
 	return 0;
 }
 
@@ -536,6 +579,15 @@ int FilesTest::RunAllTests()
     if NS_FAILED(Execute("c:\\windows\\notepad.exe", ""))
 #endif
         return -1;
+
+	Banner("Persistence");
+	if (Persistence("mumble/filedesc.dat") != 0)
+		return -1;
+
+	Banner("Delete again (to clean up our mess)");
+	if (Delete(parent) != 0)
+		return -1;
+		
     return 0;
 }
 

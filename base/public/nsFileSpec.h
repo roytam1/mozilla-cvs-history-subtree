@@ -157,6 +157,7 @@ class nsPersistentFileDescriptor; // Used for storage across program launches.
 #define kFileURLPrefixLength (7)
 
 class nsBasicOutStream;
+class nsBasicInStream;
 
 //========================================================================================
 class NS_BASE nsFileSpec
@@ -177,6 +178,7 @@ class NS_BASE nsFileSpec
         void                    operator = (const nsFilePath& inPath);
         void                    operator = (const nsFileURL& inURL);
         void                    operator = (const nsFileSpec& inOther);
+        void                    operator = (const nsPersistentFileDescriptor& inOther);
 
 #ifndef XP_MAC
                                 operator const char* () const { return mPath; }
@@ -382,9 +384,27 @@ class NS_BASE nsPersistentFileDescriptor
 //========================================================================================
 {
     public:
-                                nsPersistentFileDescriptor(const nsFileSpec& inPath);
+                                nsPersistentFileDescriptor() : mDescriptorString(nsnull) {}
+                                    // For use prior to reading in from a stream
+                                nsPersistentFileDescriptor(const nsPersistentFileDescriptor& inPath);
         virtual                 ~nsPersistentFileDescriptor();
-        const char*             GetString() const { return mDescriptorString; } // DON'T FREE
+        void					operator = (const nsPersistentFileDescriptor& inPath);
+        
+        // Conversions
+                                nsPersistentFileDescriptor(const nsFileSpec& inPath);
+        void					operator = (const nsFileSpec& inPath);
+        
+    	friend nsBasicInStream& operator >> (nsBasicInStream&, nsPersistentFileDescriptor&);
+    		// reads the data from a file
+    	friend nsBasicOutStream& operator << (nsBasicOutStream&, const nsPersistentFileDescriptor&);
+    	    // writes the data to a file
+        friend class nsFileSpec;
+
+    private:
+        // Here are the ways to get data in and out of a file.
+        void                    GetData(void*& outData, PRInt32& outSize) const;
+                                     // DON'T FREE the returned data!
+        void                    SetData(const void* inData, PRInt32 inSize);
 
     private:
 

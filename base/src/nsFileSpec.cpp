@@ -23,6 +23,8 @@
 
 #include "prtypes.h"
 #include "plstr.h"
+#include "plbase64.h"
+#include "prmem.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -66,7 +68,7 @@ char* nsFileSpecHelpers::StringDup(
         allocLength = strlen(inString);
     char* newPath = inString || allocLength ? new char[allocLength + 1] : nsnull;
     if (!newPath)
-        return NULL;
+        return nsnull;
     strcpy(newPath, inString);
     return newPath;
 } // nsFileSpecHelpers::StringDup
@@ -78,7 +80,7 @@ char* nsFileSpecHelpers::AllocCat(
 //----------------------------------------------------------------------------------------
 {
     if (!inString1)
-        return inString2 ? StringDup(inString2) : (char*)NULL;
+        return inString2 ? StringDup(inString2) : (char*)nsnull;
     if (!inString2)
         return StringDup(inString1);
     char* outString = StringDup(inString1, strlen(inString1) + strlen(inString2));
@@ -96,7 +98,7 @@ char* nsFileSpecHelpers::StringAssign(
     if (!inString2)
     {
         delete [] ioString;
-        ioString = (char*)NULL;
+        ioString = (char*)nsnull;
         return ioString;
     }
     if (!ioString || (strlen(inString2) > strlen(ioString)))
@@ -143,7 +145,7 @@ char* nsFileSpecHelpers::GetLeaf(const char* inPath, char inSeparator)
 //----------------------------------------------------------------------------------------
 {
     if (!inPath)
-        return NULL;
+        return nsnull;
     char* lastSeparator = strrchr(inPath, inSeparator);
     if (lastSeparator)
         return StringDup(++lastSeparator);
@@ -431,16 +433,26 @@ void nsFilePath::operator = (const nsFileURL& inOther)
 //----------------------------------------------------------------------------------------
 nsFileSpec::nsFileSpec()
 //----------------------------------------------------------------------------------------
-:    mPath(NULL)
+:    mPath(nsnull)
 {
 }
 #endif
 
 //----------------------------------------------------------------------------------------
+nsFileSpec::nsFileSpec(const nsPersistentFileDescriptor& inDescriptor)
+//----------------------------------------------------------------------------------------
+#ifndef XP_MAC
+:    mPath(nsnull)
+#endif
+{
+	*this = inDescriptor;
+}
+
+//----------------------------------------------------------------------------------------
 nsFileSpec::nsFileSpec(const nsFileURL& inURL)
 //----------------------------------------------------------------------------------------
 #ifndef XP_MAC
-:    mPath(NULL)
+:    mPath(nsnull)
 #endif
 {
     *this = nsFilePath(inURL); // convert to unix path first
@@ -495,6 +507,30 @@ void nsFileSpec::operator = (const nsFileURL& inURL)
 //----------------------------------------------------------------------------------------
 {
     *this = nsFilePath(inURL); // convert to unix path first
+}
+
+//----------------------------------------------------------------------------------------
+void nsFileSpec::operator = (const nsPersistentFileDescriptor& inDescriptor)
+//----------------------------------------------------------------------------------------
+{
+#ifdef XP_MAC
+	void* data;
+	PRInt32 dataSize;
+    inDescriptor.GetData(data, dataSize);
+    char* decodedData = PL_Base64Decode((const char*)data, (int)dataSize, nsnull);
+	// Cast to an alias record and resolve.
+	AliasHandle aliasH = nsnull;
+	mError = PtrToHand(decodedData, &(Handle)aliasH, (dataSize * 3) / 4);
+	PR_Free(decodedData);
+	if (mError != noErr)
+		return; // not enough memory?
+
+	Boolean changed;
+	mError = ::ResolveAlias(nsnull, aliasH, &mSpec, &changed);
+	DisposeHandle((Handle) aliasH);
+#else
+    nsFileSpecHelpers::StringAssign(mPath, inDescriptor.GetString());
+#endif
 }
 
 //========================================================================================
@@ -586,3 +622,118 @@ nsFileSpec nsFileSpec::operator + (const char* inRelativePath) const
     result += inRelativePath;
     return result;
 } // nsFileSpec::operator +
+
+//========================================================================================
+//	class nsPersistentFileDescriptor
+//========================================================================================
+
+//----------------------------------------------------------------------------------------
+nsPersistentFileDescriptor::nsPersistentFileDescriptor(const nsPersistentFileDescriptor& inDesc)
+//----------------------------------------------------------------------------------------
+    : mDescriptorString(nsFileSpecHelpers::StringDup(inDesc.mDescriptorString))
+{
+} // nsPersistentFileDescriptor::nsPersistentFileDescriptor
+
+//----------------------------------------------------------------------------------------
+void nsPersistentFileDescriptor::operator = (const nsPersistentFileDescriptor& inDesc)
+//----------------------------------------------------------------------------------------
+{
+    nsFileSpecHelpers::StringAssign(mDescriptorString, inDesc.mDescriptorString);
+} // nsPersistentFileDescriptor::operator =
+
+//----------------------------------------------------------------------------------------
+nsPersistentFileDescriptor::nsPersistentFileDescriptor(const nsFileSpec& inSpec)
+//----------------------------------------------------------------------------------------
+    : mDescriptorString(nsnull)
+{
+	*this = inSpec;
+} // nsPersistentFileDescriptor::nsPersistentFileDescriptor
+
+//----------------------------------------------------------------------------------------
+void nsPersistentFileDescriptor::operator = (const nsFileSpec& inSpec)
+//----------------------------------------------------------------------------------------
+{
+#ifdef XP_MAC
+    if (inSpec.Error())
+    	return;
+	AliasHandle	aliasH;
+	OSErr err = NewAlias(nil, inSpec.operator const FSSpec* const (), &aliasH);
+	if (err != noErr)
+		return;
+
+	PRUint32 bytes = GetHandleSize((Handle) aliasH);
+	HLock((Handle) aliasH);
+	char* buf = PL_Base64Encode((const char*)*aliasH, bytes, nsnull);
+	DisposeHandle((Handle) aliasH);
+
+    nsFileSpecHelpers::StringAssign(mDescriptorString, buf);
+    PR_Free(buf);
+#else
+    nsFileSpecHelpers::StringAssign(mDescriptorString, inSpec);
+#endif // XP_MAC
+} // nsPersistentFileDescriptor::operator =
+
+//----------------------------------------------------------------------------------------
+nsPersistentFileDescriptor::~nsPersistentFileDescriptor()
+//----------------------------------------------------------------------------------------
+{
+    delete [] mDescriptorString;
+} // nsPersistentFileDescriptor::~nsPersistentFileDescriptor
+
+//----------------------------------------------------------------------------------------
+void nsPersistentFileDescriptor::GetData(void*& outData, PRInt32& outSize) const
+//----------------------------------------------------------------------------------------
+{
+    outSize = PL_strlen(mDescriptorString);
+    outData = mDescriptorString;
+}
+
+//----------------------------------------------------------------------------------------
+void nsPersistentFileDescriptor::SetData(const void* inData, PRInt32 inSize)
+//----------------------------------------------------------------------------------------
+{
+	delete [] mDescriptorString;
+	mDescriptorString = new char[1 + inSize];
+	if (!mDescriptorString)
+	    return;
+	memcpy(mDescriptorString, inData, inSize);
+	mDescriptorString[inSize] = '\0';
+}
+
+//----------------------------------------------------------------------------------------
+nsBasicInStream& operator >> (nsBasicInStream& s, nsPersistentFileDescriptor& d)
+// reads the data from a file
+//----------------------------------------------------------------------------------------
+{
+	char bigBuffer[1000];
+	// The first 8 bytes of the data should be a hex version of the data size to follow.
+	PRInt32 bytesRead = 8;
+	s.read(bigBuffer, bytesRead);
+	if (bytesRead != 8)
+		return s;
+	bigBuffer[8] = '\0';
+	sscanf(bigBuffer, "%lx", &bytesRead);
+	if (bytesRead > 0x4000)
+		return s; // preposterous.
+	// Now we know how many bytes to read, do it.
+	s.read(bigBuffer, bytesRead);
+	d.SetData(bigBuffer, bytesRead);
+	return s;
+}
+
+//----------------------------------------------------------------------------------------
+nsBasicOutStream& operator << (nsBasicOutStream& s, const nsPersistentFileDescriptor& d)
+// writes the data to a file
+//----------------------------------------------------------------------------------------
+{
+	char littleBuf[9];
+	PRInt32 dataSize;
+	void* data;
+	d.GetData(data, dataSize);
+	// First write (in hex) the length of the data to follow.  Exactly 8 bytes
+	sprintf(littleBuf, "%0.8x", dataSize);
+	s << littleBuf;
+	// Now write the data itself
+	s << d.mDescriptorString;
+	return s;
+}
