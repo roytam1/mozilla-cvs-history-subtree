@@ -113,7 +113,15 @@
         <outlinerrow class="folderTreeItem"
                      uri="...">
           <outlinercell ref="folderNameCol"
-                        label="rdf:http://home.netscape.com/NC-rdf#FolderTreeName"/>
+                        label="rdf:http://home.netscape.com/NC-rdf#FolderTreeName"
+                        properties="specialFolder-rdf:http://home.netscape.com/NC-rdf#SpecialFolder
+                                    biffState-rdf:http://home.netscape.com/NC-rdf#BiffState
+                                    isServer-rdf:http://home.netscape.com/NC-rdf#IsServer
+                                    newMessages-rdf:http://home.netscape.com/NC-rdf#NewMessages
+                                    hasUnreadMessages-rdf:http://home.netscape.com/NC-rdf#HasUnreadMessages
+                                    isSecure-rdf:http://home.netscape.com/NC-rdf#IsSecure
+                                    serverType-rdf:http://home.netscape.com/NC-rdf#ServerType
+                                    noSelect-rdf:http://home.netscape.com/NC-rdf#NoSelect"/>
         </outlinerrow>
       </template>
     </outlinerbody>
