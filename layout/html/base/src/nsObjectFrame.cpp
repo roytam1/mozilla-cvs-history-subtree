@@ -77,6 +77,7 @@
 #include "npapi.h"
 #include "nsIPrintOptions.h"
 #include "nsGfxCIID.h"
+#include "nsHTMLUtils.h"
 static NS_DEFINE_CID(kPrintOptionsCID, NS_PRINTOPTIONS_CID);
 
 // headers for plugin scriptability
@@ -838,6 +839,27 @@ nsObjectFrame::GetDesiredSize(nsIPresContext* aPresContext,
   }
 }
 
+nsresult 
+nsObjectFrame::MakeAbsoluteURL(nsIURI* *aFullURI, 
+                              nsString aSrc,
+                              nsIURI* aBaseURI)
+{
+  nsresult rv;
+  nsCOMPtr<nsIDocument> document;
+  rv = mInstanceOwner->GetDocument(getter_AddRefs(document));
+
+  //trim leading and trailing whitespace
+  aSrc.Trim("\b\t\r\n ", PR_TRUE, PR_TRUE, PR_FALSE);
+
+  //create properly encoded absolute URI using the document charset
+  nsXPIDLCString encodedURI;
+  rv = NS_MakeAbsoluteURIWithCharset(getter_Copies(encodedURI),
+                                     aSrc, document, aBaseURI,
+                                     nsHTMLUtils::IOService,
+                                     nsHTMLUtils::CharsetMgr);
+  rv = NS_NewURI(aFullURI, encodedURI, aBaseURI);
+  return rv;
+}
 
 #define JAVA_CLASS_ID "8AD9C840-044E-11D1-B3E9-00805F499D93"
 
@@ -907,7 +929,7 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
              mContent->GetAttr(kNameSpaceID_HTML, nsHTMLAtoms::codebase, codeBase)) && 
             !bJavaPluginClsid) {
           nsCOMPtr<nsIURI> codeBaseURL;
-          rv = NS_NewURI(getter_AddRefs(codeBaseURL), codeBase, baseURL);
+          rv = MakeAbsoluteURL(getter_AddRefs(codeBaseURL), codeBase, baseURL);
           if (NS_SUCCEEDED(rv)) {
             baseURL = codeBaseURL;
           }
@@ -915,7 +937,7 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
 
         // Create an absolute URL
         if(bJavaPluginClsid) {
-          rv = NS_NewURI(getter_AddRefs(fullURL), classid, baseURL);
+          rv = MakeAbsoluteURL(getter_AddRefs(fullURL), classid, baseURL);
         }
         else fullURL = baseURL;
 
@@ -944,7 +966,7 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
           nsAutoString codeBase;
           if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttr(kNameSpaceID_HTML, nsHTMLAtoms::codebase, codeBase)) {
             nsCOMPtr<nsIURI> codeBaseURL;
-            rv = NS_NewURI(getter_AddRefs(fullURL), codeBase, baseURL);
+            rv = MakeAbsoluteURL(getter_AddRefs(fullURL), codeBase, baseURL);
             if (NS_SUCCEEDED(rv)) {
               baseURL = codeBaseURL;
             }
@@ -991,14 +1013,13 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
           nsAutoString codeBase;
           if (NS_CONTENT_ATTR_HAS_VALUE == mContent->GetAttr(kNameSpaceID_HTML, nsHTMLAtoms::codebase, codeBase)) {
             nsCOMPtr<nsIURI> codeBaseURL;
-            rv = NS_NewURI(getter_AddRefs(codeBaseURL), codeBase, baseURL);
+            rv = MakeAbsoluteURL(getter_AddRefs(codeBaseURL), codeBase, baseURL);
             if(rv == NS_OK) {
               baseURL = codeBaseURL;
             }
           }
-
           // Create an absolute URL
-          rv = NS_NewURI(getter_AddRefs(fullURL), src, baseURL);
+          rv = MakeAbsoluteURL(getter_AddRefs(fullURL), src, baseURL);
         }
         rv = InstantiatePlugin(aPresContext, aMetrics, aReflowState,
                                pluginHost, "application/x-java-vm", fullURL);
@@ -1013,9 +1034,8 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
         //stream in the object source if there is one...
         if (NS_CONTENT_ATTR_HAS_VALUE ==
             mContent->GetAttr(kNameSpaceID_HTML, nsHTMLAtoms::src, src)) {
-          src.Trim("\b\t\r\n ", PR_TRUE, PR_TRUE, PR_FALSE);  // trim leading and trailing whitespace
           // Create an absolute URL
-          rv = NS_NewURI(getter_AddRefs(fullURL), src, baseURL);
+          rv = MakeAbsoluteURL(getter_AddRefs(fullURL), src, baseURL);
           if (NS_FAILED(rv)) {
             // Failed to create URI, maybe because we didn't
             // reconize the protocol handler ==> treat like
@@ -1025,9 +1045,8 @@ nsObjectFrame::Reflow(nsIPresContext*          aPresContext,
         }
         else if (NS_CONTENT_ATTR_HAS_VALUE ==
                  mContent->GetAttr(kNameSpaceID_HTML, nsHTMLAtoms::data, src)) {
-          src.Trim("\b\t\r\n ", PR_TRUE, PR_TRUE, PR_FALSE);  // trim leading and trailing whitespace
           // Create an absolute URL
-          rv = NS_NewURI(getter_AddRefs(fullURL), src, baseURL);
+          rv = MakeAbsoluteURL(getter_AddRefs(fullURL), src, baseURL);
           if (NS_FAILED(rv)) {
             // Failed to create URI, maybe because we didn't
             // reconize the protocol handler ==> treat like
