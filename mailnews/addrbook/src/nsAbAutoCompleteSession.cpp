@@ -134,7 +134,7 @@ nsAbAutoCompleteSession::AddToResult(const PRUnichar* pNickNameStr,
   // It should just be a third email address, set as the primary if applicable.
   // Right now even if the person's screenname isn't their primary address,
   // we'll autocomplete to it
-  if (!pEmailStr || pEmailStr[0] == 0)
+  if (pNickNameStr && pNickNameStr[0] != 0)
    pEmailStr = pNickNameStr;
 
   if (type == DEFAULT_MATCH)
