@@ -3158,7 +3158,6 @@ nsBrowserStatusHandler.prototype =
 
   startDocumentLoad : function(aRequest)
   {
-    dump("*** SDL\n");
     // Reset so we can see if the user typed between the document load
     // starting and the location changing.
     getBrowser().userTypedValue = null;

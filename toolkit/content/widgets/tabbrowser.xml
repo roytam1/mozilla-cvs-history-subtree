@@ -440,16 +440,16 @@
             if (this.docShell.contentViewer)
               docTitle = this.contentDocument.title;
             
-	    if (!docTitle)
-	      docTitle = this.ownerDocument.documentElement.getAttribute("titledefault");
+	          if (!docTitle)
+	            docTitle = this.ownerDocument.documentElement.getAttribute("titledefault");
 
-	    var modifier = this.ownerDocument.documentElement.getAttribute("titlemodifier");
+            var modifier = this.ownerDocument.documentElement.getAttribute("titlemodifier");
             if (docTitle) {
               newTitle += this.ownerDocument.documentElement.getAttribute("titlepreface");
               newTitle += docTitle;
-	      var sep = this.ownerDocument.documentElement.getAttribute("titlemenuseparator");
-	      if (modifier)
-	        newTitle += sep;
+              var sep = this.ownerDocument.documentElement.getAttribute("titlemenuseparator");
+              if (modifier)
+                newTitle += sep;
             }
             newTitle += modifier;
             window.title = newTitle;
@@ -696,14 +696,14 @@
               return;
 
             var i = 0;
-            for ( ; i < this.parentNode.childNodes.length; i++) {
-              if (this.parentNode.childNodes[i] == this)
+            for ( ; i < this.parentNode.parentNode.childNodes.length; i++) {
+              if (this.parentNode.parentNode.childNodes[i].firstChild.nextSibling == this)
                 break;
             }
-
+            
             var tabBrowser = this.parentNode.parentNode.parentNode.parentNode;
-            var tab = tabBrowser.mTabContainer.childNodes[i];
 
+            var tab = tabBrowser.mTabContainer.childNodes[i];
             tabBrowser.setTabTitle(tab);
 
             if (tab == tabBrowser.mCurrentTab)
