@@ -119,9 +119,9 @@ public:
     virtual ~nsDNSRequest()
     {
         if (!PR_CLIST_IS_EMPTY(this)) {
-            nsDNSService::LockDNSService();
+            nsDNSService::Lock();
             PR_REMOVE_AND_INIT_LINK(this);
-            nsDNSService::UnlockDNSService();
+            nsDNSService::Unlock();
         }
     }
 
@@ -161,6 +161,7 @@ public:
     const char *        HostName()   { return mHostName; }
     nsHostEnt *         HostEntry()  { return &mHostEntry; }
 
+    PRBool              IsNew()      { return mState == LOOKUP_NEW; }
     PRBool              IsComplete() { return mState == LOOKUP_COMPLETE; }
     PRBool              IsNotCacheable() { return !mCacheable; }
     PRBool              IsExpired();
@@ -415,9 +416,9 @@ nsDNSRequest::Cancel(nsresult  status)
     
     NS_ASSERTION(!PR_CLIST_IS_EMPTY(this), "request is not queue on lookup");
     if (!PR_CLIST_IS_EMPTY(this)) {
-        nsDNSService::LockDNSService();
+        nsDNSService::Lock();
         PR_REMOVE_AND_INIT_LINK(this);
-        nsDNSService::UnlockDNSService();
+        nsDNSService::Unlock();
     }
 
     if (mUserListener)  rv = FireStop(status);
@@ -729,9 +730,9 @@ nsDNSLookup::EnqueueRequest(nsDNSRequest * request)
     // must guarantee lookup will not be deallocated for duration of method
     nsresult  rv;
     
-    nsDNSService::UnlockDNSService();   // can't hold locks during callback
+    nsDNSService::Unlock();   // can't hold locks during callback
     rv = request->FireStart();
-    nsDNSService::LockDNSService();
+    nsDNSService::Lock();
 
     if (NS_FAILED(rv)) return rv;
 
@@ -759,11 +760,11 @@ nsDNSLookup::ProcessRequests()
     nsDNSRequest * request = (nsDNSRequest *)PR_LIST_HEAD(&mRequestQ);
     while (request != &mRequestQ) {
         PR_REMOVE_AND_INIT_LINK(request);
-        nsDNSService::UnlockDNSService();   // can't hold lock during callback
+        nsDNSService::Unlock();   // can't hold lock during callback
         nsresult  rv = request->FireStop(mStatus);
         NS_ASSERTION(NS_SUCCEEDED(rv), "request->FireStop() failed.");
         NS_RELEASE(request);
-        nsDNSService::LockDNSService();
+        nsDNSService::Lock();
         request = (nsDNSRequest *)PR_LIST_HEAD(&mRequestQ);
     }
 }
@@ -812,7 +813,7 @@ nsDNSLookup::DoSyncLookup()
                               PR_NETDB_BUF_SIZE, 
                               &(mHostEntry.hostEnt));
 #else
-    NS_NOTREACHED("platform requires async interface");
+    NS_NOTREACHED("platform requires sync interface");
 #endif
 
     if (PR_SUCCESS != status)
@@ -1080,15 +1081,15 @@ nsDNSService::Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult)
 
 
 void
-nsDNSService::LockDNSService()
+nsDNSService::Lock()
 {
-    NS_ASSERTION(gService, "LockDNSService: No DNS Service");
+    NS_ASSERTION(gService, "nsDNSService::Lock: No DNS Service");
     if (gService && gService->mDNSServiceLock)  PR_Lock(gService->mDNSServiceLock);
 }
 
 
 void
-nsDNSService::UnlockDNSService()
+nsDNSService::Unlock()
 {
     if (gService && gService->mDNSServiceLock) {
         PRStatus status = PR_Unlock(gService->mDNSServiceLock);
@@ -1103,40 +1104,6 @@ nsDNSService::ExpirationInterval()
     if (gService)  return gService->mExpirationInterval;
     
     return 0;
-}
-
-
-nsresult
-nsDNSService::InitDNSThread()
-{
-#if defined(XP_WIN)
-    WNDCLASS    wc;
-    char *      windowClass = "Mozilla:DNSWindowClass";
-
-    // register window class for DNS event receiver window
-    memset(&wc, 0, sizeof(wc));
-    wc.style            = 0;
-    wc.lpfnWndProc      = nsDNSEventProc;
-    wc.cbClsExtra       = 0;
-    wc.cbWndExtra       = 0;
-    wc.hInstance        = NULL;
-    wc.hIcon            = NULL;
-    wc.hbrBackground    = (HBRUSH) NULL;
-    wc.lpszMenuName     = (LPCSTR) NULL;
-    wc.lpszClassName    = windowClass;
-    RegisterClass(&wc);
-
-    // create DNS event receiver window
-    mDNSWindow = CreateWindow(windowClass, "Mozilla:DNSWindow",
-                              0, 0, 0, 10, 10, NULL, NULL, NULL, NULL);
-
-    // sync with Create thread
-    nsAutoLock dnsLock(mDNSServiceLock);
-    PRStatus  status = PR_NotifyCondVar(mDNSCondVar);
-    NS_ASSERTION(status == PR_SUCCESS, "PR_NotifyCondVar failed.");
-#endif /* XP_WIN */
-
-    return NS_OK;
 }
 
 
@@ -1280,8 +1247,30 @@ nsDNSService::Run()
 NS_IMETHODIMP
 nsDNSService::Run()
 {
-    nsresult rv = InitDNSThread();
-    if (NS_FAILED(rv)) return rv;
+    WNDCLASS    wc;
+    char *      windowClass = "Mozilla:DNSWindowClass";
+
+    // register window class for DNS event receiver window
+    memset(&wc, 0, sizeof(wc));
+    wc.style            = 0;
+    wc.lpfnWndProc      = nsDNSEventProc;
+    wc.cbClsExtra       = 0;
+    wc.cbWndExtra       = 0;
+    wc.hInstance        = NULL;
+    wc.hIcon            = NULL;
+    wc.hbrBackground    = (HBRUSH) NULL;
+    wc.lpszMenuName     = (LPCSTR) NULL;
+    wc.lpszClassName    = windowClass;
+    RegisterClass(&wc);
+
+    // create DNS event receiver window
+    mDNSWindow = CreateWindow(windowClass, "Mozilla:DNSWindow",
+                              0, 0, 0, 10, 10, NULL, NULL, NULL, NULL);
+
+    // sync with Create thread
+    nsAutoLock dnsLock(mDNSServiceLock);
+    PRStatus  status = PR_NotifyCondVar(mDNSCondVar);
+    NS_ASSERTION(status == PR_SUCCESS, "PR_NotifyCondVar failed.");
 
     MSG msg;
     
@@ -1326,32 +1315,30 @@ nsDNSService::Lookup(const char*     hostName,
         if (!lookup) return NS_ERROR_OUT_OF_MEMORY;
 
         request = new nsDNSRequest(lookup, userListener, userContext);
-        if (!request)  return NS_ERROR_OUT_OF_MEMORY;
+        if (!request) {
+            rv = NS_ERROR_OUT_OF_MEMORY;
+            goto exit;
+        }
         NS_ADDREF(request); // for caller
 
- //       NS_ADDREF(request); // XXX debug leak
-
         NS_ADDREF(lookup);  // keep it around for life of this method.
-        rv = lookup->EnqueueRequest(request);    // releases dns lock
-
-        if (NS_FAILED(rv)) {
-            NS_RELEASE(lookup);
-            return rv;
-        }
+        rv = lookup->EnqueueRequest(request);    // releases and re-acquires dns lock
+        if (NS_FAILED(rv))  goto exit;
 
         if (lookup->IsComplete()) {
-            lookup->ProcessRequests();      // releases dns lock
+            lookup->ProcessRequests();      // releases and re-acquires dns lock
             if (lookup->IsNotCacheable()) {
                 // non-cacheable lookups are released here.
                 EvictLookup(lookup);
             }
         }
+
+exit:
         NS_RELEASE(lookup); // it's either on the pending queue, or we're done with it
+        if (lookup->IsNew())  EvictLookup(lookup);
     }
 
-    if (NS_SUCCEEDED(rv)) {
-        *result = request;
-    }
+    if (NS_SUCCEEDED(rv))  *result = request;    
     return rv;
 }
 
@@ -1457,7 +1444,7 @@ nsDNSService::AddToEvictionQ(nsDNSLookup * lookup)
         nsDNSLookup * lookup = (nsDNSLookup *)elem;
         PR_REMOVE_AND_INIT_LINK(lookup);
         --mEvictionQCount;
-       EvictLookup(lookup);
+        EvictLookup(lookup);
     }
 }
 

@@ -70,8 +70,8 @@ public:
                                     const nsIID & iid,
                                     void **       result);
     
-    static void             LockDNSService();
-    static void             UnlockDNSService();
+    static void             Lock();
+    static void             Unlock();
 
     void                    EnqueuePendingQ(nsDNSLookup * lookup);
     nsDNSLookup *           DequeuePendingQ();
@@ -82,7 +82,6 @@ public:
 
 private:
     nsresult                LateInit();
-    nsresult                InitDNSThread();
     nsresult                InstallPrefObserver();
     nsresult                RemovePrefObserver();
     nsDNSLookup *           FindOrCreateLookup( const char *  hostName);
