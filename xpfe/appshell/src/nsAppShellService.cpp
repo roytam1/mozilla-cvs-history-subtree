@@ -834,7 +834,7 @@ nsAppShellService::UnregisterTopLevelWindow(nsIXULWindow* aWindow)
        nsCOMPtr<nsIDOMWindow> newWindow;
        mShownTurboDialog = PR_TRUE;
        if (domWin)
-         domWin->OpenDialog(NS_LITERAL_STRING("chrome://communicator/content/profile/turboDialog.xul"),
+         domWin->OpenDialog(NS_LITERAL_STRING("chrome://navigator/content/turboDialog.xul"),
                             NS_LITERAL_STRING("_blank"),
                             NS_LITERAL_STRING("chrome,modal,titlebar,centerscreen,dialog"),
                             nsnull, getter_AddRefs(newWindow));
