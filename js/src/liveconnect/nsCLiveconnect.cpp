@@ -51,9 +51,6 @@ PR_END_EXTERN_C
 
 #include "nsCLiveconnect.h"
 
-static NS_DEFINE_IID(kILiveconnectIID, NS_ILIVECONNECT_IID);
-static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
-
 
 ////////////////////////////////////////////////////////////////////////////
 // from nsISupports and AggregatedQueryInterface:
@@ -65,18 +62,20 @@ NS_IMPL_AGGREGATED(nsCLiveconnect);
 NS_METHOD
 nsCLiveconnect::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
-    if (aIID.Equals(kISupportsIID)) {
+	 NS_ENSURE_ARG_POINTER(aInstancePtr);
+
+    if (aIID.Equals(NS_GET_IID(nsISupports))) {
       *aInstancePtr = GetInner();
-      AddRef();
-      return NS_OK;
     }
-    if (aIID.Equals(kILiveconnectIID)) 
-    {
-        *aInstancePtr = (nsILiveconnect *)this;
-        AddRef();
-        return NS_OK;
+    else if (aIID.Equals(NS_GET_IID(nsILiveconnect))) {
+        *aInstancePtr = NS_STATIC_CAST(nsILiveconnect*, this);
     }
-    return NS_NOINTERFACE;
+	 else	{
+		  *aInstancePtr = nsnull;
+		  return NS_NOINTERFACE;
+	 }
+	 NS_ADDREF((nsISupports*) *aInstancePtr);
+	 return NS_OK;
 }
 
 
@@ -102,7 +101,7 @@ nsCLiveconnect::GetMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize l
     JSJavaThreadState *jsj_env        = NULL;
     JSObjectHandle    *handle         = (JSObjectHandle*)obj;
     JSObject          *js_obj         = handle->js_obj;
-    JSContext         *cx             = handle->cx;
+    JSContext         *cx             = NULL;
     jobject            member         = NULL;
     jsval              js_val;
     int                dummy_cost     = 0;
@@ -156,7 +155,7 @@ nsCLiveconnect::GetSlot(JNIEnv *jEnv, jsobject obj, jint slot, void* principalsA
     JSJavaThreadState *jsj_env        = NULL;
     JSObjectHandle    *handle         = (JSObjectHandle*)obj;
     JSObject          *js_obj         = handle->js_obj;
-    JSContext         *cx             = handle->cx;
+    JSContext         *cx             = NULL;
     jobject            member         = NULL;
     jsval              js_val;
     int                dummy_cost     = 0;
@@ -204,7 +203,7 @@ nsCLiveconnect::SetMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize l
     JSJavaThreadState *jsj_env        = NULL;
     JSObjectHandle    *handle         = (JSObjectHandle*)obj;
     JSObject          *js_obj         = handle->js_obj;
-    JSContext         *cx             = handle->cx;
+    JSContext         *cx             = NULL;
     jsval              js_val;
     JSErrorReporter    saved_state    = NULL;
 
@@ -250,7 +249,7 @@ nsCLiveconnect::SetSlot(JNIEnv *jEnv, jsobject obj, jint slot, jobject java_obj,
     JSJavaThreadState *jsj_env        = NULL;
     JSObjectHandle    *handle         = (JSObjectHandle*)obj;
     JSObject          *js_obj         = handle->js_obj;
-    JSContext         *cx             = handle->cx;
+    JSContext         *cx             = NULL;
     jsval              js_val;
     JSErrorReporter    saved_state    = NULL;
 
@@ -286,7 +285,7 @@ nsCLiveconnect::RemoveMember(JNIEnv *jEnv, jsobject obj, const jchar *name, jsiz
     JSJavaThreadState *jsj_env        = NULL;
     JSObjectHandle    *handle         = (JSObjectHandle*)obj;
     JSObject          *js_obj         = handle->js_obj;
-    JSContext         *cx             = handle->cx;
+    JSContext         *cx             = NULL;
     jsval              js_val;
     JSErrorReporter    saved_state    = NULL;
 
@@ -330,7 +329,7 @@ nsCLiveconnect::Call(JNIEnv *jEnv, jsobject obj, const jchar *name, jsize length
     JSJavaThreadState *jsj_env        = NULL;
     JSObjectHandle    *handle         = (JSObjectHandle*)obj;
     JSObject          *js_obj         = handle->js_obj;
-    JSContext         *cx             = handle->cx;
+    JSContext         *cx             = NULL;
     jsval              js_val;
     jsval              function_val   = 0;
     int                dummy_cost     = 0;
@@ -405,7 +404,7 @@ nsCLiveconnect::Eval(JNIEnv *jEnv, jsobject obj, const jchar *script, jsize leng
     JSJavaThreadState *jsj_env        = NULL;
     JSObjectHandle    *handle         = (JSObjectHandle*)obj;
     JSObject          *js_obj         = handle->js_obj;
-    JSContext         *cx             = handle->cx;
+    JSContext         *cx             = NULL;
     jsval              js_val;
     int                dummy_cost     = 0;
     JSBool             dummy_bool     = PR_FALSE;
@@ -508,7 +507,7 @@ nsCLiveconnect::GetWindow(JNIEnv *jEnv, void *java_applet_obj,  void* principals
     if (handle != NULL)
     {
       handle->js_obj = js_obj;
-      handle->cx = cx;
+      handle->rt = JS_GetRuntime(cx);
     }
     *pobj = (jsobject)handle;
     /* FIXME:  what if the window is explicitly disposed of, how do we
@@ -531,14 +530,13 @@ NS_METHOD
 nsCLiveconnect::FinalizeJSObject(JNIEnv *jEnv, jsobject obj)
 {
     JSObjectHandle    *handle         = (JSObjectHandle *)obj;
-    JSContext         *cx             = handle->cx;
     
     if(jEnv == NULL)
        return NS_ERROR_FAILURE;
     if (!handle)
         return NS_ERROR_NULL_POINTER;
-    JS_RemoveRoot(cx, &handle->js_obj);
-    JS_free(cx, handle);
+    JS_RemoveRootRT(handle->rt, &handle->js_obj);
+    free(handle);
     return NS_OK;
 }
 
@@ -549,7 +547,7 @@ nsCLiveconnect::ToString(JNIEnv *jEnv, jsobject obj, jstring *pjstring)
     JSJavaThreadState *jsj_env        = NULL;
     JSObjectHandle    *handle         = (JSObjectHandle*)obj;
     JSObject          *js_obj         = handle->js_obj;
-    JSContext         *cx             = handle->cx;
+    JSContext         *cx             = NULL;
     JSErrorReporter    saved_state    = NULL;
     jstring            result         = NULL;
     JSString          *jsstr          = NULL;
