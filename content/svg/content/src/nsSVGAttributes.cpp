@@ -553,8 +553,7 @@ nsSVGAttributes::UpdateContentStyleRule()
   nsCOMPtr<nsIURI> baseURL;
   {
     NS_ASSERTION(mContent, "null owner");
-    nsCOMPtr<nsIDocument> document;
-    mContent->GetDocument(getter_AddRefs(document));
+    nsCOMPtr<nsIDocument> document = mContent->GetDocument();
     NS_ASSERTION(document, "null document");
     document->GetBaseURL(getter_AddRefs(baseURL));
   }
