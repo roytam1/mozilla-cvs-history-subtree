@@ -2535,7 +2535,7 @@ nsBookmarksService::InsertResource(nsIRDFResource* aResource,
         nsCOMPtr<nsIRDFContainer> container(do_GetService("@mozilla.org/rdf/container;1", &rv));
         if (NS_FAILED(rv)) 
             return rv;
-        rv = container->Init(this, aParentFolder);
+        rv = container->Init(mInner, aParentFolder);
         if (NS_FAILED(rv)) 
             return rv;
         // if the index in the js call is null or undefined, aIndex will be equal to 0
@@ -4618,7 +4618,7 @@ nsBookmarksService::initDatasource()
     // Insert NC:BookmarksRoot in NC:BookmarksTopRoot
     nsCOMPtr<nsIRDFContainer> container(do_CreateInstance(kRDFContainerCID, &rv));
     if (NS_FAILED(rv)) return rv;
-    rv = container->Init(this, kNC_BookmarksTopRoot);
+    rv = container->Init(mInner, kNC_BookmarksTopRoot);
     if (NS_FAILED(rv)) return rv;
     rv = container->AppendElement(kNC_BookmarksRoot);
 
@@ -5364,11 +5364,8 @@ nsBookmarksService::CanAccept(nsIRDFResource* aSource,
     nsresult    rv;
     PRBool      isBookmarkedFlag = PR_FALSE, canAcceptFlag = PR_FALSE, isOrdinal;
 
-    if (
-#if 0
-        NS_SUCCEEDED(rv = IsBookmarkedInternal(aSource, &isBookmarkedFlag)) &&
+    if (NS_SUCCEEDED(rv = IsBookmarkedInternal(aSource, &isBookmarkedFlag)) &&
         (isBookmarkedFlag == PR_TRUE) &&
-#endif
         (NS_SUCCEEDED(rv = gRDFC->IsOrdinalProperty(aProperty, &isOrdinal))))
     {
         if (isOrdinal == PR_TRUE)
