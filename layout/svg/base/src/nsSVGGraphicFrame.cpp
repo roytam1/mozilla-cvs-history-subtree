@@ -252,7 +252,7 @@ void nsSVGGraphicFrame::GetCTM(nsIDOMSVGMatrix** ctm)
   nsCOMPtr<nsIDOMSVGTransformable> transformable = do_QueryInterface(mContent);
   NS_ASSERTION(transformable, "wrong content type");
   
-  transformable->GetScreenCTM(ctm);  
+  transformable->GetCTM(ctm);  
 }
 
 

@@ -390,7 +390,7 @@ float nsSVGLength::UserUnitsPerPixel()
 //   if (!locatable) return UUPerPx;
   
 //   nsCOMPtr<nsIDOMSVGMatrix> matrix;
-//   locatable->GetScreenCTM( getter_AddRefs(matrix) );
+//   locatable->GetCTM( getter_AddRefs(matrix) );
 //   if (!matrix) return UUPerPx;
   
 //   nsCOMPtr<nsIDOMSVGPoint> point, XFormedPoint;

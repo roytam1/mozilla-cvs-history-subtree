@@ -27,6 +27,7 @@
 #include "nsSVGAtoms.h"
 #include "nsIDOMSVGSVGElement.h"
 #include "nsIDOMSVGFitToViewBox.h"
+#include "nsIDOMSVGLocatable.h"
 #include "nsSVGAnimatedLength.h"
 #include "nsSVGLength.h"
 #include "nsCOMPtr.h"
@@ -40,13 +41,16 @@
 #include "nsSVGTransform.h"
 #include "nsIDOMEventTarget.h"
 #include "nsIViewManager.h"
-
+#include "nsIBindingManager.h"
+#include "nsIWidget.h"
 #include "nsIFrame.h"
+#include "nsIScrollableView.h"
 #include "nsISVGFrame.h" //XXX
 
 class nsSVGSVGElement : public nsSVGElement,
                         public nsIDOMSVGSVGElement,
-                        public nsIDOMSVGFitToViewBox
+                        public nsIDOMSVGFitToViewBox,
+                        public nsIDOMSVGLocatable
 {
 protected:
   friend nsresult NS_NewSVGSVGElement(nsIContent **aResult,
@@ -61,6 +65,7 @@ public:
   NS_DECL_ISUPPORTS_INHERITED
   NS_DECL_NSIDOMSVGSVGELEMENT
   NS_DECL_NSIDOMSVGFITTOVIEWBOX
+  NS_DECL_NSIDOMSVGLOCATABLE
   
   // xxx I wish we could use virtual inheritance
   NS_FORWARD_NSIDOMNODE_NO_CLONENODE(nsSVGElement::)
@@ -68,6 +73,9 @@ public:
   NS_FORWARD_NSIDOMSVGELEMENT(nsSVGElement::)
 
 protected:
+  // implementation helpers:
+  void GetScreenPosition(PRInt32 &x, PRInt32 &y);
+  
   nsCOMPtr<nsIDOMSVGAnimatedLength> mWidth;
   nsCOMPtr<nsIDOMSVGAnimatedLength> mHeight;
   nsCOMPtr<nsIDOMSVGRect>           mViewport;
@@ -115,6 +123,7 @@ NS_IMPL_RELEASE_INHERITED(nsSVGSVGElement,nsSVGElement)
 NS_INTERFACE_MAP_BEGIN(nsSVGSVGElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMSVGSVGElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMSVGFitToViewBox)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMSVGLocatable)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(SVGSVGElement)
 NS_INTERFACE_MAP_END_INHERITING(nsSVGElement)
 
@@ -308,24 +317,28 @@ nsSVGSVGElement::GetHeight(nsIDOMSVGAnimatedLength * *aHeight)
 NS_IMETHODIMP
 nsSVGSVGElement::GetContentScriptType(nsAWritableString & aContentScriptType)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 NS_IMETHODIMP
 nsSVGSVGElement::SetContentScriptType(const nsAReadableString & aContentScriptType)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* attribute DOMString contentStyleType; */
 NS_IMETHODIMP
 nsSVGSVGElement::GetContentStyleType(nsAWritableString & aContentStyleType)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 NS_IMETHODIMP
 nsSVGSVGElement::SetContentStyleType(const nsAReadableString & aContentStyleType)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* readonly attribute nsIDOMSVGRect viewport; */
@@ -407,31 +420,36 @@ nsSVGSVGElement::GetScreenPixelToMillimeterY(float *aScreenPixelToMillimeterY)
 NS_IMETHODIMP
 nsSVGSVGElement::GetUseCurrentView(PRBool *aUseCurrentView)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 NS_IMETHODIMP
 nsSVGSVGElement::SetUseCurrentView(PRBool aUseCurrentView)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* readonly attribute nsIDOMSVGViewSpec currentView; */
 NS_IMETHODIMP
 nsSVGSVGElement::GetCurrentView(nsIDOMSVGViewSpec * *aCurrentView)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* attribute float currentScale; */
 NS_IMETHODIMP
 nsSVGSVGElement::GetCurrentScale(float *aCurrentScale)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 NS_IMETHODIMP
 nsSVGSVGElement::SetCurrentScale(float aCurrentScale)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /* readonly attribute nsIDOMSVGPoint currentTranslate; */
@@ -551,6 +569,7 @@ nsSVGSVGElement::ForceRedraw()
 NS_IMETHODIMP
 nsSVGSVGElement::PauseAnimations()
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -558,6 +577,7 @@ nsSVGSVGElement::PauseAnimations()
 NS_IMETHODIMP
 nsSVGSVGElement::UnpauseAnimations()
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -565,6 +585,7 @@ nsSVGSVGElement::UnpauseAnimations()
 NS_IMETHODIMP
 nsSVGSVGElement::AnimationsPaused(PRBool *_retval)
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -572,6 +593,7 @@ nsSVGSVGElement::AnimationsPaused(PRBool *_retval)
 NS_IMETHODIMP
 nsSVGSVGElement::GetCurrentTime(float *_retval)
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -579,6 +601,7 @@ nsSVGSVGElement::GetCurrentTime(float *_retval)
 NS_IMETHODIMP
 nsSVGSVGElement::SetCurrentTime(float seconds)
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -586,6 +609,7 @@ nsSVGSVGElement::SetCurrentTime(float seconds)
 NS_IMETHODIMP
 nsSVGSVGElement::GetIntersectionList(nsIDOMSVGRect *rect, nsIDOMSVGElement *referenceElement, nsIDOMNodeList **_retval)
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -593,6 +617,7 @@ nsSVGSVGElement::GetIntersectionList(nsIDOMSVGRect *rect, nsIDOMSVGElement *refe
 NS_IMETHODIMP
 nsSVGSVGElement::GetEnclosureList(nsIDOMSVGRect *rect, nsIDOMSVGElement *referenceElement, nsIDOMNodeList **_retval)
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -600,6 +625,7 @@ nsSVGSVGElement::GetEnclosureList(nsIDOMSVGRect *rect, nsIDOMSVGElement *referen
 NS_IMETHODIMP
 nsSVGSVGElement::CheckIntersection(nsIDOMSVGElement *element, nsIDOMSVGRect *rect, PRBool *_retval)
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -607,6 +633,7 @@ nsSVGSVGElement::CheckIntersection(nsIDOMSVGElement *element, nsIDOMSVGRect *rec
 NS_IMETHODIMP
 nsSVGSVGElement::CheckEnclosure(nsIDOMSVGElement *element, nsIDOMSVGRect *rect, PRBool *_retval)
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -614,6 +641,7 @@ nsSVGSVGElement::CheckEnclosure(nsIDOMSVGElement *element, nsIDOMSVGRect *rect, 
 NS_IMETHODIMP
 nsSVGSVGElement::DeSelectAll()
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -621,6 +649,7 @@ nsSVGSVGElement::DeSelectAll()
 NS_IMETHODIMP
 nsSVGSVGElement::CreateSVGNumber(nsIDOMSVGNumber **_retval)
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -628,6 +657,7 @@ nsSVGSVGElement::CreateSVGNumber(nsIDOMSVGNumber **_retval)
 NS_IMETHODIMP
 nsSVGSVGElement::CreateSVGLength(nsIDOMSVGLength **_retval)
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -635,6 +665,7 @@ nsSVGSVGElement::CreateSVGLength(nsIDOMSVGLength **_retval)
 NS_IMETHODIMP
 nsSVGSVGElement::CreateSVGAngle(nsIDOMSVGAngle **_retval)
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -656,6 +687,7 @@ nsSVGSVGElement::CreateSVGMatrix(nsIDOMSVGMatrix **_retval)
 NS_IMETHODIMP
 nsSVGSVGElement::CreateSVGRect(nsIDOMSVGRect **_retval)
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -670,6 +702,7 @@ nsSVGSVGElement::CreateSVGTransform(nsIDOMSVGTransform **_retval)
 NS_IMETHODIMP
 nsSVGSVGElement::CreateSVGTransformFromMatrix(nsIDOMSVGMatrix *matrix, nsIDOMSVGTransform **_retval)
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -687,6 +720,14 @@ nsSVGSVGElement::GetElementById(const nsAReadableString & elementId, nsIDOMEleme
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+/* nsIDOMSVGMatrix getViewboxToViewportTransform (); */
+NS_IMETHODIMP
+nsSVGSVGElement::GetViewboxToViewportTransform(nsIDOMSVGMatrix **_retval)
+{
+  // XXX
+  return CreateSVGMatrix(_retval);
+}
+
 //----------------------------------------------------------------------
 // nsIDOMSVGFitToViewBox methods
 
@@ -694,6 +735,7 @@ nsSVGSVGElement::GetElementById(const nsAReadableString & elementId, nsIDOMEleme
 NS_IMETHODIMP
 nsSVGSVGElement::GetViewBox(nsIDOMSVGAnimatedRect * *aViewBox)
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
@@ -701,6 +743,280 @@ nsSVGSVGElement::GetViewBox(nsIDOMSVGAnimatedRect * *aViewBox)
 NS_IMETHODIMP
 nsSVGSVGElement::GetPreserveAspectRatio(nsIDOMSVGAnimatedPreserveAspectRatio * *aPreserveAspectRatio)
 {
+  NS_NOTYETIMPLEMENTED("write me!");
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+//----------------------------------------------------------------------
+// nsIDOMSVGLocatable methods
+
+/* readonly attribute nsIDOMSVGElement nearestViewportElement; */
+NS_IMETHODIMP
+nsSVGSVGElement::GetNearestViewportElement(nsIDOMSVGElement * *aNearestViewportElement)
+{
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* readonly attribute nsIDOMSVGElement farthestViewportElement; */
+NS_IMETHODIMP
+nsSVGSVGElement::GetFarthestViewportElement(nsIDOMSVGElement * *aFarthestViewportElement)
+{
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* nsIDOMSVGRect getBBox (); */
+NS_IMETHODIMP
+nsSVGSVGElement::GetBBox(nsIDOMSVGRect **_retval)
+{
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* nsIDOMSVGMatrix getCTM (); */
+NS_IMETHODIMP
+nsSVGSVGElement::GetCTM(nsIDOMSVGMatrix **_retval)
+{
+  nsCOMPtr<nsIDOMSVGMatrix> CTM;
+
+  nsCOMPtr<nsIBindingManager> bindingManager;
+  if (mDocument) {
+    mDocument->GetBindingManager(getter_AddRefs(bindingManager));
+  }
+
+  nsCOMPtr<nsIContent> parent;
+  
+  if (bindingManager) {
+    // we have a binding manager -- do we have an anonymous parent?
+    bindingManager->GetInsertionParent(this, getter_AddRefs(parent));
+  }
+
+  if (!parent) {
+    // if we didn't find an anonymous parent, use the explicit one,
+    // whether it's null or not...
+    parent = mParent;
+  }
+  
+  while (parent) {
+    nsCOMPtr<nsIDOMSVGSVGElement> viewportElement = do_QueryInterface(parent);
+    if (viewportElement) {
+      // Our nearest SVG parent is a viewport element.
+      viewportElement->GetViewboxToViewportTransform(getter_AddRefs(CTM));
+      break; 
+    }
+    
+    nsCOMPtr<nsIDOMSVGLocatable> locatableElement = do_QueryInterface(parent);
+    if (locatableElement) {
+      // Our nearest SVG parent is a locatable object that is not a
+      // viewport. Its GetCTM function will give us a ctm from the
+      // viewport to itself:
+      locatableElement->GetCTM(getter_AddRefs(CTM));
+      break;
+    }
+
+    // Our parent was not svg content. We allow interdispersed non-SVG
+    // content to coexist with XBL. Loop until we find the first SVG
+    // parent.
+    
+    nsCOMPtr<nsIContent> next;
+
+    if (bindingManager) {
+      bindingManager->GetInsertionParent(parent, getter_AddRefs(next));
+    }
+
+    if (!next) {
+      // no anonymous parent, so use explicit one
+      parent->GetParent(*getter_AddRefs(next));
+    }
+
+    parent = next;
+  }
+
+  if (!CTM) {
+    // We either didn't find an SVG parent, or our parent failed in
+    // giving us a CTM. In either case:
+    nsSVGMatrix::Create(getter_AddRefs(CTM));
+  }
+  
+  // XXX do we have to append our viewboxToViewport  transformation?
+  // if we do we have to change nsSVGGraphicElement::GetCTM()
+  
+  *_retval = CTM;
+  NS_IF_ADDREF(*_retval);
+  return NS_OK;
+}
+
+/* nsIDOMSVGMatrix getScreenCTM (); */
+NS_IMETHODIMP
+nsSVGSVGElement::GetScreenCTM(nsIDOMSVGMatrix **_retval)
+{
+  nsCOMPtr<nsIDOMSVGMatrix> screenCTM;
+
+  nsCOMPtr<nsIBindingManager> bindingManager;
+  if (mDocument) {
+    mDocument->GetBindingManager(getter_AddRefs(bindingManager));
+  }
+
+  nsCOMPtr<nsIContent> parent;
+  
+  if (bindingManager) {
+    // we have a binding manager -- do we have an anonymous parent?
+    bindingManager->GetInsertionParent(this, getter_AddRefs(parent));
+  }
+
+  if (!parent) {
+    // if we didn't find an anonymous parent, use the explicit one,
+    // whether it's null or not...
+    parent = mParent;
+  }
+  
+  while (parent) {
+    
+    nsCOMPtr<nsIDOMSVGLocatable> locatableElement = do_QueryInterface(parent);
+    if (locatableElement) {
+      nsCOMPtr<nsIDOMSVGMatrix> ctm;
+      locatableElement->GetScreenCTM(getter_AddRefs(ctm));
+      if (!ctm) {
+        NS_ERROR("couldn't get CTM");
+        break;
+      }
+      
+      nsCOMPtr<nsIDOMSVGSVGElement> viewportElement = do_QueryInterface(parent);
+      if (viewportElement) {
+        // It is a viewport element. we need to append the viewbox xform:
+        nsCOMPtr<nsIDOMSVGMatrix> matrix;
+        viewportElement->GetViewboxToViewportTransform(getter_AddRefs(matrix));
+        ctm->Multiply(matrix, getter_AddRefs(screenCTM));
+      }
+      else
+        screenCTM = ctm;
+
+      break;
+    }
+
+    // Our parent was not svg content. We allow interdispersed non-SVG
+    // content to coexist with XBL. Loop until we find the first SVG
+    // parent.
+    
+    nsCOMPtr<nsIContent> next;
+
+    if (bindingManager) {
+      bindingManager->GetInsertionParent(parent, getter_AddRefs(next));
+    }
+
+    if (!next) {
+      // no anonymous parent, so use explicit one
+      parent->GetParent(*getter_AddRefs(next));
+    }
+
+    parent = next;
+  }
+
+  if (!screenCTM) {
+    // We either didn't find an SVG parent, or our parent failed in
+    // giving us a CTM.
+    // In either case, we'll just assume that we are the outermost element:
+    nsCOMPtr<nsIDOMSVGMatrix> matrix;
+    nsSVGMatrix::Create(getter_AddRefs(matrix));
+    PRInt32 x, y;
+    GetScreenPosition(x, y);
+    matrix->Translate((float)x, (float)y, getter_AddRefs(screenCTM));
+  }
+
+  // XXX do we have to append our viewboxToViewport  transformation?
+  // if we do we have to change nsSVGGraphicElement::GetScreenCTM()
+  
+  *_retval = screenCTM;
+  NS_IF_ADDREF(*_retval);
+  return NS_OK;
+}
+
+/* nsIDOMSVGMatrix getTransformToElement (in nsIDOMSVGElement element); */
+NS_IMETHODIMP
+nsSVGSVGElement::GetTransformToElement(nsIDOMSVGElement *element, nsIDOMSVGMatrix **_retval)
+{
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
+// ----------------------------------------------------------------------
+// implementation helpers
+void nsSVGSVGElement::GetScreenPosition(PRInt32 &x, PRInt32 &y)
+{
+  x = 0;
+  y = 0;
+
+  if (!mDocument) return;
+
+  nsCOMPtr<nsIPresShell> presShell;
+  mDocument->GetShellAt(0, getter_AddRefs(presShell));
+  if (!presShell) {
+    NS_ERROR("couldn't get presshell");
+    return;
+  }
+
+  nsCOMPtr<nsIPresContext> context;
+  presShell->GetPresContext(getter_AddRefs(context));
+  if (!context) {
+    NS_ERROR("couldn't get prescontext");
+    return;
+  }
+   
+  // Flush all pending notifications so that our frames are uptodate
+  presShell->FlushPendingNotifications(PR_FALSE);
+    
+  nsIFrame* frame;
+  nsresult rv = presShell->GetPrimaryFrameFor(this, &frame);
+
+  float t2p;
+  context->GetTwipsToPixels(&t2p);
+
+  
+  nsCOMPtr<nsIWidget> widget;
+        
+  while (frame) {
+    // Look for a widget so we can get screen coordinates
+    nsIView* view;
+    rv = frame->GetView(context, &view);
+    if (view) {
+      // handle scrolled views along the way:
+      nsIScrollableView* scrollableView = nsnull;
+      view->QueryInterface(NS_GET_IID(nsIScrollableView), (void**)&scrollableView);
+      if (scrollableView) {
+        nscoord scrollX, scrollY;
+        scrollableView->GetScrollPosition(scrollX, scrollY);
+        x -= scrollX;
+        y -= scrollY;
+      }
+
+      // if this is a widget we break and get screen coords from it:
+      rv = view->GetWidget(*getter_AddRefs(widget));
+      if (widget)
+        break;
+    }
+          
+    // No widget yet, so count up the coordinates of the frame 
+    nsPoint origin;
+    frame->GetOrigin(origin);
+    x += origin.x;
+    y += origin.y;
+      
+    frame->GetParent(&frame);
+  }
+        
+  
+  // Convert to pixels using that scale
+  x = NSTwipsToIntPixels(x, t2p);
+  y = NSTwipsToIntPixels(y, t2p);
+  
+  if (widget) {
+    // Add the widget's screen coordinates to the offset we've counted
+    nsRect client(0,0,0,0);
+    nsRect screen;
+    widget->WidgetToScreen(client, screen);
+    x += screen.x;
+    y += screen.y;
+  }
+}

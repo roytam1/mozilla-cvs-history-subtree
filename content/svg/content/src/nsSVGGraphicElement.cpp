@@ -98,8 +98,76 @@ NS_IMETHODIMP nsSVGGraphicElement::GetBBox(nsIDOMSVGRect **_retval)
 /* nsIDOMSVGMatrix getCTM (); */
 NS_IMETHODIMP nsSVGGraphicElement::GetCTM(nsIDOMSVGMatrix **_retval)
 {
-  NS_NOTYETIMPLEMENTED("write me!");
-  return NS_ERROR_NOT_IMPLEMENTED;
+  nsCOMPtr<nsIDOMSVGMatrix> CTM;
+
+  nsCOMPtr<nsIBindingManager> bindingManager;
+  if (mDocument) {
+    mDocument->GetBindingManager(getter_AddRefs(bindingManager));
+  }
+
+  nsCOMPtr<nsIContent> parent;
+  
+  if (bindingManager) {
+    // we have a binding manager -- do we have an anonymous parent?
+    bindingManager->GetInsertionParent(this, getter_AddRefs(parent));
+  }
+
+  if (!parent) {
+    // if we didn't find an anonymous parent, use the explicit one,
+    // whether it's null or not...
+    parent = mParent;
+  }
+  
+  while (parent) {
+    nsCOMPtr<nsIDOMSVGSVGElement> viewportElement = do_QueryInterface(parent);
+    if (viewportElement) {
+      // Our nearest SVG parent is a viewport element.
+      viewportElement->GetViewboxToViewportTransform(getter_AddRefs(CTM));
+      break; 
+    }
+    
+    nsCOMPtr<nsIDOMSVGLocatable> locatableElement = do_QueryInterface(parent);
+    if (locatableElement) {
+      // Our nearest SVG parent is a locatable object that is not a
+      // viewport. Its GetCTM function will give us a ctm from the
+      // viewport to itself:
+      locatableElement->GetCTM(getter_AddRefs(CTM));
+      break;
+    }
+
+    // Our parent was not svg content. We allow interdispersed non-SVG
+    // content to coexist with XBL. Loop until we find the first SVG
+    // parent.
+    
+    nsCOMPtr<nsIContent> next;
+
+    if (bindingManager) {
+      bindingManager->GetInsertionParent(parent, getter_AddRefs(next));
+    }
+
+    if (!next) {
+      // no anonymous parent, so use explicit one
+      parent->GetParent(*getter_AddRefs(next));
+    }
+
+    parent = next;
+  }
+
+  if (!CTM) {
+    // We either didn't find an SVG parent, or our parent failed in
+    // giving us a CTM. In either case:
+    NS_WARNING("Couldn't get CTM");
+    nsSVGMatrix::Create(getter_AddRefs(CTM));
+  }
+
+  // append our local transformations:
+  nsCOMPtr<nsIDOMSVGTransformList> transforms;
+  mTransforms->GetAnimVal(getter_AddRefs(transforms));
+  NS_ENSURE_TRUE(transforms, NS_ERROR_FAILURE);
+  nsCOMPtr<nsIDOMSVGMatrix> matrix;
+  transforms->GetConsolidation(getter_AddRefs(matrix));
+
+  return CTM->Multiply(matrix, _retval);
 }
 
 /* nsIDOMSVGMatrix getScreenCTM (); */
@@ -125,16 +193,31 @@ NS_IMETHODIMP nsSVGGraphicElement::GetScreenCTM(nsIDOMSVGMatrix **_retval)
     parent = mParent;
   }
   
-  while (parent) {    
+  while (parent) {
+    
     nsCOMPtr<nsIDOMSVGLocatable> locatableElement = do_QueryInterface(parent);
     if (locatableElement) {
-      locatableElement->GetScreenCTM(getter_AddRefs(screenCTM));
+      nsCOMPtr<nsIDOMSVGMatrix> ctm;
+      locatableElement->GetScreenCTM(getter_AddRefs(ctm));
+      if (!ctm) break;
+      
+      nsCOMPtr<nsIDOMSVGSVGElement> viewportElement = do_QueryInterface(parent);
+      if (viewportElement) {
+        // It is a viewport element. we need to append the viewbox xform:
+        nsCOMPtr<nsIDOMSVGMatrix> matrix;
+        viewportElement->GetViewboxToViewportTransform(getter_AddRefs(matrix));
+        ctm->Multiply(matrix, getter_AddRefs(screenCTM));
+      }
+      else
+        screenCTM = ctm;
+
       break;
     }
-    nsCOMPtr<nsIDOMSVGSVGElement> rootElement = do_QueryInterface(parent);
-    if (rootElement) 
-      break; // XXX check whether it's the outermost owner before breaking
 
+    // Our parent was not svg content. We allow interdispersed non-SVG
+    // content to coexist with XBL. Loop until we find the first SVG
+    // parent.
+    
     nsCOMPtr<nsIContent> next;
 
     if (bindingManager) {
@@ -149,9 +232,14 @@ NS_IMETHODIMP nsSVGGraphicElement::GetScreenCTM(nsIDOMSVGMatrix **_retval)
     parent = next;
   }
 
-  if (!screenCTM)
+  if (!screenCTM) {
+    // We either didn't find an SVG parent, or our parent failed in
+    // giving us a CTM. In either case:
+    NS_ERROR("couldn't get ctm");
     nsSVGMatrix::Create(getter_AddRefs(screenCTM));
+  }
 
+  // append our local transformations:
   nsCOMPtr<nsIDOMSVGTransformList> transforms;
   mTransforms->GetAnimVal(getter_AddRefs(transforms));
   NS_ENSURE_TRUE(transforms, NS_ERROR_FAILURE);

@@ -104,6 +104,9 @@ interface nsIDOMSVGSVGElement
   nsIDOMSVGTransform    createSVGTransformFromMatrix(in nsIDOMSVGMatrix matrix);
   DOMString             createSVGString();
   nsIDOMElement         getElementById(in DOMString elementId);
+
+  // Mozilla extension, not part of W3 SVG DOM:
+  nsIDOMSVGMatrix getViewboxToViewportTransform();
 };
 
 
