@@ -247,15 +247,35 @@ HistoryDataSourceObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
 }
 
 
+//
+// filterDragItems:
+//
+// Walk the list of items, filtering out any folder. Returns a new list
+// that has been autoreleased.
+//
+- (NSArray*)filterDragItems:(NSArray*)inItems
+{
+  NSMutableArray* outItems = [[[NSMutableArray alloc] init] autorelease];
+  
+  NSEnumerator *enumerator = [inItems objectEnumerator];
+  id obj;
+  while ( (obj = [enumerator nextObject]) ) {
+    if ( ! [mOutlineView isExpandable: obj] )    // if it's not a folder, we can drag it
+      [outItems addObject:obj];
+  }
+  
+  return outItems;
+}
+
 - (BOOL)outlineView:(NSOutlineView *)ov writeItems:(NSArray*)items toPasteboard:(NSPasteboard*)pboard 
 {
   //Need to filter out folders from the list, only allow the urls to be dragged
-  //NSArray *toDrag = [self filterDragItems:items];
+  NSArray *toDrag = [self filterDragItems:items];
 
-  int count = [items count];
+  int count = [toDrag count];
   if (count > 0) {    
     if (count == 1) {
-      id item = [items objectAtIndex: 0];
+      id item = [toDrag objectAtIndex: 0];
       
       // if we have just one item, we add some more flavours
       nsXPIDLString urlLiteral, nameLiteral;
