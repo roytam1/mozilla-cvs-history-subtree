@@ -1612,15 +1612,27 @@
             return;
 
           const browsers = this.mPanelContainer.childNodes;
-          if (browsers.length == 1)
+          if (browsers.length == 1) {
+            // There's only one browser left. If a window is being
+            // closed and the window is *not* the window in the
+            // browser that's still around, prevent the event's default
+            // action to prevent closing a window that's being closed
+            // already.
+            if (this.getBrowserAtIndex(0).contentWindow != event.target)
+              event.preventDefault();
+
             return;
+          }
+
           var i = 0;
           for (; i < browsers.length; ++i) {
-            if (this.getBrowserAtIndex(i).contentWindow == event.target)
+            if (this.getBrowserAtIndex(i).contentWindow == event.target) {
+              this.removeTab(this.mTabContainer.childNodes[i]);
+              event.preventDefault();
+
               break;
+            }
           }
-          this.removeTab(this.mTabContainer.childNodes[i]);
-          event.preventDefault();
         ]]>
       </handler>
     </handlers>

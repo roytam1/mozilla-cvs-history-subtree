@@ -1145,10 +1145,16 @@ nsresult nsDocShell::FindTarget(const PRUnichar *aWindowTarget,
                 }
 
                 // open a new tab
-                if (bwin)
+                if (bwin) {
                     rv = bwin->OpenURI(0, 0, nsIBrowserDOMWindow::OPEN_NEWTAB,
                                       nsIBrowserDOMWindow::OPEN_NEW,
                                       getter_AddRefs(newWindow));
+
+                    nsCOMPtr<nsIScriptGlobalObject> newObj =
+                        do_GetInterface(newWindow);
+                    if (newObj)
+                        newObj->SetOpenerWindow(parentWindow);
+                }
             }
             // else fall through to the normal Open method, from which
             // the appropriate measures will be taken when the popup fails
