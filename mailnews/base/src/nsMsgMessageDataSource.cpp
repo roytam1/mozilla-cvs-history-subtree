@@ -90,6 +90,16 @@ nsMsgMessageDataSource::nsMsgMessageDataSource():
 	if(NS_SUCCEEDED(rv))
 		mailSession->AddFolderListener(this);
 	PR_ASSERT(NS_SUCCEEDED(rv));
+
+  // XXX This call should be moved to a NS_NewMsgFooDataSource()
+  // method that the factory calls, so that failure to construct
+  // will return an error code instead of returning a partially
+  // initialized object.
+  rv = Init();
+  NS_ASSERTION(NS_SUCCEEDED(rv), "uh oh, initialization failed");
+  if (NS_FAILED(rv)) return /* rv */;
+
+  return /* NS_OK */;
 }
 
 nsMsgMessageDataSource::~nsMsgMessageDataSource (void)
@@ -141,8 +151,8 @@ nsresult nsMsgMessageDataSource::Init()
   return NS_OK;
 }
 
-NS_IMPL_ADDREF(nsMsgMessageDataSource)
-NS_IMPL_RELEASE(nsMsgMessageDataSource)
+NS_IMPL_ADDREF_INHERITED(nsMsgMessageDataSource, nsMsgRDFDataSource)
+NS_IMPL_RELEASE_INHERITED(nsMsgMessageDataSource, nsMsgRDFDataSource)
 
 NS_IMETHODIMP
 nsMsgMessageDataSource::QueryInterface(REFNSIID iid, void** result)

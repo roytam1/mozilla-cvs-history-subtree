@@ -30,18 +30,6 @@ nsMsgRDFDataSource::nsMsgRDFDataSource():
     mRDFService(nsnull)
 {
     NS_INIT_REFCNT();
-
-    nsresult rv;
-    rv = Init();
-
-    // XXX This call should be moved to a NS_NewMsgFooDataSource()
-    // method that the factory calls, so that failure to construct
-    // will return an error code instead of returning a partially
-    // initialized object.
-    NS_ASSERTION(NS_SUCCEEDED(rv), "uh oh, initialization failed");
-    if (NS_FAILED(rv)) return /* rv */;
-
-    return /* NS_OK */;
 }
 
 nsMsgRDFDataSource::~nsMsgRDFDataSource()

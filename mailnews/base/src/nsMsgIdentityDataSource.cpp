@@ -42,7 +42,8 @@ class nsMsgIdentityDataSource : public nsMsgRDFDataSource
 {
 
 public:
-
+  nsMsgIdentityDataSource();
+  virtual ~nsMsgIdentityDataSource();
   virtual nsresult Init();
 
   // RDF datasource methods
@@ -94,6 +95,27 @@ nsIRDFResource* nsMsgIdentityDataSource::kNC_Identity;
 DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, child);
 DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Server);
 DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Identity);
+
+nsMsgIdentityDataSource::nsMsgIdentityDataSource()
+{
+    nsresult rv;
+    rv = Init();
+
+    // XXX This call should be moved to a NS_NewMsgFooDataSource()
+    // method that the factory calls, so that failure to construct
+    // will return an error code instead of returning a partially
+    // initialized object.
+    NS_ASSERTION(NS_SUCCEEDED(rv), "uh oh, initialization failed");
+    if (NS_FAILED(rv)) return /* rv */;
+
+    return /* NS_OK */;
+}
+
+
+nsMsgIdentityDataSource::~nsMsgIdentityDataSource()
+{
+    // XXX Release all the resources we acquired in Init()
+}
 
 nsresult
 nsMsgIdentityDataSource::Init()

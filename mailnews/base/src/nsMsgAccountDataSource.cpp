@@ -44,7 +44,7 @@ public:
   virtual ~nsMsgAccountDataSource();
   virtual nsresult Init();
   
-  NS_DECL_ISUPPORTS
+  NS_DECL_ISUPPORTS_INHERITED
   
   // RDF datasource methods
   NS_IMETHOD GetURI(char* *aURI);
@@ -116,8 +116,17 @@ DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Identity);
 nsMsgAccountDataSource::nsMsgAccountDataSource():
   mInitialized(PR_FALSE)
 {
-  NS_INIT_REFCNT();
-  
+    nsresult rv;
+    rv = Init();
+
+    // XXX This call should be moved to a NS_NewMsgFooDataSource()
+    // method that the factory calls, so that failure to construct
+    // will return an error code instead of returning a partially
+    // initialized object.
+    NS_ASSERTION(NS_SUCCEEDED(rv), "uh oh, initialization failed");
+    if (NS_FAILED(rv)) return /* rv */;
+
+    return /* NS_OK */;
 }
 
 nsMsgAccountDataSource::~nsMsgAccountDataSource()
@@ -140,13 +149,12 @@ nsMsgAccountDataSource::Init()
 }
 
 
-NS_IMPL_ADDREF(nsMsgAccountDataSource)
-NS_IMPL_RELEASE(nsMsgAccountDataSource)
+NS_IMPL_ADDREF_INHERITED(nsMsgAccountDataSource, nsMsgRDFDataSource)
+NS_IMPL_RELEASE_INHERITED(nsMsgAccountDataSource, nsMsgRDFDataSource)
 
 nsresult
 nsMsgAccountDataSource::QueryInterface(const nsIID& iid, void **result)
 {
-
   return NS_OK;
 }
 

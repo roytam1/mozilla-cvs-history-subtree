@@ -47,7 +47,7 @@ public:
 
 	nsMessageViewDataSource(void);
 	virtual ~nsMessageViewDataSource (void);
-  nsresult Init();
+  virtual nsresult Init();
 
 
 	// nsIRDFDataSource methods
