@@ -131,6 +131,7 @@ protected:
   static JSString *sOnpaint_id;
   static JSString *sOnresize_id;
   static JSString *sOnscroll_id;
+  static JSString *sOpen_id;
 
   static const JSClass *sObjectClass;
 };
@@ -454,8 +455,10 @@ protected:
   {
   }
 
-  nsresult ResolveImpl(nsIXPConnectWrappedNative *wrapper, jsval id,
-                       nsISupports **result);
+  static nsresult ResolveImpl(nsIXPConnectWrappedNative *wrapper, jsval id,
+                              nsISupports **result);
+  static JSBool DocumentOpen(JSContext *cx, JSObject *obj, uintN argc,
+                             jsval *argv, jsval *rval);
 
 public:
   NS_IMETHOD NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
