@@ -25,6 +25,9 @@
 #include "nsCacheManager.h"
 #include "nsCacheEntryChannel.h"
 #include "nsIOutputStream.h"
+#include "nsIIOService.h"
+#include "nsIServiceManager.h"
+#include "nsIStreamListener.h"
 
 NS_IMPL_ISUPPORTS3(nsCacheEntryChannel, nsISupports, nsIChannel, nsIRequest)
 
@@ -36,12 +39,13 @@ public:
         mOutputStream(aOutputStream), mCacheEntry(aCacheEntry), mStartTime(PR_Now())
         { NS_INIT_REFCNT(); }
 
-    ~CacheOutputStream() {}
+    virtual ~CacheOutputStream() {}
 
     NS_DECL_ISUPPORTS
 
     NS_IMETHOD Close() {
         mCacheEntry->NoteDownloadTime(mStartTime, PR_Now());
+        mCacheEntry->ClearFlag(nsCachedNetData::UPDATE_IN_PROGRESS);
         return mOutputStream->Close();
     }
 
@@ -97,12 +101,85 @@ nsCacheEntryChannel::OpenInputStream(PRUint32 aStartPosition, PRInt32 aReadCount
     return mChannel->OpenInputStream(aStartPosition, aReadCount, aInputStream);
 }
 
+class LoadGroupInterceptor: public nsIStreamListener  {
+
+    public:
+    
+    LoadGroupInterceptor(nsIStreamListener *aListener,
+                         nsILoadGroup *aLoadGroup, nsIChannel *aChannel):
+        mListener(aListener), mLoadGroup(aLoadGroup), mChannel(aChannel)
+        { NS_INIT_REFCNT(); }
+
+    virtual ~LoadGroupInterceptor() {}
+
+    private:
+
+    NS_DECL_ISUPPORTS
+
+    NS_IMETHOD
+    OnDataAvailable(nsIChannel *channel, nsISupports *aContext,
+                    nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count) {
+        return mListener->OnDataAvailable(mChannel, aContext, inStr, sourceOffset, count);
+    }
+
+    NS_IMETHOD
+    OnStartRequest(nsIChannel *channel, nsISupports *aContext) {
+        mLoadGroup->AddChannel(mChannel, aContext);
+        return mListener->OnStartRequest(mChannel, aContext);
+    }
+
+    NS_IMETHOD
+    OnStopRequest(nsIChannel *channel, nsISupports *aContext,
+                  nsresult status, const PRUnichar *errorMsg) {
+        nsresult rv;
+        rv = mListener->OnStopRequest(mChannel, aContext, status, errorMsg);
+        mLoadGroup->RemoveChannel(mChannel, aContext, status, errorMsg);
+        return rv;
+    }
+
+    private:
+    
+    nsCOMPtr<nsIStreamListener>  mListener;
+    nsCOMPtr<nsILoadGroup>       mLoadGroup;
+    nsCOMPtr<nsIChannel>         mChannel;
+};
+
+NS_IMPL_ISUPPORTS2(LoadGroupInterceptor, nsIStreamListener, nsIStreamObserver)
+
 NS_IMETHODIMP
 nsCacheEntryChannel::AsyncRead(PRUint32 aStartPosition, PRInt32 aReadCount,
-			       nsISupports *aContext, nsIStreamListener *aListener)
+                               nsISupports *aContext, nsIStreamListener *aListener)
 {
+    nsresult rv;
+
     mCacheEntry->NoteAccess();
-    return mChannel->AsyncRead(aStartPosition, aReadCount, aContext, aListener);
+
+    nsCOMPtr<nsIStreamListener> headListener;
+    if (mLoadGroup) {
+        mLoadGroup->GetDefaultLoadAttributes(&mLoadAttributes);
+
+        // Create a load group "proxy" listener...
+        nsCOMPtr<nsILoadGroupListenerFactory> factory;
+        rv = mLoadGroup->GetGroupListenerFactory(getter_AddRefs(factory));
+        if (NS_SUCCEEDED(rv) && factory) {
+            rv = factory->CreateLoadGroupListener(aListener, 
+                                                  getter_AddRefs(headListener));
+            if (NS_FAILED(rv)) return rv;
+        }
+    } else {
+        headListener = aListener;
+    }
+
+    LoadGroupInterceptor* loadGroupInterceptor =
+        new LoadGroupInterceptor(headListener, mLoadGroup, this);
+    if (!loadGroupInterceptor) return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(loadGroupInterceptor);
+    rv = mChannel->AsyncRead(aStartPosition, aReadCount, aContext,
+                             loadGroupInterceptor);
+    NS_RELEASE(loadGroupInterceptor);
+
+    return rv;
 }
 
 // No async writes allowed to the cache yet
@@ -114,7 +191,35 @@ nsCacheEntryChannel::AsyncWrite(nsIInputStream *aFromStream, PRUint32 aStartPosi
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+NS_IMETHODIMP
+nsCacheEntryChannel::GetLoadAttributes(nsLoadFlags *aLoadAttributes)
+{
+    *aLoadAttributes = mLoadAttributes;
+    return NS_OK;
+}
 
+NS_IMETHODIMP
+nsCacheEntryChannel::SetLoadAttributes(nsLoadFlags aLoadAttributes)
+{
+    mLoadAttributes = aLoadAttributes;
+    return NS_OK;
+}
 
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
+NS_IMETHODIMP
+nsCacheEntryChannel::GetURI(nsIURI * *aURI)
+{
+    char* spec;
+    nsresult rv;
 
+    rv = mCacheEntry->GetUriSpec(&spec);
+    if (NS_FAILED(rv)) return rv;
+
+    NS_WITH_SERVICE(nsIIOService, serv, kIOServiceCID, &rv);
+    if (NS_FAILED(rv)) return rv;
+    
+    rv = serv->NewURI(spec, 0, aURI);
+    nsAllocator::Free(spec);
+    return rv;
+}

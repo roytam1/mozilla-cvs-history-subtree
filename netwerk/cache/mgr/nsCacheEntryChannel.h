@@ -28,6 +28,9 @@
 #include "nsCOMPtr.h"
 #include "nsIChannel.h"
 #include "nsCachedNetData.h"
+#include "nsILoadGroup.h"
+
+class nsIStreamListener;
 
 // A proxy for an nsIChannel, useful when only one or two nsIChannel
 // methods must be overridden
@@ -39,6 +42,7 @@ public:
 
 protected:
     nsChannelProxy(nsIChannel* aChannel):mChannel(aChannel) {};
+    virtual ~nsChannelProxy() {};
     nsCOMPtr<nsIChannel>      mChannel;
 };
 
@@ -56,16 +60,25 @@ public:
     NS_IMETHOD AsyncWrite(nsIInputStream *aFromStream, PRUint32 aStartPosition,
 			  PRInt32 aWriteCount, nsISupports *aContext,
 			  nsIStreamObserver *aObserver);
+    NS_IMETHOD GetLoadAttributes(nsLoadFlags *aLoadAttributes);
+    NS_IMETHOD SetLoadAttributes(nsLoadFlags aLoadAttributes);
+    NS_IMETHOD GetURI(nsIURI * *aURI);
 
 protected:
-    nsCacheEntryChannel(nsCachedNetData* aCacheEntry, nsIChannel* aChannel):
-        nsChannelProxy(aChannel), mCacheEntry(aCacheEntry) { NS_INIT_REFCNT(); }
-    ~nsCacheEntryChannel() {};
+    nsCacheEntryChannel(nsCachedNetData* aCacheEntry, nsIChannel* aChannel,
+                        nsILoadGroup* aLoadGroup):
+        nsChannelProxy(aChannel), mCacheEntry(aCacheEntry),
+        mLoadGroup(aLoadGroup), mLoadAttributes(0) {
+        NS_INIT_REFCNT();
+    }
+    virtual ~nsCacheEntryChannel() {};
 
     friend class nsCachedNetData;
 
 private:
-    nsCOMPtr<nsCachedNetData> mCacheEntry;
+    nsCOMPtr<nsCachedNetData>    mCacheEntry;
+    nsCOMPtr<nsILoadGroup>       mLoadGroup;
+    nsLoadFlags                  mLoadAttributes;
 };
 
 #endif // _nsCacheEntryChannel_h_

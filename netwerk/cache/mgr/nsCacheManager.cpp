@@ -157,8 +157,8 @@ nsCacheManager::GetCachedNetData(const char *aUriSpec, const char *aSecondaryKey
         spaceManager = mMemSpaceManager;
 
         // Ensure that cache is initialized
-        if (mMemCacheCapacity == (PRUint32)-1)
-            return NS_ERROR_NOT_AVAILABLE;
+        // FIXME - temporary comment out              if (mMemCacheCapacity == (PRUint32)-1)
+        // return NS_ERROR_NOT_AVAILABLE;
     } else {
         cache = mFlatCache ? mFlatCache : mFileCache;
         spaceManager = mDiskSpaceManager;
@@ -303,6 +303,8 @@ class CacheEnumerator : public nsISimpleEnumerator
 public:
     CacheEnumerator(nsINetDataCache* aFirstCache):mCache(aFirstCache)
         { NS_INIT_REFCNT(); }
+
+    virtual ~CacheEnumerator() {};
     
     NS_DECL_ISUPPORTS
 

@@ -52,7 +52,7 @@
     }                                                                         \
 }
 
-// placement new for arena-allocation
+// Placement new for arena-allocation of nsCachedNetData instances
 void *
 nsCachedNetData::operator new (size_t aSize, nsIArena *aArena)
 {
@@ -63,35 +63,18 @@ nsCachedNetData::operator new (size_t aSize, nsIArena *aArena)
     return entry;
 }
 
-// Convert PRTime to unix-style time_t, i.e. seconds since the epoch
-static PRUint32
-convertPRTimeToSeconds(PRTime aTime64)
-{
-    double fpTime;
-    LL_L2D(fpTime, aTime64);
-    return (PRUint32)(fpTime * 1e-6 + 0.5);
-}
-
-// Convert unix-style time_t, i.e. seconds since the epoch, to PRTime
-static PRTime
-convertSecondsToPRTime(PRUint32 aSeconds)
-{
-    PRInt64 t64;
-    LL_L2I(t64, aSeconds);
-    LL_MUL(t64, t64, 1000000);
-    return t64;
-}
-
 // One element in a linked list of nsIStreamAsFileObserver's
 class StreamAsFileObserverClosure
 {
 public:
-    StreamAsFileObserverClosure(nsIStreamAsFile *aStreamAsFile, nsIStreamAsFileObserver *aObserver):
+    StreamAsFileObserverClosure(nsIStreamAsFile *aStreamAsFile,
+                                nsIStreamAsFileObserver *aObserver):
         mStreamAsFile(aStreamAsFile), mObserver(aObserver), mNext(0) {}
 
     ~StreamAsFileObserverClosure() { delete mNext; }
 
-    // Weak link to nsIStreamAsFile which, indirectly, holds a strong link to this
+    // Weak link to nsIStreamAsFile which, indirectly, holds a strong link
+    //   to this instance
     nsIStreamAsFile*           mStreamAsFile;
     nsIStreamAsFileObserver*   mObserver;        
 
@@ -101,10 +84,11 @@ public:
 
 
 // nsIStreamAsFile is implemented as an XPCOM tearoff to avoid the cost of an
-// extra vtable pointer in nsCachedNetData
+//   extra vtable pointer in nsCachedNetData
 class StreamAsFile : public nsIStreamAsFile {
 public:    
     StreamAsFile(nsCachedNetData* cacheEntry): mCacheEntry(cacheEntry) {}
+    virtual ~StreamAsFile() {};
 
     NS_DECL_ISUPPORTS
 
@@ -145,6 +129,60 @@ StreamAsFile::QueryInterface(REFNSIID aIID, void** aInstancePtr)
         return mCacheEntry->QueryInterface(aIID, aInstancePtr);
     }
 }
+
+// External clients of the cache can attach tagged pieces of meta-data to
+//   each cache-entry.  The tag is a NUL-terminated string.
+class CacheMetaData {
+    CacheMetaData(const char *aTag):
+	    mTag(nsCRT::strdup(aTag)), mOpaqueBytes(0), mLength(0), mNext(0) {}
+
+    ~CacheMetaData() {
+        if (mOpaqueBytes)
+            nsAllocator::Free(mOpaqueBytes);
+        if (mNext)
+            delete mNext;
+    }
+
+protected:
+    nsresult Set(PRUint32 aLength, const char* aOpaqueBytes) {
+        char* newOpaqueBytes = 0;
+        if (aOpaqueBytes) {
+            newOpaqueBytes = (char*)nsAllocator::Alloc(aLength);
+            if (!newOpaqueBytes)
+                return NS_ERROR_OUT_OF_MEMORY;
+            memcpy(newOpaqueBytes, aOpaqueBytes, aLength);
+        }
+        
+        if (mOpaqueBytes)
+            nsAllocator::Free(mOpaqueBytes);
+
+        mOpaqueBytes = newOpaqueBytes;
+        mLength = aLength;
+        return NS_OK;
+    }
+
+    nsresult Get(PRUint32 *aLength, char* *aOpaqueBytes) {
+        char *copyOpaqueBytes = 0;
+        if (mOpaqueBytes) {
+            copyOpaqueBytes = (char*)nsAllocator::Alloc(mLength);
+            if (!copyOpaqueBytes)
+                return NS_ERROR_OUT_OF_MEMORY;
+            memcpy(copyOpaqueBytes, mOpaqueBytes, mLength);
+        }
+
+        *aOpaqueBytes = copyOpaqueBytes;
+        *aLength = mLength;
+    
+        return NS_OK;
+    }
+
+    const char*     mTag;           // Descriptive tag, e.g. "http headers"
+    char*           mOpaqueBytes;   // The meta-data itself
+    PRUint32        mLength;        // Length of mOpaqueBytes
+    CacheMetaData*  mNext;          // Next in chain for this cache entry
+
+    friend class nsCachedNetData;
+};
 
 NS_IMPL_ADDREF(nsCachedNetData)
 NS_IMETHODIMP
@@ -209,11 +247,8 @@ nsCachedNetData::Release(void)
         NS_RELEASE(mRecord);
         mRecord = 0;
         mRecordID = recordID;
-        if (mProtocolData) {
-            nsAllocator::Free((void*)mProtocolData);
-            mProtocolData = 0;
-        }
-        mProtocolDataLength = 0;
+        delete mMetaData;
+	mMetaData = 0;
     }
     return mRefCnt;
 }
@@ -239,6 +274,25 @@ nsCachedNetData::GetRecordID(PRInt32 *aRecordID)
     } else {
         return mRecord->GetRecordID(aRecordID);
     }
+}
+
+// Convert PRTime to unix-style time_t, i.e. seconds since the epoch
+static PRUint32
+convertPRTimeToSeconds(PRTime aTime64)
+{
+    double fpTime;
+    LL_L2D(fpTime, aTime64);
+    return (PRUint32)(fpTime * 1e-6 + 0.5);
+}
+
+// Convert unix-style time_t, i.e. seconds since the epoch, to PRTime
+static PRTime
+convertSecondsToPRTime(PRUint32 aSeconds)
+{
+    PRInt64 t64;
+    LL_L2I(t64, aSeconds);
+    LL_MUL(t64, t64, 1000000);
+    return t64;
 }
 
 void
@@ -295,6 +349,31 @@ nsCachedNetData::Resurrect(nsINetDataCacheRecord *aRecord)
     NS_ADDREF(aRecord);
     
     return Deserialize(true);
+}
+
+// Set a boolean flag for the cache entry
+nsresult 
+nsCachedNetData::SetFlag(PRBool aValue, Flag aFlag)
+{
+    if (mFlags & RECYCLED)
+        return NS_ERROR_NOT_AVAILABLE;
+    NS_ASSERTION(aValue == 1 || aValue == 0, "Illegal argument");
+    PRUint16 newFlags;
+    newFlags = mFlags & ~aFlag;
+    newFlags |= (-aValue & aFlag);
+
+    // Mark record as dirty if any non-transient flag has changed
+    if ((newFlags & ~TRANSIENT_FLAGS) != (mFlags & ~TRANSIENT_FLAGS)) {
+        newFlags |= DIRTY;
+    }
+        
+    mFlags = newFlags;
+
+    // Once a record has become dormant, only its flags can change
+    if ((newFlags & DIRTY) && (newFlags & DORMANT))
+        CommitFlags();
+
+    return NS_OK;
 }
 
 nsresult
@@ -369,11 +448,29 @@ nsCachedNetData::Deserialize(bool aDeserializeFlags)
     if (version != CACHE_MANAGER_VERSION)
         return NS_ERROR_FAILURE;
 
-    rv = binaryStream->Read32(&mProtocolDataLength);
-    if (NS_FAILED(rv)) return rv;
+    while (1) {
+        char* tag;
+        rv = binaryStream->ReadStringZ(&tag);
+        if (NS_FAILED(rv)) return rv;
+
+        // Last meta-data chunk is indicated by empty tag
+        if (*tag == 0)
+            break;
+
+        CacheMetaData *metaData;
+        metaData = new CacheMetaData(tag);
+        if (!metaData)
+            return NS_ERROR_OUT_OF_MEMORY;
+
+        rv = binaryStream->Read32(&metaData->mLength);
+        if (NS_FAILED(rv)) return rv;
     
-    rv = binaryStream->ReadBytes(&mProtocolData, mProtocolDataLength);
-    if (NS_FAILED(rv)) return rv;
+        rv = binaryStream->ReadBytes(&metaData->mOpaqueBytes, metaData->mLength);
+        if (NS_FAILED(rv)) return rv;
+
+        metaData->mNext = mMetaData;
+        mMetaData = metaData;
+    }
 
     PRUint16 flags;
     rv = binaryStream->Read16(&flags);
@@ -477,7 +574,7 @@ nsCachedNetData::SetAllowPartial(PRBool aAllowPartial)
 }
 
 NS_IMETHODIMP
-nsCachedNetData::GetPartial(PRBool *aPartial)
+nsCachedNetData::GetPartialFlag(PRBool *aPartial)
 {
     return GetFlag(aPartial, TRUNCATED_CONTENT);
 }
@@ -593,8 +690,8 @@ NS_IMETHODIMP
 nsCachedNetData::Commit(void)
 {
     nsresult rv;
-    char *metaData;
-    PRUint32 metaDataLength, bytesRead;
+    char *serializedData;
+    PRUint32 serializedDataLength, bytesRead;
     nsCOMPtr<nsIInputStream> inputStream;
     nsCOMPtr<nsIOutputStream> outputStream;
     nsCOMPtr<nsIBinaryOutputStream> binaryStream;
@@ -638,11 +735,20 @@ nsCachedNetData::Commit(void)
     rv = binaryStream->Write8(CACHE_MANAGER_VERSION);
     if (NS_FAILED(rv)) goto error;
 
-    rv = binaryStream->Write32(mProtocolDataLength);
-    if (NS_FAILED(rv)) goto error;
+    CacheMetaData *metaData;
+    for (metaData = mMetaData; metaData; metaData = metaData->mNext) {
+        rv = binaryStream->WriteStringZ(metaData->mTag);
+        if (NS_FAILED(rv)) return rv;
+
+        rv = binaryStream->Write32(metaData->mLength);
+        if (NS_FAILED(rv)) return rv;
     
-    rv = binaryStream->WriteBytes(mProtocolData, mProtocolDataLength);
-    if (NS_FAILED(rv)) goto error;
+        rv = binaryStream->WriteBytes(metaData->mOpaqueBytes, metaData->mLength);
+        if (NS_FAILED(rv)) return rv;
+    }
+    // Write terminating null for last meta-data chunk
+    rv = binaryStream->WriteStringZ("");
+    if (NS_FAILED(rv)) return rv;
 
     rv = binaryStream->Write16(mFlags);
     if (NS_FAILED(rv)) goto error;
@@ -667,18 +773,18 @@ nsCachedNetData::Commit(void)
     rv = storageStream->NewInputStream(0, getter_AddRefs(inputStream));
     if (NS_FAILED(rv)) goto error;
 
-    inputStream->Available(&metaDataLength);
+    inputStream->Available(&serializedDataLength);
 
-    metaData = (char*)nsAllocator::Alloc(metaDataLength);
-    if (!metaData) goto error;
-    inputStream->Read(metaData, metaDataLength, &bytesRead);
+    serializedData = (char*)nsAllocator::Alloc(serializedDataLength);
+    if (!serializedData) goto error;
+    inputStream->Read(serializedData, serializedDataLength, &bytesRead);
     if (NS_FAILED(rv)) {
-        nsAllocator::Free(metaData);
+        nsAllocator::Free(serializedData);
         goto error;
     }
 
-    rv = record->SetMetaData(metaDataLength, metaData);
-    nsAllocator::Free(metaData);
+    rv = record->SetMetaData(serializedDataLength, serializedData);
+    nsAllocator::Free(serializedData);
     return rv;
 
  error:
@@ -686,48 +792,68 @@ nsCachedNetData::Commit(void)
     return rv;
 }
 
+CacheMetaData*
+nsCachedNetData::FindTaggedMetaData(const char* aTag, PRBool aCreate)
+{
+    CacheMetaData* metaData;
+    CacheMetaData** metaDatap;
+    metaDatap = &mMetaData;
+
+    while ((metaData = *metaDatap)) {
+        if (!strcmp(aTag, metaData->mTag))
+            return metaData;
+        metaDatap = &metaData->mNext;
+    }
+    if (!aCreate)
+        return NULL;
+    *metaDatap = new CacheMetaData(aTag);
+    return *metaDatap;
+}
+
 NS_IMETHODIMP
-nsCachedNetData::GetProtocolPrivate(PRUint32* aProtocolDataLength, char* *aProtocolData)
+nsCachedNetData::GetProtocolPrivate(const char* aKey,
+                                    PRUint32* aProtocolDataLength,
+                                    char* *aProtocolData)
 {
     CHECK_AVAILABILITY();
 
     NS_ENSURE_ARG_POINTER(aProtocolDataLength);
     NS_ENSURE_ARG_POINTER(aProtocolData);
 
-    char *copyProtocolData = 0;
-    if (mProtocolData) {
-        copyProtocolData = (char*)nsAllocator::Alloc(mProtocolDataLength);
-        if (!copyProtocolData)
-            return NS_ERROR_OUT_OF_MEMORY;
-        memcpy(copyProtocolData, mProtocolData, mProtocolDataLength);
-    }
-
-    *aProtocolData = copyProtocolData;
-    *aProtocolDataLength = mProtocolDataLength;
+    CacheMetaData* metaData;
+    metaData = FindTaggedMetaData(aKey, PR_FALSE);
+    if (!metaData) {
+			*aProtocolDataLength = 0;
+			*aProtocolData = 0;
+			return NS_OK;
+	}
     
-    return NS_OK;
+    return metaData->Get(aProtocolDataLength, aProtocolData);
 }
 
 NS_IMETHODIMP
-nsCachedNetData::SetProtocolPrivate(PRUint32 aLength, const char *aProtocolData)
+nsCachedNetData::SetProtocolPrivate(const char* aTag,
+                                    PRUint32 aLength,
+                                    const char *aProtocolData)
 {
+    nsresult rv;
+    CacheMetaData* metaData;
+
     CHECK_AVAILABILITY();
 
-    char* newProtocolData = 0;
+    NS_ENSURE_ARG(aTag);
+    if (!*aTag)
+        return NS_ERROR_INVALID_ARG;
 
-    if (aProtocolData) {
-        newProtocolData = (char*)nsAllocator::Alloc(aLength);
-        if (!newProtocolData)
-            return NS_ERROR_OUT_OF_MEMORY;
-        memcpy(newProtocolData, aProtocolData, aLength);
-    }
-        
-    if (mProtocolData)
-        nsAllocator::Free(mProtocolData);
-    mProtocolData = newProtocolData;
-    mProtocolDataLength = aLength;
+    metaData = FindTaggedMetaData(aTag, PR_TRUE);
+    if (!metaData)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    rv = metaData->Set(aLength, aProtocolData);
+
     SetDirty();
-    return NS_OK;
+
+    return rv;
 }
 
 nsresult
@@ -876,17 +1002,17 @@ nsCachedNetData::GetCache(nsINetDataCache* *aCache)
 }
 
 NS_IMETHODIMP
-nsCachedNetData::NewChannel(nsILoadGroup* loadGroup, nsIChannel* *aChannel)
+nsCachedNetData::NewChannel(nsILoadGroup* aLoadGroup, nsIChannel* *aChannel)
 {
     nsresult rv;
     nsCOMPtr<nsIChannel> channel;
 
     CHECK_AVAILABILITY();
 
-    rv =  mRecord->NewChannel(loadGroup, getter_AddRefs(channel));
+    rv =  mRecord->NewChannel(0, getter_AddRefs(channel));
     if (NS_FAILED(rv)) return rv;
 
-    *aChannel = new nsCacheEntryChannel(this, channel);
+    *aChannel = new nsCacheEntryChannel(this, channel, aLoadGroup);
     if (!*aChannel)
         return NS_ERROR_OUT_OF_MEMORY;
     NS_ADDREF(*aChannel);
@@ -905,17 +1031,20 @@ class InterceptStreamListener : public nsIStreamListener,
 {
 public:
 
-    InterceptStreamListener(nsCachedNetData *aCacheEntry, nsIStreamListener *aOriginalListener):
-        mCacheEntry(aCacheEntry), mOriginalListener(aOriginalListener) {}
+    InterceptStreamListener(nsCachedNetData *aCacheEntry,
+                            nsIStreamListener *aOriginalListener):
+        mCacheEntry(aCacheEntry), mOriginalListener(aOriginalListener) {
+    NS_INIT_REFCNT(); }
+    
+    virtual ~InterceptStreamListener() {};
 
     nsresult Init(PRUint32 aStartingOffset) {
         nsresult rv;
 
-        nsCOMPtr<nsIChannel> channel;
-        rv = mCacheEntry->NewChannel(0, getter_AddRefs(channel));
+        rv = mCacheEntry->NewChannel(0, getter_AddRefs(mChannel));
         if (NS_FAILED(rv)) return rv;
 
-        return channel->OpenOutputStream(aStartingOffset, getter_AddRefs(mCacheStream));
+        return mChannel->OpenOutputStream(aStartingOffset, getter_AddRefs(mCacheStream));
     }
 
     NS_DECL_ISUPPORTS
@@ -970,11 +1099,12 @@ private:
     }
 
 private:
-    nsCOMPtr<nsCachedNetData> mCacheEntry;
+    nsCOMPtr<nsCachedNetData>    mCacheEntry;
     nsCOMPtr<nsIStreamListener>  mOriginalListener;
     nsCOMPtr<nsIOutputStream>    mCacheStream;
 
     nsCOMPtr<nsIInputStream>     mOriginalStream;
+    nsCOMPtr<nsIChannel>         mChannel;
 };
 
 NS_IMPL_ISUPPORTS2(InterceptStreamListener, nsIInputStream, nsIStreamListener)
@@ -993,7 +1123,8 @@ nsCachedNetData::InterceptAsyncRead(nsIStreamListener *aOriginalListener,
     
     rv = interceptListener->Init(aStartingOffset);
     if (NS_FAILED(rv)) return rv;
-        
+
+    // Just in case the protocol handler forgot to set this flag...
     SetFlag(UPDATE_IN_PROGRESS);
 
     NS_ADDREF(interceptListener);

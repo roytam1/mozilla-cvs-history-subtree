@@ -34,6 +34,7 @@ class nsIStreamAsFileObserver;
 class nsIStreamAsFile;
 class nsIArena;
 class StreamAsFileObserverClosure;
+class CacheMetaData;
 
 // Number of recent access times recorded
 #define MAX_K  3
@@ -94,34 +95,11 @@ protected:
         TRANSIENT_FLAGS     = DIRTY | RECYCLED | DORMANT
     } Flag;
 
-    PRBool GetFlag(Flag aFlag) {
-        return (mFlags & aFlag) != 0;
-    }
+    PRBool GetFlag(Flag aFlag) { return (mFlags & aFlag) != 0; }
     nsresult GetFlag(PRBool *aResult, Flag aFlag) { *aResult = GetFlag(aFlag); return NS_OK; }
 
     // Set a boolean flag for the cache entry
-    nsresult SetFlag(PRBool aValue, Flag aFlag) {
-        if (mFlags & RECYCLED)
-            return NS_ERROR_NOT_AVAILABLE;
-        NS_ASSERTION(aValue == 1 || aValue == 0, "Illegal argument");
-        PRUint16 newFlags;
-        newFlags = mFlags & ~aFlag;
-        newFlags |= (-aValue & aFlag);
-
-        // Mark record as dirty if any non-transient flag has changed
-        if ((newFlags & ~TRANSIENT_FLAGS) != (mFlags & ~TRANSIENT_FLAGS)) {
-            newFlags |= DIRTY;
-        }
-        
-        mFlags = newFlags;
-
-        // Once a record has become dormant, only its flags can change
-        if ((newFlags & DIRTY) && (newFlags & DORMANT))
-            CommitFlags();
-
-        return NS_OK;
-    }
-
+    nsresult SetFlag(PRBool aValue, Flag aFlag);
     nsresult SetFlag(Flag aFlag)   { return SetFlag(PR_TRUE,  aFlag); }
     nsresult ClearFlag(Flag aFlag) { return SetFlag(PR_FALSE, aFlag); }
 
@@ -155,7 +133,7 @@ protected:
 private:
 
     nsCachedNetData() {};
-    ~nsCachedNetData() {};
+    virtual ~nsCachedNetData() {};
 
     // Initialize internal fields of this nsCachedNetData instance from the
     // underlying raw cache database record.
@@ -175,6 +153,8 @@ private:
 
     nsresult CommitFlags();
 
+    CacheMetaData* FindTaggedMetaData(const char* aTag, PRBool aCreate);
+
 private:
     
     // List of nsIStreamAsFileObserver's that will receive notification events
@@ -183,8 +163,7 @@ private:
     StreamAsFileObserverClosure* mObservers;
 
     // Protocol-specific meta-data, opaque to the cache manager
-    char*       mProtocolData;
-    PRUint32    mProtocolDataLength;
+    CacheMetaData *mMetaData;
 
     // Next in chain for a single bucket in the replacement policy hash table
     // that maps from record ID to nsCachedNetData

@@ -45,7 +45,7 @@ class nsCacheManager : public nsINetDataCacheManager {
 
 public:
     nsCacheManager();
-    ~nsCacheManager();
+    virtual ~nsCacheManager();
 
     NS_METHOD Init();
 
