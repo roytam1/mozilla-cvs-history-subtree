@@ -1926,15 +1926,21 @@ js_Interpret(JSContext *cx, jsval *result)
 		parent = OBJ_GET_PARENT(cx, obj2);
 	    }
 
-#if 0
-	    obj = js_NewObject(cx, &js_ObjectClass, proto, parent);
-#else
-	    /* If there is no class prototype, use js_ObjectClass. */
-	    if (!proto)
-		obj = js_NewObject(cx, &js_ObjectClass, NULL, parent);
-	    else
-		obj = js_NewObject(cx, OBJ_GET_CLASS(cx, proto), proto, parent);
-#endif
+            clasp = &js_ObjectClass;
+            if (!JSVAL_IS_PRIMITIVE(lval)) {
+                /* 
+                 * Use prototype's class iff we are calling the class's
+                 * constuctor.
+                 */
+                JSObject *funobj;
+
+                funobj = JSVAL_TO_OBJECT(lval);
+                if ((OBJ_GET_CLASS(cx, funobj)->flags & JSCLASS_HAS_PRIVATE) &&
+                    ((JSFunction *)JS_GetPrivate(cx, funobj))->call == 
+                        OBJ_GET_CLASS(cx, proto)->construct)
+                    clasp = OBJ_GET_CLASS(cx, proto);
+            }
+	    obj = js_NewObject(cx, clasp, proto, parent);
 	    if (!obj) {
 		ok = JS_FALSE;
 		goto out;

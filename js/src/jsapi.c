@@ -986,6 +986,9 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
 	if (!fun)
 	    goto bad;
 
+        if (clasp->construct == NULL)
+            clasp->construct = constructor;
+
 	/* Connect constructor and prototype by named properties. */
 	ctor = fun->object;
 	if (!js_SetClassPrototype(cx, ctor, proto,
@@ -1863,8 +1866,10 @@ JS_CloneFunctionObject(JSContext *cx, JSObject *funobj, JSObject *parent)
     JSObject *newfunobj;
 
     CHECK_REQUEST(cx);
-    if (OBJ_GET_CLASS(cx, funobj) != &js_FunctionClass)
-	return NULL;
+    if (OBJ_GET_CLASS(cx, funobj) != &js_FunctionClass) {
+        /* Indicate we cannot clone this object */
+	return funobj;
+    }
     fun = JS_GetPrivate(cx, funobj);
 
     newfunobj = js_NewObject(cx, &js_FunctionClass, funobj, parent);
