@@ -25,6 +25,99 @@
 
 NS_IMPL_ISUPPORTS1(nsImageFrame, nsIImageFrame)
 
+
+
+
+
+
+struct MONOBITMAPINFO {
+  BITMAPINFOHEADER  bmiHeader;
+  RGBQUAD           bmiColors[2];
+
+  MONOBITMAPINFO(LONG aWidth, LONG aHeight)
+  {
+    memset(&bmiHeader, 0, sizeof(bmiHeader));
+    bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmiHeader.biWidth = aWidth;
+    bmiHeader.biHeight = aHeight;
+    bmiHeader.biPlanes = 1;
+    bmiHeader.biBitCount = 1;
+
+    // Note that the palette is being set up so the DIB and the DDB have white and
+    // black reversed. This is because we need the mask to have 0 for the opaque
+    // pixels of the image, and 1 for the transparent pixels. This way the SRCAND
+    // operation sets the opaque pixels to 0, and leaves the transparent pixels
+    // undisturbed
+    bmiColors[0].rgbBlue = 255;
+    bmiColors[0].rgbGreen = 255;
+    bmiColors[0].rgbRed = 255;
+    bmiColors[0].rgbReserved = 0;
+    bmiColors[1].rgbBlue = 0;
+    bmiColors[1].rgbGreen = 0;
+    bmiColors[1].rgbRed = 0;
+    bmiColors[1].rgbReserved = 0;
+  }
+};
+
+
+struct ALPHA8BITMAPINFO {
+  BITMAPINFOHEADER  bmiHeader;
+  RGBQUAD           bmiColors[256];
+
+  ALPHA8BITMAPINFO(LONG aWidth, LONG aHeight)
+  {
+    memset(&bmiHeader, 0, sizeof(bmiHeader));
+    bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmiHeader.biWidth = aWidth;
+    bmiHeader.biHeight = aHeight;
+    bmiHeader.biPlanes = 1;
+    bmiHeader.biBitCount = 8;
+
+    /* fill in gray scale palette */
+     int i;
+     for(i=0; i < 256; i++){
+      bmiColors[i].rgbBlue = 255-i;
+      bmiColors[i].rgbGreen = 255-i;
+      bmiColors[i].rgbRed = 255-i;
+      bmiColors[1].rgbReserved = 0;
+     }
+  }
+};
+
+struct ALPHA24BITMAPINFO {
+  BITMAPINFOHEADER  bmiHeader;
+
+  ALPHA24BITMAPINFO(LONG aWidth, LONG aHeight)
+  {
+    memset(&bmiHeader, 0, sizeof(bmiHeader));
+    bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmiHeader.biWidth = aWidth;
+    bmiHeader.biHeight = aHeight;
+    bmiHeader.biPlanes = 1;
+    bmiHeader.biBitCount = 24;
+  }
+};
+
+struct ALPHA32BITMAPINFO {
+  BITMAPINFOHEADER  bmiHeader;
+
+  ALPHA32BITMAPINFO(LONG aWidth, LONG aHeight)
+  {
+    memset(&bmiHeader, 0, sizeof(bmiHeader));
+    bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+    bmiHeader.biWidth = aWidth;
+    bmiHeader.biHeight = aHeight;
+    bmiHeader.biPlanes = 1;
+    bmiHeader.biBitCount = 32;
+  }
+};
+
+
+
+
+
+
+
 nsImageFrame::nsImageFrame() :
   mInitalized(PR_FALSE),
   mAlphaData(nsnull)
@@ -74,12 +167,14 @@ NS_IMETHODIMP nsImageFrame::Init(nscoord aX, nscoord aY, nscoord aWidth, nscoord
     mImageData.depth = 24;
     mAlphaData->depth = 1;
     mAlphaData->bytesPerRow = (((mRect.width + 7) / 8) + 3) & ~0x3;
+//    mAlphaData->header = new MONOBITMAPINFO(mRect.width, mRect.height);
     break;
   case nsIGFXFormat::BGR_A8:
   case nsIGFXFormat::RGB_A8:
     mImageData.depth = 24;
     mAlphaData->depth = 8;
     mAlphaData->bytesPerRow = (mRect.width + 3) & ~0x3;
+//    mAlphaData->header = new ALPHA8BITMAPINFO(mRect.width, mRect.height);
     break;
 
   default:
@@ -97,10 +192,18 @@ NS_IMETHODIMP nsImageFrame::Init(nscoord aX, nscoord aY, nscoord aWidth, nscoord
 
   mImageData.length = mImageData.bytesPerRow * mRect.height;
   mImageData.data = new PRUint8[mImageData.length];
+/*
+  mImageData.bitmap = ::CreateDIBitmap(NULL, mImageData.header, CBM_INIT, NULL, (LPBITMAPINFO)mImageData.header,
+				                               DIB_RGB_COLORS);
+*/
 
   if (mAlphaData) {
     mAlphaData->length = mAlphaData->bytesPerRow * mRect.height;
     mAlphaData->data = new PRUint8[mAlphaData->length];
+/*
+    mAlphaData->bitmap = ::CreateDIBitmap(NULL, mAlphaData->header, CBM_INIT, NULL, (LPBITMAPINFO)mAlphaData->header,
+				                                  DIB_RGB_COLORS);
+*/
   }
 
   return NS_OK;

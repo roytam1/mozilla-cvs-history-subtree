@@ -25,6 +25,8 @@
 
 #include "nsRect.h"
 
+#include <windows.h>
+
 #define NS_IMAGEFRAME_CID \
 { /* 99b219ea-1dd1-11b2-aa87-cd48e7d50227 */         \
      0x99b219ea,                                     \
@@ -35,10 +37,13 @@
 
 struct ImageData
 {
-  ImageData() : bytesPerRow(0), data(nsnull), length(0), depth(0) {}
+  ImageData() : header(nsnull), bitmap(0), bytesPerRow(0), data(nsnull), length(0), depth(0) {}
   ~ImageData() {
     delete[] data;
+    delete header;
   }
+  LPBITMAPINFOHEADER header;
+  HBITMAP bitmap;
   PRUint32 bytesPerRow; // bytes per row
   PRUint8 *data;
   PRUint32 length; // length of the data in bytes
@@ -59,9 +64,9 @@ private:
   nsRect mRect;
 
   PRPackedBool mInitalized;   // 8 bits
-  // ???                      // 8 bits
-  gfx_format mFormat;         // 16 bits
 
   ImageData mImageData;
+  gfx_format mFormat;         // 16 bits
+
   ImageData *mAlphaData;
 };

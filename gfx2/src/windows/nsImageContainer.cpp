@@ -23,7 +23,7 @@
 
 #include "nsImageContainer.h"
 
-NS_IMPL_ISUPPORTS1(nsImageContainer, nsIImageContainer)
+NS_IMPL_ISUPPORTS2(nsImageContainer, nsIImageContainer, nsPIImageContainerWin)
 
 nsImageContainer::nsImageContainer()
 {
@@ -126,3 +126,11 @@ NS_IMETHODIMP nsImageContainer::SetLoopCount(PRInt32 aLoopCount)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+
+
+/** nsPIImageContainerWin methods **/
+
+NS_IMETHODIMP nsImageContainer::DrawImage(PRInt32 width, PRInt32 height)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
