@@ -50,6 +50,7 @@
 #include "nsNativeAppSupportWin.h"
 #else
 #include "nsINativeAppSupportWin.h"
+#include "nsICmdLineHandler.h"
 #endif
 
 #define MOZ_HWND_BROADCAST_MSG_TIMEOUT 5000

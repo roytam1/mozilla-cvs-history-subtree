@@ -50,7 +50,7 @@
 #define ICOMMANDLINEHANDLER nsICommandLineHandler
 #else
 #include "nsICmdLineHandler.h"
-#define ICOMMANDLINEHANDLEr nsICmdLineHandler
+#define ICOMMANDLINEHANDLER nsICmdLineHandler
 #endif
 
 class nsMsgCachedWindowInfo
