@@ -337,7 +337,7 @@ private:
      * @param ps the current ProcessorState
     **/
     void processAttrValueTemplate
-        (const String& attValue, String& result, Node* context, ProcessorState* ps);
+        (const String& attValue, DOMString& result, Node* context, ProcessorState* ps);
 
     void processTemplate(Node* node, Node* xslTemplate, ProcessorState* ps);
     void processTemplateParams(Node* xslTemplate, Node* context, ProcessorState* ps);
