@@ -45,6 +45,7 @@ XPIDLSRCS =					\
 	nsIDOMXULSelectCntrlEl.idl       \
 	nsIDOMXULSelectCntrlItemEl.idl   \
 	nsIDOMXULMultSelectCntrlEl.idl \
+  nsIDOMXULTabboxElement.idl \
 	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
