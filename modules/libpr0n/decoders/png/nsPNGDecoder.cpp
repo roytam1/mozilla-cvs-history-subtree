@@ -314,13 +314,13 @@ nsPNGDecoder::info_callback(png_structp png_ptr, png_infop info_ptr)
   nsPNGDecoder *decoder = NS_STATIC_CAST(nsPNGDecoder*, png_get_progressive_ptr(png_ptr));
 
   if (decoder->mObserver)
-    decoder->mObserver->OnStartDecode(nsnull);
+    decoder->mObserver->OnStartDecode(nsnull, nsnull);
 
   // since the png is only 1 frame, initalize the container to the width and height of the frame
   decoder->mImage->Init(width, height);
 
   if (decoder->mObserver)
-    decoder->mObserver->OnStartContainer(nsnull, decoder->mImage);
+    decoder->mObserver->OnStartContainer(nsnull, nsnull, decoder->mImage);
 
   decoder->mFrame = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
 #if 0
@@ -332,7 +332,7 @@ nsPNGDecoder::info_callback(png_structp png_ptr, png_infop info_ptr)
   decoder->mImage->AppendFrame(decoder->mFrame);
 
   if (decoder->mObserver)
-    decoder->mObserver->OnStartFrame(nsnull, decoder->mFrame);
+    decoder->mObserver->OnStartFrame(nsnull, nsnull, decoder->mFrame);
 
 
   // then initalize the frame (which was appended above in nsPNGDecoder::Init())
@@ -406,7 +406,7 @@ nsPNGDecoder::row_callback(png_structp png_ptr, png_bytep new_row,
     gfx_dimension width;
     decoder->mFrame->GetWidth(&width);
     nsRect2 r(0, row_num, width, 1);
-    decoder->mObserver->OnDataAvailable(nsnull, decoder->mFrame, &r);
+    decoder->mObserver->OnDataAvailable(nsnull, nsnull, decoder->mFrame, &r);
   }
 }
 
@@ -430,9 +430,9 @@ nsPNGDecoder::end_callback(png_structp png_ptr, png_infop info_ptr)
   nsPNGDecoder *decoder = NS_STATIC_CAST(nsPNGDecoder*, png_get_progressive_ptr(png_ptr));
 
   if (decoder->mObserver) {
-    decoder->mObserver->OnStopFrame(nsnull, decoder->mFrame);
-    decoder->mObserver->OnStopContainer(nsnull, decoder->mImage);
-    decoder->mObserver->OnStopDecode(nsnull, NS_OK, nsnull);
+    decoder->mObserver->OnStopFrame(nsnull, nsnull, decoder->mFrame);
+    decoder->mObserver->OnStopContainer(nsnull, nsnull, decoder->mImage);
+    decoder->mObserver->OnStopDecode(nsnull, nsnull, NS_OK, nsnull);
   }
 
 }

@@ -38,7 +38,7 @@ interface nsIImageRequest : nsIRequest
   const long STATUS_LOAD_COMPLETE    = 0x2;
   const long STATUS_ERROR            = 0x4;
 
-  void init(in nsIChannel aChannel, in nsIImageDecoderObserver aObserver);
+  void init(in nsIChannel aChannel, in nsIImageDecoderObserver aObserver, in nsISupports cx);
 
   /// @return the image object associated with the request.
   readonly attribute nsIImageContainer image;

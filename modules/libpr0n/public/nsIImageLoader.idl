@@ -33,7 +33,7 @@ interface nsIURI;
 [scriptable, uuid(4c8cf1e0-1dd2-11b2-aff9-c51cdbfcb6da)]
 interface nsIImageLoader : nsISupports
 {
-  nsIImageRequest loadImage(in nsIURI uri, in nsIImageDecoderObserver aObserver);
+  nsIImageRequest loadImage(in nsIURI uri, in nsIImageDecoderObserver aObserver, in nsISupports cx);
 
   /**
    * Returns the channels contained directly in this group.

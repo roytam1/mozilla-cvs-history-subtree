@@ -48,8 +48,8 @@ nsImageLoader::~nsImageLoader()
 
 //#define IMAGE_THREADPOOL 1
 
-/* nsIImageRequest loadImage (in nsIURI uri, in nsIImageDecoderObserver aObserver); */
-NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aObserver, nsIImageRequest **_retval)
+/* nsIImageRequest loadImage (in nsIURI uri, in nsIImageDecoderObserver aObserver, in nsISupports cx); */
+NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aObserver, nsISupports *cx, nsIImageRequest **_retval)
 {
 
 #ifdef IMAGE_THREADPOOL
@@ -73,14 +73,14 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
 
   // XXX look at the progid
   nsCOMPtr<nsIImageRequest> imgRequest(do_CreateInstance("@mozilla.org/image/request;1"));
-  imgRequest->Init(newChannel, aObserver);
+  imgRequest->Init(newChannel, aObserver, cx);
 
 #ifdef IMAGE_THREADPOOL
   nsCOMPtr<nsIRunnable> run(do_QueryInterface(imgRequest));
   mThreadPool->DispatchRequest(run);
 #else
   nsCOMPtr<nsIStreamListener> streamList(do_QueryInterface(imgRequest));
-  newChannel->AsyncRead(streamList, nsnull);
+  newChannel->AsyncRead(streamList, cx);
 #endif
 
   *_retval = imgRequest;

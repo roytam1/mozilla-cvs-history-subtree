@@ -58,8 +58,8 @@ nsImageRequest::~nsImageRequest()
 
 
 
-/* void init (in nsIChannel aChannel, in nsIImageDecoderObserver aObserver); */
-NS_IMETHODIMP nsImageRequest::Init(nsIChannel *aChannel, nsIImageDecoderObserver *aObserver)
+/* void init (in nsIChannel aChannel, in nsIImageDecoderObserver aObserver, in nsISupports cx); */
+NS_IMETHODIMP nsImageRequest::Init(nsIChannel *aChannel, nsIImageDecoderObserver *aObserver, nsISupports *cx)
 {
   if (mImage)
     return NS_ERROR_FAILURE; // XXX
@@ -68,6 +68,8 @@ NS_IMETHODIMP nsImageRequest::Init(nsIChannel *aChannel, nsIImageDecoderObserver
 
   mObserver = aObserver;
   // XXX we should save off the thread we are getting called on here so that we can proxy all calls to mDecoder to it.
+
+  mContext = cx;
 
   // XXX do not init the image here.  this has to be done from the image decoder.
   mImage = do_CreateInstance("@mozilla.org/gfx/image;2");
@@ -139,71 +141,71 @@ NS_IMETHODIMP nsImageRequest::Resume()
 
 /** nsIImageDecoderObserver methods **/
 
-/* void onStartDecode (in nsIImageRequest request); */
-NS_IMETHODIMP nsImageRequest::OnStartDecode(nsIImageRequest *request)
+/* void onStartDecode (in nsIImageRequest request, in nsISupports cx); */
+NS_IMETHODIMP nsImageRequest::OnStartDecode(nsIImageRequest *request, nsISupports *cx)
 {
   if (mObserver)
-    mObserver->OnStartDecode(this);
+    mObserver->OnStartDecode(this, mContext);
 
   return NS_OK;
 }
 
-/* void onStartContainer (in nsIImageRequest request, in nsIImageContainer image); */
-NS_IMETHODIMP nsImageRequest::OnStartContainer(nsIImageRequest *request, nsIImageContainer *image)
+/* void onStartContainer (in nsIImageRequest request, in nsISupports cx, in nsIImageContainer image); */
+NS_IMETHODIMP nsImageRequest::OnStartContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image)
 {
   mStatus |= nsIImageRequest::STATUS_SIZE_AVAILABLE;
 
   if (mObserver)
-    mObserver->OnStartContainer(this, image);
+    mObserver->OnStartContainer(this, mContext, image);
 
   return NS_OK;
 }
 
-/* void onStartFrame (in nsIImageRequest request, in nsIImageFrame frame); */
-NS_IMETHODIMP nsImageRequest::OnStartFrame(nsIImageRequest *request, nsIImageFrame *frame)
+/* void onStartFrame (in nsIImageRequest request, in nsISupports cx, in nsIImageFrame frame); */
+NS_IMETHODIMP nsImageRequest::OnStartFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame)
 {
   if (mObserver)
-    mObserver->OnStartFrame(this, frame);
+    mObserver->OnStartFrame(this, mContext, frame);
 
   return NS_OK;
 }
 
-/* [noscript] void onDataAvailable (in nsIImageRequest request, in nsIImageFrame frame, [const] in nsRect2 rect); */
-NS_IMETHODIMP nsImageRequest::OnDataAvailable(nsIImageRequest *request, nsIImageFrame *frame, const nsRect2 * rect)
+/* [noscript] void onDataAvailable (in nsIImageRequest request, in nsISupports cx, in nsIImageFrame frame, [const] in nsRect2 rect); */
+NS_IMETHODIMP nsImageRequest::OnDataAvailable(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame, const nsRect2 * rect)
 {
   if (mObserver)
-    mObserver->OnDataAvailable(this, frame, rect);
+    mObserver->OnDataAvailable(this, mContext, frame, rect);
 
   return NS_OK;
 }
 
-/* void onStopFrame (in nsIImageRequest request, in nsIImageFrame frame); */
-NS_IMETHODIMP nsImageRequest::OnStopFrame(nsIImageRequest *request, nsIImageFrame *frame)
+/* void onStopFrame (in nsIImageRequest request, in nsISupports cx, in nsIImageFrame frame); */
+NS_IMETHODIMP nsImageRequest::OnStopFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame)
 {
   if (mObserver)
-    mObserver->OnStopFrame(this, frame);
+    mObserver->OnStopFrame(this, mContext, frame);
 
   return NS_OK;
 }
 
-/* void onStopContainer (in nsIImageRequest request, in nsIImageContainer image); */
-NS_IMETHODIMP nsImageRequest::OnStopContainer(nsIImageRequest *request, nsIImageContainer *image)
+/* void onStopContainer (in nsIImageRequest request, in nsISupports cx, in nsIImageContainer image); */
+NS_IMETHODIMP nsImageRequest::OnStopContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image)
 {
   if (mObserver)
-    mObserver->OnStopContainer(this, image);
+    mObserver->OnStopContainer(this, mContext, image);
 
   return NS_OK;
 }
 
-/* void onStopDecode (in nsIImageRequest request, in nsresult status, in wstring statusArg); */
-NS_IMETHODIMP nsImageRequest::OnStopDecode(nsIImageRequest *request, nsresult status, const PRUnichar *statusArg)
+/* void onStopDecode (in nsIImageRequest request, in nsISupports cx, in nsresult status, in wstring statusArg); */
+NS_IMETHODIMP nsImageRequest::OnStopDecode(nsIImageRequest *request, nsISupports *cx, nsresult status, const PRUnichar *statusArg)
 {
 
   if (NS_FAILED(status))
     mStatus = nsIImageRequest::STATUS_ERROR;
 
   if (mObserver)
-    mObserver->OnStopDecode(this, status, statusArg);
+    mObserver->OnStopDecode(this, mContext, status, statusArg);
 
   return NS_OK;
 }
