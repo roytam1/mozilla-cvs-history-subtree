@@ -72,7 +72,6 @@ LINCS= \
   -I..\..\..\xml\content\src \
   -I..\..\..\base\public \
   -I..\..\..\..\content\svg\content\src \
-  -I$(LIBART) \
   $(NULL)
 
 
@@ -80,9 +79,6 @@ LCFLAGS = \
         $(LCFLAGS) \
         $(DEFINES) \
         $(NULL)
-
-LLIBS=					\
- $(DIST)\lib\libart.lib	
 
 
 include <$(DEPTH)\config\rules.mak>

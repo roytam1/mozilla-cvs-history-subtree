@@ -78,7 +78,7 @@ SUB_LIBRARIES=                          \
 !endif
 !ifdef MOZ_SVG
  $(DIST)\lib\layoutsvgbase_s.lib        \
- $(LIBART)\libart.lib                 \
+ $(DIST)\lib\libart.lib                 \
 !endif
  $(NULL)
 

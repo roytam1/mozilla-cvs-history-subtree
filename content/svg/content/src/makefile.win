@@ -92,7 +92,6 @@ LINCS=-I$(PUBLIC)\xpcom -I$(PUBLIC)\raptor -I$(PUBLIC)\js \
   -I..\..\..\base\src \
   -I..\..\..\xml\content\src \
   -I..\..\..\..\layout\svg\base\src\ \
-  -I$(LIBART) \
   $(NULL)
 
 LCFLAGS = \
