@@ -737,29 +737,6 @@ NS_IMETHODIMP nsAbCardProperty::Copy(nsIAbCard* srcCard)
 	return NS_OK;
 }
 
-NS_IMETHODIMP nsAbCardProperty::DropCardToDatabase(const char *uri)
-{
-  // fix me, should not be here
-#if 0
-	nsresult rv = NS_OK;
-	nsCOMPtr<nsIRDFService> rdf(do_GetService("@mozilla.org/rdf/rdf-service;1", &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-	nsCOMPtr<nsIRDFResource> res;
-	rv = rdf->GetResource(uri, getter_AddRefs(res));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-	nsCOMPtr<nsIAbDirectory> directory(do_QueryInterface(res, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-	
-	rv = directory->DropCard(this);
-		NS_ENSURE_SUCCESS(rv, rv);       
-#else
-  NS_ASSERTION(0,"fix this crap");
-#endif
-	return NS_ERROR_UNEXPECTED;
-}
-
 NS_IMETHODIMP nsAbCardProperty::EditCardToDatabase(const char *uri)
 {
 	return NS_ERROR_NOT_IMPLEMENTED;

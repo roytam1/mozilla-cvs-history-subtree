@@ -40,12 +40,13 @@ var abResultsPaneObserver = {
   onDragStart: function (aEvent, aXferData, aDragAction)
     {
       aXferData.data = new TransferData();
-      var selectedCards = GetSelectedAbCards();
+      var selectedRows = GetSelectedRows();
       var selectedAddresses = GetSelectedAddresses();
 
       dump("XXX " + selectedAddresses + "\n");
- 
-      aXferData.data.addDataForFlavour("moz/abcard", selectedCards);
+      dump("XXX " + selectedRows + "\n");
+
+      aXferData.data.addDataForFlavour("moz/abcard", selectedRows);
       aXferData.data.addDataForFlavour("text/x-moz-address", selectedAddresses);
     },
 
@@ -63,7 +64,6 @@ var abResultsPaneObserver = {
 
   getSupportedFlavours: function ()
     {
-     dump("XXX getSupportedFlavours\n");
      return null;
     }
 };
@@ -77,6 +77,31 @@ var abDirTreeObserver = {
     {
 	    var xferData = aXferData.data.split("\n");
       dump("XXX = " + xferData[0] + "\n");
+
+      // XXX do we still need this check, since we do it in onDragOver?
+      if (aEvent.target.localName != "treecell") {
+         return;
+      }
+
+      // target is the <treecell>, and "id" is on the <treeitem> two levels above
+      var treeItem = aEvent.target.parentNode.parentNode;
+      if (!treeItem)  
+        return;
+
+      var targetID = treeItem.getAttribute("id");
+      var rdf = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);
+      var directory = rdf.GetResource(targetID).QueryInterface(Components.interfaces.nsIAbDirectory);
+
+      var boxObject = GetAbResultsBoxObject();
+      var abView = boxObject.view.QueryInterface(Components.interfaces.nsIAbView);
+
+      var rows = xferData[0].split(",");
+      var numrows = rows.length;
+
+      for (var i=0;i<numrows;i++) {
+        var card = abView.getCardFromRow(rows[i]);
+        directory.dropCard(card);
+      }
     },
 
   onDragExit: function (aEvent, aDragSession)
@@ -85,9 +110,19 @@ var abDirTreeObserver = {
 
   onDragOver: function (aEvent, aFlavour, aDragSession)
     {
-      var id = aEvent.target.id;
-      var uri = aEvent.target.getAttribute("uri");
-      dump("over = " + id + "," + uri + "\n");
+      //dump("XXX " + aEvent.target.localName + "\n");
+      if (aEvent.target.localName != "treecell") {
+         aDragSession.canDrop = false;
+         return false;
+      }
+
+      // target is the <treecell>, and "id" is on the <treeitem> two levels above
+      var treeItem = aEvent.target.parentNode.parentNode;
+      if (!treeItem)  
+        return false;
+
+      var targetID = treeItem.getAttribute("id");
+      //dump("over = " + targetID + "\n");
       return true;
     },
 

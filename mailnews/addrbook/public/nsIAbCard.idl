@@ -108,22 +108,11 @@ interface nsIAbCard : nsISupports {
 	// Copies the card attributes from srcCard
 	void copy(in nsIAbCard srcCard);
 
-	// XXX FIX ME, this should not be a the card, it should be on the db.
-	//
-	// Behaviour wise this is very similar to the
-	// addCardToDatabase method, except that it
-	// assumes the uri refers to a directory that
-	// is not a mail list
-	// This method is rendundent, droping a card
-	// onto a list should be allowed.
-	// Rename to dropCardToDirectory
-	void dropCardToDatabase(in string uri);
-
 	// Edits an existing card in the directory defined by 'uri'
 	// Rename to editCardInDirectory
 	// Component will be an RDF card, since it has already
 	// been created
 	//
-	// XXX FIX ME, this should not be a the card, it should be on the db.
+	// XXX FIX ME, this should not be a the card, it should be on the addressbook.
 	void  editCardToDatabase(in string uri);
 };

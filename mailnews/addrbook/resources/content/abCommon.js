@@ -324,6 +324,35 @@ function GetNumSelectedCards()
  }
 }
 
+// XXX fix me to be GetSelectedRanges()
+function GetSelectedRows()
+{
+  var selectedRows = "";
+
+  if (!gAbView)
+    return selectedRows;
+
+  var outlinerSelection = gAbView.selection;
+
+  var cards = new Array(outlinerSelection.count);
+  var i,j;
+  var count = outlinerSelection.getRangeCount();
+  
+  var current = 0;
+
+  for (i=0; i < count; i++) {
+    var start = new Object;
+    var end = new Object;
+    outlinerSelection.getRangeAt(i,start,end);
+    for (j=start.value;j<=end.value;j++) {
+      if (selectedRows != "")
+        selectedRows += ",";
+      selectedRows += j;
+    }
+  }
+  return selectedRows;
+}
+
 function GetSelectedAbCards()
 {  
   if (!gAbView)
@@ -366,8 +395,8 @@ function SelectFirstCard()
 {
   if (gAbView && gAbView.selection) {
     gAbView.selection.select(0);
-    }
   }
+}
 
 function DirPaneDoubleClick()
 {
@@ -385,7 +414,18 @@ function GetAbResultsBoxObject()
 {
   var outliner = GetAbResultsOutliner();
   return outliner.boxObject.QueryInterface(Components.interfaces.nsIOutlinerBoxObject);
-    }
+}
+
+var gAbResultsOutliner = null;
+
+function GetAbResultsOutliner()
+{
+  if (gAbResultsOutliner) 
+    return gAbResultsOutliner;
+
+	gAbResultsOutliner = document.getElementById('abResultsOutliner');
+	return gAbResultsOutliner;
+}
 
 function CloseAbView()
 {
