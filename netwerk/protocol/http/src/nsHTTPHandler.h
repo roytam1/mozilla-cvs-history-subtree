@@ -50,6 +50,7 @@
 //Forward decl.
 class nsHashtable;
 class nsHTTPChannel;
+class nsITransport;
 
 #define TRANSPORT_REUSE_ALIVE   1
 #define TRANSPORT_OPEN_ALWAYS   2

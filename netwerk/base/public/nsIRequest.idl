@@ -22,8 +22,6 @@
 
 #include "nsISupports.idl"
 
-interface nsITransport;
-
 [scriptable, uuid(F2CAABA0-2F25-11d3-A164-0050041CAF44)]
 interface nsIRequest : nsISupports
 {
@@ -67,11 +65,4 @@ interface nsIRequest : nsISupports
      * any open streams. 
      */
     void resume();
-
-};
-
-[scriptable, uuid(d7abf5a4-ce72-482a-9217-a219a905c019)]
-interface nsITransportRequest : nsIRequest
-{
-   readonly attribute nsITransport transport;
 };
