@@ -42,8 +42,8 @@
 #include "prtypes.h"
 
 
-#define ALU_SIZE PR_BITS_PER_LONG
-//#define ALU_SIZE 16
+//#define ALU_SIZE PR_BITS_PER_LONG
+#define ALU_SIZE 16
 //#define ALU_SIZE 32
 //#define ALU_SIZE 64
 #if (ALU_SIZE==32)
