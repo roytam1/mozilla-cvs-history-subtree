@@ -227,7 +227,7 @@ output_row(gif_struct *gs)
     }
     else
     {
-        do{
+        do {
             switch(gs->ipass)
             {
                 case 1:
@@ -269,7 +269,7 @@ output_row(gif_struct *gs)
                     /* PR_ASSERT(0); */
                     break;
             }
-        }while(gs->irow > gs->height - 1);
+        } while(gs->irow > gs->height - 1);
     }
 }
 
@@ -730,16 +730,16 @@ gif_destroy_transparency(gif_struct* gs)
 
 //******************************************************************************
 PRBool
-gif_write_ready(gif_struct* gs)
+gif_write_ready(const gif_struct* gs)
 {    
     if (!gs)
-        return PR_TRUE;         /* Let imglib generic code decide */
+        return PR_FALSE;
         
     PRInt32 max = PR_MAX(MAX_READ_AHEAD, gs->requested_buffer_fullness);
     if (gs->gathered < max)
         return PR_TRUE;         /* Let imglib generic code decide */
     else
-        return PR_FALSE;        /* No more data until timeout expires */
+        return PR_FALSE;        /* No more data yet expires */
 }
 
 //******************************************************************************
@@ -750,7 +750,7 @@ gif_write_ready(gif_struct* gs)
  * it's unnecessary.  XXX - This can be optimized.
  */
 
-static int
+static PRStatus
 gif_clear_screen(gif_struct *gs)
 {
     PRUintn erase_width=0, erase_height=0, erase_x_offset=0, erase_y_offset=0;
@@ -815,7 +815,7 @@ gif_clear_screen(gif_struct *gs)
         src_trans_pixel_index = 0;
         if (!gif_init_transparency(gs, src_trans_pixel_index)) {
             gs->transparent_pixel = saved_gs_trans_pixel;
-            return NS_ERROR_FAILURE; // XXX: should be out of mem error
+            return PR_FAILURE; // out of mem
         }
         
         /* Now fill in the row buffer. */
@@ -841,7 +841,7 @@ gif_clear_screen(gif_struct *gs)
             gs->transparent_pixel = saved_gs_trans_pixel;
         }
     }
-    return 0;
+    return PR_SUCCESS;
 }
 
 /******************************************************************************/
@@ -849,31 +849,21 @@ gif_clear_screen(gif_struct *gs)
  * process data arriving from the stream for the gif decoder
  */
  
-int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
+PRStatus gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 {
-    int status;
-    /* NI_PixmapHeader *src_header = ic->src_header; */
-    /* GIF_ColorMap *cmap = &src_header->color_space->cmap; */
-    const PRUint8 *q, *p=buf,*ep=buf+len;
-
-
-    /* If this assert fires, chances are the netlib flubbed and
-       continued to send data after the image stream was closed. */
-    //PR_ASSERT(gs);
-    if (!gs) {
-#ifdef DEBUG
-        //ILTRACE(1,("Netlib Error - imagelib image stream is closed\n"));
-#endif
-        return NS_ERROR_FAILURE;
-    }
+    if (!gs)
+        return PR_FAILURE;
 
     /* If this assert fires, some upstream data provider ignored the
        zero return value from il_gif_write_ready() which says not to
        send any more data to this stream until the delay timeout fires. */
     //  PR_ASSERT ((len == 0) || (gs->gathered < MAX_READ_AHEAD));
     if (!((len == 0) || (gs->gathered < MAX_READ_AHEAD)))
-        return NS_ERROR_FAILURE;
+        return PR_FAILURE;
     
+    /* GIF_ColorMap *cmap = &src_header->color_space->cmap; */
+    const PRUint8 *q, *p=buf, *ep=buf+len;
+
     q = NULL;                   /* Initialize to shut up gcc warnings */
     
     while (p <= ep)
@@ -885,7 +875,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
         case gif_lzw:
             if (do_lzw(gs, q) < 0)
             {
-                gs->state=gif_error;
+                gs->state = gif_error;
                 break;
             }           
             GETN(1,gif_sub_block);
@@ -893,8 +883,6 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
         
         case gif_lzw_start:
         {
-            int i;
-
             //cmap->map = gs->is_local_colormap_defined ?
             //    gs->local_colormap : gs->global_colormap;
 
@@ -912,15 +900,15 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                 //}
             }
 
-            status = gif_clear_screen(gs);             
-            if (status < 0)
-               return status;
+            PRStatus status = gif_clear_screen(gs);             
+            if (status != PR_SUCCESS)
+               return PR_FAILURE;
 
             /* Initialize LZW parser/decoder */
             gs->datasize = *q;
             if (gs->datasize > MAX_LZW_BITS)
             {
-                gs->state=gif_error;
+                gs->state = gif_error;
                 break;
             }
 
@@ -947,12 +935,12 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 
             if (gs->clear_code >= MAX_BITS)
             {
-                gs->state=gif_error;
+                gs->state = gif_error;
                 break;
             }
 
             /* init the tables */
-            for (i=0; i < gs->clear_code; i++) 
+            for (int i=0; i < gs->clear_code; i++) 
                 gs->suffix[i] = i;
 
             gs->stackp = gs->stack;
@@ -1056,15 +1044,14 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 
         case gif_global_colormap:
         {
-            GIF_RGB* map;
-            int i;
+            
 #ifdef DEBUG_dp
             printf("DEBUG: global_colormap - %d [%d x %d]\n", gs->global_colormap_size * sizeof(GIF_RGB),
                    gs->global_colormap_size, sizeof(GIF_RGB));
 #endif
 
-            if (!(map = (GIF_RGB*)PR_Calloc(gs->global_colormap_size,
-                                          sizeof(GIF_RGB))))
+            GIF_RGB* map = (GIF_RGB*)PR_Calloc(gs->global_colormap_size, sizeof(GIF_RGB));
+            if (!map)
             {
                 //ILTRACE(0,("il:gif: MEM map"));
                 gs->state=gif_oom;
@@ -1081,7 +1068,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
             //im->hasUniqueColormap = 1; // What the hell is this?
 #endif
 #endif /* M12N */
-            for (i=0; i < gs->global_colormap_size; i++, map++) 
+            for (int i=0; i < gs->global_colormap_size; i++, map++) 
             {
                 map->red = *q++;
                 map->green = *q++;
@@ -1175,8 +1162,12 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
             {
                 gs->tpixel = *(q+3);
                 //ILTRACE(2,("il:gif: transparent pixel %d", gs->tpixel));
-                if (!gif_init_transparency(gs, gs->tpixel))
-                    return NS_ERROR_FAILURE;  // should be out of mem error
+
+                if (!gif_init_transparency(gs, gs->tpixel)) {
+                    gs->state = gif_oom;
+                    break;
+                }
+
                 gs->is_transparent = PR_TRUE;
             }
             else
@@ -1278,20 +1269,20 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
              * size has weird width or height.  We assume that GIF87a
              * files don't contain animations.
              */
-         if ((gs->images_decoded == 0) &&
-                ((gs->screen_height < height) || (gs->screen_width < width) ||
-                 (gs->version == 87))){           
+            if ((gs->images_decoded == 0) &&
+                ((gs->screen_height < height) || (gs->screen_width < width) || (gs->version == 87)))
+            {           
                 gs->screen_height = height;
                 gs->screen_width = width;
                 gs->x_offset = 0;
                 gs->y_offset = 0;
                 
-              (*gs->GIFCallback_BeginGIF)(
-                gs->clientptr,
-                gs->screen_width, 
-                gs->screen_height,
-                gs->screen_bgcolor);
+              (*gs->GIFCallback_BeginGIF)(gs->clientptr,
+                                          gs->screen_width, 
+                                          gs->screen_height,
+                                          gs->screen_bgcolor);
             }
+
             /* Work around more broken GIF files that have zero image
                width or height */
             if (!height || !width) 
@@ -1303,14 +1294,13 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
             gs->height = height;
             gs->width = width;
 
-                (*gs->GIFCallback_BeginImageFrame)(
-                  gs->clientptr,
-                  gs->images_decoded + 1,   /* Frame number, 1-n */
-                  gs->x_offset,  /* X offset in logical screen */
-                  gs->y_offset,  /* Y offset in logical screen */
-                  width,    
-                  height,   
-                  nsnull /*GIF_RGB* aTransparencyChromaKey*/);
+            (*gs->GIFCallback_BeginImageFrame)(gs->clientptr,
+                                               gs->images_decoded + 1,   /* Frame number, 1-n */
+                                               gs->x_offset,  /* X offset in logical screen */
+                                               gs->y_offset,  /* Y offset in logical screen */
+                                               width,    
+                                               height,   
+                                               nsnull /*GIF_RGB* aTransparencyChromaKey*/);
                   
             /* This case will never be taken if this is the first image */
             /* being decoded. If any of the later images are larger     */
@@ -1320,20 +1310,20 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
 
                 gs->rowbuf = (PRUint8*)PR_REALLOC(gs->rowbuf, width);
 
-                if (!gs->rowbuf){
+                if (!gs->rowbuf) {
                     gs->state = gif_oom;
                     break;
                 }
             
                 gs->screen_width = width;
-                if (gs->screen_height < gs->height )
+                if (gs->screen_height < gs->height)
                     gs->screen_height = gs->height;
 
-        }
-        else {
-            if (!gs->rowbuf)
-                gs->rowbuf = (PRUint8*)PR_MALLOC(gs->screen_width);
-        }
+            }
+            else {
+                if (!gs->rowbuf)
+                    gs->rowbuf = (PRUint8*)PR_MALLOC(gs->screen_width);
+            }
 
             if (!gs->rowbuf)
             {
@@ -1373,8 +1363,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                 gs->ipass = 0;
             }
             
-            if (gs->images_decoded == 0)
-            {
+            if (gs->images_decoded == 0) {
                 gs->progressive_display = PR_TRUE;
             } else {
 
@@ -1425,9 +1414,9 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
             {
                 /* Switch back to the global palette */
                 if (gs->is_local_colormap_defined){
-                  // XXX: do pallete reset callback
-                  //if (ic->imgdcb)
-                  //  ic->imgdcb->ImgDCBResetPalette();
+                    // XXX: do pallete reset callback
+                    //if (ic->imgdcb)
+                    //  ic->imgdcb->ImgDCBResetPalette();
                 }
                 gs->is_local_colormap_defined = PR_FALSE;
                 GETN(1, gif_lzw_start);
@@ -1444,13 +1433,12 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
             map = gs->local_colormap;
             if (!map) 
             {
-                map = gs->local_colormap = (GIF_RGB*)PR_Calloc(
-                    gs->local_colormap_size, sizeof(GIF_RGB));
+                map = gs->local_colormap = (GIF_RGB*)PR_Calloc(gs->local_colormap_size, sizeof(GIF_RGB));
 
                 if (!map)
                 {
                     //ILTRACE(0,("il:gif: MEM map"));
-                    gs->state=gif_oom;
+                    gs->state = gif_oom;
                     break;
                 }
             }
@@ -1504,13 +1492,10 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                 
                 ++gs->images_decoded; 
                 
-                (*gs->GIFCallback_EndImageFrame)(
-                  gs->clientptr,
-                  gs->images_decoded,
-                  gs->delay_time,
-                  gs->disposal_method);
-                
-                               
+                (*gs->GIFCallback_EndImageFrame)(gs->clientptr,
+                                                 gs->images_decoded,
+                                                 gs->delay_time,
+                                                 gs->disposal_method);
 
                 /* Clear state from this image */
                 gs->control_extension = PR_FALSE;
@@ -1554,7 +1539,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
             if (gs->GIFCallback_EndGIF) {
                 int result = (gs->GIFCallback_EndGIF)(gs->clientptr, gs->loop_count);
             }    
-            return 0;
+            return PR_SUCCESS;
             break;
 
         case gif_delay:
@@ -1562,7 +1547,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
         {
             PRInt32 gather_remaining;
             PRInt32 request_size = gs->gather_request_size;
-            
+
             {
                 gather_remaining = request_size - gs->gathered;
 
@@ -1583,7 +1568,7 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                     nsCRT::memmove(gs->hold, gs->gather_head, gs->gathered);
                     gs->gather_head = gs->hold;
                 }
-                 
+
                 /* If we add the data just handed to us by the netlib
                    to what we've already gathered, is there enough to satisfy 
                    the current request ? */
@@ -1611,37 +1596,36 @@ int gif_write(gif_struct *gs, const PRUint8 *buf, PRUint32 len)
                     gs->hold = (PRUint8*)hold;
                     gs->gather_head = gs->hold;
                     gs->gathered += ep-p;
-                    return 0;
+                    return PR_SUCCESS;
                 }
             }
         }
         break;
 
-        case gif_oom: 
-            //ILTRACE(1,("il:gif: reached oom state"));
-            return NS_ERROR_FAILURE; // XXX should be out of mem error
+        // Handle out of memory errors
+        case gif_oom:
+            return PR_FAILURE;
             break;
 
+        // Handle general errors
         case gif_error: 
-            // ILTRACE(2,("il:gif: reached error state"));
             if (gs->GIFCallback_EndGIF) {
               int result = (gs->GIFCallback_EndGIF)(gs->clientptr, gs->loop_count);
             }    
-            return NS_ERROR_FAILURE; // XXX should be image lossage
+            return PR_FAILURE;
             break;
 
         case gif_stop_animating:
-            return 0;
+            return PR_SUCCESS;
             break;
 
-        default: 
-            // ILTRACE(0,("il:gif: unknown state"));
-            // PR_ASSERT(0);
+        // We shouldn't ever get here.
+        default:
             break;
         }
     }
 
-    return 0;
+    return PR_SUCCESS;
 }
 
 //******************************************************************************
