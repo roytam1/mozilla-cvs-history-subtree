@@ -73,7 +73,6 @@ CPP_OBJS=                               \
 	.\$(OBJDIR)\nsMsgIncomingServer.obj	\
 	.\$(OBJDIR)\nsNewsSummarySpec.obj	\
 	.\$(OBJDIR)\nsMsgUtils.obj			\
-	.\$(OBJDIR)\nsMessage.obj			\
 	.\$(OBJDIR)\nsMsgProtocol.obj		\
 	.\$(OBJDIR)\nsMsgMailNewsUrl.obj	\
 	.\$(OBJDIR)\nsMsgTxn.obj			\

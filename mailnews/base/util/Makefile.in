@@ -44,7 +44,6 @@ CPPSRCS		= \
 		nsMsgIdentity.cpp \
 		nsMsgIncomingServer.cpp \
 		nsMsgUtils.cpp \
-		nsMessage.cpp \
 		nsMsgProtocol.cpp \
 		nsMsgMailNewsUrl.cpp \
 		nsMsgTxn.cpp \
