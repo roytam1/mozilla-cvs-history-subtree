@@ -1266,12 +1266,6 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, const PRUnichar *colI
   if (flags & MSG_FLAG_ATTACHMENT) 
     properties->AppendElement(kAttachMsgAtom);
 
-  if (flags & MSG_FLAG_WATCHED) 
-    properties->AppendElement(kWatchThreadAtom);
-
-  if (flags & MSG_FLAG_IGNORED) 
-    properties->AppendElement(kIgnoreThreadAtom);
-
   if ((mDeleteModel == nsMsgImapDeleteModels::IMAPDelete) && (flags & MSG_FLAG_IMAP_DELETED)) 
     properties->AppendElement(kImapDeletedMsgAtom);
 
@@ -1380,9 +1374,12 @@ NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 aRow, const PRUnichar *colI
         PRUint32 numUnreadChildren;
         thread->GetNumUnreadChildren(&numUnreadChildren);
         if (numUnreadChildren > 0)
-        {
-            properties->AppendElement(kHasUnreadAtom);
-        }   
+          properties->AppendElement(kHasUnreadAtom);
+        thread->GetFlags(&flags);
+        if (flags & MSG_FLAG_WATCHED) 
+          properties->AppendElement(kWatchThreadAtom);
+        if (flags & MSG_FLAG_IGNORED) 
+          properties->AppendElement(kIgnoreThreadAtom);
       }
     }
   }     
