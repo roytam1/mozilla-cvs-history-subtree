@@ -492,9 +492,6 @@ function AddSubFoldersToURI(folder)
   return returnString;
 }
 
-
-
-
 function GetScopeForFolder(folder) 
 {
   return folder.server.searchScope;

@@ -38,6 +38,7 @@
 
 #include "msgCore.h"
 #include "nsMsgQuickSearchDBView.h"
+#include "nsMsgFolderFlags.h"
 #include "nsIMsgHdr.h"
 #include "nsMsgBaseCID.h"
 #include "nsIMsgImapMailFolder.h"
@@ -219,5 +220,10 @@ nsMsgQuickSearchDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrder
   RestoreSelection(&preservedSelection);
   if (mTree) 
     mTree->Invalidate();
+
+  PRUint32 folderFlags;
+  if (m_viewFolder && NS_SUCCEEDED(m_viewFolder->GetFlags(&folderFlags)) && folderFlags & MSG_FOLDER_FLAG_VIRTUAL)
+    SaveSortInfo(sortType, sortOrder);
+
   return NS_OK;
 }
