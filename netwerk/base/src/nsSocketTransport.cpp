@@ -114,8 +114,8 @@ public:
                 mWouldBlock = PR_TRUE;
             }
             else {
-                LOG(("nsSocketTransport: PR_Read() failed [error=%x, os_error=%x]\n",
-                    code, PR_GetOSError()));
+                LOG(("nsSocketTransport: PR_Read() failed [error=%s, os_error=%x]\n",
+                    PR_ErrorToName(code), PR_GetOSError()));
                 rv = NS_ERROR_FAILURE;
             }
             *aBytesRead = 0;
@@ -200,8 +200,8 @@ public:
                 rv = NS_BASE_STREAM_WOULD_BLOCK;
                 mWouldBlock = PR_TRUE;
             } else {
-                LOG(("nsSocketTransport: PR_Write() failed [error=%x, os_error=%x]\n",
-                    code, PR_GetOSError()));
+                LOG(("nsSocketTransport: PR_Write() failed [error=%s, os_error=%x]\n",
+                    PR_ErrorToName(code), PR_GetOSError()));
                 rv = NS_ERROR_FAILURE;
             }
             *aBytesWritten = 0;
@@ -865,8 +865,8 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
     mLastActiveTime  = PR_IntervalNow();
 
     LOG(("nsSocketTransport: Leaving Process() [host=%s:%d this=%x], mStatus = %x, "
-        "CurrentState=%d\n\n",
-        mHostName, mPort, this, mStatus, mCurrentState));
+        "CurrentState=%d, mSelectFlags=%x\n\n",
+        mHostName, mPort, this, mStatus, mCurrentState, mSelectFlags));
 
     PR_ExitMonitor(mMonitor);
     return mStatus;
@@ -1147,19 +1147,22 @@ nsresult nsSocketTransport::doConnection(PRInt16 aSelectFlags)
     } else
         rv = NS_BASE_STREAM_WOULD_BLOCK;
 
-    LOG(("nsSocketTransport: Leaving doConnection() [%s:%d %x].\t"
-        "rv = %x.\n\n",
-        mHostName, mPort, this, rv));
-
-    if (rv == NS_OK && mSecurityInfo && mProxyHost && mProxyHost && proxyTransparent) {
+    if (rv == NS_OK && mSecurityInfo && mProxyHost && mProxyPort && proxyTransparent) {
         // if the connection phase is finished, and the ssl layer
         // has been pushed, and we were proxying (transparently; ie. nothing
         // has to happen in the protocol layer above us), it's time
         // for the ssl to "step up" and start doing it's thing.
         nsCOMPtr<nsISSLSocketControl> sslControl = do_QueryInterface(mSecurityInfo, &rv);
-        if (NS_SUCCEEDED(rv) && sslControl)
+        if (NS_SUCCEEDED(rv) && sslControl) {
+            LOG(("nsSocketTransport: Enabling SSL proxy; calling ProxyStepUp\n"));
             sslControl->ProxyStepUp();
+        }
     }
+
+    LOG(("nsSocketTransport: Leaving doConnection() [%s:%d %x].\t"
+        "rv = %x.\n\n",
+        mHostName, mPort, this, rv));
+
     return rv;
 }
 
@@ -1263,11 +1266,6 @@ nsWriteToSocket(nsIInputStream* in,
 //-----
 nsresult nsSocketTransport::doReadAsync(PRInt16 aSelectFlags)
 {
-    if (!(aSelectFlags & PR_POLL_READ)) {
-        // wait for the proper select flags
-        return NS_BASE_STREAM_WOULD_BLOCK;
-    }
-
     if (!mSocketInputStream) {
         NS_NEWXPCOM(mSocketInputStream, nsSocketInputStream);
         if (!mSocketInputStream)
@@ -1448,11 +1446,6 @@ nsresult nsSocketTransport::doWriteAsync(PRInt16 aSelectFlags)
     LOG(("nsSocketTransport: Entering doWriteAsync() [host=%s:%d this=%x], "
         "aSelectFlags=%x.\n",
         mHostName, mPort, this, aSelectFlags));
-
-    if (!(aSelectFlags & PR_POLL_WRITE)) {
-        // wait for the proper select flags
-        return NS_BASE_STREAM_WOULD_BLOCK;
-    }
 
     if (!mSocketOutputStream) {
         NS_NEWXPCOM(mSocketOutputStream, nsSocketOutputStream);
@@ -1850,7 +1843,7 @@ nsSocketTransport::Suspend(void)
     // Enter the socket transport lock...
     nsAutoMonitor mon(mMonitor);
 
-    mSuspendCount += 1;
+    mSuspendCount++;
     //
     // Wake up the transport on the socket transport thread so it can
     // be removed from the select list...  
@@ -1882,19 +1875,16 @@ nsSocketTransport::Resume(void)
     // Enter the socket transport lock...
     nsAutoMonitor mon(mMonitor);
 
-    if (mSuspendCount) {
-        mSuspendCount -= 1;
-        //
-        // Wake up the transport on the socket transport thread so it can
-        // be resumed...
-        //
-        if (0 == mSuspendCount) {
-            mLastActiveTime  = PR_IntervalNow ();
-            rv = mService->AddToWorkQ(this);
-        }
-    } else {
-        // Only a suspended transport can be resumed...
-        rv = NS_ERROR_FAILURE;
+    if (mSuspendCount)
+        mSuspendCount--;
+
+    //
+    // Wake up the transport on the socket transport thread so it can
+    // be resumed...
+    //
+    if (0 == mSuspendCount) {
+        mLastActiveTime = PR_IntervalNow();
+        rv = mService->AddToWorkQ(this);
     }
 
     LOG(("nsSocketTransport: Resuming [%s:%d %x].  rv = %x\t"
@@ -2165,6 +2155,12 @@ nsSocketTransport::AsyncRead(nsIStreamListener* aListener,
     if (NS_SUCCEEDED(rv)) {
         mOperation = eSocketOperation_ReadWrite;
         SetReadType(eSocketRead_Async);
+
+        //
+        // If we're already connected then make sure PR_POLL_READ is set
+        //
+        if (mSocketFD)
+            mSelectFlags |= PR_POLL_READ;
         
         mLastActiveTime  = PR_IntervalNow ();
         rv = mService->AddToWorkQ(this);
@@ -2204,10 +2200,16 @@ nsSocketTransport::AsyncWrite(nsIStreamProvider* aProvider,
                                            aProvider, NS_CURRENT_EVENTQ);
         }
     }
-    
+
     if (NS_SUCCEEDED(rv)) {
         mOperation = eSocketOperation_ReadWrite;
         SetWriteType(eSocketWrite_Async);
+
+        //
+        // If we're already connected then make sure PR_POLL_WRITE is set
+        //
+        if (mSocketFD)
+            mSelectFlags |= PR_POLL_WRITE;
         
         mLastActiveTime = PR_IntervalNow ();
         rv = mService->AddToWorkQ(this);
