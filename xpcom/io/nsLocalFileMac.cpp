@@ -437,6 +437,10 @@ nsLocalFile::nsLocalFile()
 
     MakeDirty();
     
+    
+    mWorkingPath.Assign("");
+    mAppendedPath.Assign("");
+    
     mInitType = eNotInitialized;
     
     mSpec.vRefNum = 0;
@@ -578,7 +582,7 @@ nsLocalFile::Clone(nsIFile **file)
     		// Now set any appended path info
     		char *appendedPath;
     		GetAppendedPath(&appendedPath);
-    		localFileMac->SetAppendedPath(path);
+    		localFileMac->SetAppendedPath(appendedPath);
     		break;
     		
     	default:
@@ -679,7 +683,17 @@ nsLocalFile::OpenANSIFileDesc(const char *mode, FILE * *_retval)
     if (NS_FAILED(rv) && rv != NS_ERROR_FILE_NOT_FOUND)
         return rv; 
    
-    *_retval = FSp_fopen(&mResolvedSpec, mode);
+   
+   // Resolve the alias to the original file.
+	FSSpec	spec = mResolvedSpec;
+	Boolean	targetIsFolder;	  
+	Boolean	wasAliased;	  
+	OSErr err = ::ResolveAliasFile(&spec, TRUE, &targetIsFolder, &wasAliased);
+	if (err != noErr)
+		return MacErrorMapper(err);
+		
+		
+    *_retval = FSp_fopen(&spec, mode);
     
     if (*_retval)
         return NS_OK;
@@ -920,6 +934,9 @@ nsLocalFile::GetPath(char **_retval)
     		err = FSpGetFullPath(&mResolvedSpec, &fullPathLen, &fullPathHandle);
     		*_retval = (char*) nsAllocator::Clone(*fullPathHandle, fullPathLen+1);
     		DisposeHandle(fullPathHandle);
+    		
+    		((*_retval)+fullPathLen)[0] = 0;
+    		
     		break;
     	}
     		
@@ -1089,23 +1106,19 @@ nsLocalFile::GetFileSize(PRInt64 *aFileSize)
     if (!mHaveValidSpec)
     	return NS_ERROR_FILE_NOT_FOUND;
     
-	CInfoPBRec	pb;
-	OSErr		err;
-	pb.dirInfo.ioCompletion = nsnull;
-	pb.dirInfo.ioFDirIndex = 0; // use dirID and name
-	pb.dirInfo.ioVRefNum = mResolvedSpec.vRefNum;
-	pb.dirInfo.ioDrDirID = mResolvedSpec.parID;
-	pb.dirInfo.ioNamePtr = mResolvedSpec.name;
-	err = ::PBGetCatInfoSync(&pb);
+    long dataSize, resSize;
     
+    OSErr err = FSpGetFileSize(&mResolvedSpec, &dataSize, &resSize);
+							   
     if (err != noErr)
 		return MacErrorMapper(err);
 	
 	// For now we've only got 32 bits of file size info
-	PRInt64 tempInt64;
-	LL_I2L(tempInt64, pb.hFileInfo.ioFlLgLen);
-	*aFileSize = tempInt64;
-
+	PRInt64 resInt64, dataInt64;
+	LL_I2L(resInt64, resSize);
+	LL_I2L(dataInt64, dataSize);
+	LL_ADD((*aFileSize), dataInt64, resInt64);
+	
     return NS_OK;
 }
 
@@ -1345,9 +1358,27 @@ nsLocalFile::Equals(nsIFile *inFile, PRBool *_retval)
 NS_IMETHODIMP
 nsLocalFile::IsContainedIn(nsIFile *inFile, PRBool recur, PRBool *_retval)
 {
-    NS_ENSURE_ARG(_retval);
     *_retval = PR_FALSE;
-    return NS_ERROR_NOT_IMPLEMENTED;
+       
+    char* myFilePath;
+    if ( NS_FAILED(GetTarget(&myFilePath)))
+        GetPath(&myFilePath);
+    
+    PRInt32 myFilePathLen = strlen(myFilePath);
+    
+    char* inFilePath;
+    if ( NS_FAILED(inFile->GetTarget(&inFilePath)))
+        inFile->GetPath(&inFilePath);
+
+    if ( strncmp( myFilePath, inFilePath, myFilePathLen) == 0)
+    {
+         *_retval = PR_TRUE;
+    }
+        
+    nsAllocator::Free(inFilePath);
+    nsAllocator::Free(myFilePath);
+
+    return NS_OK;
 }
 
 
