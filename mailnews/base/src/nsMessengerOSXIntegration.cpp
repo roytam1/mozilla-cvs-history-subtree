@@ -104,6 +104,11 @@ nsMessengerOSXIntegration::nsMessengerOSXIntegration()
 
 nsMessengerOSXIntegration::~nsMessengerOSXIntegration()
 {
+  if (mBiffIconVisible) 
+  {
+    RestoreApplicationDockTileImage();
+    mBiffIconVisible = PR_FALSE;
+  }
 }
 
 NS_IMPL_ADDREF(nsMessengerOSXIntegration)
@@ -280,7 +285,10 @@ nsMessengerOSXIntegration::OnItemPropertyFlagChanged(nsISupports *item, nsIAtom 
 
       mFoldersWithNewMail->Clear(); 
       if (mBiffIconVisible) 
+      {
         RestoreApplicationDockTileImage();
+        mBiffIconVisible = PR_FALSE;
+      }
     }
   } // if the biff property changed
   
