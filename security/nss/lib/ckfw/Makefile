@@ -39,16 +39,11 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 
 # This'll need some help from a build person.
 
-# The generated files are checked in, and differ from what ckapi.perl
-# will produce.  ckapi.perl is currently newer than the targets, so
-# these rules are invoked, causing the wrong files to be generated.
-# Turning off to fix builds.
-#
-# nssckepv.h: ck.api ckapi.perl
-# nssckft.h: ck.api ckapi.perl
-# nssckg.h: ck.api ckapi.perl
-# nssck.api: ck.api ckapi.perl
-# 	perl ckapi.perl ck.api
+nssckepv.h: ck.api ckapi.perl
+nssckft.h: ck.api ckapi.perl
+nssckg.h: ck.api ckapi.perl
+nssck.api: ck.api ckapi.perl
+	perl ckapi.perl ck.api
 
 export:: private_export
 

@@ -275,7 +275,7 @@ static const struct mechanismList mechanisms[] = {
      {CKM_RC2_CBC,		{1, 128, CKF_EN_DE_WR_UN},	PR_FALSE},
      {CKM_RC2_MAC,		{1, 128, CKF_SN_VR},		PR_FALSE},
      {CKM_RC2_MAC_GENERAL,	{1, 128, CKF_SN_VR},		PR_FALSE},
-     {CKM_RC2_CBC_PAD,		{1, 128, CKF_EN_DE_WR_UN},	PR_TRUE},
+     {CKM_RC2_CBC_PAD,		{1, 128, CKF_EN_DE_WR_UN},	PR_FALSE},
      /* ------------------------- RC4 Operations --------------------------- */
      {CKM_RC4_KEY_GEN,		{1, 256, CKF_GENERATE},		PR_FALSE},
      {CKM_RC4,			{1, 256, CKF_EN_DE_WR_UN},	PR_FALSE},
@@ -285,7 +285,7 @@ static const struct mechanismList mechanisms[] = {
      {CKM_DES_CBC,		{ 8,  8, CKF_EN_DE_WR_UN},	PR_FALSE},
      {CKM_DES_MAC,		{ 8,  8, CKF_SN_VR},		PR_FALSE},
      {CKM_DES_MAC_GENERAL,	{ 8,  8, CKF_SN_VR},		PR_FALSE},
-     {CKM_DES_CBC_PAD,		{ 8,  8, CKF_EN_DE_WR_UN},	PR_TRUE},
+     {CKM_DES_CBC_PAD,		{ 8,  8, CKF_EN_DE_WR_UN},	PR_FALSE},
      {CKM_DES2_KEY_GEN,		{24, 24, CKF_GENERATE},		PR_FALSE},
      {CKM_DES3_KEY_GEN,		{24, 24, CKF_GENERATE},		PR_TRUE },
      {CKM_DES3_ECB,		{24, 24, CKF_EN_DE_WR_UN},	PR_TRUE },
@@ -299,14 +299,14 @@ static const struct mechanismList mechanisms[] = {
      {CKM_CDMF_CBC,		{8,  8, CKF_EN_DE_WR_UN},	PR_FALSE},
      {CKM_CDMF_MAC,		{8,  8, CKF_SN_VR},		PR_FALSE},
      {CKM_CDMF_MAC_GENERAL,	{8,  8, CKF_SN_VR},		PR_FALSE},
-     {CKM_CDMF_CBC_PAD,		{8,  8, CKF_EN_DE_WR_UN},	PR_TRUE},
+     {CKM_CDMF_CBC_PAD,		{8,  8, CKF_EN_DE_WR_UN},	PR_FALSE},
      /* ------------------------- AES Operations --------------------------- */
      {CKM_AES_KEY_GEN,		{16, 32, CKF_GENERATE},		PR_FALSE},
      {CKM_AES_ECB,		{16, 32, CKF_EN_DE_WR_UN},	PR_FALSE},
      {CKM_AES_CBC,		{16, 32, CKF_EN_DE_WR_UN},	PR_FALSE},
      {CKM_AES_MAC,		{16, 32, CKF_SN_VR},		PR_FALSE},
      {CKM_AES_MAC_GENERAL,	{16, 32, CKF_SN_VR},		PR_FALSE},
-     {CKM_AES_CBC_PAD,		{16, 32, CKF_EN_DE_WR_UN},	PR_TRUE},
+     {CKM_AES_CBC_PAD,		{16, 32, CKF_EN_DE_WR_UN},	PR_FALSE},
      /* ------------------------- Hashing Operations ----------------------- */
      {CKM_MD2,			{0,   0, CKF_DIGEST},		PR_FALSE},
      {CKM_MD2_HMAC,		{1, 128, CKF_SN_VR},		PR_FALSE},
@@ -326,19 +326,19 @@ static const struct mechanismList mechanisms[] = {
      {CKM_CAST_CBC,		{1,  8, CKF_EN_DE_WR_UN},	PR_FALSE}, 
      {CKM_CAST_MAC,		{1,  8, CKF_SN_VR},		PR_FALSE}, 
      {CKM_CAST_MAC_GENERAL,	{1,  8, CKF_SN_VR},		PR_FALSE}, 
-     {CKM_CAST_CBC_PAD,		{1,  8, CKF_EN_DE_WR_UN},	PR_TRUE}, 
+     {CKM_CAST_CBC_PAD,		{1,  8, CKF_EN_DE_WR_UN},	PR_FALSE}, 
      {CKM_CAST3_KEY_GEN,	{1, 16, CKF_GENERATE},		PR_FALSE}, 
      {CKM_CAST3_ECB,		{1, 16, CKF_EN_DE_WR_UN},	PR_FALSE}, 
      {CKM_CAST3_CBC,		{1, 16, CKF_EN_DE_WR_UN},	PR_FALSE}, 
      {CKM_CAST3_MAC,		{1, 16, CKF_SN_VR},		PR_FALSE}, 
      {CKM_CAST3_MAC_GENERAL,	{1, 16, CKF_SN_VR},		PR_FALSE}, 
-     {CKM_CAST3_CBC_PAD,	{1, 16, CKF_EN_DE_WR_UN},	PR_TRUE}, 
+     {CKM_CAST3_CBC_PAD,	{1, 16, CKF_EN_DE_WR_UN},	PR_FALSE}, 
      {CKM_CAST5_KEY_GEN,	{1, 16, CKF_GENERATE},		PR_FALSE}, 
      {CKM_CAST5_ECB,		{1, 16, CKF_EN_DE_WR_UN},	PR_FALSE}, 
      {CKM_CAST5_CBC,		{1, 16, CKF_EN_DE_WR_UN},	PR_FALSE}, 
      {CKM_CAST5_MAC,		{1, 16, CKF_SN_VR},		PR_FALSE}, 
      {CKM_CAST5_MAC_GENERAL,	{1, 16, CKF_SN_VR},		PR_FALSE}, 
-     {CKM_CAST5_CBC_PAD,	{1, 16, CKF_EN_DE_WR_UN},	PR_TRUE}, 
+     {CKM_CAST5_CBC_PAD,	{1, 16, CKF_EN_DE_WR_UN},	PR_FALSE}, 
 #endif
 #if NSS_SOFTOKEN_DOES_RC5
      /* ------------------------- RC5 Operations --------------------------- */
@@ -347,7 +347,7 @@ static const struct mechanismList mechanisms[] = {
      {CKM_RC5_CBC,		{1, 32, CKF_EN_DE_WR_UN},	PR_FALSE},
      {CKM_RC5_MAC,		{1, 32, CKF_SN_VR},  		PR_FALSE},
      {CKM_RC5_MAC_GENERAL,	{1, 32, CKF_SN_VR},  		PR_FALSE},
-     {CKM_RC5_CBC_PAD,		{1, 32, CKF_EN_DE_WR_UN}, 	PR_TRUE},
+     {CKM_RC5_CBC_PAD,		{1, 32, CKF_EN_DE_WR_UN}, 	PR_FALSE},
 #endif
 #ifdef NSS_SOFTOKEN_DOES_IDEA
      /* ------------------------- IDEA Operations -------------------------- */
@@ -356,7 +356,7 @@ static const struct mechanismList mechanisms[] = {
      {CKM_IDEA_CBC,		{16, 16, CKF_EN_DE_WR_UN},	PR_FALSE}, 
      {CKM_IDEA_MAC,		{16, 16, CKF_SN_VR},		PR_FALSE}, 
      {CKM_IDEA_MAC_GENERAL,	{16, 16, CKF_SN_VR},		PR_FALSE}, 
-     {CKM_IDEA_CBC_PAD,		{16, 16, CKF_EN_DE_WR_UN}, 	PR_TRUE}, 
+     {CKM_IDEA_CBC_PAD,		{16, 16, CKF_EN_DE_WR_UN}, 	PR_FALSE}, 
 #endif
      /* --------------------- Secret Key Operations ------------------------ */
      {CKM_GENERIC_SECRET_KEY_GEN,	{1, 32, CKF_GENERATE}, PR_FALSE}, 
@@ -618,7 +618,6 @@ pk11_handleCertObject(PK11Session *session,PK11Object *object)
 	attribute = pk11_FindAttribute(object,CKA_VALUE);
 	PORT_Assert(attribute);
 
-	derCert.type = 0;
 	derCert.data = (unsigned char *)attribute->attrib.pValue;
 	derCert.len = attribute->attrib.ulValueLen ;
 
@@ -626,7 +625,7 @@ pk11_handleCertObject(PK11Session *session,PK11Object *object)
 
 	cert =  nsslowcert_FindCertByDERCert(slot->certDB, &derCert);
         if (cert == NULL) {
-	    cert = nsslowcert_DecodeDERCertificate(&derCert, label);
+	    cert = nsslowcert_DecodeDERCertificate(&derCert,PR_FALSE,label);
 	    inDB = PR_FALSE;
 	}
 	if (cert == NULL) {
@@ -739,7 +738,7 @@ pk11_handleTrustObject(PK11Session *session,PK11Object *object)
         CK_TRUST clientTrust = CKT_NETSCAPE_TRUST_UNKNOWN;
         CK_TRUST emailTrust = CKT_NETSCAPE_TRUST_UNKNOWN;
         CK_TRUST signTrust = CKT_NETSCAPE_TRUST_UNKNOWN;
- 	NSSLOWCERTCertTrust dbTrust = { 0 };
+ 	NSSLOWCERTCertTrust dbTrust;
 	SECStatus rv;
 
 
@@ -806,10 +805,10 @@ pk11_handleTrustObject(PK11Session *session,PK11Object *object)
 		cert->trust->objectSigningFlags & CERTDB_PRESERVE_TRUST_BITS;
 	}
 
-	dbTrust.sslFlags |= pk11_MapTrust(sslTrust,PR_FALSE);
+	dbTrust.sslFlags = pk11_MapTrust(sslTrust,PR_FALSE);
 	dbTrust.sslFlags |= pk11_MapTrust(clientTrust,PR_TRUE);
-	dbTrust.emailFlags |= pk11_MapTrust(emailTrust,PR_FALSE);
-	dbTrust.objectSigningFlags |= pk11_MapTrust(signTrust,PR_FALSE);
+	dbTrust.emailFlags = pk11_MapTrust(emailTrust,PR_FALSE);
+	dbTrust.objectSigningFlags = pk11_MapTrust(signTrust,PR_FALSE);
 
 	rv = nsslowcert_ChangeCertTrust(slot->certDB,cert,&dbTrust);
 	object->handle=pk11_mkHandle(slot,&cert->certKey,PK11_TOKEN_TYPE_TRUST);
@@ -861,14 +860,12 @@ pk11_handleSMimeObject(PK11Session *session,PK11Object *object)
 	PORT_Assert(subject);
 	derSubj.data = (unsigned char *)subject->attrib.pValue;
 	derSubj.len = subject->attrib.ulValueLen ;
-	derSubj.type = 0;
 
 	/* lookup VALUE */
 	profile = pk11_FindAttribute(object,CKA_VALUE);
 	if (profile) {
 	    rawProfile.data = (unsigned char *)profile->attrib.pValue;
 	    rawProfile.len = profile->attrib.ulValueLen ;
-	    rawProfile.type = siBuffer;
 	    pRawProfile = &rawProfile;
 	}
 
@@ -877,7 +874,6 @@ pk11_handleSMimeObject(PK11Session *session,PK11Object *object)
 	if (time) {
 	    rawTime.data = (unsigned char *)time->attrib.pValue;
 	    rawTime.len = time->attrib.ulValueLen ;
-	    rawTime.type = siBuffer;
 	    pRawTime = &rawTime;
 	}
 
@@ -2171,29 +2167,10 @@ PK11_SlotInit(char *configdir,pk11_token_parameters *params, int moduleIndex)
 	return CKR_HOST_MEMORY;
     }
 
-    slot->optimizeSpace = params->optimizeSpace;
-    if (slot->optimizeSpace) {
-	slot->tokObjHashSize = SPACE_TOKEN_OBJECT_HASH_SIZE;
-	slot->sessHashSize = SPACE_SESSION_HASH_SIZE;
-	slot->numSessionLocks = 1;
-    } else {
-	slot->tokObjHashSize = TIME_TOKEN_OBJECT_HASH_SIZE;
-	slot->sessHashSize = TIME_SESSION_HASH_SIZE;
-	slot->numSessionLocks = slot->sessHashSize/BUCKETS_PER_SESSION_LOCK;
-    }
-    slot->sessionLockMask = slot->numSessionLocks-1;
-
 #ifdef PKCS11_USE_THREADS
     slot->slotLock = PZ_NewLock(nssILockSession);
-    if (slot->slotLock == NULL) {
-	return CKR_HOST_MEMORY;
-    }
-    slot->sessionLock = (PZLock **)
-			PORT_ZAlloc(slot->numSessionLocks * sizeof(PZLock *));
-    if (slot->sessionLock == NULL) {
-	return CKR_HOST_MEMORY;
-    }
-    for (i=0; i < slot->numSessionLocks; i++) {
+    if (slot->slotLock == NULL) return CKR_HOST_MEMORY;
+    for (i=0; i < NUMBER_OF_SESSION_LOCKS; i++) {
         slot->sessionLock[i] = PZ_NewLock(nssILockSession);
         if (slot->sessionLock[i] == NULL) return CKR_HOST_MEMORY;
     }
@@ -2201,25 +2178,16 @@ PK11_SlotInit(char *configdir,pk11_token_parameters *params, int moduleIndex)
     if (slot->objectLock == NULL) return CKR_HOST_MEMORY;
 #else
     slot->slotLock = NULL;
-    slot->sessionLock = (PZLock **)
-			PORT_ZAlloc(slot->numSessionLocks * sizeof(PZLock *));
-    if (slot->sessionLock == NULL) {
-	return CKR_HOST_MEMORY;
-    }
-    for (i=0; i < slot->numSessionLocks; i++) {
+    for (i=0; i < NUMBER_OF_SESSION_LOCKS; i++) {
         slot->sessionLock[i] = NULL;
     }
     slot->objectLock = NULL;
 #endif
-    slot->head = (PK11Session **)
-		PORT_ZAlloc(slot->sessHashSize*sizeof(PK11Session *));
-    if (slot->head == NULL) {
-	return CKR_HOST_MEMORY;
+    for(i=0; i < SESSION_HASH_SIZE; i++) {
+	slot->head[i] = NULL;
     }
-    slot->tokObjects = (PK11Object **)
-		PORT_ZAlloc(slot->tokObjHashSize*sizeof(PK11Object *));
-    if (slot->tokObjects == NULL) {
-	return CKR_HOST_MEMORY;
+    for(i=0; i < TOKEN_OBJECT_HASH_SIZE; i++) {
+	slot->tokObjects[i] = NULL;
     }
     slot->tokenHashTable = PL_NewHashTable(64,pk11_HashNumber,PL_CompareValues,
 					SECITEM_HashCompare, NULL, 0);
@@ -2296,51 +2264,32 @@ pk11_DestroySlotData(PK11Slot *slot)
 	PZ_DestroyLock(slot->slotLock);
 	slot->slotLock = NULL;
     }
-    if (slot->sessionLock) {
-	for (i=0; i < slot->numSessionLocks; i++) {
-	    if (slot->sessionLock[i]) {
-		PZ_DestroyLock(slot->sessionLock[i]);
-		slot->sessionLock[i] = NULL;
-	    }
-	}
+    for (i=0; i < NUMBER_OF_SESSION_LOCKS; i++) {
+        if (slot->sessionLock[i]) {
+            PZ_DestroyLock(slot->sessionLock[i]);
+            slot->sessionLock[i] = NULL;
+        }
     }
     if (slot->objectLock) {
 	PZ_DestroyLock(slot->objectLock);
 	slot->objectLock = NULL;
     }
 #endif
-    if (slot->sessionLock) {
-	PORT_Free(slot->sessionLock);
-	slot->sessionLock = NULL;
+
+    PL_HashTableEnumerateEntries(slot->tokenHashTable,pk11_freeHashItem,NULL);
+    PL_HashTableDestroy(slot->tokenHashTable);
+
+    for(i=0; i < TOKEN_OBJECT_HASH_SIZE; i++) {
+	PK11Object *object = slot->tokObjects[i];
+	slot->tokObjects[i] = NULL;
+	if (object) pk11_FreeObject(object);
     }
 
-    if (slot->tokenHashTable) {
-	PL_HashTableEnumerateEntries(slot->tokenHashTable,
-							pk11_freeHashItem,NULL);
-	PL_HashTableDestroy(slot->tokenHashTable);
-	slot->tokenHashTable = NULL;
+    for(i=0; i < SESSION_HASH_SIZE; i++) {
+	PK11Session *session = slot->head[i];
+	slot->head[i] = NULL;
+	if (session) pk11_FreeSession(session);
     }
-
-    if (slot->tokObjects) {
-	for(i=0; i < slot->tokObjHashSize; i++) {
-	    PK11Object *object = slot->tokObjects[i];
-	    slot->tokObjects[i] = NULL;
-	    if (object) pk11_FreeObject(object);
-	}
-	PORT_Free(slot->tokObjects);
-	slot->tokObjects = NULL;
-    }
-    slot->tokObjHashSize = 0;
-    if (slot->head) {
-	for(i=0; i < slot->sessHashSize; i++) {
-	    PK11Session *session = slot->head[i];
-	    slot->head[i] = NULL;
-	    if (session) pk11_FreeSession(session);
-	}
-	PORT_Free(slot->head);
-	slot->head = NULL;
-    }
-    slot->sessHashSize = 0;
     pk11_DBShutdown(slot->certDB,slot->keyDB);
 
     PORT_Free(slot);
@@ -2449,7 +2398,7 @@ CK_RV nsc_CommonInitialize(CK_VOID_PTR pReserved, PRBool isFIPS)
     rv = RNG_RNGInit();         /* initialize random number generator */
     if (rv != SECSuccess) {
 	crv = CKR_DEVICE_ERROR;
-	return crv;
+	goto loser;
     }
     RNG_SystemInfoForRNG();
 
@@ -2792,7 +2741,7 @@ CK_RV NSC_InitToken(CK_SLOT_ID slotID,CK_CHAR_PTR pPin,
     /* first, delete all our loaded key and cert objects from our 
      * internal list. */
     PK11_USE_THREADS(PZ_Lock(slot->objectLock);)
-    for (i=0; i < slot->tokObjHashSize; i++) {
+    for (i=0; i < TOKEN_OBJECT_HASH_SIZE; i++) {
 	do {
 	    object = slot->tokObjects[i];
 	    /* hand deque */
@@ -3014,11 +2963,11 @@ CK_RV NSC_OpenSession(CK_SLOT_ID slotID, CK_FLAGS flags,
                         | (slot->index << 24);
         } while (sessionID == CK_INVALID_HANDLE);
         PK11_USE_THREADS(PZ_Lock(PK11_SESSION_LOCK(slot,sessionID));)
-        pk11queue_find(sameID, sessionID, slot->head, slot->sessHashSize);
+        pk11queue_find(sameID, sessionID, slot->head, SESSION_HASH_SIZE);
         if (sameID == NULL) {
             session->handle = sessionID;
             pk11_update_state(slot, session);
-            pk11queue_add(session, sessionID, slot->head,slot->sessHashSize);
+            pk11queue_add(session, sessionID, slot->head, SESSION_HASH_SIZE);
         } else {
             slot->sessionIDConflict++;  /* for debugging */
         }
@@ -3045,9 +2994,9 @@ CK_RV NSC_CloseSession(CK_SESSION_HANDLE hSession)
 
     /* lock */
     PK11_USE_THREADS(PZ_Lock(PK11_SESSION_LOCK(slot,hSession));)
-    if (pk11queue_is_queued(session,hSession,slot->head,slot->sessHashSize)) {
+    if (pk11queue_is_queued(session,hSession,slot->head,SESSION_HASH_SIZE)) {
 	sessionFound = PR_TRUE;
-	pk11queue_delete(session,hSession,slot->head,slot->sessHashSize);
+	pk11queue_delete(session,hSession,slot->head,SESSION_HASH_SIZE);
 	session->refCount--; /* can't go to zero while we hold the reference */
 	PORT_Assert(session->refCount > 0);
     }
@@ -3097,7 +3046,7 @@ CK_RV NSC_CloseAllSessions (CK_SLOT_ID slotID)
      * completes, some of those new sessions may or may not be closed by
      * NSC_CloseAllSessions... but any session running when this code starts
      * will guarrenteed be close, and no session will be partially closed */
-    for (i=0; i < slot->sessHashSize; i++) {
+    for (i=0; i < SESSION_HASH_SIZE; i++) {
 	do {
 	    PK11_USE_THREADS(PZ_Lock(PK11_SESSION_LOCK(slot,i));)
 	    session = slot->head[i];
@@ -3410,7 +3359,6 @@ CK_RV NSC_GetAttributeValue(CK_SESSION_HANDLE hSession,
     PK11Object *object;
     PK11Attribute *attribute;
     PRBool sensitive;
-    CK_RV crv;
     int i;
 
     /*
@@ -3434,20 +3382,17 @@ CK_RV NSC_GetAttributeValue(CK_SESSION_HANDLE hSession,
 	return CKR_USER_NOT_LOGGED_IN;
     }
 
-    crv = CKR_OK;
     sensitive = pk11_isTrue(object,CKA_SENSITIVE);
     for (i=0; i < (int) ulCount; i++) {
 	/* Make sure that this attribute is retrievable */
 	if (sensitive && pk11_isSensitive(pTemplate[i].type,object->objclass)) {
-	    crv = CKR_ATTRIBUTE_SENSITIVE;
-	    pTemplate[i].ulValueLen = -1;
-	    continue;
+	    pk11_FreeObject(object);
+	    return CKR_ATTRIBUTE_SENSITIVE;
 	}
 	attribute = pk11_FindAttribute(object,pTemplate[i].type);
 	if (attribute == NULL) {
-	    crv = CKR_ATTRIBUTE_TYPE_INVALID;
-	    pTemplate[i].ulValueLen = -1;
-	    continue;
+	    pk11_FreeObject(object);
+	    return CKR_ATTRIBUTE_TYPE_INVALID;
 	}
 	if (pTemplate[i].pValue != NULL) {
 	    PORT_Memcpy(pTemplate[i].pValue,attribute->attrib.pValue,
@@ -3458,7 +3403,7 @@ CK_RV NSC_GetAttributeValue(CK_SESSION_HANDLE hSession,
     }
 
     pk11_FreeObject(object);
-    return crv;
+    return CKR_OK;
 }
 
 /* NSC_SetAttributeValue modifies the value of one or more object attributes */
@@ -3650,7 +3595,6 @@ pk11_key_collect(DBT *key, DBT *data, void *arg)
 
     tmpDBKey.data = key->data;
     tmpDBKey.len = key->size;
-    tmpDBKey.type = siBuffer;
 
     PORT_Assert(slot->keyDB);
     if (!keyData->strict && keyData->id) {
@@ -3771,11 +3715,6 @@ pk11_searchKeys(PK11Slot *slot, SECItem *key_id, PRBool isLoggedIn,
 	}
 	/* don't do the traversal if we have an up to date db */
 	if (keyHandle->version != 3) {
-	    return;
-	}
-	/* don't do the traversal if it can't possibly be the correct id */
-	/* all soft token id's are SHA1_HASH_LEN's */
-	if (key_id->len != SHA1_LENGTH) {
 	    return;
 	}
     }
@@ -3946,22 +3885,10 @@ pk11_searchCertsAndTrust(PK11Slot *slot, SECItem *derCert, SECItem *name,
 				pk11_cert_collect, &certData);
     } else if ((issuerSN->derIssuer.data != NULL) && 
 			(issuerSN->serialNumber.data != NULL)) {
-        if (classFlags & NSC_CERT) {
-	    NSSLOWCERTCertificate *cert = 
+	NSSLOWCERTCertificate *cert = 
 		nsslowcert_FindCertByIssuerAndSN(certHandle,issuerSN);
 
-	    pk11_searchSingleCert(&certData,cert);
-	}
-	if (classFlags & NSC_TRUST) {
-	    NSSLOWCERTTrust *trust = 
-		nsslowcert_FindTrustByIssuerAndSN(certHandle, issuerSN);
-
-	    if (trust) {
-		pk11_addHandle(handles,
-		    pk11_mkHandle(slot,&trust->dbKey,PK11_TOKEN_TYPE_TRUST));
-		nsslowcert_DestroyTrust(trust);
-	    }
-	}
+	pk11_searchSingleCert(&certData,cert);
     } else if (email->data != NULL) {
 	char *tmp_name = (char*)PORT_Alloc(email->len+1);
 	certDBEntrySMime *entry = NULL;
@@ -4004,7 +3931,7 @@ pk11_searchCertsAndTrust(PK11Slot *slot, SECItem *derCert, SECItem *name,
 	    pk11_addHandle(handles,
 		pk11_mkHandle(slot,&cert->certKey,PK11_TOKEN_TYPE_CERT));
 	}
-	if ((classFlags & NSC_TRUST) && nsslowcert_hasTrust(cert->trust)) {
+	if ((classFlags & NSC_TRUST) && nsslowcert_hasTrust(cert)) {
 	    pk11_addHandle(handles,
 		pk11_mkHandle(slot,&cert->certKey,PK11_TOKEN_TYPE_TRUST));
 	}
@@ -4040,7 +3967,6 @@ pk11_searchSMime(PK11Slot *slot, SECItem *email, PK11SearchResults *handles,
 
 	    emailKey.data = (unsigned char *)tmp_name;
 	    emailKey.len = PORT_Strlen(tmp_name)+1;
-	    emailKey.type = 0;
 	    pk11_addHandle(handles,
 		pk11_mkHandle(slot,&emailKey,PK11_TOKEN_TYPE_SMIME));
 	    nsslowcert_DestroyDBEntry((certDBEntry *)entry);
@@ -4308,9 +4234,8 @@ CK_RV NSC_FindObjectsInit(CK_SESSION_HANDLE hSession,
     
     /* build list of found objects in the session */
     if (!tokenOnly) {
-	crv = pk11_searchObjectList(search, slot->tokObjects, 
-				slot->tokObjHashSize, slot->objectLock, 
-					pTemplate, ulCount, isLoggedIn);
+	crv = pk11_searchObjectList(search, slot->tokObjects,
+			slot->objectLock, pTemplate, ulCount, isLoggedIn);
     }
     if (crv != CKR_OK) {
 	goto loser;
