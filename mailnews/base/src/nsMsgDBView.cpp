@@ -261,7 +261,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     PRUint32 maxSize = (PRUint32)(maxLen + sizeof(EntryInfo) + 1) * (PRUint32)(arraySize - numSoFar);
 
     PRUint32 maxBlockSize = (uint32) 0xf000L;
-    PRUint32 allocSize = MIN(maxBlockSize, maxSize);
+    PRUint32 allocSize = PR_MIN(maxBlockSize, maxSize);
     char *pTemp = (char *) PR_Malloc(allocSize);
     NS_ASSERTION(pTemp, "out of memory, can't sort");
     if (!pTemp) {   
@@ -330,7 +330,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
       if ((PRUint32)(pTemp - pBase) + (PRUint32)sizeof(EntryInfo) + (PRUint32)paddedFieldLen >= allocSize) {
         maxSize = (PRUint32)(maxLen + sizeof(EntryInfo) + 1) * (PRUint32)(arraySize - numSoFar);
         maxBlockSize = (PRUint32) 0xf000L;
-        allocSize = MIN(maxBlockSize, maxSize);
+        allocSize = PR_MIN(maxBlockSize, maxSize);
         pTemp = (char*)PR_Malloc(allocSize);
         NS_ASSERTION(pTemp, "out of memory, can't sort");
         if (!pTemp) {
@@ -357,7 +357,7 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
       info->bits = bits;
       pTemp += sizeof(EntryInfo);
       PRInt32 bytesLeft = allocSize - (PRInt32)(pTemp - pBase);
-      PRInt32 bytesToCopy = MIN(bytesLeft, (PRInt32)actualFieldLen);
+      PRInt32 bytesToCopy = PR_MIN(bytesLeft, (PRInt32)actualFieldLen);
       if (pField && bytesToCopy > 0) {
         memcpy((char *)pTemp, pField, bytesToCopy);
         if (bytesToCopy < (PRInt32)actualFieldLen) {
