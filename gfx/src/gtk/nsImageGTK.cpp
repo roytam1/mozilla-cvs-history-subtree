@@ -1074,8 +1074,6 @@ nsImageGTK::DrawCompositedGeneral(PRBool isLSB, PRBool flipBytes,
   GdkVisual *visual     = gdk_rgb_get_visual();
   GdkColormap *colormap = gdk_rgb_get_cmap();
 
-  unsigned char *target = readData;
-
   // flip bytes
   if (flipBytes && (ximage->bits_per_pixel>=16)) {
     for (int row=0; row<ximage->height; row++) {
@@ -1126,9 +1124,10 @@ nsImageGTK::DrawCompositedGeneral(PRBool isLSB, PRBool flipBytes,
   greenFill = 0xff>>visual->green_prec;
   blueFill =  0xff>>visual->blue_prec;
 
-  for (int row=0; row<ximage->height; row++) {
+  for (int row=0; row<height; row++) {
     unsigned char *ptr = srcData + row*ximage->bytes_per_line;
-    for (int col=0; col<ximage->width; col++) {
+    unsigned char *target = readData+3*row*ximage->width;
+    for (int col=0; col<width; col++) {
       unsigned pix;
       switch (ximage->bits_per_pixel) {
       case 1:
@@ -1193,7 +1192,7 @@ nsImageGTK::DrawCompositedGeneral(PRBool isLSB, PRBool flipBytes,
 
   // now composite
   for (unsigned y=0; y<height; y++) {
-    unsigned char *targetRow = readData+3*y*width;
+    unsigned char *targetRow = readData+3*y*ximage->width;
     unsigned char *imageRow  = imageOrigin + y*imageStride;
     unsigned char *alphaRow  = alphaOrigin + y*alphaStride;
     
