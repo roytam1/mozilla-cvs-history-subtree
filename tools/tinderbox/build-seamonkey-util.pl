@@ -1708,6 +1708,9 @@ sub run_all_tests {
             if ($Settings::BinaryName =~ /^firefox/) {
                 set_pref($pref_file, 'privacy.popups.firstTime', 'false');
                 set_pref($pref_file, 'dom.disable_open_during_load', 'false');
+
+                # Suppress default browser dialog
+                set_pref($pref_file, 'browser.shell.checkDefaultBrowser', 'false');
             }
 
             # Suppress security warnings for QA test.
