@@ -528,7 +528,7 @@ NPL_Write(NET_StreamClass *stream, const unsigned char *str, int32 len)
     if (newstream->handle->userPlugin) {
         nsPluginStreamPeer* peerStream = (nsPluginStreamPeer*)newstream->pstream->pdata;
         NPIPluginStream* userStream = peerStream->GetUserStream();
-        ret = userStream->Write(len, (const char*)&str[urls->position]);
+        ret = userStream->Write(len, (const char*)str);
     }
     else if (ISFUNCPTR(newstream->handle->f->write)) {
         ret = CallNPP_WriteProc(newstream->handle->f->write, newstream->instance->npp, newstream->pstream, 
