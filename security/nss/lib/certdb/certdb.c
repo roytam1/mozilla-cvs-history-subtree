@@ -2245,7 +2245,7 @@ CERT_ImportCerts(CERTCertDBHandle *certdb, SECCertUsage usage,
     unsigned int fcerts = 0;
 
     if ( ncerts ) {
-	certs = PORT_ZNewArray(CERTCertificate*, ncerts);
+	certs = (CERTCertificate**)PORT_ZAlloc(sizeof(CERTCertificate *) * ncerts );
 	if ( certs == NULL ) {
 	    return(SECFailure);
 	}
@@ -2306,7 +2306,18 @@ CERT_ImportCerts(CERTCertDBHandle *certdb, SECCertUsage usage,
 	}
     }
 
-    return (fcerts ? SECSuccess : SECFailure);
+    return(SECSuccess);
+    
+#if 0	/* dead code here - why ?? XXX */
+loser:
+    if ( retCerts ) {
+	*retCerts = NULL;
+    }
+    if ( certs ) {
+	CERT_DestroyCertArray(certs, ncerts);
+    }    
+    return(SECFailure);
+#endif
 }
 
 /*
@@ -2598,7 +2609,7 @@ CERT_FilterCertListByUsage(CERTCertList *certList, SECCertUsage usage,
 		 * takes trust flags into consideration.  Should probably
 		 * fix the cert decoding code to do this.
 		 */
-		(void)CERT_IsCACert(node->cert, &certType);
+		PRBool dummyret = CERT_IsCACert(node->cert, &certType);
 	    } else {
 		certType = node->cert->nsCertType;
 	    }

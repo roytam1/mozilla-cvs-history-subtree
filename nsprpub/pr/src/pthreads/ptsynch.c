@@ -471,8 +471,7 @@ PR_IMPLEMENT(PRMonitor*) PR_NewMonitor(void)
 PR_IMPLEMENT(PRMonitor*) PR_NewNamedMonitor(const char* name)
 {
     PRMonitor* mon = PR_NewMonitor();
-    if (mon)
-        mon->name = name;
+    mon->name = name;
     return mon;
 }
 

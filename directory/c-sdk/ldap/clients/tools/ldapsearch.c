@@ -1,39 +1,24 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- * 
- * The contents of this file are subject to the Mozilla Public License Version 
- * 1.1 (the "License"); you may not use this file except in compliance with 
- * the License. You may obtain a copy of the License at 
- * http://www.mozilla.org/MPL/
- * 
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- * 
+/* 
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *  
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *  
  * The Original Code is Mozilla Communicator client code, released
  * March 31, 1998.
  * 
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1998-1999
- * the Initial Developer. All Rights Reserved.
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
  * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the terms of
- * either of the GNU General Public License Version 2 or later (the "GPL"),
- * or the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- * 
- * ***** END LICENSE BLOCK ***** */
+ * Contributor(s): 
+ */
 
 /* ldapsearch.c - generic program to search LDAP */
 
@@ -48,7 +33,7 @@ static int dosearch( LDAP *ld, char *base, int scope, char **attrs,
 static void write_string_attr_value( char *attrname, char *strval,
 	unsigned long opts );
 #define LDAPTOOL_WRITEVALOPT_SUPPRESS_NAME	0x01
-static void write_ldif_value( char *type, char *value, unsigned long vallen,
+static int write_ldif_value( char *type, char *value, unsigned long vallen,
 	unsigned long ldifoptions );
 static void print_entry( LDAP *ld, LDAPMessage *entry, int attrsonly );
 static void options_callback( int option, char *optarg );
@@ -88,7 +73,6 @@ usage( void )
     fprintf( stderr, "    -e\t\tminimize base-64 encoding of values\n" );
     fprintf( stderr, "    -u\t\tinclude User Friendly entry names in the output\n" );
     fprintf( stderr, "    -o\t\tprint entries using old format (default is LDIF)\n" );
-    fprintf( stderr, "    -r\t\tflush output after each entry is printed (useful with -C)\n" );
     fprintf( stderr, "    -T\t\tdon't fold (wrap) long lines (default is to fold)\n" );
     fprintf( stderr, "    -1\t\tomit leading \"version: %d\" line in LDIF output\n", LDIF_VERSION_ONE );
     fprintf( stderr, "    -A\t\tretrieve attribute names only (no values)\n" );
@@ -102,7 +86,7 @@ usage( void )
     fprintf( stderr, "            \t(alias dereferencing)\n" );
     fprintf( stderr, "    -l time lim\ttime limit (in seconds) for search\n" );
     fprintf( stderr, "    -z size lim\tsize limit (in entries) for search\n" );
-    fprintf( stderr, "    -C PS:changetype[:changesonly[:entrychgcontrols]]\n" );
+    fprintf( stderr, "    -C ps:changetype[:changesonly[:entrychgcontrols]]\n" );
     fprintf( stderr, "\t\tchangetypes are add,delete,modify,moddn,any\n" );
     fprintf( stderr, "\t\tchangesonly and  entrychgcontrols are boolean values\n" );
     fprintf( stderr, "\t\t(default is 1)\n" );
@@ -124,7 +108,6 @@ static int	attrsonly, timelimit, sizelimit, server_sort, fold;
 static int	minimize_base64, produce_file_urls;
 static int	use_vlv = 0, vlv_before, vlv_after, vlv_index, vlv_count;
 static int	use_psearch=0;
-static int	flush_after_each_entry=0;
 static int	write_ldif_version = 1;
 
 /* Persistent search variables */
@@ -157,8 +140,8 @@ main( int argc, char **argv )
 
 
     ldaptool_reset_control_array( ldaptool_request_ctrls );
-    optind = ldaptool_process_args( argc, argv,
-	    "ABLTU1eortuxa:b:F:G:l:S:s:z:C:", 0, options_callback );
+    optind = ldaptool_process_args( argc, argv, "ABLTU1eotuxa:b:F:G:l:S:s:z:C:",
+        0, options_callback );
 
     if ( optind == -1 ) {
 	usage();
@@ -192,7 +175,7 @@ main( int argc, char **argv )
 	filtpattern = "%s";
     } else {	/* there are additional args (filter + attrs) */
 	if ( ldaptool_fp == NULL || strstr( argv[ optind ], "%s" ) != NULL ) {
-	    filtpattern = ldaptool_local2UTF8( argv[ optind ], "filter" );
+	    filtpattern = ldaptool_local2UTF8( argv[ optind ] );
 	    ++optind;
 	} else {
 	    filtpattern = "%s";
@@ -249,7 +232,7 @@ main( int argc, char **argv )
     if ( ldaptool_fp == NULL ) {
 	char *conv;
 
-	conv = ldaptool_local2UTF8( base, "base DN" );
+	conv = ldaptool_local2UTF8( base );
 	rc = dosearch( ld, conv, scope, attrs, attrsonly, filtpattern, "" );
 	if( conv != NULL )
             free( conv );
@@ -312,9 +295,9 @@ main( int argc, char **argv )
 static void
 options_callback( int option, char *optarg )
 {
-    char *s, *ps_ptr, *ps_arg;
-    char *temp_arg = NULL;
-
+    char *s, *p, *temp_arg, *ps_ptr, *ps_arg;
+    int i=0;
+    
     switch( option ) {
     case 'u':	/* include UFN */
 	++includeufn;
@@ -335,9 +318,6 @@ options_callback( int option, char *optarg )
 	break;
     case 'o':	/* print entries using old ldapsearch format */
 	ldif = 0;
-	break;
-    case 'r':	/* flush output after each entry is written */
-	flush_after_each_entry = 1;
 	break;
     case 'B':	/* allow binary values to be printed, even if -o used */
 	++allow_binary;
@@ -441,14 +421,14 @@ options_callback( int option, char *optarg )
 	    }
 	    else
 	    {
-		fprintf( stderr,"Illegal 'after' parameter for virtual list\n" );
+		fprintf( stderr,"Illegal 'after' paramater for virtual list\n" );
 		exit( LDAP_PARAM_ERROR );
 	    }
 	    
 	}
 	else
 	{
-	    fprintf( stderr,"Illegal 'before' parameter for virtual list\n" );
+	    fprintf( stderr,"Illegal 'before' paramater for virtual list\n" );
 	    exit( LDAP_PARAM_ERROR );
 	}
 	break;
@@ -464,7 +444,7 @@ options_callback( int option, char *optarg )
 	    fprintf (stderr, "Invalid argument for -C\n");
 	    usage();
 	}
-	if (NULL != (ps_ptr=strtok(NULL, ":"))) {
+	if (ps_ptr=strtok(NULL, ":")) {
 	    if ( (temp_arg = strdup( ps_ptr )) == NULL ) {
 	        perror ("strdup");
 	    	exit (LDAP_NO_MEMORY);
@@ -473,13 +453,13 @@ options_callback( int option, char *optarg )
 	    fprintf (stderr, "Invalid argument for -C\n");
 	    usage();
 	}
-	if (NULL != (ps_ptr=strtok(NULL, ":"))) {
+	if (ps_ptr=strtok(NULL, ":")) {
 	    if ( (changesonly = ldaptool_boolean_str2value(ps_ptr, 0)) == -1) {
 		fprintf(stderr, "Invalid option value: %s\n", ps_ptr);
 		usage();
 	    }
 	}    
-	if (NULL != (ps_ptr=strtok(NULL, ":"))) {
+	if (ps_ptr=strtok(NULL, ":")) {
 	    if ( (return_echg_ctls = ldaptool_boolean_str2value(ps_ptr, 0)) == -1) {
 		fprintf(stderr, "Invalid option value: %s\n", ps_ptr);
 		usage();
@@ -536,39 +516,29 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
     LDAPVirtualList	vlv_data;
     int			msgid = 0;
     int			length = 0;
-    int			mallocd_filter = 0;
 
-    if ( strstr( filtpatt, "%s" ) == NULL ) {	/* no need to sprintf() */
-	filterp = filtpatt;
+    length = strlen( filtpatt ) + strlen ( value ) +1;
+    if ( length > BUFSIZ ) {
+	if ((filterp = (char *)
+		malloc ( length )) == NULL) {
+		perror( "filter and/or pattern too long?" );
+		exit (LDAP_PARAM_ERROR);
+	}
     } else {
-	length = strlen( filtpatt ) + strlen ( value ) +1;
-	if ( length > BUFSIZ ) {
-	    if ((filterp = (char *)
-		    malloc ( length )) == NULL) {
-		    perror( "filter and/or pattern too long?" );
-		    exit (LDAP_PARAM_ERROR);
-	    }
-	    mallocd_filter = 1;
-	} else {
-	    filterp = filter;
-	}
-     
-#ifdef HAVE_SNPRINTF
-	if ( snprintf( filterp, length, filtpatt, value ) < 0 ) {
-	    perror( "snprintf filter (filter and/or pattern too long?)" );
-	    exit( LDAP_PARAM_ERROR );
-	}
-#else
-	sprintf( filterp, filtpatt, value );
-#endif
+	filterp = filter;
     }
+ 
+#ifdef HAVE_SNPRINTF
+    if ( snprintf( filterp, length, filtpatt, value ) < 0 ) {
+	perror( "snprintf filter (filter and/or pattern too long?)" );
+	exit( LDAP_PARAM_ERROR );
+    }
+#else
+    sprintf( filterp, filtpatt, value );
+#endif
 
     if ( *filterp == '\0' ) {	/* treat empty filter is a shortcut for oc=* */
-	if (mallocd_filter) {
-	    free(filterp);
-	    mallocd_filter = 0;
-	}
-	filterp = "(objectclass=*)";
+	strcpy( filterp, "(objectclass=*)" );
     }
 
     if ( ldaptool_verbose ) {
@@ -584,7 +554,8 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
     }
 
     if ( ldaptool_not ) {
-	if (mallocd_filter) free(filterp);
+	if (filterp != filter)
+		free (filterp);
 	return( LDAP_SUCCESS );
     }
 
@@ -644,7 +615,8 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 	rc = ldap_create_sort_control(ld,keylist,0,&ldctrl);
 	ldap_free_sort_keylist(keylist);
 	if ( rc != LDAP_SUCCESS ) {
-	    if (mallocd_filter) free(filterp);
+	    if (filterp != filter)
+		free (filterp);
 	    return( ldaptool_print_lderror( ld, "ldap_create_sort_control",
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
 	}
@@ -684,14 +656,16 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 	}
 	
 	if ( rc != LDAP_SUCCESS ) {
-	    if (mallocd_filter) free(filterp);
+	    if (filterp != filter)
+		free (filterp);
 	    return( ldaptool_print_lderror( ld, "ldap_create_sort_control",
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
 	}
 	if (LDAP_SUCCESS != (rc = ldap_create_virtuallist_control(ld,
 		&vlv_data, &ldctrl)))
 	{
-	    if (mallocd_filter) free(filterp);
+	    if (filterp != filter)
+		free (filterp);
 	    return( ldaptool_print_lderror( ld,
 		"ldap_create_virtuallist_control",
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
@@ -704,7 +678,8 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
     if ( ldap_search_ext( ld, base, scope, filterp, attrs, attrsonly, 
 	    ldaptool_request_ctrls, NULL, NULL, -1, &msgid )
 	    != LDAP_SUCCESS ) {
-	if (mallocd_filter) free(filterp);
+	if (filterp != filter)
+		free (filterp);
 	return( ldaptool_print_lderror( ld, "ldap_search",
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
     }
@@ -722,7 +697,7 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 		    parse_and_display_reference( ld, res );
 		} else if ( rc == LDAP_RES_EXTENDED
 			&& ldap_msgid( res ) == LDAP_RES_UNSOLICITED ) {
-		    (void)ldaptool_print_extended_response( ld, res,
+		    ldaptool_print_extended_response( ld, res,
 			    "Unsolicited response" );
 		} else {
 		    fprintf( stderr, "%s: ignoring LDAP response message"
@@ -744,17 +719,18 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
         }
     }
     if ( rc == -1 ) {
-	if (mallocd_filter) free(filterp);
+	if (filterp != filter)
+		free (filterp);
 	return( ldaptool_print_lderror( ld, "ldap_result",
 		LDAPTOOL_CHECK4SSL_IF_APPROP ));
     }
 
     if ( ldap_parse_result( ld, res, &rc, NULL, NULL, &refs,
 	    &ctrl_response_array, 0 ) != LDAP_SUCCESS ) {
-	(void)ldaptool_print_lderror( ld, "ldap_parse_result",
+	ldaptool_print_lderror( ld, "ldap_parse_result",
 		LDAPTOOL_CHECK4SSL_IF_APPROP );
     } else if ( rc != LDAP_SUCCESS ) {                                          
-	(void)ldaptool_print_lderror( ld, "ldap_search",
+	ldaptool_print_lderror( ld, "ldap_search",
 		LDAPTOOL_CHECK4SSL_IF_APPROP );
     } 
     /* Parse the returned sort control */
@@ -763,11 +739,12 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 	char *attribute;
 	
 	if ( LDAP_SUCCESS != ldap_parse_sort_control(ld,ctrl_response_array,&result,&attribute) ) {
-	    (void)ldaptool_print_lderror(ld, "ldap_parse_sort_control",
+	    ldaptool_print_lderror(ld, "ldap_parse_sort_control",
 		    LDAPTOOL_CHECK4SSL_IF_APPROP );
 	    ldap_controls_free(ctrl_response_array);
 	    ldap_msgfree(res);
-	    if (mallocd_filter) free(filterp);
+	    if (filterp != filter)
+		free (filterp);
 	    return ( ldap_get_lderrno( ld, NULL, NULL ) );
 	}
 	
@@ -790,11 +767,12 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 	unsigned long vpos, vcount;
 	int vresult;
 	if ( LDAP_SUCCESS != ldap_parse_virtuallist_control(ld,ctrl_response_array,&vpos, &vcount,&vresult) ) {
-	    (void)ldaptool_print_lderror( ld, "ldap_parse_virtuallist_control",
+	    ldaptool_print_lderror( ld, "ldap_parse_virtuallist_control",
 		    LDAPTOOL_CHECK4SSL_IF_APPROP );
 	    ldap_controls_free(ctrl_response_array);
 	    ldap_msgfree(res);
-	    if (mallocd_filter) free(filterp);
+	    if (filterp != filter)
+		free (filterp);
 	    return ( ldap_get_lderrno( ld, NULL, NULL ) );
 	}
 	
@@ -841,15 +819,8 @@ dosearch( ld, base, scope, attrs, attrsonly, filtpatt, value )
 	ldap_value_free( refs );
     }
 
-    if (mallocd_filter) free(filterp);
-
-    if ( flush_after_each_entry ) {
-	/*
-	 * Ensure that sort control, VLV control, and other status
-	 * information is flushed in a timely fashion.
-	 */
-	fflush( stdout );
-    }
+    if (filterp != filter)
+	free (filterp);
 
     ldap_msgfree( res );
     return( rc );
@@ -884,10 +855,10 @@ print_entry( ld, entry, attrsonly )
     ldap_memfree( dn );
 
     if ( use_psearch ) {
-	LDAPControl	**ectrls = NULL;
+	LDAPControl	**ectrls;
 	int		chgtype, chgnumpresent;
 	long		chgnum;
-	char		*prevdn, longbuf[ 128 ];
+	char		*prevdn, intbuf[ 128 ];
 
 	if ( ldap_get_entry_controls( ld, entry, &ectrls ) == LDAP_SUCCESS ) {
 	    if ( ldap_parse_entrychange_control( ld, ectrls, &chgtype,
@@ -896,10 +867,10 @@ print_entry( ld, entry, attrsonly )
 			LDAPTOOL_PSEARCH_ATTR_PREFIX "changeType",
 			changetype_num2string( chgtype ), 0 );
 		if ( chgnumpresent ) {
-		    sprintf( longbuf, "%ld", chgnum );
+		    sprintf( intbuf, "%d", chgnum );
 		    write_string_attr_value(
 			    LDAPTOOL_PSEARCH_ATTR_PREFIX "changeNumber",
-			    longbuf, 0 );
+			    intbuf, 0 );
 		}
 		if ( NULL != prevdn ) {
 		    write_string_attr_value(
@@ -908,7 +879,6 @@ print_entry( ld, entry, attrsonly )
 		    ldap_memfree( prevdn );
 		}
 	    }
-	    ldap_controls_free( ectrls );
 	}
     }
 
@@ -940,9 +910,9 @@ print_entry( ld, entry, attrsonly )
 #endif
 		    tmpfp = NULL;
 
-		    if ( LDAPTOOL_MKTEMP( tmpfname ) == NULL ) {
+		    if ( mktemp( tmpfname ) == NULL ) {
 			perror( tmpfname );
-		    } else if (( tmpfp = ldaptool_open_file( tmpfname, mode)) == NULL ) {
+		    } else if (( tmpfp = fopen( tmpfname, mode)) == NULL ) {
 			perror( tmpfname );
 		    } else if ( bvals[ i ]->bv_len > 0 &&
 			    fwrite( bvals[ i ]->bv_val,
@@ -992,12 +962,8 @@ print_entry( ld, entry, attrsonly )
     }
 
     if ( ldap_get_lderrno( ld, NULL, NULL ) != LDAP_SUCCESS ) {
-	(void)ldaptool_print_lderror( ld, "ldap_first_attribute/ldap_next_attribute",
+	ldaptool_print_lderror( ld, "ldap_first_attribute/ldap_next_attribute",
 		LDAPTOOL_CHECK4SSL_IF_APPROP );
-    }
-
-    if ( flush_after_each_entry ) {
-	fflush( stdout );
     }
 
     if ( ber != NULL ) {
@@ -1022,7 +988,7 @@ write_string_attr_value( char *attrname, char *strval, unsigned long opts )
 }
 
 
-static void
+static int
 write_ldif_value( char *type, char *value, unsigned long vallen,
 	unsigned long ldifoptions )
 {
@@ -1044,14 +1010,15 @@ write_ldif_value( char *type, char *value, unsigned long vallen,
 	ldifoptions |= LDIF_OPT_MINIMAL_ENCODING;
     }
 
-    /* ldif_type_and_value() fails only if malloc() fails. */
     if (( ldif = ldif_type_and_value_with_options( type, value, (int)vallen,
 	    ldifoptions )) == NULL ) {
-	exit( LDAP_NO_MEMORY );
+	return( -1 );
     }
 
     fputs( ldif, stdout );
     free( ldif );
+
+    return( 0 );
 }
 
 
@@ -1104,7 +1071,7 @@ parse_and_display_reference( LDAP *ld, LDAPMessage *ref )
     char	**refs;
 
     if ( ldap_parse_reference( ld, ref, &refs, NULL, 0 ) != LDAP_SUCCESS ) {
-	(void)ldaptool_print_lderror( ld, "ldap_parse_reference",
+	ldaptool_print_lderror( ld, "ldap_parse_reference",
 		LDAPTOOL_CHECK4SSL_IF_APPROP );
     } else if ( refs != NULL && refs[ 0 ] != NULL ) {
 	fputs( "Unfollowed continuation reference(s):\n", stderr );
