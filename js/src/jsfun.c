@@ -1189,11 +1189,26 @@ fun_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     uint32 indent;
     JSString *str;
 
-    if (!OBJ_DEFAULT_VALUE(cx, obj, JSTYPE_FUNCTION, &argv[-1]))
-	return JS_FALSE;
-    fval = argv[-1];
-    if (!JSVAL_IS_FUNCTION(cx, fval))
-	return js_obj_toString(cx, obj, argc, argv, rval);
+    fval = argv[-1];    
+    if (!JSVAL_IS_FUNCTION(cx, fval)) {
+/*
+    if we don't have a function to start off with, try converting the
+    object to a function. If that doesn't work, complain.
+*/
+        if (JSVAL_IS_OBJECT(fval)) {
+            obj = JSVAL_TO_OBJECT(fval);
+            if (!OBJ_GET_CLASS(cx, obj)->convert(cx, obj, JSTYPE_FUNCTION, &fval))
+	        return JS_FALSE;
+        }
+        if (!JSVAL_IS_FUNCTION(cx, fval)) {
+	    JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
+                                 JSMSG_INCOMPATIBLE_PROTO,
+                                 "Function", "toString", 
+                                 JS_GetStringBytes(JS_ValueToString(cx, fval)));
+            return JS_FALSE;
+        }        
+    }
+
     obj = JSVAL_TO_OBJECT(fval);
     fun = JS_GetPrivate(cx, obj);
     if (!fun)
@@ -1221,6 +1236,14 @@ fun_call(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     if (!OBJ_DEFAULT_VALUE(cx, obj, JSTYPE_FUNCTION, &argv[-1]))
 	return JS_FALSE;
     fval = argv[-1];
+
+    if (!JSVAL_IS_FUNCTION(cx, fval)) {
+	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
+                             JSMSG_INCOMPATIBLE_PROTO,
+                             "Function", "call", 
+                             JS_GetStringBytes(JS_ValueToString(cx, fval)));
+        return JS_FALSE;
+    }        
 
     if (argc == 0) {
 	/* Call fun with its parent as the 'this' parameter if no args. */
@@ -1281,6 +1304,13 @@ fun_apply(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	return JS_FALSE;
     fval = argv[-1];
 
+    if (!JSVAL_IS_FUNCTION(cx, fval)) {
+	JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
+                             JSMSG_INCOMPATIBLE_PROTO,
+                             "Function", "apply", 
+                             JS_GetStringBytes(JS_ValueToString(cx, fval)));
+        return JS_FALSE;
+    }        
     /* Convert the first arg to 'this' and skip over it. */
     if (!js_ValueToObject(cx, argv[0], &obj))
 	return JS_FALSE;
