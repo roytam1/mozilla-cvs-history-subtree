@@ -772,17 +772,16 @@ static nsDOMClassInfoData sClassInfoData[] = {
   // DOM Chrome Window class. Don't allow modifications to a chrome
   // window's prototype
   NS_DEFINE_CLASSINFO_DATA(ChromeWindow, nsWindowSH,
-                           (DEFAULT_SCRIPTABLE_FLAGS |
-                            nsIXPCScriptable::WANT_GETPROPERTY |
-                            nsIXPCScriptable::WANT_SETPROPERTY |
-                            nsIXPCScriptable::WANT_NEWRESOLVE |
-                            nsIXPCScriptable::WANT_PRECREATE |
-                            nsIXPCScriptable::WANT_FINALIZE |
-                            nsIXPCScriptable::WANT_ADDPROPERTY |
-                            nsIXPCScriptable::WANT_DELPROPERTY |
-                            nsIXPCScriptable::WANT_ENUMERATE |
-                            nsIXPCScriptable::DONT_ENUM_QUERY_INTERFACE) &
-                           ~nsIXPCScriptable::ALLOW_PROP_MODS_TO_PROTOTYPE)
+                           DEFAULT_SCRIPTABLE_FLAGS |
+                           nsIXPCScriptable::WANT_GETPROPERTY |
+                           nsIXPCScriptable::WANT_SETPROPERTY |
+                           nsIXPCScriptable::WANT_NEWRESOLVE |
+                           nsIXPCScriptable::WANT_PRECREATE |
+                           nsIXPCScriptable::WANT_FINALIZE |
+                           nsIXPCScriptable::WANT_ADDPROPERTY |
+                           nsIXPCScriptable::WANT_DELPROPERTY |
+                           nsIXPCScriptable::WANT_ENUMERATE |
+                           nsIXPCScriptable::DONT_ENUM_QUERY_INTERFACE)
 
   NS_DEFINE_CLASSINFO_DATA(CSSRGBColor, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
