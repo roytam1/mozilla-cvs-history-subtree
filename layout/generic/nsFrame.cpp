@@ -2057,7 +2057,25 @@ nsFrame::GetFrameForPoint(const nsPoint& aPoint,
 
 // Resize and incremental reflow
 
-// nsIHTMLReflow member functions
+virtual void
+nsFrame::IntrinsicWidthsDirty()
+{
+}
+
+virtual nscoord
+nsFrame::GetMinWidth()
+{
+  NS_NOTREACHED("frame didn't implement GetMinWidth");
+  return 0;
+}
+
+virtual nscoord
+nsFrame::GetPrefWidth()
+{
+  NS_NOTREACHED("frame didn't implement GetPrefWidth");
+  return 0;
+}
+
 
 NS_IMETHODIMP
 nsFrame::WillReflow(nsPresContext* aPresContext)

@@ -873,7 +873,7 @@ public:
    * directly; nsLayoutUtils::MarkIntrinsicWidthsDirty should be used
    * instead.
    */
-  NS_IMETHOD IntrinsicWidthsDirty() = 0;
+  virtual void IntrinsicWidthsDirty() = 0;
 
   /**
    * Get the intrinsic minimum width of the frame.
@@ -885,7 +885,7 @@ public:
    * Note that many frames will cache the result of this function call
    * unless IntrinsicWidthsDirty is called.
    */
-  NS_IMETHOD_(nscoord) GetMinWidth() = 0;
+  virtual nscoord GetMinWidth() = 0;
 
   /**
    * Get the intrinsic width of the frame.
@@ -897,7 +897,7 @@ public:
    * Note that many frames will cache the result of this function call
    * unless IntrinsicWidthsDirty is called.
    */
-  NS_IMETHOD_(nscoord) GetPrefWidth() = 0;
+  virtual nscoord GetPrefWidth() = 0;
 
   /**
    * Pre-reflow hook. Before a frame is reflowed this method will be called.
