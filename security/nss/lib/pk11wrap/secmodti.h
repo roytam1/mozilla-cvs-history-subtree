@@ -129,7 +129,6 @@ struct PK11SlotInfoStr {
     PRBool hasRootTrust;
     PRBool hasRSAInfo;
     CK_FLAGS RSAInfoFlags;
-    PRBool protectedAuthPath;
     /* for Stan */
     NSSToken *nssToken;
 };

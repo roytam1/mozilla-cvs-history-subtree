@@ -91,9 +91,3 @@ SHARED_LIBRARY_DIRS = \
 	../base \
 	$(NULL)
 
-
-ifeq ($(OS_TARGET),SunOS)
-# The -R '$ORIGIN' linker option instructs libnss3.so to search for its
-# dependencies (libsoftokn3.so) in the same directory where it resides.
-MKSHLIB += -R '$$ORIGIN'
-endif

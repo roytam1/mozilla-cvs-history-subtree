@@ -153,7 +153,6 @@ PRBool PK11_NeedLogin(PK11SlotInfo *slot);
 PRBool PK11_IsFriendly(PK11SlotInfo *slot);
 PRBool PK11_IsHW(PK11SlotInfo *slot);
 PRBool PK11_NeedUserInit(PK11SlotInfo *slot);
-PRBool PK11_ProtectedAuthenticationPath(PK11SlotInfo *slot);
 int PK11_GetSlotSeries(PK11SlotInfo *slot);
 int PK11_GetCurrentWrapIndex(PK11SlotInfo *slot);
 unsigned long PK11_GetDefaultFlags(PK11SlotInfo *slot);
@@ -531,7 +530,7 @@ PK11_GetLowLevelKeyIDForPrivateKey(SECKEYPrivateKey *key);
 
 SECItem *
 PK11_FindCrlByName(PK11SlotInfo **slot, CK_OBJECT_HANDLE *handle,
-					SECItem *derName, int type, char **url);
+						SECItem *derName, int type);
 
 CK_OBJECT_HANDLE
 PK11_PutCrl(PK11SlotInfo *slot, SECItem *crl, 

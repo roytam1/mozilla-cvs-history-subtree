@@ -411,7 +411,6 @@ NSSTrustDomain_FindBestCertificateByNickname
     nssTokenCertSearch search;
     nssBestCertificateCB best;
     nssList *nameList;
-    PRBool notPresent;
     /* set the criteria for determining the best cert */
     nssBestCertificate_SetArgs(&best, timeOpt, usage, policiesOpt);
     /* find all matching certs in the cache */
@@ -422,21 +421,19 @@ NSSTrustDomain_FindBestCertificateByNickname
     search.cbarg = &best;
     search.cached = nameList;
     search.searchType = nssTokenSearchType_TokenOnly;
+    nssCertificateList_DoCallback(nameList, 
+                                  nssBestCertificate_Callback, &best);
     /* traverse the tokens */
     for (token  = (NSSToken *)nssListIterator_Start(td->tokens);
          token != (NSSToken *)NULL;
          token  = (NSSToken *)nssListIterator_Next(td->tokens))
     {
-	if (nssToken_SearchCerts(token, &notPresent)) {
+	if (nssToken_SearchCerts(token)) {
 	    nssrv = nssToken_TraverseCertificatesByNickname(token, NULL, 
 	                                                    name, &search);
 	}
-	if (notPresent) {
-	    nssCertificateList_DestroyTokenCerts(nameList, token);
-	}
     }
     nssListIterator_Finish(td->tokens);
-    nssCertificateList_DoCallback(nameList, nssBestCertificate_Callback, &best);
     nssList_Clear(nameList, cert_destructor);
     nssList_Destroy(nameList);
     if (best.cert) {
@@ -460,9 +457,8 @@ NSSTrustDomain_FindCertificatesByNickname
     PRUint32 count;
     PRStatus nssrv;
     nssList *nameList;
-    nssTokenCertSearch search;
     struct collect_arg_str ca;
-    PRBool notPresent;
+    nssTokenCertSearch search;
     /* set up the collection */
     nameList = nssList_Create(NULL, PR_FALSE);
     (void)nssTrustDomain_GetCertsForNicknameFromCache(td, name, nameList);
@@ -478,12 +474,9 @@ NSSTrustDomain_FindCertificatesByNickname
          token != (NSSToken *)NULL;
          token  = (NSSToken *)nssListIterator_Next(td->tokens))
     {
-	if (nssToken_SearchCerts(token, &notPresent)) {
+	if (nssToken_SearchCerts(token)) {
 	    nssrv = nssToken_TraverseCertificatesByNickname(token, NULL, 
 	                                                    name, &search);
-	}
-	if (notPresent) {
-	    nssCertificateList_DestroyTokenCerts(nameList, token);
 	}
     }
     nssListIterator_Finish(td->tokens);
@@ -504,32 +497,6 @@ NSSTrustDomain_FindCertificatesByNickname
     return rvCerts;
 }
 
-static PRBool cert_token_not_present(NSSCertificate *c)
-{
-    nssListIterator *instances;
-    nssCryptokiInstance *instance;
-    PRBool freeIt = PR_TRUE;
-    instances = nssList_CreateIterator(c->object.instanceList);
-    for (instance  = (nssCryptokiInstance *)nssListIterator_Start(instances);
-         instance != (nssCryptokiInstance *)NULL;
-         instance  = (nssCryptokiInstance *)nssListIterator_Next(instances))
-    {
-	if (!nssToken_IsPresent(instance->token)) {
-	    nssToken_DestroyCertList(instance->token, PR_TRUE);
-	    nssList_Remove(c->object.instanceList, instance);
-	} else {
-	    freeIt = PR_FALSE;
-	}
-    }
-    nssListIterator_Finish(instances);
-    nssListIterator_Destroy(instances);
-    if (!freeIt) {
-	nssListIterator_Destroy(c->object.instances);
-	c->object.instances = nssList_CreateIterator(c->object.instanceList);
-    }
-    return freeIt;
-}
-
 NSS_IMPLEMENT NSSCertificate *
 NSSTrustDomain_FindCertificateByIssuerAndSerialNumber
 (
@@ -545,10 +512,6 @@ NSSTrustDomain_FindCertificateByIssuerAndSerialNumber
                                                            issuer, 
                                                            serialNumber);
     if (rvCert) {
-	if (cert_token_not_present(rvCert)) {
-	    CERT_DestroyCertificate(STAN_GetCERTCertificate(rvCert));
-	    rvCert = NULL;
-	}
 	return rvCert;
     }
     /* Not cached, look for it on tokens */
@@ -556,7 +519,7 @@ NSSTrustDomain_FindCertificateByIssuerAndSerialNumber
          tok != (NSSToken *)NULL;
          tok  = (NSSToken *)nssListIterator_Next(td->tokens))
     {
-	if (nssToken_SearchCerts(tok, NULL)) {
+	if (nssToken_SearchCerts(tok)) {
 	    rvCert = nssToken_FindCertificateByIssuerAndSerialNumber(tok,
 	                                                         NULL,
 	                                                         issuer,
@@ -578,7 +541,7 @@ NSSTrustDomain_FindCertificateByIssuerAndSerialNumber
 	    if (secrv == SECSuccess) {
 		decodedSerial.data = ds.data;
 		decodedSerial.size = ds.len;
-		if (nssToken_SearchCerts(tok, NULL)) {
+		if (nssToken_SearchCerts(tok)) {
 		    rvCert = nssToken_FindCertificateByIssuerAndSerialNumber(
 		                                tok,
 	                                        NULL,
@@ -615,7 +578,6 @@ NSSTrustDomain_FindBestCertificateBySubject
     nssList *subjectList;
     nssBestCertificateCB best;
     nssTokenCertSearch search;
-    PRBool notPresent;
     /* set the criteria for determining the best cert */
     nssBestCertificate_SetArgs(&best, timeOpt, usage, policiesOpt);
     /* find all matching certs in the cache */
@@ -626,22 +588,19 @@ NSSTrustDomain_FindBestCertificateBySubject
     search.cbarg = &best;
     search.cached = subjectList;
     search.searchType = nssTokenSearchType_TokenOnly;
+    nssCertificateList_DoCallback(subjectList, 
+                                  nssBestCertificate_Callback, &best);
     /* traverse the tokens */
     for (token  = (NSSToken *)nssListIterator_Start(td->tokens);
          token != (NSSToken *)NULL;
          token  = (NSSToken *)nssListIterator_Next(td->tokens))
     {
-	if (nssToken_SearchCerts(token, &notPresent)) {
+	if (nssToken_SearchCerts(token)) {
 	    nssrv = nssToken_TraverseCertificatesBySubject(token, NULL, 
 	                                                   subject, &search);
 	}
-	if (notPresent) {
-	    nssCertificateList_DestroyTokenCerts(subjectList, token);
-	}
     }
     nssListIterator_Finish(td->tokens);
-    nssCertificateList_DoCallback(subjectList, 
-                                  nssBestCertificate_Callback, &best);
     nssList_Clear(subjectList, cert_destructor);
     nssList_Destroy(subjectList);
     if (best.cert) {
@@ -667,7 +626,6 @@ NSSTrustDomain_FindCertificatesBySubject
     nssList *subjectList;
     struct collect_arg_str ca;
     nssTokenCertSearch search;
-    PRBool notPresent;
     /* set up the collection */
     subjectList = nssList_Create(NULL, PR_FALSE);
     (void)nssTrustDomain_GetCertsForSubjectFromCache(td, subject, subjectList);
@@ -683,12 +641,9 @@ NSSTrustDomain_FindCertificatesBySubject
          token != (NSSToken *)NULL;
          token  = (NSSToken *)nssListIterator_Next(td->tokens))
     {
-	if (nssToken_SearchCerts(token, &notPresent)) {
+	if (nssToken_SearchCerts(token)) {
 	    nssrv = nssToken_TraverseCertificatesBySubject(token, NULL, 
 	                                                   subject, &search);
-	}
-	if (notPresent) {
-	    nssCertificateList_DestroyTokenCerts(subjectList, token);
 	}
     }
     nssListIterator_Finish(td->tokens);
@@ -749,10 +704,6 @@ NSSTrustDomain_FindCertificateByEncodedCertificate
     /* Try the cache */
     rvCert = nssTrustDomain_GetCertByDERFromCache(td, encodedCertificate);
     if (rvCert) {
-	if (cert_token_not_present(rvCert)) {
-	    CERT_DestroyCertificate(STAN_GetCERTCertificate(rvCert));
-	    rvCert = NULL;
-	}
 	return rvCert;
     }
     /* Not cached, look for it on tokens */
@@ -760,7 +711,7 @@ NSSTrustDomain_FindCertificateByEncodedCertificate
          tok != (NSSToken *)NULL;
          tok  = (NSSToken *)nssListIterator_Next(td->tokens))
     {
-	if (nssToken_SearchCerts(tok, NULL)) {
+	if (nssToken_SearchCerts(tok)) {
 	    rvCert = nssToken_FindCertificateByEncodedCertificate(tok, NULL,
 	                                        encodedCertificate,
 	                                        nssTokenSearchType_TokenOnly);
@@ -790,7 +741,6 @@ NSSTrustDomain_FindCertificateByEmail
     nssBestCertificateCB best;
     nssTokenCertSearch search;
     nssList *emailList;
-    PRBool notPresent;
     /* set the criteria for determining the best cert */
     nssBestCertificate_SetArgs(&best, timeOpt, usage, policiesOpt);
     /* find all matching certs in the cache */
@@ -801,22 +751,19 @@ NSSTrustDomain_FindCertificateByEmail
     search.cbarg = &best;
     search.cached = emailList;
     search.searchType = nssTokenSearchType_TokenOnly;
+    nssCertificateList_DoCallback(emailList, 
+                                  nssBestCertificate_Callback, &best);
     /* traverse the tokens */
     for (token  = (NSSToken *)nssListIterator_Start(td->tokens);
          token != (NSSToken *)NULL;
          token  = (NSSToken *)nssListIterator_Next(td->tokens))
     {
-	if (nssToken_SearchCerts(token, &notPresent)) {
+	if (nssToken_SearchCerts(token)) {
 	    nssrv = nssToken_TraverseCertificatesByEmail(token, NULL, 
 	                                                 email, &search);
 	}
-	if (notPresent) {
-	    nssCertificateList_DestroyTokenCerts(emailList, token);
-	}
     }
     nssListIterator_Finish(td->tokens);
-    nssCertificateList_DoCallback(emailList, 
-                                  nssBestCertificate_Callback, &best);
     nssList_Clear(emailList, cert_destructor);
     nssList_Destroy(emailList);
     if (best.cert) {
@@ -980,11 +927,13 @@ static PRStatus traverse_callback(NSSCertificate *c, void *arg)
      * destroy the reference to the copy, the callback will use the reference
      * to the cached entry, and everyone should be happy.
      */
+    if (cp == c) {
+	/* However, if the call to add c to the cache was successful, cp is
+	 * now an extra copy within this function and needs to be destroyed.
+	 */
+	NSSCertificate_Destroy(cp);
+    }
     nssrv = (*ta->callback)(c, ta->arg);
-    /* This function owns a reference to the cert, either from the AddRef
-     * or by getting it from the cache.
-     */
-    CERT_DestroyCertificate(STAN_GetCERTCertificate(c));
     return nssrv;
 }
 
@@ -999,7 +948,7 @@ static void cert_destructor_with_cache(void *el)
     CERT_DestroyCertificate(cert);
 }
 #endif
-
+ 
 NSS_IMPLEMENT PRStatus *
 NSSTrustDomain_TraverseCertificates
 (
@@ -1010,18 +959,13 @@ NSSTrustDomain_TraverseCertificates
 {
     PRStatus nssrv;
     NSSToken *token;
-    nssList *certList, *cacheList;
+    nssList *certList;
     nssTokenCertSearch search;
     struct traverse_arg ta;
     nssListIterator *tokens;
-    PRBool notPresent;
     certList = nssList_Create(NULL, PR_FALSE);
     if (!certList) return NULL;
     (void *)nssTrustDomain_GetCertsFromCache(td, certList);
-    cacheList = nssList_Clone(certList);
-    if (!cacheList) {
-	goto cleanup;
-    }
     /* set traverse args */
     ta.callback = callback;
     ta.cached = certList;
@@ -1031,6 +975,8 @@ NSSTrustDomain_TraverseCertificates
     search.cbarg = &ta;
     search.cached = certList;
     search.searchType = nssTokenSearchType_TokenOnly;
+    nssCertificateList_DoCallback(certList, 
+                                  traverse_callback, &ta);
     /* Must create a local copy of the token list, because the callback
      * above may want to traverse the tokens as well.
      */
@@ -1043,20 +989,12 @@ NSSTrustDomain_TraverseCertificates
          token != (NSSToken *)NULL;
          token  = (NSSToken *)nssListIterator_Next(tokens))
     {
-	if (nssToken_SearchCerts(token, &notPresent)) {
+	if (nssToken_SearchCerts(token)) {
 	    nssrv = nssToken_TraverseCertificates(token, NULL, &search);
-	}
-	if (notPresent) {
-	    nssCertificateList_RemoveTokenCerts(cacheList, token);
 	}
     }
     nssListIterator_Finish(tokens);
     nssListIterator_Destroy(tokens);
-    /* now do the callback on the cached certs, 
-     * sans certs from removed tokens 
-     */
-    nssCertificateList_DoCallback(cacheList, callback, arg);
-    nssList_Destroy(cacheList);
 cleanup:
 #ifdef NSS_3_4_CODE
     nssList_Clear(certList, cert_destructor_with_cache);

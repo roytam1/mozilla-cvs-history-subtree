@@ -335,14 +335,8 @@ CERT_FindCertByName(CERTCertDBHandle *handle, SECItem *name)
     cp = NSSTrustDomain_FindBestCertificateBySubject(handle, &subject, 
                                                      NULL, &usage, NULL);
     c = get_best_temp_or_perm(ct, cp);
-    if (ct) {
-	CERTCertificate *cert = STAN_GetCERTCertificate(ct);
-	CERT_DestroyCertificate(cert);
-    }
-    if (cp) {
-	CERTCertificate *cert = STAN_GetCERTCertificate(cp);
-	CERT_DestroyCertificate(cert);
-    }
+    if (ct) NSSCertificate_Destroy(ct);
+    if (cp) NSSCertificate_Destroy(cp);
     if (c) {
 	return STAN_GetCERTCertificate(c);
     } else {
@@ -385,10 +379,7 @@ CERT_FindCertByNickname(CERTCertDBHandle *handle, char *nickname)
     if (cert) {
 	c = get_best_temp_or_perm(ct, STAN_GetNSSCertificate(cert));
 	CERT_DestroyCertificate(cert);
-	if (ct) {
-	    CERTCertificate *cert2 = STAN_GetCERTCertificate(ct);
-	    CERT_DestroyCertificate(cert2);
-	}
+	if (ct) NSSCertificate_Destroy(ct);
     } else {
 	c = ct;
     }
@@ -435,10 +426,7 @@ CERT_FindCertByNicknameOrEmailAddr(CERTCertDBHandle *handle, char *name)
     if (cert) {
 	c = get_best_temp_or_perm(ct, STAN_GetNSSCertificate(cert));
 	CERT_DestroyCertificate(cert);
-	if (ct) {
-	    CERTCertificate *cert2 = STAN_GetCERTCertificate(ct);
-	    CERT_DestroyCertificate(cert2);
-	}
+	if (ct) NSSCertificate_Destroy(ct);
     } else {
 	c = ct;
     }
@@ -548,6 +536,8 @@ CERT_DestroyCertificate(CERTCertificate *cert)
         }
 #else
 	if (tmp) {
+	    /* delete the NSSCertificate */
+	    PK11SlotInfo *slot = cert->slot;
 	    NSSTrustDomain *td = STAN_GetDefaultTrustDomain();
 	    refCount = (int)tmp->object.refCount;
 	    /* This is a hack.  For 3.4, there are persistent references
@@ -569,8 +559,8 @@ CERT_DestroyCertificate(CERTCertificate *cert)
 		} else {
 		    nssTrustDomain_RemoveCertFromCache(td, tmp);
 		}
+		refCount = (int)tmp->object.refCount;
 	    }
-	    /* delete the NSSCertificate */
 	    NSSCertificate_Destroy(tmp);
 	} 
 #endif
@@ -705,6 +695,7 @@ CERT_SaveSMimeProfile(CERTCertificate *cert, SECItem *emailProfile,
     
     emailAddr = cert->emailAddr;
     
+    PORT_Assert(emailAddr);
     if ( emailAddr == NULL ) {
 	goto loser;
     }
@@ -715,7 +706,6 @@ CERT_SaveSMimeProfile(CERTCertificate *cert, SECItem *emailProfile,
     if (cc != NULL) {
 	stanProfile = nssCryptoContext_FindSMIMEProfileForCertificate(cc, c);
 	if (stanProfile) {
-	    PORT_Assert(stanProfile->profileData);
 	    SECITEM_FROM_NSSITEM(&oldprof, stanProfile->profileData);
 	    oldProfile = &oldprof;
 	}
@@ -772,7 +762,7 @@ CERT_SaveSMimeProfile(CERTCertificate *cert, SECItem *emailProfile,
 		 */
 		NSSITEM_FROM_SECITEM(stanProfile->profileTime, profileTime);
 		NSSITEM_FROM_SECITEM(stanProfile->profileData, emailProfile);
-	    } else if (profileTime && emailProfile) {
+	    } else {
 		PRStatus nssrv;
 		NSSDER subject;
 		NSSItem profTime, profData;

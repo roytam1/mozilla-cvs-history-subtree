@@ -3719,9 +3719,9 @@ nsNSSCertificateDB::getCertNames(CERTCertList *certList,
         if (sc) *sc = DELIM;
       }
       nsAutoString certname = NS_ConvertASCIItoUCS2(namestr);
-      certstr.Append(PRUnichar(DELIM));
+      certstr.AppendWithConversion(DELIM);
       certstr += certname;
-      certstr.Append(PRUnichar(DELIM));
+      certstr.AppendWithConversion(DELIM);
       certstr += keystr;
       tmpArray[i++] = ToNewUnicode(certstr);
     }
@@ -3768,7 +3768,7 @@ nsNSSCertificateDB::ImportCrl (char *aData, PRUint32 aLength, nsIURI * aURI, PRU
   CERTSignedData sd;
   SECStatus sec_rv;
   CERTSignedCrl *crl;
-  nsCAutoString url;
+  nsXPIDLCString url;
   nsCOMPtr<nsICrlEntry> crlEntry;
   PRBool importSuccessful;
   PRInt32 errorCode;
@@ -3777,7 +3777,7 @@ nsNSSCertificateDB::ImportCrl (char *aData, PRUint32 aLength, nsIURI * aURI, PRU
   nsCOMPtr<nsINSSComponent> nssComponent(do_GetService(kNSSComponentCID, &rv));
   if (NS_FAILED(rv)) return rv;
 	         
-  aURI->GetSpec(url);
+  aURI->GetSpec(getter_Copies(url));
   arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
   if (!arena) {
     goto loser;

@@ -46,9 +46,10 @@ NS_IMPL_ISUPPORTS2(nsIconProtocolHandler, nsIProtocolHandler, nsISupportsWeakRef
 ////////////////////////////////////////////////////////////////////////////////
 // nsIProtocolHandler methods:
 
-NS_IMETHODIMP nsIconProtocolHandler::GetScheme(nsACString &result) 
+NS_IMETHODIMP nsIconProtocolHandler::GetScheme(char* *result) 
 {
-  result = "moz-icon";
+  *result = nsCRT::strdup("moz-icon");
+  if (!*result) return NS_ERROR_OUT_OF_MEMORY;
   return NS_OK;
 }
 
@@ -71,10 +72,7 @@ NS_IMETHODIMP nsIconProtocolHandler::GetProtocolFlags(PRUint32 *result)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsIconProtocolHandler::NewURI(const nsACString &aSpec,
-                                            const char *aOriginCharset, // ignored
-                                            nsIURI *aBaseURI,
-                                            nsIURI **result) 
+NS_IMETHODIMP nsIconProtocolHandler::NewURI(const char *aSpec, nsIURI *aBaseURI, nsIURI **result) 
 {
   // no concept of a relative icon url
   NS_ASSERTION(!aBaseURI, "base url passed into icon protocol handler");

@@ -221,7 +221,7 @@ getStringFromFlags(unsigned long flags, MaskString array[], int elements)
  */
 Error
 AddModule(char *moduleName, char *libFile, char *cipherString,
-	char *mechanismString, char* modparms)
+	char *mechanismString)
 {
 	unsigned long ciphers;
 	unsigned long mechanisms;
@@ -234,10 +234,9 @@ AddModule(char *moduleName, char *libFile, char *cipherString,
 		getFlagsFromString(cipherString, cipherStrings, numCipherStrings);
 
 	status =
-		SECMOD_AddNewModuleEx(moduleName, libFile,
+		SECMOD_AddNewModule(moduleName, libFile,
 		  SECMOD_PubMechFlagstoInternal(mechanisms),
-		  SECMOD_PubCipherFlagstoInternal(ciphers),
-                  modparms, NULL );
+		  SECMOD_PubCipherFlagstoInternal(ciphers) );
 
 	if(status != SECSuccess) {
                 char* errtxt=NULL;

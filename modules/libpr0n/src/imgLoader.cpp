@@ -126,8 +126,8 @@ NS_IMETHODIMP imgLoader::LoadImage(
     return NS_ERROR_NULL_POINTER;
 
 #if defined(PR_LOGGING)
-  nsCAutoString spec;
-  aURI->GetAsciiSpec(spec);
+  nsXPIDLCString spec;
+  aURI->GetSpec(getter_Copies(spec));
   LOG_SCOPE_WITH_PARAM(gImgLog, "imgLoader::LoadImage", "aURI", spec.get());
 #endif
 

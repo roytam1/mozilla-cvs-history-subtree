@@ -319,11 +319,11 @@ nsSecureBrowserUIImpl::OnStateChange(nsIWebProgress* aWebProgress,
   res = channel->GetURI(getter_AddRefs(loadingURI));
   NS_ASSERTION(NS_SUCCEEDED(res), "GetURI failed");
   if (loadingURI) {
-    nsCAutoString temp;
-    loadingURI->GetSpec(temp);
+    nsXPIDLCString temp;
+    loadingURI->GetSpec(getter_Copies(temp));
     PR_LOG(gSecureDocLog, PR_LOG_DEBUG,
            ("SecureUI:%p: OnStateChange: %x :%s\n", this,
-            aProgressStateFlags,temp.get()));
+            aProgressStateFlags,(const char*)temp));
   }
 #endif
 
@@ -433,9 +433,9 @@ nsSecureBrowserUIImpl::OnSecurityChange(nsIWebProgress *aWebProgress,
   nsCOMPtr<nsIURI> aURI;
   channel->GetURI(getter_AddRefs(aURI));
   
-  nsCAutoString temp;
-  aURI->GetSpec(temp);
-  printf("OnSecurityChange: (%x) %s\n", state, temp.get());
+  nsXPIDLCString temp;
+  aURI->GetSpec(getter_Copies(temp));
+  printf("OnSecurityChange: (%x) %s\n", state, (const char*)temp);
 #endif
   /* Deprecated support for mSecurityButton */
   if (mSecurityButton) {
@@ -475,17 +475,18 @@ nsSecureBrowserUIImpl::IsURLHTTPS(nsIURI* aURL, PRBool* value)
 	if (!aURL)
 		return NS_OK;
   
-	nsCAutoString scheme;
-	aURL->GetScheme(scheme);
+  char* scheme;
+	aURL->GetScheme(&scheme);
 
   // If no scheme, it's not an https url - not necessarily an error.
   // See bugs 54845 and 54966  
-	if (scheme.IsEmpty())
+	if (!scheme)
 		return NS_OK;
   
-	if (!PL_strncasecmp(scheme.get(), "https",  5))
+  if (!PL_strncasecmp(scheme, "https",  5))
 		*value = PR_TRUE;
 	
+	nsMemory::Free(scheme);
 	return NS_OK;
 }
 
@@ -569,11 +570,11 @@ nsSecureBrowserUIImpl::CheckMixedContext(nsISecurityEventSink *eventSink,
     nsCOMPtr<nsIURI> aURI;
     aChannel->GetURI(getter_AddRefs(aURI));
 
-    nsCAutoString temp;
-    aURI->GetSpec(temp);
+    nsXPIDLCString temp;
+    aURI->GetSpec(getter_Copies(temp));
 
-    if (!strncmp(temp.get(), "file:", 5) ||
-        !strcmp(temp.get(), "about:layout-dummy-request")) {
+    if (!nsCRT::strncmp((const char*) temp, "file:", 5) ||
+        !nsCRT::strcmp((const char*) temp, "about:layout-dummy-request")) {
       return NS_OK;
     }
 
