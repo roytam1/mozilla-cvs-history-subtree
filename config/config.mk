@@ -77,6 +77,10 @@ endif
 ifeq ($(OS_ARCH),UnixWare)
 OS_ARCH		:= UNIXWARE
 endif
+ifeq ($(OS_ARCH),OS_2)
+OS_ARCH := OS2
+OS_RELEASE := 4.0
+endif
 
 #
 # Strip off the excessively long version numbers on these platforms,
@@ -154,19 +158,13 @@ BSLASH		:= \$(EMPTY)
 SEMICOLON	:= ;$(EMPTY)
 SPACE		:= $(EMPTY) $(EMPTY)
 PATH_SEPARATOR	:= \;
-RC		= flipper rc$(BIN_SUFFIX)
 XP_DEFINE	= -DXP_PC
 LIB_SUFFIX	= lib
 DLL_SUFFIX	= dll
 MAP_SUFFIX	= map
 BIN_SUFFIX	= .exe
-AR		= flipper ILibo //noignorecase //nologo $@
-IMPLIB		= flipper ILibo //noignorecase //nologo $@
-DLLFLAGS	= -DLL -OUT:$@ $(XLFLAGS) -MAP:$(@:.dll=.map)
-LFLAGS		= $(OBJS) -OUT:$@ $(XLFLAGS) $(DEPLIBS) $(EXTRA_LIBS) -MAP:$(@:.dll=.map) $(DEF_FILE)
 NSINSTALL	= nsinstall
 INSTALL		= $(NSINSTALL)
-JAVA_PROG	= flipper java -norestart
 JAVAC_ZIP	= $(subst $(BSLASH),$(SLASH),$(JAVA_HOME))/lib/classes.zip
 else
 ifeq ($(OS_ARCH),WINNT)
@@ -212,20 +210,6 @@ XBCFLAGS	= -FR$*
 XCFLAGS		= $(LCFLAGS)
 XLFLAGS		= $(LLFLAGS)
 
-ifeq ($(OS_ARCH),OS2)
-OPTIMIZER	= -Ti+
-XLFLAGS		+= -DEBUG
-ifdef BUILD_PROFILE
-OPTIMIZER	+= -Gh+ 
-OBJDIR_TAG	= _PRF
-else
-OPTIMIZER	+= -DDEBUG
-ifdef BUILD_MEMDBG
-OPTIMIZER	+= -Tm+ -DXP_OS2_MEMDEBUG=1
-OBJDIR_TAG	= _MEM
-endif
-endif
-else
 ifeq ($(OS_ARCH),WINNT)
 OPTIMIZER	= -Od -Z7
 JAVA_OPTIMIZER	= $(OPTIMIZER)
@@ -233,20 +217,15 @@ XLFLAGS		+= -DEBUG
 else
 DEFINES		= -DDEBUG -UNDEBUG -DDEBUG_$(shell $(WHOAMI)) -DTRACING
 endif
-endif
 
 ifdef BUILD_OPT
 OBJDIR_TAG	= _OPT
 XBCFLAGS	=
-ifeq ($(OS_ARCH),OS2)
-OPTIMIZER	= -O+ -Oi -DNDEBUG
-else
 ifeq ($(OS_ARCH),WINNT)
 OPTIMIZER	= -O2
 else
 OPTIMIZER	= -O
 DEFINES		= -UDEBUG -DNDEBUG -DTRIMMED
-endif
 endif
 endif
 

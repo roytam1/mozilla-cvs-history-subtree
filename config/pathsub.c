@@ -28,7 +28,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifndef XP_OS2
+#ifndef XP_OS2_VACPP
 #include <unistd.h>
 #endif
 #include <sys/stat.h>
@@ -38,7 +38,7 @@
 #include <libc_r.h>
 #endif
 
-#ifdef XP_OS2
+#ifdef XP_OS2_VACPP
 #include <direct.h>
 #include <io.h>
 #include <sys\utime.h>

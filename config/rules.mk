@@ -82,14 +82,14 @@ endif
 endif
 
 ifdef LIBRARY
-ifeq ($(OS_ARCH),OS2)
+ifdef XP_OS2_VACPP
 ifndef DEF_FILE
 DEF_FILE		:= $(LIBRARY:.lib=.def)
 endif
 endif
 LIBRARY			:= $(addprefix $(OBJDIR)/, $(LIBRARY))
 ifdef MKSHLIB
-ifeq ($(OS_ARCH),OS2)
+ifdef XP_OS2_VACPP
 SHARED_LIBRARY		:= $(LIBRARY:.lib=.dll)
 MAPS			:= $(LIBRARY:.lib=.map)
 else
@@ -289,7 +289,7 @@ alltags:
 
 $(PROGRAM): $(OBJS)
 	@$(MAKE_OBJDIR)
-ifeq ($(OS_ARCH),OS2)
+ifdef XP_OS2_VACPP
 	$(LINK) -FREE -OUT:$@ $(LDFLAGS) $(OS_LFLAGS) $(OBJS)  $(EXTRA_LIBS) -MAP:$(@:.exe=.map) $(OS_LIBS) $(DEF_FILE)
 else
 ifeq ($(OS_ARCH),WINNT)
@@ -306,6 +306,7 @@ $(LIBRARY): $(OBJS) $(LOBJS)
 	$(AR) $(OBJS) $(LOBJS)
 	$(RANLIB) $@
 else
+ifdef XP_OS2_VACPP
 ifdef OS2_IMPLIB
 $(LIBRARY): $(OBJS) $(DEF_FILE) 
 	@$(MAKE_OBJDIR)
@@ -320,6 +321,7 @@ $(LIBRARY): $(OBJS)
 	$(RANLIB) $@
 endif
 endif
+endif
 
 ifneq ($(OS_ARCH),OS2)
 $(SHARED_LIBRARY): $(OBJS) $(LOBJS)
@@ -328,38 +330,50 @@ $(SHARED_LIBRARY): $(OBJS) $(LOBJS)
 	$(MKSHLIB) -o $@ $(OBJS) $(LOBJS) $(EXTRA_DSO_LDOPTS)
 	chmod +x $@
 else
+ifdef XP_OS2_VACPP
 $(SHARED_LIBRARY): $(OBJS) $(DEF_FILE)
 	@$(MAKE_OBJDIR)
 	rm -f $@
 	$(LINK_DLL) $(OBJS) $(OS_LIBS) $(EXTRA_LIBS) $(DEF_FILE)
 	chmod +x $@
 endif
+endif
 
-ifneq (,$(filter OS2 WINNT,$(OS_ARCH)))
+ifeq ($(OS_ARCH),WINNT)
 $(DLL): $(OBJS) $(EXTRA_LIBS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
-ifeq ($(OS_ARCH),OS2)
-	$(LINK_DLL) $(OBJS) $(EXTRA_LIBS) $(OS_LIBS)
-else
 	$(LINK_DLL) $(OBJS) $(OS_LIBS) $(EXTRA_LIBS)
 endif
+
+ifdef XP_OS2_VACPP
+	@$(MAKE_OBJDIR)
+	rm -f $@
+	$(LINK_DLL) $(OBJS) $(EXTRA_LIBS) $(OS_LIBS)
 endif
 
 $(OBJDIR)/%: %.c
 	@$(MAKE_OBJDIR)
-ifneq (,$(filter OS2 WINNT,$(OS_ARCH)))
+ifeq ($(OS_ARCH),WINNT)
 	$(CC) -Fo$@ -c $(CFLAGS) $*.c
 else
+ifndef XP_OS2_VACPP
 	$(CCF) $(LDFLAGS) -o $@ $*.c
+else
+	$(CC) -Fo$@ -c $(CFLAGS) $*.c
+endif
 endif
 
 $(OBJDIR)/%.o: %.c
 	@$(MAKE_OBJDIR)
-ifneq (,$(filter OS2 WINNT,$(OS_ARCH)))
+ifeq ($(OS_ARCH),WINNT)
 	$(CC) -Fo$@ -c $(CFLAGS) $*.c
 else
+ifndef XP_OS2_VACPP
 	$(CC) -o $@ -c $(CFLAGS) $*.c
+else
+	$(CC) -Fo$@ -c $(CFLAGS) $*.c
+endif
 endif
 
 $(OBJDIR)/%.o: %.s
@@ -388,10 +402,14 @@ ifdef STRICT_CPLUSPLUS_SUFFIX
 	$(CCC) -o $@ -c $(CFLAGS) $(OBJDIR)/t_$*.cc
 	rm -f $(OBJDIR)/t_$*.cc
 else
-ifneq (,$(filter OS2 WINNT,$(OS_ARCH)))
+ifeq ($(OS_ARCH),WINNT)
 	$(CCC) -Fo$@ -c $(CFLAGS) $*.cpp
 else
+ifndef XP_OS2_VACPP
 	$(CCC) -o $@ -c $(CFLAGS) $*.cpp
+else
+	$(CCC) -Fo$@ -c $(CFLAGS) $*.cpp
+endif
 endif
 endif #STRICT_CPLUSPLUS_SUFFIX
 
@@ -602,7 +620,7 @@ $(JMC_GEN_DIR)/M%.c: $(JMCSRCDIR)/%.class
 
 $(OBJDIR)/M%.o: $(JMC_GEN_DIR)/M%.h $(JMC_GEN_DIR)/M%.c
 	@$(MAKE_OBJDIR)
-ifeq ($(OS_ARCH),OS2)
+ifdef XP_OS2_VACPP
 	$(CC) -Fo$@ -c $(CFLAGS) $(JMC_GEN_DIR)/M$*.c
 else
 	$(CC) -o $@ -c $(CFLAGS) $(JMC_GEN_DIR)/M$*.c

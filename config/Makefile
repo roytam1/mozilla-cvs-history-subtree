@@ -22,9 +22,7 @@ HSRCS		= pathsub.h
 CSRCS		= nsinstall.c pathsub.c
 
 ifeq ($(subst /,_,$(shell uname -s)),OS2)
-DIRS		= os2
-LOCAL_INCLUDES	+= -Ios2
-HSRCS		+= dirent.h getopt.h
+LOCAL_INCLUDES += -Ios2
 endif
 
 PLSRCS		= nfspwd.pl revdepth.pl
@@ -77,7 +75,7 @@ endef
 
 export:: $(TARGETS)
 
-ifeq ($(OS_ARCH),OS2)
+ifdef XP_OS2_VACPP
 # could not get bsdecho rules to work implicitly, so here is explicit ones
 $(OBJDIR)/bsdecho.o:  bsdecho.c
 	@$(MAKE_OBJDIR)

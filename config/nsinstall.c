@@ -20,11 +20,15 @@
 **
 ** Brendan Eich, 7/20/95
 */
+#ifdef XP_OS2_VACPP
+#include "getopt.c"
+#include "dirent.c"
+#endif
 #include <stdio.h>  /* OSF/1 requires this before grp.h, so put it first */
 #include <assert.h>
 #include <fcntl.h>
 
-#ifndef XP_OS2
+#ifndef XP_OS2_VACPP
 #include <grp.h>
 #include <pwd.h>
 #endif
@@ -33,7 +37,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef XP_OS2
+#ifndef XP_OS2_VACPP
 #include <unistd.h>
 #include <utime.h>
 #endif
@@ -46,13 +50,12 @@
 #include <getopt.h>
 #endif
 
-#ifdef XP_OS2
+#ifdef XP_OS2_VACPP
 #include <dirent.h>
 #include <direct.h>
 #include <io.h>
 #include <sys\utime.h>
 #include <sys\types.h>
-#include "getopt.h" /*yes... we had to build this...*/
 #endif
 
 #ifdef SUNOS4
@@ -74,11 +77,13 @@ extern int fchmod(int fildes, mode_t mode);
 #define lstat stat
 /*looks reasonably safe based on OS/2's stat.h...*/
 #define S_ISLNK(mode)   0 /*no way in hell on a file system that doesn't support it*/
+#ifdef XP_OS2_VACPP
 typedef unsigned short mode_t;
 typedef unsigned short uid_t;
 typedef unsigned short gid_t;
 #define mkdir(path, mode) mkdir(path)
 #define W_OK 1
+#endif
 #define touid(spam) 0
 #define togid(spam) 0
 #define access(spam, spam2) 0
@@ -87,8 +92,10 @@ typedef unsigned short gid_t;
 #define fchown(spam1, spam2, spam3) 0
 #define readlink(spam1, spam2, spam3) -1
 #define symlink(spam1, spam2) -1
-unsigned long _System DosSetFileSize(int, int);
-#define ftruncate(spam1, spam2) DosSetFileSize(spam1, spam2)
+#ifndef XP_OS2_VACPP
+unsigned long DosSetFileSize(int, int);
+#endif
+#define ftruncate(spam1, spam2) (DosSetFileSize(spam1, spam2)?-1:0)
 #endif
 
 static void
@@ -97,7 +104,7 @@ usage(void)
     fprintf(stderr,
 	"usage: %s [-C cwd] [-L linkprefix] [-m mode] [-o owner] [-g group]\n"
 	"       %*s [-DdltR] file [file ...] directory\n",
-	program, strlen(program), "");
+	program, (int)strlen(program), "");
     exit(2);
 }
 
@@ -302,12 +309,22 @@ main(int argc, char **argv)
 	    }
 
 	    /* Check for a pre-existing symlink with identical content. */
+#ifdef XP_OS2_VACPP
+#pragma info(nocnd)
+#endif
 	    if ((exists && (!S_ISLNK(tosb.st_mode) ||
 						readlink(toname, buf, sizeof buf) != len ||
 						strncmp(buf, name, len) != 0)) || 
 			((stat(name, &fromsb) == 0) && 
 			 (fromsb.st_mtime > tosb.st_mtime))) {
-		(void) (S_ISDIR(tosb.st_mode) ? rmdir : unlink)(toname);
+#ifdef XP_OS2_VACPP
+#pragma info(restore)
+#endif
+		if ( S_ISDIR(tosb.st_mode) ) {
+			(void)rmdir(toname);
+		} else {
+			(void)unlink(toname);
+		}
 		exists = 0;
 	    }
 	    if (!exists && symlink(name, toname) < 0)
@@ -331,7 +348,11 @@ main(int argc, char **argv)
 	    if (fromfd < 0 || fstat(fromfd, &sb) < 0)
 		fail("cannot access %s", name);
 	    if (exists && (!S_ISREG(tosb.st_mode) || access(toname, W_OK) < 0))
-		(void) (S_ISDIR(tosb.st_mode) ? rmdir : unlink)(toname);
+	    if (S_ISDIR(tosb.st_mode)) {
+			(void)rmdir(toname);
+		} else {
+			(void)unlink(toname);
+		}
 #ifdef XP_OS2
 	    chmod(toname, S_IREAD | S_IWRITE);
 #endif
