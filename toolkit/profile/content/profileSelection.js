@@ -74,6 +74,7 @@ function startup()
       catch(e) { }
     }
 
+    var autoSelectLastProfile = document.getElementById("autoSelectLastProfile");
     autoSelectLastProfile.checked = gProfileService.startWithLastProfile;
     profilesElement.focus();
   }
