@@ -23,9 +23,9 @@
  * $Id$
  */
 
-XP_BEGIN_PROTOS
+PR_BEGIN_EXTERN_C
 void NET_InitCertLdapProtocol(void);
-XP_END_PROTOS
+PR_END_EXTERN_C
 
 #endif /* _MKCERTLD_H_ */
 
