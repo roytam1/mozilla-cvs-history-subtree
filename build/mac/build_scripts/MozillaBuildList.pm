@@ -791,6 +791,7 @@ sub BuildClientDist()
     
     #EDITOR
     InstallFromManifest(":mozilla:editor:idl:MANIFEST",                            "$distdirectory:idl:");
+    InstallFromManifest(":mozilla:editor:composer:public:MANIFEST_IDL",            "$distdirectory:idl:");
     InstallFromManifest(":mozilla:editor:txmgr:idl:MANIFEST",                      "$distdirectory:idl:");
     InstallFromManifest(":mozilla:editor:public:MANIFEST",                         "$distdirectory:editor:");
     InstallFromManifest(":mozilla:editor:txmgr:public:MANIFEST",                   "$distdirectory:editor:txmgr");
