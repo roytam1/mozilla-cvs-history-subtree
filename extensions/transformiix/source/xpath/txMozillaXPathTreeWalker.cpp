@@ -1334,9 +1334,20 @@ PRIntn
 txXPathNodeUtils::comparePosition(const txXPathNode& aNode,
                                   const txXPathNode& aOtherNode)
 {
-    // First check for equal nodes.
-    if (aNode == aOtherNode) {
-        return 0;
+    // First check for equal nodes or attribute-nodes on the same element.
+    if (aNode.mContent == aOtherNode.mContent) {
+        if (aNode.mIndex == aOtherNode.mIndex) {
+            return 0;
+        }
+
+        // The isContent tests can be removed if we rely on that mIndex < 0
+        // for content.
+        if (aNode.isContent() || (!aOtherNode.isContent() &&
+                                  aNode.mIndex < aOtherNode.mIndex)) {
+            return -1;
+        }
+
+        return 1;
     }
 
     // If they're both documents and not equal, compare the document pointers.
@@ -1344,7 +1355,8 @@ txXPathNodeUtils::comparePosition(const txXPathNode& aNode,
         return (aNode.mDocument > aOtherNode.mDocument ? 1 : -1);
     }
 
-    nsCOMPtr<nsIDocument> document;
+    // Get document for both nodes.
+    nsIDocument* document;
     if (aNode.isDocument()) {
         document = aNode.mDocument;
     }
@@ -1352,7 +1364,7 @@ txXPathNodeUtils::comparePosition(const txXPathNode& aNode,
         document = aNode.mContent->GetDocument();
     }
 
-    nsCOMPtr<nsIDocument> otherDocument;
+    nsIDocument* otherDocument;
     if (aOtherNode.isDocument()) {
         otherDocument = aOtherNode.mDocument;
     }
@@ -1363,7 +1375,7 @@ txXPathNodeUtils::comparePosition(const txXPathNode& aNode,
     // If the nodes have different ownerdocuments, compare the document
     // pointers.
     if (document != otherDocument) {
-        return (document.get() > otherDocument.get() ? 1 : -1);
+        return (document > otherDocument ? 1 : -1);
     }
 
     // Every node comes after its ownerdocument.
@@ -1375,120 +1387,76 @@ txXPathNodeUtils::comparePosition(const txXPathNode& aNode,
         return 1;
     }
 
-    nsCOMPtr<nsIContent> parent;
-    PRInt32 index;
-    if (aNode.isContent()) {
-        parent = aNode.mContent->GetParent();
-        if (parent) {
-            parent->IndexOf(aNode.mContent, index);
-        }
-        else {
-            document->IndexOf(aNode.mContent, index);
-        }
-    }
-    else if (aNode.isAttribute()) {
-        parent = aNode.mContent;
-        index = aNode.mIndex;
-    }
-    else {
-        document->IndexOf(aNode.mContent, index);
-    }
-
-    nsCOMPtr<nsIContent> otherParent;
-    PRInt32 otherIndex;
-    if (aOtherNode.isContent()) {
-        otherParent = aOtherNode.mContent->GetParent();
-        if (otherParent) {
-            otherParent->IndexOf(aOtherNode.mContent, otherIndex);
-        }
-        else {
-            otherDocument->IndexOf(aOtherNode.mContent, otherIndex);
-        }
-    }
-    else if (aOtherNode.isAttribute()) {
-        otherParent = aOtherNode.mContent;
-        otherIndex = aOtherNode.mIndex;
-    }
-    else {
-        document->IndexOf(aOtherNode.mContent, otherIndex);
-    }
-
-    if (parent == otherParent) {
-        if (aNode.mIndex == aOtherNode.mIndex) {
-            return (index > otherIndex ? 1 : -1);
-        }
-
-        if (aNode.isAttribute()) {
-            return -1;
-        }
-
-        if (aOtherNode.isAttribute()) {
-            return 1;
-        }
-    }
-
-    txInt32Array parentChain;
-    nsCOMPtr<nsIContent> content;
-    while (parent) {
-        parentChain.AppendValue(index);
-        content = parent;
+    // Get parents up the tree.
+    nsAutoVoidArray parents, otherParents;
+    nsIContent* content = aNode.mContent;
+    nsIContent* otherContent = aOtherNode.mContent;
+    nsIContent* parent, *otherParent;
+    PRInt32 index, otherIndex;
+    while (content && otherContent) {
         parent = content->GetParent();
-        if (parent) {
-            parent->IndexOf(content, index);
-        }
-    }
-    document->IndexOf(content, index);
-    parentChain.AppendValue(index);
+        otherParent = otherContent->GetParent();
 
-    txInt32Array otherParentChain;
-    while (otherParent) {
-        otherParentChain.AppendValue(otherIndex);
-        content = otherParent;
-        otherParent = content->GetParent();
-        if (otherParent) {
-            otherParent->IndexOf(content, otherIndex);
+        // Hopefully this is a common case.
+        if (parent == otherParent) {
+            if (parent) {
+                parent->IndexOf(content, index);
+                parent->IndexOf(otherContent, otherIndex);
+            }
+            else {
+                document->IndexOf(content, index);
+                document->IndexOf(otherContent, otherIndex);
+            }
+            return index < otherIndex ? -1 : 1;
         }
-    }
-    document->IndexOf(content, otherIndex);
-    otherParentChain.AppendValue(otherIndex);
 
-    PRInt32 total = parentChain.Count() - 1;
-    PRInt32 otherTotal = otherParentChain.Count() - 1;
+        parents.AppendElement(content);
+        otherParents.AppendElement(otherContent);
+        content = parent;
+        otherContent = otherParent;
+    }
+
+    while (content) {
+        parents.AppendElement(content);
+        content = content->GetParent();
+    }
+    while (otherContent) {
+        otherParents.AppendElement(otherContent);
+        otherContent = otherContent->GetParent();
+    }
+
+    // Walk back down along the parent-chains until we find where they split.
+    PRInt32 total = parents.Count() - 1;
+    PRInt32 otherTotal = otherParents.Count() - 1;
+    NS_ASSERTION(total != otherTotal, "Can't have same number of parents");
+
     PRInt32 lastIndex = PR_MIN(total, otherTotal);
     PRInt32 i;
-    for (i = 0; i < lastIndex; ++i) {
-        PRInt32 index = parentChain.ValueAt(total - i);
-        PRInt32 otherIndex = otherParentChain.ValueAt(otherTotal - i);
-
-        if (index < otherIndex) {
-            return -1;
+    parent = nsnull;
+    for (i = 0; i <= lastIndex; ++i) {
+        content = NS_STATIC_CAST(nsIContent*, parents.ElementAt(total - i));
+        otherContent = NS_STATIC_CAST(nsIContent*,
+                                      otherParents.ElementAt(otherTotal - i));
+        if (content != otherContent) {
+            if (parent) {
+                parent->IndexOf(content, index);
+                parent->IndexOf(otherContent, otherIndex);
+            }
+            else {
+                document->IndexOf(content, index);
+                document->IndexOf(otherContent, otherIndex);
+            }
+            NS_ASSERTION(index != otherIndex && index >= 0 && otherIndex >= 0,
+                         "invalid index in compareTreePosition");
+            return index < otherIndex ? -1 : 1;
         }
 
-        if (index > otherIndex) {
-            return 1;
-        }
+        parent = content;
     }
 
-    if (lastIndex == total) {
-        // aNode is at the same depth as or a smaller depth than aOtherNode.
-        // Check if it is an attribute, they come before children.
-        if (aNode.isAttribute()) {
-            return -1;
-        }
-
-        // If aNode has a higher index than aOtherNode or it has the same index
-        // then aNode comes first, since it's either a next sibling or
-        // aOtherNode is one of its descendants.
-        return (parentChain.ValueAt(0) >
-                otherParentChain.ValueAt(otherTotal - lastIndex) ? 1 : -1);
-    }
-
-    if (aOtherNode.isAttribute()) {
-        return 1;
-    }
-
-    return (parentChain.ValueAt(total - lastIndex) >=
-            otherParentChain.ValueAt(0) ? 1 : -1);
+    // One node is a descendant of the other. The one with the shortest
+    // parent-chain is first in the document.
+    return total < otherTotal ? -1 : 1;
 }
 
 /* static */
