@@ -361,14 +361,6 @@ function handleColumnClick(columnID) {
   }
 }
 
-function updateSortIndicators(foo, bar) {
-}
-
-function reverseSort() {
-  outlinerView.sort(outlinerView.sortType, !outlinerView.reverseSort);
-  updateSortIndicators(outlinerView.sortType, outlinerView.reverseSort);
-}
-
 function doSort(sortType) {
   outlinerView.sort(sortType, false);
 }
