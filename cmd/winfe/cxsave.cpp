@@ -108,45 +108,6 @@ BOOL CSaveCX::SaveAnchorAsText(const char *pAnchor, History_entry *pHist,  CWnd 
 	}
 }
 
-// Kludge to avoid including cxsave.h in edview.cpp (freaks out Win16 compiler)
-BOOL wfe_SaveAnchorAsText(const char *pAnchor, History_entry *pHist,  CWnd *pParent, char *pFileName)
-{
-    return CSaveCX::SaveAnchorAsText(pAnchor, pHist, pParent, pFileName);
-}
-
-// Similar to above, but special version for Composer
-//  to allow converting current HTML to text output
-BOOL CSaveCX::SaveAnchorAsText(const char *pAnchor, History_entry *pHist,  CWnd *pParent, char *pFileName)
-{
-	//	Allocate the dialog.
-	CSaveCX *pSaveCX = new CSaveCX(pAnchor, NULL, pParent);
-    if( !pSaveCX  || !pFileName )
-        return FALSE;
-
-    // see if we've been given a file to load
-    pSaveCX->m_csFileName = pFileName;
-
-    // We already know to save as Text, so set this here
-    // (CanCreate will not prompt for filename - we already selected it)
-    pSaveCX->m_iFileType = TXT;
-
-	//	Assign over the history entry.
-	pSaveCX->m_pHist = pHist;
-
-	//	See if we can create the dialog.
-	BOOL bCreate = pSaveCX->CanCreate();
-
-	if(bCreate == TRUE)	{
-		//	Create the dialog.
-		pSaveCX->DoCreate();
-		return(TRUE);
-	}
-	else	{
-		//	No need to destroy a window, none created.
-		return(FALSE);
-	}
-}
-
 NET_StreamClass *CSaveCX::SaveUrlObject(URL_Struct *pUrl, CWnd *pParent, char * pFileName)	
 {
 	//	Indirect constructor for serializing object.
