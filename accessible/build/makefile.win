@@ -40,7 +40,7 @@ LLIBS=\
   $(DIST)\lib\xpcom.lib                     \
   $(DIST)\lib\accessibility_s.lib           \
   $(DIST)\lib\timer_s.lib                   \
-  $(DIST)\lib\gkgfkwin.lib                  \
+  $(DIST)\lib\gkgfxwin.lib                  \
   $(DIST)\lib\contentshared_s.lib           \
   $(LIBNSPR)                                \
   $(NULL)

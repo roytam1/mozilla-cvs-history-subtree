@@ -259,17 +259,15 @@ NS_IMETHODIMP nsHTMLSelectTextFieldAccessible::GetAccValue(nsAWritableString& _r
   GetPresContext(context);
   if ( !frame )
     return NS_ERROR_FAILURE;
-  // gets a block frame
-  frame->FirstChild(context, nsnull, &frame);
-  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
-    return NS_ERROR_FAILURE;
 
-  // gets the text
   frame->FirstChild(context, nsnull, &frame);
   if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::blockFrame) )
     return NS_ERROR_FAILURE;
 
-  // get the texts node
+  frame->FirstChild(context, nsnull, &frame);
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::textFrame) )
+    return NS_ERROR_FAILURE;
+
   nsCOMPtr<nsIContent> content;
   frame->GetContent(getter_AddRefs(content));
 
@@ -289,12 +287,15 @@ void nsHTMLSelectTextFieldAccessible::GetBounds(nsRect& aBounds, nsIFrame** aRel
   GetPresContext(context);
   if ( !frame )
     return;
+
   frame->FirstChild(context, nsnull, &frame);
-  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::blockFrame) )
     return;
+
   frame->GetParent(aRelativeFrame);
-  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( *aRelativeFrame, nsLayoutAtoms::listControlFrame) )
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( *aRelativeFrame, nsLayoutAtoms::areaFrame) )
     return;
+
   frame->GetRect(aBounds);
 }
 
@@ -411,13 +412,15 @@ NS_IMETHODIMP nsHTMLSelectButtonAccessible::AccDoAction(PRUint8 index)
   nsIFrame* frame = nsAccessible::GetBoundsFrame();
   nsCOMPtr<nsIPresContext> context;
   GetPresContext(context);
+
   frame->FirstChild(context, nsnull, &frame);
-  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::blockFrame) )
     return NS_ERROR_FAILURE;
+ 
   frame->GetNextSibling(&frame);
-  // sibling of the SelectAreaFrame
-  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::gfxButtonControlFrame) )
     return NS_ERROR_FAILURE;
+
   nsCOMPtr<nsIContent> content;
   frame->GetContent(getter_AddRefs(content));
 
@@ -446,19 +449,20 @@ void nsHTMLSelectButtonAccessible::GetBounds(nsRect& aBounds, nsIFrame** aRelati
   nsIFrame* frame = nsAccessible::GetBoundsFrame();
   nsCOMPtr<nsIPresContext> context;
   GetPresContext(context);
-  frame->FirstChild(context, nsnull, &frame);
-  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
-    return;
-  frame->GetNextSibling(&frame);
-  // sibling of the SelectAreaFrame
-  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
-    return;
-  frame->GetParent(aRelativeFrame);
-  // parent list control frame
-  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( *aRelativeFrame, nsLayoutAtoms::listControlFrame) )
-    return;
-  frame->GetRect(aBounds);
 
+  frame->FirstChild(context, nsnull, &frame);
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::blockFrame) )
+    return;
+
+  frame->GetNextSibling(&frame);
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::gfxButtonControlFrame) )
+    return;
+
+  frame->GetParent(aRelativeFrame);
+  if ( ! nsHTMLSelectAccessible::IsCorrectFrame( *aRelativeFrame, nsLayoutAtoms::areaFrame) )
+    return;
+
+  frame->GetRect(aBounds);
 }
 
 NS_IMETHODIMP nsHTMLSelectButtonAccessible::GetAccRole(PRUint32 *_retval)
@@ -640,13 +644,14 @@ void nsHTMLSelectWindowAccessible::GetBounds(nsRect& aBounds, nsIFrame** aRelati
   if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::blockFrame) )
     return;
 
-  // get that frame's parent this should be the window
   frame->GetParent(&frame);
   if ( ! nsHTMLSelectAccessible::IsCorrectFrame( frame, nsLayoutAtoms::areaFrame) )
     return;
+
   frame->GetParent(aRelativeFrame);
   if ( ! nsHTMLSelectAccessible::IsCorrectFrame( *aRelativeFrame, nsLayoutAtoms::listControlFrame) )
     return;
+
   frame->GetRect(aBounds);
 }
 
