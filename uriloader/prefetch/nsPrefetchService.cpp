@@ -45,7 +45,7 @@
 #include "nsIWebProgress.h"
 #include "nsCURILoader.h"
 #include "nsICachingChannel.h"
-#include "nsICacheVisitor.h"
+#include "nsICacheEntryDescriptor.h"
 #include "nsIHttpChannel.h"
 #include "nsIURL.h"
 #include "nsNetUtil.h"
@@ -160,7 +160,7 @@ nsPrefetchListener::OnStartRequest(nsIRequest *aRequest,
     if (!cacheToken)
         return NS_ERROR_ABORT; // bail, no cache entry
 
-    nsCOMPtr<nsICacheEntryInfo> entryInfo(do_QueryInterface(cacheToken, &rv));
+    nsCOMPtr<nsICacheEntryDescriptor> entryInfo(do_QueryInterface(cacheToken, &rv));
     if (NS_FAILED(rv)) return rv;
 
     PRUint32 expTime;
@@ -284,19 +284,16 @@ nsPrefetchService::ProcessNextURI()
         //
         // if opening the channel fails, then just skip to the next uri
         //
-        rv = NS_NewChannel(getter_AddRefs(mCurrentChannel), uri,
-                           nsnull, nsnull, nsnull,
-                           nsIRequest::LOAD_BACKGROUND |
-                           nsICachingChannel::LOAD_ONLY_IF_MODIFIED);
+        rv = NS_NewChannel(getter_AddRefs(mCurrentChannel), uri, nsnull, nsnull,
+                           nsnull, nsIRequest::LOAD_BACKGROUND);
         if (NS_FAILED(rv)) continue;
 
         // configure HTTP specific stuff
         nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(mCurrentChannel));
         if (httpChannel) {
-            httpChannel->SetReferrer(referrer);
+            httpChannel->SetReferrer(referrer, nsIHttpChannel::REFERRER_INLINES);
             httpChannel->SetRequestHeader(NS_LITERAL_CSTRING("X-Moz"),
-                                          NS_LITERAL_CSTRING("prefetch"),
-                                          PR_FALSE);
+                                          NS_LITERAL_CSTRING("prefetch"));
         }
 
         rv = mCurrentChannel->AsyncOpen(listener, nsnull);
