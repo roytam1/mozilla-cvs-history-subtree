@@ -84,6 +84,10 @@ ifdef MOZ_UNICODE
 DEFINES += -DMOZ_UNICODE 
 endif
 
+ifdef BUILD_STATIC_LIBS
+DEFINES		+= -DMOZ_STATIC_COMPONENT_LIBS
+endif # BUILD_STATIC_LIBS
+
 EXPORTS		= nsdefs.h
 
 LOCAL_INCLUDES	= -I. -I$(srcdir)/../xpwidgets -I$(srcdir)
