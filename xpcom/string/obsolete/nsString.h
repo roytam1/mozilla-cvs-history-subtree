@@ -428,6 +428,9 @@ public:
 
   void AssignWithConversion(const PRUnichar*,PRInt32=-1);
   void AssignWithConversion( const nsString& aString );
+#ifdef NEW_STRING_APIS
+  void AssignWithConversion( const nsAReadableString& aString );
+#endif
   void AssignWithConversion(PRUnichar);
 
 #ifndef NEW_STRING_APIS

@@ -629,8 +629,10 @@ template <class CharT>
 PRInt32
 basic_nsAReadableString<CharT>::FindChar( CharT aChar, PRUint32 aOffset ) const
   {
-    nsReadingIterator<CharT> start( BeginReading()+=aOffset );
+    nsReadingIterator<CharT> start( BeginReading() );
     nsReadingIterator<CharT> end( EndReading() );
+
+    start += aOffset;
 
     PRUint32 pos = 0;
     while (start != end) {
@@ -1144,11 +1146,11 @@ nsPromiseSubstring<CharT>::GetReadableFragment( nsReadableFragment<CharT>& aFrag
       {
           // if there's more physical data in the returned fragment than I logically have left...
         size_t logical_size_backward = aPosition - mStartPos;
-        if ( position_ptr - aFragment.mStart > logical_size_backward )
+        if ( size_t(position_ptr - aFragment.mStart) > logical_size_backward )
           aFragment.mStart = position_ptr - logical_size_backward;
 
         size_t logical_size_forward = mLength - logical_size_backward;
-        if ( aFragment.mEnd - position_ptr > logical_size_forward )
+        if ( size_t(aFragment.mEnd - position_ptr) > logical_size_forward )
           aFragment.mEnd = position_ptr + logical_size_forward;
       }
 

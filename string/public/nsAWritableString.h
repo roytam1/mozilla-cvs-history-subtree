@@ -321,7 +321,6 @@ class basic_nsAWritableString
       basic_nsAWritableString<CharT>& operator=( const basic_nsAWritableString<CharT>& aWritable )  { Assign(aWritable); return *this; }
 
       basic_nsAWritableString<CharT>& operator=( const basic_nsAReadableString<CharT>& aReadable )  { Assign(aReadable); return *this; }
-      basic_nsAWritableString<CharT>& operator=( const basic_nsAWritableString<CharT>& aWritable )  { Assign(aWritable); return *this; }
       basic_nsAWritableString<CharT>& operator=( const nsPromiseReadable<CharT>& aReadable )        { Assign(aReadable); return *this; }
       basic_nsAWritableString<CharT>& operator=( const CharT* aPtr )                                { Assign(aPtr); return *this; }
       basic_nsAWritableString<CharT>& operator=( CharT aChar )                                      { Assign(aChar); return *this; }
