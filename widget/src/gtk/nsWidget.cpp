@@ -2080,6 +2080,7 @@ nsWidget::OnFocusInSignal(GdkEventFocus * aGdkFocusEvent)
     if (gdkWindow)
     {
       gdk_im_begin ((GdkIC*)mIC, gdkWindow);
+#if 0
       // set spot location
       nsCompositionEvent compEvent;
       nsEventStatus status;
@@ -2093,6 +2094,7 @@ nsWidget::OnFocusInSignal(GdkEventFocus * aGdkFocusEvent)
       DispatchEvent(&compEvent, status);
       // set SpotLocation
       SetXICSpotLocation(compEvent.theReply.mCursorPosition);
+#endif
     }
     else
     {
