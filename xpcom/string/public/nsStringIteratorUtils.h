@@ -28,14 +28,6 @@
 #include "nsStringDefines.h"
 #endif
 
-template <class Iterator>
-inline
-PRBool
-SameFragment( const Iterator& lhs, const Iterator& rhs )
-  {
-    return lhs.start() == rhs.start();
-  }
-
 template <class CharT> class nsReadingIterator;
 
   // NOTE: need to break iterators out into their own file (as with many classes here), need

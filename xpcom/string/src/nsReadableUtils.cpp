@@ -26,16 +26,6 @@
 #include "nsString.h"
 #include "nsUTF8Utils.h"
 
-
-template <class Iterator>
-inline
-PRBool
-SameFragment( const Iterator& lhs, const Iterator& rhs )
-  {
-    return lhs.start() == rhs.start();
-  }
-
-
 NS_COM
 void
 LossyCopyUTF16toASCII( const nsAString& aSource, nsACString& aDest )
@@ -1131,23 +1121,15 @@ NS_COM
 PRBool 
 FindCharInReadable( PRUnichar aChar, nsAString::const_iterator& aSearchStart, const nsAString::const_iterator& aSearchEnd )
   {
-    while ( aSearchStart != aSearchEnd )
-      {
-        PRInt32 fragmentLength;
-        if ( SameFragment(aSearchStart, aSearchEnd) ) 
-          fragmentLength = aSearchEnd.get() - aSearchStart.get();
-        else
-          fragmentLength = aSearchStart.size_forward();
+    PRInt32 fragmentLength = aSearchEnd.get() - aSearchStart.get();
 
-        const PRUnichar* charFoundAt = nsCharTraits<PRUnichar>::find(aSearchStart.get(), fragmentLength, aChar);
-        if ( charFoundAt ) {
-          aSearchStart.advance( charFoundAt - aSearchStart.get() );
-          return PR_TRUE;
-        }
+    const PRUnichar* charFoundAt = nsCharTraits<PRUnichar>::find(aSearchStart.get(), fragmentLength, aChar);
+    if ( charFoundAt ) {
+      aSearchStart.advance( charFoundAt - aSearchStart.get() );
+      return PR_TRUE;
+    }
 
-        aSearchStart.advance(fragmentLength);
-      }
-
+    aSearchStart.advance(fragmentLength);
     return PR_FALSE;
   }
 
@@ -1155,23 +1137,15 @@ NS_COM
 PRBool 
 FindCharInReadable( char aChar, nsACString::const_iterator& aSearchStart, const nsACString::const_iterator& aSearchEnd )
   {
-    while ( aSearchStart != aSearchEnd )
-      {
-        PRInt32 fragmentLength;
-        if ( SameFragment(aSearchStart, aSearchEnd) ) 
-          fragmentLength = aSearchEnd.get() - aSearchStart.get();
-        else
-          fragmentLength = aSearchStart.size_forward();
+    PRInt32 fragmentLength = aSearchEnd.get() - aSearchStart.get();
 
-        const char* charFoundAt = nsCharTraits<char>::find(aSearchStart.get(), fragmentLength, aChar);
-        if ( charFoundAt ) {
-          aSearchStart.advance( charFoundAt - aSearchStart.get() );
-          return PR_TRUE;
-        }
+    const char* charFoundAt = nsCharTraits<char>::find(aSearchStart.get(), fragmentLength, aChar);
+    if ( charFoundAt ) {
+      aSearchStart.advance( charFoundAt - aSearchStart.get() );
+      return PR_TRUE;
+    }
 
-        aSearchStart.advance(fragmentLength);
-      }
-
+    aSearchStart.advance(fragmentLength);
     return PR_FALSE;
   } 
 
