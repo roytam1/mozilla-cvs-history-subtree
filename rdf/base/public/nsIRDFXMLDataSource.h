@@ -178,5 +178,8 @@ public:
 };
 
 
+extern nsresult
+NS_NewRDFXMLDataSource(nsIRDFXMLDataSource** result);
+
 #endif // nsIRDFXMLDataSource_h__
 

@@ -43,10 +43,10 @@
 #include "nsIParser.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
+#include "nsIRDFCompositeDataSource.h"
 #include "nsIRDFContent.h"
 #include "nsIRDFContentModelBuilder.h"
 #include "nsIRDFCursor.h"
-#include "nsIRDFDataBase.h"
 #include "nsIRDFDataSource.h"
 #include "nsIRDFDocument.h"
 #include "nsIRDFNode.h"
@@ -81,7 +81,7 @@ static NS_DEFINE_IID(kIHTMLStyleSheetIID,     NS_IHTML_STYLE_SHEET_IID);
 static NS_DEFINE_IID(kINameSpaceManagerIID,   NS_INAMESPACEMANAGER_IID);
 static NS_DEFINE_IID(kIParserIID,             NS_IPARSER_IID);
 static NS_DEFINE_IID(kIPresShellIID,          NS_IPRESSHELL_IID);
-static NS_DEFINE_IID(kIRDFDataBaseIID,        NS_IRDFDATABASE_IID);
+static NS_DEFINE_IID(kIRDFCompositeDataSourceIID, NS_IRDFCOMPOSITEDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFDataSourceIID,      NS_IRDFDATASOURCE_IID);
 static NS_DEFINE_IID(kIRDFDocumentIID,        NS_IRDFDOCUMENT_IID);
 static NS_DEFINE_IID(kIRDFLiteralIID,         NS_IRDFLITERAL_IID);
@@ -102,7 +102,7 @@ static NS_DEFINE_CID(kPresShellCID,             NS_PRESSHELL_CID);
 static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFServiceCID,            NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kRDFXMLDataSourceCID,      NS_RDFXMLDATASOURCE_CID);
-static NS_DEFINE_CID(kRDFDataBaseCID,           NS_RDFDATABASE_CID);
+static NS_DEFINE_CID(kRDFCompositeDataSourceCID, NS_RDFCOMPOSITEDATASOURCE_CID);
 static NS_DEFINE_CID(kRangeListCID,             NS_RANGELIST_CID);
 static NS_DEFINE_CID(kWellFormedDTDCID,         NS_WELLFORMEDDTD_CID);
 
@@ -279,7 +279,7 @@ public:
     // nsIRDFDocument interface
     NS_IMETHOD Init(nsIRDFContentModelBuilder* aBuilder);
     NS_IMETHOD SetRootResource(nsIRDFResource* resource);
-    NS_IMETHOD GetDataBase(nsIRDFDataBase*& result);
+    NS_IMETHOD GetDataBase(nsIRDFCompositeDataSource*& result);
     NS_IMETHOD CreateChildren(nsIRDFContent* element);
     NS_IMETHOD AddTreeProperty(nsIRDFResource* resource);
     NS_IMETHOD RemoveTreeProperty(nsIRDFResource* resource);
@@ -338,7 +338,7 @@ protected:
     nsVoidArray            mPresShells;
     nsINameSpaceManager*   mNameSpaceManager;
     nsIStyleSheet*         mAttrStyleSheet;
-    nsIRDFDataBase*        mDB;
+    nsIRDFCompositeDataSource*        mDB;
     nsIRDFService*         mRDFService;
     nsISupportsArray*      mTreeProperties;
     nsIRDFContentModelBuilder* mBuilder;
@@ -1484,9 +1484,9 @@ RDFDocumentImpl::Init(nsIRDFContentModelBuilder* aBuilder)
                                       nsnull)) == nsnull)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFDataBaseCID,
+    if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFCompositeDataSourceCID,
                                                     nsnull,
-                                                    kIRDFDataBaseIID,
+                                                    kIRDFCompositeDataSourceIID,
                                                     (void**) &mDB)))
         return rv;
 
@@ -1517,7 +1517,7 @@ RDFDocumentImpl::SetRootResource(nsIRDFResource* aResource)
 }
 
 NS_IMETHODIMP
-RDFDocumentImpl::GetDataBase(nsIRDFDataBase*& result)
+RDFDocumentImpl::GetDataBase(nsIRDFCompositeDataSource*& result)
 {
     NS_PRECONDITION(mDB != nsnull, "not initialized");
     if (! mDB)

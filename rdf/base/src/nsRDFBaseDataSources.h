@@ -31,16 +31,9 @@
 
 #include "nsError.h"
 class nsIRDFDataSource;
-class nsIRDFDataBase;
 
 // in nsInMemoryDataSource.cpp
 nsresult NS_NewRDFInMemoryDataSource(nsIRDFDataSource** result);
-
-// in nsDataBase.cpp
-nsresult NS_NewRDFDataBase(nsIRDFDataBase** result);
-
-// in nsXMLDataSource.cpp
-nsresult NS_NewRDFXMLDataSource(nsIRDFXMLDataSource** result);
 
 #endif // nsBaseDataSources_h__
 

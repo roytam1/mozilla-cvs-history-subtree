@@ -23,10 +23,12 @@
  */
 
 #include "nsIFactory.h"
+#include "nsIRDFCompositeDataSource.h"
 #include "nsIRDFContentModelBuilder.h"
 #include "nsIRDFContentSink.h"
 #include "nsIRDFDocument.h"
 #include "nsIRDFService.h"
+#include "nsIRDFXMLDataSource.h"
 #include "nsISupports.h"
 #include "nsRDFBaseDataSources.h"
 #include "nsRDFBuiltInDataSources.h"
@@ -36,7 +38,7 @@ static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
 static NS_DEFINE_IID(kIFactoryIID,  NS_IFACTORY_IID);
 
 static NS_DEFINE_CID(kRDFBookmarkDataSourceCID, NS_RDFBOOKMARKDATASOURCE_CID);
-static NS_DEFINE_CID(kRDFDataBaseCID,           NS_RDFDATABASE_CID);
+static NS_DEFINE_CID(kRDFCompositeDataSourceCID, NS_RDFCOMPOSITEDATASOURCE_CID);
 static NS_DEFINE_CID(kRDFDocumentCID,           NS_RDFDOCUMENT_CID);
 static NS_DEFINE_CID(kRDFHTMLBuilderCID,        NS_RDFHTMLBUILDER_CID);
 static NS_DEFINE_CID(kRDFInMemoryDataSourceCID, NS_RDFINMEMORYDATASOURCE_CID);
@@ -139,8 +141,8 @@ RDFFactoryImpl::CreateInstance(nsISupports *aOuter,
         if (NS_FAILED(rv = NS_NewRDFBookmarkDataSource((nsIRDFDataSource**) &inst)))
             return rv;
     }
-    else if (mClassID.Equals(kRDFDataBaseCID)) {
-        if (NS_FAILED(rv = NS_NewRDFDataBase((nsIRDFDataBase**) &inst)))
+    else if (mClassID.Equals(kRDFCompositeDataSourceCID)) {
+        if (NS_FAILED(rv = NS_NewRDFCompositeDataSource((nsIRDFCompositeDataSource**) &inst)))
             return rv;
     }
     else if (mClassID.Equals(kRDFDocumentCID)) {

@@ -1,7 +1,7 @@
 rdf.h
+nsIRDFCompositeDataSource.h
 nsIRDFContentSink.h
 nsIRDFCursor.h
-nsIRDFDataBase.h
 nsIRDFDataSource.h
 nsIRDFNode.h
 nsIRDFObserver.h
