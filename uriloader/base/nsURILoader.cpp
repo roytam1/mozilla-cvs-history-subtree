@@ -321,9 +321,27 @@ nsresult nsDocumentOpenInfo::DispatchContent(nsIRequest *request, nsISupports * 
     // Until that day, if we couldn't find a handler for the content type, then go back to the listener who
     // originated the url request and force them to handle the content....this forces us through the old code
     // path for unknown content types which brings up the file save as dialog...
-    if (!contentListener) {
+
+#ifndef MOZ_MINOTAUR
+    if (!contentListener)
       contentListener = m_contentListener;
-    }
+#else // MINOTAUR HACK: force anything we can't handle through the helper app dialog
+    if (!contentListener) 
+    {
+      nsCOMPtr<nsIURI> uri;
+      PRBool abortProcess = PR_FALSE;
+      aChannel->GetURI(getter_AddRefs(uri));
+      nsCOMPtr<nsIExternalHelperAppService> helperAppService (do_GetService(NS_EXTERNALHELPERAPPSERVICE_CONTRACTID));
+      if (helperAppService)
+      {
+        rv = helperAppService->DoContent(contentType.get(), uri, m_originalContext, &abortProcess, getter_AddRefs(contentStreamListener));
+        if (NS_SUCCEEDED(rv) && contentStreamListener)
+          return RetargetOutput(request, contentType.get(), contentType.get(), contentStreamListener);
+      }
+      
+      return rv = NS_ERROR_FAILURE; // this will cause us to bring up the unknown content handler dialog.
+    }      
+#endif
 
     //
     // Good news!  Some content listener can handle this content type.

@@ -96,6 +96,7 @@ static PRBool PR_CALLBACK DeleteEntry(nsHashKey *aKey, void *aData, void* closur
 // These are only the ones handled internally.  These must be listed here so that we can do the
 // proper file-extension to content-type mapping.  These cannot be overridden by user helper app
 // prefs.
+#ifndef MOZ_MINOTAUR
 static nsDefaultMimeTypeEntry defaultMimeEntries [] = 
 {
   { TEXT_PLAIN, "txt,text", "Text File", 'TEXT', 'ttxt' },
@@ -120,6 +121,22 @@ static nsDefaultMimeTypeEntry defaultMimeEntries [] =
   { IMAGE_XBM, "xbm", "XBM Image", 0, 0 },
   { APPLICATION_XPINSTALL, "xpi", "XPInstall Install", 'xpi*','MOSS' },
 };
+#else
+static nsDefaultMimeTypeEntry defaultMimeEntries [] = 
+{
+  { TEXT_RDF, "rdf", "Resource Description Framework", 'TEXT','ttxt' },
+  { TEXT_XUL, "xul", "XML-Based User Interface Language", 'TEXT', 'ttxt' },
+  { TEXT_XML,          "xml,xsl,xbl", "Extensible Markup Language", 'TEXT', 'ttxt' },
+  { "application/xhtml+xml", "xhtml,xht", "Extensible HyperText Markup Language", 'TEXT', 'ttxt' },
+#ifdef MOZ_SVG
+  { "image/svg+xml", "svg", "Scalable Vector Graphics", 'svg ', 'ttxt' },
+#endif
+  { TEXT_CSS, "css", "Style Sheet", 'TEXT', 'ttxt' },
+  { APPLICATION_JAVASCRIPT, "js", "Javascript Source File", 'TEXT', 'ttxt' },
+  { MESSAGE_RFC822, "eml", "RFC-822 data", 'TEXT', 'MOSS' },
+  { APPLICATION_XPINSTALL, "xpi", "XPInstall Install", 'xpi*','MOSS' },
+};
+#endif
 
 // This table lists all of the 'extra" content types that we can deduce from particular
 // file extensions.  These entries also ensure that we provide a good descriptive name

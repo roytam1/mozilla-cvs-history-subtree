@@ -626,6 +626,7 @@ nsBrowserInstance::Close()
 //*****************************************************************************
 
 
+#ifndef MOZ_MINOTAUR
 ////////////////////////////////////////////////////////////////////////
 // browserCntHandler is a content handler component that registers
 // the browse as the preferred content handler for various content
@@ -843,16 +844,21 @@ NS_IMETHODIMP nsBrowserContentHandler::HandleContent(const char * aContentType,
   return NS_OK;
 }
 
-NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsBrowserInstance, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsBrowserContentHandler)
+
+#endif
+
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsBrowserInstance, Init)
+
 
 static const nsModuleComponentInfo components[] = {
   { "nsBrowserInstance",
     NS_BROWSERINSTANCE_CID,
     NS_BROWSERINSTANCE_CONTRACTID, 
     nsBrowserInstanceConstructor
-  },
-  { "Browser Content Handler",
+  }
+#ifndef MOZ_MINOTAUR
+  ,{ "Browser Content Handler",
     NS_BROWSERCONTENTHANDLER_CID,
     NS_CONTENT_HANDLER_CONTRACTID_PREFIX"text/html", 
     nsBrowserContentHandlerConstructor 
@@ -862,13 +868,11 @@ static const nsModuleComponentInfo components[] = {
     NS_CONTENT_HANDLER_CONTRACTID_PREFIX"application/vnd.mozilla.xul+xml", 
     nsBrowserContentHandlerConstructor 
   },
-#ifdef MOZ_SVG
   { "Browser Content Handler",
     NS_BROWSERCONTENTHANDLER_CID,
     NS_CONTENT_HANDLER_CONTRACTID_PREFIX"image/svg+xml",
     nsBrowserContentHandlerConstructor
   },
-#endif
   { "Browser Content Handler",
     NS_BROWSERCONTENTHANDLER_CID,
     NS_CONTENT_HANDLER_CONTRACTID_PREFIX"text/rdf", 
@@ -961,6 +965,7 @@ static const nsModuleComponentInfo components[] = {
     "@mozilla.org/commandlinehandler/general-startup;1?type=chrome",
     nsBrowserContentHandlerConstructor,
   } 
+#endif
   
 };
 
