@@ -46,3 +46,8 @@ Rights Reserved.
 <!ENTITY printAttachmentCmd.accesskey		"P">  
 <!ENTITY saveAllAttachmentsCmd.label    "Save All...">  
 <!ENTITY saveAllAttachmentsCmd.accesskey		"S">  
+
+<!ENTITY copyLinkCmd.label        "Copy Link Location">  
+<!ENTITY copyLinkCmd.accesskey		"C">  
+
+
