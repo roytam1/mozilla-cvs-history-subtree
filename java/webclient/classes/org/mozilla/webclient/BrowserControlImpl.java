@@ -35,8 +35,6 @@ import org.mozilla.util.ParameterCheck;
 import java.awt.Rectangle;
 import java.awt.Canvas;
 
-import org.mozilla.webclient.motif.*;
-
 /**
  *
  *  <B>BrowserControlImpl</B> provides the implementation for BrowserControl
