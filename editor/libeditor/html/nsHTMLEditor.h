@@ -909,7 +909,6 @@ protected:
   PRInt32  GetNewResizingHeight(PRInt32 aX, PRInt32 aY);
   void     HideShadowAndInfo();
   void     SetFinalSize(PRInt32 aX, PRInt32 aY);
-  void     DeleteAnonymousFrameFor(nsIDOMNode * aNode);
   void     SetResizeIncrements(PRInt32 aX, PRInt32 aY, PRInt32 aW, PRInt32 aH, PRBool aPreserveRatio);
   nsresult GetElementOrigin(nsIDOMElement * aElement, PRInt32 & aX, PRInt32 & aY);
 public:

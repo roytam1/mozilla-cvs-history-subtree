@@ -45,6 +45,7 @@
 
 #include "nsIContent.h"
 #include "nsIDocument.h"
+#include "nsIDocumentObserver.h"
 #include "nsIEditor.h"
 #include "nsIPresShell.h"
 #include "nsIScriptGlobalObject.h"
@@ -571,47 +572,99 @@ nsHTMLEditor::ShowResizers(nsIDOMElement *aResizedElement)
   return res;
 }
 
-void
-nsHTMLEditor::DeleteAnonymousFrameFor(nsIDOMNode * aNode)
-{
-  nsCOMPtr<nsIDOMElement> elt = do_QueryInterface(aNode);
-  NS_ASSERTION(elt, "anonymous node is not an element");
-  // let's destroy element's frame
-  elt->SetAttribute(NS_LITERAL_STRING("class"), NS_LITERAL_STRING("hidden"));
-}
-
 NS_IMETHODIMP 
 nsHTMLEditor::HideResizers(void)
 {
   if (!mIsShowingResizeHandles || !mResizedObject)
     return NS_OK;
 
-  DeleteAnonymousFrameFor(mTopLeftHandle);
-  mTopLeftHandle = nsnull;
-  DeleteAnonymousFrameFor(mTopHandle);
-  mTopHandle = nsnull;
-  DeleteAnonymousFrameFor(mTopRightHandle);
-  mTopRightHandle = nsnull;
-  DeleteAnonymousFrameFor(mLeftHandle);
-  mLeftHandle = nsnull;
-  DeleteAnonymousFrameFor(mRightHandle);
-  mRightHandle = nsnull;
-  DeleteAnonymousFrameFor(mBottomLeftHandle);
-  mBottomLeftHandle = nsnull;
-  DeleteAnonymousFrameFor(mBottomHandle);
-  mBottomHandle = nsnull;
-  DeleteAnonymousFrameFor(mBottomRightHandle);
-  mBottomRightHandle = nsnull;
+  // get the presshell's document observer interface.
 
-  DeleteAnonymousFrameFor(mResizingShadow);
-  mResizingShadow = nsnull;
-  DeleteAnonymousFrameFor(mResizingInfo);
-  mResizingInfo = nsnull;
+  if (!mPresShellWeak) return NS_ERROR_NOT_INITIALIZED;
+  nsCOMPtr<nsIPresShell> ps = do_QueryReferent(mPresShellWeak);
+  if (!ps) return NS_ERROR_NOT_INITIALIZED;
+
+  nsCOMPtr<nsIDocumentObserver> docObserver(do_QueryInterface(ps));
+  if (!docObserver) return NS_ERROR_FAILURE;
+
+  // get the root content node.
+
+  nsCOMPtr<nsIDOMElement> bodyElement;
+  nsresult res = nsEditor::GetRootElement(getter_AddRefs(bodyElement));
+  if (NS_FAILED(res)) return res;
+  if (!bodyElement)   return NS_ERROR_NULL_POINTER;
+
+  nsCOMPtr<nsIContent> bodyContent( do_QueryInterface(bodyElement) );
+  if (!bodyContent) return NS_ERROR_FAILURE;
+
+  // call ContentRemoved() for each of our anonymous content
+  // nodes so their references get removed from the frame manager's
+  // undisplay map, and their layout frames get destroyed!
+
+  nsCOMPtr<nsIContent> content = do_QueryInterface(mTopLeftHandle);
+  if (content) {
+    docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
+    mTopLeftHandle = nsnull;
+  }
+
+  content = do_QueryInterface(mTopHandle);
+  if (content) {
+    docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
+    mTopHandle = nsnull;
+  }
+
+  content = do_QueryInterface(mTopRightHandle);
+  if (content) {
+    docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
+    mTopRightHandle = nsnull;
+  }
+
+  content = do_QueryInterface(mLeftHandle);
+  if (content) {
+    docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
+    mLeftHandle = nsnull;
+  }
+
+  content = do_QueryInterface(mRightHandle);
+  if (content) {
+    docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
+    mRightHandle = nsnull;
+  }
+
+  content = do_QueryInterface(mBottomLeftHandle);
+  if (content) {
+    docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
+    mBottomLeftHandle = nsnull;
+  }
+
+  content = do_QueryInterface(mBottomHandle);
+  if (content) {
+    docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
+    mBottomHandle = nsnull;
+  }
+
+  content = do_QueryInterface(mBottomRightHandle);
+  if (content) {
+    docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
+    mBottomRightHandle = nsnull;
+  }
+
+  content = do_QueryInterface(mResizingShadow);
+  if (content) {
+    docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
+    mResizingShadow = nsnull;
+  }
+
+  content = do_QueryInterface(mResizingInfo);
+  if (content) {
+    docObserver->ContentRemoved(nsnull, bodyContent, content, -1);
+    mResizingInfo = nsnull;
+  }
 
   // don't forget to remove the listeners !
 
   nsCOMPtr<nsIDOMEventReceiver> erP = do_QueryInterface(mResizedObject);
-  nsresult res = erP->RemoveEventListener(NS_LITERAL_STRING("DOMAttrModified"), mMutationListenerP, PR_FALSE);
+  res = erP->RemoveEventListener(NS_LITERAL_STRING("DOMAttrModified"), mMutationListenerP, PR_FALSE);
   NS_ASSERTION(NS_SUCCEEDED(res), "failed to remove AttrModified mutation event listener");
 
   nsCOMPtr<nsIDOMNode> parentNode;
