@@ -22,24 +22,18 @@
 #ifndef PREFAPI_H
 #define PREFAPI_H
 
-#include "prtypes.h"
-#if defined(XP_UNIX) || defined(XP_MAC) || defined(XP_OS2)
 #include "xp_core.h"
-#endif	 
+#include "prtypes.h"
 #include "jscompat.h"
 #include "jspubtd.h"
 
-#ifdef XP_WIN
-#ifndef NSPR20
-#include "prhash.h"
-#else
+#ifdef XP_PC
 #include "plhash.h"
-#endif
 #endif
 
 NSPR_BEGIN_EXTERN_C
 
-#if defined(XP_WIN) || defined(XP_OS2)
+#ifdef XP_PC
 // horrible pre-declaration...so kill me.
 int pref_InitInitialObjects(JSContext *js_context,JSObject *js_object);
 PR_EXTERN(int) pref_savePref(PRHashEntry *he, int i, void *arg);

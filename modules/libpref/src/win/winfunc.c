@@ -18,8 +18,6 @@
 
 #include "mochaapi.h"
 #include "mochalib.h"
-#include "xp_core.h"
-#include "xp_mcom.h"
 #include "prefapi.h"
 
 extern MochaContext *		m_mochaContext;
@@ -31,8 +29,8 @@ int pref_InitInitialObjects() {
 	HRSRC hFound;
 	HGLOBAL hRes;
 	char * lpBuff = NULL;
-	XP_File fp;
-	XP_StatStruct stats;
+	FILE *fp;
+	struct _stat stats;
 	long fileLength;
 
 
@@ -52,12 +50,12 @@ int pref_InitInitialObjects() {
 	if (fp) {
 		char* readBuf = (char *) malloc(fileLength * sizeof(char));
 		if (readBuf) {
-			fileLength = XP_FileRead(readBuf, fileLength, fp);
+			fileLength = fread(readBuf, sizeof(char), fileLength, fp);
 			
 			ok = MOCHA_EvaluateBuffer(m_mochaContext,m_mochaPrefObject,
 				  readBuf, fileLength, NULL, 0, &result);
 			free(readBuf);
-			XP_FileClose(fp);
+			fclose(fp);
 		}
 	}
 #endif
