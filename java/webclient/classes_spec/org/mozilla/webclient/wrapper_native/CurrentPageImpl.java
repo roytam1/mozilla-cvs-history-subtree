@@ -108,12 +108,12 @@ public void findInPage(String stringToFind, boolean forward, boolean matchCase)
     }
 }
             
-public void findNextInPage(boolean forward)
+public void findNextInPage()
 {
     myFactory.throwExceptionIfNotInitialized();
     
     synchronized(myBrowserControl) {
-        nativeFindNextInPage(nativeWebShell, forward);
+        nativeFindNextInPage(nativeWebShell);
     }
 }
             
@@ -233,7 +233,7 @@ native public void nativeCopyCurrentSelectionToSystemClipboard(int webShellPtr);
             
 native public void nativeFindInPage(int webShellPtr, String stringToFind, boolean forward, boolean matchCase);
             
-native public void nativeFindNextInPage(int webShellPtr, boolean forward);
+native public void nativeFindNextInPage(int webShellPtr);
             
 native public String nativeGetCurrentURL(int webShellPtr);
             

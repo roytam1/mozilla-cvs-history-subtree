@@ -194,7 +194,7 @@ JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPageImp
  * Signature: (Z)V
  */
 JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPageImpl_nativeFindNextInPage
-(JNIEnv *env, jobject obj, jint webShellPtr, jboolean forward)
+(JNIEnv *env, jobject obj, jint webShellPtr)
 {
 
   WebShellInitContext* initContext = (WebShellInitContext *) webShellPtr;
@@ -216,9 +216,6 @@ JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPageImp
         ::util_ThrowExceptionToJava(env, "Exception: NULL SearchContext received for FindNext");
         return;
   }
-
-  // Set the forward flag as per input parameter
-  searchContext->SetSearchBackwards(!forward);
 
   // Pass searchContext to findComponent for the actual find call
   PRBool found = PR_TRUE;

@@ -377,7 +377,7 @@ public void actionPerformed (ActionEvent evt)
                 //		currentPage.findInPage("Sun", true, true);
             }
             else if (command.equals("Find Next")) {
-                currentPage.findNextInPage(false);
+                currentPage.findNextInPage();
             }
             else if (command.equals("View Page Source")) {
                 currentPage.getSourceBytes(viewMode);

@@ -114,7 +114,7 @@ jint (* nativeNewRDFNode)  (JNIEnv *, jobject, jint, jstring, jboolean);
 // from CurrentPageImpl.h
 void (* nativeCopyCurrentSelectionToSystemClipboard) (JNIEnv *, jobject, jint);
 void (* nativeFindInPage) (JNIEnv *, jobject, jint, jstring, jboolean, jboolean);
-void (* nativeFindNextInPage) (JNIEnv *, jobject, jint, jboolean);
+void (* nativeFindNextInPage) (JNIEnv *, jobject, jint);
 jstring (* nativeGetCurrentURL) (JNIEnv *, jobject, jint);
 jstring (* nativeGetSource) (JNIEnv *, jobject);
 jbyteArray (* nativeGetSourceBytes) (JNIEnv *, jobject, jint, jboolean);
@@ -341,7 +341,7 @@ void locateBrowserControlStubFunctions(void * dll) {
   if (!nativeFindInPage) {
     printf("got dlsym error %s\n", dlerror());
   }
-  nativeFindNextInPage = (void (*) (JNIEnv *, jobject, jint, jboolean)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_CurrentPageImpl_nativeFindNextInPage");
+  nativeFindNextInPage = (void (*) (JNIEnv *, jobject, jint)) dlsym(dll, "Java_org_mozilla_webclient_wrapper_1native_CurrentPageImpl_nativeFindNextInPage");
   if (!nativeFindNextInPage) {
     printf("got dlsym error %s\n", dlerror());
   }
@@ -516,8 +516,8 @@ JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPageImp
  * Signature: (Z)V
  */
 JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_CurrentPageImpl_nativeFindNextInPage
-(JNIEnv * env, jobject obj, jint webShellPtr, jboolean myboolean) {
-  (* nativeFindNextInPage) (env, obj, webShellPtr, myboolean);
+(JNIEnv * env, jobject obj, jint webShellPtr) {
+  (* nativeFindNextInPage) (env, obj, webShellPtr);
 }
 
 /*
