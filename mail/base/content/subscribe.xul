@@ -152,7 +152,7 @@
               onkeypress="onSearchTreeKeyPress(event);"
               onclick="SearchOnClick(event);"> 
          <treecols>
-           <treecol id="nameColumn2" persist="hidden" primary="true"  sort="?LeafName" flex="10" hideheader="true"/>
+           <treecol id="nameColumn2" primary="true"  sort="?LeafName" flex="10" hideheader="true"/>
            <splitter class="tree-splitter"/>
            <treecol id="subscribedColumn2" hideheader="true" flex="1" sort="?Subscribed"/>
          </treecols>
