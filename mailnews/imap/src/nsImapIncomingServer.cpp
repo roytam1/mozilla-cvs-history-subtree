@@ -1333,6 +1333,18 @@ NS_IMETHODIMP nsImapIncomingServer::PossibleImapMailbox(const char *folderPath, 
       else
       {
         rv = ConvertFolderName(onlineName.get(), getter_Copies(convertedName));
+
+        //make sure rv value is not crunched, it is used to SetPrettyName
+        nsXPIDLCString redirectorType;
+        GetRedirectorType(getter_Copies(redirectorType)); //Sent mail folder as per netscape webmail and aol server
+        if ((redirectorType.Equals(NS_LITERAL_CSTRING("aol")) && convertedName.Equals(NS_LITERAL_STRING("Sent Mail"))) ||
+          (redirectorType.Equals(NS_LITERAL_CSTRING("netscape")) && onlineName.Equals(NS_LITERAL_CSTRING("Sent"))))
+          //we know that we don't allowConversion for netscape webmail so just use the onlineName
+          child->SetFlag(MSG_FOLDER_FLAG_SENTMAIL);
+
+        else if (redirectorType.Equals(NS_LITERAL_CSTRING("netscape")) && onlineName.Equals(NS_LITERAL_CSTRING("Draft")))
+          child->SetFlag(MSG_FOLDER_FLAG_DRAFTS);
+
         if (NS_SUCCEEDED(rv))
           child->SetPrettyName(convertedName);
       }
