@@ -65,7 +65,7 @@ public WindowControlImpl(WrapperFactory yourFactory,
 /**
 
  * First, we delete our eventThread, which causes the eventThread to
- * stop running.  Then we call nativeDestroyInitContext(), which
+ * stop running, which causes the initContext to be deleted.  
  * deallocates native resources for this window.
 
  */
@@ -75,7 +75,6 @@ public void delete()
     Assert.assert(null != eventThread, "eventThread shouldn't be null at delete time");
     eventThread.delete();
     eventThread = null;
-    nativeDestroyInitContext(nativeWebShell);
     nativeWebShell = -1;
 }
 
