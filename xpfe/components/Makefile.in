@@ -73,6 +73,7 @@ DIRS    = \
           sidebar/public \
           history/public \
           shistory/public \
+	  timebomb \
           $(NULL)
 
 ifeq ($(OS_ARCH),WINNT)
