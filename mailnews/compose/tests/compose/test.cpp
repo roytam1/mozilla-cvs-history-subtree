@@ -173,14 +173,14 @@ GetLocalAttachments(void)
   nsMsgNewURL(&url, "file://C:/boxster.jpg");
   nsCRT::memset(attachments, 0, sizeof(nsMsgAttachedFile) * attachCount);
 
-  nsMsgNewURL(&url, nsString("file://C:/boxster.jpg"));
+  nsMsgNewURL(&url, "file://C:/boxster.jpg");
   attachments[0].orig_url = url;
   attachments[0].file_spec = new nsFileSpec("C:\\boxster.jpg");
   attachments[0].type = PL_strdup("image/jpeg");
   attachments[0].encoding = PL_strdup(ENCODING_BINARY);
   attachments[0].description = PL_strdup("Boxster Image");
   
-  nsMsgNewURL(&url2, nsString("file://C:/boxster.jpg"));
+  nsMsgNewURL(&url2, "file://C:/boxster.jpg");
   attachments[1].orig_url = url2;
   attachments[1].file_spec = new nsFileSpec("C:\\boxster.jpg");
   attachments[1].type = PL_strdup("image/jpeg");
@@ -203,7 +203,7 @@ GetRemoteAttachments()
   nsCRT::memset(attachments, 0, sizeof(nsMsgAttachmentData) * attachCount);
  
   url = nsnull;
-  nsMsgNewURL(&url, nsString("http://people.netscape.com/rhp/sherry.html"));
+  nsMsgNewURL(&url, "http://people.netscape.com/rhp/sherry.html");
   NS_ADDREF(url);
   attachments[0].url = url; // The URL to attach. This should be 0 to signify "end of list".
   
@@ -227,7 +227,7 @@ GetRemoteAttachments()
   // This can be any explanatory text; it's not a file name.						 
   
   url = nsnull;
-  nsMsgNewURL(&url, nsString("http://people.netscape.com/rhp/sherry.html"));
+  nsMsgNewURL(&url, "http://people.netscape.com/rhp/sherry.html");
                                   // This can be any explanatory text; it's not a file name.						 
 
   nsMsgNewURL(&url,"http://www.pennatech.com");
@@ -261,9 +261,6 @@ SetupRegistry(void)
     printf("ERROR at GetService() code=0x%x.\n",res);
     return NS_ERROR_FAILURE;
   }
-  
-  // netlib
-  nsComponentManager::RegisterComponent(kNetServiceCID,     NULL, NULL, NETLIB_DLL,  PR_FALSE, PR_FALSE);
   
   // xpcom
   nsComponentManager::RegisterComponent(kEventQueueServiceCID, NULL, NULL, XPCOM_DLL,  PR_FALSE, PR_FALSE);
