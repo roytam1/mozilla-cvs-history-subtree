@@ -4666,19 +4666,17 @@ nsBlockFrame::RemoveFrame(nsIPresContext* aPresContext,
       return mAbsoluteContainer.RemoveFrame(this, aPresContext, aPresShell, aListName, aOldFrame);
   }
   else if (nsLayoutAtoms::floaterList == aListName) {
-    // Remove floater from the floater list first
-    mFloaters.RemoveFrame(aOldFrame);
-
     // Find which line contains the floater
     nsLineBox* line = mLines;
     while (nsnull != line) {
       if (line->IsInline() && line->RemoveFloater(aOldFrame)) {
-        aOldFrame->Destroy(aPresContext);
         goto found_it;
       }
       line = line->mNext;
     }
    found_it:
+    if (mFloaters.RemoveFrame(aOldFrame))
+      aOldFrame->Destroy(aPresContext);
 
     // Mark every line at and below the line where the floater was dirty
     while (nsnull != line) {
