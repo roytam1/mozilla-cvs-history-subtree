@@ -152,7 +152,8 @@ public:
 	UINT GetSelectedColumn() { return m_nSelectedColumn; } // Returns selected column
 	int GetSortColumn() { return m_nSortColumn; }
 	int GetSortType() { return m_nSortType; }
-	
+	BOOL IsPopup() { return m_bIsPopup; }
+
 	// Setters
 	void SetNavigationMode(BOOL inMode);
 	void SetIsPopup(BOOL isPopup) { m_bIsPopup = isPopup; }
@@ -471,6 +472,7 @@ protected:
 	afx_msg int OnCreate ( LPCREATESTRUCT );
     afx_msg void OnSize ( UINT, int, int );
     afx_msg void OnSetFocus ( CWnd * pOldWnd );
+	afx_msg void OnKillFocus (CWnd* pNewWnd); 
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

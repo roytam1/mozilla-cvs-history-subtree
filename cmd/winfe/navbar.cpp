@@ -295,7 +295,7 @@ void CNavTitleBar::OnPaint( )
 	int top = rect.top + (rect.Height() - NAVBAR_CLOSEBOX)/2;
 	int bottom = top + NAVBAR_CLOSEBOX;
 	
-	CRDFImage* pImage = LookupImage("http://www.shadowland.org/images/closebox.gif", NULL);
+	CRDFImage* pImage = LookupImage("http://www.shadowland.org/images/blah.gif", NULL);
 
 	int imageWidth = 16;
 	int imageHeight = 15;
