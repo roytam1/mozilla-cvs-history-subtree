@@ -118,14 +118,23 @@ nsImageFrame::Destroy(nsIPresContext* aPresContext)
       NS_RELEASE(mImageMap);
     }
 
+#ifndef USE_IMG2
   // Release image loader first so that it's refcnt can go to zero
   mImageLoader.StopAllLoadImages(aPresContext);
   if (mLowSrcImageLoader != nsnull) {
     mLowSrcImageLoader->StopAllLoadImages(aPresContext);
   }
-  
+#endif
+
   return nsLeafFrame::Destroy(aPresContext);
 }
+
+#ifdef USE_IMG2
+#include "nsIImageContainer.h"
+#include "nsIImageRequest.h"
+#include "nsIImageLoader.h"
+#include "nsRect2.h"
+#endif
 
 NS_IMETHODIMP
 nsImageFrame::Init(nsIPresContext*  aPresContext,
@@ -174,13 +183,34 @@ nsImageFrame::Init(nsIPresContext*  aPresContext,
     }
   }
 
+#ifdef USE_IMG2
+  nsCOMPtr<nsIImageLoader> il(do_CreateInstance("@mozilla.org/image/loader;1", &rv));
+  if (NS_FAILED(rv))
+    return rv;
+#endif
+
   if (NS_CONTENT_ATTR_HAS_VALUE == lowSrcResult && lowSrc.Length() > 0) {
+#ifdef USE_IMG2
+    nsCOMPtr<nsIURI> lowURI;
+    NS_NewURI(getter_AddRefs(lowURI), src, baseURL);
+    il->LoadImage(lowURI, nsnull, getter_AddRefs(mLowImageRequest));
+#else
     mLowSrcImageLoader = new nsHTMLImageLoader;
-    if (mLowSrcImageLoader != nsnull) {
+    if (mLowSrcImageLoader) {
       mLowSrcImageLoader->Init(this, UpdateImageFrame, (void*)mLowSrcImageLoader, baseURL, lowSrc);
     }
+#endif
   }
+
+
+#ifdef USE_IMG2
+  nsCOMPtr<nsIURI> srcURI;
+  NS_NewURI(getter_AddRefs(srcURI), src, baseURL);
+  il->LoadImage(srcURI, nsnull, getter_AddRefs(mImageRequest));
+//#else
   mImageLoader.Init(this, UpdateImageFrame, (void*)&mImageLoader, baseURL, src);
+#endif
+
   NS_IF_RELEASE(baseURL);
 
   mInitialLoadCompleted = PR_FALSE;
@@ -603,16 +633,29 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
     nsIImage * lowImage = nsnull;
     nsIImage * image    = nsnull;
 
+#ifdef USE_IMG2
+    nsCOMPtr<nsIImageContainer> imgCon;
+    nsCOMPtr<nsIImageContainer> lowImgCon;
+
+    mImageRequest->GetImage(getter_AddRefs(imgCon));
+#endif
+
+#ifdef USE_IMG2
+    if (mLowImageRequest) {
+      mLowImageRequest->GetImage(getter_AddRefs(lowImgCon));
+    }
+#else
     // if lowsrc is here 
-    if (mLowSrcImageLoader != nsnull) {
+    if (mLowSrcImageLoader) {
       lowImage = mLowSrcImageLoader->GetImage();
       lowSrcLinesLoaded = lowImage != nsnull?lowImage->GetDecodedY2():-1;
     }
+#endif
 
     image = mImageLoader.GetImage();
     imgSrcLinesLoaded = image != nsnull?image->GetDecodedY2():-1;
 
-    if (nsnull == image && nsnull == lowImage) {
+    if (!image && !lowImage) {
       // No image yet, or image load failed. Draw the alt-text and an icon
       // indicating the status
       if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer &&
@@ -642,11 +685,22 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
           }
         }
 
-        if (image != nsnull && imgSrcLinesLoaded > 0) {
+#ifdef USE_IMG2
+        if (imgCon) {
+          nsRect2 r(0,0,0,0);
+          nsPoint2 p(inner.x, inner.y);
+          imgCon->GetWidth(&r.width);
+          imgCon->GetHeight(&r.height);
+
+          aRenderingContext.DrawImage(imgCon, &r, &p);
+        }
+#else
+        if (image && imgSrcLinesLoaded > 0) {
           aRenderingContext.DrawImage(image, inner);
-        } else if (lowImage != nsnull && lowSrcLinesLoaded > 0) {
+        } else if (lowImage && lowSrcLinesLoaded > 0) {
           aRenderingContext.DrawImage(lowImage, inner);
         }
+#endif
 
       }
 
