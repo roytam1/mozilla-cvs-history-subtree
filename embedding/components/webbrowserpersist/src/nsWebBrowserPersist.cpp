@@ -82,6 +82,7 @@
 #include "nsIDOMHTMLDocument.h"
 
 #include "ftpCore.h"
+#include "nsITransport.h"
 #include "nsISocketTransport.h"
 #include "nsIStringBundle.h"
 
@@ -928,6 +929,8 @@ NS_IMETHODIMP nsWebBrowserPersist::OnStatus(
         case NS_NET_STATUS_SENDING_TO:
         case NS_NET_STATUS_RECEIVING_FROM:
         case NS_NET_STATUS_WAITING_FOR:
+        case nsITransport::STATUS_READING:
+        case nsITransport::STATUS_WRITING:
             break;
 
         default:
