@@ -46,6 +46,7 @@
 #include "nsIFileLocator.h"
 #include "nsFileLocations.h"
 #include "nsIStringBundle.h"
+#include "nsISupportsPrimitives.h"
 #include "nsProxiedService.h"
 
 #include "nsNetUtil.h"
@@ -500,18 +501,18 @@ nsPrefMigration::ShowSpaceDialog(PRInt32 *choice)
     if ( NS_SUCCEEDED( rv ) ) 
       ioParamBlock->SetInt(0,3); //set the Retry, CreateNew and Cancel buttons
 
-    nsCOMPtr<nsISupportsArray> array;
-
-    rv = NS_NewISupportsArray(getter_AddRefs(array));
+    nsCOMPtr<nsISupportsInterfacePointer> ifptr =
+      do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    array->AppendElement(ioParamBlock);
+    ifptr->SetData(ioParamBlock);
+    ifptr->SetDataIID(&NS_GET_IID(nsIDialogParamBlock));
         
     nsCOMPtr<nsIDOMWindow> newWindow;
     rv = PMDOMWindow->OpenDialog(NS_ConvertASCIItoUCS2(PREF_MIGRATION_NO_SPACE_URL),
                                  NS_LITERAL_STRING("_blank"),
                                  NS_LITERAL_STRING("chrome,modal"),
-                                 array, getter_AddRefs(newWindow));
+                                 ifptr, getter_AddRefs(newWindow));
     if (NS_SUCCEEDED(rv)) {
       //Now get which button was pressed from the ParamBlock
       ioParamBlock->GetInt( 0, choice );

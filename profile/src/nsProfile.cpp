@@ -63,6 +63,7 @@
 #include "nsIChromeRegistry.h" // chromeReg
 #include "nsIStringBundle.h"
 #include "nsIObserverService.h"
+#include "nsISupportsPrimitives.h"
 #include "nsHashtable.h"
 
 // Interfaces Needed
@@ -2016,18 +2017,18 @@ nsProfile::ShowProfileWizard(void)
         if ( NS_SUCCEEDED( rv ) ) 
             ioParamBlock->SetInt(0,4); // standard wizard buttons
 
-        nsCOMPtr<nsISupportsArray> array;
-
-        rv = NS_NewISupportsArray(getter_AddRefs(array));
+        nsCOMPtr<nsISupportsInterfacePointer> ifptr =
+            do_CreateInstance(NS_SUPPORTS_INTERFACE_POINTER_CONTRACTID, &rv);
         NS_ENSURE_SUCCESS(rv, rv);
 
-        array->AppendElement(ioParamBlock);
+        ifptr->SetData(ioParamBlock);
+        ifptr->SetDataIID(&NS_GET_IID(nsIDialogParamBlock));
 
         nsCOMPtr<nsIDOMWindow> newWindow;
         rv = PMDOMWindow->OpenDialog(NS_ConvertUTF8toUCS2(PROFILE_WIZARD_URL),
                                      NS_LITERAL_STRING("_blank"),
                                      NS_LITERAL_STRING("chrome,modal"),
-                                     array, getter_AddRefs(newWindow));
+                                     ifptr, getter_AddRefs(newWindow));
         if (NS_FAILED(rv)) {
             return rv;
         }
