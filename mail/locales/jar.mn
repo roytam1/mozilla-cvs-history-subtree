@@ -124,6 +124,7 @@
   locale/messenger/messengercompose/askSendFormat.dtd           (@AB_CD@/chrome/messenger/messengercompose/askSendFormat.dtd)
   locale/messenger/messengercompose/sendProgress.dtd            (@AB_CD@/chrome/messenger/messengercompose/sendProgress.dtd)
   locale/messenger/messengercompose/composeMsgs.properties      (@AB_CD@/chrome/messenger/messengercompose/composeMsgs.properties)
+  locale/messenger/ocsp.dtd                                     (@AB_CD@/chrome/messenger/ocsp.dtd)
   locale/messenger/migration/migration.dtd                      (@AB_CD@/chrome/messenger/migration/migration.dtd)
   locale/messenger/migration/migration.properties               (@AB_CD@/chrome/messenger/migration/migration.properties)
 + locale/@AB_CD@/messenger-mapi/mapi.properties          (@AB_CD@/chrome/messenger-mapi/mapi.properties)
