@@ -662,8 +662,10 @@ var gFoundPage = {
           }
 
           var files = this._newestInfo.getCollection("files", { });
+#ifndef XP_MACOSX
           if (files.length > 0 && haveLanguage && !updatePerformed) 
             this.buildApp(files);
+#endif
             
           // When the user upgrades the application, any optional components that
           // they have installed are automatically installed. If there are remaining
