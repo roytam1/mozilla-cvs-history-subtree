@@ -91,6 +91,14 @@ interface nsICachedNetData : nsISupports
     attribute boolean updateInProgress;
 
     /**
+     * inUse is set if any existing channels are associated with this cache
+     * entry or if the updateInProgess flag is set.  This can be used to
+     * prevent writing to a cache entry by a protocol handler if it's being
+     * read or written elsewhere.
+     */
+    readonly attribute boolean inUse;
+
+    /**
      * Date/time that the document was last stored on the origin server, as
      * supplied by the protocol handler.  This value is used as input to the
      * cache replacement policy, i.e. it is not used for validation.  If the
@@ -140,20 +148,21 @@ interface nsICachedNetData : nsISupports
      * Accessor methods for opaque meta-data which can be read and updated
      * independently of the content data.
      *
-     * The aKey argument can be used to accommodate multiple clients of the
+     * The aTag argument can be used to accommodate multiple clients of the
      * cache API, each of which wants to store its own private meta-data into
-     * the cache.  For example, there could be a "headers" key that the HTTP
+     * the cache.  For example, there could be a "headers" tag that the HTTP
      * protocol handler uses to store http response headers and a "image size"
-     * key used to store the image dimensions of a GIF file.  The aData
+     * tag used to store the image dimensions of a GIF file.  The aData
      * argument refers to an opaque blob of arbitrary bytes.
      *
-     * IMPORTANT: The contents of aData must be byte-swapped by the caller, so
-     * as to make the cache files endian-independent.
+     * IMPORTANT: If aData does not contain byte-oriented data, i.e. it's not a
+     *            string, the contents of aData must be byte-swapped by the,
+     *            caller, so as to make the cache files endian-independent.
      */
-    void getProtocolPrivate(in string aKey, 
-                            out PRUint32 aLength, [size_is(aLength), retval] out string aData);
-    void setProtocolPrivate(in string aKey,
-                            in  PRUint32 aLength, [size_is(aLength)] in string aData);
+    void getAnnotation(in string aTag, 
+                       out PRUint32 aLength, [size_is(aLength), retval] out string aData);
+    void setAnnotation(in string aTag,
+                       in  PRUint32 aLength, [size_is(aLength)] in string aData);
 
     /**
      * As a getter, return the number of content bytes stored in the cache,
@@ -201,9 +210,12 @@ interface nsICachedNetData : nsISupports
      *
      * Though nsIChannel provides for both async and synchronous I/O APIs, both
      * may not be implemented.  Only AsyncRead() and OpenOutputStream() is
-     * required.
+     * required.  The aProxyChannel argument allows another channel to be
+     * specified as the proffered argument to nsIStreamListener methods rather
+     * than the cache's own channel.
      */
-    nsIChannel newChannel(in nsILoadGroup loadGroup);
+    nsIChannel newChannel(in nsILoadGroup aLoadGroup,
+                          in nsIChannel aProxyChannel);
 
     /**
      * This method can be used by a caching protocol handler to store data in
