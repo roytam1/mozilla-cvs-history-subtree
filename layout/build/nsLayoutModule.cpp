@@ -166,7 +166,7 @@ NS_NewXULTreeBuilder(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 #include "nsSVGAtoms.h"
 #include "nsSVGTypeCIDs.h"
 #include "nsISVGRenderer.h"
-#include "nsISVGRect.h"
+#include "nsSVGRect.h"
 #endif
 
 // jst says, ``we need this to avoid holding on to XPConnect past its

@@ -275,9 +275,6 @@ nsSVGLibartBitmapDefault::Flush()
       delete[] rowbuf;
     }
     
-    img->SetDecodedRect(0,0,GetWidth(), GetHeight());
-    img->SetNaturalWidth(GetWidth());
-    img->SetNaturalHeight(GetHeight());
     nsRect r(0, 0, GetWidth(), GetHeight());
     img->ImageUpdated(ctx, nsImageUpdateFlags_kBitsChanged, &r);
   }
