@@ -332,7 +332,7 @@ capture_js_error_reports_for_java(JSContext *cx, const char *message,
     /* Warnings are not propagated as Java exceptions - they are simply
        ignored.  Ditto for exceptions that are duplicated in the form
        of error reports. */
-    if (report->flags & (JSREPORT_WARNING | JSREPORT_EXCEPTION))
+    if (report && (report->flags & (JSREPORT_WARNING | JSREPORT_EXCEPTION)))
         return;
 
     /* Create an empty struct to hold the saved JS error state */
@@ -428,7 +428,6 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
     jEnv = jsj_env->jEnv;
 
     cx = jsj_env->cx;
-
     /* Get the pending JS exception if it exists */
     if (JS_IsExceptionPending(cx)) {
         if (!JS_GetPendingException(cx, &pending_exception))
@@ -463,7 +462,6 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
         JS_ClearPendingException(cx);
         return;
     }
-    
     if (!jsj_env->pending_js_errors) {
 #ifdef DEBUG
         /* Any exception should be cleared as soon as it's detected, so there
@@ -699,8 +697,10 @@ jsj_enter_js(JNIEnv *jEnv, jobject java_wrapper_obj,
                                   "context for JNI thread 0x%08x", jEnv);
             goto error;
         }
+        jsj_env->cx = cx;
     }
     *cxp = cx;
+    jsj_env->recursion_depth++;
 
     /*
      * Capture all JS error reports so that they can be thrown into the Java
@@ -761,6 +761,9 @@ jsj_exit_js(JSContext *cx, JSJavaThreadState *jsj_env, JSErrorReporter original_
     if (JSJ_callbacks->exit_js)
         JSJ_callbacks->exit_js(jEnv);
 
+    jsj_env->recursion_depth--;
+    if (!jsj_env->recursion_depth)
+	jsj_env->cx = NULL;
     return JS_TRUE;
 }
 

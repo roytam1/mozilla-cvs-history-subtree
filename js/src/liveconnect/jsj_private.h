@@ -204,6 +204,7 @@ struct JSJavaThreadState {
     JNIEnv *            jEnv;           /* Per-thread opaque handle to Java VM */
     CapturedJSError *   pending_js_errors; /* JS errors to be thrown as Java exceptions */
     JSContext *         cx;             /* current JS context for thread */
+    int			recursion_depth;/* # transitions into JS from Java */
     JSJavaThreadState * next;           /* next thread state among all created threads */
 };
 
