@@ -94,15 +94,14 @@ public:
     nsresult scanDiskCacheEntries(nsISupportsArray ** result);
     nsresult evictDiskCacheEntries();
     
-    nsresult writeCacheInfo();
-    nsresult readCacheInfo();
+    nsresult readDiskCacheMap();
+    nsresult writeDiskCacheMap();
 
 private:
     nsCOMPtr<nsIObserver>       mPrefsObserver;
     nsCOMPtr<nsILocalFile>      mCacheDirectory;
     nsDiskCacheEntryHashTable   mBoundEntries;
     PRUint32                    mCacheCapacity;
-    PRUint32                    mCacheSize;
     nsDiskCacheMap*             mCacheMap;
 };
 
