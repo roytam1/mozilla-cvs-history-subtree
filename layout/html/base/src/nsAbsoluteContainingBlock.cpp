@@ -306,8 +306,8 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIFrame*                aDelegatin
     aReflowState.SetCurrentReflowNode(nsnull);
 
     // It's targeted at us. See if it's for the positioned child frames
-    // XXX double-check that this is ok, or if we need to avoid merging
-    // XXX reflows with different childlistnames (probably)
+    // XXXrjesup - double-check that this is ok, or if we need to avoid merging
+    // XXXrjesup - reflows with different childlistnames (probably)
     aReflowState.reflowCommand->GetChildListName(listName);
     isAbsoluteChild = nsLayoutAtoms::absoluteList == listName;
     NS_IF_RELEASE(listName);
@@ -348,7 +348,8 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIFrame*                aDelegatin
       // Calculate the total child bounds
       CalculateChildBounds(aPresContext, aChildBounds);
     }
-    // We reflowed all our children, no need to look at reflow tree children
+    // We reflowed all our DIRTY children, but other children that are in
+    // the tree still may need reflow.
   }
   // now handle any targets that are children of this node
   while (reflowIterator.NextChild(&childFrame))
@@ -369,6 +370,7 @@ nsAbsoluteContainingBlock::IncrementalReflow(nsIFrame*                aDelegatin
       aWasHandled = PR_TRUE;
       
       // Calculate the total child bounds
+      // XXXrjesup - Check to see if this is impacted by being done for multiple children. 
       CalculateChildBounds(aPresContext, aChildBounds);
     }
   }
