@@ -80,50 +80,50 @@ function DataToUI()
 
   EnableTree(data.Enabled, filesList);
 
-		// first, disable all by default
-		var children = filesList.childNodes;
-		for (var i = 0, l = children.length; i < l; i++)
-		{
-			var checkbox = children[i];
-			if (!("getAttribute" in checkbox) ||
-          checkbox.getAttribute("type") != "checkbox")
-        // Somebody adds unwanted nodes as children to listbox :-(
-				continue;
-			checkbox.checked = false;
-		}
-		// then check for each file in the list, if it's in the checkboxes.
-		// enabled it, if so, otherwise create and enable it (for files added by
-    // the user).
-		for (i = 0, l = data.Files.length; i < l; i++)
-		{
-			var file = data.Files[i];
-			var found = false;
-			for (var i2 = 0, l2 = children.length; i2 < l2; i2++)
+  // first, disable all by default
+  var children = filesList.childNodes;
+  for (var i = 0, l = children.length; i < l; i++)
+  {
+    var checkbox = children[i];
+    if (!("getAttribute" in checkbox) ||
+        checkbox.getAttribute("type") != "checkbox")
+      // Somebody adds unwanted nodes as children to listbox :-(
+      continue;
+    checkbox.checked = false;
+  }
+  // then check for each file in the list, if it's in the checkboxes.
+  // enabled it, if so, otherwise create and enable it (for files added by
+  // the user).
+  for (i = 0, l = data.Files.length; i < l; i++)
+  {
+    var file = data.Files[i];
+    var found = false;
+    for (var i2 = 0, l2 = children.length; i2 < l2; i2++)
+    {
+      var checkbox = children[i2];
+      if ("getAttribute" in checkbox
+          && checkbox.getAttribute("type") == "checkbox"
+          // Somebody adds unwanted nodes as children to listbox :-(
+          && checkbox.getAttribute("filename") == file)
       {
-        var checkbox = children[i2];
-        if ("getAttribute" in checkbox
-            && checkbox.getAttribute("type") == "checkbox"
-            // Somebody adds unwanted nodes as children to listbox :-(
-            && checkbox.getAttribute("filename") == file)
-        {
-          checkbox.checked = true;
-          found = true;
-        }
+        checkbox.checked = true;
+        found = true;
       }
-      if (!found)
+    }
+    if (!found)
+    {
+      var li = document.createElementNS(kXULNS, "listitem");
+      if (li)
       {
-				var li = document.createElementNS(kXULNS, "listitem");
-				if (li)
-				{
-					li.setAttribute("type", "checkbox");
-					li.setAttribute("id", file);
-					li.setAttribute("filename", file);
-					li.setAttribute("label", file);
-					li.setAttribute("checked", "true");
-					filesList.appendChild(li);
-				}
-			}
-		}
+        li.setAttribute("type", "checkbox");
+        li.setAttribute("id", file);
+        li.setAttribute("filename", file);
+        li.setAttribute("label", file);
+        li.setAttribute("checked", "true");
+        filesList.appendChild(li);
+      }
+    }
+  }
 }
 
 // write widget content to data
