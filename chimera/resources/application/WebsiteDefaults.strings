@@ -1,5 +1,5 @@
-HomePageDefault = "http://www.mozilla.org";
-/* SearchPageDefault = "http://www.google.com/"; Leave commented out to get search engine from IC, but uncommented for 10.2 */
+HomePageDefault = "http://www.mozilla.org/projects/chimera/";
+SearchPageDefault = "http://www.google.com/defaults";
 StartPageDefault = "about:blank";
 ThrobberPageDefault = "http://www.mozilla.org";
 FeedbackPageDefault = "http://www.mozilla.org/projects/chimera/";
