@@ -41,6 +41,10 @@
 
 @namespace url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 
+#toolbar-menubar {
+	display: none;
+}
+
 #main-window {
 	-moz-appearance: none;
 }
@@ -90,6 +94,10 @@ toolbarbutton.bookmark-item[container]:hover > .toolbarbutton-text,
 {
   background: url("chrome://browser/skin/bookmark-hover-mid.png") repeat-x;
   color: #fff;
+}
+
+#find-closebutton > .toolbarbutton-icon  {
+	background-image: none !important;
 }
 
 toolbarbutton.bookmark-item:not([container]):hover:active  > .toolbarbutton-text,
@@ -256,14 +264,12 @@ toolbar[mode="icons"] .toolbarbutton-text {
   display: none;
 }
 
-toolbar[mode="text"] .toolbarbutton-menubutton-dropmarker,
 toolbar[mode="text"] .toolbarbutton-icon {
   display: none;
 }
 
-toolbar[mode="text"] .toolbarbutton-text {
-  padding: 0px !important;
-  margin: 3px 5px !important;
+toolbar[mode="text"] .toolbarbutton-1 > .toolbarbutton-text, toolbar[mode="text"] .toolbarbutton-1 > stack > toolbarbutton > .toolbarbutton-text {
+  margin: 4px;
 }
 
 #back-button, #forward-button  {

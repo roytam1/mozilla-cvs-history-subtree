@@ -88,6 +88,8 @@ classic.jar:
 +  skin/classic/global/icons/closetab.png                             (icons/closetab.png)
 +  skin/classic/global/icons/find.png                                 (icons/find.png)
 +  skin/classic/global/icons/find-bar-background.png                  (icons/find-bar-background.png)
++  skin/classic/global/icons/find-bar-flash.png                       (icons/find-bar-flash.png)
++  skin/classic/global/icons/find-bar-notfound.png                    (icons/find-bar-notfound.png)
 +  skin/classic/global/icons/grip-vrt.gif                             (icons/grip-vrt.gif)
 +  skin/classic/global/icons/loading_16_grey.gif                      (icons/loading_16_grey.gif)
 +  skin/classic/global/icons/loading_16.gif                           (icons/loading_16.gif)

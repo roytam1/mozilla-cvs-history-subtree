@@ -88,3 +88,11 @@ toolbarbutton#delete[disabled="true"] {
 #bookmarks-search {
 	background-image: none;
 }
+
+.bookmarksTree {
+  margin: 0px !important;
+}
+
+#bookmark-views-splitter {
+  border-right: 1px solid #bebebe;
+}
