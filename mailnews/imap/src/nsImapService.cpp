@@ -833,6 +833,9 @@ NS_IMETHODIMP nsImapService::Search(nsIMsgSearchSession *aSearchSession, nsIMsgW
     GetFolderName(aMsgFolder, getter_Copies(folderName));
 
     nsCOMPtr <nsIMsgMailNewsUrl> mailNewsUrl = do_QueryInterface(imapUrl);
+    if (!aMsgWindow)
+      mailNewsUrl->SetSuppressErrorMsgs(PR_TRUE);
+
     urlSpec.Append("/search>UID>");
     urlSpec.Append(char(hierarchySeparator));
     urlSpec.Append((const char *) folderName);
