@@ -26,7 +26,11 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= classic modern 
+DIRS		= modern 
+
+ifndef MOZ_MINOTAUR
+DIRS += classic
+endif
 
 include $(topsrcdir)/config/rules.mk
 
