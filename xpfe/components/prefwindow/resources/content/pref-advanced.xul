@@ -28,7 +28,7 @@
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         class="color-dialog"
         orient="vertical"
-        onload="parent.initPanel(panel);">
+        onload="parent.initPanel('chrome://communicator/content/pref/pref-advanced.xul');">
 
   <script type="application/x-javascript">
   <![CDATA[
@@ -80,55 +80,61 @@
         frame.setAttribute("hidden", "true");
         return;
       }
+      if (!("didCheckTurbo" in parent))
+        parent.didCheckTurbo = false;
+      if (!("isTurboEnabled" in parent))
+        parent.isTurboEnabled = false;
+      if (parent.didCheckTurbo) {
+        document.getElementById("enableTurbo").checked = parent.isTurboEnabled;
+        return;
+      }
+      var winhooksService = Components.classes["@mozilla.org/winhooks;1"].getService(Components.interfaces.nsIWindowsHooks);
+      if (winhooksService) {
+        var isTurbo = winhooksService.isStartupTurboEnabled();
+        document.getElementById("enableTurbo").checked = isTurbo;
+        parent.didCheckTurbo = true;
+      }
+
       parent.hPrefWindow.registerOKCallbackFunc( saveTurboSetting );
     }
 
-	/* 
-	 * Name: saveTurboSetting()
-	 * 
-	 * Arguments: none
-	 *
-	 * Description: This function is called when the user hits the OK button in
-	 * the preferences panel. The function determines what the turbo "preference" 
-	 * setting is and performs the appropriate action to enable or disable turbo mode.
-	 *
-	 * Return Value: void
-	 *
-	 * Original Code: syd@netscape.com 6/9/2001
-	 *
-	*/
+    /* 
+     * Name: saveTurboSetting()
+     * 
+     * Arguments: none
+     *
+     * Description: This function is called when the user hits the OK button in
+     * the preferences panel. The function determines what the turbo "preference" 
+     * setting is and performs the appropriate action to enable or disable turbo mode.
+     *
+     * Return Value: void
+     *
+     * Original Code: syd@netscape.com 6/9/2001
+     *
+    */
 
-	function saveTurboSetting()
-	{
-  	  if ( navigator.platform != "Win32" )
-		return;   
+    function saveTurboSetting() {
+      if (navigator.platform != "Win32")
+        return;   
 
-          var acheckbox = document.getElementById("enableTurbo");
-	  try {
-	    hooks = Components.classes["@mozilla.org/winhooks;1"];
-	    if ( hooks )
-	      hooks = hooks.getService(Components.interfaces.nsIWindowsHooks);
-	       if ( hooks ) {
-		var isEnabled = acheckbox.checked;
-		if ( isEnabled == true )
-		hooks.startupTurboEnable();
-		else 
-			hooks.startupTurboDisable();
-                var appShell = Components.classes['@mozilla.org/appshell/appShellService;1'].getService();
-               appShell = appShell.QueryInterface( Components.interfaces.nsIAppShellService );
-               var nativeAppSupport = null;
-            try {
-                     nativeAppSupport = appShell.nativeAppSupport;
-            }
-           catch ( ex ) {
-           }
-             if (nativeAppSupport)
-                  nativeAppSupport.isServerMode = isEnabled;
-	      }
-	  } catch( ex ) {
-	  }
-	}
-    
+      var winhooksService = Components.classes["@mozilla.org/winhooks;1"].getService(Components.interfaces.nsIWindowsHooks);
+      if (winhooksService) {
+        if (parent.isTurboEnabled)
+          winhooksService.startupTurboEnable();
+        else 
+          winhooksService.startupTurboDisable();
+        var appShell = Components.classes['@mozilla.org/appshell/appShellService;1'].getService();
+        appShell = appShell.QueryInterface( Components.interfaces.nsIAppShellService );
+        var nativeAppSupport = null;
+        try {
+          nativeAppSupport = appShell.nativeAppSupport;
+        }
+        catch ( ex ) {
+        }
+        if (nativeAppSupport)
+          nativeAppSupport.isServerMode = parent.isTurboEnabled;
+        }
+      }
   ]]>
   </script>
 
@@ -167,7 +173,7 @@
    <label id="perfLabel" value="&perfTitle.label;"/>
     <vbox id="perfBox" align="start">
       <checkbox id="enableTurbo" label="&enableTurbo.label;" accesskey="&enableTurboCheck.accesskey;"
-                pref="true" preftype="bool" prefstring="browser.turbo.enabled" prefattribute="checked"/>
+                oncommand="parent.isTurboEnabled = this.checked;"/>
     </vbox>
   </groupbox>
   
