@@ -1105,14 +1105,14 @@ void JS::Parser::parseFunctionSignature(FunctionDefinition &fd)
 				if (t1.hasKind(Token::closeParenthesis))
 					restParameter = new(arena) VariableBinding(t1.getPos(), 0, 0, 0, false);
 				else
-					restParameter = parseVariableBinding(true, false, lexer.eat(true, Token::Const));
+					restParameter = parseVariableBinding(true, false, (lexer.eat(true, Token::Const) != NULL));
 				if (!optParameters)
 					optParameters = restParameter;
 				parameters += restParameter;
 				require(true, Token::closeParenthesis);
 				break;
 			} else {
-				VariableBinding *b = parseVariableBinding(true, false, lexer.eat(true, Token::Const));
+				VariableBinding *b = parseVariableBinding(true, false, (lexer.eat(true, Token::Const) != NULL));
 				if (b->initializer) {
 					if (!optParameters)
 						optParameters = b;
@@ -1912,7 +1912,7 @@ JS::VariableBinding *JS::Parser::parseRestParameter()
 
 JS::VariableBinding *JS::Parser::parseParameter()
 {
-	bool constant = lexer.eat (true, Token::Const);
+	bool constant = (lexer.eat (true, Token::Const) != NULL);
 	ExprNode *first = parseIdentifier();
 	ExprNode *second = parseTypeBinding (Token::colon, false);
 

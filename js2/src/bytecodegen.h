@@ -268,6 +268,11 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
                 mStackMax = (mStackTop + n); 
         }
 
+        void adjustStack(uint32 n)
+        {
+            mStackTop += n;
+        }
+
         // these routines assume the depth is being reduced
         // i.e. they don't reset mStackMax
         void addOpAdjustDepth(uint8 op, uint32 depth)        

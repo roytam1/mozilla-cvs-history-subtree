@@ -1797,6 +1797,8 @@ BinaryOpEquals:
             addOp(JumpOp);
             addFixup(labelAtBottom);
             setLabel(falseConditionExpression);
+            adjustStack(-1);        // the true case will leave a stack entry pending
+                                    // but we can discard it since only path will be taken.
             genExpr(c->op3);
             setLabel(labelAtBottom);
             return Object_Type;
