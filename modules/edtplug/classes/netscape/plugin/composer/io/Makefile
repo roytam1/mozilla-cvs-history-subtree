@@ -31,11 +31,9 @@ JSRCS	= Comment.java \
 	  Token.java \
 	  $(NULL)
 
-ifdef MOZ_JAVA
 # This file was removed due to a third-party license
 # bug #110330 is a placeholder to put this file back
 # into the product builds
-JSRCS	+= FooStringBuffer.java
-endif
+#JSRCS	+= FooStringBuffer.java
 
 include $(DEPTH)/config/rules.mk
