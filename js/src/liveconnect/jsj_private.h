@@ -29,15 +29,9 @@
 #ifndef _JSJAVA_PVT_H
 #define _JSJAVA_PVT_H
 
-#ifndef NSPR20
-#ifndef NSPR20
-#include "prhash.h"          /* NSPR hash-tables      */
-#else
+#include "jsj_hash.h"        /* Hash tables */
 #include "plhash.h"          /* NSPR hash-tables      */
-#endif
-#else
-#include "plhash.h"          /* NSPR hash-tables      */
-#endif
+#include "protypes.h"        /* NSPR hash-tables      */
 #include "jni.h"             /* Java Native Interface */
 #include "jsapi.h"           /* JavaScript engine API */
 
@@ -182,7 +176,6 @@ typedef struct JSJavaThreadState {
 
 /******************************** Globals ***********************************/
 
-extern JNIEnv *jENV;
 extern JSJCallbacks *JSJ_callbacks;
 
 /* JavaScript classes that reflect Java objects */
@@ -276,10 +269,10 @@ jsj_PurgeJavaMethodSignature(JSContext *cx, JNIEnv *jEnv, JavaMethodSignature *s
 
 extern JSBool
 jsj_ConvertJSValueToJavaValue(JSContext *cx, JNIEnv *jEnv, jsval v, JavaSignature *signature,
-			      int *cost, jvalue *java_value);
+			      int *cost, jvalue *java_value, JSBool *is_local_refp);
 extern JSBool
 jsj_ConvertJSValueToJavaObject(JSContext *cx, JNIEnv *jEnv, jsval v, JavaSignature *signature,
-			       int *cost, jobject *java_value);
+			       int *cost, jobject *java_value, JSBool *is_local_refp);
 extern jstring
 jsj_ConvertJSStringToJavaString(JSContext *cx, JNIEnv *jEnv, JSString *js_str);
 
@@ -289,6 +282,10 @@ jsj_ConvertJavaValueToJSValue(JSContext *cx, JNIEnv *jEnv, JavaSignature *signat
 extern JSBool
 jsj_ConvertJavaObjectToJSValue(JSContext *cx, JNIEnv *jEnv,
                                jobject java_obj, jsval *vp);
+
+extern JSString *
+jsj_ConvertJavaStringToJSString(JSContext *cx, JNIEnv *jEnv, jstring java_str);
+
 extern JSBool
 jsj_ConvertJavaObjectToJSString(JSContext *cx, JNIEnv *jEnv,
                                 JavaClassDescriptor *class_descriptor,
@@ -309,7 +306,10 @@ jsj_init_JavaPackage(JSContext *, JSObject *,
 extern JSBool
 jsj_init_JavaClass(JSContext *cx, JSObject *global_obj);
 
-const char *
+extern void
+jsj_DiscardJavaClassReflections(JNIEnv *jEnv);
+
+extern const char *
 jsj_GetJavaClassName(JSContext *cx, JNIEnv *jEnv, jclass java_class);
 
 extern JavaClassDescriptor *
@@ -329,20 +329,10 @@ jsj_GetJavaMemberDescriptor(JSContext *cx,
                             JavaClassDescriptor *class_descriptor,
                             jstring member_name);
 
-/* extern JavaMemberDescriptor *
-jsj_LookupJavaClassMember(JSContext *cx,
-                          JavaClassDescriptor *class_descriptor,
-                          const char *member_name);*/
-
 extern JavaMemberDescriptor *
 jsj_LookupJavaMemberDescriptorById(JSContext *cx, JNIEnv *jEnv,
                                    JavaClassDescriptor *class_descriptor,
                                    jsid id);
-
-/* extern JavaMemberDescriptor *
-jsj_LookupJavaStaticMemberDescriptor(JSContext *cx,
-                                     JavaClassDescriptor *class_descriptor,
-                                     jstring member_name); */
 
 extern JavaMemberDescriptor *
 jsj_LookupJavaStaticMemberDescriptorById(JSContext *cx, JNIEnv *jEnv,
@@ -420,6 +410,9 @@ jsj_init_JavaObject(JSContext *, JSObject *);
 extern JSObject *
 jsj_WrapJavaObject(JSContext *cx, JNIEnv *jEnv, jobject java_obj, jclass java_class);
 
+extern void
+jsj_DiscardJavaObjReflections(JNIEnv *jEnv);
+
 extern JSBool
 JavaObject_convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp);
 
@@ -475,11 +468,11 @@ jsj_GetJavaErrorMessage(JNIEnv *env);
 extern void
 jsj_LogError(const char *error_msg);
 
-PR_CALLBACK PRHashNumber
-jsj_HashJavaObject(const void *key);
+PR_CALLBACK JSJHashNumber
+jsj_HashJavaObject(const void *key, void* env);
 
 PR_CALLBACK intN
-jsj_JavaObjectComparator(const void *v1, const void *v2);
+jsj_JavaObjectComparator(const void *v1, const void *v2, void *arg);
 
 extern JSJavaThreadState *
 jsj_MapJavaThreadToJSJavaThreadState(JNIEnv *jEnv, char **errp);

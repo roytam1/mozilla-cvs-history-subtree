@@ -43,16 +43,18 @@
  * This is a hash-table utility routine that computes the hash code of a Java
  * object by calling java.lang.System.identityHashCode()
  */
-PR_CALLBACK PRHashNumber
-jsj_HashJavaObject(const void *key)
+PR_CALLBACK JSJHashNumber
+jsj_HashJavaObject(const void *key, void* env)
 {
-    PRHashNumber hash_code;
+    JSJHashNumber hash_code;
     jobject java_obj;
+    JNIEnv *jEnv;
 
     java_obj = (jobject)key;
-    hash_code = (*jENV)->CallStaticIntMethod(jENV, jlSystem,
+    jEnv = (JNIEnv*) env;
+    hash_code = (*jEnv)->CallStaticIntMethod(jEnv, jlSystem,
                                              jlSystem_identityHashCode, java_obj);
-    PR_ASSERT(!(*jENV)->ExceptionOccurred(jENV));
+    PR_ASSERT(!(*jEnv)->ExceptionOccurred(jEnv));
     return hash_code;
 }
 
@@ -64,16 +66,18 @@ jsj_HashJavaObject(const void *key)
  * use the JNI routine for comparing the two objects.
  */
 PR_CALLBACK intN
-jsj_JavaObjectComparator(const void *v1, const void *v2)
+jsj_JavaObjectComparator(const void *v1, const void *v2, void *arg)
 {
     jobject java_obj1, java_obj2;
+    JNIEnv *jEnv;
 
+    jEnv = (JNIEnv*)arg;
     java_obj1 = (jobject)v1;
     java_obj2 = (jobject)v2;
 
     if (java_obj1 == java_obj2)
         return 1;
-    return (*jENV)->IsSameObject(jENV, java_obj1, java_obj2);
+    return (*jEnv)->IsSameObject(jEnv, java_obj1, java_obj2);
 }
 
 /*
