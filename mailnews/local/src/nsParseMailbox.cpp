@@ -74,6 +74,7 @@
 #include "nsIMsgMdnGenerator.h"
 #include "nsMsgSearchCore.h"
 #include "nsMailHeaders.h"
+#include "nsIMsgMailSession.h"
 
 static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
 static NS_DEFINE_CID(kIOServiceCID,              NS_IOSERVICE_CID);
@@ -1787,6 +1788,32 @@ int nsParseNewMailState::MarkFilteredMessageRead(nsIMsgDBHdr *msgHdr)
   return 0;
 }
 
+nsresult nsParseNewMailState::EndMsgDownload()
+{
+  // need to do this for all folders that had messages filtered into them
+  PRUint32 serverCount = m_filterTargetFolders.Count();
+  nsresult rv;
+  nsCOMPtr<nsIMsgMailSession> session = 
+           do_GetService(NS_MSGMAILSESSION_CONTRACTID, &rv); 
+  if (NS_SUCCEEDED(rv) && session) // don't use NS_ENSURE_SUCCESS here - we need to release semaphore below
+  {
+    for (PRUint32 index = 0; index < serverCount; index++)
+    {
+      PRBool folderOpen;
+      session->IsFolderOpenInWindow(m_filterTargetFolders[index], &folderOpen);
+      if (!folderOpen)
+      {
+        PRUint32 folderFlags;
+        m_filterTargetFolders[index]->GetFlags(&folderFlags);
+        if (! (folderFlags & (MSG_FOLDER_FLAG_TRASH | MSG_FOLDER_FLAG_INBOX)))
+          m_filterTargetFolders[index]->SetMsgDatabase(nsnull);
+      }
+    }
+  }
+  m_filterTargetFolders.Clear();
+  return rv;
+}
+
 nsresult nsParseNewMailState::MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr, 
                                                       nsIMsgDatabase *sourceDB, 
                                                       const nsACString& destFolderUri,
@@ -1961,6 +1988,9 @@ nsresult nsParseNewMailState::MoveIncorporatedMessage(nsIMsgDBHdr *mailHdr,
   }
   if (movedMsgIsNew)
     destIFolder->SetHasNewMessages(PR_TRUE);
+
+  m_filterTargetFolders.AppendObject(destIFolder);
+
   destFile->close();
   delete destFile;
   m_inboxFileStream->close();
