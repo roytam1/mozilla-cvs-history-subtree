@@ -298,7 +298,11 @@ nsresult CopyMozMapiToWinSysDir()
 
     PRBool bExist;
     rv = pMozMapiFile->Exists(&bExist);
-    if (NS_FAILED(rv) || !bExist) return rv;
+    if (NS_SUCCEEDED(rv) && bExist) 
+    {
+        rv = pMozMapiFile->Remove(PR_FALSE);
+    }
+    if (NS_FAILED(rv)) return rv;
 
     rv = pCurrentMapiFile->Exists(&bExist);
     if (NS_SUCCEEDED(rv) && bExist)
