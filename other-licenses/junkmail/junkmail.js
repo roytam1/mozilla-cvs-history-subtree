@@ -261,7 +261,7 @@ function nsJunkmail() {}
 
 nsJunkmail.prototype = {
 
-    init: function() {
+    init: function(aServerPrefsKey) {
 
         if (!gPrefs) {
             gPrefs = Components.classes["@mozilla.org/preferences-service;1"]
