@@ -4,8 +4,8 @@ var err;
 var fDesktop;
 var szFolderDesktop;
 
-srDest = $SpaceRequired$;
-err    = initInstall("Mozilla Installer", "/mozilla.org/Mozilla Installer", "$Version$"); 
+srDest = @XPI_SPACEREQUIRED@;
+err    = initInstall("Mozilla Installer", "/mozilla.org/Mozilla Installer", "@XPI_VERSION@"); 
 logComment("initInstall: " + err);
 
 // Find the current user's desktop

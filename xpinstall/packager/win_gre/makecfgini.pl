@@ -84,26 +84,24 @@ $inRedirIniUrl    = $ARGV[4];
 $inUrl            = $ARGV[5];
 
 # get environment vars
-$userAgent        = $ENV{WIZ_userAgent};
-$userAgentShort   = $ENV{WIZ_userAgentShort};
-$xpinstallVersion = $ENV{WIZ_xpinstallVersion};
-$nameCompany      = $ENV{WIZ_nameCompany};
-$nameProduct      = $ENV{WIZ_nameProduct};
-$nameProductInternal = $ENV{WIZ_nameProductInternal};
-$fileMainExe      = $ENV{WIZ_fileMainExe};
-$fileUninstall    = $ENV{WIZ_fileUninstall};
-$fileUninstallZip = $ENV{WIZ_fileUninstallZip};
-$greBuildID       = $ENV{WIZ_greBuildID};
-$greFileVersion   = $ENV{WIZ_greFileVersion};
-$greUniqueID      = $ENV{WIZ_greUniqueID};
+$userAgent        = $ENV{XPI_USERAGENT};
+$userAgentShort   = $ENV{XPI_USERAGENTSHORT};
+$xpinstallVersion = $ENV{XPI_XPINSTALLVERSION};
+$nameCompany      = $ENV{XPI_COMPANYNAME};
+$nameProduct      = $ENV{XPI_PRODUCTNAME};
+$nameProductInternal = $ENV{XPI_PRODUCTNAMEINTERNAL};
+$fileMainExe      = $ENV{XPI_MAINFILEEXE};
+$fileUninstall    = $ENV{XPI_UNINSTALLFILE};
+$fileUninstallZip = $ENV{XPI_UNINSTALLFILEZIP};
+$greBuildID       = $ENV{XPI_GREBUILDID};
+$greFileVersion   = $ENV{XPI_GREFILEVERSION};
+$greUniqueID      = $ENV{XPI_GREUNIQUEID};
 
-$inDomain;
-$inRedirDomain;
-$inServerPath;
-$inRedirServerPath;
-
-($inDomain,      $inServerPath)      = ParseDomainAndPath($inUrl);
-($inRedirDomain, $inRedirServerPath) = ParseDomainAndPath($inRedirIniUrl);
+# ($inDomain,      $dummy) = ParseDomainAndPath($inUrl);
+#($inRedirDomain, $dummy) = ParseDomainAndPath($inRedirIniUrl);
+# 
+# for the sake of -w, re-reference $inRedirDomain
+# $inRedirDomain .= "";
 
 # Get the name of the file replacing the .it extension with a .ini extension
 @inItFileSplit    = split(/\./,$inItFile);
@@ -111,15 +109,15 @@ $outIniFile       = $inItFileSplit[0];
 $outIniFile      .= ".ini";
 
 # Open the input file
-open(fpInIt, $inItFile) || die "\ncould not open $ARGV[0]: $!\n";
+open my $fpInIt, $inItFile || die "\ncould not open $ARGV[0]: $!\n";
 
 # Open the output file
-open(fpOutIni, ">$outIniFile") || die "\nCould not open $outIniFile: $!\n";
+open($fpOutIni, ">$outIniFile") || die "\nCould not open $outIniFile: $!\n";
 
 print "\n Making $outIniFile...\n";
 
 # While loop to read each line from input file
-while($line = <fpInIt>)
+while(defined($line = <$fpInIt>))
 {
   # For each line read, search and replace $InstallSize$ with the calculated size
   if($line =~ /\$InstallSize\$/i)
@@ -153,7 +151,7 @@ while($line = <fpInIt>)
     }
 
     # Read the next line to calculate for the "Install Size System="
-    if($line = <fpInIt>)
+    if(defined($line = <$fpInIt>))
     {
       if($line =~ /\$InstallSizeSystem\$/i)
       {
@@ -162,8 +160,8 @@ while($line = <fpInIt>)
     }
 
     $installSize -= $installSizeSystem;
-    print fpOutIni "Install Size=$installSize\n";
-    print fpOutIni "Install Size System=$installSizeSystem\n";
+    print $fpOutIni "Install Size=$installSize\n";
+    print $fpOutIni "Install Size System=$installSizeSystem\n";
   }
   elsif($line =~ /\$InstallSizeArchive\$/i)
   {
@@ -179,19 +177,14 @@ while($line = <fpInIt>)
       $installSizeArchive = OutputInstallSizeArchive("$inXpiPath/$componentName");
     }
 
-    print fpOutIni "Install Size Archive=$installSizeArchive\n";
+    print $fpOutIni "Install Size Archive=$installSizeArchive\n";
   }
   else
   {
     # For each line read, search and replace $Version$ with the version passed in
     $line =~ s/\$Version\$/$inVersion/gi;
-    $line =~ s/\$Domain\$/$inDomain/gi;
-    $line =~ s/\$ServerPath\$/$inServerPath/gi;
     $line =~ s/\$RedirIniUrl\$/$inRedirIniUrl/gi;
-    $line =~ s/\$ArchiveServerPath\$/$inServerPath/gi;
     $line =~ s/\$ArchiveUrl\$/$inUrl/gi;
-    $line =~ s/\$RedirectServerPath\$/$inRedirServerPath/gi;
-    $line =~ s/\$RedirectUrl\$/$inRedirUrl/gi;
     $line =~ s/\$UserAgent\$/$userAgent/gi;
     $line =~ s/\$UserAgentShort\$/$userAgentShort/gi;
     $line =~ s/\$XPInstallVersion\$/$xpinstallVersion/gi;
@@ -204,16 +197,19 @@ while($line = <fpInIt>)
     $line =~ s/\$GreBuildID\$/$greBuildID/gi;
     $line =~ s/\$GreFileVersion\$/$greFileVersion/gi;
     $line =~ s/\$GreUniqueID\$/$greUniqueID/gi;
-    print fpOutIni $line;
+    print $fpOutIni $line;
   }
 }
+
+close $fpInIt;
+close $fpOutIni;
 
 print " done!\n";
 
 # end of script
 exit(0);
 
-sub ParseDomainAndPath()
+sub ParseDomainAndPath
 {
   my($aUrl) = @_;
   my($aDomain, $aServerPath);
@@ -225,7 +221,7 @@ sub ParseDomainAndPath()
     {
       if($i <= 2)
       {
-        if($aDomain eq "")
+        if(! $aDomain)
         {
           $aDomain = "$slashSplit[$i]";
         }
@@ -236,7 +232,7 @@ sub ParseDomainAndPath()
       }
       else
       {
-        if($aServerPath eq "")
+        if(! $aServerPath)
         {
           $aServerPath = "/$slashSplit[$i]";
         }
@@ -251,20 +247,20 @@ sub ParseDomainAndPath()
   return($aDomain, $aServerPath);
 }
 
-sub OutputInstallSize()
+sub OutputInstallSize
 {
   my($inPath) = @_;
   my($installSize);
 
   print "   calculating size for $inPath\n";
-  $installSize    = `$ENV{WIZ_distInstallPath}/../install/ds32.exe /D /L0 /A /S /C 32768 $inPath`;
+  $installSize    = `$ENV{XPI_DISTINSTALLPATH}/../install/ds32.exe /D /L0 /A /S /C 32768 $inPath`;
   $installSize   += 32768; # take into account install.js
   $installSize    = int($installSize / 1024);
   $installSize   += 1;
   return($installSize);
 }
 
-sub OutputInstallSizeArchive()
+sub OutputInstallSizeArchive
 {
   my($inPath) = @_;
   my($installSizeArchive);
@@ -278,14 +274,14 @@ sub OutputInstallSizeArchive()
   return($installSizeArchive);
 }
 
-sub OutputInstallSizeSystem()
+sub OutputInstallSizeSystem
 {
   my($inLine, $inPath) = @_;
   my($installSizeSystem) = 0;
 
   # split read line by ":" deliminator
   @colonSplit = split(/:/, $inLine);
-  if($#colonSplit >= 0)
+  if($#colonSplit >= 2)
   {
     # split line by "," deliminator
     @commaSplit = split(/\,/, $colonSplit[1]);
@@ -295,17 +291,17 @@ sub OutputInstallSizeSystem()
       {
         # calculate the size of component installed using ds32.exe in Kbytes
         print "   calculating size for $inPath/$_";
-        $installSizeSystem += `$ENV{WIZ_distInstallPath}/../install/ds32.exe /D /L0 /A /S /C 32768 $inPath/$_`;
+        $installSizeSystem += `$ENV{XPI_DISTINSTALLPATH}/../install/ds32.exe /D /L0 /A /S /C 32768 $inPath/$_`;
+        $installSizeSystem  = int($installSizeSystem / 1024);
+        $installSizeSystem += 1;
       }
     }
   }
 
-  $installSizeSystem  = int($installSizeSystem / 1024);
-  $installSizeSystem += 1;
   return($installSizeSystem);
 }
 
-sub ParseUserAgentShort()
+sub ParseUserAgentShort
 {
   my($aUserAgent) = @_;
   my($aUserAgentShort);

@@ -56,17 +56,17 @@ $inItFile         = $ARGV[0];
 $inVersion        = $ARGV[1];
 
 # get environment vars
-$userAgent        = $ENV{WIZ_userAgent};
-$userAgentShort   = $ENV{WIZ_userAgentShort};
-$xpinstallVersion = $ENV{WIZ_xpinstallVersion};
-$nameCompany      = $ENV{WIZ_nameCompany};
-$nameProduct      = $ENV{WIZ_nameProduct};
-$nameProductInternal = $ENV{WIZ_nameProductInternal};
-$fileMainExe      = $ENV{WIZ_fileMainExe};
-$fileUninstall    = $ENV{WIZ_fileUninstall};
-$greBuildID       = $ENV{WIZ_greBuildID};
-$greFileVersion   = $ENV{WIZ_greFileVersion};
-$greUniqueID      = $ENV{WIZ_greUniqueID};
+$userAgent        = $ENV{XPI_USERAGENT};
+$userAgentShort   = $ENV{XPI_USERAGENTSHORT};
+$xpinstallVersion = $ENV{XPI_XPINSTALLVERSION};
+$nameCompany      = $ENV{XPI_COMPANYNAME};
+$nameProduct      = $ENV{XPI_PRODUCTNAME};
+$nameProductInternal = $ENV{XPI_PRODUCTNAMEINTERNAL};
+$fileMainExe      = $ENV{XPI_MAINFILEEXE};
+$fileUninstall    = $ENV{XPI_UNINSTALLFILE};
+$greBuildID       = $ENV{XPI_GREBUILDID};
+$greFileVersion   = $ENV{XPI_GREFILEVERSION};
+$greUniqueID      = $ENV{XPI_GREUNIQUEID};
 
 # Get the name of the file replacing the .it extension with a .ini extension
 @inItFileSplit    = split(/\./,$inItFile);

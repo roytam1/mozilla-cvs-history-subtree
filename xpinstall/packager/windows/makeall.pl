@@ -20,25 +20,37 @@
 # 
 # Contributor(s): 
 # Sean Su <ssu@netscape.com>
+# Benjamin Smedberg <bsmedberg@covad.net>
 # 
 
 #
-# This perl script builds the xpi, config.ini, and js files.
+# This perl script builds the xpi and config.ini files.
 #
 
 use Cwd;
 use File::Copy;
 use File::Path;
 use File::Basename;
+use Getopt::Long;
+
+GetOptions('help|h|?'              => \&PrintUsage,
+           'objdir|o=s'            => \$topobjdir,
+           'stagepath|s=s'         => \$inStagePath,
+           'distpath|d=s'          => \$inDistPath,
+           'archive-uri|aurl|a=s'  => \$inXpiURL,
+           'redirect-uri|rurl|r=s' => \$inRedirIniURL);
 
 $DEPTH = "../../..";
 $topsrcdir = GetTopSrcDir();
 
 # ensure that Packager.pm is in @INC, since we might not be called from
 # mozilla/xpinstall/packager
-push(@INC, "$topsrcdir/xpinstall/packager");
-require StageUtils;
-require "$topsrcdir/config/zipcfunc.pl";
+push(@INC, "$topsrcdir/build/package");
+require MozPackager;
+
+if(defined($ENV{DEBUG_INSTALLER_BUILD})) {
+  $MozPackager::verbosity++;
+}
 
 $seiFileNameGeneric       = "nsinstall.exe";
 $seiFileNameSpecific      = "mozilla-win32-installer.exe";
@@ -49,14 +61,17 @@ $seuzFileNameSpecific     = "mozillauninstall.zip";
 $seiGreFileNameSpecific   = "gre-win32-installer.exe";
 $seizGreFileNameSpecific  = "gre-win32-installer.zip";
 
-ParseArgv(@ARGV);
-
 $topobjdir                = "$topsrcdir"                 if !defined($topobjdir);
 $inStagePath              = "$topobjdir/stage"           if !defined($inStagePath);
 $inDistPath               = "$topobjdir/dist"            if !defined($inDistPath);
 $inXpiURL                 = "ftp://not.supplied.invalid" if !defined($inXpiURL);
 $inRedirIniURL            = $inXpiURL                    if !defined($inRedirIniURL);
 
+# because we change directory to stage the XPI packages, make all paths absolute
+$topobjdir   = File::Spec->rel2abs($topobjdir);
+$inStagePath = File::Spec->rel2abs($inStagePath);
+$inDistPath  = File::Spec->rel2abs($inDistPath);
+  
 if(defined($ENV{DEBUG_INSTALLER_BUILD}))
 {
   print " windows/makeall.pl\n";
@@ -66,7 +81,7 @@ if(defined($ENV{DEBUG_INSTALLER_BUILD}))
   print "   inDistPath : $inDistPath\n";
 }
 
-$gDefaultProductVersion   = StageUtils::GetProductY2KVersion($topobjdir, $topsrcdir, $topsrcdir);
+$gDefaultProductVersion   = MozPackager::GetProductY2KVersion($topobjdir, $topsrcdir, $topsrcdir);
 
 print "\n";
 print " Building Mozilla\n";
@@ -93,7 +108,7 @@ print "  Raw version id   : $gDefaultProductVersion\n";
 #   must be numeric only:
 $gDefaultProductVersion =~ s/[^0-9.][^.]*//g;
 
-# set environment vars for use by other .pl scripts called from this script.
+# set environment vars for use by the preprocessor
 if($versionParts[2] eq "0")
 {
   $versionMain = "$versionParts[0].$versionParts[1]";
@@ -102,6 +117,8 @@ else
 {
   $versionMain = "$versionParts[0].$versionParts[1].$versionParts[2]";
 }
+
+$versionLanguage               = "en";
 
 print "  Display version  : $versionMain\n";
 print "  Xpinstall version: $gDefaultProductVersion\n";
@@ -112,11 +129,18 @@ $gDirStageProduct     = "$inStagePath/mozilla";
 $gDirDistInstall      = "$inDistPath/install";
 $gDirDistInstGre      = "$inDistPath/inst_gre";
 
-# Build GRE installer package first before building Mozilla!  GRE installer is required by the mozilla installer.
-if(system("perl \"$gDirPackager/win_gre/makeall.pl\" -objDir \"$topobjdir\" -stagePath \"$inStagePath\" -distPath \"$inDistPath\" -aurl $inXpiURL -rurl $inRedirIniURL"))
-{
-  die "\n Error: perl \"$gDirPackager/win_gre/makeall.pl\" -objDir \"$topobjdir\" -stagePath \"$inStagePath\" -distPath \"$inDistPath\" -aurl $inXpiURL -rurl $inRedirIniURL\n";
+if (-d $gDirStageProduct) {
+  rmtree($gDirStageProduct) || die("Error removing stage directory $gDirStageProduct.");
 }
+mkdir $gDirStageProduct, 0775;
+
+if (-d "$gDirDistInstall/xpi") {
+  rmtree("$gDirDistInstall/xpi") || die("Error removing XPI directory $gDirDistInstall/xpi");
+}
+mkdir "$gDirDistInstall/xpi", 0775;
+
+# Build GRE installer package first before building Mozilla!  GRE installer is required by the mozilla installer.
+MozPackager::system("perl -w \"$gDirPackager/win_gre/makeall.pl\" -objDir \"$topobjdir\" -stagePath \"$inStagePath\" -distPath \"$inDistPath\" -aurl $inXpiURL -rurl $inRedirIniURL");
 
 if(defined($ENV{DEBUG_INSTALLER_BUILD}))
 {
@@ -125,12 +149,98 @@ if(defined($ENV{DEBUG_INSTALLER_BUILD}))
   print "   inDistPath : $inDistPath\n";
 }
 
-# Create the stage area here.
-# If -sd is not used, the default stage dir will be: $topobjdir/stage
-if(system("perl \"$gDirPackager/make_stage.pl\" -pn mozilla -os win -sd \"$inStagePath\" -dd \"$inDistPath\""))
-{
-  die "\n Error: perl \"$gDirPackager/make_stage.pl\" -pn mozilla -os win -sd \"$inStagePath\" -dd \"$inDistPath\"\n";
+$ENV{XPI_VERSION}              = $gDefaultProductVersion;
+$ENV{XPI_COMPANYNAME}          = "mozilla.org";
+$ENV{XPI_PRODUCTNAME}          = "Mozilla";
+# product name without the version string
+$ENV{XPI_PRODUCTNAMEINTERNAL}  = "Mozilla";
+$ENV{XPI_MAINEXEFILE}          = "Mozilla.exe";
+$ENV{XPI_UNINSTALLFILE}        = $seuFileNameSpecific;
+$ENV{XPI_UNINSTALLFILEZIP}     = $seuzFileNameSpecific;
+$ENV{XPI_XPINSTALLVERSION}     = "$gDefaultProductVersion";
+
+# The following variables are for displaying version info in the 
+# the installer.
+$ENV{XPI_USERAGENT}            = "$versionMain ($versionLanguage)";
+$ENV{XPI_USERAGENTSHORT}       = "$versionMain";
+$ENV{XPI_DISTINSTALLPATH}      = "$gDirDistInstall";
+
+# GetProductBuildID() will return the build id for GRE located here:
+#      NS_BUILD_ID in nsBuildID.h: 2003030610
+$ENV{XPI_GREBUILDID}           = MozPackager::GetProductBuildID("$inDistPath/include/nsBuildID.h", "NS_BUILD_ID");
+
+# GetGreFileVersion() will return the actual version of xpcom.dll used by GRE.
+#  ie:
+#      given milestone.txt : 1.4a
+#      given nsBuildID.h   : 2003030610
+#      gre version would be: 1.4.20030.30610
+$ENV{XPI_GREFILEVERSION}       = MozPackager::GetGreFileVersion($topobjdir, $topsrcdir);
+
+# GetProductBuildID() will return the GRE ID to be used in the windows registry.
+# This ID is also the same one being querried for by the mozilla glue code.
+#  ie:
+#      given milestone.txt    : 1.4a
+#      given nsBuildID.h      : 2003030610
+#      gre special ID would be: 1.4a_2003030610
+$ENV{XPI_GREUNIQUEID}          = MozPackager::GetProductBuildID("$topobjdir/dist/include/nsBuildID.h", "GRE_BUILD_ID");
+
+print "\n";
+print " GRE build id       : $ENV{XPI_GREBUILDID}\n";
+print " GRE file version   : $ENV{XPI_GREFILEVERSION}\n";
+print " GRE special version: $ENV{XPI_GREUNIQUEID}\n";
+print "\n";
+print " Building $ENV{XPI_PRODUCTNAME} $ENV{XPI_USERAGENT}...\n";
+print "\n";
+
+# Stage our XPI packages.
+%gPackages = ('xpfe-browser-xpi'       => 'browser',
+              'xpfe-lang-enUS-xpi'     => 'langenus',
+              'xpfe-locale-US-xpi'     => 'regus',
+              'xpfe-default-US-xpi'    => 'deflenus',
+              'xpfe-mailnews-xpi'      => 'mail',
+              'venkman-xpi'            => 'venkman',
+              'inspector-xpi'          => 'inspector',
+              'chatzilla-xpi'          => 'chatzilla',
+              'spellcheck-enUS-xpi'    => 'spellcheck',
+              'talkback-xpi'           => 'talkback',
+              'xpi-bootstrap'          => 'xpcom');
+
+$savedCwd = cwd();
+chdir $topobjdir;
+
+$dummyFile = "$gDirStageProduct/dummy.touch";
+unlink $dummyFile if (-e $dummyFile);
+system('touch', $dummyFile);
+MozPackages::parsePackageList("$topsrcdir/build/package/packages.list");
+
+foreach $package (keys %gPackages) {
+  print "Making $gPackages{$package}.xpi\n";
+  my $packageStageDir = "$gDirStageProduct/$gPackages{$package}";
+  if (-d $packageStageDir) {
+    rmtree($packageStageDir) ||
+        die("Error removing stage directory $packageStageDir.");
+  }
+  my $packageDistPath = "$gDirDistInstall/xpi/$gPackages{$package}.xpi";
+
+  my $parser = new MozParser;
+  MozParser::XPTMerge::add($parser);
+  MozParser::Touch::add($parser, $dummyFile);
+  MozParser::Preprocess::add($parser);
+  MozParser::Optional::add($parser);
+  $parser->addMapping('dist/bin', 'bin');
+  $parser->addMapping('xpiroot/', '');
+  my $files = $parser->parse("$inDistPath/packages", MozPackages::getPackagesFor($package));
+  MozStage::stage($files, $packageStageDir);
+  MozParser::XPTMerge::mergeTo($parser, "$packageStageDir/bin/components/$package.xpt");
+  MozPackager::calcDiskSpace($packageStageDir);
+  MozParser::Preprocess::preprocessTo($parser, "$topsrcdir/config/preprocessor.pl", $packageStageDir);
+  MozStage::makeXPI($packageStageDir, $packageDistPath);
+
+  # We can't remove the stage, because makecfgini needs it to
+  # compute space.
 }
+
+chdir $savedCwd;
 
 # Copy the GRE installer to the Ns' stage area
 if(!(-e "$gDirDistInstGre/$seiGreFileNameSpecific"))
@@ -141,84 +251,16 @@ mkdir "$gDirStageProduct/gre";
 copy("$gDirDistInstGre/$seiGreFileNameSpecific", "$gDirStageProduct/gre") ||
   die "copy(\"$gDirDistInstGre/$seiGreFileNameSpecific\", \"$gDirStageProduct/gre\"): $!\n";
 
-$versionLanguage               = "en";
-$ENV{WIZ_nameCompany}          = "mozilla.org";
-$ENV{WIZ_nameProduct}          = "Mozilla";
-$ENV{WIZ_nameProductInternal}  = "Mozilla"; # product name without the version string
-$ENV{WIZ_fileMainExe}          = "Mozilla.exe";
-$ENV{WIZ_fileUninstall}        = $seuFileNameSpecific;
-$ENV{WIZ_fileUninstallZip}     = $seuzFileNameSpecific;
-# The following variables are for displaying version info in the 
-# the installer.
-$ENV{WIZ_userAgent}            = "$versionMain ($versionLanguage)";
-$ENV{WIZ_userAgentShort}       = "$versionMain";
-$ENV{WIZ_xpinstallVersion}     = "$gDefaultProductVersion";
-$ENV{WIZ_distInstallPath}      = "$gDirDistInstall";
-
-# GetProductBuildID() will return the build id for GRE located here:
-#      NS_BUILD_ID in nsBuildID.h: 2003030610
-$ENV{WIZ_greBuildID}       = StageUtils::GetProductBuildID("$inDistPath/include/nsBuildID.h", "NS_BUILD_ID");
-
-# GetGreFileVersion() will return the actual version of xpcom.dll used by GRE.
-#  ie:
-#      given milestone.txt : 1.4a
-#      given nsBuildID.h   : 2003030610
-#      gre version would be: 1.4.20030.30610
-$ENV{WIZ_greFileVersion}       = StageUtils::GetGreFileVersion($topobjdir, $topsrcdir);
-
-# GetGreSpecialID() will return the GRE ID to be used in the windows registry.
-# This ID is also the same one being querried for by the mozilla glue code.
-#  ie:
-#      given milestone.txt    : 1.4a
-#      given nsBuildID.h      : 2003030610
-#      gre special ID would be: 1.4a_2003030610
-$ENV{WIZ_greUniqueID}          = StageUtils::GetGreSpecialID($topobjdir);
-
-print "\n";
-print " GRE build id       : $ENV{WIZ_greBuildID}\n";
-print " GRE file version   : $ENV{WIZ_greFileVersion}\n";
-print " GRE special version: $ENV{WIZ_greUniqueID}\n";
-print "\n";
-print " Building $ENV{WIZ_nameProduct} $ENV{WIZ_userAgent}...\n";
-print "\n";
-
 # Check for existence of staging path
 if(!(-d "$gDirStageProduct"))
 {
   die "\n Invalid path: $gDirStageProduct\n";
 }
 
-# List of components for to create xpi files from
-@gComponentList = ("xpcom",
-                   "browser",
-                   "mail",
-                   "spellcheck",
-                   "talkback",
-                   "chatzilla",
-                   "deflenus",
-                   "langenus",
-                   "regus",
-                   "venkman",
-                   "inspector");
-
-if(VerifyComponents()) # return value of 0 means no errors encountered
-{
-  exit(1);
-}
-
 # Make sure gDirDistInstall exists
 if(!(-d "$gDirDistInstall"))
 {
   mkdir ("$gDirDistInstall",0775);
-}
-
-if(-d "$gDirDistInstall/xpi")
-{
-  unlink <$gDirDistInstall/xpi/*>;
-}
-else
-{
-  mkdir ("$gDirDistInstall/xpi",0775);
 }
 
 if(-d "$gDirDistInstall/uninstall")
@@ -245,10 +287,6 @@ if(!(-e "$inDistPath/inst_gre/$seiGreFileNameSpecific"))
 }
 MakeExeZip("$inDistPath/inst_gre", $seiGreFileNameSpecific, $seizGreFileNameSpecific);
 
-if(MakeXpiFile())
-{
-  exit(1);
-}
 if(MakeUninstall())
 {
   exit(1);
@@ -291,10 +329,7 @@ print "\n $gDirDistInstall/stub/$seiFileNameSpecificStub\n";
 copy("$gDirDistInstall/$seiFileNameGeneric", "$gDirDistInstall/$seiFileNameSpecificStub") ||
   die "copy $gDirDistInstall/$seiFileNameGeneric $gDirDistInstall/$seiFileNameSpecificStub: $!\n";
 
-if (system("$gDirDistInstall/nsztool.exe $gDirDistInstall/$seiFileNameSpecificStub $gDirDistInstall/setup/*.*"))
-{
-  die "\n Error: $gDirDistInstall/nsztool.exe $gDirDistInstall/$seiFileNameSpecificStub $gDirDistInstall/setup/*.*\n";
-}
+MozPackager::system("$gDirDistInstall/nsztool.exe $gDirDistInstall/$seiFileNameSpecificStub $gDirDistInstall/setup/*.*");
 
 if(-d "$gDirDistInstall/stub")
 {
@@ -315,29 +350,20 @@ print "*                                  *\n";
 print "************************************\n";
 print "\n $gDirDistInstall/$seiStubRootName.xpi\n\n";
 
-if(-d "$gDirStageProduct/$seiStubRootName")
-{
-  unlink <$gDirStageProduct/$seiStubRootName/*>;
-}
-else
-{
-  mkdir ("$gDirStageProduct/$seiStubRootName",0775);
-}
-copy("$gDirDistInstall/stub/$seiFileNameSpecificStub", "$gDirStageProduct/$seiStubRootName") ||
-  die "copy $gDirDistInstall/stub/$seiFileNameSpecificStub $gDirStageProduct/$seiStubRootName: $!\n";
+$savedCwd = cwd();
+chdir $topobjdir;
 
-# Make .js files
-if(MakeJsFile($seiStubRootName))
-{
-  return(1);
-}
+$parser = new MozParser;
+MozParser::Preprocess::add($parser);
+$parser->addMapping('xpiroot/', '');
+my $files = $parser->parse("$inDistPath/packages", MozPackages::getPackagesFor('seamonkey-stub-en-xpi'));
+MozStage::stage($files, "$gDirStageProduct/$seiStubRootName");
+MozPackager::calcDiskSpace("$gDirStageProduct/$seiStubRootName");
+MozParser::Preprocess::preprocessTo($parser, "$topsrcdir/config/preprocessor.pl", "$gDirStageProduct/$seiStubRootName");
+MozStage::makeXPI("$gDirStageProduct/$seiStubRootName", "$gDirDistInstall/$seiStubRootName.xpi");
+# rmtree($packageStageDir);
 
-# Make .xpi file
-if(system("perl makexpi.pl $seiStubRootName $gDirStageProduct $gDirDistInstall"))
-{
-  print "\n Error: perl makexpi.pl $seiStubRootName $gDirStageProduct $gDirDistInstall\n";
-  return(1);
-}
+chdir $savedCwd;
 
 # group files for CD
 print "\n************************************\n";
@@ -359,7 +385,14 @@ else
 copy("$gDirDistInstall/$seiFileNameSpecificStub", "$gDirDistInstall/cd") ||
   die "copy $gDirDistInstall/$seiFileNameSpecificStub $gDirDistInstall/cd: $!\n";
 
-StageUtils::CopyFiles("$gDirDistInstall/xpi", "$gDirDistInstall/cd");
+@packageFiles = (map("$gDirDistInstall/xpi/$_.xpi", values(%gPackages)),
+                 "$gDirDistInstall/xpi/gre-win32-installer.zip",
+                 "$gDirDistInstall/xpi/mozillauninstall.zip");
+
+foreach $packageFile (@packageFiles) {
+  copy($packageFile, "$gDirDistInstall/cd") ||
+    die "copy $packageFile $gDirDistInstall/cd: $!\n";
+}
 
 # create the big self extracting .exe installer
 print "\n**************************************************************\n";
@@ -380,41 +413,16 @@ else
 copy("$gDirDistInstall/$seiFileNameGeneric", "$gDirDistInstall/$seiFileNameSpecific") ||
   die "copy $gDirDistInstall/$seiFileNameGeneric $gDirDistInstall/$seiFileNameSpecific: $!\n";
 
-if(system("$gDirDistInstall/nsztool.exe $gDirDistInstall/$seiFileNameSpecific $gDirDistInstall/setup/*.* $gDirDistInstall/xpi/*.*"))
-{
-  die "\n Error: $gDirDistInstall/nsztool.exe $gDirDistInstall/$seiFileNameSpecific $gDirDistInstall/setup/*.* $gDirDistInstall/xpi/*.*\n";
-}
+$packageFiles = join(' ', @packageFiles);
+
+MozPackager::system("$gDirDistInstall/nsztool.exe $gDirDistInstall/$seiFileNameSpecific $gDirDistInstall/setup/*.* $packageFiles");
+
 copy("$gDirDistInstall/$seiFileNameSpecific", "$gDirDistInstall/sea") ||
   die "copy $gDirDistInstall/$seiFileNameSpecific $gDirDistInstall/sea: $!\n";
 
 unlink <$gDirDistInstall/$seiFileNameSpecificStub>;
 
 print " done!\n\n";
-
-if((!(-e "$topsrcdir/../redist/microsoft/system/msvcrt.dll")) ||
-   (!(-e "$topsrcdir/../redist/microsoft/system/msvcirt.dll")))
-{
-  print "***\n";
-  print "**\n";
-  print "**  The following required Microsoft redistributable system files were not found\n";
-  print "**  in $topsrcdir/../redist/microsoft/system:\n";
-  print "**\n";
-  if(!(-e "$topsrcdir/../redist/microsoft/system/msvcrt.dll"))
-  {
-    print "**    msvcrt.dll\n";
-  }
-  if(!(-e "$topsrcdir/../redist/microsoft/system/msvcirt.dll"))
-  {
-    print "**    msvcirt.dll\n";
-  }
-  print "**\n";
-  print "**  The above files are required by the installer and the browser.  If you attempt\n";
-  print "**  to run the installer, you may encounter the following bug:\n";
-  print "**\n";
-  print "**    http://bugzilla.mozilla.org/show_bug.cgi?id=27601\n";
-  print "**\n";
-  print "***\n\n";
-}
 
 # end of script
 exit(0);
@@ -460,80 +468,15 @@ sub PrintUsage
        \n";
 }
 
-sub ParseArgv
-{
-  my(@myArgv) = @_;
-  my($counter);
-
-  for($counter = 0; $counter <= $#myArgv; $counter++)
-  {
-    if($myArgv[$counter] =~ /^[-,\/]h$/i)
-    {
-      PrintUsage();
-    }
-    elsif($myArgv[$counter] =~ /^[-,\/]objDir$/i)
-    {
-      if($#myArgv >= ($counter + 1))
-      {
-        ++$counter;
-        $topobjdir = $myArgv[$counter];
-        $topobjdir =~ s/\\/\//g;
-      }
-    }
-    elsif($myArgv[$counter] =~ /^[-,\/]stagePath$/i)
-    {
-      if($#myArgv >= ($counter + 1))
-      {
-        ++$counter;
-        $inStagePath = $myArgv[$counter];
-        $inStagePath =~ s/\\/\//g;
-      }
-    }
-    elsif($myArgv[$counter] =~ /^[-,\/]distPath$/i)
-    {
-      if($#myArgv >= ($counter + 1))
-      {
-        ++$counter;
-        $inDistPath = $myArgv[$counter];
-        $inDistPath =~ s/\\/\//g;
-      }
-    }
-    elsif($myArgv[$counter] =~ /^[-,\/]aurl$/i)
-    {
-      if($#myArgv >= ($counter + 1))
-      {
-        ++$counter;
-        $inXpiURL = $myArgv[$counter];
-        $inRedirIniURL = $inXpiURL;
-      }
-    }
-    elsif($myArgv[$counter] =~ /^[-,\/]rurl$/i)
-    {
-      if($#myArgv >= ($counter + 1))
-      {
-        ++$counter;
-        $inRedirIniURL = $myArgv[$counter];
-      }
-    }
-  }
-}
-
 sub MakeConfigFile
 {
   chdir("$gDirPackager/windows");
   # Make config.ini file
-  if(system("perl makecfgini.pl config.it $gDefaultProductVersion $gDirStageProduct $gDirDistInstall/xpi $inRedirIniURL $inXpiURL"))
-  {
-    print "\n Error: perl makecfgini.pl config.it $gDefaultProductVersion $gDirStageProduct $gDirDistInstall/xpi $inRedirIniURL $inXpiURL\n";
-    return(1);
-  }
+  MozPackager::system("perl -w makecfgini.pl config.it $gDefaultProductVersion $gDirStageProduct $gDirDistInstall/xpi $inRedirIniURL $inXpiURL");
 
   # Make install.ini file
-  if(system("perl makecfgini.pl install.it $gDefaultProductVersion $gDirStageProduct $gDirDistInstall/xpi $inRedirIniURL $inXpiURL"))
-  {
-    print "\n Error: perl makecfgini.pl install.it $gDefaultProductVersion $gDirStageProduct $gDirDistInstall/xpi $inRedirIniURL $inXpiURL\n";
-    return(1);
-  }
+  MozPackager::system("perl makecfgini.pl install.it $gDefaultProductVersion $gDirStageProduct $gDirDistInstall/xpi $inRedirIniURL $inXpiURL");
+
   return(0);
 }
 
@@ -575,76 +518,8 @@ sub MakeUninstall
 sub MakeUninstallIniFile
 {
   # Make config.ini file
-  if(system("perl makeuninstallini.pl uninstall.it $gDefaultProductVersion"))
-  {
-    print "\n Error: perl makeuninstallini.pl uninstall.it $gDefaultProductVersion\n";
-    return(1);
-  }
+  MozPackager::system("perl -w makeuninstallini.pl uninstall.it $gDefaultProductVersion");
   return(0);
-}
-
-sub MakeJsFile
-{
-  my($mComponent) = @_;
-
-  # Make .js file
-  chdir("$gDirPackager/windows");
-  if(system("perl makejs.pl $mComponent.jst $gDefaultProductVersion $gDirStageProduct/$mComponent"))
-  {
-    print "\n Error: perl makejs.pl $mComponent.jst $gDefaultProductVersion $gDirStageProduct/$mComponent\n";
-    return(1);
-  }
-  return(0);
-}
-
-sub MakeXpiFile
-{
-  my($mComponent);
-
-  chdir("$gDirPackager/windows");
-  foreach $mComponent (@gComponentList)
-  {
-    # Make .js files
-    if(MakeJsFile($mComponent))
-    {
-      return(1);
-    }
-
-    # Make .xpi file
-    if(system("perl makexpi.pl $mComponent $gDirStageProduct $gDirDistInstall/xpi"))
-    {
-      print "\n Error: perl makexpi.pl $mComponent $gDirStageProduct $gDirDistInstall/xpi\n";
-      return(1);
-    }
-  }
-  return(0);
-}
-
-sub VerifyComponents()
-{
-  my($mComponent);
-  my($mError) = 0;
-
-  print "\n Verifying existence of required components...\n";
-  foreach $mComponent (@gComponentList)
-  {
-    if($mComponent =~ /talkback/i)
-    {
-      print " place holder: $gDirStageProduct/$mComponent\n";
-      mkdir("$gDirStageProduct/$mComponent", 775);
-    }
-    elsif(-d "$gDirStageProduct/$mComponent")
-    {
-      print "           ok: $gDirStageProduct/$mComponent\n";
-    }
-    else
-    {
-      print "        Error: $gDirStageProduct/$mComponent does not exist!\n";
-      $mError = 1;
-    }
-  }
-  print "\n";
-  return($mError);
 }
 
 sub GetTopSrcDir
@@ -657,4 +532,3 @@ sub GetTopSrcDir
   chdir($savedCwdDir);
   return($rootDir);
 }
-
