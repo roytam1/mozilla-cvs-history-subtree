@@ -19,54 +19,47 @@ outlinerbody {
   -moz-user-select: none;
 }
 
-:-moz-outliner-row
+outlinerbody:-moz-outliner-row
 {
   height: 19px;
   border-right: 1px solid transparent;
   border-left: 1px solid transparent;
 }
 
-:-moz-outliner-row(current)
+outlinerbody:-moz-outliner-row(current)
 {
   border: 1px #768AA0 dotted;
 }
 
-:-moz-outliner-row(selected)
+outlinerbody:-moz-outliner-row(selected)
 {
   background-color:  #486380;
 }
 
-:-moz-outliner-cell
+outlinerbody:-moz-outliner-cell
+{
+  border-top: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  padding: 0px 0px 1px 2px;
+}
+
+outlinerbody:-moz-outliner-cell(selected)
 {
   
 }
 
-:-moz-outliner-cell(selected)
-{
-  
-}
-
-:-moz-outliner-cell-text
+outlinerbody:-moz-outliner-cell-text
 {
   color: inherit;
 }
 
-:-moz-outliner-cell-text(selected)
+outlinerbody:-moz-outliner-cell-text(selected)
 {
   color: white;  
 }
 
-outlinercol { 
-  border-top: 1px solid transparent;
-  border-bottom: 1px solid transparent;
-  padding: 0px 0px 1px 2px;
-  white-space: nowrap;
-  vertical-align: middle;
-} 
-
-.outlinercol-header,
-.outlinercol-inset-header, 
-.outlinercol-image { 
+outlinercol
+{ 
   border-left: 1px solid #EDEDED !important;
   border-top: 1px solid #EDEDED !important;
   border-right: 1px solid #6E7070 !important;
@@ -93,30 +86,25 @@ outlinercol {
   padding: 0px 1px 0px 1px;
 }
   
-.outlinercol-header:hover:active,
-.outlinercol-image:hover:active,
-.outlinercol-inset-header:hover:active {
+outlinercol:hover:active
+{
   border: 1px solid #A4ACAC !important;
 }
 
-.outlinercol-header:hover:active > .outlinercol-box,
-.outlinercol-inset-header:hover:active > .outlinercol-box,
-.outlinercol-image:hover:active > .outlinercol-image-box {
+outlinercol:hover:active > .outlinercol-box,
+outlinercol:hover:active > .outlinercol-image-box
+{
   border-top: 1px solid transparent;
   border-right: none;
   border-bottom: none;
   border-left: 1px solid transparent;
 }
   
-.outlinercol-header:hover:active > .outlinercol-box,
-.outlinercol-inset-header:hover:active > .outlinercol-box {
+outlinercol:hover:active > .outlinercol-box,
+outlinercol:hover:active > .outlinercol-image-box
+{
   padding: 1px 4px 0px 5px;
 }
-
-.outlinercol-image:hover:active > .outlinercol-image-box {
-  padding: 1px 1px 0px 2px;
-}
-
 
 /* outliner header with sort direction indicators */
 

@@ -278,6 +278,10 @@ outlinercol {
  -moz-binding: url("chrome://global/content/outlinerBindings.xml#outlinercol");
 }
 
+outlinercol.outlinercol-image {
+ -moz-binding: url("chrome://global/content/outlinerBindings.xml#outlinercol-image");
+}
+
 outlinerbody {
  -moz-binding: url("chrome://global/content/outlinerBindings.xml#outlinerbody");
 }
