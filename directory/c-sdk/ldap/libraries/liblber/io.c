@@ -948,8 +948,16 @@ ber_sockbuf_set_option( Sockbuf *sb, int option, void *value )
 			sb->sb_ext_io_fns = *extiofns;
 		} else if ( extiofns->lbextiofn_size
 			    == LBER_X_EXTIO_FNS_SIZE_REV0 ) {
-		  sb->sb_ext_io_fns = *extiofns;
-		  sb->sb_ext_io_fns.lbextiofn_writev = NULL;
+			/* backwards compatiblity for older struct */
+			sb->sb_ext_io_fns.lbextiofn_size =
+				LBER_X_EXTIO_FNS_SIZE;
+			sb->sb_ext_io_fns.lbextiofn_read =
+				extiofns->lbextiofn_read;
+			sb->sb_ext_io_fns.lbextiofn_write =
+				    extiofns->lbextiofn_write;
+			sb->sb_ext_io_fns.lbextiofn_writev = NULL;
+			sb->sb_ext_io_fns.lbextiofn_socket_arg =
+				    extiofns->lbextiofn_socket_arg;
 		} else {
 			return( -1 );
 		}
@@ -1003,15 +1011,16 @@ ber_sockbuf_get_option( Sockbuf *sb, int option, void *value )
 			return( -1 );
 		} else if ( extiofns->lbextiofn_size
 			    == LBER_X_EXTIO_FNS_SIZE ) {
-		  /* struct copy */
-		  *extiofns = sb->sb_ext_io_fns;
+			/* struct copy */
+			*extiofns = sb->sb_ext_io_fns;
 		} else if ( extiofns->lbextiofn_size
 			    == LBER_X_EXTIO_FNS_SIZE_REV0 ) {
-		  extiofns->lbextiofn_read = sb->sb_ext_io_fns.lbextiofn_read;
-		  extiofns->lbextiofn_write = sb->sb_ext_io_fns.lbextiofn_write;
-		  extiofns->lbextiofn_socket_arg = sb->sb_ext_io_fns.lbextiofn_socket_arg;
+			/* backwards compatiblity for older struct */
+			extiofns->lbextiofn_read = sb->sb_ext_io_fns.lbextiofn_read;
+			extiofns->lbextiofn_write = sb->sb_ext_io_fns.lbextiofn_write;
+			extiofns->lbextiofn_socket_arg = sb->sb_ext_io_fns.lbextiofn_socket_arg;
 		} else {
-		  return( -1 );
+			return( -1 );
 		}
 		break;
 	default:
@@ -1443,6 +1452,7 @@ nslberi_install_compat_io_fns( Sockbuf *sb )
 	sb->sb_ext_io_fns.lbextiofn_size = LBER_X_EXTIO_FNS_SIZE;
 	sb->sb_ext_io_fns.lbextiofn_read = nslberi_extread_compat;
 	sb->sb_ext_io_fns.lbextiofn_write = nslberi_extwrite_compat;
+	sb->sb_ext_io_fns.lbextiofn_writev = NULL;
 	sb->sb_ext_io_fns.lbextiofn_socket_arg = (void *)sb;
 }
 /*
