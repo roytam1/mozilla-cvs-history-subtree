@@ -803,17 +803,19 @@ nsAppUpdater.prototype = {
       //        preference if they previously installed an app update when a 
       //        langpack for their language was not available and they used another
       //        in the meantime. 
+      var haveLanguage = false;
       var patches = this._service._currentVersion.patches;
       var languages = this._service._newestVersion.languages;
-      var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
-                        .getService(Components.interfaces.nsIXULChromeRegistry);
-      var selectedLocale = cr.getSelectedLocale("global");
-      var haveLanguage = false;
-      for (var i = 0; i < languages.length; ++i) {
-        if (languages[i].internalName == selectedLocale)
-          haveLanguage = true;
+      if (languages) {
+        var cr = Components.classes["@mozilla.org/chrome/chrome-registry;1"]
+                          .getService(Components.interfaces.nsIXULChromeRegistry);
+        var selectedLocale = cr.getSelectedLocale("global");
+        for (var i = 0; i < languages.length; ++i) {
+          if (languages[i].internalName == selectedLocale)
+            haveLanguage = true;
+        }
       }
-
+      
       if (haveLanguage && 
           (newestVersionObj.version != appVersion || (patches && patches.length > 0))) {
         gPref.setIntPref(PREF_UPDATE_SEVERITY, 2);

@@ -47,7 +47,7 @@ const PREF_APP_ID                               = "app.id";
 const PREF_UPDATE_APP_UPDATESAVAILABLE          = "app.update.updatesAvailable";
 const PREF_UPDATE_APP_PERFORMED                 = "app.update.performed";
 
-const PREF_UPDATE_EXTENSIONS_ENABLED            = "extensions.update.enabled";
+const PREF_UPDATE_EXTENSIONS_AUTOUPDATEENABLED  = "extensions.update.autoUpdateEnabled";
 const PREF_UPDATE_EXTENSIONS_COUNT              = "extensions.update.count";
 const PREF_UPDATE_EXTENSIONS_SEVERITY_THRESHOLD = "extensions.update.severity.threshold";
 
@@ -95,7 +95,7 @@ var gUpdateWizard = {
     var pref = Components.classes["@mozilla.org/preferences-service;1"]
                          .getService(Components.interfaces.nsIPrefBranch);
     this.shouldSuggestAutoChecking = (gSourceEvent == nsIUpdateService.SOURCE_EVENT_MISMATCH) && 
-                                      !pref.getBoolPref(PREF_UPDATE_EXTENSIONS_ENABLED);
+                                      !pref.getBoolPref(PREF_UPDATE_EXTENSIONS_AUTOUPDATEENABLED);
 
     if (gSourceEvent != nsIUpdateService.SOURCE_EVENT_MISMATCH)
       document.documentElement.advance();
