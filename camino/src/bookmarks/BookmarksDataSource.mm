@@ -57,6 +57,12 @@
 
 #import "BookmarksService.h"
 
+@interface BookmarksDataSource(Private)
+
+- (void)restoreFolderExpandedStates;
+
+@end
+
 @implementation BookmarksDataSource
 
 -(id) init
@@ -96,6 +102,7 @@
   [mOutlineView setDoubleAction: @selector(openBookmark:)];
   [mOutlineView setDeleteAction: @selector(deleteBookmarks:)];
   [mOutlineView reloadData];
+  [self restoreFolderExpandedStates];
 }
 
 -(IBAction)addBookmark:(id)aSender
@@ -430,6 +437,30 @@
   return BookmarksService::ResolveKeyword(aKeyword);
 }
 
+- (void)restoreFolderExpandedStates
+{
+  int curRow = 0;
+  
+  while (curRow < [mOutlineView numberOfRows])
+  {
+    id item = [mOutlineView itemAtRow:curRow];
+
+    if (item)
+    {
+      nsCOMPtr<nsIContent> content;
+      content = [item contentNode];
+  
+      PRBool isOpen = content && content->HasAttr(kNameSpaceID_None, BookmarksService::gOpenAtom);
+      if (isOpen)
+        [mOutlineView expandItem: item];
+      else
+        [mOutlineView collapseItem: item];
+    }
+  
+    curRow ++;
+  }
+}
+
 #pragma mark -
 
 //
@@ -471,23 +502,7 @@
     if (!item)
         return YES; // The root node is always open.
     
-    BOOL isExpandable = [item isFolder];
-
-// XXXben - persistence of folder open state
-// I'm adding this code, turned off, until I can figure out how to refresh the NSOutlineView's
-// row count. Currently the items are expanded, but the outline view continues to believe it had
-// the number of rows it had before the item was opened visible, until the view is resized. 
-#if 0
-    if (isExpandable) {
-      PRBool isOpen = content->HasAttr(kNameSpaceID_None, BookmarksService::gOpenAtom);
-      if (isOpen)
-        [mOutlineView expandItem: item];
-      else
-        [mOutlineView collapseItem: item];
-    }
-#endif
-    
-    return isExpandable;
+    return [item isFolder];
 }
 
 - (int)outlineView:(NSOutlineView *)outlineView numberOfChildrenOfItem:(id)item
