@@ -235,14 +235,6 @@ void fe_finish_exit(void *pClosure)
         }
     }
 
-#ifdef MOZ_LOC_INDEP
-	/* li_stuff - time to do last synch */
-	if (theApp.LIStuffEnd() == FALSE) {
-        //  synching files.
-        bCanExit = FALSE;
-	}
-#endif // MOZ_LOC_INDEP
-
     if(AfxOleCanExitApp() == FALSE) {
         //  Outstanding com lock.
         bCanExit = FALSE;
@@ -256,7 +248,7 @@ void fe_finish_exit(void *pClosure)
     if(theApp.m_pMainWnd != NULL)   {
         if(bCanExit)    {
             TRACE("Posting WM_CLOSE to %p hidden frame to exit app.\n", theApp.m_pMainWnd);
-            theApp.m_pMainWnd->PostMessage(WM_CLOSE);
+             theApp.m_pMainWnd->PostMessage(WM_CLOSE);
         }
         else    {
             //  Have to retry in a little while.
@@ -1233,8 +1225,8 @@ void CAbstractCX::CopySelection()	{
 		INTL_StrToUnicode(datacsid, (unsigned char*)text, (INTL_Unicode*)string, len);
 
 		GlobalUnlock(hData);		
+  	h = ::SetClipboardData(CF_UNICODETEXT, hData); 
 	}
-	h = ::SetClipboardData(CF_UNICODETEXT, hData); 
 
 #endif
 
