@@ -123,7 +123,7 @@ static void activateWindow( nsIDOMWindowInternal *win )
 }
 // end shameless copying from nsNativeAppWinSupport.cpp
 
-static void openMailWindow(const PRUnichar * aMailWindowName, const PRUnichar * aFolderUri)
+static void openMailWindow(const PRUnichar * aMailWindowName, const char * aFolderUri)
 {
   nsCOMPtr<nsIWindowMediator> mediator ( do_GetService(NS_WINDOWMEDIATOR_CONTRACTID) );
   if (mediator)
@@ -139,7 +139,7 @@ static void openMailWindow(const PRUnichar * aMailWindowName, const PRUnichar * 
         piDOMWindow->GetObjectProperty(NS_LITERAL_STRING("MsgWindowCommands").get(), getter_AddRefs(xpConnectObj));
         nsCOMPtr<nsIMsgWindowCommands> msgWindowCommands = do_QueryInterface(xpConnectObj);
         if (msgWindowCommands)
-          msgWindowCommands->SelectFolder(NS_ConvertUCS2toUTF8(aFolderUri).get());
+          msgWindowCommands->SelectFolder(aFolderUri);
       }
 
       activateWindow(domWindow);
@@ -151,7 +151,7 @@ static void openMailWindow(const PRUnichar * aMailWindowName, const PRUnichar * 
       // if we want to preselect the first account with new mail, here is where we would try to generate
       // a uri to pass in (and add code to the messenger window service to make that work)
       if (messengerWindowService) 
-        messengerWindowService->OpenMessengerWindowWithUri("mail:3pane", NS_ConvertUCS2toUTF8(aFolderUri).get(), nsMsgKey_None);
+        messengerWindowService->OpenMessengerWindowWithUri("mail:3pane", aFolderUri, nsMsgKey_None);
     }
   }
 }
@@ -278,6 +278,7 @@ nsMessengerWinIntegration::nsMessengerWinIntegration()
   mBiffStateAtom = getter_AddRefs(NS_NewAtom("BiffState"));
   mBiffIconVisible = PR_FALSE;
   mSuppressBiffIcon = PR_FALSE;
+  mAlertInProgress = PR_FALSE;
   mBiffIconInitialized = PR_FALSE;
   mUseWideCharBiffIcon = PR_FALSE;
   NS_NewISupportsArray(getter_AddRefs(mFoldersWithNewMail));
@@ -498,6 +499,10 @@ nsresult nsMessengerWinIntegration::ShowAlertMessage(const PRUnichar * aAlertTex
 {
   nsresult rv;
 
+  // if we are already in the process of showing an alert, don't try to show another....
+  if (mAlertInProgress) 
+    return NS_OK; 
+
   nsCOMPtr<nsIPref> prefService;
   prefService = do_GetService(NS_PREF_CONTRACTID, &rv);  
   PRBool showAlert = PR_TRUE; 
@@ -520,6 +525,8 @@ nsresult nsMessengerWinIntegration::ShowAlertMessage(const PRUnichar * aAlertTex
         bundle->GetStringFromName(NS_LITERAL_STRING("newMail_Alert_Title").get(), getter_Copies(alertTitle));
         rv = alertsService->ShowAlertNotification(NEW_MAIL_ALERT_ICON, alertTitle, aAlertText, PR_TRUE, 
          NS_ConvertASCIItoUCS2(aFolderURI).get(), alertListener); 
+
+        mAlertInProgress = PR_TRUE;
       }
       else
         rv = NS_ERROR_FAILURE;
@@ -542,6 +549,7 @@ NS_IMETHODIMP nsMessengerWinIntegration::OnAlertFinished(const PRUnichar * aAler
   }
 
   mSuppressBiffIcon = PR_FALSE;
+  mAlertInProgress = PR_FALSE;
   return NS_OK;
 }
 
@@ -549,7 +557,11 @@ NS_IMETHODIMP nsMessengerWinIntegration::OnAlertClickCallback(const PRUnichar * 
 {
   // make sure we don't insert the icon in the system tray since the user clicked on the alert.
   mSuppressBiffIcon = PR_TRUE;
-  openMailWindow(NS_LITERAL_STRING("mail:3pane").get(), aAlertCookie);
+  
+  nsXPIDLCString folderURI;
+  GetFirstFolderWithNewMail(getter_Copies(folderURI));
+
+  openMailWindow(NS_LITERAL_STRING("mail:3pane").get(), folderURI);
  
   return NS_OK;
 }
@@ -560,6 +572,7 @@ void nsMessengerWinIntegration::FillToolTipInfo()
   nsXPIDLCString userName;
   nsXPIDLCString hostName; 
   nsAutoString toolTipText;
+  nsAutoString animatedAlertText;
   nsCOMPtr<nsISupports> supports;
   nsCOMPtr<nsIMsgFolder> folder;
   nsCOMPtr<nsIWeakReference> weakReference;
@@ -601,6 +614,11 @@ void nsMessengerWinIntegration::FillToolTipInfo()
         else
           bundle->FormatStringFromName(NS_LITERAL_STRING("biffNotification_messages").get(), formatStrings, 2, getter_Copies(finalText));
 
+        // the alert message is special...we actually only want to show the first account with 
+        // new mail in the alert. 
+        if (animatedAlertText.IsEmpty()) // if we haven't filled in the animated alert text yet
+          animatedAlertText = finalText;
+
         // only add this new string if it will fit without truncation....
         if (maxTooltipSize >= toolTipText.Length() + finalText.Length() + 2)
         {
@@ -616,9 +634,7 @@ void nsMessengerWinIntegration::FillToolTipInfo()
 
   if (!mBiffIconVisible)
   {
-    nsXPIDLCString folderURI;
-    GetFirstFolderWithNewMail(getter_Copies(folderURI));
-    ShowAlertMessage(toolTipText.get(), folderURI);
+    ShowAlertMessage(animatedAlertText.get(), "");
   }
   else
    GenericShellNotify( NIM_MODIFY);
@@ -690,11 +706,6 @@ nsresult nsMessengerWinIntegration::GetFirstFolderWithNewMail(char ** aFolderURI
 void nsMessengerWinIntegration::DestroyBiffIcon()
 {
   GenericShellNotify(NIM_DELETE); 
-  
-  if (mUseWideCharBiffIcon && mWideBiffIconData.hIcon)
-	  DestroyIcon(mWideBiffIconData.hIcon);
-  else if (mAsciiBiffIconData.hIcon)
-	  DestroyIcon(mAsciiBiffIconData.hIcon);
 }
 
 PRUint32 nsMessengerWinIntegration::GetToolTipSize()
@@ -739,8 +750,6 @@ void nsMessengerWinIntegration::GenericShellNotify(DWORD aMessage)
 void nsMessengerWinIntegration::RevertToNonUnicodeShellAPI()
 {
   mUseWideCharBiffIcon = PR_FALSE;
-  if (mWideBiffIconData.hIcon)  // release any windows handles
-	  DestroyIcon(mWideBiffIconData.hIcon);
 
   // now initialize the ascii shell notify struct
   InitializeBiffStatusIcon();
@@ -811,6 +820,13 @@ nsMessengerWinIntegration::OnItemPropertyFlagChanged(nsISupports *item, nsIAtom 
     {
       // we are always going to remove the icon whenever we get our first no mail
       // notification. 
+      
+      // avoid a race condition where we are told to remove the icon before we've actually
+      // added it to the system tray. This happens when the user reads a new message before
+      // the animated alert has gone away.
+      if (mAlertInProgress)
+        mSuppressBiffIcon = PR_TRUE;
+
       mFoldersWithNewMail->Clear(); 
       if (mBiffIconVisible) 
       {
