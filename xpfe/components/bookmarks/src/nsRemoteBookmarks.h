@@ -59,13 +59,16 @@
 #include "nsILDAPOperation.h"
 #include "nsILDAPMessageListener.h"
 #include "nsIWindowWatcher.h"
+#include "nsITimer.h"
+#include "nsITimerCallback.h"
 
 
 
 class nsRemoteBookmarks : public nsIRemoteBookmarks,
                           public nsIRDFDataSource,
                           public nsIRDFObserver,
-                          public nsILDAPMessageListener
+                          public nsILDAPMessageListener,
+                          public nsITimerCallback
                           // public nsIRDFRemoteDataSource,
                           // public nsIStreamListener,
                           // public nsIObserver,
@@ -82,6 +85,7 @@ protected:
   static nsIRDFResource      *kNC_Bookmark;
   static nsIRDFResource      *kNC_BookmarkSeparator;
   static nsIRDFResource      *kNC_Folder;
+  static nsIRDFResource      *kNC_Parent;
   static nsIRDFResource      *kNC_Child;
   static nsIRDFResource      *kNC_Name;
   static nsIRDFResource      *kNC_URL;
@@ -97,20 +101,28 @@ protected:
 
   // XXX XXX XXX hack TO DO for now testing only!
   nsCOMPtr<nsILDAPConnection> mConnection;
-  nsCOMPtr<nsILDAPOperation>  mSearchOperation;
+  nsCOMPtr<nsILDAPOperation>  mLDAPOperation;
   nsCOMPtr<nsILDAPURL>        mLDAPURL;
+  nsCOMPtr<nsIRDFResource>    mSource;
   nsCOMPtr<nsIRDFContainer>   mContainer;
+  nsCOMPtr<nsIRDFResource>    mNode;
+  nsCOMPtr<nsITimer>          mTimer;
   nsString                    mPassword;
+  PRUint32                    mOpcode;
 
 
   PRBool   isRemoteBookmarkURI(nsIRDFResource *r);
-  nsresult doLDAPQuery(nsILDAPConnection *ldapConnection, nsIRDFResource *aSource, nsString bindDN, nsString password);
+  nsresult showLDAPError(nsILDAPMessage *aMessage);
+  nsresult doLDAPRebind();
+  nsresult doLDAPQuery(nsILDAPConnection *ldapConnection, nsIRDFResource *aParent, nsIRDFResource *aNode, nsString bindDN, nsString password, PRUint32 ldapOpcode);
   nsresult doAuthentication(nsIRDFResource *aNode, nsString &bindDN, nsString &password);
   PRBool   GetLDAPMsgAttrValue(nsILDAPMessage *aMessage, const char *aAttrib, nsString &aValue);
   nsresult GetLDAPExtension(nsIRDFResource *aNode, const char *name, nsCString &value, PRBool *important);
   nsresult insertLDAPBookmarkItem(nsIRDFResource *aRelativeNode, nsISupportsArray *aArguments, nsIRDFResource *aItemType);
   nsresult deleteLDAPBookmarkItem(nsIRDFResource *aNode, nsISupportsArray *aArguments, PRInt32 parentArgIndex, nsIRDFResource *aItemType);
   nsresult getArgumentN(nsISupportsArray *arguments, nsIRDFResource *res, PRInt32 offset, nsIRDFNode **argValue);
+
+  enum { LDAP_READY=0, LDAP_SEARCH, LDAP_ADD, LDAP_DELETE };
 
 public:
   nsRemoteBookmarks();
@@ -134,6 +146,9 @@ public:
 
   // nsILDAPMessageListener
   NS_DECL_NSILDAPMESSAGELISTENER
+
+  // nsITimerCallback
+  NS_IMETHOD_(void) Notify(nsITimer *timer);
 };
 
 

@@ -1015,9 +1015,10 @@
               rValue = this.rdf.GetLiteral(aArgumentsArray[i].literal);
             argsArray.AppendElement(rValue);
           }
-      
+
           // rjc: Exec the command against the composite datasource
           this.db.DoCommand(sourcesArray, rCommand, argsArray);
+
         ]]></body>
       </method>
       
@@ -1267,6 +1268,7 @@
               ksRDFC.RemoveElementAt(i, false);
           }
           */
+
           const kPrefSvcContractID = "@mozilla.org/preferences;1";
           const kPrefSvcIID = Components.interfaces.nsIPrefService;
           var prefSvc = Components.classes[kPrefSvcContractID].getService(kPrefSvcIID);
@@ -1302,8 +1304,18 @@
                 // assume its parent is the root
                 parent = ksRDF.GetResource("NC:BookmarksRoot");
               }
+
+              /*
+                rjc says:  WRONG!  Use RDF datasource COMMAND APIs !!!
+
               ksRDFC.Init(this.bookmarksDS, parent); 
               ksRDFC.RemoveElement(resource, true);
+              */
+              var args = [{ property: this.NC_NS + "parent",
+                            resource: parent.Value }];
+              var selectedURI = this.treeBuilder.getResourceAtIndex(this.treeBoxObject.selection.currentIndex).Value;
+              this.doBookmarksCommand(selectedURI, this.NC_NS_CMD + "deletebookmark", args);
+
               nextIndex = j;
             }
           }
