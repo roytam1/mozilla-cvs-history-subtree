@@ -167,7 +167,3 @@ SECOID_CompareAlgorithmID(SECAlgorithmID *a, SECAlgorithmID *b)
     rv = SECITEM_CompareItem(&a->parameters, &b->parameters);
     return rv;
 }
-
-/* This functions simply returns the address of the above-declared template. */
-SEC_ASN1_CHOOSER_IMPLEMENT(SECOID_AlgorithmIDTemplate)
-

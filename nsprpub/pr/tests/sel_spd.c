@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 /*
@@ -107,7 +91,7 @@ int _readn(PRFileDesc *sock, char *buf, int len)
 	int bytes;
 
 	for (rem=len; rem; rem -= bytes) {
-		bytes = PR_Recv(sock, buf+len-rem, rem, 0, PR_INTERVAL_NO_TIMEOUT);
+		bytes = PR_Recv(sock, buf, rem, 0, PR_INTERVAL_NO_TIMEOUT);
 		if (bytes <= 0)
             return -1;
 	}
@@ -393,8 +377,7 @@ void do_work(void)
 	}
 	
 	PR_EnterMonitor(exit_cv);
-	while (_thread_exit_count > 0)
-		PR_Wait(exit_cv, PR_INTERVAL_NO_TIMEOUT);
+	PR_Wait(exit_cv, 0x7fffffff);
 	PR_ExitMonitor(exit_cv);
 
 	fprintf(stdout, "TEST COMPLETE!\n");
@@ -448,7 +431,7 @@ static void Measure(void (*func)(void), const char *msg)
 }
 
 
-int main(int argc, char **argv)
+main(int argc, char **argv)
 {
 #if defined(XP_UNIX) || defined(XP_OS2_EMX)
 	int opt;
@@ -498,9 +481,9 @@ int main(int argc, char **argv)
 	memset(timer_data, 0 , 2*_threads*sizeof(timer_slot_t));
 
     Measure(do_workUU, "select loop user/user");
-    Measure(do_workUK, "select loop user/kernel");
-    Measure(do_workKU, "select loop kernel/user");
-    Measure(do_workKK, "select loop kernel/kernel");
+    Measure(do_workUK, "select loop user/user");
+    Measure(do_workKU, "select loop user/user");
+    Measure(do_workKK, "select loop user/user");
 
 
 	return 0;

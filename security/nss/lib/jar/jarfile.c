@@ -51,7 +51,6 @@
 #include "sys/stat.h"
 #endif
 
-#include "sechash.h"	/* for HASH_GetHashObject() */
 
 /* extracting */
 

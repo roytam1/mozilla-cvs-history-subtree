@@ -22,6 +22,6 @@
 DEPTH=..
 include <$(DEPTH)/config/config.mak>
 
-DIRS = nss psm\lib\nlslayer psm
+DIRS = psm
 
 include <$(DEPTH)\config\rules.mak>

@@ -24,8 +24,6 @@
 [scriptable, uuid(a6cf9114-15b3-11d2-932e-00805f8add32)]
 interface nsIDOMNSHTMLOptionCollection : nsISupports
 {
-
-            attribute  unsigned long        length;
-            attribute  long                 selectedIndex;
+           attribute unsigned long    length;
+           attribute long             selectedIndex;
 };
-

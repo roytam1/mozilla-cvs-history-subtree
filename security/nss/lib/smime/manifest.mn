@@ -67,10 +67,8 @@ CSRCS = \
 	cmsutil.c \
 	smimemessage.c \
 	smimeutil.c \
-	smimever.c \
 	$(NULL)
 
 REQUIRES = security dbm
 
 LIBRARY_NAME = smime
-LIBRARY_VERSION = 3

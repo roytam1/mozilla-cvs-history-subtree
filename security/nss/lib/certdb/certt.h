@@ -45,7 +45,7 @@
 #include "secoidt.h"
 #include "plarena.h"
 #include "prcvar.h"
-#include "nssilock.h"
+#include "prlock.h"
 #include "prio.h"
 #include "prmon.h"
 
@@ -173,10 +173,10 @@ struct CERTCertTrustStr {
  * defined the types of trust that exist
  */
 typedef enum {
-    trustSSL = 0,
-    trustEmail = 1,
-    trustObjectSigning = 2,
-    trustTypeNone = 3
+    trustSSL,
+    trustEmail,
+    trustObjectSigning,
+    trustTypeNone
 } SECTrustType;
 
 #define SEC_GET_TRUST_FLAGS(trust,type) \
@@ -451,36 +451,36 @@ struct CERTDistNamesStr {
 			 NS_CERT_TYPE_OBJECT_SIGNING_CA | \
 			 EXT_KEY_USAGE_STATUS_RESPONDER )
 typedef enum {
-    certUsageSSLClient = 0,
-    certUsageSSLServer = 1,
-    certUsageSSLServerWithStepUp = 2,
-    certUsageSSLCA = 3,
-    certUsageEmailSigner = 4,
-    certUsageEmailRecipient = 5,
-    certUsageObjectSigner = 6,
-    certUsageUserCertImport = 7,
-    certUsageVerifyCA = 8,
-    certUsageProtectedObjectSigner = 9,
-    certUsageStatusResponder = 10,
-    certUsageAnyCA = 11
+    certUsageSSLClient,
+    certUsageSSLServer,
+    certUsageSSLServerWithStepUp,
+    certUsageSSLCA,
+    certUsageEmailSigner,
+    certUsageEmailRecipient,
+    certUsageObjectSigner,
+    certUsageUserCertImport,
+    certUsageVerifyCA,
+    certUsageProtectedObjectSigner,
+    certUsageStatusResponder,
+    certUsageAnyCA
 } SECCertUsage;
 
 /*
  * Does the cert belong to the user, a peer, or a CA.
  */
 typedef enum {
-    certOwnerUser = 0,
-    certOwnerPeer = 1,
-    certOwnerCA = 2
+    certOwnerUser,
+    certOwnerPeer,
+    certOwnerCA
 } CERTCertOwner;
 
 /*
  * This enum represents the state of validity times of a certificate
  */
 typedef enum {
-    secCertTimeValid = 0,
-    secCertTimeExpired = 1,
-    secCertTimeNotValidYet = 2
+    secCertTimeValid,
+    secCertTimeExpired,
+    secCertTimeNotValidYet
 } SECCertTimeValidity;
 
 /*
@@ -605,7 +605,7 @@ struct CERTGeneralNameListStr {
     CERTGeneralName *name;
     int refCount;
     int len;
-    PZLock *lock;
+    PRLock *lock;
 };
 
 struct CERTNameConstraintStr {
@@ -727,11 +727,11 @@ typedef char * (*CERTDBNameFunc)(void *arg, int dbVersion);
  * types of cert packages that we can decode
  */
 typedef enum {
-    certPackageNone = 0,
-    certPackageCert = 1,
-    certPackagePKCS7 = 2,
-    certPackageNSCertSeq = 3,
-    certPackageNSCertWrap = 4
+    certPackageNone,
+    certPackageCert,
+    certPackagePKCS7,
+    certPackageNSCertSeq,
+    certPackageNSCertWrap
 } CERTPackageType;
 
 /*
@@ -800,15 +800,5 @@ extern const SEC_ASN1Template CERT_CrlTemplate[];
 */
 extern const SEC_ASN1Template CERT_AttributeTemplate[];
 extern const SEC_ASN1Template CERT_SetOfAttributeTemplate[];
-
-/* These functions simply return the address of the above-declared templates.
-** This is necessary for Windows DLLs.  Sigh.
-*/
-SEC_ASN1_CHOOSER_DECLARE(CERT_CertificateRequestTemplate)
-SEC_ASN1_CHOOSER_DECLARE(CERT_CertificateTemplate)
-SEC_ASN1_CHOOSER_DECLARE(CERT_CrlTemplate)
-SEC_ASN1_CHOOSER_DECLARE(CERT_IssuerAndSNTemplate)
-SEC_ASN1_CHOOSER_DECLARE(CERT_SetOfSignedCrlTemplate)
-SEC_ASN1_CHOOSER_DECLARE(CERT_SignedDataTemplate)
 
 #endif /* _CERTT_H_ */

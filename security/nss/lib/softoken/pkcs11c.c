@@ -716,35 +716,6 @@ finish_des:
 	context->destroy = (PK11Destroy) DES_DestroyContext;
 
 	break;
-    case CKM_AES_CBC_PAD:
-	context->doPad = PR_TRUE;
-	context->blockSize = 16;
-	/* fall thru */
-    case CKM_AES_ECB:
-    case CKM_AES_CBC:
-	if (key_type != CKK_AES) {
-	    crv = CKR_KEY_TYPE_INCONSISTENT;
-	    break;
-	}
-	att = pk11_FindAttribute(key,CKA_VALUE);
-	if (att == NULL) {
-	    crv = CKR_KEY_HANDLE_INVALID;
-	    break;
-	}
-	context->cipherInfo = AES_CreateContext(
-	    (unsigned char*)att->attrib.pValue,
-	    (unsigned char*)pMechanism->pParameter,
-	    pMechanism->mechanism == CKM_AES_ECB ? NSS_AES : NSS_AES_CBC,
-	    PR_TRUE, att->attrib.ulValueLen, 16);
-	pk11_FreeAttribute(att);
-	if (context->cipherInfo == NULL) {
-	    crv = CKR_HOST_MEMORY;
-	    break;
-	}
-	context->update = (PK11Cipher) AES_Encrypt;
-	context->destroy = (PK11Destroy) AES_DestroyContext;
-
-	break;
     default:
 	crv = CKR_MECHANISM_INVALID;
 	break;
@@ -1122,35 +1093,6 @@ finish_des:
 	}
 	context->update = (PK11Cipher) DES_Decrypt;
 	context->destroy = (PK11Destroy) DES_DestroyContext;
-
-	break;
-    case CKM_AES_CBC_PAD:
-	context->doPad = PR_TRUE;
-	context->blockSize = 16;
-	/* fall thru */
-    case CKM_AES_ECB:
-    case CKM_AES_CBC:
-	if (key_type != CKK_AES) {
-	    crv = CKR_KEY_TYPE_INCONSISTENT;
-	    break;
-	}
-	att = pk11_FindAttribute(key,CKA_VALUE);
-	if (att == NULL) {
-	    crv = CKR_KEY_HANDLE_INVALID;
-	    break;
-	}
-	context->cipherInfo = AES_CreateContext(
-	    (unsigned char*)att->attrib.pValue,
-	    (unsigned char*)pMechanism->pParameter,
-	    pMechanism->mechanism == CKM_AES_ECB ? NSS_AES : NSS_AES_CBC,
-	    PR_TRUE, att->attrib.ulValueLen,16);
-	pk11_FreeAttribute(att);
-	if (context->cipherInfo == NULL) {
-	    crv = CKR_HOST_MEMORY;
-	    break;
-	}
-	context->update = (PK11Cipher) AES_Decrypt;
-	context->destroy = (PK11Destroy) AES_DestroyContext;
 
 	break;
     default:
@@ -1924,16 +1866,6 @@ pk11_InitCBCMac(CK_SESSION_HANDLE hSession, CK_MECHANISM_PTR pMechanism,
 	blockSize = 8;
 	PORT_Memset(ivBlock,0,blockSize);
 	cbc_mechanism.mechanism = CKM_CDMF_CBC;
-	cbc_mechanism.pParameter = &ivBlock;
-	cbc_mechanism.ulParameterLen = blockSize;
-	break;
-    case CKM_AES_MAC_GENERAL:
-	mac_bytes = *(CK_ULONG *)pMechanism->pParameter;
-	/* fall through */
-    case CKM_AES_MAC:
-	blockSize = 16;
-	PORT_Memset(ivBlock,0,blockSize);
-	cbc_mechanism.mechanism = CKM_AES_CBC;
 	cbc_mechanism.pParameter = &ivBlock;
 	cbc_mechanism.ulParameterLen = blockSize;
 	break;
@@ -2987,10 +2919,6 @@ CK_RV NSC_GenerateKey(CK_SESSION_HANDLE hSession,
 	key_length = 24;
 	checkWeak = PR_TRUE;
 	break;
-    case CKM_AES_KEY_GEN:
-	key_type = CKK_AES;
-	if (key_length == 0) crv = CKR_TEMPLATE_INCOMPLETE;
-	break;
     case CKM_SSL3_PRE_MASTER_KEY_GEN:
 	key_type = CKK_GENERIC_SECRET;
 	key_length = 48;
@@ -3265,7 +3193,7 @@ CK_RV NSC_GenerateKeyPair (CK_SESSION_HANDLE hSession,
 	rsaPriv = RSA_NewKey(public_modulus_bits, &pubExp);
 	PORT_Free(pubExp.data);
 	if (rsaPriv == NULL) {
-	    crv = CKR_DEVICE_ERROR;
+	    crv = CKR_HOST_MEMORY;
 	    break;
 	}
         /* now fill in the RSA dependent paramenters in the public key */
@@ -3355,7 +3283,7 @@ kpg_done:
 	PORT_Free(pqgParam.subPrime.data);
 	PORT_Free(pqgParam.base.data);
 
-	if (rv != SECSuccess) { crv = CKR_DEVICE_ERROR; break; }
+	if (rv != SECSuccess) { crv = CKR_HOST_MEMORY; break; }
 
 	/* store the generated key into the attributes */
         crv = pk11_AddAttributeType(publicKey,CKA_VALUE,
@@ -3404,7 +3332,7 @@ dsagn_done:
 	PORT_Free(dhParam.prime.data);
 	PORT_Free(dhParam.base.data);
 	if (rv != SECSuccess) { 
-	  crv = CKR_DEVICE_ERROR;
+	  crv = CKR_HOST_MEMORY; 
 	  break;
 	}
 

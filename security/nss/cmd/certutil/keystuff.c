@@ -98,7 +98,7 @@ UpdateRNG(void)
     /* turn off echo on stdin & return on 1 char instead of NL */
     fd = fileno(stdin);
 
-#if defined(XP_UNIX) && !defined(VMS)
+#ifdef XP_UNIX
     tcgetattr(fd, &tio);
     orig_lflag = tio.c_lflag;
     orig_cc_min = tio.c_cc[VMIN];
@@ -114,9 +114,7 @@ UpdateRNG(void)
     randbuf = (char *) PORT_Alloc(RAND_BUF_SIZE);
     count = 0;
     while (count < NUM_KEYSTROKES+1) {
-#ifdef VMS
-	c = GENERIC_GETCHAR_NOECHO();
-#elif XP_UNIX
+#ifdef XP_UNIX
 	c = getc(stdin);
 #else
 	c = getch();
@@ -138,18 +136,13 @@ UpdateRNG(void)
 
     FPS "\n\n");
     FPS "Finished.  Press enter to continue: ");
-#if defined(VMS)
-    while(GENERIC_GETCHAR_NO_ECHO() != '\r')
-	;
-#else
     while (getc(stdin) != '\n')
 	;
-#endif
     FPS "\n");
 
 #undef FPS
 
-#if defined(XP_UNIX) && !defined(VMS)
+#ifdef XP_UNIX
     /* set back termio the way it was */
     tio.c_lflag = orig_lflag;
     tio.c_cc[VMIN] = orig_cc_min;

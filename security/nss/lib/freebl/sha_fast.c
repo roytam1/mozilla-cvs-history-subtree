@@ -35,7 +35,6 @@
 #include <memory.h>
 #include "blapi.h"
 #include "sha_fast.h"
-#include "prerror.h"
 
 #ifdef TRACING_SSL
 #include "ssl.h"
@@ -384,10 +383,10 @@ SHA1_Resurrect(unsigned char *space,void *arg)
     return cx;
 }
 
+#ifdef TRACING_SSL
 void
 SHA1_TraceState(SHA1Context *ctx)
 {
-#ifdef TRACING_SSL
     uint32        W;
     int           i;
     int           len;
@@ -415,7 +414,5 @@ SHA1_TraceState(SHA1Context *ctx)
 
     PRINT_BUF(99, (0, "SHA1_TraceState: buffered input", buf, len));
 
-#else
-    PORT_SetError(PR_NOT_IMPLEMENTED_ERROR);
-#endif
 }
+#endif
