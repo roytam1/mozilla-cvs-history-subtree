@@ -87,9 +87,8 @@ var abDirTreeObserver = {
       var targetID = treeItem.getAttribute("id");
       var directory = GetDirectoryFromURI(targetID);
 
-      var boxObject = GetAbResultsBoxObject();
-      var abView = boxObject.view.QueryInterface(Components.interfaces.nsIAbView);
-
+      var abView = GetAbView();
+      
       var rows = xferData[0].split(",");
       var numrows = rows.length;
 
@@ -116,8 +115,17 @@ var abDirTreeObserver = {
         return false;
 
       var targetID = treeItem.getAttribute("id");
-      var directory = GetDirectoryFromURI(targetID);
-      dump("XXX over " + targetID + " mailing list = " + directory.isMailList + "\n");
+      var targetDirectory = GetDirectoryFromURI(targetID);
+      var srcDirectory = GetAbViewDirectory();
+
+      // you can't drop a card onto the directory it comes from
+      if (targetDirectory == srcDirectory) {
+        aDragSession.canDrop = false;
+        return false;
+      }
+
+      dump("XXX over " + targetID + " mailing list = " + targetDirectory.isMailList + "\n");
+      dump("  from " + GetAbViewURI() + " mailing list = " + srcDirectory.isMailList + "\n");
       return true;
     },
 

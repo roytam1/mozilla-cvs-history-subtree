@@ -466,6 +466,22 @@ const kDefaultSortColumn = "GeneratedName";
 const kDefaultAscending = "ascending";
 const kDefaultDescending = "descending";
 
+function GetAbView()
+{
+  if (gAbView)
+    return gAbView;
+  else 
+    return null;
+}
+
+function GetAbViewDirectory()
+{
+  if (gAbView)
+    return gAbView.directory;
+  else 
+    return null;
+}
+
 function GetAbViewURI()
 {
   if (gAbView)
