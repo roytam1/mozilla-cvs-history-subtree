@@ -883,7 +883,10 @@ NS_IMETHODIMP nsImapMailFolder::CreateClientSubfolderInfo(const char *folderName
     rv = CreateFileSpecForDB(folderName, path, getter_AddRefs(dbFileSpec));
     NS_ENSURE_SUCCESS(rv,rv);
 
-    rv = msgDBService->OpenFolderDB(child, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(unusedDB));
+    rv = msgDBService->OpenMailDBFromFileSpec(dbFileSpec, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(unusedDB));
+
+    if (rv == NS_MSG_ERROR_FOLDER_SUMMARY_MISSING)
+      rv = NS_OK;
 
     if (NS_SUCCEEDED(rv) && unusedDB)
     {
