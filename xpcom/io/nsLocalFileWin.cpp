@@ -271,7 +271,7 @@ nsLocalFile::Create(nsISupports* outer, const nsIID& aIID, void* *aInstancePtr)
 void
 nsLocalFile::MakeDirty()
 {
-    mStatDirty       = PR_TRUE;
+    mDirty       = PR_TRUE;
 }
 
 //----------------------------------------------------------------------------------------
@@ -465,11 +465,10 @@ nsLocalFile::ResolvePath(const char* workingPath, PRBool resolveTerminal, char**
 nsresult
 nsLocalFile::ResolveAndStat(PRBool resolveTerminal)
 {
-//    if (!mStatDirty)
-//    {
-//        return NS_OK;  todo need to cache information about both the path and the target both
-//                       follow this code path.
-//    }
+    if (!mDirty)
+    {
+        return NS_OK;
+    }
     
     char *resolvePath;
     nsresult rv = ResolvePath(mWorkingPath.GetBuffer(), resolveTerminal, &resolvePath);
@@ -505,7 +504,7 @@ nsLocalFile::ResolveAndStat(PRBool resolveTerminal)
         return ConvertWinError(GetLastError());
     }
 
-    mStatDirty = PR_FALSE;
+    mDirty = PR_FALSE;
     return NS_OK;
 }
 
@@ -1044,8 +1043,6 @@ nsLocalFile::Load(PRLibrary * *_retval)
 NS_IMETHODIMP  
 nsLocalFile::Delete(PRBool recursive)
 {
-    MakeDirty();
-    
     PRBool isDir;
     
     nsresult rv = IsDirectory(&isDir);
@@ -1087,6 +1084,7 @@ nsLocalFile::Delete(PRBool recursive)
         remove(filePath); // todo: save return value?
     }
     
+    MakeDirty();
     return NS_OK;
 }
 
@@ -1113,8 +1111,6 @@ nsLocalFile::GetLastModificationDate(PRInt64 *aLastModificationDate)
 NS_IMETHODIMP  
 nsLocalFile::SetLastModificationDate(PRInt64 aLastModificationDate)
 {
-    MakeDirty();
-
     nsresult rv = ResolveAndStat(PR_TRUE);
     
     if (NS_FAILED(rv))
@@ -1141,12 +1137,14 @@ nsLocalFile::SetLastModificationDate(PRInt64 aLastModificationDate)
     if (!file)
     {
         // could not open file for writing.
+        MakeDirty();
         return NS_ERROR_FAILURE; //TODO better error code
     }
 
     if ( 0 == SetFileTime(file, NULL, &time, &time) )
     {
         // could not set time
+        MakeDirty();
         return NS_ERROR_FAILURE;
     }
     
@@ -1179,8 +1177,6 @@ nsLocalFile::GetLastModificationDateOfLink(PRInt64 *aLastModificationDate)
 NS_IMETHODIMP  
 nsLocalFile::SetLastModificationDateOfLink(PRInt64 aLastModificationDate)
 {
-    MakeDirty();
-
     nsresult rv = ResolveAndStat(PR_FALSE);
     
     if (NS_FAILED(rv))
@@ -1207,12 +1203,14 @@ nsLocalFile::SetLastModificationDateOfLink(PRInt64 aLastModificationDate)
     if (!file)
     {
         // could not open file for writing.
+        MakeDirty();
         return NS_ERROR_FAILURE; //TODO better error code
     }
 
     if ( 0 == SetFileTime(file, NULL, &time, &time) )
     {
         // could not set time
+        MakeDirty();
         return NS_ERROR_FAILURE;
     }
     
@@ -1293,7 +1291,10 @@ nsLocalFile::SetFileSize(PRInt64 aFileSize)
                        NULL); 
 
     if (hFile == INVALID_HANDLE_VALUE)
+    {
+        MakeDirty();
         return NS_ERROR_FAILURE;
+    }
 
     // Seek to new, desired end of file
     PRInt32 hi, lo;
@@ -1310,9 +1311,11 @@ nsLocalFile::SetFileSize(PRInt64 aFileSize)
     if (!CloseHandle(hFile))
         return NS_ERROR_FAILURE;
 
+    MakeDirty();
     return NS_OK;
 
  error:
+    MakeDirty();
     CloseHandle(hFile);
     return NS_ERROR_FAILURE;
 }
@@ -1451,8 +1454,6 @@ nsLocalFile::IsWritable(PRBool *_retval)
     *_retval = (PRBool) !( mFileAttrData.dwFileAttributes & FILE_ATTRIBUTE_READONLY); 
 
     return NS_OK;
-
-
 }
 
 NS_IMETHODIMP  
@@ -1627,12 +1628,14 @@ nsLocalFile::IsContainedIn(nsIFile *inFile, PRBool recur, PRBool *_retval)
     *_retval = PR_FALSE;
        
     char* myFilePath;
-    GetPath(&myFilePath);
+    if ( NS_FAILED(GetTarget(&myFilePath)))
+        GetPath(&myFilePath);
     
     PRInt32 myFilePathLen = strlen(myFilePath);
     
     char* inFilePath;
-    inFile->GetPath(&inFilePath);
+    if ( NS_FAILED(inFile->GetTarget(&inFilePath)))
+        inFile->GetPath(&inFilePath);
 
     if ( strncmp( myFilePath, inFilePath, myFilePathLen) == 0)
     {
