@@ -443,7 +443,7 @@ sub BuildIt {
       
       foreach $fe (@felist) {            
         if (&BinaryExists($fe)) {
-          print LOG "deleting existing binary\n";
+          print LOG "deleting existing binary: $fe\n";
           &DeleteBinary($fe);
         }
       }
