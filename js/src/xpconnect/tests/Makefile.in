@@ -34,22 +34,47 @@
 DEPTH		= ../../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
+VPATH		= @srcdir@ @srcdir@/idl
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE		= TestXPC
+MODULE		= xpconnect_tests
+LIBRARY_NAME	= xpctest
+EXPORT_LIBRARY	= 1
+IS_COMPONENT	= 1
+CPP_PROG_LINK	= 1
 SIMPLE_PROGRAMS = TestXPC$(BIN_SUFFIX)
+
 REQUIRES	= xpconnect \
 		  xpcom \
 		  string \
 		  js \
-		  xpconnect_tests \
 		  $(NULL)
 
-DIRS		= idl components
+LIB_CPPSRCS	= \
+		components/xpctest_array.cpp \
+		components/xpctest_echo.cpp \
+		components/xpctest_child.cpp \
+		components/xpctest_noisy.cpp \
+		components/xpctest_overloaded.cpp \
+		components/xpctest_string.cpp \
+		components/xpctest_module.cpp \
+		components/xpctest_attributes.cpp \
+		components/xpctest_calljs.cpp \
+		components/xpctest_const.cpp \
+		components/xpctest_in.cpp \
+		components/xpctest_inout.cpp \
+		components/xpctest_multiple.cpp \
+		components/xpctest_out.cpp \
+		components/xpctest_domstring.cpp \
+		components/xpctest_variant.cpp \
+		$(NULL)
 
-CPPSRCS		= TestXPC.cpp
+EXTRA_DSO_LDOPTS = \
+		$(LIBS_DIR) \
+		$(MOZ_JS_LIBS) \
+		$(MOZ_COMPONENT_LIBS) \
+		$(NULL)
 
 PROG_LIBS	= \
 		$(LIBS_DIR) \
@@ -57,6 +82,21 @@ PROG_LIBS	= \
 		$(MOZ_COMPONENT_LIBS) \
 		$(NULL)
 
+XPIDLSRCS	= \
+		xpctest.idl \
+		xpctest2.idl \
+		xpctest_attributes.idl \
+		xpctest_calljs.idl \
+		xpctest_const.idl \
+		xpctest_in.idl \
+		xpctest_inout.idl \
+		xpctest_multiple.idl \
+		xpctest_domstring.idl \
+		xpctest_out.idl \
+		$(NULL)
+
 include $(topsrcdir)/config/rules.mk
 
-DEFINES		+= -DJS_THREADSAFE -DJSFILE
+PROG_DEFINES	+= -DJS_THREADSAFE -DJSFILE
+
+$(SIMPLE_PROGRAMS): %$(BIN_SUFFIX): %.$(OBJ_SUFFIX) $(SHARED_LIBRARY) $(LIBRARY)

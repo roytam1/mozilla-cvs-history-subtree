@@ -34,19 +34,139 @@
 DEPTH		= ../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
+VPATH		= @srcdir@ @srcdir@/idl 
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= public idl loader src shell
+MODULE		= xpconnect
+LIBRARY_NAME	= xpconnect
+EXPORT_LIBRARY = 1
+SHORT_LIBNAME	= xpconect
+IS_COMPONENT	= 1
+MODULE_NAME	= xpconnect
+ifeq ($(OS_ARCH),WINNT)
+LIBRARY_NAME	= xpc$(MOZ_BITS)$(VERSION_NUMBER)
+SHORT_LIBNAME	= xpc$(MOZ_BITS)$(VERSION_NUMBER)
+endif
 
 ifdef ENABLE_TESTS
 DIRS		+= tests
 endif
 
 ifdef MOZ_XPCTOOLS
-DIRS         +=  tools 
+DIRS         +=  tools/src
 endif
 
+REQUIRES	= xpcom \
+		  string \
+		  xpconnect \
+		  js \
+		  caps \
+		  dom \
+		  necko \
+		  $(NULL)
+
+EXPORTS		= \
+		public/xpc_map_end.h \
+		$(NULL)
+
+SDK_XPIDLSRCS   = \
+		mozIJSSubScriptLoader.idl \
+		$(NULL)
+
+XPIDLSRCS	= \
+		xpccomponents.idl \
+		xpcjsid.idl \
+		xpcexception.idl \
+		nsIJSContextStack.idl \
+		nsIJSRuntimeService.idl \
+		nsIXPConnect.idl \
+		nsIXPCSecurityManager.idl \
+		nsIXPCScriptable.idl \
+		nsIScriptError.idl \
+		nsIXPCScriptNotify.idl \
+		nsIScriptableInterfaces.idl \
+		XPCIDispatch.idl \
+		$(NULL)
+
+
+LIB_CPPSRCS	= \
+		loader/mozJSComponentLoader.cpp \
+		loader/mozJSSubScriptLoader.cpp \
+		src/nsScriptError.cpp \
+		src/nsXPConnect.cpp \
+		src/xpccallcontext.cpp \
+		src/xpccomponents.cpp \
+		src/xpccontext.cpp \
+		src/xpcconvert.cpp \
+		src/xpcdebug.cpp \
+		src/xpcexception.cpp \
+		src/xpcjsid.cpp \
+		src/xpcjsruntime.cpp \
+		src/xpclog.cpp \
+		src/xpcmaps.cpp \
+		src/xpcmodule.cpp \
+		src/xpcruntimesvc.cpp  \
+		src/xpcstack.cpp \
+		src/xpcstring.cpp \
+		src/xpcthreadcontext.cpp \
+		src/xpcthrower.cpp \
+		src/xpcwrappedjs.cpp \
+		src/xpcvariant.cpp \
+		src/xpcwrappedjsclass.cpp \
+		src/xpcwrappednative.cpp \
+		src/xpcwrappednativeinfo.cpp \
+		src/xpcwrappednativejsops.cpp \
+		src/xpcwrappednativeproto.cpp \
+		src/xpcwrappednativescope.cpp \
+		$(NULL)
+
+ifdef XPC_IDISPATCH_SUPPORT
+LIB_CPPSRCS +=	src/XPCDispObject.cpp	\
+		src/XPCDispInterface.cpp	\
+		src/XPCDispConvert.cpp \
+		src/XPCDispTypeInfo.cpp	\
+		src/XPCDispTearOff.cpp \
+		src/XPCIDispatchExtension.cpp \
+		$(NULL)
+endif
+
+EXTRA_DSO_LDOPTS += \
+		$(MOZ_COMPONENT_LIBS) \
+		$(MOZ_JS_LIBS) \
+		$(NULL)
+
+LOCAL_INCLUDES = \
+		-I$(srcdir)/loader \
+		$(NULL)
+
+
+SIMPLE_PROGRAMS	= shell/xpcshell$(BIN_SUFFIX)
+
+PROG_LIBS	= \
+		$(MOZ_JS_LIBS) \
+		$(XPCOM_LIBS) \
+		$(NSPR_LIBS) \
+		$(NULL) 
+
 include $(topsrcdir)/config/rules.mk
+
+DEFINES		+= -DJS_THREADSAFE -DJSFILE
+LIB_DEFINES	+= -DEXPORT_XPC_API
+
+ifdef MOZ_XPCTOOLS
+DEFINES         += -DXPC_TOOLS_SUPPORT
+REQUIRES	+= xpctools
+endif
+
+ifdef XPC_IDISPATCH_SUPPORT
+DEFINES		+= -DXPC_IDISPATCH_SUPPORT
+endif
+
+ifeq ($(OS_ARCH),WINNT)
+# use pre-compiled headers
+CXXFLAGS	+= -YX -Fp$(LIBRARY_NAME).pch
+# precompiled headers require write access to .pch which breaks -j builds
+.NOTPARALLEL::
+endif
 

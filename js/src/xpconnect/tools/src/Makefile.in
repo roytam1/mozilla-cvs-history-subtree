@@ -35,7 +35,7 @@
 DEPTH		= ../../../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@
+VPATH		= @srcdir@ @srcdir@/../idl
 
 include $(DEPTH)/config/autoconf.mk
 
@@ -55,11 +55,16 @@ CPPSRCS		= \
 		nsXPCToolsModule.cpp \
 		$(NULL)
 
+XPIDLSRCS	= \
+		nsIXPCToolsCompiler.idl \
+		nsIXPCToolsProfiler.idl \
+		$(NULL)
+
 include $(topsrcdir)/config/config.mk
 
 EXTRA_DSO_LDOPTS += \
-		$(MOZ_COMPONENT_LIBS) \
 		$(MOZ_JS_LIBS) \
+		$(MOZ_COMPONENT_LIBS) \
 		$(NULL)
 
 include $(topsrcdir)/config/rules.mk
