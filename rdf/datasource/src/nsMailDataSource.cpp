@@ -148,6 +148,7 @@ private:
 
     // Resources that we use often XXX : got to initialize these and release them!
     nsIRDFResource* mResourceChild;
+    nsIRDFResource* mResourceFolder;
     nsIRDFResource* mResourceFrom;
     nsIRDFResource* mResourceSubject;
     nsIRDFResource* mResourceDate;
@@ -208,14 +209,15 @@ public:
     NS_IMETHOD Init(const char* uri) {
         if ((mURI = PL_strdup(uri)) == nsnull)
             return NS_ERROR_OUT_OF_MEMORY;
-        gRDFService->GetResource("child", &mResourceChild);
+        gRDFService->GetResource("http://home.netscape.com/NC-rdf#child", &mResourceChild);
+        gRDFService->GetResource("http://home.netscape.com/NC-rdf#Folder", &mResourceFolder);  
         gRDFService->GetResource("from", &mResourceFrom);
         gRDFService->GetResource("subject", &mResourceSubject);
         gRDFService->GetResource("date", &mResourceDate);
         gRDFService->GetResource("user", &mResourceUser);
         gRDFService->GetResource("host", &mResourceHost);
         gRDFService->GetResource("account", &mResourceAccount);
-        gRDFService->GetResource("name", &mResourceName);
+        gRDFService->GetResource("http://home.netscape.com/NC-rdf#Name", &mResourceName);
         gRDFService->GetResource("MailRoot", &mMailRoot);
         InitAccountList();
         return NS_OK;
@@ -341,9 +343,7 @@ public:
     }
 
     NS_IMETHOD ArcLabelsOut(nsIRDFResource* source,
-                            nsIRDFArcsOutCursor** labels /* out */) {
-        return NS_ERROR_NOT_IMPLEMENTED;
-    }
+                            nsIRDFArcsOutCursor** labels /* out */); 
 
     NS_IMETHOD Flush() {
         return NS_ERROR_NOT_IMPLEMENTED;
@@ -401,6 +401,7 @@ public:
 
     MailAccount (const char* uri) {
         mURI = PL_strdup(uri);
+		 InitMailAccount(uri);
     }
         
 
@@ -480,8 +481,9 @@ public:
     }
 
     NS_IMETHOD GetName(nsIRDFLiteral**  result) const {
-        NS_ADDREF(mName);
-        *result = mName;
+       // NS_ADDREF(mName);
+		// XXX Leak Like a Sieve ...
+		gRDFService->GetLiteral((const unsigned short*) mURI, result); 
         return NS_OK;
     }
     
@@ -721,6 +723,7 @@ public:
         NS_ADDREF(mProperty);
         mValueReturnedp = 0;
         mInversep = inversep;
+		mValue = nsnull;
     }
             
     
@@ -751,10 +754,13 @@ public:
             rv = gMailDataSource->GetTarget(mSource, mProperty,  1, &mValue);
             mTarget = mValue;
         }
-        NS_ADDREF(mValue);
-        NS_ADDREF(mValue); 
+		if (mValue) {
+			NS_ADDREF(mValue);
+			NS_ADDREF(mValue); 
+		}
         // yes, its required twice, one for the value and one for the source/target
-        return rv;
+         if (rv == NS_ERROR_RDF_NO_VALUE) return NS_ERROR_RDF_CURSOR_EMPTY;
+		 return rv;
     }
         
     NS_IMETHOD GetValue(nsIRDFNode** aValue) {
@@ -796,7 +802,8 @@ public:
 
 NS_IMPL_ISUPPORTS(SingletonMailCursor, kIRDFAssertionCursorIID);
 
-class ArrayMailCursor : public nsIRDFAssertionCursor 
+class ArrayMailCursor : public nsIRDFAssertionCursor , 
+                        public nsIRDFArcsOutCursor
 {
 private:
     nsIRDFNode*     mValue;
@@ -815,6 +822,8 @@ public:
         NS_ADDREF(mProperty);
         NS_ADDREF(u);
         mCount = 0;
+		mTarget = nsnull;
+		mValue = nsnull;
     }
                 
     virtual ~ArrayMailCursor(void) {
@@ -829,9 +838,9 @@ public:
    
     // nsIRDFCursor interface
     NS_IMETHOD Advance(void) {
-        if (mArray->Count() <= mCount) return  NS_ERROR_RDF_NO_VALUE;
+        if (mArray->Count() <= mCount) return  NS_ERROR_RDF_CURSOR_EMPTY;
         NS_IF_RELEASE(mValue);
-        mValue = (nsIRDFNode*) mArray->ElementAt(mCount++);
+        mTarget = mValue = (nsIRDFNode*) mArray->ElementAt(mCount++);
         NS_ADDREF(mValue);
         return NS_OK;
     }
@@ -873,7 +882,29 @@ public:
     }
 };
 
-NS_IMPL_ISUPPORTS(ArrayMailCursor, kIRDFAssertionCursorIID);
+
+NS_IMPL_ADDREF(ArrayMailCursor);
+NS_IMPL_RELEASE(ArrayMailCursor);
+
+NS_IMETHODIMP
+ArrayMailCursor::QueryInterface(REFNSIID iid, void** result)
+{
+    if (! result)
+        return NS_ERROR_NULL_POINTER;
+    
+    *result = nsnull;
+    if (iid.Equals(kIRDFAssertionCursorIID) ||
+        iid.Equals(kIRDFCursorIID) ||
+        iid.Equals(kIRDFArcsOutCursorIID) ||
+        iid.Equals(kISupportsIID)) {
+        *result = NS_STATIC_CAST(nsIRDFAssertionCursor*, this);
+        AddRef();
+        return NS_OK;
+    }
+    return NS_NOINTERFACE;
+}
+
+
 
 
 NS_IMETHODIMP
@@ -899,11 +930,11 @@ MailDataSource::GetTargets(nsIRDFResource* source,
         } 
         NS_IF_RELEASE(fl);
     } else  if (NS_OK == source->QueryInterface(kIRDFMailAccountIID, (void**)&ac)) {
-        if (peq(mResourceChild, property)) {
+        if (peq(mResourceFolder, property)) {
             rv = ac->GetFolderList(&array);
         } 
         NS_IF_RELEASE(ac);
-    } else if (peq(mMailRoot, source) && peq(mResourceChild, property)) {
+    } else if (peq(mMailRoot, source) && peq(mResourceFolder, property)) {
         rv = GetAccountList(&array);
     }
     if (array) {
@@ -915,6 +946,16 @@ MailDataSource::GetTargets(nsIRDFResource* source,
     return NS_OK;
 }
 
+NS_IMETHODIMP 
+MailDataSource::ArcLabelsOut(nsIRDFResource* source,
+                             nsIRDFArcsOutCursor** labels /* out */) {
+    nsVoidArray* temp = new nsVoidArray();        
+    temp->AppendElement(mResourceChild);        
+    temp->AppendElement(mResourceFolder);        
+    temp->AppendElement(mResourceName);        
+    *labels = new ArrayMailCursor(source, mResourceChild, temp);
+    return NS_OK;
+}
 
 
 
@@ -1045,7 +1086,7 @@ MailAccount::InitMailAccount (const char* url) {
     PRDirEntry	*de;
     PRDir* dir ;
     nsIRDFMailFolder* folder;
-    sprintf(fileurl, "Mail\\%s",  &url[14]);
+    sprintf(fileurl, "Mail\\%s",  &url[12]);
     dir =  PR_OpenDir(fileurl);
     if (dir == NULL) {
         //if (CallPRMkDirUsingFileURL(fileurl, 00700) > -1) dir = OpenDir(fileurl);
@@ -1053,7 +1094,7 @@ MailAccount::InitMailAccount (const char* url) {
     while ((dir != NULL) && ((de = PR_ReadDir(dir, (PRDirFlags)(n++))) != NULL)) {
         if ((!endsWith(".ssf", de->name)) && (!endsWith(".dat", de->name)) && 
             (!endsWith(".snm", de->name)) && (!endsWith("~", de->name))) {              
-            sprintf(fileurl, "mailbox://%s/%s", &url[14], de->name);
+            sprintf(fileurl, "mailbox://%s/%s/", &url[12], de->name);
             gRDFService->GetResource(fileurl, (nsIRDFResource**)&folder);
             AddFolder(folder);
         }
@@ -1077,7 +1118,7 @@ MailDataSource::InitAccountList (void) {
     }
     while ((dir != NULL) && ((de = PR_ReadDir(dir, (PRDirFlags)(n++))) != NULL)) {
         if (strchr(de->name, '@')) {              
-            sprintf(fileurl, "mailbox://%s/", de->name);
+            sprintf(fileurl, "mailaccount:%s", de->name);
             gRDFService->GetResource(fileurl, (nsIRDFResource**)&folder);
             AddAccount(folder);
         }

@@ -1105,7 +1105,7 @@ nsRDFDocument::CreateChildren(nsIRDFContent* element)
     while (NS_SUCCEEDED(rv = properties->Advance())) {
         nsIRDFResource* property = nsnull;
 
-        if (NS_FAILED(rv = properties->GetPredicate(&property)))
+        if (NS_FAILED(rv = properties->GetValue((nsIRDFNode**)&property)))
             break;
 
         const char* s;
@@ -1126,7 +1126,7 @@ nsRDFDocument::CreateChildren(nsIRDFContent* element)
 
         while (NS_SUCCEEDED(rv = assertions->Advance())) {
             nsIRDFNode* value;
-            if (NS_SUCCEEDED(rv = assertions->GetObject(&value))) {
+            if (NS_SUCCEEDED(rv = assertions->GetValue((nsIRDFNode**)&value))) {
                 // At this point, the specific nsRDFDocument
                 // implementations will create an appropriate child
                 // element (or elements).
@@ -1230,7 +1230,7 @@ nsRDFDocument::IsTreeProperty(const nsIRDFResource* property) const
     const char* p;
     property->GetValue(&p);
     nsAutoString s(p);
-    if (s.Equals("http://home.netscape.com/NC-rdf#Bookmark") ||
+    if (s.Equals("http://home.netscape.com/NC-rdf#child") ||
         s.Equals("http://home.netscape.com/NC-rdf#Folder")) {
         return PR_TRUE;
     }

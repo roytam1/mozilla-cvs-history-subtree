@@ -156,11 +156,11 @@ rdf_Assert(nsIRDFService* service, // unused
 
 #ifdef DEBUG
     const char* s;
-
-    subject->GetValue(&s);
-    printf("(%s\n", s);
     predicate->GetValue(&s);
-    printf(" %s\n", s);
+    printf(" %s", (strchr(s, '#') ? strchr(s, '#')+1 : s));
+    subject->GetValue(&s);
+    printf("(%s, ", s);
+     
 
     nsIRDFResource* objectResource;
     nsIRDFLiteral* objectLiteral;

@@ -37,7 +37,7 @@ static NS_DEFINE_CID(kRDFServiceCID,            NS_RDFSERVICE_CID);
 static const char kURI_bookmarks[] = "rdf:bookmarks"; // XXX?
 
 #define NC_NAMESPACE_URI "http://home.netscape.com/NC-rdf#"
-DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Bookmark);
+DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, child);
 DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, BookmarkAddDate);
 DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Description);
 DEFINE_RDF_VOCAB(NC_NAMESPACE_URI, NC, Folder);
@@ -428,7 +428,7 @@ BookmarkParser::CreateBookmark(void)
     if (! parent)
         return;
 
-    rdf_Assert(mRDFService, mDataSource, parent, kURINC_Bookmark, bookmark);
+    rdf_Assert(mRDFService, mDataSource, parent, kURINC_child, bookmark);
 
     if (values[eBmkAttribute_AddDate].Length() > 0)
         AssertTime(bookmark, kURINC_BookmarkAddDate, values[eBmkAttribute_AddDate]);
