@@ -59,15 +59,15 @@
 #define HG77677 "msgpane.h"
 #define HG77678
 #define HG72266
-#define HG72267
+#define HG72267	XP_STRDUP
 #define HG29872
 #define HG52442
 #define HG42322
 #define HG72530
 #define HG52421
 #define HG52987
-#define HG72224
-#define HG62294
+#define HG72224	XP_STRDUP
+#define HG62294	XP_STRDUP
 #define HG52286
 #define HG64384
 #define HG99874 "msgsend.h"
@@ -89,11 +89,11 @@
 #define HG09275
 #define HG24327
 #define HG24326
-#define HG23258
-#define HG28265
+#define HG23258	XP_STRDUP
+#define HG28265	XP_STRDUP
 #define HG24239
 #define HG56307
-#define HG32686 STRDUP
+#define HG32686 XP_STRDUP
 #define HG53961
 #define HG97760
 #define HG29866
@@ -113,7 +113,11 @@
 #define HG62422
 #define HG89377
 #define HG83623
+#define HG68452
 #define HG93873
+#define HG54897
+#define HG96484
+#define HG15448
 #define HG83336
 #define HG63531	0
 #define HG73653
@@ -215,8 +219,10 @@
 #define HG22987
 #define HG22296 FALSE, FALSE
 #define HG22867
-#define HG09990
-#define HG02192
+#define HG32145
+#define HG09990 FALSE, FALSE
+#define HG89520
+#define HG02192	FALSE, FALSE
 #define HG82821
 #define HG82224
 #define HG22821
