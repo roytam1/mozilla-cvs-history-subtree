@@ -33,7 +33,8 @@
 #include "nsIFrame.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
-#include "nsIStyleSet.h"
+#include "nsStyleSet.h"
+#include "nsIStyleFrameConstruction.h"
 #include "nsStyleContext.h"
 #include "nsStyleChangeList.h"
 #include "nsIEventQueueService.h"
@@ -277,7 +278,7 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsIFrameManager
-  NS_IMETHOD Init(nsIPresShell* aPresShell, nsIStyleSet* aStyleSet);
+  NS_IMETHOD Init(nsIPresShell* aPresShell, nsStyleSet* aStyleSet);
   NS_IMETHOD Destroy();
 
   // Gets and sets the root frame
@@ -396,10 +397,9 @@ private:
   nsIPresContext* GetPresContext() const {
     return mPresShell->GetPresContext();
   }
-  nsIStyleSet* GetStyleSet() const { return mStyleSet; }
 
   nsIPresShell*                   mPresShell;    // weak link, because the pres shell owns us
-  nsIStyleSet*                    mStyleSet;     // weak link. pres shell holds a reference
+  nsStyleSet*                     mStyleSet;     // weak link. pres shell holds a reference
   nsIFrame*                       mRootFrame;
   PLDHashTable                    mPrimaryFrameMap;
   PLDHashTable                    mPlaceholderMap;
@@ -458,7 +458,7 @@ NS_IMPL_ISUPPORTS1(FrameManager, nsIFrameManager)
 
 NS_IMETHODIMP
 FrameManager::Init(nsIPresShell* aPresShell,
-                   nsIStyleSet*  aStyleSet)
+                   nsStyleSet*  aStyleSet)
 {
   NS_ASSERTION(aPresShell, "null aPresShell");
   NS_ASSERTION(aStyleSet, "null aStyleSet");
@@ -540,7 +540,6 @@ FrameManager::GetCanvasFrame(nsIFrame** aCanvasFrame) const
 {
   NS_ENSURE_TRUE(mPresShell, NS_ERROR_NOT_AVAILABLE);
   NS_PRECONDITION(aCanvasFrame, "aCanvasFrame argument cannot be null");
-  nsIPresContext *presContext = GetPresContext();
 
   *aCanvasFrame = nsnull;
   if (mRootFrame) {
@@ -560,7 +559,7 @@ FrameManager::GetCanvasFrame(nsIFrame** aCanvasFrame) const
         }
       }
       // move on to the child's child
-      childFrame->FirstChild(presContext, nsnull, &childFrame);
+      childFrame = childFrame->GetFirstChild(nsnull);
     }
   }
   return NS_OK;
@@ -600,16 +599,13 @@ FrameManager::GetPrimaryFrameFor(nsIContent* aContent, nsIFrame** aResult)
       //             very fast in the embedded hash table.
       //             This would almost completely remove the lookup penalty for things
       //             like <SCRIPT> and comments in very large documents.
-      nsCOMPtr<nsIStyleSet>    styleSet;
       nsCOMPtr<nsIPresContext> presContext;
 
       // Give the frame construction code the opportunity to return the
       // frame that maps the content object
-      mPresShell->GetStyleSet(getter_AddRefs(styleSet));
-      NS_ASSERTION(styleSet, "bad style set");
       mPresShell->GetPresContext(getter_AddRefs(presContext));
       NS_ASSERTION(presContext, "bad presContext");
-      if (!styleSet || !presContext) {
+      if (!presContext) {
         return NS_ERROR_NULL_POINTER;
       }
 
@@ -645,8 +641,9 @@ FrameManager::GetPrimaryFrameFor(nsIContent* aContent, nsIFrame** aResult)
 
       // walk the frame tree to find the frame that maps aContent.  
       // Use the hint if we have it.
-      styleSet->FindPrimaryFrameFor(presContext, this, aContent, aResult, 
-                                    hint.mPrimaryFrameForPrevSibling ? &hint : nsnull);
+      mPresShell->FrameConstructor()->
+        FindPrimaryFrameFor(presContext, this, aContent, aResult, 
+                            hint.mPrimaryFrameForPrevSibling ? &hint : nsnull);
       
     }
   }
@@ -1144,8 +1141,10 @@ FrameManager::HandlePLEvent(CantRenderReplacedElementEvent* aEvent)
   // are generated
   nsCOMPtr<nsIPresContext> presContext;    
   frameManager->mPresShell->GetPresContext(getter_AddRefs(presContext));
-  frameManager->mStyleSet->CantRenderReplacedElement(presContext,
-                                                     aEvent->mFrame);        
+  frameManager->mPresShell->FrameConstructor()->
+    CantRenderReplacedElement(frameManager->mPresShell, presContext,
+                              aEvent->mFrame);
+
 #ifdef NOISY_EVENTS
   printf("FrameManager::HandlePLEvent() end for FM %p\n", aEvent->owner);
 #endif
@@ -1404,9 +1403,8 @@ VerifyStyleTree(nsIPresContext* aPresContext, nsIFrame* aFrame, nsStyleContext* 
   nsIFrame* child;
 
   do {
-    child = nsnull;
-    nsresult result = aFrame->FirstChild(aPresContext, childList, &child);
-    while ((NS_SUCCEEDED(result)) && child) {
+    child = aFrame->GetFirstChild(childList);
+    while (child) {
       if (NS_FRAME_OUT_OF_FLOW != (child->GetStateBits() & NS_FRAME_OUT_OF_FLOW)) {
         // only do frames that are in flow
         if (nsLayoutAtoms::placeholderFrame == child->GetType()) { 
@@ -1429,8 +1427,7 @@ VerifyStyleTree(nsIPresContext* aPresContext, nsIFrame* aFrame, nsStyleContext* 
       child = child->GetNextSibling();
     }
 
-    NS_IF_RELEASE(childList);
-    aFrame->GetAdditionalChildListName(listIndex++, &childList);
+    childList = aFrame->GetAdditionalChildListName(listIndex++);
   } while (childList);
   
   // do additional contexts 
@@ -1485,9 +1482,8 @@ FrameManager::ReParentStyleContext(nsIFrame* aFrame,
           aFrame->SetStyleContext(presContext, newContext);
 
           do {
-            child = nsnull;
-            result = aFrame->FirstChild(presContext, childList, &child);
-            while ((NS_SUCCEEDED(result)) && child) {
+            child = aFrame->GetFirstChild(childList);
+            while (child) {
               if (NS_FRAME_OUT_OF_FLOW != (child->GetStateBits() & NS_FRAME_OUT_OF_FLOW)) {
                 // only do frames that are in flow
                 if (nsLayoutAtoms::placeholderFrame == child->GetType()) {
@@ -1509,8 +1505,7 @@ FrameManager::ReParentStyleContext(nsIFrame* aFrame,
               child = child->GetNextSibling();
             }
 
-            NS_IF_RELEASE(childList);
-            aFrame->GetAdditionalChildListName(listIndex++, &childList);
+            childList = aFrame->GetAdditionalChildListName(listIndex++);
           } while (childList);
 
           // do additional contexts 
@@ -1614,7 +1609,6 @@ FrameManager::ReResolveStyleContext(nsIPresContext* aPresContext,
   // that the frame has the last reference to it, so AddRef it here.
 
   nsStyleContext* oldContext = aFrame->GetStyleContext();
-  nsresult result = NS_OK;
 
   if (oldContext) {
     oldContext->AddRef();
@@ -1893,9 +1887,8 @@ FrameManager::ReResolveStyleContext(nsIPresContext* aPresContext,
       nsChangeHint childChange;
 
       do {
-        nsIFrame* child = nsnull;
-        result = aFrame->FirstChild(aPresContext, childList, &child);
-        while (NS_SUCCEEDED(result) && child) {
+        nsIFrame* child = aFrame->GetFirstChild(childList);
+        while (child) {
           if (!(child->GetStateBits() & NS_FRAME_OUT_OF_FLOW)) {
             // only do frames that are in flow
             if (nsLayoutAtoms::placeholderFrame == child->GetType()) { // placeholder
@@ -1931,8 +1924,7 @@ FrameManager::ReResolveStyleContext(nsIPresContext* aPresContext,
           child = child->GetNextSibling();
         }
 
-        NS_IF_RELEASE(childList);
-        aFrame->GetAdditionalChildListName(listIndex++, &childList);
+        childList = aFrame->GetAdditionalChildListName(listIndex++);
       } while (childList);
       // XXX need to do overflow frames???
     }
@@ -2028,10 +2020,10 @@ FrameManager::HasAttributeDependentStyle(nsIContent *aContent,
       return NS_OK;
   }
 #endif
-
-  return mStyleSet->HasAttributeDependentStyle(GetPresContext(), aContent,
-                                               aAttribute, aModType,
-                                               aResult);
+  
+  *aResult = mStyleSet->HasAttributeDependentStyle(GetPresContext(), aContent,
+                                                   aAttribute, aModType);
+  return NS_OK;
 }
 
 // Capture state for a given frame.
@@ -2084,15 +2076,13 @@ FrameManager::CaptureFrameState(nsIFrame* aFrame,
   nsIAtom*  childListName = nsnull;
   PRInt32   childListIndex = 0;
   do {    
-    nsIFrame* childFrame;
-    aFrame->FirstChild(GetPresContext(), childListName, &childFrame);
+    nsIFrame* childFrame = aFrame->GetFirstChild(childListName);
     while (childFrame) {             
       rv = CaptureFrameState(childFrame, aState);
       // Get the next sibling child frame
       childFrame = childFrame->GetNextSibling();
     }
-    NS_IF_RELEASE(childListName);
-    aFrame->GetAdditionalChildListName(childListIndex++, &childListName);
+    childListName = aFrame->GetAdditionalChildListName(childListIndex++);
   } while (childListName);
 
   return rv;
@@ -2157,15 +2147,13 @@ FrameManager::RestoreFrameState(nsIFrame* aFrame, nsILayoutHistoryState* aState)
   nsIAtom*  childListName = nsnull;
   PRInt32   childListIndex = 0;
   do {    
-    nsIFrame* childFrame;
-    aFrame->FirstChild(GetPresContext(), childListName, &childFrame);
+    nsIFrame* childFrame = aFrame->GetFirstChild(childListName);
     while (childFrame) {
       rv = RestoreFrameState(childFrame, aState);
       // Get the next sibling child frame
       childFrame = childFrame->GetNextSibling();
     }
-    NS_IF_RELEASE(childListName);
-    aFrame->GetAdditionalChildListName(childListIndex++, &childListName);
+    childListName = aFrame->GetAdditionalChildListName(childListIndex++);
   } while (childListName);
 
   return rv;
