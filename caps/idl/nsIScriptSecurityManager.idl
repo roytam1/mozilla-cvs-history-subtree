@@ -183,6 +183,13 @@ interface nsIScriptSecurityManager : nsIXPCSecurityManager
      */
     [noscript] nsIPrincipal getObjectPrincipal(in JSContextPtr cx,
                                                in JSObjectPtr obj);
+
+    /**
+     * Returns OK if aJSContext and target have the same "origin"
+     * (scheme, host, and port).
+     */
+    [noscript] void checkSameOrigin(in JSContextPtr aJSContext,
+                                    in nsIURI aTargetURI);
 };
 
 %{C++

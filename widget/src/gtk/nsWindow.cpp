@@ -2262,7 +2262,14 @@ NS_IMETHODIMP nsWindow::SetTitle(const nsString& aTitle)
   }
 
   // fallback to use bad conversion
+#ifndef HPUX
   gtk_window_set_title(GTK_WINDOW(mShell), nsAutoCString(aTitle));
+#else
+  //nsAutoCString force conversion from unicode to platform charset might not 
+  //generate legal string in platform charset. Passing such illegal string will 
+  //hang OS. HP_UX in ja_JP.SJIS locale is one instance. (108765)
+  gtk_window_set_title(GTK_WINDOW(mShell), "");
+#endif  
   return NS_OK;
 }
 
