@@ -95,17 +95,12 @@ public:
 class txImportItem : public txToplevelItem
 {
 public:
-    ~txImportItem()
-    {
-        delete mFrame;
-    }
-
     virtual txToplevelItem::type getType()
     {
         return txToplevelItem::import;
     }
 
-    txStylesheet::ImportFrame* mFrame;
+    nsAutoPtr<txStylesheet::ImportFrame> mFrame;
 };
 
 // xsl:output

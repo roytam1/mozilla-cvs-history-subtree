@@ -47,6 +47,7 @@
 #include "txToplevelItems.h"
 #include "txPatternParser.h"
 #include "txNamespaceMap.h"
+#include "txURIUtils.h"
 
 txHandlerTable* gTxIgnoreHandler = 0;
 txHandlerTable* gTxRootHandler = 0;
@@ -60,6 +61,7 @@ txHandlerTable* gTxForEachHandler = 0;
 txHandlerTable* gTxTopVariableHandler = 0;
 txHandlerTable* gTxChooseHandler = 0;
 txHandlerTable* gTxParamHandler = 0;
+txHandlerTable* gTxImportHandler = 0;
 
 nsresult
 txFnStartLRE(PRInt32 aNamespaceID,
@@ -407,7 +409,7 @@ txFnStartStylesheet(PRInt32 aNamespaceID,
                                txXSLTAtoms::version, PR_TRUE, &attr);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    return aState.pushHandlerTable(gTxTopHandler);
+    return aState.pushHandlerTable(gTxImportHandler);
 }
 
 nsresult
@@ -415,6 +417,19 @@ txFnEndStylesheet(txStylesheetCompilerState& aState)
 {
     aState.popHandlerTable();
     return NS_OK;
+}
+
+nsresult
+txFnStartElementConinueTopLevel(PRInt32 aNamespaceID,
+                                nsIAtom* aLocalName,
+                                nsIAtom* aPrefix,
+                                txStylesheetAttr* aAttributes,
+                                PRInt32 aAttrCount,
+                                txStylesheetCompilerState& aState)
+{
+    aState.mHandlerTable = gTxTopHandler;
+
+    return NS_ERROR_XSLT_GET_NEW_HANDLER;
 }
 
 nsresult
@@ -495,6 +510,75 @@ txFnEndOtherTop(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+
+// xsl:import
+nsresult
+txFnStartImport(PRInt32 aNamespaceID,
+                nsIAtom* aLocalName,
+                nsIAtom* aPrefix,
+                txStylesheetAttr* aAttributes,
+                PRInt32 aAttrCount,
+                txStylesheetCompilerState& aState)
+{
+    txImportItem* import = new txImportItem;
+    NS_ENSURE_TRUE(import, NS_ERROR_OUT_OF_MEMORY);
+    
+    import->mFrame = new txStylesheet::ImportFrame;
+    NS_ENSURE_TRUE(import->mFrame, NS_ERROR_OUT_OF_MEMORY);
+
+    nsresult rv = aState.addToplevelItem(import);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    txStylesheetAttr* attr = nsnull;
+    rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                      txXSLTAtoms::href, PR_TRUE, &attr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsAutoString absUri;
+    URIUtils::resolveHref(attr->mValue, aState.mElementContext->mBaseURI, absUri);
+    rv = aState.loadImportedStylesheet(absUri, import->mFrame);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aState.pushHandlerTable(gTxIgnoreHandler);
+}
+
+nsresult
+txFnEndImport(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+
+    return NS_OK;
+}
+
+// xsl:include
+nsresult
+txFnStartInclude(PRInt32 aNamespaceID,
+                 nsIAtom* aLocalName,
+                 nsIAtom* aPrefix,
+                 txStylesheetAttr* aAttributes,
+                 PRInt32 aAttrCount,
+                 txStylesheetCompilerState& aState)
+{
+    txStylesheetAttr* attr = nsnull;
+    nsresult rv = getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None,
+                               txXSLTAtoms::href, PR_TRUE, &attr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsAutoString absUri;
+    URIUtils::resolveHref(attr->mValue, aState.mElementContext->mBaseURI, absUri);
+    rv = aState.loadIncludedStylesheet(absUri);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aState.pushHandlerTable(gTxIgnoreHandler);
+}
+
+nsresult
+txFnEndInclude(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+
+    return NS_OK;
+}
 
 // xsl:output
 nsresult
@@ -1973,7 +2057,8 @@ txHandlerTableData gTxRootTableData = {
 
 txHandlerTableData gTxTopTableData = {
   // Handlers
-  { { kNameSpaceID_XSLT, "key", txFnStartKey, txFnEndKey },
+  { { kNameSpaceID_XSLT, "include", txFnStartInclude, txFnEndInclude },
+    { kNameSpaceID_XSLT, "key", txFnStartKey, txFnEndKey },
     { kNameSpaceID_XSLT, "output", txFnStartOutput, txFnEndOutput },
     { kNameSpaceID_XSLT, "param", txFnStartTopVariable, txFnEndTopVariable },
     { kNameSpaceID_XSLT, "template", txFnStartTemplate, txFnEndTemplate },
@@ -2109,6 +2194,18 @@ txHandlerTableData gTxParamTableData = {
   txFnTextConinueTemplate
 };
 
+txHandlerTableData gTxImportTableData = {
+  // Handlers
+  { { kNameSpaceID_XSLT, "import", txFnStartImport, txFnEndImport },
+    { 0, 0, 0, 0 } },
+  // Other
+  { 0, 0, txFnStartElementConinueTopLevel, 0 },
+  // LRE
+  { 0, 0, txFnStartOtherTop, txFnEndOtherTop }, // XXX what should we do here?
+  // Text
+  txFnTextIgnore  // XXX what should we do here?
+};
+
 
 
 /**
@@ -2182,6 +2279,7 @@ txHandlerTable::init()
     INIT_HANDLER(TopVariable);
     INIT_HANDLER(Choose);
     INIT_HANDLER(Param);
+    INIT_HANDLER(Import);
 
     return MB_TRUE;
 }
@@ -2202,4 +2300,5 @@ txHandlerTable::shutdown()
     SHUTDOWN_HANDLER(TopVariable);
     SHUTDOWN_HANDLER(Choose);
     SHUTDOWN_HANDLER(Param);
+    SHUTDOWN_HANDLER(Import);
 }
