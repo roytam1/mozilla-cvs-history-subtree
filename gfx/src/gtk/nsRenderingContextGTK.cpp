@@ -1990,11 +1990,12 @@ nsRenderingContextGTK::my_gdk_draw_text (GdkDrawable *drawable,
 
 #ifdef USE_IMG2
 
-#include "gfxIImageContainer.h"
-#include "nsPIImageContainerGtk.h"
+#include "imgIContainer.h"
+#include "gfxIImageFrame.h"
+#include "nsIInterfaceRequestor.h"
 
-/* [noscript] void drawImage (in gfxIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
-NS_IMETHODIMP nsRenderingContextGTK::DrawImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
+/* [noscript] void drawImage (in imgIContainer aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
+NS_IMETHODIMP nsRenderingContextGTK::DrawImage(imgIContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
 {
   nsPoint pt;
   nsRect sr;
@@ -2020,8 +2021,8 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawImage(gfxIImageContainer *aImage, const
                                     pt.x + sr.x, pt.y + sr.y, sr.width, sr.height);
 }
 
-/* [noscript] void drawScaledImage (in gfxIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsRect aDestRect); */
-NS_IMETHODIMP nsRenderingContextGTK::DrawScaledImage(gfxIImageContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
+/* [noscript] void drawScaledImage (in imgIContainer aImage, [const] in nsRect aSrcRect, [const] in nsRect aDestRect); */
+NS_IMETHODIMP nsRenderingContextGTK::DrawScaledImage(imgIContainer *aImage, const nsRect * aSrcRect, const nsRect * aDestRect)
 {
   nsRect dr;
   nsRect sr;
@@ -2046,14 +2047,14 @@ NS_IMETHODIMP nsRenderingContextGTK::DrawScaledImage(gfxIImageContainer *aImage,
   return img->Draw(*this, mSurface, sr.x, sr.y, sr.width, sr.height, dr.x, dr.y, dr.width, dr.height);
 }
 
-/* [noscript] void drawTile (in gfxIImageContainer aImage, in nscoord aXOffset, in nscoord aYOffset, [const] in nsRect aTargetRect); */
-NS_IMETHODIMP nsRenderingContextGTK::DrawTile(gfxIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, const nsRect * aTargetRect)
+/* [noscript] void drawTile (in imgIContainer aImage, in nscoord aXOffset, in nscoord aYOffset, [const] in nsRect aTargetRect); */
+NS_IMETHODIMP nsRenderingContextGTK::DrawTile(imgIContainer *aImage, nscoord aXOffset, nscoord aYOffset, const nsRect * aTargetRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* [noscript] void drawScaledTile (in gfxIImageContainer aImage, in nscoord aXOffset, in nscoord aYOffset, in nscoord aTileWidth, in nscoord aTileHeight, [const] in nsRect aTargetRect); */
-NS_IMETHODIMP nsRenderingContextGTK::DrawScaledTile(gfxIImageContainer *aImage, nscoord aXOffset, nscoord aYOffset, nscoord aTileWidth, nscoord aTileHeight, const nsRect * aTargetRect)
+/* [noscript] void drawScaledTile (in imgIContainer aImage, in nscoord aXOffset, in nscoord aYOffset, in nscoord aTileWidth, in nscoord aTileHeight, [const] in nsRect aTargetRect); */
+NS_IMETHODIMP nsRenderingContextGTK::DrawScaledTile(imgIContainer *aImage, nscoord aXOffset, nscoord aYOffset, nscoord aTileWidth, nscoord aTileHeight, const nsRect * aTargetRect)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
