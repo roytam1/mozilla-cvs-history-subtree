@@ -40,6 +40,7 @@
 #include "nsIDateTimeFormat.h"
 #include "nsIMsgHeaderParser.h"
 #include "nsIDOMElement.h"
+#include "nsIAtom.h"
 
 enum eFieldType {
     kString,
@@ -67,6 +68,10 @@ public:
   NS_DECL_NSIOUTLINERVIEW
 
 protected:
+  static nsrefcnt gInstanceCount;
+  // atoms used for styling the view. we're going to have a lot of
+  // these so i'm going to make them static.
+  static nsIAtom* kUnreadMsgAtom;
 
   nsCOMPtr<nsIOutlinerBoxObject> mOutliner;
   nsCOMPtr<nsIOutlinerSelection> mOutlinerSelection;
@@ -77,7 +82,6 @@ protected:
   // toggles ascending/descending or adds the sort attribute
   // also cleans up the attributes on the previously sorted column.
   nsresult UpdateSortUI(nsIDOMElement * aNewSortColumn);
-
   nsresult GenerateURIForMsgKey(nsMsgKey aMsgKey, char ** aURI);
 
   nsresult GetSelectedIndices(nsUInt32Array *selection);

@@ -43,6 +43,9 @@
 
 static NS_DEFINE_CID(kDateTimeFormatCID,    NS_DATETIMEFORMAT_CID);
 
+nsrefcnt nsMsgDBView::gInstanceCount	= 0;
+nsIAtom * nsMsgDBView::kUnreadMsgAtom	= nsnull;
+
 NS_IMPL_ADDREF(nsMsgDBView)
 NS_IMPL_RELEASE(nsMsgDBView)
 
@@ -61,12 +64,26 @@ nsMsgDBView::nsMsgDBView()
   m_sortOrder = nsMsgViewSortOrder::none;
   m_viewFlags = nsMsgViewFlagsType::kNone;
   m_cachedMsgKey = nsMsgKey_None;
+
+  // initialize any static atoms or unicode strings
+  if (gInstanceCount == 0) 
+  {
+    kUnreadMsgAtom = NS_NewAtom("unread");
+  }
+  
+  gInstanceCount++;
 }
 
 nsMsgDBView::~nsMsgDBView()
 {
   if (m_db)
 	  m_db->RemoveListener(this);
+
+  gInstanceCount--;
+  if (gInstanceCount <= 0) 
+  {
+    NS_IF_RELEASE(kUnreadMsgAtom);
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -168,11 +185,14 @@ nsresult nsMsgDBView::CycleThreadedColumn(nsIDOMElement * aElement)
   if (currentView.Equals(NS_LITERAL_STRING("threaded")))
   {
     aElement->SetAttribute(NS_LITERAL_STRING("currentView"), NS_LITERAL_STRING("unthreaded"));
+    // we must be a threaded view...create a new unthreaded view.
 
   }
   else
   {
      aElement->SetAttribute(NS_LITERAL_STRING("currentView"), NS_LITERAL_STRING("threaded"));
+     // we must be unthreaded view. create a threaded view and replace ourself.
+
   }
 
   // i think we need to create a new view and switch it in this circumstance since
@@ -273,6 +293,13 @@ NS_IMETHODIMP nsMsgDBView::GetColumnProperties(const PRUnichar *colID, nsIDOMEle
 
 NS_IMETHODIMP nsMsgDBView::GetCellProperties(PRInt32 row, const PRUnichar *colID, nsISupportsArray *properties)
 {
+  // this is where we tell the outliner to apply styles to a particular row
+  // i.e. if the row is an unread message...
+
+  char    flags = m_flags.GetAt(row);
+  if (!(flags & MSG_FLAG_READ))
+    properties->AppendElement(kUnreadMsgAtom);  
+
   return NS_OK;
 }
 
