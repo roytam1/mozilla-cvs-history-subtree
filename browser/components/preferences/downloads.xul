@@ -69,11 +69,12 @@
       <caption label="&askOnSave.label;"/>
       
       <radiogroup id="askOnSave" flex="1"
-                  preference="browser.download.useDownloadDir">
+                  preference="browser.download.useDownloadDir"
+                  onpreferenceread="return gDownloadsPane.onReadUseDownloadDir();">
         <radio id="alwaysAsk" label="&alwaysAsk.label;" value="false"/>
         <vbox flex="1">
           <radio id="neverAsk" label="&neverAsk.label;" value="true"/>
-          <hbox class="indent">
+          <hbox class="indent" align="center">
             <filefield id="downloadFolder" flex="1"
                        preference="browser.download.folderList"
                        preference-editable="true"
