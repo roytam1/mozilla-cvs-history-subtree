@@ -23,16 +23,17 @@ MODULE		= mime
 
 include $(DEPTH)/config/autoconf.mk
 
-XPIDLSRCS = \
+XPIDLSRCS =  \
+		nsIStreamConverter.idl		\
+		nsIMimeStreamConverter.idl	\
+		nsIMimeEmitter.idl		\
 		nsIMimeURLUtils.idl \
 		nsIMsgHeaderParser.idl \
 		$(NULL)
 
 EXPORTS = \
-		nsIStreamConverter.h		\
 		nsIMimeConverter.h    	\
 		nsIMimeObjectClassAccess.h	\
-		nsIMimeEmitter.h		\
 		nsMailHeaders.h			\
 		nsIMimeContentTypeHandler.h \
 		$(NULL)
