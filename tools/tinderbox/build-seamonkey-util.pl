@@ -349,6 +349,7 @@ sub SetupPath {
         $Settings::ConfigureEnvArgs = 'CC=cc CXX=c++';
         $Settings::Compiler = 'cc';
         $Settings::mail = '/usr/bin/mail';
+        $Settings::Make = '/usr/bin/make';
     }
 
     if ($Settings::OS eq 'FreeBSD') {
