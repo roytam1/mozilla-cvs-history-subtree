@@ -22,8 +22,8 @@
 
 /*
  * Modify the RDN (relative distinguished name) of an entry.  In this
- * example, we change the dn "cn=Jacques Smith, o=Airius.com"
- * to "cn=Jacques M Smith, o=Airius.com".
+ * example, we change the dn "cn=Jacques Smith,ou=People,dc=example,dc=com
+ * to "cn=Jacques M Smith,ou=People,dc=example,dc=com.
  *
  * Since it is an error to either (1) attempt to modrdn an entry which
  * does not exist, or (2) modrdn an entry where the destination name

@@ -43,6 +43,7 @@ endif
 SSLOBJDEST	= $(OBJDIR_NAME)
 OBJS		= $(addprefix $(SSLOBJDEST)/, $(REALOBJS))
 
+DISTHDIR	= $(NSCP_DISTDIR)/public/ldap
 HDIR		= $(LDAP_SRC)/include
 
 ifeq ($(OS_ARCH), WINNT)
@@ -56,7 +57,7 @@ endif
 INSTALLDIR      = $(DEPTH)/dist/$(OBJDIR_NAME)
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
-INCLUDES	+= -I$(HDIR) -I$(INSTALLDIR)/include \
+INCLUDES	+= -I$(DISTHDIR) -I$(HDIR) -I$(INSTALLDIR)/include \
 		   -I../../../../../dist/include \
 		   -I../../../../../dist/public/security \
 		   -I../../../../../dist/public/nss

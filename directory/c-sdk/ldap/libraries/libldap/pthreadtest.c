@@ -34,7 +34,7 @@
 /* Authentication and search information. */
 #define NAME		"cn=Directory Manager"
 #define PASSWORD	"rtfm11111"
-#define BASE		"o=Airius.com"
+#define BASE		"dc=example,dc=com"
 #define SCOPE		LDAP_SCOPE_SUBTREE
 
 static void *modify_thread();

@@ -26,8 +26,8 @@ NSS_TREE	= ../security
 MOD_DEPTH	= ../nsprpub
 CORECONFDIR	= ../coreconf
 ALTCORECONFDIR	= ../../coreconf
-NSPR_VERSION	= 4.1.1
-NSS_VERSION	= 3.2.1
+NSPR_VERSION	= 4.1.2
+NSS_VERSION	= 3.3.1
 DEPTH		= ..
 CONFIGDIR	= c-sdk/config
 MOD_DEPTH	= c-sdk
@@ -49,8 +49,10 @@ all:	FORCE
 	@echo "   USE_64=1		for building 64 bit versions"
 	@echo "   BUILD_CLU=1		build command line utilities"
 	@echo "   COMPS_FROM_OBJDIR=1	use components from ../dist/$(OBJDIR_NAME)"
+	@echo "   VENDOR_NAME=string	SDK vendor name (default $(DEFAULT_VENDOR_NAME))"
+	@echo "   VENDOR_VERSION=#	vendor specific version number * 100 (default $(DEFAULT_VENDOR_VERSION))"
 	@echo 
-	@echo iPlanet internal options
+	@echo Internal options
 	@echo
 	@echo "   gmake buildAndPkgLdapSDK"
 	@echo "   gmake PullSDKComponents"
@@ -59,14 +61,18 @@ all:	FORCE
 	@echo "   HAVE_LIBNLS=1	for building/linking with LIBNLS"
 	@echo "   HAVE_CCONF=1		for building with components"
 	@echo "   HAVE_SVRCORE=1	for building with svrcore"
-	@echo "   DONT_REPULL=1		for not repulling components"
+	@echo "   DONT_REPULL=1	for not repulling components"
+	@echo "   PKG_PRIVATE_HDRS=0	do not ship private headers"
+	@echo "   PKG_PRIVATE_LIBS=0	do not ship private libraries"
+	@echo "   PKG_DEP_LIBS=0	do not ship dependent libraries"
+
 	@echo
-	@echo "   For iPlanet builds, coreconf must be installed"
+	@echo "   For internal builds, coreconf must be installed"
 	@echo "   in $(CORECONFDIR)"
 
 buildLdapClientSDK export: PullSDKComponents
 	@echo
-	@echo ==== Starting iPlanet LDAP Client SDK ==========
+	@echo ==== Starting LDAP Client SDK ==========
 	@echo
 ifneq ($(HAVE_CCONF), 1)
 	@if [ -d $(NSPR_TREE)/ ]; then \
@@ -89,7 +95,7 @@ else
 			cp -r $(ALTCORECONFDIR) $(CORECONFDIR); \
 		else \
 			echo "No coreconf directory found"; \
-			exit 0; \
+			exit 1; \
 		fi \
 	fi
 	@if [ -d $(CORECONFDIR)/ ]; then \
@@ -116,7 +122,7 @@ endif
 
 pkgLdapSDK: FORCE
 	@echo
-	@echo ==== Starting iPlanet LDAP Client SDK packaging ===
+	@echo ==== Starting LDAP Client SDK packaging ===
 	@echo
 	@if [ -d $(DIST_TREE)/ ]; then \
 		cd $(LDAP_DEPTH)/c-sdk/; \
@@ -143,7 +149,7 @@ ifeq ($(HAVE_CCONF), 1)
 			cp -r $(ALTCORECONFDIR) $(CORECONFDIR); \
 		else \
 			echo "No coreconf directory found"; \
-			exit 0; \
+			exit 1; \
 		fi \
 	fi
 	@if [ -d $(CORECONFDIR)/ ]; then \

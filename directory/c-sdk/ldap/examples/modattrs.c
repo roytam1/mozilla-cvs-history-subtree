@@ -22,7 +22,7 @@
 
 /*
  * Modify an entry:
- *  - replace any existing "mail" attribute values with "babs@airius.com"
+ *  - replace any existing "mail" attribute values with "babs@example.com"
  *  - add a new value to the "description" attribute
  */
 
@@ -49,7 +49,7 @@ main( int argc, char **argv )
     /* construct the list of modifications to make */
     mod0.mod_op = LDAP_MOD_REPLACE;
     mod0.mod_type = "mail";
-    vals0[0] = "babs@airius.com";
+    vals0[0] = "babs@example.com";
     vals0[1] = NULL;
     mod0.mod_values = vals0;
 

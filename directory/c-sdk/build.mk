@@ -20,10 +20,22 @@
 # Contributor(s): 
 #
 
+DEFAULT_VENDOR_NAME=mozilla.org
+DEFAULT_VENDOR_VERSION=500
+
+ifndef VENDOR_NAME
+VENDOR_NAME	= $(DEFAULT_VENDOR_NAME)
+endif
+
+ifndef VENDOR_VERSION
+VENDOR_VERSION = $(DEFAULT_VENDOR_VERSION)
+endif
+
+
 ifdef HAVE_CCONF
-# component tags for iPlanet build only
+# component tags for internal build only
 NSPR_RELEASE_TAG=v4.1.2
-NSS_RELEASE_TAG	=NSS_3_3_RTM
+NSS_RELEASE_TAG	=NSS_3_3_1_RTM
 SVRCORE_RELEASE_TAG=SVRCORE_3_3_RTM
 # NSPR, NSS, and SVRCORE already had existing Solaris 5.8 symbolic
 # link to a Solaris 5.6 version.  Hence, the new respun components
@@ -38,7 +50,7 @@ OS_VERS         := $(shell uname -r)
 ifeq ($(OS_VERS),5.8)
 ifneq ($(OS_TEST),i86pc)
 NSPR_RELEASE_TAG=v4.1.2/forte6
-NSS_RELEASE_TAG	=NSS_3_3_RTM/forte6.2
+NSS_RELEASE_TAG	=NSS_3_3_1_RTM/forte6
 SVRCORE_RELEASE_TAG=SVRCORE_3_3_RTM/forte6
 endif
 endif

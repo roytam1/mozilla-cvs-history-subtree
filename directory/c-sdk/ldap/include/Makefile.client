@@ -33,7 +33,6 @@ HEADERS		= \
 		  disptmpl.h \
 		  lber.h \
 		  ldap.h \
-		  ldap-standard.h \
 		  ldap-extension.h \
 		  ldap-platform.h \
 		  ldap-to-be-deprecated.h \
@@ -52,6 +51,8 @@ PRIVATEHEADERS	= \
 		  ldaplog.h \
 		  $(NULL)
 
+GENERATED_HEADERS = ldap-standard.h
+
 include $(NSPR_TREE)/config/rules.mk
 include ../../build.mk
 
@@ -59,6 +60,7 @@ ETCDIR		= $(DIST)/etc
 INCLUDEDIR	= $(XPDIST)/public/ldap
 PRIVATEINCDIR	= $(XPDIST)/public/ldap-private
 DELHEADERS	= $(addprefix $(INCLUDEDIR)/, $(HEADERS))
+GENHEADERS	= $(addprefix $(INCLUDEDIR)/, $(GENERATED_HEADERS))
 
 ifeq ($(OS_ARCH), WINNT)
 # Is this correct?
@@ -69,16 +71,26 @@ endif
 
 DIRVER_PROG	= $(DIRVER_PATH)/dirver$(BIN_SUFFIX)
 
+
 ###########################################################################
 
-all export::	FORCE
-	$(NSINSTALL) -D $(INCLUDEDIR)
+all export::	$(INCLUDEDIR) $(GENHEADERS)
 	$(NSINSTALL) -D $(PRIVATEINCDIR)
 	$(INSTALL) $(INSTALLFLAGS) -m 644 $(HEADERS) $(INCLUDEDIR)
 	$(INSTALL) $(INSTALLFLAGS) -m 644 $(PRIVATEHEADERS) $(PRIVATEINCDIR)
 
+$(INCLUDEDIR):	FORCE
+	$(NSINSTALL) -D $(INCLUDEDIR)
+
+$(INCLUDEDIR)/ldap-standard.h:	ldap-standard-tmpl.h
+	perl ../build/replace.pl \
+			LDAP_VENDOR_NAME="$(VENDOR_NAME)" \
+			LDAP_VENDOR_VERSION="$(VENDOR_VERSION)" \
+			< $< > $@
+
 install::	export
 
-clean::
+clean::		FORCE
+	-$(RM) $(GENHEADERS)
 
 FORCE:

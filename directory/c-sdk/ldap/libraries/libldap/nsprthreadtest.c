@@ -25,7 +25,7 @@
 
 #define NAME		"cn=Directory Manager"
 #define PASSWORD	"secret99"
-#define BASE		"o=Airius.com"
+#define BASE		"dc=example,dc=com"
 
 static int simplebind( LDAP *ld, char *msg, int tries );
 static void search_thread( void * );

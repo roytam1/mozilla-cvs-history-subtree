@@ -63,7 +63,7 @@ main( int argc, char **argv )
 	}
 
 	/* search for all entries with surname of Jensen */
-	if ( ldap_search_s( ld, "o=Airius.com", LDAP_SCOPE_SUBTREE,
+	if ( ldap_search_s( ld, PEOPLE_BASE, LDAP_SCOPE_SUBTREE,
 		"(sn=jensen)", NULL, 0, &result ) != LDAP_SUCCESS ) {
 		ldap_perror( ld, "ldap_search_s" );
 		if ( result == NULL ) {

@@ -36,32 +36,46 @@ ETCDIR  = ../../dist/$(OBJDIR_NAME)/etc
 EXPDIR  = ldap/examples
 DOCDIR  = ldap/docs
 
+# defaults
+PKG_PRIVATE_HDRS=1
+PKG_PRIVATE_LIBS=1
+PKG_DEP_LIBS=1
 
 all::   FORCE
 	$(NSINSTALL) -D $(INSTDIR)
 
 	@echo "Installing libraries"
 	$(NSINSTALL) -D $(INSTDIR)/lib
+# Windows
 ifeq ($(OS_ARCH), WINNT)
 	$(NSINSTALL) $(LIBDIR)/$(LDAP_LIBNAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/$(SSLDAP_LIBNAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/$(PRLDAP_LIBNAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/$(LBER_LIBNAME).lib $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/$(LDIF_LIBNAME).lib $(INSTDIR)/lib
+ifeq ($(PKG_PRIVATE_LIBS),1)
 	$(NSINSTALL) $(LIBDIR)/$(IUTIL_LIBNAME).lib $(INSTDIR)/lib
+endif
 	$(NSINSTALL) $(LIBDIR)/$(UTIL_LIBNAME).lib $(INSTDIR)/lib
+ifeq ($(PKG_DEP_LIBS),1)
 	$(NSINSTALL) $(LIBDIR)/$(NSS_LIBNAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/$(SSL_LIBNAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/$(PLC_BASENAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/$(PLDS_BASENAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/$(NSPR_BASENAME).* $(INSTDIR)/lib
+endif
+# UNIX
 else
-	$(NSINSTALL) $(LIBDIR)/lib$(LDAP_LIBNAME).* $(INSTDIR)/lib
+	$(NSINSTALL) $(LIBDIR)/lib$(LDAP_LIBNAME).$(DLL_SUFFIX) $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/lib$(SSLDAP_LIBNAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/lib$(PRLDAP_LIBNAME).* $(INSTDIR)/lib
+	$(NSINSTALL) $(LIBDIR)/lib$(LDAP_LIBNAME).$(LIB_SUFFIX) $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/lib$(LBER_LIBNAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/lib$(LDIF_LIBNAME).* $(INSTDIR)/lib
+ifeq ($(PKG_PRIVATE_LIBS),1)
 	$(NSINSTALL) $(LIBDIR)/lib$(IUTIL_LIBNAME).* $(INSTDIR)/lib
+endif
+ifeq ($(PKG_DEP_LIBS),1)
 	$(NSINSTALL) $(LIBDIR)/lib$(NSS_LIBNAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/lib$(SSL_LIBNAME).* $(INSTDIR)/lib
 	$(NSINSTALL) $(LIBDIR)/$(PLC_BASENAME).* $(INSTDIR)/lib
@@ -80,6 +94,7 @@ ifeq ($(OS_ARCH), HP-UX)
 endif
 endif
 endif
+endif
 	@echo "Installing tools"
 	$(NSINSTALL) -D $(INSTDIR)/tools
 	$(NSINSTALL) $(BINDIR)/ldapsearch$(EXE_SUFFIX) $(INSTDIR)/tools
@@ -91,7 +106,9 @@ endif
 	@echo "Installing includes"
 	$(NSINSTALL) -D $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/disptmpl.h $(INSTDIR)/include
+ifeq ($(PKG_PRIVATE_LIBS),1)
 	$(NSINSTALL) $(INCDIR)/iutil.h $(INSTDIR)/include
+endif
 	$(NSINSTALL) $(INCDIR)/lber.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/ldap.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/ldap-standard.h $(INSTDIR)/include
@@ -102,6 +119,7 @@ endif
 	$(NSINSTALL) $(INCDIR)/ldap_ssl.h $(INSTDIR)/include
 	$(NSINSTALL) $(INCDIR)/srchpref.h $(INSTDIR)/include
 
+ifeq ($(PKG_PRIVATE_HDRS),1)
 	@echo "Installing private include files"
 	$(NSINSTALL) -D $(INSTDIR)/include-private
 	$(NSINSTALL) -D $(INSTDIR)/include-private/liblber
@@ -110,6 +128,7 @@ endif
 	$(NSINSTALL) $(PRIVATEINCDIR)/portable.h $(INSTDIR)/include-private
 	$(NSINSTALL) $(PRIVATEINCDIR)/ldaprot.h $(INSTDIR)/include-private
 	$(NSINSTALL) $(PRIVATEINCDIR)/ldaplog.h $(INSTDIR)/include-private
+endif
 
 	@echo "Installing etc files"
 	$(NSINSTALL) -D $(INSTDIR)/etc

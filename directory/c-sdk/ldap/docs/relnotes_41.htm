@@ -439,7 +439,7 @@ LDAP *ld;
 LDAPURLDesc *ludpp;
 int res;
 
-char *url = &quot;ldap://phonebook.airius.com:2389 directory.airius.com:389/o=airius.com&quot;;
+char *url = &quot;ldap://phonebook.example.com:2389 directory.example.com:389/o=example.com&quot;;
 
 res = ldap_url_parse(url, &amp;ludpp);
 ld = ldap_init(ludpp-&gt;host, ludpp-&gt;port);
@@ -450,7 +450,7 @@ ld = ldap_init(ludpp-&gt;host, ludpp-&gt;port);
 <P>Note that <TT>ludpp-&gt;port</TT> is set to the port identified on the last host in the URL string. If <TT>ludpp-&gt;port</TT> is used as shown here, then the last port identified on the URL string becomes the default port for any hosts for which a port is not explicitly set. Using the example above, suppose the URL string contained the following:</P>
 
 <PRE>
-ldap://phonebook.airius.com phonebook2.airius.com phonebook3.airius.com:2389/o=airius.com
+ldap://phonebook.example.com phonebook2.example.com phonebook3.example.com:2389/o=example.com
 </PRE>
 
 <P>Here, <TT>ldap_init()</TT> would use port 2389 for all the hosts that it tries. If the last host in the string does not identify a port, then <TT>ludpp-&gt;port</TT> is set to zero (0). Setting the port to 0 tells <TT>ldap_init()</TT> to use the default port, which is 389 for <TT>ldap://</TT> urls and 636 for <TT>ldaps://</TT> urls.</P>

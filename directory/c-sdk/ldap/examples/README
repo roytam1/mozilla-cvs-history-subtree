@@ -5,7 +5,7 @@ This directory contains some sample LDAP code to help you understand
 how to use the Directory SDK.  These examples are designed to work against
 the sample data contained in the Netscape Directory Server 4.x
 distribution.  If you want to run these samples, you will need to have
-a working LDAP server running, and the sample "airius.com" data
+a working LDAP server running, and the sample "example.com" data
 loaded.
 
 -------------------
@@ -45,7 +45,8 @@ ldap_search_ext_s() function.
 rdentry.c
 ---------
 Shows how to use ldap_search_s() to retrieve a particular entry from the
-directory.  In this example, the entry "uid=bjensen, ou=People, o=airius.com"
+directory.  In this example, the entry:
+	uid=bjensen,ou=People,dc=example,dc=com
 is retrieved and displayed.
 
 getattrs.c

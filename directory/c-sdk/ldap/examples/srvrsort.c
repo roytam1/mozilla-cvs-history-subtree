@@ -83,7 +83,7 @@ main( int argc, char **argv )
 
 	/* Search for all entries in Sunnyvale */
 
-	rc = ldap_search_ext_s( ld, "o=Airius.com", LDAP_SCOPE_SUBTREE,
+	rc = ldap_search_ext_s( ld, PEOPLE_BASE, LDAP_SCOPE_SUBTREE,
 	    "(objectclass=person)", NULL, 0, requestctrls, NULL, NULL, 0,
 	    &result );
 

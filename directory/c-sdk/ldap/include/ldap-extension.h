@@ -98,10 +98,10 @@ extern "C" {
 #define LDAP_CONTROL_PWEXPIRED          "2.16.840.1.113730.3.4.4"
 #define LDAP_CONTROL_PWEXPIRING         "2.16.840.1.113730.3.4.5"
 
-/* Suppress virtual/inherited attribute values (iPlanet DS 5.0 and later) */
+/* Suppress virtual/inherited attribute values */
 #define LDAP_CONTROL_REAL_ATTRS_ONLY	"2.16.840.1.113730.3.4.17"
 
-/* Only return virtual/inherited attribute values (iPlanet DS 5.1 and later) */
+/* Only return virtual/inherited attribute values */
 #define LDAP_CONTROL_VIRTUAL_ATTRS_ONLY	"2.16.840.1.113730.3.4.19"
 
 
@@ -177,8 +177,6 @@ LDAP_API(int) LDAP_CALL ldap_parse_entrychange_control( LDAP *ld,
  * extension -- LDAP_API_FEATURE_PROXY_AUTHORIZATION)
  * ldap_create_proxyauth_control() is for the old (version 1) control.
  * ldap_create_proxiedauth_control() is for the newer (version 2) control.
- * Version 1 is supported by iPlanet Directory Server 4.1 and later.
- * Version 2 is supported by iPlanet Directory Server 5.0 and later.
  */
 LDAP_API(int) LDAP_CALL ldap_create_proxyauth_control( LDAP *ld,
         const char *dn, const char ctl_iscritical, LDAPControl **ctrlp );

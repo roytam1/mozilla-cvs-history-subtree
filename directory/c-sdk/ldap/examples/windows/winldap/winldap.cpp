@@ -96,7 +96,8 @@ BOOL LdapApp::InitInstance()
 
 	m_dirHost = GetProfileString( "Connection", "host", "localhost" );
 	m_dirPort = GetProfileInt( "Connection", "port", 389 );
-	m_searchBase = GetProfileString( "Search", "base", "o=airius.com" );
+	m_searchBase = GetProfileString( "Search", "base", "dc=example,dc=com" );
+
 	m_scope = GetProfileInt( "Search", "scope", LDAP_SCOPE_SUBTREE );
 	m_searchFilter = GetProfileString( "Search", "filter", "objectclass=*" );
 

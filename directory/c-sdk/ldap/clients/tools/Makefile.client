@@ -37,6 +37,7 @@ INCLUDES	+= -I../../../../..$(HEADERDIR)/include \
 		-I../../../../../dist/include \
 		-I../../../../../dist/public/security \
 		-I../../../../../dist/public/nss \
+		-I$(NSCP_DISTDIR)/public/ldap \
 		-I../../../ldap/include \
 
 ifeq ($(HAVE_CCONF), 1)

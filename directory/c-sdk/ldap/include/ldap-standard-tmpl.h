@@ -1,3 +1,4 @@
+/* This file is a template.  The generated file is ldap-standard.h>
 /*
  * The contents of this file are subject to the Netscape Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -42,8 +43,8 @@ extern "C" {
 #define LDAP_VERSION_MIN	LDAP_VERSION1
 #define LDAP_VERSION_MAX	LDAP_VERSION3
 
-#define LDAP_VENDOR_VERSION	500	/* version # * 100 */
-#define LDAP_VENDOR_NAME	"Iplanet A Sun|Netscape Alliance"
+#define LDAP_VENDOR_VERSION	{{LDAP_VENDOR_VERSION}}	/* version # * 100 */
+#define LDAP_VENDOR_NAME	"{{LDAP_VENDOR_NAME}}"
 /*
  * The following will be an RFC number once the LDAP C API Internet Draft
  * is published as a Proposed Standard RFC.  For now we use 2000 + the

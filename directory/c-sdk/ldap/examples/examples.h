@@ -61,7 +61,7 @@
 /*
  * Subtree to search
  */
-#define	MY_SEARCHBASE	"o=Airius.com"
+#define	MY_SEARCHBASE	"dc=example,dc=com"
 
 /*
  * Place where people entries are stored
