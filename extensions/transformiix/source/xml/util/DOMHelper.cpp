@@ -167,7 +167,12 @@ void DOMHelper::continueIndexing(Node* node) {
     MITREObjectWrapper* wrapper = 0;
 
     //-- get indexing information
-    Document* doc = node->getOwnerDocument();
+    Document* doc = 0;
+    if (node->getNodeType() == Node::DOCUMENT_NODE)
+        doc = (Document*)node;
+    else
+        doc = node->getOwnerDocument();
+
     ListIterator* iter = indexes.iterator();
     IndexState* idxState = 0;
     while (iter->hasNext()) {

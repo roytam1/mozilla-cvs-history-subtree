@@ -32,6 +32,7 @@
 #endif
 #ifndef MOZ_XSL
 #include "xmlparse.h"
+#include "URIUtils.h"
 #endif
 #include "dom.h"
 

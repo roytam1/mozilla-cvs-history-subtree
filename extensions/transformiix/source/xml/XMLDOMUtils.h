@@ -24,15 +24,17 @@
  * $Id$
  */
 
-/**
- * A utility class for use with XML DOM implementations
-**/
+
 #include "dom.h"
-#include "Expr.h"
+#include "NamespaceResolver.h"
 
 #ifndef TRANSFRMX_XMLDOMUTILS_H
 #define TRANSFRMX_XMLDOMUTILS_H
 
+
+/**
+ * A utility class for use with XML DOM implementations
+**/
 class XMLDOMUtils {
 
 public:
