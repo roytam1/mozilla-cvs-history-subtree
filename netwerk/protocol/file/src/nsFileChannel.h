@@ -24,7 +24,6 @@
 #define nsFileChannel_h__
 
 #include "nsIChannel.h"
-#include "nsIFileProtocolHandler.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsILoadGroup.h"
 #include "nsIStreamListener.h"
