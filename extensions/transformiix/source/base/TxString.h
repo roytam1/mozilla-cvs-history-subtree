@@ -82,11 +82,11 @@ public:
     void ensureCapacity(const PRUint32 aCapacity);
 
     // Returns index of first occurrence of aData
-    PRUint32 indexOf(const UNICODE_CHAR aData, const PRUint32 aOffset = 0) const;
-    PRUint32 indexOf(const String& data, const PRUint32 aOffset = 0) const;
+    PRInt32 indexOf(const UNICODE_CHAR aData, const PRUint32 aOffset = 0) const;
+    PRInt32 indexOf(const String& data, const PRUint32 aOffset = 0) const;
 
     // Returns index of last occurrence of aData
-    PRUint32 lastIndexOf(const UNICODE_CHAR aData, const PRUint32 aOffset = 0) const;
+    PRInt32 lastIndexOf(const UNICODE_CHAR aData, const PRUint32 aOffset = 0) const;
 
     // Check equality between strings
     MBool isEqual(const String& aData) const;
@@ -151,8 +151,8 @@ public:
     /* explicit */ String(const char* aSource); // XXX Used for literal strings
     String& operator = (const char* aSource); // XXX Used for literal strings
     void append(const char* aSource);
-    PRUint32 indexOf(char aData, const PRUint32 aOffset = 0) const;
-    PRUint32 lastIndexOf(const char aData, const PRUint32 aOffset = 0) const;
+    PRInt32 indexOf(char aData, const PRUint32 aOffset = 0) const;
+    PRInt32 lastIndexOf(const char aData, const PRUint32 aOffset = 0) const;
     MBool isEqual(const char* aData) const;
 private:
 #ifdef TX_EXE

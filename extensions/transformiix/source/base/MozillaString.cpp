@@ -91,17 +91,17 @@ void String::ensureCapacity(const PRUint32 aCapacity)
   mString.SetCapacity(aCapacity);
 }
 
-PRUint32 String::indexOf(const UNICODE_CHAR aData, const PRUint32 aOffset) const
+PRInt32 String::indexOf(const UNICODE_CHAR aData, const PRUint32 aOffset) const
 {
   return mString.FindChar(aData, aOffset);
 }
 
-PRUint32 String::indexOf(const String& aData, const PRUint32 aOffset) const
+PRInt32 String::indexOf(const String& aData, const PRUint32 aOffset) const
 {
   return mString.Find(aData.mString, 0);
 }
 
-PRUint32 String::lastIndexOf(const UNICODE_CHAR aData, const PRUint32 aOffset) const
+PRInt32 String::lastIndexOf(const UNICODE_CHAR aData, const PRUint32 aOffset) const
 {
   return mString.RFindChar(aData, aOffset);
 }
@@ -216,12 +216,12 @@ void String::append(const char* aSource)
   mString.AppendWithConversion(aSource);
 }
 
-PRUint32 String::indexOf(const char aData, const PRUint32 aOffset) const
+PRInt32 String::indexOf(const char aData, const PRUint32 aOffset) const
 {
   return mString.FindChar((const PRUnichar)aData, aOffset);
 }
 
-PRUint32 String::lastIndexOf(const char aData, const PRUint32 aOffset) const
+PRInt32 String::lastIndexOf(const char aData, const PRUint32 aOffset) const
 {
   return mString.RFindChar((const PRUnichar)aData, aOffset);
 }

@@ -107,7 +107,7 @@ void String::replace(const PRUint32 aOffset, const String& aSource)
     PRUint32 finalLength = aOffset + aSource.mLength;
 
     if (finalLength > mLength) {
-      ensureCapacity(finalLength - mLength);
+      ensureCapacity(finalLength - mBufferLength);
       mLength = finalLength;
     }
     memcpy(&mBuffer[aOffset], aSource.mBuffer,
@@ -134,7 +134,7 @@ void String::deleteChars(const PRUint32 aOffset, const PRUint32 aCount)
 
 UNICODE_CHAR String::charAt(const PRUint32 aIndex) const
 {
-  if ((aIndex < mLength) && (aIndex >= 0)) {
+  if (aIndex < mLength) {
     return mBuffer[aIndex];
   }
   return (UNICODE_CHAR)-1;
@@ -165,7 +165,7 @@ PRUint32 String::indexOf(UNICODE_CHAR aData, const PRUint32 aOffset) const
   PRUint32 searchIndex = aOffset;
 
   while (searchIndex < mLength) {
-    if (mBuffer[searchIndex] == data)
+    if (mBuffer[searchIndex] == aData)
       return searchIndex;
     ++searchIndex;
   }
@@ -212,7 +212,7 @@ MBool String::isEqualIgnoreCase(const String& aData) const
 
   const UNICODE_CHAR* otherBuffer = aData.mBuffer;
   UNICODE_CHAR thisChar, otherChar;
-  PRIint32 compLoop = 0;
+  PRUint32 compLoop = 0;
   while (compLoop < mLength) {
     thisChar = mBuffer[compLoop];
     if ((thisChar >= 'A') && (thisChar <= 'Z'))
@@ -249,14 +249,15 @@ String& String::subString(const PRUint32 aStart, String& aDest) const
 
 String& String::subString(const PRUint32 aStart, const PRUint32 aEnd, String& aDest) const
 {
-  PRUint32 start = aStart;
   PRUint32 end = (aEnd > mLength) ? mLength : aEnd;
 
   aDest.clear();
-  if (start < end) {
-    aDest.ensureCapacity(end - start);
-    memcpy(aDest.mBuffer, &mBuffer[aStart], start - end);
-    aDest.mLength = start - end;
+  if (aStart < end) {
+    PRUint32 substrLength = end - aStart;
+
+    aDest.ensureCapacity(substrLength);
+    memcpy(aDest.mBuffer, &mBuffer[aStart], substrLength);
+    aDest.mLength = substrLength;
   }
 
   return aDest;
