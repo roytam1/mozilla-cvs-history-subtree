@@ -24,11 +24,13 @@ LDAP_DEPTH	= .
 NSPR_TREE	= ../nsprpub
 NSS_TREE	= ../security
 MOD_DEPTH	= ../nsprpub
-CORECONFDIR	= c-sdk/coreconf
+CORECONFDIR	= ../coreconf
 NSPR_VERSION	= 4.1
 NSS_VERSION	= 3.2
 DEPTH		= ..
 CONFIGDIR	= c-sdk/config
+
+include		c-sdk/build.mk
 
 all:	FORCE
 	@echo
@@ -44,16 +46,18 @@ all:	FORCE
 	@echo "   BUILD_OPT=1		for optimized build"
 	@echo "   USE_PTHREADS=1	for using pthreads"
 	@echo "   NS_USE_GCC=1		for using gcc"
-	@echo "   BUILD_CLU=1		build command line utilities"
 	@echo 
 	@echo iPlanet internal options
 	@echo
+	@echo "   gmake PullSDKComponents"
+	@echo
+	@echo "   BUILD_CLU=1		build command line utilities"
 	@echo "   HAVE_LIBNLS=1	for building/linking with LIBNLS"
 	@echo "   HAVE_CCONF=1		for building with components"
 	@echo "   HAVE_SVRCORE=1	for building with svrcore"
 	@echo
 
-buildLdapClientSDK export: pullcomponents
+buildLdapClientSDK export: PullSDKComponents
 	@echo
 	@echo ==== Starting iPlanet LDAP Client SDK ==========
 	@echo
@@ -92,7 +96,7 @@ pkgLdapSDK: FORCE
 
 buildAndPkgLdapSDK: buildLdapClientSDK pkgLdapSDK
 
-pullcomponents: FORCE
+PullSDKComponents: FORCE
 ifeq ($(HAVE_CCONF), 1)
 	@if [  -d $(CORECONFDIR)/ ]; then \
 		echo "coreconf directory found"; \
