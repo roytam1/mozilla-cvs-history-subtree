@@ -209,3 +209,9 @@ treeitem[empty="true"] > treerow > .tree-cell-folderpane-icon > .tree-cell-twist
   {
     list-style-image: none;
   }
+
+#folderNameCol {
+  min-height: 0px;
+  height: 0px;
+  max-height: 0px;
+}
