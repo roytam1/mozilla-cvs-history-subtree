@@ -34,6 +34,7 @@ XPIDLSRCS = \
 
 
 EXPORTS=nsIScriptContext.h		\
+	nsIDOMNativeObjectRegistry.h \
 	nsIJSScriptObject.h		\
 	nsIJSNativeInitializer.h	\
 	nsIScriptObjectOwner.h		\
