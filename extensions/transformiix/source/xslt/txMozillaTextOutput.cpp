@@ -51,17 +51,35 @@ static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
 
 txMozillaTextOutput::txMozillaTextOutput(nsIDOMDocument* aSourceDocument,
                                          nsITransformObserver* aObserver)
-    : mSourceDocument(aSourceDocument)
 {
     NS_INIT_ISUPPORTS();
 
     mObserver = do_GetWeakReference(aObserver);
+    
+    createResultDocument(aSourceDocument);
 }
 
 txMozillaTextOutput::txMozillaTextOutput(nsIDOMDocumentFragment* aDest)
-    : mFragment(aDest)
 {
     NS_INIT_ISUPPORTS();
+
+    nsCOMPtr<nsIDOMDocument> doc;
+    aDest->GetOwnerDocument(getter_AddRefs(doc));
+    NS_ASSERTION(doc, "unable to get ownerdocument");
+    nsCOMPtr<nsIDOMText> textNode;
+    nsresult rv = doc->CreateTextNode(NS_LITERAL_STRING(""),
+                                      getter_AddRefs(textNode));
+    if (NS_FAILED(rv)) {
+        return;
+    }
+    nsCOMPtr<nsIDOMNode> dummy;
+    rv = aDest->AppendChild(textNode, getter_AddRefs(dummy));
+    if (NS_FAILED(rv)) {
+        return;
+    }
+
+    mTextNode = textNode;
+    return;
 }
 
 txMozillaTextOutput::~txMozillaTextOutput()
@@ -106,29 +124,12 @@ void txMozillaTextOutput::processingInstruction(const String& aTarget,
 
 void txMozillaTextOutput::startDocument()
 {
+}
+
+void txMozillaTextOutput::createResultDocument(nsIDOMDocument* aSourceDocument)
+{
     nsresult rv = NS_OK;
     
-    // If we are transforming into a fragment then just create a textnode
-    if (mFragment) {
-        nsCOMPtr<nsIDOMDocument> doc;
-        mFragment->GetOwnerDocument(getter_AddRefs(doc));
-        NS_ASSERTION(doc, "unable to get ownerdocument");
-        nsCOMPtr<nsIDOMText> textNode;
-        rv = doc->CreateTextNode(NS_LITERAL_STRING(""),
-                                 getter_AddRefs(textNode));
-        if (NS_FAILED(rv)) {
-            return;
-        }
-        nsCOMPtr<nsIDOMNode> dummy;
-        rv = mFragment->AppendChild(textNode, getter_AddRefs(dummy));
-        if (NS_FAILED(rv)) {
-            return;
-        }
-
-        mTextNode = textNode;
-        return;
-    }
-
     /*
      * Create an XHTML document to hold the text.
      *
@@ -153,7 +154,7 @@ void txMozillaTextOutput::startDocument()
     // Reset and set up document
     nsCOMPtr<nsILoadGroup> loadGroup;
     nsCOMPtr<nsIChannel> channel;
-    nsCOMPtr<nsIDocument> sourceDoc = do_QueryInterface(mSourceDocument);
+    nsCOMPtr<nsIDocument> sourceDoc = do_QueryInterface(aSourceDocument);
     sourceDoc->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
     nsCOMPtr<nsIIOService> serv = do_GetService(NS_IOSERVICE_CONTRACTID);
     if (serv) {

@@ -151,12 +151,12 @@ public:
     void getOutputDocument(nsIDOMDocument** aDocument);
 
 private:
+    void createResultDocument(nsIDOMDocument* aSourceDocument);
+
     nsCOMPtr<nsIDOMCharacterData> mTextNode;
     nsWeakPtr mObserver;
     nsCOMPtr<nsIDOMDocument> mDocument;
     txOutputFormat mOutputFormat;
-    nsCOMPtr<nsIDOMDocumentFragment> mFragment;
-    nsCOMPtr<nsIDOMDocument> mSourceDocument;
 };
 
 #endif
