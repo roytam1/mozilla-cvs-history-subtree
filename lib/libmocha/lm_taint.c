@@ -590,7 +590,7 @@ lm_GetPrincipalsFromStackFrame(JSContext *cx)
      */
     JSStackFrame *fp;
     JSScript *script;
-    JSStackFrame *pFrameToStartLooking = JVM_GetStartJSFrameFromParallelStack();
+    JSStackFrame *pFrameToStartLooking = *JVM_GetStartJSFrameFromParallelStack();
     JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
 
     fp = pFrameToStartLooking;
@@ -617,7 +617,7 @@ lm_GetSubjectOriginURL(JSContext *cx)
     JSScript *script;
     MochaDecoder *running;
 #ifdef OJI
-    JSStackFrame *pFrameToStartLooking = JVM_GetStartJSFrameFromParallelStack();
+    JSStackFrame *pFrameToStartLooking = *JVM_GetStartJSFrameFromParallelStack();
     JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
 #endif
 
@@ -1560,7 +1560,7 @@ principalsCanAccessTarget(JSContext *cx, JSTarget target)
     void *annotationRef;
     void *principalArray = NULL;
 #ifdef OJI
-    JSStackFrame *pFrameToStartLooking = JVM_GetStartJSFrameFromParallelStack();
+    JSStackFrame *pFrameToStartLooking = *JVM_GetStartJSFrameFromParallelStack();
     JSStackFrame *pFrameToEndLooking   = JVM_GetEndJSFrameFromParallelStack(pFrameToStartLooking);
 #endif
     setupJSCapsCallbacks();
