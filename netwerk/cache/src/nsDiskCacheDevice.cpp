@@ -292,7 +292,7 @@ NS_IMPL_ISUPPORTS1(nsDiskCacheDeviceInfo, nsICacheDeviceInfo);
 NS_IMETHODIMP nsDiskCacheDeviceInfo::GetDescription(char ** aDescription)
 {
     NS_ENSURE_ARG_POINTER(aDescription);
-    char* result = nsCRT::strdup("disk cache device");
+    char* result = nsCRT::strdup("Disk cache device");
     if (!result) return NS_ERROR_OUT_OF_MEMORY;
     *aDescription = result;
     return NS_OK;
