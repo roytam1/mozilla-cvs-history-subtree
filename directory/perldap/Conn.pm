@@ -277,7 +277,7 @@ sub printError
 sub search
 {
   my $self = shift;
-  my ($basedn, $scope, $filter, $attrsonly, @attrs, $res);
+  my ($basedn, $scope, $filter, $attrsonly, $attrs, $res, $sortattrs);
 
   if (ref $_[$[] eq "HASH")
     {
@@ -286,14 +286,29 @@ sub search
       $basedn = $hash->{"base"} || "";
       $scope = Mozilla::LDAP::Utils::str2Scope($hash->{"scope"});
       $filter = $hash->{"filter"} || "(objectclass=*)";
-      $attrsonly = $hash->{"attrsonly"} || 0;
-      @attrs = @{$hash->{"attrs"}};
+      $attrsonly = $hash->{"attrsonly"} || undef;
+      $attrs = $hash->{"attrs"} || undef;
+      $sortattrs = $hash->{"sortattrs"} || undef;
     }
   else
     {
-      ($basedn, $scope, $filter, $attrsonly, @attrs) = @_;
+      my @rest;
+
+      ($basedn, $scope, $filter, $attrsonly, @rest) = @_;
       $scope = Mozilla::LDAP::Utils::str2Scope($scope);
-      $attrsonly = 0 unless defined($attrsonly);
+      if (ref($rest[0]) eq "ARRAY")
+        {
+          $attrs = $rest[0];
+        }
+      elsif (scalar(@rest) > 0)
+        {
+          $attrs = \@rest;
+        }
+      else
+        {
+          $attrs = undef;
+          $sortattrs = undef;
+        }
     }
   $filter = "(objectclass=*)" if ($filter =~ /^ALL$/i);
 
@@ -317,13 +332,27 @@ sub search
 	{
           $self->{"searchres"} = $res unless $res == LDAP_SUCCESS;
 	  $self->{"ldfe"} = 1;
+          if (defined($sortattrs))
+            {
+              if (scalar(@{$sortattrs}) > 1)
+                {
+                  ldap_multisort_entries($self->{"ld"}, $self->{"ldres"},
+                                         $sortattrs);
+                }
+              else
+                {
+                  ldap_sort_entries($self->{"ld"}, $self->{"ldres"},
+                                    $sortattrs->[0]);
+                }
+            }
+
 	  return $self->nextEntry();
 	}
     }
   else
     {
       $res = ldap_search_s($self->{"ld"}, $basedn, $scope, $filter,
-                           defined(\@attrs) ? \@attrs : 0,
+                           defined($attrs) ? $attrs : 0,
                            defined($attrsonly) ? $attrsonly : 0,
                            $self->{"ldres"});
       if ($res == LDAP_SUCCESS || $res == LDAP_TIMELIMIT_EXCEEDED ||
@@ -331,6 +360,20 @@ sub search
         {
           $self->{"searchres"} = $res unless $res == LDAP_SUCCESS;
 	  $self->{"ldfe"} = 1;
+          if (defined($sortattrs))
+            {
+              if (scalar(@{$sortattrs}) > 1)
+                {
+                  ldap_multisort_entries($self->{"ld"}, $self->{"ldres"},
+                                         $sortattrs);
+                }
+              else
+                {
+                  ldap_sort_entries($self->{"ld"}, $self->{"ldres"},
+                                    $sortattrs->[0]);
+                }
+            }
+
 	  return $self->nextEntry();
 	}
     }
@@ -1098,7 +1141,7 @@ search to only retrieve certain attributes. With the LDAP URLs you specify
 this as an optional parameter, and with the B<search> method you add two
 more options, like
 
-    $entry = $conn->search($base, "sub", $filter, 0, ("mail", "cn");
+    $entry = $conn->search($base, "sub", $filter, 0, ("mail", "cn"));
 
 The last argument specifies an array of attributes to retrieve, the fewer
 the attributes, the faster the search will be. The second to last argument

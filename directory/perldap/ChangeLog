@@ -1,3 +1,9 @@
+2004-11-02  Leif Hedstrom  <leif@ogre.com>
+
+	* Conn.pm: Cleaned up NSPR code, fixed some bugs.
+	(search): Added support for sortattrs, using multisort.
+	(search): Fixed parsing of the attrs.
+
 2004-10-28  Leif Hedstrom  <leif@ogre.com>
 
 	* Entry.pm (attrModified): Removed some dead code.
