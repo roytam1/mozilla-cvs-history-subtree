@@ -144,13 +144,16 @@ NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallCall(nsISOAPMessage *aMessage, nsISu
   nsCOMPtr<nsISOAPParameter> param;
   nsCOMPtr<nsISupports> result;
   nsCOMPtr<nsIDOMElement> element;
+  nsAutoString type;
+  nsAutoString schemaType;
   for (PRUint32 i = 0; i < count; i++) {
     next = dont_AddRef(parameters->ElementAt(i));
     param = do_QueryInterface(next);
-    nsAutoString type;
     rv = param->GetType(type);
     if (NS_FAILED(rv)) return rv;
-    rv = types->Marshall(aMessage, next, encodingStyleURI, type, getter_AddRefs(result));
+    rv = param->GetSchemaType(schemaType);
+    if (NS_FAILED(rv)) return rv;
+    rv = types->Marshall(aMessage, next, encodingStyleURI, type, schemaType, getter_AddRefs(result));
     if (NS_FAILED(rv)) return rv;
     if (result == nsnull) return NS_ERROR_FAILURE;
     element = do_QueryInterface(result);
