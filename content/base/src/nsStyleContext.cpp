@@ -428,25 +428,19 @@ StyleContextImpl::GetUniqueStyleData(nsIPresContext* aPresContext, const nsStyle
   nsStyleStruct* result = nsnull;
   switch (aSID) {
   case eStyleStruct_Background: {
-    if (mCachedStyleData.mResetData && mCachedStyleData.mResetData->mBackgroundData)
-      result = mCachedStyleData.mResetData->mBackgroundData;
-    else {
-      const nsStyleBackground* bg = (const nsStyleBackground*)GetStyleData(aSID);
-      nsStyleBackground* newBG = new (aPresContext) nsStyleBackground(*bg);
-      SetStyle(aSID, *newBG);
-      result = newBG;
-    }
+    const nsStyleBackground* bg = (const nsStyleBackground*)GetStyleData(aSID);
+    nsStyleBackground* newBG = new (aPresContext) nsStyleBackground(*bg);
+    SetStyle(aSID, *newBG);
+    result = newBG;
+    mBits &= ~NS_STYLE_INHERIT_BACKGROUND;
     break;
   }
   case eStyleStruct_Text: {
-    if (mCachedStyleData.mInheritedData && mCachedStyleData.mInheritedData->mTextData)
-      result = mCachedStyleData.mInheritedData->mTextData;
-    else {
-      const nsStyleText* text = (const nsStyleText*)GetStyleData(aSID);
-      nsStyleText* newText = new (aPresContext) nsStyleText(*text);
-      SetStyle(aSID, *newText);
-      result = newText;
-    }
+    const nsStyleText* text = (const nsStyleText*)GetStyleData(aSID);
+    nsStyleText* newText = new (aPresContext) nsStyleText(*text);
+    SetStyle(aSID, *newText);
+    result = newText;
+    mBits &= ~NS_STYLE_INHERIT_TEXT;
     break;
   }
   default:
