@@ -87,6 +87,7 @@ function addCommands(commandObject)
     add ("voice", "onInputVoice");
     add ("who", "onInputSimpleCommand");
     add ("whois", "onInputWhoIs");
+    add ("whowas", "onInputSimpleCommand");
     
 }
 

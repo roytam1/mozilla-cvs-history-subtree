@@ -2373,7 +2373,7 @@ function my_unknown (e)
     e.params.shift(); /* and the dest. nick (always me) */
         /* if it looks like some kind of "end of foo" code, and we don't
          * already have a mapping for it, make one up */
-    if (!client.responseCodeMap[e.code] && e.meat.search (/^end of/i) != -1)
+    if (!(e.code in client.responseCodeMap) && e.meat.search (/^end of/i) != -1)
         client.responseCodeMap[e.code] = "---";
     
     this.display (e.params.join(" ") + ": " + e.meat,
