@@ -1075,41 +1075,32 @@ NS_IMETHODIMP nsMessenger::DeleteFolders(nsIRDFCompositeDataSource *db,
 }
 
 NS_IMETHODIMP
-nsMessenger::CopyMessages(nsIRDFCompositeDataSource *database,
-                          nsIRDFResource *srcResource, // folder
-						  nsIRDFResource *dstResource,
-                          nsISupportsArray *argumentArray, // nsIMsgDBHdrs
+nsMessenger::CopyMessages(nsIMsgFolder *srcFolder, nsIMsgFolder *destFolder,
+                          nsISupportsArray *messageArray,
                           PRBool isMove)
 {
 	nsresult rv;
+    NS_ENSURE_ARG_POINTER(srcFolder);
+    NS_ENSURE_ARG_POINTER(destFolder);
+    NS_ENSURE_ARG_POINTER(messageArray);
 
-	if(!srcResource || !dstResource || !argumentArray)
-		return NS_ERROR_NULL_POINTER;
-
-	nsCOMPtr<nsIMsgFolder> srcFolder;
-	nsCOMPtr<nsISupportsArray> folderArray;
-    
-	srcFolder = do_QueryInterface(srcResource);
-	if(!srcFolder)
-		return NS_ERROR_NO_INTERFACE;
-
-	nsCOMPtr<nsISupports> srcFolderSupports(do_QueryInterface(srcFolder));
-	if(srcFolderSupports)
-		argumentArray->InsertElementAt(srcFolderSupports, 0);
-
-	rv = NS_NewISupportsArray(getter_AddRefs(folderArray));
-	if(NS_FAILED(rv))
-	{
-		return NS_ERROR_OUT_OF_MEMORY;
-	}
-
-	folderArray->AppendElement(dstResource);
-	
-	rv = DoCommand(database, isMove ? (char *)NC_RDF_MOVE : (char *)NC_RDF_COPY, folderArray, argumentArray);
-	return rv;
-
+    rv = destFolder->CopyMessages(srcFolder, messageArray, isMove, nsnull /* nsIMsgWindow */, nsnull /* listener */, PR_FALSE /* isFolder */);
+    NS_ENSURE_SUCCESS(rv,rv);
+    return rv;
 }
 
+
+NS_IMETHODIMP
+nsMessenger::MessageServiceFromURI(const char *uri, nsIMsgMessageService **msgService)
+{
+    nsresult rv;
+    NS_ENSURE_ARG_POINTER(uri);
+    NS_ENSURE_ARG_POINTER(msgService);
+
+    rv = GetMessageServiceFromURI(uri, msgService);
+    NS_ENSURE_SUCCESS(rv,rv);
+    return rv;
+}
 
 NS_IMETHODIMP
 nsMessenger::CopyFolders(nsIRDFCompositeDataSource *database,
