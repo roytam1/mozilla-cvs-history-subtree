@@ -67,6 +67,7 @@ XP_LIBS		+= \
 		$(ZLIB_LIBS) \
 		$(MOZ_GDK_PIXBUF_LIBS) \
 		$(MOZ_XIE_LIBS) \
+		$(NSS_LIBS) \
 		$(NULL)
 
 ifdef MOZ_ENABLE_GTK

@@ -162,6 +162,28 @@ OS_CONFIG	:= $(OS_ARCH)$(OS_RELEASE)
 FINAL_LINK_LIBS = $(DEPTH)/config/final-link-libs
 FINAL_LINK_COMPS = $(DEPTH)/config/final-link-comps
 
+# 
+# NSS libs needed for final link in static build
+# 
+NSS_LIBS	= \
+	$(DIST)/lib/libcrmf.$(LIB_SUFFIX) \
+	$(DIST)/lib/libssl.$(LIB_SUFFIX) \
+	$(DIST)/lib/libnss.$(LIB_SUFFIX) \
+	$(DIST)/lib/libssl.$(LIB_SUFFIX) \
+	$(DIST)/lib/libpkcs12.$(LIB_SUFFIX) \
+	$(DIST)/lib/libpkcs7.$(LIB_SUFFIX) \
+	$(DIST)/lib/libcerthi.$(LIB_SUFFIX) \
+	$(DIST)/lib/libpk11wrap.$(LIB_SUFFIX) \
+	$(DIST)/lib/libcryptohi.$(LIB_SUFFIX) \
+	$(DIST)/lib/libcerthi.$(LIB_SUFFIX) \
+	$(DIST)/lib/libpk11wrap.$(LIB_SUFFIX) \
+	$(DIST)/lib/libsoftoken.$(LIB_SUFFIX) \
+	$(DIST)/lib/libcertdb.$(LIB_SUFFIX) \
+	$(DIST)/lib/libfreebl.$(LIB_SUFFIX) \
+	$(DIST)/lib/libsecutil.$(LIB_SUFFIX) \
+	$(DIST)/lib/libdbm.$(LIB_SUFFIX) \
+	$(NULL)
+
 # determine debug-related options
 DEBUG_FLAGS :=
 
