@@ -59,6 +59,8 @@
     // the title associated with this tab's url. We need to hold it so that we
     // can set the window title whenever we become the primary. 
   NSString*                 mTitle;
+    // the title we use for the tab. This differs for mTitle when the tab is loading
+  NSString*                 mTabTitle;
 
   CHBrowserView*            mBrowserView;
   NSString*                 mDefaultStatusString;

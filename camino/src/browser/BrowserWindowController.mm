@@ -1059,7 +1059,8 @@ static NSArray* sToolbarDefaults = nil;
 {
   // Simply load an array of NSImage objects from the files "throbber-NN.tif". I used "Quicktime Player" to
   // save all of the frames of the animated gif as individual .tif files for simplicity of implementation.
-  if (mThrobberImages == nil) {
+  if (mThrobberImages == nil)
+  {
     NSImage* images[64];
     int i;
     for (i = 0;; ++i) {
@@ -1495,21 +1496,21 @@ static NSArray* sToolbarDefaults = nil;
 
 - (void)tabView:(NSTabView *)aTabView didSelectTabViewItem:(NSTabViewItem *)aTabViewItem
 {
-    // we'll get called for the sidebar tabs as well. ignore any calls coming from
-    // there, we're only interested in the browser tabs.
-    if (aTabView != mTabBrowser)
-      return;
+  // we'll get called for the sidebar tabs as well. ignore any calls coming from
+  // there, we're only interested in the browser tabs.
+  if (aTabView != mTabBrowser)
+    return;
 
-    // Disconnect the old view, if one has been designated.
-    // If the window has just been opened, none has been.
-    if ( mBrowserView )
-        [mBrowserView disconnectView];
+  // Disconnect the old view, if one has been designated.
+  // If the window has just been opened, none has been.
+  if ( mBrowserView )
+    [mBrowserView disconnectView];
 
-    // Connect up the new view
-    mBrowserView = [aTabViewItem view];
-       
-    // Make the new view the primary content area.
-    [mBrowserView makePrimaryBrowserView: mURLBar status: mStatus windowController: self];
+  // Connect up the new view
+  mBrowserView = [aTabViewItem view];
+      
+  // Make the new view the primary content area.
+  [mBrowserView makePrimaryBrowserView: mURLBar status: mStatus windowController: self];
 }
 
 - (void)tabViewDidChangeNumberOfTabViewItems:(NSTabView *)aTabView
@@ -2055,6 +2056,7 @@ static NSArray* sToolbarDefaults = nil;
 
 @end
 
+#pragma mark -
 
 @implementation ThrobberHandler
 

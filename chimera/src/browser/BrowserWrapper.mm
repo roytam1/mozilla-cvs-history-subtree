@@ -83,6 +83,8 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 
 - (void)updateSiteIconImage:(NSImage*)inSiteIcon withURI:(NSString *)inSiteIconURI;
 
+- (void)setTabTitle:(NSString*)tabTitle windowTitle:(NSString*)windowTitle;
+
 @end
 
 @implementation BrowserWrapper
@@ -145,7 +147,8 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 
   [mToolTip release];
   [mTitle release];
-
+  [mTabTitle release];
+  
   [super dealloc];
 }
 
@@ -193,13 +196,22 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   mStatus = aStatus;
   mWindowController = aWindowController;
 
-  if (!mIsBusy)
+  if (mIsBusy)
+  {
+    [mWindowController startThrobber];    
+  }
+  else
+  {
     [mWindowController hideProgressIndicator];
   
-  [mDefaultStatusString autorelease];
-  mDefaultStatusString = nil;
-  [mLoadingStatusString autorelease];
-  mLoadingStatusString = [NSLocalizedString(@"DocumentDone", @"") retain];
+    [mDefaultStatusString autorelease];
+    mDefaultStatusString = nil;
+    [mLoadingStatusString autorelease];
+    mLoadingStatusString = [NSLocalizedString(@"DocumentDone", @"") retain];
+
+    [mWindowController stopThrobber];    
+  }
+
   [mStatus setStringValue:mLoadingStatusString];
   
   mIsPrimary = YES;
@@ -209,7 +221,7 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   [self onSecurityStateChange:mSecureState];
 
   // update the window's title. 
-  [self setTitle:mTitle];
+  [self setTabTitle:mTabTitle windowTitle:mTitle];
 
   if ([[self window] isKeyWindow])
     [mBrowserView setActive: YES];
@@ -231,7 +243,8 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   [mWindowController updateLocationFields:[self getCurrentURLSpec]];
   [mWindowController updateSiteIcons:mSiteIconImage];
   
-  if (mWindowController && !mListenersAttached) {
+  if (mWindowController && !mListenersAttached)
+  {
     mListenersAttached = YES;
     
     // We need to hook up our click and context menu listeners.
@@ -298,7 +311,10 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   [mStatus setStringValue:mLoadingStatusString];
 
   mIsBusy = YES;
-  [mTabItem setLabel: NSLocalizedString(@"TabLoading", @"")];
+  
+  [mTabTitle autorelease];
+  mTabTitle = [mLoadingStatusString retain];
+  [mTabItem setLabel:mTabTitle];
 
   if (mWindowController) {
     [mWindowController updateToolbarItems];
@@ -471,35 +487,34 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
 
 - (void)setTitle:(NSString *)title
 {
-  [mTitle autorelease];
-  
-  // We must be the primary content area to actually set the title, but we
-  // still want to hold onto the title in case we become the primary later.
-  NSString* newTitle = nil;
-  if (mOffline) {
-    if (title && ![title isEqualToString:@""])
-        newTitle = [title stringByAppendingString: @" [Working Offline]"];	// XXX localize me
-    else
-        newTitle = [NSString stringWithString:@"Untitled [Working Offline]"];
-    mTitle = [newTitle retain];
-  }
-  else {
-    if (!title || [title isEqualToString:@""])
-      title = [NSString stringWithString:NSLocalizedString(@"UntitledPageTitle", @"")];
-    mTitle = [title retain];
-  }
+  [self setTabTitle:title windowTitle:title];
+}
 
-  if ( mIsPrimary && mWindowController )
+- (void)setTabTitle:(NSString*)tabTitle windowTitle:(NSString*)windowTitle
+{
+  [mTabTitle autorelease];
+  if (tabTitle && [tabTitle length] > 0)
+    mTabTitle = tabTitle;
+  else
+    mTabTitle = NSLocalizedString(@"UntitledPageTitle", @"");
+  [mTabTitle retain];
+  
+  [mTitle autorelease];
+  if (windowTitle && [windowTitle length] > 0)
+    mTitle = windowTitle;
+  else
+    mTitle = NSLocalizedString(@"UntitledPageTitle", @"");
+
+  if (mOffline)
+    mTitle = [NSString stringWithFormat:NSLocalizedString(@"OfflineTitleFormat", @""), mTitle];
+  [mTitle retain];
+  
+  if (mIsPrimary && mWindowController)
     [[mWindowController window] setTitle:[mTitle stringByTruncatingTo:80 at:kTruncateAtEnd]];
   
   // Always set the tab.
-  if (title && ![title isEqualToString:@""])
-    [mTabItem setLabel:title];		// tab titles get truncated when setting them to tabs
-  else
-    [mTabItem setLabel:NSLocalizedString(@"UntitledPageTitle", @"")];
+  [mTabItem setLabel:mTabTitle];		// tab titles get truncated when setting them to tabs
 }
-
-
 
 - (BOOL)isFlipped
 {
