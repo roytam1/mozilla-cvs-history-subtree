@@ -186,9 +186,9 @@ enum nsPluginManagerVariable {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-enum nsPluginType {
-    nsPluginType_Embedded = 1,
-    nsPluginType_Full
+enum nsPluginMode {
+    nsPluginMode_Embedded = 1,
+    nsPluginMode_Full
 };
 
 // XXX this can go away now
@@ -268,11 +268,11 @@ struct nsPluginEmbedPrint {
 };
 
 struct nsPluginPrint {
-    nsPluginType      mode;     /* nsPluginType_Full or nsPluginType_Embedded */
+    nsPluginMode      mode;     /* nsPluginMode_Full or nsPluginMode_Embedded */
     union
     {
-        nsPluginFullPrint     fullPrint;	/* if mode is nsPluginType_Full */
-        nsPluginEmbedPrint    embedPrint;	/* if mode is nsPluginType_Embedded */
+        nsPluginFullPrint     fullPrint;	/* if mode is nsPluginMode_Full */
+        nsPluginEmbedPrint    embedPrint;	/* if mode is nsPluginMode_Embedded */
     } print;
 };
 

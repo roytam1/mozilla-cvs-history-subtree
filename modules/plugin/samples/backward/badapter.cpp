@@ -50,17 +50,8 @@ public:
 
     NS_DECL_ISUPPORTS
     
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     ReloadPlugins(PRBool reloadPages);
-    
-    NS_IMETHOD_(void* )
-    MemAlloc(PRUint32 size);
-
-    NS_IMETHOD_(void)
-    MemFree(void* ptr);
-
-    NS_IMETHOD_(PRUint32)
-    MemFlush(PRUint32 size);
 
     // (Corresponds to NPN_GetValue.)
     NS_IMETHOD
@@ -71,46 +62,12 @@ public:
     SetValue(nsPluginManagerVariable variable, void *value);
 
     // (Corresponds to NPN_UserAgent.)
-    NS_IMETHOD_(const char*)
-    UserAgent(void);
-
-    // (Corresponds to NPN_GetURL and NPN_GetURLNotify.)
-    //   notifyData: When present, URLNotify is called passing the notifyData back
-    //          to the client. When NULL, this call behaves like NPN_GetURL.
-    // New arguments:
-    //   peer:  A plugin instance peer. The peer's window will be used to display
-    //          progress information. If NULL, the load happens in the background.
-    //   altHost: An IP-address string that will be used instead of the host
-    //          specified in the URL. This is used to prevent DNS-spoofing attacks.
-    //          Can be defaulted to NULL meaning use the host in the URL.
-    //   referrer: 
-    //   forceJSEnabled: Forces JavaScript to be enabled for 'javascript:' URLs,
-    //          even if the user currently has JavaScript disabled. 
     NS_IMETHOD
-    GetURL(nsISupports* peer, const char* url, const char* target, void* notifyData = NULL,
-           const char* altHost = NULL, const char* referrer = NULL,
-           PRBool forceJSEnabled = PR_FALSE);
+    UserAgent(const char* *result);
 
-    // (Corresponds to NPN_PostURL and NPN_PostURLNotify.)
-    //   notifyData: When present, URLNotify is called passing the notifyData back
-    //          to the client. When NULL, this call behaves like NPN_GetURL.
-    // New arguments:
-    //   peer:  A plugin instance peer. The peer's window will be used to display
-    //          progress information. If NULL, the load happens in the background.
-    //   altHost: An IP-address string that will be used instead of the host
-    //          specified in the URL. This is used to prevent DNS-spoofing attacks.
-    //          Can be defaulted to NULL meaning use the host in the URL.
-    //   referrer: 
-    //   forceJSEnabled: Forces JavaScript to be enabled for 'javascript:' URLs,
-    //          even if the user currently has JavaScript disabled. 
-    //   postHeaders: A string containing post headers.
-    //   postHeadersLength: The length of the post headers string.
     NS_IMETHOD
-    PostURL(nsISupports* peer, const char* url, const char* target, PRUint32 bufLen, 
-            const char* buf, PRBool file, void* notifyData = NULL,
-            const char* altHost = NULL, const char* referrer = NULL,
-            PRBool forceJSEnabled = PR_FALSE,
-            PRUint32 postHeadersLength = 0, const char* postHeaders = NULL);
+    FetchURL(nsISupports* peer, nsURLInfo* urlInfo);
+
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -149,20 +106,20 @@ public:
     //
     
     // Corresponds to NPStream's url field.
-    NS_IMETHOD_(const char* )
-    GetURL(void);
+    NS_IMETHOD
+    GetURL(const char*  *result);
 
     // Corresponds to NPStream's end field.
-    NS_IMETHOD_(PRUint32)
-    GetEnd(void);
+    NS_IMETHOD
+    GetEnd(PRUint32 *result);
 
     // Corresponds to NPStream's lastmodfied field.
-    NS_IMETHOD_(PRUint32)
-    GetLastModified(void);
+    NS_IMETHOD
+    GetLastModified(PRUint32 *result);
 
     // Corresponds to NPStream's notifyData field.
-    NS_IMETHOD_(void* )
-    GetNotifyData(void);
+    NS_IMETHOD
+    GetNotifyData(void*  *result);
 
     // Corresponds to NPStream's url field.
     NS_IMETHOD Close(void);
@@ -193,19 +150,19 @@ public:
     // XXX - I add parameters to the constructor because I wasn't sure if
     // XXX - the 4.0 browser had the npp_instance struct implemented.
     // XXX - If so, then I can access npp_instance through npp->ndata.
-    CPluginInstancePeer(NPP npp, nsMIMEType typeString, nsPluginType type,
+    CPluginInstancePeer(NPP npp, nsMIMEType typeString, nsPluginMode type,
         PRUint16 attribute_cnt, const char** attribute_list, const char** values_list);
     virtual ~CPluginInstancePeer(void);
 
     NS_DECL_ISUPPORTS
 
     // Corresponds to NPP_New's MIMEType argument.
-    NS_IMETHOD_(nsMIMEType)
-    GetMIMEType(void);
+    NS_IMETHOD
+    GetMIMEType(nsMIMEType *result);
 
     // Corresponds to NPP_New's mode argument.
-    NS_IMETHOD_(nsPluginType)
-    GetMode(void);
+    NS_IMETHOD
+    GetMode(nsPluginMode *result);
 
     // Get a ptr to the paired list of attribute names and values,
     // returns the length of the array.
@@ -216,19 +173,19 @@ public:
 
     // Get the value for the named attribute.  Returns null
     // if the attribute was not set.
-    NS_IMETHOD_(const char*)
-    GetAttribute(const char* name);
+    NS_IMETHOD
+    GetAttribute(const char* name, const char* *result);
 
     // Corresponds to NPN_NewStream.
     NS_IMETHOD
     NewStream(nsMIMEType type, const char* target, nsIOutputStream* *result);
 
     // Corresponds to NPN_ShowStatus.
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     ShowStatus(const char* message);
 
     // XXX - Where did this go?
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     Version(int* plugin_major, int* plugin_minor,
                       int* netscape_major, int* netscape_minor);
 
@@ -241,7 +198,7 @@ protected:
     // XXX - The next five variables may need to be here since I
     // XXX - don't think np_instance is available in 4.0X.
     nsMIMEType typeString;
-	nsPluginType type;
+	nsPluginMode type;
 	PRUint16 attribute_cnt;
 	char** attribute_list;
 	char** values_list;
@@ -264,20 +221,20 @@ public:
     NS_DECL_ISUPPORTS
 
     // (Corresponds to NPStream's url field.)
-    NS_IMETHOD_(const char*)
-    GetURL(void);
+    NS_IMETHOD
+    GetURL(const char* *result);
 
     // (Corresponds to NPStream's end field.)
-    NS_IMETHOD_(PRUint32)
-    GetEnd(void);
+    NS_IMETHOD
+    GetEnd(PRUint32 *result);
 
     // (Corresponds to NPStream's lastmodified field.)
-    NS_IMETHOD_(PRUint32)
-    GetLastModified(void);
+    NS_IMETHOD
+    GetLastModified(PRUint32 *result);
 
     // (Corresponds to NPStream's notifyData field.)
-    NS_IMETHOD_(void*)
-    GetNotifyData(void);
+    NS_IMETHOD
+    GetNotifyData(void* *result);
 
 	//////////////////////////////////////////////////////////////////////////
     //
@@ -285,12 +242,12 @@ public:
     //
 
     // Corresponds to NPP_DestroyStream's reason argument.
-    NS_IMETHOD_(nsPluginReason)
-    GetReason(void);
+    NS_IMETHOD
+    GetReason(nsPluginReason *result);
 
     // Corresponds to NPP_NewStream's MIMEType argument.
-    NS_IMETHOD_(nsMIMEType)
-    GetMIMEType(void);
+    NS_IMETHOD
+    GetMIMEType(nsMIMEType *result);
 
     //////////////////////////////////////////////////////////////////////////
     //
@@ -398,6 +355,7 @@ nsresult fromNPError[] = {
 ////////////////////////////////////////////////////////////////////////////////
 // UNIX-only API calls
 ////////////////////////////////////////////////////////////////////////////////
+
 #ifdef XP_UNIX
 char* NPP_GetMIMEDescription(void)
 {
@@ -427,6 +385,7 @@ char* NPP_GetMIMEDescription(void)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // NPP_SetValue:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 NPError
 NPP_SetValue(NPP instance, NPNVariable variable, void *value)
 {
@@ -436,6 +395,7 @@ NPP_SetValue(NPP instance, NPNVariable variable, void *value)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // NPP_GetValue:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 NPError
 NPP_GetValue(NPP instance, NPPVariable variable, void *value) {
     int freeFac = 0;
@@ -457,6 +417,7 @@ NPP_GetValue(NPP instance, NPPVariable variable, void *value) {
     return ret;
 }
 #endif
+
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // NPP_Initialize:
 // Provides global initialization for a plug-in, and returns an error value. 
@@ -464,6 +425,7 @@ NPP_GetValue(NPP instance, NPPVariable variable, void *value) {
 // This function is called once when a plug-in is loaded, before the first instance
 // is created. thePluginManager and thePlugin are both initialized.
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 NPError
 NPP_Initialize(void)
 {
@@ -501,6 +463,7 @@ NPP_Initialize(void)
 // error will be signalled by "use_" and will cause the Navigator to
 // complain to the user.
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 jref
 NPP_GetJavaClass(void)
 {
@@ -526,6 +489,7 @@ NPP_GetJavaClass(void)
 // This function is called once after the last instance of your plug-in 
 // is destroyed.  thePluginManager and thePlugin are delete at this time.
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 void
 NPP_Shutdown(void)
 {
@@ -554,6 +518,7 @@ NPP_Shutdown(void)
 // a successful instansiation, the peer is stored in the plugin
 // instance's pdata.
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 NPError 
 NPP_New(NPMIMEType pluginType,
 	NPP instance,
@@ -581,7 +546,7 @@ NPP_New(NPMIMEType pluginType,
     // XXX - Ask Warren about np_instance.
     CPluginInstancePeer* peer = 
 	new CPluginInstancePeer(instance, (nsMIMEType)pluginType, 
-				(nsPluginType)mode, (PRUint16)argc, 
+				(nsPluginMode)mode, (PRUint16)argc, 
 				(const char** )argn, (const char** )argv);
     assert( peer != NULL );
     if (!peer) return NPERR_OUT_OF_MEMORY_ERROR;
@@ -602,6 +567,7 @@ NPP_New(NPMIMEType pluginType,
 // The plugin instance peer and plugin instance are destroyed.
 // The instance's pdata is set to NULL.
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 NPError 
 NPP_Destroy(NPP instance, NPSavedData** save)
 {
@@ -623,6 +589,7 @@ NPP_Destroy(NPP instance, NPSavedData** save)
 // NPP_SetWindow:
 // Sets the window in which a plug-in draws, and returns an error value. 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 NPError 
 NPP_SetWindow(NPP instance, NPWindow* window)
 {
@@ -646,6 +613,7 @@ NPP_SetWindow(NPP instance, NPWindow* window)
 // Create a stream peer and stream.  If succesful, save
 // the stream peer in NPStream's pdata.
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 NPError 
 NPP_NewStream(NPP instance,
 	      NPMIMEType type,
@@ -676,7 +644,8 @@ NPP_NewStream(NPP instance,
 	return NPERR_OUT_OF_MEMORY_ERROR;
 		
     stream->pdata = (void*) pluginStream;
-    *stype = pluginStream->GetStreamType();
+    nsresult err = pluginStream->GetStreamType((nsStreamType*)stype);
+    assert(err == NS_OK);
 	
     return NPERR_NO_ERROR;
 }
@@ -686,6 +655,7 @@ NPP_NewStream(NPP instance,
 // Returns the maximum number of bytes that an instance is prepared to accept
 // from the stream. 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 int32 
 NPP_WriteReady(NPP instance, NPStream *stream)
 {
@@ -706,6 +676,7 @@ NPP_WriteReady(NPP instance, NPStream *stream)
 // NPP_Write:
 // Delivers data from a stream and returns the number of bytes written. 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 int32 
 NPP_Write(NPP instance, NPStream *stream, int32 offset, int32 len, void *buffer)
 {
@@ -728,6 +699,7 @@ NPP_Write(NPP instance, NPStream *stream, int32 offset, int32 len, void *buffer)
 // The stream peer and stream are destroyed.  NPStream's
 // pdata is set to NULL.
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 NPError 
 NPP_DestroyStream(NPP instance, NPStream *stream, NPReason reason)
 {
@@ -750,6 +722,7 @@ NPP_DestroyStream(NPP instance, NPStream *stream, NPReason reason)
 // NPP_StreamAsFile:
 // Provides a local file name for the data from a stream. 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 void 
 NPP_StreamAsFile(NPP instance, NPStream *stream, const char* fname)
 {
@@ -768,6 +741,7 @@ NPP_StreamAsFile(NPP instance, NPStream *stream, const char* fname)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // NPP_Print:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 void 
 NPP_Print(NPP instance, NPPrint* printInfo)
 {
@@ -787,6 +761,7 @@ NPP_Print(NPP instance, NPPrint* printInfo)
 // NPP_URLNotify:
 // Notifies the instance of the completion of a URL request. 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 void
 NPP_URLNotify(NPP instance, const char* url, NPReason reason, void* notifyData)
 {
@@ -805,6 +780,7 @@ NPP_URLNotify(NPP instance, const char* url, NPReason reason, void* notifyData)
 // Mac-only, but stub must be present for Windows
 // Delivers a platform-specific event to the instance. 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 #ifndef XP_UNIX
 int16
 NPP_HandleEvent(NPP instance, void* event)
@@ -822,7 +798,6 @@ NPP_HandleEvent(NPP instance, void* event)
 	return eventHandled;
 }
 #endif // ndef XP_UNIX 
-//////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////
 // SECTION 5 - API Browser Implementations
@@ -851,10 +826,12 @@ CPluginManager::~CPluginManager(void)
 {
 }
 
+#if 0
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // MemAlloc:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-void* NP_LOADDS 
+
+NS_METHOD
 CPluginManager::MemAlloc(PRUint32 size)
 {
     return NPN_MemAlloc(size);
@@ -863,7 +840,8 @@ CPluginManager::MemAlloc(PRUint32 size)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // MemFree:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-void NP_LOADDS 
+
+NS_METHOD
 CPluginManager::MemFree(void* ptr)
 {
     assert( ptr != NULL );
@@ -874,7 +852,8 @@ CPluginManager::MemFree(void* ptr)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // MemFlush:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-PRUint32 NP_LOADDS 
+
+NS_METHOD
 CPluginManager::MemFlush(PRUint32 size)
 {
 #ifdef XP_MAC
@@ -883,14 +862,17 @@ CPluginManager::MemFlush(PRUint32 size)
 	return 0;
 #endif
 }
+#endif
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // ReloadPlugins:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-void NP_LOADDS 
+
+NS_METHOD
 CPluginManager::ReloadPlugins(PRBool reloadPages)
 {
 	NPN_ReloadPlugins(reloadPages);
+    return NS_OK;
 }
 
 
@@ -906,9 +888,8 @@ CPluginManager::ReloadPlugins(PRBool reloadPages)
 //   referrer: 
 //   forceJSEnabled: Forces JavaScript to be enabled for 'javascript:' URLs,
 //          even if the user currently has JavaScript disabled. 
-nsresult NP_LOADDS 
-CPluginManager::GetURL(nsISupports* peer, const char* url, const char* target, void* notifyData,
-					   const char* altHost, const char* referrer, PRBool forceJSEnabled)
+NS_METHOD
+CPluginManager::FetchURL(nsISupports* peer, nsURLInfo* urlInfo)
 {
    // assert( npp != NULL );
    // assert( url != NULL );
@@ -917,65 +898,52 @@ CPluginManager::GetURL(nsISupports* peer, const char* url, const char* target, v
 	CPluginInstancePeer* instancePeer = (CPluginInstancePeer*)(nsIPluginInstancePeer*) peer;
 	NPP npp = instancePeer->GetNPPInstance();
 
-    
-    // Call the correct GetURL* function.
-    // This is determinded by checking notifyData.
-    if (notifyData == NULL) {
-        return fromNPError[NPN_GetURL(npp, url, target)];
-    } else {
-        return fromNPError[NPN_GetURLNotify(npp, url, target, notifyData)];
+    const char* url = urlInfo->url;
+    const char* target = urlInfo->target;
+    PRUint32 bufLen = urlInfo->postDataLength;
+    const char* buf = urlInfo->postData;
+    PRBool file = urlInfo->postFile;
+    void* notifyData = urlInfo->notifyData;
+    NPError err;
+    if (urlInfo->postData || urlInfo->postHeaders) {
+        // Call the correct PostURL* function.
+        // This is determinded by checking notifyData.
+        if (urlInfo->notifyData == NULL) {
+            err = NPN_PostURL(npp, url, target, bufLen, buf, file);
+        } else {
+            err = NPN_PostURLNotify(npp, url, target, bufLen, buf, file, notifyData);
+        }
     }
-}
-
-// (Corresponds to NPN_PostURL and NPN_PostURLNotify.)
-//   notifyData: When present, URLNotify is called passing the notifyData back
-//          to the client. When NULL, this call behaves like NPN_GetURL.
-// New arguments:
-//   peer:  A plugin instance peer. The peer's window will be used to display
-//          progress information. If NULL, the load happens in the background.
-//   altHost: An IP-address string that will be used instead of the host
-//          specified in the URL. This is used to prevent DNS-spoofing attacks.
-//          Can be defaulted to NULL meaning use the host in the URL.
-//   referrer: 
-//   forceJSEnabled: Forces JavaScript to be enabled for 'javascript:' URLs,
-//          even if the user currently has JavaScript disabled. 
-//   postHeaders: A string containing post headers.
-//   postHeadersLength: The length of the post headers string.
-nsresult NP_LOADDS 
-CPluginManager::PostURL(nsISupports* peer, const char* url, const char* target, PRUint32 bufLen, 
-						const char* buf, PRBool file, void* notifyData, const char* altHost, 
-						const char* referrer, PRBool forceJSEnabled, PRUint32 postHeadersLength, 
-						const char* postHeaders) 
-{
-	assert( peer != NULL);
-
-	CPluginInstancePeer* instancePeer = (CPluginInstancePeer*)(nsIPluginInstancePeer*)peer;
-	NPP npp = instancePeer->GetNPPInstance();
-
-    // Call the correct PostURL* function.
-    // This is determinded by checking notifyData.
-    if (notifyData == NULL) {
-        return fromNPError[NPN_PostURL(npp, url, target, bufLen, buf, file)];
-    } else {
-        return fromNPError[NPN_PostURLNotify(npp, url, target, bufLen, buf, file, notifyData)];
+    else {
+        // Call the correct GetURL* function.
+        // This is determinded by checking notifyData.
+        if (urlInfo->notifyData == NULL) {
+            err = NPN_GetURL(npp, url, target);
+        } else {
+            err = NPN_GetURLNotify(npp, url, target, notifyData);
+        }
     }
+    return fromNPError[err];
 }
 
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // UserAgent:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-const char* NP_LOADDS 
-CPluginManager::UserAgent(void)
+
+NS_METHOD
+CPluginManager::UserAgent(const char* *result)
 {
-    return NPN_UserAgent(NULL);
+    *result = NPN_UserAgent(NULL);
+    return NS_OK;
 }
 
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // GetValue:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-nsresult NP_LOADDS 
+
+NS_METHOD
 CPluginManager::GetValue(nsPluginManagerVariable variable, void *value)
 {
     // XXX - This may need to be stubbed out for
@@ -992,7 +960,8 @@ CPluginManager::GetValue(nsPluginManagerVariable variable, void *value)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // SetValue:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-nsresult NP_LOADDS 
+
+NS_METHOD
 CPluginManager::SetValue(nsPluginManagerVariable variable, void *value) 
 {
     // XXX - This should do something like this.
@@ -1002,16 +971,15 @@ CPluginManager::SetValue(nsPluginManagerVariable variable, void *value)
     return fromNPError[NPERR_NO_DATA];
 }
 
-
-
-
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // nsISupports functions
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 NS_IMPL_ADDREF(CPluginManager);
 NS_IMPL_RELEASE(CPluginManager);
-//NS_IMPL_QUERY_INTERFACE(CPluginManager, kPluginManagerIID);
-nsresult CPluginManager::QueryInterface(const nsIID& iid, void** ptr) 
+
+NS_METHOD
+CPluginManager::QueryInterface(const nsIID& iid, void** ptr) 
 {                                                                        
   if (NULL == ptr) {                                            
     return NS_ERROR_NULL_POINTER;                                        
@@ -1038,7 +1006,7 @@ nsresult CPluginManager::QueryInterface(const nsIID& iid, void** ptr)
 
 CPluginInstancePeer::CPluginInstancePeer(NPP npp,
                                          nsMIMEType typeString, 
-                                         nsPluginType type,
+                                         nsPluginMode type,
                                          PRUint16 attr_cnt, 
                                          const char** attr_list, 
                                          const char** val_list)
@@ -1076,20 +1044,24 @@ CPluginInstancePeer::~CPluginInstancePeer(void)
 // GetMIMEType:
 // Corresponds to NPP_New's MIMEType argument.
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-nsMIMEType NP_LOADDS 
-CPluginInstancePeer::GetMIMEType(void) 
+
+NS_METHOD
+CPluginInstancePeer::GetMIMEType(nsMIMEType *result) 
 {
-    return typeString;
+    *result = typeString;
+    return NS_OK;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // GetMode:
 // Corresponds to NPP_New's mode argument.
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-nsPluginType NP_LOADDS 
-CPluginInstancePeer::GetMode(void)
+
+NS_METHOD
+CPluginInstancePeer::GetMode(nsPluginMode *result)
 {
-    return type;
+    *result = type;
+    return NS_OK;
 }
 
 
@@ -1097,7 +1069,7 @@ CPluginInstancePeer::GetMode(void)
 // returns the length of the array.
 //
 // Each name or value is a null-terminated string.
-nsresult NP_LOADDS 
+NS_METHOD
 CPluginInstancePeer::GetAttributes(PRUint16& n, const char* const*& names, const char* const*& values)  
 {
 	n = attribute_cnt;
@@ -1110,19 +1082,22 @@ CPluginInstancePeer::GetAttributes(PRUint16& n, const char* const*& names, const
 
 // Get the value for the named attribute.  Returns null
 // if the attribute was not set.
-const char* NP_LOADDS 
-CPluginInstancePeer::GetAttribute(const char* name) 
+NS_METHOD
+CPluginInstancePeer::GetAttribute(const char* name, const char* *result) 
 {
 	for (int i=0; i < attribute_cnt; i++)  {
 #ifdef XP_UNIX
 		if (strcasecmp(name, attribute_list[i]) == 0)
 #else
-		if (stricmp(name, attribute_list[i]) == 0)
+		if (stricmp(name, attribute_list[i]) == 0) 
 #endif
-			return values_list[i];
+        {
+			*result = values_list[i];
+            return NS_OK;
+        }
 	}
 
-	return NULL;
+	return NS_ERROR_FAILURE;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1131,18 +1106,20 @@ CPluginInstancePeer::GetAttribute(const char* name)
 // XXX - Where did this go in the new API?
 //
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-void NP_LOADDS 
+
+NS_METHOD
 CPluginInstancePeer::Version(int* plugin_major, int* plugin_minor,
-                                   int* netscape_major, int* netscape_minor)
+                             int* netscape_major, int* netscape_minor)
 {
     NPN_Version(plugin_major, plugin_minor, netscape_major, netscape_minor);
+	return NS_OK;
 }
 
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // NewStream:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-nsresult NP_LOADDS 
+NS_METHOD
 CPluginInstancePeer::NewStream(nsMIMEType type, const char* target, 
                                      nsIOutputStream* *result)
 {
@@ -1169,23 +1146,26 @@ CPluginInstancePeer::NewStream(nsMIMEType type, const char* target,
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // ShowStatus:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-void NP_LOADDS 
+
+NS_METHOD
 CPluginInstancePeer::ShowStatus(const char* message)
 {
     assert( message != NULL );
 
     NPN_Status(npp, message);
+	return NS_OK;
 }
 
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // nsISupports functions
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 NS_IMPL_ADDREF(CPluginInstancePeer);
 NS_IMPL_RELEASE(CPluginInstancePeer);
 
-
-nsresult CPluginInstancePeer::QueryInterface(const nsIID& iid, void** ptr) 
+NS_METHOD
+CPluginInstancePeer::QueryInterface(const nsIID& iid, void** ptr) 
 {                                                                        
   if (NULL == ptr) {                                            
     return NS_ERROR_NULL_POINTER;                                        
@@ -1226,6 +1206,7 @@ CPluginManagerStream::~CPluginManagerStream(void)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // Write:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 NS_METHOD
 CPluginManagerStream::Write(const char* buffer, PRInt32 offset, PRInt32 len)
 {
@@ -1239,51 +1220,60 @@ CPluginManagerStream::Write(const char* buffer, PRInt32 offset, PRInt32 len)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // GetURL:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-const char* NP_LOADDS 
-CPluginManagerStream::GetURL(void)
+
+NS_METHOD
+CPluginManagerStream::GetURL(const char* *result)
 {
     assert( pstream != NULL );
 
-    return pstream->url;
+    *result = pstream->url;
+	return NS_OK;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // GetEnd:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-PRUint32 NP_LOADDS 
-CPluginManagerStream::GetEnd(void)
+
+NS_METHOD
+CPluginManagerStream::GetEnd(PRUint32 *result)
 {
     assert( pstream != NULL );
 
-    return pstream->end;
+    *result = pstream->end;
+	return NS_OK;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // GetLastModified:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-PRUint32 NP_LOADDS 
-CPluginManagerStream::GetLastModified(void)
+
+NS_METHOD
+CPluginManagerStream::GetLastModified(PRUint32 *result)
 {
     assert( pstream != NULL );
 
-    return pstream->lastmodified;
+    *result = pstream->lastmodified;
+	return NS_OK;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // GetNotifyData:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-void* NP_LOADDS 
-CPluginManagerStream::GetNotifyData(void)
+
+NS_METHOD
+CPluginManagerStream::GetNotifyData(void* *result)
 {
     assert( pstream != NULL );
 
-    return pstream->notifyData;
+    *result = pstream->notifyData;
+	return NS_OK;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // GetNotifyData:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-nsresult NP_LOADDS 
+
+NS_METHOD
 CPluginManagerStream::Close(void)
 {
     assert( pstream != NULL );
@@ -1295,16 +1285,10 @@ CPluginManagerStream::Close(void)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // nsISupports functions
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 NS_IMPL_ADDREF(CPluginManagerStream);
-//NS_IMPL_RELEASE(CPluginManagerStream);
-nsrefcnt CPluginManagerStream::Release(void)     
-{                  
-    if (--mRefCnt == 0) {                                
-        delete this;                                       
-        return 0;                                          
-    }                                                    
-    return mRefCnt;                                      
-}
+NS_IMPL_RELEASE(CPluginManagerStream);
+
 NS_IMPL_QUERY_INTERFACE(CPluginManagerStream, kOutputStreamIID);
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1330,56 +1314,74 @@ CPluginStreamPeer::~CPluginStreamPeer(void)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // GetURL:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-const char* CPluginStreamPeer::GetURL(void)
+
+NS_METHOD
+CPluginStreamPeer::GetURL(const char* *result)
 {
-    return npStream->url;
+    *result = npStream->url;
+    return NS_OK;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // GetEnd:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-PRUint32 CPluginStreamPeer::GetEnd(void)
+
+NS_METHOD
+CPluginStreamPeer::GetEnd(PRUint32 *result)
 {
-    return npStream->end;
+    *result = npStream->end;
+    return NS_OK;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // GetLastModified:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-PRUint32 CPluginStreamPeer::GetLastModified(void)
+
+NS_METHOD
+CPluginStreamPeer::GetLastModified(PRUint32 *result)
 {
-    return npStream->lastmodified;
+    *result = npStream->lastmodified;
+    return NS_OK;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // GetNotifyData:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-void* CPluginStreamPeer::GetNotifyData(void)
+
+NS_METHOD
+CPluginStreamPeer::GetNotifyData(void* *result)
 {
-    return npStream->notifyData;
+    *result = npStream->notifyData;
+    return NS_OK;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // GetReason:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-nsPluginReason CPluginStreamPeer::GetReason(void)
+
+NS_METHOD
+CPluginStreamPeer::GetReason(nsPluginReason *result)
 {
-    return reason;
+    *result = reason;
+    return NS_OK;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // GetMIMEType:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-nsMIMEType NP_LOADDS 
-CPluginStreamPeer::GetMIMEType(void)
+
+NS_METHOD
+CPluginStreamPeer::GetMIMEType(nsMIMEType *result)
 {
-    return type;
+    *result = type;
+    return NS_OK;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // RequestRead:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-nsresult NP_LOADDS 
+
+NS_METHOD
 CPluginStreamPeer::RequestRead(nsByteRange* rangeList)
 {
     return fromNPError[NPN_RequestRead(npStream, (NPByteRange* )rangeList)];
@@ -1388,9 +1390,10 @@ CPluginStreamPeer::RequestRead(nsByteRange* rangeList)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // nsISupports functions
 //+++++++++++++++++++++++++++++++++++++++++++++++++
+
 NS_IMPL_ADDREF(CPluginStreamPeer);
 NS_IMPL_RELEASE(CPluginStreamPeer);
-//NS_IMPL_QUERY_INTERFACE(CPluginStreamPeer, kSeekablePluginStreamPeerIID);
+
 nsresult CPluginStreamPeer::QueryInterface(const nsIID& iid, void** ptr) 
 {
     if (NULL == ptr) {

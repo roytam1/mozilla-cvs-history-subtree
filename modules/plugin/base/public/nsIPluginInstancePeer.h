@@ -82,7 +82,7 @@ public:
      * @result - NS_OK if this operation was successful
      */
     NS_IMETHOD
-    GetMode(nsPluginType *result) = 0;
+    GetMode(nsPluginMode *result) = 0;
 
     /**
      * This operation is called by the plugin instance when it wishes to send

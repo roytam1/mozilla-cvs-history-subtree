@@ -156,8 +156,8 @@ public:
     Shutdown(void);
 
     // (Corresponds to NPP_GetMIMEDescription.)
-    NS_IMETHOD_(const char*)
-    GetMIMEDescription(void);
+    NS_IMETHOD
+    GetMIMEDescription(const char* *result);
 
     // (Corresponds to NPP_GetValue.)
     NS_IMETHOD
@@ -183,8 +183,8 @@ public:
     // from nsIJRILiveConnectPlugin:
 
     // (Corresponds to NPP_GetJavaClass.)
-    NS_IMETHOD_(jref)
-    GetJavaClass(void);
+    NS_IMETHOD
+    GetJavaClass(jref *result);
 
     ////////////////////////////////////////////////////////////////////////////
     // SimplePlugin specific methods:
@@ -208,14 +208,26 @@ class SimplePluginInstance : public nsIPluginInstance {
 public:
 
     ////////////////////////////////////////////////////////////////////////////
+    // from nsIEventHandler:
+
+    // (Corresponds to NPP_HandleEvent.)
+    // Note that for Unix and Mac the nsPluginEvent structure is different
+    // from the old NPEvent structure -- it's no longer the native event
+    // record, but is instead a struct. This was done for future extensibility,
+    // and so that the Mac could receive the window argument too. For Windows
+    // and OS2, it's always been a struct, so there's no change for them.
+    NS_IMETHOD
+    HandleEvent(nsPluginEvent* event);
+
+    ////////////////////////////////////////////////////////////////////////////
     // from nsIPluginInstance:
 
     NS_IMETHOD
     Initialize(nsIPluginInstancePeer* peer);
 
     // Required backpointer to the peer.
-    NS_IMETHOD_(nsIPluginInstancePeer*)
-    GetPeer(void);
+    NS_IMETHOD
+    GetPeer(nsIPluginInstancePeer* *result);
 
     // See comment for nsIPlugin::CreateInstance, above.
     NS_IMETHOD
@@ -246,20 +258,11 @@ public:
     NewStream(nsIPluginStreamPeer* peer, nsIPluginStream* *result);
 
     // (Corresponds to NPP_Print.)
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     Print(nsPluginPrint* platformPrint);
 
-    // (Corresponds to NPP_HandleEvent.)
-    // Note that for Unix and Mac the nsPluginEvent structure is different
-    // from the old NPEvent structure -- it's no longer the native event
-    // record, but is instead a struct. This was done for future extensibility,
-    // and so that the Mac could receive the window argument too. For Windows
-    // and OS2, it's always been a struct, so there's no change for them.
-    NS_IMETHOD_(PRInt16)
-    HandleEvent(nsPluginEvent* event);
-
     // (Corresponds to NPP_URLNotify.)
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     URLNotify(const char* url, const char* target,
               nsPluginReason reason, void* notifyData);
 
@@ -277,7 +280,7 @@ public:
     nsresult    	PlatformSetWindow(nsPluginWindow* window);
     PRInt16         PlatformHandleEvent(nsPluginEvent* event);
 
-    void SetMode(PRUint16 mode) { fMode = mode; }
+    void SetMode(nsPluginMode mode) { fMode = mode; }
 
 #ifdef XP_PC
     static LRESULT CALLBACK 
@@ -291,7 +294,7 @@ public:
 protected:
     nsIPluginInstancePeer*      fPeer;
     nsPluginWindow*             fWindow;
-    PRUint16                    fMode;
+    nsPluginMode                fMode;
     PlatformInstance            fPlatform;
 
 };
@@ -327,11 +330,11 @@ public:
     // from nsIPluginStream:
 
     // (Corresponds to NPP_NewStream's stype return parameter.)
-    NS_IMETHOD_(NPStreamType)
-    GetStreamType(void);
+    NS_IMETHOD
+    GetStreamType(nsStreamType *result);
 
     // (Corresponds to NPP_StreamAsFile.)
-    NS_IMETHOD_(void)
+    NS_IMETHOD
     AsFile(const char* fname);
 
     ////////////////////////////////////////////////////////////////////////////
@@ -473,10 +476,11 @@ SimplePlugin::Shutdown(void)
  * GetMIMEDescription:
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-NS_METHOD_(const char*)
-SimplePlugin::GetMIMEDescription(void)
+NS_METHOD
+SimplePlugin::GetMIMEDescription(const char* *result)
 {
-    return "application/x-simple-plugin:smp:Simple LiveConnect Sample Plug-in";
+    *result = "application/x-simple-plugin:smp:Simple LiveConnect Sample Plug-in";
+    return NS_OK;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -517,12 +521,12 @@ SimplePlugin::SetValue(nsPluginVariable variable, void *value)
  * complain to the user.
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-NS_METHOD_(jref)
-SimplePlugin::GetJavaClass(void)
+NS_METHOD
+SimplePlugin::GetJavaClass(jref *result)
 {
     struct java_lang_Class* myClass;
     if (mgr->QueryInterface(kIJRIEnvIID, (void**)&env) == NS_NOINTERFACE)
-        return NULL;    // Java disabled
+        return NS_ERROR_FAILURE;    // Java disabled
 
     myClass = Simple::_use(env);
 
@@ -533,7 +537,8 @@ SimplePlugin::GetJavaClass(void)
         */
         env = NULL;
     }
-    return (jref)myClass;
+    *result = (jref)myClass;
+    return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -541,7 +546,7 @@ SimplePlugin::GetJavaClass(void)
 ////////////////////////////////////////////////////////////////////////////////
 
 SimplePluginInstance::SimplePluginInstance(void)
-    : fPeer(NULL), fWindow(NULL), fMode(0)
+    : fPeer(NULL), fWindow(NULL), fMode(nsPluginMode_Embedded)
 {
     NS_INIT_REFCNT();
 }
@@ -574,15 +579,18 @@ NS_METHOD
 SimplePluginInstance::Initialize(nsIPluginInstancePeer* peer)
 {
     fPeer = peer;
-    fMode = peer->GetMode();
+    nsresult err = peer->GetMode(&fMode);
+    if (err) return err;
     PlatformNew(); 	/* Call Platform-specific initializations */
     return NS_OK;
 }
 
-NS_METHOD_(nsIPluginInstancePeer*)
-SimplePluginInstance::GetPeer(void)
+NS_METHOD
+SimplePluginInstance::GetPeer(nsIPluginInstancePeer* *result)
 {
-    return fPeer;
+    fPeer->AddRef();
+    *result = fPeer;
+    return NS_OK;
 }
 
 NS_METHOD
@@ -681,15 +689,15 @@ SimplePluginInstance::NewStream(nsIPluginStreamPeer* peer, nsIPluginStream* *res
  * NPP_Print:
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-NS_METHOD_(void)
+NS_METHOD
 SimplePluginInstance::Print(nsPluginPrint* printInfo)
 {
     DisplayJavaMessage("Calling SimplePluginInstance::Print.", -1); 
 
     if (printInfo == NULL)
-        return;
+        return NS_ERROR_FAILURE;
 
-    if (printInfo->mode == nsPluginType_Full) {
+    if (printInfo->mode == nsPluginMode_Full) {
         /*
          * PLUGIN DEVELOPERS:
          *	If your plugin would like to take over
@@ -720,7 +728,7 @@ SimplePluginInstance::Print(nsPluginPrint* printInfo)
          * PLUGIN DEVELOPERS:
          *	If your plugin is embedded, or is full-screen
          *	but you returned false in pluginPrinted above, NPP_Print
-         *	will be called with mode == nsPluginType_Embedded.  The nsPluginWindow
+         *	will be called with mode == nsPluginMode_Embedded.  The nsPluginWindow
          *	in the printInfo gives the location and dimensions of
          *	the embedded plugin on the printed page.  On the
          *	Macintosh, platformPrint is the printer port; on
@@ -733,6 +741,7 @@ SimplePluginInstance::Print(nsPluginPrint* printInfo)
         void* platformPrint =
             printInfo->print.embedPrint.platformPrint;
     }
+    return NS_OK;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -745,11 +754,11 @@ SimplePluginInstance::Print(nsPluginPrint* printInfo)
  * return TRUE if you handle the event and FALSE if you ignore the event. 
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-NS_METHOD_(PRInt16)
+NS_METHOD
 SimplePluginInstance::HandleEvent(nsPluginEvent* event)
 {
     PRInt16 eventHandled = PlatformHandleEvent(event);
-    return eventHandled;
+    return eventHandled ? NS_OK : NS_ERROR_FAILURE;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -771,11 +780,12 @@ SimplePluginInstance::HandleEvent(nsPluginEvent* event)
  * call, and can be used by your plug-in to uniquely identify the request. 
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-NS_METHOD_(void)
+NS_METHOD
 SimplePluginInstance::URLNotify(const char* url, const char* target,
                                 nsPluginReason reason, void* notifyData)
 {
     // Not used in the Simple plugin
+    return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -839,11 +849,12 @@ SimplePluginStream::Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount)
 
 /*******************************************************************************/
 
-NS_METHOD_(NPStreamType)
-SimplePluginStream::GetStreamType(void)
+NS_METHOD
+SimplePluginStream::GetStreamType(nsStreamType *result)
 {
     // XXX these should become subclasses
-    return NPStreamType_Normal;
+    *result = nsStreamType_Normal;
+    return NS_OK;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -857,10 +868,11 @@ SimplePluginStream::GetStreamType(void)
  * retrieving the data or writing the file, fname may be NULL. 
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-NS_METHOD_(void )
+NS_METHOD
 SimplePluginStream::AsFile(const char* fname)
 {
     fInst->DisplayJavaMessage("Calling SimplePluginStream::AsFile.", -1); 
+    return NS_OK;
 }
 
 
@@ -923,7 +935,8 @@ SimplePluginInstance::DisplayJavaMessage(char* msg, int len)
     ** Use the GetJavaPeer operation to get the Java instance that
     ** corresponds to our plug-in (an instance of the Simple class):
     */
-    javaPeer = (Simple*)lcPeer->GetJavaPeer();
+    nsresult err = lcPeer->GetJavaPeer((jobject*)&javaPeer);
+    if (err) return;
 	
     /*
     ** Finally, call our plug-in's big "feature" -- the 'doit' method,
