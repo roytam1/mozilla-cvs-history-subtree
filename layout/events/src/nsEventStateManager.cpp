@@ -557,7 +557,9 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
               nsCOMPtr<nsIEventStateManager> esm;
               oldPresContext->GetEventStateManager(getter_AddRefs(esm));
               esm->SetFocusedContent(gLastFocusedContent);
-              gLastFocusedContent->HandleDOMEvent(oldPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status); 
+              nsCOMPtr<nsIContent> temp = gLastFocusedContent;
+              NS_RELEASE(gLastFocusedContent);
+              temp->HandleDOMEvent(oldPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status); 
               esm->SetFocusedContent(nsnull);
               NS_IF_RELEASE(gLastFocusedContent);
             }
