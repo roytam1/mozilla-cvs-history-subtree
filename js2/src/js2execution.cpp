@@ -103,7 +103,7 @@ JSValue Context::readEvalFile(const String& fileName)
         buildRuntime(parsedStatements);
         JS2Runtime::ByteCodeModule* bcm = genCode(parsedStatements, fileName);
         if (bcm) {
-            result = interpret(bcm, NULL, JSValue(getGlobalObject()), NULL, 0);
+            result = interpret(bcm, 0, NULL, JSValue(getGlobalObject()), NULL, 0);
             delete bcm;
         }
     }
@@ -169,10 +169,10 @@ JSValue Context::invokeFunction(JSFunction *target, const JSValue& thisValue, JS
     if (target->isNative())
         return target->getNativeCode()(this, thisValue, argv, argc);
     else
-        return interpret(target->getByteCode(), target->getScopeChain(), thisValue, argv, argc);
+        return interpret(target->getByteCode(), 0, target->getScopeChain(), thisValue, argv, argc);
 }
 
-JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, ScopeChain *scopeChain, const JSValue& thisValue, JSValue *argv, uint32 /*argc*/)
+JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, int offset, ScopeChain *scopeChain, const JSValue& thisValue, JSValue *argv, uint32 /*argc*/)
 { 
     mActivationStack.push(new Activation(mLocals, mStack, mStackTop, mScopeChain,
                                             mArgumentBase, mThis, NULL, mCurModule));   // use NULL pc value to force interpret loop to exit
@@ -186,7 +186,7 @@ JSValue Context::interpret(JS2Runtime::ByteCodeModule *bcm, ScopeChain *scopeCha
     if (mThis.isObject())
         mScopeChain->addScope(mThis.object);
     mCurModule = bcm;
-    uint8 *pc = mCurModule->mCodeBase;
+    uint8 *pc = mCurModule->mCodeBase + offset;
     uint8 *endPC = mCurModule->mCodeBase + mCurModule->mLength;
     mArgumentBase = argv;
     mLocals = new JSValue[mCurModule->mLocalsCount];
@@ -399,89 +399,112 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         target = targetValue->function;
                         if (target->hasBoundThis())   // then we use it instead of the expressed version
                             mThis = target->getThisValue();
-                        if (target->isConstructor())
-                            mThis = kNullValue;       // invoking a constructor function, give it a NULL 'this' to chew on
                     }
-                    
-                    // expectedArgCount = total # specified parameters - required & optional
-                    // hasOptionalArguments() 
-                    // getRequiredArgumentCount()
-                    //
-                    
-                    uint32 expectedArgCount = target->getExpectedArgs();
-                    JSValue *argBase = NULL;
+                                        
+                    JSValue *argBase = getBase(stackSize() - argCount);
 
-                    if ((callFlag & NamedArguments) == NamedArguments) {
-                        uint32 i;
-                        // simplest to allocate a chunk for the args, pull them off
-                        // the current stack and put them in the right place
+                    if (!target->isNative()) {
 
-                        uint32 argBlockSize = argCount;
-                        if (expectedArgCount > argCount)
-                            argBlockSize = expectedArgCount;
-
-                        argBase = new JSValue[argBlockSize];
-                        bool *argAssigned = new bool[argBlockSize];
-                        for (i = 0; i < argBlockSize; i++)
-                            argAssigned[i] = false;
-
-                        uint32 argStart = stackSize() - argCount;
-                        for (i = 0; i < argCount; i++) {
-                            JSValue v = getValue(i + argStart);
-                            uint32 index = i;
-                            if (v.isObject() && (v.object->mType == NamedArgument_Type)) {
-                                NamedArgument *arg = static_cast<NamedArgument *>(v.object);
-                                index = target->findParameterName(arg->mName);
-                                if (index == (uint32)(-1))
-                                    reportError(Exception::referenceError, "Way iffy parameter name");
-                                v = arg->mValue;
-                            }
-                            if (argAssigned[index])
-                                reportError(Exception::referenceError, "Like, we've so seen that argument before");
-                            argBase[index] = v;
-                            argAssigned[index] = true;
-                        }
-                        delete[] argAssigned;
-                    }
-                    else {
-                        ASSERT(stackSize() > argCount);
-                        argBase = getBase(stackSize() - argCount);
-
+                        uint32 expectedArgCount = target->getExpectedArgs();
                         if (target->isChecked()) {
                             if (argCount < target->getRequiredArgumentCount())
                                 reportError(Exception::referenceError, "Insufficient quantity of arguments");
-                            
-                            if (argCount > expectedArgCount)    // XXX are we supposed to check this ??
+                        
+                            if ((argCount > expectedArgCount) && !target->hasRestParameter())
                                 reportError(Exception::referenceError, "Oversufficient quantity of arguments");
                         }
 
-                        // we didn't know the target function at compile time
-                        // and so we couldn't allocate space for these
-                        // 'missing' arguments.
-                        if (expectedArgCount > argCount)
-                            assureStackSpace(expectedArgCount - argCount);
+                        uint32 i;
+                        argBase = new JSValue[expectedArgCount];        // room for all required & optional arguments
+                                                                        // any left-overs will go into the rest parameter
 
-                        if (target->hasOptionalArguments()) {
-                            // call the initializers for each not-supplied argument
-                            for (uint32 i = argCount; i < expectedArgCount; i++) {
-                                // be better to jump to a 'fall-thru' entry-point that
-                                // handles this?
-                       //         invokeInitializer(target->getArgumentInitializer(i));
-                       //         pushValue( XXX );
-                                cleanUp++;
+                        bool *argUsed = new bool[argCount];
+                        for (i = 0; i < argCount; i++)
+                            argUsed[i] = false;
+
+                        uint32 argStart = stackSize() - argCount;
+
+                        uint32 argIndex = 0;      // the index into argBase, the resolved outgoing arguments
+                        uint32 posArgIndex = 0;   // next positional arg from the incoming set
+                        for (i = 0; i < argCount; i++) {    // find the first positional (i.e. non-named arg)
+                            JSValue v = getValue(i + argStart);
+                            if (!v.isObject() || (v.object->mType != NamedArgument_Type)) {
+                                posArgIndex = i;
+                                break;
                             }
                         }
-                        else {
-                            for (uint32 i = argCount; i < expectedArgCount; i++) {
-                                pushValue(kUndefinedValue);
-                                cleanUp++;
+                        while (argIndex < expectedArgCount) {                        
+                            bool foundNamedArg = false;
+                            // find a matching named argument
+                            for (uint32 i = 0; i < argCount; i++) {
+                                JSValue v = getValue(i + argStart);
+                                if (v.isObject() && (v.object->mType == NamedArgument_Type)) {
+                                    NamedArgument *arg = static_cast<NamedArgument *>(v.object);
+                                    if (target->findParameterName(arg->mName) == argIndex) {
+                                        // mark this arg has having been used
+                                        argUsed[i] = true;
+                                        foundNamedArg = true;
+                                        argBase[argIndex] = arg->mValue;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!foundNamedArg) {
+                                if (target->argHasInitializer(argIndex)) {
+                                    argBase[argIndex] = target->runArgInitializer(this, argIndex, mThis, argBase, expectedArgCount);
+                                }
+                                else {
+                                    if (posArgIndex < argCount) {
+                                        argUsed[posArgIndex] = true; 
+                                        argBase[argIndex] = getValue(posArgIndex++ + argStart);
+                                    }
+                                    else {
+                                        if (target->isChecked())
+                                            reportError(Exception::referenceError, "Missing positional argument");
+                                        else
+                                            argBase[argIndex] = kUndefinedValue;
+                                    }
+                                }
+                            }
+                            argIndex++;
+                        }
+
+                        JSValue restArgument;
+                        if (target->hasRestParameter() && target->getRestParameterName())
+                            restArgument = Object_Type->newInstance(this);
+                        posArgIndex = 0;
+                        for (i = 0; i < argCount; i++) {
+                            if (!argUsed[i]) {
+                                JSValue v = getValue(i + argStart);
+                                if (v.isObject() && (v.object->mType == NamedArgument_Type)) {
+                                    NamedArgument *arg = static_cast<NamedArgument *>(v.object);
+                                    // if this argument matches a parameter name, that's bad because
+                                    // it's a duplicate case
+                                    if (target->findParameterName(arg->mName) != (uint32)(-1))
+                                        reportError(Exception::referenceError, "Duplicate named argument");                                
+                                    else {
+                                        if (target->hasRestParameter()) {
+                                            if (!restArgument.isUndefined())
+                                                restArgument.object->setProperty(this, *arg->mName, (NamespaceList *)(NULL), arg->mValue);
+                                        }
+                                        else
+                                            reportError(Exception::referenceError, "Unknown named argument, no rest argument");                                
+                                    }
+                                }
+                                else {
+                                    if (target->hasRestParameter()) {
+                                        if (!restArgument.isUndefined()) {
+                                            String *id = numberToString(i);
+                                            restArgument.object->setProperty(this, *id, (NamespaceList *)(NULL), v);
+                                        }
+                                    }
+                                    else
+                                        reportError(Exception::referenceError, "Extra argument, no rest argument");                                
+                                }
                             }
                         }
-                    }
 
 
-
-                    if (!target->isNative()) {
                         mActivationStack.push(new Activation(mLocals, mStack, mStackTop - (cleanUp + 1),
                                                                     mScopeChain,
                                                                     mArgumentBase, oldThis,
@@ -784,7 +807,12 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     JSValue result = topValue();
                     if (result.isFunction()) {
                         popValue();
-                        pushValue(JSValue((JSFunction *)(new JSBoundFunction(result.function, obj))));
+                        if (result.function->isConstructor())
+                            // A constructor has to be called with a NULL 'this' in order to prompt it
+                            // to construct the instance object.
+                            pushValue(JSValue((JSFunction *)(new JSBoundFunction(result.function, NULL))));
+                        else
+                            pushValue(JSValue((JSFunction *)(new JSBoundFunction(result.function, obj))));
                     }
                 }
                 break;
@@ -2079,6 +2107,8 @@ JSValue JSValue::valueToBoolean(Context *cx, const JSValue& value)
 JSValue Context::mapValueToType(JSValue v, JSType *t)
 {
     // user conversions?
+    if (v.getType() == t)
+        return v;
     
     if (t == Number_Type) {
         return v.toNumber(this);

@@ -185,7 +185,7 @@ static int readEvalPrint(Context *cx, FILE *in)
 #ifdef SHOW_ICODE
                     stdOut << *bcm;
 #endif
-                    JSValue result = cx->interpret(bcm, NULL, JSValue(cx->getGlobalObject()), NULL, 0);
+                    JSValue result = cx->interpret(bcm, 0, NULL, JSValue(cx->getGlobalObject()), NULL, 0);
                     if (!result.isUndefined())
                         stdOut << result.toString(cx) << "\n";
                     delete bcm;

@@ -131,6 +131,13 @@ void StaticFieldReference::emitCodeSequence(ByteCodeGen *bcg)
     bcg->addStringRef(mName); 
 }
 
+void StaticFieldReference::emitInvokeSequence(ByteCodeGen *bcg) 
+{
+    bcg->addOp(GetPropertyOp);
+    bcg->addStringRef(mName); 
+}
+
+
 
 void MethodReference::emitImplicitLoad(ByteCodeGen *bcg) 
 {
@@ -365,15 +372,16 @@ ByteCodeModule::ByteCodeModule(ByteCodeGen *bcg)
 
 size_t ByteCodeModule::getPositionForPC(uint32 pc)
 {
-    if (mCodeMapLength == 1)
-        return mCodeMap[0].second;
+    if (mCodeMapLength == 0)
+        return 0;
+
     for (uint32 i = 0; i < (mCodeMapLength - 1); i++) {
         uint32 pos1 = mCodeMap[i].first;
         uint32 pos2 = mCodeMap[i + 1].first;
         if ((pc >= pos1) && (pc < pos2))
             return mCodeMap[i].second;
     }
-    return 0;
+    return mCodeMap[mCodeMapLength - 1].second;
 }
 
 
@@ -497,7 +505,7 @@ void Label::addFixup(ByteCodeGen *bcg, uint32 branchLocation)
 
 
 
-void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, JSFunction *fnc, bool isConstructor, JSType *topClass)
+void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, size_t pos, JSFunction *fnc, bool isConstructor, JSType *topClass)
 {
     mScopeChain->addScope(fnc->mParameterBarrel);
     mScopeChain->addScope(&fnc->mActivation);
@@ -532,49 +540,62 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, JSFunction *fnc, boo
         //  Invoke the super class constructor if there isn't an explicit
         // statement to do so.
         //  
-        bool foundSuperCall = false;
-        BlockStmtNode *b = f.body;
-        if (b && b->statements) {
-            if (b->statements->getKind() == StmtNode::expression) {
-                ExprStmtNode *e = checked_cast<ExprStmtNode *>(b->statements);
-                if (e->expr->getKind() == ExprNode::call) {
-                    InvokeExprNode *i = checked_cast<InvokeExprNode *>(e->expr);
-                    if (i->op->getKind() == ExprNode::dot) {
-                        // check for 'this.m()'
-                        BinaryExprNode *b = checked_cast<BinaryExprNode *>(i->op);
-                        if ((b->op1->getKind() == ExprNode::This) && (b->op2->getKind() == ExprNode::identifier)) {
-//                            IdentifierExprNode *i = checked_cast<IdentifierExprNode *>(b->op2);
-                            // XXX verify that i->name is a constructor in the superclass
-                            foundSuperCall = true;
+        if (topClass->mSuperType) {
+            JSType *superClass = topClass->mSuperType;            
+            bool foundSuperCall = false;
+            BlockStmtNode *b = f.body;
+            if (b && b->statements) {
+                if (b->statements->getKind() == StmtNode::expression) {
+                    ExprStmtNode *e = checked_cast<ExprStmtNode *>(b->statements);
+                    if (e->expr->getKind() == ExprNode::call) {
+                        InvokeExprNode *i = checked_cast<InvokeExprNode *>(e->expr);
+                        if (i->op->getKind() == ExprNode::dot) {
+                            // check for 'this.m()'
+                            BinaryExprNode *b = checked_cast<BinaryExprNode *>(i->op);
+                            if ((b->op1->getKind() == ExprNode::This) && (b->op2->getKind() == ExprNode::identifier)) {
+    //                            IdentifierExprNode *i = checked_cast<IdentifierExprNode *>(b->op2);
+                                // XXX verify that i->name is a constructor in the superclass
+                                foundSuperCall = true;
+                            }
+                        }
+                        else {
+                            // look for calls to 'this()'
+                            if (i->op->getKind() == ExprNode::This) {
+                                foundSuperCall = true;
+                            }
+                            else {
+                                // otherwise, look for calls to the superclass by name
+                                if (i->op->getKind() == ExprNode::identifier) {
+                                    const StringAtom &name = checked_cast<IdentifierExprNode *>(i->op)->name;
+                                    if (name == superClass->mClassName)
+                                        foundSuperCall = true;
+                                }                            
+                            }
                         }
                     }
                     else {
-                        // look for calls to 'this()'
-                        if (i->op->getKind() == ExprNode::This) {
+                        if (e->expr->getKind() == ExprNode::superStmt) {
                             foundSuperCall = true;
                         }
                     }
                 }
-                else {
-                    if (e->expr->getKind() == ExprNode::superStmt) {
-                        foundSuperCall = true;
-                    }
-                }
             }
-        }
 
-        if (!foundSuperCall) { // invoke the default superclass constructor
-            JSType *superClass = topClass->mSuperType;
-            if (superClass) {
-                JSFunction *superConstructor = superClass->getDefaultConstructor();
-                if (superConstructor) {
-                    addOp(LoadThisOp);
-                    addOp(LoadFunctionOp);
-                    addPointer(superConstructor);
-                    addOpAdjustDepth(InvokeOp, -1);
-                    addLong(0);
-                    addByte(Explicit);
-                    addOp(PopOp);
+            if (!foundSuperCall) { // invoke the default superclass constructor
+                if (superClass) {
+            // Make sure there's a default constructor with 0 (required) parameters
+                    JSFunction *superConstructor = superClass->getDefaultConstructor();
+                    if (superConstructor) {
+                        if (superConstructor->getRequiredArgumentCount() > 0)
+                            m_cx->reportError(Exception::typeError, "Super class default constructor must be called explicitly - it has required parameters that must be specified", pos);
+                        addOp(LoadThisOp);
+                        addOp(LoadFunctionOp);
+                        addPointer(superConstructor);
+                        addOpAdjustDepth(InvokeOp, -1);
+                        addLong(0);
+                        addByte(Explicit);
+                        addOp(PopOp);
+                    }
                 }
             }
         }
@@ -610,7 +631,7 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, JSFunction *fnc, boo
             // an argument for this parameter. 
             fnc->setArgumentInitializer(index, currentOffset());
             genExpr(v->initializer);
-            addOp(RtsOp);        
+            addOpSetDepth(ReturnOp, 0);
         }
         index++;
         v = v->next;
@@ -646,6 +667,7 @@ ByteCodeModule *ByteCodeGen::genCodeForExpression(ExprNode *p)
 bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
 {
     bool result = false;    
+    addPosition(p->pos);
     switch (p->getKind()) {
     case StmtNode::Class:
         {
@@ -737,7 +759,7 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             if (mScopeChain->topClass() && (mScopeChain->topClass()->mClassName.compare(*f->function.name) == 0))
                 isConstructor = true;
             ByteCodeGen bcg(m_cx, mScopeChain);
-            bcg.genCodeForFunction(f->function, fnc, isConstructor, mScopeChain->topClass());
+            bcg.genCodeForFunction(f->function, f->pos, fnc, isConstructor, mScopeChain->topClass());
         }
         break;
     case StmtNode::While:
@@ -1079,7 +1101,6 @@ bool ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
             BlockStmtNode *b = checked_cast<BlockStmtNode *>(p);
             StmtNode *s = b->statements;
             while (s) {
-                addPosition(s->pos);
                 result = genCodeForStatement(s, static_cg);
                 s = s->next;
             }            
@@ -2141,7 +2162,7 @@ BinaryOpEquals:
             JSFunction *fnc = new JSFunction(NULL, m_cx->getParameterCount(f->function), mScopeChain);
             m_cx->buildRuntimeForFunction(f->function, fnc);
             ByteCodeGen bcg(m_cx, mScopeChain);
-            bcg.genCodeForFunction(f->function, fnc, false, NULL);
+            bcg.genCodeForFunction(f->function, f->pos, fnc, false, NULL);
             addOp(LoadFunctionOp);
             addPointer(fnc);
             addOp(NewClosureOp);

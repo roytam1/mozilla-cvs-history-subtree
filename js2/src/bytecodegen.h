@@ -250,6 +250,7 @@ extern ByteCodeData gByteCodeData[OpCodeCount];
         ByteCodeModule *genCodeForScript(StmtNode *p);
         bool genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg);
         void genCodeForFunction(FunctionDefinition &f, 
+                                    size_t pos,
                                     JSFunction *fnc, 
                                     bool isConstructor, 
                                     JSType *topClass);

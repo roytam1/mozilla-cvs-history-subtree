@@ -90,7 +90,7 @@ Attribute *Context::executeAttributes(ExprNode *attr)
     ByteCodeGen bcg(this, mScopeChain);
     ByteCodeModule *bcm = bcg.genCodeForExpression(attr);
 //    stdOut << *bcm;
-    JSValue result = interpret(bcm, NULL, JSValue(getGlobalObject()), NULL, 0);
+    JSValue result = interpret(bcm, 0, NULL, JSValue(getGlobalObject()), NULL, 0);
 
     ASSERT(result.isObject() && (result.object->getType() == Attribute_Type));
     return static_cast<Attribute *>(result.object);
@@ -275,7 +275,7 @@ Reference *JSObject::genReference(const String& name, NamespaceList *names, Acce
 void JSObject::getProperty(Context *cx, const String &name, NamespaceList *names)
 {
     PropertyIterator i;
-    if (hasProperty(name, names, Read, &i)) {
+    if (hasOwnProperty(name, names, Read, &i)) {
         Property *prop = PROPERTY(i);
         switch (prop->mFlag) {
         case ValuePointer:
@@ -293,8 +293,12 @@ void JSObject::getProperty(Context *cx, const String &name, NamespaceList *names
             break;
         }
     }
-    else
-        cx->pushValue(kUndefinedValue);        
+    else {
+        if (mPrototype)
+            mPrototype->getProperty(cx, name, names);
+        else
+            cx->pushValue(kUndefinedValue);        
+    }
 }
 
 
@@ -525,7 +529,7 @@ void JSType::setInstanceInitializer(Context *cx, JSFunction *f)
     }
     if (f) {
         JSValue thisValue(mInitialInstance);
-        cx->interpret(f->getByteCode(), f->getScopeChain(), thisValue, NULL, 0);
+        cx->interpret(f->getByteCode(), 0, f->getScopeChain(), thisValue, NULL, 0);
     }
 }
 
@@ -533,7 +537,7 @@ void JSType::setInstanceInitializer(Context *cx, JSFunction *f)
 void JSType::setStaticInitializer(Context *cx, JSFunction *f)
 {
     if (f)
-        cx->interpret(f->getByteCode(), f->getScopeChain(), JSValue(this), NULL, 0);
+        cx->interpret(f->getByteCode(), 0, f->getScopeChain(), JSValue(this), NULL, 0);
 }
 
 Property *JSType::defineVariable(const String& name, AttributeStmtNode *attr, JSType *type)
@@ -576,6 +580,8 @@ void ScopeChain::setNameValue(const String& name, AttributeStmtNode *attr, Conte
     }
 }
 
+inline char narrow(char16 ch) { return char(ch); }
+
 void ScopeChain::getNameValue(const String& name, AttributeStmtNode *attr, Context *cx)
 {
     NamespaceList *names = (attr) ? attr->attributeValue->mNamespaceList : NULL;
@@ -592,7 +598,11 @@ void ScopeChain::getNameValue(const String& name, AttributeStmtNode *attr, Conte
             return;
         }
     }
-    m_cx->reportError(Exception::referenceError, "Not defined");
+
+    std::string str(name.length(), char());
+    std::transform(name.begin(), name.end(), str.begin(), narrow);
+    
+    m_cx->reportError(Exception::referenceError, "'{0}' not defined", str.c_str() );
 }
 
 
@@ -809,6 +819,32 @@ void ScopeChain::collectNames(StmtNode *p)
             fnc->setIsPrototype(isPrototype);
             fnc->setIsConstructor(isConstructor);
             f->mFunction = fnc;
+
+            /* XXX determine whether a function is unchecked, which is the case if -
+                 
+                 strict mode is disabled at the point of the function definition; 
+                 the function is not a class or interface member; 
+                 the function has no optional, named, or rest parameters; 
+                 none of the function's parameters has a declared type; 
+                 the function does not have a declared return type; 
+                 the function is not a getter or setter. 
+
+            */
+            if (f->function.restParameter) {
+                fnc->setHasRestParameter();
+                if (f->function.restParameter->name)
+                    fnc->setRestParameterName(f->function.restParameter->name);
+            }
+            if (f->function.optParameters) {
+                uint32 optPCount = 0;
+                VariableBinding *b = f->function.optParameters;
+                while (b != f->function.restParameter) {
+                    optPCount++;
+                    b = b->next;
+                }
+                fnc->setOptionalArgumentCount(optPCount);
+            }
+
 
             if (isOperator) {
                 // no need to do anything yet, all operators are 'pre-declared'
@@ -1168,10 +1204,12 @@ void Context::buildRuntimeForFunction(FunctionDefinition &f, JSFunction *fnc)
         }
         v = v->next;
     }
-    mScopeChain->addScope(&fnc->mActivation);
-    mScopeChain->collectNames(f.body);
-    buildRuntimeForStmt(f.body);
-    mScopeChain->popScope();
+    if (f.body) {
+        mScopeChain->addScope(&fnc->mActivation);
+        mScopeChain->collectNames(f.body);
+        buildRuntimeForStmt(f.body);
+        mScopeChain->popScope();
+    }
     mScopeChain->popScope();
 }
 
@@ -1493,6 +1531,11 @@ static JSValue ExtendAttribute_Invoke(Context * /*cx*/, const JSValue& /*thisVal
     return JSValue(x);
 }
               
+JSValue JSFunction::runArgInitializer(Context *cx, uint32 a, const JSValue& thisValue, JSValue *argv, uint32 argc)
+{
+    ASSERT(mArguments && (a < mExpectedArgs));
+    return cx->interpret(getByteCode(), mArguments[a].mInitializer, getScopeChain(), thisValue, argv, argc);    
+}
 
 
 uint32 JSFunction::findParameterName(const String *name)
@@ -1622,9 +1665,6 @@ void Context::initBuiltins()
     *mGlobal = Object_Type->newInstance(this);
     initClass(Object_Type,  &builtInClasses[0], new PrototypeFunctions(&objectProtos[0]) );
     
-    // pull up them bootstraps 
-    (*mGlobal)->mPrototype = Object_Type->mPrototype;
-
     initClass(Type_Type,            &builtInClasses[1],  NULL );
     initClass(Function_Type,        &builtInClasses[2],  new PrototypeFunctions(&functionProtos[0]) );
     initClass(Number_Type,          &builtInClasses[3],  new PrototypeFunctions(&numberProtos[0]) );
@@ -1640,6 +1680,7 @@ void Context::initBuiltins()
 
 
 OperatorMap operatorMap;
+//OperatorHashTable operatorHashTable;
 
 struct OperatorInitData {
     char *operatorString;
@@ -1676,8 +1717,13 @@ static void initOperatorTable()
 {
     static bool mapped = false;
     if (!mapped) {
-        for (uint32 i = 0; (i < sizeof(operatorInitData) / sizeof(OperatorInitData)); i++)
-            operatorMap[widenCString(operatorInitData[i].operatorString)] = operatorInitData[i].op;
+        for (uint32 i = 0; (i < sizeof(operatorInitData) / sizeof(OperatorInitData)); i++) {
+            const String& name = widenCString(operatorInitData[i].operatorString);
+            operatorMap[name] = operatorInitData[i].op;
+/*
+            operatorHashTable.insert(name, OperatorEntry(name, operatorInitData[i].op)  );
+*/
+        }
         mapped = true;
     }
 }
@@ -1764,7 +1810,7 @@ Context::Context(JSObject **global, World &world, Arena &a, Pragma::Flags flags)
 
 }
 
-void Context::reportError(Exception::Kind, char *message, size_t pos)
+void Context::reportError(Exception::Kind kind, char *message, size_t pos, const char *arg)
 {
     if (mReader) {
         uint32 lineNum = mReader->posToLineNum(pos);
@@ -1773,21 +1819,25 @@ void Context::reportError(Exception::Kind, char *message, size_t pos)
         size_t linePos = mReader->getLine(lineNum, lineBegin, lineEnd);
         ASSERT(lineBegin && lineEnd && linePos <= pos);
 
-        throw Exception(Exception::semanticError, 
-                            widenCString(message), 
+        String x = widenCString(message);
+        if (arg) {
+            int a = x.find(widenCString("{0}"));
+            x.replace(a, (a + 2), widenCString(arg));
+        }
+        throw Exception(kind, x, 
                             mReader->sourceLocation, 
                             lineNum, pos - linePos, pos, lineBegin, lineEnd);
     }
     else {
-        throw Exception(Exception::semanticError, message); 
+        throw Exception(kind, message); 
     }
 }
 
 // assumes mPC has been set inside the interpreter loop prior 
 // to dispatch to whatever routine invoked this error reporter
-void Context::reportError(Exception::Kind kind, char *message)
+void Context::reportError(Exception::Kind kind, char *message, const char *arg)
 {
-    reportError(kind, message, mCurModule->getPositionForPC(toUInt32(mPC - mCurModule->mCodeBase)));
+    reportError(kind, message, mCurModule->getPositionForPC(toUInt32(mPC - mCurModule->mCodeBase)), arg);
 }
 
 

@@ -260,6 +260,24 @@ static const double two31 = 2147483648.0;
         OperatorCount
     } Operator;
     
+/*
+XXX ...couldn't get this to work...
+
+    class OperatorEntry {
+    public:
+        OperatorEntry(const String &, JS2Runtime::Operator) {}
+        OperatorEntry& operator=(const OperatorEntry &) { return *this; }
+
+        const String mName;
+        JS2Runtime::Operator op;
+
+        bool operator == (const String &name) { return name == mName; }
+    };
+
+    typedef HashTable<OperatorEntry, const String> OperatorHashTable;
+    extern OperatorHashTable operatorHashTable;
+*/
+
     typedef std::map<const String, JS2Runtime::Operator> OperatorMap;
     extern OperatorMap operatorMap;
         
@@ -348,6 +366,7 @@ static const double two31 = 2147483648.0;
         const String& mName;
         JSType *mClass;
         void emitCodeSequence(ByteCodeGen *bcg);
+        void emitInvokeSequence(ByteCodeGen *bcg);
         void emitImplicitLoad(ByteCodeGen *bcg);
         int32 baseExpressionDepth() { return 1; }
     };
@@ -1148,6 +1167,9 @@ static const double two31 = 2147483648.0;
                         mScopeChain(NULL), 
                         mIsPrototype(false),
                         mIsConstructor(false),
+                        mIsChecked(true),
+                        mHasRestParameter(false),
+                        mRestParameterName(NULL),
                         mClass(NULL)
         {
             if (scopeChain) {
@@ -1169,6 +1191,9 @@ static const double two31 = 2147483648.0;
                         mScopeChain(NULL),
                         mIsPrototype(false),
                         mIsConstructor(false),
+                        mIsChecked(false),          // native functions aren't checked (?)
+                        mHasRestParameter(false),
+                        mRestParameterName(NULL),
                         mClass(NULL)
         {
             mPrototype = Function_Type->mPrototypeObject;
@@ -1191,8 +1216,13 @@ static const double two31 = 2147483648.0;
 
         void setIsPrototype(bool i)             { mIsPrototype = i; }
         void setIsConstructor(bool i)           { mIsConstructor = i; }
+        void setIsUnchecked()                   { mIsChecked = false; }
         void setFunctionName(const String &n)   { mFunctionName = n; }
         void setClass(JSType *c)                { mClass = c; }
+        void setOptionalArgumentCount(uint32 r) { mOptionalArgs = r; }
+        void setHasRestParameter()              { mHasRestParameter = true; }
+        void setRestParameterName(const String *n)
+                                                { mRestParameterName = n; }
 
         virtual bool hasBoundThis()             { return false; }
         virtual bool isNative()                 { return (mCode != NULL); }
@@ -1204,14 +1234,21 @@ static const double two31 = 2147483648.0;
         virtual JSType *getResultType()         { return mResultType; }
         virtual uint32 getExpectedArgs()        { return mExpectedArgs; }
         virtual JSType *getArgType(uint32 a)    { ASSERT(mArguments && (a < mExpectedArgs)); return mArguments[a].mType; }
+        virtual bool argHasInitializer(uint32 a){ ASSERT(mArguments && (a < mExpectedArgs)); return (mArguments[a].mInitializer != (uint32)(-1)); }
+        virtual JSValue runArgInitializer(Context *cx, uint32 a, const JSValue& thisValue, JSValue *argv, uint32 argc);
         virtual ScopeChain *getScopeChain()     { return mScopeChain; }
         virtual JSValue getThisValue()          { return kNullValue; }         
         virtual JSType *getClass()              { return mClass; }
         virtual String &getFunctionName()       { return mFunctionName; }
         virtual uint32 findParameterName(const String *name);
-        virtual uint32 getRequiredArgumentCount()   { return mExpectedArgs; }
+        virtual uint32 getRequiredArgumentCount()   
+                                                { return (mExpectedArgs - mOptionalArgs); }
         virtual bool hasOptionalArguments()     { return (mOptionalArgs > 0); }
-        virtual bool isChecked()                { return false; }
+        virtual bool isChecked()                { return mIsChecked; }
+        virtual bool hasRestParameter()         { return mHasRestParameter; }
+        virtual const String *getRestParameterName()  
+                                                { return mRestParameterName; }
+
 
 
         ParameterBarrel *mParameterBarrel;
@@ -1221,12 +1258,15 @@ static const double two31 = 2147483648.0;
         ByteCodeModule *mByteCode;
         NativeCode *mCode;
         JSType *mResultType;
-        uint32 mExpectedArgs;
+        uint32 mExpectedArgs;                   // total # parameters
         uint32 mOptionalArgs;
         ArgumentData *mArguments;
         ScopeChain *mScopeChain;
         bool mIsPrototype;                      // set for functions with prototype attribute
         bool mIsConstructor;
+        bool mIsChecked;
+        bool mHasRestParameter;
+        const String *mRestParameterName;
         JSType *mClass;                         // pointer to owning class if this function is a method
         String mFunctionName;
     };
@@ -1251,17 +1291,22 @@ static const double two31 = 2147483648.0;
         JSType *getResultType()         { return mFunction->getResultType(); }
         uint32 getExpectedArgs()        { return mFunction->getExpectedArgs(); }
         JSType *getArgType(uint32 a)    { return mFunction->getArgType(a); }
+        bool argHasInitializer(uint32 a){ return mFunction->argHasInitializer(a); }
+        JSValue runArgInitializer(Context *cx, uint32 a, const JSValue& thisValue, JSValue *argv, uint32 argc)
+                                        { return mFunction->runArgInitializer(cx, a, thisValue, argv, argc); }
         ScopeChain *getScopeChain()     { return mFunction->getScopeChain(); }
-        JSValue getThisValue()          { return JSValue(mThis); }         
+        JSValue getThisValue()          { return (mThis) ? JSValue(mThis) : kNullValue; }         
         JSType *getClass()              { return mFunction->getClass(); }
         String &getFunctionName()       { return mFunction->getFunctionName(); }
         uint32 findParameterName(const String *name)
                                         { return mFunction->findParameterName(name); } 
-        virtual uint32 getRequiredArgumentCount()   
+        uint32 getRequiredArgumentCount()   
                                         { return mFunction->getRequiredArgumentCount(); }
-        virtual bool hasOptionalArguments()
-                                        { return mFunction->hasOptionalArguments(); }
-        virtual bool isChecked()        { return mFunction->isChecked(); }
+        bool hasOptionalArguments()     { return mFunction->hasOptionalArguments(); }
+        bool isChecked()                { return mFunction->isChecked(); }
+        bool hasRestParameter()         { return mFunction->hasRestParameter(); }
+        const String *getRestParameterName()  
+                                        { return mFunction->getRestParameterName(); }
 
         void getProperty(Context *cx, const String &name, NamespaceList *names) 
                                         { mFunction->getProperty(cx, name, names); }
@@ -1498,11 +1543,11 @@ static const double two31 = 2147483648.0;
         void buildRuntimeForStmt(StmtNode *p);
         ByteCodeModule *genCode(StmtNode *p, String sourceName);
 
-        JSValue interpret(ByteCodeModule *bcm, ScopeChain *scopeChain, const JSValue& thisValue, JSValue *argv, uint32 argc);
+        JSValue interpret(ByteCodeModule *bcm, int offset, ScopeChain *scopeChain, const JSValue& thisValue, JSValue *argv, uint32 argc);
         JSValue interpret(uint8 *pc, uint8 *endPC);
         
-        void reportError(Exception::Kind kind, char *message, size_t pos);
-        void reportError(Exception::Kind kind, char *message);
+        void reportError(Exception::Kind kind, char *message, size_t pos, const char *arg = NULL);
+        void reportError(Exception::Kind kind, char *message, const char *arg = NULL);
 
         
         /* utility routines */
