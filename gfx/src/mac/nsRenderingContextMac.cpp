@@ -335,7 +335,9 @@ void nsRenderingContextMac::SelectDrawingSurface(nsDrawingSurfaceMac* aSurface, 
 
   nsGraphicsUtils::SafeSetPort(mPort);
 
+#ifndef MOZ_WIDGET_COCOA
 	::SetOrigin(-mGS->mOffx, -mGS->mOffy);		// line order...
+#endif
 
 	if (aChanges & kClippingChanged)
 		::SetClip(mGS->mClipRegion);			// ...does matter
@@ -402,7 +404,9 @@ nsresult nsRenderingContextMac::SetPortTextState()
 void nsRenderingContextMac::SetupPortState()
 {
   nsGraphicsUtils::SafeSetPort(mPort);
+#ifndef MOZ_WIDGET_COCOA
 	::SetOrigin(-mGS->mOffx, -mGS->mOffy);
+#endif
 	::SetClip(mGS->mClipRegion);
 }
 
@@ -1586,6 +1590,37 @@ NS_IMETHODIMP nsRenderingContextMac::InvertRect(nscoord aX, nscoord aY, nscoord 
 	::InvertRect(&therect);
 
 	return NS_OK;
+}
+
+NS_IMETHODIMP
+nsRenderingContextMac::FlushRect(const nsRect& aRect)
+{
+  return FlushRect(aRect.x, aRect.y, aRect.width, aRect.height);
+}
+
+NS_IMETHODIMP
+nsRenderingContextMac::FlushRect(nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
+{
+#ifdef MOZ_WIDGET_COCOA
+    if (mPort) {
+        SetupPortState();
+
+        nscoord x,y,w,h;
+        Rect	therect;
+    
+        x = aX;
+        y = aY;
+        w = aWidth;
+        h = aHeight;
+    
+        mGS->mTMatrix.TransformCoord(&x, &y, &w, &h);
+        RgnHandle rgn = ::NewRgn();
+        ::SetRectRgn(rgn, pinToShort(x), pinToShort(y), pinToShort(x + w), pinToShort(y + h));
+        ::QDFlushPortBuffer(mPort, rgn);
+        ::DisposeRgn(rgn);
+    }
+#endif
+    return NS_OK;
 }
 
 NS_IMETHODIMP nsRenderingContextMac::GetGraphics(nsIGraphics* *aGraphics)

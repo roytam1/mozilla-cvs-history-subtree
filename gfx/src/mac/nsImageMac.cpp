@@ -362,6 +362,15 @@ NS_IMETHODIMP nsImageMac :: DrawToImage(nsIImage* aDstImage, PRInt32 aDX, PRInt3
   if (!mImageBitsHandle)
     return NS_ERROR_FAILURE;
 
+#ifdef MOZ_WIDGET_COCOA
+  nsGraphicsUtils::SetPortToKnownGoodPort();
+  GrafPtr port;
+  GDHandle handle;
+  ::GetGWorld(&port, &handle);
+  if (!IsValidPort(port))
+  return NS_ERROR_FAILURE;
+#endif
+
   // lock and set up bits handles
   LockImagePixels(PR_FALSE);
   LockImagePixels(PR_TRUE);
@@ -382,7 +391,7 @@ NS_IMETHODIMP nsImageMac :: DrawToImage(nsIImage* aDstImage, PRInt32 aDX, PRInt3
   PixMap* destPixels;
   dstMacImage->GetPixMap(&destPixels);
   NS_ASSERTION(destPixels, "No dest pixels!");
-          
+
   CopyBitsWithMask((BitMap*)(&mImagePixmap),
       mMaskBitsHandle ? (BitMap*)(&mMaskPixmap) : nsnull, mAlphaDepth,
       (BitMap*)(destPixels), srcRect, maskRect, dstRect, PR_FALSE);
