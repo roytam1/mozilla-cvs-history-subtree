@@ -460,6 +460,46 @@ nsInstall::AddDirectory(const nsString& aRegName,
 }
 
 PRInt32    
+nsInstall::AddDirectory(const nsString& aRegName, 
+                        const nsIDOMInstallVersion& aVersion, 
+                        const nsString& aJarSource, 
+                        const nsString& aFolder, 
+                        const nsString& aSubdir, 
+                        PRBool aForceMode, 
+                        PRInt32* aReturn)
+{
+    return NS_OK;
+}
+
+PRInt32    
+nsInstall::AddDirectory(const nsString& aRegName, 
+                        const nsString& aVersion, 
+                        const nsString& aJarSource, 
+                        const nsString& aFolder, 
+                        const nsString& aSubdir, 
+                        PRInt32* aReturn)
+{
+    return NS_OK;
+}
+
+PRInt32    
+nsInstall::AddDirectory(const nsString& aRegName, 
+                        const nsString& aJarSource, 
+                        const nsString& aFolder, 
+                        const nsString& aSubdir, 
+                        PRInt32* aReturn)
+{
+    return NS_OK;
+}
+
+PRInt32    
+nsInstall::AddDirectory(const nsString& aJarSource,
+                        PRInt32* aReturn)
+{
+    return NS_OK;
+}
+
+PRInt32    
 nsInstall::AddSubcomponent(const nsString& aRegName, 
                            const nsString& aVersion, 
                            const nsString& aJarSource, 
@@ -575,6 +615,46 @@ nsInstall::AddSubcomponent(const nsString& aRegName,
 }
 
 PRInt32    
+nsInstall::AddSubcomponent(const nsString& aRegName, 
+                           const nsIDOMInstallVersion& aVersion, 
+                           const nsString& aJarSource, 
+                           const nsString& aFolder, 
+                           const nsString& aTargetName, 
+                           PRBool aForceMode, 
+                           PRInt32* aReturn)
+{
+    return NS_OK;
+}
+
+PRInt32    
+nsInstall::AddSubcomponent(const nsString& aRegName, 
+                           const nsString& aVersion, 
+                           const nsString& aJarSource, 
+                           const nsString& aFolder, 
+                           const nsString& aTargetName, 
+                           PRInt32* aReturn)
+{
+    return NS_OK;
+}
+
+PRInt32    
+nsInstall::AddSubcomponent(const nsString& aRegName, 
+                           const nsString& aJarSource, 
+                           const nsString& aFolder, 
+                           const nsString& aTargetName, 
+                           PRInt32* aReturn)
+{
+    return NS_OK;
+}
+
+PRInt32    
+nsInstall::AddSubcomponent(const nsString& aJarSource,
+                           PRInt32* aReturn)
+{
+    return NS_OK;
+}
+
+PRInt32    
 nsInstall::DeleteComponent(const nsString& aRegistryName, PRInt32* aReturn)
 {
     PRInt32 result = SanityCheck();
@@ -661,6 +741,12 @@ nsInstall::Execute(const nsString& aJarSource, const nsString& aArgs, PRInt32* a
         
     *aReturn = SaveError(result);
 
+    return NS_OK;
+}
+
+PRInt32    
+nsInstall::Execute(const nsString& aJarSource, PRInt32* aReturn)
+{
     return NS_OK;
 }
 
@@ -800,6 +886,12 @@ nsInstall::GetComponentFolder(const nsString& aComponentName, const nsString& aS
 }
 
 PRInt32    
+nsInstall::GetComponentFolder(const nsString& aComponentName, nsString** aFolder)
+{
+    return NS_OK;
+}
+
+PRInt32    
 nsInstall::GetFolder(const nsString& targetFolder, const nsString& aSubdirectory, nsString** aFolder)
 {
     nsInstallFolder* spec = nsnull;
@@ -813,6 +905,12 @@ nsInstall::GetFolder(const nsString& targetFolder, const nsString& aSubdirectory
     *aFolder = new nsString(dirString);
     
 
+    return NS_OK;    
+}
+
+PRInt32    
+nsInstall::GetFolder(const nsString& targetFolder, nsString** aFolder)
+{
     return NS_OK;    
 }
 
@@ -877,6 +975,12 @@ nsInstall::Patch(const nsString& aRegName, const nsString& aVersion, const nsStr
 }
 
 PRInt32    
+nsInstall::Patch(const nsString& aRegName, const nsString& aJarSource, const nsString& aFolder, const nsString& aTargetName, PRInt32* aReturn)
+{
+    return NS_OK;
+}
+
+PRInt32    
 nsInstall::ResetError()
 {
     mLastError = nsInstall::SUCCESS;
@@ -910,7 +1014,7 @@ nsInstall::SetPackageFolder(const nsString& aFolder)
  *                          can be either NO_STATUS_DLG or NO_FINALIZE_DLG
  */
 PRInt32    
-nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPackageName, const nsString& aVersion, PRInt32 aFlags, PRInt32* aReturn)
+nsInstall::StartInstall(const nsString& aPackageName, const nsString& aVersion, PRInt32 aFlags, PRInt32* aReturn)
 {
     *aReturn     = nsInstall::SUCCESS;
     
@@ -918,8 +1022,6 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPacka
         
     mUserCancelled = PR_FALSE; 
     
-    mUIName = aUserPackageName;
-
     if ( aPackageName.Equals("") ) 
     {
         *aReturn = nsInstall::INVALID_ARGUMENTS;
@@ -982,12 +1084,18 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPacka
     GetTime(time);
     
     *mLogStream << "---------------------------------------------------------------------------" << nsEndl;
-    *mLogStream << nsAutoCString(mUIName) << nsEndl;    
+//    *mLogStream << nsAutoCString(mUIName) << nsEndl;    
     *mLogStream << "---------------------------------------------------------------------------" << nsEndl;
     *mLogStream << nsEndl;
     *mLogStream << "     Starting Installation at " << nsAutoCString(time) << nsEndl;   
     *mLogStream << nsEndl;
          
+    return NS_OK;
+}
+
+PRInt32    
+nsInstall::StartInstall(const nsString& aPackageName, const nsIDOMInstallVersion& aVersion, PRInt32 aFlags, PRInt32* aReturn)
+{
     return NS_OK;
 }
 
