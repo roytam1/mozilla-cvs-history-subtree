@@ -35,10 +35,10 @@ var gTotalCount = null;
 
 var gCurrentLoadingFolderURI;
 var gCurrentFolderToReroot;
-var gCurrentLoadingFolderIsThreaded = false;
-var gCurrentLoadingFolderSortID ="";
-var gCurrentLoadingFolderSortDirection = null;
-var gCurrentLoadingFolderViewType = "";
+var gCurrentLoadingFolderSortType = 0;
+var gCurrentLoadingFolderSortOrder = 0;
+var gCurrentLoadingFolderViewType = 0;
+var gCurrentLoadingFolderViewFlags = 0;
 
 var gCurrentDisplayedMessage = null;
 var gNextMessageAfterDelete = null;
@@ -118,13 +118,13 @@ var folderListener = {
 					if(msgFolder)
 					{
 						msgFolder.endFolderLoading();
-						RerootFolder(uri, msgFolder, gCurrentLoadingFolderIsThreaded, gCurrentLoadingFolderSortID, gCurrentLoadingFolderSortDirection, gCurrentLoadingFolderViewType);
+						RerootFolder(uri, msgFolder, gCurrentLoadingFolderViewType, gCurrentLoadingFolderViewFlags, gCurrentLoadingFolderSortType, gCurrentLoadingFolderSortOrder);
 						gIsEditableMsgFolder = IsSpecialFolder(msgFolder, [ "Drafts" ]);
 
-						gCurrentLoadingFolderIsThreaded = false;
-						gCurrentLoadingFolderSortID = "";
-						gCurrentLoadingFolderSortDirection = null;
-                        gCurrentLoadingFolderViewType = "";
+						gCurrentLoadingFolderSortType = 0;
+						gCurrentLoadingFolderSortOrder = 0;
+                        gCurrentLoadingFolderViewType = 0;
+                        gCurrentLoadingFolderViewFlags = 0;
 
                         SetFocusThreadPane();
                         if (gNextMessageAfterLoad) {

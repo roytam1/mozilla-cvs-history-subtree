@@ -97,23 +97,14 @@ function ChangeFolderByDOMNode(folderNode)
 {
   var uri = folderNode.getAttribute('id');
   dump(uri + "\n");
+  if (!uri) return;
 
-  var isThreaded = folderNode.getAttribute('threaded');
-  
-  if ((isThreaded == "") && isNewsURI(uri)) {
-    isThreaded = "true";
-  }
-
-  var sortResource = folderNode.getAttribute('sortResource');
-  if(!sortResource)
-	sortResource = "";
-
-  var sortDirection = folderNode.getAttribute('sortDirection');
-
+  var sortType = folderNode.getAttribute('sortType');
+  var sortOrder = folderNode.getAttribute('sortOrder');
+  var viewFlags = folderNode.getAttribute('viewFlags');
   var viewType = folderNode.getAttribute('viewType');
 
-  if (uri)
-	  ChangeFolderByURI(uri, isThreaded == "true", sortResource, sortDirection, viewType);
+	ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder);
 }
 
 function setTitleFromFolder(msgfolder, subject)
@@ -162,7 +153,7 @@ function setTitleFromFolder(msgfolder, subject)
     window.title = title;
 }
 
-function ChangeFolderByURI(uri, isThreaded, sortID, sortDirection, viewType)
+function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
 {
   dump('In ChangeFolderByURI uri = ' + uri + "\n");
   if (uri == gCurrentLoadingFolderURI)
@@ -208,10 +199,10 @@ function ChangeFolderByURI(uri, isThreaded, sortID, sortDirection, viewType)
 	{
 		SetBusyCursor(window, true);
 		gCurrentFolderToReroot = uri;
-		gCurrentLoadingFolderIsThreaded = isThreaded;
-		gCurrentLoadingFolderSortID = sortID;
-		gCurrentLoadingFolderSortDirection = sortDirection;
-        gCurrentLoadingFolderViewType = viewType;
+		gCurrentLoadingFolderViewFlags = viewFlags;
+		gCurrentLoadingFolderViewType = viewType;
+		gCurrentLoadingFolderSortType = sortType;
+		gCurrentLoadingFolderSortOrder = sortOrder;
 		msgfolder.startFolderLoading();
 		msgfolder.updateFolder(msgWindow);
 	}
@@ -224,10 +215,11 @@ function ChangeFolderByURI(uri, isThreaded, sortID, sortDirection, viewType)
   {
     SetBusyCursor(window, true);
 	gCurrentFolderToReroot = "";
-	gCurrentLoadingFolderIsThreaded = false;
-	gCurrentLoadingFolderSortID = "";
-    gCurrentLoadingFolderViewType = "";
-	RerootFolder(uri, msgfolder, isThreaded, sortID, sortDirection, viewType);
+	gCurrentLoadingFolderViewFlags = 0;  // is this correct?
+	gCurrentLoadingFolderSortType = 0;  // is this correct?
+	gCurrentLoadingFolderSortOrder = 0;  // is this correct?
+  gCurrentLoadingFolderViewType = 0;  // is this correct?
+	RerootFolder(uri, msgfolder, viewType, viewFlags, sortType, sortOrder);
 
 	//Need to do this after rerooting folder.  Otherwise possibility of receiving folder loaded
 	//notification before folder has actually changed.
@@ -245,7 +237,7 @@ function isNewsURI(uri)
     }
 }
 
-function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewType)
+function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
 {
   dump('In reroot folder\n');
 	
@@ -257,11 +249,7 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
   //Set the window's new open folder.
   msgWindow.openFolder = newFolder;
 
-  //Set threaded state
-  ShowThreads(isThreaded);
-
-  //Set the view type
-  SetViewType(viewType);
+  SetViewFlags(viewFlags);
 
   //Clear the new messages of the old folder
 /*
@@ -297,8 +285,7 @@ function RerootFolder(uri, newFolder, isThreaded, sortID, sortDirection, viewTyp
 
   // now create the db view, which will sort it.
 
-  // this will be replaced with CreateDBView when we get rid of the old view type.
-  CreateDBViewWithOldViewType(newFolder, isThreaded, viewType, sortID, sortDirection);
+  CreateDBView(newFolder, viewType, viewFlags, sortType, sortOrder);
   // that should have initialized gDBView, now re-root the thread pane
   var outlinerView = gDBView.QueryInterface(Components.interfaces.nsIOutlinerView);
   if (outlinerView)
@@ -431,59 +418,84 @@ function UpdateStatusMessageCounts(folder)
 
 }
 
-
-function FindOutlinerColumnBySortType(sortKey)
+function ConvertColumnIDToSortType(columnID)
 {
-	if(sortKey == nsMsgViewSortType.byDate)
-		return "dateCol";
-	else if(sortKey == nsMsgViewSortType.byAuthor)
-		return "senderCol";
-	else if(sortKey == nsMsgViewSortType.bySubject)
-		return "subjectCol";
-	else if(sortKey == nsMsgViewSortType.byUnread)
-		return "unreadButtonColHeader";
- 	else if(sortKey == nsMsgViewSortType.byStatus)
-		return "statusCol";
-  else if (sortKey == nsMsgViewSortType.bySize)
-    return "sizeCol";
-  else if (sortKey == nsMsgViewSortType.byPriority)
-    return "priorityCol";
+  var sortKey;
 
-  // oops we haven't added the column for the sort key they are using yet...return null.
-	return null;
+  switch (columnID) {
+    case "dateCol":
+      sortKey = nsMsgViewSortType.byDate;
+      break;
+		case "senderCol":
+	    sortKey = nsMsgViewSortType.byAuthor;
+      break;
+		case "subjectCol":
+	    sortKey = nsMsgViewSortType.bySubject;
+      break;
+		case "unreadButtonColHeader":
+	    sortKey = nsMsgViewSortType.byUnread;
+      break;
+		case "statusCol":
+ 	    sortKey = nsMsgViewSortType.byStatus;
+      break;
+    case "sizeCol":
+      sortKey = nsMsgViewSortType.bySize;
+      break;
+    case "priorityCol":
+      sortKey = nsMsgViewSortType.byPriority;
+      break;
+    case "flaggedCol":
+      sortKey = nsMsgViewSortType.byFlagged;
+      break;
+    case "threadCol":
+      sortKey = nsMsgViewSortType.byThread;
+      break;
+    default:
+      dump("unsupported sort\n");
+      sortKey = 0;
+      break;
+  }
+  return sortKey;
 }
 
-function FindThreadPaneColumnBySortResource(sortID)
+function ConvertSortTypeToColumnID(sortKey)
 {
+  var columnID;
 
-	if(sortID == "http://home.netscape.com/NC-rdf#Date")
-		return "DateColumn";
-	else if(sortID == "http://home.netscape.com/NC-rdf#Sender")
-		return "AuthorColumn";
-	else if(sortID == "http://home.netscape.com/NC-rdf#Recipient")
-		return "AuthorColumn";
-	else if(sortID == "http://home.netscape.com/NC-rdf#Status")
-		return "StatusColumn";
-	else if(sortID == "http://home.netscape.com/NC-rdf#Subject")
-		return "SubjectColumn";
-	else if(sortID == "http://home.netscape.com/NC-rdf#Flagged")
-		return "FlaggedButtonColumn";
-	else if(sortID == "http://home.netscape.com/NC-rdf#Priority")
-		return "PriorityColumn";
-	else if(sortID == "http://home.netscape.com/NC-rdf#Size")
-		return "MemoryColumn";
-	else if(sortID == "http://home.netscape.com/NC-rdf#Lines")
-		return "MemoryColumn";
-	else if(sortID == "http://home.netscape.com/NC-rdf#IsUnread")
-		return "UnreadButtonColumn";
-	else if(sortID == "http://home.netscape.com/NC-rdf#TotalUnreadMessages")
-		return "UnreadColumn";
-	else if(sortID == "http://home.netscape.com/NC-rdf#TotalMessages")
-		return "TotalColumn";
-	else if(sortID == "http://home.netscape.com/NC-rdf#OrderReceived")
-		return "OrderReceivedColumn";
-
-	return null;
+  switch (sortKey) {
+    case nsMsgViewSortType.byDate:
+		  columnID = "dateCol";
+      break;
+	  case nsMsgViewSortType.byAuthor:
+		  columnID = "senderCol";
+      break;
+	  case nsMsgViewSortType.bySubject:
+		  columnID = "subjectCol";
+      break;
+	  case nsMsgViewSortType.byUnread:
+		  columnID = "unreadButtonColHeader";
+      break;
+ 	  case nsMsgViewSortType.byStatus:
+		  columnID = "statusCol";
+      break;
+    case nsMsgViewSortType.bySize:
+      columnID = "sizeCol";
+      break;
+    case nsMsgViewSortType.byPriority:
+      columnID = "priorityCol";
+      break;
+    case nsMsgViewSortType.byFlagged:
+      columnID = "flaggedCol";
+      break;
+    case nsMsgViewSortType.byThread:
+      columnID = "threadCol";
+      break;
+    default:
+      dump("unsupported sort\n");
+      columnID = null;
+      break;
+  }
+  return columnID;
 }
 
 var nsMsgViewSortType = Components.interfaces.nsMsgViewSortType;
@@ -494,25 +506,12 @@ var nsMsgViewCommandType = Components.interfaces.nsMsgViewCommandType;
 var gDBView = null;
 var gCurViewFlags;
 
-function CreateDBViewWithOldViewType(msgFolder, isThreaded, viewType, sortKey, sortDirection)
+function CreateDBView(msgFolder, viewType, viewFlags, sortType, sortOrder)
 {
-  var dbViewType = ConvertViewType(viewType);
-  var viewFlags;
-    if (isThreaded) 
-      viewFlags = nsMsgViewFlagsType.kThreadedDisplay;
-    else   
-      viewFlags = nsMsgViewFlagsType.kFlatDisplay;
-  CreateDBView(msgFolder, dbViewType, viewFlags, sortKey, sortDirection);
-}
-
-function CreateDBView(msgFolder, viewType, viewFlags, sortKey, sortDirection)
-{
-    dump("XXX CreateDBView(" + msgFolder + "," + viewType + "," + viewFlags + "," + sortKey + "," + sortDirection + ")\n");
+    dump("XXX CreateDBView(" + msgFolder + "," + viewType + "," + viewFlags + "," + sortType + "," + sortOrder + ")\n");
 
     var dbviewContractId = "@mozilla.org/messenger/msgdbview;1?type=";
 
-    // eventually, we will not be using nsMsgViewType.eShow*, but for now
-    // this will help us mirror the thread pane
     switch (viewType) {
         case nsMsgViewType.eShowThreadsWithUnread:
             dbviewContractId += "threadswithunread";
@@ -526,13 +525,26 @@ function CreateDBView(msgFolder, viewType, viewFlags, sortKey, sortDirection)
             break;
     }
 
-    dump("XXX creating " + dbviewContractId + " with: " + viewType + "," + sortKey + "," + sortDirection + "\n");
+    dump("XXX creating " + dbviewContractId + " with: " + viewType + "," + sortType + "," + sortOrder + "\n");
     gDBView = Components.classes[dbviewContractId].createInstance(Components.interfaces.nsIMsgDBView);
 
-    var sortType = ConvertSortKey(sortKey);
-    var sortOrder = ConvertSortDirection(sortDirection)
+    if (!viewFlags) {
+      if (isNewsURI(msgFolder.URI)) { 
+        // news is threaded by default
+        viewFlags = nsMsgViewFlagsType.kThreadedDisplay;
+      }
+      else {
+        viewFlags = nsMsgViewFlagsType.kFlatDisplay;
+      }
+    }
 
-    dump("XXX which is: " + viewFlags + "," + sortType + "," + sortOrder + "\n");
+    if (!sortType) {
+      sortType = nsMsgViewSortType.byDate;
+    }
+
+    if (!sortOrder) {
+      sortOrder = nsMsgViewSortOrder.ascending;
+    }
 
     gCurViewFlags = viewFlags;
     var count = new Object;
@@ -548,9 +560,8 @@ function CreateDBView(msgFolder, viewType, viewFlags, sortKey, sortDirection)
       SetHiddenAttributeOnThreadOnlyColumns("true");
     }
 
-    var colID = FindOutlinerColumnBySortType(sortType);
-    if (colID)
-    {
+    var colID = ConvertSortTypeToColumnID(sortType);
+    if (colID) {
       var column = document.getElementById(colID);
       gDBView.sortedColumn = column;
     }
@@ -563,66 +574,6 @@ function SetViewFlags(viewFlags)
     if (!gDBView) return;
     dump("XXX SetViewFlags(" + viewFlags + ")\n");
     gDBView.viewFlags = viewFlags;
-}
-
-function SortDBView(sortKey, direction)
-{
-    if (!gDBView) return;
-
-    dump("XXX SortDBView(" + sortKey + "," + direction + ")\n");
-
-    var sortOrder = ConvertSortDirection(direction);
-    var sortType = ConvertSortKey(sortKey);
-
-    gDBView.sort(sortType,sortOrder);
-}
-
-function ConvertSortDirection(direction)
-{
-    if (direction == "ascending") {
-        return nsMsgViewSortOrder.ascending;
-    }
-    else {
-        return nsMsgViewSortOrder.descending;
-    }
-}
-
-function ConvertSortKey(sortKey)
-{
-    switch (sortKey) {
-        case 'http://home.netscape.com/NC-rdf#Date':
-            return nsMsgViewSortType.byDate;
-        case 'http://home.netscape.com/NC-rdf#Subject':
-            return nsMsgViewSortType.bySubject;
-        case 'http://home.netscape.com/NC-rdf#Sender':
-            return nsMsgViewSortType.byAuthor;
-        case 'http://home.netscape.com/NC-rdf#ID':
-            return nsMsgViewSortType.byId;
-        case 'http://home.netscape.com/NC-rdf#Thread':
-            return nsMsgViewSortType.byThread;
-        case 'http://home.netscape.com/NC-rdf#Priority':
-            return nsMsgViewSortType.byPriority;
-        case 'http://home.netscape.com/NC-rdf#Status':
-            return nsMsgViewSortType.byStatus;
-        case 'http://home.netscape.com/NC-rdf#Size':
-            return nsMsgViewSortType.bySize;
-        case 'http://home.netscape.com/NC-rdf#Flagged':
-            return nsMsgViewSortType.byFlagged;
-        case 'http://home.netscape.com/NC-rdf#IsUnread':
-            return nsMsgViewSortType.byUnread;
-        case 'http://home.netscape.com/NC-rdf#Recipient':
-            return nsMsgViewSortType.byRecipient;
-        default:
-            dump("unexpected\n");
-            break;
-    }
-    return nsMsgViewSortType.byDate;
-}
-
-function DumpView()
-{
-    dump("XXX DumpView()\n");
-    gDBView.dumpView();
 }
 
 //------------------------------------------------------------
@@ -860,53 +811,6 @@ function IsSpecialFolder(msgFolder, specialFolderNames)
 	return false;
 }
 
-function ConvertViewType(viewType)
-{
-    if (!viewType || (viewType == "")) {
-        return nsMsgViewType.eShowAllThreads;
-    }
-    else {
-        return viewType;
-    }
-}
-
-
-function SetViewType(viewType)
-{
-}
-
-function ShowThreads(showThreads)
-{
-	//dump('in showthreads\n');
-  /*
-	if(messageView)
-	{
-		messageView.showThreads = showThreads;
-		var threadColumn = document.getElementById('ThreadColumnHeader');
-		if(threadColumn)
-		{
-			if(showThreads)
-			{
-				threadColumn.setAttribute('currentView', 'threaded');
-			}
-			else
-			{
-				threadColumn.setAttribute('currentView', 'unthreaded');
-			}
-		}
-	}
-*/    
-    var viewFlags;
-    if (showThreads) {
-        viewFlags = nsMsgViewFlagsType.kThreadedDisplay;
-    }
-    else {
-        viewFlags = nsMsgViewFlagsType.kFlatDisplay;
-    }
-    SetViewFlags(viewFlags);
-}
-
-
 function SelectNextMessage(nextMessage)
 {
 /*
@@ -973,15 +877,3 @@ function MsgToggleWorkOffline()
     offlineManager.synchronizeForOffline(true, true, true, true, msgWindow);
   } 
 }
-
-/* 
-	UpdateSortMenu(column);
-
-  var folder = GetSelectedFolder();
-	if(folder)
-	{
-		folder.setAttribute("sortResource", sortKey);
-		folder.setAttribute("sortDirection", direction);
-	}
-
-*/

@@ -629,11 +629,11 @@ function MsgOpenNewWindowForFolder(folderUri)
         else
             window.openDialog("chrome://messenger/content/mail3PaneWindowVertLayout.xul", "_blank", "chrome,all,dialog=no", folderUri );
     }
-
 }
 
 function MsgOpenSelectedMessages()
 {
+  dump("fix this for gayatrib\n");
   var selectedMessages = GetSelectedMessages();
   var numMessages = selectedMessages.length;
   var folderUri = gDBView.msgFolder.URI;

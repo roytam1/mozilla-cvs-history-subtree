@@ -60,6 +60,19 @@ function HandleColumnClick(columnID)
   else {
     SetHiddenAttributeOnThreadOnlyColumns("true");  // this will hide them
   }
+  
+  dump("fix this, is this the right place for persisting?\n");
+  dump("fix UpdateSortMenu()\n");
+  //UpdateSortMenu(columnID);
+  var folder = GetSelectedFolder();
+
+  if (folder) {
+    var sortType = ConvertColumnIDToSortType(columnID);
+    dump("XXX sortType to save = " + sortType + "\n");
+    folder.setAttribute("sortType", sortType);
+    dump("XXX fix me to save sortOrder\n");
+    //folder.setAttribute("sortOrder", XXX);
+  }
 }
 
 function MsgComposeDraftMessage()
