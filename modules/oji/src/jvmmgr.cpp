@@ -670,13 +670,7 @@ nsJVMMgr::StartupJVM(void)
                 }
                 jriJVM->ReleaseJRIEnv(env);
             }
-            fStatus = nsJVMStatus_Running;
             jriJVM->Release();
-        }
-        else {
-            // Non-JRI JVM -- bail.
-            jvm->Release();
-            return ShutdownJVM();
         }
 #endif
     }
