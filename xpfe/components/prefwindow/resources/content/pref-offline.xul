@@ -60,12 +60,13 @@
 <groupbox>
     <caption label="&rHeader;"/>
 
-  <label value="&textStart;"/>
+  <!-- uncomment when 82487 is fixed -->
+  <!-- <label value="&textStart;"/>
     <radiogroup id="offlineStartupstate"
                 prefstring="offline.startup_state">
     <radio value="0" label="&radioAskMode;"/>
     <radio value="1" label="&radioUsePrev;"/>
-    </radiogroup> 
+  </radiogroup> -->
 
   <separator class="thin"/>
   <label value="&textGoingOnline;"/>
