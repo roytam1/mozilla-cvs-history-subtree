@@ -107,6 +107,8 @@ void splitMatch(const String *S, uint32 q, const String *R, MatchResult &result)
 
 JSValue String_split(Context *cx, JSValue *thisValue, JSValue *argv, uint32 argc)
 {
+    ContextStackReplacement csr(cx);
+
     ASSERT(thisValue->isObject());
     JSValue S = thisValue->toString(cx);
 
