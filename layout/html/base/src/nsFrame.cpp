@@ -717,7 +717,7 @@ nsFrame::Paint(nsIPresContext*      aPresContext,
     result = shell->GetSelectionFlags(&displaySelection);
     if (NS_FAILED(result))
       return result;
-    if (!(displaySelection & nsISelectionController::DISPLAY_FRAMES))
+    if (!(displaySelection == nsISelectionController::DISPLAY_FRAMES))
       return NS_OK;
   }
 
@@ -1093,7 +1093,7 @@ nsFrame::HandlePress(nsIPresContext* aPresContext,
   PRInt16 isEditor = 0;
   shell->GetSelectionFlags ( &isEditor );
   //weaaak. only the editor can display frame selction not just text and images
-  isEditor = isEditor & nsISelectionController::DISPLAY_ALL;
+  isEditor = isEditor == nsISelectionController::DISPLAY_ALL;
   nsKeyEvent* keyEvent = (nsKeyEvent*)aEvent;
   if (!isEditor && !keyEvent->isAlt) {
     nsCOMPtr<nsIContent> content;
@@ -2986,7 +2986,7 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
         if (!shell)
           return NS_ERROR_FAILURE;
         shell->GetSelectionFlags ( &isEditor );
-        isEditor = isEditor & nsISelectionController::DISPLAY_ALL;
+        isEditor = isEditor == nsISelectionController::DISPLAY_ALL;
         if ( isEditor ) 
         {
           nsIAtom *resultFrameType;
