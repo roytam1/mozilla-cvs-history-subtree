@@ -36,6 +36,7 @@ inline PRBool DOMStringIsNull(const nsAReadableString& aString)
 
 inline void SetDOMStringToNull(nsAWritableString& aString)
 {
+  aString.Truncate();
   // Set aString to null here.
 }
 
