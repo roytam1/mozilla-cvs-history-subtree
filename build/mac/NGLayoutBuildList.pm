@@ -442,10 +442,14 @@ sub Checkout()
         $session->checkout("mozilla/nsprpub", $nsprpub_tag)            || print "checkout of nsprpub failed\n";        
         $session->checkout("mozilla/security/nss", $nss_tab)           || print "checkout of security/nss failed\n";
         $session->checkout("mozilla/security/psm", $psm_tag)           || print "checkout of security/psm failed\n";
-        $session->checkout("mozilla/security/base", $secbase_tag)      || print "checkout of security/base failed\n";
+        $session->checkout("mozilla/security/base", $secbase_tag)      || print "checkout of security/base failed\n";               
         $session->checkout("DirectorySDKSourceC", $ldapsdk_tag)        || print "checkout of LDAP C SDK failed\n";
-        $session->checkout("SeaMonkeyAll", $jars_branch_tag)           || 
-            print "MacCVS reported some errors checking out SeaMonkeyAll, but these are probably not serious.\n";
+
+        # we need this jar.mn file on the jar branch
+        $session->checkout("mozilla/security/base/res/jar.mn", $jars_branch_tag) || print "checkout of jar.mn failed\n";
+
+       # $session->checkout("SeaMonkeyAll", $jars_branch_tag)           || 
+       #     print "MacCVS reported some errors checking out SeaMonkeyAll, but these are probably not serious.\n";
     }
     elsif ($main::pull{runtime})
     {
