@@ -176,8 +176,6 @@ var abDirTreeObserver = {
         aDragSession.canDrop = false;
         return false;
       }
- 
-      dump("XXX over " + targetURI + " from " + srcURI + "\n");
       return true;
     },
 

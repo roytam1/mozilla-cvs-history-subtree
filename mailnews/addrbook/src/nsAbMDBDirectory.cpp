@@ -154,7 +154,7 @@ nsresult nsAbMDBDirectory::RemoveCardFromAddressList(nsIAbCard* card)
 					nsCOMPtr<nsISupports> pSupport = getter_AddRefs(pAddressLists->ElementAt(j));
 					nsCOMPtr<nsIAbCard> cardInList(do_QueryInterface(pSupport, &rv));
           PRBool equals;
-          nsresult rv = cardInList->Equals(card, &equals);
+          nsresult rv = cardInList->Equals(card, &equals);  // should we checking email?
           if (NS_SUCCEEDED(rv) && equals) {
 						pAddressLists->RemoveElementAt(j);
           }
@@ -826,11 +826,6 @@ NS_IMETHODIMP nsAbMDBDirectory::DropCard(nsIAbCard* aCard, PRBool needToCopyCard
   nsCOMPtr<nsIAbMDBCard> dbcard;
 
   if (needToCopyCard) {
-    dbcard = do_QueryInterface(aCard, &rv);
-    NS_ENSURE_SUCCESS(rv,rv);
-    newCard = aCard;
-  }  
-  else {
     dbcard = do_CreateInstance(NS_ABMDBCARD_CONTRACTID, &rv);
 	  NS_ENSURE_SUCCESS(rv,rv);
 
@@ -840,14 +835,22 @@ NS_IMETHODIMP nsAbMDBDirectory::DropCard(nsIAbCard* aCard, PRBool needToCopyCard
 	  rv = newCard->Copy(aCard);
     NS_ENSURE_SUCCESS(rv,rv);
   }
+  else {
+    dbcard = do_QueryInterface(aCard, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+    newCard = aCard;
+  }  
 
 	dbcard->SetAbDatabase(mDatabase);
-	if (mIsMailingList == 1)
-		mDatabase->CreateNewListCardAndAddToDB(this, m_dbRowID, newCard, PR_TRUE);
-	else
-		mDatabase->CreateNewCardAndAddToDB(newCard, PR_TRUE);
-	mDatabase->Commit(kLargeCommit);
 
+  if (mIsMailingList == 1) {
+    // if we didn't copy the card, we don't have to notify that it was inserted
+		mDatabase->CreateNewListCardAndAddToDB(this, m_dbRowID, newCard, needToCopyCard /* notify */);
+  }
+  else {
+		mDatabase->CreateNewCardAndAddToDB(newCard, PR_TRUE);
+  }
+  mDatabase->Commit(kLargeCommit);
 	return NS_OK;
 }
 

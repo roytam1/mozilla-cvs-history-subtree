@@ -166,7 +166,7 @@ function InitCommonJS()
   gResultsOutliner = document.getElementById("abResultsOutliner");
 }
 
-function SetupCommandUpdateHandlers()
+function SetupAbCommandUpdateHandlers()
 {
   // dir pane
   if (dirTree)
@@ -316,6 +316,7 @@ function GetSelectedAddresses()
 function GetNumSelectedCards()
 {
  try {
+   dump("XXX gAbView = " + gAbView.URI + "\n");
    var outlinerSelection = gAbView.selection;
    return outlinerSelection.count;
  }

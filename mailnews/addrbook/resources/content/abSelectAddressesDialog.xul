@@ -113,7 +113,7 @@ Contributor(s):
         <spacer class="third-column-spacer"/>
         <button id="new" label="&newButton.label;" tooltip="aTooltip" tooltiptext="&addressPickerNewButton.tooltip;" oncommand="AbNewCard('dirTree')"/> 
         <spacer class="third-column-spacer"/>
-        <button id="edit" label="&editButton.label;" tooltip="aTooltip" tooltiptext="&addressPickerEditButton.tooltip;" oncommand="goDoCommand('button_edit');"/> 
+        <button id="edit" label="&editButton.label;" tooltip="aTooltip" tooltiptext="&addressPickerEditButton.tooltip;" oncommand="AbEditSelectedCard()"/> 
         <spacer flex="1"/>
       </vbox>
       <vbox flex="1">

@@ -97,7 +97,7 @@ function OnLoadAddressBook()
 	// FIX ME - later we will be able to use onload from the overlay
 	OnLoadCardView();
 	
-	SetupCommandUpdateHandlers();
+	SetupAbCommandUpdateHandlers();
 
 	//workaround - add setTimeout to make sure dynamic overlays get loaded first
 	setTimeout('SelectFirstAddressBook()',0);

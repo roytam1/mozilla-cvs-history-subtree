@@ -1592,22 +1592,57 @@ NS_IMETHODIMP nsAddrDatabase::CreateNewListCardAndAddToDB(nsIAbDirectory *aList,
   if (!pListRow)
     return NS_OK;
   
+  
+  nsCOMPtr <nsISupportsArray> addressList;
+  rv = aList->GetAddressLists(getter_AddRefs(addressList));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  PRUint32 count;
+	addressList->Count(&count);
+
+  nsXPIDLString newEmail;
+  rv = newCard->GetPrimaryEmail(getter_Copies(newEmail));
+  NS_ENSURE_SUCCESS(rv,rv);
+
+	PRUint32 i;
+  for (i = 0; i < count; i++) {
+    nsCOMPtr<nsISupports> support = getter_AddRefs(addressList->ElementAt(i));
+    nsCOMPtr<nsIAbCard> currentCard = do_QueryInterface(support, &rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    PRBool equals;
+    rv = newCard->Equals(currentCard, &equals);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    if (equals) {
+      // card is already in list, bail out.
+      // this can happen when dropping a card on a mailing list from the directory that contains the mailing list
+      return NS_OK;
+    }
+
+    nsXPIDLString currentEmail;
+    rv = currentCard->GetPrimaryEmail(getter_Copies(currentEmail));
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    if (!nsCRT::strcmp(newEmail.get(), currentEmail.get())) {
+      // card is already in list, bail out
+      // this can happen when dropping a card on a mailing list from another directory (not the one that contains the mailing list
+      // or if you have multiple cards on a directory, with the same primary email address.
+      return NS_OK;
+    }
+  }  
+    
   PRUint32 totalAddress = GetListAddressTotal(pListRow) + 1;
   SetListAddressTotal(pListRow, totalAddress);
   nsCOMPtr<nsIAbCard> pNewCard;
   rv = AddListCardColumnsToRow(newCard, pListRow, totalAddress, getter_AddRefs(pNewCard));
   NS_ENSURE_SUCCESS(rv,rv);
 
-  nsCOMPtr <nsISupportsArray> addressList;
-  rv = aList->GetAddressLists(getter_AddRefs(addressList));
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  // XXX todo, check if card is already there?
   addressList->AppendElement(newCard);
 
   if (notify)
     NotifyCardEntryChange(AB_NotifyInserted, newCard, nsnull); 
-  
+
 	return rv;
 }
 
@@ -1724,6 +1759,7 @@ nsresult nsAddrDatabase::AddListAttributeColumnsToRow(nsIAbDirectory *list, nsIM
 			}
 		}
 
+    // XXX todo, this code has problems if you manually enter duplicate emails.
 		nsCOMPtr <nsISupportsArray> pAddressLists;
 		list->GetAddressLists(getter_AddRefs(pAddressLists));
 		PRUint32 count;
