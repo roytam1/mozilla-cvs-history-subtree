@@ -1095,6 +1095,9 @@ void
 nsEventStateManager::CreateClickHoldTimer(nsIPresContext* inPresContext,
                                           nsGUIEvent* inMouseDownEvent)
 {
+  if (!(inMouseDownEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED))
+    return;
+
   // just to be anal (er, safe)
   if (mClickHoldTimer) {
     mClickHoldTimer->Cancel();
@@ -1202,6 +1205,7 @@ nsEventStateManager::FireContextClick()
   event.clickCount = 1;
   event.point = mEventPoint;
   event.refPoint = mEventRefPoint;
+  event.internalAppFlags |= NS_APP_EVENT_FLAG_TRUSTED;
 
   // Dispatch to the DOM. We have to fake out the ESM and tell it that the
   // current target frame is actually where the mouseDown occurred, otherwise it
@@ -1450,6 +1454,8 @@ nsEventStateManager::GenerateDragGesture(nsIPresContext* aPresContext,
       event.isControl = ((nsMouseEvent*)aEvent)->isControl;
       event.isAlt = ((nsMouseEvent*)aEvent)->isAlt;
       event.isMeta = ((nsMouseEvent*)aEvent)->isMeta;
+      event.internalAppFlags |=
+        aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
       // Dispatch to the DOM. We have to fake out the ESM and tell it that the
       // current target frame is actually where the mouseDown occurred, otherwise it
@@ -1632,6 +1638,8 @@ nsEventStateManager::DoScrollText(nsIPresContext* aPresContext,
   // scrolling, to allow tooltips to disappear, etc.
 
   nsMouseEvent mouseOutEvent(NS_MOUSE_EXIT, aEvent->widget);
+  mouseOutEvent.internalAppFlags |=
+    aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
   nsIPresShell *presShell = aPresContext->PresShell();
 
@@ -2547,6 +2555,8 @@ nsEventStateManager::DispatchMouseEvent(nsIPresContext* aPresContext,
   event.isAlt = ((nsMouseEvent*)aEvent)->isAlt;
   event.isMeta = ((nsMouseEvent*)aEvent)->isMeta;
   event.nativeMsg = ((nsMouseEvent*)aEvent)->nativeMsg;
+  event.internalAppFlags |=
+    aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
   mCurrentTargetContent = aTargetContent;
   mCurrentRelatedContent = aRelatedContent;
@@ -2603,6 +2613,8 @@ nsEventStateManager::MaybeDispatchMouseEventToIframe(
           event.isAlt = ((nsMouseEvent*)aEvent)->isAlt;
           event.isMeta = ((nsMouseEvent*)aEvent)->isMeta;
           event.nativeMsg = ((nsMouseEvent*)aEvent)->nativeMsg;
+          event.internalAppFlags |=
+            aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
           CurrentEventShepherd shepherd(this, &event);
           parentShell->HandleDOMEventWithTarget(docContent, &event, &status);
@@ -2756,6 +2768,8 @@ nsEventStateManager::GenerateDragDropEnterExit(nsIPresContext* aPresContext,
           event.isControl = ((nsMouseEvent*)aEvent)->isControl;
           event.isAlt = ((nsMouseEvent*)aEvent)->isAlt;
           event.isMeta = ((nsMouseEvent*)aEvent)->isMeta;
+          event.internalAppFlags |=
+            aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
           //The frame has change but the content may not have.  Check before dispatching to content
           mLastDragOverFrame->GetContentForEvent(aPresContext, aEvent, getter_AddRefs(lastContent));
@@ -2789,6 +2803,8 @@ nsEventStateManager::GenerateDragDropEnterExit(nsIPresContext* aPresContext,
         event.isControl = ((nsMouseEvent*)aEvent)->isControl;
         event.isAlt = ((nsMouseEvent*)aEvent)->isAlt;
         event.isMeta = ((nsMouseEvent*)aEvent)->isMeta;
+        event.internalAppFlags |=
+          aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
         mCurrentTargetContent = targetContent;
         mCurrentRelatedContent = lastContent;
@@ -2830,6 +2846,8 @@ nsEventStateManager::GenerateDragDropEnterExit(nsIPresContext* aPresContext,
         event.isControl = ((nsMouseEvent*)aEvent)->isControl;
         event.isAlt = ((nsMouseEvent*)aEvent)->isAlt;
         event.isMeta = ((nsMouseEvent*)aEvent)->isMeta;
+        event.internalAppFlags |=
+          aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
         // dispatch to content via DOM
         nsCOMPtr<nsIContent> lastContent;
@@ -2987,6 +3005,8 @@ nsEventStateManager::CheckForAndDispatchClick(nsIPresContext* aPresContext,
         event2.isControl = aEvent->isControl;
         event2.isAlt = aEvent->isAlt;
         event2.isMeta = aEvent->isMeta;
+        event2.internalAppFlags |=
+          aEvent->internalAppFlags & NS_APP_EVENT_FLAG_TRUSTED;
 
         ret = presShell->HandleEventWithTarget(&event2, mCurrentTarget, mouseContent, flags, aStatus);
       }
