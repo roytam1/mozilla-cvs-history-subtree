@@ -1,11 +1,42 @@
-//
-//  Appearance pref pane for chimera
-//  
-//
-//  Created by Simon Fraser on Wed Jun 19 2002.
-//  Copyright (c) 2000 __MyCompanyName__. All rights reserved.
-//
-
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: NPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/NPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is mozilla.org code.
+ *
+ * The Initial Developer of the Original Code is 
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2002
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *    Simon Fraser <sfraser@netscape.com>
+ *
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or 
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the NPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the NPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
+ 
 #import "Appearance.h"
 
 #include "nsIServiceManager.h"
@@ -193,6 +224,7 @@
           fontsize = {
             variable = 
             fixed = 
+            minimum =   // optional
           }
       
         }
@@ -266,17 +298,22 @@
   NSMutableDictionary *fontDict = [NSMutableDictionary dictionaryWithCapacity:2];
 
   NSString	*variableSizePref	= [NSString stringWithFormat:@"font.size.variable.%@", regionCode];
-  NSString	*fixedSizePref	  = [NSString stringWithFormat:@"font.size.fixed.%@", regionCode];
+  NSString	*fixedSizePref    = [NSString stringWithFormat:@"font.size.fixed.%@", regionCode];
+  NSString	*minSizePref	    = [NSString stringWithFormat:@"font.minimum-size.%@", regionCode];
 
-  BOOL 	gotFixed, gotVariable;
-  int		variableSize		= [self getIntPref:[variableSizePref cString] withSuccess:&gotVariable];
-  int		fixedSize				= [self getIntPref:[fixedSizePref cString] withSuccess:&gotFixed];
+  BOOL 	gotFixed, gotVariable, gotMinSize;
+  int		variableSize    = [self getIntPref:[variableSizePref cString] withSuccess:&gotVariable];
+  int		fixedSize       = [self getIntPref:[fixedSizePref cString] withSuccess:&gotFixed];
+  int		minSize         = [self getIntPref:[minSizePref cString] withSuccess:&gotMinSize];
 
   if (gotVariable)
     [fontDict setObject:[NSNumber numberWithInt:variableSize] forKey:@"variable"];
   
   if (gotFixed)
     [fontDict setObject:[NSNumber numberWithInt:fixedSize] forKey:@"fixed"];
+
+  if (gotMinSize)
+    [fontDict setObject:[NSNumber numberWithInt:minSize] forKey:@"minimum"];
     
   return fontDict;
 }
@@ -302,17 +339,22 @@
   
   NSString	*variableSizePref	= [NSString stringWithFormat:@"font.size.variable.%@", regionCode];
   NSString	*fixedSizePref	  = [NSString stringWithFormat:@"font.size.fixed.%@", regionCode];
+  NSString	*minSizePref	    = [NSString stringWithFormat:@"font.minimum-size.%@", regionCode];
 
   NSDictionary* fontSizeDict = [regionDict objectForKey:@"fontsize"];
 
-  int variableSize 	= [[fontSizeDict objectForKey:@"variable"] intValue];
-  int fixedSize 		= [[fontSizeDict objectForKey:@"fixed"] intValue];
+  int variableSize  = [[fontSizeDict objectForKey:@"variable"] intValue];
+  int fixedSize     = [[fontSizeDict objectForKey:@"fixed"] intValue];
+  int minSize       = [[fontSizeDict objectForKey:@"minimum"] intValue];
 
   if (variableSize)
     [self setPref:[variableSizePref cString] toInt:variableSize];
 
   if (fixedSize)
     [self setPref:[fixedSizePref cString] toInt:fixedSize];
+
+  if (minSize)
+    [self setPref:[minSizePref cString] toInt:minSize];
 }
 
 #pragma mark -
@@ -513,6 +555,18 @@ const int kDefaultFontSansSerifTag = 1;
   [self setupFontPopup:cursiveFontPopup   forType:@"cursive"    fromDict:regionDict];
   [self setupFontPopup:fantasyFontPopup   forType:@"fantasy"    fromDict:regionDict];
   
+  // setup min size popup
+  int itemIndex = 0;
+  NSMutableDictionary	*fontSizeDict = [regionDict objectForKey:@"fontsize"];
+  NSNumber* minSize = [fontSizeDict objectForKey:@"minimum"];
+  if (minSize)
+  {
+    itemIndex = [minFontSizePopup indexOfItemWithTag:[minSize intValue]];
+    if (itemIndex == -1)
+      itemIndex = 0;
+  }
+  [minFontSizePopup selectItemAtIndex:itemIndex];
+  
   // set up default font radio buttons (default to serif)
   [defaultFontMatrix selectCellWithTag:([defaultFontType isEqualToString:@"sans-serif"] ? kDefaultFontSansSerifTag : kDefaultFontSerifTag)];
   
@@ -537,6 +591,13 @@ const int kDefaultFontSansSerifTag = 1;
   [self getFontFromPopup:cursiveFontPopup   forType:@"cursive"    intoDict:regionDict];
   [self getFontFromPopup:fantasyFontPopup   forType:@"fantasy"    intoDict:regionDict];
 
+  int minSize = [[minFontSizePopup selectedItem] tag];
+  if (minSize != 0)
+  {
+    NSMutableDictionary	*fontSizeDict = [regionDict objectForKey:@"fontsize"];
+    [fontSizeDict setObject:[NSNumber numberWithInt:(int)minSize] forKey:@"minimum"];
+  }
+    
   // save the default font
   [defaultFontType release];
   defaultFontType = ([[defaultFontMatrix selectedCell] tag] == kDefaultFontSerifTag) ? @"serif" : @"sans-serif";
