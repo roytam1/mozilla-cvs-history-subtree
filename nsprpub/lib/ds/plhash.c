@@ -27,6 +27,23 @@
 #include <stdlib.h>
 #include <string.h>
 
+struct PLHashTable {
+    PLHashEntry         **buckets;      /* vector of hash buckets */
+    PRUint32              nentries;       /* number of entries in table */
+    PRUint32              shift;          /* multiplicative hash shift */
+    PLHashFunction      keyHash;        /* key hash function */
+    PLHashComparator    keyCompare;     /* key comparison function */
+    PLHashComparator    valueCompare;   /* value comparison function */
+    const PLHashAllocOps *allocOps;     /* allocation operations */
+    void                *allocPriv;     /* allocation private data */
+#ifdef HASHMETER
+    PRUint32              nlookups;       /* total number of lookups */
+    PRUint32              nsteps;         /* number of hash chains traversed */
+    PRUint32              ngrows;         /* number of table expansions */
+    PRUint32              nshrinks;       /* number of table contractions */
+#endif
+};
+
 /* Compute the number of buckets in ht */
 #define NBUCKETS(ht)    (1 << (PL_HASH_BITS - (ht)->shift))
 
@@ -60,7 +77,7 @@ DefaultFreeTable(void *pool, void *item)
 #pragma unused (pool)
 #endif
 
-    PR_DELETE(item);
+    PR_Free(item);
 }
 
 static PLHashEntry * PR_CALLBACK
@@ -81,7 +98,7 @@ DefaultFreeEntry(void *pool, PLHashEntry *he, PRUintn flag)
 #endif
 
     if (flag == HT_FREE_ENTRY)
-        PR_DELETE(he);
+        PR_Free(he);
 }
 
 static PLHashAllocOps defaultHashAllocOps = {
@@ -92,10 +109,10 @@ static PLHashAllocOps defaultHashAllocOps = {
 PR_IMPLEMENT(PLHashTable *)
 PL_NewHashTable(PRUint32 n, PLHashFunction keyHash,
                 PLHashComparator keyCompare, PLHashComparator valueCompare,
-                PLHashAllocOps *allocOps, void *allocPriv)
+                const PLHashAllocOps *allocOps, void *allocPriv)
 {
     PLHashTable *ht;
-    PRUint32 nb;
+    PRSize nb;
 
     if (n <= MINBUCKETS) {
         n = MINBUCKETSLOG2;
@@ -113,7 +130,7 @@ PL_NewHashTable(PRUint32 n, PLHashFunction keyHash,
     memset(ht, 0, sizeof *ht);
     ht->shift = PL_HASH_BITS - n;
     n = 1 << n;
-#if defined(XP_PC) && !defined(_WIN32)
+#if defined(WIN16)
     if (n > 16000) {
         (*allocOps->freeTable)(allocPriv, ht);
         return 0;
@@ -140,7 +157,7 @@ PL_HashTableDestroy(PLHashTable *ht)
 {
     PRUint32 i, n;
     PLHashEntry *he, *next;
-    PLHashAllocOps *allocOps = ht->allocOps;
+    const PLHashAllocOps *allocOps = ht->allocOps;
     void *allocPriv = ht->allocPriv;
 
     n = NBUCKETS(ht);
@@ -201,7 +218,7 @@ PL_HashTableRawAdd(PLHashTable *ht, PLHashEntry **hep,
 {
     PRUint32 i, n;
     PLHashEntry *he, *next, **oldbuckets;
-    PRUint32 nb;
+    PRSize nb;
 
     /* Grow the table if it is overloaded */
     n = NBUCKETS(ht);
@@ -211,7 +228,7 @@ PL_HashTableRawAdd(PLHashTable *ht, PLHashEntry **hep,
 #endif
         ht->shift--;
         oldbuckets = ht->buckets;
-#if defined(XP_PC) && !defined(_WIN32)
+#if defined(WIN16)
         if (2 * n > 16000)
             return 0;
 #endif  /* WIN16 */
@@ -280,7 +297,7 @@ PL_HashTableRawRemove(PLHashTable *ht, PLHashEntry **hep, PLHashEntry *he)
 {
     PRUint32 i, n;
     PLHashEntry *next, **oldbuckets;
-    PRUint32 nb;
+    PRSize nb;
 
     *hep = he->next;
     (*ht->allocOps->freeEntry)(ht->allocPriv, he, HT_FREE_ENTRY);

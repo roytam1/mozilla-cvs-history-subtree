@@ -34,7 +34,6 @@ CSRCS = \
 	plarena.c \
 	plevent.c \
 	plhash.c \
-	plvector.c \
 	$(NULL)
 
 HEADERS = \
@@ -42,7 +41,6 @@ HEADERS = \
 	plarena.h \
 	plevent.h \
 	plhash.h \
-	plvector.h \
 	$(NULL)
 
 ifeq ($(OS_ARCH), WINNT)
@@ -55,13 +53,6 @@ RES=$(OBJDIR)/ds.res
 RESNAME=$(MOD_DEPTH)/pr/src/nspr.rc
 OS_LIBS = user32.lib
 EXTRA_LIBS = $(DIST)/lib/libnspr$(MOD_VERSION).lib
-
-ifdef MOZ_DEBUG
-ifdef GLOWCODE
-EXTRA_LIBS += $(GLOWDIR)/glowcode.lib
-endif
-endif
-
 endif
 else
 ifeq ($(OS_ARCH), AIX)
@@ -106,7 +97,9 @@ include $(MOD_DEPTH)/config/rules.mk
 export:: $(TARGETS)
 	$(INSTALL) -m 444 $(HEADERS) $(DIST)/include
 	$(INSTALL) -m 444 $(TARGETS) $(DIST)/lib
+ifdef SHARED_LIBRARY
 	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(DIST)/bin
+endif
 ifeq ($(MOZ_BITS),16)
 	$(INSTALL) -m 444 $(HEADERS) $(MOZ_INCL)
 	$(INSTALL) -m 444 $(TARGETS) $(MOZ_DIST)/lib
