@@ -1934,7 +1934,7 @@ nsXULTreeBuilder::CompareMatches(nsTemplateMatch* aLeft, nsTemplateMatch* aRight
                 r->GetValueConst(&rstr);
 
                 if (mCollation) {
-                    mCollation->CompareString(kCollationCaseInSensitive,
+                    mCollation->CompareString(nsICollation::kCollationCaseInSensitive,
                                               nsDependentString(lstr),
                                               nsDependentString(rstr),
                                               &result);

@@ -364,7 +364,7 @@ LocaleCompare(JSContext *cx, JSString *src1, JSString *src2, jsval *rval)
   }
 
   PRInt32 result;
-  rv = gCollation->CompareString(kCollationStrengthDefault,
+  rv = gCollation->CompareString(nsICollation::kCollationStrengthDefault,
                                  nsDependentJSString(src1),
                                  nsDependentJSString(src2),
                                  &result);

@@ -64,6 +64,7 @@
 #include "nsIObserver.h"
 #include "nsIMsgFilterPlugin.h"
 #include "nsIStringBundle.h"
+#include "nsICollation.h"
 
 #define MESSENGER_STRING_URL       "chrome://messenger/locale/messenger.properties"
 
