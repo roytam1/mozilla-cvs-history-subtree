@@ -198,8 +198,8 @@ function smimeSelectCert(smime_cert)
 
   try {
     x509cert = picker.pickByUsage(window,
-      "X",
-      "Y",
+      prefBundle.getString("smimeCertTitle"),
+      prefBundle.getString("smimeCertPrompt"),
       certUsage, // this is from enum SECCertUsage
       false, false, canceled);
   } catch(e) {
