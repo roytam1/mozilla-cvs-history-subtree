@@ -744,11 +744,11 @@ function OpenSearch(tabName, forceDialogFlag, searchStr)
 		}
 		else
 		{
-			//window._content.location.href = "http://search.netscape.com/"
+			//window._content.location.href = "http://home.netscape.com/bookmark/6_0/tsearch.html"
 			// Call in to BrowserAppCore instead of replacing 
 		    // the url in the content area so that B/F buttons work right
 			if (appCore)
-			   appCore.loadUrl("http://search.netscape.com/");
+			   appCore.loadUrl("http://home.netscape.com/bookmark/6_0/tsearch.html");
 			else
 			   dump("BrowserAppCore is not initialised\n");
 		}
