@@ -41,8 +41,10 @@
 #include "nsHashtable.h"
 #include "nsIAtom.h"
 #include "nsIContent.h"
+#include "nsIDOMAttr.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMElement.h"
+#include "nsIDOMElementObserver.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIDOMNodeList.h"
 #include "nsIDOMNodeObserver.h"
@@ -716,11 +718,11 @@ RDFElementImpl::GetAttribute(const nsString& aName, nsString& aReturn)
 NS_IMETHODIMP
 RDFElementImpl::SetAttribute(const nsString& aName, const nsString& aValue)
 {
-    nsIAtom* nameAtom;
-    PRInt32 nameSpaceID;
-
-    ParseAttributeString(aName, nameAtom, nameSpaceID);
-    SetAttribute(nameSpaceID, nameAtom, aValue, PR_TRUE);
+    nsIDOMElementObserver* obs;
+    if (NS_SUCCEEDED(mDocument->QueryInterface(nsIDOMElementObserver::IID(), (void**) &obs))) {
+        obs->OnSetAttribute(this, aName, aValue);
+        NS_RELEASE(obs);
+    }
     return NS_OK;
 }
 
@@ -728,11 +730,11 @@ RDFElementImpl::SetAttribute(const nsString& aName, const nsString& aValue)
 NS_IMETHODIMP
 RDFElementImpl::RemoveAttribute(const nsString& aName)
 {
-    nsIAtom* nameAtom;
-    PRInt32 nameSpaceID;
-
-    ParseAttributeString(aName, nameAtom, nameSpaceID);
-    UnsetAttribute(nameSpaceID, nameAtom, PR_TRUE);
+    nsIDOMElementObserver* obs;
+    if (NS_SUCCEEDED(mDocument->QueryInterface(nsIDOMElementObserver::IID(), (void**) &obs))) {
+        obs->OnRemoveAttribute(this, aName);
+        NS_RELEASE(obs);
+    }
     return NS_OK;
 }
 
@@ -748,16 +750,36 @@ RDFElementImpl::GetAttributeNode(const nsString& aName, nsIDOMAttr** aReturn)
 NS_IMETHODIMP
 RDFElementImpl::SetAttributeNode(nsIDOMAttr* aNewAttr, nsIDOMAttr** aReturn)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_PRECONDITION(aReturn != nsnull, "null ptr");
+    if (! aReturn)
+        return NS_ERROR_NULL_POINTER;
+
+    nsIDOMElementObserver* obs;
+    if (NS_SUCCEEDED(mDocument->QueryInterface(nsIDOMElementObserver::IID(), (void**) &obs))) {
+        obs->OnSetAttributeNode(this, aNewAttr);
+        NS_RELEASE(obs);
+    }
+    NS_ADDREF(aNewAttr);
+    *aReturn = aNewAttr;
+    return NS_OK;
 }
 
 
 NS_IMETHODIMP
 RDFElementImpl::RemoveAttributeNode(nsIDOMAttr* aOldAttr, nsIDOMAttr** aReturn)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    NS_PRECONDITION(aReturn != nsnull, "null ptr");
+    if (! aReturn)
+        return NS_ERROR_NULL_POINTER;
+
+    nsIDOMElementObserver* obs;
+    if (NS_SUCCEEDED(mDocument->QueryInterface(nsIDOMElementObserver::IID(), (void**) &obs))) {
+        obs->OnRemoveAttributeNode(this, aOldAttr);
+        NS_RELEASE(obs);
+    }
+    NS_ADDREF(aOldAttr);
+    *aReturn = aOldAttr;
+    return NS_OK;
 }
 
 

@@ -34,6 +34,7 @@
 #include "nsIContent.h"
 #include "nsICSSParser.h"
 #include "nsICSSStyleSheet.h"
+#include "nsIDOMElementObserver.h"
 #include "nsIDOMNodeObserver.h"
 #include "nsIDOMScriptObjectFactory.h"
 #include "nsIDOMStyleSheetCollection.h"
@@ -301,7 +302,8 @@ class XULDocumentImpl : public nsIDocument,
                         public nsIJSScriptObject,
                         public nsIScriptObjectOwner,
                         public nsIHTMLContentContainer,
-                        public nsIDOMNodeObserver
+                        public nsIDOMNodeObserver,
+                        public nsIDOMElementObserver
 {
 public:
     XULDocumentImpl();
@@ -529,6 +531,9 @@ public:
 
     // nsIDOMNodeObserver interface
     NS_DECL_IDOMNODEOBSERVER
+
+    // nsIDOMElementObserver interface
+    NS_DECL_IDOMELEMENTOBSERVER
 
     // Implementation methods
     nsresult Init(void);
@@ -2335,8 +2340,19 @@ XULDocumentImpl::GetInlineStyleSheet(nsIHTMLCSSStyleSheet** aResult)
 NS_IMETHODIMP
 XULDocumentImpl::OnSetNodeValue(nsIDOMNode* aNode, const nsString& aValue)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    for (PRInt32 i = 0; i < mBuilders->Count(); ++i) {
+        nsIRDFContentModelBuilder* builder
+            = (nsIRDFContentModelBuilder*) mBuilders->ElementAt(i);
+
+        nsIDOMNodeObserver* obs;
+        if (NS_SUCCEEDED(builder->QueryInterface(nsIDOMNodeObserver::IID(), (void**) &obs))) {
+            obs->OnSetNodeValue(aNode, aValue);
+            NS_RELEASE(obs);
+        }
+
+        NS_RELEASE(builder);
+    }
+    return NS_OK;
 }
 
 
@@ -2364,8 +2380,19 @@ XULDocumentImpl::OnInsertBefore(nsIDOMNode* aParent, nsIDOMNode* aNewChild, nsID
 NS_IMETHODIMP
 XULDocumentImpl::OnReplaceChild(nsIDOMNode* aParent, nsIDOMNode* aNewChild, nsIDOMNode* aOldChild)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    for (PRInt32 i = 0; i < mBuilders->Count(); ++i) {
+        nsIRDFContentModelBuilder* builder
+            = (nsIRDFContentModelBuilder*) mBuilders->ElementAt(i);
+
+        nsIDOMNodeObserver* obs;
+        if (NS_SUCCEEDED(builder->QueryInterface(nsIDOMNodeObserver::IID(), (void**) &obs))) {
+            obs->OnReplaceChild(aParent, aNewChild, aOldChild);
+            NS_RELEASE(obs);
+        }
+
+        NS_RELEASE(builder);
+    }
+    return NS_OK;
 }
 
 
@@ -2373,8 +2400,19 @@ XULDocumentImpl::OnReplaceChild(nsIDOMNode* aParent, nsIDOMNode* aNewChild, nsID
 NS_IMETHODIMP
 XULDocumentImpl::OnRemoveChild(nsIDOMNode* aParent, nsIDOMNode* aOldChild)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    for (PRInt32 i = 0; i < mBuilders->Count(); ++i) {
+        nsIRDFContentModelBuilder* builder
+            = (nsIRDFContentModelBuilder*) mBuilders->ElementAt(i);
+
+        nsIDOMNodeObserver* obs;
+        if (NS_SUCCEEDED(builder->QueryInterface(nsIDOMNodeObserver::IID(), (void**) &obs))) {
+            obs->OnRemoveChild(aParent, aOldChild);
+            NS_RELEASE(obs);
+        }
+
+        NS_RELEASE(builder);
+    }
+    return NS_OK;
 }
 
 
@@ -2382,10 +2420,97 @@ XULDocumentImpl::OnRemoveChild(nsIDOMNode* aParent, nsIDOMNode* aOldChild)
 NS_IMETHODIMP
 XULDocumentImpl::OnAppendChild(nsIDOMNode* aParent, nsIDOMNode* aNewChild)
 {
-    NS_NOTYETIMPLEMENTED("write me!");
-    return NS_ERROR_NOT_IMPLEMENTED;
+    for (PRInt32 i = 0; i < mBuilders->Count(); ++i) {
+        nsIRDFContentModelBuilder* builder
+            = (nsIRDFContentModelBuilder*) mBuilders->ElementAt(i);
+
+        nsIDOMNodeObserver* obs;
+        if (NS_SUCCEEDED(builder->QueryInterface(nsIDOMNodeObserver::IID(), (void**) &obs))) {
+            obs->OnAppendChild(aParent, aNewChild);
+            NS_RELEASE(obs);
+        }
+
+        NS_RELEASE(builder);
+    }
+    return NS_OK;
 }
 
+
+
+////////////////////////////////////////////////////////////////////////
+// nsIDOMElementObserver interface
+
+NS_IMETHODIMP
+XULDocumentImpl::OnSetAttribute(nsIDOMElement* aElement, const nsString& aName, const nsString& aValue)
+{
+    for (PRInt32 i = 0; i < mBuilders->Count(); ++i) {
+        nsIRDFContentModelBuilder* builder
+            = (nsIRDFContentModelBuilder*) mBuilders->ElementAt(i);
+
+        nsIDOMElementObserver* obs;
+        if (NS_SUCCEEDED(builder->QueryInterface(nsIDOMElementObserver::IID(), (void**) &obs))) {
+            obs->OnSetAttribute(aElement, aName, aValue);
+            NS_RELEASE(obs);
+        }
+
+        NS_RELEASE(builder);
+    }
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+XULDocumentImpl::OnRemoveAttribute(nsIDOMElement* aElement, const nsString& aName)
+{
+    for (PRInt32 i = 0; i < mBuilders->Count(); ++i) {
+        nsIRDFContentModelBuilder* builder
+            = (nsIRDFContentModelBuilder*) mBuilders->ElementAt(i);
+
+        nsIDOMElementObserver* obs;
+        if (NS_SUCCEEDED(builder->QueryInterface(nsIDOMElementObserver::IID(), (void**) &obs))) {
+            obs->OnRemoveAttribute(aElement, aName);
+            NS_RELEASE(obs);
+        }
+
+        NS_RELEASE(builder);
+    }
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+XULDocumentImpl::OnSetAttributeNode(nsIDOMElement* aElement, nsIDOMAttr* aNewAttr)
+{
+    for (PRInt32 i = 0; i < mBuilders->Count(); ++i) {
+        nsIRDFContentModelBuilder* builder
+            = (nsIRDFContentModelBuilder*) mBuilders->ElementAt(i);
+
+        nsIDOMElementObserver* obs;
+        if (NS_SUCCEEDED(builder->QueryInterface(nsIDOMElementObserver::IID(), (void**) &obs))) {
+            obs->OnSetAttributeNode(aElement, aNewAttr);
+            NS_RELEASE(obs);
+        }
+
+        NS_RELEASE(builder);
+    }
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+XULDocumentImpl::OnRemoveAttributeNode(nsIDOMElement* aElement, nsIDOMAttr* aOldAttr)
+{
+    for (PRInt32 i = 0; i < mBuilders->Count(); ++i) {
+        nsIRDFContentModelBuilder* builder
+            = (nsIRDFContentModelBuilder*) mBuilders->ElementAt(i);
+
+        nsIDOMElementObserver* obs;
+        if (NS_SUCCEEDED(builder->QueryInterface(nsIDOMElementObserver::IID(), (void**) &obs))) {
+            obs->OnRemoveAttributeNode(aElement, aOldAttr);
+            NS_RELEASE(obs);
+        }
+
+        NS_RELEASE(builder);
+    }
+    return NS_OK;
+}
 
 
 
