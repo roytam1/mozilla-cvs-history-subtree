@@ -3057,6 +3057,7 @@ PopupControlState
 GlobalWindowImpl::CheckForAbusePoint()
 {
   nsCOMPtr<nsIDocShellTreeItem> item(do_QueryInterface(mDocShell));
+  PRBool isBeingDestroyed = PR_FALSE;
 
   if (item) {
     PRInt32 type = nsIDocShellTreeItem::typeChrome;
@@ -3064,14 +3065,29 @@ GlobalWindowImpl::CheckForAbusePoint()
     item->GetItemType(&type);
     if (type != nsIDocShellTreeItem::typeContent)
       return openAllowed;
+
+    while (item) {
+      nsCOMPtr<nsIDocShell> docShell(do_QueryInterface(item));
+
+      docShell->IsBeingDestroyed(&isBeingDestroyed);
+
+      if (isBeingDestroyed) {
+        break;
+      }
+
+      nsIDocShellTreeItem *tmp = item;
+      tmp->GetParent(getter_AddRefs(item));
+    }
   }
 
   if (!gPrefBranch)
     return openAllowed;
 
   // level of abuse we've detected, initialized to the current popup
-  // state
-  PopupControlState abuse = gPopupControlState;
+  // state, except in the case where this window is being destroyed
+  // since then we override the current state and prevent popups
+  // alltogether.
+  PopupControlState abuse = isBeingDestroyed ? openAbused : gPopupControlState;
 
   // limit the number of simultaneously open popups
   if (abuse == openAbused || abuse == openControlled) {
