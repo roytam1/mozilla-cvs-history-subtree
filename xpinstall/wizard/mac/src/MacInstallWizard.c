@@ -503,6 +503,7 @@ void Shutdown(void)
 #endif
 	NavUnload();
 	
+#if 0
 /* deallocate config object */
     if (gControls->cfg)
     {
@@ -565,7 +566,6 @@ void Shutdown(void)
 		
 /* deallocate all controls */	
 
-#if 0
 /* XXX gets disposed by DisposeWindow() ? */
 	if (gControls->nextB)
 		DisposeControl(gControls->nextB);  
