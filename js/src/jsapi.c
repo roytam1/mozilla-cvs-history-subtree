@@ -1900,7 +1900,7 @@ JS_IsAssigning(JSContext *cx)
 /************************************************************************/
 
 #ifdef XP_PC
-#if defined(XP_OS2_HACK)
+#if defined(XP_OS2)
 /*DSR031297 - the OS/2 equiv is dll_InitTerm, but I don't see the need for it*/
 #else
 /*
