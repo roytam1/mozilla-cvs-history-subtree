@@ -353,14 +353,22 @@ nsTSubstring_CharT::Adopt( char_type* data, size_type length )
 void
 nsTSubstring_CharT::Replace( index_type cutStart, size_type cutLength, const char_type* data, size_type length )
   {
-    if (length == size_type(-1))
-      length = char_traits::length(data);
-
-    if (IsDependentOn(data, data + length))
+      // unfortunately, some callers pass null :-(
+    if (!data)
       {
-        nsTAutoString_CharT temp(data, length);
-        Replace(cutStart, cutLength, temp);
-        return;
+        length = 0;
+      }
+    else
+      {
+        if (length == size_type(-1))
+          length = char_traits::length(data);
+
+        if (IsDependentOn(data, data + length))
+          {
+            nsTAutoString_CharT temp(data, length);
+            Replace(cutStart, cutLength, temp);
+            return;
+          }
       }
 
     ReplacePrep(cutStart, cutLength, length);
