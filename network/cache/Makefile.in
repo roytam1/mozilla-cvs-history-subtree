@@ -42,6 +42,9 @@ ifdef NU_CACHE
 REQUIRES += \
 	cache \
 	$(NULL)
+DIRS += \
+	nu \
+	$(NULL)
 endif
 
 NO_STATIC_LIB=1
