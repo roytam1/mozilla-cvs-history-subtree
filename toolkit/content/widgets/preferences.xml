@@ -82,9 +82,21 @@
   <binding id="preference">
     <implementation>
       <constructor>
+      <![CDATA[
         this.preferences.rootBranchInternal
             .addObserver(this.name, this.preferences, false);
-        this._setValue(this.valueFromPreferences, false);
+        // In non-instant apply mode, we must try and use the last saved state
+        // from any previous opens of a child dialog instead of the value from
+        // preferences, to pick up any edits a user may have made. 
+        if (document.documentElement.type == "child" && !this.instantApply) {
+          var pdoc = window.opener.document;
+          var lastStatePref = pdoc.getElementById(window.location.href + "#" + this.id);
+          this._setValue(lastStatePref ? lastStatePref.value 
+                                       : this.valueFromPreferences, false);
+        }
+        else 
+          this._setValue(this.valueFromPreferences, false);
+      ]]>
       </constructor>
       <destructor>
         this.preferences.rootBranchInternal
