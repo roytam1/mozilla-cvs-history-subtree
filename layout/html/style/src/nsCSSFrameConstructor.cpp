@@ -64,6 +64,7 @@
 #ifdef INCLUDE_XUL
 #include "nsXULAtoms.h"
 #include "nsTreeFrame.h"
+#include "nsTreeRowGroupFrame.h"
 #include "nsToolboxFrame.h"
 #include "nsToolbarFrame.h"
 #include "nsTreeIndentationFrame.h"
@@ -319,6 +320,7 @@ nsTableCreator::CreateTableCellFrame(nsIFrame** aNewFrame) {
 struct nsTreeCreator: public nsTableCreator {
   nsresult CreateTableFrame(nsIFrame** aNewFrame);
   nsresult CreateTableCellFrame(nsIFrame** aNewFrame);
+  nsresult CreateTableRowGroupFrame(nsIFrame** aNewFrame);
 
   PRBool IsTreeCreator() { return PR_TRUE; };
 };
@@ -333,6 +335,12 @@ nsresult
 nsTreeCreator::CreateTableCellFrame(nsIFrame** aNewFrame)
 {
   return NS_NewTreeCellFrame(aNewFrame);
+}
+
+nsresult
+nsTreeCreator::CreateTableRowGroupFrame(nsIFrame** aNewFrame)
+{
+  return NS_NewTreeRowGroupFrame(aNewFrame);
 }
 
 #endif // INCLUDE_XUL
@@ -1580,11 +1588,22 @@ nsCSSFrameConstructor::TableProcessChildren(nsIPresContext*          aPresContex
   nsCOMPtr<nsIStyleContext> parentStyleContext;
   aParentFrame->GetStyleContext(getter_AddRefs(parentStyleContext));
 
+  const nsStyleDisplay* display = (const nsStyleDisplay*)
+        parentStyleContext->GetStyleData(eStyleStruct_Display);
+      
   aContent->ChildCount(count);
   for (PRInt32 i = 0; i < count; i++) {
     nsCOMPtr<nsIContent> childContent;
     
     aContent->ChildAt(i, *getter_AddRefs(childContent));
+
+    if (aTableCreator.IsTreeCreator() &&
+        (display->mDisplay == NS_STYLE_DISPLAY_TABLE_ROW_GROUP) &&
+        i > 74) {
+      // Stop the processing. We never build more than 75 children initially.
+      break;
+    }
+
     rv = TableProcessChild(aPresContext, aState, childContent, aParentFrame, parentStyleContext,
                            aChildItems, aTableCreator);
   }
