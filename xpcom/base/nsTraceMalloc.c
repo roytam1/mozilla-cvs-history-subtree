@@ -53,9 +53,11 @@
 #include <sys/time.h>
 #endif
 #include "plhash.h"
+#include "pratom.h"
 #include "prlog.h"
 #include "prmon.h"
 #include "prprf.h"
+#include "prenv.h"
 #include "nsTraceMalloc.h"
 
 #ifdef XP_WIN32
@@ -68,7 +70,7 @@
 
 #define WRITE_FLAGS "w"
 
-#endif //WIN32
+#endif /* WIN32 */
 
 
 #ifdef XP_UNIX
@@ -231,15 +233,15 @@ typedef void   (__stdcall *FREEDEBUGPROC) ( void *, int);
 
 struct AllocationFuncs
 {
-  MALLOCPROC   malloc_proc;    
-  CALLOCPROC   calloc_proc;    
-  REALLOCPROC  realloc_proc;    
+  MALLOCPROC   malloc_proc;
+  CALLOCPROC   calloc_proc;
+  REALLOCPROC  realloc_proc;
   FREEPROC     free_proc;
 #ifdef _DEBUG
-  MALLOCDEBUGPROC   malloc_debug_proc;    
-  CALLOCDEBUGPROC   calloc_debug_proc;    
-  REALLOCDEBUGPROC  realloc_debug_proc;    
-  FREEDEBUGPROC     free_debug_proc;    
+  MALLOCDEBUGPROC   malloc_debug_proc;
+  CALLOCDEBUGPROC   calloc_debug_proc;
+  REALLOCDEBUGPROC  realloc_debug_proc;
+  FREEDEBUGPROC     free_debug_proc;
 #endif
   int          prevent_reentry;
 }gAllocFuncs;
@@ -268,6 +270,25 @@ static logfile   *logfile_list = NULL;
 static logfile   **logfile_tail = &logfile_list;
 static logfile   *logfp = &default_logfile;
 static PRMonitor *tmmon = NULL;
+static char      *sdlogname = NULL; /* filename for shutdown leak log */
+
+/*
+ * This counter suppresses tracing, in case any tracing code needs to malloc,
+ * and it must be tested and manipulated only within tmmon.
+ */
+static uint32 suppress_tracing = 0;
+
+#define TM_ENTER_MONITOR()                                                    \
+    PR_BEGIN_MACRO                                                            \
+        if (tmmon)                                                            \
+            PR_EnterMonitor(tmmon);                                           \
+    PR_END_MACRO
+
+#define TM_EXIT_MONITOR()                                                     \
+    PR_BEGIN_MACRO                                                            \
+        if (tmmon)                                                            \
+            PR_ExitMonitor(tmmon);                                            \
+    PR_END_MACRO
 
 /* We don't want more than 32 logfiles open at once, ok? */
 typedef uint32          lfd_set;
@@ -317,8 +338,7 @@ retry:
 
 static void flush_logfile(logfile *fp)
 {
-    int len, cnt;
-	int fd;
+    int len, cnt, fd;
     char *bp;
 
     len = fp->pos;
@@ -440,11 +460,10 @@ struct callsite {
 };
 
 /* NB: these counters are incremented and decremented only within tmmon. */
-static uint32   suppress_tracing = 0;
-static uint32   library_serial_generator = 0;
-static uint32   method_serial_generator = 0;
-static uint32   callsite_serial_generator = 0;
-static uint32   tmstats_serial_generator = 0;
+static uint32 library_serial_generator = 0;
+static uint32 method_serial_generator = 0;
+static uint32 callsite_serial_generator = 0;
+static uint32 tmstats_serial_generator = 0;
 
 /* Root of the tree of callsites, the sum of all (cycle-compressed) stacks. */
 static callsite calltree_root = {0, 0, LFD_SET_STATIC_INITIALIZER, NULL, NULL, 0, NULL, NULL, NULL};
@@ -532,11 +551,10 @@ static PLHashTable *libraries = NULL;
 /* Table mapping method names to logged 'N' record serial numbers. */
 static PLHashTable *methods = NULL;
 
-#if XP_WIN32
+#ifdef XP_WIN32
+
 #define  MAX_STACKFRAMES 256
 #define  MAX_UNMANGLED_NAME_LEN 256
-
-
 
 static callsite *calltree(int skip)
 {
@@ -568,17 +586,19 @@ static callsite *calltree(int skip)
 
     ok = EnsureSymInitialized();
     if (! ok)
-      return 0;
+        return 0;
 
-    // Get the context information for this thread. That way we will
-    // know where our sp, fp, pc, etc. are and can fill in the
-    // STACKFRAME with the initial values.
+    /*
+     * Get the context information for this thread.  That way we will know
+     * where our sp, fp, pc, etc. are, and we can fill in the STACKFRAME with
+     * the initial values.
+     */
     context.ContextFlags = CONTEXT_FULL;
     ok = GetThreadContext(myThread, &context);
     if (! ok)
-      return 0;
+        return 0;
 
-    // Setup initial stack frame to walk from
+    /* Setup initial stack frame from which to walk. */
     memset(&(frame[0]), 0, sizeof(frame[0]));
     frame[0].AddrPC.Offset    = context.Eip;
     frame[0].AddrPC.Mode      = AddrModeFlat;
@@ -586,39 +606,38 @@ static callsite *calltree(int skip)
     frame[0].AddrStack.Mode   = AddrModeFlat;
     frame[0].AddrFrame.Offset = context.Ebp;
     frame[0].AddrFrame.Mode   = AddrModeFlat;
-    while (1) {
-      PIMAGEHLP_SYMBOL symbol = (PIMAGEHLP_SYMBOL) buf;
-      if (framenum)
-      {
-        memcpy(&(frame[framenum]),&(frame[framenum-1]),sizeof(STACKFRAME));
-      }
+    for (;;) {
+        PIMAGEHLP_SYMBOL symbol = (PIMAGEHLP_SYMBOL) buf;
+        if (framenum)
+            memcpy(&(frame[framenum]),&(frame[framenum-1]),sizeof(STACKFRAME));
 
-      ok = _StackWalk(IMAGE_FILE_MACHINE_I386,
-                     myProcess,
-                     myThread,
-                     &(frame[framenum]),
-                     &context,
-                     0,                        // read process memory routine
-                     _SymFunctionTableAccess,  // function table access routine
-                     _SymGetModuleBase,        // module base routine
-                     0);                       // translate address routine
+        ok = _StackWalk(IMAGE_FILE_MACHINE_I386,
+                        myProcess,
+                        myThread,
+                        &(frame[framenum]),
+                        &context,
+                        0,                       /* read process memory hook */
+                        _SymFunctionTableAccess, /* function table access hook */
+                        _SymGetModuleBase,       /* module base hook */
+                        0);                      /* translate address hook */
 
-      if (!ok) {
-        break;
-      }
-      if (skip)
-      {
-        skip--;
-        continue;/*skip tells us to skip the first skip amount of stackframes*/
-      }
-      if (frame[framenum].AddrPC.Offset == 0)
-        break;
-      framenum++;
+        if (!ok)
+            break;
+        if (skip) {
+            /* skip tells us to skip the first skip amount of stackframes */
+            skip--;
+            continue;
+        }
+        if (frame[framenum].AddrPC.Offset == 0)
+            break;
+        framenum++;
     }
+
     depth = framenum;
     maxstack = (depth > tmstats.calltree_maxstack);
     if (maxstack)
         tmstats.calltree_maxstack = depth;
+
     /* Reverse the stack again, finding and building a path in the tree. */
     parent = &calltree_root;
     do {
@@ -670,17 +689,16 @@ static callsite *calltree(int skip)
         /*
          * Not in tree at all, or not logged to fp: let's find our symbolic
          * callsite info.  XXX static syms are masked by nearest lower global
+         * Load up the info for the dll.
          */
-
-        if (!_SymGetModuleInfo(myProcess,frame[framenum].AddrPC.Offset,&imagehelp))/*load up the info for the dll*/
-        {
+        if (!_SymGetModuleInfo(myProcess,
+                               frame[framenum].AddrPC.Offset,
+                               &imagehelp)) {
             DWORD error = GetLastError();
             PR_ASSERT(error);
-            library = "unknown";//ew
-        }
-        else
-        {
-          library = imagehelp.ModuleName;
+            library = "unknown"; /* XXX mjudge sez "ew!" */
+        } else {
+            library = imagehelp.ModuleName;
         }
 
         symbol = (PIMAGEHLP_SYMBOL) buf;
@@ -707,7 +725,7 @@ static callsite *calltree(int skip)
             hash = PL_HashString(library);
             hep = PL_HashTableRawLookup(libraries, hash, library);
             he = *hep;
-            library = strdup(library); //strdup it always?
+            library = strdup(library); /* strdup it always? */
             if (he) {
                 library_serial = (uint32) he->value;
                 le = (lfdset_entry *) he;
@@ -716,7 +734,7 @@ static callsite *calltree(int skip)
                     le = NULL;
                 }
             } else {
-//                library = strdup(library);
+/*                library = strdup(library); */
                 if (library) {
                     library_serial = ++library_serial_generator;
                     he = PL_HashTableRawAdd(libraries, hep, hash, library,
@@ -837,9 +855,8 @@ static callsite *calltree(int skip)
     return site;
 }
 
+#else /*XP_UNIX*/
 
-#else
-/*XP_UNIX*/
 static callsite *calltree(uint32 *bp)
 {
     logfile *fp = logfp;
@@ -1111,8 +1128,7 @@ backtrace(int skip)
     return site;
 }
 
-#else
-/*XP_UNIX*/
+#else /*XP_UNIX*/
 
 callsite *
 backtrace(int skip)
@@ -1148,7 +1164,7 @@ backtrace(int skip)
 }
 
 
-#endif /*XP_WIN32*/
+#endif /* XP_UNIX */
 
 
 typedef struct allocation {
@@ -1223,7 +1239,7 @@ static PLHashTable *new_allocations(void)
 
 #define get_allocations() (allocations ? allocations : new_allocations())
 
-#if XP_UNIX
+#ifdef XP_UNIX
 
 __ptr_t malloc(size_t size)
 {
@@ -1233,8 +1249,7 @@ __ptr_t malloc(size_t size)
     allocation *alloc;
 
     ptr = __libc_malloc(size);
-    if (tmmon)
-        PR_EnterMonitor(tmmon);
+    TM_ENTER_MONITOR();
     tmstats.malloc_calls++;
     if (!ptr) {
         tmstats.malloc_failures++;
@@ -1252,8 +1267,7 @@ __ptr_t malloc(size_t size)
             }
         }
     }
-    if (tmmon)
-        PR_ExitMonitor(tmmon);
+    TM_EXIT_MONITOR();
     return ptr;
 }
 
@@ -1265,8 +1279,7 @@ __ptr_t calloc(size_t count, size_t size)
     allocation *alloc;
 
     ptr = __libc_calloc(count, size);
-    if (tmmon)
-        PR_EnterMonitor(tmmon);
+    TM_ENTER_MONITOR();
     tmstats.calloc_calls++;
     if (!ptr) {
         tmstats.calloc_failures++;
@@ -1285,8 +1298,7 @@ __ptr_t calloc(size_t count, size_t size)
             }
         }
     }
-    if (tmmon)
-        PR_ExitMonitor(tmmon);
+    TM_EXIT_MONITOR();
     return ptr;
 }
 
@@ -1299,8 +1311,7 @@ __ptr_t realloc(__ptr_t ptr, size_t size)
     PLHashEntry **hep, *he;
     allocation *alloc;
 
-    if (tmmon)
-        PR_EnterMonitor(tmmon);
+    TM_ENTER_MONITOR();
     tmstats.realloc_calls++;
     if (suppress_tracing == 0) {
         oldptr = ptr;
@@ -1318,13 +1329,11 @@ __ptr_t realloc(__ptr_t ptr, size_t size)
             }
         }
     }
-    if (tmmon)
-        PR_ExitMonitor(tmmon);
+    TM_EXIT_MONITOR();
 
     ptr = __libc_realloc(ptr, size);
 
-    if (tmmon)
-        PR_EnterMonitor(tmmon);
+    TM_ENTER_MONITOR();
     if (!ptr && size) {
         /*
          * When realloc() fails, the original block is not freed or moved, so
@@ -1341,8 +1350,9 @@ __ptr_t realloc(__ptr_t ptr, size_t size)
             suppress_tracing++;
             if (ptr != oldptr) {
                 /*
-                 * If we're reallocating (not allocating new space by passing
-                 * null to realloc) and realloc moved the block, free oldptr.
+                 * If we're reallocating (not merely allocating new space by
+                 * passing null to realloc) and realloc has moved the block,
+                 * free oldptr.
                  */
                 if (he)
                     PL_HashTableRemove(allocations, oldptr);
@@ -1351,8 +1361,8 @@ __ptr_t realloc(__ptr_t ptr, size_t size)
                 he = PL_HashTableAdd(allocations, ptr, site);
             } else {
                 /*
-                 * If we haven't yet recorded an allocation (possibly due to a
-                 * temporary memory shortage), do it now.
+                 * If we haven't yet recorded an allocation (possibly due to
+                 * a temporary memory shortage), do it now.
                  */
                 if (!he)
                     he = PL_HashTableAdd(allocations, ptr, site);
@@ -1364,8 +1374,7 @@ __ptr_t realloc(__ptr_t ptr, size_t size)
             }
         }
     }
-    if (tmmon)
-        PR_ExitMonitor(tmmon);
+    TM_EXIT_MONITOR();
     return ptr;
 }
 
@@ -1375,8 +1384,7 @@ void free(__ptr_t ptr)
     callsite *site;
     allocation *alloc;
 
-    if (tmmon)
-        PR_EnterMonitor(tmmon);
+    TM_ENTER_MONITOR();
     tmstats.free_calls++;
     if (!ptr) {
         tmstats.null_free_calls++;
@@ -1388,17 +1396,18 @@ void free(__ptr_t ptr)
                 site = (callsite*) he->value;
                 if (site) {
                     alloc = (allocation*) he;
-                    log_event2(logfp, TM_EVENT_FREE, site->serial, alloc->size);
+                    log_event2(logfp, TM_EVENT_FREE, site->serial,
+                               alloc->size);
                 }
                 PL_HashTableRawRemove(allocations, hep, he);
             }
         }
     }
-    if (tmmon)
-        PR_ExitMonitor(tmmon);
+    TM_EXIT_MONITOR();
     __libc_free(ptr);
 }
-#endif 
+
+#endif /* XP_UNIX */
 
 static const char magic[] = NS_TRACE_MALLOC_MAGIC;
 
@@ -1421,106 +1430,141 @@ PR_IMPLEMENT(void) NS_TraceMallocStartup(int logfd)
 
     atexit(NS_TraceMallocShutdown);
     tmmon = PR_NewMonitor();
-    /*register listeners for win32*/
+
 #ifdef XP_WIN32
+    /* Register listeners for win32. */
     {
-      StartupHooker();
+        StartupHooker();
     }
 #endif
 }
 
 
+/*
+ * Options for log files, with the log file name either as the next option
+ * or separated by '=' (e.g. "./mozilla --trace-malloc * malloc.log" or
+ * "./mozilla --trace-malloc=malloc.log").
+ */
+static const char TMLOG_OPTION[] = "--trace-malloc";
+static const char SDLOG_OPTION[] = "--shutdown-leaks";
+
+#define SHOULD_PARSE_ARG(name_, log_, arg_) \
+    (0 == strncmp(arg_, name_, sizeof(name_) - 1))
+
+#define PARSE_ARG(name_, log_, argv_, i_, consumed_)                          \
+    PR_BEGIN_MACRO                                                            \
+        char _nextchar = argv_[i_][sizeof(name_) - 1];                        \
+        if (_nextchar == '=') {                                               \
+            log_ = argv_[i_] + sizeof(name_);                                 \
+            consumed_ = 1;                                                    \
+        } else if (_nextchar == '\0') {                                       \
+            log_ = argv_[i_+1];                                               \
+            consumed_ = 2;                                                    \
+        }                                                                     \
+    PR_END_MACRO
 
 PR_IMPLEMENT(int) NS_TraceMallocStartupArgs(int argc, char* argv[])
 {
-    int i, logfd = -1;
+    int i, logfd = -1, consumed;
+    char *tmlogname = NULL; /* note global |sdlogname| */
 
     /*
      * Look for the --trace-malloc <logfile> option early, to avoid missing
      * early mallocs (we miss static constructors whose output overflows the
      * log file's static 16K output buffer).
      */
-    for (i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--trace-malloc") == 0 && i < argc-1) {
-            char *logfilename;
-            int pipefds[2];
+    for (i = 1; i < argc; i += consumed) {
+        consumed = 0;
+        if (SHOULD_PARSE_ARG(TMLOG_OPTION, tmlogname, argv[i]))
+            PARSE_ARG(TMLOG_OPTION, tmlogname, argv, i, consumed);
+        else if (SHOULD_PARSE_ARG(SDLOG_OPTION, sdlogname, argv[i]))
+            PARSE_ARG(SDLOG_OPTION, sdlogname, argv, i, consumed);
 
-            logfilename = argv[i+1];
-			switch (*logfilename) {
-		#if XP_UNIX
-			case '|':
-				if (pipe(pipefds) == 0) {
-					pid_t pid = fork();
-					if (pid == 0) {
-						/* In child: set up stdin, parse args, and exec. */
-						int maxargc, nargc;
-						char **nargv, *token;
-
-						if (pipefds[0] != 0) {
-							dup2(pipefds[0], 0);
-							close(pipefds[0]);
-						}
-						close(pipefds[1]);
-
-						logfilename = strtok(logfilename + 1, " \t");
-						maxargc = 3;
-						nargv = (char **) malloc((maxargc+1) * sizeof(char *));
-						if (!nargv) exit(1);
-						nargc = 0;
-						nargv[nargc++] = logfilename;
-						while ((token = strtok(NULL, " \t")) != NULL) {
-							if (nargc == maxargc) {
-								maxargc *= 2;
-								nargv = (char**)
-									realloc(nargv, (maxargc+1) * sizeof(char*));
-								if (!nargv) exit(1);
-							}
-							nargv[nargc++] = token;
-						}
-						nargv[nargc] = NULL;
-
-						(void) setsid();
-						execvp(logfilename, nargv);
-						exit(127);
-					}
-
-					if (pid > 0) {
-						/* In parent: set logfd to the pipe's write side. */
-						close(pipefds[0]);
-						logfd = pipefds[1];
-					}
-				}
-				if (logfd < 0) {
-					fprintf(stderr,
-						"%s: can't pipe to trace-malloc child process %s: %s\n",
-						argv[0], logfilename, strerror(errno));
-					exit(1);
-				}
-				break;
-		#endif /*XP_UNIX*/
-			  case '-':
-				/* Don't log from startup, but do prepare to log later. */
-				/* XXX traditional meaning of '-' as option argument is "stdin" or "stdout" */
-				if (logfilename[1] == '\0')
-					break;
-				/* FALL THROUGH */
-
-			  default:
-				logfd = open(logfilename, O_CREAT | O_WRONLY | O_TRUNC, 0644);
-				if (logfd < 0) {
-					fprintf(stderr,
-						"%s: can't create trace-malloc logfilename %s: %s\n",
-						argv[0], logfilename, strerror(errno));
-					exit(1);
-				}
-				break;
-			}
-#ifndef XP_WIN32
+        if (consumed) {
+#ifndef XP_WIN32 /* If we don't comment this out, it will crash Windows. */
+            int j;
             /* Now remove --trace-malloc and its argument from argv. */
-            for (argc -= 2; i < argc; i++)
-                argv[i] = argv[i+2];
+            argc -= consumed;
+            for (j = i; j < argc; ++j)
+                argv[j] = argv[j+consumed];
             argv[argc] = NULL;
-#endif//if you dont comment this out it will crash windows
+            consumed = 0; /* don't advance next iteration */
+#endif
+        } else {
+            consumed = 1;
+        }
+    }
+
+    if (tmlogname) {
+        int pipefds[2];
+
+        switch (*tmlogname) {
+#ifdef XP_UNIX
+          case '|':
+            if (pipe(pipefds) == 0) {
+                pid_t pid = fork();
+                if (pid == 0) {
+                    /* In child: set up stdin, parse args, and exec. */
+                    int maxargc, nargc;
+                    char **nargv, *token;
+
+                    if (pipefds[0] != 0) {
+                        dup2(pipefds[0], 0);
+                        close(pipefds[0]);
+                    }
+                    close(pipefds[1]);
+
+                    tmlogname = strtok(tmlogname + 1, " \t");
+                    maxargc = 3;
+                    nargv = (char **) malloc((maxargc+1) * sizeof(char *));
+                    if (!nargv) exit(1);
+                    nargc = 0;
+                    nargv[nargc++] = tmlogname;
+                    while ((token = strtok(NULL, " \t")) != NULL) {
+                        if (nargc == maxargc) {
+                            maxargc *= 2;
+                            nargv = (char**)
+                                realloc(nargv, (maxargc+1) * sizeof(char*));
+                            if (!nargv) exit(1);
+                        }
+                        nargv[nargc++] = token;
+                    }
+                    nargv[nargc] = NULL;
+
+                    (void) setsid();
+                    execvp(tmlogname, nargv);
+                    exit(127);
+                }
+
+                if (pid > 0) {
+                    /* In parent: set logfd to the pipe's write side. */
+                    close(pipefds[0]);
+                    logfd = pipefds[1];
+                }
+            }
+            if (logfd < 0) {
+                fprintf(stderr,
+                    "%s: can't pipe to trace-malloc child process %s: %s\n",
+                    argv[0], tmlogname, strerror(errno));
+                exit(1);
+            }
+            break;
+#endif /*XP_UNIX*/
+          case '-':
+            /* Don't log from startup, but do prepare to log later. */
+            /* XXX traditional meaning of '-' as option argument is "stdin" or "stdout" */
+            if (tmlogname[1] == '\0')
+                break;
+            /* FALL THROUGH */
+
+          default:
+            logfd = open(tmlogname, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+            if (logfd < 0) {
+                fprintf(stderr,
+                    "%s: can't create trace-malloc log named %s: %s\n",
+                    argv[0], tmlogname, strerror(errno));
+                exit(1);
+            }
             break;
         }
     }
@@ -1532,6 +1576,9 @@ PR_IMPLEMENT(int) NS_TraceMallocStartupArgs(int argc, char* argv[])
 PR_IMPLEMENT(void) NS_TraceMallocShutdown()
 {
     logfile *fp;
+
+    if (sdlogname)
+        NS_TraceMallocDumpAllocations(sdlogname);
 
     if (tmstats.backtrace_failures) {
         fprintf(stderr,
@@ -1568,32 +1615,26 @@ PR_IMPLEMENT(void) NS_TraceMallocDisable()
 {
     logfile *fp;
 
-    if (tmmon)
-        PR_EnterMonitor(tmmon);
+    TM_ENTER_MONITOR();
     for (fp = logfile_list; fp; fp = fp->next)
         flush_logfile(fp);
     suppress_tracing++;
-    if (tmmon)
-        PR_ExitMonitor(tmmon);
+    TM_EXIT_MONITOR();
 }
 
 PR_IMPLEMENT(void) NS_TraceMallocEnable()
 {
-    if (tmmon) 
-        PR_EnterMonitor(tmmon);
+    TM_ENTER_MONITOR();
     suppress_tracing--;
-    if (tmmon)
-        PR_ExitMonitor(tmmon);
+    TM_EXIT_MONITOR();
 }
-
 
 PR_IMPLEMENT(int) NS_TraceMallocChangeLogFD(int fd)
 {
     logfile *oldfp, *fp;
     struct stat sb;
 
-    if (tmmon)
-        PR_EnterMonitor(tmmon);
+    TM_ENTER_MONITOR();
     oldfp = logfp;
     if (oldfp->fd != fd) {
         flush_logfile(oldfp);
@@ -1604,12 +1645,9 @@ PR_IMPLEMENT(int) NS_TraceMallocChangeLogFD(int fd)
             (void) write(fd, magic, NS_TRACE_MALLOC_MAGIC_SIZE);
         logfp = fp;
     }
-    if (tmmon)
-        PR_ExitMonitor(tmmon);
+    TM_EXIT_MONITOR();
     return oldfp->fd;
 }
-
-
 
 static PRIntn
 lfd_clr_enumerator(PLHashEntry *he, PRIntn i, void *arg)
@@ -1625,7 +1663,7 @@ static void
 lfd_clr_walk(callsite *site, logfile *fp)
 {
     callsite *kid;
-    
+
     LFD_CLR(fp->lfd, &site->lfdset);
     for (kid = site->kids; kid; kid = kid->siblings)
         lfd_clr_walk(kid, fp);
@@ -1636,8 +1674,7 @@ NS_TraceMallocCloseLogFD(int fd)
 {
     logfile *fp;
 
-    if (tmmon)
-        PR_EnterMonitor(tmmon);
+    TM_ENTER_MONITOR();
 
     fp = get_logfile(fd);
     if (fp) {
@@ -1668,44 +1705,39 @@ NS_TraceMallocCloseLogFD(int fd)
         }
     }
 
-    if (tmmon)
-        PR_ExitMonitor(tmmon);
+    TM_EXIT_MONITOR();
     close(fd);
 }
-
 
 PR_IMPLEMENT(void)
 NS_TraceMallocLogTimestamp(const char *caption)
 {
     logfile *fp;
-#if defined(XP_UNIX)
+#ifdef XP_UNIX
     struct timeval tv;
 #endif
-#if defined(XP_WIN32)
+#ifdef XP_WIN32
     struct _timeb tb;
-#endif	
+#endif
 
-
-    if (tmmon)
-        PR_EnterMonitor(tmmon);
+    TM_ENTER_MONITOR();
 
     fp = logfp;
     log_byte(fp, TM_EVENT_TIMESTAMP);
 
-#if defined(XP_UNIX)
+#ifdef XP_UNIX
      gettimeofday(&tv, NULL);
     log_uint32(fp, (uint32) tv.tv_sec);
     log_uint32(fp, (uint32) tv.tv_usec);
 #endif
-#if defined(XP_WIN32)
+#ifdef XP_WIN32
      _ftime(&tb);
     log_uint32(fp, (uint32) tb.time);
     log_uint32(fp, (uint32) tb.millitm);
 #endif
     log_string(fp, caption);
 
-    if (tmmon)
-        PR_ExitMonitor(tmmon);
+    TM_EXIT_MONITOR();
 }
 
 static PRIntn
@@ -1733,6 +1765,18 @@ allocation_enumerator(PLHashEntry *he, PRIntn i, void *arg)
     return HT_ENUMERATE_NEXT;
 }
 
+PR_IMPLEMENT(void)
+NS_TraceStack(int skip, FILE *ofp)
+{
+    callsite *site;
+
+    site = backtrace(skip + 1);
+    while (site) {
+        if (site->name || site->parent)
+            fprintf(ofp, "%s[%s +0x%X]\n", site->name, site->library, site->offset);
+        site = site->parent;
+    }
+}
 
 PR_IMPLEMENT(int)
 NS_TraceMallocDumpAllocations(const char *pathname)
@@ -1754,32 +1798,28 @@ NS_TraceMallocFlushLogfiles()
 {
     logfile *fp;
 
-    if (tmmon)
-        PR_EnterMonitor(tmmon);
+    TM_ENTER_MONITOR();
 
     for (fp = logfile_list; fp; fp = fp->next)
         flush_logfile(fp);
 
-    if (tmmon)
-        PR_ExitMonitor(tmmon);
+    TM_EXIT_MONITOR();
 }
 
 #ifdef XP_WIN32
 
-
-
-PR_IMPLEMENT(void) 
+PR_IMPLEMENT(void)
 MallocCallback(void *aPtr, size_t size)
 {
     callsite *site;
     PLHashEntry *he;
     allocation *alloc;
+
+    TM_ENTER_MONITOR();
     tmstats.malloc_calls++;
     if (!aPtr) {
         tmstats.malloc_failures++;
     } else if (suppress_tracing == 0) {
-        if (tmmon)
-            PR_EnterMonitor(tmmon);
         site = backtrace(4);
         if (site)
             log_event2(logfp, TM_EVENT_MALLOC, site->serial, size);
@@ -1792,12 +1832,9 @@ MallocCallback(void *aPtr, size_t size)
                 alloc->size = size;
             }
         }
-        if (tmmon)
-            PR_ExitMonitor(tmmon);
     }
+    TM_EXIT_MONITOR();
 }
-
-
 
 PR_IMPLEMENT(void)
 CallocCallback(void *ptr, size_t count, size_t size)
@@ -1806,12 +1843,11 @@ CallocCallback(void *ptr, size_t count, size_t size)
     PLHashEntry *he;
     allocation *alloc;
 
+    TM_ENTER_MONITOR();
     tmstats.calloc_calls++;
     if (!ptr) {
         tmstats.calloc_failures++;
     } else if (suppress_tracing == 0) {
-        if (tmmon)
-            PR_EnterMonitor(tmmon);
         site = backtrace(1);
         size *= count;
         if (site)
@@ -1825,9 +1861,8 @@ CallocCallback(void *ptr, size_t count, size_t size)
                 alloc->size = size;
             }
         }
-        if (tmmon)
-            PR_ExitMonitor(tmmon);
     }
+    TM_EXIT_MONITOR();
 }
 
 PR_IMPLEMENT(void)
@@ -1839,13 +1874,12 @@ ReallocCallback(void * oldptr, void *ptr, size_t size)
     PLHashEntry **hep, *he;
     allocation *alloc;
 
+    TM_ENTER_MONITOR();
     tmstats.realloc_calls++;
     if (suppress_tracing == 0) {
         oldsite = NULL;
         oldsize = 0;
         he = NULL;
-        if (tmmon)
-            PR_EnterMonitor(tmmon);
         if (oldptr && get_allocations()) {
             hash = hash_pointer(oldptr);
             hep = PL_HashTableRawLookup(allocations, hash, oldptr);
@@ -1856,31 +1890,15 @@ ReallocCallback(void * oldptr, void *ptr, size_t size)
                 oldsize = alloc->size;
             }
         }
-#ifdef EXIT_TMMON_AROUND_REALLOC
-        /* XXX rusty.lynch@intel.com found that oldsize gets corrupted on
-               his SMP Linux box occasionally, unless tmmon is held across
-               the call to __libc_realloc.  Figure out why that stack var
-               is being trashed, and until then use his workaround. */
-        if (tmmon)
-            PR_ExitMonitor(tmmon);
-#endif
-      }
-      if (!ptr && size) {
-          tmstats.realloc_failures++;
-  #ifndef EXIT_TMMON_AROUND_REALLOC
-          if (tmmon && suppress_tracing == 0)
-              PR_ExitMonitor(tmmon);
-  #endif
+    }
+    if (!ptr && size) {
+        tmstats.realloc_failures++;
 
-          /*
-           * When realloc() fails, the original block is not freed or moved, so
-           * we'll leave the allocation entry untouched.
-           */
-      } else if (suppress_tracing == 0) {
-#ifdef EXIT_TMMON_AROUND_REALLOC
-        if (tmmon)
-            PR_EnterMonitor(tmmon);
-#endif
+        /*
+         * When realloc() fails, the original block is not freed or moved, so
+         * we'll leave the allocation entry untouched.
+         */
+    } else if (suppress_tracing == 0) {
         site = backtrace(1);
         if (site) {
             log_event4(logfp, TM_EVENT_REALLOC, site->serial, size,
@@ -1912,9 +1930,8 @@ ReallocCallback(void * oldptr, void *ptr, size_t size)
                 alloc->size = size;
             }
         }
-        if (tmmon)
-            PR_ExitMonitor(tmmon);
     }
+    TM_EXIT_MONITOR();
 }
 
 PR_IMPLEMENT(void)
@@ -1924,12 +1941,11 @@ FreeCallback(void * ptr)
     callsite *site;
     allocation *alloc;
 
+    TM_ENTER_MONITOR();
     tmstats.free_calls++;
     if (!ptr) {
         tmstats.null_free_calls++;
     } else if (suppress_tracing == 0) {
-        if (tmmon)
-            PR_EnterMonitor(tmmon);
         if (get_allocations()) {
             hep = PL_HashTableRawLookup(allocations, hash_pointer(ptr), ptr);
             he = *hep;
@@ -1942,11 +1958,10 @@ FreeCallback(void * ptr)
                 PL_HashTableRawRemove(allocations, hep, he);
             }
         }
-        if (tmmon)
-            PR_ExitMonitor(tmmon);
     }
+    TM_EXIT_MONITOR();
 }
 
 #endif /*XP_WIN32*/
- 
+
 #endif /* NS_TRACE_MALLOC */
