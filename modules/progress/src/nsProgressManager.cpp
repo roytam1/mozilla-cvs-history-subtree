@@ -80,6 +80,9 @@ protected:
     PRBool            fComplete;
     PRInt32           fResultCode;
 
+    static PRUint32 DefaultMSecRemaining;
+    static void UpdateDefaultMSecRemaining(PRUint32 time);
+
 public:
     nsTransfer(const URL_Struct* url);
     virtual ~nsTransfer(void);
@@ -98,6 +101,8 @@ public:
 };
 
 ////////////////////////////////////////////////////////////////////////
+
+PRUint32 nsTransfer::DefaultMSecRemaining = 1000;
 
 nsTransfer::nsTransfer(const URL_Struct* url)
     : fURL(url), fBytesReceived(0), fContentLength(0), fStart(PR_Now()),
@@ -160,22 +165,21 @@ nsTransfer::GetTransferRate(void)
 PRUint32
 nsTransfer::GetMSecRemaining(void)
 {
-#define DEFAULT_MSEC_REMAINING 10000
     if (IsComplete())
         return 0;
 
     if (fContentLength == 0 || fBytesReceived == 0)
         // no content length and/or no bytes received
-        return DEFAULT_MSEC_REMAINING;
+        return DefaultMSecRemaining;
 
     PRUint32 cbRemaining = fContentLength - fBytesReceived;
     if (cbRemaining == 0)
         // not complete, but content length == bytes received.
-        return DEFAULT_MSEC_REMAINING;
+        return DefaultMSecRemaining;
 
     double bytesPerMSec = GetTransferRate();
     if (bytesPerMSec == 0)
-        return DEFAULT_MSEC_REMAINING;
+        return DefaultMSecRemaining;
 
     PRUint32 msecRemaining = (PRUint32) (((double) cbRemaining) * bytesPerMSec);
 
@@ -207,6 +211,12 @@ nsTransfer::MarkComplete(PRInt32 resultCode)
 {
     fComplete = PR_TRUE;
     fResultCode = resultCode;
+
+    if (fResultCode >= 0) {
+        nsInt64 elapsed = nsTime(PR_Now()) - fStart;
+        PRUint32 elapsedMSec= (PRUint32) (elapsed / nsInt64((PRUint32) PR_USEC_PER_MSEC));
+        UpdateDefaultMSecRemaining(elapsedMSec);
+    }
 }
 
 
@@ -217,6 +227,13 @@ nsTransfer::IsComplete(void)
 }
 
 
+void
+nsTransfer::UpdateDefaultMSecRemaining(PRUint32 msec)
+{
+    // very simple. just maintain a rolling average.
+    DefaultMSecRemaining += msec;
+    DefaultMSecRemaining /= 2;
+}
 
 ////////////////////////////////////////////////////////////////////////
 //
@@ -462,7 +479,6 @@ nsTopProgressManager::OnProgress(const URL_Struct* url,
                                  PRUint32 bytesReceived,
                                  PRUint32 contentLength)
 {
-
     // Some sanity checks...
     PR_ASSERT(url);
     if (! url)
