@@ -1,3 +1,19 @@
+1999-08-08  Leif Hedstrom  <leif@netscape.com> and Kevin McCarthy
+
+	* Conn.pm (close): Fixed memory leak, moved code from the DESTROY
+	method over here.
+	(DESTROY): Call the close() method.
+	(getErrorCode): We now return LDAP_SUCCESS if there is no LDAP
+	connection handle.
+	(getErrorString): Dito.
+
+	* Entry.pm (STORE): Bug fix for large attribute sets.
+	(attrModified): Dito.
+	(removeValue): Dito.
+	(addValue): Dito.
+	(EXISTS): Fix for bug 4368, cleaning up the code, and avoid the
+	double calls.
+
 1999-08-06  Leif Hedstrom  <leif@netscape.com> and Kevin McCarthy 
 
 	* API.xs: Added some more tests around free() statements. These
