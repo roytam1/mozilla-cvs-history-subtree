@@ -104,9 +104,11 @@ EXPORTS = \
 	libart-features.h \
 	$(NULL)
 
-ifdef ENABLE_TESTS
-SIMPLE_PROGRAMS	= testart$(BIN_SUFFIX) testuta$(BIN_SUFFIX)
-endif
+# XXX For some reason, building the tests in this way on Windows will
+# wreck Libart's PDB-file
+#ifdef ENABLE_TESTS
+#SIMPLE_PROGRAMS	= testart$(BIN_SUFFIX) testuta$(BIN_SUFFIX)
+#endif
 
 FORCE_SHARED_LIB=1
 
