@@ -42,7 +42,6 @@
 #include "nsCOMPtr.h"
 #include "nsIServiceManager.h"
 #include "prenv.h"
-#include "nsICmdLineService.h"
 #include "nsIStringBundle.h"
 #include "nsIPromptService.h"
 #include "nsIPrefService.h"
@@ -76,37 +75,20 @@ nsMailGNOMEIntegration::Init()
   // the locale encoding.  If it's not set, they use UTF-8.
   mUseLocaleFilenames = PR_GetEnv("G_BROKEN_FILENAMES") != nsnull;
 
-  // Get the path we were launched from.
-  nsCOMPtr<nsICmdLineService> cmdService =
-    do_GetService("@mozilla.org/appshell/commandLineService;1");
-  if (!cmdService)
-    return NS_ERROR_NOT_AVAILABLE;
+  nsCOMPtr<nsIProperties> dirSvc
+    (do_GetService("@mozilla.org/file/directory_service;1"));
+  NS_ENSURE_TRUE(dirSvc, NS_ERROR_NOT_AVAILABLE);
 
-  nsXPIDLCString programName;
-  cmdService->GetProgramName(getter_Copies(programName));
+  nsCOMPtr<nsILocalFile> appPath;
+  rv = dirSvc->Get(NS_XPCOM_CURRENT_PROCESS_DIR, NS_GET_IID(nsILocalFile),
+                   getter_AddRefs(appPath));
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  // Make sure we have an absolute pathname.
-  if (programName[0] != '/') {
-    // First search PATH if we were just launched as 'thunderbird-bin'.
-    // If we were launched as './thunderbird-bin', this will just return
-    // the original string.
+  rv = appPath->AppendNative(NS_LITERAL_CSTRING("thunderbird"));
+  NS_ENSURE_SUCCESS(rv, rv);
 
-    gchar *appPath = g_find_program_in_path(programName.get());
-
-    // Now resolve it.
-    char resolvedPath[PATH_MAX] = "";
-    if (realpath(appPath, resolvedPath)) {
-      mAppPath.Assign(resolvedPath);
-    }
-
-    g_free(appPath);
-  } else {
-    mAppPath.Assign(programName);
-  }
-
-  // strip "-bin" off of the binary name
-  if (StringEndsWith(mAppPath, NS_LITERAL_CSTRING("-bin")))
-    mAppPath.SetLength(mAppPath.Length() - 4);
+  rv = appPath->GetNativePath(mAppPath);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   PRBool isDefault;
   nsMailGNOMEIntegration::GetIsDefaultMailClient(&isDefault);
