@@ -113,7 +113,7 @@ protected:
 
   nsresult FlushText(nsAWritableString& aString, PRBool aForce);
 
-  static PRBool IncludeInContext_HTML(nsIDOMNode *aNode);
+  virtual PRBool IncludeInContext(nsIDOMNode *aNode);
 
   nsCOMPtr<nsIDocument>          mDocument;
   nsCOMPtr<nsISelection>         mSelection;
@@ -130,42 +130,12 @@ protected:
   PRUint32          mEndDepth;
   PRBool            mHaltRangeHint;  
   nsVoidArray       mCommonAncestors;
-
-  PRBool (* mIncludeInContextFP)(nsIDOMNode *aNode);
 };
 
 #ifdef XP_MAC
 #pragma mark  nsDocumentEncoder implementation 
 #pragma mark -
 #endif
-
-PRBool
-nsDocumentEncoder::IncludeInContext_HTML(nsIDOMNode *aNode)
-{
-  nsCOMPtr<nsIContent> content(do_QueryInterface(aNode));
-
-  if (!content)
-    return PR_FALSE;
-
-  nsCOMPtr<nsIAtom> tag;
-
-  content->GetTag(*getter_AddRefs(tag));
-
-  if (tag.get() == nsHTMLAtoms::b ||
-      tag.get() == nsHTMLAtoms::i ||
-      tag.get() == nsHTMLAtoms::u ||
-      tag.get() == nsHTMLAtoms::pre ||
-      tag.get() == nsHTMLAtoms::h1 ||
-      tag.get() == nsHTMLAtoms::h2 ||
-      tag.get() == nsHTMLAtoms::h3 ||
-      tag.get() == nsHTMLAtoms::h4 ||
-      tag.get() == nsHTMLAtoms::h5 ||
-      tag.get() == nsHTMLAtoms::h6) {
-    return PR_TRUE;
-  }
-
-  return PR_FALSE;
-}
 
 NS_IMPL_ADDREF(nsDocumentEncoder)
 NS_IMPL_RELEASE(nsDocumentEncoder)
@@ -204,12 +174,6 @@ nsDocumentEncoder::Init(nsIDocument* aDocument,
 
   mMimeType = aMimeType;
 
-  if (mMimeType.Equals(NS_LITERAL_STRING("text/html"))) {
-    mIncludeInContextFP = IncludeInContext_HTML;
-  } else {
-    mIncludeInContextFP = nsnull;
-  }
-
   mFlags = aFlags;
 
   return NS_OK;
@@ -241,6 +205,12 @@ nsDocumentEncoder::SetCharset(const nsAReadableString& aCharset)
 {
   mCharset = aCharset;
   return NS_OK;
+}
+
+PRBool
+nsDocumentEncoder::IncludeInContext(nsIDOMNode *aNode)
+{
+  return PR_FALSE;
 }
 
 nsresult
@@ -394,6 +364,8 @@ nsDocumentEncoder::FlushText(nsAWritableString& aString, PRBool aForce)
   return rv;
 }
 
+#if 0 // This code is really fast at serializing a range, but unfortunately
+      // there are problems with it so we don't use it now, maybe later...
 static nsresult ChildAt(nsIDOMNode* aNode, PRInt32 aIndex, nsIDOMNode*& aChild)
 {
   nsCOMPtr<nsIContent> node(do_QueryInterface(aNode));
@@ -501,6 +473,7 @@ static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
 
   return NS_OK;
 }
+#endif
 
 static PRBool IsTextNode(nsIDOMNode *aNode)
 {
@@ -576,7 +549,7 @@ nsDocumentEncoder::SerializeRangeNodes(nsIDOMRange* aRange,
       }
       else
       {
-        if (IncludeInContext_HTML(aNode))
+        if (IncludeInContext(aNode))
         {
           // halt the incrementing of mStartDepth/mEndDepth.  This is
           // so paste client will include this node in paste.
@@ -610,9 +583,6 @@ nsresult
 nsDocumentEncoder::SerializeRangeContextStart(const nsVoidArray& aAncestorArray,
                                               nsAWritableString& aString)
 {
-  if (!mIncludeInContextFP)
-    return NS_OK;
-
   PRInt32 i = 0;
   nsresult rv = NS_OK;
 
@@ -622,7 +592,7 @@ nsDocumentEncoder::SerializeRangeContextStart(const nsVoidArray& aAncestorArray,
     if (!node)
       break;
 
-    if (mIncludeInContextFP(node)) {
+    if (IncludeInContext(node)) {
       rv = SerializeNodeStart(node, 0, -1, aString);
 
       if (NS_FAILED(rv))
@@ -637,9 +607,6 @@ nsresult
 nsDocumentEncoder::SerializeRangeContextEnd(const nsVoidArray& aAncestorArray,
                                             nsAWritableString& aString)
 {
-  if (!mIncludeInContextFP)
-    return NS_OK;
-
   PRInt32 i = aAncestorArray.Count();
   nsresult rv = NS_OK;
 
@@ -649,7 +616,7 @@ nsDocumentEncoder::SerializeRangeContextEnd(const nsVoidArray& aAncestorArray,
     if (!node)
       break;
 
-    if (mIncludeInContextFP(node)) {
+    if (IncludeInContext(node)) {
       rv = SerializeNodeEnd(node, aString);
 
       if (NS_FAILED(rv))
@@ -871,6 +838,7 @@ protected:
   PRBool IsFirstNode(nsIDOMNode *aNode);
   PRBool IsLastNode(nsIDOMNode *aNode);
   PRBool IsEmptyTextContent(nsIDOMNode* aNode);
+  virtual PRBool IncludeInContext(nsIDOMNode *aNode);
 
   nsCOMPtr<nsIParserService> mParserService;
 };
@@ -899,8 +867,6 @@ nsHTMLCopyEncoder::Init(nsIDocument* aDocument,
   mDocument = aDocument;
 
   mMimeType = NS_LITERAL_STRING("text/html");
-
-  mIncludeInContextFP = IncludeInContext_HTML;
 
   mFlags = aFlags;
 
@@ -998,6 +964,35 @@ nsHTMLCopyEncoder::EncodeToStringWithContext(nsAWritableString& aEncodedString,
   aInfoString = infoString;
   
   return NS_OK;
+}
+
+
+PRBool
+nsHTMLCopyEncoder::IncludeInContext(nsIDOMNode *aNode)
+{
+  nsCOMPtr<nsIContent> content(do_QueryInterface(aNode));
+
+  if (!content)
+    return PR_FALSE;
+
+  nsCOMPtr<nsIAtom> tag;
+
+  content->GetTag(*getter_AddRefs(tag));
+
+  if (tag.get() == nsHTMLAtoms::b ||
+      tag.get() == nsHTMLAtoms::i ||
+      tag.get() == nsHTMLAtoms::u ||
+      tag.get() == nsHTMLAtoms::pre ||
+      tag.get() == nsHTMLAtoms::h1 ||
+      tag.get() == nsHTMLAtoms::h2 ||
+      tag.get() == nsHTMLAtoms::h3 ||
+      tag.get() == nsHTMLAtoms::h4 ||
+      tag.get() == nsHTMLAtoms::h5 ||
+      tag.get() == nsHTMLAtoms::h6) {
+    return PR_TRUE;
+  }
+
+  return PR_FALSE;
 }
 
 
