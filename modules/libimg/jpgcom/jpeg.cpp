@@ -61,7 +61,7 @@ PR_END_EXTERN_C
 #define MAX_JPEG_MARKER_LENGTH  (((PRUint32)1 << 16) - 1)
 
 int il_debug;
-PRLogModuleInfo *il_log_module;
+PRLogModuleInfo *il_log_module = NULL;
 
 /*
  * States that the jpeg decoder might be in

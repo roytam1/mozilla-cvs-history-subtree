@@ -72,9 +72,10 @@ typedef struct il_container_struct il_container;
    group observer notification. */
 /* #define DEBUG_GROUP_OBSERVER */
 
-extern int il_debug;
+
 
 #ifdef DEBUG
+extern int il_debug;
 extern PRLogModuleInfo *il_log_module;
 #define ILTRACE(l,t) { if(il_debug>l) {PR_LOG(il_log_module, 1, t);} }
 #else
