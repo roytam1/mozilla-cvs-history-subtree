@@ -59,7 +59,7 @@
 ***********************************************************************/
 #if defined(WIN32)
 
-#if defined(__MINGW32__)
+#if defined(__GNUC__)
 #define PR_EXTERN(__type) extern __declspec(dllexport) __type
 #define PR_IMPLEMENT(__type) __declspec(dllexport) __type
 #define PR_EXTERN_DATA(__type) extern __declspec(dllexport) __type
@@ -266,7 +266,7 @@ typedef unsigned long PRUint64;
 #elif defined(WIN16)
 typedef __int64 PRInt64;
 typedef unsigned __int64 PRUint64;
-#elif defined(WIN32) && !defined(__MINGW32__)
+#elif defined(WIN32) && !defined(__GNUC__)
 typedef __int64  PRInt64;
 typedef unsigned __int64 PRUint64;
 #else
