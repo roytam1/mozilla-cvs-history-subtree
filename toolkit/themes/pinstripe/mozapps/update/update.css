@@ -67,13 +67,22 @@ updateitem {
 .updateIcon {
   width: 16px;
   height: 16px;
+  list-style-image: url("chrome://mozapps/skin/update/update.png");
 }
 .updateIcon[severity="0"] {
-  background-color: #00FF00;
+  -moz-image-region: rect(0px, 48px, 16px, 32px);
 }
 .updateIcon[severity="1"] {
-  background-color: #0000FF;
+  -moz-image-region: rect(0px, 32px, 16px, 16px);
 }
 .updateIcon[severity="2"] {
-  background-color: #FF0000;
+  -moz-image-region: rect(0px, 16px, 16px, 0px);
+}
+
+#statusbar-updates {
+	padding: 0px 4px 0px 0px;
+}
+
+.updateIndicator > label {
+	margin-left: 2px !important;
 }
