@@ -1711,7 +1711,15 @@ BookmarkInsertTransaction.prototype =
         this.RDFC.AppendElement(this.item[i]);
         this.index[i] = this.RDFC.GetCount();
       } else {
-        this.RDFC.InsertElementAt(this.item[i], this.index[i], true);
+        try {
+          this.RDFC.InsertElementAt(this.item[i], this.index[i], true);
+        } catch (e if e.result == Components.results.NS_ERROR_ILLEGAL_VALUE) {
+          // if this failed, then we assume that we really want to append,
+          // because things are out of whack until we renumber.
+          this.RDFC.AppendElement(this.item[i]);
+          // and then fix up the index so undo works
+          this.index[i] = this.RDFC.GetCount();
+        }
       }
     }
     this.endUpdateBatch();
