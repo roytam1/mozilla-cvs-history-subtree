@@ -115,7 +115,10 @@
 <popup id="toolbar-context-menu"/>
 <tooltip id="attachmentListTooltip"/>
 
-<popup id="emailAddressPopup" popupanchor="bottomleft" onpopupshowing="goUpdateCommand('cmd_createFilterFromPopup')">
+<popup id="emailAddressPopup" popupanchor="bottomleft" onpopupshowing="fillEmailAddressPopup(document.popupNode); goUpdateCommand('cmd_createFilterFromPopup')">
+    <menuitem id="emailAddressPlaceHolder" label=""
+              disabled="true"/>
+    <menuseparator/>
     <menuitem label="&AddToAddressBook.label;"
               accesskey="&AddToAddressBook.accesskey;"
               oncommand="AddNodeToAddressBook(document.popupNode)"/>
@@ -125,6 +128,7 @@
     <menuitem label="&CopyEmailAddress.label;"
               accesskey="&CopyEmailAddress.accesskey;"
               oncommand="CopyEmailAddress(document.popupNode)"/>  
+    <menuseparator/> 
     <menuitem label="&CreateFilter.label;"
               accesskey="&CreateFilter.accesskey;"
               oncommand="CreateFilter(document.popupNode)"
