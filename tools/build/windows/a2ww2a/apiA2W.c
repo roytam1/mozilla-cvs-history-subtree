@@ -46,7 +46,7 @@
 **  Just FYI, Win9x is mostly vice versa with regards to format (i.e. is
 **      ansi code page multibyte software).
 **  As for trying to explain just why there is no inherent A2W layer for
-**      WinCE, I can not.  Someone must be trying to make a point.
+**      WinCE, I can not other than this does cost stack/heap space and time.
 **
 **  But shouldn't we just back up and make the product support wide
 **      characters everywhere, and it will just work?  IMO, no, because
@@ -79,15 +79,113 @@
 
 A2WW2A_API DWORD GetModuleFileNameA(HMODULE hModule, LPSTR lpFilename, DWORD nSize)
 {
-    DWORD retval;
     WCHAR wideStr[MAX_PATH];
 
-    retval = w2a_buffer(
+    return w2a_buffer(
         wideStr,
         GetModuleFileNameW(hModule, wideStr, wcharcount(wideStr)),
         lpFilename,
         nSize
         );
+}
+
+
+A2WW2A_API BOOL CreateDirectoryA(LPCSTR lpPathName, LPSECURITY_ATTRIBUTES lpSecurityAttributes)
+{
+    BOOL retval = FALSE;
+    WCHAR wideStr[MAX_PATH];
+
+    if(a2w_buffer(lpPathName, -1, wideStr, wcharcount(wideStr)))
+    {
+        retval = CreateDirectoryW(wideStr, lpSecurityAttributes);
+    }
+
+    return retval;
+}
+
+
+A2WW2A_API BOOL MoveFileA(LPCSTR lpExistingFileName, LPCSTR lpNewFileName)
+{
+    BOOL retval = FALSE;
+    WCHAR wideStr[2][MAX_PATH];
+
+    if(
+        a2w_buffer(lpExistingFileName, -1, wideStr[0], wcharcount(wideStr[0])) &&
+        a2w_buffer(lpNewFileName, -1, wideStr[1], wcharcount(wideStr[1]))
+        )
+    {
+        retval = MoveFileW(wideStr[0], wideStr[1]);
+    }
+
+    return retval;
+}
+
+
+A2WW2A_API BOOL CopyFileA(LPCSTR lpExistingFileName, LPCSTR lpNewFileName, BOOL bFailIfExists)
+{
+    BOOL retval = FALSE;
+    WCHAR wideStr[2][MAX_PATH];
+
+    if(
+        a2w_buffer(lpExistingFileName, -1, wideStr[0], wcharcount(wideStr[0])) &&
+        a2w_buffer(lpNewFileName, -1, wideStr[1], wcharcount(wideStr[1]))
+        )
+    {
+        retval = CopyFileW(wideStr[0], wideStr[1], bFailIfExists);
+    }
+
+    return retval;
+}
+
+
+A2WW2A_API HANDLE CreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile)
+{
+    HANDLE retval = INVALID_HANDLE_VALUE;
+    WCHAR wideStr[MAX_PATH];
+
+    if(a2w_buffer(lpFileName, -1, wideStr, wcharcount(wideStr)))
+    {
+        retval = CreateFileW(wideStr, dwDesiredAccess, dwShareMode, lpSecurityAttributes, dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile);
+    }
+
+    return retval;
+}
+
+
+A2WW2A_API DWORD GetFileAttributesA(LPCSTR lpFileName)
+{
+    DWORD retval = (DWORD)-1;
+    WCHAR wideStr[MAX_PATH];
+
+    if(a2w_buffer(lpFileName, -1, wideStr, wcharcount(wideStr)))
+    {
+        retval = GetFileAttributesW(wideStr);
+    }
+
+    return retval;
+}
+
+
+A2WW2A_API BOOL CreateProcessA_CE(LPCSTR pszImageName, LPCSTR pszCmdLine, LPSECURITY_ATTRIBUTES psaProcess, LPSECURITY_ATTRIBUTES psaThread, BOOL fInheritHandles, DWORD fdwCreate, LPVOID pvEnvironment, LPSTR pszCurDir, LPSTARTUPINFO psiStartInfo, LPPROCESS_INFORMATION pProcInfo)
+{
+    BOOL retval = FALSE;
+    WCHAR pszImageNameW[MAX_PATH];
+
+    if(a2w_buffer(pszImageName, -1, pszImageNameW, wcharcount(pszImageNameW)))
+    {
+        LPWSTR pszCmdLineW = NULL;
+
+        pszCmdLineW = a2w_malloc(pszCmdLine, -1, NULL);
+        if(NULL != pszCmdLineW || NULL == pszCmdLine)
+        {
+            retval = CreateProcessW(pszImageNameW, pszCmdLineW, NULL, NULL, FALSE, fdwCreate, NULL, NULL, NULL, pProcInfo);
+
+            if(NULL != pszCmdLineW)
+            {
+                free(pszCmdLineW);
+            }
+        }
+    }
 
     return retval;
 }

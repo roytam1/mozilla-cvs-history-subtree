@@ -87,6 +87,12 @@ LCFLAGS=$(LCFLAGS) \
     /DBUILD_$(MODULE) \
     $(NULL)
 
+LLFLAGS=$(LLFALGS) \
+!if "$(OS_TARGET)" == "WINCE"
+    /EXPORT:CreateProcessA=CreateProcessA_CE \
+!endif
+    $(NULL)
+
 #//------------------------------------------------------------------------
 #//
 #// Include the common makefile rules
