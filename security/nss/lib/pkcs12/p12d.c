@@ -1202,12 +1202,6 @@ SEC_PKCS12DecoderStart(SECItem *pwitem, PK11SlotInfo *slot, void *wincx,
     p12dcx->errorValue = 0;
     p12dcx->error = PR_FALSE;
 
-    /* a slot is *required */
-    if(!slot) {
-	PORT_SetError(SEC_ERROR_NO_MEMORY);
-	goto loser;
-    }
-
     /* start the decoding of the PFX and set the notify proc
      * for the PFX item.
      */
@@ -1215,6 +1209,7 @@ SEC_PKCS12DecoderStart(SECItem *pwitem, PK11SlotInfo *slot, void *wincx,
     					  sec_PKCS12PFXItemTemplate);
     if(!p12dcx->pfxDcx) {
 	PORT_SetError(SEC_ERROR_NO_MEMORY); 
+	PK11_FreeSlot(p12dcx->slot);
 	goto loser;
     }
 
@@ -1413,6 +1408,12 @@ SEC_PKCS12DecoderVerify(SEC_PKCS12DecoderContext *p12dcx)
 	return SECFailure;
     }
 
+    rv = SEC_ASN1DecoderFinish(p12dcx->pfxDcx);
+    p12dcx->pfxDcx = NULL;
+    if(rv != SECSuccess) {
+	return rv;
+    }
+
     /* check the signature or the mac depending on the type of
      * integrity used.
      */
@@ -1480,7 +1481,7 @@ SEC_PKCS12DecoderFinish(SEC_PKCS12DecoderContext *p12dcx)
     if(p12dcx->slot) {
 	PK11_FreeSlot(p12dcx->slot);
 	p12dcx->slot = NULL;
-     }
+    }
 
     if(p12dcx->arena) {
 	PORT_FreeArena(p12dcx->arena, PR_TRUE);
@@ -2245,7 +2246,7 @@ sec_pkcs12_validate_cert(sec_PKCS12SafeBag *cert,
     }
 
     cert->noInstall = PR_FALSE;
-    cert->removeExisting = PR_FALSE;
+    cert->unused = PR_FALSE;
     cert->problem = PR_FALSE;
     cert->error = 0;
 
@@ -2258,26 +2259,7 @@ sec_pkcs12_validate_cert(sec_PKCS12SafeBag *cert,
 	return;
     }
 
-    testCert = PK11_FindCertFromDERCert(cert->slot, leafCert, wincx);
     CERT_DestroyCertificate(leafCert);
-    /* if we can't find the certificate through the PKCS11 interface,
-     * we should check the cert database directly, if we are
-     * importing to an internal slot.
-     */
-    if(!testCert && PK11_IsInternal(cert->slot)) {
-	testCert = CERT_FindCertByDERCert(CERT_GetDefaultCertDB(),
-				 &cert->safeBagContent.certBag->value.x509Cert);
-    }
-
-    if(testCert) {
-	if(!testCert->nickname) {
-	    cert->removeExisting = PR_TRUE;
-	}
-	CERT_DestroyCertificate(testCert);
-	if(cert->noInstall && !cert->removeExisting) {
-	    return;
-	}
-    }
 
     sec_pkcs12_validate_cert_nickname(cert, key, nicknameCb, wincx);
 }
@@ -2325,59 +2307,6 @@ sec_pkcs12_validate_key_by_cert(sec_PKCS12SafeBag *cert, sec_PKCS12SafeBag *key,
 }
 
 static SECStatus
-sec_pkcs12_remove_existing_cert(sec_PKCS12SafeBag *cert, 
-				void *wincx)
-{
-    SECItem *derCert = NULL;
-    CERTCertificate *tempCert = NULL;
-    CK_OBJECT_HANDLE certObj;
-    PRBool removed = PR_FALSE;
-
-    if(!cert) {
-	return SECFailure;
-    }
-
-    PORT_Assert(cert->removeExisting);
-
-    cert->removeExisting = PR_FALSE;
-    derCert = &cert->safeBagContent.certBag->value.x509Cert;
-    tempCert = CERT_DecodeDERCertificate(derCert, PR_FALSE, NULL);
-    if(!tempCert) {
-	return SECFailure;
-    }
-
-    certObj = PK11_FindCertInSlot(cert->slot, tempCert, wincx);
-    CERT_DestroyCertificate(tempCert);
-    tempCert = NULL;
-
-    if(certObj != CK_INVALID_HANDLE) {
-	PK11_DestroyObject(cert->slot, certObj);
-	removed = PR_TRUE;
-    } else if(PK11_IsInternal(cert->slot)) {
-	tempCert = CERT_FindCertByDERCert(CERT_GetDefaultCertDB(), derCert);
-	if(tempCert) {
-	    if(SEC_DeletePermCertificate(tempCert) == SECSuccess) {
-		removed = PR_TRUE;
-	    } 
-	    CERT_DestroyCertificate(tempCert);
-	    tempCert = NULL;
-	}
-    }
-
-    if(!removed) {
-	cert->problem = PR_TRUE;
-	cert->error = SEC_ERROR_NO_MEMORY;
-	cert->noInstall = PR_TRUE;
-    }
-	
-    if(tempCert) {
-	CERT_DestroyCertificate(tempCert);
-    }
-
-    return ((removed) ? SECSuccess : SECFailure);
-}
-
-static SECStatus
 sec_pkcs12_add_cert(sec_PKCS12SafeBag *cert, PRBool keyExists, void *wincx)
 {
     SECItem *derCert, *nickName;
@@ -2393,15 +2322,8 @@ sec_pkcs12_add_cert(sec_PKCS12SafeBag *cert, PRBool keyExists, void *wincx)
     }
 
     derCert = &cert->safeBagContent.certBag->value.x509Cert;
-    if(cert->removeExisting) {
-	if(sec_pkcs12_remove_existing_cert(cert, wincx) 
-			!= SECSuccess) {
-	    return SECFailure;
-	}
-	cert->removeExisting = PR_FALSE;
-    }
 
-    PORT_Assert(!cert->problem && !cert->removeExisting && !cert->noInstall);
+    PORT_Assert(!cert->problem && !cert->noInstall);
 
     nickName = sec_pkcs12_get_nickname(cert);
     if(nickName) {
@@ -2411,7 +2333,8 @@ sec_pkcs12_add_cert(sec_PKCS12SafeBag *cert, PRBool keyExists, void *wincx)
     if(keyExists) {
 	CERTCertificate *newCert;
 
-	newCert = CERT_DecodeDERCertificate( derCert, PR_FALSE, NULL);
+	newCert = CERT_NewTempCertificate(CERT_GetDefaultCertDB(),
+	                                  derCert, NULL, PR_FALSE, PR_FALSE);
 	if(!newCert) {
 	     if(nickName) SECITEM_ZfreeItem(nickName, PR_TRUE);
 	     cert->error = SEC_ERROR_NO_MEMORY;
@@ -2443,12 +2366,6 @@ sec_pkcs12_add_key(sec_PKCS12SafeBag *key, SECItem *publicValue,
     SECItem *nickName;
 
     if(!key) {
-	return SECFailure;
-    }
-
-    if(key->removeExisting) {
-	key->problem = PR_TRUE;
-	key->error = SEC_ERROR_PKCS12_UNABLE_TO_IMPORT_KEY;
 	return SECFailure;
     }
 
@@ -2593,7 +2510,9 @@ SEC_PKCS12DecoderGetCerts(SEC_PKCS12DecoderContext *p12dcx)
 		CERTCertificate *tempCert = NULL;
 
 		if (derCert == NULL) continue;
-    		tempCert=CERT_DecodeDERCertificate(derCert, PR_TRUE, NULL);
+    		tempCert=CERT_NewTempCertificate(CERT_GetDefaultCertDB(),
+		                                 derCert, NULL, 
+		                                 PR_FALSE, PR_TRUE);
 
 		if (tempCert) {
 		    CERT_AddCertToListTail(certList,tempCert);

@@ -1105,6 +1105,7 @@ const ssl3BulkCipherDef *cipher_def;
 
     mac_param.data = (unsigned char *)&macLength;
     mac_param.len  = sizeof(macLength);
+    mac_param.type = 0;
     mac_mech       = pwSpec->mac_def->mmech;
 
     if (cipher_def->calg == calg_null) {
@@ -1615,8 +1616,9 @@ ssl3_HandleNoCertificate(sslSocket *ss)
      * first handshake because if we're redoing the handshake we 
      * know the server is paying attention to the certificate.
      */
-    if ((ss->requireCertificate == 1) ||
-	(!ss->firstHsDone && (ss->requireCertificate > 1))) {
+    if ((ss->requireCertificate == SSL_REQUIRE_ALWAYS) ||
+	(!ss->firstHsDone && 
+	 (ss->requireCertificate == SSL_REQUIRE_FIRST_HANDSHAKE))) {
 	PRFileDesc * lower;
 
 	ss->sec.uncache(ss->sec.ci.sid);
@@ -2418,22 +2420,31 @@ ssl3_ComputeHandshakeHashes(sslSocket *     ss,
     SSL3Opaque    md5_inner[MAX_MAC_LENGTH];
     SSL3Opaque    sha_inner[MAX_MAC_LENGTH];
     unsigned char s[4];
+    unsigned char md5StackBuf[256];
+    unsigned char shaStackBuf[512];
+    unsigned char *md5StateBuf = NULL;
+    unsigned char *shaStateBuf = NULL;
+    unsigned int  md5StateLen, shaStateLen;
 
     PORT_Assert( ssl_HaveSSL3HandshakeLock(ss) );
 
     isTLS = (PRBool)(spec->version > SSL_LIBRARY_VERSION_3_0);
 
-    md5 = PK11_CloneContext(ssl3->hs.md5);
-    if (md5 == NULL) {
+    md5StateBuf = PK11_SaveContextAlloc(ssl3->hs.md5, md5StackBuf,
+                                        sizeof md5StackBuf, &md5StateLen);
+    if (md5StateBuf == NULL) {
 	ssl_MapLowLevelError(SSL_ERROR_MD5_DIGEST_FAILURE);
-    	return SECFailure;
+	goto loser;
     }
+    md5 = ssl3->hs.md5;
 
-    sha = PK11_CloneContext(ssl3->hs.sha);
-    if (sha == NULL) {
+    shaStateBuf = PK11_SaveContextAlloc(ssl3->hs.sha, shaStackBuf,
+                                        sizeof shaStackBuf, &shaStateLen);
+    if (shaStateBuf == NULL) {
 	ssl_MapLowLevelError(SSL_ERROR_SHA_DIGEST_FAILURE);
 	goto loser;
     }
+    sha = ssl3->hs.sha;
 
     if (!isTLS) {
 	/* compute hashes for SSL3. */
@@ -2522,8 +2533,28 @@ ssl3_ComputeHandshakeHashes(sslSocket *     ss,
     rv = SECSuccess;
 
 loser:
-    if (md5) PK11_DestroyContext(md5, PR_TRUE);
-    if (sha) PK11_DestroyContext(sha, PR_TRUE);
+    if (md5StateBuf) {
+	if (PK11_RestoreContext(ssl3->hs.md5, md5StateBuf, md5StateLen)
+	     != SECSuccess) 
+	{
+	    ssl_MapLowLevelError(SSL_ERROR_MD5_DIGEST_FAILURE);
+	    rv = SECFailure;
+	}
+	if (md5StateBuf != md5StackBuf) {
+	    PORT_ZFree(md5StateBuf, md5StateLen);
+	}
+    }
+    if (shaStateBuf) {
+	if (PK11_RestoreContext(ssl3->hs.sha, shaStateBuf, shaStateLen)
+	     != SECSuccess) 
+	{
+	    ssl_MapLowLevelError(SSL_ERROR_SHA_DIGEST_FAILURE);
+	    rv = SECFailure;
+	}
+	if (shaStateBuf != shaStackBuf) {
+	    PORT_ZFree(shaStateBuf, shaStateLen);
+	}
+    }
 
     return rv;
 }
@@ -4980,8 +5011,10 @@ ssl3_HandleClientHello(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 	 * then drop this old cache entry and start a new session.
 	 */
 	if ((sid->peerCert == NULL) && ss->requestCertificate &&
-	    ((ss->requireCertificate == 1) ||
-	     ((ss->requireCertificate == 2) && !ss->firstHsDone))) {
+	    ((ss->requireCertificate == SSL_REQUIRE_ALWAYS) ||
+	     (ss->requireCertificate == SSL_REQUIRE_NO_ERROR) ||
+	     ((ss->requireCertificate == SSL_REQUIRE_FIRST_HANDSHAKE) 
+	      && !ss->firstHsDone))) {
 
 	    ++ssl3stats.hch_sid_cache_not_ok;
 	    ss->sec.uncache(sid);

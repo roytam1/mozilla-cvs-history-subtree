@@ -48,7 +48,7 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$ $Name$";
 #endif /* CKHELPER_H */
 
 /* measured in seconds */
-#define NSSSLOT_TOKEN_DELAY_TIME 10
+#define NSSSLOT_TOKEN_DELAY_TIME 1
 
 /* this should track global and per-transaction login information */
 
@@ -176,16 +176,17 @@ nssSlot_Destroy
   NSSSlot *slot
 )
 {
-#ifdef PURE_STAN_BUILD
     if (slot) {
 	PR_AtomicDecrement(&slot->base.refCount);
 	if (slot->base.refCount == 0) {
+	    PZ_DestroyLock(slot->base.lock);
+#ifdef PURE_STAN_BUILD
 	    nssToken_Destroy(slot->token);
 	    nssModule_DestroyFromSlot(slot->module, slot);
+#endif
 	    return nssArena_Destroy(slot->base.arena);
 	}
     }
-#endif
     return PR_SUCCESS;
 }
 
@@ -236,7 +237,8 @@ within_token_delay_period(NSSSlot *slot)
     }
     time = PR_IntervalNow();
     lastTime = slot->lastTokenPing;
-    if ((time > lastTime) && ((time - lastTime) < s_token_delay_time)) {
+    if ((lastTime) &&
+	(time > lastTime) && ((time - lastTime) < s_token_delay_time)) {
 	return PR_TRUE;
     }
     slot->lastTokenPing = time;
@@ -297,7 +299,7 @@ nssSlot_IsTokenPresent
 	if (slot->token->base.name[0] != 0) {
 	    /* notify the high-level cache that the token is removed */
 	    slot->token->base.name[0] = 0; /* XXX */
-	    nssToken_NofifyCertsNotVisible(slot->token);
+	    nssToken_NotifyCertsNotVisible(slot->token);
 	}
 #endif
 	slot->token->base.name[0] = 0; /* XXX */
@@ -330,6 +332,12 @@ nssSlot_IsTokenPresent
     if (session->handle != CK_INVALID_SESSION) {
 	return PR_TRUE;
     } else {
+	/* the token has been removed, and reinserted, invalidate all the old
+	 * information we had on this token */
+#ifdef NSS_3_4_CODE
+	nssToken_NotifyCertsNotVisible(slot->token);
+#endif /* NSS_3_4_CODE */
+	nssToken_Remove(slot->token);
 	/* token has been removed, need to refresh with new session */
 	nssrv = nssSlot_Refresh(slot);
 	if (nssrv != PR_SUCCESS) {

@@ -54,6 +54,7 @@
 #include "dev.h"
 #include "dev3hack.h"
 #include "pki3hack.h"
+#include "pkim.h"
 
 
 /*************************************************************
@@ -656,6 +657,7 @@ pk11_CheckPassword(PK11SlotInfo *slot,char *pw)
     PK11_EnterSlotMonitor(slot);
     crv = PK11_GETTAB(slot)->C_Login(slot->session,CKU_USER,
 						(unsigned char *)pw,len);
+    slot->lastLoginCheck = 0;
     PK11_ExitSlotMonitor(slot);
     switch (crv) {
     /* if we're already logged in, we're good to go */
@@ -699,6 +701,7 @@ PK11_CheckUserPassword(PK11SlotInfo *slot,char *pw)
 
     crv = PK11_GETTAB(slot)->C_Login(slot->session,CKU_USER,
 					(unsigned char *)pw,len);
+    slot->lastLoginCheck = 0;
     PK11_ExitSlotMonitor(slot);
     switch (crv) {
     /* if we're already logged in, we're good to go */
@@ -726,6 +729,7 @@ PK11_Logout(PK11SlotInfo *slot)
     /* force a logout */
     PK11_EnterSlotMonitor(slot);
     crv = PK11_GETTAB(slot)->C_Logout(slot->session);
+    slot->lastLoginCheck = 0;
     PK11_ExitSlotMonitor(slot);
     if (crv != CKR_OK) {
 	PORT_SetError(PK11_MapError(crv));
@@ -779,6 +783,7 @@ PK11_HandlePasswordCheck(PK11SlotInfo *slot,void *wincx)
 			 (PK11_Global.transaction != slot->authTransact)) {
     	    PK11_EnterSlotMonitor(slot);
 	    PK11_GETTAB(slot)->C_Logout(slot->session);
+	    slot->lastLoginCheck = 0;
     	    PK11_ExitSlotMonitor(slot);
 	    NeedAuth = PR_TRUE;
 	}
@@ -932,6 +937,7 @@ PK11_CheckSSOPassword(PK11SlotInfo *slot, char *ssopw)
     /* check the password */
     crv = PK11_GETTAB(slot)->C_Login(rwsession,CKU_SO,
 						(unsigned char *)ssopw,len);
+    slot->lastLoginCheck = 0;
     switch (crv) {
     /* if we're already logged in, we're good to go */
     case CKR_OK:
@@ -946,6 +952,8 @@ PK11_CheckSSOPassword(PK11SlotInfo *slot, char *ssopw)
 	rv = SECFailure; /* some failure we can't fix by retrying */
     }
     PK11_GETTAB(slot)->C_Logout(rwsession);
+    slot->lastLoginCheck = 0;
+
     /* release rwsession */
     PK11_RestoreROSession(slot,rwsession);
     return rv;
@@ -998,6 +1006,7 @@ PK11_InitPin(PK11SlotInfo *slot,char *ssopw, char *userpw)
     /* check the password */
     crv = PK11_GETTAB(slot)->C_Login(rwsession,CKU_SO, 
 					  (unsigned char *)ssopw,ssolen);
+    slot->lastLoginCheck = 0;
     if (crv != CKR_OK) {
 	PORT_SetError(PK11_MapError(crv));
 	goto done;
@@ -1012,6 +1021,7 @@ PK11_InitPin(PK11SlotInfo *slot,char *ssopw, char *userpw)
 
 done:
     PK11_GETTAB(slot)->C_Logout(rwsession);
+    slot->lastLoginCheck = 0;
     PK11_RestoreROSession(slot,rwsession);
     if (rv == SECSuccess) {
         /* update our view of the world */
@@ -1019,6 +1029,7 @@ done:
 	PK11_EnterSlotMonitor(slot);
     	PK11_GETTAB(slot)->C_Login(slot->session,CKU_USER,
 						(unsigned char *)userpw,len);
+	slot->lastLoginCheck = 0;
 	PK11_ExitSlotMonitor(slot);
     }
     return rv;
@@ -1142,6 +1153,10 @@ PK11_DoPassword(PK11SlotInfo *slot, PRBool loadCerts, void *wincx)
     }
     if (rv == SECSuccess) {
 	rv = pk11_CheckVerifyTest(slot);
+	if (!PK11_IsFriendly(slot)) {
+	    nssTrustDomain_UpdateCachedTokenCerts(slot->nssToken->trustDomain,
+	                                      slot->nssToken);
+	}
     } else if (!attempt) PORT_SetError(SEC_ERROR_BAD_PASSWORD);
     return rv;
 }
@@ -1562,7 +1577,10 @@ PK11_VerifySlotMechanisms(PK11SlotInfo *slot)
     	mechList = (CK_MECHANISM_TYPE *)
 			    PORT_Alloc(count *sizeof(CK_MECHANISM_TYPE));
 	alloced = PR_TRUE;
-	if (mechList == NULL) return PR_FALSE;
+	if (mechList == NULL) {
+	    PK11_FreeSlot(intern);
+	    return PR_FALSE;
+	}
     }
     /* get the list */
     if (!slot->isThreadSafe) PK11_EnterSlotMonitor(slot);
@@ -1708,7 +1726,9 @@ PK11_InitToken(PK11SlotInfo *slot, PRBool loadCerts)
     slot->hasRandom = ((tokenInfo.flags & CKF_RNG) ? PR_TRUE : PR_FALSE);
     slot->protectedAuthPath =
     		((tokenInfo.flags & CKF_PROTECTED_AUTHENTICATION_PATH) 
-							? PR_TRUE : PR_FALSE);
+	 						? PR_TRUE : PR_FALSE);
+    slot->lastLoginCheck = 0;
+    slot->lastState = 0;
     /* on some platforms Active Card incorrectly sets the 
      * CKF_PROTECTED_AUTHENTICATION_PATH bit when it doesn't mean to. */
     if (slot->isActiveCard) {
@@ -1822,6 +1842,7 @@ PK11_InitToken(PK11SlotInfo *slot, PRBool loadCerts)
 					random_bytes, sizeof(random_bytes));
 	        PK11_ExitSlotMonitor(slot);
 	    }
+	    PK11_FreeSlot(int_slot);
 	}
     }
 
@@ -1888,7 +1909,7 @@ PK11_InitSlot(SECMODModule *mod,CK_SLOT_ID slotID,PK11SlotInfo *slot)
 	 (char *)slotInfo.slotDescription, sizeof(slotInfo.slotDescription));
     slot->isHW = (PRBool)((slotInfo.flags & CKF_HW_SLOT) == CKF_HW_SLOT);
 #define ACTIVE_CARD "ActivCard SA"
-    slot->isActiveCard = (PRBool)(PORT_Strncmp(slotInfo.manufacturerID,
+    slot->isActiveCard = (PRBool)(PORT_Strncmp((char *)slotInfo.manufacturerID,
 				ACTIVE_CARD, sizeof(ACTIVE_CARD)-1) == 0);
     if ((slotInfo.flags & CKF_REMOVABLE_DEVICE) == 0) {
 	slot->isPerm = PR_TRUE;
@@ -2188,6 +2209,19 @@ PK11_GetTokenInfo(PK11SlotInfo *slot, CK_TOKEN_INFO *info)
 PRBool
 PK11_NeedUserInit(PK11SlotInfo *slot)
 {
+    PRBool needUserInit = (PRBool) ((slot->flags & CKF_USER_PIN_INITIALIZED) 
+					== 0);
+
+    if (needUserInit) {
+	CK_TOKEN_INFO info;
+	SECStatus rv;
+
+	/* see if token has been initialized off line */
+	rv = PK11_GetTokenInfo(slot, &info);
+	if (rv == SECSuccess) {
+	    slot->flags = info.flags;
+	}
+    }
     return (PRBool)((slot->flags & CKF_USER_PIN_INITIALIZED) == 0);
 }
 
@@ -2218,6 +2252,17 @@ PK11_GetInternalSlot(void)
     return PK11_ReferenceSlot(mod->slots[0]);
 }
 
+PRBool 
+pk11_InDelayPeriod(PRIntervalTime lastTime, PRIntervalTime delayTime, 
+						PRIntervalTime *retTime)
+{
+    PRIntervalTime time;
+
+    *retTime = time = PR_IntervalNow();
+    return (PRBool) (lastTime) && (time > lastTime) && 
+				((time-lastTime) < delayTime);
+}
+
 /*
  * Determine if the token is logged in. We have to actually query the token,
  * because it's state can change without intervention from us.
@@ -2229,6 +2274,12 @@ PK11_IsLoggedIn(PK11SlotInfo *slot,void *wincx)
     int askpw = slot->askpw;
     int timeout = slot->timeout;
     CK_RV crv;
+    PRIntervalTime curTime;
+    static PRIntervalTime login_delay_time = 0;
+
+    if (login_delay_time == 0) {
+	login_delay_time = PR_SecondsToInterval(1);
+    }
 
     /* If we don't have our own password default values, use the system
      * ones */
@@ -2259,6 +2310,7 @@ PK11_IsLoggedIn(PK11SlotInfo *slot,void *wincx)
 	if (LL_CMP(result, <, currtime) ) {
 	    PK11_EnterSlotMonitor(slot);
 	    PK11_GETTAB(slot)->C_Logout(slot->session);
+	    slot->lastLoginCheck = 0;
 	    PK11_ExitSlotMonitor(slot);
 	} else {
 	    slot->authTime = currtime;
@@ -2266,7 +2318,16 @@ PK11_IsLoggedIn(PK11SlotInfo *slot,void *wincx)
     }
 
     PK11_EnterSlotMonitor(slot);
-    crv = PK11_GETTAB(slot)->C_GetSessionInfo(slot->session,&sessionInfo);
+    if (pk11_InDelayPeriod(slot->lastLoginCheck,login_delay_time, &curTime)) {
+	sessionInfo.state = slot->lastState;
+	crv = CKR_OK;
+    } else {
+	crv = PK11_GETTAB(slot)->C_GetSessionInfo(slot->session,&sessionInfo);
+	if (crv == CKR_OK) {
+	    slot->lastState = sessionInfo.state;
+	    slot->lastLoginCheck = curTime;
+	}
+    }
     PK11_ExitSlotMonitor(slot);
     /* if we can't get session info, something is really wrong */
     if (crv != CKR_OK) {
@@ -3130,6 +3191,7 @@ PK11_ParamFromIV(CK_MECHANISM_TYPE type,SECItem *iv)
     if (param == NULL) return NULL;
     param->data = NULL;
     param->len = 0;
+    param->type = 0;
     switch (type) {
     case CKM_AES_ECB:
     case CKM_DES_ECB:
@@ -3433,6 +3495,7 @@ PK11_ParamFromAlgid(SECAlgorithmID *algid)
 
     mech = (SECItem *) PORT_Alloc(sizeof(SECItem));
     if (mech == NULL) return NULL;
+    mech->type = siBuffer;
 
 
     /* handle the complicated cases */
@@ -3742,6 +3805,7 @@ PK11_GenerateNewParam(CK_MECHANISM_TYPE type, PK11SymKey *key) {
     if (mech == NULL) return NULL;
 
     rv = SECSuccess;
+    mech->type = siBuffer;
     switch (type) {
     case CKM_RC4:
     case CKM_AES_ECB:

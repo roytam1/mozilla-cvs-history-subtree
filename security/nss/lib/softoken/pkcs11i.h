@@ -90,27 +90,26 @@
 #define NSC_SEARCH_BLOCK_SIZE   5 
 #define NSC_SLOT_LIST_BLOCK_SIZE 10
 
+#define NSC_FIPS_MODULE 1
+#define NSC_NON_FIPS_MODULE 0
+
 /* these are data base storage hashes, not cryptographic hashes.. The define
  * the effective size of the various object hash tables */
-#ifdef MOZ_CLIENT
 /* clients care more about memory usage than lookup performance on
  * cyrptographic objects. Clients also have less objects around to play with 
  *
  * we eventually should make this configurable at runtime! Especially now that
  * NSS is a shared library.
  */
-#define ATTRIBUTE_HASH_SIZE 32 
-#define SESSION_OBJECT_HASH_SIZE 16
-#define TOKEN_OBJECT_HASH_SIZE 32
-#define SESSION_HASH_SIZE 32
-#else
-#define ATTRIBUTE_HASH_SIZE 32
-#define SESSION_OBJECT_HASH_SIZE 32
-#define TOKEN_OBJECT_HASH_SIZE 1024
-#define SESSION_HASH_SIZE 1024
-#define MAX_OBJECT_LIST_SIZE 800  /* how many objects to keep on the free list
+#define SPACE_ATTRIBUTE_HASH_SIZE 32 
+#define SPACE_TOKEN_OBJECT_HASH_SIZE 32
+#define SPACE_SESSION_HASH_SIZE 32
+#define TIME_ATTRIBUTE_HASH_SIZE 32
+#define TIME_TOKEN_OBJECT_HASH_SIZE 1024
+#define TIME_SESSION_HASH_SIZE 1024
+#define MAX_OBJECT_LIST_SIZE 800  
+				  /* how many objects to keep on the free list
 				   * before we start freeing them */
-#endif
 #define MAX_KEY_LEN 256
 
 #define MULTIACCESS "multiaccess:"
@@ -133,11 +132,7 @@
  */
 #define LOG2_BUCKETS_PER_SESSION_LOCK 1
 #define BUCKETS_PER_SESSION_LOCK (1 << (LOG2_BUCKETS_PER_SESSION_LOCK))
-#define NUMBER_OF_SESSION_LOCKS (SESSION_HASH_SIZE/BUCKETS_PER_SESSION_LOCK)
 /* NOSPREAD sessionID to hash table index macro has been slower. */
-#if 0
-#define NOSPREAD
-#endif
 
 #ifdef PKCS11_USE_THREADS
 #define PK11_USE_THREADS(x) x
@@ -148,6 +143,7 @@
 /* define typedefs, double as forward declarations as well */
 typedef struct PK11AttributeStr PK11Attribute;
 typedef struct PK11ObjectListStr PK11ObjectList;
+typedef struct PK11ObjectFreeListStr PK11ObjectFreeList;
 typedef struct PK11ObjectListElementStr PK11ObjectListElement;
 typedef struct PK11ObjectStr PK11Object;
 typedef struct PK11SessionObjectStr PK11SessionObject;
@@ -223,6 +219,12 @@ struct PK11ObjectListStr {
     PK11Object	   *parent;
 };
 
+struct PK11ObjectFreeListStr {
+    PK11Object	*head;
+    PZLock	*lock;
+    int		count;
+};
+
 /*
  * PKCS 11 crypto object structure
  */
@@ -252,11 +254,13 @@ struct PK11SessionObjectStr {
     PZLock		*attributeLock;
     PK11Session   	*session;
     PRBool		wasDerived;
-    PK11Attribute 	*head[ATTRIBUTE_HASH_SIZE];
 #ifdef PKCS11_STATIC_ATTRIBUTES
     int nextAttr;
     PK11Attribute	attrList[MAX_OBJS_ATTRS];
 #endif
+    PRBool		optimizeSpace;
+    unsigned int	hashSize;
+    PK11Attribute 	*head[1];
 };
 
 /*
@@ -354,7 +358,9 @@ struct PK11SessionStr {
 struct PK11SlotStr {
     CK_SLOT_ID		slotID;
     PZLock		*slotLock;
-    PZLock		*sessionLock[NUMBER_OF_SESSION_LOCKS];
+    PZLock		**sessionLock;
+    unsigned int	numSessionLocks;
+    unsigned long	sessionLockMask;
     PZLock		*objectLock;
     SECItem		*password;
     PRBool		hasTokens;
@@ -363,6 +369,7 @@ struct PK11SlotStr {
     PRBool		needLogin;
     PRBool		DB_loaded;
     PRBool		readOnly;
+    PRBool		optimizeSpace;
     NSSLOWCERTCertDBHandle *certDB;
     NSSLOWKEYDBHandle	*keyDB;
     int			minimumPinLen;
@@ -373,8 +380,10 @@ struct PK11SlotStr {
     int			tokenIDCount;
     int			index;
     PLHashTable		*tokenHashTable;
-    PK11Object		*tokObjects[TOKEN_OBJECT_HASH_SIZE];
-    PK11Session		*head[SESSION_HASH_SIZE];
+    PK11Object		**tokObjects;
+    unsigned int	tokObjHashSize;
+    PK11Session		**head;
+    unsigned int	sessHashSize;
     char		tokDescription[33];
     char		slotDescription[64];
 };
@@ -465,11 +474,11 @@ struct PK11SSLMACInfoStr {
 /* NOSPREAD:	(ID>>L2LPB) & (perbucket-1) */
 #define PK11_SESSION_LOCK(slot,handle) \
     ((slot)->sessionLock[((handle) >> LOG2_BUCKETS_PER_SESSION_LOCK) \
-        & (NUMBER_OF_SESSION_LOCKS-1)])
+        & (slot)->sessionLockMask])
 #else
 /* SPREAD:	ID & (perbucket-1) */
 #define PK11_SESSION_LOCK(slot,handle) \
-    ((slot)->sessionLock[(handle) & (NUMBER_OF_SESSION_LOCKS-1)])
+    ((slot)->sessionLock[(handle) & (slot)->sessionLockMask])
 #endif
 
 /* expand an attribute & secitem structures out */
@@ -489,6 +498,7 @@ typedef struct pk11_token_parametersStr {
     PRBool noKeyDB;
     PRBool forceOpen;
     PRBool pwRequired;
+    PRBool optimizeSpace;
 } pk11_token_parameters;
 
 typedef struct pk11_parametersStr {
@@ -501,6 +511,7 @@ typedef struct pk11_parametersStr {
     PRBool noCertDB;
     PRBool forceOpen;
     PRBool pwRequired;
+    PRBool optimizeSpace;
     pk11_token_parameters *tokens;
     int token_count;
 } pk11_parameters;
@@ -521,9 +532,14 @@ typedef struct pk11_parametersStr {
 
 SEC_BEGIN_PROTOS
 
+extern int nsf_init;
 extern CK_RV nsc_CommonInitialize(CK_VOID_PTR pReserved, PRBool isFIPS);
+extern CK_RV nsc_CommonFinalize(CK_VOID_PTR pReserved, PRBool isFIPS);
+extern CK_RV nsc_CommonGetSlotList(CK_BBOOL tokPresent, 
+	CK_SLOT_ID_PTR pSlotList, CK_ULONG_PTR pulCount, int moduleIndex);
 /* shared functions between PKCS11.c and PK11FIPS.c */
-extern CK_RV PK11_SlotInit(char *configdir,pk11_token_parameters *params);
+extern CK_RV PK11_SlotInit(char *configdir,pk11_token_parameters *params, 
+							int moduleIndex);
 
 /* internal utility functions used by pkcs11.c */
 extern PK11Attribute *pk11_FindAttribute(PK11Object *object,
@@ -565,9 +581,9 @@ extern void pk11_AddSlotObject(PK11Slot *slot, PK11Object *object);
 extern void pk11_AddObject(PK11Session *session, PK11Object *object);
 
 extern CK_RV pk11_searchObjectList(PK11SearchResults *search,
-				   PK11Object **head, PZLock *lock,
-				   CK_ATTRIBUTE_PTR inTemplate, int count,
-				   PRBool isLoggedIn);
+				   PK11Object **head, unsigned int size,
+				   PZLock *lock, CK_ATTRIBUTE_PTR inTemplate,
+				   int count, PRBool isLoggedIn);
 extern PK11ObjectListElement *pk11_FreeObjectListElement(
 					     PK11ObjectListElement *objectList);
 extern void pk11_FreeObjectList(PK11ObjectListElement *objectList);

@@ -669,8 +669,20 @@ NSSCertificate_IsPrivateKeyAvailable
   PRStatus *statusOpt
 )
 {
-    nss_SetError(NSS_ERROR_NOT_FOUND);
-    return PR_FALSE;
+    PRBool isUser = PR_FALSE;
+    nssCryptokiObject **ip;
+    nssCryptokiObject **instances = nssPKIObject_GetInstances(&c->object);
+    if (!instances) {
+	return PR_FALSE;
+    }
+    for (ip = instances; *ip; ip++) {
+	nssCryptokiObject *instance = *ip;
+	if (nssToken_IsPrivateKeyAvailable(instance->token, c, instance)) {
+	    isUser = PR_TRUE;
+	}
+    }
+    nssCryptokiObjectArray_Destroy(instances);
+    return isUser;
 }
 
 NSS_IMPLEMENT PRBool
@@ -814,7 +826,9 @@ nssBestCertificate_Callback
 	     * what the trust values are for the cert.
 	     * Ignore the returned pointer, the refcount is in c anyway.
 	     */
-	    (void)STAN_GetCERTCertificate(c);
+	    if (STAN_GetCERTCertificate(c) == NULL) {
+		return PR_FAILURE;
+	    }
 #endif
 	    if (dc->matchUsage(dc, best->usage)) {
 		best->cert = nssCertificate_AddRef(c);
@@ -1110,4 +1124,3 @@ nssCRL_GetEncoding
 	return (NSSDER *)NULL;
     }
 }
-

@@ -282,7 +282,7 @@ nssToken_DeleteStoredObject
     nssSession *session = NULL;
     void *epv = nssToken_GetCryptokiEPV(instance->token);
     if (token->cache) {
-	status = nssTokenObjectCache_RemoveObject(token->cache, instance);
+	nssTokenObjectCache_RemoveObject(token->cache, instance);
     }
     if (instance->isTokenObject) {
        if (nssSession_IsReadWrite(token->defaultSession)) {
@@ -301,9 +301,7 @@ nssToken_DeleteStoredObject
     if (createdSession) {
 	nssSession_Destroy(session);
     }
-    if (ckrv != CKR_OK) {
-	return PR_FAILURE;
-    }
+    status = (ckrv == CKR_OK) ? PR_SUCCESS : PR_FAILURE;
     return status;
 }
 
@@ -395,24 +393,25 @@ find_objects
     CK_RV ckrv;
     CK_ULONG count;
     CK_OBJECT_HANDLE *objectHandles;
+    CK_OBJECT_HANDLE staticObjects[OBJECT_STACK_SIZE];
     PRUint32 arraySize, numHandles;
     void *epv = nssToken_GetCryptokiEPV(tok);
     nssCryptokiObject **objects;
     NSSArena *arena;
     nssSession *session = (sessionOpt) ? sessionOpt : tok->defaultSession;
+
     /* the arena is only for the array of object handles */
-    arena = nssArena_Create();
-    if (!arena) {
-	if (statusOpt) *statusOpt = PR_FAILURE;
-	return (nssCryptokiObject **)NULL;
-    }
     if (maximumOpt > 0) {
 	arraySize = maximumOpt;
     } else {
 	arraySize = OBJECT_STACK_SIZE;
     }
     numHandles = 0;
-    objectHandles = nss_ZNEWARRAY(arena, CK_OBJECT_HANDLE, arraySize);
+    if (arraySize <= OBJECT_STACK_SIZE) {
+	objectHandles = staticObjects;
+    } else {
+	objectHandles = nss_ZNEWARRAY(NULL, CK_OBJECT_HANDLE, arraySize);
+    }
     if (!objectHandles) {
 	goto loser;
     }
@@ -464,11 +463,15 @@ find_objects
     } else {
 	objects = NULL;
     }
-    nssArena_Destroy(arena);
+    if (objectHandles && objectHandles != staticObjects) {
+	nss_ZFreeIf(objectHandles);
+    }
     if (statusOpt) *statusOpt = PR_SUCCESS;
     return objects;
 loser:
-    nssArena_Destroy(arena);
+    if (objectHandles && objectHandles != staticObjects) {
+	nss_ZFreeIf(objectHandles);
+    }
     if (statusOpt) *statusOpt = PR_FAILURE;
     return (nssCryptokiObject **)NULL;
 }
@@ -529,14 +532,17 @@ nssToken_ImportCertificate
   NSSDER *issuer,
   NSSDER *subject,
   NSSDER *serial,
+  NSSASCII7 *email,
   PRBool asTokenObject
 )
 {
     CK_CERTIFICATE_TYPE cert_type;
     CK_ATTRIBUTE_PTR attr;
-    CK_ATTRIBUTE cert_tmpl[9];
+    CK_ATTRIBUTE cert_tmpl[10];
     CK_ULONG ctsize;
+    nssTokenSearchType searchType;
     nssCryptokiObject *rvObject = NULL;
+
     if (certType == NSSCertificateType_PKIX) {
 	cert_type = CKC_X_509;
     } else {
@@ -545,8 +551,10 @@ nssToken_ImportCertificate
     NSS_CK_TEMPLATE_START(cert_tmpl, attr, ctsize);
     if (asTokenObject) {
 	NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_TOKEN, &g_ck_true);
+	searchType = nssTokenSearchType_TokenOnly;
     } else {
 	NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_TOKEN, &g_ck_false);
+	searchType = nssTokenSearchType_SessionOnly;
     }
     NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_CLASS,            &g_ck_class_cert);
     NSS_CK_SET_ATTRIBUTE_VAR( attr, CKA_CERTIFICATE_TYPE,  cert_type);
@@ -556,10 +564,50 @@ nssToken_ImportCertificate
     NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_ISSUER,            issuer);
     NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_SUBJECT,           subject);
     NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_SERIAL_NUMBER,     serial);
+    if (email) {
+	NSS_CK_SET_ATTRIBUTE_UTF8(attr, CKA_NETSCAPE_EMAIL,    email);
+    }
     NSS_CK_TEMPLATE_FINISH(cert_tmpl, attr, ctsize);
-    /* Import the certificate onto the token */
-    rvObject = import_object(tok, sessionOpt, cert_tmpl, ctsize);
+    /* see if the cert is already there */
+    rvObject = nssToken_FindCertificateByIssuerAndSerialNumber(tok,
+                                                               sessionOpt,
+                                                               issuer,
+                                                               serial,
+                                                               searchType,
+                                                               NULL);
+    if (rvObject) {
+	NSSSlot *slot = nssToken_GetSlot(tok);
+	nssSession *session = nssSlot_CreateSession(slot, NULL, PR_TRUE);
+	if (!session) {
+	    nssCryptokiObject_Destroy(rvObject);
+	    return (nssCryptokiObject *)NULL;
+	}
+	/* according to PKCS#11, label, ID, issuer, and serial number 
+	 * may change after the object has been created.  For PKIX, the
+	 * last two attributes can't change, so for now we'll only worry
+	 * about the first two.
+	 */
+	NSS_CK_TEMPLATE_START(cert_tmpl, attr, ctsize);
+	NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_ID,    id);
+	NSS_CK_SET_ATTRIBUTE_UTF8(attr, CKA_LABEL, nickname);
+	NSS_CK_TEMPLATE_FINISH(cert_tmpl, attr, ctsize);
+	/* reset the mutable attributes on the token */
+	nssCKObject_SetAttributes(rvObject->handle, 
+	                          cert_tmpl, ctsize,
+	                          session, slot);
+	if (!rvObject->label && nickname) {
+	    rvObject->label = nssUTF8_Duplicate(nickname, NULL);
+	}
+	nssSession_Destroy(session);
+	nssSlot_Destroy(slot);
+    } else {
+	/* Import the certificate onto the token */
+	rvObject = import_object(tok, sessionOpt, cert_tmpl, ctsize);
+    }
     if (rvObject && tok->cache) {
+	/* The cache will overwrite the attributes if the object already
+	 * exists.
+	 */
 	nssTokenObjectCache_ImportObject(tok->cache, rvObject,
 	                                 CKO_CERTIFICATE,
 	                                 cert_tmpl, ctsize);
@@ -1170,8 +1218,6 @@ nssToken_FindTrustForCertificate
     nssSession *session = sessionOpt ? sessionOpt : token->defaultSession;
     nssCryptokiObject *object, **objects;
 
-    sha1_result.data = sha1; sha1_result.size = sizeof sha1;
-    sha1_hash(certEncoding, &sha1_result);
     NSS_CK_TEMPLATE_START(tobj_template, attr, tobj_size);
     if (searchType == nssTokenSearchType_SessionOnly) {
 	NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_TOKEN, &g_ck_false);
@@ -1179,19 +1225,8 @@ nssToken_FindTrustForCertificate
 	NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_TOKEN, &g_ck_true);
     }
     NSS_CK_SET_ATTRIBUTE_VAR( attr, CKA_CLASS,          tobjc);
-    NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_CERT_SHA1_HASH, &sha1_result);
-#ifdef NSS_3_4_CODE
-    if (!PK11_HasRootCerts(token->pk11slot)) {
-#endif
     NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_ISSUER,         certIssuer);
     NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_SERIAL_NUMBER , certSerial);
-#ifdef NSS_3_4_CODE
-    }
-    /*
-     * we need to arrange for the built-in token to lose the bottom 2 
-     * attributes so that old built-in tokens will continue to work.
-     */
-#endif
     NSS_CK_TEMPLATE_FINISH(tobj_template, attr, tobj_size);
     object = NULL;
     objects = find_objects_by_template(token, session,
@@ -1509,3 +1544,136 @@ nssToken_IsPresent
     return nssSlot_IsTokenPresent(token->slot);
 }
 
+/* Sigh.  The methods to find objects declared above cause problems with
+ * the low-level object cache in the softoken -- the objects are found in 
+ * toto, then one wave of GetAttributes is done, then another.  Having a 
+ * large number of objects causes the cache to be thrashed, as the objects 
+ * are gone before there's any chance to ask for their attributes.
+ * So, for now, bringing back traversal methods for certs.  This way all of 
+ * the cert's attributes can be grabbed immediately after finding it,
+ * increasing the likelihood that the cache takes care of it.
+ */
+NSS_IMPLEMENT PRStatus
+nssToken_TraverseCertificates
+(
+  NSSToken *token,
+  nssSession *sessionOpt,
+  nssTokenSearchType searchType,
+  PRStatus (* callback)(nssCryptokiObject *instance, void *arg),
+  void *arg
+)
+{
+    CK_RV ckrv;
+    CK_ULONG count;
+    CK_OBJECT_HANDLE *objectHandles;
+    CK_ATTRIBUTE_PTR attr;
+    CK_ATTRIBUTE cert_template[2];
+    CK_ULONG ctsize;
+    NSSArena *arena;
+    PRStatus status;
+    PRUint32 arraySize, numHandles;
+    nssCryptokiObject **objects;
+    void *epv = nssToken_GetCryptokiEPV(token);
+    nssSession *session = (sessionOpt) ? sessionOpt : token->defaultSession;
+
+    /* template for all certs */
+    NSS_CK_TEMPLATE_START(cert_template, attr, ctsize);
+    if (searchType == nssTokenSearchType_SessionOnly) {
+	NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_TOKEN, &g_ck_false);
+    } else if (searchType == nssTokenSearchType_TokenOnly ||
+               searchType == nssTokenSearchType_TokenForced) {
+	NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_TOKEN, &g_ck_true);
+    }
+    NSS_CK_SET_ATTRIBUTE_ITEM(attr, CKA_CLASS, &g_ck_class_cert);
+    NSS_CK_TEMPLATE_FINISH(cert_template, attr, ctsize);
+
+    /* the arena is only for the array of object handles */
+    arena = nssArena_Create();
+    if (!arena) {
+	return PR_FAILURE;
+    }
+    arraySize = OBJECT_STACK_SIZE;
+    numHandles = 0;
+    objectHandles = nss_ZNEWARRAY(arena, CK_OBJECT_HANDLE, arraySize);
+    if (!objectHandles) {
+	goto loser;
+    }
+    nssSession_EnterMonitor(session); /* ==== session lock === */
+    /* Initialize the find with the template */
+    ckrv = CKAPI(epv)->C_FindObjectsInit(session->handle, 
+                                         cert_template, ctsize);
+    if (ckrv != CKR_OK) {
+	nssSession_ExitMonitor(session);
+	goto loser;
+    }
+    while (PR_TRUE) {
+	/* Issue the find for up to arraySize - numHandles objects */
+	ckrv = CKAPI(epv)->C_FindObjects(session->handle, 
+	                                 objectHandles + numHandles, 
+	                                 arraySize - numHandles, 
+	                                 &count);
+	if (ckrv != CKR_OK) {
+	    nssSession_ExitMonitor(session);
+	    goto loser;
+	}
+	/* bump the number of found objects */
+	numHandles += count;
+	if (numHandles < arraySize) {
+	    break;
+	}
+	/* the array is filled, double it and continue */
+	arraySize *= 2;
+	objectHandles = nss_ZREALLOCARRAY(objectHandles, 
+	                                  CK_OBJECT_HANDLE, 
+	                                  arraySize);
+	if (!objectHandles) {
+	    nssSession_ExitMonitor(session);
+	    goto loser;
+	}
+    }
+    ckrv = CKAPI(epv)->C_FindObjectsFinal(session->handle);
+    nssSession_ExitMonitor(session); /* ==== end session lock === */
+    if (ckrv != CKR_OK) {
+	goto loser;
+    }
+    if (numHandles > 0) {
+	objects = create_objects_from_handles(token, session,
+	                                      objectHandles, numHandles);
+	if (objects) {
+	    nssCryptokiObject **op;
+	    for (op = objects; *op; op++) {
+		status = (*callback)(*op, arg);
+	    }
+	    nss_ZFreeIf(objects);
+	}
+    }
+    nssArena_Destroy(arena);
+    return PR_SUCCESS;
+loser:
+    nssArena_Destroy(arena);
+    return PR_FAILURE;
+}
+
+NSS_IMPLEMENT PRBool
+nssToken_IsPrivateKeyAvailable
+(
+  NSSToken *token,
+  NSSCertificate *c,
+  nssCryptokiObject *instance
+)
+{
+    CK_OBJECT_CLASS theClass;
+
+    if (token == NULL) return PR_FALSE;
+    if (c == NULL) return PR_FALSE;
+
+    theClass = CKO_PRIVATE_KEY;
+    if (!nssSlot_IsLoggedIn(token->slot)) {
+	theClass = CKO_PUBLIC_KEY;
+    }
+    if (PK11_MatchItem(token->pk11slot, instance->handle, theClass) 
+						!= CK_INVALID_HANDLE) {
+	return PR_TRUE;
+    }
+    return PR_FALSE;
+}

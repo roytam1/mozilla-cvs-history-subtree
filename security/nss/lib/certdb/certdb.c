@@ -781,7 +781,8 @@ CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
     }
 
     /* generate and save the database key for the cert */
-    rv = CERT_KeyFromDERCert(arena, &cert->derCert, &cert->certKey);
+    rv = CERT_KeyFromIssuerAndSN(arena, &cert->derIssuer, &cert->serialNumber,
+			&cert->certKey);
     if ( rv ) {
 	goto loser;
     }
@@ -1659,6 +1660,7 @@ CERT_IsCADERCert(SECItem *derCert, unsigned int *type) {
     CERTCertificate *cert;
     PRBool isCA;
 
+    /* This is okay -- only looks at extensions */
     cert = CERT_DecodeDERCertificate(derCert, PR_FALSE, NULL);
     if (cert == NULL) return PR_FALSE;
 
@@ -2006,6 +2008,7 @@ CERT_SaveImportedCert(CERTCertificate *cert, SECCertUsage usage,
 loser:
     rv = SECFailure;
 done:
+
     return(rv);
 }
 
@@ -2037,25 +2040,40 @@ CERT_ImportCerts(CERTCertDBHandle *certdb, SECCertUsage usage,
 	}
 
 	if ( keepCerts ) {
-	    PK11SlotInfo *intSlot = PK11_GetInternalKeySlot();
 	    for ( i = 0; i < fcerts; i++ ) {
+                char* canickname = NULL;
+                PRBool freeNickname = PR_FALSE;
+
 		SECKEY_UpdateCertPQG(certs[i]);
+                
+                if ( CERT_IsCACert(certs[i], NULL) ) {
+                    canickname = CERT_MakeCANickname(certs[i]);
+                    if ( canickname != NULL ) {
+                        freeNickname = PR_TRUE;
+                    }
+                }
+
 		if(CERT_IsCACert(certs[i], NULL) && (fcerts > 1)) {
 		    /* if we are importing only a single cert and specifying
 		     * a nickname, we want to use that nickname if it a CA,
 		     * otherwise if there are more than one cert, we don't
-		     * know which cert it belongs to.
+		     * know which cert it belongs to. But we still may try
+                     * the individual canickname from the cert itself.
 		     */
-		    rv = CERT_AddTempCertToPerm(certs[i], NULL, NULL);
+		    rv = CERT_AddTempCertToPerm(certs[i], canickname, NULL);
 		} else {
-		    rv = CERT_AddTempCertToPerm(certs[i], nickname, NULL);
+		    rv = CERT_AddTempCertToPerm(certs[i],
+                                                nickname?nickname:canickname, NULL);
 		}
 		if (rv == SECSuccess) {
 		    CERT_SaveImportedCert(certs[i], usage, caOnly, NULL);
 		}
+
+                if (PR_TRUE == freeNickname) {
+                    PORT_Free(canickname);
+                }
 		/* don't care if it fails - keep going */
 	    }
-	    PK11_FreeSlot(intSlot);
 	}
     }
 

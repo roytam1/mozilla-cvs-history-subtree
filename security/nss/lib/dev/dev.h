@@ -434,6 +434,7 @@ nssToken_ImportCertificate
   NSSDER *issuer,
   NSSDER *subject,
   NSSDER *serial,
+  NSSASCII7 *emailAddr,
   PRBool asTokenObject
 );
 
@@ -947,10 +948,29 @@ nssToken_GetTrustOrder
 );
 
 NSS_EXTERN PRStatus
-nssToken_NofifyCertsNotVisible
+nssToken_NotifyCertsNotVisible
 (
   NSSToken *tok
 );
+
+NSS_EXTERN PRStatus
+nssToken_TraverseCertificates
+(
+  NSSToken *token,
+  nssSession *sessionOpt,
+  nssTokenSearchType searchType,
+  PRStatus (* callback)(nssCryptokiObject *instance, void *arg),
+  void *arg
+);
+
+NSS_EXTERN PRBool
+nssToken_IsPrivateKeyAvailable
+(
+  NSSToken *token,
+  NSSCertificate *c,
+  nssCryptokiObject *instance
+);
+
 
 #endif
 

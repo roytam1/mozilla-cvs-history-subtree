@@ -145,6 +145,23 @@ nssPKIObject_AddInstance
 	for (i=0; i<object->numInstances; i++) {
 	    if (nssCryptokiObject_Equal(object->instances[i], instance)) {
 		PZ_Unlock(object->lock);
+		if (instance->label) {
+		    if (!object->instances[i]->label ||
+		        !nssUTF8_Equal(instance->label,
+		                       object->instances[i]->label, NULL))
+		    {
+			/* Either the old instance did not have a label,
+			 * or the label has changed.
+			 */
+			nss_ZFreeIf(object->instances[i]->label);
+			object->instances[i]->label = instance->label;
+			instance->label = NULL;
+		    }
+		} else if (object->instances[i]->label) {
+		    /* The old label was removed */
+		    nss_ZFreeIf(object->instances[i]->label);
+		    object->instances[i]->label = NULL;
+		}
 		nssCryptokiObject_Destroy(instance);
 		return PR_SUCCESS;
 	    }
@@ -360,7 +377,9 @@ nssCertificateArray_Destroy
 #ifdef NSS_3_4_CODE
 	    if ((*certp)->decoding) {
 		CERTCertificate *cc = STAN_GetCERTCertificate(*certp);
-		CERT_DestroyCertificate(cc);
+		if (cc) {
+		    CERT_DestroyCertificate(cc);
+		}
 		continue;
 	    }
 #endif
@@ -716,7 +735,7 @@ find_object_in_collection
     return (pkiObjectCollectionNode *)NULL;
 }
 
-static PRStatus
+static pkiObjectCollectionNode *
 add_object_instance
 (
   nssPKIObjectCollection *collection,
@@ -740,7 +759,7 @@ add_object_instance
 	 * are not using it, it must be destroyed.
 	 */
 	nssCryptokiObject_Destroy(instance);
-	return PR_SUCCESS;
+	return node;
     }
     mark = nssArena_Mark(collection->arena);
     if (!mark) {
@@ -780,13 +799,13 @@ add_object_instance
 	status = PR_SUCCESS;
     }
     nssArena_Unmark(collection->arena, mark);
-    return status;
+    return node;
 loser:
     if (mark) {
 	nssArena_Release(collection->arena, mark);
     }
     nssCryptokiObject_Destroy(instance);
-    return PR_FAILURE;
+    return (pkiObjectCollectionNode *)NULL;
 }
 
 NSS_IMPLEMENT PRStatus
@@ -799,13 +818,14 @@ nssPKIObjectCollection_AddInstances
 {
     PRStatus status = PR_SUCCESS;
     PRUint32 i = 0;
+    pkiObjectCollectionNode *node;
     if (instances) {
 	for (; *instances; instances++, i++) {
 	    if (numInstances > 0 && i == numInstances) {
 		break;
 	    }
-	    status = add_object_instance(collection, *instances);
-	    if (status != PR_SUCCESS) {
+	    node = add_object_instance(collection, *instances);
+	    if (node == NULL) {
 		goto loser;
 	    }
 	}
@@ -891,6 +911,38 @@ nssPKIObjectCollection_Traverse
     return PR_SUCCESS;
 }
 
+NSS_IMPLEMENT PRStatus
+nssPKIObjectCollection_AddInstanceAsObject
+(
+  nssPKIObjectCollection *collection,
+  nssCryptokiObject *instance
+)
+{
+    pkiObjectCollectionNode *node;
+    node = add_object_instance(collection, instance);
+    if (node == NULL) {
+	return PR_FAILURE;
+    }
+    if (!node->haveObject) {
+	node->object = (*collection->createObject)(node->object);
+	if (!node->object) {
+	    return PR_FAILURE;
+	}
+	node->haveObject = PR_TRUE;
+    }
+#ifdef NSS_3_4_CODE
+    else {
+	/* The instance was added to a pre-existing node.  This
+	 * function is *only* being used for certificates, and having
+	 * multiple instances of certs in 3.X requires updating the
+	 * CERTCertificate.
+	 */
+	STAN_ForceCERTCertificateUpdate((NSSCertificate *)node->object);
+    }
+#endif
+    return PR_SUCCESS;
+}
+
 /*
  * Certificate collections
  */
@@ -902,8 +954,10 @@ cert_destroyObject(nssPKIObject *o)
 #ifdef NSS_3_4_CODE
     if (c->decoding) {
 	CERTCertificate *cc = STAN_GetCERTCertificate(c);
-	CERT_DestroyCertificate(cc);
-	return;
+	if (cc) {
+	    CERT_DestroyCertificate(cc);
+	    return;
+	} /* else destroy it as NSSCertificate below */
     }
 #endif
     nssCertificate_Destroy(c);
@@ -913,11 +967,22 @@ static PRStatus
 cert_getUIDFromObject(nssPKIObject *o, NSSItem *uid)
 {
     NSSCertificate *c = (NSSCertificate *)o;
+#ifdef NSS_3_4_CODE
+    /* The builtins are still returning decoded serial numbers.  Until
+     * this compatibility issue is resolved, use the full DER of the
+     * cert to uniquely identify it.
+     */
+    NSSDER *derCert;
+    derCert = nssCertificate_GetEncoding(c);
+    uid[0] = *derCert;
+    uid[1].data = NULL; uid[1].size = 0;
+#else
     NSSDER *issuer, *serial;
     issuer = nssCertificate_GetIssuer(c);
     serial = nssCertificate_GetSerialNumber(c);
     uid[0] = *issuer;
     uid[1] = *serial;
+#endif /* NSS_3_4_CODE */
     return PR_SUCCESS;
 }
 
@@ -925,6 +990,23 @@ static PRStatus
 cert_getUIDFromInstance(nssCryptokiObject *instance, NSSItem *uid, 
                         NSSArena *arena)
 {
+#ifdef NSS_3_4_CODE
+    /* The builtins are still returning decoded serial numbers.  Until
+     * this compatibility issue is resolved, use the full DER of the
+     * cert to uniquely identify it.
+     */
+    uid[1].data = NULL; uid[1].size = 0;
+    return nssCryptokiCertificate_GetAttributes(instance,
+                                                NULL,  /* XXX sessionOpt */
+                                                arena, /* arena    */
+                                                NULL,  /* type     */
+                                                NULL,  /* id       */
+                                                &uid[0], /* encoding */
+                                                NULL,  /* issuer   */
+                                                NULL,  /* serial   */
+                                                NULL,  /* subject  */
+                                                NULL); /* email    */
+#else
     return nssCryptokiCertificate_GetAttributes(instance,
                                                 NULL,  /* XXX sessionOpt */
                                                 arena, /* arena    */
@@ -935,6 +1017,7 @@ cert_getUIDFromInstance(nssCryptokiObject *instance, NSSItem *uid,
                                                 &uid[1], /* serial */
                                                 NULL,  /* subject  */
                                                 NULL); /* email    */
+#endif /* NSS_3_4_CODE */
 }
 
 static nssPKIObject *
@@ -943,7 +1026,10 @@ cert_createObject(nssPKIObject *o)
     NSSCertificate *cert;
     cert = nssCertificate_Create(o);
 #ifdef NSS_3_4_CODE
-    (void)STAN_GetCERTCertificate(cert);
+/*    if (STAN_GetCERTCertificate(cert) == NULL) {
+	nssCertificate_Destroy(cert);
+	return (nssPKIObject *)NULL;
+    } */
     /* In 3.4, have to maintain uniqueness of cert pointers by caching all
      * certs.  Cache the cert here, before returning.  If it is already
      * cached, take the cached entry.

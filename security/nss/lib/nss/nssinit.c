@@ -52,8 +52,27 @@
 
 #include "pki3hack.h"
 
+/*
+ * On Windows nss3.dll needs to export the symbol 'mktemp' to be
+ * fully backward compatible with the nss3.dll in NSS 3.2.x and
+ * 3.3.x.  This symbol was unintentionally exported and its
+ * definition (in DBM) was moved from nss3.dll to softokn3.dll
+ * in NSS 3.4.  See bug 142575.
+ */
+#ifdef WIN32_NSS3_DLL_COMPAT
+#include <io.h>
+
+/* exported as 'mktemp' */
+char *
+nss_mktemp(char *path)
+{
+    return _mktemp(path);
+}
+#endif
+
 #define NSS_MAX_FLAG_SIZE  sizeof("readOnly")+sizeof("noCertDB")+ \
-	sizeof("noModDB")+sizeof("forceOpen")+sizeof("passwordRequired")
+	sizeof("noModDB")+sizeof("forceOpen")+sizeof("passwordRequired")+ \
+	sizeof ("optimizeSpace")
 #define NSS_DEFAULT_MOD_NAME "NSS Internal Module"
 #ifdef macintosh
 #define SECMOD_DB "Security Modules"
@@ -63,7 +82,8 @@
 
 static char *
 nss_makeFlags(PRBool readOnly, PRBool noCertDB, 
-		PRBool noModDB, PRBool forceOpen, PRBool passwordRequired) 
+				PRBool noModDB, PRBool forceOpen, 
+				PRBool passwordRequired, PRBool optimizeSpace) 
 {
     char *flags = (char *)PORT_Alloc(NSS_MAX_FLAG_SIZE);
     PRBool first = PR_TRUE;
@@ -91,6 +111,11 @@ nss_makeFlags(PRBool readOnly, PRBool noCertDB,
     if (passwordRequired) {
         if (!first) PORT_Strcat(flags,",");
         PORT_Strcat(flags,"passwordRequired");
+        first = PR_FALSE;
+    }
+    if (optimizeSpace) {
+        if (!first) PORT_Strcat(flags,",");
+        PORT_Strcat(flags,"optimizeSpace");
         first = PR_FALSE;
     }
     return flags;
@@ -274,26 +299,76 @@ static const char *dllname =
 /* Should we have platform ifdefs here??? */
 #define FILE_SEP '/'
 
-static void
-nss_FindExternalRoot(const char *dbpath)
+static void nss_FindExternalRootPaths(const char *dbpath, const char* secmodprefix,
+                              char** retoldpath, char** retnewpath)
 {
-	char *path;
-	int len, path_len;
+    char *path, *oldpath = NULL, *lastsep;
+    int len, path_len, secmod_len, dll_len;
 
-	path_len = PORT_Strlen(dbpath);
-	len = path_len + PORT_Strlen(dllname) + 2; /* FILE_SEP + NULL */
-	
-	path = PORT_Alloc(len);
-	if (path == NULL) return;
+    path_len = PORT_Strlen(dbpath);
+    secmod_len = PORT_Strlen(secmodprefix);
+    dll_len = PORT_Strlen(dllname);
+    len = path_len + secmod_len + dll_len + 2; /* FILE_SEP + NULL */
 
-	/* back up to the top of the directory */
-	PORT_Memcpy(path,dbpath,path_len);
-	if (path[path_len-1] != FILE_SEP) {
-	    path[path_len++] = FILE_SEP;
-	}
-	PORT_Strcpy(&path[path_len],dllname);
-	(void) SECMOD_AddNewModule("Root Certs",path, 0, 0);
-	PORT_Free(path);
+    path = PORT_Alloc(len);
+    if (path == NULL) return;
+
+    /* back up to the top of the directory */
+    PORT_Memcpy(path,dbpath,path_len);
+    if (path[path_len-1] != FILE_SEP) {
+        path[path_len++] = FILE_SEP;
+    }
+    PORT_Strcpy(&path[path_len],dllname);
+    if (secmodprefix) {
+        lastsep = PORT_Strrchr(secmodprefix, FILE_SEP);
+        if (lastsep) {
+            int secmoddir_len = lastsep-secmodprefix+1; /* FILE_SEP */
+            oldpath = PORT_Alloc(len);
+            if (oldpath == NULL) {
+                PORT_Free(path);
+                return;
+            }
+            PORT_Memcpy(oldpath,path,path_len);
+            PORT_Memcpy(&oldpath[path_len],secmodprefix,secmoddir_len);
+            PORT_Strcpy(&oldpath[path_len+secmoddir_len],dllname);
+        }
+    }
+    *retoldpath = oldpath;
+    *retnewpath = path;
+    return;
+}
+
+static void nss_FreeExternalRootPaths(char* oldpath, char* path)
+{
+    if (path) {
+        PORT_Free(path);
+    }
+    if (oldpath) {
+        PORT_Free(oldpath);
+    }
+}
+
+static void
+nss_FindExternalRoot(const char *dbpath, const char* secmodprefix)
+{
+	char *path = NULL;
+        char *oldpath = NULL;
+        PRBool hasrootcerts = PR_FALSE;
+
+        /*
+         * 'oldpath' is the external root path in NSS 3.3.x or older.
+         * For backward compatibility we try to load the root certs
+         * module with the old path first.
+         */
+        nss_FindExternalRootPaths(dbpath, secmodprefix, &oldpath, &path);
+        if (oldpath) {
+            (void) SECMOD_AddNewModule("Root Certs",oldpath, 0, 0);
+            hasrootcerts = SECMOD_HasRootCerts();
+        }
+        if (path && !hasrootcerts) {
+	    (void) SECMOD_AddNewModule("Root Certs",path, 0, 0);
+        }
+        nss_FreeExternalRootPaths(oldpath, path);
 	return;
 }
 #endif
@@ -321,7 +396,8 @@ static PRBool nss_IsInitted = PR_FALSE;
 static SECStatus
 nss_Init(const char *configdir, const char *certPrefix, const char *keyPrefix,
 		 const char *secmodName, PRBool readOnly, PRBool noCertDB, 
-			PRBool noModDB, PRBool forceOpen, PRBool noRootInit)
+			PRBool noModDB, PRBool forceOpen, PRBool noRootInit,
+			PRBool optimizeSpace)
 {
     char *moduleSpec = NULL;
     char *flags = NULL;
@@ -336,7 +412,7 @@ nss_Init(const char *configdir, const char *certPrefix, const char *keyPrefix,
     }
 
     flags = nss_makeFlags(readOnly,noCertDB,noModDB,forceOpen,
-						pk11_password_required);
+					pk11_password_required, optimizeSpace);
     if (flags == NULL) return rv;
 
     /*
@@ -390,7 +466,7 @@ loser:
 	/* only servers need this. We currently do not have a mac server */
 	if ((!noModDB) && (!noCertDB) && (!noRootInit)) {
 	    if (!SECMOD_HasRootCerts()) {
-		nss_FindExternalRoot(configdir);
+		nss_FindExternalRoot(configdir, secmodName);
 	    }
 	}
 #endif
@@ -404,14 +480,14 @@ SECStatus
 NSS_Init(const char *configdir)
 {
     return nss_Init(configdir, "", "", SECMOD_DB, PR_TRUE, 
-		PR_FALSE, PR_FALSE, PR_FALSE, PR_TRUE);
+		PR_FALSE, PR_FALSE, PR_FALSE, PR_FALSE, PR_TRUE);
 }
 
 SECStatus
 NSS_InitReadWrite(const char *configdir)
 {
     return nss_Init(configdir, "", "", SECMOD_DB, PR_FALSE, 
-		PR_FALSE, PR_FALSE, PR_FALSE, PR_FALSE);
+		PR_FALSE, PR_FALSE, PR_FALSE, PR_FALSE, PR_TRUE);
 }
 
 /*
@@ -441,7 +517,8 @@ NSS_Initialize(const char *configdir, const char *certPrefix,
 	((flags & NSS_INIT_NOCERTDB) == NSS_INIT_NOCERTDB),
 	((flags & NSS_INIT_NOMODDB) == NSS_INIT_NOMODDB),
 	((flags & NSS_INIT_FORCEOPEN) == NSS_INIT_FORCEOPEN),
-	((flags & NSS_INIT_NOROOTINIT) == NSS_INIT_NOROOTINIT));
+	((flags & NSS_INIT_NOROOTINIT) == NSS_INIT_NOROOTINIT),
+	((flags & NSS_INIT_OPTIMIZESPACE) == NSS_INIT_OPTIMIZESPACE));
 }
 
 /*
@@ -451,16 +528,19 @@ SECStatus
 NSS_NoDB_Init(const char * configdir)
 {
       return nss_Init(configdir?configdir:"","","",SECMOD_DB,
-				PR_TRUE,PR_TRUE,PR_TRUE,PR_TRUE,PR_TRUE);
+			PR_TRUE,PR_TRUE,PR_TRUE,PR_TRUE,PR_TRUE,PR_TRUE);
 }
 
-void
+SECStatus
 NSS_Shutdown(void)
 {
+    SECStatus rv;
+
     SECOID_Shutdown();
     STAN_Shutdown();
-    SECMOD_Shutdown();
+    rv = SECMOD_Shutdown();
     nss_IsInitted = PR_FALSE;
+    return rv;
 }
 
 
