@@ -2437,8 +2437,8 @@ BUILD_SOURCE: $(OBJ_FILES)
 !endif
 
 
-"$(OUTDIR)\mozilla.exe" : "$(OUTDIR)" BUILD_SOURCE $(OUTDIR)\mozilla.res $(LINK_LIBS)
-	$(LINK) @<<"$(OUTDIR)\link.cl"
+LINK_CL:
+	@echo Creating <<"$(OUTDIR)\link.cl"
 !if "$(MOZ_BITS)"=="32"
     $(LINK_FLAGS) $(LINK_OBJS)
 !else
@@ -2584,6 +2584,23 @@ BUILD_SOURCE: $(OBJ_FILES)
 !endif
 
 <<KEEP
+!if "$(MOZ_EXPORT_ALL_SYMBOLS)"=="1"
+	$(PERL) listsymb.pl $(OUTDIR)\link.cl $(OUTDIR)\symbols.txt
+!endif
+
+# gendispw.pl depends on link.cl to generate dispwin.h & dispwin.c
+# dispwin.obj is then added to link.cl so that it will
+# be linked with the rest of the libraries and object files
+# to form the excutable
+
+DISPATCHER : $(OUTDIR)/symbols.txt
+	$(PERL) gendisp.pl $(OUTDIR)\symbols.txt $(OUTDIR)\dispwin.h $(OUTDIR)\dispwin.c $(OUTDIR)\cmoffset.h
+	@cl -c -MT -Fo"$(OUTDIR)/" -I"$(DIST)\include" $(OUTDIR)\dispwin.c
+	@echo $(OUTDIR)\dispwin.obj>>$(OUTDIR)\link.cl
+
+"$(OUTDIR)\mozilla.exe" : "$(OUTDIR)" BUILD_SOURCE $(OUTDIR)\mozilla.res $(LINK_LIBS) LINK_CL DISPATCHER
+	$(LINK) @"$(OUTDIR)\link.cl"
+
 !if "$(MOZ_BITS)"=="16"
     $(RSC) /K $(OUTDIR)\appicon.res $(OUTDIR)\mozilla.exe
 !endif
