@@ -36,6 +36,8 @@
 #
 # ***** END LICENSE BLOCK *****
 
+$failure = 0;
+
 sub unJAR
 {
     my ($file, $dir) = @_;
@@ -77,6 +79,7 @@ sub compareDTD
     }
 
     if (@extra1 or keys %entities2) {
+        $failure = 1;
         print "Entities in $path don't match:\n";
         if (@extra1) {
             print "  In $gSource1:\n";
@@ -124,6 +127,7 @@ sub compareProperties
     }
 
     if (@extra1 or keys %entities2) {
+        $failure = 1;
         print "Properties in $path don't match:\n";
         if (@extra1) {
             print "  In $gSource1:\n";
@@ -220,3 +224,5 @@ if (@gSource2Extra) {
 
 $gSource1IsZIP && system("rm -rf $gSourceDir1");
 $gSource2IsZIP && system("rm -rf $gSourceDir2");
+
+exit $failure;
