@@ -1,0 +1,19 @@
+MODULE		= npsimple
+
+LIBRARY_NAME	= npsimple
+
+DEPTH = ../../../..
+
+REQUIRES = java plug
+
+CSRCS = stubs.c
+CPPSRCS = npsimple.cpp
+
+CPPSRCS = npwin.cpp
+
+JDIRS = .
+
+JRI_GEN =		       \
+	Simple		       \
+        java.lang.Object       \
+	netscape.plugin.Plugin \

@@ -35,8 +35,12 @@
 #include "feembed.h"
 #include "libevent.h"
 #include "np.h"
+#ifdef PLUGIN_MODULE
+#include "pluginimpl.h"
+#else
 #include "nppg.h"
 #include "nppriv.h"
+#endif
 #include "winclose.h"
 #include "tooltip.h"
 #include "slavewnd.h"
@@ -4083,7 +4087,12 @@ void CWinCX::CreateEmbedWindow(MWContext *pContext, NPEmbeddedApp *pApp)
     if (XP_FAIL_ASSERT(pContext != NULL && pApp != NULL && pApp->np_data != NULL))
         return;
 
+#ifdef PLUGIN_MODULE
+	nsPluginInstancePeer* peer = (nsPluginInstancePeer*) pApp->np_data;
+    LO_EmbedStruct *pEmbed = peer->GetEmbedStruct();
+#else
     LO_EmbedStruct *pEmbed = ((np_data *) pApp->np_data)->lo_struct;
+#endif
     if (XP_FAIL_ASSERT(pEmbed != NULL))
         return;
 
@@ -4254,10 +4263,17 @@ void CWinCX::DestroyEmbedWindow(MWContext *pContext, NPEmbeddedApp *pApp)
     }	
     XP_FREE(pAppWin);	
 
+    // turn scrollbars back on
 #ifdef MOZ_NGLAYOUT
   XP_ASSERT(0);
+#endif
+
+#ifdef PLUGIN_MODULE
+    if(pApp->pagePluginType == NP_FullPage) {
+        CPaneCX *pPaneCX = PANECX(pContext);
+        pPaneCX->ShowScrollBars(SB_BOTH, TRUE);
+    }
 #else
-    // turn scrollbars back on
     if(pApp->pagePluginType == NP_FullPage)
         FE_ShowScrollBars(pContext, TRUE);
 #endif

@@ -42,13 +42,19 @@ CPPSRCS = \
 	nsID.cpp		\
 	nsRepository.cpp	\
 	nsSupportsArray.cpp	\
+        nsString.cpp            \
+        nsVoidArray.cpp         \
+        $(NULL)
 
 CPP_OBJS = \
 	.\$(OBJDIR)\nsDebug.obj		\
 	.\$(OBJDIR)\nsHashtable.obj	\
 	.\$(OBJDIR)\nsID.obj		\
 	.\$(OBJDIR)\nsSupportsArray.obj	\
+        .\$(OBJDIR)\nsString.obj        \
 	.\$(OBJDIR)\nsRepository.obj	\
+        .\$(OBJDIR)\nsVoidArray.obj     \
+        $(NULL)
 
 EXPORTS = \
 	nsAgg.h			\
@@ -62,7 +68,9 @@ EXPORTS = \
 	nsIPtr.h		\
 	nsISupportsArray.h	\
 	nsRepository.h		\
+        nsString.h              \
 	nsIEnumerator.h		\
+        nsVoidArray.h           \
 	$(NULL)			
 
 MODULE = xpcom 

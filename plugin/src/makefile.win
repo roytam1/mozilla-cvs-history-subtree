@@ -1,0 +1,139 @@
+#!gmake
+#
+# The contents of this file are subject to the Netscape Public License
+# Version 1.0 (the "NPL"); you may not use this file except in
+# compliance with the NPL.  You may obtain a copy of the NPL at
+# http://www.mozilla.org/NPL/
+#
+# Software distributed under the NPL is distributed on an "AS IS" basis,
+# WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+# for the specific language governing rights and limitations under the
+# NPL.
+#
+# The Initial Developer of this code under the NPL is Netscape
+# Communications Corporation.  Portions created by Netscape are
+# Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+# Reserved.
+
+#
+
+
+IGNORE_MANIFEST = 1
+
+#//------------------------------------------------------------------------
+#//
+# 
+#//
+#//------------------------------------------------------------------------
+MODULE=plugin
+
+
+#//------------------------------------------------------------------------
+#//
+#// Specify the depth of the current directory relative to the
+#// root of Mozilla
+#//
+#//------------------------------------------------------------------------
+DEPTH= ..\..
+
+
+#//------------------------------------------------------------------------
+#//
+#// Define any Public Make Variables here: (ie. PDFFILE, MAPFILE, ...)
+#//
+#//------------------------------------------------------------------------
+LIBRARY_NAME=$(MODULE)
+
+# XXX Unfortunately, we need to build this as a static library because
+# it depends on netlib and some front-end callbacks.
+#
+#DLLNAME=$(MODULE)
+#PDBFILE=$(DLLNAME).pdb
+#MAPFILE=$(DLLNAME).map
+#DLL=.\$(OBJDIR)\$(DLLNAME).dll
+
+
+#//------------------------------------------------------------------------
+#// 
+#// Define the files necessary to build the target (ie. OBJS)
+#//
+#//------------------------------------------------------------------------
+OBJS=\
+        .\$(OBJDIR)\glue.obj                     \
+        .\$(OBJDIR)\npassoc.obj                  \
+        .\$(OBJDIR)\ns4xPlugin.obj               \
+        .\$(OBJDIR)\ns4xPluginInstance.obj       \
+        .\$(OBJDIR)\ns4xPluginStream.obj         \
+        .\$(OBJDIR)\nsMimeType.obj               \
+        .\$(OBJDIR)\nsMimeTypeRegistry.obj       \
+        .\$(OBJDIR)\nsPluginClass.obj            \
+        .\$(OBJDIR)\nsPluginInstancePeer.obj     \
+        .\$(OBJDIR)\nsPluginManager.obj          \
+        .\$(OBJDIR)\nsPluginManagerStream.obj    \
+        .\$(OBJDIR)\nsPluginRegistry.obj         \
+        .\$(OBJDIR)\nsPluginStreamPeer.obj       \
+        .\$(OBJDIR)\nsWin32PluginClass.obj       \
+        .\$(OBJDIR)\plugin_win32.obj             \
+        $(NULL)
+
+#//------------------------------------------------------------------------
+#//
+#// Define any Public Targets here (ie. PROGRAM, LIBRARY, DLL, ...)
+#// (these must be defined before the common makefiles are included)
+#//
+#//------------------------------------------------------------------------
+EXPORTS=\
+        nsIContentHandler.h   \
+        nsILCPlg.h            \
+        nsIMimeType.h         \
+        nsIMimeTypeRegistry.h \
+        nsIPlug.h             \
+        nsIPluginClass.h      \
+        nsIPluginRegistry.h   \
+        pluginimpl.h          \
+	$(NULL)
+
+LIBRARY=.\$(OBJDIR)\$(MODULE).lib
+
+
+#//------------------------------------------------------------------------
+#//
+#// Define any local options for the make tools 
+#//     (ie. LCFLAGS, LLFLAGS, LLIBS, LINCS)
+#//
+#//------------------------------------------------------------------------
+
+#LLIBS=$(LLIBS)\
+#        .\$(DIST)\lib\libnspr21.lib     \
+#        .\$(DIST)\lib\libplc21.lib      \
+#        .\$(DIST)\lib\xpcom32.lib       \
+#        .\$(DIST)\lib\netcnvts.lib      \
+#        .\$(DIST)\lib\network.lib       \
+#        version.lib                     \
+#        $(NULL)
+
+LINCS=  $(LINCS)                        \
+        -I$(XPDIST)\public\java         \
+        -I$(XPDIST)\public\js           \
+        -I$(XPDIST)\public\oji          \
+        -I$(XPDIST)\public\netcnvts     \
+        -I$(XPDIST)\public\network      \
+        -I$(XPDIST)\public\pref         \
+        -I$(XPDIST)\public\xpcom        \
+        -I.                             \
+        $(NULL)
+
+#//------------------------------------------------------------------------
+#//
+#// Include the common makefile rules
+#//
+#//------------------------------------------------------------------------
+include <$(DEPTH)/config/rules.mak>
+
+#libs:: $(DLL)
+#        $(MAKE_INSTALL) $(DLL) $(DIST)\bin
+#        $(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
+
+libs:: $(LIBRARY)
+        $(MAKE_INSTALL) $(LIBRARY) $(DIST)\lib
+

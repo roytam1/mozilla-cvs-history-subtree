@@ -1,0 +1,64 @@
+PLUGINDIR=$(MOZ_SRC)\mozilla\cmd\winfe\mkfiles32\x86dbg\plugins
+
+DEFINES=        /DXP_PC
+
+INCLUDES=       -I$(MOZ_SRC)\mozilla\include                  \
+                -I$(MOZ_SRC)\mozilla\dist\public\xpcom        \
+                -I$(MOZ_SRC)\mozilla\dist\public\java         \
+                -I$(MOZ_SRC)\mozilla\plugin\src               \
+                -I$(MOZ_SRC)\mozilla\dist\win32_d.obj\include \
+                $(NULL)
+
+CPPFLAGS=       /W3 /GX $(DEFINES) $(INCLUDES) $(OPTIMIZER) 
+CFLAGS=         /W3 /GX $(DEFINES) $(INCLUDES) $(OPTIMIZER)
+
+LINK=           link
+LFLAGS=         /MACHINE:IX86
+LIBS=           kernel32.lib gdi32.lib user32.lib
+
+!if !defined(NODEBUG)
+OPTIMIZER=      /Z7 /Od /DDEBUG /D_DEBUG
+LFLAGS=         $(LFLAGS) /DEBUG /DEBUGTYPE:CV /PDB:NONE
+!endif
+
+########################################################################
+#
+# Top-level build targets
+#
+
+all:    npsimp50.dll npsimp40.dll
+
+clean:
+        del *.obj *.dll *.res *.lib *.exp *~
+
+#
+# Install the DLLs into the plugin directory
+#
+
+install: npsimp50.dll npsimp40.dll
+!if !exists($(PLUGINDIR))
+        mkdir $(PLUGINDIR)
+!endif
+        copy npsimp40.dll $(PLUGINDIR)
+        copy npsimp50.dll $(PLUGINDIR)
+
+########################################################################
+#
+# Link the DLLs
+#
+
+npsimp40.dll:   npsimp40.obj npsimp40.res npsimp40.def
+        $(LINK) /DLL $(LFLAGS) /DEF:npsimp40.def /OUT:$@ $(LIBS) npsimp40.obj npsimp40.res
+
+npsimp50.dll: npsimp50.obj npsimp50.res npsimp50.def
+        $(LINK) /DLL $(LFLAGS) /DEF:npsimp50.def /OUT:$@ $(LIBS) npsimp50.obj npsimp50.res
+
+########################################################################
+#
+# Source dependencies
+#
+
+npsimp40.res:   npsimp40.rc
+npsimp40.obj:   npsimp40.c
+npsimp50.res:   npsimp50.rc
+npsimp50.obj:   npsimp50.cpp
