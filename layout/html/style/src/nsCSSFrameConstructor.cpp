@@ -2802,16 +2802,8 @@ nsCSSFrameConstructor::ConstructTableColFrame(nsIPresShell*            aPresShel
     }
   }
 
-  if (!aIsPseudo) {
-    nsFrameItems childItems;
-    nsIFrame* captionFrame;
-    rv = TableProcessChildren(aPresShell, aPresContext, aState, aContent, aNewFrame,
-                              aTableCreator, childItems, captionFrame);
-    if (NS_FAILED(rv)) return rv;
-    aNewFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
-    if (aIsPseudoParent) {
+  if (!aIsPseudo && aIsPseudoParent) {
       aState.mPseudoFrames.mColGroup.mChildList.AddChild(aNewFrame);
-    }
   }
   
   return rv;

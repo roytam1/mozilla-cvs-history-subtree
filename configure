@@ -2641,9 +2641,9 @@ cross_compiling=$ac_cv_prog_cxx_cross
         cat > conftest.$ac_ext <<EOF
 #line 2643 "configure"
 #include "confdefs.h"
-#include <iostream.h>
+#include <new.h>
 int main() {
- cout << "Hello World" << endl; 
+ unsigned *test = new unsigned(42); 
 ; return 0; }
 EOF
 if { (eval echo configure:2650: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
