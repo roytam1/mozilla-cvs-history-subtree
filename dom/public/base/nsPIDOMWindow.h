@@ -64,6 +64,8 @@ public:
   NS_IMETHOD SetMutationListeners(PRUint32 aType) = 0;
 
   NS_IMETHOD GetRootFocusController(nsIFocusController** aResult) = 0;
+
+  NS_IMETHOD ReallyCloseWindow() = 0;
 };
 
 #endif // nsPIDOMWindow_h__

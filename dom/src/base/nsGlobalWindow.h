@@ -154,25 +154,16 @@ public:
   // nsPIDOMWindow
   NS_IMETHOD GetPrivateParent(nsPIDOMWindow** aResult);
   NS_IMETHOD GetPrivateRoot(nsIDOMWindowInternal** aResult);
-
   NS_IMETHOD GetObjectProperty(const PRUnichar* aProperty,
                                nsISupports** aObject);
-
   NS_IMETHOD Activate();
   NS_IMETHOD Deactivate();
-
   NS_IMETHOD GetChromeEventHandler(nsIChromeEventHandler** aHandler);
-
   NS_IMETHOD HasMutationListeners(PRUint32 aMutationEventType,
                                   PRBool* aResult);
   NS_IMETHOD SetMutationListeners(PRUint32 aEventType);
-
   NS_IMETHOD GetRootFocusController(nsIFocusController** aResult);
-
-  NS_IMETHOD SetPositionAndSize(PRInt32 x, PRInt32 y, PRInt32 cx, PRInt32 cy,
-                                PRBool fRepaint);
-  NS_IMETHOD GetPositionAndSize(PRInt32 *x, PRInt32 *y, PRInt32 *cx,
-                                PRInt32 *cy);
+  NS_IMETHOD ReallyCloseWindow();
 
   // nsIDOMViewCSS
   NS_DECL_NSIDOMVIEWCSS
