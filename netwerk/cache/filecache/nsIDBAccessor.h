@@ -44,9 +44,9 @@ class nsIDBAccessor : public nsISupports
 
   NS_IMETHOD Get(PRInt32 aID, void** anEntry, PRUint32 *aLength) = 0 ;
 
-  NS_IMETHOD Del(PRInt32 aID) = 0 ;
+  NS_IMETHOD Del(PRInt32 aID, void* anEntry, PRUint32 aLength) = 0 ;
 
-  NS_IMETHOD GenID(const char* key, PRUint32 length, PRInt32* aID) = 0 ;
+  NS_IMETHOD GetID(const char* key, PRUint32 length, PRInt32* aID) = 0 ;
 
   NS_IMETHOD EnumEntry(void* *anEntry, PRUint32* aLength, PRBool bReset) = 0 ;
 

@@ -26,80 +26,7 @@
 
 static NS_DEFINE_IID(kIFactoryIID, NS_IFACTORY_IID);
 static NS_DEFINE_CID (kComponentManagerCID, NS_COMPONENTMANAGER_CID) ;
-
-static NS_DEFINE_CID(kDBAccessorCID, NS_DBACCESSOR_CID) ;
 static NS_DEFINE_CID(kNetDiskCacheCID, NS_NETDISKCACHE_CID) ;
-
-class nsDBAccessorFactory : public nsIFactory
-{
-  public:
-  nsDBAccessorFactory() ;
-  virtual ~nsDBAccessorFactory() ;
-
-  // nsISupports methods
-  NS_DECL_ISUPPORTS
-
-  // nsIFactory methods
-  NS_IMETHOD CreateInstance(nsISupports *aOuter,
-                            const nsIID &aIID,
-                            void **aResult);
-
-  NS_IMETHOD LockFactory(PRBool aLock);
-  private:
-
-//  static PRInt32 DBLockCnt ;
-} ;
-
-nsDBAccessorFactory::nsDBAccessorFactory()
-{
-//  DBLockCnt = 0 ;
-  NS_INIT_REFCNT();
-}
-
-nsDBAccessorFactory::~nsDBAccessorFactory()
-{
-  NS_ASSERTION(mRefCnt == 0, "non-zero refcnt at destruction");
-}
-
-NS_IMPL_ISUPPORTS(nsDBAccessorFactory, kIFactoryIID) ;
-
-NS_IMETHODIMP
-nsDBAccessorFactory::CreateInstance(nsISupports *aOuter,
-                                   const nsIID &aIID,
-                                   void **aResult)
-{
-  if(!aResult)
-    return NS_ERROR_NULL_POINTER ;
-
-  *aResult = nsnull ;
-
-  nsISupports *inst = new nsDBAccessor ;
-
-  if(!inst) 
-    return NS_ERROR_OUT_OF_MEMORY ;
-
-  nsresult rv = inst -> QueryInterface(aIID, aResult) ;
-
-  if(NS_FAILED(rv)) 
-    delete inst ;
-
-  return rv ;
-}
-
-NS_IMETHODIMP
-nsDBAccessorFactory::LockFactory(PRBool aLock)
-{
-  /*
-  if(aLock) 
-    PR_AtomicIncrement (&DBLockCnt) ;
-            
-  else 
-    PR_AtomicDecrement (&DBLockCnt) ;
-    */
-
-  return NS_OK ;
-
-}
 
 class nsNetDiskCacheFactory : public nsIFactory
 {
@@ -149,10 +76,16 @@ nsNetDiskCacheFactory::CreateInstance(nsISupports *aOuter,
   if(!inst) 
     return NS_ERROR_OUT_OF_MEMORY ;
 
-  nsresult rv = inst -> QueryInterface(aIID, aResult) ;
+  nsresult rv = inst->QueryInterface(aIID, aResult) ;
 
   if(NS_FAILED(rv)) 
     delete inst ;
+
+  rv = NS_STATIC_CAST(nsNetDiskCache*, inst)->Init() ;
+  if(NS_FAILED(rv)) {
+    NS_IF_RELEASE(inst) ;
+    return NS_ERROR_FAILURE ;
+  }
 
   return rv ;
 }
@@ -185,10 +118,7 @@ NSGetFactory(nsISupports *serviceMgr,
 
   nsISupports *inst ;
 
-  if(aCID.Equals(kDBAccessorCID)) {
-	inst = new nsDBAccessorFactory() ;
-  }
-  else if(aCID.Equals(kNetDiskCacheCID)) {
+  if(aCID.Equals(kNetDiskCacheCID)) {
     inst = new nsNetDiskCacheFactory() ; 
   }
   else {
@@ -236,10 +166,6 @@ NSRegisterSelf(nsISupports *aServMgr, const char *path)
 	NS_RELEASE(sm) ;
 	return rv ;
   }
-
-  rv = cm->RegisterComponent(kDBAccessorCID, "Disk Cache DB Accessor", 
-                             "component://netscape/network/cache/db-access",
-                             path, PR_TRUE, PR_TRUE) ;
 
   rv = cm->RegisterComponent(kNetDiskCacheCID, "Disk Cache Module", 
                              "component://netscape/network/cache/db-access",

@@ -25,22 +25,23 @@
 #include "prtypes.h"
 #include "nsILoadGroup.h"
 #include "nsIFileChannel.h" 
-          // don't know why we need it, but nsCOMPtr would compliant otherwise
+#include "nsNetDiskCache.h"
 
 class nsDiskCacheRecord : public nsINetDataCacheRecord
 {
   public:
 
-  nsDiskCacheRecord(nsIDBAccessor* db) ;
-  nsDiskCacheRecord(const char* key, PRUint32 length, nsIDBAccessor* db) ;
-  virtual ~nsDiskCacheRecord() ;
-
   NS_DECL_ISUPPORTS
   NS_DECL_NSINETDATACACHERECORD
 
-  NS_IMETHOD RetrieveInfo(void* aInfo, PRUint32 aInfoLength) ;
-
   protected: 
+
+  nsDiskCacheRecord(nsIDBAccessor* db, nsNetDiskCache* aCache) ;
+  virtual ~nsDiskCacheRecord() ;
+
+  NS_IMETHOD RetrieveInfo(void* aInfo, PRUint32 aInfoLength) ;
+  NS_IMETHOD Init(const char* key, PRUint32 length) ;
+
   nsresult GenInfo(void) ;
 
   private:
@@ -51,12 +52,15 @@ class nsDiskCacheRecord : public nsINetDataCacheRecord
   char*                     mMetaData ;
   PRUint32                  mMetaDataLength ;
   nsCOMPtr<nsIFileSpec>     mFile ;
-  // according to SCC@netscape, we don't use nsCOMPtr for services (for now) 
-  nsIDBAccessor*            mDB ; 
+  nsCOMPtr<nsIDBAccessor>            mDB ; 
   void*                     mInfo ;
   PRUint32                  mInfoSize ;
+  PRUint32                  mNumChannels ;
+  nsCOMPtr<nsNetDiskCache>           mDiskCache ;
 
-  nsCOMPtr<nsIChannel>      mFileTransport ;
+  friend class nsDiskCacheRecordChannel ;
+  friend class nsDBEnumerator ;
+  friend class nsNetDiskCache ;
 } ;
 
 #endif // _NET_CACHEDDISKDATA_H_

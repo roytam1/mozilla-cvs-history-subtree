@@ -23,6 +23,8 @@
 #include "nsINetDataCacheRecord.h"
 #include "nsIDBAccessor.h"
 #include "nsCOMPtr.h"
+#include "nsNetDiskCache.h"
+#include "nsDiskCacheRecord.h"
 
 class nsCachedDiskData ; /* forward decl */
 
@@ -36,14 +38,15 @@ class nsDBEnumerator : public nsISimpleEnumerator {
   /* nsISupports GetNext (); */
   NS_IMETHOD GetNext(nsISupports **_retval) ;
 
-  nsDBEnumerator(nsIDBAccessor* aDB) ;
+  nsDBEnumerator(nsIDBAccessor* aDB, nsNetDiskCache* aCache) ;
   virtual ~nsDBEnumerator() ;
 
   private:
   nsCOMPtr<nsIDBAccessor>                m_DB ;
+  nsCOMPtr<nsNetDiskCache>                        m_DiskCache ;
   void *                                 tempEntry ;
   PRUint32                               tempEntry_length ;
-  nsINetDataCacheRecord *                m_CacheEntry ;
+  nsDiskCacheRecord*                    m_CacheEntry ;
   PRBool                                 bReset ;
 };
 

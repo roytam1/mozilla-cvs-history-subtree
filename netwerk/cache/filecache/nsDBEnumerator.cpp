@@ -19,18 +19,15 @@
 #include "nsDBEnumerator.h"
 #include "nsDiskCacheRecord.h"
 
-nsDBEnumerator::nsDBEnumerator(nsIDBAccessor* aDB) :
-  m_DB(aDB) 
+nsDBEnumerator::nsDBEnumerator(nsIDBAccessor* aDB, nsNetDiskCache* aCache) :
+  m_DB(aDB) ,
+  m_DiskCache(aCache) ,
+  tempEntry(0) ,
+  tempEntry_length(0) ,
+  m_CacheEntry(0) ,
+  bReset(PR_TRUE) 
 {
   NS_INIT_REFCNT();
-
-  tempEntry = nsnull ;
-
-  bReset = PR_TRUE ;
-
-  m_CacheEntry = new nsDiskCacheRecord(m_DB) ;
-  if(m_CacheEntry)
-    NS_ADDREF(m_CacheEntry) ;
 
 }
 
@@ -71,17 +68,21 @@ nsDBEnumerator::HasMoreElements(PRBool *_retval)
 NS_IMETHODIMP
 nsDBEnumerator::GetNext(nsISupports **_retval)
 {
+  if(!m_CacheEntry) {
+    m_CacheEntry = new nsDiskCacheRecord(m_DB, m_DiskCache) ;
+    if(m_CacheEntry)
+      NS_ADDREF(m_CacheEntry) ;
+    else
+      return NS_ERROR_OUT_OF_MEMORY ;
+  }
+
   if(!_retval)
     return NS_ERROR_NULL_POINTER ;
   *_retval = nsnull ;
 
-  NS_ASSERTION(m_CacheEntry, "cache entry doesn't exist, something's wrong") ;
-
-  // I don't like this cast. But don't know what to do else.
-  nsDiskCacheRecord* p_CacheEntry ;
-  p_CacheEntry = NS_STATIC_CAST(nsDiskCacheRecord*, m_CacheEntry) ;
-
-  p_CacheEntry->RetrieveInfo(tempEntry, tempEntry_length) ;
+  nsresult rv = m_CacheEntry->RetrieveInfo(tempEntry, tempEntry_length) ;
+  if(NS_FAILED(rv))
+    return rv ;
 
   *_retval = NS_STATIC_CAST(nsISupports*, m_CacheEntry) ;
   NS_ADDREF(*_retval) ; // all good getter addref 

@@ -21,6 +21,12 @@
 #include "nsIDBAccessor.h"
 #include "mcom_db.h"
 
+// bogus string for the key of session id 
+static const char * const SessionKey = "^^" ;
+
+// initial session id number 
+static const PRInt16 ini_sessionID = 0xff ;
+
 class nsDBAccessor : public nsIDBAccessor
 {
   public:
@@ -36,9 +42,9 @@ class nsDBAccessor : public nsIDBAccessor
 
   NS_IMETHOD Get(PRInt32 aID, void** anEntry, PRUint32 *aLength) ;
 
-  NS_IMETHOD Del(PRInt32 aID) ;
+  NS_IMETHOD Del(PRInt32 aID, void* anEntry, PRUint32 aLength) ;
 
-  NS_IMETHOD GenID(const char* key, PRUint32 length, PRInt32* aID) ;
+  NS_IMETHOD GetID(const char* key, PRUint32 length, PRInt32* aID) ;
 
   NS_IMETHOD EnumEntry(void* *anEntry, PRUint32* aLength, PRBool bReset) ;
 
@@ -46,7 +52,8 @@ class nsDBAccessor : public nsIDBAccessor
 
   private:
   DB *                          mDB ;
-  char *                        mDBFilename ;
+  PRInt16                       mSessionID ;
+  PRInt16                       mSessionCntr ;
   PRLock *                      m_Lock ;
 } ;
 

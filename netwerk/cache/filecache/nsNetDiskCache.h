@@ -23,7 +23,7 @@
 #include "nsNetDiskCacheCID.h"
 #include "nsCOMPtr.h"
 #include "nsIPref.h"
-#include "nsIDBAccessor.h"
+#include "nsDBAccessor.h"
 
 class nsIURI; /* forward decl */
 class nsICachedNetData; /* forward decl */
@@ -39,35 +39,39 @@ class nsNetDiskCache : public nsINetDataDiskCache {
   NS_DECL_NSINETDATACACHE
   NS_DECL_NSINETDATADISKCACHE
 
+  NS_IMETHOD Init(void) ;
+
   nsNetDiskCache() ;
   virtual ~nsNetDiskCache() ;
 
   protected:
 
-  NS_IMETHOD Init(void) ;
   NS_IMETHOD InitDB(void) ;
-  NS_IMETHOD SearchRUList(PRInt32 id, nsINetDataCacheRecord * *_retval) ;
-  NS_IMETHOD AddToRUList(nsINetDataCacheRecord* aRecord) ;
-  NS_IMETHOD CountDirSize(PRUint32 * t_size, nsIFileSpec * dir) ;
   NS_IMETHOD CreateDir(nsIFileSpec* dir_spec) ;
+  NS_IMETHOD UpdateInfo(void) ;
+
+  NS_IMETHOD RenameCacheSubDirs(void) ;
+  NS_IMETHOD DBRecovery(void) ;
+  NS_IMETHOD RemoveDirs(PRUint32 aNum) ;
 
   private:
 
-  PRUnichar* 		                m_Description ;
   PRBool 			                m_Enabled ;
-  PRBool 			                m_ReadOnly ;
   PRUint32 			                m_NumEntries ;
   nsCOMPtr<nsINetDataCache> 	    m_pNextCache ;
   nsCOMPtr<nsIFileSpec>   	        m_pDiskCacheFolder ;
-  char*                             m_DBFileName ;
   nsCOMPtr<nsIFileSpec>             m_DBFile ;
 
   PRUint32                          m_MaxEntries ;
   PRInt32 			                m_Capacity ;
-  // according to SCC@netscape, we don't use nsCOMPtr for services (for now) 
+  PRUint32                          m_StorageInUse ;
   nsIDBAccessor*                    m_DB ;
-  PRUint32                          m_ListCount ;
-  PRLock*                           m_Lock ;
-};
+
+  // this is used to indicate a db corruption
+  PRInt32                           m_BaseDirNum ;
+
+  friend class nsDiskCacheRecord ;
+  friend class nsDiskCacheRecordChannel ;
+} ;
 
 #endif /* __gen_nsNetDiskCache_h__ */
