@@ -222,14 +222,7 @@ PRInt32 nsInstallDelete::NativeComplete()
     {
         if (mFinalFile->IsFile())
         {
-           mFinalFile->Delete(false);
-
-           if (mFinalFile->Exists())
-           {
-                // If file still exists, we need to delete it later!
-                DeleteFileLater(*mFinalFile);
-                return nsInstall::REBOOT_NEEDED;
-           }
+           return DeleteFileLater(*mFinalFile);
         }
         else
         {

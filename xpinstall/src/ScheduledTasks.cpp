@@ -27,25 +27,35 @@
 #include "NSReg.h"
 #include "nsFileSpec.h"
 #include "nsFileStream.h"
+#include "nsInstall.h" // for error codes
 
 REGERR DeleteFileLater(nsFileSpec& filename)
 {
-    RKEY newkey;
-    REGERR result = -1;
-    HREG reg;
-    if ( REGERR_OK == NR_RegOpen("", &reg) ) 
+
+    REGERR result = 0;
+    
+    filename.Delete(false);
+    
+    if (filename.Exists())
     {
-        if (REGERR_OK == NR_RegAddKey( reg, ROOTKEY_PRIVATE, REG_DELETE_LIST_KEY, &newkey) )
+        RKEY newkey;
+        HREG reg;
+        if ( REGERR_OK == NR_RegOpen("", &reg) ) 
         {
-            nsPersistentFileDescriptor savethis(filename);
-            char* buffer;
-            nsOutputStringStream s(buffer);
-            s << savethis;
+            if (REGERR_OK == NR_RegAddKey( reg, ROOTKEY_PRIVATE, REG_DELETE_LIST_KEY, &newkey) )
+            {
+                nsPersistentFileDescriptor savethis(filename);
+                char* buffer;
+                nsOutputStringStream s(buffer);
+                s << savethis;
 
-            result = NR_RegSetEntry( reg, newkey, "", REGTYPE_ENTRY_BYTES, buffer, strlen(buffer));
+                result = NR_RegSetEntry( reg, newkey, "", REGTYPE_ENTRY_BYTES, buffer, strlen(buffer));
+                if (result == REGERR_OK)
+                    result = nsInstall::REBOOT_NEEDED;
+            }
+
+            NR_RegClose(reg);
         }
-
-        NR_RegClose(reg);
     }
 
     return result;
@@ -53,31 +63,52 @@ REGERR DeleteFileLater(nsFileSpec& filename)
 
 REGERR ReplaceFileLater(nsFileSpec& tmpfile, nsFileSpec& target )
 {
-    RKEY newkey;
-    REGERR result;
-    HREG reg;
-
-    if ( REGERR_OK == NR_RegOpen("", &reg) ) 
+    REGERR result = 0;
+    
+    if (! target.Exists() )
     {
-        result = NR_RegAddKey( reg, ROOTKEY_PRIVATE, REG_REPLACE_LIST_KEY, &newkey);
-        if ( result == REGERR_OK ) 
-        {
-            nsPersistentFileDescriptor tempDesc(tmpfile);
-            nsPersistentFileDescriptor targDesc(target);
-            
-            char* tempBuffer;
-            char* targBuffer;
+        // Now that we have move the existing file, we can move the mExtracedFile into place.
+        nsFileSpec parentofFinalFile;
 
-            nsOutputStringStream tempStream(tempBuffer);
-            nsOutputStringStream targStream(targBuffer);
-            
-            tempStream << tempDesc;
-            targStream << targDesc;
-
-            result = NR_RegSetEntry( reg, newkey, tempBuffer, REGTYPE_ENTRY_BYTES, targBuffer, strlen(targBuffer));
-        }
-        NR_RegClose(reg);
+        target.GetParent(parentofFinalFile);
+        result = tmpfile.Move(parentofFinalFile);
+    
+        char* leafName = target.GetLeafName();
+        tmpfile.Rename(leafName);
+        delete [] leafName;
     }
+    else
+    {
+        RKEY newkey;
+        HREG reg;
+
+        if ( REGERR_OK == NR_RegOpen("", &reg) ) 
+        {
+            result = NR_RegAddKey( reg, ROOTKEY_PRIVATE, REG_REPLACE_LIST_KEY, &newkey);
+            if ( result == REGERR_OK ) 
+            {
+                nsPersistentFileDescriptor tempDesc(tmpfile);
+                nsPersistentFileDescriptor targDesc(target);
+            
+                char* tempBuffer;
+                char* targBuffer;
+
+                nsOutputStringStream tempStream(tempBuffer);
+                nsOutputStringStream targStream(targBuffer);
+            
+                tempStream << tempDesc;
+                targStream << targDesc;
+
+                result = NR_RegSetEntry( reg, newkey, tempBuffer, REGTYPE_ENTRY_BYTES, targBuffer, strlen(targBuffer));
+                if (result == REGERR_OK)
+                    result = nsInstall::REBOOT_NEEDED;
+            
+            }
+
+            NR_RegClose(reg);
+        }
+    }
+
     return result;
 }
 

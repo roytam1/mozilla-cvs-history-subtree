@@ -98,12 +98,7 @@ void nsInstallExecute::Abort()
     if (mExecutableFile == nsnull) 
         return;
 
-    mExecutableFile->Delete(PR_FALSE);
-    
-    if ( mExecutableFile->Exists() )
-    {
-        DeleteFileLater(*mExecutableFile);
-    }
+    DeleteFileLater(*mExecutableFile);
 }
 
 char* nsInstallExecute::toString()

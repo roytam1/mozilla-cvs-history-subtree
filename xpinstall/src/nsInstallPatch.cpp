@@ -183,7 +183,7 @@ PRInt32 nsInstallPatch::Prepare()
 
     if ( deleteOldSrc ) 
     {
-        NativeDeleteFile( fileName );
+        DeleteFileLater(*fileName );
     }
   
     return err;
@@ -206,7 +206,7 @@ PRInt32 nsInstallPatch::Complete()
     if (fileName != nsnull && (*fileName == *mPatchedFile) )
     {
         // the patch has not been superceded--do final replacement
-        err = NativeReplace( *mTargetFile, *mPatchedFile );
+        err = ReplaceFileLater( *mTargetFile, *mPatchedFile );
         if ( 0 == err || nsInstall::REBOOT_NEEDED == err ) 
         {
             nsString tempVersionString;
@@ -247,7 +247,7 @@ void nsInstallPatch::Abort()
 
     if (fileName != nsnull && (*fileName == *mPatchedFile) )
     {
-        NativeDeleteFile( mPatchedFile );
+        DeleteFileLater( *mPatchedFile );
     }
 }
 
@@ -278,58 +278,6 @@ nsInstallPatch::NativePatch(const nsFileSpec &sourceFile, const nsFileSpec &patc
 {
     return -1;
 }
-
-PRInt32
-nsInstallPatch::NativeDeleteFile(nsFileSpec* doomedFile)
-{
-    if (doomedFile->Exists())
-    {
-        if (doomedFile->IsFile())
-        {
-           doomedFile->Delete(false);
-
-           if (doomedFile->Exists())
-           {
-                // If file still exists, we need to delete it later!
-                DeleteFileLater(*doomedFile);
-                return nsInstall::REBOOT_NEEDED;
-           }
-        }
-        else
-        {
-            return nsInstall::FILE_IS_DIRECTORY;
-        }
-    }
-
-    return nsInstall::FILE_DOES_NOT_EXIST;
-}
-
-PRInt32
-nsInstallPatch::NativeReplace(nsFileSpec& oldfile, nsFileSpec& newFile)
-{
-    
-    oldfile.Delete(PR_FALSE);
-    if (oldfile.Exists())
-    {
-        ReplaceFileLater(newFile, oldfile);
-        return nsInstall::REBOOT_NEEDED;
-    }
-    else
-    {
-        // We can simple move the extracted file to the mFinalFile's parent
-        nsFileSpec parentofFinalFile;
-
-        oldfile.GetParent(parentofFinalFile);
-        newFile.Move(parentofFinalFile);
-        
-        char* leafName = newFile.GetLeafName();
-        newFile.Rename(leafName);
-        delete [] leafName;
-    }
-    
-    return nsInstall::SUCCESS;
-}
-
 
 void* 
 nsInstallPatch::HashFilePath(const nsFilePath& aPath)

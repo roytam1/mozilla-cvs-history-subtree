@@ -36,7 +36,7 @@ REGERR DeleteFileLater(nsFileSpec& filename);
 REGERR ReplaceFileLater(nsFileSpec& tmpfile, nsFileSpec& target );
 
 
-extern "C" void PerformScheduledTasks(void *data)
+extern "C" void PerformScheduledTasks(void *data);
 
 
 #endif

@@ -200,41 +200,7 @@ PRInt32 nsInstallFile::CompleteFileMove()
     } 
     else 
     {
-        if (mFinalFile->Exists() == PR_FALSE)
-        {
-            // We can simple move the extracted file to the mFinalFile's parent
-            nsFileSpec parentofFinalFile;
-
-            mFinalFile->GetParent(parentofFinalFile);
-            result = mExtracedFile->Move(parentofFinalFile);
-            
-            char* leafName = mFinalFile->GetLeafName();
-            mExtracedFile->Rename(leafName);
-            delete [] leafName;
-
-        }
-        else
-        {
-            mFinalFile->Delete(PR_FALSE);
-
-            if (! mFinalFile->Exists())
-            {    
-                // Now that we have move the existing file, we can move the mExtracedFile into place.
-                nsFileSpec parentofFinalFile;
-
-                mFinalFile->GetParent(parentofFinalFile);
-                result = mExtracedFile->Move(parentofFinalFile);
-            
-                char* leafName = mFinalFile->GetLeafName();
-                mExtracedFile->Rename(leafName);
-                delete [] leafName;
-            }
-            else
-            {
-                ReplaceFileLater(*mExtracedFile, *mFinalFile );
-                result = nsInstall::REBOOT_NEEDED;
-            }
-        }
+        result = ReplaceFileLater(*mExtracedFile, *mFinalFile );
     }
 
   return result;  
