@@ -100,7 +100,7 @@ InspectorCmdLineHandler.prototype =
     }
   },
 
-  helpInfo : "  -inspect <url>       Open the URL in the DOM inspector.\n  --inspector          Open the DOM inspector."
+  helpInfo : "  -inspect <url>       Open the URL in the DOM inspector.\n  -inspector           Open the DOM inspector.\n"
 };
 
 
