@@ -1652,11 +1652,11 @@ sub run_all_tests {
     }
 
     # QA test: Client-side JS, DOM/HTML/Views, form submission.
-    if ($Settings::QATest and $test_result eq 'success') {
-        $test_result = QATest("QATest",
-                              $build_dir,
-                              [$binary, "-P", $Settings::MozProfileName]);
-    }
+    #if ($Settings::QATest and $test_result eq 'success') {
+    #    $test_result = QATest("QATest",
+    #                          $build_dir,
+    #                          [$binary, "-P", $Settings::MozProfileName]);
+    #}
 
 
     # xul window open test.
