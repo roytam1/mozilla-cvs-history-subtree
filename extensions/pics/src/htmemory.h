@@ -61,6 +61,9 @@ with copyright holders.
  */
 #ifndef HTMEMORY_H
 #define HTMEMORY_H
+
+PR_BEGIN_EXTERN_C
+
 /*
 
 ALLOCATION, REALLOCATION AND DE-ALLOCATION
@@ -169,6 +172,9 @@ extern void HTMemory_outofmem(char * name, char * file, unsigned long line);
 /*
 
  */
+
+PR_END_EXTERN_C
+
 #endif /* HTMEMORY_H */
 /*
 

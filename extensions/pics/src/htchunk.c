@@ -52,7 +52,7 @@ with copyright holders.
 /*	Create a chunk with a certain allocation unit
 **	--------------
 */
-PUBLIC HTChunk * HTChunk_new (int grow)
+PUBLIC HTChunk * HTChunk_new (PRInt32 grow)
 {
     HTChunk * ch;
     if ((ch = (HTChunk  *) HT_CALLOC(1, sizeof(HTChunk))) == NULL)
@@ -90,7 +90,7 @@ PUBLIC void HTChunk_delete (HTChunk * ch)
 /*	Create a chunk from an allocated string
 **	---------------------------------------
 */
-PUBLIC HTChunk * HTChunk_fromCString (char * str, int grow)
+PUBLIC HTChunk * HTChunk_fromCString (char * str, PRInt32 grow)
 {
     HTChunk * ch;
     ch = HTChunk_new(grow);
@@ -140,17 +140,17 @@ PUBLIC void HTChunk_putc (HTChunk * ch, char c)
 */
 PUBLIC void HTChunk_puts (HTChunk * ch, const char * s)
 {
-     HTChunk_putb(ch, s, (int) PL_strlen(s));
+     HTChunk_putb(ch, s, (PRInt32) PL_strlen(s));
 }
 
 /*	Append a block
 **	---------------
 **	The string is always zero terminated
 */
-PUBLIC void HTChunk_putb (HTChunk * ch, const char * block, int len)
+PUBLIC void HTChunk_putb (HTChunk * ch, const char * block, PRInt32 len)
 {
     if (ch && block && len) {
-	int needed = ch->size+len;
+	PRInt32 needed = ch->size+len;
 	if (needed >= ch->allocated) {
 	    ch->allocated = needed - needed%ch->growby + ch->growby;
 	    if (ch->data) {
@@ -171,10 +171,10 @@ PUBLIC void HTChunk_putb (HTChunk * ch, const char * block, int len)
 /*	Ensure a certain size
 **	---------------------
 */
-PUBLIC void HTChunk_ensure (HTChunk * ch, int len)
+PUBLIC void HTChunk_ensure (HTChunk * ch, PRInt32 len)
 {
     if (ch && len) {
-	int needed = ch->size+len;
+	PRInt32 needed = ch->size+len;
 	if (needed >= ch->allocated) {
 	    ch->allocated = needed - needed%ch->growby + ch->growby;
 	    if (ch->data) {

@@ -155,19 +155,19 @@ PUBLIC void * HTList_firstObject  (HTList * me)
 	return NULL;
 }
 
-PUBLIC int HTList_count  (HTList * me)
+PUBLIC PRInt32 HTList_count  (HTList * me)
 {
-    int count = 0;
+    PRInt32 count = 0;
     if (me)
 	while ((me = me->next) != NULL)
 	    count++;
     return count;
 }
 
-PUBLIC int HTList_indexOf (HTList * me, void * object)
+PUBLIC PRInt32 HTList_indexOf (HTList * me, void * object)
 {
     if (me) {
-	int position = 0;
+	PRInt32 position = 0;
 	while ((me = me->next) != NULL) {
 	    if (me->object == object)
 		return position;
@@ -177,7 +177,7 @@ PUBLIC int HTList_indexOf (HTList * me, void * object)
     return -1;
 }
 
-PUBLIC void * HTList_objectAt  (HTList * me, int position)
+PUBLIC void * HTList_objectAt  (HTList * me, PRInt32 position)
 {
     if (position < 0)
 	return NULL;
@@ -191,7 +191,7 @@ PUBLIC void * HTList_objectAt  (HTList * me, int position)
     return NULL;		/* Reached the end of the list */
 }
 
-PRIVATE void * HTList_removeObjectAt  (HTList * me, int position)
+PRIVATE void * HTList_removeObjectAt  (HTList * me, PRInt32 position)
 {
     if (position < 0)
 	return NULL;
