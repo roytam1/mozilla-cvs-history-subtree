@@ -1177,8 +1177,11 @@ Boolean CPluginWindow::IsPluginCommand(CommandT inCommand)
 	// whether the command is synthetic and is from one of the plugin's menus.
 	if (thePluginManager != NULL) {
 		short menuID, menuItem;
-		if (LCommander::IsSyntheticCommand(inCommand, menuID, menuItem))
-			return thePluginManager->HasAllocatedMenuID(mEventHandler, menuID);
+		if (LCommander::IsSyntheticCommand(inCommand, menuID, menuItem)) {
+			PRBool hasAllocated = PR_FALSE;
+			if (thePluginManager->HasAllocatedMenuID(mEventHandler, menuID, &hasAllocated) == NS_OK)
+				return hasAllocated;
+		}
 	}
 	return false;
 #else
