@@ -32,6 +32,7 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= xpinstall
 DIRS		= public res src stub cleanup
+PACKAGE_FILE = installjs.pkg
 
 ifdef MOZ_INSTALLER
 DIRS		+= wizard/libxpnet

@@ -1,0 +1,47 @@
+#if OS_ARCH==WINNT
+[xpi-bootstrap]
+!preprocess @srcdir@/packager/windows/xpcom.jst xpiroot/install.js
+
+!optional @topsrcdir@/../redist/microsoft/system/msvcrt.dll
+!=The Microsoft redistributable system file msvcrt.dll was not found in
+!=$topsrcdir/../redist/microsoft/system/
+!=This file is required by the installer and browser. If you attempt to
+!=run the installer, you may encounter the following bug:
+!=http://bugzilla.mozilla.org/show_bug.cgi?id=27601
+
+!optional @topsrcdir@/../redist/microsoft/system/msvcirt.dll
+!=The Microsoft redistributable system file msvcirt.dll was not found in
+!=$topsrcdir/../redist/microsoft/system/
+!=This file is required by the installer and browser. If you attempt to
+!=run the installer, you may encounter the following bug:
+!=http://bugzilla.mozilla.org/show_bug.cgi?id=27601
+
+[gre-xpi]
+!preprocess @srcdir@/packager/win_gre/gre.jst xpiroot/install.js
+
+[xpfe-browser-xpi]
+!preprocess @srcdir@/packager/windows/browser.jst xpiroot/install.js
+
+[xpfe-lang-enUS-xpi]
+!preprocess @srcdir@/xpinstall/packager/windows/langenus.jst xpiroot/install.js
+
+[xpfe-locale-US-xpi]
+!preprocess @srcdir@/xpinstall/packager/windows/regus.jst xpiroot/install.js
+
+[xpfe-default-US-xpi]
+!preprocess @srcdir@/xpinstall/packager/windows/deflenus.jst xpiroot/install.js
+
+[xpfe-mailnews-xpi]
+!preprocess @srcdir@/xpinstall/packager/windows/mail.jst xpiroot/install.js
+
+[xpfe-editor-xpi]
+!preprocess @srcdir@/xpinstall/packager/windows/
+
+#else
+#if OS_ARCH==OS2
+
+#else
+[xpi-bootstrap gre-xpi xpfe-browser-xpi xpfe-lang-enUS-xpi xpfe-locale-US-xpi xpfe-default-US-xpi xpfe-mailnews-xpi xpfe-editor-xpi
+!error No XPI package definitions available for this platform!
+#endif
+#endif
