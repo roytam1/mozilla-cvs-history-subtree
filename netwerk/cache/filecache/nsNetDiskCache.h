@@ -69,7 +69,6 @@ class nsNetDiskCache : public nsINetDataDiskCache {
   nsCOMPtr<nsIFileSpec>             m_DBFile ;
 
   PRUint32                          m_MaxEntries ;
-  PRInt32 			                m_Capacity ;
   PRUint32                          m_StorageInUse ;
   nsIDBAccessor*                    m_DB ;
 

@@ -127,18 +127,6 @@ nsNetDiskCache::Init(void)
     PRInt32 nTemp = 0 ;
 
     /*
-    if(NS_SUCCEEDED(pref->GetIntPref(DISK_CACHE_PREF, &nTemp))) {
-      printf("cache size is %d bytes\n", nTemp) ;
-      m_Capacity = nTemp;
-    } else
-    */
-
-    {
-      m_Capacity = DISK_CACHE_SIZE_DEFAULT ;
-      printf("using default capacity value, %d bytes\n", m_Capacity) ;
-    }
-
-    /*
     rv = pref->CopyCharPref(CACHE_DIR_PREF, &tempPref) ;
     if (NS_SUCCEEDED(rv)) {
       printf("cache dir is %s\n", tempPref) ;
@@ -152,7 +140,6 @@ nsNetDiskCache::Init(void)
   }
   else {
     // temp hack for now. change later for other platform
-    m_Capacity = DISK_CACHE_SIZE_DEFAULT ;
     m_pDiskCacheFolder->SetUnixStyleFilePath("/tmp") ;
   }
 
@@ -437,13 +424,6 @@ NS_IMETHODIMP
 nsNetDiskCache::SetNextCache(nsINetDataCache *aNextCache)
 {
   m_pNextCache = aNextCache ;
-  return NS_OK ;
-}
-
-NS_IMETHODIMP
-nsNetDiskCache::GetCapacity(PRUint32 *aCapacity)
-{
-  *aCapacity = m_Capacity ;
   return NS_OK ;
 }
 
