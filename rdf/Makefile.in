@@ -26,7 +26,11 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= base util datasource resources chrome build
+DIRS		= base util datasource resources build
+
+ifndef MOZ_XUL_APP
+DIRS            += chrome
+endif
 
 ifdef ENABLE_TESTS
 DIRS		+= tests

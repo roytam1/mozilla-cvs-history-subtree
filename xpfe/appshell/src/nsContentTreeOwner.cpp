@@ -597,36 +597,34 @@ NS_IMETHODIMP nsContentTreeOwner::GetTitle(PRUnichar** aTitle)
 NS_IMETHODIMP nsContentTreeOwner::SetTitle(const PRUnichar* aTitle)
 {
    // We only allow the title to be set from the primary content shell
-   if(!mPrimary || !mContentTitleSetting)
-      return NS_OK;
+  if(!mPrimary || !mContentTitleSetting)
+    return NS_OK;
+  
+  nsAutoString   title;
+  nsAutoString   docTitle(aTitle);
 
-   nsAutoString   title;
-   nsAutoString   docTitle(aTitle);
+  if (docTitle.IsEmpty())
+    docTitle.Assign(mTitleDefault);
+  
+  if (!docTitle.IsEmpty()) {
+    if (!mTitlePreface.IsEmpty()) {
+      // Title will be: "Preface: Doc Title - Mozilla"
+      title.Assign(mTitlePreface);
+      title.Append(docTitle);
+    }
+    else {
+      // Title will be: "Doc Title - Mozilla"
+      title = docTitle;
+    }
+  
+    title += mTitleSeparator + mWindowTitleModifier;
+  }
+  else
+    title.Assign(mWindowTitleModifier); // Title will just be plain "Mozilla"
 
-   if(!docTitle.IsEmpty())
-      {
-      if(!mTitlePreface.IsEmpty())
-         {
-         // Title will be: "Preface: Doc Title - Mozilla"
-         title.Assign(mTitlePreface);
-         title.Append(docTitle);
-         }
-      else 
-         {
-         // Title will be: "Doc Title - Mozilla"
-         title = docTitle;
-         }
-      title += mTitleSeparator + mWindowTitleModifier;
-      }
-   else 
-      { 
-      // Title will just be plain: Mozilla
-      title.Assign(mWindowTitleModifier);
-      }
-
-   // XXX Don't need to fully qualify this once I remove nsWebShellWindow::SetTitle
-   // return mXULWindow->SetTitle(title.get());
-   return mXULWindow->nsXULWindow::SetTitle(title.get());
+  // XXX Don't need to fully qualify this once I remove nsWebShellWindow::SetTitle
+  // return mXULWindow->SetTitle(title.get());
+  return mXULWindow->nsXULWindow::SetTitle(title.get());
 }
 
 //*****************************************************************************
@@ -712,9 +710,23 @@ void nsContentTreeOwner::XULWindow(nsXULWindow* aXULWindow)
          if(contentTitleSetting.Equals(NS_LITERAL_STRING("true")))
             {
             mContentTitleSetting = PR_TRUE;
+            docShellElement->GetAttribute(NS_LITERAL_STRING("titledefault"), mTitleDefault);
             docShellElement->GetAttribute(NS_LITERAL_STRING("titlemodifier"), mWindowTitleModifier);
-            docShellElement->GetAttribute(NS_LITERAL_STRING("titlemenuseparator"), mTitleSeparator);
             docShellElement->GetAttribute(NS_LITERAL_STRING("titlepreface"), mTitlePreface);
+            
+#if defined(XP_MACOSX) && defined(MOZ_XUL_APP)
+            // On OS X, treat the titlemodifier like it's the titledefault, and don't ever append
+            // the separator + appname.
+            if (mTitleDefault.IsEmpty()) {
+                docShellElement->SetAttribute(NS_LITERAL_STRING("titledefault"),
+                                              mWindowTitleModifier);
+                docShellElement->RemoveAttribute(NS_LITERAL_STRING("titlemodifier"));
+                mTitleDefault = mWindowTitleModifier;
+                mWindowTitleModifier.Truncate();
+            }
+#else
+            docShellElement->GetAttribute(NS_LITERAL_STRING("titlemenuseparator"), mTitleSeparator);
+#endif
             }
          }
       else

@@ -107,7 +107,6 @@ pref("mail.check_time",                     10);
 pref("mail.pop_name",                       "");
 pref("mail.remember_password",              false);
 pref("mail.pop_password",                   "");
-pref("mail.auto_quote",                     true);
 pref("mail.fixed_width_messages",           true);
 pref("mail.citation_color",                 ""); // quoted color
 pref("mail.quoted_style",                   0); // 0=plain, 1=bold, 2=italic, 3=bolditalic
@@ -142,9 +141,9 @@ pref("mail.addr_book.displayName.lastnamefirst", "chrome://messenger/locale/mess
 pref("mail.addr_book.show_phonetic_fields", "chrome://messenger/locale/messenger.properties");
 pref("mail.attach_vcard",                   false);
 pref("mail.html_compose",                   true);
-// you can specify one, option header
+// you can specify multiple, option headers
 // this will show up in the address picker in the compose window
-// examples: "X-Face" or "Approved"
+// examples: "X-Face" or "Approved,X-No-Archive"
 pref("mail.compose.other.header",	    "");
 pref("mail.fcc_folder",                     "");
 pref("mail.encrypt_outgoing_mail",          false);
@@ -173,8 +172,6 @@ pref("news.mark_old_read",                  false);
 
 pref("mailnews.wraplength",                 72);
 pref("mail.compose.wrap_to_window_width",   false);
-
-pref("mailnews.reply_on_top",               0); // 0=bottom 1=top 2=select+bottom 3=select+top
 
 // 0=no header, 1="<author> wrote:", 2="On <date> <author> wrote:", 3="<author> wrote On <date>:", 4=user specified
 pref("mailnews.reply_header_type",          1);
@@ -205,6 +202,8 @@ pref("mailnews.search_date_format",        "chrome://messenger/locale/messenger.
 pref("mailnews.search_date_separator",     "chrome://messenger/locale/messenger.properties");
 
 pref("mailnews.language_sensitive_font",    true);
+
+pref("mailnews.quotingPrefs.version",       0);  // used to decide whether to migrate global quoting prefs
 
 pref("offline.news.download.unread_only",   true);
 pref("offline.news.download.by_date",       true);
@@ -311,6 +310,13 @@ pref("mail.identity.default.draft_folder","mailbox://nobody@Local%20Folders/Draf
 pref("mail.identity.default.stationery_folder","mailbox://nobody@Local%20Folders/Templates");
 pref("mail.identity.default.directoryServer","");
 pref("mail.identity.default.overrideGlobal_Pref", false);
+pref("mail.identity.default.auto_quote", true);
+pref("mail.identity.default.reply_on_top", 0); // 0=bottom 1=top 2=select
+// Headers to always add to outgoing mail
+// examples: "header1,header2"
+// pref("mail.identity.id1.headers", "header1");
+// user_pref("mail.identity.id1.header.header1", "X-Mozilla-Rocks: True")
+pref("mail.identity.default.headers", "");
 
 // by default, only collect addresses the user sends to (outgoing)
 // incoming is all spam anyways
@@ -534,6 +540,8 @@ pref("mail.compose.add_undisclosed_recipients", true);
 pref("mail.purge.min_delay",480);
 pref("mail.purge.timer_interval",5); 
 
+// require a password before showing imap or local headers in thread pane
+pref("mail.password_protect_local_cache", false);
 // to reduce forking in the js / C++
 // overridden by stand alone mail
 pref("mail.standalone", false);

@@ -869,10 +869,19 @@ browser/components/prefwindow/locale/Makefile
 browser/components/search/Makefile
 browser/components/search/resources/Makefile
 browser/components/security/Makefile
+browser/components/sidebar/Makefile
+browser/components/sidebar/public/Makefile
+browser/components/sidebar/src/Makefile
 "
 
 MAKEFILES_xulapp="
+chrome/Makefile
+chrome/public/Makefile
+chrome/src/Makefile
+chrome/tools/Makefile
+chrome/tools/chromereg/Makefile
 toolkit/Makefile
+toolkit/content/buildconfig.html
 toolkit/components/autocomplete/Makefile
 toolkit/components/autocomplete/public/Makefile
 toolkit/components/autocomplete/src/Makefile
@@ -890,7 +899,6 @@ toolkit/components/satchel/Makefile
 toolkit/components/satchel/public/Makefile
 toolkit/components/satchel/src/Makefile
 toolkit/components/viewsource/Makefile
-toolkit/content/mac/Makefile
 toolkit/skin/mac/Makefile
 toolkit/skin/unix/Makefile
 toolkit/skin/win/Makefile
