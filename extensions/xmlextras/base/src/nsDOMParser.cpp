@@ -87,6 +87,7 @@ public:
 
 protected:
   nsCString mContentType;
+  nsCString mContentCharset;
   nsresult mStatus;
   PRInt32 mContentLength;
   nsCOMPtr<nsIURI> mURI;
@@ -195,12 +196,13 @@ NS_IMETHODIMP nsDOMParserChannel::SetContentType(const nsACString &aContentType)
 /* attribute ACString contentCharset; */
 NS_IMETHODIMP nsDOMParserChannel::GetContentCharset(nsACString &aContentCharset)
 {
-  aContentCharset.Truncate();
+  aContentCharset = mContentCharset;
   return NS_OK;
 }
 NS_IMETHODIMP nsDOMParserChannel::SetContentCharset(const nsACString &aContentCharset)
 {
-  return NS_ERROR_NOT_IMPLEMENTED;
+  mContentCharset = aContentCharset;
+  return NS_OK;
 }
 
 /* attribute long contentLength; */
@@ -575,6 +577,7 @@ nsDOMParser::ParseFromStream(nsIInputStream *stream,
   if (principal) {
     channel->SetOwner(principal);
   }
+  parserChannel->SetContentCharset(charset);
   nsCOMPtr<nsIRequest> request = NS_STATIC_CAST(nsIRequest*, parserChannel);
 
   // Tell the document to start loading
