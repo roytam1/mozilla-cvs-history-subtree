@@ -40,6 +40,8 @@
 #include "nsDebug.h"
 #include "nsIAtom.h"
 #include "nsIDocument.h"
+#include "nsIDOMNode.h"
+#include "nsIDOMNodeObserver.h"
 #include "nsINameSpaceManager.h"
 #include "nsIRDFContent.h"
 #include "nsIRDFContentModelBuilder.h"
@@ -93,7 +95,8 @@ DEFINE_RDF_VOCAB(RDF_NAMESPACE_URI, RDF, child); // XXX bogus: needs to be NC:ch
 ////////////////////////////////////////////////////////////////////////
 
 class RDFXULBuilderImpl : public nsIRDFContentModelBuilder,
-                          public nsIRDFObserver
+                          public nsIRDFObserver,
+                          public nsIDOMNodeObserver
 {
 private:
     nsIRDFCompositeDataSource* mDB;
@@ -134,8 +137,14 @@ public:
     NS_IMETHOD OnAssert(nsIRDFResource* aSubject, nsIRDFResource* aPredicate, nsIRDFNode* aObject);
     NS_IMETHOD OnUnassert(nsIRDFResource* aSubject, nsIRDFResource* aPredicate, nsIRDFNode* aObjetct);
 
+    // nsIDOMNodeObserver interface
+    NS_DECL_IDOMNODEOBSERVER
+
     // Implementation methods
     nsresult AppendChild(nsIContent* aElement,
+                         nsIRDFNode* aValue);
+
+    nsresult RemoveChild(nsIContent* aElement,
                          nsIRDFNode* aValue);
 
     nsresult CreateElement(nsIRDFResource* aResource,
@@ -157,8 +166,15 @@ public:
                           nsIRDFResource* aProperty,
                           nsIRDFNode* aValue);
 
+    nsresult RemoveAttribute(nsIContent* aElement,
+                             nsIRDFResource* aProperty,
+                             nsIRDFNode* aValue);
+
     nsresult CreateTreeBuilder(nsIContent* aElement,
                                const nsString& aDataSources);
+
+    nsresult
+    GetDOMNodeResource(nsIDOMNode* aNode, nsIRDFResource** aResource);
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -256,7 +272,10 @@ static const char kRDFNameSpaceURI[]
 RDFXULBuilderImpl::~RDFXULBuilderImpl(void)
 {
     NS_IF_RELEASE(mRoot);
-    NS_IF_RELEASE(mDB);
+    if (mDB) {
+        mDB->RemoveObserver(this);
+        NS_RELEASE(mDB);
+    }
     // NS_IF_RELEASE(mDocument) not refcounted
 
     if (--gRefCnt == 0) {
@@ -293,6 +312,11 @@ RDFXULBuilderImpl::QueryInterface(REFNSIID iid, void** aResult)
     }
     else if (iid.Equals(kIRDFObserverIID)) {
         *aResult = NS_STATIC_CAST(nsIRDFObserver*, this);
+        NS_ADDREF(this);
+        return NS_OK;
+    }
+    else if (iid.Equals(nsIDOMNodeObserver::IID())) {
+        *aResult = NS_STATIC_CAST(nsIDOMNodeObserver*, this);
         NS_ADDREF(this);
         return NS_OK;
     }
@@ -333,6 +357,8 @@ RDFXULBuilderImpl::SetDataBase(nsIRDFCompositeDataSource* aDataBase)
 
     mDB = aDataBase;
     NS_ADDREF(mDB);
+
+    mDB->AddObserver(this);
     return NS_OK;
 }
 
@@ -544,12 +570,200 @@ RDFXULBuilderImpl::OnUnassert(nsIRDFResource* aSubject,
                               nsIRDFResource* aPredicate,
                               nsIRDFNode* aObject)
 {
+    NS_PRECONDITION(mDocument != nsnull, "not initialized");
+    if (! mDocument)
+        return NS_ERROR_NOT_INITIALIZED;
+
+    nsresult rv;
+
+    nsCOMPtr<nsISupportsArray> elements;
+    if (NS_FAILED(rv = NS_NewISupportsArray(getter_AddRefs(elements)))) {
+        NS_ERROR("unable to create new ISupportsArray");
+        return rv;
+    }
+
+    // Find all the elements in the content model that correspond to
+    // aSubject: for each, we'll try to build XUL children if
+    // appropriate.
+    if (NS_FAILED(rv = mDocument->GetElementsForResource(aSubject, elements))) {
+        NS_ERROR("unable to retrieve elements from resource");
+        return rv;
+    }
+
+    for (PRInt32 i = elements->Count() - 1; i >= 0; --i) {
+        nsCOMPtr<nsIContent> element(elements->ElementAt(i));
+        
+        // XXX somehow figure out if building XUL kids on this
+        // particular element makes any sense whatsoever.
+
+        if (aPredicate == kRDF_child) {
+            // It's a child node. If the contents of aElement _haven't_
+            // yet been generated, then just ignore the unassertion. We do
+            // this because we know that _eventually_ the contents will be
+            // generated (via CreateContents()) when somebody asks for
+            // them later.
+            nsAutoString contentsGenerated;
+            if (NS_FAILED(rv = element->GetAttribute(kNameSpaceID_XUL,
+                                                     kContentsGeneratedAtom,
+                                                     contentsGenerated))) {
+                NS_ERROR("severe problem trying to get attribute");
+                return rv;
+            }
+
+            if (rv == NS_CONTENT_ATTR_NOT_THERE || rv == NS_CONTENT_ATTR_NO_VALUE)
+                continue;
+
+            if (! contentsGenerated.EqualsIgnoreCase("true"))
+                continue;
+
+            // Okay, it's a "live" element, so go ahead and append the new
+            // child to this node.
+            if (NS_FAILED(RemoveChild(element, aObject))) {
+                NS_ERROR("problem removing child from content model");
+                return rv;
+            }
+        }
+        else if (aPredicate == kRDF_type) {
+            // We shouldn't ever see this: if we do, there ain't much we
+            // can do.
+            NS_ERROR("attempt to remove tag type");
+            return NS_ERROR_UNEXPECTED;
+        }
+        else {
+            // Add the thing as a vanilla attribute to the element.
+            if (NS_FAILED(rv = RemoveAttribute(element, aPredicate, aObject))) {
+                NS_ERROR("unable to remove attribute to the element");
+                return rv;
+            }
+        }
+    }
+    return NS_OK;
+}
+
+
+////////////////////////////////////////////////////////////////////////
+// nsIDOMNodeObserver interface
+
+NS_IMETHODIMP
+RDFXULBuilderImpl::OnSetNodeValue(nsIDOMNode* aNode, const nsString& aValue)
+{
+    NS_NOTYETIMPLEMENTED("write me!");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+nsresult
+RDFXULBuilderImpl::GetDOMNodeResource(nsIDOMNode* aNode, nsIRDFResource** aResource)
+{
+    nsresult rv;
+
+    nsCOMPtr<nsIContent> element;
+    if (NS_FAILED(rv = aNode->QueryInterface(kIContentIID, getter_AddRefs(element) ))) {
+        NS_ERROR("DOM element doesn't support nsIContent");
+        return rv;
+    }
+
+    nsAutoString uri;
+    if (NS_FAILED(rv = element->GetAttribute(kNameSpaceID_RDF,
+                                             kIdAtom,
+                                             uri))) {
+        NS_ERROR("severe error retrieving attribute");
+        return rv;
+    }
+
+    if (rv != NS_CONTENT_ATTR_HAS_VALUE) {
+        NS_ERROR("tree element has no RDF:ID");
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    nsCOMPtr<nsIRDFResource> resource;
+    if (NS_FAILED(rv = gRDFService->GetUnicodeResource(uri, aResource))) {
+        NS_ERROR("unable to create resource");
+        return rv;
+    }
+
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+RDFXULBuilderImpl::OnInsertBefore(nsIDOMNode* aParent, nsIDOMNode* aNewChild, nsIDOMNode* aRefChild)
+{
+    nsresult rv;
+
+    nsCOMPtr<nsIRDFResource> parent;
+    if (NS_FAILED(rv = GetDOMNodeResource(aParent, getter_AddRefs(parent)))) {
+        NS_ERROR("parent doesn't support nsIContent");
+        return rv;
+    }
+
+    nsCOMPtr<nsIRDFResource> newChild;
+    if (NS_FAILED(rv = GetDOMNodeResource(aNewChild, getter_AddRefs(newChild)))) {
+        NS_ERROR("new child doesn't have a resource");
+        return rv;
+    }
+
+    nsCOMPtr<nsIDOMNode> oldParentNode;
+    if (NS_FAILED(rv = aNewChild->GetParentNode(getter_AddRefs(oldParentNode)))) {
+        NS_ERROR("unable to get new child's parent");
+        return rv;
+    }
+
+    if (oldParentNode) {
+        nsCOMPtr<nsIRDFResource> oldParent;
+        if (NS_FAILED(rv = GetDOMNodeResource(oldParentNode, getter_AddRefs(oldParent)))) {
+            NS_ERROR("old parent doesn't have a resource");
+            return rv;
+        }
+
+        if (NS_FAILED(rv = mDB->Unassert(oldParent, kRDF_child, newChild))) {
+            NS_ERROR("unable to remove newChild from oldParent");
+            return rv;
+        }
+    }
+
+    nsCOMPtr<nsIRDFResource> refChild;
+    if (NS_FAILED(rv = GetDOMNodeResource(aRefChild, getter_AddRefs(refChild)))) {
+        NS_ERROR("ref child doesn't have a resource");
+        return rv;
+    }
+
+    if (NS_FAILED(rv = mDB->Assert(parent, kRDF_child, newChild, PR_TRUE))) {
+        NS_ERROR("unable to make new assertion");
+        return rv;
+    }
+
+    return NS_OK;
+}
+
+
+
+NS_IMETHODIMP
+RDFXULBuilderImpl::OnReplaceChild(nsIDOMNode* aParent, nsIDOMNode* aNewChild, nsIDOMNode* aOldChild)
+{
+    NS_NOTYETIMPLEMENTED("write me!");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
+
+NS_IMETHODIMP
+RDFXULBuilderImpl::OnRemoveChild(nsIDOMNode* aParent, nsIDOMNode* aOldChild)
+{
+    NS_NOTYETIMPLEMENTED("write me!");
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
+
+NS_IMETHODIMP
+RDFXULBuilderImpl::OnAppendChild(nsIDOMNode* aParent, nsIDOMNode* aNewChild)
+{
     NS_NOTYETIMPLEMENTED("write me!");
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 
 ////////////////////////////////////////////////////////////////////////
+// Implementation methods
 
 nsresult
 RDFXULBuilderImpl::AppendChild(nsIContent* aElement,
@@ -586,6 +800,59 @@ RDFXULBuilderImpl::AppendChild(nsIContent* aElement,
             NS_ERROR("unable to add text to content model");
             return rv;
         }
+    }
+    else {
+        // This should _never_ happen
+        NS_ERROR("node is not a value or a resource");
+        return NS_ERROR_UNEXPECTED;
+    }
+
+    return NS_OK;
+}
+
+
+
+nsresult
+RDFXULBuilderImpl::RemoveChild(nsIContent* aElement, nsIRDFNode* aValue)
+{
+    nsresult rv;
+
+    // Remove the specified node from the children of this
+    // element. What we do will vary slightly depending on whether
+    // aValue is a resource or a literal.
+    nsCOMPtr<nsIRDFResource> resource;
+    nsCOMPtr<nsIRDFLiteral> literal;
+
+    if (NS_SUCCEEDED(rv = aValue->QueryInterface(kIRDFResourceIID,
+                                                 (void**) getter_AddRefs(resource)))) {
+
+        // If it's a resource, then look for a child container to remove
+        const char* resourceURI;
+        resource->GetValue(&resourceURI);
+
+        PRInt32 count;
+        aElement->ChildCount(count);
+        while (--count >= 0) {
+            nsCOMPtr<nsIContent> child;
+            aElement->ChildAt(count, *getter_AddRefs(child));
+
+            nsAutoString uri;
+            rv = child->GetAttribute(kNameSpaceID_RDF, kIdAtom, uri);
+            if (rv != NS_CONTENT_ATTR_HAS_VALUE)
+                continue;
+
+            if (! uri.Equals(resourceURI))
+                continue;
+
+            // okay, found it. now blow it away...
+            aElement->RemoveChildAt(count, PR_TRUE);
+            return NS_OK;
+        }
+    }
+    else if (NS_SUCCEEDED(rv = aValue->QueryInterface(kIRDFLiteralIID,
+                                                      (void**) getter_AddRefs(literal)))) {
+        // If it's a literal, then look for a simple text node to remove
+        NS_NOTYETIMPLEMENTED("write me!");
     }
     else {
         // This should _never_ happen
@@ -896,6 +1163,14 @@ RDFXULBuilderImpl::AddAttribute(nsIContent* aElement,
     return rv;
 }
 
+
+nsresult
+RDFXULBuilderImpl::RemoveAttribute(nsIContent* aElement,
+                                   nsIRDFResource* aProperty,
+                                   nsIRDFNode* aValue)
+{
+    return NS_OK;
+}
 
 nsresult
 RDFXULBuilderImpl::CreateTreeBuilder(nsIContent* aElement,
