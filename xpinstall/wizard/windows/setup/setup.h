@@ -279,6 +279,7 @@ struct sinfoComponent
   DWORD           dwAttributes;
   LPSTR           szArchiveName;
   LPSTR           szArchivePath;
+  LPSTR           szDestinationPath;
   LPSTR           szDescriptionShort;
   LPSTR           szDescriptionLong;
   LPSTR           szParameter;
