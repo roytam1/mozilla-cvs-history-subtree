@@ -117,7 +117,7 @@ while ($entry)
       $conn->printError() if $conn->getError();
     }
 
-  $entry = $conn->entry;
+  $entry = $conn->nextEntry();
 }
 
 
