@@ -353,8 +353,8 @@ static PRInt32 IndexOf(nsIDOMNodeList* aNodeList, nsIDOMNode* aChild)
   return -1;
 }
 
-nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
-                     nsIDOMNode*& aNextNode, PRInt32& aDirection)
+static nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
+                            nsIDOMNode*& aNextNode, PRInt32& aDirection)
 {
   PRBool hasChildren;
 
@@ -366,7 +366,7 @@ nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
     ChildAt(aNode, 0, &aNextNode);
     NS_ENSURE_TRUE(aNextNode, NS_ERROR_FAILURE);
 
-    aIndexArray.AppendElement(0);
+    aIndexArray.AppendElement((void *)1);
 
     aDirection = 1;
   } else if (aDirection > 0) {
@@ -375,6 +375,9 @@ nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
     NS_ADDREF(aNextNode);
 
     aDirection = -1;
+
+    PRInt32 count = aIndexArray.Count();
+    aIndexArray.RemoveElementAt(count - 1);
   } else {
     nsCOMPtr<nsIDOMNode> parent;
 
