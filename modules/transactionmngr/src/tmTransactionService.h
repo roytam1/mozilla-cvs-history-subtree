@@ -161,7 +161,9 @@ public:
 
   /**
     * Sends a message to attach to the queue named by the arg passed in and
-    *   link those transactions to the observer passed in.
+    *   link those transactions to the observer passed in. The boolean arg
+    *   determines wether the calling app will be called back asynchronously
+    *   or synchronously.
     *
     * @returns NS_OK if everything goes well and the attach message is sent
     * @returns TM_ERROR_QUEUE_EXISTS if the queue already exists which means
@@ -171,7 +173,8 @@ public:
     *          transaction
     */
   NS_IMETHOD Attach(const nsACString & aQueueName, 
-                    tmITransactionObserver *aObserver);
+                    tmITransactionObserver *aObserver,
+                    PRBool aAsync);
 
   /**
     * Sends a message to remove the listener from the queue named by the arg

@@ -67,7 +67,7 @@ void init(in ACString aProfileName);
   * @param aQueueName
   *        the name of the area to listen for transaction from. ie cookies
   */
-void attach(in ACString aQueueName, in tmITransactionObserver aObserver);
+void attach(in ACString aQueueName, in tmITransactionObserver aObserver, in boolean aAsync);
 
 /**
   * Called when a consumer of a type of data wants to stop posting

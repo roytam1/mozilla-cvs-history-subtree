@@ -226,7 +226,7 @@ PRInt32 main(PRInt32 argc, char *argv[])
     printf("tmModuleTest: using profileName [%s]\n", profileName);
 
     // attach to the queue in the transaction manager
-    gTransServ->Attach(nsDependentCString(queueName), observ);
+    gTransServ->Attach(nsDependentCString(queueName), observ, PR_TRUE);
     printf("tmModuleTest: observing queue [%s]\n", queueName);
 
 

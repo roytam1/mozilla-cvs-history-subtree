@@ -116,7 +116,8 @@ tmTransactionService::Init(const nsACString & aProfileName) {
 
 NS_IMETHODIMP
 tmTransactionService::Attach(const nsACString & aQueueName, 
-                             tmITransactionObserver *aObserver) {
+                             tmITransactionObserver *aObserver,
+                             PRBool aAsync) {
 
   nsresult rv = NS_ERROR_OUT_OF_MEMORY;  // prime the return value
 
