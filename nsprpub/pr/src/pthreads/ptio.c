@@ -173,11 +173,21 @@ static ssize_t (*pt_aix_sendfile_fptr)() = NULL;
 #endif /* HAVE_SEND_FILE */
 #endif /* AIX */
 
+#ifdef LINUX
+#include <sys/sendfile.h>
+#endif
+
 #include "primpl.h"
 
 /* On Alpha Linux, these are already defined in sys/socket.h */
 #if !(defined(LINUX) && defined(__alpha))
 #include <netinet/tcp.h>  /* TCP_NODELAY, TCP_MAXSEG */
+#ifdef LINUX
+/* TCP_CORK is not defined in <netinet/tcp.h> on Red Hat Linux 6.0 */
+#ifndef TCP_CORK
+#define TCP_CORK 3
+#endif
+#endif
 #endif
 
 #if defined(SOLARIS)
@@ -338,6 +348,15 @@ struct pt_Continuation
      */
     int nbytes_to_send;                     /* size of header and file */
 #endif  /* SOLARIS */
+
+#ifdef LINUX
+    /*
+     * For sendfile()
+     */
+    int in_fd;                              /* descriptor of file to send */
+    off_t offset;
+    size_t count;
+#endif  /* LINUX */
  
     PRIntervalTime timeout;                 /* client (relative) timeout */
 
@@ -406,6 +425,7 @@ static void pt_poll_now_with_select(pt_Continuation *op)
 	fd_set rd, wr, *rdp, *wrp;
 	struct timeval tv;
 	PRIntervalTime epoch, now, elapsed, remaining;
+	PRBool wait_for_remaining;
     PRThread *self = PR_GetCurrentThread();
     
 	PR_ASSERT(PR_INTERVAL_NO_WAIT != op->timeout);
@@ -485,9 +505,12 @@ static void pt_poll_now_with_select(pt_Continuation *op)
 				} else
 					wrp = NULL;
 
+    			wait_for_remaining = PR_TRUE;
     			msecs = (PRInt32)PR_IntervalToMilliseconds(remaining);
-				if (msecs > PT_DEFAULT_POLL_MSEC)
+				if (msecs > PT_DEFAULT_POLL_MSEC) {
+					wait_for_remaining = PR_FALSE;
 					msecs = PT_DEFAULT_POLL_MSEC;
+				}
 				tv.tv_sec = msecs/PR_MSEC_PER_SEC;
 				tv.tv_usec = (msecs % PR_MSEC_PER_SEC) * PR_USEC_PER_MSEC;
 				rv = select(op->arg1.osfd + 1, rdp, wrp, NULL, &tv);
@@ -514,9 +537,12 @@ static void pt_poll_now_with_select(pt_Continuation *op)
 
 				} else if ((rv == 0) ||
 						((errno == EINTR) || (errno == EAGAIN))) {
-					if (rv == 0)	/* select timed out */
-						now += PR_MillisecondsToInterval(msecs);
-					else
+					if (rv == 0) {	/* select timed out */
+						if (wait_for_remaining)
+							now += remaining;
+						else
+							now += PR_MillisecondsToInterval(msecs);
+					} else
 						now = PR_IntervalNow();
 					elapsed = (PRIntervalTime) (now - epoch);
 					if (elapsed >= op->timeout) {
@@ -542,6 +568,7 @@ static void pt_poll_now(pt_Continuation *op)
 {
     PRInt32 msecs;
 	PRIntervalTime epoch, now, elapsed, remaining;
+	PRBool wait_for_remaining;
     PRThread *self = PR_GetCurrentThread();
     
 	PR_ASSERT(PR_INTERVAL_NO_WAIT != op->timeout);
@@ -618,9 +645,13 @@ static void pt_poll_now(pt_Continuation *op)
 				tmp_pfd.fd = op->arg1.osfd;
 				tmp_pfd.events = op->event;
 
+    			wait_for_remaining = PR_TRUE;
     			msecs = (PRInt32)PR_IntervalToMilliseconds(remaining);
 				if (msecs > PT_DEFAULT_POLL_MSEC)
+				{
+					wait_for_remaining = PR_FALSE;
 					msecs = PT_DEFAULT_POLL_MSEC;
+				}
 				rv = poll(&tmp_pfd, 1, msecs);
 				
 				if (self->state & PT_THREAD_ABORTED)
@@ -654,7 +685,12 @@ static void pt_poll_now(pt_Continuation *op)
 				} else if ((rv == 0) ||
 						((errno == EINTR) || (errno == EAGAIN))) {
 					if (rv == 0)	/* poll timed out */
-						now += PR_MillisecondsToInterval(msecs);
+					{
+						if (wait_for_remaining)
+							now += remaining;
+						else
+							now += PR_MillisecondsToInterval(msecs);
+					}
 					else
 						now = PR_IntervalNow();
 					elapsed = (PRIntervalTime) (now - epoch);
@@ -1029,7 +1065,8 @@ static PRBool pt_solaris_sendfile_cont(pt_Continuation *op, PRInt16 revents)
     op->syserrno = errno;
 
     if (count == -1) {
-        if (op->syserrno != EWOULDBLOCK && op->syserrno != EAGAIN) {
+        if (op->syserrno != EWOULDBLOCK && op->syserrno != EAGAIN
+                && op->syserrno != EINTR) {
             op->result.code = -1;
             return PR_TRUE;
         }
@@ -1058,6 +1095,33 @@ static PRBool pt_solaris_sendfile_cont(pt_Continuation *op, PRInt16 revents)
     return PR_TRUE;
 }
 #endif  /* SOLARIS */
+
+#ifdef LINUX 
+static PRBool pt_linux_sendfile_cont(pt_Continuation *op, PRInt16 revents)
+{
+    ssize_t rv;
+    off_t oldoffset;
+
+    oldoffset = op->offset;
+    rv = sendfile(op->arg1.osfd, op->in_fd, &op->offset, op->count);
+    op->syserrno = errno;
+
+    if (rv == -1) {
+        if (op->syserrno != EWOULDBLOCK && op->syserrno != EAGAIN) {
+            op->result.code = -1;
+            return PR_TRUE;
+        }
+        rv = 0;
+    }
+    PR_ASSERT(rv == op->offset - oldoffset);
+    op->result.code += rv;
+    if (rv < op->count) {
+        op->count -= rv;
+        return PR_FALSE;
+    }
+    return PR_TRUE;
+}
+#endif  /* LINUX */
 
 void _PR_InitIO(void)
 {
@@ -1614,6 +1678,14 @@ static PRFileDesc* pt_Accept(
     {
         PR_ASSERT(IsValidNetAddr(addr) == PR_TRUE);
         PR_ASSERT(IsValidNetAddrLen(addr, addr_len) == PR_TRUE);
+#ifdef LINUX
+        /*
+         * On Linux, experiments showed that the accepted sockets
+         * inherit the TCP_NODELAY socket option of the listening
+         * socket.
+         */
+        newfd->secret->md.tcp_nodelay = fd->secret->md.tcp_nodelay;
+#endif
     }
     return newfd;
 
@@ -2107,7 +2179,7 @@ static PRInt32 pt_AIXSendFile(PRFileDesc *sd, PRSendFileData *sfd,
     }
 
     if (count == -1) {
-        _MD_aix_map_sendfile_error(syserrno);
+        pt_MapError(_MD_aix_map_sendfile_error, syserrno);
         return -1;
     }
     if (flags & PR_TRANSMITFILE_CLOSE_SOCKET) {
@@ -2146,14 +2218,16 @@ static PRInt32 pt_HPUXSendFile(PRFileDesc *sd, PRSendFileData *sfd,
     PRInt32 count;
     int syserrno;
 
-    /* Get file size */
-    if (fstat(sfd->fd->secret->md.osfd, &statbuf) == -1) {
-        _PR_MD_MAP_FSTAT_ERROR(errno);
-        return -1;
+    if (sfd->file_nbytes == 0) {
+        /* Get file size */
+        if (fstat(sfd->fd->secret->md.osfd, &statbuf) == -1) {
+            _PR_MD_MAP_FSTAT_ERROR(errno);
+            return -1;
+        } 		
+        file_nbytes_to_send = statbuf.st_size - sfd->file_offset;
+    } else {
+        file_nbytes_to_send = sfd->file_nbytes;
     }
-	file_nbytes_to_send = (sfd->file_nbytes ==  0) ?
-						statbuf.st_size - sfd->file_offset :
-						sfd->file_nbytes;
     nbytes_to_send = sfd->hlen + sfd->tlen + file_nbytes_to_send;
 
     hdtrl[0].iov_base = (void *) sfd->header;  /* cast away the 'const' */
@@ -2228,7 +2302,7 @@ static PRInt32 pt_HPUXSendFile(PRFileDesc *sd, PRSendFileData *sfd,
     }
 
     if (count == -1) {
-        _MD_hpux_map_sendfile_error(syserrno);
+        pt_MapError(_MD_hpux_map_sendfile_error, syserrno);
         return -1;
     }
     if (flags & PR_TRANSMITFILE_CLOSE_SOCKET) {
@@ -2358,7 +2432,7 @@ static PRInt32 pt_SolarisSendFile(PRFileDesc *sd, PRSendFileData *sfd,
 
 done:
     if (count == -1) {
-        _MD_solaris_map_sendfile_error(syserrno);
+        pt_MapError(_MD_solaris_map_sendfile_error, syserrno);
         return -1;
     }
     if (flags & PR_TRANSMITFILE_CLOSE_SOCKET) {
@@ -2425,6 +2499,140 @@ static PRInt32 pt_SolarisDispatchSendFile(PRFileDesc *sd, PRSendFileData *sfd,
 
 #endif  /* SOLARIS */
 
+#ifdef LINUX
+/*
+ * pt_LinuxSendFile
+ *
+ *    Send file sfd->fd across socket sd. If specified, header and trailer
+ *    buffers are sent before and after the file, respectively.
+ *
+ *    PR_TRANSMITFILE_CLOSE_SOCKET flag - close socket after sending file
+ *    
+ *    return number of bytes sent or -1 on error
+ *
+ *      This implementation takes advantage of the sendfile() system
+ *      call available in Linux kernel 2.2 or higher.
+ */
+
+static PRInt32 pt_LinuxSendFile(PRFileDesc *sd, PRSendFileData *sfd,
+                PRTransmitFileFlags flags, PRIntervalTime timeout)
+{
+    struct stat statbuf;
+    size_t file_nbytes_to_send;	
+    PRInt32 count = 0;
+    ssize_t rv;
+    int syserrno;
+    off_t offset;
+    PRBool tcp_cork_enabled = PR_FALSE;
+    int tcp_cork;
+
+    if (sfd->file_nbytes == 0) {
+        /* Get file size */
+        if (fstat(sfd->fd->secret->md.osfd, &statbuf) == -1) {
+            _PR_MD_MAP_FSTAT_ERROR(errno);
+            return -1;
+        } 		
+        file_nbytes_to_send = statbuf.st_size - sfd->file_offset;
+    } else {
+        file_nbytes_to_send = sfd->file_nbytes;
+    }
+
+    if ((sfd->hlen != 0 || sfd->tlen != 0)
+            && sd->secret->md.tcp_nodelay == 0) {
+        tcp_cork = 1;
+        if (setsockopt(sd->secret->md.osfd, SOL_TCP, TCP_CORK,
+                &tcp_cork, sizeof tcp_cork) == 0) {
+            tcp_cork_enabled = PR_TRUE;
+        } else {
+            syserrno = errno;
+            if (syserrno != EINVAL) {
+                _PR_MD_MAP_SETSOCKOPT_ERROR(syserrno);
+                return -1;
+            }
+            /*
+             * The most likely reason for the EINVAL error is that
+             * TCP_NODELAY is set (with a function other than
+             * PR_SetSocketOption).  This is not fatal, so we keep
+             * on going.
+             */
+            PR_LOG(_pr_io_lm, PR_LOG_WARNING,
+                ("pt_LinuxSendFile: "
+                "setsockopt(TCP_CORK) failed with EINVAL\n"));
+        }
+    }
+
+    if (sfd->hlen != 0) {
+        count = PR_Send(sd, sfd->header, sfd->hlen, 0, timeout);
+        if (count == -1) {
+            goto failed;
+        }
+    }
+
+    if (file_nbytes_to_send != 0) {
+        offset = sfd->file_offset;
+        do {
+            rv = sendfile(sd->secret->md.osfd, sfd->fd->secret->md.osfd,
+                &offset, file_nbytes_to_send);
+        } while (rv == -1 && (syserrno = errno) == EINTR);
+        if (rv == -1) {
+            if (syserrno != EAGAIN && syserrno != EWOULDBLOCK) {
+                _MD_linux_map_sendfile_error(syserrno);
+                count = -1;
+                goto failed;
+            }
+            rv = 0;
+        }
+        PR_ASSERT(rv == offset - sfd->file_offset);
+        count += rv;
+
+        if (rv < file_nbytes_to_send) {
+            pt_Continuation op;
+
+            op.arg1.osfd = sd->secret->md.osfd;
+            op.in_fd = sfd->fd->secret->md.osfd;
+            op.offset = offset;
+            op.count = file_nbytes_to_send - rv;
+            op.result.code = count;
+            op.timeout = timeout;
+            op.function = pt_linux_sendfile_cont;
+            op.event = POLLOUT | POLLPRI;
+            count = pt_Continue(&op);
+            syserrno = op.syserrno;
+            if (count == -1) {
+                pt_MapError(_MD_linux_map_sendfile_error, syserrno);
+                goto failed;
+            }
+        }
+    }
+
+    if (sfd->tlen != 0) {
+        rv = PR_Send(sd, sfd->trailer, sfd->tlen, 0, timeout);
+        if (rv == -1) {
+            count = -1;
+            goto failed;
+        }
+        count += rv;
+    }
+
+failed:
+    if (tcp_cork_enabled) {
+        tcp_cork = 0;
+        if (setsockopt(sd->secret->md.osfd, SOL_TCP, TCP_CORK,
+                &tcp_cork, sizeof tcp_cork) == -1 && count != -1) {
+            _PR_MD_MAP_SETSOCKOPT_ERROR(errno);
+            count = -1;
+        }
+    }
+    if (count != -1) {
+        if (flags & PR_TRANSMITFILE_CLOSE_SOCKET) {
+            PR_Close(sd);
+        }
+        PR_ASSERT(count == sfd->hlen + sfd->tlen + file_nbytes_to_send);
+    }
+    return count;
+}
+#endif  /* LINUX */
+
 #ifdef AIX
 extern	int _pr_aix_send_file_use_disabled;
 #endif
@@ -2465,6 +2673,8 @@ static PRInt32 pt_SendFile(
 #else
 	return(pt_SolarisDispatchSendFile(sd, sfd, flags, timeout));
 #endif /* HAVE_SENDFILEV */
+#elif defined(LINUX)
+    	return(pt_LinuxSendFile(sd, sfd, flags, timeout));
 #else
 	return(PR_EmulateSendFile(sd, sfd, flags, timeout));
 #endif
@@ -2728,6 +2938,12 @@ static PRStatus pt_SetSocketOption(PRFileDesc *fd, const PRSocketOptionData *dat
                 rv = setsockopt(
                     fd->secret->md.osfd, level, name,
                     (char*)&value, sizeof(PRIntn));
+#ifdef LINUX
+                /* for pt_LinuxSendFile */
+                if (name == TCP_NODELAY && rv == 0) {
+                    fd->secret->md.tcp_nodelay = value;
+                }
+#endif
                 break;
             }
             case PR_SockOpt_McastLoopback:
