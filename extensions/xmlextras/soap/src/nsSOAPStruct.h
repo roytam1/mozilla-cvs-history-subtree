@@ -25,6 +25,7 @@
 
 #include "nsString.h"
 #include "nsISOAPStruct.h"
+#include "nsIXPCScriptable.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsCOMPtr.h"
 #include "nsHashtable.h"
@@ -32,6 +33,7 @@
 class nsSOAPStructEnumerator;
 
 class nsSOAPStruct : public nsISOAPStruct,
+		    public nsIXPCScriptable,
 		    public nsISecurityCheckedComponent
 {
 public:
@@ -42,6 +44,9 @@ public:
 
   // nsISOAPStruct
   NS_DECL_NSISOAPSTRUCT
+
+  // nsISOAPStruct
+  NS_DECL_NSIXPCSCRIPTABLE
 
   // nsISecurityCheckedComponent
   NS_DECL_NSISECURITYCHECKEDCOMPONENT

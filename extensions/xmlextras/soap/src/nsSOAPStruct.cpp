@@ -24,10 +24,14 @@
 #include "nsSOAPStruct.h"
 #include "nsSOAPUtils.h"
 #include "nsSupportsArray.h"
+#include "nsIXPConnect.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
+#include "nsISOAPParameter.h"
+#include "nsSOAPJSValue.h"
+#include "jsapi.h"
 
-NS_IMPL_ISUPPORTS2(nsSOAPStruct, nsISOAPStruct, nsISecurityCheckedComponent)
+NS_IMPL_ISUPPORTS3(nsSOAPStruct, nsISOAPStruct, nsIXPCScriptable, nsISecurityCheckedComponent)
 
 nsSOAPStruct::nsSOAPStruct(): mMembers(new nsSupportsHashtable)
 {
@@ -119,6 +123,70 @@ NS_IMETHODIMP nsSOAPStruct::GetMember(const nsAReadableString& aName, nsISOAPPar
   NS_ENSURE_ARG_POINTER(aMember);
   nsStringKey nameKey(aName);
   *aMember = NS_STATIC_CAST(nsISOAPParameter*, mMembers->Get(&nameKey));
+  return NS_OK;
+}
+
+// The nsIXPCScriptable map declaration that will generate stubs for us...
+#define XPC_MAP_CLASSNAME           nsSOAPStruct
+#define XPC_MAP_QUOTED_CLASSNAME   "SOAPStruct"
+#define                             XPC_MAP_WANT_SETPROPERTY
+#define                             XPC_MAP_WANT_GETPROPERTY
+#define XPC_MAP_FLAGS       nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY   | \
+                            nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY   | \
+                            nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY
+#include "xpc_map_end.h" /* This will #undef the above */
+
+NS_IMETHODIMP 
+nsSOAPStruct::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                             JSObject *obj, jsval id, jsval *vp,
+                             PRBool *_retval)
+{
+  if (JSVAL_IS_STRING(id)) {
+    JSString* str = JSVAL_TO_STRING(id);
+    const PRUnichar* name = NS_REINTERPRET_CAST(const PRUnichar *,
+                                                JS_GetStringChars(str));
+    nsDependentString namestr(name);
+    nsStringKey nameKey(namestr);
+    nsCOMPtr<nsISOAPParameter> parameter = dont_AddRef(NS_STATIC_CAST(nsISOAPParameter*, mMembers->Get(&nameKey)));
+    if (parameter == nsnull)
+      return NS_OK;
+    nsAutoString type;
+    parameter->GetType(type);
+    nsCOMPtr<nsISupports> value;
+    parameter->GetValue(getter_AddRefs(value));
+    return nsSOAPJSValue::ConvertValueToJSVal(cx,
+                                        value,
+                                        type,
+                                        vp);
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsSOAPStruct::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                             JSObject *obj, jsval id, jsval *vp,
+                             PRBool *_retval)
+{
+  if (JSVAL_IS_STRING(id)) {
+    JSString* str = JSVAL_TO_STRING(id);
+    const PRUnichar* name = NS_REINTERPRET_CAST(const PRUnichar *,
+                                                JS_GetStringChars(str));
+    nsDependentString namestr(name);
+    nsStringKey nameKey(namestr);
+    nsCOMPtr<nsISupports> value;
+    nsAutoString type;
+    nsresult rc = nsSOAPJSValue::ConvertJSValToValue(cx,
+                                        *vp,
+                                        getter_AddRefs(value),
+                                        type);
+    if (NS_FAILED(rc))
+	return rc;
+    nsCOMPtr<nsISOAPParameter> parameter = do_CreateInstance(NS_SOAPPARAMETER_CONTRACTID);
+    parameter->SetName(namestr);
+    parameter->SetAsInterface(NS_GET_IID(nsISOAPStruct), value);
+    parameter->SetType(type);
+    mMembers->Put(&nameKey, parameter);
+  }
   return NS_OK;
 }
 
