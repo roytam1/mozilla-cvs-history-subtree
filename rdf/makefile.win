@@ -6,7 +6,9 @@ MODULE = rdf
 DIRS=\
 	include \
 	src \
+!if 0
 	tests \
+!endif
 	$(NULL)
 
 include <$(DEPTH)\config\rules.mak>
