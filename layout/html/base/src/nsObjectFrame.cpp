@@ -60,6 +60,7 @@
 #include "nsContentPolicyUtils.h"
 #include "nsIDOMWindow.h"
 #include "nsIDOMMouseListener.h"
+#include "nsIDOMMouseMotionListener.h"
 #include "nsIDOMFocusListener.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIPrivateDOMEvent.h"
@@ -108,6 +109,7 @@ class nsPluginInstanceOwner : public nsIPluginInstanceOwner,
                               public nsIEventListener,
                               public nsITimerCallback,
                               public nsIDOMMouseListener,
+                              public nsIDOMMouseMotionListener,
                               public nsIDOMKeyListener,
                               public nsIDOMFocusListener
                               
@@ -204,9 +206,12 @@ public:
   NS_IMETHOD MouseOut(nsIDOMEvent* aMouseEvent);
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);     
   /* END interfaces from nsIDOMMouseListener*/
-  
-  // nsIDOMKeyListener interfaces
 
+  // nsIDOMMouseListener intefaces
+  NS_IMETHOD MouseMove(nsIDOMEvent* aMouseEvent);
+  NS_IMETHOD DragMove(nsIDOMEvent* aMouseEvent) { return NS_OK; }
+
+  // nsIDOMKeyListener interfaces
   NS_IMETHOD KeyDown(nsIDOMEvent* aKeyEvent);
   NS_IMETHOD KeyUp(nsIDOMEvent* aKeyEvent);
   NS_IMETHOD KeyPress(nsIDOMEvent* aKeyEvent);
@@ -1695,79 +1700,17 @@ nsPluginInstanceOwner::~nsPluginInstanceOwner()
   mContext = nsnull;
 }
 
-NS_IMPL_ADDREF(nsPluginInstanceOwner);
-NS_IMPL_RELEASE(nsPluginInstanceOwner);
-
-nsresult nsPluginInstanceOwner::QueryInterface(const nsIID& aIID,
-                                                 void** aInstancePtrResult)
-{
-  NS_PRECONDITION(nsnull != aInstancePtrResult, "null pointer");
-
-  if (nsnull == aInstancePtrResult)
-    return NS_ERROR_NULL_POINTER;
-
-  if (aIID.Equals(NS_GET_IID(nsIPluginInstanceOwner)))
-  {
-    *aInstancePtrResult = (void *)((nsIPluginInstanceOwner *)this);
-    AddRef();
-    return NS_OK;
-  }
-
-  if (aIID.Equals(NS_GET_IID(nsIPluginTagInfo)) || aIID.Equals(NS_GET_IID(nsIPluginTagInfo2)))
-  {
-    *aInstancePtrResult = (void *)((nsIPluginTagInfo2 *)this);
-    AddRef();
-    return NS_OK;
-  }
-
-  if (aIID.Equals(NS_GET_IID(nsIJVMPluginTagInfo)))
-  {
-    *aInstancePtrResult = (void *)((nsIJVMPluginTagInfo *)this);
-    AddRef();
-    return NS_OK;
-  }
-
-  if (aIID.Equals(NS_GET_IID(nsIEventListener)))
-  {
-    *aInstancePtrResult = (void *)((nsIEventListener *)this);
-    AddRef();
-    return NS_OK;
-  }
-
-  if (aIID.Equals(NS_GET_IID(nsITimerCallback)))
-  {
-    *aInstancePtrResult = (void *)((nsITimerCallback *)this);
-    AddRef();
-    return NS_OK;
-  }
-
-  if (aIID.Equals(NS_GET_IID(nsIDOMMouseListener))) {                                         
-    *aInstancePtrResult = (void*)(nsIDOMMouseListener*) this;    
-    AddRef();
-    return NS_OK;                                                        
-  }
-  
-  if (aIID.Equals(NS_GET_IID(nsIDOMKeyListener))) {                                         
-    *aInstancePtrResult = (void*)(nsIDOMKeyListener*) this;    
-    AddRef();
-    return NS_OK;                                                        
-  }
-
-  if (aIID.Equals(NS_GET_IID(nsIDOMFocusListener))) {                                         
-    *aInstancePtrResult = (void*)(nsIDOMFocusListener*) this;    
-    AddRef();
-    return NS_OK;                                                        
-  }
-  
-  if (aIID.Equals(NS_GET_IID(nsISupports)))
-  {
-    *aInstancePtrResult = (void *)((nsISupports *)((nsIPluginTagInfo *)this));
-    AddRef();
-    return NS_OK;
-  }
-
-  return NS_NOINTERFACE;
-}
+NS_IMPL_ISUPPORTS10(nsPluginInstanceOwner,
+                    nsIPluginInstanceOwner,
+                    nsIPluginTagInfo,
+                    nsIPluginTagInfo2,
+                    nsIJVMPluginTagInfo,
+                    nsIEventListener,
+                    nsITimerCallback,
+                    nsIDOMMouseListener,
+                    nsIDOMMouseMotionListener,
+                    nsIDOMKeyListener,
+                    nsIDOMFocusListener)
 
 NS_IMETHODIMP nsPluginInstanceOwner::SetInstance(nsIPluginInstance *aInstance)
 {
@@ -2731,7 +2674,12 @@ nsresult nsPluginInstanceOwner::Blur(nsIDOMEvent * aFocusEvent)
 
 nsresult nsPluginInstanceOwner::DispatchFocusToPlugin(nsIDOMEvent* aFocusEvent)
 {
-#ifndef XP_WIN    // on Windows, events are sent directly to plugins through child windows
+#ifndef XP_MAC
+  if (nsPluginWindowType_Window == mPluginWindow.type)
+    return NS_ERROR_FAILURE; // means consume event
+  // continue only for cases without child window
+#endif
+
   nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aFocusEvent));
   if (privateEvent) {
     nsEvent * theEvent;
@@ -2752,9 +2700,6 @@ nsresult nsPluginInstanceOwner::DispatchFocusToPlugin(nsIDOMEvent* aFocusEvent)
   else NS_ASSERTION(PR_FALSE, "nsPluginInstanceOwner::DispatchFocusToPlugin failed, privateEvent null");   
   
   return NS_OK;
-#else
-  return NS_ERROR_FAILURE; // means consume event
-#endif
 }    
 
 
@@ -2784,7 +2729,7 @@ nsresult nsPluginInstanceOwner::KeyPress(nsIDOMEvent* aKeyEvent)
     
 nsresult nsPluginInstanceOwner::DispatchKeyToPlugin(nsIDOMEvent* aKeyEvent)
 {
-#ifndef XP_WIN   // on Windows, events are sent directly to plugins through child windows
+#ifdef XP_MAC   // on Mac, we don't have child windows so hook in through DOM events
   if (mInstance) {
     nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aKeyEvent));
     if (privateEvent) {
@@ -2808,12 +2753,45 @@ nsresult nsPluginInstanceOwner::DispatchKeyToPlugin(nsIDOMEvent* aKeyEvent)
 #endif
 }    
 
+/*=============== nsIMouseMotionListener ======================*/
+
+nsresult
+nsPluginInstanceOwner::MouseMove(nsIDOMEvent* aMouseEvent)
+{
+#ifndef XP_MAC
+  if (nsPluginWindowType_Window == mPluginWindow.type)
+    return NS_ERROR_FAILURE; // means consume event
+  // continue only for cases without child window
+#endif
+
+  nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aMouseEvent));
+  if (privateEvent) {
+    nsMouseEvent* mouseEvent = nsnull;
+    privateEvent->GetInternalNSEvent((nsEvent**)&mouseEvent);
+    if (mouseEvent) {
+      nsEventStatus rv = ProcessEvent(*mouseEvent);
+      if (nsEventStatus_eConsumeNoDefault == rv) {
+        return NS_ERROR_FAILURE; // means consume event
+      }
+    }
+    else NS_ASSERTION(PR_FALSE, "nsPluginInstanceOwner::MouseMove failed, mouseEvent null");   
+  }
+  else NS_ASSERTION(PR_FALSE, "nsPluginInstanceOwner::MouseMove failed, privateEvent null");   
+  
+  return NS_OK;
+}
+
 /*=============== nsIMouseListener ======================*/
 
 nsresult
 nsPluginInstanceOwner::MouseDown(nsIDOMEvent* aMouseEvent)
 {
-#ifndef XP_WIN   // on Windows, events are sent directly to plugins through child windows
+#ifndef XP_MAC
+  if (nsPluginWindowType_Window == mPluginWindow.type)
+    return NS_ERROR_FAILURE; // means consume event
+  // continue only for cases without child window
+#endif
+
   nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aMouseEvent));
   if (privateEvent) {
     nsMouseEvent* mouseEvent = nsnull;
@@ -2829,9 +2807,6 @@ nsPluginInstanceOwner::MouseDown(nsIDOMEvent* aMouseEvent)
   else NS_ASSERTION(PR_FALSE, "nsPluginInstanceOwner::MouseDown failed, privateEvent null");   
   
   return NS_OK;
-#else
-  return NS_ERROR_FAILURE; // means consume event
-#endif
 }
 
 nsresult
@@ -2866,7 +2841,12 @@ nsPluginInstanceOwner::MouseOut(nsIDOMEvent* aMouseEvent)
 
 nsresult nsPluginInstanceOwner::DispatchMouseToPlugin(nsIDOMEvent* aMouseEvent)
 {
-#ifndef XP_WIN   // on Windows, events are sent directly to plugins through child windows  
+#ifndef XP_MAC
+  if (nsPluginWindowType_Window == mPluginWindow.type)
+    return NS_ERROR_FAILURE; // means consume event
+  // continue only for cases without child window
+#endif
+
   nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aMouseEvent));
   if (privateEvent) {
     nsMouseEvent* mouseEvent = nsnull;
@@ -2884,9 +2864,6 @@ nsresult nsPluginInstanceOwner::DispatchMouseToPlugin(nsIDOMEvent* aMouseEvent)
   else NS_ASSERTION(PR_FALSE, "nsPluginInstanceOwner::DispatchMouseToPlugin failed, privateEvent null");   
   
   return NS_OK;
-#else
-  return NS_ERROR_FAILURE; // means consume event
-#endif
 }
 
 nsresult
@@ -2965,6 +2942,13 @@ nsPluginInstanceOwner::Destroy()
       QueryInterface(NS_GET_IID(nsIDOMMouseListener), getter_AddRefs(mouseListener));
       if (mouseListener) { 
         receiver->RemoveEventListenerByIID(mouseListener, NS_GET_IID(nsIDOMMouseListener));
+      }
+      else NS_ASSERTION(PR_FALSE, "Unable to remove event listener for plugin");
+      // now for the mouse motion listener
+      nsCOMPtr<nsIDOMMouseMotionListener> mouseMotionListener;
+      QueryInterface(NS_GET_IID(nsIDOMMouseMotionListener), getter_AddRefs(mouseMotionListener));
+      if (mouseMotionListener) { 
+        receiver->RemoveEventListenerByIID(mouseMotionListener, NS_GET_IID(nsIDOMMouseMotionListener));
       }
       else NS_ASSERTION(PR_FALSE, "Unable to remove event listener for plugin");
     }
@@ -3132,6 +3116,12 @@ NS_IMETHODIMP nsPluginInstanceOwner::Init(nsIPresContext* aPresContext, nsObject
       QueryInterface(NS_GET_IID(nsIDOMMouseListener), getter_AddRefs(mouseListener));
       if (mouseListener) {
         receiver->AddEventListenerByIID(mouseListener, NS_GET_IID(nsIDOMMouseListener));
+      }
+      // now do the mouse motion listener
+      nsCOMPtr<nsIDOMMouseMotionListener> mouseMotionListener;
+      QueryInterface(NS_GET_IID(nsIDOMMouseMotionListener), getter_AddRefs(mouseMotionListener));
+      if (mouseMotionListener) {
+        receiver->AddEventListenerByIID(mouseMotionListener, NS_GET_IID(nsIDOMMouseMotionListener));
       }
     }
   }
