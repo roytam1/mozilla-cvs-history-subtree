@@ -29,11 +29,12 @@ else
 
 var client = new Object();
 
-const CSP = getMsg ("commaSpace", [" "]);
+const MSG_CSP       = getMsg ("commaSpace", [" "]);
+const MSG_UNKNOWN = getMsg ("unknown");
 
 client.defaultNick = getMsg( "defaultNick" );
 
-client.version = "0.8.5-pre2";
+client.version = "0.8.5-pre3";
 
 client.TYPE = "IRCClient";
 client.COMMAND_CHAR = "/";
@@ -80,9 +81,10 @@ client.responseCodeMap["TOPIC"] = "=-=";
 client.responseCodeMap["KICK"]  = "=-=";
 client.responseCodeMap["MODE"]  = "=-=";
 client.responseCodeMap["END_STATUS"] = "---";
-client.responseCodeMap["376"]  = "---"; /* end of MOTD */
+client.responseCodeMap["315"]  = "---"; /* end of WHO */
 client.responseCodeMap["318"]  = "---"; /* end of WHOIS */
 client.responseCodeMap["366"]  = "---"; /* end of NAMES */
+client.responseCodeMap["376"]  = "---"; /* end of MOTD */
 
 client.name = getMsg("clientname");
 client.viewsArray = new Array();
@@ -408,8 +410,8 @@ function insertChannelLink (matchText, containerTag, eventData)
     
     var anchor = document.createElementNS ("http://www.w3.org/1999/xhtml",
                                            "html:a");
-    anchor.setAttribute ("href", "irc://" + eventData.network.name + "/" +
-                         matchText);
+    anchor.setAttribute ("href", "irc://" + escape(eventData.network.name) +
+                         "/" + escape (matchText));
     anchor.setAttribute ("class", "chatzilla-link");
     //anchor.setAttribute ("target", "_content");
     insertHyphenatedWord (matchText, anchor);
@@ -896,7 +898,7 @@ function parseIRCURL (url)
         return null;
     }
     var host = ary[1];
-    var rest = ary[2];
+    var rest = (2 in ary) ? ary[2] : "";
 
     /* split <host> into server (or network) / port */
     ary = host.match (/^([^\s\:]+)?(\:\d+)?$/);
@@ -992,7 +994,7 @@ function gotoIRCURL (url)
     
     if (!url)
     {
-        window.alert (getMsg("gotoIRCURLMsg",url));
+        window.alert (getMsg("badIRCURL",url));
         return;
     }
 
@@ -1053,7 +1055,7 @@ function gotoIRCURL (url)
             dd ("gotoIRCURL: not already connected to " +
                 "network " + url.host + " trying to connect...");
             */
-            client.onInputAttach ({inputData: url.host + " " + pass});
+            client.connectToNetwork (url.host, pass);
             if (!("pendingURLs" in net))
                 net.pendingURLs = new Array();
             net.pendingURLs.push (url);            
@@ -1065,37 +1067,62 @@ function gotoIRCURL (url)
     //dd ("gotoIRCURL: connected, time to finish parsing ``" + url + "''");
     if (url.target)
     {
-        var key = "";
-        if (url.needkey)
-            key = window.prompt (getMsg("gotoIRCURLMsg3",url.spec));
-
+        var targetObject;
+        var ev;
         if (url.isnick)
         {
-                /* eek, do nick stuff here */
+            /* url points to a person. */
+            var nick = url.target;
+            var ary = url.target.split("%21");
+            if (ary)
+            {
+                if (ary[0].indexOf("!") != -1)
+                {
+                    client.display (getMsg("gotoIRCURLCharWarning",
+                                           ["!", "%21", url.target]), "WARNING");
+                    ary = ary[0].split("!");
+                }
+                nick = ary[0];
+            }    
+
+            ev =  {inputData: nick, network: net, server: net.primServ};
+            client.onInputQuery(ev);
+            targetObject = ev.user;
         }
         else
         {
-            var ev = {inputData: url.target + " " + key,
-                      network: net, server: net.primServ}
-            client.onInputJoin (ev);
-            if (url.msg)
+            /* url points to a channel */
+            if (url.target.indexOf("#") != -1)
             {
-                var msg;
-                if (url.msg.indexOf("\01ACTION") == 0)
-                {
-                    msg = filterOutput (url.msg, "ACTION", "ME!");
-                    ev.channel.display (msg, "ACTION", "ME!",
-                                        client.currentObject);
-                }
-                else
-                {
-                    msg = filterOutput (url.msg, "PRIVMSG", "ME!");
-                    ev.channel.display (msg, "PRIVMSG", "ME!",
-                                        client.currentObject);
-                }
-                ev.channel.say (msg);
-                setCurrentObject (ev.channel);
+                client.display (getMsg("gotoIRCURLCharWarning", 
+                                       ["#", "%23", url.target]), "WARNING");
             }
+            var key = "";
+            if (url.needkey)
+                key = window.prompt (getMsg("gotoIRCURLMsg3",url.spec));
+            ev = {inputData: url.target + " " + key,
+                  network: net, server: net.primServ};
+            client.onInputJoin (ev);
+            targetObject = ev.channel;
+        }
+
+        if (url.msg)
+        {
+            var msg;
+            if (url.msg.indexOf("\01ACTION") == 0)
+            {
+                msg = filterOutput (url.msg, "ACTION", "ME!");
+                targetObject.display (msg, "ACTION", "ME!",
+                                      client.currentObject);
+            }
+            else
+            {
+                msg = filterOutput (url.msg, "PRIVMSG", "ME!");
+                targetObject.display (msg, "PRIVMSG", "ME!",
+                                      client.currentObject);
+            }
+            targetObject.say (msg);
+            setCurrentObject (targetObject);
         }
     }
     else
@@ -1195,7 +1222,15 @@ function updateTitle (obj)
             break;
 
         case "IRCUser":
-            tstring = getMsg("updateTitleUser", client.currentObject.properNick);
+            nick = client.currentObject.properNick;
+            var source = "";
+            if (client.currentObject.name)
+            {
+                source = client.currentObject.name + "@" +
+                    client.currentObject.host;
+            }
+            tstring = getMsg("updateTitleUser", [nick, source]);
+            client.statusBar["channel-topic"].setAttribute("value", tstring);
             break;
 
         default:
@@ -1211,7 +1246,7 @@ function updateTitle (obj)
                        (Number(i) + 1) + "!" : (Number(i) + 1));
         if (actl.length > 0)
             tstring = getMsg("updateTitleWithActivity",
-                              [tstring, actl.join (", ")]);
+                              [tstring, actl.join (MSG_CSP)]);
     }
 
     document.title = tstring;
@@ -1418,20 +1453,14 @@ function addHistory (source, obj)
 
         source.messages.setAttribute ("class", "msg-table");
         source.messages.setAttribute ("view-type", source.TYPE);
-        if (0) /*XXX*/ {
-            tbody = document.createElementNS ("http://www.w3.org/1999/xhtml",
-                                              "html:tbody");
-            source.messages.appendChild (tbody);
-        } else {
-            tbody = source.messages;
-        }
+        tbody = document.createElementNS ("http://www.w3.org/1999/xhtml",
+                                          "html:tbody");
+        source.messages.appendChild (tbody);
     }
     else
-        if (0) /*XXX*/ {        
-            tbody = source.messages.firstChild;
-        } else {
-            tbody = source.messages;
-        }
+    {
+        tbody = source.messages.firstChild;
+    }
 
     var needScroll = false;
     var w = window.frames[0];
@@ -1571,6 +1600,8 @@ function getTabForObject (source, create)
         tb.setAttribute ("ondraggesture",
                          "nsDragAndDrop.startDrag(event, tabDNDObserver);");
         tb.setAttribute ("href", source.getURL());
+        tb.setAttribute ("tooltip", "aTooltip");
+        tb.setAttribute ("tooltiptext", source.getURL());
         tb.setAttribute ("name", source.name);
         tb.setAttribute ("onclick", "onTabClick('" + id + "');");
         tb.setAttribute ("crop", "right");
@@ -1731,6 +1762,37 @@ function filterOutput (msg, msgtype)
     return msg;
     
 }
+
+client.connectToNetwork =
+function cli_connet (netname, pass)
+{
+    if (!(netname in client.networks))
+    {
+        display (getMsg("cli_attachNoNet", netname), "ERROR");
+        return false;
+    }
+    
+    var netobj = client.networks[netname];
+
+    if (!("messages" in netobj))
+        netobj.displayHere (getMsg("cli_attachOpened", netname), "INFO");
+    setCurrentObject(netobj);
+
+    if (netobj.isConnected())
+    {
+        netobj.display (getMsg("cli_attachAlreadyThere", netname), "ERROR");
+        return true;
+    }
+    
+    if (CIRCNetwork.prototype.INITIAL_NICK == client.defaultNick)
+        CIRCNetwork.prototype.INITIAL_NICK =
+            prompt (getMsg("cli_attachGetNick"), client.defaultNick);
+    
+    netobj.connect(pass);
+    netobj.display (getMsg("cli_attachWorking",netobj.name), "INFO");
+    return true;
+}
+
 
 client.getURL =
 function cli_geturl ()
@@ -2017,15 +2079,11 @@ function __display(message, msgtype, sourceObj, destObj)
         table.setAttribute ("cellpadding", "0");
         
         td.appendChild (table);
-        if (0) /*XXX*/ {
-            var tbody =  document.createElementNS ("http://www.w3.org/1999/xhtml",
-                                                   "html:tbody");
-        } else {
-            tbody = table;
-        }
+        var tbody =  document.createElementNS ("http://www.w3.org/1999/xhtml",
+                                               "html:tbody");
         
         tbody.appendChild (msgRow);
-        //XXXtable.appendChild (tbody);
+        table.appendChild (tbody);
         msgRow = tr;
     }
 
@@ -2062,7 +2120,7 @@ function cli_quit (reason)
  * textbox.
  */
 client.performTabMatch =
-CIRCUser.performTabMatch =
+CIRCUser.prototype.performTabMatch =
 function gettabmatch_usr (line, wordStart, wordEnd, word, cursorPos)
 {
     if (wordStart != 1 || line[0] != client.COMMAND_CHAR)

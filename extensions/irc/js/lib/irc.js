@@ -111,7 +111,7 @@ CIRCNetwork.prototype.TYPE = "IRCNetwork";
 CIRCNetwork.prototype.getURL =
 function net_geturl ()
 {
-    return "irc://" + this.name + "/";
+    return "irc://" + escape(this.name) + "/";
 }
 
 CIRCNetwork.prototype.connect =
@@ -873,6 +873,30 @@ function serv_333 (e)
 
 }
 
+/* who reply */
+CIRCServer.prototype.on352 = 
+function serv_352 (e)
+{
+    e.user = new CIRCUser (this, e.params[6], e.params[3], e.params[4]);
+    e.user.connectionHost = e.params[5];
+    e.destObject = this.parent;
+    e.set = "network";
+
+    return true;
+}
+
+/* end of who */
+CIRCServer.prototype.on315 = 
+function serv_315 (e)
+{
+
+    e.user = new CIRCUser (this, e.params[2]);
+    e.destObject = this.parent;
+    e.set = "network";
+
+    return true;
+}
+
 /* name reply */
 CIRCServer.prototype.on353 = 
 function serv_353 (e)
@@ -1606,7 +1630,7 @@ CIRCChannel.prototype.topic = "";
 CIRCChannel.prototype.getURL =
 function chan_geturl ()
 {
-    return this.parent.parent.getURL() + this.name + "/";
+    return this.parent.parent.getURL() + escape(this.name) + "/";
 }
 
 CIRCChannel.prototype.addUser = 
@@ -2069,7 +2093,7 @@ function CIRCChanUser (parent, nick, isOp, isVoice)
 
 function cusr_geturl ()
 {
-    return this.parent.parent.getURL() + this.nick + "/";
+    return this.parent.parent.getURL() + escape(this.nick) + "/,isnick";
 }
 
 function cusr_setop (f)

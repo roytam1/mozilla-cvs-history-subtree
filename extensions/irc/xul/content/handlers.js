@@ -728,7 +728,7 @@ function onTabCompleteRequest (e)
                 /* then list possible completions, */
                 client.currentObject.display(getMsg("tabCompleteList",
                                                     [matches.length, word,
-                                                     matches.join(CSP)]),
+                                                     matches.join(MSG_CSP)]),
                                              "INFO");
             }
             else
@@ -899,42 +899,41 @@ function cli_icommand (e)
 {
     var ary = client.commands.list (e.command);
     
-    switch (ary.length)
+    if (ary.length == 0)
     {        
-        case 0:
-            var o = getObjectDetails(client.currentObject);
-            if (o.server)
-            {
-                client.currentObject.display (getMsg("cli_icommandMsg",
-                                                     e.command), "WARNING");
-                o.server.sendData (e.command + " " + e.inputData + "\n");
-            }
-            else
-                client.currentObject.display (getMsg("cli_icommandMsg2",
-                                                     e.command), "ERROR");
-            break;
-            
-        case 1:
-            if (typeof client[ary[0].func] == "undefined")        
-                client.currentObject.display (getMsg("cli_icommandMsg3",
-                                                     ary[0].name), "ERROR");
-            else
-            {
-                e.commandEntry = ary[0];
-                if (!client[ary[0].func](e))
-                    client.currentObject.display (ary[0].name + " " +
-                                                  ary[0].usage, "USAGE");
-            }
-            break;
-            
-        default:
-            client.currentObject.display (getMsg("cli_icommandMsg4",
+        var o = getObjectDetails(client.currentObject);
+        if (o.server)
+        {
+            client.currentObject.display (getMsg("cli_icommandMsg",
+                                                 e.command), "WARNING");
+            o.server.sendData (e.command + " " + e.inputData + "\n");
+        }
+        else
+            client.currentObject.display (getMsg("cli_icommandMsg2",
                                                  e.command), "ERROR");
-            var str = "";
-            for (var i in ary)
-                str += str ? ", " + ary[i].name : ary[i].name;
-            client.currentObject.display (getMsg("cli_icommandMsg5",
-                                                 [ary.length, str]), "ERROR");
+    }
+    else if (ary.length == 1 || ary[0].name == e.command)
+    {
+        if (typeof client[ary[0].func] == "undefined")        
+            client.currentObject.display (getMsg("cli_icommandMsg3",
+                                                 ary[0].name), "ERROR");
+        else
+        {
+            e.commandEntry = ary[0];
+            if (!client[ary[0].func](e))
+                client.currentObject.display (ary[0].name + " " +
+                                              ary[0].usage, "USAGE");
+        }
+    }
+    else
+    {
+        client.currentObject.display (getMsg("cli_icommandMsg4",
+                                             e.command), "ERROR");
+        var str = "";
+        for (var i in ary)
+            str += str ? ", " + ary[i].name : ary[i].name;
+        client.currentObject.display (getMsg("cli_icommandMsg5",
+                                             [ary.length, str]), "ERROR");
     }
 
 }
@@ -969,7 +968,7 @@ function cli_iscommand (e)
 {    
     var o = getObjectDetails(client.currentObject);
     
-    if (o.server)
+    if ("server" in o)
     {
         o.server.sendData (e.command + " " + e.inputData + "\n");
         return true;
@@ -1215,7 +1214,6 @@ function cli_inetwork (e)
 
     if (net)
     {
-        client.lastNetwork = net;
         setCurrentObject (net);    
     }
     else
@@ -1251,7 +1249,7 @@ function clie_ilistnets (e)
         a.appendChild (t);
         span.appendChild (a);
         if (netnames[n] != lastname)
-            span.appendChild (newInlineText (", "));
+            span.appendChild (newInlineText (MSG_CSP));
     }
 
     span.appendChild (newInlineText("]."));
@@ -1318,9 +1316,8 @@ function cli_iserver (e)
          * serverList, in case the user changed the port or password */
         net.serverList = [{name: ary[1], port: port, password: pass}];
     }
-    
-    onSimulateCommand ("/attach " + ary[1]);
-    
+
+    client.connectToNetwork (ary[1]);
     return true;
 
 }
@@ -1466,7 +1463,7 @@ function cli_icommands (e)
     client.currentObject.display (getMsg("cli_icommandsMsg"), "INFO");
     
     var pattern = (e && e.inputData) ? e.inputData : "";
-    var matchResult = client.commands.listNames(pattern).join(", ");
+    var matchResult = client.commands.listNames(pattern).join(MSG_CSP);
     
     if (pattern)
         client.currentObject.display (getMsg("cli_icommandsMsg2a",
@@ -1481,59 +1478,24 @@ function cli_icommands (e)
 client.onInputAttach =
 function cli_iattach (e)
 {
-    var net;
-    var pass;
-    
     if (!e.inputData)
     {
-        if (client.lastNetwork)
-        {        
-            client.currentObject.display (getMsg("cli_iattachMsg",
-                                                 client.lastNetwork.name),
-                                          "NOTICE");
-            net = client.lastNetwork;
-        }
-        else
-        {
-            client.currentObject.display (getMsg("cli_iattachMsg2"),
-                                          "ERROR");
-            return false;
-        }
-    }
-    else
-    {
-        var ary = e.inputData.match (/(\S+) ?(\S+)?/);
-        net = client.networks[ary[1]];
-        if (2 in ary)
-            pass = ary[2];
-        
-        if (!net)
-        {
-            client.currentObject.display (getMsg("cli_iattachMsg3", e.inputData),
-                                          "ERROR");
-            return false;
-        }
-        client.lastNetwork = net;
+        return false;
     }
 
-    if (!("messages" in net))
-        net.displayHere (getMsg("cli_iattachMsg4", net.name), "INFO");
-    setCurrentObject(net);
-
-    if (net.isConnected())
+    if (e.inputData.search(/irc:\/\//i) != 0)
+        e.inputData = "irc://" + e.inputData;
+    
+    var url = parseIRCURL(e.inputData);
+    if (!url)
     {
-        net.display (getMsg("cli_iattachMsg5",net.name),"ERROR");
-        return true;
+        client.currentObject.display (getMsg("badIRCURL", e.inputData),
+                                      "ERROR");
+        return false;
     }
     
-    if (CIRCNetwork.prototype.INITIAL_NICK == client.defaultNick)
-        CIRCNetwork.prototype.INITIAL_NICK =
-            prompt (getMsg("cli_iattachMsg6"), client.defaultNick);
-    
-    net.connect(pass);
-    net.display (getMsg("cli_iattachMsg7",net.name), "INFO");
+    gotoIRCURL (url);
     return true;
-    
 }
     
 client.onInputMe =
@@ -1554,7 +1516,7 @@ function cli_ime (e)
 }
 
 client.onInputQuery =
-function cli_imsg (e)
+function cli_iquery (e)
 {
     if (!e.server.users)
     {
@@ -1571,9 +1533,10 @@ function cli_imsg (e)
     
     var usr = e.network.primServ.addUser(ary[1].toLowerCase());
 
-    if (!usr.messages)
+    if (!("messages" in usr))
         usr.displayHere (getMsg("cli_imsgMsg3", usr.properNick), "INFO");
     setCurrentObject (usr);
+    onSimulateCommand ("/who " + usr.properNick);
     
     if (ary[2])
     {
@@ -1582,6 +1545,8 @@ function cli_imsg (e)
         usr.say (ary[2]);
     }
     
+    e.user = usr;
+
     return true;
 }
 
@@ -2305,7 +2270,7 @@ function cli_istalk (e)
         else
         {
             client.currentObject.display
-                (getMsg("cli_istalkMsg2", client.stalkingVictims.join(", ")),
+                (getMsg("cli_istalkMsg2", client.stalkingVictims.join(MSG_CSP)),
                  "STALK");
         }
         return true;
@@ -2515,7 +2480,7 @@ function my_321 (e)
 CIRCNetwork.prototype.on323 = /* end of LIST reply */
 function my_323 (e)
 {
-    this.displayHere (e.meat, "323");
+    this.displayHere (e.params.join(" ") + ": " + e.meat, "323");
 }
 
 CIRCNetwork.prototype.on322 = /* LIST reply */
@@ -2524,7 +2489,53 @@ function my_listrply (e)
     this.displayHere (getMsg("my_322", [e.params[2], e.params[3], e.meat]),
                       "322");
 }
+
+/* end of WHO */
+CIRCNetwork.prototype.on315 =
+function my_315 (e)
+{
+    var matches;
+    if ("whoMatches" in this)
+        matches = this.whoMatches;
+    else
+        matches = 0;
+    e.user.display (getMsg("my_315", [e.params[2], matches]), e.code);
+    delete this.whoMatches;
+}
+
+CIRCNetwork.prototype.on352 =
+function my_352 (e)
+{
+    //0-352 1-rginda_ 2-#chatzilla 3-chatzilla 4-h-64-236-139-254.aoltw.net 5-irc.mozilla.org 6-rginda 7-H
+    var desc;
+    var hops = "?";
+    var ary = e.meat.match(/(\d+)\s(.*)/);
+    if (ary)
+    {
+        hops = Number(ary[1]);
+        desc = ary[2];
+    }
+    else
+    {
+        desc = e.meat;
+    }
     
+    var status = e.params[7];
+    if (e.params[7] == "G")
+        status = getMsg("my_352.g");
+    else if (e.params[7] == "H")
+        status = getMsg("my_352.h");
+        
+    e.user.display (getMsg("my_352", [e.params[6], e.params[3], e.params[4],
+                                      desc, status, e.params[2], e.params[5],
+                                      hops]), e.code, e.user);
+    updateTitle (e.user);
+    if ("whoMatches" in this)
+        ++this.whoMatches;
+    else
+        this.whoMatches = 1;
+}
+
 CIRCNetwork.prototype.on311 = /* whois name */
 CIRCNetwork.prototype.on319 = /* whois channels */
 CIRCNetwork.prototype.on312 = /* whois server */
@@ -2533,38 +2544,47 @@ CIRCNetwork.prototype.on318 = /* whois end of whois*/
 function my_whoisreply (e)
 {
     var text = "egads!";
+    var nick = e.params[2];
     
     switch (Number(e.code))
     {
         case 311:
             text = getMsg("my_whoisreplyMsg",
-                          [e.params[2], e.params[3], e.params[4], e.meat]);
+                          [nick, e.params[3], e.params[4], e.meat]);
             break;
             
         case 319:
             var ary = stringTrim(e.meat).split(" ");
-            text = getMsg("my_whoisreplyMsg2",[e.params[2], arraySpeak(ary)]);
+            text = getMsg("my_whoisreplyMsg2",[nick, arraySpeak(ary)]);
             break;
             
         case 312:
             text = getMsg("my_whoisreplyMsg3",
-                          [e.params[2], e.params[3], e.meat]);
+                          [nick, e.params[3], e.meat]);
             break;
             
         case 317:
             text = getMsg("my_whoisreplyMsg4",
-                          [e.params[2], formatDateOffset(Number(e.params[3])),
+                          [nick, formatDateOffset(Number(e.params[3])),
                           new Date(Number(e.params[4]) * 1000)]);
             break;
             
         case 318:
-            text = getMsg("my_whoisreplyMsg5", e.params[2]);
+            text = getMsg("my_whoisreplyMsg5", nick);
             break;
             
     }
 
-    e.server.parent.display(text, e.code);
-    
+    if (nick in e.server.users && "messages" in e.server.users[nick])
+    {
+        var user = e.server.users[nick];
+        updateTitle(user);
+        user.display (text, e.code);
+    }
+    else
+    {
+        e.server.parent.display(text, e.code);
+    }
 }
 
 CIRCNetwork.prototype.on341 = /* invite reply */
