@@ -263,7 +263,7 @@ nsSelectMoveScrollCommand::DoSelectCommand(const char *aCommandName, nsIDOMWindo
   GetEventStateManagerForWindow(aWindow, getter_AddRefs(esm));
 
   nsresult rv;
-  if (caretOn || (esm && esm->GetBrowseWithCaret()))
+  if (caretOn)
     rv = DoCommandBrowseWithCaretOn(aCommandName, selCont, esm);
   else
     rv = DoCommandBrowseWithCaretOff(aCommandName, selCont);
