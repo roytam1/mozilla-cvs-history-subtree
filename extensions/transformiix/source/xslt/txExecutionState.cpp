@@ -53,6 +53,8 @@
 static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
 #endif
 
+const PRInt32 txExecutionState::kMaxRecursionDepth = 20000;
+
 DHASH_WRAPPER(txLoadedDocumentsBase, txLoadedDocumentEntry, nsAString&)
 
 nsresult txLoadedDocumentsHash::init(Document* aSourceDocument)
@@ -104,6 +106,7 @@ txExecutionState::txExecutionState(txStylesheet* aStylesheet)
     : mStylesheet(aStylesheet),
       mNextInstruction(nsnull),
       mLocalVariables(nsnull),
+      mRecursionDepth(0),
       mTemplateParams(nsnull),
       mTemplateRules(nsnull),
       mTemplateRulesBufferSize(0),
@@ -197,10 +200,15 @@ txExecutionState::init(Node* aNode,
     }
     rv = mLoadedDocuments.init(sourceDoc);
     NS_ENSURE_SUCCESS(rv, rv);
-    
-    
+
+    // Init members    
     rv = mKeyHash.init();
     NS_ENSURE_SUCCESS(rv, rv);
+    
+    // The actual value here doesn't really matter since noone should use this
+    // value. But lets put something errorlike in just in case
+    mGlobalVarPlaceholderValue = new StringResult(NS_LITERAL_STRING("Error"));
+    NS_ENSURE_TRUE(mGlobalVarPlaceholderValue, NS_ERROR_OUT_OF_MEMORY);
 
     return NS_OK;
 }
@@ -234,6 +242,11 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
     // look for an evaluated global variable
     aResult = mGlobalVariableValues.getVariable(name);
     if (aResult) {
+        if (aResult == mGlobalVarPlaceholderValue) {
+            // XXX ErrorReport: cyclic variable-value
+            aResult = nsnull;
+            return NS_ERROR_XSLT_BAD_RECURSION;
+        }
         return NS_OK;
     }
 
@@ -265,6 +278,11 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
             return NS_OK;
         }
     }
+
+    // Insert a placeholdervalue to protect against recursion
+    rv = mGlobalVariableValues.bindVariable(name, mGlobalVarPlaceholderValue,
+                                            PR_FALSE);
+    NS_ENSURE_SUCCESS(rv, rv);
 
     // evaluate the global variable
     pushEvalContext(mInitialEvalContext);
@@ -306,6 +324,8 @@ txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
     }
     popEvalContext();
 
+    // Remove the placeholder and insert the calculated value
+    mGlobalVariableValues.removeVariable(name);
     rv = mGlobalVariableValues.bindVariable(name, aResult, PR_TRUE);
     if (NS_FAILED(rv)) {
         delete aResult;
@@ -545,6 +565,9 @@ txExecutionState::getNextInstruction()
 nsresult
 txExecutionState::runTemplate(txInstruction* aTemplate)
 {
+    NS_ENSURE_TRUE(++mRecursionDepth < kMaxRecursionDepth,
+                   NS_ERROR_XSLT_BAD_RECURSION);
+
     nsresult rv = mLocalVarsStack.push(mLocalVariables);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -566,6 +589,7 @@ txExecutionState::gotoInstruction(txInstruction* aNext)
 void
 txExecutionState::returnFromTemplate()
 {
+    --mRecursionDepth;
     NS_ASSERTION(!mReturnStack.isEmpty() && !mLocalVarsStack.isEmpty(),
                  "return or variable stack is empty");
     delete mLocalVariables;
@@ -608,35 +632,4 @@ txExecutionState::popParamMap()
     mTemplateParams = (txExpandedNameMap*)mParamStack.pop();
 
     return oldParams;
-}
-
-nsresult
-txExecutionState::enterRecursionCheckpoint(txRecursionCheckpointStart* aChk,
-                                           txIEvalContext* aContext)
-{
-    PRInt32 i;
-    for (i = 0; i < mRecursionInstructions.Count(); ++i) {
-        if (mRecursionInstructions[i] == aChk &&
-            mRecursionContexts[i] == aContext) {
-            return NS_ERROR_XSLT_BAD_RECURSION;
-        }
-    }
-    
-    if (!mRecursionInstructions.AppendElement(aChk)) {
-        return NS_ERROR_OUT_OF_MEMORY;
-    }
-    
-    if (!mRecursionContexts.AppendElement(aContext)) {
-        mRecursionInstructions.RemoveElementAt(mRecursionInstructions.Count() - 1);
-        return NS_ERROR_OUT_OF_MEMORY;
-    }
-    
-    return NS_OK;
-}
-
-void
-txExecutionState::leaveRecursionCheckpoint()
-{
-    mRecursionInstructions.RemoveElementAt(mRecursionInstructions.Count() - 1);
-    mRecursionContexts.RemoveElementAt(mRecursionContexts.Count() - 1);
 }

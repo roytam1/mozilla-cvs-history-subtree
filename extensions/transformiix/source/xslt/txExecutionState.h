@@ -51,11 +51,10 @@
 #include "nsDoubleHashtable.h"
 #include "txKey.h"
 #include "txStylesheet.h"
+#include "ExprResult.h"
 
 class txInstruction;
 class txIOutputHandlerFactory;
-class ExprResult;
-class txRecursionCheckpointStart;
 class txExpandedNameMap;
 
 
@@ -143,11 +142,6 @@ public:
                           ExprResult* aValue, MBool aOwned);
     void removeVariable(const txExpandedName& aName);
 
-    // Other
-    nsresult enterRecursionCheckpoint(txRecursionCheckpointStart* aChk,
-                                      txIEvalContext* aContext);
-    void leaveRecursionCheckpoint();
-
     txAXMLEventHandler* mOutputHandler;
     txAXMLEventHandler* mResultHandler;
     txAOutputHandlerFactory* mOutputHandlerFactory;
@@ -167,6 +161,8 @@ private:
     txInstruction* mNextInstruction;
     txVariableMap* mLocalVariables;
     txVariableMap mGlobalVariableValues;
+    nsAutoPtr<ExprResult> mGlobalVarPlaceholderValue;
+    PRInt32 mRecursionDepth;
 
     TemplateRule* mTemplateRules;
     PRInt32 mTemplateRulesBufferSize;
@@ -176,12 +172,11 @@ private:
     txIEvalContext* mInitialEvalContext;
     Document* mRTFDocument;
     txExpandedNameMap* mGlobalParams;
-    
-    nsVoidArray mRecursionInstructions;
-    nsVoidArray mRecursionContexts;
-    
+
     txLoadedDocumentsHash mLoadedDocuments;
     txKeyHash mKeyHash;
+
+    static const PRInt32 kMaxRecursionDepth;
 };
 
 #endif

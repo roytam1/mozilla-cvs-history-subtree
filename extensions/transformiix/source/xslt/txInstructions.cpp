@@ -816,25 +816,6 @@ txPushStringHandler::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
-nsresult
-txRecursionCheckpointEnd::execute(txExecutionState& aEs)
-{
-    aEs.leaveRecursionCheckpoint();
-    return NS_OK;
-}
-
-txRecursionCheckpointStart::txRecursionCheckpointStart(const nsAString& aName)
-    : mName(aName)
-{
-}
-
-nsresult
-txRecursionCheckpointStart::execute(txExecutionState& aEs)
-{
-    // XXX will this work? what if the context is in two different states
-    return aEs.enterRecursionCheckpoint(this, aEs.getEvalContext());
-}
-
 txRemoveVariable::txRemoveVariable(const txExpandedName& aName)
     : mName(aName)
 {

@@ -338,22 +338,6 @@ public:
     PRBool mOnlyText;
 };
 
-class txRecursionCheckpointEnd : public txInstruction
-{
-public:
-    TX_DECL_TXINSTRUCTION
-};
-
-class txRecursionCheckpointStart : public txInstruction
-{
-public:
-    txRecursionCheckpointStart(const nsAString& aName);
-
-    TX_DECL_TXINSTRUCTION
-    
-    nsString mName;
-};
-
 class txRemoveVariable : public txInstruction
 {
 public:

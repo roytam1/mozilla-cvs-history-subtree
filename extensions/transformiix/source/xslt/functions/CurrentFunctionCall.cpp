@@ -30,11 +30,7 @@ ExprResult* CurrentFunctionCall::evaluate(txIEvalContext* aContext)
         // result type.
         return new NodeSet();
     }
-    Node* current = es->getEvalContext()->getContextNode();
-    if (current) {
-      return new NodeSet(current);
-    }
-    return new NodeSet();
+    return new NodeSet(es->getEvalContext()->getContextNode());
 }
 
 nsresult CurrentFunctionCall::getNameAtom(nsIAtom** aAtom)
