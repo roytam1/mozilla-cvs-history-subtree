@@ -719,10 +719,6 @@ nsAccessible::nsAccessible(nsIAccessible* aAccessible, nsIDOMNode* aNode, nsIWea
      printf("\n");
    }
 #endif
-   // get frame and node
-   mDOMNode = aNode;
-   mAccessible = aAccessible;
-   mPresShell = aShell;
 
 #ifdef DEBUG_LEAKS
   printf("nsAccessibles=%d\n", ++gnsAccessibles);
@@ -1680,7 +1676,7 @@ NS_IMETHODIMP nsHTMLBlockAccessible::AccGetAt(PRInt32 tx, PRInt32 ty, nsIAccessi
       //
       // [[block #1 is long wrapped text that continues to
       // another line]]  [[here is a shorter block #2]]
-\
+
       if (tx > cx && tx < cx + cw && ty > cy && ty < cy + ch) 
       {
         if (smallestArea == -1 || cw*ch < smallestArea) {
