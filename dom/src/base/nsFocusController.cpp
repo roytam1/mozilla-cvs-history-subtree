@@ -269,6 +269,7 @@ nsFocusController::Focus(nsIDOMEvent* aEvent)
   if (domElement && (domElement != mCurrentElement)) {
     SetFocusedElement(domElement);
 
+#if 0
     // Also set focus to our innermost window.
     // XXX Must be done for the Ender case, since ender causes a blur,
     // but we don't hear the subsequent focus to the Ender window.
@@ -278,6 +279,7 @@ nsFocusController::Focus(nsIDOMEvent* aEvent)
     GetParentWindowFromDocument(ownerDoc, getter_AddRefs(domWindow));
     if (domWindow)
       SetFocusedWindow(domWindow);
+#endif
   }
   else {
     // We're focusing a window.  We only want to do an update commands
