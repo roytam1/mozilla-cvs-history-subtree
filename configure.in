@@ -3756,6 +3756,18 @@ if test "$MOZ_JSLOADER"; then
 fi
 
 dnl ========================================================
+dnl JSCodeLib
+dnl ========================================================
+MOZ_JSCODELIB=1
+MOZ_ARG_DISABLE_BOOL(jscodelib,
+[  --disable-jscodelib     Disable js shared code library],
+    MOZ_JSCODELIB=,
+    MOZ_JSCODELIB=1 )
+if test -n "$MOZ_JSCODELIB"; then
+  AC_DEFINE(MOZ_JSCODELIB)
+fi
+
+dnl ========================================================
 dnl use native unicode converters
 dnl ========================================================
 MOZ_USE_NATIVE_UCONV=
@@ -4049,6 +4061,17 @@ MOZ_ARG_DISABLE_BOOL(mathml,
     MOZ_MATHML=1 )
 if test "$MOZ_MATHML"; then
   AC_DEFINE(MOZ_MATHML)
+fi
+
+dnl ========================================================
+dnl XTF
+dnl ========================================================
+MOZ_ARG_ENABLE_BOOL(xtf,
+[  --enable-xtf            Enable XTF (pluggable xml tags) support],
+    MOZ_XTF=1,
+    MOZ_XTF= )
+if test -n "$MOZ_XTF"; then
+  AC_DEFINE(MOZ_XTF)
 fi
 
 dnl ========================================================
@@ -5481,6 +5504,7 @@ AC_SUBST(MOZ_GFX_TOOLKIT_LDFLAGS)
 AC_SUBST(MOZ_UPDATE_XTERM)
 AC_SUBST(MINIMO)
 AC_SUBST(MOZ_MATHML)
+AC_SUBST(MOZ_XTF)
 AC_SUBST(MOZ_SVG)
 AC_SUBST(MOZ_SVG_RENDERER_GDIPLUS)
 AC_SUBST(MOZ_SVG_RENDERER_LIBART)
@@ -5511,6 +5535,7 @@ AC_SUBST(MOZ_LEAKY)
 AC_SUBST(MOZ_JPROF)
 AC_SUBST(MOZ_XPCTOOLS)
 AC_SUBST(MOZ_JSLOADER)
+AC_SUBST(MOZ_JSCODELIB)
 AC_SUBST(MOZ_USE_NATIVE_UCONV)
 AC_SUBST(MOZ_INSURE)
 AC_SUBST(MOZ_INSURE_DIRS)

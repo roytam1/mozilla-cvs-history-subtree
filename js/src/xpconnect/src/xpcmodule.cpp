@@ -44,6 +44,10 @@
 #ifdef MOZ_JSLOADER
 #include "mozJSLoaderConstructors.h"
 #endif
+#ifdef MOZ_JSCODELIB
+#include "mozJSCodeLib.h"
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(mozJSCodeLib, Init)
+#endif
 
 /* Module implementation for the xpconnect library. */
 
@@ -102,6 +106,10 @@ static const nsModuleComponentInfo components[] = {
 #ifdef XPC_IDISPATCH_SUPPORT
  ,{ nsnull, NS_IDISPATCH_SUPPORT_CID,            NS_IDISPATCH_SUPPORT_CONTRACTID,
     nsIDispatchSupportConstructor }
+#endif
+#ifdef MOZ_JSCODELIB
+ ,{ "JS code library", MOZ_JSCODELIB_CID,
+    MOZ_JSCODELIB_CONTRACTID, mozJSCodeLibConstructor }
 #endif
 };
 

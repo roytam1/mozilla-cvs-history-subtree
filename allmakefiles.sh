@@ -252,6 +252,8 @@ js/src/xpconnect/shell/Makefile
 js/src/xpconnect/tools/Makefile
 js/src/xpconnect/tools/idl/Makefile
 js/src/xpconnect/tools/idl/Makefile
+js/src/xpconnect/codelib/Makefile
+js/src/xpconnect/shared/Makefile
 "
 
 MAKEFILES_jsdebugger="
@@ -869,7 +871,6 @@ other-licenses/branding/firefox/content/Makefile
 
 MAKEFILES_thunderbird_branding="
 other-licenses/branding/thunderbird/Makefile
-other-licenses/branding/thunderbird/content/Makefile
 "
 
 MAKEFILES_phoenix="
@@ -886,6 +887,8 @@ browser/components/build/Makefile
 browser/components/cookieviewer/Makefile
 browser/components/history/Makefile
 browser/components/prefwindow/Makefile
+browser/components/prefwindow/content/Makefile
+browser/components/prefwindow/locale/Makefile
 browser/components/security/Makefile
 browser/components/sidebar/Makefile
 browser/components/sidebar/public/Makefile
@@ -1208,6 +1211,24 @@ if [ "$MOZ_SVG" ]; then
 "
 fi
 
+# xtf
+if [ "$MOZ_XTF" ]; then
+    MAKEFILES_content="$MAKEFILES_content
+	content/xtf/Makefile
+	content/xtf/public/Makefile
+	content/xtf/src/Makefile
+	content/xtf/js/Makefile
+	content/xtf/tests/Makefile
+	content/xtf/tests/smiley/Makefile
+	content/xtf/tests/canvas/Makefile
+	content/xtf/tests/perf/Makefile
+"
+    MAKEFILES_layout="$MAKEFILES_layout
+	layout/xtf/Makefile
+	layout/xtf/src/Makefile
+"
+fi
+
 # directory/xpcom
 if [ "$MOZ_LDAP_XPCOM" ]; then
     MAKEFILES_ldap="
@@ -1277,6 +1298,9 @@ for extension in $MOZ_EXTENSIONS; do
             ;;
         irc ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/irc/Makefile
+            " ;;
+        jssh ) MAKEFILES_extensions="$MAKEFILES_extensions
+            extensions/jssh/Makefile
             " ;;
         layout-debug ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/layout-debug/Makefile

@@ -46,8 +46,18 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= xpconnect
 DIRS		= public idl
 
+ifdef MOZ_JSCODELIB
+DIRS         += codelib
+NEEDS_XPCONNECT_SHARED = 1
+endif
+
 ifdef MOZ_JSLOADER
 DIRS         +=  loader
+NEEDS_XPCONNECT_SHARED = 1
+endif
+
+ifdef NEEDS_XPCONNECT_SHARED
+DIRS         += shared
 endif
 
 DIRS         += src shell
