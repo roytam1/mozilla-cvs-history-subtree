@@ -116,7 +116,8 @@ NS_IMPL_THREADSAFE_ISUPPORTS6(nsNSSDialogs, nsINSSDialogs,
                                             nsISecurityWarningDialogs,
                                             nsIBadCertListener,
                                             nsICertificateDialogs,
-											nsIClientAuthDialogs)
+                                            nsIClientAuthDialogs);
+
 nsresult
 nsNSSDialogs::Init()
 {
@@ -128,11 +129,11 @@ nsNSSDialogs::Init()
   nsCOMPtr<nsIStringBundleService> service = do_GetService(kCStringBundleServiceCID, &rv);
   if (NS_FAILED(rv)) return rv;
   
-  rv = service->CreateBundle(STRING_BUNDLE_URL, nsnull,
+  rv = service->CreateBundle(STRING_BUNDLE_URL,
                              getter_AddRefs(mStringBundle));
   if (NS_FAILED(rv)) return rv;
 
-  rv = service->CreateBundle(PIPSTRING_BUNDLE_URL, nsnull,
+  rv = service->CreateBundle(PIPSTRING_BUNDLE_URL,
                              getter_AddRefs(mPIPStringBundle));
   return rv;
 }

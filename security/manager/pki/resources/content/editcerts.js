@@ -24,22 +24,21 @@
 const nsIX509Cert = Components.interfaces.nsIX509Cert;
 const nsX509CertDB = "@mozilla.org/security/x509certdb;1";
 const nsIX509CertDB = Components.interfaces.nsIX509CertDB;
+const nsIPKIParamBlock = Components.interfaces.nsIPKIParamBlock;
 
-//var myName;
-// XXX yes?
 var certdb;
 var cert;
 
 function setWindowName()
 {
-  //myName = self.name;
-  certkey = self.name;
+  var dbkey = self.name;
 
   //  Get the cert from the cert database
   certdb = Components.classes[nsX509CertDB].getService(nsIX509CertDB);
-  //var cert = certdb.getCertByNickname(token, myName);
-  //cert = certdb.getCertByNickname(null, myName);
-  cert = certdb.getCertByDBKey(certkey, null);
+  //var pkiParams = window.arguments[0].QueryInterface(nsIPKIParamBlock);
+  //var isupport = pkiParams.getISupportAtIndex(1);
+  //cert = isupport.QueryInterface(nsIX509Cert);
+  cert = certdb.getCertByDBKey(dbkey, null);
 
   var windowReference = document.getElementById('editCert');
   windowReference.setAttribute("title", cert.commonName);

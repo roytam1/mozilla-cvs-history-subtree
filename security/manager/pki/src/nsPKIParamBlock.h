@@ -37,6 +37,7 @@
 #include "nsCOMPtr.h"
 #include "nsIPKIParamBlock.h"
 #include "nsIDialogParamBlock.h"
+#include "nsISupportsArray.h"
 
 #define NS_PKIPARAMBLOCK_CID \
   { 0x0bec75a8, 0x1dd2, 0x11b2, \
@@ -48,7 +49,6 @@ class nsPKIParamBlock : public nsIPKIParamBlock,
                         public nsIDialogParamBlock
 {
 public:
-  enum { kNumISupports = 4 };
  
   nsPKIParamBlock();
   virtual ~nsPKIParamBlock();
@@ -58,16 +58,8 @@ public:
   NS_DECL_NSIDIALOGPARAMBLOCK
   NS_DECL_ISUPPORTS
 private:
-  nsresult InBounds( PRInt32 inIndex, PRInt32 inMax )
-  {
-    if ( inIndex >= 0 && inIndex< inMax )
-      return NS_OK;
-    else
-      return NS_ERROR_ILLEGAL_VALUE;
-  }
   nsCOMPtr<nsIDialogParamBlock> mDialogParamBlock;
-  nsISupports **mSupports;
-  PRIntn       mNumISupports;
+  nsCOMPtr<nsISupportsArray>    mSupports;
 };
 
 #endif //_NSPKIPARAMBLOCK_

@@ -44,6 +44,8 @@
 #include "cert.h"
 #include "secitem.h"
 
+class nsINSSComponent;
+
 /* Certificate */
 class nsNSSCertificate : public nsIX509Cert 
 {
@@ -59,8 +61,17 @@ public:
 
 private:
   CERTCertificate *mCert;
+  nsCOMPtr<nsIASN1Object> mASN1Structure;
+  nsresult CreateASN1Struct();
+  nsresult CreateTBSCertificateASN1Struct(nsIASN1Sequence **retSequence,
+                                          nsINSSComponent *nssComponent);
 
   PRBool verifyFailed(PRUint32 *_verified);
+
+  nsresult GetUsageArray(char     *suffix,
+                         PRUint32 *_verified,
+                         PRUint32 *_count,
+                         PRUnichar **tmpUsages);
 };
 
 class nsNSSCertificateDB : public nsIX509CertDB

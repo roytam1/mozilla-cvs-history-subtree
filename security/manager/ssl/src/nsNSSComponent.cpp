@@ -161,6 +161,9 @@ nsNSSComponent::GetPIPNSSBundleString(const PRUnichar *name,
   } else {
     outString.SetLength(0);
   }
+  if (ptrv)
+    nsMemory::Free(ptrv);
+
   return NS_ERROR_FAILURE;
 }
 
@@ -178,7 +181,8 @@ nsNSSComponent::InstallLoadableRoots()
         hasRoot = PR_TRUE;
         break;
       }    
-    }     
+    }
+    PK11_FreeSlotList(slotList);
   }
   if (!hasRoot) {
     nsresult rv;
@@ -317,7 +321,7 @@ nsNSSComponent::InitializePIPNSSBundle()
   if (NS_FAILED(rv) || !bundleService) 
     return NS_ERROR_FAILURE;
   
-  bundleService->CreateBundle(PIPNSS_STRBUNDLE_URL, nsnull,
+  bundleService->CreateBundle(PIPNSS_STRBUNDLE_URL,
                               getter_AddRefs(mPIPNSSBundle));
   if (!mPIPNSSBundle)
     rv = NS_ERROR_FAILURE;
