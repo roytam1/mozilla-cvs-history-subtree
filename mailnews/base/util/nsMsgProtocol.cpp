@@ -20,11 +20,11 @@
 #include "nsMsgProtocol.h"
 #include "nsIMsgMailNewsUrl.h"
 #include "nsISocketTransportService.h"
-#include "nsIFileTransportService.h"
 #include "nsXPIDLString.h"
+#include "nsIIOService.h"
 
 static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
-static NS_DEFINE_CID(kFileTransportServiceCID, NS_FILETRANSPORTSERVICE_CID);
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 NS_IMPL_ISUPPORTS(nsMsgProtocol, nsCOMTypeInfo<nsIStreamListener>::GetIID())
 
@@ -68,17 +68,21 @@ nsresult nsMsgProtocol::OpenFileSocket(nsIURI * aURL, const nsFileSpec * aFileSp
 	// rid of this method completely.
 
 	nsresult rv = NS_OK;
-    NS_WITH_SERVICE(nsIFileTransportService, fileService, kFileTransportServiceCID, &rv);
-
+    NS_WITH_SERVICE(nsIIOService, netService, kIOServiceCID, &rv);
 	if (NS_SUCCEEDED(rv) && aURL)
 	{
+		// extract the file path from the uri...
+		nsXPIDLCString filePath;
+		aURL->GetPath(getter_Copies(filePath));
+		char * urlSpec = PR_smprintf("file://%s", filePath);
 
-		rv = fileService->CreateTransport((const char *) *aFileSpec, getter_AddRefs(m_channel));
+		rv = netService->NewChannel("Load", urlSpec, nsnull, nsnull, getter_AddRefs(m_channel));
+		PR_FREEIF(urlSpec);
 
 		if (NS_SUCCEEDED(rv) && m_channel)
 		{
 			m_socketIsOpen = PR_FALSE;
-			rv = SetupTransportState();
+			// rv = SetupTransportState();
 		}
 	}
 
