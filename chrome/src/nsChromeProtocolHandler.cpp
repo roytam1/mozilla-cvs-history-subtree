@@ -433,7 +433,8 @@ nsCachedChromeChannel::HandleStopLoadEvent(PLEvent* aEvent)
 void PR_CALLBACK
 nsCachedChromeChannel::DestroyLoadEvent(PLEvent* aEvent)
 {
-    NS_RELEASE((nsCachedChromeChannel*) aEvent->owner);
+    nsCachedChromeChannel* channel = (nsCachedChromeChannel*) aEvent->owner;
+    NS_RELEASE(channel);
     delete aEvent;
 }
 
