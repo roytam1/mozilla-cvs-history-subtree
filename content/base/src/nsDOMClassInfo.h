@@ -61,6 +61,7 @@ public:
 
     // HTML classes
     eHTMLDocument_id,
+    eHTMLOptionCollection_id,
 
     // HTML element classes
     eHTMLAnchorElement_id,

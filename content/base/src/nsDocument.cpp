@@ -443,8 +443,6 @@ nsDOMImplementation::Init(nsIURI* aBaseURI)
 // =
 // ==================================================================
 
-MOZ_DECL_CTOR_COUNTER(nsDocumentChildNodes)
-
 nsDocumentChildNodes::nsDocumentChildNodes(nsIDocument* aDocument)
 {
   MOZ_COUNT_CTOR(nsDocumentChildNodes);

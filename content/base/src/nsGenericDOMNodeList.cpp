@@ -32,6 +32,7 @@ nsGenericDOMNodeList::~nsGenericDOMNodeList()
 {
 }
 
+
 NS_IMPL_ADDREF(nsGenericDOMNodeList)
 NS_IMPL_RELEASE(nsGenericDOMNodeList)
 

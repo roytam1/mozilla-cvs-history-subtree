@@ -46,6 +46,10 @@
 // HTMLFormElement helper includes
 #include "nsIForm.h"
 
+// HTMLOptionCollection includes
+#include "nsIDOMHTMLOptionElement.h"
+#include "nsIDOMNSHTMLOptionCollection.h"
+
 // Event related includes
 #include "nsIEventListenerManager.h"
 #include "nsIDOMEventReceiver.h"
@@ -830,7 +834,7 @@ nsElementSH::Create(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
 class nsNodeListSH : public nsDOMClassInfo
 {
-private:
+protected:
   nsNodeListSH(nsDOMClassInfoID aID) : nsDOMClassInfo(aID)
   {
   }
@@ -1099,6 +1103,79 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
   return NS_OK;
 }
 
+// HTMLOptionCollection scriptable helper
+
+class nsHTMLOptionCollectionSH : public nsNodeListSH
+{
+private:
+  nsHTMLOptionCollectionSH(nsDOMClassInfoID aID) : nsNodeListSH(aID)
+  {
+  }
+
+  virtual ~nsHTMLOptionCollectionSH()
+  {
+  }
+
+public:
+  NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
+
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsHTMLOptionCollectionSH(aID);
+  }
+};
+
+NS_IMETHODIMP
+nsHTMLOptionCollectionSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
+                                      JSContext *cx, JSObject *obj, jsval id,
+                                      jsval *vp, PRBool *_retval)
+{
+  if (!JSVAL_IS_INT(id)) {
+    return NS_OK;
+  }
+
+  // vp must refer to an object
+  if (!JSVAL_IS_OBJECT(*vp) && !JS_ConvertValue(cx, *vp, JSTYPE_OBJECT, vp)) {
+    return NS_ERROR_UNEXPECTED;
+  }
+
+  nsCOMPtr<nsIDOMHTMLOptionElement> new_option;
+
+  if (!JSVAL_IS_NULL(*vp)) {
+    JSObject* option_obj = JSVAL_TO_OBJECT(*vp); 
+    JSClass* jsclass = JS_GetClass(cx, option_obj);
+
+    if (jsclass && !((~jsclass->flags) & (JSCLASS_HAS_PRIVATE |
+                                          JSCLASS_PRIVATE_IS_NSISUPPORTS))) {
+      nsISupports *s = (nsISupports *)JS_GetPrivate(cx, option_obj);
+
+      nsCOMPtr<nsIXPConnectWrappedNative> wrapper(do_QueryInterface(s));
+      NS_ENSURE_TRUE(wrapper, NS_ERROR_UNEXPECTED);
+
+      nsCOMPtr<nsISupports> native;
+      wrapper->GetNative(getter_AddRefs(native));
+
+      new_option = do_QueryInterface(native);
+
+      if (!new_option) {
+        // Someone is trying to set an option to a non-option object.
+
+        return NS_ERROR_UNEXPECTED;
+      }
+    } else {
+      return NS_ERROR_UNEXPECTED;
+    }
+  }
+
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+
+  nsCOMPtr<nsIDOMNSHTMLOptionCollection> oc(do_QueryInterface(native));
+  NS_ENSURE_TRUE(oc, NS_ERROR_UNEXPECTED);
+
+  return oc->SetOption(JSVAL_TO_INT(id), new_option);
+}
 
 
 nsresult
@@ -1145,7 +1222,7 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(Notation, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(NodeList, nsNodeListSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(NamedNodeMap, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
 
@@ -1156,6 +1233,10 @@ nsDOMClassInfo::Init()
   // Misc HTML classes
   NS_DEFINE_CLASSINFO_DATA(HTMLDocument, nsHTMLDocumentSH::Create,
                            DOCUMENT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(HTMLOptionCollection,
+                           nsHTMLOptionCollectionSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY |
+                           WANT_SETPROPERTY);
 
   // HTML element classes
   NS_DEFINE_CLASSINFO_DATA(HTMLAnchorElement, nsElementSH::Create,
@@ -1313,7 +1394,7 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(XULCommandDispatcher, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULNodeList, nsNodeListSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY);
   NS_DEFINE_CLASSINFO_DATA(XULNamedNodeMap, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULAttr, nsDOMGenericSH::Create,

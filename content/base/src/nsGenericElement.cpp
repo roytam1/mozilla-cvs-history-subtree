@@ -2540,16 +2540,15 @@ nsGenericContainerElement::GetChildNodes(nsIDOMNodeList** aChildNodes)
 {
   nsDOMSlots *slots = GetDOMSlots();
 
-  if (nsnull == slots->mChildNodes) {
+  if (!slots->mChildNodes) {
     slots->mChildNodes = new nsChildContentList(this);
-    if (nsnull == slots->mChildNodes) {
+    if (!slots->mChildNodes) {
       return NS_ERROR_OUT_OF_MEMORY;
     }
     NS_ADDREF(slots->mChildNodes);
   }
 
-  return slots->mChildNodes->QueryInterface(NS_GET_IID(nsIDOMNodeList),
-                                            (void **)aChildNodes);
+  return CallQueryInterface(slots->mChildNodes, aChildNodes);
 }
 
 nsresult
