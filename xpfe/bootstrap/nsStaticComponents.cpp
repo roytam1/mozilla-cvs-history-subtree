@@ -106,20 +106,7 @@ DECL_MODULE(nsCookieModule);
 DECL_MODULE(nsWalletModule);
 DECL_MODULE(nsWalletViewerModule);
 DECL_MODULE(nsXMLExtrasModule);
-DECL_MODULE(nsMsgBaseModule);
-DECL_MODULE(nsMsgDBModule);
-DECL_MODULE(nsMsgNewsModule);
-DECL_MODULE(local_mail_services);
-DECL_MODULE(nsMimeEmitterModule);
-DECL_MODULE(nsVCardModule);
 DECL_MODULE(nsSMIMEModule);
-DECL_MODULE(mime_services);
-DECL_MODULE(nsMsgComposeModule);
-DECL_MODULE(IMAP_factory);
-DECL_MODULE(nsAbModule);
-DECL_MODULE(nsImportServiceModule);
-DECL_MODULE(nsTextImportModule);
-DECL_MODULE(nsAbSyncModule);
 DECL_MODULE(nsLDAPProtocolModule);
 
 static nsStaticModuleInfo StaticModuleInfo[] = {
@@ -194,20 +181,7 @@ static nsStaticModuleInfo StaticModuleInfo[] = {
     MODULE(nsWalletModule),
     MODULE(nsWalletViewerModule),
     MODULE(nsXMLExtrasModule),
-    MODULE(nsMsgBaseModule),
-    MODULE(nsMsgDBModule),
-    MODULE(nsMsgNewsModule),
-    MODULE(local_mail_services),
-    MODULE(nsMimeEmitterModule),
-    MODULE(nsVCardModule),
     MODULE(nsSMIMEModule),
-    MODULE(mime_services),
-    MODULE(nsMsgComposeModule),
-    MODULE(IMAP_factory),
-    MODULE(nsAbModule),
-    MODULE(nsImportServiceModule),
-    MODULE(nsTextImportModule),
-    MODULE(nsAbSyncModule),
     MODULE(nsLDAPProtocolModule),
 
 };
