@@ -379,6 +379,8 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
         myLabel.setAttribute("tooltiptext", myPluginItem.error);
       } else if (!myPluginItem.licenseAccepted) {
         statusMsg = this.getString("pluginInstallationSummary.licenseNotAccepted");
+      } else if (!myPluginItem.XPILocation) {
+        statusMsg = this.getString("pluginInstallationSummary.notAvailable");
       } else {
         this.mSuccessfullPluginInstallation++;
         statusMsg = this.getString("pluginInstallationSummary.success");
@@ -388,7 +390,7 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
       myRow.appendChild(myLabel)
 
       // manual url - either returned from the webservice or the pluginspage attribute
-      if (myPluginItem.error && (myPluginItem.manualInstallationURL || this.mPluginRequestArray[myPluginItem.requestedMimetype].pluginsPage)){
+      if ((myPluginItem.error || !myPluginItem.XPILocation) && (myPluginItem.manualInstallationURL || this.mPluginRequestArray[myPluginItem.requestedMimetype].pluginsPage)){
         var myButton = document.createElement("button");
       
         var manualInstallLabel = this.getString("pluginInstallationSummary.manualInstall.label");
@@ -399,7 +401,7 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
 
         var manualUrl = myPluginItem.manualInstallationURL ? myPluginItem.manualInstallationURL : this.mPluginRequestArray[myPluginItem.requestedMimetype].pluginsPage;
 
-        myButton.setAttribute("oncommand","gPluginInstaller.doManualPluginInstall('" + manualUrl + "')");
+        myButton.setAttribute("oncommand","gPluginInstaller.loadURL('" + manualUrl + "')");
         myRow.appendChild(myButton);
       }  
     
@@ -421,7 +423,7 @@ nsPluginInstallerWizard.prototype.showPluginResults = function (){
   this.canCancel(false);
 } 
 
-nsPluginInstallerWizard.prototype.doManualPluginInstall = function (aUrl){
+nsPluginInstallerWizard.prototype.loadURL = function (aUrl){
   window.open(aUrl);
 }
 

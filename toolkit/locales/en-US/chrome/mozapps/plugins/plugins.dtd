@@ -14,3 +14,5 @@
 <!ENTITY pluginWizard.installPluginsPage.description.label   "&brandShortName; is installing plugins...">
 
 <!ENTITY pluginWizard.finalPage.description.label            "&brandShortName; finished installing the missing plugins:">
+
+<!ENTITY pluginWizard.finalPage.moreInfo.label               "Find out more about Plugins or manually find missing plugins.">
