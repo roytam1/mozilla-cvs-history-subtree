@@ -75,7 +75,7 @@ class CFiltersTableView;
 //#include "msg.h"
 //#include "msgcom.h"
 //#include "msg_filt.h"
-#include "pmsgfilt.h"
+//#include "pmsgfilt.h"
 //#include "pmsgsrch.h"
 //#include "msgglue.cpp"
 //#include "ptrarray.h"
