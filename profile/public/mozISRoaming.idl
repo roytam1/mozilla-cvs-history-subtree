@@ -15,7 +15,8 @@
  * The Original Code is Mozilla Roaming code.
  *
  * The Initial Developer of the Original Code is 
- * Ben Bucksch
+ * Ben Bucksch <http://www.bucksch.org> of
+ * Beonex <http://www.beonex.com>
  * Portions created by the Initial Developer are Copyright (C) 2002
  * the Initial Developer. All Rights Reserved.
  *
@@ -66,9 +67,5 @@
 interface mozISRoaming : nsISupports {
     void BeginSession(); 
     void EndSession(); 
-
     boolean isRoaming();                  // should be here?
-
-    void Encrypt(inout wstring password); // dito
-    void Decrypt(inout wstring password); // dito
 };
