@@ -35,6 +35,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "msgMapiMain.h"
+#include "nsIServiceManager.h"
+#include "nsCOMPtr.h"
 
 // move to xpcom bug 81956.
 class nsPRUintKey : public nsHashKey {
@@ -146,8 +148,8 @@ PRInt16 nsMAPIConfiguration::RegisterSession(PRUint32 aHwnd,
 
     if (aUserName != nsnull && aUserName[0] != '\0')
     {
-        nsStringKey usernameKey(aUserName);
-        n_SessionId = (PRUint32) m_ProfileMap->Get(&usernameKey);
+    nsStringKey usernameKey(aUserName);
+    n_SessionId = (PRUint32) m_ProfileMap->Get(&usernameKey);
     }
 
     // try to share a session; if not create a session
@@ -185,7 +187,7 @@ PRInt16 nsMAPIConfiguration::RegisterSession(PRUint32 aHwnd,
             if (aUserName != nsnull && aUserName[0] != '\0')
             {
                 nsStringKey usernameKey(aUserName);
-                m_ProfileMap->Put(&usernameKey, (void*)session_generator);
+            m_ProfileMap->Put(&usernameKey, (void*)session_generator);
             }
 
             *aSession = session_generator;
@@ -215,8 +217,8 @@ PRBool nsMAPIConfiguration::UnRegisterSession(PRUint32 aSessionID)
             {
                 if (pTemp->m_pProfileName.get() != nsnull)
                 {
-                   nsStringKey stringKey(pTemp->m_pProfileName.get());
-                   m_ProfileMap->Remove(&stringKey);
+                nsStringKey stringKey(pTemp->m_pProfileName.get());
+                m_ProfileMap->Remove(&stringKey);
                 }
                 m_SessionMap->Remove(&sessionKey);
                 sessionCount--;
@@ -228,6 +230,24 @@ PRBool nsMAPIConfiguration::UnRegisterSession(PRUint32 aSessionID)
     PR_Unlock(m_Lock);
     return bResult;
 }
+
+PRBool nsMAPIConfiguration::IsSessionValid(PRUint32 aSessionID)
+{
+    if (aSessionID == 0)
+        return PR_FALSE;
+
+    PRBool retValue = PR_FALSE;
+    nsPRUintKey sessionKey(aSessionID);
+
+    PR_Lock(m_Lock);
+
+    retValue = m_SessionMap->Exists(&sessionKey);
+        
+    PR_Unlock(m_Lock);
+
+    return retValue;
+}
+
 
 PRUnichar *nsMAPIConfiguration::GetPassWord(PRUint32 aSessionID)
 {

@@ -69,6 +69,9 @@ public :
                                 LPTSTR aFilePaths, LPTSTR aFileNames, ULONG aFlags);
 
     STDMETHODIMP Initialize();
+    STDMETHODIMP IsValid();
+    STDMETHODIMP IsValidSession(unsigned long aSession);
+
     STDMETHODIMP Logoff (unsigned long aSession);
     STDMETHODIMP CleanUp();
 

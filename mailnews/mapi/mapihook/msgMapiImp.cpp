@@ -103,6 +103,20 @@ STDMETHODIMP_(ULONG) nsMapiImp::Release()
     return temp;
 }
 
+STDMETHODIMP nsMapiImp::IsValid()
+{
+    return S_OK;
+}
+
+STDMETHODIMP nsMapiImp::IsValidSession(unsigned long aSession)
+{
+    nsMAPIConfiguration *pConfig = nsMAPIConfiguration::GetMAPIConfiguration();
+    if (pConfig && pConfig->IsSessionValid(aSession))
+        return S_OK;
+
+    return E_FAIL;
+}
+
 STDMETHODIMP nsMapiImp::Initialize()
 {
     HRESULT hr = E_FAIL;
