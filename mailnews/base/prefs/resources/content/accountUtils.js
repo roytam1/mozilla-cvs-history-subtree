@@ -146,8 +146,8 @@ function verifyAccounts(wizardcallback) {
 
         // migrate quoting preferences from global to per account. This function returns
         // true if it had to migrate, which we will use to mean this is a just migrated
-        // or new profile
-        var newProfile = migrateGlobalQuotingPrefs(am.allIdentities);
+        // profile
+        var newlyMigratedProfile = migrateGlobalQuotingPrefs(am.allIdentities);
 
         var accounts = am.accounts;
 
@@ -162,7 +162,7 @@ function verifyAccounts(wizardcallback) {
         // if there are no accounts, or all accounts are "invalid"
         // then kick off the account migration. Or if this is a new (to Mozilla) profile.
         // MCD can set up accounts without the profile being used yet
-        if (newProfile) {
+        if (newlyMigratedProfile) {
           // check if MCD is configured. If not, say this is not a new profile
           // so that we don't accidentally remigrate non MCD profiles.
           var adminUrl;
@@ -173,9 +173,9 @@ function verifyAccounts(wizardcallback) {
           }
           catch (ex) {}
           if (!adminUrl)
-            newProfile = false;
+            newlyMigratedProfile = false;
         }
-        if (newProfile || accountCount == invalidAccounts.length) {
+        if (newlyMigratedProfile || accountCount == invalidAccounts.length) {
             try {
                   var messengerMigrator = Components.classes[messengerMigratorContractID].getService(Components.interfaces.nsIMessengerMigrator); 
                   messengerMigrator.UpgradePrefs();
@@ -300,7 +300,8 @@ function loadInboxForNewAccount()
 
 // returns true if we migrated - it knows this because 4.x did not have the
 // pref mailnews.quotingPrefs.version, so if it's not set, we're either 
-// migrating from 4.x, or a much older version of Mozilla.
+// migrating from 4.x, or a much older version of Mozilla. And if mailnews.profile_age
+// is not set, then we know this is a new Moz profile.
 function migrateGlobalQuotingPrefs(allIdentities)
 {
   // if reply_on_top and auto_quote exist then, if non-default
@@ -309,16 +310,19 @@ function migrateGlobalQuotingPrefs(allIdentities)
   var auto_quote = true;
   var quotingPrefs = 0;
   var migrated = false;
+  var profileAge = -1;
   try {
     var prefService = Components.classes["@mozilla.org/preferences-service;1"]
                                 .getService(Components.interfaces.nsIPrefService);
     var pref = prefService.getBranch(null);
     quotingPrefs = pref.getIntPref("mailnews.quotingPrefs.version");
+    profileAge = pref.getIntPref("mailnews.profile_age");
   } catch (ex) {}
   
   // If the quotingPrefs version is 0 then we need to migrate our preferences
   if (quotingPrefs == 0) {
-    migrated = true;
+    if (profileAge != -1)
+        migrated = true;
     try {
       reply_on_top = pref.getIntPref("mailnews.reply_on_top");
       auto_quote = pref.getBoolPref("mail.auto_quote");
