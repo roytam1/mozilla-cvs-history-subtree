@@ -157,7 +157,6 @@ public:
     eXULNodeList_id,
     eXULNamedNodeMap_id,
     eXULAttr_id,
-    eXULPDGlobalObject_id,
 
     eDOMClassInfoIDCount // This one better be the last one in this list
   };

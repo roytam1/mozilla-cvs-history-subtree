@@ -154,18 +154,19 @@ static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
   DONT_ENUM_QUERY_INTERFACE |                                                 \
   CLASSINFO_INTERFACES_ONLY
 
-#define ELEMENT_SCRIPTABLE_FLAGS                                              \
+#define NODE_SCRIPTABLE_FLAGS                                                 \
   DEFAULT_SCRIPTABLE_FLAGS |                                                  \
   WANT_PRECREATE |                                                            \
-  WANT_POSTCREATE |                                                           \
   WANT_NEWRESOLVE |                                                           \
   WANT_SETPROPERTY
 
+#define ELEMENT_SCRIPTABLE_FLAGS                                              \
+  NODE_SCRIPTABLE_FLAGS |                                                     \
+  WANT_POSTCREATE
+
 #define DOCUMENT_SCRIPTABLE_FLAGS                                             \
-  DEFAULT_SCRIPTABLE_FLAGS |                                                  \
-  WANT_NEWRESOLVE |                                                           \
-  WANT_GETPROPERTY |                                                          \
-  WANT_SETPROPERTY
+  NODE_SCRIPTABLE_FLAGS |                                                     \
+  WANT_GETPROPERTY
 
 #define ARRAY_SCRIPTABLE_FLAGS                                                \
   DEFAULT_SCRIPTABLE_FLAGS |                                                  \
@@ -407,8 +408,8 @@ nsDOMClassInfo::Init()
   // Core classes
   NS_DEFINE_CLASSINFO_DATA(Document, nsDOMGenericSH::Create,
                            DOCUMENT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(DocumentType, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(DocumentType, nsNodeSH::Create,
+                           NODE_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(DOMImplementation, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(DocumentFragment, nsDOMGenericSH::Create,
@@ -418,26 +419,25 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(Attr, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Text, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
+                           NODE_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Comment, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
+                           NODE_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(CDATASection, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
+                           NODE_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(ProcessingInstruction, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
+                           NODE_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Entity, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
+                           NODE_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(EntityReference, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
+                           NODE_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Notation, nsNodeSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS | WANT_SETPROPERTY);
+                           NODE_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(NodeList, nsArraySH::Create,
                            ARRAY_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(NamedNodeMap, nsNamedNodeMapSH::Create,
                            ARRAY_SCRIPTABLE_FLAGS);
 
   // Misc Core related classes
-
 
   // StyleSheet classes
   NS_DEFINE_CLASSINFO_DATA(DocumentStyleSheetList, nsStyleSheetListSH::Create,
@@ -619,8 +619,6 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(XULNamedNodeMap, nsNamedNodeMapSH::Create,
                            ARRAY_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULAttr, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(XULPDGlobalObject, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
 
   NS_DEFINE_CLASSINFO_DATA_TAIL
@@ -1396,7 +1394,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
     const JSObject *o = *objp;
 
-    nsresult rv = GlobalResolve(wrapper, cx, obj, str, flags, &did_resolve);
+    nsresult rv = GlobalResolve(native, cx, obj, str, flags, &did_resolve);
     NS_ENSURE_SUCCESS(rv, rv);
 
     if (did_resolve) {
