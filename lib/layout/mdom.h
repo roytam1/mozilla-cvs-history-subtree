@@ -28,6 +28,24 @@ class MDomDocument;
 class MDomAttribute;
 class MDomAttributeList;
 
+/* naming scheme:
+
+   o All Class names should begin with 'MDom'.  
+   For instance, the Node class is MDomNode.
+
+   o method names are carried straight from the IDL to
+   the C++ classes.
+
+   o attributes are denoted by get_<attribute name> and set_<attribute
+   name>.  For instance, the data attribute of the Text object is
+   exposed via get_data and set_data.
+
+   o internal (but sometimes public) methods and internal fields have
+   an underscore prepended to them.  For example, MDomNode has a
+   _getNumChildren() method to return the number of children, and a
+   _nodeType field.
+*/
+
 class MDomNode 
 {
 public:
@@ -94,7 +112,8 @@ class MDomText : public MDomNode
 public:
   MDomText(JSString *text_data);
 
-  JSString*	data;
+  void set_data(JSString *data);
+  JSString* get_data();
 
   void		append(JSString *data);
   void		insert(int offset,
@@ -114,7 +133,8 @@ class MDomComment : public MDomNode
 public:
   MDomComment(JSString *comment_data);
 
-  JSString*	data;
+  void set_data(JSString *data);
+  JSString* get_data();
 };
 
 class MDomPI : public MDomNode
@@ -122,8 +142,10 @@ class MDomPI : public MDomNode
 public:
   MDomPI(JSString *pi_name, JSString *pi_data);
 
-  JSString*	name;
-  JSString*	data;
+  void set_name(JSString *name);
+  void set_data(JSString *data);
+  JSString* get_name();
+  JSString* get_data();
 };
 
 class MDomAttribute : public MDomNode
@@ -134,7 +156,8 @@ public:
   JSString*	getName();
   JSString*	getValue();
   
-  XP_Bool	specified;
+  XP_Bool	get_specified();
+  /* XXX set_specified? */
 
   JSString*	toString();
 
@@ -188,7 +211,8 @@ class MDomDocumentContext
 {
 public:
   /* attribute Document document; */
-  MDomDocument*	document;
+  MDomDocument* get_document();
+  void			set_document(MDomDocument* document);
 };
 
 class MDomDocumentFragment : public MDomNode
@@ -197,7 +221,8 @@ public:
   MDomDocumentFragment();
 
   /* attribute Document masterDoc; */
-  MDomDocument*	masterDoc;
+  MDomDocument* get_masterDoc();
+  void			set_masterDoc(MDomDocument* document);
 };
 
 class MDomDocument : public MDomDocumentFragment
@@ -206,11 +231,16 @@ public:
   MDomDocument();
 
   /* attribute Node documentType; */
-  MDomNode*				documentType;
+  MDomNode*				get_documentType();
+  void					set_documentType(MDomNode* type);
+
   /* attribute Element documentElement; */
-  MDomElement*			documentElement;
+  MDomElement*			get_documentElement();
+  void					set_documentElement(MDomElement* element);
+
   /* attribute DocumentContext contextInfo; */
-  MDomDocumentContext*	contextInfo;
+  MDomDocumentContext*	get_contextInfo();
+  void					set_contextInfo(MDomDocumentContext *contextInfo);
 
   /* DocumentContext createDocumentContext(); */
   MDomDocumentContext*	createDocumentContext();

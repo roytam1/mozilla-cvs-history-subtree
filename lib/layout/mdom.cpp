@@ -225,9 +225,20 @@ MDomElement::normalize()
 }
 
 MDomText::MDomText(JSString *text_data)
-  : MDomNode(ID_TEXT),
-    data(text_data)
+  : MDomNode(ID_TEXT)
 {
+  set_data(text_data);
+}
+
+void
+MDomText::set_data(JSString */*data*/)
+{
+}
+
+JSString *
+MDomText::get_data()
+{
+  return 0;
 }
 
 void
@@ -262,17 +273,50 @@ MDomText::splice(MDomElement */*element*/,
 }
 
 MDomComment::MDomComment(JSString *comment_data)
-  : MDomNode(ID_COMMENT),
-    data(comment_data)
+  : MDomNode(ID_COMMENT)
 {
+  set_data(comment_data);
+}
+
+void
+MDomComment::set_data(JSString */*data*/)
+{
+}
+
+JSString *
+MDomComment::get_data()
+{
+  return 0;
 }
 
 MDomPI::MDomPI(JSString *pi_name,
                JSString *pi_data)
-  : MDomNode(ID_PI),
-    name(pi_name),
-    data(pi_data)
+  : MDomNode(ID_PI)
 {
+  set_name(pi_name);
+  set_data(pi_data);
+}
+
+void
+MDomPI::set_data(JSString */*data*/)
+{
+}
+
+JSString *
+MDomPI::get_data()
+{
+  return 0;
+}
+
+void
+MDomPI::set_name(JSString */*data*/)
+{
+}
+
+JSString *
+MDomPI::get_name()
+{
+  return 0;
 }
 
 MDomAttribute::MDomAttribute(JSString *attr_name,
@@ -293,6 +337,12 @@ JSString*
 MDomAttribute::getValue()
 {
   return _value;
+}
+
+XP_Bool
+MDomAttribute::get_specified()
+{
+  return 0;
 }
 
 JSString*
@@ -502,14 +552,69 @@ MDomTreeIterator::toNthChild(int n)
   return nth_node;
 }
 
+MDomDocument*
+MDomDocumentContext::get_document()
+{
+  return 0;
+}
+
+void
+MDomDocumentContext::set_document(MDomDocument */*document*/)
+{
+}
+
 MDomDocumentFragment::MDomDocumentFragment()
   : MDomNode(ID_DOCUMENT)
 {
 }
 
+MDomDocument*
+MDomDocumentFragment::get_masterDoc()
+{
+  return 0;
+}
+
+void
+MDomDocumentFragment::set_masterDoc(MDomDocument* /*document*/)
+{
+}
+
 MDomDocument::MDomDocument()
 {
-  masterDoc = this;
+  set_masterDoc(this);
+}
+
+MDomNode*
+MDomDocument::get_documentType()
+{
+  return 0;
+}
+
+void
+MDomDocument::set_documentType(MDomNode* /*type*/)
+{
+}
+
+MDomElement*
+MDomDocument::get_documentElement()
+{
+  return 0;
+}
+
+void
+MDomDocument::set_documentElement(MDomElement* /*element*/)
+{
+}
+
+MDomDocumentContext*
+MDomDocument::get_contextInfo()
+{
+  return 0;
+}
+
+void
+MDomDocument::set_contextInfo(MDomDocumentContext */*contextInfo*/)
+{
 }
 
 MDomDocumentContext*
