@@ -408,8 +408,11 @@ static JSJCallbacks jsj_callbacks = {
     map_js_context_to_jsj_thread_impl,
     map_java_object_to_js_object_impl,
     NULL,
-    LM_LockJS,
-    LM_UnlockJS,
+#ifdef OJI
+    LM_LockJS, LM_UnlockJS,
+#else
+	NULL, NULL,
+#endif
     NULL,
     get_java_vm_impl
 };
