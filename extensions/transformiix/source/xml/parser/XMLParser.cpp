@@ -168,9 +168,6 @@ void charData(void* userData, const XML_Char* s, int len)
     Node* prevSib = ps->currentNode->getLastChild();
     if (prevSib && prevSib->getNodeType()==Node::TEXT_NODE){
       ((CharacterData*)prevSib)->appendData(data);
-#ifdef DEBUG
-      cout<< "Another abundant text object spared?" << endl;
-#endif
     } else {
       ps->currentNode->appendChild(ps->document->createTextNode(data));
     };
