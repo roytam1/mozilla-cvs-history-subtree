@@ -171,8 +171,9 @@ GlobalWindowImpl::GlobalWindowImpl() :
   mScrollbars(nsnull), mTimeouts(nsnull), mTimeoutInsertionPoint(&mTimeouts),
   mRunningTimeout(nsnull), mTimeoutPublicIdCounter(1), mTimeoutFiringDepth(0),
   mTimeoutsWereCleared(PR_FALSE), mFirstDocumentLoad(PR_TRUE),
-  mIsScopeClear(PR_TRUE), mIsDocumentLoaded(PR_FALSE), mGlobalObjectOwner(nsnull),
-  mDocShell(nsnull), mMutationBits(0), mChromeEventHandler(nsnull)
+  mIsScopeClear(PR_TRUE), mIsDocumentLoaded(PR_FALSE),
+  mGlobalObjectOwner(nsnull), mDocShell(nsnull), mMutationBits(0),
+  mChromeEventHandler(nsnull), mFrameElement(nsnull)
 {
   NS_INIT_REFCNT();
   // We could have failed the first time through trying
@@ -2543,6 +2544,22 @@ GlobalWindowImpl::ReallyCloseWindow()
     treeOwnerAsWin->Destroy();
     CleanUp();
   }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::GetFrameElement(nsIDOMElement** aFrameElement)
+{
+  *aFrameElement = mFrameElement;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+GlobalWindowImpl::SetFrameElement(nsIDOMElement* aFrameElement)
+{
+  mFrameElement = aFrameElement;
 
   return NS_OK;
 }

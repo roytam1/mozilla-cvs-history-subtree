@@ -185,6 +185,8 @@ public:
 
   NS_IMETHOD ReallyCloseWindow();
 
+  NS_IMETHOD SetFrameElement(nsIDOMElement* aFrameElement);
+
   // nsIDOMViewCSS
   NS_DECL_NSIDOMVIEWCSS
 
@@ -291,6 +293,8 @@ protected:
   nsCOMPtr<nsIDOMCrypto>        mCrypto;
   nsCOMPtr<nsIDOMPkcs11>        mPkcs11;
   nsCOMPtr<nsIPrincipal>        mDocumentPrincipal;
+
+  nsIDOMElement*                mFrameElement; // WEAK
 
   friend class nsDOMScriptableHelper;
   static nsIXPConnect *sXPConnect;

@@ -46,6 +46,7 @@
 #include "nsIDOMLocation.h"
 #include "nsIDOMXULCommandDispatcher.h"
 #include "nsIDocument.h"
+#include "nsIDOMElement.h"
 
 class nsIDocShell;
 class nsIDOMWindowInternal;
@@ -84,6 +85,8 @@ public:
   NS_IMETHOD GetExtantDocument(nsIDOMDocument** aDocument) = 0;
 
   NS_IMETHOD ReallyCloseWindow() = 0;
+
+  NS_IMETHOD SetFrameElement(nsIDOMElement* aFrameElement) = 0;
 };
 
 #endif // nsPIDOMWindow_h__
