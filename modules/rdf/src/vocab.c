@@ -127,7 +127,8 @@ createNavCenterVocab () {
   setResourceType(gNavCenter->RDF_HistoryBySite, HISTORY_RT);
   setResourceType(gNavCenter->RDF_HistoryByDate, HISTORY_RT);
   gNavCenter->RDF_bookmarkAddDate  = newResource("bookmarkAddDate", RDF_ADDED_ON_STR);
-  gNavCenter->RDF_PersonalToolbarFolderCategory = RDF_GetResource(gCoreDB, "PersonalToolbarCat", true);
+  gNavCenter->RDF_PersonalToolbarFolderCategory = 
+    RDF_GetResource(gCoreDB, "PersonalToolbarCat", true);
   gNavCenter->RDF_Column = RDF_GetResource(gCoreDB, "Column", true);
   gNavCenter->RDF_ColumnResource = RDF_GetResource(gCoreDB, "ColumnResource", true);
   gNavCenter->RDF_ColumnWidth = RDF_GetResource(gCoreDB, "ColumnWidth", true);

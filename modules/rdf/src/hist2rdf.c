@@ -373,11 +373,11 @@ updateNewHistItem (DBT *key, DBT *data)
     HIST_COPY_INT32(&first, (time_t *)((char *)data->data + sizeof(int32)));
     HIST_COPY_INT32(&numaccess, (time_t *)((char *)data->data + 2*sizeof(int32)));
     
-    if (hostHash) collateOneHist(grdf, gNavCenter->RDF_History, 
+    if (hostHash) collateOneHist(grdf, gNavCenter->RDF_HistoryBySite, 
 				 (char*)key->data,                        /* url */
 				 ((char*)data->data + 4*sizeof(int32)),   /* title */
 				 last, first, numaccess, 0);
-    if (ByDateOpened) collateOneHist(grdf, gNavCenter->RDF_History, 
+    if (ByDateOpened) collateOneHist(grdf, gNavCenter->RDF_HistoryByDate, 
 				     (char*)key->data,                        /* url */
 				     ((char*)data->data + 4*sizeof(int32)),   /* title */
 				     last, first, numaccess, 1);
@@ -548,7 +548,7 @@ HistPossiblyAccessFile (RDFT rdf, RDF_Resource u, RDF_Resource s, PRBool inverse
 {
   if ((s ==  gCoreVocab->RDF_parent) && inversep && (rdf == gHistoryStore) &&
       ((u == gNavCenter->RDF_HistoryByDate) ||  (u == gNavCenter->RDF_HistoryBySite))) {
-      /* collateHistory(rdf, gNavCenter->RDF_History, (u == gNavCenter->RDF_HistoryByDate)); */
+       collateHistory(rdf, u, (u == gNavCenter->RDF_HistoryByDate)); 
   } 
 }
 
@@ -571,10 +571,9 @@ MakeHistoryStore (char* url)
       ntr->possiblyAccessFile = HistPossiblyAccessFile;
       gHistoryStore = ntr;
       ntr->url = copyString(url);
-      collateHistory(ntr, gNavCenter->RDF_History, 1);
-      remoteStoreAdd(ntr, sep, gCoreVocab->RDF_parent, gNavCenter->RDF_History, RDF_RESOURCE_TYPE, 1);
+      /*      remoteStoreAdd(ntr, sep, gCoreVocab->RDF_parent, gNavCenter->RDF_History, RDF_RESOURCE_TYPE, 1); */
       bySite = 1;
-      collateHistory(ntr, gNavCenter->RDF_History, 0);
+      /*      collateHistory(ntr, gNavCenter->RDF_History, 0); */
       return ntr;
     } else return gHistoryStore;
   } else return NULL;
