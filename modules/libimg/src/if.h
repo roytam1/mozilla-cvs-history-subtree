@@ -71,9 +71,14 @@ typedef struct il_container_struct il_container;
 /* #define DEBUG_GROUP_OBSERVER */
 
 
-#include "nslog.h"
-NS_DECL_LOG(IMGLIBLog)
-#define ILTRACE(l,t) NS_LOG_PRINTF(IMGLIBLog) t     // level, l, no longer used
+
+#ifdef DEBUG
+extern int il_debug;
+extern PRLogModuleInfo *il_log_module;
+#define ILTRACE(l,t) { if(il_debug>l) {PR_LOG(il_log_module, 1, t);} }
+#else
+#define ILTRACE(l,t) {}
+#endif
 
 #define FREE_IF_NOT_NULL(x)    do {if (x) {PR_FREEIF(x); (x) = NULL;}} while (0)
 
