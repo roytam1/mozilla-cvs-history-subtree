@@ -1982,3 +1982,16 @@ NS_IMETHODIMP nsRenderingContextGTK::ReleaseBackbuffer(void) {
   // the backbuffer as needed and it doesn't cause a performance hit. @see bug 95952
   return DestroyCachedBackbuffer();
 }
+
+NS_IMETHODIMP nsRenderingContextGTK::GetBackbuffer(const nsRect &aRequestedSize, const nsRect &aMaxSize, nsDrawingSurface &aBackbuffer)
+{
+  // Do not cache the backbuffer. On GTK it is more efficient to allocate
+  // the backbuffer as needed and it doesn't cause a performance hit. @see bug 95952
+  return AllocateBackbuffer(aRequestedSize, aMaxSize, aBackbuffer, PR_FALSE);
+}
+ 
+NS_IMETHODIMP nsRenderingContextGTK::ReleaseBackbuffer(void) {
+  // Do not cache the backbuffer. On GTK it is more efficient to allocate
+  // the backbuffer as needed and it doesn't cause a performance hit. @see bug 95952
+  return DestroyCachedBackbuffer();
+}

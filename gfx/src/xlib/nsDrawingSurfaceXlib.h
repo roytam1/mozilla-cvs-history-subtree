@@ -90,6 +90,7 @@ private:
 
   // are we offscreen
   PRBool         mIsOffscreen;
+  PRBool         mDestroyDrawable;
 
 
 private:
