@@ -66,7 +66,7 @@ if ($sslopt =~ /^n/i)
    $ssl_def = "-DUSE_SSL";
 }
 
-if ($osname eq 'MSWin32')
+if ($osname =~ /mswin/i)
 {
    if ($ssl_def)
    {
