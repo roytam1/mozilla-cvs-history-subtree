@@ -120,19 +120,22 @@
 
 static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
 
-#define DEFAULT_SCRIPTABLE_FLAGS                                              \
+#define DEFAULT_SCRIPTABLE_FLAGS_BASE                                         \
   nsIXPCScriptable::USE_JSSTUB_FOR_ADDPROPERTY |                              \
   nsIXPCScriptable::USE_JSSTUB_FOR_DELPROPERTY |                              \
   nsIXPCScriptable::USE_JSSTUB_FOR_SETPROPERTY |                              \
   nsIXPCScriptable::ALLOW_PROP_MODS_DURING_RESOLVE |                          \
   nsIXPCScriptable::ALLOW_PROP_MODS_TO_PROTOTYPE |                            \
   nsIXPCScriptable::DONT_ASK_INSTANCE_FOR_SCRIPTABLE |                        \
-  nsIXPCScriptable::DONT_ENUM_QUERY_INTERFACE |                               \
-  nsIXPCScriptable::CLASSINFO_INTERFACES_ONLY |                               \
   nsIXPCScriptable::DONT_REFLECT_INTERFACE_NAMES
 
+#define DOM_DEFAULT_SCRIPTABLE_FLAGS                                          \
+  DEFAULT_SCRIPTABLE_FLAGS_BASE |                                             \
+  nsIXPCScriptable::DONT_ENUM_QUERY_INTERFACE |                               \
+  nsIXPCScriptable::CLASSINFO_INTERFACES_ONLY
+
 #define NODE_SCRIPTABLE_FLAGS                                                 \
-  (DEFAULT_SCRIPTABLE_FLAGS |                                                 \
+  (DOM_DEFAULT_SCRIPTABLE_FLAGS |                                             \
    nsIXPCScriptable::WANT_PRECREATE |                                         \
    nsIXPCScriptable::WANT_NEWRESOLVE |                                        \
    nsIXPCScriptable::WANT_ADDPROPERTY |                                       \
@@ -148,9 +151,11 @@ static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
   nsIXPCScriptable::WANT_GETPROPERTY
 
 #define ARRAY_SCRIPTABLE_FLAGS                                                \
-  DEFAULT_SCRIPTABLE_FLAGS |                                                  \
+  DOM_DEFAULT_SCRIPTABLE_FLAGS |                                              \
   nsIXPCScriptable::WANT_GETPROPERTY
 
+#define BOXOBJECT_SCRIPTABLE_FLAGS                                            \
+  DEFAULT_SCRIPTABLE_FLAGS_BASE
 
 typedef nsIClassInfo* (*nsDOMClassInfoConstructorFnc)
   (nsDOMClassInfo::nsDOMClassInfoID aID);
@@ -199,30 +204,30 @@ struct nsDOMClassInfoData
 nsDOMClassInfoData sClassInfoData[] = {
   // Base classes
   NS_DEFINE_CLASSINFO_DATA(Window, nsWindowSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS |
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS |
                            nsIXPCScriptable::WANT_GETPROPERTY |
                            nsIXPCScriptable::WANT_SETPROPERTY |
                            nsIXPCScriptable::WANT_NEWRESOLVE |
                            nsIXPCScriptable::WANT_PRECREATE |
                            nsIXPCScriptable::WANT_FINALIZE)
   NS_DEFINE_CLASSINFO_DATA(Location, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(Navigator, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(Plugin, nsPluginSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(PluginArray, nsPluginArraySH::Create,
                            ARRAY_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(MimeType, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(MimeTypeArray, nsMimeTypeArraySH::Create,
                            ARRAY_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(BarProp, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(History, nsHistorySH::Create,
                            ARRAY_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(Screen, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
 
   // Core classes
   NS_DEFINE_CLASSINFO_DATA(Document, nsDocumentSH::Create,
@@ -230,13 +235,13 @@ nsDOMClassInfoData sClassInfoData[] = {
   NS_DEFINE_CLASSINFO_DATA(DocumentType, nsNodeSH::Create,
                            NODE_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(DOMImplementation, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(DocumentFragment, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(Element, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(Attr, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(Text, nsNodeSH::Create,
                            NODE_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(Comment, nsNodeSH::Create,
@@ -260,11 +265,11 @@ nsDOMClassInfoData sClassInfoData[] = {
 
   // StyleSheet classes
   NS_DEFINE_CLASSINFO_DATA(DocumentStyleSheetList, nsStyleSheetListSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
 
   // Event
   NS_DEFINE_CLASSINFO_DATA(Event, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
 
   // Misc HTML classes
   NS_DEFINE_CLASSINFO_DATA(HTMLDocument, nsHTMLDocumentSH::Create,
@@ -404,27 +409,27 @@ nsDOMClassInfoData sClassInfoData[] = {
 
   // CSS classes
   NS_DEFINE_CLASSINFO_DATA(CSSStyleRule, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(CSSRuleList, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(MediaList, nsMediaListSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(StyleSheetList, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(CSSStyleSheet, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(CSSStyleDeclaration, nsCSSStyleDeclSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(ComputedCSSStyleDeclaration, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(ROCSSPrimitiveValue, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
 
   // Range classes
   NS_DEFINE_CLASSINFO_DATA(Range, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(Selection, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
 
   // XUL classes
   NS_DEFINE_CLASSINFO_DATA(XULDocument, nsDocumentSH::Create,
@@ -434,30 +439,32 @@ nsDOMClassInfoData sClassInfoData[] = {
   NS_DEFINE_CLASSINFO_DATA(XULTreeElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(XULCommandDispatcher, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(XULNodeList, nsArraySH::Create,
                            ARRAY_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(XULNamedNodeMap, nsNamedNodeMapSH::Create,
                            ARRAY_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(XULAttr, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(BoxObject, nsDOMGenericSH::Create,
+                           BOXOBJECT_SCRIPTABLE_FLAGS)
 
   // Crypto classes
   NS_DEFINE_CLASSINFO_DATA(Crypto, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(CRMFObject, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(Pkcs11, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
 
   // XML extras classes
   NS_DEFINE_CLASSINFO_DATA(XMLHttpRequest, nsXMLHttpRequestSH::Create,
                            0 /* Not used, XMLHttpRequest is it's own
                                 helper */)
   NS_DEFINE_CLASSINFO_DATA(DOMSerializer, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(DOMParser, nsDOMGenericSH::Create,
-                           DEFAULT_SCRIPTABLE_FLAGS)
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
 };
 
 nsIXPConnect *nsDOMClassInfo::sXPConnect = nsnull;
