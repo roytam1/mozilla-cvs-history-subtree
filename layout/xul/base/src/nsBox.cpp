@@ -280,7 +280,7 @@ nsBox::MarkDirty(nsBoxLayoutState& aState)
 
   AddStateBits(NS_FRAME_IS_DIRTY);
 
-  NeedsRecalc();
+#error "This used to be a NeedsRecalc call."
 
   if (GetStateBits() & NS_FRAME_HAS_DIRTY_CHILDREN) {   
 #ifdef DEBUG_COELESCED
@@ -307,7 +307,7 @@ nsIFrame::MarkDirtyChildren(nsBoxLayoutState& aState)
 NS_IMETHODIMP
 nsBox::MarkStyleChange(nsBoxLayoutState& aState)
 {
-  NeedsRecalc();
+#error "This used to be a NeedsRecalc call."
 
   if (HasStyleChange())
     return NS_OK;
@@ -340,7 +340,7 @@ nsBox::HasStyleChange()
 void
 nsBox::SetStyleChangeFlag()
 {
-  NeedsRecalc();
+#error "This used to be a NeedsRecalc call."
   AddStateBits(NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN);
 }
 
@@ -383,7 +383,7 @@ nsBox::RelayoutDirtyChild(nsBoxLayoutState& aState, nsIBox* aChild)
         return NS_OK;
       }
 
-      NeedsRecalc();
+#error "This used to be a NeedsRecalc call."
 
       nsIBox* parentBox = nsnull;
       GetParentBox(&parentBox);
@@ -602,12 +602,6 @@ nsresult
 nsIFrame::GetParentBox(nsIBox** aParent)
 {
   *aParent = (mParent && mParent->IsBoxFrame()) ? mParent : nsnull;
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsBox::NeedsRecalc()
-{
   return NS_OK;
 }
 

@@ -56,7 +56,7 @@ public:
   NS_IMETHOD GetMaxSize(nsBoxLayoutState& aState, nsSize& aSize);
   NS_IMETHOD GetFlex(nsBoxLayoutState& aState, nscoord& aFlex);
   NS_IMETHOD GetAscent(nsBoxLayoutState& aState, nscoord& aAscent);
-  NS_IMETHOD NeedsRecalc();
+  virtual void MarkIntrinsicWidthsDirty();
 
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const;

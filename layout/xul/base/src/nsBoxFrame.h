@@ -113,7 +113,7 @@ public:
 #endif
   NS_IMETHOD GetVAlign(Valignment& aAlign);
   NS_IMETHOD GetHAlign(Halignment& aAlign);
-  NS_IMETHOD NeedsRecalc();
+  virtual void MarkIntrinsicWidthsDirty();
   NS_IMETHOD DoLayout(nsBoxLayoutState& aBoxLayoutState);
 
   NS_IMETHOD GetMouseThrough(PRBool& aMouseThrough);

@@ -83,7 +83,6 @@ public:
   NS_IMETHOD GetHAlign(Halignment& aAlign);
 
 
-  NS_IMETHOD NeedsRecalc();
   NS_IMETHOD RelayoutDirtyChild(nsBoxLayoutState& aState, nsIBox* aChild);
   NS_IMETHOD RelayoutChildAtOrdinal(nsBoxLayoutState& aState, nsIBox* aChild);
 

@@ -340,7 +340,6 @@ public:
   NS_IMETHOD GetAscent(nsBoxLayoutState& aBoxLayoutState, nscoord& aAscent);
   NS_IMETHOD SetIncludeOverflow(PRBool aInclude);
   NS_IMETHOD GetOverflow(nsSize& aOverflow);
-  NS_IMETHOD NeedsRecalc();
 
   //--------------------------------------------------
   // Additional methods

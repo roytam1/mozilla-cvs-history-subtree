@@ -397,7 +397,7 @@ nsLeafBoxFrame::CharacterDataChanged(nsPresContext* aPresContext,
                                      nsIContent*     aChild,
                                      PRBool          aAppend)
 {
-  NeedsRecalc();
+  MarkIntrinsicWidthsDirty();
   return nsLeafFrame::CharacterDataChanged(aPresContext, aChild, aAppend);
 }
 
@@ -431,10 +431,10 @@ nsLeafBoxFrame::GetAscent(nsBoxLayoutState& aState, nscoord& aAscent)
     return nsBox::GetAscent(aState, aAscent);
 }
 
-NS_IMETHODIMP
-nsLeafBoxFrame::NeedsRecalc()
+/* virtual */ void
+nsLeafBoxFrame::MarkIntrinsicWidthsDirty()
 {
-    return nsBox::NeedsRecalc();
+    return;
 }
 
 NS_IMETHODIMP

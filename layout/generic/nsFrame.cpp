@@ -2059,6 +2059,19 @@ nsFrame::GetFrameForPoint(const nsPoint& aPoint,
 virtual void
 nsFrame::MarkIntrinsicWidthsDirty()
 {
+  // This version is meant only for what used to be box-to-block adaptors.
+  // It should not be called by other derived classes.
+  if (IsBoxFrame()) {
+    nsBoxLayoutMetrics *metrics = BoxMetrics();
+
+    SizeNeedsRecalc(metrics->mPrefSize);
+    SizeNeedsRecalc(metrics->mMinSize);
+    SizeNeedsRecalc(metrics->mMaxSize);
+    SizeNeedsRecalc(metrics->mBlockPrefSize);
+    SizeNeedsRecalc(metrics->mBlockMinSize);
+    CoordNeedsRecalc(metrics->mFlex);
+    CoordNeedsRecalc(metrics->mAscent);
+  }
 }
 
 virtual nscoord
@@ -4717,21 +4730,6 @@ nsFrame::SetStyleChangeFlag()
 {
   nsBox::SetStyleChangeFlag();
   BoxMetrics()->mStyleChange = PR_TRUE;
-}
-
-NS_IMETHODIMP
-nsFrame::NeedsRecalc()
-{
-  nsBoxLayoutMetrics *metrics = BoxMetrics();
-
-  SizeNeedsRecalc(metrics->mPrefSize);
-  SizeNeedsRecalc(metrics->mMinSize);
-  SizeNeedsRecalc(metrics->mMaxSize);
-  SizeNeedsRecalc(metrics->mBlockPrefSize);
-  SizeNeedsRecalc(metrics->mBlockMinSize);
-  CoordNeedsRecalc(metrics->mFlex);
-  CoordNeedsRecalc(metrics->mAscent);
-  return NS_OK;
 }
 
 NS_IMETHODIMP

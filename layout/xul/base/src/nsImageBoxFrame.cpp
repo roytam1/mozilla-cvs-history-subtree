@@ -271,7 +271,7 @@ nsImageBoxFrame::nsImageBoxFrame(nsIPresShell* aShell) :
   mIntrinsicSize(0,0),
   mLoadFlags(nsIRequest::LOAD_NORMAL)
 {
-  NeedsRecalc();
+  MarkIntrinsicWidthsDirty();
 }
 
 nsImageBoxFrame::~nsImageBoxFrame()
@@ -279,8 +279,8 @@ nsImageBoxFrame::~nsImageBoxFrame()
 }
 
 
-NS_IMETHODIMP
-nsImageBoxFrame::NeedsRecalc()
+/* virtual */ void
+nsImageBoxFrame::MarkIntrinsicWidthsDirty()
 {
   SizeNeedsRecalc(mImageSize);
   return NS_OK;

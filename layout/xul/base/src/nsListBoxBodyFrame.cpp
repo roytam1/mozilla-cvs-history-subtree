@@ -339,11 +339,10 @@ nsListBoxBodyFrame::AttributeChanged(nsIContent* aChild,
 
 /////////// nsIBox ///////////////
 
-NS_IMETHODIMP
-nsListBoxBodyFrame::NeedsRecalc()
+/* virtual */ void
+nsListBoxBodyFrame::MarkIntrinsicWidthsDirty()
 {
   mStringWidth = -1;
-  return nsBoxFrame::NeedsRecalc();
 }
 
 /////////// nsBox ///////////////

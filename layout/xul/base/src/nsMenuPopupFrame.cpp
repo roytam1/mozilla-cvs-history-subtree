@@ -241,7 +241,7 @@ nsMenuPopupFrame::Init(nsPresContext*  aPresContext,
 NS_IMETHODIMP
 nsMenuPopupFrame::MarkStyleChange(nsBoxLayoutState& aState)
 {
-  NeedsRecalc();
+#error "This used to be a NeedsRecalc call."
 
   if (HasStyleChange())
     return NS_OK;
@@ -274,7 +274,7 @@ nsMenuPopupFrame::MarkStyleChange(nsBoxLayoutState& aState)
 NS_IMETHODIMP
 nsMenuPopupFrame::MarkDirty(nsBoxLayoutState& aState)
 {
-  NeedsRecalc();
+#error "This used to be a NeedsRecalc call."
 
   // only reflow if we aren't already dirty.
   if (GetStateBits() & NS_FRAME_IS_DIRTY) {      
@@ -323,7 +323,7 @@ nsMenuPopupFrame::RelayoutDirtyChild(nsBoxLayoutState& aState, nsIBox* aChild)
   if (!(GetStateBits() & NS_FRAME_HAS_DIRTY_CHILDREN)) {      
     // Mark yourself as dirty and needing to be recalculated
     AddStateBits(NS_FRAME_HAS_DIRTY_CHILDREN);
-    NeedsRecalc();
+#error "This used to be a NeedsRecalc call."
 
     nsIBox* parentBox = nsnull;
     GetParentBox(&parentBox);
