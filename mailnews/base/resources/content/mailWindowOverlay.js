@@ -1335,10 +1335,6 @@ function SetUpToolbarButtons(uri)
     if (buttonToShow) {
         buttonToShow.removeAttribute('hidden');
     }
-
-    // hook for extra toolbar items
-    var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
-    observerService.notifyObservers(window, "mail:updateToolbarItems", uri);
 }
 
 var gMessageBrowser;

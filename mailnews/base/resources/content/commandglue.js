@@ -155,6 +155,11 @@ function ChangeFolderByURI(uri, viewType, viewFlags, sortType, sortOrder)
   //dump("In ChangeFolderByURI uri = " + uri + " sortType = " + sortType + "\n");
   if (uri == gCurrentLoadingFolderURI)
     return;
+
+  // hook for extra toolbar items
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+  observerService.notifyObservers(window, "mail:updateToolbarItems", uri);
+
   var resource = RDF.GetResource(uri);
   var msgfolder =
       resource.QueryInterface(Components.interfaces.nsIMsgFolder);
