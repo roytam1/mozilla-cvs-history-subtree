@@ -33,11 +33,11 @@
 CORE_DEPTH = ..
 DEPTH      = ..
 
-IMPORTS =	nspr20/v4.2 \
+IMPORTS =	nspr20/v4.2.2-rc1 \
 		dbm/DBM_1_61_RTM \
 		$(NULL)
 
-RELEASE = security
+RELEASE = nss
 
 DIRS = lib cmd
 

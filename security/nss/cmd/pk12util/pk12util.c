@@ -54,8 +54,10 @@ Usage(char *progName)
     FPS "Usage:	 %s -i importfile [-d certdir] [-P dbprefix] [-h tokenname]\n",
 				 progName);
     FPS "\t\t [-k slotpwfile | -K slotpw] [-w p12filepwfile | -W p12filepw]\n");
+    FPS "\t\t [-v]\n");
     FPS "Usage:	 %s -o exportfile -n certname [-d certdir] [-P dbprefix]\n", progName);
     FPS "\t\t [-k slotpwfile | -K slotpw] [-w p12filepwfile | -W p12filepw]\n");
+    FPS "\t\t [-v]\n");
     exit(PK12UERR_USAGE);
 }
 
@@ -556,9 +558,8 @@ P12U_ExportPKCS12Object(char *nn, char *outfile, PK11SlotInfo *inSlot,
     SEC_PKCS12ExportContext *p12ecx = NULL;
     SEC_PKCS12SafeInfo *keySafe = NULL, *certSafe = NULL;
     SECItem *pwitem = NULL;
-    PK11SlotInfo *slot = NULL;
     p12uContext *p12cxt = NULL;
-    CERTCertificate *cert;
+    CERTCertificate *cert = NULL;
 
     if (P12U_InitSlot(inSlot, slotPw) != SECSuccess) {
 	SECU_PrintError(progName,"Failed to authenticate to \"%s\"",
@@ -639,9 +640,6 @@ P12U_ExportPKCS12Object(char *nn, char *outfile, PK11SlotInfo *inSlot,
     p12u_DestroyExportFileInfo(&p12cxt, PR_FALSE);
     SECITEM_ZfreeItem(pwitem, PR_TRUE);
     CERT_DestroyCertificate(cert);
-    if(slot) {
-	PK11_FreeSlot(slot);
-    }
 
     fprintf(stdout, "%s: PKCS12 EXPORT SUCCESSFUL\n", progName);
     SEC_PKCS12DestroyExportContext(p12ecx);
@@ -657,9 +655,6 @@ loser:
     if (p12FilePw)
 	PR_Free(p12FilePw->data);
 
-    if(slot && (slot != cert->slot)) {
-	PK11_FreeSlot(slot);
-    }
     if(cert) {
 	CERT_DestroyCertificate(cert);
     }
@@ -711,7 +706,6 @@ enum {
     opt_Import,
     opt_SlotPWFile,
     opt_SlotPW,
-    opt_Mode,
     opt_Nickname,
     opt_Export,
     opt_P12FilePWFile,
@@ -727,7 +721,6 @@ static secuCommandFlag pk12util_options[] =
     { /* opt_Import	       */ 'i', PR_TRUE,	 0, PR_FALSE },
     { /* opt_SlotPWFile	       */ 'k', PR_TRUE,	 0, PR_FALSE },
     { /* opt_SlotPW	       */ 'K', PR_TRUE,	 0, PR_FALSE },
-    { /* opt_Mode	       */ 'm', PR_TRUE,	 0, PR_FALSE },
     { /* opt_Nickname	       */ 'n', PR_TRUE,	 0, PR_FALSE },
     { /* opt_Export	       */ 'o', PR_TRUE,	 0, PR_FALSE },
     { /* opt_P12FilePWFile     */ 'w', PR_TRUE,	 0, PR_FALSE },
@@ -814,6 +807,7 @@ main(int argc, char **argv)
 
     if (!slot) {
 	SECU_PrintError(progName,"Invalid slot \"%s\"", slotname);
+	pk12uErrno = PK12UERR_PK11GETSLOT;
 	goto done;
     }
 
