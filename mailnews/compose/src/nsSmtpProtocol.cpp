@@ -1232,9 +1232,7 @@ nsresult nsSmtpProtocol::LoadUrl(nsIURI * aURL, nsISupports * /* aConsumer */)
                                                nsCOMTypeInfo<nsIMsgHeaderParser>::GetIID(),
                                                getter_AddRefs(parser));
 
-			// mscott -- temp hack until i've gotten mime to build...
-			//m_runningURL->GetAllRecipients(&addresses);
-			m_runningURL->GetAllRecipients(&m_addresses);
+			m_runningURL->GetAllRecipients(&addresses);
 
 			if (NS_SUCCEEDED(rv) && parser)
 			{
