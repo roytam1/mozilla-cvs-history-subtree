@@ -1,0 +1,16 @@
+Distribution
+or How to compile and package Beonex Communicator
+
+Linux
+Follow the steps in makedist.sh.
+Preferably by hand. In any case, it is important to stick to this order.
+
+Other Unices
+Basically like Linux, but you probably need to edit .mozconfig,
+esp. the compiler options.
+
+Windows
+Please fill in
+
+Mac OS X
+Please fill in

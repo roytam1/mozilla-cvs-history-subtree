@@ -5,9 +5,10 @@
 4. Edit CVS/Tag
 5. In extensions/spellcheck/: find . -not -path "*CVS*" |xargs -n 10 cvs add
 5. In README: cvs add user/; cvs add user/*.txt
-6. cat newtextfiles |xargs -n 10 cvs add
-7. cat newbinfiles |xargs -n 10 cvs add -kb
-8. cvs commit
+6. ae .cvsignore, remove .mozconfig
+7. cat newtextfiles |xargs -n 10 cvs add
+8. cat newbinfiles |xargs -n 10 cvs add -kb
+9. cvs commit
 
 To update to latest Mozilla source:
 cvs up -r MOZILLA_WHATEVER
