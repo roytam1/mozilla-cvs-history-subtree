@@ -125,6 +125,8 @@ const int kButtonEndCapWidth = 14;
   
   //  get panel and display it
   NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: NSLocalizedString(@"OKButtonText", @"") altButton: nil otherButton: nil extraView: checkboxView];
+  [panel setInitialFirstResponder: checkBox];
+
   [NSApp runModalForWindow: panel relativeToWindow:parent];
   *checkValue = ([checkBox state] == NSOnState);  
   [panel close];
@@ -154,6 +156,8 @@ const int kButtonEndCapWidth = 14;
   
   //  get panel and display it
   NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: okButton altButton: cancelButton otherButton: nil extraView: checkboxView];
+  [panel setInitialFirstResponder: checkBox];
+
   int result = [NSApp runModalForWindow: panel relativeToWindow:parent];
   *checkValue = ([checkBox state] == NSOnState);  
   [panel close];
@@ -218,6 +222,8 @@ const int kButtonEndCapWidth = 14;
     
   //  get panel and display it
   NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: okButton altButton: cancelButton otherButton: nil extraView: extraView];
+  [panel setInitialFirstResponder: field];
+
   int result = [NSApp runModalForWindow: panel relativeToWindow:parent];
   [panel close];
   
@@ -266,6 +272,8 @@ const int kButtonEndCapWidth = 14;
     
   //  get panel and display it
   NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: okButton altButton: cancelButton otherButton: nil extraView: extraView];
+  [panel setInitialFirstResponder: userView];
+
   int result = [NSApp runModalForWindow: panel relativeToWindow:parent];
   [panel close];
   
@@ -278,7 +286,8 @@ const int kButtonEndCapWidth = 14;
   return (result == kOKButton);
 }
 
-- (BOOL)promptPassword:(NSWindow*)parent title:(NSString*)title text:(NSString*)text passwordText:(NSMutableString*)passwordText checkMsg:(NSString*)checkMsg checkValue:(BOOL*)checkValue doCheck:(BOOL)doCheck
+- (BOOL)promptPassword:(NSWindow*)parent title:(NSString*)title text:(NSString*)text passwordText:(NSMutableString*)passwordText
+        checkMsg:(NSString*)checkMsg checkValue:(BOOL*)checkValue doCheck:(BOOL)doCheck
 {
   NSString* okButton = NSLocalizedString(@"OKButtonText", @"");
   NSString* cancelButton = NSLocalizedString(@"CancelButtonText", @"");
@@ -306,6 +315,8 @@ const int kButtonEndCapWidth = 14;
     
   //  get panel and display it
   NSPanel* panel = [self getAlertPanelWithTitle: title message: text defaultButton: okButton altButton: cancelButton otherButton: nil extraView: extraView];
+  [panel setInitialFirstResponder: passField];
+
   int result = [NSApp runModalForWindow: panel relativeToWindow:parent];
   [panel close];
   
@@ -417,8 +428,11 @@ const int kButtonEndCapWidth = 14;
   return (minContentWidth > buttonWidth) ? minContentWidth : buttonWidth;
 }
 
-- (NSPanel*)getAlertPanelWithTitle:(NSString*)title message:(NSString*)message defaultButton:(NSString*)defaultLabel altButton:(NSString*)altLabel otherButton:(NSString*)otherLabel extraView:(NSView*)extraView
+- (NSPanel*)getAlertPanelWithTitle:(NSString*)title message:(NSString*)message
+                defaultButton:(NSString*)defaultLabel altButton:(NSString*)altLabel
+                otherButton:(NSString*)otherLabel extraView:(NSView*)extraView
 {
+  // XXX to do: we need to fix the tab order between dynamically added items
   NSRect rect = NSMakeRect(0, 0, kMinDialogWidth, kMaxDialogHeight);
   NSPanel* panel = [[[NSPanel alloc] initWithContentRect: rect styleMask: NSTitledWindowMask backing: NSBackingStoreBuffered defer: YES] autorelease];
   NSImageView* imageView = [[[NSImageView alloc] initWithFrame: NSMakeRect(kWindowBorder, kMaxDialogHeight - kWindowBorder - kIconSize, kIconSize, kIconSize)] autorelease];
@@ -436,6 +450,7 @@ const int kButtonEndCapWidth = 14;
   NSButton* defButton = [self makeButtonWithTitle: defaultLabel];
   [defButton setAction: @selector(hitButton1:)];
   [defButton setAutoresizingMask: NSViewMinXMargin | NSViewMaxYMargin];
+  [defButton setKeyEquivalent: @"\r"];		// return
   [[panel contentView] addSubview: defButton];
   [panel setDefaultButtonCell: [defButton cell]];
   
@@ -444,6 +459,7 @@ const int kButtonEndCapWidth = 14;
     altButton = [self makeButtonWithTitle: altLabel];
     [altButton setAction: @selector(hitButton2:)];
     [altButton setAutoresizingMask: NSViewMinXMargin | NSViewMaxYMargin];
+    [altButton setKeyEquivalent: @"\e"];		// escape
     [[panel contentView] addSubview: altButton];
   }
   
@@ -508,11 +524,11 @@ const int kButtonEndCapWidth = 14;
   [[panel contentView] addSubview: messageView];
   
   //  position the extra view
-  
+
   NSRect extraRect = NSMakeRect(contentLeftEdge, NSMinY([messageView frame]) - kGeneralViewSpace - extraViewHeight, contentWidth, extraViewHeight);
   [extraView setFrame: extraRect];
   [[panel contentView] addSubview: extraView];
-    
+
   return panel;
 }
 
@@ -642,6 +658,7 @@ const int kButtonEndCapWidth = 14;
 
 - (NSView*)getCheckboxView:(NSButton**)checkBoxPtr withLabel:(NSString*)label andWidth:(float)width
 {
+  // XXX to do: need to make it so that clicking on the label toggles the checkbox
   NSTextField* textField = [self getLabelView: label withWidth: width - kCheckBoxWidth];
   float height = NSHeight([textField frame]);
   
