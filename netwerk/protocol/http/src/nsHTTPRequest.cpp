@@ -56,13 +56,13 @@ nsHTTPRequest::nsHTTPRequest(nsIURI* i_URL, nsHTTPHandler* i_Handler, PRUint32 b
     :
     mMethod(i_Method),
     mVersion(HTTP_ONE_ZERO),
-    mRequestSpec(0),
-    mDoKeepAlive(PR_FALSE),
     mKeepAliveTimeout (2*60),
-    mBufferSegmentSize(bufferSegmentSize),
-    mBufferMaxSize(bufferMaxSize),
     mAttempts (0),
-    mHandler (i_Handler)
+    mDoKeepAlive(PR_FALSE),
+    mRequestSpec(0),
+    mHandler (i_Handler),
+    mBufferSegmentSize(bufferSegmentSize),
+    mBufferMaxSize(bufferMaxSize)
 {   
     NS_INIT_REFCNT();
 
@@ -649,3 +649,4 @@ nsHTTPRequest::formHeaders ()
 
     return NS_OK;
 }
+
