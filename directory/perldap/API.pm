@@ -2820,12 +2820,7 @@ EXAMPLE:
 
   $status = ldap_url_search_st($ld,$url,$attrsonly,$timeout,$res);
 
-=head1 AUTHOR INFORMATION
-
-Address bug reports and comments to the Netscape DevEdge newsgroups at:
-nntps://secnews.netscape.com/netscape.dev.directory.
-
--head1 CREDITS
+=head1 CREDITS
 
 Most of the Perl API module was written by Clayton Donley to interface with
 C API routines from Netscape Communications Corp., Inc.
