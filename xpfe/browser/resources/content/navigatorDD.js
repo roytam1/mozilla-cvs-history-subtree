@@ -437,6 +437,18 @@ var searchButtonObserver = {
     }
 };
 var gOpenFolder = null;
+
+function closeFolder (aTarget)
+{
+  var children = aTarget.childNodes;
+  for (var i=0; i<children.length; i++) {
+    if (children[i].getAttribute("open") == "true") {
+      closeFolder(children[i].firstChild);
+      children[i].firstChild.hidePopup();
+    }
+  }
+}
+
 var folderObserver = {
   onDragOver: function(aEvent, aFlavour, aDragSession)
     {
@@ -449,7 +461,14 @@ var folderObserver = {
         return false;
 
       aEvent.target.setAttribute("dragover", "true");
+
+      // XXX Ensure that only one folder can be open at once
+      document.getElementById("bookmarks-button").firstChild.hidePopup();
+      closeFolder(document.getElementById("bookmarks-button").firstChild);
+      closeFolder(document.getElementById("innermostBox"));
+
       aEvent.target.firstChild.showPopup(aEvent.target, -1, -1, "menupopup", "bottomleft", "bottomleft");
+
       return true;
     },
   getSupportedFlavours: function ()
