@@ -59,7 +59,7 @@
  * compute an nsID given an NSFastLoadID.
  */
 typedef PRUint32 NSFastLoadID;          // nsFastLoadFooter::mIDMap index
-typedef PRUint32 NSFastLoadOID;         // nsFastLoadFooter::mSharpObjectMap index
+typedef PRUint32 NSFastLoadOID;         // nsFastLoadFooter::mObjectMap index
 
 /**
  * A Mozilla FastLoad file is an untagged (in general) stream of objects and
@@ -106,7 +106,7 @@ typedef PRUint32 NSFastLoadOID;         // nsFastLoadFooter::mSharpObjectMap ind
 #define MFL_DULL_OBJECT_OID     MFL_OBJECT_DEF_TAG
 
 /**
- * Convert an OID to an index into nsFastLoadFooter::mSharpObjectMap.
+ * Convert an OID to an index into nsFastLoadFooter::mObjectMap.
  */
 #define MFL_OID_TO_SHARP_INDEX(oid)     (((oid) >> MFL_OBJECT_TAG_BITS) - 1)
 
@@ -215,7 +215,9 @@ class NS_COM nsFastLoadFileReader
 
     PRUint32 GetChecksum() { return mHeader.mChecksum; }
 
-    nsresult SelectMuxedDocument(const char* aURISpec);
+    nsresult StartMuxedDocument(nsISupports* aURI, const char* aURISpec);
+    nsresult SelectMuxedDocument(nsISupports* aURI);
+    nsresult EndMuxedDocument(nsISupports* aURI);
 
   private:
     // nsISupports methods
@@ -246,15 +248,17 @@ class NS_COM nsFastLoadFileReader
     struct nsFastLoadFooter : public nsFastLoadFooterPrefix {
         nsFastLoadFooter()
           : mIDMap(nsnull),
-            mSharpObjectMap(nsnull) {
-            mMuxedDocumentMap.ops = nsnull;
+            mObjectMap(nsnull) {
+            mDocumentMap.ops = mURIMap.ops = nsnull;
         }
 
         ~nsFastLoadFooter() {
             delete[] mIDMap;
-            delete[] mSharpObjectMap;
-            if (mMuxedDocumentMap.ops)
-                PL_DHashTableFinish(&mMuxedDocumentMap);
+            delete[] mObjectMap;
+            if (mDocumentMap.ops)
+                PL_DHashTableFinish(&mDocumentMap);
+            if (mURIMap.ops)
+                PL_DHashTableFinish(&mURIMap);
         }
 
         const nsID& GetID(NSFastLoadID aFastId) const {
@@ -273,7 +277,7 @@ class NS_COM nsFastLoadFileReader
             NS_ASSERTION(index < mNumSharpObjects, "aOID out of range");
             if (index >= mNumSharpObjects)
                 return dummy;
-            return mSharpObjectMap[index];
+            return mObjectMap[index];
         }
 
         const char* GetDependency(PRUint32 aIndex) const {
@@ -295,12 +299,16 @@ class NS_COM nsFastLoadFileReader
 
         // Map from dense, zero-based MFL_OID_TO_SHARP_INDEX(oid) to sharp
         // object offset and refcnt information.
-        nsFastLoadSharpObjectEntry* mSharpObjectMap;
+        nsFastLoadSharpObjectEntry* mObjectMap;
 
         // Map from URI spec string to nsDocumentMapReadEntry, which helps us
         // demultiplex a document's objects from among the interleaved object
         // stream segments in the FastLoad file.
-        PLDHashTable mMuxedDocumentMap;
+        PLDHashTable mDocumentMap;
+
+        // Fast mapping from URI object pointer to mDocumentMap entry, valid
+        // only while the muxed document is loading.
+        PLDHashTable mURIMap;
 
         // List of source filename dependencies that should trigger regeneration
         // of the FastLoad file.
@@ -344,7 +352,7 @@ class NS_COM nsFastLoadFileWriter
       : nsBinaryOutputStream(aStream),
         mCurrentDocumentMapEntry(nsnull) {
         NS_INIT_REFCNT();
-        mIDMap.ops = mObjectMap.ops = nsnull;
+        mIDMap.ops = mObjectMap.ops = mDocumentMap.ops = mURIMap.ops = nsnull;
     }
 
     virtual ~nsFastLoadFileWriter() {
@@ -352,9 +360,15 @@ class NS_COM nsFastLoadFileWriter
             PL_DHashTableFinish(&mIDMap);
         if (mObjectMap.ops)
             PL_DHashTableFinish(&mObjectMap);
+        if (mDocumentMap.ops)
+            PL_DHashTableFinish(&mDocumentMap);
+        if (mURIMap.ops)
+            PL_DHashTableFinish(&mURIMap);
     }
 
-    nsresult SelectMuxedDocument(const char* aURISpec);
+    nsresult StartMuxedDocument(nsISupports* aURI, const char* aURISpec);
+    nsresult SelectMuxedDocument(nsISupports* aURI);
+    nsresult EndMuxedDocument(nsISupports* aURI);
 
     PRUint32 GetDependencyCount() { return PRUint32(mDependencies.Count()); }
 
@@ -421,6 +435,7 @@ class NS_COM nsFastLoadFileWriter
     PLDHashTable mIDMap;
     PLDHashTable mObjectMap;
     PLDHashTable mDocumentMap;
+    PLDHashTable mURIMap;
 
     nsDocumentMapWriteEntry* mCurrentDocumentMapEntry;
 

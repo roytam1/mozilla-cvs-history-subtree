@@ -74,6 +74,7 @@
 
 class nsIAtom;
 class nsIElementFactory;
+class nsIFile;
 class nsILoadGroup;
 class nsIRDFResource;
 class nsIRDFService;
@@ -93,7 +94,7 @@ class nsIXULPrototypeScript;
 struct JSObject;
 struct PRLogModuleInfo;
 
-class nsIFastLoadService;
+#include "nsIFastLoadService.h"         // XXXbe temporary?
 
 /**
  * The XUL document class
@@ -335,6 +336,8 @@ public:
     NS_IMETHOD RemoveSubtreeFromDocument(nsIContent* aElement);
     NS_IMETHOD SetTemplateBuilderFor(nsIContent* aContent, nsIXULTemplateBuilder* aBuilder);
     NS_IMETHOD GetTemplateBuilderFor(nsIContent* aContent, nsIXULTemplateBuilder** aResult);
+    NS_IMETHOD OnPrototypeLoadDone();
+    NS_IMETHOD OnResumeContentSink();
     
     // nsIDOMEventCapturer interface
     NS_IMETHOD    CaptureEvent(const nsAReadableString& aType);
@@ -392,6 +395,13 @@ public:
                          PRInt32 aNamespaceID,
                          nsRDFDOMNodeList* aElements);
 
+    static nsresult
+    GetFastLoadService(nsIFastLoadService** aResult)
+    {
+        NS_IF_ADDREF(*aResult = gFastLoadService);
+        return NS_OK;
+    }
+
 protected:
     // Implementation methods
     friend nsresult
@@ -428,9 +438,14 @@ protected:
 
     nsresult CreateElement(nsINodeInfo *aNodeInfo, nsIContent** aResult);
 
-    nsresult InitFastLoad(nsIURI* aURI);
+    nsresult StartFastLoad();
+    nsresult EndFastLoad();
+    static nsresult AbortFastLoads();
 
-    static nsIFastLoadService* gFastLoadService;
+    static nsIFastLoadService*  gFastLoadService;
+    static nsIFile*             gFastLoadFile;
+    static PRBool               gFastLoadDone;
+    static nsXULDocument*       gFastLoadList;
 
     nsresult PrepareToLoad(nsISupports* aContainer,
                            const char* aCommand,
@@ -518,7 +533,9 @@ protected:
     nsCOMPtr<nsILineBreaker>            mLineBreaker;    // [OWNER] 
     nsCOMPtr<nsIWordBreaker>            mWordBreaker;    // [OWNER] 
     nsVoidArray                mSubDocuments;     // [OWNER] of subelements
-    PRBool                     mIsPopup;
+    PRPackedBool               mIsPopup;
+    PRPackedBool               mIsFastLoad;
+    nsXULDocument*             mNextFastLoad;
     nsCOMPtr<nsIDOMXULCommandDispatcher>     mCommandDispatcher; // [OWNER] of the focus tracker
 
     nsCOMPtr<nsIBindingManager> mBindingManager; // [OWNER] of all bindings
@@ -770,11 +787,12 @@ protected:
     class CachedChromeStreamListener : public nsIStreamListener {
     protected:
         nsXULDocument* mDocument;
+        PRPackedBool   mProtoLoaded;
 
         virtual ~CachedChromeStreamListener();
 
     public:
-        CachedChromeStreamListener(nsXULDocument* aDocument);
+        CachedChromeStreamListener(nsXULDocument* aDocument, PRBool aProtoLoaded);
 
         NS_DECL_ISUPPORTS
         NS_DECL_NSIREQUESTOBSERVER

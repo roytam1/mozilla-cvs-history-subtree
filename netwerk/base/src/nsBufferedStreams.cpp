@@ -103,9 +103,13 @@ nsBufferedStream::Seek(PRInt32 whence, PRInt32 offset)
         return NS_ERROR_UNEXPECTED;
     }
 
-    if ((PRInt32)mBufferStartOffset <= absPos
-        && absPos < (PRInt32)(mBufferStartOffset + mFillPoint)) {
-        mCursor = absPos - mBufferStartOffset;
+    // Let mCursor point into the existing buffer if the new position is at
+    // the mFillPoint "fencepost" -- the client may never get around to Read
+    // or Write after this seek.  Let Read and Write worry about flushing and
+    // filling in that event.
+    PRUint32 offsetInBuffer = PRUint32(absPos - mBufferStartOffset);
+    if (offsetInBuffer <= mFillPoint) {
+        mCursor = offsetInBuffer;
         return NS_OK;
     }
 
@@ -303,7 +307,6 @@ nsBufferedOutputStream::Create(nsISupports *aOuter, REFNSIID aIID, void **aResul
 NS_IMETHODIMP
 nsBufferedOutputStream::Init(nsIOutputStream* stream, PRUint32 bufferSize)
 {
-    mFillPoint = bufferSize;   // always fill to the end for buffered output streams
     return nsBufferedStream::Init(stream, bufferSize);
 }
 
@@ -331,7 +334,7 @@ nsBufferedOutputStream::Write(const char *buf, PRUint32 count, PRUint32 *result)
     nsresult rv = NS_OK;
     PRUint32 written = 0;
     while (count > 0) {
-        PRUint32 amt = PR_MIN(count, mFillPoint - mCursor);
+        PRUint32 amt = PR_MIN(count, mBufferSize - mCursor);
         if (amt > 0) {
             nsCRT::memcpy(mBuffer + mCursor, buf + written, amt);
             written += amt;
@@ -344,6 +347,8 @@ nsBufferedOutputStream::Write(const char *buf, PRUint32 count, PRUint32 *result)
             if (NS_FAILED(rv)) break;
         }
     }
+    if (mFillPoint < mCursor)
+        mFillPoint = mCursor;
     *result = written;
     return (written > 0) ? NS_OK : rv;
 }

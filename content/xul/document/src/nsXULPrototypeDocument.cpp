@@ -42,6 +42,7 @@
 #include "nsIServiceManager.h"
 #include "nsISupportsArray.h"
 #include "nsIURI.h"
+#include "nsIXULDocument.h"
 #include "nsIXULPrototypeDocument.h"
 #include "jsapi.h"
 #include "nsString.h"
@@ -129,6 +130,9 @@ public:
     NS_IMETHOD GetDocumentPrincipal(nsIPrincipal** aResult);
     NS_IMETHOD SetDocumentPrincipal(nsIPrincipal* aPrincipal);
 
+    NS_IMETHOD AwaitLoadDone(nsIXULDocument* aDocument, PRBool* aResult);
+    NS_IMETHOD NotifyLoadDone();
+
     // nsIScriptGlobalObjectOwner methods
     NS_DECL_NSISCRIPTGLOBALOBJECTOWNER
 
@@ -142,6 +146,9 @@ protected:
     nsCOMPtr<nsIPrincipal> mDocumentPrincipal;
 
     nsCOMPtr<nsIScriptGlobalObject> mGlobalObject;
+
+    PRPackedBool mLoaded;
+    nsCOMPtr<nsICollection> mPrototypeWaiters;
 
     nsXULPrototypeDocument();
     virtual ~nsXULPrototypeDocument();
@@ -195,7 +202,8 @@ JSClass nsXULPDGlobalObject::gSharedGlobalClass = {
 
 nsXULPrototypeDocument::nsXULPrototypeDocument()
     : mRoot(nsnull),
-      mGlobalObject(nsnull)
+      mGlobalObject(nsnull),
+      mLoaded(PR_FALSE)
 {
     NS_INIT_REFCNT();
 }
@@ -219,8 +227,8 @@ nsXULPrototypeDocument::Init()
 nsXULPrototypeDocument::~nsXULPrototypeDocument()
 {
     if (mGlobalObject) {
-      mGlobalObject->SetContext(nsnull); // remove circular reference
-      mGlobalObject->SetGlobalObjectOwner(nsnull); // just in case
+        mGlobalObject->SetContext(nsnull); // remove circular reference
+        mGlobalObject->SetGlobalObjectOwner(nsnull); // just in case
     }
     delete mRoot;
 }
@@ -450,6 +458,58 @@ nsXULPrototypeDocument::SetDocumentPrincipal(nsIPrincipal* aPrincipal)
 {
     mDocumentPrincipal = aPrincipal;
     return NS_OK;
+}
+
+
+
+NS_IMETHODIMP
+nsXULPrototypeDocument::AwaitLoadDone(nsIXULDocument* aDocument, PRBool* aResult)
+{
+    nsresult rv = NS_OK;
+
+    *aResult = mLoaded;
+
+    if (!mLoaded) {
+        if (!mPrototypeWaiters) {
+            nsCOMPtr<nsISupportsArray> supportsArray;
+            rv = NS_NewISupportsArray(getter_AddRefs(supportsArray));
+            if (NS_FAILED(rv)) return rv;
+
+            mPrototypeWaiters = do_QueryInterface(supportsArray);
+        }
+
+        rv = mPrototypeWaiters->AppendElement(aDocument);
+    }
+
+    return rv;
+}
+
+
+NS_IMETHODIMP
+nsXULPrototypeDocument::NotifyLoadDone()
+{
+    nsresult rv = NS_OK;
+
+    mLoaded = PR_TRUE;
+
+    if (mPrototypeWaiters) {
+        PRUint32 n;
+        rv = mPrototypeWaiters->Count(&n);
+        if (NS_SUCCEEDED(rv)) {
+            for (PRUint32 i = 0; i < n; i++) {
+                nsCOMPtr<nsIXULDocument> doc;
+                rv = mPrototypeWaiters->GetElementAt(i, getter_AddRefs(doc));
+                if (NS_FAILED(rv)) break;
+
+                rv = doc->OnPrototypeLoadDone();
+                if (NS_FAILED(rv)) break;
+            }
+        }
+
+        mPrototypeWaiters = nsnull;
+    }
+
+    return rv;
 }
 
 //----------------------------------------------------------------------

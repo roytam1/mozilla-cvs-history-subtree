@@ -49,15 +49,20 @@ protected:
 protected:
     PRUint32                    mBufferSize;
     char*                       mBuffer;
-    // mBufferStartOffset is the offset relative to the start of mStream:
+
+    // mBufferStartOffset is the offset relative to the start of mStream.
     PRUint32                    mBufferStartOffset;
+
     // mCursor is the read cursor for input streams, or write cursor for
-    // output streams, and is relative to mBufferStartOffset:
+    // output streams, and is relative to mBufferStartOffset.
     PRUint32                    mCursor;
+
     // mFillPoint is the amount available in the buffer for input streams,
-    // or the end of the buffer for output streams, and is relative to 
-    // mBufferStartOffset:
+    // or the count of bytes written or read (in case of a seek/read/write
+    // cycle) in the buffer for output streams, and is therefore relative
+    // to mBufferStartOffset.
     PRUint32                    mFillPoint;
+
     nsISupports*                mStream;        // cast to appropriate subclass
 };
 

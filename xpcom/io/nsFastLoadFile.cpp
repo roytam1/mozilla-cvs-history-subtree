@@ -33,6 +33,32 @@
 #include "nsBinaryStream.h"
 #include "nsFastLoadFile.h"
 
+#ifdef DEBUG_MUX
+#include <stdio.h>
+#include <stdarg.h>
+
+static void trace_mux(char mode, const char *format, ...)
+{
+    va_list ap;
+    static FILE *tfp;
+    if (!tfp) {
+        char tfn[16];
+        sprintf(tfn, "/tmp/mux.%ctrace", mode);
+        tfp = fopen(tfn, "w");
+        if (!tfp)
+            return;
+        setvbuf(tfp, NULL, _IOLBF, 0);
+    }
+    va_start(ap, format);
+    vfprintf(tfp, format, ap);
+    va_end(ap);
+}
+
+#define TRACE_MUX(args) trace_mux args
+#else
+#define TRACE_MUX(args) /* nothing */
+#endif
+
 /*
  * Fletcher's 16-bit checksum, using 32-bit two's-complement arithmetic.
  */
@@ -102,7 +128,7 @@ nsFastLoadFileReader::ReadHeader(nsFastLoadHeader *aHeader)
 
     if (bytesRead != MFL_FILE_MAGIC_SIZE ||
         memcmp(aHeader->mMagic, magic, MFL_FILE_MAGIC_SIZE)) {
-        return NS_ERROR_FAILURE;
+        return NS_ERROR_UNEXPECTED;
     }
 
     rv = Read32(&aHeader->mChecksum);
@@ -164,39 +190,138 @@ static PLDHashTableOps docmap_DHashTableOps = {
     NULL
 };
 
+struct nsObjectMapEntry : public PLDHashEntryHdr {
+    nsISupports*            mObject;        // key, must come first
+};
+
+// Fast mapping from URI object pointer back to spec-indexed document info.
+struct nsURIMapReadEntry : public nsObjectMapEntry {
+    nsDocumentMapReadEntry* mDocMapEntry;
+};
+
+PR_STATIC_CALLBACK(void)
+objmap_ClearEntry(PLDHashTable *aTable, PLDHashEntryHdr *aHdr)
+{
+    nsObjectMapEntry* entry = NS_STATIC_CAST(nsObjectMapEntry*, aHdr);
+
+    NS_IF_RELEASE(entry->mObject);
+    PL_DHashClearEntryStub(aTable, aHdr);
+}
+
+static PLDHashTableOps objmap_DHashTableOps = {
+    PL_DHashAllocTable,
+    PL_DHashFreeTable,
+    PL_DHashGetKeyStub,
+    PL_DHashVoidPtrKeyStub,
+    PL_DHashMatchEntryStub,
+    PL_DHashMoveEntryStub,
+    objmap_ClearEntry,
+    PL_DHashFinalizeStub,
+    NULL
+};
+
 nsresult
-nsFastLoadFileReader::SelectMuxedDocument(const char* aURISpec)
+nsFastLoadFileReader::StartMuxedDocument(nsISupports* aURI, const char* aURISpec)
+{
+    nsDocumentMapReadEntry* docMapEntry =
+        NS_STATIC_CAST(nsDocumentMapReadEntry*,
+                       PL_DHashTableOperate(&mFooter.mDocumentMap, aURISpec,
+                                            PL_DHASH_LOOKUP));
+    NS_ASSERTION(PL_DHASH_ENTRY_IS_BUSY(docMapEntry),
+                 "aURISpec not multiplexed in FastLoad file!");
+    if (PL_DHASH_ENTRY_IS_FREE(docMapEntry))
+        return NS_ERROR_UNEXPECTED;
+
+    nsCOMPtr<nsISupports> key(do_QueryInterface(aURI));
+    nsURIMapReadEntry* uriMapEntry =
+        NS_STATIC_CAST(nsURIMapReadEntry*,
+                       PL_DHashTableOperate(&mFooter.mURIMap, key,
+                                            PL_DHASH_ADD));
+    if (!uriMapEntry)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ASSERTION(uriMapEntry->mDocMapEntry == nsnull,
+                 "URI mapped to two different specs?");
+    if (uriMapEntry->mDocMapEntry)
+        return NS_ERROR_UNEXPECTED;
+
+    NS_ADDREF(uriMapEntry->mObject = key);
+    uriMapEntry->mDocMapEntry = docMapEntry;
+    TRACE_MUX(('r', "start %p (%p) %s\n", aURI, key.get(), aURISpec));
+    return NS_OK;
+}
+
+nsresult
+nsFastLoadFileReader::SelectMuxedDocument(nsISupports* aURI)
 {
     nsresult rv;
 
     // If we're interrupting another document's segment, save its offset so
     // we can seek back when it's reselected.
-    nsDocumentMapReadEntry* entry = mCurrentDocumentMapEntry;
-    if (entry && entry->mBytesLeft) {
-        rv = Tell(&entry->mSaveOffset);
+    nsDocumentMapReadEntry* docMapEntry = mCurrentDocumentMapEntry;
+    if (docMapEntry && docMapEntry->mBytesLeft) {
+        rv = Tell(&docMapEntry->mSaveOffset);
         if (NS_FAILED(rv)) return rv;
     }
 
     // Find the given URI's entry and select it for more reading.
-    entry = NS_STATIC_CAST(nsDocumentMapReadEntry*,
-                           PL_DHashTableOperate(&mFooter.mMuxedDocumentMap,
-                                                aURISpec,
-                                                PL_DHASH_LOOKUP));
-    if (PL_DHASH_ENTRY_IS_FREE(entry)) {
-        // XXXbe no such URI in mux -- invalidate/remove FastLoad file?
+    nsCOMPtr<nsISupports> key(do_QueryInterface(aURI));
+    nsURIMapReadEntry* uriMapEntry =
+        NS_STATIC_CAST(nsURIMapReadEntry*,
+                       PL_DHashTableOperate(&mFooter.mURIMap, key,
+                                            PL_DHASH_LOOKUP));
+    NS_ASSERTION(PL_DHASH_ENTRY_IS_BUSY(uriMapEntry),
+                 "SelectMuxedDocument without prior StartMuxedDocument?");
+    if (PL_DHASH_ENTRY_IS_FREE(uriMapEntry))
         return NS_ERROR_UNEXPECTED;
+
+    // It turns out we get a fair amount of redundant select calls, thanks to
+    // what seem like unnecessary parser calls to nsIContentSink::WillResume.
+    // (XXXbe figure out why!)
+    docMapEntry = uriMapEntry->mDocMapEntry;
+    if (docMapEntry == mCurrentDocumentMapEntry) {
+        TRACE_MUX(('r', "select prev %s same as current!\n",
+                   docMapEntry->mURISpec));
     }
 
-    // Invariant: entry->mBytesLeft implies entry->mSaveOffset has been set
-    // non-zero by the Tell call above.
-    if (entry->mBytesLeft) {
-        NS_ASSERTION(entry->mSaveOffset != 0, "reselecting at unsaved offset");
+    // Invariant: docMapEntry->mBytesLeft implies docMapEntry->mSaveOffset has
+    // been set non-zero by the Tell call above.
+    if (docMapEntry->mBytesLeft) {
+        NS_ASSERTION(docMapEntry->mSaveOffset != 0,
+                     "reselecting from multiplex at unsaved offset?");
 
-        rv = Seek(nsISeekableStream::NS_SEEK_SET, entry->mSaveOffset);
+        // Don't call our Seek wrapper, as it clears mCurrentDocumentMapEntry.
+        nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
+        rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
+                            docMapEntry->mSaveOffset);
         if (NS_FAILED(rv)) return rv;
     }
 
-    mCurrentDocumentMapEntry = entry;
+    mCurrentDocumentMapEntry = docMapEntry;
+#ifdef DEBUG_MUX
+    PRUint32 currentSegmentOffset;
+    Tell(&currentSegmentOffset);
+    trace_mux('r', "select %p (%p) offset %lu\n",
+              aURI, key.get(), currentSegmentOffset);
+#endif
+    return NS_OK;
+}
+
+nsresult
+nsFastLoadFileReader::EndMuxedDocument(nsISupports* aURI)
+{
+    nsCOMPtr<nsISupports> key(do_QueryInterface(aURI));
+#ifdef NS_DEBUG
+    nsURIMapReadEntry* uriMapEntry =
+        NS_STATIC_CAST(nsURIMapReadEntry*,
+                       PL_DHashTableOperate(&mFooter.mURIMap, key,
+                                            PL_DHASH_LOOKUP));
+    NS_ASSERTION(uriMapEntry && uriMapEntry->mDocMapEntry,
+                 "unknown aURI passed to EndMuxedDocument!");
+#endif
+
+    PL_DHashTableOperate(&mFooter.mURIMap, key, PL_DHASH_REMOVE);
+    TRACE_MUX(('r', "end %p (%p)\n", aURI, key.get()));
     return NS_OK;
 }
 
@@ -207,13 +332,20 @@ nsFastLoadFileReader::Read(char* aBuffer, PRUint32 aCount, PRUint32 *aBytesRead)
 
     nsDocumentMapReadEntry* entry = mCurrentDocumentMapEntry;
     if (entry && entry->mBytesLeft == 0) {
-        rv = Seek(nsISeekableStream::NS_SEEK_SET, entry->mNextSegmentOffset);
+        // Don't call our Seek wrapper, as it clears mCurrentDocumentMapEntry.
+        nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
+        rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
+                            entry->mNextSegmentOffset);
         if (NS_FAILED(rv)) return rv;
+
+        // Clear mCurrentDocumentMapEntry temporarily to avoid recursive death.
+        mCurrentDocumentMapEntry = nsnull;
 
         rv = Read32(&entry->mNextSegmentOffset);
-        if (NS_FAILED(rv)) return rv;
+        if (NS_SUCCEEDED(rv))
+            rv = Read32(&entry->mBytesLeft);
 
-        rv = Read32(&entry->mBytesLeft);
+        mCurrentDocumentMapEntry = entry;
         if (NS_FAILED(rv)) return rv;
 
         NS_ASSERTION(entry->mBytesLeft >= 8, "demux segment length botch!");
@@ -253,13 +385,13 @@ nsFastLoadFileReader::ReadFooter(nsFastLoadFooter *aFooter)
         if (NS_FAILED(rv)) return rv;
     }
 
-    aFooter->mSharpObjectMap =
+    aFooter->mObjectMap =
         new nsFastLoadSharpObjectEntry[aFooter->mNumSharpObjects];
-    if (!aFooter->mSharpObjectMap)
+    if (!aFooter->mObjectMap)
         return NS_ERROR_OUT_OF_MEMORY;
 
     for (i = 0, n = aFooter->mNumSharpObjects; i < n; i++) {
-        nsFastLoadSharpObjectEntry* entry = &aFooter->mSharpObjectMap[i];
+        nsFastLoadSharpObjectEntry* entry = &aFooter->mObjectMap[i];
 
         rv = ReadSharpObjectInfo(entry);
         if (NS_FAILED(rv)) return rv;
@@ -267,10 +399,17 @@ nsFastLoadFileReader::ReadFooter(nsFastLoadFooter *aFooter)
         entry->mObject = nsnull;
     }
 
-    if (!PL_DHashTableInit(&aFooter->mMuxedDocumentMap, &docmap_DHashTableOps,
+    if (!PL_DHashTableInit(&aFooter->mDocumentMap, &docmap_DHashTableOps,
                            (void *)this, sizeof(nsDocumentMapReadEntry),
                            PL_DHASH_MIN_SIZE)) {
-        aFooter->mMuxedDocumentMap.ops = nsnull;
+        aFooter->mDocumentMap.ops = nsnull;
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    if (!PL_DHashTableInit(&aFooter->mURIMap, &objmap_DHashTableOps,
+                           (void *)this, sizeof(nsURIMapReadEntry),
+                           PL_DHASH_MIN_SIZE)) {
+        aFooter->mURIMap.ops = nsnull;
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
@@ -282,7 +421,7 @@ nsFastLoadFileReader::ReadFooter(nsFastLoadFooter *aFooter)
 
         nsDocumentMapReadEntry* entry =
             NS_STATIC_CAST(nsDocumentMapReadEntry*,
-                           PL_DHashTableOperate(&aFooter->mMuxedDocumentMap,
+                           PL_DHashTableOperate(&aFooter->mDocumentMap,
                                                 info.mURISpec,
                                                 PL_DHASH_ADD));
         if (!entry) {
@@ -403,7 +542,7 @@ nsFastLoadFileReader::Open()
 {
     nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
     if (!seekable)
-        return NS_ERROR_FAILURE;
+        return NS_ERROR_UNEXPECTED;
 
     nsresult rv;
 
@@ -411,7 +550,7 @@ nsFastLoadFileReader::Open()
     if (NS_FAILED(rv)) return rv;
 
     if (mHeader.mVersion != MFL_FILE_VERSION)
-        return NS_ERROR_FAILURE;
+        return NS_ERROR_UNEXPECTED;
 
     PRUint32 dataOffset;
     rv = seekable->Tell(&dataOffset);
@@ -425,7 +564,7 @@ nsFastLoadFileReader::Open()
     if (NS_FAILED(rv)) return rv;
 
     if (fileSize != mHeader.mFileSize)
-        return NS_ERROR_FAILURE;
+        return NS_ERROR_UNEXPECTED;
 
     rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
                         PRInt32(mHeader.mFooterOffset));
@@ -443,7 +582,7 @@ nsFastLoadFileReader::Close()
 {
     // Give up any dangling strong refs, after asserting there aren't any.
     for (PRUint32 i = 0, n = mFooter.mNumSharpObjects; i < n; i++) {
-        nsFastLoadSharpObjectEntry* entry = &mFooter.mSharpObjectMap[i];
+        nsFastLoadSharpObjectEntry* entry = &mFooter.mObjectMap[i];
 
         NS_ASSERTION(entry->mStrongRefCnt == 0,
                      "failed to deserialize all strong refs!");
@@ -512,6 +651,7 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
         if (!object) {
             nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
             PRUint32 saveOffset;
+            nsDocumentMapReadEntry* saveDocMapEntry = nsnull;
 
             rv = seekable->Tell(&saveOffset);
             if (NS_FAILED(rv)) return rv;
@@ -524,6 +664,11 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
                 NS_ASSERTION(entry->mCIDOffset < saveOffset,
                              "out of order object?!");
 
+                // Ape our Seek wrapper by clearing mCurrentDocumentMapEntry.
+                // This allows for a skipped object to be referenced from two
+                // or more multiplexed documents in the FastLoad file.
+                saveDocMapEntry = mCurrentDocumentMapEntry;
+                mCurrentDocumentMapEntry = nsnull;
                 rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
                                     entry->mCIDOffset);
                 if (NS_FAILED(rv)) return rv;
@@ -533,10 +678,12 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
             if (NS_FAILED(rv)) return rv;
 
             if (entry->mCIDOffset != saveOffset) {
-                // Restore offset in case we're still reading forward to get
-                // object definitions eagerly.
+                // Restore stream offset and mCurrentDocumentMapEntry in case
+                // we're still reading forward through a part of the multiplex
+                // to get object definitions eagerly.
                 rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET, saveOffset);
                 if (NS_FAILED(rv)) return rv;
+                mCurrentDocumentMapEntry = saveDocMapEntry;
             }
 
             // Save object until all refs have been deserialized.
@@ -587,6 +734,7 @@ nsFastLoadFileReader::ReadID(nsID *aResult)
 NS_IMETHODIMP
 nsFastLoadFileReader::Seek(PRInt32 aWhence, PRInt32 aOffset)
 {
+    mCurrentDocumentMapEntry = nsnull;
     nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
     return seekable->Seek(aWhence, aOffset);
 }
@@ -687,33 +835,6 @@ nsFastLoadFileWriter::MapID(const nsID& aSlowID, NSFastLoadID *aResult)
     return NS_OK;
 }
 
-struct nsObjectMapEntry : public PLDHashEntryHdr {
-    nsISupports*                mObject;        // key, must come first
-    NSFastLoadOID               mOID;
-    nsFastLoadSharpObjectInfo   mInfo;
-};
-
-PR_STATIC_CALLBACK(void)
-objmap_ClearEntry(PLDHashTable *aTable, PLDHashEntryHdr *aHdr)
-{
-    nsObjectMapEntry* entry = NS_STATIC_CAST(nsObjectMapEntry*, aHdr);
-
-    NS_IF_RELEASE(entry->mObject);
-    PL_DHashClearEntryStub(aTable, aHdr);
-}
-
-static PLDHashTableOps objmap_DHashTableOps = {
-    PL_DHashAllocTable,
-    PL_DHashFreeTable,
-    PL_DHashGetKeyStub,
-    PL_DHashVoidPtrKeyStub,
-    PL_DHashMatchEntryStub,
-    PL_DHashMoveEntryStub,
-    objmap_ClearEntry,
-    PL_DHashFinalizeStub,
-    NULL
-};
-
 nsresult
 nsFastLoadFileWriter::WriteHeader(nsFastLoadHeader *aHeader)
 {
@@ -746,8 +867,70 @@ struct nsDocumentMapWriteEntry : public nsDocumentMapEntry {
     PRUint32    mCurrentSegmentOffset;      // last written segment's offset
 };
 
+// Fast mapping from URI object pointer back to spec-indexed document info.
+struct nsURIMapWriteEntry : public nsObjectMapEntry {
+    nsDocumentMapWriteEntry* mDocMapEntry;
+};
+
 nsresult
-nsFastLoadFileWriter::SelectMuxedDocument(const char* aURISpec)
+nsFastLoadFileWriter::StartMuxedDocument(nsISupports* aURI, const char* aURISpec)
+{
+    // Save mDocumentMap table generation and mCurrentDocumentMapEntry key in
+    // case the hash table grows during the PL_DHASH_ADD operation.
+    PRUint32 saveGeneration = 0;
+    const char* saveURISpec = nsnull;
+    if (mCurrentDocumentMapEntry) {
+        saveGeneration = mDocumentMap.generation;
+        saveURISpec = mCurrentDocumentMapEntry->mURISpec;
+    }
+
+    nsDocumentMapWriteEntry* docMapEntry =
+        NS_STATIC_CAST(nsDocumentMapWriteEntry*,
+                       PL_DHashTableOperate(&mDocumentMap, aURISpec,
+                                            PL_DHASH_ADD));
+    if (!docMapEntry)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    // If the generation number changed, refresh mCurrentDocumentMapEntry.
+    if (mCurrentDocumentMapEntry && mDocumentMap.generation != saveGeneration) {
+        mCurrentDocumentMapEntry =
+            NS_STATIC_CAST(nsDocumentMapWriteEntry*,
+                           PL_DHashTableOperate(&mDocumentMap, saveURISpec,
+                                                PL_DHASH_LOOKUP));
+        NS_ASSERTION(PL_DHASH_ENTRY_IS_BUSY(mCurrentDocumentMapEntry),
+                     "mCurrentDocumentMapEntry lost during table growth?!");
+    }
+
+    NS_ASSERTION(docMapEntry->mURISpec == nsnull,
+                 "redundant multiplexed document?");
+    if (docMapEntry->mURISpec)
+        return NS_ERROR_UNEXPECTED;
+
+    void* spec = nsMemory::Clone(aURISpec, strlen(aURISpec) + 1);
+    if (!spec)
+        return NS_ERROR_OUT_OF_MEMORY;
+    docMapEntry->mURISpec = NS_REINTERPRET_CAST(const char*, spec);
+
+    nsCOMPtr<nsISupports> key(do_QueryInterface(aURI));
+    nsURIMapWriteEntry* uriMapEntry =
+        NS_STATIC_CAST(nsURIMapWriteEntry*,
+                       PL_DHashTableOperate(&mURIMap, key, PL_DHASH_ADD));
+    if (!uriMapEntry)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ASSERTION(uriMapEntry->mDocMapEntry == nsnull,
+                 "URI mapped to two different specs?");
+    if (uriMapEntry->mDocMapEntry)
+        return NS_ERROR_UNEXPECTED;
+
+    NS_ADDREF(uriMapEntry->mObject = key);
+    uriMapEntry->mDocMapEntry = docMapEntry;
+    TRACE_MUX(('w', "start %p (%p) %s\n", aURI, key.get(), aURISpec));
+    return NS_OK;
+}
+
+nsresult
+nsFastLoadFileWriter::SelectMuxedDocument(nsISupports* aURI)
 {
     // Avoid repeatedly QI'ing to nsISeekableStream as we tell and seek.
     nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mOutputStream));
@@ -758,36 +941,45 @@ nsFastLoadFileWriter::SelectMuxedDocument(const char* aURISpec)
     rv = seekable->Tell(&currentSegmentOffset);
     if (NS_FAILED(rv)) return rv;
 
-    // Look for an existing entry keyed by aURISpec, adding one if needed.
-    nsDocumentMapWriteEntry* entry =
-        NS_STATIC_CAST(nsDocumentMapWriteEntry*,
-                       PL_DHashTableOperate(&mDocumentMap, aURISpec,
-                                            PL_DHASH_ADD));
-    if (!entry)
-        return NS_ERROR_OUT_OF_MEMORY;
+    // Look for an existing entry keyed by aURI, added by StartMuxedDocument.
+    nsCOMPtr<nsISupports> key(do_QueryInterface(aURI));
+    nsURIMapWriteEntry* uriMapEntry =
+        NS_STATIC_CAST(nsURIMapWriteEntry*,
+                       PL_DHashTableOperate(&mURIMap, key, PL_DHASH_LOOKUP));
+    NS_ASSERTION(PL_DHASH_ENTRY_IS_BUSY(uriMapEntry),
+                 "SelectMuxedDocument without prior StartMuxedDocument?");
+    if (PL_DHASH_ENTRY_IS_FREE(uriMapEntry))
+        return NS_ERROR_UNEXPECTED;
+
+    nsDocumentMapWriteEntry* docMapEntry = uriMapEntry->mDocMapEntry;
 
     // If there is a muxed document segment open, close it now by setting its
     // length, stored in the second PRUint32 of the segment.
-    nsDocumentMapWriteEntry* previousEntry = mCurrentDocumentMapEntry;
-    if (previousEntry) {
-        NS_ASSERTION(previousEntry != entry, "redundant SelectMuxedDocument!");
-        if (previousEntry == entry)
+    nsDocumentMapWriteEntry* prevDocMapEntry = mCurrentDocumentMapEntry;
+    if (prevDocMapEntry) {
+        if (prevDocMapEntry == docMapEntry) {
+            TRACE_MUX(('w', "select prev %s same as current!\n",
+                       prevDocMapEntry->mURISpec));
             return NS_OK;
+        }
 
-        PRUint32 previousSegmentOffset = previousEntry->mCurrentSegmentOffset;
+        PRUint32 prevSegmentOffset = prevDocMapEntry->mCurrentSegmentOffset;
+        TRACE_MUX(('w', "select prev %s offset %lu\n",
+                   prevDocMapEntry->mURISpec, prevSegmentOffset));
+
         rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
-                            previousSegmentOffset + 4);
+                            prevSegmentOffset + 4);
         if (NS_FAILED(rv)) return rv;
 
         // The length counts all bytes in the segment, including the header
         // that contains [nextSegmentOffset, length].
-        rv = Write32(currentSegmentOffset - previousSegmentOffset);
+        rv = Write32(currentSegmentOffset - prevSegmentOffset);
         if (NS_FAILED(rv)) return rv;
 
         // Seek back to the current offset only if we are not going to seek
         // back to *this* entry's last "current" segment offset and write its
         // next segment offset at the first PRUint32 of the segment.
-        if (!entry->mURISpec) {
+        if (!docMapEntry->mInitialSegmentOffset) {
             rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
                                 currentSegmentOffset);
             if (NS_FAILED(rv)) return rv;
@@ -797,16 +989,11 @@ nsFastLoadFileWriter::SelectMuxedDocument(const char* aURISpec)
     // If this entry was newly added, set its key and initial segment offset.
     // Otherwise, seek back to write the next segment offset of the previous
     // segment for this document in the multiplex.
-    if (!entry->mURISpec) {
-        void *spec = nsMemory::Clone(aURISpec, strlen(aURISpec) + 1);
-        if (!spec)
-            return NS_ERROR_OUT_OF_MEMORY;
-
-        entry->mURISpec = NS_REINTERPRET_CAST(const char*, spec);
-        entry->mInitialSegmentOffset = currentSegmentOffset;
+    if (!docMapEntry->mInitialSegmentOffset) {
+        docMapEntry->mInitialSegmentOffset = currentSegmentOffset;
     } else {
         rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
-                            entry->mCurrentSegmentOffset);
+                            docMapEntry->mCurrentSegmentOffset);
         if (NS_FAILED(rv)) return rv;
 
         rv = Write32(currentSegmentOffset);
@@ -820,7 +1007,7 @@ nsFastLoadFileWriter::SelectMuxedDocument(const char* aURISpec)
     // Update this document's current segment offset so we can later fix its
     // next segment offset (unless it is last, in which case we leave the zero
     // placeholder as a terminator).
-    entry->mCurrentSegmentOffset = currentSegmentOffset;
+    docMapEntry->mCurrentSegmentOffset = currentSegmentOffset;
 
     rv = Write32(0);    // nextSegmentOffset placeholder
     if (NS_FAILED(rv)) return rv;
@@ -828,7 +1015,26 @@ nsFastLoadFileWriter::SelectMuxedDocument(const char* aURISpec)
     rv = Write32(0);    // length placeholder
     if (NS_FAILED(rv)) return rv;
 
-    mCurrentDocumentMapEntry = entry;
+    mCurrentDocumentMapEntry = docMapEntry;
+    TRACE_MUX(('w', "select %p (%p) offset %lu\n",
+               aURI, key.get(), currentSegmentOffset));
+    return NS_OK;
+}
+
+nsresult
+nsFastLoadFileWriter::EndMuxedDocument(nsISupports* aURI)
+{
+    nsCOMPtr<nsISupports> key(do_QueryInterface(aURI));
+#ifdef NS_DEBUG
+    nsURIMapWriteEntry* uriMapEntry =
+        NS_STATIC_CAST(nsURIMapWriteEntry*,
+                       PL_DHashTableOperate(&mURIMap, key, PL_DHASH_LOOKUP));
+    NS_ASSERTION(uriMapEntry && uriMapEntry->mDocMapEntry,
+                 "unknown aURI passed to EndMuxedDocument!");
+#endif
+
+    PL_DHashTableOperate(&mURIMap, key, PL_DHASH_REMOVE);
+    TRACE_MUX(('w', "end %p (%p)\n", aURI, key.get()));
     return NS_OK;
 }
 
@@ -928,13 +1134,18 @@ nsFastLoadFileWriter::IDMapEnumerate(PLDHashTable *aTable,
     return PL_DHASH_NEXT;
 }
 
+struct nsSharpObjectMapEntry : public nsObjectMapEntry {
+    NSFastLoadOID               mOID;
+    nsFastLoadSharpObjectInfo   mInfo;
+};
+
 PLDHashOperator PR_CALLBACK
 nsFastLoadFileWriter::ObjectMapEnumerate(PLDHashTable *aTable,
                                          PLDHashEntryHdr *aHdr,
                                          PRUint32 aNumber,
                                          void *aData)
 {
-    nsObjectMapEntry* entry = NS_STATIC_CAST(nsObjectMapEntry*, aHdr);
+    nsSharpObjectMapEntry* entry = NS_STATIC_CAST(nsSharpObjectMapEntry*, aHdr);
     PRUint32 index = MFL_OID_TO_SHARP_INDEX(entry->mOID);
     nsFastLoadSharpObjectInfo* vector =
         NS_REINTERPRET_CAST(nsFastLoadSharpObjectInfo*, aData);
@@ -1046,7 +1257,7 @@ nsFastLoadFileWriter::Open()
 {
     nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mOutputStream));
     if (!seekable)
-        return NS_ERROR_FAILURE;
+        return NS_ERROR_UNEXPECTED;
 
     nsresult rv;
 
@@ -1061,18 +1272,21 @@ nsFastLoadFileWriter::Open()
     }
 
     if (!PL_DHashTableInit(&mObjectMap, &objmap_DHashTableOps, (void *)this,
-                           sizeof(nsObjectMapEntry), PL_DHASH_MIN_SIZE)) {
-        PL_DHashTableFinish(&mIDMap);
-        mIDMap.ops = mObjectMap.ops = nsnull;
+                           sizeof(nsSharpObjectMapEntry), PL_DHASH_MIN_SIZE)) {
+        mObjectMap.ops = nsnull;
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
     if (!PL_DHashTableInit(&mDocumentMap, &docmap_DHashTableOps, (void *)this,
                            sizeof(nsDocumentMapWriteEntry),
                            PL_DHASH_MIN_SIZE)) {
-        PL_DHashTableFinish(&mIDMap);
-        PL_DHashTableFinish(&mObjectMap);
-        mIDMap.ops = mObjectMap.ops = mDocumentMap.ops = nsnull;
+        mDocumentMap.ops = nsnull;
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
+    if (!PL_DHashTableInit(&mURIMap, &objmap_DHashTableOps, (void *)this,
+                           sizeof(nsURIMapWriteEntry), PL_DHASH_MIN_SIZE)) {
+        mURIMap.ops = nsnull;
         return NS_ERROR_OUT_OF_MEMORY;
     }
 
@@ -1156,8 +1370,8 @@ nsFastLoadFileWriter::WriteObjectCommon(nsISupports* aObject,
     } else {
         // Object is presumed to be multiply connected through some combo of
         // strong and weak refs.  Hold onto it via mObjectMap.
-        nsObjectMapEntry* entry =
-            NS_STATIC_CAST(nsObjectMapEntry*,
+        nsSharpObjectMapEntry* entry =
+            NS_STATIC_CAST(nsSharpObjectMapEntry*,
                            PL_DHashTableOperate(&mObjectMap, aObject,
                                                 PL_DHASH_ADD));
         if (!entry) {
@@ -1298,6 +1512,7 @@ nsFastLoadFileWriter::WriteID(const nsID& aID)
 NS_IMETHODIMP
 nsFastLoadFileWriter::Seek(PRInt32 aWhence, PRInt32 aOffset)
 {
+    mCurrentDocumentMapEntry = nsnull;
     nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mOutputStream));
     return seekable->Seek(aWhence, aOffset);
 }

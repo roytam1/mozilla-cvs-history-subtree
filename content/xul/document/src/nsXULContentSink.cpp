@@ -89,6 +89,7 @@
 
 #include "nsIFastLoadService.h"         // XXXbe temporary
 #include "nsIObjectInputStream.h"       // XXXbe temporary
+#include "nsXULDocument.h"              // XXXbe temporary
 
 #include "nsHTMLTokens.h" // XXX so we can use nsIParserNode::GetTokenType()
 
@@ -534,6 +535,10 @@ XULContentSinkImpl::WillInterrupt(void)
 NS_IMETHODIMP 
 XULContentSinkImpl::WillResume(void)
 {
+    nsCOMPtr<nsIXULDocument> xuldoc(do_QueryReferent(mDocument));
+    if (xuldoc)
+        xuldoc->OnResumeContentSink();
+
     // XXX Notify the webshell, if necessary
     return NS_OK;
 }
@@ -1553,9 +1558,12 @@ XULContentSinkImpl::OpenScript(const nsIParserNode& aNode)
 
         // XXXbe temporary, until we serialize/deserialize everything from the
         //       nsXULPrototypeDocument on down...
-        nsCOMPtr<nsIFastLoadService> fastLoadService(do_GetService(NS_FAST_LOAD_SERVICE_CONTRACTID));
+        nsCOMPtr<nsIFastLoadService> fastLoadService;
+        nsXULDocument::GetFastLoadService(getter_AddRefs(fastLoadService));
         nsCOMPtr<nsIObjectInputStream> objectInput;
-        fastLoadService->GetCurrentInputStream(getter_AddRefs(objectInput));
+        if (fastLoadService)
+            fastLoadService->GetCurrentInputStream(getter_AddRefs(objectInput));
+
         if (objectInput) {
             nsCOMPtr<nsIScriptGlobalObjectOwner> globalOwner(do_QueryInterface(mPrototype));
             nsCOMPtr<nsIScriptGlobalObject> globalObject;

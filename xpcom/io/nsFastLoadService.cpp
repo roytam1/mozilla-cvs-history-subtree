@@ -202,15 +202,47 @@ nsFastLoadService::SetCurrentOutputStream(nsIObjectOutputStream* aStream)
 }
 
 NS_IMETHODIMP
-nsFastLoadService::SelectMuxedDocument(const char* aURISpec)
+nsFastLoadService::StartMuxedDocument(nsISupports* aURI, const char* aURISpec)
 {
     nsresult rv;
     nsAutoLock lock(mLock);
 
     if (mObjectOutputStream)
-        rv = GetWriter(mObjectOutputStream)->SelectMuxedDocument(aURISpec);
+        rv = GetWriter(mObjectOutputStream)->StartMuxedDocument(aURI, aURISpec);
     else if (mObjectInputStream)
-        rv = GetReader(mObjectInputStream)->SelectMuxedDocument(aURISpec);
+        rv = GetReader(mObjectInputStream)->StartMuxedDocument(aURI, aURISpec);
+    else
+        rv = NS_ERROR_NOT_AVAILABLE;
+    return rv;
+}
+
+NS_IMETHODIMP
+nsFastLoadService::SelectMuxedDocument(nsISupports* aURI)
+{
+    nsresult rv;
+    nsAutoLock lock(mLock);
+
+    if (mObjectOutputStream)
+        rv = GetWriter(mObjectOutputStream)->SelectMuxedDocument(aURI);
+    else if (mObjectInputStream)
+        rv = GetReader(mObjectInputStream)->SelectMuxedDocument(aURI);
+    else
+        rv = NS_ERROR_NOT_AVAILABLE;
+    return rv;
+}
+
+NS_IMETHODIMP
+nsFastLoadService::EndMuxedDocument(nsISupports* aURI)
+{
+    nsresult rv;
+    nsAutoLock lock(mLock);
+
+    if (mObjectOutputStream)
+        rv = GetWriter(mObjectOutputStream)->EndMuxedDocument(aURI);
+    else if (mObjectInputStream)
+        rv = GetReader(mObjectInputStream)->EndMuxedDocument(aURI);
+    else
+        rv = NS_ERROR_NOT_AVAILABLE;
     return rv;
 }
 
