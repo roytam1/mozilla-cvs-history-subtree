@@ -1947,10 +1947,6 @@ js_Interpret(JSContext *cx, jsval *result)
 	    RESTORE_SP(fp);
 	    if (!ok) {
 		cx->newborn[GCX_OBJECT] = NULL;
-#if JS_HAS_EXCEPTIONS
-		if (cx->throwing)
-		    goto do_throw;
-#endif
 		goto out;
 	    }
 
@@ -2166,10 +2162,6 @@ js_Interpret(JSContext *cx, jsval *result)
 	    ok = js_Invoke(cx, argc, JS_FALSE);
 	    RESTORE_SP(fp);
 	    if (!ok) {
-#if JS_HAS_EXCEPTIONS
-		if (cx->throwing)
-		    goto do_throw;
-#endif
 		goto out;
 	    }
 	    obj = NULL;
@@ -2674,22 +2666,8 @@ js_Interpret(JSContext *cx, jsval *result)
 	  case JSOP_THROW:
 	    cx->throwing = JS_TRUE;
 	    cx->exception = POP();
-	  do_throw:
-	    tn = script->trynotes;
-	    offset = PTRDIFF(pc, script->code, jsbytecode);
-	    if (tn) {
-		while (JS_UPTRDIFF(offset, tn->start) >= (jsuword)tn->length)
-		    tn++;
-		if (tn->catchStart) {
-		    pc = script->code + tn->catchStart;
-		    len = 0;
-		    cx->throwing = JS_FALSE; /* caught */
-		    goto advance_pc;
-		}
-	    }
-
-	    /* Not in a catch block, so propagate the exception. */
 	    ok = JS_FALSE;
+            /* let the code at out try to catch the exception. */
 	    goto out;
 #endif /* JS_HAS_EXCEPTIONS */
 
@@ -2777,6 +2755,29 @@ js_Interpret(JSContext *cx, jsval *result)
 #endif
     }
 out:
+
+#if JS_HAS_EXCEPTIONS
+    if (cx->throwing) {
+        /*
+         * Check if an exception has been raised.  If so, there may be
+         * a try block within this frame that can catch the exception.
+         */ 
+        tn = script->trynotes;
+        if (tn) {
+            offset = PTRDIFF(pc, script->code, jsbytecode);
+            while (JS_UPTRDIFF(offset, tn->start) >= (jsuword)tn->length)
+                tn++;
+            if (tn->catchStart) {
+                pc = script->code + tn->catchStart;
+                len = 0;
+                cx->throwing = JS_FALSE; /* caught */
+                ok = JS_TRUE;
+                goto advance_pc;
+            }
+        }
+    }
+#endif
+
     /*
      * Restore the previous frame's execution state.
      */
