@@ -395,36 +395,12 @@ const int kReuseWindowOnAE = 2;
     [[NSNotificationCenter defaultCenter] postNotificationName:@"offlineModeChanged" object:nil];
 }
 
-//Send URL to default mail app
 - (IBAction)sendURL:(id)aSender
 {
-  NSString* titleString = nil;
-  NSString* urlString = nil;
-
-  [[[self getMainWindowBrowserController] getBrowserWrapper] getTitle:&titleString andHref:&urlString];
-  
-  if (!titleString) titleString = @"";
-  if (!urlString)   urlString = @"";
-  
-  // we need to encode entities in the title and url strings first. For some reason, CFURLCreateStringByAddingPercentEscapes is only happy
-  // with UTF-8 strings.
-  CFStringRef urlUTF8String   = CFStringCreateWithCString(kCFAllocatorDefault, [urlString   UTF8String], kCFStringEncodingUTF8);
-  CFStringRef titleUTF8String = CFStringCreateWithCString(kCFAllocatorDefault, [titleString UTF8String], kCFStringEncodingUTF8);
-  
-  CFStringRef escapedURL   = CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, urlUTF8String,   NULL, CFSTR("&?="), kCFStringEncodingUTF8);
-  CFStringRef escapedTitle = CFURLCreateStringByAddingPercentEscapes(kCFAllocatorDefault, titleUTF8String, NULL, CFSTR("&?="), kCFStringEncodingUTF8);
-    
-  NSString* mailtoURLString = [NSString stringWithFormat:@"mailto:?subject=%@&body=%@", (NSString*)escapedTitle, (NSString*)escapedURL];
-
-  [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:mailtoURLString]];
-  
-  CFRelease(urlUTF8String);
-  CFRelease(titleUTF8String);
-  
-  CFRelease(escapedURL);
-  CFRelease(escapedTitle);
+  BrowserWindowController* browserController = [self getMainWindowBrowserController];
+  if (browserController)
+    [browserController sendURL:aSender];
 }
-
 
 
 // Edit menu actions.
@@ -778,14 +754,14 @@ const int kReuseWindowOnAE = 2;
 {
   BrowserWindowController* browserController = [self getMainWindowBrowserController];
   if (browserController)
-    [browserController biggerTextSize];
+    [browserController biggerTextSize:aSender];
 }
 
 - (IBAction)smallerTextSize:(id)aSender
 {
   BrowserWindowController* browserController = [self getMainWindowBrowserController];
   if (browserController)
-    [browserController smallerTextSize];
+    [browserController smallerTextSize:aSender];
 }
 
 -(IBAction) viewSource:(id)aSender

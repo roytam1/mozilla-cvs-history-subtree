@@ -60,6 +60,7 @@
         {
             ACTIONS = {
                 back = id; 
+                biggerTextSize = id; 
                 bookmarkLink = id; 
                 bookmarkPage = id; 
                 cancelAddBookmarkSheet = id; 
@@ -84,6 +85,7 @@
                 nextTab = id; 
                 openLinkInNewTab = id; 
                 openLinkInNewWindow = id; 
+                pageSetup = id; 
                 performSearch = id; 
                 previousTab = id; 
                 printDocument = id; 
@@ -93,6 +95,8 @@
                 saveImageAs = id; 
                 saveLinkAs = id; 
                 savePageAs = id; 
+                sendURL = id; 
+                smallerTextSize = id; 
                 stop = id; 
                 toggleSidebar = id; 
                 viewOnlyThisImage = id; 
@@ -107,7 +111,6 @@
                 mAddBookmarkSheetWindow = NSWindow; 
                 mAddBookmarkTitleField = NSTextField; 
                 mBackItem = NSMenuItem; 
-                mCachedBMDS = id; 
                 mContentView = BrowserContentView; 
                 mCopyItem = NSMenuItem; 
                 mForwardItem = NSMenuItem; 
@@ -125,7 +128,6 @@
                 mProgress = NSProgressIndicator; 
                 mProxyIcon = PageProxyIcon; 
                 mSidebarBookmarksDataSource = BookmarksDataSource; 
-                mSidebarBrowserView = id; 
                 mSidebarDrawer = NSDrawer; 
                 mSidebarSourceTabView = NSTabView; 
                 mSidebarTabView = NSTabView; 

@@ -1811,10 +1811,11 @@ static BOOL gMadeBMManager;
   NSRange matchRange = [location rangeOfString:@"%s"];
   if (matchRange.location != NSNotFound)
   {
-    return [NSString stringWithFormat:@"%@%@%@",
+    NSString* resultString = [NSString stringWithFormat:@"%@%@%@",
                 [location substringToIndex:matchRange.location],
                 keyword,
                 [location substringFromIndex:(matchRange.location + matchRange.length)]];
+    return resultString;
   }
     
   return location;
@@ -1841,7 +1842,7 @@ static BOOL gMadeBMManager;
   {
     NSString* firstWord  = [locationString substringToIndex:spaceRange.location];
     NSString* secondWord = [locationString substringFromIndex:(spaceRange.location + spaceRange.length)];
-  
+
     BookmarksService::GetContentForKeyword(firstWord, getter_AddRefs(foundContent));
     if (foundContent)
     {

@@ -111,7 +111,6 @@ typedef enum
   IBOutlet PageProxyIcon*     mProxyIcon;
   IBOutlet BrowserContentView* mContentView;
   
-  IBOutlet id                   mSidebarBrowserView;  // currently unused
   IBOutlet BookmarksDataSource* mSidebarBookmarksDataSource;
   IBOutlet HistoryDataSource* mHistoryDataSource;
 
@@ -163,7 +162,7 @@ typedef enum
   nsIDOMNode* mContextMenuNode;
 
   // Cached bookmark ds used when adding through a sheet
-  id mCachedBMDS;
+  BookmarksDataSource* mCachedBMDS;
 
   // Throbber state variables.
   ThrobberHandler* mThrobberHandler;
@@ -204,7 +203,7 @@ typedef enum
 
 - (IBAction)cancelAddBookmarkSheet:(id)sender;
 - (IBAction)endAddBookmarkSheet:(id)sender;
-- (void)cacheBookmarkDS: (id)aDS;
+- (void)cacheBookmarkDS:(BookmarksDataSource*)aDS;
 
 - (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)proposedFrameSize;
 
@@ -217,15 +216,16 @@ typedef enum
 - (IBAction)printDocument:(id)aSender;
 - (IBAction)pageSetup:(id)aSender;
 - (IBAction)performSearch:(id)aSender;
+- (IBAction)sendURL:(id)aSender;
 
 - (void)startThrobber;
 - (void)stopThrobber;
 - (void)clickThrobber:(id)aSender;
 
-- (void)biggerTextSize;
-- (void)smallerTextSize;
-- (void)getInfo:(id)sender;
+- (IBAction)biggerTextSize:(id)aSender;
+- (IBAction)smallerTextSize:(id)aSender;
 
+- (void)getInfo:(id)sender;
 - (BOOL)canGetInfo;
 
 - (BOOL)shouldShowBookmarkToolbar;

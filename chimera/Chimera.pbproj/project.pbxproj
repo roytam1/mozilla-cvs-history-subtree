@@ -629,6 +629,10 @@
 				F5EB9377030C92450100010C,
 				F520BECB036041D501026D5D,
 				F520BECC036041D501026D5D,
+				F5566DC4038E075F01A80166,
+				F5566DC5038E075F01A80166,
+				F5566DC6038E075F01A80166,
+				F5566DC7038E075F01A80166,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2830,6 +2834,10 @@
 				F5F94BEF0338E8C501026D5D,
 				F520BEC7036041D501026D5D,
 				F520BEC8036041D501026D5D,
+				F5566DC0038E075F01A80166,
+				F5566DC1038E075F01A80166,
+				F5566DC2038E075F01A80166,
+				F5566DC3038E075F01A80166,
 			);
 			isa = PBXGroup;
 			name = "Toolbar-Browser";
@@ -3870,6 +3878,78 @@
 		};
 		F5555C8902022F070164C72B = {
 			fileRef = F5555C8502022F070164C72B;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5566DC0038E075F01A80166 = {
+			isa = PBXFileReference;
+			name = closeTab.tif;
+			path = resources/images/toolbar/closeTab.tif;
+			refType = 2;
+		};
+		F5566DC1038E075F01A80166 = {
+			isa = PBXFileReference;
+			name = newTab.tif;
+			path = resources/images/toolbar/newTab.tif;
+			refType = 2;
+		};
+		F5566DC2038E075F01A80166 = {
+			isa = PBXFileReference;
+			name = searchWeb.tif;
+			path = resources/images/toolbar/searchWeb.tif;
+			refType = 2;
+		};
+		F5566DC3038E075F01A80166 = {
+			isa = PBXFileReference;
+			name = sendLink.tif;
+			path = resources/images/toolbar/sendLink.tif;
+			refType = 2;
+		};
+		F5566DC4038E075F01A80166 = {
+			fileRef = F5566DC0038E075F01A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5566DC5038E075F01A80166 = {
+			fileRef = F5566DC1038E075F01A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5566DC6038E075F01A80166 = {
+			fileRef = F5566DC2038E075F01A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5566DC7038E075F01A80166 = {
+			fileRef = F5566DC3038E075F01A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5566DC8038E075F01A80166 = {
+			fileRef = F5566DC0038E075F01A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5566DC9038E075F01A80166 = {
+			fileRef = F5566DC1038E075F01A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5566DCA038E075F01A80166 = {
+			fileRef = F5566DC2038E075F01A80166;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5566DCB038E075F01A80166 = {
+			fileRef = F5566DC3038E075F01A80166;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -7118,6 +7198,10 @@
 				F5A70922036DB4B201202892,
 				F5A70923036DB4B201202892,
 				F5A70924036DB4B201202892,
+				F5566DC8038E075F01A80166,
+				F5566DC9038E075F01A80166,
+				F5566DCA038E075F01A80166,
+				F5566DCB038E075F01A80166,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
