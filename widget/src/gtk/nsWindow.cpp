@@ -421,6 +421,7 @@ NS_IMETHODIMP nsWindow::Invalidate(PRBool aIsSynchronous)
   
   return NS_OK;
 }
+
 NS_IMETHODIMP nsWindow::Invalidate(const nsRect &aRect, PRBool aIsSynchronous)
 {
 
@@ -434,6 +435,20 @@ NS_IMETHODIMP nsWindow::Invalidate(const nsRect &aRect, PRBool aIsSynchronous)
   else
     QueueDraw();
   
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsWindow::SetBackgroundColor(const nscolor &aColor)
+{
+  nsBaseWidget::SetBackgroundColor(aColor);
+
+  if (nsnull != mSuperWin) {
+    GdkColor back_color;
+
+    NSCOLOR_TO_GDKCOLOR(aColor, back_color);
+    gdk_window_set_background(mSuperWin->bin_window, &back_color); 
+  }
+
   return NS_OK;
 }
 
@@ -590,16 +605,16 @@ NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
   }
 
   gdk_window_set_events(mSuperWin->bin_window, 
-                        GDK_BUTTON_PRESS_MASK |
-                        GDK_BUTTON_RELEASE_MASK |
-                        GDK_ENTER_NOTIFY_MASK |
-                        GDK_LEAVE_NOTIFY_MASK |
-                        GDK_EXPOSURE_MASK |
-                        GDK_FOCUS_CHANGE_MASK |
-                        GDK_KEY_PRESS_MASK |
-                        GDK_KEY_RELEASE_MASK |
-                        GDK_POINTER_MOTION_MASK |
-                        GDK_POINTER_MOTION_HINT_MASK);
+                        (GdkEventMask)(GDK_BUTTON_PRESS_MASK |
+                                       GDK_BUTTON_RELEASE_MASK |
+                                       GDK_ENTER_NOTIFY_MASK |
+                                       GDK_LEAVE_NOTIFY_MASK |
+                                       GDK_EXPOSURE_MASK |
+                                       GDK_FOCUS_CHANGE_MASK |
+                                       GDK_KEY_PRESS_MASK |
+                                       GDK_KEY_RELEASE_MASK |
+                                       GDK_POINTER_MOTION_MASK |
+                                       GDK_POINTER_MOTION_HINT_MASK));
 
   gtk_object_set_data (GTK_OBJECT (mSuperWin), "nsWindow", this);
   gdk_window_set_user_data (mSuperWin->bin_window, (gpointer)mSuperWin);

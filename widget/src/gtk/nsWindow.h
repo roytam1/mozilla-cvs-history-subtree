@@ -75,6 +75,7 @@ public:
                                            PRBool aConsumeRollupEvent);
   NS_IMETHOD           Invalidate(PRBool aIsSynchronous);
   NS_IMETHOD           Invalidate(const nsRect &aRect, PRBool aIsSynchronous);
+  NS_IMETHOD           SetBackgroundColor(const nscolor &aColor);
   void                 QueueDraw();
   void                 UnqueueDraw();
   void                 DoPaint(PRInt32 x, PRInt32 y, PRInt32 width, PRInt32 height,
