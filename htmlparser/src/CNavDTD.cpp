@@ -3194,12 +3194,15 @@ nsresult CNavDTD::CloseBody(const nsIParserNode *aNode){
  */
 nsresult CNavDTD::OpenForm(const nsIParserNode *aNode){
   static eHTMLTags gTableElements[]={eHTMLTag_table,eHTMLTag_tbody,eHTMLTag_tr,
-                                     eHTMLTag_td,eHTMLTag_th,eHTMLTag_col,
-                                     eHTMLTag_tfoot,eHTMLTag_thead,eHTMLTag_colgroup};
+                                     eHTMLTag_tfoot,eHTMLTag_thead,
+                                     eHTMLTag_col,eHTMLTag_colgroup};
   nsresult result=NS_OK;
   if(!(mFlags & NS_PARSER_FLAG_HAS_OPEN_FORM)) { // discard nested forms - bug 72639
-    
-    if(!FindTagInSet(mBodyContext->Last(),gTableElements,sizeof(gTableElements)/sizeof(eHTMLTag_unknown))) {
+       
+    // Check if the parent is a table, tbody, thead, tfoot, tr, col or
+    // colgroup. If so, treat form as a leaf content. [ Ex. bug 92530 ]
+    if(!FindTagInSet(mBodyContext->Last(),gTableElements,
+                     sizeof(gTableElements)/sizeof(eHTMLTag_unknown))) {
       mFlags |= NS_PARSER_FLAG_IS_FORM_CONTAINER;
     }
 
@@ -3669,11 +3672,14 @@ nsresult CNavDTD::CloseContainersTo(PRInt32 anIndex,eHTMLTags aTarget, PRBool aC
                   }
                 }
                 else if(1==theNode->mUseCount) {
-                  // This fixes bug 30885 and 29626
+                  // This fixes bug 30885,29626.
                   // Make sure that the node, which is about to
                   // get released does not stay on the style stack...
-                  nsCParserNode* node=mBodyContext->PopStyle(theTag);
-                  IF_FREE(node, &mNodeAllocator);
+                  // Also be sure to remove the correct style off the
+                  // style stack. - Ref. bug 94208.
+                  // Ex <FONT><B><I></FONT><FONT></B></I></FONT>
+                  // Make sure that </B> removes B off the style stack.
+                  mBodyContext->RemoveStyle(theTag);
                 }
                 mBodyContext->PushStyles(theChildStyleStack);
               }
@@ -3693,9 +3699,11 @@ nsresult CNavDTD::CloseContainersTo(PRInt32 anIndex,eHTMLTags aTarget, PRBool aC
               //Ah, at last, the final case. If you're here, then we just popped a 
               //style tag that got onto that tag stack from a stylestack somewhere.
               //Pop it from the stylestack if the target is also a style tag.
-              if(theTargetTagIsStyle) {
-                nsCParserNode* node=mBodyContext->PopStyle(theTag);
-                IF_FREE(node, &mNodeAllocator);
+              //Make sure to remove the matching style. In the following example
+              //<FONT><B><I></FONT><FONT color=red></B></I></FONT> make sure that 
+              //</I> does not remove <FONT color=red> off the style stack. - bug 94208
+              if (theTargetTagIsStyle && theTag == aTarget) {
+                mBodyContext->RemoveStyle(theTag);
               }
             }
           }
