@@ -2944,15 +2944,6 @@ function GetMsgHeadersToolbarElement()
   return gMsgHeadersToolbarElement;
 }
 
-function IsMsgHeadersToolbarCollapsed()
-{
-  var element = GetMsgHeadersToolbarElement();
-  if(element)
-    return(element.getAttribute('moz-collapsed') == "true");
-
-  return(0);
-}
-
 function WhichElementHasFocus()
 {
   var msgIdentityElement             = GetMsgIdentityElement();
@@ -2994,9 +2985,7 @@ function SwitchElementFocus(event)
 
   if (event && event.shiftKey)
   {
-    if (IsMsgHeadersToolbarCollapsed())
-      SetMsgBodyFrameFocus();
-    else if (focusedElement == gMsgAddressingWidgetTreeElement)
+    if (focusedElement == gMsgAddressingWidgetTreeElement)
       SetMsgIdentityElementFocus();
     else if (focusedElement == gMsgIdentityElement)
       SetMsgBodyFrameFocus();
@@ -3016,9 +3005,7 @@ function SwitchElementFocus(event)
   }
   else
   {
-    if (IsMsgHeadersToolbarCollapsed())
-      SetMsgBodyFrameFocus();
-    else if (focusedElement == gMsgAddressingWidgetTreeElement)
+    if (focusedElement == gMsgAddressingWidgetTreeElement)
       SetMsgSubjectElementFocus();
     else if (focusedElement == gMsgSubjectElement)
     {
