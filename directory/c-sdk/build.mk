@@ -408,6 +408,10 @@ endif # ReliantUNIX
 endif # HP-UX
 endif # WINNT
 
+ifeq ($(OS_ARCH), OSF1)
+LINK_EXE        = $(CCC) $(ALDFLAGS) $(LDFLAGS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) \
+        -o $@ $(OBJS) $(EXTRA_LIBS)
+endif
 
 PERL = perl
 #
