@@ -1507,8 +1507,8 @@ PRBool nsPrivilegeManagerInitialize(void)
   thePrivilegeManager = new nsPrivilegeManager();
 #ifdef DEBUG_raman_xxx
   RDFJSec_InitPrivilegeDB();
-  return PR_FALSE;
 #endif /* DEBUG_raman_xxx */
+  return PR_FALSE;
 }
 
 PRBool nsPrivilegeManager::theInited = nsPrivilegeManagerInitialize();
