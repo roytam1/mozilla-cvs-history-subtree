@@ -520,7 +520,10 @@ var MessageWindowController =
 
 	doCommand: function(command)
 	{
-    dump("MessageWindowController.doCommand(" + command + ")\n");
+    // if the user invoked a key short cut then it is possible that we got here for a command which is
+    // really disabled. kick out if the command should be disabled.
+    if (!this.isCommandEnabled(command)) return;
+
     var navigationType = nsMsgNavigationType.nextUnreadMessage;
 
 		switch ( command )

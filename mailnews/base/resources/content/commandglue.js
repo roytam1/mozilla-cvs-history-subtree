@@ -80,7 +80,7 @@ function LoadMessageByUri(uri)
 		var resource = RDF.GetResource(uri);
 		var message = resource.QueryInterface(Components.interfaces.nsIMessage); 
 		if (message)
-			setTitleFromFolder(message.msgFolder, message.mime2DecodedSubject);
+			setTitleFromFolder(message.msgFolder, message.mimef2DecodedSubject);
 
 		var nsIMsgFolder = Components.interfaces.nsIMsgFolder;
 		if (message.msgFolder.server.downloadOnBiff)
@@ -759,16 +759,17 @@ function FolderPaneSelectionChange()
 	{
 		var selArray = tree.selectedItems;
 		if ( selArray && (selArray.length == 1) )
-        {
-			ChangeFolderByDOMNode(selArray[0]);
-        }
+    {
+    	ChangeFolderByDOMNode(selArray[0]);
+    }
 		else
 		{
 			ClearThreadPane();
 		}
 	}
-        if (!gAccountCentralLoaded)
-            ClearMessagePane();
+
+  if (!gAccountCentralLoaded)
+    ClearMessagePane();
 
 }
 

@@ -88,6 +88,10 @@ var FolderPaneController =
 
 	doCommand: function(command)
 	{
+    // if the user invoked a key short cut then it is possible that we got here for a command which is
+    // really disabled. kick out if the command should be disabled.
+    if (!this.isCommandEnabled(command)) return;
+
 		switch ( command )
 		{
 			case "cmd_delete":
@@ -145,17 +149,23 @@ var ThreadPaneController =
 
 	doCommand: function(command)
 	{
+    // if the user invoked a key short cut then it is possible that we got here for a command which is
+    // really disabled. kick out if the command should be disabled.
+    if (!this.isCommandEnabled(command)) return;
+
 		switch ( command )
 		{
 			case "cmd_selectAll":
-                if (gDBView) {
-                    // if in threaded mode, the view will expand all before selecting all
-                    gDBView.doCommand(nsMsgViewCommandType.selectAll)
-                    if (gDBView.numSelected != 1) {
-                        ClearMessagePane();
-                    }
-                }
-				break;
+      if (gDBView) 
+      {
+        // if in threaded mode, the view will expand all before selecting all
+        gDBView.doCommand(nsMsgViewCommandType.selectAll)
+        if (gDBView.numSelected != 1) 
+        {
+          ClearMessagePane();
+        }
+      }			
+      break;
 		}
 	},
 	
@@ -369,6 +379,10 @@ var DefaultController =
 
 	doCommand: function(command)
 	{
+    // if the user invoked a key short cut then it is possible that we got here for a command which is
+    // really disabled. kick out if the command should be disabled.
+    if (!this.isCommandEnabled(command)) return;
+
 		switch ( command )
 		{
       case "button_getNewMessages":
