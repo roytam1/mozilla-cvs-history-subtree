@@ -243,7 +243,7 @@ nsComposerCommandsUpdater::UpdateDirtyState(PRBool aNowDirty)
 }
 
 nsresult
-nsComposerCommandsUpdater::CallUpdateCommands(const nsAString& aCommand)
+nsComposerCommandsUpdater::CallUpdateCommands(const nsAString& aCommandGroup)
 {
   if (!mDocShell)
   {
@@ -260,9 +260,11 @@ nsComposerCommandsUpdater::CallUpdateCommands(const nsAString& aCommand)
     nsCOMPtr<nsIScriptGlobalObject> scriptGlobalObject;
     theDoc->GetScriptGlobalObject(getter_AddRefs(scriptGlobalObject));
 
-		nsCOMPtr<nsIDocShell>	docShell;
-		scriptGlobalObject->GetDocShell(getter_AddRefs(docShell));
-		mDocShell = docShell.get();		
+    if (scriptGlobalObject) {
+        nsCOMPtr<nsIDocShell>	docShell;
+        scriptGlobalObject->GetDocShell(getter_AddRefs(docShell));
+        mDocShell = docShell.get();		
+    }
   }
 
   if (!mDocShell) return NS_ERROR_FAILURE;
@@ -271,10 +273,49 @@ nsComposerCommandsUpdater::CallUpdateCommands(const nsAString& aCommand)
   nsCOMPtr<nsPICommandUpdater>	commandUpdater = do_QueryInterface(commandManager);
   if (!commandUpdater) return NS_ERROR_FAILURE;
   
-  commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_bold"));
-  commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_italic"));
-  commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_underline"));
+  // this hardcoded list of commands in temporary. This code should
+  // use nsICommandGroup.
+  if (aCommandGroup.Equals(NS_LITERAL_STRING("undo")))
+  {
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_undo"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_redo"));
+  }
+  else if (aCommandGroup.Equals(NS_LITERAL_STRING("select")) ||
+           aCommandGroup.Equals(NS_LITERAL_STRING("style")))
+  {
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_bold"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_italic"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_underline"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_tt"));
+
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_strikethrough"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_superscript"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_subscript"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_nobreak"));
+
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_em"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_strong"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_cite"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_abbr"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_acronym"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_code"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_samp"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_var"));
   
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_increaseFont"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_decreaseFont"));
+
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_paragraphState"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_fontFace"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_fontColor"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_backgroundColor"));
+    commandUpdater->CommandStatusChanged(NS_LITERAL_STRING("cmd_highlight"));
+  }  
+  else if (aCommandGroup.Equals(NS_LITERAL_STRING("save")))
+  {
+    // save commands (none in C++)
+  }
+    
   return NS_OK;  
 }
 

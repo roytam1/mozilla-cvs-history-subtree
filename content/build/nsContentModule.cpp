@@ -82,6 +82,7 @@
 #include "nsHTMLAttributes.h"
 #include "nsIHTMLCSSStyleSheet.h"
 #include "nsIHTMLContent.h"
+#include "nsIHTMLFragmentContentSink.h"
 #include "nsIHTMLStyleSheet.h"
 #include "nsIHTMLToTextSink.h"
 #include "nsILayoutDebugger.h"
@@ -343,6 +344,8 @@ MAKE_CTOR(CreateHTMLCopyTextEncoder,      nsIDocumentEncoder,          NS_NewHTM
 MAKE_CTOR(CreateXMLContentSerializer,     nsIContentSerializer,        NS_NewXMLContentSerializer)
 MAKE_CTOR(CreateHTMLContentSerializer,    nsIContentSerializer,        NS_NewHTMLContentSerializer)
 MAKE_CTOR(CreatePlainTextSerializer,      nsIContentSerializer,        NS_NewPlainTextSerializer)
+MAKE_CTOR(CreateHTMLFragmentSink,         nsIHTMLFragmentContentSink,  NS_NewHTMLFragmentContentSink)
+MAKE_CTOR(CreateHTMLFragmentSink2,        nsIHTMLFragmentContentSink,  NS_NewHTMLFragmentContentSink2)
 MAKE_CTOR(CreateXBLService,               nsIXBLService,               NS_NewXBLService)
 MAKE_CTOR(CreateBindingManager,           nsIBindingManager,           NS_NewBindingManager)
 MAKE_CTOR(CreateContentPolicy,            nsIContentPolicy,            NS_NewContentPolicy)
@@ -719,6 +722,16 @@ static const nsModuleComponentInfo gComponents[] = {
     NS_PLAINTEXTSERIALIZER_CID,
     NS_PLAINTEXTSINK_CONTRACTID,
     CreatePlainTextSerializer },
+
+  { "html fragment sink",
+    NS_HTMLFRAGMENTSINK_CID,
+    NS_FRAGMENTSINK_CONTRACTID,
+    CreateHTMLFragmentSink },
+
+  { "html fragment sink 2",
+    NS_HTMLFRAGMENTSINK2_CID,
+    NS_HTMLFRAGMENTSINK2_CONTRACTID,
+    CreateHTMLFragmentSink2 },
 
   { "XBL Service",
     NS_XBLSERVICE_CID,

@@ -541,12 +541,6 @@ makeGlobalSalt(NSSLOWKEYDBHandle *handle)
     return(SECSuccess);
 }
 
-static char *
-keyDBFilenameCallback(void *arg, int dbVersion)
-{
-    return(PORT_Strdup((char *)arg));
-}
-
 static SECStatus
 ChangeKeyDBPasswordAlg(NSSLOWKEYDBHandle *handle,
 		       SECItem *oldpwitem, SECItem *newpwitem,
@@ -831,16 +825,145 @@ done:
     return(SECSuccess);
 }
 
+static SECStatus
+openNewDB(const char *appName, const char *prefix, const char *dbname, 
+	NSSLOWKEYDBHandle *handle, NSSLOWKEYDBNameFunc namecb, void *cbarg)
+{
+    SECStatus rv = SECFailure;
+    int status = RDB_FAIL;
+    char *updname = NULL;
+    DB *updatedb = NULL;
+    PRBool updated = PR_FALSE;
+    int ret;
+
+    if (appName) {
+	handle->db = rdbopen( appName, prefix, "key", NO_CREATE, &status);
+    } else {
+	handle->db = dbopen( dbname, NO_CREATE, 0600, DB_HASH, 0 );
+    }
+    /* if create fails then we lose */
+    if ( handle->db == NULL ) {
+	return (status == RDB_RETRY) ? SECWouldBlock: SECFailure;
+    }
+
+    rv = db_BeginTransaction(handle->db);
+    if (rv != SECSuccess) {
+	db_InitComplete(handle->db);
+	return rv;
+    }
+
+    /* force a transactional read, which will verify that one and only one
+     * process attempts the update. */
+    if (nsslowkey_version(handle->db) == NSSLOWKEY_DB_FILE_VERSION) {
+	/* someone else has already updated the database for us */
+	db_FinishTransaction(handle->db, PR_FALSE);
+	db_InitComplete(handle->db);
+	return SECSuccess;
+    }
+
+    /*
+     * if we are creating a multiaccess database, see if there is a
+     * local database we can update from.
+     */
+    if (appName) {
+	updatedb = dbopen( dbname, NO_RDONLY, 0600, DB_HASH, 0 );
+	if (updatedb) {
+	    handle->version = nsslowkey_version(updatedb);
+	    if (handle->version != NSSLOWKEY_DB_FILE_VERSION) {
+		(updatedb->close)(updatedb);
+	    } else {
+		db_Copy(handle->db, updatedb);
+		(updatedb->close)(updatedb);
+		db_FinishTransaction(handle->db,PR_FALSE);
+		db_InitComplete(handle->db);
+		return SECSuccess;
+	    }
+	}
+    }
+
+    /* update the version number */
+    rv = makeGlobalVersion(handle);
+    if ( rv != SECSuccess ) {
+	goto loser;
+    }
+
+    /*
+     * try to update from v2 db
+     */
+    updname = (*namecb)(cbarg, 2);
+    if ( updname != NULL ) {
+	handle->updatedb = dbopen( updname, NO_RDONLY, 0600, DB_HASH, 0 );
+        PORT_Free( updname );
+
+	if ( handle->updatedb ) {
+	    /*
+	     * Try to update the db using a null password.  If the db
+	     * doesn't have a password, then this will work.  If it does
+	     * have a password, then this will fail and we will do the
+	     * update later
+	     */
+	    rv = nsslowkey_UpdateKeyDBPass1(handle);
+	    if ( rv == SECSuccess ) {
+		updated = PR_TRUE;
+	    }
+	}
+	    
+    }
+
+    /* we are using the old salt if we updated from an old db */
+    if ( ! updated ) {
+	rv = makeGlobalSalt(handle);
+	if ( rv != SECSuccess ) {
+	   goto loser;
+	}
+    }
+	
+    /* sync the database */
+    ret = (* handle->db->sync)(handle->db, 0);
+    if ( ret ) {
+	rv = SECFailure;
+	goto loser;
+    }
+    rv = SECSuccess;
+
+loser:
+    db_FinishTransaction(handle->db, rv != SECSuccess);
+    db_InitComplete(handle->db);
+    return rv;
+}
+
+
+static DB *
+openOldDB(const char *appName, const char *prefix, const char *dbname, 
+					PRBool openflags, int *version) {
+    DB *db = NULL;
+
+    if (appName) {
+	db = rdbopen( appName, prefix, "key", openflags, NULL);
+    } else {
+	db = dbopen( dbname, openflags, 0600, DB_HASH, 0 );
+    }
+
+    /* check for correct version number */
+    if (db != NULL) {
+	*version = nsslowkey_version(db);
+	if (*version != NSSLOWKEY_DB_FILE_VERSION ) {
+	    /* bogus version number record, reset the database */
+	    (* db->close)( db );
+	    db = NULL;
+	}
+    }
+    return db;
+}
+
 NSSLOWKEYDBHandle *
 nsslowkey_OpenKeyDB(PRBool readOnly, const char *appName, const char *prefix,
 				NSSLOWKEYDBNameFunc namecb, void *cbarg)
 {
     NSSLOWKEYDBHandle *handle;
-    int ret;
     SECStatus rv;
     int openflags;
     char *dbname = NULL;
-    PRBool updated = PR_FALSE;
     
     handle = (NSSLOWKEYDBHandle *)PORT_ZAlloc (sizeof(NSSLOWKEYDBHandle));
     if (handle == NULL) {
@@ -855,32 +978,18 @@ nsslowkey_OpenKeyDB(PRBool readOnly, const char *appName, const char *prefix,
 	goto loser;
     }
 
-    handle->dbname = PORT_Strdup(dbname);
+    handle->appname = appName ? PORT_Strdup(appName) : NULL ;
+    handle->dbname = (appName == NULL) ? PORT_Strdup(dbname) : 
+			(prefix ? PORT_Strdup(prefix) : NULL);
     handle->readOnly = readOnly;
-   
-    if (appName) {
-	handle->db = rdbopen( appName, prefix, "key", openflags);
-    } else {
-	handle->db = dbopen( dbname, openflags, 0600, DB_HASH, 0 );
+
+
+    handle->db = openOldDB(appName, prefix, dbname, openflags, 
+							&handle->version);
+    if (handle->version == 255) {
+	goto loser;
     }
-
-    /* check for correct version number */
-    if (handle->db != NULL) {
-	handle->version = nsslowkey_version(handle->db);
-	if (handle->version == 255) {
-	    goto loser;
-	}
-	if (handle->version != NSSLOWKEY_DB_FILE_VERSION ) {
-	    /* bogus version number record, reset the database */
-	    (* handle->db->close)( handle->db );
-	    handle->db = NULL;
-
-	    goto newdb;
-	}
-
-    }
-
-newdb:
+  
 
     /* if first open fails, try to create a new DB */
     if ( handle->db == NULL ) {
@@ -888,77 +997,21 @@ newdb:
 	    goto loser;
 	}
 
-	if (appName) {
-	    handle->db = rdbopen( appName, prefix, "key", NO_CREATE);
-	    handle->updatedb = dbopen( dbname, NO_RDONLY, 0600, DB_HASH, 0 );
-	    if (handle->updatedb) {
-		handle->version = nsslowkey_version(handle->updatedb);
-		if (handle->version != NSSLOWKEY_DB_FILE_VERSION) {
-		    (*handle->updatedb->close)(handle->updatedb);
-		    handle->updatedb = NULL;
-		} else {
-		    db_Copy(handle->db, handle->updatedb);
-		    (*handle->updatedb->close)(handle->updatedb);
-		    handle->updatedb = NULL;
-		    goto done;
-		}
-	    }
-	} else {
-	    handle->db = dbopen( dbname, NO_CREATE, 0600, DB_HASH, 0 );
-	}
-
-        PORT_Free( dbname );
-        dbname = NULL;
-
-	/* if create fails then we lose */
-	if ( handle->db == NULL ) {
-	    goto loser;
-	}
-
-	rv = makeGlobalVersion(handle);
-	if ( rv != SECSuccess ) {
-	    goto loser;
-	}
-	/*
-	 * try to update from v2 db
-	 */
-	dbname = (*namecb)(cbarg, 2);
-	if ( dbname != NULL ) {
-	    handle->updatedb = dbopen( dbname, NO_RDONLY, 0600, DB_HASH, 0 );
-            PORT_Free( dbname );
-            dbname = NULL;
-
-	    if ( handle->updatedb ) {
-		/*
-		 * Try to update the db using a null password.  If the db
-		 * doesn't have a password, then this will work.  If it does
-		 * have a password, then this will fail and we will do the
-		 * update later
-		 */
-		rv = nsslowkey_UpdateKeyDBPass1(handle);
-		if ( rv == SECSuccess ) {
-		    updated = PR_TRUE;
-		}
-	    }
-	    
-	}
-
-	/* we are using the old salt if we updated from an old db */
-	if ( ! updated ) {
-	    rv = makeGlobalSalt(handle);
-	    if ( rv != SECSuccess ) {
+	rv = openNewDB(appName, prefix, dbname, handle, namecb, cbarg);
+	/* two processes started to initialize the database at the same time.
+	 * The multiprocess code blocked the second one, then had it retry to
+	 * see if it can just open the database normally */
+	if (rv == SECWouldBlock) {
+	    handle->db = openOldDB(appName,prefix,dbname, 
+						openflags, &handle->version);
+	    if (handle->db == NULL) {
 		goto loser;
 	    }
-	}
-	
-	/* sync the database */
-	ret = (* handle->db->sync)(handle->db, 0);
-	if ( ret ) {
+	} else if (rv != SECSuccess) {
 	    goto loser;
 	}
+	
     }
-
-done:
 
     handle->global_salt = GetKeyDBGlobalSalt(handle);
     if ( dbname )
@@ -992,6 +1045,7 @@ nsslowkey_CloseKeyDB(NSSLOWKEYDBHandle *handle)
 	    (* handle->db->close)(handle->db);
 	}
 	if (handle->dbname) PORT_Free(handle->dbname);
+	if (handle->appname) PORT_Free(handle->appname);
 	if (handle->global_salt) {
 	    SECITEM_FreeItem(handle->global_salt,PR_TRUE);
 	}
@@ -1069,6 +1123,25 @@ nsslowkey_UpdateNickname(NSSLOWKEYDBHandle *handle,
 	     nickname, arg, nsslowkey_GetDefaultKeyDBAlg(),PR_TRUE);
 }
 
+/* see if the symetric CKA_ID already Exists.
+ */
+PRBool
+nsslowkey_KeyForIDExists(NSSLOWKEYDBHandle *handle, SECItem *id)
+{
+    DBT namekey;
+    DBT dummy;
+    int status;
+
+    namekey.data = (char *)id->data;
+    namekey.size = id->len;
+    status = (* handle->db->get)(handle->db, &namekey, &dummy, 0);
+    if ( status ) {
+	return PR_FALSE;
+    }
+    
+    return PR_TRUE;
+}
+
 /* see if the public key for this cert is in the database filed
  * by modulus
  */
@@ -1114,6 +1187,18 @@ nsslowkey_KeyForCertExists(NSSLOWKEYDBHandle *handle, NSSLOWCERTCertificate *cer
     }
 
     status = (* handle->db->get)(handle->db, &namekey, &dummy, 0);
+    /* some databases have the key stored as a signed value */
+    if (status) {
+	unsigned char *buf = (unsigned char *)PORT_Alloc(namekey.size+1);
+	if (buf) {
+	    PORT_Memcpy(&buf[1], namekey.data, namekey.size);
+	    buf[0] = 0;
+	    namekey.data = buf;
+	    namekey.size ++;
+    	    status = (* handle->db->get)(handle->db, &namekey, &dummy, 0);
+	    PORT_Free(buf);
+	}
+    }
     nsslowkey_DestroyPublicKey(pubkey);
     if ( status ) {
 	return PR_FALSE;
@@ -2170,6 +2255,7 @@ nsslowkey_CheckKeyDBPassword(NSSLOWKEYDBHandle *handle, SECItem *pwitem)
     /* make a secitem of the encrypted check string */
     encstring.len = dbkey->derPK.len - ( oid.len + 1 );
     encstring.data = &dbkey->derPK.data[oid.len+1];
+    encstring.type = 0;
     
     switch(algorithm)
     {
@@ -2255,6 +2341,11 @@ ChangeKeyDBPasswordAlg(NSSLOWKEYDBHandle *handle,
 	return(SECFailure);
     }
     keylist.head = NULL;
+
+    rv = db_BeginTransaction(handle->db);
+    if (rv != SECSuccess) {
+	goto loser;
+    }
     
     /* TNH - TraverseKeys should not be public, since it exposes
        the underlying DBT data type. */
@@ -2299,7 +2390,10 @@ ChangeKeyDBPasswordAlg(NSSLOWKEYDBHandle *handle,
 	    newkey.size = privkey->u.dh.publicValue.len;
 	    break;
 	  default:
-	    return SECFailure;
+	    /* should we continue here and loose the key? */
+	    PORT_SetError(SEC_ERROR_BAD_DATABASE);
+	    rv = SECFailure;
+	    goto loser;
 	}
 
 	rv = seckey_put_private_key(handle, &newkey, newpwitem, privkey,
@@ -2319,6 +2413,8 @@ ChangeKeyDBPasswordAlg(NSSLOWKEYDBHandle *handle,
     rv = nsslowkey_SetKeyDBPasswordAlg(handle, newpwitem, new_algorithm);
 
 loser:
+
+    db_FinishTransaction(handle->db,rv != SECSuccess);
 
     /* free the arena */
     if ( keylist.arena ) {
@@ -2378,13 +2474,17 @@ nsslowkey_ResetKeyDB(NSSLOWKEYDBHandle *handle)
 	return SECFailure;
      }
 
-    PORT_Assert(handle->dbname != NULL);
-    if (handle->dbname == NULL) {
+    if (handle->appname == NULL && handle->dbname == NULL) {
 	return SECFailure;
     }
 
     (* handle->db->close)(handle->db);
-    handle->db = dbopen( handle->dbname, NO_CREATE, 0600, DB_HASH, 0 );
+    if (handle->appname) {
+	handle->db= 
+	    rdbopen(handle->appname, handle->dbname, "key", NO_CREATE, NULL);
+    } else {
+	handle->db = dbopen( handle->dbname, NO_CREATE, 0600, DB_HASH, 0 );
+    }
     if (handle->db == NULL) {
 	/* set an error code */
 	return SECFailure;

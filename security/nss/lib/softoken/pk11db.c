@@ -50,6 +50,7 @@ secmod_parseTokenFlags(char *tmp, pk11_token_parameters *parsed) {
     parsed->noKeyDB = pk11_argHasFlag("flags","noKeyDB",tmp);
     parsed->forceOpen = pk11_argHasFlag("flags","forceOpen",tmp);
     parsed->pwRequired = pk11_argHasFlag("flags","passwordRequired",tmp);
+    parsed->optimizeSpace = pk11_argHasFlag("flags","optimizeSpace",tmp);
     return;
 }
 
@@ -61,6 +62,7 @@ secmod_parseFlags(char *tmp, pk11_parameters *parsed) {
     parsed->noCertDB = pk11_argHasFlag("flags","noCertDB",tmp);
     parsed->forceOpen = pk11_argHasFlag("flags","forceOpen",tmp);
     parsed->pwRequired = pk11_argHasFlag("flags","passwordRequired",tmp);
+    parsed->optimizeSpace = pk11_argHasFlag("flags","optimizeSpace",tmp);
     return;
 }
 
@@ -191,6 +193,8 @@ secmod_parseParameters(char *param, pk11_parameters *parsed, PRBool isFIPS)
 	tokens[index].noKeyDB = parsed->noCertDB;
 	tokens[index].forceOpen = parsed->forceOpen;
 	tokens[index].pwRequired = parsed->pwRequired;
+	tokens[index].optimizeSpace = parsed->optimizeSpace;
+	tokens[0].optimizeSpace = parsed->optimizeSpace;
 	certPrefix = NULL;
 	keyPrefix = NULL;
 	if (isFIPS) {
@@ -269,7 +273,10 @@ secmod_getSecmodName(char *param, char **appName, char **filename,PRBool *rw)
    if (pk11_argHasFlag("flags","readOnly",save_params) ||
 	pk11_argHasFlag("flags","noModDB",save_params)) *rw = PR_FALSE;
 
-   if (!secmodName || *secmodName == '\0') secmodName = PORT_Strdup(SECMOD_DB);
+   if (!secmodName || *secmodName == '\0') {
+	if (secmodName) PORT_Free(secmodName);
+	secmodName = PORT_Strdup(SECMOD_DB);
+   }
    *filename = secmodName;
 
    lconfigdir = pk11_EvaluateConfigDir(configdir, appName);
@@ -621,8 +628,7 @@ secmod_DecodeData(char *defParams, DBT *data, PRBool *retInternal)
 
 	slotStrings[i] = pk11_mkSlotString(slotID, defaultFlags, timeout, 
 	                                   (unsigned char)slots[i].askpw, 
-	                                   (unsigned char)hasRootCerts, 
-	                                   (unsigned char)hasRootTrust);
+	                                   hasRootCerts, hasRootTrust);
     }
 
     nss = pk11_mkNSS(slotStrings, slotCount, internal, isFIPS, isModuleDB, 
@@ -646,18 +652,24 @@ secmod_OpenDB(const char *appName, const char *filename, const char *dbName,
     if (appName) {
 	char *secname = PORT_Strdup(filename);
 	int len = strlen(secname);
+	int status = RDB_FAIL;
 
 	if (len >= 3 && PORT_Strcmp(&secname[len-3],".db") == 0) {
 	   secname[len-3] = 0;
 	}
-    	pkcs11db=rdbopen(appName, "", secname, readOnly ? NO_RDONLY:NO_CREATE);
+    	pkcs11db=
+	   rdbopen(appName, "", secname, readOnly ? NO_RDONLY:NO_RDWR, NULL);
 	if (update && !pkcs11db) {
 	    DB *updatedb;
 
-    	    pkcs11db = rdbopen(appName, "", secname, NO_CREATE);
+    	    pkcs11db = rdbopen(appName, "", secname, NO_CREATE, &status);
 	    if (!pkcs11db) {
+		if (status == RDB_RETRY) {
+ 		    pkcs11db= rdbopen(appName, "", secname, 
+					readOnly ? NO_RDONLY:NO_RDWR, NULL);
+		}
 		PORT_Free(secname);
-		return NULL;
+		return pkcs11db;
 	    }
 	    updatedb = dbopen(dbName, NO_RDONLY, 0600, DB_HASH, 0);
 	    if (updatedb) {
