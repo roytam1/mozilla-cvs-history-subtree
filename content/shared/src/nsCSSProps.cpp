@@ -904,7 +904,7 @@ const PRInt32 nsCSSProps::kPointerEventsKTable[] = {
 
 const PRInt32 nsCSSProps::kShapeRenderingKTable[] = {
   eCSSKeyword_optimizespeed, NS_STYLE_SHAPE_RENDERING_OPTIMIZESPEED,
-  eCSSKeyword_optimizelegibility, NS_STYLE_SHAPE_RENDERING_CRISPEDGES,
+  eCSSKeyword_crispedges, NS_STYLE_SHAPE_RENDERING_CRISPEDGES,
   eCSSKeyword_geometricprecision, NS_STYLE_SHAPE_RENDERING_GEOMETRICPRECISION,
   -1, -1
 };
