@@ -37,47 +37,12 @@
  * ----- END LICENSE BLOCK ----- */
 
 #include "nsISupports.idl"
-#include "nsISupportsArray.idl"
 
-interface nsIXTFElementWrapper;
+interface nsIDOMElement;
 
-[scriptable, uuid(f0617ed1-db6a-4704-ac4b-67bf15a77788)]
-interface nsIXTFElement : nsISupports
-{
-  void onDestroyed();
-
-  const unsigned long ELEMENT_TYPE_GENERIC_ELEMENT     = 0;
-  const unsigned long ELEMENT_TYPE_SVG_VISUAL          = 1;
-  const unsigned long ELEMENT_TYPE_XML_VISUAL          = 2;
-  const unsigned long ELEMENT_TYPE_XUL_VISUAL          = 3;
-  
-  readonly attribute unsigned long elementType;
-  
-  void getScriptingInterfaces(out unsigned long count,
-                              [array, size_is(count), retval] out nsIIDPtr array);
-
-  void willChangeDocument(in nsISupports newDoc);
-  void documentChanged(in nsISupports newDoc);
-  
-  void willChangeParent(in nsISupports newParent);
-  void parentChanged(in nsISupports newParent);
-
-  void willInsertChild(in nsISupports child, in unsigned long index);
-  void childInserted(in nsISupports child, in unsigned long index);
-
-  void willReplaceChild(in nsISupports child, in unsigned long index);
-  void childReplaced(in nsISupports child, in unsigned long index);
-
-  void willAppendChild(in nsISupports child);
-  void childAppended(in nsISupports child);
-
-  void willRemoveChild(in unsigned long index);
-  void childRemoved(in unsigned long index);
-
-  void willSetAttribute(in AString name, in AString newValue);
-  void AttributeSet(in AString name, in AString newValue);
-
-  void willUnsetAttribute(in AString name);
-  void AttributeUnset(in AString name);
+[scriptable, uuid(b8bb0585-5b59-4e6f-9e0e-13569da1ad33)]
+interface nsIXTFXULVisualWrapper : nsISupports
+{  
+  readonly attribute nsIDOMElement elementNode;
 };
 

@@ -43,6 +43,7 @@
 #include "nsIXTFGenericElement.h"
 #include "nsIXTFSVGVisual.h"
 #include "nsIXTFXMLVisual.h"
+#include "nsIXTFXULVisual.h"
 #include "nsIElementFactory.h"
 #include "nsString.h"
 #include "nsINodeInfo.h"
@@ -50,6 +51,7 @@
 #include "nsXTFGenericElementWrapper.h"
 #include "nsXTFSVGVisualWrapper.h"
 #include "nsXTFXMLVisualWrapper.h"
+#include "nsXTFXULVisualWrapper.h"
 
 ////////////////////////////////////////////////////////////////////////
 // nsXTFElementFactoryWrapper class
@@ -143,6 +145,12 @@ nsXTFElementFactoryWrapper::CreateInstanceByTag(nsINodeInfo *aNodeInfo,
       {
         nsCOMPtr<nsIXTFXMLVisual> elem2 = do_QueryInterface(elem);
         return NS_NewXTFXMLVisualWrapper(elem2, aNodeInfo, aResult);
+        break;
+      }
+      case nsIXTFElement::ELEMENT_TYPE_XUL_VISUAL:
+      {
+        nsCOMPtr<nsIXTFXULVisual> elem2 = do_QueryInterface(elem);
+        return NS_NewXTFXULVisualWrapper(elem2, aNodeInfo, aResult);
         break;
       }
       default:

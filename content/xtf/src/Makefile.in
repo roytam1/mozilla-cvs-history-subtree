@@ -66,6 +66,7 @@ CPPSRCS		= \
 		nsXTFGenericElementWrapper.cpp \
 		nsXTFSVGVisualWrapper.cpp \
 		nsXTFXMLVisualWrapper.cpp \
+		nsXTFXULVisualWrapper.cpp \
 		nsXMLContentFragment.cpp \
 		$(NULL)
 

@@ -1,4 +1,4 @@
-/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ----- BEGIN LICENSE BLOCK -----
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -36,48 +36,16 @@
  *
  * ----- END LICENSE BLOCK ----- */
 
-#include "nsISupports.idl"
-#include "nsISupportsArray.idl"
+#ifndef __NS_XTFXULVISUALWRAPPER_H__
+#define __NS_XTFXULVISUALWRAPPER_H__
 
-interface nsIXTFElementWrapper;
+class nsIXTFXULVisual;
+class nsIContent;
+class nsINodeInfo;
 
-[scriptable, uuid(f0617ed1-db6a-4704-ac4b-67bf15a77788)]
-interface nsIXTFElement : nsISupports
-{
-  void onDestroyed();
+nsresult
+NS_NewXTFXULVisualWrapper(nsIXTFXULVisual* xtfElement,
+                          nsINodeInfo* ni,
+                          nsIContent** aResult);
 
-  const unsigned long ELEMENT_TYPE_GENERIC_ELEMENT     = 0;
-  const unsigned long ELEMENT_TYPE_SVG_VISUAL          = 1;
-  const unsigned long ELEMENT_TYPE_XML_VISUAL          = 2;
-  const unsigned long ELEMENT_TYPE_XUL_VISUAL          = 3;
-  
-  readonly attribute unsigned long elementType;
-  
-  void getScriptingInterfaces(out unsigned long count,
-                              [array, size_is(count), retval] out nsIIDPtr array);
-
-  void willChangeDocument(in nsISupports newDoc);
-  void documentChanged(in nsISupports newDoc);
-  
-  void willChangeParent(in nsISupports newParent);
-  void parentChanged(in nsISupports newParent);
-
-  void willInsertChild(in nsISupports child, in unsigned long index);
-  void childInserted(in nsISupports child, in unsigned long index);
-
-  void willReplaceChild(in nsISupports child, in unsigned long index);
-  void childReplaced(in nsISupports child, in unsigned long index);
-
-  void willAppendChild(in nsISupports child);
-  void childAppended(in nsISupports child);
-
-  void willRemoveChild(in unsigned long index);
-  void childRemoved(in unsigned long index);
-
-  void willSetAttribute(in AString name, in AString newValue);
-  void AttributeSet(in AString name, in AString newValue);
-
-  void willUnsetAttribute(in AString name);
-  void AttributeUnset(in AString name);
-};
-
+#endif // __NS_XTFXULVISUALWRAPPER_H__

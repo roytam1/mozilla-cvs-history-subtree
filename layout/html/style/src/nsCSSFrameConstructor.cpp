@@ -6779,15 +6779,20 @@ nsCSSFrameConstructor::ConstructXTFFrame(nsIPresShell*            aPresShell,
   xtfElem->GetElementType(&elementType);
   switch(elementType) {
     case nsIXTFElement::ELEMENT_TYPE_SVG_VISUAL:
-      processChildren = PR_TRUE;
       rv = NS_NewXTFSVGDisplayFrame(aPresShell, aContent, &newFrame);
+      break;
+    case nsIXTFElement::ELEMENT_TYPE_XML_VISUAL:
+      // XXX examine display style
+      rv = NS_NewBlockFrame(aPresShell, &newFrame);
+      break;
+    case nsIXTFElement::ELEMENT_TYPE_XUL_VISUAL:
+      rv = NS_NewBoxFrame(aPresShell, &newFrame, PR_FALSE, nsnull);
       break;
     case nsIXTFElement::ELEMENT_TYPE_GENERIC_ELEMENT:
       NS_ERROR("huh? ELEMENT_TYPE_GENERIC_ELEMENT should have been flagged by caller");
       break;
-    case nsIXTFElement::ELEMENT_TYPE_XML_VISUAL:
     default:
-      // just let the caller generate a default frame
+      NS_ERROR("unknown xtf frame!");
       return NS_OK;
   }
 
@@ -6809,13 +6814,15 @@ nsCSSFrameConstructor::ConstructXTFFrame(nsIPresShell*            aPresShell,
     if (processChildren) {
       rv = ProcessChildren(aPresShell, aPresContext, aState, aContent,
                            newFrame, PR_TRUE, childItems, isBlock);
-      
-//      CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent, newFrame,
-//                            PR_FALSE, childItems);
-      // don't check tag:
-        CreateAnonymousFrames(aPresShell, aPresContext, aState, aContent, mDocument, newFrame,
-                              PR_FALSE, childItems);
     }
+
+    // always create anonymous frames:
+    
+//    CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent, newFrame,
+//                          PR_FALSE, childItems);
+    // call version of CreateAnonymousFrames that doesn't check tag:
+    CreateAnonymousFrames(aPresShell, aPresContext, aState, aContent, mDocument, newFrame,
+                          PR_FALSE, childItems);
 
     // Set the frame's initial child list
     newFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
