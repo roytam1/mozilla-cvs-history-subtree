@@ -63,6 +63,10 @@
 #include "nsIProxyInfo.h"
 #include "nsProxyRelease.h"
 
+#if defined(XP_WIN)
+#include "nsNativeConnectionHelper.h"
+#endif
+
 #if defined(PR_LOGGING)
 static PRLogModuleInfo *gSocketTransportLog = nsnull;
 #endif
@@ -534,7 +538,9 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
             // on connection failure, reuse next address if one exists
             if (mStatus == NS_ERROR_CONNECTION_REFUSED) {
                 LOG(("connection failed [this=%x error=%x]\n", this, mStatus));
-                if (TryNextAddress()) {
+
+                // Try again? 
+                if (OnConnectionFailed(PR_TRUE)) {                     
                     done = PR_TRUE;
                     continue;
                 }
@@ -561,7 +567,9 @@ nsresult nsSocketTransport::Process(PRInt16 aSelectFlags)
                     firedOnStart = mReadRequest->IsInitialized();
                 if (!firedOnStart && mWriteRequest)
                     firedOnStart = mWriteRequest->IsInitialized();
-                if (!firedOnStart && TryNextAddress()) {
+
+                // Try again? 
+                if (!firedOnStart && OnConnectionFailed(PR_TRUE)) {
                     // a little bit of hackery here so we'll end up in the
                     // WaitConnect state...
                     mCurrentState = eSocketState_WaitConnect;
@@ -617,27 +625,67 @@ nsSocketTransport::Cancel(nsresult status)
     return NS_OK;
 }
 
+// Try next address if param says to. Otherwise, try to use autodial. If a 
+// connection is made, we try the network again. Otherwise, we don't.
+// Blocks until connection is made or fails.
+// Returns true to cause connection failures to try again.
+//
 PRBool
-nsSocketTransport::TryNextAddress()
+nsSocketTransport::OnConnectionFailed(PRBool tryNextAddress)
 {
-    mNetAddress = mNetAddrList.GetNext(mNetAddress);
-    if (mNetAddress) {
+    LOG(("nsSocketTransport Entering OnConnectionFailed()"));
+
+    PRBool tryAgain = PR_FALSE;
+
+    // If required, retry using next address.
+    if (tryNextAddress) {
+
+        PRNetAddr* nextNetAddress = mNetAddrList.GetNext(mNetAddress);
+    
+        if (nextNetAddress) {
+            mNetAddress = nextNetAddress;
+
 #if defined(PR_LOGGING)
-        char buf[64];
-        PR_NetAddrToString(mNetAddress, buf, sizeof(buf));
-        LOG(("  ...trying next address: %s\n", buf));
+            char buf[64];
+            PR_NetAddrToString(mNetAddress, buf, sizeof(buf));
+            LOG(("  ...trying next address: %s\n", buf));
 #endif
-        PR_Close(mSocketFD);
+            tryAgain = PR_TRUE;
+        }
+    }
+
+#if defined(XP_WIN)
+
+    // If not trying next address, try to make a connection using dialup. 
+    // Retry if that connection is made.
+    if (!tryAgain && mService->mAutodialEnabled) {
+
+        tryAgain = nsNativeConnectionHelper::OnConnectionFailed(GetSocketHost());
+    }
+
+#endif
+
+    // Prepare to try again.
+    if (tryAgain)
+    {
+        if (mSocketFD)
+            PR_Close(mSocketFD);
         mSocketFD = nsnull;
 
         // mask error status so we'll return to this state
         mStatus = NS_OK;
 
-        // need to re-enter Process() asynchronously
         mService->AddToWorkQ(this);
-        return PR_TRUE;
     }
-    return PR_FALSE;
+
+    else
+    {
+        if (tryNextAddress)
+            mNetAddress = nsnull;
+    }
+
+    LOG(("nsSocketTransport Leaving OnConnectionFailed() tryAgain = %d",tryAgain));
+    return tryAgain;
 }
 
 void
@@ -1617,11 +1665,20 @@ nsSocketTransport::OnStopLookup(nsISupports *aContext,
     // Release our reference to the DNS Request...
     mDNSRequest = 0;
 
-    // If the lookup failed, set the status...
-    if (NS_FAILED(aStatus))
-        mStatus = aStatus;
-    else if (mNetAddress == nsnull)
+    // If the lookup failed...
+    if (NS_FAILED(aStatus)) {
+        
+        // Retry? 
+        // Don't want to set the tryNextAddress param because DNS lookup has
+        // just failed so hostname has not been resolved yet.
+        if (aStatus != NS_BASE_STREAM_WOULD_BLOCK && OnConnectionFailed(PR_FALSE))
+            mStatus = NS_OK;
+        else
+            mStatus = aStatus;
+    }
+    else if (mNetAddress == nsnull) {
         mStatus = NS_ERROR_ABORT;
+    }
 
     // Start processing the transport again - if necessary...
     if (GetFlag(eSocketDNS_Wait)) {

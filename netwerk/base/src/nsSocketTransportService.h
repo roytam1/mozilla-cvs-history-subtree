@@ -102,6 +102,9 @@ public:
     nsIDNSService* GetCachedDNSService() { return mDNSService.get(); }
     nsIEventQueueService* GetCachedEventQueueService() { return mEventQService.get(); }
 
+    // Pref to enable autodial helper on windows.
+    PRBool mAutodialEnabled;
+
 protected:
     nsIThread*            mThread;
     PRFileDesc*           mThreadEvent;

@@ -66,7 +66,8 @@ static NS_DEFINE_CID(kDNSService, NS_DNSSERVICE_CID);
 
 nsSocketTransportService::nsSocketTransportService ()   :
     mConnectedTransports (0),
-    mTotalTransports (0)
+    mTotalTransports (0),
+    mAutodialEnabled(PR_FALSE)
 {
 #if defined(PR_LOGGING)
   if (!gSocketTransportServiceLog)
@@ -836,4 +837,18 @@ nsSocketTransportService::GetNeckoStringByName (const char *aName, PRUnichar **a
 	}
 
 	return res;
+}
+
+NS_IMETHODIMP
+nsSocketTransportService::GetAutodialEnabled(PRBool *enabled)
+{
+    *enabled = mAutodialEnabled;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSocketTransportService::SetAutodialEnabled(PRBool enabled)
+{
+    mAutodialEnabled = enabled;
+    return NS_OK;
 }
