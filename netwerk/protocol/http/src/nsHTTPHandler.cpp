@@ -374,32 +374,20 @@ nsHTTPHandler::GetAcceptLanguages(char* *o_AcceptLanguages)
 }
 
 NS_IMETHODIMP
-nsHTTPHandler::SetHttpVersion (const char* i_HttpVersion) 
+nsHTTPHandler::SetHttpVersion (unsigned int i_HttpVersion) 
 {
-    CRTFREEIF(mHttpVersion);
-    if (i_HttpVersion)
-    {
-        mHttpVersion = nsCRT::strdup( i_HttpVersion);
-        return (mHttpVersion == nsnull) ? NS_ERROR_OUT_OF_MEMORY : NS_OK;
-    }
+	mHttpVersion = i_HttpVersion;
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsHTTPHandler::GetHttpVersion (char* *o_HttpVersion)
+nsHTTPHandler::GetHttpVersion (unsigned int * o_HttpVersion)
 {
     if (!o_HttpVersion)
         return NS_ERROR_NULL_POINTER;
-    if (mHttpVersion)
-    {
-        *o_HttpVersion = nsCRT::strdup(mHttpVersion);
-        return (*o_HttpVersion == nsnull) ? NS_ERROR_OUT_OF_MEMORY : NS_OK;
-    }
-    else
-    {
-        *o_HttpVersion = nsnull;
-        return NS_OK;
-    }
+
+    *o_HttpVersion = mHttpVersion;
+	return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -564,7 +552,7 @@ nsHTTPHandler::SetMisc(const PRUnichar* aMisc)
 
 nsHTTPHandler::nsHTTPHandler():
     mAcceptLanguages(nsnull),
-	mHttpVersion(nsnull),
+	mHttpVersion(HTTP_ONE_ZERO),
     mDoKeepAlive(PR_FALSE),
     mReferrerLevel(0)
 {
@@ -1101,8 +1089,19 @@ nsHTTPHandler::PrefsChanged(const char* pref)
 
 	nsXPIDLCString httpVersion;
     rv = mPrefs -> CopyCharPref("network.http.version", getter_Copies(httpVersion));
-	if (NS_SUCCEEDED(rv))
-		SetHttpVersion (httpVersion);
+	if (NS_SUCCEEDED (rv) && httpVersion)
+	{
+		if (!PL_strcmp (httpVersion, "1.1"))
+			mHttpVersion = HTTP_ONE_ONE;
+		else
+		if (!PL_strcmp (httpVersion, "0.9"))
+			mHttpVersion = HTTP_ZERO_NINE;
+	}
+	else
+		mHttpVersion = HTTP_ONE_ZERO;
+
+	if (mHttpVersion == HTTP_ONE_ONE)
+		mDoKeepAlive = PR_TRUE;
 
     // Things read only during initialization...
     if (bChangedAll) // intl.accept_languages

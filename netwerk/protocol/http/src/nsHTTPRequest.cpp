@@ -139,17 +139,7 @@ nsHTTPRequest::nsHTTPRequest(nsIURI* i_URL, HTTPMethod i_Method):
             SetHeader(nsHTTPAtoms::Accept_Language, acceptLanguages);
     }
 
-	// XXX/ruslan: should we just hold the version as a string always?
-    nsXPIDLCString httpVersion;
-    rv = httpHandler -> GetHttpVersion (getter_Copies (httpVersion));
-    if (NS_SUCCEEDED (rv) && httpVersion)
-    {
-		if (!PL_strcmp (httpVersion, "1.1"))
-			mVersion = HTTP_ONE_ONE;
-		else
-		if (!PL_strcmp (httpVersion, "0.9"))
-			mVersion = HTTP_ZERO_NINE;
-	}
+    httpHandler -> GetHttpVersion (&mVersion);
 }
     
 
@@ -438,13 +428,13 @@ nsresult nsHTTPRequest::GetHeader(nsIAtom* i_Header, char* *o_Value)
 }
 
 
-nsresult nsHTTPRequest::SetHTTPVersion(HTTPVersion i_Version)
+nsresult nsHTTPRequest::SetHTTPVersion (PRUint32  i_Version)
 {
     mVersion = i_Version;
     return NS_OK;
 }
 
-nsresult nsHTTPRequest::GetHTTPVersion(HTTPVersion* o_Version) 
+nsresult nsHTTPRequest::GetHTTPVersion (PRUint32 * o_Version) 
 {
     *o_Version = mVersion;
     return NS_OK;

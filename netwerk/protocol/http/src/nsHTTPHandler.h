@@ -104,7 +104,7 @@ protected:
     nsCOMPtr<nsISupportsArray> mIdleTransports;
 
     char*               mAcceptLanguages;
-    char*               mHttpVersion;
+    PRUint32			mHttpVersion;
     nsAuthEngine        mAuthEngine;
     PRBool              mDoKeepAlive;
     nsCOMPtr<nsIPref>   mPrefs;
