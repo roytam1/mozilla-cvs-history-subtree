@@ -138,7 +138,8 @@ Rights Reserved.
 
 <popup id="messagePaneContext"/>
 
-  <toolbox id="customMailToolbarToolbox" class="toolbox-top"/>
+  <toolbox id="mail-toolbox" class="toolbox-top">
+  </toolbox>
   
   <!-- The main mail three pane frame -->
 
