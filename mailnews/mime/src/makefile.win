@@ -66,7 +66,6 @@ OBJS=											\
 # Code for stream converter interface to netlib...
 #
 		.\$(OBJDIR)\nsMimeAddress.obj		\
-		.\$(OBJDIR)\plugin_inst.obj			\
 		.\$(OBJDIR)\mimecont.obj			\
 		.\$(OBJDIR)\mimeebod.obj			\
 		.\$(OBJDIR)\mimeenc.obj				\
@@ -100,7 +99,6 @@ OBJS=											\
 		.\$(OBJDIR)\nsMsgHeaderParser.obj	\
 		.\$(OBJDIR)\nsMimeURLUtils.obj		\
 		.\$(OBJDIR)\nsStreamConverter.obj	\
-		.\$(OBJDIR)\nsMimeEmitter2.obj	\
 #
 # THIS WILL NEED WORK AFTER WE GET A LIBMSG MORE XP-COM-afied
 #			.\$(OBJDIR)\mimedrft.obj		\
