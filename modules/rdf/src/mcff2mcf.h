@@ -21,6 +21,7 @@
 
 
 #include "rdf-int.h"
+#include "cstream.h"
 
 
 
