@@ -675,7 +675,8 @@ loser:
 }
 
 SSMStatus
-SSMSecurityAdvisorContext_DoPKCS12Response(HTTPRequest *req,
+SSMSecurityAdvisorContext_DoPKCS12Response(SSMSecurityAdvisorContext *advisor,
+                                           HTTPRequest *req,
                                            const char  *responseKey)
 {
     SSMTextGenContext *cx = NULL;
@@ -706,7 +707,7 @@ SSMSecurityAdvisorContext_DoPKCS12Response(HTTPRequest *req,
     if (rv != SSM_SUCCESS) {
         goto loser;
     }
-    out = PR_smprintf(content, alertMessage);
+    out = PR_smprintf(content, alertMessage, advisor->super.m_id);
     rv = SSM_HTTPSendOKHeader(req, hdrs, type);
     if (rv != SSM_SUCCESS) {
         goto loser;
@@ -825,7 +826,7 @@ SSMStatus SSMSecurityAdvisorContext_DoPKCS12Restore(
             responseKey = "pkcs12_restore_success";
             SSM_ChangeCertSecAdvisorList(req, NULL, certHashAdd);
         }
-        rv = SSMSecurityAdvisorContext_DoPKCS12Response(req, responseKey);
+        rv = SSMSecurityAdvisorContext_DoPKCS12Response(res, req, responseKey);
     }
  done:
     if (p12Cxt != NULL) {
@@ -1022,7 +1023,7 @@ SSMSecurityAdvisorContext_BackupAllMineCerts(SSMSecurityAdvisorContext *cx,
     }
     SSM_FreeResource(&p12Cxt->super);
     p12Cxt = NULL;
-    if (SSMSecurityAdvisorContext_DoPKCS12Response(req, responseKey)
+    if (SSMSecurityAdvisorContext_DoPKCS12Response(cx, req, responseKey)
         != SSM_SUCCESS) {
         goto loser;
     }
@@ -1087,7 +1088,7 @@ SSMStatus SSMSecurityAdvisorContext_DoPKCS12Backup(
             responseKey = SSMUI_GetPKCS12Error(rv, PR_TRUE);
         }
     }
-    if (SSMSecurityAdvisorContext_DoPKCS12Response(req, responseKey)
+    if (SSMSecurityAdvisorContext_DoPKCS12Response(cx, req, responseKey)
         != SSM_SUCCESS) {
         goto loser;
     }
@@ -3090,7 +3091,7 @@ static SECStatus ssm_get_potential_ocsp_signers(CERTCertificate *cert,
     }
     
  done:
-    return SSM_SUCCESS;
+    return SECSuccess;
 }
 
 static void
