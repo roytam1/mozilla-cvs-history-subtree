@@ -136,6 +136,7 @@ pref("mail.show_headers",                   1); // some
 pref("mail.pane_config",                    0);
 pref("mail.pane_config.dynamic",            0); // new pref used for dynamic pane configuration
 pref("mail.addr_book.mapit_url.format", "chrome://messenger-region/locale/region.properties");
+pref("mapi.blind-send.enabled",             true);
 
 // the format for "mail.addr_book.quicksearchquery.format" is:
 // @V == the escaped value typed in the quick search bar in the addressbook
