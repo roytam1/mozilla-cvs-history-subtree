@@ -262,20 +262,26 @@ CEditorFrame::MakeEditable()
 NS_METHOD
 CEditorFrame::DoCommand(const char *aCommand, nsICommandParams *aCommandParams)
 {
-    return mCommandManager ? mCommandManager->DoCommand(aCommand, aCommandParams) : NS_ERROR_FAILURE;
+    nsCOMPtr<nsIDOMWindow> domWindow;
+    m_wndBrowserView.mWebBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
+    return mCommandManager ? mCommandManager->DoCommand(aCommand, aCommandParams, domWindow) : NS_ERROR_FAILURE;
 }
 
 NS_METHOD
 CEditorFrame::IsCommandEnabled(const char *aCommand, PRBool *retval)
 {
-    return mCommandManager ? mCommandManager->IsCommandEnabled(aCommand, retval) : NS_ERROR_FAILURE;
+    nsCOMPtr<nsIDOMWindow> domWindow;
+    m_wndBrowserView.mWebBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
+    return mCommandManager ? mCommandManager->IsCommandEnabled(aCommand, domWindow, retval) : NS_ERROR_FAILURE;
 }
 
 
 NS_METHOD
 CEditorFrame::GetCommandState(const char *aCommand, nsICommandParams *aCommandParams)
 {
-    return mCommandManager ? mCommandManager->GetCommandState(aCommand,aCommandParams) : NS_ERROR_FAILURE;
+    nsCOMPtr<nsIDOMWindow> domWindow;
+    m_wndBrowserView.mWebBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
+    return mCommandManager ? mCommandManager->GetCommandState(aCommand, domWindow, aCommandParams) : NS_ERROR_FAILURE;
 }
 
 NS_METHOD
