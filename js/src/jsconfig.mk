@@ -65,6 +65,12 @@ SHIP_INCS := $(addprefix $(SHIP_DIST)/include/, $(SHIP_INCS))
 SHIP_BINS  = js jsj
 SHIP_BINS := $(addprefix $(SHIP_DIST)/bin/, $(SHIP_BINS))
 
+ifdef BUILD_OPT
+  JSREFJAR = jsref_opt.jar
+else
+  JSREFJAR = jsref_dbg.jar
+endif
+
 ship:
 	mkdir -p $(SHIP_DIR)/lib
 	mkdir -p $(SHIP_DIR)/include
@@ -73,7 +79,7 @@ ship:
 	cp $(SHIP_INCS) $(SHIP_DIR)/include
 	cp $(SHIP_BINS) $(SHIP_DIR)/bin
 	cd $(SHIP_DIR); \
-	  zip -r jsref.jar bin lib include
+	  zip -r $(JSREFJAR) bin lib include
 ifdef BUILD_SHIP
-	cp $(SHIP_DIR)/jsref.jar $(BUILD_SHIP)
+	cp $(SHIP_DIR)/$(JSREFJAR) $(BUILD_SHIP)
 endif
