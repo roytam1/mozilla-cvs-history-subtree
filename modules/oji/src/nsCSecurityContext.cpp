@@ -30,6 +30,7 @@
 #include "jsdbgapi.h"
 #include "libmocha.h"
 #include "nsCSecurityContext.h"
+#include "jvmmgr.h"
 
 static NS_DEFINE_IID(kISecurityContextIID, NS_ISECURITYCONTEXT_IID);
 static NS_DEFINE_IID(kISupportsIID, NS_ISUPPORTS_IID);
@@ -59,9 +60,6 @@ nsCSecurityContext::QueryInterface(const nsIID& aIID, void** aInstancePtr)
     return NS_NOINTERFACE; 
 }
 
-extern PRUintn tlsIndex2_g;
-
-
 ////////////////////////////////////////////////////////////////////////////
 // from nsISecurityContext:
 
@@ -79,9 +77,10 @@ nsCSecurityContext::Implies(const char* target, const char* action, PRBool *bAll
        return NS_OK;
     }
     JSContext *pJSContext = LM_GetCrippledContext();
-    PR_SetThreadPrivate(tlsIndex2_g, (void *)m_pJStoJavaFrame);
+    JSStackFrame** startFrame = JVM_GetStartJSFrameFromParallelStack();
+    *startFrame = m_pJStoJavaFrame;
     *bAllowedAccess = LM_CanAccessTargetStr(pJSContext, target);
-    PR_SetThreadPrivate(tlsIndex2_g, (void *)NULL);
+    *startFrame = NULL;
     return NS_OK;
 }
 
@@ -89,11 +88,11 @@ nsCSecurityContext::Implies(const char* target, const char* action, PRBool *bAll
 ////////////////////////////////////////////////////////////////////////////
 // from nsCSecurityContext:
 extern PRUintn tlsIndex3_g;
-nsCSecurityContext::nsCSecurityContext()
+nsCSecurityContext::nsCSecurityContext(JSContext* cx)
                    : m_pJStoJavaFrame(NULL)
 {
     NS_INIT_REFCNT();
-    JSContext *pJSCX = (JSContext *)PR_GetThreadPrivate(tlsIndex3_g);
+    JSContext *pJSCX = cx;
     if (pJSCX == NULL)
     {
        pJSCX = LM_GetCrippledContext();
