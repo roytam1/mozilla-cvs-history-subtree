@@ -77,7 +77,7 @@ Template.prototype.toString = function() {
 
 Template.prototype.__noSuchMethod__ = function(id, args) {
   if (this._ops[id])
-    this._ops[id].apply(this, args);
+    return this._ops[id].apply(this, args);
   else
     throw("Unknown method: "+id);
 };
@@ -98,17 +98,37 @@ Template.prototype.appendInitializer = function(name, fct) {
   this._initializers.push({"name":name, "fct":fct});
 };
 
-Template.prototype.addPrototypeObject = function(name, obj, /*[optional]*/ flags) {
+Template.prototype.getInitializer = function(name) {
+  var l = this._initializers.length;
+  for (var i=0; i<l; ++i) {
+    if (this._initializers[i].name == name)
+      return this._initializers[i].fct;
+  }
+  return null;
+};
+
+Template.prototype.bindInitializer = function(name, args) {
+  var l = this._initializers.length;
+  for (var i=0; i<l; ++i) {
+    if (this._initializers[i].name == name) {
+      this._initializers[i].fct.call(this._proto, args);
+      this._initializers.splice(i,1);
+      return;
+    }
+  }
+};
+
+Template.prototype.addProtoObj = function(name, obj, /*[optional]*/ flags) {
   this._proto[name] = obj;
   if (flags)
     this._protoflags[name] = flags;
 };
 
-Template.prototype.getPrototypeObject = function(name) {
+Template.prototype.getProtoObj = function(name) {
   return this._proto[name];
 };
 
-Template.prototype.addPrototypeGetter = function(name, fct, /*[optional]*/ flags) {
+Template.prototype.addProtoGetter = function(name, fct, /*[optional]*/ flags) {
   this._proto.__defineGetter__(name, fct);
   if (flags)
     this._protoflags[name] = flags;
@@ -152,8 +172,9 @@ Template.prototype.mergeTemplate = function(src /* ,src2, src3, ... */) {
     appendUnique(this._initializers, src._initializers, function(a,b){return a.name==b.name;});
 
     // and ditto for ops:
-    for (var o in src._ops) { this._ops[o] = src._ops[o]; }
+    for (var op in src._ops) { this._ops[op] = src._ops[op]; }
   }
+  return this;
 };
 
 //----------------------------------------------------------------------
@@ -168,14 +189,14 @@ function makeTemplate(name) {
 
 var NamedObjectTemplate = makeTemplate("NamedObjectTemplate");
 
-NamedObjectTemplate.addPrototypeGetter("objname",
+NamedObjectTemplate.addProtoGetter("_objname",
   function() {
     return "Instance of "+this.__template.name;
   });
 
-NamedObjectTemplate.addPrototypeObject("toString",
+NamedObjectTemplate.addProtoObj("toString",
   function() {
-    return "["+this.objname+"]";
+    return "["+this._objname+"]";
   });
 
 //----------------------------------------------------------------------
@@ -185,16 +206,20 @@ var ErrorTemplate = makeTemplate("ErrorTemplate");
 
 ErrorTemplate.mergeTemplate(NamedObjectTemplate);
 
-ErrorTemplate.addPrototypeObject("error",
+ErrorTemplate.addProtoObj("_error",
   function(message) {
-    throw(this.objname+": "+message);
+    throw(this+": "+message);
   });
 
-ErrorTemplate.addPrototypeObject("warning",
+ErrorTemplate.addProtoObj("_warning",
   function(message) {
-    dump(this.objname+": "+message);
+    dump(this+": WARNING:"+message+"\n");
   });
 
+ErrorTemplate.addProtoObj("_dump",
+  function(message) {
+    dump(this+": "+message+"\n");
+  });
     
 //----------------------------------------------------------------------
 // nsISupports-implementation template
@@ -203,22 +228,23 @@ var SupportsTemplate = makeTemplate("SupportsTemplate");
 
 SupportsTemplate.mergeTemplate(ErrorTemplate);
 
-SupportsTemplate.addPrototypeObject("QueryInterface",
+SupportsTemplate.addProtoObj("QueryInterface",
   function(iid) {
-    var l = this.interfaces.length;
+    var l = this._interfaces.length;
     for (var i=0; i<l; ++i) {
-      if (iid.equals(this.interfaces[i]))
+      if (this._interfaces[i].equals(iid))
         return this;
     }
-    this.warning("Interface "+iid+" not found");
+    this._warning("Interface "+Components.interfacesByID[iid]+" ("+iid+") not found");
     throw Components.results.NS_ERROR_NO_INTERFACE;
   });
 
-SupportsTemplate.addPrototypeObject("interfaces",
-                                    [Components.interfaces.nsISupports],
-                                    { mergeover: appendUnique });
+SupportsTemplate.addProtoObj("_interfaces",
+                             [Components.interfaces.nsISupports],
+                             { mergeover: appendUnique });
                                     
 
-SupportsTemplate.addOpsObject("addInterface", function(itf) {
-  this.getPrototypeObject("interfaces").push(itf);
-});
+SupportsTemplate.addOpsObject("addInterface",
+  function(itf) {
+    this.getProtoObj("_interfaces").push(itf);
+  });
