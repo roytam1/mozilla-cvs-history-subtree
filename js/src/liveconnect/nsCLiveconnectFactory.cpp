@@ -102,6 +102,7 @@ NS_IMPL_RELEASE(nsCLiveconnectFactory)
 NS_METHOD
 nsCLiveconnectFactory::CreateInstance(nsISupports *aOuter, REFNSIID aIID, void **aResult)
 {
+   nsCLiveconnect *pNSCLiveconnect = NULL;
    *aResult  = NULL;
    
    if (aOuter && !aIID.Equals(kISupportsIID))
