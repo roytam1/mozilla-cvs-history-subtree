@@ -88,6 +88,7 @@
 #endif
 #include "pldhash.h"
 #include "nsVariant.h"
+#include "nsEscape.h"
 
 #ifdef DEBUG
 extern NS_COM void TestSegmentedBuffer();
@@ -176,4 +177,6 @@ void XXXNeverCalled()
     NS_NewArray(nsnull, dummyArray);
     NS_NewArrayEnumerator(nsnull, dummyArray);
     nsVariant();
+    nsUnescape(nsnull);
+    nsEscape(nsnull, url_XAlphas);
 }
