@@ -53,6 +53,7 @@ PR_BEGIN_EXTERN_C
 PR_EXTERN(const PRIOMethods*)    PR_GetFileMethods(void);
 PR_EXTERN(const PRIOMethods*)    PR_GetTCPMethods(void);
 PR_EXTERN(const PRIOMethods*)    PR_GetUDPMethods(void);
+PR_EXTERN(const PRIOMethods*)    PR_GetPipeMethods(void);
 
 /*
 ** Convert a NSPR Socket Handle to a Native Socket handle.

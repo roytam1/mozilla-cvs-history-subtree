@@ -393,6 +393,8 @@ extern PRInt32		_MD_socketavailable(PRFileDesc *fd);
 extern PRInt64		_MD_socketavailable64(PRFileDesc *fd);
 #define	_MD_SOCKETAVAILABLE64		_MD_socketavailable64
 
+#define _MD_PIPEAVAILABLE       _MD_socketavailable
+
 extern PRInt32 _MD_pr_poll(PRPollDesc *pds, PRIntn npds,
 												PRIntervalTime timeout);
 #define _MD_PR_POLL		_MD_pr_poll

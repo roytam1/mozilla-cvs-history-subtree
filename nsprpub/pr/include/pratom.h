@@ -88,9 +88,12 @@ struct PRStackElemStr {
 typedef struct PRStackStr PRStack;
 
 struct PRStackStr {
-    PRStackElem	prstk_head;			/* head MUST be at offset 0; assembly
-										language code relies on this
-									*/
+#if defined(AIX)
+    volatile PRStackElem	prstk_head;	/* head MUST be at offset 0; assembly
+										language code relies on this */
+#else
+    PRStackElem	prstk_head;
+#endif
     PRLock		*prstk_lock;
     char		*prstk_name;
 };

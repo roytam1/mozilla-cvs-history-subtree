@@ -278,7 +278,8 @@ typedef enum PRDescType
     PR_DESC_FILE = 1,
     PR_DESC_SOCKET_TCP = 2,
     PR_DESC_SOCKET_UDP = 3,
-    PR_DESC_LAYERED = 4
+    PR_DESC_LAYERED = 4,
+    PR_DESC_PIPE = 5
 } PRDescType;
 
 typedef enum PRSeekWhence {

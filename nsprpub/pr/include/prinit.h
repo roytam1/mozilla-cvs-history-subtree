@@ -44,10 +44,10 @@ PR_BEGIN_EXTERN_C
 ** The format of the version string is
 **     "<major version>.<minor version> <build date>"
 */
-#define PR_VERSION  "3.5"
+#define PR_VERSION  "3.5.1"
 #define PR_VMAJOR   3
 #define PR_VMINOR   5
-#define PR_VPATCH   0
+#define PR_VPATCH   1
 #define PR_BETA     PR_FALSE
 
 /*
