@@ -49,6 +49,9 @@
 #import "PageProxyIcon.h"
 
 #include "nsIWebNavigation.h"
+#include "nsIDOMDocument.h"
+#include "nsIDOMNSDocument.h"
+#include "nsIDOMLocation.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMEvent.h"
 #include "nsIPrefBranch.h"
@@ -139,6 +142,7 @@ static NSArray* sToolbarDefaults = nil;
 @interface BrowserWindowController(Private)
 - (void)setupToolbar;
 - (void)setupSidebarTabs;
+- (NSString*)getContextMenuNodeDocumentURL;
 @end
 
 @implementation BrowserWindowController
@@ -1007,6 +1011,7 @@ static NSArray* sToolbarDefaults = nil;
 
 - (IBAction)forward:(id)aSender
 {
+  NSLog(@"forward sender is %@", aSender);
   [[mBrowserView getBrowserView] goForward];
 }
 
@@ -1029,6 +1034,50 @@ static NSArray* sToolbarDefaults = nil;
 {
   [mBrowserView loadURI:[[PreferenceManager sharedInstance] homePage:NO] referrer: nil flags:NSLoadFlagsNone activate:NO];
 }
+
+- (NSString*)getContextMenuNodeDocumentURL
+{
+  if (!mContextMenuNode) return @"";
+  
+  nsCOMPtr<nsIDOMDocument> ownerDoc;
+  mContextMenuNode->GetOwnerDocument(getter_AddRefs(ownerDoc));
+
+  nsCOMPtr<nsIDOMNSDocument> nsDoc = do_QueryInterface(ownerDoc);
+  if (!nsDoc) return @"";
+
+  nsCOMPtr<nsIDOMLocation> location;
+  nsDoc->GetLocation(getter_AddRefs(location));
+  if (!location) return @"";
+	
+  nsAutoString urlStr;
+  location->GetHref(urlStr);
+  return [NSString stringWith_nsAString:urlStr];
+}
+
+- (IBAction)frameToNewWindow:(id)sender
+{
+  // assumes mContextMenuNode has been set
+  NSString* frameURL = [self getContextMenuNodeDocumentURL];
+  if ([frameURL length] > 0)
+    [self openNewWindowWithURL:frameURL referrer:nil loadInBackground:NO];		// follow the pref?
+}
+
+- (IBAction)frameToNewTab:(id)sender
+{
+  // assumes mContextMenuNode has been set
+  NSString* frameURL = [self getContextMenuNodeDocumentURL];
+  if ([frameURL length] > 0)
+    [self openNewTabWithURL:frameURL referrer:nil loadInBackground:NO];		// follow the pref?
+}
+
+- (IBAction)frameToThisWindow:(id)sender
+{
+  // assumes mContextMenuNode has been set
+  NSString* frameURL = [self getContextMenuNodeDocumentURL];
+  if ([frameURL length] > 0)
+    [self loadURL:frameURL referrer:nil activate:YES];
+}
+
 
 - (IBAction)toggleSidebar:(id)aSender
 {
@@ -1357,10 +1406,10 @@ static NSArray* sToolbarDefaults = nil;
 
 - (void)openTabGroup:(NSArray*)urlArray replaceExistingTabs:(BOOL)replaceExisting
 {
-  int curNumTabs 				= [mTabBrowser numberOfTabViewItems];
-  unsigned int numItems = [urlArray count];
+  int curNumTabs	= [mTabBrowser numberOfTabViewItems];
+  int numItems 		= (int)[urlArray count];
   
-  for (unsigned int i = 0; i < numItems; i++)
+  for (int i = 0; i < numItems; i++)
   {
     NSString* thisURL = [urlArray objectAtIndex:i];
     BrowserTabViewItem* tabViewItem;
@@ -1566,6 +1615,8 @@ static NSArray* sToolbarDefaults = nil;
 
 - (NSMenu*)getContextMenu
 {
+  BOOL showFrameItems = NO;
+  
   NSMenu* result = nil;
   if ((mContextMenuFlags & nsIContextMenuListener::CONTEXT_LINK) != 0) {
     if ((mContextMenuFlags & nsIContextMenuListener::CONTEXT_IMAGE) != 0) {
@@ -1585,6 +1636,32 @@ static NSArray* sToolbarDefaults = nil;
     result = mPageMenu;
     [mBackItem setEnabled: [[mBrowserView getBrowserView] canGoBack]];
     [mForwardItem setEnabled: [[mBrowserView getBrowserView] canGoForward]];
+  }
+  
+  if (mContextMenuNode)
+  {
+    nsCOMPtr<nsIDOMDocument> ownerDoc;
+    mContextMenuNode->GetOwnerDocument(getter_AddRefs(ownerDoc));
+  
+    nsCOMPtr<nsIDOMWindow> contentWindow = getter_AddRefs([[mBrowserView getBrowserView] getContentWindow]);
+
+    nsCOMPtr<nsIDOMDocument> contentDoc;
+    if (contentWindow)
+      contentWindow->GetDocument(getter_AddRefs(contentDoc));
+    
+    showFrameItems = (contentDoc != ownerDoc);
+  }
+
+  if (!showFrameItems)
+  {
+    const int kFrameRelatedItemsTag = 100;
+
+    // we have to clone the menu and return that, so that we don't change
+    // our only copy of the menu
+    result = [[result copy] autorelease];
+    NSMenuItem* frameItem;
+    while ((frameItem = [result itemWithTag:kFrameRelatedItemsTag]) != nil)
+      [result removeItem:frameItem];
   }
   
   return result;
@@ -1658,7 +1735,8 @@ static NSArray* sToolbarDefaults = nil;
 - (IBAction)saveImageAs:(id)aSender
 {
   nsCOMPtr<nsIDOMHTMLImageElement> imgElement(do_QueryInterface(mContextMenuNode));
-  if (imgElement) {
+  if (imgElement)
+  {
       nsAutoString text;
       imgElement->GetAttribute(NS_LITERAL_STRING("src"), text);
       nsAutoString url;
@@ -1669,6 +1747,19 @@ static NSArray* sToolbarDefaults = nil;
       [self saveURL: nil filterList: nil
                 url: hrefStr suggestedFilename: [NSString stringWith_nsAString: text]];
   }
+}
+
+- (IBAction)copyImageLocation:(id)sender
+{
+  CHBrowserView* view = [[self getBrowserWrapper] getBrowserView];
+  if (!view) return;
+
+  nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([view getWebBrowser]);
+  if (!webBrowser) return;
+
+  nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(webBrowser));
+  if (clipboard)
+    clipboard->CopyImageLocation();
 }
 
 - (IBAction)copyLinkLocation:(id)aSender
@@ -1684,8 +1775,6 @@ static NSArray* sToolbarDefaults = nil;
     clipboard->CopyLinkLocation();
 }
 
-
-
 - (IBAction)viewOnlyThisImage:(id)aSender
 {
   nsCOMPtr<nsIDOMHTMLImageElement> imgElement(do_QueryInterface(mContextMenuNode));
@@ -1699,7 +1788,6 @@ static NSArray* sToolbarDefaults = nil;
     [self loadURL: urlStr referrer:referrer activate:YES];
   }  
 }
-
 
 - (BookmarksToolbar*) bookmarksToolbar
 {

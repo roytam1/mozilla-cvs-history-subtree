@@ -252,6 +252,10 @@ typedef enum
 - (IBAction)stop:(id)aSender;
 - (IBAction)home:(id)aSender;
 
+- (IBAction)frameToNewWindow:(id)sender;
+- (IBAction)frameToNewTab:(id)sender;
+- (IBAction)frameToThisWindow:(id)sender;
+
 - (void)openNewWindowWithURL: (NSString*)aURLSpec referrer:(NSString*)aReferrer loadInBackground: (BOOL)aLoadInBG;
 - (void)openNewWindowWithGroup: (nsIContent*)aFolderContent loadInBackground: (BOOL)aLoadInBG;
 - (void)openNewTabWithURL: (NSString*)aURLSpec referrer: (NSString*)aReferrer loadInBackground: (BOOL)aLoadInBG;
@@ -285,12 +289,13 @@ typedef enum
 - (IBAction)saveLinkAs:(id)aSender;
 - (IBAction)saveImageAs:(id)aSender;
 
+- (IBAction)viewOnlyThisImage:(id)aSender;
+
 - (IBAction)bookmarkPage: (id)aSender;
 - (IBAction)bookmarkLink: (id)aSender;
 
 - (IBAction)copyLinkLocation:(id)aSender;
-
-- (IBAction)viewOnlyThisImage:(id)aSender;
+- (IBAction)copyImageLocation:(id)sender;
 
 - (BookmarksToolbar*) bookmarksToolbar;
 

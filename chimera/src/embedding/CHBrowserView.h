@@ -137,7 +137,7 @@ enum {
 - (void)addListener:(id <CHBrowserListener>)listener;
 - (void)removeListener:(id <CHBrowserListener>)listener;
 - (void)setContainer:(id <CHBrowserContainer>)container;
-- (nsIDOMWindow*)getContentWindow;
+- (nsIDOMWindow*)getContentWindow;	// addrefs
 
 // nsIWebNavigation methods
 - (void)loadURI:(NSString *)urlSpec referrer:(NSString*)referrer flags:(unsigned int)flags;

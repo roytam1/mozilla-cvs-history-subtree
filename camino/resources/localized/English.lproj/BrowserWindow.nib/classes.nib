@@ -62,10 +62,14 @@
                 closeCurrentTab = id; 
                 closeOtherTabs = id; 
                 closeSendersTab = id; 
+                copyImageLocation = id; 
                 copyLinkLocation = id; 
                 endAddBookmarkSheet = id; 
                 endLocationSheet = id; 
                 forward = id; 
+                frameToNewTab = id; 
+                frameToNewWindow = id; 
+                frameToThisWindow = id; 
                 getInfo = id; 
                 goToLocationFromToolbarURLField = id; 
                 home = id; 
