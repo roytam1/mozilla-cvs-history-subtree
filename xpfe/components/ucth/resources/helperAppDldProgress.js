@@ -77,12 +77,16 @@ var progressListener = {
       if (!gRestartChecked) 
       {
         gRestartChecked = true;
+        try 
+        {
         // right now, all that supports restarting downloads is ftp (rfc959)    
         ftpChannel = aRequest.QueryInterface(Components.interfaces.nsIFTPChannel);
         if (ftpChannel) {
             dialog.pause.setAttribute("hidden", false);
             dialog.pause.setAttribute("label", getString("pause"));
         }
+      }
+        catch (ex) {}
       }
 
       // this is so that we don't clobber the status text if 
@@ -118,7 +122,7 @@ var progressListener = {
 
       // Calculate percentage.
       var percent;
-      if ( aMaxTotalProgress != "-1" )
+      if ( aMaxTotalProgress > 0)
       {
         percent = parseInt( (overallProgress*100)/aMaxTotalProgress + .5 );
         if ( percent > 100 )
@@ -129,7 +133,7 @@ var progressListener = {
       }
       else
       {
-        percent = "??";
+        percent = -1;
 
         // Progress meter should be barber-pole in this case.
         dialog.progress.setAttribute( "mode", "undetermined" );
@@ -184,12 +188,17 @@ var progressListener = {
       dialog.status.setAttribute("value", status);
 
       // Update percentage label on progress meter.
+      if (percent < 0)
+        dialog.progressText.setAttribute("value", "");
+      else
+      {
       var percentMsg = getString( "percentMsg" );
       percentMsg = replaceInsert( percentMsg, 1, percent );
       dialog.progressText.setAttribute("value", percentMsg);
+      }
 
       // Update time remaining.
-      if ( rate && aMaxTotalProgress != "-1" )
+      if ( rate && (aMaxTotalProgress > 0) )
       {
         var rem = ( aMaxTotalProgress - aCurTotalProgress ) / rate;
             rem = parseInt( rem + .5 );
