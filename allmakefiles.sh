@@ -1071,6 +1071,12 @@ if [ "$BUILD_MODULES" = "all" ]; then
 
 MAKEFILES_themes=`cat ${srcdir}/themes/makefiles`
 
+MAKEFILES_calendar="
+        calendar/Makefile
+        calendar/libxpical/Makefile
+        calendar/resources/Makefile
+       "
+
 add_makefiles "
 $MAKEFILES_caps
 $MAKEFILES_db
@@ -1131,6 +1137,10 @@ $MAKEFILES_zlib
 
 if test -n "$MOZ_PSM"; then
     add_makefiles "$MAKEFILES_psm2"
+fi
+
+if test -n "$MOZ_CALENDAR"; then
+    add_makefiles "$MAKEFILES_calendar"
 fi
 
 else

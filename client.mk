@@ -414,6 +414,19 @@ SVG_BRANCH_FILES := \
 	uriloader/exthandler/nsExternalHelperAppService.cpp \
 	xpfe/browser/src/nsBrowserInstance.cpp
 
+####################################
+# CVS defines for Calendar (pulled and built if MOZ_CALENDAR is set)
+#
+CVSCO_CALENDAR := $(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/calendar
+
+ifdef MOZ_CALENDAR
+FASTUPDATE_CALENDAR := fast_update $(CVSCO_CALENDAR)
+CHECKOUT_CALENDAR := cvs_co $(CVSCO_CALENDAR)
+else
+CHECKOUT_CALENDAR := true
+FASTUPDATE_CALENDAR := true
+endif
+
 #######################################################################
 # Rules
 # 
@@ -450,11 +463,17 @@ checkout::
 	  mv $(CVSCO_LOGFILE) $(CVSCO_LOGFILE).old; \
 	else true; \
 	fi
+ifdef RUN_AUTOCONF_LOCALLY
+	@echo "Removing local configures" ; \
+	cd $(ROOTDIR) && \
+	$(RM) -f mozilla/configure mozilla/nsprpub/configure \
+		mozilla/directory/c-sdk/ldap/configure
+endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
 	@echo '$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk'; \
-        cd $(ROOTDIR); \
-	$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk && \
-	$(MAKE) -f mozilla/client.mk real_checkout
+        cd $(ROOTDIR) && \
+	$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk
+	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_checkout
 
 real_checkout:
 #	@: Start the checkout. Split the output to the tty and a log file. \
@@ -471,6 +490,7 @@ real_checkout:
         cvs_co $(CVSCO_GFX2) && \
         cvs_co $(CVSCO_IMGLIB2) && \
 	cvs_co $(CVSCO_SEAMONKEY) && \
+	$(CHECKOUT_CALENDAR) && \
 	cvs_co $(CVSCO_NOSUBDIRS)
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
 #	@: Check the log for conflicts. ;
@@ -495,17 +515,30 @@ commitmerge:
 diffsvg:
 	cvs diff $(SVG_BRANCH_FILES)
 
+ifdef RUN_AUTOCONF_LOCALLY
+	@echo Generating configures using $(AUTOCONF) ; \
+	cd $(TOPSRCDIR) && $(AUTOCONF) && \
+	cd $(TOPSRCDIR)/nsprpub && $(AUTOCONF) && \
+	cd $(TOPSRCDIR)/directory/c-sdk/ldap && $(AUTOCONF)
+endif
+
 fast-update:
 #	@: Backup the last checkout log.
 	@if test -f $(CVSCO_LOGFILE) ; then \
 	  mv $(CVSCO_LOGFILE) $(CVSCO_LOGFILE).old; \
 	else true; \
 	fi
+ifdef RUN_AUTOCONF_LOCALLY
+	@echo "Removing local configures" ; \
+	cd $(ROOTDIR) && \
+	$(RM) -f mozilla/configure mozilla/nsprpub/configure \
+		mozilla/directory/c-sdk/ldap/configure
+endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
 	@echo '$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk'; \
-        cd $(ROOTDIR); \
-	$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk && \
-        cd mozilla; \
+        cd $(ROOTDIR) && \
+	$(CVSCO) mozilla/client.mk mozilla/build/unix/modules.mk
+	@cd $(TOPSRCDIR) && \
 	$(MAKE) -f client.mk real_fast-update
 
 real_fast-update:
@@ -527,6 +560,7 @@ real_fast-update:
 	fast_update $(CVSCO_GFX2) && \
 	fast_update $(CVSCO_IMGLIB2) && \
 	fast_update $(CVSCO_SEAMONKEY) && \
+	$(FASTUPDATE_CALENDAR) && \
 	fast_update $(CVSCO_NOSUBDIRS)
 	@echo "fast_update finish: "`date` | tee -a $(CVSCO_LOGFILE)
 #	@: Check the log for conflicts. ;
@@ -538,6 +572,12 @@ real_fast-update:
 	  false; \
 	else true; \
 	fi
+ifdef RUN_AUTOCONF_LOCALLY
+	@echo Generating configures using $(AUTOCONF) ; \
+	cd $(TOPSRCDIR) && $(AUTOCONF) && \
+	cd $(TOPSRCDIR)/nsprpub && $(AUTOCONF) && \
+	cd $(TOPSRCDIR)/directory/c-sdk/ldap && $(AUTOCONF)
+endif
 
 ####################################
 # Web configure
@@ -581,8 +621,7 @@ CONFIG_CACHE  := $(wildcard $(OBJDIR)/config.cache)
 ifdef RUN_AUTOCONF_LOCALLY
 EXTRA_CONFIG_DEPS := \
 	$(TOPSRCDIR)/aclocal.m4 \
-	$(TOPSRCDIR)/build/autoconf/gtk.m4 \
-	$(TOPSRCDIR)/build/autoconf/altoptions.m4 \
+	$(wildcard $(TOPSRCDIR)/build/autoconf/*.m4) \
 	$(NULL)
 
 $(TOPSRCDIR)/configure: $(TOPSRCDIR)/configure.in $(EXTRA_CONFIG_DEPS)
