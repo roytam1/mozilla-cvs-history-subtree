@@ -494,11 +494,16 @@ function ShowAccountCentral()
         GetMessagePane().collapsed = true;
         document.getElementById("threadpane-splitter").collapsed = true;
         gSearchBox.collapsed = true;
+        
         GetThreadTree().collapsed = true;
+        document.getElementById('messengerBox').setAttribute('flex', '1');
         document.getElementById("accountCentralBox").collapsed = false;
+
     window.frames["accountCentralPane"].location = acctCentralPage;
+        
         if (!IsFolderPaneCollapsed())
             GetFolderTree().focus();
+
     gAccountCentralLoaded = true;
     }
     catch (ex)
@@ -519,9 +524,11 @@ function HideAccountCentral()
         document.getElementById("accountCentralBox").collapsed = true;
         GetThreadTree().collapsed = false;
         gSearchBox.collapsed = false;
+        
         var threadPaneSplitter = document.getElementById("threadpane-splitter");
         threadPaneSplitter.collapsed = false;
         GetMessagePane().collapsed = threadPaneSplitter.getAttribute("state") == "collapsed";
+        document.getElementById('messengerBox').removeAttribute('flex');
         gAccountCentralLoaded = false;
     }
     catch (ex)
