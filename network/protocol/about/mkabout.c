@@ -341,16 +341,17 @@ PRIVATE int net_output_about_url(ActiveEntry * cur_entry)
             uses_fe_data = FALSE;
         } 
 	  }
+#if defined(CookieManagement)
 	else if(!PL_strcasecmp(which, "cookies"))
 	{
-		NET_DisplayCookieInfoAsHTML(cur_entry);
+		NET_DisplayCookieInfoAsHTML(cur_entry->window_id);
 		return(-1);
 	}
+#endif
 #if defined(SingleSignon)
         else if(!PL_strcasecmp(which, "signons"))
 	{
-		extern void SI_DisplaySignonInfoAsHTML(ActiveEntry * cur_entry);
-		SI_DisplaySignonInfoAsHTML(cur_entry);
+		SI_DisplaySignonInfoAsHTML(cur_entry->window_id);
 		return(-1);
 	}
 #endif
