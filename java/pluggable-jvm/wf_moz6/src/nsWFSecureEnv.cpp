@@ -181,7 +181,7 @@ nsWFSecureEnv::CallMethod(/*[in]*/  jni_type ret_type,
     {
       // XXX: do smth meaningful with possible Java exception
       if (call->jException) {
-	m_jvm->DeleteLocalRef(call->jException);
+	m_jvm->DeleteGlobalRef(call->jException);
 	rv = NS_ERROR_FAILURE; 
       } else {
 	*result = call->data.__callMethod.result;

@@ -78,7 +78,7 @@ nsAppletHTMLObject::Initialize(nsIPluginInstancePeer *peer)
   m_peer = peer;
   NS_ADDREF(m_peer);
   peer->QueryInterface(kIPluginInstancePeer2IID,
-		       (void **)&m_peer2);
+                       (void **)&m_peer2);
   m_jobject = new nsJavaHTMLObject(m_factory);
   NS_ADDREF(m_jobject);
   res = nsServiceManager::GetService(kPluginManagerCID, 

@@ -29,6 +29,7 @@
 #include "nsIWFInstanceWrapper.h"
 #include "nsIPluginInstance.h"
 #include "wf_moz6_common.h"
+#include <stdlib.h>
 
 static NS_DEFINE_IID(kIPluginInstanceIID, NS_IPLUGININSTANCE_IID);
 static NS_DEFINE_IID(kIWFInstanceWrapperIID, NS_IWFINSTANCEWRAPPER_IID);

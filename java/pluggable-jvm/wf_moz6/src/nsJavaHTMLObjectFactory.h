@@ -107,8 +107,9 @@ class nsJavaHTMLObjectFactory : public nsIPlugin,
   BrowserSupportWrapper*          m_wrapper;
   JNIEnv*                         m_env;
   NS_IMETHOD doGetProxyForURL(const char* url,
-			      char* *target);
-  NS_IMETHOD doJSCall(jint jstid, struct JSObject_CallInfo** call);
+                              char* *target);
+  NS_IMETHOD doJSCall(jint jstid, 
+                      struct JSObject_CallInfo** call);
   NS_IMETHOD initLiveConnect();
   PRThread*                       m_mainThread;
   jint                            m_jsjRecursion;

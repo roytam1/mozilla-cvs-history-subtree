@@ -26,7 +26,7 @@
 # Set those variables
 # for me this var set in .bashrc so I don't need it here
 #WFJDKHOME=/usr/java/jdk1.3.0_02
-WFDIR=/usr/local/home/nike/mozilla/wf
+WFDIR=/work/wf.ed
 # end of customizable part
 
 CURDIR=`pwd`

@@ -48,8 +48,8 @@ nsPluggableJVM::~nsPluggableJVM()
   OJI_LOG("nsPluggableJVM::~nsPluggableJVM");
   if (m_jvmp_context)
     {
-      if (m_extID) 
-	(m_jvmp_context->JVMP_UnregisterExtension)(m_ctx, m_extID);
+        if (m_ctx != nsnull && m_extID != 0) 
+            (m_jvmp_context->JVMP_UnregisterExtension)(m_ctx, m_extID);
     }
 }
 
@@ -168,6 +168,7 @@ nsPluggableJVM::GetJNIEnv(JNIEnv* *env)
   JVMP_CallingContext* ctx;
   int res;
 
+  if (!m_jvmp_context) return NS_ERROR_FAILURE;
   res = (m_jvmp_context->JVMP_GetCallingContext)(&ctx);
   if (res != JNI_TRUE) return NS_ERROR_FAILURE;  
   *env = ctx->env;
@@ -176,7 +177,8 @@ nsPluggableJVM::GetJNIEnv(JNIEnv* *env)
 
 
 static int newPrincipalsFromStrings(jbyte** *resprin, 
-				    jint* *reslen, jint num, ...)
+                                    jint* *reslen, 
+                                    jint num, ...)
 {
     jint*  prins_len; 
     jbyte* *prins;
@@ -277,6 +279,7 @@ nsPluggableJVM::ShutdownJVM(PRBool fullShutdown, nsPluggableJVMStatus *status)
 {
   if ((m_jvmp_context->JVMP_UnregisterExtension(m_ctx, m_extID) != JNI_TRUE))
     return NS_ERROR_FAILURE;
+  m_extID = 0;
   if ((m_jvmp_context->JVMP_StopJVM(m_ctx) != JNI_TRUE))
     return NS_ERROR_FAILURE;
   m_jvmp_context = NULL;
