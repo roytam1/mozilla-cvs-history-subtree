@@ -597,7 +597,7 @@ nsPKCS12Blob::nickname_collision(SECItem *oldNick, PRBool *cancel, void *wincx)
   nsCOMPtr<nsINSSComponent> nssComponent(do_GetService(kNSSComponentCID, &rv));
   if (NS_FAILED(rv)) return nsnull;
   int count = 1;
-  nsXPIDLCString nickname;
+  nsCString nickname;
   nsString nickFromProp;
   nssComponent->GetPIPNSSBundleString(
                                  NS_LITERAL_STRING("P12DefaultNickname").get(),
@@ -646,7 +646,7 @@ nsPKCS12Blob::nickname_collision(SECItem *oldNick, PRBool *cancel, void *wincx)
     return nsnull;
 
   newNick->type = siAsciiString;
-  newNick->data = (unsigned char*) nsCRT::strdup(nickname);
+  newNick->data = (unsigned char*) nsCRT::strdup(nickname.get());
   newNick->len  = strlen((char*)newNick->data);
   return newNick;
 }
