@@ -66,6 +66,7 @@ class EmbedPrivate {
   void        Destroy         (void);
   void        SetURI          (const char *aURI);
   void        LoadCurrentURI  (void);
+  void        Reload          (PRUint32 reloadFlags);
 
   static void PushStartup     (void);
   static void PopStartup      (void);

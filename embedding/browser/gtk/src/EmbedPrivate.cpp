@@ -387,6 +387,24 @@ EmbedPrivate::LoadCurrentURI(void)
                          nsnull);                           // extra headers
 }
 
+void
+EmbedPrivate::Reload(PRUint32 reloadFlags)
+{
+  /* Use the session history if it is available, this
+   * allows framesets to reload correctly */
+  nsCOMPtr<nsIWebNavigation> wn;
+
+  if (mSessionHistory) {
+    wn = do_QueryInterface(mSessionHistory);
+  }
+  if (!wn)
+    wn = mNavigation;
+
+  if (wn)
+    wn->Reload(reloadFlags);
+}
+
+
 /* static */
 void
 EmbedPrivate::PushStartup(void)
