@@ -801,6 +801,16 @@ void nsMsgDatabase::UnixToNative(char*& ioPath)
 
 #endif /* XP_MAC */
 
+NS_IMETHODIMP nsMsgDatabase::OpenFolderDB(nsIMsgFolder *folder, PRBool create, PRBool upgrading, nsIMsgDatabase** pMessageDB)
+{
+  NS_ENSURE_ARG(folder);
+  m_folder = folder;
+  nsCOMPtr <nsIFileSpec> folderPath;
+  nsresult rv = folder->GetPath(getter_AddRefs(folderPath));
+  NS_ENSURE_SUCCESS(rv, rv);
+  return Open(folderPath, create, upgrading, pMessageDB);
+}
+
 NS_IMETHODIMP nsMsgDatabase::Open(nsIFileSpec *folderName, PRBool create, PRBool upgrading, nsIMsgDatabase** pMessageDB)
 {
 	NS_ASSERTION(PR_FALSE, "must override");
@@ -1261,6 +1271,9 @@ NS_IMETHODIMP nsMsgDatabase::GetMsgHdrForKey(nsMsgKey key, nsIMsgDBHdr **pmsgHdr
 	mdb_bool	hasOid;
 	mdbOid		rowObjectId;
 
+#ifdef DEBUG_bienvenu
+  NS_ASSERTION(m_folder, "folder should be set");
+#endif
 
 	if (!pmsgHdr || !m_mdbAllMsgHeadersTable)
 		return NS_ERROR_NULL_POINTER;

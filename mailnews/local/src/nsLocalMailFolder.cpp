@@ -356,7 +356,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::GetDatabaseWOReparse(nsIMsgDatabase **aDatab
 	  nsresult rv = nsComponentManager::CreateInstance(kCMailDB, nsnull, NS_GET_IID(nsIMsgDatabase), (void **) getter_AddRefs(mailDBFactory));
 	  if (NS_SUCCEEDED(rv) && mailDBFactory)
 	  {
-		  rv = mailDBFactory->Open(destIFolderSpec, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(mDatabase));
+		  rv = mailDBFactory->OpenFolderDB(this, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(mDatabase));
       if (mDatabase && NS_SUCCEEDED(rv))
         mDatabase->AddListener(this);
 	  }
@@ -515,7 +515,7 @@ nsresult nsMsgLocalMailFolder::GetDatabase(nsIMsgWindow *aMsgWindow)
 		rv = nsComponentManager::CreateInstance(kCMailDB, nsnull, NS_GET_IID(nsIMsgDatabase), getter_AddRefs(mailDBFactory));
 		if (NS_SUCCEEDED(rv) && mailDBFactory)
 		{
-			folderOpen = mailDBFactory->Open(pathSpec, PR_TRUE, PR_FALSE, getter_AddRefs(mDatabase));
+			folderOpen = mailDBFactory->OpenFolderDB(this, PR_TRUE, PR_FALSE, getter_AddRefs(mDatabase));
 			if(!NS_SUCCEEDED(folderOpen) &&
 				folderOpen == NS_MSG_ERROR_FOLDER_SUMMARY_OUT_OF_DATE || folderOpen == NS_MSG_ERROR_FOLDER_SUMMARY_MISSING )
 			{
@@ -533,7 +533,7 @@ nsresult nsMsgLocalMailFolder::GetDatabase(nsIMsgWindow *aMsgWindow)
           dbFolderInfo = nsnull;
         }
 				// if it's out of date then reopen with upgrade.
-				if(!NS_SUCCEEDED(rv = mailDBFactory->Open(pathSpec, PR_TRUE, PR_TRUE, getter_AddRefs(mDatabase))))
+				if(!NS_SUCCEEDED(rv = mailDBFactory->OpenFolderDB(this, PR_TRUE, PR_TRUE, getter_AddRefs(mDatabase))))
 				{
 					return rv;
 				}
@@ -1273,7 +1273,7 @@ nsMsgLocalMailFolder::GetDBFolderInfoAndDB(nsIDBFolderInfo **folderInfo, nsIMsgD
 	nsCOMPtr<nsIMsgDatabase> mailDB;
   if (NS_SUCCEEDED(rv) && mailDBFactory)
   {
-        openErr = mailDBFactory->Open(mPath, PR_FALSE, PR_FALSE, getter_AddRefs(mailDB));
+        openErr = mailDBFactory->OpenFolderDB(this, PR_FALSE, PR_FALSE, getter_AddRefs(mailDB));
   }
 
   *db = mailDB;

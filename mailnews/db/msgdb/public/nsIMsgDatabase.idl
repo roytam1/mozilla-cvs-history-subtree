@@ -35,6 +35,7 @@ interface nsISimpleEnumerator;
 interface nsIMsgThread;
 interface nsIDBFolderInfo;
 interface nsIMsgOfflineImapOperation;
+interface nsIMsgFolder;
 
 [ptr] native octetPtr(PRUint8);
 
@@ -82,6 +83,7 @@ interface nsMsgDBCommitType
 
 interface  nsIMsgDatabase : nsIDBChangeAnnouncer {
   nsIMsgDatabase Open(in nsIFileSpec folderName, in boolean create, in boolean upgrading);
+  nsIMsgDatabase OpenFolderDB(in nsIMsgFolder folder, in boolean create, in boolean upgrading);
   void Close(in boolean forceCommit);
 
   void Commit(in nsMsgDBCommit commitType);

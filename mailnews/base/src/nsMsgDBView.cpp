@@ -2172,6 +2172,7 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 	IdDWord	dWordEntryInfo1, dWordEntryInfo2;
 	IdKeyPtr	keyInfo1, keyInfo2;
   IdPRTime timeInfo1, timeInfo2;
+  void *comparisonContext = nsnull;
 
   nsresult rv;
 
@@ -2198,6 +2199,7 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
       NS_ASSERTION(NS_SUCCEEDED(rv),"failed to create collation key");
 			msgHdr->GetMessageKey(&keyInfo1.info.id);
       comparisonFun = FnSortIdKey;
+      comparisonContext = m_db.get();
 			pValue1 = (void *) &keyInfo1;
 			break;
 		case kU32:
@@ -2244,7 +2246,7 @@ nsMsgViewIndex nsMsgDBView::GetInsertIndex(nsIMsgDBHdr *msgHdr)
 			timeInfo2.info.id = messageKey;
 			pValue2 = &timeInfo2;
     }
-		retStatus = (*comparisonFun)(&pValue1, &pValue2, nsnull);
+		retStatus = (*comparisonFun)(&pValue1, &pValue2, comparisonContext);
 		if (retStatus == 0)
 			break;
     if (m_sortOrder == nsMsgViewSortOrder::descending)	//switch retStatus based on sort order

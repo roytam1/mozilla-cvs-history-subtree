@@ -628,3 +628,11 @@ NS_IMETHODIMP nsMessage::SetMessageType(PRUint32 aMessageType)
   mMessageType = aMessageType;
   return NS_OK;
 }
+
+NS_IMETHODIMP nsMessage::GetFolder(nsIMsgFolder **folder)
+{
+	if(mMsgHdr)
+		return mMsgHdr->GetFolder(folder);
+	else
+		return NS_ERROR_FAILURE;
+}

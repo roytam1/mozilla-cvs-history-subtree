@@ -34,6 +34,8 @@
 [ref] native nsCStringRef(nsCString);
 [ptr] native octetPtr(PRUint8);
 
+interface nsIMsgFolder;
+
 [scriptable, uuid(4e994f60-c317-11d2-8cc9-0060b0fc14a3)]
 interface nsIMsgHdr : nsISupports
 {
@@ -99,6 +101,7 @@ interface nsIMsgHdr : nsISupports
     [noscript] void getRecipientsCollationKey(out octetPtr key, out unsigned long len);
     
 	attribute string Charset;
+  readonly attribute nsIMsgFolder folder;
 };
 
 [scriptable, uuid(B5212A60-F93F-11d2-951C-006097222B83)]

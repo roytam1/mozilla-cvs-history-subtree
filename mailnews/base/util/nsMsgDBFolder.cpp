@@ -1204,7 +1204,7 @@ nsMsgDBFolder::SetFlag(PRUint32 flag)
 }
 
 NS_IMETHODIMP
-nsMsgDBFolder::AddMessageDispositionState(nsIMessage *aMessage, nsMsgDispositionState aDispositionFlag)
+nsMsgDBFolder::AddMessageDispositionState(nsIMsgDBHdr *aMessage, nsMsgDispositionState aDispositionFlag)
 {
   NS_ENSURE_ARG_POINTER(aMessage);
 
@@ -1212,7 +1212,7 @@ nsMsgDBFolder::AddMessageDispositionState(nsIMessage *aMessage, nsMsgDisposition
   NS_ENSURE_SUCCESS(rv, NS_OK);
   
   nsMsgKey msgKey;
-  aMessage->GetMsgKey(&msgKey);
+  aMessage->GetMessageKey(&msgKey);
   
   if (aDispositionFlag == nsIMsgFolder::nsMsgDispositionState_Replied)
     mDatabase->MarkReplied(msgKey, PR_TRUE, nsnull);

@@ -518,7 +518,7 @@ nsresult nsImapMailFolder::GetDatabase(nsIMsgWindow *aMsgWindow)
 
     rv = nsComponentManager::CreateInstance(kCImapDB, nsnull, NS_GET_IID(nsIMsgDatabase), (void **) getter_AddRefs(mailDBFactory));
     if (NS_SUCCEEDED(rv) && mailDBFactory)
-      folderOpen = mailDBFactory->Open(pathSpec, PR_TRUE, PR_TRUE, getter_AddRefs(mDatabase));
+      folderOpen = mailDBFactory->OpenFolderDB(this, PR_TRUE, PR_TRUE, getter_AddRefs(mDatabase));
 
     if(mDatabase)
     {
@@ -753,7 +753,7 @@ NS_IMETHODIMP nsImapMailFolder::CreateClientSubfolderInfo(const char *folderName
     path.SetLeafName(proposedDBName);
 
     NS_NewFileSpecWithSpec(path, getter_AddRefs(dbFileSpec));
-    rv = mailDBFactory->Open(dbFileSpec, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(unusedDB));
+    rv = mailDBFactory->OpenFolderDB(this, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(unusedDB));
 
         if (NS_SUCCEEDED(rv) && unusedDB)
         {
@@ -1427,7 +1427,7 @@ NS_IMETHODIMP nsImapMailFolder::GetRememberedPassword(char ** password)
 }
 
 NS_IMETHODIMP
-nsImapMailFolder::AddMessageDispositionState(nsIMessage *aMessage, nsMsgDispositionState aDispositionFlag)
+nsImapMailFolder::AddMessageDispositionState(nsIMsgDBHdr *aMessage, nsMsgDispositionState aDispositionFlag)
 {
   nsMsgDBFolder::AddMessageDispositionState(aMessage, aDispositionFlag);
 
@@ -1436,7 +1436,7 @@ nsImapMailFolder::AddMessageDispositionState(nsIMessage *aMessage, nsMsgDisposit
   {
     nsMsgKeyArray messageIDs;
     nsMsgKey msgKey;
-    aMessage->GetMsgKey(&msgKey);
+    aMessage->GetMessageKey(&msgKey);
     messageIDs.Add(msgKey);
 
     if (aDispositionFlag == nsIMsgFolder::nsMsgDispositionState_Replied)
@@ -2129,7 +2129,7 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
     
       // Create a new summary file, update the folder message counts, and
       // Close the summary file db.
-      rv = mailDBFactory->Open(pathSpec, PR_TRUE, PR_TRUE, getter_AddRefs(mDatabase));
+      rv = mailDBFactory->OpenFolderDB(this, PR_TRUE, PR_TRUE, getter_AddRefs(mDatabase));
 
       // ********** Important *************
       // David, help me here I don't know this is right or wrong
@@ -5325,6 +5325,7 @@ NS_IMETHODIMP nsImapMailFolder::RenameClient( nsIMsgFolder *msgFolder, const cha
       path.SetLeafName(proposedDBName);
 
       NS_NewFileSpecWithSpec(path, getter_AddRefs(dbFileSpec));
+      // it's OK to use Open and not OpenFolderDB here, since we don't use the DB.
       rv = mailDBFactory->Open(dbFileSpec, PR_TRUE, PR_TRUE, (nsIMsgDatabase **) getter_AddRefs(unusedDB));
 
       if (NS_SUCCEEDED(rv) && unusedDB)

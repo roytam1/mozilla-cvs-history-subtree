@@ -168,7 +168,7 @@ hasMessages);
   NS_IMETHOD SetPath(nsIFileSpec * aPath);
   NS_IMETHOD GetBaseMessageURI (char ** baseMessageURI);
   NS_IMETHOD MarkMessagesRead(nsISupportsArray *messages, PRBool markRead);
-  NS_IMETHOD AddMessageDispositionState(nsIMessage *aMessage, nsMsgDispositionState aDispositionFlag);
+  NS_IMETHOD AddMessageDispositionState(nsIMsgDBHdr *aMessage, nsMsgDispositionState aDispositionFlag);
   NS_IMETHOD MarkAllMessagesRead(void);
   NS_IMETHOD MarkMessagesFlagged(nsISupportsArray *messages, PRBool markFlagged);
   NS_IMETHOD MarkThreadRead(nsIMsgThread *thread);

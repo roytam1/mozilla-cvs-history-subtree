@@ -2131,7 +2131,7 @@ nsMsgFolder::MarkMessagesFlagged(nsISupportsArray *messages, PRBool markFlagged)
 }
 
 NS_IMETHODIMP
-nsMsgFolder::AddMessageDispositionState(nsIMessage *aMessage, nsMsgDispositionState aDispositionFlag)
+nsMsgFolder::AddMessageDispositionState(nsIMsgDBHdr *aMessage, nsMsgDispositionState aDispositionFlag)
 {
   // most folders don't do anything for this...
   return NS_OK;

@@ -1572,8 +1572,7 @@ nsresult nsMsgCompose::ProcessReplyFlags()
       {
         // get the folder for the message resource
         nsCOMPtr<nsIMsgFolder> msgFolder;
-        NS_ASSERTION(0,"fix this");
-        //msgHdr->GetMsgFolder(getter_AddRefs(msgFolder));
+        msgHdr->GetFolder(getter_AddRefs(msgFolder));
         if (msgFolder)
         {
           nsMsgDispositionState dispositionSetting = nsIMsgFolder::nsMsgDispositionState_Replied;
@@ -1581,8 +1580,7 @@ nsresult nsMsgCompose::ProcessReplyFlags()
   	          mType == nsIMsgCompType::ForwardInline)
               dispositionSetting = nsIMsgFolder::nsMsgDispositionState_Forwarded;
 
-          NS_ASSERTION(0,"fix this, too");
-          //msgFolder->AddMessageDispositionState(msgHdr, dispositionSetting);
+          msgFolder->AddMessageDispositionState(msgHdr, dispositionSetting);
         }
       }
       

@@ -702,6 +702,20 @@ NS_IMETHODIMP nsMsgHdr::GetThreadParent(nsMsgKey *result)
     return NS_OK;
 }
 
+NS_IMETHODIMP nsMsgHdr::GetFolder(nsIMsgFolder **result)
+{
+  NS_ENSURE_ARG(result);
+
+  if (m_mdb && m_mdb->m_folder)
+  {
+    *result = m_mdb->m_folder;
+    NS_ADDREF(*result);
+  }
+  else
+    *result = nsnull;
+  return NS_OK;
+}
+
 nsresult nsMsgHdr::SetStringColumn(const char *str, mdb_token token)
 {
   return m_mdb->CharPtrToRowCellColumn(m_mdbRow, token, str);

@@ -31,6 +31,7 @@
 #include "nsIDBChangeListener.h"
 #include "nsIDBChangeAnnouncer.h"
 #include "nsMsgMessageFlags.h"
+#include "nsIMsgFolder.h"
 #include "nsISupportsArray.h"
 #include "nsDBFolderInfo.h"
 #include "nsICollation.h"
@@ -189,6 +190,7 @@ protected:
 	virtual nsresult			InitNewDB();
 	virtual nsresult			InitMDBInfo();
 
+  nsCOMPtr <nsIMsgFolder> m_folder;
 	nsDBFolderInfo      *m_dbFolderInfo;
 	nsMsgKey            m_nextPseudoMsgKey;
 	nsIMdbEnv		    *m_mdbEnv;	// to be used in all the db calls.
