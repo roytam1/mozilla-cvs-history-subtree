@@ -23,7 +23,6 @@
 #define NS_IMPL_IDS
 #include "nsIAppShellService.h"
 #include "nsICmdLineService.h"
-#include "nsIDOMXPConnectFactory.h"
 #include "nsAppShellCIDs.h"
 #include "nsINetSupportDialogService.h"
 #include "nsIEditor.h"
@@ -48,7 +47,6 @@ static NS_DEFINE_CID(	kCommonDialogsCID, NS_CommonDialog_CID );
 #define WEB_DLL         "WEBSHELL"
 #define PREF_DLL        "PREF"
 #define PARSER_DLL      "HTMLPARS"
-#define DOM_DLL         "JSDOM"
 #define LAYOUT_DLL      "NGLAYOUT"
 #define NETLIB_DLL      "NECKO"
 #define EDITOR_DLL      "ENDER"
