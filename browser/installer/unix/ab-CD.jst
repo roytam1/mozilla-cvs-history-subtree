@@ -83,7 +83,9 @@ if (verifyDiskSpace(fProgram, srDest))
         registerChrome(chromeType, cf, "locale/mozapps/");
 
         registerChrome(chromeType, cf, "locale/necko/");
+#ifdef EXTENSION_PREF
         registerChrome(chromeType, cf, "locale/autoconfig/");
+#endif
         registerChrome(chromeType, cf, "locale/cookie/");
         registerChrome(chromeType, cf, "locale/pipnss/");
         registerChrome(chromeType, cf, "locale/pippki/");
