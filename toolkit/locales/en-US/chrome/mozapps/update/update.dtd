@@ -24,7 +24,7 @@
 <!ENTITY  found.updatetype.components.accesskey "O">
 <!ENTITY  found.updatetype.addons.accesskey     "E">
 <!ENTITY  found.updatetype.languages.accesskey  "L">
-<!ENTITY  found.criticalUpdates.label           "The following Critical Updates are available for Firefox:">
+<!ENTITY  found.criticalUpdates.label           "The following Critical Updates are available for &brandShortName;:">
 <!ENTITY  found.criticalUpdates.info            "You should install these updates immediately to protect your computer from attack.">
 <!ENTITY  found.app.infoLink                    "More Information...">
 <!ENTITY  found.components.label                "The following components and plugins are available to install:">
