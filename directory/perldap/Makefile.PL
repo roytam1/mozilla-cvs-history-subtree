@@ -158,7 +158,9 @@ push(@extras,
 push(@extras,
      ABSTRACT => 'Perl methods for LDAP C API calls',
      AUTHOR   => 'Netscape Communications Corp., Inc. and Clayton Donley')
-    if ($ExtUtils::MakeMaker::Version >= 5.4301);
+    if ($] >= 5.005);
+
+print "Version is $]\n";
 
 #
 # Ok, let's do it!
