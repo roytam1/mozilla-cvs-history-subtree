@@ -1191,7 +1191,7 @@ NET_FindURLInMemCache(URL_Struct * URL_s, MWContext *ctxt)
 
 		if(found_cache_obj->current_page_only)
 		  {
-			History_entry * he = SHIST_GetCurrent(&ctxt->hist);
+			History_entry * he = SHIST_GetCurrent(NET_GetHistory(ctxt));
 			int hist_num;
 
 			/* if the current_page_only flag is set 
@@ -1204,7 +1204,7 @@ NET_FindURLInMemCache(URL_Struct * URL_s, MWContext *ctxt)
 			 */
 			if(he)
 			  {
-				hist_num = SHIST_GetIndex(&ctxt->hist, he);
+				hist_num = SHIST_GetIndex(NET_GetHistory(ctxt), he);
 
 				/* we can tell if the document being loaded is the
 			 	 * same as the current document by looking up it's
