@@ -707,12 +707,7 @@ loop:
             goto parseMinimalFlag;
 
           case '*':
-	    if (!(ren->flags & RENODE_NONEMPTY)) {
-	        JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
-				     JSMSG_EMPTY_BEFORE_STAR);
-	        return NULL;
-	    }
-	    cp++;
+	    cp++; 
 	    ren = NewRENode(state, REOP_STAR, ren);
     parseMinimalFlag :
             if (*cp == '?') {
@@ -722,11 +717,6 @@ loop:
 	    goto loop;
 
           case '+':
-	    if (!(ren->flags & RENODE_NONEMPTY)) {
-	        JS_ReportErrorNumber(state->context, js_GetErrorMessage, NULL,
-				     JSMSG_EMPTY_BEFORE_PLUS);
-	        return NULL;
-	    }
 	    cp++;
 	    ren2 = NewRENode(state, REOP_PLUS, ren);
 	    if (!ren2)
@@ -1214,6 +1204,7 @@ static const jschar *matchGreedyKid(MatchState *state, RENode *ren,
         }
     }
     else {
+        if (kidMatch == cp) return kidMatch;    // no point pursuing an empty match forever  
         if ((maxKid == 0) || (++kidCount < maxKid)) {
             match = matchGreedyKid(state, ren, kidCount, maxKid, kidMatch, cp);
             if (match != NULL) return match;
@@ -1240,8 +1231,10 @@ static const jschar *matchNonGreedyKid(MatchState *state, RENode *ren,
     kidMatch = matchRENodes(state, (RENode *)ren->kid, ren->next, cp);
     if (kidMatch == NULL)
         return NULL;
-    else
+    else {
+        if (kidMatch == cp) return kidMatch;    // no point pursuing an empty match forever 
         return matchNonGreedyKid(state, ren, kidCount, maxKid, kidMatch);
+    }
 }
 
 static void calcBMSize(MatchState *state, RENode *ren)
@@ -1593,6 +1586,7 @@ static const jschar *matchRENodes(MatchState *state, RENode *ren, RENode *stop,
                     ren = (RENode *)ren->kid;
 	            parsub = &state->parens[num];
 	            parsub->chars = cp;
+                    parsub->length = 0;
                     if (num >= state->parenCount)
                         state->parenCount = num + 1;
                     continue;
