@@ -1480,13 +1480,6 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>ExtensionFunctionCall.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>GenerateIdFunctionCall.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -1565,13 +1558,6 @@
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>txKeyFunctionCall.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>Expr.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
@@ -1681,6 +1667,20 @@
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS>Debug</FILEFLAGS>
                 </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txPatternParser.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txXSLTPatterns.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
             </FILELIST>
             <LINKORDER>
                 <FILEREF>
@@ -1718,34 +1718,26 @@
                     <PATH>UnicharUtilsStaticDebug.o</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
-                <FILE>
+                <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>txNameTest.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
+                </FILEREF>
+                <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>txNodeTypeTest.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
+                </FILEREF>
+                <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>txForwardContext.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
+                </FILEREF>
+                <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>txNodeSetContext.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
+                </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>List.cpp</PATH>
@@ -2063,11 +2055,6 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>ExtensionFunctionCall.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>GenerateIdFunctionCall.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -2124,11 +2111,6 @@
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>txKeyFunctionCall.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>Expr.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -2199,6 +2181,16 @@
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>txExpandedNameMap.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txPatternParser.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txXSLTPatterns.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
             </LINKORDER>
@@ -3245,27 +3237,6 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>BasicNodeExpr.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>AttributeExpr.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>ElementExpr.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>ErrorFunctionCall.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -3560,13 +3531,6 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>TextExpr.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>ArrayList.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -3624,13 +3588,6 @@
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>XMLParser.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>ExtensionFunctionCall.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
@@ -3715,13 +3672,6 @@
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>txKeyFunctionCall.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>Expr.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
@@ -3831,6 +3781,48 @@
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS>Debug</FILEFLAGS>
                 </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txForwardContext.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txNameTest.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txNodeSetContext.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txNodeTypeTest.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txPatternParser.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txXSLTPatterns.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
             </FILELIST>
             <LINKORDER>
                 <FILEREF>
@@ -3906,21 +3898,6 @@
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>VariableBinding.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>BasicNodeExpr.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>AttributeExpr.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>ElementExpr.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -4066,11 +4043,6 @@
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>RootExpr.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>TextExpr.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -4205,11 +4177,6 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>ExtensionFunctionCall.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>GenerateIdFunctionCall.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -4266,11 +4233,6 @@
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>txKeyFunctionCall.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>Expr.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -4341,6 +4303,36 @@
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>txExpandedNameMap.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txForwardContext.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txNameTest.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txNodeSetContext.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txNodeTypeTest.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txPatternParser.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txXSLTPatterns.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
             </LINKORDER>
@@ -4584,19 +4576,7 @@
                 <FILEREF>
                     <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>AttributeExpr.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>AttributeValueTemplate.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>BasicNodeExpr.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -4620,19 +4600,7 @@
                 <FILEREF>
                     <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>ElementExpr.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>ErrorFunctionCall.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>Expr.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -4651,12 +4619,6 @@
                     <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>ExprParser.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>ExtensionFunctionCall.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -4764,7 +4726,25 @@
                 <FILEREF>
                     <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>TextExpr.cpp</PATH>
+                    <PATH>txForwardContext.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txNameTest.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txNodeSetContext.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txNodeTypeTest.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -4838,6 +4818,12 @@
                 <FILEREF>
                     <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txPatternParser.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>txRtfHandler.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -4845,6 +4831,12 @@
                     <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>txTextHandler.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <TARGETNAME>transformiixDebug.shlb</TARGETNAME>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>txXSLTPatterns.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
