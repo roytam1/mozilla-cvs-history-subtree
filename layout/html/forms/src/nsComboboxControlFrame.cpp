@@ -2545,6 +2545,7 @@ nsComboboxControlFrame::Paint(nsIPresContext*     aPresContext,
     nsAreaFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
                        NS_FRAME_PAINT_LAYER_FOREGROUND);
 
+/*
     if (mDisplayFrame) {
       aRenderingContext.PushState();
       PRBool clipEmpty;
@@ -2596,6 +2597,7 @@ nsComboboxControlFrame::Paint(nsIPresContext*     aPresContext,
       /////////////////////
       aRenderingContext.PopState(clipEmpty);
     }
+*/
   }
   
   // Call to the base class to draw selection borders when appropriate
