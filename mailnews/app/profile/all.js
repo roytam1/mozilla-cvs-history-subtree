@@ -38,16 +38,12 @@
 // SYNTAX HINTS:  dashes are delimiters.  Use underscores instead.
 //  The first character after a period must be alphabetic.
 
-pref("startup.homepage_override_url","chrome://navigator-region/locale/region.properties");
-pref("browser.chromeURL","chrome://navigator/content/navigator.xul");
-
 pref("network.search.url","http://cgi.netscape.com/cgi-bin/url_search.cgi?search=");
 
 pref("keyword.URL", "http://keyword.netscape.com/keyword/");
 pref("keyword.enabled", false);
 pref("general.useragent.locale", "chrome://navigator/locale/navigator.properties");
-pref("general.useragent.contentlocale", "chrome://navigator-region/locale/region.properties");
-pref("general.useragent.misc", "rv:1.2b");
+pref("general.useragent.misc", "rv:1.0.2");
 
 pref("general.startup.browser",             false);
 pref("general.startup.mail",                true);
@@ -83,8 +79,8 @@ pref("browser.display.use_system_colors",   false);
 pref("browser.display.foreground_color",    "#000000");
 pref("browser.display.background_color",    "#FFFFFF");
 pref("browser.display.force_inline_alttext", false); // true = force ALT text for missing images to be layed out inline
-// 0 = no external leading, 
-// 1 = use external leading only when font provides, 
+// 0 = no external leading,
+// 1 = use external leading only when font provides,
 // 2 = add extra leading both internal leading and external leading are zero
 pref("browser.display.normal_lineheight_calc_control", 2);
 pref("browser.display.show_image_placeholders", true); // true = show image placeholders while image is loaded and when image is broken
@@ -99,6 +95,9 @@ pref("browser.display.focus_text_color",     "#ffffff");
 pref("browser.display.focus_ring_width",     1);
 pref("browser.display.focus_ring_on_anything", false);
 
+pref("browser.new_find", true);  // temporary
+pref("editor.new_find",  true);  // temporary
+
 pref("browser.urlbar.autoFill", false);
 pref("browser.urlbar.showPopup", true);
 pref("browser.urlbar.showSearch", true);
@@ -108,16 +107,18 @@ pref("browser.chrome.site_icons", true);
 pref("browser.chrome.favicons", false);
 
 pref("browser.chrome.toolbar_tips",         true);
-// 0 = Pictures Only, 1 = Text Only, 2 = Pictures and Text
 pref("browser.chrome.toolbar_style",        2);
 
 pref("browser.toolbars.showbutton.bookmarks", true);
 pref("browser.toolbars.showbutton.go",      false);
 pref("browser.toolbars.showbutton.home",    true);
+pref("browser.toolbars.showbutton.mynetscape", true);
+pref("browser.toolbars.showbutton.net2phone", true);
 pref("browser.toolbars.showbutton.print",   true);
 pref("browser.toolbars.showbutton.search",  true);
 
 pref("browser.turbo.enabled", false);
+// pref("browser.turbo.singleProfileOnly", false);
 
 pref("browser.helperApps.alwaysAsk.force",  false);
 pref("browser.helperApps.neverAsk.saveToDisk", "");
@@ -125,19 +126,9 @@ pref("browser.helperApps.neverAsk.openFile", "");
 
 pref("accessibility.browsewithcaret", false);
 pref("accessibility.warn_on_browsewithcaret", true);
-// Tab focus model bit field:
-// 1 focuses text controls, 2 focuses other form elements, 4 adds links.
-// Most users will want 1, 3, or 7.
-pref("accessibility.tabfocus", 7);
 pref("accessibility.usetexttospeech", "");
 pref("accessibility.usebrailledisplay", "");
 pref("accessibility.accesskeycausesactivation", true);
-
-// Type Ahead Find
-pref("accessibility.typeaheadfind", true);
-pref("accessibility.typeaheadfind.linksonly", true);
-pref("accessibility.typeaheadfind.startlinksonly", false);
-pref("accessibility.typeaheadfind.timeout", 5000);
 
 // Dialog modality issues
 pref("browser.prefWindowModal", true);
@@ -158,6 +149,7 @@ pref("browser.search.basic.min_ver", "0.0");
 pref("browser.urlbar.autocomplete.enabled", true);
 pref("browser.urlbar.clickSelectsAll", true);
 
+pref("browser.history.last_page_visited", "");
 pref("browser.history_expire_days", 9);
 pref("browser.history.grouping", "day");
 pref("browser.sessionhistory.max_entries", 50);
@@ -360,11 +352,6 @@ pref("capability.policy.mailnews.Window.screenX.set", "noAccess");
 pref("capability.policy.mailnews.Window.screenY.set", "noAccess");
 pref("capability.policy.mailnews.Window.sizeToContent", "noAccess");
 
-// XMLExtras
-pref("capability.policy.default.XMLHttpRequest.channel", "noAccess");
-pref("capability.policy.default.DOMParser.parseFromStream", "noAccess");
-
-
 // Scripts & Windows prefs
 pref("browser.block.target_new_window",     false);
 pref("dom.disable_cookie_get",              false);
@@ -375,30 +362,18 @@ pref("dom.disable_window_flip",             false);
 pref("dom.disable_window_move_resize",      false);
 pref("dom.disable_window_status_change",    false);
 
-pref("dom.disable_window_open_feature.titlebar",    false);
-pref("dom.disable_window_open_feature.close",       false);
-pref("dom.disable_window_open_feature.toolbar",     false);
-pref("dom.disable_window_open_feature.location",    false);
-pref("dom.disable_window_open_feature.directories", false);
-pref("dom.disable_window_open_feature.personalbar", false);
-pref("dom.disable_window_open_feature.menubar",     false);
-pref("dom.disable_window_open_feature.scrollbars",  false);
-pref("dom.disable_window_open_feature.resizable",   false);
-pref("dom.disable_window_open_feature.minimizable", false);
 pref("dom.disable_window_open_feature.status",      false);
 
 pref("javascript.enabled",                  true);
 pref("javascript.allow.mailnews",           false);
 pref("javascript.options.strict",           false);
 pref("javascript.options.showInConsole",    true);
-
-// popups.policy 1=allow,2=reject
-pref("privacy.popups.policy",               1);
-pref("privacy.popups.usecustom",            false);
+pref("javascript.strict_domain_checking",   false);
 
 // advanced prefs
 pref("advanced.always_load_images",         true);
 pref("security.enable_java",                true);
+pref("css.allow",                           true);
 pref("advanced.mailftp",                    false);
 pref("image.animation_mode",                "normal");
 
@@ -475,8 +450,9 @@ pref("network.http.accept.default", "text/xml,application/xml,application/xhtml+
 
 pref("network.http.sendRefererHeader",      2); // 0=don't send any, 1=send only on clicks, 2=send on image requests as well
 
-// Controls whether we send HTTPS referres to other HTTPS sites.
-// By default this is enabled for compatibility (see bug 141641)
+// This pref controls whether or not we send HTTPS referrers
+// cross domain.  By default, this is enabled for compatibility
+// with other browsers and many websites (see bug 141641).
 pref("network.http.sendSecureXSiteReferrer", true);
 
 // Maximum number of consecutive redirects before aborting.
@@ -515,9 +491,6 @@ pref("network.ftp.idleConnectionTimeout", 300);
 // directory listing format - constants are defined in nsIDirectoryListing.idl
 // Do not set this to 0...
 pref("network.dir.format", 2);
-
-// enables the prefetch service (i.e., prefetching of <link rel="next"> URLs).
-pref("network.prefetch-next", true);
 
 // sspitzer:  change this back to "news" when we get to beta.
 // for now, set this to news.mozilla.org because you can only
@@ -610,12 +583,12 @@ pref("intl.fallbackCharsetList.ISO-8859-1", "windows-1252");
 pref("font.language.group",                 "chrome://navigator/locale/navigator.properties");
 
 // -- folders (Mac: these are binary aliases.)
-pref("mail.signature_file",             "");
-pref("mail.directory",                  "");
+localDefPref("mail.signature_file",             "");
+localDefPref("mail.directory",                  "");
 
 pref("images.dither", "auto");
-pref("news.directory",                  "");
-pref("security.directory",              "");
+localDefPref("news.directory",                  "");
+localDefPref("security.directory",              "");
 
 pref("autoupdate.enabled",              true);
 
@@ -629,9 +602,7 @@ pref("security.xpconnect.plugin.unrestricted", true);
 
 // Modifier key prefs: default to Windows settings,
 // menu access key = alt, accelerator key = control.
-// Use 17 for Ctrl, 18 for Alt, 224 for Meta, 0 for none. Mac settings in macprefs.js
 pref("ui.key.accelKey", 17);
-pref("ui.key.generalAccessKey", 18);
 pref("ui.key.menuAccessKey", 18);
 pref("ui.key.menuAccessKeyFocuses", false);
 pref("ui.key.saveLink.shift", true); // true = shift, false = meta
@@ -700,7 +671,7 @@ pref("bidi.texttype", 1);
 //  Controls Text Mode
 // ------------------
 // 1 = logicalcontrolstextmodeBidiCmd
-// 2 = visualcontrolstextmodeBidi <-- NO LONGER SUPPORTED
+// 2 = visiualcontrolstextmodeBidi
 // 3 = containercontrolstextmodeBidi *
 pref("bidi.controlstextmode", 1);
 // ------------------
@@ -759,29 +730,15 @@ pref("update_notifications.provider.0.datasource", "chrome://communicator-region
 // 0 opens the download manager
 // 1 opens a progress dialog
 // 2 and other values, no download manager, no progress dialog. 
-pref("browser.downloadmanager.behavior", 0);
+pref("browser.downloadmanager.behavior", 1);
 
 // if true, allow plug-ins to override internal imglib decoder mime types in full-page mode
 pref("plugin.override_internal_types", false);
-pref("plugin.expose_full_path", false); // if true navigator.plugins reveals full path
+pref("plugin.expose_full_path",false); // if true navigator.plugins reveals full path
 
-// See bug 136985.  Gives embedders a pref to hook into to show
-// a popup blocker if they choose.
-pref("browser.popups.showPopupBlocker", true);
+// if true, enable XSLT (if installed)
+pref("xslt.enabled", true);
 
 // Help Windows NT, 2000, and XP dialup a RAS connection
 // when a network address is unreachable.
-pref("network.autodial-helper.enabled", true);
-
-// Pref to control whether we set ddeexec subkeys for the http
-// Internet shortcut protocol if we are handling it.  These
-// subkeys will be set only while we are running (to avoid the
-// problem of Windows showing an alert when it tries to use DDE
-// and we're not already running).
-pref("advanced.system.supportDDEExec", true);
-
-// Pref to control whether the viewmanager code does double-buffering or not
-// See http://bugzilla.mozilla.org/show_bug.cgi?id=169483 for further details...
-pref("viewmanager.do_doublebuffering", true);
-
-
+pref("network.autodial-helper.enabled", false);

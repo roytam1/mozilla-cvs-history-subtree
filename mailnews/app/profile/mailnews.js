@@ -136,7 +136,7 @@ pref("mail.addr_book.displayName.lastnamefirst", false); // generate display nam
 pref("mail.attach_vcard",                   false);
 pref("mail.html_compose",                   true);
 pref("mail.compose.other.header",	    "");
-pref("mail.fcc_folder",                     "");
+localDefPref("mail.fcc_folder",                     "");
 pref("mail.encrypt_outgoing_mail",          false);
 pref("mail.crypto_sign_outgoing_mail",      false);
 pref("mail.default_html_action", 0);          // 0=ask, 1=plain, 2=html, 3=both
@@ -162,14 +162,13 @@ pref("news.max_articles",                   500);
 pref("news.mark_old_read",                  false);
 
 pref("mailnews.wraplength",                 72);
-pref("mail.compose.wrap_to_window_width",   false);
 
 pref("mailnews.reply_on_top",               0); // 0=bottom 1=top 2=select+bottom 3=select+top
 
 // 0=no header, 1="<author> wrote:", 2="On <date> <author> wrote:", 3="<author> wrote On <date>:", 4=user specified
 pref("mailnews.reply_header_type",          1);
 // locale which affects date format, set empty string to use application default locale
-pref("mailnews.reply_header_locale",        "");
+pref("mailnews.reply_header_locale",        "en-US");
 pref("mailnews.reply_header_authorwrote",   "chrome://messenger/locale/messengercompose/composeMsgs.properties");
 pref("mailnews.reply_header_ondate",        "On %s");
 // separator to separate between date and author
@@ -286,15 +285,13 @@ pref("mail.identity.default.stationery_folder","mailbox://nobody@Local%20Folders
 pref("mail.identity.default.directoryServer","");
 pref("mail.identity.default.overrideGlobal_Pref", false);
 
-// by default, only collect addresses the user sends to (outgoing)
-// incoming is all spam anyways
+
+// don't collect incoming by default.  it's all spam anyways
 pref("mail.collect_email_address_incoming", false);
 pref("mail.collect_email_address_outgoing", true);
 pref("mail.collect_email_address_newsgroup", false);
-
-// by default, use the Personal Addressbook for collection
-pref("mail.collect_addressbook","moz-abmdbdirectory://abook.mab"); // the Personal addressbook.
-
+pref("mail.collect_email_address_enable_size_limit", true);
+pref("mail.collect_email_address_size_limit", 700);
 pref("mail.default_sendlater_uri","mailbox://nobody@Local%20Folders/Unsent%20Messages");
 
 pref("mail.server.default.port", -1);
@@ -331,43 +328,12 @@ pref("mail.server.default.allows_specialfolders_usage", true);
 pref("mail.server.default.canCreateFolders", true);
 pref("mail.server.default.canFileMessages", true);
 
-// special enhancements for IMAP servers
-pref("mail.server.default.store_read_mail_in_pfc", false);  
-pref("mail.server.default.store_sent_mail_in_pfc", false);  
-
-// for spam
-pref("mail.server.default.spamLevel",60);  // 0 - 100, 0 off, 20, lowest, 40 low, 60 medium, 80 high, 100 highest
-pref("mail.server.default.moveOnSpam",false);
-pref("mail.server.default.moveTargetMode",0); // 0 == "Junk" on server, 1 == specific folder
-pref("mail.server.default.spamActionTargetAccount","");
-pref("mail.server.default.spamActionTargetFolder","");
-pref("mail.server.default.useWhiteList",true);
-pref("mail.server.default.whiteListAbURI","moz-abmdbdirectory://abook.mab");  // the Personal addressbook.
-pref("mail.server.default.purgeSpam",false);
-pref("mail.server.default.purgeSpamInterval",14); // 14 days
-pref("mail.server.default.spamLoggingEnabled",false);
-
 pref("mail.smtpserver.default.auth_method", 1); // auth any
 pref("mail.smtpserver.default.try_ssl", 0);
 
-// For the next 3 prefs, see <http://www.bucksch.org/1/projects/mozilla/16507>
-pref("mail.display_glyph", true);   // TXT->HTML :-) etc. in viewer
-pref("mail.display_struct", true);  // TXT->HTML *bold* etc. in viewer; ditto
-pref("mail.send_struct", false);   // HTML->HTML *bold* etc. during Send; ditto
-// For the next 4 prefs, see <http://www.bucksch.org/1/projects/mozilla/108153>
-pref("mailnews.display.prefer_plaintext", false);  // Ignore HTML parts in multipart/alternative
-pref("mailnews.display.html_as", 0);  // How to display HTML parts. 0 = Render the sender's HTML; 1 = HTML->TXT->HTML; 2 = Show HTML source; 3 = Sanitize HTML
-pref("mailnews.display.html_sanitizer.allowed_tags", "html head title body p br div(lang,title) h1 h2 h3 h4 h5 h6 ul ol li(value,start,compact) dl dt dd blockquote(type,cite) pre noscript noframes strong em sub sup span(lang,title) acronym(title) abbr(title) del(title,cite,datetime) ins(title,cite,datetime) q(cite) a(href,name,title) img(alt,title,longdesc) base(href) area(alt) applet(alt) object(alt) var samp dfn address kbd code cite s strike tt b i table(align) caption tr(align,valign) td(rowspan,colspan,align,valign) th(rowspan,colspan,align,valign)");
-pref("mailnews.display.disallow_mime_handlers", 0);  /* Let only a few classes process incoming data. This protects from bugs (e.g. buffer overflows) and from security loopholes (e.g. allowing unchecked HTML in some obscure classes, although the user has html_as > 0).
-This option is mainly for the UI of html_as.
-0 = allow all available classes
-1 = Use hardcoded blacklist to avoid rendering (incoming) HTML
-2 = ... and inline images
-3 = ... and some other uncommon content types
-100 = Use hardcoded whitelist to avoid even more bugs(buffer overflows).
-      This mode will limit the features available (e.g. uncommon
-      attachment types and inline images) and is for paranoid users.
-*/
+pref("mail.display_glyph", true);   // see <http://www.bucksch.org/1/projects/mozilla/16507>
+pref("mail.display_struct", true);  // ditto
+pref("mail.send_struct", false);   // ditto
 
 pref("mail.forward_message_mode", 0); // 0=default as attachment 2=forward as inline with attachments, (obsolete 4.x value)1=forward as quoted (mapped to 2 in mozilla)
 
@@ -406,11 +372,6 @@ pref("mailnews.append_preconfig_accounts.version",1);
 pref("mail.append_preconfig_smtpservers.version",1);
 
 pref("mail.biff.play_sound",true);
-// 0 == default system sound, 1 == user specified wav
-pref("mail.biff.play_sound.type",0);
-// _moz_mailbeep is a magic key, for the default sound.
-// otherwise, this needs to be a file url
-pref("mail.biff.play_sound.url","");
 pref("mail.biff.show_alert", true);
 
 pref("mail.content_disposition_type", 0);
@@ -477,7 +438,7 @@ pref("mailnews.labels.color.5", "#993399"); // default: purple
 //default null headers
 //example "X-Warn: XReply", list of hdrs separated by ": "
 pref("mailnews.customHeaders", ""); 
-
+ 
 pref("mailnews.fakeaccount.show", false);
 pref("mailnews.fakeaccount.server", "");
 
