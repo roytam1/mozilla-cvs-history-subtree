@@ -113,6 +113,7 @@
 #include "nsIObserverService.h"
 #include "nsIObserver.h"
 #include "nsIDocShell.h"        // for reflow observation
+#include "nsIBaseWindow.h"
 #include "nsLayoutErrors.h"
 #include "nsLayoutUtils.h"
 #include "nsCSSRendering.h"
@@ -1181,6 +1182,7 @@ public:
                             nsEvent* aEvent,
                             nsEventStatus* aStatus);
   NS_IMETHOD ResizeReflow(nsIView *aView, nscoord aWidth, nscoord aHeight);
+  NS_IMETHOD_(PRBool) IsVisible();
 
   //nsIFocusTracker interface
   NS_IMETHOD ScrollFrameIntoView(nsIFrame *aFrame);
@@ -6142,6 +6144,18 @@ NS_IMETHODIMP
 PresShell::ResizeReflow(nsIView *aView, nscoord aWidth, nscoord aHeight)
 {
   return ResizeReflow(aWidth, aHeight);
+}
+
+NS_IMETHODIMP_(PRBool)
+PresShell::IsVisible()
+{
+  nsCOMPtr<nsISupports> container = mPresContext->GetContainer();
+  nsCOMPtr<nsIBaseWindow> bw = do_QueryInterface(container);
+  if (!bw)
+    return PR_FALSE;
+  PRBool res = PR_TRUE;
+  bw->GetVisibility(&res);
+  return res;
 }
 
 nsresult

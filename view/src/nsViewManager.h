@@ -40,7 +40,6 @@
 #include "nsCOMPtr.h"
 #include "nsIViewManager.h"
 #include "nsCRT.h"
-#include "nsIPresContext.h"
 #include "nsIWidget.h"
 #include "nsITimer.h"
 #include "prtime.h"
@@ -353,6 +352,18 @@ private:
    */
   void GetMaxWidgetBounds(nsRect& aMaxWidgetBounds) const;
 
+  void DoSetWindowDimensions(nscoord aWidth, nscoord aHeight)
+  {
+    nsRect oldDim;
+    nsRect newDim(0, 0, aWidth, aHeight);
+    mRootView->GetDimensions(oldDim);
+    if (oldDim != newDim) {
+      mRootView->SetDimensions(newDim);
+      if (mObserver)
+        mObserver->ResizeReflow(mRootView, aWidth, aHeight);
+    }
+  }
+
 public: // NOT in nsIViewManager, so private to the view module
   nsView* GetRootView() const { return mRootView; }
   nsView* GetMouseEventGrabber() const { return mMouseGrabber; }
@@ -394,6 +405,10 @@ private:
   nsIScrollableView *mRootScrollable;
   PRInt32           mCachingWidgetChanges;
   nscolor           mDefaultBackgroundColor;
+
+  // The size for a resize that we delayed until the root view becomes
+  // visible again.
+  nsSize            mDelayedResize;
 
   nsHashtable       mMapPlaceholderViewToZTreeNode;
 

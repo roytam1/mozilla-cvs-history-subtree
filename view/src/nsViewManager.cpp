@@ -98,6 +98,8 @@ static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 #define PUSH_FILTER       0x00000080
 #define POP_FILTER        0x00000100
 
+#define NSCOORD_NONE      PR_INT32_MIN
+
 #define SUPPORT_TRANSLUCENT_VIEWS
 
 /*
@@ -396,6 +398,24 @@ static PRInt32 CompareZIndex(PRInt32 aZIndex1, PRBool aTopMost1, PRBool aIsAuto1
   }
 }
 
+static PRBool IsViewVisible(nsView *aView)
+{
+  for (nsIView *view = aView; view; view = view->GetParent()) {
+    // We don't check widget visibility here because in the future (with
+    // the better approach to this that's in attachment 160801 on bug
+    // 227361), callers of the equivalent to this function should be able
+    // to rely on being notified when the result of this function changes.
+    if (view->GetVisibility() == nsViewVisibility_kHide)
+      return PR_FALSE;
+  }
+  // Find out if the root view is visible by asking the view observer
+  // (this won't be needed anymore if we link view trees across chrome /
+  // content boundaries in DocumentViewerImpl::MakeWindow).
+  nsCOMPtr<nsIViewObserver> vo;
+  aView->GetViewManager()->GetViewObserver(*getter_AddRefs(vo));
+  return vo->IsVisible();
+}
+
 void
 nsViewManager::PostInvalidateEvent()
 {
@@ -419,6 +439,7 @@ nsVoidArray* nsViewManager::gViewManagers = nsnull;
 PRUint32 nsViewManager::gLastUserEventTime = 0;
 
 nsViewManager::nsViewManager()
+  : mDelayedResize(NSCOORD_NONE, NSCOORD_NONE)
 {
   if (gViewManagers == nsnull) {
     NS_ASSERTION(mVMCount == 0, "View Manager count is incorrect");
@@ -639,10 +660,15 @@ NS_IMETHODIMP nsViewManager::SetWindowOffset(nscoord aX, nscoord aY)
 NS_IMETHODIMP nsViewManager::GetWindowDimensions(nscoord *aWidth, nscoord *aHeight)
 {
   if (nsnull != mRootView) {
-    nsRect dim;
-    mRootView->GetDimensions(dim);
-    *aWidth = dim.width;
-    *aHeight = dim.height;
+    if (mDelayedResize == nsSize(NSCOORD_NONE, NSCOORD_NONE)) {
+      nsRect dim;
+      mRootView->GetDimensions(dim);
+      *aWidth = dim.width;
+      *aHeight = dim.height;
+    } else {
+      *aWidth = mDelayedResize.width;
+      *aHeight = mDelayedResize.height;
+    }
   }
   else
     {
@@ -654,17 +680,14 @@ NS_IMETHODIMP nsViewManager::GetWindowDimensions(nscoord *aWidth, nscoord *aHeig
 
 NS_IMETHODIMP nsViewManager::SetWindowDimensions(nscoord aWidth, nscoord aHeight)
 {
-  // Resize the root view
-  if (nsnull != mRootView) {
-    nsRect dim(0, 0, aWidth, aHeight);
-    mRootView->SetDimensions(dim);
+  if (mRootView) {
+    if (IsViewVisible(mRootView)) {
+      mDelayedResize.SizeTo(NSCOORD_NONE, NSCOORD_NONE);
+      DoSetWindowDimensions(aWidth, aHeight);
+    } else {
+      mDelayedResize.SizeTo(aWidth, aHeight);
+    }
   }
-
-  //printf("new dims: %d %d\n", aWidth, aHeight);
-  // Inform the presentation shell that we've been resized
-  if (nsnull != mObserver)
-    mObserver->ResizeReflow(mRootView, aWidth, aHeight);
-  //printf("reflow done\n");
 
   return NS_OK;
 }
@@ -1855,6 +1878,7 @@ NS_IMETHODIMP nsViewManager::DispatchEvent(nsGUIEvent *aEvent, nsEventStatus *aS
 
     case NS_PAINT:
       {
+        nsPaintEvent *event = NS_STATIC_CAST(nsPaintEvent*, aEvent);
         nsView *view = nsView::GetViewFor(aEvent->widget);
 
         if (!view || !mContext)
@@ -1864,12 +1888,12 @@ NS_IMETHODIMP nsViewManager::DispatchEvent(nsGUIEvent *aEvent, nsEventStatus *aS
 
         // The rect is in device units, and it's in the coordinate space of its
         // associated window.
-        nsCOMPtr<nsIRegion> region = ((nsPaintEvent*)aEvent)->region;
+        nsCOMPtr<nsIRegion> region = event->region;
         if (!region) {
           if (NS_FAILED(CreateRegion(getter_AddRefs(region))))
             break;
 
-          const nsRect& damrect = *((nsPaintEvent*)aEvent)->rect;
+          const nsRect& damrect = *event->rect;
           region->SetTo(damrect.x, damrect.y, damrect.width, damrect.height);
         }
         
@@ -1878,8 +1902,21 @@ NS_IMETHODIMP nsViewManager::DispatchEvent(nsGUIEvent *aEvent, nsEventStatus *aS
 
         // Refresh the view
         if (mRefreshEnabled) {
-          Refresh(view, ((nsPaintEvent*)aEvent)->renderingContext, region,
-                  NS_VMREFRESH_DOUBLE_BUFFER);
+          // If an ancestor widget was hidden and then shown, we could
+          // have a delayed resize to handle.
+          if (view == mRootView &&
+              mDelayedResize != nsSize(NSCOORD_NONE, NSCOORD_NONE) &&
+              IsViewVisible(view)) {
+            DoSetWindowDimensions(mDelayedResize.width, mDelayedResize.height);
+            mDelayedResize.SizeTo(NSCOORD_NONE, NSCOORD_NONE);
+            
+            // Paint later.
+            UpdateView(view, NS_VMREFRESH_NO_SYNC);
+          } else {
+            //NS_ASSERTION(IsViewVisible(view), "painting an invisible view");
+            Refresh(view, event->renderingContext, region,
+                    NS_VMREFRESH_DOUBLE_BUFFER);
+          }
         } else {
           // since we got an NS_PAINT event, we need to
           // draw something so we don't get blank areas.
