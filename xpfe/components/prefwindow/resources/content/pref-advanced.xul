@@ -33,17 +33,14 @@
   <script type="application/x-javascript">
   <![CDATA[
     var panel = "chrome://communicator/content/pref/pref-advanced.xul";
-    var _elementIDs = ["advancedJavaAllow", "javascriptEnabled", "advancedMailFTP", "advancedMailFTPAddress",
-		"enableTurbo"];
+    var _elementIDs = ["advancedJavaAllow", "javascriptEnabled", "advancedMailFTP", "advancedMailFTPAddress"];
     
-    function Startup()
-    {
+    function Startup() {
       ftpCheck();
-	  turboCheck();
+      turboCheck();
     }   
     
-    function ftpCheck()
-    {
+    function ftpCheck() {
       var checked = document.getElementById("advancedMailFTP").checked;
       var field = document.getElementById("advancedMailFTPAddress");
       field.disabled = !checked;
@@ -51,27 +48,27 @@
         field.focus();
     }
 
-	/* 
-	 * Name: turboCheck()
-	 * 
-	 * Arguments: none
-	 *
-	 * Description: This function is called when the root advanced prefs panel
-	 * is loaded. The turbo mode setting is not exactly a preference -- setting
-	 * the checkbox should (on leaving the prefs with an "Ok") result in a call
-	 * to the backend to do the necessary win32 registry twiddling needed for
-	 * turbo mode to go into affect. Clearing it should undo this work. We need
-	 * to call the backend to determine if turbo mode is enabled (since we are 
-	 * required to check for it in a non-trivial way) and then explicitly set the
-	 * checkbox here based on what we find. Finally, we have to hide the checkbox
-	 * (and the group box that frames it) if we are not executing on a Win32 
-	 * platform.
-	 *
-	 * Return Value: void
-	 *
-	 * Original Code: syd@netscape.com 6/8/2001
-	 *
-	*/
+    /* 
+     * Name: turboCheck()
+     * 
+     * Arguments: none
+     *
+     * Description: This function is called when the root advanced prefs panel
+     * is loaded. The turbo mode setting is not exactly a preference -- setting
+     * the checkbox should (on leaving the prefs with an "Ok") result in a call
+     * to the backend to do the necessary win32 registry twiddling needed for
+     * turbo mode to go into effect. Clearing it should undo this work. We need
+     * to call the backend to determine if turbo mode is enabled (since we are 
+     * required to check for it in a non-trivial way) and then explicitly set the
+     * checkbox here based on what we find. Finally, we have to hide the checkbox
+     * (and the group box that frames it) if we are not executing on a Win32 
+     * platform.
+     *
+     * Return Value: void
+     *
+     * Original Code: syd@netscape.com 6/8/2001
+     *
+    */
 
     function turboCheck()
     {
@@ -80,19 +77,16 @@
         frame.setAttribute("hidden", "true");
         return;
       }
-      if (!("didCheckTurbo" in parent))
-        parent.didCheckTurbo = false;
       if (!("isTurboEnabled" in parent))
-        parent.isTurboEnabled = false;
-      if (parent.didCheckTurbo) {
+        parent.isTurboEnabled = -1;
+      else {
         document.getElementById("enableTurbo").checked = parent.isTurboEnabled;
         return;
       }
       var winhooksService = Components.classes["@mozilla.org/winhooks;1"].getService(Components.interfaces.nsIWindowsHooks);
       if (winhooksService) {
-        var isTurbo = winhooksService.isStartupTurboEnabled();
-        document.getElementById("enableTurbo").checked = isTurbo;
-        parent.didCheckTurbo = true;
+        parent.isTurboEnabled = winhooksService.isStartupTurboEnabled();
+        document.getElementById("enableTurbo").checked = parent.isTurboEnabled;
       }
 
       parent.hPrefWindow.registerOKCallbackFunc( saveTurboSetting );
@@ -118,7 +112,7 @@
         return;   
 
       var winhooksService = Components.classes["@mozilla.org/winhooks;1"].getService(Components.interfaces.nsIWindowsHooks);
-      if (winhooksService) {
+      if (winhooksService && parent.isTurboEnabled != -1) {
         if (parent.isTurboEnabled)
           winhooksService.startupTurboEnable();
         else 
@@ -170,7 +164,7 @@
     <separator/>
   </groupbox>
   <groupbox orient="vertical" id="perfSettings">
-   <label id="perfLabel" value="&perfTitle.label;"/>
+    <label id="perfLabel" value="&perfTitle.label;"/>
     <vbox id="perfBox" align="start">
       <checkbox id="enableTurbo" label="&enableTurbo.label;" accesskey="&enableTurboCheck.accesskey;"
                 oncommand="parent.isTurboEnabled = this.checked;"/>
