@@ -217,6 +217,16 @@ void JS::Formatter::printVFormat8(const char *format, va_list args)
 }
 
 
+// Write the printf format using the supplied args.
+void JS::printFormat(Formatter &f, const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    f.printVFormat8(format, args);
+    va_end(args);
+}
+
+
 static const int printCharBufferSize = 64;
 
 // Print ch count times.

@@ -84,20 +84,9 @@ namespace JavaScript
         Formatter &operator<<(int32 i) {printFormat(*this, "%d", i); return *this;}
         Formatter &operator<<(uint8 i) {printFormat(*this, "%u", i); return *this;}
 
-        friend void printString(Formatter &f, const char *strBegin, const char *strEnd) {
-            f.printStr8(strBegin, strEnd);
-        }
-
-        friend void printString(Formatter &f, const char16 *strBegin, const char16 *strEnd) {
-            f.printStr16(strBegin, strEnd);
-        }
-
-        friend void printFormat(Formatter &f, const char *format, ...) {
-            va_list args;
-            va_start(args, format);
-            f.printVFormat8(format, args);
-            va_end(args);
-        }
+        friend void printString(Formatter &f, const char *strBegin, const char *strEnd) {f.printStr8(strBegin, strEnd);}
+        friend void printString(Formatter &f, const char16 *strBegin, const char16 *strEnd) {f.printStr16(strBegin, strEnd);}
+        friend void printFormat(Formatter &f, const char *format, ...);
     };
 
     void printNum(Formatter &f, uint32 i, int nDigits, char pad, const char *format);
