@@ -42,7 +42,7 @@ nsSVGGraphicFrame::nsSVGGraphicFrame()
     : mUpdateFlags(0)
 {
 #ifdef DEBUG
-  printf("nsSVGGraphicFrame %p CTOR\n", this);
+//  printf("nsSVGGraphicFrame %p CTOR\n", this);
 #endif
 }
 
@@ -58,7 +58,7 @@ nsSVGGraphicFrame::~nsSVGGraphicFrame()
     value->RemoveObserver(this);
 
 #ifdef DEBUG
-  printf("~nsSVGGraphicFrame %p\n", this);
+//  printf("~nsSVGGraphicFrame %p\n", this);
 #endif
 }
 
@@ -108,13 +108,13 @@ nsSVGGraphicFrame::AttributeChanged(nsIPresContext* aPresContext,
   // we don't use this notification mechanism
   
 #ifdef DEBUG
-  printf("** nsSVGGraphicFrame::AttributeChanged(");
-  nsAutoString str;
-  aAttribute->ToString(str);
-  nsCAutoString cstr;
-  cstr.AssignWithConversion(str);
-  printf(cstr.get());
-  printf(")\n");
+//  printf("** nsSVGGraphicFrame::AttributeChanged(");
+//  nsAutoString str;
+//  aAttribute->ToString(str);
+//  nsCAutoString cstr;
+//  cstr.AssignWithConversion(str);
+//  printf(cstr.get());
+//  printf(")\n");
 #endif
   
   return NS_OK;
