@@ -1338,6 +1338,11 @@ private:
 class XPCWrappedNativeTearOff
 {
 public:
+    JSBool IsAvailable() const {return mInterface == nsnull;}    
+    JSBool IsReserved()  const {return mInterface == (XPCNativeInterface*)1;}
+    JSBool IsValid()     const {return !IsAvailable() && !IsReserved();}
+    void   SetReserved()       {mInterface = (XPCNativeInterface*)1;}
+
     XPCNativeInterface* GetInterface() const {return mInterface;}
     nsISupports*        GetNative()    const {return mNative;}
     JSObject*           GetJSObject()  const {return mJSObject;}
@@ -1528,9 +1533,10 @@ public:
     inline JSBool HasInterfaceNoQI(XPCNativeInterface* aInterface);
     inline JSBool HasInterfaceNoQI(const nsIID& iid);
 
-    inline XPCWrappedNativeTearOff* FindTearOff(XPCCallContext& ccx,
-                                                XPCNativeInterface* aInterface,
-                                                JSBool needJSObject = JS_FALSE);
+    XPCWrappedNativeTearOff* FindTearOff(XPCCallContext& ccx,
+                                         XPCNativeInterface* aInterface,
+                                         JSBool needJSObject = JS_FALSE,
+                                         nsresult* pError = nsnull);
 
     void 
     MarkSets() const 
@@ -1563,8 +1569,7 @@ protected:
     // This ctor is used if this object will NOT have a proto.
     XPCWrappedNative(nsISupports* aIdentity,
                      XPCWrappedNativeScope* aScope,
-                     XPCNativeSet* aSet,
-                     void* SecurityInfo);
+                     XPCNativeSet* aSet);
 
     virtual ~XPCWrappedNative();
 
@@ -1574,13 +1579,13 @@ private:
 
     JSBool ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface);
 
-    JSBool InitTearOff(XPCCallContext& ccx,
-                       XPCWrappedNativeTearOff* aTearOff,
-                       XPCNativeInterface* aInterface,
-                       JSBool needJSObject);
+    nsresult InitTearOff(XPCCallContext& ccx,
+                         XPCWrappedNativeTearOff* aTearOff,
+                         XPCNativeInterface* aInterface,
+                         JSBool needJSObject);
 
     JSBool InitTearOffJSObject(XPCCallContext& ccx,
-                               XPCWrappedNativeTearOff* to);
+                                XPCWrappedNativeTearOff* to);
 
     static nsresult GatherScriptableInfo(nsISupports* obj,
                                          nsIClassInfo* classInfo,

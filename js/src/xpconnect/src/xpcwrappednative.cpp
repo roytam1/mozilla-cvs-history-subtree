@@ -200,6 +200,8 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
                                XPCNativeInterface* Interface,
                                XPCWrappedNative** resultWrapper)
 {
+    nsresult rv;
+
     nsCOMPtr<nsISupports> identity(do_QueryInterface(Object));
     if(!identity)
     {
@@ -219,10 +221,11 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
 
     if(wrapper)
     {
-        if(!wrapper->FindTearOff(ccx, Interface))
+        if(!wrapper->FindTearOff(ccx, Interface, JS_FALSE, &rv))
         {
             NS_RELEASE(wrapper);
-            return NS_ERROR_NO_INTERFACE;
+            NS_ASSERTION(NS_FAILED(rv), "returning NS_OK on failure");
+            return rv;
         }
         DEBUG_CheckWrapperThreadSafety(wrapper);
         *resultWrapper = wrapper;
@@ -285,10 +288,11 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
 
     if(wrapper)
     {
-        if(!wrapper->FindTearOff(ccx, Interface))
+        if(!wrapper->FindTearOff(ccx, Interface, JS_FALSE, &rv))
         {
             NS_RELEASE(wrapper);
-            return NS_ERROR_NO_INTERFACE;
+            NS_ASSERTION(NS_FAILED(rv), "returning NS_OK on failure");
+            return rv;
         }
         DEBUG_CheckWrapperThreadSafety(wrapper);
         *resultWrapper = wrapper;
@@ -298,7 +302,9 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     XPCWrappedNativeProto* proto = nsnull;
 
     // If there is nsIClassInfo then we use a wrapper that needs a prototype.
-    // We need to get the proto before the security check below.
+    
+    // Note that the security check happens inside FindTearOff - after the 
+    // wrapper is actually created, but before JS code can see it.
 
     if(info)
     {
@@ -306,34 +312,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
                                                     isClassInfo);
         if(!proto)
             return NS_ERROR_FAILURE;
-    }
-
-    // We have to ask the security manager if it is OK to create this wrapper.
-    // We give it a place to store the policy for future use. If we have a
-    // proto then we give it that space (where it might have previously cached
-    // a its own info about this class). If this wrapper is not going to have a
-    // proto, then we use some temporary space to capture the info and then
-    // pass that to the wrapper later after the wrapper is constucted.
-
-    void* securityInfoSpace = nsnull;
-    void** pSecurityInfoSpace = proto ? 
-                proto->GetSecurityInfoAddr() : &securityInfoSpace;
-
-    nsIXPCSecurityManager* sm;
-       sm = ccx.GetXPCContext()->GetAppropriateSecurityManager(
-                            nsIXPCSecurityManager::HOOK_CREATE_WRAPPER);
-    if(sm && NS_FAILED(sm->
-                CanCreateWrapper(ccx, *Interface->GetIID(),
-                                 identity, info, pSecurityInfoSpace)))
-    {
-        // the security manager vetoed. It should have set an exception.
-        return NS_ERROR_XPC_SECURITY_MANAGER_VETO;
-    }
-
-    // Now we build the wrapper (with or without a proto).
-
-    if(info)
-    {    
+        
         wrapper = new XPCWrappedNative(identity, proto);
         if(!wrapper)
         {
@@ -349,10 +328,11 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         if(!set)
             return NS_ERROR_FAILURE;
 
-        wrapper = new XPCWrappedNative(identity, Scope, set, 
-                                       securityInfoSpace);
+        wrapper = new XPCWrappedNative(identity, Scope, set);
         if(!wrapper)
             return NS_ERROR_FAILURE;
+
+        DEBUG_ReportShadowedMembers(set, wrapper, nsnull);
     }
 
     if(!wrapper->Init(ccx, parent, siWrapper))
@@ -364,11 +344,12 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         return NS_ERROR_FAILURE;
     }
 
-    if(!wrapper->FindTearOff(ccx, Interface))
+    if(!wrapper->FindTearOff(ccx, Interface, JS_FALSE, &rv))
     {
         // Second reference will be released by the FlatJSObject's finializer.
         wrapper->Release();
-        return NS_ERROR_FAILURE;
+        NS_ASSERTION(NS_FAILED(rv), "returning NS_OK on failure");
+        return rv;
     }
 
     // Redundant wrapper must be killed outside of the map lock.
@@ -442,10 +423,12 @@ XPCWrappedNative::GetUsedOnly(XPCCallContext& ccx,
         NS_ADDREF(wrapper);
     }
 
-    if(!wrapper->FindTearOff(ccx, Interface))
+    nsresult rv;
+    if(!wrapper->FindTearOff(ccx, Interface, JS_FALSE, &rv))
     {
         NS_RELEASE(wrapper);
-        return NS_ERROR_FAILURE;
+        NS_ASSERTION(NS_FAILED(rv), "returning NS_OK on failure");
+        return rv;
     }
 
     *resultWrapper = wrapper;
@@ -474,11 +457,10 @@ XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,
 // This ctor is used if this object will NOT have a proto.
 XPCWrappedNative::XPCWrappedNative(nsISupports* aIdentity,
                                    XPCWrappedNativeScope* aScope,
-                                   XPCNativeSet* aSet,
-                                   void* SecurityInfo)
+                                   XPCNativeSet* aSet)
 
     : mScopeOrHasProtoIfNull(aScope),
-      mMaybeSecurityInfo(SecurityInfo),
+      mMaybeSecurityInfo(nsnull),
       mSet(aSet),
       mIdentity(aIdentity),
       mFlatJSObject((JSObject*)JSVAL_ONE), // non-null to pass IsValid() test
@@ -1146,7 +1128,69 @@ XPCWrappedNative::ExtendSet(XPCCallContext& ccx, XPCNativeInterface* aInterface)
     return JS_TRUE;
 }
 
-JSBool
+XPCWrappedNativeTearOff*
+XPCWrappedNative::FindTearOff(XPCCallContext& ccx,
+                              XPCNativeInterface* aInterface,
+                              JSBool needJSObject /* = JS_FALSE */,
+                              nsresult* pError /* = nsnull */)
+{
+    XPCAutoLock al(GetLock()); // hold the lock throughout
+
+    nsresult rv = NS_OK;
+    XPCWrappedNativeTearOff* to;
+    XPCWrappedNativeTearOff* firstAvailable = nsnull;
+
+    XPCWrappedNativeTearOffChunk* lastChunk;
+    XPCWrappedNativeTearOffChunk* chunk;
+    for(lastChunk = chunk = &mFirstChunk;
+        chunk;
+        lastChunk = chunk, chunk = chunk->mNextChunk)
+    {
+        to = chunk->mTearOffs;
+        for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK; i > 0; i--, to++)
+        {
+            if(to->GetInterface() == aInterface)
+            {
+                if(needJSObject && !to->GetJSObject())
+                {
+                    rv = InitTearOffJSObject(ccx, to);
+                    if(NS_FAILED(rv))
+                        to = nsnull;
+                }
+                goto return_result;
+            }
+            if(!firstAvailable && to->IsAvailable())
+                firstAvailable = to;
+        }
+    }
+
+    to = firstAvailable;
+
+    if(!to)
+    {
+        XPCWrappedNativeTearOffChunk* newChunk =
+            new XPCWrappedNativeTearOffChunk();
+        if(!newChunk)
+        {
+            rv = NS_ERROR_OUT_OF_MEMORY;
+            goto return_result;
+        }
+        lastChunk->mNextChunk = newChunk;
+        to = newChunk->mTearOffs;
+    }
+
+    rv = InitTearOff(ccx, to, aInterface, needJSObject);
+    if(NS_FAILED(rv))
+        to = nsnull;
+    
+return_result:
+
+    if(pError) 
+        *pError = rv;
+    return to;
+}
+
+nsresult
 XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
                               XPCWrappedNativeTearOff* aTearOff,
                               XPCNativeInterface* aInterface,
@@ -1156,6 +1200,7 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
 
     // Determine if the object really does this interface...
 
+    nsresult rv = NS_OK;
     const nsIID* iid = aInterface->GetIID();
     nsISupports* identity = GetIdentityObject();
     nsISupports* obj;
@@ -1166,11 +1211,17 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
     if(mScriptableInfo && mScriptableInfo->ClassInfoInterfacesOnly() &&
        !foundInSet && !mSet->HasInterfaceWithAncestor(aInterface))
     {
-        return JS_FALSE;
+        return NS_ERROR_NO_INTERFACE;
     }
 
+    // We are about to call out to other code. So protect our intended tearoff.
+    aTearOff->SetReserved();
+    
     if(NS_FAILED(identity->QueryInterface(*iid, (void**)&obj)) || !obj)
-        return JS_FALSE;
+    {
+        aTearOff->SetInterface(nsnull);
+        return NS_ERROR_NO_INTERFACE;
+    }
 
     // Guard against trying to build a tearoff for a shared nsIClassInfo.
     if(iid->Equals(NS_GET_IID(nsIClassInfo)))
@@ -1179,24 +1230,39 @@ XPCWrappedNative::InitTearOff(XPCCallContext& ccx,
         if(alternate_identity.get() != identity)
         {
             NS_RELEASE(obj);
-            return JS_FALSE;
+            aTearOff->SetInterface(nsnull);
+            return NS_ERROR_NO_INTERFACE;
         }
+    }
+
+    nsIXPCSecurityManager* sm;
+       sm = ccx.GetXPCContext()->GetAppropriateSecurityManager(
+                            nsIXPCSecurityManager::HOOK_CREATE_WRAPPER);
+    if(sm && NS_FAILED(sm->
+                CanCreateWrapper(ccx, *iid, identity, 
+                                 GetClassInfo(), GetSecurityInfoAddr())))
+    {
+        // the security manager vetoed. It should have set an exception.
+        NS_RELEASE(obj);
+        aTearOff->SetInterface(nsnull);
+        return NS_ERROR_XPC_SECURITY_MANAGER_VETO;
     }
 
     // If this is not already in our set we need to extend our set.
     if(!foundInSet && !ExtendSet(ccx, aInterface))
     {
         NS_RELEASE(obj);
-        return JS_FALSE;
+        aTearOff->SetInterface(nsnull);
+        return NS_ERROR_NO_INTERFACE;
     }
 
     aTearOff->SetInterface(aInterface);
     aTearOff->SetNative(obj);
 
     if(needJSObject && !InitTearOffJSObject(ccx, aTearOff))
-        return JS_FALSE;
+        return NS_ERROR_OUT_OF_MEMORY;
 
-    return JS_TRUE;
+    return NS_OK;
 }
 
 JSBool

@@ -550,52 +550,6 @@ XPCWrappedNative::HasInterfaceNoQI(const nsIID& iid)
     return nsnull != GetSet()->FindInterfaceWithIID(iid);
 }
 
-inline XPCWrappedNativeTearOff*
-XPCWrappedNative::FindTearOff(XPCCallContext& ccx,
-                              XPCNativeInterface* aInterface,
-                              JSBool needJSObject /* = JS_FALSE */)
-{
-    XPCAutoLock al(GetLock()); // hold the lock throughout
-
-    XPCWrappedNativeTearOff* firstAvailable = nsnull;
-
-    XPCWrappedNativeTearOffChunk* lastChunk;
-    XPCWrappedNativeTearOffChunk* chunk;
-    for(lastChunk = chunk = &mFirstChunk;
-        chunk;
-        lastChunk = chunk, chunk = chunk->mNextChunk)
-    {
-        XPCWrappedNativeTearOff* to = chunk->mTearOffs;
-        for(int i = XPC_WRAPPED_NATIVE_TEAROFFS_PER_CHUNK; i > 0; i--, to++)
-        {
-            if(to->GetInterface() == aInterface)
-            {
-                if(needJSObject && !to->GetJSObject() &&
-                   !InitTearOffJSObject(ccx, to))
-                   return nsnull;
-                return to;
-            }
-            if(!to->GetInterface() && !firstAvailable)
-                firstAvailable = to;
-        }
-    }
-
-    if(!firstAvailable)
-    {
-        XPCWrappedNativeTearOffChunk* newChunk =
-            new XPCWrappedNativeTearOffChunk();
-        if(!newChunk)
-            return nsnull;
-        lastChunk->mNextChunk = newChunk;
-        firstAvailable = newChunk->mTearOffs;
-    }
-
-    if(!InitTearOff(ccx, firstAvailable, aInterface, needJSObject))
-        return nsnull;
-
-    return firstAvailable;
-}
-
 inline void
 XPCWrappedNative::SweepTearOffs()
 {
