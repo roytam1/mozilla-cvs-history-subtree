@@ -143,6 +143,7 @@ nsDocShell::nsDocShell() :
   mURIResultedInDocument(PR_FALSE),
   mUseExternalProtocolHandler (PR_FALSE),
   mDisallowPopupWindows(PR_FALSE),
+  mIsBeingDestroyed(PR_FALSE),
   mParent(nsnull),
   mTreeOwner(nsnull),
   mChromeEventHandler(nsnull)
@@ -1706,6 +1707,8 @@ NS_IMETHODIMP nsDocShell::Create()
 
 NS_IMETHODIMP nsDocShell::Destroy()
 {
+    mIsBeingDestroyed = PR_TRUE;
+
    // Stop any URLs that are currently being loaded...
    Stop();
    if(mDocLoader)
@@ -2461,6 +2464,10 @@ NS_IMETHODIMP nsDocShell::ScrollByPages(PRInt32 numPages)
 
 NS_IMETHODIMP nsDocShell::GetScriptGlobalObject(nsIScriptGlobalObject** aGlobal)
 {
+  if (mIsBeingDestroyed) {
+    return NS_ERROR_NOT_AVAILABLE;
+  }
+
    NS_ENSURE_ARG_POINTER(aGlobal);
    NS_ENSURE_SUCCESS(EnsureScriptEnvironment(), NS_ERROR_FAILURE);
 
@@ -4424,6 +4431,10 @@ NS_IMETHODIMP nsDocShell::EnsureScriptEnvironment()
 {
    if(mScriptContext)
       return NS_OK;
+
+   if (mIsBeingDestroyed) {
+       return NS_ERROR_NOT_AVAILABLE;
+   }
 
    nsCOMPtr<nsIDOMScriptObjectFactory> factory =
        do_GetService(kDOMScriptObjectFactoryCID);
