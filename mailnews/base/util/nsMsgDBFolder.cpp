@@ -632,6 +632,26 @@ NS_IMETHODIMP nsMsgDBFolder::GetOfflineFileStream(nsMsgKey msgKey, PRUint32 *off
         hdr->GetMessageOffset(offset);
         hdr->GetOfflineMessageSize(size);
       }
+      // check if offline store really has the correct offset into the offline 
+      // store by reading the first few bytes. If it doesn't, clear the offline
+      // flag on the msg and return false, which will fall back to reading the message
+      // from the server.
+      nsCOMPtr <nsISeekableStream> seekableStream = do_QueryInterface(*aFileStream);
+      if (seekableStream)
+      {
+        rv = seekableStream->Seek(nsISeekableStream::NS_SEEK_CUR, *offset);
+        char startOfMsg[10];
+        PRUint32 bytesRead;
+        if (NS_SUCCEEDED(rv))
+          rv = (*aFileStream)->Read(startOfMsg, sizeof(startOfMsg), &bytesRead);
+
+        if (NS_FAILED(rv) || bytesRead != sizeof(startOfMsg) || strncmp(startOfMsg, "From ", 5))
+        {
+          if (mDatabase)
+            mDatabase->MarkOffline(msgKey, PR_FALSE, nsnull);
+          rv = NS_ERROR_FAILURE;
+        }
+      }
     }
   }
   return rv;
