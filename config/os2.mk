@@ -50,12 +50,15 @@ INSTALL		= $(NSINSTALL)
 JAVA_PROG	= $(FLIPPER) java -norestart
 JAVAC_ZIP	= $(subst $(BSLASH),$(SLASH),$(JAVA_HOME))/lib/classes.zip
 RANLIB		= echo
+EMACS           = emacs
+RM              = rm -rf
 
 ifdef XP_OS2_EMX
 ######################################################################
 # These are for emx/gcc
 ######################################################################
 
+CCC		= $(CC)
 LINK		= $(CC)
 
 # Determine which object format to use.  Two choices:
@@ -102,6 +105,7 @@ ifdef XP_OS2_VACPP
 ######################################################################
 FLIPPER         = flipper
 CC		= icc
+CCC		= $(CC)
 LINK		= ilink
 
 ifdef MAKE_DLL
