@@ -602,28 +602,14 @@ do_QueryElementAt( nsICollection* aCollection, PRUint32 aIndex, nsresult* aError
 static nsCOMPtr<nsIFileTransportService> gFileTransportService;
 
 nsDiskCacheDevice::nsDiskCacheDevice()
-    :   mCacheCapacity(0), mCacheMap(nsnull)
+    :   mInitialized(PR_FALSE), mCacheCapacity(0), mCacheMap(nsnull)
 {
 }
 
 nsDiskCacheDevice::~nsDiskCacheDevice()
 {
-    removeObservers(this);
-
-#if 1
-    // XXX implement poor man's eviction strategy right here,
-    // keep deleting cache entries from oldest to newest, until
-    // cache usage is brought below limits.
-    evictDiskCacheEntries();
-#endif
-
-    // XXX write out persistent information about the cache.
-    writeDiskCacheMap();
-
+    Shutdown();
     delete mCacheMap;
-
-    // XXX release the reference to the cached file transport service.
-    gFileTransportService = nsnull;
 }
 
 nsresult
@@ -651,8 +637,37 @@ nsDiskCacheDevice::Init()
         scanDiskCacheEntries(getter_AddRefs(entries));
     }
     
+    // XXX record that initialization succeeded.
+    mInitialized = PR_TRUE;
+    
     return NS_OK;
 }
+
+nsresult
+nsDiskCacheDevice::Shutdown()
+{
+    if (mInitialized) {
+        // XXX implement poor man's eviction strategy right here,
+        // keep deleting cache entries from oldest to newest, until
+        // cache usage is brought below limits.
+        evictDiskCacheEntries();
+
+        // XXX write out persistent information about the cache.
+        writeDiskCacheMap();
+
+        // XXX no longer initialized.
+        mInitialized = PR_FALSE;
+    }
+
+    // XXX disconnect observers.
+    removeObservers(this);
+    
+    // XXX release the reference to the cached file transport service.
+    gFileTransportService = nsnull;
+    
+    return NS_OK;
+}
+
 
 nsresult
 nsDiskCacheDevice::Create(nsCacheDevice **result)
