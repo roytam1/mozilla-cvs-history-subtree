@@ -53,17 +53,17 @@
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
 
-# pull svg mini-branch
-MOZ_CO_TAG = SVG_20010721_BRANCH
-MOZ_CO_FLAGS := $(MOZ_CO_FLAGS) -f
+# pull svg branch
+MOZ_CO_TAG = SVG_0_9_6_BRANCH
 
-NSPR_CO_TAG = NSPRPUB_PRE_4_2_CLIENT_BRANCH
-PSM_CO_TAG = #We will now build PSM from the tip instead of a branch.
-NSS_CO_TAG = NSS_CLIENT_TAG
-LDAPCSDK_CO_TAG = LDAPCSDK_40_BRANCH
-ACCESSIBLE_CO_TAG = 
-GFX2_CO_TAG = 
-IMGLIB2_CO_TAG = 
+
+NSPR_CO_TAG = SVG_0_9_6_BRANCH
+PSM_CO_TAG = SVG_0_9_6_BRANCH
+NSS_CO_TAG = SVG_0_9_6_BRANCH
+LDAPCSDK_CO_TAG = SVG_0_9_6_BRANCH
+ACCESSIBLE_CO_TAG = SVG_0_9_6_BRANCH
+GFX2_CO_TAG = SVG_0_9_6_BRANCH
+IMGLIB2_CO_TAG = SVG_0_9_6_BRANCH
 BUILD_MODULES = all
 
 #######################################################################
@@ -342,82 +342,94 @@ ifeq ($(MOZ_CO_MODULE),)
 endif
 CVSCO_SEAMONKEY := $(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZ_CO_MODULE)
 
-# HACK FOR SVG SEMI_BRANCH
 
-# add new files here
+# list of all files modified on our branch. used for the 'minibranch' targets below.
+# all other files/directories should be identical to MOZ_0_9_6_RELEASE
+# please add files here and in client.mak when you modify new files
 SVG_BRANCH_FILES := \
-	content/svg \
-	layout/svg \
-	dom/public/idl/svg \
+	mozilla/content/svg \
+	mozilla/layout/svg \
+	mozilla/dom/public/idl/svg \
 	\
-	aclocal.m4 \
-	allmakefiles.sh \
-	build/autoconf/libart.m4 \
-	build/mac/build_scripts/MozillaBuildList.pm \
-	client.mk \
-	client.mak \
-	config/autoconf.mk.in \
-	configure \
-	configure.in \
-	content/Makefile.in \
-	content/base/public/nsIDocument.h \
-	content/base/public/nsIElementFactory.h \
-	content/base/src/nsRuleNode.cpp \
-	content/base/src/nsStyleContext.cpp \
-	content/build/Makefile.in \
-	content/build/makefile.win \
-	content/build/nsContentCID.h \
-	content/build/nsContentDLF.cpp \
-	content/build/nsContentModule.cpp \
-	content/html/document/src/nsHTMLDocument.cpp \
-	content/html/style/src/nsCSSDeclaration.cpp \
-	content/html/style/src/nsCSSParser.cpp \
-	content/html/style/src/nsCSSStyleRule.cpp \
-	content/html/style/src/nsICSSDeclaration.h \
-	content/macbuild/contentSVG.mcp \
-	content/makefile.win \
-	content/shared/public/MANIFEST \
-	content/shared/public/Makefile.in \
-	content/shared/public/makefile.win \
-	content/shared/public/nsCSSKeywordList.h \
-	content/shared/public/nsCSSPropList.h \
-	content/shared/public/nsCSSProps.h \
-	content/shared/public/nsRuleNode.h \
-	content/shared/public/nsSVGAtomList.h \
-	content/shared/public/nsSVGAtoms.h \
-	content/shared/public/nsStyleStruct.h \
-	content/shared/src/Makefile.in \
-	content/shared/src/makefile.win \
-	content/shared/src/nsCSSProps.cpp \
-	content/shared/src/nsSVGAtoms.cpp \
-	content/shared/src/nsStyleStruct.cpp \
-	content/shared/src/nsStyleUtil.cpp \
-	content/xml/document/src/nsXMLDocument.cpp \
-	content/xml/document/src/nsXMLDocument.h \
-	dom/macbuild/dom_svgIDL.mcp \
-	dom/public/idl/Makefile.in \
-	dom/public/idl/makefile.win \
-	dom/public/nsIDOMClassInfo.h \
-	dom/src/base/nsDOMClassInfo.cpp \
-	gfx/public/nsTransform2D.h \
-	htmlparser/public/nsIParser.h \
-	htmlparser/src/nsExpatTokenizer.cpp \
-	htmlparser/src/nsViewSourceHTML.cpp \
-	htmlparser/src/nsWellFormedDTD.cpp \
-	layout/base/public/nsStyleConsts.h \
-	layout/build/Makefile.in \
-	layout/build/makefile.win \
-	layout/html/style/src/Makefile.in \
-	layout/html/style/src/makefile.win \
-	layout/html/style/src/nsCSSFrameConstructor.cpp \
-	layout/html/style/src/nsCSSFrameConstructor.h \
-	layout/html/tests/makefile.win \
-	layout/macbuild/layoutsvg.mcp \
-	Makefile.in \
-	makefile.win \
-	netwerk/mime/src/nsXMLMIMEDataSource.cpp \
-	uriloader/exthandler/nsExternalHelperAppService.cpp \
-	xpfe/browser/src/nsBrowserInstance.cpp
+	mozilla/aclocal.m4 \
+	mozilla/allmakefiles.sh \
+	mozilla/build/autoconf/libart.m4 \
+	mozilla/build/mac/build_scripts/MozillaBuildList.pm \
+	mozilla/client.mk \
+	mozilla/client.mak \
+	mozilla/config/autoconf.mk.in \
+	mozilla/configure \
+	mozilla/configure.in \
+	mozilla/content/Makefile.in \
+	mozilla/content/base/public/nsIDocument.h \
+	mozilla/content/base/public/nsIElementFactory.h \
+	mozilla/content/base/src/nsRuleNode.cpp \
+	mozilla/content/base/src/nsStyleContext.cpp \
+	mozilla/content/build/Makefile.in \
+	mozilla/content/build/makefile.win \
+	mozilla/content/build/nsContentCID.h \
+	mozilla/content/build/nsContentDLF.cpp \
+	mozilla/content/build/nsContentModule.cpp \
+	mozilla/content/html/style/src/nsCSSDeclaration.cpp \
+	mozilla/content/html/style/src/nsCSSParser.cpp \
+	mozilla/content/html/style/src/nsCSSStyleRule.cpp \
+	mozilla/content/html/style/src/nsICSSDeclaration.h \
+	mozilla/content/macbuild/contentSVG.mcp \
+	mozilla/content/makefile.win \
+	mozilla/content/shared/public/MANIFEST \
+	mozilla/content/shared/public/Makefile.in \
+	mozilla/content/shared/public/makefile.win \
+	mozilla/content/shared/public/nsCSSKeywordList.h \
+	mozilla/content/shared/public/nsCSSPropList.h \
+	mozilla/content/shared/public/nsCSSProps.h \
+	mozilla/content/shared/public/nsRuleNode.h \
+	mozilla/content/shared/public/nsSVGAtomList.h \
+	mozilla/content/shared/public/nsSVGAtoms.h \
+	mozilla/content/shared/public/nsStyleStruct.h \
+	mozilla/content/shared/src/Makefile.in \
+	mozilla/content/shared/src/makefile.win \
+	mozilla/content/shared/src/nsCSSProps.cpp \
+	mozilla/content/shared/src/nsSVGAtoms.cpp \
+	mozilla/content/shared/src/nsStyleStruct.cpp \
+	mozilla/content/shared/src/nsStyleUtil.cpp \
+	mozilla/content/xml/document/src/nsXMLDocument.cpp \
+	mozilla/content/xml/document/src/nsXMLDocument.h \
+	mozilla/dom/macbuild/dom_svgIDL.mcp \
+	mozilla/dom/public/idl/Makefile.in \
+	mozilla/dom/public/idl/makefile.win \
+	mozilla/dom/public/nsIDOMClassInfo.h \
+	mozilla/dom/src/base/nsDOMClassInfo.cpp \
+	mozilla/gfx/public/nsTransform2D.h \
+	mozilla/gfx/public/nsIDrawingSurface.h \
+	mozilla/gfx/src/windows/nsDrawingSurfaceWin.cpp \
+	mozilla/gfx/src/mac/nsRenderingContextMac.cpp \
+	mozilla/htmlparser/public/nsIParser.h \
+	mozilla/htmlparser/src/nsExpatTokenizer.cpp \
+	mozilla/htmlparser/src/nsViewSourceHTML.cpp \
+	mozilla/htmlparser/src/nsWellFormedDTD.cpp \
+	mozilla/layout/base/public/nsStyleConsts.h \
+	mozilla/layout/build/Makefile.in \
+	mozilla/layout/build/makefile.win \
+	mozilla/layout/html/style/src/Makefile.in \
+	mozilla/layout/html/style/src/makefile.win \
+	mozilla/layout/html/style/src/nsCSSFrameConstructor.cpp \
+	mozilla/layout/html/style/src/nsCSSFrameConstructor.h \
+	mozilla/layout/html/tests/makefile.win \
+	mozilla/layout/macbuild/layoutsvg.mcp \
+	mozilla/Makefile.in \
+	mozilla/makefile.win \
+	mozilla/netwerk/mime/src/nsXMLMIMEDataSource.cpp \
+	mozilla/uriloader/exthandler/nsExternalHelperAppService.cpp \
+	mozilla/xpfe/browser/src/nsBrowserInstance.cpp \
+	mozilla/other-licenses/libart_lgpl \
+	mozilla/layout/xul/base/src/nsXULTreeOuterGroupFrame.cpp \
+	mozilla/layout/xul/base/src/nsXULTreeOuterGroupFrame.h
+
+
+# same again with first item of path stripped:
+SVG_BRANCH_FILES_P1 := $(SVG_BRANCH_FILES:mozilla/=)
+
+
 
 ####################################
 # CVS defined for libart (pulled and built if MOZ_INTERNAL_LIBART_LGPL is set)
@@ -522,17 +534,24 @@ real_checkout:
 	else true; \
 	fi
 
-merge:
-	cvs up -dP -jSVG_20010721_TAG -jHEAD $(SVG_BRANCH_FILES)
+# svg 'mini-branch' targets:
 
-statictag:
-	cvs tag -F -rHEAD SVG_20010721_TAG $(SVG_BRANCH_FILES)
+commit_local:
+	cvs -z3 ci $(SVG_BRANCH_FILES_P1)
 
-commitmerge:
-	cvs ci $(SVG_BRANCH_FILES)
+diff_local:
+	cvs -z3 diff -u $(SVG_BRANCH_FILES_P1)
 
-diffsvg:
-	cvs diff $(SVG_BRANCH_FILES)
+diff_devel_branch:
+	cvs -z3 diff -u -r SVG_20010721_BRANCH $(SVG_BRANCH_FILES_P1)
+
+diff_milestone:
+	cvs -z3 diff -u -r MOZILLA_0_9_6_RELEASE $(SVG_BRANCH_FILES_P1)
+
+quick_update:
+	cd $(MOZ_SRC)\.
+	$(CVSCO) $(SVG_BRANCH_FILES)
+
 
 ifdef RUN_AUTOCONF_LOCALLY
 	@echo Generating configures using $(AUTOCONF) ; \
