@@ -22,12 +22,7 @@
 ** 
 */
 
-#include "prtypes.h"
-#include "prshma.h"
-#include "prlog.h"
-#include "prio.h"
-#include "prprf.h"
-#include "private/primpl.h"
+#include "primpl.h"
 
 extern PRLogModuleInfo *_pr_shma_lm;
 
