@@ -965,6 +965,7 @@ nsMsgAttachmentHandler::UrlExit(nsresult status, const PRUnichar* aMsg)
 		  if (NS_FAILED(status))
 			{
 			  m_mime_delivery_state->Fail(status, 0);
+			  m_mime_delivery_state->NotifyListenersOnStopSending(nsnull, status, 0, nsnull);
 			  return NS_ERROR_UNEXPECTED;
 			}
 		}
@@ -978,11 +979,19 @@ nsMsgAttachmentHandler::UrlExit(nsresult status, const PRUnichar* aMsg)
 	  if (NS_FAILED(status))
 		{
 		  m_mime_delivery_state->Fail(status, aMsg);
-		}
+          m_mime_delivery_state->NotifyListenersOnStopSending(nsnull, status, aMsg, nsnull);
+          return NS_ERROR_UNEXPECTED;
+	  }
 	  else
 		{
-		  m_mime_delivery_state->GatherMimeAttachments ();
-		}
+			status = m_mime_delivery_state->GatherMimeAttachments ();
+			if (NS_FAILED(status))
+			{
+				m_mime_delivery_state->Fail(status, aMsg);
+				m_mime_delivery_state->NotifyListenersOnStopSending(nsnull, status, aMsg, nsnull);
+				return NS_ERROR_UNEXPECTED;
+			}
+	  }
 	}
   else
 	{
