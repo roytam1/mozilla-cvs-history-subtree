@@ -33,6 +33,7 @@ class nsIContent;
 class nsIDocument;
 class nsIDOMNodeList;
 class nsIRDFNode;
+class nsCString;
 class nsString;
 
 
