@@ -61,7 +61,7 @@ const FIND_LINKS = 2;
 var gRDF = null;
 var gGlobalHistory = null;
 var gURIFixup = null;
-var gPageThemeButton = null;
+var gPageStyleButton = null;
 var gLivemarksButton = null;
 var gCharsetMenu = null;
 var gLastBrowserCharset = null;
@@ -126,7 +126,7 @@ function loadEventHandlers(event)
     checkForDirectoryListing();
     charsetLoadListener(event);
 #ifdef SHOW_ALT_SS_UI
-    updatePageTheme();
+    updatePageStyles();
 #endif
     updatePageLivemarks();
   }
@@ -3499,7 +3499,7 @@ nsBrowserStatusHandler.prototype =
        
     setTimeout(function () { updatePageLivemarks(); }, 0);
 #ifdef SHOW_ALT_SS_UI
-    setTimeout(function () { updatePageTheme(); }, 0);
+    setTimeout(function () { updatePageStyles(); }, 0);
 #endif
   },
 
@@ -5345,7 +5345,7 @@ function setStyleDisabled(disabled) {
   getMarkupDocumentViewer().authorStyleDisabled = disabled;
 }
 
-function updatePageTheme(evt)
+function updatePageStyles(evt)
 {
   // XXX - Accessing window._content.document can generate an
   // onLocationChange for the current tab, this can cause the url
@@ -5355,36 +5355,37 @@ function updatePageTheme(evt)
   var userTypedClear = browser.userTypedClear;
   browser.userTypedClear = false;
 
-  if (!gPageThemeButton)
-    gPageThemeButton = document.getElementById("page-theme-button");
+  if (!gPageStyleButton)
+    gPageStyleButton = document.getElementById("page-theme-button");
 
-  var hasThemes = false;
+  var hasAltSS = false;
   var stylesheets = window._content.document.styleSheets;
+  var preferredSheet = window._content.document.preferredStylesheetSet;
   for (var i = 0; i < stylesheets.length; ++i) {
     var currentStyleSheet = stylesheets[i];
     
-    if (currentStyleSheet.title) {
+    if (currentStyleSheet.title && currentStyleSheet.title != preferredSheet) {
         // Skip any stylesheets that don't match the screen media type.
         var media = currentStyleSheet.media.mediaText.toLowerCase();
         if (media && (media.indexOf("screen") == -1) && (media.indexOf("all") == -1))
             continue;
-        hasThemes = true;
+        hasAltSS = true;
         break;
     }
   }
 
-  if (hasThemes) {
-    gPageThemeButton.setAttribute("themes", "true");
-    // FIXME: Do a first-time explanation of page themes here perhaps?
+  if (hasAltSS) {
+    gPageStyleButton.setAttribute("themes", "true");
+    // FIXME: Do a first-time explanation of page styles here perhaps?
     // Avoid for now since Firebird's default home page has an alt sheet.
   }
   else
-    gPageThemeButton.removeAttribute("themes");
+    gPageStyleButton.removeAttribute("themes");
 
   // Restore clear state
   browser.userTypedClear = userTypedClear;
 }
-/* End of the Page Theme functions */
+/* End of the Page Style functions */
 #endif
 
 function clearObsoletePrefs()
