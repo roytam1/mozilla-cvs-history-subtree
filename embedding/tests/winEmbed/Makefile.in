@@ -95,4 +95,24 @@ endif # WINCE
 #
 LDFLAGS += /HEAP:0x40000
 
+
+ifdef BUILD_STATIC_LIBS
+
+include $(topsrcdir)/config/static-config.mk
+
+EXTRA_DEPS	+= $(STATIC_EXTRA_DEPS)
+EXTRA_DSO_LIBS	+= $(STATIC_EXTRA_DSO_LIBS)
+EXTRA_LIBS	+= -L$(DEPTH)/dist/lib/components
+EXTRA_LIBS	+= $(EXTRA_DSO_LIBS) $(STATIC_EXTRA_LIBS)
+DEFINES		+= $(STATIC_DEFINES)
+CPPSRCS		+= $(STATIC_CPPSRCS)
+
+endif # BUILD_STATIC_LIBS
+
+
 include $(topsrcdir)/config/rules.mk
+
+
+ifdef BUILD_STATIC_LIBS
+include $(topsrcdir)/config/static-rules.mk
+endif # BUILD_STATIC_LIBS
