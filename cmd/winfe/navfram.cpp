@@ -514,8 +514,8 @@ void CNSNavFrame::ComputeDockingSizes()
 	else
 	{
 
-		m_DockWidth = MIN_CATEGORY_WIDTH + DRAGWIDTH;
-		m_DockHeight = MIN_CATEGORY_HEIGHT + DRAGWIDTH;
+		m_DockWidth = MIN_CATEGORY_WIDTH;
+		m_DockHeight = MIN_CATEGORY_HEIGHT;
 	}
 }
 
@@ -883,12 +883,12 @@ LRESULT CNSNavFrame::OnSizeParent(WPARAM, LPARAM lParam)
 		//dragRect.bottom -= 10;
 
 		resizeRect.right = lpLayout->rect.left + oldRect.Width();
-
 		if (oldDragRect.left != resizeRect.right) // we move the drag bar.  Need to resize here.
 			resizeRect.right += oldDragRect.left - resizeRect.right;
 
 		if (IsTreeVisible())
 		{
+			
 			CWnd* pParent = GetParent();
 			CRect parentRect;
 			pParent->GetClientRect(&parentRect);
@@ -898,13 +898,13 @@ LRESULT CNSNavFrame::OnSizeParent(WPARAM, LPARAM lParam)
 				resizeRect.right = resizeRect.left + parentRect.Width() - DRAGWIDTH;
 			}
 		}
-
+	
 		dragRect.left = resizeRect.right;
 		dragRect.right = dragRect.left + DRAGWIDTH;
 
-		//if (IsTreeVisible())
+		if (IsTreeVisible())
 			lpLayout->rect.left = resizeRect.right + DRAGWIDTH;
-		//else lpLayout->rect.left = resizeRect.right;
+		else lpLayout->rect.left = resizeRect.right;
 
 		m_DragWnd->SetRect(dragRect);
 		m_DockWidth = resizeRect.Width();
@@ -1011,7 +1011,7 @@ void CNSNavFrame::CollapseWindow()
 		}
 		else if (m_dwOverDockStyle == DOCKSTYLE_VERTLEFT)
 		{
-			dragBox.left -= (tempRect.Width() - MIN_CATEGORY_WIDTH - DRAGWIDTH);
+			dragBox.left -= (tempRect.Width() - MIN_CATEGORY_WIDTH);
 			dragBox.right = dragBox.left + DRAGWIDTH;
 		}
 		else 
