@@ -46,10 +46,18 @@
 
 // Basic Definitions used throughout many of these classes
 
+//
+// Modification History:
+// Who  When        What
+// TK   01/31/2000  Added UInt32 to provide a common unsigned integer.
+//
+
+
 #ifndef MITRE_BASEUTILS_H
 #define MITRE_BASEUTILS_H
 
 typedef int Int32;
+typedef unsigned int UInt32;
 
 typedef Int32 MBool;
 
