@@ -69,8 +69,12 @@ txStylesheetCompiler::startElement(PRInt32 aNamespaceID, nsIAtom* aLocalName,
     nsresult rv = flushCharacters();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    // look for new namespace mappings
     PRInt32 i;
+    for (i = mState.mInScopeVariables.Count() - 1; i >= 0; --i) {
+        ++((txInScopeVariable*)mState.mInScopeVariables[i])->mLevel;
+    }
+
+    // look for new namespace mappings
     for (i = 0; i < aAttrCount; ++i) {
         txStylesheetAttr* attr = aAttributes + i;
         if (attr->mNamespaceID == kNameSpaceID_XMLNS) {
@@ -205,6 +209,22 @@ txStylesheetCompiler::endElement()
 {
     nsresult rv = flushCharacters();
     NS_ENSURE_SUCCESS(rv, rv);
+
+    PRInt32 i;
+    for (i = mState.mInScopeVariables.Count() - 1; i >= 0; --i) {
+        txInScopeVariable* var =
+            (txInScopeVariable*)mState.mInScopeVariables[i];
+        if (!--(var->mLevel)) {
+            txInstruction* instr = new txRemoveVariable(var->mName);
+            NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+            rv = mState.addInstruction(instr);
+            NS_ENSURE_SUCCESS(rv, rv);
+            
+            mState.mInScopeVariables.RemoveElementAt(i);
+            delete var;
+        }
+    }
 
     txElementHandler* handler =
         (txElementHandler*)mState.popPtr();
@@ -345,6 +365,11 @@ txStylesheetCompilerState::~txStylesheetCompilerState()
     while (!mObjectStack.isEmpty()) {
         delete popObject();
     }
+    
+    PRInt32 i;
+    for (i = mInScopeVariables.Count() - 1; i >= 0; --i) {
+        delete (txInScopeVariable*)mInScopeVariables[i];
+    }
 }
 
 nsresult
@@ -445,6 +470,20 @@ txStylesheetCompilerState::addGotoTarget(txInstruction** aTargetPointer)
         return NS_ERROR_OUT_OF_MEMORY;
     }
     
+    return NS_OK;
+}
+
+nsresult
+txStylesheetCompilerState::addVariable(const txExpandedName& aName)
+{
+    txInScopeVariable* var = new txInScopeVariable(aName);
+    NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
+
+    if (!mInScopeVariables.AppendElement(var)) {
+        delete var;
+        return NS_ERROR_OUT_OF_MEMORY;
+    }
+
     return NS_OK;
 }
 

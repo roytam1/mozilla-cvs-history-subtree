@@ -54,6 +54,7 @@ txHandlerTable* gTxTemplateHandler = 0;
 txHandlerTable* gTxTextHandler = 0;
 txHandlerTable* gTxApplyTemplatesHandler = 0;
 txHandlerTable* gTxCallTemplateHandler = 0;
+txHandlerTable* gTxVariableHandler = 0;
 
 nsresult
 txFnStartLRE(PRInt32 aNamespaceID,
@@ -1137,6 +1138,104 @@ txFnEndValueOf(txStylesheetCompilerState& aState)
     return NS_OK;
 }
 
+// xsl:variable
+nsresult
+txFnStartVariable(PRInt32 aNamespaceID,
+                  nsIAtom* aLocalName,
+                  nsIAtom* aPrefix,
+                  txStylesheetAttr* aAttributes,
+                  PRInt32 aAttrCount,
+                  txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+
+    txExpandedName name;
+    rv = getQNameAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_TRUE,
+                      aState, name);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    Expr* select = nsnull;
+    rv = getExprAttr(aAttributes, aAttrCount, txXSLTAtoms::select, PR_FALSE,
+                     aState, select);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txSetVariable* var = new txSetVariable(name, select);
+    NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
+
+    if (var->mValue) {
+        // XXX should be gTxErrorHandler?
+        rv = aState.pushHandlerTable(gTxIgnoreHandler);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+    else {
+        rv = aState.pushHandlerTable(gTxVariableHandler);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    rv = aState.pushObject(var);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+nsresult
+txFnEndVariable(txStylesheetCompilerState& aState)
+{
+    txSetVariable* var = (txSetVariable*)aState.popObject();
+
+    txHandlerTable* prev = aState.mHandlerTable;
+    aState.popHandlerTable();
+
+    if (prev == gTxVariableHandler) {
+        // No children were found.
+        NS_ASSERTION(!var->mValue, "There shouldn't be a select-expression here");
+        var->mValue = new StringExpr(NS_LITERAL_STRING(""));
+        NS_ENSURE_TRUE(var->mValue, NS_ERROR_OUT_OF_MEMORY);
+    }
+
+    nsresult rv = aState.addVariable(var->mName);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = aState.addInstruction(var);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return NS_OK;
+}
+
+nsresult
+txFnStartElementStartRTF(PRInt32 aNamespaceID,
+                         nsIAtom* aLocalName,
+                         nsIAtom* aPrefix,
+                         txStylesheetAttr* aAttributes,
+                         PRInt32 aAttrCount,
+                         txStylesheetCompilerState& aState)
+{
+    txInstruction* instr = new txPushRTFHandler;
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    nsresult rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    aState.mHandlerTable = gTxTemplateHandler;
+
+    return NS_ERROR_XSLT_GET_NEW_HANDLER;
+}
+
+nsresult
+txFnTextStartRTF(const nsAString& aStr, txStylesheetCompilerState& aState)
+{
+    TX_RETURN_IF_WHITESPACE(aStr, aState);
+
+    txInstruction* instr = new txPushRTFHandler;
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    nsresult rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    aState.mHandlerTable = gTxTemplateHandler;
+
+    return NS_ERROR_XSLT_GET_NEW_HANDLER;
+}
 
 /**
  * Table Datas
@@ -1192,6 +1291,7 @@ txHandlerTableData gTxTemplateTableData = {
     { kNameSpaceID_XSLT, "processing-instruction", txFnStartPI, txFnEndPI },
     { kNameSpaceID_XSLT, "text", txFnStartText, txFnEndText },
     { kNameSpaceID_XSLT, "value-of", txFnStartValueOf, txFnEndValueOf },
+    { kNameSpaceID_XSLT, "variable", txFnStartVariable, txFnEndVariable },
     { 0, 0, 0, 0 } },
   // Other
   { 0, 0, txFnStartElementIgnore, txFnEndElementIgnore },
@@ -1232,6 +1332,17 @@ txHandlerTableData gTxCallTemplateTableData = {
   { 0, 0, txFnStartElementSetIgnore, txFnEndElementSetIgnore },
   // Text
   txFnTextIgnore
+};
+
+txHandlerTableData gTxVariableTableData = {
+  // Handlers
+  { { 0, 0, 0, 0 } },
+  // Other
+  { 0, 0, txFnStartElementStartRTF, 0 },
+  // LRE
+  { 0, 0, txFnStartElementStartRTF, 0 },
+  // Text
+  txFnTextStartRTF
 };
 
 
@@ -1301,6 +1412,8 @@ txHandlerTable::init()
     INIT_HANDLER(Template);
     INIT_HANDLER(Text);
     INIT_HANDLER(ApplyTemplates);
+    INIT_HANDLER(CallTemplate);
+    INIT_HANDLER(Variable);
 
     return MB_TRUE;
 }
@@ -1315,4 +1428,6 @@ txHandlerTable::shutdown()
     SHUTDOWN_HANDLER(Template);
     SHUTDOWN_HANDLER(Text);
     SHUTDOWN_HANDLER(ApplyTemplates);
+    SHUTDOWN_HANDLER(CallTemplate);
+    SHUTDOWN_HANDLER(Variable);
 }

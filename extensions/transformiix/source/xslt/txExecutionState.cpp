@@ -40,16 +40,28 @@
 #include "txSingleNodeContext.h"
 #include "txInstructions.h"
 #include "txStylesheet.h"
+#include "txVariableMap.h"
+
+#ifndef TX_EXE
+#include "nsIDOMDocument.h"
+#include "nsContentCID.h"
+static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
+#endif
 
 txExecutionState::txExecutionState(txStylesheet* aStylesheet)
     : mStylesheet(aStylesheet),
-      mNextInstruction(nsnull)
+      mNextInstruction(nsnull),
+      mLocalVariables(nsnull),
+      mEvalContext(nsnull),
+      mInitialEvalContext(nsnull),
+      mRTFDocument(nsnull)
 {
 }
 
 txExecutionState::~txExecutionState()
 {
     delete mEvalContext;
+    delete mRTFDocument;
     
     // XXX ToDo: delete stack of resulthandlers. This is messy since the 
     // the top resulthandler is the outputhandler, which is refcounted
@@ -106,7 +118,10 @@ nsresult
 txExecutionState::getVariable(PRInt32 aNamespace, nsIAtom* aLName,
                               ExprResult*& aResult)
 {
-    // XXX implement me
+    txExpandedName name(aNamespace, aLName);
+    aResult = mLocalVariables->getVariable(name);
+    NS_ENSURE_TRUE(aResult, NS_ERROR_FAILURE);
+
     return NS_OK;
 }
 
@@ -200,6 +215,30 @@ txExecutionState::getEvalContext()
     return mEvalContext;
 }
 
+nsresult
+txExecutionState::getRTFDocument(Document** aDocument)
+{
+    *aDocument = nsnull;
+    if (!mRTFDocument) {
+#ifdef TX_EXE
+        mRTFDocument = new Document();
+        NS_ENSURE_TRUE(mRTFDocument, NS_ERROR_OUT_OF_MEMORY);
+#else
+        nsresult rv;
+        nsCOMPtr<nsIDOMDocument> domDoc = do_CreateInstance(kXMLDocumentCID,
+                                                            &rv);
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        mRTFDocument = new Document(domDoc);
+        NS_ENSURE_TRUE(mRTFDocument, NS_ERROR_OUT_OF_MEMORY);
+#endif
+    }
+
+    *aDocument = mRTFDocument;
+
+    return NS_OK;
+}
+
 txInstruction*
 txExecutionState::getNextInstruction()
 {
@@ -215,9 +254,14 @@ nsresult
 txExecutionState::runTemplate(txInstruction* aTemplate,
                               txInstruction* aReturnTo)
 {
-    // XXX ToDo: push local variables
+    nsresult rv = mLocalVarsStack.push(mLocalVariables);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    mLocalVariables = new txVariableMap;
+    NS_ENSURE_TRUE(mLocalVariables, NS_ERROR_OUT_OF_MEMORY);
+
     txInstruction* ret = aReturnTo ? aReturnTo : mNextInstruction;
-    nsresult rv = mReturnStack.push(ret);
+    rv = mReturnStack.push(ret);
     NS_ENSURE_SUCCESS(rv, rv);
     
     mNextInstruction = aTemplate;
@@ -234,9 +278,24 @@ txExecutionState::gotoInstruction(txInstruction* aNext)
 void
 txExecutionState::returnFromTemplate()
 {
-    NS_ASSERTION(!mReturnStack.isEmpty(), "returnstack is empty");
+    NS_ASSERTION(!mReturnStack.isEmpty() && !mLocalVarsStack.isEmpty(),
+                 "return or variable stack is empty");
+    delete mLocalVariables;
     mNextInstruction = (txInstruction*)mReturnStack.pop();
-    // XXX ToDo: pop local variables
+    mLocalVariables = (txVariableMap*)mLocalVarsStack.pop();
+}
+
+nsresult
+txExecutionState::bindVariable(const txExpandedName& aName,
+                               ExprResult* aValue, MBool aOwned)
+{
+    return mLocalVariables->bindVariable(aName, aValue, aOwned);
+}
+
+void
+txExecutionState::removeVariable(const txExpandedName& aName)
+{
+    mLocalVariables->removeVariable(aName);
 }
 
 nsresult

@@ -54,6 +54,7 @@ class ExprResult;
 class txStylesheet;
 class txRecursionCheckpointStart;
 class txExpandedNameMap;
+class txVariableMap;
 
 class txExecutionState : public txIMatchContext
 {
@@ -77,6 +78,7 @@ public:
 
     // state-getting functions
     txIEvalContext* getEvalContext();
+    nsresult getRTFDocument(Document** aDocument);
 
     // state-modification functions
     txInstruction* getNextInstruction();
@@ -84,6 +86,9 @@ public:
                          txInstruction* aReturnTo = nsnull);
     void gotoInstruction(txInstruction* aNext);
     void returnFromTemplate();
+    nsresult bindVariable(const txExpandedName& aName,
+                          ExprResult* aValue, MBool aOwned);
+    void removeVariable(const txExpandedName& aName);
 
     // Other
     nsresult enterRecursionCheckpoint(txRecursionCheckpointStart* aChk,
@@ -102,14 +107,17 @@ public:
 
 private:
     txStack mReturnStack;
+    txStack mLocalVarsStack;
     txStack mEvalContextStack;
     txStack mIntStack;
     txStack mResultHandlerStack;
     nsStringArray mStringStack;
     txInstruction* mNextInstruction;
+    txVariableMap* mLocalVariables;
     
     txIEvalContext* mEvalContext;
     txIEvalContext* mInitialEvalContext;
+    Document* mRTFDocument;
     
     nsVoidArray mRecursionInstructions;
     nsVoidArray mRecursionContexts;

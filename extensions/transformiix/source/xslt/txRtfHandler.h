@@ -48,8 +48,7 @@ class Node;
 class txRtfHandler : public txXMLEventHandler
 {
 public:
-    txRtfHandler(Document* aDocument,
-                 txResultTreeFragment* aResultTreeFragment);
+    txRtfHandler(Document* aDocument);
     virtual ~txRtfHandler();
 
     /**
@@ -116,9 +115,10 @@ public:
     void startElement(const nsAString& aName,
                       const PRInt32 aNsID);
 
+    txResultTreeFragment* mResultTreeFragment;
+
 private:
     Document* mDocument;
-    txResultTreeFragment* mResultTreeFragment;
     Node* mCurrentNode;
 };
 

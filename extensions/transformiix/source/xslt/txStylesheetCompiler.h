@@ -54,6 +54,15 @@ class txInstructionContainer;
 class txInstruction;
 class txToplevelItem;
 
+class txInScopeVariable {
+public:
+    txInScopeVariable(const txExpandedName& aName) : mName(aName), mLevel(1)
+    {
+    }
+    txExpandedName mName;
+    PRInt32 mLevel;
+};
+
 class txStylesheetCompilerState : public txIParseContext
 {
 public:
@@ -79,6 +88,7 @@ public:
     
     // misc
     nsresult addGotoTarget(txInstruction** aTargetPointer);
+    nsresult addVariable(const txExpandedName& aName);
 
     // txIParseContext
     nsresult resolveNamespacePrefix(nsIAtom* aPrefix, PRInt32& aID);
@@ -87,6 +97,7 @@ public:
     void receiveError(const nsAString& aMsg, nsresult aRes);
 
 
+    nsVoidArray mInScopeVariables;
     txStylesheet* mStylesheet;
     txHandlerTable* mHandlerTable;
     txElementContext* mElementContext;

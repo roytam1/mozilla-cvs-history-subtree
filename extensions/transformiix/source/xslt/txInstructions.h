@@ -208,6 +208,12 @@ public:
     Expr* mSelect;
 };
 
+class txPushRTFHandler : public txInstruction
+{
+public:
+    TX_DECL_TXINSTRUCTION
+};
+
 class txPushStringHandler : public txInstruction
 {
 public:
@@ -234,9 +240,32 @@ public:
     nsString mName;
 };
 
+class txRemoveVariable : public txInstruction
+{
+public:
+    txRemoveVariable(const txExpandedName& aName);
+
+    TX_DECL_TXINSTRUCTION
+
+    txExpandedName mName;
+};
+
 class txReturn : public txInstruction
 {
+public:
     TX_DECL_TXINSTRUCTION
+};
+
+class txSetVariable : public txInstruction
+{
+public:
+    txSetVariable(const txExpandedName& aName, Expr* aValue);
+    ~txSetVariable();
+
+    TX_DECL_TXINSTRUCTION
+
+    txExpandedName mName;
+    Expr* mValue;
 };
 
 class txStartElement : public txInstruction

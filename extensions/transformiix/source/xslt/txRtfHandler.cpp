@@ -39,15 +39,14 @@
 #include "txRtfHandler.h"
 #include "dom.h"
 
-txRtfHandler::txRtfHandler(Document* aDocument,
-                           txResultTreeFragment* aResultTreeFragment) :
-                               mDocument(aDocument),
-                               mResultTreeFragment(aResultTreeFragment)
+txRtfHandler::txRtfHandler(Document* aDocument) :
+                           mDocument(aDocument)
 {
     NS_ASSERTION(mDocument, "We need a valid document");
     if (!mDocument)
         return;
 
+    mResultTreeFragment = new txResultTreeFragment;
     NS_ASSERTION(mResultTreeFragment, "We need a valid result tree fragment");
     if (!mResultTreeFragment)
         return;
@@ -61,6 +60,7 @@ txRtfHandler::txRtfHandler(Document* aDocument,
 
 txRtfHandler::~txRtfHandler()
 {
+    delete mResultTreeFragment;
 }
 
 void txRtfHandler::attribute(const nsAString& aName,

@@ -47,6 +47,7 @@
 #include "nsIServiceManagerUtils.h"
 #include "txStringUtils.h"
 #include "txAtoms.h"
+#include "txRtfHandler.h"
 
 txApplyTemplates::txApplyTemplates(const txExpandedName& aMode)
     : mMode(aMode)
@@ -418,6 +419,25 @@ txPushNewContext::execute(txExecutionState& aEs)
     return NS_OK;
 }
 
+nsresult
+txPushRTFHandler::execute(txExecutionState& aEs)
+{
+    Document* rtfdoc;
+    nsresult rv = aEs.getRTFDocument(&rtfdoc);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    txXMLEventHandler* handler = new txRtfHandler(rtfdoc);
+    NS_ENSURE_TRUE(handler, NS_ERROR_OUT_OF_MEMORY);
+    
+    rv = aEs.pushResultHandler(handler);
+    if (NS_FAILED(rv)) {
+        delete handler;
+        return rv;
+    }
+
+    return NS_OK;
+}
+
 txPushStringHandler::txPushStringHandler(PRBool aOnlyText)
     : mOnlyText(aOnlyText)
 {
@@ -457,11 +477,58 @@ txRecursionCheckpointStart::execute(txExecutionState& aEs)
     return aEs.enterRecursionCheckpoint(this, aEs.getEvalContext());
 }
 
+txRemoveVariable::txRemoveVariable(const txExpandedName& aName)
+    : mName(aName)
+{
+}
+
+nsresult
+txRemoveVariable::execute(txExecutionState& aEs)
+{
+    aEs.removeVariable(mName);
+    
+    return NS_OK;
+}
+
 nsresult
 txReturn::execute(txExecutionState& aEs)
 {
     aEs.returnFromTemplate();
 
+    return NS_OK;
+}
+
+txSetVariable::txSetVariable(const txExpandedName& aName, Expr* aValue)
+    : mName(aName), mValue(aValue)
+{
+}
+
+txSetVariable::~txSetVariable()
+{
+    delete mValue;
+}
+
+nsresult
+txSetVariable::execute(txExecutionState& aEs)
+{
+    ExprResult* exprRes;
+    if (mValue) {
+        exprRes = mValue->evaluate(aEs.getEvalContext());
+        NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
+    }
+    else {
+        txRtfHandler* handler = (txRtfHandler*)aEs.popResultHandler();
+        exprRes = handler->mResultTreeFragment;
+        handler->mResultTreeFragment = nsnull;
+        delete handler;
+    }
+    
+    nsresult rv = aEs.bindVariable(mName, exprRes, MB_TRUE);
+    if (NS_FAILED(rv)) {
+        delete exprRes;
+        return rv;
+    }
+    
     return NS_OK;
 }
 
