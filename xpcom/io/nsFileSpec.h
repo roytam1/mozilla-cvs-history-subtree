@@ -1,23 +1,19 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is Netscape
+ * The Initial Developer of this code under the NPL is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation. All
- * Rights Reserved.
- *
- * Contributor(s): 
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 //    First checked in on 98/11/20 by John R. McMullen in the wrong directory.
@@ -255,7 +251,7 @@ public:
     void                         operator += (const char* inString);
     nsSimpleCharString           operator + (const char* inString) const;
     
-    char                         operator [](int i) const { return mData ? mData->mString[i] : '\0'; }
+    char                         operator [](int i) const { return mData ? mData->mString[i] : 0; }
     char&                        operator [](int i)
                                  {
                                      if (i >= (int)Length())
@@ -508,6 +504,7 @@ class NS_COM nsFileSpec
         void                    Delete(PRBool inRecursive) const;
         void                    RecursiveCopy(nsFileSpec newDir) const;
         
+        nsresult                Truncate(const PRInt32 offset) const;
         nsresult                Rename(const char* inNewName); // not const: gets updated
         nsresult                Rename(const nsString& inNewName)
                                 {

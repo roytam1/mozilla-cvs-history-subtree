@@ -1,23 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
- * The contents of this file are subject to the Netscape Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.0 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  *
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  *
- * The Original Code is mozilla.org code.
- *
- * The Initial Developer of the Original Code is Netscape
+ * The Initial Developer of this code under the NPL is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation. All
- * Rights Reserved.
- *
- * Contributor(s): 
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
  
 //	This file is included by nsFileSpec.cp, and includes the Windows-specific
@@ -470,6 +466,51 @@ void nsFileSpec::RecursiveCopy(nsFileSpec newDir) const
         filePath.CopyToDir(newDir);
     }
 } // nsFileSpec::RecursiveCopy
+
+// We have to implement this since there's no truncate() in system.
+//----------------------------------------------------------------------------------------
+nsresutl nsFileSpec::Truncate(const PRInt32 offset) const
+{
+    char* oldPath = nsCRT::strdup(mPath);
+
+    nsFileSpec newFile = *this ;
+    newFile.MakeUnique() ;
+
+    nsInputFileStream inStream(*this) ;
+    nsOutputFileStream outStream(newFile) ;
+
+    PRUint32 buffer_size = 1024, len ;
+    char buffer[buffer_size]  ;
+    PRUint32 bytes_read=0, bytes_written=0, size_left = offset ;
+
+    do {
+        if(size_left > buffer_size)
+            len = buffer_size ;
+        else 
+            len = size_left ;
+
+        bytes_read = inStream.read((void*)buffer, len) ;
+
+        bytes_written = outStream.write(buffer, bytes_read) ;
+        if(bytes_written != bytes_read) 
+            return NS_ERROR_FAILURE ;
+
+        size_left -= bytes_read ;
+    } while(!set_left) ;
+
+    outStream.flush() ;
+    outStream.close() ;
+    inStream.close() ;
+
+    // remove the original file 
+    Delete(PR_TRUE) ;
+
+    // rename the new file
+    rv = newFile.Rename(oldPath) ;
+
+    return rv ;
+
+} // nsFileSpec::Truncate
 
 //----------------------------------------------------------------------------------------
 nsresult nsFileSpec::Rename(const char* inNewName)
