@@ -67,7 +67,6 @@ CPPSRCS         =  \
 		nsDeleteObserver.cpp \
 		nsDragService.cpp \
 		nsDragHelperService.cpp \
-		nsFilePicker.cpp \
 		nsLookAndFeel.cpp \
 		nsMacResources.cpp \
 		nsMenuX.cpp \
@@ -80,6 +79,7 @@ CPPSRCS         =  \
 		$(NULL)
 
 CMMSRCS = \
+    nsFilePicker.mm \
     nsScrollbar.mm \
     nsToolkit.mm \
     nsAppShellCocoa.mm \

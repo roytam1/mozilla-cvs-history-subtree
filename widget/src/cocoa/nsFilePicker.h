@@ -20,6 +20,8 @@
  * Contributor(s): 
  *   Stuart Parmenter <pavlov@netscape.com>
  *   Steve Dagley <sdagley@netscape.com>
+ *   David Haas <haasd@cae.wisc.edu>
+ *   Steve Dagley <sdagley@netscape.com>
  */
 
 #ifndef nsFilePicker_h__
@@ -29,15 +31,15 @@
 #include "nsString.h"
 #include "nsIFileChannel.h"
 #include "nsILocalFile.h"
-#include <Navigation.h>
+
+//#include <Navigation.h>
 
 class nsILocalFileMac;
+@class NSArray;
 
-#define	kMaxTypeListCount	10
-#define kMaxTypesPerFilter	9
 
 /**
- * Native Mac FileSelector wrapper
+ * Native Mac Cocoa FileSelector wrapper
  */
 
 class nsFilePicker : public nsBaseFilePicker
@@ -52,15 +54,15 @@ public:
   NS_IMETHOD GetDefaultString(PRUnichar * *aDefaultString);
   NS_IMETHOD SetDefaultString(const PRUnichar * aDefaultString);
   NS_IMETHOD GetDefaultExtension(PRUnichar * *aDefaultExtension);
+  NS_IMETHOD GetFilterIndex(PRInt32 *aFilterIndex);
+  NS_IMETHOD SetFilterIndex(PRInt32 aFilterIndex);
   NS_IMETHOD SetDefaultExtension(const PRUnichar * aDefaultExtension);
   NS_IMETHOD GetDisplayDirectory(nsILocalFile * *aDisplayDirectory);
   NS_IMETHOD SetDisplayDirectory(nsILocalFile * aDisplayDirectory);
-  NS_IMETHOD GetFilterIndex(PRInt32 *aFilterIndex);
-  NS_IMETHOD SetFilterIndex(PRInt32 aFilterIndex);
   NS_IMETHOD GetFile(nsILocalFile * *aFile);
   NS_IMETHOD GetFileURL(nsIFileURL * *aFileURL);
   NS_IMETHOD Show(PRInt16 *_retval); 
-  NS_IMETHOD AppendFilter(const PRUnichar *aTitle,  const PRUnichar *aFilter) ;
+  NS_IMETHOD AppendFilter(const PRUnichar *aTitle, const PRUnichar *aFilter);
 
 protected:
 
@@ -69,26 +71,14 @@ protected:
   NS_IMETHOD            OnOk();
   NS_IMETHOD            OnCancel();
 
-    // actual implementations of get/put dialogs using NavServices
+    // actual implementations of get/put dialogs using NSOpenPanel & NSSavePanel
     // aFile is an existing but unspecified file. These functions must specify it.
   PRInt16 PutLocalFile(const nsString& inTitle, const nsString& inDefaultName, nsILocalFileMac* aFile);
   PRInt16 GetLocalFile(const nsString& inTitle, nsILocalFileMac* aFile);
   PRInt16 GetLocalFolder(const nsString& inTitle, nsILocalFileMac* aFile);
-  void MapFilterToFileTypes ( ) ;
-  void SetupFormatMenuItems (NavDialogCreationOptions* dialogCreateOptions) ;
-  Boolean IsTypeInFilterList ( ResType inType ) ;
-  Boolean IsExtensionInFilterList ( StrFileName & inFileName ) ;
-  void HandleShowPopupMenuSelect( NavCBRecPtr callBackParms ) ;
-  
-    // filter routine for file dialog events
-  static pascal void FileDialogEventHandlerProc( NavEventCallbackMessage msg,
-                                                 NavCBRecPtr cbRec,
-                                                 NavCallBackUserData callbackUD ) ;
-  
-    // filter routine for file types
-  static pascal Boolean FileDialogFilterProc ( AEDesc* theItem, void* info,
-                                                NavCallBackUserData callbackUD,
-                                                NavFilterModes filterMode ) ;
+  NSArray  *GenerateFilterList();
+  void     SetDialogTitle(const nsString& inTitle, id aDialog);
+  NSString *PanelDefaultDirectory();
                                                 
   PRBool                 mWasCancelled;
   PRBool                 mAllFilesDisplayed;
@@ -100,13 +90,10 @@ protected:
 
   nsStringArray          mFilters; 
   nsStringArray          mTitles;
-  nsCStringArray         mFlatFilters;        // all the filters from mFilters, but one per string
   
-  NavTypeListPtr         mTypeLists[kMaxTypeListCount];
-
+  PRInt32                mSelectedType;  //this is in some NS_IMETHODIMP, but otherwise unsed.
   static OSType          sCurrentProcessSignature;
-  
-  PRInt32                mSelectedType;
+
 };
 
 #endif // nsFilePicker_h__
