@@ -23,10 +23,17 @@
 #include "nsIFactory.h"
 #include "nsIComponentManager.h"
 
+//
+// nsMsgComposeService
+//
 #define NS_MSGCOMPOSESERVICE_CID				  \
 { /* 588595FE-1ADA-11d3-A715-0060B0EB39B5 */      \
  0x588595fe, 0x1ada, 0x11d3,                      \
  {0xa7, 0x15, 0x0, 0x60, 0xb0, 0xeb, 0x39, 0xb5}}
+
+#define NS_MSGCOMPOSESERVICE_PROGID			\
+  "component://netscape/messengercompose",
+
 
 #define NS_MSGCOMPOSE_CID						  \
 { /* EB5BDAF8-BBC6-11d2-A6EC-0060B0EB39B5 */      \

@@ -18,27 +18,154 @@
 
 #include "msgCore.h"
 
-#include "nsIFactory.h"
 #include "nsISupports.h"
+#include "nsCOMPtr.h"
+
+#include "nsIFactory.h"
+#include "nsIGenericFactory.h"
+#include "nsIServiceManager.h"
+#include "nsIModule.h"
+
 #include "pratom.h"
 #include "nsMsgCompCID.h"
 
 /* Include all of the interfaces our factory can generate components for */
+#include "nsMsgSendFact.h"
+#include "nsMsgCompFieldsFact.h"
+#include "nsMsgSendLaterFact.h"
+#include "nsMsgComposeFact.h"
+#include "nsMsgSendLater.h"
+
 #include "nsISmtpService.h"
 #include "nsSmtpService.h"
 #include "nsSmtpUrl.h"
 #include "nsMsgComposeService.h"
 #include "nsMsgCompose.h"
-#include "nsMsgComposeFact.h"
-#include "nsMsgCompFieldsFact.h"
-#include "nsMsgSendFact.h"
-#include "nsMsgSendLaterFact.h"
-#include "nsIServiceManager.h"
-#include "nsCOMPtr.h"
+#include "nsMsgSend.h"
 #include "nsMsgQuote.h"
 #include "nsIMsgDraft.h"
 #include "nsMsgCreate.h"    // For drafts...I know, awful file name...
 #include "nsSmtpServer.h"
+
+#define NS_DECL_MODULE(_class) \
+class _class : public nsIModule { \
+public: \
+  _class(); \
+  virtual ~_class(); \
+  NS_DECL_ISUPPORTS \
+  NS_DECL_NSIMODULE \
+};
+
+#define NS_IMPL_MODULE_CORE(_class) \
+_class::_class() { NS_INIT_ISUPPORTS(); } \
+_class::~_class() {}
+
+#define NS_IMPL_MODULE_GETCLASSOBJECT(_class, _table) \
+NS_IMETHODIMP \
+_class::GetClassObject(nsIComponentManager *aCompMgr,\
+                                const nsCID& aClass, \
+                                const nsIID& aIID, \
+                                void** aResult) \
+{ \
+  if (aResult == nsnull) \
+    return NS_ERROR_NULL_POINTER; \
+ \
+  *aResult = nsnull; \
+ \
+  nsresult rv; \
+  nsIGenericFactory::ConstructorProcPtr constructor = nsnull; \
+  nsCOMPtr<nsIGenericFactory> fact; \
+ \
+  for (unsigned int i=0; i<(sizeof(_table) / sizeof(_table[0])); i++) { \
+    if (aClass.Equals(_table[i].cid)) { \
+      constructor = _table[i].constructor; \
+      break; \
+    } \
+  } \
+ \
+  if (!constructor) return NS_ERROR_FAILURE; \
+  rv = NS_NewGenericFactory(getter_AddRefs(fact), constructor); \
+  if (NS_FAILED(rv)) return rv; \
+ \
+  return fact->QueryInterface(aIID, aResult); \
+}
+
+#define NS_IMPL_MODULE_REGISTERSELF(_class, _table) \
+NS_IMETHODIMP \
+_class::RegisterSelf(nsIComponentManager *aCompMgr, \
+                     nsIFileSpec* aPath, \
+                     const char* registryLocation, \
+                     const char* componentType) \
+{ \
+    nsresult rv = NS_OK; \
+  for (unsigned int i=0; i<(sizeof(_table) / sizeof(_table[0])); i++) { \
+    rv = aCompMgr->RegisterComponentSpec(_table[i].cid, \
+                                         _table[i].description, \
+                                         _table[i].progid, \
+                                         aPath, \
+                                         PR_TRUE, PR_TRUE); \
+  } \
+  return rv; \
+}
+
+#define NS_IMPL_MODULE_UNREGISTERSELF(_class, _table) \
+NS_IMETHODIMP \
+_class::UnregisterSelf(nsIComponentManager *aCompMgr, \
+                     nsIFileSpec* aPath, \
+                     const char* registryLocation) \
+{ \
+    nsresult rv = NS_OK; \
+  for (unsigned int i=0; i<(sizeof(_table) / sizeof(_table[0])); i++) { \
+    rv = aCompMgr->UnregisterComponentSpec(_table[i].cid, aPath); \
+  } \
+  return rv; \
+}
+
+#define NS_IMPL_MODULE_CANUNLOAD(_class) \
+NS_IMETHODIMP \
+_class::CanUnload(nsIComponentManager *aCompMgr, PRBool *okToUnload) \
+{ \
+    if (!okToUnload) \
+        return NS_ERROR_INVALID_POINTER; \
+ \
+    *okToUnload = PR_FALSE; \
+    return NS_ERROR_FAILURE; \
+}
+
+#define NS_IMPL_NSGETMODULE(_class) \
+static _class *g##_class; \
+extern "C" NS_EXPORT nsresult \
+NSGetModule(nsIComponentManager *servMgr, \
+            nsIFileSpec* location, \
+            nsIModule** aResult) \
+{ \
+    nsresult rv = NS_OK; \
+ \
+    if (!aResult) return NS_ERROR_NULL_POINTER; \
+    if (!gModule) { \
+      gModule = new _class; \
+      if (!gModule) return NS_ERROR_OUT_OF_MEMORY; \
+    } \
+ \
+    NS_ADDREF(gModule); \
+    if (gModule) \
+      rv = gModule->QueryInterface(NS_GET_IID(nsIModule), \
+                                   (void **)aResult); \
+    NS_RELEASE(gModule); \
+    return rv; \
+}
+
+
+#define NS_IMPL_MODULE(_table) \
+    NS_DECL_MODULE(nsModule)  \
+    NS_IMPL_MODULE_CORE(nsModule) \
+    NS_IMPL_ISUPPORTS1(nsModule, nsIModule) \
+    NS_IMPL_MODULE_GETCLASSOBJECT(nsModule, _table) \
+    NS_IMPL_MODULE_REGISTERSELF(nsModule, _table) \
+    NS_IMPL_MODULE_UNREGISTERSELF(nsModule, _table) \
+    NS_IMPL_MODULE_CANUNLOAD(nsModule)
+
+
 
 static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 static NS_DEFINE_CID(kCMsgComposeCID, NS_MSGCOMPOSE_CID);
@@ -52,187 +179,52 @@ static NS_DEFINE_CID(kCMsgQuoteCID, NS_MSGQUOTE_CID);
 static NS_DEFINE_CID(kCSmtpUrlCID, NS_SMTPURL_CID);
 static NS_DEFINE_CID(kMsgDraftCID, NS_MSGDRAFT_CID);
 
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsSmtpService);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsSmtpServer);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgCompose);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgCompFields);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgComposeAndSend);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgSendLater);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgDraft)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgComposeService);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsMsgQuote);
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsSmtpUrl);
+
 ////////////////////////////////////////////////////////////
 //
 ////////////////////////////////////////////////////////////
 static PRInt32 g_InstanceCount = 0;
 static PRInt32 g_LockCount = 0;
 
-class nsMsgComposeFactory : public nsIFactory
-{   
-public:
-	// nsISupports methods
-	NS_DECL_ISUPPORTS 
+struct components_t {
+  nsCID cid;
+  nsIGenericFactory::ConstructorProcPtr constructor;
+  const char *progid;
+  const char *description;
+};
 
-    nsMsgComposeFactory(const nsCID &aClass,
-               const char* aClassName,
-               const char* aProgID,
-               nsISupports*); 
+static components_t components[] =
+{
+  { NS_MSGCOMPOSE_CID,        &nsMsgComposeConstructor,    },
+  { NS_MSGCOMPOSESERVICE_CID, &nsMsgComposeServiceConstructor, },
+  { NS_MSGCOMPFIELDS_CID,     &nsMsgCompFieldsConstructor, },
+  { NS_MSGDRAFT_CID,          &nsMsgDraftConstructor, },
+  { NS_MSGSEND_CID,           &nsMsgComposeAndSendConstructor, },
+  { NS_MSGSENDLATER_CID,      &nsMsgSendLaterConstructor, },
+  { NS_SMTPSERVICE_CID,       &nsSmtpServiceConstructor,  },
+  { NS_SMTPSERVER_CID,        &nsSmtpServerConstructor,    },
+  { NS_SMTPURL_CID,           &nsSmtpUrlConstructor, },
+  { NS_MSGQUOTE_CID,          &nsMsgQuoteConstructor, },
+};
 
-    // nsIFactory methods   
-    NS_IMETHOD CreateInstance(nsISupports *aOuter, const nsIID &aIID, void **aResult);   
-    NS_IMETHOD LockFactory(PRBool aLock);   
-
-  protected:
-    virtual ~nsMsgComposeFactory();   
-
-  private:  
-    nsCID mClassID;
-	char* mClassName;
-	char* mProgID;
-};   
-
-nsMsgComposeFactory::nsMsgComposeFactory(const nsCID &aClass,
-                           const char* aClassName,
-                           const char* aProgID,
-                           nsISupports *compMgrSupports)   
-  : mClassID(aClass),
-    mClassName(nsCRT::strdup(aClassName)),
-    mProgID(nsCRT::strdup(aProgID))
-{   
-	NS_INIT_REFCNT();
-
-}   
-
-nsMsgComposeFactory::~nsMsgComposeFactory()   
-{   
-	NS_ASSERTION(mRefCnt == 0, "non-zero refcnt at destruction");   
-
-	PL_strfree(mClassName);
-	PL_strfree(mProgID);
-}   
-
-NS_IMPL_ISUPPORTS1(nsMsgComposeFactory, nsIFactory)
-
-nsresult nsMsgComposeFactory::CreateInstance(nsISupports *aOuter, const nsIID &aIID, void **aResult)  
-{  
-	if (aResult == NULL)  
-		return NS_ERROR_NULL_POINTER;  
-
-	*aResult = NULL;  
-
-	// ClassID check happens here
-	// Whenever you add a new class that supports an interface, plug it in here!!!
-
-	// mscott --> I've noticed that all of the "convience" functions (NS_*) used to 
-	// create components are adding a ref count to the returned component...then at the end of
-	// CreateInstance we ref count again when we query interface for the desired interface. 
-	// That's why we need to be careful and make sure we release the first ref count before returning...
-	// So, if you add a component here and it doesn't ref count when you create it then you might
-	// have a problem....
-	
-	if (mClassID.Equals(kCSmtpServiceCID)) 
-	{
-		nsSmtpService * smtpService = new nsSmtpService();
-		// okay now turn around and give inst a handle on it....
-    if (smtpService)
-  		return smtpService->QueryInterface(aIID, aResult);
-    else
-      return NS_ERROR_OUT_OF_MEMORY;
-	}
-
-	if (mClassID.Equals(kSmtpServerCID)) 
-	{
-		nsSmtpServer * smtpServer = new nsSmtpServer();
-		// okay now turn around and give inst a handle on it....
-    if (smtpServer)
-  		return smtpServer->QueryInterface(aIID, aResult);
-    else
-      return NS_ERROR_OUT_OF_MEMORY;
-	}
-
-	// do they want a Message Compose interface ?
-	else if (mClassID.Equals(kCMsgComposeCID)) 
-	{
-		nsMsgCompose * msgCompose = new nsMsgCompose();
-		// okay now turn around and give inst a handle on it....
-    if (msgCompose)
-  		return msgCompose->QueryInterface(aIID, aResult);
-    else
-      return NS_ERROR_OUT_OF_MEMORY;
-	}
-
-	// do they want a Message Compose Fields interface ?
-	else if (mClassID.Equals(kCMsgCompFieldsCID)) 
-	{
-		return NS_NewMsgCompFields(aIID, aResult);
-	}
-
-	// do they want a Message Send interface ?
-	else if (mClassID.Equals(kCMsgSendCID)) 
-	{
-		return NS_NewMsgSend(aIID, aResult);
-	}
-	
-	// do they want a Message Send Later interface ?
-	else if (mClassID.Equals(kCMsgSendLaterCID)) 
-	{
-		return NS_NewMsgSendLater(aIID, aResult);
-	}
-
-  // do they want a Draft interface?
-	else if (mClassID.Equals(kMsgDraftCID)) 
-	{
-		return NS_NewMsgDraft(aIID, aResult);
-	}
-
-	else if (mClassID.Equals(kCMsgComposeServiceCID)) 
-	{
-		nsMsgComposeService * aMsgCompService = new nsMsgComposeService();
-		// okay now turn around and give inst a handle on it....
-    if (aMsgCompService)
-  		return aMsgCompService->QueryInterface(aIID, aResult);
-    else
-      return NS_ERROR_OUT_OF_MEMORY;
-	}
-
-	// Quoting anyone?
-	else if (mClassID.Equals(kCMsgQuoteCID)) 
-		return NS_NewMsgQuote(aIID, aResult);
-	else if (mClassID.Equals(kCSmtpUrlCID))
-		return NS_NewSmtpUrl(aIID, aResult);
+NS_DECL_MODULE(nsModule)
+NS_IMPL_MODULE_CORE(nsModule)
+NS_IMPL_ISUPPORTS1(nsModule, nsIModule)
+NS_IMPL_MODULE_GETCLASSOBJECT(nsModule, components)
+NS_IMPL_MODULE_REGISTERSELF(nsModule, components)
+NS_IMPL_MODULE_UNREGISTERSELF(nsModule, components)
   
-	return NS_NOINTERFACE;  
-}  
-
-nsresult nsMsgComposeFactory::LockFactory(PRBool aLock)  
-{  
-	if (aLock) 
-		PR_AtomicIncrement(&g_LockCount); 
-	else
-		PR_AtomicDecrement(&g_LockCount); 
-	
-	return NS_OK;
-}  
-
-// return the proper factory to the caller. 
-extern "C" NS_EXPORT nsresult NSGetFactory(nsISupports* aServMgr,
-                                           const nsCID &aClass,
-                                           const char *aClassName,
-                                           const char *aProgID,
-                                           nsIFactory **aFactory)
-{
-	if (nsnull == aFactory)
-		return NS_ERROR_NULL_POINTER;
-
-	*aFactory = new nsMsgComposeFactory(aClass, aClassName, aProgID, aServMgr);
-	if (aFactory)
-		return (*aFactory)->QueryInterface(nsCOMTypeInfo<nsIFactory>::GetIID(),
-									   (void**)aFactory);
-		else
-			return NS_ERROR_OUT_OF_MEMORY;
-}
-
-extern "C" NS_EXPORT PRBool NSCanUnload(nsISupports* aServMgr) 
-{
-    return PRBool(g_InstanceCount == 0 && g_LockCount == 0);
-}
-
-extern "C" NS_EXPORT nsresult NSRegisterSelf(nsISupports* aServMgr, const char* path)
-{
-	nsresult rv = NS_OK;
-	nsresult finalResult = NS_OK;
-
+#if 0
 	nsCOMPtr<nsIServiceManager> servMgr(do_QueryInterface(aServMgr, &rv));
 	if (NS_FAILED(rv)) return rv;
 
@@ -258,9 +250,9 @@ extern "C" NS_EXPORT nsresult NSRegisterSelf(nsISupports* aServMgr, const char* 
 	if (NS_FAILED(rv)) finalResult = rv;
 
 	rv = compMgr->RegisterComponent(kCMsgComposeServiceCID,
-										"Message Compose Service",
-										"component://netscape/messengercompose",
-										path, PR_TRUE, PR_TRUE);
+                                  "Message Compose Service",
+                                  NS_MSGCOMPOSESERVICE_PROGID,
+                                  path, PR_TRUE, PR_TRUE);
 	if (NS_FAILED(rv)) finalResult = rv;
 
 	rv = compMgr->RegisterComponent(kCMsgComposeCID,
@@ -358,3 +350,4 @@ NSUnregisterSelf(nsISupports* aServMgr, const char* path)
 
 	return finalResult;
 }
+#endif
