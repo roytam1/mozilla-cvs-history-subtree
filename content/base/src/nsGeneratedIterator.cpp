@@ -136,6 +136,11 @@ public:
 
   NS_IMETHOD PositionAt(nsIContent* aCurNode);
 
+  NS_IMETHOD MakePre();
+
+  NS_IMETHOD MakePost();
+
+  
   // nsIEnumertor interface methods ------------------------------
   
   //NS_IMETHOD CurrentItem(nsISupports **aItem);
@@ -171,6 +176,7 @@ protected:
   nsIPresShell::GeneratedContentType mLastIterType;
   nsCOMPtr<nsIPresShell> mPresShell;
   PRBool mIsDone;
+  PRBool mPre;
   
 private:
 
@@ -243,7 +249,7 @@ nsresult nsGeneratedContentIterator::QueryInterface(const nsIID& aIID,
 
 nsGeneratedContentIterator::nsGeneratedContentIterator() :
   // don't need to explicitly initialize |nsCOMPtr|s, they will automatically be NULL
-  mIsDone(PR_FALSE)
+  mIsDone(PR_FALSE), mPre(PR_FALSE)
 {
   NS_INIT_ISUPPORTS();
 }
@@ -647,6 +653,11 @@ nsresult nsGeneratedContentIterator::NextNode(nsCOMPtr<nsIContent> *ioNextNode)
   if (!ioNextNode)
     return NS_ERROR_NULL_POINTER;
     
+  if (mPre)  // if we are a Pre-order iterator, use pre-order
+  {
+    return NS_ERROR_NOT_IMPLEMENTED;
+  }
+  else  // post-order*/
   if (mGenIter)
   {
     if (mGenIter->IsDone())
@@ -720,25 +731,33 @@ nsresult nsGeneratedContentIterator::PrevNode(nsCOMPtr<nsIContent> *ioNextNode)
   if (!ioNextNode)
     return NS_ERROR_NULL_POINTER;
    
-  nsCOMPtr<nsIContent> cN = *ioNextNode;
-  nsCOMPtr<nsIContent> cLastChild;
-  PRInt32 numChildren;
-  
-  cN->ChildCount(numChildren);
-  
-  // if it has children then prev node is last child
-  if (numChildren)
+ if (mPre)  // if we are a Pre-order iterator, use pre-order
   {
-    if (NS_FAILED(cN->ChildAt(--numChildren,*getter_AddRefs(cLastChild))))
-      return NS_ERROR_FAILURE;
-    if (!cLastChild)
-      return NS_ERROR_FAILURE;
-    *ioNextNode = cLastChild;
-    return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
   }
+  else  // post-order
+  {
+    nsCOMPtr<nsIContent> cN = *ioNextNode;
+    nsCOMPtr<nsIContent> cLastChild;
+    PRInt32 numChildren;
   
-  // else prev sibling is previous
-  return GetPrevSibling(cN, ioNextNode);
+    cN->ChildCount(numChildren);
+  
+    // if it has children then prev node is last child
+    if (numChildren)
+    {
+      if (NS_FAILED(cN->ChildAt(--numChildren,*getter_AddRefs(cLastChild))))
+        return NS_ERROR_FAILURE;
+      if (!cLastChild)
+        return NS_ERROR_FAILURE;
+      *ioNextNode = cLastChild;
+      return NS_OK;
+    }
+  
+    // else prev sibling is previous
+    return GetPrevSibling(cN, ioNextNode);
+  }
+  return NS_OK;
 }
 
 /******************************************************
@@ -822,6 +841,20 @@ nsresult nsGeneratedContentIterator::PositionAt(nsIContent* aCurNode)
   return NS_OK;
 }
 
+nsresult nsGeneratedContentIterator::MakePre()
+{
+  // XXX need to confirm mCurNode is within range
+  mPre = PR_TRUE;
+  return NS_OK;
+}
+
+nsresult nsGeneratedContentIterator::MakePost()
+{
+  // XXX need to confirm mCurNode is within range
+  mPre = PR_FALSE;
+  return NS_OK;
+}
+
 
 nsresult nsGeneratedContentIterator::CurrentNode(nsIContent **aNode)
 {
@@ -866,6 +899,10 @@ public:
   NS_IMETHOD Prev();
 
   NS_IMETHOD PositionAt(nsIContent* aCurNode);
+
+  NS_IMETHOD MakePre();
+
+  NS_IMETHOD MakePost();
 
   //nsIGeneratedContentIterator
   NS_IMETHOD Init(nsIPresShell *aShell, nsIDOMRange* aRange);
@@ -1205,6 +1242,16 @@ nsresult nsGeneratedSubtreeIterator::Prev()
 }
 
 nsresult nsGeneratedSubtreeIterator::PositionAt(nsIContent* aCurNode)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+nsresult nsGeneratedSubtreeIterator::MakePre()
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+nsresult nsGeneratedSubtreeIterator::MakePost()
 {
   return NS_ERROR_NOT_IMPLEMENTED;
 }

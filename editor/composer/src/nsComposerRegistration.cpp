@@ -43,7 +43,6 @@
 #include "nsComposerController.h"   // for the CID
 #include "nsEditorSpellCheck.h"     // for the CID
 #include "nsEditorService.h"
-#include "nsComposeTxtSrvFilter.h"
 
 ////////////////////////////////////////////////////////////////////////
 // Define the contructor function for the objects
@@ -56,51 +55,6 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsEditingSession)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsComposerController)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsEditorService)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsEditorSpellCheck)
-
-// There are no macros that enable us to have 2 constructors
-// for the same object
-//
-// Here we are creating the same object with two different contract IDs
-// and then initializing it different.
-// Basically, we need to tell the filter whether it is doing mail or not
-static nsresult
-nsComposeTxtSrvFilterConstructor(nsISupports *aOuter, REFNSIID aIID,
-                                 void **aResult, PRBool aIsForMail)
-{
-    *aResult = NULL;
-    if (NULL != aOuter)
-    {
-        return NS_ERROR_NO_AGGREGATION;
-    }
-    nsComposeTxtSrvFilter * inst;
-    NS_NEWXPCOM(inst, nsComposeTxtSrvFilter);
-    if (NULL == inst)
-    {
-        return NS_ERROR_OUT_OF_MEMORY;
-    }
-    NS_ADDREF(inst);
-         inst->Init(aIsForMail);
-    nsresult rv = inst->QueryInterface(aIID, aResult);
-    NS_RELEASE(inst);
-    return rv;
-}
-
-static NS_IMETHODIMP
-nsComposeTxtSrvFilterConstructorForComposer(nsISupports *aOuter,
-                                            REFNSIID aIID,
-                                            void **aResult)
-{
-    return nsComposeTxtSrvFilterConstructor(aOuter, aIID, aResult, PR_FALSE);
-}
-
-static NS_IMETHODIMP
-nsComposeTxtSrvFilterConstructorForMail(nsISupports *aOuter,
-                                        REFNSIID aIID,
-                                        void **aResult)
-{
-    return nsComposeTxtSrvFilterConstructor(aOuter, aIID, aResult, PR_TRUE);
-}
-
 
 ////////////////////////////////////////////////////////////////////////
 // Define a table of CIDs implemented by this module along with other
@@ -130,16 +84,6 @@ static const nsModuleComponentInfo components[] = {
     { "Edit Startup Handler", NS_EDITORSERVICE_CID,
       "@mozilla.org/commandlinehandler/general-startup;1?type=edit",
       nsEditorServiceConstructor, },
-    // HACK: Photon only needs the mail variant, and 
-    //       this was somehow getting in the way...
-#if 0
-    { "TxtSrv Filter", NS_COMPOSERTXTSRVFILTER_CID,
-      COMPOSER_TXTSRVFILTER_CONTRACTID,
-      nsComposeTxtSrvFilterConstructorForComposer, },
-#endif
-    { "TxtSrv Filter For Mail", NS_COMPOSERTXTSRVFILTER_CID,
-      COMPOSER_TXTSRVFILTERMAIL_CONTRACTID,
-      nsComposeTxtSrvFilterConstructorForMail, },
 };
 
 ////////////////////////////////////////////////////////////////////////

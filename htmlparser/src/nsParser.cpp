@@ -123,9 +123,22 @@ public:
   CSharedParserObjects()
   :mDTDDeque(0), 
    mHasViewSourceDTD(PR_FALSE),
-   mHasXMLDTD(PR_FALSE) 
+   mHasXMLDTD(PR_FALSE)
   {
-    // do nothing.
+
+    //Note: To cut down on startup time/overhead, we defer the construction of non-html DTD's. 
+
+    nsIDTD* theDTD;
+
+    NS_NewNavHTMLDTD(&theDTD);    //do this as a default HTML DTD...
+    
+    // please handle allocation failure
+    NS_ASSERTION(theDTD, "Failed to create DTD");
+    
+    mDTDDeque.Push(theDTD);
+     
+    mHasViewSourceDTD=PR_FALSE;
+    mHasXMLDTD=PR_FALSE;
   }
 
   ~CSharedParserObjects() {
@@ -133,31 +146,17 @@ public:
     mDTDDeque.ForEach(theDeallocator);  //release all the DTD's
   }
 
-  nsresult Init() {
-    //Note: To cut down on startup time/overhead, we defer the construction of non-html DTD's. 
-    nsIDTD* theDTD = 0;
-    nsresult rv = NS_NewNavHTMLDTD(&theDTD);    //do this as a default HTML DTD...
-    
-    NS_ASSERTION(theDTD, "Failed to create DTD");
-    NS_ENSURE_SUCCESS(rv, rv);
-    
-    mDTDDeque.Push(theDTD);
-    mHasViewSourceDTD = PR_FALSE;
-    mHasXMLDTD = PR_FALSE;
-    return NS_OK;
-  }
-
-  nsresult RegisterDTD(nsIDTD* aDTD) {
-    NS_ENSURE_ARG_POINTER(aDTD);
-    nsCOMPtr<nsIDTD> dtd(aDTD);
-    CDTDFinder theFinder(dtd);
-    if (!mDTDDeque.FirstThat(theFinder)) {
-      nsIDTD* theDTD;
-      nsresult rv = dtd->CreateNewInstance(&theDTD);
-      NS_ENSURE_SUCCESS(rv, rv);
-      mDTDDeque.Push(theDTD);
+  void RegisterDTD(nsIDTD* aDTD){
+    if(aDTD) {
+      NS_ADDREF(aDTD);
+      CDTDFinder theFinder(aDTD);
+      if(!mDTDDeque.FirstThat(theFinder)) {
+        nsIDTD* theDTD;
+        aDTD->CreateNewInstance(&theDTD);
+        mDTDDeque.Push(theDTD);
+      }
+      NS_RELEASE(aDTD);
     }
-    return NS_OK;
   }
   
   nsDeque mDTDDeque;
@@ -263,16 +262,11 @@ static CSharedParserObjects* gSharedParserObjects=0;
 
 //-------------------------------------------------------------------------
 
-nsresult
-GetSharedObjects(CSharedParserObjects** aSharedParserObjects) {
+CSharedParserObjects& GetSharedObjects() {
   if (!gSharedParserObjects) {
     gSharedParserObjects = new CSharedParserObjects();
-    NS_ENSURE_TRUE(gSharedParserObjects, NS_ERROR_OUT_OF_MEMORY);
-    nsresult rv = gSharedParserObjects->Init();
-    NS_ENSURE_SUCCESS(rv, rv);
   }
-  *aSharedParserObjects = gSharedParserObjects;
-  return NS_OK;
+  return *gSharedParserObjects;
 }
 
 /** 
@@ -557,12 +551,9 @@ nsIContentSink* nsParser::GetContentSink(void){
  *  @param   aDTD  is the object to be registered.
  *  @return  nothing.
  */
-nsresult
-nsParser::RegisterDTD(nsIDTD* aDTD){
-  CSharedParserObjects* sharedObjects;
-  nsresult rv = GetSharedObjects(&sharedObjects);
-  NS_ENSURE_SUCCESS(rv, rv);
-  return sharedObjects->RegisterDTD(aDTD);
+void nsParser::RegisterDTD(nsIDTD* aDTD){
+  CSharedParserObjects& theShare=GetSharedObjects();
+  theShare.RegisterDTD(aDTD);
 }
 
 /**
@@ -1137,72 +1128,58 @@ void DetermineParseMode(const nsString& aBuffer,
  *  @return  
  */
 static
-nsresult
-FindSuitableDTD(CParserContext& aParserContext,
-                const nsString& aBuffer,
-                PRBool* aReturn)
-{
-   *aReturn = PR_FALSE;
+PRBool FindSuitableDTD( CParserContext& aParserContext,nsString& aBuffer) {
+  
   //Let's start by trying the defaultDTD, if one exists...
   if(aParserContext.mDTD)
     if(aParserContext.mDTD->CanParse(aParserContext,aBuffer,0))
       return PR_TRUE;
 
-  CSharedParserObjects* sharedObjects;
-  nsresult rv = GetSharedObjects(&sharedObjects);
-  NS_ENSURE_SUCCESS(rv, rv);
+  CSharedParserObjects& gSharedObjects=GetSharedObjects();
 
-  aParserContext.mAutoDetectStatus = eUnknownDetect;
-  PRInt32 theDTDIndex = 0;
-  nsIDTD* theBestDTD  = 0;
-  nsIDTD* theDTD      = 0;
-  PRBool  thePrimaryFound = PR_FALSE;
+  aParserContext.mAutoDetectStatus=eUnknownDetect;
+  PRInt32 theDTDIndex=0;
+  nsIDTD* theBestDTD=0;
+  nsIDTD* theDTD=0;
+  PRBool  thePrimaryFound=PR_FALSE;
 
-  while ((theDTDIndex <= sharedObjects->mDTDDeque.GetSize()) && 
-         (aParserContext.mAutoDetectStatus != ePrimaryDetect)){
-    theDTD = NS_STATIC_CAST(nsIDTD*, sharedObjects->mDTDDeque.ObjectAt(theDTDIndex++));
-    if (theDTD) {
+  while((theDTDIndex<=gSharedObjects.mDTDDeque.GetSize()) && (aParserContext.mAutoDetectStatus!=ePrimaryDetect)){
+    theDTD=(nsIDTD*)gSharedObjects.mDTDDeque.ObjectAt(theDTDIndex++);
+    if(theDTD) {
       // Store detect status in temp ( theResult ) to avoid bugs such as
       // 36233, 36754, 36491, 36323. Basically, we should avoid calling DTD's
       // WillBuildModel() multiple times, i.e., we shouldn't leave auto-detect-status
       // unknown.
-      eAutoDetectResult theResult = theDTD->CanParse(aParserContext,aBuffer,0);
-      if (eValidDetect == theResult){
-        aParserContext.mAutoDetectStatus = eValidDetect;
-        theBestDTD = theDTD;
+      eAutoDetectResult theResult=theDTD->CanParse(aParserContext,aBuffer,0);
+      if(eValidDetect==theResult){
+        aParserContext.mAutoDetectStatus=eValidDetect;
+        theBestDTD=theDTD;
       }
-      else if (ePrimaryDetect == theResult) {  
-        theBestDTD = theDTD;
-        thePrimaryFound = PR_TRUE;
-        aParserContext.mAutoDetectStatus = ePrimaryDetect;
+      else if(ePrimaryDetect==theResult) {  
+        theBestDTD=theDTD;
+        thePrimaryFound=PR_TRUE;
+        aParserContext.mAutoDetectStatus=ePrimaryDetect;
       }
     }
-    if (theDTDIndex == sharedObjects->mDTDDeque.GetSize() && !thePrimaryFound) {
-      if (!sharedObjects->mHasXMLDTD) {
-        rv = NS_NewExpatDriver(&theDTD); //do this to view XML files...
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        sharedObjects->mDTDDeque.Push(theDTD);
-        sharedObjects->mHasXMLDTD = PR_TRUE;
+    if((theDTDIndex==gSharedObjects.mDTDDeque.GetSize()) && (!thePrimaryFound)) {
+      if(!gSharedObjects.mHasXMLDTD) {
+        NS_NewExpatDriver(&theDTD); //do this to view XML files...
+        gSharedObjects.mDTDDeque.Push(theDTD);
+        gSharedObjects.mHasXMLDTD=PR_TRUE;
       }
-      else if (!sharedObjects->mHasViewSourceDTD) {
-        rv = NS_NewViewSourceHTML(&theDTD);  //do this so all non-html files can be viewed...
-        NS_ENSURE_SUCCESS(rv, rv);
-        
-        sharedObjects->mDTDDeque.Push(theDTD);
-        sharedObjects->mHasViewSourceDTD = PR_TRUE;
+      else if(!gSharedObjects.mHasViewSourceDTD) {
+        NS_NewViewSourceHTML(&theDTD);  //do this so all non-html files can be viewed...
+        gSharedObjects.mDTDDeque.Push(theDTD);
+        gSharedObjects.mHasViewSourceDTD=PR_TRUE;
       }
     }
   }
 
   if(theBestDTD) {
-    rv = theBestDTD->CreateNewInstance(&aParserContext.mDTD);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    *aReturn = PR_TRUE;
+    theBestDTD->CreateNewInstance(&aParserContext.mDTD);
+    return PR_TRUE;
   }
-
-  return rv;
+  return PR_FALSE;
 }
 
 NS_IMETHODIMP 
@@ -1238,9 +1215,8 @@ nsParser::CancelParsingEvents() {
  * @param 
  * @return  error code -- 0 if ok, non-zero if error.
  */
-nsresult 
-nsParser::WillBuildModel(nsString& aFilename)
-{
+nsresult nsParser::WillBuildModel(nsString& aFilename){
+
   nsresult       result=NS_OK;
 
   if(mParserContext){
@@ -1256,17 +1232,12 @@ nsParser::WillBuildModel(nsString& aFilename)
           eDTDMode_autodetect == mParserContext->mDTDMode) {
         DetermineParseMode(theBuffer,mParserContext->mDTDMode,mParserContext->mDocType,mParserContext->mMimeType);
       }
-      
-      PRBool found;
-      nsresult rv = FindSuitableDTD(*mParserContext,theBuffer, &found);
-      NS_ENSURE_SUCCESS(rv, rv);
 
-      if (!found)
-        return rv;
-
-      nsITokenizer* tokenizer;
-      mParserContext->GetTokenizer(mParserContext->mDTD->GetType(), tokenizer);
-      result = mParserContext->mDTD->WillBuildModel(*mParserContext, tokenizer, mSink);       
+      if(PR_TRUE==FindSuitableDTD(*mParserContext,theBuffer)) {
+        nsITokenizer* tokenizer;
+        mParserContext->GetTokenizer(mParserContext->mDTD->GetType(), tokenizer);
+        result = mParserContext->mDTD->WillBuildModel(*mParserContext, tokenizer, mSink);
+      }//if        
     }//if
   } 
   else result=kInvalidParserContext;    
@@ -1749,7 +1720,7 @@ nsresult nsParser::ResumeParse(PRBool allowIteration, PRBool aIsFinalChunk, PRBo
     MOZ_TIMER_DEBUGLOG(("Start: Parse Time: nsParser::ResumeParse(), this=%p\n", this));
     MOZ_TIMER_START(mParseTime);
 
-    result = WillBuildModel(mParserContext->mScanner->GetFilename());
+    result=WillBuildModel(mParserContext->mScanner->GetFilename());
     if (NS_FAILED(result)) {
       mFlags &= ~NS_PARSER_FLAG_CAN_TOKENIZE;
       return result;

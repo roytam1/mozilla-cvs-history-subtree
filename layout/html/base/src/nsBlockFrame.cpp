@@ -6029,7 +6029,6 @@ nsBlockFrame::HandleEvent(nsIPresContext* aPresContext,
       pos.mDirection = eDirNext;
       pos.mDesiredX = aEvent->point.x;
       pos.mScrollViewStop = PR_FALSE;
-      pos.mInlineFrameStop = PR_TRUE;
       result = nsFrame::GetNextPrevLineFromeBlockFrame(aPresContext,
                                           &pos,
                                           mainframe, 
@@ -6052,11 +6051,6 @@ nsBlockFrame::HandleEvent(nsIPresContext* aPresContext,
 
     if (resultFrame)
     {
-      const nsStyleDisplay* display;
-      resultFrame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&) display);
-      nsCOMPtr<nsIFrameSelection> frameselection;
-      shell->GetFrameSelection(getter_AddRefs(frameselection));
-      PRBool mouseDown = aEvent->message == NS_MOUSE_MOVE;
       if (NS_COMFALSE == result)
       {
         nsCOMPtr<nsISelectionController> selCon;
@@ -6069,35 +6063,17 @@ nsBlockFrame::HandleEvent(nsIPresContext* aPresContext,
           if (displayresult == nsISelectionController::SELECTION_OFF)
             return NS_OK;//nothing to do we cannot affect selection from here
         }
+        nsCOMPtr<nsIFrameSelection> frameselection;
+        shell->GetFrameSelection(getter_AddRefs(frameselection));
+        PRBool mouseDown = aEvent->message == NS_MOUSE_MOVE;
         if (frameselection)
         {
           result = frameselection->HandleClick(pos.mResultContent, pos.mContentOffset, 
                                                pos.mContentOffsetEnd, mouseDown || me->isShift, PR_FALSE, pos.mPreferLeft);
         }
       }
-      else 
-      {
-        //check to see if result frame is an inline. see if it is also selected after the frame..
-        //the pos.mInlineFrameStop is also a return value that tells us that the getnextprevline code did hit a 
-        //qualifying frame for the inline/link stop
-        if (pos.mInlineFrameStop && (aEvent->message == NS_MOUSE_MOVE ||
-            aEvent->message == NS_MOUSE_LEFT_BUTTON_DOWN) && 
-            frameselection) 
-        {
-          resultFrame->GetOffsetFromView(aPresContext, origin, &parentWithView);
-          nsRect rect;
-          resultFrame->GetRect(rect);
-          if ((origin.x >  aEvent->point.x) 
-            || (origin.x + rect.width  < aEvent->point.x))
-          {
-            frameselection->SetMouseDownState( PR_TRUE );
-            CaptureMouse(aPresContext, PR_TRUE);
-            return frameselection->HandleClick(pos.mResultContent, pos.mContentOffset,
-                                      pos.mContentOffsetEnd, mouseDown || me->isShift, PR_FALSE, pos.mPreferLeft);
-          }
-        }
+      else
         result = resultFrame->HandleEvent(aPresContext, aEvent, aEventStatus);//else let the frame/container do what it needs
-      }
       if (aEvent->message == NS_MOUSE_LEFT_BUTTON_DOWN && !IsMouseCaptured(aPresContext))
           CaptureMouse(aPresContext, PR_TRUE);
       return result;

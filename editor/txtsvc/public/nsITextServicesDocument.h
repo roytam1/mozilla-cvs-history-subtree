@@ -42,11 +42,9 @@
 #include "nsISupports.h"
 
 class nsIDOMDocument;
-class nsIDOMRange;
 class nsIPresShell;
 class nsIEditor;
 class nsString;
-class nsITextServicesFilter;
 
 /*
 TextServicesDocument interface to outside world
@@ -78,7 +76,7 @@ public:
   } TSDBlockSelectionStatus;
 
   /**
-   * Initializes the text services document to use a particular
+   * Initailizes the text services document to use a particular
    * DOM document.
    * @param aDOMDocument is the document to use. It is AddRef'd
    * by this method.
@@ -88,12 +86,6 @@ public:
   NS_IMETHOD InitWithDocument(nsIDOMDocument *aDOMDocument, nsIPresShell *aPresShell) = 0;
 
   /**
-   * Get the DOM document for the document in use.
-   * @return aDocument the dom document [OUT]
-   */
-  NS_IMETHOD GetDocument(nsIDOMDocument **aDocument) = 0;
-
-  /**
    * Initializes the text services document to use a particular
    * editor. The text services document will use the DOM document
    * and presentation shell used by the editor.
@@ -101,42 +93,6 @@ public:
    * by this method.
    */
   NS_IMETHOD InitWithEditor(nsIEditor *aEditor) = 0;
-
-  /**
-   * Sets the range/extent over which the text services document
-   * will iterate. Note that InitWithDocument() or InitWithEditor()
-   * should have been called prior to calling this method. If this
-   * method is never called, the text services defaults to iterating
-   * over the entire document.
-   *
-   * @param aDOMRange is the range to use. aDOMRange must point to a
-   * valid range object.
-   */
-  NS_IMETHOD SetExtent(nsIDOMRange* aDOMRange) = 0;
-
-  /**
-   * Gets the range that the text services document
-   * is currently iterating over. If SetExtent() was never
-   * called, this method will return a range that spans the
-   * entire body of the document.
-   *
-   * @param aDOMRange will contain an AddRef'd pointer to the range.
-   */
-  NS_IMETHOD GetExtent(nsIDOMRange** aDOMRange) = 0;
-
-  /**
-   * Expands the end points of the range so that it spans complete words.
-   * This call does not change any internal state of the text services document.
-   *
-   * @param aDOMRange the range to be expanded/adjusted.
-   */
-  NS_IMETHOD ExpandRangeToWordBoundaries(nsIDOMRange *aRange) = 0;
-
-  /**
-   * Sets the filter to be used while iterating over content.
-   * @param aFilter filter to be used while iterating over content.
-   */
-  NS_IMETHOD SetFilter(nsITextServicesFilter *aFilter) = 0;
 
   /**
    * Returns true if the document can be modified with calls

@@ -1150,6 +1150,15 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
 
       rv = nsuiEvent->GetRangeOffset(&newSelectionOffset);
       if (NS_FAILED(rv)) return rv;
+      /* Creating a range to store insert position because when
+         we delete the selection, range gravity will make sure the insertion
+         point is in the correct place */
+      nsCOMPtr<nsIDOMRange> destinationRange;
+      rv = CreateRange(newSelectionParent, newSelectionOffset,newSelectionParent, newSelectionOffset, getter_AddRefs(destinationRange));
+      if (NS_FAILED(rv))
+        return rv;
+      if(!destinationRange)
+        return NS_ERROR_FAILURE;
 
       // We never have to delete if selection is already collapsed
       PRBool deleteSelection = PR_FALSE;
@@ -1209,9 +1218,6 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
 
       if (deleteSelection)
       {
-        // Use an auto tracker so that our drop point is correctly
-        // positioned after the delete.
-        nsAutoTrackDOMPoint tracker(mRangeUpdater, &newSelectionParent, &newSelectionOffset);
         rv = DeleteSelection(eNone);
         if (NS_FAILED(rv)) return rv;
       }
@@ -1221,6 +1227,15 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
       if (!(deleteSelection && srcdomdoc != destdomdoc))
       {
         // Move the selection to the point under the mouse cursor
+        rv = destinationRange->GetStartContainer(getter_AddRefs(newSelectionParent));
+        if (NS_FAILED(rv))
+          return rv;
+        if(!newSelectionParent)
+          return NS_ERROR_FAILURE;
+       
+        rv = destinationRange->GetStartOffset(&newSelectionOffset);
+        if (NS_FAILED(rv))
+          return rv;
         selection->Collapse(newSelectionParent, newSelectionOffset);
       }      
       // We have to figure out whether to delete and relocate caret only once
@@ -2092,13 +2107,12 @@ nsresult nsHTMLEditor::CreateDOMFragmentFromPaste(nsIDOMNSRange *aNSRange,
   nsresult res = NS_OK;
   
   // if we have context info, create a fragment for that
-  nsVoidArray tagStack;
   nsCOMPtr<nsIDOMDocumentFragment> contextfrag;
   nsCOMPtr<nsIDOMNode> contextLeaf, junk;
   PRInt32 contextDepth = 0;
   if (aContextStr.Length())
   {
-    res = ParseFragment(aContextStr, tagStack, address_of(contextAsNode));
+    res = ParseFragment(aContextStr, address_of(contextAsNode));
     NS_ENSURE_SUCCESS(res, res);
     NS_ENSURE_TRUE(contextAsNode, NS_ERROR_FAILURE);
 
@@ -2117,17 +2131,13 @@ nsresult nsHTMLEditor::CreateDOMFragmentFromPaste(nsIDOMNSRange *aNSRange,
     }
   }
  
-  // get the tagstack for the context
-  res = CreateTagStack(tagStack, contextLeaf);
-  NS_ENSURE_SUCCESS(res, res);
 
   // create fragment for pasted html
-  res = ParseFragment(aInputString, tagStack, outFragNode);
+  res = ParseFragment(aInputString, outFragNode);
   NS_ENSURE_SUCCESS(res, res);
   NS_ENSURE_TRUE(*outFragNode, NS_ERROR_FAILURE);
 
   RemoveBodyAndHead(*outFragNode);
-  FreeTagStackStrings(tagStack);
   
   if (contextAsNode)
   {
@@ -2161,11 +2171,8 @@ nsresult nsHTMLEditor::CreateDOMFragmentFromPaste(nsIDOMNSRange *aNSRange,
 }
 
 
-nsresult nsHTMLEditor::ParseFragment(const nsAString & aFragStr, nsVoidArray &aTagStack, nsCOMPtr<nsIDOMNode> *outNode)
+nsresult nsHTMLEditor::ParseFragment(const nsAString & aFragStr, nsCOMPtr<nsIDOMNode> *outNode)
 {
-  // figure out if we are parsing full context or not
-  PRBool bContext = (aTagStack.Count()==0);
-
   // create the parser to do the conversion.
   nsCOMPtr<nsIParser> parser;
   nsresult res = nsComponentManager::CreateInstance(kCParserCID, nsnull, NS_GET_IID(nsIParser),
@@ -2175,21 +2182,15 @@ nsresult nsHTMLEditor::ParseFragment(const nsAString & aFragStr, nsVoidArray &aT
 
   // create the html fragment sink
   nsCOMPtr<nsIContentSink> sink;
-  if (bContext)
-    sink = do_CreateInstance(NS_HTMLFRAGMENTSINK2_CONTRACTID);
-  else
-    sink = do_CreateInstance(NS_HTMLFRAGMENTSINK_CONTRACTID);
-
+  sink = do_CreateInstance(NS_HTMLFRAGMENTSINK2_CONTRACTID);
   NS_ENSURE_TRUE(sink, NS_ERROR_FAILURE);
   nsCOMPtr<nsIHTMLFragmentContentSink> fragSink(do_QueryInterface(sink));
   NS_ENSURE_TRUE(fragSink, NS_ERROR_FAILURE);
 
   // parse the fragment
   parser->SetContentSink(sink);
-  if (bContext)
-    parser->Parse(aFragStr, (void*)0, NS_LITERAL_CSTRING("text/html"), PR_FALSE, PR_TRUE, eDTDMode_fragment);
-  else
-    parser->ParseFragment(aFragStr, 0, aTagStack, 0, NS_LITERAL_CSTRING("text/html"), eDTDMode_quirks);
+  parser->Parse(aFragStr, 0, NS_LITERAL_CSTRING("text/html"), PR_FALSE, PR_TRUE, eDTDMode_fragment);
+
   // get the fragment node
   nsCOMPtr<nsIDOMDocumentFragment> contextfrag;
   res = fragSink->GetFragment(getter_AddRefs(contextfrag));
@@ -2199,68 +2200,6 @@ nsresult nsHTMLEditor::ParseFragment(const nsAString & aFragStr, nsVoidArray &aT
   return res;
 }
 
-nsresult nsHTMLEditor::CreateTagStack(nsVoidArray &aTagStack, nsIDOMNode *aNode)
-{
-  nsresult res = NS_OK;
-  nsCOMPtr<nsIDOMNode> node= aNode;
-  // printf("in CreateTagStack------------------------------------\n");
-  PRBool bSeenBody = PR_FALSE;
-  
-  while (node) 
-  {
-    if (nsTextEditUtils::IsBody(node))
-      bSeenBody = PR_TRUE;
-    nsCOMPtr<nsIDOMNode> temp = node;
-    nsAutoString tagName;
-    PRUnichar* name = nsnull;
-    PRUint16 nodeType;
-    
-    node->GetNodeType(&nodeType);
-    if (nsIDOMNode::ELEMENT_NODE == nodeType)
-    {
-      node->GetNodeName(tagName);
-      // XXX Wish we didn't have to allocate here
-      name = ToNewUnicode(tagName);
-      if (name) 
-      {
-        aTagStack.AppendElement(name);
-        // printf("%s\n",NS_LossyConvertUCS2toASCII(tagName).get());
-        res = temp->GetParentNode(getter_AddRefs(node));
-        NS_ENSURE_SUCCESS(res, res);
-      }
-      else 
-      {
-        return NS_ERROR_OUT_OF_MEMORY;
-      }
-    }
-    else 
-    {
-      res = temp->GetParentNode(getter_AddRefs(node));
-      NS_ENSURE_SUCCESS(res, res);
-    }
-  }
-  
-  if (!bSeenBody)
-  {
-      PRUnichar* bodyname = ToNewUnicode(NS_LITERAL_STRING("BODY"));
-      aTagStack.AppendElement(bodyname);
-      // printf("BODY\n");
-  }
-  return res;
-}
-
-
-void nsHTMLEditor::FreeTagStackStrings(nsVoidArray &tagStack)
-{
-  PRInt32 count = tagStack.Count();
-  for (PRInt32 i = 0; i < count; i++) 
-  {
-    PRUnichar* str = (PRUnichar*)tagStack.ElementAt(i);
-    if (str) {
-      nsCRT::free(str);
-    }
-  }
-}
 
 nsresult nsHTMLEditor::CreateListOfNodesToPaste(nsIDOMNode  *aFragmentAsNode,
                                                 nsCOMPtr<nsISupportsArray> *outNodeList,

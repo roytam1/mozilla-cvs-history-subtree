@@ -243,7 +243,7 @@ pref("print.print_headerright", "&U");
 pref("print.print_footerleft", "&PT");
 pref("print.print_footercenter", "");
 pref("print.print_footerright", "&D");
-pref("print.show_print_progress", false);
+pref("print.show_print_progress", true);
 
 // When this is set to false it means each window has its PrintSettings
 // and a change in one browser window does not effect the others

@@ -97,8 +97,7 @@ struct nsPeekOffsetStruct
                PRBool aEatingWS,
                PRBool aPreferLeft,
                PRBool aJumpLines,
-               PRBool aScrollViewStop,
-               PRBool aInlineFrameStop)
+               PRBool aScrollViewStop)
       {
        mTracker=aTracker;
        mDesiredX=aDesiredX;
@@ -109,7 +108,6 @@ struct nsPeekOffsetStruct
        mPreferLeft=aPreferLeft;
        mJumpLines = aJumpLines;
        mScrollViewStop = aScrollViewStop;
-       mInlineFrameStop = aInlineFrameStop;
       }
   nsIFocusTracker *mTracker;
   nscoord mDesiredX;
@@ -124,7 +122,6 @@ struct nsPeekOffsetStruct
   PRBool mPreferLeft;
   PRBool mJumpLines;
   PRBool mScrollViewStop;
-  PRBool mInlineFrameStop;
 };
 
 class nsIScrollableView;

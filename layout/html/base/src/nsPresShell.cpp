@@ -3412,7 +3412,6 @@ PresShell::CompleteMove(PRBool aForward, PRBool aExtend)
   pos.mContentOffset = 0;
   pos.mContentOffsetEnd = 0;
   pos.mScrollViewStop = PR_FALSE;//dont stop on scrolled views.
-  pos.mInlineFrameStop = PR_FALSE;//dont stop on inlineFrames.
   if (aForward)
   {
     outsideLimit = 1;//search from end
