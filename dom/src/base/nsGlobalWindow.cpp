@@ -2552,6 +2552,7 @@ NS_IMETHODIMP
 GlobalWindowImpl::GetFrameElement(nsIDOMElement** aFrameElement)
 {
   *aFrameElement = mFrameElement;
+  NS_IF_ADDREF(*aFrameElement);
 
   return NS_OK;
 }
