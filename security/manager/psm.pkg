@@ -38,3 +38,10 @@ dist/bin/components/@DLLP@pipnss@DLLS@
 
 [psm-support]
 dist/bin/chrome/pipnss.jar
+
+[unpackaged-files]
+dist/bin/shlibsign@BINS@
+#if OS_ARCH==WINNT
+!optional dist/bin/mangle.exe
+#endif
+dist/bin/@SOFTOKEN3_CHK@
