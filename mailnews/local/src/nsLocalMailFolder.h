@@ -171,11 +171,11 @@ protected:
 	*/
 	nsresult CreateDirectoryForFolder(nsFileSpec &path);
 
-	nsresult DeleteMessage(nsIMessage *message, nsIMsgWindow *msgWindow,
+	nsresult DeleteMessage(nsISupports *message, nsIMsgWindow *msgWindow,
                          PRBool deleteStorage);
 
 	// copy message helper
-	nsresult CopyMessageTo(nsIMessage *message, nsIMsgFolder *dstFolder,
+	nsresult CopyMessageTo(nsISupports *message, nsIMsgFolder *dstFolder,
                          nsIMsgWindow *msgWindow, PRBool isMove);
 
 	// copy multiple messages at a time from this folder

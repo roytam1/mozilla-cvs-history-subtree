@@ -604,6 +604,16 @@ nsresult nsMsgDBView::DeleteMessages(nsIMsgWindow *window, nsMsgViewIndex *indic
   nsresult rv = NS_OK;
 	nsCOMPtr<nsISupportsArray> messageArray;
 	NS_NewISupportsArray(getter_AddRefs(messageArray));
+  for (nsMsgViewIndex index = 0; index < numIndices; index++)
+  {
+    nsMsgKey key = m_keys.GetAt(indices[index]);
+    nsCOMPtr <nsIMsgDBHdr> msgHdr;
+    rv = m_db->GetMsgHdrForKey(key, getter_AddRefs(msgHdr));
+    NS_ENSURE_SUCCESS(rv,rv);
+    if (msgHdr)
+      messageArray->AppendElement(msgHdr);
+
+  }
   // ### TODO populate messageArray, probably with nsIMsgDBHdrs, not nsIMessages.
   // but will need to change move/copy/delete to handle nsIMsgDBHdrs.
   m_folder->DeleteMessages(messageArray, window, deleteStorage, PR_FALSE);

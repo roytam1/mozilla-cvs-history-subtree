@@ -1498,7 +1498,6 @@ nsMsgLocalMailFolder::DeleteMessages(nsISupportsArray *messages,
       if(NS_SUCCEEDED(rv))
       {
           PRUint32 messageCount;
-          nsCOMPtr<nsIMessage> message;
           nsCOMPtr<nsISupports> msgSupport;
           rv = messages->Count(&messageCount);
 
@@ -1508,13 +1507,7 @@ nsMsgLocalMailFolder::DeleteMessages(nsISupportsArray *messages,
           EnableNotifications(allMessageCountNotifications, PR_FALSE);
           for(PRUint32 i = 0; i < messageCount; i++)
           {
-              msgSupport = getter_AddRefs(messages->ElementAt(i));
-              if (msgSupport)
-              {
-                message = do_QueryInterface(msgSupport, &rv);
-                if(message)
-                  DeleteMessage(message, msgWindow, PR_TRUE);
-              }
+            DeleteMessage(msgSupport, msgWindow, PR_TRUE);
           }
           EnableNotifications(allMessageCountNotifications, PR_TRUE);
 		  if(!isMove)
@@ -1710,11 +1703,12 @@ nsMsgLocalMailFolder::CopyMessages(nsIMsgFolder* srcFolder, nsISupportsArray*
 		msgSupport = getter_AddRefs(messages->ElementAt(0));
 		if (msgSupport)
 		{
-		  nsCOMPtr<nsIMessage> aMessage = do_QueryInterface(msgSupport, &rv);
-		  if(NS_SUCCEEDED(rv))
-			rv = CopyMessageTo(aMessage, this, msgWindow, isMove);
-		  else
-			ClearCopyState();
+			rv = CopyMessageTo(msgSupport, this, msgWindow, isMove);
+		  if (!NS_SUCCEEDED(rv))
+      {
+        NS_ASSERTION(PR_FALSE, "copy message failed");
+			  ClearCopyState();
+      }
 		}
 	}
   return rv;
@@ -1996,19 +1990,20 @@ done:
   return rv;
 }
 
-nsresult nsMsgLocalMailFolder::DeleteMessage(nsIMessage *message,
+nsresult nsMsgLocalMailFolder::DeleteMessage(nsISupports *message,
                                              nsIMsgWindow *msgWindow,
                                              PRBool deleteStorage)
 {
 	nsresult rv = NS_OK;
   if (deleteStorage)
 	{
-		nsCOMPtr <nsIMsgDBHdr> msgDBHdr;
+		nsCOMPtr <nsIMsgDBHdr> msgDBHdr(do_QueryInterface(message, &rv));
 		nsCOMPtr<nsIDBMessage> dbMessage(do_QueryInterface(message, &rv));
 
 		if(NS_SUCCEEDED(rv))
 		{
-			rv = dbMessage->GetMsgDBHdr(getter_AddRefs(msgDBHdr));
+      if (!msgDBHdr)
+			  rv = dbMessage->GetMsgDBHdr(getter_AddRefs(msgDBHdr));
 			if(NS_SUCCEEDED(rv))
 				rv = mDatabase->DeleteHeader(msgDBHdr, nsnull, PR_TRUE, PR_TRUE);
 		}
@@ -2391,9 +2386,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::EndCopy(PRBool copySucceeded)
     nsCOMPtr<nsISupports> aSupport =
       getter_AddRefs(mCopyState->m_messages->ElementAt
                      (mCopyState->m_curCopyIndex));
-    nsCOMPtr<nsIMessage>aMessage = do_QueryInterface(aSupport, &rv);
-    if (NS_SUCCEEDED(rv))
-      rv = CopyMessageTo(aMessage, this, msgWindow, mCopyState->m_isMove);
+    rv = CopyMessageTo(aSupport, this, msgWindow, mCopyState->m_isMove);
   }
   else
   { // both CopyMessages() & CopyFileMessage() go here if they have
@@ -2602,7 +2595,7 @@ nsresult nsMsgLocalMailFolder::CopyMessagesTo(nsISupportsArray *messages,
 	return rv;
 }
 
-nsresult nsMsgLocalMailFolder::CopyMessageTo(nsIMessage *message, 
+nsresult nsMsgLocalMailFolder::CopyMessageTo(nsISupports *message, 
                                              nsIMsgFolder *dstFolder,
                                              nsIMsgWindow *aMsgWindow,
                                              PRBool isMove)

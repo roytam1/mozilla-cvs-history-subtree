@@ -1668,15 +1668,21 @@ nsImapMailFolder::BuildIdsAndKeyArray(nsISupportsArray* messages,
     // build up message keys.
     for (i = 0; i < count; i++)
     {
-        msgSupports = getter_AddRefs(messages->ElementAt(i));
-        message = do_QueryInterface(msgSupports);
-        if (message)
-        {
-            nsMsgKey key;
-            rv = message->GetMessageKey(&key);
-            if (NS_SUCCEEDED(rv))
-                keyArray.Add(key);
-        }
+      msgSupports = getter_AddRefs(messages->ElementAt(i));
+      message = do_QueryInterface(msgSupports);
+      nsMsgKey key;
+      if (message)
+      {
+        rv = message->GetMessageKey(&key);
+      }
+      else
+      {
+        nsCOMPtr <nsIMsgDBHdr> msgDBHdr = do_QueryInterface(msgSupports, &rv);
+        if (msgDBHdr)
+          rv = msgDBHdr->GetMessageKey(&key);
+      }
+      if (NS_SUCCEEDED(rv))
+        keyArray.Add(key);
     }
     
   return AllocateUidStringFromKeys(keyArray.GetArray(), keyArray.GetSize(), msgIds);
