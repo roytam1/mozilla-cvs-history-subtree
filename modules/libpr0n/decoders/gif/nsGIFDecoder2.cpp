@@ -371,7 +371,7 @@ int HaveDecodedRow(
 #ifdef FOO
     nscoord width;
 #else
-    gfX_dimension width;
+    gfx_dimension width;
 #endif
     decoder->mImageFrame->GetWidth(&width);
     PRUint32 iwidth = width;
