@@ -165,6 +165,9 @@ NS_IMETHODIMP nsCommandParams::GetStringValue(const char *name, nsAString & _ret
 /* AString getStringValue (in AString name); */
 NS_IMETHODIMP nsCommandParams::GetCStringValue(const char * name, char **_retval)
 {
+  NS_ENSURE_ARG_POINTER(_retval);
+  *_retval = nsnull;
+
   HashEntry*  foundEntry = GetNamedEntry(name);
   if (foundEntry && foundEntry->mEntryType == eStringType)
   {
