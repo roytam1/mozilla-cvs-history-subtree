@@ -32,9 +32,10 @@
  */
 
 #include "Expr.h"
-#include "XMLUtils.h"
+#include "NodeSet.h"
 #include "txNodeSetContext.h"
 #include "txSingleNodeContext.h"
+#include "XMLUtils.h"
 
   //------------/
  //- PathExpr -/
