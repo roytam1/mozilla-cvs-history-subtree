@@ -482,9 +482,7 @@ public:
     NS_DECL_ISUPPORTS
 
     // nsIRDFDataSource
-    NS_IMETHOD Init(const char* uri) {
-        return mInner->Init(uri);
-    }
+    NS_IMETHOD Init(const char* uri);
 
     NS_IMETHOD GetSource(nsIRDFResource* property,
                          nsIRDFNode* target,
@@ -566,17 +564,6 @@ BookmarkDataSourceImpl::BookmarkDataSourceImpl(void)
     // XXX rvg there should be only one instance of this class. 
     // this is actually true of all datasources.
     NS_INIT_REFCNT();
-    nsresult rv;
-
-    // XXX do or die, my friend...
-    rv = nsRepository::CreateInstance(kRDFInMemoryDataSourceCID,
-                                      nsnull,
-                                      kIRDFDataSourceIID,
-                                      (void**) &mInner);
-
-    PR_ASSERT(NS_SUCCEEDED(rv));
-    ReadBookmarks();
-    Init(kURI_bookmarks);
 }
 
 BookmarkDataSourceImpl::~BookmarkDataSourceImpl(void)
@@ -587,6 +574,25 @@ BookmarkDataSourceImpl::~BookmarkDataSourceImpl(void)
 
 NS_IMPL_ISUPPORTS(BookmarkDataSourceImpl, kIRDFDataSourceIID);
 
+NS_IMETHODIMP
+BookmarkDataSourceImpl::Init(const char* uri)
+{
+    nsresult rv;
+
+    if (NS_FAILED(rv = nsRepository::CreateInstance(kRDFInMemoryDataSourceCID,
+                                                    nsnull,
+                                                    kIRDFDataSourceIID,
+                                                    (void**) &mInner)))
+        return rv;
+
+    if (NS_FAILED(rv = mInner->Init(uri)))
+        return rv;
+
+    if (NS_FAILED(rv = ReadBookmarks()))
+        return rv;
+
+    return NS_OK;
+}
 
 NS_IMETHODIMP
 BookmarkDataSourceImpl::Flush(void)
