@@ -65,7 +65,7 @@ nsMimeHtmlEmitter::nsMimeHtmlEmitter()
   mOutStream = nsnull;
   mOutListener = nsnull;
   mURL = nsnull;
-  mHeaderDisplayType = NormalHeaders;
+  mHeaderDisplayType = nsMimeHeaderDisplayTypes::NormalHeaders;
 
   nsresult rv = nsServiceManager::GetService(kPrefCID, nsIPref::GetIID(), (nsISupports**)&(mPrefs));
   if (! (mPrefs && NS_SUCCEEDED(rv)))
