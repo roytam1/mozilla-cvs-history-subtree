@@ -906,9 +906,6 @@ nsXMLHttpRequest::OnDataAvailable(nsIRequest *request, nsISupports *ctxt, nsIInp
 
   PRUint32 totalRead;
   nsresult result = inStr->ReadSegments(nsXMLHttpRequest::StreamReaderFunc, (void*)this, count, &totalRead);
-  if (NS_FAILED(result)) {
-    mResponseBody.Truncate();
-  }
 
   return result;
 }
