@@ -514,7 +514,7 @@ NS_IMETHODIMP nsOutlinerBodyFrame::RowCountChanged(PRInt32 aIndex, PRInt32 aCoun
 
   // Adjust our top row index.
   if (aCount > 0) {
-    if (mTopRowIndex <= aIndex) {
+    if (mTopRowIndex > aIndex) {
       // Rows came in above us.  Augment the top row index.
       mTopRowIndex += aCount;
       UpdateScrollbar();
