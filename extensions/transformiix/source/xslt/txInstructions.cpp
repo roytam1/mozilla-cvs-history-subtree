@@ -103,7 +103,7 @@ txAttribute::execute(txExecutionState& aEs)
 
     if (!XMLUtils::isValidQName(name) ||
         TX_StringEqualsAtom(name, txXMLAtoms::xmlns)) {
-        // tunkate name to indicate failure
+        // truncate name to indicate failure
         name.Truncate();
     }
 
