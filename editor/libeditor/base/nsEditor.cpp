@@ -1380,7 +1380,7 @@ nsString& nsEditor::GetTextNodeTag()
 }
 
 
-NS_IMETHODIMP nsEditor::DoInsertTextTxn(const nsString& aStringToInsert)
+NS_IMETHODIMP nsEditor::InsertTextImpl(const nsString& aStringToInsert)
 {
 #ifdef ENABLE_JS_EDITOR_LOG
   nsAutoJSEditorLogLock logLock(mJSEditorLog);
@@ -1435,7 +1435,7 @@ NS_IMETHODIMP nsEditor::DoInsertTextTxn(const nsString& aStringToInsert)
               newTextNode->SetData(placeholderText);
               selection->Collapse(newNode, 0);
               selection->Extend(newNode, 1);
-              result = DoInsertTextTxn(aStringToInsert);		// this really recurses, right?
+              result = InsertTextImpl(aStringToInsert);		// this really recurses, right?
             }
           }
         }
@@ -3788,7 +3788,7 @@ nsEditor::CopyAttributes(nsIDOMNode *aDestNode, nsIDOMNode *aSourceNode)
 
 
 NS_IMETHODIMP 
-nsEditor::DoDeleteSelectionTxn(ESelectionCollapseDirection aAction)
+nsEditor::DeleteSelectionImpl(ESelectionCollapseDirection aAction)
 {
 #ifdef ENABLE_JS_EDITOR_LOG
   nsAutoJSEditorLogLock logLock(mJSEditorLog);

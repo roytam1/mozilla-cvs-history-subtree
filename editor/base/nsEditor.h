@@ -214,9 +214,8 @@ public:
 public:
 
   
-  NS_IMETHOD DoInsertTextTxn(const nsString& aStringToInsert);
-
-  NS_IMETHOD DoDeleteSelectionTxn(ESelectionCollapseDirection aAction);
+  NS_IMETHOD InsertTextImpl(const nsString& aStringToInsert);
+  NS_IMETHOD DeleteSelectionImpl(ESelectionCollapseDirection aAction);
 
 
 protected:

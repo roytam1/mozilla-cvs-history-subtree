@@ -466,7 +466,7 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection, nsIEditor::ESe
       {
         // first delete the selection
         *aCancel = PR_TRUE;
-        res = mEditor->nsEditor::DoDeleteSelectionTxn(aAction);
+        res = mEditor->DeleteSelectionImpl(aAction);
         if (NS_FAILED(res)) return res;
         // then join para's, insert break
         res = mEditor->JoinNodeDeep(leftParent,rightParent,aSelection);
@@ -479,7 +479,7 @@ nsHTMLEditRules::WillDeleteSelection(nsIDOMSelection *aSelection, nsIEditor::ESe
       {
         // first delete the selection
         *aCancel = PR_TRUE;
-        res = mEditor->nsEditor::DoDeleteSelectionTxn(aAction);
+        res = mEditor->DeleteSelectionImpl(aAction);
         if (NS_FAILED(res)) return res;
         // join blocks
         res = mEditor->JoinNodeDeep(leftParent,rightParent,aSelection);

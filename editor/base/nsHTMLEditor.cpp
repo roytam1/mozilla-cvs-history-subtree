@@ -805,7 +805,7 @@ NS_IMETHODIMP nsHTMLEditor::DeleteSelection(nsIEditor::ESelectionCollapseDirecti
   result = mRules->WillDoAction(selection, &ruleInfo, &cancel);
   if ((PR_FALSE==cancel) && (NS_SUCCEEDED(result)))
   {
-    result = DoDeleteSelectionTxn(aAction);
+    result = DeleteSelectionImpl(aAction);
     // post-process 
     result = mRules->DidDoAction(selection, &ruleInfo, result);
   }
@@ -844,7 +844,7 @@ NS_IMETHODIMP nsHTMLEditor::InsertText(const nsString& aStringToInsert)
   nsresult result = mRules->WillDoAction(selection, &ruleInfo, &cancel);
   if ((PR_FALSE==cancel) && (NS_SUCCEEDED(result)))
   {
-    result = nsEditor::DoInsertTextTxn(resultString);
+    result = InsertTextImpl(resultString);
     // post-process 
     result = mRules->DidDoAction(selection, &ruleInfo, result);
   }

@@ -40,6 +40,7 @@
 #include "nsIEditorSpellCheck.h"
 #include "nsISpellChecker.h"
 #include "nsInterfaceState.h"
+#include "nsIHighLevelHTMLEditor.h"
 
 class nsIBrowserWindow;
 class nsIWebShell;
@@ -50,7 +51,6 @@ class nsIDOMNode;
 class nsIURI;
 class nsIWebShellWindow;
 class nsIPresShell;
-class nsIHighLevelHTMLEditor;
 class nsIOutputStream;
 class nsISupportsArray;
 
