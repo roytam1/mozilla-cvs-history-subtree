@@ -1,6 +1,0 @@
-Makefile
-gtkmozilla.lo
-GtkMozillaContainer.lo
-nsSetupRegistry.lo
-.libs
-libgtkmozilla.la
