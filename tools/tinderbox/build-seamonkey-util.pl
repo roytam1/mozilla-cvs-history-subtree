@@ -1563,6 +1563,10 @@ sub run_all_tests {
         FileBasedTest("XpcomGlueTest", $build_dir, $binary_dir,
                       ["nsTestSample"], $Settings::DomTestTimeout,
                       "Test passed", 1, 0);  # Timeout means failure.
+
+      if ($test_result eq 'testfailed') {
+        print_log "XpcomGlueTest: If this fails ask dougt\@netscape.com for help.";
+      }
     }
 
 
