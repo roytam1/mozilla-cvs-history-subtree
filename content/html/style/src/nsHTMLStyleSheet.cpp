@@ -668,8 +668,12 @@ HTMLStyleSheetImpl::HTMLStyleSheetImpl(void)
     mDocumentColorRule(nsnull)
 {
   NS_INIT_REFCNT();
+
+  // XXX - assuming all memory allocations are OK here...
   mTableTHRule = new TableTHRule(this);
   NS_ADDREF(mTableTHRule);
+  mDocumentColorRule = new HTMLDocumentColorRule(this);
+  NS_ADDREF(mDocumentColorRule);
 }
 
 PRBool PR_CALLBACK MappedDropSheet(nsHashKey *aKey, void *aData, void* closure)
@@ -1124,13 +1128,7 @@ NS_IMETHODIMP HTMLStyleSheetImpl::SetVisitedLinkColor(nscolor aColor)
 
 NS_IMETHODIMP HTMLStyleSheetImpl::SetDocumentForegroundColor(nscolor aColor)
 {
-  if (nsnull == mDocumentColorRule) {
-    mDocumentColorRule = new HTMLDocumentColorRule(this);
-    if (nsnull == mDocumentColorRule) {
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
-    NS_ADDREF(mDocumentColorRule);
-  }
+  NS_ASSERTION(mDocumentColorRule, "color rule should have been created in constructor");
   mDocumentColorRule->mColor = aColor;
   mDocumentColorRule->mForegroundSet = PR_TRUE;
   return NS_OK;
@@ -1138,13 +1136,7 @@ NS_IMETHODIMP HTMLStyleSheetImpl::SetDocumentForegroundColor(nscolor aColor)
 
 NS_IMETHODIMP HTMLStyleSheetImpl::SetDocumentBackgroundColor(nscolor aColor)
 {
-  if (nsnull == mDocumentColorRule) {
-    mDocumentColorRule = new HTMLDocumentColorRule(this);
-    if (nsnull == mDocumentColorRule) {
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
-    NS_ADDREF(mDocumentColorRule);
-  }
+  NS_ASSERTION(mDocumentColorRule, "color rule shoudl have been created in ctor");
   mDocumentColorRule->mBackgroundColor = aColor;
   mDocumentColorRule->mBackgroundSet = PR_TRUE;
   return NS_OK;
