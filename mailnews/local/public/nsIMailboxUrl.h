@@ -92,6 +92,7 @@ public:
 	// mailbox urls to fetch a mail message can specify the size of the message...
 	// this saves us the trouble of having to open up the msg db and ask ourselves...
 	NS_IMETHOD SetMessageSize(PRUint32 aMessageSize) = 0; 
+	NS_IMETHOD GetMessageSize(PRUint32 * aMessageSize) = 0;
 
 	NS_IMETHOD GetMailboxAction(nsMailboxAction * aMailboxAction) = 0;
 	NS_IMETHOD SetMailboxAction(nsMailboxAction aMailboxAction) = 0;
