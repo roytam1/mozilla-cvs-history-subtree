@@ -58,7 +58,7 @@ CNameCompletionTable::~CNameCompletionTable()
 //----------------------------------------------------------------------------
 //	Don't delete the MSG_PickerPane: it belongs to the CMailAddressEditField
 //
-void CNameCompletionTable::DestroyMessagePane(MSG_Pane* inPane)
+void CNameCompletionTable::DestroyMessagePane(MSG_Pane* /*inPane*/)
 {
 }
 
@@ -313,7 +313,7 @@ void	CNameCompletionPicker::CalcStandardBoundsForScreen(
 //		¥ CNameCompletionPicker::ListenToMessage
 //----------------------------------------------------------------------------
 //
-void CNameCompletionPicker::ListenToMessage(MessageT inMessage, void *ioParam)
+void CNameCompletionPicker::ListenToMessage(MessageT inMessage, void */*ioParam*/)
 {
 	if (inMessage == msg_OK)
 	{
