@@ -1,0 +1,42 @@
+#ifndef nsHttpRequestHead_h__
+#define nsHttpRequestHead_h__
+
+#include "nsHttpHeaderArray.h"
+#include "nsHttp.h"
+#include "nsAString.h"
+#include "nsCommonString.h"
+
+//-----------------------------------------------------------------------------
+// nsHttpRequestHead represents the request line and headers from an HTTP
+// request.
+//-----------------------------------------------------------------------------
+
+class nsHttpRequestHead
+{
+public:
+    nsHttpRequestHead() {}
+   ~nsHttpRequestHead() {}
+
+    void SetMethod(nsHttpAtom method) { mMethod = method; }
+    void SetVersion(nsHttpVersion version) { mVersion = version; }
+    void SetRequestURI(const nsACString &s) { mRequestURI = s; }
+
+    nsHttpHeaderArray &Headers()    { return mHeaders; }
+    nsHttpAtom         Method()     { return mMethod; }
+    nsHttpVersion      Version()    { return mVersion; }
+    nsCommonCString    RequestURI() { return mRequestURI; }
+
+    const char *PeekHeader(nsHttpAtom h)                  { return mHeaders.PeekHeader(h); }
+    nsresult SetHeader(nsHttpAtom h, const nsACString &v) { return mHeaders.SetHeader(h, v); }
+    nsresult GetHeader(nsHttpAtom h, nsACString &v)       { return mHeaders.GetHeader(h, v); }
+
+    nsresult Flatten(nsACString &);
+
+private:
+    nsHttpHeaderArray mHeaders;
+    nsHttpAtom        mMethod;
+    nsHttpVersion     mVersion;
+    nsCommonCString   mRequestURI;
+};
+
+#endif // nsHttpRequestHead_h__
