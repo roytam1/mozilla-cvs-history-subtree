@@ -59,8 +59,6 @@ AttributeValueTemplate* ExprParser::createAttributeValueTemplate
 
     AttributeValueTemplate* avt = new AttributeValueTemplate();
     Int32 size = attValue.length();
-    char* chars = new char[size+1];
-    attValue.toChar(chars);
     int cc = 0;
     String buffer;
     MBool inExpr    = MB_FALSE;
@@ -69,7 +67,7 @@ AttributeValueTemplate* ExprParser::createAttributeValueTemplate
     char prevCh = '\0';
 
     while ( cc < size) {
-        char ch = chars[cc++];
+        UNICODE_CHAR ch = attValue.charAt(cc++);
         // if in literal just add ch to buffer
         if ( inLiteral && (ch != endLiteral) ) {
                 buffer.append(ch);
@@ -134,10 +132,6 @@ AttributeValueTemplate* ExprParser::createAttributeValueTemplate
         }
         else avt->addExpr(new StringExpr(buffer));
     }
-
-    //-- cleanup
-    delete chars;
-
     return avt;
 
 } //-- createAttributeValueTemplate
