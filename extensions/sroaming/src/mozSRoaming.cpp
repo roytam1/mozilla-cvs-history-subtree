@@ -74,6 +74,7 @@ mozSRoaming::mozSRoaming()
     mHavePrefs = PR_FALSE;
     mIsRoaming = PR_FALSE;
     mMethod = 0;
+    mRegistry = 0;
 }
 
 mozSRoaming::~mozSRoaming()
@@ -303,21 +304,29 @@ mozSRoaming::ConflictResolveUI(PRBool download, const nsCStringArray& files,
     return NS_OK;
 }
 
-
-nsCOMPtr<nsIRegistry> mozSRoaming::Registry()
+nsresult mozSRoaming::Registry(nsCOMPtr<nsIRegistry>& result)
 {
+    if (mRegistry)
+    {
+      result = mRegistry;
+      return NS_OK;
+    }
+
     nsresult rv = NS_OK;
     nsCOMPtr<nsIRegistry> registry(do_CreateInstance(NS_REGISTRY_CONTRACTID,
                                                      &rv));
     if (NS_FAILED(rv))
-        return nsnull;
+        return rv;
     rv = registry->OpenWellKnownRegistry(nsIRegistry::ApplicationRegistry);
     if (NS_FAILED(rv))
-        return nsnull;
-    return registry;
+        return rv;
+
+    mRegistry = registry;
+    result = registry;
+    return NS_OK;
 }
 
-nsRegistryKey mozSRoaming::RegistryTree()
+nsresult mozSRoaming::RegistryTree(nsRegistryKey& result)
 {
     nsresult rv = NS_OK;
     nsRegistryKey regkey = 0;
@@ -325,14 +334,15 @@ nsRegistryKey mozSRoaming::RegistryTree()
     nsXPIDLString profile;
     nsCOMPtr<nsIProfile> profMan(do_GetService(NS_PROFILE_CONTRACTID, &rv));
     if (NS_FAILED(rv))
-        return 0;
+        return rv;
     rv = profMan->GetCurrentProfile(getter_Copies(profile));
     if (NS_FAILED(rv))
-        return 0; 
+        return rv; 
 
-    nsCOMPtr<nsIRegistry> registry = Registry();
+    nsCOMPtr<nsIRegistry> registry;
+    rv = Registry(registry);
     if (NS_FAILED(rv))
-        return 0;
+        return rv;
 
     rv = registry->GetKey(nsIRegistry::Common,
                           kRegTreeProfile.get(),
@@ -340,7 +350,7 @@ nsRegistryKey mozSRoaming::RegistryTree()
     if (NS_FAILED(rv))
     {
         //printf("registry read of Profiles failed: error 0x%x\n", rv);
-        return 0;
+        return rv;
     }
     rv = registry->GetKey(regkey,
                           profile.get(),
@@ -348,7 +358,7 @@ nsRegistryKey mozSRoaming::RegistryTree()
     if (NS_FAILED(rv))
     {
         //printf("registry read of current profile failed: error 0x%x\n", rv);
-        return 0;
+        return rv;
     }
     rv = registry->GetKey(regkey,
                           kRegTreeRoaming.get(),
@@ -356,9 +366,11 @@ nsRegistryKey mozSRoaming::RegistryTree()
     if (NS_FAILED(rv))
     {
         //printf("Roaming not set up for this profile\n");
-        return 0;
+        return rv;
     }
-    return regkey;
+
+    result = regkey;
+    return NS_OK;
 }
 
 
@@ -370,15 +382,16 @@ nsresult mozSRoaming::ReadRoamingPrefs()
 {
     //printf("mozSRoaming::ReadRoamingPrefs\n");
     nsresult rv = NS_OK;
-    nsCOMPtr<nsIRegistry> registry = Registry();
-    if (!registry)
-        return NS_ERROR_UNEXPECTED;
-    nsRegistryKey regkey = RegistryTree();
 
-    if (!regkey)
-    {
+    nsCOMPtr<nsIRegistry> registry;
+    rv = Registry(registry);
+    if (NS_FAILED(rv))
+        return rv;
+
+    nsRegistryKey regkey;
+    rv = RegistryTree(regkey);
+    if (NS_FAILED(rv)) // expected, if roaming not set up for this profile
         mIsRoaming = PR_FALSE;
-    }
     else
     {
         PRInt32 enabled;
@@ -395,7 +408,7 @@ nsresult mozSRoaming::ReadRoamingPrefs()
 
     //printf("roaming enabled: %s\n", mIsRoaming?"Yes":"No");
     if (!mIsRoaming)
-      return rv;
+      return NS_OK;
 
     // Method
     nsXPIDLString proto;

@@ -126,10 +126,16 @@ nsresult mozSRoamingCopy::Init(mozSRoaming* aController)
         return NS_ERROR_INVALID_ARG;
 
     // Get prefs
-    nsCOMPtr<nsIRegistry> registry = mController->Registry();
-    if (!registry)
-        return NS_ERROR_UNEXPECTED;
-    nsRegistryKey regkey = mController->RegistryTree();
+    nsCOMPtr<nsIRegistry> registry;
+    rv = mController->Registry(registry);
+    if (NS_FAILED(rv))
+        return rv;
+
+    nsRegistryKey regkey;
+    rv = mController->RegistryTree(regkey);
+    if (NS_FAILED(rv))
+        return rv;
+
     rv = registry->GetKey(regkey,
                           kRegTreeCopy.get(),
                           &regkey);

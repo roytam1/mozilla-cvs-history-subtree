@@ -1,6 +1,4 @@
 todo:
-- nsresult for internal functions, clean up interfaces
-- warn before saving pw
 - experimental warning
 - XXXs
 - firebird/thunderbird extension
@@ -27,7 +25,7 @@ Enhance
   - HTTPS
   - LDAP (already done by Sun?)
   - IMAP
-- password encrypt
+- password encrypt?
 - no upload at switch profile
 
 roaming urls

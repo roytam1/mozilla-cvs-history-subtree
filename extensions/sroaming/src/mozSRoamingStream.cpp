@@ -94,10 +94,16 @@ nsresult mozSRoamingStream::Init(mozSRoaming* aController)
         return NS_ERROR_INVALID_ARG;
 
     // Get prefs
-    nsCOMPtr<nsIRegistry> registry = mController->Registry();
-    if (!registry)
-        return NS_ERROR_UNEXPECTED;
-    nsRegistryKey regkey = mController->RegistryTree();
+    nsCOMPtr<nsIRegistry> registry;
+    rv = mController->Registry(registry);
+    if (NS_FAILED(rv))
+        return rv;
+
+    nsRegistryKey regkey;
+    rv = mController->RegistryTree(regkey);
+    if (NS_FAILED(rv))
+        return rv;
+
     rv = registry->GetKey(regkey,
                           kRegTreeStream.get(),
                           &regkey);
@@ -321,7 +327,8 @@ nsresult mozSRoamingStream::DownUpLoad(PRBool download)
 
       mPassword = password;
       //printf("will save passw:-%s-\n",NS_ConvertUCS2toUTF8(password).get());
-      nsCOMPtr<nsIRegistry> registry = mController->Registry();
+      nsCOMPtr<nsIRegistry> registry;
+      rv = mController->Registry(registry);
       rv = registry->SetInt(mRegkeyStream, kRegKeySavePassword.get(),  1);
       rv = registry->SetString(mRegkeyStream, kRegKeyUsername.get(),
                                username.get());

@@ -90,8 +90,8 @@ public:
     nsresult ConflictResolveUI(PRBool download, const nsCStringArray& files,
                                nsCStringArray* result);
 
-    nsCOMPtr<nsIRegistry> Registry();
-    nsRegistryKey RegistryTree();
+    nsresult Registry(nsCOMPtr<nsIRegistry>& result);
+    nsresult RegistryTree(nsRegistryKey& result);
 
     /* At the time we attempt to upload, the network lib has already been
        shut down. So, temporarily restore it and then close it down again.
