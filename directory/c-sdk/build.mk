@@ -101,6 +101,7 @@ NOLIBLCACHE	= -DNO_LIBLCACHE
 
 # uncomment if have access to libnls
 #HAVELIBNLS     = -DHAVE_LIBNLS
+#BUILDCLU	= 1
 
 #
 # DEFS are included in CFLAGS
