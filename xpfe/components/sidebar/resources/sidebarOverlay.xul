@@ -26,23 +26,21 @@
     <box id="sidebar-panels" align="vertical" flex="100%"
       datasources="chrome://sidebar/content/local-panels.rdf 
                    chrome://sidebar/content/remote-panels.rdf"
-
       ref="urn:sidebar:current-panel-list">
       <template>
         <rule>
-          <box uri="rdf:*" align="vertical">
-          <splitter class="panel-bar"
-            collapse="after" resizeafter="grow"
-            onclick="sidebarSavePanelState(this)">
+          <!--<box uri="rdf:*" align="vertical" flex="100%">-->
+          <splitter class="panel-bar" uri="rdf:*"
+            collapse="after" resizeafter="grow">
             <titledbutton value="rdf:http://home.netscape.com/NC-rdf#title"
-              class="panel-bar"/>
+              class="panel-bar plain"/>
             <spring flex="100%"/>
             <titledbutton class="borderless show-hide"
               onclick="sidebarOpenClosePanel(this.parentNode)"/>
           </splitter>
-          <html:iframe class="panel-frame"
+          <html:iframe class="panel-frame" uri="rdf:*"
            src="rdf:http://home.netscape.com/NC-rdf#content"/>
-          </box>
+          <!--</box>-->
         </rule>
       </template>
     </box>
