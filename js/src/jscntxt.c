@@ -219,12 +219,15 @@ js_ExpandErrorArguments(JSContext *cx, JSErrorCallback callback,
 	    if (argCount > 0) {
 		/*
                  * Gather the arguments into an array, and accumulate
-                 * their sizes.
+                 * their sizes. We allocate 1 more than necessary and 
+                 * null it out to act as the caboose when we free the
+                 * pointers later.
 		 */
 		reportp->messageArgs
                         = JS_malloc(cx, sizeof(jschar *) * (argCount + 1));
 		if (!reportp->messageArgs)
 		    return JS_FALSE;
+                reportp->messageArgs[argCount] = NULL;
                 for (i = 0; i < argCount; i++) {
                     if (charArgs) {
                         char *charArg = va_arg(ap, char *);
@@ -377,8 +380,14 @@ js_ReportErrorNumberVA(JSContext *cx, uintN flags, JSErrorCallback callback,
 
     if (message)
 	JS_free(cx, message);
-    if (report.messageArgs)
-	JS_free(cx, (void *)report.messageArgs);
+    if (report.messageArgs) {
+        int i = 0;
+        while (report.messageArgs[i]) 
+            JS_free(cx, (void *)report.messageArgs[i++]);
+        JS_free(cx, (void *)report.messageArgs);
+    }
+    if (report.ucmessage) 
+        JS_free(cx, (void *)report.ucmessage);
 }
 
 JS_FRIEND_API(void)
