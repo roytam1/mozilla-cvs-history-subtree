@@ -333,6 +333,7 @@ RDFGenericElementImpl::GetNodeType(PRUint16* aNodeType)
 NS_IMETHODIMP
 RDFGenericElementImpl::GetParentNode(nsIDOMNode** aParentNode)
 {
+    NS_PRECONDITION(mParent != nsnull, "not initialized");
     if (!mParent)
         return NS_ERROR_NOT_INITIALIZED;
 
