@@ -107,6 +107,8 @@ ldaptool_common_usage( int two_hosts )
 #endif /* NET_SSL */
     fprintf( stderr, "    -D binddn\tbind dn\n" );
     fprintf( stderr, "    -w passwd\tbind passwd (for simple authentication)\n" );
+    fprintf( stderr, "    -w - \tprompt for bind passwd (for simple authentication)\n" );
+    fprintf( stderr, "    -j file\tread bind passwd from 'file' (for simple authentication)\n" );
     fprintf( stderr, "    -E\t\task server to expose (report) bind identity\n" );
 #ifdef LDAP_DEBUG
     fprintf( stderr, "    -d level\tset LDAP debugging level to `level'\n" );
@@ -145,6 +147,7 @@ int			ldaptool_port2 = LDAP_PORT;
 int			ldaptool_verbose = 0;
 int			ldaptool_not = 0;
 FILE			*ldaptool_fp = NULL;
+FILE			*password_fp = NULL;
 char			*ldaptool_progname = "";
 char			*ldaptool_nls_lang = NULL;
 char                    *proxyauth_id = NULL;
@@ -165,6 +168,7 @@ static int		lib_version_mismatch_is_fatal = 1;
 static int		ldversion = -1;	/* use default */
 static int		refhoplim = LDAPTOOL_DEFREFHOPLIMIT;
 static int		send_manage_dsait_ctrl = 0;
+static int		prompt_password = 0;
 
 #ifndef NO_LIBLCACHE
 static char		*cache_config_file = NULL;
@@ -174,6 +178,9 @@ static int		secure = 0;
 static int		isZ = 0;
 static int		isN = 0;
 static int		isW = 0;
+static int		isw = 0;
+static int		isD = 0;
+static int		isj = 0;
 static char		*ssl_certdbpath = LDAPTOOL_DEFCERTDBPATH;
 static char		*ssl_keydbpath = LDAPTOOL_DEFKEYDBPATH;
 /*
@@ -312,7 +319,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	extra_opts = "";
     }
 
-    common_opts = "nvEMRHZ0d:D:f:h:I:K:N:O:P:p:Q:W:w:V:X:m:i:k:y:Y:J:";
+    common_opts = "nvEMRHZ0d:D:f:h:j:I:K:N:O:P:p:Q:W:w:V:X:m:i:k:y:Y:J:";
 
     /* note: optstring must include room for liblcache "C:" option */
     if (( optstring = (char *) malloc( strlen( extra_opts ) + strlen( common_opts )
@@ -373,6 +380,7 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 	    ++hostnum;
 	    break;
 	case 'D':	/* bind DN */
+	    isD = 1;
 	    binddn = strdup( optarg );
 	    break;
 	case 'E':	/* expose bind identity via auth. response control */
@@ -466,8 +474,20 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 
 #endif /* NET_SSL */
 	case 'w':	/* bind password */
-	    passwd = strdup( optarg );
+	    isw = 1;
+	    if ( optarg[0] == '-' && optarg[1] == '\0' )
+		prompt_password = 1;
+	    else
+		passwd = strdup( optarg );
 	    break;
+	    case 'j':       /* bind password from file */
+	    isj = 1;
+	    if ((password_fp = fopen( optarg, "r" )) == NULL ) {
+		fprintf(stderr, "%s: Unable to open '%s' file\n",
+			ldaptool_progname, optarg);
+		exit( LDAP_PARAM_ERROR );
+	    }
+            break;
 	case 'O':	/* referral hop limit */
 	    refhoplim = atoi( optarg );
 	    break;
@@ -554,6 +574,76 @@ ldaptool_process_args( int argc, char **argv, char *extra_opts,
 		return (-1);
 	}
     }
+
+    if ( isj && isw ) {
+	fprintf(stderr, "%s: -j and -w options cannot be specified simultaneously\n\n", ldaptool_progname );
+	return (-1);
+    }
+
+    if ( (isj || isw) && !isD ) {
+	fprintf(stderr, "%s: with -j, -w options, please specify -D\n\n", ldaptool_progname );
+	return (-1);
+    }
+
+    if (prompt_password != 0) {
+	char *password_string = "Enter bind password: ";
+	char pbuf[257];
+
+#if defined(_WIN32)
+	fputs(password_string,stdout);
+	fflush(stdout);
+	if (fgets(pbuf,256,stdin) == NULL) {
+	    passwd = NULL;
+	} else {
+	    char *tmp;
+
+	    tmp = strchr(pbuf,'\n');
+	    if (tmp) *tmp = '\0';
+	    tmp = strchr(pbuf,'\r');
+	    if (tmp) *tmp = '\0';
+	    passwd = pbuf;
+	}
+#else
+#if defined(SOLARIS)
+	/* 256 characters on Solaris */
+	passwd = getpassphrase(password_string);
+#else
+	/* limited to 16 chars on Tru64, 32 on AIX */
+	passwd = getpass(password_string);
+#endif
+#endif
+
+    } else if (password_fp != NULL) {
+	char *linep = NULL;
+	int   increment = 0;
+	int   c, index;
+
+	/* allocate initial block of memory */
+	if ((linep = (char *)malloc(BUFSIZ)) == NULL) {
+	    fprintf( stderr, "%s: not enough memory to read password from file\n", ldaptool_progname );
+	    exit( LDAP_NO_MEMORY );
+	}
+	increment++;
+	index = 0;
+	while ((c = fgetc( password_fp )) != '\n' && c != EOF) {
+
+	    /* check if we will overflow the buffer */
+	    if ((c != EOF) && (index == ((increment * BUFSIZ) -1))) {
+
+		/* if we did, add another BUFSIZ worth of bytes */
+		if ((linep = (char *)
+		    realloc(linep, (increment + 1) * BUFSIZ)) == NULL) {
+			fprintf( stderr, "%s: not enough memory to read password from file\n", ldaptool_progname );
+			exit( LDAP_NO_MEMORY );
+		}
+	 	increment++;
+	    }
+	    linep[index++] = c;
+	}
+	linep[index] = '\0';
+	passwd = linep;
+    }
+
     /*
      * If verbose (-v) flag was passed in, display program name and start time.
      * If the verbose flag was passed at least twice (-vv), also display
