@@ -1,19 +1,22 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ * The contents of this file are subject to the Netscape Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/NPL/
+ *  
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *  
+ * The Original Code is Mozilla Communicator client code, released
+ * March 31, 1998.
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation. Portions created by Netscape are
+ * Copyright (C) 1998-1999 Netscape Communications Corporation. All
+ * Rights Reserved.
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
- *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
- * for the specific language governing rights and limitations under the
- * NPL.
- *
- * The Initial Developer of this code under the NPL is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
- * Reserved.
  */
 
 /**
@@ -60,44 +63,6 @@ nsMemCache::Init()
     if (!mHashTable)
         return NS_ERROR_OUT_OF_MEMORY;
     return NS_OK;
-}
-
-// Factory method to create a new nsMemCache instance.  Used
-// by nsNetDataCacheModule
-NS_METHOD
-nsMemCache::nsMemCacheConstructor(nsISupports *aOuter, REFNSIID aIID,
-                                  void **aResult)
-{
-    nsresult rv;
-
-    nsMemCache * inst;
-
-    if (NULL == aResult) {
-        rv = NS_ERROR_NULL_POINTER;
-        goto done;
-    }
-    *aResult = NULL;
-    if (NULL != aOuter) {
-        rv = NS_ERROR_NO_AGGREGATION;
-        goto done;
-    }
-
-    NS_NEWXPCOM(inst, nsMemCache);
-    if (NULL == inst) {
-        rv = NS_ERROR_OUT_OF_MEMORY;
-        goto done;
-    }
-    rv = inst->Init();
-    if(NS_FAILED(rv)) {
-        NS_DELETEXPCOM(inst);
-        goto done;
-    }
-    NS_ADDREF(inst);
-    rv = inst->QueryInterface(aIID, aResult);
-    NS_RELEASE(inst);
-
- done:
-    return rv;
 }
 
 NS_IMPL_ISUPPORTS(nsMemCache, NS_GET_IID(nsINetDataCache))
@@ -192,8 +157,11 @@ nsMemCache::GetCachedNetDataByID(PRInt32 RecordID,
     nsOpaqueKey opaqueKey(NS_REINTERPRET_CAST(const char *, &RecordID),
                           sizeof RecordID);
     *aRecord = (nsINetDataCacheRecord*)mHashTable->Get(&opaqueKey);
-    NS_IF_ADDREF(*aRecord);
-    return NS_OK;
+    if (*aRecord) {
+        NS_ADDREF(*aRecord);
+        return NS_OK;
+    }
+    return NS_ERROR_FAILURE;
 }
 
 NS_METHOD
@@ -301,6 +269,7 @@ nsMemCache::GetNextCache(nsINetDataCache* *aNextCache)
 {
     NS_ENSURE_ARG(aNextCache);
     *aNextCache = mNextCache;
+    NS_ADDREF(*aNextCache);
     return NS_OK;
 }
 
@@ -350,6 +319,7 @@ nsMemCache::RemoveAll(void)
         
         iterator->GetNext(getter_AddRefs(recordSupports));
         record = do_QueryInterface(recordSupports);
+        recordSupports = 0;
 
         PRUint32 bytesUsed;
         record->GetStoredContentLength(&bytesUsed);

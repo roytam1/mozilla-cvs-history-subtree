@@ -29,6 +29,8 @@ CPP_OBJS =                                \
 	.\$(OBJDIR)\nsMemCacheChannel.obj \
 	$(NULL)
 
+EXPORTS=nsMemCacheCID.h
+
 include <$(DEPTH)\config\rules.mak>
 
 libs:: $(LIBRARY)
