@@ -35,7 +35,7 @@
 #include <Processes.h>
 
 // helper converter function.....
-static void ConvertCharStringToStr255( char* inString, Str255& outString  )
+static void ConvertCharStringToStr255( const char* inString, Str255& outString  )
 {
 		if ( inString == NULL )
 			return;
@@ -357,7 +357,7 @@ NS_IMETHODIMP nsInternetConfigService::GetMIMEInfoFromExtension(const char *aFil
     nsCAutoString filename("foobar.");
 	filename+=aFileExt;
 	Str255 pFileName;
-	ConvertCharStringToStr255( filename, pFileName  );
+	ConvertCharStringToStr255( filename.get(), pFileName  );
 	ICMapEntry entry;
 	OSStatus err = ::ICMapFilename( instance, pFileName, &entry );
 	if( err == noErr )
@@ -379,7 +379,7 @@ NS_IMETHODIMP nsInternetConfigService::GetMIMEInfoFromTypeCreator(PRUint32 aType
 	nsCAutoString filename("foobar.");
 	filename+=aFileExt;
 	Str255 pFileName;
-	ConvertCharStringToStr255( filename, pFileName  );
+	ConvertCharStringToStr255( filename.get(), pFileName  );
 	ICMapEntry entry;
 	OSStatus err = ::ICMapTypeCreator( instance, aType, aCreator, pFileName, &entry );
 	if( err == noErr )
