@@ -215,7 +215,7 @@ function getItemsDS(server) {
 
 function getItemsFile(server) {
   server.QueryInterface(Components.interfaces.nsIRssIncomingServer);
-  var file = server.subscriptionsDataSourcePath;
+  var file = server.feedItemsDataSourcePath;
 
   // If the file doesn't exist, create it.
   if (!file.exists()) {
