@@ -125,6 +125,9 @@ nsPrintOptionsMac::ShowPrintSetupDialog(nsIPrintSettings *aThePrintSettings)
   if (err != noErr)
     return NS_ERROR_FAILURE;
 
+  if (!dialogOK) 
+    return NS_ERROR_ABORT;
+
   return NS_OK;
 } 
 

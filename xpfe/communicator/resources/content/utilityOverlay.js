@@ -125,7 +125,7 @@ function getBrowserURL() {
   return "chrome://navigator/content/navigator.xul";
 }
 
-function goPageSetup(printSettings)
+function goPageSetup(domwin, printSettings)
 {
   try {
     if (printSettings == null) {
@@ -138,8 +138,10 @@ function goPageSetup(printSettings)
     var printOptionsService = Components.classes["@mozilla.org/gfx/printoptions;1"]
                                              .getService(Components.interfaces.nsIPrintOptions);
     printOptionsService.ShowPrintSetupDialog(printSettings);
-  } catch(e) { 
+  } catch(e) {
+    return false;
   }
+  return true;
 }
 
 function goPreferences(containerID, paneURL, itemID)

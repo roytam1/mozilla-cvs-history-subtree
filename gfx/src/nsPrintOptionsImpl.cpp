@@ -301,6 +301,12 @@ nsPrintOptions::ShowPrintSetupDialog(nsIPrintSettings *aPS)
      rv = wwatch->OpenWindow(parent, "chrome://communicator/content/printPageSetup.xul",
                    "_blank", "chrome,modal,centerscreen", array,
                    getter_AddRefs(newWindow));
+     PRInt32 didOK = PR_FALSE;
+     ioParamBlock->GetInt(0, &didOK);
+     if (!didOK) {
+       return NS_ERROR_ABORT;
+     }
+
    }
  }
 
