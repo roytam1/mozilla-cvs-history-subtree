@@ -171,4 +171,3 @@ toolkit.jar:
     content/global/filepicker.js				(filepicker/res/content/filepicker.js)
     content/global/filepicker.xul				(filepicker/res/content/filepicker.xul)
     content/global/nsFileView.js                                (filepicker/res/content/nsFileView.js)
-    content/global/filepicker.css				(filepicker/res/content/filepicker.css)
