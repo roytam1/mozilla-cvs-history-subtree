@@ -137,8 +137,8 @@ endif
 #
 
 ifndef OBJS
-OBJS		= $(addprefix $(srcdir)/$(OBJDIR)/,$(CSRCS:.c=.$(OBJ_SUFFIX))) \
-		  $(addprefix $(srcdir)/$(OBJDIR)/,$(ASFILES:.s=.$(OBJ_SUFFIX)))
+OBJS		= $(addprefix $(OBJDIR)/,$(CSRCS:.c=.$(OBJ_SUFFIX))) \
+		  $(addprefix $(OBJDIR)/,$(ASFILES:.s=.$(OBJ_SUFFIX)))
 endif
 
 ifeq ($(OS_TARGET), WIN16)
@@ -388,18 +388,18 @@ ifeq ($(OS_TARGET), WIN16)
 	rm w16wccf
 else
 ifndef XP_OS2_EMX
-	$(CC) -Fo$@ -c $(CFLAGS) $*.c
+	$(CC) -Fo$@ -c $(CFLAGS) $<
 else
-	$(CC) -o $@ -c $(CFLAGS) $*.c
+	$(CC) -o $@ -c $(CFLAGS) $<
 endif
 endif
 else
-	$(CC) -o $@ -c $(CFLAGS) $*.c
+	$(CC) -o $@ -c $(CFLAGS) $<
 endif
 
 $(OBJDIR)/%.$(OBJ_SUFFIX): %.s
 	@$(MAKE_OBJDIR)
-	$(AS) -o $@ $(ASFLAGS) -c $*.s
+	$(AS) -o $@ $(ASFLAGS) -c $<
 
 %.i: %.c
 	$(CC) -C -E $(CFLAGS) $< > $*.i
