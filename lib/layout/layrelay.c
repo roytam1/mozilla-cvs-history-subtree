@@ -135,6 +135,12 @@ static lo_FitFunction lo_rl_FitFunctionTable[] = {
 };
 
 
+void lo_FillInBuiltinGeometry(lo_DocState *state, LO_BuiltinStruct *builtin,
+							  Bool relayout);
+void lo_UpdateStateAfterBuiltinLayout (lo_DocState *state, LO_BuiltinStruct *builtin,
+									   int32 line_inc, int32 baseline_inc);
+
+
 /*	NRA - 10/3/97: Main Relayout Entry Point
  *  This function walks through the layout element list and re-lays out
  *  the elements to fit into a window of the specified width and height.
