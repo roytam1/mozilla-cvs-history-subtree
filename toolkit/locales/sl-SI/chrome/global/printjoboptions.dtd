@@ -1,0 +1,12 @@
+<!ENTITY cmdInput.label "Ukaz za tiskanje:">
+<!ENTITY paperInput.label "Velikost papirja:">
+<!ENTITY topInput.label "Zgoraj:">
+<!ENTITY leftInput.label "Levo:">
+<!ENTITY edgeMarginInput.label "Velikost roba v palcih">
+<!ENTITY colorRadio.label "Barvno">
+<!ENTITY grayRadio.label "Odtenki sive">
+<!ENTITY colorGroup.label "Barva:">
+<!ENTITY plexInput.label "Način plex:">
+<!ENTITY printJobOptions.title "Lastnosti tiskalnika">
+<!ENTITY bottomInput.label "Dno:">
+<!ENTITY rightInput.label "Desno:">

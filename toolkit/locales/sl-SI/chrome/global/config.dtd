@@ -1,0 +1,26 @@
+<!ENTITY prefColumn.label "Izbrano ime">
+<!ENTITY typeColumn.label "Vrsta">
+<!ENTITY filterPrefs.accesskey "I">
+<!ENTITY showAll.label "Pokaži vse">
+<!ENTITY boolean.label "Boolean">
+<!ENTITY string.label "String">
+<!ENTITY new.accesskey "N">
+<!ENTITY reset.accesskey "n">
+<!ENTITY copyName.label "Ime kopije">
+<!ENTITY new.label "Novo">
+<!ENTITY columnChooser.tooltip "Kliknite za izbiro stolpcev za prikaz">
+<!ENTITY filterPrefs.label "Filter:">
+<!ENTITY prefColumnHeader.tooltip "Kliknite za razvrščanje">
+<!ENTITY modify.label "Spremeni">
+<!ENTITY copyName.accesskey "k">
+<!ENTITY string.accesskey "S">
+<!ENTITY integer.label "Integer">
+<!ENTITY modify.accesskey "M">
+<!ENTITY boolean.accesskey "B">
+<!ENTITY valueColumn.label "Vrednost">
+<!ENTITY copyValue.accesskey "V">
+<!ENTITY showAll.accesskey "k">
+<!ENTITY lockColumn.label "Stanje">
+<!ENTITY copyValue.label "Vrednost kopije">
+<!ENTITY integer.accesskey "I">
+<!ENTITY reset.label "Ponastavi">

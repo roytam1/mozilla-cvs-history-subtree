@@ -1,0 +1,4 @@
+<!ENTITY dialog.title "Namestitev programske opreme">
+<!ENTITY warningText3.label "Programsko opremo nameščajte le iz virov, katerim zaupate.">
+<!ENTITY warningText2.label "Zlobna programska oprema lahko poškoduje vaš računalnik ali ogroža vašo zasebnost.">
+<!ENTITY from.label "iz:">

@@ -1,0 +1,23 @@
+<!ENTITY netOffline.longDesc "Brskalnik trenutno deluje v načinu brez povezave, ter se zato ne more povezati na zahtevano stran. Preden ponovno poskusite, nastavite način brskalnika v delo s povezavo.">
+<!ENTITY netTimeout.longDesc "Dovoljen čas za povezavo s stranjo je potekel. Stran ima morda previsoko obremenitev, kar jo upočasnjuje, ali pa mrežni problemi preprečujejo dostop do podatkov v razumnem času. V primeru, da mislite, da je stran lahko preobremenjena, premislite, če ni bolje počakati nekaj trenutkov, preden ponovite vašo zahtevo.">
+<!ENTITY connectionFailure.title "Napaka -- Povezava neuspešna">
+<!ENTITY dnsNotFound.longDesc "Naslov (URI) ne ustreza znani strani, in ga ne morem naložiti. Temu je lahko tako zaradi napake v črkovanju naslova, lahko pa da spletna stran ne obstaja. V primeru, da veste, da je naslov pravilen, ali pa, če prihaja do tega problema z mnogimi stranmi, je to lahko problem z vašimi proxy nastavitvami (če uporabljate proxy strežnik), ali pa s storitvijo vpogleda imen imenikov (directory name service lookup). V takšnem primeru se posvetujte z vašim administratorjem, dokumentacijo sistema, ali s ponudnikom internetnih storitev (ISP -- Internet Service Provider); kakor menite, da boste najlažje dobili pomoč.">
+<!ENTITY loadError.label "Napaka pri nalaganju strani">
+<!ENTITY malformedURI.longDesc "Naslov (URI) ni v pravem formatu in se ga zato ne more brati. Običajno se naslov začne s protokolom, na primer s &quot;http://&quot;, temu sledi naslov gostitelja, na primer www.mozilla.org, na koncu pa je pot do vsebine, ali pa preprosto &quot;/&quot;. Pogost vzrok temu je uporaba znaka \ namesto /.">
+<!ENTITY dnsNotFound.title "Napaka -- Naslov ni najden">
+<!ENTITY netReset.title "Napaka -- Ponastavitev mreže">
+<!ENTITY protocolNotFound.title "Napaka -- Protokol ni znan">
+<!ENTITY retry.label "Ponovno poskusite">
+<!ENTITY unknownSocketType.title "Napaka -- Neznan vtič">
+<!ENTITY netOffline.title "Napaka -- Brez povezave">
+<!ENTITY malformedURI.title "Napaka -- Neveljaven naslov">
+<!ENTITY generic.longDesc "Strani ne morem naložiti, kajti morda ne obstaja, morda pa naslov ni pravilen.<br/>Preverite in se prepričajte, da je naslov (URI) pravilen in pravilno urejen.">
+<!ENTITY fileNotFound.longDesc "Datoteka v naslovu (URI) ni bila najdena.">
+<!ENTITY protocolNotFound.longDesc "Naslov (URI) se začenja s protokolom, ki ga brskalnik ne pozna. Protokol je prvi del naslova, kot denimo http: ali ftp:, ki brskalniku pove, kako naj se poveže do spletne strani. V tem primeru pa to ni znano. Preden ponovno poskusite, se prepričajte, da je naslov pravilen.">
+<!ENTITY redirectLoop.title "Napaka -- Krog preusmeritev">
+<!ENTITY fileNotFound.title "Napaka -- Datoteka ni najdena">
+<!ENTITY connectionFailure.longDesc "Brskalnik se ne more povezati na izbrano stran, čeprav obstaja. Temu je lahko tako zato, ker stran ne dovoli povezav iz vašega računalnika, ker storitev trenutno ne deluje, ali pa ker stran ne podpira storitve ali vrat, na katera ste se poskušali povezati.">
+<!ENTITY netTimeout.title "Napaka -- Dovoljeni čas pretekel">
+<!ENTITY netReset.longDesc "Povezava s stranjo je bila nepričakovano prekinjena med pogajanjem za povezavo ali med prenašanjem podatkov. Temu je lahko tako zaradi mrežne napake nekje med to stranjo in vašim računalnikom. V primeru, da problem ne izgine sam od sebe, se posvetujte z vašim administratorjem, sistemsko dokumentacijo ali s ponudnikom internetnih storitev (ISP -- Internet Service Provider); kakor mislite, da boste najlažje dobili pomoč.">
+<!ENTITY redirectLoop.longDesc "Povezava je bila prekinjena, kajti stran preusmerja nase, kar pomeni, da se krog ne bi nikoli zaključil.">
+<!ENTITY unknownSocketType.longDesc "Stran je na mrežno zahtevo odgovorila na nepričakovan način. Mogoče je, da naslov (URI) uporablja napačen protokol za izbrana vrata, ali pa gre za nestandardno konfiguracijo gostitelja, ki poganja druge storitve, kot bi bilo pričakovati.">

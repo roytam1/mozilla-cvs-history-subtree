@@ -1,0 +1,27 @@
+<!ENTITY launch "Odpri datoteko">
+<!ENTITY unknownSavingTitle "Shranjujem #1">
+<!ENTITY progress "Potek:">
+<!ENTITY savingTarget "V:">
+<!ENTITY resume "Nadaljuj">
+<!ENTITY timeElapsed "Pretekli čas:">
+<!ENTITY shortTimeFormat "#2:#3">
+<!ENTITY progressMsg "#1 kB od #2 kB (pri #3 kB/s)">
+<!ENTITY unknownOpeningTitle "Odpiram #1">
+<!ENTITY cancel "Prekliči">
+<!ENTITY reveal "Pokaži nahajališče datoteke">
+<!ENTITY keep "Po končanem prenosu naj ostane to okno odprto.">
+<!ENTITY savingTitle "Shranjeno #2&#037; od #1">
+<!ENTITY openingTarget "Z:">
+<!ENTITY unknownTime "Neznano">
+<!ENTITY openingTitle "Končano #2&#037; od #1">
+<!ENTITY timeLeft "Preostali čas:">
+<!ENTITY close "Zapri">
+<!ENTITY percentMsg "#1 &#037;">
+<!ENTITY savingSource "Shranjevanje iz:">
+<!ENTITY status "Stanje:">
+<!ENTITY completeMsg "Prenos končan (v času: #1)">
+<!ENTITY defaultTitle "Shranjevanje">
+<!ENTITY longTimeFormat "#1:#2:#3">
+<!ENTITY pausedMsg "Prenos zaustavljen">
+<!ENTITY openingSource "Odpiranje iz:">
+<!ENTITY pause "Premor">

@@ -1,0 +1,10 @@
+<!ENTITY customAppPath.label "Izberite 'Spremeni ...', če želite izbrati program.">
+<!ENTITY changeAction.title "Spremeni dejanje">
+<!ENTITY saveToDisk.label "Shrani na disk">
+<!ENTITY changeApp.label "Spremeni ...">
+<!ENTITY changeApp.accesskey "s">
+<!ENTITY whenDownloading.label "Pri prenašanju datotek vrste:">
+<!ENTITY openDefault.label "Odpri s privzetim programom:">
+<!ENTITY always.label "samodejno:">
+<!ENTITY openApplication.label "Odpri s tem programom:">
+<!ENTITY changeAppWindowTitle.label "Izbira aplikacije">

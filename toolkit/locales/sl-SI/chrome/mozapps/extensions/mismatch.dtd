@@ -1,0 +1,4 @@
+<!ENTITY  mismatch.title "Nekompatibilne razširitve">
+<!ENTITY  intro1.label "Sledeče razširitve niso kompatibilne z novo različico &brandShortName;, ki ste jo pravkar namestili.">
+<!ENTITY  intro2.label "Vse so bile onemogočene, dokler ne namestite kompatibilnih različic.">
+<!ENTITY  intro3.label "&brandShortName; lahko pregleda, če obstajajo, in jih samodejno namesti.">

@@ -1,0 +1,20 @@
+<!ENTITY chooseAppFilePickerTitle "Izbiranje pomožnega programa">
+<!ENTITY badApp.title "Programa ne najdem">
+<!ENTITY chooseApp.accesskey "i">
+<!ENTITY intro.noDesc.label "Datoteka &quot;#3&quot; je vrste #2, a #4 ne ve, kako naj ravna s takšnim tipom datoteke. To datoteko najdete na naslovu:">
+<!ENTITY openUsing.accesskey "s">
+<!ENTITY useSystemDefault.accesskey "o">
+<!ENTITY intro.label "Datoteka &quot;#3&quot; je vrste #2 (#1), a #4 ne ve, kako naj ravna s takšnim tipom datoteke. To datoteko najdete na naslovu:">
+<!ENTITY prompt.label "Kaj naj #1 stori s to datoteko?">
+<!ENTITY saveToDisk.label "Shrani datoteko na disk">
+<!ENTITY intro.attachment.label "Spletna stran predlaga, da se &quot;#3&quot; uporablja kot priloga. Je vrste #2 (#1) in se nahaja na:">
+<!ENTITY saveToDisk.accesskey "s">
+<!ENTITY useSystemDefault.label "Odpri datoteko s privzetim programom (#1)">
+<!ENTITY intro.attachment.noDesc.label "Spletna stran predlaga, da se &quot;#3&quot; uporablja kot priloga. Je vrste #2 in se nahaja na:">
+<!ENTITY openUsing.label "Odpri s programom">
+<!ENTITY useSystemDefault.noDesc.label "Odpri s privzetim programom">
+<!ENTITY badApp "Navedenega programa (&quot;#1&quot;) ni mogoče najti. Preverite ime datoteke, ali pa izberite drug program.">
+<!ENTITY chooseApp.label "Izberite ...">
+<!ENTITY caption.label "Odpiram #1">
+<!ENTITY alwaysHandle.accesskey "a">
+<!ENTITY alwaysHandle.label "Ob ravnanju z datotekami te vrste vselej izvrši sledeče dejanje">

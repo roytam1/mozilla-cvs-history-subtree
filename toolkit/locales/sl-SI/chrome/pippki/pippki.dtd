@@ -1,0 +1,67 @@
+<!ENTITY help.label "Pomoč">
+<!ENTITY downloadCert.trustSSL "Zaupaj tej uradni osebi za certifikate (CA) za identifikacijo spletnih strani.">
+<!ENTITY examineCert.label "Preglej certifikat">
+<!ENTITY pkcs12.setpassword.title "Izbira gesla za varnostne kopije certifikatov">
+<!ENTITY pref.security.general.manageCert.label "Upravljaj certifikate">
+<!ENTITY resetPassword.text "Če ponastavite glavno geslo, bodo vsi vaši osebni podatki -- shranjena spletna in e-poštna gesla, podatki o obrazcih, osebni certifikati in privatni ključi -- pozabljeni. Ste prepričani, da želite ponastaviti vaše glavno geslo?">
+<!ENTITY domainMismatch.title "Varnostna napaka: Neujemanje imen domen">
+<!ENTITY serverCrlNextupdate.message "Prosim, povprašajte sistemskega administratorja za pomoč">
+<!ENTITY downloadCert.viewCert.text "Preveri certifikat uradne osebe za certifikate (CA)">
+<!ENTITY pkcs12.setpassword.label2 "Geslo za varnostne kopije certifikatov (ponovno):">
+<!ENTITY pkcs12.setpassword.label1 "Geslo za varnostne kopije certifikatov:">
+<!ENTITY downloadCert.viewCert.label "Poglej">
+<!ENTITY piperror.title "Napaka">
+<!ENTITY setPassword.oldPassword.label "Trenutno geslo:">
+<!ENTITY certPicker.info "Certifikat:">
+<!ENTITY escrowWarn.title "Kopija šifrirnega ključa">
+<!ENTITY caCertExists.message "Certifikat že obstaja.">
+<!ENTITY ok.label "V redu">
+<!ENTITY certPicker.title "Izbira certifikata">
+<!ENTITY resetPassword.title "Ponastavitev glavnega gesla">
+<!ENTITY pkcs12.setpassword.reminder "Pomembno: Če pozabite geslo za varnostno kopijo certifikata, tega certifikata pozneje ne boste mogli obnoviti. Prosim, shranite geslo na varnem mestu.">
+<!ENTITY setPassword.reenterPassword.label "Novo geslo (ponovno):">
+<!ENTITY createCertInfo.msg2 "Prosim, počakajte ...">
+<!ENTITY createCertInfo.msg1 "Ustvarjanje ključa poteka ... To lahko traja nekaj minut ...">
+<!ENTITY pref.security.general.certificates.title "Certifikati">
+<!ENTITY escrowWarn.benefit1 "Prednost tega je, da če izgubite dostop do vašega privatnega ključa, lahko zahtevate kopijo od te uradne osebe za certifikate (CA).">
+<!ENTITY caCertExists.title "Certifikat obstaja">
+<!ENTITY setPassword.tokenName.label "Varnostna naprava">
+<!ENTITY cancel.label "Prekliči">
+<!ENTITY setPassword.meter.label "Merilec kakovosti gesla">
+<!ENTITY getPassword.tokenName.label "Varnostna naprava">
+<!ENTITY pkcs12.setpassword.message "Geslo za varnostne kopije certifikata, ki se ga tukaj nastavlja, ščiti varnostno kopijo, ki bo vsak čas narejena. To geslo morate nastaviti, če želite varnostno kopijo certifikata.">
+<!ENTITY downloadCert.message3 "Preden zaupate tej uradni osebi za certifikate (CA) za kakršenkoli namen, bi bilo priporočljivo, da pregledate njen certifikat in splošne procedure in standardne plane (če so na voljo).">
+<!ENTITY downloadCert.viewPolicy.label "Standardni plan">
+<!ENTITY downloadCert.trustEmail "Zaupaj tej uradni osebi za certifikate (CA) za identifikacijo e-poštnih uporabnikov.">
+<!ENTITY downloadCert.message1 "Uradna oseba za certifikate (CA) vas sprašuje za zaupanje.">
+<!ENTITY downloadCert.trustObjSign "Zaupaj tej uradni osebi za certifikate (CA) za identifikacjo razvijalcev programja.">
+<!ENTITY pref.security.general.lHeader "Varnost">
+<!ENTITY clientAuthAsk.message3 "Podrobnosti o izbranem certifikatu:">
+<!ENTITY clientAuthAsk.message2 "Izberite certifikat, ki vas bo identificiral:">
+<!ENTITY clientAuthAsk.message1 "Ta stran zahteva, da se predstavite s certifikatom:">
+<!ENTITY setPassword.meter.loading "Nalaganje">
+<!ENTITY createCertInfo.title "Ustvarjam privatni ključ">
+<!ENTITY pref.security.general.paranoid.label "Uporabi paranoične varnostne nastavitve">
+<!ENTITY pkcs12.getpassword.message "Prosim, uporabite geslo, ki je bilo uporabljeno za šifriranje te certifikatove varnostne kopije.">
+<!ENTITY serverCertExpired.continue "Želite vseeno nadaljevati?">
+<!ENTITY downloadCert.viewPolicy.text "Preveri standardne plane in procedure uradne osebe za certifikate:">
+<!ENTITY pref.security.general.header "Nastavitve globalne varnosti">
+<!ENTITY setPassword.newPassword.label "Novo geslo:">
+<!ENTITY createCertInfo.okButtonAccessKey "v">
+<!ENTITY downloadCert.title "Prenos certifikata">
+<!ENTITY chooseToken.message1 "Prosim, izberite figuro.">
+<!ENTITY getPassword.title "Vnos glavnega gesla">
+<!ENTITY certPicker.detailsLabel "Podrobnosti izbranega certifikata:">
+<!ENTITY chooseToken.title "Pogovorno okno izbiranja figure">
+<!ENTITY pipalert.title "Napaka -- ne morem si opomoči">
+<!ENTITY pref.security.general.level.title "Varnostni nivo">
+<!ENTITY setPassword.title "Spreminjanje glavnega gesla">
+<!ENTITY pref.security.general.rHeader "Nastavitve globalne varnosti">
+<!ENTITY escrowWarn.message2 "Vendar pa bo vaš šifrirni privatni ključ shranjen pri uradni osebi za certifikate, kar lahko le-ta uporabi za branje šifrirane e-pošte ali dokumentov brez vašega dovoljenja.">
+<!ENTITY clientAuthAsk.title "Zahteva identifikacije uporabnika">
+<!ENTITY escrowWarn.message1 "Pomembno: Ta uradna oseba za certifikate (CA) želi narediti kopijo vašega šifrirnega privatnega ključa v namene izdelave varnostne kopije.">
+<!ENTITY getPassword.password.label "Geslo:">
+<!ENTITY pkcs12.getpassword.title "Pogovorno okno vnosa gesla">
+<!ENTITY formSigning.cert "Certifikat za podpisovanje">
+<!ENTITY formSigning.title "Zahteva podpisovanja besedila">
+<!ENTITY formSigning.confirmPassword "Za potrditev, da se strinjate, da boste podpisali besedilo tega sporočila z izbranim certifikatom, prosim, vnesite glavno geslo:">

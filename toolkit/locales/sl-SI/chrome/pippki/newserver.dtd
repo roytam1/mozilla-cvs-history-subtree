@@ -1,0 +1,9 @@
+<!ENTITY newserver.reason2 "- Certifikat te strani ni popoln zaradi nepravilnih nastavitvev strežnika">
+<!ENTITY newserver.reason1 "- Vaš brskalnik ne prepozna uradne osebe za certifikate (CA), ki je izdala certifikat tej strani">
+<!ENTITY newserver.notify "Prosim, obvestite vzdrževalca strani (webmaster) o tem problemu.">
+<!ENTITY newserver.session "Ta certifikat sprejmi začasno, le za to sejo">
+<!ENTITY newserver.examine "Preveri certifikat ...">
+<!ENTITY newserver.title "Spletno stran je certificirala neznan uradna oseba za certifikate (CA)">
+<!ENTITY newserver.remember "Ta certifikat sprejmi za vedno">
+<!ENTITY newserver.refuse "Tega certifikata ne sprejmi, in se ne poveži s to spletno stranjo">
+<!ENTITY newserver.reasons "Možni razlogi za to napako:">

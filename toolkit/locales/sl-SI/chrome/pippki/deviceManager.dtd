@@ -1,0 +1,18 @@
+<!ENTITY loaddevice.modname.default "Nov PKCS#11 modul">
+<!ENTITY devmgr.button.unload.label "Odstrani">
+<!ENTITY devmgr.button.load.label "Naloži">
+<!ENTITY devmgr.title "Upravitelj naprav">
+<!ENTITY loaddevice.filename "Ime datoteke modula:">
+<!ENTITY devmgr.button.login.label "Prijava">
+<!ENTITY loaddevice.info "Vnesite informacije za modul, ki ga želite dodati.">
+<!ENTITY devmgr.button.changeslotname.label "Spremeni ime izbranega">
+<!ENTITY devmgr.details.title "Podrobnosti">
+<!ENTITY devmgr.button.changepw.label "Spremeni geslo">
+<!ENTITY devmgr.devlist.label "Varnostni moduli in naprave">
+<!ENTITY devmgr.button.logout.label "Odjava">
+<!ENTITY devmgr.status.label "Stanje">
+<!ENTITY devmgr.version.label "Različica">
+<!ENTITY devmgr.details.title2 "Vrednost">
+<!ENTITY loaddevice.title "Nalaganje PKCS#11 naprave">
+<!ENTITY loaddevice.browse "Brskaj ...">
+<!ENTITY loaddevice.modname "Ime modula:">

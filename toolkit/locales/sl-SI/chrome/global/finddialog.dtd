@@ -1,0 +1,19 @@
+<!ENTITY direction.label "Smer">
+<!ENTITY findField.tooltip "Vnesite eno ali več besed za iskanje">
+<!ENTITY backwardsCheckbox.label "Išči nazaj">
+<!ENTITY wrapCheckbox.label "Nadaljuj na začetku">
+<!ENTITY up.label "Gor">
+<!ENTITY findField.label "Najdi besedilo:">
+<!ENTITY up.accesskey "G">
+<!ENTITY backwardsCheckbox.accesskey "n">
+<!ENTITY down.accesskey "D">
+<!ENTITY findButton.accesskey "n">
+<!ENTITY caseSensitiveCheckbox.accesskey "z">
+<!ENTITY down.label "Dol">
+<!ENTITY wrapCheckbox.accesskey "z">
+<!ENTITY findButton.label "Najdi">
+<!ENTITY cancelButton.label "Prekliči">
+<!ENTITY findDialog.title "Iskanje po strani">
+<!ENTITY caseSensitiveCheckbox.label "Razlikuj velike in male črke">
+<!ENTITY findField.accesskey "n">
+<!ENTITY findDialogFrame.title "Iskanje po okviru">

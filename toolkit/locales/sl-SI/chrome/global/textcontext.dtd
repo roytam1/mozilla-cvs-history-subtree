@@ -1,0 +1,14 @@
+<!ENTITY copyCmd.label "Kopiraj">
+<!ENTITY redoCmd.label "Ponovi">
+<!ENTITY cutCmd.accesskey "I">
+<!ENTITY deleteCmd.accesskey "b">
+<!ENTITY selectAllCmd.label "Izberi vse">
+<!ENTITY selectAllCmd.accesskey "v">
+<!ENTITY pasteCmd.label "Prilepi">
+<!ENTITY undoCmd.label "Razveljavi">
+<!ENTITY copyCmd.accesskey "K">
+<!ENTITY redoCmd.accesskey "v">
+<!ENTITY undoCmd.accesskey "z">
+<!ENTITY cutCmd.label "Izreži">
+<!ENTITY deleteCmd.label "Izbriši">
+<!ENTITY pasteCmd.accesskey "p">

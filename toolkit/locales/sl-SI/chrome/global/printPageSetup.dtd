@@ -1,0 +1,37 @@
+<!ENTITY shrinkToFit.label "Skrči, da bo ustrezalo širini strani">
+<!ENTITY marginTop.label "Zgoraj:">
+<!ENTITY hfURL.code "[&amp;U]">
+<!ENTITY basic.tab "Oblika in možnosti">
+<!ENTITY hfPage.code "[&amp;P]">
+<!ENTITY customPrompt.prompt "Vnesite besedilo za glavo/nogo po meri">
+<!ENTITY formatGroup.label "Oblika">
+<!ENTITY marginLeft.label "Levo:">
+<!ENTITY marginRight.label "Desno:">
+<!ENTITY landscape "Ležeče">
+<!ENTITY headerFooter.label "Glave in noge">
+<!ENTITY printSetup.title "Nastavitve strani">
+<!ENTITY hfPage "Stran #">
+<!ENTITY portrait "Pokončno">
+<!ENTITY hfTitle "Naslov">
+<!ENTITY hfTitle.code "[&amp;T]">
+<!ENTITY hfBlank "--prazno--">
+<!ENTITY marginBottom.label "Spodaj:">
+<!ENTITY hfPageAndTotal "Stran # od #">
+<!ENTITY advanced.tab "Robovi ter glava in noga">
+<!ENTITY hfLeft.label "Levo:">
+<!ENTITY scalePercent " &#037;">
+<!ENTITY hfPageAndTotal.code "[&amp;PT]">
+<!ENTITY marginUnits.metric "milimetri">
+<!ENTITY printBG.label "Natisni ozadje (barve in slike)">
+<!ENTITY hfDateAndTime.code "&amp;D">
+<!ENTITY hfRight.label "Desno:">
+<!ENTITY hfURL "URI">
+<!ENTITY marginUnits.inches "palci">
+<!ENTITY scale.label "Merilo:">
+<!ENTITY hfCenter.label "Sredina:">
+<!ENTITY optionsGroup.label "Možnosti">
+<!ENTITY customPrompt.title "Po meri ...">
+<!ENTITY marginGroup.label "Robovi (#1)">
+<!ENTITY hfCustom "Po meri ...">
+<!ENTITY orientation.label "Usmerjenost:">
+<!ENTITY hfDateAndTime "Datum/čas">

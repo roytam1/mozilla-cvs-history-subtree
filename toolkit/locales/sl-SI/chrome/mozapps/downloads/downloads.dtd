@@ -1,0 +1,36 @@
+<!ENTITY cmd.properties.label "Lastnosti">
+<!ENTITY cmd.openWith.label "Odpri s programom ...">
+<!ENTITY cmd.pause.label "Premor">
+<!ENTITY cmd.close.commandKey "w">
+<!ENTITY cmd.properties.accesskey "L">
+<!ENTITY starting.label "Zaganjam ...">
+<!ENTITY cmd.show.accesskey "v">
+<!ENTITY cmd.open.accesskey "O">
+<!ENTITY installing.label "Nameščam ...">
+<!ENTITY cmd.show.label "Odpri vsebujoči imenik">
+<!ENTITY cmd.retry.label "Ponovno poskusi">
+<!ENTITY cmd.remove.accesskey "d">
+<!ENTITY cmd.resume.accesskey "N">
+<!ENTITY cmd.cleanUp.tooltip "Odstrani končane, preklicane in neuspešne prenose s seznama">
+<!ENTITY cmd.info.commandKey "i">
+<!ENTITY failed.label "Neuspešno">
+<!ENTITY canceled.label "Preklican">
+<!ENTITY cmd.cancel.label "Prekliči">
+<!ENTITY closeWhenDone.tooltip "Zapre okno s prenosi, ko je prenašanje vseh datotek končano">
+<!ENTITY cmd.resume.label "Nadaljuj">
+<!ENTITY done.label "Končaj">
+<!ENTITY cmd.cleanUp.accesskey "o">
+<!ENTITY cmd.open.label "Odpri">
+<!ENTITY closeWhenDone.label "Zapri, ko so vsi prenosi končani">
+<!ENTITY downloads.title "Prenosi">
+<!ENTITY cmd.cleanUp.label "Počisti">
+<!ENTITY cmd.cancel.accesskey "P">
+<!ENTITY cmd.openWith.accesskey "g">
+<!ENTITY cmd.pause.accesskey "P">
+<!ENTITY cmd.remove.label "Odstrani">
+<!ENTITY cmd.retry.accesskey "v">
+<!ENTITY cmd.change.label "Spremeni ...">
+<!ENTITY cmd.change.accesskey "S">
+<!ENTITY cmd.change.tooltip "Spremeni, kam in kako naj se shranjujejo datoteke">
+<!ENTITY filesSavedTo.label "Vse datoteke se shranijo v:">
+<!ENTITY showFolder.label "Prikaži ta imenik">

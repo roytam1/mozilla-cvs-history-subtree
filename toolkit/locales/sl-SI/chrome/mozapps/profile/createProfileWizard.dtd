@@ -1,0 +1,15 @@
+<!ENTITY button.choosefolder.label "Izberite imenik ...">
+<!ENTITY profileCreationExplanation_2.text "Če si to kopijo programa &brandShortName; delite z ostalimi uporabniki, lahko s pomočjo profilov ločite posamezne uporabnike. Za to mora imeti vsak uporabnik svoj profil.">
+<!ENTITY newprofile.title "Ustvarjanje profila">
+<!ENTITY button.choosefolder.accesskey "I">
+<!ENTITY profileDirExplanation.text "Vaše uporabniške nastavitve, zaznamki in e-poštna sporočila bodo shranjeni v:">
+<!ENTITY profileDefaultName "Privzeti uporabnik">
+<!ENTITY window.size "width: 45em; height: 32em;">
+<!ENTITY profilePrompt.accesskey "E">
+<!ENTITY button.usedefault.label "Uporabi privzeti imenik">
+<!ENTITY profileCreationExplanation_3.text "Če edini uporabljate to kopijo programa &brandShortName;, morate imeti vsaj en profil. Če hočete, lahko ustvarite več profilov, da lahko shranite različne nastavitve in osebne nastavitve. Lahko imate, na primer, ločene profile za zasebno in službeno rabo.">
+<!ENTITY profileCreationExplanation_1.text "&brandShortName; shrani informacije o nastavitvah, zaznamkih, e-poštnih sporočilih in drugih uporabniških elementih v vašem uporabniškem profilu.">
+<!ENTITY button.usedefault.accesskey "U">
+<!ENTITY profileCreationIntro.text "Če ustvarite več profilov, jih lahko prepoznate po njihovih imenih. Uporabite lahko predlagano ime, ali pa uporabite svoje.">
+<!ENTITY profilePrompt.label "Vnesite novo ime profila:">
+<!ENTITY profileCreationExplanation_4.text "Kliknite Naprej, da začnete ustvarjati profil.">

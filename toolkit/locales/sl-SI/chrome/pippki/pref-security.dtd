@@ -1,0 +1,16 @@
+<!ENTITY security.label "Zasebnost in varnost">
+<!ENTITY managecerts.accesskey "t">
+<!ENTITY managedevices.label "Upravljanje varnostne naprave">
+<!ENTITY security.description "Nastavtive zasebnosti in varnosti">
+<!ENTITY managedevices.accesskey "S">
+<!ENTITY managecerts.button "Upravljaj certifikate ...">
+<!ENTITY managecerts.label "Upravljanje certifikatov">
+<!ENTITY managedevices.button "Upravljaj varnostne naprave ...">
+<!ENTITY certs.title "Certifikati">
+<!ENTITY managedevices.text "Uporabite ta gumb za upravljanje vaših varnostnih naprav, kot so 'pametne kartice' (smart cards).">
+<!ENTITY certs.label "Certifikati">
+<!ENTITY ssl.label "SSL">
+<!ENTITY resetsettings.label "Ponastavi nastavitve">
+<!ENTITY managecerts.text "Upravitelja certifikatov uporabljate za urejanje vaših osebnih certifikatov, kot tudi certifikatov drugih ljudi in uradnih oseb za certifikate (CA).">
+<!ENTITY security.title "Varnostne nastavitve">
+<!ENTITY resetpreferences.label "Ponastavi lastnosti ...">

@@ -1,0 +1,42 @@
+<!ENTITY validation.crlnextupdate.label "Nasledja posodobitev">
+<!ENTITY validation.crlautoupdatestatus.label "Stanje samodejne posodobitve">
+<!ENTITY validation.crllastupdate.label "Nazadnje posodobljeno">
+<!ENTITY crl.import.nextupdate.label "Naslednja posodobitev:">
+<!ENTITY validation.crl.autoupdate.title "Samodejna CRL posodobitev lastnosti">
+<!ENTITY crl.issuer.label "CRL izdajatelj:">
+<!ENTITY signingCA.accesskey "R">
+<!ENTITY disableOCSP.label "Ne uporabljaj OCSP za preverjanje certifikatov">
+<!ENTITY crl.import.success.message "T. i. 'Certificate Revocation List (CRL)' je bila uspešno uvožena.">
+<!ENTITY validation.crlautoupdateenabled.label "Samodejna posodobitev">
+<!ENTITY validation.deletecrl.label "Izbriši">
+<!ENTITY serviceURL.label "Storitveni URI:">
+<!ENTITY serviceURL.accesskey "S">
+<!ENTITY help.button "Pomoč">
+<!ENTITY proxyOCSP.label "Uporabljaj OCSP za preverjanje vseh certifikatov, pri tem pa uporabi ta URI in podpisnik:">
+<!ENTITY validation.crl.autoupdate.enable.label "Omogoči samodejno posodobitev za ta CRL">
+<!ENTITY edit.button "Nastavitve">
+<!ENTITY ok.button "V redu">
+<!ENTITY validation.crl.autoupdate.time.label2 "Število dni pred naslednjim datumom posodobitve">
+<!ENTITY validation.crl.autoupdate.time.label1 "Posodobitev">
+<!ENTITY validation.crl.label "CRL">
+<!ENTITY validation.title "Preverjanje">
+<!ENTITY crl.autoupdate.fail.cnt.label "Prejšnje neuspeše konsekutivne posodobitve:">
+<!ENTITY crl.import.status.title "CRL uvozno stanje">
+<!ENTITY validation.crlname.label "Ime">
+<!ENTITY validation.managecrls.accesskey "M">
+<!ENTITY validation.crlmanager.label "Upravljanje CRL-jev">
+<!ENTITY crl.issuer.orgunit.label "Enota:">
+<!ENTITY validation.crl.autoupdate.url.label "CRL bi bil uvožen iz:">
+<!ENTITY validation.updatecrl.label "Posodobitev">
+<!ENTITY validation.crl.autoupdate.freq.label2 "Dnevi">
+<!ENTITY crl.autoupdate.fail.reason.label "Podrobnosti o zadnji neuspešni posodobitvi:">
+<!ENTITY validation.crl.autoupdate.freq.label1 "Posodobi vsakih">
+<!ENTITY signingCA.label "Podpisnik odgovora:">
+<!ENTITY validation.crl.description "Uporabite CRL upravitelja za upravljanje s t. i. 'Certificate Revocation List (CRL)' seznami, ki so spravljene v vaši podatkovni bazi certifikatov.">
+<!ENTITY validation.ocsp.description "&brandShortName; lahko uporablja 'Online Certificate Status Protocol' (OCSP) za preverjanje certifikatov. Program &brandShortName; lahko nastavite, da uporablja OSCP na sledeč način:">
+<!ENTITY cancel.button "Prekliči">
+<!ENTITY validation.managecrls.button "Upravljaj CRL-je ...">
+<!ENTITY validation.ocsp.label "OCSP">
+<!ENTITY certOCSP.label "Uporabljaj OCSP le za certifikate, ki specificirajo OCSP storitveni URI">
+<!ENTITY crl.issuer.org.label "Organizacija:">
+<!ENTITY validation.advanced.label "Nastavitve">

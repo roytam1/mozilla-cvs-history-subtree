@@ -1,0 +1,35 @@
+<!ENTITY savePageCmd.commandkey "S">
+<!ENTITY printCmd.label "Natisni ...">
+<!ENTITY mainWindow.preface "Izvorna koda strani: ">
+<!ENTITY fileMenu.label "Datoteka">
+<!ENTITY menu_highlightSyntax.label "Označevanje skladnje">
+<!ENTITY closeCmd.label "Zapri">
+<!ENTITY savePageCmd.accesskey "A">
+<!ENTITY printCmd.accesskey "N">
+<!ENTITY mainWindow.titlemodifier "&brandFullName;">
+<!ENTITY closeCmd.accesskey "Z">
+<!ENTITY closeCmd.commandkey "W">
+<!ENTITY menu_highlightSyntax.accesskey "O">
+<!ENTITY menu_wrapLongLines.title "Prelomi dolge vrstice">
+<!ENTITY viewMenu.label "Pogled">
+<!ENTITY mainWindow.title "&brandFullName;">
+<!ENTITY fileMenu.accesskey "D">
+<!ENTITY mainWindow.titlemodifierseparator " - ">
+<!ENTITY printCmd.commandkey "P">
+<!ENTITY viewMenu.accesskey "P">
+<!ENTITY savePageCmd.label "Shrani stran kot ...">
+<!ENTITY menu_wrapLongLines.accesskey "p">
+<!ENTITY printPreviewCmd.accesskey "g">
+<!ENTITY pageSetupCmd.accesskey "v">
+<!ENTITY goToLineCmd.commandkey "l">
+<!ENTITY pageSetupCmd.label "Nastavitve strani ...">
+<!ENTITY goToLineCmd.accesskey "j">
+<!ENTITY goToLineCmd.label "Pojdi v vrstico ...">
+<!ENTITY printPreviewCmd.label "Predogled tiskanja">
+<!ENTITY menu_textReduce.label "Zmanjšaj velikost besedila">
+<!ENTITY textEnlarge.commandkey "+">
+<!ENTITY menu_textEnlarge.label "Povečaj velikost besedila">
+<!ENTITY menu_textEnlarge.accesskey "v">
+<!ENTITY menu_textReduce.accesskey "m">
+<!ENTITY textReduce.commandkey "-">
+<!ENTITY textReset.commandkey "0">

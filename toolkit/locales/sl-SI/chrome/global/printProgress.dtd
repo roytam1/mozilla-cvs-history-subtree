@@ -1,0 +1,8 @@
+<!ENTITY printWindow.title "Tiskanje">
+<!ENTITY title "Naslov:">
+<!ENTITY percentPrint "#1 &#037;">
+<!ENTITY preparing "Pripravljam ...">
+<!ENTITY printComplete "Tiskanje je končano.">
+<!ENTITY dialogCancel.label "Prekliči">
+<!ENTITY dialogClose.label "Zapri">
+<!ENTITY progress "Potek:">

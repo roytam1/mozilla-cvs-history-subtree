@@ -1,0 +1,29 @@
+<!ENTITY p70.label "70&#037;">
+<!ENTITY portrait.label "Pokončno">
+<!ENTITY close.label "Zapri">
+<!ENTITY p60.label "60&#037;">
+<!ENTITY print.accesskey "N">
+<!ENTITY print.label "Natisni ...">
+<!ENTITY pageSetup.accesskey "v">
+<!ENTITY p50.label "50&#037;">
+<!ENTITY landscape.label "Ležeče">
+<!ENTITY portrait.accesskey "k">
+<!ENTITY Custom.label "Po meri ...">
+<!ENTITY p100.label "100&#037;">
+<!ENTITY p150.label "150&#037;">
+<!ENTITY page.label "Stran:">
+<!ENTITY close.accesskey "Z">
+<!ENTITY p40.label "40&#037;">
+<!ENTITY customPrompt.title "Merilo po meri ...">
+<!ENTITY landscape.accesskey "L">
+<!ENTITY p90.label "90&#037;">
+<!ENTITY p200.label "200&#037;">
+<!ENTITY scale.label "Merilo:">
+<!ENTITY p125.label "125&#037;">
+<!ENTITY p30.label "30&#037;">
+<!ENTITY ShrinkToFit.label "Skrči, da ustreza">
+<!ENTITY p175.label "175&#037;">
+<!ENTITY p80.label "80&#037;">
+<!ENTITY percent.label "&#037;">
+<!ENTITY of.label "od">
+<!ENTITY pageSetup.label "Nastavitve strani ...">

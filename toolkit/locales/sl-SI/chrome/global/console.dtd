@@ -1,0 +1,25 @@
+<!ENTITY sortFirst.label "Vrstni red Prvi > Zadnji">
+<!ENTITY clear.accesskey "t">
+<!ENTITY sortLast.accesskey "z">
+<!ENTITY errLine.label "Vrstica:">
+<!ENTITY focus2.commandkey "d">
+<!ENTITY messages.label "Sporočila">
+<!ENTITY closeCmd.commandkey "w">
+<!ENTITY focus1.commandkey "l">
+<!ENTITY copyCmd.accesskey "K">
+<!ENTITY copyCmd.label "Kopiraj">
+<!ENTITY sortLast.label "Vrstni red Zadnji > Prvi">
+<!ENTITY warnings.label "Opozorila">
+<!ENTITY warnings.accesskey "z">
+<!ENTITY evaluate.label "Ovrednoti">
+<!ENTITY errColumn.label "Stolpec:">
+<!ENTITY clear.label "Počisti">
+<!ENTITY all.accesskey "v">
+<!ENTITY messages.accesskey "s">
+<!ENTITY all.label "Vse">
+<!ENTITY copyCmd.commandkey "C">
+<!ENTITY errors.label "Napake">
+<!ENTITY sortFirst.accesskey "p">
+<!ENTITY errFile.label "Izvorna datoteka:">
+<!ENTITY console.title "Konzola za JavaScript">
+<!ENTITY errors.accesskey "k">

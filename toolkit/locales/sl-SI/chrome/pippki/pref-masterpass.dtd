@@ -1,0 +1,15 @@
+<!ENTITY resetpassword.text "Če ponastavite glavno geslo, bodo vsa vaša spravljena spletna in e-poštna gesla, podatki za obrazce, osebni certifikati in privatni ključi izbrisani.">
+<!ENTITY lheader "Glavna gesla">
+<!ENTITY changepassword.text "Vaše glavno geslo varuje občutljive informacije, kot so na primer gesla za splet in e-pošto in certifikati.">
+<!ENTITY managepassword.asktimeout "Če ni bilo uporabljeno">
+<!ENTITY managepassword.askfirsttime "Prvič, ko je potrebno">
+<!ENTITY changepassword.label "Spremeni glavno geslo">
+<!ENTITY resetpassword.accesskey "s">
+<!ENTITY managepassword.timeout.unit "minut ali več">
+<!ENTITY managepassword.text "Program &brandShortName; vas bo vprašal za glavno geslo:">
+<!ENTITY changepassword.accesskey "p">
+<!ENTITY resetpassword.button "Ponastavi geslo">
+<!ENTITY managepassword.askeverytime "Vsakokrat, ko je potrebno">
+<!ENTITY resetpassword.label "Ponastavi glavno geslo">
+<!ENTITY managepassword.label "Čas veljavnosti glavnega gesla">
+<!ENTITY changepassword.button "Spremeni geslo ...">

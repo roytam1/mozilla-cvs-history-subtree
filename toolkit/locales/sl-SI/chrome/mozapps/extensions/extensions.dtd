@@ -1,0 +1,51 @@
+<!ENTITY previewNoThemeSelected.label "Ni izbrane teme">
+<!ENTITY extensions.title "Razširitve">
+<!ENTITY cmd.optionsUnix.accesskey "n">
+<!ENTITY about.tooltip "O razširitvi">
+<!ENTITY cmd.update.accesskey "P">
+<!ENTITY cmd.update.tooltip "Poišče posodobitve vaših razširitev">
+<!ENTITY cmd.enable.label "Omogoči">
+<!ENTITY cmd.enable.accesskey "m">
+<!ENTITY cmd.disable.label "Onemogoči">
+<!ENTITY cmd.moveDn.accesskey "d">
+<!ENTITY cmd.homepage.accesskey "d">
+<!ENTITY cmd.about.label "O tej razširitvi">
+<!ENTITY cmd.close.commandKey "w">
+<!ENTITY homepage.tooltip "Domača stran">
+<!ENTITY cmd.useTheme.accesskey "U">
+<!ENTITY extensionItem.waiting.label "Čakam ...">
+<!ENTITY getMoreExtensions.tooltip "Več razširitev na update.mozilla.org">
+<!ENTITY extensionItem.installing.label "Nameščam ...">
+<!ENTITY extensionItem.toBeUninstalled.label "Element bo odstranjen, ko ponovno zaženete program &brandShortName;.">
+<!ENTITY cmd.about.accesskey "O">
+<!ENTITY cmd.optionsUnix.label "Nastavitve">
+<!ENTITY getMoreThemes.label "Več tem">
+<!ENTITY cmd.options.label "Možnosti">
+<!ENTITY cmd.options.commandKey ",">
+<!ENTITY options.tooltip "Možnosti">
+<!ENTITY getMoreExtensions.label "Več razširitev">
+<!ENTITY cmd.uninstall.accesskey "i">
+<!ENTITY getMoreThemes.tooltip "Več tem na update.mozilla.org">
+<!ENTITY cmd.info.commandKey "i">
+<!ENTITY cmd.uninstall.tooltip "Odstrani izbrano razširitev">
+<!ENTITY cmd.homepage.label "Obišči domačo stran">
+<!ENTITY cmd.moveUp.label "Premakni gor">
+<!ENTITY previewNoPreviewImage.label "Ta tema nima slike za predogled.">
+<!ENTITY cmd.moveUp.accesskey "g">
+<!ENTITY extensionItem.toBeInstalled.label "Ta element bo nameščen, ko ponovno zaženete program &brandShortName;.">
+<!ENTITY cmd.useTheme.label "Uporabi temo">
+<!ENTITY cmd.options.accesskey "M">
+<!ENTITY extensionItem.toBeDisabled.label "Ta element bo onemogočen, ko ponovno zaženete program &brandShortName;.">
+<!ENTITY cmd.install.accesskey "n">
+<!ENTITY cmd.update.label "Posodobi">
+<!ENTITY cmd.install.tooltip "Namesti razširitev">
+<!ENTITY extensionItem.done.label "Namestitev uspešna">
+<!ENTITY cmd.moveDn.label "Premakni dol">
+<!ENTITY cmd.disable.accesskey "n">
+<!ENTITY extensionItem.toBeEnabled.label "Ta element bo omogočen, ko ponovno zaženete program &brandShortName;.">
+<!ENTITY cmd.moveToTop.label "Premakni na vrh">
+<!ENTITY cmd.uninstall.label "Odstrani">
+<!ENTITY cmd.moveToTop.accesskey "v">
+<!ENTITY cmd.install.label "Namesti">
+<!ENTITY optionsUnix.tooltip "Nastavitve">
+<!ENTITY cmd.useTheme.tooltip "Spremeni temo, ki jo uporablja &brandShortName;.">

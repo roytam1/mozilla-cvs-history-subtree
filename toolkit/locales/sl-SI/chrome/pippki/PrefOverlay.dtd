@@ -1,0 +1,5 @@
+<!ENTITY ssl.label "SSL">
+<!ENTITY certs.label "Certifikati">
+<!ENTITY validation.label "Preverjanje">
+<!ENTITY security.label "Zasebnost in varnost">
+<!ENTITY masterpass.label "Glavna gesla">

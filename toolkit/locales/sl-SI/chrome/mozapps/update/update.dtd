@@ -1,0 +1,52 @@
+<!ENTITY checking.title "Iščem posodobitve">
+<!ENTITY noupdates.intro.user.label "&brandShortName; ne najde nobenih posodobitev.">
+<!ENTITY updateWizard.title "Posodobitev &brandShortName;">
+<!ENTITY updateCheckError.label "Podrobnosti">
+<!ENTITY errors.intro.label "&brandShortName; ima težave pri posodabljanju vaše programske
+                                           opreme, zato niso bile posodobljene vse komponente.">
+<!ENTITY finished.updated.label "Program &brandShortName; je namestil vse posodobitve, ki so bile na voljo.">
+<!ENTITY found.title "Najdene posodobitve">
+<!ENTITY mismatch.intro2.label "So onemogočene, dokler ne bodo nameščene ustrezne različice.">
+<!ENTITY errors.details.accesskey "D">
+<!ENTITY errors.details.label "Podrobnosti">
+<!ENTITY finished.error.label "Programu &brandShortName; ni uspelo prenesti in
+                                           namestiti nekaterih posodobitev.">
+<!ENTITY appupdate.intro.label "Posodobitev &brandShortName; se bo zdaj zaprla in vam
+                                           odprla spletno stran, s katere lahko prenesete najnovejšo
+                                           različico programa &brandShortName;.">
+<!ENTITY installing.disclaimer.label "XXXben - this will not work until we have a scriptable API to XPInstall.">
+<!ENTITY found.instructions.label "Izberite tiste, ki jih želite namestiti, in kliknite Namesti zdaj za namestitev.">
+<!ENTITY noupdates.intro.mismatch.label "&brandShortName; ne najde nobenih posodobitev -
+                                           morda trenutno ni nobenih kompatibilnih različic.">
+<!ENTITY noupdates.enableChecking.label "Dovoli programu &brandShortName;, da poišče posodobitve.">
+<!ENTITY finished.mismatch.label "Kliknite Dokončaj za nadaljevanje zagona programa &brandShortName;">
+<!ENTITY finished.remaining2.label "Nekatere nekompatibilne komponente niso bile posodobljene, morda
+                                           zato, ker kompatibilne različice trenutno niso na voljo.
+                                           &brandShortName; lahko periodično pregleduje, če so že na
+                                           voljo, in vas obvesti, ko bodo.">
+<!ENTITY appupdate.title "Posodobitev &brandShortName;">
+<!ENTITY updateCheckError.description "Pri iskanju posodobitev nekaterih elementov so bili problemi.">
+<!ENTITY noupdates.intro2.mismatch.label "Program &brandShortName; bo periodično iskal kompatibilne različice
+                                            in vas bo opozoril, ko bodo na voljo.">
+<!ENTITY updateCheckError.accesskey "D">
+<!ENTITY errors.title "Problemi med posodabljanjem">
+<!ENTITY noupdates.title "Nič posodobitev najdenih">
+<!ENTITY finished.enableChecking.label "Dovoli programu &brandShortName;, da išče posodobitve.">
+<!ENTITY mismatch.title "Nekompatibilne komponente">
+<!ENTITY checking.intro.label "&brandShortName; išče posodobitve ...">
+<!ENTITY from.label "iz:">
+<!ENTITY noupdates.intro3.mismatch.label "Program &brandShortName; lahko periodično išče kompatibilne različice
+                                            in vas opozori, ko bodo na voljo.">
+<!ENTITY installing.intro.label "Prenašam in nameščam posodobitve ...">
+<!ENTITY mismatch.intro1.label "Sledeče komponente niso kompatibilne z novo različico programa
+                                           &brandShortName;, ki ste jo ravno namestili.">
+<!ENTITY installing.title "Nameščanje posodobitev">
+<!ENTITY finished.title "Posodobitev končana">
+<!ENTITY appInfo.label "To posodobitev morate namestiti ločeno od vseh drugih.">
+<!ENTITY mismatch.intro3.label "Program &brandShortName; lahko išče in namesti kompatibilne različice
+                                            teh komponent.">
+<!ENTITY finished.remaining.label "Nekatere nekompatibilne komponente niso bile posodobljene, morda
+                                           zato, ker kompatibilne različice trenutno niso na voljo.
+                                           Program &brandShortName; bo periodično pregledoval,
+                                           če so že na voljo, in vas obvestil, ko bodo.">
+<!ENTITY found.intro.label "Sledeče posodobitve so bile najdene:">

@@ -1,0 +1,66 @@
+<!ENTITY cipher.tab.ssl2 "SSL2">
+<!ENTITY SSLClientAuthMethod "Izbira certifikatov klienta">
+<!ENTITY cipher.ssl3.dhe_rsa_aes_256_sha "AES šifriranje z 256-bitnim ključem z RSA, DHE in SHA1 MAC">
+<!ENTITY cipher.details "Podrobnosti ...">
+<!ENTITY cipher.ssl3.dhe_dss_aes_128_sha "AES šifriranje s 128-bitnim ključem z DSA, DHE in SHA1 MAC">
+<!ENTITY cipher.ssl2.rc4_128 "RC4 šifriranje s 128-bitnim ključem z RSA in MD5 MAC">
+<!ENTITY cipher.ssl2.rc4_40 "RC4 šifriranje s 40-bitnim ključem z RSA in MD5 MAC (izvoz)">
+<!ENTITY cipher.ssl3.rsa_1024_rc4_56_sha "RC4 šifriranje s 54-bitnim ključem z RSA in SHA1 MAC (izvoz)">
+<!ENTITY cipher.keySize "Efektivna velikost ključa:">
+<!ENTITY cipher.ssl3_extra.label "Ekstra SSL3/TLS suite skrivnih kod">
+<!ENTITY cipher.tab.ssl3tls "SSL3/TLS">
+<!ENTITY cipher.ssl2.rc2_128 "RC2 šifriranje s 128-bitnim ključem z RSA in MD5 MAC">
+<!ENTITY cipher.ssl3.rsa_rc4_128_sha "RC4 šifriranje s 128-bitnim ključem z RSA in SHA1 MAC">
+<!ENTITY certselect.description "Odločite se, kako naj &brandShortName; predstavi varnostni certifikat stranem, ki ga zahtevajo:">
+<!ENTITY cipher.name "Skrivna koda">
+<!ENTITY cipher.ssl3.rsa_null_sha "Brez šifriranja, z RSA avtentikacijo in SHA1 MAC">
+<!ENTITY cipher.encryption "Algoritem šifriranja:">
+<!ENTITY cipher.authAlg "Algoritem avtentikacije:">
+<!ENTITY SSLProtocolVersions "Različice SSL protokola">
+<!ENTITY cipher.ssl3.dhe_rsa_aes_128_sha "AES šifriranje s 128-bitnim ključem z RSA, DHE in SHA1 MAC">
+<!ENTITY cipher.ssl3.dhe_rsa_des_sha "AES šifriranje s 56-bitnim ključem z RSA, DHE in SHA1 MAC">
+<!ENTITY cipher.macAlg "Algoritem MAC:">
+<!ENTITY cipher.ssl3.rsa_aes_256_sha "AES šifriranje z 256-bitnim ključem z RSA in SHA1 MAC">
+<!ENTITY warn.insecurepost "Pošiljanje podatkov obrazca iz nešifrirane strani na nešifrirano stran">
+<!ENTITY warn.viewmixed "Nalaganje strani z mešanico šifriranega in šifriranega">
+<!ENTITY cipher.ssl3.dhe_dss_des_ede3_sha "Trojno DES šifriranje s 168-bitnim ključem z DSA, DHE in SHA1 MAC">
+<!ENTITY warn.secureredirecttoinsecure "Napotitev iz šifrirane strani na nešifrirano">
+<!ENTITY cipher.title "SSL: Spreminjanje skrivnih kod">
+<!ENTITY cipher.ssl3.dhe_rsa_des_ede3_sha "Trojno DES šifriranje s 168-bitnim ključem z RSA, DHE in SHA1 MAC">
+<!ENTITY edit.sslciphers.accesskey "E">
+<!ENTITY cipher.ssl3.rsa_des_sha "DES šifriranje s 56-bitnim ključem in SHA1 MAC">
+<!ENTITY cipher.ssl3.rsa_fips_des_sha "FIPS 140-1 ustrezajoče DES šifriranje in SHA1 MAC">
+<!ENTITY warn.description "&brandShortName; vas lahko opozori o varnostnem stanju obiskanih strani. &brandShortName; trenutno prikaže opozorilo in prosi za dovoljenje pred nalaganjem naslednjega:">
+<!ENTITY cipher.keyAlg "Algoritem ključa:">
+<!ENTITY cipher.ssl2.des_64 "DES šifriranje s 56-bitnim ključem z RSA in MD5 MAC">
+<!ENTITY cipher.fips "FIPS">
+<!ENTITY cipher.ssl3.rsa_aes_128_sha "AES šifriranje s 128-bitnim ključem z RSA in SHA1 MAC">
+<!ENTITY enable.tls "Omogoči TLS">
+<!ENTITY enable.ssl3 "Omogoči SSL različice 3">
+<!ENTITY warn.enteringweak "Nalaganje strani, ki uporablja nizkostopenjsko zaščito">
+<!ENTITY cipher.ssl3.rsa_1024_des_cbc_sha "DES šifriranje z RSA in SHA1 MAC s 56-bitnim ključem (izvoz)">
+<!ENTITY enable.ssl2 "Omogoči SSL različice 2">
+<!ENTITY cipher.ssl2.label "Suite skrivnih kod SSL2">
+<!ENTITY cipherinfo.title "Podrobnosti o skrivni kodi">
+<!ENTITY cipher.ssl3.rsa_des_ede3_sha "Trojno DES šifriranje s 168-bitnim ključem z RSA in SHA1 MAC">
+<!ENTITY SSLWarnings "SSL opozorila">
+<!ENTITY cipher.ssl3.rsa_rc4_128_md5 "RC4 šifriranje s 128-bitnim ključem z RSA in MD5 MAC">
+<!ENTITY cipher.ssl3.dhe_dss_aes_256_sha "AES šifriranje z 256-bitnim ključem z DSA, DHE in SHA1 MAC">
+<!ENTITY certselect.auto "Izberi samodejno">
+<!ENTITY cipher.exportable "IsExportable">
+<!ENTITY certselect.ask "Vsakokrat vprašaj">
+<!ENTITY cipher.ssl3.rsa_null_md5 "Brez šifriranja, z RSA avtentikacijo in MD5 MAC">
+<!ENTITY cipher.ssl3.rsa_rc4_40_md5 "RC4 v s 40-bitnim ključem z RSA in MD5 MAC (izvoz)">
+<!ENTITY warn.enteringsecure "Nalaganje strani, ki podpira šifriranje">
+<!ENTITY cipher.ssl3.rsa_rc2_40_md5 "RC2 šifriranje s 40-bitnim ključem z RSA in MD5 MAC (izvoz)">
+<!ENTITY edit.sslciphers "Spremeni skrivne kode ...">
+<!ENTITY cipher.tab.ssl3tls_extra "Ekstra SSL3/TLS">
+<!ENTITY cipher.ssl3.rsa_fips_des_ede3_sha "FIPS 140-1 ustrezajoče trojne DES šifriranje in SHA1 MAC">
+<!ENTITY cipher.other "Ostali atributi:">
+<!ENTITY cipher.ssl2.rc2_40 "RC2 šifriranje s 40-bitnim ključem z RSA in MD5 MAC (izvoz)">
+<!ENTITY warn.leavingsecure "Zapuščanje strani, ki podpira šifriranje">
+<!ENTITY cipher.ssl3.label "SSL3/TLS suite skrivnih kod">
+<!ENTITY warn.secureredirect "Napotitev iz ene šifrirane strani na drugo">
+<!ENTITY cipher.ssl2.des_ede3_192 "Trojno DES šifriranje s 168-bitnim ključem z RSA in MD5 MAC">
+<!ENTITY cipher.ssl3.dhe_dss_des_sha "DES šifriranje s 56-bitnim ključem z DSA, DHE in SHA1 MAC">
+<!ENTITY prefheader.title "Secure Sockets Layer (SSL)">

@@ -1,0 +1,21 @@
+<!ENTITY neverAsk.label "Shrani vse datoteke v ta imenik:">
+<!ENTITY fileTypes.label "Vrste datotek">
+<!ENTITY showWhenStarting.label "Prikaži upravitelja prenosov ob začetku prenosa.">
+<!ENTITY closeWhenDone.label "Zapri upravitelja prenosov, ko so vsi prenosi končani.">
+<!ENTITY removeFileHandler.label "Odstrani">
+<!ENTITY plugins.accesskey "d">
+<!ENTITY fileTypesDescription.label "Samodejno izvrši sledeče dejanje za vsako od naslednjih vrst datotek:">
+<!ENTITY plugins.label "Dodatki ...">
+<!ENTITY editFileHandler.label "Spremeni dejanje ...">
+<!ENTITY showFolder.label "Pokaži imenik">
+<!ENTITY editFileHandler.accesskey "a">
+<!ENTITY downloads.label "Moji prenosi">
+<!ENTITY downloadManagerWindow.label "Upravitelj prenosov">
+<!ENTITY choose.label "Drugo ...">
+<!ENTITY fileTypeColName.label "Vrsta datoteke">
+<!ENTITY removeFileHandler.accesskey "r">
+<!ENTITY alwaysAsk.label "Vprašaj me, kam naj shranim vsako datoteko posebej">
+<!ENTITY askOnSave.label "Imenik za prenose">
+<!ENTITY lHeader "Prenosi">
+<!ENTITY fileHandlerColName.label "Program">
+<!ENTITY desktop.label "Namizje">

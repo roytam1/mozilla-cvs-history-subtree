@@ -1,0 +1,14 @@
+<!ENTITY actionQuestion.label "Kaj naj &brandShortName; s to datoteko stori?">
+<!ENTITY save.label "Shrani na disk">
+<!ENTITY openWith.accesskey "o">
+<!ENTITY whichIsA.label "ki je vrste:">
+<!ENTITY save.accesskey "s">
+<!ENTITY openWith.label "Odpri s programom">
+<!ENTITY rememberChoice.label "Od zdaj naprej naredi to samodejno za tovrstne datoteke.">
+<!ENTITY rememberChoice.accesskey "a">
+<!ENTITY other.label "Drugo ...">
+<!ENTITY intro.label "Začeli ste z odpiranjem">
+<!ENTITY settingsChange.label "Nastavitve lahko spremenite v področju Prenosi med Možnostmi, ki jih najdete v meniju Orodja.">
+<!ENTITY from.label "iz:">
+<!ENTITY settingsChangeMac.label "Nastavitve lahko spremenite v področju možnosti Prenosi (v meniju Urejanje -> Nastavitve).">
+<!ENTITY settingsChangeUnix.label "Nastavitve lahko spremenite v področju možnosti Prenosi (v meniju Urejanje -> Nastavitve).">

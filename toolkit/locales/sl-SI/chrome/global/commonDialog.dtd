@@ -1,0 +1,6 @@
+<!ENTITY header.label "Kratek naslov">
+<!ENTITY editfield1.label "Geslo:">
+<!ENTITY editfield0.label "Uporabniško ime:">
+<!ENTITY checkbox.label "označi">
+<!ENTITY message.label "Sem sodi vzorčno besedilo.">
+<!ENTITY editfield2.label "Potrditev gesla:">

@@ -1,0 +1,16 @@
+<!ENTITY autoSelect.label "Ne vprašaj ob zagonu">
+<!ENTITY offlineState.accesskey "v">
+<!ENTITY exit.label "Izhod">
+<!ENTITY start.label "Zaženi &brandShortName;">
+<!ENTITY newButton.accesskey "v">
+<!ENTITY renameButton.accesskey "R">
+<!ENTITY windowtitle.label "&brandShortName; - Izbira uporabniškega profila">
+<!ENTITY newButton.label "Ustvari profil ...">
+<!ENTITY availprofiles.label "Dostopni profili">
+<!ENTITY renameButton.label "Preimenuj profil ...">
+<!ENTITY deleteButton.label "Izbriši profil ...">
+<!ENTITY autoSelect.accesskey "p">
+<!ENTITY profilename.label "Ime profila:">
+<!ENTITY deleteButton.accesskey "b">
+<!ENTITY pmDescription.label "&brandShortName; shrani informacije o nastavitvah, zaznamkih in drugih uporabniških elementih v vašem uporabniškem profilu.">
+<!ENTITY offlineState.label "Brez povezave">

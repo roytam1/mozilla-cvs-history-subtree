@@ -1,0 +1,23 @@
+<!ENTITY fpDialog.title "Shranjevanje datoteke">
+<!ENTITY numCopies.label "Število kopij:">
+<!ENTITY aslaidoutRadio.label "Kot postavljeno na zaslonu">
+<!ENTITY propertiesButton.label "Lastnosti ...">
+<!ENTITY copies.label "Kopije">
+<!ENTITY selectedframeRadio.label "Izbrani okvir">
+<!ENTITY selectionRadio.label "Izbrano">
+<!ENTITY allpagesRadio.label "Vse strani">
+<!ENTITY printTo.label "Natisni v:">
+<!ENTITY frompageInput.label "iz">
+<!ENTITY printer.label "Tiskalnik">
+<!ENTITY chooseButton.label "Izberite datoteko ...">
+<!ENTITY rangeRadio.label "Strani">
+<!ENTITY printButton.label "Natisni">
+<!ENTITY printframeGroup.label "Tiskanje okvirjev">
+<!ENTITY printerInput.label "Tiskalnik:">
+<!ENTITY printDialog.title "Tiskanje">
+<!ENTITY eachframesepRadio.label "Vsak okvir posebej">
+<!ENTITY fileInput.label "Datoteka:">
+<!ENTITY printrangeGroup.label "Obseg tiskanja">
+<!ENTITY topageInput.label "v">
+<!ENTITY printerRadio.label "Tiskalnik">
+<!ENTITY fileRadio.label "Datoteka">

@@ -1,0 +1,16 @@
+<!ENTITY textInput.accesskey "m">
+<!ENTITY filterMenuList.label "Datoteke vrste:">
+<!ENTITY showHiddenFiles.accesskey "S">
+<!ENTITY lookInMenuList.accesskey "L">
+<!ENTITY lastModified.label "Zadnja sprememba:">
+<!ENTITY noPermissionError.label "Nimate potrebnih dovoljenj za ogled tega imenika.">
+<!ENTITY folderUp.tooltiptext "Pojdi eno raven višje">
+<!ENTITY folderNew.tooltiptext "Ustvari nov imenik">
+<!ENTITY folderHome.tooltiptext "Pojdi v domači imenik">
+<!ENTITY lookInMenuList.label "Poglej v:">
+<!ENTITY filterMenuList.accesskey "t">
+<!ENTITY name.label "Ime">
+<!ENTITY showHiddenFiles.label "Pokaži skrite datoteke in imenike">
+<!ENTITY permissions.label "Dovoljenja">
+<!ENTITY size.label "Velikost">
+<!ENTITY textInput.label "Ime datoteke:">

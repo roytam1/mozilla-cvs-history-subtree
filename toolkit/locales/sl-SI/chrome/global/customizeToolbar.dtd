@@ -1,0 +1,11 @@
+<!ENTITY dialog.title "Urejanje orodne vrstice">
+<!ENTITY undoChanges.label "Razveljavi spremembe">
+<!ENTITY addNewToolbar.label "Nova orodna vrstica">
+<!ENTITY text.label "Besedilo">
+<!ENTITY restoreDefaultSet.label "Privzeta postavitev">
+<!ENTITY show.label "Prikaži:">
+<!ENTITY instructions.description "Povlecite elemente na orodne vrstice zgoraj, če jih želite dodati.">
+<!ENTITY icons.label "Ikone">
+<!ENTITY saveChanges.label "Končaj">
+<!ENTITY useSmallIcons.label "Uporabi majhne ikone">
+<!ENTITY iconsAndText.label "Ikone in besedilo">

@@ -1,0 +1,69 @@
+<!ENTITY certmgr.detail.general_tab.title "Splošno">
+<!ENTITY certmgr.details.label "Polja certifikata">
+<!ENTITY certmgr.ocsp_info "Certifikati niso bili preverjeni z OCSP. Kliknite na Pogled, če želite to storiti.">
+<!ENTITY certmgr.websites "Imate certifikate, ki predstavljajo sledeče spletne strani:">
+<!ENTITY certmgr.certdetail.title "Podrobnosti certifikata">
+<!ENTITY certmgr.editsslcert.donttrust "Ne zaupaj avtentičnosti tega certifikata.">
+<!ENTITY certmgr.fingerprints.label "Prstni odtisi">
+<!ENTITY certmgr.deleteusercert.beforename "Zahtevali ste izbris certifikata:">
+<!ENTITY certmgr.editemailcert.edittrust "Urejanje nastavitve zaupanja certifikata:">
+<!ENTITY certmgr.editsslcert.dotrust "Zaupaj avtentičnosti tega certifikata.">
+<!ENTITY certmgr.cas "Imate certifikate, ki predstavljajo sledeče uradne osebe za certifikate (CA):">
+<!ENTITY certmgr.editcert.trustemail "Ta certifikat lahko predstavlja e-poštne uporabnike.">
+<!ENTITY certmgr.add.label "Dodaj">
+<!ENTITY certmgr.ok.label "V redu">
+<!ENTITY certmgr.tokenname "Varnostna naprava">
+<!ENTITY certmgr.editsslcert.edittrust "Spremeni nastavitve zaupanja certifikata:">
+<!ENTITY certmgr.tab.ca "Uradne osebe za certifikate">
+<!ENTITY certmgr.purpose "Nameni">
+<!ENTITY certmgr.certdetail.serialnumber "Serijska številka">
+<!ENTITY certmgr.deleteusercert.title "Izbris certifikata">
+<!ENTITY certmgr.certdetail.sha1fingerprint "SHA1 prstni odtis">
+<!ENTITY certmgr.editemailcert.dotrust "Zaupaj avtentičnosti tega certifikata.">
+<!ENTITY certmgr.closeWindowAccessKey "z">
+<!ENTITY certmgr.cancel.label "Prekliči">
+<!ENTITY certmgr.editca.label "Spremeni zaupanje uradni osebi za certifikate (CA)">
+<!ENTITY certmgr.helpButtonAccessKey "p">
+<!ENTITY certmgr.restore.label "Uvoz">
+<!ENTITY certmgr.delete.label "Izbris">
+<!ENTITY certmgr.backup.label "Varnostna kopija">
+<!ENTITY certmgr.editcert.title "Urejanje nastavitev varnostnih certifikatov">
+<!ENTITY certmgr.editcert.edittrust "Spremeni nastavitve zaupanja:">
+<!ENTITY certmgr.issued "Izdan dne">
+<!ENTITY certmgr.expires "Preteče dne">
+<!ENTITY certmgr.others "Imate certifikate, ki predstavljajo sledeče ljudi:">
+<!ENTITY certmgr.certdetail.ou "Organizacijska enota (OU)">
+<!ENTITY certmgr.mine "Imate certifikate sledečih organizacij, ki predstavljajo vas:">
+<!ENTITY certmgr.certname "Ime certifikata">
+<!ENTITY certmgr.subjectinfo.label "Izdano komu:">
+<!ENTITY certmgr.detail.prettyprint_tab.title "Podrobnosti">
+<!ENTITY certmgr.view.label "Poglej">
+<!ENTITY certmgr.deleteusercert.aftername "Ko bo certifikat izbrisan, ne boste mogli brati pošte, šifrirane z njim.">
+<!ENTITY certmgr.help.label "Pomoč">
+<!ENTITY certmgr.serial "Serijska številka">
+<!ENTITY certmgr.title "Upravitelj certifikatov">
+<!ENTITY certmgr.deletecert.title "Izbris certifikata">
+<!ENTITY certmgr.certdetail.md5fingerprint "MD5 prstni odtis">
+<!ENTITY certmgr.validity.label "Veljavnost">
+<!ENTITY certmgr.edit.label "Spreminjanje">
+<!ENTITY certmgr.backupall.label "Naredi varnostno kopijo za vse">
+<!ENTITY certmgr.issuerinfo.label "Izdajatelj:">
+<!ENTITY certmgr.tab.websites "Spletne strani">
+<!ENTITY certmgr.editsslcert.title "Urejanje nastavitev zaupanja spletnim stranem">
+<!ENTITY certmgr.tab.others "Drugih ljudi">
+<!ENTITY certmgr.certdetail.o "Organizacija (O)">
+<!ENTITY certmgr.certdetail.cn "Splošno ime (CN):">
+<!ENTITY certmgr.editcacert.title "Urejanje nastavitev zaupanja uradnim osebam za certifikate (CA)">
+<!ENTITY certmgr.deletecert.beforename "Zahtevali ste izbris tega certifikata:">
+<!ENTITY certmgr.ca.mycas "Uradne osebe za certifikate (CA), ki jih upravljate">
+<!ENTITY certmgr.ca.builtins "Vnaprej vnešene uradne osebe za certifikate (CA)">
+<!ENTITY certmgr.editemailcert.title "Urejanje nastavitev zaupanja e-poštnim certifikatom">
+<!ENTITY certmgr.editcert.trustobjsign "Ta certifikat lahko predstavlja izdelovalce programov.">
+<!ENTITY certmgr.email "E-mail naslov">
+<!ENTITY certmgr.editcert.trustssl "Ta certifikat lahko predstavlja spletne strani.">
+<!ENTITY certmgr.close.label "Zapri">
+<!ENTITY certmgr.hierarchy.label "Hierarhija certifikatov">
+<!ENTITY certmgr.tab.mine "Vaši certifikati">
+<!ENTITY certmgr.deletecert.aftername "Ste prepričani, da želite izbrisati ta certifikat?">
+<!ENTITY certmgr.editemailcert.donttrust "Ne zaupaj avtentičnosti tega certifikata.">
+<!ENTITY certmgr.fields.label "Vrednost polja">
