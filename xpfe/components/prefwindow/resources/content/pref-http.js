@@ -40,32 +40,24 @@
 function checkPipelining()
 {
   try {
-    var browserEnableHTTP11 = document.getElementById("httpVersion11");
-    var browserEnableKeepAlive = document.getElementById("browserEnableKeepAlive");
-    var browserEnablePipelining = document.getElementById("browserEnablePipelining");
+    var enableHTTP11 = document.getElementById("httpVersion11");
+    var enableKeepAlive = document.getElementById("enableKeepAlive");
+    var enablePipelining = document.getElementById("enablePipelining");
 
-    if (browserEnableHTTP11.selected && browserEnableKeepAlive.checked) {
-      browserEnablePipelining.removeAttribute("disabled");
-    } else {
-      browserEnablePipelining.setAttribute("disabled", "true");
-      browserEnablePipelining.setAttribute("checked", "false");
-    }
+    var doDisable = !(enableHTTP11.selected && enableKeepAlive.checked);
+    enablePipelining.disabled = doDisable;
   } catch(e) {}
 }
 
-/* Function to restore pref values to application defaults */
-function restoreAcceptEncoding()
+function checkPipeliningProxy()
 {
   try {
-    var prefService = Components.classes["@mozilla.org/preferences-service;1"]
-                                .getService(Components.interfaces.nsIPrefService);
-    var prefs = prefService.getDefaultBranch(null);
+    var enableHTTP11 = document.getElementById("httpVersion11Proxy");
+    var enableKeepAlive = document.getElementById("enableKeepAliveProxy");
+    var enablePipelining = document.getElementById("enablePipeliningProxy");
 
-    /* get the current pref setting */
-    var prefValue = prefs.getCharPref("network.http.accept-encoding");
-    var editfield = document.getElementById("acceptEncodingString");
-    if (editfield)
-      editfield.value = prefValue;
-  } catch (e) {}
+    var doDisable = !(enableHTTP11.selected && enableKeepAlive.checked);
+    enablePipelining.disabled = doDisable;
+  } catch(e) {}
 }
 
