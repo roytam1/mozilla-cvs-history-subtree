@@ -116,7 +116,7 @@ endif
 
 ifdef BUILD_SHIP
 	@echo "Copying files to $(BUILD_SHIP) directory"
-	$(CP) -r $(INSTDIR) $(BUILD_SHIP)
+	cp -r $(INSTDIR) $(BUILD_SHIP)
 endif
 	
 clean:: FORCE
