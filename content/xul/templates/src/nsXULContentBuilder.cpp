@@ -1392,6 +1392,17 @@ nsXULContentBuilder::RemoveGeneratedContent(nsIContent* aElement)
         nsIContent* element = NS_STATIC_CAST(nsIContent*, ungenerated[last]);
         ungenerated.RemoveElementAt(last);
 
+        // see bug 251506; this is a bandaid, as we can get in this
+        // state if someone does a full rebuild while we have
+        // generated content visible (i.e.  in a menu), and someone
+        // added their own elements at the end/beginning of generated
+        // content.  We'll trip on those elements when we try to tear
+        // down the generated content.
+        if (!element) {
+            NS_WARNING("ungenerated list had NULL element");
+            continue;
+        }
+
         PRUint32 i = element->GetChildCount();
 
         while (i-- > 0) {
