@@ -534,7 +534,7 @@ nsNSSCertificateDB::GetCertByName(nsIPK11Token *aToken,
 {
   CERTCertificate *cert = NULL;
   nsCOMPtr<nsIX509Cert> pCert = nsnull;
-  char *foo = strdup(nickname);
+  char *foo = PL_strdup(nickname);
   PR_LOG(gPIPNSSLog, PR_LOG_DEBUG, ("Getting \"%s\"\n", foo));
   cert = CERT_FindCertByNickname(CERT_GetDefaultCertDB(), foo);
   if (cert) {
