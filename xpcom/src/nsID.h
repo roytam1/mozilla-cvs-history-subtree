@@ -33,7 +33,7 @@ struct nsID {
 
   //@{
   PRUint32 m0;
-  PRUint16 m1
+  PRUint16 m1;
   PRUint16 m2;
   PRUint8 m3[8];
   //@}
