@@ -108,7 +108,7 @@ public:
   NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode);
   NS_IMETHOD FlushPendingNotifications() { return NS_OK; }
   NS_IMETHOD SetDocumentCharset(nsACString& aCharset);
-  NS_IMETHOD NotifyTagObservers(nsIParserNode* aNode) { return NS_OK; }
+  virtual nsISupports *GetTarget() { return nsnull; }
 
   // nsIHTMLContentSink
   NS_IMETHOD OpenHTML(const nsIParserNode& aNode);
@@ -125,6 +125,7 @@ public:
   NS_IMETHOD OpenFrameset(const nsIParserNode& aNode);
   NS_IMETHOD CloseFrameset();
   NS_IMETHOD IsEnabled(PRInt32 aTag, PRBool* aReturn);
+  NS_IMETHOD NotifyTagObservers(nsIParserNode* aNode) { return NS_OK; }
   NS_IMETHOD_(PRBool) IsFormOnStack() { return PR_FALSE; }
   NS_IMETHOD BeginContext(PRInt32 aPosition) { return NS_OK; }
   NS_IMETHOD EndContext(PRInt32 aPosition) { return NS_OK; }

@@ -112,6 +112,7 @@ public:
     NS_IMETHOD SetParser(nsIParser* aParser) { return NS_OK; }
     NS_IMETHOD FlushPendingNotifications() { return NS_OK; }
     NS_IMETHOD SetDocumentCharset(nsACString& aCharset) { return NS_OK; }
+    virtual nsISupports *GetTarget() { return nsnull; }
 
 private:
     nsRefPtr<txStylesheetCompiler> mCompiler;

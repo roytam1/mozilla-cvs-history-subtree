@@ -88,6 +88,7 @@ public:
   NS_IMETHOD SetParser(nsIParser* aParser);  
   NS_IMETHOD FlushPendingNotifications() { return NS_OK; }
   NS_IMETHOD SetDocumentCharset(nsACString& aCharset);
+  virtual nsISupports *GetTarget();
 
   // nsITransformObserver
   NS_IMETHOD OnDocumentCreated(nsIDOMDocument *aResultDocument);

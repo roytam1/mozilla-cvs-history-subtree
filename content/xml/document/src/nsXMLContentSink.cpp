@@ -704,6 +704,12 @@ nsXMLContentSink::SetDocumentCharset(nsACString& aCharset)
   return NS_OK;
 }
 
+nsISupports *
+nsXMLContentSink::GetTarget()
+{
+  return mDocument;
+}
+
 nsresult
 nsXMLContentSink::FlushText(PRBool aCreateTextNode, PRBool* aDidFlush)
 {

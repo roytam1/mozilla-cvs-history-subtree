@@ -83,6 +83,7 @@ public:
   NS_IMETHOD SetParser(nsIParser* aParser);
   NS_IMETHOD FlushPendingNotifications() { return NS_OK; }
   NS_IMETHOD SetDocumentCharset(nsACString& aCharset) { return NS_OK; }
+  virtual nsISupports *GetTarget() { return mTargetDocument; }
 
   // nsIHTMLContentSink
   NS_IMETHOD BeginContext(PRInt32 aID);
