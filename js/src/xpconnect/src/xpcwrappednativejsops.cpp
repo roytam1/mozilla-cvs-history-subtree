@@ -33,8 +33,7 @@
  * file under either the NPL or the GPL.
  */
 
-/* JavaScript Object Ops for our Wrapped Native JS Objects. */
-
+/* JavaScript JSClasses and JSOps for our Wrapped Native JS Objects. */
 
 #include "xpcprivate.h"
 
@@ -54,19 +53,22 @@ static JSBool Throw(uintN errNum, JSContext* cx)
         return Throw(NS_ERROR_XPC_HAS_BEEN_SHUTDOWN, cx);                    \
     PR_END_MACRO
 
-
 // We rely on the engine only giving us jsval ids that are actually the
-// self-same jsvals that are in the atom table. So, we assert by converting
-// the jsval to an id and then back to a jsval and comparing pointers.
-// If the engine ever breaks this promise then we will scream.
+// self-same jsvals that are in the atom table (that is, if the id represents 
+// a string). So, we assert by converting the jsval to an id and then back 
+// to a jsval and comparing pointers. If the engine ever breaks this promise 
+// then we will scream.
 #ifdef DEBUG
 #define CHECK_IDVAL(cx, idval)                                               \
     PR_BEGIN_MACRO                                                           \
-    jsid d_id;                                                               \
-    jsval d_val;                                                             \
-    NS_ASSERTION(JS_ValueToId(cx, idval, &d_id), "JS_ValueToId failed!");    \
-    NS_ASSERTION(JS_IdToValue(cx, d_id, &d_val), "JS_IdToValue failed!");    \
-    NS_ASSERTION(d_val == idval, "id differs from id in atom table!");       \
+    if(JSVAL_IS_STRING(idval))                                               \
+    {                                                                        \
+        jsid d_id;                                                           \
+        jsval d_val;                                                         \
+        NS_ASSERTION(JS_ValueToId(cx, idval, &d_id), "JS_ValueToId failed!");\
+        NS_ASSERTION(JS_IdToValue(cx, d_id, &d_val), "JS_IdToValue failed!");\
+        NS_ASSERTION(d_val == idval, "id differs from id in atom table!");   \
+    }                                                                        \
     PR_END_MACRO
 #else
 #define CHECK_IDVAL(cx, idval) ((void)0)
@@ -371,9 +373,13 @@ XPC_WN_OnlyIWrite_PropertyStub(JSContext *cx, JSObject *obj, jsval idval, jsval 
     if(ccx.GetResolveName() == idval)
         return JS_TRUE;
 
+    // No, we use shared setters, so this should not matter 
+    // (modulo the engine resolve bugs brendan is helping with!)
+/*
     if(ccx.GetInterface() && ccx.GetMember() && 
        ccx.GetMember()->IsWritableAttribute())
         return JS_TRUE;
+*/
     
     return Throw(NS_ERROR_XPC_CANT_MODIFY_PROP_ON_WN, cx);
 }
