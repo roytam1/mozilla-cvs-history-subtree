@@ -72,7 +72,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
 
     XPCWrappedNativeProto* proto;
 
-    nsCOMPtr<nsIClassInfo> info(do_QueryInterface(Object));
+    nsCOMPtr<nsIClassInfo> info(do_QueryInterface(identity));
 
     // If we are making a wrapper for the nsIClassInfo interface then
     // We *don't* want to have it use the prototype meant for instances
@@ -95,7 +95,7 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
     if(!proto)
         return nsnull;
 
-    wrapper = new XPCWrappedNative(Object, proto);
+    wrapper = new XPCWrappedNative(identity, proto);
     if(!wrapper)
     {
         proto->Release();
@@ -117,9 +117,29 @@ XPCWrappedNative::GetNewOrUsed(XPCCallContext& ccx,
         return nsnull;
     }
 
+    // Redundant wrapper must be killed outside of the map lock.
+    XPCWrappedNative* wrapperToKill = nsnull;
+
     {   // scoped lock
         nsAutoLock lock(Scope->GetRuntime()->GetMapLock());  
-        map->Add(wrapper);
+
+        // Deal with the case where the wrapper got created as a side effect
+        // of one of our calls out of this code (or on another thread).
+        XPCWrappedNative* wrapper2 = map->Find(identity);
+        if(wrapper2)
+        {
+            NS_ADDREF(wrapper2);
+            wrapperToKill = wrapper;
+            wrapper = wrapper2;
+        }
+        else
+            map->Add(wrapper);
+    }
+
+    if(wrapperToKill)
+    {
+        wrapperToKill->Release();
+        wrapperToKill->Release();
     }
 
     return wrapper;
