@@ -212,7 +212,6 @@ NS_MakeAbsoluteURI(nsAWritableString& result,
     return rv;
 }
 
-#if 0
 inline nsresult
 NS_NewPostDataStream(nsIInputStream **result,
                      PRBool isFile,
@@ -220,6 +219,7 @@ NS_NewPostDataStream(nsIInputStream **result,
                      PRUint32 encodeFlags,
                      nsIIOService* ioService = nsnull)     // pass in nsIIOService to optimize callers
 {
+#if 0
     nsresult rv;
     nsCOMPtr<nsIIOService> serv;
 
@@ -237,8 +237,9 @@ NS_NewPostDataStream(nsIInputStream **result,
     if (NS_FAILED(rv)) return rv;
     
     return http->NewPostDataStream(isFile, data, encodeFlags, result);
-}
 #endif
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
 
 inline nsresult
 NS_NewStreamIOChannel(nsIStreamIOChannel **result,

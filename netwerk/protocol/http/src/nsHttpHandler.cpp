@@ -52,6 +52,8 @@ nsHttpHandler::nsHttpHandler()
 
     NS_ASSERTION(!mGlobalInstance, "HTTP handler already created!");
     mGlobalInstance = this;
+
+    PR_INIT_CLIST(&mIdleConnections);
 }
 
 nsHttpHandler::~nsHttpHandler()
@@ -222,29 +224,74 @@ nsHttpHandler::InitiateTransaction(nsHttpTransaction *transaction,
 {
     LOG(("nsHttpHandler::InitiateTransaction\n"));
 
-    // XXX need keep-alive cache, etc.
+    NS_ENSURE_ARG_POINTER(transaction);
+    NS_ENSURE_ARG_POINTER(connectionInfo);
 
-    nsHttpConnection *connection;
-    NS_NEWXPCOM(connection, nsHttpConnection);
-    if (!connection)
-        return NS_ERROR_OUT_OF_MEMORY;
+    if (mNumActiveConnections == PRUint32(mMaxConnections))
+        // unable to perform this transaction at this time
+        return EnqueueTransaction(transaction, connectionInfo);
 
-    nsresult rv = connection->Init(connectionInfo);
+    nsHttpConnection *conn = nsnull;
+
+    // search the idle connection list
+    PRCList *node = PR_LIST_HEAD(&mIdleConnections);
+    while (node != &mIdleConnections) {
+        conn = (nsHttpConnection *) node; 
+        node = PR_NEXT_LINK(node);
+
+        if (conn->ConnectionInfo()->Equals(connectionInfo)) {
+            // found a matching connection; remove from list
+            PR_REMOVE_LINK(conn);
+
+            if (conn->CanReuse()) {
+                LOG(("reusing connection [conn=%x]\n", conn));
+                break;
+            }
+            else {
+                LOG(("dropping stale connection: [conn=%x]\n", conn));
+                NS_RELEASE(conn);
+                conn = nsnull;
+            }
+        }
+    }
+
+    if (!conn) {
+        // XXX need to make sure we aren't exceeding max-connections
+
+        LOG(("creating new connection...\n"));
+        NS_NEWXPCOM(conn, nsHttpConnection);
+        if (!conn)
+            return NS_ERROR_OUT_OF_MEMORY;
+        NS_ADDREF(conn);
+    }
+
+    nsresult rv = conn->Init(connectionInfo);
     if (NS_FAILED(rv)) goto failed;
 
-    rv = connection->SetTransaction(transaction);
+    rv = conn->SetTransaction(transaction);
     if (NS_FAILED(rv)) goto failed;
 
     return NS_OK;
 
 failed:
-    delete connection;
+    NS_RELEASE(conn);
     return rv;
 }
 
 nsresult
 nsHttpHandler::RecycleConnection(nsHttpConnection *connection)
 {
+    NS_ENSURE_ARG_POINTER(connection);
+
+    if (connection->CanReuse()) {
+        PR_INSERT_AFTER(connection, &mIdleConnections);
+        mNumIdleConnections++;
+    }
+
+    mNumActiveConnections--;
+    if (!PR_CLIST_IS_EMPTY(&mTransactionQ))
+        ProcessTransactionQ();
+
     return NS_OK;
 }
 
@@ -256,6 +303,44 @@ nsHttpHandler::UserAgent()
         mUserAgentIsDirty = PR_FALSE;
     }
     return mUserAgent.get();
+}
+
+void
+nsHttpHandler::ProcessTransactionQ()
+{
+    LOG(("nsHttpHandler::ProcessTransactionQ\n"));
+    nsPendingTransaction *pt = nsnull;
+    PRCList *node = PR_LIST_HEAD(&mTransactionQ);
+    while ((node != &mTransactionQ) && (mNumActiveConnections < mMaxConnections)) {
+        pt = (nsPendingTransaction *) node;
+        node = PR_NEXT_LINK(node);
+        nsresult rv = InitiateTransaction(pt->transaction, pt->connectionInfo);
+        if (NS_FAILED(rv)) break;
+        PR_REMOVE_LINK(pt);
+        NS_RELEASE(pt->transaction);
+        NS_RELEASE(pt->connectionInfo);
+        delete pt;
+    }
+}
+
+nsresult
+nsHttpHandler::EnqueueTransaction(nsHttpTransaction *transaction,
+                                  nsHttpConnectionInfo *connectionInfo)
+{
+    nsPendingTransaction pt = new nsPendingTransaction;
+    if (!pt)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    PR_INIT_CLIST(pt);
+
+    pt->transaction = transaction;
+    pt->connectionInfo = connectionInfo;
+
+    NS_ADDREF(pt->transaction);
+    NS_ADDREF(pt->connectionInfo);
+
+    PR_APPEND_LINK(pt, &mPendingTransactionQ);
+    return NS_OK;
 }
 
 void

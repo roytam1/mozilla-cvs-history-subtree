@@ -21,6 +21,7 @@ nsHttpConnection::nsHttpConnection()
     , mIdleTimeout(0)
 {
     NS_INIT_ISUPPORTS();
+    PR_INIT_CLIST(this);
 }
 
 nsHttpConnection::~nsHttpConnection()
@@ -30,6 +31,9 @@ nsHttpConnection::~nsHttpConnection()
 
     if (mSocketTransport)
         mSocketTransport->SetReuseConnection(PR_FALSE);
+
+    // ensure that we're no longer part of any list
+    PR_REMOVE_LINK(this);
 }
 
 nsresult

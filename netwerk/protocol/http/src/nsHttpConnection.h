@@ -7,6 +7,7 @@
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 #include "plstr.h"
+#include "prclist.h"
 
 class nsHttpHandler;
 class nsHttpConnectionInfo;
@@ -18,6 +19,7 @@ class nsHttpTransaction;
 
 class nsHttpConnection : public nsIStreamListener
                        , public nsIStreamProvider
+                       , public PRCList
 {
 public:
     NS_DECL_ISUPPORTS

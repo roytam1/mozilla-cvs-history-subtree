@@ -108,13 +108,9 @@ int main(int argc, char **argv)
     rv = NS_OpenURI(listener, nsnull, uri);
     RETURN_IF_FAILED(rv, "NS_OpenURI");
 
-    /*
-    PLEvent *ev;
-    while (gKeepRunning) {
-        gEventQ->WaitForEvent(&ev);
-        gEventQ->HandleEvent(ev);
-    }
-    */
-    gEventQ->EventLoop();
+    while (gKeepRunning)
+        gEventQ->ProcessPendingEvents();
+
+    printf(">>> done\n");
     return 0;
 }

@@ -8,6 +8,7 @@
 #include "nsXPIDLString.h"
 #include "nsString.h"
 #include "nsCOMPtr.h"
+#include "prclist.h"
 
 class nsHttpConnection;
 class nsHttpConnectionInfo;
@@ -76,9 +77,17 @@ public:
     nsresult RecycleConnection(nsHttpConnection *);
 
 private:
-    void BuildUserAgent();
-    void InitUserAgentComponents();
-    void PrefsChanged(const char *pref = nsnull);
+    struct nsPendingTransaction : public PRCList
+    {
+        nsHttpTransaction    *transaction;
+        nsHttpConnectionInfo *connectionInfo;
+    };
+
+    void     ProcessTransactionQ();
+    nsresult EnqueueTransaction(nsHttpTransaction *, nsHttpConnectionInfo *);
+    void     BuildUserAgent();
+    void     InitUserAgentComponents();
+    void     PrefsChanged(const char *pref = nsnull);
 
     nsresult SetAcceptLanguages(const char *);
     nsresult SetAcceptEncodings(const char *);
@@ -116,6 +125,12 @@ private:
     nsXPIDLCString mAcceptLanguages;
     nsXPIDLCString mAcceptEncodings;
     nsXPIDLCString mAcceptCharsets;
+
+    // connection management
+    PRCList  mIdleConnections;     // list of nsHttpConnection objects
+    PRCList  mPendingTransactionQ; // list of nsPendingTransaction objects
+    PRUint32 mNumActiveConnections;
+    PRUint32 mNumIdleConnections;
 
     // useragent components
     nsXPIDLCString mAppName;
