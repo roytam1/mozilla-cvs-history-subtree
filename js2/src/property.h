@@ -117,9 +117,9 @@ namespace JS2Runtime {
     Formatter& operator<<(Formatter& f, const Property& prop);
    
     struct NamespaceList {
-        NamespaceList(const StringAtom &name, NamespaceList *next) : mName(name), mNext(next) { }
+        NamespaceList(const String *name, NamespaceList *next) : mName(*name), mNext(next) { }
 
-        const StringAtom &mName;
+        const String mName;
         NamespaceList *mNext;
     };
 
@@ -128,7 +128,6 @@ namespace JS2Runtime {
     typedef std::multimap<String, NamespacedProperty *, std::less<const String> > PropertyMap;
     typedef PropertyMap::iterator PropertyIterator;
 
-    NamespaceList *buildNamespaceList(ExprNode *attr);
 
 
 #define PROPERTY_KIND(it)           ((it)->second->first->mFlag)

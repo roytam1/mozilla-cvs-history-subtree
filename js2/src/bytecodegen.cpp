@@ -1353,7 +1353,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
                 const StringAtom &qualifierName = static_cast<IdentifierExprNode *>(qe->qualifier)->name;
 
                 NamespaceList *oldNS = mNamespaceList;
-                mNamespaceList = new NamespaceList(qualifierName, mNamespaceList);
+                mNamespaceList = new NamespaceList(&qualifierName, mNamespaceList);
 
                 Reference *ref = lType->genReference(fieldName, mNamespaceList, acc, 0);
                 if (ref == NULL)
