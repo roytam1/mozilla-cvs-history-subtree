@@ -25,6 +25,7 @@
 
 #include "nsIDOMClassInfo.h"
 #include "nsIXPCScriptable.h"
+#include "jsapi.h"
 
 
 struct nsDOMClassInfoData;
@@ -120,6 +121,272 @@ protected:
   static JSString *sOnresize_id;
   static JSString *sOnscroll_id;
 };
+
+typedef nsDOMClassInfo nsDOMGenericSH;
+
+
+// Window scirptable helper
+
+class nsWindowSH : public nsDOMGenericSH
+{
+protected:
+  nsWindowSH(nsDOMClassInfoID aID) : nsDOMGenericSH(aID)
+  {
+  }
+
+  virtual ~nsWindowSH()
+  {
+  }
+
+  // XXX does this need to be a member???
+  nsresult GlobalResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, PRUint32 flags,
+                         JSObject **objp, PRBool *_retval);
+
+public:
+  NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,
+                       JSObject *globalObj, JSObject **parentObj);
+  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
+  NS_IMETHOD NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                        JSObject *obj, jsval id, PRUint32 flags,
+                        JSObject **objp, PRBool *_retval);
+
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsWindowSH(aID);
+  }
+};
+
+
+// DOM Node scriptable helper, this class deals with setting the
+// parent for the wrappers
+
+class nsNodeSH : public nsDOMGenericSH
+{
+protected:
+  nsNodeSH(nsDOMClassInfoID aID) : nsDOMGenericSH(aID)
+  {
+  }
+
+  virtual ~nsNodeSH()
+  {
+  }
+
+public:
+  NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,
+                       JSObject *globalObj, JSObject **parentObj);
+
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsNodeSH(aID);
+  }
+};
+
+
+// EventProp scriptable helper, this class should be the base class of
+// all objects that should support things like
+// obj.onclick=function{...}
+
+class nsEventPropSH : public nsNodeSH
+{
+protected:
+  nsEventPropSH(nsDOMClassInfoID aID) : nsNodeSH(aID)
+  {
+  }
+
+  virtual ~nsEventPropSH()
+  {
+  }
+
+  inline PRBool canBeEventName(JSString *jsstr)
+  {
+    jschar *str = ::JS_GetStringChars(jsstr);
+
+    return str[0] == 'o' && str[1] == 'n';
+  }
+
+public:
+  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
+                         PRBool *_retval);
+  NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
+                         PRBool *_retval);
+};
+
+
+// Element helper
+
+class nsElementSH : public nsEventPropSH
+{
+protected:
+  nsElementSH(nsDOMClassInfoID aID) : nsEventPropSH(aID)
+  {
+  }
+
+  virtual ~nsElementSH()
+  {
+  }
+
+public:
+  NS_IMETHOD Create(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                    JSObject *obj);
+
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsElementSH(aID);
+  }
+};
+
+
+// NodeList scriptable helper
+
+class nsNodeListSH : public nsDOMClassInfo
+{
+protected:
+  nsNodeListSH(nsDOMClassInfoID aID) : nsDOMClassInfo(aID)
+  {
+  }
+
+  virtual ~nsNodeListSH()
+  {
+  }
+
+public:
+  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
+                         PRBool *_retval);
+
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsNodeListSH(aID);
+  }
+};
+
+
+// FomrControlList scriptable helper
+
+class nsFormControlListSH : public nsNodeListSH
+{
+protected:
+  nsFormControlListSH(nsDOMClassInfoID aID) : nsNodeListSH(aID)
+  {
+  }
+
+  virtual ~nsFormControlListSH()
+  {
+  }
+
+public:
+  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
+                         PRBool *_retval);
+
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsFormControlListSH(aID);
+  }
+};
+
+
+// Document helper, for document.location and document.on*
+
+class nsDocumentSH : public nsEventPropSH
+{
+public:
+  nsDocumentSH(nsDOMClassInfoID aID) : nsEventPropSH(aID)
+  {
+  }
+
+  virtual ~nsDocumentSH()
+  {
+  }
+
+public:
+  NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
+
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsDocumentSH(aID);
+  }
+};
+
+
+// HTMLDocument helper
+
+class nsHTMLDocumentSH : public nsDocumentSH
+{
+private:
+  nsHTMLDocumentSH(nsDOMClassInfoID aID) : nsDocumentSH(aID)
+  {
+  }
+
+  virtual ~nsHTMLDocumentSH()
+  {
+  }
+
+public:
+  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
+                         PRBool *_retval);
+
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsHTMLDocumentSH(aID);
+  }
+};
+
+
+// HTMLFormElement helper
+
+class nsHTMLFormElementSH : public nsElementSH
+{
+private:
+  nsHTMLFormElementSH(nsDOMClassInfoID aID) : nsElementSH(aID)
+  {
+  }
+
+  virtual ~nsHTMLFormElementSH()
+  {
+  }
+
+public:
+  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
+                         PRBool *_retval);
+
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsHTMLFormElementSH(aID);
+  }
+};
+
+
+// HTMLOptionCollection helper
+
+class nsHTMLOptionCollectionSH : public nsNodeListSH
+{
+private:
+  nsHTMLOptionCollectionSH(nsDOMClassInfoID aID) : nsNodeListSH(aID)
+  {
+  }
+
+  virtual ~nsHTMLOptionCollectionSH()
+  {
+  }
+
+public:
+  NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp, PRBool *_retval);
+
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsHTMLOptionCollectionSH(aID);
+  }
+};
+
 
 
 /**
