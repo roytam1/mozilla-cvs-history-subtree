@@ -833,8 +833,7 @@ NS_IMETHODIMP nsAccessible::GetAccPreviousSibling(nsIAccessible * *aAccPreviousS
 
   /* readonly attribute nsIAccessible accFirstChild; */
 NS_IMETHODIMP nsAccessible::GetAccFirstChild(nsIAccessible * *aAccFirstChild) 
-{ 
-    
+{  
   // delegate
   if (mAccessible) {
     nsresult rv = mAccessible->GetAccFirstChild(aAccFirstChild);
@@ -1030,7 +1029,34 @@ NS_IMETHODIMP nsAccessible::GetAccHelp(PRUnichar * *aAccHelp)
 }
 
   /* readonly attribute boolean accFocused; */
-NS_IMETHODIMP nsAccessible::GetAccFocused(PRBool *aAccFocused) { return NS_OK;  }
+NS_IMETHODIMP nsAccessible::GetAccFocused(nsIAccessible * *aAccFocused) 
+{ 
+  nsCOMPtr<nsIDOMElement> focusedElement;
+  if (mFocusController) {
+    mFocusController->GetFocusedElement(getter_AddRefs(focusedElement));
+  }
+
+  nsIFrame *frame = nsnull;
+  if (focusedElement) {
+    nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+    nsCOMPtr<nsIContent> content(do_QueryInterface(focusedElement));
+    if (shell && content)
+      shell->GetPrimaryFrameFor(content, &frame);
+  }
+
+  if (frame) {
+    nsCOMPtr<nsIAccessible> acc(do_QueryInterface(frame));
+    if (acc) { 
+      *aAccFocused = acc;
+      NS_ADDREF(*aAccFocused);
+      return NS_OK;
+    }
+  }
+ 
+  *aAccFocused = nsnull;
+
+  return NS_OK;  
+}
 
   /* nsIAccessible accGetChildAt (in long x, in long y); */
 NS_IMETHODIMP nsAccessible::AccGetAt(PRInt32 tx, PRInt32 ty, nsIAccessible **_retval)
@@ -1709,16 +1735,16 @@ NS_IMETHODIMP nsAccessible::AccGetBounds(PRInt32 *x, PRInt32 *y, PRInt32 *width,
 
 nsIFrame* nsAccessible::GetBoundsFrame()
 {
-   return GetFrame();
+  return GetFrame();
 }
 
 nsIFrame* nsAccessible::GetFrame()
 {
-   nsCOMPtr<nsIPresShell> shell = do_QueryReferent(mPresShell);
-   nsIFrame* frame = nsnull;
-   nsCOMPtr<nsIContent> content = do_QueryInterface(mDOMNode);
-   shell->GetPrimaryFrameFor(content, &frame);
-   return frame;
+  nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+  nsIFrame* frame = nsnull;
+  nsCOMPtr<nsIContent> content(do_QueryInterface(mDOMNode));
+  shell->GetPrimaryFrameFor(content, &frame);
+  return frame;
 }
 
 void nsAccessible::GetPresContext(nsCOMPtr<nsIPresContext>& aContext)

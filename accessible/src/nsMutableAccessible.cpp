@@ -196,7 +196,7 @@ NS_IMETHODIMP nsMutableAccessible::GetAccHelp(PRUnichar **_retval)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsMutableAccessible::GetAccFocused(PRBool *_retval)
+NS_IMETHODIMP nsMutableAccessible::GetAccFocused(nsIAccessible **_retval)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }

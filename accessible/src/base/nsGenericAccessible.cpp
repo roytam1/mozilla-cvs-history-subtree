@@ -140,14 +140,14 @@ NS_IMETHODIMP nsGenericAccessible::GetAccDefaultAction(PRUnichar **_retval)
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* wstring getAccHelp (); */
-NS_IMETHODIMP nsGenericAccessible::GetAccHelp(PRUnichar **_retval)
+/* nsIAccessible getAccFocused(); */
+NS_IMETHODIMP nsGenericAccessible::GetAccFocused(nsIAccessible **_retval)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-/* boolean getAccFocused (); */
-NS_IMETHODIMP nsGenericAccessible::GetAccFocused(PRBool *_retval)
+/* wstring getAccHelp (); */
+NS_IMETHODIMP nsGenericAccessible::GetAccHelp(PRUnichar **_retval)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }

@@ -64,7 +64,7 @@ interface nsIAccessible : nsISupports
   unsigned long getAccExtState();
   wstring getAccDefaultAction();
   wstring getAccHelp();
-  boolean getAccFocused();
+  nsIAccessible getAccFocused();
 
   nsIAccessible accGetAt(in long x, in long y);
 

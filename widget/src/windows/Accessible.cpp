@@ -114,7 +114,7 @@ STDMETHODIMP_(ULONG) Accessible::Release()
 
 STDMETHODIMP Accessible::get_accParent( IDispatch __RPC_FAR *__RPC_FAR *ppdispParent)
 {
-  nsCOMPtr<nsIAccessible> parent = nsnull;
+  nsCOMPtr<nsIAccessible> parent(nsnull);
   mAccessible->GetAccParent(getter_AddRefs(parent));
 
   if (parent) {
@@ -355,9 +355,19 @@ STDMETHODIMP Accessible::get_accKeyboardShortcut(
 STDMETHODIMP Accessible::get_accFocus( 
       /* [retval][out] */ VARIANT __RPC_FAR *pvarChild)
 {
+  // Return the current nsIAccessible that has focus
   VariantInit(pvarChild);
+
+  nsCOMPtr<nsIAccessible> focusedAccessible;
+  if (NS_SUCCEEDED(mAccessible->GetAccFocused(getter_AddRefs(focusedAccessible)))) {
+    pvarChild->vt = VT_DISPATCH;
+    pvarChild->pdispVal = new Accessible(focusedAccessible, mWnd);
+    pvarChild->pdispVal->AddRef();
+    return S_OK;
+  }
+
   pvarChild->vt = VT_EMPTY;
-  return S_OK;
+  return S_FALSE;
 }
 
 STDMETHODIMP Accessible::get_accSelection( 
@@ -634,14 +644,14 @@ RootAccessible::RootAccessible(nsIAccessible* aAcc, HWND aWnd):Accessible(aAcc,a
     mNextId = -1;
     mNextPos = 0;
 
-    nsCOMPtr<nsIAccessibleEventReceiver> r = do_QueryInterface(mAccessible);
+    nsCOMPtr<nsIAccessibleEventReceiver> r(do_QueryInterface(mAccessible));
     if (r) 
       r->AddAccessibleEventListener(this);
 }
 
 RootAccessible::~RootAccessible()
 {
-    nsCOMPtr<nsIAccessibleEventReceiver> r = do_QueryInterface(mAccessible);
+    nsCOMPtr<nsIAccessibleEventReceiver> r(do_QueryInterface(mAccessible));
     if (r) 
       r->RemoveAccessibleEventListener(this);
 
