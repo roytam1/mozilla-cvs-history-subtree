@@ -44,8 +44,15 @@ namespace JS = JavaScript;
 // Create a new Parser for parsing the provided source code, interning
 // identifiers, keywords, and regular expressions in the designated world,
 // and allocating the parse tree in the designated arena.
-JS::Parser::Parser(World &world, Arena &arena, const String &source, const String &sourceLocation, uint32 initialLineNum):
-        lexer(world, source, sourceLocation, initialLineNum), arena(arena), lineBreaksSignificant(true)
+// On entry to the constructor, flags is the initial set of pragma flags.
+// As the parser's methods are called to parse input text, flags will change
+// to reflect new top-level pragma settings.  The caller must make sure that
+// flags refers to a variable that will accept such mutations.
+JS::Parser::Parser(World &world, Arena &arena, Pragma::Flags &flags, const String &source, const String &sourceLocation,
+                   uint32 initialLineNum):
+        lexer(world, source, sourceLocation, initialLineNum),
+        arena(arena),
+        flags(flags)
 {
 }
 
@@ -54,7 +61,7 @@ JS::Parser::Parser(World &world, Arena &arena, const String &source, const Strin
 // In other words, if backUp is 0, the error is at the next token to be read
 // by the Lexer (which must have been peeked already); if backUp is 1, the
 // error is at the last token read by the Lexer, and so forth.
-void JS::Parser::syntaxError(const char *message, uint backUp)
+void JS::Parser::syntaxError(const char *message, uint backUp /* = 1 */)
 {
     syntaxError(widenCString(message), backUp);
 }
@@ -1428,6 +1435,7 @@ JS::StmtNode *JS::Parser::parseDirective(bool substatement, bool inSwitch, bool 
       case Token::Namespace:
         if (substatement)
             syntaxError("A definition is not allowed as a substatement; enclose it in a block");
+        // Falls through
       case Token::openBrace:
       case Token::Var:
         s = parseDefinition(pos, 0, t, false, substatement, semicolonWanted);
@@ -1534,10 +1542,6 @@ JS::StmtNode *JS::Parser::parseDirective(bool substatement, bool inSwitch, bool 
         s = parseTry(pos);
         break;
 
-      case Token::Debugger:
-        s = new(arena) DebuggerStmtNode(pos, StmtNode::Debugger);
-        break;
-
       case CASE_TOKEN_NONEXPRESSION_ATTRIBUTE:
         e = new(arena) IdentifierExprNode(t);
       makeAttribute:
@@ -1545,8 +1549,17 @@ JS::StmtNode *JS::Parser::parseDirective(bool substatement, bool inSwitch, bool 
         s = parseDefinition(pos, e, lexer.get(true), false, false, semicolonWanted);
         break;
 
-      case CASE_TOKEN_NONRESERVED:
+      case Token::Include:
         t2 = &lexer.peek(false);
+        if (!t2->hasKind(Token::string))
+            goto nonreservedToken;
+        lexer.skip();
+        s = new(arena) IncludeStmtNode(pos, copyTokenChars(*t2));
+        goto insertableSemicolon;
+
+      case CASE_TOKEN_NONRESERVED_NONINCLUDE:
+        t2 = &lexer.peek(false);
+      nonreservedToken:
         if (t2->hasKind(Token::colon)) {
             lexer.skip();
             // Must do this now because parseDirective can invalidate t.
@@ -1554,7 +1567,29 @@ JS::StmtNode *JS::Parser::parseDirective(bool substatement, bool inSwitch, bool 
             s = new(arena) LabelStmtNode(pos, name, parseDirective(true, false, semicolonWanted));
             break;
         }
-      default:
+        // Falls through
+      case Token::number:
+      case Token::string:
+      case Token::regExp:
+      case Token::openParenthesis:
+      case Token::openBracket:
+      case Token::increment:
+      case Token::decrement:
+      case Token::complement:
+      case Token::logicalNot:
+      case Token::plus:
+      case Token::minus:
+      case Token::Delete:
+      case Token::False:
+      case Token::New:
+      case Token::Null:
+      case Token::Private:
+      case Token::Public:
+      case Token::Super:
+      case Token::This:
+      case Token::True:
+      case Token::Typeof:
+      case Token::Void:
         lexer.unget();
         e = parseGeneralExpression(true, false, false, false);
         // Safe: a '/' or a '/=' would have been interpreted as an operator, so it can't be the next token.
@@ -1569,6 +1604,14 @@ JS::StmtNode *JS::Parser::parseDirective(bool substatement, bool inSwitch, bool 
         s = new(arena) ExprStmtNode(pos, sKind, e);
       insertableSemicolon:
         semicolonWanted = true;
+        break;
+
+      default:
+        syntaxError(substatement ? "Statement expected" : "Statement or definition expected");
+        // syntaxError cannot return, but the compiler doesn't know that.
+        // The break was omitted here to avoid compiler complaints about s being uninitialized.
+      case Token::Debugger:
+        s = new(arena) DebuggerStmtNode(pos, StmtNode::Debugger);
         break;
     }
     return s;
@@ -2407,4 +2450,12 @@ void JS::ClassStmtNode::print(PrettyPrinter &f, bool noSemi) const
         body->printBlock(f, true);
     } else
         printSemi(f, noSemi);
+}
+
+
+void JS::IncludeStmtNode::print(PrettyPrinter &f, bool noSemi) const
+{
+    f << "include ";
+    quoteString(f, name, '"');
+    printSemi(f, noSemi);
 }
