@@ -68,9 +68,9 @@ function viewChange(aMenuList, val)
      ViewLabel(parseInt(val) - kLabelOffset);
      break;
    case "7": // save view as virtual folder
-     getViewName(CreateVFFromView, gCurrentViewLabel);
      val = oldViewValue;
      aMenuList.value = val;
+     openNewVirtualFolderDialogWithArgs(gCurrentViewLabel, gSaveDefaultSVTerms);
      break;
    default:
      LoadCustomMailView(parseInt(val) - kLastDefaultViewIndex);
@@ -91,14 +91,6 @@ function viewChange(aMenuList, val)
     onEnterInSearchBar();
     gQSViewIsDirty = true;
   }
-}
-
-function CreateVFFromView(newName, origFolderURI)
-{
-  var selectedFolder = GetResourceFromUri(origFolderURI);
-  var folderToSearch = selectedFolder.QueryInterface(Components.interfaces.nsIMsgFolder);
-
-  CreateVirtualFolder(newName, folderToSearch.parent, origFolderURI, gSaveDefaultSVTerms);
 }
 
 const kLabelPrefs = "mailnews.labels.description.";

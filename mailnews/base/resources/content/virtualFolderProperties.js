@@ -68,8 +68,15 @@ function onLoad()
   else // we are creating a new virtual folder
   {
     // it is possible that we were given arguments to pre-fill the dialog with...
-    gSearchTermSession = arguments.searchTermSession || 
-                         Components.classes[searchSessionContractID].createInstance(Components.interfaces.nsIMsgSearchSession);
+    gSearchTermSession = Components.classes[searchSessionContractID].createInstance(Components.interfaces.nsIMsgSearchSession);
+
+    if (arguments.searchTerms) // then add them to our search session
+    {
+      var count = arguments.searchTerms.Count();
+      for (var searchIndex = 0; searchIndex < count; )
+        gSearchTermSession.appendTerm(arguments.searchTerms.QueryElementAt(searchIndex++, Components.interfaces.nsIMsgSearchTerm));
+    }
+
     if (arguments.preselectedURI)
     {
       gSearchFolderURIs = arguments.preselectedURI;
@@ -80,6 +87,9 @@ function onLoad()
     }
     if (arguments.newFolderName) 
       document.getElementById("name").value = arguments.newFolderName;
+    if (arguments.searchFolderURIs)
+      gSearchFolderURIs = arguments.searchFolderURIs;
+      
     
     setupSearchRows(gSearchTermSession.searchTerms);
     doEnabling(); // we only need to disable/enable the OK button for new virtual folders
