@@ -77,15 +77,13 @@
 #include "nsIDocument.h"
 #include "nsIBindingManager.h"
 #include "nsIScrollableFrame.h"
-#include "nsWidgetsCID.h"
 #include "nsLayoutAtoms.h"
 #include "nsViewsCID.h"
 #include "nsIScrollableView.h"
 #include "nsHTMLContainerFrame.h"
+#include "nsIWindow.h"
 
-static NS_DEFINE_IID(kWidgetCID, NS_CHILD_CID);
 static NS_DEFINE_IID(kScrollViewIID, NS_ISCROLLABLEVIEW_IID);
-static NS_DEFINE_IID(kCChildCID, NS_CHILD_CID);
 
 //define DEBUG_REDRAW
 
@@ -147,7 +145,7 @@ public:
     /*
     nsresult PaintDebug(nsIBox* aBox, 
                         nsIPresContext* aPresContext,
-                        nsIRenderingContext& aRenderingContext,
+                        nsIDrawable* aDrawable,
                         const nsRect& aDirtyRect,
                         nsFramePaintLayer aWhichLayer);
 */
@@ -162,13 +160,12 @@ public:
     void GetDebugBorder(nsMargin& aInset);
     void GetDebugPadding(nsMargin& aInset);
     void GetDebugMargin(nsMargin& aInset);
-    void PixelMarginToTwips(nsIPresContext* aPresContext, nsMargin& aMarginPixels);
 
     void GetValue(nsIPresContext* aPresContext, const nsSize& a, const nsSize& b, char* value);
     void GetValue(nsIPresContext* aPresContext, PRInt32 a, PRInt32 b, char* value);
-    void DrawSpring(nsIPresContext* aPresContext, nsIRenderingContext& aRenderingContext, PRBool aHorizontal, PRInt32 flex, nscoord x, nscoord y, nscoord size, nscoord springSize);
-    void DrawLine(nsIRenderingContext& aRenderingContext,  PRBool aHorizontal, nscoord x1, nscoord y1, nscoord x2, nscoord y2);
-    void FillRect(nsIRenderingContext& aRenderingContext,  PRBool aHorizontal, nscoord x, nscoord y, nscoord width, nscoord height);
+    void DrawSpring(nsIPresContext* aPresContext, nsIDrawable* aDrawable, PRBool aHorizontal, PRInt32 flex, nscoord x, nscoord y, nscoord size, nscoord springSize);
+    void DrawLine(nsIDrawable* aDrawable,  PRBool aHorizontal, nscoord x1, nscoord y1, nscoord x2, nscoord y2);
+    void FillRect(nsIDrawable* aDrawable,  PRBool aHorizontal, nscoord x, nscoord y, nscoord width, nscoord height);
 
     void CacheAttributes();
 
@@ -326,11 +323,11 @@ nsBoxFrame::Init(nsIPresContext*  aPresContext,
            GetView(aPresContext, &view);
         }
 
-        nsIWidget* widget;
-        view->GetWidget(widget);
+        nsCOMPtr<nsIWindow> window;
+        view->GetWidget(getter_AddRefs(window));
 
-        if (!widget)
-           view->CreateWidget(kWidgetCID);   
+        if (!window)
+           view->CreateWidget("@mozilla.org/gfx/window/child;2");   
     }
   }
 
@@ -1260,11 +1257,8 @@ nsBoxFrame::GetInset(nsMargin& margin)
      nsMargin debugBorder(0,0,0,0);
      nsMargin debugPadding(0,0,0,0);
      mInner->GetDebugBorder(debugBorder);
-     mInner->PixelMarginToTwips(mInner->mPresContext, debugBorder);
      mInner->GetDebugMargin(debugMargin);
-     mInner->PixelMarginToTwips(mInner->mPresContext, debugMargin);
      mInner->GetDebugMargin(debugPadding);
-     mInner->PixelMarginToTwips(mInner->mPresContext, debugPadding);
      margin += debugBorder;
      margin += debugMargin;
      margin += debugPadding;
@@ -1314,7 +1308,7 @@ nsBoxFrameInner::GetDebugPref(nsIPresContext* aPresContext)
 
 NS_IMETHODIMP
 nsBoxFrame::Paint(nsIPresContext* aPresContext,
-                            nsIRenderingContext& aRenderingContext,
+                            nsIDrawable* aDrawable,
                             const nsRect& aDirtyRect,
                             nsFramePaintLayer aWhichLayer)
 {
@@ -1341,11 +1335,11 @@ nsBoxFrame::Paint(nsIPresContext* aPresContext,
         mStyleContext->GetStyleData(eStyleStruct_Spacing);
 
       nsRect  rect(0, 0, mRect.width, mRect.height);
-      nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
+      nsCSSRendering::PaintBackground(aPresContext, aDrawable, this,
                                       aDirtyRect, rect, *color, *spacing, 0, 0);
-      nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+      nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                                   aDirtyRect, rect, *spacing, mStyleContext, skipSides);
-      nsCSSRendering::PaintOutline(aPresContext, aRenderingContext, this,
+      nsCSSRendering::PaintOutline(aPresContext, aDrawable, this,
                                   aDirtyRect, rect, *spacing, mStyleContext, 0);
       
       // The sole purpose of this is to trigger display
@@ -1356,7 +1350,7 @@ nsBoxFrame::Paint(nsIPresContext* aPresContext,
       if (!mFrames.FirstChild())
       {
         nsFrame::Paint(aPresContext,
-                       aRenderingContext, aDirtyRect, aWhichLayer);
+                       aDrawable, aDirtyRect, aWhichLayer);
       }
     }
   }
@@ -1365,10 +1359,10 @@ nsBoxFrame::Paint(nsIPresContext* aPresContext,
   // override the visibility property and display even if their parent is
   // hidden
 
-  PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  PaintChildren(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 
   // see if we have to draw a selection frame around this container
-  return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  return nsFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 }
 
 /**
@@ -1377,7 +1371,7 @@ nsBoxFrame::Paint(nsIPresContext* aPresContext,
  */
 void
 nsBoxFrame::PaintChild(nsIPresContext*      aPresContext,
-                             nsIRenderingContext& aRenderingContext,
+                             nsIDrawable* aDrawable,
                              const nsRect&        aDirtyRect,
                              nsIFrame*            aFrame,
                              nsFramePaintLayer    aWhichLayer)
@@ -1409,19 +1403,23 @@ nsBoxFrame::PaintChild(nsIPresContext*      aPresContext,
       // coordinate system.
       damageArea.x -= kidRect.x;
       damageArea.y -= kidRect.y;
-      aRenderingContext.Translate(kidRect.x, kidRect.y);
+
+      // XXX pav
+      //      aDrawable->Translate(kidRect.x, kidRect.y);
 
       // Paint the kid
-      aFrame->Paint(aPresContext, aRenderingContext, damageArea, aWhichLayer);
+      aFrame->Paint(aPresContext, aDrawable, damageArea, aWhichLayer);
       // don't use PushState and PopState, because they're slow
-      aRenderingContext.Translate(-kidRect.x, -kidRect.y);
+
+      // XXX pav
+      //      aDrawable.Translate(-kidRect.x, -kidRect.y);
     }
   }
 }
 
 void
 nsBoxFrame::PaintChildren(nsIPresContext*      aPresContext,
-                                nsIRenderingContext& aRenderingContext,
+                                nsIDrawable* aDrawable,
                                 const nsRect&        aDirtyRect,
                                 nsFramePaintLayer    aWhichLayer)
 {
@@ -1429,7 +1427,6 @@ nsBoxFrame::PaintChildren(nsIPresContext*      aPresContext,
   nsMargin debugMargin;
   nsMargin debugPadding;
   nsMargin border;
-  nscoord onePixel;
   nsRect inner;
 
   GetBorder(border);
@@ -1438,18 +1435,11 @@ nsBoxFrame::PaintChildren(nsIPresContext*      aPresContext,
   {
         PRBool isHorizontal = IsHorizontal();
 
-        float p2t;
-        aPresContext->GetScaledPixelsToTwips(&p2t);
-        onePixel = NSIntPixelsToTwips(1, p2t);
-
         mInner->GetDebugBorder(debugBorder);
-        mInner->PixelMarginToTwips(aPresContext, debugBorder);
 
         mInner->GetDebugMargin(debugMargin);
-        mInner->PixelMarginToTwips(aPresContext, debugMargin);
 
         mInner->GetDebugPadding(debugPadding);
-        mInner->PixelMarginToTwips(aPresContext, debugPadding);
 
         GetContentRect(inner);
         inner.Deflate(debugMargin);
@@ -1463,29 +1453,29 @@ nsBoxFrame::PaintChildren(nsIPresContext*      aPresContext,
           color = NS_RGB(255,0,0);
         }
 
-        aRenderingContext.SetColor(color);
+        aDrawable->SetForegroundColor(color);
 
         //left
         nsRect r(inner);
         r.width = debugBorder.left;
-        aRenderingContext.FillRect(r);
+        aDrawable->FillRectangle(r.x, r.y, r.width, r.height);
 
         // top
         r = inner;
         r.height = debugBorder.top;
-        aRenderingContext.FillRect(r);
+        aDrawable->FillRectangle(r.x, r.y, r.width, r.height);
 
         //right
         r = inner;
         r.x = r.x + r.width - debugBorder.right;
         r.width = debugBorder.right;
-        aRenderingContext.FillRect(r);
+        aDrawable->FillRectangle(r.x, r.y, r.width, r.height);
 
         //bottom
         r = inner;
         r.y = r.y + r.height - debugBorder.bottom;
         r.height = debugBorder.bottom;
-        aRenderingContext.FillRect(r);
+        aDrawable->FillRectangle(r.x, r.y, r.width, r.height);
 
         
         // if we have dirty children or we are dirty 
@@ -1500,9 +1490,9 @@ nsBoxFrame::PaintChildren(nsIPresContext*      aPresContext,
            HasDirtyChildren(dirty);
 
            nsRect dirtyr(inner);
-           aRenderingContext.SetColor(NS_RGB(0,255,0));
-           aRenderingContext.DrawRect(dirtyr);
-           aRenderingContext.SetColor(color);
+           aDrawable->SetForegroundColor(NS_RGB(0,255,0));
+           aDrawable->DrawRectangle(dirtyr.x, dirtyr.y, dirtyr.width, dirtyr.height);
+           aDrawable->SetForegroundColor(color);
         }
   }
 
@@ -1541,20 +1531,21 @@ nsBoxFrame::PaintChildren(nsIPresContext*      aPresContext,
     
         // if our rect does not contain the childs then begin clipping
         if (!r.Contains(cr)) {
-            aRenderingContext.PushState();
-            aRenderingContext.SetClipRect(r,
-                                          nsClipCombine_kIntersect, clipState);
+          // XXX pav
+          //            aDrawable.PushState();
+          //            aDrawable.SetClipRect(r, nsClipCombine_kIntersect, clipState);
             hasClipped = PR_TRUE;
         }
     }
 
-    PaintChild(aPresContext, aRenderingContext, aDirtyRect, frame, aWhichLayer);
+    PaintChild(aPresContext, aDrawable, aDirtyRect, frame, aWhichLayer);
 
     kid->GetNextBox(&kid);
   }
 
   if (hasClipped) {
-    aRenderingContext.PopState(clipState);
+    // XXX pav
+    //    aDrawable.PopState(clipState);
   }
 
   if (mState & NS_STATE_CURRENTLY_IN_DEBUG) 
@@ -1563,7 +1554,6 @@ nsBoxFrame::PaintChildren(nsIPresContext*      aPresContext,
 
     if (NS_STYLE_OVERFLOW_HIDDEN == disp->mOverflow) {
       mInner->GetDebugMargin(debugMargin);
-      mInner->PixelMarginToTwips(aPresContext, debugMargin);
       r.Deflate(debugMargin);
     }
 
@@ -1580,9 +1570,8 @@ nsBoxFrame::PaintChildren(nsIPresContext*      aPresContext,
     
             // if our rect does not contain the childs then begin clipping
             if (!r.Contains(cr)) {
-                aRenderingContext.PushState();
-                aRenderingContext.SetClipRect(r,
-                                              nsClipCombine_kIntersect, clipState);
+              //                aDrawable.PushState();
+              //                aDrawable.SetClipRect(r,nsClipCombine_kIntersect, clipState);
                 hasClipped = PR_TRUE;
             }
         }
@@ -1600,13 +1589,13 @@ nsBoxFrame::PaintChildren(nsIPresContext*      aPresContext,
         {
             cr.y = inner.y;
             x = cr.x;
-            y = cr.y + onePixel;
-            springSize = debugBorder.top - onePixel*4;
+            y = cr.y;
+            springSize = debugBorder.top - 4;
         } else {
             cr.x = inner.x;
             x = cr.y;
-            y = cr.x + onePixel;
-            springSize = debugBorder.left - onePixel*4;
+            y = cr.x;
+            springSize = debugBorder.left - 4;
         }
 
         nsBoxLayoutState state(aPresContext);
@@ -1618,21 +1607,22 @@ nsBoxFrame::PaintChildren(nsIPresContext*      aPresContext,
         kid->IsCollapsed(state, isCollapsed);
 
         if (!isCollapsed) {
-          aRenderingContext.SetColor(NS_RGB(255,255,255));
+          aDrawable->SetForegroundColor(NS_RGB(255,255,255));
 
           if (isHorizontal) 
               borderSize = cr.width;
           else 
               borderSize = cr.height;
         
-          mInner->DrawSpring(aPresContext, aRenderingContext, isHorizontal, flex, x, y, borderSize, springSize);
+          mInner->DrawSpring(aPresContext, aDrawable, isHorizontal, flex, x, y, borderSize, springSize);
         }
 
         kid->GetNextBox(&kid);
     }
 
     if (hasClipped) {
-       aRenderingContext.PopState(clipState);
+      // XXX pav
+      //       aDrawable.PopState(clipState);
     }
   }
 }
@@ -2009,7 +1999,7 @@ nsBoxFrameInner::operator delete(void* aPtr, size_t sz)
 nsresult
 nsBoxFrameInner::PaintDebug(nsIBox* aBox, 
                         nsIPresContext* aPresContext,
-                        nsIRenderingContext& aRenderingContext,
+                        nsIDrawable* aDrawable,
                         const nsRect& aDirtyRect,
                         nsFramePaintLayer aWhichLayer)
 
@@ -2049,27 +2039,27 @@ nsBoxFrameInner::PaintDebug(nsIBox* aBox,
         }
         
         //left
-        aRenderingContext.SetColor(color);
+        aDrawable.SetColor(color);
         nsRect r(inner);
         r.width = debugBorder.left;
-        aRenderingContext.FillRect(r);
+        aDrawable->FillRectangle(r);
 
         // top
         r = inner;
         r.height = debugBorder.top;
-        aRenderingContext.FillRect(r);
+        aDrawable->FillRectangle(r);
 
         //right
         r = inner;
         r.x = r.x + r.width - debugBorder.right;
         r.width = debugBorder.right;
-        aRenderingContext.FillRect(r);
+        aDrawable->FillRectangle(r);
 
         //bottom
         r = inner;
         r.y = r.y + r.height - debugBorder.bottom;
         r.height = debugBorder.bottom;
-        aRenderingContext.FillRect(r);
+        aDrawable->FillRectangle(r);
 
         // if we have dirty children or we are dirty 
         // place a green border around us.
@@ -2080,14 +2070,14 @@ nsBoxFrameInner::PaintDebug(nsIBox* aBox,
 
         if (dirty || dirtyc) {
            nsRect dirtyr(inner);
-           aRenderingContext.SetColor(NS_RGB(0,255,0));
-           aRenderingContext.DrawRect(dirtyr);
+           aDrawable.SetColor(NS_RGB(0,255,0));
+           aDrawable.DrawRect(dirtyr);
         }
 
         // paint the springs.
         nscoord x, y, borderSize, springSize;
         
-        aRenderingContext.SetColor(NS_RGB(255,255,255));
+        aDrawable.SetColor(NS_RGB(255,255,255));
         
         if (isHorizontal) 
         {
@@ -2123,7 +2113,7 @@ nsBoxFrameInner::PaintDebug(nsIBox* aBox,
                 nscoord flex = 0;
                 box->GetFlex(state, flex);
 
-                DrawSpring(aPresContext, aRenderingContext, isHorizontal, flex, x, y, borderSize, springSize);
+                DrawSpring(aPresContext, aDrawable, isHorizontal, flex, x, y, borderSize, springSize);
                 x += borderSize;
             }
             box->GetNextBox(&box);
@@ -2134,35 +2124,31 @@ nsBoxFrameInner::PaintDebug(nsIBox* aBox,
 */
 
 void
-nsBoxFrameInner::DrawLine(nsIRenderingContext& aRenderingContext, PRBool aHorizontal, nscoord x1, nscoord y1, nscoord x2, nscoord y2)
+nsBoxFrameInner::DrawLine(nsIDrawable* aDrawable, PRBool aHorizontal, nscoord x1, nscoord y1, nscoord x2, nscoord y2)
 {
     if (aHorizontal)
-       aRenderingContext.DrawLine(x1,y1,x2,y2);
+       aDrawable->DrawLine(x1,y1,x2,y2);
     else
-       aRenderingContext.DrawLine(y1,x1,y2,x2);
+       aDrawable->DrawLine(y1,x1,y2,x2);
 }
 
 void
-nsBoxFrameInner::FillRect(nsIRenderingContext& aRenderingContext, PRBool aHorizontal, nscoord x, nscoord y, nscoord width, nscoord height)
+nsBoxFrameInner::FillRect(nsIDrawable* aDrawable, PRBool aHorizontal, nscoord x, nscoord y, nscoord width, nscoord height)
 {
     if (aHorizontal)
-       aRenderingContext.FillRect(x,y,width,height);
+       aDrawable->FillRectangle(x,y,width,height);
     else
-       aRenderingContext.FillRect(y,x,height,width);
+       aDrawable->FillRectangle(y,x,height,width);
 }
 
 void 
-nsBoxFrameInner::DrawSpring(nsIPresContext* aPresContext, nsIRenderingContext& aRenderingContext, PRBool aHorizontal, PRInt32 flex, nscoord x, nscoord y, nscoord size, nscoord springSize)
+nsBoxFrameInner::DrawSpring(nsIPresContext* aPresContext, nsIDrawable* aDrawable, PRBool aHorizontal, PRInt32 flex, nscoord x, nscoord y, nscoord size, nscoord springSize)
 {    
-        float p2t;
-        aPresContext->GetScaledPixelsToTwips(&p2t);
-        nscoord onePixel = NSIntPixelsToTwips(1, p2t);
-
      // if we do draw the coils
         int distance = 0;
         int center = 0;
         int offset = 0;
-        int coilSize = COIL_SIZE*onePixel;
+        int coilSize = COIL_SIZE;
         int halfSpring = springSize/2;
 
         distance = size;
@@ -2174,21 +2160,21 @@ nsBoxFrameInner::DrawSpring(nsIPresContext* aPresContext, nsIRenderingContext& a
         int halfCoilSize = coilSize/2;
 
         if (flex == 0) {
-            DrawLine(aRenderingContext, aHorizontal, x,y + springSize/2, x + size, y + springSize/2);
+            DrawLine(aDrawable, aHorizontal, x,y + springSize/2, x + size, y + springSize/2);
         } else {
             for (int i=0; i < coils; i++)
             {
-                   DrawLine(aRenderingContext, aHorizontal, offset, center+halfSpring, offset+halfCoilSize, center-halfSpring);
-                   DrawLine(aRenderingContext, aHorizontal, offset+halfCoilSize, center-halfSpring, offset+coilSize, center+halfSpring);
+                   DrawLine(aDrawable, aHorizontal, offset, center+halfSpring, offset+halfCoilSize, center-halfSpring);
+                   DrawLine(aDrawable, aHorizontal, offset+halfCoilSize, center-halfSpring, offset+coilSize, center+halfSpring);
 
                    offset += coilSize;
             }
         }
 
-        FillRect(aRenderingContext, aHorizontal, x + size - springSize/2, y, springSize/2, springSize);
-        FillRect(aRenderingContext, aHorizontal, x, y, springSize/2, springSize);
+        FillRect(aDrawable, aHorizontal, x + size - springSize/2, y, springSize/2, springSize);
+        FillRect(aDrawable, aHorizontal, x, y, springSize/2, springSize);
 
-        //DrawKnob(aPresContext, aRenderingContext, x + size - springSize, y, springSize);
+        //DrawKnob(aPresContext, aDrawable, x + size - springSize, y, springSize);
 }
 
 void
@@ -2215,25 +2201,9 @@ nsBoxFrameInner::GetDebugPadding(nsMargin& aPadding)
 }
 
 
-void 
-nsBoxFrameInner::PixelMarginToTwips(nsIPresContext* aPresContext, nsMargin& aMarginPixels)
-{
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
-  nscoord onePixel = NSIntPixelsToTwips(1, p2t);
-  aMarginPixels.left   *= onePixel;
-  aMarginPixels.right  *= onePixel;
-  aMarginPixels.top    *= onePixel;
-  aMarginPixels.bottom *= onePixel;
-}
-
-
 void
 nsBoxFrameInner::GetValue(nsIPresContext* aPresContext, const nsSize& a, const nsSize& b, char* ch) 
 {
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-
     char width[100];
     char height[100];
     
@@ -2297,10 +2267,8 @@ nsBoxFrameInner::DisplayDebugInfoFor(nsIBox* aBox,
         nsMargin m;
         nsMargin m2;
         GetDebugBorder(m);
-        PixelMarginToTwips(aPresContext, m);
 
         GetDebugMargin(m2);
-        PixelMarginToTwips(aPresContext, m2);
 
         m += m2;
 
@@ -2523,11 +2491,10 @@ nsBoxFrame::CreateViewForFrame(nsIPresContext* aPresContext,
         }
         else if (NS_STYLE_VISIBILITY_HIDDEN == display->mVisible) {
           // If it has a widget, hide the view because the widget can't deal with it
-          nsIWidget* widget = nsnull;
-          view->GetWidget(widget);
-          if (widget) {
+          nsCOMPtr<nsIWindow> window;
+          view->GetWidget(getter_AddRefs(window));
+          if (window) {
             viewIsVisible = PR_FALSE;
-            NS_RELEASE(widget);
           }
           else {
             // If it's a container element, then leave the view visible, but

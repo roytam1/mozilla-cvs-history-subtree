@@ -45,10 +45,8 @@
 #include "nsIViewManager.h"
 #include "nsBoxLayoutState.h"
 #include "nsStackLayout.h"
-#include "nsWidgetsCID.h"
 #include "nsHTMLContainerFrame.h"
-
-static NS_DEFINE_IID(kWidgetCID, NS_CHILD_CID);
+#include "nsIWindow.h"
 
 nsresult
 NS_NewDeckFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame, nsIBoxLayout* aLayoutManager)
@@ -109,11 +107,11 @@ nsDeckFrame::CreateWidget(nsIPresContext* aPresContext, nsIBox* aBox)
      frame->GetView(aPresContext, &view);
   }
 
-  nsIWidget* widget;
-  view->GetWidget(widget);
+  nsCOMPtr<nsIWindow> window;
+  view->GetWidget(getter_AddRefs(window));
 
-  if (!widget)
-     rv = view->CreateWidget(kWidgetCID);
+  if (!window)
+     rv = view->CreateWidget("@mozilla.org/gfx/window/child;2");
 
   return rv;
 }
@@ -293,7 +291,7 @@ nsDeckFrame::GetSelectedBox()
 
 NS_IMETHODIMP
 nsDeckFrame::Paint(nsIPresContext* aPresContext,
-                                nsIRenderingContext& aRenderingContext,
+                                nsIDrawable* aDrawable,
                                 const nsRect& aDirtyRect,
                                 nsFramePaintLayer aWhichLayer)
 {
@@ -313,9 +311,9 @@ nsDeckFrame::Paint(nsIPresContext* aPresContext,
         mStyleContext->GetStyleData(eStyleStruct_Spacing);
 
       nsRect  rect(0, 0, mRect.width, mRect.height);
-      nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
+      nsCSSRendering::PaintBackground(aPresContext, aDrawable, this,
                                       aDirtyRect, rect, *color, *spacing, 0, 0);
-      nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+      nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                                   aDirtyRect, rect, *spacing, mStyleContext, skipSides);
     }
   }
@@ -327,7 +325,7 @@ nsDeckFrame::Paint(nsIPresContext* aPresContext,
     box->GetFrame(&frame);
 
     if (frame != nsnull)
-      PaintChild(aPresContext, aRenderingContext, aDirtyRect, frame, aWhichLayer);
+      PaintChild(aPresContext, aDrawable, aDirtyRect, frame, aWhichLayer);
   }
 
   return NS_OK;

@@ -49,7 +49,6 @@
 #include "nsHTMLParts.h"
 #include "nsIPresShell.h"
 #include "nsIStyleContext.h"
-#include "nsWidgetsCID.h"
 #include "nsBoxLayoutState.h"
 #include "nsIXBLService.h"
 #include "nsIServiceManager.h"
@@ -108,7 +107,7 @@ public:
   void AddRemoveSpace(nscoord aDiff,
                     nsSplitterInfo* aChildInfos,
                     PRInt32 aCount,
-                    PRInt32& aSpaceLeft);
+                    nscoord& aSpaceLeft);
 
   void ResizeChildTo(nsIPresContext* aPresContext,
                    nscoord& aDiff, 
@@ -138,7 +137,7 @@ public:
 
   void MoveSplitterBy(nsIPresContext* aPresContext, nscoord aDiff);
   void EnsureOrient();
-  void SetPreferredSize(nsBoxLayoutState& aState, nsIBox* aChildBox, nscoord aOnePixel, PRBool aIsHorizontal, nscoord* aSize);
+  void SetPreferredSize(nsBoxLayoutState& aState, nsIBox* aChildBox, PRBool aIsHorizontal, nscoord* aSize);
 
   nsSplitterFrame* mOuter;
   PRBool mDidDrag;
@@ -370,7 +369,7 @@ nsSplitterFrame::Init(nsIPresContext*  aPresContext,
      viewManager->SetViewZIndex(view, kMaxZ);
 
      // Need to have a widget to appear on top of other widgets.
-     view->CreateWidget(kCChildCID);
+     view->CreateWidget("@mozilla.org/gfx/window/child;2");
 #endif
 
   mInner->mState = nsSplitterFrameInner::Open;
@@ -535,10 +534,7 @@ nsSplitterFrameInner::MouseDrag(nsIPresContext* aPresContext, nsGUIEvent* aEvent
            // convert start to twips
            nscoord startpx = mDragStartPx;
               
-           float p2t;
-           aPresContext->GetScaledPixelsToTwips(&p2t);
-           nscoord onePixel = NSIntPixelsToTwips(1, p2t);
-           nscoord start = startpx*onePixel;
+           nscoord start = startpx;
 
            // get it into our coordintate system by subtracting our parents offsets.
            nsIFrame* parent = mOuter;
@@ -1124,16 +1120,12 @@ nsSplitterFrameInner::AdjustChildren(nsIPresContext* aPresContext, nsSplitterInf
     nsCOMPtr<nsIPresShell> shell;
     state.GetPresShell(getter_AddRefs(shell));
 
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-    nscoord onePixel = NSIntPixelsToTwips(1, p2t);
-
     // first set all the widths.
     nsIBox* child = nsnull;
     mOuter->GetChildBox(&child);
     while(child)
     {
-      SetPreferredSize(state, child, onePixel, aIsHorizontal, nsnull);
+      SetPreferredSize(state, child, aIsHorizontal, nsnull);
       child->GetNextBox(&child);
     }
 
@@ -1143,12 +1135,12 @@ nsSplitterFrameInner::AdjustChildren(nsIPresContext* aPresContext, nsSplitterInf
         nscoord   pref       = aChildInfos[i].changed;
         nsIBox* childBox     = aChildInfos[i].child;
 
-        SetPreferredSize(state, childBox, onePixel, aIsHorizontal, &pref);
+        SetPreferredSize(state, childBox, aIsHorizontal, &pref);
     }
 }
 
 void
-nsSplitterFrameInner::SetPreferredSize(nsBoxLayoutState& aState, nsIBox* aChildBox, nscoord aOnePixel, PRBool aIsHorizontal, nscoord* aSize)
+nsSplitterFrameInner::SetPreferredSize(nsBoxLayoutState& aState, nsIBox* aChildBox, PRBool aIsHorizontal, nscoord* aSize)
 {
   //printf("current=%d, pref=%d", current/onePixel, pref/onePixel);
  
@@ -1194,7 +1186,7 @@ nsSplitterFrameInner::SetPreferredSize(nsBoxLayoutState& aState, nsIBox* aChildB
 
   // set its preferred size.
   char ch[50];
-  sprintf(ch,"%d",pref/aOnePixel);
+  sprintf(ch,"%f",pref);
   nsAutoString oldValue;
   content->GetAttribute(kNameSpaceID_None, attribute, oldValue);
   if (oldValue.EqualsWithConversion(ch))
@@ -1215,7 +1207,7 @@ void
 nsSplitterFrameInner::AddRemoveSpace(nscoord aDiff,
                                     nsSplitterInfo* aChildInfos,
                                     PRInt32 aCount,
-                                    PRInt32& aSpaceLeft)
+                                    nscoord& aSpaceLeft)
 {
   aSpaceLeft = 0;
 

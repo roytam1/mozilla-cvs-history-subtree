@@ -119,11 +119,9 @@ nsTreeIndentationFrame::Reflow(nsIPresContext*          aPresContext,
 	  }
   }
 
-  float p2t;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
  
   if (0 != mWidth) {
-      aMetrics.width = NSIntPixelsToTwips(mWidth, p2t);
+      aMetrics.width = mWidth;
   }
   
   if (nsnull != aMetrics.maxElementSize) {

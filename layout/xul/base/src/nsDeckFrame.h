@@ -50,7 +50,7 @@ public:
   NS_IMETHOD DoLayout(nsBoxLayoutState& aState);
 
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                    nsIRenderingContext& aRenderingContext,
+                    nsIDrawable* aDrawable,
                     const nsRect& aDirtyRect,
                     nsFramePaintLayer aWhichLayer);
 

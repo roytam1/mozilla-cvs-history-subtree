@@ -63,7 +63,7 @@ public:
 
 
   NS_IMETHOD Paint(nsIPresContext*      aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable* aDrawable,
                    const nsRect&        aDirtyRect,
                    nsFramePaintLayer    aWhichLayer);
 
@@ -75,26 +75,26 @@ protected:
   void UpdateAccessIndex();
 
   NS_IMETHOD PaintTitle(nsIPresContext*      aPresContext,
-                        nsIRenderingContext& aRenderingContext,
+                        nsIDrawable* aDrawable,
                         const nsRect&        aDirtyRect,
                         const nsRect&        aRect);
 
   virtual void LayoutTitle(nsIPresContext*      aPresContext,
-                           nsIRenderingContext& aRenderingContext,
+                           nsIDrawable* aDrawable,
                            const nsRect&        aRect);
 
-  virtual void CalculateUnderline(nsIRenderingContext& aRenderingContext);
+  virtual void CalculateUnderline(nsIDrawable* aDrawable);
 
   virtual void CalcTextSize(nsBoxLayoutState& aBoxLayoutState);
 
   nsTextBoxFrame(nsIPresShell* aShell);
 
   virtual void CalculateTitleForWidth(nsIPresContext*      aPresContext,
-                                      nsIRenderingContext& aRenderingContext,
+                                      nsIDrawable* aDrawable,
                                       nscoord              aWidth);
 
   virtual void GetTextSize(nsIPresContext*      aPresContext,
-                           nsIRenderingContext& aRenderingContext,
+                           nsIDrawable* aDrawable,
                            const nsString&      aString,
                            nsSize&              aSize,
                            nscoord&             aAscent);

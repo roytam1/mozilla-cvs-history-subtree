@@ -117,10 +117,6 @@ nsTreeItemDragCapturer :: ComputeDropPosition ( nsIDOMEvent* aDragEvent, nscoord
   *outBefore = PR_FALSE;
   *outDropOnMe = PR_FALSE;
 
-  float p2t;
-  mPresContext->GetScaledPixelsToTwips(&p2t);
-  nscoord onePixel = NSIntPixelsToTwips(1, p2t);
-
   // Gecko trickery to get mouse coordinates into the right coordinate system for
   // comparison with the row.
   nsPoint pnt(0,0);
@@ -157,7 +153,7 @@ nsTreeItemDragCapturer :: ComputeDropPosition ( nsIDOMEvent* aDragEvent, nscoord
       } 
       else if (pnt.y >= (rowRect.y + PRInt32(float(rowRect.height) *0.75))) {
         *outBefore = PR_FALSE;
-        *outYLoc = rowRect.y + rowRect.height - onePixel;
+        *outYLoc = rowRect.y + rowRect.height - 1;
       } 
       else {
         // we're on the container
@@ -171,7 +167,7 @@ nsTreeItemDragCapturer :: ComputeDropPosition ( nsIDOMEvent* aDragEvent, nscoord
         *outYLoc = 0;
       }
       else
-        *outYLoc = rowRect.y + rowRect.height - onePixel;
+        *outYLoc = rowRect.y + rowRect.height - 1;
     } // else is not a container
   } // if can drop between rows
   else {
@@ -202,11 +198,6 @@ nsTreeItemDragCapturer :: ConvertEventCoordsToRowCoords ( nsIDOMEvent* inDragEve
   PRInt32 x,y = 0;
   mouseEvent->GetClientX(&x);
   mouseEvent->GetClientY(&y);
-  float p2t;
-  mPresContext->GetScaledPixelsToTwips(&p2t);
-  nscoord onePixel = NSIntPixelsToTwips(1, p2t);
-  nscoord xp       = NSIntPixelsToTwips(x, p2t);
-  nscoord yp       = NSIntPixelsToTwips(y, p2t);
   
   // get the rect of the row (not the tree item) that the mouse is over. This is
   // where we need to start computing things from.
@@ -216,8 +207,6 @@ nsTreeItemDragCapturer :: ConvertEventCoordsToRowCoords ( nsIDOMEvent* inDragEve
   rowFrame->GetRect(*outRowRect);
 
   // compute the offset to top level in twips
-  float t2p;
-  mPresContext->GetTwipsToPixels(&t2p);
   PRInt32 frameOffsetX = 0, frameOffsetY = 0;
   nsIFrame* curr = rowFrame;
   curr->GetParent(&curr);
@@ -230,7 +219,7 @@ nsTreeItemDragCapturer :: ConvertEventCoordsToRowCoords ( nsIDOMEvent* inDragEve
   } // until we reach the top  
 
   // subtract the offset from the mouse coord to put it into row relative coordinates.
-  nsPoint pnt(xp, yp);
+  nsPoint pnt(x, y);
   pnt.MoveBy ( -frameOffsetX, -frameOffsetY );
 
   // Find the tree's view and take it's scroll position into account

@@ -180,7 +180,7 @@ nsStackFrame::GetStackedFrameForPoint(nsIPresContext* aPresContext,
 
 void
 nsStackFrame::PaintChildren(nsIPresContext*      aPresContext,
-                                nsIRenderingContext& aRenderingContext,
+                                nsIDrawable* aDrawable,
                                 const nsRect&        aDirtyRect,
                                 nsFramePaintLayer    aWhichLayer)
 {
@@ -189,14 +189,14 @@ nsStackFrame::PaintChildren(nsIPresContext*      aPresContext,
   // background of the second.
   if (aWhichLayer == NS_FRAME_PAINT_LAYER_BACKGROUND)
   {
-      nsBoxFrame::PaintChildren(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+      nsBoxFrame::PaintChildren(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
   }
 }
 
 // Paint one child frame
 void
 nsStackFrame::PaintChild(nsIPresContext*      aPresContext,
-                             nsIRenderingContext& aRenderingContext,
+                             nsIDrawable*         aDrawable,
                              const nsRect&        aDirtyRect,
                              nsIFrame*            aFrame,
                              nsFramePaintLayer    aWhichLayer)
@@ -206,7 +206,7 @@ nsStackFrame::PaintChild(nsIPresContext*      aPresContext,
   // background of the second.
   if (aWhichLayer == NS_FRAME_PAINT_LAYER_BACKGROUND)
   {
-    nsBoxFrame::PaintChild(aPresContext, aRenderingContext, aDirtyRect, aFrame, NS_FRAME_PAINT_LAYER_BACKGROUND);
-    nsBoxFrame::PaintChild(aPresContext, aRenderingContext, aDirtyRect, aFrame, NS_FRAME_PAINT_LAYER_FOREGROUND);
+    nsBoxFrame::PaintChild(aPresContext, aDrawable, aDirtyRect, aFrame, NS_FRAME_PAINT_LAYER_BACKGROUND);
+    nsBoxFrame::PaintChild(aPresContext, aDrawable, aDirtyRect, aFrame, NS_FRAME_PAINT_LAYER_FOREGROUND);
   } 
 }

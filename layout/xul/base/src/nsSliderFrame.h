@@ -108,7 +108,7 @@ public:
   virtual nsresult HandleEvent(nsIDOMEvent* aEvent) { return NS_OK; }
 
 
-  NS_IMETHOD_(void) Notify(nsITimer *timer);
+  NS_IMETHOD Notify(nsITimer *timer);
 
 }; // class nsSliderFrame
 
@@ -197,7 +197,7 @@ public:
                            nsGUIEvent *    aEvent,
                            nsEventStatus*  aEventStatus);
 
-  NS_IMETHOD_(void) Notify(nsITimer *timer);
+  NS_IMETHOD Notify(nsITimer *timer);
   //friend nsSliderMediator;
 
 protected:

@@ -318,14 +318,10 @@ nsSliderFrame::DoLayout(nsBoxLayoutState& aState)
   else if (curpospx > maxpospx)
      curpospx = maxpospx;
 
-  float p2t;
-  aState.GetPresContext()->GetScaledPixelsToTwips(&p2t);
-  nscoord onePixel = NSIntPixelsToTwips(1, p2t);
+  // get max pos
+  nscoord maxpos = maxpospx;
 
-  // get max pos in twips
-  nscoord maxpos = maxpospx*onePixel;
-
-  // get our maxpos in twips. This is the space we have left over in the scrollbar
+  // get our maxpos. This is the space we have left over in the scrollbar
   // after the height of the thumb has been removed
   nscoord& desiredcoord = isHorizontal ? clientRect.width : clientRect.height;
   nscoord& thumbcoord = isHorizontal ? thumbSize.width : thumbSize.height;
@@ -413,10 +409,7 @@ nsSliderFrame::HandleEvent(nsIPresContext* aPresContext,
        // convert start to twips
        nscoord startpx = mDragStartPx;
               
-       float p2t;
-       aPresContext->GetScaledPixelsToTwips(&p2t);
-       nscoord onePixel = NSIntPixelsToTwips(1, p2t);
-       nscoord start = startpx*onePixel;
+       nscoord start = startpx;
 
        nsIFrame* thumbFrame = mFrames.FirstChild();
 
@@ -488,10 +481,7 @@ nsSliderFrame::HandleEvent(nsIPresContext* aPresContext,
   else if (mMiddlePref && aEvent->message == NS_MOUSE_MIDDLE_BUTTON_DOWN) {
     // convert coord from twips to pixels
     nscoord pos = isHorizontal ? aEvent->point.x : aEvent->point.y;
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-    nscoord onePixel = NSIntPixelsToTwips(1, p2t);
-    nscoord pospx = pos/onePixel;
+    nscoord pospx = pos;
 
    // adjust so that the middle of the thumb is placed under the click
     nsIFrame* thumbFrame = mFrames.FirstChild();
@@ -631,11 +621,7 @@ nsSliderFrame::CurrentPositionChanged(nsIPresContext* aPresContext)
       curpos = maxpos;
 
     // convert to pixels
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
-    nscoord onePixel = NSIntPixelsToTwips(1, p2t);
-
-    nscoord curpospx = curpos*onePixel;
+    nscoord curpospx = curpos;
 
     // get the thumb's rect
     nsIFrame* thumbFrame = mFrames.FirstChild();
@@ -807,15 +793,9 @@ nsSliderFrame::MouseDown(nsIDOMEvent* aMouseEvent)
   if (button == 2) {
 
     nscoord pos;
-    nscoord pospx;
 
     // mouseEvent has click coordinates in pixels, convert to twips first
-    isHorizontal ? mouseEvent->GetClientX(&pospx) : mouseEvent->GetClientY(&pospx);
-    float p2t;
-    // XXX hack
-    mPresContext->GetScaledPixelsToTwips(&p2t);
-    nscoord onePixel = NSIntPixelsToTwips(1, p2t);
-    pos = pospx * onePixel;
+    isHorizontal ? mouseEvent->GetClientX(&pos) : mouseEvent->GetClientY(&pos);
 
     // then get it into our coordinate system by subtracting our parents offsets.
     nsIFrame* parent = this;
@@ -1071,13 +1051,14 @@ nsSliderFrame::SetScrollbarListener(nsIScrollbarListener* aListener)
   mScrollbarListener = aListener;
 }
 
-NS_IMETHODIMP_(void) nsSliderMediator::Notify(nsITimer *timer)
+NS_IMETHODIMP nsSliderMediator::Notify(nsITimer *timer)
 { 
   if (mSlider)
     mSlider->Notify(timer);  
+  return NS_OK;
 }
 
-NS_IMETHODIMP_(void) nsSliderFrame::Notify(nsITimer *timer)
+NS_IMETHODIMP nsSliderFrame::Notify(nsITimer *timer)
 { 
     PRBool stop = PR_FALSE;
 
@@ -1113,6 +1094,8 @@ NS_IMETHODIMP_(void) nsSliderFrame::Notify(nsITimer *timer)
     } else {
       PageUpDown(thumbFrame, mChange);
     }
+
+    return NS_OK;
 }
 
 /*
