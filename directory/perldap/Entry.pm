@@ -39,20 +39,6 @@ $VERSION = "1.0302";
 
 
 #############################################################################
-# Initializer, this should be called only once.
-#
-BEGIN
-{
-  use vars qw($_no_LDIF_module);
-
-  print "Initializing the ::Entry module\n" if $main::LDAP_DEBUG;
-  undef $_no_LDIF_module;
-  eval "use Mozilla::LDAP::LDIF 0.07 ()";
-  $_no_LDIF_module = 1 if ($@);
-}
-
-
-#############################################################################
 # Constructor, for convenience.
 #
 sub new
@@ -706,23 +692,36 @@ sub getLDIFrecords # called from LDIF.pm (at least)
 #############################################################################
 # Print an entry, in LDIF format.
 #
+use vars qw($_no_LDIF_module $_tested_LDIF_module);
+undef $_no_LDIF_module;
+undef $_tested_LDIF_module;
+
 sub printLDIF
 {
   my ($self) = @_;
 
-  if (defined($_no_LDIF_module)) { # Bad.  Well, do something half-assed:
-    my $record = $self->getLDIFrecords();
-    my ($attr, $values);
 
-    while (($attr, $values) = splice @$record, 0, 2)
-      {
-	grep((print "$attr: $_\n"), @$values);
-      }
-    print "\n";
-  }
+  if (not defined($_tested_LDIF_module))
+    {
+      eval {require Mozilla::LDAP::LDIF; Mozilla::LDAP::LDIF->VERSION(0.07)};
+      $_no_LDIF_module = $@;
+      $_tested_LDIF_module = 1;
+    }
+
+  if ($_no_LDIF_module)
+    {
+      my $record = $self->getLDIFrecords();
+      my ($attr, $values);
+
+      while (($attr, $values) = splice @$record, 0, 2)
+	{
+	  grep((print "$attr: $_\n"), @$values);
+	}
+      print "\n";
+    }
   else
     {
-      (new Mozilla::LDAP::LDIF(select()))->writeOneEntry ($self);
+      Mozilla::LDAP::LDIF::put_LDIF(select(), 78, $self);
     }
 }
 
