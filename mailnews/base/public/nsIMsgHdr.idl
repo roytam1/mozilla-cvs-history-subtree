@@ -1,3 +1,0 @@
-interface nsIMsgHdr {};
-
-interface nsIMsgDBHdr {};
