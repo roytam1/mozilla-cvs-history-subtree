@@ -706,11 +706,8 @@ var BookmarksCommand = {
 
   importBookmarks: function ()
   {
-#ifdef XP_MACOSX
-      var features = "centerscreen,chrome,resizable=no";
-#else
+      // XXX: ifdef it to be non-modal (non-"sheet") on mac (see bug 259039)
       var features = "modal,centerscreen,chrome,resizable=no";
-#endif
       window.fromFile = false;
       window.openDialog("chrome://browser/content/migration/migration.xul", "migration", features, "bookmarks");
       if(window.fromFile)
