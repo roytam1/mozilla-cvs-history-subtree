@@ -1,8 +1,21 @@
 1998-12-04  Leif Hedstrom  <leif@netscape.com>
 
+	* Makefile.PL: Modified so that "silent" install will actually
+	echo what options it's setting.
+	It will now croak() if the SDK dir specified doesn't exist.
+
+	* INSTALL: Updated to reflect new v1.1 stuff. Added links to the
+	FAQ.
+
+	* README: Dito. Also changed some of the binary install
+	information, which might not be useful anyways...
+
 	* Makefile.PL: Added "filters" to remove .dll and .sl from shared
 	libraries when creating link options. I also replaced the code to
 	put the valid library extensions into a variable (bug #1344).
+
+	* Makefile.PL: Fixed some crap with the config parsing, and ENV
+	handling (for silent installs).
 
 1998-12-03  Leif Hedstrom  <leif@netscape.com>
 
