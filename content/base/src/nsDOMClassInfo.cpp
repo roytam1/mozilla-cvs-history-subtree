@@ -505,7 +505,15 @@ nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
 
   if (!doc) {
     doc = do_QueryInterface(nativeObj);
-    NS_ENSURE_TRUE(doc, NS_ERROR_UNEXPECTED);
+
+    if (!doc) {
+      // No document reachable from nativeObj, use the global object
+      // that was passed to this method.
+
+      *parentObj = globalObj;
+
+      return NS_OK;
+    }
   }
 
   // Get the script global object from the document and get the
@@ -969,14 +977,26 @@ nsHTMLDocumentSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
 
     nsCOMPtr<nsIDOMNodeList> node_list;
 
+    // XXX: This should use nsIHTMLDocument::ResolveName()!
+
     doc->GetElementsByName(prop_name, getter_AddRefs(node_list));
 
-    if (node_list) {
+    PRUint32 len;
+
+    if (node_list && NS_SUCCEEDED(node_list->GetLength(&len)) && len) {
+      nsISupports *s = node_list;
+      nsCOMPtr<nsIDOMNode> n;
+
+      if (len == 1) {
+        node_list->Item(0, getter_AddRefs(n));
+
+        s = n;
+      }
+
       nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
       nsresult rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx),
-                                           node_list,
-                                           NS_GET_IID(nsIDOMNodeList),
+                                           s, NS_GET_IID(nsIDOMNodeList),
                                            getter_AddRefs(holder));
       NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1052,25 +1072,9 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
       nsCOMPtr<nsIDOMHTMLDocument> html_doc(do_QueryInterface(doc));
 
       if (html_doc) {
-        nsCOMPtr<nsIDOMNodeList> node_list;
-
-
-
-
-
-        // XXX This is wrong!
-
-        html_doc->GetElementsByName(name, getter_AddRefs(node_list));
-
-        if (node_list) {
-          PRUint32 len;
-
-          node_list->GetLength(&len);
-
-          if (len) {
-            result = node_list;
-          }
-        }
+#if 0 // Once this branch is merged to the tip, enable this code.
+        html_doc->ResolveName(name, native, getter_AddRefs(result));
+#endif
       }
     }
 
@@ -1303,6 +1307,8 @@ nsDOMClassInfo::Init()
   NS_DEFINE_CLASSINFO_DATA(XULDocument, nsDocumentSH::Create,
                            DOCUMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULElement, nsElementSH::Create,
+                           ELEMENT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(XULTreeElement, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(XULCommandDispatcher, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);

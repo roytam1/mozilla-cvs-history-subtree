@@ -188,7 +188,8 @@ nsXBLPrototypeHandler::InitAccessKeys()
 }
 
 NS_IMETHODIMP
-nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver, nsIDOMEvent* aEvent)
+nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
+                                      nsIDOMEvent* aEvent)
 {
   if (!mHandlerElement)
     return NS_ERROR_FAILURE;
@@ -229,7 +230,7 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver, nsIDOMEven
     // element and call doCommand on it.
     nsCOMPtr<nsIController> controller;
     nsCOMPtr<nsIFocusController> focusController;
-    
+
     nsCOMPtr<nsPIWindowRoot> windowRoot(do_QueryInterface(aReceiver));
     if (windowRoot) {
       windowRoot->GetFocusController(getter_AddRefs(focusController));
@@ -241,10 +242,10 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver, nsIDOMEven
         nsCOMPtr<nsIDocument> doc;
         if (elt)
           elt->GetDocument(*getter_AddRefs(doc));
-      
+
         if (!doc)
           doc = do_QueryInterface(aReceiver);
-      
+
         if (!doc)
           return NS_ERROR_FAILURE;
 
