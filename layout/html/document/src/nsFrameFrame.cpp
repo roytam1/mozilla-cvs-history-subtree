@@ -638,16 +638,10 @@ PRInt32 nsHTMLFrameInnerFrame::GetMarginWidth(nsIPresContext* aPresContext, nsIC
   nsresult rv = NS_OK;
   nsCOMPtr<nsIHTMLContent> content = do_QueryInterface(mContent, &rv);
   if (NS_SUCCEEDED(rv) && content) {
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
     nsHTMLValue value;
     content->GetHTMLAttribute(nsHTMLAtoms::marginwidth, value);
-    if (eHTMLUnit_Pixel == value.GetUnit()) { 
-      marginWidth = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-      if (marginWidth < 0) {
-        marginWidth = 0;
-      }
-    }
+    if (eHTMLUnit_Pixel == value.GetUnit())
+      return value.GetPixelValue();
   }
   return marginWidth;
 }
@@ -658,16 +652,10 @@ PRInt32 nsHTMLFrameInnerFrame::GetMarginHeight(nsIPresContext* aPresContext, nsI
   nsresult rv = NS_OK;
   nsCOMPtr<nsIHTMLContent> content = do_QueryInterface(mContent, &rv);
   if (NS_SUCCEEDED(rv) && content) {
-    float p2t;
-    aPresContext->GetScaledPixelsToTwips(&p2t);
     nsHTMLValue value;
     content->GetHTMLAttribute(nsHTMLAtoms::marginheight, value);
-    if (eHTMLUnit_Pixel == value.GetUnit()) { 
-      marginHeight = NSIntPixelsToTwips(value.GetPixelValue(), p2t);
-      if (marginHeight < 0) {
-        marginHeight = 0;
-      }
-    }
+    if (eHTMLUnit_Pixel == value.GetUnit())
+      return value.GetPixelValue();
   }
   return marginHeight;
 }
