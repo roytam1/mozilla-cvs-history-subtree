@@ -92,10 +92,15 @@ while ($entry)
   print "dn: ", $entry->{targetdn}[0], "\n";
   $type = $entry->{changetype}[0];
   print "changetype: $type\n";
-  if (!($type =~ /delete/i))
+  if ($type =~ /modify/i)
     {
-      # Should we filter out modifiersname and modifytimestamp ?
-      # chop($entry->{changes}[0]);
+      # Should we filter out modifiersname and modifytimestamp ? We do chop
+      # off the trailing \0 though.
+      chop($entry->{changes}[0]);
+      print $entry->{changes}[0], "\n";
+    }
+  elsif ($type =~ /add/i)
+    {
       print $entry->{changes}[0], "\n";
     }
   print "\n";
