@@ -108,7 +108,7 @@
         modifiers="accel shift" key="D"/>
       <key id="key_close"/>
 
-      <!-- Edit Menu -->
+      <!-- Edit Keys -->
       <key id="key_undo"/>
       <key id="key_redo"/>
       <key id="key_cut"/>
@@ -269,6 +269,9 @@
 
         <!-- Tasks menu -->
         <menu id="tasksMenu"/>
+
+        <menu id="menu_Help"/>
+
       </menubar>
     
     </toolbox>
