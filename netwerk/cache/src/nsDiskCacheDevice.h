@@ -18,7 +18,8 @@
  * Rights Reserved.
  * 
  * Contributor(s): 
- *    Gordon Sheridan, 20-February-2001
+ *    Gordon Sheridan <gordon@netscape.com>
+ *    Patrick C. Beard <beard@netscape.com>
  */
 
 #ifndef _nsDiskCacheDevice_h_
@@ -31,7 +32,11 @@
 #include "nsIObserver.h"
 
 class nsDiskCacheEntry;
+class nsDiskCacheMap;
+
 class nsISupportsArray;
+class nsIInputStream;
+class nsIOutputStream;
 
 class nsDiskCacheDevice : public nsCacheDevice {
 public:
@@ -69,7 +74,10 @@ public:
 
     nsresult getFileForKey(const char* key, PRBool meta, PRUint32 generation, nsIFile ** result);
     nsresult getFileForDiskCacheEntry(nsDiskCacheEntry * diskEntry, PRBool meta, nsIFile ** result);
+
     static nsresult getTransportForFile(nsIFile* file, nsCacheAccessMode mode, nsITransport ** result);
+    static nsresult openInputStream(nsIFile* file, nsIInputStream ** result);
+    static nsresult openOutputStream(nsIFile* file, nsIOutputStream ** result);
 
     nsresult visitEntries(nsICacheVisitor * visitory);
     
@@ -93,6 +101,7 @@ private:
     nsDiskCacheEntryHashTable   mBoundEntries;
     PRUint32                    mCacheCapacity;
     PRUint32                    mCacheSize;
+    nsDiskCacheMap*             mCacheMap;
 };
 
 #endif // _nsDiskCacheDevice_h_
