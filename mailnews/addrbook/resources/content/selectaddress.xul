@@ -55,7 +55,8 @@ Rights Reserved.
 		xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 		xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         title="&selectAddressWindow.title;"
-        style="width:100%; height:100%">
+        class="dialog"
+        style="width:100%; height:100%; padding:0px">
 
 <html:script language="JavaScript" src="chrome://addressbook/content/addressbook.js"/>
 
