@@ -1351,6 +1351,8 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContex
 
   nsIPresShell *shell = aPresContext->PresShell();
 
+  nsCOMPtr<nsIContent> content;
+
   if (eStyleContentType_URL == type) {
     // Create an HTML image content object, and set the SRC.
     // XXX Check if it's an image type we can handle...
@@ -1366,7 +1368,6 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContex
     nsCOMPtr<nsIElementFactory> ef(do_GetService(kHTMLElementFactoryCID,&rv));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    nsCOMPtr<nsIContent> content;
     rv = ef->CreateInstanceByTag(nodeInfo,getter_AddRefs(content));
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1436,9 +1437,9 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContex
         nsresult rv = NS_ERROR_FAILURE;
         if (attrName) {
           nsIFrame*   textFrame = nsnull;
-          nsCOMPtr<nsIContent> content;
           rv = NS_NewAttributeContent(aContent, attrNameSpace, attrName,
                                       getter_AddRefs(content));
+          NS_ENSURE_SUCCESS(rv, rv);
 
           // Set aContent as the parent content and set the document
           // object. This way event handling works
@@ -1456,7 +1457,6 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContex
           *aFrame = textFrame;
           rv = NS_OK;
         }
-        return rv;
       }
       break;
   
@@ -1500,29 +1500,43 @@ nsCSSFrameConstructor::CreateGeneratedFrameFor(nsIPresContext*       aPresContex
     } // switch
   
 
-    // Create a text content node
-    nsIFrame* textFrame = nsnull;
-    nsCOMPtr<nsIContent> textContent = do_CreateInstance(kTextNodeCID);
-    if (textContent) {
-      // Set the text
-      nsCOMPtr<nsIDOMCharacterData> domData = do_QueryInterface(textContent);
-      if (domData)
-        domData->SetData(contentString);
+    if (!content) {
+      // Create a text content node
+      nsIFrame* textFrame = nsnull;
+      nsCOMPtr<nsIContent> textContent = do_CreateInstance(kTextNodeCID);
+      if (textContent) {
+        // Set the text
+        nsCOMPtr<nsIDOMCharacterData> domData = do_QueryInterface(textContent);
+        if (domData)
+          domData->SetData(contentString);
   
-      // Set aContent as the parent content and set the document object. This
-      // way event handling works
-      textContent->SetParent(aContent);
-      textContent->SetDocument(aDocument, PR_TRUE, PR_TRUE);
-      textContent->SetNativeAnonymous(PR_TRUE);
-      textContent->SetBindingParent(textContent);
-      
-      // Create a text frame and initialize it
-      NS_NewTextFrame(shell, &textFrame);
-      textFrame->Init(aPresContext, textContent, aParentFrame, aStyleContext, nsnull);
+        // Set aContent as the parent content and set the document
+        // object. This way event handling works
+        textContent->SetParent(aContent);
+        textContent->SetDocument(aDocument, PR_TRUE, PR_TRUE);
+        textContent->SetNativeAnonymous(PR_TRUE);
+        textContent->SetBindingParent(textContent);
+
+        // Create a text frame and initialize it
+        NS_NewTextFrame(shell, &textFrame);
+        textFrame->Init(aPresContext, textContent, aParentFrame, aStyleContext, nsnull);
+
+        content = textContent;
+      }
+
+      // Return the text frame
+      *aFrame = textFrame;
     }
-  
-    // Return the text frame
-    *aFrame = textFrame;
+  }
+
+  if (content) {
+    nsCOMPtr<nsISupportsArray> anonymousItems;
+    nsresult rv = NS_NewISupportsArray(getter_AddRefs(anonymousItems));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    anonymousItems->AppendElement(content);
+
+    shell->SetAnonymousContentFor(aContent, anonymousItems);
   }
 
   return NS_OK;
