@@ -907,7 +907,7 @@ nsWebShell::Back(void)
 NS_IMETHODIMP
 nsWebShell::CanBack(void)
 {
-  return (mHistoryIndex > 0 ? NS_OK : PR_FALSE);
+  return (mHistoryIndex > 0 ? NS_OK : NS_FALSE);
 }
 
 NS_IMETHODIMP
@@ -919,7 +919,7 @@ nsWebShell::Forward(void)
 NS_IMETHODIMP
 nsWebShell::CanForward(void)
 {
-  return (mHistoryIndex  < mHistory.Count() - 1 ? NS_OK : PR_FALSE);
+  return (mHistoryIndex  < mHistory.Count() - 1 ? NS_OK : NS_FALSE);
 }
 
 NS_IMETHODIMP
