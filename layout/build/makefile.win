@@ -76,7 +76,9 @@ SUB_LIBRARIES=                          \
 !endif
 !ifdef MOZ_SVG
  $(DIST)\lib\layoutsvgbase_s.lib        \
- $(DIST)\lib\moz_art_lgpl.lib           \
+#ifdef XXX
+# $(DIST)\lib\moz_art_lgpl.lib           \
+#endif XXX
 # ifdef XXX
  $(DIST)\lib\layoutsvgrenderergdiplus_s.lib \
 # endif XXX
