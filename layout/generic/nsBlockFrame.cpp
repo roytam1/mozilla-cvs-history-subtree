@@ -989,43 +989,6 @@ HaveAutoWidth(const nsHTMLReflowState& aReflowState)
 }
 
 
-// XXXldb why do we check vertical and horizontal at the same time?  Don't
-// we usually care about one or the other?
-static PRBool
-IsPercentageAwareChild(const nsIFrame* aFrame)
-{
-  NS_ASSERTION(aFrame, "null frame is not allowed");
-
-  const nsStyleMargin* margin = aFrame->GetStyleMargin();
-  if (nsLineLayout::IsPercentageUnitSides(&margin->mMargin)) {
-    return PR_TRUE;
-  }
-
-  const nsStylePadding* padding = aFrame->GetStylePadding();
-  if (nsLineLayout::IsPercentageUnitSides(&padding->mPadding)) {
-    return PR_TRUE;
-  }
-
-  const nsStyleBorder* border = aFrame->GetStyleBorder();
-  if (nsLineLayout::IsPercentageUnitSides(&border->mBorder)) {
-    return PR_TRUE;
-  }
-
-  const nsStylePosition* pos = aFrame->GetStylePosition();
-
-  if (eStyleUnit_Percent == pos->mWidth.GetUnit()
-    || eStyleUnit_Percent == pos->mMaxWidth.GetUnit()
-    || eStyleUnit_Percent == pos->mMinWidth.GetUnit()
-    || eStyleUnit_Percent == pos->mHeight.GetUnit()
-    || eStyleUnit_Percent == pos->mMinHeight.GetUnit()
-    || eStyleUnit_Percent == pos->mMaxHeight.GetUnit()
-    || nsLineLayout::IsPercentageUnitSides(&pos->mOffset)) { // XXX need more here!!!
-    return PR_TRUE;
-  }
-
-  return PR_FALSE;
-}
-
 PRBool
 nsBlockFrame::CheckForCollapsedBottomMarginFromClearanceLine()
 {
@@ -2978,7 +2941,6 @@ nsBlockFrame::DoReflowInlineFrames(nsBlockReflowState& aState,
   PRUint8 lineReflowStatus = LINE_REFLOW_OK;
   PRInt32 i;
   nsIFrame* frame = aLine->mFirstChild;
-  aLine->SetHasPercentageChild(PR_FALSE); // To be set by ReflowInlineFrame below
   // need to repeatedly call GetChildCount here, because the child
   // count can change during the loop!
   for (i = 0; i < aLine->GetChildCount(); i++) { 
@@ -3106,11 +3068,6 @@ nsBlockFrame::ReflowInlineFrame(nsBlockReflowState& aState,
   nsFrame::ListTag(stdout, aFrame);
   printf(" reflowingFirstLetter=%s\n", reflowingFirstLetter ? "on" : "off");
 #endif
-
-  // Remember if we have a percentage aware child on this line
-  if (IsPercentageAwareChild(aFrame)) {
-    aLine->SetHasPercentageChild(PR_TRUE);
-  }
 
   // Reflow the inline frame
   nsReflowStatus frameReflowStatus;

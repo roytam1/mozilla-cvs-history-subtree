@@ -263,15 +263,6 @@ public:
     return mFlags.mImpactedByFloat;
   }
 
-  // mHasPercentageChild bit
-  void SetHasPercentageChild(PRBool aOn) {
-    NS_ASSERTION((PR_FALSE==aOn || PR_TRUE==aOn), "somebody is playing fast and loose with bools and bits!");
-    mFlags.mHasPercentageChild = aOn;
-  }
-  PRBool HasPercentageChild() const {
-    return mFlags.mHasPercentageChild;
-  }
-
   // mLineWrapped bit
   void SetLineWrapped(PRBool aOn) {
     NS_ASSERTION((PR_FALSE==aOn || PR_TRUE==aOn), "somebody is playing fast and loose with bools and bits!");
@@ -442,13 +433,12 @@ public:
     PRUint32 mHasClearance : 1;
     PRUint32 mBlock : 1;
     PRUint32 mImpactedByFloat : 1;
-    PRUint32 mHasPercentageChild : 1;
     PRUint32 mLineWrapped: 1;
     PRUint32 mEmptyCacheValid: 1;
     PRUint32 mEmptyCacheState: 1;
     PRUint32 mBreakType : 4;
 
-    PRUint32 mChildCount : 19;
+    PRUint32 mChildCount : 20;
   };
 
   struct ExtraData {
