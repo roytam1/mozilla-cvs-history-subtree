@@ -1301,7 +1301,7 @@ DumpContext(nsIFrame* aFrame, nsStyleContext* aContext)
   if (aContext) {
     fprintf(stdout, " style: %p ", NS_STATIC_CAST(void*, aContext));
 
-    nsCOMPtr<nsIAtom> pseudoTag = aContext->GetPseudoType();
+    nsIAtom* pseudoTag = aContext->GetPseudoType();
     if (pseudoTag) {
       nsAutoString  buffer;
       pseudoTag->ToString(buffer);
@@ -1640,7 +1640,7 @@ FrameManager::ReResolveStyleContext(nsIPresContext* aPresContext,
 
   if (oldContext) {
     oldContext->AddRef();
-    nsCOMPtr<nsIAtom> pseudoTag = oldContext->GetPseudoType();
+    nsIAtom* pseudoTag = oldContext->GetPseudoType();
     nsIContent* localContent = aFrame->GetContent();
     nsIContent* content = localContent ? localContent : aParentContent;
 
