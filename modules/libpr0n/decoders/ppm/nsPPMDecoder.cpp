@@ -26,6 +26,7 @@
 
 #include "nsIInputStream.h"
 #include "nsIImageContainer.h"
+#include "nsIImageContainerObserver.h"
 
 #include "nspr.h"
 
@@ -214,7 +215,9 @@ NS_IMETHODIMP nsPPMDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PRU
     readLen -= i + j;
     dataLen = readLen; // since this is the first pass, we don't have any data waiting that we need to keep track of
 
-    mImage->Init(w, h);
+    nsCOMPtr<nsIImageContainerObserver> conObserver(do_QueryInterface(mObserver));
+
+    mImage->Init(w, h, conObserver);
     if (mObserver)
       mObserver->OnStartContainer(nsnull, nsnull, mImage);
 

@@ -92,6 +92,18 @@ NS_IMETHODIMP nsImageRequestProxy::GetImageStatus(PRUint32 *aStatus)
 }
 
 
+
+/** nsIImageContainerObserver methods **/
+
+
+/* [noscript] void frameChanged (in nsIImageContainer container, in nsIImageFrame newframe, in nsRect dirtyRect); */
+NS_IMETHODIMP nsImageRequestProxy::FrameChanged(nsIImageContainer *container, nsIImageFrame *newframe, nsRect * dirtyRect)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+
+
 /** nsIImageDecoderObserver methods **/
 
 /* void onStartDecode (in nsIImageRequest request, in nsISupports cx); */
@@ -156,6 +168,4 @@ NS_IMETHODIMP nsImageRequestProxy::OnStopDecode(nsIImageRequest *request, nsISup
 
   return NS_OK;
 }
-
-
 

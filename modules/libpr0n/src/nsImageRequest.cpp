@@ -110,7 +110,7 @@ NS_IMETHODIMP nsImageRequest::Cancel(nsresult status)
 
   nsresult rv = NS_OK;
   if (mChannel && mProcessing) {
-    nsresult rv = mChannel->Cancel(status);
+    rv = mChannel->Cancel(status);
   }
   return rv;
 }
@@ -133,6 +133,21 @@ NS_IMETHODIMP nsImageRequest::GetImageStatus(PRUint32 *aStatus)
 
 
 
+/** nsIImageContainerObserver methods **/
+
+/* [noscript] void frameChanged (in nsIImageContainer container, in nsIImageFrame newframe, in nsRect dirtyRect); */
+NS_IMETHODIMP nsImageRequest::FrameChanged(nsIImageContainer *container, nsIImageFrame *newframe, nsRect * dirtyRect)
+{
+  PRInt32 i = -1;
+  PRInt32 count = mObservers.Count();
+
+  while (++i < count) {
+    nsIImageContainerObserver *ob = NS_STATIC_CAST(nsIImageContainerObserver*, mObservers[i]);
+    if (ob) ob->FrameChanged(container, newframe, dirtyRect);
+  }
+
+  return NS_OK;
+}
 
 
 
@@ -325,6 +340,3 @@ NS_IMETHODIMP nsImageRequest::OnDataAvailable(nsIChannel *channel, nsISupports *
   PRUint32 wrote;
   return mDecoder->WriteFrom(inStr, count, &wrote);
 }
-
-
-

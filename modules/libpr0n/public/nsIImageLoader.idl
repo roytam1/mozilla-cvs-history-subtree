@@ -24,7 +24,6 @@
 #include "nsISupports.idl"
 #include "gfxtypes.idl"
 
-interface nsIImage;
 interface nsIImageDecoderObserver;
 interface nsIImageRequest;
 interface nsISimpleEnumerator;

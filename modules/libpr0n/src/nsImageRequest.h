@@ -30,6 +30,7 @@
 
 #include "nsIChannel.h"
 #include "nsIImageContainer.h"
+#include "nsIImageContainerObserver.h"
 #include "nsIImageDecoder.h"
 #include "nsIImageDecoderObserver.h"
 #include "nsIStreamListener.h"
@@ -54,6 +55,7 @@ enum {
 };
 
 class nsImageRequest : public nsIImageRequest,
+                       public nsIImageContainerObserver,
                        public nsIImageDecoderObserver, 
                        public nsIStreamListener
 {
@@ -68,6 +70,7 @@ public:
 
   NS_DECL_ISUPPORTS
   NS_DECL_NSIIMAGEREQUEST
+  NS_DECL_NSIIMAGECONTAINEROBSERVER
   NS_DECL_NSIIMAGEDECODEROBSERVER
   NS_DECL_NSISTREAMLISTENER
   NS_DECL_NSISTREAMOBSERVER

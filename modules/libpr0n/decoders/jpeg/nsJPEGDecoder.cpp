@@ -32,6 +32,7 @@
 
 #include "nsIComponentManager.h"
 
+#include "nsIImageContainerObserver.h"
 
 NS_IMPL_ISUPPORTS2(nsJPEGDecoder, nsIImageDecoder, nsIOutputStream)
 
@@ -213,6 +214,7 @@ NS_IMETHODIMP nsJPEGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PR
   int status;
   switch (mState) {
   case JPEG_HEADER:
+  {
     /* Step 3: read file parameters with jpeg_read_header() */
     if (jpeg_read_header(&mInfo, TRUE) == JPEG_SUSPENDED)
       return NS_OK;
@@ -228,7 +230,8 @@ NS_IMETHODIMP nsJPEGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PR
 
     mObserver->OnStartDecode(nsnull, nsnull);
 
-    mImage->Init(mInfo.image_width, mInfo.image_height); 
+    nsCOMPtr<nsIImageContainerObserver> conObserver(do_QueryInterface(mObserver));
+    mImage->Init(mInfo.image_width, mInfo.image_height, conObserver);
     mObserver->OnStartContainer(nsnull, nsnull, mImage);
 
     mFrame = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
@@ -259,7 +262,7 @@ NS_IMETHODIMP nsJPEGDecoder::WriteFrom(nsIInputStream *inStr, PRUint32 count, PR
     }
 
     mState = JPEG_START_DECOMPRESS;
-
+  }
   case JPEG_START_DECOMPRESS:
 
     /* Step 4: set parameters for decompression */

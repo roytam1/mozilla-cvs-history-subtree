@@ -27,6 +27,8 @@
 #include "nsIImageFrame.h"
 #include "nsMemory.h"
 
+#include "nsIImageContainerObserver.h"
+
 #ifndef XP_MAC
 #endif
 
@@ -230,7 +232,9 @@ int BeginGIF(
   if (decoder->mObserver)
     decoder->mObserver->OnStartDecode(nsnull, nsnull);
 
-  decoder->mImageContainer->Init(aLogicalScreenWidth, aLogicalScreenHeight);
+  nsCOMPtr<nsIImageContainerObserver> conObserver(do_QueryInterface(decoder->mObserver));
+
+  decoder->mImageContainer->Init(aLogicalScreenWidth, aLogicalScreenHeight, conObserver);
 
   if (decoder->mObserver)
     decoder->mObserver->OnStartContainer(nsnull, nsnull, decoder->mImageContainer);
