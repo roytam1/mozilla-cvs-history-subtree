@@ -38,9 +38,8 @@ protected:
     nsCOMPtr<nsIInputStream>  mPipeIn;
     nsCOMPtr<nsIOutputStream> mPipeOut;
     nsCOMPtr<nsIChannel>      mChannelToResume;
-    PRLock                   *mCLock;
+    PRLock                   *mLock;
     PRUint32                  mPendingCount;
-    PRLock                   *mPLock;
     nsresult                  mListenerStatus;
 };
 

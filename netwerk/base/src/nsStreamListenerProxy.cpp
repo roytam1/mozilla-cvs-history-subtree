@@ -57,31 +57,23 @@
 //
 
 nsStreamListenerProxy::nsStreamListenerProxy()
-    : mCLock(nsnull)
+    : mLock(nsnull)
     , mPendingCount(0)
-    , mPLock(nsnull)
     , mListenerStatus(NS_OK)
 { }
 
 nsStreamListenerProxy::~nsStreamListenerProxy()
 {
-    if (mCLock) {
-        PR_DestroyLock(mCLock);
-        mCLock = nsnull;
-    }
-    if (mPLock) {
-        PR_DestroyLock(mPLock);
-        mPLock = nsnull;
+    if (mLock) {
+        PR_DestroyLock(mLock);
+        mLock = nsnull;
     }
 }
 
 PRUint32
 nsStreamListenerProxy::GetPendingCount()
 {
-    nsAutoLock lock(mPLock);
-    PRUint32 c = mPendingCount;
-    mPendingCount = 0;
-    return c;
+    return PR_AtomicSet((PRInt32 *) &mPendingCount, 0);
 }
 
 //
@@ -259,7 +251,7 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     // Enter the ChannelToResume lock
     //
     {
-        nsAutoLock lock(mCLock);
+        nsAutoLock lock(mLock);
 
         // 
         // Try to copy data into the pipe.
@@ -288,25 +280,12 @@ nsStreamListenerProxy::OnDataAvailable(nsIChannel *aChannel,
     }
 
     //
-    // Enter the PendingCount lock
+    // Update the pending count; return if able to piggy-back on a pending event.
     //
-    {
-        nsAutoLock lock(mPLock);
-
-        //
-        // If the pending count is non-zero then there is a pending
-        // event, so just increment the pending count and let that 
-        // event do the work.  Otherwise, set the pending count and
-        // post an event.
-        //
-        if (mPendingCount > 0) {
-            mPendingCount += bytesWritten;
-            LOG(("Piggy-backing pending OnDataAvailable event [mPendingCount=%u]\n",
-                mPendingCount));
-            return NS_OK;
-        }
-        else
-            mPendingCount = bytesWritten;
+    PRUint32 total = PR_AtomicAdd((PRInt32 *) &mPendingCount, bytesWritten);
+    if (total > bytesWritten) {
+        LOG(("Piggy-backing pending OnDataAvailable event [total=%u]\n", total));
+        return NS_OK;
     }
 
     //
@@ -338,10 +317,8 @@ nsStreamListenerProxy::Init(nsIStreamListener *aListener,
     NS_PRECONDITION(GetReceiver() == nsnull, "Listener already set");
     NS_PRECONDITION(GetEventQueue() == nsnull, "Event queue already set");
 
-    mCLock = PR_NewLock();
-    if (!mCLock) return NS_ERROR_OUT_OF_MEMORY;
-    mPLock = PR_NewLock();
-    if (!mPLock) return NS_ERROR_OUT_OF_MEMORY;
+    mLock = PR_NewLock();
+    if (!mLock) return NS_ERROR_OUT_OF_MEMORY;
 
     //
     // Create the pipe
@@ -384,7 +361,7 @@ nsStreamListenerProxy::OnEmpty(nsIInputStream *aInputStream)
     //
     nsCOMPtr<nsIChannel> chan;
     {
-        nsAutoLock lock(mCLock);
+        nsAutoLock lock(mLock);
         chan = mChannelToResume;
         mChannelToResume = 0;
     }
