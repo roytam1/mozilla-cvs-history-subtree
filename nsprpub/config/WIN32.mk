@@ -71,10 +71,11 @@ OS_CFLAGS = -W3 -nologo -GF -Gy
 ifdef BUILD_OPT
 ifeq ($(OS_TARGET),WINCE)
 OS_CFLAGS += -Zl
+OPTIMIZER = -O1
 else
 OS_CFLAGS += -MD
-endif
 OPTIMIZER = -O2
+endif
 DEFINES = -UDEBUG -U_DEBUG -DNDEBUG
 DLLFLAGS = -OUT:"$@"
 OBJDIR_TAG = _OPT
@@ -92,7 +93,7 @@ else
 # (RTL) in the debug build
 #
 ifeq ($(OS_TARGET),WINCE)
-OPTIMIZER = -Od -Zd
+OPTIMIZER = -Od -Zi
 OS_CFLAGS += -Zl
 else
 OPTIMIZER = -Od -Z7

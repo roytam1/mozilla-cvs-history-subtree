@@ -107,7 +107,7 @@ ifneq ($(OS_TARGET),WINCE)
 #//  -Zi -GM needed to compile mmx functions in assembly.
 CFLAGS	+= -Zi -GM
 else
-CFLAGS	+= -Zd -GM
+CFLAGS	+= -Zi -GM
 endif
 endif
 endif

@@ -991,7 +991,7 @@ case "$target" in
             else
                 LDFLAGS="$LDFLAGS -MACHINE:IX86"
             fi
-            MOZ_DEBUG_FLAGS='-Zd'
+            MOZ_DEBUG_FLAGS='-Zi'
         else
             LIBS="$LIBS kernel32.lib user32.lib gdi32.lib winmm.lib wsock32.lib advapi32.lib"
             MOZ_DEBUG_FLAGS='-Zi'

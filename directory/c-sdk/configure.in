@@ -1262,10 +1262,11 @@ case "$target" in
         if test -n "$MOZ_OPTIMIZE"; then
             if test "$OS_TARGET" = "WINCE"; then
                 CFLAGS="$CFLAGS -Zl"
+                _OPTIMIZE_FLAGS=-O1
             else
                 CFLAGS="$CFLAGS -MD"
+                _OPTIMIZE_FLAGS=-O2
             fi
-            _OPTIMIZE_FLAGS=-O2
             DLLFLAGS='-OUT:"$@"'
 
             if test -n "$MOZ_PROFILE"; then
@@ -1276,14 +1277,15 @@ case "$target" in
         else
             if test "$OS_TARGET" = "WINCE"; then
                 CFLAGS="$CFLAGS -Zl"
+                _DEBUG_FLAGS="-Od -Zi"
             else
                 if test -n "$USE_DEBUG_RTL"; then
                     CFLAGS="$CFLAGS -MDd"
                 else
                     CFLAGS="$CFLAGS -MD"
                 fi
+                _DEBUG_FLAGS="-Od -Z7"
             fi
-            _DEBUG_FLAGS="-Od -Z7"
             DLLFLAGS='-DEBUG -DEBUGTYPE:CV -OUT:"$@"'
             if test -n "$GLOWCODE"; then
                 DLLFLAGS='-DEBUG -DEBUGTYPE:both -INCLUDE:_GlowCode -OUT:"$@"'
