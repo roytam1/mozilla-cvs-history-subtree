@@ -20,64 +20,49 @@
 
 #include "nsCOMPtr.h"
 #include "nsIStreamConverter.h" 
+#include "nsIMimeStreamConverter.h"
 #include "nsIOutputStream.h"
 #include "nsIMimeEmitter.h" 
 #include "nsIURI.h"
+#include "nsIBuffer.h"
+#include "nsIBufferInputStream.h"
+#include "nsIBufferOutputStream.h"
 
-class nsStreamConverter : public nsIStreamConverter { 
+#define NS_STREAM_CONVERTER_SEGMENT_SIZE   (4*1024)
+#define NS_STREAM_CONVERTER_BUFFER_SIZE    (1024*1024)//(32*1024)
+
+class nsStreamConverter : public nsIStreamConverter, public nsIMimeStreamConverter, public nsIBufferObserver { 
 public: 
   nsStreamConverter();
   virtual ~nsStreamConverter();
-   
-  /* this macro defines QueryInterface, AddRef and Release for this class */
+
   NS_DECL_ISUPPORTS 
 
-  //
-  // 
-  // This is the output stream where the stream converter will write processed data after 
-  // conversion. 
-  // 
-  NS_IMETHOD SetOutputStream(nsIOutputStream *aOutStream, nsIURI *aURI, nsMimeOutputType aType,
-                             nsMimeOutputType *aOutFormat, char **aOutputContentType);
+  // nsIStreamConverter
+  NS_IMETHOD Init(nsIURI *aURI, nsIStreamListener *outListener);
+  NS_IMETHOD GetContentType(char **aOutputContentType);
 
-  // 
-  // This is the type of output operation that is being requested by libmime. The types
-  // of output are specified by nsIMimeOutputType enum
-  // 
-  NS_IMETHOD SetOutputType(nsMimeOutputType aType); 
+  // nsIMimeStreamConverter support
+  NS_IMETHOD SetMimeOutputType(nsMimeOutputType aType);
+  NS_IMETHOD GetMimeOutputType(nsMimeOutputType *aOutFormat);
+  NS_IMETHOD SetStreamURI(nsIURI *aURI);
 
-  // 
-  // The output listener can be set to allow for the flexibility of having the stream converter 
-  // directly notify the listener of the output stream for any processed/converter data. If 
-  // this output listener is not set, the data will be written into the output stream but it is 
-  // the responsibility of the client of the stream converter to handle the resulting data. 
-  // 
-  NS_IMETHOD SetOutputListener(nsIStreamListener *aOutListener); 
-
-  // 
-  // This is needed by libmime for MHTML link processing...this is the URI associated
-  // with this input stream
-  // 
-  NS_IMETHOD SetStreamURI(nsIURI *aURI); 
+  ////////////////////////////////////////////////////////////////////////////
+  // nsIBufferObserver:
+  NS_IMETHOD OnFull(nsIBuffer* buffer);
+  NS_IMETHOD OnWrite(nsIBuffer* aBuffer, PRUint32 aCount);
+  NS_IMETHOD OnEmpty(nsIBuffer* buffer);
 
   /////////////////////////////////////////////////////////////////////////////
   // Methods for nsIStreamListener...
   /////////////////////////////////////////////////////////////////////////////
-  //
-  // Notify the client that data is available in the input stream.  This
-  // method is called whenver data is written into the input stream by the
-  // networking library...
-  //
+
   NS_IMETHOD OnDataAvailable(nsIChannel * aChannel, 
 							 nsISupports    *ctxt, 
                              nsIInputStream *inStr, 
                              PRUint32       sourceOffset, 
                              PRUint32       count);
 
-  /////////////////////////////////////////////////////////////////////////////
-  // Methods for nsIStreamObserver 
-  /////////////////////////////////////////////////////////////////////////////
-  //
   // Notify the observer that the URL has started to load.  This method is
   // called only once, at the beginning of a URL load.
   //
@@ -97,12 +82,16 @@ public:
   NS_IMETHOD          DetermineOutputFormat(const char *url, nsMimeOutputType *newType);
 
 private:
-  nsCOMPtr<nsIOutputStream>     mOutStream;     // output stream
+  // the input and output streams form a pipe...they need to be passed around together..
+  nsCOMPtr<nsIBufferOutputStream>     mOutputStream;     // output stream
+  nsCOMPtr<nsIBufferInputStream>	    mInputStream;
+
   nsCOMPtr<nsIStreamListener>   mOutListener;   // output stream listener
 
   nsCOMPtr<nsIMimeEmitter>      mEmitter;       // emitter being used...
   nsCOMPtr<nsIURI>              mURI;           // URI being processed
   nsMimeOutputType              mOutputType;    // the output type we should use for the operation
+  PRBool						mAlreadyKnowOutputType;
 
   void                          *mBridgeStream; // internal libmime data stream
   PRInt32                       mTotalRead;     // Counter variable
@@ -115,7 +104,7 @@ private:
                                                   // data so don't feed the parser any more!
 }; 
 
-/* this function will be used by the factory to generate an class access object....*/
-extern nsresult NS_NewStreamConverter(nsIStreamConverter **aInstancePtrResult);
+// factory method
+extern nsresult NS_NewStreamConverter(const nsIID &aIID, void ** aInstancePtrResult);
 
 #endif /* nsStreamConverter_h_ */
