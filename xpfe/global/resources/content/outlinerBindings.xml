@@ -126,8 +126,8 @@
          if (f > 0) {
            var p = this.outlinerBoxObject.getPageCount();
            i = c - p;
-           if (i < 0)
-             i = 0;
+           if (f - p < 0)
+             i = c - f;
            this.outlinerBoxObject.scrollByPages(-1);
          }
          this.outlinerBoxObject.selection.timedSelect(i, 500);
@@ -144,10 +144,11 @@
          var f = this.outlinerBoxObject.getFirstVisibleRow();
          var p = this.outlinerBoxObject.getPageCount();
          var i = l;
-         if (f <= l - p) {
+         var lastTopRowIndex = l - p;
+         if (f <= lastTopRowIndex) {
            i = c + p;
-           if (i > l)
-             i = l;
+           if (f + p > lastTopRowIndex)
+             i = lastTopRowIndex + c - f + 1;
            this.outlinerBoxObject.scrollByPages(1);
          }
          this.outlinerBoxObject.selection.timedSelect(i, 500);
@@ -165,8 +166,8 @@
          if (f > 0) {
            var p = this.outlinerBoxObject.getPageCount();
            i = c - p;
-           if (i < 0)
-             i = 0;
+           if (f - p < 0)
+             i = c - f;
            this.outlinerBoxObject.scrollByPages(-1);
          }
          this.outlinerBoxObject.selection.currentIndex = i;
@@ -183,10 +184,11 @@
          var f = this.outlinerBoxObject.getFirstVisibleRow();
          var p = this.outlinerBoxObject.getPageCount();
          var i = l;
-         if (f <= l - p) {
+         var lastTopRowIndex = l - p;
+         if (f <= lastTopRowIndex) {
            i = c + p;
-           if (i > l)
-             i = l;
+           if (f + p > lastTopRowIndex)
+             i = lastTopRowIndex + c - f + 1;
            this.outlinerBoxObject.scrollByPages(1);
          }
          this.outlinerBoxObject.selection.currentIndex = i;
