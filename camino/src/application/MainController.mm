@@ -397,8 +397,8 @@ const int kReuseWindowOnAE = 2;
 //Send URL to default mail app
 - (IBAction)sendURL:(id)aSender
 {
-  NSString* titleString;
-  NSString* urlString;
+  NSString* titleString = nil;
+  NSString* urlString = nil;
 
   [[[self getMainWindowBrowserController] getBrowserWrapper] getTitle:&titleString andHref:&urlString];
   
@@ -924,8 +924,8 @@ const int kReuseWindowOnAE = 2;
   
   if ( action == @selector(sendURL:) )
   {
-    NSString* titleString;
-    NSString* urlString;
+    NSString* titleString = nil;
+    NSString* urlString = nil;
     [[[self getMainWindowBrowserController] getBrowserWrapper] getTitle:&titleString andHref:&urlString];
     return [urlString length] > 0 && ![urlString isEqualToString:@"about:blank"];
   }

@@ -264,8 +264,8 @@ const int kBookmarksRootItemTag = -2;
     {
       BrowserWrapper* browserWrapper = (BrowserWrapper*)[[tabBrowser tabViewItemAtIndex: i] view];
       
-      NSString* titleString;
-      NSString* hrefString;
+      NSString* titleString = nil;
+      NSString* hrefString = nil;
       [browserWrapper getTitle:&titleString andHref:&hrefString];
 
       NSDictionary* itemDict = [NSDictionary dictionaryWithObjectsAndKeys:

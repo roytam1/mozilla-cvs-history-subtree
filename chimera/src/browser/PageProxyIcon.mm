@@ -70,8 +70,8 @@
 
 - (void) mouseDragged: (NSEvent*) event
 {
-  NSString*		urlString;
-  NSString*		titleString;
+  NSString*		urlString = nil;
+  NSString*		titleString = nil;
   [[[[self window] windowController] getBrowserWrapper] getTitle:&titleString andHref:&urlString];
 
   NSString     *cleanedTitle = [titleString stringByReplacingCharactersInSet:[NSCharacterSet controlCharacterSet] withString:@" "];
