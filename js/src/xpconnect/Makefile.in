@@ -34,13 +34,13 @@
 DEPTH		= ../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@ @srcdir@/idl 
 
 include $(DEPTH)/config/autoconf.mk
+VPATH		= @srcdir@$(VPS)@srcdir@/idl 
 
 MODULE		= xpconnect
 LIBRARY_NAME	= xpconnect
-EXPORT_LIBRARY = 1
+EXPORT_LIBRARY	= 1
 SHORT_LIBNAME	= xpconect
 IS_COMPONENT	= 1
 MODULE_NAME	= xpconnect

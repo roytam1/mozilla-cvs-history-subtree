@@ -22,24 +22,24 @@
 DEPTH		= ../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= \
-	@srcdir@ \
-	@srcdir@/../base/public \
-	@srcdir@/../dns/public \
-	@srcdir@/../cookie/public \
-	@srcdir@/../cache/public \
-	@srcdir@/../socket/base \
-	@srcdir@/../mime/public \
-	@srcdir@/../streamconv/public \
-	@srcdir@/../protocol/http/public \
-	@srcdir@/../protocol/file/public \
-	@srcdir@/../protocol/data/public \
-	@srcdir@/../protocol/jar/public \
-	@srcdir@/../protocol/res/public \
-	@srcdir@/../protocol/about/public \
-	$(NULL)
 
 include $(DEPTH)/config/autoconf.mk
+VPATH		= \
+	@srcdir@$(VPS)\
+	@srcdir@/../base/public$(VPS)\
+	@srcdir@/../dns/public$(VPS)\
+	@srcdir@/../cookie/public$(VPS)\
+	@srcdir@/../cache/public$(VPS)\
+	@srcdir@/../socket/base$(VPS)\
+	@srcdir@/../mime/public$(VPS)\
+	@srcdir@/../streamconv/public$(VPS)\
+	@srcdir@/../protocol/http/public$(VPS)\
+	@srcdir@/../protocol/file/public$(VPS)\
+	@srcdir@/../protocol/data/public$(VPS)\
+	@srcdir@/../protocol/jar/public$(VPS)\
+	@srcdir@/../protocol/res/public$(VPS)\
+	@srcdir@/../protocol/about/public$(VPS)\
+	$(NULL)
 
 MODULE		= necko
 LIBRARY_NAME	= necko

@@ -19,19 +19,19 @@
 DEPTH		= ../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= \
-	@srcdir@ \
-	@srcdir@/../unicharutil/idl \
-	@srcdir@/../locale/idl \
-	@srcdir@/../strres/public \
-	@srcdir@/../chardet/public \
-	$(NULL)
 
 include $(DEPTH)/config/autoconf.mk
+VPATH		= \
+		@srcdir@$(VPS)\
+		@srcdir@/../unicharutil/idl$(VPS)\
+		@srcdir@/../locale/idl$(VPS)\
+		@srcdir@/../strres/public$(VPS)\
+		@srcdir@/../chardet/public$(VPS)\
+		$(NULL)
 
 MODULE		= i18n
 LIBRARY_NAME	= i18n
-EXPORT_LIBRARY = 1
+EXPORT_LIBRARY	= 1
 IS_COMPONENT	= 1
 MODULE_NAME	= nsI18nModule
 

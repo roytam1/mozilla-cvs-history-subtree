@@ -34,9 +34,9 @@
 DEPTH		= ../../../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@ @srcdir@/idl
 
 include $(DEPTH)/config/autoconf.mk
+VPATH		= @srcdir@$(VPS)@srcdir@/idl
 
 MODULE		= xpconnect_tests
 LIBRARY_NAME	= xpctest

@@ -24,9 +24,9 @@
 DEPTH		= ../..
 topsrcdir	= @top_srcdir@
 srcdir		= @srcdir@
-VPATH		= @srcdir@ @srcdir@/idl
 
 include $(DEPTH)/config/autoconf.mk
+VPATH		= @srcdir@$(VPS)@srcdir@/idl
 
 MODULE		= jsdebug
 XPIDL_MODULE	= jsdservice
