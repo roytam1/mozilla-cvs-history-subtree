@@ -79,7 +79,8 @@
 #define HG42420
 #define HG42933
 #define HG52965
-#define HG66663 ,XP_Bool,XP_Bool
+#define HG66663
+#define HG66664
 #define HG65243
 #define HG00282
 #define HG02872
@@ -101,7 +102,6 @@
 #define HG82309
 #define HG63256
 #define HG87635
-#define HG93653
 #define HG32428
 #define HG82454
 #define HG43788
@@ -120,24 +120,24 @@
 #define HG15448	,FALSE, FALSE
 #define HG83336
 #define HG63531	0
-#define HG73653 0
+#define HG73653(a) 0
 #define HG52242
 #define HG42320
 #define HG98379
-#define HG65293	0
+#define HG65293(a) 0
 #define HG42539
 #define HG72761
 #define HG42490
 #define HG73699
 #define HG72873
-#define HG83777
+#define HG83778
 #define HG32839
 #define HG73209
 #define HG65288 "client.h"
 #define HG73891
 #define HG76298
 #define HG87325
-#define HG73896	TRUE
+#define HG73896
 #define HG73684
 #define HG83903
 #define HG32138
@@ -163,7 +163,7 @@
 #define HG42422
 #define HG64398
 #define HG77355
-#define HG42420
+#define HG42421
 #define HG87237
 #define HG52423
 #define HG76373 TRUE
@@ -237,12 +237,131 @@
 #define HG02700 "NIKI"
 #define HG99877 "prefapi.h"
 #define HG02902 "msgsend.h"
+#define HG72621
+#define HG10828
+#define HG82727
+#define HG26763
+#define HG26250
+#define HG26251
+#define HG26252	SECFailure;
+#define HG26253	FALSE
+#define HG26237
+#define HG26748
+#define HG98476
+#define HG83764
+#define HG83744
+#define HG83476
+#define HG84777
+#define HG27398
+#define HG83263
+#define HG22730
+#define HG74640
+#define HG87365
+#define HG73632
+#define HG29383
+#define HG25262
+#define HG17993
+#define HG72294
+#define HG21522
+#define HG03937
+#define HG21632
+#define HG22220
+#define HG38932
+#define HG83330
+#define HG20476
+#define HG87358
+#define HG93765
+#define HG92743
+#define HG83665
+#define HG98376
+#define HG92362
+#define HG26300
+#define HG27229 "mkfile.h"
+#define HG27230
+#define HG27326 "mkutils.h"
+#define HG32828
+#define HG26363 "msgnet.h"
+#define HG26227
+#define HG27327 FALSE
+#define HG38373 FALSE
+#define HG72524
+#define HG73654 FALSE
+#define HG87263 FALSE
+#define HG83733 FALSE
+#define HG32830 FALSE
+#define HG29237
+#define HG87373 "net.h"
+#define HG73226
+#define HG38731
+#define HG87272 MK_LDAP_TITLE
+#define HG73272 MK_LDAP_TITLE
+#define HG73211
+#define HG83363
+#define HG26557
+#define HG27328
+#define HG23833
+#define HG28330
+#define HG10299 "gui.h"
+#define HG10300
+#define HG82332
+#define HG32949
+#define HG38737
+#define HG29239
+#define HG28287
+#define HG22999
+#define HG93230
+#define HG29399
+#define HG20900
+#define HG23929 "mktcp.h"
+#define HG82300
+#define HG21899
+#define HG19088
+#define HG10877
+#define HG23298
+#define HG29898
+#define HG22201
+#define HG38738
+#define HG02873
+#define HG92892
+#define HG92871
+#define HG82772
+#define HG03903
+#define HG82773 FALSE
+#define HG22087
+#define HG21092
+#define HG09309
+#define HG29802 0
+#define HG93882
+#define HG93898
+#define HG93288
+#define HG21090
+#define HG20092
+#define HG29398
+#define HG83273
+#define HG09438 "mkpop3.h"
+#define HG09439
+#define HG23535 "mktcp.h"
+#define HG27655
+#define HG83763
+#define HG35353
+#define HG38763 "mime.h"
+#define HG83777
+#define HG35632
+#define HG83773
+#define HG83787
+#define HG73678
+#define HG84378
+#define HG84772
+
+#define HG99875 XP_STRDUP
+#define HG99876 XP_STRDUP
+#define HG99879 XP_STRDUP
+#define HG99880
+#define HG99881
+#define HG99882
+
+
 #if 0
-#define 
-#define 
-#define 
-#define 
-#define 
 #define 
 #define 
 #define 
@@ -314,5 +433,3 @@
 #define HG75442
 #define HG59731
 #define HG56898
-
-#define HG42421
