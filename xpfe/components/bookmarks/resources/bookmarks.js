@@ -584,7 +584,7 @@ var BookmarksCommand = {
       // Select the first tab in the group if we aren't loading in the background.
       if (!PREF.getBoolPref("browser.tabs.loadInBackground")) {
         var tabs = browser.mTabContainer.childNodes;
-        browser.selectedTab = tabs[index];
+        browser.selectedTab = tabs[tabCount];
       }
     } else {
       dump("Open Group in new window: not implemented...\n");
