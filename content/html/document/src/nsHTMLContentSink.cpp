@@ -61,6 +61,9 @@
 #include "nsIScrollableView.h"
 #include "nsHTMLAtoms.h"
 #include "nsIFrame.h"
+#include "nsICharsetConverterManager.h"
+#include "nsIUnicodeDecoder.h"
+#include "nsICharsetAlias.h"
 
 #include "nsIWebShell.h"
 #include "nsIDocument.h"
@@ -119,6 +122,7 @@ static NS_DEFINE_IID(kIHTMLContentContainerIID, NS_IHTMLCONTENTCONTAINER_IID);
 static NS_DEFINE_IID(kIStreamListenerIID, NS_ISTREAMLISTENER_IID);
 static NS_DEFINE_IID(kIStyleSheetLinkingElementIID, NS_ISTYLESHEETLINKINGELEMENT_IID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
+static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
 //----------------------------------------------------------------------
 
@@ -4165,13 +4169,54 @@ HTMLContentSink::OnStreamComplete(nsIStreamLoader* aLoader,
                                   PRUint32 stringLen,
                                   const char* string)
 {
+  
+  static nsString unicodeXferBuf;
+  PRUnichar *unicodeString; 
+  nsAutoString characterSet;
+  nsICharsetConverterManager  *charsetConv = nsnull;
   nsresult rv = NS_OK;
-  nsString aData(string, stringLen);
+
+  nsCOMPtr<nsIUnicodeDecoder> unicodeDecoder;
+  //PRUnichar *unicodeString = nsnull;
+  PRInt32 unicodeLength;
+
+  // charset from document default
+  rv = mDocument->GetDocumentCharacterSet(characterSet);
+
+  rv = nsServiceManager::GetService(kCharsetConverterManagerCID, 
+                 NS_GET_IID(nsICharsetConverterManager), 
+                 (nsISupports**)&charsetConv);
+
+  if (NS_SUCCEEDED(rv) && (charsetConv))
+  {
+     rv = charsetConv->GetUnicodeDecoder(&characterSet,
+         getter_AddRefs(unicodeDecoder));
+     NS_RELEASE(charsetConv);
+  }
+
+  // converts from the charset to unicode
+  if (NS_SUCCEEDED(rv)) {
+    rv = unicodeDecoder->GetMaxLength(string, stringLen, &unicodeLength);
+    if (NS_SUCCEEDED(rv)) {
+        unicodeXferBuf.SetCapacity(unicodeLength+32);
+        unicodeString = (PRUnichar *) unicodeXferBuf.GetUnicode();
+        //since we are not using the nsString interface to fill the string, we need to set 
+        //nsString.mLength somehow to be able to use the string later at all, SetLength unfortunately just truncates... 
+        nsStr::Initialize(unicodeXferBuf,(char*) unicodeString, unicodeLength+32, unicodeLength+32, eTwoByte, 1);
+        rv = unicodeDecoder->Convert(string, (PRInt32 *) &stringLen, unicodeString, &unicodeLength);
+        if (NS_SUCCEEDED(rv)) {
+        unicodeString[unicodeLength] = 0; //add this since the unicode converters can't be trusted to do so.    
+        unicodeXferBuf.SetLength(unicodeLength); 
+      }
+    }
+  }
+
+  NS_ASSERTION(NS_SUCCEEDED(rv), "Could not convert Script input to Unicode!");
 
   if (NS_OK == aStatus) {
     PRBool bodyPresent = PreEvaluateScript();
 
-    rv = EvaluateScript(aData, mScriptURI, 1, mScriptLanguageVersion);
+    rv = EvaluateScript(unicodeXferBuf, mScriptURI, 1, mScriptLanguageVersion);
     if (NS_FAILED(rv)) return rv;
 
     PostEvaluateScript(bodyPresent);
