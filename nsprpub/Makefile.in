@@ -51,12 +51,10 @@ ifdef PR_CLIENT_BUILD_UNIX
 endif
 endif
 
-distclean realclean clobber_all::
-	@echo "cd pr/tests; $(MAKE) $@"
-	@$(MAKE) -C pr/tests $@
-
 # Delete config/autoconf.mk last because it is included by every makefile.
 distclean::
+	@echo "cd pr/tests; $(MAKE) $@"
+	@$(MAKE) -C pr/tests $@
 	rm -f config/autoconf.mk
 
 release::
@@ -116,5 +114,5 @@ endif
 	cp -f mdheader.jar $(MDIST)/$(MOD_NAME)/$(BUILD_NUMBER)/$(OBJDIR_NAME); \
 	chmod 664 $(MDIST)/$(MOD_NAME)/$(BUILD_NUMBER)/$(OBJDIR_NAME)/mdheader.jar
 
-depend::
+depend:
 	@echo "NSPR20 has no dependencies.  Skipped."
