@@ -35,7 +35,6 @@ ifeq ($(BUILD_MODULES),all)
 # Tiers must be defined on module boundaries 
 #
 default: $(SUBMAKEFILES)
-	$(RM) -rf dist/packages
 	$(MAKE) -C config export
 	$(MAKE) nspr
 	$(MAKE) ldap
@@ -123,14 +122,8 @@ endif
 #
 # tier 2 - base libraries
 # 
-tier_2_dirs	= js
-
-# MacOSX needs to build lib for MoreFiles before xpcom
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-tier_2_dirs += lib/mac/MoreFiles
-endif
-
-tier_2_dirs	+= \
+tier_2_dirs	= \
+		js \
 		xpcom \
 		modules/libreg \
 		xpcom/obsolete \
@@ -301,6 +294,8 @@ endif
 # tier 99 - application binaries
 #
 
+tier_99_dirs   += embedding/config
+
 ifdef MOZ_COMPONENTLIB
 tier_99_dirs   += embedding/componentlib
 else
@@ -381,7 +376,6 @@ DIST_GARBAGE = config.cache config.log config.status config-defs.h \
 
 # Build pseudo-external modules first when export is explicitly called
 export::
-	$(RM) -rf dist/packages
 	$(MAKE) -C config export
 	$(MAKE) nspr
 	$(MAKE) ldap
@@ -420,6 +414,7 @@ tier_%:
 			$(MAKE) -C $$d export; \
 		done ; \
 		$(PERL) $(MOZILLA_DIR)/config/purge-old-headers.pl $(DIST)/include ;\
+		$(PERL) $(MOZILLA_DIR)/config/purge-old-headers.pl $(DIST)/packages ;\
 		for d in $($@_dirs); do $(UPDATE_TITLE) \
 			$(MAKE) -C $$d libs; \
 		done
@@ -443,6 +438,10 @@ endif
 
 export::
 	@$(PERL) $(MOZILLA_DIR)/config/purge-old-headers.pl $(DIST)/include
+	@$(PERL) $(MOZILLA_DIR)/config/purge-old-headers.pl $(DIST)/packages
+
+packages::
+	@$(PERL) $(MOZILLA_DIR)/config/purge-old-headers.pl $(DIST)/packages
 
 distclean::
 	cat unallmakefiles | $(XARGS) rm -f

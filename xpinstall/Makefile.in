@@ -31,7 +31,15 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 MODULE		= xpinstall
-DIRS		= public res src stub cleanup
+DIRS		= \
+	public \
+	res \
+	src \
+	stub \
+	cleanup \
+	packager \
+	$(NULL)
+
 PACKAGE_FILE = installjs.pkg
 
 ifdef MOZ_INSTALLER
@@ -49,3 +57,5 @@ endif
 
 include $(topsrcdir)/config/rules.mk
 
+installer:
+	$(MAKE) -C packager installer
