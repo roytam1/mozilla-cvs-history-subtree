@@ -83,6 +83,7 @@ static const nsModuleComponentInfo components[] = {
   {nsnull, SCRIPTABLE_INTERFACES_CID,            NS_SCRIPTABLE_INTERFACES_CONTRACTID,        nsXPCComponents_InterfacesConstructor },
   {nsnull, XPCVARIANT_CID,                       XPCVARIANT_CONTRACTID,        nsnull, nsnull, nsnull, nsnull, NS_CI_INTERFACE_GETTER_NAME(XPCVariant), nsnull, &NS_CLASSINFO_NAME(XPCVariant)},
 
+#ifdef MOZ_JSLOADER
   // jsloader stuff
   { "JS component loader", MOZJSCOMPONENTLOADER_CID,
     mozJSComponentLoaderContractID, mozJSComponentLoaderConstructor,
@@ -90,6 +91,7 @@ static const nsModuleComponentInfo components[] = {
 #ifndef NO_SUBSCRIPT_LOADER
   ,{ "JS subscript loader", MOZ_JSSUBSCRIPTLOADER_CID,
     mozJSSubScriptLoadContractID, mozJSSubScriptLoaderConstructor }
+#endif
 #endif
 #ifdef XPC_IDISPATCH_SUPPORT
   ,{ nsnull, NS_IDISPATCH_SUPPORT_CID,            NS_IDISPATCH_SUPPORT_CONTRACTID,
