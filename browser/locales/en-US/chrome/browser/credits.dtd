@@ -5,8 +5,11 @@
 <!ENTITY credit.thanks    "Special Thanks To">
 
 <!-- localization credits look like this: -->
+<!--
 <!ENTITY credit.translation
   "<h3>Translators</h3><ul><li>Name Here</li></ul>">
+-->
+<!ENTITY credit.translation "">
 
 <!ENTITY credit.visuals     "Visual Design Coordinator">
 <!ENTITY credit.theme       "Theme Design">
