@@ -34,14 +34,69 @@
 # 
 # ***** END LICENSE BLOCK *****
 
+const kFontNameFmtSerif         = "font.name.serif.%LANG%";
+const kFontNameFmtSansSerif     = "font.name.sans-serif.%LANG%";
+const kFontNameListFmtSerif     = "font.name-list.serif.%LANG%";
+const kFontNameListFmtSansSerif = "font.name-list.sans-serif.%LANG%";
+const kFontSizeFmtVariable      = "font.size.variable.%LANG%";
+
 var gContentPane = {
   _pane: null,
   
   init: function ()
   {
     this._pane = document.getElementById("paneContent");
+    this._rebuildFonts();
   },
   
+  _rebuildFonts: function ()
+  {
+    var langGroupPref = document.getElementById("font.language.group");
+    var isSerifPref = document.getElementById("font.default");
+    this._selectLanguageGroup(langGroupPref.value, isSerifPref.value == "serif");
+  },
+  
+  _selectLanguageGroup: function (aLanguageGroup, aIsSerif)
+  {
+    var prefs = [{ format   : aIsSerif ? kFontNameFmtSerif : kFontNameFmtSansSerif,
+                   type     : "unichar", 
+                   element  : "defaultFont",      
+                   fonttype : aIsSerif ? "serif" : "sans-serif" },
+                 { format   : aIsSerif ? kFontNameListFmtSerif : kFontNameListFmtSansSerif,
+                   type     : "unichar", 
+                   element  : null,               
+                   fonttype : aIsSerif ? "serif" : "sans-serif" },
+                 { format   : kFontSizeFmtVariable,      
+                   type     : "int",     
+                   element  : "defaultFontSize",  
+                   fonttype : null }];
+    var preferences = document.getElementById("contentPreferences");
+    for (var i = 0; i < prefs.length; ++i) {
+      var preference = document.getElementById(prefs[i].format.replace(/%LANG%/, aLanguageGroup));
+      if (!preference) {
+        preference = document.createElement("preference");
+        var name = prefs[i].format.replace(/%LANG%/, aLanguageGroup);
+        preference.id = name;
+        preferences.appendChild(preference);
+        preference.name = name;
+        preference.type = prefs[i].type;
+      }
+      
+      if (!prefs[i].element)
+        continue;
+        
+      var element = document.getElementById(prefs[i].element);
+      if (element) {
+        element.setAttribute("preference", preference.id);
+      
+        if (prefs[i].fonttype)
+          FontBuilder.buildFontList(aLanguageGroup, prefs[i].fonttype, element);
+
+        preference.setElementValue(element);
+      }
+    }
+  },
+
   writeEnableImagesPref: function ()
   { 
     var enableImages = document.getElementById("enableImages");

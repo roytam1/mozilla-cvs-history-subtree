@@ -6,14 +6,17 @@
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
   <prefpane id="paneContent" onpaneload="gContentPane.init();">
-    <preferences>
+    <preferences id="contentPreferences">
       <preference id="dom.disable_open_during_load"   name="dom.disable_open_during_load"   type="bool"/>
       <preference id="xpinstall.enabled"              name="xpinstall.enabled"              type="bool"/>
       <preference id="permissions.default.image"      name="permissions.default.image"      type="int"/>
       <preference id="security.enable_java"           name="security.enable_java"           type="bool"/>
       <preference id="javascript.enabled"             name="javascript.enabled"             type="bool"/>
+      <preference id="font.language.group"            name="font.language.group"            type="wstring"  onchange="gContentPane._rebuildFonts();"/>
+      <preference id="font.default"                   name="font.default"                   type="string"   onchange="gContentPane._rebuildFonts();"/>
     </preferences>
     
+    <script type="application/x-javascript" src="chrome://browser/content/preferences/fontbuilder.js"/>
     <script type="application/x-javascript" src="chrome://browser/content/preferences/content.js"/>
 
     <groupbox>
@@ -97,11 +100,7 @@
           <row>
             <hbox align="center">
               <label control="defaultFont" accesskey="&defaultFont.accesskey;">&defaultFont.label;</label>
-              <menulist id="defaultFont" flex="1">
-                <menupopup>
-                  <menuitem label="Goats"/>
-                </menupopup>
-              </menulist>
+              <menulist id="defaultFont" flex="1"/>
               <label control="defaultFontSize" accesskey="&defaultFontSize.accesskey;">&defaultFontSize.label;</label>
               <menulist id="defaultFontSize">
                 <menupopup>
