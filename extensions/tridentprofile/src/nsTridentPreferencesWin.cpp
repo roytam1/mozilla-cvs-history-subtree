@@ -61,6 +61,19 @@
 #include "nsIBrowserProfileMigrator.h"
 #include "nsIObserverService.h"
 
+#ifdef MOZ_PHOENIX
+#include <objbase.h>
+#include <initguid.h>
+#include <shlguid.h>
+#include <urlhist.h>
+#include <comdef.h>
+
+#include "nsIBrowserHistory.h"
+#include "nsIGlobalHistory.h"
+#include "nsIRDFRemoteDataSource.h"
+#include "nsIURI.h"
+#endif
+
 #define MIGRATION_ITEMBEFOREMIGRATE "Migration:ItemBeforeMigrate"
 #define MIGRATION_ITEMAFTERMIGRATE  "Migration:ItemAfterMigrate"
 #define MIGRATION_STARTED           "Migration:Started"
@@ -71,7 +84,6 @@ const int sUsernameLengthLimit     = 80;
 const int sHostnameLengthLimit     = 255;
 
 static nsIObserverService* sObserverService = nsnull;
-
 
 //***********************************************************************
 //*** windows registry to mozilla prefs data type translation functions
@@ -384,10 +396,12 @@ nsTridentPreferencesWin::~nsTridentPreferencesWin() {
   if (sObserverService) \
     sObserverService->NotifyObservers(nsnull, message, item)
 
-#define COPY_DATA(func, replace, item) \
-  NOTIFY_OBSERVERS(MIGRATION_ITEMBEFOREMIGRATE, item); \
-  rv = func(replace); \
-  NOTIFY_OBSERVERS(MIGRATION_ITEMAFTERMIGRATE, item);
+#define COPY_DATA(func, replace, itemIndex, itemString) \
+  if (NS_SUCCEEDED(rv) && (aItems & itemIndex)) { \
+    NOTIFY_OBSERVERS(MIGRATION_ITEMBEFOREMIGRATE, itemString); \
+    rv = func(replace); \
+    NOTIFY_OBSERVERS(MIGRATION_ITEMAFTERMIGRATE, itemString); \
+  }
 
 // migration entry point
 nsresult
@@ -397,18 +411,12 @@ nsTridentPreferencesWin::MigrateTridentPreferences(PRUint32 aItems, PRBool aRepl
 
   NOTIFY_OBSERVERS(MIGRATION_STARTED, nsnull);
 
-  if (aItems & nsIBrowserProfileMigrator::SETTINGS)
-    COPY_DATA(CopyPreferences, aReplace, NS_LITERAL_STRING("settings").get());
-  if (NS_SUCCEEDED(rv) && (aItems & nsIBrowserProfileMigrator::COOKIES))
-    COPY_DATA(CopyCookies, aReplace, NS_LITERAL_STRING("cookies").get());
-  if (NS_SUCCEEDED(rv) && (aItems & nsIBrowserProfileMigrator::HISTORY))
-    COPY_DATA(CopyHistory, aReplace, NS_LITERAL_STRING("history").get());
-  if (NS_SUCCEEDED(rv) && (aItems & nsIBrowserProfileMigrator::FORMDATA))
-    COPY_DATA(CopyFormData, aReplace, NS_LITERAL_STRING("formdata").get());
-  if (NS_SUCCEEDED(rv) && (aItems & nsIBrowserProfileMigrator::PASSWORDS))
-    COPY_DATA(CopyPasswords, aReplace, NS_LITERAL_STRING("passwords").get());
-  if (NS_SUCCEEDED(rv) && (aItems & nsIBrowserProfileMigrator::BOOKMARKS))
-    COPY_DATA(CopyFavorites, aReplace, NS_LITERAL_STRING("bookmarks").get());
+  COPY_DATA(CopyPreferences,  aReplace, nsIBrowserProfileMigrator::SETTINGS,  NS_LITERAL_STRING("settings").get());
+  COPY_DATA(CopyCookies,      aReplace, nsIBrowserProfileMigrator::COOKIES,   NS_LITERAL_STRING("cookies").get());
+  COPY_DATA(CopyHistory,      aReplace, nsIBrowserProfileMigrator::HISTORY,   NS_LITERAL_STRING("history").get());
+  COPY_DATA(CopyFormData,     aReplace, nsIBrowserProfileMigrator::FORMDATA,  NS_LITERAL_STRING("formdata").get());
+  COPY_DATA(CopyPasswords,    aReplace, nsIBrowserProfileMigrator::PASSWORDS, NS_LITERAL_STRING("passwords").get());
+  COPY_DATA(CopyFavorites,    aReplace, nsIBrowserProfileMigrator::BOOKMARKS, NS_LITERAL_STRING("bookmarks").get());
 
   NOTIFY_OBSERVERS(MIGRATION_ENDED, nsnull);
 
@@ -417,7 +425,110 @@ nsTridentPreferencesWin::MigrateTridentPreferences(PRUint32 aItems, PRBool aRepl
 
 nsresult
 nsTridentPreferencesWin::CopyHistory(PRBool aReplace) {
-  printf("*** copyhistory\n");
+  nsCOMPtr<nsIBrowserHistory> hist(do_GetService(NS_GLOBALHISTORY_CONTRACTID));
+
+  // First, Migrate standard IE History entries...
+  ::CoInitialize(NULL);
+
+  IUrlHistoryStg2* ieHistory;
+  HRESULT hr = ::CoCreateInstance(CLSID_CUrlHistory, 
+                                  NULL,
+                                  CLSCTX_INPROC_SERVER, 
+                                  IID_IUrlHistoryStg2, 
+                                  reinterpret_cast<void**>(&ieHistory));
+  if (SUCCEEDED(hr)) {
+    IEnumSTATURL* enumURLs;
+    hr = ieHistory->EnumUrls(&enumURLs);
+    if (SUCCEEDED(hr)) {
+      STATURL statURL;
+      ULONG fetched;
+      _bstr_t url, title;
+      nsCAutoString str;
+      SYSTEMTIME st;
+      PRBool validScheme = PR_FALSE;
+      PRUnichar* tempTitle = nsnull;
+      nsCOMPtr<nsIURI> uri(do_CreateInstance("@mozilla.org/network/standard-url;1"));
+
+      for (int count = 0; (hr = enumURLs->Next(1, &statURL, &fetched)) == S_OK; ++count) {
+        if (statURL.pwcsUrl) {
+          // 1 - Page Title
+          tempTitle = statURL.pwcsTitle ? (PRUnichar*)((wchar_t*)(statURL.pwcsTitle)) : nsnull;
+
+          // 2 - Last Visit Date
+          ::FileTimeToSystemTime(&(statURL.ftLastVisited), &st);
+          PRExplodedTime prt;
+          prt.tm_year = st.wYear;
+          prt.tm_month = st.wMonth;
+          prt.tm_mday = st.wDay;
+          prt.tm_hour = st.wHour;
+          prt.tm_min = st.wMinute;
+          prt.tm_sec = st.wSecond;
+          prt.tm_usec = st.wMilliseconds * 1000;
+          prt.tm_wday = 0;
+          prt.tm_yday = 0;
+          prt.tm_params.tp_gmt_offset = 0;
+          prt.tm_params.tp_dst_offset = 0;
+          PRTime lastVisited = PR_ImplodeTime(&prt);
+
+          // 3 - URL
+          url = statURL.pwcsUrl;
+
+          str = (char*)(url);
+          uri->SetSpec(str);
+          // XXXben - 
+          // MSIE stores some types of URLs in its history that we can't handle, like HTMLHelp
+          // and others. At present Necko isn't clever enough to delegate handling of these types
+          // to the system, so we should just avoid importing them. 
+          const char* schemes[] = { "http", "https", "ftp", "file" };
+          for (int i = 0; i < 4; ++i) {
+            uri->SchemeIs(schemes[i], &validScheme);
+            if (validScheme)
+              break;
+          }
+          
+          // 4 - Now add the page
+          if (validScheme) 
+            hist->AddPageWithDetails((char*)url, tempTitle, lastVisited);
+        }
+      }
+      nsCOMPtr<nsIRDFRemoteDataSource> ds(do_QueryInterface(hist));
+      if (ds)
+        ds->Flush();
+  
+      enumURLs->Release();
+    }
+
+    ieHistory->Release();
+  }
+  ::CoUninitialize();
+
+  // Now, find out what URLs were typed in by the user
+  HKEY key;
+  if (::RegOpenKeyEx(HKEY_CURRENT_USER, 
+                     "Software\\Microsoft\\Internet Explorer\\TypedURLs",
+                     0, KEY_READ, &key) == ERROR_SUCCESS) {
+    int offset = 0;
+#define KEY_NAME_LENGTH 20
+    while (1) {
+      char valueName[KEY_NAME_LENGTH];
+      DWORD valueSize = KEY_NAME_LENGTH;
+      unsigned char data[MAX_PATH];
+      DWORD dataSize = MAX_PATH;
+      DWORD type;
+      LONG rv = ::RegEnumValue(key, offset, valueName, &valueSize, 
+                               NULL, &type, data, &dataSize);
+      if (rv == ERROR_NO_MORE_ITEMS)
+        break;
+
+      nsCAutoString valueNameStr(valueName);
+      const nsACString& prefix = Substring(valueNameStr, 0, 3);
+      if (prefix.Equals("url"))
+        hist->MarkPageAsTyped((const char*)data);
+      ++offset;
+
+    }
+  }
+
   return NS_OK;
 }
 
@@ -430,6 +541,95 @@ nsTridentPreferencesWin::CopyFormData(PRBool aReplace) {
 nsresult
 nsTridentPreferencesWin::CopyPasswords(PRBool aReplace) {
   printf("*** copypasswords\n");
+
+#if 0
+#import "c:\windows\system32\pstorec.dll"
+using namespace PSTORECLib;
+
+typedef HRESULT (WINAPI *PStoreCreateInstancePtr)(IPStore **, DWORD, DWORD, DWORD);
+
+void DecryptData(unsigned long pcbData, unsigned char* ppbData);
+
+int checkunicode (unsigned char *data, unsigned long length)
+{
+  for (unsigned int i=0; i < length; ++i) {
+    if(data[i] == 0) 
+      return 1;
+  }
+  return 0;
+}
+
+void GetUserNameAndPass(unsigned char* data, unsigned long len, unsigned char** username, unsigned char** pass);
+
+int main (int argc, char **argv)
+{
+  HRESULT hRes;
+
+  HMODULE hPstoreDLL = LoadLibrary("pstorec.dll");
+  PStoreCreateInstancePtr PStoreCreateInstance = (PStoreCreateInstancePtr)GetProcAddress(hPstoreDLL, "PStoreCreateInstance");
+
+  IPStorePtr spPStore;
+  hRes = PStoreCreateInstance(&spPStore, 0, 0, 0);
+
+  IEnumPStoreTypesPtr spEnumTypes;
+  hRes = spPStore->EnumTypes(0, 0, &spEnumTypes);
+
+  GUID typeGUID;
+
+  while (spEnumTypes->raw_Next(1,&typeGUID,0) == S_OK) {
+    printf("typeGUID = %.8x\n",typeGUID);
+
+    IEnumPStoreTypesPtr spEnumSubTypes;
+    hRes = spPStore->EnumSubtypes(0, &typeGUID, 0, &spEnumSubTypes);
+
+    GUID subtypeGUID;
+    while (spEnumSubTypes->raw_Next(1,&subtypeGUID,0) == S_OK) {
+      printf("\tsubtypeGUID = %.8x\n",subtypeGUID);
+
+      IEnumPStoreItemsPtr spEnumItems;
+      HRESULT hRes = spPStore->EnumItems(0, &typeGUID, &subtypeGUID, 0, &spEnumItems);
+
+      LPWSTR itemName;
+      while (spEnumItems->raw_Next(1,&itemName,0) == S_OK) {
+        printf("\t\titemName = %ws\n",itemName);
+        unsigned long pcbData = 0;
+        unsigned char *ppbData = NULL;
+        _PST_PROMPTINFO *pi = NULL;
+        hRes = spPStore->ReadItem(0,&typeGUID,&subtypeGUID,itemName,&pcbData,&ppbData,pi,0);
+
+        if(checkunicode(ppbData,pcbData)) {
+          unsigned char* username = NULL;
+          unsigned char* pass = NULL;
+          GetUserNameAndPass(ppbData, pcbData, &username, &pass);
+          printf("\t\tusername = %ws\n",username);
+          if (pass) 
+            printf("\t\tpass = %ws\n",pass);
+        }
+        else
+          printf("\t\titemData = %s\n",ppbData);
+      }
+    }
+  }
+
+  return 0;
+}
+
+void GetUserNameAndPass(unsigned char* data, unsigned long len, unsigned char** username, unsigned char** pass)
+{
+  *username = data;
+  *pass = NULL;
+
+  unsigned char* temp = data; 
+
+  for (unsigned int i = 0; i < len; i += 2, temp += 2*sizeof(unsigned char)) {
+    if (*temp == '\0') {
+      *pass = temp + 2*sizeof(unsigned char);
+      break;
+    }
+  }
+}
+
+#endif
   return NS_OK;
 }
 

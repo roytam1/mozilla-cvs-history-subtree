@@ -57,7 +57,7 @@ REQUIRES = xpcom  \
 	$(NULL)
 
 ifdef MOZ_PHOENIX
-REQUIRES += browsercomps migration
+REQUIRES += browsercomps migration history rdf
 endif
 
 CPPSRCS = \

@@ -926,6 +926,16 @@ nsGlobalHistory::GetRowValue(nsIMdbRow *aRow, mdb_column aCol,
 }
 
 NS_IMETHODIMP
+nsGlobalHistory::AddPageWithDetails(const char *aURL, const PRUnichar *aTitle, 
+                                    PRInt64 aLastVisitDate)
+{
+  nsresult rv = AddPageToDatabase(aURL, aLastVisitDate);
+  if (NS_FAILED(rv)) return rv;
+
+  return SetPageTitle(aURL, aTitle);
+}
+
+NS_IMETHODIMP
 nsGlobalHistory::GetCount(PRUint32* aCount)
 {
   NS_ENSURE_ARG_POINTER(aCount);
