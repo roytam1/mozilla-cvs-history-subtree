@@ -1385,7 +1385,7 @@ ConfirmPostToInsecure()
   nsCOMPtr<nsISecurityWarningDialogs> dialogs;
 
   GetNSSDialogs(getter_AddRefs(dialogs));
-  if (!dialogs) return PR_FALSE;  // Should this allow PR_TRUE for unimplemented?
+  if (!dialogs) return PR_TRUE;  // Should this allow PR_TRUE for unimplemented?
 
   nsCOMPtr<nsIInterfaceRequestor> ctx = new nsUIContext(mWindow);
 
@@ -1410,7 +1410,7 @@ ConfirmPostToInsecureFromSecure()
   nsCOMPtr<nsISecurityWarningDialogs> dialogs;
 
   GetNSSDialogs(getter_AddRefs(dialogs));
-  if (!dialogs) return PR_FALSE;  // Should this allow PR_TRUE for unimplemented?
+  if (!dialogs) return PR_TRUE;  // Should this allow PR_TRUE for unimplemented?
 
   nsCOMPtr<nsIInterfaceRequestor> ctx = new nsUIContext(mWindow);
 
