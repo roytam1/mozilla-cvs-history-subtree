@@ -35,11 +35,9 @@
 
 /* Debug Logging support. */
 
-#include <stdarg.h>
-#include <string.h>
-#include "prprf.h"
-#include "xpclog.h"
+#include "xpcprivate.h"
 
+// this all only works for DEBUG...
 #ifdef DEBUG
 
 #define SPACE_COUNT     200

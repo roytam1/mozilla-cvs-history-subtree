@@ -50,6 +50,5 @@ interface nsIJSContextStack : nsISupports
 interface nsIThreadJSContextStack : nsIJSContextStack
 {
     /* inherits methods of nsIJSContextStack */
-    
-    readonly attribute JSContext safeJSContext;
+    attribute JSContext safeJSContext;
 };

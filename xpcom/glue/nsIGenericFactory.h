@@ -54,7 +54,7 @@ public:
 
 	/**
 	 * Establishes the generic factory's destructor function, which will be called
-	 * whe the generic factory is deleted. This is used to notify the DLL that
+	 * when the generic factory is deleted. This is used to notify the DLL that
 	 * an instance of one of its generic factories is going away.
 	 */
     NS_IMETHOD SetDestructor(DestructorProcPtr destructor) = 0;

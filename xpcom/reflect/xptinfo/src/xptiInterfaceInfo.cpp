@@ -638,3 +638,27 @@ xptiInterfaceInfo::IsIID(const nsIID * IID, PRBool *_retval)
     *_retval = mIID.Equals(*IID);
     return NS_OK;
 }
+
+/* void getNameShared ([shared, retval] out string name); */
+NS_IMETHODIMP 
+xptiInterfaceInfo::GetNameShared(const char **name)
+{
+    NS_PRECONDITION(name, "bad param");
+
+    if(!mName)
+        return NS_ERROR_UNEXPECTED;
+
+    *name = mName;
+    return NS_OK;
+}
+
+/* void getIIDShared ([shared, retval] out nsIIDPtrShared iid); */
+NS_IMETHODIMP 
+xptiInterfaceInfo::GetIIDShared(const nsIID * *iid)
+{
+    NS_PRECONDITION(iid, "bad param");
+
+    *iid = &mIID;
+    return NS_OK;
+}
+

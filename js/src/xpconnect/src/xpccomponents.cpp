@@ -43,7 +43,7 @@
 
 static nsresult ThrowAndFail(uintN errNum, JSContext* cx, JSBool* retval)
 {
-    nsXPConnect::GetJSThrower()->ThrowException(errNum, cx);
+    XPCThrower::Throw(errNum, cx);
     *retval = JS_FALSE;
     return NS_OK;
 }        
@@ -103,15 +103,15 @@ public:
 
 private:
     void RealizeInterface(JSContext *cx, JSObject *obj, const char *iface_name,
-                          nsIXPConnectWrappedNative* wrapper,
+                          nsIXPCWrappedNativeTearOff* tearOff,
                           nsIXPCScriptable* arbitrary);
 
     void CacheDynaProp(JSContext *cx, JSObject *obj, jsid id,
-                       nsIXPConnectWrappedNative* wrapper,
+                       nsIXPCWrappedNativeTearOff* tearOff,
                        nsIXPCScriptable* arbitrary);
 
     void FillCache(JSContext *cx, JSObject *obj,
-                   nsIXPConnectWrappedNative *wrapper,
+                   nsIXPCWrappedNativeTearOff *tearOff,
                    nsIXPCScriptable *arbitrary);
 };
 
@@ -155,7 +155,7 @@ XPC_IMPLEMENT_FORWARD_FINALIZE(nsXPCComponents_Interfaces)
 
 NS_IMETHODIMP
 nsXPCComponents_Interfaces::GetFlags(JSContext *cx, JSObject *obj,
-                          nsIXPConnectWrappedNative* wrapper,
+                          nsIXPCWrappedNativeTearOff* tearOff,
                           JSUint32* flagsp,
                           nsIXPCScriptable* arbitrary)
 {
@@ -168,32 +168,32 @@ NS_IMETHODIMP
 nsXPCComponents_Interfaces::LookupProperty(JSContext *cx, JSObject *obj,
                                 jsid id,
                                 JSObject **objp, JSProperty **propp,
-                                nsIXPConnectWrappedNative* wrapper,
+                                nsIXPCWrappedNativeTearOff* tearOff,
                                 nsIXPCScriptable* arbitrary,
                                 JSBool* retval)
 {
-    if(NS_SUCCEEDED(arbitrary->LookupProperty(cx, obj, id, objp, propp, wrapper,
+    if(NS_SUCCEEDED(arbitrary->LookupProperty(cx, obj, id, objp, propp, tearOff,
                                               nsnull, retval)) && *retval)
         return NS_OK;
-    CacheDynaProp(cx, obj, id, wrapper, arbitrary);
-    return arbitrary->LookupProperty(cx, obj, id, objp, propp, wrapper,
+    CacheDynaProp(cx, obj, id, tearOff, arbitrary);
+    return arbitrary->LookupProperty(cx, obj, id, objp, propp, tearOff,
                                      nsnull, retval);
 }
 
 NS_IMETHODIMP
 nsXPCComponents_Interfaces::GetProperty(JSContext *cx, JSObject *obj,
                              jsid id, jsval *vp,
-                             nsIXPConnectWrappedNative* wrapper,
+                             nsIXPCWrappedNativeTearOff* tearOff,
                              nsIXPCScriptable* arbitrary,
                              JSBool* retval)
 {
-    if(NS_SUCCEEDED(arbitrary->GetProperty(cx, obj, id, vp, wrapper,
+    if(NS_SUCCEEDED(arbitrary->GetProperty(cx, obj, id, vp, tearOff,
                                            nsnull, retval)) && *retval &&
                                            *vp != JSVAL_VOID)
         return NS_OK;
 
-    CacheDynaProp(cx, obj, id, wrapper, arbitrary);
-    return arbitrary->GetProperty(cx, obj, id, vp, wrapper, nsnull, retval);
+    CacheDynaProp(cx, obj, id, tearOff, arbitrary);
+    return arbitrary->GetProperty(cx, obj, id, vp, tearOff, nsnull, retval);
 }
 
 
@@ -201,21 +201,21 @@ NS_IMETHODIMP
 nsXPCComponents_Interfaces::Enumerate(JSContext *cx, JSObject *obj,
                            JSIterateOp enum_op,
                            jsval *statep, jsid *idp,
-                           nsIXPConnectWrappedNative *wrapper,
+                           nsIXPCWrappedNativeTearOff *tearOff,
                            nsIXPCScriptable *arbitrary,
                            JSBool *retval)
 {
     if(enum_op == JSENUMERATE_INIT)
-        FillCache(cx, obj, wrapper, arbitrary);
+        FillCache(cx, obj, tearOff, arbitrary);
 
-    return arbitrary->Enumerate(cx, obj, enum_op, statep, idp, wrapper,
+    return arbitrary->Enumerate(cx, obj, enum_op, statep, idp, tearOff,
                                 arbitrary, retval);
 }
 
 /* enumerate the known interfaces, adding a property for each new one */
 void
 nsXPCComponents_Interfaces::FillCache(JSContext *cx, JSObject *obj,
-                           nsIXPConnectWrappedNative *wrapper,
+                           nsIXPCWrappedNativeTearOff *tearOff,
                            nsIXPCScriptable *arbitrary)
 {
     nsIInterfaceInfoManager*  iim = nsnull;
@@ -260,7 +260,7 @@ nsXPCComponents_Interfaces::FillCache(JSContext *cx, JSObject *obj,
         {
             char *interface_name;
             Interface->GetName(&interface_name);
-            RealizeInterface(cx, obj, interface_name, wrapper, arbitrary);
+            RealizeInterface(cx, obj, interface_name, tearOff, arbitrary);
             nsMemory::Free(interface_name);
             NS_RELEASE(Interface);
         }
@@ -282,7 +282,7 @@ done:
 void
 nsXPCComponents_Interfaces::RealizeInterface(JSContext *cx, JSObject *obj,
                                   const char *iface_name,
-                                  nsIXPConnectWrappedNative* wrapper,
+                                  nsIXPCWrappedNativeTearOff* tearOff,
                                   nsIXPCScriptable* arbitrary)
 {
     jsval prop;
@@ -296,14 +296,14 @@ nsXPCComponents_Interfaces::RealizeInterface(JSContext *cx, JSObject *obj,
         if(nsnull != (jstrid = JS_InternString(cx, iface_name)) &&
            JS_ValueToId(cx, STRING_TO_JSVAL(jstrid), &id))
         {
-            CacheDynaProp(cx, obj, id, wrapper, arbitrary);
+            CacheDynaProp(cx, obj, id, tearOff, arbitrary);
         }
     }
 }
 
 void
 nsXPCComponents_Interfaces::CacheDynaProp(JSContext *cx, JSObject *obj, jsid id,
-                               nsIXPConnectWrappedNative* wrapper,
+                               nsIXPCWrappedNativeTearOff* tearOff,
                                nsIXPCScriptable* arbitrary)
 {
     jsval idval;
@@ -331,7 +331,7 @@ nsXPCComponents_Interfaces::CacheDynaProp(JSContext *cx, JSObject *obj, jsid id,
                     {
                         JSBool retval;
                         jsval val = OBJECT_TO_JSVAL(idobj);
-                        arbitrary->SetProperty(cx, obj, id, &val, wrapper,
+                        arbitrary->SetProperty(cx, obj, id, &val, tearOff,
                                                nsnull, &retval);
                     }
                 }
@@ -396,15 +396,15 @@ public:
 private:
 
     void RealizeClass(JSContext *cx, JSObject *obj, const char *class_name,
-                      nsIXPConnectWrappedNative* wrapper,
+                      nsIXPCWrappedNativeTearOff* tearOff,
                       nsIXPCScriptable* arbitrary);
 
     void CacheDynaProp(JSContext *cx, JSObject *obj, jsid id,
-                       nsIXPConnectWrappedNative* wrapper,
+                       nsIXPCWrappedNativeTearOff* tearOff,
                        nsIXPCScriptable* arbitrary);
 
     void FillCache(JSContext *cx, JSObject *obj,
-                   nsIXPConnectWrappedNative *wrapper,
+                   nsIXPCWrappedNativeTearOff *tearOff,
                    nsIXPCScriptable *arbitrary);
 };
 
@@ -440,7 +440,7 @@ XPC_IMPLEMENT_FORWARD_FINALIZE(nsXPCComponents_Classes)
 
 NS_IMETHODIMP
 nsXPCComponents_Classes::GetFlags(JSContext *cx, JSObject *obj,
-                       nsIXPConnectWrappedNative* wrapper,
+                       nsIXPCWrappedNativeTearOff* tearOff,
                        JSUint32* flagsp,
                        nsIXPCScriptable* arbitrary)
 {
@@ -454,32 +454,32 @@ NS_IMETHODIMP
 nsXPCComponents_Classes::LookupProperty(JSContext *cx, JSObject *obj,
                              jsid id,
                              JSObject **objp, JSProperty **propp,
-                             nsIXPConnectWrappedNative* wrapper,
+                             nsIXPCWrappedNativeTearOff* tearOff,
                              nsIXPCScriptable* arbitrary,
                              JSBool* retval)
 {
-    if(NS_SUCCEEDED(arbitrary->LookupProperty(cx, obj, id, objp, propp, wrapper,
+    if(NS_SUCCEEDED(arbitrary->LookupProperty(cx, obj, id, objp, propp, tearOff,
                                               nsnull, retval)) && *retval)
         return NS_OK;
-    CacheDynaProp(cx, obj, id, wrapper, arbitrary);
-    return arbitrary->LookupProperty(cx, obj, id, objp, propp, wrapper,
+    CacheDynaProp(cx, obj, id, tearOff, arbitrary);
+    return arbitrary->LookupProperty(cx, obj, id, objp, propp, tearOff,
                                      nsnull, retval);
 }
 
 NS_IMETHODIMP
 nsXPCComponents_Classes::GetProperty(JSContext *cx, JSObject *obj,
                           jsid id, jsval *vp,
-                          nsIXPConnectWrappedNative* wrapper,
+                          nsIXPCWrappedNativeTearOff* tearOff,
                           nsIXPCScriptable* arbitrary,
                           JSBool* retval)
 {
-    if(NS_SUCCEEDED(arbitrary->GetProperty(cx, obj, id, vp, wrapper,
+    if(NS_SUCCEEDED(arbitrary->GetProperty(cx, obj, id, vp, tearOff,
                                            nsnull, retval)) && *retval &&
                                            *vp != JSVAL_VOID)
         return NS_OK;
 
-    CacheDynaProp(cx, obj, id, wrapper, arbitrary);
-    return arbitrary->GetProperty(cx, obj, id, vp, wrapper, nsnull, retval);
+    CacheDynaProp(cx, obj, id, tearOff, arbitrary);
+    return arbitrary->GetProperty(cx, obj, id, vp, tearOff, nsnull, retval);
 }
 
 
@@ -488,21 +488,21 @@ NS_IMETHODIMP
 nsXPCComponents_Classes::Enumerate(JSContext *cx, JSObject *obj,
                         JSIterateOp enum_op,
                         jsval *statep, jsid *idp,
-                        nsIXPConnectWrappedNative *wrapper,
+                        nsIXPCWrappedNativeTearOff *tearOff,
                         nsIXPCScriptable *arbitrary,
                         JSBool *retval)
 {
     if(enum_op == JSENUMERATE_INIT)
-        FillCache(cx, obj, wrapper, arbitrary);
+        FillCache(cx, obj, tearOff, arbitrary);
 
-    return arbitrary->Enumerate(cx, obj, enum_op, statep, idp, wrapper,
+    return arbitrary->Enumerate(cx, obj, enum_op, statep, idp, tearOff,
                                 arbitrary, retval);
 }
 
 /* enumerate the known contractids, adding a property for each new one */
 void
 nsXPCComponents_Classes::FillCache(JSContext *cx, JSObject *obj,
-                        nsIXPConnectWrappedNative *wrapper,
+                        nsIXPCWrappedNativeTearOff* tearOff,
                         nsIXPCScriptable *arbitrary)
 {
 
@@ -535,7 +535,7 @@ nsXPCComponents_Classes::FillCache(JSContext *cx, JSObject *obj,
                 char *class_name;
                 if(NS_SUCCEEDED(ClassNameHolder->GetData(&class_name)))
                 {
-                    RealizeClass(cx, obj, class_name, wrapper, arbitrary);
+                    RealizeClass(cx, obj, class_name, tearOff, arbitrary);
                     nsMemory::Free(class_name);
                 }
                 NS_RELEASE(ClassNameHolder);
@@ -554,7 +554,7 @@ nsXPCComponents_Classes::FillCache(JSContext *cx, JSObject *obj,
 void
 nsXPCComponents_Classes::RealizeClass(JSContext *cx, JSObject *obj,
                            const char *class_name,
-                           nsIXPConnectWrappedNative* wrapper,
+                           nsIXPCWrappedNativeTearOff* tearOff,
                            nsIXPCScriptable* arbitrary)
 {
     jsval prop;
@@ -568,14 +568,14 @@ nsXPCComponents_Classes::RealizeClass(JSContext *cx, JSObject *obj,
         if(nsnull != (jstrid = JS_InternString(cx, class_name)) &&
            JS_ValueToId(cx, STRING_TO_JSVAL(jstrid), &id))
         {
-            CacheDynaProp(cx, obj, id, wrapper, arbitrary);
+            CacheDynaProp(cx, obj, id, tearOff, arbitrary);
         }
     }
 }
 
 void
 nsXPCComponents_Classes::CacheDynaProp(JSContext *cx, JSObject *obj, jsid id,
-                            nsIXPConnectWrappedNative* wrapper,
+                            nsIXPCWrappedNativeTearOff* tearOff,
                             nsIXPCScriptable* arbitrary)
 {
     jsval idval;
@@ -603,7 +603,7 @@ nsXPCComponents_Classes::CacheDynaProp(JSContext *cx, JSObject *obj, jsid id,
                     {
                         JSBool retval;
                         jsval val = OBJECT_TO_JSVAL(idobj);
-                        arbitrary->SetProperty(cx, obj, id, &val, wrapper,
+                        arbitrary->SetProperty(cx, obj, id, &val, tearOff,
                                                nsnull, &retval);
                     }
                 }
@@ -631,17 +631,17 @@ public:
 private:
 
     void RealizeClass(JSContext *cx, JSObject *obj, const char *class_name,
-                      nsIXPConnectWrappedNative* wrapper,
+                      nsIXPCWrappedNativeTearOff* tearOff,
                       nsIXPCScriptable* arbitrary,
                       JSBool knownToBeRegistered);
 
     void CacheDynaProp(JSContext *cx, JSObject *obj, jsid id,
-                       nsIXPConnectWrappedNative* wrapper,
+                       nsIXPCWrappedNativeTearOff* tearOff,
                        nsIXPCScriptable* arbitrary,
                        JSBool knownToBeRegistered);
 
     void FillCache(JSContext *cx, JSObject *obj,
-                   nsIXPConnectWrappedNative *wrapper,
+                   nsIXPCWrappedNativeTearOff *tearOff,
                    nsIXPCScriptable *arbitrary);
 };
 
@@ -677,7 +677,7 @@ XPC_IMPLEMENT_FORWARD_FINALIZE(nsXPCComponents_ClassesByID)
 
 NS_IMETHODIMP
 nsXPCComponents_ClassesByID::GetFlags(JSContext *cx, JSObject *obj,
-                           nsIXPConnectWrappedNative* wrapper,
+                           nsIXPCWrappedNativeTearOff* tearOff,
                            JSUint32* flagsp,
                            nsIXPCScriptable* arbitrary)
 {
@@ -690,32 +690,32 @@ NS_IMETHODIMP
 nsXPCComponents_ClassesByID::LookupProperty(JSContext *cx, JSObject *obj,
                                  jsid id,
                                  JSObject **objp, JSProperty **propp,
-                                 nsIXPConnectWrappedNative* wrapper,
+                                 nsIXPCWrappedNativeTearOff* tearOff,
                                  nsIXPCScriptable* arbitrary,
                                  JSBool* retval)
 {
-    if(NS_SUCCEEDED(arbitrary->LookupProperty(cx, obj, id, objp, propp, wrapper,
+    if(NS_SUCCEEDED(arbitrary->LookupProperty(cx, obj, id, objp, propp, tearOff,
                                               nsnull, retval)) && *retval)
         return NS_OK;
-    CacheDynaProp(cx, obj, id, wrapper, arbitrary, JS_FALSE);
-    return arbitrary->LookupProperty(cx, obj, id, objp, propp, wrapper,
+    CacheDynaProp(cx, obj, id, tearOff, arbitrary, JS_FALSE);
+    return arbitrary->LookupProperty(cx, obj, id, objp, propp, tearOff,
                                      nsnull, retval);
 }
 
 NS_IMETHODIMP
 nsXPCComponents_ClassesByID::GetProperty(JSContext *cx, JSObject *obj,
                               jsid id, jsval *vp,
-                              nsIXPConnectWrappedNative* wrapper,
+                              nsIXPCWrappedNativeTearOff* tearOff,
                               nsIXPCScriptable* arbitrary,
                               JSBool* retval)
 {
-    if(NS_SUCCEEDED(arbitrary->GetProperty(cx, obj, id, vp, wrapper,
+    if(NS_SUCCEEDED(arbitrary->GetProperty(cx, obj, id, vp, tearOff,
                                            nsnull, retval)) && *retval &&
                                            *vp != JSVAL_VOID)
         return NS_OK;
 
-    CacheDynaProp(cx, obj, id, wrapper, arbitrary, JS_FALSE);
-    return arbitrary->GetProperty(cx, obj, id, vp, wrapper, nsnull, retval);
+    CacheDynaProp(cx, obj, id, tearOff, arbitrary, JS_FALSE);
+    return arbitrary->GetProperty(cx, obj, id, vp, tearOff, nsnull, retval);
 }
 
 
@@ -724,21 +724,21 @@ NS_IMETHODIMP
 nsXPCComponents_ClassesByID::Enumerate(JSContext *cx, JSObject *obj,
                             JSIterateOp enum_op,
                             jsval *statep, jsid *idp,
-                            nsIXPConnectWrappedNative *wrapper,
+                            nsIXPCWrappedNativeTearOff *tearOff,
                             nsIXPCScriptable *arbitrary,
                             JSBool *retval)
 {
     if(enum_op == JSENUMERATE_INIT)
-        FillCache(cx, obj, wrapper, arbitrary);
+        FillCache(cx, obj, tearOff, arbitrary);
 
-    return arbitrary->Enumerate(cx, obj, enum_op, statep, idp, wrapper,
+    return arbitrary->Enumerate(cx, obj, enum_op, statep, idp, tearOff,
                                 arbitrary, retval);
 }
 
 /* enumerate the known contractids, adding a property for each new one */
 void
 nsXPCComponents_ClassesByID::FillCache(JSContext *cx, JSObject *obj,
-                            nsIXPConnectWrappedNative *wrapper,
+                            nsIXPCWrappedNativeTearOff *tearOff,
                             nsIXPCScriptable *arbitrary)
 {
 
@@ -774,7 +774,7 @@ nsXPCComponents_ClassesByID::FillCache(JSContext *cx, JSObject *obj,
                     char* class_name;
                     if(nsnull != (class_name = class_id->ToString()))
                     {
-                       RealizeClass(cx, obj, class_name, wrapper,
+                       RealizeClass(cx, obj, class_name, tearOff,
                                     arbitrary, JS_TRUE);
                        delete [] class_name;
                     }
@@ -796,7 +796,7 @@ nsXPCComponents_ClassesByID::FillCache(JSContext *cx, JSObject *obj,
 void
 nsXPCComponents_ClassesByID::RealizeClass(JSContext *cx, JSObject *obj,
                                const char *class_name,
-                               nsIXPConnectWrappedNative* wrapper,
+                               nsIXPCWrappedNativeTearOff* tearOff,
                                nsIXPCScriptable* arbitrary,
                                JSBool knownToBeRegistered)
 {
@@ -811,7 +811,7 @@ nsXPCComponents_ClassesByID::RealizeClass(JSContext *cx, JSObject *obj,
         if(nsnull != (jstrid = JS_InternString(cx, class_name)) &&
            JS_ValueToId(cx, STRING_TO_JSVAL(jstrid), &id))
         {
-            CacheDynaProp(cx, obj, id, wrapper, arbitrary, knownToBeRegistered);
+            CacheDynaProp(cx, obj, id, tearOff, arbitrary, knownToBeRegistered);
         }
     }
 }
@@ -842,7 +842,7 @@ IsCanonicalFormOfRegisteredCLSID(const char* str)
 
 void
 nsXPCComponents_ClassesByID::CacheDynaProp(JSContext *cx, JSObject *obj, jsid id,
-                                nsIXPConnectWrappedNative* wrapper,
+                                nsIXPCWrappedNativeTearOff* tearOff,
                                 nsIXPCScriptable* arbitrary,
                                 JSBool knownToBeRegistered)
 {
@@ -877,7 +877,7 @@ nsXPCComponents_ClassesByID::CacheDynaProp(JSContext *cx, JSObject *obj, jsid id
                     {
                         JSBool retval;
                         jsval val = OBJECT_TO_JSVAL(idobj);
-                        arbitrary->SetProperty(cx, obj, id, &val, wrapper,
+                        arbitrary->SetProperty(cx, obj, id, &val, tearOff,
                                                nsnull, &retval);
                     }
                 }
@@ -905,7 +905,7 @@ public:
 
 private:
     void FillCache(JSContext *cx, JSObject *obj,
-                   nsIXPConnectWrappedNative *wrapper,
+                   nsIXPCWrappedNativeTearOff *tearOff,
                    nsIXPCScriptable *arbitrary);
 
     JSBool NeedToFillCache(JSObject* obj) const {return obj != mObj;}
@@ -943,7 +943,7 @@ nsXPCComponents_Results::~nsXPCComponents_Results()
 
 void
 nsXPCComponents_Results::FillCache(JSContext *cx, JSObject *obj,
-                        nsIXPConnectWrappedNative *wrapper,
+                        nsIXPCWrappedNativeTearOff *tearOff,
                         nsIXPCScriptable *arbitrary)
 {
     nsresult rv;
@@ -960,7 +960,7 @@ nsXPCComponents_Results::FillCache(JSContext *cx, JSObject *obj,
         if(!(jstrid = JS_InternString(cx, name)) ||
            !JS_ValueToId(cx, STRING_TO_JSVAL(jstrid), &id) ||
            !JS_NewNumberValue(cx, (jsdouble)rv, &val) ||
-           NS_FAILED(arbitrary->SetProperty(cx, obj, id, &val, wrapper, nsnull, &retval)) ||
+           NS_FAILED(arbitrary->SetProperty(cx, obj, id, &val, tearOff, nsnull, &retval)) ||
            !retval)
         {
             JS_ReportOutOfMemory(cx);
@@ -994,7 +994,7 @@ XPC_IMPLEMENT_FORWARD_FINALIZE(nsXPCComponents_Results)
 
 NS_IMETHODIMP
 nsXPCComponents_Results::GetFlags(JSContext *cx, JSObject *obj,
-                       nsIXPConnectWrappedNative* wrapper,
+                       nsIXPCWrappedNativeTearOff* tearOff,
                        JSUint32* flagsp,
                        nsIXPCScriptable* arbitrary)
 {
@@ -1007,26 +1007,26 @@ NS_IMETHODIMP
 nsXPCComponents_Results::LookupProperty(JSContext *cx, JSObject *obj,
                              jsid id,
                              JSObject **objp, JSProperty **propp,
-                             nsIXPConnectWrappedNative* wrapper,
+                             nsIXPCWrappedNativeTearOff* tearOff,
                              nsIXPCScriptable* arbitrary,
                              JSBool* retval)
 {
     if(NeedToFillCache(obj))
-        FillCache(cx, obj, wrapper, arbitrary);
-    return arbitrary->LookupProperty(cx, obj, id, objp, propp, wrapper,
+        FillCache(cx, obj, tearOff, arbitrary);
+    return arbitrary->LookupProperty(cx, obj, id, objp, propp, tearOff,
                                      nsnull, retval);
 }
 
 NS_IMETHODIMP
 nsXPCComponents_Results::GetProperty(JSContext *cx, JSObject *obj,
                           jsid id, jsval *vp,
-                          nsIXPConnectWrappedNative* wrapper,
+                          nsIXPCWrappedNativeTearOff* tearOff,
                           nsIXPCScriptable* arbitrary,
                           JSBool* retval)
 {
     if(NeedToFillCache(obj))
-        FillCache(cx, obj, wrapper, arbitrary);
-    return arbitrary->GetProperty(cx, obj, id, vp, wrapper, nsnull, retval);
+        FillCache(cx, obj, tearOff, arbitrary);
+    return arbitrary->GetProperty(cx, obj, id, vp, tearOff, nsnull, retval);
 }
 
 
@@ -1034,14 +1034,14 @@ NS_IMETHODIMP
 nsXPCComponents_Results::Enumerate(JSContext *cx, JSObject *obj,
                         JSIterateOp enum_op,
                         jsval *statep, jsid *idp,
-                        nsIXPConnectWrappedNative *wrapper,
+                        nsIXPCWrappedNativeTearOff *tearOff,
                         nsIXPCScriptable *arbitrary,
                         JSBool *retval)
 {
     if(enum_op == JSENUMERATE_INIT && NeedToFillCache(obj))
-        FillCache(cx, obj, wrapper, arbitrary);
+        FillCache(cx, obj, tearOff, arbitrary);
 
-    return arbitrary->Enumerate(cx, obj, enum_op, statep, idp, wrapper,
+    return arbitrary->Enumerate(cx, obj, enum_op, statep, idp, tearOff,
                                 arbitrary, retval);
 }
 
@@ -1065,7 +1065,7 @@ private:
     NS_METHOD CallOrConstruct(JSContext *cx, JSObject *obj,
                               uintN argc, jsval *argv,
                               jsval *rval,
-                              nsIXPConnectWrappedNative* wrapper,
+                              nsIXPCWrappedNativeTearOff* tearOff,
                               nsIXPCScriptable* arbitrary,
                               JSBool* retval);
 };
@@ -1103,43 +1103,42 @@ NS_IMETHODIMP
 nsXPCComponents_ID::Call(JSContext *cx, JSObject *obj,
                          uintN argc, jsval *argv,
                          jsval *rval,
-                         nsIXPConnectWrappedNative* wrapper,
+                         nsIXPCWrappedNativeTearOff* tearOff,
                          nsIXPCScriptable* arbitrary,
                          JSBool* retval)
 {
-    return CallOrConstruct(cx, obj, argc, argv, rval, wrapper, arbitrary, retval);
+    return CallOrConstruct(cx, obj, argc, argv, rval, tearOff, arbitrary, retval);
 }
 
 NS_IMETHODIMP
 nsXPCComponents_ID::Construct(JSContext *cx, JSObject *obj,
                               uintN argc, jsval *argv,
                               jsval *rval,
-                              nsIXPConnectWrappedNative* wrapper,
+                              nsIXPCWrappedNativeTearOff* tearOff,
                               nsIXPCScriptable* arbitrary,
                               JSBool* retval)
 {
-    return CallOrConstruct(cx, obj, argc, argv, rval, wrapper, arbitrary, retval);
+    return CallOrConstruct(cx, obj, argc, argv, rval, tearOff, arbitrary, retval);
 }
 
 NS_METHOD
 nsXPCComponents_ID::CallOrConstruct(JSContext *cx, JSObject *obj,
                                     uintN argc, jsval *argv,
                                     jsval *rval,
-                                    nsIXPConnectWrappedNative* wrapper,
+                                    nsIXPCWrappedNativeTearOff* tearOff,
                                     nsIXPCScriptable* arbitrary,
                                     JSBool* retval)
 {
-    AUTO_PUSH_JSCONTEXT(cx);
-    SET_CALLER_JAVASCRIPT(cx);
-
     // make sure we have at least one arg
     
     if(!argc)
         return ThrowAndFail(NS_ERROR_XPC_NOT_ENOUGH_ARGS, cx, retval);
     
-    XPCContext* xpcc = nsXPConnect::GetContext(cx);
-    if(!xpcc)
+    XPCCallContext ccx(JS_CALLER, cx);
+    if(!ccx.IsValid())
         return ThrowAndFail(NS_ERROR_XPC_UNEXPECTED, cx, retval);
+
+    XPCContext* xpcc = ccx.GetXPCContext();
 
     // Do the security check if necessary
     
@@ -1180,7 +1179,7 @@ nsXPCComponents_ID::CallOrConstruct(JSContext *cx, JSObject *obj,
 NS_IMETHODIMP
 nsXPCComponents_ID::HasInstance(JSContext *cx, JSObject *obj,                    
                                 jsval v, JSBool *bp,                             
-                                nsIXPConnectWrappedNative* wrapper,              
+                                nsIXPCWrappedNativeTearOff* tearOff,              
                                 nsIXPCScriptable* arbitrary,                     
                                 JSBool* retval)
 {
@@ -1210,7 +1209,7 @@ private:
     NS_METHOD CallOrConstruct(JSContext *cx, JSObject *obj,
                               uintN argc, jsval *argv,
                               jsval *rval,
-                              nsIXPConnectWrappedNative* wrapper,
+                              nsIXPCWrappedNativeTearOff* tearOff,
                               nsIXPCScriptable* arbitrary,
                               JSBool* retval);
 };
@@ -1248,41 +1247,38 @@ NS_IMETHODIMP
 nsXPCComponents_Exception::Call(JSContext *cx, JSObject *obj,
                                 uintN argc, jsval *argv,
                                 jsval *rval,
-                                nsIXPConnectWrappedNative* wrapper,
+                                nsIXPCWrappedNativeTearOff* tearOff,
                                 nsIXPCScriptable* arbitrary,
                                 JSBool* retval)
 {
-    return CallOrConstruct(cx, obj, argc, argv, rval, wrapper, arbitrary, retval);
+    return CallOrConstruct(cx, obj, argc, argv, rval, tearOff, arbitrary, retval);
 }
 
 NS_IMETHODIMP
 nsXPCComponents_Exception::Construct(JSContext *cx, JSObject *obj,
                                      uintN argc, jsval *argv,
                                      jsval *rval,
-                                     nsIXPConnectWrappedNative* wrapper,
+                                     nsIXPCWrappedNativeTearOff* tearOff,
                                      nsIXPCScriptable* arbitrary,
                                      JSBool* retval)
 {
-    return CallOrConstruct(cx, obj, argc, argv, rval, wrapper, arbitrary, retval);
+    return CallOrConstruct(cx, obj, argc, argv, rval, tearOff, arbitrary, retval);
 }
 
 NS_METHOD
 nsXPCComponents_Exception::CallOrConstruct(JSContext *cx, JSObject *obj,
                                            uintN argc, jsval *argv,
                                            jsval *rval,
-                                           nsIXPConnectWrappedNative* wrapper,
+                                           nsIXPCWrappedNativeTearOff* tearOff,
                                            nsIXPCScriptable* arbitrary,
                                            JSBool* retval)
 {
-    AUTO_PUSH_JSCONTEXT(cx);
-    SET_CALLER_JAVASCRIPT(cx);
-
-    nsCOMPtr<nsIXPConnect> xpc = 
-        dont_AddRef(NS_STATIC_CAST(nsIXPConnect*,nsXPConnect::GetXPConnect()));
-    XPCContext* xpcc = nsXPConnect::GetContext(cx);
-
-    if(!xpc || !xpcc)
+    XPCCallContext ccx(JS_CALLER, cx);
+    if(!ccx.IsValid())
         return ThrowAndFail(NS_ERROR_XPC_UNEXPECTED, cx, retval);
+
+    nsXPConnect* xpc = ccx.GetXPConnect();
+    XPCContext* xpcc = ccx.GetXPCContext();
 
     // Do the security check if necessary
     
@@ -1377,7 +1373,7 @@ nsXPCComponents_Exception::CallOrConstruct(JSContext *cx, JSObject *obj,
 NS_IMETHODIMP
 nsXPCComponents_Exception::HasInstance(JSContext *cx, JSObject *obj,                    
                                        jsval v, JSBool *bp,                             
-                                       nsIXPConnectWrappedNative* wrapper,              
+                                       nsIXPCWrappedNativeTearOff* tearOff,              
                                        nsIXPCScriptable* arbitrary,                     
                                        JSBool* retval)
 {
@@ -1420,7 +1416,7 @@ private:
     NS_METHOD CallOrConstruct(JSContext *cx, JSObject *obj,
                               uintN argc, jsval *argv,
                               jsval *rval,
-                              nsIXPConnectWrappedNative* wrapper,
+                              nsIXPCWrappedNativeTearOff* tearOff,
                               nsIXPCScriptable* arbitrary,
                               JSBool* retval);
 private:
@@ -1496,39 +1492,37 @@ NS_IMETHODIMP
 nsXPCConstructor::Call(JSContext *cx, JSObject *obj,
                        uintN argc, jsval *argv,
                        jsval *rval,
-                       nsIXPConnectWrappedNative* wrapper,
+                       nsIXPCWrappedNativeTearOff* tearOff,
                        nsIXPCScriptable* arbitrary,
                        JSBool* retval)
 {
-    return CallOrConstruct(cx, obj, argc, argv, rval, wrapper, arbitrary, retval);
+    return CallOrConstruct(cx, obj, argc, argv, rval, tearOff, arbitrary, retval);
 }
 
 NS_IMETHODIMP
 nsXPCConstructor::Construct(JSContext *cx, JSObject *obj,
                             uintN argc, jsval *argv,
                             jsval *rval,
-                            nsIXPConnectWrappedNative* wrapper,
+                            nsIXPCWrappedNativeTearOff* tearOff,
                             nsIXPCScriptable* arbitrary,
                             JSBool* retval)
 {
-    return CallOrConstruct(cx, obj, argc, argv, rval, wrapper, arbitrary, retval);
+    return CallOrConstruct(cx, obj, argc, argv, rval, tearOff, arbitrary, retval);
 }
 
 NS_METHOD
 nsXPCConstructor::CallOrConstruct(JSContext *cx, JSObject *obj,
                                   uintN argc, jsval *argv,
                                   jsval *rval,
-                                  nsIXPConnectWrappedNative* wrapper,
+                                  nsIXPCWrappedNativeTearOff* tearOff,
                                   nsIXPCScriptable* arbitrary,
                                   JSBool* retval)
 {
-    AUTO_PUSH_JSCONTEXT(cx);
-    SET_CALLER_JAVASCRIPT(cx);
-
-    nsCOMPtr<nsIXPConnect> xpc = 
-        dont_AddRef(NS_STATIC_CAST(nsIXPConnect*,nsXPConnect::GetXPConnect()));
-    if(!xpc)
+    XPCCallContext ccx(JS_CALLER, cx);
+    if(!ccx.IsValid())
         return ThrowAndFail(NS_ERROR_XPC_UNEXPECTED, cx, retval);
+
+    nsXPConnect* xpc = ccx.GetXPConnect();
 
     // security check not required because we are going to call through the
     // code which is reflected into JS which will do that for us later.
@@ -1608,7 +1602,7 @@ private:
     NS_METHOD CallOrConstruct(JSContext *cx, JSObject *obj,
                               uintN argc, jsval *argv,
                               jsval *rval,
-                              nsIXPConnectWrappedNative* wrapper,
+                              nsIXPCWrappedNativeTearOff* tearOff,
                               nsIXPCScriptable* arbitrary,
                               JSBool* retval);
 };
@@ -1646,35 +1640,32 @@ NS_IMETHODIMP
 nsXPCComponents_Constructor::Call(JSContext *cx, JSObject *obj,
                                 uintN argc, jsval *argv,
                                 jsval *rval,
-                                nsIXPConnectWrappedNative* wrapper,
+                                nsIXPCWrappedNativeTearOff* tearOff,
                                 nsIXPCScriptable* arbitrary,
                                 JSBool* retval)
 {
-    return CallOrConstruct(cx, obj, argc, argv, rval, wrapper, arbitrary, retval);
+    return CallOrConstruct(cx, obj, argc, argv, rval, tearOff, arbitrary, retval);
 }
 
 NS_IMETHODIMP
 nsXPCComponents_Constructor::Construct(JSContext *cx, JSObject *obj,
                                      uintN argc, jsval *argv,
                                      jsval *rval,
-                                     nsIXPConnectWrappedNative* wrapper,
+                                     nsIXPCWrappedNativeTearOff* tearOff,
                                      nsIXPCScriptable* arbitrary,
                                      JSBool* retval)
 {
-    return CallOrConstruct(cx, obj, argc, argv, rval, wrapper, arbitrary, retval);
+    return CallOrConstruct(cx, obj, argc, argv, rval, tearOff, arbitrary, retval);
 }
 
 NS_METHOD
 nsXPCComponents_Constructor::CallOrConstruct(JSContext *cx, JSObject *obj,
                                            uintN argc, jsval *argv,
                                            jsval *rval,
-                                           nsIXPConnectWrappedNative* wrapper,
+                                           nsIXPCWrappedNativeTearOff* tearOff,
                                            nsIXPCScriptable* arbitrary,
                                            JSBool* retval)
 {
-    AUTO_PUSH_JSCONTEXT(cx);
-    SET_CALLER_JAVASCRIPT(cx);
-
     // make sure we have at least one arg
     
     if(!argc)
@@ -1682,11 +1673,14 @@ nsXPCComponents_Constructor::CallOrConstruct(JSContext *cx, JSObject *obj,
 
     // get the various other object pointers we need
 
-    nsCOMPtr<nsIXPConnect> xpc = 
-        dont_AddRef(NS_STATIC_CAST(nsIXPConnect*,nsXPConnect::GetXPConnect()));
-    XPCContext* xpcc = nsXPConnect::GetContext(cx);
-    nsXPCWrappedNativeScope* scope =  
-        nsXPCWrappedNativeScope::FindInJSObjectScope(xpcc, obj);
+    XPCCallContext ccx(JS_CALLER, cx);
+    if(!ccx.IsValid())
+        return ThrowAndFail(NS_ERROR_XPC_UNEXPECTED, cx, retval);
+
+    nsXPConnect* xpc = ccx.GetXPConnect();
+    XPCContext* xpcc = ccx.GetXPCContext();
+    XPCWrappedNativeScope* scope =  
+        XPCWrappedNativeScope::FindInJSObjectScope(ccx, obj);
     nsXPCComponents* comp;
 
     if(!xpc || !xpcc || !scope || !(comp = scope->GetComponents()))
@@ -1840,7 +1834,7 @@ nsXPCComponents_Constructor::CallOrConstruct(JSContext *cx, JSObject *obj,
 NS_IMETHODIMP
 nsXPCComponents_Constructor::HasInstance(JSContext *cx, JSObject *obj,                    
                                        jsval v, JSBool *bp,                             
-                                       nsIXPConnectWrappedNative* wrapper,              
+                                       nsIXPCWrappedNativeTearOff* tearOff,              
                                        nsIXPCScriptable* arbitrary,                     
                                        JSBool* retval)
 {
@@ -1857,16 +1851,19 @@ nsXPCComponents_Constructor::HasInstance(JSContext *cx, JSObject *obj,
 // XXXjband We ought to cache the wrapper in the object's slots rather than
 // re-wrapping on demand
 
-#ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
-NS_IMPL_THREADSAFE_ISUPPORTS3(nsXPCComponents, 
-                              nsIXPCComponents, 
-                              nsIXPCScriptable, 
-                              nsISecurityCheckedComponent)
-#else
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsXPCComponents, 
-                              nsIXPCComponents, 
-                              nsIXPCScriptable)
+NS_IMPL_THREADSAFE_ADDREF(nsXPCComponents)
+NS_IMPL_THREADSAFE_RELEASE(nsXPCComponents)
+
+NS_INTERFACE_MAP_BEGIN(nsXPCComponents)
+  NS_INTERFACE_MAP_ENTRY(nsIXPCComponents)
+#if 0
+  NS_INTERFACE_MAP_ENTRY(nsIXPCScriptable)
 #endif
+#ifdef XPC_USE_SECURITY_CHECKED_COMPONENT
+  NS_INTERFACE_MAP_ENTRY(nsISecurityCheckedComponent)
+#endif
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIXPCComponents)
+NS_INTERFACE_MAP_END_THREADSAFE
 
 nsXPCComponents::nsXPCComponents()
     :   mInterfaces(nsnull),
@@ -1970,7 +1967,7 @@ XPC_IMPLEMENT_FORWARD_FINALIZE(nsXPCComponents)
 NS_IMETHODIMP
 nsXPCComponents::GetProperty(JSContext *cx, JSObject *obj,
                              jsid id, jsval *vp,
-                             nsIXPConnectWrappedNative* wrapper,
+                             nsIXPCWrappedNativeTearOff* tearOff,
                              nsIXPCScriptable* arbitrary,
                              JSBool* retval)
 {
@@ -2002,13 +1999,13 @@ nsXPCComponents::GetProperty(JSContext *cx, JSObject *obj,
             return NS_OK;
         }
     }
-    return arbitrary->GetProperty(cx, obj, id, vp, wrapper, nsnull, retval);
+    return arbitrary->GetProperty(cx, obj, id, vp, tearOff, nsnull, retval);
 }
 
 NS_IMETHODIMP
 nsXPCComponents::SetProperty(JSContext *cx, JSObject *obj,
                              jsid id, jsval *vp,
-                             nsIXPConnectWrappedNative* wrapper,
+                             nsIXPCWrappedNativeTearOff* tearOff,
                              nsIXPCScriptable* arbitrary,
                              JSBool* retval)
 {
@@ -2031,61 +2028,50 @@ nsXPCComponents::SetProperty(JSContext *cx, JSObject *obj,
     }
 
     if(mCreating)
-        return arbitrary->SetProperty(cx, obj, id, vp, wrapper, nsnull, retval);
+        return arbitrary->SetProperty(cx, obj, id, vp, tearOff, nsnull, retval);
     *retval = JS_TRUE;
     return NS_OK;
 }
 
 // static 
 JSBool
-nsXPCComponents::AttachNewComponentsObject(XPCContext* xpcc, 
+nsXPCComponents::AttachNewComponentsObject(XPCCallContext& ccx, 
+                                           XPCWrappedNativeScope* aScope,
                                            JSObject* aGlobal)
 {
-    if(!xpcc || !aGlobal)
+    if(!aGlobal)
+        return JS_FALSE;
+    
+    nsXPCComponents* components = new nsXPCComponents();
+    if(!components)
         return JS_FALSE;
 
-    JSBool success = JS_FALSE;
-    nsXPCComponents* components = nsnull;
-    nsXPCWrappedNativeScope* scope = nsnull;
-    nsXPCWrappedNative* wrapper = nsnull;
+    nsCOMPtr<nsIXPCComponents> cholder(components);
 
-    components = new nsXPCComponents();
-    if(components)
-        NS_ADDREF(components);
-    else
-        goto done;        
+    // XXX this should not be needed when we get a nsIClassInfo
+    XPCNativeInterface* iface = 
+        XPCNativeInterface::GetNewOrUsed(ccx, &NS_GET_IID(nsIXPCComponents));
+
+    if(!iface)
+        return JS_FALSE;
+
+    nsCOMPtr<XPCWrappedNative> 
+        wrapper(
+            dont_AddRef(
+                XPCWrappedNative::GetNewOrUsed(ccx, cholder, aScope, iface)));
+    if(!wrapper)
+        return JS_FALSE;
     
-    scope = new nsXPCWrappedNativeScope(xpcc, components, aGlobal);
-    if(scope)
-        NS_ADDREF(scope);
-    else
-        goto done;        
+    aScope->SetComponents(components);
 
-    if(!scope->IsValid())
-        goto done;        
-
-    // objects init'd OK. 
-
-    wrapper = nsXPCWrappedNative::GetNewOrUsedWrapper(xpcc, scope, aGlobal, 
-                                NS_STATIC_CAST(nsIXPCComponents*,components),
-                                NS_GET_IID(nsIXPCComponents), nsnull);
-    if(wrapper)
-    {
-        JSObject* obj;
-        jsid id = xpcc->GetRuntime()->GetStringID(XPCJSRuntime::IDX_COMPONENTS);
-        success = NS_SUCCEEDED(wrapper->GetJSObject(&obj)) &&
-                  OBJ_DEFINE_PROPERTY(xpcc->GetJSContext(),
+    jsid id = ccx.GetRuntime()->GetStringID(XPCJSRuntime::IDX_COMPONENTS);
+    JSObject* obj = wrapper->GetFlatJSObject();
+    
+    return obj && OBJ_DEFINE_PROPERTY(ccx.GetJSContext(),
                                       aGlobal, id, OBJECT_TO_JSVAL(obj),
                                       nsnull, nsnull,
-                                      JSPROP_PERMANENT |
-                                      JSPROP_READONLY,
+                                      JSPROP_PERMANENT | JSPROP_READONLY,
                                       nsnull);
-    }            
-done:
-    NS_IF_RELEASE(components);
-    NS_IF_RELEASE(scope);
-    NS_IF_RELEASE(wrapper);
-    return success;
 }
 
 #ifdef XPC_USE_SECURITY_CHECKED_COMPONENT

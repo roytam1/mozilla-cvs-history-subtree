@@ -848,10 +848,10 @@ XPT_DumpConstDescriptor(XPTHeader *header, XPTConstDescriptor *cd,
         fprintf(stdout, "%d", cd->value.i32);
         break;
     case TD_UINT8:
-        fprintf(stdout, "%d", cd->value.ui8);
+        fprintf(stdout, "%u", cd->value.ui8);
         break;
     case TD_UINT16:
-        fprintf(stdout, "%d", cd->value.ui16);
+        fprintf(stdout, "%u", cd->value.ui16);
         break;
     case TD_UINT64:
 /*          out = PR_smprintf("%lld", cd->value.ui64); */
@@ -859,10 +859,10 @@ XPT_DumpConstDescriptor(XPTHeader *header, XPTConstDescriptor *cd,
 /*          PR_smprintf_free(out); */
         /* XXX punt for now to remove NSPR linkage. */
         LL_L2UI(uintout, cd->value.ui64);
-        fprintf(stdout, "%d", uintout);
+        fprintf(stdout, "%u", uintout);
         break;
     case TD_UINT32:
-        fprintf(stdout, "%d", cd->value.ui32);
+        fprintf(stdout, "%u", cd->value.ui32);
         break;
     case TD_FLOAT:
         fprintf(stdout, "%f", cd->value.flt);

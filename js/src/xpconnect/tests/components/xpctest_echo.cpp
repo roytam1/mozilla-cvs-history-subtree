@@ -59,6 +59,7 @@ public:
     virtual ~xpctestEcho();
 private:
     nsIEcho* mReceiver;
+    char*    mString;
 };
 
 /***************************************************************************/
@@ -70,7 +71,7 @@ NS_IMPL_ISUPPORTS1(xpctestEcho, nsIEcho);
 #endif // IMPLEMENT_TIMER_STUFF
 
 xpctestEcho::xpctestEcho()
-    : mReceiver(NULL)
+    : mReceiver(nsnull), mString(nsnull)
 {
     NS_INIT_REFCNT();
     NS_ADDREF_THIS();
@@ -79,6 +80,8 @@ xpctestEcho::xpctestEcho()
 xpctestEcho::~xpctestEcho()
 {
     NS_IF_RELEASE(mReceiver);
+    if(mString)
+        nsMemory::Free(mString);
 }
 
 NS_IMETHODIMP xpctestEcho::SetReceiver(nsIEcho* aReceiver)
@@ -135,14 +138,14 @@ NS_IMETHODIMP xpctestEcho::In2OutOneString(const char* input, char** output)
     char* p;
     int len;
     if(input && output &&
-       (NULL != (p = (char*)nsMemory::Alloc(len=strlen(input)+1))))
+       (nsnull != (p = (char*)nsMemory::Alloc(len=strlen(input)+1))))
     {
         memcpy(p, input, len);
         *output = p;
         return NS_OK;
     }
     if(output)
-        *output = NULL;
+        *output = nsnull;
     return NS_ERROR_FAILURE;
 }
 
@@ -340,6 +343,30 @@ xpctestEcho::DebugDumpJSStack()
     }
     return rv;
 }        
+
+/* attribute string aString; */
+NS_IMETHODIMP 
+xpctestEcho::GetAString(char * *aAString)
+{
+    if(mString)
+        *aAString = (char*) nsMemory::Clone(mString, strlen(mString)+1);
+    else
+        *aAString = nsnull;
+    return NS_OK;
+}
+NS_IMETHODIMP 
+xpctestEcho::SetAString(const char * aAString)
+{
+    if(mString)
+        nsMemory::Free(mString);
+    if(aAString)
+        mString = (char*) nsMemory::Clone(aAString, strlen(aAString)+1);
+    else
+        mString = nsnull;
+    return NS_OK;
+}
+
+
 
 /***************************************************/
 

@@ -44,6 +44,7 @@ XPIDLSRCS =               \
         .\nsIComponentLoader.idl \
 	.\nsIComponentManager.idl \
 	.\nsIFactory.idl	\
+	.\nsIClassInfo.idl \
         .\nsIModule.idl	  \
 	.\nsIRegistry.idl \
         $(NULL)

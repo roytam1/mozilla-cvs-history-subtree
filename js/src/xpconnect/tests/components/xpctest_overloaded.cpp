@@ -152,7 +152,7 @@ XPC_IMPLEMENT_FORWARD_FINALIZE(xpcoverloaded)
 
 NS_IMETHODIMP
 xpcoverloaded::Create(JSContext *cx, JSObject *obj,
-                                nsIXPConnectWrappedNative* wrapper,
+                                nsIXPCWrappedNativeTearOff* tearOff,
                                 nsIXPCScriptable* arbitrary)
 {
 /*
