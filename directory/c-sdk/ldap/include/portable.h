@@ -137,7 +137,7 @@
  * for select()
  */
 #if !defined(WINSOCK) && !defined(_WINDOWS) && !defined(macintosh) && !defined(XP_OS2)
-#if defined(hpux) || defined(LINUX) || defined(SUNOS4)
+#if defined(hpux) || defined(LINUX) || defined(SUNOS4) || defined(XP_BEOS)
 #include <sys/time.h>
 #else
 #include <sys/select.h>
@@ -238,6 +238,11 @@ int strncasecmp(const char *, const char *, size_t);
 #define GETHOSTBYNAME( n, r, b, l, e )  gethostbyname( n )
 #define CTIME( c, b, l )		ctime( c )
 #define STRTOK( s1, s2, l )		strtok( s1, s2 )
+#elif defined(XP_BEOS)
+#define GETHOSTBYNAME( n, r, b, l, e )  gethostbyname( n )
+#define CTIME( c, b, l )                ctime_r( c, b )
+#define STRTOK( s1, s2, l )		strtok_r( s1, s2, l )
+#define HAVE_STRTOK_R
 #else /* UNIX */
 #if defined(sgi) || defined(HPUX9) || defined(LINUX1_2) || defined(SCOOS) || \
     defined(UNIXWARE) || defined(SUNOS4) || defined(SNI) || defined(BSDI) || \
@@ -302,7 +307,9 @@ extern char *strdup();
 
 #if !defined(_WINDOWS) && !defined(macintosh) && !defined(XP_OS2)
 #include <netinet/in.h>
+#if !defined(XP_BEOS)
 #include <arpa/inet.h>	/* for inet_addr() */
+#endif
 #endif
 
 /*

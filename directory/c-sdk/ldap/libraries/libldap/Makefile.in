@@ -106,6 +106,10 @@ DEFINES               += -D_THREAD_SAFE
 DSO_LDOPTS      += -lm -lc_r -L../liblber -llber40
 endif
 
+ifeq ($(OS_ARCH),BeOS)
+DSO_LDOPTS	+= -L../liblber -llber40
+endif
+
 GARBAGE		+= $(ETCDIR)/ldapfriendly $(ETCDIR)/ldapfilter.conf \
 		   $(ETCDIR)/ldaptemplates.conf $(ETCDIR)/ldapsearchprefs.conf
 
