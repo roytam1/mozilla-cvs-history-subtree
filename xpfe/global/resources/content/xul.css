@@ -279,10 +279,7 @@ tooltip[menugenerated="true"] {
 tooltip {
   -moz-binding: url("chrome://global/content/bindings/popup.xml#tooltip");
   display: -moz-popup;
-}
-
-.titletip {
-  -moz-binding: url("chrome://global/content/bindings/outliner.xml#titletip");
+  margin-top: 21px;
 }
 
 /********** floating popups **********/
