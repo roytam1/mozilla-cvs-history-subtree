@@ -26,6 +26,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef OJI
+#include "prtypes.h"          /* Need platform-dependent definition of HAVE_LONG_LONG
+                                 for non-standard jri_md.h file */
+#endif
+
 #include "jsj_private.h"      /* LiveConnect internals */
 
 /* Floating-point double utilities, stolen from jsnum.h */
