@@ -3392,7 +3392,6 @@ NS_IMETHODIMP nsDocShell::DoURILoad(nsIURI* aURI, nsIURI* aReferrerURI,
              postDataRandomAccess->Seek(PR_SEEK_SET, 0);
          }
 
-         httpChannel->SetRequestMethod("POST");
          httpChannel->SetUploadStream(aPostData);
           /* If there is a valid postdata *and* it is a History Load,
            * set up the cache key on the channel, to retrieve the
