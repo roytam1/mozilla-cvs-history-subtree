@@ -1060,28 +1060,21 @@ nsXULDocument::CreateShell(nsIPresContext* aContext,
                            nsIPresShell** aInstancePtrResult)
 {
     NS_PRECONDITION(aInstancePtrResult, "null ptr");
-    if (! aInstancePtrResult)
-        return NS_ERROR_NULL_POINTER;
-
-    nsresult rv;
 
     nsIPresShell* shell;
-    if (NS_FAILED(rv = nsComponentManager::CreateInstance(kPresShellCID,
-                                                    nsnull,
-                                                    NS_GET_IID(nsIPresShell),
-                                                    (void**) &shell)))
+    nsresult rv = CallCreateInstance(kPresShellCID, &shell);
+    if (NS_FAILED(rv))
         return rv;
 
-    if (NS_FAILED(rv = shell->Init(this, aContext, aViewManager, aStyleSet))) {
+    rv = shell->Init(this, aContext, aViewManager, aStyleSet,
+                     eCompatibility_FullStandards);
+    if (NS_FAILED(rv)) {
         NS_RELEASE(shell);
         return rv;
     }
 
     mPresShells.AppendElement(shell);
     *aInstancePtrResult = shell; // addref implicit in CreateInstance()
-
-    // tell the context the mode we want (always standard)
-    aContext->SetCompatibilityMode(eCompatibility_Standard);
 
     return NS_OK;
 }
@@ -1459,7 +1452,8 @@ nsXULDocument::GetCSSLoader(nsICSSLoader*& aLoader)
     if (NS_SUCCEEDED(result)) {
       result = mCSSLoader->Init(this);
       mCSSLoader->SetCaseSensitive(PR_TRUE);
-      mCSSLoader->SetQuirkMode(PR_FALSE); // no quirks in XUL
+      // no quirks in XUL
+      mCSSLoader->SetCompatibilityMode(eCompatibility_FullStandards);
     }
   }
   aLoader = mCSSLoader;

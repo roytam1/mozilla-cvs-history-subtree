@@ -1149,7 +1149,7 @@ public:
    * aIsPre should be ignored by frames to which the 'white-space'
    * property applies.
    */
-  NS_IMETHOD IsEmpty(PRBool aIsQuirkMode,
+  NS_IMETHOD IsEmpty(nsCompatibility aCompatMode,
                      PRBool aIsPre,
                      PRBool* aResult) = 0;
 

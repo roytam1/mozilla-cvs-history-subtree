@@ -301,7 +301,7 @@ nsHTMLDocument::nsHTMLDocument()
   mAnchors = nsnull;
   mLayers = nsnull;
   mParser = nsnull;
-  mDTDMode = eDTDMode_quirks;  
+  mCompatMode = eCompatibility_NavQuirks;
   mCSSLoader = nsnull;
 
   mForms = nsnull;
@@ -508,17 +508,8 @@ nsHTMLDocument::CreateShell(nsIPresContext* aContext,
                             nsIStyleSet* aStyleSet,
                             nsIPresShell** aInstancePtrResult)
 {
-  nsresult result = nsMarkupDocument::CreateShell(aContext,
-                                                  aViewManager,
-                                                  aStyleSet,
-                                                  aInstancePtrResult);
-
-  if (NS_SUCCEEDED(result)) {
-    aContext->SetCompatibilityMode(((eDTDMode_strict== mDTDMode) ? 
-                                    eCompatibility_Standard : 
-                                    eCompatibility_NavQuirks));
-  }
-  return result;
+  return doCreateShell(aContext, aViewManager, aStyleSet,
+                       mCompatMode, aInstancePtrResult);
 }
 
 // The following Try*Charset will return PR_FALSE only if the charset source 
@@ -1345,7 +1336,7 @@ nsHTMLDocument::GetCSSLoader(nsICSSLoader*& aLoader)
   }
   if (mCSSLoader) {
     mCSSLoader->SetCaseSensitive(PR_FALSE);
-    mCSSLoader->SetQuirkMode(PRBool(eDTDMode_strict!= mDTDMode));
+    mCSSLoader->SetCompatibilityMode(mCompatMode);
   }
   aLoader = mCSSLoader;
   NS_IF_ADDREF(aLoader);
@@ -1354,27 +1345,25 @@ nsHTMLDocument::GetCSSLoader(nsICSSLoader*& aLoader)
 
 
 NS_IMETHODIMP
-nsHTMLDocument::GetDTDMode(nsDTDMode& aMode)
+nsHTMLDocument::GetCompatibilityMode(nsCompatibility& aMode)
 {
-  aMode = mDTDMode;
+  aMode = mCompatMode;
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsHTMLDocument::SetDTDMode(nsDTDMode aMode)
+nsHTMLDocument::SetCompatibilityMode(nsCompatibility aMode)
 {
-  mDTDMode = aMode;
+  mCompatMode = aMode;
   if (mCSSLoader) {
-    mCSSLoader->SetQuirkMode(PRBool(eDTDMode_strict!= mDTDMode));
+    mCSSLoader->SetCompatibilityMode(mCompatMode);
   }
   nsCOMPtr<nsIPresShell> shell = (nsIPresShell*)mPresShells.SafeElementAt(0);
   if (shell) {
     nsCOMPtr<nsIPresContext> pc;
     shell->GetPresContext(getter_AddRefs(pc));
     if (pc) {
-      pc->SetCompatibilityMode(((eDTDMode_strict== mDTDMode) ? 
-                                eCompatibility_Standard : 
-                                eCompatibility_NavQuirks));
+      pc->SetCompatibilityMode(mCompatMode);
     }
   }
 
@@ -3345,17 +3334,19 @@ nsHTMLDocument::RouteEvent(nsIDOMEvent* aEvt)
 }
 
 // readonly attribute DOMString compatMode;
-// Returns "BackCompat" if we are in quirks mode,
-// "CSS1Compat" if we are in strict mode. See bug 105640.
-// This was implemented to match MSIE's compatMode property
+// Returns "BackCompat" if we are in quirks mode, "CSS1Compat" if we are
+// in almost standards or full standards mode. See bug 105640.  This was
+// implemented to match MSIE's compatMode property
 NS_IMETHODIMP
 nsHTMLDocument::GetCompatMode(nsAString& aCompatMode)
 {
   aCompatMode.Truncate();
-  NS_ASSERTION((mDTDMode == eDTDMode_quirks) || (mDTDMode == eDTDMode_strict),
-               "mDTDMode is neither quirks nor strict for this document");
+  NS_ASSERTION(mCompatMode == eCompatibility_NavQuirks ||
+               mCompatMode == eCompatibility_AlmostStandards ||
+               mCompatMode == eCompatibility_FullStandards,
+               "mCompatMode is neither quirks nor strict for this document");
 
-  if (mDTDMode == eDTDMode_quirks) {
+  if (mCompatMode == eCompatibility_NavQuirks) {
     aCompatMode.Assign(NS_LITERAL_STRING("BackCompat"));
   } else {
     aCompatMode.Assign(NS_LITERAL_STRING("CSS1Compat"));

@@ -41,6 +41,7 @@
 #include "nsCoord.h"
 #include "nsEvent.h"
 #include "nsReflowType.h"
+#include "nsCompatibility.h"
 
 class nsIAtom;
 class nsIContent;
@@ -125,7 +126,8 @@ public:
   NS_IMETHOD Init(nsIDocument* aDocument,
                   nsIPresContext* aPresContext,
                   nsIViewManager* aViewManager,
-                  nsIStyleSet* aStyleSet) = 0;
+                  nsIStyleSet* aStyleSet,
+                  nsCompatibility aCompatMode) = 0;
 
   /**
    * All callers are responsible for calling |Destroy| after calling

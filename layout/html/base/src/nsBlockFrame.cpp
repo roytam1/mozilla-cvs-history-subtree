@@ -2949,7 +2949,8 @@ IsMarginZero(nsStyleUnit aUnit, nsStyleCoord &aCoord)
 }
 
 NS_IMETHODIMP
-nsBlockFrame::IsEmpty(PRBool aIsQuirkMode, PRBool aIsPre, PRBool *aResult)
+nsBlockFrame::IsEmpty(nsCompatibility aCompatMode, PRBool aIsPre,
+                      PRBool *aResult)
 {
   // XXXldb In hindsight, I'm not sure why I made this check the margin,
   // but it seems to work right and I'm a little hesitant to change it.
@@ -2989,7 +2990,7 @@ nsBlockFrame::IsEmpty(PRBool aIsQuirkMode, PRBool aIsPre, PRBool *aResult)
        line != line_end;
        ++line)
   {
-    line->IsEmpty(aIsQuirkMode, isPre, aResult);
+    line->IsEmpty(aCompatMode, isPre, aResult);
     if (! *aResult)
       break;
   }

@@ -250,7 +250,7 @@ public:
   NS_IMETHOD AddLeaf(const nsIParserNode& aNode);
   NS_IMETHOD AddComment(const nsIParserNode& aNode);
   NS_IMETHOD AddProcessingInstruction(const nsIParserNode& aNode);
-  NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode=0);
+  NS_IMETHOD AddDocTypeDecl(const nsIParserNode& aNode);
   NS_IMETHOD WillProcessTokens(void);
   NS_IMETHOD DidProcessTokens(void);
   NS_IMETHOD WillProcessAToken(void);
@@ -2697,7 +2697,22 @@ HTMLContentSink::WillBuildModel(void)
   mScrolledToRefAlready = PR_FALSE;
 
   if (mHTMLDocument) {
-    mHTMLDocument->SetDTDMode(mParser? mParser->GetParseMode():eDTDMode_quirks);
+    nsCompatibility mode = eCompatibility_NavQuirks;
+    if (mParser) {
+      nsDTDMode dtdMode = mParser->GetParseMode();
+      switch (dtdMode) {
+        case eDTDMode_full_standards:
+          mode = eCompatibility_FullStandards;
+          break;
+        case eDTDMode_almost_standards:
+          mode = eCompatibility_AlmostStandards;
+          break;
+        default:
+          mode = eCompatibility_NavQuirks;
+          break;
+      }
+    }
+    mHTMLDocument->SetCompatibilityMode(mode);
   }
 
   // Notify document that the load is beginning
@@ -3569,14 +3584,12 @@ nsresult HTMLContentSink::AddProcessingInstruction(const nsIParserNode& aNode) {
  */
 
 NS_IMETHODIMP
-HTMLContentSink::AddDocTypeDecl(const nsIParserNode& aNode, PRInt32 aMode)
+HTMLContentSink::AddDocTypeDecl(const nsIParserNode& aNode)
 {
   nsresult rv = NS_OK;
   MOZ_TIMER_DEBUGLOG(("Start: nsHTMLContentSink::AddDocTypeDecl()\n"));
   MOZ_TIMER_START(mWatch);
  
-  mHTMLDocument->SetDTDMode((nsDTDMode)aMode);
-
   nsCOMPtr<nsIDOMDocument> doc(do_QueryInterface(mHTMLDocument));
 
   if (!doc)
@@ -4499,11 +4512,11 @@ HTMLContentSink::ProcessStyleLink(nsIHTMLContent* aElement,
     nsAutoString  params;
     nsParserUtils::SplitMimeType(aType, mimeType, params);
 
-    nsDTDMode mode;
-    mHTMLDocument->GetDTDMode(mode);
+    nsCompatibility mode;
+    mHTMLDocument->GetCompatibilityMode(mode);
 
     PRBool isStyleSheet = PR_FALSE;     // see bug 18817
-    if (eDTDMode_strict== mode) {
+    if (eCompatibility_NavQuirks != mode) {
       if (mimeType.EqualsIgnoreCase("text/css")) {
         isStyleSheet = PR_TRUE;         // strict mode + good mime type
       }

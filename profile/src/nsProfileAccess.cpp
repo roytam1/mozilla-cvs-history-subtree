@@ -1840,22 +1840,23 @@ nsresult nsProfileLock::Lock(nsILocalFile* aFile)
 
     // First, try the 4.x-compatible symlink technique, which works with NFS
     // without depending on (broken or missing, too often) lockd.
-    struct in_addr inaddr;
-    inaddr.s_addr = INADDR_LOOPBACK;
 
-    char hostname[256];
-    PRStatus status = PR_GetSystemInfo(PR_SI_HOSTNAME, hostname, sizeof hostname);
-    if (status == PR_SUCCESS)
-    {
-        char netdbbuf[PR_NETDB_BUF_SIZE];
-        PRHostEnt hostent;
-        status = PR_GetHostByName(hostname, netdbbuf, sizeof netdbbuf, &hostent);
-        if (status == PR_SUCCESS)
-            memcpy(&inaddr, hostent.h_addr, sizeof inaddr);
-    }
+    // Fake a UDP connection to www.mozilla.org in order to grab the
+    // local network address.
 
-    char *signature =
-        PR_smprintf("%s:%lu", inet_ntoa(inaddr), (unsigned long)getpid());
+    PRFileDesc* sock = PR_NewUDPSocket();
+    PRNetAddr remote_addr;
+    PR_StringToNetAddr("207.200.81.215", &remote_addr);
+    PR_Connect(sock, &remote_addr, 0);
+
+    PRNetAddr local_hostaddr;
+    PR_GetSockName(sock, &local_hostaddr);
+    char hostname[16];
+    PR_NetAddrToString(&local_hostaddr, hostname, 16);
+
+    PR_Close(sock);
+
+    char *signature = PR_smprintf("%s:%lu", hostname, (unsigned long)getpid());
     const char *oldFileName = oldFilePath.get();
     int symlink_rv, symlink_errno, tries = 0;
 
@@ -1877,14 +1878,14 @@ nsresult nsProfileLock::Lock(nsILocalFile* aFile)
             if (colon)
             {
                 *colon++ = '\0';
-                unsigned long addr = inet_addr(buf);
-                if (addr != (unsigned long) -1)
+                PRNetAddr addr;
+                if (PR_SUCCESS == PR_StringToNetAddr(buf, &addr))
                 {
                     char *after = nsnull;
                     pid_t pid = strtol(colon, &after, 0);
                     if (pid != 0 && *after == '\0')
                     {
-                        if (addr != inaddr.s_addr)
+                        if (addr.inet.ip != local_hostaddr.inet.ip)
                         {
                             // Remote lock: give up even if stuck.
                             break;

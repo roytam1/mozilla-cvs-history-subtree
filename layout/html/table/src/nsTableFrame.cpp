@@ -2961,7 +2961,7 @@ nsTableFrame::GetBCBorder(nsIPresContext& aPresContext,
   if (propData) {
     nsCompatibility mode;
     aPresContext.GetCompatibilityMode(&mode);
-    if ((eCompatibility_Standard == mode) || aInnerBorderOnly) {
+    if ((eCompatibility_NavQuirks != mode) || aInnerBorderOnly) {
       nscoord smallHalf, largeHalf;
 
       DivideBCBorderSize(propData->mTopBorderWidth, smallHalf, largeHalf);

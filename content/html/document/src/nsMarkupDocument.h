@@ -39,6 +39,7 @@
 #define nsMarkupDocument_h___
 
 #include "nsDocument.h"
+#include "nsCompatibility.h"
 
 /**
   * MODULE NOTES:
@@ -61,6 +62,15 @@ public:
   NS_IMETHOD CreateShell(nsIPresContext* aContext,
                          nsIViewManager* aViewManager,
                          nsIStyleSet* aStyleSet,
+                         nsIPresShell** aInstancePtrResult);
+protected:
+  // To allow different implementations to choose the quirks mode
+  // differently for their |CreateShell| without overriding the whole
+  // thing.
+  nsresult doCreateShell(nsIPresContext* aContext,
+                         nsIViewManager* aViewManager,
+                         nsIStyleSet* aStyleSet,
+                         nsCompatibility aCompatMode,
                          nsIPresShell** aInstancePtrResult);
 };
 

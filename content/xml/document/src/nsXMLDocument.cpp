@@ -1106,7 +1106,8 @@ nsXMLDocument::GetCSSLoader(nsICSSLoader*& aLoader)
     result = NS_NewCSSLoader(this, getter_AddRefs(mCSSLoader));
     if (mCSSLoader) {
       mCSSLoader->SetCaseSensitive(PR_TRUE);
-      mCSSLoader->SetQuirkMode(PR_FALSE); // No quirks in XML
+      // No quirks in XML
+      mCSSLoader->SetCompatibilityMode(eCompatibility_FullStandards);
     }
   }
   aLoader = mCSSLoader;
