@@ -118,7 +118,8 @@
       <checkbox label="&junkFolder.label;"/>
 
       <!-- note that the id "actionTargetFolder" is magic, and causes 
-           msgFolderPickerOverlay to set things up in a specific way.  -->
+           msgFolderPickerOverlay to set things up identically to the msg 
+           filters file picker -->
       <menulist id="actionTargetFolder"/>
   </hbox>
 
