@@ -515,8 +515,7 @@ function ViewPageSource(messages)
 
 	for(var i = 0; i < numMessages; i++)
 	{
-		var messageResource = messages[i].QueryInterface(Components.interfaces.nsIRDFResource);
-		uri = messageResource.Value;
+		uri = messages[i];
   
 		// Now, we need to get a URL from a URI
 		url = mailSession.ConvertMsgURIToMsgURL(uri, msgWindow);
