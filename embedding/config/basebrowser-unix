@@ -154,7 +154,6 @@ components/dom_xbl.xpt
 components/dom_xul.xpt
 
 ; "javascript:" URLs
-components/libjsurl.so
 components/jsurl.xpt
 
 ; editor

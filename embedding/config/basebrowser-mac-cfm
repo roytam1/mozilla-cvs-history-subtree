@@ -104,7 +104,6 @@ Essential Files:gfx.shlb
 Components:gfxComponent.shlb
 
 ; javascript
-Components:JSUrl.shlb
 Components:jsurl.xpt
 
 ; layout

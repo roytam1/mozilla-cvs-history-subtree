@@ -104,7 +104,6 @@ Essential Files:gfxDebug.shlb
 Components:gfxComponentDebug.shlb
 
 ; javascript
-Components:JSUrlDebug.shlb
 Components:jsurl.xpt
 
 ; layout

@@ -102,7 +102,6 @@ components/libjar50.dylib
 components/jar.xpt
 
 ; javascript
-components/libjsurl.dylib
 components/jsurl.xpt
 
 ; layout

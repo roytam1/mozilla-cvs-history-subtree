@@ -164,7 +164,6 @@ components\dom_xbl.xpt
 components\dom_xul.xpt
 
 ; "javascript:" URLs
-components\jsurl.dll
 components\jsurl.xpt
 
 ; editor
