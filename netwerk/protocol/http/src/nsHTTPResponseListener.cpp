@@ -626,6 +626,10 @@ nsresult nsHTTPResponseListener::FinishedResponseHeaders(void)
   PR_LOG(gHTTPLog, PR_LOG_DEBUG, 
          ("nsHTTPResponseListener::FinishedResponseHeaders [this=%x].\n",
           this));
+
+  // Notify the consumer that headers are available...
+  FireOnHeadersAvailable();
+
   //
   // Check the status code to see if any special processing is necessary.
   //
@@ -640,9 +644,6 @@ nsresult nsHTTPResponseListener::FinishedResponseHeaders(void)
   if (NS_SUCCEEDED(rv) && m_pConsumer) {
     rv = m_pConsumer->OnStartRequest(m_pConnection, m_ResponseContext);
     if (NS_FAILED(rv)) return rv;
-
-    // Notify the consumer that headers are available...
-    FireOnHeadersAvailable();
   } 
 
   return rv;
