@@ -3346,7 +3346,7 @@ nsListControlFrame::KeyPress(nsIDOMEvent* aKeyEvent)
       } break;
 
     case nsIDOMKeyEvent::DOM_VK_ESCAPE: {
-      if (mComboBoxFrame != nsnull) {
+      if (mComboboxFrame != nsnull) {
         PRBool droppedDown = PR_FALSE;
         mComboboxFrame->IsDroppedDown(&droppedDown);
         if (droppedDown) {
