@@ -43,6 +43,8 @@ EXPORTS		= nsCom.h \
                   nsIInputStream.h \
 	          nsIOutputStream.h \
 		  nscore.h \
+		  nsIMalloc.h \
+		  nsMalloc.h \
 		  nsVector.h \
 		  $(NULL)
 
