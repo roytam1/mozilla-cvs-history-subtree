@@ -688,12 +688,12 @@ sub BuildIt {
 		#
 		my $external_build = "$Settings::BaseDir/post-mozilla.pl";
 		if (-e $external_build and $build_status eq 'success') {
-		  PostMozilla::main();
-		} 
+		  $build_status = PostMozilla::main();
+		}
 
         close LOG;
         chdir $build_dir;
-        
+		
         mail_build_finished_message($start_time, $build_status, $logfile)
           if $Settings::ReportStatus;
 
