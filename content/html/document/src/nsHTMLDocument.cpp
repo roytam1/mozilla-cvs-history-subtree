@@ -215,7 +215,6 @@ nsHTMLDocument::nsHTMLDocument()
   mCSSLoader = nsnull;
   mDocWriteDummyRequest = nsnull;
 
-  mBodyContent = nsnull;
   mForms = nsnull;
   mIsWriting = 0;
   mWriteLevel = 0;
@@ -275,8 +274,6 @@ nsHTMLDocument::~nsHTMLDocument()
     mCSSLoader->DropDocumentReference();  // release weak ref
   }
 
-  NS_IF_RELEASE(mBodyContent);
-
   if (--gRefCntRDFService == 0)
   {     
      nsServiceManager::ReleaseService("@mozilla.org/rdf/rdf-service;1", gRDF);
@@ -320,6 +317,8 @@ nsHTMLDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
   NS_IF_RELEASE(mLinks);
   NS_IF_RELEASE(mAnchors);
   NS_IF_RELEASE(mLayers);
+
+  mBodyContent = nsnull;
 
   mImageMaps.Clear();
   NS_IF_RELEASE(mForms);
@@ -1851,7 +1850,7 @@ nsHTMLDocument::SetBody(nsIDOMHTMLElement* aBody)
 
         nsresult rv = root->ReplaceChild(aBody, child, getter_AddRefs(ret));
 
-        NS_IF_RELEASE(mBodyContent);
+        mBodyContent = nsnull;
 
         return rv;
       }
@@ -2627,7 +2626,7 @@ nsHTMLDocument::GetPixelDimensions(nsIPresShell* aShell,
 
   // Find the <body> element: this is what we'll want to use for the
   // document's width and height values.
-  if (mBodyContent == nsnull && PR_FALSE == GetBodyContent()) {
+  if (!mBodyContent && PR_FALSE == GetBodyContent()) {
     return NS_OK;
   }
 
@@ -2688,6 +2687,8 @@ nsHTMLDocument::GetWidth(PRInt32* aWidth)
 {
   NS_ENSURE_ARG_POINTER(aWidth);
 
+  FlushPendingNotifications();
+
   nsCOMPtr<nsIPresShell> shell;
   nsresult result = NS_OK;
 
@@ -2709,6 +2710,8 @@ NS_IMETHODIMP
 nsHTMLDocument::GetHeight(PRInt32* aHeight)
 {
   NS_ENSURE_ARG_POINTER(aHeight);
+
+  FlushPendingNotifications();
 
   nsCOMPtr<nsIPresShell> shell;
   nsresult result = NS_OK;
@@ -3549,7 +3552,7 @@ nsHTMLDocument::GetBodyContent()
 NS_IMETHODIMP
 nsHTMLDocument::GetBodyElement(nsIDOMHTMLBodyElement** aBody)
 {
-  if (mBodyContent == nsnull && PR_FALSE == GetBodyContent()) {
+  if (!mBodyContent && PR_FALSE == GetBodyContent()) {
     return NS_ERROR_FAILURE;
   }
   
