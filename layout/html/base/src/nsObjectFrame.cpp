@@ -291,10 +291,13 @@ private:
 #ifdef XP_MAC
   // get the absolute widget position and clip
   static void GetWidgetPosAndClip(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbsY, nsRect& aClipRect); 
+#endif // XP_MAC
+
+#if defined(XP_MAC) || defined(XP_WIN)
   static void ConvertTwipsToPixels(nsIPresContext& aPresContext, nsRect& aTwipsRect, nsRect& aPixelRect);
   // convert relative coordinates to absolute
   static void ConvertRelativeToWindowAbsolute(nsIFrame* aFrame, nsIPresContext* aPresContext, nsPoint& aRel, nsPoint& aAbs, nsIWidget *&aContainerWidget);
-#endif // XP_MAC
+#endif // XP_MAC || XP_WIN
 
 nsObjectFrame::~nsObjectFrame()
 {
@@ -1492,9 +1495,11 @@ nsObjectFrame::DidReflow(nsIPresContext* aPresContext,
           nsIFrame* parentFrame;
           GetParentWithView(aPresContext, &parentFrame);
 
-          if(parentFrame != nsnull)
-            parentFrame->GetOffsetFromView(aPresContext, origin, &parentWithView);
-
+          if(parentFrame != nsnull) {
+            nsPoint originFrame;
+            parentFrame->GetOffsetFromView(aPresContext, originFrame, &parentWithView);
+            origin+=originFrame;
+          }
         }
 
         window->x = NSTwipsToIntPixels(origin.x + offx, t2p);
@@ -3328,12 +3333,11 @@ nsPluginInstanceOwner::Destroy()
 
 void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect, PRUint32 ndc)
 {
-#ifdef XP_MAC
-  if (mInstance != NULL) {
+#if defined(XP_MAC) || defined(XP_WIN)
+  if (!mInstance)
+    return;
 
-    nsPluginPort* pluginPort = GetPluginPort();
-
-#ifdef DO_DIRTY_INTERSECT   // aDirtyRect isn't always correct, see bug 56128
+#if defined(DO_DIRTY_INTERSECT) || defined(XP_WIN) // aDirtyRect isn't always correct, see bug 56128
     nsPoint rel(aDirtyRect.x, aDirtyRect.y);
     nsPoint abs(0,0);
     nsCOMPtr<nsIWidget> containerWidget;
@@ -3347,6 +3351,10 @@ void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect, PRUint32 ndc)
     nsRect absDirtyRectInPixels;
     ConvertTwipsToPixels(*mContext, absDirtyRect, absDirtyRectInPixels);
 #endif
+
+#ifdef XP_MAC
+  nsPluginPort* pluginPort = GetPluginPort();
+
     FixUpPluginWindow();
 
     EventRecord updateEvent;
@@ -3357,17 +3365,24 @@ void nsPluginInstanceOwner::Paint(const nsRect& aDirtyRect, PRUint32 ndc)
     nsPluginEvent pluginEvent = { &updateEvent, nsPluginPlatformWindowRef(pluginPort->port) };
     PRBool eventHandled = PR_FALSE;
     mInstance->HandleEvent(&pluginEvent, &eventHandled);
-    }
-#endif
+#endif // XP_MAC
+#endif // XP_MAC || XP_WIN
 
 #ifdef XP_WIN
+  // prepare rectangle to pass with paint message
+  RECT rc;
+  rc.left   = absDirtyRectInPixels.x;
+  rc.top    = absDirtyRectInPixels.y;
+  rc.right  = rc.left + absDirtyRectInPixels.width;
+  rc.bottom = rc.top + absDirtyRectInPixels.height;
+
     nsPluginEvent pluginEvent;
   pluginEvent.event = 0x000F; //!!! This is bad, but is it better to include <windows.h> for WM_PAINT only?
   pluginEvent.wParam = (uint32)ndc;
-  pluginEvent.lParam = nsnull;
+  pluginEvent.lParam = (uint32)&rc;
     PRBool eventHandled = PR_FALSE;
     mInstance->HandleEvent(&pluginEvent, &eventHandled);
-#endif
+#endif // XP_WIN
 }
 
 // Here's how we give idle time to plugins.
@@ -3636,9 +3651,9 @@ static void GetWidgetPosAndClip(nsIWidget* aWidget,nscoord& aAbsX, nscoord& aAbs
   //printf("Widget clip X %d Y %d rect %d %d %d %d\n", aAbsX, aAbsY,  aClipRect.x,  aClipRect.y, aClipRect.width,  aClipRect.height ); 
   //printf("--------------\n"); 
 } 
+#endif // XP_MAC
 
-
-#ifdef DO_DIRTY_INTERSECT
+#if (defined (XP_MAC) && defined(DO_DIRTY_INTERSECT)) || defined(XP_WIN) 
 // Convert from a frame relative coordinate to a coordinate relative to its
 // containing window
 static void ConvertRelativeToWindowAbsolute(nsIFrame* aFrame, nsIPresContext* aPresContext, nsPoint& aRel, nsPoint& aAbs, nsIWidget *&
@@ -3704,7 +3719,9 @@ static void ConvertTwipsToPixels(nsIPresContext& aPresContext, nsRect& aTwipsRec
   aPixelRect.width = NSTwipsToIntPixels(aTwipsRect.width, t2p);
   aPixelRect.height = NSTwipsToIntPixels(aTwipsRect.height, t2p);
 }
-#endif // DO_DIRTY_INTERSECT
+#endif // (XP_MAC && DO_DIRTY_INTERSECT) || XP_WIN
+
+#ifdef XP_MAC
 
 void nsPluginInstanceOwner::FixUpPluginWindow()
 {
