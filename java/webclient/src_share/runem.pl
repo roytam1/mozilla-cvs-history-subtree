@@ -115,8 +115,10 @@ $cmd = $JAVA_CMD;
 if ($SEP eq "/") {
   $cmd = $cmd . " -native";
 }
-# workaround bug 64332, turn off hotspot and JIT
-$cmd = $cmd . " -classic -Djava.compiler=NONE";
+else {
+  # workaround bug 64332 on Win32, turn off hotspot and JIT
+  $cmd = $cmd . " -classic -Djava.compiler=NONE";
+}
 
 #tack on the java library path
 $cmd = $cmd . " -Djava.library.path=" . $BINDIR;

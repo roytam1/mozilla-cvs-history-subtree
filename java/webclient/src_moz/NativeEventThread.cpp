@@ -71,6 +71,12 @@
 #include <unistd.h>
 #include "gdksuperwin.h"
 #include "gtkmozarea.h"
+
+extern "C" {
+    static int	    wc_x_error			 (Display     *display, 
+                                          XErrorEvent *error);
+}
+
 #endif
 
 static NS_DEFINE_IID(kWebShellCID, NS_WEB_SHELL_CID);
@@ -117,6 +123,29 @@ extern const char * gBinDir; // defined in WrapperFactoryImpl.cpp
 //
 // Local functions
 //
+
+#ifdef XP_UNIX
+static int
+wc_x_error (Display	 *display,
+            XErrorEvent *error)
+{
+    if (error->error_code)
+        {
+            char buf[64];
+            
+            XGetErrorText (display, error->error_code, buf, 63);
+            
+            fprintf (stderr, "Webclient-Gdk-ERROR **: %s\n  serial %ld error_code %d request_code %d minor_code %d\n",
+                     buf, 
+                     error->serial, 
+                     error->error_code, 
+                     error->request_code,
+                     error->minor_code);
+        }
+    
+    return 0;
+}
+#endif
 
 /**
 
@@ -200,6 +229,7 @@ JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_NativeEventThr
                                     "NULL webShellPtr passed to nativeProcessEvents.");
         return;
     }
+
     void* threadId = PR_GetCurrentThread();
     if (threadId == (void *) gEmbeddedThread) {
         //        printf("--------- Thread ID ---- %p\n",gEmbeddedThread);
@@ -677,6 +707,14 @@ nsresult InitMozillaStuff (WebShellInitContext * initContext)
                ("InitMozillaStuff(%lx): enter event loop\n", initContext));
     }
 #endif
+
+#ifdef XP_UNIX
+
+    // The gdk_x_error function exits in some cases, we don't 
+    // want that.
+    XSetErrorHandler(wc_x_error);
+#endif
+
     // Just need to loop once to clear out events before returning
     processEventLoop(initContext);
     

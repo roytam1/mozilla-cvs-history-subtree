@@ -104,6 +104,12 @@ JNIEXPORT jint JNICALL Java_org_mozilla_webclient_wrapper_1native_WindowControlI
     util_InitializeShareInitContext(&(initContext->shareContext));
 
 #ifdef XP_UNIX
+    /***** Uncomment this to debug on unix
+    pid_t pid = getpid();
+    printf("++++++++++++++++debug: edburns: pid is: %d\n", pid);
+    sleep(7);
+    **************/ 
+
     initContext->gtkWinPtr = 
         (int)::util_GetGTKWinPtrFromCanvas(env, aBrowserControlImpl);
 #else
