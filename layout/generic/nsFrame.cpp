@@ -4774,11 +4774,6 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
 
     PRBool useHTMLConstraints = UseHTMLReflowConstraints(this, aState);
 
-    // See if we an set the max element size and return the reflow states new reason. Sometimes reflow states need to 
-    // be changed. Incremental dirty reflows targeted at us can be converted to Resize if we are not dirty. So make sure
-    // we look at the reason returned.
-    PRBool canSetMaxElementWidth = CanSetMaxElementWidth(aState, reason, &path);
-
     // If we don't have any HTML constraints and its a resize, then nothing in the block
     // could have changed, so no refresh is necessary.
     nsBoxLayoutMetrics* metrics = BoxMetrics();
@@ -4792,18 +4787,9 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
     // the rect we plan to size to.
     nsRect rect(oldRect);
     
-    // if we can set the maxElementSize then 
-    // tell the metrics we want it. And also tell it we want
-    // to compute the max width. This will allow us to get the min width and the pref width.
-    if (canSetMaxElementWidth) {
-       desiredSize.mFlags |= NS_REFLOW_CALC_MAX_WIDTH;
-       desiredSize.mComputeMEW = PR_TRUE;
-    } else {
-      // if we can't set the maxElementSize. Then we must reflow
-      // uncontrained.
-      rect.width = NS_UNCONSTRAINEDSIZE;
-      rect.height = NS_UNCONSTRAINEDSIZE;
-    }
+    desiredSize.mFlags |= NS_REFLOW_CALC_MAX_WIDTH;
+    desiredSize.mComputeMEW = PR_TRUE;
+
     if (useHTMLConstraints) {
       nsSize constrained = aState.ScrolledBlockSizeConstraint();
       rect.width = constrained.width;
@@ -4830,10 +4816,10 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
     nsRect newRect = GetRect();
 
     // make sure we draw any size change
-    if (reason == eReflowReason_Incremental && (oldRect.width != newRect.width || oldRect.height != newRect.height)) {
-     newRect.x = 0;
-     newRect.y = 0;
-     Redraw(aState, &newRect);
+    if (oldRect.width != newRect.width || oldRect.height != newRect.height) {
+      newRect.x = 0;
+      newRect.y = 0;
+      Redraw(aState, &newRect);
     }
 
     // if someone asked the nsBoxLayoutState to get the max size lets handle that.
@@ -4846,41 +4832,32 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
     }
  
     metrics->mBlockMinSize.height = 0;
-    // if we can use the maxElmementSize then lets use it
-    // if not then just use the desired.
-    if (canSetMaxElementWidth) {
-      metrics->mBlockPrefSize.width  = desiredSize.mMaximumWidth;
-      metrics->mBlockMinSize.width   = desiredSize.mMaxElementWidth; 
-      // ok we need the max ascent of the items on the line. So to do this
-      // ask the block for its line iterator. Get the max ascent.
-      nsCOMPtr<nsILineIterator> lines = do_QueryInterface(NS_STATIC_CAST(nsIFrame*, this));
-      if (lines) 
-      {
-        metrics->mBlockMinSize.height = 0;
-        int count = 0;
-        nsIFrame* firstFrame = nsnull;
-        PRInt32 framesOnLine;
-        nsRect lineBounds;
-        PRUint32 lineFlags;
+    metrics->mBlockPrefSize.width  = desiredSize.mMaximumWidth;
+    metrics->mBlockMinSize.width   = desiredSize.mMaxElementWidth; 
+    // ok we need the max ascent of the items on the line. So to do this
+    // ask the block for its line iterator. Get the max ascent.
+    nsCOMPtr<nsILineIterator> lines = do_QueryInterface(NS_STATIC_CAST(nsIFrame*, this));
+    if (lines) 
+    {
+      metrics->mBlockMinSize.height = 0;
+      int count = 0;
+      nsIFrame* firstFrame = nsnull;
+      PRInt32 framesOnLine;
+      nsRect lineBounds;
+      PRUint32 lineFlags;
 
-        do {
-           lines->GetLine(count, &firstFrame, &framesOnLine, lineBounds, &lineFlags);
- 
-           if (lineBounds.height > metrics->mBlockMinSize.height)
-             metrics->mBlockMinSize.height = lineBounds.height;
+      do {
+         lines->GetLine(count, &firstFrame, &framesOnLine, lineBounds, &lineFlags);
 
-           count++;
-        } while(firstFrame);
-      }
+         if (lineBounds.height > metrics->mBlockMinSize.height)
+           metrics->mBlockMinSize.height = lineBounds.height;
 
-      metrics->mBlockPrefSize.height  = metrics->mBlockMinSize.height;
-    } else {
-      metrics->mBlockPrefSize.width = desiredSize.width;
-      metrics->mBlockPrefSize.height = desiredSize.height;
-      // this sucks. We could not get the width.
-      metrics->mBlockMinSize.width = 0;
-      metrics->mBlockMinSize.height = desiredSize.height;
+         count++;
+      } while(firstFrame);
     }
+
+    metrics->mBlockPrefSize.height  = metrics->mBlockMinSize.height;
+
     if (useHTMLConstraints) {
       // set the preferred metrics to exactly what the block asked for
       metrics->mBlockPrefSize.width = desiredSize.width;
