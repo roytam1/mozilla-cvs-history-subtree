@@ -2372,6 +2372,10 @@ nsHTMLDocument::ScriptWriteCommon(PRBool aNewlineTerminate)
         rv = codebase->GetURI(getter_AddRefs(subjectURI));
         NS_ENSURE_SUCCESS(rv, rv);
 
+        nsXPIDLCString spec;
+        subjectURI->GetSpec(getter_Copies(spec));
+        printf("Document.write is setting stuff: %s\n",spec.get());
+
         NS_IF_RELEASE(mDocumentURL);
         mDocumentURL = subjectURI;
         NS_ADDREF(mDocumentURL);

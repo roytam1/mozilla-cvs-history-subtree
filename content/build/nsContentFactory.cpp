@@ -187,6 +187,13 @@ extern nsresult NS_NewXULElementFactory(nsIElementFactory** aResult);
 extern NS_IMETHODIMP NS_NewXULControllers(nsISupports* aOuter, REFNSIID aIID, void** aResult);
 #endif
 
+#ifdef MOZ_SVG
+static NS_DEFINE_IID(kSVGDocumentCID, NS_SVGDOCUMENT_CID);
+static NS_DEFINE_CID(kSVGDeprecatedElementFactoryCID,
+                     NS_SVGELEMENTFACTORY_DEPRECATED_CID);
+static NS_DEFINE_CID(kSVGElementFactoryCID,  NS_SVGELEMENTFACTORY_CID);
+extern nsresult NS_NewSVGElementFactory(nsIElementFactory** aResult);
+#endif
 
 //----------------------------------------------------------------------
 
@@ -254,6 +261,15 @@ nsContentFactory::CreateInstance(nsISupports *aOuter,
       return res;
     }
   }
+#ifdef MOZ_SVG
+  else if (mClassID.Equals(kSVGDocumentCID)) {
+    res = NS_NewXMLDocument((nsIDocument **)&inst);
+    if (NS_FAILED(res)) {
+      LOG_NEW_FAILURE("NS_NewSVGDocument", res);
+      return res;
+    }
+  }
+#endif
   else if (mClassID.Equals(kImageDocumentCID)) {
     res = NS_NewImageDocument((nsIDocument **)&inst);
     if (NS_FAILED(res)) {
@@ -613,6 +629,17 @@ nsContentFactory::CreateInstance(nsISupports *aOuter,
     }
   }
 #endif
+
+#ifdef MOZ_SVG
+  else if (mClassID.Equals(kSVGElementFactoryCID) || mClassID.Equals(kSVGDeprecatedElementFactoryCID)) {
+    res = NS_NewSVGElementFactory((nsIElementFactory**) &inst);
+    if (NS_FAILED(res)) {
+      LOG_NEW_FAILURE("NS_NewSVGElementFactory", res);
+      return res;
+    }
+  }
+#endif
+  
   else {
     return NS_NOINTERFACE;
   }

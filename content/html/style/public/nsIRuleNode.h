@@ -44,7 +44,11 @@ struct nsInheritedStyleData
   nsStyleQuotes* mQuotesData;
   nsStyleText* mTextData;
   nsStyleUserInterface* mUIData;
-
+#ifdef MOZ_SVG
+  nsStyleSVG* mSVGData;
+#endif
+  
+  
   void* operator new(size_t sz, nsIPresContext* aContext) {
     void* result = nsnull;
     aContext->AllocateFromShell(sz, &result);
@@ -68,6 +72,10 @@ struct nsInheritedStyleData
       mTextData = nsnull;
     if (mUIData && (aBits & NS_STYLE_INHERIT_UI))
       mUIData = nsnull;
+#ifdef MOZ_SVG
+    if (mSVGData && (aBits & NS_STYLE_INHERIT_SVG))
+      mSVGData = nsnull;
+#endif
   };
 
   void Destroy(PRUint32 aBits, nsIPresContext* aContext) {
@@ -87,12 +95,19 @@ struct nsInheritedStyleData
       mTextData->Destroy(aContext);
     if (mUIData && !(aBits & NS_STYLE_INHERIT_UI))
       mUIData->Destroy(aContext);
+#ifdef MOZ_SVG
+    if (mSVGData && !(aBits & NS_STYLE_INHERIT_SVG))
+      mSVGData->Destroy(aContext);
+#endif    
     aContext->FreeToShell(sizeof(nsInheritedStyleData), this);
   };
 
   nsInheritedStyleData() 
     :mVisibilityData(nsnull), mFontData(nsnull), mListData(nsnull), 
      mTableData(nsnull), mColorData(nsnull), mQuotesData(nsnull), mTextData(nsnull), mUIData(nsnull)
+#ifdef MOZ_SVG
+    , mSVGData(nsnull)
+#endif
   {};
 };
 
@@ -105,6 +120,9 @@ struct nsResetStyleData
   {
 #ifdef INCLUDE_XUL
     mXULData = nsnull;
+#endif
+#ifdef MOZ_SVG
+    mSVGData = nsnull;
 #endif
   };
 
@@ -141,6 +159,10 @@ struct nsResetStyleData
     if (mXULData && (aBits & NS_STYLE_INHERIT_XUL))
       mXULData = nsnull;
 #endif
+#ifdef MOZ_SVG
+    if (mSVGData && (aBits & NS_STYLE_INHERIT_SVG))
+      mSVGData = nsnull;
+#endif
   };
 
   void Destroy(PRUint32 aBits, nsIPresContext* aContext) {
@@ -170,6 +192,10 @@ struct nsResetStyleData
     if (mXULData && !(aBits & NS_STYLE_INHERIT_XUL))
       mXULData->Destroy(aContext);
 #endif
+#ifdef INCLUDE_SVG
+    if (mSVGData && !(aBits & NS_STYLE_INHERIT_SVG))
+      mSVGData->Destroy(aContext);
+#endif
     aContext->FreeToShell(sizeof(nsResetStyleData), this);
   };
 
@@ -186,6 +212,9 @@ struct nsResetStyleData
   nsStyleUIReset* mUIData;
 #ifdef INCLUDE_XUL
   nsStyleXUL* mXULData;
+#endif
+#ifdef MOZ_SVG
+  nsStyleSVG* mSVGData;
 #endif
 };
 
@@ -267,6 +296,10 @@ struct nsRuleData
   nsCSSXUL* mXULData;
 #endif
 
+#ifdef MOZ_SVG
+  nsCSSSVG* mSVGData;
+#endif
+  
   nsRuleData(const nsStyleStructID& aSID, nsIPresContext* aContext, nsIStyleContext* aStyleContext) 
     :mSID(aSID), mPresContext(aContext), mStyleContext(aStyleContext), mPostResolveCallback(nsnull),
      mAttributes(nsnull), mFontData(nsnull), mDisplayData(nsnull), mMarginData(nsnull), mListData(nsnull), 
@@ -277,6 +310,10 @@ struct nsRuleData
 
 #ifdef INCLUDE_XUL
     mXULData = nsnull;
+#endif
+
+#ifdef MOZ_SVG
+    mSVGData = nsnull;
 #endif
   };
   ~nsRuleData() {};

@@ -41,6 +41,8 @@ nsHTMLValue.h \
 nsImageMapUtils.h \
 nsLayoutAtomList.h \
 nsLayoutAtoms.h \
+nsSVGAtomList.h \
+nsSVGAtoms.h \
 nsStyleCoord.h \
 nsStyleUtil.h \
 nsStyleStruct.h \

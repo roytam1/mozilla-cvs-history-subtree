@@ -789,6 +789,15 @@ static const PRInt32 kBackgroundYPositionKTable[] = {
     return SearchKeywordTable(aValue, kBoxOrientKTable);
 #endif
 
+#ifdef MOZ_SVG
+  case eCSSProperty_stroke:
+  case eCSSProperty_stroke_width:
+  case eCSSProperty_stroke_opacity:
+  case eCSSProperty_fill:
+  case eCSSProperty_fill_opacity:
+    break;
+#endif
+    
   case eCSSProperty_box_sizing:
     return SearchKeywordTable(aValue, kBoxSizingKTable);
 

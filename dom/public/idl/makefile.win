@@ -24,5 +24,9 @@ DEPTH=..\..\..
 
 DIRS=base core html events stylesheets views css traversal range xbl xul
 
+!ifdef MOZ_SVG
+DIRS += svg
+!endif
+
 include <$(DEPTH)\config\rules.mak>
 

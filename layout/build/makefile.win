@@ -51,9 +51,6 @@ LINCS=  -I..\html\base\src -I..\base\src \
 !ifdef MOZ_MATHML
 	-I..\mathml\content\src \
 !endif
-!ifdef MOZ_SVG
-	-I..\svg\content\src \
-!endif
 	$(NULL)
 
 SUB_LIBRARIES=                          \
@@ -72,7 +69,7 @@ SUB_LIBRARIES=                          \
 !endif
 !ifdef MOZ_SVG
  $(DIST)\lib\layoutsvgbase_s.lib        \
- $(DIST)\lib\layoutsvgcontent_s.lib	\
+ $(DIST)\lib\art_lgpl.lib               \
 !endif
  $(NULL)
 

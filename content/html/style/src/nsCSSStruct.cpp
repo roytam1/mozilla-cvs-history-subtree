@@ -52,6 +52,10 @@ static NS_DEFINE_IID(kCSSAuralSID, NS_CSS_AURAL_SID);
 static NS_DEFINE_IID(kCSSXULSID, NS_CSS_XUL_SID);
 #endif
 
+#ifdef MOZ_SVG
+static NS_DEFINE_IID(kCSSSVGSID, NS_CSS_SVG_SID);
+#endif
+
 #define CSS_IF_DELETE(ptr)  if (nsnull != ptr)  { delete ptr; ptr = nsnull; }
 
 nsCSSStruct::~nsCSSStruct()
@@ -1012,6 +1016,50 @@ void nsCSSXUL::List(FILE* out, PRInt32 aIndent) const
 
 #endif // INCLUDE_XUL
 
+#ifdef MOZ_SVG
+// --- nsCSSSVG -----------------
+
+nsCSSSVG::nsCSSSVG(void)
+{
+  MOZ_COUNT_CTOR(nsCSSSVG);
+}
+
+nsCSSSVG::nsCSSSVG(const nsCSSSVG& aCopy)
+    : mStroke(aCopy.mStroke),
+      mStrokeWidth(aCopy.mStrokeWidth),
+      mStrokeOpacity(aCopy.mStrokeOpacity),
+      mFill(aCopy.mFill),
+      mFillOpacity(aCopy.mFillOpacity)
+{
+  MOZ_COUNT_CTOR(nsCSSSVG);
+}
+
+nsCSSSVG::~nsCSSSVG(void)
+{
+  MOZ_COUNT_DTOR(nsCSSSVG);
+}
+
+const nsID& nsCSSSVG::GetID(void)
+{
+  return kCSSSVGSID;
+}
+
+void nsCSSSVG::List(FILE* out, PRInt32 aIndent) const
+{
+  for (PRInt32 index = aIndent; --index >= 0; ) fputs("  ", out);
+
+  nsAutoString buffer;
+
+  mStroke.AppendToString(buffer, eCSSProperty_stroke);
+  mStrokeWidth.AppendToString(buffer, eCSSProperty_stroke_width);
+  mStrokeOpacity.AppendToString(buffer, eCSSProperty_stroke_opacity);
+  mFill.AppendToString(buffer, eCSSProperty_fill);
+  mFillOpacity.AppendToString(buffer, eCSSProperty_fill_opacity);
+  fputs(buffer, out);
+}
+
+#endif // MOZ_SVG
+
 
 // --- nsCSSDeclaration -----------------
 
@@ -1084,6 +1132,10 @@ protected:
   nsCSSXUL*       mXUL;
 #endif
 
+#ifdef MOZ_SVG
+  nsCSSSVG*       mSVG;
+#endif
+  
   CSSDeclarationImpl* mImportant;
 
   nsVoidArray*    mOrder;
@@ -1129,6 +1181,10 @@ CSSDeclarationImpl::CSSDeclarationImpl(const CSSDeclarationImpl& aCopy)
   DECL_IF_COPY(XUL);
 #endif
 
+#ifdef MOZ_SVG
+  DECL_IF_COPY(SVG);
+#endif
+  
 #ifdef DEBUG_REFS
   ++gInstanceCount;
   fprintf(stdout, "CSSDeclaration Instances (cp-ctor): %ld\n", (long)gInstanceCount);
@@ -1174,6 +1230,10 @@ CSSDeclarationImpl::~CSSDeclarationImpl(void)
   CSS_IF_DELETE(mXUL);
 #endif
 
+#ifdef MOZ_SVG
+  CSS_IF_DELETE(mSVG);
+#endif
+  
   NS_IF_RELEASE(mImportant);
   CSS_IF_DELETE(mOrder);
   CSS_IF_DELETE(mComments);
@@ -1211,6 +1271,9 @@ CSSDeclarationImpl::GetData(const nsID& aSID, nsCSSStruct** aDataPtr)
   CSS_IF_GET_ELSE(aSID, Aural, aDataPtr)
 #ifdef INCLUDE_XUL
   CSS_IF_GET_ELSE(aSID, XUL, aDataPtr)
+#endif
+#ifdef MOZ_SVG
+  CSS_IF_GET_ELSE(aSID, SVG, aDataPtr)
 #endif
   {
     return NS_NOINTERFACE;
@@ -1756,7 +1819,28 @@ CSSDeclarationImpl::AppendValue(nsCSSProperty aProperty, const nsCSSValue& aValu
       break;
 #endif
 
-      // nsCSSAural
+#ifdef MOZ_SVG
+    // nsCSSSVG
+    case eCSSProperty_stroke:
+    case eCSSProperty_stroke_width:
+    case eCSSProperty_stroke_opacity:
+    case eCSSProperty_fill:
+    case eCSSProperty_fill_opacity:
+      CSS_ENSURE(SVG) {
+        switch (aProperty) {
+          case eCSSProperty_stroke:            mSVG->mStroke = aValue;          break;
+          case eCSSProperty_stroke_width:      mSVG->mStrokeWidth = aValue;     break;
+          case eCSSProperty_stroke_opacity:    mSVG->mStrokeOpacity = aValue;   break;
+          case eCSSProperty_fill:              mSVG->mFill = aValue;            break;
+          case eCSSProperty_fill_opacity:      mSVG->mFillOpacity = aValue;     break;
+          CSS_BOGUS_DEFAULT; // make compiler happy
+        }
+      }
+      break;
+#endif
+
+      
+    // nsCSSAural
     case eCSSProperty_azimuth:
     case eCSSProperty_elevation:
     case eCSSProperty_cue_after:
@@ -2505,7 +2589,29 @@ CSSDeclarationImpl::SetValueImportant(nsCSSProperty aProperty)
         break;
 #endif
 
-        // nsCSSAural
+#ifdef MOZ_SVG
+      // nsCSSSVG
+      case eCSSProperty_stroke:
+      case eCSSProperty_stroke_width:
+      case eCSSProperty_stroke_opacity:
+      case eCSSProperty_fill:
+      case eCSSProperty_fill_opacity:
+        if (nsnull != mSVG) {
+          CSS_ENSURE_IMPORTANT(SVG) {
+            switch (aProperty) {
+              CSS_CASE_IMPORTANT(eCSSProperty_stroke,            mSVG->mStroke);
+              CSS_CASE_IMPORTANT(eCSSProperty_stroke_width,      mSVG->mStrokeWidth);
+              CSS_CASE_IMPORTANT(eCSSProperty_stroke_opacity,    mSVG->mStrokeOpacity);
+              CSS_CASE_IMPORTANT(eCSSProperty_fill,              mSVG->mFill);
+              CSS_CASE_IMPORTANT(eCSSProperty_fill_opacity,      mSVG->mFillOpacity);
+              CSS_BOGUS_DEFAULT; // make compiler happy
+            }
+          }
+        }
+        break;
+#endif
+        
+      // nsCSSAural
       case eCSSProperty_azimuth:
       case eCSSProperty_elevation:
       case eCSSProperty_cue_after:
@@ -3191,6 +3297,27 @@ CSSDeclarationImpl::RemoveProperty(nsCSSProperty aProperty)
       break;
 #endif
 
+#ifdef MOZ_SVG
+    // nsCSSSVG
+    case eCSSProperty_stroke:
+    case eCSSProperty_stroke_width:
+    case eCSSProperty_stroke_opacity:
+    case eCSSProperty_fill:
+    case eCSSProperty_fill_opacity:
+      CSS_CHECK(SVG) {
+        switch(aProperty) {
+        case eCSSProperty_stroke:            mSVG->mStroke.Reset();        break;
+        case eCSSProperty_stroke_width:      mSVG->mStrokeWidth.Reset();   break;
+        case eCSSProperty_stroke_opacity:    mSVG->mStrokeOpacity.Reset(); break;
+        case eCSSProperty_fill:              mSVG->mFill.Reset();          break;
+        case eCSSProperty_fill_opacity:      mSVG->mFillOpacity.Reset();   break;
+       CSS_BOGUS_DEFAULT; // Make compiler happy
+        }
+      }
+      break;
+#endif
+
+      
       // nsCSSAural
     case eCSSProperty_azimuth:
     case eCSSProperty_elevation:
@@ -3933,7 +4060,30 @@ CSSDeclarationImpl::GetValue(nsCSSProperty aProperty, nsCSSValue& aValue)
       break;
 #endif
 
-      // nsCSSAural
+#ifdef MOZ_SVG
+    // nsCSSSVG
+    case eCSSProperty_stroke:
+    case eCSSProperty_stroke_width:
+    case eCSSProperty_stroke_opacity:
+    case eCSSProperty_fill:
+    case eCSSProperty_fill_opacity:
+      if (nsnull != mSVG) {
+        switch (aProperty) {
+          case eCSSProperty_stroke:         aValue = mSVG->mStroke;        break;
+          case eCSSProperty_stroke_width:   aValue = mSVG->mStrokeWidth;   break;
+          case eCSSProperty_stroke_opacity: aValue = mSVG->mStrokeOpacity; break;
+          case eCSSProperty_fill:           aValue = mSVG->mFill;          break;
+          case eCSSProperty_fill_opacity:   aValue = mSVG->mFillOpacity;   break;
+          CSS_BOGUS_DEFAULT; // make compiler happy
+        }
+      }
+      else {
+        aValue.Reset();
+      }
+      break;
+#endif
+      
+    // nsCSSAural
     case eCSSProperty_azimuth:
     case eCSSProperty_elevation:
     case eCSSProperty_cue_after:
@@ -4726,6 +4876,11 @@ void CSSDeclarationImpl::SizeOf(nsISizeOfHandler *aSizeOfHandler, PRUint32 &aSiz
 #ifdef INCLUDE_XUL
   if(mXUL && uniqueItems->AddItem(mXUL)){
     aSize += sizeof(*mXUL);
+  }
+#endif
+#ifdef MOZ_SVG
+  if(mSVG && uniqueItems->AddItem(mSVG)){
+    aSize += sizeof(*mSVG);
   }
 #endif
   if(mAural && uniqueItems->AddItem(mAural)){

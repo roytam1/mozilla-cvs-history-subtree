@@ -1,304 +1,201 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
- * The contents of this file are subject to the Netscape Public
+ * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/NPL/
+ * the License at http://www.mozilla.org/MPL/
  *
  * Software distributed under the License is distributed on an "AS
  * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
  * implied. See the License for the specific language governing
  * rights and limitations under the License.
  *
- * The Original Code is mozilla.org code.
+ * The Original Code is the Mozilla SVG project.
  *
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation. All
+ * The Initial Developer of the Original Code is Crocodile Clips Ltd.
+ * Portions created by Crocodile Clips are 
+ * Copyright (C) 2001 Crocodile Clips Ltd. All
  * Rights Reserved.
  *
  * Contributor(s): 
+ *
+ *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *
  */
 
+#include "nsSVGGraphicFrame.h"
+#include "nsIDOMSVGAnimatedPathData.h"
+#include "nsIDOMSVGPathSegList.h"
+#include "nsIDOMSVGPathSeg.h"
+#include "nsSVGPath.h"
+#include "nsIDOMSVGMatrix.h"
 
-#include "nsSVGPathFrame.h"
-
-#include "nsIDOMElement.h"
-#include "nsIContent.h"
-#include "prtypes.h"
-#include "nsIAtom.h"
-#include "nsHTMLAtoms.h"
-#include "nsIPresContext.h"
-#include "nsIStyleContext.h"
-#include "nsCSSRendering.h"
-#include "nsINameSpaceManager.h"
-#include "nsColor.h"
-#include "nsIServiceManager.h"
-#include "nsPoint.h"
-#include "nsSVGAtoms.h"
-#include "nsIDeviceContext.h"
-#include "nsGUIEvent.h"
-//#include "nsSVGPathCID.h"
-
-//
-// NS_NewSVGPathFrame
-//
-// Wrapper for creating a new color picker
-//
-nsresult
-NS_NewSVGPathFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
+class nsSVGPathFrame : public nsSVGGraphicFrame
 {
-  NS_PRECONDITION(aNewFrame, "null OUT ptr");
-  if (nsnull == aNewFrame) {
-    return NS_ERROR_NULL_POINTER;
+  friend nsresult
+  NS_NewSVGPathFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+
+  ~nsSVGPathFrame();
+
+  virtual nsresult Init();
+  virtual void BuildPath();
+
+  nsCOMPtr<nsIDOMSVGPathSegList> mSegments;
+};
+
+//----------------------------------------------------------------------
+// Implementation
+
+nsresult
+NS_NewSVGPathFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame)
+{
+  *aNewFrame = nsnull;
+  
+  nsCOMPtr<nsIDOMSVGAnimatedPathData> anim_data = do_QueryInterface(aContent);
+  if (!anim_data) {
+#ifdef DEBUG
+    printf("warning: trying to contruct an SVGPathFrame for a content element that doesn't support the right interfaces\n");
+#endif
+    return NS_ERROR_FAILURE;
   }
+  
   nsSVGPathFrame* it = new (aPresShell) nsSVGPathFrame;
-  if ( !it )
+  if (nsnull == it)
     return NS_ERROR_OUT_OF_MEMORY;
+
   *aNewFrame = it;
   return NS_OK;
 }
 
-// static NS_DEFINE_IID(kDefSVGPathCID, NS_DEFCOLORPICKER_CID);
-
-//
-// nsSVGPathFrame cntr
-//
-nsSVGPathFrame::nsSVGPathFrame() :
-  mPath(nsnull),
-  mX(0),
-  mY(0)
-{
-
-}
-
 nsSVGPathFrame::~nsSVGPathFrame()
 {
-//  if (mPath) {
-//    delete mPath;
-//  }
+  nsCOMPtr<nsISVGValue> value;
+  if (mSegments && (value = do_QueryInterface(mSegments)))
+      value->RemoveObserver(this);
 }
 
-
-NS_IMETHODIMP
-nsSVGPathFrame::Init(nsIPresContext*  aPresContext,
-                         nsIContent*      aContent,
-                         nsIFrame*        aParent,
-                         nsIStyleContext* aContext,
-                         nsIFrame*        aPrevInFlow)
+nsresult nsSVGPathFrame::Init()
 {
- 
-  nsresult rv = nsLeafFrame::Init(aPresContext, aContent, aParent, aContext,
-                                  aPrevInFlow);
-
-
-  nsAutoString type;
-  mContent->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::type, type);
-
-  if (type.EqualsIgnoreCase(NS_ConvertASCIItoUCS2("swatch")) || type.IsEmpty())
-  {
-    //mSVGPath = new nsStdSVGPath();
-    //mSVGPath->Init(mContent);
-  }
-
-  return rv;
-}
-
-//--------------------------------------------------------------
-// Frames are not refcounted, no need to AddRef
-NS_IMETHODIMP
-nsSVGPathFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
-{
-  NS_PRECONDITION(0 != aInstancePtr, "null ptr");
-  if (NULL == aInstancePtr) {
-    return NS_ERROR_NULL_POINTER;
-  }
-
-  if (aIID.Equals(NS_GET_IID(nsISVGFrame))) {
-    *aInstancePtr = (void*) ((nsISVGFrame*) this);
-    return NS_OK;
-  }
-  return nsLeafFrame::QueryInterface(aIID, aInstancePtr);
-}
-
-
-//-------------------------------------------------------------------
-//-- Main Reflow for the SVGPath
-//-------------------------------------------------------------------
-NS_IMETHODIMP 
-nsSVGPathFrame::Reflow(nsIPresContext*          aPresContext, 
-                       nsHTMLReflowMetrics&     aDesiredSize,
-                       const nsHTMLReflowState& aReflowState, 
-                       nsReflowStatus&          aStatus)
-{
-  aStatus = NS_FRAME_COMPLETE;
-
-  nsCOMPtr<nsIDeviceContext> dx;
-  aPresContext->GetDeviceContext(getter_AddRefs(dx));
-  float p2t   = 1.0;
-  float scale = 1.0;
-  if (dx) { 
-    aPresContext->GetPixelsToTwips(&p2t);
-    dx->GetCanonicalPixelScale(scale); 
-  }  
+  nsCOMPtr<nsIDOMSVGAnimatedPathData> anim_data = do_QueryInterface(mContent);
+  NS_ASSERTION(anim_data,"wrong content element");
+  anim_data->GetAnimatedPathSegList(getter_AddRefs(mSegments));
+  NS_ASSERTION(mSegments, "no pathseglist");
+  if (!mSegments) return NS_ERROR_FAILURE;
+  nsCOMPtr<nsISVGValue> value = do_QueryInterface(mSegments);
+  if (value)
+    value->AddObserver(this);
   
-  nsAutoString coordStr;
-  nsresult res = mContent->GetAttribute(kNameSpaceID_None, nsSVGAtoms::x, coordStr);
-  if (NS_SUCCEEDED(res)) {
-    char * s = coordStr.ToNewCString();
-    mX = NSIntPixelsToTwips(atoi(s), p2t*scale);
-    delete [] s;
+  return nsSVGGraphicFrame::Init();
+}  
+
+void nsSVGPathFrame::BuildPath()
+{
+#ifdef DEBUG
+  printf("nsSVGPathFrame::BuildPath()\n");
+#endif
+  if (mPath) {
+    mPath->Clear();
   }
 
-  res = mContent->GetAttribute(kNameSpaceID_None, nsSVGAtoms::y, coordStr);
-  if (NS_SUCCEEDED(res)) {
-    char * s = coordStr.ToNewCString();
-    mY = NSIntPixelsToTwips(atoi(s), p2t*scale);
-    delete [] s;
+  if (!mSegments) return;
+
+  if (!mPath)
+    mPath = new nsSVGPath();
+  
+  PRUint32 count;
+  mSegments->GetNumberOfItems(&count);
+  if (count == 0) return;
+
+  PRUint32 i;
+  float cx = 0.0f;
+  float cy = 0.0f;
+  for (i = 0; i < count; ++i) {
+    nsCOMPtr<nsIDOMSVGPathSeg> segment;
+    mSegments->GetItem(i, getter_AddRefs(segment));
+
+    PRUint16 type = nsIDOMSVGPathSeg::PATHSEG_UNKNOWN;
+    segment->GetPathSegType(&type);
+
+    PRBool absCoords = PR_TRUE;
+    
+    switch (type) {
+      case nsIDOMSVGPathSeg::PATHSEG_CLOSEPATH:
+        mPath->ClosePath();
+        break;
+        
+      case nsIDOMSVGPathSeg::PATHSEG_MOVETO_REL:
+        absCoords = PR_FALSE;
+      case nsIDOMSVGPathSeg::PATHSEG_MOVETO_ABS:
+        {
+          nsCOMPtr<nsIDOMSVGPathSegMovetoAbs> moveseg = do_QueryInterface(segment);
+          NS_ASSERTION(moveseg, "interface not implemented");
+          float x, y;
+          moveseg->GetX(&x);
+          moveseg->GetY(&y);
+          if (!absCoords) {
+            x += cx;
+            y += cy;
+          }
+          TransformPoint(x, y);
+          mPath->Moveto(x,y);
+          cx = x;
+          cy = y;
+        }
+        break;
+        
+      case nsIDOMSVGPathSeg::PATHSEG_LINETO_REL:
+        absCoords = PR_FALSE;
+      case nsIDOMSVGPathSeg::PATHSEG_LINETO_ABS:
+        {
+          nsCOMPtr<nsIDOMSVGPathSegLinetoAbs> lineseg = do_QueryInterface(segment);
+          NS_ASSERTION(lineseg, "interface not implemented");
+          float x, y;
+          lineseg->GetX(&x);
+          lineseg->GetY(&y);
+          if (!absCoords) {
+            x += cx;
+            y += cy;
+          }
+          TransformPoint(x, y);
+          mPath->Lineto(x,y);
+          cx = x;
+          cy = y;
+        }
+        break;        
+
+      case nsIDOMSVGPathSeg::PATHSEG_CURVETO_CUBIC_REL:
+        absCoords = PR_FALSE;
+      case nsIDOMSVGPathSeg::PATHSEG_CURVETO_CUBIC_ABS:
+        {
+          nsCOMPtr<nsIDOMSVGPathSegCurvetoCubicAbs> curveseg = do_QueryInterface(segment);
+          NS_ASSERTION(curveseg, "interface not implemented");
+          float x, y, x1, y1, x2, y2;
+          curveseg->GetX(&x);
+          curveseg->GetY(&y);
+          curveseg->GetX1(&x1);
+          curveseg->GetY1(&y1);
+          curveseg->GetX2(&x2);
+          curveseg->GetY2(&y2);
+          if (!absCoords) {
+            x  += cx;
+            y  += cy;
+            x1 += cx;
+            y1 += cy;
+            x2 += cx;
+            y2 += cy;
+          }
+          TransformPoint(x, y);
+          TransformPoint(x1, y1);
+          TransformPoint(x2, y2);
+          mPath->Curveto(x, y, x1, y1, x2, y2);
+          cx = x;
+          cy = y;
+        }
+        break;        
+      default:
+        /* */
+        break;
+    }
   }
-
-  nsAutoString pathStr;
-  res = mContent->GetAttribute(kNameSpaceID_None, nsSVGAtoms::d, pathStr);
-  if (NS_SUCCEEDED(res)) {
-    char * s = pathStr.ToNewCString();
-    // parse path commands here
-    delete [] s;
-  }
-
-  // Create Path object here;
-  //mPath = new nsPathObject();
-  //
-  // iterate thru path commands here and load up path
-  // calculate the rect the the path owns
-
-  //aDesiredSize.width  = maxWidth  + nscoord(p2t*scale);
-  //aDesiredSize.height = maxHeight + nscoord(p2t*scale);
-  aDesiredSize.ascent = aDesiredSize.height;
-  aDesiredSize.descent = 0;
-
-  if (nsnull != aDesiredSize.maxElementSize) {
-    aDesiredSize.maxElementSize->width  = aDesiredSize.width;
-    aDesiredSize.maxElementSize->height = aDesiredSize.height;
-  }
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSVGPathFrame::HandleEvent(nsIPresContext* aPresContext, 
-                                nsGUIEvent*     aEvent,
-                                nsEventStatus*  aEventStatus)
-{
-  NS_ENSURE_ARG_POINTER(aEventStatus);
-  *aEventStatus = nsEventStatus_eConsumeDoDefault;
-	if (aEvent->message == NS_MOUSE_LEFT_BUTTON_DOWN)
-		HandleMouseDownEvent(aPresContext, aEvent, aEventStatus);
-
-  return NS_OK;
-}
-
-nsresult
-nsSVGPathFrame::HandleMouseDownEvent(nsIPresContext* aPresContext, 
-                                         nsGUIEvent*     aEvent,
-                                         nsEventStatus*  aEventStatus)
-{
-
-  return NS_OK;
-}
-
-NS_IMETHODIMP nsSVGPathFrame::SetProperty(nsIPresContext* aPresContext, 
-                                          nsIAtom* aName, 
-                                          const nsString& aValue)
-{
-  if (aName == nsSVGAtoms::d) {
-  }
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSVGPathFrame::AttributeChanged(nsIPresContext* aPresContext,
-                                          nsIContent*     aChild,
-                                          PRInt32         aNameSpaceID,
-                                          nsIAtom*        aAttribute,
-                                          PRInt32         aHint)
-{
-  return nsLeafFrame::AttributeChanged(aPresContext, aChild, aNameSpaceID, aAttribute, aHint);
-}
   
-
-//
-// Paint
-//
-//
-NS_METHOD 
-nsSVGPathFrame::Paint(nsIPresContext* aPresContext,
-                          nsIRenderingContext& aRenderingContext,
-                          const nsRect& aDirtyRect,
-                          nsFramePaintLayer aWhichLayer)
-{
-  const nsStyleVisibility* visib = NS_STATIC_CAST(const nsStyleVisibility*,
-    mStyleContext->GetStyleData(eStyleStruct_Visibility));
-
-  // if we aren't visible then we are done.
-  if (!visib->IsVisibleOrCollapsed()) 
-	   return NS_OK;  
-
-  // if we are visible then tell our superclass to paint
-  nsLeafFrame::Paint(aPresContext, aRenderingContext, aDirtyRect,
-                     aWhichLayer);
-
-  // get our border
-	const nsStyleBorder* borderStyle = (const nsStyleBorder*)mStyleContext->GetStyleData(eStyleStruct_Border);
-	nsMargin border(0,0,0,0);
-	borderStyle->CalcBorderFor(this, border);
-
-  
-  // XXX - Color needs to comes from new style property fill
-  // and not mColor
-  const nsStyleColor* colorStyle = (const nsStyleColor*)mStyleContext->GetStyleData(eStyleStruct_Color);
-  nscolor color = colorStyle->mColor;
-  
-
-  aRenderingContext.PushState();
-
-  // set the clip region
-  nsRect rect;
-
-  PRBool clipState;
-  GetRect(rect);
-
-  // Clip so we don't render outside the inner rect
-  aRenderingContext.SetClipRect(rect, nsClipCombine_kReplace, clipState);
-  aRenderingContext.SetColor(color);
-  
-  ///////////////////////////////////////////
-  // XXX - This is all just a quick hack
-  // needs to be rewritten
-  nsCOMPtr<nsIDeviceContext> dx;
-  aPresContext->GetDeviceContext(getter_AddRefs(dx));
-  float p2t   = 1.0;
-  float scale = 1.0;
-  if (dx) {
-    aPresContext->GetPixelsToTwips(&p2t);
-    dx->GetCanonicalPixelScale(scale); 
-  }  
-  
-  // render path here
-
-  aRenderingContext.PopState(clipState);
-
-  return NS_OK;
 }
-
-
-//
-// GetDesiredSize
-//
-// For now, be as big as CSS wants us to be, or some small default size.
-//
-void
-nsSVGPathFrame::GetDesiredSize(nsIPresContext* aPresContext,
-                               const nsHTMLReflowState& aReflowState,
-                               nsHTMLReflowMetrics& aDesiredSize)
-{
-  NS_ASSERTION(0, "Who called this? and Why?");
-} // GetDesiredSize

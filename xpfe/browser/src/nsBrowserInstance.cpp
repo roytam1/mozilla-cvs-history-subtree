@@ -1004,6 +1004,12 @@ static nsModuleComponentInfo components[] = {
     NS_CONTENT_HANDLER_CONTRACTID_PREFIX"application/vnd.mozilla.xul+xml", 
     nsBrowserContentHandlerConstructor 
   },
+#ifdef MOZ_SVG
+  { "Browser Content Handler",
+    NS_BROWSERCONTENTHANDLER_CID,
+    NS_CONTENT_HANDLER_CONTRACTID_PREFIX"image/svg+xml",
+  },
+#endif
   { "Browser Content Handler",
     NS_BROWSERCONTENTHANDLER_CID,
     NS_CONTENT_HANDLER_CONTRACTID_PREFIX"text/rdf", 

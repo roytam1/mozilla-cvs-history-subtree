@@ -167,6 +167,13 @@ protected:
                                       const RuleDetail& aRuleDetail, PRBool aInherited);
 #endif
 
+#ifdef MOZ_SVG
+  const nsStyleStruct* ComputeSVGData(nsStyleStruct* aStartSVG, const nsCSSStruct& aSVGData, 
+                                      nsIStyleContext* aContext,  
+                                      nsRuleNode* aHighestNode,
+                                      const RuleDetail& aRuleDetail, PRBool aInherited);
+#endif
+  
   typedef const nsStyleStruct*
   (nsRuleNode::*ComputeStyleDataFn)(nsStyleStruct* aStartStruct,
                                     const nsCSSStruct& aStartData,
@@ -202,6 +209,10 @@ protected:
   RuleDetail CheckXULProperties(const nsCSSXUL& aXUL);
 #endif
 
+#ifdef MOZ_SVG
+  RuleDetail CheckSVGProperties(const nsCSSSVG& aSVG);
+#endif
+  
   const nsStyleStruct* GetParentData(const nsStyleStructID& aSID);
   const nsStyleStruct* GetDisplayData(nsIStyleContext* aContext);
   const nsStyleStruct* GetVisibilityData(nsIStyleContext* aContext);
@@ -224,6 +235,9 @@ protected:
   const nsStyleStruct* GetUIResetData(nsIStyleContext* aContext);
 #ifdef INCLUDE_XUL
   const nsStyleStruct* GetXULData(nsIStyleContext* aContext);
+#endif
+#ifdef MOZ_SVG
+  const nsStyleStruct* GetSVGData(nsIStyleContext* aContext);
 #endif
 
   typedef const nsStyleStruct* (nsRuleNode::*GetStyleDataFn)(nsIStyleContext*);

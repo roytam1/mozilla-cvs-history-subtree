@@ -359,6 +359,11 @@ extern NS_LAYOUT nsresult
 extern NS_LAYOUT nsresult
    NS_NewXMLDocument(nsIDocument** aInstancePtrResult);
 
+#ifdef MOZ_SVG
+extern NS_LAYOUT nsresult
+   NS_NewSVGDocument(nsIDocument** aInstancePtrResult);
+#endif
+
 extern NS_LAYOUT nsresult
    NS_NewImageDocument(nsIDocument** aInstancePtrResult);
 

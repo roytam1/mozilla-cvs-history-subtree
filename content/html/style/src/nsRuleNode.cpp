@@ -575,6 +575,10 @@ nsRuleNode::CheckSpecifiedProperties(const nsStyleStructID& aSID, const nsCSSStr
   case eStyleStruct_XUL:
     return CheckXULProperties((const nsCSSXUL&)aCSSStruct);
 #endif
+#ifdef MOZ_SVG
+  case eStyleStruct_SVG:
+    return CheckSVGProperties((const nsCSSSVG&)aCSSStruct);
+#endif
   case eStyleStruct_BorderPaddingShortcut:
     NS_ERROR("unexpected SID");
   }
@@ -833,6 +837,18 @@ nsRuleNode::GetXULData(nsIStyleContext* aContext)
 }
 #endif
 
+#ifdef MOZ_SVG
+const nsStyleStruct*
+nsRuleNode::GetSVGData(nsIStyleContext* aContext)
+{
+  nsCSSSVG svgData; // Declare a struct with null CSS values.
+  nsRuleData ruleData(eStyleStruct_SVG, mPresContext, aContext);
+  ruleData.mSVGData = &svgData;
+
+  return WalkRuleTree(eStyleStruct_SVG, aContext, &ruleData, &svgData);
+}
+#endif
+
 const nsStyleStruct*
 nsRuleNode::WalkRuleTree(const nsStyleStructID& aSID, nsIStyleContext* aContext, 
                          nsRuleData* aRuleData,
@@ -1074,6 +1090,15 @@ nsRuleNode::SetDefaultOnRoot(const nsStyleStructID& aSID, nsIStyleContext* aCont
     }
 #endif
 
+#ifdef MOZ_SVG
+    case eStyleStruct_SVG:
+    {
+      nsStyleSVG* svg = new (mPresContext) nsStyleSVG();
+      aContext->SetStyle(eStyleStruct_SVG, *svg);
+      return svg;
+    }
+#endif
+
     case eStyleStruct_BorderPaddingShortcut:
       NS_ERROR("unexpected SID");
   }
@@ -1106,6 +1131,9 @@ nsRuleNode::gComputeStyleDataFn[] = {
   &nsRuleNode::ComputeOutlineData,
 #ifdef INCLUDE_XUL
   &nsRuleNode::ComputeXULData,
+#endif
+#ifdef MOZ_SVG
+  &nsRuleNode::ComputeSVGData,
 #endif
   nsnull
 };
@@ -3576,6 +3604,115 @@ nsRuleNode::ComputeXULData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData
 }
 #endif
 
+#ifdef MOZ_SVG
+static void
+SetSVGPaint(const nsCSSValue& aValue, const nsStyleSVGPaint& parentPaint,
+            nsIPresContext* aPresContext, nsStyleSVGPaint& aResult, PRBool& aInherited)
+{
+  if (aValue.GetUnit() == eCSSUnit_Inherit) {
+    aResult = parentPaint;
+    aInherited = PR_TRUE;
+  }
+  else if (SetColor(aValue, parentPaint.mColor, aPresContext, aResult.mColor, aInherited)) {
+    aResult.mType = eStyleSVGPaintType_Color;
+  }
+}
+
+static void
+SetSVGOpacity(const nsCSSValue& aValue, float parentOpacity, float& opacity, PRBool& aInherited)
+{
+  if (aValue.GetUnit() == eCSSUnit_Inherit) {
+    opacity = parentOpacity;
+    aInherited = PR_TRUE;
+  }
+  else if (aValue.GetUnit() == eCSSUnit_Number) {
+    opacity = aValue.GetFloatValue();
+  }
+}
+
+const nsStyleStruct* 
+nsRuleNode::ComputeSVGData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+                           nsIStyleContext* aContext, 
+                           nsRuleNode* aHighestNode,
+                           const RuleDetail& aRuleDetail, PRBool aInherited)
+{
+  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+
+  nsStyleSVG* svg = nsnull;
+  nsStyleSVG* parentSVG = svg;
+  PRBool inherited = aInherited;
+  
+  const nsCSSSVG& svgData = NS_STATIC_CAST(nsCSSSVG&, aData);
+  nsStyleSVG* aStartSVG = NS_STATIC_CAST(nsStyleSVG*, aStartStruct);
+
+  if (aStartSVG)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    svg = new (mPresContext) nsStyleSVG(*aStartSVG);
+  else {
+    if (aRuleDetail != eRuleFullMixed) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
+      inherited = PR_TRUE;
+      if (parentContext)
+        parentSVG = (nsStyleSVG*)parentContext->GetStyleData(eStyleStruct_SVG);
+      if (parentSVG)
+        svg = new (mPresContext) nsStyleSVG(*parentSVG);
+    }
+  }
+
+  if (!svg)
+    svg = parentSVG = new (mPresContext) nsStyleSVG();
+
+  // stroke: 
+  SetSVGPaint(svgData.mStroke, parentSVG->mStroke, mPresContext, svg->mStroke, inherited);
+  // stroke_width:
+  nsStyleCoord coord;
+  if (SetCoord(svgData.mStrokeWidth, coord, coord,
+               SETCOORD_LP | SETCOORD_FACTOR,
+               aContext, mPresContext, inherited)) {
+    if (coord.GetUnit() == eStyleUnit_Factor) { // user units
+      svg->mStrokeWidth = (float) coord.GetFactorValue();
+    }
+    else {
+      svg->mStrokeWidth = (float) coord.GetCoordValue();
+      float twipsPerPix;
+      mPresContext->GetScaledPixelsToTwips(&twipsPerPix);
+      if (twipsPerPix == 0.0f)
+        twipsPerPix = 1e-20f;
+      svg->mStrokeWidth /= twipsPerPix;
+    }
+  }
+  else if (svgData.mStrokeWidth.GetUnit() == eCSSUnit_Inherit) {
+    svg->mStrokeWidth = parentSVG->mStrokeWidth;
+    inherited = PR_TRUE;
+  }
+  // stroke_opacity:
+  SetSVGOpacity(svgData.mStrokeOpacity, parentSVG->mStrokeOpacity, svg->mStrokeOpacity, inherited);
+  // fill: 
+  SetSVGPaint(svgData.mFill, parentSVG->mFill, mPresContext, svg->mFill, inherited);
+  // fill_opacity:
+  SetSVGOpacity(svgData.mFillOpacity, parentSVG->mFillOpacity, svg->mFillOpacity, inherited);
+  
+
+  if (inherited)
+    // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the
+    // style context.
+    aContext->SetStyle(eStyleStruct_SVG, *svg);
+  else {
+    // We were fully specified and can therefore be cached right on the rule node.
+    if (!aHighestNode->mStyleData.mInheritedData)
+      aHighestNode->mStyleData.mInheritedData = new (mPresContext) nsInheritedStyleData;
+    aHighestNode->mStyleData.mInheritedData->mSVGData = svg;
+    // Propagate the bit down.
+    PropagateInheritBit(NS_STYLE_INHERIT_SVG, aHighestNode);
+  }
+
+  return svg;
+}
+#endif
+
+
 static void
 ExamineRectProperties(const nsCSSRect* aRect, PRUint32& aTotalCount, PRUint32& aInheritedCount)
 {
@@ -4457,6 +4594,59 @@ nsRuleNode::CheckXULProperties(const nsCSSXUL& aXULData)
 }
 #endif
 
+#ifdef MOZ_SVG
+inline nsRuleNode::RuleDetail 
+nsRuleNode::CheckSVGProperties(const nsCSSSVG& aSVGData)
+{
+  const PRUint32 numSVGProps = 5;
+  PRUint32 totalCount=0;
+  PRUint32 inheritCount=0;
+
+  if (eCSSUnit_Null != aSVGData.mStroke.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aSVGData.mStroke.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aSVGData.mStrokeWidth.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aSVGData.mStrokeWidth.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aSVGData.mStrokeOpacity.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aSVGData.mStrokeOpacity.GetUnit())
+      inheritCount++;
+  }
+  
+  if (eCSSUnit_Null != aSVGData.mFill.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aSVGData.mFill.GetUnit())
+      inheritCount++;
+  }
+
+  if (eCSSUnit_Null != aSVGData.mFillOpacity.GetUnit()) {
+    totalCount++;
+    if (eCSSUnit_Inherit == aSVGData.mFillOpacity.GetUnit())
+      inheritCount++;
+  }
+
+  if (inheritCount == numSVGProps)
+    return eRuleFullInherited;
+  else if (totalCount == numSVGProps) 
+    return eRuleFullMixed;
+
+  if (totalCount == 0)
+    return eRuleNone;
+  else if (totalCount == inheritCount)
+    return eRulePartialInherited;
+
+  return eRulePartialMixed;
+}
+#endif
+
+
 inline const nsStyleStruct* 
 nsRuleNode::GetParentData(const nsStyleStructID& aSID)
 {
@@ -4500,6 +4690,9 @@ nsRuleNode::gGetStyleDataFn[] = {
   &nsRuleNode::GetOutlineData,
 #ifdef INCLUDE_XUL
   &nsRuleNode::GetXULData,
+#endif
+#ifdef MOZ_SVG
+  &nsRuleNode::GetSVGData,
 #endif
   nsnull
 };

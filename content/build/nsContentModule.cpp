@@ -73,6 +73,10 @@
 #include "nsXULContentUtils.h"
 #endif
 
+#ifdef MOZ_SVG
+#include "nsSVGAtoms.h"
+#endif
+
 static nsContentModule *gModule = NULL;
 
 extern "C" NS_EXPORT nsresult
@@ -151,6 +155,9 @@ nsContentModule::Initialize()
   nsXULContentUtils::Init();
 #endif
 
+#ifdef MOZ_SVG
+  nsSVGAtoms::AddRefAtoms();
+#endif
   nsContentUtils::Init();
 
   return rv;
@@ -180,6 +187,10 @@ nsContentModule::Shutdown()
   nsXULAtoms::ReleaseAtoms();
 #endif
 
+#ifdef MOZ_SVG
+  nsSVGAtoms::ReleaseAtoms();
+#endif
+  
   NS_IF_RELEASE(gUAStyleSheet);
 
   nsContentUtils::Shutdown();
@@ -249,6 +260,9 @@ static Components gComponents[] = {
   { "DOM implementation", NS_DOM_IMPLEMENTATION_CID, nsnull, },
 
   { "XML document", NS_XMLDOCUMENT_CID, nsnull, },
+#ifdef MOZ_SVG
+  { "SVG document", NS_SVGDOCUMENT_CID, nsnull, },
+#endif
   { "Image document", NS_IMAGEDOCUMENT_CID, nsnull, },
 
   { "CSS parser", NS_CSSPARSER_CID, nsnull, },
@@ -287,6 +301,10 @@ static Components gComponents[] = {
     NS_DOC_ENCODER_CONTRACTID_BASE "application/xml", },
   { "XML document encoder", NS_TEXT_ENCODER_CID,
     NS_DOC_ENCODER_CONTRACTID_BASE "application/xhtml+xml", },
+#ifdef MOZ_SVG
+  { "XML document encoder", NS_TEXT_ENCODER_CID,
+    NS_DOC_ENCODER_CONTRACTID_BASE "image/svg+xml", },
+#endif
   { "HTML document encoder", NS_TEXT_ENCODER_CID,
     NS_DOC_ENCODER_CONTRACTID_BASE "text/html", },
   { "Plaintext document encoder", NS_TEXT_ENCODER_CID,
@@ -299,6 +317,10 @@ static Components gComponents[] = {
     NS_CONTENTSERIALIZER_CONTRACTID_PREFIX "application/xml", },
   { "XML content serializer", NS_XMLCONTENTSERIALIZER_CID,
     NS_CONTENTSERIALIZER_CONTRACTID_PREFIX "application/xhtml+xml", },
+#ifdef MOZ_SVG
+  { "XML content serializer", NS_XMLCONTENTSERIALIZER_CID,
+    NS_CONTENTSERIALIZER_CONTRACTID_PREFIX "image/svg+xml", },
+#endif
   { "HTML content serializer", NS_HTMLCONTENTSERIALIZER_CID,
     NS_CONTENTSERIALIZER_CONTRACTID_PREFIX "text/html", },
   { "XUL content serializer", NS_XMLCONTENTSERIALIZER_CID,
@@ -340,6 +362,12 @@ static Components gComponents[] = {
     "@mozilla.org/content/controller-command-manager;1", },
   { "Content HTTP Startup Listener", NS_CONTENTHTTPSTARTUP_CID,
     NS_CONTENTHTTPSTARTUP_CONTRACTID, },
+#ifdef MOZ_SVG
+  { "SVG element factory (deprecated namepace)", NS_SVGELEMENTFACTORY_DEPRECATED_CID,
+      NS_SVG_DEPRECATED_ELEMENT_FACTORY_CONTRACTID, },
+  { "SVG element factory", NS_SVGELEMENTFACTORY_CID, NS_SVG_ELEMENT_FACTORY_CONTRACTID, },
+#endif
+    
 };
 #define NUM_COMPONENTS (sizeof(gComponents) / sizeof(gComponents[0]))
 

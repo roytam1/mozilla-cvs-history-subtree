@@ -3462,6 +3462,23 @@ PRBool CSSParserImpl::ParseSingleValueProperty(PRInt32& aErrorCode,
     return ParseVariant(aErrorCode, aValue, VARIANT_HK,
                         nsCSSProps::kBoxOrientKTable);
 #endif
+#ifdef MOZ_SVG
+  case eCSSProperty_stroke:
+    return ParseVariant(aErrorCode, aValue, VARIANT_HC | VARIANT_NONE,
+                        nsnull);
+  case eCSSProperty_stroke_width:
+    return ParsePositiveVariant(aErrorCode, aValue, VARIANT_HLPN,
+                        nsnull);
+  case eCSSProperty_stroke_opacity:
+    return ParseVariant(aErrorCode, aValue, VARIANT_HN,
+                        nsnull);
+  case eCSSProperty_fill:
+    return ParseVariant(aErrorCode, aValue, VARIANT_HC | VARIANT_NONE,
+                        nsnull);
+  case eCSSProperty_fill_opacity:
+    return ParseVariant(aErrorCode, aValue, VARIANT_HN,
+                        nsnull);
+#endif
   case eCSSProperty_box_sizing:
     return ParseVariant(aErrorCode, aValue, VARIANT_HK,
                         nsCSSProps::kBoxSizingKTable);

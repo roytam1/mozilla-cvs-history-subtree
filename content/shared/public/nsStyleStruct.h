@@ -60,8 +60,14 @@ enum nsStyleStructID {
   eStyleStruct_Border         = 18,
   eStyleStruct_Outline        = 19,
   eStyleStruct_XUL            = 20,
+#ifdef MOZ_SVG
+  eStyleStruct_SVG            = 21,
+  eStyleStruct_Max            = eStyleStruct_SVG,
+  eStyleStruct_BorderPaddingShortcut = 22       // only for use in GetStyle()
+#else
   eStyleStruct_Max            = eStyleStruct_XUL,
   eStyleStruct_BorderPaddingShortcut = 21       // only for use in GetStyle()
+#endif
 };
 
 // Bits for each struct.
@@ -86,6 +92,7 @@ enum nsStyleStructID {
 #define NS_STYLE_INHERIT_BORDER           NS_STYLE_INHERIT_BIT(eStyleStruct_Border)
 #define NS_STYLE_INHERIT_OUTLINE          NS_STYLE_INHERIT_BIT(eStyleStruct_Outline)
 #define NS_STYLE_INHERIT_XUL              NS_STYLE_INHERIT_BIT(eStyleStruct_XUL)
+#define NS_STYLE_INHERIT_SVG              NS_STYLE_INHERIT_BIT(eStyleStruct_SVG)
 
 #define NS_STYLE_INHERIT_MASK             0x0fffff
 
@@ -974,6 +981,47 @@ struct nsStyleXUL : public nsStyleStruct {
   PRUint8       mBoxOrient;             // [reset] see nsStyleConsts.h
 };
 #endif
+
+#ifdef MOZ_SVG
+enum nsStyleSVGPaintType {
+  eStyleSVGPaintType_None = 0,
+  eStyleSVGPaintType_Color,
+  eStyleSVGPaintType_Server
+};
+
+struct nsStyleSVGPaint
+{
+  nsStyleSVGPaintType mType;
+  nscolor mColor;
+};
+
+struct nsStyleSVG : public nsStyleStruct {
+  nsStyleSVG();
+  nsStyleSVG(const nsStyleSVG& aSource);
+  ~nsStyleSVG();
+
+  void* operator new(size_t sz, nsIPresContext* aContext) {
+    void* result = nsnull;
+    aContext->AllocateFromShell(sz, &result);
+    return result;
+  }
+  void Destroy(nsIPresContext* aContext) {
+    this->~nsStyleSVG();
+    aContext->FreeToShell(sizeof(nsStyleSVG), this);
+  };
+
+  PRInt32 CalcDifference(const nsStyleSVG& aOther) const;
+
+  // all [inherit]ed
+  nsStyleSVGPaint  mStroke;
+  float            mStrokeWidth; // in pixels
+  float            mStrokeOpacity;
+  
+  nsStyleSVGPaint  mFill;
+  float            mFillOpacity;
+};
+#endif
+
 
 #define BORDER_PRECEDENT_EQUAL  0
 #define BORDER_PRECEDENT_LOWER  1

@@ -126,24 +126,23 @@ static NS_DEFINE_CID(kAttributeContentCID, NS_ATTRIBUTECONTENT_CID);
 
 #ifdef MOZ_SVG
 #include "nsSVGAtoms.h"
-#endif
 
-#ifdef MOZ_SVG
-#include "nsSVGAtoms.h"
-#include "nsSVGContainerFrame.h"
-#include "nsPolygonFrame.h"
-#include "nsPolylineFrame.h"
-
-
-
-nsresult
-NS_NewSVGContainerFrame ( nsIPresShell* aPresShell, nsIFrame** aNewFrame, PRBool aIsRoot );
-
-nsresult
-NS_NewPolygonFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
-
-nsresult
-NS_NewPolylineFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
+extern nsresult
+NS_NewSVGOuterSVGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+extern nsresult
+NS_NewSVGPolylineFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+extern nsresult
+NS_NewSVGPolygonFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+extern nsresult
+NS_NewSVGCircleFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+extern nsresult
+NS_NewSVGGFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+extern nsresult
+NS_NewSVGGenericContainerFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+extern nsresult
+NS_NewSVGForeignObjectFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
+extern nsresult
+NS_NewSVGPathFrame(nsIPresShell* aPresShell, nsIContent* aContent, nsIFrame** aNewFrame);
 #endif
 
 #include "nsIDocument.h"
@@ -3474,10 +3473,12 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
       contentFrame->GetStyleContext(getter_AddRefs(styleContext));
   } else {
         // otherwise build a box or a block
+#if defined(INCLUDE_XUL) || defined(MOZ_SVG)
+        PRInt32 nameSpaceID = kNameSpaceID_Unknown;
+        aDocElement->GetNameSpaceID(nameSpaceID);
+#endif
 #ifdef INCLUDE_XUL
-        PRInt32 nameSpaceID;
-        if (NS_SUCCEEDED(aDocElement->GetNameSpaceID(nameSpaceID)) &&
-            nameSpaceID == nsXULAtoms::nameSpaceID) {
+        if (nameSpaceID == nsXULAtoms::nameSpaceID) {
           rv = NS_NewBoxFrame(aPresShell, &contentFrame, PR_TRUE);
           if (NS_FAILED(rv)) {
             return rv;
@@ -3485,6 +3486,17 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
         }
         else
 #endif 
+#ifdef MOZ_SVG
+        if (nameSpaceID == nsSVGAtoms::nameSpaceID ||
+            nameSpaceID == nsSVGAtoms::nameSpaceDeprecatedID) {
+          rv = NS_NewSVGOuterSVGFrame(aPresShell, aDocElement, &contentFrame);
+          if (NS_FAILED(rv)) {
+            return rv;
+          }
+          isBlockFrame = PR_TRUE;
+        }
+        else 
+#endif
         {
           rv = NS_NewDocumentElementFrame(aPresShell, &contentFrame);
           if (NS_FAILED(rv)) {
@@ -7040,23 +7052,16 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
                                           nsIStyleContext*         aStyleContext,
                                           nsFrameItems&            aFrameItems)
 {
-  PRBool    processChildren = PR_TRUE;  // Whether we should process child content.
-                                        // MathML frames are inline frames.
-                                        // processChildren = PR_TRUE for inline frames.
-                                        // see case NS_STYLE_DISPLAY_INLINE in
-                                        // ConstructFrameByDisplayType()
-  
-  nsresult  rv = NS_OK;
-  PRBool    isAbsolutelyPositioned = PR_FALSE;
-  PRBool    isFixedPositioned = PR_FALSE;
-  PRBool    isReplaced = PR_FALSE;
 
+  nsresult  rv = NS_OK;
+  PRBool isAbsolutelyPositioned = PR_FALSE;
+  PRBool isFixedPositioned = PR_FALSE;
+  PRBool forceView = PR_FALSE;
+  PRBool isBlock = PR_FALSE;
+  PRBool processChildren = PR_FALSE;
+  
   NS_ASSERTION(aTag != nsnull, "null SVG tag");
   if (aTag == nsnull)
-    return NS_OK;
-
-  // Make sure that we remain confined in the SVG world
-  if (aNameSpaceID != nsSVGAtoms::nameSpaceID) 
     return NS_OK;
 
   // Initialize the new frame
@@ -7072,22 +7077,50 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
   else if (NS_STYLE_POSITION_FIXED == disp->mPosition) {
     isFixedPositioned = PR_TRUE;
   }
-  if (aTag == nsSVGAtoms::g)
-     rv = NS_NewSVGContainerFrame(aPresShell, &newFrame);
-  else if (aTag == nsSVGAtoms::polygon)
-     rv = NS_NewPolygonFrame(aPresShell, &newFrame);
-  else if (aTag == nsSVGAtoms::polyline)
-     rv = NS_NewPolylineFrame(aPresShell, &newFrame);
 
+  if (aTag == nsSVGAtoms::svg) {
+    forceView = PR_TRUE;
+    isBlock = PR_TRUE;
+    processChildren = PR_TRUE;
+    rv = NS_NewSVGOuterSVGFrame(aPresShell, aContent, &newFrame);
+  }
+  else if (aTag == nsSVGAtoms::g) {
+    processChildren = PR_TRUE;
+    rv = NS_NewSVGGFrame(aPresShell, aContent, &newFrame);
+  }
+  else if (aTag == nsSVGAtoms::polygon)
+    rv = NS_NewSVGPolygonFrame(aPresShell, aContent, &newFrame);
+  else if (aTag == nsSVGAtoms::polyline)
+    rv = NS_NewSVGPolylineFrame(aPresShell, aContent, &newFrame);
+  else if (aTag == nsSVGAtoms::circle)
+    rv = NS_NewSVGCircleFrame(aPresShell, aContent, &newFrame);
+  else if (aTag == nsSVGAtoms::foreignObject) {
+    processChildren = PR_TRUE;
+    rv = NS_NewSVGForeignObjectFrame(aPresShell, aContent, &newFrame);
+  }
+  else if (aTag == nsSVGAtoms::path)
+    rv = NS_NewSVGPathFrame(aPresShell, aContent, &newFrame);
+  
+  if (newFrame == nsnull) {
+    // Either we have an unknown tag, or construction of a frame
+    // failed. One reason why frame construction for a known tag might
+    // have failed is that the content element doesn't implement all
+    // interfaces required by the frame. This happens e.g. when using
+    // 'extends' in xbl to extend an xbl binding from an svg
+    // element. In that case, the bound content element will always be
+    // a standard xml element, and not be of the right type.
+    // The best we can do here is to create a generic svg container frame.
+#ifdef DEBUG
+    printf("Warning: Creating SVGGenericContainerFrame for tag <");
+    nsAutoString str;
+    printf("%s>\n", NS_ConvertUCS2toUTF8(str).get());
+#endif
+    processChildren = PR_TRUE;
+    rv = NS_NewSVGGenericContainerFrame(aPresShell, aContent, &newFrame);
+  }  
   // If we succeeded in creating a frame then initialize it, process its
   // children (if requested), and set the initial child list
   if (NS_SUCCEEDED(rv) && newFrame != nsnull) {
-    // If the frame is a replaced element, then set the frame state bit
-    if (isReplaced) {
-      nsFrameState  state;
-      newFrame->GetFrameState(&state);
-      newFrame->SetFrameState(state | NS_FRAME_REPLACED_ELEMENT);
-    }
 
     nsIFrame* geometricParent = isAbsolutelyPositioned
                               ? aState.mAbsoluteItems.containingBlock
@@ -7095,9 +7128,9 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
     InitAndRestoreFrame(aPresContext, aState, aContent, 
                         geometricParent, aStyleContext, nsnull, newFrame);
 
-    // See if we need to create a view, e.g. the frame is absolutely positioned
     nsHTMLContainerFrame::CreateViewForFrame(aPresContext, newFrame,
-                                             aStyleContext, aParentFrame, PR_FALSE);
+                                             aStyleContext, aParentFrame,
+                                             forceView);
 
     // Add the new frame to our list of frame items.
     aFrameItems.AddChild(newFrame);
@@ -7105,8 +7138,8 @@ nsCSSFrameConstructor::ConstructSVGFrame(nsIPresShell*            aPresShell,
     // Process the child content if requested
     nsFrameItems childItems;
     if (processChildren) {
-      rv = ProcessChildren(aPresShell, aPresContext, aState, aContent, newFrame, PR_TRUE,
-                           childItems, PR_FALSE);
+      rv = ProcessChildren(aPresShell, aPresContext, aState, aContent,
+                           newFrame, PR_TRUE, childItems, isBlock);
 
       CreateAnonymousFrames(aPresShell, aPresContext, aTag, aState, aContent, newFrame,
                             childItems);
@@ -7290,8 +7323,11 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsIPresShell*            aPresShe
 
 // SVG
 #ifdef MOZ_SVG
-  if (NS_SUCCEEDED(rv) && ((nsnull == aFrameItems.childList) ||
-                           (lastChild == aFrameItems.lastChild))) {
+  if (NS_SUCCEEDED(rv) &&
+      ((nsnull == aFrameItems.childList) ||
+       (lastChild == aFrameItems.lastChild)) &&
+      (aNameSpaceID == nsSVGAtoms::nameSpaceID ||
+       aNameSpaceID == nsSVGAtoms::nameSpaceDeprecatedID)) {
     rv = ConstructSVGFrame(aPresShell, aPresContext, aState, aContent, aParentFrame,
                               aTag, aNameSpaceID, styleContext, aFrameItems);
   }
@@ -9889,7 +9925,7 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
   nsCOMPtr<nsIPresShell> shell;
   aPresContext->GetShell(getter_AddRefs(shell));
   nsIFrame*     primaryFrame;
-   
+
   shell->GetPrimaryFrameFor(aContent, &primaryFrame);
 
   PRBool  reconstruct = PR_FALSE;

@@ -983,15 +983,21 @@ if [ "$MOZ_MATHML" ]; then
 "
 fi
 
-# layout/svg
+# svg
 if [ "$MOZ_SVG" ]; then
+    MAKEFILES_content="$MAKEFILES_content
+	content/svg/Makefile
+	content/svg/document/Makefile
+	content/svg/document/src/Makefile
+	content/svg/src/Makefile
+"
+    MAKEFILES_dom="$MAKEFILES_dom
+	dom/public/idl/svg/Makefile
+"
     MAKEFILES_layout="$MAKEFILES_layout
 	layout/svg/Makefile
 	layout/svg/base/Makefile
-	layout/svg/base/public/Makefile
 	layout/svg/base/src/Makefile
-	layout/svg/content/Makefile
-	layout/svg/content/src/Makefile
 "
 fi
 

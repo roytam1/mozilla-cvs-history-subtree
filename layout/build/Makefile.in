@@ -32,7 +32,7 @@ EXPORT_LIBRARY = 1
 SHORT_LIBNAME	= gkhtml
 IS_COMPONENT	= 1
 MODULE_NAME	= nsLayoutModule
-EXTRA_DSO_LIBS	= gkgfx
+EXTRA_DSO_LIBS	= gkgfx art_lgpl
 REQUIRES	= xpcom string widget necko rdf docshell dom htmlparser uriloader webshell locale timer xuldoc gfx2
 
 CPPSRCS		= \
@@ -74,7 +74,6 @@ endif
 
 ifdef MOZ_SVG
 SHARED_LIBRARY_LIBS += \
-                $(DIST)/lib/libgksvgcon_s.$(LIB_SUFFIX) \
                 $(DIST)/lib/libgksvgbase_s.$(LIB_SUFFIX) \
                 $(NSNULL)
 endif

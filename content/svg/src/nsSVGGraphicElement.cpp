@@ -1,0 +1,163 @@
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is the Mozilla SVG project.
+ *
+ * The Initial Developer of the Original Code is Crocodile Clips Ltd.
+ * Portions created by Crocodile Clips are 
+ * Copyright (C) 2001 Crocodile Clips Ltd. All
+ * Rights Reserved.
+ *
+ * Contributor(s): 
+ *
+ *          Alex Fritze <alex.fritze@crocodile-clips.com>
+ *
+ */
+
+#include "nsSVGGraphicElement.h"
+#include "nsSVGTransformList.h"
+#include "nsSVGAnimatedTransformList.h"
+#include "nsSVGAtoms.h"
+#include "nsSVGMatrix.h"
+#include "nsIDOMSVGSVGElement.h"
+#include "nsIDOMEventTarget.h"
+
+//----------------------------------------------------------------------
+// XPConnect interface list
+NS_CLASSINFO_MAP_BEGIN_EXPORTED(SVGGraphicElement)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGLocatable)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGTransformable)
+  NS_CLASSINFO_MAP_ENTRY_FUNCTION(GetSVGElementIIDs)
+NS_CLASSINFO_MAP_END
+
+
+//----------------------------------------------------------------------
+// nsISupports methods
+
+NS_IMPL_ADDREF_INHERITED(nsSVGGraphicElement, nsSVGGraphicElementBase)
+NS_IMPL_RELEASE_INHERITED(nsSVGGraphicElement, nsSVGGraphicElementBase)
+
+NS_INTERFACE_MAP_BEGIN(nsSVGGraphicElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMSVGLocatable)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMSVGTransformable)
+NS_INTERFACE_MAP_END_INHERITING(nsSVGGraphicElementBase)
+
+//----------------------------------------------------------------------
+// Implementation
+
+nsresult
+nsSVGGraphicElement::Init()
+{
+  nsresult rv;
+  rv = nsSVGGraphicElementBase::Init();
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  // Create mapped properties:
+
+  // DOM property: transform, #IMPLIED attrib: transform
+  {
+    nsCOMPtr<nsIDOMSVGTransformList> transformList;
+    rv = nsSVGTransformList::Create(getter_AddRefs(transformList));
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = NS_NewSVGAnimatedTransformList(getter_AddRefs(mTransforms),
+                                        transformList);
+    NS_ENSURE_SUCCESS(rv,rv);
+    rv = mAttributes->AddMappedSVGValue(nsSVGAtoms::transform, mTransforms);
+    NS_ENSURE_SUCCESS(rv,rv);
+  }
+  
+  return NS_OK;
+}
+
+//----------------------------------------------------------------------
+// nsIDOMSVGLocatable methods
+
+/* readonly attribute nsIDOMSVGElement nearestViewportElement; */
+NS_IMETHODIMP nsSVGGraphicElement::GetNearestViewportElement(nsIDOMSVGElement * *aNearestViewportElement)
+{
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* readonly attribute nsIDOMSVGElement farthestViewportElement; */
+NS_IMETHODIMP nsSVGGraphicElement::GetFarthestViewportElement(nsIDOMSVGElement * *aFarthestViewportElement)
+{
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* nsIDOMSVGRect getBBox (); */
+NS_IMETHODIMP nsSVGGraphicElement::GetBBox(nsIDOMSVGRect **_retval)
+{
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* nsIDOMSVGMatrix getCTM (); */
+NS_IMETHODIMP nsSVGGraphicElement::GetCTM(nsIDOMSVGMatrix **_retval)
+{
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* nsIDOMSVGMatrix getScreenCTM (); */
+NS_IMETHODIMP nsSVGGraphicElement::GetScreenCTM(nsIDOMSVGMatrix **_retval)
+{
+  nsCOMPtr<nsIDOMSVGMatrix> screenCTM;
+  
+  nsCOMPtr<nsIContent> parent = mParent;
+  while (parent) {    
+    nsCOMPtr<nsIDOMSVGLocatable> locatableElement = do_QueryInterface(parent);
+    if (locatableElement) {
+      locatableElement->GetScreenCTM(getter_AddRefs(screenCTM));
+      break;
+    }
+    nsCOMPtr<nsIDOMSVGSVGElement> rootElement = do_QueryInterface(parent);
+    if (rootElement) 
+      break; // XXX check whether it's the outermost owner before breaking
+
+    nsCOMPtr<nsIContent> next;
+    parent->GetParent(*getter_AddRefs(next));
+    parent = next;
+  }
+
+  if (!screenCTM)
+    nsSVGMatrix::Create(getter_AddRefs(screenCTM));
+
+  nsCOMPtr<nsIDOMSVGTransformList> transforms;
+  mTransforms->GetAnimVal(getter_AddRefs(transforms));
+  NS_ENSURE_TRUE(transforms, NS_ERROR_FAILURE);
+  nsCOMPtr<nsIDOMSVGMatrix> matrix;
+  transforms->GetConsolidation(getter_AddRefs(matrix));
+
+  return screenCTM->Multiply(matrix, _retval);
+}
+
+/* nsIDOMSVGMatrix getTransformToElement (in nsIDOMSVGElement element); */
+NS_IMETHODIMP nsSVGGraphicElement::GetTransformToElement(nsIDOMSVGElement *element, nsIDOMSVGMatrix **_retval)
+{
+  NS_NOTYETIMPLEMENTED("write me!");
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+//----------------------------------------------------------------------
+// nsIDOMSVGTransformable methods
+/* readonly attribute nsIDOMSVGAnimatedTransformList transform; */
+
+NS_IMETHODIMP nsSVGGraphicElement::GetTransform(nsIDOMSVGAnimatedTransformList * *aTransform)
+{
+  *aTransform = mTransforms;
+  NS_IF_ADDREF(*aTransform);
+  return NS_OK;
+}
+

@@ -40,6 +40,9 @@ CPPSRCS =				\
   nsTextFragment.cpp \
   nsXULAtoms.cpp \
   nsStyleCoord.cpp \
+!ifdef MOZ_SVG
+  nsSVGAtoms.cpp   \
+!endif
 	$(NULL)
 
 MODULE=raptor 
@@ -57,6 +60,9 @@ CPP_OBJS=					\
   .\$(OBJDIR)\nsTextFragment.obj \
   .\$(OBJDIR)\nsXULAtoms.obj \
   .\$(OBJDIR)\nsStyleCoord.obj \
+!ifdef MOZ_SVG
+  .\$(OBJDIR)\nsSVGAtoms.obj \
+!endif
 	$(NULL)
 
 LCFLAGS = \
