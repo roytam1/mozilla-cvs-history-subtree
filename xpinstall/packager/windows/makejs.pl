@@ -36,23 +36,26 @@
 #        ie: perl makejs.pl xpcom.jst 5.0.0.99256
 #
 
-# Make sure there are at least two arguments
-if($#ARGV < 2)
+use File::Copy;
+
+# Make sure there are at least four arguments
+if($#ARGV < 3)
 {
-  die "usage: $0 <.jst file> <default version> <staging path>
+  die "usage: $0 <topsrcdir> <.jst file> <default version> <staging path>
 
        .jst file              : .js template input file
        default version        : default julian base version number to use in the
                                 form of: major.minor.release.yydoy
                                 ie: 5.0.0.99256
        component staging path : path to where this component is staged at
-                                ie: z:\\stage\\windows\\32bit\\en\\5.0\\xpcom
+                                ie: z:/stage/windows/32bit/en/5.0/xpcom
        \n";
 }
 
-$inJstFile        = $ARGV[0];
-$inVersion        = $ARGV[1];
-$inStagePath      = $ARGV[2];
+$topsrcdir        = $ARGV[0];
+$inJstFile        = $ARGV[1];
+$inVersion        = $ARGV[2];
+$inStagePath      = $ARGV[3];
 
 # get environment vars
 $userAgent        = $ENV{WIZ_userAgent};
@@ -72,8 +75,10 @@ $outTempFile      = $inJstFileSplit[0];
 $outTempFile     .= ".template";
 $foundLongFiles   = 0;
 
-print "\ncopy \"$ENV{MOZ_SRC}\\mozilla\\xpinstall\\packager\\common\\share.t\" $outTempFile\n";
-system("copy \"$ENV{MOZ_SRC}\\mozilla\\xpinstall\\packager\\common\\share.t\" $outTempFile");
+($MOZ_TOOLS = $ENV{"MOZ_TOOLS"}) =~ s/\\/\//g;
+
+print "copy \"$topsrcdir/xpinstall/packager/common/share.t\" $outTempFile\n";
+copy("$topsrcdir/xpinstall/packager/common/share.t", "$outTempFile");
 print "\ntype $inJstFile >> $outTempFile";
 system("type $inJstFile >> $outTempFile");
 
@@ -97,7 +102,7 @@ while($line = <fpInTemplate>)
     {
       @semiColonSplit = split(/;/, $colonSplit[1]);
       $subDir         = $semiColonSplit[0];
-      $spaceRequired  = GetSpaceRequired("$inStagePath\\$subDir");
+      $spaceRequired  = GetSpaceRequired("$inStagePath/$subDir");
       $line =~ s/\$SpaceRequired\$:$subDir/$spaceRequired/i;
     }
     else
@@ -132,7 +137,7 @@ sub GetSpaceRequired()
   my($spaceRequired);
 
   print "   calculating size for $inPath\n";
-  $spaceRequired    = `\"$ENV{MOZ_TOOLS}\\bin\\ds32.exe\" /D /L0 /A /S /C 32768 $inPath`;
+  $spaceRequired    = `\"$MOZ_TOOLS/bin/ds32.exe\" /D /L0 /A /S /C 32768 $inPath`;
   $spaceRequired    = int($spaceRequired / 1024);
   $spaceRequired   += 1;
   return($spaceRequired);

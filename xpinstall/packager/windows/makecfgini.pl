@@ -102,6 +102,8 @@ $inRedirServerPath;
 ($inDomain,      $inServerPath)      = ParseDomainAndPath($inUrl);
 ($inRedirDomain, $inRedirServerPath) = ParseDomainAndPath($inRedirIniUrl);
 
+($MOZ_TOOLS = $ENV{MOZ_TOOLS}) =~ s/\\/\//g;
+
 # Get the name of the file replacing the .it extension with a .ini extension
 @inItFileSplit    = split(/\./,$inItFile);
 $outIniFile       = $inItFileSplit[0];
@@ -251,7 +253,7 @@ sub OutputInstallSize()
   my($installSize);
 
   print "   calculating size for $inPath\n";
-  $installSize    = `$ENV{MOZ_TOOLS}\\bin\\ds32.exe /D /L0 /A /S /C 32768 $inPath`;
+  $installSize    = `$MOZ_TOOLS/bin/ds32.exe /D /L0 /A /S /C 32768 $inPath`;
   $installSize   += 32768; # take into account install.js
   $installSize    = int($installSize / 1024);
   $installSize   += 1;
@@ -289,7 +291,7 @@ sub OutputInstallSizeSystem()
       {
         # calculate the size of component installed using ds32.exe in Kbytes
         print "   calculating size for $inPath\\$_";
-        $installSizeSystem += `$ENV{MOZ_TOOLS}\\bin\\ds32.exe /D /L0 /A /S /C 32768 $inPath\\$_`;
+        $installSizeSystem += `$MOZ_TOOLS/bin/ds32.exe /D /L0 /A /S /C 32768 $inPath\\$_`;
       }
     }
   }

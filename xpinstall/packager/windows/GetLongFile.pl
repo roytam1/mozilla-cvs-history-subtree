@@ -41,6 +41,8 @@ if(substr($start_dir, -1, 1) ne '/')
     $start_dir = $start_dir . "/";
 }
 
+($MOZ_TOOLS = $ENV{"MOZ_TOOLS"}) =~ s/\\/\//g;
+
 # Open the output file
 open(fpOutFile, ">>$outFile") || die "\nCould not open $outFile: $!\n";
 
@@ -115,10 +117,10 @@ sub check_all_dir
         {
             if(check_extension($file))
             {
-                $short_filename = `$ENV{MOZ_TOOLS}\\bin\\GetShortPathName.exe $file`;
+                $short_filename = `$MOZ_TOOLS/bin/GetShortPathName.exe $file`;
                 if(($?/256) == 1)
                 {
-                    print "$ENV{MOZ_TOOLS}\\bin\\GetShortPathName.exe: $!\n";
+                    print "$MOZ_TOOLS/bin/GetShortPathName.exe: $!\n";
                     exit(1);
                 }
 
