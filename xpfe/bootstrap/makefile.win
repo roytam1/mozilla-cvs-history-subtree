@@ -26,9 +26,9 @@ DEFINES=-DWIN32_LEAN_AND_MEAN
 
 !ifdef MOZ_STATIC_COMPONENT_LIBS
 DEFINES=$(DEFINES) -D_BUILD_STATIC_BIN
-LIBFILE=$(OBJDIR)\libs.txt
+EXTRA_LIBS_LIST_FILE=$(OBJDIR)\libs.txt
 SEDCMDS=nsStaticComonents.cpp.sed
-GARBAGE=$(GARBAGE) $(LIBFILE) $(SEDCMDS) nsStaticComponents.cpp
+GARBAGE=$(GARBAGE) $(EXTRA_LIBS_LIST_FILE) $(SEDCMDS) nsStaticComponents.cpp
 !endif
 
 CPPSRCS=                                \
@@ -157,7 +157,7 @@ nsStaticComponents.cpp: nsStaticComponents.cpp.in $(FINAL_LINK_COMP_NAMES) $(SED
         sed -f $(SEDCMDS) nsStaticComponents.cpp.in > $@
         rm -f $(SEDCMDS)
 
-$(LIBFILE): $(FINAL_LINK_COMPS) $(FINAL_LINK_LIBS)
+$(EXTRA_LIBS_LIST_FILE): $(FINAL_LINK_COMPS) $(FINAL_LINK_LIBS)
         echo +++ make: Creating list of link libraries: $@
         rm -f $@
         sed -e "s/^/$(DIST:\=\\\)\\\lib\\\/" -e "s/$$/.lib/" $(FINAL_LINK_COMPS)  > $@
