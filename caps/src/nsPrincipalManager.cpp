@@ -380,6 +380,8 @@ nsPrincipalManager::Init()
 
 nsPrincipalManager::~nsPrincipalManager(void) {
   if (itsPrinNameToPrincipalTable) delete itsPrinNameToPrincipalTable;
+  NS_IF_RELEASE(theUnsignedPrincipalArray);
+  NS_IF_RELEASE(theUnknownPrincipalArray);
 }
 
 nsresult
