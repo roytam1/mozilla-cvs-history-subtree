@@ -52,6 +52,7 @@ class txToplevelItem;
 class txTemplateItem;
 class txVariableItem;
 class txStripSpaceItem;
+class txAttributeSetItem;
 
 class txStylesheet
 {
@@ -159,6 +160,7 @@ private:
     nsresult addFrames(txListIterator& aInsertIter);
     nsresult addStripSpace(txStripSpaceItem* aStripSpaceItem,
                            nsVoidArray& frameStripSpaceTests);
+    nsresult addAttributeSet(txAttributeSetItem* aAttributeSetItem);
 
     // Refcount
     nsAutoRefCnt mRefCnt;

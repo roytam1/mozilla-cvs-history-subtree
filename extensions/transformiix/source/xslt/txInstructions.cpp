@@ -780,6 +780,7 @@ txRemoveVariable::execute(txExecutionState& aEs)
 nsresult
 txReturn::execute(txExecutionState& aEs)
 {
+    NS_ASSERTION(!mNext, "instructions exist after txReturn");
     aEs.returnFromTemplate();
 
     return NS_OK;

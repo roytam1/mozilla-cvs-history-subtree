@@ -63,6 +63,7 @@ txHandlerTable* gTxTopVariableHandler = 0;
 txHandlerTable* gTxChooseHandler = 0;
 txHandlerTable* gTxParamHandler = 0;
 txHandlerTable* gTxImportHandler = 0;
+txHandlerTable* gTxAttributeSetHandler = 0;
 
 nsresult
 txFnStartLRE(PRInt32 aNamespaceID,
@@ -473,9 +474,6 @@ txFnStartLREStylesheet(PRInt32 aNamespaceID,
                                txXSLTAtoms::version, PR_TRUE, &attr);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = aState.pushHandlerTable(gTxTemplateHandler);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
     txExpandedName nullExpr;
     double prio = Double::NaN;
     nsAutoPtr<txPattern> match(new txRootPattern(MB_TRUE));
@@ -491,6 +489,9 @@ txFnStartLREStylesheet(PRInt32 aNamespaceID,
     templ.forget();
     aState.openInstructionContainer(templ);
 
+    rv = aState.pushHandlerTable(gTxTemplateHandler);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
     return txFnStartLRE(aNamespaceID, aLocalName, aPrefix, aAttributes,
                         aAttrCount, aState);
 }
@@ -501,6 +502,8 @@ txFnEndLREStylesheet(txStylesheetCompilerState& aState)
     nsresult rv = txFnEndLRE(aState);
     NS_ENSURE_SUCCESS(rv, rv);
 
+    aState.popHandlerTable();
+
     nsAutoPtr<txInstruction> instr(new txReturn());
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
@@ -508,7 +511,6 @@ txFnEndLREStylesheet(txStylesheetCompilerState& aState)
     NS_ENSURE_SUCCESS(rv, rv);
 
     aState.closeInstructionContainer();
-    aState.popHandlerTable();
 
     return NS_OK;
 }
@@ -536,6 +538,54 @@ nsresult
 txFnEndOtherTop(txStylesheetCompilerState& aState)
 {
     aState.popHandlerTable();
+    return NS_OK;
+}
+
+
+// xsl:attribute-set
+nsresult
+txFnStartAttributeSet(PRInt32 aNamespaceID,
+                      nsIAtom* aLocalName,
+                      nsIAtom* aPrefix,
+                      txStylesheetAttr* aAttributes,
+                      PRInt32 aAttrCount,
+                      txStylesheetCompilerState& aState)
+{
+    nsresult rv = NS_OK;
+    txExpandedName name;
+    rv = getQNameAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_TRUE,
+                      aState, name);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    nsAutoPtr<txAttributeSetItem> attrSet(new txAttributeSetItem(name));
+    NS_ENSURE_TRUE(attrSet, NS_ERROR_OUT_OF_MEMORY);
+
+    aState.openInstructionContainer(attrSet);
+
+    rv = aState.addToplevelItem(attrSet);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    attrSet.forget();
+
+    rv = parseUseAttrSets(aAttributes, aAttrCount, PR_FALSE, aState);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    return aState.pushHandlerTable(gTxAttributeSetHandler);
+}
+
+nsresult
+txFnEndAttributeSet(txStylesheetCompilerState& aState)
+{
+    aState.popHandlerTable();
+
+    nsAutoPtr<txInstruction> instr(new txReturn());
+    NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
+
+    nsresult rv = aState.addInstruction(instr);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    aState.closeInstructionContainer();
+
     return NS_OK;
 }
 
@@ -913,9 +963,7 @@ txFnStartTemplate(PRInt32 aNamespaceID,
                   PRInt32 aAttrCount,
                   txStylesheetCompilerState& aState)
 {
-    nsresult rv = aState.pushHandlerTable(gTxParamHandler);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
+    nsresult rv = NS_OK;
     txExpandedName name;
     rv = getQNameAttr(aAttributes, aAttrCount, txXSLTAtoms::name, PR_FALSE,
                       aState, name);
@@ -944,13 +992,15 @@ txFnStartTemplate(PRInt32 aNamespaceID,
     NS_ENSURE_SUCCESS(rv, rv);
     
     templ.forget();
-    
-    return NS_OK;
+
+    return aState.pushHandlerTable(gTxParamHandler);
 }
 
 nsresult
 txFnEndTemplate(txStylesheetCompilerState& aState)
 {
+    aState.popHandlerTable();
+
     nsAutoPtr<txInstruction> instr(new txReturn());
     NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
@@ -958,7 +1008,6 @@ txFnEndTemplate(txStylesheetCompilerState& aState)
     NS_ENSURE_SUCCESS(rv, rv);
 
     aState.closeInstructionContainer();
-    aState.popHandlerTable();
 
     return NS_OK;
 }
@@ -1280,12 +1329,15 @@ txFnStartAttribute(PRInt32 aNamespaceID,
 
     instr.forget();
 
-    return NS_OK;
+    // We need to push the template-handler since the current might be
+    // the attributeset-handler
+    return aState.pushHandlerTable(gTxTemplateHandler);
 }
 
 nsresult
 txFnEndAttribute(txStylesheetCompilerState& aState)
 {
+    aState.popHandlerTable();
     nsAutoPtr<txInstruction> instr((txInstruction*)aState.popObject());
     nsresult rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -1827,7 +1879,7 @@ txFnStartNumber(PRInt32 aNamespaceID,
     rv = aState.addInstruction(instr);
     NS_ENSURE_SUCCESS(rv, rv);
 
-    return aState.pushHandlerTable(gTxIgnoreHandler);;
+    return aState.pushHandlerTable(gTxIgnoreHandler);
 }
 
 nsresult
@@ -1851,7 +1903,7 @@ txFnStartOtherwise(PRInt32 aNamespaceID,
                    PRInt32 aAttrCount,
                    txStylesheetCompilerState& aState)
 {
-    return aState.pushHandlerTable(gTxTemplateHandler);;
+    return aState.pushHandlerTable(gTxTemplateHandler);
 }
 
 nsresult
@@ -2410,7 +2462,8 @@ txHandlerTableData gTxRootTableData = {
 
 txHandlerTableData gTxTopTableData = {
   // Handlers
-  { { kNameSpaceID_XSLT, "decimal-format", txFnStartDecimalFormat, txFnEndDecimalFormat },
+  { { kNameSpaceID_XSLT, "attribute-set", txFnStartAttributeSet, txFnEndAttributeSet },
+    { kNameSpaceID_XSLT, "decimal-format", txFnStartDecimalFormat, txFnEndDecimalFormat },
     { kNameSpaceID_XSLT, "include", txFnStartInclude, txFnEndInclude },
     { kNameSpaceID_XSLT, "key", txFnStartKey, txFnEndKey },
     { kNameSpaceID_XSLT, "output", txFnStartOutput, txFnEndOutput },
@@ -2563,6 +2616,18 @@ txHandlerTableData gTxImportTableData = {
   txFnTextIgnore  // XXX what should we do here?
 };
 
+txHandlerTableData gTxAttributeSetTableData = {
+  // Handlers
+  { { kNameSpaceID_XSLT, "attribute", txFnStartAttribute, txFnEndAttribute },
+    { 0, 0, 0, 0 } },
+  // Other
+  { 0, 0, txFnStartElementError, 0 },
+  // LRE
+  { 0, 0, txFnStartElementError, 0 },
+  // Text
+  txFnTextError
+};
+
 
 
 /**
@@ -2637,6 +2702,7 @@ txHandlerTable::init()
     INIT_HANDLER(Choose);
     INIT_HANDLER(Param);
     INIT_HANDLER(Import);
+    INIT_HANDLER(AttributeSet);
 
     return MB_TRUE;
 }
@@ -2658,4 +2724,5 @@ txHandlerTable::shutdown()
     SHUTDOWN_HANDLER(Choose);
     SHUTDOWN_HANDLER(Param);
     SHUTDOWN_HANDLER(Import);
+    SHUTDOWN_HANDLER(AttributeSet);
 }

@@ -48,7 +48,7 @@ txStylesheet::txStylesheet()
     : mRootFrame(nsnull),
       mNamedTemplates(PR_FALSE),
       mDecimalFormats(PR_TRUE),
-      mAttributeSets(PR_TRUE),
+      mAttributeSets(PR_FALSE),
       mGlobalVariables(PR_TRUE),
       mKeys(PR_TRUE)
 {
@@ -120,6 +120,13 @@ txStylesheet::~txStylesheet()
     txListIterator instrIter(&mTemplateInstructions);
     while (instrIter.hasNext()) {
         delete (txInstruction*)instrIter.next();
+    }
+    
+    // We can't make the map own its values because then we wouldn't be able
+    // to merge attributesets of the same name
+    txExpandedNameMap::iterator attrSetIter(mAttributeSets);
+    while (attrSetIter.next()) {
+        delete attrSetIter.value();
     }
 }
 
@@ -328,6 +335,12 @@ txStylesheet::doneCompiling()
         txToplevelItem* item;
         while ((item = (txToplevelItem*)itemIter.previous())) {
             switch (item->getType()) {
+                case txToplevelItem::attributeSet:
+                {
+                    rv = addAttributeSet((txAttributeSetItem*)item);
+                    NS_ENSURE_SUCCESS(rv, rv);
+                    break;
+                }
                 case txToplevelItem::dummy:
                 case txToplevelItem::import:
                 {
@@ -342,6 +355,7 @@ txStylesheet::doneCompiling()
                 {
                     rv = addStripSpace((txStripSpaceItem*)item,
                                        frameStripSpaceTests);
+                    NS_ENSURE_SUCCESS(rv, rv);
                     break;
                 }
                 case txToplevelItem::templ:
@@ -495,7 +509,6 @@ nsresult
 txStylesheet::addStripSpace(txStripSpaceItem* aStripSpaceItem,
                             nsVoidArray& frameStripSpaceTests)
 {
-    
     PRInt32 testCount = aStripSpaceItem->mStripSpaceTests.Count();
     for (; testCount > 0; --testCount) {
         txStripSpaceTest* sst =
@@ -514,6 +527,47 @@ txStylesheet::addStripSpace(txStripSpaceItem* aStripSpaceItem,
 
         aStripSpaceItem->mStripSpaceTests.RemoveElementAt(testCount-1);
     }
+
+    return NS_OK;
+}
+
+nsresult
+txStylesheet::addAttributeSet(txAttributeSetItem* aAttributeSetItem)
+{
+    nsresult rv = NS_OK;
+    txInstruction* oldInstr =
+        (txInstruction*)mAttributeSets.get(aAttributeSetItem->mName);
+    if (!oldInstr) {
+        rv = mAttributeSets.add(aAttributeSetItem->mName,
+                                aAttributeSetItem->mFirstInstruction);
+        NS_ENSURE_SUCCESS(rv, rv);
+        
+        aAttributeSetItem->mFirstInstruction.forget();
+        
+        return NS_OK;
+    }
+    
+    // We need to prepend the new instructions before the existing ones.
+    txInstruction* instr = aAttributeSetItem->mFirstInstruction;
+    txInstruction* lastNonReturn = nsnull;
+    while(instr->mNext) {
+        lastNonReturn = instr;
+        instr = instr->mNext;
+    }
+    
+    if (!lastNonReturn) {
+        // The new attributeset is empty, so lets just ignore it.
+        return NS_OK;
+    }
+
+    rv = mAttributeSets.set(aAttributeSetItem->mName,
+                            aAttributeSetItem->mFirstInstruction);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    aAttributeSetItem->mFirstInstruction.forget();
+
+    delete lastNonReturn->mNext;      // Delete the txReturn...
+    lastNonReturn->mNext = oldInstr;  // ...and link up the old instructions.
 
     return NS_OK;
 }
