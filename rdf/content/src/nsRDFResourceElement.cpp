@@ -1257,6 +1257,7 @@ RDFResourceElementImpl::SetAttribute(PRInt32 aNameSpaceID,
 
     nsresult rv;
     nsGenericAttribute* attr;
+	  PRBool successful = PR_FALSE;
     PRInt32 index;
     PRInt32 count = mAttributes->Count();
     for (index = 0; index < count; index++) {
@@ -1264,6 +1265,7 @@ RDFResourceElementImpl::SetAttribute(PRInt32 aNameSpaceID,
         if ((aNameSpaceID == attr->mNameSpaceID) && (aName == attr->mName)) {
             attr->mValue = aValue;
             rv = NS_OK;
+			      successful = PR_TRUE;
             break;
         }
     }
@@ -1273,11 +1275,34 @@ RDFResourceElementImpl::SetAttribute(PRInt32 aNameSpaceID,
         if (nsnull != attr) {
             mAttributes->AppendElement(attr);
             rv = NS_OK;
+			      successful = PR_TRUE;
         }
     }
 
-    // XXX notify doc?
-    return rv;
+	// XUL Only. Find out if we have a broadcast listener for this element.
+	if (successful)
+	{
+		count = mBroadcastListeners.Count();
+		for (PRInt32 i = 0; i < count; i++)
+		{
+			XULBroadcastListener* xulListener = (XULBroadcastListener*)mBroadcastListeners[i];
+			nsString aString;
+			aName->ToString(aString);
+			if (xulListener->mAttribute.EqualsIgnoreCase(aString))
+			{
+				// Set the attribute in the broadcast listener.
+				nsCOMPtr<nsIContent> contentNode(xulListener->mListener);
+				if (contentNode)
+				{
+					contentNode->SetAttribute(aNameSpaceID, aName, aValue, aNotify);
+				}
+			}
+		}
+	}
+	// End XUL Only Code
+
+  // XXX notify doc?
+  return rv;
 }
 
 
@@ -1367,7 +1392,7 @@ RDFResourceElementImpl::UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, PRB
     }
 
     nsresult rv = NS_OK;
-
+	  PRBool successful = PR_FALSE;
     if (nsnull != mAttributes) {
         PRInt32 count = mAttributes->Count();
         PRInt32 index;
@@ -1376,12 +1401,35 @@ RDFResourceElementImpl::UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, PRB
             if ((attr->mNameSpaceID == aNameSpaceID) && (attr->mName == aName)) {
                 mAttributes->RemoveElementAt(index);
                 delete attr;
+				        successful = PR_TRUE;
                 break;
             }
         }
 
         // XXX notify document??
     }
+
+	  // XUL Only. Find out if we have a broadcast listener for this element.
+	  if (successful)
+	  {
+		  PRInt32 count = mBroadcastListeners.Count();
+		  for (PRInt32 i = 0; i < count; i++)
+		  {
+			  XULBroadcastListener* xulListener = (XULBroadcastListener*)mBroadcastListeners[i];
+			  nsString aString;
+			  aName->ToString(aString);
+			  if (xulListener->mAttribute.EqualsIgnoreCase(aString))
+			  {
+				  // Unset the attribute in the broadcast listener.
+				  nsCOMPtr<nsIContent> contentNode(xulListener->mListener);
+				  if (contentNode)
+				  {
+					  contentNode->UnsetAttribute(aNameSpaceID, aName, aNotify);
+				  }
+			  }
+		  }
+	  }
+	  // End XUL Only Code
 
     return rv;
 }
