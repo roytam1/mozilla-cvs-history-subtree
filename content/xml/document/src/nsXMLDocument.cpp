@@ -1076,7 +1076,8 @@ nsXMLDocument::GetElementFactory(PRInt32 aNameSpaceID, nsIElementFactory** aResu
   contractID.AppendWithConversion(nameSpace);
 
   // Retrieve the appropriate factory.
-  nsCOMPtr<nsIElementFactory> elementFactory(do_GetService(contractID, &rv));
+  nsCOMPtr<nsIElementFactory> elementFactory(do_GetService(contractID.get(),
+                                                           &rv));
 
   *aResult = elementFactory;
   NS_IF_ADDREF(*aResult);

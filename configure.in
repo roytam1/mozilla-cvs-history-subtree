@@ -1395,6 +1395,25 @@ then
 
 	LDFLAGS="$_SAVE_LDFLAGS"
 
+    dnl ====================================================
+    dnl = Check if X headers exist
+    dnl ====================================================
+    _SAVE_CFLAGS=$CFLAGS
+    CFLAGS="$CFLAGS $XCFLAGS"
+    AC_TRY_COMPILE([
+        #include <stdio.h>
+        #include <X11/Xlib.h>
+    ],
+    [
+        Display *dpy = 0;
+        if ((dpy = XOpenDisplay(NULL)) == NULL) {
+            fprintf(stderr, ": can't open %s\en", XDisplayName(NULL));
+            exit(1);
+        }
+    ], [], 
+    [ AC_MSG_ERROR([Could not compile basic X program.]) ])
+    CFLAGS="$_SAVE_CFLAGS"
+
 fi # $no_x
 
 AC_SUBST(XCFLAGS)
@@ -2617,6 +2636,16 @@ MOZ_ARG_DISABLE_BOOL(ldap,
 [  --disable-ldap          Disable LDAP support],
     MOZ_LDAP_XPCOM=)
 
+dnl =========================================================
+dnl = Calendar
+dnl =========================================================
+if test "$MOZ_CALENDAR"; then
+    AC_CHECK_LIB(ical, icalproperty_new_location, [],
+        AC_MSG_ERROR([Calendar requires libical]))
+fi
+
+AC_SUBST(MOZ_CALENDAR)
+
 dnl ========================================================
 dnl = Xprint
 dnl ========================================================
@@ -3719,8 +3748,7 @@ then
     fi
     if test -n "$_LIBIDL_NOT_FOUND"; then
         AC_MSG_ERROR([libIDL not found.
-        libIDL $LIBIDL_VERSION or higher is required.
-        See http://andrewtv.org/libIDL/ for more information.])
+        libIDL $LIBIDL_VERSION or higher is required.])
     fi
 fi
 
