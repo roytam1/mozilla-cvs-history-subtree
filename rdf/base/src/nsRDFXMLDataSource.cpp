@@ -306,7 +306,6 @@ public:
     // nsIRDFXMLSink interface
     NS_IMETHOD GetReadOnly(PRBool* aIsReadOnly);
     NS_IMETHOD SetReadOnly(PRBool aIsReadOnly);
-    NS_IMETHOD Open(PRBool aBlocking);
     NS_IMETHOD BeginLoad(void);
     NS_IMETHOD Interrupt(void);
     NS_IMETHOD Resume(void);
@@ -735,7 +734,7 @@ RDFXMLDataSourceImpl::SetReadOnly(PRBool aIsReadOnly)
 }
 
 NS_IMETHODIMP
-RDFXMLDataSourceImpl::Open(PRBool aBlocking)
+RDFXMLDataSourceImpl::Refresh(PRBool aBlocking)
 {
     nsresult rv;
 
