@@ -546,6 +546,8 @@ NS_IMETHODIMP nsMailDatabase::GetOfflineOpForKey(nsMsgKey msgKey, PRBool create,
 					imapFlags |= kImapMsgFlaggedFlag;
 				if (msgHdrFlags & MSG_FLAG_FORWARDED)
 					imapFlags |= kImapMsgForwardedFlag;
+        if (msgHdrFlags & MSG_FLAG_IMAP_DELETED)
+          imapFlags |= kImapMsgDeletedFlag;
 				(*offlineOp)->SetNewFlags(imapFlags);
       }
       NS_IF_ADDREF(*offlineOp);
