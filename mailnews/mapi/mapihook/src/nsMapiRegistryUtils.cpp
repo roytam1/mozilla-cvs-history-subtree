@@ -480,7 +480,7 @@ nsresult nsMapiRegistryUtils::setMailtoProtocolHandler()
     nsCAutoString appName (NS_ConvertUCS2toUTF8(vendorName()).get());
 
     nsCAutoString mailAppPath(thisApplication());
-    mailAppPath += " -compose %1";
+    mailAppPath += " -compose \"%1\"";
 
     nsresult rv = SetRegistryKey(HKEY_LOCAL_MACHINE, "Software\\Classes\\mailto\\shell\\open\\command", "", (char *)mailAppPath.get());
     NS_ENSURE_SUCCESS(rv, rv);
@@ -570,7 +570,7 @@ nsresult nsMapiRegistryUtils::setDefaultMailClient()
                                 "", "URL:MailTo Protocol");
             if (NS_SUCCEEDED(rv)) {
                 nsCAutoString appPath (thisApp);
-                appPath += " \"%1\"";
+                appPath += " -compose \"%1\"";
                 keyName.Append("\\shell\\open\\command");
                 rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
                        keyName.get(), 
