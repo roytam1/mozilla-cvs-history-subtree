@@ -2345,7 +2345,7 @@ nsRuleNode::ComputeUserInterfaceData(nsStyleStruct* aStartData,
       ui->mCursor = NS_STYLE_CURSOR_AUTO;
     }
     else if (eCSSUnit_URL == list->mValue.GetUnit()) {
-      list->mValue.GetStringValue(ui->mCursorImage);
+      ui->mCursorImage = list->mValue.GetURLValue();
     }
     else if (eCSSUnit_Inherit == list->mValue.GetUnit()) {
       inherited = PR_TRUE;
@@ -2554,10 +2554,10 @@ nsRuleNode::ComputeDisplayData(nsStyleStruct* aStartStruct,
 
   // binding: url, none, inherit
   if (eCSSUnit_URL == displayData.mBinding.GetUnit()) {
-    displayData.mBinding.GetStringValue(display->mBinding);
+    display->mBinding = displayData.mBinding.GetURLValue();
   }
   else if (eCSSUnit_None == displayData.mBinding.GetUnit()) {
-    display->mBinding.Truncate();
+    display->mBinding = nsnull;
   }
   else if (eCSSUnit_Inherit == displayData.mBinding.GetUnit()) {
     inherited = PR_TRUE;
@@ -2950,11 +2950,11 @@ nsRuleNode::ComputeBackgroundData(nsStyleStruct* aStartStruct,
 
   // background-image: url, none, inherit
   if (eCSSUnit_URL == colorData.mBackImage.GetUnit()) {
-    colorData.mBackImage.GetStringValue(bg->mBackgroundImage);
+    bg->mBackgroundImage = colorData.mBackImage.GetURLValue();
     bg->mBackgroundFlags &= ~NS_STYLE_BG_IMAGE_NONE;
   }
   else if (eCSSUnit_None == colorData.mBackImage.GetUnit()) {
-    bg->mBackgroundImage.Truncate();
+    bg->mBackgroundImage = nsnull;
     bg->mBackgroundFlags |= NS_STYLE_BG_IMAGE_NONE;
   }
   else if (eCSSUnit_Inherit == colorData.mBackImage.GetUnit()) {
@@ -3472,10 +3472,10 @@ nsRuleNode::ComputeListData(nsStyleStruct* aStartStruct,
 
   // list-style-image: url, none, inherit
   if (eCSSUnit_URL == listData.mImage.GetUnit()) {
-    listData.mImage.GetStringValue(list->mListStyleImage);
+    list->mListStyleImage = listData.mImage.GetURLValue();
   }
   else if (eCSSUnit_None == listData.mImage.GetUnit()) {
-    list->mListStyleImage.Truncate();
+    list->mListStyleImage = nsnull;
   }
   else if (eCSSUnit_Inherit == listData.mImage.GetUnit()) {
     inherited = PR_TRUE;
@@ -3837,10 +3837,8 @@ nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct,
       inherited = PR_TRUE;
       count = parentContent->ContentCount();
       if (NS_SUCCEEDED(content->AllocateContents(count))) {
-        nsStyleContentType type;
         while (0 < count--) {
-          parentContent->GetContentAt(count, type, buffer);
-          content->SetContentAt(count, type, buffer);
+          content->ContentAt(count) = parentContent->ContentAt(count);
         }
       }
     }
@@ -3858,6 +3856,7 @@ nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct,
           const nsCSSValue& value = contentValue->mValue;
           nsCSSUnit unit = value.GetUnit();
           nsStyleContentType type;
+          nsStyleContentData &data = content->ContentAt(count++);
           switch (unit) {
             case eCSSUnit_String:   type = eStyleContentType_String;    break;
             case eCSSUnit_URL:      type = eStyleContentType_URL;       break;
@@ -3881,13 +3880,18 @@ nsRuleNode::ComputeContentData(nsStyleStruct* aStartStruct,
             default:
               NS_ERROR("bad content type");
           }
-          if (type < eStyleContentType_OpenQuote) {
+          data.mType = type;
+          if (type == eStyleContentType_URL) {
+            data.mContent.mURL = value.GetURLValue();
+            NS_IF_ADDREF(data.mContent.mURL);
+          }
+          else if (type < eStyleContentType_OpenQuote) {
             value.GetStringValue(buffer);
             Unquote(buffer);
-            content->SetContentAt(count++, type, buffer);
+            data.mContent.mString = nsCRT::strdup(buffer.get());
           }
           else {
-            content->SetContentAt(count++, type, nullStr);
+            data.mContent.mString = nsnull;
           }
           contentValue = contentValue->mNext;
         }
