@@ -46,11 +46,10 @@ floatingview {
 treecol[hideheader="true"] {
   -moz-appearance: none;
   border: none;
-  padding: 0;
+  padding: 0px 0px 0px;
 }
 
 #session-output-iframe {
-    margin: 0px 5px 0px 5px;
     border: thin silver inset;
 }
 
@@ -60,6 +59,7 @@ treecol[hideheader="true"] {
 }
 
 tree {
+    margin: 0px 0px 0px 0px;
     min-height: 50px;
 }
 
@@ -239,7 +239,12 @@ tree {
     font-variant: small-caps;
 }
 
+floatingview {
+    padding: 4px 4px 4px 4px;
+}
+
 floatingview[dragover="left"] {
+    padding-left: 0px;
     border-left: 4px black solid;
 }
 
@@ -248,6 +253,7 @@ floatingview[dragover="left"] {
 }
 
 floatingview[dragover="up"] {
+    padding-top: 0px;
     border-top: 4px black solid;
 }
 
@@ -256,6 +262,7 @@ floatingview[dragover="up"] {
 }
 
 floatingview[dragover="right"] {
+    padding-right: 0px;
     border-right: 4px black solid;
 }
 
@@ -264,6 +271,7 @@ floatingview[dragover="right"] {
 }
 
 floatingview[dragover="down"] {
+    padding-bottom: 0px;
     border-bottom: 4px black solid;
 }
 
