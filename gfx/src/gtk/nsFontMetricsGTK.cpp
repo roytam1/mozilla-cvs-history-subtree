@@ -1489,7 +1489,7 @@ CompareSizes(const void* aArg1, const void* aArg2, void *data)
 void
 nsFontStretch::SortSizes(void)
 {
-  nsQuickSort(mSizes, mSizesCount, sizeof(*mSizes), CompareSizes, NULL);
+  NS_QuickSort(mSizes, mSizesCount, sizeof(*mSizes), CompareSizes, NULL);
 }
 
 void
@@ -2001,7 +2001,7 @@ GetFontNames(char* aPattern)
       int newSize = 2 * (stretch->mSizesAlloc ? stretch->mSizesAlloc : 1);
       nsFontGTK* newPointer = new nsFontGTK[newSize];
       if (newPointer) {
-        for (int i = stretch->mSizesAlloc - 1; i >= 0; i--) {
+        for (i = stretch->mSizesAlloc - 1; i >= 0; i--) {
           newPointer[i] = stretch->mSizes[i];
         }
         stretch->mSizesAlloc = newSize;
