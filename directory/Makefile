@@ -37,9 +37,7 @@ all:	FORCE
 	@echo
 	@echo The following are build targets that you can choose from:
 	@echo
-	@echo "   gmake buildAndPkgLdapSDK"
 	@echo "   gmake buildLdapClientSDK"
-	@echo "   gmake pkgLdapSDK"
 	@echo "   gmake clean"
 	@echo
 	@echo Allowed options:
@@ -51,7 +49,9 @@ all:	FORCE
 	@echo 
 	@echo iPlanet internal options
 	@echo
+	@echo "   gmake buildAndPkgLdapSDK"
 	@echo "   gmake PullSDKComponents"
+	@echo "   gmake pkgLdapSDK"
 	@echo
 	@echo "   BUILD_CLU=1		build command line utilities"
 	@echo "   HAVE_LIBNLS=1	for building/linking with LIBNLS"
@@ -95,10 +95,13 @@ endif
 	fi
 
 pkgLdapSDK: FORCE
-	@echo
-	@echo "Still working on"
-	@echo
-
+	@if [ -d $(DIST_TREE)/ ]; then \
+		cd $(LDAP_DEPTH)/c-sdk/; \
+		$(MAKE) -f package.mk $(MFLAGS) all; \
+	else \
+		echo "No dist directory found -- can't package"; \
+		exit 0; \
+	fi
 
 buildAndPkgLdapSDK: buildLdapClientSDK pkgLdapSDK
 

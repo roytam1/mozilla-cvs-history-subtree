@@ -57,7 +57,6 @@ DIRVER_PROG	= $(DIRVER_PATH)/dirver$(BIN_SUFFIX)
 ###########################################################################
 
 all export::	FORCE
-	$(RM) -rf $(INCLUDEDIR)
 	$(NSINSTALL) -D $(INCLUDEDIR)
 	$(INSTALL) $(INSTALLFLAGS) -m 644 $(HEADERS) $(INCLUDEDIR)
 
