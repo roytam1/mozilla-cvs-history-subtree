@@ -3957,19 +3957,6 @@ nsPluginPort* nsPluginInstanceOwner::FixUpPluginWindow()
 
     ::SetPort(savePort);  // restore port
 
-    // now we need to check if we've been hidden or made visible and then update the plugin 
-    // with the correct port if visible or null if hidden,
-    // if visiblity has changed, then update the plugin
-    if (isVisible != mWidgetVisible) {
-      mWidgetVisible = isVisible;
-      nsPluginWindow *window;
-      GetWindow(window);
-      if (window && mInstance) {
-        window->window = mWidgetVisible ? GetPluginPort() : nsnull;
-        mInstance->SetWindow(window);
-      }
-    }
-    
     return pluginPort;
   }
   
