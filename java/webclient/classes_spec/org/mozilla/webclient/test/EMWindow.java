@@ -728,11 +728,13 @@ public void eventDispatched(WebclientEvent event)
             break;
         case ((int) DocumentLoadEvent.END_DOCUMENT_LOAD_EVENT_MASK):
             stopButton.setEnabled(false);
-            backButton.setEnabled(history.canBack());
-            backMenuItem.setEnabled(history.canBack());
-            forwardButton.setEnabled(history.canForward());
-            forwardMenuItem.setEnabled(history.canForward());
-            populateHistoryMenu();
+            if (null != history) {
+                backButton.setEnabled(history.canBack());
+                backMenuItem.setEnabled(history.canBack());
+                forwardButton.setEnabled(history.canForward());
+                forwardMenuItem.setEnabled(history.canForward());
+                populateHistoryMenu();
+            }
             statusLabel.setText("Done.");
             urlStatusLabel.setText("");
             if (null != currentPage) {
