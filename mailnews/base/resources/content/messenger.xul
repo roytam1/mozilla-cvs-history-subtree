@@ -149,8 +149,8 @@ Rights Reserved.
     <splitter id="sidebar-splitter"/>
 
     <vbox flex="1">
-
-      <vbox id="accountCentralBox" flex="1">
+      <-- collapse this box.  since we are loading on a timeout, the user will see it "jump" if it isn't collapsed" -->
+      <vbox id="accountCentralBox" flex="1" collapsed="true">
                      <iframe name="accountCentralPane" flex="1" src="about:blank"/>
                   </vbox>
       <vbox id="messagesBox" flex="1">

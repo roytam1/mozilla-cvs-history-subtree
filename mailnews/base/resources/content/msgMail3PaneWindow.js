@@ -485,9 +485,15 @@ var gThreePaneIncomingServerListener = {
     }
 }
 
-
-/* Functions related to startup */
+// we won't show the window until the onload() handler is finished
+// so we do this trick (suggested by hyatt / blaker)
 function OnLoadMessenger()
+{
+  setTimeout(delayedOnLoadMessenger, 0); // when debugging, set this to 5000, so you can see what happens after the window comes up.                                          
+}
+
+// Functions related to startup
+function delayedOnLoadMessenger()
 {
   AddMailOfflineObserver();
   CreateMailWindowGlobals();
