@@ -1174,8 +1174,7 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
   // transferable hooks here
   nsCOMPtr<nsIDOMDocument> domdoc;
   GetDocument(getter_AddRefs(domdoc));
-  PRBool isAllowed = nsEditorHookUtils::DoAllowDropHook(domdoc, aDropEvent, dragSession);
-  if (!isAllowed)
+  if (!nsEditorHookUtils::DoAllowDropHook(domdoc, aDropEvent, dragSession))
     return NS_OK;
 
   // find out if we have our internal html flavor on the clipboard.  We don't want to mess
@@ -1376,8 +1375,7 @@ NS_IMETHODIMP nsHTMLEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
     }
     
     // handle transferable hooks
-    PRBool doInsert = nsEditorHookUtils::DoInsertionHook(domdoc, aDropEvent, trans);
-    if (!doInsert)
+    if (!nsEditorHookUtils::DoInsertionHook(domdoc, aDropEvent, trans))
       return NS_OK;
 
     rv = InsertFromTransferable(trans, contextStr, infoStr, newSelectionParent,
@@ -1596,8 +1594,7 @@ NS_IMETHODIMP nsHTMLEditor::Paste(PRInt32 aSelectionType)
      // handle transferable hooks
      nsCOMPtr<nsIDOMDocument> domdoc;
      GetDocument(getter_AddRefs(domdoc));
-     PRBool doInsert = nsEditorHookUtils::DoInsertionHook(domdoc, nsnull, trans);
-     if (!doInsert)
+     if (!nsEditorHookUtils::DoInsertionHook(domdoc, nsnull, trans))
        return NS_OK;
 
       rv = InsertFromTransferable(trans, contextStr, infoStr,

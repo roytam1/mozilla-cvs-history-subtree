@@ -173,8 +173,7 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
   // transferable hooks
   nsCOMPtr<nsIDOMDocument> domdoc;
   GetDocument(getter_AddRefs(domdoc));
-  PRBool isAllowed = nsEditorHookUtils::DoAllowDropHook(domdoc, aDropEvent, dragSession);
-  if (!isAllowed)
+  if (!nsEditorHookUtils::DoAllowDropHook(domdoc, aDropEvent, dragSession))
     return NS_OK;
 
   // Get the nsITransferable interface for getting the data from the drop
@@ -305,8 +304,7 @@ NS_IMETHODIMP nsPlaintextEditor::InsertFromDrop(nsIDOMEvent* aDropEvent)
       doPlaceCaret = PR_FALSE;
     }
     
-    PRBool doInsert = nsEditorHookUtils::DoInsertionHook(domdoc, aDropEvent, trans);
-    if (!doInsert)
+    if (!nsEditorHookUtils::DoInsertionHook(domdoc, aDropEvent, trans))
       return NS_OK;
 
     rv = InsertTextFromTransferable(trans, newSelectionParent, newSelectionOffset, deleteSelection);
@@ -447,8 +445,7 @@ NS_IMETHODIMP nsPlaintextEditor::Paste(PRInt32 aSelectionType)
       // handle transferable hooks
       nsCOMPtr<nsIDOMDocument> domdoc;
       GetDocument(getter_AddRefs(domdoc));
-      PRBool doInsert = nsEditorHookUtils::DoInsertionHook(domdoc, nsnull, trans);
-      if (!doInsert)
+      if (!nsEditorHookUtils::DoInsertionHook(domdoc, nsnull, trans))
         return NS_OK;
 
       rv = InsertTextFromTransferable(trans, nsnull, nsnull, PR_TRUE);
