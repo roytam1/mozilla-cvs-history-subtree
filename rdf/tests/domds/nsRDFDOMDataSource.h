@@ -40,6 +40,7 @@
 
 #include "nsICSSStyleRule.h"
 #include "nsIStyleRule.h"
+#include "nsIFrame.h"
 
 /* {c7cf77e8-245a-11d3-80f0-006008948010} */
 #define NS_RDF_DOMDATASOURCE_CID \
@@ -77,6 +78,9 @@ class nsRDFDOMDataSource : public nsIRDFDataSource,
     // HTML stuff
     nsresult createHTMLElementArcs(nsIDOMHTMLElement *element,
                                    nsISupportsArray *arcs);
+
+    nsresult createFrameArcs(nsIFrame *frame,
+                             nsISupportsArray *arcs);
     // DOM stuff
     nsresult createDOMNodeArcs(nsIDOMNode *node,
                                nsISupportsArray *arcs);
@@ -91,6 +95,9 @@ class nsRDFDOMDataSource : public nsIRDFDataSource,
                                        nsISupportsArray *arcs);
 
 
+    nsresult createFrameTarget(nsIFrame *frame, 
+                                 nsIRDFResource *property,
+                                 nsIRDFNode **aResult);
     nsresult createDOMNodeTarget(nsIDOMNode *node,
                                  nsIRDFResource *property,
                                  nsIRDFNode **aResult);
@@ -178,6 +185,7 @@ class nsRDFDOMDataSource : public nsIRDFDataSource,
     nsHashtable mModeTable;
     
     nsCOMPtr<nsIDOMDocument> mDocument;
+    nsIFrame *mRootFrame;
 
     nsIRDFResource* kNC_Name;
     nsIRDFResource* kNC_Value;

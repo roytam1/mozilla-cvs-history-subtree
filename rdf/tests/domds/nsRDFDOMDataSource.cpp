@@ -46,6 +46,13 @@
 #include "nsIDOMCSSStyleDeclaration.h"
 #include "nsIDocument.h"
 
+#include "nsIScriptGlobalObject.h"
+#include "nsIWebShell.h"
+#include "nsIContentViewer.h"
+#include "nsIDocumentViewer.h"
+#include "nsIPresContext.h"
+#include "nsIPresShell.h"
+
 #include "prprf.h"
 
 #define NC_RDF_Name  NC_NAMESPACE_URI "Name"
@@ -58,6 +65,7 @@ static PRInt32 gCurrentId=0;
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kISupportsIID, NS_ISUPPORTS_IID);
+static NS_DEFINE_IID(kFrameIID, NS_IFRAME_IID);
 
 nsRDFDOMDataSource::nsRDFDOMDataSource():
     mURI(nsnull),
@@ -166,6 +174,21 @@ nsRDFDOMDataSource::GetTarget(nsIRDFResource *aSource, nsIRDFResource *aProperty
 }
 
 nsresult
+nsRDFDOMDataSource::createFrameTarget(nsIFrame *frame,
+                                        nsIRDFResource *aProperty,
+                                        nsIRDFNode **aResult)
+{
+  nsAutoString str;
+  if (aProperty == kNC_Name)
+    frame->GetFrameName(str);
+  else if (aProperty == kNC_Type)
+    str = "frame";
+
+  return createLiteral(str, aResult);
+}
+
+
+nsresult
 nsRDFDOMDataSource::createDOMNodeTarget(nsIDOMNode *node,
                                         nsIRDFResource *aProperty,
                                         nsIRDFNode **aResult)
@@ -244,7 +267,7 @@ nsRDFDOMDataSource::GetTargets(nsIRDFResource *aSource, nsIRDFResource *aPropert
   
   // what node is this?
   if (aSource == kNC_DOMRoot) {
-    rv = getTargetsForKnownObject(mDocument, aProperty, PR_TRUE, arcs);
+    rv = getTargetsForKnownObject(mRootFrame, aProperty, PR_TRUE, arcs);
   } else {
     nsCOMPtr<nsIDOMViewerElement> nodeContainer;
     nodeContainer = do_QueryInterface(aSource, &rv);
@@ -509,6 +532,46 @@ nsRDFDOMDataSource::getStyleRuleTarget(nsIStyleRule *rule,
 }
 
 nsresult
+nsRDFDOMDataSource::createFrameArcs(nsIFrame* frame,
+                                    nsISupportsArray* arcs)
+{
+  nsresult rv;
+  nsIFrame *child;
+  nsCOMPtr<nsIRDFResource> resource;
+  int i=0;
+  // primary child list
+  frame->FirstChild(nsnull, &child);
+  while (child) {
+    rv = getResourceForObject(child, getter_AddRefs(resource));
+    arcs->AppendElement(resource);
+
+    child->GetNextSibling(&child);
+    i++;
+  }
+  printf("%d primary children\n", i);
+  
+  // secondary child lists
+  PRInt32 listIndex=0;
+  nsCOMPtr<nsIAtom> childList;
+  frame->GetAdditionalChildListName(listIndex++, getter_AddRefs(childList));
+  while (childList) {
+    rv = frame->FirstChild(childList, &child);
+    while (NS_SUCCEEDED(rv) && (child)) {
+      rv = getResourceForObject(child, getter_AddRefs(resource));
+      arcs->AppendElement(resource);
+      
+      child->GetNextSibling(&child);
+      if (child) i++;
+    }
+
+    frame->GetAdditionalChildListName(listIndex++, getter_AddRefs(childList));
+  }
+  printf("Added %d child frame arcs\n", i);
+
+  return NS_OK;
+}
+
+nsresult
 nsRDFDOMDataSource::createHTMLElementArcs(nsIDOMHTMLElement* element,
                                           nsISupportsArray* arcs)
 {
@@ -665,6 +728,12 @@ nsRDFDOMDataSource::getTargetForKnownObject(nsISupports* object,
 {
   nsresult rv;
 
+  nsIFrame *frame;
+  rv = object->QueryInterface(kFrameIID, (void **)&frame);
+  if (NS_SUCCEEDED(rv)) {
+    return createFrameTarget(frame, aProperty, aResult);
+  }
+  
   nsStringKey domMode(nsAutoString("dom"));
   if (mModeTable.Get(&domMode)) {
     
@@ -767,6 +836,8 @@ nsRDFDOMDataSource::getTargetsForKnownObject(nsISupports *object,
 {
   nsresult rv;
 
+  if (!object) return NS_ERROR_NULL_POINTER;
+  
   // nsIDocument (special case)
   nsCOMPtr<nsIDOMDocument> document =
     do_QueryInterface(object, &rv);
@@ -779,6 +850,14 @@ nsRDFDOMDataSource::getTargetsForKnownObject(nsISupports *object,
     printf("This is a document.\n");
     createDOMNodeArcs(document, arcs);
     return NS_OK;
+  }
+
+  // nsIFrame (testing right now)
+  nsIFrame* frame;
+  rv = object->QueryInterface(kFrameIID, (void **)&frame);
+  if (NS_SUCCEEDED(rv)) {
+    printf("creating arcs for frame\n");
+    createFrameArcs(frame, arcs);
   }
   
   // nsIDOMNode hierarchy
@@ -1098,8 +1177,60 @@ nsRDFDOMDataSource::SetWindow(nsIDOMWindow *window) {
   objectTable.Reset();
   nsCOMPtr<nsIDOMDocument> document;
   rv = window->GetDocument(getter_AddRefs(mDocument));
+  
   if (NS_FAILED(rv)) return rv;
+  nsCOMPtr<nsIScriptGlobalObject> scriptGlobalObject =
+    do_QueryInterface(window, &rv);
+  if (NS_FAILED(rv)) {
+    printf("Couldn't get scriptglobalobject\n");
+    return NS_OK;
+  }
+  
+  nsCOMPtr<nsIWebShell> webShell;
+  scriptGlobalObject->GetWebShell(getter_AddRefs(webShell));
+  if (!webShell) {
+    printf("Couldn't get webshell\n");
+    return NS_OK;
+  }
+  
+  nsCOMPtr<nsIContentViewer> cv;
+  rv = webShell->GetContentViewer(getter_AddRefs(cv));
+  if (NS_FAILED(rv)) {
+    printf("Couldn't get content viewer\n");
+    return NS_OK;
+  }
 
+  nsCOMPtr<nsIDocumentViewer> dv =
+    do_QueryInterface(cv, &rv);
+  if (NS_FAILED(rv)) {
+    printf("Couldn't get document viewer\n");
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIPresContext> pcx;
+  rv = dv->GetPresContext(*getter_AddRefs(pcx));
+  if (NS_FAILED(rv)) {
+    printf("Couldn't get pres context\n");
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIPresShell> pshell;
+  pcx->GetShell(getter_AddRefs(pshell));
+  if (NS_FAILED(rv)) {
+    printf("Couldn't get presshell\n");
+    return NS_OK;
+  }
+    
+  pshell->GetRootFrame(&mRootFrame);
+  if (NS_FAILED(rv)) {
+    printf("Couldn't get frame\n");
+    return NS_OK;
+  }
+  
+  nsAutoString framename;
+  mRootFrame->GetFrameName(framename);
+
+  printf("Got root frame: %s\n", framename.ToNewCString());
   return rv;
 }
 
