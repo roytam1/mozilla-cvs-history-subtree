@@ -48,7 +48,7 @@ static nsModuleComponentInfo components[] = {
 
 
 PR_STATIC_CALLBACK(void)
-importModuleDtor(nsIModule* self)
+importModuleDtor(nsIModule* self, PRUint32 componentCount, nsModuleComponentInfo* components)
 {
 	nsImportStringBundle::Cleanup();
 }

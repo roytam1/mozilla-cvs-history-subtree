@@ -73,7 +73,7 @@ static nsModuleComponentInfo components[] = {
 };
 
 PR_STATIC_CALLBACK(void)
-eudoraModuleDtor(nsIModule* self)
+eudoraModuleDtor(nsIModule* self, PRUint32 componentCount, nsModuleComponentInfo* components)
 {
 	nsEudoraStringBundle::Cleanup();
 }

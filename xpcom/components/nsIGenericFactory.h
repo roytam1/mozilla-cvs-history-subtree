@@ -96,7 +96,7 @@ struct nsModuleComponentInfo {
     NSUnregisterSelfProcPtr                     mUnregisterSelfProc;
 };
 
-typedef void (PR_CALLBACK *nsModuleDestructorProc) (nsIModule *self);
+typedef void (PR_CALLBACK *nsModuleDestructorProc) (nsIModule *self, PRUint32 componentCount, nsModuleComponentInfo* components);
 
 extern NS_COM nsresult
 NS_NewGenericModule(const char* moduleName,
@@ -109,13 +109,20 @@ NS_NewGenericModule(const char* moduleName,
     NS_IMPL_NSGETMODULE_WITH_DTOR(_name, _components, nsnull)
 
 #define NS_IMPL_NSGETMODULE_WITH_DTOR(_name, _components, _dtor)             \
+                                                                             \
+PRUint32 NSGM_comp_count =                                                   \
+           sizeof(_components) / sizeof(_components[0]);                     \
+                                                                             \
+nsModuleComponentInfo* NSGM_comps = (_components);                           \
+                                                                             \
 extern "C" NS_EXPORT nsresult NSGetModule(nsIComponentManager *servMgr,      \
                                           nsIFile* location,                 \
                                           nsIModule** result)                \
 {                                                                            \
     return NS_NewGenericModule((_name),                                      \
-                               sizeof(_components) / sizeof(_components[0]), \
-                               (_components), _dtor, result);                \
+                               NSGM_comp_count,                              \
+                               NSGM_comps,                                   \
+                               _dtor, result);                               \
 }
 
 ////////////////////////////////////////////////////////////////////////////////

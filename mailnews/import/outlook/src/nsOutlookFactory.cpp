@@ -77,7 +77,7 @@ static nsModuleComponentInfo components[] = {
 };
 
 PR_STATIC_CALLBACK(void)
-outlookModuleDtor(nsIModule* self)
+outlookModuleDtor(nsIModule* self, PRUint32 componentCount, nsModuleComponentInfo* components)
 {
 	nsOutlookStringBundle::Cleanup();
 }

@@ -76,7 +76,7 @@ static nsModuleComponentInfo components[] = {
 };
 
 PR_STATIC_CALLBACK(void)
-oeModuleDtor(nsIModule* self)
+oeModuleDtor(nsIModule* self, PRUint32 componentCount, nsModuleComponentInfo* components)
 {
 	nsOEStringBundle::Cleanup();
 }

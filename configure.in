@@ -3537,6 +3537,14 @@ MOZ_ARG_ENABLE_BOOL(static,
 [  --enable-static         Enable building of internal static libs (BROKEN)],
   NO_STATIC_LIB=)
 
+MOZ_ARG_ENABLE_STRING(static-components,
+[  --enable-static-components
+                           Enable/disable static linking for specific components only],
+  [ MOZ_STATIC_COMPONENTS=`echo $enableval | sed 's/,/ /g'` ] )
+
+
+dnl ========================================================
+
 case "$target" in
     *-*-aix*)
 	if test "${NO_STATIC_LIB}" = "1" -o -z "${NO_SHARED_LIB}"; then
@@ -3621,6 +3629,7 @@ AC_SUBST(MOZ_USER_DIR)
 dnl AC_SUBST(MOZ_SMART_MAIL)
 AC_SUBST(FULL_STATIC_BUILD)
 AC_SUBST(BUILD_IDLC)
+AC_SUBST(MOZ_STATIC_COMPONENTS)
 
 AC_SUBST(MOZ_COMPONENTS_VERSION_SCRIPT_LDFLAGS)
 AC_SUBST(MOZ_COMPONENT_NSPR_LIBS)

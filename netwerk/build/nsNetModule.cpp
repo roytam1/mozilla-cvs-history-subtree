@@ -341,7 +341,7 @@ CreateNewNSTXTToHTMLConvFactory(nsISupports *aOuter, REFNSIID aIID, void **aResu
 // Module implementation for the net library
 
 // Necko module shutdown hook
-static void PR_CALLBACK nsNeckoShutdown(nsIModule *neckoModule)
+static void PR_CALLBACK nsNeckoShutdown(nsIModule *neckoModule, PRUint32 componentCount, nsModuleComponentInfo* components)
 {
     // Release the url parser that the stdurl is holding.
     nsStdURL::ShutdownGlobalObjects();

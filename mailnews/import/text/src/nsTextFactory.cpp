@@ -73,7 +73,7 @@ static nsModuleComponentInfo components[] = {
 };
 
 PR_STATIC_CALLBACK(void)
-textModuleDtor(nsIModule* self)
+textModuleDtor(nsIModule* self, PRUint32 componentCount, nsModuleComponentInfo* components)
 {
 	nsTextStringBundle::Cleanup();
 }

@@ -219,6 +219,14 @@ endif
 OS_CFLAGS += $(DEBUG_FLAGS)
 OS_CXXFLAGS += $(DEBUG_FLAGS)
 
+ifneq (,$(IS_COMPONENT))
+ifneq (, $(findstring $(LIBRARY_NAME), $(MOZ_STATIC_COMPONENTS)))
+DEFINES        += -DNSGetModule=$(LIBRARY_NAME)_NSGetModule -DNSGM_comps=$(LIBRARY_NAME)_NSGM_comps -DNSGM_comp_count=$(LIBRARY_NAME)_NSGM_comp_count
+NO_STATIC_LIB=
+NO_SHARED_LIB=1
+endif
+endif
+
 #
 # Personal makefile customizations go in these optional make include files.
 #

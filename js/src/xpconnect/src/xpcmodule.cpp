@@ -57,7 +57,7 @@ static nsModuleComponentInfo components[] = {
 };
 
 PR_STATIC_CALLBACK(void)
-xpcModuleDtor(nsIModule* self)
+xpcModuleDtor(nsIModule* self, PRUint32 componentCount, nsModuleComponentInfo* components)
 {
     // Release our singletons
     nsXPConnect::ReleaseXPConnectSingleton();

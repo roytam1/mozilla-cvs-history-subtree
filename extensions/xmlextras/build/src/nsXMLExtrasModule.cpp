@@ -254,7 +254,7 @@ static nsModuleComponentInfo components[] = {
 };
 
 static void PR_CALLBACK
-XMLExtrasModuleDtor(nsIModule* self)
+XMLExtrasModuleDtor(nsIModule* self, PRUint32 componentCount, nsModuleComponentInfo* components)
 {
   NS_IF_RELEASE(nsXMLExtras::mInstance);
 }

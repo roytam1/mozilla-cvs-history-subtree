@@ -140,7 +140,7 @@ void
 nsGenericModule::Shutdown()
 {
     if (mDtor)
-        mDtor(this);
+        mDtor(this, mComponentCount, mComponents);
     // Release the factory objects
     mFactories.Reset();
 }
