@@ -32,7 +32,8 @@ EXPORT_LIBRARY = 1
 SHORT_LIBNAME	= gkhtml
 IS_COMPONENT	= 1
 MODULE_NAME	= nsLayoutModule
-EXTRA_DSO_LIBS	= gkgfx art_lgpl
+EXTRA_DSO_LIBS	= gkgfx
+
 REQUIRES	= xpcom \
 		  string \
 		  content \
@@ -90,6 +91,10 @@ EXTRA_DSO_LDOPTS = \
 		$(MOZ_COMPONENT_LIBS) \
 		$(MOZ_JS_LIBS) \
 		$(NULL)
+
+ifdef MOZ_SVG
+EXTRA_DSO_LDOPTS += $(MOZ_LIBART_LIBS)
+endif
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
 EXPORT_OBJS	= 1
