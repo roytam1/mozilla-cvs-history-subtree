@@ -210,6 +210,10 @@ private:
     nsAutoRefCnt mRefCnt;
     nsString mCharacters;
     nsresult mStatus;
+
+protected:
+    // This exists soly to supress a warning from nsDerivedSafe
+    txStylesheetCompiler();
 };
 
 class txInScopeVariable {

@@ -79,6 +79,10 @@ public:
 
 private:
     nsRefPtr<txStylesheetCompiler> mCompiler;
+
+protected:
+    // This exists soly to supress a warning from nsDerivedSafe
+    txStylesheetSink();
 };
 
 txStylesheetSink::txStylesheetSink(txStylesheetCompiler* aCompiler)
@@ -191,14 +195,7 @@ public:
                       nsILoadGroup* aLoadGroup);
     virtual ~txCompileObserver();
 
-    // txACompileObserver
-    nsrefcnt AddRef();
-    nsrefcnt Release();
-
-    virtual nsresult loadURI(const nsAString& aUri,
-                             txStylesheetCompiler* aCompiler);
-    virtual void onDoneCompiling(txStylesheetCompiler* aCompiler,
-                                 nsresult aResult);
+    TX_DECL_ACOMPILEOBSERVER;
 
     nsresult startLoad(nsIURI* aUri, txStylesheetSink* aSink,
                        nsIURI* aReferrerUri);
@@ -209,6 +206,10 @@ protected:
 private:
     nsRefPtr<txMozillaXSLTProcessor> mProcessor;
     nsCOMPtr<nsILoadGroup> mLoadGroup;
+
+protected:
+    // This exists soly to supress a warning from nsDerivedSafe
+    txCompileObserver();
 };
 
 txCompileObserver::txCompileObserver(txMozillaXSLTProcessor* aProcessor,
@@ -440,17 +441,7 @@ public:
     txSyncCompileObserver(nsIURI* aReferrerURI);
     virtual ~txSyncCompileObserver();
 
-    // txACompileObserver
-    nsrefcnt AddRef();
-    nsrefcnt Release();
-
-    virtual nsresult loadURI(const nsAString& aUri,
-                             txStylesheetCompiler* aCompiler);
-    virtual void onDoneCompiling(txStylesheetCompiler* aCompiler,
-                                 nsresult aResult)
-    {
-        return;
-    }
+    TX_DECL_ACOMPILEOBSERVER;
 
 protected:
     nsAutoRefCnt mRefCnt;
@@ -458,6 +449,10 @@ protected:
 private:
     nsCOMPtr<nsISyncLoadDOMService> mLoadService;
     nsCOMPtr<nsIURI> mReferrer;
+
+protected:
+    // This exists soly to supress a warning from nsDerivedSafe
+    txSyncCompileObserver();
 };
 
 txSyncCompileObserver::txSyncCompileObserver(nsIURI* aReferrer)
@@ -526,6 +521,11 @@ txSyncCompileObserver::loadURI(const nsAString& aUri,
 
     rv = aCompiler->doneLoading();
     return rv;
+}
+
+void txSyncCompileObserver::onDoneCompiling(txStylesheetCompiler* aCompiler,
+                                            nsresult aResult)
+{
 }
 
 nsresult
