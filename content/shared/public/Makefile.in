@@ -44,8 +44,6 @@ nsLayoutAtomList.h \
 nsLayoutAtoms.h \
 nsRuleNode.h \
 nsRuleWalker.h \
-nsSVGAtomList.h \
-nsSVGAtoms.h \
 nsStyleCoord.h \
 nsStyleUtil.h \
 nsStyleStruct.h \
@@ -55,6 +53,10 @@ nsXULAtoms.h \
 nsXBLAtomList.h \
 nsXBLAtoms.h \
 $(NULL)
+
+ifdef MOZ_SVG
+EXPORTS += nsSVGAtomList.h nsSVGAtoms.h
+endif
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
 

@@ -37,8 +37,7 @@
  * the terms of any one of the NPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-#include "nsIStyleContext.h"
+ 
 #include "nsStyleConsts.h"
 #include "nsString.h"
 #include "nsUnitConversion.h"
@@ -841,7 +840,6 @@ nsStyleContext::CalcStyleDifference(nsIStyleContext* aOther, PRInt32& aHint)
         }
       }
     }
-
     
     if (aHint < maxHint) {
       const nsStyleTableBorder* table = (const nsStyleTableBorder*)PeekStyleData(eStyleStruct_TableBorder);

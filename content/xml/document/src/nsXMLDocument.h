@@ -51,7 +51,6 @@ class nsIParser;
 class nsIDOMNode;
 class nsICSSLoader;
 class nsIURI;
-class nsIElementFactory;
 
 class nsXMLDocument : public nsMarkupDocument,
                       public nsIXMLDocument,

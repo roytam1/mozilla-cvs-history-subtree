@@ -52,7 +52,6 @@ CPPSRCS		= \
 		nsHTMLValue.cpp \
 		nsImageMapUtils.cpp \
 		nsLayoutAtoms.cpp \
-		nsSVGAtoms.cpp \
 		nsStyleUtil.cpp \
 		nsTextFragment.cpp \
 		nsXULAtoms.cpp \
@@ -60,6 +59,10 @@ CPPSRCS		= \
 		nsStyleCoord.cpp \
 		nsStyleStruct.cpp \
 		$(NULL)
+
+ifdef MOZ_SVG
+CPPSRCS 	+= nsSVGAtoms.cpp
+endif
 
 # we don't want the shared lib, but we want to force the creation of a static lib.
 FORCE_STATIC_LIB = 1

@@ -3309,8 +3309,7 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
   } else {
         // otherwise build a box or a block
 #if defined(INCLUDE_XUL) || defined(MOZ_SVG)
-        PRInt32 nameSpaceID = kNameSpaceID_Unknown;
-        aDocElement->GetNameSpaceID(nameSpaceID);
+        PRInt32 nameSpaceID;
 #endif
 #ifdef INCLUDE_XUL
         if (NS_SUCCEEDED(aDocElement->GetNameSpaceID(nameSpaceID)) &&
@@ -3323,8 +3322,9 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsIPresShell*        aPresShell,
         else
 #endif 
 #ifdef MOZ_SVG
-        if (nameSpaceID == nsSVGAtoms::nameSpaceID ||
-            nameSpaceID == nsSVGAtoms::nameSpaceDeprecatedID) {
+        if (NS_SUCCEEDED(aDocElement->GetNameSpaceID(nameSpaceID)) && 
+            (nameSpaceID == nsSVGAtoms::nameSpaceID ||
+             nameSpaceID == nsSVGAtoms::nameSpaceDeprecatedID)) {
           rv = NS_NewSVGOuterSVGFrame(aPresShell, aDocElement, &contentFrame);
           if (NS_FAILED(rv)) {
             return rv;
@@ -10084,6 +10084,7 @@ nsCSSFrameConstructor::AttributeChanged(nsIPresContext* aPresContext,
   nsCOMPtr<nsIPresShell> shell;
   aPresContext->GetShell(getter_AddRefs(shell));
   nsIFrame*     primaryFrame;
+
 
   shell->GetPrimaryFrameFor(aContent, &primaryFrame);
 
