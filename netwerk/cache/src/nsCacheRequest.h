@@ -94,6 +94,7 @@ private:
     void MarkStreamBased()      { mInfo |=  eStreamBasedMask; }
     PRBool IsStreamBased()      { return (mInfo & eStreamBasedMask) != 0; }
 
+
     void   MarkDoomEntriesIfExpired()   { mInfo |=  eDoomEntriesIfExpiredMask; }
     PRBool WillDoomEntriesIfExpired()   { return (mInfo & eDoomEntriesIfExpiredMask); }
     

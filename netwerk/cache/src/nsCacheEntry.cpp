@@ -322,7 +322,7 @@ nsCacheEntry::CreateDescriptor(nsCacheRequest *           request,
                                nsICacheEntryDescriptor ** result)
 {
     NS_ENSURE_ARG_POINTER(request && result);
-    
+
     nsCacheEntryDescriptor * descriptor =
         new nsCacheEntryDescriptor(this, accessGranted);
 
