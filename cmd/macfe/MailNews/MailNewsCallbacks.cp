@@ -24,8 +24,8 @@
 
 // XP headers
 #include "fe_proto.h"
-#include "errcode.h"
-#include "msglpane.h"
+//#include "errcode.h"
+//#include "msglpane.h"
 #include "addrbook.h"
 
 
