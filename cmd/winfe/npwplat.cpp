@@ -672,7 +672,7 @@ NPPluginFuncs* FE_LoadPlugin(void* pluginType, NPNetscapeFuncs* pNavigatorFuncs,
         nsresult res = nsGetFactory(kIPluginIID, (nsIFactory**)&plugin);
         PR_ASSERT(thePluginManager != NULL);
         if (res == NS_OK && plugin != NULL
-            && plugin->Initialize(thePluginManager) == nsPluginError_NoError) {
+            && plugin->Initialize(thePluginManager) == NS_OK) {
 
             handle->userPlugin = plugin;
             pNPMgtBlock->pPluginFuncs = (NPPluginFuncs*)-1;   // something to say it's loaded, but != 0

@@ -43,7 +43,7 @@
 class nsIPluginInstance : public nsISupports {
 public:
 
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     Initialize(nsIPluginInstancePeer* peer) = 0;
 
     // Required backpointer to the peer.
@@ -51,7 +51,7 @@ public:
     GetPeer(void) = 0;
 
     // See comment for nsIPlugin::CreateInstance, above.
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     Start(void) = 0;
 
     // The old NPP_Destroy call has been factored into two plugin instance 
@@ -64,18 +64,18 @@ public:
     // Destroy -- called once, before the plugin instance peer is to be 
     // destroyed. This method is used to destroy the plugin instance.
 
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     Stop(void) = 0;
 
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     Destroy(void) = 0;
 
     // (Corresponds to NPP_SetWindow.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     SetWindow(nsPluginWindow* window) = 0;
 
     // (Corresponds to NPP_NewStream.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     NewStream(nsIPluginStreamPeer* peer, nsIPluginStream* *result) = 0;
 
     // (Corresponds to NPP_Print.)

@@ -46,13 +46,6 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // from nsIJVMManager:
 
-    // This method may be called by the JVM to indicate a status
-    // change, e.g. that the JVM has failed or is shutting down
-    // spontaneously. This allows the browser to clean up any
-    // JVM-specific state.
-    NS_IMETHOD_(void)
-    NotifyJVMStatusChange(nsJVMError error);
-
     ////////////////////////////////////////////////////////////////////////////
     // JVMMgr specific methods:
 
@@ -70,7 +63,7 @@ public:
     nsJVMStatus GetJVMStatus(void);
     void SetJVMEnabled(PRBool enabled);
 
-    nsPluginError AddToClassPath(const char* dirPath);
+    nsresult    AddToClassPath(const char* dirPath);
     void        JSJInit();
     PRBool      IsJVMAndMochaPrefsEnabled(void);
     JSJavaVM*   GetJSJavaVM() { return fJSJavaVM; }
@@ -177,7 +170,7 @@ JVM_GetJVMMgr(void);
 PR_EXTERN(PRBool)
 JVM_IsJVMAvailable(void);
 
-PR_EXTERN(nsPluginError)
+PR_EXTERN(nsresult)
 JVM_AddToClassPath(const char* dirPath);
 
 PR_EXTERN(void)

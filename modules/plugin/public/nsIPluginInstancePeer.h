@@ -58,7 +58,7 @@ public:
     GetMode(void) = 0;
 
     // (Corresponds to NPN_NewStream.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     NewStream(nsMIMEType type, const char* target, nsIOutputStream* *result) = 0;
 
     // (Corresponds to NPN_Status.)

@@ -52,24 +52,24 @@ public:
     // Note that calling this method is distinctly separate from 
     // initializing the nsIJVMPlugin object (done by the Initialize
     // method).
-    NS_IMETHOD_(nsJVMError)
+    NS_IMETHOD
     StartupJVM(nsJVMInitArgs* initargs) = 0;
 
     // This method us used to stop the Java virtual machine.
     // It tears down any global state necessary to host Java programs.
     // The fullShutdown flag specifies whether the browser is quitting
     // (PR_TRUE) or simply whether the JVM is being shut down (PR_FALSE).
-    NS_IMETHOD_(nsJVMError)
+    NS_IMETHOD
     ShutdownJVM(PRBool fullShutdown) = 0;
 
     // Causes the JVM to append a new directory to its classpath.
     // If the JVM doesn't support this operation, an error is returned.
-    NS_IMETHOD_(nsJVMError)
+    NS_IMETHOD
     AddToClassPath(const char* dirPath) = 0;
 
     // Causes the JVM to remove a directory from its classpath.
     // If the JVM doesn't support this operation, an error is returned.
-    NS_IMETHOD_(nsJVMError)
+    NS_IMETHOD
     RemoveFromClassPath(const char* dirPath) = 0;
 
     // Returns the current classpath in use by the JVM.

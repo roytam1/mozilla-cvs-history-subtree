@@ -43,14 +43,38 @@
 class nsIPluginManager2 : public nsIPluginManager {
 public:
 
+    /**
+     * Puts up a wait cursor.
+     */
     NS_IMETHOD_(void)
     BeginWaitCursor(void) = 0;
 
+    /**
+     * Restores the previous (non-wait) cursor.
+     */
     NS_IMETHOD_(void)
     EndWaitCursor(void) = 0;
 
+    /**
+     * Returns true if a URL protocol (e.g. "http") is supported.
+     *
+     * @param protocol - the protocol name
+     * @result true if the protocol is supported
+     */
     NS_IMETHOD_(PRBool)
     SupportsURLProtocol(const char* protocol) = 0;
+
+    /**
+     * This method may be called by the plugin to indicate that an error 
+     * has occurred, e.g. that the plugin has failed or is shutting down 
+     * spontaneously. This allows the browser to clean up any plugin-specific 
+     * state.
+     *
+     * @param plugin - the plugin whose status is changing
+     * @param error - the the error value
+     */
+    NS_IMETHOD_(void)
+    NotifyStatusChange(nsIPlugin* plugin, nsresult error) = 0;
 
 };
 

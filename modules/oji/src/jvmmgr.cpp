@@ -90,7 +90,7 @@ nsJVMMgr::GetJVMPlugin(void)
     if (fJVM == NULL) {
 	    nsIPlugin* plugin = NPL_LoadPluginByType(NPJVM_MIME_TYPE);
 	    if (plugin != NULL) {
-	        nsresult rslt = plugin->QueryInterface(kIJVMPluginIID, &fJVM);
+	        nsresult rslt = plugin->QueryInterface(kIJVMPluginIID, (void**)&fJVM);
 	        if (rslt != NS_OK) fJVM = NULL;
 	    }
 	 }
@@ -146,24 +146,8 @@ nsJVMMgr::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
-NS_METHOD_(void)
-nsJVMMgr::NotifyJVMStatusChange(nsJVMError error)
-{
-    if (error != nsJVMError_Ok) {
-        // Should have been running before this:
-        PR_ASSERT(fStatus == nsJVMStatus_Running);
-
-        // XXX report error?
-
-        // The JVM should have shut down itself in this case so there's no
-        // need to call ShutdownJVM here.
-        fStatus = nsJVMStatus_Failed;
-    }
-}
-
-
-///////////////////////////LiveConnect callbacks//////////////////////////////////////////////////////
+// LiveConnect callbacks
+////////////////////////////////////////////////////////////////////////////////
 
 template <class T>
 class ThreadLocalStorage {
@@ -501,12 +485,12 @@ ConvertToPlatformPathList(const char* cp)
 }
 
 NS_METHOD_(void)
-nsJVMMgr::ReportJVMError(void* env, nsJVMError err)
+nsJVMMgr::ReportJVMError(void* env, nsresult err)
 {
     MWContext* cx = XP_FindSomeContext();
     char *s;
     switch (err) {
-      case nsJVMError_NoClasses: {
+      case NS_JVM_ERROR_NO_CLASSES: {
           const char* cp = fJVM->GetClassPath();
           const char* jarName = "<jar path>"; // XXX fJVM->GetSystemJARPath();
           cp = ConvertToPlatformPathList(cp);
@@ -517,7 +501,7 @@ nsJVMMgr::ReportJVMError(void* env, nsJVMError err)
           break;
       }
 
-      case nsJVMError_JavaError: {
+      case NS_JVM_ERROR_JAVA_ERROR: {
           const char* msg = GetJavaErrorString((JRIEnv*)env);
 #ifdef DEBUG
 # ifdef XP_MAC
@@ -531,7 +515,7 @@ nsJVMMgr::ReportJVMError(void* env, nsJVMError err)
           if (msg) free((void*)msg);
           break;
       }
-      case nsJVMError_NoDebugger: {
+      case NS_JVM_ERROR_NO_DEBUGGER: {
           s = PR_smprintf(XP_GetString(XP_JAVA_DEBUGGER_FAILED));
           break;
       }
@@ -657,8 +641,8 @@ nsJVMMgr::StartupJVM(void)
     initargs.version = nsJVMInitArgs_Version;
     initargs.classpathAdditions = classpathAdditions;
 
-    nsJVMError err = fJVM->StartupJVM(&initargs);
-    if (err == nsJVMError_Ok) {
+    nsresult err = fJVM->StartupJVM(&initargs);
+    if (err == NS_OK) {
 #if defined(XP_MAC)
 		// On the MacOS, MRJ uses JNI exclusively.
         nsIJVMPlugin* jniJVM;
@@ -713,8 +697,8 @@ nsJVMMgr::ShutdownJVM(PRBool fullShutdown)
 {
     if (fJVM) {
         // XXX we should just make nsPluginError and nsJVMStatus be nsresult
-        nsJVMError err = fJVM->ShutdownJVM(fullShutdown);
-        if (err == nsJVMError_Ok)
+        nsresult err = fJVM->ShutdownJVM(fullShutdown);
+        if (err == NS_OK)
             return nsJVMStatus_Enabled;
         else {
             // XXX report error?
@@ -789,7 +773,7 @@ nsJVMMgr::IsJVMAndMochaPrefsEnabled(void)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-nsPluginError
+nsresult
 nsJVMMgr::AddToClassPath(const char* dirPath)
 {
     nsIJVMPlugin* jvm = GetJVMPlugin();
@@ -834,7 +818,7 @@ nsJVMMgr::AddToClassPath(const char* dirPath)
         jvm->AddToClassPath(dirPath);
         jvm->Release();
     }
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1048,10 +1032,10 @@ JVM_IsJVMAvailable(void)
     return result;
 }
 
-PR_IMPLEMENT(nsPluginError)
+PR_IMPLEMENT(nsresult)
 JVM_AddToClassPath(const char* dirPath)
 {
-    nsPluginError err = nsPluginError_GenericError;
+    nsresult err = NS_ERROR_FAILURE;
     nsJVMMgr* mgr = JVM_GetJVMMgr();
     if (mgr) {
         err = mgr->AddToClassPath(dirPath);

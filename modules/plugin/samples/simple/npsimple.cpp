@@ -146,13 +146,13 @@ public:
     // This call initializes the plugin and will be called before any new
     // instances are created. It is passed browserInterfaces on which QueryInterface
     // may be used to obtain an nsIPluginManager, and other interfaces.
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     Initialize(nsISupports* browserInterfaces);
 
     // (Corresponds to NPP_Shutdown.)
     // Called when the browser is done with the plugin factory, or when
     // the plugin is disabled by the user.
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     Shutdown(void);
 
     // (Corresponds to NPP_GetMIMEDescription.)
@@ -160,11 +160,11 @@ public:
     GetMIMEDescription(void);
 
     // (Corresponds to NPP_GetValue.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     GetValue(nsPluginVariable variable, void *value);
 
     // (Corresponds to NPP_SetValue.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     SetValue(nsPluginVariable variable, void *value);
 
     // The old NPP_New call has been factored into two plugin instance methods:
@@ -210,7 +210,7 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // from nsIPluginInstance:
 
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     Initialize(nsIPluginInstancePeer* peer);
 
     // Required backpointer to the peer.
@@ -218,7 +218,7 @@ public:
     GetPeer(void);
 
     // See comment for nsIPlugin::CreateInstance, above.
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     Start(void);
 
     // The old NPP_Destroy call has been factored into two plugin instance 
@@ -231,18 +231,18 @@ public:
     // Destroy -- called once, before the plugin instance peer is to be 
     // destroyed. This method is used to destroy the plugin instance. 
 
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     Stop(void);
 
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     Destroy(void);
 
     // (Corresponds to NPP_SetWindow.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     SetWindow(nsPluginWindow* window);
 
     // (Corresponds to NPP_NewStream.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     NewStream(nsIPluginStreamPeer* peer, nsIPluginStream* *result);
 
     // (Corresponds to NPP_Print.)
@@ -273,8 +273,8 @@ public:
 
     void            DisplayJavaMessage(char* msg, int len);
     void            PlatformNew(void);
-    nsPluginError	PlatformDestroy(void);
-    nsPluginError	PlatformSetWindow(nsPluginWindow* window);
+    nsresult        PlatformDestroy(void);
+    nsresult    	PlatformSetWindow(nsPluginWindow* window);
     PRInt16         PlatformHandleEvent(nsPluginEvent* event);
 
     void SetMode(PRUint16 mode) { fMode = mode; }
@@ -451,22 +451,22 @@ SimplePlugin::LockFactory(PRBool aLock)
     return NS_OK;
 }
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 SimplePlugin::Initialize(nsISupports* browserInterfaces)
 {
     if (browserInterfaces->QueryInterface(kIPluginManagerIID, 
                                           (void**)mgr) != NS_OK) {
-        return nsPluginError_GenericError;
+        return NS_ERROR_FAILURE;
     }
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 SimplePlugin::Shutdown(void)
 {
     mgr->Release();     // QueryInterface in Initialize
     mgr = NULL;
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -486,24 +486,24 @@ SimplePlugin::GetMIMEDescription(void)
 #define PLUGIN_NAME             "Simple LiveConnect Sample Plug-in"
 #define PLUGIN_DESCRIPTION      "Demonstrates a simple LiveConnected plug-in."
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 SimplePlugin::GetValue(nsPluginVariable variable, void *value)
 {
-    nsPluginError err = nsPluginError_NoError;
+    nsresult err = NS_OK;
     if (variable == nsPluginVariable_NameString)
         *((char **)value) = PLUGIN_NAME;
     else if (variable == nsPluginVariable_DescriptionString)
         *((char **)value) = PLUGIN_DESCRIPTION;
     else
-        err = nsPluginError_GenericError;
+        err = NS_ERROR_FAILURE;
 
     return err;
 }
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 SimplePlugin::SetValue(nsPluginVariable variable, void *value)
 {
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -570,13 +570,13 @@ NS_IMPL_RELEASE(SimplePluginInstance);
  * time. The NPP pointer is valid until the instance is destroyed. 
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 SimplePluginInstance::Initialize(nsIPluginInstancePeer* peer)
 {
     fPeer = peer;
     fMode = peer->GetMode();
     PlatformNew(); 	/* Call Platform-specific initializations */
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
 NS_METHOD_(nsIPluginInstancePeer*)
@@ -585,7 +585,7 @@ SimplePluginInstance::GetPeer(void)
     return fPeer;
 }
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 SimplePluginInstance::Start(void)
 {
     /* Show off some of that Java functionality: */
@@ -608,19 +608,19 @@ SimplePluginInstance::Start(void)
         sprintf(factString, "my favorite function returned %d\n", v);
         DisplayJavaMessage(factString, -1);
     }
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 SimplePluginInstance::Stop(void)
 {
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 SimplePluginInstance::Destroy(void)
 {
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -637,10 +637,10 @@ SimplePluginInstance::Destroy(void)
  * with the window. 
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 SimplePluginInstance::SetWindow(nsPluginWindow* window)
 {
-    nsPluginError result;
+    nsresult result;
     DisplayJavaMessage("Calling SimplePluginInstance::SetWindow.", -1); 
 
     /*
@@ -665,15 +665,16 @@ SimplePluginInstance::SetWindow(nsPluginWindow* window)
  * parameter type. 
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 SimplePluginInstance::NewStream(nsIPluginStreamPeer* peer, nsIPluginStream* *result)
 {
     DisplayJavaMessage("Calling SimplePluginInstance::NewStream.", -1); 
     SimplePluginStream* strm = new SimplePluginStream(peer, this);
-    if (strm == NULL) return nsPluginError_OutOfMemoryError;
+    if (strm == NULL) 
+        return NS_ERROR_OUT_OF_MEMORY;
     strm->AddRef();
     *result = strm;
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -960,10 +961,10 @@ SimplePluginInstance::PlatformNew(void)
  * Destroy any Platform-Specific instance data.
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-nsPluginError
+nsresult
 SimplePluginInstance::PlatformDestroy(void)
 {
-	return nsPluginError_NoError;
+	return NS_OK;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -972,7 +973,7 @@ SimplePluginInstance::PlatformDestroy(void)
  * Perform platform-specific window operations
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-nsPluginError
+nsresult
 SimplePluginInstance::PlatformSetWindow(nsPluginWindow* window)
 {
     Widget netscape_widget;
@@ -987,7 +988,7 @@ SimplePluginInstance::PlatformSetWindow(nsPluginWindow* window)
     netscape_widget = XtWindowToWidget(fPlatform.display, fPlatform.window);
     XtAddEventHandler(netscape_widget, ExposureMask, FALSE, (XtEventHandler)Redraw, this);
     Redraw(netscape_widget, (XtPointer)this, NULL);
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1053,7 +1054,7 @@ SimplePluginInstance::PlatformNew(void)
  * Destroy any Platform-Specific instance data.
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-nsPluginError
+nsresult
 SimplePluginInstance::PlatformDestroy(void)
 {
     if( fWindow != NULL ) { /* If we have a window, clean
@@ -1063,7 +1064,7 @@ SimplePluginInstance::PlatformDestroy(void)
         fPlatform.fhWnd = NULL;
     }
 
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1072,7 +1073,7 @@ SimplePluginInstance::PlatformDestroy(void)
  * Perform platform-specific window operations
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-nsPluginError
+nsresult
 SimplePluginInstance::PlatformSetWindow(nsPluginWindow* window)
 {
     if( fWindow != NULL ) /* If we already have a window, clean
@@ -1085,12 +1086,12 @@ SimplePluginInstance::PlatformSetWindow(nsPluginWindow* window)
             SetWindowLong( fPlatform.fhWnd, GWL_WNDPROC, (LONG)fPlatform.fDefaultWindowProc);
             fPlatform.fDefaultWindowProc = NULL;
             fPlatform.fhWnd = NULL;
-            return nsPluginError_NoError;
+            return NS_OK;
         }
 
         else if ( fPlatform.fhWnd == (HWND) window->window ) {
             /* The new window is the same as the old one. Exit now. */
-            return nsPluginError_NoError;
+            return NS_OK;
         }
         else {
             /* Clean up the old window, so that we can subclass the new
@@ -1103,7 +1104,7 @@ SimplePluginInstance::PlatformSetWindow(nsPluginWindow* window)
     else if( (window == NULL) || ( window->window == NULL ) ) {
         /* We can just get out of here if there is no current
          * window and there is no new window to use. */
-        return nsPluginError_NoError;
+        return NS_OK;
     }
 
     /* At this point, we will subclass
@@ -1117,7 +1118,7 @@ SimplePluginInstance::PlatformSetWindow(nsPluginWindow* window)
 
     InvalidateRect( fPlatform.fhWnd, NULL, TRUE );
     UpdateWindow( fPlatform.fhWnd );
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1196,10 +1197,10 @@ SimplePluginInstance::PlatformNew(void)
  * Destroy any Platform-Specific instance data.
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-nsPluginError
+nsresult
 SimplePluginInstance::PlatformDestroy(void)
 {
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1208,7 +1209,7 @@ SimplePluginInstance::PlatformDestroy(void)
  * Perform platform-specific window operations
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-nsPluginError
+nsresult
 SimplePluginInstance::PlatformSetWindow(nsPluginWindow* window)
 {
     fWindow = window;
@@ -1216,7 +1217,7 @@ SimplePluginInstance::PlatformSetWindow(nsPluginWindow* window)
         DoDraw(This);
         EndDraw( window );
     }
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
 /*+++++++++++++++++++++++++++++++++++++++++++++++++

@@ -45,19 +45,17 @@ public:
 
     // QueryInterface on nsIPluginManager to get this.
     
+    /**
+     * Returns the name of the browser executable program.
+     * @returns 
+     */
     NS_IMETHOD_(const char*)
     GetProgramPath(void) = 0;
 
     NS_IMETHOD_(const char*)
     GetTempDirPath(void) = 0;
 
-    enum FileNameType { SIGNED_APPLET_DBNAME, TEMP_FILENAME };
-
-    NS_IMETHOD_(nsresult)
-    GetFileName(const char* fn, FileNameType type,
-                char* resultBuf, PRUint32 bufLen) = 0;
-
-    NS_IMETHOD_(nsresult)
+    NS_IMETHOD
     NewTempFileName(const char* prefix, char* resultBuf, PRUint32 bufLen) = 0;
 
 };

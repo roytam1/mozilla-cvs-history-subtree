@@ -67,11 +67,11 @@ public:
     UserAgent(void) = 0;
 
     // (Corresponds to NPN_GetValue.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     GetValue(nsPluginManagerVariable variable, void *value) = 0;
 
     // (Corresponds to NPN_SetValue.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     SetValue(nsPluginManagerVariable variable, void *value) = 0;
 
     // (Corresponds to NPN_GetURL and NPN_GetURLNotify.)
@@ -86,7 +86,7 @@ public:
     //   referrer: 
     //   forceJSEnabled: Forces JavaScript to be enabled for 'javascript:' URLs,
     //          even if the user currently has JavaScript disabled. 
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     GetURL(nsISupports* peer, const char* url, const char* target, void* notifyData = NULL,
            const char* altHost = NULL, const char* referrer = NULL,
            PRBool forceJSEnabled = PR_FALSE) = 0;
@@ -105,7 +105,7 @@ public:
     //          even if the user currently has JavaScript disabled. 
     //   postHeaders: A string containing post headers.
     //   postHeadersLength: The length of the post headers string.
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     PostURL(nsISupports* peer, const char* url, const char* target, PRUint32 bufLen, 
             const char* buf, PRBool file, void* notifyData = NULL,
             const char* altHost = NULL, const char* referrer = NULL,

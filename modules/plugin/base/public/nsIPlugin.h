@@ -49,13 +49,13 @@ public:
     // This call initializes the plugin and will be called before any new
     // instances are created. It is passed browserInterfaces on which QueryInterface
     // may be used to obtain an nsIPluginManager, and other interfaces.
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     Initialize(nsISupports* browserInterfaces) = 0;
 
     // (Corresponds to NPP_Shutdown.)
     // Called when the browser is done with the plugin factory, or when
     // the plugin is disabled by the user.
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     Shutdown(void) = 0;
 
     // (Corresponds to NPP_GetMIMEDescription.)
@@ -63,11 +63,11 @@ public:
     GetMIMEDescription(void) = 0;
 
     // (Corresponds to NPP_GetValue.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     GetValue(nsPluginVariable variable, void *value) = 0;
 
     // (Corresponds to NPP_SetValue.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     SetValue(nsPluginVariable variable, void *value) = 0;
 
     // The old NPP_New call has been factored into two plugin instance methods:

@@ -49,7 +49,7 @@ public:
     // seekable argument.
 
     // (Corresponds to NPN_RequestRead.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     RequestRead(nsByteRange* rangeList) = 0;
 
 };

@@ -296,29 +296,6 @@ struct NPPort {
 
 #endif /* XP_MAC */
 
-////////////////////////////////////////////////////////////////////////////////
-// Error and Reason Code definitions
-
-enum nsPluginError {
-    nsPluginError_Base = 0,
-    nsPluginError_NoError = 0,
-    nsPluginError_GenericError,
-    nsPluginError_InvalidInstanceError,
-    nsPluginError_InvalidFunctableError,
-    nsPluginError_ModuleLoadFailedError,
-    nsPluginError_OutOfMemoryError,
-    nsPluginError_InvalidPluginError,
-    nsPluginError_InvalidPluginDirError,
-    nsPluginError_IncompatibleVersionError,
-    nsPluginError_InvalidParam,
-    nsPluginError_InvalidUrl,
-    nsPluginError_FileNotFound,
-    nsPluginError_NoData,
-    nsPluginError_StreamNotSeekable
-};
-
-#define NPCallFailed( code ) ((code) != nsPluginError_NoError)
-
 enum nsPluginReason {
     nsPluginReason_Base = 0,
     nsPluginReason_Done = 0,

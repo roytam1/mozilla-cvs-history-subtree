@@ -540,9 +540,8 @@ NPL_Write(NET_StreamClass *stream, const unsigned char *str, int32 len)
     if (newstream->handle->userPlugin) {
         nsPluginStreamPeer* peerStream = (nsPluginStreamPeer*)newstream->pstream->pdata;
         nsIPluginStream* userStream = peerStream->GetUserStream();
-        nsresult err;
-        userStream->Write((const char*)str, 0, len, &err);
-        PR_ASSERT(err == 0);        // XXX this error should go somewhere
+        nsresult err = userStream->Write((const char*)str, 0, len);
+        PR_ASSERT(err == (nsresult)len);        // XXX this error should go somewhere
     }
     else if (ISFUNCPTR(newstream->handle->f->write)) {
         ret = CallNPP_WriteProc(newstream->handle->f->write, newstream->instance->npp, newstream->pstream, 
@@ -2548,9 +2547,9 @@ np_setwindow(np_instance *instance, NPWindow *appWin)
                 // If this is the first time we're drawing this, then call
                 // the plugin's Start() method.
                 if (lo_struct && ! (lo_struct->objTag.ele_attrmask & LO_ELE_DRAWN)) {
-                    nsPluginError err = pluginInst->Start();
+                    nsresult err = pluginInst->Start();
                     pluginInst->Release();
-                    if (err != nsPluginError_NoError) {
+                    if (err != NS_OK) {
                         np_delete_instance(instance);
                         return PR_FALSE;
                     }
@@ -2727,14 +2726,12 @@ np_newinstance(np_handle *handle, MWContext *cx, NPEmbeddedApp *app,
             else {
                 peerInst->AddRef();
                 nsIPluginInstance* pluginInst;
-
                 nsresult err2 = pluginClass->CreateInstance(NULL, kPluginInstanceIID,
-                                                                (void**)&pluginInst);
-
+                                                            (void**)&pluginInst);
                 if (err2 == NS_OK && pluginInst != NULL) {
                     peerInst->SetPluginInstance(pluginInst);
-                    nsPluginError err3 = pluginInst->Initialize(peerInst);
-                    if (err3 == nsPluginError_NoError) {
+                    nsresult err3 = pluginInst->Initialize(peerInst);
+                    if (err3 == NS_OK) {
                         npp->pdata = peerInst;
                         ndata->sdata = (NPSavedData*)pluginInst;
                         err = NPERR_NO_ERROR;
@@ -2825,8 +2822,8 @@ np_newinstance(np_handle *handle, MWContext *cx, NPEmbeddedApp *app,
     // Do this before sending the mocha OnLoad message.
     if (handle->userPlugin && ndata->sdata) {
         nsIPluginInstance* pluginInst = (nsIPluginInstance*)ndata->sdata;
-        nsPluginError err = pluginInst->Start();
-        if (err != nsPluginError_NoError) goto error;
+        nsresult err = pluginInst->Start();
+        if (err != NS_OK) goto error;
     }
     */
 
@@ -2936,8 +2933,8 @@ np_newstream(URL_Struct *urls, np_handle *handle, np_instance *instance)
         else {
             peerStream->AddRef();
             nsIPluginStream* userStream;
-            nsPluginError err = pluginInst->NewStream(peerStream, &userStream);
-            if (err == nsPluginError_NoError && userStream != NULL) {
+            nsresult err = pluginInst->NewStream(peerStream, &userStream);
+            if (err == NS_OK && userStream != NULL) {
                 peerStream->SetUserStream(userStream);
                 pstream->pdata = peerStream;
 
@@ -3729,8 +3726,8 @@ np_delete_instance(np_instance *instance)
                 pluginInst->SetWindow(NULL);
                 
                 // tell the plugin instance the browser is through with it.
-                nsPluginError err = pluginInst->Destroy();
-                XP_ASSERT(err == nsPluginError_NoError);
+                nsresult err = pluginInst->Destroy();
+                XP_ASSERT(err == NS_OK);
                 pluginInst->Release();
                 
                 // break the reference cycle and release the instance peer.
@@ -4241,9 +4238,9 @@ NPL_EmbedDelete(MWContext* cx, LO_EmbedStruct* embed_struct)
                 nsPluginInstancePeer* peerInst = (nsPluginInstancePeer*) ndata->instance->npp->pdata;
                 nsIPluginInstance* pluginInst = peerInst->GetPluginInstance();
 
-                nsPluginError err = pluginInst->Stop();
+                nsresult err = pluginInst->Stop();
                 pluginInst->Release();
-                if (err == nsPluginError_NoError) {
+                if (err == NS_OK) {
                     /* XXX So I'm going out on a limb here and saying that
                        by keeping the plugin in a "cached" state, we
                        should pretty much not need to perturb much
@@ -4463,7 +4460,7 @@ NPL_GetText(nsIPluginInstance* pluginInst)
 {
     const char *text = NULL;
     nsIJVMPluginInstance *jvmInst = NULL;
-    if (pluginInst->QueryInterface(kJVMPluginInstanceIID, &jvmInst) == NS_OK) {
+    if (pluginInst->QueryInterface(kJVMPluginInstanceIID, (void**)&jvmInst) == NS_OK) {
         text = jvmInst->GetText();
         jvmInst->Release();
     }
@@ -4475,7 +4472,7 @@ NPL_GetJavaObject(nsIPluginInstance* pluginInst)
 {
     jobject javaobject = NULL;
     nsIJVMPluginInstance *jvmInst = NULL;
-    if (pluginInst->QueryInterface(kJVMPluginInstanceIID, &jvmInst) == NS_OK) {
+    if (pluginInst->QueryInterface(kJVMPluginInstanceIID, (void**)&jvmInst) == NS_OK) {
         javaobject = jvmInst->GetJavaObject();
         jvmInst->Release();
     }

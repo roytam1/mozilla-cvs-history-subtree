@@ -58,6 +58,26 @@ static NS_DEFINE_IID(kIPluginStreamPeerIID, NS_IPLUGINSTREAMPEER_IID);
 static NS_DEFINE_IID(kIPluginStreamPeer2IID, NS_IPLUGINSTREAMPEER2_IID);
 static NS_DEFINE_IID(kIFileUtilitiesIID, NS_IFILEUTILITIES_IID);
 
+#include "prerror.h"
+
+// mapping from NPError to nsresult
+nsresult fromNPError[] = {
+    NS_OK,                          // NPERR_NO_ERROR,
+    NS_ERROR_FAILURE,               // NPERR_GENERIC_ERROR,
+    NS_ERROR_FAILURE,               // NPERR_INVALID_INSTANCE_ERROR,
+    NS_ERROR_NOT_INITIALIZED,       // NPERR_INVALID_FUNCTABLE_ERROR,
+    NS_ERROR_FACTORY_NOT_LOADED,    // NPERR_MODULE_LOAD_FAILED_ERROR,
+    NS_ERROR_OUT_OF_MEMORY,         // NPERR_OUT_OF_MEMORY_ERROR,
+    NS_NOINTERFACE,                 // NPERR_INVALID_PLUGIN_ERROR,
+    NS_ERROR_ILLEGAL_VALUE,         // NPERR_INVALID_PLUGIN_DIR_ERROR,
+    NS_NOINTERFACE,                 // NPERR_INCOMPATIBLE_VERSION_ERROR,
+    NS_ERROR_ILLEGAL_VALUE,         // NPERR_INVALID_PARAM,
+    NS_ERROR_ILLEGAL_VALUE,         // NPERR_INVALID_URL,
+    NS_ERROR_ILLEGAL_VALUE,         // NPERR_FILE_NOT_FOUND,
+    NS_ERROR_FAILURE,               // NPERR_NO_DATA,
+    NS_ERROR_FAILURE                // NPERR_STREAM_NOT_SEEKABLE,
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // THINGS IMPLEMENTED BY THE BROWSER...
 ////////////////////////////////////////////////////////////////////////////////
@@ -146,16 +166,18 @@ int varMap[] = {
     (int)NPPVpluginTimerInterval,       // nsPluginManagerVariable_TimerInterval
 };
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 nsPluginManager::GetValue(nsPluginManagerVariable variable, void *value)
 {
-    return (nsPluginError)npn_getvalue(NULL, (NPNVariable)varMap[(int)variable], value);
+    NPError err = npn_getvalue(NULL, (NPNVariable)varMap[(int)variable], value);
+    return fromNPError[err];
 }
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 nsPluginManager::SetValue(nsPluginManagerVariable variable, void *value)
 {
-    return (nsPluginError)npn_setvalue(NULL, (NPPVariable)varMap[(int)variable], value);
+    NPError err = npn_setvalue(NULL, (NPPVariable)varMap[(int)variable], value);
+    return fromNPError[err];
 }
 
 NS_METHOD
@@ -216,38 +238,38 @@ nsPluginManager::GetJVMMgr(const nsIID& aIID)
     return result;
 }
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 nsPluginManager::GetURL(nsISupports* peer, const char* url, const char* target, void* notifyData,
                         const char* altHost, const char* referrer,
                         PRBool forceJSEnabled)
 {
-    nsPluginError rslt = nsPluginError_InvalidParam;
+    NPError rslt = NPERR_INVALID_PARAM;
     nsPluginInstancePeer* instPeer = NULL;
     if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK) {
         NPP npp = instPeer->GetNPP();
-	     rslt = (nsPluginError)np_geturlinternal(npp, url, target, altHost, referrer,
-                                               forceJSEnabled, notifyData != NULL, notifyData);
+        rslt = np_geturlinternal(npp, url, target, altHost, referrer,
+                                 forceJSEnabled, notifyData != NULL, notifyData);
         instPeer->Release();
     }
-    return rslt;
+    return fromNPError[rslt];
 }
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 nsPluginManager::PostURL(nsISupports* peer, const char* url, const char* target, PRUint32 bufLen, 
                          const char* buf, PRBool file, void* notifyData,
                          const char* altHost, const char* referrer,
                          PRBool forceJSEnabled,
                          PRUint32 postHeadersLength, const char* postHeaders)
 {
-    nsPluginError rslt = nsPluginError_InvalidParam;
+    NPError rslt = NPERR_INVALID_PARAM;
     nsPluginInstancePeer* instPeer;
     if (peer->QueryInterface(kPluginInstancePeerCID, (void**)&instPeer) == NS_OK) {
         NPP npp = instPeer->GetNPP();
-        rslt = (nsPluginError)np_posturlinternal(npp, url, target, altHost, referrer, forceJSEnabled,
-                                                bufLen, buf, file, notifyData != NULL, notifyData);
+        rslt = np_posturlinternal(npp, url, target, altHost, referrer, forceJSEnabled,
+                                  bufLen, buf, file, notifyData != NULL, notifyData);
         instPeer->Release();
     }
-    return rslt;
+    return fromNPError[rslt];
 }
 
 NS_METHOD_(void)
@@ -288,6 +310,12 @@ nsPluginManager::SupportsURLProtocol(const char* protocol)
 {
     int type = NET_URL_Type(protocol);
     return (PRBool)(type != 0);
+}
+
+NS_METHOD_(void)
+nsPluginManager::NotifyStatusChange(nsIPlugin* plugin, nsresult error)
+{
+    // XXX need to shut down all instances of this plugin
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -338,6 +366,7 @@ nsFileUtilities::GetTempDirPath(void)
     return tempDirName;
 }
 
+#if 0
 NS_METHOD
 nsFileUtilities::GetFileName(const char* fn, FileNameType type,
                              char* resultBuf, PRUint32 bufLen)
@@ -359,6 +388,7 @@ nsFileUtilities::GetFileName(const char* fn, FileNameType type,
     XP_FREE(tempName);
     return NS_OK;
 }
+#endif
 
 NS_METHOD
 nsFileUtilities::NewTempFileName(const char* prefix, char* resultBuf, PRUint32 bufLen)
@@ -425,16 +455,15 @@ nsPluginInstancePeer::GetMode(void)
     return (nsPluginType)instance->type;
 }
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 nsPluginInstancePeer::NewStream(nsMIMEType type, const char* target, nsIOutputStream* *result)
 {
     NPStream* pstream;
-    nsPluginError err = (nsPluginError)
-        npn_newstream(fNPP, (char*)type, (char*)target, &pstream);
-    if (err != nsPluginError_NoError)
+    NPError err = npn_newstream(fNPP, (char*)type, (char*)target, &pstream);
+    if (err != NPERR_NO_ERROR)
         return err;
     *result = new nsPluginManagerStream(fNPP, pstream);
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
 NS_METHOD_(void)
@@ -600,7 +629,7 @@ nsPluginTagInfo::AggregatedQueryInterface(const nsIID& aIID, void** aInstancePtr
 
 static char* empty_list[] = { "", NULL };
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 nsPluginTagInfo::GetAttributes(PRUint16& n, 
                                const char*const*& names, 
                                const char*const*& values)
@@ -630,7 +659,7 @@ nsPluginTagInfo::GetAttributes(PRUint16& n,
         n = (PRUint16) ndata->lo_struct->attribute_cnt;
 #endif
 
-        return nsPluginError_NoError;
+        return NS_OK;
     } else {
         static char _name[] = "PALETTE";
         static char* _names[1];
@@ -645,7 +674,7 @@ nsPluginTagInfo::GetAttributes(PRUint16& n,
         values = (const char*const*) _values;
         n = 1;
 
-        return nsPluginError_NoError;
+        return NS_OK;
     }
 
     // random, sun-spot induced error
@@ -655,7 +684,7 @@ nsPluginTagInfo::GetAttributes(PRUint16& n,
     // const char* const* empty_list = { { '\0' } };
     names = values = (const char*const*)empty_list;
 
-    return nsPluginError_GenericError;
+    return NS_ERROR_FAILURE;
 }
 
 NS_METHOD_(const char*)
@@ -665,15 +694,15 @@ nsPluginTagInfo::GetAttribute(const char* name)
     const char*const* names;
     const char*const* values;
 
-    if( NPCallFailed( GetAttributes( nAttrs, names, values )) )
-        return 0;
+    if (GetAttributes(nAttrs, names, values) != NS_OK)
+        return NULL;
 
     for( i = 0; i < nAttrs; i++ ) {
         if( PL_strcasecmp( name, names[i] ) == 0 )
             return values[i];
     }
 
-    return 0;
+    return NULL;
 }
 
 NS_METHOD_(nsPluginTagType) 
@@ -702,7 +731,7 @@ nsPluginTagInfo::GetTagText(void)
     return NULL;
 }
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 nsPluginTagInfo::GetParameters(PRUint16& n, 
                                const char*const*& names, 
                                const char*const*& values)
@@ -724,7 +753,7 @@ nsPluginTagInfo::GetParameters(PRUint16& n,
         n = (PRUint16)ndata->lo_struct->attribute_cnt;
 #endif
 
-        return nsPluginError_NoError;
+        return NS_OK;
     } else {
         static char _name[] = "PALETTE";
         static char* _names[1];
@@ -739,7 +768,7 @@ nsPluginTagInfo::GetParameters(PRUint16& n,
         values = (const char*const*) _values;
         n = 1;
 
-        return nsPluginError_NoError;
+        return NS_OK;
     }
 
     // random, sun-spot induced error
@@ -749,7 +778,7 @@ nsPluginTagInfo::GetParameters(PRUint16& n,
     // static const char* const* empty_list = { { '\0' } };
     names = values = (const char*const*)empty_list;
 
-    return nsPluginError_GenericError;
+    return NS_ERROR_FAILURE;
 }
 
 NS_METHOD_(const char*)
@@ -759,15 +788,15 @@ nsPluginTagInfo::GetParameter(const char* name)
     const char*const* names;
     const char*const* values;
 
-    if( NPCallFailed( GetParameters( nParams, names, values )) )
-        return 0;
+    if (GetParameters(nParams, names, values) != NS_OK)
+        return NULL;
 
     for( i = 0; i < nParams; i++ ) {
         if( PL_strcasecmp( name, names[i] ) == 0 )
             return values[i];
     }
 
-    return 0;
+    return NULL;
 }
 
 NS_METHOD_(const char*)
@@ -1016,11 +1045,12 @@ nsPluginStreamPeer::GetHeaderField(PRUint32 index)
     return urls->all_headers.value[index];
 }
 
-NS_METHOD_(nsPluginError)
+NS_METHOD
 nsPluginStreamPeer::RequestRead(nsByteRange* rangeList)
 {
-    return (nsPluginError)npn_requestread(stream->pstream,
-                                          (NPByteRange*)rangeList);
+    NPError err = npn_requestread(stream->pstream,
+                                  (NPByteRange*)rangeList);
+    return fromNPError[err];
 }
 
 NS_IMPL_ADDREF(nsPluginStreamPeer);

@@ -59,7 +59,7 @@ public:
     // returns the length of the array.
     //
     // Each name or value is a null-terminated string.
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     GetParameters(PRUint16& n, const char*const*& names, const char*const*& values) = 0;
 
     // Get the value for the named parameter.  Returns null

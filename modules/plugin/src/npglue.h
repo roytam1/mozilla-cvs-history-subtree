@@ -305,20 +305,20 @@ public:
     UserAgent(void);
 
     // (Corresponds to NPN_GetValue.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     GetValue(nsPluginManagerVariable variable, void *value);
 
     // (Corresponds to NPN_SetValue.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     SetValue(nsPluginManagerVariable variable, void *value);
 
     // (Corresponds to NPN_GetURL and NPN_GetURLNotify.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     GetURL(nsISupports* peer, const char* url, const char* target, void* notifyData, 
            const char* altHost, const char* referer, PRBool forceJSEnabled);
 
     // (Corresponds to NPN_PostURL and NPN_PostURLNotify.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     PostURL(nsISupports* peer, const char* url, const char* target,
             PRUint32 len, const char* buf, PRBool file, void* notifyData, 
             const char* altHost, const char* referer, PRBool forceJSEnabled,
@@ -335,6 +335,12 @@ public:
 
     NS_IMETHOD_(PRBool)
     SupportsURLProtocol(const char* protocol);
+
+    // This method may be called by the plugin to indicate that an error has
+    // occurred, e.g. that the plugin has failed or is shutting down spontaneously.
+    // This allows the browser to clean up any plugin-specific state.
+    NS_IMETHOD_(void)
+    NotifyStatusChange(nsIPlugin* plugin, nsresult error);
 
     ////////////////////////////////////////////////////////////////////////////
     // nsPluginManager specific methods:
@@ -371,10 +377,6 @@ public:
 
     NS_IMETHOD_(const char*)
     GetTempDirPath(void);
-
-    NS_IMETHOD_(nsresult)
-    GetFileName(const char* fn, FileNameType type,
-                char* resultBuf, PRUint32 bufLen);
 
     NS_IMETHOD_(nsresult)
     NewTempFileName(const char* prefix, char* resultBuf, PRUint32 bufLen);
@@ -417,7 +419,7 @@ public:
     GetMode(void);
 
     // (Corresponds to NPN_NewStream.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     NewStream(nsMIMEType type, const char* target, nsIOutputStream* *result);
 
     // (Corresponds to NPN_Status.)
@@ -512,7 +514,7 @@ public:
     //
     // Each name or value is a null-terminated string.
     //
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     GetAttributes(PRUint16& n, const char*const*& names, const char*const*& values);
 
     // Get the value for the named attribute.  Returns null
@@ -537,7 +539,7 @@ public:
     // returns the length of the array.
     //
     // Each name or value is a null-terminated string.
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     GetParameters(PRUint16& n, const char*const*& names, const char*const*& values);
 
     // Get the value for the named parameter.  Returns null
@@ -611,9 +613,14 @@ public:
     ////////////////////////////////////////////////////////////////////////////
     // from nsIOutputStream:
 
-    NS_IMETHOD_(PRInt32)
-    Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount,
-          nsresult *errorResult);
+    /** Write data into the stream.
+     *  @param aBuf the buffer into which the data is read
+     *  @param aOffset the start offset of the data
+     *  @param aCount the maximum number of bytes to read
+     *  @return number of bytes read or an error if < 0
+     */   
+    NS_IMETHOD
+    Write(const char* aBuf, PRInt32 aOffset, PRInt32 aCount); 
 
     ////////////////////////////////////////////////////////////////////////////
     // nsPluginManagerStream specific methods:
@@ -683,7 +690,7 @@ public:
     // from nsISeekablePluginStreamPeer:
 
     // (Corresponds to NPN_RequestRead.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     RequestRead(nsByteRange* rangeList);
 
     ////////////////////////////////////////////////////////////////////////////

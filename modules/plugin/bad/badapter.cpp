@@ -63,11 +63,11 @@ public:
     MemFlush(PRUint32 size);
 
     // (Corresponds to NPN_GetValue.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     GetValue(nsPluginManagerVariable variable, void *value);
 
     // (Corresponds to NPN_SetValue.)
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     SetValue(nsPluginManagerVariable variable, void *value);
 
     // (Corresponds to NPN_UserAgent.)
@@ -86,7 +86,7 @@ public:
     //   referrer: 
     //   forceJSEnabled: Forces JavaScript to be enabled for 'javascript:' URLs,
     //          even if the user currently has JavaScript disabled. 
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     GetURL(nsISupports* peer, const char* url, const char* target, void* notifyData = NULL,
            const char* altHost = NULL, const char* referrer = NULL,
            PRBool forceJSEnabled = PR_FALSE);
@@ -105,7 +105,7 @@ public:
     //          even if the user currently has JavaScript disabled. 
     //   postHeaders: A string containing post headers.
     //   postHeadersLength: The length of the post headers string.
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     PostURL(nsISupports* peer, const char* url, const char* target, PRUint32 bufLen, 
             const char* buf, PRBool file, void* notifyData = NULL,
             const char* altHost = NULL, const char* referrer = NULL,
@@ -211,7 +211,7 @@ public:
     // returns the length of the array.
     //
     // Each name or value is a null-terminated string.
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     GetAttributes(PRUint16& n, const char* const*& names, const char* const*& values);
 
     // Get the value for the named attribute.  Returns null
@@ -220,7 +220,7 @@ public:
     GetAttribute(const char* name);
 
     // Corresponds to NPN_NewStream.
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     NewStream(nsMIMEType type, const char* target, nsIOutputStream* *result);
 
     // Corresponds to NPN_ShowStatus.
@@ -298,7 +298,7 @@ public:
     //
 
     // Corresponds to NPN_RequestRead.
-    NS_IMETHOD_(nsPluginError)
+    NS_IMETHOD
     RequestRead(nsByteRange* rangeList);
 
 protected:
@@ -360,6 +360,23 @@ NS_DEFINE_IID(kPluginInstancePeerIID, NS_IPLUGININSTANCEPEER_IID);
 NS_DEFINE_IID(kPluginStreamPeerIID, NS_IPLUGINSTREAMPEER_IID);
 NS_DEFINE_IID(kSeekablePluginStreamPeerIID, NS_ISEEKABLEPLUGINSTREAMPEER_IID);
 
+// mapping from NPError to nsresult
+nsresult fromNPError[] = {
+    NS_OK,                          // NPERR_NO_ERROR,
+    NS_ERROR_FAILURE,               // NPERR_GENERIC_ERROR,
+    NS_ERROR_FAILURE,               // NPERR_INVALID_INSTANCE_ERROR,
+    NS_ERROR_NOT_INITIALIZED,       // NPERR_INVALID_FUNCTABLE_ERROR,
+    NS_ERROR_FACTORY_NOT_LOADED,    // NPERR_MODULE_LOAD_FAILED_ERROR,
+    NS_ERROR_OUT_OF_MEMORY,         // NPERR_OUT_OF_MEMORY_ERROR,
+    NS_NOINTERFACE,                 // NPERR_INVALID_PLUGIN_ERROR,
+    NS_ERROR_ILLEGAL_VALUE,         // NPERR_INVALID_PLUGIN_DIR_ERROR,
+    NS_NOINTERFACE,                 // NPERR_INCOMPATIBLE_VERSION_ERROR,
+    NS_ERROR_ILLEGAL_VALUE,         // NPERR_INVALID_PARAM,
+    NS_ERROR_ILLEGAL_VALUE,         // NPERR_INVALID_URL,
+    NS_ERROR_ILLEGAL_VALUE,         // NPERR_FILE_NOT_FOUND,
+    NS_ERROR_FAILURE,               // NPERR_NO_DATA,
+    NS_ERROR_FAILURE                // NPERR_STREAM_NOT_SEEKABLE,
+};
 
 ////////////////////////////////////////////////////////////////////////////////
 // SECTION 4 - API Shim Plugin Implementations
@@ -413,7 +430,7 @@ char* NPP_GetMIMEDescription(void)
 NPError
 NPP_SetValue(NPP instance, NPNVariable variable, void *value)
 {
-    return (NPError)nsPluginError_NoError;
+    return NPERR_NO_ERROR;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -889,7 +906,7 @@ CPluginManager::ReloadPlugins(PRBool reloadPages)
 //   referrer: 
 //   forceJSEnabled: Forces JavaScript to be enabled for 'javascript:' URLs,
 //          even if the user currently has JavaScript disabled. 
-nsPluginError NP_LOADDS 
+nsresult NP_LOADDS 
 CPluginManager::GetURL(nsISupports* peer, const char* url, const char* target, void* notifyData,
 					   const char* altHost, const char* referrer, PRBool forceJSEnabled)
 {
@@ -904,9 +921,9 @@ CPluginManager::GetURL(nsISupports* peer, const char* url, const char* target, v
     // Call the correct GetURL* function.
     // This is determinded by checking notifyData.
     if (notifyData == NULL) {
-        return (nsPluginError)NPN_GetURL(npp, url, target);
+        return fromNPError[NPN_GetURL(npp, url, target)];
     } else {
-        return (nsPluginError)NPN_GetURLNotify(npp, url, target, notifyData);
+        return fromNPError[NPN_GetURLNotify(npp, url, target, notifyData)];
     }
 }
 
@@ -924,7 +941,7 @@ CPluginManager::GetURL(nsISupports* peer, const char* url, const char* target, v
 //          even if the user currently has JavaScript disabled. 
 //   postHeaders: A string containing post headers.
 //   postHeadersLength: The length of the post headers string.
-nsPluginError NP_LOADDS 
+nsresult NP_LOADDS 
 CPluginManager::PostURL(nsISupports* peer, const char* url, const char* target, PRUint32 bufLen, 
 						const char* buf, PRBool file, void* notifyData, const char* altHost, 
 						const char* referrer, PRBool forceJSEnabled, PRUint32 postHeadersLength, 
@@ -938,9 +955,9 @@ CPluginManager::PostURL(nsISupports* peer, const char* url, const char* target, 
     // Call the correct PostURL* function.
     // This is determinded by checking notifyData.
     if (notifyData == NULL) {
-        return (nsPluginError)NPN_PostURL(npp, url, target, bufLen, buf, file);
+        return fromNPError[NPN_PostURL(npp, url, target, bufLen, buf, file)];
     } else {
-        return (nsPluginError)NPN_PostURLNotify(npp, url, target, bufLen, buf, file, notifyData);
+        return fromNPError[NPN_PostURLNotify(npp, url, target, bufLen, buf, file, notifyData)];
     }
 }
 
@@ -958,31 +975,31 @@ CPluginManager::UserAgent(void)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // GetValue:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-nsPluginError NP_LOADDS 
+nsresult NP_LOADDS 
 CPluginManager::GetValue(nsPluginManagerVariable variable, void *value)
 {
     // XXX - This may need to be stubbed out for
     // XXX - other platforms than Unix.
     // XXX - Change this to return NPPPlugin_Error;
 #ifdef XP_UNIX
-    return (nsPluginError)NPN_GetValue(NULL, (NPNVariable)variable, value);
+    return fromNPError[NPN_GetValue(NULL, (NPNVariable)variable, value)];
 #else
     // XXX - Need to check this on the new API.
-    return nsPluginError_NoData;
+    return fromNPError[NPERR_NO_DATA];
 #endif // XP_UNIX
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // SetValue:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-nsPluginError NP_LOADDS 
+nsresult NP_LOADDS 
 CPluginManager::SetValue(nsPluginManagerVariable variable, void *value) 
 {
     // XXX - This should do something like this.
-    // XXX - return (nsPluginError)npn_setvalue(npp, (NPPVariable)variable, value);
+    // XXX - return npn_setvalue(npp, (NPPVariable)variable, value);
     // XXX - Is this XP in 4.0x?
     // XXX - Need to check this on the new API.
-    return nsPluginError_NoData;    
+    return fromNPError[NPERR_NO_DATA];
 }
 
 
@@ -1080,14 +1097,14 @@ CPluginInstancePeer::GetMode(void)
 // returns the length of the array.
 //
 // Each name or value is a null-terminated string.
-nsPluginError NP_LOADDS 
+nsresult NP_LOADDS 
 CPluginInstancePeer::GetAttributes(PRUint16& n, const char* const*& names, const char* const*& values)  
 {
 	n = attribute_cnt;
 	names = attribute_list;
 	values = values_list;
 
-	return nsPluginError_NoError;
+	return NS_OK;
 }
 
 
@@ -1125,7 +1142,7 @@ CPluginInstancePeer::Version(int* plugin_major, int* plugin_minor,
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // NewStream:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-nsPluginError NP_LOADDS 
+nsresult NP_LOADDS 
 CPluginInstancePeer::NewStream(nsMIMEType type, const char* target, 
                                      nsIOutputStream* *result)
 {
@@ -1133,18 +1150,20 @@ CPluginInstancePeer::NewStream(nsMIMEType type, const char* target,
     
     // Create a new NPStream.
     NPStream* ptr = NULL;
-    nsPluginError error = (nsPluginError)NPN_NewStream(npp, (NPMIMEType)type, target, &ptr);
-    if (error) return error;
+    NPError error = NPN_NewStream(npp, (NPMIMEType)type, target, &ptr);
+    if (error) 
+        return fromNPError[error];
     
     // Create a new Plugin Manager Stream.
     // XXX - Do we have to Release() the manager stream before doing this?
     // XXX - See the BAM doc for more info.
     CPluginManagerStream* mstream = new CPluginManagerStream(npp, ptr);
-    if (mstream == NULL) return nsPluginError_OutOfMemoryError;
+    if (mstream == NULL) 
+        return NS_ERROR_OUT_OF_MEMORY;
     mstream->AddRef();
     *result = (nsIOutputStream* )mstream;
 
-    return nsPluginError_NoError;
+    return NS_OK;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1360,10 +1379,10 @@ CPluginStreamPeer::GetMIMEType(void)
 //+++++++++++++++++++++++++++++++++++++++++++++++++
 // RequestRead:
 //+++++++++++++++++++++++++++++++++++++++++++++++++
-nsPluginError NP_LOADDS 
+nsresult NP_LOADDS 
 CPluginStreamPeer::RequestRead(nsByteRange* rangeList)
 {
-    return (nsPluginError)NPN_RequestRead(npStream, (NPByteRange* )rangeList);
+    return fromNPError[NPN_RequestRead(npStream, (NPByteRange* )rangeList)];
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++
