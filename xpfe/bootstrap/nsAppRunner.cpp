@@ -107,8 +107,6 @@ static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 #include "macstdlibextras.h"
 #include <TextServices.h>
 
-static nsresult CheckForNewChrome(void);
-
 // Set up the toolbox and (if DEBUG) the console.  Do this in a static initializer,
 // to make it as unlikely as possible that somebody calls printf() before we get initialized.
 static struct MacInitializer { MacInitializer() { InitializeMacToolbox(); } } gInitializer;
@@ -714,18 +712,6 @@ static nsresult Ensure1Window( nsICmdLineService* cmdLineArgs)
 	return rv;
 }
 
-nsresult CheckForNewChrome(void) {
-
-  nsCOMPtr <nsIChromeRegistry> chromeReg = do_GetService("@mozilla.org/chrome/chrome-registry;1");
-  NS_ASSERTION(chromeReg, "chrome check couldn't get the chrome registry");
-
-  if (chromeReg)
-    return chromeReg->CheckForNewChrome();
-  return NS_ERROR_FAILURE;
-}
-
-
-
 static nsresult CreateAndRegisterDirectoryService()
 {
   nsresult rv = NS_OK;
@@ -768,8 +754,35 @@ static nsresult InitializeProfileService(nsICmdLineService *cmdLineArgs)
         NS_ENSURE_TRUE(fileLocProvider, NS_ERROR_OUT_OF_MEMORY); 
         // Specify the dir that standalone app will use for its "profile" dir 
         nsCOMPtr<nsIFile> parentDir; 
-        rv = NS_GetSpecialDirectory(NS_OS_CURRENT_PROCESS_DIR, getter_AddRefs(parentDir)); 
-        if (NS_FAILED(rv)) return rv; 
+
+        PRBool exists = PR_FALSE;
+#ifdef XP_OS2
+        rv = NS_GetSpecialDirectory(NS_OS2_DIR, getter_AddRefs(parentDir)); 
+      
+        if (NS_SUCCEEDED(rv))
+          rv = parentDir->Exists(&exists);
+        if (NS_FAILED(rv) || !exists)
+          return rv;
+#elif defined(XP_PC)
+        rv = NS_GetSpecialDirectory(NS_WIN_APPDATA_DIR, getter_AddRefs(parentDir)); 
+        if (NS_SUCCEEDED(rv))
+          rv = parentDir->Exists(&exists);
+        if (NS_FAILED(rv) || !exists)
+          {
+            parentDir = nsnull;
+            rv = NS_GetSpecialDirectory(NS_WIN_WINDOWS_DIR, getter_AddRefs(parentDir));
+          }
+        
+        if (NS_FAILED(rv)) 
+          return rv;
+#else
+      rv = NS_GetSpecialDirectory(NS_OS_HOME_DIR, getter_AddRefs(parentDir)); 
+      
+      if (NS_SUCCEEDED(rv))
+        rv = parentDir->Exists(&exists);
+      if (NS_FAILED(rv) || !exists)
+        return rv;
+#endif
 
         // Get standalone app dir name from prefs and initialize mpfilelocprovider
         nsXPIDLCString appDir;
@@ -922,8 +935,6 @@ static nsresult main1(int argc, char* argv[], nsISupports *nativeApp )
     PrintUsage();
     return rv;
   }
-
-  CheckForNewChrome();
 
   nsCOMPtr<nsIAppShellService> appShell = do_GetService(kAppShellServiceCID, &rv);
   NS_ASSERTION(NS_SUCCEEDED(rv), "failed to get the appshell service");
