@@ -414,8 +414,13 @@ Node* ProcessorState::findTemplate(Node* aNode,
                 (modeBuf = aMode.toCharArray()),
                 (uriBuf = matchTemplate->getBaseURI().toCharArray()),
                 (nodeBuf = aNode->getNodeName().toCharArray())));
-        delete matchBuf;
-        delete uriBuf;
+#ifdef TX_EXE
+        delete [] matchBuf;
+        delete [] uriBuf;
+#else
+        nsMemory::Free(matchBuf);
+        nsMemory::Free(uriBuf);
+#endif
     }
     else {
         PR_LOG(txLog::xslt, PR_LOG_DEBUG,
@@ -423,8 +428,13 @@ Node* ProcessorState::findTemplate(Node* aNode,
                 (nodeBuf  = aNode->getNodeName().toCharArray()),
                 (modeBuf = aMode.toCharArray())));
     }
-    delete nodeBuf;
-    delete modeBuf;
+#ifdef TX_EXE
+        delete [] nodeBuf;
+        delete [] modeBuf;
+#else
+        nsMemory::Free(nodeBuf);
+        nsMemory::Free(modeBuf);
+#endif
     #endif
     return matchTemplate;
 }

@@ -1305,8 +1305,13 @@ void XSLTProcessor::processAction(Node* aNode,
                                ("CallTemplate, Name %s, Stylesheet %s\n",
                                 (nameBuf = templateName.toCharArray()),
                                 (uriBuf = xslTemplate->getBaseURI().toCharArray())));
-                        delete nameBuf;
-                        delete uriBuf;
+#ifdef TX_EXE
+                        delete [] nameBuf;
+                        delete [] uriBuf;
+#else
+                        nsMemory::Free(nameBuf);
+                        nsMemory::Free(uriBuf);
+#endif
 #endif
                         NamedMap* actualParams = processParameters(actionElement, aNode, aPs);
                         processTemplate(aNode, xslTemplate, aPs, actualParams);

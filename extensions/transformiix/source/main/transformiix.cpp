@@ -104,7 +104,7 @@ int main(int argc, char** argv) {
     if (xmlFilename && ! xmlFilename->isEqual("-")) {
       char* chars = xmlFilename->toCharArray();
       xmlInput = new ifstream(chars, ios::in);
-      delete chars;
+      delete [] chars;
     }
 
     //-- handle output stream
@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
     if ( outFilename && ! outFilename->isEqual("-")) {
         char* chars = outFilename->toCharArray();
         resultFileStream.open(chars, ios::out);
-        delete chars;
+        delete [] chars;
         if ( !resultFileStream ) {
             cerr << "error opening output file: " << *xmlFilename << endl;
             return -1;
@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
         //-- open XSLT file
         char* chars = xsltFilename->toCharArray();
         ifstream xsltInput(chars, ios::in);
-        delete chars;
+        delete [] chars;
         xsltProcessor.process(*xmlInput, *xmlFilename, xsltInput, *xsltFilename, *resultOutput);
     }
     resultFileStream.close();
