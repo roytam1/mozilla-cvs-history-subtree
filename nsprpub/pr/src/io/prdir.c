@@ -18,6 +18,7 @@
  * Rights Reserved.
  * 
  * Contributor(s):
+ *   Roy Yokoyama <yokoyama@netscape.com>
  * 
  * Alternatively, the contents of this file may be used under the
  * terms of the GNU General Public License Version 2 or later (the
@@ -109,3 +110,52 @@ PRInt32 rv;
 		return PR_SUCCESS;
 }
 
+#ifdef MOZ_UNICODE
+/*
+ *  UCS2 Interface
+ */
+PR_IMPLEMENT(PRDirUCS2*) PR_OpenDirUCS2(const PRUnichar *name)
+{ 
+    PRDirUCS2 *dir;
+    PRStatus sts;
+
+    dir = PR_NEW(PRDirUCS2);
+    if (dir) {
+        sts = _PR_MD_OPEN_DIR_UCS2(&dir->md,name);
+        if (sts != PR_SUCCESS) {
+            PR_DELETE(dir);
+            return NULL;
+        }
+    } else {
+        PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
+    }
+    return dir;
+}  
+ 
+PR_IMPLEMENT(PRDirEntryUCS2*) PR_ReadDirUCS2(PRDirUCS2 *dir, PRDirFlags flags)
+{ 
+    /*
+     * _MD_READ_DIR_UCS2 return a PRUnichar* to the name; allocation in
+     * machine-dependent code
+     */
+    PRUnichar* name = _PR_MD_READ_DIR_UCS2(&dir->md, flags);
+    dir->d.name = name;
+    return name ? &dir->d : NULL;
+} 
+ 
+PR_IMPLEMENT(PRStatus) PR_CloseDirUCS2(PRDirUCS2 *dir)
+{ 
+    PRInt32 rv; 
+
+    if (dir) {
+        rv = _PR_MD_CLOSE_DIR_UCS2(&dir->md);
+        PR_DELETE(dir);
+        if (rv < 0)
+	    return PR_FAILURE;
+        else
+	    return PR_SUCCESS;
+    } 
+    return PR_SUCCESS;
+}
+
+#endif /* MOZ_UNICODE */

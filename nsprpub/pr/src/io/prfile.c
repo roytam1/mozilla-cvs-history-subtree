@@ -779,3 +779,35 @@ PR_IMPLEMENT(PRStatus) PR_CreatePipe(
     return PR_FAILURE;
 #endif
 }
+
+#ifdef MOZ_UNICODE
+/* ================ UCS2 Interfaces ================================ */
+PR_IMPLEMENT(PRFileDesc*) PR_OpenFileUCS2(
+    const PRUnichar *name, PRIntn flags, PRIntn mode)
+{ 
+    PRInt32 osfd;
+    PRFileDesc *fd = 0;
+#if !defined(XP_UNIX) /* BugZilla: 4090 */
+    PRBool  appendMode = ( PR_APPEND & flags )? PR_TRUE : PR_FALSE;
+#endif
+   
+    if (!_pr_initialized) _PR_ImplicitInitialization();
+  
+    /* Map pr open flags and mode to os specific flags */
+    osfd = _PR_MD_OPEN_FILE_UCS2(name, flags, mode);
+    if (osfd != -1) {
+        fd = PR_AllocFileDesc(osfd, &_pr_fileMethods);
+        if (!fd) {
+            (void) _PR_MD_CLOSE_FILE(osfd);
+        } else {
+#if !defined(XP_UNIX) /* BugZilla: 4090 */
+            fd->secret->appendMode = appendMode;
+#endif
+            _PR_MD_INIT_FD_INHERITABLE(fd, PR_FALSE);
+        }
+    }
+    return fd;
+}
+ 
+/* ================ UCS2 Interfaces ================================ */
+#endif /* MOZ_UNICODE */

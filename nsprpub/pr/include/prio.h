@@ -52,6 +52,10 @@ PR_BEGIN_EXTERN_C
 /* Typedefs */
 typedef struct PRDir            PRDir;
 typedef struct PRDirEntry       PRDirEntry;
+#ifdef MOZ_UNICODE
+typedef struct PRDirUCS2        PRDirUCS2;
+typedef struct PRDirEntryUCS2   PRDirEntryUCS2;
+#endif /* MOZ_UNICODE */
 typedef struct PRFileDesc       PRFileDesc;
 typedef struct PRFileInfo       PRFileInfo;
 typedef struct PRFileInfo64     PRFileInfo64;
@@ -650,6 +654,14 @@ NSPR_API(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode);
 NSPR_API(PRFileDesc*) PR_OpenFile(
     const char *name, PRIntn flags, PRIntn mode);
 
+#ifdef MOZ_UNICODE
+/*
+ * EXPERIMENTAL: This function may be removed in a future release.
+ */
+NSPR_API(PRFileDesc*) PR_OpenFileUCS2(
+    const PRUnichar *name, PRIntn flags, PRIntn mode);
+#endif /* MOZ_UNICODE */
+
 /*
  **************************************************************************
  * FUNCTION: PR_Close
@@ -984,6 +996,13 @@ struct PRDirEntry {
     const char *name;        /* name of entry, relative to directory name */
 };
 
+#ifdef MOZ_UNICODE
+struct PRDirEntryUCS2 {
+    const PRUnichar *name;   /* name of entry in UCS2, relative to
+                              * directory name */
+};
+#endif /* MOZ_UNICODE */
+
 #if !defined(NO_NSPR_10_SUPPORT)
 #define PR_DirName(dirEntry)	(dirEntry->name)
 #endif
@@ -1009,6 +1028,13 @@ struct PRDirEntry {
  */
 
 NSPR_API(PRDir*) PR_OpenDir(const char *name);
+
+#ifdef MOZ_UNICODE
+/*
+ * EXPERIMENTAL: This function may be removed in a future release.
+ */
+NSPR_API(PRDirUCS2*) PR_OpenDirUCS2(const PRUnichar *name);
+#endif /* MOZ_UNICODE */
 
 /*
  *************************************************************************
@@ -1043,6 +1069,13 @@ typedef enum PRDirFlags {
 
 NSPR_API(PRDirEntry*) PR_ReadDir(PRDir *dir, PRDirFlags flags);
 
+#ifdef MOZ_UNICODE
+/*
+ * EXPERIMENTAL: This function may be removed in a future release.
+ */
+NSPR_API(PRDirEntryUCS2*) PR_ReadDirUCS2(PRDirUCS2 *dir, PRDirFlags flags);
+#endif /* MOZ_UNICODE */
+
 /*
  *************************************************************************
  * FUNCTION: PR_CloseDir
@@ -1061,6 +1094,13 @@ NSPR_API(PRDirEntry*) PR_ReadDir(PRDir *dir, PRDirFlags flags);
  */
 
 NSPR_API(PRStatus) PR_CloseDir(PRDir *dir);
+
+#ifdef MOZ_UNICODE
+/*
+ * EXPERIMENTAL: This function may be removed in a future release.
+ */
+NSPR_API(PRStatus) PR_CloseDirUCS2(PRDirUCS2 *dir);
+#endif /* MOZ_UNICODE */
 
 /*
  *************************************************************************

@@ -112,6 +112,16 @@ struct _MDDir {
     PRUint32         magic;          /* for debugging */
 };
 
+#ifdef MOZ_UNICODE
+struct _MDDirUCS2 {
+    HANDLE           d_hdl;
+    WIN32_FIND_DATAW d_entry;
+    PRBool           firstEntry;     /* Is this the entry returned
+                                      * by FindFirstFileW()? */
+    PRUint32         magic;          /* for debugging */
+};
+#endif /* MOZ_UNICODE */
+
 struct _MDCVar {
     PRUint32 magic;
     struct PRThread *waitHead, *waitTail;  /* the wait queue: a doubly-
@@ -212,6 +222,14 @@ extern PRInt32 _MD_CloseFile(PRInt32 osfd);
 #define _MD_LOCKFILE                  _PR_MD_LOCKFILE
 #define _MD_TLOCKFILE                 _PR_MD_TLOCKFILE
 #define _MD_UNLOCKFILE                _PR_MD_UNLOCKFILE
+
+#ifdef MOZ_UNICODE
+/* --- UCS2 IO stuff --- */
+#define _MD_OPEN_FILE_UCS2            _PR_MD_OPEN_FILE_UCS2 
+#define _MD_OPEN_DIR_UCS2             _PR_MD_OPEN_DIR_UCS2 
+#define _MD_READ_DIR_UCS2             _PR_MD_READ_DIR_UCS2 
+#define _MD_CLOSE_DIR_UCS2            _PR_MD_CLOSE_DIR_UCS2
+#endif /* MOZ_UNICODE */
 
 /* --- Socket IO stuff --- */
 #define _MD_EACCES                WSAEACCES

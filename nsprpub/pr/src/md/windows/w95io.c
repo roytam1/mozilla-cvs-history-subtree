@@ -41,6 +41,9 @@
 #include "primpl.h"
 #include <direct.h>
 #include <mbstring.h>
+#ifdef MOZ_UNICODE
+#include <tchar.h>
+#endif /* MOZ_UNICODE */
 
 
 struct _MDLock               _pr_ioq_lock;
@@ -1088,3 +1091,168 @@ _PR_MD_PIPEAVAILABLE(PRFileDesc *fd)
 		PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return -1;
 }
+
+#ifdef MOZ_UNICODE
+/* ================ UCS2 Interfaces ================================ */
+void FlipSlashesW(PRUnichar *cp, int len)
+{
+    while (--len >= 0) {
+        if (cp[0] == L'/') {
+            cp[0] = L'\\';
+        }
+        cp++;
+    }
+} /* end FlipSlashesW() */
+
+PRInt32
+_PR_MD_OPEN_FILE_UCS2(const PRUnichar *name, PRIntn osflags, int mode)
+{
+    HANDLE file;
+    PRInt32 access = 0;
+    PRInt32 flags = 0;
+    PRInt32 flag6 = 0;
+    SECURITY_ATTRIBUTES sa;
+    LPSECURITY_ATTRIBUTES lpSA = NULL;
+    PSECURITY_DESCRIPTOR pSD = NULL;
+    PACL pACL = NULL;
+ 
+    if (osflags & PR_CREATE_FILE) {
+        if (_PR_NT_MakeSecurityDescriptorACL(mode, fileAccessTable,
+                &pSD, &pACL) == PR_SUCCESS) {
+            sa.nLength = sizeof(sa);
+            sa.lpSecurityDescriptor = pSD;
+            sa.bInheritHandle = FALSE;
+            lpSA = &sa;
+        }
+    }
+
+    if (osflags & PR_SYNC) flag6 = FILE_FLAG_WRITE_THROUGH;
+
+    if (osflags & PR_RDONLY || osflags & PR_RDWR)
+        access |= GENERIC_READ;
+    if (osflags & PR_WRONLY || osflags & PR_RDWR)
+        access |= GENERIC_WRITE;
+ 
+    if ( osflags & PR_CREATE_FILE && osflags & PR_EXCL )
+        flags = CREATE_NEW;
+    else if (osflags & PR_CREATE_FILE) {
+        if (osflags & PR_TRUNCATE)
+            flags = CREATE_ALWAYS;
+        else
+            flags = OPEN_ALWAYS;
+    } else {
+        if (osflags & PR_TRUNCATE)
+            flags = TRUNCATE_EXISTING;
+        else
+            flags = OPEN_EXISTING;
+    }
+
+    file = CreateFileW(name,
+                       access,
+                       FILE_SHARE_READ|FILE_SHARE_WRITE,
+                       lpSA,
+                       flags,
+                       flag6,
+                       NULL);
+    if (lpSA != NULL) {
+        _PR_NT_FreeSecurityDescriptorACL(pSD, pACL);
+    }
+    if (file == INVALID_HANDLE_VALUE) {
+        _PR_MD_MAP_OPEN_ERROR(GetLastError());
+        return -1;
+    }
+ 
+    return (PRInt32)file;
+}
+ 
+PRStatus
+_PR_MD_OPEN_DIR_UCS2(_MDDirUCS2 *d, const PRUnichar *name)
+{
+    PRUnichar filename[ MAX_PATH ];
+    int len;
+
+    len = wcslen(name);
+    /* Need 5 bytes for \*.* and the trailing null byte. */
+    if (len + 5 > MAX_PATH) {
+        PR_SetError(PR_NAME_TOO_LONG_ERROR, 0);
+        return PR_FAILURE;
+    }
+    wcscpy(filename, name);
+
+    /*
+     * If 'name' ends in a slash or backslash, do not append
+     * another backslash.
+     */
+    if (filename[len - 1] == L'/' || filename[len - 1] == L'\\') {
+        len--;
+    }
+    wcscpy(&filename[len], L"\\*.*");
+    FlipSlashesW( filename, wcslen(filename) );
+
+    d->d_hdl = FindFirstFileW( filename, &(d->d_entry) );
+    if ( d->d_hdl == INVALID_HANDLE_VALUE ) {
+        _PR_MD_MAP_OPENDIR_ERROR(GetLastError());
+        return PR_FAILURE;
+    }
+    d->firstEntry = PR_TRUE;
+    d->magic = _MD_MAGIC_DIR;
+    return PR_SUCCESS;
+}
+
+PRUnichar *
+_PR_MD_READ_DIR_UCS2(_MDDirUCS2 *d, PRIntn flags)
+{
+    PRInt32 err;
+    BOOL rv;
+    PRUnichar *fileName;
+
+    if ( d ) {
+        while (1) {
+            if (d->firstEntry) {
+                d->firstEntry = PR_FALSE;
+                rv = 1;
+            } else {
+                rv = FindNextFileW(d->d_hdl, &(d->d_entry));
+            }
+            if (rv == 0) {
+                break;
+            }
+            fileName = GetFileFromDIR(d);
+            if ( (flags & PR_SKIP_DOT) &&
+                 (fileName[0] == L'.') && (fileName[1] == L'\0'))
+                continue;
+            if ( (flags & PR_SKIP_DOT_DOT) &&
+                 (fileName[0] == L'.') && (fileName[1] == L'.') &&
+                 (fileName[2] == L'\0'))
+                continue;
+            if ( (flags & PR_SKIP_HIDDEN) && FileIsHidden(d))
+                continue;
+            return fileName;
+        }
+        err = GetLastError();
+        PR_ASSERT(NO_ERROR != err);
+        _PR_MD_MAP_READDIR_ERROR(err);
+        return NULL;
+    }
+    PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
+    return NULL;
+}
+ 
+PRStatus
+_PR_MD_CLOSE_DIR_UCS2(_MDDirUCS2 *d)
+{
+    if ( d ) {
+        if (FindClose(d->d_hdl)) {
+            d->magic = (PRUint32)-1;
+            return PR_SUCCESS;
+        } else {
+            _PR_MD_MAP_CLOSEDIR_ERROR(GetLastError());
+            return PR_FAILURE;
+        }
+    }
+    PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
+    return PR_FAILURE;
+}
+
+/* ================ end of UCS2 Interfaces ================================ */
+#endif /* MOZ_UNICODE */

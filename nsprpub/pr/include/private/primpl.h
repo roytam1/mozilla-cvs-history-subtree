@@ -144,6 +144,9 @@ typedef struct _MDThread _MDThread;
 typedef struct _MDThreadStack _MDThreadStack;
 typedef struct _MDSemaphore _MDSemaphore;
 typedef struct _MDDir _MDDir;
+#ifdef MOZ_UNICODE
+typedef struct _MDDirUCS2 _MDDirUCS2;
+#endif /* MOZ_UNICODE */
 typedef struct _MDFileDesc _MDFileDesc;
 typedef struct _MDProcess _MDProcess;
 typedef struct _MDFileMap _MDFileMap;
@@ -1144,6 +1147,21 @@ extern PRInt32 _PR_MD_MAKE_DIR(const char *name, PRIntn mode);
 extern PRInt32 _PR_MD_RMDIR(const char *name);
 #define _PR_MD_RMDIR _MD_RMDIR
 
+#ifdef MOZ_UNICODE
+/* UCS2 File I/O related */
+extern PRStatus _PR_MD_OPEN_DIR_UCS2(_MDDirUCS2 *md, const PRUnichar *name);
+#define    _PR_MD_OPEN_DIR_UCS2 _MD_OPEN_DIR_UCS2
+
+extern PRInt32 _PR_MD_OPEN_FILE_UCS2(const PRUnichar *name, PRIntn osflags, PRIntn mode);
+#define    _PR_MD_OPEN_FILE_UCS2 _MD_OPEN_FILE_UCS2
+
+extern PRUnichar * _PR_MD_READ_DIR_UCS2(_MDDirUCS2 *md, PRIntn flags);
+#define    _PR_MD_READ_DIR_UCS2 _MD_READ_DIR_UCS2
+
+extern PRInt32 _PR_MD_CLOSE_DIR_UCS2(_MDDirUCS2 *md);
+#define    _PR_MD_CLOSE_DIR_UCS2 _MD_CLOSE_DIR_UCS2
+#endif /* MOZ_UNICODE */
+
 /* Socket I/O related */
 extern void _PR_MD_INIT_IO(void);
 #define    _PR_MD_INIT_IO _MD_INIT_IO
@@ -1735,6 +1753,13 @@ struct PRDir {
     PRDirEntry d;
     _MDDir md;
 };
+
+#ifdef MOZ_UNICODE
+struct PRDirUCS2 { 
+    PRDirEntry d; 
+    _MDDirUCS2 md; 
+}; 
+#endif /* MOZ_UNICODE */
 
 extern void _PR_InitSegs(void);
 extern void _PR_InitStacks(void);
