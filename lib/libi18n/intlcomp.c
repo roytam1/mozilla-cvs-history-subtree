@@ -376,7 +376,7 @@ PUBLIC XP_Bool	INTL_StrEndWith(
 }
 
 
-#ifndef MOZ_MAIL_NEWS
+#ifdef MOZ_MAIL_NEWS
 
 
 #if defined(XP_WIN32)
@@ -455,7 +455,8 @@ static char *FEINTL_CreateCollationKeyUsingOS(const char *in_string, int16 wincs
 	{
 		/* Convert to MacRoman. */
 		out_string = (char *) INTL_ConvertLineWithoutAutoDetect (wincsid, CS_MAC_ROMAN, (unsigned char *) temp_string, in_string_len);
-		if (out_string != temp_string)
+		/* Set the converted string if conversion was applied and the input string was not altered. */
+		if (out_string != NULL && out_string != temp_string)
 		{
 			XP_FREE(temp_string);
 			temp_string = out_string;
