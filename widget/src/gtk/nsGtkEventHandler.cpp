@@ -335,6 +335,17 @@ void handle_size_allocate(GtkWidget *w, GtkAllocation *alloc, gpointer p)
   delete event.windowSize;
 }
 
+void
+handle_xlib_expose_event(GdkSuperWin *superwin, XEvent *event, gpointer p)
+{
+  nsWindow *window = (nsWindow *)p;
+  switch(event->xany.type) {
+  case Expose:
+    window->HandleXlibExposeEvent(event);
+    break;
+  }
+}
+
 gint handle_expose_event(GtkWidget *w, GdkEventExpose *event, gpointer p)
 {
   if (event->type == GDK_NO_EXPOSE)
