@@ -45,6 +45,19 @@ class nsIRDFContainerUtils;
 class nsIRDFResource;
 class nsIRDFService;
 
+
+// RDF Resource Wrapper to make the Outline View happy
+@interface RDFOutlineViewItem : NSObject
+{
+    nsIRDFResource* mResource;
+}
+
+- (nsIRDFResource*) resource;
+- (void) setResource: (nsIRDFResource*) aResource;
+
+@end
+
+
 @interface RDFOutlineViewDataSource : NSObject {
     nsIRDFDataSource* 		mDataSource;
     nsIRDFContainer* 		mContainer;
@@ -72,6 +85,10 @@ class nsIRDFService;
 - (id)outlineView:(NSOutlineView *)outlineView objectValueForTableColumn:(NSTableColumn *)tableColumn byItem:(id)item;
 - (void)outlineView:(NSOutlineView *)outlineView setObjectValue:(id)object forTableColumn:(NSTableColumn *)tableColumn byItem:(id)item;
 
+// tooltip support from the ExtendedOutlineView. Override to provide a tooltip
+// other than the Name property for each item in the view.
+- (NSString *)outlineView:(NSOutlineView *)outlineView tooltipStringForItem:(id)inItem;
+
 - (void)reloadDataForItem:(id)item reloadChildren: (BOOL)aReloadChildren;
 
 // Implementation Methods
@@ -81,16 +98,8 @@ class nsIRDFService;
 // return a string (add an icon in an attributed string, for example).
 -(id) createCellContents:(const nsAString&)inValue withColumn:(NSString*)inColumn byItem:(id) inItem;
 
-@end
-
-// RDF Resource Wrapper to make the Outline View happy
-@interface RDFOutlineViewItem : NSObject
-{
-    nsIRDFResource* mResource;
-}
-
-- (nsIRDFResource*) resource;
-- (void) setResource: (nsIRDFResource*) aResource;
+-(void) getPropertyString:(NSString*)inPropertyURI forItem:(RDFOutlineViewItem*)inItem
+            result:(PRUnichar**)outResult;
 
 @end
 

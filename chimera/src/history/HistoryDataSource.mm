@@ -147,6 +147,11 @@ HistoryDataSourceObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
     }
     [mOutlineView reloadData];
   }
+  else {
+    // everything is loaded, but we have to refresh our tree otherwise
+    // changes that took place while the drawer was closed won't be noticed
+    [mOutlineView reloadData];
+  }
   
   NS_ASSERTION(mDataSource, "Uh oh, History RDF Data source not created");
 }
@@ -255,6 +260,28 @@ HistoryDataSourceObserver::OnChange(nsIRDFDataSource*, nsIRDFResource*,
     // get uri
     NSString* url = [NSString stringWith_nsAString: literalValue];
     [[mBrowserWindowController getBrowserWrapper] loadURI: url referrer: nil flags: NSLoadFlagsNone activate:YES];
+}
+
+
+//
+// outlineView:tooltipForString
+//
+// Only show a tooltip if we're not a folder. For urls, use title\nurl as the format.
+// We can re-use the base-class impl to get the title of the page and then just add on
+// to that.
+//
+- (NSString *)outlineView:(NSOutlineView *)outlineView tooltipStringForItem:(id)inItem
+{
+  if ( ! [mOutlineView isExpandable: inItem] ) {
+    // use baseclass to get title of page
+    NSString* pageTitle = [super outlineView:outlineView tooltipStringForItem:inItem];
+  
+    // append url
+    nsXPIDLString literalValue;
+    [self getPropertyString:@"http://home.netscape.com/NC-rdf#URL" forItem:inItem result:getter_Copies(literalValue)];
+    return [NSString stringWithFormat:@"%@\n%@", pageTitle, [NSString stringWith_nsAString:literalValue]];
+  }
+  return nil;
 }
 
 @end

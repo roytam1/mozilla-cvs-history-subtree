@@ -54,6 +54,8 @@ class HistoryDataSourceObserver;
 // overridden to create a attributed string with icon
 -(id) createCellContents:(const nsAString&)inValue withColumn:(NSString*)inColumn byItem:(id) inItem;
 
+- (NSString *)outlineView:(NSOutlineView *)outlineView tooltipStringForItem:(id)inItem;
+
 -(void) enableObserver;
 -(void) disableObserver;
 

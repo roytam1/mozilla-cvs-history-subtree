@@ -270,41 +270,42 @@
 - (id) outlineView: (NSOutlineView*) aOutlineView objectValueForTableColumn: (NSTableColumn*) aTableColumn
                                                   byItem: (id) aItem
 {
-    if (!mDataSource || !aItem)
-        return nil;
-    
-    // The table column's identifier is the RDF Resource URI of the property being displayed in
-    // that column, e.g. "http://home.netscape.com/NC-rdf#Name"
-    NSString* columnPropertyURI = [aTableColumn identifier];
-    
-    nsCOMPtr<nsIRDFResource> propertyResource;
-    mRDFService->GetResource([columnPropertyURI UTF8String], getter_AddRefs(propertyResource));
-            
-    nsCOMPtr<nsIRDFResource> resource = dont_AddRef([aItem resource]);
-            
-    nsCOMPtr<nsIRDFNode> valueNode;
-    mDataSource->GetTarget(resource, propertyResource, PR_TRUE, getter_AddRefs(valueNode));
-    if (!valueNode) {
-#if DEBUG
-        NSLog(@"ValueNode is null in RDF objectValueForTableColumn");
-#endif
-        return nil;
-    }
-    
-    nsCOMPtr<nsIRDFLiteral> valueLiteral(do_QueryInterface(valueNode));
-    if (!valueLiteral)
-        return nil;
-    
-    nsXPIDLString literalValue;
-    valueLiteral->GetValue(getter_Copies(literalValue));
+  if (!mDataSource || !aItem)
+      return nil;
+  
+  // The table column's identifier is the RDF Resource URI of the property being displayed in
+  // that column, e.g. "http://home.netscape.com/NC-rdf#Name"
+  NSString* columnPropertyURI = [aTableColumn identifier];    
+  nsXPIDLString literalValue;
+  [self getPropertyString:columnPropertyURI forItem:aItem result:getter_Copies(literalValue)];
 
-    return [self createCellContents:literalValue withColumn:columnPropertyURI byItem:aItem];
+  return [self createCellContents:literalValue withColumn:columnPropertyURI byItem:aItem];
 }
 
 
+//
+// createCellContents:withColumn:byItem
+//
+// Constructs a NSString from the given string data for this item in the given column.
+// This should be overridden to do more fancy things, such as add an icon, etc.
+//
 -(id) createCellContents:(const nsAString&)inValue withColumn:(NSString*)inColumn byItem:(id) inItem
 {
   return [NSString stringWith_nsAString: inValue];
+}
+
+
+//
+// outlineView:tooltipForString
+//
+// returns the value of the Name property as the tooltip for the given item. Override to do 
+// anything more complicated
+//
+- (NSString *)outlineView:(NSOutlineView *)outlineView tooltipStringForItem:(id)inItem
+{
+  nsXPIDLString literalValue;
+  [self getPropertyString:@"http://home.netscape.com/NC-rdf#Name" forItem:inItem result:getter_Copies(literalValue)];
+  return [NSString stringWith_nsAString:literalValue];
 }
 
 
@@ -339,6 +340,35 @@
   }
   
   return item;
+}
+
+
+-(void) getPropertyString:(NSString*)inPropertyURI forItem:(RDFOutlineViewItem*)inItem
+            result:(PRUnichar**)outResult
+{
+  if ( !outResult )
+    return;
+  *outResult = nil;
+  
+  nsCOMPtr<nsIRDFResource> propertyResource;
+  mRDFService->GetResource([inPropertyURI UTF8String], getter_AddRefs(propertyResource));
+          
+  nsCOMPtr<nsIRDFResource> resource = dont_AddRef([inItem resource]);
+          
+  nsCOMPtr<nsIRDFNode> valueNode;
+  mDataSource->GetTarget(resource, propertyResource, PR_TRUE, getter_AddRefs(valueNode));
+  if (!valueNode) {
+#if DEBUG
+      NSLog(@"ValueNode is null in RDF objectValueForTableColumn");
+#endif
+      return;
+  }
+  
+  nsCOMPtr<nsIRDFLiteral> valueLiteral(do_QueryInterface(valueNode));
+  if (!valueLiteral)
+      return;
+
+  valueLiteral->GetValue(outResult);
 }
 
 
