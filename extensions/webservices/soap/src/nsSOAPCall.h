@@ -35,8 +35,7 @@
 #include "nsCOMPtr.h"
 
 class nsSOAPCall : public nsISOAPCall,
-                   public nsISecurityCheckedComponent,
-                   public nsISOAPTransportListener
+                   public nsISecurityCheckedComponent
 {
 public:
   nsSOAPCall();
@@ -45,30 +44,16 @@ public:
   NS_DECL_ISUPPORTS
 
   // nsISOAPCall
+  NS_FORWARD_NSISOAPMESSAGE(nsISOAPMessage::)
+
+  // nsISOAPCall
   NS_DECL_NSISOAPCALL
 
   // nsISecurityCheckedComponent
   NS_DECL_NSISECURITYCHECKEDCOMPONENT
 
-  // nsISOAPTransportListener
-  NS_DECL_NSISOAPTRANSPORTLISTENER
-
 protected:
 
-  nsresult EnsureDocumentAllocated();
-  PRBool HasBodyEntry();
-  nsresult CreateBodyEntry(PRBool aNewParameters);
-  nsresult CreateParameterElements();
-  nsresult ClearParameterElements();
-  nsresult GetTransport(nsISOAPTransport** aTransport);
-  nsresult GetScriptListener(nsISupports* aObject,
-                             nsISOAPResponseListener** aListener);
-
-  nsCOMPtr<nsIDOMDocument> mEnvelopeDocument;
-  nsCOMPtr<nsIDOMElement> mEnvelopeElement;
-  nsCOMPtr<nsIDOMElement> mHeaderElement;
-  nsCOMPtr<nsIDOMElement> mBodyElement;
-  nsCString mDestinationURI;
   nsCString mActionURI;
   nsCString mTargetObjectURI;
   nsString mMethodName;

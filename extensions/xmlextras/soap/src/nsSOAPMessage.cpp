@@ -132,6 +132,19 @@ NS_IMETHODIMP nsSOAPMessage::GetBody(nsIDOMElement * *aBody)
   return GetSOAPElementOf(env, "Body", aBody);
 }
 
+/* attribute DOMString actionURI; */
+NS_IMETHODIMP nsSOAPMessage::GetActionURI(nsAWritableString & aActionURI)
+{
+  NS_ENSURE_ARG_POINTER(&aActionURI);
+  aActionURI.Assign(mActionURI);
+  return NS_OK;
+}
+NS_IMETHODIMP nsSOAPMessage::SetActionURI(const nsAReadableString & aActionURI)
+{
+  mActionURI.Assign(aActionURI);
+  return NS_OK;
+}
+
 /* attribute DOMString encodingStyleURI; */
 NS_IMETHODIMP nsSOAPMessage::GetEncodingStyleURI(nsAWritableString & aEncodingStyleURI)
 {

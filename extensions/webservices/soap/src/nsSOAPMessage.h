@@ -53,6 +53,7 @@ protected:
   nsCOMPtr<nsIDOMDocument> mMessage;
   nsCOMPtr<nsISupportsArray> mProtocol;
   nsCOMPtr<nsISOAPTypeRegistry> mTypes;
+  nsString mActionURI;
   nsString mEncodingStyleURI;
   nsString mTargetObjectURI;
   nsString mMethodName;
