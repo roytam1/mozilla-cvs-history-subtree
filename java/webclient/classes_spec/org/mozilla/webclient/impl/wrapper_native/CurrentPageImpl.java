@@ -94,9 +94,12 @@ public void copyCurrentSelectionToSystemClipboard()
     getWrapperFactory().verifyInitialized();
     Assert.assert_it(-1 != getNativeBrowserControl());
 
-    synchronized(getBrowserControl()) {
-        nativeCopyCurrentSelectionToSystemClipboard(getNativeBrowserControl());
-    }
+    NativeEventThread.instance.pushBlockingWCRunnable(new WCRunnable() {
+	    public Object run() {
+		nativeCopyCurrentSelectionToSystemClipboard(CurrentPageImpl.this.getNativeBrowserControl());
+		return null;
+	    }
+	});
 }
 
 public Selection getSelection() {
