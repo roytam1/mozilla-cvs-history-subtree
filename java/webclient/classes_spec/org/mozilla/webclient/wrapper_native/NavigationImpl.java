@@ -27,14 +27,13 @@ import org.mozilla.util.Log;
 import org.mozilla.util.ParameterCheck;
 
 import org.mozilla.webclient.BrowserControl;
-import org.mozilla.webclient.ImplObject;
 import org.mozilla.webclient.Navigation;
 import org.mozilla.webclient.WindowControl;
 import org.mozilla.webclient.WrapperFactory;
 
 import java.awt.Rectangle;
 
-public class NavigationImpl extends ImplObject implements Navigation
+public class NavigationImpl extends ImplObjectNative implements Navigation
 {
 //
 // Protected Constants
@@ -52,15 +51,6 @@ public class NavigationImpl extends ImplObject implements Navigation
 
 // Relationship Instance Variables
 
-/** 
-      
- * a handle to the actual mozilla webShell, obtained from WindowControl
-   
- */
-  
-private int nativeWebShell = -1;
-
-
 //
 // Constructors and Initializers    
 //
@@ -69,16 +59,6 @@ public NavigationImpl(WrapperFactory yourFactory,
 		      BrowserControl yourBrowserControl)
 {
     super(yourFactory, yourBrowserControl);
-
-    // save the native webshell ptr
-    try {
-      WindowControl windowControl = (WindowControl)
-	myBrowserControl.queryInterface(BrowserControl.WINDOW_CONTROL_NAME);
-      nativeWebShell = windowControl.getNativeWebShell();
-    }
-    catch (Exception e) {
-      System.out.println(e.getMessage());
-    }
 }
 
 //

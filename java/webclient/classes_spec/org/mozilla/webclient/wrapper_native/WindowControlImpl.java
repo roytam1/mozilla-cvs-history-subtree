@@ -27,13 +27,12 @@ import org.mozilla.util.Log;
 import org.mozilla.util.ParameterCheck;
 
 import org.mozilla.webclient.BrowserControl;
-import org.mozilla.webclient.ImplObject;
 import org.mozilla.webclient.WindowControl;
 import org.mozilla.webclient.WrapperFactory;
 
 import java.awt.Rectangle;
 
-public class WindowControlImpl extends ImplObject implements WindowControl
+public class WindowControlImpl extends ImplObjectNative implements WindowControl
 {
 //
 // Protected Constants
@@ -53,14 +52,6 @@ public class WindowControlImpl extends ImplObject implements WindowControl
 
 protected NativeEventThread eventThread = null;
 
-/** 
-      
- * a handle to the actual mozilla webShell
-   
- */
-  
-private int nativeWebShell = -1;
-
 //
 // Constructors and Initializers    
 //
@@ -68,7 +59,7 @@ private int nativeWebShell = -1;
 public WindowControlImpl(WrapperFactory yourFactory, 
 			 BrowserControl yourBrowserControl)
 {
-    super(yourFactory, yourBrowserControl);
+    super(yourFactory, yourBrowserControl, false);
 }
 
 //
@@ -108,7 +99,7 @@ public void setBounds(Rectangle newBounds)
 public void createWindow(int nativeWindow, Rectangle bounds)
 {
     myFactory.throwExceptionIfNotInitialized();
-    
+
     synchronized(myBrowserControl) {
         synchronized(this) {
             nativeWebShell = nativeCreateInitContext(nativeWindow, bounds.x, 

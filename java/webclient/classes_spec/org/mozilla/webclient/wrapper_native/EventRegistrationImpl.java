@@ -27,7 +27,6 @@ import org.mozilla.util.Log;
 import org.mozilla.util.ParameterCheck;
 
 import org.mozilla.webclient.BrowserControl;
-import org.mozilla.webclient.ImplObject;
 import org.mozilla.webclient.EventRegistration;
 import org.mozilla.webclient.WindowControl;
 import org.mozilla.webclient.WrapperFactory;
@@ -36,7 +35,7 @@ import org.mozilla.webclient.DocumentLoadListener;
 import org.mozilla.webclient.WebclientEvent;
 import org.mozilla.webclient.WebclientEventListener;
 
-public class EventRegistrationImpl extends ImplObject implements EventRegistration
+public class EventRegistrationImpl extends ImplObjectNative implements EventRegistration
 {
 //
 // Constants
@@ -53,15 +52,6 @@ public class EventRegistrationImpl extends ImplObject implements EventRegistrati
 // Attribute Instance Variables
 
 // Relationship Instance Variables
-
-/** 
-      
- * a handle to the actual mozilla webShell, obtained from WindowControl
-   
- */
-  
-private int nativeWebShell = -1;
-
 
 /**
 
@@ -80,13 +70,11 @@ public EventRegistrationImpl(WrapperFactory yourFactory,
 {
     super(yourFactory, yourBrowserControl);
 
-    // save the native webshell ptr
+        // pull out the NativeEventThread from the WindowControl
     try {
         WindowControl windowControl = (WindowControl)
             myBrowserControl.queryInterface(BrowserControl.WINDOW_CONTROL_NAME);
-        nativeWebShell = windowControl.getNativeWebShell();
         
-        // pull out the NativeEventThread from the WindowControl
         if (windowControl instanceof WindowControlImpl) {
             nativeEventThread = 
                 ((WindowControlImpl)windowControl).getNativeEventThread();

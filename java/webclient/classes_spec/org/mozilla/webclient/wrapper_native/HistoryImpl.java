@@ -29,11 +29,10 @@ import org.mozilla.util.ParameterCheck;
 import org.mozilla.webclient.BrowserControl;
 import org.mozilla.webclient.History;
 import org.mozilla.webclient.HistoryEntry;
-import org.mozilla.webclient.ImplObject;
 import org.mozilla.webclient.WindowControl;
 import org.mozilla.webclient.WrapperFactory;
 
-public class HistoryImpl extends ImplObject implements History
+public class HistoryImpl extends ImplObjectNative implements History
 {
 //
 // Protected Constants
@@ -51,14 +50,6 @@ public class HistoryImpl extends ImplObject implements History
 
 // Relationship Instance Variables
 
-/** 
-      
- * a handle to the actual mozilla webShell, obtained from WindowControl
-   
- */
-  
-private int nativeWebShell = -1;
-
 //
 // Constructors and Initializers    
 //
@@ -67,16 +58,6 @@ public HistoryImpl(WrapperFactory yourFactory,
                        BrowserControl yourBrowserControl)
 {
     super(yourFactory, yourBrowserControl);
-
-    // save the native webshell ptr
-    try {
-        WindowControl windowControl = (WindowControl)
-            myBrowserControl.queryInterface(BrowserControl.WINDOW_CONTROL_NAME);
-        nativeWebShell = windowControl.getNativeWebShell();
-    }
-    catch (Exception e) {
-        System.out.println(e.getMessage());
-    }
 }
 
 //
