@@ -40,6 +40,7 @@
 #include "nsIFormSubmission.h"
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMNSHTMLFormElement.h"
+#include "nsIDOMWWGHTMLFormElement.h"
 #include "nsIHTMLDocument.h"
 #include "nsIDOMNSHTMLFormControlList.h"
 #include "nsIDOMEventReceiver.h"
@@ -95,6 +96,7 @@ class nsHTMLFormElement : public nsGenericHTMLElement,
                           public nsSupportsWeakReference,
                           public nsIDOMHTMLFormElement,
                           public nsIDOMNSHTMLFormElement,
+                          public nsIDOMWWGHTMLFormElement,
                           public nsIWebProgressListener,
                           public nsIForm,
                           public nsIRadioGroupContainer
@@ -122,6 +124,9 @@ public:
 
   // nsIDOMNSHTMLFormElement
   NS_DECL_NSIDOMNSHTMLFORMELEMENT  
+
+  // nsIDOMWWGHTMLFormElement
+  NS_DECL_NSIDOMWWGHTMLFORMELEMENT  
 
   // nsIWebProgressListener
   NS_DECL_NSIWEBPROGRESSLISTENER
@@ -328,6 +333,7 @@ public:
   nsIDOMHTMLFormElement* mForm;  // WEAK - the form owns me
 
   nsAutoVoidArray mElements;  // Holds WEAK references - bug 36639
+  nsAutoVoidArray mTemplateElements;  // Holds WEAK references - bug 36639
 
   // This array holds on to all form controls that are not contained
   // in mElements (form.elements in JS, see ShouldBeInFormControl()).
@@ -502,6 +508,14 @@ nsHTMLFormElement::GetElements(nsIDOMHTMLCollection** aElements)
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsHTMLFormElement::GetTemplateElements(nsIDOMHTMLCollection** aElements)
+{
+  *aElements = mControls;
+  NS_ADDREF(mControls);
+  return NS_OK;
+}
+
 nsresult
 nsHTMLFormElement::SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                            nsIAtom* aPrefix, const nsAString& aValue,
@@ -527,6 +541,9 @@ NS_IMPL_STRING_ATTR(nsHTMLFormElement, Action, action)
 NS_IMPL_STRING_ATTR(nsHTMLFormElement, Enctype, enctype)
 NS_IMPL_STRING_ATTR(nsHTMLFormElement, Method, method)
 NS_IMPL_STRING_ATTR(nsHTMLFormElement, Name, name)
+NS_IMPL_STRING_ATTR(nsHTMLFormElement, Accept, accept)
+NS_IMPL_STRING_ATTR(nsHTMLFormElement, Replace, replace)
+NS_IMPL_STRING_ATTR(nsHTMLFormElement, Data, data)
 
 NS_IMETHODIMP
 nsHTMLFormElement::GetTarget(nsAString& aValue)
@@ -2034,4 +2051,29 @@ nsFormControlEnumerator::GetNext(nsISupports** aNext)
 
   NS_IF_ADDREF(*aNext);
   return NS_OK;
+}
+
+// nsIDOMWWGHTMLFormElement
+/* boolean validate (); */
+NS_IMETHODIMP nsHTMLFormElement::Validate(PRBool *_retval)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void resetFromData (in nsIDOMDocument data); */
+NS_IMETHODIMP nsHTMLFormElement::ResetFromData(nsIDOMDocument *data)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void dispatchFormInput (); */
+NS_IMETHODIMP nsHTMLFormElement::DispatchFormInput()
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void dispatchFormChange (); */
+NS_IMETHODIMP nsHTMLFormElement::DispatchFormChange()
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }

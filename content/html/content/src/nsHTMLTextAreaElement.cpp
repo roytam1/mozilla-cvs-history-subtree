@@ -37,6 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 #include "nsIDOMHTMLTextAreaElement.h"
 #include "nsIDOMNSHTMLTextAreaElement.h"
+#include "nsIDOMWWGHTMLTextAreaElement.h"
 #include "nsITextControlElement.h"
 #include "nsIControllers.h"
 #include "nsContentCID.h"
@@ -71,9 +72,10 @@
 static NS_DEFINE_CID(kXULControllersCID,  NS_XULCONTROLLERS_CID);
 
 
-class nsHTMLTextAreaElement : public nsGenericHTMLFormElement,
+class nsHTMLTextAreaElement : public nsGenericWWGFormControl,
                               public nsIDOMHTMLTextAreaElement,
                               public nsIDOMNSHTMLTextAreaElement,
+                              public nsIDOMWWGHTMLTextAreaElement,
                               public nsITextControlElement
 {
 public:
@@ -97,6 +99,9 @@ public:
 
   // nsIDOMNSHTMLTextAreaElement
   NS_DECL_NSIDOMNSHTMLTEXTAREAELEMENT
+
+  // nsIDOMWWGHTMLTextAreaElement
+  NS_DECL_NSIDOMWWGHTMLTEXTAREAELEMENT
 
   // nsIFormControl
   NS_IMETHOD_(PRInt32) GetType() { return NS_FORM_TEXTAREA; }
@@ -168,7 +173,7 @@ NS_IMPL_NS_NEW_HTML_ELEMENT_CHECK_PARSER(TextArea)
 
 nsHTMLTextAreaElement::nsHTMLTextAreaElement(nsINodeInfo *aNodeInfo,
                                              PRBool aFromParser)
-  : nsGenericHTMLFormElement(aNodeInfo),
+  : nsGenericWWGFormControl(aNodeInfo),
     mValue(nsnull),
     mValueChanged(PR_FALSE),
     mHandlingSelect(PR_FALSE),
@@ -190,9 +195,10 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLTextAreaElement, nsGenericElement)
 
 // QueryInterface implementation for nsHTMLTextAreaElement
 NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLTextAreaElement,
-                                    nsGenericHTMLFormElement)
+                                    nsGenericWWGFormControl)
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLTextAreaElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLTextAreaElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMWWGHTMLTextAreaElement)
   NS_INTERFACE_MAP_ENTRY(nsITextControlElement)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLTextAreaElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
@@ -848,4 +854,90 @@ nsHTMLTextAreaElement::RestoreState(nsPresState* aState)
   SetValue(value);
 
   return PR_FALSE;
+}
+
+/* attribute DOMString wrap; */
+NS_IMETHODIMP nsHTMLTextAreaElement::GetWrap(nsAString & aWrap)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLTextAreaElement::SetWrap(const nsAString & aWrap)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString pattern; */
+NS_IMETHODIMP nsHTMLTextAreaElement::GetPattern(nsAString & aPattern)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLTextAreaElement::SetPattern(const nsAString & aPattern)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute boolean required; */
+NS_IMETHODIMP nsHTMLTextAreaElement::GetRequired(PRBool *aRequired)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLTextAreaElement::SetRequired(PRBool aRequired)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute boolean autocomplete; */
+NS_IMETHODIMP nsHTMLTextAreaElement::GetAutocomplete(PRBool *aAutocomplete)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLTextAreaElement::SetAutocomplete(PRBool aAutocomplete)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute boolean autofocus; */
+NS_IMETHODIMP nsHTMLTextAreaElement::GetAutofocus(PRBool *aAutofocus)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLTextAreaElement::SetAutofocus(PRBool aAutofocus)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString inputmode; */
+NS_IMETHODIMP nsHTMLTextAreaElement::GetInputmode(nsAString & aInputmode)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLTextAreaElement::SetInputmode(const nsAString & aInputmode)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute long maxLength; */
+NS_IMETHODIMP nsHTMLTextAreaElement::GetMaxLength(PRInt32 *aMaxLength)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLTextAreaElement::SetMaxLength(PRInt32 aMaxLength)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString accept; */
+NS_IMETHODIMP nsHTMLTextAreaElement::GetAccept(nsAString & aAccept)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLTextAreaElement::SetAccept(const nsAString & aAccept)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* readonly attribute nsIDOMHTMLCollection labels; */
+NS_IMETHODIMP nsHTMLTextAreaElement::GetLabels(nsIDOMHTMLCollection * *aLabels)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }

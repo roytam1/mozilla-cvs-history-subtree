@@ -36,6 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 #include "nsIDOMHTMLButtonElement.h"
 #include "nsIDOMNSHTMLButtonElement.h"
+#include "nsIDOMWWGHTMLButtonElement.h"
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
@@ -58,9 +59,10 @@
 #include "nsUnicharUtils.h"
 
 
-class nsHTMLButtonElement : public nsGenericHTMLFormElement,
+class nsHTMLButtonElement : public nsGenericWWGFormControl,
                             public nsIDOMHTMLButtonElement,
-                            public nsIDOMNSHTMLButtonElement
+                            public nsIDOMNSHTMLButtonElement,
+                            public nsIDOMWWGHTMLButtonElement
 {
 public:
   nsHTMLButtonElement(nsINodeInfo *aNodeInfo);
@@ -80,6 +82,9 @@ public:
 
   // nsIDOMHTMLButtonElement
   NS_DECL_NSIDOMHTMLBUTTONELEMENT
+
+  // nsIDOMHTMLButtonElement
+  NS_DECL_NSIDOMWWGHTMLBUTTONELEMENT
 
   // nsIDOMNSHTMLButtonElement
   // Can't just use the macro, since it shares GetType with
@@ -124,7 +129,7 @@ NS_IMPL_NS_NEW_HTML_ELEMENT(Button)
 
 
 nsHTMLButtonElement::nsHTMLButtonElement(nsINodeInfo *aNodeInfo)
-  : nsGenericHTMLFormElement(aNodeInfo)
+  : nsGenericWWGFormControl(aNodeInfo)
 {
   mType = NS_FORM_BUTTON_SUBMIT; // default
   mHandlingClick = PR_FALSE;
@@ -142,9 +147,10 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLButtonElement, nsGenericElement)
 
 // QueryInterface implementation for nsHTMLButtonElement
 NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLButtonElement,
-                                    nsGenericHTMLFormElement)
+                                    nsGenericWWGFormControl)
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLButtonElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLButtonElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMWWGHTMLButtonElement)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLButtonElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
@@ -529,4 +535,66 @@ nsHTMLButtonElement::SubmitNamesValues(nsIFormSubmission* aFormSubmission,
   rv = aFormSubmission->AddNameValuePair(this, name, value);
 
   return rv;
+}
+
+/* attribute DOMString action; */
+NS_IMETHODIMP nsHTMLButtonElement::GetAction(nsAString & aAction)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLButtonElement::SetAction(const nsAString & aAction)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString enctype; */
+NS_IMETHODIMP nsHTMLButtonElement::GetEnctype(nsAString & aEnctype)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLButtonElement::SetEnctype(const nsAString & aEnctype)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString method; */
+NS_IMETHODIMP nsHTMLButtonElement::GetMethod(nsAString & aMethod)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLButtonElement::SetMethod(const nsAString & aMethod)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString replace; */
+NS_IMETHODIMP nsHTMLButtonElement::GetReplace(nsAString & aReplace)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLButtonElement::SetReplace(const nsAString & aReplace)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute boolean autofocus; */
+NS_IMETHODIMP nsHTMLButtonElement::GetAutofocus(PRBool *aAutofocus)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLButtonElement::SetAutofocus(PRBool aAutofocus)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* readonly attribute nsIDOMHTMLCollection labels; */
+NS_IMETHODIMP nsHTMLButtonElement::GetLabels(nsIDOMHTMLCollection * *aLabels)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* readonly attribute nsIDOMWWGHTMLRepetitionElement template; */
+NS_IMETHODIMP nsHTMLButtonElement::GetTemplate(nsIDOMWWGHTMLRepetitionElement * *aTemplate)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }

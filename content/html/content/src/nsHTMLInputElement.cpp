@@ -38,6 +38,7 @@
 #include "nsCOMPtr.h"
 #include "nsIDOMHTMLInputElement.h"
 #include "nsIDOMNSHTMLInputElement.h"
+#include "nsIDOMWWGHTMLInputElement.h"
 #include "nsITextControlElement.h"
 #include "nsIRadioControlElement.h"
 #include "nsIRadioVisitor.h"
@@ -130,10 +131,11 @@ static NS_DEFINE_CID(kXULControllersCID,  NS_XULCONTROLLERS_CID);
                                         ? ((bitfield) |=  (0x01 << (field))) \
                                         : ((bitfield) &= ~(0x01 << (field))))
 
-class nsHTMLInputElement : public nsGenericHTMLFormElement,
+class nsHTMLInputElement : public nsGenericWWGFormControl,
                            public nsImageLoadingContent,
                            public nsIDOMHTMLInputElement,
                            public nsIDOMNSHTMLInputElement,
+                           public nsIDOMWWGHTMLInputElement,
                            public nsITextControlElement,
                            public nsIRadioControlElement,
                            public nsIPhonetic
@@ -159,6 +161,9 @@ public:
 
   // nsIDOMNSHTMLInputElement
   NS_DECL_NSIDOMNSHTMLINPUTELEMENT
+
+  // nsIDOMWWGHTMLInputElement
+  NS_DECL_NSIDOMWWGHTMLINPUTELEMENT
 
   // nsIPhonetic
   NS_DECL_NSIPHONETIC
@@ -339,7 +344,7 @@ NS_IMPL_NS_NEW_HTML_ELEMENT_CHECK_PARSER(Input)
 
 nsHTMLInputElement::nsHTMLInputElement(nsINodeInfo *aNodeInfo,
                                        PRBool aFromParser)
-  : nsGenericHTMLFormElement(aNodeInfo),
+  : nsGenericWWGFormControl(aNodeInfo),
     mType(NS_FORM_INPUT_TEXT), // default value
     mBitField(0),
     mValue(nsnull)
@@ -363,9 +368,10 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLInputElement, nsGenericElement)
 
 // QueryInterface implementation for nsHTMLInputElement
 NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLInputElement,
-                                    nsGenericHTMLFormElement)
+                                    nsGenericWWGFormControl)
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLInputElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSHTMLInputElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMWWGHTMLInputElement)
   NS_INTERFACE_MAP_ENTRY(nsITextControlElement)
   NS_INTERFACE_MAP_ENTRY(nsIRadioControlElement)
   NS_INTERFACE_MAP_ENTRY(nsIPhonetic)
@@ -2836,4 +2842,190 @@ NS_GetRadioGetCheckedChangedVisitor(PRBool* aCheckedChanged,
   NS_ADDREF(*aVisitor);
 
   return NS_OK;
+}
+
+/* attribute DOMString min; */
+NS_IMETHODIMP nsHTMLInputElement::GetMin(nsAString & aMin)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetMin(const nsAString & aMin)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString max; */
+NS_IMETHODIMP nsHTMLInputElement::GetMax(nsAString & aMax)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetMax(const nsAString & aMax)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString step; */
+NS_IMETHODIMP nsHTMLInputElement::GetStep(nsAString & aStep)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetStep(const nsAString & aStep)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString pattern; */
+NS_IMETHODIMP nsHTMLInputElement::GetPattern(nsAString & aPattern)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetPattern(const nsAString & aPattern)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute boolean required; */
+NS_IMETHODIMP nsHTMLInputElement::GetRequired(PRBool *aRequired)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetRequired(PRBool aRequired)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute boolean autocomplete; */
+NS_IMETHODIMP nsHTMLInputElement::GetAutocomplete(PRBool *aAutocomplete)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetAutocomplete(PRBool aAutocomplete)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute boolean autofocus; */
+NS_IMETHODIMP nsHTMLInputElement::GetAutofocus(PRBool *aAutofocus)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetAutofocus(PRBool aAutofocus)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString inputmode; */
+NS_IMETHODIMP nsHTMLInputElement::GetInputmode(nsAString & aInputmode)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetInputmode(const nsAString & aInputmode)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString action; */
+NS_IMETHODIMP nsHTMLInputElement::GetAction(nsAString & aAction)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetAction(const nsAString & aAction)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString enctype; */
+NS_IMETHODIMP nsHTMLInputElement::GetEnctype(nsAString & aEnctype)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetEnctype(const nsAString & aEnctype)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString method; */
+NS_IMETHODIMP nsHTMLInputElement::GetMethod(nsAString & aMethod)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetMethod(const nsAString & aMethod)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString target; */
+NS_IMETHODIMP nsHTMLInputElement::GetTarget(nsAString & aTarget)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetTarget(const nsAString & aTarget)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMString replace; */
+NS_IMETHODIMP nsHTMLInputElement::GetReplace(nsAString & aReplace)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetReplace(const nsAString & aReplace)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* readonly attribute nsIDOMHTMLElement list; */
+NS_IMETHODIMP nsHTMLInputElement::GetList(nsIDOMHTMLElement * *aList)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* readonly attribute nsIDOMHTMLOptionElement selectedOption; */
+NS_IMETHODIMP nsHTMLInputElement::GetSelectedOption(nsIDOMHTMLOptionElement * *aSelectedOption)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* readonly attribute nsIDOMWWGHTMLRepetitionElement template; */
+NS_IMETHODIMP nsHTMLInputElement::GetTemplate(nsIDOMWWGHTMLRepetitionElement * *aTemplate)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* readonly attribute nsIDOMHTMLCollection labels; */
+NS_IMETHODIMP nsHTMLInputElement::GetLabels(nsIDOMHTMLCollection * *aLabels)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute DOMTimeStamp valueAsDate; */
+NS_IMETHODIMP nsHTMLInputElement::GetValueAsDate(DOMTimeStamp *aValueAsDate)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetValueAsDate(DOMTimeStamp aValueAsDate)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute float valueAsNumber; */
+NS_IMETHODIMP nsHTMLInputElement::GetValueAsNumber(float *aValueAsNumber)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLInputElement::SetValueAsNumber(float aValueAsNumber)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void stepUp (in long n); */
+NS_IMETHODIMP nsHTMLInputElement::StepUp(PRInt32 n)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void stepDown (in long n); */
+NS_IMETHODIMP nsHTMLInputElement::StepDown(PRInt32 n)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }

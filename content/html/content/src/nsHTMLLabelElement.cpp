@@ -36,6 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 #include "nsCOMPtr.h"
 #include "nsIDOMHTMLLabelElement.h"
+#include "nsIDOMWWGHTMLLabelElement.h"
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
@@ -53,8 +54,9 @@
 #include "nsIEventStateManager.h"
 
 
-class nsHTMLLabelElement : public nsGenericHTMLFormElement,
-                           public nsIDOMHTMLLabelElement
+class nsHTMLLabelElement : public nsGenericWWGFormControl,
+                           public nsIDOMHTMLLabelElement,
+                           public nsIDOMWWGHTMLLabelElement
 {
 public:
   nsHTMLLabelElement(nsINodeInfo *aNodeInfo);
@@ -74,6 +76,9 @@ public:
 
   // nsIDOMHTMLLabelElement
   NS_DECL_NSIDOMHTMLLABELELEMENT
+
+  // nsIDOMWWGHTMLLabelElement
+  NS_DECL_NSIDOMWWGHTMLLABELELEMENT
 
   // nsIFormControl
   NS_IMETHOD_(PRInt32) GetType() { return NS_FORM_LABEL; }
@@ -115,7 +120,7 @@ NS_IMPL_NS_NEW_HTML_ELEMENT(Label)
 
 
 nsHTMLLabelElement::nsHTMLLabelElement(nsINodeInfo *aNodeInfo)
-  : nsGenericHTMLFormElement(aNodeInfo),
+  : nsGenericWWGFormControl(aNodeInfo),
     mHandlingEvent(PR_FALSE)
 {
 }
@@ -133,8 +138,9 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLLabelElement, nsGenericElement)
 
 // QueryInterface implementation for nsHTMLLabelElement
 NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLLabelElement,
-                                    nsGenericHTMLFormElement)
+                                    nsGenericWWGFormControl)
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLLabelElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMWWGHTMLLabelElement)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLLabelElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
@@ -378,4 +384,10 @@ nsHTMLLabelElement::GetFirstFormControl(nsIContent *current)
   }
 
   return nsnull;
+}
+
+/* readonly attribute nsIDOMHTMLElement control; */
+NS_IMETHODIMP nsHTMLLabelElement::GetControl(nsIDOMHTMLElement * *aControl)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }

@@ -21,6 +21,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Daniel Brooks <db48x@yahoo.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -42,6 +43,7 @@
 #include "nsIDOMHTMLElement.h"
 #include "nsINameSpaceManager.h"  // for kNameSpaceID_None
 #include "nsIFormControl.h"
+#include "nsIDOMWWGHTMLFormControl.h"
 #include "nsIDOMNSHTMLFrameElement.h"
 #include "nsIChromeEventHandler.h"
 #include "nsIFrameLoader.h"
@@ -852,6 +854,31 @@ protected:
 
   /** The form that contains this control */
   nsIForm* mForm;
+};
+
+//----------------------------------------------------------------------
+
+/**
+ * helper class for WhatWG form elements
+ */
+
+class nsGenericWWGFormControl : public nsGenericHTMLFormElement,
+                                       nsIDOMWWGHTMLFormControl
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIDOMWWGHTMLFORMCONTROL
+
+  nsGenericWWGFormControl(nsINodeInfo *aNodeInfo)
+    : nsGenericHTMLFormElement(aNodeInfo)
+  {
+  }
+  ~nsGenericWWGFormControl();
+
+private:
+
+protected:
+  /* additional members */
 };
 
 //----------------------------------------------------------------------

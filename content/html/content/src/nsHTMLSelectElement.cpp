@@ -39,6 +39,7 @@
 #include "nsCOMArray.h"
 #include "nsIDOMHTMLSelectElement.h"
 #include "nsIDOMNSHTMLSelectElement.h"
+#include "nsIDOMWWGHTMLSelectElement.h"
 #include "nsIDOMNSXBLFormControl.h"
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMEventReceiver.h"
@@ -185,9 +186,10 @@ NS_IMPL_ISUPPORTS0(nsSelectState)
 /**
  * Implementation of &lt;select&gt;
  */
-class nsHTMLSelectElement : public nsGenericHTMLFormElement,
+class nsHTMLSelectElement : public nsGenericWWGFormControl,
                             public nsIDOMHTMLSelectElement,
                             public nsIDOMNSHTMLSelectElement,
+                            public nsIDOMWWGHTMLSelectElement,
                             public nsIDOMNSXBLFormControl,
                             public nsISelectElement
 {
@@ -212,6 +214,9 @@ public:
 
   // nsIDOMNSHTMLSelectElement
   NS_DECL_NSIDOMNSHTMLSELECTELEMENT
+
+  // nsIDOMWWGHTMLSelectElement
+  NS_DECL_NSIDOMWWGHTMLSELECTELEMENT
 
   // nsIDOMNSXBLFormControl
   NS_DECL_NSIDOMNSXBLFORMCONTROL
@@ -428,7 +433,7 @@ NS_IMPL_NS_NEW_HTML_ELEMENT_CHECK_PARSER(Select)
 
 nsHTMLSelectElement::nsHTMLSelectElement(nsINodeInfo *aNodeInfo,
                                          PRBool aFromParser)
-  : nsGenericHTMLFormElement(aNodeInfo),
+  : nsGenericWWGFormControl(aNodeInfo),
     mOptions(new nsHTMLOptionCollection(this)),
     mIsDoneAddingChildren(!aFromParser),
     mNonOptionChildren(0),
@@ -2214,4 +2219,22 @@ nsresult
 nsHTMLOptionCollection::RemoveElementAt(PRInt32 aIndex)
 {
   return mElements.RemoveObjectAt(aIndex);
+}
+
+// nsIDOMWWGHTMLSelectElement
+
+NS_IMPL_BOOL_ATTR(nsHTMLSelectElement, Autocomplete, autocomplete)
+NS_IMPL_BOOL_ATTR(nsHTMLSelectElement, Autofocus, autofocus)
+NS_IMPL_STRING_ATTR(nsHTMLSelectElement, Data, data)
+
+/* readonly attribute nsIDOMHTMLCollection selectedOptions; */
+NS_IMETHODIMP nsHTMLSelectElement::GetSelectedOptions(nsIDOMHTMLCollection * *aSelectedOptions)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* readonly attribute nsIDOMHTMLCollection labels; */
+NS_IMETHODIMP nsHTMLSelectElement::GetLabels(nsIDOMHTMLCollection * *aLabels)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }

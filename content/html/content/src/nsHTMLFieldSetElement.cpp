@@ -35,6 +35,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 #include "nsIDOMHTMLFieldSetElement.h"
+#include "nsIDOMWWGHTMLFieldSetElement.h"
 #include "nsIDOMHTMLFormElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsGenericHTMLElement.h"
@@ -46,7 +47,8 @@
 
 
 class nsHTMLFieldSetElement : public nsGenericHTMLFormElement,
-                              public nsIDOMHTMLFieldSetElement
+                              public nsIDOMHTMLFieldSetElement,
+                              public nsIDOMWWGHTMLFieldSetElement
 {
 public:
   nsHTMLFieldSetElement(nsINodeInfo *aNodeInfo);
@@ -66,6 +68,9 @@ public:
 
   // nsIDOMHTMLFieldSetElement
   NS_DECL_NSIDOMHTMLFIELDSETELEMENT
+
+  // nsIDOMWWGHTMLFieldSetElement
+  NS_DECL_NSIDOMWWGHTMLFIELDSETELEMENT
 
   // nsIFormControl
   NS_IMETHOD_(PRInt32) GetType() { return NS_FORM_FIELDSET; }
@@ -99,6 +104,7 @@ NS_IMPL_RELEASE_INHERITED(nsHTMLFieldSetElement, nsGenericElement)
 NS_HTML_CONTENT_INTERFACE_MAP_BEGIN(nsHTMLFieldSetElement,
                                     nsGenericHTMLFormElement)
   NS_INTERFACE_MAP_ENTRY(nsIDOMHTMLFieldSetElement)
+  NS_INTERFACE_MAP_ENTRY(nsIDOMWWGHTMLFieldSetElement)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(HTMLFieldSetElement)
 NS_HTML_CONTENT_INTERFACE_MAP_END
 
@@ -130,4 +136,20 @@ nsHTMLFieldSetElement::SubmitNamesValues(nsIFormSubmission* aFormSubmission,
                                          nsIContent* aSubmitElement)
 {
   return NS_OK;
+}
+
+/* readonly attribute nsIDOMHTMLCollection elements; */
+NS_IMETHODIMP nsHTMLFieldSetElement::GetElements(nsIDOMHTMLCollection * *aElements)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* attribute boolean disabled; */
+NS_IMETHODIMP nsHTMLFieldSetElement::GetDisabled(PRBool *aDisabled)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+NS_IMETHODIMP nsHTMLFieldSetElement::SetDisabled(PRBool aDisabled)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
 }

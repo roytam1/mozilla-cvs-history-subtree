@@ -4049,3 +4049,52 @@ nsGenericHTMLElement::InternalGetExistingAttrNameFromQName(const nsAString& aStr
   return mAttrsAndChildren.GetExistingAttrNameFromQName(
     NS_ConvertUTF16toUTF8(aStr));
 }
+
+NS_IMPL_ISUPPORTS1(nsGenericWWGFormControl, nsIDOMWWGHTMLFormControl)
+
+nsGenericWWGFormControl::~nsGenericWWGFormControl()
+{
+  /* destructor code */
+}
+
+/* readonly attribute boolean willConsiderForSubmission; */
+NS_IMETHODIMP nsGenericWWGFormControl::GetWillConsiderForSubmission(PRBool *aWillConsiderForSubmission)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* readonly attribute nsIDOMWWGHTMLValidityState validity; */
+NS_IMETHODIMP nsGenericWWGFormControl::GetValidity(nsIDOMWWGHTMLValidityState * *aValidity)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* readonly attribute DOMString validationMessage; */
+NS_IMETHODIMP nsGenericWWGFormControl::GetValidationMessage(nsAString & aValidationMessage)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* boolean validate (); */
+NS_IMETHODIMP nsGenericWWGFormControl::Validate(PRBool *_retval)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void setCustomValidity (in DOMString error); */
+NS_IMETHODIMP nsGenericWWGFormControl::SetCustomValidity(const nsAString & error)
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void dispatchChanged (); */
+NS_IMETHODIMP nsGenericWWGFormControl::DispatchChanged()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+/* void dispatchFormChanged (); */
+NS_IMETHODIMP nsGenericWWGFormControl::DispatchFormChanged()
+{
+    return NS_ERROR_NOT_IMPLEMENTED;
+}

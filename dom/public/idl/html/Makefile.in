@@ -104,6 +104,18 @@ SDK_XPIDLSRCS =					\
 	nsIDOMHTMLTextAreaElement.idl		\
 	nsIDOMHTMLTitleElement.idl		\
 	nsIDOMHTMLUListElement.idl		\
+	nsIDOMWWGHTMLRepetitionElement.idl	\
+        nsIDOMWWGHTMLValidityState.idl		\
+	nsIDOMWWGHTMLFormControl.idl		\
+	nsIDOMWWGHTMLButtonElement.idl		\
+	nsIDOMWWGHTMLInputElement.idl		\
+        nsIDOMWWGHTMLTextAreaElement.idl	\
+	nsIDOMWWGHTMLDataListElement.idl	\
+	nsIDOMWWGHTMLLabelElement.idl		\
+	nsIDOMWWGHTMLOutputElement.idl		\
+	nsIDOMWWGHTMLFieldSetElement.idl	\
+	nsIDOMWWGHTMLFormElement.idl		\
+	nsIDOMWWGHTMLSelectElement.idl		\
 	$(NULL)
 
 XPIDLSRCS = 					\
