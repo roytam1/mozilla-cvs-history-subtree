@@ -61,12 +61,12 @@ public:
 
   static void ShutDown();
 
-protected:
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
   {
     return new nsDOMClassInfo(aID);
   }
 
+protected:
   static nsresult Init();
 
   static nsresult WrapNative(JSContext *cx, JSObject *scope,
@@ -75,12 +75,13 @@ protected:
 
   nsDOMClassInfoID mID;
 
-  static nsDOMClassInfoData *sClassInfoData;
   static nsIXPConnect *sXPConnect;
   static PRUint32 sInstanceCount;
 
   // nsIXPCScriptable code
   static nsresult DefineStaticJSStrings(JSContext *cx);
+
+  static PRBool sIsInitialized;
 
   static JSString *sTop_id;
   static JSString *sScrollbars_id;
