@@ -76,7 +76,9 @@ function filepickerLoad() {
   if ((filePickerMode == nsIFilePicker.modeOpen) ||
       (filePickerMode == nsIFilePicker.modeSave)) {
 
+    window.setCursor("wait");
     outlinerView.setFilter(filterTypes[0]);
+    window.setCursor("auto");
 
     /* build filter popup */
     var filterPopup = document.createElement("menupopup");
@@ -152,7 +154,9 @@ function filepickerLoad() {
 function onFilterChanged(target)
 {
   var filterTypes = target.getAttribute("filters");
+  window.setCursor("wait");
   outlinerView.setFilter(filterTypes);
+  window.setCursor("auto");
 }
 
 function onOK()
@@ -313,13 +317,13 @@ function convertColumnIDtoSortType(columnID) {
   
   switch (columnID) {
   case "FilenameColumn":
-    sortKey = sortType_name;
+    sortKey = nsFileView.SORTTYPE_NAME;
     break;
   case "FileSizeColumn":
-    sortKey = sortType_size;
+    sortKey = nsFileView.SORTTYPE_SIZE;
     break;
   case "LastModifiedColumn":
-    sortKey = sortType_date;
+    sortKey = nsFileView.SORTTYPE_DATE;
     break;
   default:
     dump("unsupported sort column: " + columnID + "\n");
@@ -332,12 +336,8 @@ function convertColumnIDtoSortType(columnID) {
 
 function handleColumnClick(columnID) {
   var sortType = convertColumnIDtoSortType(columnID);
-  if (outlinerView.sortType == sortType) {
-    // reverse the current sort
-    outlinerView.sort(outlinerView.sortType, !outlinerView.reverseSort, false);
-  } else {
-    outlinerView.sort(sortType, false, false);
-  }
+  var sortOrder = (outlinerView.sortType == sortType) ? !outlinerView.reverseSort : false;
+  outlinerView.sort(sortType, sortOrder, false);
   
   // set the sort indicator on the column we are sorted by
   var sortedColumn = document.getElementById(columnID);
@@ -456,7 +456,9 @@ function goUp() {
 
 function gotoDirectory(directory) {
   addToHistory(directory.unicodePath);
+  window.setCursor("wait");
   outlinerView.setDirectory(directory.unicodePath);
+  window.setCursor("auto");
   sfile = directory;
 }
 

@@ -34,10 +34,6 @@ const nsAtomService_CONTRACTID = "@mozilla.org/atom-service;1";
 
 var gDateService = null;
 
-const sortType_name = 1;
-const sortType_size = 2;
-const sortType_date = 3;
-
 function numMatchingChars(str1, str2) {
   for (var i = 0; ((i < Math.min(str1.length, str2.length)) && (str1[i] == str2[i])); i++);
   return i;
@@ -96,6 +92,10 @@ function nsFileView() {
 }
 
 nsFileView.prototype = {
+
+  SORTTYPE_NAME: 1,
+  SORTTYPE_SIZE: 2,
+  SORTTYPE_DATE: 3,
 
   /* readonly attribute long rowCount; */
   set rowCount(c) { throw "readonly property"; },
@@ -301,7 +301,7 @@ nsFileView.prototype = {
       case 0:
         /* no sort has been set yet */
         return;
-      case sortType_name:
+      case nsFileView.SORTTYPE_NAME:
         for (i = 0; i < this.mDirList.length; i++) {
           this.mDirList[i].cachedName = this.mDirList[i].file.unicodeLeafName;
         }
@@ -310,7 +310,7 @@ nsFileView.prototype = {
         }
         compareFunc = sortFilename;
         break;
-      case sortType_size:
+      case nsFileView.SORTTYPE_SIZE:
         for (i = 0; i < this.mDirList.length; i++) {
           this.mDirList[i].cachedSize = this.mDirList[i].file.fileSize;
         }
@@ -319,7 +319,7 @@ nsFileView.prototype = {
         }
         compareFunc = sortSize;
         break;
-      case sortType_date:
+      case nsFileView.SORTTYPE_DATE:
         for (i = 0; i < this.mDirList.length; i++) {
           this.mDirList[i].cachedDate = this.mDirList[i].file.lastModificationDate;
         }
