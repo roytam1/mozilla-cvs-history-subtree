@@ -119,7 +119,7 @@ ac_help="$ac_help
 ac_help="$ac_help
   --disable-mathml        Disable MathML support"
 ac_help="$ac_help
-  --enable-svg            Enable SVG "
+  --enable-svg            Enable SVG support "
 ac_help="$ac_help
   --enable-svg-renderer-gdiplus Enable SVG gdi+ renderer "
 ac_help="$ac_help
@@ -11804,7 +11804,7 @@ if test "${enable_svg_renderer_gdiplus+set}" = set; then
   fi
 fi
 
-if test -n "MOZ_SVG_RENDERER_GDIPLUS"; then
+if test -n "$MOZ_SVG_RENDERER_GDIPLUS"; then
   cat >> confdefs.h <<\EOF
 #define MOZ_SVG_RENDERER_GDIPLUS 1
 EOF
@@ -11824,7 +11824,7 @@ if test "${enable_svg_renderer_libart+set}" = set; then
   fi
 fi
 
-if test -n "MOZ_SVG_RENDERER_LIBART"; then
+if test -n "$MOZ_SVG_RENDERER_LIBART"; then
   cat >> confdefs.h <<\EOF
 #define MOZ_SVG_RENDERER_LIBART 1
 EOF
