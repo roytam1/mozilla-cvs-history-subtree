@@ -166,7 +166,7 @@ OS_LIBS += comctl32.lib comdlg32.lib uuid.lib shell32.lib ole32.lib oleaut32.lib
 endif
 
 ifneq (,$(filter windows gtk gtk2,$(MOZ_WIDGET_TOOLKIT)))
-ifeq ($(MOZ_WIDGET_TOOLKT),windows)
+ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
 ICON_SUFFIX=.ico
 else
 ICON_SUFFIX=.xpm
