@@ -862,39 +862,6 @@ XPCConvert::NativeInterface2JSObject(XPCCallContext& ccx,
 #endif /* XPC_DO_DOUBLE_WRAP */
 
     {
-#ifndef XPCONNECT_STANDALONE
-        // is this a DOM wrapped native object?
-        nsCOMPtr<nsIScriptObjectOwner> owner = do_QueryInterface(src);
-        if(owner)
-        {
-            // is a DOM object
-            nsCOMPtr<nsIScriptContext> scriptCX;
-            GetStaticScriptContext(cx, scope, getter_AddRefs(scriptCX));
-            if(!scriptCX)
-                GetDynamicScriptContext(cx, getter_AddRefs(scriptCX));
-            JSObject* aJSObj = nsnull;
-            if(scriptCX &&
-               NS_SUCCEEDED(owner->GetScriptObject(scriptCX, (void **)&aJSObj)))
-            {
-                if(aJSObj)
-                {
-                    nsIXPConnectJSObjectHolder* holder =
-                        nsXPCJSObjectHolder::newHolder(cx, aJSObj);
-                    if(holder)
-                    {
-                        NS_ADDREF(holder);
-                        *dest = holder;
-                        return JS_TRUE;
-                    }
-                    return JS_FALSE;
-                }
-                return JS_TRUE;
-            }
-            if(pErr)
-                *pErr = NS_ERROR_XPC_CANT_GET_JSOBJECT_OF_DOM_OBJECT;
-        }
-        else
-#endif /* XPCONNECT_STANDALONE */
         {
             // not a DOM object. Just try to build a wrapper
             XPCWrappedNativeScope* xpcscope =
