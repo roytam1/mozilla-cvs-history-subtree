@@ -17,15 +17,17 @@ DEPTH=..\..\..
 DIRS=plugin applet
 
 PACKAGE=netscape\npasw
-SIGNDIR=signed
 
 !include <$(DEPTH)\config\rules.mak>
 
-
+export::
+	-rm npasw.jar
+	-rm -rf signed
+	-mkdir signed\$(PACKAGE)
+	-copy $(JAVA_DESTPATH)\$(PACKAGE)\*.* signed\$(PACKAGE)
+	
 install:: $(JAVA_DESTPATH)\$(PACKAGE)
-	-mkdir $(SIGNDIR)\$(PACKAGE)
-	copy $(JAVA_DESTPATH)\$(PACKAGE)\*.class $(SIGNDIR)\$(PACKAGE)
-	zigbert \
+	signtool \
 !ifdef MOZ_CERT_DIR
 	-d $(MOZ_CERT_DIR) \
 !endif
@@ -35,9 +37,8 @@ install:: $(JAVA_DESTPATH)\$(PACKAGE)
 !ifdef MOZ_CERT_PWD
 	-p $(MOZ_CERT_PWD) \
 !endif
-	$(SIGNDIR)
-	cd $(SIGNDIR)
-	$(ZIP) npasw.jar *
-
+	-Z"npasw.jar" \
+	signed
+	
 clobber::
-	-rm -r $(SIGNDIR)
+	-rm npasw.jar
