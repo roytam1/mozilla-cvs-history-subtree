@@ -103,13 +103,13 @@ public:
 	
 	Boolean                 CanGoBack();
 	Boolean                 CanGoForward();
-	Boolean                 IsLoading();
-	void                    Back();
-	void                    Forward();
-	void                    Stop();
+
+	NS_METHOD               Back();
+	NS_METHOD               Forward();
+	NS_METHOD               Stop();
 	                        
-	void                    LoadURL(Ptr urlText, SInt32 urlTextLen);
-	void                    LoadURL(const nsString& urlText);
+	NS_METHOD               LoadURL(const char* urlText, SInt32 urlTextLen = -1);
+	NS_METHOD               LoadURL(const nsString& urlText);
 	
 	   // Puts up a find dialog and does the find operation                        
 	Boolean                 Find();

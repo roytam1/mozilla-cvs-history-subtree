@@ -351,49 +351,59 @@ Boolean CBrowserShell::CanGoForward()
 }
 
 
-Boolean CBrowserShell::IsLoading()
+NS_METHOD CBrowserShell::Back()
 {
-   return false;
-}
-
-
-void CBrowserShell::Back()
-{
+   nsresult rv;
+    
    if (CanGoBack())
-      mWebBrowserAsWebNav->GoBack();
+      rv = mWebBrowserAsWebNav->GoBack();
    else
+   {
       ::SysBeep(5);
+      rv = NS_ERROR_FAILURE;
+   }
+   return rv;
 }
 
-void CBrowserShell::Forward()
+NS_METHOD CBrowserShell::Forward()
 {
+   nsresult rv;
+
    if (CanGoForward())
-      mWebBrowserAsWebNav->GoForward();
+      rv = mWebBrowserAsWebNav->GoForward();
    else
+   {
       ::SysBeep(5);
+      rv = NS_ERROR_FAILURE;
+   }
+   return rv;
 }
 
-void CBrowserShell::Stop()
+NS_METHOD CBrowserShell::Stop()
 {
-   mWebBrowserAsWebNav->Stop();
+   return mWebBrowserAsWebNav->Stop();
 }
 
 //*****************************************************************************
 //***    CBrowserShell: URL Loading
 //*****************************************************************************
 
-void CBrowserShell::LoadURL(Ptr urlText, SInt32 urlTextLen)
+NS_METHOD CBrowserShell::LoadURL(const char* urlText, SInt32 urlTextLen)
 {
-    nsAutoString urlString; urlString.AssignWithConversion(urlText, urlTextLen);
-    LoadURL(urlString);
+    nsAutoString urlString;
+    
+    if (urlTextLen == -1)
+        urlString.AssignWithConversion(urlText);
+    else
+        urlString.AssignWithConversion(urlText, urlTextLen);
+        
+    return LoadURL(urlString);
 }
 
 
-void CBrowserShell::LoadURL(const nsString& urlText)
+NS_METHOD CBrowserShell::LoadURL(const nsString& urlText)
 {
-   nsresult rv = mWebBrowserAsWebNav->LoadURI(urlText.GetUnicode(), nsIWebNavigation::LOAD_FLAGS_NONE);
-   if (NS_FAILED(rv))
-      Throw_(NS_ERROR_GET_CODE(rv));
+   return mWebBrowserAsWebNav->LoadURI(urlText.GetUnicode(), nsIWebNavigation::LOAD_FLAGS_NONE);
 }
 
 
