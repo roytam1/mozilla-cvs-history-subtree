@@ -56,7 +56,7 @@ pref("app.id", "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}");
 pref("app.version", 
 #expand __APP_VERSION__
 );
-pref("app.extensions.version", "0.10");
+pref("app.extensions.version", "1.0");
 pref("app.build_id", 
 #expand __BUILD_ID__
 );
@@ -124,7 +124,9 @@ pref("keyword.URL", "http://www.google.com/search?btnI=I%27m+Feeling+Lucky&ie=UT
 #expand pref("general.useragent.locale", "__AB_CD__");
 pref("general.skins.selectedSkin", "classic/1.0");
 pref("general.useragent.vendor", "Firefox");
-pref("general.useragent.vendorSub", "0.10");
+pref("general.useragent.vendorSub", 
+#expand __APP_VERSION__
+);
 
 pref("general.smoothScroll", false);
 #ifdef XP_UNIX
