@@ -904,8 +904,10 @@ static void GetImportTitle(nsIDOMElement* aSrc, nsString& aTitle)
 static PRBool ContainsControlChars(const nsString& inString)
 {
   PRUint16 *c = (PRUint16*)inString.get();  // be sure to get unsigned
+  PRUint16 *cEnd = c + inString.Length();   // use Length, rather than looking for null byte,
+                                            // because there may be extra nulls at the end.
   
-  while (*c)
+  while (c < cEnd)
   {
     if ((*c <= 0x001F) || (*c >= 0x007F && *c <= 0x009F))
       return PR_TRUE;
@@ -1413,8 +1415,14 @@ BookmarksService::PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeI
 
   nsAutoString url;   [inUrl assignTo_nsAString:url];
   nsAutoString title; [inTitle assignTo_nsAString:title];
+
   if (title.Length() == 0)
     [inUrl assignTo_nsAString:title];
+
+  // we have to be paranoid about adding bad characters to the XML DOM here, because
+  // that will cause our XML file to not validate when it's read in
+  CleanControlChars(url);
+  CleanControlChars(title);
 
   BookmarksService::AddBookmarkToFolder(url, title, parentElt, beforeElt);
   return YES;  
