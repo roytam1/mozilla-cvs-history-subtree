@@ -2,11 +2,11 @@
 
 var err;
 
-err = initInstall("Palmsync v0.4.0", // name for install UI
+err = initInstall("Palmsync v0.6.0", // name for install UI
                   "/palmsync",         // registered name
-                  "0.4.0.0");        // package version
+                  "0.6.0.0");        // package version
 
-const APP_VERSION = "0.0.4";
+const APP_VERSION = "0.0.6";
 const APP_PACKAGE = "/XXX.mozdev.org/palmsync";
 
 logComment("initInstall: " + err);
