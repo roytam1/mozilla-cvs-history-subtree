@@ -510,23 +510,34 @@ static const double two31 = 2147483648.0;
 
         virtual bool isDynamic() { return true; }
 
-        PropertyIterator findAttributedProperty(const String &name, AttributeList *attr)
+
+        // find a property by the given name, and then check to see if there's any
+        // overlap between the supplied attribute list and the property's list.
+        PropertyIterator findAttributedProperty(const String &name, AttributeList *attrs)
         {
             for (PropertyIterator i = mProperties.lower_bound(name), 
                             end = mProperties.upper_bound(name); (i != end); i++) {
-                if (attr) {
+                if (attrs) {
                     AttributeList *propAttr = PROPERTY_ATTRLIST(i);
                     if (propAttr == NULL)
                         return i;
-                    while (attr) {
-                        if (attr->expr->getKind() == ExprNode::identifier) {
-                            const StringAtom& name = (static_cast<IdentifierExprNode *>(attr->expr))->name;
+                    while (attrs) {
+                        if (attrs->expr->getKind() == ExprNode::identifier) {
+                            const StringAtom& name = (static_cast<IdentifierExprNode *>(attrs->expr))->name;
                             if (hasAttribute(propAttr, name))
                                 return i;
                         }
                         else
-                            ASSERT(false);  // XXX NYI
-                        attr = attr->next;
+                            if (attrs->expr->getKind() == ExprNode::call) {
+                                InvokeExprNode *ie = static_cast<InvokeExprNode *>(attrs->expr);        
+                                ASSERT(ie->op->getKind() == ExprNode::identifier);
+                                const StringAtom& idname = (static_cast<IdentifierExprNode *>(ie->op))->name;
+                                if (hasAttribute(propAttr, idname))
+                                    return i;
+                            }
+                            else
+                                ASSERT(false);
+                        attrs = attrs->next;
                     }
                 }
                 else

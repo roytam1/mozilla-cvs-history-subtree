@@ -141,6 +141,7 @@ LoadGlobalObjectOp,     //                          --> <object>
 PushScopeOp,            // <pointer>        XXX !!! XXX
 PopScopeOp,             // <pointer>        XXX !!! XXX
 NewClosureOp,           //                          <function> --> <function>
+ClassOp,                //                          <object> --> <type>
 
 OpCodeCount
 

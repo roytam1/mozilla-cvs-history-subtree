@@ -1337,6 +1337,14 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                         throw Exception(Exception::uncaughtError, "No handler for throw");
                 }
                 break;
+            case ClassOp:
+                {
+                    JSValue x = popValue();
+                    ASSERT(x.isObject());
+                    pushValue(JSValue(x.getType()));
+                }
+                break;
+
 
             default:
                 throw Exception(Exception::internalError, "Bad Opcode");
@@ -2240,7 +2248,7 @@ String *numberToString(float64 number)
               
 JSValue JSValue::valueToString(Context *cx, const JSValue& value)
 {
-    const char* chrp = NULL;
+    String *strp = NULL;
     JSObject *obj = NULL;
     switch (value.tag) {
     case f64_tag:
@@ -2254,10 +2262,15 @@ JSValue JSValue::valueToString(Context *cx, const JSValue& value)
     case string_tag:
         return value;
     case boolean_tag:
-        chrp = (value.boolean) ? "true" : "false";
+        strp = (value.boolean) 
+                        ? new JavaScript::String(widenCString("true")) 
+                        : new JavaScript::String(widenCString("false"));
+        break;
+    case type_tag:
+        strp = &value.type->mClassName;
         break;
     case undefined_tag:
-        chrp = "undefined";
+        strp = new JavaScript::String(widenCString("undefined"));
         break;
     default:
         NOT_REACHED("Bad tag");
@@ -2288,7 +2301,7 @@ JSValue JSValue::valueToString(Context *cx, const JSValue& value)
         throw new Exception(Exception::runtimeError, "toString");    // XXX
     }
     else
-        return JSValue(new JavaScript::String(widenCString(chrp)));
+        return JSValue(strp);
 
 }
 

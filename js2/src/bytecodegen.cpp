@@ -372,6 +372,7 @@ ByteCodeData gByteCodeData[OpCodeCount] = {
 { 0,        "PushScope", },
 { 0,        "PopScope", },
 { 0,        "NewClosure" },
+{ 0,        "Class" },
 
 };
 
@@ -440,37 +441,26 @@ void ByteCodeGen::genCodeForFunction(FunctionDefinition &f, JSFunction *fnc, boo
                 if (e->expr->getKind() == ExprNode::call) {
                     InvokeExprNode *i = static_cast<InvokeExprNode *>(e->expr);
                     if (i->op->getKind() == ExprNode::dot) {
-                        // here, under '.' we check for 'super.m()' or 'this.m()'
-                        // 
+                        // check for 'this.m()'
                         BinaryExprNode *b = static_cast<BinaryExprNode *>(i->op);
                         if ((b->op1->getKind() == ExprNode::This) && (b->op2->getKind() == ExprNode::identifier)) {
 //                            IdentifierExprNode *i = static_cast<IdentifierExprNode *>(b->op2);
                             // XXX verify that i->name is a constructor in the superclass
                             foundSuperCall = true;
                         }
-                        else {
-                            if ((b->op1->getKind() == ExprNode::superExpr) && (b->op2->getKind() == ExprNode::identifier)) {
-//                                IdentifierExprNode *i = static_cast<IdentifierExprNode *>(b->op2);
-                                // XXX verify that i->name is a constructor in this class
-                                foundSuperCall = true;
-                            }
-                        }
                     }
                     else {
-                        // look for calls to 'this()' or 'super'
+                        // look for calls to 'this()'
                         if (i->op->getKind() == ExprNode::This) {
                             foundSuperCall = true;
                         }
-                        else {
-                            if (i->op->getKind() == ExprNode::superExpr) {
-                                foundSuperCall = true;
-                            }
-                        }
                     }
                 }
-            }
-            else {
-                // is there (going to be) such a thing as a SuperStatement ?
+                else {
+                    if (e->expr->getKind() == ExprNode::superStmt) {
+                        foundSuperCall = true;
+                    }
+                }
             }
         }
 
@@ -1056,7 +1046,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                 // the exception object is on the top of the stack already
                 addOp(JsrOp);
                 addFixup(finallyLabel);
-                addOp(ThrowOp);
+                addOpSetDepth(ThrowOp, 0);
 
             }
             else {
@@ -1942,6 +1932,40 @@ BinaryOpEquals:
             // terminate.
         }
         break;
+    case ExprNode::superStmt:
+        {
+            // we're in a class constructor - turn this into
+            // an invocation of the default constructor of the
+            // superclass
+            InvokeExprNode *i = static_cast<InvokeExprNode *>(p);
+            JSType *currentClass = mScopeChain->topClass();
+            ASSERT(currentClass);
+
+            addOp(LoadFunctionOp);
+            addPointer(currentClass->mSuperType->getDefaultConstructor());
+
+            ExprPairList *p = i->pairs;
+            uint32 argCount = 1;
+            addOp(LoadThisOp);
+            while (p) {
+                genExpr(p->value);
+                argCount++;
+                p = p->next;
+            }
+
+            addOpAdjustDepth(InvokeOp, -argCount);
+            addLong(argCount);
+            addByte(Explicit);
+            return currentClass;
+        }
+        break;
+    case ExprNode::dotClass:
+        {
+            UnaryExprNode *u = static_cast<UnaryExprNode *>(p);
+            JSType *uType = genExpr(u->op);
+            addByte(ClassOp);
+        }
+        break;
     default:
         NOT_REACHED("Not Implemented Yet");
     }
@@ -1987,6 +2011,7 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
     case SetElementOp:
     case LoadGlobalObjectOp:
     case NewClosureOp:
+    case ClassOp:
         break;
 
     case DoUnaryOp:
