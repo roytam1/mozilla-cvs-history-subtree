@@ -57,6 +57,7 @@ NS_IMETHODIMP nsSOAPMessage::GetMessage(nsIDOMDocument * *aMessage)
 {
   NS_ENSURE_ARG_POINTER(aMessage);
   *aMessage = mMessage;
+  NS_IF_ADD_REF(*aMessage);
   return NS_OK;
 }
 NS_IMETHODIMP nsSOAPMessage::SetMessage(nsIDOMDocument * aMessage)
@@ -94,7 +95,7 @@ NS_IMETHODIMP nsSOAPMessage::GetEnvelope(nsIDOMElement * *aEnvelope)
   return NS_OK;
 }
 
-static nsresult GetSOAPElementOf(nsIDOMElement *aParent, const nsAReadableString& aType, nsIDOMElement * *aElement)
+nsresult nsSOAPMessage::GetSOAPElementOf(nsIDOMElement *aParent, const nsAReadableString& aType, nsIDOMElement * *aElement)
 {
   NS_ENSURE_ARG_POINTER(aElement);
   if (aParent)
@@ -225,6 +226,7 @@ NS_IMETHODIMP nsSOAPMessage::GetProtocol(nsISupportsArray * *aProtocol)
 {
   NS_ENSURE_ARG_POINTER(aProtocol);
   *aProtocol = mProtocol;
+  NS_IF_ADD_REF(*aProtocol);
   return NS_OK;
 }
 NS_IMETHODIMP nsSOAPMessage::SetProtocol(nsISupportsArray * aProtocol)
@@ -238,6 +240,7 @@ NS_IMETHODIMP nsSOAPMessage::GetTypes(nsISOAPTypeRegistry * *aTypes)
 {
   NS_ENSURE_ARG_POINTER(aTypes);
   *aTypes = mTypes;
+  NS_IF_ADD_REF(*aTypes);
   return NS_OK;
 }
 NS_IMETHODIMP nsSOAPMessage::SetTypes(nsISOAPTypeRegistry * aTypes)

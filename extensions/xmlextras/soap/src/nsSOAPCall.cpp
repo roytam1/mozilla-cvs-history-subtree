@@ -111,7 +111,7 @@ NS_IMETHODIMP nsSOAPCall::Invoke(nsISOAPResponse **_retval)
   if (NS_FAILED(rv)) return rv;
   
   nsCOMPtr<nsISOAPResponse> response;
-  response = new nsSOAPResponse();
+  response = dont_AddRef(new nsSOAPResponse());
   if (!response) return NS_ERROR_OUT_OF_MEMORY;
 
   rv = transport->SyncCall(mTransportURI,
@@ -136,7 +136,7 @@ NS_IMETHODIMP nsSOAPCall::AsyncInvoke(nsISOAPResponseListener *listener)
   if (NS_FAILED(rv)) return rv;
   
   nsCOMPtr<nsISOAPResponse> response;
-  response = new nsSOAPResponse();
+  response = dont_AddRef(new nsSOAPResponse());
   if (!response) return NS_ERROR_OUT_OF_MEMORY;
 
   rv = transport->AsyncCall(mTransportURI,

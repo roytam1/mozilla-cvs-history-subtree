@@ -48,6 +48,7 @@ NS_IMETHODIMP nsSOAPResponse::GetRespondingTo(nsISOAPMessage * *aRespondingTo)
 {
   NS_ENSURE_ARG_POINTER(aRespondingTo);
   *aRespondingTo = mRespondingTo;
+  NS_IF_ADD_REF(*aRespondingTo);
   return NS_OK;
 }
 NS_IMETHODIMP nsSOAPResponse::SetRespondingTo(nsISOAPMessage * aRespondingTo)
@@ -94,9 +95,8 @@ NS_IMETHODIMP nsSOAPResponse::GetReturnValue(nsISOAPParameter * *aReturnValue)
     return rc;
   if (params)
   {
-    nsCOMPtr<nsISupports> result = getter_AddRefs(params->ElementAt(0));
-//    return response->QueryInterface(NS_GET_IID(nsISOAPResponse), (void**)_retval);
-//    *aReturnValue = QueryIn params->ElementAt(0);
+    nsCOMPtr<nsISupports> retval = dont_AddRef(params->ElementAt(0));
+    return retval->QueryInterface(NS_GET_IID(nsISOAPParameter), (void**)aReturnValue);
   }
   else
   {
