@@ -425,7 +425,7 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext, nsISupports
         JS_SetPrototype(aJSContext, protoJSObject, scope->GetPrototypeJSObject());
     }
 
-    if(NS_FAILED(InitClasses(aJSContext, aGlobalJSObj)))
+    if(!nsXPCComponents::AttachNewComponentsObject(ccx, scope, aGlobalJSObj))
         return UnexpectedFailure(NS_ERROR_FAILURE);
     
     NS_ADDREF(*_retval = holder);

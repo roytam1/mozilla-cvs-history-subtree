@@ -53,6 +53,12 @@ XPCWrappedNativeScope::XPCWrappedNativeScope(XPCCallContext& ccx,
     // add ourselves to the scopes list
     {   // scoped lock
         XPCAutoLock lock(mRuntime->GetMapLock());  
+
+#ifdef DEBUG
+        for(XPCWrappedNativeScope* cur = gScopes; cur; cur = cur->mNext)
+            NS_ASSERTION(aGlobal != cur->GetGlobalJSObject(), "dup object");
+#endif
+
         mNext = gScopes;
         gScopes = this;
     }
@@ -64,9 +70,9 @@ XPCWrappedNativeScope::XPCWrappedNativeScope(XPCCallContext& ccx,
 void 
 XPCWrappedNativeScope::SetComponents(nsXPCComponents* aComponents)
 {
-    NS_ASSERTION(!mComponents && aComponents, "bad");
+    NS_IF_ADDREF(aComponents);
+    NS_IF_RELEASE(mComponents);
     mComponents = aComponents;
-    NS_IF_ADDREF(mComponents);
 }
 
 void 
@@ -401,16 +407,13 @@ XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj)
     scope = GetScopeOfObject(ccx, obj);
     if(scope)
         return scope;
-    
-    // Else, we will have to lookup the 'Components' object and ask it for
-    // the scope. 
 
+    // Else we'll have to look up the parent chain to get the scope
+    
     JSObject* parent;
-    const char* name = ccx.GetRuntime()->GetStringName(XPCJSRuntime::IDX_COMPONENTS);
 
     while(nsnull != (parent = JS_GetParent(ccx, obj)))
         obj = parent;
-
 
 #if 1 /* Use new scope lookup */
 
@@ -427,6 +430,10 @@ XPCWrappedNativeScope::FindInJSObjectScope(XPCCallContext& ccx, JSObject* obj)
     NS_ERROR("No scope has this global object!");
     return nsnull;
 #else
+    // Else, we will have to lookup the 'Components' object and ask it for
+    // the scope. 
+
+    const char* name = ccx.GetRuntime()->GetStringName(XPCJSRuntime::IDX_COMPONENTS);
     jsval prop;
     JSObject* compobj;
     if(!JS_LookupProperty(ccx, obj, name, &prop) ||

@@ -131,7 +131,7 @@
 #endif
 #endif
 
-#if defined(DEBUG_jband)
+#if defined(DEBUG_jband) || defined(DEBUG_jst)
 #define XPC_DUMP_AT_SHUTDOWN
 #define XPC_CHECK_WRAPPERS_AT_SHUTDOWN
 //#define DEBUG_stats_jband 1

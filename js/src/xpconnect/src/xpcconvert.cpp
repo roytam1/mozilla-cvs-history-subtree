@@ -877,7 +877,7 @@ XPCConvert::NativeInterface2JSObject(XPCCallContext& ccx,
             // not a DOM object. Just try to build a wrapper
             XPCWrappedNativeScope* xpcscope =
                 XPCWrappedNativeScope::FindInJSObjectScope(ccx, scope);
-            if(!scope)
+            if(!xpcscope)
                 return JS_FALSE;
 
             XPCNativeInterface* iface =

@@ -390,14 +390,12 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
                 mProto->SetScriptableInfo(mScriptableInfo);
         }       
     }
-
+    XPCNativeScriptableInfo* si = mScriptableInfo;
     XPCWrappedNativeScope* scope = mProto->GetScope();
 
     // create our flatJSObject
 
-    JSClass* jsclazz = mScriptableInfo ?
-                            mScriptableInfo->GetJSClass() :
-                            &XPC_WN_NoHelper_JSClass;
+    JSClass* jsclazz = si ? si->GetJSClass() : &XPC_WN_NoHelper_JSClass;
 
     NS_ASSERTION(jsclazz &&
                  jsclazz->name &&
@@ -417,8 +415,11 @@ XPCWrappedNative::Init(XPCCallContext& ccx, JSObject* parent,
     if(!mFlatJSObject || !JS_SetPrivate(ccx, mFlatJSObject, this))
         return JS_FALSE;
 
-    if(mScriptableInfo && mScriptableInfo->WantCreate())
-        mScriptableInfo->GetScriptable()->Create(this, ccx, mFlatJSObject);
+    if(si && si->WantCreate() &&
+       NS_FAILED(si->GetScriptable()->Create(this, ccx, mFlatJSObject)))
+    {
+        return JS_FALSE;
+    }
 
     // XXX and so on....
     return JS_TRUE;
