@@ -1281,6 +1281,7 @@ net_ProcessFile (ActiveEntry * cur_entry)
 				{
                     ABORT_STREAM(CE_STATUS);
 		    		FREE_STREAM;
+                    CD_STREAM=NULL;
 				}
                 if(CD_DIR_PTR)
                     XP_CloseDir(CD_DIR_PTR);
