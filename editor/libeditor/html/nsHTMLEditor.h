@@ -70,6 +70,7 @@ class nsITransferable;
 class nsIDOMEventReceiver;
 class nsIDOMNSRange;
 class nsIDocumentEncoder;
+class nsIClipboard;
 class TypeInState;
 
 /**
@@ -454,6 +455,7 @@ public:
                        PRBool aMozBRDoesntCount = PR_FALSE,
                        PRBool aListOrCellNotEmpty = PR_FALSE,
                        PRBool aSafeToAskFrames = PR_FALSE);
+
   nsresult IsEmptyNodeImpl(nsIDOMNode *aNode,
                            PRBool *outIsEmptyBlock, 
                            PRBool aMozBRDoesntCount,
@@ -644,9 +646,12 @@ protected:
 
   // factored methods for handling insertion of data from transferables (drag&drop or clipboard)
   NS_IMETHOD PrepareTransferable(nsITransferable **transferable);
+  NS_IMETHOD PrepareHTMLTransferable(nsITransferable **transferable, PRBool havePrivFlavor);
   NS_IMETHOD InsertFromTransferable(nsITransferable *transferable, 
                                     const nsAString & aContextStr,
                                     const nsAString & aInfoStr);
+  PRBool HavePrivateHTMLFlavor( nsIClipboard *clipboard );
+  nsresult   ParseCFHTML(nsCString & cfhtml, nsAString & stuffToPaste, nsAString & cfcontext);
   nsresult   InsertHTMLWithContext(const nsAString & aInputString, 
                                    const nsAString & aContextStr, 
                                    const nsAString & aInfoStr);
@@ -663,6 +668,7 @@ protected:
                                         nsCOMPtr<nsIDOMNode> *outFragNode,
                                         PRInt32 *outRangeStartHint,
                                         PRInt32 *outRangeEndHint);
+  nsresult   ParseFragment(const nsAString & aStr, nsCOMPtr<nsIDOMNode> *outNode);
   nsresult   CreateListOfNodesToPaste(nsIDOMNode  *aFragmentAsNode,
                                       nsCOMPtr<nsISupportsArray> *outNodeList,
                                       PRInt32 aRangeStartHint,
