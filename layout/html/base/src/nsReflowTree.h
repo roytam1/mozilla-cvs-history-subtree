@@ -41,7 +41,7 @@ public:
         class ChildChunk {
             friend class nsReflowTree::Node;
             friend class nsReflowTree::Node::Iterator;
-            static const int KIDS_CHUNK_SIZE = 110;
+            static const int KIDS_CHUNK_SIZE = 10;
 
             Node       *mKids[KIDS_CHUNK_SIZE];
             ChildChunk *mNext;
