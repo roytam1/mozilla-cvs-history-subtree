@@ -59,6 +59,7 @@
 #include "nsIChannel.h"
 #include "nsNetCID.h"
 #include "nsIDOMClassInfo.h"
+#include "nsIConsoleService.h"
 //#include "nslog.h"
 #else
 #include "printers.h"
@@ -1224,9 +1225,19 @@ void XSLTProcessor::processAction
                 delete dfrag;
 
                 //-- we should add a MessageObserver class
-#if 0 
-		// XXX DEBUG OUTPUT
+#ifdef TX_EXE
                 cout << "xsl:message - "<< message << endl;
+#else
+                nsresult rv;
+                nsCOMPtr<nsIConsoleService> consoleSvc = 
+                  do_GetService("@mozilla.org/consoleservice;1", &rv);
+                NS_ASSERTION(NS_SUCCEEDED(rv), "xsl:message couldn't get console service");
+                if (consoleSvc) {
+                    nsAutoString logString(NS_LITERAL_STRING("xsl:message - "));
+                    logString.Append(message.getConstNSString());
+                    rv = consoleSvc->LogStringMessage(logString.get());
+                    NS_ASSERTION(NS_SUCCEEDED(rv), "xsl:message couldn't log");
+                }
 #endif
                 break;
             }
