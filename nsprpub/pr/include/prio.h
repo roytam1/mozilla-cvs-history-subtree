@@ -378,10 +378,6 @@ typedef PRInt32 (PR_CALLBACK *PRTransmitfileFN)(
      PRInt32 hlen, PRTransmitFileFlags flags, PRIntervalTime t);
 typedef PRStatus (PR_CALLBACK *PRGetsocknameFN)(PRFileDesc *fd, PRNetAddr *addr);
 typedef PRStatus (PR_CALLBACK *PRGetpeernameFN)(PRFileDesc *fd, PRNetAddr *addr);
-typedef PRStatus (PR_CALLBACK *PRGetsockoptFN)(  /* OBSOLETE */
-    PRFileDesc *fd, PRSockOption optname, void* optval, PRInt32 *optlen);
-typedef PRStatus (PR_CALLBACK *PRSetsockoptFN)(  /* OBSOLETE */
-    PRFileDesc *fd, PRSockOption optname, const void* optval, PRInt32 optlen);
 typedef PRStatus (PR_CALLBACK *PRGetsocketoptionFN)(
     PRFileDesc *fd, PRSocketOptionData *data);
 typedef PRStatus (PR_CALLBACK *PRSetsocketoptionFN)(
@@ -418,8 +414,8 @@ struct PRIOMethods {
     PRTransmitfileFN transmitfile;  /* Transmit at entire file                  */
     PRGetsocknameFN getsockname;    /* Get (net) address associated with fd     */
     PRGetpeernameFN getpeername;    /* Get peer's (net) address                 */
-    PRGetsockoptFN getsockopt;      /*             OBSOLETE                     */
-    PRSetsockoptFN setsockopt;      /*             OBSOLETE                     */
+    PRReservedFN reserved_fn_6;     /* reserved for future use */
+    PRReservedFN reserved_fn_5;     /* reserved for future use */
     PRGetsocketoptionFN getsocketoption;
                                     /* Get current setting of specified option  */
     PRSetsocketoptionFN setsocketoption;
