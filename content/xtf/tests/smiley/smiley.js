@@ -23,9 +23,6 @@ var genericElement = {
   willInsertChild: function(child, index) {},
   childInserted: function(child, index) {},
   
-  willReplaceChild: function(child, index) {},
-  childReplaced: function(child, index) {},
-  
   willAppendChild: function(child) {},
   childAppended: function(child) {},
   

@@ -75,8 +75,6 @@ public:
   void SetParent(nsIContent* aParent);
   nsresult InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
                          PRBool aNotify, PRBool aDeepSetDocument);
-  nsresult ReplaceChildAt(nsIContent* aKid, PRUint32 aIndex,
-                          PRBool aNotify, PRBool aDeepSetDocument);
   nsresult AppendChildTo(nsIContent* aKid, PRBool aNotify,
                          PRBool aDeepSetDocument);
   nsresult RemoveChildAt(PRUint32 aIndex, PRBool aNotify);
@@ -225,17 +223,6 @@ nsXTFGenericElementWrapper::InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
   mXTFElement->WillInsertChild(aKid, aIndex);
   rv = nsXTFGenericElementWrapperBase::InsertChildAt(aKid, aIndex, aNotify, aDeepSetDocument);
   mXTFElement->ChildInserted(aKid, aIndex);
-  return rv;
-}
-
-nsresult
-nsXTFGenericElementWrapper::ReplaceChildAt(nsIContent* aKid, PRUint32 aIndex,
-                                           PRBool aNotify, PRBool aDeepSetDocument)
-{
-  nsresult rv;
-  mXTFElement->WillReplaceChild(aKid, aIndex);
-  rv = nsXTFGenericElementWrapperBase::ReplaceChildAt(aKid, aIndex, aNotify, aDeepSetDocument);
-  mXTFElement->ChildReplaced(aKid, aIndex);
   return rv;
 }
 

@@ -65,9 +65,6 @@ interface nsIXTFElement : nsISupports
   void willInsertChild(in nsISupports child, in unsigned long index);
   void childInserted(in nsISupports child, in unsigned long index);
 
-  void willReplaceChild(in nsISupports child, in unsigned long index);
-  void childReplaced(in nsISupports child, in unsigned long index);
-
   void willAppendChild(in nsISupports child);
   void childAppended(in nsISupports child);
 

@@ -77,8 +77,6 @@ public:
   void SetParent(nsIContent* aParent);
   nsresult InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
                          PRBool aNotify, PRBool aDeepSetDocument);
-  nsresult ReplaceChildAt(nsIContent* aKid, PRUint32 aIndex,
-                          PRBool aNotify, PRBool aDeepSetDocument);
   nsresult AppendChildTo(nsIContent* aKid, PRBool aNotify,
                          PRBool aDeepSetDocument);
   nsresult RemoveChildAt(PRUint32 aIndex, PRBool aNotify);
@@ -243,17 +241,6 @@ nsXTFSVGVisualWrapper::InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
   mXTFElement->WillInsertChild(aKid, aIndex);
   rv = nsXTFSVGVisualWrapperBase::InsertChildAt(aKid, aIndex, aNotify, aDeepSetDocument);
   mXTFElement->ChildInserted(aKid, aIndex);
-  return rv;
-}
-
-nsresult
-nsXTFSVGVisualWrapper::ReplaceChildAt(nsIContent* aKid, PRUint32 aIndex,
-                                      PRBool aNotify, PRBool aDeepSetDocument)
-{
-  nsresult rv;
-  mXTFElement->WillReplaceChild(aKid, aIndex);
-  rv = nsXTFSVGVisualWrapperBase::ReplaceChildAt(aKid, aIndex, aNotify, aDeepSetDocument);
-  mXTFElement->ChildReplaced(aKid, aIndex);
   return rv;
 }
 
