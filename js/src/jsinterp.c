@@ -1072,7 +1072,7 @@ js_Interpret(JSContext *cx, jsval *result)
 #endif
 
 	if (rt->interruptHandler) {
-	    JSTrapHandler handler = (JSTrapHandler) rt->interruptHandler;
+	    JSTrapHandler handler = rt->interruptHandler;
 	    /* check copy of pointer for safety in multithreaded situation */
 	    if (handler) {
 		switch (handler(cx, script, pc, &rval,
@@ -2715,7 +2715,7 @@ js_Interpret(JSContext *cx, jsval *result)
 #if JS_HAS_DEBUGGER_KEYWORD
 	  case JSOP_DEBUGGER:
 	    if (rt->debuggerHandler) {
-		JSTrapHandler handler = (JSTrapHandler) rt->debuggerHandler;
+		JSTrapHandler handler = rt->debuggerHandler;
 		/* check copy of pointer for safety in multithread situation */
 		if (handler) {
 		    switch (handler(cx, script, pc, &rval,
@@ -2779,10 +2779,40 @@ js_Interpret(JSContext *cx, jsval *result)
 out:
 
 #if JS_HAS_EXCEPTIONS
+    /* 
+     * Has an exception been raised?
+     */
     if (!ok && cx->throwing) {
+        /* 
+         * call hook if set
+         */
+	if (rt->throwHook) {
+	    JSTrapHandler handler = rt->throwHook;
+	    /* check copy of pointer for safety in multithreaded situation */
+	    if (handler) {
+		switch (handler(cx, script, pc, &rval,
+				rt->throwHookData)) {
+		  case JSTRAP_ERROR:
+                    cx->throwing = JS_FALSE;
+		    goto no_catch;
+		  case JSTRAP_CONTINUE:
+                    cx->throwing = JS_FALSE;
+                    ok = JS_TRUE;
+                    goto advance_pc;
+		  case JSTRAP_RETURN:
+                    ok = JS_TRUE;
+                    cx->throwing = JS_FALSE;
+		    fp->rval = rval;
+		    goto no_catch;
+		  case JSTRAP_THROW:
+                    cx->exception = rval;
+		  default:;
+		}
+	    }
+	}
+
         /*
-         * Check if an exception has been raised.  If so, there may be
-         * a try block within this frame that can catch the exception.
+         * Look for a try block within this frame that can catch the exception.
          */ 
         tn = script->trynotes;
         if (tn) {
@@ -2798,6 +2828,7 @@ out:
             }
         }
     }
+no_catch:
 #endif
 
     /*

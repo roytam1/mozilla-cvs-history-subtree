@@ -91,6 +91,8 @@ struct JSRuntime {
     void                *callHookData;
     JSObjectHook        objectHook;
     void                *objectHookData;
+    JSTrapHandler       throwHook;
+    void                *throwHookData;
 
     /* More debugging state, see jsdbgapi.c. */
     JSCList             trapList;

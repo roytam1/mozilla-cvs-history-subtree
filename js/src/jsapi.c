@@ -2727,6 +2727,60 @@ JS_ClearPendingException(JSContext *cx)
 #endif
 }
 
+#if JS_HAS_EXCEPTIONS
+typedef struct JSExceptionState 
+{
+    JSBool throwing; 
+    jsval  exception;
+} JSExceptionState;
+#endif
+
+JS_PUBLIC_API(JSExceptionState *)
+JS_SaveExceptionState(JSContext *cx)
+{
+#if JS_HAS_EXCEPTIONS
+    JSExceptionState *state;
+    CHECK_REQUEST(cx);
+    state = (JSExceptionState*) JS_malloc(cx, sizeof(JSExceptionState));
+    if (state) {
+        state->throwing = JS_GetPendingException(cx, &state->exception);
+        if (state->throwing && JSVAL_IS_GCTHING(state->exception))
+            JS_AddRoot(cx, &state->exception);
+    }
+    return state;
+#else
+    return NULL;
+#endif
+}
+
+JS_PUBLIC_API(void)
+JS_RestoreExceptionState(JSContext *cx, JSExceptionState *state)
+{
+#if JS_HAS_EXCEPTIONS
+    CHECK_REQUEST(cx);
+    if (state) {
+        if (state->throwing)
+            JS_SetPendingException(cx, state->exception);
+        else
+            JS_ClearPendingException(cx);
+        JS_DropExceptionState(cx, state);
+    }
+#endif
+}
+
+JS_PUBLIC_API(void)
+JS_DropExceptionState(JSContext *cx, JSExceptionState *state)
+{
+#if JS_HAS_EXCEPTIONS
+    CHECK_REQUEST(cx);
+    if (state) {
+        if (state->throwing && JSVAL_IS_GCTHING(state->exception))
+            JS_RemoveRoot(cx, &state->exception);
+        JS_free(cx, state);
+    }
+#endif
+}
+
 #ifdef JS_THREADSAFE
 JS_PUBLIC_API(intN)
 JS_GetContextThread(JSContext *cx)
