@@ -42,6 +42,7 @@
 ;+#    And for AIX, the first ";" will also be removed.
 ;+#  This file is passed directly to windows. Since ';' is a comment, all UNIX
 ;+#   directives are hidden behind ";", ";+", and ";-"
+;+#
 ;+NSPR_4.0 {
 ;+	global:
 LIBRARY nspr4 ;-
