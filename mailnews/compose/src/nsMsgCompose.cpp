@@ -1720,7 +1720,8 @@ QuotingOutputStreamListener::QuotingOutputStreamListener(const char * originalMs
     if (NS_SUCCEEDED(rv) && originalMsgHdr && !quoteHeaders)
     {
 
-      mCitePrefix = NS_LITERAL_STRING("<span _moz_skip_spellcheck=\"true\">");
+      // mCitePrefix = NS_LITERAL_STRING("<span _moz_skip_spellcheck=\"true\">");
+
       // Setup the cite information....
       nsXPIDLCString myGetter;
       if (NS_SUCCEEDED(originalMsgHdr->GetMessageId(getter_Copies(myGetter))))
@@ -1878,7 +1879,7 @@ QuotingOutputStreamListener::QuotingOutputStreamListener(const char * originalMs
           mCitePrefix.Append(citePrefixAuthor);
         mCitePrefix.Append(replyHeaderColon);
 
-        mCitePrefix.Append(NS_LITERAL_STRING("</span>"));
+        // mCitePrefix.Append(NS_LITERAL_STRING("</span>"));
         mCitePrefix.Append(NS_LITERAL_STRING("<br><html>"));
       }
     }
