@@ -25,10 +25,4 @@
 interface nsIDOMNSHTMLFormElement : nsISupports
 {
            attribute DOMString        encoding;
-
-
-  /*
-  nsISupports               namedItem(in DOMString name);
-  nsIDOMHTMLElement         item(in unsigned long index);
-  */
 };
