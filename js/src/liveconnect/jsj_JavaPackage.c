@@ -181,6 +181,7 @@ JavaPackage_resolve(JSContext *cx, JSObject *obj, jsval id)
         JSObject *newClass;
 
         newClass = jsj_define_JavaClass(cx, jEnv, obj, subPath, jclazz);
+        (*jEnv)->DeleteLocalRef(jEnv, jclazz);
         if (!newClass) {
             ok = JS_FALSE;
             goto out;
@@ -203,7 +204,7 @@ JavaPackage_resolve(JSContext *cx, JSObject *obj, jsval id)
             package = JS_GetPrivate(cx, obj);
             if (package->flags & PKG_SYSTEM) {
                 char *msg, *cp;
-		msg = JS_strdup(cx, newPath);
+                msg = JS_strdup(cx, newPath);
 
                 /* Check for OOM */
                 if (msg) {
@@ -211,7 +212,7 @@ JavaPackage_resolve(JSContext *cx, JSObject *obj, jsval id)
                     for (cp = msg; *cp != '\0'; cp++)
                         if (*cp == '/')
                             *cp = '.';
-		    JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
+                    JS_ReportErrorNumber(cx, jsj_GetErrorMessage, NULL, 
                                                 JSJMSG_MISSING_PACKAGE, msg);
                     free((char*)msg);
                 }
