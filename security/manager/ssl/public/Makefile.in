@@ -54,7 +54,7 @@ XPIDLSRCS = \
     nsISSLStatus.idl \
     nsICertOutliner.idl \
     nsIKeygenThread.idl \
-    nsICMSMessage.idl \
+    nsICMSSecureMessage.idl \
     nsICMSDecoder.idl \
     $(NULL)
 

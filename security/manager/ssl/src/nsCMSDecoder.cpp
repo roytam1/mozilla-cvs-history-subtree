@@ -23,6 +23,8 @@
 #include "nsISupports.h"
 #include "nsCMSDecoder.h"
 #include "nsNSSHelper.h"
+#include "nsNSSCertificate.h"
+#include "smime.h"
 #include "cms.h"
 
 NS_IMPL_ISUPPORTS1(nsHash, nsIHash)
@@ -73,6 +75,11 @@ NS_IMETHODIMP nsHash::End(unsigned char* aBuf, PRUint32* aResultLen, PRUint32 aM
 
 NS_IMPL_ISUPPORTS1(nsCMSMessage, nsICMSMessage)
 
+nsCMSMessage::nsCMSMessage()
+{
+  NS_INIT_ISUPPORTS();
+  m_cmsMsg = nsnull;
+}
 nsCMSMessage::nsCMSMessage(NSSCMSMessage *aCMSMsg)
 {
   NS_INIT_ISUPPORTS();
@@ -113,16 +120,94 @@ NS_IMETHODIMP nsCMSMessage::VerifyDetachedSignature()
   return  NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsCMSMessage::CreateEncrypted()
+NS_IMETHODIMP nsCMSMessage::CreateEncrypted(nsISupportsArray * aRecipientCerts)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NSSCMSContentInfo *cinfo;
+  NSSCMSEnvelopedData *envd;
+  NSSCMSRecipientInfo *recipientInfo;
+  CERTCertificate **recipientCerts;
+  PLArenaPool *tmpPoolp = nsnull;
+  SECOidTag bulkAlgTag;
+  int keySize, i;
+  nsNSSCertificate *nssRecipientCert;
+
+  // Check the recipient certificates //
+  PRUint32 recipientCertCount;
+  aRecipientCerts->Count(&recipientCertCount);
+  PR_ASSERT(recipientCertCount > 0);
+
+  if ((tmpPoolp = PORT_NewArena(1024)) == nsnull) {
+    goto loser;
+  }
+
+  if ((recipientCerts = (CERTCertificate**)PORT_ArenaZAlloc(tmpPoolp,
+                                           (recipientCertCount+1)*sizeof(CERTCertificate*)))
+                                           == nsnull) {
+    goto loser;
+  }
+
+  for (i=0; i<recipientCertCount; i++) {
+    nssRecipientCert = NS_STATIC_CAST(nsNSSCertificate*, aRecipientCerts->ElementAt(i));
+    recipientCerts[i] = nssRecipientCert->GetCert();
+  }
+  recipientCerts[i] = nsnull;
+
+  // Find a bulk key algorithm //
+  if (NSS_SMIMEUtil_FindBulkAlgForRecipients(recipientCerts, &bulkAlgTag,
+                                            &keySize) != SECSuccess) {
+    goto loser;
+  }
+
+  m_cmsMsg = NSS_CMSMessage_Create(NULL);
+  if (m_cmsMsg == nsnull) {
+    goto loser;
+  }
+
+  if ((envd = NSS_CMSEnvelopedData_Create(m_cmsMsg, bulkAlgTag, keySize)) == nsnull) {
+    goto loser;
+  }
+
+  cinfo = NSS_CMSMessage_GetContentInfo(m_cmsMsg);
+  if (NSS_CMSContentInfo_SetContent_EnvelopedData(m_cmsMsg, cinfo, envd) != SECSuccess) {
+    goto loser;
+  }
+
+  cinfo = NSS_CMSEnvelopedData_GetContentInfo(envd);
+  if (NSS_CMSContentInfo_SetContent_Data(m_cmsMsg, cinfo, nsnull, PR_FALSE) != SECSuccess) {
+    goto loser;
+  }
+
+  // Create and attach recipient information //
+  for (i=0; recipientCerts[i] != nsnull; i++) {
+    if ((recipientInfo = NSS_CMSRecipientInfo_Create(m_cmsMsg, recipientCerts[i])) == nsnull) {
+      goto loser;
+    }
+    if (NSS_CMSEnvelopedData_AddRecipient(envd, recipientInfo) != SECSuccess) {
+      goto loser;
+    }
+  }
+
+  if (tmpPoolp) {
+    PORT_FreeArena(tmpPoolp, PR_FALSE);
+  }
+
+  return NS_OK;
+loser:
+  if (m_cmsMsg) {
+    NSS_CMSMessage_Destroy(m_cmsMsg);
+    m_cmsMsg = nsnull;
+  }
+  if (tmpPoolp) {
+    PORT_FreeArena(tmpPoolp, PR_FALSE);
+  }
+
+  return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP nsCMSMessage::CreateSigned()
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  return NS_ERROR_NOT_IMPLEMENTED;
 }
-
 
 NS_IMPL_ISUPPORTS1(nsCMSDecoder, nsICMSDecoder)
 
@@ -166,3 +251,52 @@ NS_IMETHODIMP nsCMSDecoder::Finish(nsICMSMessage ** aCMSMsg)
   }
   return NS_OK;
 }
+
+NS_IMPL_ISUPPORTS1(nsCMSEncoder, nsICMSEncoder)
+
+nsCMSEncoder::nsCMSEncoder()
+{
+  NS_INIT_ISUPPORTS();
+}
+
+nsCMSEncoder::~nsCMSEncoder()
+{
+}
+
+/* void start (); */
+NS_IMETHODIMP nsCMSEncoder::Start(nsICMSMessage *aMsg, NSSCMSContentCallback cb, void * arg)
+{
+  nsCMSMessage *cmsMsg = NS_STATIC_CAST(nsCMSMessage*, aMsg);
+  m_ctx = new PipUIContext();
+
+  m_ecx = NSS_CMSEncoder_Start(cmsMsg->getCMS(), cb, arg, 0, 0, 0, m_ctx, 0, 0, 0, 0);
+  if (m_ecx == nsnull) {
+    return NS_ERROR_FAILURE;
+  }
+  return NS_OK;
+}
+
+/* void update (in string aBuf, in long aLen); */
+NS_IMETHODIMP nsCMSEncoder::Update(const char *aBuf, PRInt32 aLen)
+{
+  if (NSS_CMSEncoder_Update(m_ecx, aBuf, aLen) != SECSuccess) {
+    return NS_ERROR_FAILURE;
+  }
+  return NS_OK;
+}
+
+/* void finish (); */
+NS_IMETHODIMP nsCMSEncoder::Finish()
+{
+  if (NSS_CMSEncoder_Finish(m_ecx) != SECSuccess) {
+    return NS_ERROR_FAILURE;
+  }
+  return NS_OK;
+}
+
+/* void encode (in nsICMSMessage aMsg); */
+NS_IMETHODIMP nsCMSEncoder::Encode(nsICMSMessage *aMsg)
+{
+  return NS_ERROR_NOT_IMPLEMENTED;
+}
+

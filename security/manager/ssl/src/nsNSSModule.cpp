@@ -44,7 +44,7 @@
 //For the NS_CRYPTO_CONTRACTID define
 #include "nsDOMCID.h"
 
-#include "nsCMSMessage.h"  // and nsCMSManager
+#include "nsCMSSecureMessage.h"
 #include "nsCMSDecoder.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsNSSComponent, Init)
@@ -59,8 +59,10 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsNSSCertificateDB)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCertOutliner)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCrypto)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsPkcs11)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSManager)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSSecureMessage)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSDecoder)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSEncoder)
+NS_GENERIC_FACTORY_CONSTRUCTOR(nsCMSMessage)
 
 static nsModuleComponentInfo components[] =
 {
@@ -198,10 +200,10 @@ static nsModuleComponentInfo components[] =
   },
 
   {
-    NS_CMSMANAGER_CLASSNAME,
-    NS_CMSMANAGER_CID,
-    NS_CMSMANAGER_CONTRACTID,
-    nsCMSManagerConstructor
+    NS_CMSSECUREMESSAGE_CLASSNAME,
+    NS_CMSSECUREMESSAGE_CID,
+    NS_CMSSECUREMESSAGE_CONTRACTID,
+    nsCMSSecureMessageConstructor
   },
 
   {
@@ -209,6 +211,20 @@ static nsModuleComponentInfo components[] =
     NS_CMSDECODER_CID,
     NS_CMSDECODER_CONTRACTID,
     nsCMSDecoderConstructor
+  },
+
+  {
+    NS_CMSENCODER_CLASSNAME,
+    NS_CMSENCODER_CID,
+    NS_CMSENCODER_CONTRACTID,
+    nsCMSEncoderConstructor
+  },
+
+  {
+    NS_CMSMESSAGE_CLASSNAME,
+    NS_CMSMESSAGE_CID,
+    NS_CMSMESSAGE_CONTRACTID,
+    nsCMSMessageConstructor
   },
 };
 

@@ -27,9 +27,9 @@
 #include "nsISupports.h"
 #include "nsIInterfaceRequestor.h"
 
-#include "nsICMSMessage.h"
+#include "nsICMSSecureMessage.h"
 
-#include "nsCMSMessage.h"
+#include "nsCMSSecureMessage.h"
 #include "nsNSSCertificate.h"
 #include "nsNSSHelper.h"
 
@@ -45,26 +45,26 @@
 // NOTE: Should these be the thread-safe versions?
 
 /*****
- * nsCMSManager
+ * nsCMSSecureMessage
  *****/
 
 // Standard ISupports implementation
-NS_IMPL_ISUPPORTS1(nsCMSManager, nsICMSManager)
+NS_IMPL_ISUPPORTS1(nsCMSSecureMessage, nsICMSSecureMessage)
 
-// nsCMSManager constructor
-nsCMSManager::nsCMSManager()
+// nsCMSSecureMessage constructor
+nsCMSSecureMessage::nsCMSSecureMessage()
 {
   // initialize superclass
   NS_INIT_ISUPPORTS();
 }
 
 // nsCMSMessage destructor
-nsCMSManager::~nsCMSManager()
+nsCMSSecureMessage::~nsCMSSecureMessage()
 {
 }
 
-// nsCMSManager::GetEncryptionCert
-NS_IMETHODIMP nsCMSManager::
+// nsCMSSecureMessage::GetEncryptionCert
+NS_IMETHODIMP nsCMSSecureMessage::
 GetEncryptionCert(char ** _retval)
 {
   nsresult rv = NS_OK;
@@ -99,8 +99,8 @@ done:
 }
 
 
-// nsCMSManager::DecodeCert
-nsresult nsCMSManager::
+// nsCMSSecureMessage::DecodeCert
+nsresult nsCMSSecureMessage::
 DecodeCert(const char *value, nsIX509Cert ** _retval)
 {
   nsresult rv = NS_OK;
@@ -123,8 +123,8 @@ DecodeCert(const char *value, nsIX509Cert ** _retval)
   return rv;
 }
 
-// nsCMSManager::SendMessage
-nsresult nsCMSManager::
+// nsCMSSecureMessage::SendMessage
+nsresult nsCMSSecureMessage::
 SendMessage(const char *msg, const char *base64Cert, char ** _retval)
 {
   nsresult rv = NS_OK;
@@ -207,9 +207,9 @@ done:
 }
 
 /*
- * nsCMSManager::ReceiveMessage
+ * nsCMSSecureMessage::ReceiveMessage
  */
-nsresult nsCMSManager::
+nsresult nsCMSSecureMessage::
 ReceiveMessage(const char *msg, char **_retval)
 {
   nsresult rv = NS_OK;
@@ -246,7 +246,7 @@ done:
   return rv;
 }
 
-nsresult nsCMSManager::
+nsresult nsCMSSecureMessage::
 encode(const unsigned char *data, PRInt32 dataLen, char **_retval)
 {
     nsresult rv = NS_OK;
@@ -258,7 +258,7 @@ loser:
     return rv;
 }
 
-nsresult nsCMSManager::
+nsresult nsCMSSecureMessage::
 decode(const char *data, unsigned char **result, PRInt32 * _retval)
 {
     nsresult rv = NS_OK;

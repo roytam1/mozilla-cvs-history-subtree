@@ -21,6 +21,7 @@
  */
 
 #include "nsISupports.idl"
+interface nsISupportsArray;
 
 %{ C++
 typedef void (*NSSCMSContentCallback)(void *arg, const char *buf, unsigned long len);
@@ -61,7 +62,7 @@ interface nsICMSMessage : nsISupports
   void getSignerEmailAddress(out string aEmail);
   void verifySignature();
   void verifyDetachedSignature();
-  void CreateEncrypted();
+  void CreateEncrypted(in nsISupportsArray aRecipientCerts);
   void CreateSigned();
 };
 
@@ -78,13 +79,13 @@ interface nsICMSDecoder : nsISupports
 };
 
 /**
- * nsICMSDecoder
+ * nsICMSEncoder
  *  Interface to decode an CMS message
  */
 [uuid(a15789aa-8903-462b-81e9-4aa2cff4d5cb)]
 interface nsICMSEncoder : nsISupports
 {
-  void start();
+  void start(in nsICMSMessage aMsg, in NSSCMSContentCallback cb, in voidPtr arg);
   void update(in string aBuf, in long aLen);
   void finish();
   void encode(in nsICMSMessage aMsg);
@@ -97,7 +98,6 @@ interface nsICMSEncoder : nsISupports
 %{C++
 #define NS_CMSDECODER_CONTRACTID "@mozilla.org/nsCMSDecoder;1"
 #define NS_CMSENCODER_CONTRACTID "@mozilla.org/nsCMSEncoder;1"
-
 #define NS_CMSMESSAGE_CONTRACTID "@mozilla.org/nsCMSMessage;1"
 #define NS_HASH_CONTRACTID "@mozilla.org/nsHash;1"
 %}

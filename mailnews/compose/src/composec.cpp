@@ -661,6 +661,11 @@ mime_crypto_hack_certs(mime_crypto_closure *state, const char *recipients,
   nsresult res = nsComponentManager::CreateInstance(kMsgHeaderParserCID, 
                                                      NULL, NS_GET_IID(nsIMsgHeaderParser), 
                                                      (void **) getter_AddRefs(pHeader)); 
+  res = NS_NewISupportsArray(getter_AddRefs(state->certs));
+  if (NS_FAILED(res)) {
+    return res;
+  }
+
   PRBool no_clearsigning_p = PR_FALSE;
 
   PR_ASSERT(encrypt_p || sign_p);

@@ -58,9 +58,11 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSICMSMESSAGE
 
+  nsCMSMessage();
   nsCMSMessage(NSSCMSMessage* aCMSMsg);
   virtual ~nsCMSMessage();
-
+  
+  NSSCMSMessage* getCMS() {return m_cmsMsg;};
 private:
   NSSCMSMessage * m_cmsMsg;
 };
@@ -86,6 +88,27 @@ public:
 private:
   nsCOMPtr<nsIInterfaceRequestor> m_ctx;
   NSSCMSDecoderContext *m_dcx;
+};
+
+// ===============================================
+// nsCMSEncoder - implementation of nsICMSEncoder
+// ===============================================
+
+#define NS_CMSENCODER_CLASSNAME "CMS Decoder Object"
+#define NS_CMSENCODER_CID \
+  { 0xa15789aa, 0x8903, 0x462b, { 0x81, 0xe9, 0x4a, 0xa2, 0xcf, 0xf4, 0xd5, 0xcb } }
+class nsCMSEncoder : public nsICMSEncoder
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSICMSENCODER
+
+  nsCMSEncoder();
+  virtual ~nsCMSEncoder();
+
+private:
+  nsCOMPtr<nsIInterfaceRequestor> m_ctx;
+  NSSCMSEncoderContext *m_ecx;
 };
 
 #endif
