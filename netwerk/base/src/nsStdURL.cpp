@@ -1021,9 +1021,9 @@ nsStdURL::SetSpec(const char* i_Spec)
         }
         if (copyToPtr) { // if copying
             *copyToPtr = *midPtr;
-            copyToPtr++;
             if (*midPtr == '\0')
                 break;
+            copyToPtr++;
         }
         midPtr++;
     }
