@@ -295,20 +295,27 @@ nsHttpTransaction::HandleContent(char *buf,
             mResponseHead->Flatten(headers);
             LOG2(("http response [\n%s]\n", headers.get()));                        
 #endif
+            PRBool reset = PR_FALSE;
+
             // we ignore a 100 response, which means that we must reset
             // our state so that we'll parse from the beginning again.
             if (mResponseHead->Status() == 100) {
                 LOG(("ignoring 100 response\n"));
+                reset = PR_TRUE;
+            }
+            // notify the connection, give it a chance to cause a reset.
+            else if (mConnection)
+                mConnection->OnHeadersAvailable(this, &reset);
+
+            // looks like we should ignore this response, resetting...
+            if (reset) {
+                LOG(("resetting transaction's response head\n"));
                 mHaveAllHeaders = PR_FALSE;
                 mHaveStatusLine = PR_FALSE;
                 mResponseHead->Reset();
                 // wait to be called again...
                 return NS_BASE_STREAM_WOULD_BLOCK;
             }
-
-            // notify the connection first
-            if (mConnection)
-                mConnection->OnHeadersAvailable(this);
 
             // grab the content-length from the response headers
             mContentLength = mResponseHead->ContentLength();

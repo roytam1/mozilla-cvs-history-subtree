@@ -26,10 +26,11 @@
 #include "nsHttpRequestHead.h"
 #include "nsHttpResponseHead.h"
 #include "nsHttpHandler.h"
-#include "nsHttpsProxyListener.h"
 #include "nsISocketTransportService.h"
 #include "nsISocketTransport.h"
 #include "nsIServiceManager.h"
+#include "nsISSLSocketControl.h"
+#include "nsIStringStream.h"
 #include "netCore.h"
 #include "nsNetCID.h"
 #include "prmem.h"
@@ -66,7 +67,6 @@ TransactionReleaseDestroyHandler(PLEvent *ev)
 nsHttpConnection::nsHttpConnection()
     : mTransaction(0)
     , mConnectionInfo(0)
-    , mState(IDLE)
     , mReuseCount(0)
     , mMaxReuseCount(0)
     , mIdleTimeout(0)
@@ -154,7 +154,7 @@ nsHttpConnection::SetTransaction(nsHttpTransaction *transaction)
 
 // called from the socket thread
 nsresult
-nsHttpConnection::OnHeadersAvailable(nsHttpTransaction *trans)
+nsHttpConnection::OnHeadersAvailable(nsHttpTransaction *trans, PRBool *reset)
 {
     LOG(("nsHttpConnection::OnHeadersAvailable [this=%x trans=%x]\n",
         this, trans));
@@ -199,6 +199,25 @@ nsHttpConnection::OnHeadersAvailable(nsHttpTransaction *trans)
             
             LOG(("Connection can be reused [this=%x max-reuse=%u "
                  "keep-alive-timeout=%u\n", this, mMaxReuseCount, mIdleTimeout));
+        }
+    }
+
+    // if we're doing an SSL proxy connect, then we need to check whether or not
+    // the connect was successful.  if so, then we have to reset the transaction
+    // and step-up the socket connection to SSL. finally, we have to wake up the
+    // socket write request.
+    if (mSSLProxyConnectStream) {
+        mSSLProxyConnectStream = 0;
+        if (trans->ResponseHead()->Status() == 200) {
+            LOG(("SSL proxy CONNECT succeeded!\n"));
+            *reset = PR_TRUE;
+            ProxyStepUp();
+            mWriteRequest->Resume();
+        }
+        else {
+            LOG(("SSL proxy CONNECT failed!\n"));
+            // close out the write request
+            mWriteRequest->Cancel(NS_OK);
         }
     }
 
@@ -251,6 +270,24 @@ nsHttpConnection::Resume()
     return NS_OK;
 }
 
+// called from the socket thread
+nsresult
+nsHttpConnection::ProxyStepUp()
+{
+    nsCOMPtr<nsISupports> securityInfo;
+    nsresult rv;
+
+    LOG(("nsHttpConnection::ProxyStepUp [this=%x]\n", this));
+
+    rv = mSocketTransport->GetSecurityInfo(getter_AddRefs(securityInfo));
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsISSLSocketControl> ssl = do_QueryInterface(securityInfo, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    return ssl->ProxyStepUp();
+}
+
 PRBool
 nsHttpConnection::CanReuse()
 {
@@ -299,20 +336,22 @@ nsHttpConnection::ActivateConnection()
         }
     }
 
-    mState = WAITING_FOR_WRITE;
-
     // allow the socket transport to call us directly on progress
     rv = mSocketTransport->
             SetNotificationCallbacks(this, nsITransport::DONT_PROXY_PROGRESS);
     if (NS_FAILED(rv)) return rv;
 
-    rv = mSocketTransport->AsyncWrite(this, nsnull, 0, PRUint32(-1),
+    // note: we pass a reference to ourselves as the context so we can
+    // differentiate the OnStopRequest events.
+    rv = mSocketTransport->AsyncWrite(this, (nsIStreamListener*) this,
+                                      0, PRUint32(-1),
                                       nsITransport::DONT_PROXY_OBSERVER |
                                       nsITransport::DONT_PROXY_PROVIDER,
                                       getter_AddRefs(mWriteRequest));
     if (NS_FAILED(rv)) return rv;
 
-    rv = mSocketTransport->AsyncRead(this, nsnull, 0, PRUint32(-1),
+    rv = mSocketTransport->AsyncRead(this, nsnull,
+                                     0, PRUint32(-1),
                                      nsITransport::DONT_PROXY_OBSERVER |
                                      nsITransport::DONT_PROXY_LISTENER,
                                      getter_AddRefs(mReadRequest));
@@ -392,6 +431,8 @@ nsHttpConnection::SetupSSLProxyConnect()
 
     LOG(("nsHttpConnection::SetupSSLProxyConnect [this=%x]\n", this));
 
+    NS_ENSURE_TRUE(!mSSLProxyConnectStream, NS_ERROR_ALREADY_INITIALIZED);
+
     nsCAutoString buf;
     buf.Assign(mConnectionInfo->Host());
     buf.Append(':');
@@ -403,28 +444,16 @@ nsHttpConnection::SetupSSLProxyConnect()
     request.SetVersion(nsHttpHandler::get()->DefaultVersion());
     request.SetRequestURI(buf.get());
 
-    // the listener's job will be to call SetTransaction on "this"
-    nsHttpsProxyListener *listener =
-            new nsHttpsProxyListener(this, mTransaction);
-    if (!listener)
-        return NS_ERROR_OUT_OF_MEMORY;
-    NS_ADDREF(listener);
+    buf.Truncate(0);
+    request.Flatten(buf);
+    buf.Append("\r\n");
 
-    // create a transaction object for the proxy connect request
-    nsHttpTransaction *trans =
-            new nsHttpTransaction(listener, mTransaction->Callbacks());
-    if (!trans)
-        return NS_ERROR_OUT_OF_MEMORY;
-    NS_ADDREF(trans);
-
-    rv = trans->SetupRequest(&request, nsnull);
+    nsCOMPtr<nsISupports> sup;
+    rv = NS_NewCStringInputStream(getter_AddRefs(sup), buf);
     if (NS_FAILED(rv)) return rv;
 
-    // switch to the proxy connect transaction
-    NS_RELEASE(mTransaction);
-    mTransaction = trans;
-
-    return NS_OK;
+    mSSLProxyConnectStream = do_QueryInterface(sup, &rv);
+    return rv;
 }
 
 //-----------------------------------------------------------------------------
@@ -450,9 +479,7 @@ NS_INTERFACE_MAP_END_THREADSAFE
 NS_IMETHODIMP
 nsHttpConnection::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
 {
-    LOG(("nsHttpConnection::OnStartRequest [this=%x state=%d]\n",
-        this, mState));
-
+    LOG(("nsHttpConnection::OnStartRequest [this=%x]\n", this));
     return NS_OK;
 }
 
@@ -461,19 +488,16 @@ NS_IMETHODIMP
 nsHttpConnection::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
                                 nsresult status)
 {
-    LOG(("nsHttpConnection::OnStopRequest [this=%x ctxt=%x state=%d status=%x]\n",
-        this, ctxt, mState, status));
+    LOG(("nsHttpConnection::OnStopRequest [this=%x ctxt=%x status=%x]\n",
+        this, ctxt, status));
 
     if (!mTransaction)
         return NS_OK;
 
-    if (mState == WRITING) {
-        mState = WAITING_FOR_READ;
+    if (ctxt == (nsISupports *) (nsIStreamListener *) this)
         mWriteRequest = 0;
-    } 
     else {
         // Done reading, so signal transaction complete...
-        mState = IDLE;
         mReadRequest = 0;
 
         // break the cycle between the socket transport and this
@@ -515,11 +539,30 @@ nsHttpConnection::OnDataWritable(nsIRequest *request, nsISupports *context,
         return NS_BASE_STREAM_CLOSED;
     }
 
-    mState = WRITING;
+    LOG(("nsHttpConnection::OnDataWritable [this=%x]\n", this));
 
-    LOG(("nsHttpConnection::OnDataWritable [this=%x state=%d]\n",
-        this, mState));
+    // if we're doing an SSL proxy connect, then we need to bypass calling
+    // into the transaction.
+    if (mSSLProxyConnectStream) {
+        PRUint32 n;
 
+        nsresult rv = mSSLProxyConnectStream->Available(&n);
+        if (NS_FAILED(rv)) return rv;
+
+        // if there are bytes available in the stream, then write them out.
+        // otherwise, suspend the write request... it'll get restarted once
+        // we get a response from the proxy server.
+        if (n) {
+            LOG(("writing data from proxy connect stream [count=%u]\n", n));
+            return outputStream->WriteFrom(mSSLProxyConnectStream, n, &n);
+        }
+
+        LOG(("done writing proxy connect stream\n"));
+        return NS_BASE_STREAM_WOULD_BLOCK;
+    }
+
+    // in the normal case, we just want to defer to the transaction to write
+    // out the request.
     return mTransaction->OnDataWritable(outputStream);
 }
 
@@ -538,11 +581,9 @@ nsHttpConnection::OnDataAvailable(nsIRequest *request, nsISupports *context,
         return NS_BASE_STREAM_CLOSED;
     }
 
-    mState = READING;
     mLastActiveTime = NowInSeconds();
 
-    LOG(("nsHttpConnection::OnDataAvailable [this=%x state=%d]\n",
-        this, mState));
+    LOG(("nsHttpConnection::OnDataAvailable [this=%x]\n", this));
 
     nsresult rv = mTransaction->OnDataReadable(inputStream);
 

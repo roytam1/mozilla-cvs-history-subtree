@@ -51,14 +51,6 @@ nsHttpsProxyListener::OnStopRequest(nsIRequest *req, nsISupports *ctx,
     LOG(("nsHttpsProxyListener::OnStopRequest [this=%x req=%x]\n",
         this, req));
 
-    // advance the connection to the next transaction, ie. the pending
-    // transaction.
-    mConnection->SetTransaction(mPendingTransaction);
-
-    // now we're done with the pending transaction.
-    NS_RELEASE(mPendingTransaction);
-    mPendingTransaction = 0;
-
     PRBool failed = NS_FAILED(status);
     if (!failed) {
         // if the transaction appeared to succeed but the http response itself
@@ -70,8 +62,27 @@ nsHttpsProxyListener::OnStopRequest(nsIRequest *req, nsISupports *ctx,
         }
     }
 
-    if (failed)
+    // if the connect was successful then instruct the connection to start
+    // speaking SSL.
+    if (!failed)
+        mConnection->ProxyStepUp();
+
+    // advance the connection to the next transaction, ie. the pending
+    // transaction.  we have to set the transaction even if the connect
+    // failed so that it can receive the proper notifications.
+    mConnection->SetTransaction(mPendingTransaction);
+
+    // now we're done with the pending transaction.
+    NS_RELEASE(mPendingTransaction);
+    mPendingTransaction = 0;
+
+    // if the connect actually failed, then we have to kill the transaction.
+    if (failed) {
+        // XXX we need to transfer the response head from the SSL proxy connect
+        // transaction to the new transaction.  This is especially important
+        // since SSL proxy servers could request authentication!
         mConnection->OnTransactionComplete(status);
+    }  
 
     return NS_OK;
 }

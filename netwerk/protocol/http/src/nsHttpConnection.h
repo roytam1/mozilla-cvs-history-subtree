@@ -31,6 +31,7 @@
 #include "nsIProgressEventSink.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIEventQueue.h"
+#include "nsIInputStream.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
 #include "plstr.h"
@@ -68,13 +69,16 @@ public:
 
     // called by the transaction to inform the connection that all of the
     // headers are available.
-    nsresult OnHeadersAvailable(nsHttpTransaction *);
+    nsresult OnHeadersAvailable(nsHttpTransaction *, PRBool *reset);
 
     // called by the transaction to inform the connection that it is done.
     nsresult OnTransactionComplete(nsresult status);
 
     // called by the transaction to resume a read-in-progress
     nsresult Resume();
+
+    // called to cause the underlying socket to start speaking SSL
+    nsresult ProxyStepUp();
 
     PRBool   CanReuse(); // can this connection be reused?
     PRBool   IsAlive();
@@ -112,10 +116,11 @@ private:
     nsCOMPtr<nsIProgressEventSink>  mProgressSink;
     nsCOMPtr<nsIEventQueue>         mEventQ;
 
+    nsCOMPtr<nsIInputStream>        mSSLProxyConnectStream;
+
     nsHttpTransaction              *mTransaction;    // hard ref
     nsHttpConnectionInfo           *mConnectionInfo; // hard ref
 
-    PRUint32                        mState;
     PRUint32                        mReuseCount;
     PRUint32                        mMaxReuseCount; // value of keep-alive: max=
     PRUint32                        mIdleTimeout;   // value of keep-alive: timeout=
