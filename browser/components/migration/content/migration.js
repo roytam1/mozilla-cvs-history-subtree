@@ -14,12 +14,11 @@ var MigrationWizard = {
               new MigrationItem(nsIBPM.PASSWORDS, "passwords"),
               new MigrationItem(nsIBPM.BOOKMARKS, "bookmarks"),
               new MigrationItem(nsIBPM.DOWNLOADS, "downloads")],
-
   _dataSources: { 
-    "ie":       [0, 1, 2, 3, 4, 5], 
-    "opera":    [0, 1, 2, 5, 6],
-    "dogbert":  [0, 1, 5],
-    "seamonkey":[0, 1, 2, 4, 5, 6]
+    "ie":       { _migrate: [0, 1, 2, 3, 4, 5], _import: [0, 1, 2, 3, 4, 5] },
+    "opera":    { _migrate: [0, 1, 2, 5, 6],    _import: [0, 1, 2, 5, 6] },
+    "dogbert":  { _migrate: [0, 1, 5],          _import: [5] },
+    "seamonkey":{ _migrate: [0, 1, 2, 4, 5, 6], _import: [5] },
   },
   
   _source: "",
@@ -62,6 +61,8 @@ var MigrationWizard = {
   // 1 - Import Source
   onImportSourcePageShow: function ()
   {
+    document.documentElement.getButton("back").disabled = true;
+
     var importSourceGroup = document.getElementById("importSourceGroup");
     importSourceGroup.selectedItem = document.getElementById(this._source == "" ? "ie" : this._source);
   },
@@ -95,6 +96,9 @@ var MigrationWizard = {
   // 2 - [Profile Selection]
   onSelectProfilePageShow: function ()
   {
+    if (this._automigrate)
+      document.documentElement.getButton("back").disabled = true;
+      
     var profiles = document.getElementById("profiles");
     while (profiles.hasChildNodes()) 
       profiles.removeChild(profiles.firstChild);
@@ -109,7 +113,13 @@ var MigrationWizard = {
       profiles.appendChild(item);
     }
     
-    profiles.selectedItem = profiles.firstChild;
+    profiles.selectedItem = this._selectedProfile ? document.getElementById(this._selectedProfile) : profiles.firstChild;
+  },
+  
+  onSelectProfilePageRewound: function ()
+  {
+    var profiles = document.getElementById("profiles");
+    this._selectedProfile = profiles.selectedItem.id;
   },
   
   onSelectProfilePageAdvanced: function ()
@@ -119,8 +129,9 @@ var MigrationWizard = {
     
     // If we're automigrating, don't show the item selection page, just grab everything.
     if (this._automigrate) {
-      this._params = nsIBPM.ALL;
-      this._wiz.next = "migrating";
+      this._itemsFlags = nsIBPM.ALL;
+      this._selectedIndices = this._dataSources[this._source]._migrate;
+      this._wiz.currentPage.next = "migrating";
     }
   },
   
@@ -133,14 +144,15 @@ var MigrationWizard = {
     
     var bundle = document.getElementById("bundle");
     
-    var ds = this._dataSources[this._source];
+    var ds = this._dataSources[this._source]._import;
     for (var i = 0; i < ds.length; ++i) {
       var item = this._items[ds[i]];
       var checkbox = document.createElement("checkbox");
       checkbox.id = item._id;
       checkbox.setAttribute("label", bundle.getString(item._key + "_" + this._source));
       dataSources.appendChild(checkbox);
-      checkbox.checked = true;
+      if (!this._itemsFlags || this._itemsFlags & item._id)
+        checkbox.checked = true;
     }
   },
 
@@ -154,47 +166,68 @@ var MigrationWizard = {
       if (checkbox.localName == "checkbox") {
         if (checkbox.checked) {
           params |= parseInt(checkbox.id);
-          this._selectedIndices.push(i);
+          this._selectedIndices.push(parseInt(checkbox.id));
         }
       }
     }
     this._itemsFlags = params;
   },
   
+  onImportItemCommand: function (aEvent)
+  {
+    var items = document.getElementById("dataSources");
+    var checkboxes = items.getElementsByTagName("checkbox");
+    
+    var oneChecked = false;
+    for (var i = 0; i < checkboxes.length; ++i)
+      oneChecked = checkboxes[i].checked;
+    
+    this._wiz.getButton("next").disabled = !oneChecked;
+  },
+  
   // 4 - Migrating
   onMigratingPageShow: function ()
   {
+    this._wiz.getButton("cancel").disabled = true;
+    this._wiz.getButton("back").disabled = true;
+    this._wiz.getButton("next").disabled = true;
+
+    this._listItems("migratingItems");
     setTimeout(this.onMigratingMigrate, 0, this);
   },
   
   onMigratingMigrate: function (aOuter)
   {
-    aOuter._migrator.migrate(aOuter._itemsFlags, true, aOuter._selectedProfile);
+    aOuter._migrator.migrate(aOuter._itemsFlags, this._automigrate, aOuter._selectedProfile);
   },
   
-  goat: function () { },
-
+  _listItems: function (aID)
+  {
+    var items = document.getElementById(aID);
+    while (items.hasChildNodes())
+      items.removeChild(items.firstChild);
+    
+    var idToIndex = { "1": 0, "2": 1, "4": 2, "8": 3, "16": 4, "32": 5, "64": 6 };
+    var bundle = document.getElementById("bundle");
+    for (var i = 0; i < this._selectedIndices.length; ++i) {
+      var index = this._selectedIndices[i];
+      var label = document.createElement("label");
+      var item = this._items[idToIndex[index.toString()]];
+      label.id = item._key;
+      label.setAttribute("value", bundle.getString(item._key + "_" + this._source));
+      items.appendChild(label);
+    } 
+  },
+  
   observe: function (aSubject, aTopic, aData)
   {
     var itemToIndex = { "settings": 0, "cookies": 1, "history": 2, "formdata": 3, "passwords": 4, "bookmarks": 5, "downloads": 6 };
-    var goats = document.getElementById("goats");
     switch (aTopic) {
     case "Migration:Started":
-      dump("*** migration started\n");
-      var items = document.getElementById("items");
-      while (items.hasChildNodes())
-        items.removeChild(items.firstChild);
-      
-      var bundle = document.getElementById("bundle");
-      for (var i = 0; i < this._selectedIndices.length; ++i) {
-        var index = this._selectedIndices[i];
-        var label = document.createElement("label");
-        label.id = this._items[index]._key;
-        label.setAttribute("value", bundle.getString(this._items[index]._key + "_" + this._source));
-        items.appendChild(label);
-      } 
+      dump("*** started\n");
       break;
     case "Migration:ItemBeforeMigrate":
+      dump("*** before " + aData + "\n");
       var index = itemToIndex[aData];
       var item = this._items[index];
       var label = document.getElementById(item._key);
@@ -202,6 +235,7 @@ var MigrationWizard = {
         label.setAttribute("style", "font-weight: bold");
       break;
     case "Migration:ItemAfterMigrate":
+      dump("*** after " + aData + "\n");
       var index = itemToIndex[aData];
       var item = this._items[index];
       var label = document.getElementById(item._key);
@@ -209,8 +243,26 @@ var MigrationWizard = {
         label.removeAttribute("style");
       break;
     case "Migration:Ended":
+      dump("*** done\n");
+      if (this._automigrate) {
+        // We're done now.
+        window.close();
+      }
+      else {
+        var nextButton = this._wiz.getButton("next");
+        nextButton.disabled = false;
+        nextButton.click();
+      }
       break;
     }
+  },
+  
+  onDonePageShow: function ()
+  {
+    this._wiz.getButton("cancel").disabled = true;
+    this._wiz.getButton("back").disabled = true;
+    this._wiz.getButton("finish").disabled = false;
+    this._listItems("doneItems");
   }
 };
 

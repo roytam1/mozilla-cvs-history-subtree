@@ -305,6 +305,7 @@ nsDogbertProfileMigrator::CopyCookies(PRBool aReplace)
 }
 
 #ifdef NEED_TO_FIX_4X_COOKIES
+// XXXben need to rewrite this to downconvert buffers properly, right now this is pretty broken.
 nsresult
 nsDogbertProfileMigrator::FixDogbertCookies()
 {
@@ -400,7 +401,7 @@ nsDogbertProfileMigrator::CopyBookmarks(PRBool aReplace)
 
   nsCOMPtr<nsIRDFService> rdfs(do_GetService("@mozilla.org/rdf/rdf-service;1"));
   nsCOMPtr<nsIRDFResource> prop;
-  rdfs->GetResource(NS_LITERAL_CSTRING("http://home.netscape.com/NC_NS#URL"), 
+  rdfs->GetResource(NS_LITERAL_CSTRING("http://home.netscape.com/NC-rdf#URL"), 
                     getter_AddRefs(prop));
   nsCOMPtr<nsIRDFLiteral> url;
   nsAutoString path;
@@ -409,9 +410,9 @@ nsDogbertProfileMigrator::CopyBookmarks(PRBool aReplace)
 
   params->AppendElement(prop);
   params->AppendElement(url);
-
+  
   nsCOMPtr<nsIRDFResource> importCmd;
-  rdfs->GetResource(NS_LITERAL_CSTRING("http://home.netscape.com/NC_NS#command?cmd=import"), 
+  rdfs->GetResource(NS_LITERAL_CSTRING("http://home.netscape.com/NC-rdf#command?cmd=import"), 
                     getter_AddRefs(importCmd));
 
   nsCOMPtr<nsIRDFResource> root;
@@ -422,10 +423,15 @@ nsDogbertProfileMigrator::CopyBookmarks(PRBool aReplace)
 
   nsCOMPtr<nsIRDFResource> folder;
   bms->CreateFolderInContainer(importedDogbertBookmarksTitle.get(), root, -1, getter_AddRefs(folder));
+  
+  nsCOMPtr<nsIRDFResource> folderProp;
+  rdfs->GetResource(NS_LITERAL_CSTRING("http://home.netscape.com/NC-rdf#Folder"), 
+                    getter_AddRefs(folderProp));
+  params->AppendElement(folderProp);
+  params->AppendElement(folder);
 
   nsCOMPtr<nsISupportsArray> sources;
   NS_NewISupportsArray(getter_AddRefs(sources));
-
   sources->AppendElement(folder);
 
   nsCOMPtr<nsIRDFDataSource> ds(do_QueryInterface(bms));

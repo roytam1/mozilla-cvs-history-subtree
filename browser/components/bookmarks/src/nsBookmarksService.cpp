@@ -4033,7 +4033,14 @@ nsBookmarksService::importBookmarks(nsISupportsArray *aArguments)
     parser.Init(file, mInner, PR_TRUE);
 
     // Note: can't Begin|EndUpdateBatch() this as notifications are required
-    parser.Parse(kNC_BookmarksRoot, kNC_Bookmark);
+    nsCOMPtr<nsIRDFNode> parentNode;
+    nsCOMPtr<nsIRDFResource> parentFolder;
+    rv = getArgumentN(aArguments, kNC_Folder, 0, getter_AddRefs(parentNode));
+    if (NS_FAILED(rv) || !parentNode)
+      parentFolder = kNC_BookmarksRoot;
+    else
+      parentFolder = do_QueryInterface(parentNode);
+    parser.Parse(parentFolder, kNC_Bookmark);
 
     return NS_OK;
 }

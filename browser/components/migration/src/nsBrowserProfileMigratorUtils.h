@@ -48,7 +48,7 @@
     sObserverService->NotifyObservers(nsnull, message, item)
 
 #define COPY_DATA(func, replace, itemIndex, itemString) \
-  if (NS_SUCCEEDED(rv) && (aItems & itemIndex)) { \
+  if (NS_SUCCEEDED(rv) && (aItems & itemIndex || !aItems)) { \
     NOTIFY_OBSERVERS(MIGRATION_ITEMBEFOREMIGRATE, itemString); \
     rv = func(replace); \
     NOTIFY_OBSERVERS(MIGRATION_ITEMAFTERMIGRATE, itemString); \

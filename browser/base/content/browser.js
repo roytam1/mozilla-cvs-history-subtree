@@ -372,16 +372,6 @@ function delayedStartup()
     sidebar.setAttribute("src", sidebarBox.getAttribute("src"));
   }
  
-#ifdef XP_WIN
-  // Perform default browser checking (after window opens).
-  try {
-    var dialogShown = Components.classes["@mozilla.org/winhooks;1"]
-                    .getService(Components.interfaces.nsIWindowsHooks)
-                    .checkSettings(window);
-  } catch(e) {
-  }
-#endif
-
   // now load bookmarks
   BMSVC.readBookmarks();  
   var bt = document.getElementById("bookmarks-ptf");
@@ -472,6 +462,16 @@ function delayedStartup()
   }
 
   clearObsoletePrefs();
+
+#ifdef XP_WIN
+  // Perform default browser checking (after window opens).
+  try {
+    var dialogShown = Components.classes["@mozilla.org/winhooks;1"]
+                    .getService(Components.interfaces.nsIWindowsHooks)
+                    .checkSettings(window);
+  } catch(e) {
+  }
+#endif
 
 }
 
