@@ -4373,26 +4373,22 @@ PRBool nsMsgDBView::WantsThisThread(nsIMsgThread * /*threadHdr*/)
   return PR_TRUE; // default is to want all threads.
 }
 
-PRInt32 nsMsgDBView::FindLevelInThread(nsIMsgDBHdr *msgHdr, nsMsgViewIndex startOfThreadViewIndex)
+nsMsgViewIndex nsMsgDBView::FindParentInThread(nsMsgKey parentKey, nsMsgViewIndex startOfThreadViewIndex)
 {
-  nsMsgKey threadParent;
-  msgHdr->GetThreadParent(&threadParent);
-  nsMsgViewIndex parentIndex = m_keys.FindIndex(threadParent, startOfThreadViewIndex);
-  if (parentIndex != nsMsgViewIndex_None)
-    return m_levels[parentIndex] + 1;
-  else
+  nsCOMPtr<nsIMsgDBHdr> msgHdr;
+  while (parentKey != nsMsgKey_None)
   {
-#ifdef DEBUG_bienvenu1
-    NS_ASSERTION(PR_FALSE, "couldn't find parent of msg");
-#endif
-    nsMsgKey msgKey;
-    msgHdr->GetMessageKey(&msgKey);
-    // check if this is a newly promoted thread root
-    if (threadParent == nsMsgKey_None || threadParent == msgKey)
-      return 0;
-    else
-      return 1; // well, return level 1.
+    nsMsgViewIndex parentIndex = m_keys.FindIndex(parentKey, startOfThreadViewIndex);
+    if (parentIndex != nsMsgViewIndex_None)
+      return parentIndex;
+
+    if (NS_FAILED(m_db->GetMsgHdrForKey(parentKey, getter_AddRefs(msgHdr))))
+      break;
+
+    msgHdr->GetThreadParent(&parentKey);
   }
+
+  return startOfThreadViewIndex;
 }
 
 nsresult nsMsgDBView::ListIdsInThreadOrder(nsIMsgThread *threadHdr, nsMsgKey parentKey, PRInt32 level, nsMsgViewIndex *viewIndex, PRUint32 *pNumListed)
@@ -4444,7 +4440,7 @@ nsresult nsMsgDBView::ListIdsInThreadOrder(nsIMsgThread *threadHdr, nsMsgKey par
   return rv; // we don't want to return the rv from the enumerator when it reaches the end, do we?
 }
 
-nsresult	nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex startOfThreadViewIndex, PRUint32 *pNumListed)
+nsresult nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex startOfThreadViewIndex, PRUint32 *pNumListed)
 {
   NS_ENSURE_ARG(threadHdr);
   // these children ids should be in thread order.
@@ -4478,7 +4474,7 @@ nsresult	nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex st
       // ### TODO - how about hasChildren flag?
       m_flags.InsertAt(viewIndex, msgFlags & ~MSG_VIEW_FLAGS);
       // ### TODO this is going to be tricky - might use enumerators
-      PRInt32 level = FindLevelInThread(msgHdr, startOfThreadViewIndex);
+      PRInt32 level = FindLevelInThread(msgHdr, startOfThreadViewIndex, viewIndex);
       m_levels.InsertAt(viewIndex, level); 
       // turn off thread or elided bit if they got turned on (maybe from new only view?)
       if (i > 0)	
@@ -4490,9 +4486,11 @@ nsresult	nsMsgDBView::ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex st
   return NS_OK;
 }
 
-PRInt32 nsMsgDBView::GetLevelInUnreadView(nsIMsgDBHdr *msgHdr, nsMsgViewIndex startOfThread, nsMsgViewIndex viewIndex)
+PRInt32 nsMsgDBView::FindLevelInThread(nsIMsgDBHdr *msgHdr, nsMsgViewIndex startOfThread, nsMsgViewIndex viewIndex)
 {
   nsCOMPtr <nsIMsgDBHdr> curMsgHdr = msgHdr;
+  nsMsgKey msgKey;
+  msgHdr->GetMessageKey(&msgKey);
 
   // look through the ancestors of the passed in msgHdr in turn, looking for them in the view, up to the start of
   // the thread. If we find an ancestor, then our level is one greater than the level of the ancestor.
@@ -4510,9 +4508,11 @@ PRInt32 nsMsgDBView::GetLevelInUnreadView(nsIMsgDBHdr *msgHdr, nsMsgViewIndex st
         return m_levels[indexToTry] + 1;
     }
 
-    if (NS_FAILED(m_db->GetMsgHdrForKey(parentKey, getter_AddRefs(curMsgHdr))))
+    // if msgHdr's key is its parentKey, we'll loop forever, so protect
+    // against that corruption.
+    if (msgKey == parentKey || NS_FAILED(m_db->GetMsgHdrForKey(parentKey, getter_AddRefs(curMsgHdr))))
     {
-      NS_ERROR("GetMsgHdrForKey failed, this used to be an infinte loop condition");
+      NS_ERROR("msgKey == parentKey, or GetMsgHdrForKey failed, this used to be an infinte loop condition");
       curMsgHdr = nsnull;
     }
   }
@@ -4554,7 +4554,7 @@ nsresult nsMsgDBView::ListUnreadIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIn
         {
           m_keys.InsertAt(viewIndex, msgKey);
           m_flags.InsertAt(viewIndex, msgFlags);
-          levelToAdd = GetLevelInUnreadView(msgHdr, startOfThreadViewIndex, viewIndex);
+          levelToAdd = FindLevelInThread(msgHdr, startOfThreadViewIndex, viewIndex);
           m_levels.InsertAt(viewIndex, levelToAdd);
           viewIndex++;
           (*pNumListed)++;
