@@ -471,8 +471,6 @@ protected:
 
     nsresult setFolderHint(nsIRDFResource *newSource, nsIRDFResource *objType);
 
-    static nsresult CreateAnonymousResource(nsIRDFResource** aResult);
-
     nsresult Unescape(nsString &text);
 
     nsresult ParseMetaTag(const nsString &aLine, nsIUnicodeDecoder **decoder);
@@ -985,20 +983,6 @@ BookmarkParser::Unescape(nsString &text)
 }
 
 nsresult
-BookmarkParser::CreateAnonymousResource(nsIRDFResource** aResult)
-{
-    static PRInt32 gNext = 0;
-    if (! gNext)
-    {
-        LL_L2I(gNext, PR_Now());
-    }
-    nsCAutoString    uri(URINC_BOOKMARKS_ROOT_STRING "#$");   // let the compiler concat literals
-    uri.AppendInt(++gNext, 16);
-
-    return gRDF->GetResource(uri, aResult);
-}
-
-nsresult
 BookmarkParser::ParseMetaTag(const nsString &aLine, nsIUnicodeDecoder **decoder)
 {
     nsresult    rv = NS_OK;
@@ -1203,7 +1187,7 @@ BookmarkParser::ParseBookmarkInfo(BookmarkField *fields, PRBool isBookmarkFlag,
     if (!bookmark)
     {
         // We've never seen this bookmark/folder before. Assign it an anonymous ID
-        rv = CreateAnonymousResource(getter_AddRefs(bookmark));
+        rv = gRDF->GetAnonymousResource(getter_AddRefs(bookmark));
         NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create anonymous resource for folder");
     }
     else if (bookmark.get() == kNC_PersonalToolbarFolder)
@@ -1464,7 +1448,7 @@ nsresult
 BookmarkParser::ParseBookmarkSeparator(const nsString &aLine, const nsCOMPtr<nsIRDFContainer> &aContainer)
 {
     nsCOMPtr<nsIRDFResource>  separator;
-    nsresult rv = CreateAnonymousResource(getter_AddRefs(separator));
+    nsresult rv = gRDF->GetAnonymousResource(getter_AddRefs(separator));
     if (NS_FAILED(rv))
         return rv;
 
@@ -2555,7 +2539,7 @@ nsBookmarksService::CreateFolder(const PRUnichar* aName,
 
     // Resource: Folder ID
     nsCOMPtr<nsIRDFResource> folderResource;
-    rv = BookmarkParser::CreateAnonymousResource(getter_AddRefs(folderResource));
+    rv = gRDF->GetAnonymousResource(getter_AddRefs(folderResource));
     if (NS_FAILED(rv)) 
         return rv;
 
@@ -2644,7 +2628,7 @@ nsBookmarksService::CreateBookmark(const PRUnichar* aName,
 {
     // Resource: Bookmark ID
     nsCOMPtr<nsIRDFResource> bookmarkResource;
-    nsresult rv = BookmarkParser::CreateAnonymousResource(getter_AddRefs(bookmarkResource));
+    nsresult rv = gRDF->GetAnonymousResource(getter_AddRefs(bookmarkResource));
 
     if (NS_FAILED(rv)) 
         return rv;
@@ -2756,7 +2740,7 @@ nsBookmarksService::CreateSeparator(nsIRDFResource** aResult)
 
     // create the anonymous resource for the separator
     nsCOMPtr<nsIRDFResource> separatorResource;
-    rv = BookmarkParser::CreateAnonymousResource(getter_AddRefs(separatorResource));
+    rv = gRDF->GetAnonymousResource(getter_AddRefs(separatorResource));
     if (NS_FAILED(rv)) 
         return rv;
 
@@ -4008,7 +3992,7 @@ nsBookmarksService::insertBookmarkItem(nsIRDFResource *aRelativeNode,
     if (!newResource)
     {
         // We're a folder, or some other type of anonymous resource.
-        rv = BookmarkParser::CreateAnonymousResource(getter_AddRefs(newResource));
+        rv = gRDF->GetAnonymousResource(getter_AddRefs(newResource));
         if (NS_FAILED(rv)) return rv;
     }
 
@@ -4115,7 +4099,7 @@ nsBookmarksService::setFolderHint(nsIRDFResource *newSource, nsIRDFResource *obj
     // else if setting a new Personal Toolbar Folder, we need to work some magic!
 
     nsCOMPtr<nsIRDFResource>    newAnonURL;
-    if (NS_FAILED(rv = BookmarkParser::CreateAnonymousResource(getter_AddRefs(newAnonURL))))
+    if (NS_FAILED(rv = gRDF->GetAnonymousResource(getter_AddRefs(newAnonURL))))
         return rv;
     // Note: use our Change() method, not mInner->Change(), due to Bookmarks magical #URL handling
     rv = Change(kNC_PersonalToolbarFolder, kNC_URL, kNC_PersonalToolbarFolder, newAnonURL);
