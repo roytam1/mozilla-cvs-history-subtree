@@ -4961,7 +4961,10 @@ nsTextServicesDocument::GetWordBreaker(nsIWordBreaker** aResult)
   nsresult result;
   nsCOMPtr<nsIWordBreakerFactory> wbf(do_GetService(NS_LWBRK_CONTRACTID, &result));
   if (NS_SUCCEEDED(result) && wbf)
-    result = wbf->GetBreaker(nsString(), aResult);
+  {
+    nsString wbarg;
+    result = wbf->GetBreaker(wbarg, aResult);
+  }
 
   return result;
 }
