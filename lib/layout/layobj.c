@@ -56,6 +56,7 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 	PA_Block buff;
 	int16 type = LO_NONE;
 	char* str;
+	char* pluginName;
 
 #ifdef	ANTHRAX
 	XP_Bool javaMimetypeHandler = FALSE;
@@ -174,8 +175,9 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 			 * It's a COM class ID, so make sure we have an
 			 * appropriate plug-in to handle ActiveX controls.
 			 */
-			if (NPL_FindPluginEnabledForType(APPLICATION_OLEOBJECT) != NULL)
+			if ((pluginName = NPL_FindPluginEnabledForType(APPLICATION_OLEOBJECT)) != NULL)
 			{
+				XP_FREE(pluginName);
 				if (type == LO_NONE)
 					type = LO_EMBED;
 				else if (type != LO_EMBED)
@@ -219,8 +221,9 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 	if (buff != NULL)
 	{
 		PA_LOCK(str, char *, buff);
-		if (NPL_FindPluginEnabledForType(str) != NULL)
+		if ((pluginName = NPL_FindPluginEnabledForType(str)) != NULL)
 		{
+			XP_FREE(pluginName);
 			/* It's a plug-in */
 			if (type == LO_NONE)
 				type = LO_EMBED;
@@ -967,13 +970,16 @@ LO_NewObjectStream(FO_Present_Types format_out, void* type,
 {
 	NET_StreamClass* stream = NULL;
 	lo_ObjectStack* top = (lo_ObjectStack*) urls->fe_data;
+	char* pluginName;
 	
 	if (top != NULL && top->object != NULL)
 	{	
-		if (NPL_FindPluginEnabledForType(urls->content_type) != NULL)
+		if ((pluginName = NPL_FindPluginEnabledForType(urls->content_type)) != NULL)
 		{
 			/* bing: Internal reference to libplug! */
 			extern void NPL_EmbedURLExit(URL_Struct*, int, MWContext*);
+
+			XP_FREE(pluginName);
 
 			/* Now we know the object type */
 			top->object->lo_element.type = LO_EMBED;
