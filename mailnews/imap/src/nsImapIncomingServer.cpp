@@ -3497,7 +3497,7 @@ nsImapIncomingServer::GetCanFileMessagesOnServer(PRBool *aCanFileMessagesOnServe
     // Initialize aCanFileMessagesOnServer true, a default value for IMAP
     *aCanFileMessagesOnServer = PR_TRUE;
 
-    GetPrefForServerAttribute("canFileMessagesOnServer", aCanFileMessagesOnServer);
+    GetPrefForServerAttribute("canFileMessages", aCanFileMessagesOnServer);
 
     return NS_OK;
 }
