@@ -400,7 +400,7 @@ WorkingDir=[SETUP PATH]
 ;                    original size and position. An application should specify
 ;                    this flag when displaying the window for the first time.
 [Program Folder0]
-Timing=post download
+Timing=post smartupdate
 Show Folder=SHOW
 Program Folder=[Default Folder]
 
