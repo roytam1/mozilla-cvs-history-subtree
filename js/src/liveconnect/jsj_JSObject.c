@@ -39,7 +39,8 @@
 #include "jsj_private.h"
 #include "jsjava.h"
 
-#include "jscntxt.h"        /* For js_ReportErrorAgain().  FIXME - get rid of private header */
+#include "jscntxt.h"        /* For js_ReportErrorAgain().
+                               TODO - get rid of private header */
 
 #include "netscape_javascript_JSObject.h"   /* javah-generated headers */
 
@@ -119,6 +120,16 @@ jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
     /* First, look in the hash table for an existing reflection of the same
        JavaScript object.  If one is found, return it. */
     hep = PR_HashTableRawLookup(js_obj_reflections, (PRHashNumber)js_obj, js_obj);
+
+#ifdef PRESERVE_JSOBJECT_IDENTITY
+    /* If the same JSObject is reflected into Java more than once then we should
+       return the same Java object, both for efficiency and so that the '=='
+       operator works as expected in Java when comparing two JSObjects.
+       However, it is not possible to hold a reference to a Java object without
+       inhibiting GC of that object, at least not in a way that is portable
+       to all vendor's JVM, i.e. a weak reference. So, for now, JSObject identity
+       is broken. */
+
     he = *hep;
     if (he) {
         java_wrapper_obj = (jobject)he->value;
@@ -126,6 +137,7 @@ jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
         if (java_wrapper_obj)
             goto done;
     }
+#endif /* PRESERVE_JSOBJECT_IDENTITY */
 
     /* No existing reflection found, so create a new Java object that wraps
        the JavaScript object by storing its address in a private integer field. */
@@ -150,6 +162,13 @@ jsj_WrapJSObject(JSContext *cx, JNIEnv *jEnv, JSObject *js_obj)
         java_wrapper_obj = NULL;
     }
     
+    /*
+     * Release local reference to wrapper object, since some JVMs seem reticent
+     * about collecting it otherwise.
+     */
+    /* FIXME -- beard: this seems to make calls into Java with JSObject's fail. */
+    /* (*jEnv)->DeleteLocalRef(jEnv, java_wrapper_obj); */
+
 done:
 #ifdef JS_THREADSAFE
         PR_ExitMonitor(js_obj_reflections_monitor);
@@ -393,6 +412,15 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
         goto done;
     }
 
+    /*
+     * Release local references to Java objects, since some JVMs seem reticent
+     * about collecting them otherwise.
+     */
+    (*jEnv)->DeleteLocalRef(jEnv, message_jstr);
+    (*jEnv)->DeleteLocalRef(jEnv, filename_jstr);
+    (*jEnv)->DeleteLocalRef(jEnv, linebuf_jstr);
+    (*jEnv)->DeleteLocalRef(jEnv, java_exception);
+
     goto done;
 
 out_of_memory:
@@ -486,7 +514,7 @@ done:
  *
  * Returns NULL on failure.
  */
-JSJavaThreadState *
+static JSJavaThreadState *
 enter_js(JNIEnv *jEnv, jobject java_wrapper_obj,
          JSContext **cxp, JSObject **js_objp, JSErrorReporter *old_error_reporterp)
 {
@@ -643,6 +671,7 @@ Java_netscape_javascript_JSObject_getMember(JNIEnv *jEnv,
     JSObject *js_obj;
     jsval js_val;
     int dummy_cost;
+    JSBool dummy_bool;
     const jchar *property_name_ucs2;
     jsize property_name_len;
     JSErrorReporter saved_reporter;
@@ -673,7 +702,7 @@ Java_netscape_javascript_JSObject_getMember(JNIEnv *jEnv,
         goto done;
 
     jsj_ConvertJSValueToJavaObject(cx, jEnv, js_val, get_jlObject_descriptor(cx, jEnv),
-                                   &dummy_cost, &member);
+                                   &dummy_cost, &member, &dummy_bool);
 
 done:
     if (property_name_ucs2)
@@ -698,6 +727,7 @@ Java_netscape_javascript_JSObject_getSlot(JNIEnv *jEnv,
     JSObject *js_obj;
     jsval js_val;
     int dummy_cost;
+    JSBool dummy_bool;
     JSErrorReporter saved_reporter;
     jobject member;
     JSJavaThreadState *jsj_env;
@@ -710,7 +740,7 @@ Java_netscape_javascript_JSObject_getSlot(JNIEnv *jEnv,
     if (!JS_GetElement(cx, js_obj, slot, &js_val))
         goto done;
     if (!jsj_ConvertJSValueToJavaObject(cx, jEnv, js_val, get_jlObject_descriptor(cx, jEnv),
-                                        &dummy_cost, &member))
+                                        &dummy_cost, &member, &dummy_bool))
         goto done;
 
 done:
@@ -750,7 +780,6 @@ Java_netscape_javascript_JSObject_setMember(JNIEnv *jEnv,
         goto done;
     }
 
-    /* FIXME - can property watchers be used to avoid security checks ? */
     /* Get the Unicode string for the JS property name */
     property_name_ucs2 = (*jEnv)->GetStringChars(jEnv, property_name_jstr, &is_copy);
     if (!property_name_ucs2) {
@@ -858,6 +887,7 @@ Java_netscape_javascript_JSObject_call(JNIEnv *jEnv, jobject java_wrapper_obj,
     JSObject *js_obj;
     jsval js_val, function_val;
     int dummy_cost;
+    JSBool dummy_bool;
     const jchar *function_name_ucs2;
     jsize function_name_len;
     JSErrorReporter saved_reporter;
@@ -912,7 +942,7 @@ Java_netscape_javascript_JSObject_call(JNIEnv *jEnv, jobject java_wrapper_obj,
         goto cleanup_argv;
 
     jsj_ConvertJSValueToJavaObject(cx, jEnv, js_val, get_jlObject_descriptor(cx, jEnv),
-                                   &dummy_cost, &result);
+                                   &dummy_cost, &result, &dummy_bool);
 
 cleanup_argv:
     if (argv) {
@@ -947,6 +977,7 @@ Java_netscape_javascript_JSObject_eval(JNIEnv *jEnv,
     JSObject *js_obj;
     jsval js_val;
     int dummy_cost;
+    JSBool dummy_bool;
     const jchar *eval_ucs2;
     jsize eval_len;
     JSErrorReporter saved_reporter;
@@ -988,7 +1019,7 @@ Java_netscape_javascript_JSObject_eval(JNIEnv *jEnv,
 
     /* Convert result to a subclass of java.lang.Object */
     jsj_ConvertJSValueToJavaObject(cx, jEnv, js_val, get_jlObject_descriptor(cx, jEnv),
-                                   &dummy_cost, &result);
+                                   &dummy_cost, &result, &dummy_bool);
 
 done:
     if (eval_ucs2)
@@ -1047,6 +1078,7 @@ Java_netscape_javascript_JSObject_getWindow(JNIEnv *jEnv,
     JSObject *js_obj;
     jsval js_val;
     int dummy_cost;
+    JSBool dummy_bool;
     JSErrorReporter saved_reporter;
     jobject java_obj;
     JSJavaThreadState *jsj_env;
@@ -1067,7 +1099,7 @@ Java_netscape_javascript_JSObject_getWindow(JNIEnv *jEnv,
     }
     js_val = OBJECT_TO_JSVAL(js_obj);
     jsj_ConvertJSValueToJavaObject(cx, jEnv, js_val, get_jlObject_descriptor(cx, jEnv),
-                                   &dummy_cost, &java_obj);
+                                   &dummy_cost, &java_obj, &dummy_bool);
 done:
     if (!exit_js(cx, jsj_env, saved_reporter))
         return NULL;
