@@ -2358,6 +2358,8 @@ nsPluginHostImpl::nsPluginHostImpl()
   mDontShowBadPluginMessage = PR_FALSE;
   mIsDestroyed = PR_FALSE;
   mUnusedLibraries = nsnull;
+  mPluginCheckSum = LL_ZERO;
+  mCalculatingCheckSumOnly = PR_FALSE;
 
   nsCOMPtr<nsIObserverService> obsService = do_GetService(NS_OBSERVERSERVICE_CONTRACTID);
   if (obsService)
@@ -2512,11 +2514,42 @@ nsresult nsPluginHostImpl::ReloadPlugins(PRBool reloadPages)
   ("nsPluginHostImpl::ReloadPlugins Begin reloadPages=%d, active_instance_count=%d\n",
   reloadPages, mActivePluginList.mCount));
 
+  nsresult rv = NS_OK;
+
   // we are re-scanning plugins. New plugins may have been added, also some
   // plugins may have been removed, so we should probably shut everything down
   // but don't touch running (active and  not stopped) plugins
   if(reloadPages)
   {
+    // check if plugins changed
+
+    // cache the existing plugin check sum and the plugin list
+    nsPluginTag * oldPluginList = mPlugins;
+    PRInt64 oldPluginCheckSum = mPluginCheckSum;
+    PRInt64 newPluginCheckSum = LL_ZERO;
+    mPlugins = nsnull;
+
+    // let's construct the check sum for the wouldbe plugin list
+    // set flags
+    mCalculatingCheckSumOnly = PR_TRUE;
+    mPluginsLoaded = PR_FALSE;
+
+    if(NS_SUCCEEDED(LoadPlugins()))
+      newPluginCheckSum = mPluginCheckSum;
+
+    // restore flags and members
+    mPluginCheckSum = oldPluginCheckSum;
+    mCalculatingCheckSumOnly = PR_FALSE;
+    mPluginsLoaded = PR_TRUE;
+    mPlugins = oldPluginList;
+
+    // do not proceed with reloading plugins if there are no changes
+    if (LL_EQ(newPluginCheckSum, oldPluginCheckSum)) {
+      // let error NS_ERROR_UNEXPECTED return code indicate
+      // that no changes to the list have been made
+      return NS_ERROR_UNEXPECTED;
+    }
+
     // if we have currently running plugins we should set a flag not to
     // unload them from memory, see bug #61388
     // and form a list of libs to be unloaded later
@@ -2572,7 +2605,7 @@ nsresult nsPluginHostImpl::ReloadPlugins(PRBool reloadPages)
   nsComponentManager::AutoRegister(nsIComponentManager::NS_Startup, nsnull);
 
   // load them again
-  nsresult rv = LoadPlugins();
+  rv = LoadPlugins();
 
   PLUGIN_LOG(PLUGIN_LOG_NORMAL,
   ("nsPluginHostImpl::ReloadPlugins End active_instance_count=%d\n",
@@ -4299,6 +4332,17 @@ static PRBool isUnwantedPlugin(nsPluginTag * tag)
   return PR_TRUE;
 }
 
+// little helper to get the plugin file last modification time
+static PRInt64 getFileLastModifiedTime(char * aPath)
+{
+  PRInt64 lastModifiedTime = LL_ZERO;
+
+  nsCOMPtr<nsILocalFile> file;
+  if(NS_SUCCEEDED(NS_NewLocalFile(aPath, PR_FALSE, getter_AddRefs(file))))
+    file->GetLastModificationDate(&lastModifiedTime);
+
+  return lastModifiedTime;
+}
 
 ////////////////////////////////////////////////////////////////////////
 nsresult nsPluginHostImpl::ScanPluginsDirectory(nsIFile * pluginsDir, 
@@ -4390,11 +4434,19 @@ nsresult nsPluginHostImpl::ScanPluginsDirectory(nsIFile * pluginsDir,
       // so if we still want it -- do it
       if(bAddIt)
       {
-        pluginTag->mNext = mPlugins;
-        mPlugins = pluginTag;
+        // add to plugin check sum
+        PRInt64 flmt = getFileLastModifiedTime(pluginTag->mFileName);
+        LL_ADD(mPluginCheckSum, mPluginCheckSum, flmt);
 
-        if(layoutPath)
-          RegisterPluginMimeTypesWithLayout(pluginTag, compManager, layoutPath);
+        if(!mCalculatingCheckSumOnly) {
+          pluginTag->mNext = mPlugins;
+          mPlugins = pluginTag;
+
+          if(layoutPath)
+            RegisterPluginMimeTypesWithLayout(pluginTag, compManager, layoutPath);
+        }
+        else
+          delete pluginTag;
       }
       else
         delete pluginTag;
@@ -4432,6 +4484,9 @@ NS_IMETHODIMP nsPluginHostImpl::LoadPlugins()
     return NS_OK;
 
   nsresult rv;
+
+  // reset the plugin check sum
+  mPluginCheckSum = LL_ZERO;
 
   // retrieve a path for layout module. Needed for plugin mime types registration
   nsCOMPtr<nsIFile> layoutPath;
@@ -4732,12 +4787,20 @@ nsPluginHostImpl::LoadXPCOMPlugins(nsIComponentManager* aComponentManager, nsIFi
       continue;
     }
 
-    tag->mNext = mPlugins;
-    mPlugins = tag;
+    // add to plugin check sum
+    PRInt64 flmt = getFileLastModifiedTime(tag->mFileName);
+    LL_ADD(mPluginCheckSum, mPluginCheckSum, flmt);
 
-    // Create an nsIDocumentLoaderFactory wrapper in case we ever see
-    // any naked streams.
-    RegisterPluginMimeTypesWithLayout(tag, aComponentManager, aPath);
+    if(!mCalculatingCheckSumOnly) {
+      tag->mNext = mPlugins;
+      mPlugins = tag;
+
+      // Create an nsIDocumentLoaderFactory wrapper in case we ever see
+      // any naked streams.
+      RegisterPluginMimeTypesWithLayout(tag, aComponentManager, aPath);
+    }
+    else
+      delete tag;
   }
 
   return NS_OK;

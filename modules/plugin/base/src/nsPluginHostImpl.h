@@ -419,6 +419,12 @@ private:
   PRBool      mDontShowBadPluginMessage;
   PRBool      mIsDestroyed;
 
+  PRInt64 mPluginCheckSum;
+
+  // flag indicating that we are only checking the control sum
+  // and do not want to touch the plugin list itself yet
+  PRBool mCalculatingCheckSumOnly;
+
   nsActivePluginList mActivePluginList;
   nsUnusedLibrary *mUnusedLibraries;
 

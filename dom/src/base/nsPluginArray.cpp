@@ -160,21 +160,6 @@ PluginArrayImpl::Refresh(PRBool aReloadDocuments)
 
   nsCOMPtr<nsIWebNavigation> webNav = do_QueryInterface(mDocShell);
 
-  if(aReloadDocuments && webNav) {
-    // we should take some measures to prevent recursive reload, 
-    // check the URL and don't do anything if we just saw it.
-    nsCOMPtr<nsIURI> uri;
-    webNav->GetCurrentURI(getter_AddRefs(uri));
-    if(uri) {
-      PRBool sameURI = PR_FALSE;
-      uri->Equals(mLastURI, &sameURI);
-      if(sameURI) {
-        mLastURI = nsnull;
-        return res;
-      }
-    }
-  }
-
   if (mPluginArray != nsnull) {
     for (PRUint32 i = 0; i < mPluginCount; i++) 
       NS_IF_RELEASE(mPluginArray[i]);
@@ -195,14 +180,21 @@ PluginArrayImpl::Refresh(PRBool aReloadDocuments)
 
   nsCOMPtr<nsIPluginManager> pm(do_QueryInterface(mPluginHost));
 
+  // NS_ERROR_UNEXPECTED on reloading plugins indicates
+  // that plugins did not change and was not reloaded
+  PRBool pluginsNotChanged = PR_FALSE;
   if(pm)
-    pm->ReloadPlugins(aReloadDocuments);
+    pluginsNotChanged = (NS_ERROR_UNEXPECTED == pm->ReloadPlugins(aReloadDocuments));
+
+  // no need to reload the page if plugins have not been changed
+  // in fact, if we do reload we can hit recursive load problem, see bug 93351
+  if(pluginsNotChanged)
+    return res;
 
   if (mNavigator)
     mNavigator->RefreshMIMEArray();
   
   if (aReloadDocuments && webNav) {
-    webNav->GetCurrentURI(getter_AddRefs(mLastURI));
     webNav->Reload(nsIWebNavigation::LOAD_FLAGS_NONE);
   }
 
