@@ -45,7 +45,7 @@
 #include "nsRuleNode.h"
 
 
-class nsHTMLOutputElement : public nsGenericHTMLElement,
+class nsHTMLOutputElement : public nsGenericHTMLFormElement,
                             public nsIWebFormsOutputElement
 {
 public:
@@ -66,6 +66,15 @@ public:
 
   // nsIDOMHTMLElement
   NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLElement::)
+
+  // nsIFormControl
+  NS_IMETHOD_(PRInt32) GetType()
+  {
+    return NS_FORM_OUTPUT;
+  }
+  NS_IMETHOD Reset();
+  NS_IMETHOD SubmitNamesValues(nsIFormSubmission* aFormSubmission,
+                               nsIContent* aSubmitElement);
 };
 
 
@@ -73,7 +82,7 @@ NS_IMPL_NS_NEW_HTML_ELEMENT(Output)
 
 
 nsHTMLOutputElement::nsHTMLOutputElement(nsINodeInfo *aNodeInfo)
-  : nsGenericHTMLElement(aNodeInfo)
+  : nsGenericHTMLFormElement(aNodeInfo)
 {
 }
 
@@ -138,4 +147,17 @@ NS_IMETHODIMP
 nsHTMLOutputElement::SetValue(const nsAString & aValue)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+NS_IMETHODIMP
+nsHTMLOutputElement::Reset()
+{
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLOutputElement::SubmitNamesValues(nsIFormSubmission* aFormSubmission,
+                                       nsIContent* aSubmitElement)
+{
+  return NS_OK;
 }
