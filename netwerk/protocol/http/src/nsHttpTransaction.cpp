@@ -156,7 +156,7 @@ nsHttpTransaction::OnDataReadable(nsIInputStream *is)
 
     // let our listener try to read up to NS_HTTP_BUFFER_SIZE from us.
     rv = mListener->OnDataAvailable(this, nsnull, this,
-                                     mContentRead, NS_HTTP_BUFFER_SIZE);
+                                    mContentRead, NS_HTTP_BUFFER_SIZE);
 
     mSource = 0;
     return rv;
@@ -220,11 +220,17 @@ nsHttpTransaction::ParseHead(char *buf,
 {
     char *eol;
 
+    nsCAutoString copy;
+    copy.Assign(buf, count);
+
+    LOG(("nsHttpTransaction::ParseHead [count=%u]\n", count));
+    printf("\n[\n%s\n]\n", copy.get());
+
     *countRead = 0;
 
     NS_PRECONDITION(!mHaveAllHeaders, "oops");
 
-    while ((eol = PL_strchr(buf, '\n')) != nsnull) {
+    while ((eol = PL_strnchr(buf, '\n', count - *countRead)) != nsnull) {
         // found line in range [buf:eol]
         *eol = 0;
 
@@ -252,10 +258,11 @@ nsHttpTransaction::ParseHead(char *buf,
     }
 
     if (!mHaveAllHeaders && (count > *countRead)) {
-        LOG(("partial line\n"));
         // remember this partial line
         mLineBuf.Assign(buf, count - *countRead);
         *countRead = count;
+
+        LOG(("partial line [%s]\n", mLineBuf.get()));
     }
 
     // read something
