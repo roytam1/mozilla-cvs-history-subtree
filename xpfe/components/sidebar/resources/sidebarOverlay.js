@@ -862,6 +862,12 @@ function SidebarReload() {
   sidebarObj.panels.refresh();
 }
 
+function SidebarRebuild() {
+  var panels = document.getElementById("sidebar-panels");
+  panels.builder.rebuild();
+  sidebar_open_default_panel(100, 0);
+}
+
 // Set up a lame hack to avoid opening two customize
 // windows on a double click.
 var gDisableCustomize = false;
