@@ -37,8 +37,8 @@ MOZRAPTOR_BRANCH = RAPTOR_INTEGRATION0_BRANCH
 
 # CVS commands to pull the appropriate branch versions
 CVSCO_NETLIB = $(CVSCO) -r $(NETLIB_BRANCH)
-CVSCO_CONFIG = $(CVSCO) -r $(MOZRAPTOR_BRANCH)
 
+# If MOZ_BRANCH is set from the user's environment, it will be ignored.
 MOZ_BRANCH=$(MOZRAPTOR_BRANCH)
 !endif
 
@@ -89,6 +89,7 @@ clobber_build_all:: 	clobber_all \
 			build_all
 
 !if defined(MOZ_RAPTOR)
+# Not very efficient, pull_raptor and pull_netlib will repull 
 pull_all:: pull_client_source_product pull_raptor pull_netlib
 !else
 pull_all:: pull_client_source_product 
@@ -115,11 +116,12 @@ pull_client_source_product:
 
 
 !if defined(MOZ_RAPTOR)
+# Build Raptor first.
 build_all:  build_raptor \
 			build_dist  \
 			build_client
 !else
-build_all:              build_dist  \
+build_all:  build_dist  \
 			build_client
 !endif
 
