@@ -85,13 +85,13 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
         for (int i=0; i<nodeSet->size(); i++) {
             String val;
             XMLDOMUtils::getNodeValue(nodeSet->get(i), val);
-            res->add(key->getNodes(val, contextDoc, mProcessorState));
+            res->add(key->getNodes(val, contextDoc));
         }
     }
     else {
         String val;
         exprResult->stringValue(val);
-        res->append(key->getNodes(val, contextDoc, mProcessorState));
+        res->append(key->getNodes(val, contextDoc));
     }
     delete exprResult;
     return res;
@@ -103,8 +103,9 @@ ExprResult* txKeyFunctionCall::evaluate(txIEvalContext* aContext)
  * have the same name one object represents all <xsl:key>s with that name
  */
 
-txXSLKey::txXSLKey()
+txXSLKey::txXSLKey(ProcessorState* aPs)
 {
+    mProcessorState = aPs;
     mMaps.setOwnership(Map::eOwnsItems);
 } // txXSLKey
 
@@ -129,8 +130,7 @@ txXSLKey::~txXSLKey()
  * @return a NodeSet* containing all nodes in doc matching with value
  *         keyValue
  */
-const NodeSet* txXSLKey::getNodes(String& aKeyValue, Document* aDoc,
-                                  ProcessorState* aContext)
+const NodeSet* txXSLKey::getNodes(String& aKeyValue, Document* aDoc)
 {
     NS_ASSERTION(aDoc, "missing document");
     if (!aDoc)
@@ -138,7 +138,7 @@ const NodeSet* txXSLKey::getNodes(String& aKeyValue, Document* aDoc,
 
     NamedMap* map = (NamedMap*)mMaps.get(aDoc);
     if (!map) {
-        map = addDocument(aDoc, aContext);
+        map = addDocument(aDoc);
         if (!map)
             return &mEmptyNodeset;
     }
@@ -177,14 +177,14 @@ MBool txXSLKey::addKey(txPattern* aMatch, Expr* aUse)
  * @param aDoc Document to index and add
  * @returns a NamedMap* containing the index
  */
-NamedMap* txXSLKey::addDocument(Document* aDoc, ProcessorState* aContext)
+NamedMap* txXSLKey::addDocument(Document* aDoc)
 {
     NamedMap* map = new NamedMap;
     if (!map)
         return NULL;
     map->setObjectDeletion(MB_TRUE);
     mMaps.put(aDoc, map);
-    indexTree(aDoc, map, aContext);
+    indexTree(aDoc, map);
     return map;
 } // addDocument
 
@@ -194,22 +194,21 @@ NamedMap* txXSLKey::addDocument(Document* aDoc, ProcessorState* aContext)
  * @param aNode node to search
  * @param aMap index to add search result in
  */
-void txXSLKey::indexTree(Node* aNode, NamedMap* aMap,
-                         ProcessorState* aContext)
+void txXSLKey::indexTree(Node* aNode, NamedMap* aMap)
 {
-    testNode(aNode, aMap, aContext);
+    testNode(aNode, aMap);
 
     // check if the nodes attributes matches
     NamedNodeMap* attrs = aNode->getAttributes();
     if (attrs) {
         for (PRUint32 i=0; i<attrs->getLength(); i++) {
-            testNode(attrs->item(i), aMap, aContext);
+            testNode(attrs->item(i), aMap);
         }
     }
 
     Node* child = aNode->getFirstChild();
     while (child) {
-        indexTree(child, aMap, aContext);
+        indexTree(child, aMap);
         child = child->getNextSibling();
     }
 } // indexTree
@@ -220,7 +219,7 @@ void txXSLKey::indexTree(Node* aNode, NamedMap* aMap,
  * @param aNode node to test
  * @param aMap index to add values to
  */
-void txXSLKey::testNode(Node* aNode, NamedMap* aMap, ProcessorState* aContext)
+void txXSLKey::testNode(Node* aNode, NamedMap* aMap)
 {
     String val;
     NodeSet *nodeSet;
@@ -229,11 +228,12 @@ void txXSLKey::testNode(Node* aNode, NamedMap* aMap, ProcessorState* aContext)
     while (iter.hasNext())
     {
         Key* key=(Key*)iter.next();
-        if (key->matchPattern->matches(aNode, aContext)) {
-            txSingleNodeContext evalContext(aNode, aContext);
-            txIEvalContext* prevCon = aContext->setEvalContext(&evalContext);
+        if (key->matchPattern->matches(aNode, mProcessorState)) {
+            txSingleNodeContext evalContext(aNode, mProcessorState);
+            txIEvalContext* prevCon =
+                mProcessorState->setEvalContext(&evalContext);
             ExprResult* exprResult = key->useExpr->evaluate(&evalContext);
-            aContext->setEvalContext(prevCon);
+            mProcessorState->setEvalContext(prevCon);
             if (exprResult->getResultType() == ExprResult::NODESET) {
                 NodeSet* res = (NodeSet*)exprResult;
                 for (int i=0; i<res->size(); i++) {

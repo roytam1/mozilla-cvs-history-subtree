@@ -707,7 +707,7 @@ MBool ProcessorState::addKey(Element* aKeyElem)
         return MB_FALSE;
     txXSLKey* xslKey = (txXSLKey*)xslKeys.get(keyName);
     if (!xslKey) {
-        xslKey = new txXSLKey();
+        xslKey = new txXSLKey(this);
         if (!xslKey)
             return MB_FALSE;
         xslKeys.put(keyName, xslKey);

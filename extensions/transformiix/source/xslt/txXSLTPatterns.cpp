@@ -442,7 +442,7 @@ MBool txKeyPattern::matches(Node* aNode, txIMatchContext* aContext)
     else
         contextDoc = aNode->getOwnerDocument();
     txXSLKey* key = mProcessorState->getKey(mName);
-    const NodeSet* nodes = key->getNodes(mValue, contextDoc, mProcessorState);
+    const NodeSet* nodes = key->getNodes(mValue, contextDoc);
     if (!nodes || nodes->isEmpty())
         return MB_FALSE;
     MBool isTrue = nodes->contains(aNode);

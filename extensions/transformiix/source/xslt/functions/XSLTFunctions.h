@@ -91,7 +91,7 @@ private:
 class txXSLKey : public TxObject {
     
 public:
-    txXSLKey();
+    txXSLKey(ProcessorState* aPs);
     ~txXSLKey();
     
     /*
@@ -104,8 +104,7 @@ public:
      * @return a NodeSet* containing all nodes in doc matching with value
      *         keyValue
      */
-    const NodeSet* getNodes(String& aKeyValue, Document* aDoc,
-                            ProcessorState* aContext);
+    const NodeSet* getNodes(String& aKeyValue, Document* aDoc);
     
     /*
      * Adds a match/use pair. Returns MB_FALSE if matchString or useString
@@ -122,7 +121,7 @@ private:
      * @param aDoc Document to index and add
      * @returns a NamedMap* containing the index
      */
-    NamedMap* addDocument(Document* aDoc, ProcessorState* aContext);
+    NamedMap* addDocument(Document* aDoc);
 
     /*
      * Recursively searches a node, its attributes and its subtree for
@@ -130,7 +129,7 @@ private:
      * @param aNode node to search
      * @param aMap index to add search result in
      */
-    void indexTree(Node* aNode, NamedMap* aMap, ProcessorState* aContext);
+    void indexTree(Node* aNode, NamedMap* aMap);
 
     /*
      * Tests one node if it matches any of the keys match-patterns. If
@@ -138,7 +137,7 @@ private:
      * @param aNode node to test
      * @param aMap index to add values to
      */
-    void testNode(Node* aNode, NamedMap* aMap, ProcessorState* aContext);
+    void testNode(Node* aNode, NamedMap* aMap);
 
     /*
      * represents one match/use pair
@@ -159,6 +158,12 @@ private:
      * a certain value
      */
     Map mMaps;
+    
+    /*
+     * ProcessorState used to parse the match-patterns and
+     * use-expressions
+     */
+    ProcessorState* mProcessorState;
     
     /*
      * Used to return empty nodeset
