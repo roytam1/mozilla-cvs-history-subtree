@@ -107,6 +107,9 @@ function uninitFindBar()
    var pbi = prefService.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
    pbi.removeObserver(gTypeAheadFind.useTAFPref, gTypeAheadFind);
    pbi.removeObserver(gTypeAheadFind.searchLinksPref, gTypeAheadFind);
+
+   getBrowser().removeEventListener("keypress", onBrowserKeyPress, false);
+   getBrowser().removeEventListener("mousedown", onBrowserMouseDown, false);
 }
 
 function toggleHighlight(aHighlight)
@@ -353,7 +356,8 @@ function onFindBarBlur()
 
 function onBrowserMouseDown(evt)
 {
-  if (gFindMode != FIND_NORMAL)
+  var findToolbar = document.getElementById("FindToolbar");
+  if (!findToolbar.hidden && gFindMode != FIND_NORMAL)
     closeFindBar();
 }
 
