@@ -67,4 +67,9 @@ EXPORTS		=				\
 		string-template-undef.h		\
 		$(NULL)			
 
+SDK_HEADERS	=				\
+		nsStringAPI.h			\
+		nsEmbedString.h			\
+		$(NULL)
+
 include $(topsrcdir)/config/rules.mk

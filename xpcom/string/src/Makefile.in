@@ -42,11 +42,12 @@ CPPSRCS			=			\
 		nsDependentSubstring.cpp	\
 		nsObsoleteAStringThunk.cpp	\
 		nsPromiseFlatString.cpp		\
-		nsString.cpp			\
 		nsSubstring.cpp			\
 		nsSubstringTuple.cpp		\
+		nsString.cpp			\
 		nsStringComparator.cpp		\
 		nsStringObsolete.cpp		\
+		nsStringAPI.cpp			\
 		$(NULL)
 
 # we don't want the shared lib, but we want to force the creation of a
