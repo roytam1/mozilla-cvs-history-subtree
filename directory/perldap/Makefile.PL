@@ -75,7 +75,7 @@ if ($ldapsdk_ver == "30")
 if (!$ldapsdk_ssl)
 {
    print "Include SSL Support (default: yes)?  ";
-   chomp ($sslopt = <>);
+   chomp ($ldapsdk_ssl = <>);
 }
 
 if ($ldapsdk_ssl =~ /^n/i)
