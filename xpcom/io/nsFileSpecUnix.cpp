@@ -132,7 +132,7 @@ void nsFileSpec::operator += (const char* inRelativePath)
         return;
     
     if (mPath[strlen(mPath) - 1] != '/')
-        char* newPath = nsFileSpecHelpers::ReallocCat(mPath, "/");
+        nsFileSpecHelpers::ReallocCat(mPath, "/");
     SetLeafName(inRelativePath);
 } // nsFileSpec::operator +=
 
@@ -283,7 +283,7 @@ nsresult nsFileSpec::Move(const nsFileSpec& inNewParentDirectory) const
         delete [] destPath;
     }
     return result;
-} nsFileSpec::Move
+} 
 
 //----------------------------------------------------------------------------------------
 nsresult nsFileSpec::Execute(const char* inArgs ) const
