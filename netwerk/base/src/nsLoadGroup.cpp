@@ -470,6 +470,8 @@ nsLoadGroup::AddChannel(nsIChannel *channel, nsISupports* ctxt)
                     // Only fire the start notification if *all* subgroups are
                     // empty too...
                     //
+                    mIsActive = PR_TRUE;
+
                     PR_LOG(gLoadGroupLog, PR_LOG_DEBUG, 
                            ("LOADGROUP: %x Firing OnStartRequest(...).\n", 
                            this));
