@@ -101,7 +101,8 @@ public:
   NS_IMETHOD  Paint(nsIPresContext* aPresContext,
                     nsIRenderingContext& aRenderingContext,
                     const nsRect& aDirtyRect,
-                    nsFramePaintLayer aWhichLayer);
+                    nsFramePaintLayer aWhichLayer,
+                    PRUint32 aFlags);
 
   // nsISVGFrame interface:
   NS_IMETHOD Paint(nsSVGRenderingContext* renderingContext);
@@ -626,7 +627,8 @@ NS_IMETHODIMP
 nsSVGOuterSVGFrame::Paint(nsIPresContext* aPresContext,
                           nsIRenderingContext& aRenderingContext,
                           const nsRect& aDirtyRect,
-                          nsFramePaintLayer aWhichLayer)
+                          nsFramePaintLayer aWhichLayer,
+                          PRUint32 aFlags)
 {
   
 //    if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer) {

@@ -413,17 +413,20 @@ nsSVGForeignObjectFrame::Paint(nsSVGRenderingContext* renderingContext)
   nsSVGForeignObjectFrameBase::Paint(renderingContext->GetPresContext(),
                                      *ctx,
                                      dirtyRect,
-                                     NS_FRAME_PAINT_LAYER_BACKGROUND);
+                                     NS_FRAME_PAINT_LAYER_BACKGROUND,
+                                     0);
 
   nsSVGForeignObjectFrameBase::Paint(renderingContext->GetPresContext(),
                                      *ctx,
                                      dirtyRect,
-                                     NS_FRAME_PAINT_LAYER_FLOATERS);
+                                     NS_FRAME_PAINT_LAYER_FLOATERS,
+                                     0);
 
   nsSVGForeignObjectFrameBase::Paint(renderingContext->GetPresContext(),
                                      *ctx,
                                      dirtyRect,
-                                     NS_FRAME_PAINT_LAYER_FOREGROUND);
+                                     NS_FRAME_PAINT_LAYER_FOREGROUND,
+                                     0);
 
   ctx->Translate(-mRect.x, -mRect.y);
 
