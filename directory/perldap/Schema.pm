@@ -41,20 +41,23 @@ sub new
   # do the search for everything
   my ($self) = shift;
   my $conn = shift;
-
   my $base = "cn=schema";
-  
+  my (%schema, $obj, $attr, $objectclass);
   my $initialReturn = $conn->search($base, "base", "objectclass=*");
   my @attributeArray = $initialReturn->getValues("attributetypes");
-  my (%schema, $obj);
+  my @objectarray = $initialReturn->getValues("objectclasses");
 
   foreach (@attributeArray)  {
-    my $attr = new Mozilla::LDAP::Schema::Attribute($_);
+    $attr = new Mozilla::LDAP::Schema::Attribute($_);
     $schema{"attributes"}{$attr->name()} = $attr;
- }
+  }
+  foreach (@objectarray) {
+    $objectclass = new Mozilla::LDAP::Schema::ObjectClass($_);
+    $schema{"objectclass"}{$objectclass->name()} = $objectclass;
+  }
+
   $obj = bless \%schema;
-  #$objclass = new Mozilla::LDAP::Schema::ObjectClass();
-return $obj;    
+  return $obj;    
 }
 
 sub attributes
@@ -62,6 +65,14 @@ sub attributes
   my ($self, $attr) = (shift, lc shift);
   return 0 unless (defined($attr) && ($attr ne ""));
   return $self->{"attributes"}{$attr};
+}
+
+sub objectclass
+{
+  my ($self, $attr) = (shift, lc shift);
+  return 0 unless (defined($attr) && ($attr ne ""));
+  return $self->{"objectclass"}{$attr};
+
 }
 
 1;
@@ -72,22 +83,27 @@ use Text::ParseWords;
 my %fields =  (
 	       oid		=>	undef,
 	       name		=>	undef,
-	       description	=>	undef,
+	       desc		=>	undef,
 	       syntax		=>	undef,
 	       );
 
 sub _initialize
 {
   my ($self, $attrString) = @_;
-  #take off the first and last parentheses
-  #substr ($attrString,0,1)="";
-  chop ($attrString);
-  my @tempArray = quotewords(" ", 0, $attrString);
-
-  $self->{"oid"} = $tempArray[1];
-  $self->{"name"} = lc $tempArray[3];
-  $self->{"description"} = lc $tempArray[5];
-  $self->{"syntax"} = $tempArray[7];
+  my @temparr = quotewords(" ", 0, $attrString);
+  my $i = 2;
+  
+  # The OID is always going to be the first thing, and it will not have
+  # a label on it.
+  # We start from 1 because 0 will be a parentheses.
+  
+  $self->{"oid"} = $temparr[1];
+  
+  while ($i<(scalar(@temparr)-1)) # the last character is a ")" 
+    {
+      $self->{lc $temparr[$i]} = lc $temparr[$i+1];
+      $i += 2;
+    }
 }
 
 
@@ -98,7 +114,6 @@ sub new
   my $self = {%fields};
   bless $self;
   $self->_initialize(@_);
-  #take off the first and last parentheses
   
   return $self;
 }  
@@ -121,13 +136,13 @@ sub name
   $self->{'name'}; 
 }
 
-sub description
+sub desc
 {
   my $self = shift; 
   if(@_) {
-    $self->{'description'} = shift;
+    $self->{'desc'} = shift;
   }
-  $self->{'description'}; 
+  $self->{'desc'}; 
 }
 
 sub syntax
@@ -142,12 +157,96 @@ sub syntax
 1;
 
 package Mozilla::LDAP::Schema::ObjectClass;
+use Text::ParseWords;
+
+my %objfields =  (
+	       oid     	=>	undef,
+	       name    	=>	undef,
+	       desc    	=>	undef,
+	       sup     	=>	undef,
+	       must	=>	undef,
+	       may	=>	undef
+	       );
+
+sub _initialize
+{
+  my ($self, $attrString) = @_;
+  my @temparr = quotewords(" ", 0, $attrString);
+  my ($i,$j) = 2;
+  my @objarr;
+  
+  # The OID is always going to be the first thing, and it will not have
+  # a label on it.
+  # We start from 1 because 0 will be a parentheses.
+  
+  $self->{"oid"} = $temparr[1];
+  
+  while ($i<(scalar(@temparr)-1)) # the last character is a ")" 
+    {
+      #since the objectclass can have stuff nested, we need to check
+      #for parentheses in the $i+1 phase.
+
+      #check for spaces in the objectclass!!
+      if ($i eq "") {
+	$i+=1;
+      }
+      if ($i+1 ne "(") {
+	print $temparr[$i],"\n";
+	$self->{lc $temparr[$i]} = lc $temparr[$i+1];
+	$i+=2;
+      }
+      else {
+	$j = $i+1;
+	my $k = 0;
+	while ($temparr[$j] ne ")")
+	  {
+	    if ($temparr[$j] eq "\$") {
+	      $j+=1;
+	    }
+	    print $k,"\n";
+	    $objarr[$k] = lc $temparr[$j];
+	    $k++;
+	    $j+=1;
+	  }
+	$self->{lc $temparr[$i]} = @objarr;
+	$i += 2;
+      }
+    }
+}
 
 sub new
 {
-#  return self;
+  my $tmp = shift;
+  my $self = {%objfields};
+  bless $self;
+  $self->_initialize(@_);
+  
+  return $self;
 }
 
+sub oid
+{
+  my $self = shift; 
+  if(@_) {
+    $self->{'oid'} = shift;
+  }
+  $self->{'oid'}; 
+}
+
+sub name
+{
+  my $self = shift; 
+  if(@_) {
+    $self->{'name'} = lc shift;
+  }
+  $self->{'name'}; 
+}
+
+sub may
+{
+  my $self = shift;
+  print $self->{'may'};
+}
 #############################################################################
 # Mandatory TRUE return value.
 #
