@@ -507,6 +507,20 @@ nsProfile::LoadDefaultProfileDir(nsCString & profileURLStr, PRBool canInteract)
                 if (NS_FAILED(rv))
                     profileURLStr = PROFILE_MANAGER_URL;
             } 
+            // this code makes it so we pop up the profile manager if there are old 4.x
+            // profiles still to be migrated, if automigration is turned on.
+            PRBool allowAutomigration;
+            (void)prefBranch->GetBoolPref(PREF_AUTOMIGRATION, &allowAutomigration);
+            if (allowAutomigration)
+            {
+              PRUint32    numOldProfiles = 0;
+              PRUnichar   **nameArray = nsnull;
+              rv = GetProfileListX(nsIProfileInternal::LIST_ONLY_OLD, &numOldProfiles, &nameArray);
+              if (NS_SUCCEEDED(rv) && numOldProfiles > 0)
+                profileURLStr = PROFILE_MANAGER_URL;
+              NS_FREE_XPCOM_ALLOCATED_POINTER_ARRAY(numOldProfiles, nameArray);
+            }
+
         }
         else
             profileURLStr = PROFILE_SELECTION_URL;
