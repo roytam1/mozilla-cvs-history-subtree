@@ -61,6 +61,7 @@ else
 
 DIRS    = \
           intl \
+	  find \
           download-manager \
           autocomplete \
           windowds \
