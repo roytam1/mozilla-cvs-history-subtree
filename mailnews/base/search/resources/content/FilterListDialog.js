@@ -359,3 +359,9 @@ function onFilterTreeKeyPress(event)
     }
   }
 }
+
+function doHelpButton()
+{
+  openHelp("mail-filters");
+}
+  

@@ -326,3 +326,8 @@ function onCancel()
 {	  
   window.opener.gUpdate = false;
 }
+
+function doHelpButton()
+{
+   openHelp("mail-ldap-properties");
+}
