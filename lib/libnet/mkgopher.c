@@ -21,8 +21,9 @@
 
 #include "rosetta.h"
 #include "mkutils.h"
-#include HG10299
- 
+#ifndef NO_SECURITY
+#include "ssl.h"  /* HG10299 */
+#endif
 /* Gopher types:
  */
 #define GTYPE_TEXT     	   '0'        /* text/plain */
