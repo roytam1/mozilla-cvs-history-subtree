@@ -66,7 +66,7 @@ public:
     void SetJVMEnabled(PRBool enabled);
 
     nsresult    AddToClassPath(const char* dirPath);
-    void        JSJInit();
+    PRBool      JSJInit();
     PRBool      IsJVMAndMochaPrefsEnabled(void);
     JSJavaVM*   GetJSJavaVM() { return fJSJavaVM; }
 
