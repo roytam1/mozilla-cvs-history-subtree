@@ -2589,6 +2589,7 @@ fe_MinimalNoUICleanup()
   
 #ifdef JAVA
   NR_ShutdownRegistry();
+#endif
 #ifdef MOZ_SMARTUPDATE
   SU_Shutdown();
 #endif
