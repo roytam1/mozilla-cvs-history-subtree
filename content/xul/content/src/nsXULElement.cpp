@@ -753,16 +753,12 @@ nsXULElement::GetAttributes(nsIDOMNamedNodeMap** aAttributes)
     nsresult rv = EnsureSlots();
     NS_ENSURE_SUCCESS(rv, rv);
 
-    nsDOMAttributeMap* map = mSlots->GetAttributeMap();
-    if (!map) {
-        map = new nsDOMAttributeMap(this);
-        NS_ENSURE_TRUE(map, NS_ERROR_OUT_OF_MEMORY);
-        
-        NS_ADDREF(map);
-        mSlots->SetAttributeMap(map);
+    if (!mSlots->mAttributeMap) {
+        mSlots->mAttributeMap = new nsDOMAttributeMap(this);
+        NS_ENSURE_TRUE(mSlots->mAttributeMap, NS_ERROR_OUT_OF_MEMORY);
     }
 
-    NS_ADDREF(*aAttributes = map);
+    NS_ADDREF(*aAttributes = mSlots->mAttributeMap);
 
     return NS_OK;
 }
@@ -1346,10 +1342,9 @@ NS_IMETHODIMP
 nsXULElement::SetLazyState(LazyState aFlags)
 {
     nsresult rv = EnsureSlots();
-    if (NS_FAILED(rv)) return rv;
+    NS_ENSURE_SUCCESS(rv, rv);
 
-    LazyState flags = mSlots->GetLazyState();
-    mSlots->SetLazyState(LazyState(flags | aFlags));
+    mSlots->mLazyState |= aFlags;
 
     return NS_OK;
 }
@@ -1359,8 +1354,7 @@ nsXULElement::ClearLazyState(LazyState aFlags)
 {
     // No need to clear a flag we've never set.
     if (mSlots) {
-        LazyState flags = mSlots->GetLazyState();
-        mSlots->SetLazyState(LazyState(flags & ~aFlags));
+        mSlots->mLazyState &= ~aFlags;
     }
 
     return NS_OK;
@@ -1369,12 +1363,7 @@ nsXULElement::ClearLazyState(LazyState aFlags)
 NS_IMETHODIMP
 nsXULElement::GetLazyState(LazyState aFlag, PRBool& aResult)
 {
-    if (mSlots) {
-        LazyState flags = mSlots->GetLazyState();
-        aResult = flags & aFlag;
-    }
-    else
-        aResult = PR_FALSE;
+    aResult = mSlots && mSlots->mLazyState & aFlag;
 
     return NS_OK;
 }
@@ -3021,7 +3010,7 @@ nsXULElement::GetBuilder(nsIXULTemplateBuilder** aBuilder)
 nsresult
 nsXULElement::EnsureContentsGenerated(void) const
 {
-    if (mSlots && (mSlots->GetLazyState() & nsIXULContent::eChildrenMustBeRebuilt)) {
+    if (mSlots && (mSlots->mLazyState & nsIXULContent::eChildrenMustBeRebuilt)) {
         // Ensure that the element is actually _in_ the document tree;
         // otherwise, somebody is trying to generate children for a node
         // that's not currently in the content model.
@@ -4141,7 +4130,7 @@ nsXULElement::HideWindowChrome(PRBool aShouldHide)
 //
 
 nsXULElement::Slots::Slots()
-    : mBits(0)
+    : mLazyState(0)
 {
     MOZ_COUNT_CTOR(nsXULElement::Slots);
 }
@@ -4150,9 +4139,6 @@ nsXULElement::Slots::Slots()
 nsXULElement::Slots::~Slots()
 {
     MOZ_COUNT_DTOR(nsXULElement::Slots);
-
-    nsDOMAttributeMap* map = GetAttributeMap();
-    NS_IF_RELEASE(map);
 }
 
 
