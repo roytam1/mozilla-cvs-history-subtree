@@ -71,9 +71,15 @@ var MigrationWizard = {
     var group = document.getElementById("importSourceGroup");
     for (var i = 0; i < group.childNodes.length; ++i) {
       var suffix = group.childNodes[i].id;
-      if (suffix != "nothing") {
+      if (suffix != "nothing" && suffix != "fromfile") {
         var contractID = kProfileMigratorContractIDPrefix + suffix;
-        var migrator = Components.classes[contractID].createInstance(kIMig);
+	try {
+          var migrator = Components.classes[contractID].createInstance(kIMig);
+	}
+	catch (e) {
+	  dump("*** eeee!!! contractID =" + contractID + "\n");
+	  return;
+	}
         if (!migrator.sourceExists)
           group.childNodes[i].hidden = true;
       }
