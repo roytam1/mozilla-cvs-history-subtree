@@ -32,11 +32,13 @@
 #include "nsCoord.h"
 #include "nsString.h"
 
+#include "nsCOMPtr.h"
 #include "nsIPref.h"
 #include "nsHashtable.h"
 #include "nsIUnicodeEncoder.h"
 
 #include "nsIDeviceContextSpecPS.h"
+#include "nsIPersistentProperties2.h"
 
 class nsIImage;
 #endif
@@ -45,6 +47,7 @@ class nsIImage;
 #define NS_LEGAL_SIZE     1
 #define NS_EXECUTIVE_SIZE 2
 #define NS_A4_SIZE	  3
+#define NS_A3_SIZE	  4
 
 #define N_FONTS 8
 #define INCH_TO_PAGE(f) ((int) (.5 + (f)*720))
@@ -209,7 +212,7 @@ public:
    *  Init PostScript Object 
    *	@update 3/19/99 dwc
    */
-  nsresult Init( nsIDeviceContextSpecPS *aSpec);
+  nsresult Init( nsIDeviceContextSpecPS *aSpec, PRUnichar * aTitle);
   /** ---------------------------------------------------
    *  Start a postscript page
    *	@update 2/1/99 dwc
@@ -397,10 +400,16 @@ public:
    *	@update 6/1/2000 katakai
    */
   void preshow(const PRUnichar* aText, int aLen);
+
+  XP_File GetPrintFile();
+  PRBool  InitUnixPrinterProps();
+  PRBool  GetUnixPrinterSetting(const nsCAutoString&, char**);
 private:
   PSContext             *mPrintContext;
   PrintSetup            *mPrintSetup;
   PRUint16              mPageNumber;
+  nsCOMPtr<nsIPersistentProperties> mPrinterProps;
+  char                  *mTitle;
 
 
 

@@ -45,9 +45,8 @@
 #include "nsUnicodeToCP936.h"
 #include "nsGB2312ToUnicodeV2.h"
 #include "nsUnicodeToGB2312V2.h"
-#include "nsGB2312ToUnicode.h"
-#include "nsUnicodeToGB2312.h"
 #include "nsUnicodeToGB2312GL.h"
+#include "gbku.h"
 
 //----------------------------------------------------------------------------
 // Global functions and data [declaration]
@@ -60,17 +59,18 @@ static NS_DEFINE_CID(kComponentManagerCID, NS_COMPONENTMANAGER_CID);
 PRInt32 g_InstanceCount = 0;
 PRInt32 g_LockCount = 0;
 
-PRUint16 g_AsciiMapping[] = {
-  0x0001, 0x0004, 0x0005, 0x0008, 0x0000, 0x0000, 0x007F, 0x0000
+//----------------------------------------------------------------------------
+// shared data defined in gbku.h
+
+PRUnichar GBKToUnicodeTable[MAX_GBK_LENGTH] =
+{
+#include "cp936map.h"
 };
 
-PRUint16 g_utGB2312Mapping[] = {
-#include "gb2312.ut"
-};
+DByte UnicodeToGBKTable[0x5200]; // 0xA000 - 0x4E00 = 0x5200
+PRBool gUnicodeToGBKTableInitialized = PR_FALSE;
+//----------------------------------------------------------------------------
 
-PRUint16 g_ufGB2312Mapping[] = {
-#include "gb2312.uf"
-};
 
 NS_IMPL_NSUCONVERTERREGSELF
 

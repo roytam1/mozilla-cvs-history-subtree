@@ -1110,13 +1110,13 @@ private:
 };
 
 // class to export a JSString as an nsAReadableString, including refcounting
-class XPCReadableJSStringWrapper : public nsLiteralString
+class XPCReadableJSStringWrapper : public nsLocalString
 {
 public:
     XPCReadableJSStringWrapper(JSString *str) :
-        nsLiteralString(NS_REINTERPRET_CAST(PRUnichar *,
-                                            JS_GetStringChars(str)),
-                        JS_GetStringLength(str)),
+        nsLocalString(NS_REINTERPRET_CAST(PRUnichar *,
+                                          JS_GetStringChars(str)),
+                      JS_GetStringLength(str)),
         mStr(str), mBufferHandle(0), mHandleIsShared(JS_FALSE)
     { }
 
@@ -1139,9 +1139,11 @@ protected:
     {
         WrapperBufferHandle(XPCReadableJSStringWrapper *outer, JSString *str) :
             nsSharedBufferHandleWithAllocator<PRUnichar>
-                (NS_CONST_CAST(PRUnichar *, outer->get()),
-                 NS_CONST_CAST(PRUnichar *, outer->get() + outer->Length()),
-                 mAllocator),
+              (NS_REINTERPRET_CAST(PRUnichar *, JS_GetStringChars(str)),
+               NS_REINTERPRET_CAST(PRUnichar *,
+                                   JS_GetStringChars(str) +
+                                   JS_GetStringLength(str)),
+               mAllocator),
             mAllocator(str)
         { }
 

@@ -2264,9 +2264,17 @@ js_DecompileFunction(JSPrinter *jp, JSFunction *fun)
     uintN indent;
     intN i;
 
+    /*
+     * If pretty, conform to ECMA-262 Edition 3, 15.3.4.2, by decompiling a
+     * FunctionDeclaration.  Otherwise, check the JSFUN_LAMBDA flag and force
+     * an expression by parenthesizing.
+     */
     if (jp->pretty) {
         js_puts(jp, "\n");
-	js_printf(jp, "\t");
+        js_printf(jp, "\t");
+    } else {
+        if (fun->flags & JSFUN_LAMBDA)
+            js_puts(jp, "(");
     }
     if (fun->flags & JSFUN_GETTER)
         js_printf(jp, "%s ", js_getter_str);
@@ -2326,8 +2334,12 @@ js_DecompileFunction(JSPrinter *jp, JSFunction *fun)
     }
     jp->indent -= 4;
     js_printf(jp, "\t}");
-    if (jp->pretty)
-	js_puts(jp, "\n");
+    if (jp->pretty) {
+        js_puts(jp, "\n");
+    } else {
+        if (fun->flags & JSFUN_LAMBDA)
+            js_puts(jp, ")");
+    }
     return JS_TRUE;
 }
 

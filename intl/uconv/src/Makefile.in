@@ -72,6 +72,10 @@ EXPORT_RESOURCE		+= $(srcdir)/os2charset.properties
 else
 CPPSRCS			+= nsUNIXCharset.cpp
 EXPORT_RESOURCE		+= $(srcdir)/unixcharset.properties
+# add platform charset remapping properties files here if necessary
+# (see unixcharset.sample.properties for an example file)
+# eg: if we needed a charset remap for OSARCH=Linux then add the following line:
+#EXPORT_RESOURCE		+= $(srcdir)/unixcharset.Linux.properties
 endif
 
 EXTRA_DSO_LDOPTS = $(MOZ_NECKO_UTIL_LIBS) \
@@ -97,6 +101,13 @@ CFLAGS		+= -DUSE_NSREG
 # QNX simply objects to the way it's being redefined.
 ifeq (,$(filter AIX OpenVMS QNX,$(OS_ARCH)))
 CFLAGS		+= -D__STDC__
+endif
+
+# CODESET is not automatically defined on some older versions of Redhat.
+# Define _XOPEN_SOURCE so CODESET will get defined and thus allow 
+# nl_langinfo(CODESET) to compile on these systems.
+ifeq ($(OS_ARCH), Linux)
+DEFINES         += -D_XOPEN_SOURCE=500
 endif
 
 install::

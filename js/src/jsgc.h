@@ -39,6 +39,7 @@
  */
 #include "jsprvtd.h"
 #include "jspubtd.h"
+#include "jsdhash.h"
 
 JS_BEGIN_EXTERN_C
 
@@ -57,6 +58,19 @@ JS_BEGIN_EXTERN_C
 #define GCF_LOCKSHIFT   (GCX_NTYPES_LOG2 + 2)   /* lock bit shift and mask */
 #define GCF_LOCKMASK    (JS_BITMASK(8 - GCF_LOCKSHIFT) << GCF_LOCKSHIFT)
 #define GCF_LOCK        JS_BIT(GCF_LOCKSHIFT)   /* lock request bit in API */
+
+/* These are compatible with JSDHashEntryStub. */
+struct JSGCRootHashEntry {
+    JSDHashEntryHdr hdr;
+    void            *root;
+    const char      *name;
+};
+
+struct JSGCLockHashEntry {
+    JSDHashEntryHdr hdr;
+    const JSGCThing *thing;
+    uint32          count;
+};
 
 #if 1
 /*

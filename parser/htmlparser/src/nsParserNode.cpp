@@ -40,7 +40,25 @@ const nsString& GetEmptyString() {
 
 
 /**
- *  Default constructor
+ *  Default Constructor
+ */
+nsCParserNode::nsCParserNode()
+  : mLineNumber(1),
+    mToken(nsnull),
+    mAttributes(nsnull),
+    mSkippedContent(nsnull),
+    mUseCount(0),
+    mGenericState(PR_FALSE),
+    mTokenAllocator(nsnull)
+{
+  MOZ_COUNT_CTOR(nsCParserNode);
+#ifdef HEAP_ALLOCATED_NODES
+  mNodeAllocator=nsnull;
+#endif
+}
+
+/**
+ *  Constructor
  *  
  *  @update  gess 3/25/98
  *  @param   aToken -- token to init internal token
@@ -48,7 +66,7 @@ const nsString& GetEmptyString() {
  */
 nsCParserNode::nsCParserNode(CToken* aToken,PRInt32 aLineNumber,nsTokenAllocator* aTokenAllocator,nsNodeAllocator* aNodeAllocator): 
     nsIParserNode() {
-  NS_INIT_REFCNT();
+  mRefCnt = 0;
   MOZ_COUNT_CTOR(nsCParserNode);
 
   static int theNodeCount=0;
@@ -88,9 +106,6 @@ nsCParserNode::~nsCParserNode() {
 }
 
 
-NS_IMPL_ADDREF(nsCParserNode)
-NS_IMPL_RELEASE(nsCParserNode)
-
 /**
  *  Init
  *  
@@ -100,14 +115,17 @@ NS_IMPL_RELEASE(nsCParserNode)
  */
 
 nsresult nsCParserNode::Init(CToken* aToken,PRInt32 aLineNumber,nsTokenAllocator* aTokenAllocator,nsNodeAllocator* aNodeAllocator) {
-  mLineNumber=aLineNumber;
-  mTokenAllocator=aTokenAllocator;
   if(mAttributes && (mAttributes->GetSize())) {
-    CToken* theAttrToken=0;
-    while((theAttrToken=NS_STATIC_CAST(CToken*,mAttributes->Pop()))) {
-      IF_FREE(theAttrToken);
+    NS_ASSERTION(0!=mTokenAllocator, "Error: Attribute tokens on node without token allocator");
+    if(mTokenAllocator) {
+      CToken* theAttrToken=0;
+      while((theAttrToken=NS_STATIC_CAST(CToken*,mAttributes->Pop()))) {
+        IF_FREE(theAttrToken, mTokenAllocator);
+      }
     }
   }
+  mLineNumber=aLineNumber;
+  mTokenAllocator=aTokenAllocator;
   mToken=aToken;
   IF_HOLD(mToken);
   mGenericState=PR_FALSE;
@@ -122,40 +140,6 @@ nsresult nsCParserNode::Init(CToken* aToken,PRInt32 aLineNumber,nsTokenAllocator
 }
 
 /**
- *  This method gets called as part of our COM-like interfaces.
- *  Its purpose is to create an interface to parser object
- *  of some type.
- *  
- *  @update   gess 3/25/98
- *  @param    nsIID  id of object to discover
- *  @param    aInstancePtr ptr to newly discovered interface
- *  @return   NS_xxx result code
- */
-nsresult nsCParserNode::QueryInterface(const nsIID& aIID, void** aInstancePtr)  
-{                                                                        
-  if (NULL == aInstancePtr) {                                            
-    return NS_ERROR_NULL_POINTER;                                        
-  }                                                                      
-
-  if(aIID.Equals(kISupportsIID))    {  //do IUnknown...
-    *aInstancePtr = (nsIParserNode*)(this);                                        
-  }
-  else if(aIID.Equals(kIParserNodeIID)) {  //do IParser base class...
-    *aInstancePtr = (nsIParserNode*)(this);                                        
-  }
-  else if(aIID.Equals(kClassIID)) {  //do this class...
-    *aInstancePtr = (nsCParserNode*)(this);                                        
-  }                 
-  else {
-    *aInstancePtr=0;
-    return NS_NOINTERFACE;
-  }
-  NS_ADDREF_THIS();
-  return NS_OK;                                                        
-}
-
-
-/**
  *  Causes the given attribute to be added to internal 
  *  mAttributes list, and mAttributeCount to be incremented.
  *  
@@ -165,11 +149,14 @@ nsresult nsCParserNode::QueryInterface(const nsIID& aIID, void** aInstancePtr)
  */
 void nsCParserNode::AddAttribute(CToken* aToken) {
   NS_PRECONDITION(0!=aToken, "Error: Token shouldn't be null!");
+  NS_PRECONDITION(0!=mTokenAllocator, "Error: Can't add attribute without token allocator");
 
-  if(!mAttributes)
-    mAttributes=new nsDeque(0);
-  if(mAttributes) {
-    mAttributes->Push(aToken);
+  if(mTokenAllocator) {
+    if(!mAttributes)
+      mAttributes=new nsDeque(0);
+    if(mAttributes) {
+      mAttributes->Push(aToken);
+    }
   }
 }
 
@@ -378,9 +365,12 @@ void nsCParserNode::GetSource(nsString& aString) {
  */
 nsresult nsCParserNode::ReleaseAll() {
   if(mAttributes) {
-    CToken* theAttrToken=0;
-    while((theAttrToken=NS_STATIC_CAST(CToken*,mAttributes->Pop()))) {
-      IF_FREE(theAttrToken);
+    NS_ASSERTION(0!=mTokenAllocator, "Error: no token allocator");
+    if(mTokenAllocator) {
+      CToken* theAttrToken=0;
+      while((theAttrToken=NS_STATIC_CAST(CToken*,mAttributes->Pop()))) {
+        IF_FREE(theAttrToken, mTokenAllocator);
+      }
     }
     delete mAttributes;
     mAttributes=0;
@@ -389,7 +379,12 @@ nsresult nsCParserNode::ReleaseAll() {
     delete mSkippedContent;
     mSkippedContent=0;
   }
-  IF_FREE(mToken);
+
+  if(mTokenAllocator) {
+    // It was heap allocated, so free it!
+    IF_FREE(mToken,mTokenAllocator);
+  }
+
   return NS_OK;
 }
 

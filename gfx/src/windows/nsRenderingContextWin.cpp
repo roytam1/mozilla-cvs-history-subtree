@@ -45,9 +45,6 @@
   #define VERIFY(exp)                 (exp)
 #endif  // !_DEBUG
 
-//comment this out so we won't do arabic and hebrew buggy reordering untill
-// it get fixed 
-//#define  ARABIC_HEBREW_RENDERING
 
 static NS_DEFINE_IID(kIRenderingContextIID, NS_IRENDERING_CONTEXT_IID);
 static NS_DEFINE_IID(kIRenderingContextWinIID, NS_IRENDERING_CONTEXT_WIN_IID);
@@ -154,6 +151,11 @@ GraphicsState :: ~GraphicsState()
 #define NOT_SETUP 0x33
 static PRBool gIsWIN95 = NOT_SETUP;
 
+#ifdef IBMBIDI
+#define DONT_INIT 0
+static DWORD gBidiInfo = NOT_SETUP;
+#endif // IBMBIDI
+
 // A few of the stock objects are needed all the time, so we just get them
 // once
 static HFONT  gStockSystemFont = (HFONT)::GetStockObject(SYSTEM_FONT);
@@ -176,6 +178,24 @@ nsRenderingContextWin :: nsRenderingContextWin()
     }
     else {
       gIsWIN95 = PR_TRUE;
+
+#ifdef IBMBIDI
+      if ( (os.dwMajorVersion < 4)
+           || ( (os.dwMajorVersion == 4) && (os.dwMinorVersion == 0) ) ) {
+        // Windows 95 or earlier: assume it's not Bidi
+        gBidiInfo = DONT_INIT;
+      }
+      else if (os.dwMajorVersion >= 4) {
+        // Windows 98 or later
+        UINT cp = ::GetACP();
+        if (1256 == cp) {
+          gBidiInfo = GCP_REORDER | GCP_GLYPHSHAPE;
+        }
+        else if (1255 == cp) {
+          gBidiInfo = GCP_REORDER;
+        }
+      }
+#endif // IBMBIDI
     }
   }
 
@@ -200,6 +220,9 @@ nsRenderingContextWin :: nsRenderingContextWin()
   mMainSurface = nsnull;
 
   mStateCache = new nsVoidArray();
+#ifdef IBMBIDI
+  mRightToLeftText = PR_FALSE;
+#endif
 
   //create an initial GraphicsState
 
@@ -600,6 +623,16 @@ nsRenderingContextWin :: GetHints(PRUint32& aResult)
   if (gIsWIN95)
     result |= NS_RENDERING_HINT_FAST_8BIT_TEXT;
 
+#ifdef IBMBIDI
+  if (NOT_SETUP == gBidiInfo) {
+    InitBidiInfo();
+  }
+  if (GCP_REORDER == (gBidiInfo & GCP_REORDER) )
+    result |= NS_RENDERING_HINT_BIDI_REORDERING;
+  if (GCP_GLYPHSHAPE == (gBidiInfo & GCP_GLYPHSHAPE) )
+    result |= NS_RENDERING_HINT_ARABIC_SHAPING;
+#endif // IBMBIDI
+  
   aResult = result;
 
   return NS_OK;
@@ -1442,219 +1475,6 @@ NS_IMETHODIMP nsRenderingContextWin :: FillArc(nscoord aX, nscoord aY, nscoord a
 }
 
 
-#ifdef ARABIC_HEBREW_RENDERING
-
-#define CHAR_IS_HEBREW(c) ((0x0590 <= (c)) && ((c)<= 0x05FF))
-#define CHAR_IS_ARABIC(c) ((0x0600 <= (c)) && ((c)<= 0x06FF))
-#define HAS_ARABIC_PRESENTATION_FORM_B(font) (FONT_HAS_GLYPH((font)->mMap, 0xFE81))
-#define HAS_HEBREW_GLYPH(font)               (FONT_HAS_GLYPH((font)->mMap, 0x05D0))
-
-// the following code assume all the aString is from right to left without
-// mixing with left to right characters
-static void HebrewReordering(const PRUnichar *aString, PRUint32 aLen,
-        PRUnichar* aBuf, PRUint32 &aBufLen)
-{
-   const PRUnichar* src=aString + aLen - 1;
-   PRUnichar* dest= aBuf;
-   while(src>=aString)
-       *dest++ =  *src--;
-   aBufLen = aLen;
-}
-//============ Begin Arabic Basic to Presentation Form B Code ============
-
-PRUint8 gArabicMap1[] = {
-            0x81, 0x83, 0x85, 0x87, 0x89, 0x8D, // 0622-0627
-0x8F, 0x93, 0x95, 0x99, 0x9D, 0xA1, 0xA5, 0xA9, // 0628-062F
-0xAB, 0xAD, 0xAF, 0xB1, 0xB5, 0xB9, 0xBD, 0xC1, // 0630-0637
-0xC5, 0xC9, 0xCD                                // 0638-063A
-};
-
-PRUint8 gArabicMap2[] = {
-      0xD1, 0xD5, 0xD9, 0xDD, 0xE1, 0xE5, 0xE9, // 0641-0647
-0xED, 0xEF, 0xF1                                // 0648-064A
-};
-
-#define PresentationFormB(c, form)                           \
-  (((0x0622<=(c)) && ((c)<=0x063A)) ?                        \
-    (0xFE00|(gArabicMap1[(c)-0x0622] + (form))) :            \
-     (((0x0641<=(c)) && ((c)<=0x064A)) ?                     \
-      (0xFE00|(gArabicMap2[(c)-0x0641] + (form))) : (c)))
-
-enum {
-   eIsolated,  // or Char N
-   eFinal,     // or Char R
-   eInitial,   // or Char L
-   eMedial,    // or Char M
-} eArabicForm;
-enum {
-   eTr = 0, // Transparent
-   eRJ = 1, // Right-Joining
-   eLJ = 2, // Left-Joining
-   eDJ = 3, // Dual-Joining
-   eNJ  = 4,// Non-Joining
-   eJC = 7, // Joining Causing
-   eRightJCMask = 2, // bit of Right-Join Causing 
-   eLeftJCMask = 1   // bit of Left-Join Causing 
-} eArabicJoiningClass;
-
-#define RightJCClass(j) (eRightJCMask&(j))
-#define LeftJCClass(j)  (eLeftJCMask&(j))
-
-#define DecideForm(jl,j,jr)                                 \
-  (((eRJ == (j)) && RightJCClass(jr)) ? eFinal              \
-                                      :                     \
-   ((eDJ == (j)) ?                                          \
-    ((RightJCClass(jr)) ?                                   \
-     (((LeftJCClass(jl)) ? eMedial                          \
-                         : eFinal))                         \
-                        :                                   \
-     (((LeftJCClass(jl)) ? eInitial                         \
-                         : eIsolated))                      \
-    )                     : eIsolated))                     \
-  
-
-PRInt8 gJoiningClass[] = {
-          eRJ, eRJ, eRJ, eRJ, eDJ, eRJ, // 0620-0627
-eDJ, eRJ, eDJ, eDJ, eDJ, eDJ, eDJ, eRJ, // 0628-062F
-eRJ, eRJ, eRJ, eDJ, eDJ, eDJ, eDJ, eDJ, // 0630-0637
-eDJ, eDJ, eDJ, eNJ, eNJ, eNJ, eNJ, eNJ, // 0638-063F
-eJC, eDJ, eDJ, eDJ, eDJ, eDJ, eDJ, eDJ, // 0640-0647
-eRJ, eRJ, eDJ, eTr, eTr, eTr, eTr, eTr, // 0648-064F
-eTr, eTr, eTr                           // 0650-0652
-};
-
-#define GetJoiningClass(c)                   \
-  (((0x0622 <= (c)) && ((c) <= 0x0652)) ?    \
-       (gJoiningClass[(c) - 0x0622]) :       \
-      ((0x200D == (c)) ? eJC : eTr))
-
-PRUint16 gArabicLigatureMap[] = 
-{
-0x82DF, // 0xFE82 0xFEDF -> 0xFEF5
-0x82E0, // 0xFE82 0xFEE0 -> 0xFEF6
-0x84DF, // 0xFE84 0xFEDF -> 0xFEF7
-0x84E0, // 0xFE84 0xFEE0 -> 0xFEF8
-0x88DF, // 0xFE88 0xFEDF -> 0xFEF9
-0x88E0, // 0xFE88 0xFEE0 -> 0xFEFA
-0x8EDF, // 0xFE8E 0xFEDF -> 0xFEFB
-0x8EE0  // 0xFE8E 0xFEE0 -> 0xFEFC
-};
-static void ArabicShaping(const PRUnichar* aString, PRUint32 aLen,
-             PRUnichar* aBuf, PRUint32 &aBufLen, PRUint32* map)
-{
-   const PRUnichar* src = aString+aLen-1;
-   const PRUnichar* p;
-   PRUnichar* dest = aBuf;
-   
-   PRUnichar formB;
-   PRInt8 leftJ, thisJ, rightJ;
-   PRInt8 leftNoTrJ, rightNoTrJ;
-   thisJ = eNJ;
-   rightJ = GetJoiningClass(*(src)) ;
-   while(src>aString) {
-      leftJ = thisJ;
-      if(eTr != thisJ)
-        leftNoTrJ = thisJ;
-      thisJ = rightJ;
-      rightJ = rightNoTrJ = GetJoiningClass(*(src-1)) ;
-      for(p=src-2; (eTr == rightNoTrJ) && (p >= src); p--) 
-          rightNoTrJ = GetJoiningClass(*(p)) ;
-      formB = PresentationFormB(*src, DecideForm(leftNoTrJ, thisJ, rightNoTrJ));
-      if(FONT_HAS_GLYPH(map,formB))
-          *dest++ = formB;
-      else
-          *dest++ = PresentationFormB(*src, eIsolated);
-//printf("%x %d %d %d %x\n" ,*src,leftJ, thisJ, rightJ, 
-//PresentationFormB(*src, DecideForm(leftJ, thisJ, rightJ)));
-      src--;
-   }
-   if(eTr != thisJ)
-     leftNoTrJ = thisJ;
-   formB = PresentationFormB(*src, DecideForm(leftNoTrJ, rightJ, eNJ));
-   if(FONT_HAS_GLYPH(map,formB))
-       *dest++ = formB;
-   else
-       *dest++ = PresentationFormB(*src, eIsolated);
-//printf("%x %d %d %d %x\n" ,*src, thisJ, rightJ, eNJ,
-//PresentationFormB(*src, DecideForm( thisJ, rightJ, eNJ)));
-   src--;
-   PRUnichar *lSrc = aBuf;
-   PRUnichar *lDest = aBuf;
-   while(lSrc < (dest-1))
-   {
-      PRUnichar next = *(lSrc+1);
-      if(((0xFEDF == next) || (0xFEE0 == next)) && 
-         (0xFE80 == (0xFFF1 & *lSrc))) 
-      {
-         PRBool done = PR_FALSE;
-         PRUint16 key = ((*lSrc) << 8) | ( 0x00FF & next);
-         PRUint16 i;
-         for(i=0;i<8;i++)
-         {
-             if(key == gArabicLigatureMap[i])
-             {
-                done = PR_TRUE;
-                *lDest++ = 0xFEF5 + i;
-                lSrc+=2;
-                break;
-             }
-         }
-         if(! done)
-             *lDest++ = *lSrc++; 
-      } else {
-        *lDest++ = *lSrc++; 
-      }
-   }
-   if(lSrc < dest)
-      *lDest++ = *lSrc++; 
-   aBufLen = lDest - aBuf; 
-#if 0
-printf("[");
-for(PRUint32 k=0;k<aBufLen;k++)
-  printf("%x ", aBuf[k]);
-printf("]\n");
-#endif
-}
-//============ End of Arabic Basic to Presentation Form B Code ============
-
-static PRBool NeedComplexScriptHandling(const PRUnichar *aString, PRUint32 aLen,
-       PRBool bFontSupportHebrew, PRBool* oHebrew,
-       PRBool bFontSupportArabic, PRBool* oArabic)
-{
-  PRUint32 i;
-  *oHebrew = *oArabic = PR_FALSE;
-  if(bFontSupportArabic && bFontSupportHebrew)
-  {
-     for(i=0;i<aLen;i++)
-     {
-       if(CHAR_IS_HEBREW(aString[i])) {
-          *oHebrew=PR_TRUE;
-          break;
-       } else if(CHAR_IS_ARABIC(aString[i])) {
-          *oArabic=PR_TRUE;
-          break;
-       }
-     }
-  } else if(bFontSupportHebrew) {
-     for(i=0;i<aLen;i++)
-     {
-       if(CHAR_IS_HEBREW(aString[i])) {
-          *oHebrew=PR_TRUE;
-          break;
-       }
-     }
-  } else if(bFontSupportArabic) {
-     for(i=0;i<aLen;i++)
-     {
-       if(CHAR_IS_ARABIC(aString[i])) {
-          *oArabic=PR_TRUE;
-          break;
-       }
-     }
-  }
-  return *oArabic || *oHebrew;
-}
-#endif // ARABIC_HEBREW_RENDERING
 
 #ifdef FIX_FOR_BUG_6585
 // This function will substitute non-ascii 7-bit chars so that
@@ -1717,6 +1537,16 @@ NS_IMETHODIMP nsRenderingContextWin :: GetWidth(PRUnichar ch, nscoord &aWidth, P
 {
   PRUnichar buf[1];
   buf[0] = ch;
+#ifdef IBMBIDI
+  WORD charType;
+  ::GetStringTypeW(CT_CTYPE3, &ch, 1, &charType);
+  if ((charType & C3_DIACRITIC) && !(charType & C3_ALPHA)) {
+//    aWidth = 0;
+    GetWidth(buf, 1, aWidth, aFontID);
+    aWidth *=-1;
+    return NS_OK;
+  }
+#endif
   return GetWidth(buf, 1, aWidth, aFontID);
 }
 
@@ -1934,10 +1764,6 @@ NS_IMETHODIMP nsRenderingContextWin :: GetWidth(const PRUnichar *aString,
 
     SetupFontAndColor();
     HFONT selectedFont = mCurrFont;
-#ifdef ARABIC_HEBREW_RENDERING
-    PRUnichar buf[8192];
-    PRUint32 len;
-#endif  // ARABIC_HEBREW_RENDERING
 
     LONG width = 0;
     PRUint32 start = 0;
@@ -1962,26 +1788,7 @@ FoundFont:
             ::SelectObject(mDC, prevFont->mFont);
             selectedFont = prevFont->mFont;
           }
-#ifdef ARABIC_HEBREW_RENDERING
-          PRBool bArabic=PR_FALSE;
-          PRBool bHebrew=PR_FALSE;
-          if(NeedComplexScriptHandling(&pstr[start],i-start,
-                HAS_HEBREW_GLYPH(prevFont), &bHebrew,
-                HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic ) )
-          {
-             len = 8192;
-             if(bHebrew) {
-                HebrewReordering(&pstr[start], i-start, buf, len);
-             } else if (bArabic) {
-                ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
-            }
-             width += prevFont->GetWidth(mDC, buf, len);
-          } 
-          else 
-#endif // ARABIC_HEBREW_RENDERING
-          {
-            width += prevFont->GetWidth(mDC, &pstr[start], i - start);
-          }
+          width += prevFont->GetWidth(mDC, &pstr[start], i - start);
           prevFont = currFont;
           start = i;
         }
@@ -1997,26 +1804,7 @@ FoundFont:
         ::SelectObject(mDC, prevFont->mFont);
         selectedFont = prevFont->mFont;
       }
-#ifdef ARABIC_HEBREW_RENDERING
-      PRBool bArabic=PR_FALSE;
-      PRBool bHebrew=PR_FALSE;
-      if(NeedComplexScriptHandling(&pstr[start],i-start,
-                HAS_HEBREW_GLYPH(prevFont), &bHebrew,
-            HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic ) )
-      {
-         len = 8192;
-         if(bHebrew) {
-            HebrewReordering(&pstr[start], i-start, buf, len);
-         } else if (bArabic) {
-            ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
-        }
-         width += prevFont->GetWidth(mDC, buf, len);
-      } 
-      else 
-#endif // ARABIC_HEBREW_RENDERING
-      {
-        width += prevFont->GetWidth(mDC, &pstr[start], i - start);
-      }
+      width += prevFont->GetWidth(mDC, &pstr[start], i - start);
     }
 
     aWidth = NSToCoordRound(float(width) * mP2T);
@@ -2403,14 +2191,17 @@ NS_IMETHODIMP nsRenderingContextWin :: DrawString(const PRUnichar *aString, PRUi
 
     SetupFontAndColor();
     HFONT selectedFont = mCurrFont;
-#ifdef ARABIC_HEBREW_RENDERING
-    PRUnichar buf[8192];
-    PRUint32 len;
-#endif  // ARABIC_HEBREW_RENDERING
 
     PRUint32 start = 0;
     for (PRUint32 i = 0; i < aLength; i++) {
       PRUnichar c = pstr[i];
+
+#ifdef IBMBIDI
+      if (mRightToLeftText) {
+        c = pstr[aLength - i - 1];
+      }
+#endif // IBMBIDI
+
       nsFontWin* currFont = nsnull;
       nsFontWin** font = metrics->mLoadedFonts;
       nsFontWin** end = &metrics->mLoadedFonts[metrics->mLoadedFontsCount];
@@ -2449,24 +2240,13 @@ FoundFont:
             }
           }
           else {
-#ifdef ARABIC_HEBREW_RENDERING
-            PRBool bArabic=PR_FALSE;
-            PRBool bHebrew=PR_FALSE;
-            if(NeedComplexScriptHandling(&pstr[start],i-start,
-                HAS_HEBREW_GLYPH(prevFont), &bHebrew,
-                HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic ) )
-            {
-               len = 8192;
-               if(bHebrew) {
-                  HebrewReordering(&pstr[start], i-start, buf, len);
-               } else if (bArabic) {
-                  ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
-              }
-              prevFont->DrawString(mDC, x, y, buf, len);
-              x += prevFont->GetWidth(mDC, buf, len);
-            } 
-            else 
-#endif // ARABIC_HEBREW_RENDERING
+#ifdef IBMBIDI
+            if (mRightToLeftText) {
+              prevFont->DrawString(mDC, x, y, &pstr[aLength - i], i - start);
+              x += prevFont->GetWidth(mDC, &pstr[aLength - i], i - start);
+            }
+            else
+#endif // IBMBIDI
             {
               prevFont->DrawString(mDC, x, y, &pstr[start], i - start);
               x += prevFont->GetWidth(mDC, &pstr[start], i - start);
@@ -2507,23 +2287,12 @@ FoundFont:
         }
       }
       else {
-#ifdef ARABIC_HEBREW_RENDERING
-        PRBool bArabic=PR_FALSE;
-        PRBool bHebrew=PR_FALSE;
-        if(NeedComplexScriptHandling(&pstr[start],i-start,
-            HAS_HEBREW_GLYPH(prevFont), &bHebrew,
-            HAS_ARABIC_PRESENTATION_FORM_B(prevFont), &bArabic ) )
-        {
-            len = 8192;
-            if(bHebrew) {
-               HebrewReordering(&pstr[start], i-start, buf, len);
-            } else if (bArabic) {
-               ArabicShaping(&pstr[start], i-start, buf, len, prevFont->mMap);
-            }
-            prevFont->DrawString(mDC, x, y, buf, len);
-        } 
-        else 
-#endif // ARABIC_HEBREW_RENDERING
+#ifdef IBMBIDI
+          if (mRightToLeftText) {
+            prevFont->DrawString(mDC, x, y, &pstr[aLength - i], i - start);
+          }
+          else
+#endif // IBMBIDI
         {
           prevFont->DrawString(mDC, x, y, &pstr[start], i - start);
         }
@@ -3757,6 +3526,85 @@ nsRenderingContextWin::ConditionRect(nsRect& aSrcRect, RECT& aDestRect)
                       ? kBottomRightLimit
                       : (aSrcRect.x+aSrcRect.width);
 }
+
+#ifdef IBMBIDI
+/**
+ * Let the device context know whether we want text reordered with
+ * right-to-left base direction. The Windows implementation does this
+ * by setting the fuOptions parameter to ETO_RTLREADING in calls to
+ * ExtTextOut()
+ */
+NS_IMETHODIMP
+nsRenderingContextWin::SetRightToLeftText(PRBool aIsRTL)
+{
+  // Only call SetTextAlign if the new value is different from the
+  // current value
+  if (aIsRTL != mRightToLeftText) {
+    UINT flags = ::GetTextAlign(mDC);
+    if (aIsRTL) {
+      flags |= TA_RTLREADING;
+    }
+    else {
+      flags &= (~TA_RTLREADING);
+    }
+    ::SetTextAlign(mDC, flags);
+  }
+
+  mRightToLeftText = aIsRTL;
+  return NS_OK;
+}
+
+/**
+ * Init <code>gBidiInfo</code> with reordering and shaping 
+ * capabilities of the system
+ */
+void
+nsRenderingContextWin::InitBidiInfo()
+{
+  if (NOT_SETUP == gBidiInfo) {
+    gBidiInfo = DONT_INIT;
+
+    const PRUnichar araAin  = 0x0639;
+    const PRUnichar one     = 0x0031;
+
+    int distanceArray[2];
+    PRUnichar glyphArray[2];
+    PRUnichar outStr[] = {0, 0};
+
+    GCP_RESULTSW gcpResult;
+    gcpResult.lStructSize = sizeof(GCP_RESULTS);
+    gcpResult.lpOutString = outStr;     // Output string
+    gcpResult.lpOrder = nsnull;         // Ordering indices
+    gcpResult.lpDx = distanceArray;     // Distances between character cells
+    gcpResult.lpCaretPos = nsnull;      // Caret positions
+    gcpResult.lpClass = nsnull;         // Character classifications
+    gcpResult.lpGlyphs = glyphArray;    // Character glyphs
+    gcpResult.nGlyphs = 2;              // Array size
+
+    PRUnichar inStr[] = {araAin, one};
+
+    if (::GetCharacterPlacementW(mDC, inStr, 2, 0, &gcpResult, GCP_REORDER) 
+        && (inStr[0] == outStr[1]) ) {
+      gBidiInfo = GCP_REORDER | GCP_GLYPHSHAPE;
+#ifdef NS_DEBUG
+      printf("System has shaping\n");
+#endif
+    }
+    else {
+      const PRUnichar hebAlef = 0x05D0;
+      inStr[0] = hebAlef;
+      inStr[1] = one;
+      if (::GetCharacterPlacementW(mDC, inStr, 2, 0, &gcpResult, GCP_REORDER) 
+          && (inStr[0] == outStr[1]) ) {
+        gBidiInfo = GCP_REORDER;
+#ifdef NS_DEBUG
+        printf("System has Bidi\n");
+#endif
+      }
+    }
+  }
+}
+#endif // IBMBIDI
 
 
 

@@ -37,7 +37,6 @@
 #include "nshtmlpars.h"
 #include "nsWellFormedDTD.h"
 #include "nsViewSourceHTML.h" 
-#include "nsHTMLContentSinkStream.h" //this is here so we can get a null sink, which really should be gotten from nsICOntentSink.h
 #include "nsIStringStream.h"
 #include "nsIChannel.h"
 #include "nsIProgressEventSink.h"
@@ -311,8 +310,8 @@ nsresult nsParser::QueryInterface(const nsIID& aIID, void** aInstancePtr)
   else if(aIID.Equals(NS_GET_IID(nsIProgressEventSink))) {
     *aInstancePtr = (nsIStreamListener*)(this);                                        
   }
-  else if(aIID.Equals(NS_GET_IID(nsIStreamObserver))) {
-    *aInstancePtr = (nsIStreamObserver*)(this);                                        
+  else if(aIID.Equals(NS_GET_IID(nsIRequestObserver))) {
+    *aInstancePtr = (nsIRequestObserver*)(this);                                        
   }
   else if(aIID.Equals(NS_GET_IID(nsIStreamListener))) {
     *aInstancePtr = (nsIStreamListener*)(this);                                        
@@ -1414,7 +1413,7 @@ nsresult nsParser::DidBuildModel(nsresult anErrorCode) {
   //One last thing...close any open containers.
   nsresult result=anErrorCode;
 
-  if(mParserEnabled && mParserContext && !mParserContext->mPrevContext) {
+  if(mParserContext && !mParserContext->mPrevContext) {
     if(mParserContext->mDTD) {
       result=mParserContext->mDTD->DidBuildModel(anErrorCode,PRBool(0==mParserContext->mPrevContext),this,mSink);
     }
@@ -1491,11 +1490,10 @@ nsresult nsParser::Terminate(void){
       // Hack - Hold a reference until we are completely done...
       nsCOMPtr<nsIParser> kungFuDeathGrip(this); 
       mInternalState=result;
-      result=DidBuildModel(result);
-      return result;
+      DidBuildModel(result);
     }
   }
-  return mInternalState;
+  return result;
 }
 
 
@@ -1576,7 +1574,7 @@ PRBool nsParser::IsParserEnabled() {
  *  @param   aFilename -- const char* containing file to be parsed.
  *  @return  error code -- 0 if ok, non-zero if error.
  */
-nsresult nsParser::Parse(nsIURI* aURL,nsIStreamObserver* aListener,PRBool aVerifyEnabled, void* aKey,nsDTDMode aMode) {  
+nsresult nsParser::Parse(nsIURI* aURL,nsIRequestObserver* aListener,PRBool aVerifyEnabled, void* aKey,nsDTDMode aMode) {  
 
   NS_PRECONDITION(0!=aURL,kNullURL);
 
@@ -1736,62 +1734,6 @@ aMimeType,PRBool aVerifyEnabled,PRBool aLastCall,nsDTDMode aMode){
   NS_RELEASE(me); 
   return result; 
 }  
-
-
-/**
- *  Call this method to test whether a given fragment is valid within a given context-stack.
- *  @update  gess 04/01/99
- *  @param   aSourceBuffer contains the content blob you're trying to insert
- *  @param   aInsertPos tells us where in the context stack you're trying to do the insertion
- *  @param   aMimeType tells us what kind of stuff you're inserting
- *  @return  TRUE if valid, otherwise FALSE
- */
-PRBool nsParser::IsValidFragment(const nsAReadableString& aSourceBuffer,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aMimeType,nsDTDMode aMode){
-
-  /************************************************************************************
-    This method works like this:
-      1. Convert aStack to a markup string
-      2. Append a "sentinel" tag to markup string so we know where new content is inserted
-      3. Append new context to markup stack
-      4. Call the normal parse() methods for a string, using an HTMLContentSink.
-         The output of this call is stored in an outputstring
-      5. Scan the output string looking for markup inside our sentinel. If non-empty
-         then we have to assume that the fragment is valid (at least in part)
-   ************************************************************************************/
-
-  nsAutoString  theContext;
-  PRUint32 theCount=aStack.GetSize();
-  PRUint32 theIndex=0;
-  while(theIndex++<theCount){
-    theContext.AppendWithConversion("<");
-    theContext.Append(aStack.TagAt(theCount-theIndex));
-    theContext.AppendWithConversion(">");
-  }
-  theContext.AppendWithConversion("<endnote>");       //XXXHack! I'll make this better later.
-  nsAutoString theBuffer(theContext);
-  theBuffer.Append(aSourceBuffer);
-  
-  PRBool result=PR_FALSE;
-  if(theBuffer.Length()){
-    //now it's time to try to build the model from this fragment
-
-    nsString theOutput;
-    nsIHTMLContentSink*  theSink=0;
-    nsresult theResult=NS_New_HTML_ContentSinkStream(&theSink,&theOutput,0);
-    SetContentSink(theSink);
-    theResult=Parse(theBuffer,(void*)&theBuffer,aMimeType,PR_FALSE,PR_TRUE);
-    theOutput.StripWhitespace();
-    if(NS_OK==theResult){
-      theOutput.Cut(0,theContext.Length());
-      PRInt32 aPos=theOutput.RFind("</endnote>");
-      if(-1<aPos)
-        theOutput.Truncate(aPos);
-      result=PRBool(0<theOutput.Length());
-    }
-  }
-  return result;
-}
-
 
 /**
  *
@@ -2207,8 +2149,13 @@ static PRBool detectByteOrderMark(const unsigned char* aBytes, PRInt32 aLen, nsS
                 if(kNotFound != encEnd) {
                    PRInt32 count = encEnd - encStart -1;
                    if(count >0) {
-                      firstXbytes.Mid(oCharset,(encStart+1), count);
-                      oCharsetSource= kCharsetFromMetaTag;
+                      const PRUnichar *u = firstXbytes.GetUnicode();
+                      // if UTF-16, it should have been detected by now
+                      // otherwise, the label must be invalid
+                      if (nsCRT::strncasecmp(&u[encStart+1], NS_LITERAL_STRING("UTF-16").get(), count)) {
+                        firstXbytes.Mid(oCharset,(encStart+1), count);
+                        oCharsetSource= kCharsetFromMetaTag;
+                      }
                    }
                 }
              }
@@ -2370,7 +2317,7 @@ NS_PRECONDITION(((eOnStart==mParserContext->mStreamListenerState)||(eOnDataAvail
  *  @return  
  */
 nsresult nsParser::OnStopRequest(nsIRequest *request, nsISupports* aContext,
-                                 nsresult status, const PRUnichar* aMsg)
+                                 nsresult status)
 {  
 
   nsresult result=NS_OK;
@@ -2401,7 +2348,7 @@ nsresult nsParser::OnStopRequest(nsIRequest *request, nsISupports* aContext,
   // XXX Should we wait to notify our observers as well if the
   // parser isn't yet enabled?
   if (nsnull != mObserver) {
-    mObserver->OnStopRequest(request, aContext, status, aMsg);
+    mObserver->OnStopRequest(request, aContext, status);
   }
 
 #ifdef rickgdebug

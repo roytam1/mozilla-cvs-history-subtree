@@ -182,7 +182,7 @@ class nsParser : public nsIParser,
      * @param   aListener is a listener to forward notifications to
      * @return  TRUE if all went well -- FALSE otherwise
      */
-    virtual nsresult Parse(nsIURI* aURL,nsIStreamObserver* aListener,PRBool aEnableVerify=PR_FALSE,void* aKey=0,nsDTDMode aMode=eDTDMode_autodetect);
+    virtual nsresult Parse(nsIURI* aURL,nsIRequestObserver* aListener,PRBool aEnableVerify=PR_FALSE,void* aKey=0,nsDTDMode aMode=eDTDMode_autodetect);
 
     /**
      * Cause parser to parse input from given stream 
@@ -200,7 +200,6 @@ class nsParser : public nsIParser,
      */
     virtual nsresult Parse(const nsAReadableString& aSourceBuffer,void* aKey,const nsString& aContentType,PRBool aEnableVerify=PR_FALSE,PRBool aLastCall=PR_FALSE,nsDTDMode aMode=eDTDMode_autodetect);
 
-    virtual PRBool    IsValidFragment(const nsAReadableString& aSourceBuffer,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aContentType,nsDTDMode aMode=eDTDMode_autodetect);
     virtual nsresult  ParseFragment(const nsAReadableString& aSourceBuffer,void* aKey,nsITagStack& aStack,PRUint32 anInsertPos,const nsString& aContentType,nsDTDMode aMode=eDTDMode_autodetect);
 
 
@@ -253,8 +252,8 @@ class nsParser : public nsIParser,
       //*********************************************
     NS_DECL_NSIPROGRESSEVENTSINK
 
-    // nsIStreamObserver methods:
-    NS_DECL_NSISTREAMOBSERVER
+    // nsIRequestObserver methods:
+    NS_DECL_NSIREQUESTOBSERVER
 
     // nsIStreamListener methods:
     NS_DECL_NSISTREAMLISTENER
@@ -394,7 +393,7 @@ protected:
     PRInt32             mMajorIteration;
     PRInt32             mMinorIteration;
 
-    nsIStreamObserver*  mObserver;
+    nsIRequestObserver*   mObserver;
     nsIProgressEventSink* mProgressEventSink;
     nsIContentSink*     mSink;
     nsIParserFilter*    mParserFilter;

@@ -152,5 +152,5 @@ static nsModuleComponentInfo components[] =
   }
 };
 
-NS_IMPL_NSGETMODULE("nsUCvTWModule", components);
+NS_IMPL_NSGETMODULE("nsUCvJAModule", components);
 

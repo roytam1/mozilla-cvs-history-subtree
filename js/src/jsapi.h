@@ -90,6 +90,7 @@ JS_BEGIN_EXTERN_C
                                  : JS_TRUE)
 
 /* Domain limits for the jsval int type. */
+#define JSVAL_INT_BITS          31
 #define JSVAL_INT_POW2(n)       ((jsval)1 << (n))
 #define JSVAL_INT_MIN           ((jsval)1 - JSVAL_INT_POW2(30))
 #define JSVAL_INT_MAX           (JSVAL_INT_POW2(30) - 1)
@@ -121,11 +122,12 @@ JS_BEGIN_EXTERN_C
 #define JSPROP_INDEX            0x80    /* name is actually (jsint) index */
 
 /* Function flags, set in JSFunctionSpec and passed to JS_NewFunction etc. */
+#define JSFUN_LAMBDA            0x08    /* expressed, not declared, function */
 #define JSFUN_GETTER            JSPROP_GETTER
 #define JSFUN_SETTER            JSPROP_SETTER
 #define JSFUN_BOUND_METHOD      0x40    /* bind this to fun->object's parent */
 #define JSFUN_HEAVYWEIGHT       0x80    /* activation requires a Call object */
-#define JSFUN_FLAGS_MASK        0xf0    /* overlay JSFUN_* attributes */
+#define JSFUN_FLAGS_MASK        0xf8    /* overlay JSFUN_* attributes */
 
 /*
  * Well-known JS values.  The extern'd variables are initialized when the
@@ -556,7 +558,7 @@ JS_DumpNamedRoots(JSRuntime *rt,
 typedef intN
 (* JS_DLL_CALLBACK JSGCRootMapFun)(void *rp, const char *name, void *data);
 
-extern JS_PUBLIC_API(intN)
+extern JS_PUBLIC_API(uint32)
 JS_MapGCRoots(JSRuntime *rt, JSGCRootMapFun map, void *data);
 
 extern JS_PUBLIC_API(JSBool)
@@ -640,6 +642,8 @@ JS_NewExternalString(JSContext *cx, jschar *chars, size_t length, intN type);
 /*
  * Classes, objects, and properties.
  */
+
+/* For detailed comments on the function pointer types, see jspubtd.h. */
 struct JSClass {
     const char          *name;
     uint32              flags;
@@ -665,15 +669,30 @@ struct JSClass {
     jsword              spare;
 };
 
-#define JSCLASS_HAS_PRIVATE             0x01    /* objects have private slot */
-#define JSCLASS_NEW_ENUMERATE           0x02    /* has JSNewEnumerateOp hook */
-#define JSCLASS_NEW_RESOLVE             0x04    /* has JSNewResolveOp hook */
-#define JSCLASS_PRIVATE_IS_NSISUPPORTS  0x08    /* private is (nsISupports *) */
-#define JSCLASS_SHARE_ALL_PROPERTIES    0x10    /* all properties are SHARED */
+#define JSCLASS_HAS_PRIVATE             (1<<0)  /* objects have private slot */
+#define JSCLASS_NEW_ENUMERATE           (1<<1)  /* has JSNewEnumerateOp hook */
+#define JSCLASS_NEW_RESOLVE             (1<<2)  /* has JSNewResolveOp hook */
+#define JSCLASS_PRIVATE_IS_NSISUPPORTS  (1<<3)  /* private is (nsISupports *) */
+#define JSCLASS_SHARE_ALL_PROPERTIES    (1<<4)  /* all properties are SHARED */
+
+/*
+ * To reserve slots fetched and stored via JS_Get/SetReservedSlot, bitwise-or
+ * JSCLASS_HAS_RESERVED_SLOTS(n) into the initializer for JSClass.flags, where
+ * n is a constant in [1, 255].  Reserved slots are indexed from 0 to n-1.
+ */
+#define JSCLASS_RESERVED_SLOTS_SHIFT    8       /* room for 8 flags below */
+#define JSCLASS_RESERVED_SLOTS_WIDTH    8       /* and 16 above this field */
+#define JSCLASS_RESERVED_SLOTS_MASK     JS_BITMASK(JSCLASS_RESERVED_SLOTS_WIDTH)
+#define JSCLASS_HAS_RESERVED_SLOTS(n)   (((n) & JSCLASS_RESERVED_SLOTS_MASK)   \
+                                         << JSCLASS_RESERVED_SLOTS_SHIFT)
+#define JSCLASS_RESERVED_SLOTS(clasp)   (((clasp)->flags                      \
+                                          >> JSCLASS_RESERVED_SLOTS_SHIFT)     \
+                                         & JSCLASS_RESERVED_SLOTS_MASK)
 
 /* Initializer for unused members of statically initialized JSClass structs. */
 #define JSCLASS_NO_OPTIONAL_MEMBERS     0,0,0,0,0,0,0,0
 
+/* For detailed comments on these function pointer types, see jspubtd.h. */
 struct JSObjectOps {
     /* Mandatory non-null function pointer members. */
     JSNewObjectMapOp    newObjectMap;
@@ -700,8 +719,8 @@ struct JSObjectOps {
     JSSetObjectSlotOp   setParent;
     JSMarkOp            mark;
     JSFinalizeOp        clear;
-    jsword              spare1;
-    jsword              spare2;
+    JSGetRequiredSlotOp getRequiredSlot;
+    JSSetRequiredSlotOp setRequiredSlot;
 };
 
 /*
@@ -993,6 +1012,12 @@ JS_Enumerate(JSContext *cx, JSObject *obj);
 extern JS_PUBLIC_API(JSBool)
 JS_CheckAccess(JSContext *cx, JSObject *obj, jsid id, JSAccessMode mode,
                jsval *vp, uintN *attrsp);
+
+extern JS_PUBLIC_API(JSBool)
+JS_GetReservedSlot(JSContext *cx, JSObject *obj, uint32 index, jsval *vp);
+
+extern JS_PUBLIC_API(JSBool)
+JS_SetReservedSlot(JSContext *cx, JSObject *obj, uint32 index, jsval v);
 
 /************************************************************************/
 

@@ -289,6 +289,7 @@ ShareScope(JSRuntime *rt, JSScope *scope)
             JS_ASSERT(*todop != NO_SCOPE_SHARING_TODO);
         }
         *todop = scope->u.link;
+        scope->u.link = NULL;       /* null u.link for sanity ASAP */
         JS_NOTIFY_ALL_CONDVAR(rt->scopeSharingDone);
     }
     js_InitLock(&scope->lock);
@@ -389,9 +390,15 @@ ClaimScope(JSScope *scope, JSContext *cx)
          * here and break.  After that we unwind to js_[GS]etSlotThreadSafe or
          * js_LockScope (our caller), where we wait on the newly-fattened lock
          * until ownercx's thread unwinds from js_SetProtoOrParent.
+         *
+         * Avoid deadlock before any of this scope/context cycle detection if
+         * cx is on the active GC's thread, because in that case, no requests
+         * will run until the GC completes.  Any scope wanted by the GC (from
+         * a finalizer) that can't be claimed must be slated for sharing.
          */
-        if (ownercx->scopeToShare &&
-            WillDeadlock(ownercx->scopeToShare, cx)) {
+        if (rt->gcThread == cx->thread ||
+            (ownercx->scopeToShare &&
+             WillDeadlock(ownercx->scopeToShare, cx))) {
             ShareScope(rt, scope);
             break;
         }
@@ -411,14 +418,21 @@ ClaimScope(JSScope *scope, JSContext *cx)
          * Inline JS_SuspendRequest before we wait on rt->scopeSharingDone,
          * saving and clearing cx->requestDepth so we don't deadlock if the
          * GC needs to run on ownercx.
+         *
+         * Unlike JS_SuspendRequest and JS_EndRequest, we must take care not
+         * to decrement rt->requestCount if cx is active on the GC's thread,
+         * because the GC has already reduced rt->requestCount to exclude all
+         * such such contexts.
          */
         saveDepth = cx->requestDepth;
         if (saveDepth) {
             cx->requestDepth = 0;
-            JS_ASSERT(rt->requestCount > 0);
-            rt->requestCount--;
-            if (rt->requestCount == 0)
-                JS_NOTIFY_REQUEST_DONE(rt);
+            if (rt->gcThread != cx->thread) {
+                JS_ASSERT(rt->requestCount > 0);
+                rt->requestCount--;
+                if (rt->requestCount == 0)
+                    JS_NOTIFY_REQUEST_DONE(rt);
+            }
         }
 
         /*
@@ -429,27 +443,42 @@ ClaimScope(JSScope *scope, JSContext *cx)
         cx->scopeToShare = scope;
         stat = PR_WaitCondVar(rt->scopeSharingDone, PR_INTERVAL_NO_TIMEOUT);
         JS_ASSERT(stat != PR_FAILURE);
-        cx->scopeToShare = NULL;
 
         /*
          * Inline JS_ResumeRequest after waiting on rt->scopeSharingDone,
-         * restoring cx->requestDepth.
+         * restoring cx->requestDepth.  Same note as above for the inlined,
+         * specialized JS_SuspendRequest code: beware rt->gcThread.
          */
         if (saveDepth) {
             if (rt->gcThread != cx->thread) {
                 while (rt->gcLevel > 0)
                     JS_AWAIT_GC_DONE(rt);
+                rt->requestCount++;
             }
-            rt->requestCount++;
             cx->requestDepth = saveDepth;
         }
+
+        /*
+         * Don't clear cx->scopeToShare until after we're through waiting on
+         * all condition variables protected by rt->gcLock -- that includes
+         * rt->scopeSharingDone *and* rt->gcDone (hidden in JS_AWAIT_GC_DONE,
+         * in the inlined JS_ResumeRequest code immediately above).
+         *
+         * Otherwise, the GC could easily deadlock with another thread that
+         * owns a scope wanted by a finalizer.  By keeping cx->scopeToShare
+         * set till here, we ensure that such deadlocks are detected, which
+         * results in the finalized object's scope being shared (it must, of
+         * course, have other, live objects sharing it).
+         */
+        cx->scopeToShare = NULL;
     }
 
     JS_UNLOCK_GC(rt);
     return JS_FALSE;
 }
 
-jsval
+/* Exported to js.c, which calls it via OBJ_GET_* and JSVAL_IS_* macros. */
+JS_FRIEND_API(jsval)
 js_GetSlotThreadSafe(JSContext *cx, JSObject *obj, uint32 slot)
 {
     jsval v;
@@ -459,7 +488,23 @@ js_GetSlotThreadSafe(JSContext *cx, JSObject *obj, uint32 slot)
     jsword me;
 #endif
 
-    JS_ASSERT(OBJ_IS_NATIVE(obj));
+    /*
+     * We handle non-native objects via JSObjectOps.getRequiredSlot, treating
+     * all slots starting from 0 as required slots.  A property definition or
+     * some prior arrangement must have allocated slot.
+     *
+     * Note once again (see jspubtd.h, before JSGetRequiredSlotOp's typedef)
+     * the crucial distinction between a |required slot number| that's passed
+     * to the get/setRequiredSlot JSObjectOps, and a |reserved slot index|
+     * passed to the JS_Get/SetReservedSlot APIs.
+     */
+    if (!OBJ_IS_NATIVE(obj))
+        return OBJ_GET_REQUIRED_SLOT(cx, obj, slot);
+
+    /*
+     * Native object locking is inlined here to optimize the single-threaded
+     * and contention-free multi-threaded cases.
+     */
     scope = OBJ_SCOPE(obj);
     JS_ASSERT(scope->ownercx != cx);
     JS_ASSERT(obj->slots && slot < obj->map->freeslot);
@@ -523,7 +568,19 @@ js_SetSlotThreadSafe(JSContext *cx, JSObject *obj, uint32 slot, jsval v)
     jsword me;
 #endif
 
-    JS_ASSERT(OBJ_IS_NATIVE(obj));
+    /*
+     * We handle non-native objects via JSObjectOps.setRequiredSlot, as above
+     * for the Get case.
+     */
+    if (!OBJ_IS_NATIVE(obj)) {
+        OBJ_SET_REQUIRED_SLOT(cx, obj, slot, v);
+        return;
+    }
+
+    /*
+     * Native object locking is inlined here to optimize the single-threaded
+     * and contention-free multi-threaded cases.
+     */
     scope = OBJ_SCOPE(obj);
     JS_ASSERT(scope->ownercx != cx);
     JS_ASSERT(obj->slots && slot < obj->map->freeslot);

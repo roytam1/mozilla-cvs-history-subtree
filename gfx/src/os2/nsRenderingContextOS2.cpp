@@ -62,134 +62,130 @@ HRGN OS2_CopyClipRegion( HPS hps);
 
 BOOL doSetupFontAndTextColor = PR_TRUE;
 
-// Use these instead of native GpiSave/RestorePS because: need to store ----
-// more information, and need to be able to push from onscreen & pop onto
-// offscreen.  Potentially.
-struct GraphicsState
+#define FLAG_CLIP_VALID       0x0001
+#define FLAG_CLIP_CHANGED     0x0002
+#define FLAG_LOCAL_CLIP_VALID 0x0004
+
+#define FLAGS_ALL             (FLAG_CLIP_VALID | FLAG_CLIP_CHANGED | FLAG_LOCAL_CLIP_VALID)
+
+class GraphicsState
 {
-   GraphicsState() { Construct(); }
-  ~GraphicsState() { Destruct(); }
+public:
+  GraphicsState();
+  GraphicsState(GraphicsState &aState);
+  ~GraphicsState();
 
-   void Construct();
-   void Destruct();
-
-   nsTransform2D   mMatrix;
-   HRGN            mClipRegion;
-   nscolor         mColor;
-   nsIFontMetrics *mFontMetrics;
-   nsLineStyle     mLineStyle;
-
-   GraphicsState  *mNext;
+  GraphicsState   *mNext;
+  nsTransform2D   mMatrix;
+  nsRect          mLocalClip;
+  HRGN            mClipRegion;
+  nscolor         mColor;
+  nsIFontMetrics  *mFontMetrics;
+  PRInt32         mFlags;
+  nsLineStyle     mLineStyle;
 };
 
-void GraphicsState::Construct()
+GraphicsState :: GraphicsState()
 {
-   mClipRegion = 0;
-   mColor = NS_RGB( 0, 0, 0);
-   mFontMetrics = nsnull;
-   mLineStyle = nsLineStyle_kSolid;
-   mNext = nsnull;
+  mNext = nsnull;
+  mMatrix.SetToIdentity();  
+  mLocalClip.x = mLocalClip.y = mLocalClip.width = mLocalClip.height = 0;
+  mClipRegion = NULL;
+  mColor = NS_RGB(0, 0, 0);
+  mFontMetrics = nsnull;
+  mFlags = ~FLAGS_ALL;
+  mLineStyle = nsLineStyle_kSolid;
 }
 
-void GraphicsState::Destruct()
+GraphicsState :: GraphicsState(GraphicsState &aState) :
+                               mMatrix(&aState.mMatrix),
+                               mLocalClip(aState.mLocalClip)
 {
-   if( mClipRegion)
-   {
-      printf( "oops, leaked a region from rc-gs\n");
-      mClipRegion = 0;
-   }
-   NS_IF_RELEASE( mFontMetrics);
+  mNext = &aState;
+  mClipRegion = NULL;
+  mColor = NS_RGB(0, 0, 0);
+  mFontMetrics = nsnull;
+  mFlags = ~FLAGS_ALL;
+  mLineStyle = aState.mLineStyle;
 }
 
-class GraphicsStateCache
+GraphicsState :: ~GraphicsState()
 {
-   GraphicsState *mFirst;
-   UINT           mSize;
-#ifdef PROFILE_GSTATE
-   UINT           mDeleted;
-   UINT           mCount;
-   UINT           mPeak;
-#endif
-
- public:
-   GraphicsStateCache() : mFirst(nsnull), mSize(0)
-#ifdef PROFILE_GSTATE
-                         , mDeleted(0), mCount(0), mPeak(0)
-#endif
-   {}
-
-  ~GraphicsStateCache()
-   {
-#ifdef PROFILE_GSTATE
-      printf( "---- Graphics-State Stats -----\n");
-      printf( "  GStates requested:       %d\n", mCount);
-      printf( "  Actual GStates created:  %d\n", mPeak);
-      double d = mCount ? (double)(mCount - mPeak) / (double)mCount : 0;
-      printf( "  Gstates recycled:        %d (%d%%)\n", mCount - mPeak, (int)(d*100.0));
-      UINT i = mSize+mDeleted;
-      printf( "  Cached+Deleted:          %d\n", i);
-      if( i != mPeak)
-         printf( "  WARNING: GStates leaked: %d\n", mPeak - i);
-      printf( "------------------------------\n\n");
-#endif
-
-      // Clear up the cache
-      GraphicsState *pTemp, *pNext = mFirst;
-      while( pNext)
-      {
-         pTemp = pNext->mNext;
-         delete pNext;
-         pNext = pTemp;
-      }
-   }
-
-   GraphicsState *NewState()
-   {
-      GraphicsState *state = nsnull;
-      if( mFirst)
-      {
-         state = mFirst;
-         mFirst = mFirst->mNext;
-         state->Construct();
-         mSize--;
-      }
-      else
-      {
-         state = new GraphicsState;
-#ifdef PROFILE_GSTATE
-         mPeak++;
-#endif
-      }
-#ifdef PROFILE_GSTATE
-      mCount++;
-#endif
-      return state;
-   }
-
-   void DisposeState( GraphicsState *aState)
-   {
-      if( GSTATE_CACHESIZE == mSize)
-      {
-         delete aState;
-#ifdef PROFILE_GSTATE
-         mDeleted++;
-#endif
-      }
-      else
-      {
-         aState->Destruct();
-         aState->mNext = mFirst;
-         mFirst = aState;
-         mSize++;
-      }
-   }
-
-} GStateCache; // XXX make this less static, I suppose
+  if (NULL != mClipRegion)
+  {
+    printf( "oops, leaked a region from rc-gs\n");
+    mClipRegion = NULL;
+  }
+}
 
 // Rendering context -------------------------------------------------------
 
-NS_IMPL_ADDREF(nsRenderingContextOS2)
-NS_IMPL_RELEASE(nsRenderingContextOS2)
+// Init-term stuff ---------------------------------------------------------
+
+nsRenderingContextOS2::nsRenderingContextOS2()
+{
+   NS_INIT_REFCNT();
+
+   mContext = nsnull;
+   mSurface = nsnull;
+   mPS = 0;
+   mMainSurface = nsnull;
+   mColor = NS_RGB( 0, 0, 0);
+   mFontMetrics = nsnull;
+   mLineStyle = nsLineStyle_kSolid;
+   mPreservedInitialClipRegion = PR_FALSE;
+   mPaletteMode = PR_FALSE;
+
+   // Need to enforce setting color values for first time. Make cached values different from current ones.
+   mCurrFontMetrics = mFontMetrics + 1;
+   mCurrTextColor   = mColor + 1;
+   mCurrLineColor   = mColor + 1;
+   mCurrLineStyle   = (nsLineStyle)((int)mLineStyle + 1);
+   mCurrFillColor   = mColor + 1;
+
+  mStateCache = new nsVoidArray();
+
+  //create an initial GraphicsState
+
+  PushState();
+
+  mP2T = 1.0f;
+}
+
+nsRenderingContextOS2::~nsRenderingContextOS2()
+{
+  NS_IF_RELEASE(mContext);
+  NS_IF_RELEASE(mFontMetrics);
+
+  //destroy the initial GraphicsState
+  PRBool clipState;
+  PopState (clipState);
+
+  if (nsnull != mStateCache)
+  {
+    PRInt32 cnt = mStateCache->Count();
+
+    while (--cnt >= 0)
+    {
+      GraphicsState *state = (GraphicsState *)mStateCache->ElementAt(cnt);
+      if (state->mClipRegion) {
+         GFX (::GpiDestroyRegion (mPS, state->mClipRegion), FALSE);
+         state->mClipRegion = 0;
+      }
+      mStateCache->RemoveElementAt(cnt);
+
+      if (nsnull != state)
+        delete state;
+    }
+
+    delete mStateCache;
+    mStateCache = nsnull;
+  }
+
+   // Release surfaces and the palette
+   NS_IF_RELEASE(mMainSurface);
+   NS_IF_RELEASE(mSurface);
+}
 
 nsresult
 nsRenderingContextOS2::QueryInterface( REFNSIID aIID, void **aInstancePtr)
@@ -214,61 +210,57 @@ nsRenderingContextOS2::QueryInterface( REFNSIID aIID, void **aInstancePtr)
    return NS_OK;
 }
 
-// Init-term stuff ---------------------------------------------------------
+NS_IMPL_ADDREF(nsRenderingContextOS2)
+NS_IMPL_RELEASE(nsRenderingContextOS2)
 
-nsRenderingContextOS2::nsRenderingContextOS2()
+NS_IMETHODIMP
+nsRenderingContextOS2::Init( nsIDeviceContext *aContext,
+                             nsIWidget *aWindow)
 {
-   NS_INIT_REFCNT();
+   mContext = aContext;
+   NS_IF_ADDREF(mContext);
 
-   mContext = nsnull;
-   mSurface = nsnull;
-   mPS = 0;
-   mMainSurface = nsnull;
-   mColor = NS_RGB( 0, 0, 0);
-   mP2T = 1.0f;
-   mStateStack = nsnull;
-   mFontMetrics = nsnull;
-   mLineStyle = nsLineStyle_kSolid;
-   mPreservedInitialClipRegion = PR_FALSE;
-   mPaletteMode = PR_FALSE;
+   // Create & remember an on-screen surface
+   nsWindowSurface *surf = new nsWindowSurface;
+   if (!surf)
+     return NS_ERROR_OUT_OF_MEMORY;
 
-   // Need to enforce setting color values for first time. Make cached values different from current ones.
-   mCurrFontMetrics = mFontMetrics + 1;
-   mCurrTextColor   = mColor + 1;
-   mCurrLineColor   = mColor + 1;
-   mCurrLineStyle   = (nsLineStyle)((int)mLineStyle + 1);
-   mCurrFillColor   = mColor + 1;
+   surf->Init(aWindow);
+
+   mSurface = surf;
+   mPS = mSurface->GetPS ();
+   NS_ADDREF(mSurface);
+
+   mDCOwner = aWindow;
+   NS_IF_ADDREF(mDCOwner);
+
+   // Grab another reference to the onscreen for later uniformity
+   mMainSurface = mSurface;
+   NS_ADDREF(mMainSurface);
+
+   return CommonInit();
 }
 
-nsRenderingContextOS2::~nsRenderingContextOS2()
+NS_IMETHODIMP
+nsRenderingContextOS2::Init( nsIDeviceContext *aContext,
+                             nsDrawingSurface aSurface)
 {
-   NS_IF_RELEASE(mContext);
+   mContext = aContext;
+   NS_IF_ADDREF(mContext);
 
-   //destroy the initial GraphicsState
-   if (mPreservedInitialClipRegion == PR_TRUE)
-   {
-      PRBool clipState;
-      PopState (clipState);
-   }
+   // Add a couple of references to the onscreen (or print, more likely)
+   mSurface = (nsDrawingSurfaceOS2 *) aSurface;
 
-   // clear state stack
-   GraphicsState *pTemp, *pNext = mStateStack;
-   while( pNext)
-   {
-      if( pNext->mClipRegion)
-      {
-         GFX (::GpiDestroyRegion (mPS, pNext->mClipRegion), FALSE);
-         pNext->mClipRegion = 0;
-      }
-      pTemp = pNext->mNext;
-      GStateCache.DisposeState( pNext);
-      pNext = pTemp;
-   }
+  if (nsnull != mSurface)
+  {
+    mPS = mSurface->GetPS ();
+    NS_ADDREF(mSurface);
 
-   // Release surfaces and the palette
-   NS_IF_RELEASE(mMainSurface);
-   NS_IF_RELEASE(mSurface);
-   NS_IF_RELEASE(mFontMetrics);
+    mMainSurface = mSurface;
+    NS_ADDREF(mMainSurface);
+  }
+
+   return CommonInit();
 }
 
 nsresult nsRenderingContextOS2::SetupPS (void)
@@ -323,76 +315,52 @@ nsresult nsRenderingContextOS2::SetupPS (void)
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::Init( nsIDeviceContext *aContext,
-                                      nsIWidget *aWindow)
-{
-   mContext = aContext;
-   NS_ADDREF(mContext);
-
-   // Create & remember an on-screen surface
-   nsWindowSurface *surf = new nsWindowSurface;
-   if (!surf)
-     return NS_ERROR_OUT_OF_MEMORY;
-
-   surf->Init(aWindow);
-
-   mSurface = surf;
-   mPS = mSurface->GetPS ();
-   NS_ADDREF(mSurface);
-
-   mDCOwner = aWindow;
-   NS_IF_ADDREF(mDCOwner);
-
-   // Grab another reference to the onscreen for later uniformity
-   mMainSurface = mSurface;
-   NS_ADDREF(mMainSurface);
-
-   PushState();
-   mPreservedInitialClipRegion = PR_TRUE;
-
-   return CommonInit();
-}
-
-nsresult nsRenderingContextOS2::Init( nsIDeviceContext *aContext,
-                                      nsDrawingSurface aSurface)
-{
-   mContext = aContext;
-   NS_IF_ADDREF(mContext);
-
-   // Add a couple of references to the onscreen (or print, more likely)
-   mSurface = (nsDrawingSurfaceOS2 *) aSurface;
-   mPS = mSurface->GetPS ();
-   NS_ADDREF(mSurface);
-   mMainSurface = mSurface;
-   NS_ADDREF(mMainSurface);
-
-   PushState();
-   mPreservedInitialClipRegion = PR_TRUE;
-
-   return CommonInit();
-}
-
 // Presentation space page units (& so world coords) are PU_PELS.
 // We have a matrix, mTMatrix, which converts from the passed in app units
 // to pels.  Note there is *no* guarantee that app units == twips.
 nsresult nsRenderingContextOS2::CommonInit()
 {
-   mContext->GetGammaTable(mGammaTable);
-   float app2dev = 0;
+   float app2dev;
+
    mContext->GetAppUnitsToDevUnits( app2dev);
-   mTMatrix.AddScale( app2dev, app2dev);
+   mTranMatrix->AddScale( app2dev, app2dev);
    mContext->GetDevUnitsToAppUnits( mP2T);
+
+   mContext->GetGammaTable(mGammaTable);
 
    return SetupPS ();
 }
 
 // PS & drawing surface management -----------------------------------------
 
-nsresult nsRenderingContextOS2::SelectOffScreenDrawingSurface( nsDrawingSurface aSurface)
+NS_IMETHODIMP nsRenderingContextOS2::LockDrawingSurface( PRInt32 aX, PRInt32 aY,
+                                       PRUint32 aWidth, PRUint32 aHeight,
+                                       void **aBits,
+                                       PRInt32 *aStride, PRInt32 *aWidthBytes,
+                                       PRUint32 aFlags)
+{
+  PushState();
+
+  return mSurface->Lock( aX, aY, aWidth, aHeight, aBits,
+                         aStride, aWidthBytes, aFlags);
+}
+
+NS_IMETHODIMP nsRenderingContextOS2::UnlockDrawingSurface()
+{
+  mSurface->Unlock();
+
+  PRBool clipstate;
+  PopState (clipstate);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsRenderingContextOS2::SelectOffScreenDrawingSurface( nsDrawingSurface aSurface)
 {
    if (aSurface != mSurface)
    {
-      if( aSurface)
+      if(nsnull != aSurface)
       {
          NS_IF_RELEASE(mSurface);
          mSurface = (nsDrawingSurfaceOS2 *) aSurface;
@@ -417,20 +385,436 @@ nsresult nsRenderingContextOS2::SelectOffScreenDrawingSurface( nsDrawingSurface 
 
 // !! This is a bit dodgy; nsDrawingSurface *really* needs to be XP-comified
 // !! properly...
-nsresult nsRenderingContextOS2::GetDrawingSurface( nsDrawingSurface *aSurface)
+NS_IMETHODIMP
+nsRenderingContextOS2::GetDrawingSurface( nsDrawingSurface *aSurface)
 {
    if( !aSurface)
       return NS_ERROR_NULL_POINTER;
 
-#if 0
-   NS_IF_RELEASE( *aSurface);
-#endif
-
    *aSurface = (void*)((nsDrawingSurfaceOS2 *) mSurface);
-   // !! probably don't want to addref this 'cos client can't release it...
+   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsRenderingContextOS2::GetHints(PRUint32& aResult)
+{
+  PRUint32 result = 0;
+
+  aResult = result;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextOS2::Reset()
+{
+   // okay, what's this supposed to do?  Empty the state stack?
+   return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextOS2::GetDeviceContext( nsIDeviceContext *&aContext)
+{
+  NS_IF_ADDREF(mContext);
+  aContext = mContext;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextOS2 :: PushState(void)
+{
+  PRInt32 cnt = mStateCache->Count();
+
+  if (cnt == 0)
+  {
+    if (nsnull == mStates)
+      mStates = new GraphicsState();
+    else
+      mStates = new GraphicsState(*mStates);
+  }
+  else
+  {
+    GraphicsState *state = (GraphicsState *)mStateCache->ElementAt(cnt - 1);
+    mStateCache->RemoveElementAt(cnt - 1);
+
+    state->mNext = mStates;
+
+    //clone state info
+
+    state->mMatrix = mStates->mMatrix;
+    state->mLocalClip = mStates->mLocalClip;
+// we don't want to NULL this out since we reuse the region
+// from state to state. if we NULL it, we need to also delete it,
+// which means we'll just re-create it when we push the clip state. MMP
+//   state->mClipRegion = OS2_CopyClipRegion( mPS);
+    state->mFlags = ~FLAGS_ALL;
+    state->mLineStyle = mStates->mLineStyle;
+
+    mStates = state;
+  }
+
+  if (nsnull != mStates->mNext)
+  {
+    mStates->mNext->mColor = mColor;
+    mStates->mNext->mFontMetrics = mFontMetrics;
+    NS_IF_ADDREF(mStates->mNext->mFontMetrics);
+  }
+
+  mTranMatrix = &mStates->mMatrix;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextOS2 :: PopState(PRBool &aClipEmpty)
+{
+  PRBool  retval = PR_FALSE;
+
+  if (nsnull == mStates)
+  {
+    NS_ASSERTION(!(nsnull == mStates), "state underflow");
+  }
+  else
+  {
+    GraphicsState *oldstate = mStates;
+
+    mStates = mStates->mNext;
+
+    mStateCache->AppendElement(oldstate);
+
+    if (nsnull != mStates)
+    {
+      mTranMatrix = &mStates->mMatrix;
+
+      GraphicsState *pstate;
+
+      if (oldstate->mFlags & FLAG_CLIP_CHANGED)
+      {
+        pstate = mStates;
+
+        //the clip rect has changed from state to state, so
+        //install the previous clip rect
+
+        while ((nsnull != pstate) && !(pstate->mFlags & FLAG_CLIP_VALID))
+          pstate = pstate->mNext;
+
+        if (nsnull != pstate)
+        {
+          // set copy of pstate->mClipRegion as current clip region
+          HRGN hrgn = GFX (::GpiCreateRegion (mPS, 0, NULL), RGN_ERROR);
+          GFX (::GpiCombineRegion (mPS, hrgn, pstate->mClipRegion, 0, CRGN_COPY), RGN_ERROR);
+          int cliptype = OS2_SetClipRegion (mPS, hrgn);
+
+          if (cliptype == RGN_NULL)
+            retval = PR_TRUE;
+        }
+      }
+
+      oldstate->mFlags &= ~FLAGS_ALL;
+
+      NS_IF_RELEASE(mFontMetrics);
+      mFontMetrics = mStates->mFontMetrics;
+
+      mColor = mStates->mColor;
+
+      SetLineStyle(mStates->mLineStyle);
+    }
+    else
+      mTranMatrix = nsnull;
+  }
+
+  aClipEmpty = retval;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextOS2::IsVisibleRect( const nsRect &aRect,
+                                                    PRBool &aIsVisible)
+{
+   nsRect trect( aRect);
+   mTranMatrix->TransformCoord( &trect.x, &trect.y,
+                            &trect.width, &trect.height);
+   RECTL rcl;
+   mSurface->NS2PM_ININ (trect, rcl);
+
+   LONG rc = GFX (::GpiRectVisible( mPS, &rcl), RVIS_ERROR);
+
+   aIsVisible = (rc == RVIS_PARTIAL || rc == RVIS_VISIBLE) ? PR_TRUE : PR_FALSE;
+
 
    return NS_OK;
 }
+
+// Return PR_TRUE if clip region is now empty
+NS_IMETHODIMP nsRenderingContextOS2::SetClipRect( const nsRect& aRect, nsClipCombine aCombine, PRBool &aClipEmpty)
+{
+  nsRect  trect = aRect;
+  RECTL   rcl;
+  int     cliptype = RGN_ERROR;
+
+	mTranMatrix->TransformCoord(&trect.x, &trect.y,
+                           &trect.width, &trect.height);
+
+  mStates->mLocalClip = aRect;
+  mStates->mFlags |= FLAG_LOCAL_CLIP_VALID;
+
+  //how we combine the new rect with the previous?
+
+  if( trect.width == 0 || trect.height == 0)
+  {
+    // Mozilla assumes that clip region with zero width or height does not produce any output - everything is clipped.
+    // GPI does not support clip regions with zero width or height. We cheat by creating 1x1 clip region far outside
+    // of real drawing region limits.
+
+    if( aCombine == nsClipCombine_kIntersect || aCombine == nsClipCombine_kReplace)
+    {
+      PushClipState();
+
+      rcl.xLeft   = -10000;
+      rcl.xRight  = -9999;
+      rcl.yBottom = -10000;
+      rcl.yTop    = -9999;
+
+      HRGN hrgn = GFX (::GpiCreateRegion( mPS, 1, &rcl), RGN_ERROR);
+      OS2_SetClipRegion (mPS, hrgn);
+
+      cliptype = RGN_NULL;      // Should pretend that clipping region is empty
+    }
+    else if( aCombine == nsClipCombine_kUnion || aCombine == nsClipCombine_kSubtract)
+    {
+      PushClipState();
+
+      // Clipping region is already correct. Just need to obtain it's complexity
+      POINTL Offset = { 0, 0 };
+
+      cliptype = GFX (::GpiOffsetClipRegion (mPS, &Offset), RGN_ERROR);
+    }
+    else
+      NS_ASSERTION(PR_FALSE, "illegal clip combination");
+  }
+  else
+  {
+    if (aCombine == nsClipCombine_kIntersect)
+    {
+      PushClipState();
+
+      mSurface->NS2PM_ININ (trect, rcl);
+      cliptype = GFX (::GpiIntersectClipRectangle(mPS, &rcl), RGN_ERROR);
+    }
+    else if (aCombine == nsClipCombine_kUnion)
+    {
+      PushClipState();
+
+      mSurface->NS2PM_INEX (trect, rcl);
+      HRGN hrgn = GFX (::GpiCreateRegion(mPS, 1, &rcl), RGN_ERROR);
+
+      if( hrgn )
+        cliptype = OS2_CombineClipRegion(mPS, hrgn, CRGN_OR);
+    }
+    else if (aCombine == nsClipCombine_kSubtract)
+    {
+      PushClipState();
+
+      mSurface->NS2PM_ININ (trect, rcl);
+      cliptype = GFX (::GpiExcludeClipRectangle(mPS, &rcl), RGN_ERROR);
+    }
+    else if (aCombine == nsClipCombine_kReplace)
+    {
+      PushClipState();
+
+      mSurface->NS2PM_INEX (trect, rcl);
+      HRGN hrgn = GFX (::GpiCreateRegion(mPS, 1, &rcl), RGN_ERROR);
+
+      if( hrgn )
+        cliptype = OS2_SetClipRegion(mPS, hrgn);
+    }
+    else
+      NS_ASSERTION(PR_FALSE, "illegal clip combination");
+  }
+
+  if (cliptype == RGN_NULL)
+    aClipEmpty = PR_TRUE;
+  else
+    aClipEmpty = PR_FALSE;
+
+  return NS_OK;
+}
+
+// rc is whether there is a cliprect to return
+NS_IMETHODIMP nsRenderingContextOS2::GetClipRect( nsRect &aRect, PRBool &aClipValid)
+{
+  if (mStates->mFlags & FLAG_LOCAL_CLIP_VALID)
+  {
+    aRect = mStates->mLocalClip;
+    aClipValid = PR_TRUE;
+  }
+  else
+    aClipValid = PR_FALSE;
+
+  return NS_OK;
+}
+
+// Return PR_TRUE if clip region is now empty
+NS_IMETHODIMP nsRenderingContextOS2::SetClipRegion( const nsIRegion &aRegion, nsClipCombine aCombine, PRBool &aClipEmpty)
+{
+   nsRegionOS2 *pRegion = (nsRegionOS2 *) &aRegion;
+   PRUint32     ulHeight = mSurface->GetHeight ();
+
+   HRGN hrgn = pRegion->GetHRGN( ulHeight, mPS);
+  int cmode, cliptype;
+
+   switch( aCombine)
+   {
+      case nsClipCombine_kIntersect:
+         cmode = CRGN_AND;
+         break;
+      case nsClipCombine_kUnion:
+         cmode = CRGN_OR;
+         break;
+      case nsClipCombine_kSubtract:
+         cmode = CRGN_DIFF;
+         break;
+      case nsClipCombine_kReplace:
+         cmode = CRGN_COPY;
+         break;
+      default:
+         // Compiler informational...
+         NS_ASSERTION( 0, "illegal clip combination");
+         break;
+   }
+
+  if (NULL != hrgn)
+  {
+    mStates->mFlags &= ~FLAG_LOCAL_CLIP_VALID;
+    PushClipState();
+    cliptype = OS2_CombineClipRegion( mPS, hrgn, cmode);
+  }
+  else
+    return PR_FALSE;
+
+  if (cliptype == RGN_NULL)
+    aClipEmpty = PR_TRUE;
+  else
+    aClipEmpty = PR_FALSE;
+
+   return NS_OK;
+}
+
+/**
+ * Fills in |aRegion| with a copy of the current clip region.
+ */
+NS_IMETHODIMP nsRenderingContextOS2::CopyClipRegion(nsIRegion &aRegion)
+{
+  HRGN hr = OS2_CopyClipRegion(mPS);
+
+  if (hr == HRGN_ERROR)
+    return NS_ERROR_FAILURE;
+
+  //((nsRegionOS2 *)&aRegion)->mRegion = hr;
+
+  return NS_OK;
+}
+
+// Somewhat dubious & rather expensive
+NS_IMETHODIMP nsRenderingContextOS2::GetClipRegion( nsIRegion **aRegion)
+{
+   if( !aRegion)
+      return NS_ERROR_NULL_POINTER;
+
+   *aRegion = 0;
+
+   nsRegionOS2 *pRegion = new nsRegionOS2;
+   if (!pRegion)
+     return NS_ERROR_OUT_OF_MEMORY;
+   NS_ADDREF(pRegion);
+
+   // Get current clip region
+   HRGN hrgnClip = 0;
+
+   GFX (::GpiSetClipRegion (mPS, 0, &hrgnClip), RGN_ERROR);
+   
+   if( hrgnClip && hrgnClip != HRGN_ERROR)
+   {
+      // There was a clip region, so get it & init.
+      HRGN hrgnDummy = 0;
+      PRUint32 ulHeight = mSurface->GetHeight ();
+
+      pRegion->Init( hrgnClip, ulHeight, mPS);
+      GFX (::GpiSetClipRegion (mPS, hrgnClip, &hrgnDummy), RGN_ERROR);
+   }
+   else
+      pRegion->Init();
+
+   *aRegion = pRegion;
+
+   return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextOS2::SetColor( nscolor aColor)
+{
+   mColor = aColor;
+   return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextOS2::GetColor( nscolor &aColor) const
+{
+   aColor = mColor;
+   return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextOS2::SetLineStyle( nsLineStyle aLineStyle)
+{
+   mLineStyle = aLineStyle;
+   return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextOS2::GetLineStyle( nsLineStyle &aLineStyle)
+{
+   aLineStyle = mLineStyle;
+   return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextOS2::SetFont( const nsFont &aFont)
+{
+   NS_IF_RELEASE( mFontMetrics);
+   mContext->GetMetricsFor( aFont, mFontMetrics);
+
+   return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextOS2::SetFont( nsIFontMetrics *aFontMetrics)
+{
+   NS_IF_RELEASE( mFontMetrics);
+   mFontMetrics = aFontMetrics;
+   NS_IF_ADDREF( mFontMetrics);
+
+   return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextOS2::GetFontMetrics( nsIFontMetrics*& aFontMetrics)
+{
+  NS_IF_ADDREF(mFontMetrics);
+  aFontMetrics = mFontMetrics;
+
+  return NS_OK;
+}
+
+// add the passed in translation to the current translation
+NS_IMETHODIMP nsRenderingContextOS2::Translate( nscoord aX, nscoord aY)
+{
+   mTranMatrix->AddTranslation( (float) aX, (float) aY);
+   return NS_OK;
+}
+
+// add the passed in scale to the current scale
+NS_IMETHODIMP nsRenderingContextOS2::Scale( float aSx, float aSy)
+{
+   mTranMatrix->AddScale(aSx, aSy);
+   return NS_OK;
+}
+
+NS_IMETHODIMP nsRenderingContextOS2::GetCurrentTransform( nsTransform2D *&aTransform)
+{
+  aTransform = mTranMatrix;
+  return NS_OK;
+}
+
 
 // The idea here is to create an offscreen surface for blitting with.
 // I can't find any way for people to resize the bitmap created here,
@@ -439,7 +823,7 @@ nsresult nsRenderingContextOS2::GetDrawingSurface( nsDrawingSurface *aSurface)
 // I'm reliably told that 'aBounds' is in device units, and that the
 // position oughtn't to be ignored, but for all intents & purposes can be.
 //
-nsresult nsRenderingContextOS2::CreateDrawingSurface( nsRect *aBounds,
+NS_IMETHODIMP nsRenderingContextOS2::CreateDrawingSurface( nsRect *aBounds,
                              PRUint32 aSurfFlags, nsDrawingSurface &aSurface)
 {
    nsresult rc = NS_ERROR_FAILURE;
@@ -477,7 +861,7 @@ NS_IMETHODIMP nsRenderingContextOS2::CreateDrawingSurface(HPS aPS, nsDrawingSurf
   return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::DestroyDrawingSurface( nsDrawingSurface aDS)
+NS_IMETHODIMP nsRenderingContextOS2::DestroyDrawingSurface( nsDrawingSurface aDS)
 {
    nsDrawingSurfaceOS2 *surf = (nsDrawingSurfaceOS2 *) aDS;
    nsresult rc = NS_ERROR_NULL_POINTER;
@@ -500,382 +884,6 @@ nsresult nsRenderingContextOS2::DestroyDrawingSurface( nsDrawingSurface aDS)
 
    return rc;
 }
-
-
-NS_IMETHODIMP nsRenderingContextOS2::LockDrawingSurface( PRInt32 aX, PRInt32 aY,
-                                       PRUint32 aWidth, PRUint32 aHeight,
-                                       void **aBits,
-                                       PRInt32 *aStride, PRInt32 *aWidthBytes,
-                                       PRUint32 aFlags)
-{
-  PushState();
-
-  return mSurface->Lock( aX, aY, aWidth, aHeight, aBits,
-                         aStride, aWidthBytes, aFlags);
-}
-
-NS_IMETHODIMP nsRenderingContextOS2::UnlockDrawingSurface()
-{
-  mSurface->Unlock();
-
-  PRBool clipstate;
-  PopState (clipstate);
-
-  return NS_OK;
-}
-
-// State stack -------------------------------------------------------------
-nsresult nsRenderingContextOS2::PushState()
-{
-   GraphicsState *state = GStateCache.NewState();
-
-   // copy matrix into state
-   state->mMatrix.SetMatrix( &mTMatrix);
-   // copy color & font
-   state->mColor = mColor;
-   state->mFontMetrics = mFontMetrics;
-   state->mLineStyle = mLineStyle;
-
-   // add a new ref to the fontmetrics
-   NS_IF_ADDREF( mFontMetrics);
-
-   // clip region: get current & copy it.
-   state->mClipRegion = OS2_CopyClipRegion( mPS);
-
-   // push state onto stack
-   state->mNext = mStateStack;
-   mStateStack = state;
-   return NS_OK;
-}
-
-// RC here is true if clip region is now empty.
-nsresult nsRenderingContextOS2::PopState( PRBool &aClipEmpty)
-{
-   PRBool rc = PR_TRUE;
-
-   NS_ASSERTION( mStateStack, "state underflow");
-   if( !mStateStack) return NS_ERROR_FAILURE;
-
-   GraphicsState *state = mStateStack;
-   mStateStack = state->mNext;
-
-   // update xform matrix
-   mTMatrix.SetMatrix( &state->mMatrix);
-
-   // color & font
-   SetColor( state->mColor);
-   SetLineStyle( state->mLineStyle);
-   NS_IF_RELEASE(mFontMetrics);
-   mFontMetrics = state->mFontMetrics;
-   state->mFontMetrics = nsnull;
-
-   // Clip region
-   OS2_SetClipRegion( mPS, state->mClipRegion);
-
-   if( state->mClipRegion != 0)
-   {
-      state->mClipRegion = 0;
-      rc = PR_FALSE;
-   }
-
-   GStateCache.DisposeState( state);
-
-   aClipEmpty = rc;
-
-   return NS_OK;
-}
-
-nsresult nsRenderingContextOS2::Reset()
-{
-   // okay, what's this supposed to do?  Empty the state stack?
-   return NS_OK;
-}
-
-// Clip region management --------------------------------------------------
-
-nsresult nsRenderingContextOS2::IsVisibleRect( const nsRect &aRect,
-                                               PRBool &aIsVisible)
-{
-   nsRect trect( aRect);
-   mTMatrix.TransformCoord( &trect.x, &trect.y,
-                            &trect.width, &trect.height);
-   RECTL rcl;
-   mSurface->NS2PM_ININ (trect, rcl);
-
-   LONG rc = GFX (::GpiRectVisible( mPS, &rcl), RVIS_ERROR);
-
-   aIsVisible = (rc == RVIS_PARTIAL || rc == RVIS_VISIBLE) ? PR_TRUE : PR_FALSE;
-
-
-   return NS_OK;
-}
-
-// Return PR_TRUE if clip region is now empty
-nsresult nsRenderingContextOS2::SetClipRect( const nsRect& aRect, nsClipCombine aCombine, PRBool &aClipEmpty)
-{
-   nsRect trect = aRect;
-   mTMatrix.TransformCoord( &trect.x, &trect.y, &trect.width, &trect.height);
-   long lrc = RGN_ERROR;
-
-   if( trect.width == 0 || trect.height == 0)
-   {
-      // Mozilla assumes that clip region with zero width or height does not produce any output - everything is clipped.
-      // GPI does not support clip regions with zero width or height. We cheat by creating 1x1 clip region far outside
-      // of real drawing region limits.
-
-      if( aCombine == nsClipCombine_kIntersect || aCombine == nsClipCombine_kReplace)
-      {
-         RECTL rcl;
-         rcl.xLeft   = -1000;
-         rcl.xRight  = -999;
-         rcl.yBottom = -1000;
-         rcl.yTop    = -999;
-
-         HRGN hrgn = GFX (::GpiCreateRegion( mPS, 1, &rcl), RGN_ERROR);
-         OS2_SetClipRegion (mPS, hrgn);
-
-         lrc = PR_TRUE;      // Should pretend that clipping region is empty
-      } else
-      {
-         // Clipping region is already correct. Just need to obtain it's complexity
-         POINTL Offset = { 0, 0 };
-
-         lrc = GFX (::GpiOffsetClipRegion (mPS, &Offset), RGN_ERROR);
-      }
-   }
-   else
-   {
-      RECTL rcl;
-
-      switch( aCombine)
-      {
-         case nsClipCombine_kIntersect:
-         case nsClipCombine_kSubtract:
-            mSurface->NS2PM_ININ (trect, rcl);
-            if( aCombine == nsClipCombine_kIntersect)
-               lrc = GFX (::GpiIntersectClipRectangle( mPS, &rcl), RGN_ERROR);
-            else
-               lrc = GFX (::GpiExcludeClipRectangle( mPS, &rcl), RGN_ERROR);
-            break;
-
-         case nsClipCombine_kUnion:
-         case nsClipCombine_kReplace:
-         {
-            // need to create a new region & fiddle with it
-            mSurface->NS2PM_INEX (trect, rcl);
-            HRGN hrgn = GFX (::GpiCreateRegion( mPS, 1, &rcl), RGN_ERROR);
-            if( hrgn && aCombine == nsClipCombine_kReplace)
-               lrc = OS2_SetClipRegion( mPS, hrgn);
-            else if( hrgn)
-               lrc = OS2_CombineClipRegion( mPS, hrgn, CRGN_OR);
-            break;
-         }
-         default:
-            // compiler informational...
-            NS_ASSERTION( 0, "illegal clip combination");
-            break;
-      }
-   }
-
-   aClipEmpty = (lrc == RGN_NULL) ? PR_TRUE : PR_FALSE;
-
-   return NS_OK;
-}
-
-// rc is whether there is a cliprect to return
-// !! Potential problems here: I think we ought to return the rect
-// !! transformed by the inverse of our xformation matrix.  Which,
-// !! frankly, I can't be bothered to write the code for - it ought
-// !! to be a method in nsTransform2D.
-nsresult nsRenderingContextOS2::GetClipRect( nsRect &aRect, PRBool &aHasLocalClip)
-{
-   RECTL rcl;
-   long rc = GFX (::GpiQueryClipBox (mPS, &rcl), RGN_ERROR);
-
-   PRBool brc = PR_FALSE;
-
-   if( rc != RGN_NULL && rc != RGN_ERROR)
-   {
-      mSurface->PM2NS_ININ (rcl, aRect);
-      brc = PR_TRUE;
-   }
-
-   aHasLocalClip = brc;
-
-   return NS_OK;
-}
-
-// Return PR_TRUE if clip region is now empty
-nsresult nsRenderingContextOS2::SetClipRegion( const nsIRegion &aRegion, nsClipCombine aCombine, PRBool &aClipEmpty)
-{
-   nsRegionOS2 *pRegion = (nsRegionOS2 *) &aRegion;
-   PRUint32     ulHeight = mSurface->GetHeight ();
-
-   HRGN hrgn = pRegion->GetHRGN( ulHeight, mPS);
-   long cmode = 0;
-
-   switch( aCombine)
-   {
-      case nsClipCombine_kIntersect:
-         cmode = CRGN_AND;
-         break;
-      case nsClipCombine_kUnion:
-         cmode = CRGN_OR;
-         break;
-      case nsClipCombine_kSubtract:
-         cmode = CRGN_DIFF;
-         break;
-      case nsClipCombine_kReplace:
-         cmode = CRGN_COPY;
-         break;
-      default:
-         // Compiler informational...
-         NS_ASSERTION( 0, "illegal clip combination");
-         break;
-   }
-
-   long lrc = OS2_CombineClipRegion( mPS, hrgn, cmode);
-
-   aClipEmpty = (lrc == RGN_NULL) ? PR_TRUE : PR_FALSE;
-
-   return NS_OK;
-}
-
-// Somewhat dubious & rather expensive
-nsresult nsRenderingContextOS2::GetClipRegion( nsIRegion **aRegion)
-{
-   if( !aRegion)
-      return NS_ERROR_NULL_POINTER;
-
-   *aRegion = 0;
-
-   nsRegionOS2 *pRegion = new nsRegionOS2;
-   if (!pRegion)
-     return NS_ERROR_OUT_OF_MEMORY;
-   NS_ADDREF(pRegion);
-
-   // Get current clip region
-   HRGN hrgnClip = 0;
-
-   GFX (::GpiSetClipRegion (mPS, 0, &hrgnClip), RGN_ERROR);
-   
-   if( hrgnClip && hrgnClip != HRGN_ERROR)
-   {
-      // There was a clip region, so get it & init.
-      HRGN hrgnDummy = 0;
-      PRUint32 ulHeight = mSurface->GetHeight ();
-
-      pRegion->Init( hrgnClip, ulHeight, mPS);
-      GFX (::GpiSetClipRegion (mPS, hrgnClip, &hrgnDummy), RGN_ERROR);
-   }
-   else
-      pRegion->Init();
-
-   *aRegion = pRegion;
-
-   return NS_OK;
-}
-
-/**
- * Fills in |aRegion| with a copy of the current clip region.
- */
-nsresult nsRenderingContextOS2::CopyClipRegion(nsIRegion &aRegion)
-{
-  HRGN hr = OS2_CopyClipRegion(mPS);
-
-  if (hr == HRGN_ERROR)
-    return NS_ERROR_FAILURE;
-  else
-    return NS_OK;
-}
-
-// Setters & getters -------------------------------------------------------
-
-nsresult nsRenderingContextOS2::GetDeviceContext( nsIDeviceContext *&aDeviceContext)
-{
-// NS_IF_RELEASE(aDeviceContext);
-   aDeviceContext = mContext;
-   NS_IF_ADDREF( mContext);
-   return NS_OK;
-}
-
-nsresult nsRenderingContextOS2::SetColor( nscolor aColor)
-{
-   mColor = aColor;
-   return NS_OK;
-}
-
-nsresult nsRenderingContextOS2::GetColor( nscolor &aColor) const
-{
-   aColor = mColor;
-   return NS_OK;
-}
-
-nsresult nsRenderingContextOS2::SetLineStyle( nsLineStyle aLineStyle)
-{
-   mLineStyle = aLineStyle;
-   return NS_OK;
-}
-
-nsresult nsRenderingContextOS2::GetLineStyle( nsLineStyle &aLineStyle)
-{
-   aLineStyle = mLineStyle;
-   return NS_OK;
-}
-
-nsresult nsRenderingContextOS2::SetFont( const nsFont &aFont)
-{
-   NS_IF_RELEASE( mFontMetrics);
-   mContext->GetMetricsFor( aFont, mFontMetrics);
-   return NS_OK;
-}
-
-nsresult nsRenderingContextOS2::SetFont( nsIFontMetrics *aFontMetrics)
-{
-   NS_IF_RELEASE( mFontMetrics);
-   mFontMetrics = aFontMetrics;
-   NS_IF_ADDREF( mFontMetrics);
-   return NS_OK;
-}
-
-nsresult nsRenderingContextOS2::GetFontMetrics( nsIFontMetrics*& aFontMetrics)
-{
-// Commented out because clients misuse the interface.
-//
-// NS_IF_RELEASE(aFontMetrics);
-   aFontMetrics = mFontMetrics;
-   NS_IF_ADDREF( mFontMetrics);
-   return NS_OK;
-}
-
-// add the passed in translation to the current translation
-nsresult nsRenderingContextOS2::Translate( nscoord aX, nscoord aY)
-{
-   mTMatrix.AddTranslation( (float) aX, (float) aY);
-   return NS_OK;
-}
-
-// add the passed in scale to the current scale
-nsresult nsRenderingContextOS2::Scale( float aSx, float aSy)
-{
-   mTMatrix.AddScale(aSx, aSy);
-   return NS_OK;
-}
-
-nsresult nsRenderingContextOS2::GetCurrentTransform( nsTransform2D *&aTransform)
-{
-/* JSK0126 - Assign mTMatrix into aTransform, since aTransform is not a valid object yet */
-   aTransform = &mTMatrix;
-
-   /*
-   NS_PRECONDITION(aTransform,"Null transform ptr");
-   if( !aTransform)
-      return NS_ERROR_NULL_POINTER;
-   aTransform->SetMatrix( &mTMatrix);
-   */
-   return NS_OK;
-}
-
 
 // Drawing methods ---------------------------------------------------------
 
@@ -932,39 +940,10 @@ void nsRenderingContextOS2::SetupFillColor (void)
    }
 }
 
-void nsRenderingContextOS2::SetupFontAndTextColor (void)
+NS_IMETHODIMP nsRenderingContextOS2::DrawLine( nscoord aX0, nscoord aY0, nscoord aX1, nscoord aY1)
 {
-   if (!doSetupFontAndTextColor) {
-      return;
-   } /* endif */
-   if (mFontMetrics != mCurrFontMetrics)
-   {
-      // select font
-      mCurrFontMetrics = mFontMetrics;
-      if( mCurrFontMetrics)
-         mSurface->SelectFont( mCurrFontMetrics);
-   }
-
-   if (mColor != mCurrTextColor)
-   {
-      CHARBUNDLE cBundle;
-      cBundle.lColor = GetGPIColor ();
-      cBundle.usMixMode = FM_OVERPAINT;
-      cBundle.usBackMixMode = BM_LEAVEALONE;
-
-      GFX (::GpiSetAttrs (mPS, PRIM_CHAR,
-                          CBB_COLOR | CBB_MIX_MODE | CBB_BACK_MIX_MODE,
-                          0, &cBundle),
-           FALSE);
-
-      mCurrTextColor = mColor;
-   }
-}
-
-nsresult nsRenderingContextOS2::DrawLine( nscoord aX0, nscoord aY0, nscoord aX1, nscoord aY1)
-{
-   mTMatrix.TransformCoord( &aX0, &aY0);
-   mTMatrix.TransformCoord( &aX1, &aY1);
+   mTranMatrix->TransformCoord( &aX0, &aY0);
+   mTranMatrix->TransformCoord( &aX1, &aY1);
 
    POINTL ptls[] = { { (long) aX0, (long) aY0 },
                      { (long) aX1, (long) aY1 } };
@@ -988,19 +967,19 @@ nsresult nsRenderingContextOS2::DrawLine( nscoord aX0, nscoord aY0, nscoord aX1,
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::DrawPolyline(const nsPoint aPoints[], PRInt32 aNumPoints)
+NS_IMETHODIMP nsRenderingContextOS2::DrawPolyline(const nsPoint aPoints[], PRInt32 aNumPoints)
 {
    PMDrawPoly( aPoints, aNumPoints, PR_FALSE);
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::DrawPolygon( const nsPoint aPoints[], PRInt32 aNumPoints)
+NS_IMETHODIMP nsRenderingContextOS2::DrawPolygon( const nsPoint aPoints[], PRInt32 aNumPoints)
 {
    PMDrawPoly( aPoints, aNumPoints, PR_FALSE);
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::FillPolygon( const nsPoint aPoints[], PRInt32 aNumPoints)
+NS_IMETHODIMP nsRenderingContextOS2::FillPolygon( const nsPoint aPoints[], PRInt32 aNumPoints)
 {
    PMDrawPoly( aPoints, aNumPoints, PR_TRUE);
    return NS_OK;
@@ -1024,7 +1003,7 @@ void nsRenderingContextOS2::PMDrawPoly( const nsPoint aPoints[], PRInt32 aNumPoi
       {
          pp->x = np->x;
          pp->y = np->y;
-         mTMatrix.TransformCoord( (int*)&pp->x, (int*)&pp->y);
+         mTranMatrix->TransformCoord( (int*)&pp->x, (int*)&pp->y);
       }
 
       // go to os2
@@ -1056,28 +1035,28 @@ void nsRenderingContextOS2::PMDrawPoly( const nsPoint aPoints[], PRInt32 aNumPoi
    }
 }
 
-nsresult nsRenderingContextOS2::DrawRect( const nsRect& aRect)
+NS_IMETHODIMP nsRenderingContextOS2::DrawRect( const nsRect& aRect)
 {
    nsRect tr = aRect;
    PMDrawRect( tr, FALSE);
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::DrawRect( nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
+NS_IMETHODIMP nsRenderingContextOS2::DrawRect( nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
 {
    nsRect tr( aX, aY, aWidth, aHeight);
    PMDrawRect( tr, FALSE);
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::FillRect( const nsRect& aRect)
+NS_IMETHODIMP nsRenderingContextOS2::FillRect( const nsRect& aRect)
 {
    nsRect tr = aRect;
    PMDrawRect( tr, TRUE);
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::FillRect( nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
+NS_IMETHODIMP nsRenderingContextOS2::FillRect( nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
 {
    nsRect tr( aX, aY, aWidth, aHeight);
    PMDrawRect( tr, TRUE);
@@ -1103,7 +1082,7 @@ nsRenderingContextOS2 :: InvertRect(nscoord aX, nscoord aY, nscoord aWidth, nsco
 
 void nsRenderingContextOS2::PMDrawRect( nsRect &rect, BOOL fill)
 {
-   mTMatrix.TransformCoord( &rect.x, &rect.y, &rect.width, &rect.height);
+   mTranMatrix->TransformCoord( &rect.x, &rect.y, &rect.width, &rect.height);
 
    RECTL rcl;
    mSurface->NS2PM_ININ (rect, rcl);
@@ -1134,35 +1113,35 @@ void nsRenderingContextOS2::PMDrawRect( nsRect &rect, BOOL fill)
 }
 
 // Arc-drawing methods, all proxy on to PMDrawArc
-nsresult nsRenderingContextOS2::DrawEllipse( const nsRect& aRect)
+NS_IMETHODIMP nsRenderingContextOS2::DrawEllipse( const nsRect& aRect)
 {
    nsRect tRect( aRect);
    PMDrawArc( tRect, PR_FALSE, PR_TRUE);
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::DrawEllipse( nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
+NS_IMETHODIMP nsRenderingContextOS2::DrawEllipse( nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
 {
    nsRect tRect( aX, aY, aWidth, aHeight);
    PMDrawArc( tRect, PR_FALSE, PR_TRUE);
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::FillEllipse( const nsRect& aRect)
+NS_IMETHODIMP nsRenderingContextOS2::FillEllipse( const nsRect& aRect)
 {
    nsRect tRect( aRect);
    PMDrawArc( tRect, PR_TRUE, PR_TRUE);
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::FillEllipse( nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
+NS_IMETHODIMP nsRenderingContextOS2::FillEllipse( nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight)
 {
    nsRect tRect( aX, aY, aWidth, aHeight);
    PMDrawArc( tRect, PR_TRUE, PR_TRUE);
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::DrawArc( const nsRect& aRect,
+NS_IMETHODIMP nsRenderingContextOS2::DrawArc( const nsRect& aRect,
                                          float aStartAngle, float aEndAngle)
 {
    nsRect tRect( aRect);
@@ -1170,7 +1149,7 @@ nsresult nsRenderingContextOS2::DrawArc( const nsRect& aRect,
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::DrawArc( nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight,
+NS_IMETHODIMP nsRenderingContextOS2::DrawArc( nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight,
                                          float aStartAngle, float aEndAngle)
 {
    nsRect tRect( aX, aY, aWidth, aHeight);
@@ -1178,7 +1157,7 @@ nsresult nsRenderingContextOS2::DrawArc( nscoord aX, nscoord aY, nscoord aWidth,
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::FillArc( const nsRect& aRect,
+NS_IMETHODIMP nsRenderingContextOS2::FillArc( const nsRect& aRect,
                                          float aStartAngle, float aEndAngle)
 {
    nsRect tRect( aRect);
@@ -1186,7 +1165,7 @@ nsresult nsRenderingContextOS2::FillArc( const nsRect& aRect,
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::FillArc( nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight,
+NS_IMETHODIMP nsRenderingContextOS2::FillArc( nscoord aX, nscoord aY, nscoord aWidth, nscoord aHeight,
                                          float aStartAngle, float aEndAngle)
 {
    nsRect tRect( aX, aY, aWidth, aHeight);
@@ -1198,7 +1177,7 @@ void nsRenderingContextOS2::PMDrawArc( nsRect &rect, PRBool bFilled, PRBool bFul
                                        float start, float end)
 {
    // convert coords
-   mTMatrix.TransformCoord( &rect.x, &rect.y, &rect.width, &rect.height);
+   mTranMatrix->TransformCoord( &rect.x, &rect.y, &rect.width, &rect.height);
 
    RECTL rcl;
    mSurface->NS2PM_ININ (rect, rcl);
@@ -1253,15 +1232,6 @@ void nsRenderingContextOS2::PMDrawArc( nsRect &rect, PRBool bFilled, PRBool bFul
          GFX (::GpiPartialArc (mPS, (PPOINTL)&rcl, MAKEFIXED(1,0), StartAngle, SweepAngle), GPI_ERROR);
       }
    }
-}
-
-NS_IMETHODIMP nsRenderingContextOS2::GetHints(PRUint32& aResult)
-{
-  PRUint32 result = 0;
-
-  aResult = result;
-
-  return NS_OK;
 }
 
 NS_IMETHODIMP nsRenderingContextOS2 :: GetWidth(char ch, nscoord& aWidth)
@@ -1557,9 +1527,9 @@ NS_IMETHODIMP nsRenderingContextOS2 :: DrawString(const char *aString, PRUint32 
     if (aLength > 500) {
       dx0 = new INT[aLength];
     }
-    mTMatrix.ScaleXCoords(aSpacing, aLength, dx0);
+    mTranMatrix->ScaleXCoords(aSpacing, aLength, dx0);
   }
-  mTMatrix.TransformCoord(&x, &y);
+  mTranMatrix->TransformCoord(&x, &y);
 
   POINTL ptl = { x, y };
   mSurface->NS2PM (&ptl, 1);
@@ -1646,7 +1616,7 @@ NS_IMETHODIMP nsRenderingContextOS2 :: DrawString(const nsString& aString,
 
 
 // Image drawing: just proxy on to the image object, so no worries yet.
-nsresult nsRenderingContextOS2::DrawImage( nsIImage *aImage, nscoord aX, nscoord aY)
+NS_IMETHODIMP nsRenderingContextOS2::DrawImage( nsIImage *aImage, nscoord aX, nscoord aY)
 {
    nscoord width, height;
 
@@ -1656,7 +1626,7 @@ nsresult nsRenderingContextOS2::DrawImage( nsIImage *aImage, nscoord aX, nscoord
    return this->DrawImage( aImage, aX, aY, width, height);
 }
 
-nsresult nsRenderingContextOS2::DrawImage( nsIImage *aImage, nscoord aX, nscoord aY,
+NS_IMETHODIMP nsRenderingContextOS2::DrawImage( nsIImage *aImage, nscoord aX, nscoord aY,
                                            nscoord aWidth, nscoord aHeight)
 {
    nsRect  tr;
@@ -1669,26 +1639,26 @@ nsresult nsRenderingContextOS2::DrawImage( nsIImage *aImage, nscoord aX, nscoord
    return this->DrawImage( aImage, tr);
 }
 
-nsresult nsRenderingContextOS2::DrawImage( nsIImage *aImage, const nsRect& aSRect, const nsRect& aDRect)
+NS_IMETHODIMP nsRenderingContextOS2::DrawImage( nsIImage *aImage, const nsRect& aSRect, const nsRect& aDRect)
 {
    nsRect sr,dr;
 
    sr = aSRect;
-   mTMatrix.TransformCoord( &sr.x, &sr.y, &sr.width, &sr.height);
+   mTranMatrix->TransformCoord( &sr.x, &sr.y, &sr.width, &sr.height);
    sr.x = aSRect.x;
    sr.y = aSRect.y;
-   mTMatrix.TransformNoXLateCoord(&sr.x, &sr.y);
+   mTranMatrix->TransformNoXLateCoord(&sr.x, &sr.y);
 
    dr = aDRect;
-   mTMatrix.TransformCoord( &dr.x, &dr.y, &dr.width, &dr.height);
+   mTranMatrix->TransformCoord( &dr.x, &dr.y, &dr.width, &dr.height);
 
    return aImage->Draw( *this, mSurface, sr.x, sr.y, sr.width, sr.height, dr.x, dr.y, dr.width, dr.height);
 }
 
-nsresult nsRenderingContextOS2::DrawImage( nsIImage *aImage, const nsRect& aRect)
+NS_IMETHODIMP nsRenderingContextOS2::DrawImage( nsIImage *aImage, const nsRect& aRect)
 {
    nsRect tr( aRect);
-   mTMatrix.TransformCoord( &tr.x, &tr.y, &tr.width, &tr.height);
+   mTranMatrix->TransformCoord( &tr.x, &tr.y, &tr.width, &tr.height);
 
    return aImage->Draw( *this, mSurface, tr.x, tr.y, tr.width, tr.height);
 }
@@ -1709,8 +1679,8 @@ nsRenderingContextOS2::DrawTile(nsIImage *aImage,nscoord aX0,nscoord aY0,nscoord
   orgY = aY0;
   orgWidth = aX1 - aX0;
   orgHeight = aY1 - aY0;
-  mTMatrix.TransformCoord(&aX0,&aY0,&aWidth,&aHeight);
-  mTMatrix.TransformCoord(&orgX,&orgY,&orgWidth,&orgHeight);
+  mTranMatrix->TransformCoord(&aX0,&aY0,&aWidth,&aHeight);
+  mTranMatrix->TransformCoord(&orgX,&orgY,&orgWidth,&orgHeight);
   aX1 = aX0 + orgWidth;
   aY1 = aY0 + orgHeight;
 
@@ -1728,7 +1698,7 @@ nsRenderingContextOS2::DrawTile(nsIImage *aImage,nscoord aX0,nscoord aY0,nscoord
 }
 
 
-nsresult nsRenderingContextOS2::CopyOffScreenBits(
+NS_IMETHODIMP nsRenderingContextOS2::CopyOffScreenBits(
                      nsDrawingSurface aSrcSurf, PRInt32 aSrcX, PRInt32 aSrcY,
                      const nsRect &aDestBounds, PRUint32 aCopyFlags)
 {
@@ -1774,10 +1744,10 @@ nsresult nsRenderingContextOS2::CopyOffScreenBits(
    nsRect drect( aDestBounds);
 
    if( aCopyFlags & NS_COPYBITS_XFORM_SOURCE_VALUES)
-      mTMatrix.TransformCoord( &aSrcX, &aSrcY);
+      mTranMatrix->TransformCoord( &aSrcX, &aSrcY);
 
    if( aCopyFlags & NS_COPYBITS_XFORM_DEST_VALUES)
-      mTMatrix.TransformCoord( &drect.x, &drect.y,
+      mTranMatrix->TransformCoord( &drect.x, &drect.y,
                                &drect.width, &drect.height);
 
    // Note rects for GpiBitBlt are in-ex.
@@ -1792,11 +1762,65 @@ nsresult nsRenderingContextOS2::CopyOffScreenBits(
    return NS_OK;
 }
 
-nsresult nsRenderingContextOS2::RetrieveCurrentNativeGraphicData(PRUint32* ngd)
+NS_IMETHODIMP nsRenderingContextOS2::RetrieveCurrentNativeGraphicData(PRUint32* ngd)
 {
   if(ngd != nsnull)
     *ngd = (PRUint32)mPS;
   return NS_OK;
+}
+
+void nsRenderingContextOS2::SetupFontAndTextColor (void)
+{
+   if (!doSetupFontAndTextColor) {
+      return;
+   } /* endif */
+   if (mFontMetrics != mCurrFontMetrics)
+   {
+      // select font
+      mCurrFontMetrics = mFontMetrics;
+      if( mCurrFontMetrics)
+         mSurface->SelectFont( mCurrFontMetrics);
+   }
+
+   if (mColor != mCurrTextColor)
+   {
+      CHARBUNDLE cBundle;
+      cBundle.lColor = GetGPIColor ();
+      cBundle.usMixMode = FM_OVERPAINT;
+      cBundle.usBackMixMode = BM_LEAVEALONE;
+
+      GFX (::GpiSetAttrs (mPS, PRIM_CHAR,
+                          CBB_COLOR | CBB_MIX_MODE | CBB_BACK_MIX_MODE,
+                          0, &cBundle),
+           FALSE);
+
+      mCurrTextColor = mColor;
+   }
+}
+
+void nsRenderingContextOS2::PushClipState(void)
+{
+  if (!(mStates->mFlags & FLAG_CLIP_CHANGED))
+  {
+    GraphicsState *tstate = mStates->mNext;
+
+    //we have never set a clip on this state before, so
+    //remember the current clip state in the next state on the
+    //stack. kind of wacky, but avoids selecting stuff in the DC
+    //all the damned time.
+
+    if (nsnull != tstate)
+    {
+      tstate->mClipRegion = OS2_CopyClipRegion( mPS );
+
+      if (tstate->mClipRegion != 0)
+        tstate->mFlags |= FLAG_CLIP_VALID;
+      else
+        tstate->mFlags &= ~FLAG_CLIP_VALID;
+    }
+  
+    mStates->mFlags |= FLAG_CLIP_CHANGED;
+  }
 }
 
 // Clip region helper functions --------------------------------------------

@@ -108,6 +108,7 @@ class nsITokenizer;
 class nsCParserNode;
 class nsTokenAllocator;
 
+
 /***************************************************************
   Now the main event: CNavDTD.
 
@@ -400,7 +401,7 @@ CLASS_EXPORT_HTMLPARS CNavDTD : public nsIDTD {
      * @return  error code representing construction state; usually 0.
      */
     nsresult    HandleStartToken(CToken* aToken);
-    nsresult    HandleDefaultStartToken(CToken* aToken,eHTMLTags aChildTag,nsIParserNode *aNode);
+    nsresult    HandleDefaultStartToken(CToken* aToken,eHTMLTags aChildTag,nsCParserNode *aNode);
     nsresult    HandleEndToken(CToken* aToken);
     nsresult    HandleEntityToken(CToken* aToken);
     nsresult    HandleCommentToken(CToken* aToken);
@@ -423,14 +424,14 @@ CLASS_EXPORT_HTMLPARS CNavDTD : public nsIDTD {
      * @param   node to be opened in content sink.
      * @return  error code representing error condition-- usually 0.
      */
-    nsresult OpenHTML(const nsIParserNode *aNode);
+    nsresult OpenHTML(const nsCParserNode *aNode);
     nsresult OpenHead(const nsIParserNode *aNode);
-    nsresult OpenBody(const nsIParserNode *aNode);
+    nsresult OpenBody(const nsCParserNode *aNode);
     nsresult OpenForm(const nsIParserNode *aNode);
-    nsresult OpenMap(const nsIParserNode *aNode);
-    nsresult OpenFrameset(const nsIParserNode *aNode);
-    nsresult OpenNoscript(const nsIParserNode *aNode,nsEntryStack* aStyleStack=0);
-    nsresult OpenContainer(const nsIParserNode *aNode,eHTMLTags aTag,PRBool aClosedByStartTag,nsEntryStack* aStyleStack=0);
+    nsresult OpenMap(const nsCParserNode *aNode);
+    nsresult OpenFrameset(const nsCParserNode *aNode);
+    nsresult OpenNoscript(const nsCParserNode *aNode,nsEntryStack* aStyleStack=0);
+    nsresult OpenContainer(const nsCParserNode *aNode,eHTMLTags aTag,PRBool aClosedByStartTag,nsEntryStack* aStyleStack=0);
 
     /**
      * The next set of methods close the given HTML element.
@@ -453,7 +454,7 @@ CLASS_EXPORT_HTMLPARS CNavDTD : public nsIDTD {
      * @update	gess5/11/98
      * @return  error code - 0 if all went well.
      */
-    nsresult CloseContainer(const nsIParserNode *aNode,eHTMLTags aTarget,PRBool aClosedByStartTag);
+    nsresult CloseContainer(const nsCParserNode *aNode,eHTMLTags aTarget,PRBool aClosedByStartTag);
     nsresult CloseContainersTo(eHTMLTags aTag,PRBool aClosedByStartTag);
     nsresult CloseContainersTo(PRInt32 anIndex,eHTMLTags aTag,PRBool aClosedByStartTag);
 
@@ -495,42 +496,37 @@ protected:
 
     nsIHTMLContentSink* mSink;
 
-    nsDTDContext*       mHeadContext;
     nsDTDContext*       mBodyContext;
-    nsDTDContext*       mFormContext;
-    nsDTDContext*       mMapContext;
     nsDTDContext*       mTempContext;
-    PRBool              mHasOpenForm;
+
+    PRInt32             mOpenHeadCount;
     PRInt32             mOpenMapCount;
-    PRInt32             mHasOpenHead;
-    PRBool              mHasOpenBody;
-    PRInt32             mHasOpenNoXXX;  //true when NOFRAMES, NOSCRIPT, NOEMBED, NOLAYER are open
-    PRBool              mHadFrameset;
-    PRBool              mHadBody;
-    nsString            mFilename;
-    nsIDTDDebug*		    mDTDDebug;
+    PRInt32             mAlternateTagOpenCount;  //true when NOFRAMES, NOSCRIPT, NOEMBED, NOLAYER are open
     PRInt32             mLineNumber;
-    nsParser*           mParser;
+
+    PRUint32            mComputedCRC32;
+    PRUint32            mExpectedCRC32;
+
+    PRUint16            mFlags;
+
+    nsString            mFilename;
+    nsString            mScratch;  //used for various purposes; non-persistent
+    nsAutoString        mMimeType;  //ok as an autostring; these are short.
+   
+    nsIDTDDebug*		    mDTDDebug;
     nsITokenizer*       mTokenizer;
+        
+    nsParser*           mParser;
     nsTokenAllocator*   mTokenAllocator;
     nsNodeAllocator     mNodeAllocator;
     nsDeque             mMisplacedContent;
     nsDeque             mSkippedContent;
-    PRBool              mHasOpenScript;
-    PRBool              mSaveBadTokens;
-    eHTMLTags           mSkipTarget;
     nsresult            mDTDState;
     nsDTDMode           mDTDMode;
+
+    eHTMLTags           mSkipTarget;
     eParserCommands     mParserCommand;   //tells us to viewcontent/viewsource/viewerrors...
     eParserDocType      mDocType;
-
-    PRUint32            mComputedCRC32;
-    PRUint32            mExpectedCRC32;
-    nsString            mScratch;  //used for various purposes; non-persistent
-    PRBool              mStyleHandlingEnabled;
-    PRBool              mRequestedHead;
-    PRBool              mIsFormContainer;
-    nsAutoString        mMimeType;  //ok as an autostring; these are short.
 
 };
 

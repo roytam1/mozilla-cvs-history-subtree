@@ -233,8 +233,11 @@ NS_IMETHODIMP gfxImageFrame::SetImageData(const PRUint8 *aData, PRUint32 aLength
   mImage->UnlockImagePixels(PR_FALSE);
 
   PRInt32 row = (aOffset / row_stride);
-  mImage->SetDecodedRect(0, 0, mSize.width, row + 1);
 
+  PRInt32 decY2 = mImage->GetDecodedY2();
+  if (decY2 != mSize.height) {
+    mImage->SetDecodedRect(0, 0, mSize.width, row + 1);
+  }
   PRInt32 numnewrows = (aLength / row_stride);
   nsRect r(0, row, mSize.width, numnewrows);
   mImage->ImageUpdated(nsnull, nsImageUpdateFlags_kBitsChanged, &r);
@@ -345,7 +348,10 @@ NS_IMETHODIMP gfxImageFrame::GetTimeout(PRInt32 *aTimeout)
   if (!mInitalized)
     return NS_ERROR_NOT_INITIALIZED;
 
-  *aTimeout = mTimeout;
+  if (mTimeout == 0)
+    *aTimeout = 100; // Ensure a minimal time between updates so we don't throttle the UI thread.
+  else
+    *aTimeout = mTimeout;
   return NS_OK;
 }
 
