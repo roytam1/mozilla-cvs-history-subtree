@@ -83,9 +83,13 @@ protected:
   nsresult SerializeNodeEnd(nsIDOMNode* aNode, nsAWritableString& aStr);
   nsresult SerializeRangeToString(nsIDOMRange *aRange,
                                   nsAWritableString& aOutputString);
-  nsresult SerializeRangeNodes(nsVoidArray& aAncestors, nsIDOMNode* aStart,
-                               PRInt32 aStartOffset, nsIDOMNode* aEnd,
-                               PRInt32 aEndOffset, nsAWritableString& aString);
+  nsresult SerializeRangeNodes(nsVoidArray& aAncestors,
+                               nsIDOMNode *aCommonParent,
+                               nsIDOMNode* aStart,
+                               PRInt32 aStartOffset,
+                               nsIDOMNode* aEnd,
+                               PRInt32 aEndOffset,
+                               nsAWritableString& aString);
 
   nsresult FlushText(nsAWritableString& aString, PRBool aForce);
 
@@ -382,7 +386,7 @@ nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
     if (count) {
       PRInt32 indx = (PRInt32)aIndexArray.ElementAt(count - 1);
 
-      ChildAt(parent, indx + 1, &aNextNode);
+      ChildAt(parent, indx, &aNextNode);
 
       if (aNextNode)
         aIndexArray.ReplaceElementAt((void *)(indx + 1), count - 1);
@@ -397,7 +401,8 @@ nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
 
       ChildAt(parent, indx + 1, &aNextNode);
 
-      aIndexArray.AppendElement((void *)(indx + 1));
+      if (aNextNode)
+        aIndexArray.AppendElement((void *)(indx + 1));
     }
 
     if (aNextNode) {
@@ -416,6 +421,7 @@ nsresult GetNextNode(nsIDOMNode* aNode, nsVoidArray& aIndexArray,
 
 nsresult
 nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
+                                       nsIDOMNode* aCommonParent,
                                        nsIDOMNode* aStart,
                                        PRInt32 aStartOffset,
                                        nsIDOMNode* aEnd,
@@ -427,8 +433,6 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
   nsresult rv = NS_OK;
 
   node = NS_STATIC_CAST(nsIDOMNode *, aAncestors.ElementAt(--i));
-
-  nsIDOMNode* commonParent = node.get();
 
   while (node) {
     SerializeNodeStart(node, 0, -1, aOutputString);
@@ -469,7 +473,7 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
   }
 
   if (start == end) {
-    SerializeNodeStart(start, aStartOffset, aEndOffset, aOutputString);
+    SerializeNodeStart(start, aStartOffset, aEndOffset, aOutputString); // Is this correct?
   } else {
     PRInt32 dir = 1;
     nsVoidArray offsets;
@@ -502,12 +506,15 @@ nsDocumentEncoder::SerializeRangeNodes(nsVoidArray& aAncestors,
 
   node = end;
 
-  while (node && commonParent && node.get() != commonParent) {
+  while (node && aCommonParent && node.get() != aCommonParent) {
     SerializeNodeEnd(node, aOutputString);
 
     nsIDOMNode *tmpNode = node;
     tmpNode->GetParentNode(getter_AddRefs(node));
   }
+
+  nsCAutoString tmpStr; tmpStr.AssignWithConversion(aOutputString);
+  printf ("range = '%s'\n", (const char *)tmpStr);
 
   return NS_OK;
 }
@@ -554,13 +561,13 @@ nsDocumentEncoder::SerializeRangeToString(nsIDOMRange *aRange,
   while (i--) {
     nsIDOMNode *node = NS_STATIC_CAST(nsIDOMNode *, ancestors.ElementAt(i));
 
+    ancestors.RemoveElementAt(i);
+
     if (!node || node == commonParent.get())
       break;
-
-    ancestors.RemoveElementAt(i);
   }
 
-  return SerializeRangeNodes(ancestors, start, startOffset,
+  return SerializeRangeNodes(ancestors, commonParent, start, startOffset,
                              end, endOffset, aOutputString);
 }
 
