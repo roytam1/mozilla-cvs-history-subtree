@@ -213,6 +213,7 @@ nsXULDocument::nsXULDocument(void)
     : mParentDocument(nsnull),
       mScriptContextOwner(nsnull),
       mScriptObject(nsnull),
+      mNextSrcLoadWaiter(nsnull),
       mCharSetID("UTF-8"),
       mDisplaySelection(PR_FALSE),
       mContentViewerContainer(nsnull),
@@ -225,6 +226,9 @@ nsXULDocument::nsXULDocument(void)
 
 nsXULDocument::~nsXULDocument()
 {
+    NS_ASSERTION(mNextSrcLoadWaiter == nsnull,
+        "unreferenced document still waiting for script source to load?");
+
     // In case we failed somewhere early on and the forward observer
     // decls never got resolved.
     DestroyForwardReferences();
@@ -4562,19 +4566,29 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
         // Ignore return value from execution, and don't block
         *aBlock = PR_FALSE;
     }
+    else if (aScriptProto->mSrcLoading) {
+        // Another XULDocument has started a load, which is still in progress.
+        // Remember to ResumeWalk this document when the load completes.
+        mNextSrcLoadWaiter = aScriptProto->mSrcLoadWaiters;
+        aScriptProto->mSrcLoadWaiters = this;
+        NS_ADDREF_THIS();
+
+        // Block until OnUnicharStreamComplete resumes us.
+        *aBlock = PR_TRUE;
+    }
     else {
-        // Set the current script prototype so that the DoneLoadingScript()
-        // call can get report the right file if there are errors in
-        // the script.
+        // Set the current script prototype so that OnUnicharStreamComplete
+        // can get report the right file if there are errors in the script.
         mCurrentScriptProto = aScriptProto;
 
         nsCOMPtr<nsILoadGroup> group = do_QueryReferent(mDocumentLoadGroup);
 
-        // N.B., the loader will be released in DoneLoadingScript()
+        // N.B., the loader will be released in OnUnicharStreamComplete
         nsIUnicharStreamLoader* loader;
         rv = NS_NewUnicharStreamLoader(&loader, aScriptProto->mSrcURI, group, this);
         if (NS_FAILED(rv)) return rv;
 
+        aScriptProto->mSrcLoading = PR_TRUE;
         *aBlock = PR_TRUE;
     }
     return NS_OK;
@@ -4592,6 +4606,9 @@ nsXULDocument::OnUnicharStreamComplete(nsIUnicharStreamLoader* aLoader,
     // from the prototype.
     nsresult rv;
 
+    NS_ASSERTION(mCurrentScriptProto->mSrcLoading,
+                 "script source not loading on unichar stream complete?");
+
     if (NS_SUCCEEDED(aStatus)) {
         // XXXbe bug warren to provide string length from caller too
         rv = mCurrentScriptProto->Compile(string, nsCRT::strlen(string),
@@ -4608,6 +4625,18 @@ nsXULDocument::OnUnicharStreamComplete(nsIUnicharStreamLoader* aLoader,
     NS_RELEASE(aLoader);
 
     rv = ResumeWalk();
+
+    // Resume walking other documents that waited for this one's load
+    mCurrentScriptProto->mSrcLoading = PR_FALSE;
+
+    nsXULDocument** docp = &mCurrentScriptProto->mSrcLoadWaiters;
+    nsXULDocument *doc;
+    while ((doc = *docp) != nsnull) {
+        doc->ResumeWalk();
+        *docp = doc->mNextSrcLoadWaiter;
+        doc->mNextSrcLoadWaiter = nsnull;
+        NS_RELEASE(doc);
+    }
     return rv;
 }
 

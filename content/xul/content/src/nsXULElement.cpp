@@ -3592,6 +3592,8 @@ nsXULPrototypeElement::GetAttribute(PRInt32 aNameSpaceID, nsIAtom* aName, nsStri
 
 nsXULPrototypeScript::nsXULPrototypeScript(PRInt32 aLineNo, const char *aVersion)
     : nsXULPrototypeNode(eType_Script, aLineNo),
+      mSrcLoading(PR_FALSE),
+      mSrcLoadWaiters(nsnull),
       mScriptRuntime(nsnull),
       mScriptObject(nsnull),
       mLangVersion(aVersion)

@@ -160,6 +160,7 @@ public:
 
 struct JSRuntime;
 struct JSObject;
+class nsXULDocument;
 
 class nsXULPrototypeScript : public nsXULPrototypeNode
 {
@@ -172,6 +173,8 @@ public:
                      nsIDocument* aDocument);
 
     nsCOMPtr<nsIURI>         mSrcURI;
+    PRBool                   mSrcLoading;
+    nsXULDocument*           mSrcLoadWaiters;   // [OWNER] but not COMPtr
     JSRuntime*               mScriptRuntime;    // XXX use service, save space?
     JSObject*                mScriptObject;
     const char*              mLangVersion;

@@ -503,6 +503,7 @@ protected:
     nsIDocument*               mParentDocument;     // [WEAK]
     nsIScriptContextOwner*     mScriptContextOwner; // [WEAK] it owns me! (indirectly)
     void*                      mScriptObject;       // ????
+    nsXULDocument*             mNextSrcLoadWaiter;  // [OWNER] but not COMPtr
     nsString                   mCharSetID;
     nsVoidArray                mStyleSheets;
     nsCOMPtr<nsIDOMSelection>  mSelection;          // [OWNER]
