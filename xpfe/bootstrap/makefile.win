@@ -25,7 +25,7 @@ include <$(DEPTH)/config/config.mak>
 
 
 !ifdef MOZ_STATIC_COMPONENT_LIBS
-DEFINES=-DWIN32_LEAN_AND_MEAN -DMOZ_STATIC_COMPONENT_LIBS
+DEFINES=-DWIN32_LEAN_AND_MEAN -DMOZ_STATIC_COMPONENT_LIBS -D_BUILD_STATIC_BIN
 !else
 DEFINES=-DWIN32_LEAN_AND_MEAN
 !endif
@@ -39,6 +39,7 @@ CPPSRCS=                                \
  nsNativeAppSupportBase.cpp             \
  nsNativeAppSupportWin.cpp              \
  showOSAlert.cpp                        \
+ nsStaticComponents.cpp					\
  $(NULL)
 
 CPP_OBJS=                               \
@@ -48,6 +49,7 @@ CPP_OBJS=                               \
  .\$(OBJDIR)\nsNativeAppSupportBase.obj \
  .\$(OBJDIR)\nsNativeAppSupportWin.obj  \
  .\$(OBJDIR)\showOSAlert.obj            \
+ .\$(OBJDIR)\nsStaticComponents.obj     \
  $(NULL)
 
 LINCS=-I$(PUBLIC)\raptor                \
@@ -84,6 +86,7 @@ PROGRAM = .\$(OBJDIR)\mozilla.exe
 RESFILE = splash.res
 
 LCFLAGS = \
+		/INCREMENTAL:NO \
         $(LCFLAGS) \
         $(DEFINES) \
         $(NULL)
@@ -100,9 +103,9 @@ MOZ_WINCONSOLE=0
 
 # Set subsystem type according to whether we want a console.
 !if $(MOZ_WINCONSOLE)
-LFLAGS= $(LFLAGS) /subsystem:console
+LFLAGS= $(LFLAGS) /subsystem:console /incremental:no
 !else
-LFLAGS= $(LFLAGS) /subsystem:windows
+LFLAGS= $(LFLAGS) /subsystem:windows /incremental:no
 !endif
 
 # These are the libraries we need to link with to create the exe
@@ -115,43 +118,114 @@ $(DIST)\lib\plds4.lib \
 #    $(DIST)\bin\DebugRobot.lib	\
     $(DIST)\bin\gkgfxwin.lib	\
     $(DIST)\bin\gkwidget.lib	\
+	$(DIST)\lib\raptorbasewidget_s.lib		  \
+	$(DIST)\lib\raptorwidget_s.lib	        \
+	$(DIST)\lib\timer_s.lib				\
+	$(DIST)\lib\util.lib \
     $(DIST)\bin\img3250.lib	\
     $(DIST)\bin\jpeg3250.lib	\
+	$(DIST)\lib\fdlibm.lib \
     $(DIST)\bin\js3250.lib	\
-    $(DIST)\bin\components\jsdom.lib	\
+    $(DIST)\bin\components\jsdom.lib    \
+	$(DIST)\lib\jsdomevents_s.lib    \
     $(DIST)\bin\jsj3250.lib	\
     $(DIST)\bin\mozreg.lib	\
+	$(DIST)\lib\mpfilelocprovider_s.lib \
+	$(DIST)\lib\xpcomio_s.lib    \
+	$(DIST)\lib\xpcomcomp_s.lib    \
+	$(DIST)\lib\string_s.lib    \
+	$(DIST)\lib\string_obsolete_s.lib    \
+	$(DIST)\lib\xpcomds_s.lib    \
+	$(DIST)\lib\jsdombase_s.lib    \
+	$(DIST)\lib\xpcomthreads_s.lib    \
     $(DIST)\bin\msgbsutl.lib	\
     $(DIST)\bin\nsreg.lib	\
+	$(DIST)\lib\xpcomxpt_s.lib    \
+	$(DIST)\lib\xpcomxptcall_s.lib    \
+	$(DIST)\lib\xpcomxptcmd_s.lib    \
+	$(DIST)\lib\xpcomxptinfo_s.lib    \
+	$(DIST)\lib\xpcomproxy_s.lib    \
     $(DIST)\bin\xpcom.lib	\
-    $(DIST)\bin\xpistub.lib	\
+    $(DIST)\lib\xpcombase_s.lib   \
+	$(DIST)\bin\xpistub.lib	\
     $(DIST)\bin\zlib.lib	\
     $(DIST)\bin\components\AcctIdl.lib	\
+	$(DIST)\lib\absync_s.lib    \
+	$(DIST)\lib\addrbook_s.lib    \
     $(DIST)\bin\components\absyncsv.lib	\
+	$(DIST)\lib\accessibility_s.lib \
     $(DIST)\bin\components\accessibility.lib	\
+	$(DIST)\lib\addrbook_s.lib    \
     $(DIST)\bin\components\addrbook.lib	\
+	$(DIST)\lib\autocomplete_s.lib    \
+	$(DIST)\lib\bookmarks_s.lib    \
+	$(DIST)\lib\directory_s.lib    \
+	$(DIST)\lib\history_s.lib    \
+	$(DIST)\lib\search_s.lib    \
+	$(DIST)\lib\related_s.lib    \
+	$(DIST)\lib\timebomb_s.lib    \
+	$(DIST)\lib\urlbarhistory_s.lib    \
+	$(DIST)\lib\urlwidgt_s.lib    \
+	$(DIST)\lib\winhooks_s.lib    \
     $(DIST)\bin\components\appcomps.lib	\
     $(DIST)\bin\components\appshell.lib	\
     $(DIST)\bin\components\caps.lib	\
     $(DIST)\bin\components\chardet.lib	\
     $(DIST)\bin\components\chardetc.lib	\
-    $(DIST)\bin\components\chardetnativeTest.lib	\
+#    $(DIST)\bin\components\chardetnativeTest.lib	\
+	$(DIST)\lib\rdfutil_s.lib    \
+	$(DIST)\lib\rdfdatasource_s.lib    \
+	$(DIST)\lib\rdfbase_s.lib    \
+    $(DIST)\bin\components\rdf.lib	\
+    $(DIST)\lib\chrome_s.lib    \
     $(DIST)\bin\components\chrome.lib	\
-    $(DIST)\bin\components\cookie.lib	\
+    $(DIST)\bin\components\cookie.lib \
+	$(DIST)\lib\basedocshell_s.lib \
     $(DIST)\bin\components\docshell.lib	\
-    $(DIST)\bin\components\editor.lib	\
-    $(DIST)\bin\components\embedcomponents.lib	\
-    $(DIST)\bin\components\emitter.lib	\
+    $(DIST)\bin\components\editor.lib \
+	$(DIST)\lib\windowwatcher_s.lib \
+	$(DIST)\lib\appstartupnotifier_s.lib \
+	$(DIST)\lib\jsconsole_s.lib \
+	$(DIST)\lib\find_s.lib \
+    $(DIST)\bin\components\embedcomponents.lib \
+	$(DIST)\lib\emitterutils_s.lib \
+    $(DIST)\bin\components\emitter.lib \
     $(DIST)\bin\components\evntloop.lib	\
     $(DIST)\bin\components\gfx2.lib	\
+	$(DIST)\lib\contenthtmldoc_s.lib \
+	$(DIST)\lib\contentbase_s.lib \
+	$(DIST)\lib\contentxultemplates_s.lib \
+	$(DIST)\lib\contentshared_s.lib \
+	$(DIST)\lib\contentxuldocument_s.lib \
+	$(DIST)\lib\contenthtmlstyle_s.lib \
+	$(DIST)\lib\contentxbl_s.lib \
+	$(DIST)\lib\contenthtmlcontent_s.lib \
+	$(DIST)\lib\contentxmlcontent_s.lib \
+	$(DIST)\lib\contentxsldoc_s.lib \
+	$(DIST)\lib\contentxmldoc_s.lib \
+	$(DIST)\lib\contentevents_s.lib \
+	$(DIST)\lib\xmlextrasbase_s.lib \
+    $(DIST)\bin\components\xmlextras.lib \
+	$(DIST)\lib\msgdb_s.lib \
+	$(DIST)\lib\contentxulcontent_s.lib \
     $(DIST)\bin\components\gkcontent.lib	\
+	$(DIST)\lib\layoutbase_s.lib \
+	$(DIST)\lib\layouthtmltable_s.lib \
+	$(DIST)\lib\layouthtmlforms_s.lib \
+	$(DIST)\lib\layouthtmldoc_s.lib \
+	$(DIST)\lib\layouthtmlstyle_s.lib \
+	$(DIST)\lib\layouthtmlbase_s.lib \
+	$(DIST)\lib\layoutxulbase_s.lib \
+	$(DIST)\lib\raptorxuloutliner_s.lib \
     $(DIST)\bin\components\gklayout.lib	\
+	$(DIST)\lib\expat.lib \
     $(DIST)\bin\components\gkparser.lib	\
     $(DIST)\bin\components\gkplugin.lib	\
     $(DIST)\bin\components\gkview.lib	\
     $(DIST)\bin\components\imggif.lib	\
     $(DIST)\bin\components\imgjpeg.lib	\
     $(DIST)\bin\components\imglib2.lib	\
+	$(DIST)\lib\png.lib \
     $(DIST)\bin\components\imgpng.lib	\
     $(DIST)\bin\components\imgppm.lib	\
     $(DIST)\bin\components\impEudra.lib	\
@@ -163,22 +237,48 @@ $(DIST)\lib\plds4.lib \
     $(DIST)\bin\components\jar50.lib	\
     $(DIST)\bin\components\jsloader.lib	\
     $(DIST)\bin\components\jsurl.lib	\
-    $(DIST)\bin\components\lwbrk.lib	\
+    $(DIST)\bin\components\lwbrk.lib \
+	$(DIST)\lib\mime_s.lib \
     $(DIST)\bin\components\mime.lib	\
+	$(DIST)\lib\msgmork_s.lib \
     $(DIST)\bin\components\mork.lib	\
     $(DIST)\bin\components\mozbrwsr.lib	\
     $(DIST)\bin\components\mozfind.lib	\
     $(DIST)\bin\components\mozldap.lib	\
     $(DIST)\bin\components\mozucth.lib	\
     $(DIST)\bin\components\mozxfer.lib	\
+	$(DIST)\lib\msgbase_s.lib \
+	$(DIST)\lib\msgsearch_s.lib \
     $(DIST)\bin\components\msgbase.lib	\
+	$(DIST)\lib\msgcompose_s.lib \
     $(DIST)\bin\components\msgcompo.lib	\
-    $(DIST)\bin\components\msgdb.lib	\
-    $(DIST)\bin\components\msgimap.lib	\
+    $(DIST)\bin\components\msgdb.lib \
+	$(DIST)\lib\msgimap_s.lib \
+    $(DIST)\bin\components\msgimap.lib \
+	$(DIST)\lib\msglocal_s.lib \
     $(DIST)\bin\components\msglocal.lib	\
-    $(DIST)\bin\components\msgnews.lib	\
+	$(DIST)\lib\msgnews_s.lib \
+    $(DIST)\bin\components\msgnews.lib \
     $(DIST)\bin\components\nativapp.lib	\
+	$(DIST)\lib\neckosocket_s.lib    \
+	$(DIST)\lib\nkkwd_s.lib    \
+	$(DIST)\lib\nkabout_s.lib    \
+	$(DIST)\lib\nkres_s.lib    \
+	$(DIST)\lib\nkjar_s.lib    \
+	$(DIST)\lib\nkdata_s.lib    \
+	$(DIST)\lib\nkhttp_s.lib    \
+	$(DIST)\lib\nkfile_s.lib    \
+	$(DIST)\lib\nkmime_s.lib    \
+	$(DIST)\lib\neckobase_s.lib    \
+	$(DIST)\lib\neckodns_s.lib    \
+	$(DIST)\lib\nkcnvts_s.lib    \
+	$(DIST)\lib\nkconv_s.lib    \
     $(DIST)\bin\components\necko.lib	\
+	$(DIST)\lib\nkviewsource_s.lib    \
+	$(DIST)\lib\nkdatetm_s.lib    \
+	$(DIST)\lib\nkfinger_s.lib    \
+	$(DIST)\lib\nkgopher_s.lib    \
+	$(DIST)\lib\nkftp_s.lib    \
     $(DIST)\bin\components\necko2.lib	\
     $(DIST)\bin\components\nkcache.lib	\
 #    $(DIST)\bin\components\nsgif.lib	\
@@ -186,6 +286,7 @@ $(DIST)\lib\plds4.lib \
 #    $(DIST)\bin\components\nsjpg.lib	\
     $(DIST)\bin\components\nsjpg3250.lib	\
     $(DIST)\bin\components\nslocale.lib	\
+	$(DIST)\lib\mng.lib    \
 #    $(DIST)\bin\components\nsmng.lib	\
     $(DIST)\bin\components\nsmng3250.lib	\
 #    $(DIST)\bin\components\nspng.lib	\
@@ -193,7 +294,6 @@ $(DIST)\lib\plds4.lib \
     $(DIST)\bin\components\nsprefm.lib	\
     $(DIST)\bin\components\oji.lib	\
     $(DIST)\bin\components\profile.lib	\
-    $(DIST)\bin\components\rdf.lib	\
     $(DIST)\bin\components\regviewr.lib	\
 #    $(DIST)\bin\components\sample.lib	\
     $(DIST)\bin\components\shistory.lib	\
@@ -211,10 +311,17 @@ $(DIST)\lib\plds4.lib \
     $(DIST)\bin\components\ucvlatin.lib	\
     $(DIST)\bin\components\ucvtw.lib	\
     $(DIST)\bin\components\ucvtw2.lib	\
+	$(DIST)\lib\uriloaderbase_s.lib \
+	$(DIST)\lib\exthandlers_s.lib \
+	$(DIST)\lib\exthandlerwin_s.lib \
     $(DIST)\bin\components\urildr.lib	\
     $(DIST)\bin\components\vcard.lib	\
-    $(DIST)\bin\components\wallet.lib	\
+    $(DIST)\bin\components\wallet.lib \
+	$(DIST)\lib\nsWebBrowser_s.lib \
+	$(DIST)\lib\signonviewer_s.lib \
     $(DIST)\bin\components\webbrwsr.lib	\
+	$(DIST)\lib\walleteditor_s.lib \
+	$(DIST)\lib\walletpreview_s.lib \
     $(DIST)\bin\components\wlltvwrs.lib	\
     $(DIST)\bin\components\xmlextras.lib	\
     $(DIST)\bin\components\xpacct32.lib	\
@@ -246,8 +353,14 @@ LLIBS=                          \
 # $(MOZ_TOOLS)\lib\fulls32.lib \
 #!endif
  
-WIN_LIBS=                      \
- shell32.lib                 \
+WIN_LIBS=       \
+ comctl32.lib   \
+ comdlg32.lib   \
+ Uuid.lib       \
+ shell32.lib    \
+ ole32.lib      \
+ oleaut32.lib   \
+ version.lib    \
  $(NULL)
 
 include <$(DEPTH)\config\rules.mak>
