@@ -145,6 +145,7 @@ $Timezone = '';
 
 # Release build options
 $ReleaseBuild  = 1;
+$shiptalkback  = 1;
 $build_hour    = "8";
 $package_creation_path = "/xpinstall/packager";
 $ssh_version   = "1";
