@@ -51,6 +51,13 @@
 #include "txXMLEventHandler.h"
 #include "nsIDOMDocument.h"
 #include "nsIXSLTProcessorObsolete.h"
+#include "txXSLTProcessor.h"
+#include "nsVoidArray.h"
+#include "txStylesheet.h"
+
+class nsITransformMediator;
+class nsIURI;
+class nsIXMLContentSink;
 
 /* bacd8ad0-552f-11d3-a9f7-000064657374 */
 #define TRANSFORMIIX_XSLT_PROCESSOR_CID   \
@@ -132,14 +139,23 @@ public:
     NS_DECL_NSIXSLTPROCESSOROBSOLETE
 
     // nsIDocumentTransformer interface
+    NS_IMETHOD LoadStyleSheet(nsITransformMediator* aMediator, nsIURI* aUri,
+                              nsIChannel* aChannel, nsILoadGroup* aLoadGroup);
     NS_IMETHOD TransformDocument(nsIDOMNode *aSourceDOM,
-                                 nsIDOMNode *aStyleDOM,
-                                 nsITransformObserver *aObserver,
-                                 nsIDOMDocument **_retval);
+                                 nsITransformObserver *aObserver);
 
-protected:
-    nsCOMPtr<nsIDOMNode> mStylesheet;
+    nsresult addStylesheet(txStylesheet* aStylesheet);
+
+private:
+    nsVoidArray mStylesheets;
     txExpandedNameMap mVariables;
 };
+
+extern nsresult TX_NewStylesheetSink(nsIXMLContentSink** aResult,
+                                     nsITransformMediator* aMediator,
+                                     nsIURI* aURI,
+                                     txMozillaXSLTProcessor* aProcessor);
+
+extern txStylesheet* TX_CompileStylesheet(nsIDOMNode* aNode);
 
 #endif
