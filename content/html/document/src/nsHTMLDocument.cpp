@@ -1150,6 +1150,8 @@ NS_IMETHODIMP
 nsHTMLDocument::ContentAppended(nsIContent* aContainer,
                                 PRInt32 aNewIndexInContainer)
 {
+  NS_ABORT_IF_FALSE(aContainer, "Null container!");
+
   // Register new content. That is the content numbered from
   // aNewIndexInContainer and upwards.
   PRInt32 count=0;
@@ -1170,6 +1172,8 @@ NS_IMETHODIMP
 nsHTMLDocument::ContentInserted(nsIContent* aContainer, nsIContent* aContent,
                                 PRInt32 aIndexInContainer)
 {
+  NS_ABORT_IF_FALSE(aContent, "Null content!");
+
   nsresult rv = RegisterNamedItems(aContent);
 
   if (NS_FAILED(rv)) {
@@ -1184,6 +1188,8 @@ nsHTMLDocument::ContentReplaced(nsIContent* aContainer, nsIContent* aOldChild,
                                 nsIContent* aNewChild,
                                 PRInt32 aIndexInContainer)
 {
+  NS_ABORT_IF_FALSE(aOldChild && aNewChild, "Null new or old child!");
+
   nsresult rv = UnregisterNamedItems(aOldChild);
 
   if (NS_FAILED(rv)) {
@@ -1204,6 +1210,8 @@ NS_IMETHODIMP
 nsHTMLDocument::ContentRemoved(nsIContent* aContainer, nsIContent* aContent,
                                PRInt32 aIndexInContainer)
 {
+  NS_ABORT_IF_FALSE(aContent, "Null container or content!");
+
   nsresult rv = UnregisterNamedItems(aContent);
 
   if (NS_FAILED(rv)) {
@@ -1217,6 +1225,8 @@ NS_IMETHODIMP
 nsHTMLDocument::AttributeWillChange(nsIContent* aContent, PRInt32 aNameSpaceID,
                                     nsIAtom* aAttribute)
 {
+  NS_ABORT_IF_FALSE(aContent, "Null content!");
+
   // XXX: Check namespaces!!!
 
   if (aAttribute == nsHTMLAtoms::name) {
@@ -1247,6 +1257,8 @@ NS_IMETHODIMP
 nsHTMLDocument::AttributeChanged(nsIContent* aContent, PRInt32 aNameSpaceID,
                                  nsIAtom* aAttribute, PRInt32 aHint)
 {
+  NS_ABORT_IF_FALSE(aContent, "Null content!");
+
   // XXX: Check namespaces!
 
   if (aAttribute == nsHTMLAtoms::name) {

@@ -1566,6 +1566,8 @@ NS_IMETHODIMP
 nsDocument::ContentChanged(nsIContent* aContent,
                            nsISupports* aSubContent)
 {
+  NS_ABORT_IF_FALSE(aContent, "Null content!");
+
   PRInt32 i;
   // Get new value of count for every iteration in case
   // observers remove themselves during the loop.
@@ -1605,6 +1607,8 @@ NS_IMETHODIMP
 nsDocument::ContentAppended(nsIContent* aContainer,
                             PRInt32 aNewIndexInContainer)
 {
+  NS_ABORT_IF_FALSE(aContainer, "Null container!");
+
   PRInt32 i;
   // Get new value of count for every iteration in case
   // observers remove themselves during the loop.
@@ -1625,6 +1629,8 @@ nsDocument::ContentInserted(nsIContent* aContainer,
                             nsIContent* aChild,
                             PRInt32 aIndexInContainer)
 {
+  NS_ABORT_IF_FALSE(aChild, "Null child!");
+
   PRInt32 i;
   // Get new value of count for every iteration in case
   // observers remove themselves during the loop.
@@ -1646,6 +1652,8 @@ nsDocument::ContentReplaced(nsIContent* aContainer,
                             nsIContent* aNewChild,
                             PRInt32 aIndexInContainer)
 {
+  NS_ABORT_IF_FALSE(aOldChild && aNewChild, "Null old or new child child!");
+
   PRInt32 i;
   // Get new value of count for every iteration in case
   // observers remove themselves during the loop.
@@ -1667,6 +1675,8 @@ nsDocument::ContentRemoved(nsIContent* aContainer,
                            nsIContent* aChild,
                            PRInt32 aIndexInContainer)
 {
+  NS_ABORT_IF_FALSE(aChild, "Null container or child!");
+
   PRInt32 i;
   // Get new value of count for every iteration in case
   // observers remove themselves during the loop.
@@ -1688,6 +1698,8 @@ nsDocument::AttributeWillChange(nsIContent* aChild,
                                 PRInt32 aNameSpaceID,
                                 nsIAtom* aAttribute)
 {
+  NS_ABORT_IF_FALSE(aChild, "Null child!");
+
   return NS_OK;
 }
 
@@ -1697,6 +1709,8 @@ nsDocument::AttributeChanged(nsIContent* aChild,
                              nsIAtom* aAttribute,
                              PRInt32 aHint)
 {
+  NS_ABORT_IF_FALSE(aChild, "Null child!");
+
   PRInt32 i;
   nsresult result = NS_OK;
   // Get new value of count for every iteration in case
