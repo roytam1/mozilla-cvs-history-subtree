@@ -95,6 +95,7 @@ while ($entry)
   if (!($type =~ /delete/i))
     {
       # Should we filter out modifiersname and modifytimestamp ?
+      # chop($entry->{changes}[0]);
       print $entry->{changes}[0], "\n";
     }
   print "\n";
