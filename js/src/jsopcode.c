@@ -64,9 +64,9 @@ char *js_incop_str[]        = {"++", "--"};
 	#undef FAR
     #endif
 #else  /* !__WINDOWS_386__ */
-    #ifndef FAR
-	#define FAR
-    #endif
+#ifndef FAR
+#define FAR
+#endif
 #endif /* !__WINDOWS_386__ */
 
 JSCodeSpec FAR js_CodeSpec[] = {
@@ -76,7 +76,7 @@ JSCodeSpec FAR js_CodeSpec[] = {
 #undef OPDEF
 };
 
-uintN js_NumCodeSpecs = sizeof js_CodeSpec / sizeof js_CodeSpec[0];
+uintN js_NumCodeSpecs = sizeof (js_CodeSpec) / sizeof js_CodeSpec[0];
 
 /************************************************************************/
 
