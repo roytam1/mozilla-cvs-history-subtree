@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 require 5.005;
---------------------------------------------------------------------------------
+
 # This script has split some functions off into a util
 # script so they can be re-used by other scripts.
 require "build-seamonkey-util.pl";
