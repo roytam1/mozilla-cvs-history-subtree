@@ -85,17 +85,11 @@ extern PRInt32 net_NewsChunkSize;
 nsNNTPNewsgroupList::nsNNTPNewsgroupList()
 {
     NS_INIT_REFCNT();
-#ifdef DEBUG_seth
-    printf("XXX nsNNTPNewsgroupList(%x)\n",(int)this);
-#endif
 }
 
 
 nsNNTPNewsgroupList::~nsNNTPNewsgroupList()
 {
-#ifdef DEBUG_seth
-    printf("XXX ~nsNNTPNewsgroupList(%x)\n",(int)this);
-#endif
 	CleanUp();
 }
 
@@ -792,7 +786,7 @@ nsNNTPNewsgroupList::FinishXOVERLINE(int status, int *newstatus)
 		// to get called again.
         m_finishingXover = PR_TRUE;
 
-        printf("XXX setting m_runningURL to nsnull\n");
+        // XXX is this correct?
         m_runningURL = nsnull;
 
 		if (m_lastMsgNumber > 0) {

@@ -51,9 +51,6 @@ static NS_DEFINE_CID(kCNewsDB, NS_NEWSDB_CID);
     
 nsNntpUrl::nsNntpUrl()
 {
-#ifdef DEBUG_seth
-  printf("XXX nsNntpUrl(%x)\n",(int)this);
-#endif
   m_offlineNews = nsnull;
   m_newsgroupPost = nsnull;
   m_newsAction = nsINntpUrl::ActionGetNewNews;
@@ -65,9 +62,6 @@ nsNntpUrl::nsNntpUrl()
          
 nsNntpUrl::~nsNntpUrl()
 {
-#ifdef DEBUG_seth
-  printf("XXX ~nsNntpUrl(%x)\n",(int)this);
-#endif
   NS_IF_RELEASE(m_offlineNews);
   NS_IF_RELEASE(m_newsgroupPost);
 }

@@ -31,9 +31,6 @@ NS_IMPL_ISUPPORTS1(nsNNTPArticleList, nsINNTPArticleList)
 nsNNTPArticleList::nsNNTPArticleList()
 {
     NS_INIT_REFCNT();
-#ifdef DEBUG_seth
-    printf("XXX nsNNTPArticleList(%x)\n",(int)this);
-#endif
 }
 
 nsresult
@@ -61,10 +58,6 @@ nsNNTPArticleList::Initialize(nsIMsgNewsFolder *newsFolder)
 
 nsNNTPArticleList::~nsNNTPArticleList()
 {
-#ifdef DEBUG_seth
-  printf("XXX ~nsNNTPArticleList(%x)\n",(int)this);
-#endif
-
   if (m_newsDB) {
 		m_newsDB->Commit(nsMsgDBCommitType::kSessionCommit);
         m_newsDB->Close(PR_TRUE);
@@ -89,7 +82,9 @@ nsNNTPArticleList::AddArticleKey(PRInt32 key)
 		// we have a copy of the article offline.
 		while (idInDBToCheck < key)
 		{
+#ifdef DEBUG_seth
             printf("XXX removing %d\n",idInDBToCheck);
+#endif
             m_newsFolder->RemoveMessage(idInDBToCheck);
 #ifdef DEBUG_seth
 			m_idsDeleted.Add(idInDBToCheck);
