@@ -46,7 +46,7 @@
 #include "txHTMLOutput.h"
 #endif
 
-TX_LG_IMPL;
+TX_LG_IMPL
 
 /* static */
 MBool
