@@ -20,7 +20,10 @@
  * Contributor(s): 
  * Keith Visco, kvisco@ziplink.net
  *   -- original author.
- *    
+ *
+ * Marina Mechtcheriakova, mmarina@mindspring.com
+ *   -- added LANG_FN
+ *
  * $Id$
  */
 
@@ -58,6 +61,8 @@ const String XPathNames::ROUND_FN                = "round";
 const String XPathNames::CEILING_FN              = "ceiling";
 const String XPathNames::FLOOR_FN                = "floor";
 // OG-
+//Marina M. boolean function lang
+const String XPathNames::LANG_FN				 = "lang";
 
 //-- internal XSL processor functions
 const String XPathNames::ERROR_FN                = "error";
