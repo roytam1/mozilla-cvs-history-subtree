@@ -505,9 +505,6 @@ LINK32_OBJS= \
 # Begin Source File
 
 SOURCE=.\jsaddr.c
-
-!IF  "$(CFG)" == "js - Win32 Release"
-
 DEP_CPP_JSADD=\
 	".\jsapi.h"\
 	".\jscompat.h"\
@@ -536,39 +533,6 @@ DEP_CPP_JSADD=\
 
 "$(INTDIR)\jsaddr.obj" : $(SOURCE) $(DEP_CPP_JSADD) "$(INTDIR)"
 
-
-!ELSEIF  "$(CFG)" == "js - Win32 Debug"
-
-DEP_CPP_JSADD=\
-	".\jsapi.h"\
-	".\jscompat.h"\
-	".\jscpucfg.h"\
-	".\jsinterp.h"\
-	".\jslong.h"\
-	".\jsmacos.h"\
-	".\jsosdep.h"\
-	".\jsotypes.h"\
-	".\jsprvtd.h"\
-	".\jspubtd.h"\
-	".\jstypes.h"\
-	".\os\aix.h"\
-	".\os\bsdi.h"\
-	".\os\hpux.h"\
-	".\os\irix.h"\
-	".\os\linux.h"\
-	".\os\osf1.h"\
-	".\os\scoos.h"\
-	".\os\solaris.h"\
-	".\os\sunos.h"\
-	".\os\unixware.h"\
-	".\os\win16.h"\
-	".\os\win32.h"\
-	
-
-"$(INTDIR)\jsaddr.obj" : $(SOURCE) $(DEP_CPP_JSADD) "$(INTDIR)"
-
-
-!ENDIF 
 
 # End Source File
 ################################################################################
@@ -603,8 +567,8 @@ DEP_CPP_JSAPI=\
 	".\jsmath.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsparse.h"\
@@ -667,8 +631,8 @@ DEP_CPP_JSAPI=\
 	".\jsmath.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsparse.h"\
@@ -711,9 +675,6 @@ NODEP_CPP_JSAPI=\
 # Begin Source File
 
 SOURCE=.\jsarena.c
-
-!IF  "$(CFG)" == "js - Win32 Release"
-
 DEP_CPP_JSARE=\
 	".\jsarena.h"\
 	".\jsbit.h"\
@@ -742,39 +703,6 @@ DEP_CPP_JSARE=\
 
 "$(INTDIR)\jsarena.obj" : $(SOURCE) $(DEP_CPP_JSARE) "$(INTDIR)"
 
-
-!ELSEIF  "$(CFG)" == "js - Win32 Debug"
-
-DEP_CPP_JSARE=\
-	".\jsarena.h"\
-	".\jsbit.h"\
-	".\jscompat.h"\
-	".\jscpucfg.h"\
-	".\jslong.h"\
-	".\jsmacos.h"\
-	".\jsosdep.h"\
-	".\jsotypes.h"\
-	".\jsstddef.h"\
-	".\jstypes.h"\
-	".\jsutil.h"\
-	".\os\aix.h"\
-	".\os\bsdi.h"\
-	".\os\hpux.h"\
-	".\os\irix.h"\
-	".\os\linux.h"\
-	".\os\osf1.h"\
-	".\os\scoos.h"\
-	".\os\solaris.h"\
-	".\os\sunos.h"\
-	".\os\unixware.h"\
-	".\os\win16.h"\
-	".\os\win32.h"\
-	
-
-"$(INTDIR)\jsarena.obj" : $(SOURCE) $(DEP_CPP_JSARE) "$(INTDIR)"
-
-
-!ENDIF 
 
 # End Source File
 ################################################################################
@@ -915,8 +843,8 @@ DEP_CPP_JSATO=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -968,8 +896,8 @@ DEP_CPP_JSATO=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -1145,8 +1073,8 @@ DEP_CPP_JSCNT=\
 	".\jslong.h"\
 	".\jsmacos.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -1202,8 +1130,8 @@ DEP_CPP_JSCNT=\
 	".\jslong.h"\
 	".\jsmacos.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -1385,8 +1313,8 @@ DEP_CPP_JSDBG=\
 	".\jslong.h"\
 	".\jsmacos.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprvtd.h"\
@@ -1440,8 +1368,8 @@ DEP_CPP_JSDBG=\
 	".\jslong.h"\
 	".\jsmacos.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprvtd.h"\
@@ -1481,9 +1409,6 @@ NODEP_CPP_JSDBG=\
 # Begin Source File
 
 SOURCE=.\jsdtoa.c
-
-!IF  "$(CFG)" == "js - Win32 Release"
-
 DEP_CPP_JSDTO=\
 	".\jscompat.h"\
 	".\jscpucfg.h"\
@@ -1515,42 +1440,6 @@ NODEP_CPP_JSDTO=\
 
 "$(INTDIR)\jsdtoa.obj" : $(SOURCE) $(DEP_CPP_JSDTO) "$(INTDIR)"
 
-
-!ELSEIF  "$(CFG)" == "js - Win32 Debug"
-
-DEP_CPP_JSDTO=\
-	".\jscompat.h"\
-	".\jscpucfg.h"\
-	".\jsdtoa.h"\
-	".\jslong.h"\
-	".\jsmacos.h"\
-	".\jsosdep.h"\
-	".\jsotypes.h"\
-	".\jsprf.h"\
-	".\jsstddef.h"\
-	".\jstypes.h"\
-	".\jsutil.h"\
-	".\os\aix.h"\
-	".\os\bsdi.h"\
-	".\os\hpux.h"\
-	".\os\irix.h"\
-	".\os\linux.h"\
-	".\os\osf1.h"\
-	".\os\scoos.h"\
-	".\os\solaris.h"\
-	".\os\sunos.h"\
-	".\os\unixware.h"\
-	".\os\win16.h"\
-	".\os\win32.h"\
-	
-NODEP_CPP_JSDTO=\
-	".\prlock.h"\
-	
-
-"$(INTDIR)\jsdtoa.obj" : $(SOURCE) $(DEP_CPP_JSDTO) "$(INTDIR)"
-
-
-!ENDIF 
 
 # End Source File
 ################################################################################
@@ -1580,8 +1469,8 @@ DEP_CPP_JSEMI=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsparse.h"\
@@ -1639,8 +1528,8 @@ DEP_CPP_JSEMI=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsparse.h"\
@@ -1818,8 +1707,8 @@ DEP_CPP_JSFUN=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsparse.h"\
@@ -1877,8 +1766,8 @@ DEP_CPP_JSFUN=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsparse.h"\
@@ -2035,9 +1924,6 @@ NODEP_CPP_JSGC_=\
 # Begin Source File
 
 SOURCE=.\jshash.c
-
-!IF  "$(CFG)" == "js - Win32 Release"
-
 DEP_CPP_JSHAS=\
 	".\jsbit.h"\
 	".\jscompat.h"\
@@ -2065,38 +1951,6 @@ DEP_CPP_JSHAS=\
 
 "$(INTDIR)\jshash.obj" : $(SOURCE) $(DEP_CPP_JSHAS) "$(INTDIR)"
 
-
-!ELSEIF  "$(CFG)" == "js - Win32 Debug"
-
-DEP_CPP_JSHAS=\
-	".\jsbit.h"\
-	".\jscompat.h"\
-	".\jscpucfg.h"\
-	".\jshash.h"\
-	".\jslong.h"\
-	".\jsmacos.h"\
-	".\jsosdep.h"\
-	".\jsotypes.h"\
-	".\jstypes.h"\
-	".\jsutil.h"\
-	".\os\aix.h"\
-	".\os\bsdi.h"\
-	".\os\hpux.h"\
-	".\os\irix.h"\
-	".\os\linux.h"\
-	".\os\osf1.h"\
-	".\os\scoos.h"\
-	".\os\solaris.h"\
-	".\os\sunos.h"\
-	".\os\unixware.h"\
-	".\os\win16.h"\
-	".\os\win32.h"\
-	
-
-"$(INTDIR)\jshash.obj" : $(SOURCE) $(DEP_CPP_JSHAS) "$(INTDIR)"
-
-
-!ENDIF 
 
 # End Source File
 ################################################################################
@@ -2128,8 +1982,8 @@ DEP_CPP_JSINT=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -2187,8 +2041,8 @@ DEP_CPP_JSINT=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -2339,9 +2193,6 @@ NODEP_CPP_JSLOC=\
 # Begin Source File
 
 SOURCE=.\jslog2.c
-
-!IF  "$(CFG)" == "js - Win32 Release"
-
 DEP_CPP_JSLOG=\
 	".\jsbit.h"\
 	".\jscpucfg.h"\
@@ -2365,43 +2216,12 @@ DEP_CPP_JSLOG=\
 
 "$(INTDIR)\jslog2.obj" : $(SOURCE) $(DEP_CPP_JSLOG) "$(INTDIR)"
 
-
-!ELSEIF  "$(CFG)" == "js - Win32 Debug"
-
-DEP_CPP_JSLOG=\
-	".\jsbit.h"\
-	".\jscpucfg.h"\
-	".\jsmacos.h"\
-	".\jsosdep.h"\
-	".\jsotypes.h"\
-	".\jstypes.h"\
-	".\os\aix.h"\
-	".\os\bsdi.h"\
-	".\os\hpux.h"\
-	".\os\irix.h"\
-	".\os\linux.h"\
-	".\os\osf1.h"\
-	".\os\scoos.h"\
-	".\os\solaris.h"\
-	".\os\sunos.h"\
-	".\os\unixware.h"\
-	".\os\win16.h"\
-	".\os\win32.h"\
-	
-
-"$(INTDIR)\jslog2.obj" : $(SOURCE) $(DEP_CPP_JSLOG) "$(INTDIR)"
-
-
-!ENDIF 
 
 # End Source File
 ################################################################################
 # Begin Source File
 
 SOURCE=.\jslong.c
-
-!IF  "$(CFG)" == "js - Win32 Release"
-
 DEP_CPP_JSLON=\
 	".\jscpucfg.h"\
 	".\jslong.h"\
@@ -2425,34 +2245,6 @@ DEP_CPP_JSLON=\
 
 "$(INTDIR)\jslong.obj" : $(SOURCE) $(DEP_CPP_JSLON) "$(INTDIR)"
 
-
-!ELSEIF  "$(CFG)" == "js - Win32 Debug"
-
-DEP_CPP_JSLON=\
-	".\jscpucfg.h"\
-	".\jslong.h"\
-	".\jsmacos.h"\
-	".\jsosdep.h"\
-	".\jsotypes.h"\
-	".\jstypes.h"\
-	".\os\aix.h"\
-	".\os\bsdi.h"\
-	".\os\hpux.h"\
-	".\os\irix.h"\
-	".\os\linux.h"\
-	".\os\osf1.h"\
-	".\os\scoos.h"\
-	".\os\solaris.h"\
-	".\os\sunos.h"\
-	".\os\unixware.h"\
-	".\os\win16.h"\
-	".\os\win32.h"\
-	
-
-"$(INTDIR)\jslong.obj" : $(SOURCE) $(DEP_CPP_JSLON) "$(INTDIR)"
-
-
-!ENDIF 
 
 # End Source File
 ################################################################################
@@ -2593,8 +2385,8 @@ DEP_CPP_JSNUM=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -2648,8 +2440,8 @@ DEP_CPP_JSNUM=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -2713,8 +2505,8 @@ DEP_CPP_JSOBJ=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -2772,8 +2564,8 @@ DEP_CPP_JSOBJ=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -2840,8 +2632,8 @@ DEP_CPP_JSOPC=\
 	".\jslong.h"\
 	".\jsmacos.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -2899,8 +2691,8 @@ DEP_CPP_JSOPC=\
 	".\jslong.h"\
 	".\jsmacos.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -2964,8 +2756,8 @@ DEP_CPP_JSPAR=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsparse.h"\
@@ -3022,8 +2814,8 @@ DEP_CPP_JSPAR=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsparse.h"\
@@ -3065,9 +2857,6 @@ NODEP_CPP_JSPAR=\
 # Begin Source File
 
 SOURCE=.\jsprf.c
-
-!IF  "$(CFG)" == "js - Win32 Release"
-
 DEP_CPP_JSPRF=\
 	".\jscpucfg.h"\
 	".\jslong.h"\
@@ -3093,36 +2882,6 @@ DEP_CPP_JSPRF=\
 
 "$(INTDIR)\jsprf.obj" : $(SOURCE) $(DEP_CPP_JSPRF) "$(INTDIR)"
 
-
-!ELSEIF  "$(CFG)" == "js - Win32 Debug"
-
-DEP_CPP_JSPRF=\
-	".\jscpucfg.h"\
-	".\jslong.h"\
-	".\jsmacos.h"\
-	".\jsosdep.h"\
-	".\jsotypes.h"\
-	".\jsprf.h"\
-	".\jstypes.h"\
-	".\jsutil.h"\
-	".\os\aix.h"\
-	".\os\bsdi.h"\
-	".\os\hpux.h"\
-	".\os\irix.h"\
-	".\os\linux.h"\
-	".\os\osf1.h"\
-	".\os\scoos.h"\
-	".\os\solaris.h"\
-	".\os\sunos.h"\
-	".\os\unixware.h"\
-	".\os\win16.h"\
-	".\os\win32.h"\
-	
-
-"$(INTDIR)\jsprf.obj" : $(SOURCE) $(DEP_CPP_JSPRF) "$(INTDIR)"
-
-
-!ENDIF 
 
 # End Source File
 ################################################################################
@@ -3152,8 +2911,8 @@ DEP_CPP_JSREG=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprvtd.h"\
@@ -3208,8 +2967,8 @@ DEP_CPP_JSREG=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprvtd.h"\
@@ -3272,8 +3031,8 @@ DEP_CPP_JSSCA=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -3329,8 +3088,8 @@ DEP_CPP_JSSCA=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -3503,8 +3262,8 @@ DEP_CPP_JSSCR=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -3562,8 +3321,8 @@ DEP_CPP_JSSCR=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -3628,8 +3387,8 @@ DEP_CPP_JSSTR=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -3684,8 +3443,8 @@ DEP_CPP_JSSTR=\
 	".\jsmacos.h"\
 	".\jsnum.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsprf.h"\
@@ -3725,9 +3484,6 @@ NODEP_CPP_JSSTR=\
 # Begin Source File
 
 SOURCE=.\jsutil.c
-
-!IF  "$(CFG)" == "js - Win32 Release"
-
 DEP_CPP_JSUTI=\
 	".\jscpucfg.h"\
 	".\jsmacos.h"\
@@ -3751,34 +3507,6 @@ DEP_CPP_JSUTI=\
 
 "$(INTDIR)\jsutil.obj" : $(SOURCE) $(DEP_CPP_JSUTI) "$(INTDIR)"
 
-
-!ELSEIF  "$(CFG)" == "js - Win32 Debug"
-
-DEP_CPP_JSUTI=\
-	".\jscpucfg.h"\
-	".\jsmacos.h"\
-	".\jsosdep.h"\
-	".\jsotypes.h"\
-	".\jstypes.h"\
-	".\jsutil.h"\
-	".\os\aix.h"\
-	".\os\bsdi.h"\
-	".\os\hpux.h"\
-	".\os\irix.h"\
-	".\os\linux.h"\
-	".\os\osf1.h"\
-	".\os\scoos.h"\
-	".\os\solaris.h"\
-	".\os\sunos.h"\
-	".\os\unixware.h"\
-	".\os\win16.h"\
-	".\os\win32.h"\
-	
-
-"$(INTDIR)\jsutil.obj" : $(SOURCE) $(DEP_CPP_JSUTI) "$(INTDIR)"
-
-
-!ENDIF 
 
 # End Source File
 ################################################################################
@@ -3895,9 +3623,6 @@ NODEP_CPP_JSXDR=\
 # Begin Source File
 
 SOURCE=.\prmjtime.c
-
-!IF  "$(CFG)" == "js - Win32 Release"
-
 DEP_CPP_PRMJT=\
 	".\jscompat.h"\
 	".\jscpucfg.h"\
@@ -3925,38 +3650,6 @@ DEP_CPP_PRMJT=\
 
 "$(INTDIR)\prmjtime.obj" : $(SOURCE) $(DEP_CPP_PRMJT) "$(INTDIR)"
 
-
-!ELSEIF  "$(CFG)" == "js - Win32 Debug"
-
-DEP_CPP_PRMJT=\
-	".\jscompat.h"\
-	".\jscpucfg.h"\
-	".\jslong.h"\
-	".\jsmacos.h"\
-	".\jsosdep.h"\
-	".\jsotypes.h"\
-	".\jsprf.h"\
-	".\jstypes.h"\
-	".\os\aix.h"\
-	".\os\bsdi.h"\
-	".\os\hpux.h"\
-	".\os\irix.h"\
-	".\os\linux.h"\
-	".\os\osf1.h"\
-	".\os\scoos.h"\
-	".\os\solaris.h"\
-	".\os\sunos.h"\
-	".\os\unixware.h"\
-	".\os\win16.h"\
-	".\os\win32.h"\
-	".\prmjtime.h"\
-	{$(INCLUDE)}"\sys\TIMEB.H"\
-	
-
-"$(INTDIR)\prmjtime.obj" : $(SOURCE) $(DEP_CPP_PRMJT) "$(INTDIR)"
-
-
-!ENDIF 
 
 # End Source File
 # End Target
@@ -3995,8 +3688,8 @@ DEP_CPP_JS_C42=\
 	".\jslong.h"\
 	".\jsmacos.h"\
 	".\jsobj.h"\
-	".\jsopcode.def"\
 	".\jsopcode.h"\
+	".\jsopcode.tbl"\
 	".\jsosdep.h"\
 	".\jsotypes.h"\
 	".\jsparse.h"\
