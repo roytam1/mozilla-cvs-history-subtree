@@ -679,7 +679,7 @@ nsFastLoadFileWriter::WriteFooter()
         if (NS_FAILED(rv)) break;
     }
 
-    delete idvec;
+    delete[] idvec;
     if (NS_FAILED(rv)) return rv;
 
     // Enumerate mObjectMap into a vector indexed by mOID and write it.
@@ -695,7 +695,7 @@ nsFastLoadFileWriter::WriteFooter()
         if (NS_FAILED(rv)) break;
     }
 
-    delete infovec;
+    delete[] infovec;
     if (NS_FAILED(rv)) return rv;
 
     for (i = 0; i < dependencyCount; i++) {

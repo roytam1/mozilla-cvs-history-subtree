@@ -219,8 +219,8 @@ class NS_COM nsFastLoadFileReader
         }
 
         ~nsFastLoadFooter() {
-            delete mIDMap;
-            delete mSharpObjectMap;
+            delete[] mIDMap;
+            delete[] mSharpObjectMap;
         }
 
         const nsID& GetID(NSFastLoadID aFastId) const {
