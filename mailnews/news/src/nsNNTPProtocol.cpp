@@ -1416,9 +1416,6 @@ PRInt32 nsNNTPProtocol::SendData(nsIURI * aURL, const char * dataBuffer, PRBool 
         PR_LOG(NNTP, out, ("Logging suppressed for this command (it probably contained authentication information)"));
     }
 
-#ifdef DEBUG_seth
-	printf("SEND: %s\n",dataBuffer);
-#endif
 	return nsMsgProtocol::SendData(aURL, dataBuffer); // base class actually transmits the data
 }
 
@@ -1468,9 +1465,6 @@ PRInt32 nsNNTPProtocol::NewsResponse(nsIInputStream * inputStream, PRUint32 leng
 	m_previousResponseCode = m_responseCode;
 
     PR_sscanf(line, "%d", &m_responseCode);
-#ifdef DEBUG_seth
-	printf("RECV: %s\n",line);
-#endif
 	
 	if (m_responseCode == MK_NNTP_RESPONSE_AUTHINFO_DENIED) {
 		/* login failed */
@@ -4826,10 +4820,6 @@ PRInt32 nsNNTPProtocol::ListGroupResponse(nsIInputStream * inputStream, PRUint32
 
 	if (line)
 	{
-#ifdef DEBUG_seth
-        printf("line == %s\n",line);
-#endif
-
 		if (line[0] != '.')
 		{
 			nsMsgKey found_id = nsMsgKey_None;
