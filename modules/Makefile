@@ -40,6 +40,10 @@ ifdef JAVA_OR_OJI
 DIRS		+= libreg softupdt
 endif # JAVA_OR_OJI
 
+ifdef MOZ_OJI
+DIRS		+= modules/oji
+endif
+
 DIRS            += zlib li progress
 
 ifdef EDITOR
