@@ -333,14 +333,13 @@ ifndef NO_LAYERS
 BASIC_LIBS	+= $(DIST)/lib/liblayer.a
 endif
 
-BASIC_LIBS += $(DIST)/lib/libxpcom.a
+BASIC_LIBS += $(DIST)/lib/libxpcom.a \
+              $(DIST)/lib/libcaps.a
 
 ########################################################################
 # Java
 #
 ifdef JAVA_OR_OJI
-
-BASIC_LIBS	+= $(DIST)/lib/libcaps.a
 
 #
 # Monolithic Java

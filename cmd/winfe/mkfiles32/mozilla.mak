@@ -388,9 +388,7 @@ LINK_LIBS= \
     $(DIST)\lib\secfreenav32.lib \
 !endif
     $(DIST)\lib\htmldg32.lib \
-!ifdef JAVA_OR_OJI      
     $(DIST)\lib\libcaps.lib \
-!endif
 !ifdef MOZ_JAVA
     $(DIST)\lib\libnsc32.lib \
 !endif
@@ -583,6 +581,7 @@ CDISTINCLUDES1= \
     /I$(XPDIST)\public\java \
     /I$(XPDIST)\public\plugin \
     /I$(XPDIST)\public\plugimpl \
+    /I$(XPDIST)\public\caps \
 !if defined(MOZ_OJI)
     /I$(XPDIST)\public\oji \
     /I$(XPDIST)\public\ojiimpl \
@@ -2414,9 +2413,7 @@ BUILD_SOURCE: $(OBJ_FILES)
 !ifdef MOZ_LDAP
     $(DIST)\lib\nsldap.lib +
 !endif
-!ifdef JAVA_OR_OJI
     $(DIST)\lib\libcaps.lib +
-!endif
 !if defined(MOZ_JAVA)
     $(DIST)\lib\jrt16$(VERSION_NUMBER).lib +
     $(DIST)\lib\libapp~1.lib +
@@ -2826,6 +2823,7 @@ exports:
     -xcopy $(XPDIST)\public\applet\*.h $(EXPORTINC) $(XCF)
 !endif
     -xcopy $(XPDIST)\public\libreg\*.h $(EXPORTINC) $(XCF)
+    -xcopy $(XPDIST)\public\caps\*.h $(EXPORTINC) $(XCF)
 !if defined(MOZ_OJI)
     -xcopy $(XPDIST)\public\oji\*.h $(EXPORTINC) $(XCF)
 !endif

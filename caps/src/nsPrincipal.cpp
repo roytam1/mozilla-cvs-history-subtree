@@ -144,7 +144,7 @@ nsPrincipal::nsPrincipal(nsPrincipalType type, void * key, PRUint32 key_len)
   init(type, key, key_len);
 }
 
-nsPrincipal::nsPrincipal(nsPrincipalType type, void * key, PRUint32 key_len, nsZig *zigObject)
+nsPrincipal::nsPrincipal(nsPrincipalType type, void * key, PRUint32 key_len, void *zigObject)
 {
   init(type, key, key_len);
   itsZig = zigObject;
@@ -484,7 +484,7 @@ char * nsPrincipal::saveCert(void)
     return NULL;
   }
 
-  result = SOB_stash_cert((ZIG *)itsZig->GetZig(), itsKeyLen, itsKey);
+  result = SOB_stash_cert((ZIG *)itsZig, itsKeyLen, itsKey);
   if (result < 0) {
     return SOB_get_error(result);
   }
@@ -501,7 +501,7 @@ nsPrincipal::getCertAttribute(int attrib)
     ZIG *zig = NULL;
 
     if (itsZig != NULL) {
-      zig = (ZIG *)itsZig->GetZig();
+      zig = (ZIG *)itsZig;
     }
     
     if (SOB_cert_attribute(attrib, zig, 

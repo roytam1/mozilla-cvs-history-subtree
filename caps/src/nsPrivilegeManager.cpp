@@ -662,6 +662,8 @@ nsPrivilegeManager::intersectPrincipalArray(nsPrincipalArray* p1,
 PRBool nsPrivilegeManager::canExtendTrust(nsPrincipalArray* from, 
                                           nsPrincipalArray* to)
 {
+  if ((from == NULL) || (to == NULL))
+    return PR_FALSE;
   nsPrincipalArray * intersect = intersectPrincipalArray(from, to);
   if (intersect->GetSize() == from->GetSize())
     return PR_TRUE;
@@ -984,87 +986,6 @@ nsPrivilegeManager::isPermissionGranted(nsTarget *target,
   }
 }
 
-/* The following method should call native code */
-
-static struct NSJSJavaFrameWrapper * (*NewNSJSJavaFrameWrapperCallback)(void);
-
-void 
-setNewNSJSJavaFrameWrapperCallback(struct NSJSJavaFrameWrapper * (*fp)(void))
-{
-    NewNSJSJavaFrameWrapperCallback = fp;
-}
-
-
-static void (*FreeNSJSJavaFrameWrapperCallback)(struct NSJSJavaFrameWrapper *);
-
-void 
-setFreeNSJSJavaFrameWrapperCallback(void (*fp)(struct NSJSJavaFrameWrapper *))
-{
-    FreeNSJSJavaFrameWrapperCallback = fp;
-}
-
-
-static void (*GetStartFrameCallback)(struct NSJSJavaFrameWrapper *);
-
-void 
-setGetStartFrameCallback(void (*fp)(struct NSJSJavaFrameWrapper *))
-{
-    GetStartFrameCallback = fp;
-}
-
-
-static PRBool (*IsEndOfFrameCallback)(struct NSJSJavaFrameWrapper *);
-
-void 
-setIsEndOfFrameCallback(PRBool (*fp)(struct NSJSJavaFrameWrapper *))
-{
-    IsEndOfFrameCallback = fp;
-}
-
-
-static PRBool (*IsValidFrameCallback)(struct NSJSJavaFrameWrapper *);
-
-void 
-setIsValidFrameCallback(PRBool (*fp)(struct NSJSJavaFrameWrapper *))
-{
-    IsValidFrameCallback = fp;
-}
-
-
-static void * (*GetNextFrameCallback)(struct NSJSJavaFrameWrapper *, int *);
-
-void 
-setGetNextFrameCallback(void * (*fp)(struct NSJSJavaFrameWrapper *, int *))
-{
-    GetNextFrameCallback = fp;
-}
-
-
-static void * (*GetPrincipalArrayCallback)(struct NSJSJavaFrameWrapper *);
-
-void 
-setOJIGetPrincipalArrayCallback(void * (*fp)(struct NSJSJavaFrameWrapper *))
-{
-    GetPrincipalArrayCallback = fp;
-}
-
-
-static void * (*GetAnnotationCallback)(struct NSJSJavaFrameWrapper *);
-
-void 
-setOJIGetAnnotationCallback(void * (*fp)(struct NSJSJavaFrameWrapper *))
-{
-    GetAnnotationCallback = fp;
-}
-
-
-static void * (*SetAnnotationCallback)(struct NSJSJavaFrameWrapper *, void *);
-
-void 
-setOJISetAnnotationCallback(void * (*fp)(struct NSJSJavaFrameWrapper *, void *))
-{
-    SetAnnotationCallback = fp;
-}
 
 char *
 nsPrivilegeManager::checkPrivilegeEnabled(nsTargetArray * targetArray, 
@@ -1090,18 +1011,21 @@ nsPrivilegeManager::checkPrivilegeEnabled(nsTargetArray * targetArray,
     return "internal error - null target array";
   }
 
-  wrapper = (*NewNSJSJavaFrameWrapperCallback)();
+  if (*nsCapsNewNSJSJavaFrameWrapperCallback == NULL) {
+    return NULL;
+  }
+  wrapper = (*nsCapsNewNSJSJavaFrameWrapperCallback)();
   if (wrapper == NULL) {
     return NULL;
   }
 
   noOfTargets = targetArray->GetSize();
 
-  for ((*GetStartFrameCallback)(wrapper); 
-       (!(*IsEndOfFrameCallback)(wrapper));
+  for ((*nsCapsGetStartFrameCallback)(wrapper); 
+       (!(*nsCapsIsEndOfFrameCallback)(wrapper));
        ) 
     {
-      if ((*IsValidFrameCallback)(wrapper)) {
+      if ((*nsCapsIsValidFrameCallback)(wrapper)) {
         if (depth >= callerDepth) {
           scopePerm = nsPermissionState_Blank;
           prinPerm = nsPermissionState_Blank;
@@ -1112,8 +1036,8 @@ nsPrivilegeManager::checkPrivilegeEnabled(nsTargetArray * targetArray,
               goto done;
             }
 
-            annotation = (nsPrivilegeTable *) (*GetAnnotationCallback)(wrapper);
-            prinArray = (nsPrincipalArray *) (*GetPrincipalArrayCallback)(wrapper);
+            annotation = (nsPrivilegeTable *) (*nsCapsGetAnnotationCallback)(wrapper);
+            prinArray = (nsPrincipalArray *) (*nsCapsGetPrincipalArrayCallback)(wrapper);
             /*
              * frame->annotation holds a PrivilegeTable, describing
              * the scope privileges of this frame.  We'll check
@@ -1171,7 +1095,7 @@ nsPrivilegeManager::checkPrivilegeEnabled(nsTargetArray * targetArray,
           }
         }
       }
-      if (!(*GetNextFrameCallback)(wrapper, &depth))
+      if (!(*nsCapsGetNextFrameCallback)(wrapper, &depth))
         break;
     }
     /*
@@ -1189,7 +1113,7 @@ nsPrivilegeManager::checkPrivilegeEnabled(nsTargetArray * targetArray,
     errMsg =  "access to target forbidden. Target was not enabled on stack (stack included only system code)";
     
 done:
-    (*FreeNSJSJavaFrameWrapperCallback)(wrapper);
+    (*nsCapsFreeNSJSJavaFrameWrapperCallback)(wrapper);
     return errMsg;
 }
 
@@ -1201,23 +1125,26 @@ nsPrivilegeManager::getClassPrincipalsFromStack(PRInt32 callerDepth)
   int depth = 0;
   struct NSJSJavaFrameWrapper *wrapper = NULL;
 
-  wrapper = (*NewNSJSJavaFrameWrapperCallback)();
+  if (*nsCapsNewNSJSJavaFrameWrapperCallback == NULL) {
+    return NULL;
+  }
+  wrapper = (*nsCapsNewNSJSJavaFrameWrapperCallback)();
   if (wrapper == NULL)
     return NULL;
 
-  for ((*GetStartFrameCallback)(wrapper) ; 
-       (!(*IsEndOfFrameCallback)(wrapper)) ;
+  for ((*nsCapsGetStartFrameCallback)(wrapper) ; 
+       (!(*nsCapsIsEndOfFrameCallback)(wrapper)) ;
        ) {
-    if ((*IsValidFrameCallback)(wrapper)) {
+    if ((*nsCapsIsValidFrameCallback)(wrapper)) {
       if (depth >= callerDepth) {
-        principalArray = (nsPrincipalArray *) (*GetPrincipalArrayCallback)(wrapper);
+        principalArray = (nsPrincipalArray *) (*nsCapsGetPrincipalArrayCallback)(wrapper);
 	break;
       }
     }
-    if (!(*GetNextFrameCallback)(wrapper, &depth))
+    if (!(*nsCapsGetNextFrameCallback)(wrapper, &depth))
       break;
   }
-  (*FreeNSJSJavaFrameWrapperCallback)(wrapper);
+  (*nsCapsFreeNSJSJavaFrameWrapperCallback)(wrapper);
   return principalArray;
 }
 
@@ -1231,14 +1158,17 @@ nsPrivilegeManager::getPrivilegeTableFromStack(PRInt32 callerDepth,
   struct NSJSJavaFrameWrapper *wrapper = NULL;
   nsPrivilegeTable *annotation;
 
-  wrapper = (*NewNSJSJavaFrameWrapperCallback)();
+  if (*nsCapsNewNSJSJavaFrameWrapperCallback == NULL) {
+    return NULL;
+  }
+  wrapper = (*nsCapsNewNSJSJavaFrameWrapperCallback)();
   if (wrapper == NULL)
     return NULL;
 
-  for ((*GetStartFrameCallback)(wrapper) ; 
-       (!(*IsEndOfFrameCallback)(wrapper)) ;
+  for ((*nsCapsGetStartFrameCallback)(wrapper) ; 
+       (!(*nsCapsIsEndOfFrameCallback)(wrapper)) ;
        ) {
-    if ((*IsValidFrameCallback)(wrapper)) {
+    if ((*nsCapsIsValidFrameCallback)(wrapper)) {
       if (depth >= callerDepth) {
         /*
          * it's possible for the annotation to be NULL, meaning
@@ -1247,7 +1177,7 @@ nsPrivilegeManager::getPrivilegeTableFromStack(PRInt32 callerDepth,
          * default "blank forever" privileges), assign that
          * to the annotation, and return it.
          */
-        annotation = (nsPrivilegeTable *) (*GetAnnotationCallback)(wrapper);
+        annotation = (nsPrivilegeTable *) (*nsCapsGetAnnotationCallback)(wrapper);
         if (createIfNull && annotation == NULL) {
           privTable = new nsPrivilegeTable();
           if (privTable == NULL) {
@@ -1258,17 +1188,17 @@ nsPrivilegeManager::getPrivilegeTableFromStack(PRInt32 callerDepth,
             break;
           }
           PR_ASSERT(privTable != NULL);
-          (*SetAnnotationCallback)(wrapper, privTable);
+          (*nsCapsSetAnnotationCallback)(wrapper, privTable);
         } else {
           privTable = annotation;
         }
         break;
       }
     }
-    if (!(*GetNextFrameCallback)(wrapper, &depth))
+    if (!(*nsCapsGetNextFrameCallback)(wrapper, &depth))
       break;
   }
-  (*FreeNSJSJavaFrameWrapperCallback)(wrapper);
+  (*nsCapsFreeNSJSJavaFrameWrapperCallback)(wrapper);
   return privTable;
 }
 
