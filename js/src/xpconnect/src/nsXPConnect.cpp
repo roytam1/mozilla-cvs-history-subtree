@@ -412,7 +412,10 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext,
     // voodoo to fixup scoping and parenting...
 
     JS_SetParent(aJSContext, globalJSObj, nsnull);
-    JS_SetGlobalObject(aJSContext, globalJSObj);
+
+    JSObject* oldGlobal = JS_GetGlobalObject(aJSContext);
+    if(!oldGlobal || oldGlobal == tempGlobal)
+        JS_SetGlobalObject(aJSContext, globalJSObj);
 
     if(aCallJS_InitStandardClasses &&
        !JS_InitStandardClasses(aJSContext, globalJSObj))
