@@ -2040,9 +2040,13 @@ nsresult nsFrame::GetContentAndOffsetsFromPoint(nsIPresContext* aCX,
   if (NS_FAILED(result))
     return result;
 
-  
   nsPoint offsetPoint;
-  GetOffsetFromView(aCX, offsetPoint, &view);
+  nsIView *someOtherView;
+  // Parameters 2 and 3 to GetOffsetFromView are out parameters.
+  // We want to obtain offsetPoint, but we don't need the returned view,
+  // and we must not overwrite the contents of our "view" variable,
+  // therefore we use another variable (someOtherView).
+  GetOffsetFromView(aCX, offsetPoint, &someOtherView);
   thisRect.x = offsetPoint.x;
   thisRect.y = offsetPoint.y;
 
