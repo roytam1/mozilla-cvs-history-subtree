@@ -58,6 +58,8 @@ defaults\pref\*
 defaults\messenger\mailViews.dat
 defaults\profile\localstore.rdf
 defaults\profile\mimeTypes.rdf
+defaults\profile\extensions\*
+defaults\profile\extensions\{972ce4c6-7e08-4474-a285-3208198ce6fd}\install.rdf
 defaults\profile\US\localstore.rdf
 defaults\profile\US\mimeTypes.rdf
 
@@ -297,6 +299,12 @@ components\dom_xpath.xpt
 components\lwbrk.xpt
 components\nsCloseAllWindows.js
 
+; extensions
+components\nsExtensionManager.js
+components\nsBackgroundUpdateService.js
+components\extensions.xpt
+components\update.xpt
+
 res\ua.css
 res\html.css
 res\quirk.css
@@ -331,3 +339,5 @@ res\table-remove-column.gif
 res\table-remove-row-active.gif
 res\table-remove-row-hover.gif
 res\table-remove-row.gif
+
+
