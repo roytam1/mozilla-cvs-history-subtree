@@ -38,9 +38,9 @@
 #include <cstdarg>
 
 #include "systemtypes.h"
+#include "utilities.h"
 #include "stlcfg.h"
 #include "ds.h"
-#include "utilities.h"
 #include "strings.h"
 
 namespace JavaScript
@@ -49,8 +49,8 @@ namespace JavaScript
 // Output
 //
 
-// Print the characters between begin and end to the given file.  These
-// characters may include nulls.
+    // Print the characters between begin and end to the given file.  These
+    // characters may include nulls.
     size_t printChars(FILE *file, const char *begin, const char *end);
 
 #ifndef XP_MAC_MPW
@@ -61,10 +61,10 @@ namespace JavaScript
 #endif
 
 
-// A Formatter is an abstract base class representing a simplified output stream.
-// One can print text to a Formatter by using << and the various global
-// print... methods below. Formatters accept both char and char16 text and
-// convert as appropriate to their actual stream.
+    // A Formatter is an abstract base class representing a simplified output stream.
+    // One can print text to a Formatter by using << and the various global
+    // print... methods below. Formatters accept both char and char16 text and
+    // convert as appropriate to their actual stream.
     class Formatter {
       protected:
         virtual void printChar8(char ch);

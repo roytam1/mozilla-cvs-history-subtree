@@ -45,12 +45,11 @@ namespace JavaScript
 // Doubly Linked Lists
 //
 
-// A ListQueue provides insert and delete operations on a doubly-linked list of
-// objects threaded through fields named 'next' and 'prev'.  The type parameter
-// E must be a class derived from ListQueueEntry.
-// The ListQueue does not own its elements.  They must be deleted explicitly if
-// needed.
-        
+    // A ListQueue provides insert and delete operations on a doubly-linked list of
+    // objects threaded through fields named 'next' and 'prev'.  The type parameter
+    // E must be a class derived from ListQueueEntry.
+    // The ListQueue does not own its elements.  They must be deleted explicitly if
+    // needed.
     struct ListQueueEntry {
         ListQueueEntry *next;                   // Next entry in linked list
         ListQueueEntry *prev;                   // Previous entry in linked list
@@ -65,23 +64,14 @@ namespace JavaScript
         
         ListQueue() {next = this; prev = this;}
         
-        operator bool() const {
-            // Return true if the ListQueue is nonempty
-            return next != static_cast<const ListQueueEntry *>(this);
-        }
+        // Return true if the ListQueue is nonempty.
+        operator bool() const {return next != static_cast<const ListQueueEntry *>(this);}
 
-        bool operator !() const {
-            // Return true if the ListQueue is empty
-            return next == static_cast<const ListQueueEntry *>(this);
-        }
+        // Return true if the ListQueue is empty.
+        bool operator !() const {return next == static_cast<const ListQueueEntry *>(this);}
 
-        E &front() const {
-            ASSERT(operator bool()); return *static_cast<E *>(next);
-        }
-        
-        E &back() const {
-            ASSERT(operator bool()); return *static_cast<E *>(prev);
-        }
+        E &front() const {ASSERT(operator bool()); return *static_cast<E *>(next);}
+        E &back() const {ASSERT(operator bool()); return *static_cast<E *>(prev);}
 
         void push_front(E &elt) {
             ASSERT(!elt.next && !elt.prev);
@@ -107,14 +97,14 @@ namespace JavaScript
         }
     };
 
+
 //
 // Growable Arrays
 //
 
-// A Buffer initially points to inline storage of initialSize elements of type T.
-// The Buffer can be expanded via the expand method to increase its size by
-// allocating storage from the heap.
-    
+    // A Buffer initially points to inline storage of initialSize elements of type T.
+    // The Buffer can be expanded via the expand method to increase its size by
+    // allocating storage from the heap.
     template <typename T, size_t initialSize> class Buffer {
       public:
         T *buffer;   // Pointer to the current buffer
@@ -128,16 +118,15 @@ namespace JavaScript
         void expand(size_t newSize);
     };
 
-// Expand the buffer to size newSize, which must be greater than the current
-// size. The buffer's contents are not preserved.
+
+    // Expand the buffer to size newSize, which must be greater than the current
+    // size. The buffer's contents are not preserved.
     template <typename T, size_t initialSize>
-        inline void Buffer<T, initialSize>::expand(size_t newSize) {
-        
+    inline void Buffer<T, initialSize>::expand(size_t newSize) {
         ASSERT(newSize > size);
         if (buffer != initialBuffer) {
             delete[] buffer;
-            buffer = 0;     // For exception safety if the allocation below
-                            // fails.
+            buffer = 0;     // For exception safety if the allocation below fails.
         }
         buffer = new T[newSize];
         size = newSize;
@@ -198,10 +187,10 @@ namespace JavaScript
     };
 
 
-// Enlarge the buffer so that it can hold at least newLength elements.
-// May throw an exception, in which case the buffer is left unchanged.
+    // Enlarge the buffer so that it can hold at least newLength elements.
+    // May throw an exception, in which case the buffer is left unchanged.
     template <typename T>
-        void RawArrayBuffer<T>::enlarge(size_t newLength) {
+    void RawArrayBuffer<T>::enlarge(size_t newLength) {
         size_t newBufferSize = bufferSize * 2;
         if (newBufferSize < newLength)
             newBufferSize = newLength;
@@ -215,11 +204,11 @@ namespace JavaScript
         bufferSize = newBufferSize;
     }
 
-// Ensure that there is room to hold nElts elements in the buffer, without
-// expanding the buffer's logical length.
-// May throw an exception, in which case the buffer is left unchanged.
+    // Ensure that there is room to hold nElts elements in the buffer, without
+    // expanding the buffer's logical length.
+    // May throw an exception, in which case the buffer is left unchanged.
     template <typename T>
-        inline void RawArrayBuffer<T>::reserve(size_t nElts) {
+    inline void RawArrayBuffer<T>::reserve(size_t nElts) {
         if (bufferSize < nElts)
             enlarge(nElts);
 #ifdef DEBUG
@@ -228,58 +217,58 @@ namespace JavaScript
 #endif
     }
 
-// Ensure that there is room to hold nElts more elements in the buffer, without
-// expanding the buffer's logical length.  Return a pointer to the first element
-// just past the logical length.
-// May throw an exception, in which case the buffer is left unchanged.
+    // Ensure that there is room to hold nElts more elements in the buffer, without
+    // expanding the buffer's logical length.  Return a pointer to the first element
+    // just past the logical length.
+    // May throw an exception, in which case the buffer is left unchanged.
     template <typename T>
-        inline T *RawArrayBuffer<T>::reserve_back(size_t nElts) {
+    inline T *RawArrayBuffer<T>::reserve_back(size_t nElts) {
         reserve(length + nElts);
         return buffer[length];
     }
 
-// Advance the logical length by nElts, assuming that the memory has previously
-// been reserved.
-// Return a pointer to the first new element.
+    // Advance the logical length by nElts, assuming that the memory has previously
+    // been reserved.
+    // Return a pointer to the first new element.
     template <typename T>
-        inline T *RawArrayBuffer<T>::advance_back(size_t nElts) {
+    inline T *RawArrayBuffer<T>::advance_back(size_t nElts) {
         ASSERT(length + nElts <= maxReservedSize);
         T *p = buffer + length;
         length += nElts;
         return p;
     }
-    
-// Combine the effects of reserve_back and advance_back.
+
+    // Combine the effects of reserve_back and advance_back.
     template <typename T>
-        inline T *RawArrayBuffer<T>::reserve_advance_back(size_t nElts) {
+    inline T *RawArrayBuffer<T>::reserve_advance_back(size_t nElts) {
         reserve(length + nElts);
         T *p = buffer + length;
         length += nElts;
         return p;
     }
 
-// Same as push_back but assumes that the memory has previously been reserved.
-// May throw an exception if copying elt throws one, in which case the buffer is
-// left unchanged.
+    // Same as push_back but assumes that the memory has previously been reserved.
+    // May throw an exception if copying elt throws one, in which case the buffer is
+    // left unchanged.
     template <typename T>
-        inline void RawArrayBuffer<T>::fast_push_back(const T &elt) {
+    inline void RawArrayBuffer<T>::fast_push_back(const T &elt) {
         ASSERT(length < maxReservedSize);
         buffer[length] = elt;
         ++length;
     }
 
-// Append elt to the back of the buffer.
-// May throw an exception, in which case the buffer is left unchanged.
+    // Append elt to the back of the buffer.
+    // May throw an exception, in which case the buffer is left unchanged.
     template <typename T>
-        inline void RawArrayBuffer<T>::push_back(const T &elt) {
+    inline void RawArrayBuffer<T>::push_back(const T &elt) {
         *reserve_back() = elt;
         ++length;
     }
 
-// Append nElts elements elts to the back of the array buffer.
-// May throw an exception, in which case the buffer is left unchanged.
+    // Append nElts elements elts to the back of the array buffer.
+    // May throw an exception, in which case the buffer is left unchanged.
     template <typename T>
-        void RawArrayBuffer<T>::append(const T *elts, size_t nElts) {
+    void RawArrayBuffer<T>::append(const T *elts, size_t nElts) {
         size_t newLength = length + nElts;
         if (newLength > bufferSize)
             enlarge(newLength);
@@ -288,24 +277,25 @@ namespace JavaScript
     }
 
 
-// An ArrayBuffer represents an array of elements of type T.  The ArrayBuffer
-// contains storage for a fixed size array of cacheSize elements; if this size
-// is exceeded, the ArrayBuffer allocates the array from the heap.  Elements can
-// be appended to the back of the array using append.  An ArrayBuffer can also
-// act as a stack: elements can be pushed and popped from the back.
-//
-// All ArrayBuffer operations are atomic with respect to exceptions -- either
-// they succeed or they do not affect the ArrayBuffer's existing elements and
-// length. If T has a constructor, it must have a constructor with no arguments;
-// that constructor is called at the time memory for the ArrayBuffer is
-// allocated, just like when allocating a regular C++ array.
+    // An ArrayBuffer represents an array of elements of type T.  The ArrayBuffer
+    // contains storage for a fixed size array of cacheSize elements; if this size
+    // is exceeded, the ArrayBuffer allocates the array from the heap.  Elements can
+    // be appended to the back of the array using append.  An ArrayBuffer can also
+    // act as a stack: elements can be pushed and popped from the back.
+    //
+    // All ArrayBuffer operations are atomic with respect to exceptions -- either
+    // they succeed or they do not affect the ArrayBuffer's existing elements and
+    // length. If T has a constructor, it must have a constructor with no arguments;
+    // that constructor is called at the time memory for the ArrayBuffer is
+    // allocated, just like when allocating a regular C++ array.
     template <typename T, size_t cacheSize>
-        class ArrayBuffer: public RawArrayBuffer<T> {
+    class ArrayBuffer: public RawArrayBuffer<T> {
         T cacheArray[cacheSize];
       public:
         ArrayBuffer(): RawArrayBuffer<T>(cacheArray, cacheSize) {}
     };
-    
+
+
 //
 // Bit Sets
 //
@@ -320,6 +310,7 @@ namespace JavaScript
       public:
         void clear() {zero(words, words+nWords);}
         BitSet() {clear();}
+
         // Construct a BitSet out of an array of alternating low (inclusive)
         // and high (exclusive) ends of ranges of set bits.
         // The array is terminated by a 0,0 range.
@@ -344,10 +335,11 @@ namespace JavaScript
         void resetRange(size_t low, size_t high);
         void flipRange(size_t low, size_t high);
     };
-        
-// Return true if all bits are clear.
+
+
+    // Return true if all bits are clear.
     template<size_t size>
-        inline bool BitSet<size>::none() const {
+    inline bool BitSet<size>::none() const {
         if (nWords == 1)
             return !words[0];
         else {
@@ -358,25 +350,25 @@ namespace JavaScript
             return true;
         }
     }
-    
-// Return true if the BitSets are equal.
+
+    // Return true if the BitSets are equal.
     template<size_t size>
-        inline bool BitSet<size>::operator==(const BitSet &s) const {
+    inline bool BitSet<size>::operator==(const BitSet &s) const {
         if (nWords == 1)
             return words[0] == s.words[0];
         else
             return std::equal(words, s.words);
     }
 
-// Return true if the BitSets are not equal.
+    // Return true if the BitSets are not equal.
     template<size_t size>
-        inline bool BitSet<size>::operator!=(const BitSet &s) const {
+    inline bool BitSet<size>::operator!=(const BitSet &s) const {
         return !operator==(s);
     }
-        
-// Set all bits between low inclusive and high exclusive.
+
+    // Set all bits between low inclusive and high exclusive.
     template<size_t size>
-        void BitSet<size>::setRange(size_t low, size_t high) {
+    void BitSet<size>::setRange(size_t low, size_t high) {
         ASSERT(low <= high && high <= size);
         if (low != high)
             if (nWords == 1)
@@ -397,10 +389,10 @@ namespace JavaScript
                 }
             }
     }
-    
+
     // Clear all bits between low inclusive and high exclusive.
     template<size_t size>
-        void BitSet<size>::resetRange(size_t low, size_t high) {
+    void BitSet<size>::resetRange(size_t low, size_t high) {
         ASSERT(low <= high && high <= size);
         if (low != high)
             if (nWords == 1)
@@ -421,10 +413,10 @@ namespace JavaScript
                 }
             }
     }
-    
+
     // Invert all bits between low inclusive and high exclusive.
     template<size_t size>
-        void BitSet<size>::flipRange(size_t low, size_t high) {
+    void BitSet<size>::flipRange(size_t low, size_t high) {
         ASSERT(low <= high && high <= size);
         if (low != high)
             if (nWords == 1)
@@ -445,8 +437,8 @@ namespace JavaScript
                 }
             }
     }
-    
-    
+
+
 //
 // Array Queues
 //
@@ -469,11 +461,10 @@ namespace JavaScript
 #endif
 
       public:
-        RawArrayQueue(T *cache, size_t cacheSize) :
-            cache(cache), buffer(cache), bufferEnd(cache + cacheSize),
-            f(cache), b(cache), length(0), bufferSize(cacheSize) {
-            DEBUG_ONLY(maxReservedSize = 0);
-        }
+        RawArrayQueue(T *cache, size_t cacheSize):
+                cache(cache), buffer(cache), bufferEnd(cache + cacheSize),
+                f(cache), b(cache), length(0), bufferSize(cacheSize)
+            {DEBUG_ONLY(maxReservedSize = 0);}
       private:
         RawArrayQueue(const RawArrayQueue&);        // No copy constructor
         void operator=(const RawArrayQueue&);       // No assignment operator
@@ -524,7 +515,7 @@ namespace JavaScript
         // Same as append but assumes that memory has previously been reserved.
         // Does not throw exceptions.  T::operator= must not throw exceptions.
         template <class InputIter>
-            void fast_append(InputIter begin, InputIter end) {
+        void fast_append(InputIter begin, InputIter end) {
             size_t nElts = static_cast<size_t>(std::distance(begin, end));
             ASSERT(length + nElts <= maxReservedSize);
             while (nElts) {
@@ -555,12 +546,13 @@ namespace JavaScript
         }
     };
 
-// Pop between one and nElts elements from the front of the queue.  Set begin
-// and end to an array of the first n elements, where n is the return value.
-// The popped elements may be accessed until the next non-const operation.
-// Does not throw exceptions.
+
+    // Pop between one and nElts elements from the front of the queue.  Set begin
+    // and end to an array of the first n elements, where n is the return value.
+    // The popped elements may be accessed until the next non-const operation.
+    // Does not throw exceptions.
     template <typename T>
-        size_t RawArrayQueue<T>::pop_front(size_t nElts, T *&begin, T *&end) {
+    size_t RawArrayQueue<T>::pop_front(size_t nElts, T *&begin, T *&end) {
         ASSERT(nElts <= length);
         begin = f;
         size_t eltsToEnd = static_cast<size_t>(bufferEnd - f);
@@ -576,11 +568,11 @@ namespace JavaScript
             return eltsToEnd;
         }
     }
-    
+
     // Enlarge the buffer so that it can hold at least newLength elements.
     // May throw an exception, in which case the queue is left unchanged.
     template <typename T>
-        void RawArrayQueue<T>::enlarge(size_t newLength) {
+    void RawArrayQueue<T>::enlarge(size_t newLength) {
         size_t newBufferSize = bufferSize * 2;
         if (newBufferSize < newLength)
             newBufferSize = newLength;
@@ -601,12 +593,12 @@ namespace JavaScript
             delete[] oldBuffer;
         bufferSize = newBufferSize;
     }
-    
-// Ensure that there is room to hold one more element at the back of the queue,
-// without expanding the queue's logical length.
-// May throw an exception, in which case the queue is left unchanged.
+
+    // Ensure that there is room to hold one more element at the back of the queue,
+    // without expanding the queue's logical length.
+    // May throw an exception, in which case the queue is left unchanged.
     template <typename T>
-        inline void RawArrayQueue<T>::reserve_back() {
+    inline void RawArrayQueue<T>::reserve_back() {
         if (length == bufferSize)
             enlarge(length + 1);
 #ifdef DEBUG
@@ -615,11 +607,11 @@ namespace JavaScript
 #endif
     }
 
-// Ensure that there is room to hold nElts more elements at the back of the
-// queue, without expanding the queue's logical length.
-// May throw an exception, in which case the queue is left unchanged.
+    // Ensure that there is room to hold nElts more elements at the back of the
+    // queue, without expanding the queue's logical length.
+    // May throw an exception, in which case the queue is left unchanged.
     template <typename T>
-        inline void RawArrayQueue<T>::reserve_back(size_t nElts) {
+    inline void RawArrayQueue<T>::reserve_back(size_t nElts) {
         nElts += length;
         if (bufferSize < nElts)
             enlarge(nElts);
@@ -628,13 +620,13 @@ namespace JavaScript
             maxReservedSize = nElts;
 #endif
     }
-    
-// Advance the back of the queue by one element, assuming that the memory has
-// previously been reserved.
-// Return a pointer to that new element.
-// Does not throw exceptions.
+
+    // Advance the back of the queue by one element, assuming that the memory has
+    // previously been reserved.
+    // Return a pointer to that new element.
+    // Does not throw exceptions.
     template <typename T>
-        inline T *RawArrayQueue<T>::advance_back() {
+    inline T *RawArrayQueue<T>::advance_back() {
         ASSERT(length < maxReservedSize);
         ++length;
         if (b == bufferEnd)
@@ -642,12 +634,12 @@ namespace JavaScript
         return b++;
     }
 
-// Advance the back of the queue by between one and nElts elements and return a
-// pointer to them, assuming that the memory has previously been reserved.
-// nEltsAdvanced gets the actual number of elements advanced.
-// Does not throw exceptions.
+    // Advance the back of the queue by between one and nElts elements and return a
+    // pointer to them, assuming that the memory has previously been reserved.
+    // nEltsAdvanced gets the actual number of elements advanced.
+    // Does not throw exceptions.
     template <typename T>
-        T *RawArrayQueue<T>::advance_back(size_t nElts, size_t &nEltsAdvanced) {
+    T *RawArrayQueue<T>::advance_back(size_t nElts, size_t &nEltsAdvanced) {
         size_t newLength = length + nElts;
         ASSERT(newLength <= maxReservedSize);
         if (nElts) {
@@ -669,12 +661,12 @@ namespace JavaScript
             return 0;
         }
     }
-    
-// Same as push_back but assumes that the memory has previously been reserved.
-// May throw an exception if copying elt throws one, in which case the queue is
-// left unchanged.
+
+    // Same as push_back but assumes that the memory has previously been reserved.
+    // May throw an exception if copying elt throws one, in which case the queue is
+    // left unchanged.
     template <typename T>
-        inline void RawArrayQueue<T>::fast_push_back(const T &elt) {
+    inline void RawArrayQueue<T>::fast_push_back(const T &elt) {
         ASSERT(length < maxReservedSize);
         T *b2 = b;
         if (b2 == bufferEnd)
@@ -683,11 +675,11 @@ namespace JavaScript
         b = b2 + 1;
         ++length;
     }
-    
-// Append elt to the back of the queue.
-// May throw an exception, in which case the queue is left unchanged.
+
+    // Append elt to the back of the queue.
+    // May throw an exception, in which case the queue is left unchanged.
     template <typename T>
-        inline void RawArrayQueue<T>::push_back(const T &elt) {
+    inline void RawArrayQueue<T>::push_back(const T &elt) {
         reserve_back();
         T *b2 = b == bufferEnd ? buffer : b;
         *b2 = elt;
@@ -696,26 +688,27 @@ namespace JavaScript
     }
 
 
-// An ArrayQueue represents an array of elements of type T that can be written
-// at its back end and read at its front or back end.  In addition, arrays of
-// multiple elements may be written at the back end or read at the front end.
-// The ArrayQueue contains storage for a fixed size array of cacheSize elements;
-// if this size is exceeded, the ArrayQueue allocates the array from the heap.
+    // An ArrayQueue represents an array of elements of type T that can be written
+    // at its back end and read at its front or back end.  In addition, arrays of
+    // multiple elements may be written at the back end or read at the front end.
+    // The ArrayQueue contains storage for a fixed size array of cacheSize elements;
+    // if this size is exceeded, the ArrayQueue allocates the array from the heap.
     template <typename T, size_t cacheSize>
-        class ArrayQueue: public RawArrayQueue<T> {
+    class ArrayQueue: public RawArrayQueue<T> {
         T cacheArray[cacheSize];
           public:
         ArrayQueue(): RawArrayQueue<T>(cacheArray, cacheSize) {}
     };
 
+
 //
 // Array auto_ptr's
 //
 
-// An ArrayAutoPtr holds a pointer to an array initialized by new T[x].
-// A regular auto_ptr cannot be used here because it deletes its pointer using
-// delete rather than delete[].
-// An appropriate operator[] is also provided.
+    // An ArrayAutoPtr holds a pointer to an array initialized by new T[x].
+    // A regular auto_ptr cannot be used here because it deletes its pointer using
+    // delete rather than delete[].
+    // An appropriate operator[] is also provided.
     template <typename T> class ArrayAutoPtr {
         T *ptr;
         
@@ -734,7 +727,5 @@ namespace JavaScript
     };
     
     typedef ArrayAutoPtr<char> CharAutoPtr;
-    
 }
-
 #endif /* ds_h___ */

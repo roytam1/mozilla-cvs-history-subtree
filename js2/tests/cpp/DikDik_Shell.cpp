@@ -79,11 +79,11 @@ static bool promptLine(LineReader &inReader, string &s, const char *prompt)
 {
     if (prompt) {
         stdOut << prompt;
-	  #ifdef XP_MAC_MPW
+      #ifdef XP_MAC_MPW
         // Print a CR after the prompt because MPW grabs the entire
         // line when entering an interactive command.
         stdOut << '\n';
-	  #endif
+      #endif
     }
     return inReader.readLine(s) != 0;
 }
@@ -140,24 +140,24 @@ static int readEvalPrint(Context *cx, FILE *in)
                     stdOut << ' ';
                     t.print(stdOut, true);
                 }
-	            stdOut << '\n';
+                stdOut << '\n';
             } else {
                 StmtNode *parsedStatements = p.parseProgram();
-		ASSERT(p.lexer.peek(true).hasKind(Token::end));
+                ASSERT(p.lexer.peek(true).hasKind(Token::end));
                 if (cx->mDebugFlag)
                 {
                     PrettyPrinter f(stdOut, 30);
                     {
-                	    PrettyPrinter::Block b(f, 2);
-	                    f << "Program =";
-	                    f.linearBreak(1);
-	                    StmtNode::printStatements(f, parsedStatements);
+                        PrettyPrinter::Block b(f, 2);
+                        f << "Program =";
+                        f.linearBreak(1);
+                        StmtNode::printStatements(f, parsedStatements);
                     }
                     f.end();
-        	    stdOut << '\n';
+                    stdOut << '\n';
                 }
 #ifdef INTERPRET_INPUT
-		// Generate code for parsedStatements, which is a linked 
+                // Generate code for parsedStatements, which is a linked 
                 // list of zero or more statements
                 cx->buildRuntime(parsedStatements);
                 JS2Runtime::ByteCodeModule* bcm = cx->genCode(parsedStatements, ConsoleName);
@@ -174,11 +174,9 @@ static int readEvalPrint(Context *cx, FILE *in)
             }
             clear(buffer);
         } catch (Exception &e) {
-            /* If we got a syntax error on the end of input,
-             * then wait for a continuation
-             * of input rather than printing the error message. */
-            if (!(e.hasKind(Exception::syntaxError) &&
-                  e.lineNum && e.pos == buffer.size() &&
+            // If we got a syntax error on the end of input, then wait for a continuation
+            // of input rather than printing the error message.
+            if (!(e.hasKind(Exception::syntaxError) && e.lineNum && e.pos == buffer.size() &&
                   e.sourceFile == ConsoleName)) {
                 stdOut << '\n' << e.fullMessage();
                 clear(buffer);

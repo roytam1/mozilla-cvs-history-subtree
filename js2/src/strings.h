@@ -41,28 +41,6 @@
 
 namespace JavaScript 
 {
-    
-// A string of UTF-16 characters.  Nulls are allowed just like any other
-// character. The string is not null-terminated.
-// Use wstring if char16 is wchar_t.  Otherwise use basic_string<uint16>.
-//
-// Eventually we'll want to use a custom class better suited for JavaScript that
-// generates less code bloat and separates the concepts of a fixed, read-only
-// string from a mutable buffer that is expanding.  For now, though, we use the
-// standard basic_string.
-    typedef std::basic_string<char16> String;
-    typedef String string16;
-    typedef string16::const_iterator string16_citer;    
-    typedef string string8;
-    typedef string8::const_iterator string8_citer;
-
-    String &newArenaString(Arena &arena);
-    String &newArenaString(Arena &arena, const String &str);
-
-//
-// Unicode UTF-16 characters and strings
-//
-
     // Special char16s
     namespace uni {
         const char16 null = '\0';
@@ -86,11 +64,32 @@ namespace JavaScript
     typedef uint32 char16orEOF;
     const char16orEOF char16eof = static_cast<char16orEOF>(-1);
 
-    // If c is a char16, return it; if c is char16eof, return the character
-    // \uFFFF.
+    // If c is a char16, return it; if c is char16eof, return the character \uFFFF.
     inline char16 char16orEOFToChar16(char16orEOF c) {
         return static_cast<char16>(c);
     }
+
+
+//
+// Unicode UTF-16 characters and strings
+//
+
+    // A string of UTF-16 characters.  Nulls are allowed just like any other
+    // character. The string is not null-terminated.
+    // Use wstring if char16 is wchar_t.  Otherwise use basic_string<uint16>.
+    //
+    // Eventually we'll want to use a custom class better suited for JavaScript that
+    // generates less code bloat and separates the concepts of a fixed, read-only
+    // string from a mutable buffer that is expanding.  For now, though, we use the
+    // standard basic_string.
+    typedef std::basic_string<char16> String;
+    typedef String string16;
+    typedef string16::const_iterator string16_citer;    
+    typedef string string8;
+    typedef string8::const_iterator string8_citer;
+
+    String &newArenaString(Arena &arena);
+    String &newArenaString(Arena &arena, const String &str);
 
 #ifndef _WIN32
     // Return a String containing the characters of the null-terminated C
@@ -123,8 +122,7 @@ namespace JavaScript
         str.insert(str.begin() + pos, uchars, uchars + length);
     }
 #else
-    // Microsoft VC6 bug: String constructor and append limited to char16
-    // iterators
+    // Microsoft VC6 bug: String constructor and append limited to char16 iterators
     String widenCString(const char *cstr);
     void appendChars(String &str, const char *chars, size_t length);
     inline void appendChars(String &str, const char *begin, const char *end) {
@@ -154,7 +152,7 @@ namespace JavaScript
         static const uint8 y[];
         static const uint32 a[];
     
-    public:
+      public:
         // Enumerated Unicode general category types
         enum Type {
             Unassigned            = 0,  // Cn
@@ -190,48 +188,41 @@ namespace JavaScript
         enum Group {
             NonIdGroup,         // 0  May not be part of an identifier
             FormatGroup,        // 1  Format control
-            IdGroup,            // 2  May start or continue a JS identifier
-                                //     (includes $ and _)
-            IdContinueGroup,    // 3  May continue a JS identifier
-                                //     [(IdContinueGroup & -2) == IdGroup]
+            IdGroup,            // 2  May start or continue a JS identifier (includes $ and _)
+            IdContinueGroup,    // 3  May continue a JS identifier [(IdContinueGroup & -2) == IdGroup]
             WhiteGroup,         // 4  White space character (but not line break)
-            LineBreakGroup      // 5  Line break character
-                                //     [(LineBreakGroup & -2) == WhiteGroup]
+            LineBreakGroup      // 5  Line break character [(LineBreakGroup & -2) == WhiteGroup]
         };
 
         CharInfo() {}
-        CharInfo(char16 c) :
-                info(a[y[x[static_cast<uint16>(c)>>6]<<6 | c&0x3F]]) {}
+        CharInfo(char16 c): info(a[y[x[static_cast<uint16>(c)>>6]<<6 | c&0x3F]]) {}
         CharInfo(const CharInfo &ci): info(ci.info) {}
 
         friend Type cType(const CharInfo &ci) {return static_cast<Type>(ci.info & 0x1F);}
         friend Group cGroup(const CharInfo &ci) {return static_cast<Group>(ci.info >> 16 & 7);}
 
-        friend bool isAlpha(const CharInfo &ci)
-            {
-                return ((1<<UppercaseLetter | 1<<LowercaseLetter | 1<<TitlecaseLetter | 1<<ModifierLetter | 1<<OtherLetter)
-                        >> cType(ci) & 1) != 0;
-            }
+        friend bool isAlpha(const CharInfo &ci) {
+            return ((1<<UppercaseLetter | 1<<LowercaseLetter | 1<<TitlecaseLetter | 1<<ModifierLetter | 1<<OtherLetter)
+                    >> cType(ci) & 1) != 0;
+        }
 
-        friend bool isAlphanumeric(const CharInfo &ci)
-            {
-                return ((1<<UppercaseLetter | 1<<LowercaseLetter | 1<<TitlecaseLetter | 1<<ModifierLetter | 1<<OtherLetter |
-                         1<<DecimalDigitNumber | 1<<LetterNumber)
-                        >> cType(ci) & 1) != 0;
-            }
+        friend bool isAlphanumeric(const CharInfo &ci) {
+            return ((1<<UppercaseLetter | 1<<LowercaseLetter | 1<<TitlecaseLetter | 1<<ModifierLetter | 1<<OtherLetter |
+                     1<<DecimalDigitNumber | 1<<LetterNumber) >> cType(ci) & 1) != 0;
+        }
 
-            // Return true if this character can start a JavaScript identifier
+        // Return true if this character can start a JavaScript identifier
         friend bool isIdLeading(const CharInfo &ci) {return cGroup(ci) == IdGroup;}
-            // Return true if this character can continue a JavaScript identifier
+        // Return true if this character can continue a JavaScript identifier
         friend bool isIdContinuing(const CharInfo &ci) {return (cGroup(ci) & -2) == IdGroup;}
 
-            // Return true if this character is a Unicode decimal digit (Nd) character
+        // Return true if this character is a Unicode decimal digit (Nd) character
         friend bool isDecimalDigit(const CharInfo &ci) {return cType(ci) == DecimalDigitNumber;}
-            // Return true if this character is a Unicode white space or line break character
+        // Return true if this character is a Unicode white space or line break character
         friend bool isSpace(const CharInfo &ci) {return (cGroup(ci) & -2) == WhiteGroup;}
-            // Return true if this character is a Unicode line break character (LF, CR, LS, or PS)
+        // Return true if this character is a Unicode line break character (LF, CR, LS, or PS)
         friend bool isLineBreak(const CharInfo &ci) {return cGroup(ci) == LineBreakGroup;}
-            // Return true if this character is a Unicode format control character (Cf)
+        // Return true if this character is a Unicode format control character (Cf)
         friend bool isFormat(const CharInfo &ci) {return cGroup(ci) == FormatGroup;}
 
         friend bool isUpper(const CharInfo &ci) {return cType(ci) == UppercaseLetter;}
@@ -245,7 +236,5 @@ namespace JavaScript
     bool isASCIIHexDigit(char16 c, uint &digit);
 
     const char16 *skipWhiteSpace(const char16 *str, const char16 *strEnd);
-
 }
-
 #endif /* strings_h___ */
