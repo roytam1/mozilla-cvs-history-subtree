@@ -25,11 +25,10 @@
 #define NS_IMPL_IDS
 #include "nsIServiceManager.h"
 #include "nsICharsetConverterManager.h"
-
+#include "nsIIOService.h"
 #include "nsCOMPtr.h"
 #include "nsIURL.h"
 #include "nsIEventQueueService.h"
-#include "nsINetService.h"
 #include "nsIInputStream.h"
 #include "nsIOutputStream.h"
 #include "nsIGenericFactory.h"
@@ -41,6 +40,11 @@
 #include "prprf.h"
 #include "nsIAllocator.h" // for the CID
 #include "nsURLFetcher.h"
+
+#include "nsIIOService.h"
+#include "nsIChannel.h"
+
+static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 
 #ifdef WIN32
 #include "windows.h"
@@ -77,7 +81,6 @@ static NS_DEFINE_CID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kGenericFactoryCID,    NS_GENERICFACTORY_CID);
 
 // netlib definitions....
-static NS_DEFINE_CID(kNetServiceCID, NS_NETSERVICE_CID);
 
 nsICharsetConverterManager *ccMan = nsnull;
 
@@ -94,7 +97,6 @@ SetupRegistry(void)
   }
 
   // netlib
-  nsComponentManager::RegisterComponent(kNetServiceCID,     NULL, NULL, NETLIB_DLL,  PR_FALSE, PR_FALSE);
   
   // xpcom
   static NS_DEFINE_CID(kAllocatorCID,  NS_ALLOCATOR_CID);
@@ -164,7 +166,7 @@ nsMsgNewURL(nsIURI** aInstancePtrResult, const char * aSpec)
   
   NS_WITH_SERVICE(nsIIOService, pNetService, kIOServiceCID, &rv); 
   if (NS_SUCCEEDED(rv) && pNetService)
-	rv = pNetService->NewURI(aSpec, nsnull, aInstancePtrResult)
+	rv = pNetService->NewURI(aSpec, nsnull, aInstancePtrResult);
   return rv;
 }
 
