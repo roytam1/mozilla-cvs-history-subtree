@@ -23,7 +23,6 @@
 
 #include "stdafx.h"
 #include "extgen.h"
-#include "pllist.h"
 
 /*-----------------------------------------------------------------------**
 ** Things you do not care about, private internal implemenation details. **
@@ -286,11 +285,10 @@ BOOL ext_ExtByMimeIndex(int iIndex, char *pExt, size_t stExtBufSize, DWORD dwFla
     //  No need to attempt if no Mime type.
     if(pMimeType) {
         //  Find the list of extensions of that MIME type.
-        PLList *pTypesList = cinfo_MasterListPointer();
-        PLListEntry *entry = PL_ListFirstEntry(pTypesList); // already checks for NULL.
-        for (; entry; entry = PL_ListEntryNext(entry))	{            
-            NET_cdataStruct *pListEntry = (NET_cdataStruct *)PL_ListEntryValue(entry);
-            if(pListEntry && pListEntry->ci.type != NULL)	{
+        XP_List *pTypesList = cinfo_MasterListPointer();
+        NET_cdataStruct *pListEntry = NULL;
+        while ((pListEntry = (NET_cdataStruct *)XP_ListNextObject(pTypesList)))	{
+            if(pListEntry->ci.type != NULL)	{
                 if(!stricmp(pListEntry->ci.type, pMimeType)) {
                     if(pListEntry->num_exts > iIndex) {
                         //  We consider getting this far success.
@@ -407,11 +405,10 @@ BOOL ext_PreserveMime(const char *pExt, const char *pMimeType)
         //      controlled by our inner list, regardless of
         //      how the system actually has things mapped out.
         //  Find the list of extensions of that MIME type.
-        PLList *pTypesList = cinfo_MasterListPointer();
-        PLListEntry *entry = PL_ListFirstEntry(pTypesList); // already checks for NULL.
-        for (; entry; entry = PL_ListEntryNext(entry))	{            
-            NET_cdataStruct *pListEntry = (NET_cdataStruct *)PL_ListEntryValue(entry);
-            if(pListEntry && pListEntry->ci.type != NULL)	{
+        XP_List *pTypesList = cinfo_MasterListPointer();
+        NET_cdataStruct *pListEntry = NULL;
+        while ((pListEntry = (NET_cdataStruct *)XP_ListNextObject(pTypesList)))	{
+            if(pListEntry->ci.type != NULL)	{
                 if(!stricmp(pListEntry->ci.type, pMimeType)) {
                     //  See if extension is in the list.
                     char *pListExt;

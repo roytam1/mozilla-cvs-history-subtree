@@ -318,7 +318,7 @@ BINREL_DIST=$(XPDIST)\WIN954.0_OPT.OBJ
 BINREL_DIST=$(XPDIST)\WIN954.0_DBG.OBJD
 !endif
 !endif
-	
+
 LINK_LIBS= \
 !if "$(MOZ_BITS)"=="32"
 !ifndef NSPR20
@@ -349,7 +349,7 @@ LINK_LIBS= \
     $(DIST)\lib\libapplet32.lib \
 !endif
 !ifndef MOZ_NGLAYOUT
-    $(DIST)\lib\hook.lib \
+    $(DIST)\lib\hook.lib +
 !endif
 #!if defined(EDITOR)
 !ifdef MOZ_JAVA
@@ -378,7 +378,7 @@ LINK_LIBS= \
 !ifdef MOZ_JAVA
     $(DIST)\lib\libnsc32.lib \
 !endif
-    $(DIST)\lib\img$(MOZ_BITS).lib \
+    $(DIST)\lib\img32.lib \
 !ifdef MOZ_JAVA
     $(DIST)\lib\jmc.lib \
 !endif
@@ -391,6 +391,19 @@ LINK_LIBS= \
 !ifndef MOZ_NGLAYOUT
     $(DIST)\lib\winfont.lib \
 !endif
+    $(DIST)\lib\abouturl.lib \
+    $(DIST)\lib\dataurl.lib \
+    $(DIST)\lib\fileurl.lib \
+    $(DIST)\lib\ftpurl.lib \
+    $(DIST)\lib\gophurl.lib \
+    $(DIST)\lib\httpurl.lib \
+    $(DIST)\lib\jsurl.lib \
+    $(DIST)\lib\marimurl.lib \
+    $(DIST)\lib\remoturl.lib \
+    $(DIST)\lib\netcache.lib \
+    $(DIST)\lib\netcnvts.lib \
+    $(DIST)\lib\network.lib \
+    $(DIST)\lib\cnetinit.lib \
 !ifdef MOZ_LDAP
 !ifdef MOZ_JAVA
     $(DIST)\lib\nsldap32.lib \
@@ -522,7 +535,6 @@ CINCLUDES= \
     /I$(DEPTH)\lib\layout \
     /I$(DEPTH)\lib\libstyle \
     /I$(DEPTH)\lib\liblayer\include \
-    /I$(DEPTH)\lib\libnet \
     /I$(DEPTH)\lib\libcnv \
     /I$(DEPTH)\lib\libi18n \
     /I$(DEPTH)\lib\libparse \
@@ -545,27 +557,43 @@ CDEPENDINCLUDES= \
 # if you add something to CDISTINCLUDES, you must also add it to the exports target
 # at the end of the file.
 
-CDISTINCLUDES= \
+CDISTINCLUDES1= \
 !if "$(MOZ_BITS)" == "32"
     /I$(DIST)\include \
     /I$(XPDIST)\public\dbm \
     /I$(XPDIST)\public\java \
+!ifdef MOZ_JAVA
     /I$(XPDIST)\public\applet \
+    /I$(XPDIST)\public\softupdt \
+!endif
     /I$(XPDIST)\public\libreg \
     /I$(XPDIST)\public\hook \
-    /I$(XPDIST)\public\pref \
+    /I$(XPDIST)\public\pref
+!endif
+
+CDISTINCLUDES2= \
+!if "$(MOZ_BITS)" == "32"
     /I$(XPDIST)\public\libfont \
     /I$(XPDIST)\public\winfont \
     /I$(XPDIST)\public\js \
     /I$(XPDIST)\public\jsdebug \
     /I$(XPDIST)\public\security \
     /I$(XPDIST)\public\htmldlgs \
-    /I$(XPDIST)\public\softupdt \
     /I$(XPDIST)\public\zlib \
+    /I$(XPDIST)\public\httpurl \
+    /I$(XPDIST)\public\netcache \
+    /I$(XPDIST)\public\netlib \
+    /I$(XPDIST)\public\network \
+    /I$(XPDIST)\public\netcnvts\
+    /I$(XPDIST)\public\util
+!endif
+
+CDISTINCLUDES3= \
+!if "$(MOZ_BITS)" == "32"
 #!ifdef MOZ_LOC_INDEP
-	/I$(XPDIST)\public\li \
+    /I$(XPDIST)\public\li \
 #!endif MOZ_LOC_INDEP
-	/I$(XPDIST)\public\progress \
+    /I$(XPDIST)\public\progress \
     /I$(XPDIST)\public\schedulr \
     /I$(XPDIST)\public\xpcom \
 #!ifdef EDITOR
@@ -582,7 +610,6 @@ CDISTINCLUDES= \
     /I$(DIST)\include \
     /I$(XPDIST)\public\img \
     /I$(XPDIST)\public\jtools \
-!else
 !endif
     /I$(XPDIST)\public \
     /I$(XPDIST)\public\coreincl \
@@ -593,6 +620,8 @@ CDISTINCLUDES= \
 	/I$(XPDIST)\public\raptor \
 !endif
     /I$(XPDIST)\public\util
+
+CDISTINCLUDES = $(CDISTINCLUDES1) $(CDISTINCLUDES2) $(CDISTINCLUDES3)
 
 RCDISTINCLUDES=$(DIST)\include;$(XPDIST)\public\security
 
@@ -650,7 +679,9 @@ RCDEFINES=$(RCDEFINES) $(MOZ_LITENESS_FLAGS)
 CFILEFLAGS=$(CFLAGS_GENERAL) ^
     $(CDEFINES) ^
     $(CINCLUDES) ^
-    $(CDISTINCLUDES) 
+    $(CDISTINCLUDES1) ^
+    $(CDISTINCLUDES2) ^
+    $(CDISTINCLUDES3) 
 
 
 RCFILEFLAGS=$(RCFLAGS_GENERAL)\
@@ -908,10 +939,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libmsg\maildb.cpp
 	$(DEPTH)\lib\libmsg\mailhdr.cpp
 	$(DEPTH)\lib\libmsg\mhtmlstm.cpp
-#ifdef MOZ_NGLAYOUT
-	$(DEPTH)\lib\libnet\moz_depend.cpp
-	$(DEPTH)\lib\libnet\depend.cpp
-#endif
 	$(DEPTH)\lib\libmsg\msgbg.cpp
 	$(DEPTH)\lib\libmsg\msgbgcln.cpp
 	$(DEPTH)\lib\libmsg\msgbiff.c
@@ -1018,68 +1045,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libneo\nwselect.cpp
 	$(DEPTH)\lib\libneo\semnspr.cpp
 	$(DEPTH)\lib\libneo\thrnspr.cpp
-	$(DEPTH)\lib\libnet\mkabook.cpp
 !endif
-
-	$(DEPTH)\lib\libnet\cvactive.c
-	$(DEPTH)\lib\libnet\cvcolor.c 
-	$(DEPTH)\lib\libnet\cvdisk.c  
-	$(DEPTH)\lib\libnet\cvproxy.c 
-	$(DEPTH)\lib\libnet\cvunzip.c 
-	$(DEPTH)\lib\libnet\cvchunk.c 
-	$(DEPTH)\lib\libnet\extcache.c
-	$(DEPTH)\lib\libnet\mkaccess.c
-	$(DEPTH)\lib\libnet\mkautocf.c
-	$(DEPTH)\lib\libnet\mkcache.c 
-	$(DEPTH)\lib\libnet\mkconect.c
-	$(DEPTH)\lib\libnet\mkdaturl.c
-	$(DEPTH)\lib\libnet\mkextcac.c
-	$(DEPTH)\lib\libnet\mkfile.c  
-	$(DEPTH)\lib\libnet\mkformat.c
-	$(DEPTH)\lib\libnet\mkfsort.c 
-	$(DEPTH)\lib\libnet\mkftp.c   
-	$(DEPTH)\lib\libnet\mkgeturl.c
-	$(DEPTH)\lib\libnet\mkgopher.c
-	$(DEPTH)\lib\libnet\mkhelp.c  
-	$(DEPTH)\lib\libnet\mkhttp.c  
-	$(DEPTH)\lib\libnet\mkinit.c  
-	$(DEPTH)\lib\libnet\mktrace.c
-	$(DEPTH)\lib\libnet\cvmime.c 
-	$(DEPTH)\lib\libnet\mkpadpac.c
-	$(DEPTH)\lib\libnet\jscookie.c 
-	$(DEPTH)\lib\libnet\prefetch.c 
-	$(DEPTH)\lib\libnet\mkjscfg.c
-	$(DEPTH)\lib\libnet\cvsimple.c
-!ifdef MOZ_MAIL_NEWS
-	$(DEPTH)\lib\libnet\mkcertld.c
-	$(DEPTH)\lib\libnet\imap4url.c
-	$(DEPTH)\lib\libnet\imapearl.cpp
-	$(DEPTH)\lib\libnet\imaphier.cpp
-	$(DEPTH)\lib\libnet\imappars.cpp
-	$(DEPTH)\lib\libnet\imapbody.cpp
-	$(DEPTH)\lib\libnet\mkimap4.cpp 
-	$(DEPTH)\lib\libnet\mkldap.cpp  
-	$(DEPTH)\lib\libnet\mkmailbx.c
-	$(DEPTH)\lib\libnet\mknews.c  
-	$(DEPTH)\lib\libnet\mknewsgr.c
-	$(DEPTH)\lib\libnet\mkpop3.c  
-	$(DEPTH)\lib\libnet\mksmtp.c  
-!endif
-!if defined(MOZ_JAVA)
-	$(DEPTH)\lib\libnet\mkmarimb.cpp
-!endif
-	$(DEPTH)\lib\libnet\mkmessag.c
-	$(DEPTH)\lib\libnet\mkmemcac.c
-	$(DEPTH)\lib\libnet\mkmocha.c 
-	$(DEPTH)\lib\libnet\mkparse.c 
-	$(DEPTH)\lib\libnet\mkremote.c
-	$(DEPTH)\lib\libnet\mkselect.c
-	$(DEPTH)\lib\libnet\mksockrw.c
-	$(DEPTH)\lib\libnet\mksort.c  
-	$(DEPTH)\lib\libnet\mkstream.c
-	$(DEPTH)\lib\libnet\mkutils.c 
-	$(DEPTH)\lib\libnet\jsautocf.c
-	$(DEPTH)\lib\libnet\txview.c 
 
 !ifndef MOZ_NGLAYOUT
 	$(DEPTH)\lib\libparse\pa_amp.c
@@ -1092,10 +1058,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libstyle\csslex.c
 	$(DEPTH)\lib\libstyle\csstab.c
 	$(DEPTH)\lib\libstyle\csstojs.c
-!endif
-	$(DEPTH)\lib\libnet\pllist.c 
-	$(DEPTH)\lib\libnet\plstr2.c 
-!ifndef MOZ_NGLAYOUT
 	$(DEPTH)\lib\libstyle\jssrules.c
 	$(DEPTH)\lib\libstyle\stystack.c
 	$(DEPTH)\lib\libstyle\stystruc.c
@@ -1578,7 +1540,7 @@ $(GENDIR)\tdlogo.rc: $(DEPTH)\lib\xp\tdlogo.gif
 
 AboutImages: $(GENDIR) \
 	$(GENDIR)\flamer.rc
-	
+
 $(GENDIR)\flamer.rc: $(DEPTH)\lib\xp\flamer.gif
 	$(BIN2RC) $(DEPTH)\lib\xp\flamer.gif image/gif > $(GENDIR)\flamer.rc
 !endif
@@ -1592,7 +1554,7 @@ prebuild: $(GENDIR) $(GENDIR)\initpref.rc $(GENDIR)\allpref.rc \
 	$(GENDIR)\allpref2.rc $(GENDIR)\allpref3.rc $(GENDIR)\allpref4.rc\
 	$(GENDIR)\winpref.rc $(GENDIR)\config.rc NavCenterImages \
 	AboutImages
-	
+
 $(GENDIR)\initpref.rc: $(DEPTH)\modules\libpref\src\initpref.js
 	$(TXT2RC) init_prefs $(DEPTH)\modules\libpref\src\initpref.js \
 		$(GENDIR)\initpref.rc
@@ -1703,6 +1665,12 @@ install:    \
 !IF EXIST($(DIST)\bin\sched32.dll)
 	    $(OUTDIR)\sched32.dll    \
 !ENDIF
+!IF EXIST($(DIST)\bin\libreg32.dll)
+	    $(OUTDIR)\libreg32.dll    \
+!ENDIF
+!IF EXIST($(DIST)\bin\xpcom32.dll)
+	    $(OUTDIR)\xpcom32.dll    \
+!ENDIF
 !IF EXIST($(DIST)\bin\jrt32$(VERSION_NUMBER).dll)
 	    $(OUTDIR)\jrt32$(VERSION_NUMBER).dll    \
 !ENDIF
@@ -1710,7 +1678,7 @@ install:    \
 	    $(OUTDIR)\uni3200.dll    \
 !ENDIF
 !IF EXIST($(DIST)\bin\awt32$(VERSION_NUMBER).dll)
- 	    $(OUTDIR)\java\bin\awt32$(VERSION_NUMBER).dll   \
+	    $(OUTDIR)\java\bin\awt32$(VERSION_NUMBER).dll   \
 !ENDIF
 !if defined(MOZ_TRACKGDI)
 !IF EXIST($(DIST)\bin\trackgdi.dll)
@@ -1808,6 +1776,12 @@ install:    \
 !IF EXIST($(DIST)\bin\sched16.dll)
 	    $(OUTDIR)\sched16.dll    \
 !ENDIF
+!IF EXIST($(DIST)\bin\libreg16.dll)
+	    $(OUTDIR)\libreg16.dll    \
+!ENDIF
+!IF EXIST($(DIST)\bin\xpcom16.dll)
+	    $(OUTDIR)\xpcom16.dll    \
+!ENDIF
 !IF EXIST($(DIST)\bin\nsinit.exe)
 	    $(OUTDIR)\nsinit.exe    \
 !ENDIF
@@ -1835,13 +1809,7 @@ install:    \
 	   $(OUTDIR)\spellchk\$(SPELLCHK_DLL)    \
 !ENDIF
 !endif
-!IF EXIST($(DIST)\bin\xpcom$(MOZ_BITS).dll)
-	    $(OUTDIR)\xpcom$(MOZ_BITS).dll    \
-!ENDIF
-!IF EXIST($(DIST)\bin\libreg$(MOZ_BITS).dll)
-	    $(OUTDIR)\libreg$(MOZ_BITS).dll    \
-!ENDIF
-### Copy Raptor DLLs and resources
+### Copy NGLayout DLLs and resources
 !ifdef MOZ_NGLAYOUT
 !IF EXIST($(NGLAYOUT_DIST)\bin\raptorbase.dll)
 	    $(OUTDIR)\raptorbase.dll    \
@@ -1880,11 +1848,12 @@ install:    \
 	    $(OUTDIR)\res    \
 !ENDIF
 !else
-### End Raptor DLLs
+### Need image lib dll for non-NGLayout build
 !IF EXIST($(DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll)
 	    $(OUTDIR)\img$(MOZ_BITS)$(VERSION_NUMBER).dll    \
 !ENDIF
-!endif
+!endif 
+### End NGLayout DLLs
 !ifdef EDITOR
 !IF EXIST($(SPELLCHK_DATA)\pen4s324.dat)
 	   $(OUTDIR)\spellchk\pen4s324.dat    \
@@ -2009,6 +1978,12 @@ $(OUTDIR)\xppref32.dll:   $(DIST)\bin\xppref32.dll
 $(OUTDIR)\sched32.dll:   $(DIST)\bin\sched32.dll
     @IF EXIST $(DIST)\bin\sched32.dll copy $(DIST)\bin\sched32.dll $(OUTDIR)\sched32.dll
 
+$(OUTDIR)\libreg32.dll:   $(DIST)\bin\libreg32.dll
+    @IF EXIST $(DIST)\bin\libreg32.dll copy $(DIST)\bin\libreg32.dll $(OUTDIR)\libreg32.dll
+
+$(OUTDIR)\xpcom32.dll:   $(DIST)\bin\xpcom32.dll
+    @IF EXIST $(DIST)\bin\xpcom32.dll copy $(DIST)\bin\xpcom32.dll $(OUTDIR)\xpcom32.dll
+
 $(OUTDIR)\uni3200.dll:   $(DIST)\bin\uni3200.dll
     @IF EXIST $(DIST)\bin\uni3200.dll copy $(DIST)\bin\uni3200.dll $(OUTDIR)\uni3200.dll
 
@@ -2037,16 +2012,6 @@ $(OUTDIR)\trackgdi.dll:   $(DIST)\bin\trackgdi.dll
     @IF EXIST $(DIST)\bin\trackgdi.dll copy $(DIST)\bin\trackgdi.dll $(OUTDIR)\trackgdi.dll
 !endif
 
-$(OUTDIR)\xpcom$(MOZ_BITS).dll:   $(DIST)\bin\xpcom$(MOZ_BITS).dll
-    @IF EXIST $(DIST)\bin\xpcom$(MOZ_BITS).dll copy $(DIST)\bin\xpcom$(MOZ_BITS).dll $(OUTDIR)\xpcom$(MOZ_BITS).dll
-
-$(OUTDIR)\libreg$(MOZ_BITS).dll:   $(DIST)\bin\libreg$(MOZ_BITS).dll
-    @IF EXIST $(DIST)\bin\libreg$(MOZ_BITS).dll copy $(DIST)\bin\libreg$(MOZ_BITS).dll $(OUTDIR)\libreg$(MOZ_BITS).dll
-
-!ifndef MOZ_NGLAYOUT
-$(OUTDIR)\img$(MOZ_BITS)$(VERSION_NUMBER).dll:   $(DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll
-    @IF EXIST $(DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll copy $(DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll $(OUTDIR)\img$(MOZ_BITS)$(VERSION_NUMBER).dll
-!endif
 $(OUTDIR)\java\bin\jbn32$(VERSION_NUMBER).dll:   $(DIST)\bin\jbn32$(VERSION_NUMBER).dll
     @IF NOT EXIST "$(OUTDIR)\java/$(NULL)" mkdir "$(OUTDIR)\java"
     @IF NOT EXIST "$(OUTDIR)\java\bin/$(NULL)" mkdir "$(OUTDIR)\java\bin"
@@ -2093,6 +2058,12 @@ $(OUTDIR)\xppref16.dll:   $(DIST)\bin\xppref16.dll
 
 $(OUTDIR)\sched16.dll:   $(DIST)\bin\sched16.dll
     @IF EXIST $(DIST)\bin\sched16.dll copy $(DIST)\bin\sched16.dll $(OUTDIR)\sched16.dll
+
+$(OUTDIR)\libreg16.dll:   $(DIST)\bin\libreg16.dll
+    @IF EXIST $(DIST)\bin\libreg16.dll copy $(DIST)\bin\libreg16.dll $(OUTDIR)\libreg16.dll
+
+$(OUTDIR)\xpcom16.dll:   $(DIST)\bin\xpcom16.dll
+    @IF EXIST $(DIST)\bin\xpcom16.dll copy $(DIST)\bin\xpcom16.dll $(OUTDIR)\xpcom16.dll
 
 $(OUTDIR)\uni1600.dll:   $(DIST)\bin\uni1600.dll
     @IF EXIST $(DIST)\bin\uni1600.dll copy $(DIST)\bin\uni1600.dll $(OUTDIR)\uni1600.dll
@@ -2185,7 +2156,7 @@ $(OUTDIR)\mnrc$(MOZ_BITS).dll:   $(DIST)\bin\mnrc$(MOZ_BITS).dll
 $(OUTDIR)\xpstrdll.dll:   $(DIST)\bin\xpstrdll.dll
     @IF EXIST $(DIST)\bin\$(@F) copy $(DIST)\bin\$(@F) $@
 
-### Copy Raptor dlls and resources
+### Copy NGLayout dlls and resources
 !ifdef MOZ_NGLAYOUT
 $(OUTDIR)\raptorbase.dll:   $(NGLAYOUT_DIST)\bin\raptorbase.dll
     @IF EXIST $(NGLAYOUT_DIST)\bin\$(@F) copy $(NGLAYOUT_DIST)\bin\$(@F) $@
@@ -2387,6 +2358,7 @@ BUILD_SOURCE: $(OBJ_FILES)
     $(DIST)\lib\softup16.lib +
 !else
     $(DIST)\lib\libreg16.lib +
+    $(DIST)\lib\xpcom16.lib +
     $(DIST)\lib\libsjs16.lib +
     $(DIST)\lib\libnjs16.lib +
 !endif
@@ -2428,8 +2400,23 @@ BUILD_SOURCE: $(OBJ_FILES)
 !endif
     $(DIST)\lib\png.lib +
 	$(DIST)\lib\sched16.lib +
+    $(DIST)\lib\libreg16.lib +
+    $(DIST)\lib\xpcom16.lib +
     $(DIST)\lib\rdf16.lib +
     $(DIST)\lib\xpstrdll.lib +
+    $(DIST)\lib\abouturl.lib +
+    $(DIST)\lib\dataurl.lib +
+    $(DIST)\lib\fileurl.lib +
+    $(DIST)\lib\ftpurl.lib +
+    $(DIST)\lib\gophurl.lib +
+    $(DIST)\lib\httpurl.lib +
+    $(DIST)\lib\jsurl.lib +
+    $(DIST)\lib\marimurl.lib +
+    $(DIST)\lib\remoturl.lib +
+    $(DIST)\lib\netcache.lib +
+    $(DIST)\lib\netcnvts.lib +
+    $(DIST)\lib\network.lib +
+    $(DIST)\lib\cnetinit.lib +
 !ifdef MOZ_MAIL_NEWS
 	$(DIST)\lib\mnrc16.lib +
 !endif
@@ -2726,7 +2713,6 @@ exports:
     -xcopy $(DEPTH)\lib\libi18n\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\lib\libjar\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\lib\libparse\*.h $(EXPORTINC) $(XCF)
-    -xcopy $(DEPTH)\lib\libnet\*.h $(EXPORTINC) $(XCF)
 !ifdef MOZ_MAIL_NEWS
     -xcopy $(DEPTH)\lib\libaddr\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\lib\libmsg\*.h $(EXPORTINC) $(XCF)
@@ -2801,7 +2787,7 @@ symbols:
 	@echo "MOZ_USERNAME = $(MOZ_USERNAME)"  
 	@echo "MOZ_USERDEBUG = $(MOZ_USERDEBUG)"
 !endif
-	
+
 
 ns.zip:
 	cd $(OUTDIR)
@@ -2843,5 +2829,7 @@ ns.zip:
 		editor32.dll		\
 		xppref32.dll		\
 		sched32.dll			\
+		libreg32.dll		\
+		xpcom32.dll		\
 		netscape.cfg		\
 		moz40p3	
