@@ -65,7 +65,6 @@ public:
     NS_IMETHOD SetLoadAttributes(PRUint32 aLoadAttributes);
     NS_IMETHOD GetContentType(char * *aContentType);
     NS_IMETHOD GetLoadGroup(nsILoadGroup * *aLoadGroup);
-    NS_IMETHOD SetLoadGroup(nsILoadGroup * aLoadGroup);
 
     // nsIFTPChannel methods:
     NS_IMETHOD Get(void);
@@ -92,7 +91,8 @@ public:
     static NS_METHOD
     Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult);
     
-    nsresult Init(const char* verb, nsIURI* uri, nsIEventSinkGetter* getter);
+    nsresult Init(const char* verb, nsIURI* uri, nsILoadGroup *aGroup,
+                  nsIEventSinkGetter* getter);
 
 protected:
     nsIURI*                 mUrl;

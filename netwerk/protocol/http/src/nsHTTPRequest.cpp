@@ -458,6 +458,8 @@ nsHTTPRequest::OnStopRequest(nsIChannel* channel, nsISupports* i_pContext,
         if (consumer) {
             consumer->OnStopRequest(m_pConnection, consumerContext, iStatus, i_pMsg);
         }
+        // Notify the channel that the request has finished
+        m_pConnection->ResponseCompleted(nsnull, iStatus);
 
         rv = iStatus;
     }

@@ -2056,7 +2056,7 @@ nsWebShell::DoLoadURL(const nsString& aUrlSpec,
 	        // Pass notifications to BrowserAppCore just to be consistent with
 			// regular page loads thro' necko
 			nsCOMPtr<nsIChannel> dummyChannel;
-            rv = NS_OpenURI(getter_AddRefs(dummyChannel), url);
+            rv = NS_OpenURI(getter_AddRefs(dummyChannel), url, nsnull);
             if (NS_FAILED(rv)) return rv;  
 	
 			mProcessedEndDocumentLoad = PR_FALSE;
@@ -2084,7 +2084,7 @@ nsWebShell::DoLoadURL(const nsString& aUrlSpec,
 			  // Pass notifications to BrowserAppCore just to be consistent with 
 		      // regular necko loads.
 			  nsCOMPtr<nsIChannel> dummyChannel;
-              rv = NS_OpenURI(getter_AddRefs(dummyChannel), url);
+              rv = NS_OpenURI(getter_AddRefs(dummyChannel), url, nsnull);
               if (NS_FAILED(rv)) return rv;  		   
 			  mProcessedEndDocumentLoad = PR_FALSE;
 		

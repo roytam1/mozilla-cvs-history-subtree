@@ -44,13 +44,14 @@ extern nsresult
 NS_NewURI(nsIURI* *result, const nsString& spec, nsIURI* baseURI = nsnull);
 
 extern nsresult
-NS_OpenURI(nsIChannel* *result, nsIURI* uri);
+NS_OpenURI(nsIChannel* *result, nsIURI* uri, nsILoadGroup *aGroup);
 
 extern nsresult
 NS_OpenURI(nsIInputStream* *result, nsIURI* uri);
 
 extern nsresult
-NS_OpenURI(nsIStreamListener* aConsumer, nsISupports* context, nsIURI* uri);
+NS_OpenURI(nsIStreamListener* aConsumer, nsISupports* context, nsIURI* uri, 
+           nsILoadGroup *aGroup);
 
 extern nsresult
 NS_MakeAbsoluteURI(const char* spec, nsIURI* baseURI, char* *result);

@@ -140,6 +140,7 @@ nsChromeProtocolHandler::NewURI(const char *aSpec, nsIURI *aBaseURI,
 
 NS_IMETHODIMP
 nsChromeProtocolHandler::NewChannel(const char* verb, nsIURI* uri,
+                                    nsILoadGroup *aGroup,
                                     nsIEventSinkGetter* eventSinkGetter,
                                     nsIChannel* *result)
 {
@@ -171,7 +172,8 @@ nsChromeProtocolHandler::NewChannel(const char* verb, nsIURI* uri,
         return rv;
     }
 
-    rv = serv->NewChannelFromURI(verb, chromeURI, eventSinkGetter, result);
+    rv = serv->NewChannelFromURI(verb, chromeURI, aGroup, eventSinkGetter, 
+                                 result);
     NS_RELEASE(chromeURI);
     return NS_OK;
 }

@@ -79,7 +79,6 @@ public:
     NS_IMETHOD SetLoadAttributes(PRUint32 aLoadAttributes);
     NS_IMETHOD GetContentType(char * *aContentType);
     NS_IMETHOD GetLoadGroup(nsILoadGroup * *aLoadGroup);
-    NS_IMETHOD SetLoadGroup(nsILoadGroup * aLoadGroup);
 
     // nsIHTTPChannel methods:
     NS_IMETHOD GetRequestHeader(nsIAtom *headerName, char **_retval);
@@ -99,12 +98,14 @@ public:
     NS_IMETHOD GetResponseDataListener(nsIStreamListener* *aListener);
 
     // nsHTTPChannel methods:
-    nsresult            Init();
+    nsresult            Init(nsILoadGroup *aGroup);
     nsresult            Open();
-    nsresult            ResponseCompleted(nsIChannel* aTransport);
+    nsresult            ResponseCompleted(nsIChannel* aTransport, 
+                                          nsresult aStatus);
     nsresult            SetResponse(nsHTTPResponse* i_pResp);
     nsresult            GetResponseContext(nsISupports** aContext);
     nsresult            SetContentType(const char* aContentType);
+
 
 protected:
     nsCOMPtr<nsIURI>            m_URI;
@@ -118,7 +119,7 @@ protected:
     PRUint32                    mLoadAttributes;
 
     nsCOMPtr<nsISupports>       mResponseContext;
-    nsILoadGroup*               mLoadGroup;
+    nsCOMPtr<nsILoadGroup>      mLoadGroup;
 
     nsCString                   mContentType;
     nsIInputStream*             mPostStream;

@@ -22,6 +22,7 @@
 #include "nsILoadGroup.h"
 #include "nsIStreamListener.h"
 #include "nsAgg.h"
+#include "nsCOMPtr.h"
 
 class nsISupportsArray;
 class nsLoadGroupEntry;
@@ -56,6 +57,10 @@ public:
     NS_IMETHOD GetDefaultLoadAttributes(PRUint32 *aDefaultLoadAttributes);
     NS_IMETHOD SetDefaultLoadAttributes(PRUint32 aDefaultLoadAttributes);
 
+    /* attribute nsIChannel DefaultLoadChannel; */
+    NS_IMETHOD GetDefaultLoadChannel(nsIChannel * *aChannel);
+    NS_IMETHOD SetDefaultLoadChannel(nsIChannel *aChannel);
+
     /* void AddChannel (in nsIChannel channel, in nsISupports ctxt); */
     NS_IMETHOD AddChannel(nsIChannel *channel, nsISupports* ctxt);
 
@@ -75,6 +80,10 @@ public:
     /* readonly attribute nsISimpleEnumerator SubGroups; */
     NS_IMETHOD GetSubGroups(nsISimpleEnumerator * *aSubGroups);
 
+    /* attribute nsILoadGroupListenerFactory GroupListenerFactory; */
+    NS_IMETHOD GetGroupListenerFactory(nsILoadGroupListenerFactory * *aFactory);
+    NS_IMETHOD SetGroupListenerFactory(nsILoadGroupListenerFactory* aFactory);
+
     ////////////////////////////////////////////////////////////////////////////
     // nsLoadGroup methods:
 
@@ -90,6 +99,8 @@ protected:
     typedef nsresult (*PropagateDownFun)(nsIRequest* request);
     nsresult PropagateDown(PropagateDownFun fun);
 
+    nsresult SubGroupIsEmpty(nsresult aStatus);
+
 protected:
     PRUint32                    mDefaultLoadAttributes;
     nsISupportsArray*           mChannels;
@@ -97,6 +108,11 @@ protected:
     nsIStreamObserver*          mObserver;
     nsLoadGroup*                mParent;        // weak ref
     PRUint32                    mForegroundCount;
+    PRBool                      mIsActive;
+
+    nsCOMPtr<nsIChannel>        mDefaultLoadChannel;
+
+    nsCOMPtr<nsILoadGroupListenerFactory> mGroupListenerFactory;
 };
 
 #endif // nsLoadGroup_h__

@@ -127,6 +127,7 @@ nsFtpProtocolHandler::NewURI(const char *aSpec, nsIURI *aBaseURI,
 
 NS_IMETHODIMP
 nsFtpProtocolHandler::NewChannel(const char* verb, nsIURI* url,
+                                 nsILoadGroup *aGroup,
                                  nsIEventSinkGetter* eventSinkGetter,
                                  nsIChannel* *result)
 {
@@ -136,7 +137,7 @@ nsFtpProtocolHandler::NewChannel(const char* verb, nsIURI* url,
     rv = nsFTPChannel::Create(nsnull, nsCOMTypeInfo<nsIFTPChannel>::GetIID(), (void**)&channel);
     if (NS_FAILED(rv)) return rv;
 
-    rv = channel->Init(verb, url, eventSinkGetter);
+    rv = channel->Init(verb, url, aGroup, eventSinkGetter);
     if (NS_FAILED(rv)) {
         NS_RELEASE(channel);
         return rv;

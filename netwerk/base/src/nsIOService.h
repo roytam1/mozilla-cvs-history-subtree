@@ -36,10 +36,12 @@ public:
     NS_IMETHOD NewURI(const char *aSpec, nsIURI *aBaseURI,
                       nsIURI **_retval);
     NS_IMETHOD NewChannelFromURI(const char* verb, nsIURI *aURI,
+                                 nsILoadGroup *aGroup,
                                  nsIEventSinkGetter *eventSinkGetter,
                                  nsIChannel **_retval);
     NS_IMETHOD NewChannel(const char* verb, const char *aSpec,
                           nsIURI *aBaseURI,
+                          nsILoadGroup *aGroup,
                           nsIEventSinkGetter *eventSinkGetter,
                           nsIChannel **_retval);
     NS_IMETHOD GetAppCodeName(PRUnichar* *aAppCodeName);

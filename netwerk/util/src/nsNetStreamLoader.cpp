@@ -62,7 +62,7 @@ protected:
   nsStreamCompleteFunc mFunc;
   void* mRef;
   nsString* mData;
-  nsCOMPtr<nsILoadGroup> mLoadGroup;
+///  nsCOMPtr<nsILoadGroup> mLoadGroup;
 };
 
 
@@ -74,12 +74,12 @@ nsUnicharStreamLoader::nsUnicharStreamLoader(nsIURI* aURL, nsILoadGroup* aLoadGr
   mFunc = aFunc;
   mRef = aRef;
   mData = new nsString();
-  mLoadGroup = aLoadGroup;
+///  mLoadGroup = aLoadGroup;
 
   // XXX This is vile vile vile!!! 
   if (aURL) {
     nsCOMPtr<nsIChannel> channel;
-    *rv = NS_OpenURI(getter_AddRefs(channel), aURL);
+    *rv = NS_OpenURI(getter_AddRefs(channel), aURL, aLoadGroup);
     if (NS_FAILED(*rv) && (nsnull != mFunc)) {
       // Thou shalt not call out of scope whilst ones refcnt is zero
       mRefCnt = 999;
@@ -88,8 +88,8 @@ nsUnicharStreamLoader::nsUnicharStreamLoader(nsIURI* aURL, nsILoadGroup* aLoadGr
       return;
     }
 
-    *rv = mLoadGroup->AddChannel(channel, nsnull);
-    if (NS_FAILED(*rv)) return;
+///    *rv = mLoadGroup->AddChannel(channel, nsnull);
+///    if (NS_FAILED(*rv)) return;
 
     *rv = channel->AsyncRead(0, -1, nsnull, this);
     if (NS_FAILED(*rv)) return;
@@ -159,7 +159,8 @@ nsUnicharStreamLoader::OnStopRequest(nsIChannel* channel, nsISupports *ctxt,
                                      nsresult status, const PRUnichar *errorMsg)
 {
   (*mFunc)(this, *mData, mRef, status);
-  return mLoadGroup->RemoveChannel(channel, ctxt, status, errorMsg);
+///  return mLoadGroup->RemoveChannel(channel, ctxt, status, errorMsg);
+  return NS_OK;
 }
 
 #define BUF_SIZE 1024

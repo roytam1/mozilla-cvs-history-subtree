@@ -55,7 +55,7 @@ static PRTime gElapsedTime;
 static int gKeepRunning = 1;
 static nsIEventQueue* gEventQ = nsnull;
 
-#define NUM_TEST_THREADS 5
+#define NUM_TEST_THREADS 1
 
 static TestConnection* gConnections[NUM_TEST_THREADS];
 static nsIThread*      gThreads[NUM_TEST_THREADS];

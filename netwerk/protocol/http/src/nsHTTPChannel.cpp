@@ -80,7 +80,11 @@ nsHTTPChannel::~nsHTTPChannel()
     NS_IF_RELEASE(m_pResponse);
     NS_IF_RELEASE(mPostStream);
     NS_IF_RELEASE(m_pResponseDataListener);
-    NS_IF_RELEASE(mLoadGroup);
+
+    m_pHandler       = null_nsCOMPtr();
+    m_pEventSink     = null_nsCOMPtr();
+    mResponseContext = null_nsCOMPtr();
+    mLoadGroup       = null_nsCOMPtr();
 }
 
 NS_IMETHODIMP
@@ -306,15 +310,6 @@ nsHTTPChannel::GetLoadGroup(nsILoadGroup * *aLoadGroup)
     return NS_OK;
 }
 
-NS_IMETHODIMP
-nsHTTPChannel::SetLoadGroup(nsILoadGroup * aLoadGroup)
-{
-    NS_IF_RELEASE(mLoadGroup);
-    mLoadGroup = aLoadGroup;
-    NS_IF_ADDREF(mLoadGroup);
-    return NS_OK;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 // nsIHTTPChannel methods:
 
@@ -444,7 +439,7 @@ static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 // nsHTTPChannel methods:
 
 nsresult
-nsHTTPChannel::Init()
+nsHTTPChannel::Init(nsILoadGroup *aGroup)
 {
     //TODO think if we need to make a copy of the URL and keep it here
     //since it might get deleted off the creators thread. And the
@@ -455,6 +450,14 @@ nsHTTPChannel::Init()
         request from the handler
     */
     nsresult rv;
+
+    //
+    // Initialize the load group and copy any default load attributes...
+    //
+    mLoadGroup = aGroup;
+    if (mLoadGroup) {
+        mLoadGroup->GetDefaultLoadAttributes(&mLoadAttributes);
+    }
 
     m_pRequest = new nsHTTPRequest(m_URI);
     if (m_pRequest == nsnull)
@@ -481,10 +484,33 @@ nsHTTPChannel::Open(void)
     if (m_bConnected || (m_State > HS_WAITING_FOR_OPEN))
         return NS_ERROR_ALREADY_CONNECTED;
 
-    // Set up a new request observer and a response listener and pass to the transport
+    // Set up a new request observer and a response listener and pass 
+    // to the transport
     nsresult rv = NS_OK;
     nsCOMPtr<nsIChannel> channel;
 
+    // If this is the first time, then add the channel to its load group
+    if (m_State == HS_IDLE) {
+      if (mLoadGroup) {
+        nsCOMPtr<nsILoadGroupListenerFactory> factory;
+        //
+        // Create a load group "proxy" listener...
+        //
+        rv = mLoadGroup->GetGroupListenerFactory(getter_AddRefs(factory));
+        if (factory) {
+          nsIStreamListener *newListener;
+          rv = factory->CreateLoadGroupListener(m_pResponseDataListener, 
+                                                &newListener);
+          if (NS_SUCCEEDED(rv)) {
+            NS_RELEASE(m_pResponseDataListener);
+            // Already AddRefed from the factory...
+            m_pResponseDataListener = newListener;
+          }
+        }
+        mLoadGroup->AddChannel(this, nsnull);
+      }
+    }
+     
     rv = m_pHandler->RequestTransport(m_URI, this, getter_AddRefs(channel));
     if (NS_ERROR_BUSY == rv) {
         m_State = HS_WAITING_FOR_OPEN;
@@ -600,13 +626,24 @@ nsHTTPChannel::Open(void)
     return rv;
 }
 
-nsresult nsHTTPChannel::ResponseCompleted(nsIChannel* aTransport)
+nsresult nsHTTPChannel::ResponseCompleted(nsIChannel* aTransport, 
+                                          nsresult aStatus)
 {
+  nsresult rv = NS_OK;
+
   // Null out pointers that are no longer needed...
   mResponseContext = null_nsCOMPtr();
   NS_IF_RELEASE(m_pResponseDataListener);
 
-  return m_pHandler->ReleaseTransport(aTransport);
+  if (aTransport) {
+    rv = m_pHandler->ReleaseTransport(aTransport);
+  }
+
+  // Remove the channel from its load group...
+  if (mLoadGroup) {
+    (void)mLoadGroup->RemoveChannel(this, nsnull, aStatus, nsnull);
+  }
+  return rv;
 }
 
 nsresult nsHTTPChannel::SetResponse(nsHTTPResponse* i_pResp)
