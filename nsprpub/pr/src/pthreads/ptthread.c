@@ -62,8 +62,17 @@ static void init_pthread_gc_support(void);
 #if defined(_PR_DCETHREADS) || defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
 static PRIntn pt_PriorityMap(PRThreadPriority pri)
 {
+#ifdef NTO
+    /* This priority algorithm causes lots of problems on Neutrino
+     * for now I have just hard coded everything to run at priority 10
+     * until I can come up with a new algorithm.
+     *     Jerry.Kirk@Nexwarecorp.com
+     */
+    return 10;
+#else
     return pt_book.minPrio +
 	    pri * (pt_book.maxPrio - pt_book.minPrio) / PR_PRIORITY_LAST;
+#endif
 }
 #endif
 
@@ -246,7 +255,7 @@ static PRThread* _PR_CreateThread(
     else if ((PRIntn)PR_PRIORITY_LAST < (PRIntn)priority)
         priority = PR_PRIORITY_LAST;
 
-    rv = PTHREAD_ATTR_INIT(&tattr);
+    rv = _PT_PTHREAD_ATTR_INIT(&tattr);
     PR_ASSERT(0 == rv);
 
     if (EPERM != pt_schedpriv)
@@ -271,6 +280,10 @@ static PRThread* _PR_CreateThread(
         schedule.sched_priority = pt_PriorityMap(priority);
         rv = pthread_attr_setschedparam(&tattr, &schedule);
         PR_ASSERT(0 == rv);
+#ifdef NTO
+        rv = pthread_attr_setschedpolicy(&tattr, SCHED_RR); /* Round Robin */
+        PR_ASSERT(0 == rv);
+#endif
 #endif /* !defined(_PR_DCETHREADS) */
     }
 
@@ -368,7 +381,7 @@ static PRThread* _PR_CreateThread(
          * to pthread_create() because who knows what wacky things
          * pthread_create() may be doing to its argument.
          */
-        rv = PTHREAD_CREATE(&id, tattr, _pt_root, thred);
+        rv = _PT_PTHREAD_CREATE(&id, tattr, _pt_root, thred);
 
 #if !defined(_PR_DCETHREADS)
         if (EPERM == rv)
@@ -394,7 +407,7 @@ static PRThread* _PR_CreateThread(
             PR_ASSERT(0 == rv);
 #endif
 #endif	/* IRIX */
-            rv = PTHREAD_CREATE(&id, tattr, _pt_root, thred);
+            rv = _PT_PTHREAD_CREATE(&id, tattr, _pt_root, thred);
         }
 #endif
 
@@ -440,7 +453,7 @@ static PRThread* _PR_CreateThread(
     }
 
 done:
-    rv = PTHREAD_ATTR_DESTROY(&tattr);
+    rv = _PT_PTHREAD_ATTR_DESTROY(&tattr);
     PR_ASSERT(0 == rv);
 
     return thred;
@@ -546,7 +559,7 @@ PR_IMPLEMENT(PRThread*) PR_GetCurrentThread()
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
-    PTHREAD_GETSPECIFIC(pt_book.key, thred);
+    _PT_PTHREAD_GETSPECIFIC(pt_book.key, thred);
     if (NULL == thred) thred = pt_AttachThread();
     PR_ASSERT(NULL != thred);
     return (PRThread*)thred;
@@ -621,7 +634,7 @@ PR_IMPLEMENT(PRStatus) PR_NewThreadPrivateIndex(
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
-    rv = PTHREAD_KEY_CREATE((pthread_key_t*)newIndex, destructor);
+    rv = _PT_PTHREAD_KEY_CREATE((pthread_key_t*)newIndex, destructor);
 
     if (0 == rv)
     {
@@ -655,7 +668,7 @@ PR_IMPLEMENT(void*) PR_GetThreadPrivate(PRUintn index)
 {
     void *result = NULL;
     if ((pthread_key_t)index < pt_book.highwater)
-        PTHREAD_GETSPECIFIC((pthread_key_t)index, result);
+        _PT_PTHREAD_GETSPECIFIC((pthread_key_t)index, result);
     return result;
 }  /* PR_GetThreadPrivate */
 #endif
@@ -718,7 +731,7 @@ PR_IMPLEMENT(PRStatus) PR_Sleep(PRIntervalTime ticks)
 
     if (PR_INTERVAL_NO_WAIT == ticks)
     {
-        PTHREAD_YIELD();
+        _PT_PTHREAD_YIELD();
         rv = PR_SUCCESS;
     }
     else
@@ -841,7 +854,7 @@ void _PR_InitThreads(
      * and holding PRThread references are actually holding pointers to
      * nothing.
      */
-    rv = PTHREAD_KEY_CREATE(&pt_book.key, _pt_thread_death);
+    rv = _PT_PTHREAD_KEY_CREATE(&pt_book.key, _pt_thread_death);
     PR_ASSERT(0 == rv);
     rv = pthread_setspecific(pt_book.key, thred);
     PR_ASSERT(0 == rv);    
@@ -1200,8 +1213,6 @@ static void PR_SuspendSet(PRThread *thred)
 
 static void PR_SuspendTest(PRThread *thred)
 {
-    PRIntn rv;
-
     PR_LOG(_pr_gc_lm, PR_LOG_ALWAYS, 
 	   ("Begin PR_SuspendTest thred %X thread id = %X\n", thred, thred->id));
 
@@ -1223,7 +1234,7 @@ static void PR_SuspendTest(PRThread *thred)
 #else
     while ((thred->suspend & PT_THREAD_SUSPENDED) == 0)
     {
-		rv = sigtimedwait(&sigwait_set, NULL, &onemillisec);
+		PRIntn rv = sigtimedwait(&sigwait_set, NULL, &onemillisec);
     	PR_ASSERT(-1 == rv);
 	}
 #endif
