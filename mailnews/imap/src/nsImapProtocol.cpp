@@ -5457,11 +5457,8 @@ PRBool nsImapProtocol::RenameHierarchyByHand(const char *oldParentMailboxName,
           m_runningUrl->AllocateServerPath(currentName,
                                            onlineDirSeparator,
                                            &serverName);
-          char *convertedName = serverName ? 
-              CreateUtf7ConvertedString(serverName, PR_TRUE) : (char *)NULL;
-          PR_FREEIF(serverName);
           PR_FREEIF(currentName);
-          currentName = convertedName;
+          currentName = serverName;
         }
         
         // calculate the new name and do the rename
