@@ -62,6 +62,7 @@ XPIDLSRCS	= \
 
 EXPORTS		= \
 		nsGUIEvent.h \
+		nsMargin.h \
 		nsPoint.h \
 		nsRect.h \
 		nsSize.h \
