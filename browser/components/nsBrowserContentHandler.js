@@ -364,6 +364,7 @@ var nsDefaultCommandLineHandler = {
     }
   },
 
+  // XXX localize me... how?
   helpInfo : "Usage: firefox [-flags] [<url>]\n",
 
   /* nsIFactory */
