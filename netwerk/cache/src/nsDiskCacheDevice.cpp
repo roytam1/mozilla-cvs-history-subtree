@@ -505,17 +505,20 @@ nsDiskCacheDevice::Init()
     // delete "Cache.Trash" folder
     nsCOMPtr<nsIFile> cacheTrashDir;
     rv = GetCacheTrashDirectory(getter_AddRefs(cacheTrashDir));
-    if (NS_FAILED(rv))  return rv;
+    if (NS_FAILED(rv))  goto error_exit;
     (void) cacheTrashDir->Delete(PR_TRUE);      // ignore errors, we tried...
 
     // Try opening cache map file.
     mCacheMap = new nsDiskCacheMap;
-    if (!mCacheMap) return NS_ERROR_OUT_OF_MEMORY;
+    if (!mCacheMap) {
+        rv = NS_ERROR_OUT_OF_MEMORY;
+        goto error_exit;
+    }
 
     rv = mCacheMap->Open(mCacheDirectory);
     if (NS_FAILED(rv)) {
         rv = InitializeCacheDirectory();        // retry one time
-        if (NS_FAILED(rv)) return rv;
+        if (NS_FAILED(rv))  goto error_exit;
     }
     
     mInitialized = PR_TRUE;                     // record that initialization succeeded.
@@ -523,8 +526,11 @@ nsDiskCacheDevice::Init()
 
 error_exit:
     // XXX de-install observers?
-
-    (void) mCacheMap->Close();
+    if (mCacheMap)  {
+        (void) mCacheMap->Close();
+        delete mCacheMap;
+        mCacheMap = nsnull;
+    }
     gFileTransportService   = nsnull;
 
     return rv;
@@ -944,15 +950,8 @@ nsDiskCacheDevice::Visit(nsICacheVisitor * visitor)
 nsresult
 nsDiskCacheDevice::EvictEntries(const char * clientID)
 {
-    nsresult rv;
-    
-    PRUint32 prefixLength  = (clientID ? nsCRT::strlen(clientID) : 0);
-    PRInt32  newDataSize   = mCacheMap->TotalSize();
-    PRInt32  newEntryCount = mCacheMap->EntryCount();
-
     RecordEvictor  evictor(this, mCacheMap, &mBindery, 0, clientID);
-    rv = mCacheMap->VisitRecords(&evictor);
-    
+    nsresult       rv = mCacheMap->VisitRecords(&evictor);
     return rv;
 }
 

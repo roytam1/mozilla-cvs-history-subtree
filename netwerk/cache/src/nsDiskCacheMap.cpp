@@ -94,12 +94,11 @@ nsDiskCacheBucket::EvictionRank()
 PRInt32
 nsDiskCacheBucket::VisitEachRecord(nsDiskCacheRecordVisitor *  visitor,
                                    PRUint32                    evictionRank,
-                                   PRUint32 *                  recordsDeleted)
+                                   PRUint32 *                  result)
 {
+    PRUint32 recordsDeleted = 0;
     PRInt32  rv = kVisitNextRecord;
-    PRInt32  i = CountRecords();
-
-    *recordsDeleted = 0;
+    PRInt32  i  = CountRecords();
     
     // call visitor for each entry (equal or greater than evictionRank)
     while (i--) {
@@ -110,13 +109,15 @@ nsDiskCacheBucket::VisitEachRecord(nsDiskCacheRecordVisitor *  visitor,
         
         if (rv == kDeleteRecordAndContinue) {
             mRecords[i].SetHashNumber(0);
-            *recordsDeleted++;
+            recordsDeleted++;
             continue;
         }
 
+        *result = recordsDeleted;
         return kStopVisitingRecords;  // rv == kStopVisitingRecords
     }
     
+    *result = recordsDeleted;
     return rv;
 }
 

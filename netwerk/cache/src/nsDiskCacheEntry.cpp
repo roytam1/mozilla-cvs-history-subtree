@@ -126,10 +126,16 @@ CreateDiskCacheEntry(nsDiskCacheBinding *  binding)
     char *    metaData = nsnull;
     PRUint32  metaSize = 0;
     nsresult rv = entry->FlattenMetaData(&metaData, &metaSize);
+    if (NS_FAILED(rv)) {
+        delete diskEntry;
+        return nsnull;
+    }
+    
     diskEntry->mMetaDataSize    = metaSize;
     if (metaSize)
         nsCRT::memcpy(&diskEntry->mKeyStart[keySize], metaData, metaSize);
-            
+    
+    delete metaData;
     return  diskEntry;
 }
 
