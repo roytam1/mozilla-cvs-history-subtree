@@ -1525,16 +1525,17 @@ static NSArray* sToolbarDefaults = nil;
     [mSidebarTabView insertTabViewItem:panelsItem atIndex:3];
 #endif
     
+#if USE_PREF_FOR_HISTORY_PANEL
     BOOL showHistory = NO;
     nsCOMPtr<nsIPrefBranch> pref(do_GetService("@mozilla.org/preferences-service;1"));
     if (pref) {
       PRBool historyPref = PR_FALSE;
       if (NS_SUCCEEDED(pref->GetBoolPref("chimera.show_history", &historyPref)))
         showHistory = historyPref ? YES : NO;
-    }
-    
+    }    
     if (!showHistory)
       [mSidebarTabView removeTabViewItem:[mSidebarTabView tabViewItemAtIndex:1]];
+#endif
     
     [mSidebarTabView setDelegate:self];
     [mSidebarTabView selectFirstTabViewItem:self];
