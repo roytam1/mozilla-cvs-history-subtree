@@ -179,9 +179,14 @@ MBool ProcessorState::addToResultTree(Node* node) {
             Element* element = (Element*)current;
             Attr* attr = (Attr*)node;
 #ifdef MOZ_XSL
-            String nameSpaceURI;
-	    getNameSpaceURI(attr->getName() , nameSpaceURI);
-            element->setAttributeNS(nameSpaceURI, attr->getName(), attr->getValue());
+            String nameSpaceURI, name;
+            //-- Workaround for BUG 51656 Html rendered as xhtml
+            name = attr->getName();
+            if (getOutputFormat()->isHTMLOutput()) {
+                name.toLowerCase();
+            }
+            getNameSpaceURI(name , nameSpaceURI);
+            element->setAttributeNS(nameSpaceURI, name, attr->getValue());
 #else
             element->setAttribute(attr->getName(),attr->getValue());
 #endif
