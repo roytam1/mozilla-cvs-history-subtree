@@ -890,11 +890,15 @@ BookmarkParser::ProcessLine(nsIRDFContainer *container, nsIRDFResource *nodeType
     else if ((offset = line.Find(kOpenHeading, PR_TRUE)) >= 0 &&
          nsCRT::IsAsciiDigit(line.CharAt(offset + 2)))
     {
-        // XXX Ignore <H1> so that bookmarks root _is_ <H1>
+        nsCOMPtr<nsIRDFResource>    dummy;
         if (line.CharAt(offset + 2) != PRUnichar('1'))
         {
-            nsCOMPtr<nsIRDFResource>    dummy;
             rv = ParseBookmarkInfo(gBookmarkHeaderFieldTable, PR_FALSE, line, container, nodeType, dummy);
+        } else {
+            // this is H1, i.e. the bookmarks root.  We use
+            // kNC_BookmarksRoot as the nodeType to tell
+            // ParseBookmarkInfo to do some magic
+            rv = ParseBookmarkInfo(gBookmarkHeaderFieldTable, PR_FALSE, line, container, kNC_BookmarksRoot, dummy);
         }
     }
     else if ((offset = line.Find(kSeparator, PR_TRUE)) >= 0)
@@ -1241,6 +1245,13 @@ BookmarkParser::ParseBookmarkInfo(BookmarkField *fields, PRBool isBookmarkFlag,
 
     nsresult    rv;
 
+    // the root doesn't have an ID, but we fake
+    // it here
+    if (aNodeType == kNC_BookmarksRoot) {
+        NS_ADDREF(kNC_BookmarksRoot);
+        fields[0].mValue = kNC_BookmarksRoot;
+    }
+
     // Note: the first entry MUST be the ID/resource of the bookmark
     nsCOMPtr<nsIRDFResource> bookmark = do_QueryInterface(fields[0].mValue);
     if (!bookmark)
@@ -1319,6 +1330,18 @@ BookmarkParser::ParseBookmarkInfo(BookmarkField *fields, PRBool isBookmarkFlag,
                         updateAtom(mDataSource, bookmark, kNC_Name, nameNode, nsnull);
                 }
             }
+        }
+
+        if (aNodeType == kNC_BookmarksRoot) {
+            // we're done here if it's the root; free up the field values
+            // and get out of here.  Note that we ADDREF'd kNC_BookmarksRoot
+            // above, so we can RELEASE it here safely.
+            for (BookmarkField *postField = fields; postField->mName; ++postField)
+            {
+                NS_IF_RELEASE(postField->mValue);
+            }
+
+            return NS_OK;
         }
 
         if (isBookmarkFlag == PR_FALSE)
@@ -4686,8 +4709,9 @@ static char kFileIntro[] =
     "     DO NOT EDIT! -->" NS_LINEBREAK
     // Note: we write bookmarks in UTF-8
     "<META HTTP-EQUIV=\"Content-Type\" CONTENT=\"text/html; charset=UTF-8\">" NS_LINEBREAK
-    "<TITLE>Bookmarks</TITLE>" NS_LINEBREAK
-    "<H1>Bookmarks</H1>" NS_LINEBREAK NS_LINEBREAK;
+    "<TITLE>Bookmarks</TITLE>" NS_LINEBREAK;
+static const char kRootIntro[] = "<H1";
+static const char kCloseRootH1[] = ">Bookmarks</H1>" NS_LINEBREAK NS_LINEBREAK;
 
 nsresult
 nsBookmarksService::WriteBookmarks(nsIFile* aBookmarksFile,
@@ -4730,6 +4754,14 @@ nsBookmarksService::WriteBookmarks(nsIFile* aBookmarksFile,
 
     PRUint32 dummy;
     rv = strm->Write(kFileIntro, sizeof(kFileIntro)-1, &dummy);
+
+    // Write the bookmarks root
+    // output <H1
+    rv |= strm->Write(kRootIntro, sizeof(kRootIntro)-1, &dummy);
+    // output LAST_MODIFIED
+    rv |= WriteBookmarkProperties(aDataSource, strm, aRoot, kWEB_LastModifiedDate, kLastModifiedEquals, PR_FALSE);
+    // output Bookmarks and close H1
+    rv |= strm->Write(kCloseRootH1, sizeof(kCloseRootH1)-1, &dummy);
 
     nsCOMArray<nsIRDFResource> parentArray;
     rv |= WriteBookmarksContainer(aDataSource, strm, aRoot, 0, parentArray);
