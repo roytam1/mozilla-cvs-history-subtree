@@ -55,6 +55,9 @@ static NS_DEFINE_CID(kCSSLoaderCID, NS_CSS_LOADER_CID);
 
 static NS_DEFINE_IID(kHTMLDocumentCID, NS_HTMLDOCUMENT_CID);
 static NS_DEFINE_IID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
+#ifdef MOZ_SVG
+static NS_DEFINE_IID(kSVGDocumentCID, NS_SVGDOCUMENT_CID);
+#endif
 static NS_DEFINE_IID(kImageDocumentCID, NS_IMAGEDOCUMENT_CID);
 static NS_DEFINE_IID(kXULDocumentCID, NS_XULDOCUMENT_CID);
 
@@ -82,6 +85,13 @@ static char* gXMLTypes[] = {
   0
 };
 
+#ifdef MOZ_SVG
+static char* gSVGTypes[] = {
+  "image/svg+xml",
+  "image/svg+xml; x-view-type=view-source",
+  0
+};
+#endif
 
 static char* gRDFTypes[] = {
   "text/rdf",
@@ -295,6 +305,19 @@ nsLayoutDLF::CreateInstance(const char *aCommand,
                             aDocListener, aDocViewer);
     }
   }
+
+#ifdef MOZ_SVG
+  // Try SVG
+  typeIndex = 0;
+  while(gSVGTypes[typeIndex]) {
+    if (!PL_strcmp(gSVGTypes[typeIndex++], aContentType)) {
+      return CreateDocument(aCommand,
+                            aChannel, aLoadGroup,
+                            aContainer, kSVGDocumentCID,
+                            aDocListener, aDocViewer);
+    }
+  }
+#endif
 
   // Try RDF
   typeIndex = 0;
@@ -590,6 +613,11 @@ nsLayoutModule::RegisterDocumentFactories(nsIComponentManager* aCompMgr,
     rv = RegisterTypes(aCompMgr, catmgr, "view-source", aPath, aLocation, aType, gXMLTypes);
     if (NS_FAILED(rv))
       break;
+#ifdef MOZ_SVG
+    rv = RegisterTypes(aCompMgr, catmgr, "view", aPath, aLocation, aType, gSVGTypes);
+    if (NS_FAILED(rv))
+      break;
+#endif
     rv = RegisterTypes(aCompMgr, catmgr, "view", aPath, aLocation, aType, gImageTypes);
     if (NS_FAILED(rv))
       break;
