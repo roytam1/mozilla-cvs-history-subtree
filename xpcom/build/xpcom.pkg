@@ -1,13 +1,18 @@
 [xpcom]
 dist/bin/@DLLP@xpcom@DLLS@
-!xpt components/xpcom_base.xpt
-!xpt components/xpcom_components.xpt
-!xpt components/xpcom_ds.xpt
-!xpt components/xpcom_io.xpt
-!xpt components/xpcom_nativeapp.xpt
-!xpt components/xpcom_thread.xpt
-!xpt components/xpcom_xpti.xpt
-!xpt components/proxyObject.xpt
+!xpt dist/bin/components/xpcom_base.xpt
+!xpt dist/bin/components/xpcom_components.xpt
+!xpt dist/bin/components/xpcom_ds.xpt
+!xpt dist/bin/components/xpcom_io.xpt
+!xpt dist/bin/components/xpcom_xpti.xpt
+
+#if OS_ARCH==WINNT
+!xpt dist/bin/components/xpcom_thread.xpt
+!xpt dist/bin/components/proxyObject.xpt
+#else
+!xpt dist/bin/components/xpcom_threads.xpt
+!xpt dist/bin/components/proxyObjInst.xpt
+#endif
 
 [gecko xpi-bootstrap]
 dist/bin/@DLLP@xpcom_compat@DLLS@
@@ -20,6 +25,7 @@ dist/bin/components/@DLLP@xpcom_compat_c@DLLS@
 dist/bin/regxpcom@BINS@
 
 # we put NSPR here, because hacking the NSPR build system is too painful
+# xxxbsmedberg: this doesn't obey --with-system-nspr
 [nspr]
 dist/bin/@DLLP@nspr4@DLLS@
 dist/bin/@DLLP@plc4@DLLS@
