@@ -1937,7 +1937,9 @@ nsEnderKeyListener::KeyDown(nsIDOMEvent* aKeyEvent)
     uiEvent->GetShiftKey(&(event.isShift));
     uiEvent->GetCtrlKey(&(event.isControl));
     uiEvent->GetAltKey(&(event.isAlt));
-
+#if XP_MAC 
+    uiEvent->GetMetaKey(&(event.isCommand)); 
+#endif
 
     nsIEventStateManager *manager=nsnull;
     result = mContext->GetEventStateManager(&manager);
@@ -1990,7 +1992,9 @@ nsEnderKeyListener::KeyUp(nsIDOMEvent* aKeyEvent)
     uiEvent->GetShiftKey(&(event.isShift));
     uiEvent->GetCtrlKey(&(event.isControl));
     uiEvent->GetAltKey(&(event.isAlt));
-
+#if XP_MAC 
+    uiEvent->GetMetaKey(&(event.isCommand)); 
+#endif
 
     nsIEventStateManager *manager=nsnull;
     result = mContext->GetEventStateManager(&manager);
@@ -2045,7 +2049,9 @@ nsEnderKeyListener::KeyPress(nsIDOMEvent* aKeyEvent)
     uiEvent->GetShiftKey(&(event.isShift));
     uiEvent->GetCtrlKey(&(event.isControl));
     uiEvent->GetAltKey(&(event.isAlt));
-
+#if XP_MAC 
+    uiEvent->GetMetaKey(&(event.isCommand)); 
+#endif
 
     nsIEventStateManager *manager=nsnull;
     result = mContext->GetEventStateManager(&manager);
