@@ -39,6 +39,7 @@
 #include "pics.h"
 #include "xp_ncent.h"
 #include "prefetch.h"
+#include "cstream.h"
 
 /* WEBFONTS are defined only in laytags.c and layout.c */
 #define WEBFONTS
@@ -3581,20 +3582,20 @@ lo_FreeLayoutData(MWContext *context, lo_DocState *state)
 void
 lo_CloseMochaWriteStream(lo_TopState *top_state, int mocha_event)
 {
-	NET_StreamClass *stream = top_state->mocha_write_stream;
+	NET_VoidStreamClass *stream = top_state->mocha_write_stream;
 
 	if (stream != NULL)
 	{
 		top_state->mocha_write_stream = NULL;
 		if (mocha_event == EVENT_LOAD)
 		{
-			stream->complete(stream);
+			NET_StreamComplete(stream);
 		}
 		else
 		{
-			stream->abort(stream, top_state->layout_status);
+			NET_StreamAbort(stream, top_state->layout_status);
 		}
-		XP_DELETE(stream);
+		NET_StreamFree(stream);
 	}
 }
 
