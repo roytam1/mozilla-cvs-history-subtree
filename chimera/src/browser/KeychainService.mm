@@ -188,7 +188,7 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 // also fills in the keychain's reference to this item in |outItemRef| so that
 // routines following this don't have to look it up again to make changes.
 //
-- (BOOL) getUsernameAndPassword:(NSString*)realm user:(NSMutableString*)username password:(NSMutableString*)pwd item:(KCItemRef*)outItemRef 
+- (BOOL) getUsernameAndPassword:(NSString*)realm port:(PRInt32)inPort user:(NSMutableString*)username password:(NSMutableString*)pwd item:(KCItemRef*)outItemRef 
 {
   if ( !outItemRef )
     return false;
@@ -198,7 +198,9 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   char buffer[kBufferLen];
   UInt32 actualSize;
 
-  if(kcfindinternetpassword([realm cString], 0, 0, kAnyPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest, 
+  if ( inPort == -1 )
+    inPort = kAnyPort;
+  if(kcfindinternetpassword([realm cString], 0, 0, inPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest, 
                             kBufferLen, buffer, &actualSize, outItemRef) != noErr)
     return false;
 
@@ -218,10 +220,10 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   return true;
 }
 
-- (BOOL) findUsernameAndPassword:(NSString*)realm
+- (BOOL) findUsernameAndPassword:(NSString*)realm port:(PRInt32)inPort
 {
   KCItemRef ignore;
-	return [self getUsernameAndPassword:realm user:[NSMutableString string] password:[NSMutableString string] item:&ignore];
+	return [self getUsernameAndPassword:realm port:inPort user:[NSMutableString string] password:[NSMutableString string] item:&ignore];
 }
 
 
@@ -232,7 +234,7 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 // a valid keychain item, it uses that (bypassing additional queries to the chain), if not
 // it will look it up based on the realm.
 //
-- (void) updateUsernameAndPassword:(NSString*)realm user:(NSString*)username password:(NSString*)pwd item:(KCItemRef)inItemRef
+- (void) updateUsernameAndPassword:(NSString*)realm port:(PRInt32)inPort user:(NSString*)username password:(NSString*)pwd item:(KCItemRef)inItemRef
 {
   const int kBufferLen = 255;
   OSStatus status;
@@ -240,11 +242,13 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   char buffer[kBufferLen];
   UInt32 actualSize;
 
-  if ( !inItemRef )
-    if(kcfindinternetpassword([realm cString], 0, 0, kAnyPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest, 
+  if ( !inItemRef ) {
+    if ( inPort == -1 )
+      inPort = kAnyPort;
+    if(kcfindinternetpassword([realm cString], 0, 0, inPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest, 
                               kBufferLen, buffer, &actualSize, &inItemRef) != noErr)
       return;
-
+  }
   KCAttribute attr;
 
   //
@@ -271,13 +275,15 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 
 
 //
-// storeUsernameAndPassword:user:password
+// storeUsernameAndPassword:port:user:password
 //
 // Adds a new username/password combo to the keychain based on the given realm
 //
-- (void) storeUsernameAndPassword:(NSString*)realm user:(NSString*)username password:(NSString*)pwd
+- (void) storeUsernameAndPassword:(NSString*)realm port:(PRInt32)inPort user:(NSString*)username password:(NSString*)pwd
 {
-  kcaddinternetpassword([realm cString], 0, [username cString], kAnyPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest,
+  if ( inPort == -1 )
+    inPort = kAnyPort;
+  kcaddinternetpassword([realm cString], 0, [username cString], inPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest,
                         [pwd length], [pwd cString], 0);
 }
 
@@ -288,13 +294,15 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 // removes the username/password combo from the keychain. If |inItemRef| is a valid item, it
 // uses that. If it's a null ref, it will look it up in the keychain based on the realm.
 //
-- (void) removeUsernameAndPassword:(NSString*)realm item:(KCItemRef)inItemRef
+- (void) removeUsernameAndPassword:(NSString*)realm port:(PRInt32)inPort item:(KCItemRef)inItemRef
 {
   if ( !inItemRef ) {
+    if ( inPort == -1 )
+      inPort = kAnyPort;
     const int kBufferLen = 255;
     char buffer[kBufferLen];
     UInt32 actualSize;
-    kcfindinternetpassword([realm cString], 0, 0, kAnyPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest, 
+    kcfindinternetpassword([realm cString], 0, 0, inPort, kKCProtocolTypeHTTP, kKCAuthTypeHTTPDigest, 
                             kBufferLen, buffer, &actualSize, &inItemRef);
   }
                             
@@ -350,13 +358,15 @@ KeychainPrompt::PreFill(const PRUnichar *realm, PRUnichar **user, PRUnichar **pw
   // an ftp server has the form ftp://<username>@<server>/<path>, see
   // netwerk/protocol/ftp/src/nsFtpConnectionThread.cpp.
   //
-  // Get server name from the password realm ("hostname:port (realm)",
-  // see netwerk/protocol/http/src/nsHttpChannel.cpp)
+  // Get server name from the realm ("hostname:port (realm)",
+  // see nsHttpChannel.cpp). We can use CFURL routines to do this nicely.
   //
-  NSString* passwordRealm = [NSString stringWithPRUnichars:realm];
-  NSRange r = [passwordRealm rangeOfString:@":"];
-  if(r.location != NSNotFound)
-    passwordRealm = [passwordRealm substringToIndex:r.location];
+  NSString* realmStr = [NSString stringWithPRUnichars:realm];
+  CFURLRef url = CFURLCreateWithString(kCFAllocatorDefault, (CFStringRef)realmStr, NULL);
+  if ( !url )
+    return;
+  PRInt32 port = CFURLGetPortNumber(url);
+  CFStringRef host = CFURLCopyHostName(url);
 
   NSMutableString* username = nil;
   NSMutableString* password = nil;
@@ -369,49 +379,53 @@ KeychainPrompt::PreFill(const PRUnichar *realm, PRUnichar **user, PRUnichar **pw
   // Pre-fill user/password if found in the keychain.
   //
   KCItemRef ignore;
-  if([mKeychain getUsernameAndPassword:passwordRealm user:username password:password item:&ignore]) {
+  if([mKeychain getUsernameAndPassword:(NSString*)host port:port user:username password:password item:&ignore]) {
     if ( user )
       *user = [username createNewUnicodeBuffer];
     if ( pwd )
       *pwd = [password createNewUnicodeBuffer];
   }
+  
+  CFRelease(url);
+  CFRelease(host);
 }
 
 void
 KeychainPrompt::ProcessPrompt(const PRUnichar* realm, bool checked, PRUnichar* user, PRUnichar *pwd)
 {
   //
-  // Get server name from the password realm ("hostname:port (realm)",
-  // see nsHttpChannel.cpp)
+  // Get server name from the realm ("hostname:port (realm)",
+  // see nsHttpChannel.cpp). We can use CFURL routines to do this nicely.
   //
-  NSString* passwordRealm = [NSString stringWithPRUnichars:realm];
-  NSRange r = [passwordRealm rangeOfString:@":"];
-  if(r.location != NSNotFound)
-    passwordRealm = [passwordRealm substringToIndex:r.location];
-
+  NSString* realmStr = [NSString stringWithPRUnichars:realm];
+  CFURLRef url = CFURLCreateWithString(kCFAllocatorDefault, (CFStringRef)realmStr, NULL);
+  if ( !url )
+    return;
+  PRInt32 port = CFURLGetPortNumber(url);
+  CFStringRef host = CFURLCopyHostName(url);
+  
   NSString* username = [NSString stringWithPRUnichars:user];
   NSString* password = [NSString stringWithPRUnichars:pwd];
 
   NSMutableString* origUsername = [NSMutableString string];
   NSMutableString* origPwd = [NSMutableString string];
-
   KCItemRef itemRef;
-  bool found = [mKeychain getUsernameAndPassword:passwordRealm user:origUsername password:origPwd item:&itemRef];
-
+  bool found = [mKeychain getUsernameAndPassword:(NSString*)host port:port user:origUsername password:origPwd item:&itemRef];
+  
   //
   // Update, store or remove the user/password depending on the user
   // choice and whether or not we found the username/password in the
   // keychain.
   //
-  if(checked && !found) {
-    [mKeychain storeUsernameAndPassword:passwordRealm user:username password:password];
-  }
-  else if(checked && found && (![origUsername isEqualToString:username] || ![origPwd isEqualToString:password])) {
-    [mKeychain updateUsernameAndPassword:passwordRealm user:username password:password item:itemRef];
-  }
-  else if(!checked && found) {
-    [mKeychain removeUsernameAndPassword:passwordRealm item:itemRef];
-  }
+  if(checked && !found)
+    [mKeychain storeUsernameAndPassword:(NSString*)host port:port user:username password:password];
+  else if(checked && found && (![origUsername isEqualToString:username] || ![origPwd isEqualToString:password]))
+    [mKeychain updateUsernameAndPassword:(NSString*)host port:port user:username password:password item:itemRef];
+  else if(!checked && found)
+    [mKeychain removeUsernameAndPassword:(NSString*)host port:port item:itemRef];
+
+  CFRelease(url);
+  CFRelease(host);
 }
 
 //
@@ -532,7 +546,7 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
   // param will cause FUPF to look for multiple password fields and then bail if that is the 
   // case, seting |passwordElement| to nsnull.
   nsCOMPtr<nsIDOMHTMLInputElement> usernameElement, passwordElement;
-  nsresult rv = FindUsernamePasswordFields(formNode, getter_AddRefs(usernameElement),  getter_AddRefs(passwordElement),
+  nsresult rv = FindUsernamePasswordFields(formNode, getter_AddRefs(usernameElement), getter_AddRefs(passwordElement),
                                            PR_FALSE);
 
   if (NS_SUCCEEDED(rv) && usernameElement && passwordElement) {
@@ -554,8 +568,10 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
     if (NS_FAILED(rv) || !docURL)
       return NS_OK;
 
-    nsCAutoString hostPort;
-    docURL->GetHostPort(hostPort);
+    nsCAutoString host;
+    PRInt32 port = -1;
+    docURL->GetHost(host);
+    docURL->GetPort(&port);
 
     //
     // If there's already an entry in the keychain, check if the username
@@ -563,19 +579,19 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
     // it as necessary. If there's no entry, ask if they want to remember it
     // and then put it into the keychain
     //
-    NSString* realm = [NSString stringWithCString:hostPort.get()];
+    NSString* realm = [NSString stringWithCString:host.get()];
     NSString* existingUser = [NSMutableString string];
     NSString* existingPassword = [NSMutableString string];
     KCItemRef itemRef;
-    BOOL foundExistingPassword = [mKeychain getUsernameAndPassword:realm user:existingUser password:existingPassword item:&itemRef];
+    BOOL foundExistingPassword = [mKeychain getUsernameAndPassword:realm port:port user:existingUser password:existingPassword item:&itemRef];
     if ( foundExistingPassword ) {
       if ( !([existingUser isEqualToString:username] && [existingPassword isEqualToString:password]) )
         if ( CheckChangeDataYN(window) )
-          [mKeychain updateUsernameAndPassword:realm user:username password:password item:itemRef];
+          [mKeychain updateUsernameAndPassword:realm port:port user:username password:password item:itemRef];
     }
     else {
       if (CheckStorePasswordYN(window))
-        [mKeychain storeUsernameAndPassword:realm user:username password:password];
+        [mKeychain storeUsernameAndPassword:realm port:port user:username password:password];
     }
   }
 
@@ -710,12 +726,14 @@ KeychainFormSubmitObserver::CheckChangeDataYN(nsIDOMWindowInternal* window)
       NSMutableString* username = [NSMutableString string];
       NSMutableString* password = [NSMutableString string];
       
-      nsCAutoString hostPort;
-      docURL->GetHostPort(hostPort);
-      NSString *realm = [NSString stringWithCString:hostPort.get()];
-  
+      nsCAutoString host;
+      docURL->GetHost(host);
+      NSString *hostStr = [NSString stringWithCString:host.get()];
+      PRInt32 port = -1;
+      docURL->GetPort(&port);
+      
       KCItemRef ignore;
-      if ([mKeychain getUsernameAndPassword:realm user:username password:password item:&ignore]) {
+      if ([mKeychain getUsernameAndPassword:hostStr port:port user:username password:password item:&ignore]) {
         nsAutoString user, pwd;
         [username assignTo_nsAString:user];
         [password assignTo_nsAString:pwd];
