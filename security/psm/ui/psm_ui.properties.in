@@ -6584,7 +6584,7 @@ pkcs12_action_followup_content:
 
 function showAlert() {
 	 PopUpAlert("%1$s");
-	 window.location = "get?baseRef=cert_mine";
+	 window.location = "get?baseRef=cert_mine&target=%2$d";
 }
 </script>
 </head>
