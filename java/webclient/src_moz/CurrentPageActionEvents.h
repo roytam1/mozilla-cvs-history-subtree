@@ -38,43 +38,46 @@
 #include "nsIFindComponent.h"
 #include "nsISearchContext.h"
 #include "nsISHistory.h"
-#include "jni_util.h"
+#include "ns_util.h"
 
 class wsCopySelectionEvent : public nsActionEvent {
 public:
-    wsCopySelectionEvent(nsIContentViewerEdit * contentViewerEdit);
+    wsCopySelectionEvent(WebShellInitContext *yourInitContext);
     void * handleEvent (void);
 
 protected:
-    nsIContentViewerEdit * mContentViewerEdit;
+    WebShellInitContext *mInitContext;
 };
 
 class wsFindEvent : public nsActionEvent {
 public:
-    wsFindEvent(nsIFindComponent *findComponent, 
-		  nsISearchContext * srchcontext);
+    wsFindEvent(WebShellInitContext *yourInitContext, jstring searchString,
+                jboolean forward, jboolean matchCase);
+    wsFindEvent(WebShellInitContext *yourInitContext);
     void * handleEvent (void);
 
 protected:
-    nsIFindComponent * mFindComponent;
-    nsISearchContext * mSearchContext;
+    WebShellInitContext *mInitContext;
+    jstring mSearchString;
+    jboolean mForward;
+    jboolean mMatchCase;
 };
 
 class wsGetURLEvent : public nsActionEvent {
 public:
-                       wsGetURLEvent   (nsISHistory * sHistory);
+                       wsGetURLEvent   (WebShellInitContext *yourInitContext);
         void    *      handleEvent     (void);
 protected:
-    nsISHistory * mHistory;
+    WebShellInitContext *mInitContext;
 };
 
 class wsSelectAllEvent : public nsActionEvent {
 public:
-    wsSelectAllEvent(nsIContentViewerEdit * contentViewerEdit);
+    wsSelectAllEvent(WebShellInitContext *yourInitContext);
     void * handleEvent (void);
 
 protected:
-    nsIContentViewerEdit * mContentViewerEdit;
+    WebShellInitContext *mInitContext;
 };
 
 class wsViewSourceEvent : public nsActionEvent {

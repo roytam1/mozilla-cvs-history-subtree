@@ -32,11 +32,19 @@
  */
 
 #include "CurrentPageActionEvents.h"
+#include "nsIDOMWindowInternal.h"
+#include "nsIFindComponent.h"
+#include "nsISearchContext.h"
+#include "nsIDocShell.h"
+#include "nsIContentViewer.h"
+#include "nsIContentViewer.h"
+#include "nsIContentViewerEdit.h"
+#include "nsIInterfaceRequestor.h"
 
 
-wsCopySelectionEvent::wsCopySelectionEvent(nsIContentViewerEdit * contentViewerEdit) :
+wsCopySelectionEvent::wsCopySelectionEvent(WebShellInitContext *yourInitContext) :
         nsActionEvent(),
-        mContentViewerEdit(contentViewerEdit)
+        mInitContext(yourInitContext)
 {
 }
 
@@ -45,17 +53,39 @@ wsCopySelectionEvent::handleEvent ()
 {
     void *result = nsnull;
     
-    if (mContentViewerEdit) {
-        nsresult rv = mContentViewerEdit->CopySelection();
+    if (mInitContext) {
+        nsIContentViewer* contentViewer ;
+        nsresult rv = nsnull;
+        
+        rv = mInitContext->docShell->GetContentViewer(&contentViewer);
+        if (NS_FAILED(rv) || contentViewer==nsnull )  {
+            return (void *) rv;
+        }
+    
+        nsCOMPtr<nsIContentViewerEdit> contentViewerEdit(do_QueryInterface(contentViewer));
+        
+        rv = contentViewerEdit->CopySelection();
         result = (void *) rv;
     }
     return result;
 }
 
-wsFindEvent::wsFindEvent(nsIFindComponent * findcomponent, nsISearchContext * srchcontext) :
-        nsActionEvent(),
-        mFindComponent(findcomponent),
-	mSearchContext(srchcontext)
+wsFindEvent::wsFindEvent(WebShellInitContext *yourInitContext) :
+    nsActionEvent(),
+    mInitContext(yourInitContext),
+    mSearchString(nsnull),
+    mForward(JNI_FALSE),
+    mMatchCase(JNI_FALSE)
+{
+}
+
+wsFindEvent::wsFindEvent(WebShellInitContext *yourInitContext, jstring searchString,
+                         jboolean forward, jboolean matchCase) :
+    nsActionEvent(),
+    mInitContext(yourInitContext),
+    mSearchString(searchString),
+    mForward(forward),
+    mMatchCase(matchCase)
 {
 }
 
@@ -63,11 +93,102 @@ void *
 wsFindEvent::handleEvent ()
 {
     void *result = nsnull;
+    nsresult rv = NS_ERROR_FAILURE;
+    JNIEnv *env = (JNIEnv *) JNU_GetEnv(gVm, JNI_VERSION);
     
-    if (mFindComponent && mSearchContext) {
+    if (mInitContext) {
+        //First get the FindComponent object
+        NS_WITH_SERVICE(nsIFindComponent, findComponent, NS_IFINDCOMPONENT_CONTRACTID, &rv);
+        
+        if (NS_FAILED(rv) || nsnull == findComponent)  {
+            return (void *) rv;
+        }
+
+        nsCOMPtr<nsISupports> searchContext;
+        // get the nsISearchContext
+        // No seachString means this is Find, not FindNext.
+        if (mSearchString) {
+            
+            nsCOMPtr<nsIDOMWindowInternal> domWindowInternal;
+            if (mInitContext->docShell != nsnull) {
+                nsCOMPtr<nsIInterfaceRequestor> interfaceRequestor(do_QueryInterface(mInitContext->docShell));
+                nsCOMPtr<nsIURI> url = nsnull;
+                
+                rv = mInitContext->webNavigation->GetCurrentURI(getter_AddRefs(url));
+                if (NS_FAILED(rv) || nsnull == url)  {
+                    return (void *) rv;
+                } 
+                
+                if (interfaceRequestor != nsnull) {
+                    rv = interfaceRequestor->GetInterface(NS_GET_IID(nsIDOMWindowInternal), 
+                                                          getter_AddRefs(domWindowInternal));
+                    if (NS_FAILED(rv) || nsnull == domWindowInternal)  {
+                        return (void *) rv;
+                    }
+                }
+                else
+                    {
+                        mInitContext->initFailCode = kFindComponentError;
+                        return (void *) rv;
+                    }
+            }
+            else {
+                mInitContext->initFailCode = kFindComponentError;
+                return (void *) rv;
+            }
+            
+            // if we get here, we have a domWindowInternal
+            
+            rv = findComponent->CreateContext(domWindowInternal, nsnull, getter_AddRefs(searchContext));
+            if (NS_FAILED(rv))  {
+                mInitContext->initFailCode = kSearchContextError;
+                return (void *) rv;
+            }
+        }
+        else {
+            // this is findNext
+            searchContext = mInitContext->searchContext;
+        }
+        if (!searchContext) {
+            mInitContext->initFailCode = kSearchContextError;
+            return (void *) NS_ERROR_FAILURE;
+        }
+        
+        nsCOMPtr<nsISearchContext> srchcontext;
+        rv = searchContext->QueryInterface(NS_GET_IID(nsISearchContext), getter_AddRefs(srchcontext));
+        if (NS_FAILED(rv))  {
+            mInitContext->initFailCode = kSearchContextError;
+            return (void *) rv;
+        }
+        
+        PRUnichar * aString;
+        srchcontext->GetSearchString(& aString);
+        
+        PRUnichar * srchString = nsnull;
+        if (mSearchString) {
+            srchString = (PRUnichar *) ::util_GetStringChars(env, mSearchString);
+            
+            // Check if String is NULL
+            if (nsnull == srchString) {
+                return (void *) NS_ERROR_NULL_POINTER;
+            }
+            
+            srchcontext->SetSearchString(srchString);
+            srchcontext->SetSearchBackwards(!mForward);
+            srchcontext->SetCaseSensitive(mMatchCase);
+        }
+        
         PRBool found = PR_TRUE;
-        nsresult rv = mFindComponent->FindNext(mSearchContext, &found);
+        rv = findComponent->FindNext(srchcontext, &found);
         result = (void *) rv;
+        if (mSearchString) {
+            ::util_ReleaseStringChars(env, mSearchString, srchString);
+            ::util_DeleteGlobalRef(env, mSearchString);
+            mSearchString = nsnull;
+        }
+        // Save in initContext struct for future findNextInPage calls
+        mInitContext->searchContext = srchcontext;
+  
     }
     return result;
 }
@@ -76,9 +197,9 @@ wsFindEvent::handleEvent ()
  * wsGetURLEvent
  */
 
-wsGetURLEvent::wsGetURLEvent(nsISHistory * sHistory) :
+wsGetURLEvent::wsGetURLEvent(WebShellInitContext *yourInitContext) :
         nsActionEvent(),
-	mHistory(sHistory)
+	mInitContext(yourInitContext)
 {
 }
 
@@ -87,13 +208,18 @@ void *
 wsGetURLEvent::handleEvent ()
 {
     void *result = nsnull;
-    if (mHistory) {
-        
-        
+    if (mInitContext) {
+        nsISHistory* mHistory;
+        nsresult rv;
         PRInt32 currentIndex;
         char *currentURL = nsnull;
-        nsresult rv;
 
+        
+        rv = mInitContext->webNavigation->GetSessionHistory(&mHistory);
+        if (NS_FAILED(rv)) {
+            return (void *) rv;
+        }
+        
         rv = mHistory->GetIndex(&currentIndex);
         
         if (NS_FAILED(rv)) {
@@ -125,9 +251,9 @@ wsGetURLEvent::handleEvent ()
 } // handleEvent()
 
 
-wsSelectAllEvent::wsSelectAllEvent(nsIContentViewerEdit * contentViewerEdit) :
+wsSelectAllEvent::wsSelectAllEvent(WebShellInitContext *yourInitContext) :
         nsActionEvent(),
-        mContentViewerEdit(contentViewerEdit)
+        mInitContext(yourInitContext)
 {
 }
 
@@ -136,8 +262,18 @@ wsSelectAllEvent::handleEvent ()
 {
     void *result = nsnull;
     
-    if (mContentViewerEdit) {
-        nsresult rv = mContentViewerEdit->SelectAll();
+    if (mInitContext) {
+        nsIContentViewer* contentViewer;
+        nsresult rv = nsnull;
+        rv = mInitContext->docShell->GetContentViewer(&contentViewer);
+        if (NS_FAILED(rv) || contentViewer==nsnull)  {
+            mInitContext->initFailCode = kGetContentViewerError;
+            return (void *) rv;
+        }
+
+        nsCOMPtr<nsIContentViewerEdit> contentViewerEdit(do_QueryInterface(contentViewer));
+        
+        rv = contentViewerEdit->SelectAll();
         result = (void *) rv;
     }
     return result;
