@@ -38,12 +38,14 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE       = venkman
-PACKAGE_FILE = venkman.pkg
+ifndef MOZ_PHOENIX
+	MODULE       = venkman
+	PACKAGE_FILE = venkman.pkg
 
-DIRS        = resources
+	DIRS        = resources
 
-EXTRA_COMPONENTS = js/venkman-service.js
+	EXTRA_COMPONENTS = js/venkman-service.js
+endif
 
 include $(topsrcdir)/config/rules.mk
 

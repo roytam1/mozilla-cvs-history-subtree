@@ -554,7 +554,10 @@ function lv_init ()
                   checkedif: "ValueRecord.prototype.showFunctions"}],
          ["toggle-ecmas",
                  {type: "checkbox",
-                  checkedif: "ValueRecord.prototype.showECMAProps"}]
+                  checkedif: "ValueRecord.prototype.showECMAProps"}],
+         ["toggle-constants",
+                 {type: "checkbox",
+                  checkedif: "ValueRecord.prototype.showConstants"}]
         ]
     };
 
@@ -793,7 +796,8 @@ function lv_getcx(cx)
         if (i == 0)
         {
             cx.jsdValue = rec.value;
-            cx.expression = rec.displayName;
+            var items = new Array();
+            items.unshift(rec.displayName);
             
             if ("value" in rec.parentRecord)
             {
@@ -802,7 +806,12 @@ function lv_getcx(cx)
                 while (cur != locals.childData &&
                        cur != locals.scopeRecord)
                 {
-                    cx.expression = cur.displayName + "." + cx.expression;
+                    if ("isECMAProto" in cur)
+                        items.unshift("__proto__");
+                    else if ("isECMAParent" in cur)
+                        items.unshift("__parent__");
+                    else
+                        items.unshift(cur.displayName);
                     cur = cur.parentRecord;
                 }
             }
@@ -810,6 +819,7 @@ function lv_getcx(cx)
             {
                 cx.parentValue = null;
             }
+            cx.expression = makeExpression(items);
             cx.propertyName = rec.displayName;
         }
         else
