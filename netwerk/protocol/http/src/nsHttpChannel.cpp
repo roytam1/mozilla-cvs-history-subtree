@@ -545,8 +545,10 @@ nsHttpChannel::OpenCacheEntry(PRBool *delayed)
         // we'll have to wait for the cache entry
         *delayed = PR_TRUE;
     }
-    else if (rv == NS_OK)
+    else if (rv == NS_OK) {
         mCacheEntry->GetAccessGranted(&mCacheAccess);
+        LOG(("got cache entry [access=%x]\n", mCacheAccess));
+    }
     return rv;
 }
 
@@ -2056,8 +2058,9 @@ nsHttpChannel::GetCacheKey(nsISupports **key)
     nsresult rv;
     NS_ENSURE_ARG_POINTER(key);
 
+    LOG(("nsHttpChannel::GetCacheKey [this=%x]\n", this));
+
     *key = nsnull;
-    return NS_OK;
 
     nsCOMPtr<nsISupportsPRUint32> container =
         do_CreateInstance(NS_SUPPORTS_PRUINT32_CONTRACTID, &rv);
@@ -2073,16 +2076,23 @@ NS_IMETHODIMP
 nsHttpChannel::SetCacheKey(nsISupports *key, PRBool fromCacheOnly)
 {
     nsresult rv;
-    NS_ENSURE_ARG_POINTER(key);
+
+    LOG(("nsHttpChannel::SetCacheKey [this=%x key=%x fromCacheOnly=%d]\n",
+        this, key, fromCacheOnly));
 
     // can only set the cache key if a load is not in progress
     NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
 
-    nsCOMPtr<nsISupportsPRUint32> container = do_QueryInterface(key, &rv);
-    if (NS_FAILED(rv)) return rv;
+    if (!key)
+        mPostID = 0;
+    else {
+        // extract the post id
+        nsCOMPtr<nsISupportsPRUint32> container = do_QueryInterface(key, &rv);
+        if (NS_FAILED(rv)) return rv;
 
-    rv = container->GetData(&mPostID);
-    if (NS_FAILED(rv)) return rv;
+        rv = container->GetData(&mPostID);
+        if (NS_FAILED(rv)) return rv;
+    }
 
     mFromCacheOnly = fromCacheOnly;
     return NS_OK;
