@@ -128,7 +128,7 @@ static JSPropertySpec object_props[] = {
 #define JSSLOT_COUNT 2
 
 static JSBool
-CheckStrictSlot(JSContext *cx, uint32 slot)
+ReportStrictSlot(JSContext *cx, uint32 slot)
 {
     return JS_ReportErrorFlagsAndNumber(cx,
                                         JSREPORT_WARNING | JSREPORT_STRICT,
@@ -145,7 +145,7 @@ obj_getSlot(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
     uintN attrs;
 
     slot = (uint32) JSVAL_TO_INT(id);
-    if (JS_HAS_STRICT_OPTION(cx) && CheckStrictSlot(cx, slot))
+    if (JS_HAS_STRICT_OPTION(cx) && !ReportStrictSlot(cx, slot))
         return JS_FALSE;
     if (id == INT_TO_JSVAL(JSSLOT_PROTO)) {
 	id = (jsid)cx->runtime->atomState.protoAtom;
@@ -170,7 +170,7 @@ obj_setSlot(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 	return JS_TRUE;
     obj2 = JSVAL_TO_OBJECT(*vp);
     slot = (uint32) JSVAL_TO_INT(id);
-    if (JS_HAS_STRICT_OPTION(cx) && CheckStrictSlot(cx, slot))
+    if (JS_HAS_STRICT_OPTION(cx) && !ReportStrictSlot(cx, slot))
         return JS_FALSE;
     while (obj2) {
 	if (obj2 == obj) {
@@ -191,7 +191,7 @@ obj_getCount(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
     jsid num_properties;
     JSBool ok;
 
-    if (JS_HAS_STRICT_OPTION(cx) && CheckStrictSlot(cx, JSSLOT_COUNT))
+    if (JS_HAS_STRICT_OPTION(cx) && !ReportStrictSlot(cx, JSSLOT_COUNT))
         return JS_FALSE;
 
     /* Get the number of properties to enumerate. */
