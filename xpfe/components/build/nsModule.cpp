@@ -38,6 +38,7 @@
 #include "nsICategoryManager.h"
 #include "nsAutoComplete.h"
 #include "nsBookmarksService.h"
+#include "nsRemoteBookmarks.h"
 #include "nsDirectoryViewer.h"
 #include "nsDownloadManager.h"
 #include "nsDownloadProxy.h"
@@ -65,6 +66,7 @@
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteItem)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsAutoCompleteResults)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsBookmarksService, Init)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsRemoteBookmarks, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsHTTPIndex, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDirectoryViewerFactory)
 NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsDownloadManager, Init)
@@ -145,6 +147,10 @@ static const nsModuleComponentInfo components[] = {
       nsBookmarksServiceConstructor },
     { "Bookmarks", NS_BOOKMARKS_SERVICE_CID, NS_BOOKMARKS_DATASOURCE_CONTRACTID,
       nsBookmarksServiceConstructor },
+    { "RemoteBookmarks", NS_REMOTEBOOKMARKS_CID, NS_REMOTEBOOKMARKS_CONTRACTID,
+      nsRemoteBookmarksConstructor },
+    { "RemoteBookmarks", NS_REMOTEBOOKMARKS_CID, NS_REMOTEBOOKMARKS_DATASOURCE_CONTRACTID,
+      nsRemoteBookmarksConstructor },
     { "Directory Viewer", NS_DIRECTORYVIEWERFACTORY_CID,
       NS_DOCUMENT_LOADER_FACTORY_CONTRACTID_PREFIX "view;1?type=application/http-index-format",
       nsDirectoryViewerFactoryConstructor, RegisterProc, UnregisterProc  },
