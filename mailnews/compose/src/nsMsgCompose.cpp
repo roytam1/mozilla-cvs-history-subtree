@@ -89,7 +89,6 @@
 
 // Defines....
 static NS_DEFINE_CID(kHeaderParserCID, NS_MSGHEADERPARSER_CID);
-static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kCMimeConverterCID, NS_MIME_CONVERTER_CID);
 static NS_DEFINE_CID(kDateTimeFormatCID, NS_DATETIMEFORMAT_CID);
@@ -775,6 +774,14 @@ nsresult nsMsgCompose::CloseWindow()
   	return rv;
 }
 
+nsresult nsMsgCompose::Abort()
+{
+  if (mMsgSend)
+    mMsgSend->Abort();
+
+  return NS_OK;
+}
+
 nsresult nsMsgCompose::GetEditor(nsIEditorShell * *aEditor) 
 { 
   *aEditor = m_editor;
@@ -1101,12 +1108,6 @@ NS_IMETHODIMP nsMsgCompose::GetProgress(nsIMsgComposeProgress **_retval)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgCompose::SetMessageSend(nsIMsgSend *msgSend)
-{
-  mMsgSend = msgSend;
-  return NS_OK;
-}
-
 NS_IMETHODIMP nsMsgCompose::GetMessageSend(nsIMsgSend **_retval)
 {
   NS_ENSURE_ARG(_retval);
@@ -1121,10 +1122,17 @@ NS_IMETHODIMP nsMsgCompose::SetCiteReference(nsString citeReference)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgCompose::SetSavedFoldeURI(const char *folderURI)
+NS_IMETHODIMP nsMsgCompose::SetSavedFolderURI(const char *folderURI)
 {
   m_folderName = folderURI;
   return NS_OK;
+}
+
+NS_IMETHODIMP nsMsgCompose::GetSavedFolderURI(char ** folderURI)
+{
+  NS_ENSURE_ARG_POINTER(folderURI);
+  *folderURI = m_folderName.ToNewCString();
+  return (*folderURI) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
 
 
@@ -1335,19 +1343,21 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIRequest *request, ns
         PRUnichar emptyUnichar = 0;
         PRBool needToRemoveDup = PR_FALSE;
         nsCOMPtr<nsIMimeConverter> mimeConverter = do_GetService(kCMimeConverterCID);
+        nsXPIDLCString charset;
+        compFields->GetCharacterSet(getter_Copies(charset));
         
         if (type == nsIMsgCompType::ReplyAll)
         {
           mHeaders->ExtractHeader(HEADER_TO, PR_TRUE, getter_Copies(outCString));
           if (outCString)
           {
-            mimeConverter->DecodeMimeHeader(outCString, recipient);
+            mimeConverter->DecodeMimeHeader(outCString, recipient, charset);
           }
               
           mHeaders->ExtractHeader(HEADER_CC, PR_TRUE, getter_Copies(outCString));
           if (outCString)
           {
-            mimeConverter->DecodeMimeHeader(outCString, cc);
+            mimeConverter->DecodeMimeHeader(outCString, cc, charset);
           }
               
           if (recipient.Length() > 0 && cc.Length() > 0)
@@ -1361,31 +1371,31 @@ NS_IMETHODIMP QuotingOutputStreamListener::OnStopRequest(nsIRequest *request, ns
         mHeaders->ExtractHeader(HEADER_REPLY_TO, PR_FALSE, getter_Copies(outCString));
         if (outCString)
         {
-          mimeConverter->DecodeMimeHeader(outCString, replyTo);
+          mimeConverter->DecodeMimeHeader(outCString, replyTo, charset);
         }
         
         mHeaders->ExtractHeader(HEADER_NEWSGROUPS, PR_FALSE, getter_Copies(outCString));
         if (outCString)
         {
-          mimeConverter->DecodeMimeHeader(outCString, newgroups);
+          mimeConverter->DecodeMimeHeader(outCString, newgroups, charset);
         }
         
         mHeaders->ExtractHeader(HEADER_FOLLOWUP_TO, PR_FALSE, getter_Copies(outCString));
         if (outCString)
         {
-          mimeConverter->DecodeMimeHeader(outCString, followUpTo);
+          mimeConverter->DecodeMimeHeader(outCString, followUpTo, charset);
         }
         
         mHeaders->ExtractHeader(HEADER_MESSAGE_ID, PR_FALSE, getter_Copies(outCString));
         if (outCString)
         {
-          mimeConverter->DecodeMimeHeader(outCString, messageId);
+          mimeConverter->DecodeMimeHeader(outCString, messageId, charset);
         }
         
         mHeaders->ExtractHeader(HEADER_REFERENCES, PR_FALSE, getter_Copies(outCString));
         if (outCString)
         {
-          mimeConverter->DecodeMimeHeader(outCString, references);
+          mimeConverter->DecodeMimeHeader(outCString, references, charset);
         }
         
         if (! replyTo.IsEmpty())
@@ -1545,7 +1555,14 @@ NS_IMPL_ISUPPORTS1(QuotingOutputStreamListener, nsIStreamListener)
 // END OF QUOTING LISTENER
 ////////////////////////////////////////////////////////////////////////////////////
 
-/* readonly attribute MSG_ComposeType type; */
+/* attribute MSG_ComposeType type; */
+NS_IMETHODIMP nsMsgCompose::SetType(MSG_ComposeType aType)
+{
+ 
+  mType = aType;
+  return NS_OK;
+}
+
 NS_IMETHODIMP nsMsgCompose::GetType(MSG_ComposeType *aType)
 {
   NS_ENSURE_ARG_POINTER(aType);
@@ -1809,6 +1826,11 @@ nsresult nsMsgComposeSendListener::OnStopSending(const char *aMsgID, nsresult aS
                                      // windows hanging around to prevent the app from exiting.
       }
 
+	  // Remove the current draft msg when sending draft is done.
+	  MSG_ComposeType compType = nsIMsgCompType::Draft;
+	  compose->GetType(&compType);
+      if (compType == nsIMsgCompType::Draft)
+        RemoveCurrentDraftMessage(compose, PR_FALSE);
       NS_IF_RELEASE(compFields);
 		}
 		else
@@ -1819,9 +1841,6 @@ nsresult nsMsgComposeSendListener::OnStopSending(const char *aMsgID, nsresult aS
 			compose->NotifyStateListeners(eComposeProcessDone);
       if (progress)
         progress->CloseProgress(PR_TRUE);
-
-      // Need to relelase the mComposeObj...
-      compose->SetMessageSend(nsnull);
 		}
 	}
 
@@ -1833,7 +1852,7 @@ nsMsgComposeSendListener::OnGetDraftFolderURI(const char *aFolderURI)
 {
   nsCOMPtr<nsIMsgCompose>compose = do_QueryReferent(mWeakComposeObj);
 	if (compose)
-    compose->SetSavedFoldeURI(aFolderURI);
+    compose->SetSavedFolderURI(aFolderURI);
 
   return NS_OK;
 }
@@ -1886,6 +1905,15 @@ nsMsgComposeSendListener::OnStopCopy(nsresult aStatus)
       if ( (mDeliverMode != nsIMsgSend::nsMsgSaveAsDraft) &&
            (mDeliverMode != nsIMsgSend::nsMsgSaveAsTemplate) )
         compose->CloseWindow();
+		  else
+		  if (mDeliverMode == nsIMsgSend::nsMsgSaveAsDraft)
+		  {	
+            // Remove the current draft msg when saving to draft is done. Also,
+		    // if it was a NEW comp type, it's now DRAFT comp type. Otherwise
+		    // if the msg is then sent we won't be able to remove the saved msg.
+			compose->SetType(nsIMsgCompType::Draft);
+			RemoveCurrentDraftMessage(compose, PR_TRUE);
+		  }
 		}
 #ifdef NS_DEBUG
 		else
@@ -1894,6 +1922,99 @@ nsMsgComposeSendListener::OnStopCopy(nsresult aStatus)
 	}
 
   return rv;
+}
+
+nsresult
+nsMsgComposeSendListener::RemoveCurrentDraftMessage(nsIMsgCompose *compObj, PRBool calledByCopy)
+{
+	nsresult    rv;
+	nsCOMPtr <nsIMsgCompFields> compFields = nsnull;
+
+    rv = compObj->GetCompFields(getter_AddRefs(compFields));
+	NS_ASSERTION(NS_SUCCEEDED(rv), "RemoveCurrentDraftMessage can't get compose fields");
+	if (NS_FAILED(rv) || !compFields)
+		return rv;
+
+	nsXPIDLCString curDraftIdURL;
+	nsMsgKey newUid = 0;
+	nsXPIDLCString newDraftIdURL;
+	nsCOMPtr<nsIMsgFolder> msgFolder;
+
+	rv = compFields->GetDraftId(getter_Copies(curDraftIdURL));
+	NS_ASSERTION((NS_SUCCEEDED(rv) && (curDraftIdURL)), "RemoveCurrentDraftMessage can't get draft id");
+
+	// Skip if no draft id (probably a new draft msg).
+	if (NS_SUCCEEDED(rv) && curDraftIdURL.get() && nsCRT::strlen(curDraftIdURL.get()))
+	{ 
+	  nsCOMPtr <nsIMsgDBHdr> msgDBHdr;
+	  rv = GetMsgDBHdrFromURI(curDraftIdURL, getter_AddRefs(msgDBHdr));
+	  NS_ASSERTION(NS_SUCCEEDED(rv), "RemoveCurrentDraftMessage can't get msg header DB interface pointer.");
+	  if (NS_SUCCEEDED(rv) && msgDBHdr)
+	  { // get the folder for the message resource
+		msgDBHdr->GetFolder(getter_AddRefs(msgFolder));
+		NS_ASSERTION(NS_SUCCEEDED(rv), "RemoveCurrentDraftMessage can't get msg folder interface pointer.");
+		if (NS_SUCCEEDED(rv) && msgFolder)
+		{ // build the msg arrary
+		  nsCOMPtr<nsISupportsArray> messageArray;
+		  rv = NS_NewISupportsArray(getter_AddRefs(messageArray));
+		  NS_ASSERTION(NS_SUCCEEDED(rv), "RemoveCurrentDraftMessage can't allocate support array.");
+
+		  //nsCOMPtr<nsISupports> msgSupport = do_QueryInterface(msgDBHdr, &rv);
+		  //NS_ASSERTION(NS_SUCCEEDED(rv), "RemoveCurrentDraftMessage can't get msg header interface pointer.");
+		  if (NS_SUCCEEDED(rv) && messageArray)
+		  {   // ready to delete the msg
+			  rv = messageArray->AppendElement(msgDBHdr);
+			  NS_ASSERTION(NS_SUCCEEDED(rv), "RemoveCurrentDraftMessage can't append msg header to array.");
+			  if (NS_SUCCEEDED(rv))
+				rv = msgFolder->DeleteMessages(messageArray, nsnull, PR_TRUE, PR_FALSE, nsnull);
+			  NS_ASSERTION(NS_SUCCEEDED(rv), "RemoveCurrentDraftMessage can't delete message.");
+		  }
+		}
+	  }
+  
+	}
+
+	// Now get the new uid so that next save will remove the right msg
+	// regardless whether or not the exiting msg can be deleted.
+	if (calledByCopy)
+	{
+		nsCOMPtr<nsIMsgSend> msgSend;
+		rv = compObj->GetMessageSend(getter_AddRefs(msgSend));
+		NS_ASSERTION(msgSend, "RemoveCurrentDraftMessage msgSend is null.");
+		if (NS_FAILED(rv) || !msgSend)
+			return rv;
+
+		rv = msgSend->GetMessageKey(&newUid);
+		NS_ENSURE_SUCCESS(rv, rv);
+
+		// Make sure we have a folder interface pointer
+		if (!msgFolder)
+		{
+			nsXPIDLCString folderUri;
+			rv = compObj->GetSavedFolderURI(getter_Copies(folderUri));
+			NS_ENSURE_SUCCESS(rv, rv);
+
+			nsCOMPtr<nsIRDFService> rdfService (do_GetService("@mozilla.org/rdf/rdf-service;1", &rv));
+			NS_ENSURE_SUCCESS(rv, rv); 
+
+			nsCOMPtr <nsIRDFResource> resource;
+			rv = rdfService->GetResource(folderUri, getter_AddRefs(resource));
+			NS_ENSURE_SUCCESS(rv, rv); 
+
+			msgFolder = do_QueryInterface(resource, &rv);
+			NS_ENSURE_SUCCESS(rv, rv);
+		}
+
+		// Reset draft (uid) url with the new uid.
+		if (msgFolder && newUid)
+		{
+			rv = msgFolder->GenerateMessageURI(newUid, getter_Copies(newDraftIdURL));
+			NS_ENSURE_SUCCESS(rv, rv);
+
+			compFields->SetDraftId(newDraftIdURL.get());
+		}
+	}
+	return rv;
 }
 
 nsresult
@@ -2233,7 +2354,7 @@ nsMsgCompose::ProcessSignature(nsIMsgIdentity *identity, nsString *aMsgBody)
                              4.x' HTML editor, it will not be able to
                              break this HTML sig, if quoted (for the user to
                              interleave a comment). */
-  static const char      preopen[] = "<pre class=\"moz-signature\">";
+  static const char      preopen[] = "<pre class=\"moz-signature\" cols=$mailwrapcol>";
   static const char      preclose[] = "</pre>";
 
   if (imageSig)
@@ -2456,7 +2577,7 @@ static nsresult OpenAddressBook(const char * dbUri, nsIAddrDatabase** aDatabase,
   if (addresBook)
     rv = addresBook->GetAbDatabaseFromURI(dbUri, aDatabase);
 
-	nsCOMPtr<nsIRDFService> rdfService (do_GetService(kRDFServiceCID, &rv));
+	nsCOMPtr<nsIRDFService> rdfService (do_GetService("@mozilla.org/rdf/rdf-service;1", &rv));
 	if (NS_FAILED(rv)) 
 		return rv;
 
@@ -2477,7 +2598,7 @@ nsresult nsMsgCompose::GetABDirectories(const char * dirUri, nsISupportsArray* d
     collectedAddressbookFound = PR_FALSE;
 
   nsresult rv = NS_OK;
-	nsCOMPtr<nsIRDFService> rdfService (do_GetService(kRDFServiceCID, &rv));
+	nsCOMPtr<nsIRDFService> rdfService (do_GetService("@mozilla.org/rdf/rdf-service;1", &rv));
   if (NS_FAILED(rv)) return rv;
 
   nsCOMPtr <nsIRDFResource> resource;

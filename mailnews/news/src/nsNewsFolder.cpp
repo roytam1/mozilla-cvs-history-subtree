@@ -630,12 +630,6 @@ NS_IMETHODIMP nsMsgNewsFolder::Rename(const PRUnichar *newName, nsIMsgWindow *ms
   return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsMsgNewsFolder::Adopt(nsIMsgFolder *srcFolder, PRUint32 *outPos)
-{
-  NS_ASSERTION(0,"Adopt not implemented");  
-  return NS_ERROR_NOT_IMPLEMENTED;
-}
-
 NS_IMETHODIMP nsMsgNewsFolder::GetAbbreviatedName(PRUnichar * *aAbbreviatedName)
 {
   nsresult rv = NS_OK;
@@ -955,7 +949,7 @@ nsMsgNewsFolder::DeleteMessages(nsISupportsArray *messages, nsIMsgWindow *aMsgWi
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIStringBundle> bundle;
-    rv = bundleService->CreateBundle(NEWS_MSGS_URL, nsnull, getter_AddRefs(bundle));
+    rv = bundleService->CreateBundle(NEWS_MSGS_URL, getter_AddRefs(bundle));
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsXPIDLString alertText;

@@ -47,10 +47,10 @@ pref("browser.startup.homepage",	   "chrome://navigator-region/locale/region.pro
 pref("browser.startup.homepage_override.1", true);
 pref("browser.startup.autoload_homepage",   true);
 
-pref("browser.cache.disk_cache_size",       7680);
+pref("browser.cache.disk_cache_size",       50000);
 pref("browser.cache.enable",                true);
 pref("browser.cache.disk.enable",           true);
-pref("browser.cache.memory_cache_size",     1024);
+pref("browser.cache.memory_cache_size",     4096);
 pref("browser.cache.disk_cache_ssl",        false);
 pref("browser.cache.check_doc_frequency",   0);
 
@@ -246,6 +246,10 @@ pref("network.http.pipelining.maxrequests" , 4);
 
 pref("network.http.proxy.ssl.connect",true);
 // </ruslan>
+
+// until the directory view has an owner
+// necko will produce html -- dougt
+pref("network.dir.generate_html", true);
 
 // sspitzer:  change this back to "news" when we get to beta.
 // for now, set this to news.mozilla.org because you can only

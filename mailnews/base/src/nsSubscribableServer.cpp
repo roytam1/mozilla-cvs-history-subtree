@@ -29,7 +29,6 @@
 #include "nsXPIDLString.h"
 #include "nsIFolder.h"
 #include "prmem.h"
-#include "nsICharsetConverterManager.h"
 
 #include "rdf.h"
 #include "nsRDFCID.h"
@@ -38,7 +37,8 @@
 #include "nsIRDFResource.h"
 #include "nsIRDFLiteral.h"
 
-static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+#include "nsMsgUtf7Utils.h"
+
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 
 MOZ_DECL_CTOR_COUNTER(nsSubscribableServer)
@@ -131,52 +131,6 @@ nsSubscribableServer::SetAsSubscribed(const char *path)
     return rv;
 }
 
-// copied code, this needs to be put in msgbaseutil.
-nsresult 
-CreateUnicodeStringFromUtf7(const char *aSourceString, PRUnichar **aUnicodeStr)
-{
-  if (!aUnicodeStr)
-	  return NS_ERROR_NULL_POINTER;
-
-  PRUnichar *convertedString = NULL;
-  nsresult res;
-  NS_WITH_SERVICE(nsICharsetConverterManager, ccm, kCharsetConverterManagerCID, &res); 
-
-  if(NS_SUCCEEDED(res) && (nsnull != ccm))
-  {
-    nsString aCharset; aCharset.AssignWithConversion("x-imap4-modified-utf7");
-    PRUnichar *unichars = nsnull;
-    PRInt32 unicharLength;
-
-    // convert utf7 to unicode
-    nsIUnicodeDecoder* decoder = nsnull;
-
-    res = ccm->GetUnicodeDecoder(&aCharset, &decoder);
-    if(NS_SUCCEEDED(res) && (nsnull != decoder)) 
-    {
-      PRInt32 srcLen = PL_strlen(aSourceString);
-      res = decoder->GetMaxLength(aSourceString, srcLen, &unicharLength);
-      // temporary buffer to hold unicode string
-      unichars = new PRUnichar[unicharLength + 1];
-      if (unichars == nsnull) 
-      {
-        res = NS_ERROR_OUT_OF_MEMORY;
-      }
-      else 
-      {
-        res = decoder->Convert(aSourceString, &srcLen, unichars, &unicharLength);
-        unichars[unicharLength] = 0;
-      }
-      NS_IF_RELEASE(decoder);
-      nsString unicodeStr(unichars);
-      convertedString = unicodeStr.ToNewUnicode();
-	  delete [] unichars;
-    }
-  }
-  *aUnicodeStr = convertedString;
-  return (convertedString) ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
-}
-
 NS_IMETHODIMP
 nsSubscribableServer::AddTo(const char *aName, PRBool addAsSubscribed, PRBool changeIfExists)
 {
@@ -241,22 +195,6 @@ nsSubscribableServer::SetState(const char *path, PRBool state, PRBool *stateChan
     }
 
     return rv;
-}
-
-void
-nsSubscribableServer::BuildPathFromNode(SubscribeTreeNode *node, nsCAutoString &path)
-{
-    if (node == mTreeRoot) return;
-
-    if (node->parent) {
-        BuildPathFromNode(node->parent, path);
-        if (node->parent != mTreeRoot) {
-            path += mDelimiter;
-        }
-    }
-
-    path += node->name;
-    return;
 }
 
 void
@@ -483,44 +421,7 @@ nsSubscribableServer::SetShowFullName(PRBool showFullName)
 	mShowFullName = showFullName;
 	return NS_OK;
 }
-
-nsresult
-nsSubscribableServer::DumpSubtree(SubscribeTreeNode *node)
-{
-    nsresult rv = NS_OK;
-
-    if (node) {
-        NS_ASSERTION(mDumpListener, "calling DumpTree(), no listener");
-        if (mDumpListener) {
-            if (node->isSubscribable) {
-                nsCAutoString path;
-                BuildPathFromNode(node, path);
-                rv = mDumpListener->DumpItem((const char *)path);
-                NS_ENSURE_SUCCESS(rv,rv);
-            }
-#ifdef DEBUG_seth
-            else {
-                printf("skipping %s, it is not subscribable\n",node->name);
-            }
-#endif
-        }
-
-        // recursively dump the children
-        if (node->lastChild) {
-            rv = DumpSubtree(node->lastChild);
-            NS_ENSURE_SUCCESS(rv,rv);
-        }
-
-        // recursively dump the siblings
-        if (node->prevSibling) {
-            rv = DumpSubtree(node->prevSibling);
-            NS_ENSURE_SUCCESS(rv,rv);
-        }
-    }
-
-    return NS_OK;
-}
-
+     
 nsresult 
 nsSubscribableServer::FreeSubtree(SubscribeTreeNode *node)
 {
@@ -858,7 +759,7 @@ nsSubscribableServer::GetChildren(const char *path, nsISupportsArray *array)
         uriPrefix += mDelimiter;
     }
 
-    // we inserted them in z to a order.
+    // we inserted them in reverse alphabetical order.
     // so pull them out in reverse to get the right order
     // in the subscribe dialog
     SubscribeTreeNode *current = node->lastChild;
@@ -893,24 +794,3 @@ nsSubscribableServer::CommitSubscribeChanges()
 	return NS_ERROR_FAILURE;
 }
 
-NS_IMETHODIMP
-nsSubscribableServer::DumpTree()
-{
-    nsresult rv;
-
-    NS_ASSERTION(mDumpListener, "calling DumpTree(), no listener");
-    if (mDumpListener) {
-        mDumpListener->StartDumping();
-        rv = DumpSubtree(mTreeRoot);
-        NS_ENSURE_SUCCESS(rv,rv);
-        mDumpListener->DoneDumping();
-    }
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsSubscribableServer::SetDumpListener(nsISubscribeDumpListener *dumpListener)
-{
-    mDumpListener = dumpListener;
-    return NS_OK;
-}

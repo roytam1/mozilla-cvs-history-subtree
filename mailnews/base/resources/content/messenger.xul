@@ -102,7 +102,7 @@ Rights Reserved.
   <keyset id="tasksKeys"/>
 </keyset>
 
-<popupset>
+<popupset id="aTooltipSet">
 
   <popup id="threadPaneContext"/>
   <popup id="folderPaneContext"/>
@@ -125,10 +125,8 @@ Rights Reserved.
   </popup>
 
   <popup id="messagePaneContext"/>
-</popupset>
-
-<popupset id="aTooltipSet">
   <popup id="folderTooltip"/>
+  <popup id="sidebarPopup"/>
 </popupset>
 
   <toolbox id="mailToolbarToolbox" class="toolbox-top">
@@ -155,9 +153,10 @@ Rights Reserved.
       <outliner id="threadOutliner" flex="2" persist="height" style="height:0px" context="threadPaneContext"/>
 
       <!-- if you change this id, please change GetThreadAndMessagePaneSplitter() and MsgToggleMessagePane() -->
-      <splitter collapse="after" persist="state" onclick="OnClickThreadAndMessagePaneSplitter()"
+      <splitter collapse="after" persist="state" 
+		onmouseup="OnMouseUpThreadAndMessagePaneSplitter()"
                 id="threadpane-splitter" orient="vertical" autostretch="never">
-        <grippy/>
+        <grippy onclick="OnClickThreadAndMessagePaneSplitterGrippy()"/>
       </splitter>
       
       <box id="messagepanebox" align="vertical" flex="3" persist="collapsed height" class="window-focusborder" focusring="false" onclick="contentAreaClick(event);" ondraggesture="nsDragAndDrop.startDrag(event, contentAreaDNDObserver);">

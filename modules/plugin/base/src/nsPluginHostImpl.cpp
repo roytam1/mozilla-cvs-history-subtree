@@ -19,6 +19,7 @@
  *
  * Contributor(s): 
  *   Sean Echevarria <sean@beatnik.com>
+ *   Håkan Waara <hwaara@chello.se>
  */
 
 #include "nsPluginHostImpl.h"
@@ -68,7 +69,6 @@
 #include "nsIWindowWatcher.h"
 #include "nsHashtable.h"
 
-#include "nsILocale.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptGlobalObjectOwner.h"
 #include "nsIPrincipal.h"
@@ -94,6 +94,7 @@
 #include "nsIMIMEService.h"
 #include "nsCExternalHandlerService.h"
 #include "nsILocalFile.h"
+#include "nsIFileChannel.h"
 
 #ifdef XP_UNIX
 #if defined(MOZ_WIDGET_GTK)
@@ -215,7 +216,6 @@ void DisplayNoDefaultPluginDialog(const char *mimeType)
   nsCOMPtr<nsIStringBundle> regionalBundle;
   nsCOMPtr<nsIURI> uri;
   char *spec = nsnull;
-  nsILocale* locale = nsnull;
   PRBool displayDialogPrefValue = PR_FALSE, checkboxState = PR_FALSE;
 
   if (!prefs || !prompt || !io || !strings) {
@@ -233,11 +233,11 @@ void DisplayNoDefaultPluginDialog(const char *mimeType)
   
   // Taken from mozilla\extensions\wallet\src\wallet.cpp
   // WalletLocalize().
-  rv = strings->CreateBundle(PLUGIN_PROPERTIES_URL, locale, getter_AddRefs(bundle));
+  rv = strings->CreateBundle(PLUGIN_PROPERTIES_URL, getter_AddRefs(bundle));
   if (NS_FAILED(rv)) {
     return;
   }
-  rv = strings->CreateBundle(PLUGIN_REGIONAL_URL, locale, 
+  rv = strings->CreateBundle(PLUGIN_REGIONAL_URL, 
                              getter_AddRefs(regionalBundle));
   if (NS_FAILED(rv)) {
     return;
@@ -1749,7 +1749,7 @@ nsPluginHostImpl::nsPluginHostImpl()
   if (obsService)
   {
     obsService->AddObserver(this, NS_LITERAL_STRING("quit-application").get());
-    obsService->AddObserver(this, NS_LITERAL_STRING(NS_XPCOM_SHUTDOWN_OBSERVER_ID).get());
+    obsService->AddObserver(this, NS_ConvertASCIItoUCS2(NS_XPCOM_SHUTDOWN_OBSERVER_ID).get());
   }
 }
 
@@ -1762,7 +1762,7 @@ nsPluginHostImpl::~nsPluginHostImpl()
   if (obsService)
   {
     obsService->RemoveObserver(this, NS_LITERAL_STRING("quit-application").get());
-    obsService->RemoveObserver(this, NS_LITERAL_STRING(NS_XPCOM_SHUTDOWN_OBSERVER_ID).get());
+    obsService->RemoveObserver(this, NS_ConvertASCIItoUCS2(NS_XPCOM_SHUTDOWN_OBSERVER_ID).get());
   }
   Destroy();
 }
@@ -3397,8 +3397,8 @@ static PRBool areTheSameFileNames(char * aPath1, char * aPath2)
 
   nsresult rv = NS_OK;
 
-  char * filename1 = nsnull;
-  char * filename2 = nsnull;
+  nsXPIDLCString filename1;
+  nsXPIDLCString filename2;
 
   nsCOMPtr<nsILocalFile> file1;
   nsCOMPtr<nsILocalFile> file2;
@@ -3411,15 +3411,15 @@ static PRBool areTheSameFileNames(char * aPath1, char * aPath2)
   if(NS_FAILED(rv))
     return PR_FALSE;
 
-  file1->GetLeafName(&filename1);
-  file2->GetLeafName(&filename2);
+  file1->GetLeafName(getter_Copies(filename1));
+  file2->GetLeafName(getter_Copies(filename2));
   
-  if(PL_strlen(filename1) != PL_strlen(filename2))
+  if(PL_strlen(filename1.get()) != PL_strlen(filename2.get()))
     return PR_FALSE;
 
   // XXX this one MUST be case insensitive for Windows and MUST be case 
   // sensitive for Unix. How about Win2000?
-  return (nsnull == PL_strncasecmp(filename1, filename2, PL_strlen(filename1)));
+  return (nsnull == PL_strncasecmp(filename1.get(), filename2.get(), PL_strlen(filename1.get())));
 }
 
 static PRBool isJavaPlugin(nsPluginTag * tag)
@@ -4021,16 +4021,24 @@ NS_IMETHODIMP nsPluginHostImpl::NewPluginURLStream(const nsString& aURL,
           // In the file case, hand the filename off to NewPostDataStream
           if (aIsFile) 
           {
-            // If the filename does not start with file:///, try
-            // passing it through unmodified
-            const char *filename = aPostData;
-            if (! PL_strncasecmp("file:///", filename, 8))
-              filename += 8;
+            nsXPIDLCString filename;
 
-            // tell the listener about it so it will delete the file later
-            listenerPeer->SetLocalFile(filename);
+            nsCOMPtr<nsIURI> url;
+            NS_NewURI(getter_AddRefs(url), aPostData);
+            nsCOMPtr<nsIFileURL> fileURL(do_QueryInterface(url));
+            if (fileURL) {
+              nsCOMPtr<nsIFile> file;
+              fileURL->GetFile(getter_AddRefs(file));
+              nsCOMPtr<nsILocalFile> localFile(do_QueryInterface(file));
+              if (localFile) {
+                localFile->GetPath(getter_Copies(filename));
 
-            NS_NewPostDataStream(getter_AddRefs(postDataStream), aIsFile, filename, 0);
+                // tell the listener about it so it will delete the file later
+                listenerPeer->SetLocalFile(filename);
+
+                NS_NewPostDataStream(getter_AddRefs(postDataStream), aIsFile, filename, 0);
+              }
+            }
           }
           else
           {
@@ -4432,8 +4440,8 @@ NS_IMETHODIMP nsPluginHostImpl::Observe(nsISupports *aSubject,
   if (newString)
     nsCRT::free(newString);
 #endif
-//  if (NS_LITERAL_STRING(NS_XPCOM_SHUTDOWN_OBSERVER_ID) == aTopic || 
-//      NS_LITERAL_STRING("quit-application") == aTopic)
+  if (NS_ConvertASCIItoUCS2(NS_XPCOM_SHUTDOWN_OBSERVER_ID).Equals(aTopic) ||
+      NS_LITERAL_STRING("quit-application").Equals(aTopic))
   {
     Destroy();
   }
@@ -4478,7 +4486,6 @@ NS_IMETHODIMP nsPluginHostImpl::HandleBadPlugin(PRLibrary* aLibrary)
   nsCOMPtr<nsIStringBundle> bundle;
   nsCOMPtr<nsIURI> uri;
   char *spec = nsnull;
-  nsILocale* locale = nsnull;
 
   PRInt32 buttonPressed;
   PRBool checkboxState = PR_FALSE;
@@ -4494,7 +4501,7 @@ NS_IMETHODIMP nsPluginHostImpl::HandleBadPlugin(PRLibrary* aLibrary)
     return rv;
   }
 
-  rv = strings->CreateBundle(spec, locale, getter_AddRefs(bundle));
+  rv = strings->CreateBundle(spec, getter_AddRefs(bundle));
   nsCRT::free(spec);
   if (NS_FAILED(rv))
     return rv;

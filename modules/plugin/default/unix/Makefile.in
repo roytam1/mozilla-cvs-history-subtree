@@ -28,6 +28,7 @@ include $(DEPTH)/config/autoconf.mk
 
 #MODULE		= plugin
 LIBRARY_NAME	= nullplugin
+EXPORT_LIBRARY = 1
 #IS_COMPONENT    = 1
 REQUIRES	= java
 
@@ -62,7 +63,9 @@ CFLAGS		+= $(TK_CFLAGS)
 endif
 
 install-plugin: $(SHARED_LIBRARY)
+ifdef SHARED_LIBRARY
 	$(INSTALL) $(SHARED_LIBRARY) $(DIST)/bin/plugins
+endif
 
 install:: install-plugin
 

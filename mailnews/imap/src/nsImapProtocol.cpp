@@ -58,6 +58,7 @@
 #include "nsAutoLock.h"
 #include "nsIDNSService.h"
 #include "nsIMsgHdr.h"
+#include "nsMsgUtf7Utils.h"
 // for the memory cache...
 #include "nsICacheEntryDescriptor.h"
 #include "nsICacheSession.h"
@@ -1524,7 +1525,8 @@ NS_IMETHODIMP nsImapProtocol::CanHandleUrl(nsIImapUrl * aImapUrl,
     // If we don't find a connection in that selected state,
     // we'll fall back to the first free connection.
     PRBool isSelectedStateUrl = imapState == nsIImapUrl::nsImapSelectedState 
-      || actionForProposedUrl == nsIImapUrl::nsImapDeleteFolder || actionForProposedUrl == nsIImapUrl::nsImapRenameFolder;
+      || actionForProposedUrl == nsIImapUrl::nsImapDeleteFolder || actionForProposedUrl == nsIImapUrl::nsImapRenameFolder
+      || actionForProposedUrl == nsIImapUrl::nsImapMoveFolderHierarchy;
     
     nsCOMPtr<nsIMsgMailNewsUrl> msgUrl = do_QueryInterface(aImapUrl);
     nsCOMPtr<nsIMsgIncomingServer> server;
@@ -2588,6 +2590,7 @@ nsImapProtocol::FetchMessage(const char * messageIds,
       commandString.Append(" %s (UID)");
             break;
         case kFlags:
+          GetServerStateParser().SetFetchingFlags(PR_TRUE);
       commandString.Append(" %s (FLAGS)");
             break;
         case kRFC822Size:
@@ -2672,6 +2675,7 @@ nsImapProtocol::FetchMessage(const char * messageIds,
     if (NS_SUCCEEDED(rv))
        ParseIMAPandCheckForNewMail(protocolString);
     PR_Free(protocolString);
+    GetServerStateParser().SetFetchingFlags(PR_FALSE);
     GetServerStateParser().SetFetchingEverythingRFC822(PR_FALSE); // always clear this flag after every fetch....
     }
     else
@@ -4797,6 +4801,9 @@ void nsImapProtocol::UploadMessageFromFile (nsIFileSpec* fileSpec,
                         command = "SEARCH SEEN HEADER Message-ID ";
                         command.Append(messageId);
 
+                        // Clean up result sequence before issuing the cmd.
+                        GetServerStateParser().ResetSearchResultSequence();
+ 
                         Search(command, PR_TRUE, PR_FALSE);
                         if (GetServerStateParser().LastCommandSuccessful())
             {

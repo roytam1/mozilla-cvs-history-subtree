@@ -182,6 +182,7 @@ nsImapMailFolder::nsImapMailFolder() :
                                             getter_AddRefs(m_eventQueue));
   m_moveCoalescer = nsnull;
   m_boxFlags = 0;
+  m_uidValidity = 0;
   m_hierarchyDelimiter = kOnlineHierarchySeparatorUnknown;
   m_pathName = nsnull;
 }
@@ -1583,13 +1584,6 @@ nsImapMailFolder::MarkMessagesFlagged(nsISupportsArray *messages, PRBool markFla
 }
 
 
-NS_IMETHODIMP nsImapMailFolder::Adopt(nsIMsgFolder *srcFolder, 
-                                      PRUint32 *outPos)
-{
-    nsresult rv = NS_ERROR_FAILURE;
-    return rv;
-}
-
 NS_IMETHODIMP nsImapMailFolder::SetOnlineName(const char * aOnlineFolderName)
 {
   nsresult rv;
@@ -1852,8 +1846,9 @@ NS_IMETHODIMP nsImapMailFolder::DeleteMessages(nsISupportsArray *messages,
             else
             {
                 mDatabase->DeleteMessages(&srcKeyArray,NULL);
-                NotifyFolderEvent(mDeleteOrMoveMsgCompletedAtom);
+                NotifyFolderEvent(mDeleteOrMoveMsgCompletedAtom);            
             }
+            
         }
     }
         return rv;
@@ -3473,7 +3468,7 @@ nsImapMailFolder::NotifyMessageFlags(PRUint32 flags, nsMsgKey msgKey)
 	    mDatabase->MarkHdrRead(dbHdr, (flags & kImapMsgSeenFlag) != 0, nsnull);
 		  mDatabase->MarkHdrReplied(dbHdr, (flags & kImapMsgAnsweredFlag) != 0, nsnull);
 			mDatabase->MarkHdrMarked(dbHdr, (flags & kImapMsgFlaggedFlag) != 0, nsnull);
-			mDatabase->MarkImapDeleted(msgKey, (flags & kImapMsgDeletedFlag) != 0, nsnull);
+            mDatabase->MarkImapDeleted(msgKey, (flags & kImapMsgDeletedFlag) != 0, nsnull);
 		}
   }
   
@@ -4223,14 +4218,17 @@ NS_IMETHODIMP
 nsImapMailFolder::GetStoredUIDValidity(nsIImapProtocol* aProtocol,
                                        uid_validity_info* aInfo)
 {
-    return NS_ERROR_FAILURE;
+  NS_ENSURE_ARG(aInfo);
+  aInfo->returnValidity = m_uidValidity;
+  return NS_OK;
 }
 
 NS_IMETHODIMP
 nsImapMailFolder::LiteSelectUIDValidity(nsIImapProtocol* aProtocol,
                                         PRUint32 uidValidity)
 {
-    return NS_ERROR_FAILURE;
+  m_uidValidity = uidValidity;
+  return NS_OK;
 }
 
 NS_IMETHODIMP nsImapMailFolder::GetPath(nsIFileSpec ** aPathName)
@@ -5205,13 +5203,13 @@ nsImapMailFolder::ClearCopyState(nsresult rv)
 {
     if (m_copyState)
     {
+        nsCOMPtr<nsISupports> srcSupport = do_QueryInterface(m_copyState->m_srcSupport);
+        m_copyState = null_nsCOMPtr();
         nsresult result;
         NS_WITH_SERVICE(nsIMsgCopyService, copyService, 
                         kMsgCopyServiceCID, &result); 
         if (NS_SUCCEEDED(result))
-            copyService->NotifyCompletion(m_copyState->m_srcSupport, this, rv);
-      
-        m_copyState = null_nsCOMPtr();
+            copyService->NotifyCompletion(srcSupport, this, rv);    
     }
 }
 
