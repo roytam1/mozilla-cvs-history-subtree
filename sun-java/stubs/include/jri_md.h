@@ -20,6 +20,10 @@
 
 #include <assert.h>
 
+#ifdef XP_MAC
+#include "jni.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -146,13 +150,17 @@ typedef juint			jsize;
 #endif
 
 typedef unsigned char	jbool;
+#ifndef XP_MAC
 typedef char			jbyte;
+#endif
 #ifdef IS_64 /* XXX ok for alpha, but not right on all 64-bit architectures */
 typedef unsigned int	juint;
 typedef int				jint;
 #else
 typedef unsigned long	juint;
+#ifndef XP_MAC
 typedef long			jint;
+#endif
 #endif
 
 /*******************************************************************************
@@ -226,6 +234,7 @@ typedef DWORDLONG			julong;
 
 #else  /* !HAVE_LONG_LONG */
 
+#ifndef XP_MAC
 typedef struct {
 #ifdef IS_LITTLE_ENDIAN
     juint lo, hi;
@@ -233,6 +242,7 @@ typedef struct {
     juint hi, lo;
 #endif
 } jlong;
+#endif /* XP_MAC */
 typedef jlong				julong;
 
 extern jlong jlong_MAXINT, jlong_MININT, jlong_ZERO;
