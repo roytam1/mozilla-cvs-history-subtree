@@ -44,7 +44,7 @@
       <property name="mode">
         <getter>return this.mMode;</getter>
         <setter><![CDATA[
-          this.mMode = val || "All";
+          this.mMode = val || "";
           this.setAttribute("mode", this.mMode);
           return val;
         ]]></setter>
@@ -89,7 +89,7 @@
             return;
           }          
                     
-          this.mMode = this.getAttribute("mode") || "All";
+          this.mMode = this.getAttribute("mode") || "";
 
           this.appendInitialItems();
         ]]></body>

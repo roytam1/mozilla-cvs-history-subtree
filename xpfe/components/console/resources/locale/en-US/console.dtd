@@ -27,17 +27,27 @@ Contributor(s): ______________________________________. -->
 <!ENTITY errLine.label   "Line:">
 <!ENTITY errColumn.label "Column:">
 
-<!ENTITY all.label       "All">
-<!ENTITY errors.label    "Errors">
-<!ENTITY warnings.label  "Warnings">
-<!ENTITY messages.label  "Messages">
-<!ENTITY clear.label     "Clear">
-<!ENTITY evaluate.label  "Evaluate">
+<!ENTITY all.label          "All">
+<!ENTITY all.accesskey      "A">
+<!ENTITY errors.label       "Errors">
+<!ENTITY errors.accesskey   "E">
+<!ENTITY warnings.label     "Warnings">
+<!ENTITY warnings.accesskey "W">
+<!ENTITY messages.label     "Messages">
+<!ENTITY messages.accesskey "M">
+<!ENTITY clear.label        "Clear List">
+<!ENTITY clear.accesskey    "C">
+<!ENTITY evaluate.label     "Evaluate">
 
 <!ENTITY sortFirst.label "First > Last Sort Order">
 <!ENTITY sortFirst.accesskey "f">
 <!ENTITY sortLast.label  "Last > First Sort Order">
 <!ENTITY sortLast.accesskey  "l">
+
+<!ENTITY enable.label    "Run Web Page Scripts">
+<!ENTITY enable.accesskey "R">
+<!ENTITY strictWarn.label     "Include Strict Warnings">
+<!ENTITY strictWarn.accesskey "S">
 
 <!ENTITY toolbarsCmd.label "Show/Hide">
 <!ENTITY toolbarsCmd.accesskey "w">

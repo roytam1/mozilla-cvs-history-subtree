@@ -19,8 +19,8 @@
  * Portions created by the Initial Developer are Copyright (C) 1998
  * the Initial Developer. All Rights Reserved.
  *
- * Contributor(s):
  * Contributor(s): Joe Hewitt <hewitt@netscape.com>
+ *                 Christian Biesinger <cbiesinger@web.de>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -36,7 +36,44 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-var gConsole, gConsoleBundle;
+var gConsole, gConsoleBundle, gPref;
+
+const jsEnabledPref = "javascript.enabled";
+const jsStrictWarnEnabledPref = "javascript.options.strict";
+
+function UpdatePrefs() {
+  if (gPref.getBoolPref(jsEnabledPref)) {
+    document.getElementById("JSEnabled").setAttribute("checked", "true");
+    document.getElementById("JSEnabledDesc").label = gConsoleBundle.getString("jsEnabled");
+  }
+  else {
+    document.getElementById("JSEnabled").removeAttribute("checked");
+    document.getElementById("JSEnabledDesc").label = gConsoleBundle.getString("jsDisabled");
+  }
+
+  if (gPref.getBoolPref(jsStrictWarnEnabledPref))
+    document.getElementById("StrictWarn").setAttribute("checked", "true");
+  else
+    document.getElementById("StrictWarn").removeAttribute("checked");
+
+}
+
+function nsConsolePrefListener() {
+}
+
+nsConsolePrefListener.prototype =
+{
+  domain: "javascript.",
+  observe: function(subject, topic, prefName)
+  {
+    // verify that we're changing a button pref
+    if (topic != "nsPref:changed") return;
+    if (prefName.substr(0, this.domain.length) != this.domain) return;
+    UpdatePrefs();
+  }
+}
+
+var gJSPrefListener = new nsConsolePrefListener;
 
 /* :::::::: Console Initialization ::::::::::::::: */
 
@@ -52,22 +89,28 @@ window.onload = function()
 
   var iframe = document.getElementById("Evaluator");
   iframe.addEventListener("load", displayResult, true);
+
+  var prefService = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefService);
+  gPref = prefService.getBranch(null);
+  gPref.QueryInterface(Components.interfaces.nsIPrefBranchInternal)
+    .addObserver("javascript.", gJSPrefListener, false);
+  UpdatePrefs();
 }
 
 /* :::::::: Console UI Functions ::::::::::::::: */
 
 function changeMode(aMode)
 {
-  switch (aMode) {
-    case "Errors":
-    case "Warnings":
-    case "Messages":
-      gConsole.mode = aMode;
-      break;
-    case "All":
-      gConsole.mode = null;
+  var oldmode = gConsole.mode;
+  var pos = oldmode.indexOf(aMode);
+  if (pos == -1) // append
+  {
+    gConsole.mode += " " + aMode;
   }
-  
+  else // remove
+  {
+    gConsole.mode = oldmode.replace(RegExp("\\b" + aMode + "\\b"), "").replace(/  +/, " ");
+  }
   document.persist("ConsoleBox", "mode");
 }
 
@@ -94,8 +137,12 @@ function updateSortCommand(aOrder)
 
 function updateModeCommand(aMode)
 {
-  var bc = document.getElementById("Console:mode" + aMode);
-  bc.setAttribute("checked", true);
+  var vals = aMode.split(" ");
+  for (var i = 0; i < vals.length; i++) {
+    var bc = document.getElementById("Console:mode" + vals[i]);
+    if (bc)
+      bc.removeAttribute("checked");
+  }
 }
 
 function toggleToolbar(aEl)
@@ -108,6 +155,11 @@ function toggleToolbar(aEl)
 
   document.persist(toolbar.id, "hidden");
   document.persist(bc.id, "checked");
+}
+
+function togglePref(aPref, aElem)
+{
+  gPref.setBoolPref(aPref, aElem.getAttribute("checked") == "true");
 }
 
 function copyItemToClipboard()

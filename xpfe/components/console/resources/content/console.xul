@@ -19,6 +19,7 @@ Copyright (C) 1998-1999 Netscape Communications Corporation. All
 Rights Reserved.
 
 Contributor(s): Joe Hewitt <hewitt@netscape.com>
+                Christian Biesinger <cbiesinger@web.de>
 
 -->
 
@@ -52,7 +53,8 @@ Contributor(s): Joe Hewitt <hewitt@netscape.com>
 <command id="cmd_close" oncommand="window.close()"/>
 <command id="cmd_quit"/>
 
-  <broadcaster id="Console:clear" label="&clear.label;" oncommand="clearConsole();"/>
+  <broadcaster id="Console:clear" label="&clear.label;" accesskey="&clear.accesskey;"
+               oncommand="clearConsole();"/>
   
   <broadcaster id="Console:sortAscend" label="&sortFirst.label;" 
                accesskey="&sortFirst.accesskey;"
@@ -61,22 +63,17 @@ Contributor(s): Joe Hewitt <hewitt@netscape.com>
                accesskey="&sortLast.accesskey;"
                oncommand="changeSortOrder('reverse');"/>
 
-  <broadcaster id="Console:toggleToolbarMode" label="&toolbarMode.label;" 
-               oncommand="toggleToolbar(this);" checked="true" 
-               _toolbar="ToolbarMode"/>
   <broadcaster id="Console:toggleToolbarEval" label="&toolbarEval.label;"
                oncommand="toggleToolbar(this);" checked="true" 
                _toolbar="ToolbarEval"/>
 
 <broadcasterset id="ModeBroadcasters">
-  <broadcaster id="Console:modeAll" label="&all.label;" 
-               oncommand="changeMode('All');"/>
-  <broadcaster id="Console:modeErrors" label="&errors.label;"
-               oncommand="changeMode('Errors');"/>
-  <broadcaster id="Console:modeWarnings" label="&warnings.label;"
-               oncommand="changeMode('Warnings');"/>
-  <broadcaster id="Console:modeMessages" label="&messages.label;"
-               oncommand="changeMode('Messages');"/>
+  <broadcaster id="Console:modeErrors" label="&errors.label;" accesskey="&errors.accesskey;"
+               oncommand="changeMode('Errors');" checked="true"/>
+  <broadcaster id="Console:modeWarnings" label="&warnings.label;" accesskey="&warnings.accesskey;"
+               oncommand="changeMode('Warnings');" checked="true"/>
+  <broadcaster id="Console:modeMessages" label="&messages.label;" accesskey="&messages.accesskey;"
+               oncommand="changeMode('Messages');" checked="true"/>
 </broadcasterset>
 
 <keyset id="tasksKeys">
@@ -98,6 +95,8 @@ Contributor(s): Joe Hewitt <hewitt@netscape.com>
   <menubar id="main-menubar" class="chromeclass-menubar" grippytooltiptext="&menuBar.tooltip;">
     <menu id="menu_File">
       <menupopup id="menu_FilePopup">
+        <menuitem observes="Console:clear"/>
+        <menuseparator/>
         <menuitem id="menu_close"/>
       </menupopup>
     </menu>
@@ -105,39 +104,39 @@ Contributor(s): Joe Hewitt <hewitt@netscape.com>
     <menu id="menu_Edit">
       <menupopup onpopupshowing="UpdateCopyMenu()">
         <menuitem id="menu_copy"/>
+        <menuseparator/>
+        <menuitem type="checkbox" label="&enable.label;" accesskey="&enable.accesskey;"
+                  id="JSEnabled" oncommand="togglePref(jsEnabledPref, this)"/>
+        <menuseparator/>
+        <menuitem id="menu_preferences"
+                  oncommand="goPreferences('advancedItem', 'chrome://communicator/content/pref/pref-scripts.xul', 'scripts');"/>
       </menupopup>
     </menu>
   
     <menu id="menu_View">
       <menupopup>
-       <menu label="&toolbarsCmd.label;" accesskey="&toolbarsCmd.accesskey;">
-          <menupopup> 
-            <menuitem type="checkbox" observes="Console:toggleToolbarMode"/>
-            <menuitem type="checkbox" observes="Console:toggleToolbarEval"/>
-          </menupopup>
-        </menu>
+        <menuitem type="checkbox" observes="Console:toggleToolbarEval"/>
         <menuseparator/>
         <menuitem type="radio" observes="Console:sortAscend"/>
         <menuitem type="radio" observes="Console:sortDescend"/>
+        <menuseparator/>
+        <menuitem type="checkbox" observes="Console:modeErrors"/>
+        <menuitem type="checkbox" observes="Console:modeMessages"/>
+        <menuitem type="checkbox" observes="Console:modeWarnings"/>
+        <menuitem type="checkbox" label="&strictWarn.label;" accesskey="&strictWarn.accesskey;"
+                  id="StrictWarn" oncommand="togglePref(jsStrictWarnEnabledPref, this)"/>
       </menupopup>
     </menu>
   
     <!-- tasks menu filled from tasksOverlay -->
     <menu id="tasksMenu"/>
 
+    <menu id="windowMenu"/>
+
     <!-- help menu filled from globalOverlay -->
     <menu id="menu_Help"/>
   </menubar>
 
-  <toolbar class="chromeclass-toolbar" id="ToolbarMode" grippytooltiptext="&modeToolbar.tooltip;">
-    <toolbarbutton type="radio" group="mode" observes="Console:modeAll"/>
-    <toolbarbutton type="radio" group="mode" observes="Console:modeErrors"/>
-    <toolbarbutton type="radio" group="mode" observes="Console:modeWarnings"/>
-    <toolbarbutton type="radio" group="mode" observes="Console:modeMessages"/>
-    <toolbarseparator/>
-    <toolbarbutton observes="Console:clear"/>
-  </toolbar>
-  
   <toolbar class="chromeclass-toolbar" id="ToolbarEval" grippytooltiptext="&entryToolbar.tooltip;">
     <textbox id="TextboxEval" class="toolbar" value="" onkeypress="onEvalKeyPress(event)" flex="1"/>
     <toolbarbutton id="ButtonEval" label="&evaluate.label;" oncommand="evaluateTypein()"/>
@@ -147,6 +146,10 @@ Contributor(s): Joe Hewitt <hewitt@netscape.com>
 <vbox id="ConsoleBox" class="console-box" flex="1" context="ConsoleContext" persist="sortOrder"/>
 
 <iframe name="Evaluator" id="Evaluator" collapsed="true"/>
+
+<statusbar>
+  <statusbarpanel id="JSEnabledDesc" flex="1"/>
+</statusbar>
 
 </window>
 

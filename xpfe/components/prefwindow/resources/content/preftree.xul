@@ -133,7 +133,7 @@
         <treecell url="chrome://communicator/content/pref/pref-advanced.xul" label="&advance.label;"/> 
       </treerow>
       <treechildren id="advancedChildren">
-        <treeitem>
+        <treeitem id="scripts">
           <treerow>
             <treecell url="chrome://communicator/content/pref/pref-scripts.xul" label="&scriptsAndWindows.label;"/> 
           </treerow>
