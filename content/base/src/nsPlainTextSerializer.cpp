@@ -55,6 +55,7 @@
 #include "nsReadableUtils.h"
 #include "nsCRT.h"
 #include "nsUnicharUtils.h"
+#include "nsCRT.h"
 
 static NS_DEFINE_CID(kLWBrkCID, NS_LWBRK_CID);
 static NS_DEFINE_CID(kParserServiceCID, NS_PARSERSERVICE_CID);
@@ -280,8 +281,6 @@ nsPlainTextSerializer::AppendText(nsIDOMText* aText,
 
   mOutputString = &aStr;
 
-  nsAutoString linebuffer;
-
   // We have to split the string across newlines
   // to match parser behavior
   PRInt32 start = 0;
@@ -290,8 +289,7 @@ nsPlainTextSerializer::AppendText(nsIDOMText* aText,
 
     if(offset>start) {
       // Pass in the line
-      textstr.Mid(linebuffer, start, offset-start);
-      rv = DoAddLeaf(eHTMLTag_text, linebuffer);
+      rv = DoAddLeaf(eHTMLTag_text, Substring(textstr, start, offset-start));
       if (NS_FAILED(rv)) break;
     }
 
@@ -306,8 +304,7 @@ nsPlainTextSerializer::AppendText(nsIDOMText* aText,
   // Consume the last bit of the string if there's any left
   if (NS_SUCCEEDED(rv) & (start < length)) {
     if (start) {
-      textstr.Mid(linebuffer, start, offset-start);
-      rv = DoAddLeaf(eHTMLTag_text, linebuffer);
+      rv = DoAddLeaf(eHTMLTag_text, Substring(textstr, start, length-start));
     }
     else {
       rv = DoAddLeaf(eHTMLTag_text, textstr);
@@ -1076,7 +1073,7 @@ nsPlainTextSerializer::DoAddLeaf(PRInt32 aTag,
     nsAutoString desc, temp;
     if (NS_SUCCEEDED(GetAttributeValue(nsHTMLAtoms::alt, desc))) {
       if (!desc.IsEmpty()) {
-        desc.StripChars("\"");
+        desc.StripChar(PRUnichar('"'));
         temp += desc;
       }
       // If the alt attribute has an empty value (|alt=""|), output nothing
@@ -1084,7 +1081,7 @@ nsPlainTextSerializer::DoAddLeaf(PRInt32 aTag,
     else if (NS_SUCCEEDED(GetAttributeValue(nsHTMLAtoms::title, desc))
              && !desc.IsEmpty()) {
       temp.Append(NS_LITERAL_STRING(" ["));
-      desc.StripChars("\"");
+      desc.StripChar(PRUnichar('"'));
       temp += desc;
       temp.Append(NS_LITERAL_STRING("] "));
     }
@@ -1550,8 +1547,7 @@ nsPlainTextSerializer::Write(const nsAString& aString)
       // Done searching
       if(newline == kNotFound) {
         // No new lines.
-        nsAutoString stringpart;
-        aString.Right(stringpart, totLen-bol);
+        nsAutoString stringpart(Substring(aString, bol, totLen - bol));
         if(!stringpart.IsEmpty()) {
           PRUnichar lastchar = stringpart[stringpart.Length()-1];
           if((lastchar == '\t') || (lastchar == ' ') ||
@@ -1569,8 +1565,7 @@ nsPlainTextSerializer::Write(const nsAString& aString)
       } 
       else {
         // There is a newline
-        nsAutoString stringpart;
-        aString.Mid(stringpart, bol, newline-bol);
+        nsAutoString stringpart(Substring(aString, bol, newline-bol));
         mInWhitespace = PR_TRUE;
         Output(stringpart);
         // and write the newline
@@ -1687,7 +1682,7 @@ nsPlainTextSerializer::GetAttributeValue(nsIAtom* aName,
       const nsAString& key = mParserNode->GetKeyAt(i);
       if (key.Equals(name, nsCaseInsensitiveStringComparator())) {
         aValueRet = mParserNode->GetValueAt(i);
-        aValueRet.StripChars("\"");
+        aValueRet.StripChar(PRUnichar('"'));
         return NS_OK;
       }
     }
