@@ -48,6 +48,7 @@ const PP_PowerPlant::ResIDT dlog_ConfirmCheck = 1284;
 const PP_PowerPlant::ResIDT dlog_Prompt = 1285;
 const PP_PowerPlant::ResIDT dlog_PromptNameAndPass = 1286;
 const PP_PowerPlant::ResIDT dlog_PromptPassword = 1287;
+const PP_PowerPlant::ResIDT dlog_Universal = 1288;
 
 // Profile Mgmt
 const PP_PowerPlant::ResIDT dlog_ManageProfiles = 1300;

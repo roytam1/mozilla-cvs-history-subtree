@@ -63,6 +63,7 @@
 #include "macstdlibextras.h"
 #include "SIOUX.h"
 #include "nsIURL.h"
+#include "nsINetDataCacheManager.h"
 
 #include <TextServices.h>
 
@@ -327,13 +328,13 @@ CBrowserApp::ObeyCommand(
 	
 		case PP_PowerPlant::cmd_New:
 			{
-   			CBrowserWindow	*theWindow = dynamic_cast<CBrowserWindow*>(LWindow::CreateWindow(wind_BrowserWindow, this));
+   			//CBrowserWindow	*theWindow = dynamic_cast<CBrowserWindow*>(LWindow::CreateWindow(wind_BrowserWindow, this));
+   			CBrowserWindow *theWindow = CBrowserWindow::CreateWindow(nsIWebBrowserChrome::CHROME_DEFAULT, -1, -1);
    			ThrowIfNil_(theWindow);
-   			// LWindow is not initially visible in PPob resource
+   			theWindow->SetSizeToContent(false);
+        // Just for demo sake, load a URL	
+        theWindow->GetBrowserShell()->LoadURL("http://www.mozilla.org");
    			theWindow->Show();
-
-            // Just for demo sake, load a URL	
-            theWindow->GetBrowserShell()->LoadURL("http://www.mozilla.org");
 			}
 			break;
 
@@ -360,9 +361,11 @@ CBrowserApp::ObeyCommand(
                     rv = aURL->GetSpec(getter_Copies(urlSpec));
                     ThrowIfError_(NS_ERROR_GET_CODE(rv));
                         
-           			CBrowserWindow	*theWindow = dynamic_cast<CBrowserWindow*>(LWindow::CreateWindow(wind_BrowserWindow, this));
+           			//CBrowserWindow	*theWindow = dynamic_cast<CBrowserWindow*>(LWindow::CreateWindow(wind_BrowserWindow, this));
+           			CBrowserWindow *theWindow = CBrowserWindow::CreateWindow(nsIWebBrowserChrome::CHROME_DEFAULT, -1, -1);
            			ThrowIfNil_(theWindow);
-                    theWindow->GetBrowserShell()->LoadURL(urlSpec.get());
+           			theWindow->SetSizeToContent(false);
+                theWindow->GetBrowserShell()->LoadURL(urlSpec.get());
            			theWindow->Show();
            		}
             }
@@ -582,6 +585,9 @@ NS_IMETHODIMP CBrowserApp::Observe(nsISupports *aSubject, const PRUnichar *aTopi
         	    delete browserWindow;
         	}
         }
+        NS_WITH_SERVICE(nsINetDataCacheManager, cacheMgr, NS_NETWORK_CACHE_MANAGER_CONTRACTID, &rv);
+        if (NS_SUCCEEDED(rv))
+          cacheMgr->Clear(nsINetDataCacheManager::ALL_CACHES);
     }
     else if (nsCRT::strcmp(aTopic, PROFILE_AFTER_CHANGE_TOPIC) == 0)
     {

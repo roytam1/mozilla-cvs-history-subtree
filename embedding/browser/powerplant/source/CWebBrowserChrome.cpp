@@ -34,6 +34,7 @@
 #include "nsIDocShellTreeItem.h"
 #include "nsIRequest.h"
 #include "nsIChannel.h"
+#include "nsIWalletService.h"
 
 #include "UMacUnicode.h"
 #include "ApplIDs.h"
@@ -42,6 +43,7 @@
 #include <LCheckBox.h>
 #include <LEditText.h>
 #include <UModalDialogs.h>
+#include <LPushButton.h>
 
 // Interfaces needed to be included
 
@@ -50,6 +52,34 @@ const PRInt32     kGrowIconSize = 15;
 
 // Static Variables
 vector<CWebBrowserChrome*> CWebBrowserChrome::mgBrowserList;
+
+class CWebBrowserPrompter : public nsIPrompt
+{
+public:
+  CWebBrowserPrompter(CWebBrowserChrome* aChrome);
+  virtual ~CWebBrowserPrompter();
+    
+  NS_DECL_ISUPPORTS
+  // NS_DECL_NSIPROMPT
+  
+  NS_FORWARD_NSIPROMPT(mChrome->);
+  
+protected:
+  CWebBrowserChrome *mChrome; 
+};
+
+NS_IMPL_ISUPPORTS1(CWebBrowserPrompter, nsIPrompt);
+
+CWebBrowserPrompter::CWebBrowserPrompter(CWebBrowserChrome* aChrome) :
+  mChrome(aChrome)
+{
+  NS_INIT_REFCNT();
+}
+
+
+CWebBrowserPrompter::~CWebBrowserPrompter()
+{
+}
 
 
 //*****************************************************************************
@@ -93,7 +123,31 @@ NS_INTERFACE_MAP_END
 
 NS_IMETHODIMP CWebBrowserChrome::GetInterface(const nsIID &aIID, void** aInstancePtr)
 {
-   return QueryInterface(aIID, aInstancePtr);
+   if (aIID.Equals(NS_GET_IID(nsIPrompt)))
+   {
+      if (!mPrompter)
+      {
+        nsresult rv;
+        
+        nsCOMPtr<nsIPrompt> prompt;
+        
+        prompt = new CWebBrowserPrompter(this);
+        NS_ENSURE_TRUE(prompt, NS_ERROR_OUT_OF_MEMORY);
+        
+        nsCOMPtr<nsISingleSignOnPrompt> siPrompt = do_CreateInstance(NS_SINGLESIGNONPROMPT_CONTRACTID, &rv);
+        if (NS_SUCCEEDED(rv))
+        {
+          siPrompt->Init(prompt);
+          mPrompter = siPrompt;
+        }
+        else
+          mPrompter = prompt;
+      }
+      NS_ENSURE_TRUE(mPrompter, NS_ERROR_FAILURE);
+      return mPrompter->QueryInterface(aIID, aInstancePtr);
+   }
+   else
+      return QueryInterface(aIID, aInstancePtr);
 }
 
 //*****************************************************************************
@@ -156,7 +210,8 @@ NS_IMETHODIMP CWebBrowserChrome::CreateBrowserWindow(PRUint32 chromeMask, PRInt3
    try
    {
       // CreateWindow can throw an we're being called from mozilla, so we need to catch
-      theWindow = dynamic_cast<CBrowserWindow*>(LWindow::CreateWindow(wind_PlainBrowserWindow, LCommander::GetTopCommander()));
+      //theWindow = dynamic_cast<CBrowserWindow*>(LWindow::CreateWindow(wind_PlainBrowserWindow, LCommander::GetTopCommander()));
+      theWindow = CBrowserWindow::CreateWindow(chromeMask, aCX, aCY);
    }
    catch (...)
    {
@@ -200,7 +255,7 @@ NS_IMETHODIMP CWebBrowserChrome::FindNamedBrowserItem(const PRUnichar* aName,
 
 NS_IMETHODIMP CWebBrowserChrome::SizeBrowserTo(PRInt32 aCX, PRInt32 aCY)
 {
-   mBrowserWindow->ResizeFrameTo(aCX, aCY + kGrowIconSize, true);
+   mBrowserWindow->ResizeWindowTo(aCX, aCY + kGrowIconSize);
    return NS_OK;
 }
 
@@ -354,7 +409,7 @@ NS_IMETHODIMP CWebBrowserChrome::SetSize(PRInt32 cx, PRInt32 cy, PRBool fRepaint
 {
 	NS_ENSURE_TRUE(mBrowserWindow, NS_ERROR_NOT_INITIALIZED);
 
-   mBrowserWindow->ResizeFrameTo(cx, cy + kGrowIconSize, fRepaint);
+   mBrowserWindow->ResizeWindowTo(cx, cy + kGrowIconSize);
    return NS_OK;
 }
 
@@ -847,11 +902,159 @@ NS_IMETHODIMP CWebBrowserChrome::Select(const PRUnichar *inDialogTitle, const PR
    return NS_OK;
 }
 
-NS_IMETHODIMP CWebBrowserChrome::UniversalDialog(const PRUnichar *inTitleMessage, const PRUnichar *inDialogTitle, const PRUnichar *inMsg, const PRUnichar *inCheckboxMsg, const PRUnichar *inButton0Text, const PRUnichar *inButton1Text, const PRUnichar *inButton2Text, const PRUnichar *inButton3Text, const PRUnichar *inEditfield1Msg, const PRUnichar *inEditfield2Msg, PRUnichar **inoutEditfield1Value, PRUnichar **inoutEditfield2Value, const PRUnichar *inIConURL, PRBool *inoutCheckboxState, PRInt32 inNumberButtons, PRInt32 inNumberEditfields, PRInt32 inEditField1Password, PRInt32 *outButtonPressed)
+NS_IMETHODIMP CWebBrowserChrome::UniversalDialog(const PRUnichar *inTitleMessage,
+                                                 const PRUnichar *inDialogTitle,
+                                                 const PRUnichar *inMsg,
+                                                 const PRUnichar *inCheckboxMsg,
+                                                 const PRUnichar *inButton0Text,
+                                                 const PRUnichar *inButton1Text,
+                                                 const PRUnichar *inButton2Text,
+                                                 const PRUnichar *inButton3Text,
+                                                 const PRUnichar *inEditfield1Msg,
+                                                 const PRUnichar *inEditfield2Msg,
+                                                 PRUnichar **inoutEditfield1Value,
+                                                 PRUnichar **inoutEditfield2Value,
+                                                 const PRUnichar *inIConURL,
+                                                 PRBool *inoutCheckboxState,
+                                                 PRInt32 inNumberButtons,
+                                                 PRInt32 inNumberEditfields,
+                                                 PRInt32 inEditField1Password,
+                                                 PRInt32 *outButtonPressed)
 {
-   //XXX First Check In
-   NS_ASSERTION(PR_FALSE, "Not Yet Implemented");
-   return NS_OK;
+    NS_ENSURE_ARG_POINTER(outButtonPressed);
+
+    // NOTE: Two things are missing from this implementation:
+    // (1) inEditField1Password is not used. PowerPlant's LEditText
+    // does not allow being switched from being a password field to
+    // being clear text. An override needs to be made which allows this
+    // (2) inNumberEditfields is not used. One or more edit fields
+    // may need to be hidden and positions of other dialog items would
+    // have to be changed.
+      
+    nsresult resultErr = NS_OK;
+
+    StDialogHandler	theHandler(dlog_Universal, mBrowserWindow);
+    LWindow			    *theDialog = theHandler.GetDialog();
+    nsCAutoString   cStr;
+    Str255          pStr;
+    LCheckBox       *checkbox = nsnull;
+
+    CPlatformUCSConversion::GetInstance()->UCSToPlatform(nsLiteralString(inDialogTitle), pStr);
+    theDialog->SetDescriptor(pStr);
+
+    LStaticText	*msgText = dynamic_cast<LStaticText*>(theDialog->FindPaneByID('Msg '));
+    CPlatformUCSConversion::GetInstance()->UCSToPlatform(nsLiteralString(inMsg), cStr);
+    cStr.ReplaceChar('\n', '\r');
+    msgText->SetText(const_cast<char *>(cStr.GetBuffer()), cStr.Length());
+
+    checkbox = dynamic_cast<LCheckBox*>(theDialog->FindPaneByID('Chck'));    
+    if (inCheckboxMsg && inoutCheckboxState)
+    {
+      CPlatformUCSConversion::GetInstance()->UCSToPlatform(nsLiteralString(inCheckboxMsg), pStr);
+      checkbox->SetDescriptor(pStr);
+      checkbox->SetValue(*inoutCheckboxState);
+    }
+    else
+    {
+      checkbox->Hide();
+      checkbox->Disable();
+    }
+      
+    LStaticText *edit1Msg = dynamic_cast<LStaticText*>(theDialog->FindPaneByID('EdM1'));
+    if (inEditfield1Msg)
+    {
+      CPlatformUCSConversion::GetInstance()->UCSToPlatform(nsLiteralString(inEditfield1Msg), cStr);
+      edit1Msg->SetText(const_cast<char *>(cStr.GetBuffer()), cStr.Length());
+    }
+    LStaticText *edit2Msg = dynamic_cast<LStaticText*>(theDialog->FindPaneByID('EdM2'));
+    if (inEditfield2Msg)
+    {
+      CPlatformUCSConversion::GetInstance()->UCSToPlatform(nsLiteralString(inEditfield2Msg), cStr);
+      edit2Msg->SetText(const_cast<char *>(cStr.GetBuffer()), cStr.Length());
+    }
+    
+    LEditText *edit1Value = dynamic_cast<LEditText*>(theDialog->FindPaneByID('EdV1'));
+    if (inoutEditfield1Value)
+    {
+      CPlatformUCSConversion::GetInstance()->UCSToPlatform(nsLiteralString(*inoutEditfield1Value), cStr);
+      edit1Value->SetText(const_cast<char *>(cStr.GetBuffer()), cStr.Length());
+    }
+    LEditText *edit2Value = dynamic_cast<LEditText*>(theDialog->FindPaneByID('EdV2'));
+    if (inoutEditfield2Value)
+    {
+      CPlatformUCSConversion::GetInstance()->UCSToPlatform(nsLiteralString(*inoutEditfield2Value), cStr);
+      edit2Value->SetText(const_cast<char *>(cStr.GetBuffer()), cStr.Length());
+    }
+
+    const PRUnichar* buttonTitles[4] = { inButton0Text, inButton1Text, inButton2Text, inButton3Text };
+    
+    for (PaneIDT buttonID = 1; buttonID <= 4; buttonID++)
+    {
+      LPushButton *aButton = dynamic_cast<LPushButton*>(theDialog->FindPaneByID(buttonID));
+      if (buttonID <= inNumberButtons)
+      {
+        if (buttonTitles[buttonID - 1])
+        {
+          CPlatformUCSConversion::GetInstance()->UCSToPlatform(nsLiteralString(inEditfield1Msg), pStr);
+          aButton->SetDescriptor(pStr);
+        }
+      }
+      else
+      {
+        aButton->Hide();
+        aButton->Disable();
+      }
+    }
+ 
+    theDialog->SetLatentSub(edit1Value);   
+    theDialog->Show();
+    theDialog->Select();
+	
+	while (true)  // This is our modal dialog event loop
+	{				
+		MessageT	hitMessage = theHandler.DoDialog();
+		
+		if (hitMessage == msg_OK)
+		{
+		    
+		      *outButtonPressed = 0;        
+   		    break;
+   		}
+   		else if (hitMessage == msg_Cancel)
+   		{
+   		    *outButtonPressed = 1;
+   		    break;
+   		}
+	}
+
+  nsAutoString    ucStr;
+
+  if (inoutEditfield1Value)
+  {
+    nsMemory::Free(*inoutEditfield1Value);
+    *inoutEditfield1Value = nsnull;
+    edit1Value->GetDescriptor(pStr);
+    CPlatformUCSConversion::GetInstance()->PlatformToUCS(pStr, ucStr);
+    *inoutEditfield1Value = ucStr.ToNewUnicode();
+    if (*inoutEditfield1Value == nsnull)
+      resultErr = NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  if (inoutEditfield2Value)
+  {
+    nsMemory::Free(*inoutEditfield2Value);
+    *inoutEditfield2Value = nsnull;
+    edit2Value->GetDescriptor(pStr);
+    CPlatformUCSConversion::GetInstance()->PlatformToUCS(pStr, ucStr);
+    *inoutEditfield2Value = ucStr.ToNewUnicode();
+    if (*inoutEditfield2Value == nsnull)
+      resultErr = NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  if (inoutCheckboxState)
+    *inoutCheckboxState = checkbox->GetValue();
+
+  return resultErr;
 }
 
 

@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 3; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
  * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
@@ -44,15 +44,16 @@
 class CBrowserWindow;
 class CURIContentListener;
 class CFindComponent;
+class nsIContentViewer;
 
 //*****************************************************************************
 //***    CBrowserShell
 //*****************************************************************************
 
-class CBrowserShell :	public LView,
-           					public LCommander,
-           					public LPeriodical,
-           					public LListener
+class CBrowserShell : public LView,
+                      public LCommander,
+                      public LPeriodical,
+                      public LListener
 {
   
 private:
@@ -63,33 +64,35 @@ public:
 
 	enum { cmd_Find = 'Find', cmd_FindNext = 'FNxt' };
 
-                           CBrowserShell();
-						         CBrowserShell(LStream*	inStream);
+                                CBrowserShell();
+						        CBrowserShell(const SPaneInfo	&inPaneInfo,
+								              const SViewInfo	&inViewInfo);
+                                CBrowserShell(LStream*	inStream);
 
-	virtual				      ~CBrowserShell();
+    virtual				        ~CBrowserShell();
 	
 
 	// LPane
-	virtual void		      FinishCreateSelf();
-	virtual void		      ResizeFrameBy(SInt16		inWidthDelta,
-                								  SInt16		inHeightDelta,
-                								  Boolean	inRefresh);
-	virtual void		      MoveBy(SInt32		inHorizDelta,
-				                      SInt32		inVertDelta,
-								          Boolean	   inRefresh);
-   virtual void            ShowSelf();
-	virtual void		      DrawSelf();	
-	virtual void		      ClickSelf(const SMouseDownEvent	&inMouseDown);
-	virtual void		      EventMouseUp(const EventRecord	&inMacEvent);
-   virtual void            AdjustCursorSelf(Point inPortPt,
-                                            const EventRecord&	inMacEvent);
+	virtual void		        FinishCreateSelf();
+	virtual void		        ResizeFrameBy(SInt16		inWidthDelta,
+                							  SInt16		inHeightDelta,
+                							  Boolean	    inRefresh);
+	virtual void		        MoveBy(SInt32	inHorizDelta,
+				                       SInt32	inVertDelta,
+								       Boolean	inRefresh);
+    virtual void                ShowSelf();
+	virtual void		        DrawSelf();	
+	virtual void		        ClickSelf(const SMouseDownEvent	&inMouseDown);
+	virtual void		        EventMouseUp(const EventRecord	&inMacEvent);
+    virtual void                AdjustCursorSelf(Point inPortPt,
+                                                 const EventRecord&	inMacEvent);
 
 	// LCommander
-	virtual void		      DontBeTarget();
-	virtual Boolean		   HandleKeyPress(const EventRecord	&inKeyEvent);
+	virtual void		        DontBeTarget();
+	virtual Boolean		        HandleKeyPress(const EventRecord	&inKeyEvent);
 
 	// LPeriodical
-	virtual	void		      SpendTime(const EventRecord&		inMacEvent);
+	virtual	void		        SpendTime(const EventRecord&		inMacEvent);
 	
 	// LListener
 	virtual void				ListenToMessage(MessageT			inMessage,
@@ -97,9 +100,11 @@ public:
 	
 	// CBrowserShell
 	NS_METHOD               SetTopLevelWindow(nsIWebBrowserChrome * aTopLevelWindow);
-	NS_METHOD				   GetWebBrowser(nsIWebBrowser** aBrowser);
+	NS_METHOD				GetWebBrowser(nsIWebBrowser** aBrowser);
 	NS_METHOD               SetWebBrowser(nsIWebBrowser* aBrowser);
 	                        // Drops ref to current one, installs given one
+	                        
+    NS_METHOD               GetContentViewer(nsIContentViewer** aViewer);
 	
 	Boolean                 CanGoBack();
 	Boolean                 CanGoForward();

@@ -31,6 +31,8 @@
 #include "nsIWalletService.h"
 #include "nsIDOMWindow.h"
 #include "nsIDOMWindowInternal.h"
+#include "nsIContentViewer.h"
+#include "nsIMarkupDocumentViewer.h"
 
 #include "CBrowserWindow.h"
 #include "CBrowserShell.h"
@@ -73,13 +75,36 @@ CBrowserWindow::CBrowserWindow() :
    mBrowserShell(NULL), mBrowserChrome(NULL),
    mURLField(NULL), mStatusBar(NULL), mThrobber(NULL),
    mBackButton(NULL), mForwardButton(NULL), mStopButton(NULL),
-   mProgressBar(NULL), mBusy(false)
+   mProgressBar(NULL), mBusy(false),
+   mSizeToContent(true), mDidSizeToContent(false)
 {
 	nsresult rv = CommonConstruct();
 	if (NS_FAILED(rv))
 		Throw_(NS_ERROR_GET_CODE(rv));
 }
 
+
+// ---------------------------------------------------------------------------
+//	¥ CBrowserWindow						Parameterized Constructor [public]
+// ---------------------------------------------------------------------------
+
+CBrowserWindow::CBrowserWindow(LCommander*		inSuperCommander,
+                               const Rect&		inGlobalBounds,
+                               ConstStringPtr	inTitle,
+                               SInt16			inProcID,
+                               UInt32			inAttributes,
+                               WindowPtr		inBehind) :
+    LWindow(inSuperCommander, inGlobalBounds, inTitle, inProcID, inAttributes, inBehind),
+    mBrowserShell(NULL), mBrowserChrome(NULL),
+    mURLField(NULL), mStatusBar(NULL), mThrobber(NULL),
+    mBackButton(NULL), mForwardButton(NULL), mStopButton(NULL),
+    mProgressBar(NULL), mBusy(false),
+    mSizeToContent(true), mDidSizeToContent(false)
+{
+	nsresult rv = CommonConstruct();
+	if (NS_FAILED(rv))
+		Throw_(NS_ERROR_GET_CODE(rv));
+}  
 
 
 // ---------------------------------------------------------------------------
@@ -91,7 +116,8 @@ CBrowserWindow::CBrowserWindow(LStream*	inStream)
    mBrowserShell(NULL), mBrowserChrome(NULL),
    mURLField(NULL), mStatusBar(NULL), mThrobber(NULL),
    mBackButton(NULL), mForwardButton(NULL), mStopButton(NULL),
-   mProgressBar(NULL)
+   mProgressBar(NULL), mBusy(false),
+   mSizeToContent(true), mDidSizeToContent(false)
 {
 	nsresult rv = CommonConstruct();
 	if (NS_FAILED(rv))
@@ -114,6 +140,109 @@ CBrowserWindow::~CBrowserWindow()
       mBrowserChrome->BrowserWindow() = nsnull;
       NS_RELEASE(mBrowserChrome);
    }
+}
+
+
+CBrowserWindow* CBrowserWindow::CreateWindow(PRUint32 chromeFlags, PRInt32 width, PRInt32 height)
+{
+    const SInt16 kToolBarHeight = 34;
+    
+    CBrowserWindow	*theWindow;
+    
+    if (chromeFlags == nsIWebBrowserChrome::CHROME_DEFAULT)
+    {
+        theWindow = dynamic_cast<CBrowserWindow*>(LWindow::CreateWindow(wind_BrowserWindow, LCommander::GetTopCommander()));
+        ThrowIfNil_(theWindow);
+    }
+    else
+    {
+        // Bounds - Set to an arbitrary rect - we'll size it after all the subviews are in.
+        Rect globalBounds;
+        globalBounds.left = 4;
+        globalBounds.top = 42;
+        globalBounds.right = globalBounds.left + 600;
+        globalBounds.bottom = globalBounds.top + 400;
+        
+        // ProcID and attributes
+        short windowDefProc;
+        UInt32 windowAttrs = (windAttr_Enabled | windAttr_Targetable);
+        if (chromeFlags & nsIWebBrowserChrome::CHROME_OPENAS_DIALOG)
+        {
+            windowAttrs |= windAttr_Modal;
+
+            if (chromeFlags & nsIWebBrowserChrome::CHROME_TITLEBAR)
+            {
+                windowDefProc = kWindowMovableModalDialogProc;
+                windowAttrs |= windAttr_TitleBar;
+            }
+            else
+                windowDefProc = kWindowModalDialogProc;            
+        }
+        else
+        {
+            windowAttrs |= windAttr_Regular;    
+
+            if (chromeFlags & nsIWebBrowserChrome::CHROME_WITH_SIZE)
+            {
+                windowDefProc = kWindowGrowDocumentProc;
+                windowAttrs |= windAttr_Resizable;
+            }
+            else
+                windowDefProc = kWindowDocumentProc;            
+            
+            if (chromeFlags & nsIWebBrowserChrome::CHROME_WINDOW_CLOSE)
+                windowAttrs |= windAttr_CloseBox;
+        }
+
+        theWindow = new CBrowserWindow(LCommander::GetTopCommander(), globalBounds, "\p", windowDefProc, windowAttrs, window_InFront);
+        ThrowIfNil_(theWindow);
+        theWindow->SetUserCon(wind_BrowserWindow);
+        
+        SPaneInfo aPaneInfo;
+        SViewInfo aViewInfo;
+        
+        aPaneInfo.paneID = paneID_WebShellView;
+        aPaneInfo.width = globalBounds.right - globalBounds.left;
+        aPaneInfo.height = globalBounds.bottom - globalBounds.top;
+        if (!(chromeFlags & nsIWebBrowserChrome::CHROME_OPENAS_DIALOG) && chromeFlags & nsIWebBrowserChrome::CHROME_WITH_SIZE)
+            aPaneInfo.height -= 15;
+        if (chromeFlags & nsIWebBrowserChrome::CHROME_TOOLBAR)
+            aPaneInfo.height -= kToolBarHeight;
+        aPaneInfo.visible = true;
+        aPaneInfo.enabled = true;
+        aPaneInfo.bindings.left = true;
+        aPaneInfo.bindings.top = true;
+        aPaneInfo.bindings.right = true;
+        aPaneInfo.bindings.bottom = true;
+        aPaneInfo.left = 0;
+        aPaneInfo.top = (chromeFlags & nsIWebBrowserChrome::CHROME_TOOLBAR) ? kToolBarHeight - 1 : 0;
+        aPaneInfo.userCon = 0;
+        aPaneInfo.superView = theWindow;
+        
+        aViewInfo.imageSize.width = 0;
+        aViewInfo.imageSize.height = 0;
+        aViewInfo.scrollPos.h = aViewInfo.scrollPos.v = 0;
+        aViewInfo.scrollUnit.h = aViewInfo.scrollUnit.v = 1;
+        aViewInfo.reconcileOverhang = 0;
+        
+        CBrowserShell *aShell = new CBrowserShell(aPaneInfo, aViewInfo);
+        ThrowIfNil_(aShell);
+        aShell->PutInside(theWindow, false);
+        
+        // Now the window is constructed...
+        theWindow->FinishCreate();        
+    }
+
+	Rect	theBounds;
+	theWindow->GetGlobalBounds(theBounds);
+    if (width == -1)
+        width = theBounds.right - theBounds.left;
+    if (height == -1)
+        height = theBounds.bottom - theBounds.top;
+        
+    theWindow->ResizeWindowTo(width, height);
+
+    return theWindow;
 }
 
 
@@ -370,6 +499,18 @@ NS_METHOD CBrowserWindow::GetWidget(nsIWidget** aWidget)
 }
 
 
+NS_METHOD CBrowserWindow::SizeToContent()
+{
+  nsCOMPtr<nsIContentViewer> aContentViewer;
+  mBrowserShell->GetContentViewer(getter_AddRefs(aContentViewer));
+  NS_ENSURE_TRUE(aContentViewer, NS_ERROR_FAILURE);
+  nsCOMPtr<nsIMarkupDocumentViewer> markupViewer(do_QueryInterface(aContentViewer));
+  NS_ENSURE_TRUE(markupViewer, NS_ERROR_FAILURE);
+  NS_ENSURE_SUCCESS(markupViewer->SizeToContent(), NS_ERROR_FAILURE);
+  mDidSizeToContent = true;
+  return NS_OK;
+}
+
 NS_METHOD CBrowserWindow::Stop()
 {
     return mBrowserShell->Stop();
@@ -448,6 +589,9 @@ NS_METHOD CBrowserWindow::OnStatusNetStop(nsIWebProgress *progress, nsIRequest *
 		mBrowserShell->CanGoForward() ? mForwardButton->Enable() : mForwardButton->Disable();
 	if (mStopButton)
 		mStopButton->Disable();
+		
+	if (mSizeToContent && !mDidSizeToContent)
+	  SizeToContent();
 	
 	mBusy = false;
 		

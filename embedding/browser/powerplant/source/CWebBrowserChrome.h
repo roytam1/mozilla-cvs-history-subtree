@@ -70,6 +70,8 @@ protected:
    CBrowserWindow*  mBrowserWindow;
    CBrowserShell*   mBrowserShell;
    
+   nsCOMPtr<nsIPrompt> mPrompter;
+   
    static vector<CWebBrowserChrome*> mgBrowserList;
 };
 

@@ -75,6 +75,17 @@ CBrowserShell::CBrowserShell() :
 }
 
 
+CBrowserShell::CBrowserShell(const SPaneInfo	&inPaneInfo,
+						  	             const SViewInfo	&inViewInfo) :
+  LView(inPaneInfo, inViewInfo),
+  mFinder(nsnull)
+{
+	nsresult rv = CommonConstruct();
+	if (rv != NS_OK)
+	   Throw_Err(NS_ERROR_GET_CODE(rv));   // If this fails, there's no reason to live anymore :(
+}
+
+
 CBrowserShell::CBrowserShell(LStream*	inStream) :
 	LView(inStream),
 	mFinder(nsnull)
@@ -339,6 +350,13 @@ NS_METHOD CBrowserShell::SetWebBrowser(nsIWebBrowser* aBrowser)
    AdjustFrame();   
 
    return NS_OK;
+}
+
+NS_METHOD CBrowserShell::GetContentViewer(nsIContentViewer** aViewer)
+{
+  nsCOMPtr<nsIDocShell> ourDocShell(do_GetInterface(mWebBrowser));
+  NS_ENSURE_TRUE(ourDocShell, NS_ERROR_FAILURE);
+  return ourDocShell->GetContentViewer(aViewer);
 }
 
 
