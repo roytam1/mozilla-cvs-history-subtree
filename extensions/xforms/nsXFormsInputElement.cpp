@@ -327,8 +327,15 @@ nsXFormsInputElement::Blur(nsIDOMEvent *aEvent)
   if (!singleNode)
     return NS_OK;
 
-  nsAutoString value;
-  mInput->GetValue(value);
+  nsAutoString value, type;
+  mInput->GetType(type);
+  if (type.EqualsLiteral("checkbox")) {
+    PRBool checked;
+    mInput->GetChecked(&checked);
+    value.AssignASCII(checked ? "1" : "0", 1);
+  } else {
+    mInput->GetValue(value);
+  }
 
   PRUint16 nodeType = 0;
   singleNode->GetNodeType(&nodeType);
