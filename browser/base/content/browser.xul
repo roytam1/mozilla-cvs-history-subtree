@@ -356,11 +356,12 @@
              fullscreentoolbar="true" mode="icons" 
              customizable="true"
 #ifdef XP_MACOSX
-             defaultset="back-button,forward-button,reload-button,stop-button,home-button,urlbar-container,go-container,search-container,throbber-box,fullscreenflex,window-controls"
+             defaultset="back-button,forward-button,reload-button,stop-button,home-button,urlbar-container,go-container,search-container,throbber-box"
 #else
              defaultset="back-button,forward-button,reload-button,stop-button,home-button,urlbar-container,go-container,search-container,fullscreenflex,window-controls"
 #endif
              context="toolbar-context-menu">
+#ifndef XP_MACOSX
       <hbox id="fullscreenflex" flex="1" hidden="true" fullscreencontrol="true"/>
       <hbox id="window-controls" hidden="true" fullscreencontrol="true">
         <toolbarbutton id="minimize-button" class="toolbarbutton-1"
@@ -375,6 +376,7 @@
                        tooltiptext="&fullScreenClose.tooltip;"
                        oncommand="window.close();"/>
       </hbox>
+#endif
     </toolbar>
  
     <toolbarset id="customToolbars" context="toolbar-context-menu"/>

@@ -2709,11 +2709,11 @@ var FullScreen =
           els[i].setAttribute("moz-collapsed", "true");
       }
     }
-    
+#ifndef XP_MACOSX
     var controls = document.getElementsByAttribute("fullscreencontrol", "true");
     for (i = 0; i < controls.length; ++i)
       controls[i].hidden = aShow;
-
+#endif
 
     // XXXvladimir this was a fix for bug 174174, but I don't think it's necessary
     // any more?
