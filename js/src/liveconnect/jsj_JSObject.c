@@ -395,23 +395,33 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
     jstring message_jstr, linebuf_jstr, filename_jstr;
     jint index, lineno;
     JSErrorReport *report;
-    jthrowable java_exception;
     jsval pending_exception; 
+    jobject java_obj;
+    int dummy_cost;
+    JSBool dummy_bool;
+    jthrowable java_exception;
 
     /* Get the Java JNI environment */
     jEnv = jsj_env->jEnv;
 
     if (JS_IsExceptionPending(jsj_env->cx)) {
-#if 0
-        java_exception = (*jEnv)->NewObject(jEnv, njJSWrappedException, 
-                                            njJSWrappedException_JSWrappedException);
-        if (!java_exception) 
-            goto out_of_memory;
-        
         if (!JS_GetPendingException(jsj_env->cx, &pending_exception))
             return;
         
-        (*jEnv)->SetIntField(jEnv, java_exception, njJSWrappedException_jsval, pending_exception);
+        /* Convert jsval exception to a java object and then use it to
+           create an instance of JSWrappedException. */ 
+        if (!jsj_ConvertJSValueToJavaObject(jsj_env->cx, jEnv, pending_exception, 
+                                            jsj_get_jlObject_descriptor(jsj_env->cx, jEnv),
+                                            &dummy_cost, &java_obj, &dummy_bool))
+            goto done;
+
+        java_exception = 
+            (*jEnv)->NewObject(jEnv, njJSWrappedException, 
+                               njJSWrappedException_JSWrappedException,
+                               (jobject)java_obj);
+        
+        if (!java_exception) 
+            goto out_of_memory;
         
         /* Throw the newly-created JSException */
         if ((*jEnv)->Throw(jEnv, java_exception) < 0) {
@@ -419,7 +429,6 @@ throw_any_pending_js_error_as_a_java_exception(JSJavaThreadState *jsj_env)
             jsj_LogError("Couldn't throw JSWrappedException\n");
             goto done;
         }    
-#endif
         JS_ClearPendingException(jsj_env->cx);
         return;
     }
@@ -1257,43 +1266,3 @@ Java_netscape_javascript_JSObject_equals(JNIEnv *jEnv,
 #endif  /* PRESERVE_JSOBJECT_IDENTITY */
 }
 
-#if 0 /* not quite ready for primetime */
-
-/********** Implementation of methods of JSWrappedException *************/
-
-/*
- * Class:     netscape_javascript_JSWrappedException
- * Method:    getWrappedException
- * Signature: ()Ljava/lang/Object
- */
-
-JNIEXPORT jobject JNICALL
-Java_netscape_javascript_JSWrappedException_getWrappedException(JNIEnv *jEnv,
-                                                                jobject wrappedException)
-{
-    JSJavaThreadState *jsj_env;
-    JSContext *cx;
-    JSObject *js_obj;
-    jsval js_val;
-    int dummy_cost;
-    JSBool dummy_bool;
-    JSErrorReporter saved_reporter;
-    jobject unwrapped;
-
-    jsj_env = jsj_enter_js(jEnv, wrappedException, &cx, &js_obj, &saved_reporter);
-    if (!jsj_env)
-        return NULL;
-
-    /* Retrieve jsval from the java object */
-    js_val = (jsval)(*jEnv)->GetIntField(jEnv, wrappedException, njJSWrappedException_jsval);
-
-    /* Convert jsval back to a java exception. */
-    jsj_ConvertJSValueToJavaObject(cx, jEnv, js_val, jsj_get_jlObject_descriptor(cx, jEnv),
-                                   &dummy_cost, &unwrapped, &dummy_bool);
-
-    if (!jsj_exit_js(cx, jsj_env, saved_reporter))
-        return NULL;
-
-    return unwrapped;
-}
-#endif
