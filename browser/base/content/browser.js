@@ -1319,7 +1319,8 @@ URLBarAutoFillPrefListener.prototype =
 
 function ctrlNumberTabSelection(event)
 {
-  if (event.altKey && event.keyCode == KeyEvent.DOM_VK_RETURN) {
+  if (event.altKey && event.keyCode == KeyEvent.DOM_VK_RETURN &&
+      document.commandDispatcher.focusedElement && document.commandDispatcher.focusedElement.parentNode.parentNode == gURLBar) {
     // Don't let winxp beep on ALT+ENTER, since the URL bar uses it.
     event.preventDefault();
     return;

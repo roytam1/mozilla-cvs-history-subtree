@@ -23,7 +23,7 @@
 #   David Baron <dbaron@mozilla.org>
 #
 # Alternatively, the contents of this file may be used under the terms of
-# either the GNU General Public License Version 2 or later (the "GPL"), or 
+# either the GNU General Public License Version 2 or later (the "GPL"), or
 # the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
 # in which case the provisions of the GPL or the LGPL are applicable instead
 # of those above. If you wish to allow use of your version of this file only
@@ -46,7 +46,7 @@
         cursor: default;
         -moz-user-select: none;
       }
-      
+
       #titleBox {
         position: fixed;
         left: 0px;
@@ -55,7 +55,7 @@
         bottom: auto;
         z-index: 999;
       }
-      
+
       #footerBox {
         position: fixed;
         left: 0px;
@@ -64,7 +64,7 @@
         bottom: 0px;
         z-index: 999;
       }
-      
+
       #creditsBox {
         position: absolute;
         left: 0px;
@@ -78,52 +78,52 @@
         font-family: Arial, sans-serif;
         font-size: small;
       }
-      
+
       h3 {
         font-weight: bold;
         font-size: small;
         text-align: center;
         margin: 15px 0px 5px 0px;
       }
-      
+
       .creditsGroup {
         margin-bottom: 1px;
       }
-      
+
       .credit {
         text-align: center;
-      } 
-      
+      }
+
       .footnote {
         font-size: x-small;
         text-align: justify;
       }
-      
+
       h2.title {
         margin-bottom: 2px;
       }
-      
+
       .motto {
         font-style: italic;
         padding-left: 10px;
       }
-      
+
       a {
         color: blue;
         text-decoration: underline;
       }
-    --> 
+    -->
     </style>
-    
+
     <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"></script>
     <script type="application/x-javascript">
     <!--
-    
+
       var gCreditsInterval = -1;
 
       function uninit()
       {
-        if (gCreditsInterval > -1) 
+        if (gCreditsInterval > -1)
           clearInterval(gCreditsInterval);
       }
 
@@ -133,12 +133,12 @@
         cb.scrollTop = 0;
         setTimeout(runCredits, 3000);
       }
-      
+
       function runCredits()
       {
-        gCreditsInterval = setInterval("creditsCallback()", 25);  
+        gCreditsInterval = setInterval("creditsCallback()", 25);
       }
-      
+
       function creditsCallback()
       {
         var cb = document.getElementById("creditsBox");
@@ -150,7 +150,7 @@
           setTimeout(function() { cb.scrollTop = 0 }, 3000);
         }
       }
-    
+
     //-->
     </script>
   </head>
@@ -158,50 +158,71 @@
     <div id="titleBox">
       <img src="chrome://browser/content/aboutCredits.png">
     </div>
-    
+
     <div id="creditsBox">
-        <br>    
-        <br>  
-        <br>  
-        <br>  
-        <br>  
-        <br>  
-        <br>  
-        <br>  
-        <br>  
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
         <br>
         <div align="center">
           <h2 class="title">Mozilla Firefox&trade;</h2>
           <span class="motto">&nbsp;&nbsp;&nbsp;&nbsp;The Browser, Reloaded</span>
         </div>
-        <br>  
-        <br>  
-        <br>  
-        <br>  
-        <br>  
-        <br>  
-        <br>  
-        <br>  
-        <br>  
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
 
         <div class="creditsGroup">
-          <h3>Engineering Lead</h3>
-          <div class="credit">Ben Goodger</div>
-          
+          <h3>Engineering Leads</h3>
+          <div class="credit">
+            Ben Goodger<br>
+            Blake Ross<br>
+            David Hyatt<br>
+          </div>
+
+
           <h3>Core Development Posse</h3>
           <div class="credit">
             Pierre Chanial<br>
             Mike Connor<br>
             Darin Fisher<br>
-            David Hyatt<br>
-            Blake Ross<br>
             Brian Ryner<br>
             Benjamin Smedberg<br>
           </div>
-          
-          <h3>Special Thanks To</h3>
-          <div class="credit">          
+
+          <h3>Gecko Layout Engine</h3>
+          <div class="credit">
+            Chris Aillon<br>
+            Marc Attinasi<br>
             David Baron<br>
+            Simon Fraser<br>
+            David Hyatt<br>
+            John Keiser<br>
+            Bernd Mielke<br>
+            Robert O'Callahan<br>
+            Eric Pollmann<br>
+            Rick Potts<br>
+            Brian Ryner<br>
+            Jonas Sicking<br>
+            Johnny Stenback<br>
+            Peter Van der Berken<br>
+            Boris Zbarsky<br>
+            Chris Waterson<br>
+
+          <h3>Special Thanks To</h3>
+          <div class="credit">
             Brendan Eich<br>
             Joe Hewitt<br>
             Ian Hickson<br>
@@ -216,17 +237,16 @@
             Igor Pavlov, 7-Zip<br>
             Mike Pinkerton<br>
             Jesse Ruderman<br>
+            Mike Shaver<br>
             Seth Spitzer<br>
-            Johnny Stenback<br>
             Dean Tessman<br>
             Jan Varga<br>
             Daniel Veditz<br>
             Vladimir Vukicevic<br>
             Steffen Wilberg<br>
-            Boris Zbarsky<br>
           </div>
         </div>
-        
+
 <!-- LOCALIZERS: Add your translation credits here!
         <div class="creditsGroup">
           <h3>Translators</h3>
@@ -234,19 +254,19 @@
             Translator Name<br>
           </div>
         </div>
---> 
+-->
 
         <div class="creditsGroup">
           <h3>Visual Design Coordinator</h3>
           <div class="credit">Steven Garrity</div>
-          
+
           <h3>Theme Design</h3>
           <div class="credit">
             Arvid Axelsson<br>
             Kevin Gerich<br>
             Stephen Horlander<br>
           </div>
-          
+
           <h3>Brand Identity</h3>
           <div class="credit">
             Daniel Burka<br>
@@ -254,10 +274,10 @@
             Jasper Hauser<br>
             Jon Hicks<br>
           </div>
-          
+
           <h3>Web Design</h3>
           <div class="credit">Dave Shea</div>
-          
+
           <h3>Mozilla Update</h3>
           <div class="credit">
             Chris Crews<br>
@@ -271,7 +291,7 @@
         <div class="creditsGroup">
           <h3>Quality Assurance Lead</h3>
           <div class="credit">Asa Dotzler</div>
-          
+
           <h3>Quality Assurance</h3>
           <div class="credit">
             Mike Connor<br>
@@ -280,6 +300,7 @@
             Ian Hickson<br>
             David P. James<br>
             Simon Paquet<br>
+            Jesse Ruderman<br>
             Tracy Walker<br>
           </div>
 
@@ -289,26 +310,26 @@
             Sébastian Delahaye<br>
             Jeremy Dolan<br>
             Ed Hume<br>
-            Jesse Ruderman<br>
             Alan Starr<br>
             Steffen Wilberg<br>
           </div>
-                    
+
           <h3>Build and Release</h3>
           <div class="credit">
             Leaf Nunes<br>
             Brian Ryner<br>
           </div>
-          
+
           <h3>Infrastructure Support</h3>
           <div class="credit">Myk Melez</div>
-          
+
           <h3>Support Resources</h3>
           <div class="credit">
+            Steven Hellings<br>
             Jason Kersey<br>
             David Tenser<br>
           </div>
-          
+
           <h3>Special Thanks To</h3>
           <div class="credit">
             MozillaZine Community<br>
@@ -316,19 +337,24 @@
             MozDev<br>
           </div>
         </div>
-        
+
         <div class="creditsGroup">
           <h3>Project Management</h3>
           <div class="credit">
+            Bart Decrem<br>
             Asa Dotzler<br>
             Brendan Eich<br>
             Ben Goodger<br>
             Chris Hofmann<br>
+            Blake Ross<br>
           </div>
-            
-          <h3>Marketing Lead</h3>
-          <div class="credit">Bart Decrem</div>
-          
+
+          <h3>Marketing Leads</h3>
+          <div class="credit">
+            Bart Decrem<br>
+            Rafael Ebron<br>
+          </div>
+
           <h3>Marketing</h3>
           <div class="credit">
             Catherine Corre<br>
@@ -338,53 +364,62 @@
             Jason Kersey<br>
             Blake Ross<br>
           </div>
+
+          <h3>Created By</h3>
+          <div class="credit">
+            David Hyatt<br>
+            Blake Ross<br>
+          </div>
+
+          <h3>In Fond Memory Of</h3>
+          <div class="credit">T.B.</div>
         </div>
-        
-        <br>  
-        <br>  
-        <br>  
-        <br>  
-        <br>  
-        <br>  
+
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
         <p align="center">Powered by Gecko&trade;
-        <br>  
-        <br>  
-        <br>  
-        <br>  
-        <br>  
-        <br>  
-        
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+
         <p class="footnote">
-          Mozilla Firefox&trade; is Copyright &copy;1998-2004 by its 
-          <a href="" link="about:credits" onclick="visitLink(event);">contributors</a>, 
-          according to terms set out in the Mozilla Public License and Netscape 
+          Mozilla Firefox&trade; is Copyright &copy;1998-2004 by its
+          <a href="" link="about:credits" onclick="visitLink(event);">contributors</a>,
+          according to terms set out in the Mozilla Public License and Netscape
           Public License. All Rights Reserved. For full Mozilla credits, type
           "about:credits" into the Location bar.</p>
 
         <p class="footnote">
-          Portions of this software are Copyright &copy;1994 The Regents of the 
+          Portions of this software are Copyright &copy;1994 The Regents of the
           University of California. All Rights Reserved.</p>
 
         <p class="footnote">
-          This software may contain portions that are Copyright &copy;1998-2004 
+          This software may contain portions that are Copyright &copy;1998-2004
           SupportSoft, Inc. All Rights Reserved.</p>
 
         <p class="footnote">
-          Mozilla Firefox&trade; and the Firefox logo are trademarks of the Mozilla 
-          Foundation. You are not granted rights or licenses to the trademarks 
+          Mozilla Firefox&trade; and the Firefox logo are trademarks of the Mozilla
+          Foundation. You are not granted rights or licenses to the trademarks
           of the Mozilla Foundation or any party, including without limitation the
           Firefox name or logo.</p>
-        
+
         <p class="footnote">
-          <small>U.S. GOVERNMENT END USERS. The Software is a "commercial item," 
-          as that term is defined in 48 C.F.R. 2.101 (Oct. 1995), consisting of 
-          "commercial computer software" and "commercial computer software 
-          documentation," as such terms are used in 48 C.F.R. 12.212 (Sept. 1995). 
-          Consistent with 48 C.F.R. 12.212 and 48 C.F.R. 227.7202-1 through 
-          227.7202-4 (June 1995), all U.S. Government End Users acquire the 
+          <small>U.S. GOVERNMENT END USERS. The Software is a "commercial item,"
+          as that term is defined in 48 C.F.R. 2.101 (Oct. 1995), consisting of
+          "commercial computer software" and "commercial computer software
+          documentation," as such terms are used in 48 C.F.R. 12.212 (Sept. 1995).
+          Consistent with 48 C.F.R. 12.212 and 48 C.F.R. 227.7202-1 through
+          227.7202-4 (June 1995), all U.S. Government End Users acquire the
           Software with only those rights set forth herein.</small></p>
     </div>
-    
+
     <div id="footerBox">
       <img src="chrome://browser/content/aboutFooter.png">
     </div>

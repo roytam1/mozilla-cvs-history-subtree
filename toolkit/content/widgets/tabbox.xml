@@ -150,8 +150,8 @@
         <setter>
           <![CDATA[
             if (val != this._eventNode) {
-              val.addEventListener("keypress", this._keyEventHandler, false);
-              this._eventNode.removeEventListener("keypress", this._keyEventHandler, false);
+              val.addEventListener("keypress", this._keyEventHandler, true);
+              this._eventNode.removeEventListener("keypress", this._keyEventHandler, true);
               this._eventNode = val;
             }
             return val;
@@ -165,11 +165,11 @@
           case "window": this._eventNode = window; break;
           case "document": this._eventNode = document; break;
         }
-        this._eventNode.addEventListener("keypress", this._keyEventHandler, false);
+        this._eventNode.addEventListener("keypress", this._keyEventHandler, true);
       </constructor>
 
       <destructor>
-        this._eventNode.removeEventListener("keypress", this._keyEventHandler, false);
+        this._eventNode.removeEventListener("keypress", this._keyEventHandler, true);
       </destructor>
     </implementation>
   </binding>
