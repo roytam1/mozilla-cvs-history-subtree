@@ -1845,6 +1845,16 @@ nsExtensionManager.prototype = {
   
   _checkForGlobalInstalls: function nsExtensionManager__checkForGlobalInstalls (aPath, aItemType)
   {
+#ifdef XP_UNIX
+    try {
+      var ioServ = Components.classes["@mozilla.org/network/io-service;1"]
+                             .getService(Components.interfaces.nsIIOService);
+      var uri = ioServ.newURI(aPath, null, null);  
+      aPath = uri.path;
+    }
+    catch (e) { } 
+#endif
+
     // First see if the path supplied is a file path
     var file = Components.classes["@mozilla.org/file/local;1"]
                          .createInstance(Components.interfaces.nsILocalFile);
