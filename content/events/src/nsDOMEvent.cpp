@@ -102,7 +102,7 @@ nsDOMEvent::operator new(size_t aSize)
 
   void *result = nsnull;
 
-  if (!gEventPoolInUse) {
+  if (!gEventPoolInUse && aSize <= sizeof(gEventPool)) {
 #ifdef NS_DEBUG
     numAllocFromPool++;
 #endif
