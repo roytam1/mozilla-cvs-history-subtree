@@ -22,6 +22,7 @@ Rights Reserved.
 <!DOCTYPE window SYSTEM "chrome://messenger/locale/msgHdrViewOverlay.dtd">
 
 <?xml-stylesheet href="chrome://messenger/skin/messageHeader.css" type="text/css"?>
+<?xml-stylesheet href="chrome://messenger/skin/messageKeywords.css" type="text/css"?>
 
 <overlay xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
@@ -111,8 +112,16 @@ Rights Reserved.
    
    </vbox>
 
+   <vbox id="expandedKeywordBox">
+     <spacer flex="1"/>
+     <image id="expandedKeywordImage" class="keyword-part"/>
+     <spacer flex="1"/>  
+   </vbox>
+   
    <vbox id="editMessageBox" class="header-part1" collapsed="true">
+     <spacer flex="1"/>
      <button id="editMessageButton" label="&editMessage.label;" oncommand="MsgComposeDraftMessage()"/>
+     <spacer flex="1"/>
    </vbox> 
 
    <vbox id="expandedAttachmentBox" class="header-part1" collapsed="true">

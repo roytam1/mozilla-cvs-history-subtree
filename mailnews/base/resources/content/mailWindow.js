@@ -68,6 +68,8 @@ var gPaneConfig = null;
 var gIsEditableMsgFolder = false;
 var gOfflineManager;
 
+// cache the last keywords
+var gLastKeywords = "";
 
 function OnMailWindowUnload()
 {
@@ -575,4 +577,24 @@ function GetSearchSession()
     return gSearchSession;
   else
     return null;
+}
+
+function SetKeywords(aKeywords) 
+{ 
+  // we cache the last keywords.  
+  // if there is no chagne, we do nothing.
+  // most of the time, this will be the case.
+  if (aKeywords == gLastKeywords)
+    return;
+
+  // these are the UI elements who care about keywords
+  var ids = ["expandedKeywordImage","expandedHeaderView","msgHeaderView","collapsedHeaderView"];
+  for (i in ids) {
+    var element = document.getElementById(ids[i]);
+    if (element)
+      element.setAttribute("keywords", aKeywords);
+  }
+
+  // cache the keywords 
+  gLastKeywords = aKeywords;
 }
