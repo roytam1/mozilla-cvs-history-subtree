@@ -3471,7 +3471,7 @@ NS_IMETHODIMP nsPluginHostImpl::NewPluginURLStream(const nsString& aURL,
               httpChannel->SetUploadStream(postDataStream);
               if (newPostData)
                 {
-                  delete [] newPostData;
+                  delete [] (char *)newPostData;
                   newPostData = nsnull;
                 }
             }
