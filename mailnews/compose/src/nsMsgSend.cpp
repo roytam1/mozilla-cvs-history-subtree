@@ -2270,8 +2270,6 @@ nsMsgComposeAndSend::AddCompFieldRemoteAttachments(PRUint32   aStartLocation,
 
           nsMsgNewURL(getter_AddRefs(m_attachments[newLoc].mURL), url.get());
 
-          PR_FREEIF(m_attachments[newLoc].m_charset);
-          m_attachments[newLoc].m_charset = PL_strdup(mCompFields->GetCharacterSet());
           PR_FREEIF(m_attachments[newLoc].m_encoding);
           m_attachments[newLoc].m_encoding = PL_strdup ("7bit");
 
