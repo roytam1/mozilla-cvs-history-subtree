@@ -43,8 +43,8 @@
 #include "ImageCache.h"
 
 
-NS_IMPL_ISUPPORTS6(nsImageRequest, nsIImageRequest, nsPIImageRequest,
-                   nsIImageDecoderObserver, nsIStreamListener, nsIStreamObserver, nsIRunnable)
+NS_IMPL_ISUPPORTS4(nsImageRequest, nsIImageRequest, 
+                   nsIImageDecoderObserver, nsIStreamListener, nsIStreamObserver)
 
 nsImageRequest::nsImageRequest() : 
   mObservers(0), mState(0)
@@ -61,10 +61,7 @@ nsImageRequest::~nsImageRequest()
 }
 
 
-/** nsPIImageRequest methods **/
-
-/* void init (in nsIChannel aChannel); */
-NS_IMETHODIMP nsImageRequest::Init(nsIChannel *aChannel)
+nsresult nsImageRequest::Init(nsIChannel *aChannel)
 {
   // XXX we should save off the thread we are getting called on here so that we can proxy all calls to mDecoder to it.
 
@@ -79,8 +76,7 @@ NS_IMETHODIMP nsImageRequest::Init(nsIChannel *aChannel)
   return NS_OK;
 }
 
-/* void addObserver(in nsIImageDecoderObserver observer); */
-NS_IMETHODIMP nsImageRequest::AddObserver(nsIImageDecoderObserver *observer)
+nsresult nsImageRequest::AddObserver(nsIImageDecoderObserver *observer)
 {
   mObservers.AppendElement(NS_STATIC_CAST(void*, observer));
 
@@ -96,19 +92,14 @@ NS_IMETHODIMP nsImageRequest::AddObserver(nsIImageDecoderObserver *observer)
   return NS_OK;
 }
 
-/* void removeObserver(in nsIImageDecoderObserver observer, in nsresult status); */
-NS_IMETHODIMP nsImageRequest::RemoveObserver(nsIImageDecoderObserver *observer, nsresult status)
+nsresult nsImageRequest::RemoveObserver(nsIImageDecoderObserver *observer, nsresult status)
 {
   mObservers.RemoveElement(NS_STATIC_CAST(void*, observer));
 
   if ((mObservers.Count() == 0) && mChannel) {
     if (mProcessing) {
       // XXX this is hacky :)
-      nsCOMPtr<nsIURI> uri;
-      mChannel->GetURI(getter_AddRefs(uri));
-      ImageCache::Remove(uri);
       mChannel->Cancel(status);
-
     } //otherwise we're done, no need to call cancel
   }
   return NS_OK;
@@ -304,13 +295,21 @@ NS_IMETHODIMP nsImageRequest::OnStopRequest(nsIChannel *channel, nsISupports *ct
 {
   mProcessing = PR_FALSE;
 
+  // if we failed, we should remove ourself from the cache
+  if (NS_FAILED(status)) {
+    nsCOMPtr<nsIURI> uri;
+    mChannel->GetURI(getter_AddRefs(uri));
+    ImageCache::Remove(uri);
+  }
+
+  mChannel = nsnull; // we no longer need the channel
+
   if (!mDecoder) return NS_ERROR_FAILURE;
 
   nsresult rv = mDecoder->Close();
 
   mDecoder = nsnull; // release the decoder so that it can rest peacefully ;)
 
-  mChannel = nsnull; // we no longer need the channel
 
   return rv;
 }
@@ -328,52 +327,6 @@ NS_IMETHODIMP nsImageRequest::OnDataAvailable(nsIChannel *channel, nsISupports *
   PRUint32 wrote;
   return mDecoder->WriteFrom(inStr, count, &wrote);
 }
-
-
-
-
-
-/** nsIRunnable methods **/
-
-NS_IMETHODIMP nsImageRequest::Run()
-{
-  nsresult rv = NS_OK;
-  if (!mChannel) return NS_ERROR_NOT_INITIALIZED;
-
-  // create an event queue for this thread.
-  nsCOMPtr<nsIEventQueueService> service = do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID, &rv);
-  if (NS_FAILED(rv)) return rv;
-
-  rv = service->CreateThreadEventQueue();
-  if (NS_FAILED(rv)) return rv;
-
-  nsCOMPtr<nsIEventQueue> currentThreadQ;
-  rv = service->GetThreadEventQueue(NS_CURRENT_THREAD, 
-                                getter_AddRefs(currentThreadQ));
-  if (NS_FAILED(rv)) return rv;
-
-  // initiate the AsyncRead from this thread so events are
-  // sent here for processing.
-  rv = mChannel->AsyncRead(NS_STATIC_CAST(nsIStreamListener*, this), nsnull);
-  if (NS_FAILED(rv)) return rv;
-
-  // process events until we're finished.
-  PLEvent *event;
-  while (mProcessing) {
-    rv = currentThreadQ->WaitForEvent(&event);
-    if (NS_FAILED(rv)) return rv;
-
-    rv = currentThreadQ->HandleEvent(event);
-    if (NS_FAILED(rv)) return rv;
-  }
-
-  rv = service->DestroyThreadEventQueue();
-  if (NS_FAILED(rv)) return rv;
-
-  // XXX make sure cleanup happens on the calling thread.
-  return NS_OK;
-}
-
 
 
 

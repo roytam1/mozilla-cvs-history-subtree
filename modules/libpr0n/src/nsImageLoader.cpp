@@ -33,8 +33,8 @@
 #include "nsIStreamListener.h"
 #include "nsIURI.h"
 
-#include "nsPIImageRequest.h"
-#include "nsPIImageRequestProxy.h"
+#include "nsImageRequest.h"
+#include "nsImageRequestProxy.h"
 
 #include "ImageCache.h"
 
@@ -53,26 +53,12 @@ nsImageLoader::~nsImageLoader()
   /* destructor code */
 }
 
-
-//#define IMAGE_THREADPOOL 1
-
 /* nsIImageRequest loadImage (in nsIURI uri, in nsIImageDecoderObserver aObserver, in nsISupports cx); */
 NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aObserver, nsISupports *cx, nsIImageRequest **_retval)
 {
+  nsImageRequest *imgRequest = nsnull;
 
-#ifdef IMAGE_THREADPOOL
-  if (!mThreadPool) {
-    NS_NewThreadPool(getter_AddRefs(mThreadPool),
-                     1, 4,
-                     512,
-                     PR_PRIORITY_NORMAL,
-                     PR_GLOBAL_THREAD);
-  }
-#endif
-
-  nsCOMPtr<nsPIImageRequest> imgRequest;
-
-  ImageCache::Get(aURI, getter_AddRefs(imgRequest));
+  ImageCache::Get(aURI, &imgRequest); // addrefs
   if (!imgRequest) {
     nsCOMPtr<nsIIOService> ioserv(do_GetService("@mozilla.org/network/io-service;1"));
     if (!ioserv) return NS_ERROR_FAILURE;
@@ -83,26 +69,24 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
 
     newChannel->SetOwner(this); // the channel is now holding a strong ref to 'this'
 
-    imgRequest = do_CreateInstance("@mozilla.org/image/request/real;1");
+    nsCOMPtr<nsIImageRequest> req(do_CreateInstance("@mozilla.org/image/request/real;1"));
+    imgRequest = NS_REINTERPRET_CAST(nsImageRequest*, req.get());
+    NS_ADDREF(imgRequest);
+
     imgRequest->Init(newChannel);
 
     ImageCache::Put(aURI, imgRequest);
 
-    nsCOMPtr<nsIStreamListener> streamList(do_QueryInterface(imgRequest));
-    newChannel->AsyncRead(streamList, cx);  // XXX are we calling this too early?
+    newChannel->AsyncRead(NS_STATIC_CAST(nsIStreamListener *, imgRequest), cx);  // XXX are we calling this too early?
   }
 
-  nsCOMPtr<nsPIImageRequestProxy> proxyRequest(do_CreateInstance("@mozilla.org/image/request/proxy;1"));
-  proxyRequest->Init(imgRequest, aObserver, cx); // init adds itself to imgRequest's list of observers
+  nsCOMPtr<nsIImageRequest> proxyRequest(do_CreateInstance("@mozilla.org/image/request/proxy;1"));
+  // init adds itself to imgRequest's list of observers
+  NS_REINTERPRET_CAST(nsImageRequestProxy*, proxyRequest.get())->Init(imgRequest, aObserver, cx);
 
+  NS_RELEASE(imgRequest);
 
-#ifdef IMAGE_THREADPOOL
-  nsCOMPtr<nsIRunnable> run(do_QueryInterface(imgRequest));
-  mThreadPool->DispatchRequest(run);
-#endif
-
-  nsCOMPtr<nsIImageRequest> ret(do_QueryInterface(proxyRequest));
-  *_retval = ret;
+  *_retval = proxyRequest;
   NS_ADDREF(*_retval);
 
   return NS_OK;
@@ -111,12 +95,12 @@ NS_IMETHODIMP nsImageLoader::LoadImage(nsIURI *aURI, nsIImageDecoderObserver *aO
 /* nsIImageRequest loadImageWithChannel(in nsIChannel, in nsIImageDecoderObserver aObserver, in nsISupports cx, out nsIStreamListener); */
 NS_IMETHODIMP nsImageLoader::LoadImageWithChannel(nsIChannel *channel, nsIImageDecoderObserver *aObserver, nsISupports *cx, nsIStreamListener **listener, nsIImageRequest **_retval)
 {
-  nsCOMPtr<nsPIImageRequest> imgRequest;
+  nsImageRequest *imgRequest = nsnull;
 
   nsCOMPtr<nsIURI> uri;
   channel->GetURI(getter_AddRefs(uri));
 
-  ImageCache::Get(uri, getter_AddRefs(imgRequest));
+  ImageCache::Get(uri, &imgRequest);
   if (imgRequest) {
     // we have this in our cache already.. cancel the current (document) load
 
@@ -127,21 +111,25 @@ NS_IMETHODIMP nsImageLoader::LoadImageWithChannel(nsIChannel *channel, nsIImageD
 
     *listener = nsnull; // give them back a null nsIStreamListener
   } else {
-    imgRequest = do_CreateInstance("@mozilla.org/image/request/real;1");
+    nsCOMPtr<nsIImageRequest> req(do_CreateInstance("@mozilla.org/image/request/real;1"));
+    imgRequest = NS_REINTERPRET_CAST(nsImageRequest*, req.get());
+    NS_ADDREF(imgRequest);
+
     imgRequest->Init(channel);
 
     ImageCache::Put(uri, imgRequest);
 
-    nsCOMPtr<nsIStreamListener> streamList(do_QueryInterface(imgRequest));
-    *listener = streamList;
+    *listener = NS_STATIC_CAST(nsIStreamListener*, imgRequest);
     NS_IF_ADDREF(*listener);
   }
 
-  nsCOMPtr<nsPIImageRequestProxy> proxyRequest(do_CreateInstance("@mozilla.org/image/request/proxy;1"));
-  proxyRequest->Init(imgRequest, aObserver, cx); // init adds itself to imgRequest's list of observers
+  nsCOMPtr<nsIImageRequest> proxyRequest(do_CreateInstance("@mozilla.org/image/request/proxy;1"));
+  // init adds itself to imgRequest's list of observers
+  NS_REINTERPRET_CAST(nsImageRequestProxy*, proxyRequest.get())->Init(imgRequest, aObserver, cx);
 
-  nsCOMPtr<nsIImageRequest> ret(do_QueryInterface(proxyRequest));
-  *_retval = ret;
+  NS_RELEASE(imgRequest);
+
+  *_retval = proxyRequest;
   NS_ADDREF(*_retval);
 
   return NS_OK;

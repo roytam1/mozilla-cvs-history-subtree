@@ -22,7 +22,6 @@
  */
 
 #include "nsIImageLoader.h"
-#include "nsIThreadPool.h"
 #include "nsCOMPtr.h"
 
 #define NS_IMAGELOADER_CID \
@@ -43,5 +42,4 @@ public:
   virtual ~nsImageLoader();
 
 private:
-  nsCOMPtr<nsIThreadPool> mThreadPool;
 };

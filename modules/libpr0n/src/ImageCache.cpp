@@ -67,16 +67,16 @@ ImageCache::~ImageCache()
   /* destructor code */
 }
 
-PRBool ImageCache::Put(nsIURI *aKey, nsPIImageRequest *request)
+PRBool ImageCache::Put(nsIURI *aKey, nsImageRequest *request)
 {
   nsIURIKey key(aKey);
-  return mCache.Put(&key, request);
+  return mCache.Put(&key, NS_STATIC_CAST(nsIImageRequest*, request));
 }
 
-PRBool ImageCache::Get(nsIURI *aKey, nsPIImageRequest **request)
+PRBool ImageCache::Get(nsIURI *aKey, nsImageRequest **request)
 {
   nsIURIKey key(aKey);
-  nsPIImageRequest *sup = (nsPIImageRequest*)mCache.Get(&key); // this addrefs
+  nsImageRequest *sup = NS_REINTERPRET_CAST(nsImageRequest*, NS_STATIC_CAST(nsIImageRequest*, mCache.Get(&key))); // this addrefs
   
   if (sup) {
     *request = sup;

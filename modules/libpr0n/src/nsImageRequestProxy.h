@@ -21,8 +21,7 @@
  *   Stuart Parmenter <pavlov@netscape.com>
  */
 
-#include "nsIImageRequest2.h"
-#include "nsPIImageRequestProxy.h"
+#include "nsImageRequest.h"
 #include "nsIImageDecoderObserver.h"
 
 #include "nsIImageContainer.h"
@@ -38,18 +37,18 @@
 }
 
 class nsImageRequestProxy : public nsIImageRequest,
-                            public nsPIImageRequestProxy,
                             public nsIImageDecoderObserver
 {
 public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIIMAGEREQUEST
-  NS_DECL_NSPIIMAGEREQUESTPROXY
-  NS_DECL_NSIIMAGEDECODEROBSERVER
-
   nsImageRequestProxy();
   virtual ~nsImageRequestProxy();
+
   /* additional members */
+  nsresult Init(nsImageRequest *request, nsIImageDecoderObserver *aObserver, nsISupports *cx);
+
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIIMAGEREQUEST
+  NS_DECL_NSIIMAGEDECODEROBSERVER
 
 private:
   nsCOMPtr<nsIImageDecoderObserver> mObserver;

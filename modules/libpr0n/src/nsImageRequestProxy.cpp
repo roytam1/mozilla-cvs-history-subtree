@@ -32,7 +32,7 @@
 #include "nsIComponentManager.h"
 #include "nsIServiceManager.h"
 
-#include "nsPIImageRequest.h"
+#include "nsImageRequest.h"
 
 #include "nsString.h"
 
@@ -40,8 +40,7 @@
 
 #include "nspr.h"
 
-NS_IMPL_ISUPPORTS3(nsImageRequestProxy, nsIImageRequest, nsPIImageRequestProxy,
-                   nsIImageDecoderObserver)
+NS_IMPL_ISUPPORTS2(nsImageRequestProxy, nsIImageRequest, nsIImageDecoderObserver)
 
 nsImageRequestProxy::nsImageRequestProxy()
 {
@@ -52,16 +51,14 @@ nsImageRequestProxy::nsImageRequestProxy()
 nsImageRequestProxy::~nsImageRequestProxy()
 {
   /* destructor code */
-  nsCOMPtr<nsPIImageRequest> pr(do_QueryInterface(mOwner));
-  pr->RemoveObserver(this, NS_ERROR_FAILURE); // XXX bogus result value
+  NS_REINTERPRET_CAST(nsImageRequest*, mOwner.get())->RemoveObserver(this, NS_ERROR_FAILURE); // XXX bogus result value
 }
 
 
 
-/* void init (in nsPIImageRequest request, in nsIImageDecoderObserver aObserver, in nsISupports cx); */
-NS_IMETHODIMP nsImageRequestProxy::Init(nsPIImageRequest *request, nsIImageDecoderObserver *aObserver, nsISupports *cx)
+nsresult nsImageRequestProxy::Init(nsImageRequest *request, nsIImageDecoderObserver *aObserver, nsISupports *cx)
 {
-  mOwner = do_QueryInterface(request);
+  mOwner = NS_STATIC_CAST(nsIImageRequest*, request);
 
   mObserver = aObserver;
   // XXX we should save off the thread we are getting called on here so that we can proxy all calls to mDecoder to it.
@@ -77,8 +74,7 @@ NS_IMETHODIMP nsImageRequestProxy::Init(nsPIImageRequest *request, nsIImageDecod
 /* void cancel (in nsresult status); */
 NS_IMETHODIMP nsImageRequestProxy::Cancel(nsresult status)
 {
-  nsCOMPtr<nsPIImageRequest> pr(do_QueryInterface(mOwner));
-  return pr->RemoveObserver(this, status);
+  return NS_REINTERPRET_CAST(nsImageRequest*, mOwner.get())->RemoveObserver(this, status);
 }
 
 /* readonly attribute nsIImage image; */

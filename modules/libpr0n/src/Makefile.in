@@ -30,12 +30,6 @@ MODULE		= imglib2
 LIBRARY_NAME	= imglib2
 IS_COMPONENT	= 1
 
-XPIDL_MODULE	= imglib2pr
-
-XPIDLSRCS	= nsPIImageRequest.idl       \
-			nsPIImageRequestProxy.idl    \
-			$(NULL)
-
 CPPSRCS		= ImageCache.cpp \
 			nsImageFactory.cpp    \
 			nsImageLoader.cpp         \

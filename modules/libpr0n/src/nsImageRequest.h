@@ -21,9 +21,10 @@
  *   Stuart Parmenter <pavlov@netscape.com>
  */
 
-#include "nsIImageRequest2.h"
+#ifndef nsImageRequest_h__
+#define nsImageRequest_h__
 
-#include "nsPIImageRequest.h"
+#include "nsIImageRequest2.h"
 
 #include "nsIRunnable.h"
 
@@ -53,22 +54,23 @@ enum {
 };
 
 class nsImageRequest : public nsIImageRequest,
-                       public nsPIImageRequest,
                        public nsIImageDecoderObserver, 
-                       public nsIStreamListener, public nsIRunnable
+                       public nsIStreamListener
 {
 public:
+  nsImageRequest();
+  virtual ~nsImageRequest();
+
+  /* additional members */
+  nsresult Init(nsIChannel *aChannel);
+  nsresult AddObserver(nsIImageDecoderObserver *observer);
+  nsresult RemoveObserver(nsIImageDecoderObserver *observer, nsresult status);
+
   NS_DECL_ISUPPORTS
   NS_DECL_NSIIMAGEREQUEST
-  NS_DECL_NSPIIMAGEREQUEST
   NS_DECL_NSIIMAGEDECODEROBSERVER
   NS_DECL_NSISTREAMLISTENER
   NS_DECL_NSISTREAMOBSERVER
-  NS_DECL_NSIRUNNABLE
-
-  nsImageRequest();
-  virtual ~nsImageRequest();
-  /* additional members */
 
 private:
   nsCOMPtr<nsIChannel> mChannel;
@@ -81,3 +83,5 @@ private:
   PRUint32 mStatus;
   PRUint32 mState;
 };
+
+#endif
