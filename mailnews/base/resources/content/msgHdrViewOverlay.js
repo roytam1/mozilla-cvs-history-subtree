@@ -707,9 +707,12 @@ function GetScreenNameFromEmailAddress(emailAddress)
 
 function GetUrlForAIMPresence(emailAddress)
 {
-  var aimScreenName = GetScreenNameFromEmailAddress(emailAddress);
-
-  return "http://big.oscar.aol.com:80/" + (aimScreenName ? aimScreenName : emailAddress) + "?on_url=http://ncmail.netscape.com/include/nc/images/online.gif&off_url=http://ncmail.netscape.com/include/nc/images/offline.gif";
+  if (pref.getBoolPref("aim.mail.presence")) {
+    var aimScreenName = GetScreenNameFromEmailAddress(emailAddress);
+    return "http://big.oscar.aol.com:80/" + (aimScreenName ? aimScreenName : emailAddress) + "?on_url=http://ncmail.netscape.com/include/nc/images/online.gif&off_url=http://ncmail.netscape.com/include/nc/images/offline.gif";
+  }
+  else
+    return null;
 }
 
 function updateEmailAddressNode(emailAddressNode, emailAddress, fullAddress, displayName, useShortView)

@@ -11,7 +11,7 @@
 
   <script type="application/x-javascript">
   <![CDATA[
-    var _elementIDs = ["mailFixedWidthMessages", "mailQuotedStyle", "mailQuotedSize", "wrapLongLines", "displayGlyph", "mailCitationColor", "sendDefaultCharsetList", "forceCharsetOverride"];
+    var _elementIDs = ["mailFixedWidthMessages", "mailQuotedStyle", "mailQuotedSize", "wrapLongLines", "displayGlyph", "mailCitationColor", "sendDefaultCharsetList", "forceCharsetOverride", "onlineState"];
     var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
     observerService.notifyObservers(null, "charsetmenu-selected", "other");
 
@@ -86,6 +86,10 @@
       <colorpicker type="button" id="citationmenu" palettename="standard" onchange="setColorWell(this);"/>
       <broadcaster id="mailCitationColor" pref="true" preftype="color" prefstring="mail.citation_color" prefattribute="value" wsm_attributes="value"/>
     </hbox>    
-
+  </groupbox>
+  <groupbox>
+    <caption label="&instantMessengerInMail.label;"/>
+    <checkbox id="onlineState" label="&onlineState.label;"
+                prefstring="aim.mail.presence" />
   </groupbox>
 </page>

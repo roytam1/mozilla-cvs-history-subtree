@@ -457,4 +457,5 @@ pref("mailnews.message_display.allow.plugins", true);
 // auto absync
 pref("mail.absync.performAutoSync", true);
 
-
+// show online presence in header area
+pref("aim.mail.presence", true);

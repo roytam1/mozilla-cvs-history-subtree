@@ -51,3 +51,5 @@ Rights Reserved.
 <!ENTITY convertEmoticons.accesskey       "d">
 <!ENTITY example1.label                   "For example, display ' :-) ' as">
 <!ENTITY example2.label                   ".">
+<!ENTITY instantMessengerInMail.label     "Instant Messenger In Mail">
+<!ENTITY onlineState.label                "Show online state in message envelope">
