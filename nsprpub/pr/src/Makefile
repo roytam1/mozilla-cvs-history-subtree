@@ -449,6 +449,11 @@ endif
 ifeq ($(OS_ARCH), OpenVMS)
 	$(INSTALL) -m 444 $(SHARED_LIBRARY:.$(DLL_SUFFIX)=.vms) $(DIST)/lib
 endif
+ifeq ($(OS_ARCH), SunOS)
+ifeq ($(USE_64), 1)
+	$(INSTALL) -m 755 $(SHARED_LIBRARY) $(DIST)/lib/sparcv9
+endif
+endif
 endif
 ifeq ($(MOZ_BITS),16)
 	$(INSTALL) -m 444 $(TARGETS) $(MOZ_DIST)/lib

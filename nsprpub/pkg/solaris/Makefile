@@ -12,8 +12,13 @@ MOD_DEPTH = ../..
 	cp $< $@
 	chmod +x $@
 
+ifeq ($(USE_64), 1)
+DIRS = \
+	SUNWnsprx
+else
 DIRS = \
 	SUNWnspr
+endif
 
 include Makefile.com
 
