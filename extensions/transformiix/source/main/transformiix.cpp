@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
     if (!options.get(String("q"))) {
         String copyright("(C) 1999 The MITRE Corporation, Keith Visco, and contributors");
         cerr << "TransforMiiX ";
-        cerr << "1.2a pre" << endl;
+        cerr << "1.2b pre" << endl;
         cerr << copyright << endl;
         //-- print banner line
         PRUint32 fillSize = copyright.length() + 1;
