@@ -106,7 +106,7 @@ function initReadPrefs()
         "colorCodes":        ["client.COLORCODES",                       false],
         "defaultNet":        ["client.DEFAULT_NETWORK",               "moznet"],
         //"charset":           ["client.CHARSET",                           ""],
-        "initialURLs":       ["client.INITIAL_URLS",                  "irc://"],
+        //"initialURLs":       ["client.INITIAL_URLS",                  "irc://"],
         "initialScripts":    ["client.INITIAL_SCRIPTS",                     ""],
         "newTabLimit":       ["client.NEW_TAB_LIMIT",                       15],
         "raiseNewTab":       ["client.RAISE_NEW_TAB",                    false],
@@ -219,8 +219,8 @@ function readPrefs()
     for (var p in client.prefSpecs)
         readPref(p);
     
-    if (!client.INITIAL_URLS)
-        client.INITIAL_URLS = "irc://";
+    //if (!client.INITIAL_URLS)
+    //    client.INITIAL_URLS = "irc://";
 
     for (var entry in client.munger.entries)
     {

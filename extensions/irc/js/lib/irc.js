@@ -1687,6 +1687,18 @@ function chan_userslen ()
     return i;
 }
 
+CIRCChannel.prototype.iAmOp =
+function chan_amop()
+{
+    return this.users[this.parent.me.nick].isOp;
+}
+
+CIRCChannel.prototype.iAmVoice =
+function chan_amop()
+{
+    return this.parent.users[this.parent.parent.me.nick].isVoice;
+}
+
 CIRCChannel.prototype.setTopic = 
 function chan_topic (str)
 {

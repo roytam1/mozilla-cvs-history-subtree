@@ -26,6 +26,14 @@ const RES_PFX = "http://home.netscape.com/NC-irc#";
 const nsIRDFResource = Components.interfaces.nsIRDFResource;
 const nsIRDFNode = Components.interfaces.nsIRDFNode;
 
+function initRDF()
+{
+    client.rdf = new RDFHelper();
+    
+    client.rdf.initTree("user-list");
+    client.rdf.setTreeRoot("user-list", client.rdf.resNullChan);
+}
+
 function RDFHelper()
 {
     const RDF_MEMORYDS_CONTRACTID =

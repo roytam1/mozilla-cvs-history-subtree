@@ -32,7 +32,6 @@
 <?xul-overlay href="chrome://communicator/content/utilityOverlay.xul"?>
 <?xul-overlay href="chrome://chatzilla/content/scripts.xul"?>
 <?xul-overlay href="chrome://chatzilla/content/menus.xul"?>
-<?xul-overlay href="chrome://chatzilla/content/popups.xul"?>
 
 <window id="chatzilla-window"
   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -52,7 +51,7 @@
  
           <tree id="user-list" container="true" datasources="rdf:null" flex="1"
             containment="http://home.netscape.com/NC-irc#chanuser"
-            context="userlistPopup">
+            context="context:userlist">
 
             <template>
               <rule>
@@ -191,12 +190,6 @@
     </hbox>
   </vbox> <!-- outer-box -->
   
-  <statusbar id="status-bar" persist="collapsed">
-    <statusbarpanel id="component-bar"/>
-    <statusbarpanel id="status-text" label="&StatusText.label;" flex="1"
-      crop="right"/>
-    <statusbarpanel class="statusbarpanel-icononly" id="offline-status"
-      hidden="true" offline="true"/>
-  </statusbar>  
-  
+  <overlaytarget id="statusbar-overlay-target"/>
+
 </window>

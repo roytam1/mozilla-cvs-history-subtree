@@ -33,6 +33,8 @@
  *
  */
 
+const PREF_RELOAD = true;
+
 function PrefManager (branchName)
 {
     var prefManager = this;
@@ -40,8 +42,11 @@ function PrefManager (branchName)
     function pm_observe (prefService, topic, prefName)
     {
         var r = prefManager.prefRecords[prefName];
+        if (!r)
+            return;
+        
         var oldValue = r.realValue ? r.realValue : r.defaultValue;
-        r.realValue = prefManager.getPref(prefName);
+        r.realValue = prefManager.getPref(prefName, PREF_RELOAD);
         prefManager.onPrefChanged(prefName, r.realValue, oldValue);
     };
 
@@ -134,8 +139,14 @@ function pm_readprefs ()
     }
 }
 
+PrefManager.prototype.isKnownPref =
+function pm_ispref(prefName)
+{
+    return (prefName in this.prefRecords);
+}
+
 PrefManager.prototype.addPrefs =
-function pm_addprefs (prefSpecs)
+function pm_addprefs(prefSpecs)
 {
     for (var i = 0; i < prefSpecs.length; ++i)
         this.addPref(prefSpecs[i][0], prefSpecs[i][1]);
@@ -154,16 +165,35 @@ function pm_arrayupdate(prefName)
     if (!ASSERT(record.realValue instanceof Array, "Pref is not an array"))
         return;
 
-    var ary = new Array();
-    for (i = 0; i < record.realValue.length; ++i)
-        ary[i] = escape(record.realValue[i]);
-    
-    this.prefBranch.setCharPref(prefName, ary.join("; "));
+    this.prefBranch.setCharPref(prefName, this.arrayToString(record.realValue));
     this.prefService.savePrefFile(null);
 }
 
+PrefManager.prototype.stringToArray =
+function pm_s2a(string)
+{
+    if (string.search(/\S/) == -1)
+        return [];
+    
+    var ary = string.split(/s*;\s*/);
+    for (var i = 0; i < ary.length; ++i)
+        ary[i] = unescape(ary[i]);
+
+    return ary;
+}
+
+PrefManager.prototype.arrayToString =
+function pm_a2s(ary)
+{
+    var escapedAry = new Array()
+    for (var i = 0; i < ary.length; ++i)
+        escapedAry[i] = escape(ary[i]);
+
+    return escapedAry.join("; ");
+}
+
 PrefManager.prototype.getPref =
-function pm_getpref(prefName)
+function pm_getpref(prefName, reload)
 {
     var prefManager = this;
     
@@ -173,7 +203,7 @@ function pm_getpref(prefName)
     if (!ASSERT(record, "Unknown pref: " + prefName))
         return null;
     
-    if (record.realValue)
+    if (!reload && record.realValue != null)
         return record.realValue;
 
     var realValue = null;
@@ -192,9 +222,7 @@ function pm_getpref(prefName)
         else if (defaultValue instanceof Array)
         {
             realValue = this.prefBranch.getCharPref(prefName);
-            realValue = realValue.split(/s*;\s*/);
-            for (i = 0; i < realValue.length; ++i)
-                realValue[i] = unescape(realValue[i]);
+            realValue = this.stringToArray(realValue);
             realValue.update = updateArrayPref;
         }
         else if (typeof defaultValue == "string" ||
@@ -232,7 +260,7 @@ function pm_setpref(prefName, value)
         return record.realValue;
     }
 
-    var defaultValue = record.defaulValue;
+    var defaultValue = record.defaultValue;
     
     if (typeof defaultValue == "boolean")
     {
@@ -244,11 +272,8 @@ function pm_setpref(prefName, value)
     }
     else if (defaultValue instanceof Array)
     {
-        var ary = new Array();
-        for (i = 0; i < value.length; ++i)
-            ary[i] = escape(value[i]);
-        
-        this.prefBranch.setCharPref(prefName, ary.join("; "));
+        var str = this.arrayToString(value);
+        this.prefBranch.setCharPref(prefName, str);
         value.update = updateArrayPref;
     }
     else
@@ -262,8 +287,16 @@ function pm_setpref(prefName, value)
     return value;
 }
 
+PrefManager.prototype.resetPref =
+function pm_reset(prefName)
+{
+    this.prefRecords[prefName].realValue = null;
+    this.prefBranch.clearUserPref(prefName);
+    this.prefService.savePrefFile(null);
+}
+
 PrefManager.prototype.addPref =
-function pm_addpref (prefName, defaultValue)
+function pm_addpref(prefName, defaultValue)
 {
     var prefManager = this;
 

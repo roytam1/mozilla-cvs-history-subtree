@@ -64,8 +64,6 @@ function initMunger()
     munger.addRule ("word-hyphenator",
                     new RegExp ("(\\S{" + client.MAX_WORD_DISPLAY + ",})"),
                     insertHyphenatedWord);
-
-    setupMungerMenu(client.munger);
 }
 
 function CMungerEntry (name, regex, className, enable, tagName)

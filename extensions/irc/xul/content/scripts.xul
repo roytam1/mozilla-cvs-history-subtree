@@ -55,13 +55,15 @@
     <script src="chrome://chatzilla/content/lib/js/command-manager.js"/>
     <script src="chrome://chatzilla/content/lib/js/pref-manager.js"/>
     <script src="chrome://chatzilla/content/lib/js/message-manager.js"/>
+    <script src="chrome://chatzilla/content/lib/js/menu-manager.js"/>
     <script src="chrome://chatzilla/content/lib/js/irc.js"/>
     <script src="chrome://chatzilla/content/lib/js/irc-debug.js"/>
     <script src="chrome://chatzilla/content/lib/js/file-utils.js"/>
     <script src="chrome://chatzilla/content/lib/xul/munger.js"/>
 
-    <script src="chrome://chatzilla/content/commands.js"/>
     <script src="chrome://chatzilla/content/static.js"/>
+    <script src="chrome://chatzilla/content/commands.js"/>
+    <script src="chrome://chatzilla/content/menus.js"/>
     <script src="chrome://chatzilla/content/readprefs.js"/>
     <script src="chrome://chatzilla/content/prefs.js"/>
     <script src="chrome://chatzilla/content/messages.js"/>

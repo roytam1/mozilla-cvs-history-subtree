@@ -48,10 +48,16 @@ function initPrefs()
          ["username",        "chatzilla"],
          ["desc",            "New Now Know How"],
          ["charset",         "utf-8"],
+         ["collapseMsgs",    false],
+         ["copyMessages",    true],
          ["log",             false],
+         ["initialURLs",      []],
          ["stalkWholeWords", true],
          ["stalkWords",      []],
-         ["style.default",   "chrome://chatzilla/skin/output-default.css"],
+         ["motif.dark",      "chrome://chatzilla/skin/output-dark.css"],
+         ["motif.light",     "chrome://chatzilla/skin/output-light.css"],
+         ["motif.default",   "chrome://chatzilla/skin/output-default.css"],
+         ["motif.current",   "chrome://chatzilla/skin/output-default.css"],
          ["outputWindowURL", "chrome://chatzilla/content/outputwindow.html?%s"]
         ];
 
@@ -131,7 +137,7 @@ function onPrefChanged(prefName, newValue, oldValue)
             updateAllStalkExpressions();
             break;
             
-        case "style.default":
+        case "motif.current":
             dispatch("sync-css");
     }
 }

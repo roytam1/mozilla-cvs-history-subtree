@@ -54,7 +54,7 @@ function onTopicEditEnd ()
     var text = client.statusBar["channel-topic"];
     edit.setAttribute("collapsed", "true");
     text.removeAttribute("collapsed");
-    focusInput();
+    dispatch("focus-input");
 }
 
 function onTopicKeyPress (e)
@@ -235,62 +235,6 @@ function onToggleMungerEntry(entryName)
         !client.munger.entries[entryName].enabled;
     var item = document.getElementById("menu-munger-" + entryName);
     item.setAttribute ("checked", client.munger.entries[entryName].enabled);
-}
-
-function createPopupContext(event, target)
-{
-    var targetType;
-    client._popupContext = new Object();
-    client._popupContext.menu = event.originalTarget;
-
-    if (!target)
-        return "unknown";
-    
-    switch (target.tagName.toLowerCase())
-    {
-        case "html:a":
-            var href = target.getAttribute("href");
-            client._popupContext.url = href;
-            if (href.indexOf("irc://") == 0)
-            {
-                var obj = parseIRCUrl(href);
-                if (obj)
-                {
-                    if (obj.target)
-                        if (obj.isnick)
-                        {
-                            targetType="nick-ircurl";
-                            client._popupContext.user = obj.target;
-                        }
-                        else
-                            targetType="channel-ircurl";
-                    else
-                        targetType="untargeted-ircurl";
-                }
-                else
-                    targetType="weburl";
-            }
-            else
-                targetType="weburl";
-            break;
-            
-        case "html:td":
-            var user = target.getAttribute("msg-user");
-            if (user)
-            {
-                if (user.indexOf("ME!") != -1)
-                    client._popupContext.user = "ME!";
-                else
-                    client._popupContext.user = user;
-            }
-            targetType = target.getAttribute("msg-type");
-            break;            
-    }
-
-    client._popupContext.targetType = targetType;
-    client._popupContext.targetClass = target.getAttribute("class");
-
-    return targetType;
 }
 
 function onOutputContextMenuCreate(e)
@@ -761,7 +705,7 @@ function onTabCompleteRequest (e)
 
 function onWindowKeyPress (e)
 {
-    var code = Number (e.keyCode);
+    var code = Number(e.keyCode);
     var w;
     var newOfs;
     var userList = document.getElementById("user-list");
@@ -780,7 +724,7 @@ function onWindowKeyPress (e)
         case 120:
         case 121: /* F10 */
             var idx = code - 112;
-            if ((idx in client.viewsArray) && (client.viewsArray[idx].source))
+            if ((idx in client.viewsArray) && client.viewsArray[idx].source)
                 setCurrentObject(client.viewsArray[idx].source);
             break;
 
@@ -809,11 +753,7 @@ function onWindowKeyPress (e)
                 w.scrollTo (w.pageXOffset, (w.innerHeight + w.pageYOffset));
             e.preventDefault();
             break;
-
-        default:
-            
     }
-
 }
 
 function onInputCompleteLine(e)
@@ -951,11 +891,6 @@ function my_showtonet (e)
             updateNetwork (this);
             updateStalkExpression(this);
             this.prefs["nickname"] = e.server.me.properNick
-            if (client.currentObject == this)
-            {
-                var status = document.getElementById("offline-status");
-                status.removeAttribute ("offline");
-            }
             if ("pendingURLs" in this)
             {
                 var url = this.pendingURLs.pop();
@@ -1729,7 +1664,6 @@ function my_cnick (e)
 CIRCChannel.prototype.onQuit =
 function my_cquit (e)
 {
-
     if (userIsMe(e.user)) /* I dont think this can happen */
         this.display (getMsg("my_cquitMsg", [e.server.parent.name, e.reason]),
                       "QUIT", e.user, this);
@@ -1741,7 +1675,6 @@ function my_cquit (e)
     this._removeUserFromGraph(e.user);
 
     updateChannel (e.channel);
-    
 }
 
 CIRCUser.prototype.onInit =

@@ -29,7 +29,8 @@ function getAccessKey (str)
     return str[i + 1];
 }
 
-function CommandRecord (name, func, usage, help, label, flags, keystr, tip)
+function CommandRecord (name, func, usage, help, label, flags, keystr, tip,
+                        format)
 {
     this.name = name;
     this.func = func;
@@ -37,6 +38,7 @@ function CommandRecord (name, func, usage, help, label, flags, keystr, tip)
     this.scanUsage();
     this.help = help;
     this.label = label ? label : name;
+    this.format = format;
     this.labelstr = label.replace ("&", "");
     this.tip = tip;
     this.flags = flags;
@@ -196,9 +198,10 @@ function cmgr_defcmds (cmdary)
         var help  = getMsgFrom(bundle, "cmd." + name + ".help", null,
                                helpDefault);
         var keystr = getMsgFrom (bundle, "cmd." + name + ".key", null, "");
+        var format = getMsgFrom (bundle, "cmd." + name + ".format", null, null);
         var tip = getMsgFrom (bundle, "cmd." + name + ".tip", null, "");
         var command = new CommandRecord (name, func, usage, help, label, flags,
-                                         keystr, tip);
+                                         keystr, tip, format);
         if (aliasFor)
             command.aliasFor = aliasFor;
         this.addCommand(command);
@@ -542,6 +545,16 @@ function parse_parseargsraw (e)
             {
                 e[e.command.argNames[i]] = null;
             }
+
+            if (e.command.argNames[i] == "...")
+            {
+                var paramName = e.command.argNames[i - 1];
+                if (paramName == ":")
+                    paramName = e.command.argNames[i - 2];
+                var listName = paramName + "List";
+                if (!(listName in e))
+                    e[listName] = [e[paramName]];
+            }
         }
     }
         
@@ -601,7 +614,7 @@ function parse_parseargsraw (e)
     {
         /* if no data was provided, check to see if the event is good enough
          * on its own. */
-        var rv = this.isCommandSatisfied (e);
+        var rv = this.isCommandSatisfied(e);
         if (rv)
             initOptionals();
         return rv;
@@ -631,7 +644,7 @@ function cmgr_isok (e, command)
     for (var i = 0; i < command.argNames.length; ++i)
     {
         if (command.argNames[i] == ":")
-            return true;
+             return true;
         
         if (!(command.argNames[i] in e))
         {

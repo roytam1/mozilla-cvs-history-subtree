@@ -211,6 +211,23 @@ function dumpObjectTree (o, recurse, compress, level)
     
 }
 
+function replaceVars(str, vars)
+{
+    // replace "string $with a $variable", with
+    // "string " + vars["with"] + " with a " + vars["variable"]
+
+    function doReplace(symbol)
+    {
+        var name = symbol.substr(1);
+        if (name in vars)
+            return vars[name];
+        
+        return "$" + name;
+    };
+    
+    return str.replace(/(\$\w[\w\d\-]+)/g, doReplace);
+}
+    
 function formatException (ex)
 {
     if (ex instanceof Error)
@@ -229,7 +246,7 @@ function formatException (ex)
  */
 function Clone (obj)
 {
-    robj = new Object();
+    var robj = new Object();
 
     for (var p in obj)
         robj[p] = obj[p];
