@@ -7033,8 +7033,10 @@ PRBool nsImapProtocol::TryToLogon()
             break;
          }
 
-        // try to use CRAM before we fall back to plain or auth login....
-        if (GetServerStateParser().GetCapabilityFlag() & kHasCRAMCapability)
+        // Use CRAM only if secure auth is enabled. This is for servers that
+        // say they support CRAM but are so badly broken that trying it causes
+        // all subsequent login attempts to fail (bug 231303, bug 227560)
+        if (m_useSecAuth && GetServerStateParser().GetCapabilityFlag() & kHasCRAMCapability)
         {
           AuthLogin (userName, password, kHasCRAMCapability);
           logonTries++;

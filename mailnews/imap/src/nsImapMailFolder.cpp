@@ -2237,7 +2237,8 @@ NS_IMETHODIMP nsImapMailFolder::GetNewMessages(nsIMsgWindow *aWindow, nsIUrlList
   nsCOMPtr<nsIMsgFolder> rootFolder;
   nsresult rv = GetRootFolder(getter_AddRefs(rootFolder));
 
-  if(NS_SUCCEEDED(rv) && rootFolder) {
+  if(NS_SUCCEEDED(rv) && rootFolder) 
+  {
 
     nsCOMPtr<nsIImapIncomingServer> imapServer;
     GetImapIncomingServer(getter_AddRefs(imapServer));
@@ -2256,10 +2257,10 @@ NS_IMETHODIMP nsImapMailFolder::GetNewMessages(nsIMsgWindow *aWindow, nsIUrlList
     PRBool checkAllFolders = PR_FALSE;
 
     nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
-    if (NS_SUCCEEDED(rv) && prefBranch) {
+    if (NS_SUCCEEDED(rv) && prefBranch) 
       // This pref might not exist, which is OK. We'll only check inbox and marked ones
       rv = prefBranch->GetBoolPref("mail.check_all_imap_folders_for_new", &checkAllFolders); 
-    }
+
     m_urlListener = aListener;                                                  
 
     // Get new messages for inbox
@@ -2506,6 +2507,11 @@ NS_IMETHODIMP nsImapMailFolder::UpdateImapMailboxInfo(
       }
     }
     SyncFlags(flagState);
+    PRInt32 numUnreadFromServer;
+    aSpec->GetNumUnseenMessages(&numUnreadFromServer);
+    if (mNumUnreadMessages + keysToFetch.GetSize() > numUnreadFromServer)
+      mDatabase->SyncCounts();
+
     if (keysToFetch.GetSize())
     {     
       PrepareToAddHeadersToMailDB(aProtocol, keysToFetch, aSpec);
