@@ -528,6 +528,10 @@ nsToolkitProfileService::CreateProfile(nsILocalFile* aRootDir,
                                        nsIToolkitProfile* *aResult)
 {
     nsresult rv;
+
+    rv = GetProfileByName(aName, aResult);
+    if (NS_SUCCEEDED(rv)) return rv;
+
     nsCOMPtr<nsILocalFile> rootDir (aRootDir);
 
     if (!rootDir) {
