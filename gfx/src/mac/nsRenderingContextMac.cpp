@@ -1595,3 +1595,17 @@ nsRenderingContextMac::OnMacOSX()
   }
   return gOnMacOSX;
 }
+
+PRBool
+nsRenderingContextMac::OnJaguar()
+{
+  static PRBool sInitVer = PR_FALSE;
+  static PRBool sOnJaguar = PR_FALSE;
+  if (!sInitVer) {
+    long version;
+    OSErr err = ::Gestalt(gestaltSystemVersion, &version);
+    sOnJaguar = (err == noErr && version >= 0x00001020);
+    sInitVer = PR_TRUE;
+  }
+  return sOnJaguar;
+}
