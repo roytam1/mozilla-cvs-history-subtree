@@ -198,6 +198,7 @@ en-US.jar:
     locale/en-US/messenger/addressbook/abSelectAddressesDialog.dtd     (addrbook/resources/locale/en-US/abSelectAddressesDialog.dtd)
     locale/en-US/messenger/addressbook/abMailListDialog.dtd            (addrbook/resources/locale/en-US/abMailListDialog.dtd)
     locale/en-US/messenger/addressbook/addressBook.properties          (addrbook/resources/locale/en-US/addressBook.properties)
+    locale/en-US/messenger/addressbook/ldapAutoCompErrs.properties     (addrbook/resources/locale/en-US/ldapAutoCompErrs.properties)
     locale/en-US/messenger/messenger.dtd                                (base/resources/locale/en-US/messenger.dtd)
     locale/en-US/messenger/msgAccountCentral.dtd                        (base/resources/locale/en-US/msgAccountCentral.dtd)
     locale/en-US/messenger/messenger.properties                         (base/resources/locale/en-US/messenger.properties)
