@@ -1291,6 +1291,17 @@ endif
 
 $(VERSION_OBJS): versionn.h
 
+#
+# For some reason the -include's in this file aren't working,
+# so until I figure it out, if Netscape.mk doesn't exist, just
+# create a dummy file. --briano
+#
+$(XFEPRIVDIR)Netscape.mk:
+ifdef XFEPRIVDIR
+	@-mkdir -p $(XFEPRIVDIR)
+endif
+	@touch $@
+
 everything:	all $(ALL_TARGETS)
 
 symbols:
