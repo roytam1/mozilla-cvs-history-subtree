@@ -144,7 +144,16 @@ NS_IMETHODIMP nsImageLoader::OnDataAvailable(imgIRequest *aRequest, nsISupports 
   if (!mFrame)
     return NS_ERROR_FAILURE;
 
-  RedrawDirtyFrame(aRect);
+  nsRect r(*aRect);
+
+  float p2t;
+  mPresContext->GetPixelsToTwips(&p2t);
+  r.x = NSIntPixelsToTwips(r.x, p2t);
+  r.y = NSIntPixelsToTwips(r.y, p2t);
+  r.width = NSIntPixelsToTwips(r.width, p2t);
+  r.height = NSIntPixelsToTwips(r.height, p2t);
+
+  RedrawDirtyFrame(&r);
 
   return NS_OK;
 }
@@ -169,7 +178,16 @@ NS_IMETHODIMP nsImageLoader::FrameChanged(imgIContainer *aContainer, nsISupports
   if (!mFrame)
     return NS_ERROR_FAILURE;
 
-  RedrawDirtyFrame(dirtyRect);
+  nsRect r(*dirtyRect);
+
+  float p2t;
+  mPresContext->GetPixelsToTwips(&p2t);
+  r.x = NSIntPixelsToTwips(r.x, p2t);
+  r.y = NSIntPixelsToTwips(r.y, p2t);
+  r.width = NSIntPixelsToTwips(r.width, p2t);
+  r.height = NSIntPixelsToTwips(r.height, p2t);
+
+  RedrawDirtyFrame(&r);
 
   return NS_OK;
 }
