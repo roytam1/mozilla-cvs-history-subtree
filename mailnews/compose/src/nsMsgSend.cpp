@@ -3984,7 +3984,7 @@ nsMsgComposeAndSend::MimeDoFCC(nsFileSpec       *input_file,
   PRBool        folderIsLocal = PR_TRUE;
   char          *turi = nsnull;
   PRUnichar     *printfString = nsnull;
-  char          *folderName = nsnull;
+  nsXPIDLString folderName;
   nsXPIDLString msg; 
 
   // Before continuing, just check the user has not cancel the operation
@@ -4087,9 +4087,17 @@ nsMsgComposeAndSend::MimeDoFCC(nsFileSpec       *input_file,
   mComposeBundle->GetStringByID(NS_MSG_START_COPY_MESSAGE, getter_Copies(msg));
   if (msg)
   {
-    folderName = GetFolderNameFromURLString(turi);
-    if (folderName)
-      printfString = nsTextFormatter::smprintf(msg, folderName);
+    nsCOMPtr<nsIRDFService> rdfService = do_GetService("@mozilla.org/rdf/rdf-service;1");
+    if (rdfService)
+    {
+      nsCOMPtr<nsIRDFResource> res;
+      rdfService->GetResource(turi, getter_AddRefs(res));
+      nsCOMPtr<nsIMsgFolder> folder = do_QueryInterface(res);
+      if (folder)
+        folder->GetName(getter_Copies(folderName));
+    }
+    if (!folderName.IsEmpty())
+      printfString = nsTextFormatter::smprintf(msg, folderName.get());
     else
       printfString = nsTextFormatter::smprintf(msg, "?");
     if (printfString)
@@ -4098,8 +4106,6 @@ nsMsgComposeAndSend::MimeDoFCC(nsFileSpec       *input_file,
       PR_FREEIF(printfString);  
     }
   }
-
-  PR_FREEIF(folderName);
 
   if ( (envelopeLine) && (folderIsLocal) )
   {
