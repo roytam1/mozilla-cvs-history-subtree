@@ -120,10 +120,10 @@ sub InstallDefaultsFiles()
     InstallResources(":mozilla:profile:defaults:MANIFEST",                             "$default_profile_dir", 1);
 
     # make a dup in en-US
-    my($default_profile_dir_en_US) = "$default_profile_dir"."en-US:";
-    mkdir($default_profile_dir_en_US, 0);
+    my($default_profile_dir_US) = "$default_profile_dir"."US:";
+    mkdir($default_profile_dir_US, 0);
 
-    InstallResources(":mozilla:profile:defaults:MANIFEST",                             "$default_profile_dir_en_US", 1);
+    InstallResources(":mozilla:profile:defaults:MANIFEST",                             "$default_profile_dir_US", 1);
     }
     
     # Default _pref_ directory stuff
@@ -211,9 +211,6 @@ sub InstallNonChromeResources()
     my($rdf_dir) = "$resource_dir" . "rdf:";
     BuildFolderResourceAliases(":mozilla:rdf:resources:",                               "$rdf_dir");
 
-    my($domds_dir) = "$samples_dir" . "rdf:";
-    InstallResources(":mozilla:rdf:tests:domds:resources:MANIFEST",                    "$domds_dir");
-
     # Search - make copies (not aliases) of the various search files
     my($searchPlugins) = "${dist_dir}Search Plugins";
     print("--- Starting Search Plugins copying: $searchPlugins\n");
@@ -223,8 +220,8 @@ sub InstallNonChromeResources()
     InstallResources(":mozilla:intl:strres:tests:MANIFEST",            "$resource_dir");
 
     # install builtin XBL bindings
-    MakeAlias(":mozilla:layout:xbl:builtin:htmlbindings.xml",                      "$builtin_dir");
-    MakeAlias(":mozilla:layout:xbl:builtin:mac:platformHTMLBindings.xml",          "$builtin_dir");
+    MakeAlias(":mozilla:content:xbl:builtin:htmlbindings.xml",                     "$builtin_dir");
+    MakeAlias(":mozilla:content:xbl:builtin:mac:platformHTMLBindings.xml",         "$builtin_dir");
 
     print("--- End Resource copying ----\n");
 }
@@ -293,6 +290,7 @@ sub ProcessJarManifests()
     CreateJarFromManifest(":mozilla:editor:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:embedding:browser:chrome:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:embedding:browser:chrome:locale:en-US:jar.mn", $chrome_dir, \%jars);
+    CreateJarFromManifest(":mozilla:extensions:cookie:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:extensions:irc:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:extensions:wallet:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:intl:uconv:src:jar.mn", $chrome_dir, \%jars);
@@ -302,7 +300,6 @@ sub ProcessJarManifests()
     CreateJarFromManifest(":mozilla:netwerk:resources:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:profile:pref-migrator:resources:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:profile:resources:jar.mn", $chrome_dir, \%jars);
-    CreateJarFromManifest(":mozilla:rdf:tests:domds:resources:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:themes:blue:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:themes:classic:communicator:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:themes:classic:communicator:search:mac:jar.mn", $chrome_dir, \%jars);
@@ -473,6 +470,10 @@ sub BuildClientDist()
     #LIBREG
     InstallFromManifest(":mozilla:modules:libreg:include:MANIFEST",                "$distdirectory:libreg:");
 
+    #STRING
+    InstallFromManifest(":mozilla:string:public:MANIFEST",                         "$distdirectory:string:");
+    InstallFromManifest(":mozilla:string:obsolete:MANIFEST",                       "$distdirectory:string:");
+
     #XPCOM
     InstallFromManifest(":mozilla:xpcom:base:MANIFEST_IDL",                        "$distdirectory:idl:");
     InstallFromManifest(":mozilla:xpcom:io:MANIFEST_IDL",                          "$distdirectory:idl:");
@@ -589,30 +590,52 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:webshell:public:MANIFEST_IDL",                   "$distdirectory:idl:");
     InstallFromManifest(":mozilla:webshell:tests:viewer:public:MANIFEST",          "$distdirectory:webshell:");
 
+    #CONTENT
+    
+    open(OUTPUT, ">:mozilla:content:build:gbdate.h") || die "could not open gbdate.h";
+    my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
+    # localtime returns year minus 1900
+    $year = $year + 1900;
+    printf(OUTPUT "#define PRODUCT_VERSION \"%04d%02d%02d\"\n", $year, 1+$mon, $mday);
+    close(OUTPUT);
+    
+    InstallFromManifest(":mozilla:content:base:public:MANIFEST",                   "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:base:public:MANIFEST_IDL",               "$distdirectory:idl:");
+    InstallFromManifest(":mozilla:content:base:src:MANIFEST",                      "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:build:MANIFEST",                         "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:events:public:MANIFEST",                 "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:events:src:MANIFEST",                    "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:html:content:public:MANIFEST",           "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:html:content:src:MANIFEST",              "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:html:document:public:MANIFEST",          "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:html:document:src:MANIFEST",             "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:html:style:public:MANIFEST",             "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:html:style:src:MANIFEST",                "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:xbl:public:MANIFEST",                    "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:xml:content:public:MANIFEST",            "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:xml:document:public:MANIFEST",           "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:xsl:document:src:MANIFEST_IDL",          "$distdirectory:idl:");
+    InstallFromManifest(":mozilla:content:xul:content:public:MANIFEST",            "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:xul:document:public:MANIFEST",           "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:xul:document:public:MANIFEST_IDL",       "$distdirectory:idl:");
+    InstallFromManifest(":mozilla:content:xul:templates:public:MANIFEST",          "$distdirectory:content:");
+    InstallFromManifest(":mozilla:content:xul:templates:public:MANIFEST_IDL",      "$distdirectory:idl:");
+
     #LAYOUT
     InstallFromManifest(":mozilla:layout:build:MANIFEST",                          "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:base:public:MANIFEST",                    "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:base:public:MANIFEST_IDL",                "$distdirectory:idl:");
-    InstallFromManifest(":mozilla:layout:html:content:public:MANIFEST",            "$distdirectory:layout:");
-    InstallFromManifest(":mozilla:layout:html:document:src:MANIFEST",              "$distdirectory:layout:");
-    InstallFromManifest(":mozilla:layout:html:document:public:MANIFEST",           "$distdirectory:layout:");
+    # InstallFromManifest(":mozilla:layout:html:document:src:MANIFEST",              "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:html:style:public:MANIFEST",              "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:html:style:src:MANIFEST",                 "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:html:base:src:MANIFEST",                  "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:html:forms:public:MANIFEST",              "$distdirectory:layout:");
     InstallFromManifest(":mozilla:layout:html:table:public:MANIFEST",              "$distdirectory:layout:");
-    InstallFromManifest(":mozilla:layout:base:src:MANIFEST",                       "$distdirectory:layout:");
-    InstallFromManifest(":mozilla:layout:events:public:MANIFEST",                  "$distdirectory:layout:");
-    InstallFromManifest(":mozilla:layout:events:src:MANIFEST",                     "$distdirectory:layout:");
-    InstallFromManifest(":mozilla:layout:xml:document:public:MANIFEST",            "$distdirectory:layout:");
-    InstallFromManifest(":mozilla:layout:xml:content:public:MANIFEST",             "$distdirectory:layout:");
-    InstallFromManifest(":mozilla:layout:xsl:document:src:MANIFEST_IDL",           "$distdirectory:idl:");
     if ($main::options{svg})
     {
         InstallFromManifest(":mozilla:layout:svg:base:public:MANIFEST",                        "$distdirectory:layout:");
     }
     InstallFromManifest(":mozilla:layout:xul:base:public:Manifest",                "$distdirectory:layout:");
-    InstallFromManifest(":mozilla:layout:xbl:public:Manifest",                     "$distdirectory:layout:");
 
     #GFX
     InstallFromManifest(":mozilla:gfx:public:MANIFEST",                            "$distdirectory:gfx:");
@@ -631,6 +654,7 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:dom:public:range:MANIFEST",                      "$distdirectory:dom:");
     InstallFromManifest(":mozilla:dom:public:html:MANIFEST",                       "$distdirectory:dom:");
     InstallFromManifest(":mozilla:dom:public:css:MANIFEST",                        "$distdirectory:dom:");
+    InstallFromManifest(":mozilla:dom:public:xul:MANIFEST",                        "$distdirectory:dom:");
     InstallFromManifest(":mozilla:dom:src:jsurl:MANIFEST",                         "$distdirectory:dom:");
     InstallFromManifest(":mozilla:dom:src:base:MANIFEST",                          "$distdirectory:dom:");
 
@@ -647,6 +671,7 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:docshell:base:MANIFEST_IDL",                     "$distdirectory:idl:");
 
     #EMBEDDING
+    InstallFromManifest(":mozilla:embedding:base:MANIFEST_IDL",                    "$distdirectory:idl:");
     InstallFromManifest(":mozilla:embedding:browser:webbrowser:MANIFEST_IDL",      "$distdirectory:idl:");
     InstallFromManifest(":mozilla:embedding:components:windowwatcher:public:MANIFEST_IDL", "$distdirectory:idl:");
 
@@ -829,7 +854,7 @@ sub BuildStubs()
     my($distdirectory) = ":mozilla:dist";
 
     # $C becomes a component of target names for selecting either the Carbon or non-Carbon target of a project
-    my($C) = $main::CARBON ? "Carbon" : "";
+    my($C) = $main::options{carbon} ? "Carbon" : "";
 
     StartBuildModule("stubs");
 
@@ -907,6 +932,11 @@ sub BuildIDLProjects()
     BuildIDLProject(":mozilla:netwerk:macbuild:netwerkIDL.mcp","necko");
     BuildIDLProject(":mozilla:uriloader:macbuild:uriLoaderIDL.mcp",                 "uriloader");
 
+    if ($main::options{cache})
+    {
+        BuildIDLProject(":mozilla:netwerk:macbuild:cacheIDL.mcp", "cache");
+    }
+
     # psm glue
     BuildIDLProject(":mozilla:extensions:psm-glue:macbuild:psmglueIDL.mcp",         "psmglue"); 
     
@@ -928,17 +958,19 @@ sub BuildIDLProjects()
     BuildIDLProject(":mozilla:profile:macbuild:ProfileServicesIDL.mcp", "profileservices");
     BuildIDLProject(":mozilla:profile:pref-migrator:macbuild:prefmigratorIDL.mcp",  "prefm");
         
+    BuildIDLProject(":mozilla:content:macbuild:contentIDL.mcp",                       "content");
+
     BuildIDLProject(":mozilla:layout:macbuild:layoutIDL.mcp",                       "layout");
 
     BuildIDLProject(":mozilla:rdf:macbuild:RDFIDL.mcp",                             "rdf");
-    BuildIDLProject(":mozilla:rdf:tests:domds:macbuild:DOMDataSourceIDL.mcp",       "domds");
 
     BuildIDLProject(":mozilla:rdf:chrome:build:chromeIDL.mcp",                      "chrome");
         
     BuildIDLProject(":mozilla:webshell:macbuild:webshellIDL.mcp",                   "webshell");
     BuildIDLProject(":mozilla:docshell:macbuild:docshellIDL.mcp",                   "docshell");
+    BuildIDLProject(":mozilla:embedding:base:macbuild:EmbedIDL.mcp",                "EmbedBase");
     BuildIDLProject(":mozilla:embedding:browser:macbuild:browserIDL.mcp",           "embeddingbrowser");
-    BuildIDLProject(":mozilla:embedding:components:build:macbuild:EmbedComponentsIDL.mcp", "embedcomponents");
+    BuildIDLProject(":mozilla:embedding:components:build:macbuild:EmbedComponentsIDL.mcp", "EmbedComponents");
 
     BuildIDLProject(":mozilla:extensions:wallet:macbuild:walletIDL.mcp","wallet");
     BuildIDLProject(":mozilla:extensions:xml-rpc:macbuild:xml-rpcIDL.mcp","xml-rpc");
@@ -1007,21 +1039,16 @@ sub BuildRuntimeProjects()
     my($D) = $main::DEBUG ? "Debug" : "";
 
     # $C becomes a component of target names for selecting either the Carbon or non-Carbon target of a project
-    my($C) = $main::CARBON ? "Carbon" : "";
+    my($C) = $main::options{carbon} ? "Carbon" : "";
     my($P) = $main::PROFILE ? "Profil" : "";
     my($EssentialFiles) = $main::DEBUG ? ":mozilla:dist:viewer_debug:Essential Files:" : ":mozilla:dist:viewer:Essential Files:";
 
     #//
     #// Shared libraries
     #//
-    if ( $main::CARBON )
+    if ( $main::options{carbon} )
     {
-        if ( $main::CARBONLITE ) {
-            BuildProject(":mozilla:lib:mac:InterfaceLib:Interface.mcp",            "Carbon Interfaces (Lite)");
-        }
-        else {
-            BuildProject(":mozilla:lib:mac:InterfaceLib:Interface.mcp",            "Carbon Interfaces");       
-        }
+        BuildProject(":mozilla:lib:mac:InterfaceLib:Interface.mcp",            "Carbon Interfaces");       
     }
     else
     {
@@ -1039,8 +1066,14 @@ sub BuildRuntimeProjects()
     BuildOneProjectWithOutput(":mozilla:lib:mac:NSRuntime:NSRuntime.mcp", "NSRuntime$C$P$D.shlb", "NSRuntime$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
 
     BuildProject(":mozilla:lib:mac:MoreFiles:build:MoreFilesPPC.mcp",          "MoreFiles.o");
-    
-	BuildProject(":mozilla:lib:mac:MacMemoryAllocator:MemAllocator.mcp", "MemAllocator$C$D.o");
+
+    if ($main::GC_LEAK_DETECTOR && !$main::options{carbon}) {
+        BuildProject(":mozilla:gc:boehm:macbuild:gc.mcp",                    "gc.ppc.lib");
+        MakeAlias(":mozilla:gc:boehm:macbuild:gc.PPC.lib",                   ":mozilla:dist:gc:gc.PPC.lib");
+    	BuildProject(":mozilla:lib:mac:MacMemoryAllocator:MemAllocator.mcp", "MemAllocatorGC.o");
+    } else {
+    	BuildProject(":mozilla:lib:mac:MacMemoryAllocator:MemAllocator.mcp", "MemAllocator$C$D.o");
+    }
 
     BuildOneProjectWithOutput(":mozilla:lib:mac:NSStdLib:NSStdLib.mcp", "NSStdLib$C$D.shlb", "NSStdLib$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
 
@@ -1063,6 +1096,9 @@ sub BuildCommonProjects()
     my($D) = $main::DEBUG ? "Debug" : "";
 
     StartBuildModule("common");
+
+    BuildOneProject(":mozilla:string:macbuild:string.mcp",                      "string$D.o", 0, 0, 0);
+    MakeAlias(":mozilla:string:macbuild:string$D.o", ":mozilla:dist:string:");
 
     #//
     #// Shared libraries
@@ -1174,16 +1210,21 @@ sub BuildNeckoProjects()
     my($D) = $main::DEBUG ? "Debug" : "";
 
     # $C becomes a component of target names for selecting either the Carbon or non-Carbon target of a project
-    my($C) = $main::CARBON ? "Carbon" : "";
+    my($C) = $main::options{carbon} ? "Carbon" : "";
 
     my($Components) = $main::DEBUG ? ":mozilla:dist:viewer_debug:Components:" : ":mozilla:dist:viewer:Components:";
 
     StartBuildModule("necko");
 
     BuildOneProjectWithOutput(":mozilla:netwerk:macbuild:netwerk.mcp", "Necko$C$D.shlb", "Necko$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
-    
-    BuildOneProject(":mozilla:netwerk:macbuild:netwerk2.mcp",                   "Necko2$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
-    BuildOneProject(":mozilla:dom:src:jsurl:macbuild:JSUrl.mcp",                "JSUrl$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
+    BuildOneProject(":mozilla:netwerk:macbuild:netwerk2.mcp",          "Necko2$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
+
+    if ($main::options{cache})
+    {
+        BuildOneProject(":mozilla:netwerk:macbuild:cache.mcp",         "Cache$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
+    }
+
+    BuildOneProject(":mozilla:dom:src:jsurl:macbuild:JSUrl.mcp",       "JSUrl$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
           
     EndBuildModule("necko");
 }
@@ -1279,8 +1320,6 @@ sub BuildBrowserUtilsProjects()
     
     BuildOneProject(":mozilla:rdf:chrome:build:chrome.mcp",                     "ChomeRegistry$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     
-    BuildOneProject(":mozilla:rdf:tests:domds:macbuild:DOMDataSource.mcp",      "DOMDataSource$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
-
     EndBuildModule("browserutils");
 }
 
@@ -1297,17 +1336,12 @@ sub BuildLayoutProjects()
     # $D becomes a suffix to target names for selecting either the debug or non-debug target of a project
     my($D) = $main::DEBUG ? "Debug" : "";
     # $C becomes a component of target names for selecting either the Carbon or non-Carbon target of a project
-    my($C) = $main::CARBON ? "Carbon" : "";
+    my($C) = $main::options{carbon} ? "Carbon" : "";
     my($dist_dir) = GetBinDirectory();
     
     StartBuildModule("nglayout");
 
-    open(OUTPUT, ">:mozilla:layout:build:gbdate.h") || die "could not open gbdate.h";
-    my($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime;
-    # localtime returns year minus 1900
-    $year = $year + 1900;
-    printf(OUTPUT "#define PRODUCT_VERSION \"%04d%02d%02d\"\n", $year, 1+$mon, $mday);
-    close(OUTPUT);
+
     #//
     #// Build Layout projects
     #//
@@ -1318,7 +1352,7 @@ sub BuildLayoutProjects()
     BuildOneProjectWithOutput(":mozilla:gfx:macbuild:gfx.mcp",            "gfx$C$D.shlb", "gfx$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
     BuildOneProject(":mozilla:dom:macbuild:dom.mcp",                            "dom$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
     BuildOneProject(":mozilla:modules:plugin:macbuild:plugin.mcp",              "plugin$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
-    BuildOneProject(":mozilla:layout:macbuild:layoutxsl.mcp",                   "layoutxsl$D.o", 0, 0, 0);
+    BuildOneProject(":mozilla:content:macbuild:content.mcp",                    "content$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     if ($main::options{mathml})
     {
         BuildOneProject(":mozilla:layout:macbuild:layoutmathml.mcp",                "layoutmathml$D.o", 0, 0, 0);
@@ -1341,7 +1375,6 @@ sub BuildLayoutProjects()
     BuildOneProject(":mozilla:docshell:macbuild:docshell.mcp",                  "docshell$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:webshell:embed:mac:RaptorShell.mcp",              "RaptorShell$D.shlb", 1, $main::ALIAS_SYM_FILES, 0);
 
-    #// XXX this is here because of a very TEMPORARY dependency
     BuildOneProject(":mozilla:rdf:macbuild:rdf.mcp",                            "RDFLibrary$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
 
     BuildOneProject(":mozilla:xpinstall:macbuild:xpinstall.mcp",                "xpinstall$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
@@ -1413,13 +1446,13 @@ sub BuildEmbeddingProjects()
 
     StartBuildModule("embedding");
 
-    BuildOneProject(":mozilla:embedding:components:build:macbuild:EmbedComponents.mcp",       "embedComponents$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
+    BuildOneProject(":mozilla:embedding:components:build:macbuild:EmbedComponents.mcp",       "EmbedComponents$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
     BuildOneProject(":mozilla:embedding:browser:macbuild:webBrowser.mcp",       "webBrowser$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
 
     BuildOneProject(":mozilla:embedding:base:macbuild:EmbedAPI.mcp", "EmbedAPI$D.o", 0, 0, 0);
     MakeAlias(":mozilla:embedding:base:macbuild:EmbedAPI$D.o", ":mozilla:dist:embedding:");
 
-    if ($main::options{embedding_test} && !$main::CARBON)
+    if ($main::options{embedding_test} && !$main::options{carbon})
     {
         if (-e GetCodeWarriorRelativePath("MacOS Support:PowerPlant"))
         {
@@ -1625,6 +1658,11 @@ sub BuildMozilla()
     # build tool to create Component Registry in release builds only.
     if (!($main::DEBUG)) {
         BuildOneProject(":mozilla:xpcom:tools:registry:macbuild:RegXPCOM.mcp", "RegXPCOM", 0, 0, 1);
+    }
+    
+    # build XPCShell to test the cache in debugging builds only.
+    if ($main::DEBUG && $main::options{cache}) {
+        BuildOneProject(":mozilla:js:macbuild:XPCShell.mcp", "XPCShellDebug", 0, 0, 1);
     }
     
     # copy command line documents into the Apprunner folder and set correctly the signature

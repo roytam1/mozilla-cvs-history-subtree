@@ -83,6 +83,7 @@ dom/public/css/Makefile
 dom/public/events/Makefile
 dom/public/range/Makefile
 dom/public/html/Makefile
+dom/public/xul/Makefile
 dom/public/idl/Makefile
 dom/public/idl/base/Makefile
 dom/public/idl/coreDom/Makefile
@@ -90,6 +91,7 @@ dom/public/idl/css/Makefile
 dom/public/idl/events/Makefile
 dom/public/idl/html/Makefile
 dom/public/idl/range/Makefile
+dom/public/idl/xul/Makefile
 dom/src/Makefile
 dom/src/base/Makefile
 dom/src/build/Makefile
@@ -98,6 +100,7 @@ dom/src/css/Makefile
 dom/src/events/Makefile
 dom/src/range/Makefile
 dom/src/html/Makefile
+dom/src/xul/Makefile
 dom/src/jsurl/Makefile
 dom/tools/Makefile
 "
@@ -125,6 +128,11 @@ expat/xmltok/Makefile
 
 MAKEFILES_extensions="
 extensions/Makefile
+"
+
+MAKEFILES_gc="
+gc/boehm/Makefile
+gc/boehm/leaksoup/Makefile
 "
 
 MAKEFILES_gfx="
@@ -225,6 +233,53 @@ js/src/xpconnect/tools/idl/Makefile
 js/src/xpconnect/tools/idl/Makefile
 "
 
+MAKEFILES_content="
+content/Makefile
+content/base/Makefile
+content/base/public/Makefile
+content/base/src/Makefile
+content/build/Makefile
+content/events/Makefile
+content/events/public/Makefile
+content/events/src/Makefile
+content/html/Makefile
+content/html/base/Makefile
+content/html/base/src/Makefile
+content/html/content/Makefile
+content/html/content/public/Makefile
+content/html/content/src/Makefile
+content/html/document/Makefile
+content/html/document/public/Makefile
+content/html/document/src/Makefile
+content/html/style/Makefile
+content/html/style/public/Makefile
+content/html/style/src/Makefile
+content/xml/Makefile
+content/xml/content/Makefile
+content/xml/content/public/Makefile
+content/xml/content/src/Makefile
+content/xml/document/Makefile
+content/xml/document/public/Makefile
+content/xml/document/src/Makefile
+content/xul/Makefile
+content/xul/content/Makefile
+content/xul/content/public/Makefile
+content/xul/content/src/Makefile
+content/xul/document/Makefile
+content/xul/document/public/Makefile
+content/xul/document/src/Makefile
+content/xul/templates/public/Makefile
+content/xul/templates/src/Makefile
+content/xbl/Makefile
+content/xbl/public/Makefile
+content/xbl/src/Makefile
+content/xbl/builtin/Makefile
+content/xbl/builtin/os2/Makefile
+content/xsl/Makefile
+content/xsl/document/Makefile
+content/xsl/document/src/Makefile
+"
+
 MAKEFILES_layout="
 layout/Makefile
 layout/base/Makefile
@@ -232,17 +287,10 @@ layout/base/public/Makefile
 layout/base/src/Makefile
 layout/base/tests/Makefile
 layout/build/Makefile
-layout/events/Makefile
-layout/events/public/Makefile
-layout/events/src/Makefile
 layout/html/Makefile
 layout/html/base/Makefile
 layout/html/base/src/Makefile
-layout/html/content/Makefile
-layout/html/content/public/Makefile
-layout/html/content/src/Makefile
 layout/html/document/Makefile
-layout/html/document/public/Makefile
 layout/html/document/src/Makefile
 layout/html/forms/Makefile
 layout/html/forms/public/Makefile
@@ -255,27 +303,12 @@ layout/html/table/public/Makefile
 layout/html/table/src/Makefile
 layout/html/tests/Makefile
 layout/tools/Makefile
-layout/xml/Makefile
-layout/xml/content/Makefile
-layout/xml/content/public/Makefile
-layout/xml/content/src/Makefile
-layout/xml/document/Makefile
-layout/xml/document/public/Makefile
-layout/xml/document/src/Makefile
 layout/xul/Makefile
 layout/xul/base/Makefile
 layout/xul/base/public/Makefile
 layout/xul/base/src/Makefile
 layout/xul/content/Makefile
 layout/xul/content/src/Makefile
-layout/xbl/Makefile
-layout/xbl/public/Makefile
-layout/xbl/src/Makefile
-layout/xbl/builtin/Makefile
-layout/xbl/builtin/os2/Makefile
-layout/xsl/Makefile
-layout/xsl/document/Makefile
-layout/xsl/document/src/Makefile
 "
 
 MAKEFILES_mpfilelocprovider="
@@ -291,8 +324,8 @@ modules/libimg/public_com/Makefile
 modules/libimg/src/Makefile
 modules/libimg/gifcom/Makefile
 modules/libimg/jpgcom/Makefile
-modules/libimg/pngcom/Makefile  
-modules/libimg/mngcom/Makefile  
+modules/libimg/pngcom/Makefile
+modules/libimg/mngcom/Makefile
 "
 
 MAKEFILES_libjar="
@@ -331,6 +364,11 @@ modules/plugin/public/Makefile
 modules/plugin/test/Makefile
 modules/plugin/SanePlugin/Makefile
 modules/plugin/default/unix/Makefile
+"
+
+MAKEFILES_access_builtin="
+extensions/access-builtin/Makefile
+extensions/access-builtin/accessproxy/Makefile
 "
 
 MAKEFILES_netwerk="
@@ -434,10 +472,6 @@ rdf/util/public/Makefile
 rdf/util/src/Makefile
 rdf/resources/Makefile
 rdf/build/Makefile
-rdf/content/Makefile
-rdf/content/public/Makefile
-rdf/content/public/idl/Makefile
-rdf/content/src/Makefile
 rdf/datasource/Makefile
 rdf/datasource/public/Makefile
 rdf/datasource/src/Makefile
@@ -532,6 +566,10 @@ widget/timer/src/os2/Makefile
 "
 
 MAKEFILES_xpcom="
+string/Makefile
+string/obsolete/Makefile
+string/public/Makefile
+string/src/Makefile
 xpcom/Makefile
 xpcom/base/Makefile
 xpcom/build/Makefile
@@ -578,6 +616,8 @@ xpcom/tests/Makefile
 xpcom/tests/dynamic/Makefile
 xpcom/tests/services/Makefile
 "
+
+MAKEFILES_string="$MAKEFILES_xpcom"
 
 MAKEFILES_xpinstall="
 xpinstall/Makefile
@@ -726,6 +766,7 @@ extensions/psm-glue/public/Makefile
 extensions/psm-glue/Makefile
 extensions/psm-glue/src/Makefile
 netwerk/base/public/Makefile
+netwerk/build/Makefile
 netwerk/socket/base/Makefile
 dom/public/Makefile
 uriloader/base/Makefile
@@ -742,7 +783,7 @@ gfx/public/Makefile
 docshell/base/Makefile
 layout/html/forms/public/Makefile
 layout/base/public/Makefile
-rdf/content/public/Makefile
+content/base/public/Makefile
 dom/src/base/Makefile
 modules/oji/public/Makefile
 "
@@ -912,6 +953,10 @@ for extension in $MOZ_EXTENSIONS; do
 	    extensions/wallet/walletpreview/Makefile
 	    extensions/wallet/build/Makefile
             " ;;
+        access-builtin ) MAKEFILES_access_builtin="$MAKEFILES_extensions
+	    extensions/access-builtin/Makefile
+	    extensions/access-builtin/accessproxy/Makefile
+            " ;;
         xmlextras ) MAKEFILES_extensions="$MAKEFILES_extensions
 	    extensions/xmlextras/Makefile
 	    extensions/xmlextras/base/Makefile
@@ -959,6 +1004,7 @@ $MAKEFILES_editor
 $MAKEFILES_embedding
 $MAKEFILES_expat
 $MAKEFILES_extensions
+$MAKEFILES_gc
 $MAKEFILES_gfx
 $MAKEFILES_htmlparser
 $MAKEFILES_intl
@@ -971,6 +1017,7 @@ $MAKEFILES_js
 $MAKEFILES_l10n
 $MAKEFILES_l10n_lang
 $MAKEFILES_langpacks
+$MAKEFILES_content
 $MAKEFILES_layout
 $MAKEFILES_libreg
 $MAKEFILES_libimg
@@ -1013,9 +1060,13 @@ else
 		;;
 	    psm) add_makefiles "$MAKEFILES_dbm $MAKEFILES_xpcom $MAKEFILES_security $MAKEFILES_js $MAKEFILES_psm_glue"
 		;;
+            string) add_makefiles "$MAKEFILES_string"
+                ;;
 	    transformiix) add_makefiles "$MAKEFILES_transformiix"
 		;;
-	    xpcom) add_makefiles "$MAKEFILES_xpcom" 
+	    access-builtin) add_makefiles "$MAKEFILES_access_builtin"
+		;;
+	    xpcom) add_makefiles "$MAKEFILES_xpcom"
 
 		;;
 	    xpconnect) add_makefiles "

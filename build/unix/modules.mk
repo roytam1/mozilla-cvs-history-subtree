@@ -55,12 +55,18 @@ BM_CVS_js	= $(NSPRPUB_DIR)
 BM_CVS_NS_js 	= js js/src js/src/fdlibm
 
 #
+# string
+#
+BM_DIRS_string	= $(NSPRPUB_DIR) string
+BM_CVS_string	= $(NSPRPUB_DIR) string
+
+#
 # xpcom
 #
-BM_DIRS_xpcom		= $(NSPRPUB_DIR) modules/libreg xpcom
+BM_DIRS_xpcom		= $(NSPRPUB_DIR) modules/libreg string xpcom
 BM_DEP_DIRS_xpcom	= intl/unicharutil/public intl/uconv/public modules/libjar
 BM_CVS_NS_xpcom		= xpcom xpcom/typelib xpcom/typelib/xpidl intl/unicharutil/public intl/uconv/public
-BM_CVS_xpcom		= $(NSPRPUB_DIR) modules/libreg xpcom/typelib/xpt xpcom/base xpcom/ds xpcom/io xpcom/components xpcom/threads xpcom/reflect xpcom/proxy xpcom/build xpcom/tools xpcom/sample modules/libjar
+BM_CVS_xpcom		= $(NSPRPUB_DIR) modules/libreg xpcom/typelib/xpt xpcom/base xpcom/ds xpcom/io xpcom/components xpcom/threads xpcom/reflect xpcom/proxy xpcom/build xpcom/tools xpcom/sample modules/libjar string
 
 #
 # xpconnect
@@ -87,9 +93,9 @@ BM_CVS_transformiix     = extensions/transformiix
 # psm
 #
 BM_DIRS_psm	= $(BM_DIRS_dbm) $(BM_DIRS_xpcom) security netwerk/base/public netwerk/socket/base dom/public $(BM_DIRS_js) extensions/psm-glue
-BM_DEP_DIRS_psm	= $(BM_DEP_DIRS_dbm) $(BM_DEP_DIRS_xpcom) $(BM_DEP_DIRS_js) intl/locale/idl intl/locale/public intl/strres/public uriloader/base modules/libpref/public profile/public caps/idl netwerk/protocol/http/public gfx/idl gfx/public rdf/base/idl xpfe/appshell/public widget/public docshell/base layout/html/forms/public layout/base/public rdf/content/public dom/src/base modules/oji/public caps/include
+BM_DEP_DIRS_psm	= $(BM_DEP_DIRS_dbm) $(BM_DEP_DIRS_xpcom) $(BM_DEP_DIRS_js) intl/locale/idl intl/locale/public intl/strres/public uriloader/base modules/libpref/public profile/public caps/idl netwerk/protocol/http/public gfx/idl gfx/public rdf/base/idl xpfe/appshell/public widget/public docshell/base layout/html/forms/public layout/base/public content/base/public dom/src/base modules/oji/public caps/include netwerk/build
 BM_CVS_psm	= $(BM_CVS_dbm) $(BM_CVS_xpcom) $(BM_CVS_js) security netwerk/base/public netwerk/socket/base dom/public $(BM_CVS_js) extensions/psm-glue
-BM_CVS_NS_psm	= $(BM_CVS_NS_dbm) $(BM_CVS_NS_xpcom) $(BM_CVS_NS_js) intl/locale/idl intl/locale/public intl/strres/public uriloader/base modules/libpref/public profile/public caps/idl netwerk/protocol/http/public gfx/idl gfx/public rdf/base/idl xpfe/appshell/public widget/public docshell/base layout/html/forms/public layout/base/public rdf/content/public dom/src/base modules/oji/public caps/include
+BM_CVS_NS_psm	= $(BM_CVS_NS_dbm) $(BM_CVS_NS_xpcom) $(BM_CVS_NS_js) intl/locale/idl intl/locale/public intl/strres/public uriloader/base modules/libpref/public profile/public caps/idl netwerk/protocol/http/public gfx/idl gfx/public rdf/base/idl xpfe/appshell/public widget/public docshell/base layout/html/forms/public layout/base/public content/base/public dom/src/base modules/oji/public caps/include netwerk/build
 
 
 #
