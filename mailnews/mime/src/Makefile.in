@@ -52,7 +52,6 @@ CPPSRCS = \
 		nsMimeObjectClassAccess.cpp		\
 		nsMimeConverter.cpp		\
 		nsMimeAddress.cpp \
-		plugin_inst.cpp	\
 		mimecont.cpp	\
 		mimeebod.cpp	\
 		mimeenc.cpp		\
@@ -87,7 +86,6 @@ CPPSRCS = \
 		nsMimeTransition.cpp \
 		nsMsgHeaderParser.cpp \
 		nsStreamConverter.cpp \
-		nsMimeEmitter2.cpp \
 		$(NULL)
 
 CSRCS = \
