@@ -390,9 +390,10 @@ void AddFile(LPSTR lpszSeaExe, LPSTR lpszFile)
     exit(1);
   }
 
-  dwFileSize  = GetFileSize(hInputFile, NULL);
-  lpBuf       = (LPBYTE)malloc(dwFileSize);
-  lpBufCmp    = (LPBYTE)malloc(dwFileSize + (sizeof(DWORD) * 2));
+  dwFileSize    = GetFileSize(hInputFile, NULL);
+  dwFileSizeCmp = dwFileSize;
+  lpBuf         = (LPBYTE)malloc(dwFileSize);
+  lpBufCmp      = (LPBYTE)malloc(dwFileSize + (sizeof(DWORD) * 2));
   if((lpBuf == NULL) || (lpBufCmp == NULL))
   {
     PrintError("Out of memory", ERROR_CODE_HIDE);
