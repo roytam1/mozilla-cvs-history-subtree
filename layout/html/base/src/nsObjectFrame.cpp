@@ -89,7 +89,6 @@ static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 #undef KeyPress
 #endif
 
-#define NATIVE_ERROR 05
 
 class nsPluginInstanceOwner : public nsIPluginInstanceOwner,
                               public nsIPluginTagInfo2,
@@ -1401,6 +1400,18 @@ nsObjectFrame::HandleEvent(nsIPresContext* aPresContext,
   //FIX FOR CRASHING WHEN NO INSTANCE OWVER
   if (!mInstanceOwner)
     return NS_ERROR_NULL_POINTER;
+
+  if (anEvent->message == NS_PLUGIN_ACTIVATE)
+  {
+    nsCOMPtr<nsIContent> content;
+    GetContent(getter_AddRefs(content));
+    if (content)
+    {
+      content->SetFocus(aPresContext);
+      return rv;
+    }
+  }
+
 #ifdef XP_WIN
   rv = nsObjectFrameSuper::HandleEvent(aPresContext, anEvent, anEventStatus);
   return rv;
@@ -2672,7 +2683,13 @@ nsEventStatus nsPluginInstanceOwner::ProcessEvent(const nsGUIEvent& anEvent)
 #ifdef XP_MAC
     if (mWidget != NULL) {  // check for null mWidget
         EventRecord* event = (EventRecord*)anEvent.nativeMsg;
-        if ((event == NULL) || (event->what == nullEvent) || ((int)event < NATIVE_ERROR)) {
+        if ((event == NULL) || (event->what == nullEvent) || 
+           (anEvent.message == NS_FOCUS_EVENT_START)      || 
+           (anEvent.message == NS_GOTFOCUS)               || 
+           (anEvent.message == NS_LOSTFOCUS)              || 
+           (anEvent.message == NS_MOUSE_MOVE)             ||
+           (anEvent.message == NS_MOUSE_ENTER))
+        {
             EventRecord macEvent;
             GUItoMacEvent(anEvent, macEvent);
             event = &macEvent;
