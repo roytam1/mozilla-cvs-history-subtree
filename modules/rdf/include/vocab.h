@@ -38,7 +38,10 @@ typedef struct _RDF_CoreVocabStruct {
   RDF_Resource RDF_lessThanOrEqual;
   RDF_Resource RDF_greaterThanOrEqual;
   RDF_Resource RDF_stringEquals;
+  RDF_Resource RDF_stringNotEquals;
   RDF_Resource RDF_substring;
+  RDF_Resource RDF_stringStartsWith;
+  RDF_Resource RDF_stringEndsWith;
   RDF_Resource RDF_child;
   RDF_Resource RDF_comment;
   RDF_Resource RDF_content;
