@@ -814,7 +814,7 @@ nsGenericHTMLElement::GetOffsetRect(nsRect& aRect,
 
     frame->GetOrigin(origin);
 
-    frame->GetStyleData(eStyleStruct_Display, (nsStyleStruct*&)display);
+    frame->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&)display);
 
     if (display && display->IsAbsolutelyPositioned()) {
       // If the primary frame or a parent is absolutely positioned
@@ -827,7 +827,7 @@ nsGenericHTMLElement::GetOffsetRect(nsRect& aRect,
     frame->GetParent(&parent);
 
     while (parent) {
-      parent->GetStyleData(eStyleStruct_Display, (nsStyleStruct*&)display);
+      parent->GetStyleData(eStyleStruct_Display, (const nsStyleStruct*&)display);
 
       if (display) {
         if (display->IsPositioned()) {
