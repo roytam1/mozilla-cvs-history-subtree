@@ -184,6 +184,7 @@ nsresult NS_NewStreamConv(nsStreamConverterService **aStreamConv);
 
 #define FTP_UNIX_TO_INDEX            "?from=text/ftp-dir-unix&to=application/http-index-format"
 #define FTP_NT_TO_INDEX              "?from=text/ftp-dir-nt&to=application/http-index-format"
+#define INDEX_TO_HTML                "?from=application/http-index-format&to=text/html"
 #define MULTI_MIXED_X                "?from=multipart/x-mixed-replace&to=*/*"
 #define MULTI_MIXED                  "?from=multipart/mixed&to=*/*"
 #define UNKNOWN_CONTENT              "?from=application/x-unknown-content-type&to=*/*"
@@ -196,11 +197,12 @@ nsresult NS_NewStreamConv(nsStreamConverterService **aStreamConv);
 #define DEFLATE_TO_UNCOMPRESSED      "?from=deflate&to=uncompressed"
 #define PLAIN_TO_HTML                "?from=text/plain&to=text/html"
 
-static PRUint32 g_StreamConverterCount = 13;
+static PRUint32 g_StreamConverterCount = 14;
 
 static char *g_StreamConverterArray[] = {
         FTP_UNIX_TO_INDEX,
         FTP_NT_TO_INDEX,
+        INDEX_TO_HTML,
         MULTI_MIXED_X,
         MULTI_MIXED,
         UNKNOWN_CONTENT,
@@ -629,6 +631,12 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
       NS_FTPDIRLISTINGCONVERTER_CID,
       NS_ISTREAMCONVERTER_KEY FTP_NT_TO_INDEX, 
       CreateNewFTPDirListingConv
+    },
+
+    { "Indexed to HTML Converter", 
+      NS_NSINDEXEDTOHTMLCONVERTER_CID,
+      NS_ISTREAMCONVERTER_KEY INDEX_TO_HTML, 
+      nsIndexedToHTML::Create
     },
     
     { "MultiMixedConverter", 
