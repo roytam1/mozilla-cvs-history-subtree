@@ -1603,7 +1603,7 @@ js_Interpret(JSContext *cx, jsval *result)
             /* Is this the first iteration ? */
             if (JSVAL_IS_VOID(rval)) {
                 /* Yes, create a new JSObject to hold the iterator state */
-                propobj = js_NewObject(cx, &prop_iterator_class, NULL, NULL);
+                propobj = js_NewObject(cx, &prop_iterator_class, NULL, obj);
                 if (!propobj) {
                     ok = JS_FALSE;
                     goto out;
@@ -1626,7 +1626,6 @@ js_Interpret(JSContext *cx, jsval *result)
                 *vp = OBJECT_TO_JSVAL(propobj);
 
                 ok = OBJ_ENUMERATE(cx, obj, JSENUMERATE_INIT, &iter_state, 0);
-                propobj->slots[JSSLOT_ITER_STATE] = iter_state;
                 if (!ok)
                     goto out;
 
@@ -1637,7 +1636,7 @@ js_Interpret(JSContext *cx, jsval *result)
 #if JS_INITIAL_NSLOTS < 5
 #error JS_INITIAL_NSLOTS must be greater than or equal to 5.
 #endif
-                propobj->slots[JSSLOT_PARENT] = OBJECT_TO_JSVAL(obj);
+                propobj->slots[JSSLOT_ITER_STATE] = iter_state;
             } else {
                 /* This is not the first iteration. Recover iterator state. */
                 propobj = JSVAL_TO_OBJECT(rval);
