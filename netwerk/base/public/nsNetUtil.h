@@ -493,7 +493,7 @@ NS_NewSyncStreamListener(nsIInputStream **inStream,
     *listener = lsnr;
     NS_ADDREF(*listener);
     */
-    return NS_OK;
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 //
