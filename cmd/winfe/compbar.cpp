@@ -63,8 +63,7 @@ BEGIN_MESSAGE_MAP(CComposeBar, CDialogBar)
     ON_WM_LBUTTONUP()
     ON_WM_ERASEBKGND()
     ON_WM_DROPFILES()
-    ON_BN_CLICKED(ID_ENCRYPTED,OnUpdateOptions)
-    ON_BN_CLICKED(ID_SIGNED,OnUpdateOptions)
+    HG38729
  	ON_MESSAGE(WM_LEAVINGLASTFIELD,OnLeavingLastField)
 
 END_MESSAGE_MAP()
@@ -1119,19 +1118,7 @@ void CComposeBar::CreateOptionsPage()
     CString cs;
 
     // create the options on the left
-    m_pEncrypted = new CButton;
-    m_pEncrypted->Create(
-        szLoadString(IDS_ENCRYPTED),WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTOCHECKBOX,
-        CRect(0,0,0,0),this,ID_ENCRYPTED);
-	::SendMessage(m_pEncrypted->GetSafeHwnd(), WM_SETFONT, (WPARAM)m_cfStaticFont, FALSE);
-    m_pEncrypted->SetCheck(m_bEncrypted);
-
-    m_pSigned = new CButton;
-    m_pSigned->Create(
-        szLoadString(IDS_SIGNED),WS_CHILD|WS_VISIBLE|WS_TABSTOP|BS_AUTOCHECKBOX,
-        CRect(0,0,0,0),this,ID_SIGNED);
-	::SendMessage(m_pSigned->GetSafeHwnd(), WM_SETFONT, (WPARAM)m_cfStaticFont, FALSE);
-    m_pSigned->SetCheck(m_bSigned);
+    HG81325
 
     m_pUseUUENCODE = new CButton;
     m_pUseUUENCODE->Create(
@@ -1215,10 +1202,7 @@ void CComposeBar::UpdateOptionsInfo()
             free(m_pszMessageFormat);
         m_pszMessageFormat = strdup(cs);
     }
-    if (m_pSigned && ::IsWindow(m_pSigned->m_hWnd))
-        m_bSigned = m_pSigned->GetCheck();
-    if (m_pEncrypted && ::IsWindow(m_pEncrypted->m_hWnd))
-        m_bEncrypted = m_pEncrypted->GetCheck();
+	HG87322
     if (m_pUseUUENCODE && ::IsWindow(m_pUseUUENCODE->m_hWnd))
         m_bUseUUENCODE = m_pUseUUENCODE->GetCheck();
 }
@@ -1244,23 +1228,12 @@ void CComposeBar::DestroyOptionsPage()
         delete m_pReturnReceipt;
         m_pReturnReceipt = NULL;
     }
-    if (m_pEncrypted && ::IsWindow(m_pEncrypted->m_hWnd))
-    {
-        m_pEncrypted->DestroyWindow();
-        delete m_pEncrypted;
-        m_pEncrypted = NULL;
-    }
+
     if (m_pUseUUENCODE && ::IsWindow(m_pUseUUENCODE->m_hWnd))
     {
         m_pUseUUENCODE->DestroyWindow();
         delete m_pUseUUENCODE;
         m_pUseUUENCODE = NULL;
-    }
-    if (m_pSigned && ::IsWindow(m_pSigned->m_hWnd))
-    {
-        m_pSigned->DestroyWindow();
-        delete m_pSigned;
-        m_pSigned = NULL;
     }
     if (m_pMessageFormat && ::IsWindow(m_pMessageFormat->m_hWnd))
     {
@@ -1512,11 +1485,7 @@ void CComposeBar::CalcFieldLayout(void)
 	    rect.bottom = rect.top + m_iBoxHeight;
 	    rect.left = x + m_cxChar * 3;
 	    rect.right = (WinRect.Width()/2) + 24;
-	    m_pEncrypted->MoveWindow(rect);
-
-	    rect.top = rect.bottom + 1;
-	    rect.bottom = rect.top + m_iBoxHeight;
-	    m_pSigned->MoveWindow(rect);
+	    HG76528
 
 	    rect.top = rect.bottom + 1;
 	    rect.bottom = rect.top + m_iBoxHeight;
@@ -2091,12 +2060,5 @@ void CComposeBar::OnUpdateOptions(void)
 
 void CComposeBar::UpdateSecurityOptions(void)
 {
-    if (m_iSelectedTab == IDX_COMPOSEOPTIONS)
-    {
-        if (m_pEncrypted && ::IsWindow(m_pEncrypted->m_hWnd))
-           m_pEncrypted->SetCheck(m_bEncrypted);
-        if (m_pSigned && ::IsWindow(m_pSigned->m_hWnd))
-            m_pSigned->SetCheck(m_bSigned);
-    }
-
+    HG26723
 }

@@ -20,6 +20,8 @@
 //
 
 #include "stdafx.h"
+
+#include "rosetta.h"
 #include "addrfrm.h"
 #include "addrprop.h"
 #include "template.h"
@@ -1730,11 +1732,7 @@ void CAddrFrame::OnUpdateShowAddressBookWindow( CCmdUI *pCmdUI )
 
 void CAddrFrame::OnUpdateSecureStatus(CCmdUI *pCmdUI)
 {
-	DIR_Server* dir = GetCurrentDirectoryServer();
-
-	if (dir->isSecure)
-		pCmdUI->Enable(TRUE);
-	else
+	HG28728
 		pCmdUI->Enable(FALSE);
 }
 

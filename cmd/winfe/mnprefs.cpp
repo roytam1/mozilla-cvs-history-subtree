@@ -17,6 +17,8 @@
  */
 
 #include "stdafx.h"
+
+#include "rosetta.h"
 #include "prefapi.h"
 #include "dialog.h"
 #include "msgcom.h"
@@ -238,12 +240,12 @@ extern "C" MSG_Host *DoAddNewsServer(CWnd* pParent, int nFromWhere)
 	if (IDOK == addServerDialog.DoModal())
 	{
 		char* pName = addServerDialog.GetNewsHostName();
-		XP_Bool bSecure = addServerDialog.GetSecure();
+		XP_Bool bxxx = HG28751
 		XP_Bool bAuthentication = addServerDialog.GetAuthentication();
 		int32 nPort = addServerDialog.GetNewsHostPort();
 
 		MSG_NewsHost *pNewHost = MSG_CreateNewsHost(WFE_MSGGetMaster(), pName, 
-													bSecure, nPort);
+													bxxx, nPort);
 					 
 		if (pNewHost)
 		{
@@ -718,7 +720,7 @@ CNewsServerDialog::CNewsServerDialog(CWnd *pParent, const char* pName, int nFrom
 	m_pEditHost = pHost;
     if (pHost)
 	{
-		 m_bIsSecure = MSG_IsNewsHostSecure(pHost);
+		 HG28972
 		 m_lPort = MSG_GetNewsHostPort(pHost);
 		 m_bAuthentication = MSG_GetNewsHostPushAuth(pHost);
 	}
@@ -802,9 +804,7 @@ void CNewsServerDialog::OnOK()
 	}
 	else
 	{
-		if (m_bIsSecure)
-			m_lPort = SECURE_NEWS_PORT;
-		else
+		HG29172
 			m_lPort = NEWS_PORT;
 	}
 	if (IsDlgButtonChecked(IDC_USE_NAME))	// Authentication
@@ -868,7 +868,7 @@ BOOL CNewsServerDialog::IsSameServer(MSG_Host *pHost)
 {	
 	const char* pHostName = NULL;
 
-	XP_Bool bIsSecure = IsDlgButtonChecked(IDC_SECURE);
+	HG98271
 	int32 lEditPort = GetPortNumber();
 	MSG_NewsHost* pNewsHost = MSG_GetNewsHostFromMSGHost(pHost);
 	if (pNewsHost)
@@ -876,9 +876,9 @@ BOOL CNewsServerDialog::IsSameServer(MSG_Host *pHost)
 		pHostName = MSG_GetNewsHostName(pNewsHost);
 		if (0 == lstrcmp(m_hostName, pHostName))
 		{
-			XP_Bool bSecure = MSG_IsNewsHostSecure(pNewsHost);
+			HG27851
 			int32 lPort = MSG_GetNewsHostPort(pNewsHost);
-			if (bIsSecure == bSecure && lEditPort == lPort)
+			if (HG98261 lEditPort == lPort)
 				return TRUE;
 		}  
 	}
@@ -897,26 +897,9 @@ int32 CNewsServerDialog::GetPortNumber()
 
 void CNewsServerDialog::OnCheckSecure() 
 {
-	char port[16];
-	if (IsDlgButtonChecked(IDC_SECURE))
-		m_bIsSecure = TRUE;
-	else
-		m_bIsSecure = FALSE;
-	if (GetDlgItemText(IDC_EDIT_PORT, port, 16) == 0)
-	{
-		if (m_bIsSecure)
-			SetDlgItemInt(IDC_EDIT_PORT, SECURE_NEWS_PORT);
-		else
-			SetDlgItemInt(IDC_EDIT_PORT, NEWS_PORT);
-	}
-	else
-	{
-		int32 lPort = GetPortNumber();
-		if (m_bIsSecure && lPort == NEWS_PORT)
-			SetDlgItemInt(IDC_EDIT_PORT, SECURE_NEWS_PORT);
-		else  if (!m_bIsSecure && lPort == SECURE_NEWS_PORT)
-			SetDlgItemInt(IDC_EDIT_PORT, NEWS_PORT);
-	}
+	SetDlgItemInt(IDC_EDIT_PORT, NEWS_PORT);
+	HG28768
+	
 }
 
 void CNewsServerDialog::OnHelp()
@@ -1156,9 +1139,7 @@ void CMailServerPropertySheet::SetMailHostName(char* pName)
 
 XP_Bool CMailServerPropertySheet::GetIMAPUseSSL()
 {
-	if (m_pIMAPPage && IsWindow(m_pIMAPPage->GetSafeHwnd()))
-		return m_pIMAPPage->GetUseSSL();
-	else
+	HG21675
 		return FALSE;
 }
 
@@ -1535,7 +1516,7 @@ BOOL CGeneralServerPage::ProcessOK()
 	{
 		if (!m_pParent->EditServer() || m_pParent->WasPopServer())
 		{
-			XP_Bool bIsSecure = m_pParent->GetIMAPUseSSL();
+			XP_Bool bIsxxx = HG72866
 			XP_Bool bOverrideNamespaces = m_pParent->GetIMAPOverrideNameSpaces();
 			char personalDir[256];
 			char publicDir[256];
@@ -1546,7 +1527,7 @@ BOOL CGeneralServerPage::ProcessOK()
 
 			MSG_IMAPHost* pHost = MSG_CreateIMAPHost(WFE_MSGGetMaster(),
 											name,
-											bIsSecure, 
+											bIsxxx, 
 											userName,
 											bCheckMail,
 											nCheckTime,
@@ -1643,18 +1624,18 @@ BOOL CIMAPServerPage::OnInitDialog()
 	BOOL ret = CPropertyPage::OnInitDialog();
 
 	XP_Bool bOfflineDownload = FALSE;
-	XP_Bool bUseSSL = FALSE;
+	XP_Bool bxxx = FALSE;
 	XP_Bool bEmptyTrash = FALSE;
 	XP_Bool bCleanupInbox = FALSE;
 	int32 lDeleteModel = -1;
 
 	IMAP_GetBoolPref(LPCTSTR(m_szServerName), BOOL_OFFLINE_DOWNLOAD, &bOfflineDownload);
-	IMAP_GetBoolPref(LPCTSTR(m_szServerName), BOOL_IS_SECURE, &bUseSSL);
+	
 	IMAP_GetBoolPref(LPCTSTR(m_szServerName), BOOL_EMPTY_TRASH_ON_EXIT, &bEmptyTrash);
 	IMAP_GetBoolPref(LPCTSTR(m_szServerName), BOOL_CLEANUP_INBOX_ON_EXIT, &bCleanupInbox);
 	IMAP_GetIntPref(LPCTSTR(m_szServerName), INT_DELETE_MODEL, &lDeleteModel);
 	CheckDlgButton(IDC_CHECK_IMAP_LOCAL, bOfflineDownload);
-	CheckDlgButton(IDC_CHECK_IMAP_SSL, bUseSSL);
+	
 	CheckDlgButton(IDC_CHECK_EMPTY_TRASH, bEmptyTrash);
 	CheckDlgButton(IDC_CHECK_EMPTY_INBOX, bCleanupInbox);
 	if (lDeleteModel == 0)
@@ -1685,7 +1666,7 @@ BOOL CIMAPServerPage::OnInitDialog()
 
 XP_Bool CIMAPServerPage::GetUseSSL()
 {
-	return (IsDlgButtonChecked(IDC_CHECK_IMAP_SSL) == 0 ? FALSE : TRUE);
+	return (HG73221);
 }
 
 void CIMAPServerPage::DoDataExchange(CDataExchange* pDX)
@@ -1698,7 +1679,7 @@ BOOL CIMAPServerPage::ProcessOK()
 	m_szServerName = m_pParent->GetMailHostName();
 
 	XP_Bool bOfflineDownload = IsDlgButtonChecked(IDC_CHECK_IMAP_LOCAL);
-	XP_Bool bUseSSL = IsDlgButtonChecked(IDC_CHECK_IMAP_SSL);
+	HG73723
 	XP_Bool bEmptyTrash = IsDlgButtonChecked(IDC_CHECK_EMPTY_TRASH);
 	XP_Bool bCleanupInbox = IsDlgButtonChecked(IDC_CHECK_EMPTY_INBOX);
 	int nDeleteModel = 1;
@@ -1710,7 +1691,6 @@ BOOL CIMAPServerPage::ProcessOK()
 		nDeleteModel = 2;
 
 	IMAP_SetBoolPref(LPCTSTR(m_szServerName), BOOL_OFFLINE_DOWNLOAD, bOfflineDownload);
-	IMAP_SetBoolPref(LPCTSTR(m_szServerName), BOOL_IS_SECURE, bUseSSL);
 	IMAP_SetBoolPref(LPCTSTR(m_szServerName), BOOL_EMPTY_TRASH_ON_EXIT, bEmptyTrash);
 	IMAP_SetBoolPref(LPCTSTR(m_szServerName), BOOL_CLEANUP_INBOX_ON_EXIT, bCleanupInbox);
 	IMAP_SetIntPref(LPCTSTR(m_szServerName), INT_DELETE_MODEL, (int32)nDeleteModel);

@@ -17,6 +17,8 @@
  */
 
 #include "stdafx.h"
+
+#include "rosetta.h"
 #include "ssl.h"
 #include "secnav.h"
 #include "wfemsg.h"
@@ -44,6 +46,7 @@ extern "C" char *FE_GetProgramDirectory(char *buffer, int length);
 
 void CGenericFrame::OnSecurity()
 {
+  HG73537
   MWContext * pContext = GetMainContext()->GetContext();  
   
   if (pContext != NULL)
@@ -62,6 +65,7 @@ void CGenericFrame::OnSecurity()
 
 void CGenericFrame::OnUpdateSecurity(CCmdUI *pCmdUI)
 {
+	HG73537
 	int status = XP_GetSecurityStatus(GetMainContext()->GetContext());	
 
 	pCmdUI->Enable(status == SSL_SECURITY_STATUS_ON_LOW || status == SSL_SECURITY_STATUS_ON_HIGH);

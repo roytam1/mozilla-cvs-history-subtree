@@ -1647,8 +1647,7 @@ void CComposeFrame::CompleteComposeInitialization(void)
 
 void CComposeFrame::UpdateSecurityOptions(void)
 {
-    m_pComposeBar->SetSigned(MSG_GetCompBoolHeader(GetMsgPane(),MSG_SIGNED_BOOL_HEADER_MASK));
-    m_pComposeBar->SetEncrypted(MSG_GetCompBoolHeader(GetMsgPane(),MSG_ENCRYPTED_BOOL_HEADER_MASK));
+    HG27625
 }
 
 void CComposeFrame::GoldDoneLoading ()
@@ -1748,32 +1747,13 @@ void CComposeFrame::OnUpdateToggleAddressArea(CCmdUI * pCmdUI)
 
 void CComposeFrame::OnUpdateSecurity(CCmdUI * pCmdUI)
 {
-	XP_Bool bSigned = m_pComposeBar->GetSigned();
-	XP_Bool bEncrypted = m_pComposeBar->GetEncrypted();
-	LPNSTOOLBAR pIToolBar;
-	m_pChrome->QueryInterface( IID_INSToolBar, (LPVOID *) &pIToolBar );
-	if ( pIToolBar ) {
-		CCommandToolbar *pToolBar = (CCommandToolbar *) CWnd::FromHandlePermanent( pIToolBar->GetHWnd() );
-		
-		int index = bEncrypted ? 
-					(bSigned ? SEC_SIGNED_INDEX : SECURE_INDEX) :
-				    (bSigned ? UNSEC_SIGNED_INDEX : UNSECURE_INDEX);
-
-		pToolBar->ReplaceButtonBitmapIndex(ID_SECURITY, index);
-		pIToolBar->Release();
-	}
+	HG72521
    OnUpdateButtonGeneral(pCmdUI);
 }
 
 void CComposeFrame::OnUpdateSecureStatus(CCmdUI *pCmdUI)
 {
-	XP_Bool bSigned = m_pComposeBar->GetSigned();
-	XP_Bool bEncrypted = m_pComposeBar->GetEncrypted();
-
-	if (pCmdUI->m_nID == IDS_SECURITY_STATUS)
-		pCmdUI->Enable(bEncrypted);
-	else
-		pCmdUI->Enable(bSigned);
+	HG87282
 }
 
 void CComposeFrame::OnUpdateShowNamePicker(CCmdUI *pCmdUI)

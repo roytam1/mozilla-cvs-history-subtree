@@ -79,7 +79,7 @@ public:
 	virtual int Create( CWnd* pParentWnd, 
 						DWORD dwStyle = WS_CHILD | WS_VISIBLE | CBRS_BOTTOM, 
 						UINT nID = AFX_IDW_STATUS_BAR,
-                        BOOL bSecurity = TRUE, BOOL bTaskbar = TRUE ) = 0;
+                        BOOL bxxx = TRUE, BOOL bTaskbar = TRUE ) = 0;
 	
 	virtual void Attach( CNetscapeStatusBar *pBar ) = 0;
 

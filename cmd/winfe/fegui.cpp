@@ -18,6 +18,7 @@
 
 #include "stdafx.h"
 
+#include "rosetta.h"
 #include "res\appicon.h"
 #include "dialog.h"
 #include "mainfrm.h"
@@ -2375,15 +2376,7 @@ PUBLIC void *FE_AboutData (const char *which, char **data_ret, int32 *length_ret
 
             char *pSSLVersion = NULL;
 			char *pSSLString = NULL;
-			char *pSSLCapability = SECNAV_SSLCapabilities();
-            pSSLVersion = strdup(SECNAV_SecurityVersion(PR_TRUE));
-            /* NULL pointer check. strlen fires a page fault if passed a NULL pointer */
-            if (pSSLVersion && pSSLCapability) 
-			{
-				pSSLString = (char *)malloc(strlen(pSSLVersion) + strlen(pSSLCapability) + 48*2);
-                sprintf(pSSLString, szLoadString(IDS_ABOUT_SECURITY), pSSLVersion, pSSLCapability);
-            }
-			if (pSSLCapability) free(pSSLCapability);
+			HG83722
 
             char *pSp = szLoadString(IDS_ABOUT_0);
             /* Null pointer check */
