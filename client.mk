@@ -302,10 +302,12 @@ SVG_BRANCH_NEW_FILES = \
 	layout/svg/renderer/src/gdiplus/nsSVGRendererGDIPlus.cpp \
 	layout/svg/renderer/src/libart/Makefile.in \
 	layout/svg/renderer/src/libart/libart-incs.h \
+	layout/svg/renderer/src/libart/nsISVGLibartBitmap.h \
 	layout/svg/renderer/src/libart/nsISVGLibartCanvas.h \
 	layout/svg/renderer/src/libart/nsISVGLibartRegion.h \
 	layout/svg/renderer/src/libart/nsSVGFill.cpp \
 	layout/svg/renderer/src/libart/nsSVGFill.h \
+	layout/svg/renderer/src/libart/nsSVGLibartBitmapDefault.cpp \
 	layout/svg/renderer/src/libart/nsSVGLibartBPathBuilder.cpp \
 	layout/svg/renderer/src/libart/nsSVGLibartBPathBuilder.h \
 	layout/svg/renderer/src/libart/nsSVGLibartCanvas.cpp \
