@@ -51,6 +51,7 @@
 #include "nsCOMPtr.h"
 #include "nsEmbedAPI.h"
 
+#include "nsIWebBrowserChrome.h"
 #include "nsIServiceManager.h"
 #include "nsIIOService.h"
 #include "nsIPref.h"
@@ -447,14 +448,22 @@ static const char* ioServiceContractID = "@mozilla.org/network/io-service;1";
   {
     NSWindow*	thisWindow = [windowList objectAtIndex:i];
     
-    if ([[thisWindow windowController] isMemberOfClass:[BrowserWindowController class]] &&
-       ([[thisWindow windowController] chromeMask] == 0))		// only get windows with full chrome
-    {
-      foundWindow = thisWindow;
-      break;
+    // not all browser windows are created equal. We only consider those with
+    // an empty chrome mask, or ones with a toolbar, status bar, and resize control
+    // to be real top-level browser windows for purposes of saving size and 
+    // loading urls in. Others are popups and are transient.
+    if ([[thisWindow windowController] isMemberOfClass:[BrowserWindowController class]]) {
+      unsigned int chromeMask = [[thisWindow windowController] chromeMask];
+      if (chromeMask == 0 || 
+            (chromeMask & nsIWebBrowserChrome::CHROME_TOOLBAR &&
+              chromeMask & nsIWebBrowserChrome::CHROME_STATUSBAR &&
+              chromeMask & nsIWebBrowserChrome::CHROME_WINDOW_RESIZE)) {
+        foundWindow = thisWindow;
+        break;
+      }
     }
   }
-  
+
   return foundWindow;
 }
 
