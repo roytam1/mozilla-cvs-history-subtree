@@ -19,6 +19,9 @@
 #include "jsapi.h"
 #include <sys/stat.h>
 #include <errno.h>
+#ifdef _WIN32
+#include "windows.h"
+#endif 
 
 #include "prefldap.h"
 #include "prefapi.h"
