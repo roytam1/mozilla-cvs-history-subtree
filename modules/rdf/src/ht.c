@@ -1406,7 +1406,7 @@ htSetBookmarkAddDateToNow(RDF_Resource r)
 	}
 	else
 	{
-		time((time_t *)&now);
+		/* time((time_t *)&now); */
 		if ((time = localtime((time_t *) &now)) != NULL)
 		{
 #ifdef	XP_MAC
@@ -8305,9 +8305,9 @@ dropOnSmartNode(HT_Resource dropTarget, HT_Resource dropObject, PRBool justActio
 			if (resultType != NULL)
 			{
 				context = XP_GetNavCenterContext(dropTarget->view->pane);
-				if (!strcasecmp(resultType, "TEXT/HTML"))
+				if (!compareStrings(resultType, "TEXT/HTML"))
 				{
-					if ((methodType != NULL) && (!strcasecmp(methodType, "POST")))
+					if ((methodType != NULL) && (!compareStrings(methodType, "POST")))
 					{
 						if ((url = getBaseURL(HT_GetNodeURL(dropObject))) != NULL)
 						{
@@ -8358,7 +8358,7 @@ dropOnSmartNode(HT_Resource dropTarget, HT_Resource dropObject, PRBool justActio
 							XP_FREE(url);
 						}
 					}
-					else if ((methodType == NULL) || (!strcasecmp(methodType, "GET")))
+					else if ((methodType == NULL) || (!compareStrings(methodType, "GET")))
 					{
 						url = PR_smprintf("%s%s", HT_GetNodeURL(dropTarget),
 								HT_GetNodeURL(dropObject));
@@ -8375,7 +8375,7 @@ dropOnSmartNode(HT_Resource dropTarget, HT_Resource dropObject, PRBool justActio
 						}
 					}
 				}
-				else if (!strcasecmp(resultType, "TEXT/RDF"))
+				else if (!compareStrings(resultType, "TEXT/RDF"))
 				{
 					/* XXX finish this */
 				}
@@ -8422,9 +8422,9 @@ dropOnSmartURL(HT_Resource dropTarget, char *objURL, PRBool justAction)
 			if (resultType != NULL)
 			{
 				context = XP_GetNavCenterContext(dropTarget->view->pane);
-				if (!strcasecmp(resultType, "TEXT/HTML"))
+				if (!compareStrings(resultType, "TEXT/HTML"))
 				{
-					if ((methodType != NULL) && (!strcasecmp(methodType, "POST")))
+					if ((methodType != NULL) && (!compareStrings(methodType, "POST")))
 					{
 						if ((url = getBaseURL(objURL)) != NULL)
 						{
@@ -8475,7 +8475,7 @@ dropOnSmartURL(HT_Resource dropTarget, char *objURL, PRBool justAction)
 							XP_FREE(url);
 						}
 					}
-					else if ((methodType == NULL) || (!strcasecmp(methodType, "GET")))
+					else if ((methodType == NULL) || (!compareStrings(methodType, "GET")))
 					{
 						url = PR_smprintf("%s%s", HT_GetNodeURL(dropTarget), objURL);
 						if (url != NULL)
@@ -8491,7 +8491,7 @@ dropOnSmartURL(HT_Resource dropTarget, char *objURL, PRBool justAction)
 						}
 					}
 				}
-				else if (!strcasecmp(resultType, "TEXT/RDF"))
+				else if (!compareStrings(resultType, "TEXT/RDF"))
 				{
 					/* XXX finish this */
 				}
