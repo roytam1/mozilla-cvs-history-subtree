@@ -31,7 +31,7 @@
 #include "nsUInt32Array.h"
 #include "MailNewsTypes.h"
 
-class nsMsgKeyArray : public nsUInt32Array
+class NS_MSG_BASE nsMsgKeyArray : public nsUInt32Array
 {
 // constructors
 public:
