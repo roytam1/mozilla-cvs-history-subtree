@@ -60,7 +60,7 @@ FilterExpr::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
     // null out exprRes so that we can test for shared-ness
     exprRes = nsnull;
 
-    nsRefPtr<NodeSet> nonShared;
+    nsRefPtr<txNodeSet> nonShared;
     rv = aContext->recycler()->getNonSharedNodeSet(nodes,
                                                    getter_AddRefs(nonShared));
     NS_ENSURE_SUCCESS(rv, rv);

@@ -78,7 +78,7 @@ nsresult
 UnionExpr::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 {
     *aResult = nsnull;
-    nsRefPtr<NodeSet> nodes;
+    nsRefPtr<txNodeSet> nodes;
     nsresult rv = aContext->recycler()->getNodeSet(getter_AddRefs(nodes));
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -93,7 +93,7 @@ UnionExpr::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
             //XXX ErrorReport: report nonnodeset error
             return NS_ERROR_XSLT_NODESET_EXPECTED;
         }
-	nsRefPtr<NodeSet> resultSet, ownedSet;
+	nsRefPtr<txNodeSet> resultSet, ownedSet;
 	resultSet = NS_STATIC_CAST(txNodeSet*,
 				   NS_STATIC_CAST(txAExprResult*, exprResult));
 	exprResult = nsnull;

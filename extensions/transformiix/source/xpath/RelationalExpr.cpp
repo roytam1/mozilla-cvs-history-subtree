@@ -49,12 +49,12 @@ RelationalExpr::compareResults(txIEvalContext* aContext, txAExprResult* aLeft,
             return compareResults(aContext, &leftBool, aRight);
         }
 
-        NodeSet* nodeSet = NS_STATIC_CAST(NodeSet*, aLeft);
+        txNodeSet* nodeSet = NS_STATIC_CAST(txNodeSet*, aLeft);
         nsRefPtr<StringResult> strResult;
         rv = aContext->recycler()->getStringResult(getter_AddRefs(strResult));
         NS_ENSURE_SUCCESS(rv, rv);
 
-        int i;
+        PRInt32 i;
         for (i = 0; i < nodeSet->size(); ++i) {
             strResult->mValue.Truncate();
             txXPathNodeUtils::getNodeValue(nodeSet->get(i), strResult->mValue);
@@ -78,7 +78,7 @@ RelationalExpr::compareResults(txIEvalContext* aContext, txAExprResult* aLeft,
         rv = aContext->recycler()->getStringResult(getter_AddRefs(strResult));
         NS_ENSURE_SUCCESS(rv, rv);
 
-        int i;
+        PRInt32 i;
         for (i = 0; i < nodeSet->size(); ++i) {
             strResult->mValue.Truncate();
             txXPathNodeUtils::getNodeValue(nodeSet->get(i), strResult->mValue);

@@ -80,7 +80,7 @@ txKeyFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
         rv = aContext->recycler()->getNodeSet(getter_AddRefs(res));
         NS_ENSURE_SUCCESS(rv, rv);
 
-        int i;
+        PRInt32 i;
         for (i = 0; i < nodeSet->size(); ++i) {
             nsAutoString val;
             txXPathNodeUtils::getNodeValue(nodeSet->get(i), val);
@@ -264,7 +264,7 @@ txKeyHash::init()
     rv = mIndexedKeys.Init(1);
     NS_ENSURE_SUCCESS(rv, rv);
     
-    mEmptyNodeSet = new NodeSet(nsnull);
+    mEmptyNodeSet = new txNodeSet(nsnull);
     NS_ENSURE_TRUE(mEmptyNodeSet, NS_ERROR_OUT_OF_MEMORY);
     
     return NS_OK;

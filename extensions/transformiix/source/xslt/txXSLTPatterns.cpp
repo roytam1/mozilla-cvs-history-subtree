@@ -511,7 +511,7 @@ MBool txStepPattern::matches(const txXPathNode& aNode, txIMatchContext* aContext
 
     txListIterator iter(&predicates);
     Expr* predicate = (Expr*)iter.next();
-    nsRefPtr<NodeSet> newNodes;
+    nsRefPtr<txNodeSet> newNodes;
     rv = aContext->recycler()->getNodeSet(getter_AddRefs(newNodes));
     NS_ENSURE_SUCCESS(rv, rv);
 

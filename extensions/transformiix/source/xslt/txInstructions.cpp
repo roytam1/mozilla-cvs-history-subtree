@@ -435,7 +435,7 @@ txCopyOf::execute(txExecutionState& aEs)
             txNodeSet* nodes = NS_STATIC_CAST(txNodeSet*,
                                               NS_STATIC_CAST(txAExprResult*,
                                                              exprRes));
-            int i;
+            PRInt32 i;
             for (i = 0; i < nodes->size(); ++i) {
                 rv = copyNode(nodes->get(i), aEs);
                 NS_ENSURE_SUCCESS(rv, rv);
@@ -719,7 +719,7 @@ txPushNewContext::execute(txExecutionState& aEs)
                                    aEs.getEvalContext());
         NS_ENSURE_SUCCESS(rv, rv);
     }
-    nsRefPtr<NodeSet> sortedNodes;
+    nsRefPtr<txNodeSet> sortedNodes;
     rv = sorter.sortNodeSet(nodes, &aEs, getter_AddRefs(sortedNodes));
     NS_ENSURE_SUCCESS(rv, rv);
     

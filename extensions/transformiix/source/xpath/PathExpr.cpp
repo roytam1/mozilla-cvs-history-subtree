@@ -135,7 +135,7 @@ PathExpr::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 
             if (tmpNodes) {
                 if (!resNodes->isEmpty()) {
-                    nsRefPtr<NodeSet> oldSet;
+                    nsRefPtr<txNodeSet> oldSet;
                     oldSet.swap(tmpNodes);
                     rv = aContext->recycler()->
                         getNonSharedNodeSet(oldSet, getter_AddRefs(tmpNodes));

@@ -98,8 +98,8 @@ NodeSetFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
                 txNodeSet* nodes = NS_STATIC_CAST(txNodeSet*,
                                                   NS_STATIC_CAST(txAExprResult*,
                                                                  exprResult));
-                int i;
-                for (i = 0; i < nodes->size(); i++) {
+                PRInt32 i;
+                for (i = 0; i < nodes->size(); ++i) {
                     nsAutoString idList;
                     txXPathNodeUtils::getNodeValue(nodes->get(i), idList);
                     txTokenizer tokenizer(idList);
@@ -156,8 +156,8 @@ NodeSetFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
                 }
             }
 
-            const txXPathNode& node = nodes ? nodes->get(0)
-                                              : aContext->getContextNode();
+            const txXPathNode& node = nodes ? nodes->get(0) :
+                                              aContext->getContextNode();
             switch (mType) {
                 case LOCAL_NAME:
                 {
