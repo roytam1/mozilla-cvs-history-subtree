@@ -44,13 +44,22 @@
 #include "XMLParser.h"
 #include "TxLog.h"
 #include "txAtoms.h"
+#include "txSingleNodeContext.h"
+#include "txVariableMap.h"
+#include "XSLTProcessor.h"
+
+#ifdef TX_EXE
+#else
+#include "nsITransformObserver.h"
+#include "txMozillaTextOutput.h"
+#include "txMozillaXMLOutput.h"
+#endif
 
 /**
  * Creates a new ProcessorState for the given XSL document
 **/
 ProcessorState::ProcessorState(Document* aSourceDocument,
-                               Document* aXslDocument,
-                               txIProcessorHelper* aHelper)
+                               Document* aXslDocument)
     : mXslKeys(MB_TRUE),
       mDecimalFormats(MB_TRUE),
       mEvalContext(0),
@@ -59,11 +68,11 @@ ProcessorState::ProcessorState(Document* aSourceDocument,
       mSourceDocument(aSourceDocument),
       xslDocument(aXslDocument),
       mRTFDocument(0),
-      mHelper(aHelper)
+      mOutputHandler(0),
+      mResultHandler(0)
 {
     NS_ASSERTION(aSourceDocument, "missing source document");
     NS_ASSERTION(aXslDocument, "missing xslt document");
-    NS_ASSERTION(aHelper, "missing xslt helper");
 
     /* turn object deletion on for some of the Maps (NamedMap) */
     mExprHashes[SelectAttr].setOwnership(Map::eOwnsItems);
@@ -626,19 +635,8 @@ txOutputFormat* ProcessorState::getOutputFormat()
     return &mOutputFormat;
 }
 
-txIProcessorHelper* ProcessorState::getProcessorHelper()
-{
-    NS_ASSERTION(mHelper, "missing processor helper");
-    return mHelper;
-}
-
 Document* ProcessorState::getRTFDocument()
 {
-    if (mRTFDocument) {
-        return mRTFDocument;
-    }
-   
-    mRTFDocument = mHelper->createRTFDocument(eXMLOutput);
     return mRTFDocument;
 }
 
@@ -1011,9 +1009,8 @@ nsresult ProcessorState::getVariable(PRInt32 aNamespace, txAtom* aLName,
     mLocalVariables = 0;
     txSingleNodeContext evalContext(mSourceDocument, this);
     txIEvalContext* priorEC = setEvalContext(&evalContext);
-    XSLTProcessor processor;
-    globVar->mValue = processor.processVariable(mSourceDocument, varElem,
-                                                this);
+    globVar->mValue = txXSLTProcessor::processVariable(mSourceDocument, varElem,
+                                                       this);
     setEvalContext(priorEC);
     mLocalVariables = oldVars;
 
@@ -1137,6 +1134,49 @@ nsresult ProcessorState::resolveFunctionCall(txAtom* aName, PRInt32 aID,
 
    return NS_ERROR_XPATH_PARSE_FAILED;
 } //-- resolveFunctionCall
+
+txOutputXMLEventHandler*
+ProcessorState::getOutputHandler(txOutputMethod aMethod)
+{
+#ifdef TX_EXE
+#else
+    if (mMozillaOutputHandler) {
+        if (aMethod == eHTMLOutput || aMethod == eXMLOutput) {
+            return mMozillaOutputHandler;
+        }
+        mMozillaOutputHandler = nsnull;
+    }
+    switch (aMethod) {
+        case eMethodNotSet:
+        case eXMLOutput:
+        case eHTMLOutput:
+        {
+            mMozillaOutputHandler = new txMozillaXMLOutput();
+            break;
+        }
+        case eTextOutput:
+        {
+            mMozillaOutputHandler = new txMozillaTextOutput();
+            break;
+        }
+    }
+    if (mMozillaOutputHandler) {
+        nsCOMPtr<nsIDOMDocument> source =
+            do_QueryInterface(mSourceDocument->getNSObj());
+        mMozillaOutputHandler->setSourceDocument(source);
+        nsCOMPtr<nsITransformObserver> observer =
+            do_QueryReferent(mObserver);
+        mMozillaOutputHandler->setObserver(observer);
+    }
+    return mMozillaOutputHandler;
+#endif
+}
+
+void
+ProcessorState::setTransformObserver(nsITransformObserver* aObserver)
+{
+    mObserver = do_GetWeakReference(aObserver);
+}
 
   //-------------------/
  //- Private Methods -/

@@ -40,15 +40,13 @@
 #ifndef TRANSFRMX_TXMOZILLAXSLTPROCESSOR_H
 #define TRANSFRMX_TXMOZILLAXSLTPROCESSOR_H
 
-#include "XSLTProcessor.h"
 #include "nsIDocumentTransformer.h"
 #include "nsIVariant.h"
 #include "nsIXSLTProcessor.h"
 #include "nsVoidArray.h"
 #include "nsWeakPtr.h"
-#include "txXMLEventHandler.h"
 
-class nsITransformObserver;
+class ExprResult;
 
 /* bacd8ad0-552f-11d3-a9f7-000064657374 */
 #define TRANSFORMIIX_XSLT_PROCESSOR_CID   \
@@ -78,8 +76,7 @@ public:
 /*
  * txMozillaXSLTProcessor is a front-end to the XSLT Processor.
  */
-class txMozillaXSLTProcessor : public txXSLTProcessor,
-                               public nsIDocumentTransformer,
+class txMozillaXSLTProcessor : public nsIDocumentTransformer,
                                public nsIXSLTProcessor
 {
 public:
@@ -107,23 +104,6 @@ private:
 
     nsCOMPtr<nsIDOMNode> mStylesheet;
     nsVoidArray* mVariables;
-};
-
-class txMozillaHelper : public txIProcessorHelper
-{
-public:
-    txMozillaHelper(nsIDOMDocument* aSourceDocument,
-                    nsITransformObserver* aObserver);
-    virtual ~txMozillaHelper();
-
-    txOutputXMLEventHandler* getOutputHandler(txOutputMethod aMethod);
-    void logMessage(const String& aMessage);
-    Document* createRTFDocument(txOutputMethod aMethod);
-
-private:
-    nsCOMPtr<txIMozillaXMLEventHandler> mMozillaOutputHandler;
-    nsCOMPtr<nsIDOMDocument> mSourceDocument;
-    nsWeakPtr mObserver;
 };
 
 #endif

@@ -38,22 +38,17 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "txMozillaXSLTProcessor.h"
-#include "nsContentCID.h"
-#include "nsIConsoleService.h"
 #include "nsIContent.h"
 #include "nsIDOMClassInfo.h"
 #include "nsIScriptLoader.h"
-#include "nsIServiceManagerUtils.h"
 #include "nsITransformObserver.h"
 #include "nsNetUtil.h"
+#include "ProcessorState.h"
 #include "txMozillaTextOutput.h"
 #include "txMozillaXMLOutput.h"
 #include "txSingleNodeContext.h"
-#include "txXMLEventHandler.h"
-#include "VariableBinding.h"
+#include "XSLTProcessor.h"
 #include "XMLUtils.h"
-
-static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
 
 NS_IMPL_ADDREF(txMozillaXSLTProcessor)
 NS_IMPL_RELEASE(txMozillaXSLTProcessor)
@@ -106,10 +101,9 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
     // Start of block to ensure the destruction of the ProcessorState
     // before the destruction of the documents.
     {
-        txMozillaHelper processorHelper(sourceDOMDocument, aObserver);
-
         // Create a new ProcessorState
-        ProcessorState ps(&sourceDocument, &xslDocument, &processorHelper);
+        ProcessorState ps(&sourceDocument, &xslDocument);
+        ps.setTransformObserver(aObserver);
 
         // XXX Need to add error observers
 
@@ -121,19 +115,19 @@ txMozillaXSLTProcessor::TransformDocument(nsIDOMNode* aSourceDOM,
         nsCOMPtr<nsIDOMDocument> styleDoc = do_QueryInterface(aStyleDOM);
         nsresult rv;
         if (styleDoc) {
-            rv = processStylesheet(&sourceDocument, &xslDocument, &ps);
+            rv = txXSLTProcessor::processStylesheet(&sourceDocument, &xslDocument, &ps);
         }
         else {
             nsCOMPtr<nsIDOMElement> styleElem = do_QueryInterface(aStyleDOM);
             NS_ENSURE_TRUE(styleElem, NS_ERROR_FAILURE);
             Element* element = xslDocument.createElement(styleElem);
             NS_ENSURE_TRUE(element, NS_ERROR_OUT_OF_MEMORY);
-            rv = processTopLevel(&sourceDocument, element, &ps);
+            rv = txXSLTProcessor::processTopLevel(&sourceDocument, element, &ps);
         }
         NS_ENSURE_SUCCESS(rv, rv);
 
         // Process root of XML source document
-        transform(sourceNode, &ps);
+        txXSLTProcessor::transform(sourceNode, &ps);
     }
     // End of block to ensure the destruction of the ProcessorState
     // before the destruction of the documents.
@@ -184,10 +178,8 @@ txMozillaXSLTProcessor::TransformNode(nsIDOMNode *aSource,
     // Start of block to ensure the destruction of the ProcessorState
     // before the destruction of the documents.
     {
-        txMozillaHelper processorHelper(sourceDOMDocument, nsnull);
-
         // Create a new ProcessorState
-        ProcessorState ps(&sourceDocument, &xslDocument, &processorHelper);
+        ProcessorState ps(&sourceDocument, &xslDocument);
 
         // XXX Need to add error observers
 
@@ -199,14 +191,14 @@ txMozillaXSLTProcessor::TransformNode(nsIDOMNode *aSource,
         nsCOMPtr<nsIDOMDocument> styleDoc = do_QueryInterface(mStylesheet);
         nsresult rv;
         if (styleDoc) {
-            rv = processStylesheet(&sourceDocument, &xslDocument, &ps);
+            rv = txXSLTProcessor::processStylesheet(&sourceDocument, &xslDocument, &ps);
         }
         else {
             nsCOMPtr<nsIDOMElement> styleElem = do_QueryInterface(mStylesheet);
             NS_ENSURE_TRUE(styleElem, NS_ERROR_FAILURE);
             Element* element = xslDocument.createElement(styleElem);
             NS_ENSURE_TRUE(element, NS_ERROR_OUT_OF_MEMORY);
-            rv = processTopLevel(&sourceDocument, element, &ps);
+            rv = txXSLTProcessor::processTopLevel(&sourceDocument, element, &ps);
         }
         NS_ENSURE_SUCCESS(rv, rv);
 
@@ -224,8 +216,8 @@ txMozillaXSLTProcessor::TransformNode(nsIDOMNode *aSource,
             PRInt32 count = mVariables->Count();
 
             // XXX Change when sicking lands vars rewrite
-            NamedMap* globalVars =
-                (NamedMap*)ps.getVariableSetStack()->peek();
+//            NamedMap* globalVars =
+//                (NamedMap*)ps.getVariableSetStack()->peek();
 
             nsCOMPtr<nsINameSpaceManager> namespaceManager;
             rv = document->GetNameSpaceManager(*getter_AddRefs(namespaceManager));
@@ -244,18 +236,19 @@ txMozillaXSLTProcessor::TransformNode(nsIDOMNode *aSource,
                 txExpandedName name(nsId, localName);
 
                 // XXX Change when sicking lands vars rewrite
-                VariableBinding* binding = new VariableBinding(String(var->mLocalName), value);
+ /*               VariableBinding* binding = new VariableBinding(String(var->mLocalName), value);
                 if (!binding) {
                     // XXX Error? Signal to user?
                     continue;
                 }
                 binding->allowShadowing();
                 globalVars->put(String(var->mLocalName), binding);
+*/
             }
         }
 
         // Process root of XML source document
-        transform(sourceNode, &ps);
+        txXSLTProcessor::transform(sourceNode, &ps);
     }
     // End of block to ensure the destruction of the ProcessorState
     // before the destruction of the documents.
@@ -481,72 +474,4 @@ txMozillaXSLTProcessor::ConvertParameter(nsIVariant *aValue)
         }
     }
     return nsnull;
-}
-
-txMozillaHelper::txMozillaHelper(nsIDOMDocument* aSourceDocument,
-                                 nsITransformObserver* aObserver) :
-    mSourceDocument(aSourceDocument),
-    mObserver(do_GetWeakReference(aObserver))
-{
-}
-
-txMozillaHelper::~txMozillaHelper()
-{
-}
-
-txOutputXMLEventHandler*
-txMozillaHelper::getOutputHandler(txOutputMethod aMethod)
-{
-    if (mMozillaOutputHandler) {
-        if (aMethod == eHTMLOutput || aMethod == eXMLOutput) {
-            return mMozillaOutputHandler;
-        }
-        mMozillaOutputHandler = nsnull;
-    }
-    switch (aMethod) {
-        case eMethodNotSet:
-        case eXMLOutput:
-        case eHTMLOutput:
-        {
-            mMozillaOutputHandler = new txMozillaXMLOutput();
-            break;
-        }
-        case eTextOutput:
-        {
-            mMozillaOutputHandler = new txMozillaTextOutput();
-            break;
-        }
-    }
-    if (mMozillaOutputHandler) {
-        mMozillaOutputHandler->setSourceDocument(mSourceDocument);
-        nsCOMPtr<nsITransformObserver> observer =
-            do_QueryReferent(mObserver);
-        mMozillaOutputHandler->setObserver(observer);
-    }
-    return mMozillaOutputHandler;
-}
-
-void
-txMozillaHelper::logMessage(const String& aMessage)
-{
-    nsresult rv;
-    nsCOMPtr<nsIConsoleService> consoleSvc = 
-      do_GetService("@mozilla.org/consoleservice;1", &rv);
-    NS_ASSERTION(NS_SUCCEEDED(rv),
-                 "xsl:message couldn't get console service");
-    if (consoleSvc) {
-        nsAutoString logString(NS_LITERAL_STRING("xsl:message - "));
-        logString.Append(aMessage.getConstNSString());
-        rv = consoleSvc->LogStringMessage(logString.get());
-        NS_ASSERTION(NS_SUCCEEDED(rv), "xsl:message couldn't log");
-    }
-}
-
-Document*
-txMozillaHelper::createRTFDocument(txOutputMethod aMethod)
-{
-    nsresult rv;
-    nsCOMPtr<nsIDOMDocument> domDoc = do_CreateInstance(kXMLDocumentCID, &rv);
-    NS_ENSURE_SUCCESS(rv, nsnull);
-    return new Document(domDoc);
 }
