@@ -29,8 +29,7 @@
 #include <stdlib.h>
 #include <Errors.h>
 
-#include "prtypes.h"
-#include "prmacos.h"
+#include "jstypes.h"
 
 char* strdup(const char *str)
 {
