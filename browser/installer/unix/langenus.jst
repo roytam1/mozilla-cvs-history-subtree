@@ -53,7 +53,7 @@ if (verifyDiskSpace(fProgram, srDest))
     // check return value
     if (err == SUCCESS)
     {
-        fTarget = gtFolder("Program", "defaults");
+        fTarget = getFolder("Program", "defaults");
         logComment("fTarget: " + fTarget);
         err = addDirectory("",
                            "bin/defaults", // dir name in JAR to extract
