@@ -19,15 +19,13 @@
 #include "nsNetStubs.h"
 
 #include "nspr.h"
+#include "plstr.h"
+#include "xp_core.h"
 #include "xp_file.h"
 #include "libi18n.h"
 #include "libevent.h"
 #include "mkgeturl.h"
 #include "net.h"
-
-extern "C" {
-#include "preenc.h"
-};
 
 /* From libimg */
 #define OPAQUE_CONTEXT void

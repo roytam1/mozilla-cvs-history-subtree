@@ -2567,7 +2567,8 @@ net_setup_http_stream(ActiveEntry * ce)
 
         NET_SetReadSelect(CE_WINDOW_ID, cd->connection->sock);
 	  }
-#if  defined(XP_WIN) && defined(MOZILLA_CLIENT)
+/* #if  defined(XP_WIN) && defined(MOZILLA_CLIENT) */
+#if 0
 
 #define COMPUSERVE_HEADER_NAME "Remote-Passphrase"
 
