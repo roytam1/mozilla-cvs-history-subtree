@@ -88,7 +88,6 @@ protected:
   nsCOMPtr<nsILocalFile> mAppDir;
   nsCOMPtr<nsIFile>      mProfileDir;
   PRBool                 mProfileNotified;
-  PRBool                 mRegisterExtraComponents;
 };
 
 #endif

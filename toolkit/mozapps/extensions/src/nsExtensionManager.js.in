@@ -1925,12 +1925,11 @@ nsExtensionManager.prototype = {
       delete this._extUninstaller;
       delete this._extEnabler;
       
-      if (!needsRestart) {
-        // If no additional restart is required, it implies that there are
-        // no new components that need registering so we can inform the app
-        // not to do any extra startup checking next time round.    
-        this._writeCompatibilityManifest(false);
-      }
+      this._updateManifests();
+      // If no additional restart is required, it implies that there are
+      // no new components that need registering so we can inform the app
+      // not to do any extra startup checking next time round.    
+      this._writeCompatibilityManifest(needsRestart);
     }
     catch (e) {
       dump("*** nsExtensionManager::_finishOperations - failure, catching exception so finalize window can close " + e +"\n");
@@ -2041,10 +2040,23 @@ nsExtensionManager.prototype = {
     // again. 
     gPref.setCharPref(PREF_EM_LAST_APP_VERSION, currAppVersion);
 
+    // XXXben - I am not entirely sure this is needed, since components and 
+    // defaults manifests are written by the disabling function. Not going to
+    // rock the boat now however. 
+    this._updateManifests();
+    
+    return needsRestart;
+  },
+  
+  get inSafeMode() 
+  {
+    return this._ds.safeMode;
+  },
+  
+  _updateManifests: function nsExtensionManager__updateManifests ()
+  {
     // Update the components manifests with paths for compatible, enabled, 
     // extensions.
-    // XXXben I think this might impose unnecessary restarts if needsRestart is
-    //        false.
     try {
       // Wrap this in try..catch so that if the account is restricted we don't
       // completely fail here for lack of permissions to write to the bin
@@ -2054,18 +2066,13 @@ nsExtensionManager.prototype = {
       // for people with write access to bin dir (i.e. uninstall, disable, 
       // enable)
       this._writeComponentManifest(false);
+      this._writeDefaults(false);
     }
     catch (e) { 
-      dump("*** ExtensionManager:checkForMismatches: no access privileges to application directory!\n"); 
+      dump("*** ExtensionManager:_updateManifests: no access privileges to application directory, skipping.\n"); 
     };
     this._writeComponentManifest(true);
-    
-    return needsRestart;
-  },
-  
-  get inSafeMode() 
-  {
-    return this._ds.safeMode;
+    this._writeDefaults(true);
   },
   
   // XXXben write to temporary file then move to final when done.
@@ -2096,13 +2103,15 @@ nsExtensionManager.prototype = {
       // be disabled, and not about to be uninstalled.
       var toBeDisabled = this._ds.getItemProperty(extension.id, "toBeDisabled");
       var toBeUninstalled = this._ds.getItemProperty(extension.id, "toBeUninstalled");
+      var toBeInstalled = this._ds.getItemProperty(extension.id, "toBeInstalled");
       var disabled = this._ds.getItemProperty(extension.id, "disabled");
-      if (toBeDisabled == "true" || toBeUninstalled == "true" || disabled == "true")
+      if (toBeDisabled == "true" || toBeUninstalled == "true" || 
+          disabled == "true" || toBeInstalled == "true")
         continue;
       
       var isProfile = this._ds.isProfileItem(extension.id);
       var sourceDir = aGetDirFunc(isProfile, extension.id);
-      if (sourceDir.exists() && (aIsProfile == isProfile)) 
+      if (sourceDir.exists() && (aIsProfile == isProfile))
         validExtensions.push({ sourceDir: sourceDir, isProfile: isProfile });
     }
     
@@ -2433,7 +2442,7 @@ nsExtensionManager.prototype = {
                           .createInstance(Components.interfaces.nsIUpdateItem);
       newItem.init(id, version, targetAppInfo.minVersion, 
                    targetAppInfo.maxVersion,
-                   name, -1, "", updateURL, "", aType);
+                   name, -1, "", "", updateURL, aType);
     }
     catch (e) {
       return null;

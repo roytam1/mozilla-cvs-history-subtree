@@ -48,8 +48,6 @@
 #include "nsIObserverService.h"
 #include "nsIProfileChangeStatus.h"
 
-#include "nsIComponentRegistrar.h"
-
 #include "nsAppDirectoryServiceDefs.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsXULAppAPI.h"
@@ -91,8 +89,7 @@
 nsXREDirProvider* gDirServiceProvider = nsnull;
 
 nsXREDirProvider::nsXREDirProvider() :
-  mProfileNotified(PR_FALSE),
-  mRegisterExtraComponents(PR_FALSE)
+  mProfileNotified(PR_FALSE)
 {
   gDirServiceProvider = this;
 }
@@ -348,9 +345,7 @@ nsXREDirProvider::GetFile(const char* aProperty, PRBool* aPersistent,
 }
 
 static void
-ReadDirectoryList(nsIFile* aComponentsList, 
-                  nsCOMArray<nsIFile>& aDirectories,
-                  PRBool aRegister)
+LoadDirsIntoArray(nsIFile* aComponentsList, nsCOMArray<nsIFile>& aDirectories)
 {
   nsINIParser parser;
   nsCOMPtr<nsILocalFile> lf(do_QueryInterface(aComponentsList));
@@ -373,35 +368,8 @@ ReadDirectoryList(nsIFile* aComponentsList,
         dir->SetRelativeDescriptor(lfParent, nsDependentCString(parserBuf));
         nsCOMPtr<nsIFile> dirAsFile(do_QueryInterface(dir));
         aDirectories.AppendObject(dirAsFile);
-        if (aRegister) {
-          nsCOMPtr<nsIComponentRegistrar> cr;
-          NS_GetComponentRegistrar(getter_AddRefs(cr));
-          
-          // I don't think we care about the result? Keep going...
-          cr->AutoRegister(dirAsFile);
-        }
       }
     }
-  }
-}
-
-void 
-nsXREDirProvider::RegisterExtraComponents()
-{
-  mRegisterExtraComponents = PR_TRUE;
-
-  nsCOMArray<nsIFile> directories;
-
-  nsCOMPtr<nsIFile> appFile;
-  mAppDir->Clone(getter_AddRefs(appFile));
-  appFile->AppendNative(nsDependentCString("components.ini"));
-  ReadDirectoryList(appFile, directories, PR_TRUE);
-
-  nsCOMPtr<nsIFile> profileFile;
-  if (mProfileDir) {
-    mProfileDir->Clone(getter_AddRefs(profileFile));
-    profileFile->AppendNative(nsDependentCString("components.ini"));
-    ReadDirectoryList(profileFile, directories, PR_TRUE);
   }
 }
 
@@ -412,23 +380,21 @@ nsXREDirProvider::GetFiles(const char* aProperty, nsISimpleEnumerator** aResult)
   *aResult = nsnull;
 
   if (!strcmp(aProperty, NS_XPCOM_COMPONENT_DIR_LIST)) {
-    if (mRegisterExtraComponents) {
-      nsCOMArray<nsIFile> directories;
-  
-      nsCOMPtr<nsIFile> appFile;
-      mAppDir->Clone(getter_AddRefs(appFile));
-      appFile->AppendNative(nsDependentCString("components.ini"));
-      ReadDirectoryList(appFile, directories, PR_FALSE);
+    nsCOMArray<nsIFile> directories;
 
-      nsCOMPtr<nsIFile> profileFile;
-      if (mProfileDir) {
-        mProfileDir->Clone(getter_AddRefs(profileFile));
-        profileFile->AppendNative(nsDependentCString("components.ini"));
-        ReadDirectoryList(profileFile, directories, PR_FALSE);
-      }
+    nsCOMPtr<nsIFile> appFile;
+    mAppDir->Clone(getter_AddRefs(appFile));
+    appFile->AppendNative(nsDependentCString("components.ini"));
+    LoadDirsIntoArray(appFile, directories);
 
-      rv = NS_NewArrayEnumerator(aResult, directories);
+    nsCOMPtr<nsIFile> profileFile;
+    if (mProfileDir) {
+      mProfileDir->Clone(getter_AddRefs(profileFile));
+      profileFile->AppendNative(nsDependentCString("components.ini"));
+      LoadDirsIntoArray(profileFile, directories);
     }
+
+    rv = NS_NewArrayEnumerator(aResult, directories);
   }
   else if (!strcmp(aProperty, NS_APP_PREFS_DEFAULTS_DIR_LIST)) {
     nsCOMArray<nsIFile> directories;
@@ -436,13 +402,13 @@ nsXREDirProvider::GetFiles(const char* aProperty, nsISimpleEnumerator** aResult)
     nsCOMPtr<nsIFile> appFile;
     mAppDir->Clone(getter_AddRefs(appFile));
     appFile->AppendNative(nsDependentCString("defaults.ini"));
-    ReadDirectoryList(appFile, directories, PR_FALSE);
+    LoadDirsIntoArray(appFile, directories);
 
     nsCOMPtr<nsIFile> profileFile;
     if (mProfileDir) {
       mProfileDir->Clone(getter_AddRefs(profileFile));
       profileFile->AppendNative(nsDependentCString("defaults.ini"));
-      ReadDirectoryList(profileFile, directories, PR_FALSE);
+      LoadDirsIntoArray(profileFile, directories);
     }
 
     rv = NS_NewArrayEnumerator(aResult, directories);
