@@ -297,7 +297,7 @@ void nsToolkit::SetupQuartzRendering()
     kQDUseCGTextMetrics = (1 << 2)
   };
 #endif
-  const int kFlagsWeUse = kQDUseTrueTypeScalerGlyphs | kQDUseCGTextRendering | kQDUseCGTextMetrics;
+  const int kFlagsWeUse = kQDUseCGTextRendering | kQDUseCGTextMetrics;
   
   // turn on quartz rendering if we find the symbol in the app framework. Just turn
   // on the bits that we need, don't turn off what someone else might have wanted. If
