@@ -180,12 +180,14 @@ nsresult
 txCheckParam::execute(txExecutionState& aEs)
 {
     nsresult rv = NS_OK;
-    ExprResult* exprRes = (ExprResult*)aEs.mTemplateParams->get(mName);
-    if (exprRes) {
-        rv = aEs.bindVariable(mName, exprRes, MB_FALSE);
-        NS_ENSURE_SUCCESS(rv, rv);
-        
-        aEs.gotoInstruction(mBailTarget);
+    if (aEs.mTemplateParams) {
+        ExprResult* exprRes = (ExprResult*)aEs.mTemplateParams->get(mName);
+        if (exprRes) {
+            rv = aEs.bindVariable(mName, exprRes, MB_FALSE);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            aEs.gotoInstruction(mBailTarget);
+        }
     }
     
     return NS_OK;
