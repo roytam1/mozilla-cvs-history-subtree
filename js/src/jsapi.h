@@ -612,9 +612,13 @@ JS_InitClass(JSContext *cx, JSObject *obj, JSObject *parent_proto,
 #ifdef JS_THREADSAFE
 extern JS_PUBLIC_API(JSClass *)
 JS_GetClass(JSContext *cx, JSObject *obj);
+
+#define JS_GET_CLASS(cx,obj) JS_GetClass(cx, obj)
 #else
 extern JS_PUBLIC_API(JSClass *)
 JS_GetClass(JSObject *obj);
+
+#define JS_GET_CLASS(cx,obj) JS_GetClass(obj)
 #endif
 
 extern JS_PUBLIC_API(JSBool)

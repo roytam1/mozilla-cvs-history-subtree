@@ -90,10 +90,16 @@ static struct keyword {
     {js_this_str,       TOK_PRIMARY,            JSOP_THIS},
     {js_true_str,       TOK_PRIMARY,            JSOP_TRUE},
     {js_typeof_str,     TOK_UNARYOP,            JSOP_TYPEOF},
-    {"var",             TOK_VAR,                JSOP_NOP},
+    {"var",             TOK_VAR,                JSOP_DEFVAR},
     {js_void_str,       TOK_UNARYOP,            JSOP_VOID},
     {"while",           TOK_WHILE,              JSOP_NOP},
     {"with",            TOK_WITH,               JSOP_NOP},
+
+#if JS_HAS_CONST
+    {"const",           TOK_VAR,                JSOP_DEFCONST},
+#else
+    {"const",           TOK_RESERVED,           JSOP_NOP},
+#endif
 
 #if JS_HAS_EXCEPTIONS
     {"try",             TOK_TRY,                JSOP_NOP},
@@ -119,7 +125,6 @@ static struct keyword {
     {"byte",            TOK_RESERVED,           JSOP_NOP},
     {"char",            TOK_RESERVED,           JSOP_NOP},
     {"class",           TOK_RESERVED,           JSOP_NOP},
-    {"const",           TOK_RESERVED,           JSOP_NOP},
     {"double",          TOK_RESERVED,           JSOP_NOP},
     {"extends",         TOK_RESERVED,           JSOP_NOP},
     {"final",           TOK_RESERVED,           JSOP_NOP},
@@ -546,8 +551,8 @@ js_ReportCompileErrorNumber(JSContext *cx, JSTokenStream *ts, uintN flags,
     if (onError) {
 	report.filename = ts->filename;
 	report.lineno = ts->lineno;
-	linestr = js_NewStringCopyN(cx, ts->linebuf.base, 
-                                        limit - ts->linebuf.base, 0);
+        linestr = js_NewStringCopyN(cx, ts->linebuf.base,
+                                    limit - ts->linebuf.base, 0);
 	report.linebuf  = linestr
 			  ? JS_GetStringBytes(linestr)
 			  : NULL;

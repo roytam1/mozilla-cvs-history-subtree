@@ -85,7 +85,7 @@
 #include "prlog.h"
 #include "prmem.h"
 #include "rdfutil.h"
-#include "jspubtd.h"            // for JSVERSION_*
+#include "jsapi.h"  // for JSVERSION_*, JS_VersionToString, etc.
 
 #include "nsHTMLTokens.h" // XXX so we can use nsIParserNode::GetTokenType()
 
@@ -730,8 +730,15 @@ XULContentSinkImpl::CloseContainer(const nsIParserNode& aNode)
         nsXULPrototypeScript* script =
             NS_REINTERPRET_CAST(nsXULPrototypeScript*, node);
 
-        script->mInlineScript.SetString(mText, mTextLength);
-        script->mInlineScript.Trim(" \t\n\r");
+        // If given a src= attribute, we must ignore script tag content.
+        // We can't even compile it or we'll pollute the top-level with
+        // unwanted vars and functions.
+        if (! script->mSrcURI) {
+            nsCOMPtr<nsIDocument> doc = do_QueryReferent(mDocument);
+
+            rv = script->Compile(mText, mTextLength, mDocumentURL,
+                                 script->mLineNo, doc);
+        }
 
         FlushText(PR_FALSE);
     }
@@ -1594,7 +1601,9 @@ XULContentSinkImpl::OpenScript(const nsIParserNode& aNode)
   
     // Don't process scripts that aren't JavaScript
     if (isJavaScript) {
-        nsXULPrototypeScript* script = new nsXULPrototypeScript(/* line number */ -1, jsVersionString);
+        nsXULPrototypeScript* script =
+            new nsXULPrototypeScript(aNode.GetSourceLineNumber(),
+                                     jsVersionString);
         if (! script)
             return NS_ERROR_OUT_OF_MEMORY;
 

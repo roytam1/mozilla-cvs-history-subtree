@@ -66,13 +66,7 @@ js_InitCodeGenerator(JSContext *cx, JSCodeGenerator *cg,
     memset(cg, 0, sizeof *cg);
     cg->codeMark = JS_ARENA_MARK(&cx->codePool);
     cg->tempMark = JS_ARENA_MARK(&cx->tempPool);
-    JS_ARENA_ALLOCATE(cg->base, &cx->codePool, CGINCR);
-    if (!cg->base) {
-	JS_ReportOutOfMemory(cx);
-	return JS_FALSE;
-    }
-    cg->next = cg->base;
-    cg->limit = CG_CODE(cg, CGINCR);
+    cg->current = &cg->main;
     cg->filename = filename;
     cg->firstLine = cg->currentLine = lineno;
     cg->principals = principals;
@@ -96,16 +90,19 @@ EmitCheck(JSContext *cx, JSCodeGenerator *cg, JSOp op, ptrdiff_t delta)
 
     JS_ASSERT(delta < CGINCR);
     offset = CG_OFFSET(cg);
-    if ((jsuword)cg->next + delta >= (jsuword)cg->limit) {
-	length = PTRDIFF(cg->limit, cg->base, jsbytecode);
+    if ((jsuword)CG_NEXT(cg) + delta >= (jsuword)CG_LIMIT(cg)) {
+	length = PTRDIFF(CG_LIMIT(cg), CG_BASE(cg), jsbytecode);
 	cgsize = length * sizeof(jsbytecode);
-	JS_ARENA_GROW(cg->base, &cx->codePool, cgsize, CGINCR);
-	if (!cg->base) {
+	if (CG_BASE(cg))
+	    JS_ARENA_GROW(CG_BASE(cg), &cx->codePool, cgsize, CGINCR);
+	else
+	    JS_ARENA_ALLOCATE(CG_BASE(cg), &cx->codePool, CGINCR);
+	if (!CG_BASE(cg)) {
 	    JS_ReportOutOfMemory(cx);
 	    return -1;
 	}
-	cg->limit = CG_CODE(cg, length + CGINCR);
-	cg->next = CG_CODE(cg, offset);
+	CG_LIMIT(cg) = CG_CODE(cg, length + CGINCR);
+	CG_NEXT(cg) = CG_CODE(cg, offset);
     }
     return offset;
 }
@@ -141,7 +138,7 @@ js_Emit1(JSContext *cx, JSCodeGenerator *cg, JSOp op)
     ptrdiff_t offset = EmitCheck(cx, cg, op, 1);
 
     if (offset >= 0) {
-	*cg->next++ = (jsbytecode)op;
+	*CG_NEXT(cg)++ = (jsbytecode)op;
 	UpdateDepth(cx, cg, offset);
     }
     return offset;
@@ -153,9 +150,10 @@ js_Emit2(JSContext *cx, JSCodeGenerator *cg, JSOp op, jsbytecode op1)
     ptrdiff_t offset = EmitCheck(cx, cg, op, 2);
 
     if (offset >= 0) {
-	cg->next[0] = (jsbytecode)op;
-	cg->next[1] = op1;
-	cg->next += 2;
+	jsbytecode *next = CG_NEXT(cg);
+	next[0] = (jsbytecode)op;
+	next[1] = op1;
+	CG_NEXT(cg) = next + 2;
 	UpdateDepth(cx, cg, offset);
     }
     return offset;
@@ -168,10 +166,11 @@ js_Emit3(JSContext *cx, JSCodeGenerator *cg, JSOp op, jsbytecode op1,
     ptrdiff_t offset = EmitCheck(cx, cg, op, 3);
 
     if (offset >= 0) {
-	cg->next[0] = (jsbytecode)op;
-	cg->next[1] = op1;
-	cg->next[2] = op2;
-	cg->next += 3;
+	jsbytecode *next = CG_NEXT(cg);
+	next[0] = (jsbytecode)op;
+	next[1] = op1;
+	next[2] = op2;
+	CG_NEXT(cg) = next + 3;
 	UpdateDepth(cx, cg, offset);
     }
     return offset;
@@ -184,8 +183,9 @@ js_EmitN(JSContext *cx, JSCodeGenerator *cg, JSOp op, size_t extra)
     ptrdiff_t offset = EmitCheck(cx, cg, op, length);
 
     if (offset >= 0) {
-	*cg->next = (jsbytecode)op;
-	cg->next += length;
+	jsbytecode *next = CG_NEXT(cg);
+	*next = (jsbytecode)op;
+	CG_NEXT(cg) = next + length;
 	UpdateDepth(cx, cg, offset);
     }
     return offset;
@@ -344,7 +344,7 @@ js_PopStatementCG(JSContext *cx, JSCodeGenerator *cg)
     JSStmtInfo *stmt;
 
     stmt = cg->treeContext.topStmt;
-    if (!PatchGotos(cx, cg, stmt, stmt->breaks, cg->next))
+    if (!PatchGotos(cx, cg, stmt, stmt->breaks, CG_NEXT(cg)))
 	return JS_FALSE;
     if (!PatchGotos(cx, cg, stmt, stmt->continues, CG_CODE(cg, stmt->update)))
 	return JS_FALSE;
@@ -484,13 +484,13 @@ FixupFinallyJumps(JSContext *cx, JSCodeGenerator *cg, ptrdiff_t tryStart,
 {
     jsbytecode *pc;
 
-    pc = cg->base + tryStart;
-    BYTECODE_ITER(pc, cg->next,
+    pc = CG_BASE(cg) + tryStart;
+    BYTECODE_ITER(pc, CG_NEXT(cg),
 	if (*pc == JSOP_GOSUB) {
 	    ptrdiff_t index = GET_JUMP_OFFSET(pc);
 	    if (index <= 0) {
 		if (index == 0)
-		    index = finallyIndex - (pc - cg->base);
+		    index = finallyIndex - (pc - CG_BASE(cg));
 		else
 		    index++;
 		CHECK_AND_SET_JUMP_OFFSET(cx, cg, pc, index);
@@ -506,10 +506,10 @@ FixupCatchJumps(JSContext *cx, JSCodeGenerator *cg, ptrdiff_t tryStart,
 {
     jsbytecode *pc;
 
-    pc = cg->base + tryStart;
-    BYTECODE_ITER(pc, cg->next,
+    pc = CG_BASE(cg) + tryStart;
+    BYTECODE_ITER(pc, CG_NEXT(cg),
 	if (*pc == JSOP_GOTO && !GET_JUMP_OFFSET(pc)) {
-	    CHECK_AND_SET_JUMP_OFFSET(cx, cg, pc, postCatch - (pc - cg->base));
+	    CHECK_AND_SET_JUMP_OFFSET(cx, cg, pc, postCatch - (pc - CG_BASE(cg)));
 	}
     );
     return JS_TRUE;
@@ -598,19 +598,28 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	ale = js_IndexAtom(cx, atom, &cg->atomList);
 	if (!ale)
 	    return JS_FALSE;
+	atomIndex = ale->index;
 
 	/* Emit a bytecode or srcnote naming the literal in its immediate. */
 #if JS_HAS_LEXICAL_CLOSURE
 	if (pn->pn_op != JSOP_NOP) {
-	    EMIT_ATOM_INDEX_OP(pn->pn_op, ale->index);
+	    EMIT_ATOM_INDEX_OP(pn->pn_op, atomIndex);
 	    break;
 	}
 #endif
-	noteIndex = js_NewSrcNote2(cx, cg, SRC_FUNCDEF, (ptrdiff_t)ale->index);
+
+	/* Top-level functions need a nop for decompilation. */
+	noteIndex = js_NewSrcNote2(cx, cg, SRC_FUNCDEF, (ptrdiff_t)atomIndex);
 	if (noteIndex < 0 ||
 	    js_Emit1(cx, cg, JSOP_NOP) < 0) {
 	    return JS_FALSE;
 	}
+
+	/* Top-levels also need a prolog op to predefine their names. */
+	JS_ASSERT(fun->atom);
+	CG_SWITCH_TO_PROLOG(cg);
+	EMIT_ATOM_INDEX_OP(JSOP_DEFFUN, atomIndex);
+	CG_SWITCH_TO_MAIN(cg);
 	break;
       }
 
@@ -730,7 +739,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 	} else {
 	    low  = JSVAL_INT_MAX;
 	    high = JSVAL_INT_MIN;
-	    cg2.base = NULL;
+	    cg2.current = NULL;
 	    for (pn3 = pn2->pn_head; pn3; pn3 = pn3->pn_next) {
 		if (pn3->pn_type == TOK_DEFAULT) {
 		    hasDefault = JS_TRUE;
@@ -823,9 +832,9 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 		    high = i;
 	    }
 	    if (switchop == JSOP_CONDSWITCH) {
-		JS_ASSERT(!cg2.base);
+		JS_ASSERT(!cg2.current);
 	    } else {
-		if (cg2.base)
+		if (cg2.current)
 		    js_FinishCodeGenerator(cx, &cg2);
 		if (switchop == JSOP_TABLESWITCH) {
 		    tablen = (uint32)(high - low + 1);
@@ -1592,6 +1601,11 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 		if (!ale)
 		    return JS_FALSE;
 		atomIndex = ale->index;
+
+		/* Emit a prolog bytecode to predefine the var w/ void value. */
+		CG_SWITCH_TO_PROLOG(cg);
+		EMIT_ATOM_INDEX_OP(pn->pn_op, atomIndex);
+		CG_SWITCH_TO_MAIN(cg);
 	    }
 	    if (pn2->pn_expr) {
 		if (op == JSOP_SETNAME2)
@@ -2590,7 +2604,7 @@ js_FinishTakingTryNotes(JSContext *cx, JSCodeGenerator *cg, JSTryNote **tryp)
     }
     memcpy(final, tmp, count * sizeof(JSTryNote));
     final[count].start = 0;
-    final[count].length = CG_OFFSET(cg);
+    final[count].length = CG_PROLOG_OFFSET(cg) + CG_OFFSET(cg);
     final[count].catchStart = 0;
     *tryp = final;
     return JS_TRUE;

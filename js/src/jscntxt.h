@@ -53,7 +53,16 @@ JS_BEGIN_EXTERN_C
 
 typedef enum JSGCMode { JS_NO_GC, JS_MAYBE_GC, JS_FORCE_GC } JSGCMode;
 
+typedef enum JSRuntimeState {
+    JSRTS_DOWN,
+    JSRTS_LAUNCHING,
+    JSRTS_UP,
+    JSRTS_LANDING
+} JSRuntimeState;
+
 struct JSRuntime {
+    JSRuntimeState      state;
+
     /* Garbage collector state, used by jsgc.c. */
     JSArenaPool         gcArenaPool;
     JSArenaPool         gcFlagsPool;
@@ -132,7 +141,13 @@ struct JSRuntime {
     uint32              requestCount;
 
     /* Lock and owning thread pointer for JS_LOCK_RUNTIME. */
-    JSThinLock          rtLock;
+    PRLock              *rtLock;
+#ifdef DEBUG
+    jsword              rtLockOwner;
+#endif
+
+    /* Used to synchronize down/up state change; uses rtLock. */
+    PRCondVar           *stateChange;
 #endif
 };
 

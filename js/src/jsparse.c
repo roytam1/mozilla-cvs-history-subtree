@@ -446,10 +446,6 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     JSAtom *funAtom, *argAtom;
     JSFunction *fun, *outerFun;
     JSObject *parent;
-    JSPropertyOp getter, setter;
-    uintN attrs;
-    JSBool named;
-    jsval fval;
     JSObject *pobj;
     JSScopeProperty *sprop;
     JSTreeContext funtc;
@@ -471,35 +467,14 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     if (!parent)
 	return NULL;
 
-    /* Set up for ultimate OBJ_DEFINE_PROPERTY call, if not anonymous. */
-    named = !lambda && funAtom && !InWithStatement(tc);
-    getter = setter = NULL;
-    attrs = JSPROP_ENUMERATE;
-
     fun = js_NewFunction(cx, NULL, NULL, 0, 0, parent, funAtom);
     if (!fun)
         return NULL;
 
 #if JS_HAS_GETTER_SETTER
-    if (op != JSOP_NOP) {
-        uintN gsattr;
-
-        if (op == JSOP_GETTER) {
-            getter = (JSPropertyOp) fun->object;
-            gsattr = JSPROP_GETTER;
-        } else {
-            setter = (JSPropertyOp) fun->object;
-            gsattr = JSPROP_SETTER;
-        }
-        fun->flags |= gsattr;
-        attrs |= gsattr;
-
-        fval = JSVAL_VOID;
-    } else
+    if (op != JSOP_NOP)
+        fun->flags |= (op == JSOP_GETTER) ? JSPROP_GETTER : JSPROP_SETTER;
 #endif
-    {
-        fval = OBJECT_TO_JSVAL(fun->object);
-    }
 
     /* Now parse formal argument list and compute fun->nargs. */
     MUST_MATCH_TOKEN(TOK_LP, JSMSG_PAREN_BEFORE_FORMAL);
@@ -576,19 +551,11 @@ FunctionDef(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc,
     pn->pn_tryCount = funtc.tryCount;
 
 #if JS_HAS_LEXICAL_CLOSURE
-    if (outerFun || cx->fp->scopeChain != parent || InWithStatement(tc))
+    if (lambda)
 	pn->pn_op = JSOP_CLOSURE;
-    else if (lambda)
-	pn->pn_op = JSOP_OBJECT;
     else
 #endif
 	pn->pn_op = JSOP_NOP;
-
-    if (named &&
-        !OBJ_DEFINE_PROPERTY(cx, parent, (jsid)funAtom, fval, getter, setter,
-                             attrs, NULL)) {
-        return NULL;
-    }
     return pn;
 }
 
@@ -1540,6 +1507,7 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 	setter = clasp->setProperty;
     }
 
+    ok = JS_TRUE;
     do {
         currentGetter = getter;
         currentSetter = setter;
@@ -1568,8 +1536,6 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 					    JSMSG_VAR_HIDES_ARG,
 					    ATOM_BYTES(atom));
 		ok = JS_FALSE;
-#else
-		ok = JS_TRUE;
 #endif
 	    } else {
 		ok = JS_TRUE;
@@ -1624,17 +1590,18 @@ Variables(JSContext *cx, JSTokenStream *ts, JSTreeContext *tc)
 		currentGetter = clasp->getProperty;
 		currentSetter = clasp->setProperty;
 	    }
-	    ok = OBJ_DEFINE_PROPERTY(cx, obj, (jsid)atom, JSVAL_VOID,
-				     currentGetter, currentSetter,
-				     JSPROP_ENUMERATE | JSPROP_PERMANENT,
-				     &prop);
-	    if (ok && prop) {
-		pobj = obj;
-		if (currentGetter == js_GetLocalVariable) {
+	    if (currentGetter == js_GetLocalVariable) {
+		ok = OBJ_DEFINE_PROPERTY(cx, obj, (jsid)atom, JSVAL_VOID,
+					 currentGetter, currentSetter,
+					 JSPROP_ENUMERATE | JSPROP_PERMANENT,
+					 &prop);
+		if (ok) {
+		    pobj = obj;
+
 		    /*
-		     * Allocate more room for variables in the
-		     * function's frame. We can do this only
-		     * before the function is called.
+		     * Allocate more room for variables in the function's
+		     * frame.  We can do this only before the function is
+		     * first called.
 		     */
 		    sprop = (JSScopeProperty *)prop;
 		    sprop->id = INT_TO_JSVAL(fun->nvars++);

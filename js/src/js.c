@@ -587,22 +587,40 @@ GC(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     return JS_TRUE;
 }
 
+static JSScript *
+ValueToScript(JSContext *cx, jsval v)
+{
+    JSScript *script;
+    JSFunction *fun;
+
+    if (JSVAL_IS_OBJECT(v) &&
+	JS_GET_CLASS(cx, JSVAL_TO_OBJECT(v)) == &js_ScriptClass) {
+	script = JS_GetPrivate(cx, JSVAL_TO_OBJECT(v));
+    } else {
+	fun = JS_ValueToFunction(cx, v);
+	if (!fun)
+	    return JS_FALSE;
+	script = fun->script;
+    }
+    return script;
+}
+
 static JSBool
 GetTrapArgs(JSContext *cx, uintN argc, jsval *argv, JSScript **scriptp,
 	    int32 *ip)
 {
     uintN intarg;
-    JSFunction *fun;
+    JSScript *script;
 
     *scriptp = cx->fp->down->script;
     *ip = 0;
     if (argc != 0) {
 	intarg = 0;
 	if (JS_TypeOfValue(cx, argv[0]) == JSTYPE_FUNCTION) {
-	    fun = JS_ValueToFunction(cx, argv[0]);
-	    if (!fun)
+	    script = ValueToScript(cx, argv[0]);
+	    if (!script)
 		return JS_FALSE;
-	    *scriptp = fun->script;
+	    *scriptp = script;
 	    intarg++;
 	}
 	if (argc > intarg) {
@@ -708,7 +726,7 @@ PCToLine(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 #ifdef DEBUG
 
 static void
-SrcNotes(JSContext *cx, JSFunction *fun )
+SrcNotes(JSContext *cx, JSScript *script)
 {
     uintN offset, delta, caseOff;
     jssrcnote *notes, *sn;
@@ -716,7 +734,7 @@ SrcNotes(JSContext *cx, JSFunction *fun )
     jsatomid atomIndex;
     JSAtom *atom;
 
-    notes = fun->script->notes;
+    notes = script->notes;
     if (notes) {
 	fprintf(gOutFile, "\nSource notes:\n");
 	offset = 0;
@@ -744,11 +762,23 @@ SrcNotes(JSContext *cx, JSFunction *fun )
 	      case SRC_LABELBRACE:
 	      case SRC_BREAK2LABEL:
 	      case SRC_CONT2LABEL:
-	      case SRC_FUNCDEF:
+	      case SRC_FUNCDEF: {
+		const char *bytes;
+		JSFunction *fun;
+		JSString *str;
+
 		atomIndex = (jsatomid) js_GetSrcNoteOffset(sn, 0);
-		atom = js_GetAtom(cx, &fun->script->atomMap, atomIndex);
-		fprintf(gOutFile, " atom %u (%s)", (uintN)atomIndex, ATOM_BYTES(atom));
+		atom = js_GetAtom(cx, &script->atomMap, atomIndex);
+		if (type != SRC_FUNCDEF) {
+		    bytes = ATOM_BYTES(atom);
+		} else {
+		    fun = JS_GetPrivate(cx, ATOM_TO_OBJECT(atom));
+		    str = JS_DecompileFunction(cx, fun, JS_DONT_PRETTY_PRINT);
+		    bytes = str ? JS_GetStringBytes(str) : "N/A";
+		}
+		fprintf(gOutFile, " atom %u (%s)", (uintN)atomIndex, bytes);
 		break;
+	      }
 	      case SRC_SWITCH:
 		fprintf(gOutFile, " length %u", (uintN) js_GetSrcNoteOffset(sn, 0));
 		caseOff = (uintN) js_GetSrcNoteOffset(sn, 1);
@@ -771,22 +801,22 @@ static JSBool
 Notes(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     uintN i;
-    JSFunction *fun;
+    JSScript *script;
 
     for (i = 0; i < argc; i++) {
-	fun = JS_ValueToFunction(cx, argv[i]);
-	if (!fun)
-	    return JS_FALSE;
+	script = ValueToScript(cx, argv[i]);
+	if (!script)
+	    continue;
 
-	SrcNotes(cx, fun);
+	SrcNotes(cx, script);
     }
     return JS_TRUE;
 }
 
 static JSBool
-TryNotes(JSContext *cx, JSFunction *fun)
+TryNotes(JSContext *cx, JSScript *script)
 {
-    JSTryNote *tn = fun->script->trynotes;
+    JSTryNote *tn = script->trynotes;
 
     if (!tn)
 	return JS_TRUE;
@@ -804,7 +834,7 @@ Disassemble(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSBool lines;
     uintN i;
-    JSFunction *fun;
+    JSScript *script;
 
     if (argc > 0 &&
 	JSVAL_IS_STRING(argv[0]) &&
@@ -815,13 +845,13 @@ Disassemble(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 	lines = JS_FALSE;
     }
     for (i = 0; i < argc; i++) {
-	fun = JS_ValueToFunction(cx, argv[i]);
-	if (!fun)
-	    return JS_FALSE;
+	script = ValueToScript(cx, argv[i]);
+	if (!script)
+	    continue;
 
-	js_Disassemble(cx, fun->script, lines, stdout);
-	SrcNotes(cx, fun);
-	TryNotes(cx, fun);
+	js_Disassemble(cx, script, lines, stdout);
+	SrcNotes(cx, script);
+	TryNotes(cx, script);
     }
     return JS_TRUE;
 }
@@ -831,42 +861,42 @@ DisassWithSrc(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
 {
 #define LINE_BUF_LEN 512
     uintN i, len, line1, line2, bupline;
-    JSFunction *fun;
+    JSScript *script;
     FILE *file;
     char linebuf[LINE_BUF_LEN];
     jsbytecode *pc, *end;
     static char sep[] = ";-------------------------";
 
     for (i = 0; i < argc; i++) {
-	fun = JS_ValueToFunction(cx, argv[i]);
-	if (!fun)
-	    return JS_FALSE;
+	script = ValueToScript(cx, argv[i]);
+	if (!script)
+	    continue;
 
-	if (!fun->script || !fun->script->filename) {
+	if (!script || !script->filename) {
 	    JS_ReportErrorNumber(cx, my_GetErrorMessage, NULL,
 					    JSSMSG_FILE_SCRIPTS_ONLY);
 	    return JS_FALSE;
 	}
 
-	file = fopen(fun->script->filename, "r");
+	file = fopen(script->filename, "r");
 	if (!file) {
 	    JS_ReportErrorNumber(cx, my_GetErrorMessage, NULL,
 			    JSSMSG_CANT_OPEN,
-			    fun->script->filename, strerror(errno));
+			    script->filename, strerror(errno));
 	    return JS_FALSE;
 	}
 
-	pc = fun->script->code;
-	end = pc + fun->script->length;
+	pc = script->code;
+	end = pc + script->length;
 
 	/* burn the leading lines */
-	line2 = JS_PCToLineNumber(cx, fun->script, pc);
+	line2 = JS_PCToLineNumber(cx, script, pc);
 	for (line1 = 0; line1 < line2 - 1; line1++)
 	    fgets(linebuf, LINE_BUF_LEN, file);
 
 	bupline = 0;
 	while (pc < end) {
-	    line2 = JS_PCToLineNumber(cx, fun->script, pc);
+	    line2 = JS_PCToLineNumber(cx, script, pc);
 
 	    if (line2 < line1) {
 		if (bupline != line2) {
@@ -881,7 +911,7 @@ DisassWithSrc(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
 		    if (!fgets(linebuf, LINE_BUF_LEN, file)) {
 			JS_ReportErrorNumber(cx, my_GetErrorMessage, NULL,
 				       JSSMSG_UNEXPECTED_EOF,
-				       fun->script->filename);
+				       script->filename);
 			goto bail;
 		    }
 		    line1++;
@@ -889,7 +919,7 @@ DisassWithSrc(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval
 		}
 	    }
 
-	    len = js_Disassemble1(cx, fun->script, pc, pc - fun->script->code,
+	    len = js_Disassemble1(cx, script, pc, pc - script->code,
 				  JS_TRUE, stdout);
 	    if (!len)
 		return JS_FALSE;

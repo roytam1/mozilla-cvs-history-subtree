@@ -97,9 +97,11 @@ struct JSTreeContext {              /* tree context for semantic checks */
 struct JSCodeGenerator {
     void            *codeMark;      /* low watermark in cx->codePool */
     void            *tempMark;      /* low watermark in cx->tempPool */
-    jsbytecode      *base;          /* base of JS bytecode vector */
-    jsbytecode      *limit;         /* one byte beyond end of bytecode */
-    jsbytecode      *next;          /* pointer to next free bytecode */
+    struct {
+        jsbytecode  *base;          /* base of JS bytecode vector */
+        jsbytecode  *limit;         /* one byte beyond end of bytecode */
+        jsbytecode  *next;          /* pointer to next free bytecode */
+    } prolog, main, *current;
     const char      *filename;      /* null or weak link to source filename */
     uintN           firstLine;      /* first line, for js_NewScriptFromCG */
     uintN           currentLine;    /* line number for tree-based srcnote gen */
@@ -116,8 +118,21 @@ struct JSCodeGenerator {
     size_t          tryNoteSpace;   /* # of bytes allocated at tryBase */
 };
 
-#define CG_CODE(cg,offset)  ((cg)->base + (offset))
-#define CG_OFFSET(cg)       PTRDIFF((cg)->next, (cg)->base, jsbytecode)
+#define CG_BASE(cg)             ((cg)->current->base)
+#define CG_LIMIT(cg)            ((cg)->current->limit)
+#define CG_NEXT(cg)             ((cg)->current->next)
+#define CG_CODE(cg,offset)      (CG_BASE(cg) + (offset))
+#define CG_OFFSET(cg)           PTRDIFF(CG_NEXT(cg), CG_BASE(cg), jsbytecode)
+
+#define CG_PROLOG_BASE(cg)      ((cg)->prolog.base)
+#define CG_PROLOG_LIMIT(cg)     ((cg)->prolog.limit)
+#define CG_PROLOG_NEXT(cg)      ((cg)->prolog.next)
+#define CG_PROLOG_CODE(cg,poff) (CG_PROLOG_BASE(cg) + (poff))
+#define CG_PROLOG_OFFSET(cg)    PTRDIFF(CG_PROLOG_NEXT(cg), CG_PROLOG_BASE(cg),\
+                                        jsbytecode)
+
+#define CG_SWITCH_TO_MAIN(cg)   ((cg)->current = &(cg)->main)
+#define CG_SWITCH_TO_PROLOG(cg) ((cg)->current = &(cg)->prolog)
 
 /*
  * Initialize cg to allocate bytecode space from cx->codePool, and srcnote

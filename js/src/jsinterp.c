@@ -1001,7 +1001,7 @@ js_Interpret(JSContext *cx, jsval *result)
     JSOp op, op2;
     JSCodeSpec *cs;
     JSAtom *atom;
-    uintN argc, slot;
+    uintN argc, slot, attrs;
     jsval *vp, lval, rval, ltmp, rtmp;
     jsid id;
     JSObject *withobj, *origobj, *propobj;
@@ -1028,9 +1028,6 @@ js_Interpret(JSContext *cx, jsval *result)
 #if JS_HAS_LEXICAL_CLOSURE
     JSFunction *fun2;
     JSObject *closure;
-#endif
-#if JS_HAS_EXPORT_IMPORT || JS_HAS_GETTER_SETTER
-    uintN attrs;
 #endif
 #if JS_HAS_GETTER_SETTER
     JSPropertyOp getter, setter;
@@ -2644,6 +2641,42 @@ js_Interpret(JSContext *cx, jsval *result)
 	    *vp = sp[-1];
 	    break;
 
+	  case JSOP_DEFFUN:
+	    /* We must be at top-level ("box") scope, not inside a with. */
+	    JS_ASSERT(fp->scopeChain == js_FindVariableScope(cx, &fun));
+
+	    atom = GET_ATOM(cx, script, pc);
+	    obj = ATOM_TO_OBJECT(atom);
+	    fun = JS_GetPrivate(cx, obj);
+	    attrs = fun->flags & (JSFUN_GETTER | JSFUN_SETTER);
+	    ok = OBJ_DEFINE_PROPERTY(cx, fp->scopeChain, (jsid)fun->atom,
+	                             attrs ? JSVAL_VOID : OBJECT_TO_JSVAL(obj),
+	                             (attrs & JSFUN_GETTER)
+	                             ? (JSPropertyOp) obj
+	                             : NULL,
+	                             (attrs & JSFUN_SETTER)
+	                             ? (JSPropertyOp) obj
+	                             : NULL,
+	                             attrs | JSPROP_ENUMERATE,
+				     NULL);
+	    if (!ok)
+	    	goto out;
+	    break;
+
+	  case JSOP_DEFCONST:
+	  case JSOP_DEFVAR:
+	    atom = GET_ATOM(cx, script, pc);
+	    obj = js_FindVariableScope(cx, &fun);
+	    JS_ASSERT(!fun);
+	    attrs = JSPROP_ENUMERATE | JSPROP_PERMANENT;
+	    if (op == JSOP_DEFCONST)
+	    	attrs |= JSPROP_READONLY;
+	    ok = OBJ_DEFINE_PROPERTY(cx, obj, (jsid)atom, JSVAL_VOID,
+				     NULL, NULL, attrs, NULL);
+	    if (!ok)
+	    	goto out;
+	    break;
+
 #if JS_HAS_GETTER_SETTER
           case JSOP_GETTER:
           case JSOP_SETTER:
@@ -2684,7 +2717,7 @@ js_Interpret(JSContext *cx, jsval *result)
                 JS_ASSERT(JSVAL_IS_OBJECT(lval));
                 obj = JSVAL_TO_OBJECT(lval);
                 break;
-#endif
+#endif /* JS_HAS_INITIALIZERS */
 
               default:
                 JS_ASSERT(0);
@@ -2715,7 +2748,7 @@ js_Interpret(JSContext *cx, jsval *result)
             if (cs->ndefs)
                 PUSH_OPND(rval);
             break;
-#endif
+#endif /* JS_HAS_GETTER_SETTER */
 
 #if JS_HAS_INITIALIZERS
 	  case JSOP_NEWINIT:

@@ -626,7 +626,8 @@ JS_NewRuntime(uint32 maxbytes)
     if (!rt->requestDone)
 	goto bad;
     js_SetupLocks(20,20);		/* this is asymmetric with JS_ShutDown. */
-    js_NewLock(&rt->rtLock);
+    rt->rtLock = JS_NEW_LOCK();
+    rt->stateChange = JS_NEW_CONDVAR(rt->rtLock);
 #endif
     rt->propertyCache.empty = JS_TRUE;
     JS_INIT_CLIST(&rt->contextList);
@@ -650,7 +651,7 @@ JS_DestroyRuntime(JSRuntime *rt)
 	JS_DESTROY_CONDVAR(rt->gcDone);
     if (rt->requestDone)
 	JS_DESTROY_CONDVAR(rt->requestDone);
-    js_DestroyLock(&rt->rtLock);
+    JS_DESTROY_LOCK(rt->rtLock);
 #endif
     free(rt);
 }
@@ -2157,8 +2158,9 @@ JS_NewFunction(JSContext *cx, JSNative call, uintN nargs, uintN flags,
 
     CHECK_REQUEST(cx);
 
-    atom = NULL;
-    if (name) {
+    if (!name) {
+    	atom = NULL;
+    } else {
 	atom = js_Atomize(cx, name, strlen(name), 0);
 	if (!atom)
 	    return NULL;

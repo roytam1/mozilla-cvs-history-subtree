@@ -244,3 +244,10 @@ OPDEF(JSOP_ENUMELEM,  122,"enumelem",   NULL,         1,  3,  0,  1,  JOF_BYTE |
  */
 OPDEF(JSOP_GETTER,    123,js_getter_str,js_getter_str,1,  0,  0,  0,  JOF_BYTE)
 OPDEF(JSOP_SETTER,    124,js_setter_str,js_setter_str,1,  0,  0,  0,  JOF_BYTE)
+
+/*
+ * Prolog bytecodes for defining function, var, and const names.
+ */
+OPDEF(JSOP_DEFFUN,    125,"deffun",     NULL,         3,  0,  0,  0,  JOF_CONST|JOF_NAME|JOF_SET)
+OPDEF(JSOP_DEFCONST,  126,"defconst",   NULL,         3,  0,  0,  0,  JOF_CONST|JOF_NAME|JOF_SET)
+OPDEF(JSOP_DEFVAR,    127,"defvar",     NULL,         3,  0,  0,  0,  JOF_CONST|JOF_NAME)

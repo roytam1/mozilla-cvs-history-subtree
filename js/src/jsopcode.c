@@ -110,6 +110,8 @@ js_Disassemble(JSContext *cx, JSScript *script, JSBool lines, FILE *fp)
     pc = script->code;
     end = pc + script->length;
     while (pc < end) {
+	if (pc == script->main)
+	    fputs("main:\n", fp);
 	len = js_Disassemble1(cx, script, pc, pc - script->code, lines, fp);
 	if (!len)
 	    return;
@@ -1883,7 +1885,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 		obj = ATOM_TO_OBJECT(atom);
 		fun = JS_GetPrivate(cx, obj);
 		jp2 = js_NewPrinter(cx, JS_GetFunctionName(fun), jp->indent,
-                                    jp->pretty);
+                                    JS_FALSE);
 		if (!jp2)
 		    return JS_FALSE;
 		jp2->scope = jp->scope;

@@ -51,7 +51,7 @@ class nsIScriptContext : public nsISupports {
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTCONTEXT_IID)
 
-  // deprecated: remove later
+  // deprecated: remove later (XXXbe when is later?)
   NS_IMETHOD EvaluateString(const nsString& aScript,
                             const char *aURL,
                             PRUint32 aLineNo,
@@ -60,7 +60,7 @@ public:
                             PRBool* aIsUndefined) = 0;
 
   /**
-   * Execute a script.
+   * Compile and execute a script.
    *
    * @param aScript a string representing the script to be executed
    * @param aObj a JavaScript JSObject for the scope to execute in, or nsnull
@@ -68,6 +68,7 @@ public:
    * @param principal the principal that produced the script
    * @param aURL the URL or filename for error messages
    * @param aLineNo the starting line number for the script for error messages
+   * @param aVersion the script language version to use when executing
    * @param aRetValue the result of executing the script
    * @param aIsUndefined true if the result of executing the script is the 
    *                     undefined value
@@ -83,6 +84,54 @@ public:
                             const char* aVersion,
                             nsString& aRetValue,
                             PRBool* aIsUndefined) = 0;
+
+  /**
+   * Compile a script.
+   *
+   * @param aText a PRUnichar buffer containing script source
+   * @param aTextLength number of characters in aText
+   * @param aScopeObject an object telling the scope in which to execute,
+   *                     or nsnull to use a default scope
+   * @param principal the principal that produced the script
+   * @param aURL the URL or filename for error messages
+   * @param aLineNo the starting line number for the script for error messages
+   * @param aVersion the script language version to use when executing
+   * @param aScriptObject an executable object that's the result of compiling
+   *                      the script.  The caller is responsible for GC rooting
+   *                      this object.
+   *
+   * @return NS_OK if the script source was valid and got compiled
+   *
+   **/
+  NS_IMETHOD CompileScript(const PRUnichar* aText,
+                           PRInt32 aTextLength,
+                           void *aScopeObject,
+                           nsIPrincipal *principal,
+                           const char *aURL,
+                           PRUint32 aLineNo,
+                           const char* aVersion,
+                           void** aScriptObject) = 0;
+
+  /**
+   * Execute a precompiled script object.
+   *
+   * @param aScriptObject an object representing the script to be executed
+   * @param aScopeObject an object telling the scope in which to execute,
+   *                     or nsnull to use a default scope
+   * @param aVersion the script language version to use when executing
+   * @param aRetValue the result of executing the script, may be null in
+   *                  which case no result string is computed
+   * @param aIsUndefined true if the result of executing the script is the 
+   *                     undefined value, may be null for "don't care"
+   *
+   * @return NS_OK if the script was valid and got executed
+   *
+   */ 
+  NS_IMETHOD ExecuteScript(void* aScriptObject,
+                           void *aScopeObject,
+                           const char* aVersion,
+                           nsString* aRetValue,
+                           PRBool* aIsUndefined) = 0;
 
   NS_IMETHOD CompileFunction(void *aObj, nsIAtom *aName,
                              const nsString& aBody) = 0;

@@ -58,6 +58,7 @@ struct JSTryNote {
 struct JSScript {
     jsbytecode   *code;         /* bytecodes and their immediate operands */
     uint32       length;        /* length of code vector */
+    jsbytecode   *main;         /* main entry point, after predef'ing prolog */
     JSAtomMap    atomMap;       /* maps immediate index to literal struct */
     const char   *filename;     /* source filename or null */
     uintN        lineno;        /* base line number of script */
@@ -68,7 +69,7 @@ struct JSScript {
     JSObject     *object;       /* optional Script-class object wrapper */
 };
 
-extern JSClass js_ScriptClass;
+extern JS_FRIEND_DATA(JSClass) js_ScriptClass;
 
 extern JSObject *
 js_InitScriptClass(JSContext *cx, JSObject *obj);
@@ -78,6 +79,7 @@ js_NewScript(JSContext *cx, uint32 length);
 
 extern JSScript *
 js_NewScriptFromParams(JSContext *cx, jsbytecode *code, uint32 length,
+		       jsbytecode *prolog, uint32 prologLength,
 		       const char *filename, uintN lineno, uintN depth,
 		       jssrcnote *notes, JSTryNote *trynotes,
 		       JSPrincipals *principals);
