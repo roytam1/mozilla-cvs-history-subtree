@@ -1,9 +1,0 @@
-dbm
-xpcom
-intl
-js
-modules/security/freenav
-modules/libpref
-modules/libimg
-caps
-
