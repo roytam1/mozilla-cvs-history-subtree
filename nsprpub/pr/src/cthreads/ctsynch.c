@@ -17,8 +17,8 @@
  */
 
 /*
-** File:            ptsynch.c
-** Descritpion:        Implemenation for thread synchronization using pthreads
+** File:            ctsynch.c
+** Descritpion:        Implemenation for thread synchronization using cthreads
 ** Exports:            prlock.h, prcvar.h, prmon.h, prcmon.h
 */
 
@@ -184,7 +184,7 @@ static PRStatus ct_TimedWait(
     tmo.tv_nsec = timeout - (tmo.tv_sec * ticks);
     tmo.tv_nsec = PR_IntervalToMicroseconds(CT_NANOPERMICRO * tmo.tv_nsec);
 
-    /* pthreads wants this in absolute time, off we go ... */
+    /* cthreads wants this in absolute time, off we go ... */
 #if defined(SOLARIS) && defined(_SVID_GETTOD)
     (void)gettimeofday(&now);
 #else
