@@ -37,13 +37,11 @@
 #include "nsCertPicker.h"
 #include "nsMemory.h"
 #include "nsCOMPtr.h"
-#include "nsIProxyObjectManager.h"
 #include "nsXPIDLString.h"
 #include "nsIServiceManager.h"
 #include "nsNSSComponent.h"
 #include "nsNSSCertificate.h"
 #include "nsINSSDialogs.h"
-#include "nsNSSAutoPtr.h"
 #include "nsReadableUtils.h"
 
 #include "cert.h"
@@ -76,6 +74,7 @@ NS_IMETHODIMP nsCertPicker::PickByUsage(nsIInterfaceRequestor *ctx, const PRUnic
   nsresult rv;
 
   {
+    // Iterate over all certs. This assures that user is logged in to all hardware tokens.
     CERTCertList *allcerts = nsnull;
     nsCOMPtr<nsIInterfaceRequestor> ctx = new PipUIContext();
     allcerts = PK11_ListCerts(PK11CertListUnique, ctx);
@@ -86,228 +85,107 @@ NS_IMETHODIMP nsCertPicker::PickByUsage(nsIInterfaceRequestor *ctx, const PRUnic
   /* find all user certs that are valid and for SSL */
   /* note that we are allowing expired certs in this list */
 
-  nsNSSAutoCPtr<CERTCertList> certList(
+  CERTCertList *certList = 
     CERT_FindUserCertsByUsage(CERT_GetDefaultCertDB(), 
                               (SECCertUsage)certUsage,
                               !allowDuplicateNicknames,
                               !allowInvalid,
-                              ctx),
-    CERT_DestroyCertList
-  );
+                              ctx);
   
   if (!certList) {
     return NS_ERROR_NOT_AVAILABLE;
   }
   
-  nsNSSAutoCPtr<CERTCertNicknames> nicknames(
+  rv = NS_OK;
+  
+  CERTCertNicknames *nicknames = 
     CERT_NicknameStringsFromCertList(certList,
                                      NICKNAME_EXPIRED_STRING,
-                                     NICKNAME_NOT_YET_VALID_STRING),
-    CERT_FreeNicknames
-  );
+                                     NICKNAME_NOT_YET_VALID_STRING);
 
-  if (!certList) {
-    return NS_ERROR_NOT_AVAILABLE;
+  if (!nicknames) {
+    rv = NS_ERROR_NOT_AVAILABLE;
   }
+  else {
+    certNicknameList = (PRUnichar **)nsMemory::Alloc(sizeof(PRUnichar *) * nicknames->numnicknames);
+    certDetailsList = (PRUnichar **)nsMemory::Alloc(sizeof(PRUnichar *) * nicknames->numnicknames);
 
-  certNicknameList = (PRUnichar **)nsMemory::Alloc(sizeof(PRUnichar *) * nicknames->numnicknames);
-  certDetailsList = (PRUnichar **)nsMemory::Alloc(sizeof(PRUnichar *) * nicknames->numnicknames);
-
-  nsCOMPtr<nsIProxyObjectManager> proxyman(do_GetService(NS_XPCOMPROXY_CONTRACTID));
-  NS_DEFINE_CID(nssComponentCID, NS_NSSCOMPONENT_CID);
-  nsCOMPtr<nsINSSComponent> nssComponent(do_GetService(nssComponentCID, &rv));
-
-  if (proxyman && nssComponent)
-  for (i = 0, node = CERT_LIST_HEAD(certList);
-       !CERT_LIST_END(node, certList);
-       ++i, node = CERT_LIST_NEXT(node)
-      )
-  {
-    nsNSSCertificate *tempCert = new nsNSSCertificate(node->cert);
-    NS_ADDREF(tempCert);
-
-    nsCOMPtr<nsIX509Cert> x509 = do_QueryInterface(tempCert);
-
-    nsCOMPtr<nsIX509Cert> x509Proxy;
-    proxyman->GetProxyForObject( NS_UI_THREAD_EVENTQ,
-                                 nsIX509Cert::GetIID(),
-                                 x509,
-                                 PROXY_SYNC | PROXY_ALWAYS,
-                                 getter_AddRefs(x509Proxy));
-
-    if (x509Proxy) {
-      nsAutoString nickWithSerial;
-      nsAutoString str;
-      nsAutoString info;
-      PRUnichar *temp1 = 0;
-
-      nickWithSerial.Append(NS_ConvertUTF8toUCS2(nicknames->nicknames[i]));
-
-      if (NS_SUCCEEDED(nssComponent->GetPIPNSSBundleString(NS_LITERAL_STRING("CertInfoIssuedFor").get(), info))) {
-        str.Append(info);
-        str.Append(NS_LITERAL_STRING("\n"));
-      }
-
-      if (NS_SUCCEEDED(x509Proxy->GetSubjectName(&temp1)) && temp1 && nsCharTraits<PRUnichar>::length(temp1)) {
-        str.Append(NS_LITERAL_STRING("  "));
-        if (NS_SUCCEEDED(nssComponent->GetPIPNSSBundleString(NS_LITERAL_STRING("CertDumpSubject").get(), info))) {
-          str.Append(info);
-          str.Append(NS_LITERAL_STRING(": "));
-        }
-        str.Append(temp1);
-        nsMemory::Free(temp1);
-        str.Append(NS_LITERAL_STRING("\n"));
-      }
-
-      if (NS_SUCCEEDED(x509Proxy->GetSerialNumber(&temp1)) && temp1 && nsCharTraits<PRUnichar>::length(temp1)) {
-        str.Append(NS_LITERAL_STRING("  "));
-        if (NS_SUCCEEDED(nssComponent->GetPIPNSSBundleString(NS_LITERAL_STRING("CertDumpSerialNo").get(), info))) {
-          str.Append(info);
-          str.Append(NS_LITERAL_STRING(": "));
-        }
-        str.Append(temp1);
-
-        nickWithSerial.Append(NS_LITERAL_STRING(" ["));
-        nickWithSerial.Append(temp1);
-        nickWithSerial.Append(NS_LITERAL_STRING("]"));
-
-        nsMemory::Free(temp1);
-        str.Append(NS_LITERAL_STRING("\n"));
-      }
-
-
-      {
-        nsCOMPtr<nsIX509CertValidity> validity;
-        nsCOMPtr<nsIX509CertValidity> originalValidity;
-        rv = x509Proxy->GetValidity(getter_AddRefs(originalValidity));
-        if (NS_SUCCEEDED(rv) && originalValidity) {
-          proxyman->GetProxyForObject( NS_UI_THREAD_EVENTQ,
-                                       nsIX509CertValidity::GetIID(),
-                                       originalValidity,
-                                       PROXY_SYNC | PROXY_ALWAYS,
-                                       getter_AddRefs(validity));
-        }
-
-        if (validity) {
-          str.Append(NS_LITERAL_STRING("  "));
-          if (NS_SUCCEEDED(nssComponent->GetPIPNSSBundleString(NS_LITERAL_STRING("CertInfoValid").get(), info))) {
-            str.Append(info);
-          }
-
-          if (NS_SUCCEEDED(validity->GetNotBeforeLocalTime(&temp1)) && temp1 && nsCharTraits<PRUnichar>::length(temp1)) {
-            str.Append(NS_LITERAL_STRING(" "));
-            if (NS_SUCCEEDED(nssComponent->GetPIPNSSBundleString(NS_LITERAL_STRING("CertInfoFrom").get(), info))) {
-              str.Append(info);
-            }
-            str.Append(NS_LITERAL_STRING(" "));
-            str.Append(temp1);
-            nsMemory::Free(temp1);
-          }
-
-          if (NS_SUCCEEDED(validity->GetNotAfterLocalTime(&temp1)) && temp1 && nsCharTraits<PRUnichar>::length(temp1)) {
-            str.Append(NS_LITERAL_STRING(" "));
-            if (NS_SUCCEEDED(nssComponent->GetPIPNSSBundleString(NS_LITERAL_STRING("CertInfoTo").get(), info))) {
-              str.Append(info);
-            }
-            str.Append(NS_LITERAL_STRING(" "));
-            str.Append(temp1);
-            nsMemory::Free(temp1);
-          }
-
-          str.Append(NS_LITERAL_STRING("\n"));
-        }
-      }
-
-      PRUint32 tempInt = 0;
-      if (NS_SUCCEEDED(x509Proxy->GetPurposes(&tempInt, &temp1)) && temp1 && nsCharTraits<PRUnichar>::length(temp1)) {
-        str.Append(NS_LITERAL_STRING("  "));
-        if (NS_SUCCEEDED(nssComponent->GetPIPNSSBundleString(NS_LITERAL_STRING("CertInfoPurposes").get(), info))) {
-          str.Append(info);
-        }
-        str.Append(NS_LITERAL_STRING(": "));
-        str.Append(temp1);
-        nsMemory::Free(temp1);
-        str.Append(NS_LITERAL_STRING("\n"));
-      }
-
-      if (NS_SUCCEEDED(nssComponent->GetPIPNSSBundleString(NS_LITERAL_STRING("CertInfoIssuedBy").get(), info))) {
-        str.Append(info);
-        str.Append(NS_LITERAL_STRING("\n"));
-      }
-
-      if (NS_SUCCEEDED(x509Proxy->GetIssuerName(&temp1)) && temp1 && nsCharTraits<PRUnichar>::length(temp1)) {
-        str.Append(NS_LITERAL_STRING("  "));
-        if (NS_SUCCEEDED(nssComponent->GetPIPNSSBundleString(NS_LITERAL_STRING("CertDumpSubject").get(), info))) {
-          str.Append(info);
-          str.Append(NS_LITERAL_STRING(": "));
-        }
-        str.Append(temp1);
-        nsMemory::Free(temp1);
-        str.Append(NS_LITERAL_STRING("\n"));
-      }
-
-      /*
-        the above produces output the following output:
-
-        Issued to: 
-          Subject: $subjectName
-          Serial number: $serialNumber
-          Valid from: $starting_date to $expriation_date
-          Purposes: $purposes
-        Issued by:
-          Subject: $issuerName
-      */
-
-      certNicknameList[i] = ToNewUnicode(nickWithSerial);
-      certDetailsList[i] = ToNewUnicode(str);
-    }
-
-    NS_RELEASE(tempCert);
-  }
-
-  nsICertPickDialogs *dialogs = nsnull;
-  rv = getNSSDialogs((void**)&dialogs, NS_GET_IID(nsICertPickDialogs));
-
-  if (NS_SUCCEEDED(rv)) {
-    /* Throw up the cert picker dialog and get back the index of the selected cert */
-    rv = dialogs->PickCertificate(ctx, title, infoPrompt,
-      (const PRUnichar**)certNicknameList, (const PRUnichar**)certDetailsList,
-      nicknames->numnicknames, &selectedIndex, canceled);
-
-    for (i = 0; i < nicknames->numnicknames; ++i) {
-      nsMemory::Free(certNicknameList[i]);
-      nsMemory::Free(certDetailsList[i]);
-    }
-    nsMemory::Free(certNicknameList);
-    nsMemory::Free(certDetailsList);
-
-    NS_RELEASE(dialogs);
-  }
-
-  if (NS_SUCCEEDED(rv) && !*canceled) {
     for (i = 0, node = CERT_LIST_HEAD(certList);
          !CERT_LIST_END(node, certList);
-         ++i, node = CERT_LIST_NEXT(node)) {
+         ++i, node = CERT_LIST_NEXT(node)
+        )
+    {
+      nsNSSCertificate *tempCert = new nsNSSCertificate(node->cert);
+      if (tempCert) {
 
-      if (i == selectedIndex) {
-        nsNSSCertificate *cert = new nsNSSCertificate(node->cert);
-        if (!cert) {
-          return NS_ERROR_OUT_OF_MEMORY;
-        }
+        // XXX we really should be using an nsCOMPtr instead of manually add-refing,
+        // but nsNSSCertificate does not have a default constructor.
 
-        nsIX509Cert *x509 = 0;
-        nsresult rv = cert->QueryInterface(NS_GET_IID(nsIX509Cert), (void**)&x509);
-        if (NS_FAILED(rv)) {
-          return rv;
-        }
+        NS_ADDREF(tempCert);
+
+        nsAutoString i_nickname(NS_ConvertUTF8toUCS2(nicknames->nicknames[i]));
+        nsAutoString nickWithSerial;
+        nsAutoString details;
         
-        NS_ADDREF(x509);
-        *_retval = x509;
-        NS_RELEASE(cert);
-        break;
+        if (NS_SUCCEEDED(tempCert->FormatUIStrings(i_nickname, nickWithSerial, details))) {
+          certNicknameList[i] = ToNewUnicode(nickWithSerial);
+          certDetailsList[i] = ToNewUnicode(details);
+        }
+
+        NS_RELEASE(tempCert);
       }
     }
+
+    nsICertPickDialogs *dialogs = nsnull;
+    rv = getNSSDialogs((void**)&dialogs, NS_GET_IID(nsICertPickDialogs));
+
+    if (NS_SUCCEEDED(rv)) {
+      /* Throw up the cert picker dialog and get back the index of the selected cert */
+      rv = dialogs->PickCertificate(ctx, title, infoPrompt,
+        (const PRUnichar**)certNicknameList, (const PRUnichar**)certDetailsList,
+        nicknames->numnicknames, &selectedIndex, canceled);
+
+      for (i = 0; i < nicknames->numnicknames; ++i) {
+        nsMemory::Free(certNicknameList[i]);
+        nsMemory::Free(certDetailsList[i]);
+      }
+      nsMemory::Free(certNicknameList);
+      nsMemory::Free(certDetailsList);
+
+      NS_RELEASE(dialogs);
+    }
+
+    if (NS_SUCCEEDED(rv) && !*canceled) {
+      for (i = 0, node = CERT_LIST_HEAD(certList);
+           !CERT_LIST_END(node, certList);
+           ++i, node = CERT_LIST_NEXT(node)) {
+
+        if (i == selectedIndex) {
+          nsNSSCertificate *cert = new nsNSSCertificate(node->cert);
+          if (!cert) {
+            rv = NS_ERROR_OUT_OF_MEMORY;
+            break;
+          }
+
+          nsIX509Cert *x509 = 0;
+          nsresult rv = cert->QueryInterface(NS_GET_IID(nsIX509Cert), (void**)&x509);
+          if (NS_FAILED(rv)) {
+            break;
+          }
+
+          NS_ADDREF(x509);
+          *_retval = x509;
+          NS_RELEASE(cert);
+          break;
+        }
+      }
+    }
+
+    CERT_FreeNicknames(nicknames);
   }
 
+  if (certList) {
+    CERT_DestroyCertList(certList);
+  }
   return NS_OK;
 }

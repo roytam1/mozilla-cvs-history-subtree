@@ -62,6 +62,7 @@ public:
   nsresult MarkForPermDeletion();
   nsresult SetCertType(PRUint32 aCertType);
   nsresult GetCertType(PRUint32 *aCertType);
+  nsresult FormatUIStrings(const nsAutoString &nickname, nsAutoString &nickWithSerial, nsAutoString &details);
 
 private:
   CERTCertificate *mCert;
