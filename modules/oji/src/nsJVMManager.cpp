@@ -298,7 +298,7 @@ nsJVMManager::StartupJVM(void)
     }
 
     PR_ASSERT(fJVM == NULL);
-    nsIPlugin* plugin = NPL_LoadPluginByType(NPJVM_MIME_TYPE);
+    nsIPlugin* plugin = NPL_LoadPluginByType(NS_JVM_MIME_TYPE);
     if (plugin == NULL) {
         fStatus = nsJVMStatus_Failed;
         return fStatus;
@@ -310,9 +310,17 @@ nsJVMManager::StartupJVM(void)
         fStatus = nsJVMStatus_Failed;
         return fStatus;
     }
-    
-    /* else the JVM is running. */
-    fStatus = nsJVMStatus_Running;
+
+    // Get an execution environment -- that will cause the VM to start up
+    JNIEnv* env = NULL;
+    rslt = fJVM->GetJNIEnv(&env);
+    if (rslt != NS_OK || env == NULL) {
+        fStatus = nsJVMStatus_Failed;
+    }
+    else {
+        /* else the JVM is running. */
+        fStatus = nsJVMStatus_Running;
+    }
 
 #if 0
     JSContext* crippledContext = LM_GetCrippledContext();
