@@ -15,11 +15,11 @@ MOD_DEPTH = ../..
 ifeq ($(USE_64), 1)
 DIRS = \
 	SUNWprx \
-	SUNWprx-devl
+	SUNWprdx
 else
 DIRS = \
 	SUNWpr \
-	SUNWpr-devl
+	SUNWprd
 endif
 
 PROTO = \
