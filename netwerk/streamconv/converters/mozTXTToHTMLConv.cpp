@@ -200,7 +200,7 @@ mozTXTToHTMLConv::FindURLStart(const PRUnichar * aInString, PRInt32 aInLength,
                            temp[PRUint32(i)] == '"'))
     {
       start = PRUint32(++i);
-      return PR_TRUE;
+      return start < pos;
     }
     else
       return PR_FALSE;
@@ -216,7 +216,7 @@ mozTXTToHTMLConv::FindURLStart(const PRUnichar * aInString, PRInt32 aInLength,
          aInString[PRUint32(i)] == '.'
          ); i--)
       ;
-    if (++i >= 0 && nsCRT::IsAsciiAlpha(aInString[PRUint32(i)]))
+    if (++i >= 0 && i < pos && nsCRT::IsAsciiAlpha(aInString[PRUint32(i)]))
     {
       start = PRUint32(i);
       return PR_TRUE;
@@ -239,7 +239,7 @@ mozTXTToHTMLConv::FindURLStart(const PRUnichar * aInString, PRInt32 aInLength,
       ;
     if
       (
-        ++i >= 0
+        ++i >= 0 && i < pos
           &&
           (
             nsCRT::IsAsciiAlpha(aInString[PRUint32(i)]) ||
@@ -274,7 +274,7 @@ mozTXTToHTMLConv::FindURLEnd(const PRUnichar * aInString, PRInt32 aInStringLengt
         (check == RFC1738 || temp[start - 1] == '<' ? '>' : '"'))
     {
       end = PRUint32(i);
-      return PR_TRUE;
+      return end > pos;
     }
     else
       return PR_FALSE;
