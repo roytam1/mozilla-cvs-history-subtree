@@ -69,7 +69,7 @@ CBrowserWindow::CBrowserWindow() :
    mBrowserShell(NULL), mBrowserChrome(NULL),
    mURLField(NULL), mStatusBar(NULL), mThrobber(NULL),
    mBackButton(NULL), mForwardButton(NULL), mStopButton(NULL),
-   mProgressBar(NULL)
+   mProgressBar(NULL), mBusy(false)
 {
 	nsresult rv = CommonConstruct();
 	if (NS_FAILED(rv))
@@ -320,6 +320,12 @@ NS_METHOD CBrowserWindow::GetWidget(nsIWidget** aWidget)
 }
 
 
+NS_METHOD CBrowserWindow::Stop()
+{
+    return mBrowserShell->Stop();
+}
+
+
 //*****************************************************************************
 //***    Chrome Interraction
 //*****************************************************************************
@@ -363,6 +369,8 @@ NS_METHOD CBrowserWindow::OnStatusNetStart(nsIWebProgress *progress, nsIRequest 
 	if (mStopButton)
 		mStopButton->Enable();
 
+    mBusy = true;
+    
 	// Inform any other interested parties
 	// Actually, all of the above stuff should done through
 	// broadcasters and listeners. But for demo's sake this
@@ -391,6 +399,8 @@ NS_METHOD CBrowserWindow::OnStatusNetStop(nsIWebProgress *progress, nsIRequest *
 		mBrowserShell->CanGoForward() ? mForwardButton->Enable() : mForwardButton->Disable();
 	if (mStopButton)
 		mStopButton->Disable();
+	
+	mBusy = false;
 		
 	// Inform any other interested parties
 	// Actually, all of the above stuff should done through

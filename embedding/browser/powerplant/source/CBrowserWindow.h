@@ -101,6 +101,10 @@ public:
    CBrowserShell*       GetBrowserShell() const
                         { return mBrowserShell; }
                         
+   NS_METHOD            Stop();
+   Boolean              IsBusy()
+                        { return mBusy; }
+                        
 protected:
 
       // Called by both constructors
@@ -134,6 +138,7 @@ protected:
 	CThrobber*           mThrobber;
 	LBevelButton			*mBackButton, *mForwardButton, *mStopButton;
 	LProgressBar*        mProgressBar;
+	Boolean                 mBusy;
 };
 
 
