@@ -34,7 +34,7 @@
 #include "nsString.h"
 #include "nsCOMPtr.h"
 #include "nsWeakReference.h"
-#include "prclist.h"
+#include "nsVoidArray.h"
 
 class nsHttpConnection;
 class nsHttpConnectionInfo;
@@ -123,7 +123,7 @@ private:
     // in a queue of nsPendingTransaction objects.  nsPendingTransaction 
     // implements nsAHttpTransactionSink to handle transaction Cancellation.
     //
-    class nsPendingTransaction : public PRCList
+    class nsPendingTransaction
     {
     public:
         nsPendingTransaction(nsHttpTransaction *, nsHttpConnectionInfo *);
@@ -196,11 +196,11 @@ private:
     nsCString mAcceptCharsets;
 
     // connection management
-    PRCList  mActiveConnections;    // list of nsHttpConnection objects
-    PRCList  mIdleConnections;      // list of nsHttpConnection objects
-    PRCList  mTransactionQ;         // list of nsPendingTransaction objects
-    PRUint32 mNumActiveConnections;
-    PRUint32 mNumIdleConnections;
+    nsVoidArray mActiveConnections;    // list of nsHttpConnection objects
+    nsVoidArray mIdleConnections;      // list of nsHttpConnection objects
+    nsVoidArray mTransactionQ;         // list of nsPendingTransaction objects
+    PRUint32    mNumActiveConnections;
+    PRUint32    mNumIdleConnections;
 
     // useragent components
     nsXPIDLCString mAppName;

@@ -47,7 +47,6 @@ class nsHttpConnection : public nsIStreamListener
                        , public nsIStreamProvider
                        , public nsIProgressEventSink
                        , public nsIInterfaceRequestor
-                       , public PRCList
 {
 public:
     NS_DECL_ISUPPORTS

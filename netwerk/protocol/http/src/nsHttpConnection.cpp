@@ -50,7 +50,6 @@ nsHttpConnection::nsHttpConnection()
     LOG(("Creating nsHttpConnection @%x\n", this));
 
     NS_INIT_ISUPPORTS();
-    PR_INIT_CLIST(this);
 }
 
 nsHttpConnection::~nsHttpConnection()
@@ -65,9 +64,6 @@ nsHttpConnection::~nsHttpConnection()
 
     if (mSocketTransport)
         mSocketTransport->SetReuseConnection(PR_FALSE);
-
-    // ensure that we're no longer part of any list
-    PR_REMOVE_AND_INIT_LINK(this);
 }
 
 nsresult
