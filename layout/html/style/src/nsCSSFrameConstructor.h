@@ -112,6 +112,12 @@ public:
                                    nsIFrame*       aParentFrame,
                                    nsIFrame**      aContinuingFrame);
 
+  NS_IMETHODIMP CreateTreeWidgetContent(nsIPresContext* aPresContext,
+                                        nsIContent*     aContainer,
+                                        nsIContent*     aChild,
+                                        PRInt32         aIndexInContainer,
+                                        nsIFrame**      aResult);
+
 protected:
 
   nsresult ResolveStyleContext(nsIPresContext*   aPresContext,

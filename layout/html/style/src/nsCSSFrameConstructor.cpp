@@ -5944,3 +5944,111 @@ nsCSSFrameConstructor::WrapTextFrame(nsIPresContext* aPresContext,
   return NS_OK;
 }
 
+// Tree Widget Routines
+NS_IMETHODIMP
+nsCSSFrameConstructor::CreateTreeWidgetContent(nsIPresContext* aPresContext,
+                                               nsIContent*     aContainer,
+                                               nsIContent*     aChild,
+                                               PRInt32         aIndexInContainer,
+                                               nsIFrame**      aNewFrame)
+{
+  nsCOMPtr<nsIPresShell> shell;
+  aPresContext->GetShell(getter_AddRefs(shell));
+  nsresult rv = NS_OK;
+
+  // If we have a null parent, then this must be the document element
+  // being inserted
+  
+  // Find the frame that precedes the insertion point.
+  nsIFrame* prevSibling = FindPreviousSibling(shell, aContainer, aIndexInContainer);
+  nsIFrame* nextSibling = nsnull;
+  PRBool    isAppend = PR_FALSE;
+  
+  // If there is no previous sibling, then find the frame that follows
+  if (nsnull == prevSibling) {
+    nextSibling = FindNextSibling(shell, aContainer, aIndexInContainer);
+  }
+
+  // Get the geometric parent.
+  nsIFrame* parentFrame;
+  if ((nsnull == prevSibling) && (nsnull == nextSibling)) {
+
+    // No previous or next sibling so treat this like an appended frame.
+    isAppend = PR_TRUE;
+    shell->GetPrimaryFrameFor(aContainer, &parentFrame);
+  } else {
+    // Use the prev sibling if we have it; otherwise use the next sibling
+    if (nsnull != prevSibling) {
+      prevSibling->GetParent(&parentFrame);
+    } else {
+      nextSibling->GetParent(&parentFrame);
+    }
+  }
+
+  // Construct a new frame
+  if (nsnull != parentFrame) {
+    nsFrameItems            frameItems;
+    nsFrameConstructorState state(mFixedContainingBlock,
+                                  GetAbsoluteContainingBlock(aPresContext, parentFrame),
+                                  GetFloaterContainingBlock(aPresContext, parentFrame));
+    rv = ConstructFrame(aPresContext, state, aChild, parentFrame, PR_FALSE,
+                        frameItems);
+    
+    nsIFrame* newFrame = frameItems.childList;
+    *aNewFrame = newFrame;
+
+    if (NS_SUCCEEDED(rv) && (nsnull != newFrame)) {
+      // Notify the parent frame
+      if (isAppend) {
+        rv = ((nsTreeRowGroupFrame*)parentFrame)->TreeAppendFrames(newFrame);
+      } else {
+        if (!prevSibling) {
+          // We're inserting the new frame as the first child. See if the
+          // parent has a :before pseudo-element
+          nsIFrame* firstChild;
+          parentFrame->FirstChild(nsnull, &firstChild);
+
+          if (IsGeneratedContentFor(aContainer, firstChild)) {
+            // Insert the new frames after the :before pseudo-element
+            prevSibling = firstChild;
+          }
+        }
+        rv = ((nsTreeRowGroupFrame*)parentFrame)->TreeInsertFrames(prevSibling, newFrame);
+      }
+      
+      // If there are new absolutely positioned child frames, then notify
+      // the parent
+      // XXX We can't just assume these frames are being appended, we need to
+      // determine where in the list they should be inserted...
+      if (state.mAbsoluteItems.childList) {
+        rv = state.mAbsoluteItems.containingBlock->AppendFrames(*aPresContext, *shell,
+                                                         nsLayoutAtoms::absoluteList,
+                                                         state.mAbsoluteItems.childList);
+      }
+      
+      // If there are new fixed positioned child frames, then notify
+      // the parent
+      // XXX We can't just assume these frames are being appended, we need to
+      // determine where in the list they should be inserted...
+      if (state.mFixedItems.childList) {
+        rv = state.mFixedItems.containingBlock->AppendFrames(*aPresContext, *shell,
+                                                      nsLayoutAtoms::fixedList,
+                                                      state.mFixedItems.childList);
+      }
+      
+      // If there are new floating child frames, then notify
+      // the parent
+      // XXX We can't just assume these frames are being appended, we need to
+      // determine where in the list they should be inserted...
+      if (state.mFloatedItems.childList) {
+        rv = state.mFloatedItems.containingBlock->AppendFrames(*aPresContext, *shell,
+                                                    nsLayoutAtoms::floaterList,
+                                                    state.mFloatedItems.childList);
+      }
+    }
+  }
+
+  return rv;
+}
+
+

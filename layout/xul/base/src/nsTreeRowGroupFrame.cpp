@@ -24,7 +24,7 @@
 #include "nsIPresShell.h"
 #include "nsTreeRowGroupFrame.h"
 #include "nsIStyleContext.h"
-#include "nsIStyleFrameConstruction.h"
+#include "nsCSSFrameConstructor.h"
 #include "nsIContent.h"
 #include "nsCSSRendering.h"
 #include "nsTreeCellFrame.h"
@@ -160,7 +160,11 @@ nsTreeRowGroupFrame::GetFirstFrame(nsIPresContext& aPresContext)
   for (PRInt32 i = 0; i < count; i++) {
     mContent->ChildAt(i, *getter_AddRefs(childContent));
     if (childContent != scrollbarContent) {
-      mFrameConstructor->ContentInserted(&aPresContext, mContent, childContent, i);
+      mFrameConstructor->CreateTreeWidgetContent(&aPresContext, mContent, childContent, i,
+                                                 &mTopFrame);
+      nsTableFrame* tableFrame = nsnull;
+      nsTableFrame::GetTableFrame(this, tableFrame);
+      tableFrame->DidAppendRowGroup(this);
       return nsnull;
     }
   }
@@ -198,8 +202,12 @@ nsTreeRowGroupFrame::GetNextFrame(nsIPresContext& aPresContext, nsIFrame* aFrame
             mContent->ChildAt(i+1, *getter_AddRefs(nextContent));
           }
         }
-        mFrameConstructor->ContentInserted(&aPresContext, mContent, nextContent, i+1);
+        mFrameConstructor->CreateTreeWidgetContent(&aPresContext, mContent, nextContent, i+1,
+                                                   aResult);
         *aResult = nsnull;
+        nsTableFrame* tableFrame = nsnull;
+        nsTableFrame::GetTableFrame(this, tableFrame);
+        tableFrame->DidAppendRowGroup(this);
         return;
       }
     }
@@ -210,28 +218,15 @@ nsTreeRowGroupFrame::GetNextFrame(nsIPresContext& aPresContext, nsIFrame* aFrame
 }
 
 NS_IMETHODIMP
-nsTreeRowGroupFrame::InsertFrames(nsIPresContext& aPresContext,
-                            nsIPresShell& aPresShell,
-                            nsIAtom* aListName,
-                            nsIFrame* aPrevFrame,
-                            nsIFrame* aFrameList)
+nsTreeRowGroupFrame::TreeInsertFrames(nsIFrame* aPrevFrame, nsIFrame* aFrameList)
 {
-  //mFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
-  //if (mScrollbar)
-  //  return NS_OK;
-  //else 
-    return nsTableRowGroupFrame::InsertFrames(aPresContext, aPresShell, aListName, aPrevFrame, aFrameList); 
+  mFrames.InsertFrames(nsnull, aPrevFrame, aFrameList);
+  return NS_OK;
 }
 
 NS_IMETHODIMP
-nsTreeRowGroupFrame::AppendFrames(nsIPresContext& aPresContext,
-                           nsIPresShell&   aPresShell,
-                           nsIAtom*        aListName,
-                           nsIFrame*       aFrameList)
+nsTreeRowGroupFrame::TreeAppendFrames(nsIFrame* aFrameList)
 {
-  //mFrames.AppendFrames(nsnull, aFrameList); 
-   //if (mScrollbar)
-   // return NS_OK;
-   //else
-     return nsTableRowGroupFrame::AppendFrames(aPresContext, aPresShell, aListName, aFrameList); 
+  mFrames.AppendFrames(nsnull, aFrameList);
+  return NS_OK;
 }
