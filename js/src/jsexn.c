@@ -442,7 +442,7 @@ js_InitExceptionClasses(JSContext *cx, JSObject *obj)
      */
     if (cx->exceptionProtos == NULL)
         cx->exceptionProtos =
-            JS_malloc(cx, sizeof(JSObject *) * JSEXN_LIMIT + 1);
+            JS_malloc(cx, sizeof(JSObject *) * (JSEXN_LIMIT + 1));
     if (!cx->exceptionProtos)
         return NULL;
     protos = cx->exceptionProtos;
