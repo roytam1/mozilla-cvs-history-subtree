@@ -340,8 +340,8 @@ var personalToolbarDNDObserver = {
       rdfContainer.RemoveElement(elementRes, false);
     }
 
-    // determine charset of link
-    var linkCharset = aDragSession.sourceDocument ? aDragSession.sourceDocument.characterSet : null;
+    // Don't try to determine the charset of the link (bug 174197)
+    var linkCharset = null;
     // determine title of link
     var linkTitle;
     // look it up in bookmarks
