@@ -352,6 +352,7 @@ LINK_LIBS= \
     $(DIST)\lib\libreg32.lib \
 !ifdef MOZ_JAVA
     $(DIST)\lib\libapplet32.lib \
+    $(DIST)\lib\libmsgc21.lib \
 !endif
 !ifdef MOZ_OJI
     $(DIST)\lib\oji32.lib \
