@@ -43,6 +43,7 @@ include ../../build.mk
 
 ETCDIR		= $(DIST)/etc
 INCLUDEDIR	= $(XPDIST)/public/ldap
+DELHEADERS	= $(addprefix $(INCLUDEDIR)/, $(HEADERS))
 
 ifeq ($(OS_ARCH), WINNT)
 # Is this correct?
@@ -56,6 +57,8 @@ DIRVER_PROG	= $(DIRVER_PATH)/dirver$(BIN_SUFFIX)
 ###########################################################################
 
 all export::	FORCE
+	$(RM) -rf $(INCLUDEDIR)
+	$(NSINSTALL) -D $(INCLUDEDIR)
 	$(INSTALL) $(INSTALLFLAGS) -m 644 $(HEADERS) $(INCLUDEDIR)
 
 install::	export

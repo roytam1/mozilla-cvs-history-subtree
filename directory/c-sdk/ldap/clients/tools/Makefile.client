@@ -43,6 +43,7 @@ ifdef HAVE_LIBNLS
 INCLUDES	+= -I$(LIBNLS_INCLUDES)
 endif
 
+DEFS		+= -DXP_WIN -DXP_WIN32
 DEFINES         += $(DEFS)
 
 CXXSRCS		= convutf8.cpp
@@ -157,10 +158,17 @@ EXTRA_LIBS += -L$(NSCP_DISTDIR)/lib $(DYNAMICNSPR)
 endif
 
 ifdef HAVE_LIBNLS
+ifeq ($(OS_ARCH), WINNT)
+EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
+	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
+		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
+else
 EXTRA_LIBS +=   $(LIBNLS_LIBDIR)/$(NSCNV_LIBNAME) -lC \
 		$(LIBNLS_LIBDIR)/$(NSJPN_LIBNAME) \
 	        $(LIBNLS_LIBDIR)/$(NSCCK_LIBNAME) \
 		$(LIBNLS_LIBDIR)/$(NSSB_LIBNAME)
+endif
 endif
 
 LDTOOLS_LIBS += $(EXTRA_LIBS)
@@ -246,13 +254,12 @@ ifeq ($(HAVE_LIBNLS), 1)
 	@echo
 # The following shell script recalculates $(NLS_INCLUDE), $(NLS_LIBPATH) and
 # $(NLS_VERSION_FILE)
-ifeq ($(DONTDO), 1000)
-	sh ../../build/compver.sh $(LIBNLS_DIR) $(NLS_LIBVERSION) \
-	$(OBJDIR_NAME) ../../../.. ldapsdk $(NLS_RELEASE) \
+	sh ../../build/compver.sh $(LIBNLS_DIR) $(LIBNLS_RELDATE) \
+	$(OBJDIR_NAME) ../../../../dist ldapsdk \
+	/share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME) \
 	libnls$(NLS_LIBVERSION) \
-	"' include lib conv$(NLS_LIBVERSION) locale$(NLS_LIBVERSION) '" \
-	../../../../$(OBJDIR_NAME)/locale$(NLS_LIBVERSION)/index.txt
-endif
+	"include lib conv$(NLS_LIBVERSION) locale$(NLS_LIBVERSION)" \
+	../../../../../dist/libnls31/$(OBJDIR_NAME)/locale$(NLS_LIBVERSION)/index.txt
 endif
 endif
 
@@ -276,7 +283,7 @@ $(OBJDEST):
 	$(NSINSTALL) -D $(LIBDIR)
 
 clean::
-	$(RM) $(OBJDEST)
+	$(RM) -rf $(OBJDEST)
 
 install:: $(OBJDEST) libdir $(BINS)
 	$(NSINSTALL) $(LDAPDELETE) $(INSTALLDIR)

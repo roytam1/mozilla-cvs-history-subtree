@@ -144,18 +144,29 @@ NSPR_LIBNAME=nspr$(NSPR_LIBVERSION)
 #
 NLS_LIBVERSION	=31
 LIBNLS_RELDATE=v3.2
+ifeq ($(OS_ARCH), WINNT)
+NSCNV_LIBNAME	=nscnv32$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSJPN_LIBNAME	=nsjpn32$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSCCK_LIBNAME	=nscck32$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSSB_LIBNAME	=nssb32$(NLS_LIBVERSION).$(LIB_SUFFIX)
+else
 NSCNV_LIBNAME	=libnscnv$(NLS_LIBVERSION).$(LIB_SUFFIX)
 NSJPN_LIBNAME	=libnsjpn$(NLS_LIBVERSION).$(LIB_SUFFIX)
 NSCCK_LIBNAME	=libnscck$(NLS_LIBVERSION).$(LIB_SUFFIX)
 NSSB_LIBNAME	=libnssb$(NLS_LIBVERSION).$(LIB_SUFFIX)
+endif
 
 # as used in clients/tools/Makefile.client
 LIBNLS_INCLUDES_LOC = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/include
 LIBNLS_LIB_LOC	    = /share/builds/components/libnls$(NLS_LIBVERSION)/v3.2/$(OBJDIR_NAME)/lib
-LIBNLS_DIR	    = ../../../../components/libnls$(NLS_LIBVERSION)
+LIBNLS_DIR	    = ../../../../../dist/libnls$(NLS_LIBVERSION)
+ifeq ($(OS_ARCH), WINNT)
+LIBNLS_INCLUDES =../../../../../dist/libnls31/WINNT4.0_DBG.OBJ/include
+LIBNLS_LIBDIR	=../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/lib
+else
 LIBNLS_INCLUDES =../../../../../dist/public/libnls
 LIBNLS_LIBDIR	=../../../../../dist/$(OBJDIR_NAME)/libnls
-LIBNLS_RELEASE	= $(LIBNLS_DIR)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)
+endif
 
 RM              = rm -f
 SED             = sed
@@ -330,7 +341,8 @@ ifeq ($(OS_ARCH), WINNT)
 SUBSYSTEM=CONSOLE
 LINK_EXE        = link -OUT:"$@" /MAP $(ALDFLAGS) $(LDFLAGS) $(ML_DEBUG) \
     $(LCFLAGS) /NOLOGO /PDB:NONE /DEBUGTYPE:BOTH /INCREMENTAL:NO \
-    /SUBSYSTEM:$(SUBSYSTEM) $(DEPLIBS) $(EXTRA_LIBS) $(OBJS)
+    /NODEFAULTLIB:MSVCRTD /SUBSYSTEM:$(SUBSYSTEM) $(DEPLIBS) \
+    $(EXTRA_LIBS) $(OBJS)
 LINK_LIB        = lib -OUT:"$@"  $(OBJS)
 LINK_DLL        = link /nologo /MAP /DLL /PDB:NONE /DEBUGTYPE:BOTH \
         $(ML_DEBUG) /SUBSYSTEM:$(SUBSYSTEM) $(LLFLAGS) $(DLL_LDFLAGS) \

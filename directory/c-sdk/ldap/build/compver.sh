@@ -35,11 +35,11 @@ echo "Attempting to download..."
 rm -rf ${COMP_ROOT}/${COMPOBJDIR} ${COMP_VERSION_FILE}
 mkdir -p ${COMP_ROOT}/${COMPOBJDIR}
 
-sh ${MCOM_ROOT}/netsite/nsftp.sh ${COMP_NAME}/${COMP_VERSION}/${COMPOBJDIR} ${COMP_ROOT}/${COMPOBJDIR}
+sh ../../build/nsftp.sh ${COMP_NAME}/${COMP_VERSION}/${COMPOBJDIR} ${COMP_ROOT}/${COMPOBJDIR}
 
 for d in ${COMP_SUBDIRS}; do \
   mkdir -p ${COMP_ROOT}/${COMPOBJDIR}/${d}; \
-  sh ${MCOM_ROOT}/netsite/nsftp.sh ${COMP_NAME}/${COMP_VERSION}/${COMPOBJDIR}/${d} ${COMP_ROOT}/${COMPOBJDIR}/${d}
+  sh ../../build/nsftp.sh ${COMP_NAME}/${COMP_VERSION}/${COMPOBJDIR}/${d} ${COMP_ROOT}/${COMPOBJDIR}/${d}
 done
 
 if test -f ${TEST_FILE}; then \
