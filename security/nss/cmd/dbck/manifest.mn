@@ -31,7 +31,7 @@
 # GPL.
 #
 
-MOD_DEPTH = ../..
+CORE_DEPTH = ../../..
 
 DEFINES += -DNSPR20 
 

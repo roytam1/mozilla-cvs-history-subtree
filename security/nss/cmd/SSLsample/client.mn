@@ -30,6 +30,8 @@
 # GPL.
 #
 
+CORE_DEPTH = ../../..
+
 MODULE = security
 
 EXPORTS = 

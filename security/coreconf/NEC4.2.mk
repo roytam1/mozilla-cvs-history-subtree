@@ -33,7 +33,7 @@
 # Config stuff for NEC Mips SYSV
 #
 
-include $(CORECONF_SOURCE)/UNIX.mk
+include $(CORE_DEPTH)/coreconf/UNIX.mk
 
 DEFAULT_COMPILER = $(CORE_DEPTH)/build/hcc
 

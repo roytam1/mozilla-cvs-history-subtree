@@ -30,7 +30,7 @@
 # may use your version of this file under either the MPL or the
 # GPL.
 #
-MOD_DEPTH = ../..
+CORE_DEPTH = ../../..
 
 EXPORTS = \
 	ocsp.h \

@@ -32,7 +32,7 @@
 #
 # Config stuff for AIX.
 #
-include $(CORECONF_SOURCE)/UNIX.mk
+include $(CORE_DEPTH)/coreconf/UNIX.mk
 
 #
 # There are two implementation strategies available on AIX:

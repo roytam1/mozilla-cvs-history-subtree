@@ -33,7 +33,7 @@
 # Config stuff for FreeBSD
 #
 
-include $(CORECONF_SOURCE)/UNIX.mk
+include $(CORE_DEPTH)/coreconf/UNIX.mk
 
 DEFAULT_COMPILER	= gcc
 CC			= gcc

@@ -30,17 +30,15 @@
 # may use your version of this file under either the MPL or the
 # GPL.
 #
-MOD_DEPTH = .
-DEPTH      = .
+CORE_DEPTH = ..
+DEPTH      = ..
 
 IMPORTS =	nspr20/$(NSPR_IMPORT_VERSION) \
-		dbm/DBM_1_55 \
+		dbm/DBM_1_55_RTM \
 		$(NULL)
 
 RELEASE = security
 
-DIRS = coreconf lib
+DIRS = lib cmd
 
-ifdef ENABLE_CMD
-DIRS += cmd
-endif
+

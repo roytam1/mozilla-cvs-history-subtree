@@ -33,7 +33,7 @@
 # Config stuff for IRIX 5
 #
 
-include $(CORECONF_SOURCE)/IRIX.mk
+include $(CORE_DEPTH)/coreconf/IRIX.mk
 
 ifndef NS_USE_GCC
 	ODD_CFLAGS += -xgot

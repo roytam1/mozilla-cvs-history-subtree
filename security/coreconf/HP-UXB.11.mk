@@ -32,7 +32,7 @@
 #
 # Config stuff for HP-UXB.11
 #
-include $(CORECONF_SOURCE)/HP-UX.mk
+include $(CORE_DEPTH)/coreconf/HP-UX.mk
 
 ifdef USE_LONG_LONGS
 USE_HYBRID = 1

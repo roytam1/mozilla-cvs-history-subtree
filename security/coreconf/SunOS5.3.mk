@@ -35,4 +35,4 @@
 
 SOL_CFLAGS =
 
-include $(CORECONF_SOURCE)/SunOS5.mk
+include $(CORE_DEPTH)/coreconf/SunOS5.mk

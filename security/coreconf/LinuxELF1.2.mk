@@ -33,4 +33,4 @@
 # Config stuff for Linux 1.2 (ELF)
 #
 
-include $(CORECONF_SOURCE)/Linux.mk
+include $(CORE_DEPTH)/coreconf/Linux.mk

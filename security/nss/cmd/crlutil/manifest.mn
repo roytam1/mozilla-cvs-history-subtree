@@ -31,7 +31,7 @@
 # GPL.
 #
 
-MOD_DEPTH	= ../..
+CORE_DEPTH	= ../../..
 
 # MODULE public and private header  directories are implicitly REQUIRED.
 MODULE = security 

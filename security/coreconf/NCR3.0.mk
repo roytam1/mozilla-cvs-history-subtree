@@ -33,7 +33,7 @@
 # Config stuff for NCR SysVr4 v 3.0
 #
 
-include $(CORECONF_SOURCE)/UNIX.mk
+include $(CORE_DEPTH)/coreconf/UNIX.mk
 
 DEFAULT_COMPILER = cc
 

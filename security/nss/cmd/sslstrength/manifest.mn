@@ -30,7 +30,7 @@
 # GPL.
 #
 
-MOD_DEPTH = ../..
+CORE_DEPTH = ../../..
 
 MODULE = security
 

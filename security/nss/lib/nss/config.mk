@@ -48,7 +48,7 @@ ifeq ($(OS_ARCH), WINNT)
 SHARED_LIBRARY = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).dll
 IMPORT_LIBRARY = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).lib
 
-DLLFLAGS += -DEF:$(srcdir)/nss.def
+DLLFLAGS += -DEF:nss.def
 RES = $(OBJDIR)/nss.res
 RESNAME = nss.rc
 
@@ -118,7 +118,7 @@ SHARED_LIBRARY_LIBS = \
 	$(DIST)/lib/libsecutil.$(LIB_SUFFIX) \
 	$(NULL)
 EXTRA_LIBS += \
-	$(DBM_LIBS) \
+	$(DIST)/lib/libdbm.$(LIB_SUFFIX) \
 	$(NULL)
 ifdef MOZILLA_BSAFE_BUILD
 	EXTRA_LIBS+=$(DIST)/lib/libbsafe.$(LIB_SUFFIX)
@@ -136,7 +136,10 @@ SHARED_LIBRARY_DIRS = \
 # $(PROGRAM) has NO explicit dependencies on $(EXTRA_SHARED_LIBS)
 # $(EXTRA_SHARED_LIBS) come before $(OS_LIBS), except on AIX.
 EXTRA_SHARED_LIBS += \
-	$(NSPR_LIBS) \
+	-L$(DIST)/lib/ \
+	-lplc4 \
+	-lplds4 \
+	-lnspr4 \
 	$(NULL)
 endif
 
@@ -178,4 +181,5 @@ MKSHLIB += -Wl,--version-script,$(MAPFILE)
 endif
 
 
+	
 

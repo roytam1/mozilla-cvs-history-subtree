@@ -32,4 +32,4 @@
 #
 # Config stuff for AIX3.2.5
 #
-include $(CORECONF_SOURCE)/AIX.mk
+include $(CORE_DEPTH)/coreconf/AIX.mk

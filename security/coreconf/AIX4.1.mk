@@ -33,7 +33,7 @@
 # Config stuff for AIX4.1
 #
 
-include $(CORECONF_SOURCE)/AIX.mk
+include $(CORE_DEPTH)/coreconf/AIX.mk
 
 
 AIX_LINK_OPTS  += -bnso -berok

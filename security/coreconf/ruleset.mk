@@ -112,7 +112,14 @@ endif
 
 ifndef COMPILER_TAG
 ifneq ($(DEFAULT_COMPILER), $(CC))
-	COMPILER_TAG = _$(CC)
+#
+# Temporary define for the Client; to be removed when binary release is used
+#
+	ifdef MOZILLA_CLIENT
+		COMPILER_TAG =
+	else
+		COMPILER_TAG = _$(CC)
+	endif
 else
 	COMPILER_TAG =
 endif
@@ -153,11 +160,17 @@ ifdef LIBRARY_NAME
 			IMPORT_LIBRARY = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION)32$(JDK_DEBUG_SUFFIX).lib
 		endif
 	else
-		LIBRARY = $(OBJDIR)/lib$(LIBRARY_NAME).$(LIB_SUFFIX)
-		ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
-			SHARED_LIBRARY = $(OBJDIR)/lib$(LIBRARY_NAME)$(LIBRARY_VERSION)_shr$(JDK_DEBUG_SUFFIX).a
+		ifeq ($(OS_ARCH), OS2)
+			LIBRARY = $(OBJDIR)/lib$(LIBRARY_NAME).lib
+			SHARED_LIBRARY = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION)$(JDK_DEBUG_SUFFIX).dll
+			IMPORT_LIBRARY = $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION)$(JDK_DEBUG_SUFFIX).lib
 		else
-			SHARED_LIBRARY = $(OBJDIR)/lib$(LIBRARY_NAME)$(LIBRARY_VERSION)$(JDK_DEBUG_SUFFIX).$(DLL_SUFFIX)
+			LIBRARY = $(OBJDIR)/lib$(LIBRARY_NAME).$(LIB_SUFFIX)
+			ifeq ($(OS_ARCH)$(OS_RELEASE), AIX4.1)
+				SHARED_LIBRARY = $(OBJDIR)/lib$(LIBRARY_NAME)$(LIBRARY_VERSION)_shr$(JDK_DEBUG_SUFFIX).a
+			else
+				SHARED_LIBRARY = $(OBJDIR)/lib$(LIBRARY_NAME)$(LIBRARY_VERSION)$(JDK_DEBUG_SUFFIX).$(DLL_SUFFIX)
+			endif
 		endif
 	endif
 endif
@@ -187,9 +200,18 @@ ifndef OBJS
 		$(addsuffix $(OBJ_SUFFIX), $(JMC_GEN)) \
 		$(CSRCS:.c=$(OBJ_SUFFIX)) \
 		$(CPPSRCS:.cpp=$(OBJ_SUFFIX)) \
-		$(ASFILES:$(ASM_SUFFIX)=$(OBJ_SUFFIX))
-	OBJS = $(addprefix $(OBJDIR)/$(PROG_PREFIX), $(SIMPLE_OBJS))
+		$(ASFILES:$(ASM_SUFFIX)=$(OBJ_SUFFIX)) \
+		$(BUILT_CSRCS:.c=$(OBJ_SUFFIX)) \
+		$(BUILT_CPPSRCS:.cpp=$(OBJ_SUFFIX)) \
+		$(BUILT_ASFILES:$(ASM_SUFFIX)=$(OBJ_SUFFIX))
+	OBJS =	$(addprefix $(OBJDIR)/$(PROG_PREFIX), $(SIMPLE_OBJS))
 endif
+
+ifndef BUILT_SRCS
+	BUILT_SRCS = $(addprefix $(OBJDIR)/$(PROG_PREFIX), \
+			$(BUILT_CSRCS) $(BUILT_CPPSRCS) $(BUILT_ASFILES))
+endif
+
 
 ifeq ($(OS_TARGET), WIN16)
 	comma   := ,
@@ -208,33 +230,24 @@ ifeq ($(OS_ARCH),WINNT)
 	ifneq ($(OS_TARGET), WIN16)
 		OBJS += $(RES)
 	endif
+	MAKE_OBJDIR		= $(INSTALL) -D $(OBJDIR)
+else
+	define MAKE_OBJDIR
+	if test ! -d $(@D); then rm -rf $(@D); $(NSINSTALL) -D $(@D); fi
+	endef
 endif
 
 ifndef PACKAGE
 	PACKAGE = .
 endif
 
-# SUBMAKEFILES: List of Makefiles for next level down.
-#   This is used to update or create the Makefiles before invoking them.
-ifneq ($(DIRS),)
-SUBMAKEFILES            := $(addsuffix /Makefile, $(filter-out $(STATIC_MAKEFILES), $(DIRS)))
-endif
-
-ALL_TRASH =	$(TARGETS) $(OBJS)
-
-ifdef COMPILER_DEPEND
-ifdef OBJS
-MAKE_DIRS		+= $(MDDEPDIR)
-ALL_TRASH		+= $(MDDEPDIR)
-endif
-endif
-
-ALL_TRASH +=	LOGS TAGS $(GARBAGE) \
+ALL_TRASH :=	$(TARGETS) $(OBJS) $(OBJDIR) LOGS TAGS $(GARBAGE) \
 		$(NOSUCHFILE) $(JDK_HEADER_CFILES) $(JDK_STUB_CFILES) \
 		$(JRI_HEADER_CFILES) $(JRI_STUB_CFILES) $(JNI_HEADERS) $(JMC_STUBS) \
 		$(JMC_HEADERS) $(JMC_EXPORT_FILES) so_locations \
 		_gen _jmc _jri _jni _stubs \
-		$(wildcard $(JAVA_DESTPATH)/$(PACKAGE)/*.class)
+		$(wildcard $(JAVA_DESTPATH)/$(PACKAGE)/*.class) \
+		$(BUILT_SRCS)
 
 ifdef JDIRS
 	ALL_TRASH += $(addprefix $(JAVA_DESTPATH)/,$(JDIRS))
@@ -254,10 +267,16 @@ else
 	JDK_STUB_DIR = _stubs
 endif
 
-EXIT_ON_ERROR	= -e
+#
+# If this is an "official" build, try to build everything.
+# I.e., don't exit on errors.
+#
+
 ifdef BUILD_OFFICIAL
+	EXIT_ON_ERROR		= +e
 	CLICK_STOPWATCH		= date
 else
+	EXIT_ON_ERROR		= -e
 	CLICK_STOPWATCH		= true
 endif
 
@@ -272,16 +291,6 @@ else
 		INCLUDES         += $(PRIVATE_INCLUDES)
 	endif
 endif
-endif
-
-ifdef NSPR_CFLAGS
-INCLUDES += $(NSPR_CFLAGS)
-else
-INCLUDES += -I$(SYSTEM_XP_DIR)/include/nspr
-endif
-
-ifdef DBM_CFLAGS
-INCLUDES += $(DBM_CFLAGS)
 endif
 
 ifdef SYSTEM_INCL_DIR
@@ -308,9 +317,32 @@ endif
 # special stuff for tests rule in rules.mk
 
 ifneq ($(OS_ARCH),WINNT)
-	REGDATE = $(subst \ ,, $(shell perl  $(topsrcdir)/$(MODULE)/scripts/now))
+	REGDATE = $(subst \ ,, $(shell perl  $(CORE_DEPTH)/$(MODULE)/scripts/now))
 else
-	REGCOREDEPTH = $(subst \\,/,$(topsrcdir))
-	REGDATE = $(subst \ ,, $(shell perl  $(topsrcdir)/$(MODULE)/scripts/now))
+	REGCOREDEPTH = $(subst \\,/,$(CORE_DEPTH))
+	REGDATE = $(subst \ ,, $(shell perl  $(CORE_DEPTH)/$(MODULE)/scripts/now))
 endif
 
+#
+# export control policy patcher program and arguments
+#
+
+PLCYPATCH     = $(SOURCE_BIN_DIR)/plcypatch$(PROG_SUFFIX)
+
+DOMESTIC_POLICY = -us
+EXPORT_POLICY   = -ex
+FRANCE_POLICY   = -fr
+
+ifeq ($(POLICY), domestic)
+	PLCYPATCH_ARGS = $(DOMESTIC_POLICY)
+else
+	ifeq ($(POLICY), export)
+		PLCYPATCH_ARGS = $(EXPORT_POLICY)
+	else
+		ifeq ($(POLICY), france)
+			PLCYPATCH_ARGS = $(FRANCE_POLICY)
+		else
+			PLCYPATCH_ARGS =
+		endif
+	endif
+endif

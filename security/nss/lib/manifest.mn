@@ -30,12 +30,12 @@
 # may use your version of this file under either the MPL or the
 # GPL.
 #
-MOD_DEPTH = ..
+CORE_DEPTH = ../..
 DEPTH      = ../..
 
 DIRS = crmf jar \
     certhigh pk11wrap cryptohi \
-    softoken certdb \
+    softoken certdb crypto \
     util freebl nss pkcs12 fortcrypt \
     base ckfw pkcs7 smime ssl
 #

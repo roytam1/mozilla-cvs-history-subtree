@@ -32,4 +32,4 @@
 #
 # Config stuff for IRIX 5.2
 #
-include $(CORECONF_SOURCE)/IRIX5.mk
+include $(CORE_DEPTH)/coreconf/IRIX5.mk

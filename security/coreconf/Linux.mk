@@ -33,7 +33,7 @@
 # Config stuff for Linux
 #
 
-include $(CORECONF_SOURCE)/UNIX.mk
+include $(CORE_DEPTH)/coreconf/UNIX.mk
 
 #
 # The default implementation strategy for Linux is now pthreads
