@@ -2385,15 +2385,15 @@ main
     /* check if preferences previously existed */
     status=XP_Stat(buf, &statPrefs, xpUserPrefs);
     PREF_Init((char*) fe_globalData.user_prefs_file);
-#ifndef MOZ_LITE
+#ifdef MOZ_MAIL_NEWS
     if (status!=0)              /* stuff to run the first time a user starts */
         MSG_WriteNewProfileAge();
-#endif
+#endif /* MOZ_MAIL_NEWS */
 }
 
 #ifdef MOZ_MAIL_NEWS
   fe_mailNewsPrefs = MSG_CreatePrefs();
-#endif
+#endif /* MOZ_MAIL_NEWS */
 
   toplevel = XtAppInitialize (&fe_XtAppContext, (char *) fe_progclass, options,
 			      sizeof (options) / sizeof (options [0]),
@@ -2799,7 +2799,13 @@ main
   if (fe_globalData.show_splash)
     fe_splashUpdateText(XP_GetString(XFE_SPLASH_REGISTERING_CONVERTERS));
 #endif
+
+
+#ifdef MOZ_MAIL_NEWS
+  /* Startup softupdate */
   SU_Startup();
+#endif /* MOZ_MAIL_NEWS */
+
   NR_StartupRegistry();
   fe_RegisterConverters ();  /* this must be before InstallPreferences(),
 				and after fe_InitializeGlobalResources(). */
