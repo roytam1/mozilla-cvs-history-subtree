@@ -304,6 +304,7 @@ typedef enum
 - (IBAction)bookmarkLink: (id)aSender;
 
 - (IBAction)copyLinkLocation:(id)aSender;
+- (IBAction)copyImage:(id)sender;
 - (IBAction)copyImageLocation:(id)sender;
 
 - (BookmarksToolbar*) bookmarksToolbar;

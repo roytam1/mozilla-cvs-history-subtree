@@ -1949,6 +1949,14 @@ static NSArray* sToolbarDefaults = nil;
   }
 }
 
+- (IBAction)copyImage:(id)sender
+{
+  nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([[[self getBrowserWrapper] getBrowserView] getWebBrowser]);
+  nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(webBrowser));
+  if (clipboard)
+    clipboard->CopyImageContents();
+}
+
 - (IBAction)copyImageLocation:(id)sender
 {
   nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([[[self getBrowserWrapper] getBrowserView] getWebBrowser]);
