@@ -123,6 +123,21 @@ interface nsIChannel : nsISupports
      */
     attribute nsIInterfaceRequestor notificationCallbacks;
 
+    /**
+     * Returns the content MIME type of the channel if available. Note that the 
+     * content type can often be wrongly specified (wrong file extension, wrong
+     * MIME type, wrong document type stored on a server, etc.) and the caller
+     * most likely wants to verify with the actual data. 
+     */
+    attribute string contentType;
+
+    /**
+     * Returns the length of the data associated with the channel if available.
+     * If the length is unknown then -1 is returned.
+     */
+    attribute long contentLength;
+
+
     nsIInputStream open();
 
     void asyncOpen(in nsIStreamListener listener,

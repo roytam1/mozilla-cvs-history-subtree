@@ -21,6 +21,11 @@
  */
 
 #include "nsISupports.idl"
+interface nsIStreamListener;
+interface nsIStreamProvider;
+interface nsIInputStream;
+interface nsIOutputStream;
+interface nsIRequest;
 
 [scriptable, uuid(fd01f9a4-d492-4cf8-b76e-160ffc8c01e8)]
 interface nsITransport : nsISupports
