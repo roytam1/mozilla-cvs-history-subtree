@@ -844,11 +844,15 @@ NS_IMETHODIMP nsAbMDBDirectory::DropCard(nsIAbCard* aCard, PRBool needToCopyCard
 	dbcard->SetAbDatabase(mDatabase);
 
   if (mIsMailingList == 1) {
-    // if we didn't copy the card, we don't have to notify that it was inserted
-		mDatabase->CreateNewListCardAndAddToDB(this, m_dbRowID, newCard, needToCopyCard /* notify */);
+    if (needToCopyCard) {
+      // first, add the card to the directory that contains the mailing list.
+      mDatabase->CreateNewCardAndAddToDB(newCard, PR_TRUE /* notify */);
+    }
+    // since we didn't copy the card, we don't have to notify that it was inserted
+		mDatabase->CreateNewListCardAndAddToDB(this, m_dbRowID, newCard, PR_FALSE /* notify */);
   }
   else {
-		mDatabase->CreateNewCardAndAddToDB(newCard, PR_TRUE);
+		mDatabase->CreateNewCardAndAddToDB(newCard, PR_TRUE /* notify */);
   }
   mDatabase->Commit(kLargeCommit);
 	return NS_OK;
