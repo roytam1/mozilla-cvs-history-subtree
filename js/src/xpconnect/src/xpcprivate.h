@@ -1060,7 +1060,7 @@ public:
     // Allow shallow copy
 
 private:
-    PRUint16                mIsAKey;
+    PRUint16                mIsAKey;    // must be first data member
     PRUint16                mPosition;
     XPCNativeSet*           mBaseSet;
     XPCNativeInterface*     mAddition;

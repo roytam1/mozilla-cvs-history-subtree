@@ -2441,9 +2441,21 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
     {
         // Add any classnames to skip to this (null terminated) array...
         static const char* skipClasses[] = {
+            "Window",
+            "HTMLDocument",
             "Event",
             nsnull
         };
+        
+        static PRBool warned = JS_FALSE;
+        if(!warned)
+        {
+            printf("!!! XPConnect won't warn about Shadowed Members of...\n  ");
+            for(const char** name = skipClasses; *name; name++)
+                printf("%s %s", name == skipClasses ? "" : ",", *name);
+             printf("\n");
+            warned = JS_TRUE;        
+        }
 
         PRBool quit = JS_FALSE;
         char* className = nsnull;
