@@ -198,6 +198,8 @@ nsresult nsPluginFile::GetPluginInfo(nsPluginInfo& info)
         plugin->GetValue(nsPluginVariable_DescriptionString, &description);
         info.fDescription = PL_strdup(description);
 
+        info.fFileName = PL_strdup(this->GetCString());
+
         plugin->GetMIMEDescription(&mimedescr);
     }
     else {
@@ -285,5 +287,9 @@ nsresult nsPluginFile::FreePluginInfo(nsPluginInfo& info)
     if(info.fExtensionArray[i] != nsnull)
       PL_strfree(info.fExtensionArray[i]);
   }
+
+  if(info.fFileName != nsnull )
+    PL_strfree(info.fFileName);
+
   return NS_OK;
 }
