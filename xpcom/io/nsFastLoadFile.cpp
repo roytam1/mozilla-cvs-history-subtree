@@ -677,11 +677,11 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
         NS_ASSERTION((oid & MFL_WEAK_REF_TAG) ==
                      (aIsStrongRef ? 0 : MFL_WEAK_REF_TAG),
                      "strong vs. weak ref deserialization mismatch!");
-        nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
 
         // Check whether we've already deserialized the object for this OID.
         object = entry->mObject;
         if (!object) {
+            nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
             PRUint32 saveOffset;
             nsDocumentMapReadEntry* saveDocMapEntry = nsnull;
 
@@ -732,6 +732,7 @@ nsFastLoadFileReader::ReadObject(PRBool aIsStrongRef, nsISupports* *aObject)
             // We must skip over the object definition.
             if (oid & MFL_OBJECT_DEF_TAG) {
                 NS_ASSERTION(entry->mSkipOffset != 0, "impossible! see above");
+                nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mInputStream));
                 rv = seekable->Seek(nsISeekableStream::NS_SEEK_SET,
                                     entry->mSkipOffset);
                 if (NS_FAILED(rv)) return rv;
