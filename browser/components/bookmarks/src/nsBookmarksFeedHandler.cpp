@@ -346,18 +346,15 @@ nsFeedLoadListener::OnStopRequest(nsIRequest *aRequest,
     }
 
     /* Try parsing as RDF */
-    fprintf (stderr, "... TryParseAsRDF\n");
     rv = TryParseAsRDF ();
 
     /* Try parsing as Atom/Simple RSS */
     if (!NS_SUCCEEDED(rv)) {
-        fprintf (stderr, "... TryParseAsSimpleRSS\n");
         rv = TryParseAsSimpleRSS ();
     }
 
     /* If we weren't able to load with anything, attach a dummy bookmark */
     if (!NS_SUCCEEDED(rv)) {
-        fprintf (stderr, "... failure.\n");
         mLivemarkContainer->AppendElement(mBMSVC->mLivemarkLoadFailedBookmark);
     }
 
