@@ -251,9 +251,11 @@ var BookmarksMenu = {
     var selection = this._selection;
     var target    = this._target;
     BookmarksController.onCommandUpdate(selection, target);
-    if (document.popupNode.id == "NC:PersonalToolbarFolder") {
-      // disabling 'copy' on the empty area of the personal toolbar
-      var commandNode = document.getElementById("cmd_bm_copy");
+    if (document.popupNode.id == "bookmarks-ptf") {
+      // disabling 'cut' and 'copy' on the empty area of the personal toolbar
+      var commandNode = document.getElementById("cmd_bm_cut");
+      commandNode.setAttribute("disabled", "true");
+      commandNode = document.getElementById("cmd_bm_copy");
       commandNode.setAttribute("disabled", "true");
     }
   },
