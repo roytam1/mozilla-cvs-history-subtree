@@ -23,18 +23,16 @@
 #ifndef nsSOAPCall_h__
 #define nsSOAPCall_h__
 
+#include "nsString.h"
+#include "nsSOAPMessage.h"
 #include "nsISOAPCall.h"
 #include "nsISecurityCheckedComponent.h"
-#include "nsISOAPTransportListener.h"
-#include "nsIDOMElement.h"
-#include "nsIDOMDocument.h"
-#include "nsString.h"
-#include "nsISupportsArray.h"
-#include "nsISOAPResponseListener.h"
 #include "nsISOAPTransport.h"
+#include "nsISOAPResponseListener.h"
 #include "nsCOMPtr.h"
 
-class nsSOAPCall : public nsISOAPCall,
+class nsSOAPCall : public nsSOAPMessage,
+                   public nsISOAPCall,
                    public nsISecurityCheckedComponent
 {
 public:
@@ -43,8 +41,8 @@ public:
 
   NS_DECL_ISUPPORTS
 
-  // nsISOAPCall
-  NS_FORWARD_NSISOAPMESSAGE(nsISOAPMessage::)
+  // nsISOAPMessage
+  NS_FORWARD_NSISOAPMESSAGE(nsSOAPMessage::)
 
   // nsISOAPCall
   NS_DECL_NSISOAPCALL
@@ -54,12 +52,8 @@ public:
 
 protected:
 
-  nsCString mActionURI;
-  nsCString mTargetObjectURI;
-  nsString mMethodName;
-  nsCOMPtr<nsISupportsArray> mParameters;
-  nsCOMPtr<nsISOAPResponseListener> mListener;
-  PRUint32 mStatus;
+  nsString mTransportURI;
+  nsresult GetTransport(nsISOAPTransport** aTransport);
 };
 
 #endif

@@ -23,14 +23,16 @@
 #ifndef nsSOAPResponse_h__
 #define nsSOAPResponse_h__
 
-#include "nsAWritableString.h"
+#include "nsString.h"
+#include "nsSOAPMessage.h"
 #include "nsISOAPResponse.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMElement.h"
 #include "nsCOMPtr.h"
 
-class nsSOAPResponse : public nsISOAPResponse,
+class nsSOAPResponse : public nsSOAPMessage,
+                       public nsISOAPResponse,
                        public nsISecurityCheckedComponent
 {
 public:
@@ -47,6 +49,9 @@ public:
 
   nsSOAPResponse();
   virtual ~nsSOAPResponse();
+
+protected:
+  nsCOMPtr<nsISOAPMessage> mRespondingTo;
 };
 
 #endif

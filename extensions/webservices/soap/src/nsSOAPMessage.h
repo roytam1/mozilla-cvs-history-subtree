@@ -23,18 +23,16 @@
 #ifndef nsSOAPMessage_h__
 #define nsSOAPMessage_h__
 
-#include "nsAWritableString.h"
+#include "nsString.h"
 #include "nsISOAPTypeRegistry.h"
 #include "nsISOAPMessage.h"
 #include "nsISecurityCheckedComponent.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMDocument.h"
-#include "nsString.h"
 #include "nsISupportsArray.h"
 #include "nsCOMPtr.h"
 
-class nsSOAPMessage : public nsISOAPMessage,
-                   public nsISecurityCheckedComponent
+class nsSOAPMessage
 {
 public:
   nsSOAPMessage();
@@ -53,11 +51,19 @@ protected:
   nsCOMPtr<nsIDOMDocument> mMessage;
   nsCOMPtr<nsISupportsArray> mProtocol;
   nsCOMPtr<nsISOAPTypeRegistry> mTypes;
+  static nsCOMPtr<nsISOAPTypeRegistry> mDefaultTypes;
   nsString mActionURI;
   nsString mEncodingStyleURI;
   nsString mTargetObjectURI;
   nsString mMethodName;
   PRUint32 mStatus;
+
 };
+
+
+
+//  Move this to utils when it is available again
+
+static nsresult GetSOAPElementOf(nsIDOMElement *aParent, const nsAReadableString& aType, nsIDOMElement * *aElement);
 
 #endif

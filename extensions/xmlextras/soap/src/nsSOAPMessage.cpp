@@ -24,6 +24,9 @@
 #include "nsCRT.h"
 #include "jsapi.h"
 #include "nsISOAPParameter.h"
+#include "nsISOAPType.h"
+#include "nsISOAPMarshaller.h"
+#include "nsISOAPUnmarshaller.h"
 #include "nsIServiceManager.h"
 #include "nsIComponentManager.h"
 #include "nsXPIDLString.h"
@@ -36,6 +39,8 @@
 //
 //
 /////////////////////////////////////////////
+  
+nsCOMPtr<nsISOAPTypeRegistry> nsSOAPMessage::mDefaultTypes = do_GetService(NS_SOAPDEFAULTTYPEREGISTRY_CONTRACTID);
 
 nsSOAPMessage::nsSOAPMessage()
 {
@@ -46,8 +51,6 @@ nsSOAPMessage::nsSOAPMessage()
 nsSOAPMessage::~nsSOAPMessage()
 {
 }
-
-NS_IMPL_ISUPPORTS2(nsSOAPMessage, nsISOAPMessage, nsISecurityCheckedComponent)
 
 /* attribute nsIDOMDocument message; */
 NS_IMETHODIMP nsSOAPMessage::GetMessage(nsIDOMDocument * *aMessage)
@@ -63,6 +66,7 @@ NS_IMETHODIMP nsSOAPMessage::SetMessage(nsIDOMDocument * aMessage)
 }
 
 static const nsString SOAPNS(NS_LITERAL_STRING("http://schemas.xmlsoap.org/soap/envelope/"));
+static const nsString SOAPEnvelope(NS_LITERAL_STRING("Envelope"));
 
 /* readonly attribute nsIDOMElement envelope; */
 NS_IMETHODIMP nsSOAPMessage::GetEnvelope(nsIDOMElement * *aEnvelope)
@@ -76,7 +80,7 @@ NS_IMETHODIMP nsSOAPMessage::GetEnvelope(nsIDOMElement * *aEnvelope)
       nsAutoString name, namespaceURI;
       root->GetLocalName(name);
       root->GetNamespaceURI(namespaceURI);
-      if (name.Equals(NS_LITERAL_STRING("Envelope"))
+      if (name.Equals(SOAPEnvelope)
         && namespaceURI.Equals(SOAPNS))
       {
         *aEnvelope = root;
@@ -90,7 +94,7 @@ NS_IMETHODIMP nsSOAPMessage::GetEnvelope(nsIDOMElement * *aEnvelope)
   return NS_OK;
 }
 
-static nsresult GetSOAPElementOf(nsIDOMElement *aParent, const char* aType, nsIDOMElement * *aElement)
+static nsresult GetSOAPElementOf(nsIDOMElement *aParent, const nsAReadableString& aType, nsIDOMElement * *aElement)
 {
   NS_ENSURE_ARG_POINTER(aElement);
   if (aParent)
@@ -105,7 +109,7 @@ static nsresult GetSOAPElementOf(nsIDOMElement *aParent, const char* aType, nsID
       element->GetLocalName(name);
       element->GetNamespaceURI(namespaceURI);
       if (type == nsIDOMNode::ELEMENT_NODE
-        && name.Equals(NS_LITERAL_STRING(aType))
+        && name.Equals(aType)
         && namespaceURI.Equals(SOAPNS))
       {
         return element->QueryInterface(NS_GET_IID(nsIDOMElement), (void**)aElement);
@@ -116,20 +120,22 @@ static nsresult GetSOAPElementOf(nsIDOMElement *aParent, const char* aType, nsID
   return NS_OK;
 }
 
+static const nsString SOAPHeader(NS_LITERAL_STRING("Header"));
 /* readonly attribute nsIDOMElement header; */
 NS_IMETHODIMP nsSOAPMessage::GetHeader(nsIDOMElement * *aHeader)
 {
   nsCOMPtr<nsIDOMElement> env;
   GetEnvelope(getter_AddRefs(env));
-  return GetSOAPElementOf(env, "Header", aHeader);
+  return GetSOAPElementOf(env, SOAPHeader, aHeader);
 }
 
+static const nsString SOAPBody(NS_LITERAL_STRING("Body"));
 /* readonly attribute nsIDOMElement body; */
 NS_IMETHODIMP nsSOAPMessage::GetBody(nsIDOMElement * *aBody)
 {
   nsCOMPtr<nsIDOMElement> env;
   GetEnvelope(getter_AddRefs(env));
-  return GetSOAPElementOf(env, "Body", aBody);
+  return GetSOAPElementOf(env, SOAPBody, aBody);
 }
 
 /* attribute DOMString actionURI; */
@@ -184,16 +190,26 @@ NS_IMETHODIMP nsSOAPMessage::SetTargetObjectURI(const nsAReadableString & aTarge
   return NS_OK;
 }
 
+static const nsString SOAPCall(NS_LITERAL_STRING("#SOAPCall"));
+static const nsString SOAPNull(NS_LITERAL_STRING(""));
 /* void marshallParameters (in nsISupportsArray SOAPParameters); */
 NS_IMETHODIMP nsSOAPMessage::MarshallParameters(nsISupportsArray *SOAPParameters)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  nsCOMPtr<nsISupports> ignore;
+  return Marshall(SOAPNull, SOAPNull, SOAPCall, SOAPParameters, getter_AddRefs(ignore));
 }
 
 /* nsISupportsArray unmarshallParameters (); */
 NS_IMETHODIMP nsSOAPMessage::UnmarshallParameters(nsISupportsArray **_retval)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  nsCOMPtr<nsISupports> result;
+  nsAutoString name;
+  nsresult rv = Unmarshall(name, SOAPNull, SOAPNull, SOAPCall, nsnull, getter_AddRefs(result));
+
+  if (NS_SUCCEEDED(rv))
+    return rv;
+
+  return result->QueryInterface(NS_GET_IID(nsISupportsArray), (void**)_retval);
 }
 
 /* readonly attribute unsigned long status; */
@@ -230,258 +246,66 @@ NS_IMETHODIMP nsSOAPMessage::SetTypes(nsISOAPTypeRegistry * aTypes)
   return NS_OK;
 }
 
-#if 0
-
-I kept these messages in the file as a reminder that we need to do marshalling / unmarshalling
-
-PRBool
-nsSOAPMessage::HasBodyEntry()
+/* nsISupports marshall (in DOMString aName, in DOMString aEncodingStyleURI, in DOMString aType, in nsISupports aSource); */
+NS_IMETHODIMP nsSOAPMessage::Marshall(const nsAReadableString & aName, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aType, nsISupports *aSource, nsISupports **_retval)
 {
-  if (!mBodyElement) {
-    return PR_FALSE;
+  nsresult rc;
+  nsCOMPtr<nsISOAPType> type;
+  rc = mTypes->QueryByParameterType(aEncodingStyleURI, aType, getter_AddRefs(type));
+  if (!type)
+  {
+    rc = mDefaultTypes->QueryByParameterType(aEncodingStyleURI, aType, getter_AddRefs(type));
   }
-
-  nsCOMPtr<nsIDOMElement> entry;
-  nsSOAPUtils::GetFirstChildElement(mBodyElement, getter_AddRefs(entry));
-  
-  if (entry) {
-    return PR_TRUE;
-  }
-  else {
-    return PR_FALSE;
-  }
-}
-
-nsresult
-nsSOAPMessage::CreateBodyEntry(PRBool aNewParameters)
-{
-  nsresult rv = EnsureDocumentAllocated();
-  if (NS_FAILED(rv)) return rv;
-
-  // Create the element that will be the new body entry
-  nsCOMPtr<nsIDOMElement> entry;
-  nsCOMPtr<nsIDOMNode> dummy;
-  
-  rv = mEnvelopeDocument->CreateElementNS(NS_ConvertASCIItoUCS2(mTargetObjectURI.get()), 
-                                          mMethodName, getter_AddRefs(entry));
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-
-  // See if there's an existing body entry (we only worry
-  // about the first).
-  nsCOMPtr<nsIDOMElement> oldEntry;
-  nsSOAPUtils::GetFirstChildElement(mBodyElement, getter_AddRefs(oldEntry));
-
-  // If there is, we're going to replace it, but preserve its
-  // children.
-  if (oldEntry) {
-    // Remove the old entry from the body
-    mBodyElement->RemoveChild(oldEntry, getter_AddRefs(dummy));
-    
-    if (!aNewParameters) {
-      // Transfer the children from the old to the new
-      nsCOMPtr<nsIDOMNode> child;
-      oldEntry->GetFirstChild(getter_AddRefs(child));
-      while (child) {
-        oldEntry->RemoveChild(child, getter_AddRefs(dummy));
-        entry->AppendChild(child, getter_AddRefs(dummy));
-        
-        nsCOMPtr<nsIDOMNode> temp = child;
-        temp->GetNextSibling(getter_AddRefs(child));
-      }
+  if (!type)
+  {
+    nsAutoString namespaceURI, name;
+    nsCOMPtr<nsISOAPMarshaller> marshaller;
+    nsCOMPtr<nsISupports> configuration;
+    rc = type->GetElementLocalname(name);
+    rc = type->GetElementNamespace(namespaceURI);
+    rc = type->GetMarshallConfiguration(getter_AddRefs(configuration));
+    rc = type->GetMarshaller(getter_AddRefs(marshaller));
+    if (marshaller)
+    {
+      nsCOMPtr<nsISOAPMessage> message;
+      nsresult rc = QueryInterface(NS_GET_IID(nsISOAPMessage), getter_AddRefs(message));
+      if (NS_FAILED(rc))
+        return rc;
+      return marshaller->Marshall(aName, aEncodingStyleURI, aType, namespaceURI, name, aSource, message, configuration, _retval);
     }
   }
-
-  mBodyElement->AppendChild(entry, getter_AddRefs(dummy));
-
-  // If there wasn't an old entry and we have parameters, or we
-  // we have new parameters, create the parameter elements.
-  if ((!entry && mParameters) || aNewParameters) {
-    rv = CreateParameterElements();
-    if (NS_FAILED(rv)) return rv;
-  }
-
-  return NS_OK;
+  return NS_ERROR_FAILURE;
 }
 
-nsresult
-nsSOAPMessage::CreateParameterElements()
+/* nsISupports unmarshall (out DOMString aName, in DOMString aEncodingStyleURI, in DOMString aNamespace, in DOMString aLocalname, in nsISupports aSource); */
+NS_IMETHODIMP nsSOAPMessage::Unmarshall(nsAWritableString & aName, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aNamespace, const nsAReadableString & aLocalname, nsISupports *aSource, nsISupports **_retval)
 {
-  nsresult rv = EnsureDocumentAllocated();
-  if (NS_FAILED(rv)) return rv;
-
-  // Get the body entry that's going to be the parent of
-  // the parameter elements. If we got here, there should
-  // be one.
-  nsCOMPtr<nsIDOMElement> entry;
-  nsSOAPUtils::GetFirstChildElement(mBodyElement, getter_AddRefs(entry));
-  if (!entry) return NS_ERROR_FAILURE;
-
-  // Get the inherited encoding style starting from the
-  // body entry.
-  nsXPIDLCString encodingStyle;
-  nsSOAPUtils::GetInheritedEncodingStyle(entry, getter_Copies(encodingStyle));
-
-  // Find the corresponding encoder
-  nsCAutoString encoderContractid;
-  encoderContractid.Assign(NS_SOAPENCODER_CONTRACTID_PREFIX);
-  encoderContractid.Append(encodingStyle);
-
-  nsCOMPtr<nsISOAPEncoder> encoder = do_CreateInstance(encoderContractid);
-  if (!encoder) return NS_ERROR_INVALID_ARG;
-
-  PRUint32 index, count;
-  mParameters->Count(&count);
-
-  for(index = 0; index < count; index++) {
-    nsCOMPtr<nsISupports> isup = getter_AddRefs(mParameters->ElementAt(index));
-    nsCOMPtr<nsISOAPParameter> parameter = do_QueryInterface(isup);
-    
-    if (parameter) {
-      nsCOMPtr<nsISOAPEncoder> paramEncoder = encoder;
-
-      // See if the parameter has its own encoding style
-      nsXPIDLCString paramEncoding;
-      parameter->GetEncodingStyleURI(getter_Copies(paramEncoding));
-      
-      // If it does and it's different from the inherited one,
-      // find an encoder
-      if (paramEncoding && 
-          (nsCRT::strcmp(encodingStyle, paramEncoding) != 0)) {
-        nsCAutoString paramEncoderContractid;
-        paramEncoderContractid.Assign(NS_SOAPENCODER_CONTRACTID_PREFIX);
-        paramEncoderContractid.Append(paramEncoding);
-        
-        paramEncoder = do_CreateInstance(paramEncoderContractid);
-        if (!paramEncoder) return NS_ERROR_INVALID_ARG;
-      }
-
-      // Convert the parameter to an element
-      nsCOMPtr<nsIDOMElement> element;
-      encoder->ParameterToElement(parameter,
-                                  paramEncoding ? paramEncoding : encodingStyle,
-                                  mEnvelopeDocument,
-                                  getter_AddRefs(element));
-      
-      // Append the parameter element to the body entry
-      nsCOMPtr<nsIDOMNode> dummy;
-      entry->AppendChild(element, getter_AddRefs(dummy));
+  nsresult rc;
+  nsCOMPtr<nsISOAPType> type;
+  rc = mTypes->QueryByElementType(aEncodingStyleURI, aNamespace, aLocalname, getter_AddRefs(type));
+  if (!type)
+  {
+    rc = mDefaultTypes->QueryByElementType(aEncodingStyleURI, aNamespace, aLocalname, getter_AddRefs(type));
+  }
+  if (!type)
+  {
+    nsAutoString ptype;
+    nsCOMPtr<nsISOAPUnmarshaller> unmarshaller;
+    nsCOMPtr<nsISupports> configuration;
+    rc = type->GetParameterType(ptype);
+    rc = type->GetUnmarshallConfiguration(getter_AddRefs(configuration));
+    rc = type->GetUnmarshaller(getter_AddRefs(unmarshaller));
+    if (unmarshaller)
+    {
+      nsCOMPtr<nsISOAPMessage> message;
+      nsresult rc = QueryInterface(NS_GET_IID(nsISOAPMessage), getter_AddRefs(message));
+      if (NS_FAILED(rc))
+        return rc;
+      return unmarshaller->Unmarshall(aName, aEncodingStyleURI, ptype, aNamespace, aLocalname, aSource, message, configuration, _retval);
     }
   }
-  
-  return NS_OK;
+  return NS_ERROR_FAILURE;
 }
-
-nsresult
-nsSOAPMessage::ClearParameterElements()
-{
-  nsresult rv = EnsureDocumentAllocated();
-  if (NS_FAILED(rv)) return rv;
-
-  // Get the body entry that's the parent of the parameter
-  // elements (assuming there is one)
-  nsCOMPtr<nsIDOMElement> entry;
-  nsSOAPUtils::GetFirstChildElement(mBodyElement, getter_AddRefs(entry));
-
-  if (entry) {
-    // Get rid of all the children of the body entry
-    nsCOMPtr<nsIDOMNode> child;
-    entry->GetFirstChild(getter_AddRefs(child));
-    while (child) {
-      nsCOMPtr<nsIDOMNode> dummy;
-      entry->RemoveChild(child, getter_AddRefs(dummy));
-      entry->GetFirstChild(getter_AddRefs(child));
-    }
-  }
-  
-  return NS_OK;
-}
-
-/* void setParameters (); */
-NS_IMETHODIMP nsSOAPMessage::SetParameters()
-{
-  nsresult rv;
-
-  // Clear out any existing parameters
-  if (mParameters) {
-    ClearParameterElements();
-    mParameters->Clear();
-  }
-  else {
-    rv = NS_NewISupportsArray(getter_AddRefs(mParameters));
-    if (!mParameters) return NS_ERROR_OUT_OF_MEMORY;
-  }
-
-  nsCOMPtr<nsIXPCNativeMessageContext> cc;
-  NS_WITH_SERVICE(nsIXPConnect, xpc, nsIXPConnect::GetCID(), &rv);
-  if(NS_SUCCEEDED(rv)) {
-    rv = xpc->GetCurrentNativeMessageContext(getter_AddRefs(cc));
-  }
-
-  // This should only be called from script
-  if (NS_FAILED(rv) || !cc) {
-    return NS_ERROR_FAILURE;
-  }
-
-  PRUint32 argc;
-  rv = cc->GetArgc(&argc);
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  
-  jsval* argv;
-  rv = cc->GetArgvPtr(&argv);
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  
-  JSContext* cx;
-  rv = cc->GetJSContext(&cx);
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-
-  // For each parameter to this method
-  PRUint32 index;
-  for (index = 0; index < argc; index++) {
-    nsCOMPtr<nsISOAPParameter> param;
-    jsval val = argv[index];
-    
-    // First check if it's a parameter
-    if (JSVAL_IS_OBJECT(val)) {
-      JSObject* paramobj;
-      paramobj = JSVAL_TO_OBJECT(val);
-
-      // Check if it's a wrapped native
-      nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
-      xpc->GetWrappedNativeOfJSObject(cx, paramobj, getter_AddRefs(wrapper));
-      
-      if (wrapper) {
-        // Get the native and see if it's a SOAPParameter
-        nsCOMPtr<nsISupports> native;
-        wrapper->GetNative(getter_AddRefs(native));
-        if (native) {
-          param = do_QueryInterface(native);
-        }
-      }
-    }
-
-    // Otherwise create a new parameter with the value
-    if (!param) {
-      nsSOAPParameter* newparam = new nsSOAPParameter();
-      if (!newparam) return NS_ERROR_OUT_OF_MEMORY;
-      
-      param = (nsISOAPParameter*)newparam;
-      rv = newparam->SetValue(cx, val);
-      if (NS_FAILED(rv)) return rv;
-    }
-
-    mParameters->AppendElement(param);
-  }
-
-  if (HasBodyEntry()) {
-    return CreateParameterElements();
-  }
-  else if ((mTargetObjectURI.Length() > 0) && (mMethodName.Length() > 0)) {
-    return CreateBodyEntry(PR_TRUE);
-  }
-
-  return NS_OK;
-}
-#endif
 
 static const char*kAllAccess = "AllAccess";
 

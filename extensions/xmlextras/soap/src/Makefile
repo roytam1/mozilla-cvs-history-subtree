@@ -31,6 +31,8 @@ LIBRARY_NAME	= xmlextrassoap_s
 REQUIRES	= xpcom string caps dom js widget layout xpconnect necko
 
 CPPSRCS	= 				\
+		nsSOAPCall.cpp	        \
+		nsSOAPJSResponseListener.cpp	\
 		nsSOAPMessage.cpp	\
 		nsSOAPResponse.cpp	\
 		$(NULL)

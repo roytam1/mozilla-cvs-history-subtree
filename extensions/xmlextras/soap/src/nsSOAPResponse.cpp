@@ -46,57 +46,41 @@ NS_IMPL_ISUPPORTS3(nsSOAPResponse, nsISOAPMessage, nsISOAPResponse, nsISecurityC
 /* attribute nsISOAPMessage respondingTo; */
 NS_IMETHODIMP nsSOAPResponse::GetRespondingTo(nsISOAPMessage * *aRespondingTo)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  NS_ENSURE_ARG_POINTER(aRespondingTo);
+  *aRespondingTo = mRespondingTo;
+  return NS_OK;
 }
 NS_IMETHODIMP nsSOAPResponse::SetRespondingTo(nsISOAPMessage * aRespondingTo)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  mRespondingTo = aRespondingTo;
+  return NS_OK;
 }
 
 /* readonly attribute boolean generatedFault; */
 NS_IMETHODIMP nsSOAPResponse::GetGeneratedFault(PRBool *aGeneratedFault)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+  nsCOMPtr<nsISOAPFault> fault;
+  GetFault(getter_AddRefs(fault));
+  *aGeneratedFault = fault != 0;
+  return NS_OK;
 }
 
+static const nsString SOAPFault(NS_LITERAL_STRING("Fault"));
 /* readonly attribute nsISOAPFault fault; */
 NS_IMETHODIMP nsSOAPResponse::GetFault(nsISOAPFault * *aFault)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-/* readonly attribute nsISOAPParameter returnValue; */
-NS_IMETHODIMP nsSOAPResponse::GetReturnValue(nsISOAPParameter * *aReturnValue)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-#if 0
-
-unmarshalling needs work
-
-/* boolean generatedFault (); */
-NS_IMETHODIMP nsSOAPResponse::GeneratedFault(PRBool *_retval)
-{
-  NS_ENSURE_ARG(_retval);
-  if (mFaultElement) {
-    *_retval = PR_TRUE;
+  nsCOMPtr<nsIDOMElement> body;
+  GetBody(getter_AddRefs(body));
+  nsresult rc = GetSOAPElementOf(body, SOAPFault, getter_AddRefs(body));
+  if (NS_FAILED(rc))
+    return rc;
+  if (body) {
+    *aFault = new nsSOAPFault(body);
+    if (!*aFault)
+      return NS_ERROR_OUT_OF_MEMORY;
   }
   else {
-    *_retval = PR_FALSE;
-  }
-  return NS_OK;
-}
-
-/* readonly attribute nsISOAPFault fault; */
-NS_IMETHODIMP nsSOAPResponse::GetFault(nsISOAPFault * *aFault)
-{
-  NS_ENSURE_ARG_POINTER(aFault);
-  *aFault = nsnull;
-  if (mFaultElement) {
-    nsSOAPFault* fault = new nsSOAPFault(mFaultElement);
-    if (!fault) return NS_ERROR_OUT_OF_MEMORY;
-
-    return fault->QueryInterface(NS_GET_IID(nsISOAPFault), (void**)aFault);
+    *aFault = nsnull;
   }
   return NS_OK;
 }
@@ -104,55 +88,22 @@ NS_IMETHODIMP nsSOAPResponse::GetFault(nsISOAPFault * *aFault)
 /* readonly attribute nsISOAPParameter returnValue; */
 NS_IMETHODIMP nsSOAPResponse::GetReturnValue(nsISOAPParameter * *aReturnValue)
 {
-  NS_ENSURE_ARG_POINTER(aReturnValue);
-  nsresult rv;
-
-  *aReturnValue = nsnull;
-
-  if (mResultElement) {
-    // The first child element is assumed to be the returned
-    // value
-    nsCOMPtr<nsIDOMElement> value;
-    nsSOAPUtils::GetFirstChildElement(mResultElement, getter_AddRefs(value));
-
-    // Get the inherited encoding style starting from the
-    // value
-    char* encodingStyle;
-    nsSOAPUtils::GetInheritedEncodingStyle(value, 
-                                           &encodingStyle);
-    
-    if (!encodingStyle) {
-      encodingStyle = nsCRT::strdup(nsSOAPUtils::kSOAPEncodingURI);
-    }
-    
-    // Find the corresponding encoder
-    nsCAutoString encoderContractid;
-    encoderContractid.Assign(NS_SOAPENCODER_CONTRACTID_PREFIX);
-    encoderContractid.Append(encodingStyle);
-
-    nsCOMPtr<nsISOAPEncoder> encoder = do_CreateInstance(encoderContractid);
-    if (!encoder) {
-      nsMemory::Free(encodingStyle);
-      return NS_ERROR_NOT_IMPLEMENTED;
-    }
-
-    // Convert the result element to a parameter
-    nsCOMPtr<nsISOAPParameter> param;
-    rv = encoder->ElementToParameter(value,
-                                     encodingStyle,
-                                     nsISOAPParameter::PARAMETER_TYPE_UNKNOWN,
-                                     getter_AddRefs(param));
-    nsMemory::Free(encodingStyle);
-    if (NS_FAILED(rv)) return rv;
-
-    *aReturnValue = param;
-    NS_IF_ADDREF(*aReturnValue);
+  nsCOMPtr<nsISupportsArray> params;
+  nsresult rc = UnmarshallParameters(getter_AddRefs(params));
+  if (NS_FAILED(rc))
+    return rc;
+  if (params)
+  {
+    nsCOMPtr<nsISupports> result = getter_AddRefs(params->ElementAt(0));
+//    return response->QueryInterface(NS_GET_IID(nsISOAPResponse), (void**)_retval);
+//    *aReturnValue = QueryIn params->ElementAt(0);
   }
-
-  return NS_OK;
+  else
+  {
+    *aReturnValue = nsnull;
+  }
+  return nsnull;
 }
-
-#endif
 
 static const char* kAllAccess = "AllAccess";
 
