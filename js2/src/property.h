@@ -37,6 +37,9 @@
 
 
 namespace JavaScript {
+
+    struct IdentifierList;
+
 namespace JS2Runtime {
 
     class JSFunction;
@@ -96,19 +99,23 @@ namespace JS2Runtime {
     Formatter& operator<<(Formatter& f, const Property& prop);
    
 
-    typedef std::map<String, Property, std::less<const String> > PropertyMap;
+    typedef std::pair<Property, IdentifierList *> AttributedProperty;
+
+    typedef std::multimap<String, AttributedProperty, std::less<const String> > PropertyMap;
     typedef PropertyMap::iterator PropertyIterator;
 
 
-#define PROPERTY_KIND(it)           (it->second.mFlag)
-#define PROPERTY(it)                (it->second)
-#define PROPERTY_VALUEPOINTER(it)   (it->second.mData.vp)
-#define PROPERTY_INDEX(it)          (it->second.mData.index)
+#define PROPERTY_KIND(it)           (it->second.first.mFlag)
+#define PROPERTY(it)                (it->second.first)
+#define ATTR_PROPERTY(it)           (it->second)
+#define PROPERTY_ATTRLIST(it)       (it->second.second)
+#define PROPERTY_VALUEPOINTER(it)   (it->second.first.mData.vp)
+#define PROPERTY_INDEX(it)          (it->second.first.mData.index)
 #define PROPERTY_NAME(it)           (it->first)
-#define PROPERTY_GETTERF(it)        (it->second.mData.fPair.getterF)
-#define PROPERTY_SETTERF(it)        (it->second.mData.fPair.setterF)
-#define PROPERTY_GETTERI(it)        (it->second.mData.iPair.getterI)
-#define PROPERTY_SETTERI(it)        (it->second.mData.iPair.setterI)
+#define PROPERTY_GETTERF(it)        (it->second.first.mData.fPair.getterF)
+#define PROPERTY_SETTERF(it)        (it->second.first.mData.fPair.setterF)
+#define PROPERTY_GETTERI(it)        (it->second.first.mData.iPair.getterI)
+#define PROPERTY_SETTERI(it)        (it->second.first.mData.iPair.setterI)
 
 
 }

@@ -193,6 +193,10 @@ SOURCE=..\parser.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\property.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\reader.h
 # End Source File
 # Begin Source File

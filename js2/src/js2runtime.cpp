@@ -73,7 +73,7 @@ bool hasAttribute(const IdentifierList* identifiers, Token::Kind tokenKind)
     return false;
 }
 
-bool hasAttribute(const IdentifierList* identifiers, StringAtom &name)
+bool hasAttribute(const IdentifierList* identifiers, const StringAtom &name)
 {
     while (identifiers) {
         if (identifiers->name == name)
@@ -85,7 +85,7 @@ bool hasAttribute(const IdentifierList* identifiers, StringAtom &name)
 
 JSType *ScopeChain::findType(const StringAtom& typeName) 
 {
-    Reference *ref = getName(typeName, Read);
+    Reference *ref = getName(typeName, CURRENT_ATTR, Read);
     JSType *result = Object_Type;
     if (ref) {
         if (ref->hasCompileTimeValue()) {
@@ -555,7 +555,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     const String &name = *mCurModule->getString(index);
-                    if (mScopeChain.getNameValue(name, this)) {
+                    if (mScopeChain.getNameValue(name, CURRENT_ATTR, this)) {
                         // need to invoke
                     }
                 }
@@ -565,7 +565,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     const String &name = *mCurModule->getString(index);
-                    if (mScopeChain.setNameValue(name, this)) {
+                    if (mScopeChain.setNameValue(name, CURRENT_ATTR, this)) {
                         // need to invoke
                     }
                 }
@@ -582,7 +582,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     const String &name = *mCurModule->getString(index);
-                    if (obj->getProperty(this, name) ) {
+                    if (obj->getProperty(this, name, CURRENT_ATTR) ) {
                         // need to invoke
                     }
                 }
@@ -601,7 +601,7 @@ JSValue Context::interpret(uint8 *pc, uint8 *endPC)
                     uint32 index = *((uint32 *)pc);
                     pc += sizeof(uint32);
                     const String &name = *mCurModule->getString(index);
-                    if (obj->setProperty(this, name, v) ) {
+                    if (obj->setProperty(this, name, CURRENT_ATTR, v) ) {
                         // need to invoke
                     }
                 }
@@ -865,7 +865,7 @@ void ScopeChain::collectNames(StmtNode *p)
             IdentifierExprNode *className = static_cast<IdentifierExprNode*>(classStmt->name);
             const StringAtom& name = className->name;
             JSType *thisClass = new JSType(name, NULL);
-            p->prop = defineVariable(name, Type_Type, JSValue(thisClass));
+            p->prop = defineVariable(name, classStmt->attributes, Type_Type, JSValue(thisClass));
         }
         break;
     case StmtNode::block:
@@ -889,9 +889,9 @@ void ScopeChain::collectNames(StmtNode *p)
                 if (v->name && (v->name->getKind() == ExprNode::identifier)) {
                     IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
                     if (isStatic)
-                        v->prop = defineStaticVariable(i->name, NULL);
+                        v->prop = defineStaticVariable(i->name, vs->attributes, NULL);
                     else
-                        v->prop = defineVariable(i->name, NULL);
+                        v->prop = defineVariable(i->name, vs->attributes, NULL);
                 }
                 v = v->next;
             }
@@ -914,22 +914,22 @@ void ScopeChain::collectNames(StmtNode *p)
                     if (topClass() && (topClass()->mClassName.compare(name) == 0))
                         isConstructor = true;
                     if (isConstructor) {
-                        p->prop = defineStaticMethod(name, NULL);
+                        p->prop = defineStaticMethod(name, f->attributes, NULL);
                         PROPERTY_KIND(p->prop) = Constructor;
                     }
                     else {
                         switch (f->function.prefix) {
                         case FunctionName::Get:
-                            p->prop = defineGetterMethod(name, NULL);
+                            p->prop = defineGetterMethod(name, f->attributes, NULL);
                             break;
                         case FunctionName::Set:
-                            p->prop = defineSetterMethod(name, NULL);
+                            p->prop = defineSetterMethod(name, f->attributes, NULL);
                             break;
                         case FunctionName::normal:
                             if (isStatic)
-                                p->prop = defineStaticMethod(name, NULL);
+                                p->prop = defineStaticMethod(name, f->attributes, NULL);
                             else
-                                p->prop = defineMethod(name, NULL);
+                                p->prop = defineMethod(name, f->attributes, NULL);
                             break;
                         default:
                             NOT_REACHED("unexpected prefix");
@@ -967,7 +967,7 @@ void JSType::completeClass(Context *cx, ScopeChain *scopeChain, JSType *super)
         bcg.addByte(ReturnOp);
         fnc->mByteCode = new ByteCodeModule(&bcg);        
 
-        PropertyIterator propIt = scopeChain->defineStaticMethod(mClassName, NULL);
+        PropertyIterator propIt = scopeChain->defineStaticMethod(mClassName, NULL, NULL);   // XXX attributes?
         PROPERTY_KIND(propIt) = Constructor;
 
         scopeChain->setStaticValue(PROPERTY(propIt), JSValue(fnc));                
@@ -1090,7 +1090,7 @@ void Context::buildRuntimeForStmt(StmtNode *p)
                 if (v->name && (v->name->getKind() == ExprNode::identifier)) {
                     JSType *pType = mScopeChain.extractType(v->type);
                     IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
-                    mScopeChain.defineVariable(i->name, pType);
+                    mScopeChain.defineVariable(i->name, NULL, pType);       // XXX attributes?
                 }
                 v = v->next;
             }
@@ -1268,6 +1268,9 @@ JSValue objectBitOr(Context *cx, JSValue *argv, uint32 argc)
     return JSValue((float64)( (int32)(r1.toInt32(cx).f64) | (int32)(r2.toInt32(cx).f64) ));
 }
 
+//
+// implements r1 < r2, returning true or false or undefined
+//
 JSValue objectCompare(Context *cx, JSValue &r1, JSValue &r2)
 {
     JSValue r1p = r1.toPrimitive(cx, JSValue::NumberHint);
@@ -1301,7 +1304,7 @@ JSValue objectLessEqual(Context *cx, JSValue *argv, uint32 argc)
 {
     JSValue &r1 = argv[0];
     JSValue &r2 = argv[1];
-    JSValue result = objectCompare(cx, r1, r2);
+    JSValue result = objectCompare(cx, r2, r1);
     if (result.isTrue() || result.isUndefined())
         return kFalseValue;
     else
@@ -1516,14 +1519,14 @@ JSValue JSValue::valueToString(Context *cx, JSValue& value)
     }
     if (obj) {
         JSFunction *target = NULL;
-        if (obj->hasProperty(widenCString("toString"), Read)) {
-            JSValue v = obj->getProperty(widenCString("toString"));
+        if (obj->hasProperty(widenCString("toString"), CURRENT_ATTR, Read)) {
+            JSValue v = obj->getProperty(widenCString("toString"), CURRENT_ATTR);
             if (v.isFunction())
                 target = v.function;
         }
         if (target == NULL) {
-            if (obj->hasProperty(widenCString("valueOf"), Read)) {
-                JSValue v = obj->getProperty(widenCString("valueOf"));
+            if (obj->hasProperty(widenCString("valueOf"), CURRENT_ATTR, Read)) {
+                JSValue v = obj->getProperty(widenCString("valueOf"), CURRENT_ATTR);
                 if (v.isFunction())
                     target = v.function;
             }
@@ -1745,8 +1748,8 @@ JSValue JSValue::valueToBoolean(Context *cx, JSValue& value)
     }
     ASSERT(obj);
     JSFunction *target = NULL;
-    if (obj->hasProperty(widenCString("toBoolean"), Read)) {
-        JSValue v = obj->getProperty(widenCString("toBoolean"));
+    if (obj->hasProperty(widenCString("toBoolean"), CURRENT_ATTR, Read)) {
+        JSValue v = obj->getProperty(widenCString("toBoolean"), CURRENT_ATTR);
         if (v.isFunction())
             target = v.function;
     }

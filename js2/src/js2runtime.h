@@ -58,6 +58,9 @@ namespace JS2Runtime {
 
     using namespace ByteCode;
 
+
+#define CURRENT_ATTR    (NULL)
+
 #ifdef IS_LITTLE_ENDIAN
 #define JSDOUBLE_HI32(x)        (((uint32 *)&(x))[1])
 #define JSDOUBLE_LO32(x)        (((uint32 *)&(x))[0])
@@ -99,6 +102,9 @@ namespace JS2Runtime {
                                         // has this type).
     extern JSType *Boolean_Type;
     extern JSType *Void_Type;
+
+    bool hasAttribute(const IdentifierList* identifiers, Token::Kind tokenKind);
+    bool hasAttribute(const IdentifierList* identifiers, const StringAtom &name);
 
     class JSValue {
     public:
@@ -487,10 +493,30 @@ namespace JS2Runtime {
             return (i != mProperties.end());
         }
 */
-        // see if the property exists by a specific kind of access
-        bool hasProperty(const String &name, Access acc)
+        PropertyIterator findAttributedProperty(const String &name, IdentifierList *attr)
         {
-            PropertyIterator i = mProperties.find(name);
+            for (PropertyIterator i = mProperties.lower_bound(name), 
+                            end = mProperties.upper_bound(name); (i != end); i++) {
+                if (attr) {
+                    IdentifierList *propAttr = PROPERTY_ATTRLIST(i);
+                    if (propAttr == NULL)
+                        return i;
+                    while (attr) {
+                        if (hasAttribute(propAttr, attr->name))
+                            return i;
+                        attr = attr->next;
+                    }
+                }
+                else
+                    return i;
+            }
+            return mProperties.end();
+        }
+
+        // see if the property exists by a specific kind of access
+        bool hasProperty(const String &name, IdentifierList *attr, Access acc)
+        {
+            PropertyIterator i = findAttributedProperty(name, attr);
             if (i != mProperties.end()) {
                 Property& prop = PROPERTY(i);
                 if (prop.mFlag == FunctionPair)
@@ -508,88 +534,96 @@ namespace JS2Runtime {
         }
 
         // get a property value
-        JSValue getProperty(const String &name)
+        JSValue getProperty(const String &name, IdentifierList *attr)
         {
-            Property &prop = getPropertyData(name);
+            Property &prop = getPropertyData(name, attr);
             ASSERT(prop.mFlag == ValuePointer);
             return *prop.mData.vp;
         }
 
         // set a property value
-        void setProperty(const String &name, JSValue &v)
+        void setProperty(const String &name, IdentifierList *attr, JSValue &v)
         {
-            Property &prop = getPropertyData(name);
+            Property &prop = getPropertyData(name, attr);
             ASSERT(prop.mFlag == ValuePointer);
             *prop.mData.vp = v;
         }
 
-        virtual bool getProperty(Context *cx, const String &name);
+        virtual bool getProperty(Context *cx, const String &name, IdentifierList *attr);
 
-        virtual bool setProperty(Context *cx, const String &name, JSValue &v);
+        virtual bool setProperty(Context *cx, const String &name, IdentifierList *attr, JSValue &v);
 
 
 
         // add a property
-        virtual PropertyIterator defineVariable(const String &name, JSType *type)
+        virtual PropertyIterator defineVariable(const String &name, IdentifierList *attr, JSType *type)
         {
-            const PropertyMap::value_type e(name, Property(new JSValue(), type));
-            std::pair<PropertyIterator, bool> r = mProperties.insert(e);
-            return r.first;
+            const PropertyMap::value_type e(name, AttributedProperty(Property(new JSValue(), type), attr));
+//            std::pair<PropertyIterator, bool> r = mProperties.insert(e);
+//            return r.first;
+            PropertyIterator r = mProperties.insert(e);
+            return r;
         }
-        virtual PropertyIterator defineStaticVariable(const String &name, JSType *type)
+        virtual PropertyIterator defineStaticVariable(const String &name, IdentifierList *attr, JSType *type)
         {
-            return defineVariable(name, type);
+            return defineVariable(name, attr, type);
         }
         // add a method property
-        virtual PropertyIterator defineMethod(const String &name, JSType *type)
+        virtual PropertyIterator defineMethod(const String &name, IdentifierList *attr, JSType *type)
         {
-            return defineVariable(name, type);
+            return defineVariable(name, attr, type);
         }
-        virtual PropertyIterator defineStaticMethod(const String &name, JSType *type)
+        virtual PropertyIterator defineStaticMethod(const String &name, IdentifierList *attr, JSType *type)
         {
-            return defineVariable(name, type);
+            return defineVariable(name, attr, type);
         }
-        virtual PropertyIterator defineGetterMethod(const String &name, JSType *type)
+        virtual PropertyIterator defineGetterMethod(const String &name, IdentifierList *attr, JSType *type)
         {
-            if (hasProperty(name, Write)) {
-                PropertyIterator i = mProperties.find(name);
+            if (hasProperty(name, attr, Write)) {
+                PropertyIterator i = findAttributedProperty(name, attr);
                 ASSERT(PROPERTY_KIND(i) == FunctionPair);
                 ASSERT(PROPERTY_GETTERF(i) == NULL);
                 return i;
             }
             else {
-                const PropertyMap::value_type e(name, Property(type, NULL, NULL));
-                std::pair<PropertyIterator, bool> r = mProperties.insert(e);
-                return r.first;
+                const PropertyMap::value_type e(name, AttributedProperty(Property(type, NULL, NULL), attr));
+//                std::pair<PropertyIterator, bool> r = mProperties.insert(e);
+//                return r.first;
+                PropertyIterator r = mProperties.insert(e);
+                return r;
             }
         }
-        virtual PropertyIterator defineSetterMethod(const String &name, JSType *type)
+        virtual PropertyIterator defineSetterMethod(const String &name, IdentifierList *attr, JSType *type)
         {
-            if (hasProperty(name, Read)) {
-                PropertyIterator i = mProperties.find(name);
+            if (hasProperty(name, attr, Read)) {
+                PropertyIterator i = findAttributedProperty(name, attr);
                 ASSERT(PROPERTY_KIND(i) == FunctionPair);
                 ASSERT(PROPERTY_SETTERF(i) == NULL);
                 return i;
             }
             else {
-                const PropertyMap::value_type e(name, Property(type, NULL, NULL));
-                std::pair<PropertyIterator, bool> r = mProperties.insert(e);
-                return r.first;
+                const PropertyMap::value_type e(name, AttributedProperty(Property(type, NULL, NULL), attr));
+//                std::pair<PropertyIterator, bool> r = mProperties.insert(e);
+//                return r.first;
+                PropertyIterator r = mProperties.insert(e);
+                return r;
             }
         }
 
         // add a property (with a value)
-        virtual PropertyIterator defineVariable(const String &name, JSType *type, JSValue v)
+        virtual PropertyIterator defineVariable(const String &name, IdentifierList *attr, JSType *type, JSValue v)
         {
-            const PropertyMap::value_type e(name, Property(new JSValue(v), type));
-            std::pair<PropertyIterator, bool> r = mProperties.insert(e);
-            return r.first;
+            const PropertyMap::value_type e(name, AttributedProperty(Property(new JSValue(v), type), attr));
+//            std::pair<PropertyIterator, bool> r = mProperties.insert(e);
+//            return r.first;
+            PropertyIterator r = mProperties.insert(e);
+            return r;
         }
 
         // get all the goods on a specific property
-        Property &getPropertyData(const String &name)
+        Property &getPropertyData(const String &name, IdentifierList *attr)
         {
-            PropertyIterator i = mProperties.find(name);
+            PropertyIterator i = findAttributedProperty(name, attr);
             ASSERT(i != mProperties.end());
             return PROPERTY(i);
         }
@@ -634,9 +668,9 @@ namespace JS2Runtime {
             return getValue(prop);  // XXX or should this be an error ?
         }
 
-        virtual Reference *genReference(const String& name, Access acc, uint32 depth)
+        virtual Reference *genReference(const String& name, IdentifierList *attr, Access acc, uint32 depth)
         {
-            Property &prop = getPropertyData(name);
+            Property &prop = getPropertyData(name, attr);
             switch (prop.mFlag) {
             case ValuePointer:
                 return new ValueReference(this, name, acc, prop.mType);
@@ -704,8 +738,8 @@ namespace JS2Runtime {
 
         void initInstance(JSType *type);
 
-        bool getProperty(Context *cx, const String &name);
-        bool setProperty(Context *cx, const String &name, JSValue &v);
+        bool getProperty(Context *cx, const String &name, IdentifierList *attr);
+        bool setProperty(Context *cx, const String &name, IdentifierList *attr, JSValue &v);
 
         JSValue getField(uint32 index)
         {
@@ -763,22 +797,22 @@ namespace JS2Runtime {
         
         // static helpers
 
-        PropertyIterator defineStaticMethod(const String& name, JSType *type)
+        PropertyIterator defineStaticMethod(const String& name, IdentifierList *attr, JSType *type)
         {
             ASSERT(mStatics);
-            return mStatics->defineMethod(name, type);
+            return mStatics->defineMethod(name, attr, type);
         }
 
-        PropertyIterator defineStaticVariable(const String& name, JSType *type)
+        PropertyIterator defineStaticVariable(const String& name, IdentifierList *attr, JSType *type)
         {
             ASSERT(mStatics);
-            return mStatics->defineVariable(name, type);
+            return mStatics->defineVariable(name, attr, type);
         }
 
-        bool hasStatic(const String& name, Access acc)
+        bool hasStatic(const String& name, IdentifierList *attr, Access acc)
         {
             ASSERT(mStatics);
-            return mStatics->hasProperty(name, acc);
+            return mStatics->hasProperty(name, attr, acc);
         }
 
         void setStaticValue(Property& prop, JSValue v)
@@ -796,58 +830,66 @@ namespace JS2Runtime {
         //
 
 
-        PropertyIterator defineVariable(const String& name, JSType *type)
+        PropertyIterator defineVariable(const String& name, IdentifierList *attr, JSType *type)
         {
-            const PropertyMap::value_type e(name, Property(mVariableCount++, type, Slot));
-            std::pair<PropertyIterator, bool> r = mProperties.insert(e);
-            return r.first;        
+            const PropertyMap::value_type e(name, AttributedProperty(Property(mVariableCount++, type, Slot), attr));
+//            std::pair<PropertyIterator, bool> r = mProperties.insert(e);
+//            return r.first;        
+            PropertyIterator r = mProperties.insert(e);
+            return r;
         }
 
-        PropertyIterator defineMethod(const String& name, JSType *type)
+        PropertyIterator defineMethod(const String& name, IdentifierList *attr, JSType *type)
         {
             uint32 vTableIndex = mMethods.size();
             mMethods.push_back(NULL);
 
-            const PropertyMap::value_type e(name, Property(vTableIndex, type, Method));
-            std::pair<PropertyIterator, bool> r = mProperties.insert(e);
-            return r.first;
+            const PropertyMap::value_type e(name, AttributedProperty(Property(vTableIndex, type, Method), attr));
+//            std::pair<PropertyIterator, bool> r = mProperties.insert(e);
+//            return r.first;
+            PropertyIterator r = mProperties.insert(e);
+            return r;
         }
         
-        PropertyIterator defineGetterMethod(const String &name, JSType *type)
+        PropertyIterator defineGetterMethod(const String &name, IdentifierList *attr, JSType *type)
         {
             uint32 vTableIndex = mMethods.size();
             mMethods.push_back(NULL);
 
-            if (hasProperty(name, Write)) {
-                PropertyIterator i = mProperties.find(name);
+            if (hasProperty(name, attr, Write)) {
+                PropertyIterator i = findAttributedProperty(name, attr);
                 ASSERT(PROPERTY_KIND(i) == IndexPair);
                 ASSERT(PROPERTY_GETTERI(i) == 0);
                 PROPERTY_GETTERI(i) = vTableIndex;
                 return i;
             }
             else {
-                const PropertyMap::value_type e(name, Property(vTableIndex, 0, type));
-                std::pair<PropertyIterator, bool> r = mProperties.insert(e);
-                return r.first;
+                const PropertyMap::value_type e(name, AttributedProperty(Property(vTableIndex, 0, type), attr));
+//                std::pair<PropertyIterator, bool> r = mProperties.insert(e);
+//                return r.first;
+                PropertyIterator r = mProperties.insert(e);
+                return r;
             }
         }
 
-        PropertyIterator defineSetterMethod(const String &name, JSType *type)
+        PropertyIterator defineSetterMethod(const String &name, IdentifierList *attr, JSType *type)
         {
             uint32 vTableIndex = mMethods.size();
             mMethods.push_back(NULL);
 
-            if (hasProperty(name, Read)) {
-                PropertyIterator i = mProperties.find(name);
+            if (hasProperty(name, attr, Read)) {
+                PropertyIterator i = findAttributedProperty(name, attr);
                 ASSERT(PROPERTY_KIND(i) == IndexPair);
                 ASSERT(PROPERTY_SETTERI(i) == 0);
                 PROPERTY_SETTERI(i) = vTableIndex;
                 return i;
             }
             else {
-                const PropertyMap::value_type e(name, Property(0, vTableIndex, type));
-                std::pair<PropertyIterator, bool> r = mProperties.insert(e);
-                return r.first;
+                const PropertyMap::value_type e(name, AttributedProperty(Property(0, vTableIndex, type), attr));
+//                std::pair<PropertyIterator, bool> r = mProperties.insert(e);
+//                return r.first;
+                PropertyIterator r = mProperties.insert(e);
+                return r;
             }
         }
 
@@ -863,12 +905,12 @@ namespace JS2Runtime {
 
         void setDefaultConstructor(JSFunction *f)
         {
-            PropertyIterator it = defineStaticMethod(mClassName, Object_Type);
+            PropertyIterator it = defineStaticMethod(mClassName, NULL, Object_Type);    // XXX attr?
             PROPERTY_KIND(it) = Constructor;
             setStaticValue(PROPERTY(it), JSValue(f));
         }
 
-        void addStaticMethod(const String &name, JSFunction *f);
+        void addStaticMethod(const String &name, IdentifierList *attr, JSFunction *f);
 
         // return true if 'other' is on the chain of supertypes
         bool derivesFrom(JSType *other)
@@ -927,10 +969,10 @@ namespace JS2Runtime {
             }
         }
 
-        virtual Reference *genReference(const String& name, Access acc, uint32 depth)
+        virtual Reference *genReference(const String& name, IdentifierList *attr, Access acc, uint32 depth)
         {
-            if (hasProperty(name, acc)) {
-                Property &prop = getPropertyData(name);
+            if (hasProperty(name, attr, acc)) {
+                Property &prop = getPropertyData(name, attr);
                 switch (prop.mFlag) {
                 case FunctionPair:
                     if (acc == Read)
@@ -963,7 +1005,7 @@ namespace JS2Runtime {
             }
             // walk the supertype chain
             if (mSuperType)
-                return mSuperType->genReference(name, acc, depth);
+                return mSuperType->genReference(name, attr, acc, depth);
             return NULL;
         }
 
@@ -974,12 +1016,10 @@ namespace JS2Runtime {
         {
             if (!mSuperType) return NULL;   // ground out at Object
             ASSERT(mStatics);
-            for (PropertyIterator i = mStatics->mProperties.begin(), 
-                            end = mStatics->mProperties.end(); (i != end); i++) {
-                if ((PROPERTY_KIND(i) == Constructor)
-                        && (PROPERTY_NAME(i).compare(mClassName) == 0)) {
+            for (PropertyIterator i = mStatics->mProperties.lower_bound(mClassName), 
+                            end = mStatics->mProperties.upper_bound(mClassName); (i != end); i++) {
+                if (PROPERTY_KIND(i) == Constructor)
                     return mStatics->mMethods[PROPERTY_INDEX(i)];
-                }
             }
             return NULL;
         }
@@ -1018,9 +1058,9 @@ namespace JS2Runtime {
 
         ParameterBarrel() : JSType(NULL) { }
 
-        Reference *genReference(const String& name, Access acc, uint32 depth)
+        Reference *genReference(const String& name, IdentifierList *attr, Access acc, uint32 depth)
         {
-            Property &prop = getPropertyData(name);
+            Property &prop = getPropertyData(name, attr);
             ASSERT(prop.mFlag == Slot);
             return new ParameterReference(prop.mData.index, acc, prop.mType);
         }
@@ -1037,10 +1077,16 @@ namespace JS2Runtime {
         if (type->mVariableCount)
             mInstanceValues = new JSValue[type->mVariableCount];
         // copy the instance variable names into the property map
-        for (PropertyIterator i = type->mProperties.begin(), 
-                    end = type->mProperties.end();
-                    (i != end); i++) {            
-            mProperties[PROPERTY_NAME(i)] = PROPERTY(i);
+        // only don't do it when 'this' and 'type' are the same, that's
+        // the static instance being initialized to itself
+        if (this != type) {
+            for (PropertyIterator i = type->mProperties.begin(), 
+                        end = type->mProperties.end();
+                        (i != end); i++) {            
+    //            mProperties[PropertyID(PROPERTY_NAME(i), NULL)] = PROPERTY(i);
+                const PropertyMap::value_type e(PROPERTY_NAME(i), ATTR_PROPERTY(i));
+                mProperties.insert(e);
+            }
         }
         // and then do the same for the super types
         JSType *t = type->mSuperType;
@@ -1048,7 +1094,9 @@ namespace JS2Runtime {
             for (PropertyIterator i = t->mProperties.begin(), 
                         end = t->mProperties.end();
                         (i != end); i++) {            
-                mProperties[PROPERTY_NAME(i)] = PROPERTY(i);            
+//                mProperties[PropertyID(PROPERTY_NAME(i), NULL)] = PROPERTY(i);            
+                const PropertyMap::value_type e(PROPERTY_NAME(i), ATTR_PROPERTY(i));
+                mProperties.insert(e);            
             }
             t = t->mSuperType;
         }
@@ -1101,9 +1149,9 @@ namespace JS2Runtime {
         bool hasLocalVars()             { return true; }
         virtual uint32 localVarCount()  { return mVariableCount; }
 
-        Reference *genReference(const String& name, Access acc, uint32 depth)
+        Reference *genReference(const String& name, IdentifierList *attr, Access acc, uint32 depth)
         {
-            Property &prop = getPropertyData(name);
+            Property &prop = getPropertyData(name, attr);
             ASSERT((prop.mFlag == Slot) || (prop.mFlag == FunctionPair)); 
 
             if (prop.mFlag == FunctionPair) 
@@ -1176,42 +1224,42 @@ namespace JS2Runtime {
         }
 
         // add a new name to the current scope
-        PropertyIterator defineVariable(const String& name, JSType *type)
+        PropertyIterator defineVariable(const String& name, IdentifierList *attr, JSType *type)
         {
             JSObject *top = mScopeStack.back();
-            return top->defineVariable(name, type);
+            return top->defineVariable(name, attr, type);
         }
-        PropertyIterator defineVariable(const String& name, JSType *type, JSValue v)
+        PropertyIterator defineVariable(const String& name, IdentifierList *attr, JSType *type, JSValue v)
         {
             JSObject *top = mScopeStack.back();
-            return top->defineVariable(name, type, v);
+            return top->defineVariable(name, attr, type, v);
         }
-        PropertyIterator defineStaticVariable(const String& name, JSType *type)
+        PropertyIterator defineStaticVariable(const String& name, IdentifierList *attr, JSType *type)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
-            return top->defineStaticVariable(name, type);
+            return top->defineStaticVariable(name, attr, type);
         }
-        PropertyIterator defineMethod(const String& name, JSType *type)
+        PropertyIterator defineMethod(const String& name, IdentifierList *attr, JSType *type)
         {
             JSObject *top = mScopeStack.back();
-            return top->defineMethod(name, type);
+            return top->defineMethod(name, attr, type);
         }   
-        PropertyIterator defineStaticMethod(const String& name, JSType *type)
+        PropertyIterator defineStaticMethod(const String& name, IdentifierList *attr, JSType *type)
         {
             JSObject *top = mScopeStack.back();
             ASSERT(dynamic_cast<JSType *>(top));
-            return top->defineStaticMethod(name, type);
+            return top->defineStaticMethod(name, attr, type);
         }   
-        PropertyIterator defineGetterMethod(const String &name, JSType *type)
+        PropertyIterator defineGetterMethod(const String &name, IdentifierList *attr, JSType *type)
         {
             JSObject *top = mScopeStack.back();
-            return top->defineGetterMethod(name, type);
+            return top->defineGetterMethod(name, attr, type);
         }
-        PropertyIterator defineSetterMethod(const String &name, JSType *type)
+        PropertyIterator defineSetterMethod(const String &name, IdentifierList *attr, JSType *type)
         {
             JSObject *top = mScopeStack.back();
-            return top->defineSetterMethod(name, type);
+            return top->defineSetterMethod(name, attr, type);
         }
         void defineUnaryOperator(Operator which, JSFunction *f)
         {
@@ -1221,20 +1269,20 @@ namespace JS2Runtime {
         }
 
         // see if the current scope contains a name already
-        bool hasProperty(const String& name, Access acc)
+        bool hasProperty(const String& name, IdentifierList *attr, Access acc)
         {
             JSObject *top = mScopeStack.back();
-            return top->hasProperty(name, acc);
+            return top->hasProperty(name, attr, acc);
         }
 
         // generate a reference to the given name
-        Reference *getName(const String& name, Access acc)
+        Reference *getName(const String& name, IdentifierList *attr, Access acc)
         {
             uint32 depth = 0;
             for (ScopeScanner s = mScopeStack.rbegin(), end = mScopeStack.rend(); (s != end); s++, depth++)
             {
-                if ((*s)->hasProperty(name, acc))
-                    return (*s)->genReference(name, acc, depth);
+                if ((*s)->hasProperty(name, attr, acc))
+                    return (*s)->genReference(name, attr, acc, depth);
             }
             return NULL;
         }
@@ -1250,9 +1298,9 @@ namespace JS2Runtime {
 
         // a compile time request to get the value for a name
         // (i.e. we're accessing a constant value)
-        JSValue getValue(const String& name)
+        JSValue getValue(const String& name, IdentifierList *attr)
         {
-            Reference *ref = getName(name, Read);
+            Reference *ref = getName(name, attr, Read);
             ASSERT(ref);
             JSValue result = ref->getValue();
             delete ref;
@@ -1307,9 +1355,9 @@ namespace JS2Runtime {
         // a runtime request to get the value for a name
         // it'll either return a value or cause the
         // interpreter to switch execution to a getter function
-        bool getNameValue(const String& name, Context *cx)
+        bool getNameValue(const String& name, IdentifierList *attr, Context *cx)
         {
-            Reference *ref = getName(name, Read);
+            Reference *ref = getName(name, attr, Read);
             if (ref == NULL)
                 throw Exception(Exception::referenceError, name);
             bool result = ref->getValue(cx);
@@ -1317,12 +1365,12 @@ namespace JS2Runtime {
             return result;
         }
 
-        bool setNameValue(const String& name, Context *cx)
+        bool setNameValue(const String& name, IdentifierList *attr, Context *cx)
         {
             JSObject *top = *mScopeStack.rbegin();
             Reference *ref = NULL;
-            if (top->hasProperty(name, Write))
-                ref = top->genReference(name, Write, 0);
+            if (top->hasProperty(name, attr, Write))
+                ref = top->genReference(name, attr, Write, 0);
             else {
                 // then define the property in the top scope
                 ref = new ValueReference(top, name, Write, Object_Type);
@@ -1330,7 +1378,7 @@ namespace JS2Runtime {
                                                             // and setting it's value without building a reference
                                                             // (and re-visit the whole issue of constructing
                                                             // references at runtime anyway [who's deleting these?])
-                top->defineVariable(name, Object_Type);
+                top->defineVariable(name, attr, Object_Type);
             }
             bool result = ref->setValue(cx);
             delete ref;
@@ -1404,18 +1452,18 @@ namespace JS2Runtime {
         {
             if (Object_Type == NULL) {
                 Object_Type = new JSType(NULL);
-                global->defineVariable(widenCString("Object"), Type_Type, JSValue(Object_Type));
+                global->defineVariable(widenCString("Object"), NULL, Type_Type, JSValue(Object_Type));
 
                 Number_Type = new JSType(widenCString("Number"), Object_Type);
                 Number_Type->createStaticComponent();
                 Number_Type->setDefaultConstructor(new JSFunction(&Number_Constructor, Object_Type));
-                Number_Type->addStaticMethod(widenCString("toString"), new JSFunction(&Number_ToString, String_Type));
+                Number_Type->addStaticMethod(widenCString("toString"), NULL, new JSFunction(&Number_ToString, String_Type));
                 Number_Type->completeClass(this, &mScopeChain, Object_Type);
                 Number_Type->createStaticInstance();
-                global->defineVariable(widenCString("Number"), Type_Type, JSValue(Number_Type));
+                global->defineVariable(widenCString("Number"), NULL, Type_Type, JSValue(Number_Type));
                 
                 Void_Type = new JSType(NULL);
-                global->defineVariable(widenCString("Void"), Type_Type, JSValue(Void_Type));
+                global->defineVariable(widenCString("Void"), NULL, Type_Type, JSValue(Void_Type));
 
 
                 String_Type = new JSType(Object_Type);
@@ -1539,18 +1587,18 @@ namespace JS2Runtime {
 
     inline JSValue ValueReference::getValue()
     {
-        return mBase->getProperty(mName);
+        return mBase->getProperty(mName, NULL);
     }
 
     inline bool ValueReference::getValue(Context *cx)
     {
-        cx->mStack.push_back(mBase->getProperty(mName));
+        cx->mStack.push_back(mBase->getProperty(mName, NULL));
         return false;
     }
 
     inline bool ValueReference::setValue(Context *cx)
     {
-        mBase->setProperty(mName, cx->mStack.back());
+        mBase->setProperty(mName, NULL, cx->mStack.back());
         cx->mStack.pop_back();
         return false;
     }
@@ -1561,10 +1609,10 @@ namespace JS2Runtime {
     }
 
     
-    inline bool JSObject::getProperty(Context *cx, const String &name)
+    inline bool JSObject::getProperty(Context *cx, const String &name, IdentifierList *attr)
     {
-        if (hasProperty(name, Read)) {
-            Property &prop = getPropertyData(name);
+        if (hasProperty(name, attr, Read)) {
+            Property &prop = getPropertyData(name, attr);
             switch (prop.mFlag) {
             case ValuePointer:
                 cx->mStack.push_back(*prop.mData.vp);
@@ -1588,10 +1636,10 @@ namespace JS2Runtime {
         return false;
     }
 
-    inline bool JSInstance::getProperty(Context *cx, const String &name)
+    inline bool JSInstance::getProperty(Context *cx, const String &name, IdentifierList *attr)
     {
-        if (hasProperty(name, Read)) {
-            Property &prop = getPropertyData(name);
+        if (hasProperty(name, attr, Read)) {
+            Property &prop = getPropertyData(name, attr);
             switch (prop.mFlag) {
             case Slot:
                 cx->mStack.push_back(mInstanceValues[prop.mData.index]);
@@ -1618,10 +1666,10 @@ namespace JS2Runtime {
         return false;
     }
 
-    inline bool JSObject::setProperty(Context *cx, const String &name, JSValue &v)
+    inline bool JSObject::setProperty(Context *cx, const String &name, IdentifierList *attr, JSValue &v)
     {
-        if (hasProperty(name, Write)) {
-            Property &prop = getPropertyData(name);
+        if (hasProperty(name, attr, Write)) {
+            Property &prop = getPropertyData(name, attr);
             switch (prop.mFlag) {
             case ValuePointer:
                 *prop.mData.vp = v;
@@ -1636,15 +1684,15 @@ namespace JS2Runtime {
             }
         }
         else {
-            defineVariable(name, Object_Type, v);
+            defineVariable(name, attr, Object_Type, v);
             return false;
         }
     }
 
-    inline bool JSInstance::setProperty(Context *cx, const String &name, JSValue &v)
+    inline bool JSInstance::setProperty(Context *cx, const String &name, IdentifierList *attr, JSValue &v)
     {
-        if (hasProperty(name, Write)) {
-            Property &prop = getPropertyData(name);
+        if (hasProperty(name, attr, Write)) {
+            Property &prop = getPropertyData(name, attr);
             switch (prop.mFlag) {
             case Slot:
                 mInstanceValues[prop.mData.index] = v;
@@ -1662,7 +1710,7 @@ namespace JS2Runtime {
             }
         }
         else {
-            defineVariable(name, Object_Type, v);
+            defineVariable(name, attr, Object_Type, v);
             return false;
         }
     }
@@ -1682,14 +1730,11 @@ namespace JS2Runtime {
     {
     }
 
-    inline void JSType::addStaticMethod(const String &name, JSFunction *f)
+    inline void JSType::addStaticMethod(const String &name, IdentifierList *attr, JSFunction *f)
     {
-        PropertyIterator it = defineStaticMethod(name, f->mResultType);
+        PropertyIterator it = defineStaticMethod(name, attr, f->mResultType);
         setStaticValue(PROPERTY(it), JSValue(f));
     }
-
-    bool hasAttribute(const IdentifierList* identifiers, Token::Kind tokenKind);
-    bool hasAttribute(const IdentifierList* identifiers, StringAtom &name);
 
 }
 }

@@ -120,6 +120,7 @@ JSValue debug(Context *cx, JSValue *argv, uint32 argc)
 
 static void readEvalPrint(FILE *in, World &world)
 {
+            Arena a;
     String buffer;
     string line;
     LineReader inReader(in);
@@ -130,7 +131,6 @@ static void readEvalPrint(FILE *in, World &world)
     while (promptLine(inReader, line, buffer.empty() ? "dd> " : "> ")) {
         appendChars(buffer, line.data(), line.size());
         try {
-            Arena a;
             Parser p(world, a, buffer, ConsoleName);
                 
             if (showTokens) {
@@ -163,9 +163,9 @@ static void readEvalPrint(FILE *in, World &world)
 #ifdef INTERPRET_INPUT
 		// Generate code for parsedStatements, which is a linked 
                 // list of zero or more statements
-                globalObject.defineVariable(widenCString("load"), NULL, JSValue(new JSFunction(load, NULL)));
-                globalObject.defineVariable(widenCString("print"), NULL, JSValue(new JSFunction(print, NULL)));
-                globalObject.defineVariable(widenCString("debug"), NULL, JSValue(new JSFunction(debug, NULL)));
+                globalObject.defineVariable(widenCString("load"), NULL, NULL, JSValue(new JSFunction(load, NULL)));
+                globalObject.defineVariable(widenCString("print"), NULL, NULL, JSValue(new JSFunction(print, NULL)));
+                globalObject.defineVariable(widenCString("debug"), NULL, NULL, JSValue(new JSFunction(debug, NULL)));
 
                 cx.buildRuntime(parsedStatements);
 //                stdOut << globalObject;

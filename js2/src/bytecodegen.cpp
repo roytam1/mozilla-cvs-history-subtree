@@ -379,7 +379,7 @@ void ByteCodeGen::genCodeForStatement(StmtNode *p, ByteCodeGen *static_cg)
                 if (v->name && (v->name->getKind() == ExprNode::identifier)) {
                     if (v->initializer) {
                         IdentifierExprNode *i = static_cast<IdentifierExprNode *>(v->name);
-                        Reference *ref = mScopeChain->getName(i->name, Write);
+                        Reference *ref = mScopeChain->getName(i->name, CURRENT_ATTR, Write);
                         ASSERT(ref);    // must have been added previously by collectNames
                         if (isStatic && (static_cg != NULL)) {
                             static_cg->genExpr(v->initializer);
@@ -568,7 +568,7 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
     case ExprNode::identifier:
         {
             const StringAtom &name = static_cast<IdentifierExprNode *>(p)->name;
-            Reference *ref = mScopeChain->getName(name, acc);            
+            Reference *ref = mScopeChain->getName(name, CURRENT_ATTR, acc);            
             if (ref == NULL)
                 ref = new NameReference(name, acc);
             ref->emitImplicitLoad(this);
@@ -593,9 +593,9 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
             // a newObjectOp). 
             if (b->op1->getKind() == ExprNode::identifier) {
                 const StringAtom &name = static_cast<IdentifierExprNode *>(b->op1)->name;
-                Reference *ref = mScopeChain->getName(name, Read);
+                Reference *ref = mScopeChain->getName(name, CURRENT_ATTR, Read);
                 if (ref && (ref->mType == Type_Type)) {
-                    JSValue v = mScopeChain->getValue(name);
+                    JSValue v = mScopeChain->getValue(name, CURRENT_ATTR);
                     ASSERT(v.isType());
                     if (v.type->mStatics) {
                         lType = v.type->mStatics;
@@ -607,12 +607,23 @@ Reference *ByteCodeGen::genReference(ExprNode *p, Access acc)
 
             if (lType == NULL)
                 lType = genExpr(b->op1);    // generate code for leftside of dot
-            if (b->op2->getKind() != ExprNode::identifier) {
-                // this is where we handle n.q::id
+            if (b->op2->getKind() == ExprNode::qualify) {
+                BinaryExprNode *q = static_cast<BinaryExprNode *>(b->op2);
+                ASSERT(q->op1->getKind() == ExprNode::identifier);
+                ASSERT(q->op2->getKind() == ExprNode::identifier);
+                const StringAtom &fieldName = static_cast<IdentifierExprNode *>(q->op2)->name;
+                const StringAtom &qualifierName = static_cast<IdentifierExprNode *>(q->op1)->name;
+                IdentifierList id(qualifierName);
+                id.next = CURRENT_ATTR;
+                Reference *ref = lType->genReference(fieldName, &id, acc, 0);
+                if (ref == NULL)
+                    ref = new PropertyReference(fieldName, acc);
+                return ref;
             }
             else {
+                ASSERT(b->op2->getKind() == ExprNode::identifier);
                 const StringAtom &fieldName = static_cast<IdentifierExprNode *>(b->op2)->name;
-                Reference *ref = lType->genReference(fieldName, acc, 0);
+                Reference *ref = lType->genReference(fieldName, CURRENT_ATTR, acc, 0);
                 if (ref == NULL)
                     ref = new PropertyReference(fieldName, acc);
                 return ref;
@@ -631,10 +642,10 @@ void ByteCodeGen::genReferencePair(ExprNode *p, Reference *&readRef, Reference *
     case ExprNode::identifier:
         {
             const StringAtom &name = static_cast<IdentifierExprNode *>(p)->name;
-            readRef = mScopeChain->getName(name, Read);            
+            readRef = mScopeChain->getName(name, CURRENT_ATTR, Read);            
             if (readRef == NULL)
                 readRef = new NameReference(name, Read);
-            writeRef = mScopeChain->getName(name, Write);            
+            writeRef = mScopeChain->getName(name, CURRENT_ATTR, Write);            
             if (writeRef == NULL)
                 writeRef = new NameReference(name, Write);
             readRef->emitImplicitLoad(this);
@@ -648,9 +659,9 @@ void ByteCodeGen::genReferencePair(ExprNode *p, Reference *&readRef, Reference *
 
             if (b->op1->getKind() == ExprNode::identifier) {
                 const StringAtom &name = static_cast<IdentifierExprNode *>(b->op1)->name;
-                Reference *ref = mScopeChain->getName(name, Read);
+                Reference *ref = mScopeChain->getName(name, CURRENT_ATTR, Read);
                 if (ref && (ref->mType == Type_Type)) {
-                    JSValue v = mScopeChain->getValue(name);
+                    JSValue v = mScopeChain->getValue(name, CURRENT_ATTR);
                     ASSERT(v.isType());
                     if (v.type->mStatics) {
                         lType = v.type->mStatics;
@@ -667,10 +678,10 @@ void ByteCodeGen::genReferencePair(ExprNode *p, Reference *&readRef, Reference *
             }
             else {
                 const StringAtom &fieldName = static_cast<IdentifierExprNode *>(b->op2)->name;
-                readRef = lType->genReference(fieldName, Read, 0);
+                readRef = lType->genReference(fieldName, CURRENT_ATTR, Read, 0);
                 if (readRef == NULL)
                     readRef = new PropertyReference(fieldName, Read);
-                writeRef = lType->genReference(fieldName, Write, 0);
+                writeRef = lType->genReference(fieldName, CURRENT_ATTR, Write, 0);
                 if (writeRef == NULL)
                     writeRef = new PropertyReference(fieldName, Write);
             }
@@ -1098,6 +1109,18 @@ int printInstruction(Formatter &f, int i, const ByteCodeModule& bcm)
     case SetPropertyOp:
         f << "SetProperty " << *bcm.getString(bcm.getLong(i + 1)) << "\n";
         i += 5;
+        break;
+    case LoadConstantTrueOp:
+        f << "LoadConstantTrue\n";
+        i++;
+        break;
+    case LoadConstantFalseOp:
+        f << "LoadConstantFalse\n";
+        i++;
+        break;
+    case LoadConstantNullOp:
+        f << "LoadConstantNull\n";
+        i++;
         break;
     case LoadConstantNumberOp:
         f << "LoadConstantNumber " << bcm.getNumber(bcm.getLong(i + 1)) << "\n";
