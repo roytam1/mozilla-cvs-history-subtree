@@ -1845,6 +1845,13 @@ nsLocalFile::IsExecutable(PRBool *_retval)
     else
         GetNativePath(path);
 
+    // kill trailing dots and spaces.
+    PRInt32 filePathLen = path.Length() - 1;
+    while(filePathLen > 0 && (path[filePathLen] == ' ' || path[filePathLen] == '.'))
+    {
+        path.Truncate(filePathLen--);
+    } 
+
     // Get extension.
     char* ext = ::strrchr( path.BeginWriting(), '.' );
     if ( ext ) {
