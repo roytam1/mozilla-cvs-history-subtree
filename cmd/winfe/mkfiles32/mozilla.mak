@@ -281,7 +281,7 @@ LINKFLAGS_DEBUG= \
 CFLAGS_DEFAULT=\
 !if "$(MOZ_BITS)"=="32"
     $(CFLAGS_DEBUG) \
-    /I$(DEPTH)\dist\public\js /I$(DEPTH)\dist\public\security /I$(DEPTH)\dist\public\network /I$(DEPTH)\dist\public\htmldlgs /I$(DEPTH)\dist\public\libfont /I$(DEPTH)\dist\public\httpurl /I$(DEPTH)\dist\public\netcache /I$(DEPTH)\dist\public\jsdebug /I$(DEPTH)\dist\public\winfont
+    /I$(DEPTH)\dist\public\js /I$(DEPTH)\dist\public\security /I$(DEPTH)\dist\public\network /I$(DEPTH)\dist\public\htmldlgs /I$(DEPTH)\dist\public\libfont /I$(DEPTH)\dist\public\httpurl /I$(DEPTH)\dist\public\netcache /I$(DEPTH)\dist\public\jsdebug /I$(DEPTH)\dist\public\perf /I$(DEPTH)\dist\public\winfont
 !else
     $(CFLAGS_RELEASE) -DFORCE_PR_LOG
 !endif
@@ -424,6 +424,7 @@ LINK_LIBS= \
 !ifdef JAVA_OR_OJI      
     $(DIST)\lib\libcaps.lib \
 !endif
+    $(DIST)\lib\libperf.lib \
 !ifdef MOZ_JAVA
     $(DIST)\lib\libnsc32.lib \
 !endif
@@ -658,6 +659,7 @@ CDISTINCLUDES2= \
     /I$(XPDIST)\public\winfont \
     /I$(XPDIST)\public\js \
     /I$(XPDIST)\public\jsdebug \
+    /I$(XPDIST)\public\perf \
     /I$(XPDIST)\public\security \
     /I$(XPDIST)\public\htmldlgs \
     /I$(XPDIST)\public\zlib \
@@ -2478,6 +2480,7 @@ BUILD_SOURCE: $(OBJ_FILES)
 !ifdef JAVA_OR_OJI
     $(DIST)\lib\libcaps.lib +
 !endif
+    $(DIST)\lib\libperf.lib +
 !if defined(MOZ_JAVA)
     $(DIST)\lib\jrt16$(VERSION_NUMBER).lib +
     $(DIST)\lib\libapp~1.lib +
@@ -2901,6 +2904,7 @@ exports:
     -xcopy $(XPDIST)\public\js\*.h $(EXPORTINC) $(XCF)
 !if "$(MOZ_BITS)" == "32"
     -xcopy $(XPDIST)\public\jsdebug\*.h $(EXPORTINC) $(XCF)
+    -xcopy $(XPDIST)\public\perf\*.h $(EXPORTINC) $(XCF)
 !ifdef MOZ_FULLCIRCLE
     -xcopy $(XPDIST)\ns\fullsoft\public\*.h $(EXPORTINC) $(XCF)
 !endif
