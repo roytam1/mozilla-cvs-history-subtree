@@ -606,6 +606,15 @@ function onToggleMunger()
 
 }
 
+function onToggleColors()
+{
+
+    client.enableColors = !client.enableColors;
+    document.getElementById("menu-colors").setAttribute ("checked",
+                                                         client.enableColors);
+
+}
+
 function onMultilineInputKeyPress (e)
 {
     if ((e.ctrlKey || e.metaKey) && e.keyCode == 13)
@@ -1185,6 +1194,10 @@ function cli_testdisplay (e)
         client.currentObject.display (getMsg("cli_testdisplayMsg12"),
                                       "PRIVMSG", sampleUser, me);
         client.currentObject.display (getMsg("cli_testdisplayMsg13"),
+                                      "PRIVMSG", sampleUser, me);
+        client.currentObject.display (unescape(getMsg("cli_testdisplayMsg20")),
+                                      "PRIVMSG", sampleUser, me);
+        client.currentObject.display (unescape(getMsg("cli_testdisplayMsg21")),
                                       "PRIVMSG", sampleUser, me);
         
 
