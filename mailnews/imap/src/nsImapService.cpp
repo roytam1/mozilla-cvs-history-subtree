@@ -855,20 +855,26 @@ NS_IMETHODIMP nsImapService::Search(nsIMsgSearchSession *aSearchSession, nsIMsgW
 // just a helper method to break down imap message URIs....
 nsresult nsImapService::DecomposeImapURI(const char * aMessageURI, nsIMsgFolder ** aFolder, nsMsgKey *aMsgKey)
 {
-    nsresult rv = NS_OK;
-    NS_WITH_SERVICE(nsIRDFService, rdf, kRDFServiceCID, &rv);
-    if (NS_FAILED(rv)) return rv;
+    NS_ENSURE_ARG_POINTER(aMessageURI);
+    NS_ENSURE_ARG_POINTER(aFolder);
+    NS_ENSURE_ARG_POINTER(aMsgKey);
 
-    nsCAutoString   folderURI;
+    nsresult rv = NS_OK;
+    nsCAutoString folderURI;
     rv = nsParseImapMessageURI(aMessageURI, folderURI, aMsgKey, nsnull);
-    if (NS_SUCCEEDED(rv))
-    {
-        nsCOMPtr<nsIRDFResource> res;
-        rv = rdf->GetResource(folderURI, getter_AddRefs(res));
-        if (NS_FAILED(rv))  return rv;
-        rv = res->QueryInterface(NS_GET_IID(nsIMsgFolder), (void **) aFolder);
-    }
-    return rv;
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCOMPtr <nsIRDFService> rdf = do_GetService("@mozilla.org/rdf/rdf-service;1",&rv);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    nsCOMPtr<nsIRDFResource> res;
+    rv = rdf->GetResource(folderURI, getter_AddRefs(res));
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    rv = res->QueryInterface(NS_GET_IID(nsIMsgFolder), (void **) aFolder);
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    return NS_OK;
 }
 
 // just a helper method to break down imap message URIs....
