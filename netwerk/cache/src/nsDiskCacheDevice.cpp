@@ -998,11 +998,8 @@ nsresult nsDiskCacheDevice::visitEntries(nsICacheVisitor * visitor)
         rv = file->GetLeafName(getter_Copies(name));
         if (isMetaDataFile(name)) {
             // this must be a metadata file.
-            nsCOMPtr<nsITransport> transport;
-            rv = getTransportForFile(file, nsICache::ACCESS_READ, getter_AddRefs(transport));
-            if (NS_FAILED(rv)) continue;
             nsCOMPtr<nsIInputStream> input;
-            rv = transport->OpenInputStream(0, ULONG_MAX, 0, getter_AddRefs(input));
+            rv = openInputStream(file, getter_AddRefs(input));
             if (NS_FAILED(rv)) continue;
             
             // read the metadata file.
@@ -1045,24 +1042,13 @@ nsresult nsDiskCacheDevice::updateDiskCacheEntry(nsDiskCacheEntry* diskEntry)
     nsCacheEntry* entry = diskEntry->getCacheEntry();
     if (entry->IsMetaDataDirty() || entry->IsEntryDirty()) {
         nsresult rv;
-#ifdef MOZ_NEW_CACHE_REUSE_TRANSPORTS
-        nsCOMPtr<nsITransport>& transport = diskEntry->getMetaTransport(nsICache::ACCESS_WRITE);
-#else
-        nsCOMPtr<nsITransport> transport;
-#endif
-        if (!transport) {
-            nsCOMPtr<nsIFile> file;
-            rv = getFileForDiskCacheEntry(diskEntry, PR_TRUE,
-                                     getter_AddRefs(file));
-            if (NS_FAILED(rv)) return rv;
-            
-            rv = getTransportForFile(file, nsICache::ACCESS_WRITE,
-                                     getter_AddRefs(transport));
-            if (NS_FAILED(rv)) return rv;
-        }
+        nsCOMPtr<nsIFile> file;
+        rv = getFileForDiskCacheEntry(diskEntry, PR_TRUE,
+                                 getter_AddRefs(file));
+        if (NS_FAILED(rv)) return rv;
 
         nsCOMPtr<nsIOutputStream> output;
-        rv = transport->OpenOutputStream(0, ULONG_MAX, 0, getter_AddRefs(output));
+        rv = openOutputStream(file, getter_AddRefs(output));
         if (NS_FAILED(rv)) return rv;
         
         // write the metadata to the file.
@@ -1119,18 +1105,8 @@ nsresult nsDiskCacheDevice::readDiskCacheEntry(const char * key, nsDiskCacheEntr
         nsDiskCacheEntry* diskEntry = ensureDiskCacheEntry(entry);
         if (!diskEntry) break;
 
-#ifdef MOZ_NEW_CACHE_REUSE_TRANSPORTS
-        nsCOMPtr<nsITransport>& transport = diskEntry->getMetaTransport(nsICache::ACCESS_READ);
-#else
-        nsCOMPtr<nsITransport> transport;
-#endif
-        if (!transport) {
-            rv = getTransportForFile(file, nsICache::ACCESS_READ, getter_AddRefs(transport));
-            if (NS_FAILED(rv)) break;
-        }
-
         nsCOMPtr<nsIInputStream> input;
-        rv = transport->OpenInputStream(0, ULONG_MAX, 0, getter_AddRefs(input));
+        rv = openInputStream(file, getter_AddRefs(input));
         if (NS_FAILED(rv)) break;
         
         // read the metadata file.
@@ -1312,11 +1288,8 @@ nsresult nsDiskCacheDevice::scanDiskCacheEntries(nsISupportsArray ** result)
         rv = file->GetLeafName(getter_Copies(name));
         if (isMetaDataFile(name)) {
             // this must be a metadata file.
-            nsCOMPtr<nsITransport> transport;
-            rv = getTransportForFile(file, nsICache::ACCESS_READ, getter_AddRefs(transport));
-            if (NS_FAILED(rv)) continue;
             nsCOMPtr<nsIInputStream> input;
-            rv = transport->OpenInputStream(0, ULONG_MAX, 0, getter_AddRefs(input));
+            rv = openInputStream(file, getter_AddRefs(input));
             if (NS_FAILED(rv)) continue;
 
             nsDiskCacheEntryInfo* entryInfo = new nsDiskCacheEntryInfo();
@@ -1442,9 +1415,9 @@ nsresult nsDiskCacheDevice::writeCacheInfo()
     if (NS_FAILED(rv)) return rv;
     PRUint32 count = sizeof(cacheSize);
     rv = output->Write((char*)&cacheSize, count, &count);
-    rv = output->Close();
+    output->Close();
     
-    return NS_OK;
+    return rv;
 }
 
 nsresult nsDiskCacheDevice::readCacheInfo()
@@ -1463,7 +1436,8 @@ nsresult nsDiskCacheDevice::readCacheInfo()
     if (NS_FAILED(rv)) return rv;
     PRUint32 count = sizeof(cacheSize);
     rv = input->Read((char*)&cacheSize, count, &count);
-    rv = input->Close();
+    input->Close();
+    if (NS_FAILED(rv)) return rv;
 
     mCacheSize = PR_ntohl(cacheSize);
     return NS_OK;
