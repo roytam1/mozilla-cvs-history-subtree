@@ -234,7 +234,7 @@ nsSVGLibartCanvas::NewRender()
                         mBitmap->GetLineStride(), // rowstride
                         3, // n_chan
                         8, // depth
-                        ART_ALPHA_NONE, // alpha_type
+                        mBitmap->GetPixelFormat()==nsISVGLibartBitmap::PIXEL_FORMAT_32_ABGR ? ART_ALPHA_SEPARATE : ART_ALPHA_NONE, // alpha_type
                         NULL //alphagamma
                         );
 }
