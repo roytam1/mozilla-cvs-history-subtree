@@ -129,7 +129,7 @@ typedef enum PRTransmitFileFlags {
 **************************************************************************
 *************************************************************************/
 
-struct _pr_in6_addr {
+struct PRIPv6Addr {
 	union {
 		PRUint8  _S6_u8[16];
 		PRUint16 _S6_u16[8];
@@ -137,12 +137,12 @@ struct _pr_in6_addr {
 		PRUint64 _S6_u64[2];
 	} _S6_un;
 };
-#define _pr_s6_addr		_S6_un._S6_u8
-#define _pr_s6_addr16	_S6_un._S6_u16
-#define _pr_s6_addr32	_S6_un._S6_u32
-#define _pr_s6_addr64 	_S6_un._S6_addr64
+#define pr_s6_addr		_S6_un._S6_u8
+#define pr_s6_addr16	_S6_un._S6_u16
+#define pr_s6_addr32	_S6_un._S6_u32
+#define pr_s6_addr64 	_S6_un._S6_addr64
 
-typedef struct _pr_in6_addr PRIPv6Addr;
+typedef struct PRIPv6Addr PRIPv6Addr;
 
 union PRNetAddr {
     struct {
