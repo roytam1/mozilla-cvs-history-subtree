@@ -782,12 +782,20 @@ nsTextEditorDragListener::CanDrop(nsIDOMEvent* aEvent)
   // XXX should we filter out some types for plaintext-only editors?
   PRBool flavorSupported = PR_FALSE;
   dragSession->IsDataFlavorSupported(kUnicodeMime, &flavorSupported);
-  if (!flavorSupported)
+
+  // if we aren't plaintext editing, we can accept more flavors
+  if (!flavorSupported 
+     && (flags & nsIPlaintextEditor::eEditorPlaintextMask) == 0)
+  {
     dragSession->IsDataFlavorSupported(kHTMLMime, &flavorSupported);
-  if (!flavorSupported)
-    dragSession->IsDataFlavorSupported(kFileMime, &flavorSupported);
-  if (!flavorSupported)
-    dragSession->IsDataFlavorSupported(kJPEGImageMime, &flavorSupported);
+    if (!flavorSupported)
+      dragSession->IsDataFlavorSupported(kFileMime, &flavorSupported);
+#if 0
+    if (!flavorSupported)
+      dragSession->IsDataFlavorSupported(kJPEGImageMime, &flavorSupported);
+#endif
+  }
+
   if (!flavorSupported)
     return PR_FALSE;     
 
