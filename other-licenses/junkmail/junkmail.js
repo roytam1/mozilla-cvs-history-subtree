@@ -25,7 +25,6 @@ const TEST_HEADER_EVAL = 4;
 //
 const parseConfigLine = {
 
-
     body: function(line) {
 
     },
@@ -198,7 +197,7 @@ const parseConfigLine = {
 	if (matches) {
 	    // this must be an eval
 	    // debug("rawbody eval ignored\n");
-	} else if (matches = /\/(.*)\/(\S*)/.exec(line)) {
+	} else if ( (matches = /\/(.*)\/(\S*)/.exec(line)) ) {
 
             // JS RegExps don't support all Perl RegExp flags.  Ignore
             // tests containing these.
