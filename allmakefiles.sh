@@ -482,8 +482,6 @@ rdf/datasource/Makefile
 rdf/datasource/public/Makefile
 rdf/datasource/src/Makefile
 rdf/tests/Makefile
-rdf/tests/localfile/Makefile
-rdf/tests/rdfsink/Makefile
 rdf/tests/rdfcat/Makefile
 rdf/tests/rdfpoll/Makefile
 "
@@ -850,7 +848,10 @@ extensions/typeaheadfind/Makefile
 "
 
 if [ "$MOZ_USE_OFFICIAL_BRANDING" ]; then
-    MAKEFILES_firefox_branding="other-licenses/branding/firefox/Makefile"
+    MAKEFILES_firefox_branding="
+        other-licenses/branding/firefox/Makefile
+        other-licenses/branding/firefox/content/Makefile
+    "
 fi
 
 MAKEFILES_phoenix="
@@ -960,6 +961,8 @@ mail/extensions/smime/skin/Makefile
 mail/extensions/offline/Makefile
 mail/extensions/inspector/Makefile
 mail/config/Makefile
+mail/installer/Makefile
+mail/installer/windows/Makefile
 xpfe/components/build2/Makefile
 "
 
