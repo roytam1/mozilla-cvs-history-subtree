@@ -131,6 +131,9 @@ nsresult nsImageWin :: Init(PRInt32 aWidth, PRInt32 aHeight, PRInt32 aDepth,nsMa
     return NS_ERROR_UNEXPECTED;
   }
 
+  // limit images to 64k pixels on a side (~55 feet on a 100dpi monitor)
+  if (aWidth > 0xFFFF || aHeight > 0xFFFF)
+      return NS_ERROR_FAILURE;
 
   if (mNumPaletteColors >= 0){
     // If we have a palette
