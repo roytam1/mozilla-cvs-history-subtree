@@ -52,8 +52,6 @@ protected:
                                    nsIFile* aPath);
 
   PRBool mInitialized;
-//  static nsIFactory* gFactory;
-  static nsIScriptNameSetRegistry* gRegistry;
 
 public:
   static nsICSSStyleSheet* gUAStyleSheet;

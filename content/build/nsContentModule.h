@@ -26,7 +26,6 @@
 #include "nsIModule.h"
 
 class nsICSSStyleSheet;
-class nsIScriptNameSetRegistry;
 
 // Module implementation for the content library
 class nsContentModule : public nsIModule
@@ -51,8 +50,6 @@ protected:
                                    nsIFile* aPath);
 
   PRBool mInitialized;
-//  static nsIFactory* gFactory;
-  static nsIScriptNameSetRegistry* gRegistry;
 
 public:
   static nsICSSStyleSheet* gUAStyleSheet;
