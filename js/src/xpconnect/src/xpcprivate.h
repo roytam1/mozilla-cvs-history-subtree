@@ -996,6 +996,8 @@ private:
 
 /***************************************************************************/
 
+#ifdef XPC_OLD_DOM_SUPPORT
+
 class XPCJSObjectHolder : public nsIXPConnectJSObjectHolder
 {
 public:
@@ -1017,6 +1019,8 @@ private:
     JSRuntime* mRuntime;
     JSObject* mJSObj;
 };
+
+#endif
 
 /***************************************************************************/
 // data conversion

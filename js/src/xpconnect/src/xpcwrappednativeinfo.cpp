@@ -38,7 +38,7 @@
 #include "xpcprivate.h"
 
 #ifdef off_DEBUG_jband
-#define HACK_NEW_PRIVATE_SLOTS
+#define JS_HAS_RESERVED_SLOTS
 #endif
 
 /***************************************************************************/
@@ -85,7 +85,7 @@ XPCNativeMember::GetCallInfo(XPCCallContext& ccx,
     fun = (JSFunction*) JS_GetPrivate(ccx, funobj);
     realFunObj = JS_GetFunctionObject(fun);
 
-#ifdef HACK_NEW_PRIVATE_SLOTS
+#ifdef JS_HAS_RESERVED_SLOTS
 
     jsval ifaceVal;
     jsval memberVal;
@@ -127,7 +127,7 @@ void
 XPCNativeMember::CleanupCallableInfo(JSContext* cx, XPCJSRuntime* rt,
                                      JSObject* funobj)
 {
-#ifndef HACK_NEW_PRIVATE_SLOTS
+#ifndef JS_HAS_RESERVED_SLOTS
     jsid id;
     jsval val;
 
@@ -220,7 +220,7 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
 
     mVal = OBJECT_TO_JSVAL(funobj);
 
-#ifdef HACK_NEW_PRIVATE_SLOTS
+#ifdef JS_HAS_RESERVED_SLOTS
 
     if(!JS_SetReservedSlot(ccx, funobj, 0, PRIVATE_TO_JSVAL(iface))||
        !JS_SetReservedSlot(ccx, funobj, 1, PRIVATE_TO_JSVAL(this)))
@@ -253,7 +253,7 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
 void
 XPCNativeMember::Cleanup(JSContext* cx, XPCJSRuntime* rt)
 {
-#ifndef HACK_NEW_PRIVATE_SLOTS
+#ifndef JS_HAS_RESERVED_SLOTS
     if(IsResolved() && !JSVAL_IS_PRIMITIVE(mVal))
         CleanupCallableInfo(cx, rt, JSVAL_TO_OBJECT(mVal));
 #endif

@@ -2234,6 +2234,8 @@ void DEBUG_CheckWrapperThreadSafety(const XPCWrappedNative* wrapper)
 /***************************************************************************/
 /***************************************************************************/
 
+#ifdef XPC_OLD_DOM_SUPPORT
+
 NS_IMPL_THREADSAFE_ISUPPORTS1(XPCJSObjectHolder, nsIXPConnectJSObjectHolder)
 
 NS_IMETHODIMP
@@ -2267,3 +2269,5 @@ XPCJSObjectHolder::newHolder(JSContext* cx, JSObject* obj)
     }
     return new XPCJSObjectHolder(cx, obj);
 }
+
+#endif
