@@ -2198,6 +2198,7 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsIImapProtocol* aProtocol)
                 {
                     nsCOMPtr<nsIURI> aUrl;
                     res = aProtocol->GetRunningUrl(getter_AddRefs(aUrl));
+					nsCOMPtr<nsISupports> aCtxt = do_QueryInterface(aUrl);
                     nsFileSpec fileSpec(filePath);
                     nsInputFileStream *inputFileStream = nsnull;
                     nsCOMPtr<nsIInputStream> inputStream;
@@ -2207,10 +2208,10 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsIImapProtocol* aProtocol)
                         do_QueryInterface(inputFileStream->GetIStream(), &res);
                     PRUint32 fileSize = 0;
                     res = inputStream->GetLength(&fileSize);
-                    streamListener->OnStartRequest(aUrl, "");
-                    streamListener->OnDataAvailable(aUrl, inputStream,
+                    streamListener->OnStartRequest(nsnull, aCtxt);
+                    streamListener->OnDataAvailable(nsnull /* channel */, aCtxt, inputStream, 0 /* offset */, 
                                                     fileSize);
-                    streamListener->OnStopRequest(aUrl, 0, nsnull);
+                    streamListener->OnStopRequest(nsnull, aCtxt, 0, nsnull);
                     inputStream = null_nsCOMPtr();
                     delete inputFileStream;
                 }
