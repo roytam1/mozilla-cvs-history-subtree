@@ -40,9 +40,9 @@
 
 #include <Quickdraw.h>
 
-#ifdef TARGET_CARBON
+#if defined (TARGET_CARBON) && (UNIVERSAL_INTERFACES_VERSION < 0x0340)
 enum {
-  kEventWindowConstrain = 83   // BAD!!! our CarbonEvents.h don't yet support this
+  kEventWindowConstrain = 83   // This was not defined before 0x0340
 };
 #endif
 
