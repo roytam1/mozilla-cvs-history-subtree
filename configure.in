@@ -3246,6 +3246,22 @@ fi
 
 dnl ========================================================
 dnl =
+dnl = --enable-reorder
+dnl = 
+dnl = Enable function reordering.
+dnl = 
+dnl = Function reordering is off by default.
+dnl = 
+dnl ========================================================
+MOZ_REORDER=0
+MOZ_ARG_ENABLE_STRING(reorder,
+[  --enable-reorder Enable function reordering ],
+    [ if test "$enableval" != "no"; then
+	    MOZ_REORDER=1
+      fi ])
+
+dnl ========================================================
+dnl =
 dnl = --disable-debug
 dnl = 
 dnl = Disable building with debug info.
@@ -4142,6 +4158,7 @@ AC_SUBST(MOZ_OS2_EMX_OBJECTFORMAT)
 
 AC_SUBST(MOZ_POST_DSO_LIB_COMMAND)
 AC_SUBST(MOZ_POST_PROGRAM_COMMAND)
+AC_SUBST(MOZ_REORDER)
 
 dnl system JPEG support
 dnl ========================================================
