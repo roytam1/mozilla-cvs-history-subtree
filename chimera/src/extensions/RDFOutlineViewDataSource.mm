@@ -65,26 +65,6 @@
 
 @implementation RDFOutlineViewDataSource
 
-- (void) ensureDataSourceLoaded
-{
-    if (!mContainer)
-    {
-      nsCOMPtr<nsIRDFContainer> ctr = do_CreateInstance("@mozilla.org/rdf/container;1");
-      NS_ADDREF(mContainer = ctr);
-          
-      nsCOMPtr<nsIRDFContainerUtils> ctrUtils = do_GetService("@mozilla.org/rdf/container-utils;1");
-      NS_ADDREF(mContainerUtils = ctrUtils);
-          
-      nsCOMPtr<nsIRDFService> rdfService = do_GetService("@mozilla.org/rdf/rdf-service;1");
-      NS_ADDREF(mRDFService = rdfService);
-  
-      mDictionary = [[NSMutableDictionary alloc] initWithCapacity: 30];
-
-      mDataSource = nsnull;
-      mRootResource = nsnull;
-    }
-}
-
 - (void) dealloc
 {
 	[self cleanup];    
@@ -102,6 +82,31 @@
   
   [mDictionary release];
   mDictionary = nil;
+}
+
+
+//
+// ensureDataSourceLoaded
+//
+// defer loading all this rdf junk until it's requested because it's slow
+//
+- (void) ensureDataSourceLoaded
+{
+  if ( !mContainer ) {
+    nsCOMPtr<nsIRDFContainer> ctr = do_CreateInstance("@mozilla.org/rdf/container;1");
+    NS_ADDREF(mContainer = ctr);
+    
+    nsCOMPtr<nsIRDFContainerUtils> ctrUtils = do_GetService("@mozilla.org/rdf/container-utils;1");
+    NS_ADDREF(mContainerUtils = ctrUtils);
+    
+    nsCOMPtr<nsIRDFService> rdfService = do_GetService("@mozilla.org/rdf/rdf-service;1");
+    NS_ADDREF(mRDFService = rdfService);
+  
+    mDictionary = [[NSMutableDictionary alloc] initWithCapacity: 30];
+  
+    mDataSource = nsnull;
+    mRootResource = nsnull;
+  }
 }
 
 - (void)registerForShutdownNotification
@@ -293,8 +298,15 @@
     nsXPIDLString literalValue;
     valueLiteral->GetValue(getter_Copies(literalValue));
 
-    return [NSString stringWith_nsAString: literalValue];
+    return [self createCellContents:literalValue withColumn:columnPropertyURI byItem:aItem];
 }
+
+
+-(id) createCellContents:(const nsAString&)inValue withColumn:(NSString*)inColumn byItem:(id) inItem
+{
+  return [NSString stringWith_nsAString: inValue];
+}
+
 
 - (void) outlineView: (NSOutlineView*) aOutlineView setObjectValue: (id) aObject
                                                     forTableColumn: (NSTableColumn*) aTableColumn
@@ -313,14 +325,20 @@
 
 - (id) MakeWrapperFor: (nsIRDFResource*) aRDFResource
 {
-    RDFOutlineViewItem* item = [[[RDFOutlineViewItem alloc] init] autorelease];
+  const char* k;
+  aRDFResource->GetValueConst(&k);
+  NSString* key = [NSString stringWithCString:k];
+  
+  // see if we've created a wrapper already, if not, create a new wrapper object
+  // and stash it in our dictionary
+  RDFOutlineViewItem* item = [mDictionary objectForKey:key];
+  if (!item) {
+    item = [[RDFOutlineViewItem alloc] init];
     [item setResource: aRDFResource];
-    // keep a copy around
-    const char* resourceValue;
-    aRDFResource->GetValueConst(&resourceValue);
-    
-    [mDictionary setObject:item forKey:[NSString stringWithCString:resourceValue]];
-    return item;
+    [mDictionary setObject:item forKey:key];				// retains |item|
+  }
+  
+  return item;
 }
 
 

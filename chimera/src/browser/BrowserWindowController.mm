@@ -450,7 +450,11 @@ static NSArray* sToolbarDefaults = nil;
 - (void)drawerWillOpen: (NSNotification*)aNotification
 {
   [mSidebarBookmarksDataSource ensureBookmarks];
-  [mHistoryDataSource ensureDataSourceLoaded];
+
+  if ([[[mSidebarTabView selectedTabViewItem] identifier] isEqual:@"historySidebarCHIconTabViewItem"]) {
+    [mHistoryDataSource ensureDataSourceLoaded];
+    [mHistoryDataSource enableObserver];
+  }
 
   // we used to resize the window here, but we can't if we want any chance of it
   // being allowed to open on the left side. it's too late once we get here.
@@ -459,12 +463,15 @@ static NSArray* sToolbarDefaults = nil;
 - (void)drawerDidOpen:(NSNotification *)aNotification
 {
   // Toggle the sidebar icon.
-  if(mSidebarToolbarItem)
+  if (mSidebarToolbarItem)
     [mSidebarToolbarItem setImage:[NSImage imageNamed:@"sidebarOpened"]];
 }
 
 - (void)drawerDidClose:(NSNotification *)aNotification
 {
+  if ([[[mSidebarTabView selectedTabViewItem] identifier] isEqual:@"historySidebarCHIconTabViewItem"])
+    [mHistoryDataSource disableObserver];
+
   // Unload the Gecko web page in "My Panels" to save memory.
   if(mSidebarToolbarItem)
     [mSidebarToolbarItem setImage:[NSImage imageNamed:@"sidebarClosed"]];
@@ -1316,13 +1323,33 @@ static NSArray* sToolbarDefaults = nil;
   }
 }
 
+- (void)tabView:(NSTabView *)tabView willSelectTabViewItem:(NSTabViewItem *)tabViewItem
+{
+  // we'll get called for browser tab views as well. ignore any calls coming from
+  // there, we're only interested in the sidebar.
+  if (tabView != mSidebarTabView)
+    return;
+
+  if ([[tabViewItem identifier] isEqual:@"historySidebarCHIconTabViewItem"]) {
+    [mHistoryDataSource ensureDataSourceLoaded];
+    [mHistoryDataSource enableObserver];
+  }
+  else
+    [mHistoryDataSource disableObserver];
+}
+
 - (void)tabView:(NSTabView *)aTabView didSelectTabViewItem:(NSTabViewItem *)aTabViewItem
 {
+    // we'll get called for the sidebar tabs as well. ignore any calls coming from
+    // there, we're only interested in the browser tabs.
+    if (aTabView != mTabBrowser)
+      return;
+
     // Disconnect the old view, if one has been designated.
     // If the window has just been opened, none has been.
-    if ( mBrowserView ) {
+    if ( mBrowserView )
         [mBrowserView disconnectView];
-    }
+
     // Connect up the new view
     mBrowserView = [aTabViewItem view];
        
@@ -1508,7 +1535,8 @@ static NSArray* sToolbarDefaults = nil;
     
     if (!showHistory)
       [mSidebarTabView removeTabViewItem:[mSidebarTabView tabViewItemAtIndex:1]];
-      
+    
+    [mSidebarTabView setDelegate:self];
     [mSidebarTabView selectFirstTabViewItem:self];
 }
 

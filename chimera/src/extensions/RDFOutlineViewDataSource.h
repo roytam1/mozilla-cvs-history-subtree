@@ -77,6 +77,10 @@ class nsIRDFService;
 // Implementation Methods
 - (id) MakeWrapperFor: (nsIRDFResource*) aRDFResource;
 
+// override to do something different with the cell data rather than just
+// return a string (add an icon in an attributed string, for example).
+-(id) createCellContents:(const nsAString&)inValue withColumn:(NSString*)inColumn byItem:(id) inItem;
+
 @end
 
 // RDF Resource Wrapper to make the Outline View happy
