@@ -53,6 +53,8 @@
 #include "nsIPrefBranch.h"
 #include "nsIPrefBranchInternal.h"
 
+#include "nsIAddrDatabase.h" // for kPriEmailColumn
+
 #define CARD_NOT_FOUND -1
 #define ALL_ROWS -1
 
@@ -60,9 +62,6 @@
 
 // also, our default primary sort
 #define GENERATED_NAME_COLUMN_ID "GeneratedName" 
-
-// also, our default secondary sort
-#define PRIMARY_EMAIL_COLUMN_ID "PrimaryEmail" 
 
 static NS_DEFINE_CID(kCollationFactoryCID, NS_COLLATIONFACTORY_CID);
 
@@ -687,7 +686,7 @@ nsresult nsAbView::GenerateCollationKeysForCard(const PRUnichar *colID, AbCard *
   
   // XXX fix me, do this with const to avoid the strcpy
   // hardcode email to be our secondary key
-  rv = GetCardValue(abcard->card, NS_LITERAL_STRING(PRIMARY_EMAIL_COLUMN_ID).get(), getter_Copies(value));
+  rv = GetCardValue(abcard->card, NS_LITERAL_STRING(kPriEmailColumn).get(), getter_Copies(value));
   NS_ENSURE_SUCCESS(rv,rv);
   
   // XXX be smarter about the allocation
@@ -792,7 +791,7 @@ NS_IMETHODIMP nsAbView::Observe(nsISupports *aSubject, const char *aTopic, const
       // if neither the primary nor the secondary sorts are GeneratedName, all we have to do is
       // invalidate (to show the new GeneratedNames), but the sort will not change.
       if (!nsCRT::strcmp(mSortColumn.get(), NS_LITERAL_STRING(GENERATED_NAME_COLUMN_ID).get()) ||
-          !nsCRT::strcmp(mSortColumn.get(), NS_LITERAL_STRING(PRIMARY_EMAIL_COLUMN_ID).get())) {
+          !nsCRT::strcmp(mSortColumn.get(), NS_LITERAL_STRING(kPriEmailColumn).get())) {
         rv = SortBy(mSortColumn.get(), mSortDirection.get());
       }
       else {

@@ -507,6 +507,7 @@ struct OutlookTableAttr
 // operators do not work on unicode strings in mapi.
 static const OutlookTableAttr OutlookTableStringToProp [] = 
 {
+    // replace "PrimaryEmail" with kPriEmailColumn etc.
     {"FirstName", PR_GIVEN_NAME_A},
     {"LastName", PR_SURNAME_A},
     {"DisplayName", PR_DISPLAY_NAME_A},

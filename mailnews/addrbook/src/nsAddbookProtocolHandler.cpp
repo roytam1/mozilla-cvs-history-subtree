@@ -445,7 +445,7 @@ nsAddbookProtocolHandler::BuildSingleHTML(nsIAddrDatabase *aDatabase, nsIAbDirec
   if (NS_FAILED(InitPrintColumns()))
     return NS_ERROR_FAILURE;
 
-  nsresult rv = aDatabase->GetCardForEmailAddress(directory, charEmail, getter_AddRefs(workCard));
+  nsresult rv = aDatabase->GetCardFromAttribute(directory, kPriEmailColumn, charEmail, PR_TRUE /* lowercase */, getter_AddRefs(workCard));
   NS_ENSURE_SUCCESS(rv, rv);
   if (!workCard) 
     return NS_ERROR_FAILURE;

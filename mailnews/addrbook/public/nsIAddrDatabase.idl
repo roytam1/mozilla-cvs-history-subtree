@@ -20,6 +20,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *  Seth Spitzer <sspitzer@netscape.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -124,7 +125,10 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	void deleteCardFromMailList(in nsIAbDirectory mailList, in nsIAbCard card, in boolean beNotify);
 	readonly attribute wstring directoryName;
 
-	nsIAbCard getCardForEmailAddress(in nsIAbDirectory directory, in string emailAddress);
+    /**
+	 * lowerCase: ...
+	 */
+	nsIAbCard getCardFromAttribute(in nsIAbDirectory directory, in string name, in string value, in boolean lowerCase);
 
 	PRBool findMailListbyUnicodeName(in wstring listName);
 

@@ -77,7 +77,7 @@ class nsAddrDatabase : public nsIAddrDatabase
 {
 public:
 	NS_DECL_ISUPPORTS
-    NS_DECL_NSIADDRDBANNOUNCER
+  NS_DECL_NSIADDRDBANNOUNCER
 	//////////////////////////////////////////////////////////////////////////////
 	// nsIAddrDatabase methods:
 
@@ -104,9 +104,7 @@ public:
 	NS_IMETHOD EditMailList(nsIAbDirectory *mailList, nsIAbCard *listCard, PRBool notify);
 	NS_IMETHOD ContainsMailList(nsIAbDirectory *mailList, PRBool *hasCard);
 	NS_IMETHOD DeleteCardFromMailList(nsIAbDirectory *mailList, nsIAbCard *card, PRBool beNotify);
-
-	NS_IMETHOD GetCardForEmailAddress(nsIAbDirectory *directory, const char *emailAddress, nsIAbCard **card);
-
+  NS_IMETHOD GetCardFromAttribute(nsIAbDirectory *directory, const char *aName, const char *aValue, PRBool aLowerCase, nsIAbCard **card);	
 	NS_IMETHOD GetNewRow(nsIMdbRow * *newRow); 
 	NS_IMETHOD GetNewListRow(nsIMdbRow * *newRow); 
 	NS_IMETHOD AddCardRowToDB(nsIMdbRow *newRow);
@@ -242,7 +240,7 @@ public:
   NS_IMETHOD SetCardValue(nsIAbCard *card, const char *name, const PRUnichar *value, PRBool notify);
   NS_IMETHOD GetCardValue(nsIAbCard *card, const char *name, PRUnichar **value);
 
-	// nsAddrDatabase methods:
+  // nsAddrDatabase methods:
 
 	nsAddrDatabase();
 	virtual ~nsAddrDatabase();
@@ -304,7 +302,6 @@ protected:
 	nsresult AddListCardColumnsToRow(nsIAbCard *pCard, nsIMdbRow *pListRow, PRUint32 pos, nsIAbCard** pNewCard);
 	nsresult AddListAttributeColumnsToRow(nsIAbDirectory *list, nsIMdbRow *listRow);
 	nsresult FindAttributeRow(nsIMdbTable* pTable, mdb_token columnToken, nsIMdbRow** row);
-	nsresult GetRowForEmailAddress(const char *emailAddress, nsIMdbRow	**cardRow);
 	nsresult CreateCard(nsIMdbRow* cardRow, mdb_id listRowID, nsIAbCard **result);
 	nsresult SetListAddressTotal(nsIMdbRow* listRow, PRUint32 total);
 	nsresult DeleteCardFromListRow(nsIMdbRow* pListRow, mdb_id cardRowID);
@@ -312,6 +309,7 @@ protected:
 	nsresult NotifyListEntryChange(PRUint32 abCode, nsIAbDirectory *dir, nsIAddrDBListener *instigator);
 
 	nsresult AddLowercaseColumn(nsIMdbRow * row, mdb_token columnToken, const char* utf8String);
+  nsresult GetRowFromAttribute(const char *aName, const char *aValue, PRBool aLowerCase, nsIMdbRow	**aCardRow);
 
 	static nsVoidArray/*<nsAddrDatabase>*/ * GetDBCache();
 	static nsVoidArray/*<nsAddrDatabase>*/ * m_dbCache;

@@ -1609,7 +1609,7 @@ nsresult nsAddrDatabase::AddListCardColumnsToRow
 		if (pUTF8Email)
 		{
 			nsIMdbRow	*pCardRow = nsnull;
-			err = GetRowForEmailAddress(pUTF8Email, &pCardRow);
+			err = GetRowFromAttribute(kPriEmailColumn, pUTF8Email, PR_TRUE /* lower case */, &pCardRow);
 			if (NS_FAILED(err) || !pCardRow)
 			{
 				//New Email, then add a new row with this email
@@ -2282,7 +2282,7 @@ NS_IMETHODIMP nsAddrDatabase::AddLdifListMember(nsIMdbRow* listRow, const char* 
 	valueString.Right(email, valueString.Length() - emailPos);
 	char* emailAddress = ToNewCString(email);
 	nsIMdbRow	*cardRow = nsnull;	
-	nsresult result = GetRowForEmailAddress(emailAddress, &cardRow);
+  nsresult result = GetRowFromAttribute(kPriEmailColumn, emailAddress, PR_TRUE /* lower case */, &cardRow);
 	if (cardRow)
 	{
 		mdbOid outOid;
@@ -3342,44 +3342,55 @@ nsresult nsAddrDatabase::GetListRowByRowID(mdb_id rowID, nsIMdbRow **dbRow)
   "emailAddress" is a UTF8 string, need to convert to lowercase unicode string, then UTF8 string
   for comparison.
 */
-nsresult nsAddrDatabase::GetRowForEmailAddress(const char *emailAddress, nsIMdbRow	**cardRow)
+nsresult nsAddrDatabase::GetRowFromAttribute(const char *aName, const char *aValue, PRBool aLowerCase, nsIMdbRow	**aCardRow)
 {
-	nsresult result = NS_ERROR_FAILURE;
-	PRUnichar *unicodeStr = nsnull;
-	INTL_ConvertToUnicode((const char *)emailAddress, nsCRT::strlen(emailAddress), (void**)&unicodeStr);
+  NS_ENSURE_ARG_POINTER(aName);
+  NS_ENSURE_ARG_POINTER(aValue);
+  NS_ENSURE_ARG_POINTER(aCardRow);
+
+  nsresult rv = NS_OK;
+
+  mdb_token token;
+  GetStore()->StringToToken(GetEnv(), aName, &token);
+
+  // XXX fix this string foo?
+  PRUnichar *unicodeStr = nsnull;
+	INTL_ConvertToUnicode(aValue, nsCRT::strlen(aValue), (void**)&unicodeStr);
 	if (unicodeStr)
 	{
 		nsAutoString newUnicodeString(unicodeStr);
-		newUnicodeString.ToLowerCase();
+    if (aLowerCase) {
+  		newUnicodeString.ToLowerCase();
+    }
+
 		char * pUTF8Str = ToNewUTF8String(newUnicodeString);
 		if (pUTF8Str)
 		{
-			result = GetRowForCharColumn(pUTF8Str, m_LowerPriEmailColumnToken, PR_TRUE, cardRow);
+			rv = GetRowForCharColumn(pUTF8Str, token, PR_TRUE, aCardRow);
 			Recycle(pUTF8Str);
 		}	
 		PR_Free(unicodeStr);
 	}
-	return result;
+	return rv;
 }
 
-NS_IMETHODIMP nsAddrDatabase::GetCardForEmailAddress(nsIAbDirectory *directory, const char *emailAddress, nsIAbCard **cardResult)
+NS_IMETHODIMP nsAddrDatabase::GetCardFromAttribute(nsIAbDirectory *aDirectory, const char *aName, const char *aValue, PRBool aLowerCase, nsIAbCard **aCardResult)
 {
 	nsresult rv = NS_OK;
-	if (!cardResult)
-		return NS_ERROR_NULL_POINTER;
+  NS_ENSURE_ARG_POINTER(aCardResult);
 
-	m_dbDirectory = directory;
+	m_dbDirectory = aDirectory;
 	nsIMdbRow	*cardRow = nsnull;
 	
-	nsresult result = GetRowForEmailAddress(emailAddress, &cardRow);
+  nsresult result = GetRowFromAttribute(aName, aValue, aLowerCase, &cardRow);
 
 	if (NS_SUCCEEDED(result) && cardRow)
 	{
-		rv = CreateABCard(cardRow, 0, cardResult);
+		rv = CreateABCard(cardRow, 0, aCardResult);
                 cardRow->CutStrongRef(GetEnv());
 	}
 	else
-		*cardResult = nsnull;
+		*aCardResult = nsnull;
 	return rv;
 }
 

@@ -154,7 +154,7 @@ NS_IMETHODIMP nsAbAddressCollecter::CollectAddress(const char *address)
 				nsCOMPtr <nsIAbCard> existingCard;
 				nsCOMPtr <nsIAbCard> cardInstance;
 
-				rv = m_historyAB->GetCardForEmailAddress(m_historyDirectory, curAddress, getter_AddRefs(existingCard));
+				rv = m_historyAB->GetCardFromAttribute(m_historyDirectory, kPriEmailColumn, curAddress, PR_TRUE /* lowerCase */, getter_AddRefs(existingCard));
 
 				if (!existingCard)
 				{
