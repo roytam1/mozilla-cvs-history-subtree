@@ -1,7 +1,7 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  * ucvth : nsUnicodeToTIS620.h
  *
- * The contents of this file are subject to the Mozilla Public	
+ * The contents of this file are subject to the Mozilla Public
  * License Version 1.1 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of
  * the License at http://www.mozilla.org/MPL/
@@ -20,7 +20,8 @@
  * Red Hat Software. Portions created by Redhat are Copyright (C) 
  * 1999 Red Hat Software.
  * 
- * Contributor(s): 
+ * Contributor(s):
+ *   Prabhat Hegde (prabhat.hegde@sun.com)
  */
 #ifndef nsUnicodeToTIS620_h___
 #define nsUnicodeToTIS620_h___
@@ -81,4 +82,4 @@ private:
   // handle discontinous ranges
   PRInt32 Itemize(const PRUnichar* aSrcBuf, PRInt32 aSrcLen, textRunList *aRunList);
 };
-#endif /* nsUnicodeToTIS620_h___ */
+#endif /* !nsUnicodeToTIS620_h___ */
