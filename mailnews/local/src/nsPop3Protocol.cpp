@@ -675,7 +675,7 @@ nsresult nsPop3Protocol::LoadUrl(nsIURI* aURL, nsISupports * /* aConsumer */)
         nsCOMPtr<nsIMsgIncomingServer> server = do_QueryInterface(m_pop3Server);
         if (server)
         {
-          server->GetLimitMessageSize(&limitMessageSize);
+          server->GetLimitOfflineMessageSize(&limitMessageSize);
           if (limitMessageSize)
           {
               PRInt32 max_size = 0;
