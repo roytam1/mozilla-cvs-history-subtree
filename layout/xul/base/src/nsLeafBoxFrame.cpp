@@ -261,9 +261,6 @@ nsLeafBoxFrame::Reflow(nsPresContext*   aPresContext,
   // create the layout state
   nsBoxLayoutState state(aPresContext, aReflowState, aDesiredSize);
 
-  // coelesce reflows if we are root.
-  state.HandleReflow(this);
-  
   nsSize computedSize(aReflowState.mComputedWidth,aReflowState.mComputedHeight);
 
   nsMargin m;
