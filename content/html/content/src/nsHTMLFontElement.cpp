@@ -253,7 +253,7 @@ MapAttributesIntoRule(const nsIHTMLMappedAttributes* aAttributes,
       }
       else if (value.GetUnit() == eHTMLUnit_Enumerated) {
         PRInt32 val = value.GetIntValue();
-        font.mSize = nsCSSValue(val, eCSSUnit_Enumerated);
+        font.mSize = nsCSSValue((float)val, eCSSUnit_Point);
       }
       else {
         // size: int, enum , 

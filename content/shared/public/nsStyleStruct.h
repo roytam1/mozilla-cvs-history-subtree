@@ -61,6 +61,8 @@ class nsIFrame;
 #define NS_STYLE_INHERIT_OUTLINE          0x040000
 #define NS_STYLE_INHERIT_XUL              0x080000
 
+#define NS_STYLE_INHERIT_MASK             0x0fffff
+
 // A bit to test whether or not a style context can be shared
 // by siblings.
 #define NS_STYLE_UNIQUE_CONTEXT           0x100000

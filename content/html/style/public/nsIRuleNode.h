@@ -50,6 +50,26 @@ struct nsInheritedStyleData
     aContext->AllocateFromShell(sz, &result);
     return result;
   };
+
+  void ClearInheritedData(PRUint32 aBits) {
+    if (mVisibilityData && (aBits & NS_STYLE_INHERIT_VISIBILITY))
+      mVisibilityData = nsnull;
+    if (mFontData && (aBits & NS_STYLE_INHERIT_FONT))
+      mFontData = nsnull;
+    if (mListData && (aBits & NS_STYLE_INHERIT_LIST))
+      mListData = nsnull;
+    if (mTableData && (aBits & NS_STYLE_INHERIT_TABLE_BORDER))
+      mTableData = nsnull;
+    if (mColorData && (aBits & NS_STYLE_INHERIT_COLOR))
+      mColorData = nsnull;
+    if (mQuotesData && (aBits & NS_STYLE_INHERIT_QUOTES))
+      mQuotesData = nsnull;
+    if (mTextData && (aBits & NS_STYLE_INHERIT_TEXT))
+      mTextData = nsnull;
+    if (mUIData && (aBits & NS_STYLE_INHERIT_UI))
+      mUIData = nsnull;
+  };
+
   void Destroy(PRUint32 aBits, nsIPresContext* aContext) {
     if (mVisibilityData && !(aBits & NS_STYLE_INHERIT_VISIBILITY))
       mVisibilityData->Destroy(aContext);
@@ -93,6 +113,36 @@ struct nsResetStyleData
     aContext->AllocateFromShell(sz, &result);
     return result;
   }
+
+  void ClearInheritedData(PRUint32 aBits) {
+    if (mDisplayData && (aBits & NS_STYLE_INHERIT_DISPLAY))
+      mDisplayData = nsnull;
+    if (mMarginData && (aBits & NS_STYLE_INHERIT_MARGIN))
+      mMarginData = nsnull;
+    if (mBorderData && (aBits & NS_STYLE_INHERIT_BORDER))
+      mBorderData = nsnull;
+    if (mPaddingData && (aBits & NS_STYLE_INHERIT_PADDING))
+      mPaddingData = nsnull;
+    if (mOutlineData && (aBits & NS_STYLE_INHERIT_OUTLINE))
+      mOutlineData = nsnull;
+    if (mPositionData && (aBits & NS_STYLE_INHERIT_POSITION))
+      mPositionData = nsnull;
+    if (mTableData && (aBits & NS_STYLE_INHERIT_TABLE))
+      mTableData = nsnull;
+    if (mBackgroundData && (aBits & NS_STYLE_INHERIT_BACKGROUND))
+      mBackgroundData = nsnull;
+    if (mContentData && (aBits & NS_STYLE_INHERIT_CONTENT))
+      mContentData = nsnull;
+    if (mTextData && (aBits & NS_STYLE_INHERIT_TEXT_RESET))
+      mTextData = nsnull;
+    if (mUIData && (aBits & NS_STYLE_INHERIT_UI_RESET))
+      mUIData = nsnull;
+#ifdef INCLUDE_XUL
+    if (mXULData && (aBits & NS_STYLE_INHERIT_XUL))
+      mXULData = nsnull;
+#endif
+  };
+
   void Destroy(PRUint32 aBits, nsIPresContext* aContext) {
     if (mDisplayData && !(aBits & NS_STYLE_INHERIT_DISPLAY))
       mDisplayData->Destroy(aContext);
@@ -270,6 +320,13 @@ struct nsCachedStyleData
     }
     return nsnull;
   };
+
+  void ClearInheritedData(PRUint32 aBits) {
+    if (mResetData)
+      mResetData->ClearInheritedData(aBits);
+    if (mInheritedData)
+      mInheritedData->ClearInheritedData(aBits);
+  }
 
   void Destroy(PRUint32 aBits, nsIPresContext* aContext) {
     if (mResetData)
