@@ -1608,6 +1608,9 @@
     <handlers>
       <handler event="DOMWindowClose">
         <![CDATA[
+          if (!event.isTrusted)
+            return;
+
           const browsers = this.mPanelContainer.childNodes;
           if (browsers.length == 1)
             return;
