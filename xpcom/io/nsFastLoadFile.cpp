@@ -820,10 +820,8 @@ nsFastLoadFileWriter::WriteObjectCommon(nsISupports* aObject,
         if (!entry->mObject) {
             // First time we've seen this object address: add it to mObjectMap
             // and serialize the object at the current stream offset.
-            nsCOMPtr<nsISeekableStream> seekable(do_QueryInterface(mOutputStream));
             PRUint32 thisOffset;
-
-            rv = seekable->Tell(&thisOffset);
+            rv = Tell(&thisOffset);
             if (NS_FAILED(rv)) {
                 aObject->Release();
                 return rv;
