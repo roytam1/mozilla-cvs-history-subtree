@@ -881,6 +881,8 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libmime\mimedrft.c
 	$(DEPTH)\lib\libmisc\mime.c
 	$(DEPTH)\lib\libmisc\dirprefs.c
+!endif
+!ifdef MOZ_CALENDAR
 	$(DEPTH)\lib\libmime\mimecal.c
 !endif
 
@@ -924,8 +926,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 !ifdef MOZ_MAIL_NEWS
 	$(DEPTH)\lib\libmsg\ad_strm.c 
 	$(DEPTH)\lib\libmsg\msgppane.cpp 
-	$(DEPTH)\lib\libmsg\addr.c
-	$(DEPTH)\lib\libmsg\addrutil.c
 	$(DEPTH)\lib\libmsg\ap_decod.c
 	$(DEPTH)\lib\libmsg\ap_encod.c
 	$(DEPTH)\lib\libmsg\appledbl.c
@@ -1002,7 +1002,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libmsg\thrhead.cpp
 	$(DEPTH)\lib\libmsg\thrlstst.cpp
 	$(DEPTH)\lib\libmsg\thrnewvw.cpp
-	$(DEPTH)\lib\libmsg\mozdb.cpp
 !endif
 
 !ifndef MOZ_NGLAYOUT
