@@ -49,7 +49,7 @@ Contributor(s):  Håkan Waara <hwaara@chello.se>
     <label value="&filtersForPrefix.label;" 
            accesskey="&filtersForPrefix.accesskey;" control="serverMenu"/>
 
-      <menulist oncommand="onServerClick(event);" id="serverMenu"
+      <menulist id="serverMenu"
           datasources="rdf:msgaccountmanager rdf:mailnewsfolders"
           sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
           sortDirection="ascending"
@@ -58,12 +58,17 @@ Contributor(s):  Håkan Waara <hwaara@chello.se>
             <rule iscontainer="true" isempty="false" nc:ServerType="nntp">
               <menupopup>
                 <menu uri="..." 
+                                oncommand="onFilterServerClick(event.target)"
                                 class="folderMenuItem menu-iconic" 
                                 IsServer="rdf:http://home.netscape.com/NC-rdf#IsServer"
                                 IsSecure="rdf:http://home.netscape.com/NC-rdf#IsSecure"
                                 ServerType="rdf:http://home.netscape.com/NC-rdf#ServerType"
                                 label="rdf:http://home.netscape.com/NC-rdf#Name">
-                  <menupopup class="menulist-menupopup"/>
+                  <menupopup class="menulist-menupopup">
+                    <menuitem label="&choosethisnewsserver.label;"
+                      oncommand="onFilterServerClick(event.target.parentNode.parentNode)"/>
+                    <menuseparator/>
+                  </menupopup>
                 </menu>
               </menupopup>
             </rule>
@@ -80,6 +85,7 @@ Contributor(s):  Håkan Waara <hwaara@chello.se>
             <rule nc:SupportsFilters="true">
               <menupopup>
                 <menuitem uri="..." value="..."
+                 oncommand="onFilterServerClick(event.target)"
                  class="folderMenuItem menuitem-iconic"
                  IsServer="rdf:http://home.netscape.com/NC-rdf#IsServer"
                  IsSecure="rdf:http://home.netscape.com/NC-rdf#IsSecure"
