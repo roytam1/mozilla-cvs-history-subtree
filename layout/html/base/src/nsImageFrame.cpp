@@ -796,6 +796,9 @@ nsImageFrame::DisplayAltFeedback(nsIPresContext*      aPresContext,
   aRenderingContext.SetClipRect(inner, nsClipCombine_kIntersect, clipState);
 
   // Display the icon
+#ifdef USE_IMG2
+  // XXX
+#else
   nsIDeviceContext* dc;
   aRenderingContext.GetDeviceContext(dc);
   nsIImage*         icon;
@@ -813,6 +816,7 @@ nsImageFrame::DisplayAltFeedback(nsIPresContext*      aPresContext,
   }
 
   NS_RELEASE(dc);
+#endif
 
   // If there's still room, display the alt-text
   if (!inner.IsEmpty()) {
@@ -864,7 +868,9 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
 #endif
 
 #ifdef USE_IMG2
-    if (!imgCon && !lowImgCon) {
+    PRUint32 loadStatus;
+    mImageRequest->GetImageStatus(&loadStatus);
+    if (!(loadStatus & nsIImageRequest::STATUS_SIZE_AVAILABLE) || (!imgCon && !lowImgCon)) {
 #else
     image = mImageLoader.GetImage();
     imgSrcLinesLoaded = image != nsnull?image->GetDecodedY2():-1;
