@@ -450,9 +450,9 @@ nsLeafBoxFrame::HasStyleChange()
 }
 
 void
-nsLeafBoxFrame::SetStyleChangeFlag(PRBool aDirty)
+nsLeafBoxFrame::SetStyleChangeFlag()
 {
-    nsBox::SetStyleChangeFlag(aDirty);
+    nsBox::SetStyleChangeFlag();
 }
 
 PRBool

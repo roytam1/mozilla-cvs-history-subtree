@@ -97,7 +97,7 @@ public:
 protected:
 
   virtual PRBool HasStyleChange();
-  virtual void SetStyleChangeFlag(PRBool aDirty);
+  virtual void SetStyleChangeFlag();
 
   virtual PRBool GetWasCollapsed(nsBoxLayoutState& aState);
   virtual void SetWasCollapsed(nsBoxLayoutState& aState, PRBool aWas);

@@ -4713,9 +4713,9 @@ nsFrame::HasStyleChange()
 }
 
 void
-nsFrame::SetStyleChangeFlag(PRBool aDirty)
+nsFrame::SetStyleChangeFlag()
 {
-  nsBox::SetStyleChangeFlag(aDirty);
+  nsBox::SetStyleChangeFlag();
   BoxMetrics()->mStyleChange = PR_TRUE;
 }
 

@@ -350,7 +350,7 @@ nsBox::HasStyleChange()
 }
 
 void
-nsBox::SetStyleChangeFlag(PRBool aDirty)
+nsBox::SetStyleChangeFlag()
 {
   NeedsRecalc();
   AddStateBits(NS_FRAME_IS_DIRTY | NS_FRAME_HAS_DIRTY_CHILDREN);
@@ -367,7 +367,7 @@ nsBox::MarkChildrenStyleChange()
     return NS_OK;
   }
 
-  SetStyleChangeFlag(PR_TRUE);
+  SetStyleChangeFlag();
 
   nsIBox* child = nsnull;
   GetChildBox(&child);

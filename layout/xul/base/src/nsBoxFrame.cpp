@@ -1353,14 +1353,11 @@ nsBoxFrame::HasStyleChange()
 }
 
 void
-nsBoxFrame::SetStyleChangeFlag(PRBool aDirty)
+nsBoxFrame::SetStyleChangeFlag()
 {
-  nsBox::SetStyleChangeFlag(aDirty);
+  nsBox::SetStyleChangeFlag();
 
-  if (aDirty)
-     mState |= (NS_STATE_STYLE_CHANGE);
-  else 
-     mState &= ~NS_STATE_STYLE_CHANGE;
+  mState |= (NS_STATE_STYLE_CHANGE);
 }
 
 #ifdef DEBUG_LAYOUT
