@@ -50,15 +50,20 @@ public:
   static nsresult GetNamespacePrefix(nsIDOMElement* aElement,
                                      const nsAReadableString & aURI,
                                      nsAWritableString & aPrefix);
+  static void GetInheritedEncodingStyle(nsIDOMElement* aEntry, 
+                                        nsAWritableString & aEncodingStyle);
+
 #endif
   static nsresult GetNamespaceURI(nsIDOMElement* aElement,
                                   const nsAReadableString & aQName, 
                                   nsAWritableString & aURI);
   static nsresult GetLocalName(const nsAReadableString & aQName, 
                                   nsAWritableString & aURI);
-  static void GetInheritedEncodingStyle(nsIDOMElement* aEntry, 
-                                        nsAWritableString & aEncodingStyle);
 
+// All those missing string functions have to come from somewhere...
+
+  static PRBool StartsWith(nsAReadableString& aSuper,
+		           nsAReadableString& aSub);
   static const nsString kSOAPEnvURI;
   static const nsString kSOAPEncodingURI;
   static const nsString kSOAPEnvPrefix;

@@ -88,6 +88,8 @@ NS_NAMED_LITERAL_STRING(kEmptySOAPDocStr, "<SOAP-ENV:Envelope xmlns:SOAP-ENV=\"h
 "<SOAP-ENV:Body>"
 "</SOAP-ENV:Body>"
 "</SOAP-ENV:Envelope>");
+
+//  The default serializers below assume that the above declarations are in place, without bothering to check.
  
 NS_IMETHODIMP nsDefaultSOAPEncoder::MarshallCall(nsISOAPMessage *aMessage, nsISupports *aSource, const nsAReadableString & aEncodingStyleURI, const nsAReadableString & aTypeID, const nsAReadableString & aSchemaID, nsIDOMElement* aScope, nsISupports *aConfiguration, nsISupports **_retval)
 {
@@ -306,7 +308,7 @@ GetElementNameForType(const nsAReadableString & aType, nsAWritableString & aName
     aName = kByteElementName;
   else if (aType.Equals(nsSOAPUtils::kArrayType))
     aName = kArrayElementName;
-  else if (nsAutoString(aType).RFind(nsSOAPUtils::kStructTypePrefix, false, 0) >= 0)
+  else if (nsSOAPUtils::StartsWith(aType,nsSOAPUtils::kStructTypePrefix))
     aName = kStructElementName;
   else
     aName = nsSOAPUtils::kEmpty;
@@ -390,7 +392,7 @@ GetXSDTypeForType(const nsAReadableString & aType, nsAWritableString & aNamespac
     aNamespace = nsSOAPUtils::kSOAPEncodingURI;
     aLocalName = kSOAPEncArrayAttrName;
   }
-  else if (nsAutoString(aType).RFind(nsSOAPUtils::kStructTypePrefix, false, 0) >= 0) {
+  else if (nsSOAPUtils::StartsWith(aType,nsSOAPUtils::kStructTypePrefix)) {
     aNamespace = nsSOAPUtils::kXSDURI;
     aLocalName = kXSDStructName;
   }

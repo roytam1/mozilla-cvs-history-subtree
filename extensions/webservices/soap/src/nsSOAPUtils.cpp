@@ -303,7 +303,6 @@ GetNamespaceURI(nsIDOMElement* aElement,
   aURI = nsSOAPUtils::kEmpty;
   return NS_OK;
 }
-#endif
 
 void
 nsSOAPUtils::GetInheritedEncodingStyle(nsIDOMElement* aEntry, 
@@ -328,3 +327,20 @@ nsSOAPUtils::GetInheritedEncodingStyle(nsIDOMElement* aEntry,
   aEncodingStyle.Assign(kSOAPEncodingURI);
 }
 
+#endif
+
+PRBool nsSOAPUtils::StartsWith(nsAReadableString& aSuper,
+		           nsAReadableString& aSub)
+{
+  PRUint32 c1 = aSuper.Length();
+  PRUint32 c2 = aSub.Length();
+  if (c1 < c2) return PR_FALSE;
+  if (c1 == c2) return aSuper.Equals(aSub);
+  nsReadingIterator<PRUnichar> i1;
+  nsReadingIterator<PRUnichar> i2;
+  aSuper.BeginReading(i1);
+  aSub.BeginReading(i2);
+  while (c2--)
+    if (*i1 != *i2) return PR_FALSE;
+  return PR_TRUE;
+}
