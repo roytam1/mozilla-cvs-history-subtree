@@ -16,6 +16,10 @@
  * Communications Corporation. Portions created by Netscape are
  * Copyright (C) 1998-1999 Netscape Communications Corporation. All
  * Rights Reserved.
+ *
+ * Contributor(s):
+ *   Hakan Waara (hwaara@chello.se)
+ *   Jan Varga (varga@utcru.sk)
  */
 
 /* This is where functions related to the 3 pane window are kept */
@@ -692,9 +696,9 @@ function FolderPaneOnClick(event)
     dump("In FolderPaneClick()\n");
 
     var folderOutliner = GetFolderOutliner();
-    var row;
-    var col;
-    var elt;
+    var row = {};
+    var col = {};
+    var elt = {};
     folderOutliner.outlinerBoxObject.getCellAt(event.clientX, event.clientY, row, col, elt);
     var folderResource = GetFolderResource(row.value);
 
@@ -817,19 +821,21 @@ function ClearActiveThreadPaneSortColumn()
 function GetSelectedMsgFolders()
 {
     var folderOutliner = GetFolderOutliner();
-    var startRange = {value: 0};
-    var endRange = {value: 0};
-    var count = folderOutliner.outlinerBoxObject.selection.count;
+    var rangeCount = folderOutliner.outlinerBoxObject.selection.getRangeCount();
     
-    folderOutliner.outlinerBoxObject.selection.getRangeAt(0, startRange, endRange);
-  
-    var folderArray = new Array(count);
-    for(var i = 0; i < count; i++)
-    {        
-        var msgFolder = GetFolderResource(i).QueryInterface(Components.interfaces.nsIMsgFolder);
-
-        if(msgFolder)
-            folderArray[i] = msgFolder;	
+    var folderArray = [];
+    var k = 0;
+    for(var i = 0; i < rangeCount; i++)
+    {
+        var startRange = {};
+        var endRange = {};
+        folderOutliner.outlinerBoxObject.selection.getRangeAt(i, startRange, endRange);
+        for (var j = startRange.value; j <= endRange.value; j++)
+        {
+            var msgFolder = GetFolderResource(j).QueryInterface(Components.interfaces.nsIMsgFolder);
+            if(msgFolder)
+                folderArray[k++] = msgFolder;	
+        }
     }
   
     return folderArray;

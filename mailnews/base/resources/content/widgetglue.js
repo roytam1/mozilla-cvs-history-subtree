@@ -115,47 +115,28 @@ function RenameFolder(name,uri)
 
 function MsgEmptyTrash() 
 {
-    var outliner = GetFolderOutliner();
     var folderList = GetSelectedMsgFolders();
-
     if (folderList)
     {
-        var folder = folderList[0];       
-
-        if (folder)
+        for(var i = 0; i < folderList.length; i++)
         {
-            var trashUri = GetSelectTrashUri(folder);
-            var folderResource = folder.QueryInterface(Components.interfaces.nsIRDFResource);
-
-            if (trashUri)
+            var folder = folderList[i];
+            if (IsTrashFolder(folder))
             {
-                var trashElement = document.getElementById(trashUri);
-                if (trashElement)
-                {
-                    //dump ('found trash folder\n');
-                    trashElement.setAttribute('open','');
-                }
-                
-                var trashSelected = IsSpecialFolderSelected(MSG_FOLDER_FLAG_TRASH);
-
-                if(trashSelected)
-                    outliner.outlinerBoxObject.selection.clearSelection();
-
                 try 
                 {
-                    messenger.EmptyTrash(GetFolderDatasource(), folderResource);
+                    messenger.EmptyTrash(GetFolderDatasource(), folder);
                 }
                 catch(e)
                 {  
                     dump ("Exception : messenger.EmptyTrash \n");
                 }
-                if (trashSelected)
-                {
-                    trashElement = document.getElementById(trashUri);
-                    if (trashElement)
-                        ChangeSelection(outliner, trashElement);
-                }
             }
+        }
+        var trashSelected = IsSpecialFolderSelected(MSG_FOLDER_FLAG_TRASH);
+        if(trashSelected)
+        {
+            dump("FIXME: reload thread pane after empty trash\n");
         }
     }
 }

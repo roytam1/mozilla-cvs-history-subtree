@@ -17,9 +17,9 @@
  * Copyright (C) 1998-1999 Netscape Communications Corporation. All
  * Rights Reserved.
  *
- *
- * Contributors: Jan Varga <varga@utcru.sk>
- *               Håkan Waara <hwaara@chello.se>
+ * Contributors(s):
+ *   Jan Varga <varga@utcru.sk>
+ *   Håkan Waara <hwaara@chello.se>
  */
 
 
@@ -889,21 +889,14 @@ function SelectNextMessage(nextMessage)
     dump("XXX implement SelectNextMessage()\n");
 }
 
-function GetSelectTrashUri(index)
+function IsTrashFolder(msgFolder)
 {
-    var resource = GetFolderResource(index);
-    var msgFolder =
-        resource.QueryInterface(Components.interfaces.nsIMsgFolder);
-    if (msgFolder)
-    {
-        var rootFolder = msgFolder.rootFolder;
-        var out = new {};
-        var trashFolder = rootFolder.getFoldersWithFlag(MSG_FOLDER_FLAG_TRASH, 1, out);
-        if (trashFolder)
-            return trashFolder.URI;
-    }
-
-    return null;
+    var out = {};
+    var trashFolder = msgFolder.rootFolder.getFoldersWithFlag(MSG_FOLDER_FLAG_TRASH, 1, out);
+    if (trashFolder)
+        return true;
+    else
+        return false;    
 }
 
 function Undo()
