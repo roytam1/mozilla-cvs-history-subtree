@@ -1406,6 +1406,16 @@ nsDocShell::TabToTreeOwner(PRBool aForward, PRBool* aTookFocus)
     return NS_OK;
 }
 
+NS_IMETHODIMP
+nsDocShell::Blur()
+{
+  nsCOMPtr<nsIEmbeddingSiteWindow> window = do_GetInterface(mTreeOwner);
+  if (window)
+    return window->Blur();
+  
+  return NS_ERROR_FAILURE;
+}
+
 
 //*****************************************************************************
 // nsDocShell::nsIDocShellTreeItem

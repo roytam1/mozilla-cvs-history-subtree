@@ -88,6 +88,11 @@ interface nsIEmbeddingSiteWindow : nsISupports
     void setFocus();
 
     /**
+     * Blur the window
+     */
+    void blur();
+
+    /**
      * Visibility of the window.
      */
     attribute boolean visibility;

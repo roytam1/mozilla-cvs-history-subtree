@@ -264,6 +264,12 @@ interface nsIDocShell : nsISupports
                       out boolean tookFocus);
 
   /**
+   Tells the docshell to unfocus itself. This is the where nsIDOMWindow::blur
+   comes for its implementation.
+   */
+  void blur();
+
+  /**
    * Current busy state for DocShell
    */
   const unsigned long BUSY_FLAGS_NONE             = 0;
