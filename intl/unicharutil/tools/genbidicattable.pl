@@ -1,9 +1,9 @@
 #!/usr/local/bin/perl
 #
-# The contents of this file are subject to the Netscape Public
+# The contents of this file are subject to the Mozilla Public
 # License Version 1.1 (the "License"); you may not use this file
 # except in compliance with the License. You may obtain a copy of
-# the License at http://www.mozilla.org/NPL/
+# the License at http://www.mozilla.org/MPL/
 #
 # Software distributed under the License is distributed on an "AS
 # IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
@@ -77,15 +77,15 @@ open ( OUT , "> ../src/bidicattable.h")
 $npl = <<END_OF_NPL;
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
  *
- * The contents of this file are subject to the Netscape Public License
- * Version 1.0 (the "NPL"); you may not use this file except in
- * compliance with the NPL.  You may obtain a copy of the NPL at
- * http://www.mozilla.org/NPL/
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "MPL"); you may not use this file except in
+ * compliance with the MPL.  You may obtain a copy of the MPL at
+ * http://www.mozilla.org/MPL/
  *
- * Software distributed under the NPL is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * Software distributed under the MPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the MPL
  * for the specific language governing rights and limitations under the
- * NPL.
+ * MPL.
  *
  * The Initial Developer of the Original Code is IBM
  * Corporation.  Portions created by IBM are
