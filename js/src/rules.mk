@@ -12,9 +12,9 @@ OBJS   = $(LIB_OBJS) $(PROG_OBJS)
 
 ifdef USE_MSVC
 # TARGETS = $(LIBRARY)   # $(PROGRAM) not supported for MSVC yet
-TARGETS = $(SHARED_LIBRARY) $(PROGRAM)   # it is now
+TARGETS = $(OBJDIR)/$(FDLIBM_LIBRARY) $(SHARED_LIBRARY) $(PROGRAM)  # it is now
 else
-TARGETS = $(LIBRARY) $(SHARED_LIBRARY) $(PROGRAM)
+TARGETS = $(OBJDIR)/$(FDLIBM_LIBRARY) $(LIBRARY) $(SHARED_LIBRARY) $(PROGRAM) 
 endif
 
 all:	$(TARGETS)
@@ -48,7 +48,7 @@ $(LIBRARY): $(LIB_OBJS)
 else
 ifdef USE_MSVC
 $(SHARED_LIBRARY): $(LIB_OBJS)
-	link.exe $(LIB_LINK_FLAGS) /base:0x61000000 $(OTHER_LIBS)\
+	link.exe fdlibm/$(OBJDIR)/fdlibm.lib $(LIB_LINK_FLAGS) /base:0x61000000 $(OTHER_LIBS) \
 	    /out:"$@" /pdb:"$(OBJDIR)/$(@F:.dll=.pdb)" \
 	    /implib:"$(OBJDIR)/$(@F:.dll=.lib)" $?
 else
@@ -60,6 +60,13 @@ $(SHARED_LIBRARY): $(LIB_OBJS)
 	$(MKSHLIB) -o $@ $(LIB_OBJS) $(LDFLAGS) $(OTHER_LIBS)
 endif
 endif
+
+$(OBJDIR)/$(FDLIBM_LIBRARY): fdlibm/$(OBJDIR)/$(FDLIBM_LIBRARY)
+	@$(MAKE_OBJDIR)
+	cp fdlibm/$(OBJDIR)/$(FDLIBM_LIBRARY) $(OBJDIR)/$(FDLIBM_LIBRARY)
+
+fdlibm/$(OBJDIR)/$(FDLIBM_LIBRARY):
+	cd fdlibm; gmake -f Makefile.ref
 
 define MAKE_OBJDIR
 if test ! -d $(@D); then rm -rf $(@D); mkdir $(@D); fi
@@ -88,9 +95,12 @@ export:
 
 clean:
 	rm -rf $(OBJS)
+	cd fdlibm; gmake -f Makefile.ref clean
+
 
 clobber:
 	rm -rf $(OBJS) $(TARGETS) $(DEPENDENCIES)
+	cd fdlibm; gmake -f Makefile.ref clobber
 
 depend:
 	gcc -MM $(CFLAGS) $(LIB_CFILES)

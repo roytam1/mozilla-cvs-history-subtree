@@ -29,8 +29,10 @@ DEFINES += -DJS_THREADSAFE
 INCLUDES += -I../../dist/$(OBJDIR)/include
 ifdef USE_MSVC
 OTHER_LIBS += ../../dist/$(OBJDIR)/lib/libnspr21.lib
+OTHER_LIBS += fdlibm/$(OBJDIR)/fdlibm.lib
 else
 OTHER_LIBS += -L../../dist/$(OBJDIR)/lib -lnspr21
+OTHER_LIBS += -Lfdlibm/$(OBJDIR) -lfdm
 endif
 endif
 
@@ -47,7 +49,7 @@ endif
 #
 CFLAGS          += $(OPTIMIZER) $(OS_CFLAGS) $(DEFINES) $(INCLUDES) \
                   -DJSFILE $(XCFLAGS)
-LDFLAGS		= -lm $(XLDFLAGS)
+LDFLAGS		= -lm $(XLDFLAGS) -L$(OBJDIR) -lfdm
 
 #
 # Ask perl what flags it was built with, so we can build js with similar flags
@@ -82,6 +84,7 @@ JS_HFILES =		\
 	jsfun.h		\
 	jsgc.h		\
 	jsinterp.h	\
+	jslibmath.h	\
 	jslock.h	\
 	jsmath.h	\
 	jsnum.h		\
@@ -172,6 +175,12 @@ else
 LIBRARY = $(OBJDIR)/libjs.a
 SHARED_LIBRARY = $(OBJDIR)/libjs.so
 PROGRAM = $(OBJDIR)/js
+endif
+
+ifdef USE_MSVC
+FDLIBM_LIBRARY = fdlibm.lib
+else
+FDLIBM_LIBRARY = libfdm.a
 endif
 
 include rules.mk
