@@ -134,34 +134,6 @@ public void loadURL(String absoluteURL)
 		}
 	    });
     }
-
-    public void loadFromStreamBlocking(InputStream stream, String uri,
-				       String contentType, int contentLength,
-				       Properties loadInfo) {
-	ParameterCheck.nonNull(stream);
-	ParameterCheck.nonNull(uri);
-	ParameterCheck.nonNull(contentType);
-	if (contentLength < -1 || contentLength == 0) {
-	    throw new RangeException("contentLength value " + contentLength +
-				     " is out of range.  It is should be either -1 or greater than 0.");
-	}
-	
-	final InputStream finalStream = stream;
-	final String finalUri = uri;
-	final String finalContentType = contentType;
-	final int finalContentLength = contentLength;
-	final Properties finalLoadInfo = loadInfo;
-	
-	NativeEventThread.instance.pushBlockingWCRunnable(new WCRunnable() {
-		public Object run() {
-		    nativeLoadFromStream(NavigationImpl.this.getNativeBrowserControl(), 
-					 finalStream, finalUri, 
-					 finalContentType, 
-					 finalContentLength, finalLoadInfo);
-		    return null;
-		}
-	    });
-    }
     
 public void refresh(long loadFlags)
 {
