@@ -140,6 +140,13 @@ void QtBrowserContext::print( URL_Struct* url, bool print_to_file,
 	
     //#warning We might have to do something with the resources here (see fe_Print). Kalle.
 
+
+//
+// I commented this out cause I could not build with gcc 2.7.2 -ramiro
+//
+// FIXME
+	assert( 0 );
+
 //    p.otherFontName = 0;
 
     if( print_to_file )
