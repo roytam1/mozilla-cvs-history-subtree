@@ -407,7 +407,8 @@ nsXmlRpcClient.prototype = {
         if (iid.equals(Components.interfaces.nsIAuthPrompt)){
             return this;
         }
-        return Components.results.NS_ERROR_NO_INTERFACE;
+        Components.returnCode = Components.results.NS_ERROR_NO_INTERFACE;
+        return null;
     },
 
     // nsIAuthPrompt interface
