@@ -26,6 +26,22 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS		= xmlparse xmltok
+MODULE		= expat
+LIBRARY_NAME	= expat_s
+
+CSRCS		= \
+		xmlparse/hashtable.c \
+		xmlparse/xmlparse.c \
+		xmltok/xmltok.c \
+		xmltok/xmlrole.c \
+		$(NULL)
+
+EXPORTS		= xmlparse/xmlparse.h
+
+LOCAL_INCLUDES	= -I$(srcdir)/xmltok
+
+# We want only the static lib, not the shared lib
+FORCE_STATIC_LIB = 1
 
 include $(topsrcdir)/config/rules.mk
+

@@ -48,7 +48,6 @@ REQUIRES	= xpcom \
 
 SHARED_LIBRARY_LIBS = \
 		$(DIST)/lib/$(LIB_PREFIX)expat_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/$(LIB_PREFIX)xmltok_s.$(LIB_SUFFIX) \
 		$(NULL)
 
 ifdef MOZ_PERF_METRICS
