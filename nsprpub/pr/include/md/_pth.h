@@ -91,11 +91,7 @@
 #define _PT_PTHREAD_MUTEXATTR_DESTROY     pthread_mutexattr_destroy
 #define _PT_PTHREAD_MUTEX_INIT(m, a)      pthread_mutex_init(&(m), &(a))
 #define _PT_PTHREAD_MUTEX_IS_LOCKED(m)    (EBUSY == pthread_mutex_trylock(&(m)))
-#if defined(DARWIN)
-#define _PT_PTHREAD_CONDATTR_INIT(x)      0
-#else
 #define _PT_PTHREAD_CONDATTR_INIT         pthread_condattr_init
-#endif
 #define _PT_PTHREAD_CONDATTR_DESTROY      pthread_condattr_destroy
 #define _PT_PTHREAD_COND_INIT(m, a)       pthread_cond_init(&(m), &(a))
 #endif
@@ -190,17 +186,23 @@
  */
 #if (defined(AIX) && !defined(AIX4_3)) || defined(LINUX) \
 	|| defined(FREEBSD) || defined(NETBSD) || defined(OPENBSD) \
-	|| defined(BSDI) || defined(VMS) || defined(UNIXWARE) \
-	|| defined(DARWIN)
+	|| defined(BSDI) || defined(VMS) || defined(UNIXWARE)
 #define PT_NO_SIGTIMEDWAIT
 #endif
 
-/*
- * These platforms don't have pthread_kill()
- */
 #if defined(DARWIN)
+
+/*
+** Stubs for unimplemented functions
+*/
+
+#define pthread_condattr_init(attr) 0
+
 #define pthread_kill(thread, sig) ENOSYS
-#endif
+
+#define sigtimedwait(set, info, timeout) (errno = ENOSYS, -1)
+
+#endif /* DARWIN */
 
 #if defined(OSF1) || defined(VMS)
 #define PT_PRIO_MIN            PRI_OTHER_MIN
