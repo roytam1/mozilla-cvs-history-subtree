@@ -1927,9 +1927,6 @@ lm_SetVersion(MochaDecoder *decoder, JSVersion version) {
             ? JSVERSION_DEFAULT
             : decoder->firstVersion;
     }
-    /* beard:  work around a bug in some of the HTML dialog JavaScripts. */
-    if (version == JSVERSION_DEFAULT)
-        version = JSVERSION_1_1;
     if (decoder->firstVersion == JSVERSION_UNKNOWN) {
         decoder->firstVersion = version;
     }
