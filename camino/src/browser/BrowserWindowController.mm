@@ -1153,17 +1153,17 @@ static NSArray* sToolbarDefaults = nil;
 
 -(void)setupSidebarTabs
 {
-    IconTabViewItem   *bookItem = [[IconTabViewItem alloc] initWithIdentifier:@"bookmarkSidebarCHIconTabViewItem"
-                                  withTabIcon:[NSImage imageNamed:@"bookicon"]];
-    IconTabViewItem   *histItem = [[IconTabViewItem alloc] initWithIdentifier:@"historySidebarCHIconTabViewItem"
-                                  withTabIcon:[NSImage imageNamed:@"historyicon"]];
+    IconTabViewItem   *bookItem = [[[IconTabViewItem alloc] initWithIdentifier:@"bookmarkSidebarCHIconTabViewItem"
+                                  withTabIcon:[NSImage imageNamed:@"bookicon"]] autorelease];
+    IconTabViewItem   *histItem = [[[IconTabViewItem alloc] initWithIdentifier:@"historySidebarCHIconTabViewItem"
+                                  withTabIcon:[NSImage imageNamed:@"historyicon"]] autorelease];
 #if USE_SEARCH_ITEM
-    IconTabViewItem *searchItem = [[IconTabViewItem alloc] initWithIdentifier:@"searchSidebarCHIconTabViewItem"
-                                  withTabIcon:[NSImage imageNamed:@"searchicon"]];
+    IconTabViewItem *searchItem = [[[IconTabViewItem alloc] initWithIdentifier:@"searchSidebarCHIconTabViewItem"
+                                  withTabIcon:[NSImage imageNamed:@"searchicon"]] autorelease];
 #endif
 #if USE_PANELS_ITEM
-    IconTabViewItem *panelsItem = [[IconTabViewItem alloc] initWithIdentifier:@"myPanelsCHIconTabViewItem"
-                                  withTabIcon:[NSImage imageNamed:@"panel_icon"]];
+    IconTabViewItem *panelsItem = [[[IconTabViewItem alloc] initWithIdentifier:@"myPanelsCHIconTabViewItem"
+                                  withTabIcon:[NSImage imageNamed:@"panel_icon"]] autorelease];
 #endif
     
     [bookItem   setView:[[mSidebarSourceTabView tabViewItemAtIndex:0] view]];
