@@ -981,14 +981,6 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
   return rv;
 }
 
-static PRBool
-HaveAutoWidth(const nsHTMLReflowState& aReflowState)
-{
-  return NS_UNCONSTRAINEDSIZE == aReflowState.mComputedWidth ||
-         eStyleUnit_Auto == aReflowState.mStylePosition->mWidth.GetUnit();
-}
-
-
 PRBool
 nsBlockFrame::CheckForCollapsedBottomMarginFromClearanceLine()
 {
@@ -1292,30 +1284,6 @@ nsBlockFrame::PropagateFloatDamage(nsBlockReflowState& aState,
     if ((wasImpactedByFloat != isImpactedByFloat) ||
         (isImpactedByFloat && aLine->IsBlock())) {
       aLine->MarkDirty();
-    }
-  }
-}
-
-static void
-DirtyLinesWithDirtyContinuations(const nsLineList::iterator& aLineStart,
-                                 const nsLineList::iterator& aLineEnd)
-{
-  // The line we're looking at right now
-  nsLineList::iterator line(aLineEnd);
-
-  // Whether the line following the current one is dirty
-  PRBool nextLineDirty = PR_FALSE;
-  
-  while (line != aLineStart) {
-    --line;
-
-    if (nextLineDirty && line->IsInline() && line->IsLineWrapped()) {
-      line->MarkDirty();
-      // Note that nextLineDirty is already true and |line| will be the "next
-      // line" next time through this loop, and we just marked it dirty, so
-      // just leave nextLineDirty as true.
-    } else {
-      nextLineDirty = line->IsDirty();
     }
   }
 }
