@@ -1645,7 +1645,7 @@ private:
 /***************************************************************************/
 
 // Tight. No virtual methods.
-class XPCNativeInterface : public nsIXPCNativeInterface
+class XPCNativeInterface
 {
 public:
     static XPCNativeInterface* GetNewOrUsed(XPCCallContext& ccx,
@@ -1656,10 +1656,9 @@ public:
                                             const char* name);
     static XPCNativeInterface* GetISupports(XPCCallContext& ccx);
 
-    // inherited from public class
-    // inline nsIInterfaceInfo* GetInterfaceInfo() const {return mInfo;}
-    // inline jsval             GetName() const {return mNameID;}
-
+    inline nsIInterfaceInfo* GetInterfaceInfo() const {return mInfo.get();}
+    inline jsval             GetName()          const {return mName;}
+    
     inline const nsIID* GetIID() const;
     inline const char*  GetNameString() const;
     inline XPCNativeMember* FindMember(jsval name) const;
@@ -1690,15 +1689,18 @@ private:
                                            nsIInterfaceInfo* aInfo);
 
     XPCNativeInterface();   // not implemented
-    XPCNativeInterface(nsIInterfaceInfo* aInfo, jsval aName);
+    XPCNativeInterface(nsIInterfaceInfo* aInfo, jsval aName)
+        : mInfo(aInfo), mName(aName), mMemberCount(0) {}
     ~XPCNativeInterface() {}
+   
     void* operator new(size_t, void* p) {return p;}
+   
+    XPCNativeInterface(const XPCNativeInterface& r); // not implemented
+    XPCNativeInterface& operator= (const XPCNativeInterface& r); // not implemented
 
 private:
-    // inherited from public class
-    // nsCOMPtr<nsIInterfaceInfo> mInfo;
-    // jsval                      mName;
-
+    nsCOMPtr<nsIInterfaceInfo> mInfo;
+    jsval                      mName;
     PRUint16          mMemberCount;
     XPCNativeMember   mMembers[1]; // always last - object sized for array
 };
@@ -1769,6 +1771,12 @@ public:
     inline JSBool FindMember(jsval name, XPCNativeMember** pMember,
                              XPCNativeInterface** pInterface) const;
 
+    inline JSBool FindMember(jsval name, 
+                             XPCNativeMember** pMember,
+                             XPCNativeInterface** pInterface,
+                             XPCNativeSet* protoSet,
+                             JSBool* pIsLocal) const;
+
     inline JSBool HasInterface(XPCNativeInterface* aInterface) const;
 
     inline XPCNativeInterface* FindInterfaceWithIID(const nsIID& iid) const;
@@ -1783,7 +1791,7 @@ public:
     XPCNativeInterface* GetInterfaceAt(PRUint16 i)
         {NS_ASSERTION(i < mInterfaceCount, "bad index"); return mInterfaces[i];}
 
-    inline JSBool MatchesSetUpToInterface(XPCNativeSet* other, 
+    inline JSBool MatchesSetUpToInterface(const XPCNativeSet* other, 
                                           XPCNativeInterface* iface) const;
 
     inline void Mark();
@@ -2048,6 +2056,7 @@ public:
     JSObject*              GetFlatJSObject()   const {return mFlatJSObject;}
 
     void** GetSecurityInfoAddr() const {return mProto->GetSecurityInfoAddr();}
+    nsIClassInfo* GetClassInfo() const {return mProto->GetClassInfo();}
 
     // XXX the rules may change here...
     JSBool IsValid() const {return nsnull != mFlatJSObject;}

@@ -282,44 +282,9 @@ MySecMan::CanGetService(JSContext * aJSContext, const nsCID & aCID)
     }
 }
 
-NS_IMETHODIMP
-MySecMan::CanCallMethod(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsval aName, void * *aPolicy)
-{
-    switch(mMode)
-    {
-        case OK_ALL:
-            return NS_OK;
-        case VETO_ALL:
-            JS_SetPendingException(aJSContext,
-                STRING_TO_JSVAL(JS_NewStringCopyZ(aJSContext,
-                    "security exception")));
-            return NS_ERROR_FAILURE;
-        default:
-            NS_ASSERTION(0,"bad case");
-            return NS_OK;
-    }
-}
-
-NS_IMETHODIMP
-MySecMan::CanGetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsval aName, void * *aPolicy)
-{
-    switch(mMode)
-    {
-        case OK_ALL:
-            return NS_OK;
-        case VETO_ALL:
-            JS_SetPendingException(aJSContext,
-                STRING_TO_JSVAL(JS_NewStringCopyZ(aJSContext,
-                    "security exception")));
-            return NS_ERROR_FAILURE;
-        default:
-            NS_ASSERTION(0,"bad case");
-            return NS_OK;
-    }
-}
-
-NS_IMETHODIMP
-MySecMan::CanSetProperty(JSContext * aJSContext, const nsIID & aIID, nsISupports *aObj, nsIInterfaceInfo *aInterfaceInfo, PRUint16 aMethodIndex, const jsval aName, void * *aPolicy)
+/* void CanAccess (in PRUint32 aAction, in nsIXPCNativeCallContext aCallContext, in JSContextPtr aJSContext, in JSObjectPtr aJSObject, in nsISupports aObj, in nsIClassInfo aClassInfo, in JSVal aName, inout voidPtr aPolicy); */
+NS_IMETHODIMP 
+MySecMan::CanAccess(PRUint32 aAction, nsIXPCNativeCallContext *aCallContext, JSContext * aJSContext, JSObject * aJSObject, nsISupports *aObj, nsIClassInfo *aClassInfo, jsval aName, void * *aPolicy)
 {
     switch(mMode)
     {

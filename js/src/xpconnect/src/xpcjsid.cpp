@@ -758,7 +758,7 @@ nsJSCID::HasInstance(nsIXPConnectWrappedNative *wrapper,
 
         // We consider CID equality to be the thing that matters here.
         // This is perhaps debatable.
-        nsIClassInfo* ci = other_wrapper->GetProto()->GetClassInfo();
+        nsIClassInfo* ci = other_wrapper->GetClassInfo();
         if(ci)
         {
             nsID* cid;

@@ -376,6 +376,33 @@ XPCNativeSet::FindMember(jsval name, XPCNativeMember** pMember,
     return JS_TRUE;
 }
 
+inline JSBool 
+XPCNativeSet::FindMember(jsval name, 
+                         XPCNativeMember** pMember,
+                         XPCNativeInterface** pInterface,
+                         XPCNativeSet* protoSet,
+                         JSBool* pIsLocal) const
+{
+    XPCNativeMember* Member;
+    XPCNativeInterface* Interface;
+    XPCNativeMember* protoMember;
+
+    if(!FindMember(name, &Member, &Interface))
+        return JS_FALSE;
+
+    *pMember = Member;
+    *pInterface = Interface;
+
+    *pIsLocal = 
+        !Member ||
+        (protoSet != this &&
+         !protoSet->MatchesSetUpToInterface(this, Interface) &&
+          (!protoSet->FindMember(name, &protoMember, (PRUint16*)nsnull) ||
+           protoMember != Member));
+    
+    return JS_TRUE;
+}
+
 inline XPCNativeInterface* 
 XPCNativeSet::FindNamedInterface(jsval name) const
 {
@@ -415,7 +442,7 @@ XPCNativeSet::HasInterface(XPCNativeInterface* aInterface) const
 }
 
 inline JSBool 
-XPCNativeSet::MatchesSetUpToInterface(XPCNativeSet* other, 
+XPCNativeSet::MatchesSetUpToInterface(const XPCNativeSet* other, 
                                       XPCNativeInterface* iface) const
 {
     int count = JS_MIN((int)mInterfaceCount, (int)other->mInterfaceCount);

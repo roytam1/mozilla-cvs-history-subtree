@@ -899,46 +899,38 @@ XPCWrappedNative::CallMethod(XPCCallContext& ccx,
     xpcc->SetLastResult(NS_ERROR_UNEXPECTED);
 
     // set up the method index and do the security check if needed
+    
+    PRUint32 secFlag;
+    PRUint32 secAction;
+
     switch(mode)
     {
         case CALL_METHOD:
-            sm = xpcc->GetAppropriateSecurityManager(
-                                nsIXPCSecurityManager::HOOK_CALL_METHOD);
-            if(sm && NS_FAILED(sm->
-                CanCallMethod(ccx, iid, callee, ifaceInfo, vtblIndex, name, 
-                              ccx.GetWrapper()->GetSecurityInfoAddr())))
-            {
-                // the security manager vetoed. It should have set an exception.
-                goto done;
-            }
-            break;
-
+            secFlag   = nsIXPCSecurityManager::HOOK_CALL_METHOD;
+            secAction = nsIXPCSecurityManager::ACCESS_CALL_METHOD;
+            break;    
         case CALL_GETTER:
-            sm = xpcc->GetAppropriateSecurityManager(
-                                nsIXPCSecurityManager::HOOK_GET_PROPERTY);
-            if(sm && NS_FAILED(sm->
-                CanGetProperty(ccx, iid, callee, ifaceInfo, vtblIndex, name, 
-                               ccx.GetWrapper()->GetSecurityInfoAddr())))
-            {
-                // the security manager vetoed. It should have set an exception.
-                goto done;
-            }
-            break;
-
+            secFlag   = nsIXPCSecurityManager::HOOK_GET_PROPERTY;
+            secAction = nsIXPCSecurityManager::ACCESS_GET_PROPERTY;
+            break;    
         case CALL_SETTER:
-            sm = xpcc->GetAppropriateSecurityManager(
-                                nsIXPCSecurityManager::HOOK_SET_PROPERTY);
-            if(sm && NS_FAILED(sm->
-                CanSetProperty(ccx, iid, callee, ifaceInfo, vtblIndex, name, 
-                               ccx.GetWrapper()->GetSecurityInfoAddr())))
-            {
-                // the security manager vetoed. It should have set an exception.
-                goto done;
-            }
-            break;
+            secFlag   = nsIXPCSecurityManager::HOOK_SET_PROPERTY;
+            secAction = nsIXPCSecurityManager::ACCESS_SET_PROPERTY;
+            break;    
         default:
             NS_ASSERTION(0,"bad value");
             goto done;
+    }
+
+    sm = xpcc->GetAppropriateSecurityManager(secFlag);
+    if(sm && NS_FAILED(sm->CanAccess(secAction, &ccx, ccx, 
+                                     ccx.GetFlattenedJSObject(),
+                                     ccx.GetWrapper()->GetIdentityObject(),
+                                     ccx.GetWrapper()->GetClassInfo(), name, 
+                                     ccx.GetWrapper()->GetSecurityInfoAddr())))
+    {
+        // the security manager vetoed. It should have set an exception.
+        goto done;
     }
 
     if(NS_FAILED(ifaceInfo->GetMethodInfo(vtblIndex, &methodInfo)))
@@ -1484,15 +1476,35 @@ NS_IMETHODIMP XPCWrappedNative::GetXPConnect(nsIXPConnect * *aXPConnect)
 }
 
 /* XPCNativeInterface FindInterfaceWithMember (in JSVal name); */
-NS_IMETHODIMP XPCWrappedNative::FindInterfaceWithMember(jsval name, nsIXPCNativeInterface * *_retval)
+NS_IMETHODIMP XPCWrappedNative::FindInterfaceWithMember(jsval name, nsIInterfaceInfo * *_retval)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    XPCNativeInterface* iface;
+    XPCNativeMember*  member;
+
+    if(mSet->FindMember(name, &member, &iface) && iface)
+    {
+        nsIInterfaceInfo* temp = iface->GetInterfaceInfo();
+        NS_IF_ADDREF(temp);
+        *_retval = temp;
+    }
+    else
+        *_retval = nsnull;
+    return NS_OK;
 }
 
 /* XPCNativeInterface FindInterfaceWithName (in JSVal name); */
-NS_IMETHODIMP XPCWrappedNative::FindInterfaceWithName(jsval name, nsIXPCNativeInterface * *_retval)
+NS_IMETHODIMP XPCWrappedNative::FindInterfaceWithName(jsval name, nsIInterfaceInfo * *_retval)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+    XPCNativeInterface* iface = mSet->FindNamedInterface(name);
+    if(iface)
+    {
+        nsIInterfaceInfo* temp = iface->GetInterfaceInfo();
+        NS_IF_ADDREF(temp);
+        *_retval = temp;
+    }
+    else
+        *_retval = nsnull;
+    return NS_OK;
 }
 
 /* void debugDump (in short depth); */
@@ -1618,13 +1630,13 @@ XPCWrappedNative::HandlePossibleNameCaseError(XPCCallContext& ccx,
 #ifdef XPC_CHECK_CLASSINFO_CLAIMS
 static void DEBUG_CheckClassInfoClaims(XPCWrappedNative* wrapper)
 {
-    if(!wrapper || !wrapper->GetProto()->GetClassInfo())
+    if(!wrapper || !wrapper->GetClassInfo())
         return;
 
     nsISupports* obj = wrapper->GetIdentityObject();
     for(PRUint16 i = 0; i < wrapper->GetSet()->GetInterfaceCount(); i++)
     {
-        nsIClassInfo* clsInfo = wrapper->GetProto()->GetClassInfo();
+        nsIClassInfo* clsInfo = wrapper->GetClassInfo();
         XPCNativeInterface* iface = wrapper->GetSet()->GetInterfaceAt(i);
         nsIInterfaceInfo* info = iface->GetInterfaceInfo();
         const nsIID* iid;
@@ -1812,6 +1824,34 @@ void DEBUG_ReportShadowedMembers(XPCNativeSet* set,
     int localNext = nextSeenSet+1;
     nextSeenSet = localNext < MAX_SEEN_SETS ? localNext : 0;
 
+
+    // We just want to skip some classes...
+    if(proto->GetScriptableInfo())
+    {
+        // Add any classnames to skip to this (null terminated) array...
+        static const char* skipClasses[] = {
+            "Event",
+            nsnull
+        };
+
+        PRBool quit = JS_FALSE;
+        char* className = nsnull;
+        proto->GetScriptableInfo()->GetScriptable()->GetClassName(&className);
+        if(className) 
+        {
+            for(const char** name = skipClasses; *name; name++)
+            {
+                if(!strcmp(*name, className))
+                {
+                    quit = JS_TRUE;
+                    break;
+                }
+            }
+            nsMemory::Free(className);
+        }
+        if(quit) 
+            return;
+    }
 
     const char header[] = 
         "!!!Object wrapped by XPConnect has members whose names shadow each other!!!";

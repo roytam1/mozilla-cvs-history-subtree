@@ -264,25 +264,25 @@ XPC_WN_DoubleWrappedGetter(JSContext *cx, JSObject *obj,
                     nsIXPCSecurityManager::HOOK_GET_PROPERTY);
     if(sm)
     {
-        jsval idval = ccx.GetRuntime()->
+        XPCNativeInterface* iface = XPCNativeInterface::
+            GetNewOrUsed(ccx, &NS_GET_IID(nsIXPCWrappedJSObjectGetter));
+
+        if(iface)
+        {
+            jsval idval = ccx.GetRuntime()->
                         GetStringJSVal(XPCJSRuntime::IDX_WRAPPED_JSOBJECT);
 
-        nsCOMPtr<nsIInterfaceInfoManager> iimgr =
-                dont_AddRef(nsXPConnect::GetInterfaceInfoManager());
-        if(iimgr)
-        {
-            const nsIID& iid = NS_GET_IID(nsIXPCWrappedJSObjectGetter);
-            nsCOMPtr<nsIInterfaceInfo> info;
-            if(NS_SUCCEEDED(iimgr->GetInfoForIID(&iid, getter_AddRefs(info))))
+            ccx.SetCallInfo(iface, iface->GetMemberAt(3), JS_FALSE);
+            if(NS_FAILED(sm->
+                    CanAccess(nsIXPCSecurityManager::ACCESS_GET_PROPERTY,
+                              &ccx, ccx, 
+                              ccx.GetFlattenedJSObject(),
+                              wrapper->GetIdentityObject(),
+                              wrapper->GetClassInfo(), idval, 
+                              wrapper->GetSecurityInfoAddr())))
             {
-                if(NS_FAILED(sm->
-                    CanGetProperty(cx, iid, wrapper->GetIdentityObject(),
-                                   info, 3, idval,
-                                   wrapper->GetSecurityInfoAddr())))
-                {
-                    // The SecurityManager should have set an exception.
-                    return JS_FALSE;
-                }
+                // The SecurityManager should have set an exception.
+                return JS_FALSE;
             }
         }
     }
@@ -305,6 +305,7 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                       JSObject *obj, jsval idval, 
                       XPCNativeSet* set, 
                       XPCNativeInterface* iface,
+                      XPCNativeMember* member,
                       XPCWrappedNativeScope* scope,
                       JSBool reflectToStringAndToSource,
                       XPCWrappedNative* wrapperToReflectInterfaceNames,
@@ -313,13 +314,17 @@ DefinePropertyIfFound(XPCCallContext& ccx,
                       uintN propFlags) 
 {
     XPCJSRuntime* rt = ccx.GetRuntime();
-    XPCNativeMember* member;
     JSBool found;
     const char* name;
     jsid id;
 
     if(set)
-        found = set->FindMember(idval, &member, &iface);
+    {
+        if(iface)
+            found = JS_TRUE;
+        else
+            found = set->FindMember(idval, &member, &iface);
+    }
     else
         found = (nsnull != (member = iface->FindMember(idval)));
 
@@ -682,7 +687,7 @@ XPC_WN_NoHelper_Resolve(JSContext *cx, JSObject *obj, jsval idval)
         return JS_TRUE;
 
     return DefinePropertyIfFound(ccx, obj, idval, 
-                                 set, nsnull, wrapper->GetScope(),
+                                 set, nsnull, nsnull, wrapper->GetScope(),
                                  JS_TRUE, wrapper, wrapper, nsnull,
                                  JSPROP_ENUMERATE |
                                  JSPROP_READONLY |
@@ -868,39 +873,65 @@ XPC_WN_Helper_NewResolve(JSContext *cx, JSObject *obj, jsval idval, uintN flags,
 
     jsval old = ccx.SetResolveName(idval);
 
-    // Since I can't always tell if the scriptable did anything on resolve,
-    // I'll do my part first and if the scriptable overwrites, then fine.
-
-    if(wrapper->HasMutatedSet())
-    {
-        // XXX handle this
-        // We can use XPCCallContext::SetJSID and if we discover that the id
-        // needs to be in a tearoff then we can do a resolve on the tearoff and
-        // return.
-    }
-
     nsresult rv = NS_OK;
     JSBool retval = JS_TRUE;
+    JSObject* obj2FromScriptable = nsnull;
+    
     XPCNativeScriptableInfo* si = wrapper->GetScriptableInfo();
     if(si && si->WantNewResolve())
     {
         XPCWrappedNative* oldResolvingWrapper;
+        JSBool allowPropMods = si->AllowPropModsDuringResolve();
         
-        if(si->AllowPropModsDuringResolve())
+        if(allowPropMods)
             oldResolvingWrapper = ccx.SetResolvingWrapper(wrapper);
 
         rv = si->GetScriptable()->NewResolve(wrapper, cx, obj, idval, flags,
-                                             objp, &retval);
+                                             &obj2FromScriptable, &retval);
                                                
-        if(si->AllowPropModsDuringResolve())
+        if(allowPropMods)
             (void)ccx.SetResolvingWrapper(oldResolvingWrapper);
     }
 
     old = ccx.SetResolveName(old);
     NS_ASSERTION(old == idval, "bad nest");
 
-    if(NS_FAILED(rv))
+    if(NS_SUCCEEDED(rv))
+    {
+        if(obj2FromScriptable)
+        {
+            *objp = obj2FromScriptable;   
+        }
+        else if(wrapper->HasMutatedSet())
+        {
+            // We are here if scriptable did not resolve this property and
+            // it *might* be in the instance set but not the proto set.
+
+            XPCNativeSet* set = wrapper->GetSet(); 
+            XPCNativeSet* protoSet = wrapper->GetProto()->GetSet();
+            XPCNativeMember* member;
+            XPCNativeInterface* iface;
+            JSBool IsLocal;
+
+            if(set->FindMember(idval, &member, &iface, protoSet, &IsLocal) && 
+               IsLocal)
+            {
+                uintN enumFlag = 
+                    si && si->DontEnumStaticProps() ? 0 : JSPROP_ENUMERATE;
+
+                retval = DefinePropertyIfFound(ccx, obj, idval, 
+                                               set, iface, member,
+                                               wrapper->GetScope(),
+                                               JS_FALSE, wrapper, nsnull, si,
+                                               enumFlag);
+            }
+        }
+    }
+    else
+    {
         Throw(rv, cx);
+    }
+
     return retval;
 }
 
@@ -1274,7 +1305,8 @@ XPC_WN_ModsAllowed_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     uintN enumFlag = si && si->DontEnumStaticProps() ? 0 : JSPROP_ENUMERATE;
 
     return DefinePropertyIfFound(ccx, obj, idval, 
-                                 self->GetSet(), nsnull, self->GetScope(),
+                                 self->GetSet(), nsnull, nsnull, 
+                                 self->GetScope(),
                                  JS_TRUE, nsnull, nsnull, si,
                                  enumFlag);
 }
@@ -1356,7 +1388,8 @@ XPC_WN_NoMods_Proto_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     uintN enumFlag = si && si->DontEnumStaticProps() ? 0 : JSPROP_ENUMERATE;
 
     return DefinePropertyIfFound(ccx, obj, idval, 
-                                 self->GetSet(), nsnull, self->GetScope(),
+                                 self->GetSet(), nsnull, nsnull,
+                                 self->GetScope(),
                                  JS_TRUE, nsnull, nsnull, si,
                                  JSPROP_READONLY |
                                  JSPROP_PERMANENT |
@@ -1443,7 +1476,7 @@ XPC_WN_TearOff_Resolve(JSContext *cx, JSObject *obj, jsval idval)
     if(ccx.GetResolveName() == idval)
         return JS_TRUE;
 
-    return DefinePropertyIfFound(ccx, obj, idval, nsnull, iface, 
+    return DefinePropertyIfFound(ccx, obj, idval, nsnull, iface, nsnull,
                                  wrapper->GetScope(),
                                  JS_TRUE, nsnull, nsnull, nsnull,
                                  JSPROP_READONLY |

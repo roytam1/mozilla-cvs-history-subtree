@@ -37,6 +37,10 @@
 
 #include "xpcprivate.h"
 
+#ifdef off_DEBUG_jband
+#define HACK_NEW_PRIVATE_SLOTS
+#endif
+
 /***************************************************************************/
 // XPCNativeMember
 
@@ -75,13 +79,33 @@ XPCNativeMember::GetCallInfo(XPCCallContext& ccx,
 {
     JSFunction* fun;
     JSObject* realFunObj;
-    jsid id;
-    jsval val;
 
     // We expect funobj to be a clone, we need the real funobj.
 
     fun = (JSFunction*) JS_GetPrivate(ccx, funobj);
     realFunObj = JS_GetFunctionObject(fun);
+
+#ifdef HACK_NEW_PRIVATE_SLOTS
+
+    jsval ifaceVal; 
+    jsval memberVal; 
+
+    if(!JS_GetReservedSlot(ccx, realFunObj, 0, &ifaceVal) ||
+       !JS_GetReservedSlot(ccx, realFunObj, 1, &memberVal) ||
+       !JSVAL_IS_INT(ifaceVal) || !JSVAL_IS_INT(memberVal))
+    {     
+        return JS_FALSE;
+    }
+
+    *pInterface = (XPCNativeInterface*) JSVAL_TO_PRIVATE(ifaceVal);
+    *pMember = (XPCNativeMember*) JSVAL_TO_PRIVATE(memberVal);
+    
+    return JS_TRUE;
+
+#else
+    jsid id;
+    jsval val;
+
     id = ccx.GetRuntime()->GetStringID(XPCJSRuntime::IDX_CALLABLE_INFO_PROP_NAME);
 
     if(OBJ_GET_PROPERTY(ccx, realFunObj, id, &val) && JSVAL_IS_INT(val))
@@ -96,12 +120,14 @@ XPCNativeMember::GetCallInfo(XPCCallContext& ccx,
     }
 
     return JS_FALSE;
+#endif
 }
 
 void
 XPCNativeMember::CleanupCallableInfo(JSContext* cx, XPCJSRuntime* rt, 
                                      JSObject* funobj)
 {
+#ifndef HACK_NEW_PRIVATE_SLOTS
     jsid id;
     jsval val;
 
@@ -111,6 +137,7 @@ XPCNativeMember::CleanupCallableInfo(JSContext* cx, XPCJSRuntime* rt,
 
     if(OBJ_GET_PROPERTY(cx, funobj, id, &val) && JSVAL_IS_INT(val))
         delete ((XPCCallableInfo*) JSVAL_TO_PRIVATE(val));
+#endif
 }
 
 JSBool
@@ -197,6 +224,14 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
         return JS_FALSE;
 
     mVal = OBJECT_TO_JSVAL(funobj);
+
+#ifdef HACK_NEW_PRIVATE_SLOTS
+    
+    if(!JS_SetReservedSlot(ccx, funobj, 0, PRIVATE_TO_JSVAL(iface))||
+       !JS_SetReservedSlot(ccx, funobj, 1, PRIVATE_TO_JSVAL(this)))
+        return JS_FALSE;
+#else
+
     jsid id = ccx.GetRuntime()->
         GetStringID(XPCJSRuntime::IDX_CALLABLE_INFO_PROP_NAME);
 
@@ -212,6 +247,7 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
         delete ci;
         return JS_FALSE;
     }
+#endif
 
     mFlags |= RESOLVED;
     
@@ -222,8 +258,10 @@ XPCNativeMember::Resolve(XPCCallContext& ccx, XPCNativeInterface* iface)
 void
 XPCNativeMember::Cleanup(JSContext* cx, XPCJSRuntime* rt)
 {
+#ifndef HACK_NEW_PRIVATE_SLOTS
     if(IsResolved() && !JSVAL_IS_PRIMITIVE(mVal))
         CleanupCallableInfo(cx, rt, JSVAL_TO_OBJECT(mVal));
+#endif
 }
 
 /***************************************************************************/
@@ -349,11 +387,6 @@ XPCNativeInterface::GetISupports(XPCCallContext& ccx)
 {
     // XXX We should optimize this to cache this common XPCNativeInterface.
     return GetNewOrUsed(ccx, &NS_GET_IID(nsISupports));
-}
-
-XPCNativeInterface::XPCNativeInterface(nsIInterfaceInfo* aInfo, jsval aName)
-    : nsIXPCNativeInterface(aInfo, aName)
-{
 }
 
 // static

@@ -164,26 +164,15 @@ XPCCallContext::SetName(jsval name)
     {
         mSet = mWrapper->GetSet();
 
-        if(mSet->FindMember(name, &mMember, &mInterface))
+        if(mSet->FindMember(name, &mMember, &mInterface,
+                            mWrapper->GetProto()->GetSet(),
+                            &mStaticMemberIsLocal))
         {
             if(mMember && !mMember->IsConstant())
                 mMethodIndex = mMember->GetIndex();
-    
-            XPCNativeMember* protoMember;
-            XPCNativeSet* protoSet = mWrapper->GetProto()->GetSet();
-
-            mStaticMemberIsLocal =
-                    !mMember ||
-                     (protoSet != mSet &&
-                      !protoSet->MatchesSetUpToInterface(mSet, mInterface) &&
-                      (!protoSet->FindMember(name, &protoMember, 
-                                             (PRUint16*)nsnull) ||
-                       protoMember != mMember));
         }
         else
         {
-            // XXX do we need to lookup tearoff names here?
-
             mMember = nsnull;
             mInterface = nsnull;
             mStaticMemberIsLocal = JS_FALSE;
@@ -350,9 +339,21 @@ XPCCallContext::GetCalleeWrapper(nsIXPConnectWrappedNative * *aCalleeWrapper)
 
 /* readonly attribute XPCNativeInterface CalleeInterface; */
 NS_IMETHODIMP 
-XPCCallContext::GetCalleeInterface(nsIXPCNativeInterface * *aCalleeInterface)
+XPCCallContext::GetCalleeInterface(nsIInterfaceInfo * *aCalleeInterface)
 {
-    *aCalleeInterface = mInterface;
+    nsIInterfaceInfo* temp = mInterface->GetInterfaceInfo();
+    NS_IF_ADDREF(temp);
+    *aCalleeInterface = temp;
+    return NS_OK;
+}
+
+/* readonly attribute nsIClassInfo CalleeClassInfo; */
+NS_IMETHODIMP 
+XPCCallContext::GetCalleeClassInfo(nsIClassInfo * *aCalleeClassInfo)
+{
+    nsIClassInfo* temp = mWrapper->GetClassInfo();
+    NS_IF_ADDREF(temp);
+    *aCalleeClassInfo = temp;
     return NS_OK;
 }
 

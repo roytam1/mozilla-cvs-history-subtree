@@ -36,14 +36,15 @@
 /* The core XPConnect public interfaces. */
 
 #include "nsISupports.idl"
+#include "nsIClassInfo.idl"
 #include "xpccomponents.idl"
 #include "xpcjsid.idl"
 #include "xpcexception.idl"
+#include "nsIInterfaceInfo.idl"
+#include "nsIInterfaceInfoManager.idl"
 
 %{ C++
 #include "jspubtd.h"
-#include "nsIInterfaceInfo.h"
-#include "nsIInterfaceInfoManager.h"
 #include "xptinfo.h"
 %}
 
@@ -54,12 +55,6 @@
 [ptr] native JSValPtr(jsval);
       native JSVal(jsval);
       native JSID(jsid);
-[ptr] native XPCNativeInterface(nsIXPCNativeInterface);
-
-%{ C++
-// This class is fully declared in nsIXPCScriptable.h
-class nsIXPCNativeInterface;
-%}
 
 /***************************************************************************/
 
@@ -153,8 +148,8 @@ interface nsIXPConnectWrappedNative : nsIXPConnectJSObjectHolder
      */
 
     readonly attribute nsIXPConnect XPConnect;
-    XPCNativeInterface FindInterfaceWithMember(in JSVal nameID);
-    XPCNativeInterface FindInterfaceWithName(in JSVal nameID);
+    nsIInterfaceInfo FindInterfaceWithMember(in JSVal nameID);
+    nsIInterfaceInfo FindInterfaceWithName(in JSVal nameID);
 
     void debugDump(in short depth);
 };
@@ -189,7 +184,8 @@ interface nsIXPCNativeCallContext : nsISupports
     readonly attribute nsISupports                  Callee;
     readonly attribute PRUint16                     CalleeMethodIndex;
     readonly attribute nsIXPConnectWrappedNative    CalleeWrapper;
-    readonly attribute XPCNativeInterface           CalleeInterface;
+    readonly attribute nsIInterfaceInfo             CalleeInterface;
+    readonly attribute nsIClassInfo                 CalleeClassInfo;
     readonly attribute JSContextPtr                 JSContext;
     readonly attribute PRUint32                     Argc;
     readonly attribute JSValPtr                     ArgvPtr;
