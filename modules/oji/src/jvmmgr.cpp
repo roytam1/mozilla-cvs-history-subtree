@@ -559,14 +559,12 @@ nsJVMMgr::GetJavaErrorString(JRIEnv* env)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifdef XP_MAC
-static NS_DEFINE_IID(kIJNIPluginIID, NS_IJVMPLUGIN_IID);
-#else
+#if !defined(XP_MAC)
 static NS_DEFINE_IID(kIJRIPluginIID, NS_IJRIPLUGIN_IID);        // XXX change later to JNI
-#endif
 
 // Should be in a header; must solve build-order problem first
 extern "C" void SU_Initialize(JRIEnv * env);
+#endif
 
 nsJVMStatus
 nsJVMMgr::StartupJVM(void)
