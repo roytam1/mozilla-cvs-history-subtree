@@ -55,14 +55,21 @@ protected:
                                       nsReflowStatus&      aStatus,
                                       nsReflowReason       aReason);
 
-  virtual nsIFrame* GetFirstFrame(nsIPresContext& aPresContext);
-  virtual void GetNextFrame(nsIPresContext& aPresContext, nsIFrame* aFrame, nsIFrame** aResult);
+  virtual nsIFrame* GetFirstFrameForReflow(nsIPresContext& aPresContext);
+  virtual void GetNextFrameForReflow(nsIPresContext& aPresContext, nsIFrame* aFrame, nsIFrame** aResult);
+
+  virtual nsIFrame* GetFirstFrame();
+  virtual void GetNextFrame(nsIFrame* aFrame, nsIFrame** aResult);
 
   void LocateFrame(nsIFrame* aStartFrame, nsIFrame** aResult);
 
 protected: // Data Members
   nsIFrame* mTopFrame; // The current topmost frame in the view.
+  nsIFrame* mBottomFrame; // The current bottom frame in the view.
+
   PRBool mIsLazy; // Whether or not we're a lazily instantiated beast
+  
   nsIFrame* mScrollbar; // Our scrollbar.
+  
   nsCSSFrameConstructor* mFrameConstructor; // We don't own this. (No addref/release allowed, punk.)
 }; // class nsTreeRowGroupFrame

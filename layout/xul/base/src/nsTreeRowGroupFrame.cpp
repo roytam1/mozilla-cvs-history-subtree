@@ -55,7 +55,7 @@ NS_NewTreeRowGroupFrame (nsIFrame** aNewFrame)
 // Constructor
 nsTreeRowGroupFrame::nsTreeRowGroupFrame()
 :nsTableRowGroupFrame(), mScrollbar(nsnull), mFrameConstructor(nsnull),
- mTopFrame(nsnull), mIsLazy(PR_FALSE)
+ mTopFrame(nsnull), mBottomFrame(nsnull), mIsLazy(PR_FALSE)
 { }
 
 // Destructor
@@ -135,16 +135,39 @@ void nsTreeRowGroupFrame::LocateFrame(nsIFrame* aStartFrame, nsIFrame** aResult)
     *aResult = aStartFrame;
   }
 }
-      
+   
+nsIFrame*
+nsTreeRowGroupFrame::GetFirstFrame()
+{
+  // We may just be a normal row group.
+  if (!mIsLazy)
+    return mFrames.FirstChild();
+
+  return mTopFrame;
+}
+
+void
+nsTreeRowGroupFrame::GetNextFrame(nsIFrame* aPrevFrame, nsIFrame** aResult)
+{
+  if (aPrevFrame == mBottomFrame)
+    *aResult = nsnull;
+  else aPrevFrame->GetNextSibling(aResult);
+}
+
 nsIFrame* 
-nsTreeRowGroupFrame::GetFirstFrame(nsIPresContext& aPresContext) 
+nsTreeRowGroupFrame::GetFirstFrameForReflow(nsIPresContext& aPresContext) 
 { 
+  // Clear ourselves out.
+  mTopFrame = mBottomFrame = nsnull;
+
   // We may just be a normal row group.
   if (!mIsLazy)
     return mFrames.FirstChild();
 
   // See if we have any frame whatsoever.
   LocateFrame(nsnull, &mTopFrame);
+  
+  mBottomFrame = mTopFrame;
 
   if (mTopFrame)
     return mTopFrame;
@@ -154,26 +177,26 @@ nsTreeRowGroupFrame::GetFirstFrame(nsIPresContext& aPresContext)
   PRInt32 count;
   mContent->ChildCount(count);
   nsCOMPtr<nsIContent> childContent;
-  nsCOMPtr<nsIContent> scrollbarContent;
-  if (mScrollbar)
-    mScrollbar->GetContent(getter_AddRefs(scrollbarContent));
   for (PRInt32 i = 0; i < count; i++) {
     mContent->ChildAt(i, *getter_AddRefs(childContent));
-    if (childContent != scrollbarContent) {
-      mFrameConstructor->CreateTreeWidgetContent(&aPresContext, mContent, childContent, i,
+    mFrameConstructor->CreateTreeWidgetContent(&aPresContext, mContent, childContent, i,
                                                  &mTopFrame);
-      nsTableFrame* tableFrame = nsnull;
-      nsTableFrame::GetTableFrame(this, tableFrame);
-      tableFrame->DidAppendRowGroup(this);
-      return mTopFrame;
-    }
+    i++;
+    printf("Created frame number %d\n", i);
+    mBottomFrame = mTopFrame;
+    nsTableFrame* tableFrame = nsnull;
+    nsTableFrame::GetTableFrame(this, tableFrame);
+    tableFrame->DidAppendRowGroup(this);
+    return mTopFrame;
   }
   
   return nsnull;
 }
   
+static int i = 0;
+
 void 
-nsTreeRowGroupFrame::GetNextFrame(nsIPresContext& aPresContext, nsIFrame* aFrame, nsIFrame** aResult) 
+nsTreeRowGroupFrame::GetNextFrameForReflow(nsIPresContext& aPresContext, nsIFrame* aFrame, nsIFrame** aResult) 
 { 
   if (mIsLazy) {
     // We're ultra-cool. We build our frames on the fly.
@@ -186,24 +209,15 @@ nsTreeRowGroupFrame::GetNextFrame(nsIPresContext& aPresContext, nsIFrame* aFrame
       nsCOMPtr<nsIContent> parentContent;
       mContent->IndexOf(prevContent, i);
       mContent->ChildCount(childCount);
-      nsCOMPtr<nsIContent> scrollbarContent;
-      if (mScrollbar)
-        mScrollbar->GetContent(getter_AddRefs(scrollbarContent));
       if (i+1 < childCount) {
         // There is a content node that wants a frame.
         nsCOMPtr<nsIContent> nextContent;
         mContent->ChildAt(i+1, *getter_AddRefs(nextContent));
-        if (nextContent == scrollbarContent) {
-          if (i+2 >= childCount) {
-            *aResult = nsnull;
-            return;
-          } else {
-            i++;
-            mContent->ChildAt(i+1, *getter_AddRefs(nextContent));
-          }
-        }
         mFrameConstructor->CreateTreeWidgetContent(&aPresContext, mContent, nextContent, i+1,
                                                    aResult);
+        i++;
+        printf("Created frame number %d\n", i);
+        mBottomFrame = mFrames.FrameAt(i+1);
         nsTableFrame* tableFrame = nsnull;
         nsTableFrame::GetTableFrame(this, tableFrame);
         tableFrame->DidAppendRowGroup(this);

@@ -1277,6 +1277,15 @@ nsCSSFrameConstructor::ConstructTableGroupFrameOnly(nsIPresContext*          aPr
         aContent->GetTag(*getter_AddRefs(tag));
         CreateAnonymousXULContent(aPresContext, tag, aState, aContent, aNewGroupFrame,
                                   childItems);
+
+        if (styleDisplay->mDisplay == NS_STYLE_DISPLAY_TABLE_ROW_GROUP) {
+          // We're the child of another row group. If it's lazy, we're lazy.
+          nsTreeRowGroupFrame* treeFrame = (nsTreeRowGroupFrame*)aParentFrame;
+          if (treeFrame->IsLazy()) {
+            ((nsTreeRowGroupFrame*)aNewGroupFrame)->MakeLazy();
+            ((nsTreeRowGroupFrame*)aNewGroupFrame)->SetFrameConstructor(this);
+          }
+        }
       }
 
       TableProcessChildren(aPresContext, aState, aContent, aNewGroupFrame,
@@ -2748,18 +2757,6 @@ nsCSSFrameConstructor::ConstructXULFrame(nsIPresContext*          aPresContext,
       rv = ConstructTableGroupFrame(aPresContext, aState, aContent, aParentFrame, aStyleContext,
                                     PR_TRUE, newTopFrame, newFrame, treeCreator, nsnull);
       aFrameItems.AddChild(newFrame);
-      const nsStyleDisplay* styleDisplay = (const nsStyleDisplay*)
-           aStyleContext->GetStyleData(eStyleStruct_Display);
-      
-      if (NS_STYLE_DISPLAY_TABLE_ROW_GROUP == styleDisplay->mDisplay) {
-        // We're the child of another row group. If it's lazy, we're lazy.
-        nsTreeRowGroupFrame* treeFrame = (nsTreeRowGroupFrame*)aParentFrame;
-        if (treeFrame->IsLazy()) {
-          ((nsTreeRowGroupFrame*)newFrame)->MakeLazy();
-          ((nsTreeRowGroupFrame*)newFrame)->SetFrameConstructor(this);
-        }
-      }
-
       return rv;
     }
     else if (aTag == nsXULAtoms::tree)
@@ -3005,7 +3002,7 @@ nsCSSFrameConstructor::CreateAnonymousXULContent(nsIPresContext* aPresContext,
       document->CreateElement("scrollbar",getter_AddRefs(node));
 
       nsCOMPtr<nsIContent> content = do_QueryInterface(node);
-      aContent->AppendChildTo(content, PR_TRUE);
+      content->SetParent(aContent);
 
       nsCOMPtr<nsIAtom> vertical = dont_AddRef(NS_NewAtom("align"));
       nsCOMPtr<nsIAtom> style = dont_AddRef(NS_NewAtom("style"));

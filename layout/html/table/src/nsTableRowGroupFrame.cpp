@@ -400,8 +400,7 @@ NS_METHOD nsTableRowGroupFrame::ReflowMappedChildren(nsIPresContext&      aPresC
 
   nsIFrame*  kidFrame;
   if (nsnull==aStartFrame) {
-    kidFrame = GetFirstFrame(aPresContext);
-    //kidFrame = mFrames.FirstChild();
+    kidFrame = GetFirstFrameForReflow(aPresContext);
     ReflowBeforeRowLayout(aPresContext, aDesiredSize, aReflowState, aStatus, aReason);
   }
   else
@@ -418,8 +417,7 @@ NS_METHOD nsTableRowGroupFrame::ReflowMappedChildren(nsIPresContext&      aPresC
         break;
 
       // Get the next child
-      GetNextFrame(aPresContext, kidFrame, &kidFrame);
-      //kidFrame->GetNextSibling(&kidFrame);
+      GetNextFrameForReflow(aPresContext, kidFrame, &kidFrame);
       continue;
     }
 
@@ -511,8 +509,7 @@ NS_METHOD nsTableRowGroupFrame::ReflowMappedChildren(nsIPresContext&      aPresC
       break;
 
     // Get the next child
-    GetNextFrame(aPresContext, kidFrame, &kidFrame);
-    //kidFrame->GetNextSibling(&kidFrame);
+    GetNextFrameForReflow(aPresContext, kidFrame, &kidFrame);
   }
 
   return rv;
@@ -1027,10 +1024,8 @@ nsTableRowGroupFrame::Reflow(nsIPresContext&          aPresContext,
     // reflowing the frames we have, the problem is we don't know if we have
     // room left until after we call CalculateRowHeights()...
     PullUpAllRowFrames(aPresContext);
-    if (nsnull != GetFirstFrame(aPresContext)) {
-      rv = ReflowMappedChildren(aPresContext, aDesiredSize, state, aStatus,
+    rv = ReflowMappedChildren(aPresContext, aDesiredSize, state, aStatus,
                                 nsnull, aReflowState.reason, PR_TRUE);
-    }
   
     // Return our desired rect
     aDesiredSize.width = aReflowState.availableWidth;
