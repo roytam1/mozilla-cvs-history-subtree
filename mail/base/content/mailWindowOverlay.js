@@ -232,7 +232,7 @@ function InitViewSortByMenu()
     var sortTypeSupportsGrouping = (sortType == nsMsgViewSortType.byAuthor 
         || sortType == nsMsgViewSortType.byDate || sortType == nsMsgViewSortType.byPriority
         || sortType == nsMsgViewSortType.bySubject || sortType == nsMsgViewSortType.byLabel
-        || sortType == nsMsgViewSortType.byRecipient);
+        || sortType == nsMsgViewSortType.byRecipient || sortType == nsMsgViewSortType.byAccount);
 
     setSortByMenuItemCheckState("sortAscending", (sortOrder == nsMsgViewSortOrder.ascending));
     setSortByMenuItemCheckState("sortDescending", (sortOrder == nsMsgViewSortOrder.descending));
@@ -2208,6 +2208,12 @@ function OnMsgLoaded(aUrl)
     
     if (!folder || !msgURI)
       return;
+
+    // If we are in the middle of a delete or move operation, make sure that
+    // if the user clicks on another message then that message stays selected
+    // and the selection does not "snap back" to the message chosen by
+    // SetNextMessageAfterDelete() when the operation completes (bug 243532).
+    gNextMessageViewIndexAfterDelete = -2;
 
     if (!(/type=x-message-display/.test(msgURI)))
       msgHdr = messenger.messageServiceFromURI(msgURI).messageURIToMsgHdr(msgURI);
