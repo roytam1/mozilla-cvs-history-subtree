@@ -34,7 +34,6 @@ JAVASRCDIR = ../../java
 CLASSDESTDIR = ../unix/classes
 ADDCLASSPATH = ../unix/classes
 PATH_SEP=:
-SUBDIRS = ext
 
 default: all
 
@@ -45,7 +44,7 @@ include $(BUILDDIR)/Defs.gmk
 include $(BUILDDIR)/Rules.gmk
 endif
 
-all: classes exts
+all: classes
 
 release: all wf.jar
 
@@ -55,10 +54,5 @@ wf.jar:
 	$(JAR_CMD) cf wf.jar sun netscape ; \
 	$(MV) wf.jar ..; \
 	echo "  done."
-
-exts:
-	@echo "Making Waterfall extension components"
-	@cd ext; \
-	$(MAKE)  all
 
 .PHONY : all classes clean exts

@@ -34,7 +34,6 @@ BUILDDIR=.
 JAVASRCDIR=..\..\java
 ADDCLASSPATH=..\win32\classes
 PATH_SEP=;
-SUBDIRS=ext
 
 !include FileListCommon.mk
 !include FileListWin.mk
@@ -47,13 +46,9 @@ FILES_class = $(FILES_class:netscape/javascript=../win32/classes/netscape/javasc
 !include rules.mk
 
 
-all: classes exts
+all: classes 
 
 release: all wf.jar
-
-exts:
-	@ cd ext
-	@ $(MAKE) -f makefile.win -nologo all
 
 wf.jar: 
 	@ echo "Creating wf.jar file"	
