@@ -156,6 +156,10 @@ XPCWrappedNative::~XPCWrappedNative()
     if(mScriptableInfo && mScriptableInfo != mProto->GetScriptableInfo())
         delete mScriptableInfo;
 
+    if(!mProto->IsShared())
+        mProto->ReleaseOneOff();
+    mProto = nsnull;
+
     // XXX fill me in...
 }
 

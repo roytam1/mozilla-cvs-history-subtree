@@ -1734,6 +1734,7 @@ public:
     void**                   GetSecurityInfoAddr() {return &mSecurityInfo;}
 
     JSBool                   IsShared() const {return nsnull != mClassInfo;}
+    void                     ReleaseOneOff();
 
     void SetScriptableInfo(XPCNativeScriptableInfo* si)
         {NS_ASSERTION(!mScriptableInfo, "leak here!"); mScriptableInfo = si;}

@@ -96,12 +96,41 @@ XPCWrappedNativeProto::Init(XPCCallContext& ccx)
            JS_SetPrivate(ccx.GetJSContext(), mJSProtoObject, this); 
 }
 
+
+void 
+XPCWrappedNativeProto::ReleaseOneOff()
+{
+    NS_ASSERTION(!IsShared(), "bad call");
+    // When the wrapper is done with us AND our JSObject is gone then suicide.
+    if(mJSProtoObject)
+        mJSProtoObject = nsnull;
+    else
+        delete this;
+}
+
 void
 XPCWrappedNativeProto::JSProtoObjectFinalized(JSContext *cx, JSObject *obj)
 {
-    NS_ASSERTION(obj == mJSProtoObject, "huh?");
-    mJSProtoObject = nsnull;
-    delete this;
+    NS_ASSERTION(!mJSProtoObject || obj == mJSProtoObject, "huh?");
+    if(IsShared())
+    {
+        // XXX We need to remove this from the table of available protos
+        // and move it to a 'dying list' and then wait for the xpc gc 
+        // to clean it up   
+
+        mJSProtoObject = nsnull;
+
+        // XXX and so on...
+
+        return;
+    }
+    // else... 
+
+    // When the wrapper is done with us AND our JSObject is gone then suicide.
+    if(mJSProtoObject)
+        mJSProtoObject = nsnull;
+    else
+        delete this;
 }
 
 // static
