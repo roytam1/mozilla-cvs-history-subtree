@@ -266,6 +266,7 @@ void				refreshPanes();
 PRBool				initToolbars (HT_Pane pane);
 HT_Pane				paneFromResource(RDF db, RDF_Resource resource, HT_Notification notify, PRBool autoFlushFlag, PRBool autoOpenFlag);
 void				htMetaTagURLExitFunc (URL_Struct *urls, int status, MWContext *cx);
+void				htLookInCacheForMetaTags(char *url);
 void				htSetBookmarkAddDateToNow(RDF_Resource r);
 RDF				newHTPaneDB();
 RDF				HTRDF_GetDB();

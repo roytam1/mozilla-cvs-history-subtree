@@ -1246,6 +1246,7 @@ HT_AddToContainer (HT_Resource container, char *url, char *optionalTitle)
 		}
 		htSetBookmarkAddDateToNow(r);
 		RDF_Assert(db, r, gCoreVocab->RDF_parent, container->node, RDF_RESOURCE_TYPE);
+		htLookInCacheForMetaTags(url);
 	}
 }
 
@@ -1263,6 +1264,8 @@ struct	{
 	RDF_Resource	r;
 	} matches[5];
 
+	/* Note: if more elements are added, adjust the size of the array above! */
+
 	matches[0].name = "description";	matches[0].r = gWebData->RDF_description;
 	matches[1].name = "keyword";		matches[1].r = gWebData->RDF_keyword;
 	matches[2].name = "smallIcon";		matches[2].r = gNavCenter->RDF_smallIcon;
@@ -1273,7 +1276,7 @@ struct	{
 	{
 		if ((headers = &(urls->all_headers)) != NULL)
 		{
-			if ((r = (RDF_Resource)urls->owner_data) != NULL)
+			if ((r = RDF_GetResource(gNCDB, urls->address, 1)) != NULL)
 			{
 				while (headers->key[headerNum] != NULL)
 				{
@@ -1297,11 +1300,29 @@ struct	{
 
 
 
+void
+htLookInCacheForMetaTags(char *url)
+{
+	URL_Struct      	*urls;
+
+	XP_ASSERT(url != NULL);
+
+	if (url != NULL)
+	{
+		if ((urls = NET_CreateURLStruct(url,  NET_DONT_RELOAD)) != NULL)
+		{
+			NET_GetURL(urls, FO_ONLY_FROM_CACHE_AND_PRESENT,
+				gRDFMWContext(), htMetaTagURLExitFunc);
+		}
+	}
+}
+
+
+
 PR_PUBLIC_API(void)
 HT_AddBookmark (char *url, char *optionalTitle)
 {
 	RDF_Resource		nbFolder, r;
-	URL_Struct      	*urls;
 
 	XP_ASSERT(url != NULL);
 
@@ -1316,15 +1337,7 @@ HT_AddBookmark (char *url, char *optionalTitle)
 			}
 			htSetBookmarkAddDateToNow(r);
 			RDF_Assert(gNCDB, r, gCoreVocab->RDF_parent, nbFolder, RDF_RESOURCE_TYPE);
-
-			/* look for META tags */
-
-			if ((urls = NET_CreateURLStruct(url,  NET_DONT_RELOAD)) != NULL)
-			{
-				urls->owner_data = r;
-				NET_GetURL(urls, FO_ONLY_FROM_CACHE_AND_PRESENT,
-					gRDFMWContext(), htMetaTagURLExitFunc);
-			}
+			htLookInCacheForMetaTags(url);
 		}
 	}
 }
@@ -8484,6 +8497,7 @@ copyRDFLinkURL (HT_Resource dropTarget, char* objURL, char *objTitle)
 		RDF_Assert(db, obj, gCoreVocab->RDF_name, objTitle, RDF_STRING_TYPE);
 	}
 	RDF_Assert(db, obj, gCoreVocab->RDF_parent, new, RDF_RESOURCE_TYPE);
+	htLookInCacheForMetaTags(objURL);
 	return COPY_MOVE_LINK;      
 }
 
@@ -8508,6 +8522,7 @@ copyRDFLinkURLAt (HT_Resource dropx, char* objURL, char *objTitle, PRBool before
 	}
 	nlocalStoreUnassert(gLocalStore, obj, gCoreVocab->RDF_parent, parent, RDF_RESOURCE_TYPE);
 	nlocalStoreAddChildAt(gLocalStore, parent, dropx->node, obj, before);
+	htLookInCacheForMetaTags(objURL);
 	return COPY_MOVE_LINK;      
 }
 
