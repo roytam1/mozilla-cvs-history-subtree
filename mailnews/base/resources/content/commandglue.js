@@ -283,8 +283,7 @@ function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
 
   // null this out, so we don't try sort.
   gDBView = null;
-  dump("fix me, implement SetSentFolderColumns()\n");
-  // SetSentFolderColumns(IsSpecialFolder(newFolder, [ "Sent", "Drafts", "Unsent Messages" ]));
+  SetSentFolderColumns(IsSpecialFolder(newFolder, [ "Sent", "Drafts", "Unsent Messages" ]));
 
   // now create the db view, which will sort it.
 
@@ -345,23 +344,15 @@ function SwitchView(command)
 
 function SetSentFolderColumns(isSentFolder)
 {
-	var senderColumn = document.getElementById("SenderColumnHeader");
-	var senderColumnTemplate = document.getElementById("SenderColumnTemplate");
-	var authorColumnHeader = document.getElementById("AuthorColumn");
+	var senderColumn = document.getElementById("senderCol");
 
 	if(isSentFolder)
 	{
 		senderColumn.setAttribute("value", Bundle.GetStringFromName("recipientColumnHeader"));
-		senderColumn.setAttribute("onclick", "return top.MsgSortByRecipient();");
-		senderColumnTemplate.setAttribute("value", "rdf:http://home.netscape.com/NC-rdf#Recipient");
-		authorColumnHeader.setAttribute("resource", "http://home.netscape.com/NC-rdf#Recipient");
 	}
 	else
 	{
 		senderColumn.setAttribute("value", Bundle.GetStringFromName("senderColumnHeader"));
-		senderColumn.setAttribute("onclick", "return top.MsgSortBySender();");
-		senderColumnTemplate.setAttribute("value", "rdf:http://home.netscape.com/NC-rdf#Sender");
-		authorColumnHeader.setAttribute("resource", "http://home.netscape.com/NC-rdf#Sender");
 	}
 }
 
