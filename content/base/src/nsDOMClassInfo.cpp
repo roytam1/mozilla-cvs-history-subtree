@@ -49,6 +49,10 @@
 // Event related includes
 #include "nsIEventListenerManager.h"
 #include "nsIDOMEventReceiver.h"
+
+
+// XXX most of these can be removed once I merge with the tip.
+
 #include "nsIDOMMouseListener.h"
 #include "nsIDOMKeyListener.h"
 #include "nsIDOMMouseMotionListener.h"
@@ -89,15 +93,16 @@
 #define NS_DEFINE_CLASSINFO_DATA_TAIL                                         \
   }
 
-#define DEFAULT_CLASSINFO_FLAGS                                               \
+#define DEFAULT_SCRIPTABLE_FLAGS                                              \
   USE_JSSTUB_FOR_ADDPROPERTY |                                                \
   USE_JSSTUB_FOR_DELPROPERTY |                                                \
   USE_JSSTUB_FOR_SETPROPERTY |                                                \
   ALLOW_PROP_MODS_DURING_RESOLVE |                                            \
   DONT_ASK_INSTANCE_FOR_SCRIPTABLE
 
-#define ELEMENT_CLASSINFO_FLAGS                                               \
-  DEFAULT_CLASSINFO_FLAGS |                                                   \
+#define ELEMENT_SCRIPTABLE_FLAGS                                              \
+  DEFAULT_SCRIPTABLE_FLAGS |                                                  \
+  WANT_PRECREATE |                                                            \
   WANT_GETPROPERTY |                                                          \
   WANT_SETPROPERTY
 
@@ -155,7 +160,7 @@ NS_INTERFACE_MAP_BEGIN(nsDOMClassInfo)
 NS_INTERFACE_MAP_END
 
 NS_IMETHODIMP
-nsDOMClassInfo::GetInterfaces(PRUint32 *aCount, nsIID * **aArray)
+nsDOMClassInfo::GetInterfaces(PRUint32 *aCount, nsIID ***aArray)
 {
   nsAutoVoidArray void_array;
 
@@ -206,7 +211,7 @@ nsDOMClassInfo::GetHelperForLanguage(PRUint32 language, nsISupports **_retval)
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::GetContractID(char * *aContractID)
+nsDOMClassInfo::GetContractID(char **aContractID)
 {
   *aContractID = nsnull;
 
@@ -214,7 +219,7 @@ nsDOMClassInfo::GetContractID(char * *aContractID)
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::GetClassID(nsCID * *aClassID)
+nsDOMClassInfo::GetClassID(nsCID **aClassID)
 {
   *aClassID = nsnull;
 
@@ -240,7 +245,7 @@ nsDOMClassInfo::GetFlags(PRUint32 *aFlags)
 // nsIXPCScriptable
 
 NS_IMETHODIMP
-nsDOMClassInfo::GetClassName(char * *aClassName)
+nsDOMClassInfo::GetClassName(char **aClassName)
 {
   *aClassName = nsCRT::strdup(sClassInfoData[mID].mName);
 
@@ -256,8 +261,8 @@ nsDOMClassInfo::GetScriptableFlags(PRUint32 *aFlags)
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::PreCreate(nsISupports *nativeObj, JSContext * cx,
-                                 JSObject * globalObj, JSObject * *parentObj)
+nsDOMClassInfo::PreCreate(nsISupports *nativeObj, JSContext *cx,
+                          JSObject *globalObj, JSObject **parentObj)
 {
   NS_ERROR("Don't call me!");
 
@@ -266,7 +271,7 @@ nsDOMClassInfo::PreCreate(nsISupports *nativeObj, JSContext * cx,
 
 NS_IMETHODIMP
 nsDOMClassInfo::Create(nsIXPConnectWrappedNative *wrapper,
-                              JSContext * cx, JSObject * obj)
+                       JSContext *cx, JSObject *obj)
 {
   NS_ERROR("Don't call me!");
 
@@ -274,9 +279,9 @@ nsDOMClassInfo::Create(nsIXPConnectWrappedNative *wrapper,
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::AddProperty(nsIXPConnectWrappedNative *wrapper,
-                                   JSContext * cx, JSObject * obj, jsval id,
-                                   jsval * vp, PRBool *_retval)
+nsDOMClassInfo::AddProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                            JSObject *obj, jsval id, jsval *vp,
+                            PRBool *_retval)
 {
   NS_ERROR("Don't call me!");
 
@@ -284,9 +289,9 @@ nsDOMClassInfo::AddProperty(nsIXPConnectWrappedNative *wrapper,
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::DelProperty(nsIXPConnectWrappedNative *wrapper,
-                                   JSContext * cx, JSObject * obj, jsval id,
-                                   jsval * vp, PRBool *_retval)
+nsDOMClassInfo::DelProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                            JSObject *obj, jsval id, jsval *vp,
+                            PRBool *_retval)
 {
   NS_ERROR("Don't call me!");
 
@@ -294,9 +299,9 @@ nsDOMClassInfo::DelProperty(nsIXPConnectWrappedNative *wrapper,
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::GetProperty(nsIXPConnectWrappedNative *wrapper,
-                                   JSContext * cx, JSObject * obj, jsval id,
-                                   jsval * vp, PRBool *_retval)
+nsDOMClassInfo::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                            JSObject *obj, jsval id, jsval *vp,
+                            PRBool *_retval)
 {
   NS_ERROR("Don't call me!");
 
@@ -304,9 +309,9 @@ nsDOMClassInfo::GetProperty(nsIXPConnectWrappedNative *wrapper,
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::SetProperty(nsIXPConnectWrappedNative *wrapper,
-                                   JSContext * cx, JSObject * obj, jsval id,
-                                   jsval * vp, PRBool *_retval)
+nsDOMClassInfo::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                            JSObject *obj, jsval id, jsval *vp,
+                            PRBool *_retval)
 {
   NS_ERROR("Don't call me!");
 
@@ -314,9 +319,8 @@ nsDOMClassInfo::SetProperty(nsIXPConnectWrappedNative *wrapper,
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::Enumerate(nsIXPConnectWrappedNative *wrapper,
-                                 JSContext * cx, JSObject * obj,
-                                 PRBool *_retval)
+nsDOMClassInfo::Enumerate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                          JSObject *obj, PRBool *_retval)
 {
   NS_ERROR("Don't call me!");
 
@@ -325,9 +329,8 @@ nsDOMClassInfo::Enumerate(nsIXPConnectWrappedNative *wrapper,
 
 NS_IMETHODIMP
 nsDOMClassInfo::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
-                                    JSContext * cx, JSObject * obj,
-                                    PRUint32 enum_op, jsval * statep,
-                                    jsid *idp, PRBool *_retval)
+                             JSContext *cx, JSObject *obj, PRUint32 enum_op,
+                             jsval *statep, jsid *idp, PRBool *_retval)
 {
   NS_ERROR("Don't call me!");
 
@@ -335,10 +338,9 @@ nsDOMClassInfo::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::NewResolve(nsIXPConnectWrappedNative *wrapper,
-                                  JSContext * cx, JSObject * obj, jsval id,
-                                  PRUint32 flags, JSObject * *objp,
-                                  PRBool *_retval)
+nsDOMClassInfo::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                           JSObject *obj, jsval id, PRUint32 flags,
+                           JSObject **objp, PRBool *_retval)
 {
   NS_ERROR("Don't call me!");
 
@@ -346,9 +348,9 @@ nsDOMClassInfo::NewResolve(nsIXPConnectWrappedNative *wrapper,
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::Convert(nsIXPConnectWrappedNative *wrapper,
-                               JSContext * cx, JSObject * obj, PRUint32 type,
-                               jsval * vp, PRBool *_retval)
+nsDOMClassInfo::Convert(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                        JSObject *obj, PRUint32 type, jsval *vp,
+                        PRBool *_retval)
 {
   NS_ERROR("Don't call me!");
 
@@ -356,8 +358,8 @@ nsDOMClassInfo::Convert(nsIXPConnectWrappedNative *wrapper,
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::Finalize(nsIXPConnectWrappedNative *wrapper,
-                                JSContext * cx, JSObject * obj)
+nsDOMClassInfo::Finalize(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj)
 {
   NS_ERROR("Don't call me!");
 
@@ -365,9 +367,9 @@ nsDOMClassInfo::Finalize(nsIXPConnectWrappedNative *wrapper,
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::CheckAccess(nsIXPConnectWrappedNative *wrapper,
-                                   JSContext * cx, JSObject * obj, jsval id,
-                                   PRUint32 mode, jsval * vp, PRBool *_retval)
+nsDOMClassInfo::CheckAccess(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                            JSObject *obj, jsval id, PRUint32 mode,
+                            jsval *vp, PRBool *_retval)
 {
   NS_ERROR("Don't call me!");
 
@@ -375,9 +377,9 @@ nsDOMClassInfo::CheckAccess(nsIXPConnectWrappedNative *wrapper,
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::Call(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
-                            JSObject * obj, PRUint32 argc, jsval * argv,
-                            jsval * vp, PRBool *_retval)
+nsDOMClassInfo::Call(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                     JSObject *obj, PRUint32 argc, jsval *argv, jsval *vp,
+                     PRBool *_retval)
 {
   NS_ERROR("Don't call me!");
 
@@ -385,9 +387,9 @@ nsDOMClassInfo::Call(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::Construct(nsIXPConnectWrappedNative *wrapper,
-                                 JSContext * cx, JSObject * obj, PRUint32 argc,
-                                 jsval * argv, jsval * vp, PRBool *_retval)
+nsDOMClassInfo::Construct(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                          JSObject *obj, PRUint32 argc, jsval *argv,
+                          jsval *vp, PRBool *_retval)
 {
   NS_ERROR("Don't call me!");
 
@@ -395,9 +397,9 @@ nsDOMClassInfo::Construct(nsIXPConnectWrappedNative *wrapper,
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::HasInstance(nsIXPConnectWrappedNative *wrapper,
-                            JSContext * cx, JSObject * obj, jsval val,
-                            PRBool *bp, PRBool *_retval)
+nsDOMClassInfo::HasInstance(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                            JSObject *obj, jsval val, PRBool *bp,
+                            PRBool *_retval)
 {
   NS_ERROR("Don't call me!");
 
@@ -405,8 +407,8 @@ nsDOMClassInfo::HasInstance(nsIXPConnectWrappedNative *wrapper,
 }
 
 NS_IMETHODIMP
-nsDOMClassInfo::Mark(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
-                     JSObject * obj, void * arg, PRUint32 *_retval)
+nsDOMClassInfo::Mark(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                     JSObject *obj, void *arg, PRUint32 *_retval)
 {
   NS_ERROR("Don't call me!");
 
@@ -442,14 +444,71 @@ nsDOMClassInfo::GetClassInfoInstance(nsDOMClassInfoID aID,
   return classinfo;
 }
 
+// DOM Node scriptable helper, this class deals with setting the
+// parent for the wrappers
+
+class nsNodeSH : public nsDOMGenericSH
+{
+protected:
+  nsNodeSH(nsDOMClassInfoID aID) : nsDOMGenericSH(aID)
+  {
+  }
+
+  virtual ~nsNodeSH()
+  {
+  }
+
+public:
+  NS_IMETHOD PreCreate(nsISupports *nativeObj, JSContext *cx,
+                       JSObject *globalObj, JSObject **parentObj);
+
+  // Is this method needed?
+#if 0
+  static nsIClassInfo *Create(nsDOMClassInfoID aID)
+  {
+    return new nsNodeSH(aID);
+  }
+#endif
+};
+
+NS_IMETHODIMP
+nsNodeSH::PreCreate(nsISupports *nativeObj, JSContext *cx, JSObject *globalObj,
+                    JSObject **parentObj)
+{
+  nsCOMPtr<nsIDOMNode> node(do_QueryInterface(nativeObj));
+  NS_WARN_IF_FALSE(node, "nativeObj not a node!");
+
+  nsCOMPtr<nsIDOMNode> parent;
+
+  nsresult rv = node->GetParentNode(getter_AddRefs(parent));
+
+  if (parent) {
+    NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
+
+    nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
+
+    rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx), parent,
+                                NS_GET_IID(nsISupports),
+                                getter_AddRefs(holder));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = holder->GetJSObject(parentObj);
+    NS_ENSURE_SUCCESS(rv, rv);
+  } else {
+    *parentObj = globalObj;
+  }
+
+  return NS_OK;
+}
+
 // EventProp scriptable helper, this class should be the base class of
 // all objects that should support things like
 // obj.onclick=function{...}
 
-class nsEventPropSH : public nsDOMClassInfo
+class nsEventPropSH : public nsNodeSH
 {
 protected:
-  nsEventPropSH(nsDOMClassInfoID aID) : nsDOMClassInfo(aID)
+  nsEventPropSH(nsDOMClassInfoID aID) : nsNodeSH(aID)
   {
   }
 
@@ -465,11 +524,11 @@ protected:
   }
 
 public:
-  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
-                         JSObject * obj, jsval id, jsval * vp,
+  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
                          PRBool *_retval);
-  NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
-                         JSObject * obj, jsval id, jsval * vp,
+  NS_IMETHOD SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
                          PRBool *_retval);
 
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
@@ -479,8 +538,8 @@ public:
 };
 
 NS_IMETHODIMP
-nsEventPropSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
-                           JSObject * obj, jsval id, jsval * vp,
+nsEventPropSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                           JSObject *obj, jsval id, jsval *vp,
                            PRBool *_retval)
 {
   if (JSVAL_IS_STRING(id)) {
@@ -504,8 +563,8 @@ nsEventPropSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
 }
 
 NS_IMETHODIMP
-nsEventPropSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
-                           JSObject * obj, jsval id, jsval * vp,
+nsEventPropSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                           JSObject *obj, jsval id, jsval *vp,
                            PRBool *_retval)
 {
   if (::JS_TypeOfValue(cx, *vp) != JSTYPE_FUNCTION || !JSVAL_IS_STRING(id)) {
@@ -571,12 +630,12 @@ nsEventPropSH::SetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
       wrapper->GetNative(getter_AddRefs(native));
       NS_ABORT_IF_FALSE(native, "No native!");
 
-      nsCOMPtr<nsIDOMEventReceiver> reciever(do_QueryInterface(native));
+      nsCOMPtr<nsIDOMEventReceiver> receiver(do_QueryInterface(native));
 
-      if (reciever) {
+      if (receiver) {
         nsCOMPtr<nsIEventListenerManager> manager;
 
-        reciever->GetListenerManager(getter_AddRefs(manager));
+        receiver->GetListenerManager(getter_AddRefs(manager));
 
         if (manager) {
           rv = manager->RegisterScriptEventListener(script_cx, native, atom,
@@ -613,8 +672,8 @@ private:
   }
 
 public:
-  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
-                         JSObject * obj, jsval id, jsval * vp,
+  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
                          PRBool *_retval);
 
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
@@ -624,8 +683,8 @@ public:
 };
 
 NS_IMETHODIMP
-nsNodeListSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
-                          JSObject * obj, jsval id, jsval * vp,
+nsNodeListSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                          JSObject *obj, jsval id, jsval *vp,
                           PRBool *_retval)
 {
   if (JSVAL_IS_INT(id)) {
@@ -646,7 +705,8 @@ nsNodeListSH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
     if (node) {
       nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
-      rv = sXPConnect->WrapNative(cx, obj, node, NS_GET_IID(nsIDOMNode),
+      rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx), node,
+                                  NS_GET_IID(nsIDOMNode),
                                   getter_AddRefs(holder));
       NS_ENSURE_SUCCESS(rv, rv);
 
@@ -684,8 +744,8 @@ private:
   }
 
 public:
-  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
-                         JSObject * obj, jsval id, jsval * vp,
+  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
                          PRBool *_retval);
 
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
@@ -696,8 +756,8 @@ public:
 
 NS_IMETHODIMP
 nsHTMLDocumentSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
-                              JSContext * cx, JSObject * obj, jsval id,
-                              jsval * vp, PRBool *_retval)
+                              JSContext *cx, JSObject *obj, jsval id,
+                              jsval *vp, PRBool *_retval)
 {
   if (JSVAL_IS_STRING(id)) {
     NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
@@ -722,7 +782,8 @@ nsHTMLDocumentSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
     if (node_list) {
       nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
-      nsresult rv = sXPConnect->WrapNative(cx, obj, node_list,
+      nsresult rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx),
+                                           node_list,
                                            NS_GET_IID(nsIDOMNodeList),
                                            getter_AddRefs(holder));
       NS_ENSURE_SUCCESS(rv, rv);
@@ -751,10 +812,10 @@ nsHTMLDocumentSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
 
 // HTMLFormElement scriptable helper
 
-class nsHTMLFormElementSH : public nsDOMClassInfo
+class nsHTMLFormElementSH : public nsNodeSH
 {
 private:
-  nsHTMLFormElementSH(nsDOMClassInfoID aID) : nsDOMClassInfo(aID)
+  nsHTMLFormElementSH(nsDOMClassInfoID aID) : nsNodeSH(aID)
   {
   }
 
@@ -763,8 +824,8 @@ private:
   }
 
 public:
-  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
-                         JSObject * obj, jsval id, jsval * vp,
+  NS_IMETHOD GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                         JSObject *obj, jsval id, jsval *vp,
                          PRBool *_retval);
 
   static nsIClassInfo *Create(nsDOMClassInfoID aID)
@@ -775,8 +836,8 @@ public:
 
 NS_IMETHODIMP
 nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
-                                 JSContext * cx, JSObject * obj, jsval id,
-                                 jsval * vp, PRBool *_retval)
+                                 JSContext *cx, JSObject *obj, jsval id,
+                                 jsval *vp, PRBool *_retval)
 {
   if (JSVAL_IS_STRING(id)) {
     NS_ENSURE_TRUE(sXPConnect, NS_ERROR_NOT_AVAILABLE);
@@ -834,8 +895,8 @@ nsHTMLFormElementSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
 
       // Wrap result, result can be either an element or a list of
       // elements
-      nsresult rv = sXPConnect->WrapNative(cx, obj, result,
-                                           NS_GET_IID(nsISupports),
+      nsresult rv = sXPConnect->WrapNative(cx, ::JS_GetGlobalObject(cx),
+                                           result, NS_GET_IID(nsISupports),
                                            getter_AddRefs(holder));
       NS_ENSURE_SUCCESS(rv, rv);
 
@@ -877,165 +938,165 @@ nsDOMClassInfo::Init()
 
   // Core classes
   NS_DEFINE_CLASSINFO_DATA(Document, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(DocumentType, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(DOMImplementation, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(DocumentFragment, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Element, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Attr, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Text, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Comment, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(CDATASection, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(ProcessingInstruction, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Entity, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(EntityReference, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Notation, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(NodeList, nsNodeListSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(NamedNodeMap, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
 
   // Event
   NS_DEFINE_CLASSINFO_DATA(Event, nsDOMGenericSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS);
+                           DEFAULT_SCRIPTABLE_FLAGS);
 
   // Misc HTML classes
   NS_DEFINE_CLASSINFO_DATA(HTMLDocument, nsHTMLDocumentSH::Create,
-                           DEFAULT_CLASSINFO_FLAGS | WANT_GETPROPERTY);
+                           DEFAULT_SCRIPTABLE_FLAGS | WANT_GETPROPERTY);
 
   // HTML element classes
   NS_DEFINE_CLASSINFO_DATA(HTMLAnchorElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLAppletElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLAreaElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLBRElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLBaseElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLBaseFontElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLBodyElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLButtonElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLDListElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLDelElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLDirectoryElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLDivElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLEmbedElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLFieldSetElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLFontElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLFormElement, nsHTMLFormElementSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLFrameElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLFrameSetElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLHRElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLHeadElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLHeadingElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLHtmlElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLIFrameElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLImageElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLInputElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLInsElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLIsIndexElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLLIElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLLabelElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLLegendElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLLinkElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLMapElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLMenuElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLMetaElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLModElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLOListElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLObjectElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLOptGroupElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLOptionElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLParagraphElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLParamElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLPreElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLQuoteElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLScriptElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLSelectElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLSpacerElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLSpanElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLStyleElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLTableCaptionElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLTableCellElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLTableColElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLTableColGroupElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLTableElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLTableRowElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLTableSectionElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLTextAreaElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLTitleElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLUListElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLUnknownElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(HTMLWBRElement, nsEventPropSH::Create,
-                           ELEMENT_CLASSINFO_FLAGS);
+                           ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA_TAIL
 
 #ifdef NS_DEBUG
