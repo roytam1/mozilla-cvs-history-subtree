@@ -47,11 +47,6 @@
 #include "pkcs7t.h"
 #include "cmsreclist.h"
 
-#ifndef NSS_3_4_CODE
-#define NSS_3_4_CODE
-#endif /* NSS_3_4_CODE */
-#include "nssdevt.h"
-
 SEC_BEGIN_PROTOS
 
 /************************************************************
@@ -96,7 +91,6 @@ void PK11_EnterSlotMonitor(PK11SlotInfo *);
 void PK11_ExitSlotMonitor(PK11SlotInfo *);
 void PK11_CleanKeyList(PK11SlotInfo *slot);
 
-void PK11Slot_SetNSSToken(PK11SlotInfo *slot, NSSToken *token);
 
 
 /************************************************************
@@ -484,10 +478,10 @@ PK11_GetPBEIV(SECAlgorithmID *algid, SECItem *pwitem);
  * New fucntions which are already depricated....
  **********************************************************************/
 SECItem *
-PK11_GetLowLevelKeyIDForCert(PK11SlotInfo *slot,
+PK11GetLowLevelKeyIDForCert(PK11SlotInfo *slot,
 					CERTCertificate *cert, void *pwarg);
 SECItem *
-PK11_GetLowLevelKeyIDForPrivateKey(SECKEYPrivateKey *key);
+PK11GetLowLevelKeyIDForPrivateKey(SECKEYPrivateKey *key);
 
 SEC_END_PROTOS
 

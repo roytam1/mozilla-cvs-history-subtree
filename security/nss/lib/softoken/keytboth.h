@@ -48,24 +48,52 @@ typedef struct SECKEYAttributeStr SECKEYAttribute;
 /*
 ** A PKCS#8 private key info object
 */
-struct PrivateKeyInfoStr {
+struct SECKEYPrivateKeyInfoStr {
     PLArenaPool *arena;
     SECItem version;
     SECAlgorithmID algorithm;
     SECItem privateKey;
     SECKEYAttribute **attributes;
 };
-typedef struct PrivateKeyInfoStr PrivateKeyInfo;
+typedef struct SECKEYPrivateKeyInfoStr SECKEYPrivateKeyInfo;
 #define SEC_PRIVATE_KEY_INFO_VERSION		0	/* what we *create* */
 
 /*
 ** A PKCS#8 private key info object
 */
-struct EncryptedPrivateKeyInfoStr {
+struct SECKEYEncryptedPrivateKeyInfoStr {
     PLArenaPool *arena;
     SECAlgorithmID algorithm;
     SECItem encryptedData;
 };
-typedef struct EncryptedPrivateKeyInfoStr EncryptedPrivateKeyInfo;
+typedef struct SECKEYEncryptedPrivateKeyInfoStr SECKEYEncryptedPrivateKeyInfo;
+
+
+struct DiffPQGParamsStr {
+    PQGParams DiffKEAParams;
+    PQGParams DiffDSAParams;
+};
+typedef struct DiffPQGParamsStr DiffPQGParams;
+
+struct PQGDualParamsStr {
+    PQGParams CommParams;
+    DiffPQGParams DiffParams;
+};
+typedef struct PQGDualParamsStr PQGDualParams;
+
+
+struct KEAParamsStr {
+    PLArenaPool *arena;
+    SECItem hash;
+};
+typedef struct KEAParamsStr KEAParams;
+ 
+struct KEAPublicKeyStr {
+    KEAParams params;
+    SECItem publicValue;
+};
+typedef struct KEAPublicKeyStr KEAPublicKey;
+
+
 
 #endif /* _KEYT_H_ */

@@ -43,7 +43,7 @@
 #include "keydbt.h"
 #include "secoidt.h"
 #include "certt.h"
-#include "keytlow.h"
+#include "keythi.h"
 
 SEC_BEGIN_PROTOS
 
@@ -119,8 +119,7 @@ extern SECStatus SECKEY_StoreKeyByPublicKey(SECKEYKeyDBHandle *handle,
 					    SECKEYLowPrivateKey *pk,
 					    SECItem *pubKeyData,
 					    char *nickname,
-					    SECKEYLowGetPasswordKey f,
-					    void *arg);
+					    SECKEYGetPasswordKey f, void *arg);
 
 /* does the key for this cert exist in the database filed by modulus */
 extern SECStatus SECKEY_KeyForCertExists(SECKEYKeyDBHandle *handle,
@@ -128,7 +127,7 @@ extern SECStatus SECKEY_KeyForCertExists(SECKEYKeyDBHandle *handle,
 
 SECKEYLowPrivateKey *
 SECKEY_FindKeyByCert(SECKEYKeyDBHandle *handle, CERTCertificate *cert,
-		     SECKEYLowGetPasswordKey f, void *arg);
+		     SECKEYGetPasswordKey f, void *arg);
 
 extern SECStatus SECKEY_HasKeyDBPassword(SECKEYKeyDBHandle *handle);
 extern SECStatus SECKEY_SetKeyDBPassword(SECKEYKeyDBHandle *handle,
@@ -227,7 +226,7 @@ SECKEY_StoreKeyByPublicKeyAlg(SECKEYKeyDBHandle *handle,
 			      SECKEYLowPrivateKey *privkey, 
 			      SECItem *pubKeyData,
 			      char *nickname,
-			      SECKEYLowGetPasswordKey f, void *arg,
+			      SECKEYGetPasswordKey f, void *arg,
 			      SECOidTag algorithm); 
 
 /* Find key by modulus.  This function is the inverse of store key
@@ -238,7 +237,7 @@ SECKEY_StoreKeyByPublicKeyAlg(SECKEYKeyDBHandle *handle,
  */
 extern SECKEYLowPrivateKey *
 SECKEY_FindKeyByPublicKey(SECKEYKeyDBHandle *handle, SECItem *modulus, 
-			  SECKEYLowGetPasswordKey f, void *arg);
+			  SECKEYGetPasswordKey f, void *arg);
 
 /* Make a copy of a low private key in it's own arena.
  * a return of NULL indicates an error.

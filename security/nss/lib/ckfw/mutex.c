@@ -136,6 +136,7 @@ nssCKFWMutex_Create
   NSSCKFWMutex *mutex;
   CK_ULONG count = (CK_ULONG)0;
   CK_BBOOL os_ok = CK_FALSE;
+  CK_VOID_PTR pMutex = (CK_VOID_PTR)NULL;
 
   if( (CK_C_INITIALIZE_ARGS_PTR)NULL != pInitArgs ) {
     if( (CK_CREATEMUTEX )NULL != pInitArgs->CreateMutex  ) count++;

@@ -21,7 +21,6 @@
 # Contributor(s):
 #   Michel Buijsman <michel@rubberchicken.nl> (Original Author)
 #   Peter Annema <jag@tty.nl>
-#   Chris Seawood <seawood@netscape.com>
 # 
 # Alternatively, the contents of this file may be used under the
 # terms of the GNU General Public License Version 2 or later (the
@@ -45,10 +44,18 @@
 #
 # The objdir is the directory where you ran |make| to build Mozilla
 #
-use strict;
-use IO::Handle;
+# Currently needs File::List
+# http://www.cpan.org/modules/by-module/File/File-List-0.1.tar.gz
+# We can probably get rid of this dependency
 
-my @files = rfind(".", "\\.pp\$");
+# If you can't place File::List in your perl library path,
+# point this to where you've placed File::List:
+# use lib "/home/jag/utils/";
+use strict;
+use File::List;
+
+my $search = new File::List(".");
+my @files  = @{ $search->find("\\.pp\$") };
 
 my $curdir = "";
 my %req;
@@ -78,24 +85,23 @@ sub domakefile {
 
   # find the Makefile.in by scanning Makefile for the srcdir
   my $srcdir;
-  open MAKE, "<$dir/Makefile" or die "Couldn't find file 'Makefile' in $dir";
+  open MAKE, "<$dir/Makefile" or die "huh? $dir/Makefile";
   while ( <MAKE> ) {
-    if ( m#^\s*srcdir\s*=\s*(\S*\/(mozilla|ns)\/\S*)# ) {
+    if ( m#^\s*srcdir\s*=\s*(.*?mozilla.*?)\s*$# ) {
       $srcdir = $1;
       last;
     }
   }
   close MAKE;
 
-  $srcdir or die "No srcdir found in file $dir/Makefile";
+  $srcdir or die "No srcdir found";
 
-  open MAKE, "<$curdir/$srcdir/Makefile.in" or die "Couldn't find file 'Makefile.in' in $srcdir";
+  open MAKE, "<$srcdir/Makefile.in" or die "huh? $dir/Makefile, $srcdir/Makefile.in";
 
   my @lastLines; # buffer to store last three lines in (to emulate diff -B3)
   my $i;
   my $j = 3;
   my $lastLine = "";
-  my $modified = 0;
   my @requiresLines = (); # array to contain REQUIRES line(s) we're removing
   while ( <MAKE> ) {
     $lastLine = $lastLine.$_;
@@ -112,59 +118,29 @@ sub domakefile {
       my $modules = $2;
       my @reqs = split /\s+/, $modules;
       my $line = "";
-
-      if ( $reqs[$#reqs] ne '$(NULL)' ) {
-        $reqs[$#reqs + 1] = '$(NULL)';
-      }
-
-      for ( my $index = 0; $index < $#reqs; $index++ ) {
-        my $item = $reqs[$index];
-        if ( $item =~ m#^\$\(.*\)$# ) { # always copy "$(XXX)"
-          # keep it
+      foreach my $item (@reqs) {
+        if ( $item =~ m#^\$\(.*\)$# ) { # always copy "$(FOO_REQUIRES)"
+          $line = $line.$item." ";
         }
-        elsif ( $req->{$item} ) {       # copy if the module was referenced in .deps
-          # keep it
-          delete($req{$item});          # this filters duplicate entries
-        }
-        else {
-          splice(@reqs, $index, 1);     # if it's not in .deps, don't write it out
-          $modified = 1;
+        elsif ( $req->{$item} ) {     # copy if the module was referenced in .deps
+          $line = $line.$item." ";
+          delete($req{$item});    # this filters duplicate entries
         }
       }
-
-      if ( $modified == 0 ) {
+      $line =~ s/ $//;
+      if ( $line eq $modules ) {
         last;
-      }
-
-      foreach my $index ( 0 .. $#reqs ) {
-        if ( $index == 0 ) {
-          $reqs[$index] = "REQUIRES\t= ".$reqs[$index];
-        }
-        else {
-          $reqs[$index] = "\t\t  ".$reqs[$index];
-        }
-
-        if ( $index < $#reqs ) {
-          $reqs[$index] = $reqs[$index]." \\\n";
-        }
-        else {
-          $reqs[$index] = $reqs[$index]."\n";
-        }
       }
 
       # And here's the start of making it look like a cvs diff -u
       # I chose this approach because it allows a final manual editing pass over
       # the generated diff before actually modifying the Makefile.ins. We may want
       # to replace this at some point with direct editing.
-      # Instead of replicating the diff algorithm, this code just removes all of
-      # the old REQUIRES and emits the new REQUIRES, use cvs diff to see the
-      # actual changes.
-
       print "Index: $dir/Makefile.in\n";
       print "===================================================================\n";
       print "--- $dir/Makefile.in\t2001/01/01 00:00:00\n";
       print "+++ $dir/Makefile.in\t2001/01/01 00:00:00\n";
-      print "@@ -".($i-2).",".(7+$#requiresLines)." +".($i-2).",".(7+$#reqs)." @@\n";
+      print "@@ -".($i-2).",".(7+$#requiresLines)." +".($i-2).",7 @@\n";
 
       while ( $j ) {
         print " ".$lastLines[($i - $j--) % 3]; 
@@ -172,9 +148,7 @@ sub domakefile {
       foreach my $i ( @requiresLines ) {
         print "-".$i;
       } 
-      foreach my $i ( @reqs ) {
-        print "+".$i;
-      } 
+      print "+$requires$line\n";
 
       while ( <MAKE> ) {
         if ( $j++ == 3 ) {
@@ -196,36 +170,4 @@ sub domakefile {
     }
   }
   close MAKE;
-}
-exit(0);
-
-
-sub rfind($,$) {
-    my ($dirname, $regexp) = @_;
-    my (@dirlist, @filelist, @sublist, $file, $dir);
-
-    # Create lists of current files and subdirectories
-    my $SDIR = new IO::Handle;
-    opendir($SDIR, "$dirname") || die "opendir($dirname): $!\n";
-    while ($file = readdir($SDIR)) {
-	next if ($file eq "." || $file eq "..");
-	if ( -d "$dirname/$file" ) {
-	    push @dirlist, "$file";
-	} else {
-	    push @filelist, "$dirname/$file" if ($file =~ m/$regexp/);
-	}
-    }
-    closedir($SDIR);
-
-    # Call rfind recursively
-    foreach $dir (@dirlist) {
-	#print "rfind(\"$dirname/$dir\") \n";
-	@sublist = rfind("$dirname/$dir", $regexp);
-	foreach $file (@sublist) {
-	    push @filelist, $file;
-	}
-    }
-
-    return @filelist;
-
 }

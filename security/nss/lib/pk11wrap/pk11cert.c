@@ -55,13 +55,6 @@
 #define NSSCKT_H /* we included pkcs11t.h, so block ckt.h from including nssckt.h */
 #include "ckt.h"
 
-#ifndef NSS_3_4_CODE
-#define NSS_3_4_CODE
-#endif /* NSS_3_4_CODE */
-#include "pkinss3hack.h"
-#include "dev.h"
-#include "nsspki.h"
-
 #define PK11_SEARCH_CHUNKSIZE 10
 
 CK_OBJECT_HANDLE
@@ -305,11 +298,6 @@ PK11_IsUserCert(PK11SlotInfo *slot, CERTCertificate *cert,
 	    PK11_SETATTRS(&theTemplate,CKA_VALUE, pubKey->u.dh.publicValue.data,
 						pubKey->u.dh.publicValue.len);
 	    break;
-	case keaKey:
-	case fortezzaKey:
-	case nullKey:
-	    /* fall through and return false */
-	    break;
 	}
 
 	if (theTemplate.ulValueLen == 0) {
@@ -445,11 +433,11 @@ pk11_HandleTrustObject(PK11SlotInfo *slot, CERTCertificate *cert, CERTCertTrust 
   CK_OBJECT_HANDLE tobjID;
   unsigned char sha1_hash[SHA1_LENGTH];
 
-  CK_TRUST serverAuth, codeSigning, emailProtection;
-/*
   CK_TRUST digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment,
     keyAgreement, keyCertSign, crlSign, serverAuth, clientAuth, codeSigning,
-    emailProtection, ipsecEndSystem, ipsecTunnel, ipsecUser, timeStamping; */
+    emailProtection, ipsecEndSystem, ipsecTunnel, ipsecUser, timeStamping;
+
+  SECItem item;
 
   PK11_HashBuf(SEC_OID_SHA1, sha1_hash, cert->derCert.data, cert->derCert.len);
 
@@ -865,6 +853,7 @@ PK11_TraverseSlot(PK11SlotInfo *slot, void *arg)
     int i;
     CK_OBJECT_HANDLE *objID = NULL;
     int object_count = 0;
+    CK_ULONG returned_count = 0;
     pk11TraverseSlot *slotcb = (pk11TraverseSlot*) arg;
 
     objID = pk11_FindObjectsByTemplate(slot,slotcb->findTemplate,
@@ -1230,7 +1219,6 @@ PK11_FindObjectsFromNickname(char *nickname,PK11SlotInfo **slotptr,
    
 CERTCertificate *
 PK11_FindCertFromNickname(char *nickname, void *wincx) {
-#ifndef NSS_SOFTOKEN_MODULE
     PK11SlotInfo *slot;
     int count=0;
     CK_OBJECT_HANDLE *certID = PK11_FindObjectsFromNickname(nickname,&slot,
@@ -1242,20 +1230,6 @@ PK11_FindCertFromNickname(char *nickname, void *wincx) {
     PK11_FreeSlot(slot);
     PORT_Free(certID);
     return cert;
-#else
-    CERTCertificate *rvCert = NULL;
-    NSSCertificate *cert;
-    cert = NSSTrustDomain_FindBestCertificateByNickname(
-                                                  STAN_GetDefaultTrustDomain(),
-                                                  (NSSUTF8 *)nickname,
-                                                  NULL,
-                                                  NULL, /* XXX */
-                                                  NULL);
-    if (cert) {
-	rvCert = STAN_GetCERTCertificate(cert);
-    }
-    return rvCert;
-#endif
 }
 
 CERTCertList *
@@ -1781,6 +1755,7 @@ pk11_AllFindCertObjectByRecipientNew(NSSCMSRecipient **recipientlist, void *winc
     PK11SlotList *list;
     PK11SlotListElement *le;
     CK_OBJECT_HANDLE certHandle = CK_INVALID_KEY;
+    PK11SlotInfo *slot = NULL;
     SECStatus rv;
 
     /* get them all! */
@@ -1923,6 +1898,7 @@ PK11_FindCertAndKeyByRecipientList(PK11SlotInfo **slotPtr,
 {
     CK_OBJECT_HANDLE certHandle = CK_INVALID_KEY;
     CK_OBJECT_HANDLE keyHandle = CK_INVALID_KEY;
+    PK11SlotInfo *slot = NULL;
     CERTCertificate *cert = NULL;
     SECStatus rv;
 
@@ -1973,6 +1949,7 @@ PK11_FindCertAndKeyByRecipientListNew(NSSCMSRecipient **recipientlist, void *win
 {
     CK_OBJECT_HANDLE certHandle = CK_INVALID_KEY;
     CK_OBJECT_HANDLE keyHandle = CK_INVALID_KEY;
+    SECStatus rv;
     NSSCMSRecipient *rl;
     int rlIndex;
 
@@ -2244,40 +2221,10 @@ PK11_TraverseCertsForNicknameInSlot(SECItem *nickname, PK11SlotInfo *slot,
     return PK11_TraverseSlot(slot, &callarg);
 }
 
-void
-PK11Slot_SetNSSToken(PK11SlotInfo *sl, NSSToken *nsst) 
-{
-    sl->nssToken = nsst;
-}
-
-NSSToken *
-PK11Slot_GetNSSToken(PK11SlotInfo *sl) 
-{
-    return sl->nssToken;
-}
-
-struct nss3_cert_cbstr {
-    SECStatus(* callback)(CERTCertificate*, void *);
-    void *arg;
-};
-
-/* grrr... have to decode in order to pass to callback, but does the
- * caller always need a fully decoded cert?
- */
-static PRStatus convert_cert(NSSCertificate *c, void *arg)
-{
-    CERTCertificate *nss3cert;
-    struct nss3_cert_cbstr *nss3cb = (struct nss3_cert_cbstr *)arg;
-    nss3cert = STAN_GetCERTCertificate(c);
-    if (!nss3cert) return PR_FAILURE;
-    return (*nss3cb->callback)(nss3cert, nss3cb->arg);
-}
-
 SECStatus
 PK11_TraverseCertsInSlot(PK11SlotInfo *slot,
 	SECStatus(* callback)(CERTCertificate*, void *), void *arg)
 {
-#ifndef NSS_SOFTOKEN_MODULE
     pk11DoCertCallback caller;
     pk11TraverseSlot callarg;
     CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
@@ -2300,20 +2247,8 @@ PK11_TraverseCertsInSlot(PK11SlotInfo *slot,
     callarg.callbackArg = (void *) & caller;
     callarg.findTemplate = theTemplate;
     callarg.templateCount = templateSize;
+
     return PK11_TraverseSlot(slot, &callarg);
-#else
-    struct nss3_cert_cbstr pk11cb;
-    NSSToken *tok;
-    pk11cb.callback = callback;
-    pk11cb.arg = arg;
-    tok = PK11Slot_GetNSSToken(slot);
-    if (tok) {
-	return (SECStatus)nssToken_TraverseCertificates(tok, NULL,
-	                                                convert_cert, &pk11cb);
-    } else {
-	return SECFailure;
-    }
-#endif
 }
 
 /*
@@ -2553,6 +2488,8 @@ SECStatus
 PK11_GetKEAMatchedCerts(PK11SlotInfo *slot1, PK11SlotInfo *slot2,
 	CERTCertificate **cert1, CERTCertificate **cert2)
 {
+    PK11SlotList *keaList = PK11_GetAllTokens(CKM_KEA_KEY_DERIVE,
+							PR_FALSE,PR_TRUE,NULL);
     CERTCertificate *returnedCert = NULL;
     int i;
 
@@ -2824,6 +2761,7 @@ SECItem *
 PK11_GetLowLevelKeyIDForCert(PK11SlotInfo *slot,
 					CERTCertificate *cert, void *wincx)
 {
+    CK_OBJECT_CLASS certClass = CKO_CERTIFICATE;
     CK_ATTRIBUTE theTemplate[] = {
 	{ CKA_VALUE, NULL, 0 },
 	{ CKA_CLASS, NULL, 0 }

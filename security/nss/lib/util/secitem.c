@@ -46,7 +46,7 @@ SECItem *
 SECITEM_AllocItem(PRArenaPool *arena, SECItem *item, unsigned int len)
 {
     SECItem *result = NULL;
-    void *mark = NULL;
+    void *mark;
 
     if (arena != NULL) {
 	mark = PORT_ArenaMark(arena);
@@ -75,16 +75,14 @@ SECITEM_AllocItem(PRArenaPool *arena, SECItem *item, unsigned int len)
 	}
     }
 
-    if (mark) {
+    if (arena != NULL) {
 	PORT_ArenaUnmark(arena, mark);
     }
     return(result);
 
 loser:
-    if ( arena != NULL ) {
-	if (mark) {
-	    PORT_ArenaRelease(arena, mark);
-	}
+    if (arena != NULL) {
+	PORT_ArenaRelease(arena, mark);
 	if (item != NULL) {
 	    item->data = NULL;
 	    item->len = 0;

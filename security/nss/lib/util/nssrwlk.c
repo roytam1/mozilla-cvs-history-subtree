@@ -240,6 +240,8 @@ NSSRWLock_LockRead(NSSRWLock *rwlock)
 PR_IMPLEMENT(void)
 NSSRWLock_UnlockRead(NSSRWLock *rwlock)
 {
+    PRThread *me = PR_GetCurrentThread();
+
     PZ_Lock(rwlock->rw_lock);
 
     PR_ASSERT(rwlock->rw_reader_locks > 0); /* lock must be read locked */
@@ -269,6 +271,7 @@ NSSRWLock_UnlockRead(NSSRWLock *rwlock)
 PR_IMPLEMENT(void)
 NSSRWLock_LockWrite(NSSRWLock *rwlock)
 {
+    PRInt32 lock_acquired = 0;
     PRThread *me = PR_GetCurrentThread();
 
     PZ_Lock(rwlock->rw_lock);

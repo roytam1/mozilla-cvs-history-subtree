@@ -225,12 +225,19 @@ int JAR_digest_file (char *filename, JAR_Digest *dig)
  *
  */
 
-void* jar_open_key_database (void)
+SECKEYKeyDBHandle *jar_open_key_database (void)
   {
-    return NULL;
+  SECKEYKeyDBHandle *keydb;
+
+  keydb = SECKEY_GetDefaultKeyDB();
+
+  if (keydb == NULL)
+    { /* open by file if this fails, if jartool is to call this */ ; }
+
+  return keydb;
   }
 
-int jar_close_key_database (void *keydb)
+int jar_close_key_database (SECKEYKeyDBHandle *keydb)
   {
   /* We never do close it */
   return 0;
@@ -248,7 +255,7 @@ static void jar_pk7_out (void *arg, const char *buf, unsigned long len)
   }
 
 int jar_create_pk7 
-   (CERTCertDBHandle *certdb, void *keydb, 
+   (CERTCertDBHandle *certdb, SECKEYKeyDBHandle *keydb, 
        CERTCertificate *cert, char *password, JAR_FILE infp, JAR_FILE outfp)
   {
   int nb;

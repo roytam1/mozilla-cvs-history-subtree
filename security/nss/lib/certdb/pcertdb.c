@@ -54,7 +54,6 @@
 #include "base64.h"
 #include "sechash.h"
 #include "plhash.h"
-#include "pk11func.h" /* sigh */
 
 #include "cdbhdl.h"
 
@@ -4270,10 +4269,8 @@ SEC_OpenPermCertDB(CERTCertDBHandle *handle, PRBool readOnly,
 	    DestroyDBEntry((certDBEntry *)versionEntry);
 	    PORT_Free(certdbname);
 	    return(SECFailure);
-	} else {
-	    DestroyDBEntry((certDBEntry *)versionEntry);
-	    versionEntry = NULL;
 	}
+
     }
 
 
