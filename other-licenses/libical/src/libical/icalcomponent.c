@@ -818,7 +818,11 @@ time_t icalcomponent_convert_time(icalproperty *p)
 		time_t t;
 
 		t = time(NULL);
+#ifdef __USE_BSD
 	 	offset = localtime(&t)->tm_gmtoff;
+#else
+	 	offset = localtime(&t)->__tm_gmtoff;
+#endif
 #endif
 #endif
 	}
