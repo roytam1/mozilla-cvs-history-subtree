@@ -141,12 +141,12 @@ interface nsICache
     const long STREAM_BASED     = 1;
     
     /**
-     * The synchronous OpenCacheEntry() may be blocking or non-blocking.  If an cache entry is
+     * The synchronous OpenCacheEntry() may be blocking or non-blocking.  If a cache entry is
      * waiting to be validated by another cache descriptor (so no new cache descriptors for that
      * key can be created, OpenCacheEntry() will return NS_ERROR_CACHE_WAIT_FOR_VALIDATION in
      * non-blocking mode.  In blocking mode, it will wait until the cache entry for the key has
-     * been validated or doomed.  If the cache entry is validated, then create a descriptor for
-     * that entry will be created and returned.  If the cache entry was doomed, then a descriptor
+     * been validated or doomed.  If the cache entry is validated, then a descriptor for that
+     * entry will be created and returned.  If the cache entry was doomed, then a descriptor
      * will be created for a new cache entry for the key. 
      */
     const long NON_BLOCKING = 0;
