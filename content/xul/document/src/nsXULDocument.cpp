@@ -354,7 +354,7 @@ public:
     NS_IMETHOD OpenInputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIInputStream **_retval) { *_retval = nsnull; return NS_OK; }
     NS_IMETHOD OpenOutputStream(PRUint32 transferOffset, PRUint32 transferCount, nsIOutputStream **_retval) { *_retval = nsnull; return NS_OK; }
     NS_IMETHOD AsyncRead(nsIStreamListener *listener, nsISupports *ctxt,PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval) { *_retval = nsnull; return NS_OK; }
-    NS_IMETHOD AsyncWrite(nsIInputStream *fromStream, nsIStreamObserver *observer, nsISupports *ctxt, PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval) { *_retval = nsnull; return NS_OK; }
+    NS_IMETHOD AsyncWrite(nsIStreamProvider *provider, nsISupports *ctxt, PRUint32 transferOffset, PRUint32 transferCount, nsIRequest **_retval) { *_retval = nsnull; return NS_OK; }
     NS_IMETHOD GetLoadAttributes(nsLoadFlags *aLoadAttributes) { *aLoadAttributes = nsIChannel::LOAD_NORMAL; return NS_OK; }
    	NS_IMETHOD SetLoadAttributes(nsLoadFlags aLoadAttributes) { return NS_OK; }
  	NS_IMETHOD GetOwner(nsISupports * *aOwner) { *aOwner = nsnull; return NS_OK; }
