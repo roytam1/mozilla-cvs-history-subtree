@@ -178,7 +178,7 @@ NS_IMETHODIMP nsNoIncomingServer::CreateDefaultMailboxes(nsIFileSpec *path)
                 if (NS_FAILED(rv)) return rv;
         }
 
-        rv = path->SetLeafName("Sent");
+        rv = path->SetLeafName("Sent Mail");
         if (NS_FAILED(rv)) return rv;
         rv = path->Exists(&exists);
         if (NS_FAILED(rv)) return rv;

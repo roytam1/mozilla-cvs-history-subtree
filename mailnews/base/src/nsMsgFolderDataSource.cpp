@@ -1146,7 +1146,7 @@ nsMsgFolderDataSource::createFolderSpecialNode(nsIMsgFolder *folder,
   else if(flags & MSG_FOLDER_FLAG_QUEUE)
     specialFolderString = NS_LITERAL_STRING("Unsent Messages").get();
   else if(flags & MSG_FOLDER_FLAG_SENTMAIL)
-    specialFolderString = NS_LITERAL_STRING("Sent").get();
+    specialFolderString = NS_LITERAL_STRING("Sent Mail").get();
   else if(flags & MSG_FOLDER_FLAG_DRAFTS)
     specialFolderString = NS_LITERAL_STRING("Drafts").get();
   else if(flags & MSG_FOLDER_FLAG_TEMPLATES)
