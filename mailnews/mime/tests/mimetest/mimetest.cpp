@@ -133,6 +133,9 @@ SetupRegistry(void)
   nsComponentManager::RegisterComponent(kHtmlEmitterCID, "RFC822 Parser", "component://netscape/messenger/mimeemitter;type=text/html", EMITTER_DLL,  PR_FALSE, PR_FALSE);
   nsComponentManager::RegisterComponent(kXmlEmitterCID,  "RFC822 Parser", "component://netscape/messenger/mimeemitter;type=raw", EMITTER_DLL,  PR_FALSE, PR_FALSE);
   nsComponentManager::RegisterComponent(kRawEmitterCID,  "RFC822 Parser", "component://netscape/messenger/mimeemitter;type=text/xml", EMITTER_DLL,  PR_FALSE, PR_FALSE);
+
+  nsIMsgCompFields
+
   return NS_OK;
 }
 
@@ -387,13 +390,13 @@ NewURI(nsIURI** aInstancePtrResult, const char *aSpec)
 int
 main(int argc, char** argv)
 {
-  nsresult DoRFC822toHTMLConversion(char *filename);
+  nsresult DoRFC822toHTMLConversion(char *filename, int numArgs);
   nsresult rv;
   
   // Do some sanity checking...
   if (argc < 2) 
   {
-    fprintf(stderr, "usage: %s <rfc822_disk_file>\n", argv[0]);
+    fprintf(stderr, "usage: %s <rfc822_disk_file> <any_arg_for_Draft_processing>\n", argv[0]);
     return 1;
   }
   
@@ -408,7 +411,7 @@ main(int argc, char** argv)
   NS_ASSERTION(NS_SUCCEEDED(rv), "unable to create thread event queue");
   if (NS_FAILED(rv)) return rv;
 
-  DoRFC822toHTMLConversion(argv[1]);
+  DoRFC822toHTMLConversion(argv[1], argc);
 
   // Cleanup stuff necessary...
   NS_IF_RELEASE(ccMan);
@@ -416,7 +419,7 @@ main(int argc, char** argv)
 }
 
 nsresult
-DoRFC822toHTMLConversion(char *filename)
+DoRFC822toHTMLConversion(char *filename, int numArgs)
 {
   nsresult          rv;
   char              newURL[1024] = ""; // URL for filename
@@ -487,7 +490,12 @@ DoRFC822toHTMLConversion(char *filename)
   }
 
   // Set us as the output stream for HTML data from libmime...
-  if (NS_FAILED(mimeParser->SetOutputStream(out, theURI, nsMimeOutput::nsMimeUnknown, &outFormat, &contentType)))
+  if (numArgs >= 3)
+    rv = mimeParser->SetOutputStream(out, theURI, nsMimeOutput::nsMimeMessageDraft, &outFormat, &contentType);
+  else
+    rv = mimeParser->SetOutputStream(out, theURI, nsMimeOutput::nsMimeUnknown, &outFormat, &contentType);
+
+  if (NS_FAILED(rv) || !mimeParser)
   {
     printf("Unable to set the output stream for the mime parser...\ncould be failure to create internal libmime data\n");
     return NS_ERROR_FAILURE;
