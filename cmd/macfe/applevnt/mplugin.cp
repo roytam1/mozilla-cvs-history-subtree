@@ -38,9 +38,7 @@
 #include "edt.h"	// for EDT_RegisterPlugin()
 #include "CApplicationEventAttachment.h"
 
-#if defined(OJI)
-#include "jvmmgr.h"
-#elif defined(JAVA)
+#if defined(JAVA)
 #include "java.h"	// for LJ_AddToClassPath
 #endif
 
@@ -663,10 +661,10 @@ void RegisterPluginsInFolder(FSSpec folder)
 		ThrowIfNil_(cUnixFullPath);
 		(void) NET_UnEscape(cUnixFullPath);
 
-#ifdef JAVA		
+#if defined(JAVA)
 		// Tell Java about this path name
 		LJ_AddToClassPath(cUnixFullPath);
-#elif define(OJI)
+#elif defined(OJI)
 		// What, tell the current Java plugin about this class path?
 #endif
 		XP_FREE(cUnixFullPath);
