@@ -57,22 +57,8 @@
 #include "nsIParser.h"
 #include "prtypes.h"
 #include "nsIUnicodeDecoder.h"
-//#include "nsSlidingString.h"
 #include "nsScannerString.h"
 #include "nsIInputStream.h"
-
-/*
-class nsScannerString : public nsSlidingString {
-  public: 
-    nsScannerString(PRUnichar* aStorageStart, 
-                    PRUnichar* aDataEnd, 
-                    PRUnichar* aStorageEnd);
-
-    virtual void UngetReadable(const nsAString& aReadable, const nsScannerIterator& aCurrentPosition) { InsertReadable(aReadable,aCurrentPosition); }
-    virtual void ReplaceCharacter(nsScannerIterator& aPosition,
-                                  PRUnichar aChar);
-};
-*/
 
 class nsReadEndCondition {
 public:
