@@ -24,7 +24,6 @@
 
 #include "nsISupports.idl"
 #include "domstubs.idl"
-#include "nsIMutableAccessible.idl"
 #include "nsIAtom.idl"
 #include "domstubs.idl"
 #include "nsIAccessible.idl"
