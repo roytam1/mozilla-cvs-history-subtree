@@ -219,29 +219,9 @@ nsXFormsModelElement::GetIsAttributeHandler(PRBool *aIsHandler)
 NS_IMETHODIMP
 nsXFormsModelElement::GetScriptingInterfaces(PRUint32 *aCount, nsIID ***aArray)
 {
-  PRUint32 count = NS_ARRAY_LENGTH(sScriptingIIDs);
-
-  nsIID **iids = NS_STATIC_CAST(nsIID**,
-                                nsMemory::Alloc(count * sizeof(nsIID*)));
-  if (!iids) {
-    return NS_ERROR_OUT_OF_MEMORY;
-  }
-
-  for (PRUint32 i = 0; i < count; ++i) {
-    iids[i] = NS_STATIC_CAST(nsIID*,
-                           nsMemory::Clone(&sScriptingIIDs[i], sizeof(nsIID)));
-
-    if (!iids[i]) {
-      for (PRUint32 j = 0; j < i; ++j)
-        nsMemory::Free(iids[j]);
-      nsMemory::Free(iids);
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
-  }
-
-  *aArray = iids;
-  *aCount = count;
-  return NS_OK;
+  return CloneScriptingInterfaces(sScriptingIIDs,
+                                  NS_ARRAY_LENGTH(sScriptingIIDs),
+                                  aCount, aArray);
 }
 
 NS_IMETHODIMP
@@ -814,6 +794,12 @@ nsXFormsModelElement::DispatchEvent(unsigned int aEvent)
   nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(mContent);
   PRBool cancelled;
   return target->DispatchEvent(event, &cancelled);
+}
+
+already_AddRefed<nsISchemaType>
+nsXFormsModelElement::GetTypeForControl(nsXFormsControl *aControl)
+{
+  return nsnull;
 }
 
 /* static */ void

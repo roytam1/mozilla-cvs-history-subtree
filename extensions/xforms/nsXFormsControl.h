@@ -36,45 +36,28 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsXFormsAtoms.h"
-#include "nsMemory.h"
+#ifndef nsXFormsControl_h_
+#define nsXFormsControl_h_
 
-nsIAtom* nsXFormsAtoms::schema;
-nsIAtom* nsXFormsAtoms::instance;
-nsIAtom* nsXFormsAtoms::src;
-nsIAtom* nsXFormsAtoms::bind;
-nsIAtom* nsXFormsAtoms::nodeset;
-nsIAtom* nsXFormsAtoms::type;
-nsIAtom* nsXFormsAtoms::readonly;
-nsIAtom* nsXFormsAtoms::required;
-nsIAtom* nsXFormsAtoms::relevant;
-nsIAtom* nsXFormsAtoms::calculate;
-nsIAtom* nsXFormsAtoms::constraint;
-nsIAtom* nsXFormsAtoms::p3ptype;
-nsIAtom* nsXFormsAtoms::model;
-nsIAtom* nsXFormsAtoms::modelListProperty;
-nsIAtom *nsXFormsAtoms::ref;
+#include "nscore.h"
+#include "nsIXTFXMLVisualWrapper.h"
+#include "nsIDOMNode.h"
+#include "nsCOMPtr.h"
+#include "nsXFormsElement.h"
 
-const nsStaticAtom nsXFormsAtoms::Atoms_info[] = {
-  { "schema",            &nsXFormsAtoms::schema },
-  { "instance",          &nsXFormsAtoms::instance },
-  { "src",               &nsXFormsAtoms::src },
-  { "bind",              &nsXFormsAtoms::bind },
-  { "nodeset",           &nsXFormsAtoms::nodeset },
-  { "type",              &nsXFormsAtoms::type },
-  { "readonly",          &nsXFormsAtoms::readonly },
-  { "required",          &nsXFormsAtoms::required },
-  { "relevant",          &nsXFormsAtoms::relevant },
-  { "calculate",         &nsXFormsAtoms::calculate },
-  { "constraint",        &nsXFormsAtoms::constraint },
-  { "p3ptype",           &nsXFormsAtoms::p3ptype },
-  { "model",             &nsXFormsAtoms::model },
-  { "ModelListProperty", &nsXFormsAtoms::modelListProperty },
-  { "ref",               &nsXFormsAtoms::ref }
+class nsXFormsModelElement;
+class nsIDOMElement;
+
+// Common implementation for XForms form controls
+
+class nsXFormsControl : public nsXFormsElement
+{
+public:
+  NS_HIDDEN_(nsXFormsModelElement*) GetModelAndBind(nsIDOMElement **aBindElement);
+  NS_HIDDEN_(already_AddRefed<nsIDOMNode>) GetInstanceNode();
+
+protected:
+  nsCOMPtr<nsIXTFXMLVisualWrapper> mWrapper;
 };
 
-void
-nsXFormsAtoms::InitAtoms()
-{
-  NS_RegisterStaticAtoms(Atoms_info, NS_ARRAY_LENGTH(Atoms_info));
-}
+#endif

@@ -36,45 +36,34 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsXFormsAtoms.h"
+#include "nsXFormsElement.h"
 #include "nsMemory.h"
 
-nsIAtom* nsXFormsAtoms::schema;
-nsIAtom* nsXFormsAtoms::instance;
-nsIAtom* nsXFormsAtoms::src;
-nsIAtom* nsXFormsAtoms::bind;
-nsIAtom* nsXFormsAtoms::nodeset;
-nsIAtom* nsXFormsAtoms::type;
-nsIAtom* nsXFormsAtoms::readonly;
-nsIAtom* nsXFormsAtoms::required;
-nsIAtom* nsXFormsAtoms::relevant;
-nsIAtom* nsXFormsAtoms::calculate;
-nsIAtom* nsXFormsAtoms::constraint;
-nsIAtom* nsXFormsAtoms::p3ptype;
-nsIAtom* nsXFormsAtoms::model;
-nsIAtom* nsXFormsAtoms::modelListProperty;
-nsIAtom *nsXFormsAtoms::ref;
-
-const nsStaticAtom nsXFormsAtoms::Atoms_info[] = {
-  { "schema",            &nsXFormsAtoms::schema },
-  { "instance",          &nsXFormsAtoms::instance },
-  { "src",               &nsXFormsAtoms::src },
-  { "bind",              &nsXFormsAtoms::bind },
-  { "nodeset",           &nsXFormsAtoms::nodeset },
-  { "type",              &nsXFormsAtoms::type },
-  { "readonly",          &nsXFormsAtoms::readonly },
-  { "required",          &nsXFormsAtoms::required },
-  { "relevant",          &nsXFormsAtoms::relevant },
-  { "calculate",         &nsXFormsAtoms::calculate },
-  { "constraint",        &nsXFormsAtoms::constraint },
-  { "p3ptype",           &nsXFormsAtoms::p3ptype },
-  { "model",             &nsXFormsAtoms::model },
-  { "ModelListProperty", &nsXFormsAtoms::modelListProperty },
-  { "ref",               &nsXFormsAtoms::ref }
-};
-
-void
-nsXFormsAtoms::InitAtoms()
+nsresult
+nsXFormsElement::CloneScriptingInterfaces(const nsIID *aIIDList,
+                                          unsigned int aIIDCount,
+                                          PRUint32 *aOutCount,
+                                          nsIID ***aOutArray)
 {
-  NS_RegisterStaticAtoms(Atoms_info, NS_ARRAY_LENGTH(Atoms_info));
+  nsIID **iids = NS_STATIC_CAST(nsIID**,
+                                nsMemory::Alloc(aIIDCount * sizeof(nsIID*)));
+  if (!iids) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+ 
+  for (PRUint32 i = 0; i < aIIDCount; ++i) {
+    iids[i] = NS_STATIC_CAST(nsIID*,
+                             nsMemory::Clone(&aIIDList[i], sizeof(nsIID)));
+ 
+    if (!iids[i]) {
+      for (PRUint32 j = 0; j < i; ++j)
+        nsMemory::Free(iids[j]);
+      nsMemory::Free(iids);
+      return NS_ERROR_OUT_OF_MEMORY;
+    }
+  }
+ 
+  *aOutArray = iids;
+  *aOutCount = aIIDCount;
+  return NS_OK;
 }

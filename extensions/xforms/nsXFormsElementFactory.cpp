@@ -40,6 +40,8 @@
 #include "nsXFormsModelElement.h"
 #include "nsString.h"
 
+NS_HIDDEN_(nsresult) NS_NewXFormsInputElement(nsIXTFElement **aElement);
+
 NS_IMPL_ISUPPORTS1(nsXFormsElementFactory, nsIXTFElementFactory)
 
 NS_IMETHODIMP
@@ -48,6 +50,8 @@ nsXFormsElementFactory::CreateElement(const nsAString& aTagName,
 {
   if (aTagName.Equals(NS_LITERAL_STRING("model")))
     return NS_NewXFormsModelElement(aElement);
+  else if (aTagName.Equals(NS_LITERAL_STRING("input")))
+    return NS_NewXFormsInputElement(aElement);
 
   *aElement = nsnull;
   return NS_ERROR_FAILURE;

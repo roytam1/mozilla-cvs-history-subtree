@@ -36,6 +36,9 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#ifndef nsXFormsModelElement_h_
+#define nsXFormsModelElement_h_
+
 #include "nsIXTFGenericElement.h"
 #include "nsIXFormsModelElement.h"
 #include "nsISchema.h"
@@ -43,13 +46,17 @@
 #include "nsCOMPtr.h"
 #include "nsIDOMLoadListener.h"
 #include "nsIDOMDocument.h"
+#include "nsXFormsElement.h"
 
 #include "nsISchemaLoader.h"
+#include "nsISchema.h"
 
 class nsIDOMXPathEvaluator;
 class nsIContent;
+class nsXFormsControl;
 
-class nsXFormsModelElement : public nsIXTFGenericElement,
+class nsXFormsModelElement : public nsXFormsElement,
+                             public nsIXTFGenericElement,
                              public nsIXFormsModelElement,
                              public nsISchemaLoadListener,
                              public nsIDOMLoadListener
@@ -72,6 +79,9 @@ public:
   NS_IMETHOD Error(nsIDOMEvent* aEvent);
 
   NS_HIDDEN_(nsresult) DispatchEvent(unsigned int aEvent);
+
+  NS_HIDDEN_(already_AddRefed<nsISchemaType>)
+    GetTypeForControl(nsXFormsControl *aControl);
 
   // Called after nsXFormsAtoms is registered
   static NS_HIDDEN_(void) Startup();
@@ -97,3 +107,5 @@ private:
 };
 
 NS_HIDDEN_(nsresult) NS_NewXFormsModelElement(nsIXTFElement **aResult);
+
+#endif

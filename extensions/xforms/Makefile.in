@@ -61,7 +61,10 @@ REQUIRES	= \
 
 CPPSRCS		= \
 		nsXFormsElementFactory.cpp \
+		nsXFormsElement.cpp \
+		nsXFormsControl.cpp \
 		nsXFormsModelElement.cpp \
+		nsXFormsInputElement.cpp \
 		nsXFormsAtoms.cpp \
 		nsXFormsModule.cpp \
 		$(NULL)
