@@ -53,6 +53,10 @@ typedef struct _IL_ImageReq IL_ImageReq;
 typedef struct il_context_list il_context_list;
 typedef struct il_container_list il_container_list;
 typedef struct il_container_struct il_container;
+/*	ebb - begin	*/
+typedef struct _IL_ProfileReq IL_ProfileReq;
+typedef struct ip_container_struct ip_container;
+/*	ebb - end	*/
 
 #include "il_icons.h"           /* Image icons. */
 #include "libimg.h"             /* Public API to Image Library. */
@@ -174,6 +178,22 @@ enum icstate {
     IC_ABORT_PENDING= 0x24  /* Image download abort in progress */
 };
 
+/*	ebb - begin */
+enum pc_state			/* Carried by ip_container */
+{
+    ICCP_VIRGIN       = 0x00,	/* Newly-created container */
+    ICCP_START        = 0x01,	/* Requested stream from netlib, but no data yet */
+    ICCP_STREAM       = 0x02,	/* Stream opened, data received, not on disk yet */ 
+    ICCP_ACCUMULATING = 0x03,	/* Profile loading */
+    ICCP_NOCACHE      = 0x11,	/* Profile deferred for loading later */
+    ICCP_COMPLETE     = 0x20,	/* Profile loaded - no errors */
+    ICCP_BAD          = 0x21,	/* Corrupt or illegal profile data */
+    ICCP_INCOMPLETE   = 0x22,	/* Partially loaded profile data */
+    ICCP_MISSING      = 0x23,	/* No such file on server */
+    ICCP_ABORT_PENDING= 0x24	/* Profile download abort in progress */
+};
+/*	ebb - end */
+
 /* Still receiving data from the netlib ? */
 #define IMAGE_CONTAINER_ACTIVE(ic)  ((ic)->state <= IC_MULTI)
 
@@ -265,7 +285,13 @@ struct il_container_struct {
     int comment_length;
 
     int colormap_serial_num;    /* serial number of last installed colormap */
-
+/*	ebb - begin	*/
+	uint16 icc_profile_flags;	/* Matching on/off, profile exists, etc. */ 
+	IL_ProfileReq *icc_profile_req;	/* Request for profile load */
+    void *icc_profile_ref;		/* Opened profile. */
+    char *icc_profile_url;		/* The url of an associated icc profile */
+    void *icc_matching_session;	/* A Color World, in ColorSync parlance. */
+/*	ebb - end */
     int dont_use_custom_palette;
     int rendered_with_custom_palette;
     IL_DitherMode dither_mode;  /* ilDither or ilClosestColor */
@@ -382,6 +408,66 @@ struct _IL_ImageReq {
     struct _IL_ImageReq *next;  /* Next entry in a list of image requests. */
 };
 
+/*	ebb - begin	*/
+/* There is one ip_container per icc profile */
+struct ip_container_struct {
+    ip_container *next;         /* Cache bidirectional linked list */
+    ip_container *prev;
+
+    ilIURL *url;
+
+    enum pc_state state;
+
+	PRPackedBool is_url_loading;/* TRUE if NetLib is currently loading the URL. */
+	PRPackedBool is_file_based;	/* TRUE if the profile is loading from afar */
+
+    uint8 *profile_data; 		/* The actual data. */
+    uint32 profile_data_size;	/* How much accumulated */
+    uint32 profile_buffer_size;	/* How big the accumulation buffer is */
+    void *profile_ref;			/* Opened profile. */    
+    int profile_ref_count;		/* How many il_container's use us? */
+#if	CACHE_COLOR_WORLDS
+	void **matching_sessions;	/* Cached ColorWorlds using this profile */
+#endif
+
+    ilINetContext *net_cx;      /* Context which initiated this transfer. */
+
+#ifdef STANDALONE_IMAGE_LIB
+    ilIImageRenderer *img_cb;
+#else
+    IMGCBIF *img_cb;            /* JMC callback interface. We have a cloned copy */
+#endif /* STANDALONE_IMAGE_LIB */
+
+    IL_ProfileReq *clients;       /* List of clients of this container. */
+    IL_ProfileReq *lclient;       /* Last client in the client list. */
+
+	time_t expires;            	/* Expiration date for the corresponding URL */
+
+#ifdef DEBUG
+    PRTime start_time;
+#endif
+    char *fetch_url;            /* actual url address used */
+};
+
+/* This is Image Library's internal representation of a profile request.
+   It represents a handle on a specific instance of a profile container.  */
+struct _IL_ProfileReq {
+    ip_container *ip;			/* The profile container for this request (may
+                                   be shared with other requests.) */
+    il_container *ic;			/* The image container that made this request */
+	ilINetContext *net_cx;		/* A clone of the net context which the image
+                                   library was given when this image handle was
+                                   created.  This serves as a backup in case
+                                   the image container's net_cx becomes invalid,
+                                   (for example, when the client for which the
+                                   container was initially created is destroyed.) */							   
+    PRPackedBool stopped;		/* TRUE - if user hit "Stop" button */
+
+
+    struct _IL_ProfileReq *next;	/* Next entry in a list of image requests. */
+};
+
+/*	ebb - end	*/
 
 extern int il_debug;
 extern uint8 il_identity_index_map[];
@@ -392,8 +478,8 @@ extern void il_image_abort(il_container *ic);
 extern void il_image_complete(il_container *ic);
 extern PRBool il_image_stopped(il_container *ic);
 
-extern ilINetReader *IL_NewNetReader(il_container *ic);
-extern il_container *IL_GetNetReaderContainer(ilINetReader *reader);
+extern ilINetReader *IL_NewNetReader(il_container *ic, ip_container *ip);
+extern void *IL_GetNetReaderContainer(ilINetReader *reader);
 
 #ifndef M12N_NEW_DEPENDENCIES   /* XXXM12N */
 extern unsigned int IL_StreamWriteReady(il_container *ic);
@@ -491,6 +577,9 @@ extern il_container
 *il_get_container(IL_GroupContext *image_context,
                   NET_ReloadMethod reload_cache_policy,
                   const char *image_url,
+/*	ebb - begin */
+				  const char *icc_profile_url,
+/*	ebb - end */
                   IL_IRGB *background_color,
                   IL_DitherMode dither_mode,
                   int req_depth,
