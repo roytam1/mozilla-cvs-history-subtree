@@ -40,6 +40,7 @@
 
 #include "nsChildView.h"
 #include "nsIScrollbar.h"
+#import "mozView.h"
 
 
 /**
@@ -109,7 +110,6 @@ private:
   PRUint32          mMaxValue;
   PRUint32          mVisibleImageSize;
   PRUint32          mLineIncrement;
-  PRBool            mMouseDownInScroll;
   ControlPartCode       mClickedPartCode;
   static ControlActionUPP   sControlActionProc; // we only need one of these
 };
@@ -137,27 +137,23 @@ protected:
 
 
 
-@interface ScrollbarView : NSScroller
+@interface ScrollbarView : NSScroller<mozView>
 {
-  // Our window [WEAK]
+    // Our window [WEAK]
   NSWindow* mWindow;
   
-    // the nsChildView that created the view. It retains this NSView, so
-    // the link back to it must be weak.
-  nsChildView* mGeckoChild;
-  
-    // allows us to redispatch events back to a centralized location
-  //nsIEventSink* mEventSink;
-  
-    // tag for our mouse enter/exit tracking rect
-  NSTrackingRectTag mMouseEnterExitTag;
-
-  // used to avoid move re-entrancy
-  BOOL mInMove;
+    // the nsScrollbar that created this view. It retains this NSView, so
+    // the link back to it must be weak. [WEAK]
+  nsScrollbar* mGeckoChild;
 }
 
-- (NSWindow*) getNativeWindow;
-- (void) setNativeWindow: (NSWindow*)aWindow;
+  // default initializer
+- (id)initWithFrame:(NSRect)frameRect geckoChild:(nsScrollbar*)inChild;
+  // overridden parent class initializer
+- (id)initWithFrame:(NSRect)frameRect;
+
+- (IBAction)scroll:(NSScroller*)sender;
+
 @end
 
 #endif // nsScrollbar_

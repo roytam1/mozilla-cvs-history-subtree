@@ -53,7 +53,6 @@ nsScrollbar::nsScrollbar()
 	,	mMaxValue(0)
 	,	mVisibleImageSize(0)
 	,	mLineIncrement(0)
-	,	mMouseDownInScroll(PR_FALSE)
 	,	mClickedPartCode(0)
 {
 	WIDGET_SET_CLASSNAME("nsScrollbar");
@@ -78,10 +77,12 @@ nsScrollbar::CreateCocoaView ( )
   if ( IsVertical() ) {
     orientation.size.width = 20;
     orientation.size.height = 100;
+    printf("creating vertical scrollbar\n");
   }
   else {
     orientation.size.width = 100;
     orientation.size.height = 20;
+    printf("creating horizontal scrollbar\n");
   }
   return [[[ScrollbarView alloc] initWithFrame:orientation] autorelease];
 }
@@ -195,9 +196,12 @@ PRBool nsScrollbar::DispatchMouseEvent(nsMouseEvent &aEvent)
 NS_METHOD nsScrollbar::SetMaxRange(PRUint32 aEndRange)
 {
   mMaxValue = ((int)aEndRange) > 0 ? aEndRange : 10;
+printf("SMR:: max value is %u\n", mMaxValue);
   if ( GetControl() ) {
-    PRInt32 fullVisibleArea = mVisibleImageSize + mMaxValue;
+    PRUint32 fullVisibleArea = mVisibleImageSize + mMaxValue;
     [mView setFloatValue:[mView floatValue] knobProportion:(mVisibleImageSize / (float)fullVisibleArea)];
+printf("- mVisibleImageSize %u, fullVisibleArea %u\n", mVisibleImageSize, fullVisibleArea);
+printf("SMR:: setting value to %f proportion %f\n", [mView floatValue], (mVisibleImageSize / (float)fullVisibleArea));
   }
   return NS_OK;
 }
@@ -228,6 +232,7 @@ NS_METHOD nsScrollbar::SetPosition(PRUint32 aPos)
   mValue = ((PRInt32)aPos) > mMaxValue ? mMaxValue : ((int)aPos);
   [mView setFloatValue:(aPos / (float)mMaxValue)];
 
+printf("setting position to %f, maxValue is %u\n", (aPos / (float)mMaxValue), mMaxValue);
   return NS_OK;
 }
 
@@ -257,6 +262,7 @@ NS_METHOD nsScrollbar::SetThumbSize(PRUint32 aSize)
   
   PRInt32 fullVisibleArea = mVisibleImageSize + mMaxValue;
   [mView setFloatValue:[mView floatValue] knobProportion:(mVisibleImageSize / (float)fullVisibleArea)];
+printf("STS:: setting value to %f proportion %f\n", [mView floatValue], (mVisibleImageSize / (float)fullVisibleArea));
   
   return NS_OK;
 }
@@ -304,12 +310,19 @@ NS_METHOD nsScrollbar::GetLineIncrement(PRUint32& aLineIncrement)
 NS_METHOD nsScrollbar::SetParameters(PRUint32 aMaxRange, PRUint32 aThumbSize,
 								PRUint32 aPosition, PRUint32 aLineIncrement)
 {
+if ( aThumbSize > 100000 )
+  aThumbSize = 2000;
+printf("\nsetting parameters, thumbsize %u, position %u, maxrange %u\n", aThumbSize, aPosition, aMaxRange);
+  
+  printf("mView is %d\n", mView);
+  
 	SetLineIncrement(aLineIncrement);
-	SetPosition(aPosition);
 	mVisibleImageSize = aThumbSize; // needed by SetMaxRange
 	SetMaxRange(aMaxRange);
 	SetThumbSize(aThumbSize); // Needs to know the maximum value when calling Mac toolbox.
+	SetPosition(aPosition);
 
+  Enable(PR_TRUE);
 	return NS_OK;
 }
 
@@ -365,11 +378,37 @@ nsScrollbar::IsEnabled(PRBool *aState)
 
 @implementation ScrollbarView
 
--(id)initWithFrame:(NSRect)aRect
+//
+// -initWithFrame:geckoChild
+// Designated Initializer
+//
+// Init our superclass and make the connection to the gecko nsIWidget we're
+// mirroring
+//
+- (id)initWithFrame:(NSRect)frameRect geckoChild:(nsScrollbar*)inChild
 {
-  mInMove = NO;
-  [super initWithFrame: aRect];
+  [super initWithFrame:frameRect];
+
+  NS_ASSERTION(inChild, "Need to provide a tether between this and a nsChildView class");
+  mGeckoChild = inChild;
+  
+  // make ourselves the target of the scroll and set the action message
+  [self setTarget:self];
+  [self setAction:@selector(scroll:)];
+  
   return self;
+}
+
+
+//
+// -initWithFrame
+//
+// overridden parent class initializer
+//
+- (id)initWithFrame:(NSRect)frameRect
+{
+  NS_WARNING("You're calling the wrong initializer. You really want -initWithFrame:geckoChild");
+  return [self initWithFrame:frameRect geckoChild:nsnull];
 }
 
 - (NSWindow*) getNativeWindow
@@ -386,20 +425,15 @@ nsScrollbar::IsEnabled(PRBool *aState)
   mWindow = aWindow;
 }
 
-- (void)trackKnob:(NSEvent *)theEvent
+//
+// -widget
+//
+// return our gecko child view widget. Note this does not AddRef.
+//
+- (nsIWidget*) widget
 {
-  printf("tracking knob\n");
-  [super trackKnob:theEvent];
-  printf("done tracking knob\n");
+  return NS_STATIC_CAST(nsIWidget*, mGeckoChild);
 }
-
-- (void)trackScrollButtons:(NSEvent *)theEvent
-{
-  printf("tracking buttons");
-  [super trackScrollButtons:theEvent];
-  printf("done tracking buttons");
-}
-
 
 - (BOOL)isFlipped
 {
@@ -408,8 +442,10 @@ nsScrollbar::IsEnabled(PRBool *aState)
 
 - (void)mouseDown:(NSEvent *)theEvent
 {
-  printf("mouse down in scrollbar\n");
+  printf("mouse down in scrollbar (value %f, thumb %f, enabed %d)\n", [self floatValue], [self knobProportion],
+            [self isEnabled]);
   [super mouseDown:theEvent];
+  [self drawKnob];
 }
 
 //
@@ -423,13 +459,23 @@ nsScrollbar::IsEnabled(PRBool *aState)
 - (void)mouseMoved:(NSEvent*)theEvent
 {
   // do nothing
-  if (mInMove)
-    return;
-
-  mInMove = YES;
-  [super mouseMoved: theEvent];
-  mInMove = NO;
 }
+
+//
+// -scroll
+//
+// the action message we've set up to be called when the scrollbar needs
+// to adjust its value. Feed back into the owning widget to process
+// how much to scroll and adjust the correct attributes.
+//
+- (IBAction)scroll:(NSScroller*)sender
+{
+  if ( mGeckoChild ) {
+    //mGeckoChild->DoScroll([sender hitPart]);
+    NSBeep();
+  }
+}
+
 
 @end
 
