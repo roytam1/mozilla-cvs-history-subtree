@@ -53,7 +53,8 @@ else
     SEP=:
   endif
 endif
-JAVACLASSPATH:=$(BASEDIR)/ldapjdk$(SEP)$(BASEDIR)/ldapbeans$(SEP)$(BASEDIR)/ldapfilter$(SEP)$(CLASSPATH)
+JAASLIB=$(BASEDIR)/ldapjdk/lib/jaas.jar
+JAVACLASSPATH:=$(BASEDIR)/ldapjdk$(SEP)$(JAASLIB)$(SEP)$(BASEDIR)/ldapbeans$(SEP)$(BASEDIR)/ldapfilter$(SEP)$(CLASSPATH)
 
 SRCDIR=netscape/ldap
 BEANDIR=$(BASEDIR)/ldapbeans/netscape/ldap/beans
@@ -69,6 +70,7 @@ endif
 CLASSPACKAGE=$(CLASSPACKAGEDIR)/$(PACKAGENAME)
 ERRORSDIR=$(CLASSDIR)/netscape/ldap/errors
 SASLDIR=com/netscape/sasl
+SASLMECHANISMDIR=com/netscape/sasl/mechanisms
 
 ifndef JAVAC
   ifdef JAVA_HOME
@@ -89,7 +91,7 @@ basics: $(DISTDIR) $(CLASSDIR)
 classes: LDAPCLASSES BEANS TOOLS
 
 basepackage: $(CLASSPACKAGEDIR)
-	cd $(DISTDIR)/classes; rm -f ../packages/$(BASEPACKAGENAME); $(JAR) cvfm ../packages/$(BASEPACKAGENAME) manifest.mf netscape/ldap/*.class netscape/ldap/client/*.class netscape/ldap/client/opers/*.class netscape/ldap/ber/stream/*.class netscape/ldap/controls/*.class netscape/ldap/util/*.class netscape/ldap/errors/*.props com/netscape/sasl/*.class tools/*.class
+	cd $(DISTDIR)/classes; rm -f ../packages/$(BASEPACKAGENAME); $(JAR) cvfm ../packages/$(BASEPACKAGENAME) manifest.mf netscape/ldap/*.class netscape/ldap/client/*.class netscape/ldap/client/opers/*.class netscape/ldap/ber/stream/*.class netscape/ldap/controls/*.class netscape/ldap/util/*.class netscape/ldap/errors/*.props com/netscape/sasl/*.class com/netscape/sasl/mechanisms/*.class tools/*.class
 
 MAIN: basics
 	cd ldapjdk/$(SRCDIR); $(JAVAC) -d "$(CLASS_DEST)" *.java
@@ -106,6 +108,8 @@ BER: basics
 UTIL: basics
 	cd ldapjdk/$(SRCDIR)/util; $(JAVAC) -d "$(CLASS_DEST)" *.java
 
+SASLMECHANISM: basics
+	cd ldapjdk/$(SASLMECHANISMDIR); $(JAVAC) -d "$(CLASS_DEST)" *.java
 SASL: basics
 	cd ldapjdk/$(SASLDIR); $(JAVAC) -d "$(CLASS_DEST)" *.java
 
@@ -115,7 +119,7 @@ ERRORS: basics $(ERRORSDIR)
 CONTROLS: basics
 	cd ldapjdk/$(SRCDIR)/controls; $(JAVAC) -d "$(CLASS_DEST)" *.java
 
-LDAPCLASSES: BER OPERS CLIENT MAIN UTIL CONTROLS ERRORS SASL
+LDAPCLASSES: BER OPERS CLIENT MAIN UTIL CONTROLS ERRORS SASL SASLMECHANISM
 
 BEANS: OTHERBEANS
 

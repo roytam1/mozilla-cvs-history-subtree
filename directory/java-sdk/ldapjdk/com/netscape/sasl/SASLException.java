@@ -12,51 +12,135 @@
  *
  * The Initial Developer of this code under the NPL is Netscape
  * Communications Corporation.  Portions created by Netscape are
- * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Copyright (C) 1999 Netscape Communications Corporation.  All Rights
  * Reserved.
  */
 package com.netscape.sasl;
 
-/*
- * Exception type returned on SASL authentication failures.
+/**
+ * This class represents an error that has occurred when using SASL.
+ *
  */
-public class SASLException extends Exception {
+public class SaslException extends java.io.IOException {
     /**
-     * Constructs a default exception with no specific error information.
+     * The possibly null root cause exception.
+     * @serial
      */
-    public SASLException() {
-    }
-
-    /**
-     * Constructs a default exception with a specified string as
-     * additional information.
-     * @param message The additional error information.
-     */
-    public SASLException( String message ) {
-        super( message );
-    }
+    private Throwable exception;
 
     /**
-     * Constructs a default exception with a specified string as
-     * additional information, and a result code.
-     * @param message The additional error information.
-     * @param resultCode The result code returned.
+     * Constructs a new instance of <tt>SaslException</tt>.
+     * The root exception and the detailed message are null.
      */
-    public SASLException( String message, int resultCode ) {
-        super( message );
-        this.m_resultCode = resultCode;
+    public SaslException () {
+        super();
     }
 
-    public int getResultCode() {
-        return m_resultCode;
+    /**
+     * Constructs a new instance of <tt>SaslException</tt> with a detailed message.
+     * The root exception is null.
+     * @param detail A possibly null string containing details of the exception.
+     *
+     * @see java.lang.Throwable#getMessage
+     */
+    public SaslException (String detail) {
+        super(detail);
     }
 
+    /**
+     * Constructs a new instance of <tt>SaslException</tt> with a detailed message
+     * and a root exception.
+     * For example, a SaslException might result from a problem with
+     * the callback handler, which might throw a NoSuchCallbackException if
+     * it does not support the requested callback, or throw an IOException
+     * if it had problems obtaining data for the callback. The
+     * SaslException's root exception would be then be the exception thrown
+     * by the callback handler.
+     *
+     * @param detail A possibly null string containing details of the exception.
+     * @param ex A possibly null root exception that caused this exception.
+     *
+     * @see java.lang.Throwable#getMessage
+     * @see #getException
+     */
+    public SaslException (String detail, Throwable ex) {
+        super(detail);
+        exception = ex;
+    }
+
+    /**
+     * Returns the root exception that caused this exception.
+     * @return The possibly null root exception that caused this exception.
+     */
+    public Throwable getException() {
+        return exception;
+    }
+
+    /**
+     * Prints this exception's stack trace to <tt>System.err</tt>.
+     * If this exception has a root exception; the stack trace of the
+     * root exception is printed to <tt>System.err</tt> instead.
+     */
+    public void printStackTrace() {
+        printStackTrace( System.err );
+    }
+
+    /**
+     * Prints this exception's stack trace to a print stream.
+     * If this exception has a root exception; the stack trace of the
+     * root exception is printed to the print stream instead.
+     * @param ps The non-null print stream to which to print.
+     */
+    public void printStackTrace(java.io.PrintStream ps) {
+    if ( exception != null ) {
+        String superString = super.toString();
+        synchronized ( ps ) {
+            ps.print(superString
+                     + (superString.endsWith(".") ? "" : ".")
+                     + "  Root exception is ");
+            exception.printStackTrace( ps );
+        }
+    } else {
+        super.printStackTrace( ps );
+    }
+    }
+
+    /**
+     * Prints this exception's stack trace to a print writer.
+     * If this exception has a root exception; the stack trace of the
+     * root exception is printed to the print writer instead.
+     * @param ps The non-null print writer to which to print.
+     */
+    public void printStackTrace(java.io.PrintWriter pw) {
+        if ( exception != null ) {
+            String superString = super.toString();
+            synchronized (pw) {
+                pw.print(superString
+                         + (superString.endsWith(".") ? "" : ".")
+                         + "  Root exception is ");
+                exception.printStackTrace( pw );
+            }
+        } else {
+            super.printStackTrace( pw );
+        }
+    }
+
+    /**
+     * Returns the string representation of this exception.
+     * The string representation contains
+     * this exception's class name, its detailed messsage, and if
+     * it has a root exception, the string representation of the root
+     * exception. This string representation
+     * is meant for debugging and not meant to be interpreted
+     * programmatically.
+     * @return The non-null string representation of this exception.
+     * @see java.lang.Throwable#getMessage
+     */
     public String toString() {
-        if (m_resultCode != -1)
-            return super.toString() + " (" + m_resultCode + ")" ;
-        else
-            return super.toString();
+        String answer = super.toString();
+        if (exception != null && exception != this) {
+            answer += " [Root exception is " + exception.toString() + "]";
+        }
+        return answer;
     }
-
-    private int m_resultCode = -1;
 }

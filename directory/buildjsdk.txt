@@ -1,14 +1,14 @@
 ======================================================================
                     NETSCAPE DIRECTORY SDK FOR JAVA: 
                          BUILD INSTRUCTIONS
-                     Last updated: June 4, 1999
+                     Last updated: August 2, 1999
 ======================================================================
 For information on the Netscape Directory SDK source release,
 see http://www.mozilla.org/directory/
 
 Note the following:
 - The LDAP filter classes (in the netscape.ldap.util package)
-  use the OROMatcher(tm) regular expression package (from ORO Inc.).
+  use the OROMatcher(tm) regular expression package (from ORO Java Software).
   This is not provided with the source code release.  If you want this
   package, you need to get it from ORO, Inc.  (For details, see the 
   ORO, Inc. home page at http://www.oroinc.com/.) 
