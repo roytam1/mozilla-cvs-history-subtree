@@ -717,12 +717,11 @@ function onInputKeyPress (e)
             
             break;
 
-        case 9: /* tab */
-            e.preventDefault();
-            onTabCompleteRequest(e);
-            break;       
+            //        case 9: /* tab */
+            //e.preventDefault();
+            //break;       
             
-        default:
+
             client.incompleteLine = e.target.value;
             
     }
@@ -736,21 +735,29 @@ function onTest ()
 
 function onTabCompleteRequest (e)
 {
-    var selStart = e.target.selectionStart;
-    var selEnd = e.target.selectionEnd;            
-    var line = e.target.value;
+    dd ("tab complete request");
+    var elem = document.commandDispatcher.focusedElement;
+    var singleInput = document.getElementById("input");
+    if (document.getBindingParent(elem) != singleInput)
+        return;
+
+    e.preventDefault();
+    
+    var selStart = singleInput.selectionStart;
+    var selEnd = singleInput.selectionEnd;            
+    var line = singleInput.value;
 
     if (!line)
     {
         if ("defaultCompletion" in client.currentObject)
-            e.target.value = client.currentObject.defaultCompletion;
+            singleInput.value = client.currentObject.defaultCompletion;
         return;
     }
     
     if (selStart != selEnd) 
     {
         /* text is highlighted, just move caret to end and exit */
-        e.target.selectionStart = e.target.selectionEnd = line.length;
+        singleInput.selectionStart = singleInput.selectionEnd = line.length;
         return;
     }
 
@@ -809,7 +816,7 @@ function onTabCompleteRequest (e)
                 match = matches[0];
             else
                 match = getCommonPfx(matches);
-            e.target.value = line.substr(0, wordStart) + match + 
+            singleInput.value = line.substr(0, wordStart) + match + 
                     line.substr(wordEnd);
             if (wordEnd < line.length)
             {
@@ -821,7 +828,7 @@ function onTabCompleteRequest (e)
                     /* word was fully completed, move one additional space */
                     ++newpos;
                 }
-                e.target.selectionEnd = e.target.selectionStart = newpos;
+                singleInput.selectionEnd = e.target.selectionStart = newpos;
             }
         }
     }

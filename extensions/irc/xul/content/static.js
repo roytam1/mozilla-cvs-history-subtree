@@ -653,6 +653,36 @@ function msgIsImportant (msg, sourceNick, myNick)
     return false;    
 }
 
+function cycleView (amount)
+{
+    dd ("cycleView " + amount);
+    var len = client.viewsArray.length;
+    if (len <= 1)
+        return;
+    
+    if (amount > len)
+        amount = amount % client.viewsArray.length;
+
+    var tb = getTabForObject (client.currentObject);
+    if (!tb)
+        return;
+    
+    var vk = Number(tb.getAttribute("viewKey"));
+    var destKey = vk + amount;
+    if (destKey > len - 1)
+    {
+        /* wrap past max */
+        destKey -= client.viewsArray.length;
+    }
+    else if (destKey < 0)
+    {
+        /* wrap past 0 */
+        destKey += client.viewsArray.length;
+    }
+    
+    setCurrentObject (client.viewsArray[destKey].source);
+}
+
 function playSounds (list)
 {
     ary = list.split (" ");
