@@ -3832,13 +3832,23 @@ NavigatorImpl::~NavigatorImpl()
 //    NavigatorImpl::nsISupports
 //*****************************************************************************
 
-NS_IMPL_ADDREF(NavigatorImpl)
-NS_IMPL_RELEASE(NavigatorImpl)
 
+// XPConnect interface list for NavigatorImpl
+NS_CLASSINFO_MAP_BEGIN(Navigator)
+  NS_CLASSINFO_MAP_ENTRY(nsIDOMNavigator)
+NS_CLASSINFO_MAP_END
+
+
+// QueryInterface implementation for NavigatorImpl
 NS_INTERFACE_MAP_BEGIN(NavigatorImpl)
   NS_INTERFACE_MAP_ENTRY(nsISupports)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNavigator)
 NS_INTERFACE_MAP_END
+
+
+NS_IMPL_ADDREF(NavigatorImpl)
+NS_IMPL_RELEASE(NavigatorImpl)
+
 
 void NavigatorImpl::SetDocShell(nsIDocShell *aDocShell)
 {
@@ -3856,7 +3866,7 @@ NS_IMETHODIMP NavigatorImpl::GetUserAgent(nsAWritableString& aUserAgent)
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
-  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+  if (NS_SUCCEEDED(res) && service) {
     PRUnichar *ua = nsnull;
     res = service->GetUserAgent(&ua);
     aUserAgent = ua;
@@ -3871,7 +3881,7 @@ NS_IMETHODIMP NavigatorImpl::GetAppCodeName(nsAWritableString& aAppCodeName)
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
-  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+  if (NS_SUCCEEDED(res) && service) {
     PRUnichar *appName = nsnull;
     res = service->GetAppName(&appName);
     aAppCodeName = appName;
@@ -3886,7 +3896,7 @@ NS_IMETHODIMP NavigatorImpl::GetAppVersion(nsAWritableString& aAppVersion)
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
-  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+  if (NS_SUCCEEDED(res) && service) {
     PRUnichar *str = nsnull;
     res = service->GetAppVersion(&str);
     aAppVersion = str;
@@ -3925,7 +3935,7 @@ NS_IMETHODIMP NavigatorImpl::GetLanguage(nsAWritableString& aLanguage)
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
-  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+  if (NS_SUCCEEDED(res) && service) {
     PRUnichar *lang = nsnull;
     res = service->GetLanguage(&lang);
     aLanguage = lang;
@@ -3940,7 +3950,7 @@ NS_IMETHODIMP NavigatorImpl::GetPlatform(nsAWritableString& aPlatform)
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
-  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+  if (NS_SUCCEEDED(res) && service) {
     // sorry for the #if platform ugliness, but Communicator is likewise hardcoded
     // and we're seeking backward compatibility here (bug 47080)
 #if defined(WIN32)
@@ -3968,7 +3978,7 @@ NS_IMETHODIMP NavigatorImpl::GetOscpu(nsAWritableString& aOSCPU)
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
-  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+  if (NS_SUCCEEDED(res) && service) {
     PRUnichar *oscpu = nsnull;
     res = service->GetOscpu(&oscpu);
     aOSCPU = oscpu;
@@ -3983,7 +3993,7 @@ NS_IMETHODIMP NavigatorImpl::GetVendor(nsAWritableString& aVendor)
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
-  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+  if (NS_SUCCEEDED(res) && service) {
     PRUnichar *vendor = nsnull;
     res = service->GetVendor(&vendor);
     aVendor = vendor;
@@ -3999,7 +4009,7 @@ NS_IMETHODIMP NavigatorImpl::GetVendorSub(nsAWritableString& aVendorSub)
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
-  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+  if (NS_SUCCEEDED(res) && service) {
     PRUnichar *vendor = nsnull;
     res = service->GetVendorSub(&vendor);
     aVendorSub = vendor;
@@ -4014,7 +4024,7 @@ NS_IMETHODIMP NavigatorImpl::GetProduct(nsAWritableString& aProduct)
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
-  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+  if (NS_SUCCEEDED(res) && service) {
     PRUnichar *product = nsnull;
     res = service->GetProduct(&product);
     aProduct = product;
@@ -4029,7 +4039,7 @@ NS_IMETHODIMP NavigatorImpl::GetProductSub(nsAWritableString& aProductSub)
   nsresult res;
   nsCOMPtr<nsIHTTPProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
-  if (NS_SUCCEEDED(res) && (nsnull != service)) {
+  if (NS_SUCCEEDED(res) && service) {
     PRUnichar *productSub = nsnull;
     res = service->GetProductSub(&productSub);
     aProductSub = productSub;

@@ -376,6 +376,8 @@ nsDOMClassInfo::Init()
                            WANT_FINALIZE);
   NS_DEFINE_CLASSINFO_DATA(Location, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
+  NS_DEFINE_CLASSINFO_DATA(Navigator, nsDOMGenericSH::Create,
+                           DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Plugin, nsPluginSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(PluginArray, nsPluginArraySH::Create,

@@ -35,6 +35,7 @@ public:
     // Base classes
     eWindow_id,
     eLocation_id,
+    eNavigator_id,
     ePlugin_id,
     ePluginArray_id,
     eMimeType_id,
