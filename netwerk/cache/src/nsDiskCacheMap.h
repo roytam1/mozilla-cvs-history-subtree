@@ -25,13 +25,12 @@
 #ifndef _nsDiskCacheMap_h_
 #define _nsDiskCacheMap_h_
 
-#include "nsANSIFileStreams.h"
-
 #include "prtypes.h"
 #include "prnetdb.h"
 #include "nsDebug.h"
 #include "nsError.h"
 #include "nsILocalFile.h"
+#include "nsANSIFileStreams.h"
 
 class nsIInputStream;
 class nsIOutputStream;
@@ -193,10 +192,9 @@ class nsDiskCacheRecordVisitor {
 /******************************************************************************
  *  nsDiskCacheBucket
  *****************************************************************************/
-    enum {
-        kRecordsPerBucket = 256,
-        kBucketsPerTable = (1 << 5)                 // must be a power of 2!
-    };
+enum {
+    kRecordsPerBucket = 256
+};
 
 struct nsDiskCacheBucket {
     nsDiskCacheRecord   mRecords[kRecordsPerBucket];
@@ -206,10 +204,9 @@ struct nsDiskCacheBucket {
 /******************************************************************************
  *  nsDiskCacheHeader
  *****************************************************************************/
-    enum { kCurrentVersion = 0x00010002 };
+enum { kCurrentVersion = 0x00010002 };
 
 struct nsDiskCacheHeader {
-
     PRUint32    mVersion;                           // cache version.
     PRUint32    mDataSize;                          // size of cache in bytes.
     PRUint32    mEntryCount;                        // number of entries stored in cache.
@@ -247,15 +244,20 @@ struct nsDiskCacheHeader {
     }
 };
 
-enum {  kCacheMapSize = sizeof(nsDiskCacheHeader) +
-                        kBucketsPerTable * sizeof(nsDiskCacheBucket)
-};
 
 /******************************************************************************
  *  nsDiskCacheMap
  *
  *  // XXX initial capacity, enough for 8192 distinct entries.
  *****************************************************************************/
+
+enum {
+    kBucketsPerTable = (1 << 5),                 // must be a power of 2!
+    kCacheMapSize = sizeof(nsDiskCacheHeader) +
+                    kBucketsPerTable * sizeof(nsDiskCacheBucket)
+};
+
+
 class nsDiskCacheMap {
 public:
     nsDiskCacheMap();
@@ -281,10 +283,10 @@ public:
     nsresult AddRecord( nsDiskCacheRecord *  mapRecord, nsDiskCacheRecord * oldRecord);
     nsresult UpdateRecord( nsDiskCacheRecord *  mapRecord);
     nsresult FindRecord( PRUint32  hashNumber, nsDiskCacheRecord *  mapRecord);
-
-    nsresult GetRecord2( nsDiskCacheRecord *  mapRecord);
     nsresult DeleteRecord2( nsDiskCacheRecord *  mapRecord);
     nsresult EvictRecords( nsDiskCacheRecordVisitor *  visitor);
+
+//private:
 
 
     void Reset();

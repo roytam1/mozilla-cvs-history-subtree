@@ -26,12 +26,13 @@
 #define _nsDiskCacheDevice_h_
 
 #include "nsCacheDevice.h"
+#include "nsDiskCacheBindData.h"
 #include "nsDiskCacheEntry.h"
 
 #include "nsILocalFile.h"
 #include "nsIObserver.h"
 
-class nsDiskCacheEntry;
+class nsDiskCacheBindData;
 class nsDiskCacheMap;
 class nsDiskCacheRecord;
 
@@ -81,42 +82,41 @@ public:
 
     nsresult getFileForHashNumber(PLDHashNumber hashNumber, PRBool meta, PRUint32 generation, nsIFile ** result);
     nsresult getFileForKey(const char* key, PRBool meta, PRUint32 generation, nsIFile ** result);
-    nsresult getFileForDiskCacheEntry(nsDiskCacheEntry * diskEntry, PRBool meta, nsIFile ** result);
+    nsresult getFileForDiskCacheEntry(nsDiskCacheBindData * bindData, PRBool meta, nsIFile ** result);
 
     static nsresult getTransportForFile(nsIFile* file, nsCacheAccessMode mode, nsITransport ** result);
     static nsresult openInputStream(nsIFile* file, nsIInputStream ** result);
     static nsresult openOutputStream(nsIFile* file, nsIOutputStream ** result);
 
-    nsresult visitEntries(nsICacheVisitor * visitory);
+    nsresult visitEntries(nsICacheVisitor * visitor);
     
-    nsresult readDiskCacheEntry(const char * key, nsDiskCacheEntry ** diskEntry);
+    nsresult readDiskCacheEntry(const char * key, nsDiskCacheBindData ** bindData);
 
     nsresult updateDiskCacheEntries();
-    nsresult updateDiskCacheEntry(nsDiskCacheEntry * diskEntry);
-    nsresult deleteDiskCacheEntry(nsDiskCacheEntry * diskEntry);
+    nsresult updateDiskCacheEntry(nsDiskCacheBindData * bindData);
+    nsresult deleteDiskCacheEntry(nsDiskCacheBindData * bindData);
     
-    nsresult scavengeDiskCacheEntries(nsDiskCacheEntry * diskEntry);
+    nsresult scavengeDiskCacheEntries(nsDiskCacheBindData * bindData);
 
-    nsresult scanDiskCacheEntries(nsISupportsArray ** result);
     nsresult evictDiskCacheEntries();
 
-    nsresult clobberDiskCache();
+    nsresult InitializeCacheDirectory();
     
     nsresult openCacheMap();
     nsresult readCacheMap();
     nsresult writeCacheMap();
 
-    nsresult updateCacheMap(nsDiskCacheEntry * diskEntry);
+    nsresult updateCacheMap(nsDiskCacheBindData * bindData);
     nsresult evictDiskCacheRecord(nsDiskCacheRecord * record);
     
 private:
-    PRBool                      mInitialized;
-    nsCOMPtr<nsIObserver>       mPrefsObserver;     // XXX ?
-    nsCOMPtr<nsILocalFile>      mCacheDirectory;
-    nsDiskCacheEntryHashTable   mBoundEntries;      // XXX rename to refer to active entries
-    PRUint32                    mCacheCapacity;     // XXX need soft/hard limits, currentTotal
-    nsDiskCacheMap*             mCacheMap;
-    nsANSIFileStream*           mCacheStream;       // XXX should be owned by cache map
+    PRBool                  mInitialized;
+    nsCOMPtr<nsIObserver>   mPrefsObserver;     // XXX ?
+    nsCOMPtr<nsILocalFile>  mCacheDirectory;
+    nsDiskCacheHashTable    mBoundEntries;      // XXX rename to refer to active entries
+    PRUint32                mCacheCapacity;     // XXX need soft/hard limits, currentTotal
+    nsDiskCacheMap*         mCacheMap;
+    nsANSIFileStream*       mCacheStream;       // XXX should be owned by cache map
 //  XXX need array of cache block files
 };
 

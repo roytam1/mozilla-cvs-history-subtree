@@ -259,20 +259,19 @@ static nsresult removeObservers(nsDiskCacheDevice* device)
 /******************************************************************************
  *  static utility functions
  *****************************************************************************/
-static nsDiskCacheEntry*
-ensureDiskCacheEntry(nsCacheEntry * entry)
+static nsDiskCacheBindData*
+ensureDiskCacheBindData(nsCacheEntry * entry)
 {
     nsCOMPtr<nsISupports> data;
     nsresult rv = entry->GetData(getter_AddRefs(data));
     if (NS_SUCCEEDED(rv) && !data) {
-        nsDiskCacheEntry* diskEntry = new nsDiskCacheEntry(entry);
-        data = diskEntry;
+        nsDiskCacheBindData* bindData = new nsDiskCacheBindData(entry);
+        data = bindData;
         if (NS_SUCCEEDED(rv) && data)
             entry->SetData(data.get());
     }
-    return (nsDiskCacheEntry*) (nsISupports*) data.get();
+    return (nsDiskCacheBindData*) (nsISupports*) data.get();
 }
-
 
 /******************************************************************************
  *  nsDiskCacheDeviceInfo
@@ -356,301 +355,8 @@ NS_IMETHODIMP nsDiskCacheDeviceInfo::GetMaximumSize(PRUint32 *aMaximumSize)
 
 
 /******************************************************************************
- *  MetaData
- *****************************************************************************/
-struct MetaDataHeader {
-    PRUint32        mHeaderSize;
-//  PRUint32        mHashNumber;    // XXX
-//  PRUint32        mMetaLocation;  // XXX
-    PRInt32         mFetchCount;
-    PRUint32        mLastFetched;
-    PRUint32        mLastModified;
-    PRUint32        mExpirationTime;
-    PRUint32        mDataSize;
-    PRUint32        mKeySize;
-    PRUint32        mMetaDataSize;
-//  void *          mKeyPtrSpace;       // XXX  don't need this
-//  void *          mMetaDataPtrSpace;  // XXX  don't need this, we'll calculate it when necessary
-    // followed by null-terminated key and metadata string values.
-
-    MetaDataHeader()
-        :   mHeaderSize(sizeof(MetaDataHeader)),
-            mFetchCount(0),
-            mLastFetched(0),
-            mLastModified(0),
-            mExpirationTime(0),
-            mDataSize(0),
-            mKeySize(0),
-            mMetaDataSize(0)
-    {
-    }
-
-    MetaDataHeader(nsCacheEntry* entry)
-        :   mHeaderSize(sizeof(MetaDataHeader)),
-            mFetchCount(entry->FetchCount()),
-            mLastFetched(entry->LastFetched()),
-            mLastModified(entry->LastModified()),
-            mExpirationTime(entry->ExpirationTime()),
-            mDataSize(entry->DataSize()),
-            mKeySize(entry->Key()->Length() + 1),
-            mMetaDataSize(0)
-    {
-    }
-    
-    void Swap()
-    {
-#if defined(IS_LITTLE_ENDIAN)
-        mHeaderSize     = ::PR_htonl(mHeaderSize);
-        mFetchCount     = ::PR_htonl(mFetchCount);
-        mLastFetched    = ::PR_htonl(mLastFetched);
-        mLastModified   = ::PR_htonl(mLastModified);
-        mExpirationTime = ::PR_htonl(mExpirationTime);
-        mDataSize       = ::PR_htonl(mDataSize);
-        mKeySize        = ::PR_htonl(mKeySize);
-        mMetaDataSize   = ::PR_htonl(mMetaDataSize);
-#endif
-    }
-    
-    void Unswap()
-    {
-#if defined(IS_LITTLE_ENDIAN)
-        mHeaderSize     = ::PR_ntohl(mHeaderSize);
-        mFetchCount     = ::PR_ntohl(mFetchCount);
-        mLastFetched    = ::PR_ntohl(mLastFetched);
-        mLastModified   = ::PR_ntohl(mLastModified);
-        mExpirationTime = ::PR_ntohl(mExpirationTime);
-        mDataSize       = ::PR_ntohl(mDataSize);
-        mKeySize        = ::PR_ntohl(mKeySize);
-        mMetaDataSize   = ::PR_ntohl(mMetaDataSize);
-#endif
-    }
-};
-
-struct MetaDataFile : MetaDataHeader {
-    char*           mKey;
-    char*           mMetaData;
-
-    MetaDataFile()
-        :   mKey(nsnull), mMetaData(nsnull)
-    {
-    }
-    
-    MetaDataFile(nsCacheEntry* entry)
-        :   MetaDataHeader(entry),
-            mKey(nsnull), mMetaData(nsnull)
-    {
-    }
-    
-    ~MetaDataFile()
-    {
-        delete[] mKey;
-        delete[] mMetaData;
-    }
-    
-    nsresult Init(nsCacheEntry* entry)
-    {
-        PRUint32 size = 1 + entry->Key()->Length();
-        mKey = new char[size];
-        if (!mKey) return NS_ERROR_OUT_OF_MEMORY;
-        nsCRT::memcpy(mKey, entry->Key()->get(), size);
-        return entry->FlattenMetaData(&mMetaData, &mMetaDataSize);
-    }
-
-    nsresult Read(nsIInputStream* input);
-    nsresult Write(nsIOutputStream* output);
-};
-
-nsresult MetaDataFile::Read(nsIInputStream* input)
-{
-    nsresult rv;
-    PRUint32 count;
-    
-    // XXX  Is it less expensive to read the file in multiple parts, or
-    // XXX  get the size and read it in one chunk?
-    // read in the file header.
-    rv = input->Read((char*)&mHeaderSize, sizeof(MetaDataHeader), &count);
-    if (NS_FAILED(rv)) return rv;
-    Unswap();
-    
-    // make sure it is self-consistent.
-    if (mHeaderSize != sizeof(MetaDataHeader)) {
-        NS_ERROR("### CACHE FORMAT CHANGED!!! PLEASE DELETE YOUR NewCache DIRECTORY!!! ###");
-        return NS_ERROR_ILLEGAL_VALUE;
-    }
-
-    // read in the key.
-    delete[] mKey;
-    mKey = new char[mKeySize];
-    if (!mKey) return NS_ERROR_OUT_OF_MEMORY;
-    rv = input->Read(mKey, mKeySize, &count);
-    if (NS_FAILED(rv)) return rv;
-
-    // read in the metadata.
-    delete mMetaData;
-    mMetaData = nsnull;
-    if (mMetaDataSize) {
-        mMetaData = new char[mMetaDataSize];
-        if (!mMetaData) return NS_ERROR_OUT_OF_MEMORY;
-        rv = input->Read(mMetaData, mMetaDataSize, &count);
-        if (NS_FAILED(rv)) return rv;
-    }
-    
-    return NS_OK;
-}
-
-nsresult MetaDataFile::Write(nsIOutputStream* output)
-{
-    nsresult rv;
-    PRUint32 count;
-    
-    // write the header to the file.
-    Swap();
-    rv = output->Write((char*)&mHeaderSize, sizeof(MetaDataHeader), &count);
-    Unswap();
-    if (NS_FAILED(rv)) return rv;
-    
-    // write the key to the file.
-    rv = output->Write(mKey, mKeySize, &count);
-    if (NS_FAILED(rv)) return rv;
-    
-    // write the flattened metadata to the file.
-    if (mMetaDataSize) {
-        rv = output->Write(mMetaData, mMetaDataSize, &count);
-        if (NS_FAILED(rv)) return rv;
-    }
-    
-    return NS_OK;
-}
-
-
-/******************************************************************************
- *  nsDiskCacheEntryInfo
- *****************************************************************************/
-class nsDiskCacheEntryInfo : public nsICacheEntryInfo {
-public:
-    NS_DECL_ISUPPORTS
-    NS_DECL_NSICACHEENTRYINFO
-
-    nsDiskCacheEntryInfo()
-    {
-        NS_INIT_ISUPPORTS();
-    }
-
-    virtual ~nsDiskCacheEntryInfo() {}
-    
-    nsresult Read(nsIInputStream * input)
-    {
-        return mMetaDataFile.Read(input);
-    }
-    
-    const char* Key() { return mMetaDataFile.mKey; }
-    
-private:
-    MetaDataFile mMetaDataFile;
-};
-NS_IMPL_ISUPPORTS1(nsDiskCacheEntryInfo, nsICacheEntryInfo);
-
-NS_IMETHODIMP nsDiskCacheEntryInfo::GetClientID(char ** clientID)
-{
-    NS_ENSURE_ARG_POINTER(clientID);
-    return ClientIDFromCacheKey(nsLiteralCString(mMetaDataFile.mKey), clientID);
-}
-
-
-NS_IMETHODIMP nsDiskCacheEntryInfo::GetDeviceID(char ** deviceID)
-{
-    NS_ENSURE_ARG_POINTER(deviceID);
-    *deviceID = nsCRT::strdup(DISK_CACHE_DEVICE_ID);
-    return *deviceID ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
-}
-
-
-NS_IMETHODIMP nsDiskCacheEntryInfo::GetKey(char ** clientKey)
-{
-    NS_ENSURE_ARG_POINTER(clientKey);
-    return ClientKeyFromCacheKey(nsLiteralCString(mMetaDataFile.mKey), clientKey);
-}
-
-NS_IMETHODIMP nsDiskCacheEntryInfo::GetFetchCount(PRInt32 *aFetchCount)
-{
-    return *aFetchCount = mMetaDataFile.mFetchCount;
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsDiskCacheEntryInfo::GetLastFetched(PRUint32 *aLastFetched)
-{
-    *aLastFetched = mMetaDataFile.mLastFetched;
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsDiskCacheEntryInfo::GetLastModified(PRUint32 *aLastModified)
-{
-    *aLastModified = mMetaDataFile.mLastModified;
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsDiskCacheEntryInfo::GetExpirationTime(PRUint32 *aExpirationTime)
-{
-    *aExpirationTime = mMetaDataFile.mExpirationTime;
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsDiskCacheEntryInfo::IsStreamBased(PRBool *aStreamBased)
-{
-    *aStreamBased = PR_TRUE;
-    return NS_OK;
-}
-
-NS_IMETHODIMP nsDiskCacheEntryInfo::GetDataSize(PRUint32 *aDataSize)
-{
-    *aDataSize = mMetaDataFile.mDataSize;
-    return NS_OK;
-}
-
-
-/******************************************************************************
- *  do_QueryElementAt
- *****************************************************************************/
-#if 0
-/**
- * Helper class for implementing do_QueryElementAt() pattern. Thanks scc!
- * Eventually this should become part of nsICollection.idl.
- */
-class do_QueryElementAt : public nsCOMPtr_helper {
-public:
-    do_QueryElementAt(nsICollection* aCollection, PRUint32 aIndex, nsresult* aErrorPtr = 0)
-        :   mCollection(aCollection),
-            mIndex(aIndex),
-            mErrorPtr(aErrorPtr)
-    {
-        // nothing else to do here
-    }
-
-    virtual nsresult operator()( const nsIID& aIID, void** aResult) const
-    {
-        nsresult status;
-        if ( mCollection ) {
-            if ( !NS_SUCCEEDED(status = mCollection->QueryElementAt(mIndex, aIID, aResult)) )
-            *aResult = 0;
-        } else
-            status = NS_ERROR_NULL_POINTER;
-        if ( mErrorPtr )
-            *mErrorPtr = status;
-        return status;
-    }
-    
-private:
-      nsICollection*  mCollection;
-      PRUint32        mIndex;
-      nsresult*       mErrorPtr;
-};
-#endif
-
-
-/******************************************************************************
  *  nsDiskCacheDevice
  *****************************************************************************/
-
 static nsCOMPtr<nsIFileTransportService> gFileTransportService;
 
 nsDiskCacheDevice::nsDiskCacheDevice()
@@ -701,7 +407,7 @@ nsDiskCacheDevice::Init()
     // no cache directory has ever existed before.
     rv = readCacheMap();
     if (NS_FAILED(rv) || mCacheMap->IsDirty()) {
-        rv = clobberDiskCache();    // XXX initializeCacheDirectory()
+        rv = InitializeCacheDirectory();    // XXX initializeCacheDirectory()
         if (NS_FAILED(rv)) return rv;
     }
     
@@ -766,23 +472,23 @@ nsDiskCacheDevice::FindEntry(nsCString * key)
     // XXX look in entry hashtable first, if not found, then look on
     // disk, to see if we have a disk cache entry that maches.
     nsCacheEntry *     entry     = nsnull;
-    nsDiskCacheEntry * diskEntry = nsnull;
+    nsDiskCacheBindData * bindData = nsnull;
 
     // XXX checking the bound hash table should only be a debug check
     // XXX - the cache service shouldn't bother calling the device
     // XXX - if the entry is already active (bound or not).
 // XXX change to #if DEBUG, because we shouldn't be called for active entries
-    diskEntry = mBoundEntries.GetEntry(key->get());
-    NS_ASSERTION(!diskEntry, "### FindEntry() called for a bound entry.");
+    bindData = mBoundEntries.GetEntry(key->get());
+    NS_ASSERTION(!bindData, "### FindEntry() called for a bound entry.");
 // XXX #endif
-    if (!diskEntry) {
-        PLDHashNumber hashNumber = nsDiskCacheEntry::Hash(key->get());
+    if (!bindData) {
+        PLDHashNumber hashNumber = nsDiskCacheBindData::Hash(key->get());
         nsDiskCacheRecord* record = mCacheMap->GetRecord(hashNumber);
         if (record->HashNumber() == hashNumber) {
-            nsresult rv = readDiskCacheEntry(key->get(), &diskEntry);
+            nsresult rv = readDiskCacheEntry(key->get(), &bindData);
             if (NS_FAILED(rv)) return nsnull;
-            entry = diskEntry->getCacheEntry();
-            rv = mBoundEntries.AddEntry(diskEntry);
+            entry = bindData->getCacheEntry();
+            rv = mBoundEntries.AddEntry(bindData);
             if (NS_FAILED(rv)) {
                 delete entry;
                 return nsnull;
@@ -791,7 +497,7 @@ nsDiskCacheDevice::FindEntry(nsCString * key)
     } else {
         // XXX need to make sure this is an exact match, not just
         // a hash code match.
-        entry = diskEntry->getCacheEntry();
+        entry = bindData->getCacheEntry();
         if (nsCRT::strcmp(entry->Key()->get(), key->get()) != 0)
             return nsnull;
     }
@@ -803,24 +509,24 @@ nsresult
 nsDiskCacheDevice::DeactivateEntry(nsCacheEntry * entry)
 {
     // XXX if entry->mData is null, it's an error.
-    nsDiskCacheEntry* diskEntry = ensureDiskCacheEntry(entry);
-    if (mBoundEntries.GetEntry(diskEntry->getHashNumber()) == diskEntry) {
+    nsDiskCacheBindData* bindData = ensureDiskCacheBindData(entry);
+    if (mBoundEntries.GetEntry(bindData->getHashNumber()) == bindData) {
         // XXX eventually, as a performance enhancement, keep entries around for a while before deleting them.
         // XXX right now, to prove correctness, destroy the entries eagerly.
-        mBoundEntries.RemoveEntry(diskEntry);
+        mBoundEntries.RemoveEntry(bindData);
     }
     
     if (!entry->IsDoomed()) {
         // commit any changes about this entry to disk.
-        updateDiskCacheEntry(diskEntry);
+        updateDiskCacheEntry(bindData);
 
         // XXX if this entry collided with other concurrently bound entries, then its
         // generation count will be non-zero. The other entries that came before it
         // will be linked to it and doomed. deletion of the entry can only be done
         // when all of the other doomed entries are deactivated, so that the final live entry
         // can have its generation number reset to zero.
-        if (diskEntry->getGeneration() != 0)
-            scavengeDiskCacheEntries(diskEntry);
+        if (bindData->getGeneration() != 0)
+            scavengeDiskCacheEntries(bindData);
         else
             delete entry;
     } else {
@@ -828,13 +534,13 @@ nsDiskCacheDevice::DeactivateEntry(nsCacheEntry * entry)
         mCacheMap->DataSize() -= entry->DataSize();
 
         // obliterate all knowledge of this entry on disk.
-        deleteDiskCacheEntry(diskEntry);
+        deleteDiskCacheEntry(bindData);
 
         // XXX if this entry resides on a list, then there must have been a collision
         // during the entry's lifetime. use this deactivation as a trigger to scavenge
         // generation numbers, and reset the live entry's generation to zero.
-        if (!PR_CLIST_IS_EMPTY(diskEntry)) {
-            scavengeDiskCacheEntries(diskEntry);
+        if (!PR_CLIST_IS_EMPTY(bindData)) {
+            scavengeDiskCacheEntries(bindData);
         }
         
         // delete entry from memory.
@@ -850,42 +556,42 @@ nsDiskCacheDevice::BindEntry(nsCacheEntry * newEntry)
 {
     nsresult rv;
 
-    // Make sure this entry has its associated nsDiskCacheEntry data attached.
-    nsDiskCacheEntry* newDiskEntry = ensureDiskCacheEntry(newEntry);
-    NS_ASSERTION(newDiskEntry, "nsDiskCacheDevice::BindEntry");
-    if (!newDiskEntry) return NS_ERROR_OUT_OF_MEMORY;
+    // Make sure this entry has its associated nsDiskCacheBindData attached.
+    nsDiskCacheBindData* newBindData = ensureDiskCacheBindData(newEntry);
+    NS_ASSERTION(newBindData, "nsDiskCacheDevice::BindEntry");
+    if (!newBindData) return NS_ERROR_OUT_OF_MEMORY;
     
     // XXX check for cache collision. if an entry exists on disk that has the same
     // hash code as this newly bound entry, AND there is already a bound entry for
     // that key, we need to ask the cache service to doom that entry, since two
     // simultaneous entries that have the same hash code aren't allowed until
     // some sort of chaining mechanism is implemented.
-    nsDiskCacheEntry* oldDiskEntry = mBoundEntries.GetEntry(newEntry->Key()->get());
-    if (oldDiskEntry) {
+    nsDiskCacheBindData* oldBindData = mBoundEntries.GetEntry(newEntry->Key()->get());
+    if (oldBindData) {
         // XXX Hacky liveness test, remove when we've figured this all out.
-        if (oldDiskEntry->getRefCount() > 1) {
+        if (oldBindData->getRefCount() > 1) {
             // set the generation count on the newly bound entry,
             // so that files created will be unique and won't conflict
             // with the doomed entries that are still active.
-            newDiskEntry->setGeneration(oldDiskEntry->getGeneration() + 1);
-            PR_APPEND_LINK(newDiskEntry, oldDiskEntry);
+            newBindData->setGeneration(oldBindData->getGeneration() + 1);
+            PR_APPEND_LINK(newBindData, oldBindData);
             
             // XXX Whom do we tell about this impending doom?
-            nsCacheEntry* oldEntry = oldDiskEntry->getCacheEntry();
+            nsCacheEntry* oldEntry = oldBindData->getCacheEntry();
             // XXX Yes Virginia, a doomed entry can be bound.
             // NS_ASSERTION(!oldEntry->IsDoomed(), "a bound entry is doomed!");
             if (!oldEntry->IsDoomed())
                 nsCacheService::GlobalInstance()->DoomEntry_Locked(oldEntry);
             else
-                mBoundEntries.RemoveEntry(oldDiskEntry);
+                mBoundEntries.RemoveEntry(oldBindData);
         } else {
             // XXX somehow we didn't hear about the entry going away. Ask gordon.
             NS_NOTREACHED("bound disk cache entry with no corresponding cache entry.");
-            mBoundEntries.RemoveEntry(oldDiskEntry);
+            mBoundEntries.RemoveEntry(oldBindData);
         }
     }
 
-    rv = mBoundEntries.AddEntry(newDiskEntry);
+    rv = mBoundEntries.AddEntry(newBindData);
     if (NS_FAILED(rv))
         return rv;
 
@@ -897,7 +603,7 @@ nsDiskCacheDevice::BindEntry(nsCacheEntry * newEntry)
     // this probably isn't needed while the entry is bound,
     // only when the entry is deactivated. this could be
     // the reason disk cache performance suffers.
-    return updateDiskCacheEntry(newDiskEntry);
+    return updateDiskCacheEntry(newBindData);
 }
 
 
@@ -906,8 +612,8 @@ nsDiskCacheDevice::DoomEntry(nsCacheEntry * entry)
 {
     // so it can't be seen by FindEntry() ever again.
     // XXX if entry->mData is null, it's an error
-    nsDiskCacheEntry* diskEntry = ensureDiskCacheEntry(entry);
-    mBoundEntries.RemoveEntry(diskEntry);
+    nsDiskCacheBindData* bindData = ensureDiskCacheBindData(entry);
+    mBoundEntries.RemoveEntry(bindData);
     
     // XXX clear this entry out of the cache map.
     // this is done in deleteDiskCacheEntry().
@@ -922,11 +628,11 @@ nsDiskCacheDevice::GetTransportForEntry(nsCacheEntry * entry,
     NS_ENSURE_ARG_POINTER(entry);
     NS_ENSURE_ARG_POINTER(result);
 
-    nsDiskCacheEntry* diskEntry = ensureDiskCacheEntry(entry);
-    if (!diskEntry) return NS_ERROR_OUT_OF_MEMORY;
+    nsDiskCacheBindData* bindData = ensureDiskCacheBindData(entry);
+    if (!bindData) return NS_ERROR_OUT_OF_MEMORY;
 
 #ifdef MOZ_NEW_CACHE_REUSE_TRANSPORTS
-    nsCOMPtr<nsITransport>& transport = diskEntry->getTransport(mode);
+    nsCOMPtr<nsITransport>& transport = bindData->getTransport(mode);
     if (transport) {
         NS_ADDREF(*result = transport);
         return NS_OK;
@@ -938,7 +644,7 @@ nsDiskCacheDevice::GetTransportForEntry(nsCacheEntry * entry,
     // XXX generate the name of the cache entry from the hash code of its key,
     // modulo the number of files we're willing to keep cached.
     nsCOMPtr<nsIFile> dataFile;
-    nsresult rv = getFileForDiskCacheEntry(diskEntry, PR_FALSE,
+    nsresult rv = getFileForDiskCacheEntry(bindData, PR_FALSE,
                                            getter_AddRefs(dataFile));
     if (NS_SUCCEEDED(rv)) {
         rv = getTransportForFile(dataFile, mode, getter_AddRefs(transport));
@@ -953,9 +659,9 @@ nsresult
 nsDiskCacheDevice::GetFileForEntry(nsCacheEntry *    entry,
                                    nsIFile **        result)
 {
-    nsDiskCacheEntry* diskEntry = ensureDiskCacheEntry(entry);
-    if (!diskEntry) return NS_ERROR_OUT_OF_MEMORY;
-    return getFileForDiskCacheEntry(diskEntry, PR_FALSE, result);
+    nsDiskCacheBindData* bindData = ensureDiskCacheBindData(entry);
+    if (!bindData) return NS_ERROR_OUT_OF_MEMORY;
+    return getFileForDiskCacheEntry(bindData, PR_FALSE, result);
 }
 
 /**
@@ -990,6 +696,7 @@ nsDiskCacheDevice::Visit(nsICacheVisitor * visitor)
     return NS_OK;
 }
 
+
 nsresult
 nsDiskCacheDevice::EvictEntries(const char * clientID)
 {
@@ -1019,9 +726,9 @@ nsDiskCacheDevice::EvictEntries(const char * clientID)
             nsDiskCacheRecord* record = &records[j];
 
             // if the entry is currently in use, then doom it rather than evicting right here.
-            nsDiskCacheEntry* diskEntry = mBoundEntries.GetEntry(record->HashNumber());
-            if (diskEntry) {
-                nsCacheService::GlobalInstance()->DoomEntry_Locked(diskEntry->getCacheEntry());
+            nsDiskCacheBindData* bindData = mBoundEntries.GetEntry(record->HashNumber());
+            if (bindData) {
+                nsCacheService::GlobalInstance()->DoomEntry_Locked(bindData->getCacheEntry());
                 continue;
             }
             
@@ -1159,14 +866,14 @@ nsresult nsDiskCacheDevice::getFileForHashNumber(PLDHashNumber hashNumber, PRBoo
 nsresult nsDiskCacheDevice::getFileForKey(const char* key, PRBool meta,
                                           PRUint32 generation, nsIFile ** result)
 {
-    PLDHashNumber hash = nsDiskCacheEntry::Hash(key);
+    PLDHashNumber hash = nsDiskCacheBindData::Hash(key);
     return getFileForHashNumber(hash, meta, generation, result);
 }
 
-nsresult nsDiskCacheDevice::getFileForDiskCacheEntry(nsDiskCacheEntry * diskEntry, PRBool meta,
+nsresult nsDiskCacheDevice::getFileForDiskCacheEntry(nsDiskCacheBindData * bindData, PRBool meta,
                                                      nsIFile ** result)
 {
-    return getFileForHashNumber(diskEntry->getHashNumber(), meta, diskEntry->getGeneration(), result);
+    return getFileForHashNumber(bindData->getHashNumber(), meta, bindData->getGeneration(), result);
 }
 
 nsresult nsDiskCacheDevice::getTransportForFile(nsIFile* file, nsCacheAccessMode mode, nsITransport ** result)
@@ -1239,7 +946,7 @@ nsresult nsDiskCacheDevice::visitEntries(nsICacheVisitor * visitor)
     rv = updateDiskCacheEntries();
     if (NS_FAILED(rv)) return rv;
 
-    nsDiskCacheEntryInfo* entryInfo = new nsDiskCacheEntryInfo();
+    nsDiskCacheEntryInfo* entryInfo = new nsDiskCacheEntryInfo(DISK_CACHE_DEVICE_ID);
     if (!entryInfo) return NS_ERROR_OUT_OF_MEMORY;
     nsCOMPtr<nsICacheEntryInfo> ref(entryInfo);
     
@@ -1278,14 +985,14 @@ nsresult nsDiskCacheDevice::visitEntries(nsICacheVisitor * visitor)
     return NS_OK;
 }
 
-class UpdateEntryVisitor : public nsDiskCacheEntryHashTable::Visitor {
+class UpdateEntryVisitor : public nsDiskCacheHashTable::Visitor {
     nsDiskCacheDevice* mDevice;
 public:
     UpdateEntryVisitor(nsDiskCacheDevice * device) : mDevice(device) {}
     
-    virtual PRBool VisitEntry(nsDiskCacheEntry * diskEntry)
+    virtual PRBool VisitEntry(nsDiskCacheBindData * bindData)
     {
-        mDevice->updateDiskCacheEntry(diskEntry);
+        mDevice->updateDiskCacheEntry(bindData);
         return PR_TRUE;
     }
 };
@@ -1297,17 +1004,17 @@ nsresult nsDiskCacheDevice::updateDiskCacheEntries()
     return NS_OK;
 }
 
-nsresult nsDiskCacheDevice::updateDiskCacheEntry(nsDiskCacheEntry* diskEntry)
+nsresult nsDiskCacheDevice::updateDiskCacheEntry(nsDiskCacheBindData* bindData)
 {
     nsresult rv;
-    nsCacheEntry* entry = diskEntry->getCacheEntry();
+    nsCacheEntry* entry = bindData->getCacheEntry();
     if (entry->IsMetaDataDirty() || entry->IsEntryDirty() || entry->IsDataDirty()) {
         // make sure this disk entry is known to the cache map.
-        rv = updateCacheMap(diskEntry);
+        rv = updateCacheMap(bindData);
         if (NS_FAILED(rv)) return rv;
 
         nsCOMPtr<nsIFile> file;
-        rv = getFileForDiskCacheEntry(diskEntry, PR_TRUE,
+        rv = getFileForDiskCacheEntry(bindData, PR_TRUE,
                                       getter_AddRefs(file));
         if (NS_FAILED(rv)) return rv;
 
@@ -1332,7 +1039,7 @@ nsresult nsDiskCacheDevice::updateDiskCacheEntry(nsDiskCacheEntry* diskEntry)
 }
 
 
-nsresult nsDiskCacheDevice::readDiskCacheEntry(const char * key, nsDiskCacheEntry ** result)
+nsresult nsDiskCacheDevice::readDiskCacheEntry(const char * key, nsDiskCacheBindData ** result)
 {
     // result should be nsull on cache miss.
     *result = nsnull;
@@ -1377,7 +1084,7 @@ nsresult nsDiskCacheDevice::readDiskCacheEntry(const char * key, nsDiskCacheEntr
     }
     
     // celebrate!
-    *result = ensureDiskCacheEntry(entry);
+    *result = ensureDiskCacheBindData(entry);
     if (!*result) goto error;
     return NS_OK;
 
@@ -1387,13 +1094,13 @@ error:
     return NS_ERROR_NOT_AVAILABLE;
 }
 
-nsresult nsDiskCacheDevice::deleteDiskCacheEntry(nsDiskCacheEntry * diskEntry)
+nsresult nsDiskCacheDevice::deleteDiskCacheEntry(nsDiskCacheBindData * bindData)
 {
     nsresult rv;
     
     // delete the metadata file.
     nsCOMPtr<nsIFile> metaFile;
-    rv = getFileForDiskCacheEntry(diskEntry, PR_TRUE,
+    rv = getFileForDiskCacheEntry(bindData, PR_TRUE,
                                   getter_AddRefs(metaFile));
     if (NS_SUCCEEDED(rv)) {
         rv = metaFile->Delete(PR_FALSE);
@@ -1402,7 +1109,7 @@ nsresult nsDiskCacheDevice::deleteDiskCacheEntry(nsDiskCacheEntry * diskEntry)
     
     // delete the data file
     nsCOMPtr<nsIFile> dataFile;
-    rv = getFileForDiskCacheEntry(diskEntry, PR_FALSE,
+    rv = getFileForDiskCacheEntry(bindData, PR_FALSE,
                                   getter_AddRefs(dataFile));
     if (NS_SUCCEEDED(rv)) {
         rv = dataFile->Delete(PR_FALSE);
@@ -1410,14 +1117,14 @@ nsresult nsDiskCacheDevice::deleteDiskCacheEntry(nsDiskCacheEntry * diskEntry)
     }
     
     // remove from cache map.
-    nsDiskCacheRecord* record = mCacheMap->GetRecord(diskEntry->getHashNumber());
-    if (record->HashNumber() == diskEntry->getHashNumber() && record->FileGeneration() == diskEntry->getGeneration())
+    nsDiskCacheRecord* record = mCacheMap->GetRecord(bindData->getHashNumber());
+    if (record->HashNumber() == bindData->getHashNumber() && record->FileGeneration() == bindData->getGeneration())
         mCacheMap->DeleteRecord(record);
 
     return NS_OK;
 }
 
-nsresult nsDiskCacheDevice::scavengeDiskCacheEntries(nsDiskCacheEntry * diskEntry)
+nsresult nsDiskCacheDevice::scavengeDiskCacheEntries(nsDiskCacheBindData * bindData)
 {
     nsresult rv;
     
@@ -1426,22 +1133,22 @@ nsresult nsDiskCacheDevice::scavengeDiskCacheEntries(nsDiskCacheEntry * diskEntr
     // the liveEntry, if inactive, can have its generation reset
     // to zero.
     PRUint32 doomedEntryCount = 0;
-    nsDiskCacheEntry * youngestDiskEntry = diskEntry;
-    nsCacheEntry * youngestEntry = diskEntry->getCacheEntry();
-    nsDiskCacheEntry * nextDiskEntry = NS_STATIC_CAST(nsDiskCacheEntry*, PR_NEXT_LINK(diskEntry));
-    while (nextDiskEntry != diskEntry) {
-        nsCacheEntry* nextEntry = nextDiskEntry->getCacheEntry();
+    nsDiskCacheBindData * youngestBindData = bindData;
+    nsCacheEntry * youngestEntry = bindData->getCacheEntry();
+    nsDiskCacheBindData * nextBindData = NS_STATIC_CAST(nsDiskCacheBindData*, PR_NEXT_LINK(bindData));
+    while (nextBindData != bindData) {
+        nsCacheEntry* nextEntry = nextBindData->getCacheEntry();
         if (nextEntry->IsDoomed()) {
             ++doomedEntryCount;
-        } else if (nextDiskEntry->getGeneration() > youngestDiskEntry->getGeneration()) {
+        } else if (nextBindData->getGeneration() > youngestBindData->getGeneration()) {
             youngestEntry = nextEntry;
-            youngestDiskEntry = nextDiskEntry;
+            youngestBindData = nextBindData;
         }
-        nextDiskEntry = NS_STATIC_CAST(nsDiskCacheEntry*, PR_NEXT_LINK(nextDiskEntry));
+        nextBindData = NS_STATIC_CAST(nsDiskCacheBindData*, PR_NEXT_LINK(nextBindData));
     }
     
     if (doomedEntryCount == 0 && !youngestEntry->IsDoomed() && !youngestEntry->IsActive()) {
-        PRUint32 generation = youngestDiskEntry->getGeneration();
+        PRUint32 generation = youngestBindData->getGeneration();
         // XXX reset generation number.
         const char* key = youngestEntry->Key()->get();
         nsCOMPtr<nsIFile> oldFile, newFile;
@@ -1472,107 +1179,8 @@ nsresult nsDiskCacheDevice::scavengeDiskCacheEntries(nsDiskCacheEntry * diskEntr
     return NS_OK;
 }
 
-nsresult nsDiskCacheDevice::scanDiskCacheEntries(nsISupportsArray ** result)
-{
-#if 0
-    nsresult rv;
-    
-    // XXX make sure meta data is up to date.
-    rv = updateDiskCacheEntries();
-    if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsISimpleEnumerator> files;
-    rv = mCacheDirectory->GetDirectoryEntries(getter_AddRefs(files));
-    if (NS_FAILED(rv)) return rv;
-    
-    nsCOMPtr<nsISupportsArray> entries = do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID, &rv);
-    if (NS_FAILED(rv)) return rv;
-    
-    PRUint32 newCacheSize = 0;
-    
-    for (PRBool more; NS_SUCCEEDED(files->HasMoreElements(&more)) && more;) {
-        nsCOMPtr<nsISupports> next;
-        rv = files->GetNext(getter_AddRefs(next));
-        if (NS_FAILED(rv)) break;
-        nsCOMPtr<nsIFile> file(do_QueryInterface(next, &rv));
-        if (NS_FAILED(rv)) break;
-        nsXPIDLCString name;
-        rv = file->GetLeafName(getter_Copies(name));
-        if (isMetaDataFile(name)) {
-            // this must be a metadata file.
-            nsCOMPtr<nsIInputStream> input;
-            rv = openInputStream(file, getter_AddRefs(input));
-            if (NS_FAILED(rv)) continue;
-
-            nsDiskCacheEntryInfo* entryInfo = new nsDiskCacheEntryInfo();
-            if (!entryInfo) return NS_ERROR_OUT_OF_MEMORY;
-            nsCOMPtr<nsISupports> ref(entryInfo);
-            rv = entryInfo->Read(input);
-            input->Close();
-            if (NS_FAILED(rv)) return rv;
-
-            // update the cache size.
-            PRUint32 dataSize;
-            entryInfo->GetDataSize(&dataSize);
-            newCacheSize += dataSize;
-
-            // update the cache map.
-            PLDHashNumber hashNumber = nsDiskCacheEntry::Hash(entryInfo->Key());
-            nsDiskCacheRecord* record = mCacheMap->GetRecord(hashNumber);
-            record->SetHashNumber(hashNumber);
-            record->SetEvictionRank(0);
-            record->SetFileGeneration(0);
-            
-            // sort entries by modification time.
-            PRUint32 count;
-            entries->Count(&count);
-            if (count == 0) {
-                rv = entries->AppendElement(entryInfo);
-                if (NS_FAILED(rv)) return rv;
-                continue;
-            }
-            PRUint32 modTime;
-            entryInfo->GetLastModified(&modTime);
-            PRInt32 low = 0, high = count - 1;
-            for (;;) {
-                PRInt32 middle = (low + high) / 2;
-                nsCOMPtr<nsICacheEntryInfo> info = do_QueryElementAt(entries, middle, &rv);
-                if (NS_FAILED(rv)) return rv;
-                PRUint32 modTime1;
-                info->GetLastModified(&modTime1);
-                if (low >= high) {
-                    if (modTime <= modTime1)
-                        rv = entries->InsertElementAt(entryInfo, middle);
-                    else
-                        rv = entries->InsertElementAt(entryInfo, middle + 1);
-                    if (NS_FAILED(rv)) return rv;
-                    break;
-                } else {
-                    if (modTime < modTime1) {
-                        high = middle - 1;
-                    } else if (modTime > modTime1) {
-                        low = middle + 1;
-                    } else {
-                        rv = entries->InsertElementAt(entryInfo, middle);
-                        if (NS_FAILED(rv)) return rv;
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    NS_ADDREF(*result = entries);
-
-    // we've successfully totaled the cache size.
-    mCacheMap->DataSize() = newCacheSize;
-    entries->Count(&mCacheMap->EntryCount());
-#endif
-    return NS_OK;
-}
-
-
-nsresult nsDiskCacheDevice::clobberDiskCache()
+nsresult nsDiskCacheDevice::InitializeCacheDirectory()
 {
     nsresult rv;
     
@@ -1677,8 +1285,8 @@ nsresult nsDiskCacheDevice::evictDiskCacheEntries()
             
         // XXX if this entry is currently active, then leave it alone,
         // as it is likely to be modified very soon.
-        nsDiskCacheEntry* diskEntry = mBoundEntries.GetEntry(record->HashNumber());
-        if (diskEntry) continue;
+        nsDiskCacheBindData* bindData = mBoundEntries.GetEntry(record->HashNumber());
+        if (bindData) continue;
         
         // delete the metadata file.
         nsCOMPtr<nsIFile> metaFile;
@@ -1715,6 +1323,10 @@ nsresult nsDiskCacheDevice::evictDiskCacheEntries()
     return NS_OK;
 }
 
+
+/**
+ *  openCacheMap : called by InitializeCacheDirectory, readCacheMap, writeCacheMap, updateCacheMap
+ */
 nsresult nsDiskCacheDevice::openCacheMap()
 {
     nsresult rv;
@@ -1738,7 +1350,7 @@ nsresult nsDiskCacheDevice::openCacheMap()
     return NS_OK;
 }
 
-nsresult nsDiskCacheDevice::readCacheMap()
+nsresult nsDiskCacheDevice::readCacheMap()      // only called by Init()
 {
     nsresult rv;
     if (!mCacheStream) {
@@ -1749,7 +1361,7 @@ nsresult nsDiskCacheDevice::readCacheMap()
     return rv;
 }
 
-nsresult nsDiskCacheDevice::writeCacheMap()
+nsresult nsDiskCacheDevice::writeCacheMap()     // only called by Shutdown()
 {
     nsresult rv;
     if (!mCacheStream) {
@@ -1760,14 +1372,18 @@ nsresult nsDiskCacheDevice::writeCacheMap()
     return rv;
 }
 
-nsresult nsDiskCacheDevice::updateCacheMap(nsDiskCacheEntry * diskEntry)
+
+/**
+ *  updateCacheMap : called by updateDiskCacheEntry
+ */
+nsresult nsDiskCacheDevice::updateCacheMap(nsDiskCacheBindData * bindData)
 {
     nsresult rv;
     
     // get a record from the cache map, and use the fetch time for eviction ranking.
     PRBool commitBucket = PR_TRUE;
-    nsDiskCacheRecord* record = mCacheMap->GetRecord(diskEntry->getHashNumber());
-    if (record->HashNumber() != diskEntry->getHashNumber()) {
+    nsDiskCacheRecord* record = mCacheMap->GetRecord(bindData->getHashNumber());
+    if (record->HashNumber() != bindData->getHashNumber()) {
         if (record->HashNumber() != 0) {
             // eviction of eldest entry in this bucket.
             evictDiskCacheRecord(record);
@@ -1775,14 +1391,14 @@ nsresult nsDiskCacheDevice::updateCacheMap(nsDiskCacheEntry * diskEntry)
             mCacheMap->EntryCount() += 1;
         }
         // newly bound record. fill in the blanks.
-        record->SetHashNumber(diskEntry->getHashNumber());
+        record->SetHashNumber(bindData->getHashNumber());
         record->SetEvictionRank(0);
-        record->SetFileGeneration(diskEntry->getGeneration());
-    } else if (record->FileGeneration() != diskEntry->getGeneration()) {
+        record->SetFileGeneration(bindData->getGeneration());
+    } else if (record->FileGeneration() != bindData->getGeneration()) {
         // a collision has occurred
-        record->SetHashNumber(diskEntry->getHashNumber());
+        record->SetHashNumber(bindData->getHashNumber());
         record->SetEvictionRank(0);
-        record->SetFileGeneration(diskEntry->getGeneration());
+        record->SetFileGeneration(bindData->getGeneration());
     } else {
         commitBucket = PR_FALSE;
         record->SetEvictionRank(record->EvictionRank() + 1);
@@ -1816,9 +1432,9 @@ nsresult nsDiskCacheDevice::evictDiskCacheRecord(nsDiskCacheRecord * record)
     nsresult rv;
     
     // if the entry is currently in use, then doom it rather than evicting right here.
-    nsDiskCacheEntry* diskEntry = mBoundEntries.GetEntry(record->HashNumber());
-    if (diskEntry)
-        return nsCacheService::GlobalInstance()->DoomEntry_Locked(diskEntry->getCacheEntry());
+    nsDiskCacheBindData* bindData = mBoundEntries.GetEntry(record->HashNumber());
+    if (bindData)
+        return nsCacheService::GlobalInstance()->DoomEntry_Locked(bindData->getCacheEntry());
 
     // delete the metadata file.
     nsCOMPtr<nsIFile> metaFile;

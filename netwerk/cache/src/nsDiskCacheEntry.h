@@ -17,7 +17,8 @@
  * Copyright (C) 2001 Netscape Communications Corporation.  All
  * Rights Reserved.
  * 
- * Contributor(s): 
+ * Contributor(s):
+ *    Gordon Sheridan  <gordon@netscape.com>
  *    Patrick C. Beard <beard@netscape.com>
  */
 
@@ -25,162 +26,149 @@
 #define _nsDiskCacheEntry_h_
 
 #include "nspr.h"
-#include "pldhash.h"
+#include "nscore.h"
+#include "nsError.h"
 
-#include "nsISupports.h"
+#include "nsIInputStream.h"
+#include "nsIOutputStream.h"
+#include "nsICacheVisitor.h"
+
 #include "nsCacheEntry.h"
 
-#ifdef MOZ_NEW_CACHE_REUSE_TRANSPORTS
-#include "nsITransport.h"
+
+/******************************************************************************
+ *  MetaData
+ *****************************************************************************/
+struct MetaDataHeader {
+    PRUint32        mHeaderSize;
+//  PRUint32        mHashNumber;    // XXX
+//  PRUint32        mMetaLocation;  // XXX
+    PRInt32         mFetchCount;
+    PRUint32        mLastFetched;
+    PRUint32        mLastModified;
+    PRUint32        mExpirationTime;
+    PRUint32        mDataSize;
+    PRUint32        mKeySize;
+    PRUint32        mMetaDataSize;
+//  void *          mKeyPtrSpace;       // XXX  don't need this
+//  void *          mMetaDataPtrSpace;  // XXX  don't need this, we'll calculate it when necessary
+    // followed by null-terminated key and metadata string values.
+
+    MetaDataHeader()
+        :   mHeaderSize(sizeof(MetaDataHeader)),
+            mFetchCount(0),
+            mLastFetched(0),
+            mLastModified(0),
+            mExpirationTime(0),
+            mDataSize(0),
+            mKeySize(0),
+            mMetaDataSize(0)
+    {
+    }
+
+    MetaDataHeader(nsCacheEntry* entry)
+        :   mHeaderSize(sizeof(MetaDataHeader)),
+            mFetchCount(entry->FetchCount()),
+            mLastFetched(entry->LastFetched()),
+            mLastModified(entry->LastModified()),
+            mExpirationTime(entry->ExpirationTime()),
+            mDataSize(entry->DataSize()),
+            mKeySize(entry->Key()->Length() + 1),
+            mMetaDataSize(0)
+    {
+    }
+    
+    void Swap()
+    {
+#if defined(IS_LITTLE_ENDIAN)
+        mHeaderSize     = ::PR_htonl(mHeaderSize);
+        mFetchCount     = ::PR_htonl(mFetchCount);
+        mLastFetched    = ::PR_htonl(mLastFetched);
+        mLastModified   = ::PR_htonl(mLastModified);
+        mExpirationTime = ::PR_htonl(mExpirationTime);
+        mDataSize       = ::PR_htonl(mDataSize);
+        mKeySize        = ::PR_htonl(mKeySize);
+        mMetaDataSize   = ::PR_htonl(mMetaDataSize);
 #endif
+    }
+    
+    void Unswap()
+    {
+#if defined(IS_LITTLE_ENDIAN)
+        mHeaderSize     = ::PR_ntohl(mHeaderSize);
+        mFetchCount     = ::PR_ntohl(mFetchCount);
+        mLastFetched    = ::PR_ntohl(mLastFetched);
+        mLastModified   = ::PR_ntohl(mLastModified);
+        mExpirationTime = ::PR_ntohl(mExpirationTime);
+        mDataSize       = ::PR_ntohl(mDataSize);
+        mKeySize        = ::PR_ntohl(mKeySize);
+        mMetaDataSize   = ::PR_ntohl(mMetaDataSize);
+#endif
+    }
+};
+
+struct MetaDataFile : MetaDataHeader {
+    char*           mKey;
+    char*           mMetaData;
+
+    MetaDataFile()
+        :   mKey(nsnull), mMetaData(nsnull)
+    {
+    }
+    
+    MetaDataFile(nsCacheEntry* entry)
+        :   MetaDataHeader(entry),
+            mKey(nsnull), mMetaData(nsnull)
+    {
+    }
+    
+    ~MetaDataFile()
+    {
+        delete[] mKey;
+        delete[] mMetaData;
+    }
+    
+    nsresult Init(nsCacheEntry* entry)
+    {
+        PRUint32 size = 1 + entry->Key()->Length();
+        mKey = new char[size];
+        if (!mKey) return NS_ERROR_OUT_OF_MEMORY;
+        nsCRT::memcpy(mKey, entry->Key()->get(), size);
+        return entry->FlattenMetaData(&mMetaData, &mMetaDataSize);
+    }
+
+    nsresult Read(nsIInputStream* input);
+    nsresult Write(nsIOutputStream* output);
+};
 
 
 /******************************************************************************
- *  nsDiskCacheEntry
- *
- *  Created for disk cache specific data and stored in nsCacheEntry.mData as
- *  an nsISupports.  Also stored in nsDiscCacheEntryHashTable, with collisions
- *  linked by the PRCList.
- *
+ *  nsDiskCacheEntryInfo
  *****************************************************************************/
-
-class nsDiskCacheEntry : public nsISupports, public PRCList {
+class nsDiskCacheEntryInfo : public nsICacheEntryInfo {
 public:
     NS_DECL_ISUPPORTS
+    NS_DECL_NSICACHEENTRYINFO
 
-    nsDiskCacheEntry(nsCacheEntry* entry)
-        :   mCacheEntry(entry),
-            mGeneration(0)
+    nsDiskCacheEntryInfo(const char * deviceID)
+        : mDeviceID(deviceID)
     {
         NS_INIT_ISUPPORTS();
-        PR_INIT_CLIST(this);
-        mHashNumber = Hash(entry->Key()->get());
     }
 
-    virtual ~nsDiskCacheEntry()
-    {
-        PR_REMOVE_LINK(this);
-    }
-
-#ifdef MOZ_NEW_CACHE_REUSE_TRANSPORTS
-    /**
-     * Maps a cache access mode to a cached nsITransport for that access
-     * mode. We keep these cached to avoid repeated trips to the
-     * file transport service.
-     */
-    nsCOMPtr<nsITransport>& getTransport(nsCacheAccessMode mode)
-    {
-        return mTransports[mode - 1];
-    }
-#endif
+    virtual ~nsDiskCacheEntryInfo() {}
     
-    nsCacheEntry* getCacheEntry()
+    nsresult Read(nsIInputStream * input)
     {
-        return mCacheEntry;
+        return mMetaDataFile.Read(input);
     }
     
-    PRUint32 getGeneration()
-    {
-        return mGeneration;
-    }
-    
-    void setGeneration(PRUint32 generation)
-    {
-        mGeneration = generation;
-    }
-    
-    PLDHashNumber getHashNumber()
-    {
-        return mHashNumber;
-    }
-    
-    nsrefcnt getRefCount()
-    {
-        return mRefCnt;
-    }
-    
-    static PLDHashNumber Hash(const char* key);
+    const char* Key() { return mMetaDataFile.mKey; }
     
 private:
-#ifdef MOZ_NEW_CACHE_REUSE_TRANSPORTS
-    nsCOMPtr<nsITransport>  mTransports[3];
-#endif
-    nsCacheEntry*           mCacheEntry;    // back pointer to parent nsCacheEntry
-    PRUint32                mGeneration;    // XXX part of nsDiskCacheRecord
-    PLDHashNumber           mHashNumber;    // XXX part of nsDiskCacheRecord
-// XXX    nsDiskCacheRecord       mMapRecord;
+    const char * mDeviceID;
+    MetaDataFile mMetaDataFile;
 };
 
-
-/******************************************************************************
- *  nsDiskCacheEntryHashTable
- *
- *  Used to keep track of nsDiskCacheEntries associated with active/bound (and
- *  possibly doomed) entries.  Lookups on 4 byte disk hash to find collisions
- *  (which need to be doomed, instead of just evicted.  Collisions are linked
- *  using a PRCList to keep track of current generation number.
- *
- *****************************************************************************/
-
-class nsDiskCacheEntryHashTable {
-public:
-    nsDiskCacheEntryHashTable();
-    ~nsDiskCacheEntryHashTable();
-
-    nsresult                Init();
-
-    nsDiskCacheEntry *      GetEntry(const char *               key);
-    nsDiskCacheEntry *      GetEntry(PLDHashNumber              key);
-    nsresult                AddEntry(nsDiskCacheEntry *         entry);
-    void                    RemoveEntry(nsDiskCacheEntry *      entry);
-    
-    class Visitor {
-    public:
-        virtual PRBool      VisitEntry(nsDiskCacheEntry *       entry) = 0;
-    };
-    
-    void                    VisitEntries(Visitor *              visitor);
-    
-private:
-    struct HashTableEntry : PLDHashEntryHdr {
-        nsDiskCacheEntry *  mDiskCacheEntry;                    // STRONG ref?
-    };
-
-    // PLDHashTable operation callbacks
-    static const void *     PR_CALLBACK GetKey(PLDHashTable *               table,
-                                               PLDHashEntryHdr *            entry);
-
-    static PLDHashNumber    PR_CALLBACK HashKey(PLDHashTable *              table,
-                                                const void *                key);
-
-    static PRBool           PR_CALLBACK MatchEntry(PLDHashTable *           table,
-                                                   const PLDHashEntryHdr *  entry,
-                                                   const void *             key);
-
-    static void             PR_CALLBACK MoveEntry(PLDHashTable *            table,
-                                                  const PLDHashEntryHdr *   from,
-                                                  PLDHashEntryHdr       *   to);
-
-    static void             PR_CALLBACK ClearEntry(PLDHashTable *           table,
-                                                   PLDHashEntryHdr *        entry);
-
-    static void             PR_CALLBACK Finalize(PLDHashTable *table);
-
-    static
-    PLDHashOperator         PR_CALLBACK FreeCacheEntries(PLDHashTable *     table,
-                                                         PLDHashEntryHdr *  hdr,
-                                                         PRUint32           number,
-                                                         void *             arg);
-    static
-    PLDHashOperator         PR_CALLBACK VisitEntry(PLDHashTable *           table,
-                                                   PLDHashEntryHdr *        hdr,
-                                                   PRUint32                 number,
-                                                   void *                   arg);
-                                     
-    // member variables
-    static PLDHashTableOps ops;
-    PLDHashTable           table;
-    PRBool                 initialized;
-};
 
 #endif /* _nsDiskCacheEntry_h_ */

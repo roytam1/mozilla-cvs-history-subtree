@@ -130,7 +130,7 @@ nsDiskCacheMap::Close()
     
     // XXX dealloc cache map memory?
     
-    // XXX return rv ? rv : rv2;
+//    return rv ? rv : rv2;
     return rv2;
 }
 
@@ -139,14 +139,14 @@ nsresult
 nsDiskCacheMap::AddRecord( nsDiskCacheRecord *  mapRecord,
                            nsDiskCacheRecord *  oldRecord)
 {
-    return NS_OK;
+    
 }
 
 
 nsresult
 nsDiskCacheMap::UpdateRecord( nsDiskCacheRecord *  mapRecord)
 {
-    return NS_OK;
+
 }
 
 
@@ -159,7 +159,7 @@ nsDiskCacheMap::FindRecord( PRUint32  hashNumber, nsDiskCacheRecord *  mapRecord
     
     for (int i = 0; i < kRecordsPerBucket; ++i) {
         if (bucket->mRecords[i].HashNumber() == 0)  break;
-        if (bucket->mRecords[i].HashNumber() == hashNumber) {
+        if (bucket->mRecords[i].HashNumber() == mapRecord->HashNumber()) {
             *mapRecord = bucket->mRecords[i];    // copy the record
             return NS_OK;
         }
@@ -212,8 +212,8 @@ void nsDiskCacheMap::Reset()
     mHeader.mIsDirty = PR_TRUE;
 
     for (PRUint32 b = 0; b < kBucketsPerTable; ++b) {
-        nsDiskCacheBucket& bucket = mBuckets[b];
-        ::memset(&bucket, 0, sizeof(nsDiskCacheBucket));
+        nsDiskCacheBucket * bucket = &mBuckets[b];
+        ::memset(bucket, 0, sizeof(nsDiskCacheBucket));
     }
 }
 

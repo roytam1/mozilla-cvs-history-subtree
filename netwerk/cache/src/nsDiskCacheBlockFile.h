@@ -24,7 +24,8 @@
 #ifndef _nsDiskCacheBlockFile_h_
 #define _nsDiskCacheBlockFile_h_
 
-#include "nsANSIFileStreams.h"
+#include "nsILocalFile.h"
+#include "nspr.h"
 
 enum { kBitMapBytes = 4096 };
 
@@ -48,7 +49,7 @@ typedef struct BlockFile {
 class nsDiskCacheBlockFile {
 public:
     nsDiskCacheBlockFile()
-           : mStream(nsnull)
+           : mFD(nsnull)
            , mBlockSize(0)
            , mEndOfFile(0)
            , mBitMap(nsnull)
@@ -73,7 +74,7 @@ public:
 /**
  *  Data members
  */
-    nsANSIFileStream *          mStream;
+    PRFileDesc *                mFD;
     PRUint32                    mBlockSize;
     PRUint32                    mEndOfFile;
     PRUint8 *                   mBitMap;      // XXX future: array of bit map blocks

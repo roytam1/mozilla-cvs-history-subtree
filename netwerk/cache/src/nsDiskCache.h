@@ -26,15 +26,5 @@
 #ifndef _nsDiskCache_h_
 #define _nsDiskCache_h_
 
-#include "prtypes.h"
-#include "prnetdb.h"
-#include "nsDebug.h"
-
-
-
-/*
-
-
-*/
 
 #endif // _nsDiskCache_h_
