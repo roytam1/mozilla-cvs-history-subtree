@@ -358,12 +358,29 @@ PRBool nsMapiRegistryUtils::IsDefaultMailClient()
              if (index != kNotFound) {
                  result.Truncate(index + strExtension.Length());
              }
-             nsCAutoString thisApp (thisApplication()) ;
-             return (result == thisApp);
+             nsCAutoString thisApp (thisApplication());
+             
+             // if result == thisApp, that by itself isn't a strong enough indication that everything
+             // is ok...also check HKLM\Software\Classes\mailto\shell\open\command
+             if (result == thisApp)
+             {
+               keyName = "Software\\Classes\\mailto\\shell\\open\\command";
+               nsCAutoString result;
+               GetRegistryKey(HKEY_LOCAL_MACHINE, keyName.get(), "", result);
+               if (!result.IsEmpty()) {
+                  nsCAutoString strExtension;
+                  strExtension.Assign(EXE_EXTENSION);
+                  ToUpperCase(result);
+                  ToUpperCase(strExtension);
+                  PRInt32 index = result.RFind(strExtension.get());
+                  if (index != kNotFound)
+                    result.Truncate(index + strExtension.Length());    
+                  return (result == thisApp);
+               }
+             }
         }
     }
     return PR_FALSE;
-
 }
 
 PRBool nsMapiRegistryUtils::IsDefaultNewsClient()
