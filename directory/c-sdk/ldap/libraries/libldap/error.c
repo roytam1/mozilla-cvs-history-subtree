@@ -34,7 +34,7 @@ static struct ldaperror ldap_errlist[] = {
 	{ LDAP_SIZELIMIT_EXCEEDED, 		"Sizelimit exceeded" },
 	{ LDAP_COMPARE_FALSE, 			"Compare false" },
 	{ LDAP_COMPARE_TRUE, 			"Compare true" },
-	{ LDAP_STRONG_AUTH_NOT_SUPPORTED,	"Strong authentication not supported" },
+	{ LDAP_STRONG_AUTH_NOT_SUPPORTED,	"Authentication method not supported" },
 	{ LDAP_STRONG_AUTH_REQUIRED, 		"Strong authentication required" },
 	{ LDAP_PARTIAL_RESULTS, 		"Partial results and referral received" },
 	{ LDAP_REFERRAL, 			"Referral received" },
@@ -209,6 +209,7 @@ ldap_get_lderrno( LDAP *ld, char **m, char **s )
  * between threads they *must* perform their own locking around the
  * session handle or they must install a "set lderrno" thread callback
  * function.
+ * 
  */
 int
 LDAP_CALL
@@ -218,10 +219,10 @@ ldap_set_lderrno( LDAP *ld, int e, char *m, char *s )
 		return( LDAP_PARAM_ERROR );
 	}
 
-	LDAP_MUTEX_LOCK( ld, LDAP_ERR_LOCK );
 	if ( ld->ld_set_lderrno_fn != NULL ) {
 		ld->ld_set_lderrno_fn( e, m, s, ld->ld_lderrno_arg );
 	} else {
+        LDAP_MUTEX_LOCK( ld, LDAP_ERR_LOCK );
 		ld->ld_errno = e;
 		if ( ld->ld_matched ) {
 			NSLDAPI_FREE( ld->ld_matched );
@@ -231,8 +232,8 @@ ldap_set_lderrno( LDAP *ld, int e, char *m, char *s )
 			NSLDAPI_FREE( ld->ld_error );
 		}
 		ld->ld_error = s;
+        LDAP_MUTEX_UNLOCK( ld, LDAP_ERR_LOCK );
 	}
-	LDAP_MUTEX_UNLOCK( ld, LDAP_ERR_LOCK );
 
 	return( LDAP_SUCCESS );
 }
@@ -326,6 +327,7 @@ nsldapi_parse_result( LDAP *ld, int msgtype, BerElement *rber, int *errcodep,
 	BerElement	ber;
 	unsigned long	len;
 	int		berrc, err, errcode;
+	long		along;
 	char		*m, *e;
 
 	/*
@@ -370,10 +372,12 @@ nsldapi_parse_result( LDAP *ld, int msgtype, BerElement *rber, int *errcodep,
 	ber = *rber;		/* struct copy */
 
 	if ( NSLDAPI_LDAP_VERSION( ld ) < LDAP_VERSION2 ) {
-		berrc = ber_scanf( &ber, "{ia}", &errcode, &e );
+		berrc = ber_scanf( &ber, "{ia}", &along, &e );
+		errcode = (int)along;	/* XXX lossy cast */
 	} else {
-		if (( berrc = ber_scanf( &ber, "{iaa", &errcode, &m, &e ))
+		if (( berrc = ber_scanf( &ber, "{iaa", &along, &m, &e ))
 		    != LBER_ERROR ) {
+			errcode = (int)along;	/* XXX lossy cast */
 			/* check for optional referrals */
 			if ( ber_peek_tag( &ber, &len ) == LDAP_TAG_REFERRAL ) {
 				if ( referralsp == NULL ) {

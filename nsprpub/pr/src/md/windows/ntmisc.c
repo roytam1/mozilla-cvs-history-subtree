@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 /*
@@ -44,14 +28,9 @@ char *_PR_MD_GET_ENV(const char *name)
     return getenv(name);
 }
 
-/*
-** _PR_MD_PUT_ENV() -- add or change environment variable
-**
-**
-*/
 PRIntn _PR_MD_PUT_ENV(const char *name)
 {
-    return(putenv(name));
+    return putenv(name);
 }
 
 
@@ -686,14 +665,6 @@ PRStatus _MD_CreateFileMap(PRFileMap *fmap, PRInt64 size)
     }
     return PR_SUCCESS;
 }
-
-PRInt32 _MD_GetMemMapAlignment(void)
-{
-    SYSTEM_INFO info;
-    GetSystemInfo(&info);
-    return info.dwAllocationGranularity;
-}
-
 #include "prlog.h"
 extern PRLogModuleInfo *_pr_shma_lm;
 void * _MD_MemMap(
@@ -822,9 +793,9 @@ PRInt32 _PR_MD_ATOMIC_ADD(PRInt32 *intp, PRInt32 val)
     {
         mov ecx, intp
         mov eax, val
-        mov edx, eax
+        mov ebx, val
         lock xadd dword ptr [ecx], eax
-        add eax, edx
+        add eax, ebx
     }
 #endif /* __GNUC__ */
 }

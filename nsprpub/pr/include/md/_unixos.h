@@ -1,35 +1,19 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
-/* 
- * The contents of this file are subject to the Mozilla Public
- * License Version 1.1 (the "License"); you may not use this file
- * except in compliance with the License. You may obtain a copy of
- * the License at http://www.mozilla.org/MPL/
+/*
+ * The contents of this file are subject to the Netscape Public License
+ * Version 1.1 (the "NPL"); you may not use this file except in
+ * compliance with the NPL.  You may obtain a copy of the NPL at
+ * http://www.mozilla.org/NPL/
  * 
- * Software distributed under the License is distributed on an "AS
- * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
- * implied. See the License for the specific language governing
- * rights and limitations under the License.
+ * Software distributed under the NPL is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the NPL
+ * for the specific language governing rights and limitations under the
+ * NPL.
  * 
- * The Original Code is the Netscape Portable Runtime (NSPR).
- * 
- * The Initial Developer of the Original Code is Netscape
- * Communications Corporation.  Portions created by Netscape are 
- * Copyright (C) 1998-2000 Netscape Communications Corporation.  All
- * Rights Reserved.
- * 
- * Contributor(s):
- * 
- * Alternatively, the contents of this file may be used under the
- * terms of the GNU General Public License Version 2 or later (the
- * "GPL"), in which case the provisions of the GPL are applicable 
- * instead of those above.  If you wish to allow use of your 
- * version of this file only under the terms of the GPL and not to
- * allow others to use your version of this file under the MPL,
- * indicate your decision by deleting the provisions above and
- * replace them with the notice and other provisions required by
- * the GPL.  If you do not delete the provisions above, a recipient
- * may use your version of this file under either the MPL or the
- * GPL.
+ * The Initial Developer of this code under the NPL is Netscape
+ * Communications Corporation.  Portions created by Netscape are
+ * Copyright (C) 1998 Netscape Communications Corporation.  All Rights
+ * Reserved.
  */
 
 #ifndef prunixos_h___
@@ -252,9 +236,6 @@ extern PRStatus _MD_KillUnixProcess(struct PRProcess *process);
 
 /************************************************************************/
 
-extern void _MD_EnableClockInterrupts(void);
-extern void _MD_DisableClockInterrupts(void);
-
 #define _MD_START_INTERRUPTS			_MD_StartInterrupts
 #define _MD_STOP_INTERRUPTS				_MD_StopInterrupts
 #define _MD_DISABLE_CLOCK_INTERRUPTS	_MD_DisableClockInterrupts
@@ -287,16 +268,14 @@ extern void		_MD_Wakeup_CPUs(void);
 
 /************************************************************************/
 
-#define _MD_INIT_FILEDESC(fd)
+extern void		_MD_InitFileDesc(PRFileDesc *fd);
+#define _MD_INIT_FILEDESC			_MD_InitFileDesc
 
 extern void		_MD_MakeNonblock(PRFileDesc *fd);
 #define _MD_MAKE_NONBLOCK			_MD_MakeNonblock		
 
 /************************************************************************/
 
-#if !defined(_PR_PTHREADS)
-
-extern void		_MD_InitSegs(void);
 extern PRStatus	_MD_AllocSegment(PRSegment *seg, PRUint32 size,
 				void *vaddr);
 extern void		_MD_FreeSegment(PRSegment *seg);
@@ -304,8 +283,6 @@ extern void		_MD_FreeSegment(PRSegment *seg);
 #define _MD_INIT_SEGS			_MD_InitSegs
 #define _MD_ALLOC_SEGMENT		_MD_AllocSegment
 #define _MD_FREE_SEGMENT		_MD_FreeSegment
-
-#endif /* !defined(_PR_PTHREADS) */
 
 /************************************************************************/
 
@@ -324,6 +301,7 @@ extern void		_MD_FreeSegment(PRSegment *seg);
 
 extern PRInt32 _MD_AvailableSocket(PRInt32 osfd);
 
+extern void _MD_InitSegs(void);
 extern void _MD_StartInterrupts(void);
 extern void _MD_StopInterrupts(void);
 extern void _MD_DisableClockInterrupts(void);
@@ -458,12 +436,6 @@ extern PRStatus _MD_setsockopt(PRFileDesc *fd, PRInt32 level,
 extern PRStatus _MD_set_fd_inheritable(PRFileDesc *fd, PRBool inheritable);
 #define _MD_SET_FD_INHERITABLE _MD_set_fd_inheritable
 
-extern void _MD_init_fd_inheritable(PRFileDesc *fd, PRBool imported);
-#define _MD_INIT_FD_INHERITABLE _MD_init_fd_inheritable
-
-extern void _MD_query_fd_inheritable(PRFileDesc *fd);
-#define _MD_QUERY_FD_INHERITABLE _MD_query_fd_inheritable
-
 extern PRStatus _MD_gethostname(char *name, PRUint32 namelen);
 #define _MD_GETHOSTNAME		_MD_gethostname
 
@@ -482,8 +454,6 @@ struct _MDFileMap {
 
 extern PRStatus _MD_CreateFileMap(struct PRFileMap *fmap, PRInt64 size);
 #define _MD_CREATE_FILE_MAP _MD_CreateFileMap
-
-#define _MD_GET_MEM_MAP_ALIGNMENT() PR_GetPageSize()
 
 extern void * _MD_MemMap(struct PRFileMap *fmap, PRInt64 offset,
         PRUint32 len);
