@@ -918,6 +918,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
     },
 
 #ifdef USE_DEFAULT_BROWSER
+#else
     { "HTTP Handler",
       NS_HTTPPROTOCOLHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "http",
@@ -927,7 +928,7 @@ static const nsModuleComponentInfo gNetModuleInfo[] = {
       NS_HTTPPROTOCOLHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "https",
       nsHttpHandler::Create },
-#else
+
     { "absync (really HTTP) Handler",
       NS_HTTPPROTOCOLHANDLER_CID,
       NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX "absync",
