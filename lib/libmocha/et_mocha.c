@@ -259,7 +259,7 @@ et_event_handler(JSEvent * e)
 	 *    would cause lossage of mousemove messages we're sending all
 	 *    mousemoves between mousedowns and ups so that if the scripts
 	 *    starts capturing during the onmousedown handler, the mousemoves
-	 *    we would have lost will be sitting on the JS queue.
+	 *    we would have lost will be sitting on the JS queue. */
 	/* TRUE unless explicitly denied */
 	if (LM_EventCaptureCheck(e->ce.context, EVENT_MOUSEMOVE)) {
 	    if (lm_InputEvent(e->ce.context, lo_element, e, &rval) &&
