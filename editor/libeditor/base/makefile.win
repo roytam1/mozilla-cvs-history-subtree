@@ -46,6 +46,7 @@ REQUIRES        = xpcom \
                   gfx \
                   widget \
                   xuldoc \
+                  commandhandler \
                   $(NULL)
 
 CPPSRCS =                          \
