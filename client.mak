@@ -94,13 +94,11 @@ CVS_FLAGS=$(CVS_FLAGS) -d "$(CVSROOT)"
 !endif
 !endif
 
-CVSCO = cvs -q $(CVS_FLAGS) co $(CVS_BRANCH) $(CVS_CO_FLAGS) -P
-
 !if "$(MOZ_CO_FLAGS)" != ""
-CVSCO = cvs -q $(CVS_FLAGS) co $(CVS_BRANCH) $(MOZ_CO_FLAGS)
+CVSCO = cvs -q $(CVS_FLAGS) co $(CVS_BRANCH) $(MOZ_CO_FLAGS) $(CVS_CO_FLAGS)
 CVSCO_TAG = cvs -q co $(MOZ_CO_FLAGS)
 !else
-CVSCO = cvs -q $(CVS_FLAGS) co $(CVS_BRANCH) -P
+CVSCO = cvs -q $(CVS_FLAGS) co $(CVS_BRANCH) $(CVS_CO_FLAGS) -P
 CVSCO_TAG = cvs -q co -P
 !endif
 
