@@ -2379,7 +2379,10 @@ nsLineLayout::VerticalAlignFrames(PerSpanData* psd)
     if (pfd->mVerticalAlign == VALIGN_OTHER) {
       // Text frames do not contribute to the min/max Y values for the
       // line (instead their parent frame's font-size contributes).
-      if (!pfd->GetFlag(PFD_ISTEXTFRAME)) {
+      //XXXrbs -- disable this restriction because it causes text frames
+      //          to jam together when 'font-size-adjust' is enabled
+      //          and layout is using dynamic font heights (bug 20394)
+      if (PR_TRUE) { // was: !pfd->GetFlag(PFD_ISTEXTFRAME)) {
         nscoord yTop, yBottom;
         if (frameSpan) {
           // For spans that were are now placing, use their position

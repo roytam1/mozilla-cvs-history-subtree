@@ -89,13 +89,10 @@ public:
   NS_IMETHOD GetMetricsFor(const nsFont& aFont, nsIFontMetrics** aResult);
   NS_IMETHOD AllocateFromShell(size_t aSize, void** aResult);
   NS_IMETHOD FreeToShell(size_t aSize, void* aFreeChunk);
-  NS_IMETHOD GetDefaultFont(nsFont& aResult);
-  NS_IMETHOD SetDefaultFont(const nsFont& aFont);
-  virtual const nsFont& GetDefaultFontDeprecated();
-  NS_IMETHOD GetDefaultFixedFont(nsFont& aResult);
-  NS_IMETHOD SetDefaultFixedFont(const nsFont& aFont);
-  virtual const nsFont& GetDefaultFixedFontDeprecated();
-  NS_IMETHOD GetCachedBoolPref(PRUint32 prefType, PRBool &aValue);
+  NS_IMETHOD GetDefaultFont(const PRInt32 aFontID, nsFont& aResult);
+  NS_IMETHOD SetDefaultFont(const PRInt32 aFontID, const nsFont& aFont);
+  NS_IMETHOD GetCachedBoolPref(const PRUint32 aPrefType, PRBool& aValue);
+  NS_IMETHOD GetCachedIntPref(const PRUint32 aPrefType, PRInt32& aValue);
 
   NS_IMETHOD GetFontScaler(PRInt32* aResult);
   NS_IMETHOD SetFontScaler(PRInt32 aScaler);
@@ -203,8 +200,16 @@ protected:
   nsILinkHandler*       mLinkHandler;   // [WEAK]
   nsISupports*          mContainer;     // [WEAK]
   nsCOMPtr<nsILookAndFeel> mLookAndFeel;
-  nsFont                mDefaultFont;
+
+  nsFont                mDefaultVariableFont;
   nsFont                mDefaultFixedFont;
+  nsFont                mDefaultSerifFont;
+  nsFont                mDefaultSansSerifFont;
+  nsFont                mDefaultMonospaceFont;
+  nsFont                mDefaultCursiveFont;
+  nsFont                mDefaultFantasyFont;
+  nscoord               mMinimumFontSize;
+
   PRInt32               mFontScaler;
   PRPackedBool          mUseDocumentFonts;        // set in GetUserPrefs
   nscolor               mDefaultColor;            // set in GetUserPrefs
@@ -259,6 +264,18 @@ protected:
 private:
   friend int PR_CALLBACK PrefChangedCallback(const char*, void*);
   void   PreferenceChanged(const char* aPrefName);
+
+  // these are private, use the list in nsFont.h if you want a public list
+  enum {
+    eDefaultFont_Variable,
+    eDefaultFont_Fixed,
+    eDefaultFont_Serif,
+    eDefaultFont_SansSerif,
+    eDefaultFont_Monospace,
+    eDefaultFont_Cursive,
+    eDefaultFont_Fantasy,
+    eDefaultFont_COUNT
+  };
 };
 
 #endif /* nsPresContext_h___ */

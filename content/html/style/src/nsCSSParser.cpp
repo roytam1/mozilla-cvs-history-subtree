@@ -3525,7 +3525,13 @@ PRBool CSSParserImpl::ParseSingleValueProperty(PRInt32& aErrorCode,
       return bRetVal;
     }
   case eCSSProperty_font_size_adjust:
-    return ParseVariant(aErrorCode, aValue, VARIANT_HON,
+    // NONSTANDARD: *** We should be using VARIANT_HON for strict compliance.
+    // However, we allow VARIANT_AUTO for the UA to compute the actual value of
+    // the font-size-adjust on the fly using the current font. This means that the
+    // UA will automatically enforce the x-height of the current font in subsequent
+    // child elements, without requesting authors to have an apriori knowledge
+    // of the values of font-size-adjust for the fonts that they wish to use.
+    return ParseVariant(aErrorCode, aValue, VARIANT_HON | VARIANT_AUTO,
                         nsnull);
   case eCSSProperty_font_stretch:
     return ParseVariant(aErrorCode, aValue, VARIANT_HMK,

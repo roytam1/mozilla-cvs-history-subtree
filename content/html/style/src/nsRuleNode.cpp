@@ -364,6 +364,19 @@ nsRuleNode::~nsRuleNode()
 }
 
 NS_IMETHODIMP 
+nsRuleNode::GetBits(PRInt32 aType, PRUint32* aResult)
+{
+  switch (aType) {
+    case eNoneBits :    *aResult = mNoneBits;    break;
+    case eInheritBits : *aResult = mInheritBits; break;
+    default:
+      NS_ERROR("invalid arg");
+      return NS_ERROR_INVALID_ARG;
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP 
 nsRuleNode::Transition(nsIStyleRule* aRule, nsIRuleNode** aResult)
 {
   nsCOMPtr<nsIRuleNode> next;
@@ -929,9 +942,9 @@ nsRuleNode::SetDefaultOnRoot(const nsStyleStructID& aSID, nsIStyleContext* aCont
   switch (aSID) {
     case eStyleStruct_Font: 
     {
-      const nsFont& defaultFont = mPresContext->GetDefaultFontDeprecated();
-      const nsFont& defaultFixedFont = mPresContext->GetDefaultFixedFontDeprecated();
-      nsStyleFont* fontData = new (mPresContext) nsStyleFont(defaultFont, defaultFixedFont);
+      nsFont defaultFont;
+      mPresContext->GetDefaultFont(kPresContext_DefaultVariableFont_ID, defaultFont);
+      nsStyleFont* fontData = new (mPresContext) nsStyleFont(defaultFont);
       aContext->SetStyle(eStyleStruct_Font, *fontData);
       return fontData;
     }
@@ -1089,115 +1102,38 @@ nsRuleNode::gComputeStyleDataFn[] = {
   nsnull
 };
 
-const nsStyleStruct* 
-nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
-                            nsIStyleContext* aContext, 
-                            nsRuleNode* aHighestNode,
-                            const RuleDetail& aRuleDetail, PRBool aInherited)
+static void
+SetFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
+        nscoord aMinFontSize, PRBool aUseDocumentFonts, PRBool aChromeOverride,
+        PRBool aIsGeneric, const nsCSSFont& aFontData, const nsFont& aDefaultFont,
+        nsStyleFont* aParentFont, nsStyleFont* aFont, PRBool& aInherited)
 {
-#ifdef DEBUG_hyatt
-  printf("NEW FONT CREATED!\n");
-#endif
-  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
-  const nsFont& defaultFont = mPresContext->GetDefaultFontDeprecated();
-  const nsFont& defaultFixedFont = mPresContext->GetDefaultFixedFontDeprecated();
-
-  const nsCSSFont& fontData = NS_STATIC_CAST(const nsCSSFont&, aData);
-  nsStyleFont* font = nsnull;
-  nsStyleFont* parentFont = font;
-  PRBool inherited = aInherited;
-
-  if (aStartStruct)
-    // We only need to compute the delta between this computed data and our
-    // computed data.
-    font = new (mPresContext) nsStyleFont(*NS_STATIC_CAST(nsStyleFont*, aStartStruct));
-  else {
-    if (aRuleDetail != eRuleFullMixed) {
-      // No question. We will have to inherit. Go ahead and init
-      // with inherited vals from parent.
-      inherited = PR_TRUE;
-      if (parentContext)
-        parentFont = (nsStyleFont*)parentContext->GetStyleData(eStyleStruct_Font);
-      if (parentFont)
-        font = new (mPresContext) nsStyleFont(*parentFont);
-    }
-  }
-
-  if (!font)
-    font = parentFont = new (mPresContext) nsStyleFont(defaultFont, defaultFixedFont);
+  nsFont defaultVariableFont, defaultFixedFont;
+  aPresContext->GetDefaultFont(kPresContext_DefaultVariableFont_ID, defaultVariableFont);
+  aPresContext->GetDefaultFont(kPresContext_DefaultFixedFont_ID, defaultFixedFont);
 
   // font-family: string list, enum, inherit
-  if (eCSSUnit_String == fontData.mFamily.GetUnit()) {
-    nsCOMPtr<nsIDeviceContext> dc;
-    mPresContext->GetDeviceContext(getter_AddRefs(dc));
-    if (dc) {
-      nsAutoString  familyList;
-      fontData.mFamily.GetStringValue(familyList);
-      font->mFont.name = familyList;
-      nsAutoString  face;
-
-      // MJA: bug 31816
-      // if we are not using document fonts, but this is a xul document,
-      // then we set the chromeOverride bit so we use the document fonts anyway
-      PRBool chromeOverride = PR_FALSE;
-      PRBool useDocumentFonts = PR_TRUE;
-      mPresContext->GetCachedBoolPref(kPresContext_UseDocumentFonts, useDocumentFonts);
-      if (!useDocumentFonts) {
-        // check if the prefs have been disabled for this shell
-        // - if prefs are disabled then we use the document fonts anyway (yet another override)
-        PRBool prefsEnabled = PR_TRUE;
-        nsCOMPtr<nsIPresShell> shell;
-        mPresContext->GetShell(getter_AddRefs(shell));
-        if (shell)
-          shell->ArePrefStyleRulesEnabled(prefsEnabled);
-        if (!prefsEnabled)
-          useDocumentFonts = PR_TRUE;
-        else {
-          // see if we are in the chrome, if so, use the document fonts (override the useDocFonts setting)
-          nsresult result = NS_OK;
-          nsCOMPtr<nsISupports> container;
-          result = mPresContext->GetContainer(getter_AddRefs(container));
-          if (NS_SUCCEEDED(result) && container) {
-            nsCOMPtr<nsIDocShellTreeItem> docShell(do_QueryInterface(container, &result));
-            if (NS_SUCCEEDED(result) && docShell){
-              PRInt32 docShellType;
-              result = docShell->GetItemType(&docShellType);
-              if (NS_SUCCEEDED(result)){
-                if (nsIDocShellTreeItem::typeChrome == docShellType){
-                  chromeOverride = PR_TRUE;
-                }
-              }      
-            }
-          }
-        }
+  if (eCSSUnit_String == aFontData.mFamily.GetUnit()) {
+    // set the correct font if we are using DocumentFonts OR we are overriding for XUL
+    // MJA: bug 31816
+    if (aChromeOverride || aUseDocumentFonts) {
+      if (!aIsGeneric) {
+        // only bother appending fallback fonts if this isn't a fallback generic font itself
+        aFont->mFont.name.Append((PRUnichar)',');
+        aFont->mFont.name.Append(aDefaultFont.name);
       }
-
-      // find the correct font if we are usingDocumentFonts OR we are overriding for XUL
-      // MJA: bug 31816
-      PRBool isMozFixed = font->mFont.name.EqualsIgnoreCase("-moz-fixed");
-      if (chromeOverride || useDocumentFonts) {
-        font->mFont.name += nsAutoString(NS_LITERAL_STRING(",")) + defaultFont.name;
-        font->mFixedFont.name += nsAutoString(NS_LITERAL_STRING(",")) + defaultFixedFont.name;
-      }
-      else {
-        // now set to defaults
-        font->mFont.name = defaultFont.name;
-        font->mFixedFont.name = defaultFixedFont.name;
-      }
-
-      // set to monospace if using moz-fixed
-      if (isMozFixed)
-        font->mFlags |= NS_STYLE_FONT_USE_FIXED;
-      else
-        font->mFlags &= ~NS_STYLE_FONT_USE_FIXED;
-      font->mFlags |= NS_STYLE_FONT_FACE_EXPLICIT;
     }
+    else {
+      // now set to defaults
+      aFont->mFont.name = aDefaultFont.name;
+    }
+    aFont->mFlags |= NS_STYLE_FONT_FACE_EXPLICIT;
   }
-  else if (eCSSUnit_Enumerated == fontData.mFamily.GetUnit()) {
+  else if (eCSSUnit_Enumerated == aFontData.mFamily.GetUnit()) {
     nsSystemAttrID sysID;
-    switch (fontData.mFamily.GetIntValue()) {
+    switch (aFontData.mFamily.GetIntValue()) {
       // If you add fonts to this list, you need to also patch the list
-      // in CheckFontProperties (also in this file above).
+      // in CheckFontProperties (also in this file).
       case NS_STYLE_FONT_CAPTION:       sysID = eSystemAttr_Font_Caption;       break;    // css2
       case NS_STYLE_FONT_ICON:          sysID = eSystemAttr_Font_Icon;          break;
       case NS_STYLE_FONT_MENU:          sysID = eSystemAttr_Font_Menu;          break;
@@ -1217,18 +1153,18 @@ nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDat
     }
 
     nsCompatibility mode;
-    mPresContext->GetCompatibilityMode(&mode);
-		nsCOMPtr<nsIDeviceContext> dc;
-    mPresContext->GetDeviceContext(getter_AddRefs(dc));
+    aPresContext->GetCompatibilityMode(&mode);
+    nsCOMPtr<nsIDeviceContext> dc;
+    aPresContext->GetDeviceContext(getter_AddRefs(dc));
     if (dc) {
       SystemAttrStruct sysInfo;
-      sysInfo.mFont = &font->mFont;
-      font->mFont.size = defaultFont.size; // GetSystemAttribute sets the font face but not necessarily the size
+      sysInfo.mFont = &aFont->mFont;
+      aFont->mFont.size = defaultVariableFont.size; // GetSystemAttribute sets the font face but not necessarily the size
       if (NS_FAILED(dc->GetSystemAttribute(sysID, &sysInfo))) {
-        font->mFont.name = defaultFont.name;
-        font->mFixedFont.name = defaultFixedFont.name;
+        aFont->mFont.name = defaultVariableFont.name;
       }
-      font->mFlags |= NS_STYLE_FONT_FACE_EXPLICIT;
+      aFont->mSize = aFont->mFont.size; // this becomes our cascading size
+      aFont->mFlags |= NS_STYLE_FONT_FACE_EXPLICIT;
     }
 
     // NavQuirks uses sans-serif instead of whatever the native font is
@@ -1237,12 +1173,12 @@ nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDat
       switch (sysID) {
         case eSystemAttr_Font_Field:
         case eSystemAttr_Font_List:
-          font->mFont.name.AssignWithConversion("monospace");
-          font->mFont.size = defaultFixedFont.size;
+          aFont->mFont.name.Assign(NS_LITERAL_STRING("monospace"));
+          aFont->mSize = defaultFixedFont.size;
           break;
         case eSystemAttr_Font_Button:
-          font->mFont.name.AssignWithConversion("serif");
-          font->mFont.size = defaultFont.size;
+          aFont->mFont.name.Assign(NS_LITERAL_STRING("serif"));
+          aFont->mSize = defaultVariableFont.size;
           break;
       }
     }
@@ -1269,11 +1205,11 @@ nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDat
       //    the default proportional font.
       case eSystemAttr_Font_Field:
         if (eCompatibility_NavQuirks == mode) {
-          font->mFont.name.AssignWithConversion("monospace");
-          font->mFont.size = defaultFixedFont.size;
+          aFont->mFont.name.Assign(NS_LITERAL_STRING("monospace"));
+          aFont->mSize = defaultFixedFont.size;
         } else {
           // Assumption: system defined font is proportional
-          font->mFont.size = PR_MAX(defaultFont.size - NSIntPointsToTwips(2), 0);
+          aFont->mSize = PR_MAX(defaultVariableFont.size - NSIntPointsToTwips(2), 0);
         }
         break;
       //
@@ -1291,10 +1227,10 @@ nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDat
       case eSystemAttr_Font_Button:
       case eSystemAttr_Font_List:
         if (eCompatibility_NavQuirks == mode) {
-          font->mFont.name.AssignWithConversion("sans-serif");
+          aFont->mFont.name.Assign(NS_LITERAL_STRING("sans-serif"));
         }
         // Assumption: system defined font is proportional
-        font->mFont.size = PR_MAX(defaultFont.size - NSIntPointsToTwips(2), 0);
+        aFont->mSize = PR_MAX(defaultVariableFont.size - NSIntPointsToTwips(2), 0);
         break;
     }
 #endif
@@ -1303,201 +1239,378 @@ nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct, const nsCSSStruct& aDat
     if (eCompatibility_NavQuirks == mode) {
       switch (sysID) {
         case eSystemAttr_Font_Field:
-          font->mFont.name.AssignWithConversion("monospace");
-          font->mFont.size = defaultFixedFont.size;
+          aFont->mFont.name.Assign(NS_LITERAL_STRING("monospace"));
+          aFont->mSize = defaultFixedFont.size;
           break;
         case eSystemAttr_Font_Button:
         case eSystemAttr_Font_List:
-          font->mFont.name.AssignWithConversion("serif");
-          font->mFont.size = defaultFont.size;
+          aFont->mFont.name.Assign(NS_LITERAL_STRING("serif"));
+          aFont->mSize = defaultVariableFont.size;
           break;
-
-        default:
-          NS_ERROR("unexpected SID");
       }
     }
 #endif
   }
-  else if (eCSSUnit_Inherit == fontData.mFamily.GetUnit()) {
-    if (parentContext && !inherited) {
-      inherited = PR_TRUE;
-      parentFont = (nsStyleFont*)parentContext->GetStyleData(eStyleStruct_Font);
-    }
-
-    font->mFont.name = parentFont->mFont.name;
-    font->mFixedFont.name = parentFont->mFixedFont.name;
-    font->mFlags &= ~(NS_STYLE_FONT_FACE_EXPLICIT | NS_STYLE_FONT_USE_FIXED);
-    font->mFlags |= (parentFont->mFlags & (NS_STYLE_FONT_FACE_EXPLICIT | NS_STYLE_FONT_USE_FIXED));
+  else if (eCSSUnit_Inherit == aFontData.mFamily.GetUnit()) {
+    aInherited = PR_TRUE;
+    aFont->mFont.name = aParentFont->mFont.name;
+    aFont->mFlags &= ~NS_STYLE_FONT_FACE_EXPLICIT;
+    aFont->mFlags |= aParentFont->mFlags & NS_STYLE_FONT_FACE_EXPLICIT;
   }
-  else if (eCSSUnit_Initial == fontData.mFamily.GetUnit()) {
-    font->mFont.name = defaultFont.name;
-    font->mFixedFont.name = defaultFixedFont.name;
+  else if (eCSSUnit_Initial == aFontData.mFamily.GetUnit()) {
+    aFont->mFont.name = defaultVariableFont.name;
   }
 
   // font-style: enum, normal, inherit
-  if (eCSSUnit_Enumerated == fontData.mStyle.GetUnit()) {
-    font->mFont.style = fontData.mStyle.GetIntValue();
-    font->mFixedFont.style = fontData.mStyle.GetIntValue();
+  if (eCSSUnit_Enumerated == aFontData.mStyle.GetUnit()) {
+    aFont->mFont.style = aFontData.mStyle.GetIntValue();
   }
-  else if (eCSSUnit_Normal == fontData.mStyle.GetUnit()) {
-    font->mFont.style = NS_STYLE_FONT_STYLE_NORMAL;
-    font->mFixedFont.style = NS_STYLE_FONT_STYLE_NORMAL;
+  else if (eCSSUnit_Normal == aFontData.mStyle.GetUnit()) {
+    aFont->mFont.style = NS_STYLE_FONT_STYLE_NORMAL;
   }
-  else if (eCSSUnit_Inherit == fontData.mStyle.GetUnit()) {
-    if (parentContext && !inherited) {
-      inherited = PR_TRUE;
-      parentFont = (nsStyleFont*)parentContext->GetStyleData(eStyleStruct_Font);
-    }
-
-    font->mFont.style = parentFont->mFont.style;
-    font->mFixedFont.style = parentFont->mFixedFont.style;
+  else if (eCSSUnit_Inherit == aFontData.mStyle.GetUnit()) {
+    aInherited = PR_TRUE;
+    aFont->mFont.style = aParentFont->mFont.style;
   }
-  else if (eCSSUnit_Initial == fontData.mStyle.GetUnit()) {
-    font->mFont.style = defaultFont.style;
-    font->mFixedFont.style = defaultFixedFont.style;
+  else if (eCSSUnit_Initial == aFontData.mStyle.GetUnit()) {
+    aFont->mFont.style = defaultVariableFont.style;
   }
 
   // font-variant: enum, normal, inherit
-  if (eCSSUnit_Enumerated == fontData.mVariant.GetUnit()) {
-    font->mFont.variant = fontData.mVariant.GetIntValue();
-    font->mFixedFont.variant = fontData.mVariant.GetIntValue();
+  if (eCSSUnit_Enumerated == aFontData.mVariant.GetUnit()) {
+    aFont->mFont.variant = aFontData.mVariant.GetIntValue();
   }
-  else if (eCSSUnit_Normal == fontData.mVariant.GetUnit()) {
-    font->mFont.variant = NS_STYLE_FONT_VARIANT_NORMAL;
-    font->mFixedFont.variant = NS_STYLE_FONT_VARIANT_NORMAL;
+  else if (eCSSUnit_Normal == aFontData.mVariant.GetUnit()) {
+    aFont->mFont.variant = NS_STYLE_FONT_VARIANT_NORMAL;
   }
-  else if (eCSSUnit_Inherit == fontData.mVariant.GetUnit()) {
-    if (parentContext && !inherited) {
-      inherited = PR_TRUE;
-      parentFont = (nsStyleFont*)parentContext->GetStyleData(eStyleStruct_Font);
-    }
-
-    font->mFont.variant = parentFont->mFont.variant;
-    font->mFixedFont.variant = parentFont->mFixedFont.variant;
+  else if (eCSSUnit_Inherit == aFontData.mVariant.GetUnit()) {
+    aInherited = PR_TRUE;
+    aFont->mFont.variant = aParentFont->mFont.variant;
   }
-  else if (eCSSUnit_Initial == fontData.mVariant.GetUnit()) {
-    font->mFont.variant = defaultFont.variant;
-    font->mFixedFont.variant = defaultFixedFont.variant;
+  else if (eCSSUnit_Initial == aFontData.mVariant.GetUnit()) {
+    aFont->mFont.variant = defaultVariableFont.variant;
   }
 
   // font-weight: int, enum, normal, inherit
-  if (eCSSUnit_Integer == fontData.mWeight.GetUnit()) {
-    font->mFont.weight = fontData.mWeight.GetIntValue();
-    font->mFixedFont.weight = fontData.mWeight.GetIntValue();
+  if (eCSSUnit_Integer == aFontData.mWeight.GetUnit()) {
+    aFont->mFont.weight = aFontData.mWeight.GetIntValue();
   }
-  else if (eCSSUnit_Enumerated == fontData.mWeight.GetUnit()) {
-    PRInt32 value = fontData.mWeight.GetIntValue();
+  else if (eCSSUnit_Enumerated == aFontData.mWeight.GetUnit()) {
+    PRInt32 value = aFontData.mWeight.GetIntValue();
     switch (value) {
       case NS_STYLE_FONT_WEIGHT_NORMAL:
       case NS_STYLE_FONT_WEIGHT_BOLD:
-        font->mFont.weight = value;
-        font->mFixedFont.weight = value;
+        aFont->mFont.weight = value;
         break;
       case NS_STYLE_FONT_WEIGHT_BOLDER:
       case NS_STYLE_FONT_WEIGHT_LIGHTER:
-        if (parentContext && !inherited) {
-          inherited = PR_TRUE;
-          parentFont = (nsStyleFont*)parentContext->GetStyleData(eStyleStruct_Font);
-        }
-        font->mFont.weight = nsStyleUtil::ConstrainFontWeight(parentFont->mFont.weight + value);
-        font->mFixedFont.weight = nsStyleUtil::ConstrainFontWeight(parentFont->mFixedFont.weight + value);
+        aInherited = PR_TRUE;
+        aFont->mFont.weight = nsStyleUtil::ConstrainFontWeight(aParentFont->mFont.weight + value);
         break;
     }
   }
-  else if (eCSSUnit_Normal == fontData.mWeight.GetUnit()) {
-    font->mFont.weight = NS_STYLE_FONT_WEIGHT_NORMAL;
-    font->mFixedFont.weight = NS_STYLE_FONT_WEIGHT_NORMAL;
+  else if (eCSSUnit_Normal == aFontData.mWeight.GetUnit()) {
+    aFont->mFont.weight = NS_STYLE_FONT_WEIGHT_NORMAL;
   }
-  else if (eCSSUnit_Inherit == fontData.mWeight.GetUnit()) {
-    if (parentContext && !inherited) {
-      inherited = PR_TRUE;
-      parentFont = (nsStyleFont*)parentContext->GetStyleData(eStyleStruct_Font);
-    }
-
-    font->mFont.weight = parentFont->mFont.weight;
-    font->mFixedFont.weight = parentFont->mFixedFont.weight;
+  else if (eCSSUnit_Inherit == aFontData.mWeight.GetUnit()) {
+    aInherited = PR_TRUE;
+    aFont->mFont.weight = aParentFont->mFont.weight;
   }
-  else if (eCSSUnit_Initial == fontData.mWeight.GetUnit()) {
-    font->mFont.weight = defaultFont.weight;
-    font->mFixedFont.weight = defaultFixedFont.weight;
+  else if (eCSSUnit_Initial == aFontData.mWeight.GetUnit()) {
+    aFont->mFont.weight = defaultVariableFont.weight;
   }
-  
 
   // font-size: enum, length, percent, inherit
-  if (eCSSUnit_Enumerated == fontData.mSize.GetUnit()) {
-    PRInt32 value = fontData.mSize.GetIntValue();
+  if (eCSSUnit_Enumerated == aFontData.mSize.GetUnit()) {
+    PRInt32 value = aFontData.mSize.GetIntValue();
     PRInt32 scaler;
-    mPresContext->GetFontScaler(&scaler);
+    aPresContext->GetFontScaler(&scaler);
     float scaleFactor = nsStyleUtil::GetScalingFactor(scaler);
 
-    if (parentContext && !inherited) {
-      inherited = PR_TRUE;
-      parentFont = (nsStyleFont*)parentContext->GetStyleData(eStyleStruct_Font);
-    }
-
+    aInherited = PR_TRUE;
     if ((NS_STYLE_FONT_SIZE_XXSMALL <= value) && 
         (value <= NS_STYLE_FONT_SIZE_XXLARGE)) {
-      font->mFont.size = nsStyleUtil::CalcFontPointSize(value, (PRInt32)defaultFont.size, scaleFactor, mPresContext, eFontSize_CSS);
-      font->mFixedFont.size = nsStyleUtil::CalcFontPointSize(value, (PRInt32)defaultFixedFont.size, scaleFactor, mPresContext, eFontSize_CSS);
+      aFont->mSize = nsStyleUtil::CalcFontPointSize(value, (PRInt32)aDefaultFont.size, scaleFactor, aPresContext, eFontSize_CSS);
     }
     else if (NS_STYLE_FONT_SIZE_XXXLARGE == value) {
       // <font size="7"> is not specified in CSS, so we don't use eFontSize_CSS.
-      font->mFont.size = nsStyleUtil::CalcFontPointSize(value, (PRInt32)defaultFont.size, scaleFactor, mPresContext);
-      font->mFixedFont.size = nsStyleUtil::CalcFontPointSize(value, (PRInt32)defaultFixedFont.size, scaleFactor, mPresContext);
+      aFont->mSize = nsStyleUtil::CalcFontPointSize(value, (PRInt32)aDefaultFont.size, scaleFactor, aPresContext);
     }
     else if (NS_STYLE_FONT_SIZE_LARGER == value) {
-      PRInt32 index = nsStyleUtil::FindNextLargerFontSize(parentFont->mFont.size, (PRInt32)defaultFont.size, scaleFactor, mPresContext, eFontSize_CSS);
-      nscoord largerSize = nsStyleUtil::CalcFontPointSize(index, (PRInt32)defaultFont.size, scaleFactor, mPresContext, eFontSize_CSS);
-      nscoord largerFixedSize = nsStyleUtil::CalcFontPointSize(index, (PRInt32)defaultFixedFont.size, scaleFactor, mPresContext, eFontSize_CSS);
-      font->mFont.size = PR_MAX(largerSize, parentFont->mFont.size);
-      font->mFixedFont.size = PR_MAX(largerFixedSize, parentFont->mFixedFont.size);
+      PRInt32 index = nsStyleUtil::FindNextLargerFontSize(aParentFont->mSize, (PRInt32)aDefaultFont.size, scaleFactor, aPresContext, eFontSize_CSS);
+      nscoord largerSize = nsStyleUtil::CalcFontPointSize(index, (PRInt32)aDefaultFont.size, scaleFactor, aPresContext, eFontSize_CSS);
+      aFont->mSize = PR_MAX(largerSize, aParentFont->mSize);
     }
     else if (NS_STYLE_FONT_SIZE_SMALLER == value) {
-      PRInt32 index = nsStyleUtil::FindNextSmallerFontSize(parentFont->mFont.size, (PRInt32)defaultFont.size, scaleFactor, mPresContext, eFontSize_CSS);
-      nscoord smallerSize = nsStyleUtil::CalcFontPointSize(index, (PRInt32)defaultFont.size, scaleFactor, mPresContext, eFontSize_CSS);
-      nscoord smallerFixedSize = nsStyleUtil::CalcFontPointSize(index, (PRInt32)defaultFixedFont.size, scaleFactor, mPresContext, eFontSize_CSS);
-      font->mFont.size = PR_MIN(smallerSize, parentFont->mFont.size);
-      font->mFixedFont.size = PR_MIN(smallerFixedSize, parentFont->mFixedFont.size);
+      PRInt32 index = nsStyleUtil::FindNextSmallerFontSize(aParentFont->mSize, (PRInt32)aDefaultFont.size, scaleFactor, aPresContext, eFontSize_CSS);
+      nscoord smallerSize = nsStyleUtil::CalcFontPointSize(index, (PRInt32)aDefaultFont.size, scaleFactor, aPresContext, eFontSize_CSS);
+      aFont->mSize = PR_MIN(smallerSize, aParentFont->mSize);
     }
     // this does NOT explicitly set font size
-    font->mFlags &= ~NS_STYLE_FONT_SIZE_EXPLICIT;
+    aFont->mFlags &= ~NS_STYLE_FONT_SIZE_EXPLICIT;
   }
-  else if (fontData.mSize.IsLengthUnit()) {
-    if (parentContext && !inherited)
-      parentFont = (nsStyleFont*)parentContext->GetStyleData(eStyleStruct_Font);
+  else if (aFontData.mSize.IsLengthUnit()) {
+    aFont->mSize = CalcLength(aFontData.mSize, &aParentFont->mFont, nsnull, aPresContext, aInherited);
+    aFont->mFlags |= NS_STYLE_FONT_SIZE_EXPLICIT;
+  }
+  else if (eCSSUnit_Percent == aFontData.mSize.GetUnit()) {
+    aInherited = PR_TRUE;
+    aFont->mSize = (nscoord)((float)(aParentFont->mSize) * aFontData.mSize.GetPercentValue());
+    aFont->mFlags |= NS_STYLE_FONT_SIZE_EXPLICIT;
+  }
+  else if (eCSSUnit_Inherit == aFontData.mSize.GetUnit()) {
+    aInherited = PR_TRUE;
+    aFont->mSize = aParentFont->mSize;
+    aFont->mFlags &= ~NS_STYLE_FONT_SIZE_EXPLICIT;
+    aFont->mFlags |= (aParentFont->mFlags & NS_STYLE_FONT_SIZE_EXPLICIT);
+  }
+  else if (eCSSUnit_Initial == aFontData.mSize.GetUnit()) {
+    aFont->mSize = defaultVariableFont.size;
+  }
+  // enforce the user' specified minimum font-size on the value that we expose
+  if (aChromeOverride) {
+    // the chrome is unconstrained, it always uses our cascading size
+    aFont->mFont.size = aFont->mSize;
+  }
+  else {
+    aFont->mFont.size = PR_MAX(aFont->mSize, aMinFontSize);
+  }
 
-    font->mFont.size = CalcLength(fontData.mSize, &parentFont->mFont, nsnull, mPresContext, inherited);
-    font->mFixedFont.size = CalcLength(fontData.mSize, &parentFont->mFixedFont, nsnull, mPresContext, inherited);
-    font->mFlags |= NS_STYLE_FONT_SIZE_EXPLICIT;
+  // font-size-adjust: number, none, inherit, auto
+  if (eCSSUnit_Number == aFontData.mSizeAdjust.GetUnit()) {
+    aFont->mFont.sizeAdjust = aFontData.mSizeAdjust.GetFloatValue();
   }
-  else if (eCSSUnit_Percent == fontData.mSize.GetUnit()) {
-    if (parentContext && !inherited) {
-      inherited = PR_TRUE;
-      parentFont = (nsStyleFont*)parentContext->GetStyleData(eStyleStruct_Font);
+  else if (eCSSUnit_None == aFontData.mSizeAdjust.GetUnit()) {
+    aFont->mFont.sizeAdjust = 0.0f;
+  }
+  else if (eCSSUnit_Inherit == aFontData.mSizeAdjust.GetUnit()) {
+    aFont->mFont.sizeAdjust = aParentFont->mFont.sizeAdjust;
+  }
+  else if (eCSSUnit_Auto == aFontData.mSizeAdjust.GetUnit()) {
+    // The user doesn't know the aspect-value and is asking us to compute it.
+    // We use a sufficiently large font-size during calculations here for
+    // improved accuracy.
+    nscoord size, xheight;
+    nsCOMPtr<nsIFontMetrics> fm;
+
+    size = aFont->mFont.size; // save the size
+    aFont->mFont.size = NSIntPointsToTwips(72);
+    aPresContext->GetMetricsFor(aFont->mFont, getter_AddRefs(fm));
+    fm->GetXHeight(xheight);
+    aFont->mFont.sizeAdjust = float(xheight) / float(aFont->mFont.size);
+    aFont->mFont.size = size; // restore the size
+  }
+  else if (eCSSUnit_Initial == aFontData.mSizeAdjust.GetUnit()) {
+    aFont->mFont.sizeAdjust = 0.0f;
+  }
+}
+
+// SetGenericFont:
+//  - backtrack to an ancestor with the same generic font name (possibly
+//    up to the root where default values come from the presentation context)
+//  - re-apply cascading rules from there without caching intermediate values
+static void
+SetGenericFont(nsIPresContext* aPresContext, nsIStyleContext* aContext,
+               const nsCSSFont& aFontData, PRInt32 aGenericFontID,
+               nscoord aMinFontSize, PRBool aUseDocumentFonts,
+               PRBool aChromeOverride, nsStyleFont* aFont)
+{
+  // walk up the contexts until a context with the desired generic font name
+  nsAutoVoidArray contextPath;
+  nsCOMPtr<nsIStyleContext> higherContext = getter_AddRefs(aContext->GetParent());
+  while (higherContext) {
+    contextPath.AppendElement(higherContext);
+    const nsStyleFont* higherFont = (const nsStyleFont*)higherContext->GetStyleData(eStyleStruct_Font);
+    if (higherFont) {
+      PRInt32 higherGeneric;
+      nsFont::GenericIs(higherFont->mFont.name, &higherGeneric);
+      if (higherGeneric == aGenericFontID) {
+        // done walking up the higher contexts
+        break;
+      }
+    }
+    higherContext = getter_AddRefs(higherContext->GetParent());
+  }
+
+  // re-apply the cascading rules, starting from the higher context
+
+  // If we stopped earlier because we reached the root of the style tree,
+  // we will start with the default generic font from the presentation
+  // context. Otherwise we start with the higher context.
+  nsFont defaultFont;
+  aPresContext->GetDefaultFont(aGenericFontID, defaultFont);
+  nsStyleFont parentFont(defaultFont);
+  PRInt32 i = contextPath.Count() - 1;
+  if (higherContext) {
+    nsIStyleContext* context = (nsIStyleContext*)contextPath[i];
+    nsStyleFont* tmpFont = (nsStyleFont*)context->GetStyleData(eStyleStruct_Font);
+    parentFont.mFont = tmpFont->mFont;
+    parentFont.mFlags = tmpFont->mFlags ;
+    parentFont.mSize = tmpFont->mSize;
+    --i;
+  }
+  aFont->mFont = parentFont.mFont;
+  aFont->mFlags = parentFont.mFlags ;
+  aFont->mSize = parentFont.mSize;
+
+  PRBool dummy;
+  PRUint32 noneBits;
+  PRUint32 fontBit = nsCachedStyleData::GetBitForSID(eStyleStruct_Font);
+  nsCOMPtr<nsIRuleNode> ruleNode, tmpNode;
+  nsCOMPtr<nsIStyleRule> rule;
+
+  for (; i >= 0; --i) {
+    nsIStyleContext* context = (nsIStyleContext*)contextPath[i];
+    nsCSSFont fontData; // Declare a struct with null CSS values.
+    nsRuleData ruleData(eStyleStruct_Font, aPresContext, context);
+    ruleData.mFontData = &fontData;
+
+    // Trimmed down version of ::WalkRuleTree() to re-apply the style rules
+    context->GetRuleNode(getter_AddRefs(ruleNode));
+    while (ruleNode) {
+      ruleNode->GetBits(nsIRuleNode::eNoneBits, &noneBits);
+      if (noneBits & fontBit) // no more font rules on this branch, get out
+        break;
+
+      ruleNode->GetRule(getter_AddRefs(rule));
+      if (rule)
+        rule->MapRuleInfoInto(&ruleData);
+  
+      tmpNode = ruleNode;
+      tmpNode->GetParent(getter_AddRefs(ruleNode));
     }
 
-    font->mFont.size = (nscoord)((float)(parentFont->mFont.size) * fontData.mSize.GetPercentValue());
-    font->mFixedFont.size = (nscoord)((float)(parentFont->mFixedFont.size) * fontData.mSize.GetPercentValue());
-    font->mFlags |= NS_STYLE_FONT_SIZE_EXPLICIT;
+    // Compute the delta from the information that the rules specified
+    fontData.mFamily.Reset(); // avoid unnecessary operations in SetFont()
+
+    SetFont(aPresContext, context, aMinFontSize,
+            aUseDocumentFonts, aChromeOverride, PR_TRUE,
+            fontData, defaultFont, &parentFont, aFont, dummy);
+
+    // XXX Not sure if we need to do this here
+    // If we have a post-resolve callback, handle that now.
+    if (ruleData.mPostResolveCallback)
+      (ruleData.mPostResolveCallback)((nsStyleStruct*)aFont, &ruleData);
+
+    parentFont.mFont = aFont->mFont;
+    parentFont.mFlags = aFont->mFlags;
+    parentFont.mSize = aFont->mSize;
   }
-  else if (eCSSUnit_Inherit == fontData.mSize.GetUnit()) {
-    if (parentContext && !inherited) {
+
+  // Finish off by applying our own rules. In this case, aFontData
+  // already has the current cascading information that we want. We
+  // can just compute the delta from the parent.
+  SetFont(aPresContext, aContext, aMinFontSize,
+          aUseDocumentFonts, aChromeOverride, PR_TRUE,
+          aFontData, defaultFont, &parentFont, aFont, dummy);
+}
+
+const nsStyleStruct* 
+nsRuleNode::ComputeFontData(nsStyleStruct* aStartStruct, const nsCSSStruct& aData, 
+                            nsIStyleContext* aContext, 
+                            nsRuleNode* aHighestNode,
+                            const RuleDetail& aRuleDetail, PRBool aInherited)
+{
+#ifdef DEBUG_hyatt
+  printf("NEW FONT CREATED!\n");
+#endif
+  nsCOMPtr<nsIStyleContext> parentContext = getter_AddRefs(aContext->GetParent());
+
+  const nsCSSFont& fontData = NS_STATIC_CAST(const nsCSSFont&, aData);
+  nsStyleFont* font = nsnull;
+  nsStyleFont* parentFont = font;
+  PRBool inherited = aInherited;
+
+  if (aStartStruct)
+    // We only need to compute the delta between this computed data and our
+    // computed data.
+    font = new (mPresContext) nsStyleFont(*NS_STATIC_CAST(nsStyleFont*, aStartStruct));
+  else {
+    if (aRuleDetail != eRuleFullMixed) {
+      // No question. We will have to inherit. Go ahead and init
+      // with inherited vals from parent.
       inherited = PR_TRUE;
-      parentFont = (nsStyleFont*)parentContext->GetStyleData(eStyleStruct_Font);
+      if (parentContext)
+        parentFont = (nsStyleFont*)parentContext->GetStyleData(eStyleStruct_Font);
+      if (parentFont)
+        font = new (mPresContext) nsStyleFont(*parentFont);
     }
-
-    font->mFont.size = parentFont->mFont.size;
-    font->mFixedFont.size = parentFont->mFixedFont.size;
-    font->mFlags &= ~NS_STYLE_FONT_SIZE_EXPLICIT;
-    font->mFlags |= (parentFont->mFlags & NS_STYLE_FONT_SIZE_EXPLICIT);
-  }
-  else if (eCSSUnit_Initial == fontData.mSize.GetUnit()) {
-    font->mFont.size = defaultFont.size;
-    font->mFixedFont.size = defaultFixedFont.size;
   }
 
-  if (font->mFlags & NS_STYLE_FONT_USE_FIXED)
-    font->mFont = font->mFixedFont;
+  nsFont defaultFont;
+  mPresContext->GetDefaultFont(kPresContext_DefaultVariableFont_ID, defaultFont);
+
+  if (!font)
+    font = parentFont = new (mPresContext) nsStyleFont(defaultFont);
+
+  // See if there is a minimum font-size constraint to honor
+  nscoord minimumFontSize = 0; // unconstrained by default
+  mPresContext->GetCachedIntPref(kPresContext_MinimumFontSize, minimumFontSize);
+
+  PRBool chromeOverride = PR_FALSE;
+  PRBool useDocumentFonts = PR_TRUE;
+
+  // Figure out if we are a generic font
+  PRInt32 generic = nsFont::eGeneric_NONE;
+  if (eCSSUnit_String == fontData.mFamily.GetUnit()) {
+    fontData.mFamily.GetStringValue(font->mFont.name);
+    nsFont::GenericIs(font->mFont.name, &generic);
+
+    // MJA: bug 31816
+    // if we are not using document fonts, but this is a XUL document,
+    // then we set the chromeOverride flag to use the document fonts anyway
+    mPresContext->GetCachedBoolPref(kPresContext_UseDocumentFonts, useDocumentFonts);
+    if (!useDocumentFonts) {
+      // check if the prefs have been disabled for this shell
+      // - if prefs are disabled then we use the document fonts anyway (yet another override)
+      PRBool prefsEnabled = PR_TRUE;
+      nsCOMPtr<nsIPresShell> shell;
+      mPresContext->GetShell(getter_AddRefs(shell));
+      if (shell)
+        shell->ArePrefStyleRulesEnabled(prefsEnabled);
+      if (!prefsEnabled)
+        useDocumentFonts = PR_TRUE;
+    }
+  }
+
+  // See if we are in the chrome
+  // We only need to know this to determine if we have to use the
+  // document fonts (overriding the useDocumentFonts flag), or to
+  // determine if we have to override the minimum font-size constraint.
+  if (!useDocumentFonts || minimumFontSize > 0) {
+    nsCOMPtr<nsISupports> container;
+    nsresult result = mPresContext->GetContainer(getter_AddRefs(container));
+    if (NS_SUCCEEDED(result) && container) {
+      nsCOMPtr<nsIDocShellTreeItem> docShell(do_QueryInterface(container, &result));
+      if (NS_SUCCEEDED(result) && docShell) {
+        PRInt32 docShellType;
+        result = docShell->GetItemType(&docShellType);
+        if (NS_SUCCEEDED(result)) {
+          chromeOverride = nsIDocShellTreeItem::typeChrome == docShellType;
+        }
+      }
+    }
+  }
+
+  // Now compute our font struct
+  if (generic == nsFont::eGeneric_NONE) {
+    // continue the normal processing
+    if (!parentFont) {
+      parentFont = parentContext
+                 ? (nsStyleFont*)parentContext->GetStyleData(eStyleStruct_Font)
+                 : font;
+    }
+    SetFont(mPresContext, aContext, minimumFontSize,
+            useDocumentFonts, chromeOverride, PR_FALSE,
+            fontData, defaultFont, parentFont, font, inherited);
+  }
+  else {
+    // re-calculate the font as a generic font
+    inherited = PR_TRUE;
+    SetGenericFont(mPresContext, aContext, fontData,
+                   generic, minimumFontSize, useDocumentFonts,
+                   chromeOverride, font);
+  }
 
   if (inherited)
     // We inherited, and therefore can't be cached in the rule node.  We have to be put right on the

@@ -175,21 +175,22 @@ inline void CalcSidesFor(const nsIFrame* aFrame, const nsStyleSides& aSides,
 nsStyleFont::nsStyleFont()
   : mFont(nsnull, NS_FONT_STYLE_NORMAL, NS_FONT_VARIANT_NORMAL,
             NS_FONT_WEIGHT_NORMAL, NS_FONT_DECORATION_NONE, 0),
-    mFixedFont(nsnull, NS_FONT_STYLE_NORMAL, NS_FONT_VARIANT_NORMAL,
-                 NS_FONT_WEIGHT_NORMAL, NS_FONT_DECORATION_NONE, 0),
-    mFlags(NS_STYLE_FONT_DEFAULT)
+    mFlags(NS_STYLE_FONT_DEFAULT),
+    mSize(0)
 { }
 
-nsStyleFont::nsStyleFont(const nsFont& aVariableFont, const nsFont& aFixedFont)
-  : mFont(aVariableFont),
-    mFixedFont(aFixedFont),
+nsStyleFont::nsStyleFont(const nsFont& aFont)
+  : mFont(aFont),
     mFlags(NS_STYLE_FONT_DEFAULT)
-{ }
+{
+  mSize = aFont.size;
+}
 
 nsStyleFont::nsStyleFont(const nsStyleFont& aSrc)
-:mFont(aSrc.mFont), mFixedFont(aSrc.mFixedFont)
+:mFont(aSrc.mFont)
 {
   mFlags = aSrc.mFlags;
+  mSize = aSrc.mSize;
 }
 
 void* 
@@ -210,11 +211,7 @@ nsStyleFont::Destroy(nsIPresContext* aContext) {
 PRInt32 nsStyleFont::CalcDifference(const nsStyleFont& aOther) const
 {
   if (mFlags == aOther.mFlags) {
-    PRInt32 impact = CalcFontDifference(mFont, aOther.mFont);
-    if (impact < NS_STYLE_HINT_REFLOW) {
-      impact = CalcFontDifference(mFixedFont, aOther.mFixedFont);
-    } 
-    return impact;
+    return CalcFontDifference(mFont, aOther.mFont);
   }
   return NS_STYLE_HINT_REFLOW;
 }
@@ -222,6 +219,7 @@ PRInt32 nsStyleFont::CalcDifference(const nsStyleFont& aOther) const
 PRInt32 nsStyleFont::CalcFontDifference(const nsFont& aFont1, const nsFont& aFont2)
 {
   if ((aFont1.size == aFont2.size) && 
+      (aFont1.sizeAdjust == aFont2.sizeAdjust) && 
       (aFont1.style == aFont2.style) &&
       (aFont1.variant == aFont2.variant) &&
       (aFont1.weight == aFont2.weight) &&

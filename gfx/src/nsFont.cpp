@@ -24,7 +24,8 @@
 #include "nsString.h"
 
 nsFont::nsFont(const char* aName, PRUint8 aStyle, PRUint8 aVariant,
-               PRUint16 aWeight, PRUint8 aDecoration, nscoord aSize)
+               PRUint16 aWeight, PRUint8 aDecoration, nscoord aSize,
+               float aSizeAdjust)
 {
   name.AssignWithConversion(aName);
   style = aStyle;
@@ -32,10 +33,12 @@ nsFont::nsFont(const char* aName, PRUint8 aStyle, PRUint8 aVariant,
   weight = aWeight;
   decorations = aDecoration;
   size = aSize;
+  sizeAdjust = aSizeAdjust;
 }
 
 nsFont::nsFont(const nsString& aName, PRUint8 aStyle, PRUint8 aVariant,
-               PRUint16 aWeight, PRUint8 aDecoration, nscoord aSize)
+               PRUint16 aWeight, PRUint8 aDecoration, nscoord aSize,
+               float aSizeAdjust)
   : name(aName)
 {
   style = aStyle;
@@ -43,6 +46,7 @@ nsFont::nsFont(const nsString& aName, PRUint8 aStyle, PRUint8 aVariant,
   weight = aWeight;
   decorations = aDecoration;
   size = aSize;
+  sizeAdjust = aSizeAdjust;
 }
 
 nsFont::nsFont(const nsFont& aOther)
@@ -53,6 +57,11 @@ nsFont::nsFont(const nsFont& aOther)
   weight = aOther.weight;
   decorations = aOther.decorations;
   size = aOther.size;
+  sizeAdjust = aOther.sizeAdjust;
+}
+
+nsFont::nsFont()
+{
 }
 
 nsFont::~nsFont()
@@ -66,6 +75,7 @@ PRBool nsFont::Equals(const nsFont& aOther) const
       (weight == aOther.weight) &&
       (decorations == aOther.decorations) &&
       (size == aOther.size) &&
+      (sizeAdjust == aOther.sizeAdjust) &&
       name.EqualsIgnoreCase(aOther.name)) {
     return PR_TRUE;
   }
@@ -80,18 +90,15 @@ nsFont& nsFont::operator=(const nsFont& aOther)
   weight = aOther.weight;
   decorations = aOther.decorations;
   size = aOther.size;
+  sizeAdjust = aOther.sizeAdjust;
   return *this;
 }
 
-
 static PRBool IsGenericFontFamily(const nsString& aFamily)
 {
-  return PRBool(aFamily.EqualsIgnoreCase("serif") ||
-                aFamily.EqualsIgnoreCase("sans-serif") ||
-                aFamily.EqualsIgnoreCase("cursive") ||
-                aFamily.EqualsIgnoreCase("fantasy") ||
-                aFamily.EqualsIgnoreCase("monospace") ||
-                aFamily.EqualsIgnoreCase("-moz-fixed"));  // our special "use the user's fixed font"
+  PRInt32 generic;
+  nsFont::GenericIs(aFamily, &generic);
+  return generic != nsFont::eGeneric_NONE;
 }
 
 const PRUnichar kNullCh       = PRUnichar('\0');
@@ -172,5 +179,17 @@ static PRBool FontEnumCallback(const nsString& aFamily, PRBool aGeneric, void *a
 void nsFont::GetFirstFamily(nsString& aFamily) const
 {
   EnumerateFamilies(FontEnumCallback, &aFamily);
+}
+
+/*static*/
+void nsFont::GenericIs(const nsString& aGeneric, PRInt32* aID)
+{
+  *aID = nsFont::eGeneric_NONE;
+  if (aGeneric.EqualsIgnoreCase("-moz-fixed"))      *aID = nsFont::eGeneric_moz_fixed;
+  else if (aGeneric.EqualsIgnoreCase("serif"))      *aID = nsFont::eGeneric_serif;
+  else if (aGeneric.EqualsIgnoreCase("sans-serif")) *aID = nsFont::eGeneric_sans_serif;
+  else if (aGeneric.EqualsIgnoreCase("cursive"))    *aID = nsFont::eGeneric_cursive;
+  else if (aGeneric.EqualsIgnoreCase("fantasy"))    *aID = nsFont::eGeneric_fantasy;
+  else if (aGeneric.EqualsIgnoreCase("monospace"))  *aID = nsFont::eGeneric_monospace;
 }
 
