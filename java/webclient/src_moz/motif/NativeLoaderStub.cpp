@@ -769,7 +769,7 @@ JNIEXPORT void JNICALL Java_org_mozilla_webclient_wrapper_1native_NavigationImpl
    jobject loadProperties)
 {
     (* nativeLoadFromStream) (env, obj, webShellPtr, javaStream, absoluteUrl, 
-                              contentType, contentLength, loadProperties
+                              contentType, contentLength, loadProperties);
 }
 /*
  * Class:     org_mozilla_webclient_wrapper_0005fnative_NavigationImpl
