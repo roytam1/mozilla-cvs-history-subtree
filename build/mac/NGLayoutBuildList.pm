@@ -198,26 +198,27 @@ sub Checkout()
 	ActivateApplication('Mcvs');
 
 	my($nsprpub_tag) = "NSPRPUB_CLIENT_BRANCH";
+	my($branch_tag) = "SeaMonkey_M15_BRANCH";
 	
 	#//
 	#// Checkout commands
 	#//
 	if ($main::pull{moz})
 	{
-		$session->checkout("mozilla/nsprpub",	$nsprpub_tag)				|| print "checkout of nsprpub failed";		
-		$session->checkout("mozilla/security",	"SeaMonkey_M14_BRANCH")		|| print "checkout of security failed";		
-		$session->checkout("SeaMonkeyAll")									|| print "checkout of SeaMonkeyAll failed";
+		$session->checkout("mozilla/nsprpub",	$branch_tag)		|| print "checkout of nsprpub failed\n";		
+		$session->checkout("mozilla/security",	$branch_tag)		|| print "checkout of security failed\n";		
+		$session->checkout("SeaMonkeyAll",	$branch_tag)			|| print "checkout of SeaMonkeyAll failed\n";
 	}
 	elsif ($main::pull{runtime})
 	{
-		$session->checkout("mozilla/build")							|| print "checkout failure";
-		$session->checkout("mozilla/lib/mac/InterfaceLib")			|| print "checkout failure";
-		$session->checkout("mozilla/config")						|| print "checkout failure";
-		$session->checkout("mozilla/lib/mac/NSStdLib")				|| print "checkout failure";
-		$session->checkout("mozilla/lib/mac/NSRuntime")				|| print "checkout failure";
-		$session->checkout("mozilla/lib/mac/MoreFiles")				|| print "checkout failure";
-		$session->checkout("mozilla/lib/mac/MacMemoryAllocator")	|| print "checkout failure";
-		$session->checkout("mozilla/nsprpub",	$nsprpub_tag)		|| print "checkout failure";
+		$session->checkout("mozilla/build",	$branch_tag)							|| print "checkout failure\n";
+		$session->checkout("mozilla/lib/mac/InterfaceLib",	$branch_tag)			|| print "checkout failure\n";
+		$session->checkout("mozilla/config",	$branch_tag)						|| print "checkout failure\n";
+		$session->checkout("mozilla/lib/mac/NSStdLib",	$branch_tag)				|| print "checkout failure\n";
+		$session->checkout("mozilla/lib/mac/NSRuntime",	$branch_tag)				|| print "checkout failure\n";
+		$session->checkout("mozilla/lib/mac/MoreFiles",	$branch_tag)				|| print "checkout failure\n";
+		$session->checkout("mozilla/lib/mac/MacMemoryAllocator",	$branch_tag)	|| print "checkout failure\n";
+		$session->checkout("mozilla/nsprpub",	$branch_tag)						|| print "checkout failure\n";
 	}
 }
 
