@@ -1,0 +1,19 @@
+<!ENTITY actionQuestion.label "Hva skal &brandShortName; gjøre med denne filen?">
+<!ENTITY save.label "Lagre til disk">
+<!ENTITY openWith.accesskey "Å">
+<!ENTITY whichIsA.label "som er en:">
+<!ENTITY save.accesskey "s">
+<!ENTITY openWith.label "Åpne med">
+<!ENTITY rememberChoice.label "Gjør dette automatisk for filer som denne fra nå av">
+<!ENTITY rememberChoice.accesskey "a">
+<!ENTITY other.label "Annen ...">
+<!ENTITY intro.label "Du har valgt å åpne">
+<!ENTITY settingsChange.label "Innstillinger kan endres i Nedlastinger-seksjonen i Verktøy>Innstillinger.">
+<!ENTITY from.label "fra:">
+<!ENTITY settingsChangeMac.label "Innstillinger kan bli endret i Nedlastinger-seksjonen i innstillingene til &brandShortName;.">
+<!ENTITY settingsChangeUnix.label "Innstillinger kan bli endret i Nedlastinger-seksjonen i Rediger; Innstillinger.">
+<!ENTITY  chooseHandlerMac.label      "Velg ...">
+<!ENTITY  chooseHandlerMac.accesskey  "V">
+<!ENTITY  chooseHandler.label         "Bla gjennom ...">
+<!ENTITY  chooseHandler.accesskey     "B">
+

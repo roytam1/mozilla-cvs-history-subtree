@@ -1,0 +1,8 @@
+<!ENTITY printWindow.title "Skriver ut">
+<!ENTITY title "Tittel:">
+<!ENTITY percentPrint "#1&#037;">
+<!ENTITY preparing "Forbereder ...">
+<!ENTITY printComplete "Utskrift er fullført.">
+<!ENTITY dialogCancel.label "Avbryt">
+<!ENTITY dialogClose.label "Lukk">
+<!ENTITY progress "Fremdrift:">

@@ -1,0 +1,12 @@
+<!ENTITY cmdInput.label "Utskriftskommando:">
+<!ENTITY paperInput.label "Papirstørrelse:">
+<!ENTITY topInput.label "Topp:">
+<!ENTITY leftInput.label "Venstre:">
+<!ENTITY edgeMarginInput.label "Mellomrom mellom kanten av papiret til marginen (tommer)">
+<!ENTITY colorRadio.label "Farge">
+<!ENTITY grayRadio.label "Gråtoner">
+<!ENTITY colorGroup.label "Farge:">
+<!ENTITY plexInput.label "Plex-modus:">
+<!ENTITY printJobOptions.title "Skriverinnstillinger">
+<!ENTITY bottomInput.label "Bunn:">
+<!ENTITY rightInput.label "Høyre:">

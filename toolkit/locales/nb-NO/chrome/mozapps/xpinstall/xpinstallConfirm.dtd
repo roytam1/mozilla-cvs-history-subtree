@@ -1,0 +1,4 @@
+<!ENTITY dialog.title "Programvareinstallasjon">
+<!ENTITY warningText3.label "Du bør bare installere programmer fra kilder som du stoler på.">
+<!ENTITY warningText2.label "Ondsinnet programvare kan skade datamaskinen din eller krenke personvernet ditt.">
+<!ENTITY from.label "fra:">

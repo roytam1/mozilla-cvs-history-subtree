@@ -1,0 +1,9 @@
+<!ENTITY  mismatch.title          "Inkompatible utvidelser">
+<!ENTITY  intro1.label            "Følgende utvidelser er ikke kompatible med den nye versjonen
+                                   av &brandShortName; som du nettopp har installert.">
+<!ENTITY  intro2.label            "De har blitt slått av inntil kompatible versjoner er 
+                                   installert.">
+<!ENTITY  intro3.label            "&brandShortName; kan se etter og installere nyere, kompatible versjoner
+                                   for disse utvidelsene.">
+                                   
+

@@ -1,0 +1,19 @@
+<!ENTITY direction.label "Retning">
+<!ENTITY findField.tooltip "Skriv inn ett eller flere ord å søke etter:">
+<!ENTITY backwardsCheckbox.label "Søk bakover">
+<!ENTITY wrapCheckbox.label "Bryt teksten">
+<!ENTITY up.label "Oppover">
+<!ENTITY findField.label "Søk etter tekst:">
+<!ENTITY up.accesskey "O">
+<!ENTITY backwardsCheckbox.accesskey "k">
+<!ENTITY down.accesskey "N">
+<!ENTITY findButton.accesskey "s">
+<!ENTITY caseSensitiveCheckbox.accesskey "S">
+<!ENTITY down.label "Nedover">
+<!ENTITY wrapCheckbox.accesskey "b">
+<!ENTITY findButton.label "Søk">
+<!ENTITY cancelButton.label "Avbryt">
+<!ENTITY findDialog.title "Søk i denne siden">
+<!ENTITY caseSensitiveCheckbox.label "Skill mellom store og små bokstaver">
+<!ENTITY findField.accesskey "t">
+<!ENTITY findDialogFrame.title "Søk i denne ramma">

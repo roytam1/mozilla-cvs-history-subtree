@@ -1,0 +1,25 @@
+<!ENTITY sortFirst.label "Første > Siste sorteringsrekkefølge">
+<!ENTITY clear.accesskey "t">
+<!ENTITY sortLast.accesskey "s">
+<!ENTITY errLine.label "Linje:">
+<!ENTITY focus2.commandkey "d">
+<!ENTITY messages.label "Meldinger">
+<!ENTITY closeCmd.commandkey "w">
+<!ENTITY focus1.commandkey "l">
+<!ENTITY copyCmd.accesskey "K">
+<!ENTITY copyCmd.label "Kopier">
+<!ENTITY sortLast.label "Siste > Første sorteringsrekkefølge">
+<!ENTITY warnings.label "Advarsler">
+<!ENTITY warnings.accesskey "d">
+<!ENTITY evaluate.label "Evaluer">
+<!ENTITY errColumn.label "Kolonne:">
+<!ENTITY clear.label "Tøm">
+<!ENTITY all.accesskey "a">
+<!ENTITY messages.accesskey "m">
+<!ENTITY all.label "Alle">
+<!ENTITY copyCmd.commandkey "C">
+<!ENTITY errors.label "Feil">
+<!ENTITY sortFirst.accesskey "f">
+<!ENTITY errFile.label "Kildefil:">
+<!ENTITY console.title "JavaScript-konsoll">
+<!ENTITY errors.accesskey "e">

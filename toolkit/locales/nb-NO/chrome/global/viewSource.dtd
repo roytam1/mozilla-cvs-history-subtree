@@ -1,0 +1,35 @@
+<!ENTITY savePageCmd.commandkey "S">
+<!ENTITY printCmd.label "Skriv ut ...">
+<!ENTITY mainWindow.preface "Kildekoden til:">
+<!ENTITY fileMenu.label "Fil">
+<!ENTITY menu_highlightSyntax.label "Syntaksoppmerking">
+<!ENTITY closeCmd.label "Lukk">
+<!ENTITY savePageCmd.accesskey "s">
+<!ENTITY printCmd.accesskey "u">
+<!ENTITY mainWindow.titlemodifier "&brandFullName;">
+<!ENTITY closeCmd.accesskey "L">
+<!ENTITY closeCmd.commandkey "W">
+<!ENTITY menu_highlightSyntax.accesskey "S">
+<!ENTITY menu_wrapLongLines.title "Bryt lange linjer">
+<!ENTITY viewMenu.label "Vis">
+<!ENTITY mainWindow.title "&brandFullName;">
+<!ENTITY fileMenu.accesskey "F">
+<!ENTITY mainWindow.titlemodifierseparator " - ">
+<!ENTITY printCmd.commandkey "P">
+<!ENTITY viewMenu.accesskey "V">
+<!ENTITY savePageCmd.label "Lagre siden som ...">
+<!ENTITY menu_wrapLongLines.accesskey "B">
+<!ENTITY printPreviewCmd.accesskey "v">
+<!ENTITY pageSetupCmd.accesskey "o">
+<!ENTITY goToLineCmd.commandkey "l">
+<!ENTITY pageSetupCmd.label "Sideoppsett ...">
+<!ENTITY goToLineCmd.accesskey "G">
+<!ENTITY goToLineCmd.label "Gå til linje ...">
+<!ENTITY printPreviewCmd.label "Forhåndsvisning">
+<!ENTITY menu_textReduce.label "Forminsk tekst">
+<!ENTITY textEnlarge.commandkey "+">
+<!ENTITY menu_textEnlarge.label "Forstørr tekst">
+<!ENTITY menu_textEnlarge.accesskey "F">
+<!ENTITY menu_textReduce.accesskey "t">
+<!ENTITY textReduce.commandkey "-">
+<!ENTITY textReset.commandkey "0">

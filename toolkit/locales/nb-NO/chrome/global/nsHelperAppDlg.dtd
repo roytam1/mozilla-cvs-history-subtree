@@ -1,0 +1,20 @@
+<!ENTITY chooseAppFilePickerTitle "Velg program">
+<!ENTITY badApp.title "Klarte ikke å finne programmet">
+<!ENTITY chooseApp.accesskey "v">
+<!ENTITY intro.noDesc.label "Fila «#3» er av type #2, og #4 vet ikke hvordan denne typer filer skal behandles. Fila ligger i: ">
+<!ENTITY openUsing.accesskey "å">
+<!ENTITY useSystemDefault.accesskey "s">
+<!ENTITY intro.label "Fila «#3» er av type #2 (#1), og #4 vet ikke hvordan denne filtypen skal åpnes. Fila ligger i: ">
+<!ENTITY prompt.label "Hva skal #1 gjøre med denne fila?">
+<!ENTITY saveToDisk.label "Lagre til disk">
+<!ENTITY intro.attachment.label "Nettstedet har foreslått at &quot;#3&quot; skal bli behandlet som et vedlegg. Det har filtypen #2 (#1) og ligger på:">
+<!ENTITY saveToDisk.accesskey "l">
+<!ENTITY useSystemDefault.label "Åpne den med standardprogram (#1)">
+<!ENTITY intro.attachment.noDesc.label "Nettstedet har foreslått at &quot;#3&quot; skal bli behandlet som et vedlegg. Det har filtypen #2, og er plassert på:">
+<!ENTITY openUsing.label "Åpne med">
+<!ENTITY useSystemDefault.noDesc.label "Åpne med standardprogram">
+<!ENTITY badApp "Programmet du oppgav («#1») ble ikke funnet. Kontroller filnavnet eller velg en annen applikasjon.">
+<!ENTITY chooseApp.label "Velg ...">
+<!ENTITY caption.label "Åpner #1">
+<!ENTITY alwaysHandle.accesskey "A">
+<!ENTITY alwaysHandle.label "Alltid bruk denne handlingen ved åpning av denne filtypen">

@@ -1,0 +1,69 @@
+<!ENTITY certmgr.detail.general_tab.title "Generelt">
+<!ENTITY certmgr.details.label "Sertifikat-felt">
+<!ENTITY certmgr.ocsp_info "Sertifikatene har ikke blitt verifisert med OCSP. Trykk på Vis for å gjøre det.">
+<!ENTITY certmgr.websites "Du har lagrede sertifikater som identifiserer disse nettsidene:">
+<!ENTITY certmgr.certdetail.title "Seritifikatdetaljer">
+<!ENTITY certmgr.editsslcert.donttrust "Ikke stol på autentiteten til dette sertifikatet.">
+<!ENTITY certmgr.fingerprints.label "Fingeravtrykk">
+<!ENTITY certmgr.deleteusercert.beforename "Du har bedt om å slette sertifikatet:">
+<!ENTITY certmgr.editemailcert.edittrust "Rediger tiltro-innstillinger for sertifikatet:">
+<!ENTITY certmgr.editsslcert.dotrust "Stol på autentiteten til sertifikatet.">
+<!ENTITY certmgr.cas "Du har lagrede sertifikater som identifiserer disse sertifikat-myndighetene:">
+<!ENTITY certmgr.editcert.trustemail "Dette sertifikatet kan identifisere e-postbrukere.">
+<!ENTITY certmgr.add.label "Legg til">
+<!ENTITY certmgr.ok.label "OK">
+<!ENTITY certmgr.tokenname "Sikkerhetsenhet">
+<!ENTITY certmgr.editsslcert.edittrust "Rediger tiltro-innstillinger for sertifikat">
+<!ENTITY certmgr.tab.ca "Myndigheter">
+<!ENTITY certmgr.purpose "Formål">
+<!ENTITY certmgr.certdetail.serialnumber "Serienummer">
+<!ENTITY certmgr.deleteusercert.title "Slett sertifikatet ditt">
+<!ENTITY certmgr.certdetail.sha1fingerprint "SHA1 fingeravtrykk">
+<!ENTITY certmgr.editemailcert.dotrust "Stol på autentiteten til dette sertifikatet">
+<!ENTITY certmgr.closeWindowAccessKey "L">
+<!ENTITY certmgr.cancel.label "Avbryt">
+<!ENTITY certmgr.editca.label "Rediger CA tiltro">
+<!ENTITY certmgr.helpButtonAccessKey "H">
+<!ENTITY certmgr.restore.label "Importer">
+<!ENTITY certmgr.delete.label "Slett">
+<!ENTITY certmgr.backup.label "Ta sikkerhetskopi">
+<!ENTITY certmgr.editcert.title "Rediger innstillinger for sikkerhetssertifikat">
+<!ENTITY certmgr.editcert.edittrust "Rediger tiltro-innstillinger:">
+<!ENTITY certmgr.issued "Utstedt">
+<!ENTITY certmgr.expires "Utgår">
+<!ENTITY certmgr.others "Du har lagrede sertifikater som identifiserer disse personene:">
+<!ENTITY certmgr.certdetail.ou "Organisasjonell enhet (OU)">
+<!ENTITY certmgr.mine "Du har lagrede sertifikater fra disse organisasjonene som identifiserer deg:">
+<!ENTITY certmgr.certname "Sertifikatnavn">
+<!ENTITY certmgr.subjectinfo.label "Utstedt til">
+<!ENTITY certmgr.detail.prettyprint_tab.title "Detaljer">
+<!ENTITY certmgr.view.label "Vis">
+<!ENTITY certmgr.deleteusercert.aftername "Når du har slettet dette sertifikatet, vil du ikke kunne lese e-post som har blitt kryptert med det.">
+<!ENTITY certmgr.help.label "Hjelp">
+<!ENTITY certmgr.serial "Serienummer">
+<!ENTITY certmgr.title "Sertifikatbehandling">
+<!ENTITY certmgr.deletecert.title "Slett sertifikat">
+<!ENTITY certmgr.certdetail.md5fingerprint "MD5-fingeravtrykk">
+<!ENTITY certmgr.validity.label "Gyldighet">
+<!ENTITY certmgr.edit.label "Rediger">
+<!ENTITY certmgr.backupall.label "Ta sikkerhetskopi av alle">
+<!ENTITY certmgr.issuerinfo.label "Utstedt av">
+<!ENTITY certmgr.tab.websites "Nettsteder">
+<!ENTITY certmgr.editsslcert.title "Rediger nettstedets tiltro-innstillinger">
+<!ENTITY certmgr.tab.others "Andre personers">
+<!ENTITY certmgr.certdetail.o "Organisasjon (O)">
+<!ENTITY certmgr.certdetail.cn "Vanlig navn (CN)">
+<!ENTITY certmgr.editcacert.title "Rediger CA-sertifikat tiltro-innstillinger">
+<!ENTITY certmgr.deletecert.beforename "Du har bedt om å slette dette sertifikatet:">
+<!ENTITY certmgr.ca.mycas "CAer administrert av deg">
+<!ENTITY certmgr.ca.builtins "Innebygde CAer">
+<!ENTITY certmgr.editemailcert.title "Rediger tiltro-innstillinger for e-post-sertifikat">
+<!ENTITY certmgr.editcert.trustobjsign "Dette sertifikatet kan identifisere programutviklere.">
+<!ENTITY certmgr.email "E-post-adresse">
+<!ENTITY certmgr.editcert.trustssl "Dette sertifikatet kan identifisere nettsider.">
+<!ENTITY certmgr.close.label "Lukk">
+<!ENTITY certmgr.hierarchy.label "Sertifikat-hierarki">
+<!ENTITY certmgr.tab.mine "Dine sertifikater">
+<!ENTITY certmgr.deletecert.aftername "Er du sikker på at du vil slette dette sertifikatet?">
+<!ENTITY certmgr.editemailcert.donttrust "Ikke stol på autentiteten til dette sertifikatet.">
+<!ENTITY certmgr.fields.label "Feltverdi">

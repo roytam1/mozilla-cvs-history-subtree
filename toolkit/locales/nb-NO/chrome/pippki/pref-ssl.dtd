@@ -1,0 +1,66 @@
+<!ENTITY cipher.tab.ssl2 "SSL2">
+<!ENTITY SSLClientAuthMethod "Valg av klientsertifikat">
+<!ENTITY cipher.ssl3.dhe_rsa_aes_256_sha "256-bit AES-kryptering med RSA, DHE og en SHA1 MAC">
+<!ENTITY cipher.details "Detaljer ...">
+<!ENTITY cipher.ssl3.dhe_dss_aes_128_sha "128-bit AES-kryptering med DSA, DHE og en SHA1 MAC">
+<!ENTITY cipher.ssl2.rc4_128 "128-bit RC4-kryptering med RSA og en MD5 MAC">
+<!ENTITY cipher.ssl2.rc4_40 "40-bit RC4-kryptering med RSA og en MD5 MAC (eksport)">
+<!ENTITY cipher.ssl3.rsa_1024_rc4_56_sha "56-bit RC4-kryptering med RSA og en SHA1 MAC (eksport)">
+<!ENTITY cipher.keySize "Effektiv nøkkelstørrelse:">
+<!ENTITY cipher.ssl3_extra.label "Ekstra SSL3/TLS kodesett">
+<!ENTITY cipher.tab.ssl3tls "SSL3/TLS">
+<!ENTITY cipher.ssl2.rc2_128 "128-bit RC2-kryptering med RSA og en MD5 MAC">
+<!ENTITY cipher.ssl3.rsa_rc4_128_sha "128-bit RC4-kryptering med RSA og en SHA1 MAC">
+<!ENTITY certselect.description "Avgjør hvordan &brandShortName; velger et sikkerhetssertifikat for å identifisere seg for nettsider som trenger et:">
+<!ENTITY cipher.name "Koding">
+<!ENTITY cipher.ssl3.rsa_null_sha "Ingen kryptering med RSA-autentisering og en SHA1 MAC">
+<!ENTITY cipher.encryption "Krypteringsalgoritme:">
+<!ENTITY cipher.authAlg "Autentiseringsalgoritme:">
+<!ENTITY SSLProtocolVersions "SSL protokollversjoner">
+<!ENTITY cipher.ssl3.dhe_rsa_aes_128_sha "128-bit AES-kryptering med RSA, DHE og en SHA1 MAC">
+<!ENTITY cipher.ssl3.dhe_rsa_des_sha "56-bit DES-kryptering med RSA, DHE og en SHA1 MAC">
+<!ENTITY cipher.macAlg "MAC-algoritme:">
+<!ENTITY cipher.ssl3.rsa_aes_256_sha "256-bit AES-kryptering med RSA og en SHA1 MAC">
+<!ENTITY warn.insecurepost "Sending av skjemadata fra en ukryptert side til en ukryptert side">
+<!ENTITY warn.viewmixed "Visning av en side med både kryptert og ukrypterte data">
+<!ENTITY cipher.ssl3.dhe_dss_des_ede3_sha "168-bit trippel DES med DSA, DHE og en SHA1 MAC">
+<!ENTITY warn.secureredirecttoinsecure "Videresender fra en kryptert side til en ukryptert side">
+<!ENTITY cipher.title "SSL: Rediger kodinger">
+<!ENTITY cipher.ssl3.dhe_rsa_des_ede3_sha "168-bit trippel DES med RSA, DHE og en SHA1 MAC">
+<!ENTITY edit.sslciphers.accesskey "R">
+<!ENTITY cipher.ssl3.rsa_des_sha "56-bit DES-kryptering med RSA og en SHA1 MAC">
+<!ENTITY cipher.ssl3.rsa_fips_des_sha "56-bit DES-kryptering med RSA og en SHA1 MAC (FIPS)">
+<!ENTITY warn.description "&brandShortName; kan varsle deg når sikkerhetsstatusen til nettsiden du viser endres. Sett &brandShortName; til å vise en advarsel og be om tillatelse før:">
+<!ENTITY cipher.keyAlg "Nøkkel-algoritme:">
+<!ENTITY cipher.ssl2.des_64 "56-bit DES-kryptering med RSA og en MD5 MAC">
+<!ENTITY cipher.fips "FIPS">
+<!ENTITY cipher.ssl3.rsa_aes_128_sha "128-bit AES-kryptering med RSA og en SHA1 MAC">
+<!ENTITY enable.tls "Tillat TLS">
+<!ENTITY enable.ssl3 "Tillat SSL versjon 3">
+<!ENTITY warn.enteringweak "Innlasting av en side som bruker lav grad av kryptering">
+<!ENTITY cipher.ssl3.rsa_1024_des_cbc_sha "56-bit DES-kryptering med RSA og en SHA1 MAC (eksport)">
+<!ENTITY enable.ssl2 "Tillat SSL versjon 2">
+<!ENTITY cipher.ssl2.label "SSL2 kodesett">
+<!ENTITY cipherinfo.title "Detaljer om koding">
+<!ENTITY cipher.ssl3.rsa_des_ede3_sha "168-bit trippel DES med RSA og en SHA1 MAC">
+<!ENTITY SSLWarnings "SSL-advarsler">
+<!ENTITY cipher.ssl3.rsa_rc4_128_md5 "128-bit RC4-kryptering med RSA og en MD5 MAC">
+<!ENTITY cipher.ssl3.dhe_dss_aes_256_sha "256-bit AES-kryptering med DSA, DHE og en SHA1 MAC">
+<!ENTITY certselect.auto "Velg automatisk">
+<!ENTITY cipher.exportable "IsExportable">
+<!ENTITY certselect.ask "Spør hver gang">
+<!ENTITY cipher.ssl3.rsa_null_md5 "Ingen kryptering med RSA-autentisering og en MD5 MAC">
+<!ENTITY cipher.ssl3.rsa_rc4_40_md5 "40-bit RC4-kryptering med RSA og en MD5 MAC (eksport)">
+<!ENTITY warn.enteringsecure "Innlasting av en side som støtter kryptering">
+<!ENTITY cipher.ssl3.rsa_rc2_40_md5 "40-bit RC2-kryptering med RSA og en MD5 MAC (eksport)">
+<!ENTITY edit.sslciphers "Rediger kodinger ...">
+<!ENTITY cipher.tab.ssl3tls_extra "Ekstra SSL3/TLS">
+<!ENTITY cipher.ssl3.rsa_fips_des_ede3_sha "168-bit trippel DES med RSA og en SHA1 MAC (FIPS)">
+<!ENTITY cipher.other "Andre attributter:">
+<!ENTITY cipher.ssl2.rc2_40 "40-bit RC2-kryptering med RSA og en MD5 MAC (eksport)">
+<!ENTITY warn.leavingsecure "Du forlater en side som støtter kryptering">
+<!ENTITY cipher.ssl3.label "SSL3/TLS kodesett">
+<!ENTITY warn.secureredirect "Videresender fra en kryptert side til en annen">
+<!ENTITY cipher.ssl2.des_ede3_192 "168-bit trippel DES-kryptering med RSA og MD5 MAC">
+<!ENTITY cipher.ssl3.dhe_dss_des_sha "56-bit DES-kryptering med DSA, DHE og en SHA1 MAC">
+<!ENTITY prefheader.title "Sikker tilkobling (SSL)">

@@ -1,0 +1,32 @@
+<!ENTITY editMenu.accesskey "R">
+<!ENTITY pasteCmd.label "Lim inn">
+<!ENTITY selectAllCmd.key "A">
+<!ENTITY redoCmd.key "Y">
+<!ENTITY pasteCmd.accesskey "L">
+<!ENTITY selectAllCmd.label "Merk alt">
+<!ENTITY undoCmd.accesskey "A">
+<!ENTITY cutCmd.accesskey "K">
+<!ENTITY deleteCmd.accesskey "S">
+<!ENTITY findCmd.accesskey "S">
+<!ENTITY deleteCmd.key "D">
+<!ENTITY cutCmd.key "X">
+<!ENTITY findPreviousCmd.accesskey "f">
+<!ENTITY cutCmd.label "Klipp ut">
+<!ENTITY undoCmd.label "Angre">
+<!ENTITY findCmd.label "Søk">
+<!ENTITY selectAllCmd.accesskey "M">
+<!ENTITY editMenu.label "Rediger">
+<!ENTITY copyCmd.accesskey "K">
+<!ENTITY findAgainCmd.key2 "VK_F3">
+<!ENTITY pasteCmd.key "V">
+<!ENTITY undoCmd.key "Z">
+<!ENTITY findAgainCmd.accesskey "i">
+<!ENTITY copyCmd.key "C">
+<!ENTITY findAgainCmd.key "G">
+<!ENTITY findPreviousCmd.label "Søk etter forrige">
+<!ENTITY findAgainCmd.label "Søk igjen">
+<!ENTITY redoCmd.label "Gjenta">
+<!ENTITY copyCmd.label "Kopier">
+<!ENTITY deleteCmd.label "Slett">
+<!ENTITY findCmd.key "F">
+<!ENTITY redoCmd.accesskey "G">

@@ -1,0 +1,23 @@
+<!ENTITY netOffline.longDesc "Nettleseren er frakoblet, og kan ikke koble til den angitte adressen. Koble til og prøv igjen.">
+<!ENTITY netTimeout.longDesc "Nettleseren brukte for lang tid med å koble til den angitte adressen. Tjeneren kan være under stor belastning, eller et nettverksproblem gjør at dataene ikke kommer fram. Hvis du tror tjeneren kan være opptatt, så vent en stund før du prøver igjen.">
+<!ENTITY connectionFailure.title "Oppkoblingsfeil">
+<!ENTITY dnsNotFound.longDesc "Adressen samsvarer ikke med noen kjent Internett-adresse, og kunne derfor ikke bli lastet. Dette kan være pga. en feilstaving av adressen, eller på grunn av at adressen ikke fins. Hvis adressen er gyldig, eller hvis problemet oppstår for mange nettsteder, så kan det være et problem med Proxy-tjenesten (hvis du bruker en) eller katalogtjener-oppslaget (DNS). Hvis dette er tilfelle, bør du se i systemdokumentasjonen, eller henvend deg til Internettilbyderen din for hjelp.">
+<!ENTITY loadError.label "Sidelastingsfeil.">
+<!ENTITY malformedURI.longDesc "Adressen er ikke i et gyldig format, og kunne ikke bli lest. En vanlig adresse vil starte med «http://», etterfulgt av en adresse, (f.eks. www.netscape.com), etterfulgt med en sti for innholdet (eller bare «/»). En vanlig årsak for dette problemet er bruk av bakover-skråstrek(\) istedet for vanlige skråstreker (/).">
+<!ENTITY dnsNotFound.title "Adressen ikke funnet">
+<!ENTITY netReset.title "Feil: Nettverksreset">
+<!ENTITY protocolNotFound.title "Feil: Ukjent protokoll">
+<!ENTITY retry.label "Prøv igjen">
+<!ENTITY unknownSocketType.title "Feil: Ukjent socket">
+<!ENTITY netOffline.title "Feil i frakoblet tilstand">
+<!ENTITY malformedURI.title "Feil: Ugyldig adresse">
+<!ENTITY generic.longDesc "Klarte ikke å laste siden, sannsynligvis fordi den ikke finnes, eller adressen er ugyldig.<br/>Kontroller at adressen er rett.">
+<!ENTITY fileNotFound.longDesc "Fila angitt av adressen ble ikke funnet. Kontroller at fila fins og at du har tillatelse til å åpne den.">
+<!ENTITY protocolNotFound.longDesc "Adressen (URL-en) starter med en protokoll som ikke er gjenkjent av nettleseren. En protokoll er den første delen av en Internett-adresse, for eksempel http:, ftp:, som forteller nettleseren hvordan den skal koble til adressene. I dette tilfellet er protokollen ukjent, så sidelastingen kan ikke fortsette. Kontroller at adressen er korrekt før du prøver igjen.">
+<!ENTITY redirectLoop.title "Feil: Redireksjons-løkke">
+<!ENTITY fileNotFound.title "Feil: Fant ikke fila">
+<!ENTITY connectionFailure.longDesc "Nettleseren kunne ikke koble til det angitte nettstedet, selv om det finnes. Dette kan være på grunn av at nettstedet ikke aksepterer tilkoblinger fra din maskin. Tjenesten kan også være utilgjengelig for øyeblikket, eller nettstedet støtter ikke tjenesten eller porten du forsøkte å koble til på.">
+<!ENTITY netTimeout.title "Nettverks-tidsavbrudd -Feil">
+<!ENTITY netReset.longDesc "Tilkoblingen til nettstedet ble avbrutt under dataoverføring. Dette kan være på grunn av nettverksfeil mellom nettstedet og din maskin. Hvis problemet fortsetter, se systemdokumentasjon, eller forsøk å kontakte Internettilbyderen for assistanse.">
+<!ENTITY redirectLoop.longDesc "Nettleseren har avbrutt en tilkobling, fordi den videresender forespørsler til seg selv på en måte som gjør at den aldri vil fullføre.">
+<!ENTITY unknownSocketType.longDesc "Dette nettstedet besvarte en forespørsel på en uventet måte. Dette kan være på grunn av at adressen (URL-en) bruker en feil protokoll for den angitte porten, eller en uvanlig oppsett kjører på tjeneren.">

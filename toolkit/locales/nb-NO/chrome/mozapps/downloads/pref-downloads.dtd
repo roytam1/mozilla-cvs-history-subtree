@@ -1,0 +1,21 @@
+<!ENTITY neverAsk.label "Lagre alle filer i denne mappa:">
+<!ENTITY fileTypes.label "Filtyper">
+<!ENTITY showWhenStarting.label "Vis Nedlastingsbehandling-vinduet når en nedlasting starter.">
+<!ENTITY closeWhenDone.label "Lukk Nedlastingsbehandling når alle nedlastinger er fullført">
+<!ENTITY removeFileHandler.label "Fjern">
+<!ENTITY plugins.accesskey "p">
+<!ENTITY fileTypesDescription.label "Automatisk utfør de valgte hendelsene for disse filtypene:">
+<!ENTITY plugins.label "Tilleggsprogrammer ...">
+<!ENTITY editFileHandler.label "Endre handling">
+<!ENTITY showFolder.label "Vis mappe">
+<!ENTITY editFileHandler.accesskey "h">
+<!ENTITY downloads.label "Mine nedlastinger">
+<!ENTITY downloadManagerWindow.label "Nedlastingsbehandling">
+<!ENTITY choose.label "Annet ...">
+<!ENTITY fileTypeColName.label "Filtype">
+<!ENTITY removeFileHandler.accesskey "r">
+<!ENTITY alwaysAsk.label "Spør meg hvor hver fil skal lagres">
+<!ENTITY askOnSave.label "Nedlastingsmappe">
+<!ENTITY lHeader "Nedlastinger">
+<!ENTITY fileHandlerColName.label "Applikasjon">
+<!ENTITY desktop.label "Skrivebord">

@@ -1,0 +1,9 @@
+<!ENTITY newserver.reason2 "- Nettstedets sertifikat er ufullstendig på grunn av feil oppsett av tjeneren.">
+<!ENTITY newserver.reason1 "- Nettleseren kjenner ikke igjen sertifikat-myndigheten som utstedte sertifikatet til nettstedet.">
+<!ENTITY newserver.notify "Informer nettstedets webmaster om dette problemet.">
+<!ENTITY newserver.session "Midlertidig aksepter sertifikatet for denne programøkta.">
+<!ENTITY newserver.examine "Undersøk sertifikatet ...">
+<!ENTITY newserver.title "Nettstedet er sertifisert av en ukjent myndighet">
+<!ENTITY newserver.remember "Aksepter dette sertifikatet permanent">
+<!ENTITY newserver.refuse "Ikke aksepter dette sertifikatet og ikke koble til nettstedet">
+<!ENTITY newserver.reasons "Mulige årsaker for feilen:">

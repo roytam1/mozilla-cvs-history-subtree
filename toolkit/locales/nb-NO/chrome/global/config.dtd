@@ -1,0 +1,29 @@
+<!ENTITY prefColumn.label "Innstillingnavn">
+<!ENTITY typeColumn.label "Type">
+<!ENTITY filterPrefs.accesskey "l">
+<!ENTITY showAll.label "Vis alle">
+<!ENTITY boolean.label "Boolsk">
+<!ENTITY string.label "Streng">
+<!ENTITY new.accesskey "n">
+<!ENTITY reset.accesskey "s">
+<!ENTITY copyName.label "Kopier Navn">
+<!ENTITY new.label "Ny(tt)">
+<!ENTITY columnChooser.tooltip "Trykk her for å velge kolonner som skal vises">
+<!ENTITY filterPrefs.label "Filter:">
+<!ENTITY prefColumnHeader.tooltip "Trykk her for å sortere">
+<!ENTITY modify.label "Endre">
+<!ENTITY copyName.accesskey "k">
+<!ENTITY string.accesskey "s">
+<!ENTITY integer.label "Integer">
+<!ENTITY modify.accesskey "e">
+<!ENTITY boolean.accesskey "b">
+<!ENTITY valueColumn.label "Verdi">
+<!ENTITY copyValue.accesskey "v">
+<!ENTITY showAll.accesskey "V">
+<!ENTITY lockColumn.label "Status">
+<!ENTITY copyValue.label "Kopier Verdi">
+<!ENTITY integer.accesskey "i">
+<!ENTITY reset.label "Standardverdier">
+<!ENTITY toggle.label "Slå av/på">
+<!ENTITY toggle.accesskey "T">
+

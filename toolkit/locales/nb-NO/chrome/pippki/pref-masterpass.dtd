@@ -1,0 +1,15 @@
+<!ENTITY resetpassword.text "Hvis du tilbakestiller hovedpassordet, vil alle dine lagrede nett- og epostpassord, skjemadata, personlige sertifikater og private nøkler gå tapt.">
+<!ENTITY lheader "Hovedpassord">
+<!ENTITY changepassword.text "Hovedpassordet beskytter sensitiv informasjon som f.eks. nettside-passord og sertifikater.">
+<!ENTITY managepassword.asktimeout "Hvis det ikke har blitt brukt for">
+<!ENTITY managepassword.askfirsttime "Første gang det trengs">
+<!ENTITY changepassword.label "Endre hovedpassord">
+<!ENTITY resetpassword.accesskey "T">
+<!ENTITY managepassword.timeout.unit "minutter eller lengre">
+<!ENTITY managepassword.text "&brandShortName; vil spørre etter hovedpassordet:">
+<!ENTITY changepassword.accesskey "E">
+<!ENTITY resetpassword.button "Tilbakestill passord">
+<!ENTITY managepassword.askeverytime "Hver gang det trengs">
+<!ENTITY resetpassword.label "Tilbakestill hovedpassord">
+<!ENTITY managepassword.label "Tidsavbrudd for hovedpassord">
+<!ENTITY changepassword.button "Endre passord ...">

@@ -1,0 +1,23 @@
+<!ENTITY fpDialog.title "Lagre fil">
+<!ENTITY numCopies.label "Antall kopier:">
+<!ENTITY aslaidoutRadio.label "Som det ser ut på skjermen">
+<!ENTITY propertiesButton.label "Innstillinger ...">
+<!ENTITY copies.label "Kopier">
+<!ENTITY selectedframeRadio.label "Den valgte ramma">
+<!ENTITY selectionRadio.label "Valgt område">
+<!ENTITY allpagesRadio.label "Alle sider">
+<!ENTITY printTo.label "Skriv ut til:">
+<!ENTITY frompageInput.label "fra">
+<!ENTITY printer.label "Skriver">
+<!ENTITY chooseButton.label "Velg fil ...">
+<!ENTITY rangeRadio.label "Sider">
+<!ENTITY printButton.label "Skriv ut">
+<!ENTITY printframeGroup.label "Skriv ut rammer">
+<!ENTITY printerInput.label "Skriver:">
+<!ENTITY printDialog.title "Skriver">
+<!ENTITY eachframesepRadio.label "Hver ramme hver for seg">
+<!ENTITY fileInput.label "Fil:">
+<!ENTITY printrangeGroup.label "Skriv ut område">
+<!ENTITY topageInput.label "til">
+<!ENTITY printerRadio.label "Skriver">
+<!ENTITY fileRadio.label "Fil">

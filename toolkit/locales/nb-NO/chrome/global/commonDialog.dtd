@@ -1,0 +1,6 @@
+<!ENTITY header.label "Kort tittel">
+<!ENTITY editfield1.label "Passord:">
+<!ENTITY editfield0.label "Brukernavn:">
+<!ENTITY checkbox.label "check">
+<!ENTITY message.label "Eksempeltekst her.">
+<!ENTITY editfield2.label "Bekreft passord:">

@@ -1,0 +1,16 @@
+<!ENTITY autoSelect.label "Ikke spør ved oppstart">
+<!ENTITY offlineState.accesskey "A">
+<!ENTITY exit.label "Avslutt">
+<!ENTITY start.label "Start &brandShortName;">
+<!ENTITY newButton.accesskey "O">
+<!ENTITY renameButton.accesskey "E">
+<!ENTITY windowtitle.label "&brandShortName; - velg brukerprofil">
+<!ENTITY newButton.label "Opprett profil ...">
+<!ENTITY availprofiles.label "Tilgjengelige profiler">
+<!ENTITY renameButton.label "Endre profilnavn ...">
+<!ENTITY deleteButton.label "Slett profil ...">
+<!ENTITY autoSelect.accesskey "I">
+<!ENTITY profilename.label "Profilnavn:">
+<!ENTITY deleteButton.accesskey "p">
+<!ENTITY pmDescription.label "&brandShortName; lagrer informasjon om innstillingene, valgene og annet i brukerprofilen din.">
+<!ENTITY offlineState.label "Arbeid frakoblet">

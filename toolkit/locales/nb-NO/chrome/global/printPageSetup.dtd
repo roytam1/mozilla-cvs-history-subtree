@@ -1,0 +1,37 @@
+<!ENTITY shrinkToFit.label "Forminsk til å passe sidebredden">
+<!ENTITY marginTop.label "Topp:">
+<!ENTITY hfURL.code "[&amp;U]">
+<!ENTITY basic.tab "Formattering og innstillinger">
+<!ENTITY hfPage.code "[&amp;P]">
+<!ENTITY customPrompt.prompt "Skriv inn egen topp-/bunntekst">
+<!ENTITY formatGroup.label "Formattering">
+<!ENTITY marginLeft.label "Venstre:">
+<!ENTITY marginRight.label "Høyre:">
+<!ENTITY landscape "Liggende">
+<!ENTITY headerFooter.label "Topptekst og bunntekst">
+<!ENTITY printSetup.title "Sideoppsett">
+<!ENTITY hfPage "Side #">
+<!ENTITY portrait "Stående">
+<!ENTITY hfTitle "Tittel">
+<!ENTITY hfTitle.code "[&amp;T]">
+<!ENTITY hfBlank "--blank--">
+<!ENTITY marginBottom.label "Bunn:">
+<!ENTITY hfPageAndTotal "Side # av #">
+<!ENTITY advanced.tab "Marginer og topp-/bunntekster">
+<!ENTITY hfLeft.label "Venstre:">
+<!ENTITY scalePercent "&#037;">
+<!ENTITY hfPageAndTotal.code "[&amp;PT]">
+<!ENTITY marginUnits.metric "millimeter">
+<!ENTITY printBG.label "Skriv ut bakgrunn (farger og bilder)">
+<!ENTITY hfDateAndTime.code "&amp;D">
+<!ENTITY hfRight.label "Høyre:">
+<!ENTITY hfURL "URL">
+<!ENTITY marginUnits.inches "tommer">
+<!ENTITY scale.label "Skaler:">
+<!ENTITY hfCenter.label "Midten:">
+<!ENTITY optionsGroup.label "Innstillinger">
+<!ENTITY customPrompt.title "Egendefinert ...">
+<!ENTITY marginGroup.label "Marginer (#1)">
+<!ENTITY hfCustom "Egendefinert ...">
+<!ENTITY orientation.label "Orientering:">
+<!ENTITY hfDateAndTime "Dato/tid">

@@ -1,0 +1,11 @@
+<!ENTITY dialog.title "Endre verktøylinje">
+<!ENTITY undoChanges.label "Angre endringer">
+<!ENTITY addNewToolbar.label "Ny verktøylinje">
+<!ENTITY text.label "Tekst">
+<!ENTITY restoreDefaultSet.label "Gjenopprett standarder">
+<!ENTITY show.label "Vis:">
+<!ENTITY instructions.description "Dra en knapp til verktøylinjene ovenfor for å legge den til.">
+<!ENTITY icons.label "Ikoner">
+<!ENTITY saveChanges.label "Fullført">
+<!ENTITY useSmallIcons.label "Bruk små ikoner">
+<!ENTITY iconsAndText.label "Ikoner og tekst">

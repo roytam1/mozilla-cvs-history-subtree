@@ -1,0 +1,5 @@
+<!ENTITY ssl.label "SSL">
+<!ENTITY certs.label "Sertifikater">
+<!ENTITY validation.label "Validering">
+<!ENTITY security.label "Personvern og sikkerhet">
+<!ENTITY masterpass.label "Hovedpassord">

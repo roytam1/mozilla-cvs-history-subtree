@@ -1,0 +1,67 @@
+<!ENTITY help.label "Hjelp">
+<!ENTITY downloadCert.trustSSL "Stol på denne CA-en til å identifisere nettsider.">
+<!ENTITY examineCert.label "Vis sertifikat">
+<!ENTITY pkcs12.setpassword.title "Velg passord for sikkerhetskopi av sertifikater">
+<!ENTITY pref.security.general.manageCert.label "Behandle sertifikater">
+<!ENTITY resetPassword.text "Hvis du tilbakestiller hovedpassordet, så vil alle lagrede nett- og epost-passord, skjemadataer, personlige sertifikater og private nøkler gå tapt. Er du sikker på at du vil tilbakestille hovedpassordet?">
+<!ENTITY domainMismatch.title "Sikkerhetsfeil: Domenenavn stemmer ikke">
+<!ENTITY serverCrlNextupdate.message "Spør systemadministrator om hjelp">
+<!ENTITY downloadCert.viewCert.text "Undersøk CA-sertifikat">
+<!ENTITY pkcs12.setpassword.label2 "Passord for sikkerhetskopi (igjen):">
+<!ENTITY pkcs12.setpassword.label1 "Passord for sikkerhetskopi:">
+<!ENTITY downloadCert.viewCert.label "Vis">
+<!ENTITY piperror.title "Feil">
+<!ENTITY setPassword.oldPassword.label "Nåværende passord:">
+<!ENTITY certPicker.info "Sertifikat:">
+<!ENTITY escrowWarn.title "Krypteringsnøkkel-kopi">
+<!ENTITY caCertExists.message "Sertifikatet finnes allerede.">
+<!ENTITY ok.label "OK">
+<!ENTITY certPicker.title "Velg sertifikat">
+<!ENTITY resetPassword.title "Tilbakestill hovedpassord">
+<!ENTITY pkcs12.setpassword.reminder "Viktig: Hvis du glemmer passordet til sikkerhetskopien, så vil du ikke kunne få tilbake innholdet i sikkerhetskopien senere. Skriv det ned på et sikkert sted.">
+<!ENTITY setPassword.reenterPassword.label "Nytt passord (igjen):">
+<!ENTITY createCertInfo.msg2 "Vent ...">
+<!ENTITY createCertInfo.msg1 "Nøkkeloppretting foregår ... Dette kan ta en stund ....">
+<!ENTITY pref.security.general.certificates.title "Sertifikater">
+<!ENTITY escrowWarn.benefit1 "Fordelen er at dersom du mister tilgangen til den private krypteringsnøkkelen, så kan du be om en ny kopi fra sertifikat-myndigheten (CA).">
+<!ENTITY caCertExists.title "Sertifikatet finnes">
+<!ENTITY setPassword.tokenName.label "Sikkerhetsenhet">
+<!ENTITY cancel.label "Avbryt">
+<!ENTITY setPassword.meter.label "Kvalitetsmåling av passord">
+<!ENTITY getPassword.tokenName.label "Sikkerhetsenhet">
+<!ENTITY pkcs12.setpassword.message "Passordet for sikkerhetskopien du setter her, beskytter sikkerhetskopi-fila du nå vil opprette. Du må sette dette passordet for å fortsette med sikkerhetskopieringen.">
+<!ENTITY downloadCert.message3 "Før du velger å ha tillit til denne sertifikat-myndigheten (CA), bør du undersøke dens sertifikat og dens fremgangsmåter og prosedyrer (hvis tilgjengelige).">
+<!ENTITY downloadCert.viewPolicy.label "Policy">
+<!ENTITY downloadCert.trustEmail "Stol på denne CA-en til å identifisere e-post-brukere.">
+<!ENTITY downloadCert.message1 "Du har blitt forespurt å ha tillit til en ny sertifikat-myndighet (CA)">
+<!ENTITY downloadCert.trustObjSign "Stol på denne CA-en til å identifisere programutviklere.">
+<!ENTITY pref.security.general.lHeader "Sikkerhet">
+<!ENTITY clientAuthAsk.message3 "Detaljer om valgt sertifikat:">
+<!ENTITY clientAuthAsk.message2 "Velg sertifikat som du vil bruke som identifikasjon:">
+<!ENTITY clientAuthAsk.message1 "Dette nettstedet har bedt om at du identifiserer deg selv med et sertifikat:">
+<!ENTITY setPassword.meter.loading "Laster">
+<!ENTITY createCertInfo.title "Genererer en privat nøkkel">
+<!ENTITY pref.security.general.paranoid.label "Bruk paranoide sikkerhetsinnstillinger">
+<!ENTITY pkcs12.getpassword.message "Skriv inn passordet som ble brukt for å kryptere denne sikkerhetskopien.">
+<!ENTITY serverCertExpired.continue "Vil du fortsette likevel?">
+<!ENTITY downloadCert.viewPolicy.text "Undersøk CA-fremgangsmåter og prosedyrer">
+<!ENTITY pref.security.general.header "Innstillinger for sikkerhet">
+<!ENTITY setPassword.newPassword.label "Nytt passord:">
+<!ENTITY createCertInfo.okButtonAccessKey "O">
+<!ENTITY downloadCert.title "Laster ned sertifikat">
+<!ENTITY chooseToken.message1 "Velg symbol.">
+<!ENTITY getPassword.title "Skriv inn hovedpassord">
+<!ENTITY certPicker.detailsLabel "Detaljer om det valgte sertifikater">
+<!ENTITY chooseToken.title "Velg symbol">
+<!ENTITY pipalert.title "Feil - kunne ikk gjenopprette">
+<!ENTITY pref.security.general.level.title "Sikkerhetsnivå">
+<!ENTITY setPassword.title "Endre hovedpassord">
+<!ENTITY pref.security.general.rHeader "Innstillinger for generell sikkerhet">
+<!ENTITY escrowWarn.message2 "Din private krypteringsnøkkel vil bli lagret hos sertifikat-myndigheten (CA), og kan bli brukt for å lese kryptert e-post eller dokumenter uten din tillatelse.">
+<!ENTITY clientAuthAsk.title "Forespørsel om brukeridentifikasjon">
+<!ENTITY escrowWarn.message1 "Viktig: Denne sertifikat-myndigheten (CA) har forespurt en sikkerhetskopi av dine private krypteringsnøkler.">
+<!ENTITY getPassword.password.label "Passord:">
+<!ENTITY pkcs12.getpassword.title "Passordskjerm">
+<!ENTITY formSigning.cert "Signerende sertifikat">
+<!ENTITY formSigning.title "Signering av tekst">
+<!ENTITY formSigning.confirmPassword "For å bekrefte at du ønsker å signere denne meldingen med det valgte sertifikatet, skriv inn hovedpassordet.">

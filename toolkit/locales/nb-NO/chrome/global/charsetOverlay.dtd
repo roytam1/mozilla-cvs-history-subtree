@@ -1,0 +1,20 @@
+<!ENTITY charsetMenu.accesskey "e">
+<!ENTITY charsetMenuMore4.label "SØ og SV-Asiatisk">
+<!ENTITY charsetMenuMore.accesskey "m">
+<!ENTITY charsetMenu.label "Tegnkoding">
+<!ENTITY charsetMenuMore.label "Mer">
+<!ENTITY charsetCustomize.accesskey "I">
+<!ENTITY charsetMenuMore3.label "Østasiatisk">
+<!ENTITY charsetCustomize.label "Innstillinger ...">
+<!ENTITY charsetMenuMore5.accesskey "m">
+<!ENTITY charsetMenuMore4.accesskey "s">
+<!ENTITY charsetMenuMore3.accesskey "a">
+<!ENTITY charsetMenuMore2.accesskey "ø">
+<!ENTITY charsetMenuMore1.accesskey "v">
+<!ENTITY charsetMenuMore2.label "Østeuropeisk">
+<!ENTITY charsetMenuAutodet.accesskey "A">
+<!ENTITY charsetMenuAutodet.label "Automatisk gjenkjenning">
+<!ENTITY charsetMenuMore5.label "Midtøstlig">
+<!ENTITY charsetMenuMore1.label "Vesteuropeisk">
+<!ENTITY charsetMenuUnicode.label "Unicode">
+<!ENTITY charsetMenuUnicode.accesskey "U">

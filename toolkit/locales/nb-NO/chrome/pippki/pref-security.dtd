@@ -1,0 +1,16 @@
+<!ENTITY security.label "Personvern og sikkerhet">
+<!ENTITY managecerts.accesskey "B">
+<!ENTITY managedevices.label "Behandle sikkerhetsenheter">
+<!ENTITY security.description "Innstillinger for personvern og sikkerhet">
+<!ENTITY managedevices.accesskey "s">
+<!ENTITY managecerts.button "Behandle sertifikater ...">
+<!ENTITY managecerts.label "Behandle sertifikater">
+<!ENTITY managedevices.button "Behandle sikkerhetsenheter">
+<!ENTITY certs.title "Sertifikater">
+<!ENTITY managedevices.text "Bruk denne knappen for å behandle sikkerhetsenhetene dine, som f.eks. Smart Card.">
+<!ENTITY certs.label "Sertifikater">
+<!ENTITY ssl.label "SSL">
+<!ENTITY resetsettings.label "Tilbakestill valgene">
+<!ENTITY managecerts.text "Bruk sertifikatsbehandling for å behandle dine personlige sertifikater, samt sertifikater for andre personer og sertifikat-myndigheter (CA).">
+<!ENTITY security.title "Sikkerhetsinnstillinger">
+<!ENTITY resetpreferences.label "Tilbakestill innstillingene">

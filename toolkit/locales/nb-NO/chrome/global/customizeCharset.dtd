@@ -1,0 +1,6 @@
+<!ENTITY add.label "Legg til">
+<!ENTITY current.label "Aktive tegnkodinger:">
+<!ENTITY additional.label "Tilgjengelige tegnkodinger:">
+<!ENTITY left.header "Tegnkoding">
+<!ENTITY remove.label "Fjern">
+<!ENTITY title.label "Endre tegnkoding">

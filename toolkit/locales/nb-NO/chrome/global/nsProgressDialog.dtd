@@ -1,0 +1,27 @@
+<!ENTITY launch "Kjør fil">
+<!ENTITY unknownSavingTitle "Lagrer #1">
+<!ENTITY progress "Fremdrift:">
+<!ENTITY savingTarget "Til:">
+<!ENTITY resume "Fortsett">
+<!ENTITY timeElapsed "Tid brukt:">
+<!ENTITY shortTimeFormat "#2:#3">
+<!ENTITY progressMsg "#1 KB av #2 KB (med #3 KB/sek)">
+<!ENTITY unknownOpeningTitle "Åpner #1">
+<!ENTITY cancel "Avbryt">
+<!ENTITY reveal "Vis filplassering">
+<!ENTITY keep "Behold vinduet åpent etter nedlastingen er ferdig.">
+<!ENTITY savingTitle "#2&#037; av #1 Lagret">
+<!ENTITY openingTarget "Med:">
+<!ENTITY unknownTime "Ukjent">
+<!ENTITY openingTitle "#2&#037; av #1 Fullført">
+<!ENTITY timeLeft "Tid igjen:">
+<!ENTITY close "Lukk">
+<!ENTITY percentMsg "#1&#037;">
+<!ENTITY savingSource "Lagrer fra:">
+<!ENTITY status "Status:">
+<!ENTITY completeMsg "Fullført, #2 KB lastet ned (brukt tid var #1)">
+<!ENTITY defaultTitle "Lagrer">
+<!ENTITY longTimeFormat "#1:#2:#3">
+<!ENTITY pausedMsg "Nedlasting har pause">
+<!ENTITY openingSource "Åpner fra:">
+<!ENTITY pause "Pause">

@@ -1,0 +1,42 @@
+<!ENTITY validation.crlnextupdate.label "Neste oppdatering">
+<!ENTITY validation.crlautoupdatestatus.label "Status for automatisk oppdatering">
+<!ENTITY validation.crllastupdate.label "Siste oppdatering">
+<!ENTITY crl.import.nextupdate.label "Neste oppdatering:">
+<!ENTITY validation.crl.autoupdate.title "Automatisk CRL-oppdateringsinnstillinger">
+<!ENTITY crl.issuer.label "CRL utstedt av:">
+<!ENTITY signingCA.accesskey "R">
+<!ENTITY disableOCSP.label "Ikke bruk OCSP for sertifikatkontrollering">
+<!ENTITY crl.import.success.message "Lista over opphevede sertifikater (CRL) ble importert.">
+<!ENTITY validation.crlautoupdateenabled.label "Automatisk oppdatering">
+<!ENTITY validation.deletecrl.label "Slett">
+<!ENTITY serviceURL.label "Service-URL:">
+<!ENTITY serviceURL.accesskey "S">
+<!ENTITY help.button "Hjelp">
+<!ENTITY proxyOCSP.label "Bruk OCSP for å kontrollere alle sertifikater med denne URL-en og signereren:">
+<!ENTITY validation.crl.autoupdate.enable.label "Tillat automatisk oppdatering for denne CRLen">
+<!ENTITY edit.button "Innstillinger">
+<!ENTITY ok.button "OK">
+<!ENTITY validation.crl.autoupdate.time.label2 "dag(er) før neste oppdatering">
+<!ENTITY validation.crl.autoupdate.time.label1 "Oppdater">
+<!ENTITY validation.crl.label "CRL">
+<!ENTITY validation.title "Validering">
+<!ENTITY crl.autoupdate.fail.cnt.label "Forrige påfølgende oppdateringsfeiler:">
+<!ENTITY crl.import.status.title "CRL Importstatus">
+<!ENTITY validation.crlname.label "Navn">
+<!ENTITY validation.managecrls.accesskey "B">
+<!ENTITY validation.crlmanager.label "Behandle CRL-er">
+<!ENTITY crl.issuer.orgunit.label "Enhet:">
+<!ENTITY validation.crl.autoupdate.url.label "CRL vil bli importert fra:">
+<!ENTITY validation.updatecrl.label "Oppdater">
+<!ENTITY validation.crl.autoupdate.freq.label2 "dag(er)">
+<!ENTITY crl.autoupdate.fail.reason.label "Detaljer om siste oppdateringsfeil:">
+<!ENTITY validation.crl.autoupdate.freq.label1 "Oppdater hver">
+<!ENTITY signingCA.label "Respons-signerer:">
+<!ENTITY validation.crl.description "Bruk CRL-behandler for å behandle listene over opphevede sertifikater (CRL) som er lagret i sertifikat-databasen din.">
+<!ENTITY validation.ocsp.description "&brandShortName; kan bruke Tilkoblet Sertifikatstatus-protokoll (OCSP) for å verifisere sertifikater. Sett &brandShortName; til å bruke OCSP på denne måten:">
+<!ENTITY cancel.button "Avbryt">
+<!ENTITY validation.managecrls.button "Behandle CRL-er ...">
+<!ENTITY validation.ocsp.label "OCSP">
+<!ENTITY certOCSP.label "Bruk OCSP bare for å validere sertifikater som har en OCSP service-URL">
+<!ENTITY crl.issuer.org.label "Organisasjon:">
+<!ENTITY validation.advanced.label "Innstillinger">

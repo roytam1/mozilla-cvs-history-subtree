@@ -1,0 +1,51 @@
+<!ENTITY previewNoThemeSelected.label "Ingen tema valgt">
+<!ENTITY extensions.title "Utvidelser">
+<!ENTITY cmd.optionsUnix.accesskey "n">
+<!ENTITY about.tooltip "Om">
+<!ENTITY cmd.enable.label "Slå på">
+<!ENTITY cmd.enable.accesskey "p">
+<!ENTITY cmd.disable.label "Slå av">
+<!ENTITY cmd.moveDn.accesskey "n">
+<!ENTITY cmd.homepage.accesskey "h">
+<!ENTITY cmd.about.label "Om denne utvidelsen">
+<!ENTITY cmd.close.commandKey "w">
+<!ENTITY homepage.tooltip "Hjemmeside">
+<!ENTITY cmd.useTheme.accesskey "B">
+<!ENTITY extensionItem.waiting.label "Venter ...">
+<!ENTITY cmd.update.tooltip "Ser etter oppdateringer til utvidelsene">
+<!ENTITY getMoreExtensions.tooltip "Hent flere utvidelser fra update.mozilla.org">
+<!ENTITY extensionItem.installing.label "Installerer ...">
+<!ENTITY extensionItem.toBeUninstalled.label "Dette elementet vil bli avinstallert etter at du starter &brandShortName; på nytt.">
+<!ENTITY cmd.about.accesskey "u">
+<!ENTITY cmd.optionsUnix.label "Innstillinger">
+<!ENTITY getMoreThemes.label "Hent flere temaer">
+<!ENTITY cmd.options.label "Valg">
+<!ENTITY cmd.options.commandKey ",">
+<!ENTITY options.tooltip "Innstillinger">
+<!ENTITY getMoreExtensions.label "Hent flere utvidelser">
+<!ENTITY cmd.uninstall.accesskey "A">
+<!ENTITY getMoreThemes.tooltip "Hent flere temaer fra update.mozilla.org">
+<!ENTITY cmd.info.commandKey "i">
+<!ENTITY cmd.uninstall.tooltip "Avinstallerer den valgte utvidelsen">
+<!ENTITY cmd.homepage.label "Besøk hjemmeside">
+<!ENTITY cmd.moveUp.label "Flytt opp">
+<!ENTITY previewNoPreviewImage.label "Dette temaet har ikke forhåndsvisningsbilde">
+<!ENTITY cmd.moveUp.accesskey "o">
+<!ENTITY extensionItem.toBeInstalled.label "Dette elementet vil bli installert etter at du starter &brandShortName; på nytt.">
+<!ENTITY cmd.useTheme.label " Bruk tema">
+<!ENTITY cmd.options.accesskey "V">
+<!ENTITY extensionItem.toBeDisabled.label "Dette elementet vil bli avslått etter at du starter &brandShortName; på nytt.">
+<!ENTITY cmd.install.accesskey "I">
+<!ENTITY cmd.update.label "Oppdater">
+<!ENTITY cmd.install.tooltip "Installer en utvidelse">
+<!ENTITY extensionItem.done.label "Installering fullført">
+<!ENTITY cmd.moveDn.label "Flytt ned">
+<!ENTITY cmd.disable.accesskey "a">
+<!ENTITY extensionItem.toBeEnabled.label "Dette elementet vil bli påslått etter at du starter &brandShortName; på nytt.">
+<!ENTITY cmd.moveToTop.label "Flytt til øverst">
+<!ENTITY cmd.update.accesskey "O">
+<!ENTITY cmd.uninstall.label "Avinstaller">
+<!ENTITY cmd.moveToTop.accesskey "ø">
+<!ENTITY cmd.install.label "Installer">
+<!ENTITY optionsUnix.tooltip "Innstillinger">
+<!ENTITY cmd.useTheme.tooltip "Endrer &brandShortName; sitt tema.">

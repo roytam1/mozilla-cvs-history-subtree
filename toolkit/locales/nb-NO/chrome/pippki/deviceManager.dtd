@@ -1,0 +1,18 @@
+<!ENTITY loaddevice.modname.default "Ny PKCS#11-modul">
+<!ENTITY devmgr.button.unload.label "Fjern">
+<!ENTITY devmgr.button.load.label "Last inn">
+<!ENTITY devmgr.title "Enhetsbehandling">
+<!ENTITY loaddevice.filename "Modulfilnavn:">
+<!ENTITY devmgr.button.login.label "Logg inn">
+<!ENTITY loaddevice.info "Skriv inn informasjonen for modulen du vil legge til.">
+<!ENTITY devmgr.button.changeslotname.label "Endre plassnavn">
+<!ENTITY devmgr.details.title "Detaljer">
+<!ENTITY devmgr.button.changepw.label "Endre passord">
+<!ENTITY devmgr.devlist.label "Sikkerhetsmoduler og -enheter">
+<!ENTITY devmgr.button.logout.label "Logg ut">
+<!ENTITY devmgr.status.label "Status">
+<!ENTITY devmgr.version.label "Versjon">
+<!ENTITY devmgr.details.title2 "Verdi">
+<!ENTITY loaddevice.title "Last PKCS#11-enhet">
+<!ENTITY loaddevice.browse "Bla gjennom ...">
+<!ENTITY loaddevice.modname "Modulnavn:">

@@ -1,0 +1,61 @@
+<!ENTITY checking.title "Ser etter oppdateringer">
+<!ENTITY noupdates.intro.user.label "&brandShortName; fant ingen tilgjengelige oppdateringer.">
+<!ENTITY updateWizard.title "&brandShortName; oppdatering">
+<!ENTITY updateCheckError.label "Detaljer">
+<!ENTITY errors.intro.label "&brandShortName; oppdaget et problem ved oppdatering av
+                                           programmene dine, og derfor vil ikke alle komponentene bli oppdatert.">
+<!ENTITY finished.updated.label "&brandShortName; har installert de tilgjengelige oppdateringene.">
+<!ENTITY found.title "Oppdatering funnet">
+<!ENTITY mismatch.intro2.label "De har blitt avslått inntil kompatible versjoner er
+                                           installert.">
+<!ENTITY errors.details.accesskey "D">
+<!ENTITY errors.details.label "Detaljer">
+<!ENTITY finished.error.label "&brandShortName; klarte ikke å fullføre nedlastingen og installeringen av noen oppdateringer.">
+<!ENTITY appupdate.intro.label "&brandShortName; Update vil nå lukkes, og du vil bli sendt til nettsiden
+                                           hvor du kan laste ned den siste versjonen av
+                                           &brandShortName;.">
+<!ENTITY installing.disclaimer.label "XXXben - this will not work until we have a scriptable API to XPInstall.">
+<!ENTITY found.instructions.label 'Velg hvilke du vil installere, og trykk på "Installer nå" for å installere dem.'>
+<!ENTITY noupdates.intro.mismatch.label "&brandShortName; klarte ikke å finne noen tilgjengelige oppdateringer -
+                                           kompatible versjoner er kanskje ikke tilgjengelig ennå.">
+<!ENTITY noupdates.enableChecking.label "Tillat &brandShortName; å se etter oppdateringer.">
+<!ENTITY finished.mismatch.label "Trykk på Fullfør for å starte &brandShortName;">
+<!ENTITY finished.remaining2.label "Klarte ikke å oppdatere noen inkompatible komponenter, muligens
+                                           fordi kompatible versjoner ikke er tilgjengelig nå.
+                                           &brandShortName; kan se etter oppdateringer med jevne
+                                           mellomrom og informere deg når de blir tilgjengelige.">
+<!ENTITY appupdate.title "&brandShortName; Update">
+<!ENTITY updateCheckError.description "&brandShortName; oppdaget problemer under oppdatering
+                                           av noen elementer.">
+<!ENTITY noupdates.intro2.mismatch.label "&brandShortName; vil sjekke med jevne mellomrom og informere deg
+                                           når kompatible versjoner blir tilgjengelige.">
+<!ENTITY updateCheckError.accesskey "D">
+<!ENTITY errors.title "Problemer under oppdatering">
+<!ENTITY noupdates.title "Ingen oppdateringer ble funnet">
+<!ENTITY finished.enableChecking.label "Tillat &brandShortName; å se etter oppdateringer.">
+<!ENTITY mismatch.title "Ukompatible komponenter">
+<!ENTITY checking.intro.label "&brandShortName; ser nå etter tilgjengelige oppdateringer ...">
+<!ENTITY  checking.status                 "Dette kan ta en liten stund ...">
+<!ENTITY from.label "fra:">
+<!ENTITY noupdates.intro3.mismatch.label "&brandShortName; kan sjekke etter oppdateringer med jevne mellomrom, og informere
+                                           deg når kompatible versjoner blir tilgjengelige.">
+<!ENTITY installing.intro.label "Laster ned og installerer oppdateringer ...">
+<!ENTITY mismatch.intro1.label "Følgende komponenter er ikke kompatible med den nye versjonen
+                                           av &brandShortName; som du har nettopp installert:">
+<!ENTITY installing.title "Installerer oppdateringer">
+<!ENTITY finished.title "Oppdatering fullført">
+<!ENTITY appInfo.label "Denne oppdateringen må bli installert separat fra andre.">
+<!ENTITY mismatch.intro3.label "&brandShortName; kan se etter nyere, kompatible
+                                           versjoner av disse komponentene.">
+<!ENTITY finished.remaining.label "Klarte ikke å oppdatere noen inkompatible komponenter, muligens
+                                           fordi kompatible versjoner ikke er tilgjengelig nå.
+                                           &brandShortName; vil se etter oppdateringer med jevne
+                                           mellomrom og informere deg når de blir tilgjengelige.">
+<!ENTITY found.intro.label "&brandShortName; fant følgende tilgjengelige oppdateringer:">
+<!ENTITY  resolveMaxVersion.title         "Ser etter kompatible utvidelser og temaer ...">
+<!ENTITY  resolveMaxVersion.intro1.label  "&brandShortName; ser for kompatible oppdateringer for utvidelsene og temaene dine ...">
+
+<!ENTITY  version.title                   "Ser etter kompatibilitetsoppdateringer">
+<!ENTITY  version.intro.label             "&brandShortName; ser nå etter kompatible oppdateringer for dine utvidelser og temaer ...">
+<!ENTITY  version.status                  "Dette kan ta en liten stund ...">
+

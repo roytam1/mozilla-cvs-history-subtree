@@ -1,0 +1,37 @@
+<!ENTITY canceled.label "Avbrutt">
+<!ENTITY closeWhenDone.label "Lukk når nedlastingen fullfører">
+<!ENTITY closeWhenDone.tooltip "Lukker nedlastingsvinduet når alle filene er ferdig nedlastet">
+<!ENTITY cmd.cancel.accesskey "A">
+<!ENTITY cmd.cancel.label "Avbryt">
+<!ENTITY cmd.cleanUp.accesskey "R">
+<!ENTITY cmd.cleanUp.label "Rydd opp">
+<!ENTITY cmd.cleanUp.tooltip "Fjerner ferdige, avbrutte eller feilede nedlastinger fra lista">
+<!ENTITY cmd.close.commandKey "w">
+<!ENTITY cmd.info.commandKey "i">
+<!ENTITY cmd.open.accesskey "Å">
+<!ENTITY cmd.open.label "Åpne">
+<!ENTITY cmd.openWith.accesskey "m">
+<!ENTITY cmd.openWith.label "Åpne med ...">
+<!ENTITY cmd.pause.accesskey "P">
+<!ENTITY cmd.pause.label "Pause">
+<!ENTITY cmd.properties.accesskey "E">
+<!ENTITY cmd.properties.label "Egenskaper">
+<!ENTITY cmd.remove.accesskey "F">
+<!ENTITY cmd.remove.label "Fjern">
+<!ENTITY cmd.resume.accesskey "F">
+<!ENTITY cmd.resume.label "Fortsett">
+<!ENTITY cmd.retry.accesskey "P">
+<!ENTITY cmd.retry.label "Prøv igjen">
+<!ENTITY cmd.show.accesskey "Å">
+<!ENTITY cmd.show.label "Åpne mappa med filen">
+<!ENTITY done.label "Fullført">
+<!ENTITY downloads.title "Nedlastinger">
+<!ENTITY failed.label "Feilet">
+<!ENTITY installing.label "Installerer ...">
+<!ENTITY starting.label "Starter ...">
+<!ENTITY cmd.change.label                 "Endre...">
+<!ENTITY cmd.change.accesskey             "E">
+<!ENTITY cmd.change.tooltip               "Endrer hvordan og hvor du lagrer filer til">
+<!ENTITY filesSavedTo.label               "Alle filer lastet ned til:">
+<!ENTITY showFolder.label                 "Vis denne mappa">
+

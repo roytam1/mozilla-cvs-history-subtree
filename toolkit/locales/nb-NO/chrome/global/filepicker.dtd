@@ -1,0 +1,16 @@
+<!ENTITY textInput.accesskey "f">
+<!ENTITY filterMenuList.label "Filer av typen:">
+<!ENTITY showHiddenFiles.accesskey "v">
+<!ENTITY lookInMenuList.accesskey "K">
+<!ENTITY lastModified.label "Sist endret">
+<!ENTITY noPermissionError.label "Du har ikke tilgang til å vise innholdet i denne katalogen.">
+<!ENTITY folderUp.tooltiptext "Gå opp et nivå">
+<!ENTITY folderNew.tooltiptext "Opprett ny katalog">
+<!ENTITY folderHome.tooltiptext "Gå til hjemmekatalog">
+<!ENTITY lookInMenuList.label "Katalog:">
+<!ENTITY filterMenuList.accesskey "t">
+<!ENTITY name.label "Navn">
+<!ENTITY showHiddenFiles.label "Vis skjulte filer og kataloger">
+<!ENTITY permissions.label "Rettigheter">
+<!ENTITY size.label "Størrelse">
+<!ENTITY textInput.label "Filnavn:">

@@ -1,0 +1,10 @@
+<!ENTITY customAppPath.label "Trykk på 'Endre ...' for å velge et program.">
+<!ENTITY changeAction.title "Endre handling">
+<!ENTITY saveToDisk.label "Lagre til disk">
+<!ENTITY changeApp.label "Endre ...">
+<!ENTITY changeApp.accesskey "E">
+<!ENTITY whenDownloading.label "Ved nedlasting av filer av typen:">
+<!ENTITY openDefault.label "Åpne dem med standardprogram:">
+<!ENTITY always.label "automatisk:">
+<!ENTITY openApplication.label "Åpne dem i dette programmet:">
+<!ENTITY  changeAppWindowTitle.label                "Velg program ...">

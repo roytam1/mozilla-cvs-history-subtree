@@ -1,0 +1,12 @@
+<!ENTITY reloadTab.accesskey "t">
+<!ENTITY untitledTab "(uten tittel)">
+<!ENTITY newTab.label "Ny fane">
+<!ENTITY reloadTab.label "Oppdater fane">
+<!ENTITY reloadAllTabs.label "Oppdater alle faner">
+<!ENTITY closeTab.label "Lukk fane">
+<!ENTITY closeTab.accesskey "l">
+<!ENTITY newTab.accesskey "n">
+<!ENTITY newTabButton.tooltip "Åpner en ny fane">
+<!ENTITY reloadAllTabs.accesskey "a">
+<!ENTITY closeOtherTabs.label "Lukk andre faner">
+<!ENTITY closeOtherTabs.accesskey "u">

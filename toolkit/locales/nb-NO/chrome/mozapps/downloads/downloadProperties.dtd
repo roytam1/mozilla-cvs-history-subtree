@@ -1,0 +1,7 @@
+<!ENTITY cmd.close.commandKey "w">
+<!ENTITY path.label "Til:">
+<!ENTITY window.title "Egenskaper">
+<!ENTITY dateStarted.label "Startet:">
+<!ENTITY acceptButton.label "Lukk">
+<!ENTITY downloadedFrom.label "Fra:">
+<!ENTITY dateEnded.label "Fullført:">
