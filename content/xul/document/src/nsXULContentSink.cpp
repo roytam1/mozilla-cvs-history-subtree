@@ -1649,7 +1649,12 @@ XULContentSinkImpl::OpenScript(const nsIParserNode& aNode)
                         }
                     }
                 } else {
-                    nsXULDocument::AbortFastLoads();
+                    // If script->mSrcURI is not in the FastLoad multiplex,
+                    // rv2 will be NS_ERROR_NOT_AVAILABLE and we'll try to
+                    // update the FastLoad file to hold a serialization of
+                    // this script, once it has finished loading.
+                    if (rv2 != NS_ERROR_NOT_AVAILABLE)
+                        nsXULDocument::AbortFastLoads();
                 }
             }
         }

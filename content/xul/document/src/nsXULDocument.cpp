@@ -4378,6 +4378,81 @@ const char XUL_FASTLOAD_FILE_BASENAME[] = "XUL";
 #define XUL_DESERIALIZATION_BUFFER_SIZE (8 * 1024)
 
 
+class nsXULFastLoadFileIO : public nsIFastLoadFileIO
+{
+  public:
+    nsXULFastLoadFileIO(nsIFile* aFile)
+      : mFile(aFile) {
+        NS_INIT_REFCNT();
+        MOZ_COUNT_CTOR(nsXULFastLoadFileIO);
+    }
+
+    virtual ~nsXULFastLoadFileIO() {
+        MOZ_COUNT_DTOR(nsXULFastLoadFileIO);
+    }
+
+  private:
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIFASTLOADFILEIO
+
+  protected:
+    nsCOMPtr<nsIFile>         mFile;
+    nsCOMPtr<nsIInputStream>  mInputStream;
+    nsCOMPtr<nsIOutputStream> mOutputStream;
+};
+
+
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsXULFastLoadFileIO, nsIFastLoadFileIO)
+MOZ_DECL_CTOR_COUNTER(nsXULFastLoadFileIO)
+
+
+NS_IMETHODIMP
+nsXULFastLoadFileIO::GetInputStream(nsIInputStream** aResult)
+{
+    if (! mInputStream) {
+        nsresult rv;
+        nsCOMPtr<nsIInputStream> fileInput;
+        rv = NS_NewLocalFileInputStream(getter_AddRefs(fileInput), mFile);
+        if (NS_FAILED(rv)) return rv;
+
+        rv = NS_NewBufferedInputStream(getter_AddRefs(mInputStream),
+                                       fileInput,
+                                       XUL_DESERIALIZATION_BUFFER_SIZE);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    NS_ADDREF(*aResult = mInputStream);
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsXULFastLoadFileIO::GetOutputStream(nsIOutputStream** aResult)
+{
+    if (! mOutputStream) {
+        // Need PR_RDWR even if output-only, to support backward seeks outside
+        // of the output buffer.
+        PRInt32 ioFlags = PR_RDWR;
+        if (! mInputStream)
+            ioFlags |= PR_CREATE_FILE | PR_TRUNCATE;
+
+        nsresult rv;
+        nsCOMPtr<nsIOutputStream> fileOutput;
+        rv = NS_NewLocalFileOutputStream(getter_AddRefs(fileOutput), mFile,
+                                         ioFlags, 0644);
+        if (NS_FAILED(rv)) return rv;
+
+        rv = NS_NewBufferedOutputStream(getter_AddRefs(mOutputStream),
+                                        fileOutput,
+                                        XUL_SERIALIZATION_BUFFER_SIZE);
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    NS_ADDREF(*aResult = mOutputStream);
+    return NS_OK;
+}
+
+
 nsresult
 nsXULDocument::StartFastLoad()
 {
@@ -4393,9 +4468,7 @@ nsXULDocument::StartFastLoad()
     // navigator.xul on the Mac, and multiple-app-component (e.g., mailnews
     // and browser) startup due to command-line arguments.
     //
-    // XXXbe yet if we start browser once to generate a FastLoad file, and
-    // then restart with browser+mailnews, the second run will AbortFastLoads,
-    // deleting the FastLoad file.
+    // XXXbe we should attempt to update the FastLoad file after startup!
     //
     // XXXbe we do not yet use nsFastLoadPtrs, but once we do, we must keep
     // the FastLoad input stream open for the life of the app.
@@ -4420,22 +4493,23 @@ nsXULDocument::StartFastLoad()
                                           getter_AddRefs(file));
     if (NS_FAILED(rv)) return rv;
 
+    // Give the FastLoad service an object by which it can get or create a
+    // file output stream given an input stream on the same file.
+    nsCOMPtr<nsIFastLoadFileIO> io = new nsXULFastLoadFileIO(file);
+    if (! io)
+        return NS_ERROR_OUT_OF_MEMORY;
+    fastLoadService->SetCurrentFileIO(io);
+
     // Try to read an existent FastLoad file.
     PRBool exists = PR_FALSE;
     if (NS_SUCCEEDED(file->Exists(&exists)) && exists) {
-        nsCOMPtr<nsIInputStream> fileInput;
-        rv = NS_NewLocalFileInputStream(getter_AddRefs(fileInput), file);
-        if (NS_FAILED(rv)) return rv;
-
-        nsCOMPtr<nsIInputStream> bufferedInput;
-        rv = NS_NewBufferedInputStream(getter_AddRefs(bufferedInput),
-                                       fileInput,
-                                       XUL_DESERIALIZATION_BUFFER_SIZE);
+        nsCOMPtr<nsIInputStream> input;
+        rv = io->GetInputStream(getter_AddRefs(input));
         if (NS_FAILED(rv)) return rv;
 
         nsCOMPtr<nsIObjectInputStream> objectInput;
         PRUint32 checksum;
-        rv = fastLoadService->NewInputStream(bufferedInput, &checksum,
+        rv = fastLoadService->NewInputStream(input, &checksum,
                                              getter_AddRefs(objectInput));
         if (NS_SUCCEEDED(rv)) { 
             // XXXbe verify checksum, clear exists if bad
@@ -4466,18 +4540,12 @@ nsXULDocument::StartFastLoad()
 
     // FastLoad file not found, or invalid: write a new one.
     if (! exists) {
-        nsCOMPtr<nsIOutputStream> fileOutput;
-        rv = NS_NewLocalFileOutputStream(getter_AddRefs(fileOutput), file);
-        if (NS_FAILED(rv)) return rv;
-
-        nsCOMPtr<nsIOutputStream> bufferedOutput;
-        rv = NS_NewBufferedOutputStream(getter_AddRefs(bufferedOutput),
-                                        fileOutput,
-                                        XUL_SERIALIZATION_BUFFER_SIZE);
+        nsCOMPtr<nsIOutputStream> output;
+        rv = io->GetOutputStream(getter_AddRefs(output));
         if (NS_FAILED(rv)) return rv;
 
         nsCOMPtr<nsIObjectOutputStream> objectOutput;
-        rv = fastLoadService->NewOutputStream(bufferedOutput,
+        rv = fastLoadService->NewOutputStream(output,
                                               getter_AddRefs(objectOutput));
         if (NS_FAILED(rv)) return rv;
 
@@ -4534,14 +4602,19 @@ nsXULDocument::EndFastLoad()
     // creating the FastLoad file during this app startup) stream.
     nsCOMPtr<nsIObjectInputStream> objectInput;
     nsCOMPtr<nsIObjectOutputStream> objectOutput;
-    if (gFastLoadService) {
-        gFastLoadService->GetCurrentInputStream(getter_AddRefs(objectInput));
-        gFastLoadService->GetCurrentOutputStream(getter_AddRefs(objectOutput));
-    }
+    gFastLoadService->GetCurrentInputStream(getter_AddRefs(objectInput));
+    gFastLoadService->GetCurrentOutputStream(getter_AddRefs(objectOutput));
 
     if (objectInput) {
-        NS_ASSERTION(!objectOutput, "reading and writing a FastLoad file?");
-
+        // If this is the last of one or more XUL master documents loaded
+        // together at app startup, close the FastLoad service's singleton
+        // input stream now.
+        //
+        // There may also be an output stream opened on the FastLoad file,
+        // if we are updating it to included muxed documents that weren't
+        // available via the input stream.  In that case, when we close
+        // the output stream, below, we'll update the FastLoad file header
+        // and footer.
         if (gFastLoadDone) {
             gFastLoadService->SetCurrentInputStream(nsnull);
             rv = objectInput->Close();
@@ -4631,18 +4704,22 @@ nsXULDocument::PrepareToLoadPrototype(nsIURI* aURI, const char* aCommand,
 
     // If we're reading or writing a FastLoad file, tell the FastLoad
     // service to start multiplexing data from aURI, associating it in
-    // the file with the URL's string.
-    //
-    // NB: each time the parser resumes sinking content, it "selects"
-    // the memorized document from the FastLoad multiplexor, using the
-    // nsIURI* as a fast identifier.
+    // the file with the URL's string.  Each time the parser resumes
+    // sinking content, it "selects" the memorized document from the
+    // FastLoad multiplexor, using the nsIURI* as a fast identifier.
     if (mIsFastLoad) {
         nsXPIDLCString urlspec;
         rv = aURI->GetSpec(getter_Copies(urlspec));
         if (NS_FAILED(rv)) return rv;
 
+        // If StartMuxedDocument returns NS_ERROR_NOT_AVAILABLE, then
+        // we must be reading the file, and urlspec was not associated
+        // with any multiplexed stream in it.  The FastLoad service
+        // will therefore arrange to update the file, writing new data
+        // at the end while old (available) data continues to be read
+        // from the pre-existing part of the file.
         rv = gFastLoadService->StartMuxedDocument(aURI, urlspec);
-        if (NS_FAILED(rv))
+        if (NS_FAILED(rv) && rv != NS_ERROR_NOT_AVAILABLE)
             AbortFastLoads();
     }
 
@@ -5506,10 +5583,11 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
     if (NS_SUCCEEDED(aStatus)) {
         // If the including XUL document is a FastLoad document, and we're
         // compiling an out-of-line script (one with src=...), then we must
-        // be writing a new FastLoad file.  (If we were reading a FastLoad
-        // file, XULContentSinkImpl::OpenScript (nsXULContentSink.cpp) would
-        // have already deserialized a non-null script->mJSObject, causing
-        // control flow from the top of LoadScript not to reach here.)
+        // be writing a new FastLoad file.  If we were reading this script
+        // from the FastLoad file, XULContentSinkImpl::OpenScript (over in
+        // nsXULContentSink.cpp) would have already deserialized a non-null
+        // script->mJSObject, causing control flow at the top of LoadScript
+        // not to reach here.
         //
         // Start and Select the .js document in the FastLoad multiplexor
         // before serializing script data under scriptProto->Compile, and
@@ -5519,6 +5597,7 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
             nsXPIDLCString urispec;
             uri->GetSpec(getter_Copies(urispec));
             rv = gFastLoadService->StartMuxedDocument(uri, urispec);
+            NS_ASSERTION(rv != NS_ERROR_NOT_AVAILABLE, "reading FastLoad?!");
             if (NS_SUCCEEDED(rv))
                 gFastLoadService->SelectMuxedDocument(uri);
         }
@@ -5530,8 +5609,8 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
         // End muxing the .js file into the FastLoad file.  We don't Abort
         // the FastLoad process here, when writing, as we do when reading.
         // XXXbe maybe we should...
-        // NB: we don't need to re-select mDocumentURL either, because scripts
-        //     load after the including prototype document has fully loaded.
+        // NB: we don't need to Select mDocumentURL again, because scripts
+        // load after their including prototype document has fully loaded.
         if (mIsFastLoad)
             gFastLoadService->EndMuxedDocument(uri);
 
