@@ -341,10 +341,6 @@ public:
   virtual nsresult SpamFilterClassifyMessages(const char **aURIArray, PRUint32 aURICount, nsIMsgWindow *aMsgWindow, nsIJunkMailPlugin *aJunkMailPlugin);
   
   static nsresult  AllocateUidStringFromKeys(nsMsgKey *keys, PRUint32 numKeys, nsCString &msgIds);
-
-  // these might end up as an nsIImapMailFolder attribute.
-  nsresult SetSupportedUserFlags(PRUint32 userFlags);
-  nsresult GetSupportedUserFlags(PRUint32 *userFlags);
 protected:
   // Helper methods
   
@@ -478,7 +474,6 @@ protected:
   
   nsMsgIMAPFolderACL *m_folderACL;
   PRUint32     m_aclFlags;
-  PRUint32      m_supportedUserFlags;
 
   nsCOMPtr<nsISupports> mSupportsToRelease;
   

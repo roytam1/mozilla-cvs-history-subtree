@@ -636,7 +636,6 @@ function deleteJunkInFolder()
         // since we will be deleting all selected messages
         treeSelection.clearSelection();
         clearedSelection = true;
-        treeSelection.selectEventsSuppressed = true;
       }
       treeSelection.rangedSelect(i, i, true /* augment */);
     }
@@ -647,7 +646,6 @@ function deleteJunkInFolder()
   if (!clearedSelection)
     return;
 
-  treeSelection.selectEventsSuppressed = false;
   // delete the selected messages
   //
   // XXX todo
