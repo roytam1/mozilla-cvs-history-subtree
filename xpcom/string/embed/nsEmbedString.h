@@ -21,6 +21,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Darin Fisher <darin@meer.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,8 +37,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef nsTEmbedString_h__
-#define nsTEmbedString_h__
+#ifndef nsEmbedString_h___
+#define nsEmbedString_h___
 
 #include "nsStringAPI.h"
 
@@ -128,53 +129,6 @@ class nsEmbedString
       self_type& operator=(const abstract_string_type& aReadable) { Assign(aReadable); return *this; }
       self_type& operator=(const char_type* aPtr)                 { Assign(aPtr);      return *this; }
       self_type& operator=(char_type aChar)                       { Assign(aChar);     return *this; }
-
-#if 0
-      void Append( const self_type& readable )
-        {
-          NS_StringCopy(mImpl, readable, 0, PR_UINT32_MAX, Length(), 0);
-        }
-
-      void Append( const char_type* data, size_type length = size_type(-1) )
-        {
-          NS_StringSetData(mImpl, data, length, Length(), 0);
-        }
-
-      void Append( char_type c )
-        {
-          NS_StringSetData(mImpl, &c, 1, Length(), 0);
-        }
-
-      self_type& operator+=( const self_type& readable )          { Append(readable); return *this; }
-      self_type& operator+=( const char_type* data )              { Append(data);     return *this; }
-      self_type& operator+=( char_type c )                        { Append(c);        return *this; }
-
-      void Insert( const self_type& readable, index_type pos )
-        {
-          NS_StringCopy(mImpl, readable, 0, PR_UINT32_MAX, pos, 0);
-        }
-
-      void Insert( const char_type* data, index_type pos, size_type length = size_type(-1) )
-        {
-          NS_StringSetData(mImpl, data, length, pos, 0);
-        }
-
-      void Insert( char_type c, index_type pos )
-        {
-          NS_StringSetData(mImpl, &c, 1, pos, 0);
-        }
-
-      void Cut( index_type cutStart, size_type cutLength )
-        {
-          char_type c = char_type(0);
-          NS_StringSetData(mImpl, &c, 0, cutStart, cutLength);
-        }
-
-      void Replace( index_type cutStart, size_type cutLength, const self_type& readable )
-        {
-          NS_StringCopy(mImpl, readable, 0, PR_UINT32_MAX, cutStart, cutLength);
-        }
-#endif
   };
 
 class nsEmbedCString
@@ -264,77 +218,6 @@ class nsEmbedCString
       self_type& operator=(const abstract_string_type& aReadable) { Assign(aReadable); return *this; }
       self_type& operator=(const char_type* aPtr)                 { Assign(aPtr);      return *this; }
       self_type& operator=(char_type aChar)                       { Assign(aChar);     return *this; }
-
-#if 0
-      void Append( const self_type& readable )
-        {
-          NS_CStringCopy(mImpl, readable, 0, PR_UINT32_MAX, Length(), 0);
-        }
-
-      void Append( const char_type* data, size_type length = size_type(-1) )
-        {
-          NS_CStringSetData(mImpl, data, length, Length(), 0);
-        }
-
-      void Append( char_type c )
-        {
-          NS_CStringSetData(mImpl, &c, 1, Length(), 0);
-        }
-
-      self_type& operator+=( const self_type& readable )          { Append(readable); return *this; }
-      self_type& operator+=( const char_type* data )              { Append(data);     return *this; }
-      self_type& operator+=( char_type c )                        { Append(c);        return *this; }
-
-      void Insert( const self_type& readable, index_type pos )
-        {
-          NS_CStringCopy(mImpl, readable, 0, PR_UINT32_MAX, pos, 0);
-        }
-
-      void Insert( const char_type* data, index_type pos, size_type length = size_type(-1) )
-        {
-          NS_CStringSetData(mImpl, data, length, pos, 0);
-        }
-
-      void Insert( char_type c, index_type pos )
-        {
-          NS_CStringSetData(mImpl, &c, 1, pos, 0);
-        }
-
-      void Cut( index_type cutStart, size_type cutLength )
-        {
-          char_type c = char_type(0);
-          NS_CStringSetData(mImpl, &c, 0, cutStart, cutLength);
-        }
-
-      void Replace( index_type cutStart, size_type cutLength, const self_type& readable )
-        {
-          NS_CStringCopy(mImpl, readable, 0, PR_UINT32_MAX, cutStart, cutLength);
-        }
-#endif
   };
 
-#if 0
-class nsDependentEmbedString : public nsEmbedString
-  {
-    public:
-
-      explicit
-      nsDependentEmbedString( const char_type* data, size_type length = size_type(-1) )
-        {
-          NS_StringContainerInit(mImpl, data, length, NS_STRING_TYPE_DEPENDENT);
-        }
-  };
-
-class nsDependentEmbedCString : public nsEmbedCString
-  {
-    public:
-
-      explicit
-      nsDependentEmbedCString( const char_type* data, size_type length = size_type(-1) )
-        {
-          NS_CStringContainerInit(mImpl, data, length, NS_STRING_TYPE_DEPENDENT);
-        }
-  };
-#endif
-
-#endif // !nsEmbedString_h__
+#endif // !defined(nsEmbedString_h___)
