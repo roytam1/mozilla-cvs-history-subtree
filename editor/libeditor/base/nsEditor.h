@@ -57,7 +57,6 @@
 #include "nsIDTD.h"
 #include "nsIDOMElement.h"
 #include "nsSelectionState.h"
-#include "nsICaret.h"
 
 class nsIEditActionListener;
 class nsIDocumentStateListener;
@@ -575,7 +574,6 @@ protected:
   PRInt8                        mDocDirtyState;		// -1 = not initialized
   nsWeakPtr        mDocWeak;  // weak reference to the nsIDOMDocument
   nsCOMPtr<nsIDTD> mDTD;
-  StCaretHiderInternal   mCaretHider;
 
   static PRInt32 gInstanceCount;
 

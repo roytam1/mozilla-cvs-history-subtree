@@ -3716,7 +3716,7 @@ nsFrame::GetNextPrevLineFromeBlockFrame(nsIPresContext* aPresContext,
               aPos->mContentOffset = newOffset+1;
             aPos->mContentOffsetEnd = aPos->mContentOffset;
             aPos->mInlineFrameStop = PR_TRUE;//success
-            //aPos->mResultFrame = parentFrame; leave the result frame where it was or else you may get infinate loops
+            aPos->mResultFrame = parentFrame;
             return NS_OK;
 
           }
@@ -4385,7 +4385,7 @@ nsFrame::PeekOffset(nsIPresContext* aPresContext, nsPeekOffsetStruct *aPos)
   }                          
 
   
-  if ( NS_SUCCEEDED(result) && selectStyle == NS_STYLE_USER_SELECT_ALL )
+  if ( result == NS_OK && selectStyle == NS_STYLE_USER_SELECT_ALL )
   {
     //get parent frame until we no longer have this style
     //then grab the content and set the offsets accordingly

@@ -1675,7 +1675,6 @@ nsSelection::MoveCaret(PRUint32 aKeycode, PRBool aContinue, nsSelectionAmount aA
       break;
     case nsIDOMKeyEvent::DOM_VK_END :
         InvalidateDesiredX();
-        pos.mDirection = eDirNext;
         pos.mAmount = eSelectEndLine;
         tHint = HINTLEFT;//stick to this line
         PostReason(nsISelectionListener::KEYPRESS_REASON);

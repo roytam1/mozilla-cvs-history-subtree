@@ -114,10 +114,6 @@ public:
   NS_IMETHOD WillDeleteSelection(nsISelection *aSelection);
   NS_IMETHOD DidDeleteSelection(nsISelection *aSelection);
 
-  nsresult InsertBRIfNeeded(nsISelection *aSelection);
-  nsresult GetGoodSelPointForNode(nsIDOMNode *aNode, nsIEditor::EDirection aAction, 
-                                  nsCOMPtr<nsIDOMNode> *outSelNode, PRInt32 *outSelOffset);
-
 protected:
 
   enum RulesEndpoint
@@ -280,7 +276,6 @@ protected:
   nsCOMPtr<nsIDOMRange>   mDocChangeRange;
   PRBool                  mListenerEnabled;
   PRBool                  mReturnInEmptyLIKillsList;
-  PRBool                  mDidRangedDelete;
   PRBool                  mDidDeleteSelection;
   nsCOMPtr<nsIDOMRange>   mUtilRange;
   PRUint32                mJoinOffset;  // need to remember an int across willJoin/didJoin...
