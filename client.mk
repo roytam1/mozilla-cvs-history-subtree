@@ -374,6 +374,7 @@ SVG_BRANCH_FILES := \
 	dom/src/base/nsDOMClassInfo.cpp \
 	gfx/public/nsTransform2D.h \
 	htmlparser/public/nsIParser.h \
+	htmlparser/src/nsExpatTokenizer.cpp \
 	htmlparser/src/nsViewSourceHTML.cpp \
 	layout/build/Makefile.in \
 	layout/build/makefile.win \

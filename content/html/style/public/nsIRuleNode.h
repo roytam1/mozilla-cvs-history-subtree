@@ -192,7 +192,7 @@ struct nsResetStyleData
     if (mXULData && !(aBits & NS_STYLE_INHERIT_XUL))
       mXULData->Destroy(aContext);
 #endif
-#ifdef INCLUDE_SVG
+#ifdef MOZ_SVG
     if (mSVGData && !(aBits & NS_STYLE_INHERIT_SVG))
       mSVGData->Destroy(aContext);
 #endif

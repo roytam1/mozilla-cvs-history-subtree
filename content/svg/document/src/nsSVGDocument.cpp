@@ -26,13 +26,6 @@
 #include "nsIHttpChannel.h"
 #include "nsXPIDLString.h"
 
-NS_CLASSINFO_MAP_BEGIN(SVGDocument)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMSVGDocument)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMDocument)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMNode)
-  NS_CLASSINFO_MAP_ENTRY(nsIDOMDocumentEvent)
-NS_CLASSINFO_MAP_END
-
 NS_INTERFACE_MAP_BEGIN(nsSVGDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMSVGDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentEvent)
@@ -129,6 +122,7 @@ nsSVGDocument::GetURL(nsAWritableString& aURL) {
 
 NS_IMETHODIMP
 nsSVGDocument::GetRootElement(nsIDOMSVGSVGElement** aRootElement) {
+  NS_NOTYETIMPLEMENTED("nsSVGDocument::GetRootElement");
   // XXX - writeme
   return NS_ERROR_NOT_IMPLEMENTED;
 }

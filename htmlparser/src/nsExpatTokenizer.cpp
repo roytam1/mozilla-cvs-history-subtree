@@ -844,31 +844,56 @@ int Tokenizer_HandleExternalEntityRef(XML_Parser parser,
   nsAutoString urlSpec( (const PRUnichar*) systemId );
   nsAutoString baseURL( (const PRUnichar*) base );
   nsAutoString absURL;
+  nsresult rv = NS_OK;
+  PRUnichar *uniBuf = nsnull;
+  PRUint32 retLen = 0;
+  
+#ifdef MOZ_SVG
+  // yuck. I don't know of any other way to do this, though, since we don't
+  // read external dtd's, and we need the #FIXED xmlns attribute, so we
+  // can't do this later based on what namespace we're in - bbaetz
 
-  nsresult rv = nsExpatTokenizer::OpenInputStream(urlSpec, baseURL, getter_AddRefs(in), &absURL);
-
-  if (NS_SUCCEEDED(rv) && nsnull != in) {
-    PRUint32 retLen = 0;
-    PRUnichar *uniBuf = nsnull;
-    rv = nsExpatTokenizer::LoadStream(in, uniBuf, retLen);
-
-    // Pass the buffer to expat for parsing
-    if (NS_SUCCEEDED(rv) && nsnull != uniBuf) {    
-      // Create a parser for parsing the external entity
-      nsAutoString encoding; encoding.AssignWithConversion("UTF-16");  
-      XML_Parser entParser = nsnull;
-
-      entParser = XML_ExternalEntityParserCreate(parser, 0, 
-        (const XML_Char*) encoding.get());
-
-      if (nsnull != entParser) {
-        XML_SetBase(entParser, (const XML_Char*) absURL.get());
-        result = XML_Parse(entParser, (char *)uniBuf,  retLen * sizeof(PRUnichar), 1);
-        XML_ParserFree(entParser);
-      }
-
-      PR_FREEIF(uniBuf);
+  // The alternative is remapping the urlSpec, and installing an svg.dtd file
+  // in the dtd directory. This is simpler, for now.
+  
+  // XXX - need to do this for the other #FIXED attribuues as well
+  NS_NAMED_LITERAL_STRING(svgDtd,
+                          "<!ATTLIST svg xmlns CDATA #FIXED \"http://www.w3.org/2000/svg\" >");
+  
+#define svgPublicIdPrefix "-//W3C//DTD SVG "
+  
+  if (publicId && !nsCRT::strncmp((const PRUnichar*)publicId,
+                                  svgPublicIdPrefix,
+                                  sizeof(svgPublicIdPrefix)-1)) {
+    uniBuf = ToNewUnicode(svgDtd);
+    retLen = svgDtd.Length();
+  } else {
+#endif      
+    rv = nsExpatTokenizer::OpenInputStream(urlSpec, baseURL, getter_AddRefs(in), &absURL);
+    
+    if (NS_SUCCEEDED(rv) && nsnull != in) {
+      rv = nsExpatTokenizer::LoadStream(in, uniBuf, retLen);
     }
+#ifdef MOZ_SVG
+  }
+#endif
+
+  // Pass the buffer to expat for parsing
+  if (NS_SUCCEEDED(rv) && nsnull != uniBuf) {    
+    // Create a parser for parsing the external entity
+    nsAutoString encoding; encoding.AssignWithConversion("UTF-16");  
+    XML_Parser entParser = nsnull;
+    
+    entParser = XML_ExternalEntityParserCreate(parser, 0, 
+                                               (const XML_Char*) encoding.get());
+    
+    if (nsnull != entParser) {
+      XML_SetBase(entParser, (const XML_Char*) absURL.get());
+      result = XML_Parse(entParser, (char *)uniBuf,  retLen * sizeof(PRUnichar), 1);
+      XML_ParserFree(entParser);
+    }
+    
+    PR_FREEIF(uniBuf);
   }
 #else /* ! XML_DTD */
 

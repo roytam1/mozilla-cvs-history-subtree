@@ -265,7 +265,7 @@ nsContentFactory::CreateInstance(nsISupports *aOuter,
   }
 #ifdef MOZ_SVG
   else if (mClassID.Equals(kSVGDocumentCID)) {
-    res = NS_NewXMLDocument((nsIDocument **)&inst);
+    res = NS_NewSVGDocument((nsIDocument **)&inst);
     if (NS_FAILED(res)) {
       LOG_NEW_FAILURE("NS_NewSVGDocument", res);
       return res;
