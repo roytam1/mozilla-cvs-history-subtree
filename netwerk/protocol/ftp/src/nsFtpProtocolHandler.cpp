@@ -65,6 +65,7 @@ PRLogModuleInfo* gFTPLog = nsnull;
 
 #endif /* PR_LOGGING */
 
+static NS_DEFINE_IID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_CID(kStandardURLCID,       NS_STANDARDURL_CID);
 static NS_DEFINE_CID(kProtocolProxyServiceCID, NS_PROTOCOLPROXYSERVICE_CID);
 static NS_DEFINE_CID(kHTTPHandlerCID, NS_IHTTPHANDLER_CID);
@@ -78,11 +79,25 @@ nsFtpProtocolHandler::nsFtpProtocolHandler() {
 
 nsFtpProtocolHandler::~nsFtpProtocolHandler() {
     PR_LOG(gFTPLog, PR_LOG_ALWAYS, ("~nsFtpProtocolHandler() called"));
+     if (mRootConnectionList) {
+        mRootConnectionList->Enumerate(DisconnectConnection, nsnull);
+        NS_DELETEXPCOM(mRootConnectionList);
+        mRootConnectionList = nsnull;
+    }
+    mIOSvc = 0;
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsFtpProtocolHandler, 
-                              nsIProtocolHandler, 
-                              nsIObserver);
+PRBool PR_CALLBACK
+nsFtpProtocolHandler::DisconnectConnection(nsHashKey *aKey, void *aData, void* closure)
+{
+    nsFtpControlConnection* con = NS_STATIC_CAST(nsFtpControlConnection*, aData);
+    if (con) {
+        con->Disconnect();
+    }
+    return PR_TRUE;
+}
+
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsFtpProtocolHandler, nsIProtocolHandler);
 
 nsresult
 nsFtpProtocolHandler::Init() {
@@ -95,15 +110,12 @@ nsFtpProtocolHandler::Init() {
     mProxySvc = do_GetService(kProtocolProxyServiceCID, &rv);
     if (NS_FAILED(rv)) return rv;
    
+    mIOSvc = do_GetService(kIOServiceCID, &rv);
+    if (NS_FAILED(rv)) return rv;
+
     mRootConnectionList = new nsSupportsHashtable(16, PR_TRUE);  /* xxx what should be the size of this hashtable?? */
     if (!mRootConnectionList) return NS_ERROR_OUT_OF_MEMORY;
     NS_LOG_NEW_XPCOM(mRootConnectionList, "nsSupportsHashtable", sizeof(nsSupportsHashtable), __FILE__, __LINE__);
-
-    nsCOMPtr<nsIObserverService> obsServ = do_GetService(NS_OBSERVERSERVICE_CONTRACTID, &rv);
-    if (NS_SUCCEEDED(rv)) {
-        nsAutoString topic; topic.AssignWithConversion(NS_XPCOM_SHUTDOWN_OBSERVER_ID);
-        obsServ->AddObserver(this, topic.GetUnicode());
-    }
 
     // XXX hack until xpidl supports error info directly (http://bugzilla.mozilla.org/show_bug.cgi?id=13423)
     nsCOMPtr<nsIErrorService> errorService = do_GetService(kErrorServiceCID, &rv);
@@ -271,27 +283,14 @@ nsFtpProtocolHandler::InsertConnection(nsIURI *aKey, nsISupports *aConn) {
     nsCStringKey stringKey(spec);
     
     if (mRootConnectionList)
-        mRootConnectionList->Put(&stringKey, aConn);
-    return NS_OK;
-}
+    {
+//      nsCOMPtr<nsISocketTransport> trans = do_QueryInterface (i_pTrans, &rv);
+//      trans->SetIdleTimeout(xxx);
 
-// nsIObserver method
-NS_IMETHODIMP
-nsFtpProtocolHandler::Observe(nsISupports     *aSubject,
-                              const PRUnichar *aTopic,
-                              const PRUnichar *someData ) {
-    nsresult rv;
-    if (mRootConnectionList) {
-        NS_DELETEXPCOM(mRootConnectionList);
-        mRootConnectionList = nsnull;
-    }
-    // remove ourself from the observer service.
-    NS_WITH_SERVICE(nsIObserverService, obsServ, NS_OBSERVERSERVICE_CONTRACTID, &rv);
-    if (NS_SUCCEEDED(rv)) {
-        nsAutoString topic; topic.AssignWithConversion(NS_XPCOM_SHUTDOWN_OBSERVER_ID);
-        obsServ->RemoveObserver(this, topic.GetUnicode());
-    }
-    return NS_OK;
+        mRootConnectionList->Put(&stringKey, aConn);
+        return NS_OK;
+    }        
+    return NS_ERROR_FAILURE;    
 }
 
 ////////////////////////////////////////////////////////////////////////////////

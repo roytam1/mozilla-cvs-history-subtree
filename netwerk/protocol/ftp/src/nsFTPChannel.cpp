@@ -167,9 +167,7 @@ nsFTPChannel::Cancel(nsresult status) {
     if (mProxyChannel) {
         return mProxyChannel->Cancel(status);
     } else if (mFTPState) {
-        rv = mFTPState->Cancel(status);
-        NS_RELEASE(mFTPState);
-        return rv;
+        return mFTPState->Cancel(status);
     }
     return NS_OK;
 }
@@ -232,49 +230,10 @@ nsFTPChannel::SetURI(nsIURI* aURL)
 NS_IMETHODIMP
 nsFTPChannel::OpenInputStream(nsIInputStream **result)
 {
-    nsresult rv = NS_OK;
-
-    PR_LOG(gFTPLog, PR_LOG_DEBUG, ("nsFTPChannel::OpenInputStream() called\n"));
-
-    if (mProxyChannel) {
+    if (mProxyChannel)
         return mProxyChannel->OpenInputStream(result);
-    }
-
-    // create a pipe. The caller gets the input stream end,
-    // and the FTP thread get's the output stream end.
-    // The FTP thread will write to the output stream end
-    // when data become available to it.
-    nsCOMPtr<nsIOutputStream> bufOutStream; // we don't use this piece
-    nsCOMPtr<nsIStreamListener>     listener;
-    rv = NS_NewSyncStreamListener(result, getter_AddRefs(bufOutStream),
-                                  getter_AddRefs(listener));
-    if (NS_FAILED(rv)) return rv;
-
-    mListener = listener; // ensure that we insert ourselves as the proxy listener
-
-    ///////////////////////////
-    //// setup channel state
-
-    ////////////////////////////////
-    //// setup the channel thread
-    if (!mFTPState) {
-        NS_NEWXPCOM(mFTPState, nsFtpState);
-        if (!mFTPState) return NS_ERROR_OUT_OF_MEMORY;
-        NS_ADDREF(mFTPState);
-    }
-
-    rv = mFTPState->Init(this, mPrompter, 
-                         mBufferSegmentSize, mBufferMaxSize);
-    if (NS_FAILED(rv)) return rv;
-
-    rv = mFTPState->SetStreamListener(this, nsnull);
-    if (NS_FAILED(rv)) return rv;
-
-    if (mLoadGroup) {
-        rv = mLoadGroup->AddChannel(this, nsnull);
-        if (NS_FAILED(rv)) return rv;
-    }
-    return mFTPState->Connect();
+    NS_NOTREACHED("nsFTPChannel::OpenInputStream");
+    return NS_ERROR_NOT_IMPLEMENTED;
 }
 
 NS_IMETHODIMP

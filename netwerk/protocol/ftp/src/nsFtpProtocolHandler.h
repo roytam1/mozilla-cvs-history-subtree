@@ -26,7 +26,7 @@
 #include "nsIServiceManager.h"
 #include "nsIProtocolHandler.h"
 #include "nsHashtable.h"
-#include "nsIConnectionCache.h"
+#include "nsIIOService.h"
 #include "nsIThreadPool.h"
 #include "nsIObserverService.h"
 #include "nsIProtocolProxyService.h"
@@ -36,14 +36,10 @@
 #define NS_FTPPROTOCOLHANDLER_CID \
     { 0x25029490, 0xf132, 0x11d2, { 0x95, 0x88, 0x0, 0x80, 0x5f, 0x36, 0x9f, 0x95 } }
 
-class nsFtpProtocolHandler : public nsIProtocolHandler,
-                             public nsIConnectionCache,
-                             public nsIObserver
-{
+class nsFtpProtocolHandler : public nsIProtocolHandler{
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIPROTOCOLHANDLER
-    NS_DECL_NSIOBSERVER
     
     // nsFtpProtocolHandler methods:
     nsFtpProtocolHandler();
@@ -56,9 +52,12 @@ public:
     // FTP Connection list access
     static nsresult InsertConnection(nsIURI *aKey, nsISupports *aConn);
     static nsresult RemoveConnection(nsIURI *aKey, nsISupports **_retval);
-    static nsSupportsHashtable* mRootConnectionList;
     
 protected:
+    static nsSupportsHashtable* mRootConnectionList;
+    static PRBool DisconnectConnection(nsHashKey *aKey, void *aData, void* closure);
+    
+    nsCOMPtr<nsIIOService> mIOSvc;
     nsCOMPtr<nsIProtocolProxyService>   mProxySvc;
 };
 
