@@ -739,52 +739,6 @@ nsObjectFrame::Init(nsIPresContext*  aPresContext,
       else
         aNewFrame->Destroy(aPresContext);
     }
-
-    // Return early here as we don't want to render the "default
-    // plugin" since this object tag may have children that we'll load
-    // correctly.
-    return rv;
-  }
-
-  if (!sDefaultPluginDisabled) {
-    // Nothing more to do here if the default plugin is enabled.
-    return NS_OK;
-  }
-
-  nsCAutoString type;
-
-  nsCOMPtr<nsIDOMHTMLEmbedElement> embed(do_QueryInterface(mContent));
-
-  if (embed) {
-    nsAutoString tmp;
-    embed->GetType(tmp);
-    CopyUTF16toUTF8(tmp, type);
-  } else {
-    NS_ASSERTION(aContent->Tag() == nsHTMLAtoms::applet,
-                 "Huh, aContent should be an applet tag here!");
-
-    type.Assign("application/x-java-vm");
-  }
-
-  nsCOMPtr<nsIPluginInstance> inst;
-  if (!type.IsEmpty()) {
-    nsCOMPtr<nsIPluginHost> pluginHost = do_GetService(kCPluginManagerCID);
-    if (pluginHost) {
-      if (NS_FAILED(pluginHost->IsPluginEnabledForType(type.get()))) {
-        mIsBrokenPlugin = PR_TRUE;
-
-        FirePluginNotFoundEvent(mContent);
-
-        // Our event registration code expects there to be an instance
-        // owner, create one, even though we don't really need one.
-        mInstanceOwner = new nsPluginInstanceOwner();
-        if(!mInstanceOwner)
-          return NS_ERROR_OUT_OF_MEMORY;
-
-        NS_ADDREF(mInstanceOwner);
-        mInstanceOwner->Init(aPresContext, this);
-      }
-    }
   }
 
   return rv;
