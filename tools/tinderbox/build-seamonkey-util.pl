@@ -270,6 +270,11 @@ sub LoadConfig {
 
 sub SetupEnv {
     umask 0;
+
+	# Assume this file lives in the base dir, this will
+	# avoid human error from setting this manually.
+	$Settings::BaseDir = Cwd::getcwd();
+
     my $topsrcdir = "$Settings::BaseDir/$Settings::DirName/mozilla";
 
 	if ($Settings::ObjDir ne '') {
