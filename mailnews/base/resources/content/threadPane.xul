@@ -33,13 +33,13 @@ Rights Reserved.
 
 <outliner id="threadOutliner" flex="1">
   <outlinercol id="threadCol" display="&threadColumn.label;" class="outlinercol-header outlinercol-image outlinercol-inset-header threadColumnHeader" currentView="unthreaded"/>
-  <outlinercol id="subjectCol" class="outlinercol-header outlinercell-inset-header sortDirectionIndicator" persist="hidden width" width="0" flex="7" value="&subjectColumn.label;" primary="true"/>
+  <outlinercol id="subjectCol" class="outlinercol-header outlinercell-inset-header sortDirectionIndicator" persist="hidden width" flex="7" value="&subjectColumn.label;" primary="true"/>
   <splitter class="tree-splitter"/>
-  <outlinercol id="senderCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden width" width="0" flex="4" value="&senderColumn.label;"/>
+  <outlinercol id="senderCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden width"  flex="4" value="&senderColumn.label;"/>
   <splitter class="tree-splitter"/>
-  <outlinercol id="unreadButtonColHeader" fixed="true" class="outlinercol-header outlinercol-image outlinercol-inset-header readColumnHeader" display="&readColumn.label;"/> 
+  <outlinercol id="unreadButtonColHeader" fixed="true" class="outlinercol-header outlinercol-image outlinercol-inset-header readColumnHeader" display="&readColumn.label;" cycler="true"/> 
   <splitter class="tree-splitter"/>
-  <outlinercol id="dateCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden width" width="0" flex="2" value="&dateColumn.label;"/>
+  <outlinercol id="dateCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden width"  flex="2" value="&dateColumn.label;"/>
   <splitter class="tree-splitter"/>
   <outlinercol id="statusCol" class="outlinercol-header outlinercol-inset-header sortDirectionIndicator" persist="hidden width" flex="1" value="&statusColumn.label;"/>
   <splitter class="tree-splitter"/>
