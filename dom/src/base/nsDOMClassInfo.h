@@ -848,6 +848,10 @@ public:
                                            Get##_class##IIDs,                 \
                                            #_class);                          \
     NS_ENSURE_TRUE(foundInterface, NS_ERROR_OUT_OF_MEMORY);                   \
+                                                                              \
+    *aInstancePtr = foundInterface;                                           \
+                                                                              \
+    return NS_OK;                                                             \
   } else
 
 #endif /* nsDOMClassInfo_h___ */
