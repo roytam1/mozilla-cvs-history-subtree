@@ -43,6 +43,7 @@
 #include "baseutils.h"
 #include "List.h"
 #include "txAtom.h"
+#include "txIXPathContext.h"
 
 class Element;
 class Expr;
@@ -82,6 +83,55 @@ private:
         txXPathResultComparator* mComparator;
     };
     
+    /*
+     * Utility txIEvalContext used by txNodeSorter
+     *
+     * Construct a txIEvalContext based on a NodeSet and two
+     * context nodes.
+     * The first context node is tracked by position, the other
+     * by a node.
+     */
+    class EvalContext : public txIEvalContext
+    {
+    public:
+        enum which {first,
+                    second};
+
+        EvalContext(NodeSet* aNodeSet, txIMatchContext* aMatchContext)
+            : mNodes(aNodeSet), mFirstPos(aNodeSet->size()),
+              mSecondNode(0), mWhich(first), mInner(aMatchContext)
+        {
+        }
+
+        ~EvalContext()
+        {
+        }
+
+        Node* nextFirst()
+        {
+            Node* next = 0;
+            if (mFirstPos) {
+                --mFirstPos;
+                next = mNodes->get(mFirstPos);
+            }
+            return next;
+        }
+
+        void setNode(which aWhich)
+        {
+            mWhich = aWhich;
+        }
+
+        TX_DECL_EVAL_CONTEXT;
+        
+    private:
+        NodeSet* mNodes;
+        int mFirstPos;
+        Node* mSecondNode;
+        which mWhich;
+        txIMatchContext* mInner;
+    };
+
     int compareNodes(SortableNode* sNode1,
                      SortableNode* sNode2);
 
@@ -92,6 +142,7 @@ private:
 
     txList mSortKeys;
     ProcessorState* mPs;
+    EvalContext* mEContext;
     int mNKeys;
     Expr* mDefaultExpr;
 };

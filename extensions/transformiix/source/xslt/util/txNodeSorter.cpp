@@ -43,6 +43,7 @@
 #include "ProcessorState.h"
 #include "txXPathResultComparator.h"
 #include "txAtoms.h"
+#include "txIXPathContext.h"
 
 /*
  * Sorts Nodes as specified by the W3C XSLT 1.0 Recommendation
@@ -50,9 +51,8 @@
 
 #define DEFAULT_LANG "en"
 
-txNodeSorter::txNodeSorter(ProcessorState* aPs) : mPs(aPs),
-                                                  mNKeys(0),
-                                                  mDefaultExpr(0)
+txNodeSorter::txNodeSorter(ProcessorState* aPs)
+    : mPs(aPs), mNKeys(0), mDefaultExpr(0)
 {
 }
 
@@ -80,13 +80,12 @@ MBool txNodeSorter::addSortElement(Element* aSortElement,
     String attrValue;
 
     // Select
-    if (aSortElement->getAttributeNode(SELECT_ATTR))
+    if (aSortElement->hasAttr(txXSLTAtoms::select, kNameSpaceID_None))
         key->mExpr = mPs->getExpr(aSortElement, ProcessorState::SelectAttr);
     else {
         if (!mDefaultExpr) {
-            String expr(".");
-            ExprParser parser;
-            mDefaultExpr = parser.createExpr(expr);
+            txNodeTest* test = new txNodeTypeTest(txNodeTypeTest::NODE_TYPE);
+            mDefaultExpr = new LocationStep(test, LocationStep::SELF_AXIS);
         }
         key->mExpr = mDefaultExpr;
     }
@@ -167,15 +166,17 @@ MBool txNodeSorter::sortNodeSet(NodeSet* aNodes)
     if (mNKeys == 0)
         return MB_TRUE;
 
+    mEContext = new EvalContext(aNodes, mPs);
+
     txList sortedNodes;
     txListIterator iter(&sortedNodes);
 
     int len = aNodes->size();
 
     // Step through each node in NodeSet...
-    int i;
-    for (i = len - 1; i >= 0; i--) {
-        SortableNode* currNode = new SortableNode(aNodes->get(i), mNKeys);
+    Node* node1;
+    while ((node1 = mEContext->nextFirst())) {
+        SortableNode* currNode = new SortableNode(node1, mNKeys);
         if (!currNode) {
             // XXX ErrorReport: out of memory
             iter.reset();
@@ -184,6 +185,7 @@ MBool txNodeSorter::sortNodeSet(NodeSet* aNodes)
                 sNode->clear(mNKeys);
                 delete sNode;
             }
+            delete mEContext;
             return MB_FALSE;
         }
         iter.reset();
@@ -206,7 +208,8 @@ MBool txNodeSorter::sortNodeSet(NodeSet* aNodes)
         sNode->clear(mNKeys);
         delete sNode;
     }
-    
+    delete mEContext;
+
     return MB_TRUE;
 }
 
@@ -221,9 +224,8 @@ int txNodeSorter::compareNodes(SortableNode* aSNode1,
         SortKey* key = (SortKey*)iter.next();
         // Lazy create sort values
         if (!aSNode1->mSortValues[i]) {
-            mPs->pushCurrentNode(aSNode1->mNode);
-            ExprResult* res = key->mExpr->evaluate(aSNode1->mNode, mPs);
-            mPs->popCurrentNode();
+            mEContext->setNode(EvalContext::first);
+            ExprResult* res = key->mExpr->evaluate(mEContext);
             if (!res) {
                 // XXX ErrorReport
                 return -1;
@@ -236,9 +238,8 @@ int txNodeSorter::compareNodes(SortableNode* aSNode1,
             delete res;
         }
         if (!aSNode2->mSortValues[i]) {
-            mPs->pushCurrentNode(aSNode2->mNode);
-            ExprResult* res = key->mExpr->evaluate(aSNode2->mNode, mPs);
-            mPs->popCurrentNode();
+            mEContext->setNode(EvalContext::second);
+            ExprResult* res = key->mExpr->evaluate(mEContext);
             if (!res) {
                 // XXX ErrorReport
                 return -1;
@@ -295,4 +296,55 @@ void txNodeSorter::SortableNode::clear(int aNValues)
     }
 
     delete [] mSortValues;
+}
+
+
+/*
+ * Forwarding methods for EvalContext
+ */
+
+nsresult txNodeSorter::EvalContext::getVariable(PRInt32 aNamespace,
+                                                txAtom* aLName,
+                                                ExprResult*& aResult)
+{
+    return mInner->getVariable(aNamespace, aLName, aResult);
+}
+
+MBool txNodeSorter::EvalContext::isStripSpaceAllowed(Node* aNode)
+{
+    return mInner->isStripSpaceAllowed(aNode);
+}
+
+void txNodeSorter::EvalContext::receiveError(const String& aMsg, nsresult aRes)
+{
+    mInner->receiveError(aMsg, aRes);
+}
+
+/*
+ * Inherited methods from txIEvalContext for EvalContext
+ * These depend on mWhich.
+ */
+
+Node* txNodeSorter::EvalContext::getContextNode()
+{
+    if (first == mWhich)
+        return mNodes->get(mFirstPos);
+    return mSecondNode;
+}
+
+PRUint32 txNodeSorter::EvalContext::size()
+{
+    return mNodes->size();
+}
+
+PRUint32 txNodeSorter::EvalContext::position()
+{
+    if (first == mWhich)
+        return mFirstPos;
+    return mNodes->indexOf(mSecondNode);
+}
+
+NodeSet* txNodeSorter::EvalContext::getContextNodeSet()
+{
+    return mNodes;
 }
