@@ -1564,10 +1564,9 @@ nsRuleNode::SetFont(nsIPresContext* aPresContext, nsStyleContext* aContext,
       // now set to defaults
       aFont->mFont.name = aDefaultFont.name;
     }
-    nsCompatibility compat;
-    aPresContext->GetCompatibilityMode(&compat);
     aFont->mFont.familyNameQuirks =
-        compat == eCompatibility_NavQuirks && aFontData.mFamilyFromHTML;
+        (aPresContext->CompatibilityMode() == eCompatibility_NavQuirks &&
+         aFontData.mFamilyFromHTML);
   }
   else if (eCSSUnit_Enumerated == aFontData.mFamily.GetUnit()) {
     nsSystemFontID sysID;
