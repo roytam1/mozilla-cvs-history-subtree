@@ -27,14 +27,7 @@
 #include "prlog.h"
 #include "jsapi.h"
 #include "jsbuffer.h"
-<<<<<<< unixpref.c
-#include "xpassert.h"
-#include "fe_proto.h"
-=======
->>>>>>> 3.1.8.4
 
-<<<<<<< unixpref.c
-=======
 #ifndef B1M
 #include <Xm/Xm.h>
 #endif
@@ -43,7 +36,6 @@ extern PRLibrary* pref_LoadAutoAdminLib(void);
 extern PRLibrary* m_AutoAdminLib;
 
 #include "icondata.h"
->>>>>>> 3.1.8.4
 
 /*
  * pref_InitInitialObjects
@@ -82,36 +74,11 @@ pref_InitInitialObjects(void)
 
 
 /*
-<<<<<<< unixpref.c
-=======
- * PREF_AlterSplashIcon
- */
-void
-PREF_AlterSplashIcon(struct fe_icon_data* icon)
-{
-    assert(icon);
-
-    if ( PREF_IsAutoAdminEnabled() && 
-         icon && 
-         (splash_screen = (struct fe_icon_type*)
-          PR_FindSymbol(m_AutoAdminLib, "_POLARIS_SplashPro")) != NULL ) {
-        memcpy(icon, splash_screen, sizeof(*icon));
-    }
-}
-
-#ifndef B1M
-/*
->>>>>>> 3.1.8.4
  * PREF_GetLabelAndMnemonic
  */
 PRBool
 PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemonic)
 {
-<<<<<<< unixpref.c
-    /* Code moved to where it should have been. */
-    return FE_GetLabelAndMnemonic(name, str, v_xm_str, v_mnemonic);
-}
-=======
     XmString *xm_str = (XmString*)v_xm_str;
     KeySym *mnemonic = (KeySym*)v_mnemonic;
     char buf[256];
@@ -134,10 +101,7 @@ PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemoni
     strcat(buf, ".label");
 
     PREF_CopyConfigString(buf, &_str);
->>>>>>> 3.1.8.4
 
-<<<<<<< unixpref.c
-=======
     if ( _str == NULL || *_str == '\0' ) return PR_FALSE;
 
     /* Strip out ampersands */
@@ -154,7 +118,6 @@ PREF_GetLabelAndMnemonic(char* name, char** str, void* v_xm_str, void* v_mnemoni
     return ( *xm_str != NULL );
 }
 #endif
->>>>>>> 3.1.8.4
 
 /*
  * PREF_GetUrl
