@@ -30,12 +30,12 @@ XPIDL_MODULE	= necko_cache
 include $(DEPTH)/config/autoconf.mk
 
 XPIDLSRCS	= \
-		nsICachedNetData.idl          \
-	        nsINetDataCacheManager.idl    \
-		nsINetDataCache.idl           \
-		nsINetDataCacheRecord.idl     \
-	        nsINetDataDiskCache.idl       \
-		nsIStreamAsFile.idl           \
+		nsICacheChannel.idl	\
+		nsICacheClient.idl	\
+		nsICacheListener.idl	\
+		nsICacheManager.idl	\
+		nsICacheMetaData.idl	\
+		nsIStreamAsFile.idl  	\
 	        $(NULL)
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))

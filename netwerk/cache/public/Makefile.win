@@ -30,11 +30,11 @@ EXPORTS =                   \
         $(NULL)
 
 XPIDLSRCS =                             \
-        .\nsICachedNetData.idl          \
-        .\nsINetDataCacheManager.idl    \
-        .\nsINetDataCache.idl           \
-        .\nsINetDataCacheRecord.idl     \
-        .\nsINetDataDiskCache.idl       \
+	.\nsICacheChannel.idl		\
+	.\nsICacheClient.idl		\
+	.\nsICacheListener.idl		\
+	.\nsICacheManager.idl		\
+	.\nsICacheMetaData.idl		\
         .\nsIStreamAsFile.idl           \
         $(NULL)
 

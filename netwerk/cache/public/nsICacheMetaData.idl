@@ -1,0 +1,55 @@
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+ *
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
+ * The Original Code is nsICacheMetaData.idl, released January 19, 2001.
+ * 
+ * The Initial Developer of the Original Code is Netscape Communications
+ * Corporation.  Portions created by Netscape are
+ * Copyright (C) 2001 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
+ * Contributor(s): 
+ *    Gordon Sheridan, 19-January-2001
+ */
+
+#include "nsISupports.idl"
+
+interface nsISimpleEnumerator;
+interface nsIOutputStream;
+
+/**
+ * Each cache module provides an implementation of nsICacheMetaData.
+ * From the point of view of the cache, meta data is an opaque blob
+ * that can be queried for name:value pairs.
+ *
+ * Meta data may be serialized if the underlying cache device is 
+ * persistent.  Otherwise, these functions may be NOPs.
+ */
+[scriptable, uuid(7cf2e3ac-78d3-4f21-a3d0-f7ed1c1862ae)]
+interface nsICacheMetaData : nsISupports
+{
+  /**
+   * Enumerate all name:value pairs stored in the meta data.
+   */
+  readonly attribute nsISimpleEnumerator enumerator;
+
+  /**
+   * Method called by the cache implementation to make a
+   * meta data object persistent.
+   */
+  void serialize(in nsIOutputStream toStream);
+
+  /**
+   * Indicates whether or not the meta data has been modified.
+   */
+  readonly attribute boolean isDirty;  
+};

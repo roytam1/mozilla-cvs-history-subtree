@@ -1,6 +1,6 @@
-nsICachedNetData.idl
-nsINetDataCache.idl
-nsINetDataCacheManager.idl
-nsINetDataCacheRecord.idl
-nsINetDataDiskCache.idl
+nsICacheChannel.idl
+nsICacheClient.idl
+nsICacheListener.idl
+nsICacheManager.idl
+nsICacheMetaData.idl
 nsIStreamAsFile.idl
