@@ -75,10 +75,7 @@ CSRCS		+= jcapimin.c \
 		   jcprepct.c \
 		   $(NULL)
 
-OS2_IMPLIB	= 1
-LIBRARY		= $(LIBRARY_NAME)$(MOZ_BITS)$(VERSION_NUMBER).$(LIB_SUFFIX)
-DEF_FILE	= $(LIBRARY_NAME).def
-TARGETS		= $(LIBRARY)
+MAKE_DLL	= 1
 endif
 
 include $(DEPTH)/config/rules.mk

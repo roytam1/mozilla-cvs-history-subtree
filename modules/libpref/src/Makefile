@@ -25,16 +25,8 @@ REQUIRES	= libxp js pref nspr dbm security ldap java img layer util
 ifneq ($(subst /,_,$(shell uname -s)),OS2)
 CSRCS		= unix/unixpref.c
 else
-CSRCS		= prefldap.c
-LIBRARY		= xppref32.$(LIB_SUFFIX)
-EXPORTS		= initpref.js init/all.js init/config.js win/winpref.js os2/os2pref.js
-OS2_IMPLIB	= 1
-DEF_FILE	= xpOS2.def
-EXTRA_LIBS	= $(DIST)/lib/js$(MOZ_BITS)$(VERSION_NUMBER).lib \
-		  $(LIBNSPR) \
-		  $(DIST)/lib/libldap.lib $(DIST)/lib/liblber.lib \
-		  $(DIST)/lib/libldap.lib $(DIST)/lib/libhash.lib \
-		  $(NULL)
+MAKE_DLL 	= 1
+EXTRA_LIBS 	= $(LIBNSPR) $(DIST)/lib/libjs.lib
 endif
 
 CSRCS		+= prefapi.c

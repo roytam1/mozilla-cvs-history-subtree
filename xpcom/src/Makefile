@@ -38,4 +38,7 @@ EXPORTS		= nsAgg.h \
 
 DEFINES		= -D_IMPL_NS_COM
 
+MAKE_DLL	= 1
+EXTRA_LIBS	= $(LIBNSPR)
+
 include $(DEPTH)/config/rules.mk

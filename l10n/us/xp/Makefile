@@ -29,7 +29,7 @@ RM		= /bin/rm -f
 #	tr '[\001-\272]' '[\106-\377]'
 # does not translate char ']' So we use our own program to do this
 #
-TR69		= $(OBJDIR)/tr69
+TR69		= $(OBJDIR)/tr69$(BIN_SUFFIX)
 
 TARGETS		= $(TR69) $(HSRCS:.html=.h) $(MSRCS:.msg=.h) splash.h splash-java.h \
 		  about-lite.h about-java-lite.h splash-lite.h splash-java-lite.h
@@ -43,7 +43,7 @@ GARBAGE		+= about-lite.html about-java-lite.html $(wildcard splash*.html) \
 
 $(TR69):	tr69.c
 	@$(MAKE_OBJDIR)
-ifeq ($(OS_ARCH),OS2)
+ifdef XP_OS2_VACPP
 	$(CCF) -Fe $@ $<
 else
 	$(CC) -o $@ $<
