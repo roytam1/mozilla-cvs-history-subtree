@@ -50,7 +50,6 @@ SHARED_LIBRARY_LIBS = \
 		$(DIST)/lib/libnkres_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/libnkabout_s.$(LIB_SUFFIX) \
 		$(DIST)/lib/libnkkwd_s.$(LIB_SUFFIX) \
-		$(DIST)/lib/libzlib.$(LIB_SUFFIX) \
 		$(NULL)
 
 LOCAL_INCLUDES	= \
