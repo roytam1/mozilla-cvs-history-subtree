@@ -113,8 +113,7 @@ define MAKE_OBJDIR
 if test ! -d $(@D); then rm -rf $(@D); mkdir $(@D); else true; fi
 endef
 
-export:: $(TARGETS) nspr-config
-	$(INSTALL) -m 755 nspr-config $(dist_bindir)
+export:: $(TARGETS)
 
 $(OBJDIR)/%$(PROG_SUFFIX): $(OBJDIR)/%.$(OBJ_SUFFIX)
 	@$(MAKE_OBJDIR)
