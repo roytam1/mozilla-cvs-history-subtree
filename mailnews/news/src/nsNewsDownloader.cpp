@@ -292,9 +292,17 @@ NS_IMETHODIMP nsNewsDownloader::OnSearchHit(nsIMsgDBHdr *header, nsIMsgFolder *f
 
 NS_IMETHODIMP nsNewsDownloader::OnSearchDone(nsresult status)
 {
-  DownloadArticles(m_window, m_folder, &m_keysToDownload);
-  // kick off download process?
-  return NS_OK;
+  if (m_keysToDownload.GetSize() == 0)
+  {
+    if (m_listener)
+      return m_listener->OnStopRunningUrl(nsnull, NS_OK);
+  }
+  nsresult rv = DownloadArticles(m_window, m_folder, &m_keysToDownload);
+  if (!NS_SUCCEEDED(rv))
+    if (m_listener)
+      m_listener->OnStopRunningUrl(nsnull, rv);
+
+  return rv;
 }
 NS_IMETHODIMP nsNewsDownloader::OnNewSearch()
 {
@@ -532,7 +540,7 @@ nsresult nsMsgDownloadAllNewsgroups::ProcessNextGroup()
 	{
     value->SetAttrib(nsMsgSearchAttrib::AgeInDays);
 		value->SetAge(ageLimitOfMsgsToDownload);
-		searchSession->AddSearchTerm(nsMsgSearchAttrib::AgeInDays, nsMsgSearchOp::IsLowerThan, value, nsMsgSearchBooleanOp::BooleanAND, nsnull);
+		searchSession->AddSearchTerm(nsMsgSearchAttrib::AgeInDays, nsMsgSearchOp::IsLessThan, value, nsMsgSearchBooleanOp::BooleanAND, nsnull);
 	}
   value->SetAttrib(nsMsgSearchAttrib::MsgStatus);
 	value->SetStatus(MSG_FLAG_OFFLINE);
