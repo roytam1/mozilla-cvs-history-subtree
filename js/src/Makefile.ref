@@ -166,6 +166,9 @@ endif
 
 include rules.mk
 
+MOZ_DEPTH = ../..
+include jsconfig.mk
+
 nsinstall-target:
 	cd ../../config; $(MAKE) OBJDIR=$(OBJDIR) OBJDIR_NAME=$(OBJDIR)
 
