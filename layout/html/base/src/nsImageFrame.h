@@ -42,6 +42,7 @@ struct nsHTMLReflowState;
 struct nsHTMLReflowMetrics;
 struct nsSize;
 
+#ifdef USE_IMG2
 class nsImageFrame;
 
 class nsImageListener : nsIImageDecoderObserver
@@ -58,6 +59,8 @@ public:
 private:
   nsImageFrame *mFrame;
 };
+#endif
+
 
 #define ImageFrameSuper nsLeafFrame
 
@@ -107,13 +110,13 @@ public:
 #endif
 
 #ifdef USE_IMG2
-  NS_IMETHOD OnStartDecode(nsIImageRequest *request, nsISupports *cx);
-  NS_IMETHOD OnStartContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image);
-  NS_IMETHOD OnStartFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame);
-  NS_IMETHOD OnDataAvailable(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame, const nsRect2 * rect);
-  NS_IMETHOD OnStopFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame);
-  NS_IMETHOD OnStopContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image);
-  NS_IMETHOD OnStopDecode(nsIImageRequest *request, nsISupports *cx, nsresult status, const PRUnichar *statusArg);
+  NS_IMETHOD OnStartDecode(nsIImageRequest *request, nsIPresContext *cx);
+  NS_IMETHOD OnStartContainer(nsIImageRequest *request, nsIPresContext *cx, nsIImageContainer *image);
+  NS_IMETHOD OnStartFrame(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame);
+  NS_IMETHOD OnDataAvailable(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame, const nsRect2 * rect);
+  NS_IMETHOD OnStopFrame(nsIImageRequest *request, nsIPresContext *cx, nsIImageFrame *frame);
+  NS_IMETHOD OnStopContainer(nsIImageRequest *request, nsIPresContext *cx, nsIImageContainer *image);
+  NS_IMETHOD OnStopDecode(nsIImageRequest *request, nsIPresContext *cx, nsresult status, const PRUnichar *statusArg);
 #endif
 
 protected:
@@ -179,6 +182,7 @@ protected:
 
   nsSize mNaturalSize;
   nsSize mComputedSize;
+  nsSize mIntrinsicSize;
 #endif
   nsImageMap*         mImageMap;
   PRPackedBool        mSizeFrozen;

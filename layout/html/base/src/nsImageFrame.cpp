@@ -97,6 +97,9 @@ NS_NewImageFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame)
 
 nsImageFrame::nsImageFrame() :
   mLowSrcImageLoader(nsnull)
+#ifdef USE_IMG2
+  , mIntrinsicSize(0, 0)
+#endif
 {
 }
 
@@ -225,42 +228,88 @@ nsImageFrame::UpdateImageFrame(nsIPresContext* aPresContext,
 }
 
 
+#ifdef USE_IMG2
 
-
-NS_IMETHODIMP nsImageFrame::OnStartDecode(nsIImageRequest *request, nsISupports *cx)
+NS_IMETHODIMP nsImageFrame::OnStartDecode(nsIImageRequest *request, nsIPresContext *aPresContext)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsImageFrame::OnStartContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image)
+NS_IMETHODIMP nsImageFrame::OnStartContainer(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageContainer *image)
+{
+  
+  nsCOMPtr<nsIPresShell> presShell;
+  aPresContext->GetShell(getter_AddRefs(presShell));
+
+
+  gfx_dimension w, h;
+  image->GetWidth(&w);
+  image->GetHeight(&h);
+
+  float p2t;
+  aPresContext->GetPixelsToTwips(&p2t);
+
+  mIntrinsicSize.SizeTo(GFXCoordToIntRound(w * p2t), GFXCoordToIntRound(h * p2t));
+
+
+  if (mParent) {
+    mState |= NS_FRAME_IS_DIRTY;
+	  mParent->ReflowDirtyChild(presShell, (nsIFrame*) this);
+  }
+  else {
+    NS_ASSERTION(0, "No parent to pass the reflow request up to.");
+  }
+
+  if (mCanSendLoadEvent && presShell) {
+    // Send load event
+    mCanSendLoadEvent = PR_FALSE;
+
+    nsEventStatus status = nsEventStatus_eIgnore;
+    nsEvent event;
+    event.eventStructType = NS_EVENT;
+    event.message = NS_IMAGE_LOAD;
+    presShell->HandleEventWithTarget(&event,this,mContent,NS_EVENT_FLAG_INIT | NS_EVENT_FLAG_CANT_BUBBLE,&status);
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsImageFrame::OnStartFrame(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageFrame *frame)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsImageFrame::OnStartFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame)
+NS_IMETHODIMP nsImageFrame::OnDataAvailable(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageFrame *frame, const nsRect2 * rect)
+{
+  nsCOMPtr<nsIPresShell> presShell;
+  aPresContext->GetShell(getter_AddRefs(presShell));
+
+  if (mParent) {
+    mState |= NS_FRAME_IS_DIRTY;
+	  mParent->ReflowDirtyChild(presShell, (nsIFrame*) this);
+  }
+  else {
+    NS_ASSERTION(0, "No parent to pass the reflow request up to.");
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsImageFrame::OnStopFrame(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageFrame *frame)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
-NS_IMETHODIMP nsImageFrame::OnDataAvailable(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame, const nsRect2 * rect)
+NS_IMETHODIMP nsImageFrame::OnStopContainer(nsIImageRequest *request, nsIPresContext *aPresContext, nsIImageContainer *image)
 {
-    return NS_ERROR_NOT_IMPLEMENTED;
+
+  return NS_OK;
 }
 
-NS_IMETHODIMP nsImageFrame::OnStopFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame)
+NS_IMETHODIMP nsImageFrame::OnStopDecode(nsIImageRequest *request, nsIPresContext *aPresContext, nsresult status, const PRUnichar *statusArg)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
-
-NS_IMETHODIMP nsImageFrame::OnStopContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
-
-NS_IMETHODIMP nsImageFrame::OnStopDecode(nsIImageRequest *request, nsISupports *cx, nsresult status, const PRUnichar *statusArg)
-{
-    return NS_ERROR_NOT_IMPLEMENTED;
-}
+#endif
 
 nsresult
 nsImageFrame::UpdateImage(nsIPresContext* aPresContext, PRUint32 aStatus, void* aClosure)
@@ -401,6 +450,8 @@ nsImageFrame::GetDesiredSize(nsIPresContext* aPresContext,
     fixedContentHeight = PR_TRUE;
   }
 
+  float p2t;
+  aPresContext->GetPixelsToTwips(&p2t);
 
   PRBool haveComputedSize = PR_FALSE;
   PRBool needIntrinsicImageSize = PR_FALSE;
@@ -418,15 +469,25 @@ nsImageFrame::GetDesiredSize(nsIPresContext* aPresContext,
   } else if (fixedContentHeight) {
     // We have a height, and an auto width. Compute width from height
     // once we have the intrinsic image size.
+    if (mIntrinsicSize.width != 0) {
+      newHeight = mIntrinsicSize.width;
+    } else {
+      newHeight = p2t;
+    }
   } else {
     // auto size the image
+    if (mIntrinsicSize.width == 0 && mIntrinsicSize.height == 0) {
+      newWidth = p2t;
+      newHeight = p2t;
+    } else {
+      newWidth = mIntrinsicSize.width;
+      newHeight = mIntrinsicSize.height;
+    }
+
   }
 
   mComputedSize.width = newWidth;
   mComputedSize.height = newHeight;
-
-  float p2t;
-  aPresContext->GetPixelsToTwips(&p2t);
 
 
 #if 0
@@ -763,14 +824,14 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
     // first get to see if lowsrc image is here
     PRInt32 lowSrcLinesLoaded = -1;
     PRInt32 imgSrcLinesLoaded = -1;
-    nsIImage * lowImage = nsnull;
-    nsIImage * image    = nsnull;
-
 #ifdef USE_IMG2
     nsCOMPtr<nsIImageContainer> imgCon;
     nsCOMPtr<nsIImageContainer> lowImgCon;
 
     mImageRequest->GetImage(getter_AddRefs(imgCon));
+#else
+    nsIImage * lowImage = nsnull;
+    nsIImage * image    = nsnull;
 #endif
 
 #ifdef USE_IMG2
@@ -785,10 +846,14 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
     }
 #endif
 
+#ifdef USE_IMG2
+    if (!imgCon && !lowImgCon) {
+#else
     image = mImageLoader.GetImage();
     imgSrcLinesLoaded = image != nsnull?image->GetDecodedY2():-1;
 
     if (!image && !lowImage) {
+#endif
       // No image yet, or image load failed. Draw the alt-text and an icon
       // indicating the status
       if (NS_FRAME_PAINT_LAYER_BACKGROUND == aWhichLayer &&
@@ -807,15 +872,23 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
         nsRect inner;
         GetInnerArea(aPresContext, inner);
         if (mImageLoader.GetLoadImageFailed()) {
+
+#ifdef USE_IMG2
+          if (imgCon) {
+            inner.SizeTo(mComputedSize);
+          } else if (lowImgCon) {
+          }
+#else
           float p2t;
           aPresContext->GetScaledPixelsToTwips(&p2t);
-          if (image != nsnull) {
+          if (image) {
             inner.width  = NSIntPixelsToTwips(image->GetWidth(), p2t);
             inner.height = NSIntPixelsToTwips(image->GetHeight(), p2t);
-          } else if (lowImage != nsnull) {
+          } else if (lowImage) {
             inner.width  = NSIntPixelsToTwips(lowImage->GetWidth(), p2t);
             inner.height = NSIntPixelsToTwips(lowImage->GetHeight(), p2t);
           }
+#endif
         }
 
 #ifdef USE_IMG2
@@ -868,8 +941,10 @@ nsImageFrame::Paint(nsIPresContext* aPresContext,
 #endif
     }
 
+#ifndef USE_IMG2
     NS_IF_RELEASE(lowImage);
     NS_IF_RELEASE(image);
+#endif
   }
   
   return nsFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
@@ -1356,7 +1431,7 @@ nsImageFrame::SizeOf(nsISizeOfHandler* aHandler, PRUint32* aResult) const
 #endif
 
 
-
+#ifdef USE_IMG2
 NS_IMPL_ISUPPORTS1(nsImageListener, nsIImageDecoderObserver)
 
 nsImageListener::nsImageListener()
@@ -1370,37 +1445,44 @@ nsImageListener::~nsImageListener()
 
 NS_IMETHODIMP nsImageListener::OnStartDecode(nsIImageRequest *request, nsISupports *cx)
 {
-  return mFrame->OnStartDecode(request, cx);
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStartDecode(request, pc);
 }
 
 NS_IMETHODIMP nsImageListener::OnStartContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image)
 {
-  return mFrame->OnStartContainer(request, cx, image);
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStartContainer(request, pc, image);
 }
 
 NS_IMETHODIMP nsImageListener::OnStartFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame)
 {
-  return mFrame->OnStartFrame(request, cx, frame);
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStartFrame(request, pc, frame);
 }
 
 NS_IMETHODIMP nsImageListener::OnDataAvailable(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame, const nsRect2 * rect)
 {
-  return mFrame->OnDataAvailable(request, cx, frame, rect);
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnDataAvailable(request, pc, frame, rect);
 }
 
 NS_IMETHODIMP nsImageListener::OnStopFrame(nsIImageRequest *request, nsISupports *cx, nsIImageFrame *frame)
 {
-  return mFrame->OnStopFrame(request, cx, frame);
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStopFrame(request, pc, frame);
 }
 
 NS_IMETHODIMP nsImageListener::OnStopContainer(nsIImageRequest *request, nsISupports *cx, nsIImageContainer *image)
 {
-  return mFrame->OnStopContainer(request, cx, image);
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStopContainer(request, pc, image);
 }
 
 NS_IMETHODIMP nsImageListener::OnStopDecode(nsIImageRequest *request, nsISupports *cx, nsresult status, const PRUnichar *statusArg)
 {
-  return mFrame->OnStopDecode(request, cx, status, statusArg);
+  nsCOMPtr<nsIPresContext> pc(do_QueryInterface(cx));
+  return mFrame->OnStopDecode(request, pc, status, statusArg);
 }
 
-
+#endif
