@@ -1085,7 +1085,6 @@ nsComponentManagerImpl::FindFactory(const nsCID &aClass,
         if (entry->factory == NULL)
         {
             res = LoadFactory(entry, aFactory);
-#if 0 // This doesn't work. On firsttime run, I hit a coredump.
             // XXX Cache factory that we created for performance.
             // XXX Need a way to release this factory else dlls will never
             // XXX get unloaded
@@ -1094,7 +1093,6 @@ nsComponentManagerImpl::FindFactory(const nsCID &aClass,
                 entry->factory = *aFactory;
                 NS_ADDREF(entry->factory);
             }
-#endif
         }
         else
         {
