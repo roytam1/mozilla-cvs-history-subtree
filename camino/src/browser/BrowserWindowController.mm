@@ -292,10 +292,8 @@ static NSArray* sToolbarDefaults = nil;
       // due to a cocoa issue with it updating the bounding box of two rects
       // that both needing updating instead of just the two individual rects
       // (radar 2194819), we need to make the text area opaque.
-      // smfr: fix moved to [BrowserWrapper setStatus], since this change
-      // causes ugly cosmetic issues in the window.
-      //[mStatus setBackgroundColor:[NSColor windowBackgroundColor]];
-      //[mStatus setDrawsBackground:YES];
+      [mStatus setBackgroundColor:[NSColor windowBackgroundColor]];
+      [mStatus setDrawsBackground:YES];
     }
 
     // Get our saved dimensions.

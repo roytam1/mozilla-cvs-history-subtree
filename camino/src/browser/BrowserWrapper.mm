@@ -415,7 +415,7 @@ const NSString* kOfflineNotificationName = @"offlineModeChanged";
   if (newStatus && ![[mStatus stringValue] isEqualToString:newStatus])
   {
     [mStatus setStringValue:newStatus];
-    [mStatus displayIfNeeded];      // force an immediate display. This works around some issues
+    //[mStatus displayIfNeeded];      // force an immediate display. This works around some issues
                                     // where cocoa unions update rects in the content and chrome,
                                     // causing slow updating (bug 2194819).
   }
