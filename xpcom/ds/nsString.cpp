@@ -978,6 +978,31 @@ void nsCString::AssignWithConversion( const nsAReadableString& aString ) {
 }
 #endif
 
+#ifdef NEW_STRING_APIS
+void nsCString::AppendWithConversion( const nsAReadableString& aString ) {
+  PRInt32 count = aString.Length();
+
+  if(count){   
+    nsReadingIterator<PRUnichar> start(aString.BeginReading());
+    nsReadingIterator<PRUnichar> end(aString.EndReading());
+    
+    while (start != end) {
+      PRUint32 fraglen = start.size_forward();
+
+      nsStr temp;
+      nsStr::Initialize(temp,eTwoByte);
+      temp.mUStr=(PRUnichar*)start.get();
+
+      temp.mLength=fraglen;
+
+      StrAppend(*this,temp,0,fraglen);
+      
+      start += fraglen;
+    }
+  }
+}
+#endif
+
 /**
  * assign given unichar to this string
  * @update  gess 01/04/99

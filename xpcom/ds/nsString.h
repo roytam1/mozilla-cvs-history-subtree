@@ -476,6 +476,9 @@ public:
   void AppendWithConversion(const nsString&, PRInt32=-1);
   void AppendWithConversion(PRUnichar aChar);
   // Why no |AppendWithConversion(const PRUnichar*)|?
+#ifdef NEW_STRING_APIS
+  void AppendWithConversion( const nsAReadableString& aString );
+#endif
   void AppendInt(PRInt32 aInteger,PRInt32 aRadix=10); //radix=8,10 or 16
   void AppendFloat( double aFloat );
 
