@@ -965,7 +965,7 @@ nsFT2FontCatalog::GetFontSummaryName(const nsACString &aFontDirName,      // nat
     int right_len =  aFontDirName.Length() - last_slash - 1;
     nsCAutoString parent_dir(Substring(aFontDirName, 0, last_slash));
     nsCAutoString font_dir_name_tail(Substring(aFontDirName,
-                                               last_slash+1, right_len);
+                                               last_slash+1, right_len));
     //
     // Get the parent dir's device and inode
     //
