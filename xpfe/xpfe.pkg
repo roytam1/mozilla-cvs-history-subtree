@@ -11,7 +11,7 @@ dist/bin/chrome/en-unix.jar
 dist/bin/chrome/en-win.jar
 
 [xpfe-locale-US]
-dist/bin/US.jar
+dist/bin/chrome/US.jar
 
 [xpfe-browser]
 dist/bin/README.txt dist/bin/readme.txt

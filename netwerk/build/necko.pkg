@@ -16,4 +16,4 @@ dist/bin/components/@SHARED_LIBRARY@
 !xpt dist/bin/components/necko_socket.xpt
 
 [gecko-support]
-dist/bin/defaults/prefs/security-prefs.js
+dist/bin/defaults/pref/security-prefs.js

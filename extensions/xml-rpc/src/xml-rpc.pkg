@@ -1,4 +1,4 @@
 [xpfe-browser]
 dist/bin/components/nsDictionary.js
-dist/bin/components/nsXmlPrcClient.js
+dist/bin/components/nsXmlRpcClient.js
 !xpt dist/bin/components/xml-rpc.xpt

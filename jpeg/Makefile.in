@@ -35,8 +35,6 @@ endif
 
 GRE_MODULE	= 1
 
-PACKAGE_FILE = jpeg.pkg
-
 CSRCS		= \
 		jdapimin.c \
 		jdapistd.c \
