@@ -117,10 +117,7 @@ function acceptDialog()
   gProfileService.startWithLastProfile = autoSelectLastProfile.checked;
   gProfileService.selectedProfile = selectedProfile.profile;
 
-  /* Bug 257777 */
-#ifndef MOZ_PHOENIX
   gProfileService.startOffline = document.getElementById("offlineState").checked;
-#endif
 
   gDialogParams.SetInt(0, 1);
 
