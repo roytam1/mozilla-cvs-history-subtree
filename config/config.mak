@@ -103,6 +103,16 @@ DIST=$(XPDIST)\$(DIST_PREFIX)$(MOZ_BITS)_O.OBJ
 DIST=$(XPDIST)\$(DIST_PREFIX)$(MOZ_BITS)_D.OBJ
 !endif
 
+# This will always give the location of Raptor's dist, even if "RAPTOR" is not defined.
+!if defined(MOZ_RAPTOR)
+!ifndef MOZ_DEBUG
+RAPTOR_DIST=$(XPDIST)\RAP$(MOZ_BITS)_O.OBJ
+!else
+RAPTOR_DIST=$(XPDIST)\RAP$(MOZ_BITS)_D.OBJ
+!endif
+!endif
+
+
 CFGFILE=$(OBJDIR)\cmd.cfg
 
 !if "$(MOZ_BITS)" == "16"
