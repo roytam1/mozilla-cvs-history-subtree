@@ -80,7 +80,7 @@ endif
 ifdef USE_MSVC
 LIBRARY = $(OBJDIR)/jsj.dll
 SHARED_LIBRARY = $(LIBRARY)
-PROGRAM = $(OBJDIR)/jsj
+PROGRAM = $(OBJDIR)/jsj.exe
 else
 LIBRARY = $(OBJDIR)/jsj.a
 SHARED_LIBRARY = $(OBJDIR)/jsj.so

@@ -161,7 +161,7 @@ PROG_CFILES = js.c
 ifdef USE_MSVC
 LIBRARY = $(OBJDIR)/js32.dll
 SHARED_LIBRARY = $(LIBRARY)
-PROGRAM = $(OBJDIR)/js
+PROGRAM = $(OBJDIR)/js.exe
 else
 LIBRARY = $(OBJDIR)/libjs.a
 SHARED_LIBRARY = $(OBJDIR)/libjs.so
