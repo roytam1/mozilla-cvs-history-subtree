@@ -571,12 +571,13 @@ CDISTINCLUDES= \
     /I$(XPDIST)\public\xml \
     /I$(DIST)\include \
     /I$(XPDIST)\public\img \
-    /I$(XPDIST)\public\jtools \
+	/I$(XPDIST)\public\jtools \
 !else
 !endif
     /I$(XPDIST)\public \
     /I$(XPDIST)\public\coreincl \
 !ifndef NO_SECURITY
+    /I$(XPDIST)\public\jar \
     /I$(XPDIST)\public\jar \
 !endif
     /I$(XPDIST)\public\util
