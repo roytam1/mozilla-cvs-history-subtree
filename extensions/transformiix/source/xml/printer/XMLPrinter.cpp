@@ -52,8 +52,8 @@ const String XMLPrinter::HEX_ENTITY    = "&#";
 
 const String XMLPrinter::CDATA_END        = "]]>";
 const String XMLPrinter::CDATA_START      = "<![CDATA[";
-const String XMLPrinter::COMMENT_START    = "<!-- ";
-const String XMLPrinter::COMMENT_END      = " -->";
+const String XMLPrinter::COMMENT_START    = "<!--";
+const String XMLPrinter::COMMENT_END      = "-->";
 const String XMLPrinter::DOCTYPE_START    = "<!DOCTYPE ";
 const String XMLPrinter::DOCTYPE_END      = ">";
 const String XMLPrinter::DOUBLE_QUOTE     = "\"";
@@ -429,7 +429,8 @@ void XMLPrinter::printComment(const String& data) {
 
     if (&data == &NULL_STRING) return;
 
-    prevChar = '\0';
+    //-- since comments will start with <!-- set prevChar to '-'
+    prevChar = DASH;
 
     for (int i = 0; i < data.length(); i++) {
         currChar = data.charAt(i);
@@ -441,5 +442,9 @@ void XMLPrinter::printComment(const String& data) {
 
         prevChar = currChar;
     }
-} //-- formatComment
+
+    //-- handle last char as a dash
+    if (prevChar == DASH) *ostreamPtr << SPACE;
+
+} //-- printComment
 
