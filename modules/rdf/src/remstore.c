@@ -488,30 +488,9 @@ leastRecentlyUsedRDFFile (RDF mcf)
   } else return NULL;
 }
 
-
-
-void
-gcRDFFile (RDFFile f)
-{
-  int16 n = 0;
-  RDFFile f1 = (RDFFile) f->db->pdata;
-
-  if (f->locked) return;
-  
-  if (f == f1) {
-    f->db->pdata = f->next;
-  } else {
-    RDFFile prev = f1;
-    while (f1 != NULL) {
-      if (f1 == f) {
-	prev->next = f->next;
-	break;
-      }
-      prev = f1;
-      f1 = f1->next;
-    }
-  }
-  
+ 
+void gcRDFFileInt (RDFFile f) {
+  int32 n = 0;
   while (n < f->assertionCount) {
     Assertion as = *(f->assertionList + n);
     remoteStoreRemove(f->db, as->u, as->s, as->value, as->type);
@@ -530,6 +509,42 @@ gcRDFFile (RDFFile f)
 }
 
 
+
+RDF_Error DeleteRemStore (RDFT db) {
+  RDFFile f = (RDFFile) db->pdata;
+  RDFFile next;
+  while (f) {
+    next = f->next;
+    gcRDFFileInt(f);
+    f = next;
+  }
+  freeMem(db);
+  return 0;
+}
+
+
+void
+gcRDFFile (RDFFile f)
+{
+  RDFFile f1 = (RDFFile) f->db->pdata;
+
+  if (f->locked) return;
+  
+  if (f == f1) {
+    f->db->pdata = f->next;
+  } else {
+    RDFFile prev = f1;
+    while (f1 != NULL) {
+      if (f1 == f) {
+	prev->next = f->next;
+	break;
+      }
+      prev = f1;
+      f1 = f1->next;
+    }
+  }
+  gcRDFFileInt(f);
+}
 
 static PRBool
 freeSomeRDFSpace (RDF mcf)
@@ -554,13 +569,6 @@ readRDFFile (char* url, RDF_Resource top, PRBool localp, RDFT db)
     return NULL;
   } else {
     RDFFile newFile = makeRDFFile(url, top, localp);  
-#if defined(DEBUG) && defined(MOZILLA_CLIENT) && defined(XP_WIN)
-    char* traceLine = getMem(500);
-    sprintf(traceLine, "\nAccessing %s (%s)\n", url, db->url);
-    FE_Trace(traceLine);
-    freeMem(traceLine);
-#endif
-  
     if (db->pdata) {  
       newFile->next = (RDFFile) db->pdata;
       db->pdata = newFile;
@@ -641,6 +649,7 @@ NewRemoteStore (char* url)
 		ntr->nextValue = remoteStoreNextValue;
 		ntr->disposeCursor = remoteStoreDisposeCursor;
 		ntr->url = copyString(url);
+        ntr->destroy =  DeleteRemStore;
 		ntr->arcLabelsIn = remoteStoreArcLabelsIn;
 		ntr->arcLabelsOut = remoteStoreArcLabelsOut;
 	}

@@ -189,7 +189,10 @@ RDF_ReleaseDataSource(RDF rdf, RDFT dataSource)
   memset(rdf->translators, '\0', sizeof(RDFT) * rdf->numTranslators);
   memcpy(rdf->translators, temp, sizeof(RDFT) * (rdf->numTranslators -1));
   rdf->numTranslators--;
-  deleteFromRDFList(dataSource->rdf, rdf);
+  dataSource->rdf = deleteFromRDFList(dataSource->rdf, rdf);
+  if (dataSource->rdf == NULL) {
+    (*dataSource->destroy)(dataSource);
+  }
   return 0;
 }
 
@@ -236,10 +239,14 @@ RDF_ReleaseDB(RDF rdf)
   if (rdf != NULL) {
     uint16 n = 0;
     uint16 size = rdf->numTranslators;
-    while (n < size) {
-	  RDFL rlx = (*((RDFT*)rdf->translators + n))->rdf;
-      (*((RDFT*)rdf->translators + n))->rdf =  deleteFromRDFList(rlx, rdf); 
-      callExitRoutine(n, rdf);
+    while (n < size) { 
+	  RDFT rdft = (*((RDFT*)rdf->translators + n));
+	  RDFL rlx ;
+	  if (rdft) {
+		  rlx =  rdft->rdf; 
+		  (*((RDFT*)rdf->translators + n))->rdf =  deleteFromRDFList(rlx, rdf); 
+		  if (rdft->rdf == NULL) callExitRoutine(n, rdf);
+	  }
       n++;
     }
     gAllDBs = deleteFromRDFList(gAllDBs, rdf);

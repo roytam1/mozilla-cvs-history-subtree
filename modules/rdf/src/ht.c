@@ -2746,7 +2746,8 @@ HT_ContainerSupportsNaturalOrderSort(HT_Resource container)
 
 	if (container != NULL && HT_IsContainer(container))
 	{
-		if (container->node == gNavCenter->RDF_BookmarkFolderCategory)
+		if ((container->node == gNavCenter->RDF_BookmarkFolderCategory) ||
+	        (container->node == RDFUtil_GetPTFolder()))
 		{
 			naturalOrder = PR_TRUE;
 		}
@@ -3880,14 +3881,14 @@ HT_DoMenuCmd(HT_Pane pane, HT_MenuCmd menuCmd)
 				{
 					if (menuCmd == HT_CMD_NEW_FOLDER)
 					{
-						url = PR_smprintf("container%d.rdf",
-							(int)++uniqueCount);
+						url = PR_smprintf("container%s.rdf",
+							makeNewID());
 						gAutoEditNewNode = true;
 					}
 					else if (menuCmd == HT_CMD_NEW_SEPARATOR)
 					{
-						url = PR_smprintf("separator%d",
-							(int)++uniqueCount);
+						url = PR_smprintf("separator%s",
+							makeNewID());
 					}
 					rNode = RDF_GetResource(pane->db, url, false);
 					if (rNode != NULL)
@@ -8336,7 +8337,7 @@ HT_AddSitemapFor(HT_Pane htPane, char *pUrl, char *pSitemapUrl, char* name)
     nsmp->origin =  FROM_PAGE;
     nsmp->onDisplayp = 1;
     HTADD(htPane, nu, gCoreVocab->RDF_name, nm);
-    HTADD(htPane, nu, gCoreVocab->RDF_parent, gNavCenter->RDF_Top);
+    nsmp->db = HTADD(htPane, nu, gCoreVocab->RDF_parent, gNavCenter->RDF_Top);
 	 
 
 }
@@ -8608,7 +8609,7 @@ HT_AddRelatedLinksFor(HT_Pane htPane, char *pUrl)
                 htPane->sbp = nsmp;
 		nsmp->siteToolType = RDF_RELATED_LINKS;
 		HTADD(htPane, nu, gCoreVocab->RDF_name, copyString(prov->name));
-		HTADD(htPane, nu, gCoreVocab->RDF_parent, gNavCenter->RDF_Sitemaps);
+                nsmp->db = HTADD(htPane, nu, gCoreVocab->RDF_parent, gNavCenter->RDF_Sitemaps);
 		prov = prov->next;
 		freeMem(buffer);
 	}

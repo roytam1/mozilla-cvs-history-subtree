@@ -489,11 +489,12 @@ RDFUtil_SetQuickFileFolder(RDF_Resource container)
 }
 
 
-
+RDF_Resource gPTFolder = NULL;
 PR_PUBLIC_API(RDF_Resource)
 RDFUtil_GetPTFolder()
 {
- return RDFUtil_GetFirstInstance(gNavCenter->RDF_PersonalToolbarFolderCategory, "PersonalToolbar");
+  if (gPTFolder) return gPTFolder;
+ return (gPTFolder =  RDFUtil_GetFirstInstance(gNavCenter->RDF_PersonalToolbarFolderCategory, "PersonalToolbar"));
 }
 
 
