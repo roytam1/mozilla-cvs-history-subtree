@@ -42,8 +42,6 @@
 #include "prtypes.h"
 #include "nsIID.h"
 
-class nsIDOMElement;
-
 // base class for all XForms elements
 
 class nsXFormsElement
