@@ -36,6 +36,7 @@ extern void MSG_RecordImapMessageFlags(MSG_Pane* pane,
 /* notify libmsg of deleted messages */
 extern void MSG_ImapMsgsDeleted(MSG_Pane *urlPane,
 								const char *onlineMailboxName,
+								const char *hostName,
 								XP_Bool deleteAllMsgs, 
                     			const char *doomedKeyString);
 
