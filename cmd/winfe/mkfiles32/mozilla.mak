@@ -208,16 +208,14 @@ MOZ_STACK=33679
 
 !if defined(MOZ_DEBUG)
 VERSTR=Dbg
-<<<<<<< mozilla.mak
+
 !if "$(MOZ_BITS)"=="32"
 #CFLAGS_DEBUG=$(MOZ_DEBUG_FLAG) /Bd /DDEBUG /D_DEBUG $(MOZ_USERDEBUG)\
 CFLAGS_DEBUG=$(MOZ_DEBUG_FLAG) /Bd /DDEBUG /D_DEBUG $(MOZ_USERDEBUG) /DCookieManagement /DSingleSignon\
 !else
 CFLAGS_DEBUG=$(MOZ_DEBUG_FLAG) /Bd /DDEBUG /D_DEBUG $(MOZ_USERDEBUG)\
 !endif
-=======
-CFLAGS_DEBUG=$(MOZ_DEBUG_FLAG) /DDEBUG /D_DEBUG $(MOZ_USERDEBUG)\
->>>>>>> 3.9.4.21
+
 !IF "$(MOZ_BITS)"=="32"
 	/Gm /Gi \
 !IF 0 #defined(MOZ_BATCH)
@@ -277,11 +275,6 @@ CFLAGS_LIBCNV_C=        $(CFLAGS_DEFAULT) /I$(DEPTH)\jpeg /Fp"$(OUTDIR)/xp.pch" 
 CFLAGS_JPEG_C=          $(CFLAGS_DEFAULT)
 CFLAGS_LAYOUT_C=        $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/layoutc.pch" /YX"xp.h"
 CFLAGS_LIBSTYLE_C=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/stylec.pch" /YX"xp.h"
-<<<<<<< mozilla.mak
-CFLAGS_LIBJAR_C=        $(CFLAGS_DEFAULT) 
-CFLAGS_LIBLAYER_C=      $(CFLAGS_DEFAULT) 
-CFLAGS_LIBMISC_C=       $(CFLAGS_DEFAULT) 
-=======
 CFLAGS_LIBJAR_C=        $(CFLAGS_DEFAULT)
 CFLAGS_LIBLAYER_C=      $(CFLAGS_DEFAULT)
 CFLAGS_LIBMISC_C=       $(CFLAGS_DEFAULT)
@@ -289,7 +282,6 @@ CFLAGS_LIBNET_C=        $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/netc.pch" /YX"mkutils.h"
 CFLAGS_LIBNET_CPP=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/netcpp.pch" /YX"mkutils.h"
 CFLAGS_LIBMSG_C=        $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/netc.pch" /YX"mkutils.h"
 CFLAGS_LIBMSG_CPP=      $(CFLAGS_DEFAULT) /I$(DEPTH)\dist\public\msg /I$(DEPTH)\lib\libaddr /I$(DEPTH)\lib\libmsg /Fp"$(OUTDIR)/netcpp.pch" /YX"mkutils.h"
->>>>>>> 3.9.4.21
 CFLAGS_LIBPARSE_C=      $(CFLAGS_DEFAULT) /Fp"$(OUTDIR)/pa_parse.pch" /YX"pa_parse.h"
 CFLAGS_XP_C=            $(CFLAGS_DEFAULT)
 CFLAGS_LIBPICS_C=       $(CFLAGS_DEFAULT)
@@ -570,11 +562,8 @@ CINCLUDES= \
     /I$(DEPTH)\lib\layout \
     /I$(DEPTH)\lib\libstyle \
     /I$(DEPTH)\lib\liblayer\include \
-<<<<<<< mozilla.mak
-=======
     /I$(DEPTH)\lib\libnet \
-	/I$(DEPTH)\lib\libmsg \
->>>>>>> 3.9.4.21
+    /I$(DEPTH)\lib\libmsg \
     /I$(DEPTH)\lib\libcnv \
     /I$(DEPTH)\lib\libi18n \
     /I$(DEPTH)\lib\libparse \
@@ -655,12 +644,7 @@ CDISTINCLUDES3= \
     /I$(XPDIST)\public\xml \
     /I$(DIST)\include \
     /I$(XPDIST)\public\img \
-<<<<<<< mozilla.mak
-    /I$(XPDIST)\public\jtools \
-=======
     /I$(XPDIST)\public\jtools
-!else
->>>>>>> 3.9.4.21
 !endif
 #Add additional include directories to CDISTINCLUDES2
 
@@ -737,14 +721,9 @@ RCDEFINES=$(RCDEFINES) $(MOZ_LITENESS_FLAGS)
 CFILEFLAGS=$(CFLAGS_GENERAL) ^
     $(CDEFINES) ^
     $(CINCLUDES) ^
-<<<<<<< mozilla.mak
     $(CDISTINCLUDES1) ^
     $(CDISTINCLUDES2) ^
     $(CDISTINCLUDES3) 
-=======
-    $(CDISTINCLUDES1) ^
-    $(CDISTINCLUDES2)
->>>>>>> 3.9.4.21
 
 
 RCFILEFLAGS=$(RCFLAGS_GENERAL)\
@@ -822,7 +801,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\layout\laytext.c
 	$(DEPTH)\lib\layout\layutil.c
 	$(DEPTH)\lib\layout\ptinpoly.c
-<<<<<<< mozilla.mak
 	$(DEPTH)\lib\layout\layrelay.c 
 	$(DEPTH)\lib\layout\laytrav.c 
 !endif
@@ -849,11 +827,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libaddr\abpane2.cpp
 	$(DEPTH)\lib\libaddr\abntfy.cpp
 !endif
-
-=======
-	$(DEPTH)\lib\layout\layrelay.c
-	$(DEPTH)\lib\layout\laytrav.c
->>>>>>> 3.9.4.21
 	$(DEPTH)\lib\libi18n\detectu2.c
 	$(DEPTH)\lib\libi18n\metatag.c
 	$(DEPTH)\lib\libi18n\autokr.c
@@ -971,14 +944,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libmocha\lm_jsd.c
 !endif
 !endif
-<<<<<<< mozilla.mak
-!endif
-
-!ifdef MOZ_MAIL_NEWS
-	$(DEPTH)\lib\libmsg\ad_strm.c 
-	$(DEPTH)\lib\libmsg\msgppane.cpp 
-	$(DEPTH)\lib\libmsg\addr.c
-=======
 
 !ifdef MOZ_MAIL_NEWS
 	$(DEPTH)\lib\libnet\mkabook.cpp
@@ -990,7 +955,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libnet\imap4url.c
 	$(DEPTH)\lib\libnet\mkldap.cpp
 !endif
-
 	$(DEPTH)\lib\libnet\cvactive.c
 	$(DEPTH)\lib\libnet\cvcolor.c
 	$(DEPTH)\lib\libnet\cvdisk.c
@@ -1002,7 +966,7 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libnet\mkautocf.c
 	$(DEPTH)\lib\libnet\mkcache.c
 	$(DEPTH)\lib\libnet\mkconect.c
-    $(DEPTH)\lib\libnet\mkcburl.c
+	$(DEPTH)\lib\libnet\mkcburl.c
 	$(DEPTH)\lib\libnet\mkdaturl.c
 	$(DEPTH)\lib\libnet\mkextcac.c
 	$(DEPTH)\lib\libnet\mkfile.c
@@ -1048,7 +1012,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 !ifdef MOZ_MAIL_NEWS
 	$(DEPTH)\lib\libmsg\ad_strm.c
 	$(DEPTH)\lib\libmsg\addrutil.cpp
->>>>>>> 3.9.4.21
 	$(DEPTH)\lib\libmsg\ap_decod.c
 	$(DEPTH)\lib\libmsg\ap_encod.c
 	$(DEPTH)\lib\libmsg\appledbl.c
@@ -1125,56 +1088,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\libmsg\thrhead.cpp
 	$(DEPTH)\lib\libmsg\thrlstst.cpp
 	$(DEPTH)\lib\libmsg\thrnewvw.cpp
-<<<<<<< mozilla.mak
-	$(DEPTH)\lib\libmsg\mozdb.cpp
-
-	$(DEPTH)\lib\libneo\enstring.cpp
-	$(DEPTH)\lib\libneo\enswizz.cpp
-	$(DEPTH)\lib\libneo\nappl.cpp
-	$(DEPTH)\lib\libneo\nappsa.cpp
-	$(DEPTH)\lib\libneo\narray.cpp
-	$(DEPTH)\lib\libneo\nblob.cpp
-	$(DEPTH)\lib\libneo\nclass.cpp
-	$(DEPTH)\lib\libneo\ncstream.cpp
-	$(DEPTH)\lib\libneo\ndata.cpp
-	$(DEPTH)\lib\libneo\ndblndx.cpp
-	$(DEPTH)\lib\libneo\ndoc.cpp
-	$(DEPTH)\lib\libneo\nfltndx.cpp
-	$(DEPTH)\lib\libneo\nformat.cpp
-	$(DEPTH)\lib\libneo\nfree.cpp
-	$(DEPTH)\lib\libneo\nfstream.cpp
-	$(DEPTH)\lib\libneo\nidindex.cpp
-	$(DEPTH)\lib\libneo\nidlist.cpp
-	$(DEPTH)\lib\libneo\nindexit.cpp
-	$(DEPTH)\lib\libneo\ninode.cpp
-	$(DEPTH)\lib\libneo\nioblock.cpp
-	$(DEPTH)\lib\libneo\niter.cpp
-	$(DEPTH)\lib\libneo\nlaundry.cpp
-	$(DEPTH)\lib\libneo\nlongndx.cpp
-	$(DEPTH)\lib\libneo\nmeta.cpp
-	$(DEPTH)\lib\libneo\nmrswsem.cpp
-	$(DEPTH)\lib\libneo\nmsem.cpp
-	$(DEPTH)\lib\libneo\nnode.cpp
-	$(DEPTH)\lib\libneo\nnstrndx.cpp
-	$(DEPTH)\lib\libneo\noffsprn.cpp
-	$(DEPTH)\lib\libneo\npartmgr.cpp
-	$(DEPTH)\lib\libneo\npersist.cpp
-	$(DEPTH)\lib\libneo\npliter.cpp
-	$(DEPTH)\lib\libneo\nquery.cpp
-	$(DEPTH)\lib\libneo\nselect.cpp
-	$(DEPTH)\lib\libneo\nsselect.cpp
-	$(DEPTH)\lib\libneo\nstream.cpp
-	$(DEPTH)\lib\libneo\nstrndx.cpp
-	$(DEPTH)\lib\libneo\nsub.cpp
-	$(DEPTH)\lib\libneo\nthread.cpp
-	$(DEPTH)\lib\libneo\ntrans.cpp
-	$(DEPTH)\lib\libneo\nulngndx.cpp
-	$(DEPTH)\lib\libneo\nutils.cpp
-	$(DEPTH)\lib\libneo\nwselect.cpp
-	$(DEPTH)\lib\libneo\semnspr.cpp
-	$(DEPTH)\lib\libneo\thrnspr.cpp
-=======
->>>>>>> 3.9.4.21
 !endif
 
 !ifndef MOZ_NGLAYOUT
@@ -1215,27 +1128,17 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 !endif
 !endif
 
-<<<<<<< mozilla.mak
 !ifndef MOZ_NGLAYOUT
 	$(DEPTH)\lib\plugin\npassoc.c 
-=======
-	$(DEPTH)\lib\plugin\npassoc.c
->>>>>>> 3.9.4.21
 	$(DEPTH)\lib\plugin\npglue.cpp
 	$(DEPTH)\lib\plugin\npwplat.cpp
 	$(DEPTH)\lib\plugin\nsplugin.cpp
 
 	$(DEPTH)\lib\xlate\isotab.c
 	$(DEPTH)\lib\xlate\stubs.c
-<<<<<<< mozilla.mak
 	$(DEPTH)\lib\xlate\tblprint.c 
 	$(DEPTH)\lib\xlate\text.c 
 !endif
-=======
-	$(DEPTH)\lib\xlate\tblprint.c
-	$(DEPTH)\lib\xlate\text.c
->>>>>>> 3.9.4.21
-
 	$(DEPTH)\lib\xp\allxpstr.c
 	$(DEPTH)\lib\xp\xp_alloc.c
 	$(DEPTH)\lib\xp\xp_cntxt.c
@@ -1248,14 +1151,9 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\lib\xp\xp_md5.c
 !endif
 	$(DEPTH)\lib\xp\xp_ncent.c
-<<<<<<< mozilla.mak
-	$(DEPTH)\lib\xp\xp_rgb.c  
-	$(DEPTH)\lib\xp\xp_str.c  
-=======
 	$(DEPTH)\lib\xp\xp_reg.c
 	$(DEPTH)\lib\xp\xp_rgb.c
 	$(DEPTH)\lib\xp\xp_str.c
->>>>>>> 3.9.4.21
 	$(DEPTH)\lib\xp\xp_thrmo.c
 	$(DEPTH)\lib\xp\xp_time.c
 	$(DEPTH)\lib\xp\xp_trace.c
@@ -1353,43 +1251,28 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\animbar2.cpp
 	$(DEPTH)\cmd\winfe\apiapi.cpp
 	$(DEPTH)\cmd\winfe\animecho.cpp
-<<<<<<< mozilla.mak
 	$(DEPTH)\cmd\winfe\askmedlg.cpp 
 	$(DEPTH)\cmd\winfe\authdll.cpp
 !ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\button.cpp 
 !endif
-=======
 !ifdef MOZ_OFFLINE
 	$(DEPTH)\cmd\winfe\askmedlg.cpp
 !endif
-	$(DEPTH)\cmd\winfe\authdll.cpp
-	$(DEPTH)\cmd\winfe\button.cpp
->>>>>>> 3.9.4.21
 	$(DEPTH)\cmd\winfe\cfe.cpp
 	$(DEPTH)\cmd\winfe\cmdparse.cpp
 	$(DEPTH)\cmd\winfe\cntritem.cpp
 	$(DEPTH)\cmd\winfe\confhook.cpp
 	$(DEPTH)\cmd\winfe\csttlbr2.cpp
-<<<<<<< mozilla.mak
 	$(DEPTH)\cmd\winfe\custom.cpp 
 !ifndef MOZ_NGLAYOUT
-=======
-	$(DEPTH)\cmd\winfe\custom.cpp
->>>>>>> 3.9.4.21
 	$(DEPTH)\cmd\winfe\cuvfm.cpp
 	$(DEPTH)\cmd\winfe\cuvfs.cpp
 	$(DEPTH)\cmd\winfe\cvffc.cpp
-<<<<<<< mozilla.mak
 !endif
-	$(DEPTH)\cmd\winfe\cxabstra.cpp   
-	$(DEPTH)\cmd\winfe\cxdc.cpp   
-	$(DEPTH)\cmd\winfe\cxdc1.cpp   
-=======
 	$(DEPTH)\cmd\winfe\cxabstra.cpp
 	$(DEPTH)\cmd\winfe\cxdc.cpp
 	$(DEPTH)\cmd\winfe\cxdc1.cpp
->>>>>>> 3.9.4.21
 	$(DEPTH)\cmd\winfe\cxicon.cpp
 	$(DEPTH)\cmd\winfe\cxinit.cpp
 	$(DEPTH)\cmd\winfe\cxmeta.cpp
@@ -1397,14 +1280,9 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\cxpane.cpp
 !ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\cxprint.cpp
-<<<<<<< mozilla.mak
 	$(DEPTH)\cmd\winfe\cxprndlg.cpp   
 !endif
 	$(DEPTH)\cmd\winfe\cxsave.cpp 
-=======
-	$(DEPTH)\cmd\winfe\cxprndlg.cpp
-	$(DEPTH)\cmd\winfe\cxsave.cpp
->>>>>>> 3.9.4.21
 	$(DEPTH)\cmd\winfe\cxstubs.cpp
 	$(DEPTH)\cmd\winfe\cxwin.cpp
 	$(DEPTH)\cmd\winfe\cxwin1.cpp
@@ -1414,24 +1292,16 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\ddectc.cpp
 	$(DEPTH)\cmd\winfe\dialog.cpp
 	$(DEPTH)\cmd\winfe\display.cpp
-<<<<<<< mozilla.mak
 	$(DEPTH)\cmd\winfe\dragbar.cpp   
 !ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\drawable.cpp   
 !endif
-	$(DEPTH)\cmd\winfe\dropmenu.cpp   
-	$(DEPTH)\cmd\winfe\edcombtb.cpp   
-=======
-	$(DEPTH)\cmd\winfe\dragbar.cpp
-	$(DEPTH)\cmd\winfe\drawable.cpp
 	$(DEPTH)\cmd\winfe\dropmenu.cpp
 	$(DEPTH)\cmd\winfe\edcombtb.cpp
->>>>>>> 3.9.4.21
 	$(DEPTH)\cmd\winfe\extgen.cpp
 	$(DEPTH)\cmd\winfe\extview.cpp
 !ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\feembed.cpp
-<<<<<<< mozilla.mak
 !endif
 	$(DEPTH)\cmd\winfe\fegrid.cpp 
 	$(DEPTH)\cmd\winfe\fegui.cpp  
@@ -1448,7 +1318,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\fmabstra.cpp   
 	$(DEPTH)\cmd\winfe\fmbutton.cpp   
 	$(DEPTH)\cmd\winfe\fmfile.cpp 
-=======
 	$(DEPTH)\cmd\winfe\fegrid.cpp
 	$(DEPTH)\cmd\winfe\fegui.cpp
 	$(DEPTH)\cmd\winfe\feimage.cpp
@@ -1460,40 +1329,24 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\feselect.cpp
 	$(DEPTH)\cmd\winfe\feutil.cpp
 	$(DEPTH)\cmd\winfe\findrepl.cpp
-	$(DEPTH)\cmd\winfe\fmabstra.cpp
-	$(DEPTH)\cmd\winfe\fmbutton.cpp
-	$(DEPTH)\cmd\winfe\fmfile.cpp
->>>>>>> 3.9.4.21
 	$(DEPTH)\cmd\winfe\fmradio.cpp
 	$(DEPTH)\cmd\winfe\fmrdonly.cpp
 	$(DEPTH)\cmd\winfe\fmselmul.cpp
 	$(DEPTH)\cmd\winfe\fmselone.cpp
 	$(DEPTH)\cmd\winfe\fmtext.cpp
 	$(DEPTH)\cmd\winfe\fmtxarea.cpp
-<<<<<<< mozilla.mak
-!endif
-	$(DEPTH)\cmd\winfe\frameglu.cpp   
-	$(DEPTH)\cmd\winfe\framinit.cpp   
-	$(DEPTH)\cmd\winfe\genchrom.cpp   
-	$(DEPTH)\cmd\winfe\gendoc.cpp 
-=======
 	$(DEPTH)\cmd\winfe\frameglu.cpp
 	$(DEPTH)\cmd\winfe\framinit.cpp
 	$(DEPTH)\cmd\winfe\genchrom.cpp
 	$(DEPTH)\cmd\winfe\gendoc.cpp
->>>>>>> 3.9.4.21
 	$(DEPTH)\cmd\winfe\genedit.cpp
 	$(DEPTH)\cmd\winfe\genframe.cpp
 	$(DEPTH)\cmd\winfe\genfram2.cpp
 	$(DEPTH)\cmd\winfe\prefs.cpp
 	$(DEPTH)\cmd\winfe\genview.cpp
-<<<<<<< mozilla.mak
 !ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\gridedge.cpp   
 !endif
-=======
-	$(DEPTH)\cmd\winfe\gridedge.cpp
->>>>>>> 3.9.4.21
 	$(DEPTH)\cmd\winfe\helpers.cpp
 	$(DEPTH)\cmd\winfe\hiddenfr.cpp
 	$(DEPTH)\cmd\winfe\histbld.cpp
@@ -1506,7 +1359,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\lastacti.cpp
 	$(DEPTH)\cmd\winfe\logindg.cpp
 	$(DEPTH)\cmd\winfe\mainfrm.cpp
-<<<<<<< mozilla.mak
 !ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\medit.cpp  
 !endif
@@ -1525,36 +1377,15 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 !endif
 	$(DEPTH)\cmd\winfe\mozilla.cpp   
 	$(DEPTH)\cmd\winfe\nsapp.cpp   
-=======
-	$(DEPTH)\cmd\winfe\medit.cpp
-	$(DEPTH)\cmd\winfe\mozock.cpp
-	$(DEPTH)\cmd\winfe\mucwiz.cpp
-	$(DEPTH)\cmd\winfe\mucproc.cpp
-	$(DEPTH)\cmd\winfe\navbar.cpp
-	$(DEPTH)\cmd\winfe\navcntr.cpp
-	$(DEPTH)\cmd\winfe\navcontv.cpp
-	$(DEPTH)\cmd\winfe\navfram.cpp
-	$(DEPTH)\cmd\winfe\navigate.cpp
-	$(DEPTH)\cmd\winfe\ncapiurl.cpp
-	$(DEPTH)\cmd\winfe\nethelp.cpp
-	$(DEPTH)\cmd\winfe\mozilla.cpp
-	$(DEPTH)\cmd\winfe\nsapp.cpp
->>>>>>> 3.9.4.21
 	$(DEPTH)\cmd\winfe\netsdoc.cpp
 !ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\nsfont.cpp
-<<<<<<< mozilla.mak
 	$(DEPTH)\cmd\winfe\netsprnt.cpp   
 !endif
 	$(DEPTH)\cmd\winfe\netsvw.cpp 
-=======
-	$(DEPTH)\cmd\winfe\netsprnt.cpp
-	$(DEPTH)\cmd\winfe\netsvw.cpp
->>>>>>> 3.9.4.21
 	$(DEPTH)\cmd\winfe\nsshell.cpp
 !ifndef MOZ_NGLAYOUT
 	$(DEPTH)\cmd\winfe\odctrl.cpp
-<<<<<<< mozilla.mak
 !endif
 	$(DEPTH)\cmd\winfe\olectc.cpp 
 	$(DEPTH)\cmd\winfe\olehelp.cpp 
@@ -1566,21 +1397,8 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 	$(DEPTH)\cmd\winfe\oleview1.cpp   
 	$(DEPTH)\cmd\winfe\outliner.cpp 
 	$(DEPTH)\cmd\winfe\ownedlst.cpp  
-=======
-	$(DEPTH)\cmd\winfe\olectc.cpp
-	$(DEPTH)\cmd\winfe\olehelp.cpp
-	$(DEPTH)\cmd\winfe\oleprot1.cpp
-	$(DEPTH)\cmd\winfe\oleregis.cpp
-	$(DEPTH)\cmd\winfe\olestart.cpp
-	$(DEPTH)\cmd\winfe\oleshut.cpp
-	$(DEPTH)\cmd\winfe\oleview.cpp
-	$(DEPTH)\cmd\winfe\oleview1.cpp
-	$(DEPTH)\cmd\winfe\outliner.cpp
-	$(DEPTH)\cmd\winfe\ownedlst.cpp
->>>>>>> 3.9.4.21
 	$(DEPTH)\cmd\winfe\pain.cpp
 	$(DEPTH)\cmd\winfe\plginvw.cpp
-<<<<<<< mozilla.mak
 	$(DEPTH)\cmd\winfe\popup.cpp  
 	$(DEPTH)\cmd\winfe\prefinfo.cpp   
 	$(DEPTH)\cmd\winfe\presentm.cpp   
@@ -1606,28 +1424,6 @@ $(OUTDIR)\mozilla.dep: $(DEPTH)\cmd\winfe\mkfiles32\mozilla.mak
 !endif
 	$(DEPTH)\cmd\winfe\stshplug.cpp 
 	$(DEPTH)\cmd\winfe\styles.cpp 
-=======
-	$(DEPTH)\cmd\winfe\popup.cpp
-	$(DEPTH)\cmd\winfe\prefinfo.cpp
-	$(DEPTH)\cmd\winfe\presentm.cpp
-	$(DEPTH)\cmd\winfe\printpag.cpp
-	$(DEPTH)\cmd\winfe\profile.cpp
-	$(DEPTH)\cmd\winfe\qahook.cpp
-	$(DEPTH)\cmd\winfe\quickfil.cpp
-	$(DEPTH)\cmd\winfe\rdfliner.cpp
-	$(DEPTH)\cmd\winfe\region.cpp
-	$(DEPTH)\cmd\winfe\regproto.cpp
-	$(DEPTH)\cmd\winfe\shcut.cpp
-	$(DEPTH)\cmd\winfe\shcutdlg.cpp
-	$(DEPTH)\cmd\winfe\slavewnd.cpp
-	$(DEPTH)\cmd\winfe\splash.cpp
-	$(DEPTH)\cmd\winfe\spiwrap.c
-	$(DEPTH)\cmd\winfe\srvritem.cpp
-	$(DEPTH)\cmd\winfe\statbar.cpp
-	$(DEPTH)\cmd\winfe\stshfont.cpp
-	$(DEPTH)\cmd\winfe\stshplug.cpp
-	$(DEPTH)\cmd\winfe\styles.cpp
->>>>>>> 3.9.4.21
 	$(DEPTH)\cmd\winfe\sysinfo.cpp
 	$(DEPTH)\cmd\winfe\template.cpp
 !if "$(MOZ_USERNAME)" == "WHITEBOX"
@@ -2584,11 +2380,8 @@ BATCH_BUILD_1:          \
 	BATCH_LIBI18N_C         \
 	BATCH_LIBLAYER_C                \
 	BATCH_PLUGIN_CPP                \
-<<<<<<< mozilla.mak
-=======
 	BATCH_LIBNET_CPP                \
 	BATCH_LIBMSG_CPP                \
->>>>>>> 3.9.4.21
 	BATCH_LIBDBM_C          \
 	BATCH_LAYOUT_CPP                \
 	BATCH_WINFE_CPP         \
@@ -2600,11 +2393,7 @@ BATCH_BUILD_1:          \
 
 BATCH_BUILD_2:             \
 	BATCH_LIBMIME_C         \
-<<<<<<< mozilla.mak
-	BATCH_LIBPARSE_C                \
-=======
 	BATCH_LIBNET_C          \
->>>>>>> 3.9.4.21
 	BATCH_LIBMSG_C          \
 	BATCH_LIBPARSE_C                \
 	BATCH_LIBMISC_C         \
@@ -3065,16 +2854,11 @@ exports:
     -xcopy $(DEPTH)\lib\libi18n\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\lib\libjar\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\lib\libparse\*.h $(EXPORTINC) $(XCF)
-<<<<<<< mozilla.mak
 !ifdef MOZ_MAIL_NEWS
     -xcopy $(DEPTH)\lib\libaddr\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\lib\libmsg\*.h $(EXPORTINC) $(XCF)
     -xcopy $(DEPTH)\lib\libneo\*.h $(EXPORTINC) $(XCF)
 !endif
-=======
-    -xcopy $(DEPTH)\lib\libnet\*.h $(EXPORTINC) $(XCF)
-	-xcopy $(DEPTH)\lib\libmsg\*.h $(EXPORTINC) $(XCF)
->>>>>>> 3.9.4.21
 !ifdef MOZ_LDAP
     -xcopy $(DEPTH)\netsite\ldap\include\*.h $(EXPORTINC) $(XCF)
     -xcopy $(XPDIST)\public\ldap\*.h $(EXPORTINC) $(XCF)

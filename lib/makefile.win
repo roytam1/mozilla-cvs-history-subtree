@@ -40,22 +40,16 @@ include <$(DEPTH)\config\config.mak>
 #//
 #//------------------------------------------------------------------------
 #DIRS=libi18n layout libstyle liblayer libmocha
-<<<<<<< makefile.win
 DIRS=   libi18n htmldlgs libparse layout libstyle
 
 !ifdef MOZ_OJI
 DIRS=   $(DIRS) plugin
 !endif
-=======
-DIRS= \
-	libi18n \
-	htmldlgs \
+DIRS= $(DIRS) \
 !ifdef MOZ_MAIL_NEWS
 	libaddr \
 !endif
 	libparse
-
->>>>>>> 3.2.6.1
 
 #//------------------------------------------------------------------------
 #//
