@@ -134,6 +134,7 @@ HRESULT SmartUpdateJars(LPSTR szAppName, LPSTR szAppPath, LPSTR listArchive[])
         /* break out of the for loop */
         break;
       }
+      printf("\n");
     }
 
     pfnXpiExit();
