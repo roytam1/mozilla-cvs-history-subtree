@@ -3000,6 +3000,9 @@ nsCSSFrameConstructor::CreateAnonymousXULContent(nsIPresContext* aPresContext,
       content->SetAttribute(kNameSpaceID_None, vertical, "vertical", PR_FALSE);
       
       ConstructFrame(aPresContext, aState, content, aParentFrame, PR_FALSE, aChildItems);
+
+      ((nsTreeRowGroupFrame*)aParentFrame)->SetScrollbarFrame(aChildItems.lastChild);
+
     }
   }
 

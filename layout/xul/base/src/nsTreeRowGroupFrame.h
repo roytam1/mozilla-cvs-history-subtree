@@ -27,6 +27,15 @@ class nsTreeRowGroupFrame : public nsTableRowGroupFrame
 public:
   friend nsresult NS_NewTreeRowGroupFrame(nsIFrame** aNewFrame);
 
+  NS_METHOD     ReflowBeforeRowLayout(nsIPresContext&      aPresContext,
+                                      nsHTMLReflowMetrics& aDesiredSize,
+                                      RowGroupReflowState& aReflowState,
+                                      nsReflowStatus&      aStatus);
+
+  virtual PRBool ExcludeFrameFromReflow(nsIFrame* aFrame);
+
+  void SetScrollbarFrame(nsIFrame* aFrame) { mScrollbar = aFrame; };
+  
 protected:
   nsTreeRowGroupFrame();
   virtual ~nsTreeRowGroupFrame();
@@ -34,5 +43,6 @@ protected:
   virtual PRBool RowGroupReceivesExcessSpace() { return PR_FALSE; };
 
 protected: // Data Members
+  nsIFrame* mScrollbar;
 
 }; // class nsTreeRowGroupFrame

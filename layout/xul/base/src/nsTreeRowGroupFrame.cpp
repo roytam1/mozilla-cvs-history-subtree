@@ -49,19 +49,25 @@ NS_NewTreeRowGroupFrame (nsIFrame** aNewFrame)
 
 // Constructor
 nsTreeRowGroupFrame::nsTreeRowGroupFrame()
-:nsTableRowGroupFrame() { }
+:nsTableRowGroupFrame(), mScrollbar(nsnull) { }
 
 // Destructor
 nsTreeRowGroupFrame::~nsTreeRowGroupFrame()
 {
 }
 
-/*
-PRBool nsTreeRowGroupFrame::RowGroupReceivesExcessSpace()
+NS_METHOD nsTreeRowGroupFrame::ReflowBeforeRowLayout(nsIPresContext&      aPresContext,
+                                                     nsHTMLReflowMetrics& aDesiredSize,
+                                                     RowGroupReflowState& aReflowState,
+                                                     nsReflowStatus&      aStatus)
 {
-  // Only row groups do.
-  const nsStyleDisplay *display=nsnull;
-  GetStyleData(eStyleStruct_Display, ((const nsStyleStruct *&)display));
-  return (display->mDisplay == NS_STYLE_DISPLAY_TABLE_ROW_GROUP);
+  return NS_OK;
 }
-*/
+
+
+PRBool nsTreeRowGroupFrame::ExcludeFrameFromReflow(nsIFrame* aFrame)
+{
+  if (aFrame == mScrollbar)
+    return PR_TRUE;
+  else return PR_FALSE;
+}
