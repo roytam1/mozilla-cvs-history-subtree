@@ -360,12 +360,81 @@ nsImageFrame::GetAlphaBitmap()
 }
 
 
+//#define USE_XIE 1
+#define USE_PIXBUF 1
 
 nsresult nsImageFrame::DrawImage(GdkDrawable *aDest, const GdkGC *aGC, const nsRect * aSrcRect, const nsPoint * aDestPoint)
 {
-#if 0
-  GdkPixmap *image = gdk_pixmap_new(mSurface->GetDrawable(), width, height, gdk_rgb_get_visual()->depth);
-#endif
+#ifdef USE_PIXBUF
+
+  if (!mImageData.pixbuf) {
+    PRBool hasAlpha = (mFormat == nsIGFXFormat::RGBA);
+    mImageData.pixbuf = gdk_pixbuf_new_from_data(mImageData.data,
+                                                 GDK_COLORSPACE_RGB,
+                                                 hasAlpha,
+                                                 8,
+                                                 mRect.width, mRect.height,
+                                                 mImageData.bytesPerRow,
+                                                 NULL, NULL);
+  }
+
+
+  if (mFormat == nsIGFXFormat::RGBA) {
+
+    gdk_pixbuf_render_to_drawable_alpha(mImageData.pixbuf,
+                                        aDest,
+                                        aSrcRect->x, aSrcRect->y,
+                                        (aDestPoint->x + aSrcRect->x),
+                                        (aDestPoint->y + aSrcRect->y),
+                                        aSrcRect->width, aSrcRect->height,
+                                        GDK_PIXBUF_ALPHA_FULL,
+                                        100,
+                                        GDK_RGB_DITHER_MAX,
+                                        0, 0);
+
+  } else if (mFormat == nsIGFXFormat::RGB) {
+
+    gdk_pixbuf_render_to_drawable(mImageData.pixbuf,
+                                  aDest, NS_CONST_CAST(GdkGC*, aGC),
+                                  aSrcRect->x, aSrcRect->y,
+                                  (aDestPoint->x + aSrcRect->x),
+                                  (aDestPoint->y + aSrcRect->y),
+                                  aSrcRect->width, aSrcRect->height,
+                                  GDK_RGB_DITHER_MAX, 0, 0);
+
+  } else if (mFormat == nsIGFXFormat::RGB_A1) {
+
+    GdkBitmap *alphaMask = GetAlphaBitmap();
+    GdkGC *gc = nsnull;
+
+    if (alphaMask) {
+      gc = gdk_gc_new(aDest);
+
+      gdk_gc_copy(gc, NS_CONST_CAST(GdkGC*, aGC));
+      gdk_gc_set_clip_mask(gc, alphaMask);
+      gdk_gc_set_clip_origin(gc,
+                             aDestPoint->x,
+                             aDestPoint->y);
+    }
+
+    if (!gc) {
+      gc = NS_CONST_CAST(GdkGC *, aGC);
+      gdk_gc_ref(gc);
+    }
+
+    gdk_pixbuf_render_to_drawable(mImageData.pixbuf,
+                                  aDest, gc,
+                                  aSrcRect->x, aSrcRect->y,
+                                  (aDestPoint->x + aSrcRect->x),
+                                  (aDestPoint->y + aSrcRect->y),
+                                  aSrcRect->width, aSrcRect->height,
+                                  GDK_RGB_DITHER_MAX, 0, 0);
+
+    if (alphaMask) gdk_pixmap_unref(alphaMask);
+    gdk_gc_unref(gc);
+  }
+
+#else
 
   GdkBitmap *alphaMask = GetAlphaBitmap();
   GdkGC *gc = nsnull;
@@ -384,23 +453,22 @@ nsresult nsImageFrame::DrawImage(GdkDrawable *aDest, const GdkGC *aGC, const nsR
     gc = NS_CONST_CAST(GdkGC *, aGC);
     gdk_gc_ref(gc);
   }
+
   gdk_draw_rgb_image(aDest, gc,
-                     (aDestPoint->x + aSrcRect->x), (aDestPoint->y + aSrcRect->y),
+                     aDestPoint->x, (aDestPoint->y + aSrcRect->y),
                      mRect.width, aSrcRect->height,
                      GDK_RGB_DITHER_MAX,
                      mImageData.data + (aSrcRect->y * mImageData.bytesPerRow),
                      mImageData.bytesPerRow);
 
-  if (alphaMask)
-    gdk_pixmap_unref(alphaMask);
+  if (alphaMask) gdk_pixmap_unref(alphaMask);
 
   gdk_gc_unref(gc);
 
+#endif
+
   return NS_OK;
 }
-
-//#define USE_XIE 1
-#define USE_PIXBUF 1
 
 nsresult nsImageFrame::DrawScaledImage(GdkDrawable *aDrawable, const GdkGC *aGC, const nsRect * aSrcRect, const nsRect * aDestRect)
 {
