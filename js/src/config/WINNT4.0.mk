@@ -32,15 +32,15 @@ GFX_ARCH = win32
 # /nologo  - suppress copyright message
 # /W3      - Warning level 3
 # /Gm      - enable minimal rebuild
-# /Zi      - put debug info in a Program Database (.pdb) file
+# /Z7      - put debug info into the executable, not in .pdb file
 # /YX      - automatic precompiled headers
 # /GX      - enable C++ exception support
-WIN_CFLAGS = /nologo /W3 /Gm /Zi /Fp$(OBJDIR)/js.pch /Fd$(OBJDIR)/js32.pdb
+WIN_CFLAGS = /nologo /W3 /Fp$(OBJDIR)/js.pch
 
 # MSVC compiler options for debug builds
 # /MDd     - link with MSVCRTD.LIB (Dynamically-linked, multi-threaded, debug C-runtime)
 # /Od      - minimal optimization
-WIN_DEBUG_CFLAGS = /MDd /Od
+WIN_DEBUG_CFLAGS = /MDd /Od /Z7 
 
 # MSVC compiler options for release (optimized) builds
 # /MD      - link with MSVCRT.LIB (Dynamically-linked, multi-threaded, debug C-runtime)
