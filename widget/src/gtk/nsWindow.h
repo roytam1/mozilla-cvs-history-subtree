@@ -70,6 +70,9 @@ public:
 
 #ifdef USE_SUPERWIN
   NS_IMETHOD           GetAbsoluteBounds(nsRect &aRect);
+  NS_IMETHOD           CaptureRollupEvents(nsIRollupListener * aListener,
+                                           PRBool aDoCapture,
+                                           PRBool aConsumeRollupEvent);
   // XXX chris - do we need to override these?
   // NS_IMETHOD           Invalidate(PRBool aIsSynchronous);
   // NS_IMETHOD           Invalidate(const nsRect &aRect, PRBool aIsSynchronous);

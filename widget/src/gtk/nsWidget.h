@@ -379,7 +379,10 @@ protected:
   void SetXIC(GdkICPrivate *aIC);
   void GetXYFromPosition(unsigned long *aX, unsigned long *aY);
 
-
+  // this is the rollup listener variables
+  static nsIRollupListener *gRollupListener;
+  static nsIWidget         *gRollupWidget;
+  static PRBool             gRollupConsumeRollupEvent;
 
 private:
   PRBool mIsDragDest;

@@ -37,6 +37,7 @@
 #include "nsGtkEventHandler.h"
 #include "nsIAppShell.h"
 #include "nsClipboard.h"
+#include "nsIRollupListener.h"
 
 #include "nsGtkUtils.h" // for nsGtkUtils::gdk_window_flash()
 
@@ -169,6 +170,70 @@ NS_IMETHODIMP nsWindow::GetAbsoluteBounds(nsRect &aRect)
   }
   else
     return NS_ERROR_FAILURE;
+  return NS_OK;
+}
+
+NS_IMETHODIMP nsWindow::CaptureRollupEvents(nsIRollupListener * aListener,
+                                            PRBool aDoCapture,
+                                            PRBool aConsumeRollupEvent)
+{
+#ifdef DEBUG_pavlov
+  printf("nsWindow::CaptureRollupEvents() this = %p , doCapture = %i\n", this, aDoCapture);
+#endif
+  GtkWidget *grabWidget;
+
+  grabWidget = mWidget;
+  // XXX we need a visible widget!!
+
+  if (aDoCapture)
+  {
+#ifdef DEBUG_blizzard
+    printf("grabbing widget\n");
+#endif
+    GdkCursor *cursor = gdk_cursor_new (GDK_ARROW);
+    if (!mSuperWin) {
+#ifdef DEBUG_blizzard
+      printf("no superWin for this widget");
+#endif
+    }
+    else
+      {
+      int ret = gdk_pointer_grab (GDK_SUPERWIN(mSuperWin)->bin_window, PR_TRUE,(GdkEventMask)
+                                  (GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK |
+                                   GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK |
+                                   GDK_POINTER_MOTION_MASK),
+                                  (GdkWindow*)NULL, cursor, GDK_CURRENT_TIME);
+#ifdef DEBUG_blizzard
+      printf("pointer grab returned %i\n", ret);
+#endif
+      gdk_cursor_destroy(cursor);
+    }
+  }
+  else
+    {
+#ifdef DEBUG_blizzard
+    printf("ungrabbing widget\n");
+#endif
+    gdk_pointer_ungrab(GDK_CURRENT_TIME);
+    //    gtk_grab_remove(grabWidget);
+  }
+  
+  if (aDoCapture) {
+    //    gtk_grab_add(mWidget);
+    NS_IF_RELEASE(gRollupListener);
+    NS_IF_RELEASE(gRollupWidget);
+    gRollupConsumeRollupEvent = PR_TRUE;
+    gRollupListener = aListener;
+    NS_ADDREF(aListener);
+    gRollupWidget = this;
+    NS_ADDREF(this);
+  } else {
+    //    gtk_grab_remove(mWidget);
+    NS_IF_RELEASE(gRollupListener);
+    //gRollupListener = nsnull;
+    NS_IF_RELEASE(gRollupWidget);
+  }
+  
   return NS_OK;
 }
 
@@ -340,7 +405,6 @@ NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
   gdk_window_set_user_data (mSuperWin->bin_window, (gpointer)mSuperWin);
 
   // XXX fix this later...
-#if 0
   if (mIsToplevel)
   {
     if (parentWidget && GTK_IS_WIDGET(parentWidget))
@@ -352,7 +416,6 @@ NS_METHOD nsWindow::CreateNative(GtkObject *parentWidget)
       }
     }
   }
-#endif
 
   return NS_OK;
 }

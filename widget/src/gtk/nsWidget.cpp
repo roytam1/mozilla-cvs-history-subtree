@@ -46,9 +46,9 @@ nsILookAndFeel *nsWidget::sLookAndFeel = nsnull;
 PRUint32 nsWidget::sWidgetCount = 0;
 
 
-static nsIRollupListener *gRollupListener = nsnull;
-static nsIWidget *gRollupWidget = nsnull;
-static PRBool gRollupConsumeRollupEvent = PR_FALSE;
+nsIRollupListener *nsWidget::gRollupListener = nsnull;
+nsIWidget         *nsWidget::gRollupWidget = nsnull;
+PRBool             nsWidget::gRollupConsumeRollupEvent = PR_FALSE;
 
 //
 // Keep track of the last widget being "dragged"
@@ -342,6 +342,7 @@ NS_IMETHODIMP nsWidget::Show(PRBool bState)
 
 NS_IMETHODIMP nsWidget::CaptureRollupEvents(nsIRollupListener * aListener, PRBool aDoCapture, PRBool aConsumeRollupEvent)
 {
+#ifndef USE_SUPERWIN
 #ifdef DEBUG_pavlov
   printf("nsWindow::CaptureRollupEvents() this = %p , doCapture = %i\n", this, aDoCapture);
 #endif
@@ -400,7 +401,7 @@ NS_IMETHODIMP nsWidget::CaptureRollupEvents(nsIRollupListener * aListener, PRBoo
     //gRollupListener = nsnull;
     NS_IF_RELEASE(gRollupWidget);
   }
-
+#endif /* USE_SUPERWIN */
   return NS_OK;
 }
 
@@ -1862,13 +1863,13 @@ nsWidget::OnButtonPressSignal(GdkEventButton * aGdkButtonEvent)
 
   if (gRollupWidget && gRollupListener)
   {
-    GtkWidget *rollupWidget = GTK_WIDGET(gRollupWidget->GetNativeData(NS_NATIVE_WIDGET));
+    GdkWindow *rollupWindow = (GdkWindow *)gRollupWidget->GetNativeData(NS_NATIVE_WINDOW);
 
     gint x, y;
     gint w, h;
-    gdk_window_get_origin(rollupWidget->window, &x, &y);
+    gdk_window_get_origin(rollupWindow, &x, &y);
 
-    gdk_window_get_size(rollupWidget->window, &w, &h);
+    gdk_window_get_size(rollupWindow, &w, &h);
 
 
     if (!(aGdkButtonEvent->x_root > x &&
