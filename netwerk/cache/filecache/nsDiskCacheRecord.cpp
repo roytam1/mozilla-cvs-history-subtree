@@ -225,8 +225,14 @@ nsDiskCacheRecord::SetStoredContentLength(PRUint32 aStoredContentLength)
     NS_ERROR("Error: can not set filesize to something bigger than itself.\n") ;
     return NS_ERROR_FAILURE ;
   }
-  else 
-    return mFile->Truncate(aStoredContentLength) ;
+  else {
+    rv = mFile->Truncate(aStoredContentLength) ;
+    if(NS_FAILED(rv))
+      return rv ;
+    
+    mDiskCache->m_StorageInUse -= (len - aStoredContentLength) ;
+    return NS_OK ;
+  }
 }
 
 NS_IMETHODIMP
