@@ -618,25 +618,6 @@ endif
 export:: $(SUBMAKEFILES) $(MAKE_DIRS)
 	+$(LOOP_OVER_DIRS)
 
-#
-# Rule to create list of libraries for final link
-#
-export::
-ifdef LIBRARY_NAME
-ifdef EXPORT_LIBRARY
-ifdef IS_COMPONENT
-ifdef BUILD_STATIC_LIBS
-	@$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(FINAL_LINK_COMPS) $(LIBRARY_NAME)
-ifdef MODULE_NAME
-	@$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(FINAL_LINK_COMP_NAMES) $(MODULE_NAME)
-endif
-endif
-else
-	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(FINAL_LINK_LIBS) $(LIBRARY_NAME)
-endif # IS_COMPONENT
-endif # EXPORT_LIBRARY
-endif # LIBRARY_NAME
-
 ##############################################
 libs:: $(SUBMAKEFILES) $(MAKE_DIRS) $(HOST_LIBRARY) $(LIBRARY) $(SHARED_LIBRARY) $(IMPORT_LIBRARY) $(HOST_PROGRAM) $(PROGRAM) $(HOST_SIMPLE_PROGRAMS) $(SIMPLE_PROGRAMS) $(MAPS)
 ifndef NO_DIST_INSTALL
@@ -722,6 +703,25 @@ ifdef HOST_LIBRARY
 endif
 endif # !NO_DIST_INSTALL
 	+$(LOOP_OVER_DIRS)
+
+#
+# Rule to create list of libraries for final link
+#
+libs::
+ifdef LIBRARY_NAME
+ifdef EXPORT_LIBRARY
+ifdef IS_COMPONENT
+ifdef BUILD_STATIC_LIBS
+	@$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(FINAL_LINK_COMPS) $(LIBRARY_NAME)
+ifdef MODULE_NAME
+	@$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(FINAL_LINK_COMP_NAMES) $(MODULE_NAME)
+endif
+endif
+else
+	$(PERL) -I$(MOZILLA_DIR)/config $(MOZILLA_DIR)/config/build-list.pl $(FINAL_LINK_LIBS) $(LIBRARY_NAME)
+endif # IS_COMPONENT
+endif # EXPORT_LIBRARY
+endif # LIBRARY_NAME
 
 ##############################################
 install:: $(SUBMAKEFILES) $(MAKE_DIRS)
