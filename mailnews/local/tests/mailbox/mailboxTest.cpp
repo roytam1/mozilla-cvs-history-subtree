@@ -53,6 +53,7 @@
 #include <windows.h>
 #endif
 
+#include "nsIFileSpec.h"
 #include "nsFileSpec.h"
 #include "nsIPref.h"
 #include "plstr.h"
@@ -460,6 +461,7 @@ nsresult nsMailboxTestDriver::OnDisplayMessage(PRBool copyMessage)
 
 	// concatenate folder name onto folder path....
 	char * fullFolderPath = PR_smprintf("%s%c%s", folderPath ? folderPath : "", '\\', m_userData);
+	char * mailboxName = PL_strdup(m_userData);
 	PR_FREEIF(folderPath);
 	// now turn this into a nsFilePath...
 	nsFileSpec filePath(fullFolderPath);
@@ -486,7 +488,7 @@ nsresult nsMailboxTestDriver::OnDisplayMessage(PRBool copyMessage)
 
 		// mscott - hacky....sprintf up a mailbox URI to represent the message.
 		char * uri = nsnull;
-		char * testString = PR_smprintf("%s%s", "mscott@dredd.mcom.com/", (const char *) filePath);
+		char * testString = PR_smprintf("%s%s", "mscott@dredd.mcom.com/", mailboxName);
 		rv = nsBuildLocalMessageURI(/* (const char *) filePath */ testString, msgKey, &uri);
 		if (NS_SUCCEEDED(rv))
 		{
