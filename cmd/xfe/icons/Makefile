@@ -25,7 +25,7 @@ LIBRARY_NAME	= xfeicons
 CSRCS		= $(ICONS_GEN_SRC)
 EXPORTS		= $(ICONS_GEN_HDR) icondata.h
 
-REQUIRES	= img java jtools layer nspr util xp
+REQUIRES	= img java jtools layer nspr util xp cstream
 
 LOCAL_INCLUDES	= -I. -I$(OBJDIR)
 

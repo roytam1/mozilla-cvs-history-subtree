@@ -22,6 +22,7 @@
 #include "editor.h"
 #include "prefapi.h"
 #include "intl_csi.h"
+#include "netstream.h"
 
 #define CONTENT_TYPE "Content-Type"
 
@@ -9576,8 +9577,8 @@ void CEditBuffer::ReadFromBuffer(XP_HUGE_CHAR_PTR pBuffer){
     }
 
     StrAllocCopy(url_s->content_type, TEXT_HTML);
-    NET_StreamClass *stream =
-        NET_StreamBuilder(FO_PRESENT, url_s, m_pContext);
+    NET_VoidStreamClass *stream =
+        NET_VoidStreamBuilder(FO_PRESENT, url_s, m_pContext);
     if(stream) {
         delete m_pRoot;
         m_pRoot = 0;
@@ -9600,11 +9601,11 @@ void CEditBuffer::ReadFromBuffer(XP_HUGE_CHAR_PTR pBuffer){
             int count = 0;
             for (;;) {
                 if ((*pDest++ = *pSrc++) == 0) {
-                    (*stream->put_block)(stream, pChunk, count);
+                    NET_StreamPutBlock(stream, pChunk, count);
                     break;
                 }                    
                 else if (++count == CHUNK_SIZE) {
-                    (*stream->put_block)(stream, pChunk, count);
+                    NET_StreamPutBlock(stream, pChunk, count);
                     pDest = pChunk;
                     count = 0;
                 }
@@ -9613,8 +9614,8 @@ void CEditBuffer::ReadFromBuffer(XP_HUGE_CHAR_PTR pBuffer){
         else
             XP_ASSERT(FALSE);
 
-        (*stream->complete)(stream);
-        XP_FREE(stream);
+        NET_StreamComplete(stream);
+        NET_StreamFree(stream);
         XP_FREEIF(pChunk);
     }
     NET_FreeURLStruct(url_s);

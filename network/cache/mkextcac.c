@@ -29,7 +29,6 @@
 #include "xp_mcom.h"
 #include "client.h"
 #include "mkgeturl.h"
-#include "mkstream.h"
 #include "secnav.h"
 #include "extcache.h"
 #include "mkextcac.h"

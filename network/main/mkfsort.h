@@ -20,6 +20,7 @@
 #define MKFSORT_H
 
 #include "mksort.h"
+#include "netstream.h"
 
 #include <time.h>
 
@@ -33,6 +34,6 @@ extern int NET_CompareEntryInfoStructs (void *ent1, void *ent2);
 extern void NET_DoFileSort (SortStruct * sort_list);
 
 extern int
-NET_PrintDirectory(SortStruct **sort_base, NET_StreamClass * stream, char * path, URL_Struct *URL_s);
+NET_PrintDirectory(SortStruct **sort_base, NET_VoidStreamClass * stream, char * path, URL_Struct *URL_s);
 
 #endif /* MKFSORT_H */

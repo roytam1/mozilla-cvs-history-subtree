@@ -51,7 +51,9 @@ REQUIRES	=\
 			rdf \
 			xpcom \
 			plug \
-			netcnvts
+			netcnvts \
+			network \
+			cstream
 
 CPPSRCS		= \
 		  plugin.cpp \

@@ -66,7 +66,7 @@ LIBRARY_NAME=img
 EXTRA_LIBS=$(DIST)/lib/libzlib.a $(DIST)/lib/libpng.a 
 CSRCS=color.c colormap.c dither.c dummy_nc.c external.c gif.c if.c \
     ilclient.c il_util.c jpeg.c scale.c xbm.c ipng.c png_png.c 
-REQUIRES=jtools java zlib nspr dbm jpeg util img png layer js 
+REQUIRES=jtools java zlib nspr dbm jpeg util img png layer js cstream
 EXPORTS=PIMGCB.h PPSIMGCB.h 
 JMC_HEADERS=$(JMC_GEN_DIR)\MIMGCB.h $(JMC_GEN_DIR)\MPSIMGCB.h 
 JMC_STUBS=$(JMC_GEN_DIR)\MIMGCB.c $(JMC_GEN_DIR)\MPSIMGCB.c 
@@ -83,7 +83,7 @@ LINCS=-I$(XPDIST)\public\jtools -I$(XPDIST)\public\java \
     -I$(XPDIST)\public\dbm -I$(XPDIST)\public\jpeg \
     -I$(XPDIST)\public\util -I$(XPDIST)\public\img \
     -I$(XPDIST)\public\png -I$(XPDIST)\public\layer \
-    -I$(XPDIST)\public\js 
+    -I$(XPDIST)\public\js -I$(XPDIST)\public\cstream
 !endif
 
 include <$(DEPTH)\config\rules.mak> 

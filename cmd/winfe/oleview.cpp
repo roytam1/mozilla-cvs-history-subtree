@@ -22,6 +22,7 @@
 #include "xp_mem.h"
 #include "xp_mcom.h"
 #include "xpassert.h"
+#include "cstream.h"
 
 static unsigned int
 ole_view_write_ready(NET_StreamClass *stream)

@@ -26,6 +26,7 @@
 
 #include "editor.h"
 #include "streams.h"
+#include "cstream.h"
 #include "shist.h"
 #include "xpgetstr.h"
 #include "net.h"

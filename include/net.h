@@ -477,53 +477,6 @@ struct URL_Struct_ {
 #define NET_URLStruct_ContentLength(S)    S->content_length
 #define NET_URLStruct_ContentType(S)      S->content_type
 
-/* stream functions
- */
-typedef unsigned int
-(*MKStreamWriteReadyFunc) (NET_StreamClass *stream);
-
-#define MAX_WRITE_READY (((unsigned) (~0) << 1) >> 1)   /* must be <= than MAXINT!!!!! */
-
-typedef int 
-(*MKStreamWriteFunc) (NET_StreamClass *stream, const char *str, int32 len);
-
-typedef void 
-(*MKStreamCompleteFunc) (NET_StreamClass *stream);
-
-typedef void 
-(*MKStreamAbortFunc) (NET_StreamClass *stream, int status);
-
-/* streamclass function
- */
-struct _NET_StreamClass {
-
-    char      * name;          /* Just for diagnostics */
-
-    MWContext * window_id;     /* used for progress messages, etc. */
-
-    void      * data_object;   /* a pointer to whatever
-                                * structure you wish to have
-                                * passed to the routines below
-                                * during writes, etc...
-                                * 
-                                * this data object should hold
-                                * the document, document
-                                * structure or a pointer to the
-                                * document.
-                                */
-
-    MKStreamWriteReadyFunc  is_write_ready;   /* checks to see if the stream is ready
-											   * for writing.  Returns 0 if not ready
-											   * or the number of bytes that it can
-											   * accept for write
-											   */
-    MKStreamWriteFunc       put_block;        /* writes a block of data to the stream */
-    MKStreamCompleteFunc    complete; 		  /* normal end */
-    MKStreamAbortFunc       abort;    		  /* abnormal end */
-
-	Bool					is_multipart; 	 /* is the stream part of a multipart sequence */
-};
-
 /*DSR040197 - new and improved position for BEGIN_PROTOS*/
 XP_BEGIN_PROTOS
 /*
@@ -873,15 +826,6 @@ extern void NET_SetTCPConnectTimeout(uint32 seconds);
 /* Is there a registered converter for the passed mime_type  */
 extern XP_Bool NET_HaveConverterForMimeType(char *content_type);
 
-/* builds an outgoing stream and returns a stream class structure
- * containing a stream function table
- */
-extern NET_StreamClass * NET_StreamBuilder (
-        FO_Present_Types  format_out,
-        URL_Struct *      anchor,
-        MWContext *       window_id);
-
-
 /* bit flags for determining what we want to parse from the URL
  */
 #define GET_ALL_PARTS              127
@@ -1040,15 +984,6 @@ extern int NET_CleanupCacheDirectory(char * dir_name, const char * prefix);
  * set=FALSE unlocks a file
  */
 extern Bool NET_ChangeCacheFileLock(URL_Struct *URL_s, Bool set);
-
-/* Find an actively-loading cache file for URL_s in context, and copy the first
- * nbytes of it to a new cache file.  Return a cache converter stream by which
- * the caller can append to the cloned cache file.
- */
-extern NET_StreamClass *
-NET_CloneWysiwygCacheFile(MWContext *context, URL_Struct *URL_s, 
-			  uint32 nbytes, const char * wysiwyg_url,
-			  const char * base_href);
 
 /* returns TRUE if the url is in the disk cache
  */
@@ -1483,18 +1418,6 @@ extern const char * NET_ExplainError(int code);
 /* returns true if the URL is a secure URL address
  */
 extern Bool NET_IsURLSecure(char * address);
-
-/*
- *  NewMKStream
- *  Utility to create a new initialized NET_StreamClass object
- */
-extern NET_StreamClass * NET_NewStream(char *, 
-                                       MKStreamWriteFunc, 
-                                       MKStreamCompleteFunc, 
-                                       MKStreamAbortFunc, 
-                                       MKStreamWriteReadyFunc,
-                                       void *, 
-                                       MWContext *);
 
 /* this should really be a FE function
  */ 

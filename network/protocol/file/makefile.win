@@ -71,7 +71,9 @@ LINCS= \
     -I$(PUBLIC)\js	\
     -I$(PUBLIC)\jtools  \
     -I$(PUBLIC)\network \
+    -I$(PUBLIC)\cstream \
     -I$(PUBLIC)\mimetype \
+    -I$(XPDIST)\public\network \
     $(NULL)
 #!endif
 

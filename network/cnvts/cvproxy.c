@@ -20,7 +20,7 @@
 #include "mkselect.h"
 #include "mktcp.h"
 #include "mkgeturl.h"
-#include "mkstream.h"
+#include "cstream.h"
 
 typedef struct _ProxyObj {
     PRBool  past_first_line;

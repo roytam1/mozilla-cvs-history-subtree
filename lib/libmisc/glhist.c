@@ -33,6 +33,7 @@
 #include "xplocale.h"
 #include "libi18n.h"
 #include "xp_qsort.h"
+#include "netstream.h"
 
 #if defined(XP_MAC)
 	#include "extcache.h"
@@ -893,7 +894,7 @@ NET_DisplayGlobalHistoryInfoAsHTML(MWContext *context,
 								   int format_out)
 {
 	char *buffer = (char*)XP_ALLOC(256);
-   	NET_StreamClass * stream;
+   	NET_VoidStreamClass * stream;
 	DBT key, data;
 	Bool long_form = FALSE;
 	time_t entry_date;
@@ -914,7 +915,7 @@ NET_DisplayGlobalHistoryInfoAsHTML(MWContext *context,
 	StrAllocCopy(URL_s->content_type, TEXT_HTML);
 
 	format_out = CLEAR_CACHE_BIT(format_out);
-	stream = NET_StreamBuilder(format_out,
+	stream = NET_VoidStreamBuilder(format_out,
 							   URL_s,
 							   context);
 
@@ -928,7 +929,7 @@ NET_DisplayGlobalHistoryInfoAsHTML(MWContext *context,
 	 * and handle errors
 	 */
 #define PUT_PART(part)													\
-status = (*stream->put_block)(stream,			\
+status = NET_StreamPutBlock(stream,			\
 										part ? part : XP_GetString(XP_GLHIST_UNKNOWN),	 \
 										part ? XP_STRLEN(part) : 7);	\
 if(status < 0)												\
@@ -981,7 +982,7 @@ PUT_PART(buffer);
   			goto END;
 
 		/* push the key special since we know the size */
-		status = (*stream->put_block)(stream,
+		status = NET_StreamPutBlock(stream,
 									  (char*)key.data, key.size);
 		if(status < 0)
   			goto END;
@@ -991,7 +992,7 @@ PUT_PART(buffer);
   			goto END;
 
 		/* push the key special since we know the size */
-		status = (*stream->put_block)(stream,
+		status = NET_StreamPutBlock(stream,
 									  (char*)key.data, key.size);
 		if(status < 0)
   			goto END;
@@ -1014,10 +1015,10 @@ END:
 	XP_FREE(buffer);
 	
 	if(status < 0)
-		(*stream->abort)(stream, status);
+		NET_StreamAbort(stream, status);
 	else
-		(*stream->complete)(stream);
-	XP_FREE(stream);
+		NET_StreamComplete(stream);
+	NET_StreamFree(stream);
 
 	return(status);
 }

@@ -29,6 +29,7 @@
 */
 
 #include "xmlss.h"
+#include "cstream.h"
 #define href "href"
 #define XLL   "XML-Link"
 

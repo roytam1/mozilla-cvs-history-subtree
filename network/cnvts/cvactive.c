@@ -23,7 +23,7 @@
 #include "mktcp.h"
 #include "cvactive.h"
 #include "mkgeturl.h"
-#include "mkstream.h"
+#include "cstream.h"
 #include "glhist.h"
 #include "merrors.h"
 

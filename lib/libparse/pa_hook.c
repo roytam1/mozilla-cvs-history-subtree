@@ -19,6 +19,7 @@
 #include "pa_parse.h"
 #include <stdio.h>
 #include "net.h"
+#include "cstream.h"
 
 
 #ifdef XP_WIN16

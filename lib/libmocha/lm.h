@@ -198,7 +198,7 @@ extern void             lm_FreeWindowContent(MochaDecoder *decoder,
 					     JSBool fromDiscard);
 extern JSBool           lm_SetInputStream(JSContext *cx,
 					  MochaDecoder *decoder,
-					  NET_StreamClass *stream,
+					  NET_VoidStreamClass *stream,
 					  URL_Struct *url_struct,
                                           JSBool free_stream_on_close);
 extern JSObject         *lm_DefineDocument(MochaDecoder *decoder,
@@ -478,7 +478,7 @@ lm_DestroyLayer(MWContext *context, JSObject *obj);
 extern void
 lm_CleanUpDocument(MochaDecoder *decoder, JSObject *document);
 
-extern NET_StreamClass *
+extern NET_VoidStreamClass *
 lm_ClearDecoderStream(MochaDecoder *decoder, JSBool fromDiscard);
 
 extern void
@@ -600,7 +600,7 @@ extern JSBool
 lm_MouseInputEvent(MWContext *context, LO_Element *element, JSEvent *pEvent,
             jsval *rval);
 
-extern NET_StreamClass *
+extern NET_VoidStreamClass *
 lm_DocCacheConverter(MWContext * context, URL_Struct * url,
 		     const char * wysiwyg_url);
 

@@ -106,6 +106,8 @@ REQUIRES	=\
 		  java \
 		  ldap \
 		  xfeicons \
+		  cstream \
+		  network \
 		  $(NULL)
 
 CSRCS		= \

@@ -27,7 +27,7 @@
 
 #ifdef MOZILLA_CLIENT
 
-#include "mkstream.h"
+#include "cstream.h"
 #include "zlib.h"
 
 extern int MK_OUT_OF_MEMORY;

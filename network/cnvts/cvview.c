@@ -27,7 +27,7 @@
 
 #ifdef MOZILLA_CLIENT
 
-#include "mkstream.h"
+#include "cstream.h"
 #include "mkparse.h"
 #include "cvview.h"
 

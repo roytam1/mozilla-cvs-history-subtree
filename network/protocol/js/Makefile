@@ -27,7 +27,7 @@ CSRCS		= \
 EXPORTS= jsurl.h
 
 REQUIRES	= network nspr2 dbm util pref js java fileurl \
-	security layer img httpurl lay parse style
+	security layer img httpurl lay parse style cstream
 
 include $(DEPTH)/config/rules.mk
 

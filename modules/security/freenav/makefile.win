@@ -52,6 +52,7 @@ LINCS =  \
         -I$(PUBLIC)\js \
         -I$(PUBLIC)\util \
         -I$(PUBLIC)\img \
+        -I$(PUBLIC)\network \
 !endif
         -I$(DEPTH)\include
 

@@ -34,6 +34,7 @@
 #include "stystack.h"
 
 #include "libmocha.h"
+#include "netstream.h"
 
 #define MEMORY_ARENAS 1
 
@@ -824,7 +825,7 @@ struct lo_TopState_struct {
     JSVersion version;
     uint32 mocha_loading_applets_count;
     uint32 mocha_loading_embeds_count;
-    NET_StreamClass *mocha_write_stream;
+    NET_VoidStreamClass *mocha_write_stream;
     void *scriptData;
 #endif
 
@@ -1666,5 +1667,7 @@ int32 lo_GetCellTagHeight(LO_Element *pCellElement);
 int32 lo_GetRowSpan(LO_Element *pCellElement);
 int32 lo_GetColSpan(LO_Element *pCellElement);
 int32 lo_GetCellPadding(LO_Element *pCellElement);
+
+extern intn LO_DocumentInfo(MWContext *context, NET_VoidStreamClass *stream);
 
 #endif /* _Layout_h_ */

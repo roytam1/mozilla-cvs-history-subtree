@@ -419,6 +419,7 @@ LINK_LIBS= \
     $(DIST)\lib\netcnvts.lib \
     $(DIST)\lib\mimetype.lib \
     $(DIST)\lib\netutil.lib \
+    $(DIST)\lib\cstream.lib \
     $(DIST)\lib\network.lib \
     $(DIST)\lib\cnetinit.lib \
 !ifdef MOZ_LDAP
@@ -607,8 +608,8 @@ CDISTINCLUDES2= \
     /I$(XPDIST)\public\netcache \
     /I$(XPDIST)\public\netlib \
     /I$(XPDIST)\public\network \
-    /I$(XPDIST)\public\netcnvts\
-    /I$(XPDIST)\public\util
+    /I$(XPDIST)\public\netcnvts \
+    /I$(XPDIST)\public\cstream
 !endif
 
 CDISTINCLUDES3= \

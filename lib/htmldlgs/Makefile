@@ -23,7 +23,7 @@ LIBRARY_NAME	= htmldlgs
 
 CSRCS		= htmldlgs.c
 
-REQUIRES	= security dbm nspr img util layer js
+REQUIRES	= security dbm nspr img util layer js network
 
 EXPORTS		= htmldlgs.h
 

@@ -27,7 +27,8 @@ DIRS	= \
 	mimetype	\
 	main		\
 	protocol	\
-	util
+	util		\
+	cstream		
 
 ifdef MODULAR_NETLIB
 DIRS	+= module

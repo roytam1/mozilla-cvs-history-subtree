@@ -28,6 +28,7 @@
 
 #include "xp.h"
 #include "npglue.h"
+#include "cstream.h"
 
 #ifdef ANTHRAX
 static char* np_FindAppletNForMimeType(const char* mimetype, char index);

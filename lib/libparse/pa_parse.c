@@ -24,6 +24,7 @@
 #include "hk_funcs.h"
 #include "libevent.h"
 #include "intl_csi.h"
+#include "cstream.h"
 
 extern int MK_OUT_OF_MEMORY;
 
