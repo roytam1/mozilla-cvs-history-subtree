@@ -134,7 +134,7 @@ public:
   NS_IMETHOD Destroy(nsIPresContext* aPresContext);
 
   NS_IMETHOD Paint(nsIPresContext* aPresContext,
-                   nsIRenderingContext& aRenderingContext,
+                   nsIDrawable* aDrawable,
                    const nsRect& aDirtyRect,
                    nsFramePaintLayer aWhichLayer);
  

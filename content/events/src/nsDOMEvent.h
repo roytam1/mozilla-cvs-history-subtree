@@ -168,7 +168,7 @@ public:
 protected:
 
   //Internal helper funcs
-  nsresult GetScrollInfo(nsIScrollableView** aScrollableView, float* aP2T, float* aT2P);
+  nsresult GetScrollInfo(nsIScrollableView** aScrollableView);
   nsresult SetEventType(const nsAReadableString& aEventTypeArg);
 
   nsEvent* mEvent;

@@ -306,11 +306,11 @@ nsMenuBarFrame::KeyboardNavigation(PRUint32 aDirection, PRBool& aHandledFlag)
   if (aHandledFlag)
     return NS_OK;
 
-  if (aDirection == NS_VK_RIGHT || aDirection == NS_VK_LEFT) {
+  if (aDirection == nsIDOMKeyEvent::DOM_VK_RIGHT || aDirection == nsIDOMKeyEvent::DOM_VK_LEFT) {
     
     nsIMenuFrame* nextItem;
     
-    if (aDirection == NS_VK_RIGHT)
+    if (aDirection == nsIDOMKeyEvent::DOM_VK_RIGHT)
       GetNextMenuItem(mCurrentMenu, &nextItem);
     else GetPreviousMenuItem(mCurrentMenu, &nextItem);
 
@@ -324,7 +324,7 @@ nsMenuBarFrame::KeyboardNavigation(PRUint32 aDirection, PRBool& aHandledFlag)
       }
     }
   }
-  else if (aDirection == NS_VK_UP || aDirection == NS_VK_DOWN) {
+  else if (aDirection == nsIDOMKeyEvent::DOM_VK_UP || aDirection == nsIDOMKeyEvent::DOM_VK_DOWN) {
     // Open the menu and select its first item.
     mCurrentMenu->OpenMenu(PR_TRUE);
     mCurrentMenu->SelectFirstItem();
@@ -596,7 +596,7 @@ nsMenuBarFrame :: KillPendingTimers ( )
 
 
 NS_IMETHODIMP
-nsMenuBarFrame::GetWidget(nsIWidget **aWidget)
+nsMenuBarFrame::GetWidget(nsIWindow **aWidget)
 {
   // (pinkerton/hyatt)
   // since the menubar is a menuparent but not a menuItem, the win32 rollup code
@@ -615,7 +615,7 @@ nsMenuBarFrame::GetWidget(nsIWidget **aWidget)
   if (!view)
     return NS_OK;
 
-  view->GetWidget(*aWidget);
+  view->GetWidget(aWidget);
 #endif
 }
 

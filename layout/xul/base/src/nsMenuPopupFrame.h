@@ -39,13 +39,13 @@
 
 #include "nsBoxFrame.h"
 #include "nsIMenuParent.h"
-#include "nsIWidget.h"
 
 #include "nsITimer.h"
 #include "nsITimerCallback.h"
 
 nsresult NS_NewMenuPopupFrame(nsIPresShell* aPresShell, nsIFrame** aResult) ;
 
+class nsIWindow;
 class nsIViewManager;
 class nsIView;
 class nsIMenuParent;
@@ -61,7 +61,7 @@ public:
   NS_DECL_ISUPPORTS
 
   // The nsITimerCallback interface
-  NS_IMETHOD_(void) Notify(nsITimer *aTimer);
+  NS_IMETHOD Notify(nsITimer *aTimer);
 
   // nsIMenuParentInterface
   NS_IMETHOD GetCurrentMenuItem(nsIMenuFrame** aResult);
@@ -87,7 +87,7 @@ public:
   NS_IMETHOD InstallKeyboardNavigator();
   NS_IMETHOD RemoveKeyboardNavigator();
 
-  NS_IMETHOD GetWidget(nsIWidget **aWidget);
+  NS_IMETHOD GetWidget(nsIWindow **aWindow);
 
   // The dismissal listener gets created and attached to the window.
   NS_IMETHOD CreateDismissalListener();

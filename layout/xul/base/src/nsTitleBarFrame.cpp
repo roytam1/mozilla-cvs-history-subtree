@@ -32,7 +32,7 @@
 #include "nsHTMLAtoms.h"
 #include "nsINameSpaceManager.h"
 
-#include "nsIWidget.h"
+#include "nsIWindow.h"
 #include "nsIPresContext.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIScriptGlobalObject.h"
@@ -202,12 +202,12 @@ nsTitleBarFrame::CaptureMouseEvents(nsIPresContext* aPresContext,PRBool aGrabMou
   nsCOMPtr<nsIViewManager> viewMan;
   PRBool result;
 
-  nsCOMPtr<nsIWidget> widget;
+  nsCOMPtr<nsIWindow> widget;
 
   if (view) {
     view->GetViewManager(*getter_AddRefs(viewMan));
     if (viewMan) {
-      view->GetWidget(*getter_AddRefs(widget));
+      view->GetWidget(getter_AddRefs(widget));
       if (aGrabMouseEvents) {
         viewMan->GrabMouseEvents(view,result);
         //mIsCapturingMouseEvents = PR_TRUE;
@@ -239,6 +239,6 @@ nsTitleBarFrame::MouseClicked (nsIPresContext* aPresContext)
   event.isAlt = PR_FALSE;
   event.isMeta = PR_FALSE;
   event.clickCount = 0;
-  event.widget = nsnull;
+  event.window = nsnull;
   mContent->HandleDOMEvent(aPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
 }

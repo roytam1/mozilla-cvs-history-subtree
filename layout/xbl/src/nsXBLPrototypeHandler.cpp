@@ -336,7 +336,7 @@ nsXBLPrototypeHandler::BindingAttached(nsIDOMEventReceiver* aReceiver)
     event.isAlt = PR_FALSE;
     event.isMeta = PR_FALSE;
     event.clickCount = 0;
-    event.widget = nsnull;
+    event.window = nsnull;
 
     nsCOMPtr<nsIEventListenerManager> listenerManager;
     if (NS_FAILED(ret = aReceiver->GetListenerManager(getter_AddRefs(listenerManager)))) {
@@ -381,7 +381,7 @@ nsXBLPrototypeHandler::BindingDetached(nsIDOMEventReceiver* aReceiver)
     event.isAlt = PR_FALSE;
     event.isMeta = PR_FALSE;
     event.clickCount = 0;
-    event.widget = nsnull;
+    event.window = nsnull;
 
     nsCOMPtr<nsIEventListenerManager> listenerManager;
     if (NS_FAILED(ret = aReceiver->GetListenerManager(getter_AddRefs(listenerManager)))) {

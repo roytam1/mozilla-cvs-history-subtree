@@ -25,6 +25,7 @@
 #include "nsMenuDismissalListener.h"
 #include "nsIMenuParent.h"
 #include "nsMenuFrame.h"
+#include "nsIWindow.h"
 
 /*
  * nsMenuDismissalListener implementation
@@ -69,13 +70,13 @@ nsMenuDismissalListener::SetCurrentMenuParent(nsIMenuParent* aMenuParent)
   if (!aMenuParent)
     return;
 
-  nsCOMPtr<nsIWidget> widget;
+  nsCOMPtr<nsIWindow> widget;
   aMenuParent->GetWidget(getter_AddRefs(widget));
   if (!widget)
     return;
 
   widget->CaptureRollupEvents(this, PR_TRUE, PR_TRUE);
-  mWidget = widget;
+  mWindow = widget;
 
   NS_ADDREF(nsMenuFrame::mDismissalListener = this);
 }
@@ -114,7 +115,7 @@ nsMenuDismissalListener::GetSubmenuWidgetChain(nsISupportsArray **_retval)
   NS_NewISupportsArray ( _retval );
   nsCOMPtr<nsIMenuParent> curr ( dont_QueryInterface(mMenuParent) );
   while ( curr ) {
-    nsCOMPtr<nsIWidget> widget;
+    nsCOMPtr<nsIWindow> widget;
     curr->GetWidget ( getter_AddRefs(widget) );
     nsCOMPtr<nsISupports> genericWidget ( do_QueryInterface(widget) );
     (**_retval).AppendElement ( genericWidget );
@@ -168,9 +169,9 @@ nsMenuDismissalListener::NextMenuParent(nsIMenuParent * inCurrent, nsIMenuParent
 NS_IMETHODIMP
 nsMenuDismissalListener::Unregister()
 {
-  if (mWidget) {
-    mWidget->CaptureRollupEvents(this, PR_FALSE, PR_FALSE);
-    mWidget = nsnull;
+  if (mWindow) {
+    mWindow->CaptureRollupEvents(this, PR_FALSE, PR_FALSE);
+    mWindow = nsnull;
   }
   
   NS_RELEASE(nsMenuFrame::mDismissalListener);

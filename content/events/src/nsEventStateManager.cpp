@@ -27,7 +27,8 @@
 #include "nsIContent.h"
 #include "nsIDocument.h"
 #include "nsIFrame.h"
-#include "nsIWidget.h"
+#include "nsIWindow.h"
+#include "nsICursor.h"
 #include "nsIStyleContext.h"
 #include "nsIPresContext.h"
 #include "nsIPresShell.h"
@@ -49,7 +50,6 @@
 #include "nsIScrollableView.h"
 #include "nsISelection.h"
 #include "nsIFrameSelection.h"
-#include "nsIDeviceContext.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIPrivateDOMEvent.h"
 #include "nsIGfxTextControlFrame.h"
@@ -630,7 +630,7 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
             event.isAlt = PR_FALSE;
             event.isMeta = PR_FALSE;
             event.clickCount = 0;
-            event.widget = nsnull;
+            event.window = nsnull;
             content->HandleDOMEvent(mPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
 
             *aStatus = nsEventStatus_eConsumeNoDefault;
@@ -737,24 +737,17 @@ nsEventStateManager :: GenerateDragGesture ( nsIPresContext* aPresContext, nsGUI
     // figure out the delta in twips, since that is how it is in the event.
     // Do we need to do this conversion every time? Will the pres context really change on
     // us or can we cache it?
-    long twipDeltaToStartDrag = 0;
+    const long twipDeltaToStartDrag = 5;
     const long pixelDeltaToStartDrag = 5;
-    nsCOMPtr<nsIDeviceContext> devContext;
-    aPresContext->GetDeviceContext ( getter_AddRefs(devContext) );
-    if ( devContext ) {
-      float pixelsToTwips = 0.0;
-      devContext->GetDevUnitsToTwips(pixelsToTwips);
-      twipDeltaToStartDrag =  (long)(pixelDeltaToStartDrag * pixelsToTwips);
-    }
  
     // fire drag gesture if mouse has moved enough
-    if ( abs(aEvent->point.x - mGestureDownPoint.x) > twipDeltaToStartDrag ||
-          abs(aEvent->point.y - mGestureDownPoint.y) > twipDeltaToStartDrag ) {
+    if ( GFXCoordAbs(aEvent->point.x - mGestureDownPoint.x) > twipDeltaToStartDrag ||
+         GFXCoordAbs(aEvent->point.y - mGestureDownPoint.y) > twipDeltaToStartDrag ) {
       nsEventStatus status = nsEventStatus_eIgnore;
       nsMouseEvent event;
       event.eventStructType = NS_DRAGDROP_EVENT;
       event.message = NS_DRAGDROP_GESTURE;
-      event.widget = aEvent->widget;
+      event.window = aEvent->window;
       event.clickCount = 0;
       event.point = aEvent->point;
       event.refPoint = aEvent->refPoint;
@@ -1114,7 +1107,7 @@ nsEventStateManager::PostHandleEvent(nsIPresContext* aPresContext,
       //This is to prevent keyboard scrolling while alt modifier in use.
       if (!keyEvent->isAlt) {
         switch(keyEvent->keyCode) {
-          case NS_VK_TAB:
+          case nsIDOMKeyEvent::DOM_VK_TAB:
             if (mConsumeFocusEvents) {
               mConsumeFocusEvents = PR_FALSE;
               break;
@@ -1126,33 +1119,33 @@ nsEventStateManager::PostHandleEvent(nsIPresContext* aPresContext,
 
 //the problem is that viewer does not have xul so we cannot completely eliminate these 
 #if NON_KEYBINDING
-          case NS_VK_PAGE_DOWN: 
-          case NS_VK_PAGE_UP:
+          case nsIDOMKeyEvent::DOM_VK_PAGE_DOWN: 
+          case nsIDOMKeyEvent::DOM_VK_PAGE_UP:
             if (!mCurrentFocus) {
               nsIScrollableView* sv = GetNearestScrollingView(aView);
               if (sv) {
                 nsKeyEvent * keyEvent = (nsKeyEvent *)aEvent;
-                sv->ScrollByPages((keyEvent->keyCode != NS_VK_PAGE_UP) ? 1 : -1);
+                sv->ScrollByPages((keyEvent->keyCode != nsIDOMKeyEvent::DOM_VK_PAGE_UP) ? 1 : -1);
               }
             }
             break;
-          case NS_VK_HOME: 
-          case NS_VK_END:
+          case nsIDOMKeyEvent::DOM_VK_HOME: 
+          case nsIDOMKeyEvent::DOM_VK_END:
             if (!mCurrentFocus) {
               nsIScrollableView* sv = GetNearestScrollingView(aView);
               if (sv) {
                 nsKeyEvent * keyEvent = (nsKeyEvent *)aEvent;
-                sv->ScrollByWhole((keyEvent->keyCode != NS_VK_HOME) ? PR_FALSE : PR_TRUE);
+                sv->ScrollByWhole((keyEvent->keyCode != nsIDOMKeyEvent::DOM_VK_HOME) ? PR_FALSE : PR_TRUE);
               }
             }
             break;
-          case NS_VK_DOWN: 
-          case NS_VK_UP:
+          case nsIDOMKeyEvent::DOM_VK_DOWN: 
+          case nsIDOMKeyEvent::DOM_VK_UP:
             if (!mCurrentFocus) {
               nsIScrollableView* sv = GetNearestScrollingView(aView);
               if (sv) {
                 nsKeyEvent * keyEvent = (nsKeyEvent *)aEvent;
-                sv->ScrollByLines(0, (keyEvent->keyCode == NS_VK_DOWN) ? 1 : -1);
+                sv->ScrollByLines(0, (keyEvent->keyCode == nsIDOMKeyEvent::DOM_VK_DOWN) ? 1 : -1);
               
                 // force the update to happen now, otherwise multiple scrolls can
                 // occur before the update is processed. (bug #7354)
@@ -1166,13 +1159,13 @@ nsEventStateManager::PostHandleEvent(nsIPresContext* aPresContext,
               }
             }
             break;
-          case NS_VK_LEFT: 
-          case NS_VK_RIGHT:
+          case nsIDOMKeyEvent::DOM_VK_LEFT: 
+          case nsIDOMKeyEvent::DOM_VK_RIGHT:
             if (!mCurrentFocus) {
               nsIScrollableView* sv = GetNearestScrollingView(aView);
               if (sv) {
                 nsKeyEvent * keyEvent = (nsKeyEvent *)aEvent;
-                sv->ScrollByLines((keyEvent->keyCode == NS_VK_RIGHT) ? 1 : -1, 0);
+                sv->ScrollByLines((keyEvent->keyCode == nsIDOMKeyEvent::DOM_VK_RIGHT) ? 1 : -1, 0);
               
                 // force the update to happen now, otherwise multiple scrolls can
                 // occur before the update is processed. (bug #7354)
@@ -1318,7 +1311,7 @@ nsEventStateManager::UpdateCursor(nsIPresContext* aPresContext, nsEvent* aEvent,
   }
 
   if (aTargetFrame) {
-    nsCOMPtr<nsIWidget> window;
+    nsCOMPtr<nsIWindow> window;
     aTargetFrame->GetWindow(aPresContext, getter_AddRefs(window));
     SetCursor(cursor, window, PR_FALSE);
   }
@@ -1329,9 +1322,9 @@ nsEventStateManager::UpdateCursor(nsIPresContext* aPresContext, nsEvent* aEvent,
 }
 
 NS_IMETHODIMP
-nsEventStateManager::SetCursor(PRInt32 aCursor, nsIWidget* aWidget, PRBool aLockCursor)
+nsEventStateManager::SetCursor(PRInt32 aCursor, nsIWindow* aWidget, PRBool aLockCursor)
 {
-  nsCursor c;
+  PRInt32 c;
 
   NS_ENSURE_TRUE(aWidget, NS_ERROR_FAILURE);
   if (aLockCursor) {
@@ -1347,79 +1340,82 @@ nsEventStateManager::SetCursor(PRInt32 aCursor, nsIWidget* aWidget, PRBool aLock
   default:
   case NS_STYLE_CURSOR_AUTO:
   case NS_STYLE_CURSOR_DEFAULT:
-    c = eCursor_standard;
+    c = nsICursor::standard;
     break;
   case NS_STYLE_CURSOR_POINTER:
-    c = eCursor_hyperlink;
+    c = nsICursor::hyperlink;
     break;
   case NS_STYLE_CURSOR_CROSSHAIR:
-    c = eCursor_crosshair;
+    c = nsICursor::crosshair;
     break;
   case NS_STYLE_CURSOR_MOVE:
-    c = eCursor_move;
+    c = nsICursor::move;
     break;
   case NS_STYLE_CURSOR_TEXT:
-    c = eCursor_select;
+    c = nsICursor::select;
     break;
   case NS_STYLE_CURSOR_WAIT:
-    c = eCursor_wait;
+    c = nsICursor::wait;
     break;
   case NS_STYLE_CURSOR_HELP:
-    c = eCursor_help;
+    c = nsICursor::help;
     break;
   case NS_STYLE_CURSOR_N_RESIZE:
   case NS_STYLE_CURSOR_S_RESIZE:
-    c = eCursor_sizeNS;
+    c = nsICursor::sizeNS;
     break;
   case NS_STYLE_CURSOR_W_RESIZE:
   case NS_STYLE_CURSOR_E_RESIZE:
-    c = eCursor_sizeWE;
+    c = nsICursor::sizeWE;
     break;
   case NS_STYLE_CURSOR_NW_RESIZE:
-    c = eCursor_sizeNW;
+    c = nsICursor::sizeNW;
     break;
   case NS_STYLE_CURSOR_SE_RESIZE:
-    c = eCursor_sizeSE;
+    c = nsICursor::sizeSE;
     break;
   case NS_STYLE_CURSOR_NE_RESIZE:
-    c = eCursor_sizeNE;
+    c = nsICursor::sizeNE;
     break;
   case NS_STYLE_CURSOR_SW_RESIZE:
-    c = eCursor_sizeSW;
+    c = nsICursor::sizeSW;
     break;
   case NS_STYLE_CURSOR_COPY: // CSS3
-    c = eCursor_copy;
+    c = nsICursor::copy;
     break;
   case NS_STYLE_CURSOR_ALIAS:
-    c = eCursor_alias;
+    c = nsICursor::alias;
     break;
   case NS_STYLE_CURSOR_CONTEXT_MENU:
-    c = eCursor_context_menu;
+    c = nsICursor::context_menu;
     break;
   case NS_STYLE_CURSOR_CELL:
-    c = eCursor_cell;
+    c = nsICursor::cell;
     break;
   case NS_STYLE_CURSOR_GRAB:
-    c = eCursor_grab;
+    c = nsICursor::grab;
     break;
   case NS_STYLE_CURSOR_GRABBING:
-    c = eCursor_grabbing;
+    c = nsICursor::grabbing;
     break;
   case NS_STYLE_CURSOR_SPINNING:
-    c = eCursor_spinning;
+    c = nsICursor::spinning;
     break;
   case NS_STYLE_CURSOR_COUNT_UP:
-    c = eCursor_count_up;
+    c = nsICursor::count_up;
     break;
   case NS_STYLE_CURSOR_COUNT_DOWN:
-    c = eCursor_count_down;
+    c = nsICursor::count_down;
     break;
   case NS_STYLE_CURSOR_COUNT_UP_DOWN:
-    c = eCursor_count_up_down;
+    c = nsICursor::count_up_down;
     break;
   }
 
-  aWidget->SetCursor(c);
+  nsCOMPtr<nsICursor> cursor(do_CreateInstance("@mozilla.org/gfx/cursor;2"));
+  cursor->SetCursor(c);
+
+  aWidget->SetCursor(cursor);
 
   return NS_OK;
 }
@@ -1453,7 +1449,7 @@ nsEventStateManager::GenerateMouseEnterExit(nsIPresContext* aPresContext, nsGUIE
             nsMouseEvent event;
             event.eventStructType = NS_MOUSE_EVENT;
             event.message = NS_MOUSE_EXIT_SYNTH;
-            event.widget = aEvent->widget;
+            event.window = aEvent->window;
             event.clickCount = 0;
             event.point = aEvent->point;
             event.refPoint = aEvent->refPoint;
@@ -1497,7 +1493,7 @@ nsEventStateManager::GenerateMouseEnterExit(nsIPresContext* aPresContext, nsGUIE
           nsMouseEvent event;
           event.eventStructType = NS_MOUSE_EVENT;
           event.message = NS_MOUSE_ENTER_SYNTH;
-          event.widget = aEvent->widget;
+          event.window = aEvent->window;
           event.clickCount = 0;
           event.point = aEvent->point;
           event.refPoint = aEvent->refPoint;
@@ -1559,7 +1555,7 @@ nsEventStateManager::GenerateMouseEnterExit(nsIPresContext* aPresContext, nsGUIE
           nsMouseEvent event;
           event.eventStructType = NS_MOUSE_EVENT;
           event.message = NS_MOUSE_EXIT_SYNTH;
-          event.widget = aEvent->widget;
+          event.window = aEvent->window;
           event.clickCount = 0;
           event.point = aEvent->point;
           event.refPoint = aEvent->refPoint;
@@ -1621,7 +1617,7 @@ nsEventStateManager::GenerateDragDropEnterExit(nsIPresContext* aPresContext, nsG
           nsMouseEvent event;
           event.eventStructType = NS_DRAGDROP_EVENT;
           event.message = NS_DRAGDROP_EXIT_SYNTH;
-          event.widget = aEvent->widget;
+          event.window = aEvent->window;
           event.clickCount = 0;
           event.point = aEvent->point;
           event.refPoint = aEvent->refPoint;
@@ -1663,7 +1659,7 @@ nsEventStateManager::GenerateDragDropEnterExit(nsIPresContext* aPresContext, nsG
         nsMouseEvent event;
         event.eventStructType = NS_DRAGDROP_EVENT;
         event.message = NS_DRAGDROP_ENTER;
-        event.widget = aEvent->widget;
+        event.window = aEvent->window;
         event.clickCount = 0;
         event.point = aEvent->point;
         event.refPoint = aEvent->refPoint;
@@ -1712,7 +1708,7 @@ nsEventStateManager::GenerateDragDropEnterExit(nsIPresContext* aPresContext, nsG
         nsMouseEvent event;
         event.eventStructType = NS_DRAGDROP_EVENT;
         event.message = NS_DRAGDROP_EXIT_SYNTH;
-        event.widget = aEvent->widget;
+        event.window = aEvent->window;
         event.clickCount = 0;
         event.point = aEvent->point;
         event.refPoint = aEvent->refPoint;
@@ -1846,7 +1842,7 @@ nsEventStateManager::CheckForAndDispatchClick(nsIPresContext* aPresContext,
     }
 
     event.eventStructType = NS_MOUSE_EVENT;
-    event.widget = aEvent->widget;
+    event.window = aEvent->window;
     event.point = aEvent->point;
     event.refPoint = aEvent->refPoint;
     event.clickCount = aEvent->clickCount;
@@ -1875,7 +1871,7 @@ nsEventStateManager::CheckForAndDispatchClick(nsIPresContext* aPresContext,
         }
         
         event2.eventStructType = NS_MOUSE_EVENT;
-        event2.widget = aEvent->widget;
+        event2.window = aEvent->window;
         event2.point = aEvent->point;
         event2.refPoint = aEvent->refPoint;
         event2.clickCount = aEvent->clickCount;
@@ -2806,14 +2802,14 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aCo
       nsIView * pView;
       parentFrame->GetView(aPresContext, &pView);
       if (nsnull != pView) {
-        nsIWidget *window = nsnull;
+        nsCOMPtr<nsIWindow> window;
 
         nsIView *ancestor = pView;
-        while (nsnull != ancestor) {
-          ancestor->GetWidget(window); // addrefs
-          if (nsnull != window) {
-              window->SetFocus();
-              NS_RELEASE(window); // releases. Duh.
+        while (ancestor) {
+          ancestor->GetWidget(getter_AddRefs(window));
+          if (window) {
+            // XXX pav
+            //          window->SetFocus();
 	          break;
 	        }
 	        ancestor->GetParent(ancestor);

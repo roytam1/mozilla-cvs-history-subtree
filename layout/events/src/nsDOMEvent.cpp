@@ -26,8 +26,7 @@
 #include "nsIEventStateManager.h"
 #include "nsIFrame.h"
 #include "nsIContent.h"
-#include "nsIRenderingContext.h"
-#include "nsIWidget.h"
+#include "nsIWindow.h"
 #include "nsIPresShell.h"
 #include "nsPrivateTextRange.h"
 #include "nsIDocument.h"
@@ -434,13 +433,16 @@ NS_METHOD nsDOMEvent::GetScreenX(PRInt32* aScreenX)
     return NS_OK;
   }
 
-  if (!((nsGUIEvent*)mEvent)->widget )
+  nsCOMPtr<nsIWindow> window;
+  window = NS_STATIC_CAST(nsGUIEvent*,mEvent)->window;
+
+  if ( !window ) 
     return NS_ERROR_FAILURE;
     
   nsRect bounds, offset;
   bounds.x = mEvent->refPoint.x;
   
-  ((nsGUIEvent*)mEvent)->widget->WidgetToScreen ( bounds, offset );
+  window->WidgetToScreen ( bounds, offset );
   *aScreenX = offset.x;
   
   return NS_OK;
@@ -454,13 +456,16 @@ NS_METHOD nsDOMEvent::GetScreenY(PRInt32* aScreenY)
     return NS_OK;
   }
 
-  if (!((nsGUIEvent*)mEvent)->widget )
+  nsCOMPtr<nsIWindow> window;
+  window = NS_STATIC_CAST(nsGUIEvent*,mEvent)->window;
+
+  if ( !window ) 
     return NS_ERROR_FAILURE;
 
   nsRect bounds, offset;
   bounds.y = mEvent->refPoint.y;
   
-  ((nsGUIEvent*)mEvent)->widget->WidgetToScreen ( bounds, offset );
+  window->WidgetToScreen ( bounds, offset );
   *aScreenY = offset.y;
   
   return NS_OK;
@@ -476,11 +481,11 @@ NS_METHOD nsDOMEvent::GetClientX(PRInt32* aClientX)
 
   //My god, man, there *must* be a better way to do this.
   nsCOMPtr<nsIPresShell> presShell;
-  nsIWidget* rootWidget = nsnull;
+  nsCOMPtr<nsIWindow> rootWidget;
   if (NS_SUCCEEDED(mPresContext->GetShell(getter_AddRefs(presShell))) && presShell) {
     nsCOMPtr<nsIViewManager> vm;
 		if (NS_SUCCEEDED(presShell->GetViewManager(getter_AddRefs(vm))) && vm) {
-      vm->GetWidget(&rootWidget);
+      vm->GetWidget(getter_AddRefs(rootWidget));
     }
   }
 
@@ -488,19 +493,18 @@ NS_METHOD nsDOMEvent::GetClientX(PRInt32* aClientX)
   nsRect bounds, offset;
   offset.x = 0;
 
-  nsIWidget* parent = ((nsGUIEvent*)mEvent)->widget;
+  nsCOMPtr<nsIWindow> parent = NS_STATIC_CAST(nsGUIEvent*,mEvent)->window;
+
+  // XXX pav do we need an extra addref if we are using comptrs here?
   //Add extra ref since loop will free one.
-  NS_ADDREF(parent);
-  nsIWidget* tmp;
+  nsCOMPtr<nsIWindow> tmp;
+
   while (rootWidget != parent && nsnull != parent) {
-    parent->GetBounds(bounds);
+    parent->GetBounds(&bounds.x, &bounds.y, &bounds.width, &bounds.height);
     offset.x += bounds.x;
     tmp = parent;
-    parent = tmp->GetParent();
-    NS_RELEASE(tmp);
+    tmp->GetParent(getter_AddRefs(parent));
   }
-  NS_IF_RELEASE(parent);
-  NS_IF_RELEASE(rootWidget);
   
   *aClientX = mEvent->refPoint.x + offset.x;
   return NS_OK;
@@ -516,11 +520,11 @@ NS_METHOD nsDOMEvent::GetClientY(PRInt32* aClientY)
 
   //My god, man, there *must* be a better way to do this.
   nsCOMPtr<nsIPresShell> presShell;
-  nsIWidget* rootWidget = nsnull;
+  nsCOMPtr<nsIWindow> rootWidget;
   if (NS_SUCCEEDED(mPresContext->GetShell(getter_AddRefs(presShell))) && presShell) {
     nsCOMPtr<nsIViewManager> vm;
 		if (NS_SUCCEEDED(presShell->GetViewManager(getter_AddRefs(vm))) && vm) {
-      vm->GetWidget(&rootWidget);
+      vm->GetWidget(getter_AddRefs(rootWidget));
     }
   }
 
@@ -528,19 +532,17 @@ NS_METHOD nsDOMEvent::GetClientY(PRInt32* aClientY)
   nsRect bounds, offset;
   offset.y = 0;
 
-  nsIWidget* parent = ((nsGUIEvent*)mEvent)->widget;
+  nsCOMPtr<nsIWindow> parent = NS_STATIC_CAST(nsGUIEvent*,mEvent)->window;
+
+  // XXX pav do we need an extra addref if we are using comptrs here?
   //Add extra ref since loop will free one.
-  NS_ADDREF(parent);
-  nsIWidget* tmp;
+  nsCOMPtr<nsIWindow> tmp;
   while (rootWidget != parent && nsnull != parent) {
-    parent->GetBounds(bounds);
+    parent->GetBounds(&bounds.x, &bounds.y, &bounds.width, &bounds.height);
     offset.y += bounds.y;
     tmp = parent;
-    parent = tmp->GetParent();
-    NS_RELEASE(tmp);
+    tmp->GetParent(getter_AddRefs(parent));
   }
-  NS_IF_RELEASE(parent);
-  NS_IF_RELEASE(rootWidget);
   
   *aClientY = mEvent->refPoint.y + offset.y;
   return NS_OK;
@@ -679,9 +681,7 @@ NS_METHOD nsDOMEvent::GetLayerX(PRInt32* aLayerX)
     return NS_OK;
   }
 
-  float t2p;
-  mPresContext->GetTwipsToPixels(&t2p);
-  *aLayerX = NSTwipsToIntPixels(mEvent->point.x, t2p);
+  *aLayerX = mEvent->point.x;
   return NS_OK;
 }
 
@@ -692,18 +692,12 @@ NS_METHOD nsDOMEvent::GetLayerY(PRInt32* aLayerY)
     return NS_OK;
   }
 
-  float t2p;
-  mPresContext->GetTwipsToPixels(&t2p);
-  *aLayerY = NSTwipsToIntPixels(mEvent->point.y, t2p);
+  *aLayerY = mEvent->point.y;
   return NS_OK;
 }
 
-nsresult nsDOMEvent::GetScrollInfo(nsIScrollableView** aScrollableView,
-   float* aP2T, float* aT2P)
+nsresult nsDOMEvent::GetScrollInfo(nsIScrollableView** aScrollableView)
 {
-  mPresContext->GetPixelsToTwips(aP2T);
-  mPresContext->GetTwipsToPixels(aT2P);
-
   nsCOMPtr<nsIPresShell> presShell;
   if (NS_SUCCEEDED(mPresContext->GetShell(getter_AddRefs(presShell))) && presShell) {
      nsCOMPtr<nsIViewManager> vm;
@@ -720,13 +714,12 @@ NS_METHOD nsDOMEvent::GetPageX(PRInt32* aPageX)
   nsresult ret = NS_OK;
   PRInt32 scrollX = 0;
   nsCOMPtr<nsIScrollableView> view;
-  float p2t, t2p;
 
-  GetScrollInfo(getter_AddRefs(view), &p2t, &t2p);
+  GetScrollInfo(getter_AddRefs(view));
   if(view) {
     nscoord xPos, yPos;
     ret = view->GetScrollPosition(xPos, yPos);
-    scrollX = NSTwipsToIntPixels(xPos, t2p);
+    scrollX = GFXCoordToIntRound(xPos);
   }
 
   if (NS_SUCCEEDED(ret)) {
@@ -745,13 +738,12 @@ NS_METHOD nsDOMEvent::GetPageY(PRInt32* aPageY)
   nsresult ret = NS_OK;
   PRInt32 scrollY = 0;
   nsCOMPtr<nsIScrollableView> view;
-  float p2t, t2p;
 
-  GetScrollInfo(getter_AddRefs(view), &p2t, &t2p);
+  GetScrollInfo(getter_AddRefs(view));
   if(view) {
     nscoord xPos, yPos;
     ret = view->GetScrollPosition(xPos, yPos);
-    scrollY = NSTwipsToIntPixels(yPos, t2p);
+    scrollY = GFXCoordToIntRound(yPos);
   }
 
   if (NS_SUCCEEDED(ret)) {

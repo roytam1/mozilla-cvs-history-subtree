@@ -32,7 +32,7 @@
 #include "nsHTMLAtoms.h"
 #include "nsINameSpaceManager.h"
 
-#include "nsIWidget.h"
+#include "nsIWindow.h"
 #include "nsIPresContext.h"
 #include "nsPIDOMWindow.h"	
 #include "nsIScriptGlobalObject.h"
@@ -98,17 +98,21 @@ nsResizerFrame::HandleEvent(nsIPresContext* aPresContext,
 			 mTrackingMouseMove = PR_TRUE;
 			 
 			 // start capture.		 
-			 aEvent->widget->CaptureMouse(PR_TRUE);
+
+
+       // XXX pav
+       //			 aEvent->window->CaptureMouse(PR_TRUE);
 			 CaptureMouseEvents(aPresContext,PR_TRUE);
 
 
 			 
 			 // remember current mouse coordinates.
 			 mLastPoint = aEvent->refPoint;
-			 aEvent->widget->GetScreenBounds(mWidgetRect);
+       // XXX pav
+       //			 aEvent->widget->GetScreenBounds(mWidgetRect);
 
 			 nsRect bounds;
-			 aEvent->widget->GetBounds(bounds);
+			 aEvent->window->GetBounds(&bounds.x, &bounds.y, &bounds.width, &bounds.height );
 
 			 *aEventStatus = nsEventStatus_eConsumeNoDefault;
 			 doDefault = PR_FALSE;
@@ -124,7 +128,8 @@ nsResizerFrame::HandleEvent(nsIPresContext* aPresContext,
 				 mTrackingMouseMove = PR_FALSE;
 				 
 				 // end capture
-				 aEvent->widget->CaptureMouse(PR_FALSE);				 
+         // XXX pav
+         //				 aEvent->widget->CaptureMouse(PR_FALSE);				 
 				 CaptureMouseEvents(aPresContext,PR_FALSE);
 
 				 *aEventStatus = nsEventStatus_eConsumeNoDefault;
@@ -195,10 +200,10 @@ nsResizerFrame::HandleEvent(nsIPresContext* aPresContext,
 				 PRInt32 x,y,cx,cy;
 				 window->GetPositionAndSize(&x,&y,&cx,&cy);
 
-				 x+=nsMoveBy.x;
-				 y+=nsMoveBy.y;
-				 cx+=nsSizeBy.x;
-				 cy+=nsSizeBy.y;
+				 x += GFXCoordToIntRound(nsMoveBy.x);
+				 y += GFXCoordToIntRound(nsMoveBy.y);
+				 cx += GFXCoordToIntRound(nsSizeBy.x);
+				 cy += GFXCoordToIntRound(nsSizeBy.y);
 
 				 window->SetPositionAndSize(x,y,cx,cy,PR_TRUE); // do the repaint.
 
@@ -342,6 +347,6 @@ nsResizerFrame::MouseClicked (nsIPresContext* aPresContext)
   event.isAlt = PR_FALSE;
   event.isMeta = PR_FALSE;
   event.clickCount = 0;
-  event.widget = nsnull;
+  event.window = nsnull;
   mContent->HandleDOMEvent(aPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
 }

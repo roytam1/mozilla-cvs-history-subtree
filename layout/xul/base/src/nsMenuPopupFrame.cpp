@@ -36,7 +36,6 @@
 #include "nsCSSRendering.h"
 #include "nsINameSpaceManager.h"
 #include "nsIViewManager.h"
-#include "nsWidgetsCID.h"
 #include "nsMenuFrame.h"
 #include "nsIPopupSetFrame.h"
 #include "nsIDOMWindowInternal.h"
@@ -45,15 +44,12 @@
 #include "nsIPresShell.h"
 #include "nsIScriptObjectOwner.h"
 #include "nsIDocument.h"
-#include "nsIDeviceContext.h"
 #include "nsRect.h"
 #include "nsIDOMXULDocument.h"
-#include "nsILookAndFeel.h"
+#include "nsISystemLook.h"
 #include "nsIComponentManager.h"
 #include "nsBoxLayoutState.h"
-
-static NS_DEFINE_IID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
-static NS_DEFINE_IID(kILookAndFeelIID, NS_ILOOKANDFEEL_IID);
+#include "nsIWindow.h"
 
 const PRInt32 kMaxZ = 0x7fffffff; //XXX: Shouldn't there be a define somewhere for MaxInt for PRInt32
 
@@ -122,11 +118,11 @@ nsMenuPopupFrame::Init(nsIPresContext*  aPresContext,
 
   // lookup if we're allowed to overlap the OS bar (menubar/taskbar) from the
   // look&feel object
-  nsCOMPtr<nsILookAndFeel> lookAndFeel;
-  nsComponentManager::CreateInstance(kLookAndFeelCID, nsnull, kILookAndFeelIID, 
-                                      getter_AddRefs(lookAndFeel));
-  if ( lookAndFeel )
-    lookAndFeel->GetMetric(nsILookAndFeel::eMetric_MenusCanOverlapOSBar, mMenuCanOverlapOSBar);
+  // XXX pav
+  nsCOMPtr<nsISystemLook> systemLook(do_CreateInstance("@mozilla.org/gfx/systemlook;2"));
+  if (systemLook) {
+    //    lookAndFeel->GetMetric(nsILookAndFeel::eMetric_MenusCanOverlapOSBar, mMenuCanOverlapOSBar);
+  }
 
   // XXX Hack
   mPresContext = aPresContext;
@@ -166,21 +162,11 @@ nsMenuPopupFrame::Init(nsIPresContext*  aPresContext,
   viewManager->SetViewContentTransparency(ourView, PR_FALSE);
 
   // Create a widget for ourselves.
-  nsWidgetInitData widgetData;
   ourView->SetZIndex(kMaxZ);
-  widgetData.mWindowType = eWindowType_popup;
-  widgetData.mBorderStyle = eBorderStyle_default;
 
   // XXX make sure we are hidden (shouldn't this be done automatically?)
   ourView->SetVisibility(nsViewVisibility_kHide);
-#ifdef XP_MAC
-  printf("XP Popups: This is a nag to indicate that an inconsistent hack is being done on the Mac for popups.\n");
-  static NS_DEFINE_IID(kCPopupCID,  NS_POPUP_CID);
-  ourView->CreateWidget(kCPopupCID, &widgetData, nsnull);
-#else
-  static NS_DEFINE_IID(kCChildCID,  NS_CHILD_CID);
-  ourView->CreateWidget(kCChildCID, &widgetData, nsnull);
-#endif   
+  ourView->CreateWidget("@mozilla.org/gfx/window/popup");
 
   return rv;
 }
@@ -232,10 +218,10 @@ nsMenuPopupFrame::GetNearestEnclosingView(nsIPresContext* aPresContext, nsIFrame
 }
 
 
-void GetWidgetForView(nsIView *aView, nsIWidget *&aWidget);
-void GetWidgetForView(nsIView *aView, nsIWidget *&aWidget)
+void GetWidgetForView(nsIView *aView, nsIWindow **aWidget);
+void GetWidgetForView(nsIView *aView, nsIWindow **aWidget)
 {
-  aWidget = nsnull;
+  *aWidget = nsnull;
   nsIView *view = aView;
   while (!aWidget && view)
   {
@@ -264,7 +250,7 @@ nsMenuPopupFrame :: AdjustClientXYForNestedDocuments ( nsIDOMXULDocument* inPopu
     return;
 
   // Find the widget associated with the popup's document
-  nsCOMPtr<nsIWidget> popupDocumentWidget;
+  nsCOMPtr<nsIWindow> popupDocumentWidget;
   nsCOMPtr<nsIViewManager> viewManager;
   inPopupShell->GetViewManager(getter_AddRefs(viewManager));
   if ( viewManager ) {  
@@ -272,7 +258,7 @@ nsMenuPopupFrame :: AdjustClientXYForNestedDocuments ( nsIDOMXULDocument* inPopu
     viewManager->GetRootView(rootView);
     nscoord wOffsetX, wOffsetY;
     if ( rootView )
-      rootView->GetOffsetFromWidget(&wOffsetX, &wOffsetY, *getter_AddRefs(popupDocumentWidget));
+      rootView->GetOffsetFromWidget(&wOffsetX, &wOffsetY, getter_AddRefs(popupDocumentWidget));
   }
   NS_WARN_IF_FALSE(popupDocumentWidget, "ACK, BAD WIDGET");
   
@@ -282,7 +268,7 @@ nsMenuPopupFrame :: AdjustClientXYForNestedDocuments ( nsIDOMXULDocument* inPopu
   inPopupDoc->GetPopupNode(getter_AddRefs(targetNode));
   NS_WARN_IF_FALSE(targetNode, "ACK, BAD TARGET NODE");
   nsCOMPtr<nsIContent> targetAsContent ( do_QueryInterface(targetNode) );
-  nsCOMPtr<nsIWidget> targetDocumentWidget;
+  nsCOMPtr<nsIWindow> targetDocumentWidget;
   if ( targetAsContent ) {
     nsCOMPtr<nsIDocument> targetDocument;
     targetAsContent->GetDocument(*getter_AddRefs(targetDocument));
@@ -296,7 +282,7 @@ nsMenuPopupFrame :: AdjustClientXYForNestedDocuments ( nsIDOMXULDocument* inPopu
           viewManagerTarget->GetRootView(rootViewTarget);
           if ( rootViewTarget ) {
             nscoord unusedX, unusedY;
-            rootViewTarget->GetOffsetFromWidget(&unusedX, &unusedY, *getter_AddRefs(targetDocumentWidget));
+            rootViewTarget->GetOffsetFromWidget(&unusedX, &unusedY, getter_AddRefs(targetDocumentWidget));
           }
         }
       }
@@ -384,8 +370,9 @@ nsMenuPopupFrame :: AdjustPositionForAnchorAlign ( PRInt32* ioXPos, PRInt32* ioY
 //
 PRBool
 nsMenuPopupFrame :: IsMoreRoomOnOtherSideOfParent ( PRBool inFlushAboveBelow, PRInt32 inScreenViewLocX, PRInt32 inScreenViewLocY,
-                                                     const nsRect & inScreenParentFrameRect, PRInt32 inScreenTopTwips, PRInt32 inScreenLeftTwips,
-                                                     PRInt32 inScreenBottomTwips, PRInt32 inScreenRightTwips )
+                                                    const nsRect & inScreenParentFrameRect, PRInt32 inScreenTopTwips,
+                                                    PRInt32 inScreenLeftTwips,
+                                                    PRInt32 inScreenBottomTwips, PRInt32 inScreenRightTwips )
 {
   PRBool switchSides = PR_FALSE;
   if ( inFlushAboveBelow ) {
@@ -422,9 +409,10 @@ nsMenuPopupFrame :: IsMoreRoomOnOtherSideOfParent ( PRBool inFlushAboveBelow, PR
 //
 void
 nsMenuPopupFrame :: MovePopupToOtherSideOfParent ( PRBool inFlushAboveBelow, PRInt32* ioXPos, PRInt32* ioYPos, 
-                                                     PRInt32* ioScreenViewLocX, PRInt32* ioScreenViewLocY,
-                                                     const nsRect & inScreenParentFrameRect, PRInt32 inScreenTopTwips, PRInt32 inScreenLeftTwips,
-                                                     PRInt32 inScreenBottomTwips, PRInt32 inScreenRightTwips )
+                                                   PRInt32* ioScreenViewLocX, PRInt32* ioScreenViewLocY,
+                                                   const nsRect & inScreenParentFrameRect, PRInt32 inScreenTopTwips,
+                                                   PRInt32 inScreenLeftTwips,
+                                                   PRInt32 inScreenBottomTwips, PRInt32 inScreenRightTwips )
 {
   if ( inFlushAboveBelow ) {
     if ( *ioScreenViewLocY > inScreenParentFrameRect.y ) {     // view is currently below parent
@@ -508,12 +496,6 @@ nsMenuPopupFrame::SyncViewWithFrame(nsIPresContext* aPresContext,
   nsRect parentRect;
   aFrame->GetRect(parentRect);
 
-  float p2t, t2p;
-  aPresContext->GetScaledPixelsToTwips(&p2t);
-
-  nsCOMPtr<nsIDeviceContext> dx;
-  viewManager->GetDeviceContext(*getter_AddRefs(dx));
-  dx->GetAppUnitsToDevUnits(t2p);
 
   // get the document and the global script object
   nsCOMPtr<nsIPresShell> presShell;
@@ -544,8 +526,8 @@ nsMenuPopupFrame::SyncViewWithFrame(nsIPresContext* aPresContext,
     PRInt32 newXPos = 0, newYPos = 0;
     AdjustClientXYForNestedDocuments ( xulDoc, presShell, aXPos, aYPos, &newXPos, &newYPos );
 
-    xpos = NSIntPixelsToTwips(newXPos, p2t);
-    ypos = NSIntPixelsToTwips(newYPos, p2t);
+    xpos = newXPos;
+    ypos = newYPos;
   } 
   else {
     anchoredToParent = PR_TRUE;
@@ -591,12 +573,12 @@ nsMenuPopupFrame::SyncViewWithFrame(nsIPresContext* aPresContext,
   screenWidth -= 2 * kTrimMargin;
   screenHeight -= 2 * kTrimMargin;
 
-  PRInt32 screenTopTwips    = NSIntPixelsToTwips(screenTop, p2t);
-  PRInt32 screenLeftTwips   = NSIntPixelsToTwips(screenLeft, p2t);
-  PRInt32 screenWidthTwips  = NSIntPixelsToTwips(screenWidth, p2t);
-  PRInt32 screenHeightTwips = NSIntPixelsToTwips(screenHeight, p2t);
-  PRInt32 screenRightTwips  = NSIntPixelsToTwips(screenRight, p2t);
-  PRInt32 screenBottomTwips = NSIntPixelsToTwips(screenBottom, p2t);
+  PRInt32 screenTopTwips    = screenTop;
+  PRInt32 screenLeftTwips   = screenLeft;
+  PRInt32 screenWidthTwips  = screenWidth;
+  PRInt32 screenHeightTwips = screenHeight;
+  PRInt32 screenRightTwips  = screenRight;
+  PRInt32 screenBottomTwips = screenBottom;
   
   // Recall that |xpos| and |ypos| are in the coordinate system of the parent view. In
   // order to determine the screen coordinates of where our view will end up, we
@@ -605,12 +587,13 @@ nsMenuPopupFrame::SyncViewWithFrame(nsIPresContext* aPresContext,
   // based on converting (0,0) in its coordinate space to screen coords. We then
   // offset that point by (|xpos|,|ypos|) to get the true screen coordinates of
   // the view. *whew*
-  nsCOMPtr<nsIWidget> parentViewWidget;
-  GetWidgetForView ( parentView, *getter_AddRefs(parentViewWidget) );
+  // XXX pav fix up comment since twips don't exist anymore :-)
+  nsCOMPtr<nsIWindow> parentViewWidget;
+  GetWidgetForView ( parentView, getter_AddRefs(parentViewWidget) );
   nsRect localParentWidgetRect(0,0,0,0), screenParentWidgetRect;
   parentViewWidget->WidgetToScreen ( localParentWidgetRect, screenParentWidgetRect );
-  PRInt32 screenViewLocX = NSIntPixelsToTwips(screenParentWidgetRect.x,p2t) + (xpos - parentPos.x);
-  PRInt32 screenViewLocY = NSIntPixelsToTwips(screenParentWidgetRect.y,p2t) + (ypos - parentPos.y);
+  PRInt32 screenViewLocX = screenParentWidgetRect.x + (xpos - parentPos.x);
+  PRInt32 screenViewLocY = screenParentWidgetRect.y + (ypos - parentPos.y);
 
   if ( anchoredToParent ) {
     
@@ -621,11 +604,9 @@ nsMenuPopupFrame::SyncViewWithFrame(nsIPresContext* aPresContext,
 
     // compute screen coordinates of parent frame so we can play with it. Make sure we put it
     // into twips as everything else is as well.
-    nsRect screenParentFrameRect ( NSTwipsToIntPixels(offset.x,t2p), NSTwipsToIntPixels(offset.y,t2p),
-                                    parentRect.width, parentRect.height );
+    nsRect screenParentFrameRect ( offset.x, offset.y,
+                                   parentRect.width, parentRect.height );
     parentViewWidget->WidgetToScreen ( screenParentFrameRect, screenParentFrameRect );
-    screenParentFrameRect.x = NSIntPixelsToTwips(screenParentFrameRect.x, p2t);
-    screenParentFrameRect.y = NSIntPixelsToTwips(screenParentFrameRect.y, p2t);
     
     // if it doesn't fit on the screen, do our magic.
     if ( (screenViewLocX + mRect.width) > screenRightTwips ||
@@ -888,18 +869,16 @@ NS_IMETHODIMP nsMenuPopupFrame::SetCurrentMenuItem(nsIMenuFrame* aMenuItem)
       // Don't close up immediately.
       // Kick off a close timer.
       KillCloseTimer(); // Ensure we don't have another stray waiting closure.
-      PRInt32 menuDelay = 300;   // ms
+      PRUint32 menuDelay = 300;   // ms
 
-      nsILookAndFeel * lookAndFeel;
-      if (NS_OK == nsComponentManager::CreateInstance(kLookAndFeelCID, nsnull, 
-                      kILookAndFeelIID, (void**)&lookAndFeel)) {
-        lookAndFeel->GetMetric(nsILookAndFeel::eMetric_SubmenuDelay, menuDelay);
-       NS_RELEASE(lookAndFeel);
+      nsCOMPtr<nsISystemLook> systemLook(do_CreateInstance("@mozilla.org/gfx/systemlook;2"));
+      if (systemLook) {
+        systemLook->GetDelay(nsISystemLook::delay_Submenu, &menuDelay);
       }
 
       // Kick off the timer.
-      mCloseTimer = do_CreateInstance("@mozilla.org/timer;1");
-      mCloseTimer->Init(this, menuDelay, NS_PRIORITY_HIGHEST); 
+      mCloseTimer = do_CreateInstance("@mozilla.org/gfx/timer;2");
+      mCloseTimer->Init(this, menuDelay, nsITimer::NS_PRIORITY_HIGHEST, nsITimer::NS_TYPE_ONE_SHOT); 
       mTimerMenu = mCurrentMenu;
     }
   }
@@ -1021,10 +1000,10 @@ NS_IMETHODIMP
 nsMenuPopupFrame::KeyboardNavigation(PRUint32 aDirection, PRBool& aHandledFlag)
 {
   // This method only gets called if we're open.
-  if (!mCurrentMenu && (aDirection == NS_VK_RIGHT || aDirection == NS_VK_LEFT)) {
+  if (!mCurrentMenu && (aDirection == nsIDOMKeyEvent::DOM_VK_RIGHT || aDirection == nsIDOMKeyEvent::DOM_VK_LEFT)) {
     // We've been opened, but we haven't had anything selected.
     // We can handle RIGHT, but our parent handles LEFT.
-    if (aDirection == NS_VK_RIGHT) {
+    if (aDirection == nsIDOMKeyEvent::DOM_VK_RIGHT) {
       nsIMenuFrame* nextItem;
       GetNextMenuItem(nsnull, &nextItem);
       if (nextItem) {
@@ -1047,7 +1026,7 @@ nsMenuPopupFrame::KeyboardNavigation(PRUint32 aDirection, PRBool& aHandledFlag)
       // Give our child a shot.
       mCurrentMenu->KeyboardNavigation(aDirection, aHandledFlag);
     }
-    else if (aDirection == NS_VK_RIGHT && isContainer && !isDisabled) {
+    else if (aDirection == nsIDOMKeyEvent::DOM_VK_RIGHT && isContainer && !isDisabled) {
       // The menu is not yet open. Open it and select the first item.
       aHandledFlag = PR_TRUE;
       mCurrentMenu->OpenMenu(PR_TRUE);
@@ -1059,11 +1038,11 @@ nsMenuPopupFrame::KeyboardNavigation(PRUint32 aDirection, PRBool& aHandledFlag)
     return NS_OK; // The child menu took it for us.
 
   // For the vertical direction, we can move up or down.
-  if (aDirection == NS_VK_UP || aDirection == NS_VK_DOWN) {
+  if (aDirection == nsIDOMKeyEvent::DOM_VK_UP || aDirection == nsIDOMKeyEvent::DOM_VK_DOWN) {
     
     nsIMenuFrame* nextItem;
     
-    if (aDirection == NS_VK_DOWN)
+    if (aDirection == nsIDOMKeyEvent::DOM_VK_DOWN)
       GetNextMenuItem(mCurrentMenu, &nextItem);
     else GetPreviousMenuItem(mCurrentMenu, &nextItem);
 
@@ -1072,7 +1051,7 @@ nsMenuPopupFrame::KeyboardNavigation(PRUint32 aDirection, PRBool& aHandledFlag)
     aHandledFlag = PR_TRUE;
   }
   else if (mCurrentMenu && isContainer && isOpen) {
-    if (aDirection == NS_VK_LEFT) {
+    if (aDirection == nsIDOMKeyEvent::DOM_VK_LEFT) {
       // Close it up.
       mCurrentMenu->OpenMenu(PR_FALSE);
       aHandledFlag = PR_TRUE;
@@ -1173,7 +1152,7 @@ nsMenuPopupFrame::DismissChain()
 }
 
 NS_IMETHODIMP
-nsMenuPopupFrame::GetWidget(nsIWidget **aWidget)
+nsMenuPopupFrame::GetWidget(nsIWindow **aWidget)
 {
   // Get parent view
   nsIView * view = nsnull;
@@ -1181,7 +1160,7 @@ nsMenuPopupFrame::GetWidget(nsIWidget **aWidget)
   if (!view)
     return NS_OK;
 
-  view->GetWidget(*aWidget);
+  view->GetWidget(aWidget);
   return NS_OK;
 }
 
@@ -1323,7 +1302,7 @@ nsMenuPopupFrame::GetFrameForPoint(nsIPresContext* aPresContext,
 //
 // The code below melds the two cases together.
 //
-NS_IMETHODIMP_(void)
+NS_IMETHODIMP
 nsMenuPopupFrame::Notify(nsITimer* aTimer)
 {
   // Our timer has fired. 
@@ -1376,6 +1355,8 @@ nsMenuPopupFrame::Notify(nsITimer* aTimer)
   
   mCloseTimer = nsnull;
   mTimerMenu = nsnull;
+
+  return NS_OK;
 }
 
 NS_IMETHODIMP

@@ -31,7 +31,6 @@
 
 // Drag & Drop, Clipboard
 #include "nsIServiceManager.h"
-#include "nsWidgetsCID.h"
 #include "nsCOMPtr.h"
 #include "nsIDOMKeyEvent.h"
 #include "nsIPresContext.h"
@@ -164,22 +163,22 @@ nsMenuListener::KeyPress(nsIDOMEvent* aKeyEvent)
 	keyEvent->GetKeyCode(&theChar);
   PRBool handled = PR_FALSE;
 
-  if (theChar == NS_VK_LEFT ||
-      theChar == NS_VK_RIGHT ||
-      theChar == NS_VK_UP ||
-      theChar == NS_VK_DOWN) {
+  if (theChar == nsIDOMKeyEvent::DOM_VK_LEFT ||
+      theChar == nsIDOMKeyEvent::DOM_VK_RIGHT ||
+      theChar == nsIDOMKeyEvent::DOM_VK_UP ||
+      theChar == nsIDOMKeyEvent::DOM_VK_DOWN) {
     // The arrow keys were pressed. User is moving around within
     // the menus.
 	  mMenuParent->KeyboardNavigation(theChar, handled);
   }
-  else if (theChar == NS_VK_ESCAPE) {
+  else if (theChar == nsIDOMKeyEvent::DOM_VK_ESCAPE) {
     // Close one level.
 	  mMenuParent->Escape(handled);
     if (!handled)
       mMenuParent->DismissChain();
   }
-  else if (theChar == NS_VK_ENTER ||
-           theChar == NS_VK_RETURN) {
+  else if (theChar == nsIDOMKeyEvent::DOM_VK_ENTER ||
+           theChar == nsIDOMKeyEvent::DOM_VK_RETURN) {
     // Open one level.
     mMenuParent->Enter();
   }

@@ -68,11 +68,11 @@ nsFontPickerFrame::nsFontPickerFrame()
 //
 NS_METHOD 
 nsFontPickerFrame::Paint(nsIPresContext* aPresContext,
-                              nsIRenderingContext& aRenderingContext,
+                              nsIDrawable* aDrawable,
                               const nsRect& aDirtyRect,
                               nsFramePaintLayer aWhichLayer)
 {
-  return nsLeafFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  return nsLeafFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 }
 
 

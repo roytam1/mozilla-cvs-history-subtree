@@ -42,7 +42,6 @@
 #include "nsMenuPopupFrame.h"
 #include "nsMenuBarFrame.h"
 #include "nsIView.h"
-#include "nsIWidget.h"
 #include "nsIDocument.h"
 #include "nsIDOMNSDocument.h"
 #include "nsIDOMDocument.h"
@@ -627,7 +626,7 @@ nsPopupSetFrame::OnCreate(nsIContent* aPopupContent)
   event.isAlt = PR_FALSE;
   event.isMeta = PR_FALSE;
   event.clickCount = 0;
-  event.widget = nsnull;
+  event.window = nsnull;
 
   if (aPopupContent) {
     nsCOMPtr<nsIPresShell> shell;
@@ -654,7 +653,7 @@ nsPopupSetFrame::OnDestroy()
   event.isAlt = PR_FALSE;
   event.isMeta = PR_FALSE;
   event.clickCount = 0;
-  event.widget = nsnull;
+  event.window = nsnull;
 
   nsCOMPtr<nsIContent> content;
   GetActiveChildElement(getter_AddRefs(content));

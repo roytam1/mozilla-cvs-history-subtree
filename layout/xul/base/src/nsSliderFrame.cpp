@@ -185,7 +185,7 @@ nsSliderFrame::AttributeChanged(nsIPresContext* aPresContext,
       nsIBox* scrollbarBox = GetScrollbar();
       nsCOMPtr<nsIContent> scrollbar;
       GetContentOf(scrollbarBox, getter_AddRefs(scrollbar));
-      PRInt32 current = GetCurrentPosition(scrollbar);      
+      nscoord current = GetCurrentPosition(scrollbar);      
       PRInt32 max = GetMaxPosition(scrollbar);
       if (current < 0 || current > max)
       {
@@ -230,7 +230,7 @@ nsSliderFrame::AttributeChanged(nsIPresContext* aPresContext,
 
 NS_IMETHODIMP
 nsSliderFrame::Paint(nsIPresContext* aPresContext,
-                                nsIRenderingContext& aRenderingContext,
+                                nsIDrawable* aDrawable,
                                 const nsRect& aDirtyRect,
                                 nsFramePaintLayer aWhichLayer)
 {
@@ -260,16 +260,16 @@ nsSliderFrame::Paint(nsIPresContext* aPresContext,
       const nsStyleSpacing* mySpacing = (const nsStyleSpacing*)
       mStyleContext->GetStyleData(eStyleStruct_Spacing);
       nsRect rect(0, 0, mRect.width, mRect.height);
-      nsCSSRendering::PaintBackground(aPresContext, aRenderingContext, this,
+      nsCSSRendering::PaintBackground(aPresContext, aDrawable, this,
                                   aDirtyRect, rect, *myColor, *mySpacing, 0, 0);
-      nsCSSRendering::PaintBorder(aPresContext, aRenderingContext, this,
+      nsCSSRendering::PaintBorder(aPresContext, aDrawable, this,
                               aDirtyRect, rect, *mySpacing, mStyleContext, 0);
       }
     }
     return NS_OK;
   }
   
-  return nsBoxFrame::Paint(aPresContext, aRenderingContext, aDirtyRect, aWhichLayer);
+  return nsBoxFrame::Paint(aPresContext, aDrawable, aDirtyRect, aWhichLayer);
 }
 
 NS_IMETHODIMP
@@ -351,7 +351,7 @@ nsSliderFrame::DoLayout(nsBoxLayoutState& aState)
     mRatio = float(ourmaxpos)/float(maxpos);
   }
 
-  nscoord curpos = curpospx*onePixel;
+  nscoord curpos = curpospx;
 
   // set the thumbs y coord to be the current pos * the ratio.
   nscoord pos = nscoord(float(curpos)*mRatio);
@@ -447,7 +447,7 @@ nsSliderFrame::HandleEvent(nsIPresContext* aPresContext,
        pos -= start;
 
        // convert to pixels
-       nscoord pospx = pos/onePixel;
+       nscoord pospx = pos;
 
        // convert to our internal coordinate system
        pospx = nscoord(pospx/mRatio);
@@ -488,7 +488,6 @@ nsSliderFrame::HandleEvent(nsIPresContext* aPresContext,
     nsSize thumbSize;
     thumbFrame->GetSize(thumbSize);
     nscoord thumbLength = isHorizontal ? thumbSize.width : thumbSize.height;
-    thumbLength /= onePixel;
     pospx -= (thumbLength/2);
 
 
@@ -534,7 +533,7 @@ nsSliderFrame::HandleEvent(nsIPresContext* aPresContext,
     else
       mThumbStart = thumbRect.y;
 
-    mDragStartPx =pos/onePixel;
+    mDragStartPx =pos;
   }
 
   // XXX hack until handle release is actually called in nsframe.
@@ -792,7 +791,7 @@ nsSliderFrame::MouseDown(nsIDOMEvent* aMouseEvent)
   // under the click
   if (button == 2) {
 
-    nscoord pos;
+    PRInt32 pos;
 
     // mouseEvent has click coordinates in pixels, convert to twips first
     isHorizontal ? mouseEvent->GetClientX(&pos) : mouseEvent->GetClientY(&pos);
@@ -822,9 +821,6 @@ nsSliderFrame::MouseDown(nsIDOMEvent* aMouseEvent)
       parent->GetParent(&parent);
     }
 
-    // now convert back into pixels
-    pospx = pos/onePixel;
-
     // adjust so that the middle of the thumb is placed under the click
     nsIFrame* thumbFrame = mFrames.FirstChild();
     nsRect thumbRect;
@@ -832,18 +828,17 @@ nsSliderFrame::MouseDown(nsIDOMEvent* aMouseEvent)
     nsSize thumbSize;
     thumbFrame->GetSize(thumbSize);
     nscoord thumbLength = isHorizontal ? thumbSize.width : thumbSize.height;
-    thumbLength /= onePixel;
-    pospx -= (thumbLength/2);
+    pos -= (thumbLength/2);
 
     // finally, convert to scrollbar's internal coordinate system
-    pospx = nscoord(pospx/mRatio);
+    pos /= mRatio;
 
     nsIBox* scrollbarBox = GetScrollbar();
     nsCOMPtr<nsIContent> scrollbar;
     GetContentOf(scrollbarBox, getter_AddRefs(scrollbar));
 
     // set it
-    SetCurrentPosition(scrollbar, thumbFrame, pospx);
+    SetCurrentPosition(scrollbar, thumbFrame, pos);
   }
 
   RemoveListener();

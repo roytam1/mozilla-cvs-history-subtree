@@ -43,7 +43,7 @@
 #include "nsMenuPopupFrame.h"
 #include "nsMenuBarFrame.h"
 #include "nsIView.h"
-#include "nsIWidget.h"
+#include "nsIWindow.h"
 #include "nsIDocument.h"
 #include "nsIDOMNSDocument.h"
 #include "nsIDOMDocument.h"
@@ -52,9 +52,8 @@
 #include "nsIDOMElement.h"
 #include "nsISupportsArray.h"
 #include "nsIDOMText.h"
-#include "nsILookAndFeel.h"
+#include "nsISystemLook.h"
 #include "nsIComponentManager.h"
-#include "nsWidgetsCID.h"
 #include "nsBoxLayoutState.h"
 #include "nsIXBLBinding.h"
 #include "nsIScrollableFrame.h"
@@ -72,8 +71,6 @@ static PRInt32 gEatMouseMove = PR_FALSE;
 
 nsMenuDismissalListener* nsMenuFrame::mDismissalListener = nsnull;
 
-static NS_DEFINE_IID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
-static NS_DEFINE_IID(kILookAndFeelIID, NS_ILOOKANDFEEL_IID);
 static NS_DEFINE_IID(kIFrameIID, NS_IFRAME_IID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
 
@@ -314,7 +311,7 @@ nsMenuFrame::HandleEvent(nsIPresContext* aPresContext,
   if (aEvent->message == NS_KEY_PRESS && !IsDisabled()) {
     nsKeyEvent* keyEvent = (nsKeyEvent*)aEvent;
     PRUint32 keyCode = keyEvent->keyCode;
-    if (keyCode == NS_VK_UP || keyCode == NS_VK_DOWN) {
+    if (keyCode == nsIDOMKeyEvent::DOM_VK_UP || keyCode == nsIDOMKeyEvent::DOM_VK_DOWN) {
       if (!IsOpen()) 
         OpenMenu(PR_TRUE);
     }
@@ -419,18 +416,15 @@ nsMenuFrame::HandleEvent(nsIPresContext* aPresContext,
     // kick off the timer.
     if (!IsDisabled() && !isMenuBar && IsMenu() && !mMenuOpen && !mOpenTimer) {
 
-      PRInt32 menuDelay = 300;   // ms
+      PRUint32 menuDelay = 300;   // ms
 
-      nsILookAndFeel * lookAndFeel;
-      if (NS_OK == nsComponentManager::CreateInstance(kLookAndFeelCID, nsnull, 
-                      kILookAndFeelIID, (void**)&lookAndFeel)) {
-        lookAndFeel->GetMetric(nsILookAndFeel::eMetric_SubmenuDelay, menuDelay);
-       NS_RELEASE(lookAndFeel);
-      }
+      nsCOMPtr<nsISystemLook> systemLook(do_GetService("@mozilla.org/gfx/systemlook;2"));
+      if (systemLook)
+        systemLook->GetDelay(nsISystemLook::delay_Submenu, &menuDelay);
 
       // We're a menu, we're built, we're closed, and no timer has been kicked off.
-      mOpenTimer = do_CreateInstance("@mozilla.org/timer;1");
-      mOpenTimer->Init(this, menuDelay, NS_PRIORITY_HIGHEST);
+      mOpenTimer = do_CreateInstance("@mozilla.org/gfx/timer;2");
+      mOpenTimer->Init(this, menuDelay, nsITimer::NS_PRIORITY_HIGHEST, nsITimer::NS_TYPE_ONE_SHOT);
     }
   }
   
@@ -1487,7 +1481,7 @@ nsMenuFrame::Execute()
   event.isAlt = PR_FALSE;
   event.isMeta = PR_FALSE;
   event.clickCount = 0;
-  event.widget = nsnull;
+  event.window = nsnull;
   nsCOMPtr<nsIPresShell> shell;
   nsresult result = mPresContext->GetShell(getter_AddRefs(shell));
   nsIFrame* me = this;
@@ -1526,7 +1520,7 @@ nsMenuFrame::OnCreate()
   event.isAlt = PR_FALSE;
   event.isMeta = PR_FALSE;
   event.clickCount = 0;
-  event.widget = nsnull;
+  event.window = nsnull;
   
   nsCOMPtr<nsIContent> child;
   GetMenuChildrenElement(getter_AddRefs(child));
@@ -1560,7 +1554,7 @@ nsMenuFrame::OnDestroy()
   event.isAlt = PR_FALSE;
   event.isMeta = PR_FALSE;
   event.clickCount = 0;
-  event.widget = nsnull;
+  event.window = nsnull;
   
   nsCOMPtr<nsIContent> child;
   GetMenuChildrenElement(getter_AddRefs(child));

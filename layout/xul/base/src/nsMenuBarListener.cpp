@@ -31,7 +31,6 @@
 
 // Drag & Drop, Clipboard
 #include "nsIServiceManager.h"
-#include "nsWidgetsCID.h"
 #include "nsCOMPtr.h"
 #include "nsIDOMKeyEvent.h"
 #include "nsIPresContext.h"

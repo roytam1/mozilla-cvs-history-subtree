@@ -38,8 +38,8 @@
 #include "nsMenuBarListener.h"
 #include "nsMenuListener.h"
 #include "nsIMenuParent.h"
-#include "nsIWidget.h"
 
+class nsIWindow;
 class nsIContent;
 class nsIMenuFrame;
 
@@ -79,7 +79,7 @@ public:
   NS_IMETHOD InstallKeyboardNavigator();
   NS_IMETHOD RemoveKeyboardNavigator();
 
-  NS_IMETHOD GetWidget(nsIWidget **aWidget);
+  NS_IMETHOD GetWidget(nsIWindow **aWidget);
   // The dismissal listener gets created and attached to the window.
   NS_IMETHOD CreateDismissalListener();
 
