@@ -55,5 +55,11 @@ MSG_DEF(JSFILEMSG_FIRST_ARGUMENT_MUST_BE_A_NUMBER,                32, 2, JSEXN_N
 MSG_DEF(JSFILEMSG_CANNOT_WRITE,                                   33, 1, JSEXN_NONE, "Cannot write to {0}, file mode is different")
 MSG_DEF(JSFILEMSG_CANNOT_READ,                                    34, 1, JSEXN_NONE, "Cannot read from {0}, file mode is different")
 MSG_DEF(JSFILEMSG_CANNOT_FLUSH,                                   35, 1, JSEXN_NONE, "Flush failed on {0}")
+MSG_DEF(JSFILEMSG_OBJECT_CREATION_FAILED,                         36, 1, JSEXN_NONE, "Failed to create a new object in {0}")
+MSG_DEF(JSFILEMSG_UNDEF_ARRAY_LENGTH,                             37, 1, JSEXN_NONE, "Array length cannot be determined")
+MSG_DEF(JSFILEMSG_MKDIR_FAILED,                                   38, 1, JSEXN_NONE, "mkdir {0} failed")
+MSG_DEF(JSFILEMSG_CANNOT_OPEN_DIR,                                39, 1, JSEXN_NONE, "Cannot open directory {0}")
+MSG_DEF(JSFILEMSG_INIT_FAILED,                                    40, 0, JSEXN_NONE, "JS_InitClass failed")
+
 
 
