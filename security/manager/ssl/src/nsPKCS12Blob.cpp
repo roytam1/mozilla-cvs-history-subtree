@@ -362,7 +362,7 @@ nsPKCS12Blob::ExportToFile(nsILocalFile *file,
     // We're going to add the .p12 extension to the file name just like
     // Communicator used to.  We create a new nsILocalFile and initialize
     // it with the new patch.
-    filePath.AppendWithConversion(".p12");
+    filePath.Append(NS_LITERAL_STRING(".p12"));
     localFileRef = do_CreateInstance(NS_LOCAL_FILE_CONTRACTID, &rv);
     if (NS_FAILED(rv)) goto finish;
     localFileRef->InitWithUnicodePath(filePath.get());

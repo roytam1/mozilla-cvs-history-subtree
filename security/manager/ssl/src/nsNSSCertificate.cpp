@@ -1997,7 +1997,7 @@ nsNSSCertificate::GetPurposes(PRUint32   *_verified,
   rv = GetUsageArray(suffix, _verified, &tmpCount, tmpUsages);
   nsAutoString porpoises;
   for (PRUint32 i=0; i<tmpCount; i++) {
-    if (i>0) porpoises.AppendWithConversion(",");
+    if (i>0) porpoises.Append(NS_LITERAL_STRING(","));
     porpoises.Append(tmpUsages[i]);
     nsMemory::Free(tmpUsages[i]);
   }
