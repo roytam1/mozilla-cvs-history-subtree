@@ -35,8 +35,8 @@
 #include "String.h"
 #include "baseutils.h"
 
-#ifndef MITREXSL_STRINGLIST_H
-#define MITREXSL_STRINGLIST_H
+#ifndef TRANSFRMX_STRINGLIST_H
+#define TRANSFRMX_STRINGLIST_H
 
 class StringList {
    friend class StringListIterator;
@@ -51,7 +51,7 @@ class StringList {
       /**
        * StringList destructor
       **/
-      ~StringList();
+      virtual ~StringList();
 
        MBool contains(String& search);
 
@@ -112,7 +112,7 @@ public:
 
 
    StringListIterator(StringList* list);
-   ~StringListIterator();
+   virtual ~StringListIterator();
 
    void    add(String* strptr);
 

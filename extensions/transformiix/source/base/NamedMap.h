@@ -30,8 +30,8 @@
  * @version $Revision$ $Date$
 **/
 
-#ifndef MITREXSL_NAMEDMAP_H
-#define MITREXSL_NAMEDMAP_H
+#ifndef TRANSFRMX_NAMEDMAP_H
+#define TRANSFRMX_NAMEDMAP_H
 
 #include "String.h"
 #include "baseutils.h"
