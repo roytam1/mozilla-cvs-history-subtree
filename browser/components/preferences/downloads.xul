@@ -54,7 +54,8 @@
       <preference id="browser.download.dir"               name="browser.download.dir"               type="file"/>
       <preference id="browser.download.manager.showWhenStarting"
                   name="browser.download.manager.showWhenStarting" 
-                  type="bool"/>
+                  type="bool"
+                  onchange="gDownloadsPane.showWhenStartingPrefChanged();"/>
       <preference id="browser.download.manager.closeWhenDone"
                   name="browser.download.manager.closeWhenDone"
                   type="bool"/>
@@ -68,26 +69,27 @@
       <radiogroup id="askOnSave" flex="1"
                   preference="browser.download.useDownloadDir">
         <radio id="alwaysAsk" label="&alwaysAsk.label;" value="false"/>
-        <hbox flex="1">
+        <vbox flex="1">
           <radio id="neverAsk" label="&neverAsk.label;" value="true"/>
-          <menulist id="downloadFolderList" flex="1"
-                    preference="browser.download.folderList"
-                    onpreferenceread="return gDownloadsPane.readDownloadDirPref();"
-                    onpreferencewrite="return gDownloadsPane.writeDownloadDirPref();">
-            <menupopup>
-              <menuitem value="0" label="&desktop.label;"/>
-              <menuitem value="1" label="&downloads.label;"/>
-              <menuitem value="2" label="Goats" hidden="true" id="downloadFolder" crop="center" flex="1"
-                        preference="browser.download.dir"/>
-            </menupopup>
-          </menulist>
-          <button id="chooseFolder" oncommand="gDownloadsPane.chooseFolder();"
+          <hbox>
+            <menulist id="downloadFolder" flex="1" crop="center" class="indent"
+                      preference="browser.download.folderList"
+                      onpreferenceread="return gDownloadsPane.readDownloadDirPref();"
+                      onpreferencewrite="return gDownloadsPane.writeDownloadDirPref();">
+              <menupopup>
+                <menuitem value="0" label="&desktop.label;"/>
+                <menuitem value="1" label="&downloads.label;"/>
+                <menuitem value="2" hidden="true" id="customDownloadFolder" crop="center" flex="1"/>
+              </menupopup>
+            </menulist>
+            <button id="chooseFolder" oncommand="gDownloadsPane.chooseFolder();"
 #ifdef XP_MACSOX
-                  label="&chooseFolderMac.label;"/>
+                    label="&chooseFolderMac.label;"/>
 #else
-                  label="&chooseFolderWin.label;"/>
+                    label="&chooseFolderWin.label;"/>
 #endif
-        </hbox>
+          </hbox>
+        </vbox>
       </radiogroup>
     </groupbox>
 
@@ -96,12 +98,12 @@
       
       <checkbox id="showWhenStarting" label="&showWhenStarting.label;" 
                 preference="browser.download.manager.showWhenStarting"
-                oncommand="toggleDMPrefUI(event.target);"/>
+                onpreferenceread="return gDownloadsPane.readShowWhenStartingPref();"/>
       <checkbox id="closeWhenDone" label="&closeWhenDone.label;" class="indent"
                 preference="browser.download.manager.closeWhenDone"/>
     </groupbox>
     
-    <groupbox flex="1">
+    <groupbox>
       <caption label="&fileTypes.label;"/>
       
       <description>&fileTypesDescription.label;</description>

@@ -189,6 +189,8 @@
       <button label="&sanitizeSettings.label;" oncommand="gPrivacyPane.showSanitizeSettings();"/>
       <description flex="1">&sanitize.intro;</description>
     </hbox>
+    <separator/>
+    <separator/>
   </prefpane>
 
 </overlay>

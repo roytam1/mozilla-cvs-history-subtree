@@ -284,7 +284,7 @@
           case "int":
             return parseInt(aElement.value);
           case "bool":
-            return aElement.value == "true";
+            return typeof(aElement.value) == "boolean" ? aElement.value : aElement.value == "true";
           }
           return aElement.value;
         ]]>
@@ -343,7 +343,7 @@
       <xul:deck anonid="paneDeck" flex="1">
         <children includes="prefpane"/>
       </xul:deck>
-      <xul:hbox pack="end">
+      <xul:hbox pack="end" anonid="dlg-buttons" class="prefWindow-dlgbuttons">
         <xul:button dlgtype="extra2" class="dialog-button" hidden="true"/>
         <xul:spacer anonid="spacer" flex="1" hidden="true"/>
         <xul:button dlgtype="accept" class="dialog-button"/>
@@ -359,7 +359,7 @@
         <xul:key key="&windowClose.key;" modifiers="accel" oncommand="window.close();"/>
       </xul:keyset>
     </content>
-    <implementation>
+    <implementation implements="nsITimerCallback">
       <constructor>
       <![CDATA[
         if (this.type != "child") {
@@ -367,8 +367,8 @@
                               .getService(Components.interfaces.nsIPrefBranch);
           this.instantApply = psvc.getBoolPref("browser.preferences.instantApply");
           if (this.instantApply) {
-            this.getButton("accept").hidden = true;
-            this.getButton("cancel").hidden = true;
+            var dlgButtons = document.getAnonymousElementByAttribute(this, "anonid", "dlg-buttons");
+            dlgButtons.hidden = true;
             // XXXtodo: Set up Close button for GNOME
           }
         }
@@ -467,6 +467,7 @@
         </body>
       </method>
       
+      <field name="_initialized">false</field>
       <method name="_selectPane">
         <parameter name="aPaneElement"/>
         <body>
@@ -475,15 +476,106 @@
           // selectedIndex to that value to switch to it.
           for (var i = 0; i < this.childNodes.length; ++i) {
             if (this.childNodes[i] == aPaneElement) {
-              this._paneDeck.setAttribute("selectedIndex", i);
-              this.lastSelected = aPaneElement.id;
+              var oldPane = document.getElementById(this.lastSelected);
+              oldPane.selected = !(aPaneElement.selected = true);
+              if (!this._initialized || oldPane.id != aPaneElement.id) {
+                this._paneDeck.setAttribute("selectedIndex", i);
+                this.lastSelected = aPaneElement.id;
+                aPaneElement.style.opacity = "0.0";
+                this.animate(oldPane, aPaneElement);
+                this._initialized = true;
+              }
               break;
             }
           }
         ]]>
         </body>
       </method>
+      
+      <method name="animate">
+        <parameter name="aOldPane"/>
+        <parameter name="aNewPane"/>
+        <body>
+        <![CDATA[
+          this._multiplier = aNewPane.contentHeight > aOldPane.contentHeight ? 1 : -1;
+          var sizeDelta = Math.abs(aOldPane.contentHeight - aNewPane.contentHeight);
+          this._needsSizing = sizeDelta > this._animateIncrement;
+
+          // Compute the opacity step, using 0.2 as a maximum step size. 
+          this._opacityStepSize = sizeDelta != 0 ? this._animateIncrement / sizeDelta : 1.0;
+          if (this._opacityStepSize > 0.2)
+            this._opacityStepSize = 0.2;
+
+          this._setUpTimer(aOldPane.contentHeight);
+        ]]>
+        </body>
+      </method>
+      
+      <property name="_stillAnimating" readonly="true">
+        <getter>
+        <![CDATA[
+          var lastSelectedPane = document.getElementById(this.lastSelected);
+          if (this._needsSizing)
+            return (this._multiplier > 0 && this._currentHeight < lastSelectedPane.contentHeight) || 
+                   (this._multiplier < 0 && this._currentHeight > lastSelectedPane.contentHeight);
+          return parseFloat(window.getComputedStyle(lastSelectedPane, "").opacity) < 1.0;
+        ]]>
+        </getter>
+      </property>
                 
+      <method name="notify">
+        <parameter name="aTimer"/>
+        <body>
+        <![CDATA[
+          if (this._stillAnimating) {
+            if (this._needsSizing) {
+              window.innerHeight += (this._animateIncrement * this._multiplier);
+              this._currentHeight += (this._animateIncrement * this._multiplier);
+            }
+            else
+              window.sizeToContent();
+            var elt = document.getElementById(this.lastSelected);
+            elt.style.opacity = parseFloat(window.getComputedStyle(elt, "").opacity) + this._opacityStepSize;
+          }
+          else {
+            // Do this check first because rounding errors may cause the opacity
+            // set by the code above to be > 1.0, which will result in an ugly
+            // flicker if we set it back to 1.0 here. This code exists only to
+            // correct any < 1.0 opacity states that may exist. 
+            var elt = document.getElementById(this.lastSelected);
+            if (parseFloat(window.getComputedStyle(elt, "").opacity) < 1.0) 
+              document.getElementById(this.lastSelected).style.opacity = "1.0";
+            this._timer.cancel();
+          }
+        ]]>
+        </body>
+      </method>
+      
+      <method name="_setUpTimer">
+        <parameter name="aStartHeight"/>
+        <body>
+        <![CDATA[
+          if (!this._timer) 
+            this._timer = Components.classes["@mozilla.org/timer;1"]
+                                    .createInstance(Components.interfaces.nsITimer);
+          else
+            this._timer.cancel();
+          this._currentHeight = aStartHeight;
+          
+          this._timer.initWithCallback(this, this._animateDelay, 
+                                       Components.interfaces.nsITimer.TYPE_REPEATING_SLACK);
+        ]]>
+        </body>
+      </method>
+      
+      <field name="_timer">null</field>
+      <field name="_animateDelay">50</field>
+      <field name="_animateIncrement">10</field>
+      <field name="_currentHeight">0</field>
+      <field name="_multiplier">0</field>
+      <field name="_opacityStepSize">0</field>
+      <field name="_needsSizing">0</field>
+
       <method name="addPane">
         <parameter name="aPaneElement"/>
         <body>
@@ -550,6 +642,11 @@
     <resources>
       <stylesheet src="chrome://global/skin/preferences.css"/>
     </resources>
+    <content>
+      <xul:vbox class="content-box">
+        <children/>
+      </xul:vbox>
+    </content>
     <implementation>
       <method name="writePreferences">
         <body>
@@ -572,6 +669,9 @@
       <property name="src" 
                 onget="return this.getAttribute('src');"
                 onset="this.setAttribute('src', val); return val;"/>
+      <property name="selected" 
+                onget="return this.getAttribute('selected') == 'true';"
+                onset="this.setAttribute('selected', val); return val;"/>
       <property name="image" 
                 onget="return this.getAttribute('image');"
                 onset="this.setAttribute('image', val); return val;"/>
@@ -620,6 +720,18 @@
         ]]>
         </body>
       </method>
+      
+      <property name="contentHeight" readonly="true">
+        <getter>
+          var targetHeight = parseInt(window.getComputedStyle(this._content, "").height);
+          targetHeight += parseInt(window.getComputedStyle(this._content, "").marginTop);
+          targetHeight += parseInt(window.getComputedStyle(this._content, "").marginBottom);
+          return targetHeight;
+        </getter>
+      </property>
+      <field name="_content">
+        document.getAnonymousElementByAttribute(this, "class", "content-box");
+      </field>
     </implementation>
     <handlers>
       <handler event="command">

@@ -48,13 +48,14 @@ var gDownloadsPane = {
     fp.init(window, "Choose Download Folder", nsIFilePicker.modeGetFolder);
     
     const nsILocalFile = Components.interfaces.nsILocalFile;
-    var downloadDirPref = document.getElementById("browser.download.dir");
-    if (downloadDirPref.value)
-      fp.displayDirectory = downloadDirPref.value;
+    var customDirPref = document.getElementById("browser.download.dir");
+    if (customDirPref.value)
+      fp.displayDirectory = customDirPref.value;
     fp.appendFilters(nsIFilePicker.filterAll);
     if (fp.show() == nsIFilePicker.returnOK) {
       var file = fp.file.QueryInterface(nsILocalFile);
-      downloadDirPref.value = file;
+      var currentDirPref = document.getElementById("browser.download.downloadDir");
+      customDirPref.value = currentDirPref.value = file;
       var folderListPref = document.getElementById("browser.download.folderList");
       folderListPref.value = this._fileToIndex(file);
     }
@@ -107,24 +108,56 @@ var gDownloadsPane = {
     return dir;
   },
   
+  _getDisplayNameOfFile: function (aFolder)
+  {
+    // TODO: would like to add support for 'Downloads on Macintosh HD' 
+    //       for OS X users.
+    return aFolder ? aFolder.path : "";
+  },
+  
   readDownloadDirPref: function ()
   {
-    var currentDirPref = document.getElementById("browser.download.downloadDir");
-    var index = this._fileToIndex(currentDirPref.value);
+    // Show the 'Custom Dir' menu item only when:
+    // a) there is a custom download dir at all (i.e. browser.download.dir is 
+    //    set to something), and:
+    // b) the custom download dir that is set is not set to one of the default
+    //    options (Desktop or My Downloads).
     var customDirPref = document.getElementById("browser.download.dir");
-    dump("*** readddpp: index = " + index + ", customDirPref = " + customDirPref.value + "\n");
+    var customDownloadFolder = document.getElementById("customDownloadFolder");
+    customDownloadFolder.hidden = this._fileToIndex(customDirPref.value) != 2 || !customDirPref.value;
+    customDownloadFolder.label = this._getDisplayNameOfFile(customDirPref.value);
+    
+    var ios = Components.classes["@mozilla.org/network/io-service;1"]
+                        .getService(Components.interfaces.nsIIOService);
+    var fph = ios.getProtocolHandler("file")
+                 .QueryInterface(Components.interfaces.nsIFileProtocolHandler);
+    var currentDirPref = document.getElementById("browser.download.downloadDir");
+    var urlspec = fph.getURLSpecFromFile(currentDirPref.value);
     var downloadFolder = document.getElementById("downloadFolder");
-    downloadFolder.hidden = index != 2 || !customDirPref.value;
+    downloadFolder.setAttribute("src", "moz-icon://" + urlspec + "?size=16");
+    
     return undefined;
   },
   
   writeDownloadDirPref: function ()
   {
     var currentDirPref = document.getElementById("browser.download.downloadDir");
-    var downloadFolderList = document.getElementById("downloadFolderList");
-    currentDirPref.value = this._indexToFile(downloadFolderList.selectedIndex);
-    dump("*** writeddp: currentDirPref = " + currentDirPref.value + "\n");
+    var downloadFolder = document.getElementById("downloadFolder");
+    currentDirPref.value = this._indexToFile(downloadFolder.selectedIndex);
     return undefined;
-  }
+  },
+  
+  showWhenStartingPrefChanged: function ()
+  {
+    var showWhenStartingPref = document.getElementById("browser.download.manager.showWhenStarting");
+    var closeWhenDonePref = document.getElementById("browser.download.manager.closeWhenDone");
+    closeWhenDonePref.disabled = !showWhenStartingPref.value;
+  },
+  
+  readShowWhenStartingPref: function ()
+  {
+    this.showWhenStartingPrefChanged();
+    return undefined;
+  },
 };
 

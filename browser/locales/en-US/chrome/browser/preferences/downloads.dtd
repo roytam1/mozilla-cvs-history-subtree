@@ -7,8 +7,8 @@
 <!ENTITY chooseFolderMac.label        "Choose...">
 
 <!ENTITY downloadManagerWindow.label  "Download Manager">
-<!ENTITY showWhenStarting.label       "Show Download Manager when a download begins.">
-<!ENTITY closeWhenDone.label          "Close the Download Manager when all downloads are complete.">
+<!ENTITY showWhenStarting.label       "Show Download Manager when a download begins">
+<!ENTITY closeWhenDone.label          "Close the Download Manager when all downloads are complete">
 
 <!ENTITY fileTypes.label              "File Types">
 <!ENTITY configureActions.label       "Configure Actions...">

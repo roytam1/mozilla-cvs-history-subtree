@@ -1,0 +1,10 @@
+
+<!ENTITY  prefWindow.titleWin     "Foopy">
+<!ENTITY  prefWindow.titleMac     "Preferences">
+<!ENTITY  prefWindow.width        "width: 42em;">
+
+<!ENTITY  paneGeneral.title       "General">
+<!ENTITY  panePrivacy.title       "Privacy">
+<!ENTITY  paneDownloads.title     "Downloads">
+<!ENTITY  paneAdvanced.title      "Advanced">
+<!ENTITY  paneContent.title       "Content">

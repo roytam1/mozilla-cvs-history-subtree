@@ -58,6 +58,11 @@ prefwindow[type="child"] > prefpane {
   padding: 0px;
 }
 
+.prefWindow-dlgbuttons {
+  padding-bottom: 10px;
+  padding-right: 10px;
+}
+
 radio[pane] {
   border: 1px solid transparent;
   margin: 0px 1px 0px 1px;
@@ -79,11 +84,12 @@ radio[pane] {
 
 radio[pane]:hover {
   background-color: #E0E8F6;
-	color: black;  
+  color: black;  
 }
 
 radio[pane][selected="true"] {
   background-color: #C1D2EE;
-	color: black;  
+  border: 2px solid red;
+  color: black;  
 }
 
