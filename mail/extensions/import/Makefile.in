@@ -8,7 +8,7 @@ include $(DEPTH)/config/autoconf.mk
 MODULE=mailprofileimport
 LIBRARY_NAME = profileimport
 EXPORT_LIBRARY = 1
-IS_COMPONENTS = 1
+IS_COMPONENT = 1
 MODULE_NAME = nsMailProfileImportModule
 
 REQUIRES = \

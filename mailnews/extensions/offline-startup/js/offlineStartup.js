@@ -128,7 +128,7 @@ var nsOfflineStartup =
     }
     else if (aTopic == "profile-after-change")
     {
-      onProfileStartup();
+      this.onProfileStartup();
     }
   },
 
@@ -173,7 +173,7 @@ var nsOfflineStartupModule =
     // Receive startup notification.
     // We are |getService()|d at app-startup (before profile selection)
     this.getCategoryManager().addCategoryEntry("app-startup", 
-      "service," + this.mContractID, "", true, true);
+      "Offline-startup", "service," + this.mContractID, true, true);
   },
 
   unregisterSelf: function(aCompMgr, aFileSpec, aLocation)
@@ -183,7 +183,7 @@ var nsOfflineStartupModule =
     aCompMgr.unregisterFactoryLocation(this.mClassID, aFileSpec);
 
     this.getCategoryManager().deleteCategoryEntry("app-startup", 
-      this.mContractID, true);
+      "Offline-startup", true);
   },
 
   canUnload: function(aCompMgr)
