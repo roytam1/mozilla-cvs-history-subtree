@@ -4,3 +4,4 @@ StartPageDefault = "http://www.mozilla.org/projects/chimera/welcome.html";
 ThrobberPageDefault = "http://www.mozilla.org/projects/chimera/";
 FeedbackPageDefault = "http://www.mozilla.org/projects/chimera/feedback.html";
 InfoPageDefault = "http://www.mozilla.org/projects/chimera/";
+RendezvousPageDefault="http://www.zeroconf.org/webbrowsers.html";

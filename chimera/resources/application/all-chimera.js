@@ -71,3 +71,5 @@ pref("browser.chrome.favicons", true);
 // Default to auto download enabled but auto helper dispatch disabled
 pref("browser.download.autoDownload", true);
 pref("browser.download.autoDispatch", false);
+
+pref("chimera.enable_rendezvous", false);

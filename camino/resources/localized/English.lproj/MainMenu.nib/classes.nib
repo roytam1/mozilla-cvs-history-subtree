@@ -63,6 +63,7 @@
                 mDockMenu = NSMenu; 
                 mFilterList = NSPopUpButton; 
                 mFilterView = NSView; 
+                mGoMenu = NSMenu; 
                 mServersSubmenu = NSMenu; 
                 mToggleSidebarMenuItem = NSMenuItem; 
             }; 
