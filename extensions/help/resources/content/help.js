@@ -75,6 +75,8 @@ function displayTopic(topic) {
   if (!topic)
     topic = defaultTopic;
   var uri = getLink(topic);
+  if (!uri) // Topic not found - revert to default.
+      uri = getLink(defaultTopic); 
   loadURI(uri);
 }
 
@@ -232,7 +234,7 @@ function getLink(ID) {
   // We have one possible source for an ID for each datasource in the composite datasource.
   // The first ID which matches is returned.
   var tocTree = document.getElementById("help-toc-tree");
-    tocDS = tocTree.database;
+    var tocDS = tocTree.database;
     if (tocDS == null)
       return null;
     var tocDatasources = tocTree.getAttribute("datasources");
@@ -249,8 +251,6 @@ function getLink(ID) {
           link = link.QueryInterface(Components.interfaces.nsIRDFLiteral);
           if (link) 
             return link.Value;
-          else  
-            return null;
         }  
       }
     }
@@ -512,7 +512,12 @@ function doFind() {
   for (var i=0; i < RE.length; ++i) {
     if (RE[i] == "")
       continue;
-    RE[i] = new RegExp(RE[i].substring(0, RE[i].length-1) +"\w?", "i");
+    if (RE[i].length > 3) {
+        RE[i] = new RegExp(RE[i].substring(0, RE[i].length-1) +"\w?", "i");
+    } else {
+        RE[i] = new RegExp(RE[i], "i");
+    }
+
   }
 
   // search TOC
@@ -670,3 +675,4 @@ function displayIndex() {
       }
     }
 }
+
