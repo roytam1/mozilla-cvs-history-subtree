@@ -302,6 +302,7 @@ nsPromptService::ConfirmEx(nsIDOMWindow *parent,
       block->SetInt(eDefaultButton, 0);
       break;
   }
+  block->SetInt(eDelayButtonEnable, buttonFlags & BUTTON_DELAY_ENABLE);
 
   PRInt32 numberButtons = 0;
   for (int i = 0; i < 3; i++) { 
