@@ -56,7 +56,7 @@ function onLoad()
   }
   
   // change OK button text to 'open'
-  dialog.open.setAttribute("value", bundle.GetStringFromName("openButtonLabel"));
+  dialog.open.label = bundle.GetStringFromName("openButtonLabel");
 
   doSetOKCancel(open, 0, 0, 0);
   
@@ -64,7 +64,7 @@ function onLoad()
   if (pref) {
     try {
       var data = pref.GetIntPref("general.open_location.last_window_choice");
-      var element = dialog.openAppList.getElementsByAttribute("data", data)[0];
+      var element = dialog.openAppList.getElementsByAttribute("value", value)[0];
       if (element)
         dialog.openAppList.selectedItem = element;
       dialog.input.value = pref.CopyUnicharPref("general.open_location.last_url");     
@@ -85,7 +85,12 @@ function doEnabling()
 
 function open() 
 {
-  var url = browser.getShortcutOrURI(dialog.input.value);
+  var url;
+  if (browser)
+    url = browser.getShortcutOrURI(dialog.input.value);
+  else
+    url = dialog.input.value;
+
   try {
     switch (dialog.openAppList.data) {
       case "0":
@@ -106,7 +111,7 @@ function open()
   
   if (pref) {
     pref.SetUnicharPref("general.open_location.last_url", dialog.input.value);
-    pref.SetIntPref("general.open_location.last_window_choice", dialog.openAppList.data);
+    pref.SetIntPref("general.open_location.last_window_choice", dialog.openAppList.value);
   }
 
   // Delay closing slightly to avoid timing bug on Linux.
