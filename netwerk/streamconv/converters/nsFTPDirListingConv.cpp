@@ -982,3 +982,19 @@ nsFTPDirListingConv::DigestBufferLines(char *aBuffer, nsCAutoString &aString) {
 
     return line;
 }
+
+nsresult
+NS_NewFTPDirListingConv(nsFTPDirListingConv** aFTPDirListingConv)
+{
+    NS_PRECONDITION(aFTPDirListingConv != nsnull, "null ptr");
+    if (! aFTPDirListingConv)
+        return NS_ERROR_NULL_POINTER;
+
+    *aFTPDirListingConv = new nsFTPDirListingConv();
+    if (! *aFTPDirListingConv)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(*aFTPDirListingConv);
+    return (*aFTPDirListingConv)->Init();
+}
+

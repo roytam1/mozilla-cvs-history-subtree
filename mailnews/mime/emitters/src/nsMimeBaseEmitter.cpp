@@ -268,8 +268,9 @@ NS_IMETHODIMP nsMimeBaseEmitter::OnFull(nsIOutputStream* out)
       PRUint32 bytesAvailable = 0;
       rv = mInputStream->Available(&bytesAvailable);
       NS_ASSERTION(NS_SUCCEEDED(rv), "Available failed");
-      // DOUGT - where did the request come from??!
-      rv = mOutListener->OnDataAvailable(/*mChannel*/nsnull, mURL, mInputStream, 0, bytesAvailable);
+      
+      nsCOMPtr<nsIRequest> request = do_QueryInterface(mChannel);
+      rv = mOutListener->OnDataAvailable(request, mURL, mInputStream, 0, bytesAvailable);
 
   }
   else 
@@ -285,7 +286,7 @@ NS_IMETHODIMP nsMimeBaseEmitter::OnClose(nsIInputStream* in)
 
 ///////////////////////////////////////////////////////////////////////////
 // nsMimeBaseEmitter Interface
-///////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////// 
 NS_IMETHODIMP
 nsMimeBaseEmitter::SetPipe(nsIInputStream * aInputStream, nsIOutputStream *outStream)
 {

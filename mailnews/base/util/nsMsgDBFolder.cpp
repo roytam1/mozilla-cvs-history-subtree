@@ -638,11 +638,6 @@ nsresult nsMsgDBFolder::GetOfflineStoreOutputStream(nsIOutputStream **outputStre
     nsCOMPtr<nsIFileChannel> fileChannel = do_CreateInstance(NS_LOCALFILECHANNEL_CONTRACTID);
     if (fileChannel)
     {
-      PRUint32 fileSize = 0;
-      nsXPIDLCString nativePath;
-      mPath->GetNativePath(getter_Copies(nativePath));
-
-      mPath->GetFileSize(&fileSize);
       nsCOMPtr <nsILocalFile> localStore;
       rv = NS_NewLocalFile(nativePath, PR_TRUE, getter_AddRefs(localStore));
       if (NS_SUCCEEDED(rv) && localStore)
@@ -650,7 +645,6 @@ nsresult nsMsgDBFolder::GetOfflineStoreOutputStream(nsIOutputStream **outputStre
         rv = fileChannel->Init(localStore, PR_CREATE_FILE | PR_RDWR, 0);
         if (NS_FAILED(rv)) 
           return rv; 
-      //bad see dougt    fileChannel->SetTransferOffset(fileSize);
         rv = fileChannel->Open(outputStream);
         if (NS_FAILED(rv)) 
           return rv; 

@@ -168,9 +168,190 @@ UnregisterBasicAuth(nsIComponentManager *aCompMgr, nsIFile *aPath,
 #include "nsUnknownDecoder.h"
 #include "nsTXTToHTMLConv.h"
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsUnknownDecoder);
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsHTTPCompressConv);
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsHTTPChunkConv);
+nsresult NS_NewFTPDirListingConv(nsFTPDirListingConv** result);
+nsresult NS_NewMultiMixedConv (nsMultiMixedConv** result);
+nsresult MOZ_NewTXTToHTMLConv (mozTXTToHTMLConv** result);
+nsresult NS_NewHTTPChunkConv  (nsHTTPChunkConv ** result);
+nsresult NS_NewHTTPCompressConv  (nsHTTPCompressConv ** result);
+nsresult NS_NewNSTXTToHTMLConv(nsTXTToHTMLConv** result);
+
+static NS_IMETHODIMP                 
+CreateNewFTPDirListingConv(nsISupports* aOuter, REFNSIID aIID, void **aResult) 
+{
+    if (!aResult) {                                                  
+        return NS_ERROR_INVALID_POINTER;                             
+    }
+    if (aOuter) {                                                    
+        *aResult = nsnull;                                           
+        return NS_ERROR_NO_AGGREGATION;                              
+    }   
+    nsFTPDirListingConv* inst = nsnull;
+    nsresult rv = NS_NewFTPDirListingConv(&inst);
+    if (NS_FAILED(rv)) {                                             
+        *aResult = nsnull;                                           
+        return rv;                                                   
+    } 
+    rv = inst->QueryInterface(aIID, aResult);
+    if (NS_FAILED(rv)) {                                             
+        *aResult = nsnull;                                           
+    }                                                                
+    NS_RELEASE(inst);             /* get rid of extra refcnt */      
+    return rv;              
+}
+
+static NS_IMETHODIMP                 
+CreateNewMultiMixedConvFactory(nsISupports* aOuter, REFNSIID aIID, void **aResult) 
+{
+    if (!aResult) {                                                  
+        return NS_ERROR_INVALID_POINTER;                             
+    }
+    if (aOuter) {                                                    
+        *aResult = nsnull;                                           
+        return NS_ERROR_NO_AGGREGATION;                              
+    }   
+    nsMultiMixedConv* inst = nsnull;
+    nsresult rv = NS_NewMultiMixedConv(&inst);
+    if (NS_FAILED(rv)) {                                             
+        *aResult = nsnull;                                           
+        return rv;                                                   
+    } 
+    rv = inst->QueryInterface(aIID, aResult);
+    if (NS_FAILED(rv)) {                                             
+        *aResult = nsnull;                                           
+    }                                                                
+    NS_RELEASE(inst);             /* get rid of extra refcnt */      
+    return rv;              
+}
+
+static NS_IMETHODIMP                 
+CreateNewTXTToHTMLConvFactory(nsISupports* aOuter, REFNSIID aIID, void **aResult) 
+{
+    if (!aResult) {                                                  
+        return NS_ERROR_INVALID_POINTER;                             
+    }
+    if (aOuter) {                                                    
+        *aResult = nsnull;                                           
+        return NS_ERROR_NO_AGGREGATION;                              
+    }   
+    mozTXTToHTMLConv* inst = nsnull;
+    nsresult rv = MOZ_NewTXTToHTMLConv(&inst);
+    if (NS_FAILED(rv)) {                                             
+        *aResult = nsnull;                                           
+        return rv;                                                   
+    } 
+    rv = inst->QueryInterface(aIID, aResult);
+    if (NS_FAILED(rv)) {                                             
+        *aResult = nsnull;                                           
+    }                                                                
+    NS_RELEASE(inst);             /* get rid of extra refcnt */      
+    return rv;              
+}
+
+static NS_IMETHODIMP                 
+CreateNewHTTPChunkConvFactory (nsISupports* aOuter, REFNSIID aIID, void **aResult) 
+{
+    if (!aResult) {                                                  
+        return NS_ERROR_INVALID_POINTER;                             
+    }
+    if (aOuter) {                                                    
+        *aResult = nsnull;                                           
+        return NS_ERROR_NO_AGGREGATION;                              
+    }   
+    nsHTTPChunkConv* inst = nsnull;
+    nsresult rv = NS_NewHTTPChunkConv (&inst);
+    if (NS_FAILED(rv)) {                                             
+        *aResult = nsnull;                                           
+        return rv;                                                   
+    } 
+    rv = inst->QueryInterface(aIID, aResult);
+    if (NS_FAILED(rv)) {                                             
+        *aResult = nsnull;                                           
+    }                                                                
+    NS_RELEASE(inst);             /* get rid of extra refcnt */      
+    return rv;              
+}
+
+static NS_IMETHODIMP                 
+CreateNewHTTPCompressConvFactory (nsISupports* aOuter, REFNSIID aIID, void **aResult) 
+{
+    if (!aResult) {                                                  
+        return NS_ERROR_INVALID_POINTER;                             
+    }
+    if (aOuter) {                                                    
+        *aResult = nsnull;                                           
+        return NS_ERROR_NO_AGGREGATION;                              
+    }   
+    nsHTTPCompressConv* inst = nsnull;
+    nsresult rv = NS_NewHTTPCompressConv (&inst);
+    if (NS_FAILED(rv)) {                                             
+        *aResult = nsnull;                                           
+        return rv;                                                   
+    } 
+    rv = inst->QueryInterface(aIID, aResult);
+    if (NS_FAILED(rv)) {                                             
+        *aResult = nsnull;                                           
+    }                                                                
+    NS_RELEASE(inst);             /* get rid of extra refcnt */      
+    return rv;              
+}
+
+static NS_IMETHODIMP
+CreateNewUnknownDecoderFactory(nsISupports *aOuter, REFNSIID aIID, void **aResult)
+{
+  nsresult rv;
+
+  if (!aResult) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  *aResult = nsnull;
+
+  if (aOuter) {
+    return NS_ERROR_NO_AGGREGATION;
+  }
+
+  nsUnknownDecoder *inst;
+  
+  inst = new nsUnknownDecoder();
+  if (!inst) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+  NS_ADDREF(inst);
+  rv = inst->QueryInterface(aIID, aResult);
+  NS_RELEASE(inst);
+
+  return rv;
+}
+
+static NS_IMETHODIMP
+CreateNewNSTXTToHTMLConvFactory(nsISupports *aOuter, REFNSIID aIID, void **aResult)
+{
+  nsresult rv;
+
+  if (!aResult) {
+    return NS_ERROR_NULL_POINTER;
+  }
+  *aResult = nsnull;
+
+  if (aOuter) {
+    return NS_ERROR_NO_AGGREGATION;
+  }
+
+  nsTXTToHTMLConv *inst;
+  
+  inst = new nsTXTToHTMLConv();
+  if (!inst) return NS_ERROR_OUT_OF_MEMORY;
+
+  NS_ADDREF(inst);
+  rv = inst->Init();
+  if (NS_FAILED(rv)) {
+    delete inst;
+    return rv;
+  }
+  rv = inst->QueryInterface(aIID, aResult);
+  NS_RELEASE(inst);
+
+  return rv;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Module implementation for the net library
@@ -316,19 +497,19 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
     { "FTPDirListingConverter", 
       NS_FTPDIRLISTINGCONVERTER_CID,
       NS_ISTREAMCONVERTER_KEY "?from=text/ftp-dir-unix&to=application/http-index-format", 
-      nsFTPDirListingConv::Create
+      CreateNewFTPDirListingConv
     },
 
     { "FTPDirListingConverter", 
       NS_FTPDIRLISTINGCONVERTER_CID,
       NS_ISTREAMCONVERTER_KEY "?from=text/ftp-dir-nt&to=application/http-index-format", 
-      nsFTPDirListingConv::Create
+      CreateNewFTPDirListingConv
     },
     
     { "MultiMixedConverter", 
       NS_MULTIMIXEDCONVERTER_CID,
       NS_ISTREAMCONVERTER_KEY "?from=multipart/x-mixed-replace&to=*/*", 
-      nsMultiMixedConv::Create
+      CreateNewMultiMixedConvFactory
     },
 
     // There are servers that hand back "multipart/mixed" to
@@ -336,63 +517,63 @@ static nsModuleComponentInfo gNetModuleInfo[] = {
     { "MultiMixedConverter2",
       NS_MULTIMIXEDCONVERTER_CID,
       NS_ISTREAMCONVERTER_KEY "?from=multipart/mixed&to=*/*",
-      nsMultiMixedConv::Create
+      CreateNewMultiMixedConvFactory
     },
     { "Unknown Content-Type Decoder",
       NS_UNKNOWNDECODER_CID,
       NS_ISTREAMCONVERTER_KEY "?from=application/x-unknown-content-type&to=*/*",
-      nsUnknownDecoderConstructor
+      CreateNewUnknownDecoderFactory
     },
 
     { "HttpChunkConverter", 
       NS_HTTPCHUNKCONVERTER_CID,
       NS_ISTREAMCONVERTER_KEY "?from=chunked&to=unchunked",
-      nsHTTPChunkConvConstructor
+      CreateNewHTTPChunkConvFactory
     },
 
     { "HttpChunkConverter", 
       NS_HTTPCHUNKCONVERTER_CID,
       NS_ISTREAMCONVERTER_KEY "?from=unchunked&to=chunked",
-      nsHTTPChunkConvConstructor
+      CreateNewHTTPChunkConvFactory
     },
 
     { "HttpCompressConverter", 
       NS_HTTPCOMPRESSCONVERTER_CID,
       NS_ISTREAMCONVERTER_KEY "?from=gzip&to=uncompressed",
-      nsHTTPCompressConvConstructor
+      CreateNewHTTPCompressConvFactory
     },
 
     { "HttpCompressConverter", 
       NS_HTTPCOMPRESSCONVERTER_CID,
       NS_ISTREAMCONVERTER_KEY "?from=x-gzip&to=uncompressed",
-      nsHTTPCompressConvConstructor
+      CreateNewHTTPCompressConvFactory
     },
     { "HttpCompressConverter", 
       NS_HTTPCOMPRESSCONVERTER_CID,
       NS_ISTREAMCONVERTER_KEY "?from=compress&to=uncompressed",
-      nsHTTPCompressConvConstructor
+      CreateNewHTTPCompressConvFactory
     },
     { "HttpCompressConverter", 
       NS_HTTPCOMPRESSCONVERTER_CID,
       NS_ISTREAMCONVERTER_KEY "?from=x-compress&to=uncompressed",
-      nsHTTPCompressConvConstructor
+      CreateNewHTTPCompressConvFactory
     },
     { "HttpCompressConverter", 
       NS_HTTPCOMPRESSCONVERTER_CID,
       NS_ISTREAMCONVERTER_KEY "?from=deflate&to=uncompressed",
-      nsHTTPCompressConvConstructor
+      CreateNewHTTPCompressConvFactory
     },
     { "NSTXTToHTMLConverter",
       NS_NSTXTTOHTMLCONVERTER_CID,
       NS_ISTREAMCONVERTER_KEY "?from=text/plain&to=text/html",
-      nsTXTToHTMLConv::Create
+      CreateNewNSTXTToHTMLConvFactory
 	},
 	// This is not a real stream converter, it's just
 	// registering it's cid factory here.
 	{ "HACK-TXTToHTMLConverter", 
   	  MOZITXTTOHTMLCONV_CID,
 	  NS_ISTREAMCONVERTER_KEY, 
-	  nsTXTToHTMLConv::Create
+	  CreateNewTXTToHTMLConvFactory
     },
 
     // from netwerk/cache:

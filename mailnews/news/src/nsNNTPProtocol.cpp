@@ -801,7 +801,9 @@ NS_IMETHODIMP nsNNTPProtocol::AsyncOpen(nsIStreamListener *listener, nsISupports
         // folder sink?) We also need to set the transfer offset to the message offset
         if (fileChannel && NS_SUCCEEDED(rv))
         {
-//  dougt why?        fileChannel->SetLoadGroup(m_loadGroup);
+          // dougt why do we need to add this file transport to a loadgroup?? 
+          // fileChannel->SetLoadGroup(m_loadGroup);
+
           m_typeWanted = ARTICLE_WANTED;
           nsNntpCacheStreamListener * cacheListener = new nsNntpCacheStreamListener();
           NS_ADDREF(cacheListener);
@@ -865,7 +867,7 @@ NS_IMETHODIMP nsNNTPProtocol::AsyncOpen(nsIStreamListener *listener, nsISupports
         m_typeWanted = ARTICLE_WANTED;
         cacheListener->Init(m_channelListener, NS_STATIC_CAST(nsIChannel *, this), mailnewsUrl);
         nsCOMPtr<nsIRequest> request;
-        rv = cacheChannel->AsyncRead(cacheListener, m_channelContext, 0, -1, 0, getter_AddRefs(request));  // dougt full read now.  This maybe bad.
+        rv = cacheChannel->AsyncRead(cacheListener, m_channelContext, 0, -1, 0, getter_AddRefs(request));
         NS_RELEASE(cacheListener);
 
         MarkCurrentMsgRead();

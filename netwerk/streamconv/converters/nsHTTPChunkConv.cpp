@@ -423,5 +423,20 @@ nsHTTPChunkConv::Convert (
     return NS_ERROR_NOT_IMPLEMENTED;
 } 
 
+nsresult
+NS_NewHTTPChunkConv (nsHTTPChunkConv ** aHTTPChunkConv)
+{
+    NS_PRECONDITION(aHTTPChunkConv != nsnull, "null ptr");
 
+    if (! aHTTPChunkConv)
+        return NS_ERROR_NULL_POINTER;
+
+    *aHTTPChunkConv = new nsHTTPChunkConv ();
+
+    if (! *aHTTPChunkConv)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(*aHTTPChunkConv);
+    return NS_OK;
+}
 

@@ -540,3 +540,19 @@ nsMultiMixedConv::FindToken(char *aCursor, PRUint32 aLen) {
 
     return nsnull;
 }
+
+nsresult
+NS_NewMultiMixedConv(nsMultiMixedConv** aMultiMixedConv)
+{
+    NS_PRECONDITION(aMultiMixedConv != nsnull, "null ptr");
+    if (! aMultiMixedConv)
+        return NS_ERROR_NULL_POINTER;
+
+    *aMultiMixedConv = new nsMultiMixedConv();
+    if (! *aMultiMixedConv)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(*aMultiMixedConv);
+    return (*aMultiMixedConv)->Init();
+}
+

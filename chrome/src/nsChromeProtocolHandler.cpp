@@ -132,8 +132,9 @@ public:
 PRLogModuleInfo* nsCachedChromeChannel::gLog;
 #endif
 
-NS_IMPL_ISUPPORTS1(nsCachedChromeChannel, 
-                   nsIChannel);
+NS_IMPL_ISUPPORTS2(nsCachedChromeChannel, 
+                   nsIChannel, 
+                   nsIRequest);
 
 nsresult
 nsCachedChromeChannel::Create(nsIURI* aURI, nsIChannel** aResult)

@@ -1159,3 +1159,19 @@ mozTXTToHTMLConv::ScanHTML(const PRUnichar *text, PRUint32 whattodo,
   *_retval = outString.ToNewUnicode();
   return *_retval ? NS_OK : NS_ERROR_OUT_OF_MEMORY;
 }
+
+nsresult
+MOZ_NewTXTToHTMLConv(mozTXTToHTMLConv** aConv)
+{
+    NS_PRECONDITION(aConv != nsnull, "null ptr");
+    if (!aConv)
+      return NS_ERROR_NULL_POINTER;
+
+    *aConv = new mozTXTToHTMLConv();
+    if (!*aConv)
+      return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(*aConv);
+    //    return (*aConv)->Init();
+    return NS_OK;
+}

@@ -449,3 +449,23 @@ nsHTTPCompressConv::check_header (nsIInputStream *iStr, PRUint32 streamLen, nsre
     }
     return streamLen;
 }
+
+
+nsresult
+NS_NewHTTPCompressConv (nsHTTPCompressConv ** aHTTPCompressConv)
+{
+    NS_PRECONDITION(aHTTPCompressConv != nsnull, "null ptr");
+
+    if (! aHTTPCompressConv)
+        return NS_ERROR_NULL_POINTER;
+
+    *aHTTPCompressConv = new nsHTTPCompressConv ();
+
+    if (! *aHTTPCompressConv)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(*aHTTPCompressConv);
+    return NS_OK;
+}
+
+

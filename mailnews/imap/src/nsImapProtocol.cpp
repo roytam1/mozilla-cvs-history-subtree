@@ -6964,7 +6964,9 @@ NS_IMETHODIMP nsImapMockChannel::AsyncOpen(nsIStreamListener *listener, nsISuppo
       // folder sink?) We also need to set the transfer offset to the message offset
       if (fileChannel && NS_SUCCEEDED(rv))
       {
-          // dougt why? fileChannel->SetLoadGroup(m_loadGroup);
+          // dougt why do we need to add this file transport to a loadgroup?? 
+          // fileChannel->SetLoadGroup(m_loadGroup);
+        
         // force the url to remove its reference on the mock channel...this is to solve
         // a nasty reference counting problem...
         imapUrl->SetMockChannel(nsnull);
