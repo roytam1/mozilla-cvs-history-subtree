@@ -19,11 +19,11 @@
 #ifndef nsParseMailbox_H
 #define nsParseMailbox_H
 
+#include "nsIURI.h"
 #include "nsIMsgParseMailMsgState.h"
 #include "nsMsgKeyArray.h"
 #include "nsVoidArray.h"
 #include "nsIStreamListener.h"
-#include "nsITransport.h"
 #include "nsMsgLineBuffer.h"
 #include "nsIMsgHeaderParser.h"
 #include "nsIMsgDatabase.h"
@@ -168,25 +168,12 @@ public:
 	////////////////////////////////////////////////////////////////////////////////////////
 	// we suppport the nsIStreamListener interface 
 	////////////////////////////////////////////////////////////////////////////////////////
-
-	// mscott; I don't think we need to worry about this yet so I'll leave it stubbed out for now
-	NS_IMETHOD GetBindInfo(nsIURI* aURL, nsStreamBindingInfo* aInfo) { return NS_OK;} ;
 	
-	// Whenever data arrives from the connection, core netlib notifies the protocol by calling
-	// OnDataAvailable. We then read and process the incoming data from the input stream. 
-	NS_IMETHOD OnDataAvailable(nsIURI* aURL, nsIInputStream *aIStream, PRUint32 aLength);
-
-	NS_IMETHOD OnStartBinding(nsIURI* aURL, const char *aContentType);
-
-	// stop binding is a "notification" informing us that the stream associated with aURL is going away. 
-	NS_IMETHOD OnStopBinding(nsIURI* aURL, nsresult aStatus, const PRUnichar* aMsg);
-
-	// Ideally, a protocol should only have to support the stream listener methods covered above. 
-	// However, we don't have this nsIStreamListenerLite interface defined yet. Until then, we are using
-	// nsIStreamListener so we need to add stubs for the heavy weight stuff we don't want to use.
-
-	NS_IMETHOD OnProgress(nsIURI* aURL, PRUint32 aProgress, PRUint32 aProgressMax) { return NS_OK;}
-	NS_IMETHOD OnStatus(nsIURI* aURL, const PRUnichar* aMsg) { return NS_OK;}
+	NS_IMETHOD OnDataAvailable(nsISupports *ctxt, nsIInputStream *inStr, PRUint32 sourceOffset, PRUint32 count);
+	NS_IMETHOD OnStartBinding(nsISupports *ctxt);
+	NS_IMETHOD OnStopBinding(nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg);
+	NS_IMETHOD OnStartRequest(nsISupports *ctxt) { return NS_OK;}
+	NS_IMETHOD OnStopRequest(nsISupports *ctxt, nsresult status, const PRUnichar *errorMsg) { return NS_OK;}
 
 	void			SetDB (nsIMsgDatabase *mailDB) {m_mailDB = dont_QueryInterface(mailDB); }
 	char			*GetMailboxName() {return m_mailboxName;}
