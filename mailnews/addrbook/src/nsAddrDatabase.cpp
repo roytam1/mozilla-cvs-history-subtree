@@ -3353,3 +3353,14 @@ NS_IMETHODIMP nsAddrDatabase::RemoveExtraCardsInCab(PRUint32 cardTotal, PRUint32
     return NS_OK;
 }
 
+NS_IMETHODIMP nsAddrDatabase::CreateMailListAndAddToDBWithKey(nsIAbDirectory *newList, PRBool notify, PRUint32 *key)
+{
+  NS_ENSURE_ARG_POINTER(key);
+
+  *key = 0;
+  nsresult rv;
+  rv = CreateMailListAndAddToDB(newList, notify);
+  if (NS_SUCCEEDED(rv))
+    *key = m_LastRecordKey;
+  return rv;
+}

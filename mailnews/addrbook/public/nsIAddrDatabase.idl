@@ -134,6 +134,7 @@ interface nsIAddrDatabase : nsIAddrDBAnnouncer {
 	void createNewCardAndAddToDBWithKey(in nsIAbCard newCard, in boolean aNotify, out unsigned long key);	
 	void createNewListCardAndAddToDB(in nsIAbDirectory list, in unsigned long listRowID, in nsIAbCard newCard, in boolean aNotify);
 	void createMailListAndAddToDB(in nsIAbDirectory newList, in boolean aNotify);
+  void createMailListAndAddToDBWithKey(in nsIAbDirectory newList, in boolean aNotify, out PRUint32 key);
 	nsIEnumerator enumerateCards(in nsIAbDirectory directory);
 	nsIEnumerator enumerateListAddresses(in nsIAbDirectory directory);
 	void getMailingListsFromDB(in nsIAbDirectory parentDir);
