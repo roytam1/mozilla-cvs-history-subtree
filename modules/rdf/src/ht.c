@@ -28,6 +28,7 @@
 #include "ht.h"
 #include "mcf.h"
 #include "scook.h"
+#include "utils.h"
 #include "rdfparse.h"
 
 
