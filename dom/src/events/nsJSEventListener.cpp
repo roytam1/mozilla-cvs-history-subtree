@@ -77,7 +77,6 @@ nsresult nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
   // the event handler. Might need to get one from the JS thread context
   // stack.
   JSContext* cx = (JSContext*)mContext->GetNativeContext();
-  nsresult result = NS_OK;
 
   if (!mEventName) {
     if (NS_OK != aEvent->GetType(eventString)) {
@@ -104,7 +103,6 @@ nsresult nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
   // root
   nsCOMPtr<nsIXPConnectJSObjectHolder> wrapper;
 
-  // XXX: Don't use the global object!
   rv = xpc->WrapNative(cx, ::JS_GetGlobalObject(cx),
                        mObject, NS_GET_IID(nsISupports),
                        getter_AddRefs(wrapper));
@@ -125,7 +123,7 @@ nsresult nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
     return NS_OK;
   }
 
-  rv = xpc->WrapNative(cx, obj, aEvent, NS_GET_IID(nsISupports),
+  rv = xpc->WrapNative(cx, obj, aEvent, NS_GET_IID(nsIDOMEvent),
                        getter_AddRefs(wrapper));
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -135,17 +133,18 @@ nsresult nsJSEventListener::HandleEvent(nsIDOMEvent* aEvent)
 
   argv[0] = OBJECT_TO_JSVAL(eventObj);
   PRBool jsBoolResult;
-  PRBool returnResult = mReturnResult == nsReturnResult_eReverseReturnResult ? PR_TRUE : PR_FALSE;
-  result = mContext->CallEventHandler(obj, (void*) JSVAL_TO_OBJECT(funval), 
-                                      1, argv, &jsBoolResult, returnResult);
-  if (NS_FAILED(result)) {
-    return result;
+  PRBool returnResult = (mReturnResult == nsReturnResult_eReverseReturnResult);
+
+  rv = mContext->CallEventHandler(obj, JSVAL_TO_OBJECT(funval), 1, argv,
+                                  &jsBoolResult, returnResult);
+  if (NS_FAILED(rv)) {
+    return rv;
   }
 
   if (!jsBoolResult) 
     aEvent->PreventDefault();
 
-  return result;
+  return rv;
 }
 
 NS_IMETHODIMP 
