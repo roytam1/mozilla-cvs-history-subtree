@@ -104,6 +104,7 @@ public:
                             nsIDOMEvent** aDOMEvent, PRUint32 aFlags,
                             nsEventStatus* aEventStatus);
   NS_IMETHOD_(JSObject *) GetGlobalJSObject();
+  NS_IMETHOD OnFinalize(JSObject *aJSObject);
 
   // nsIScriptObjectPrincipal
   NS_IMETHOD GetPrincipal(nsIPrincipal **prin);

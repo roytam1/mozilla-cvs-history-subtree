@@ -1030,32 +1030,28 @@ nsJSContext::InitContext(nsIScriptGlobalObject *aGlobalObject)
   mIsInitialized = PR_FALSE;
 
   nsCOMPtr<nsIXPConnect> xpc = do_GetService(nsIXPConnect::GetCID(), &rv);
-  if (NS_FAILED(rv))
-    return rv;
-
-  nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
-  rv = xpc->InitClassesWithNewWrappedGlobal(mContext, aGlobalObject,
-                                            NS_GET_IID(nsISupports),
-                                            PR_FALSE, getter_AddRefs(holder));
   NS_ENSURE_SUCCESS(rv, rv);
 
-#if 0
-  // not needed. We asked xpconnect to do this for us.
-  // XXX when we get lazy resolve working here we can turn off the
-  // flag in the call to InitClassesWithNewWrappedGlobal above.
+  JSObject *global = ::JS_GetGlobalObject(mContext);
 
-  if (!JS_InitStandardClasses(mContext, global) 
+  // If there's already a global object in mContext we won't tell
+  // XPConnect to wrap aGlobalObject since it's already wrapped.
 
-      /*
-        ||
-        !JS_DefineFunctions(mContext, global, gGlobalFun)
+  if (!global) {
+    nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
 
-      */
-
-      ) {
-    return NS_ERROR_FAILURE;
+    rv = xpc->InitClassesWithNewWrappedGlobal(mContext, aGlobalObject,
+                                              NS_GET_IID(nsISupports),
+                                              PR_FALSE, getter_AddRefs(holder));
+  } else {
+    // If there's already a global object in mContext we're called
+    // after ::JS_ClearScope() was called. We'll haveto tell XPConnect
+    // to re-initialize the global object to do things like define the
+    // Components object on the global again.
+    rv = xpc->InitClasses(mContext, global);
   }
-#endif
+
+  NS_ENSURE_SUCCESS(rv, rv);
 
   rv = InitClasses(); // this will complete global object initialization
   NS_ENSURE_SUCCESS(rv, rv);
@@ -1275,16 +1271,13 @@ nsJSContext::InitClasses()
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Initialize the options object and set default options in mContext
-  if (NS_SUCCEEDED(rv)) {
-    JSObject *optionsObj = ::JS_DefineObject(mContext, globalObj, "_options",
-                                             &OptionsClass, nsnull, 0);
-    if (optionsObj &&
-        ::JS_DefineProperties(mContext, optionsObj, OptionsProperties)) {
-      ::JS_SetOptions(mContext, mDefaultJSOptions);
-    }
-    else {
-      rv = NS_ERROR_FAILURE;
-    }
+  JSObject *optionsObj = ::JS_DefineObject(mContext, globalObj, "_options",
+                                           &OptionsClass, nsnull, 0);
+  if (optionsObj &&
+      ::JS_DefineProperties(mContext, optionsObj, OptionsProperties)) {
+    ::JS_SetOptions(mContext, mDefaultJSOptions);
+  } else {
+    rv = NS_ERROR_FAILURE;
   }
 
 #ifdef NS_TRACE_MALLOC

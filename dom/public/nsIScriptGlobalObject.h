@@ -80,6 +80,12 @@ public:
                             nsEventStatus* aEventStatus)=0;
 
   NS_IMETHOD_(JSObject *) GetGlobalJSObject() = 0;
+
+  /**
+   * Called when the global JSObject is finalized
+   */
+
+  NS_IMETHOD OnFinalize(JSObject *aJSObject) = 0;
 };
 
 #endif

@@ -372,7 +372,8 @@ nsDOMClassInfo::Init()
                            WANT_GETPROPERTY |
                            WANT_SETPROPERTY |
                            WANT_NEWRESOLVE |
-                           WANT_PRECREATE);
+                           WANT_PRECREATE |
+                           WANT_FINALIZE);
   NS_DEFINE_CLASSINFO_DATA(Location, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Plugin, nsPluginSH::Create,
@@ -1016,24 +1017,19 @@ nsWindowSH::PreCreate(nsISupports *nativeObj, JSContext * cx,
   nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(nativeObj));
   NS_WARN_IF_FALSE(sgo, "nativeObj not a node!");
 
-  nsCOMPtr<nsIScriptContext> sctx;
+  if (sgo) {
+    *parentObj = sgo->GetGlobalJSObject();
 
-  sgo->GetContext(getter_AddRefs(sctx));
-
-  if (sctx) {
-    // Use the context from nativeObj to find the global JSObject on
-    // that context.
-
-    cx = (JSContext *)sctx->GetNativeContext();
-
-    *parentObj = ::JS_GetGlobalObject(cx);
-  } else {
-    // We're most likely being called when the global object is
-    // created, at that point we won't get a nsIScriptContext but we
-    // know we're called on the correct context so we return globalObj
-
-    *parentObj = globalObj;
+    if (*parentObj) {
+      return NS_OK;
+    }
   }
+
+  // We're most likely being called when the global object is
+  // created, at that point we won't get a nsIScriptContext but we
+  // know we're called on the correct context so we return globalObj
+
+  *parentObj = globalObj;
 
   return NS_OK;
 }
@@ -1432,6 +1428,20 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   }
 
   return NS_OK;
+}
+
+NS_IMETHODIMP
+nsWindowSH::Finalize(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
+                     JSObject *obj)
+{
+  nsCOMPtr<nsISupports> native;
+  wrapper->GetNative(getter_AddRefs(native));
+  NS_ENSURE_TRUE(native, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsIScriptGlobalObject> sgo(do_QueryInterface(native));
+  NS_ENSURE_TRUE(sgo, NS_ERROR_UNEXPECTED);
+
+  return sgo->OnFinalize(obj);
 }
 
 

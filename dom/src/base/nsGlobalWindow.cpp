@@ -166,6 +166,8 @@ GlobalWindowImpl::~GlobalWindowImpl()
     NS_IF_RELEASE(sXPConnect);
   }
 
+  mDocument = nsnull;           // Forces Release
+
   CleanUp();
 }
 
@@ -182,8 +184,6 @@ GlobalWindowImpl::ShutDown()
 
 void GlobalWindowImpl::CleanUp()
 {
-  mContext = nsnull;            // Forces Release
-  mDocument = nsnull;           // Forces Release
   NS_IF_RELEASE(mNavigator);
   NS_IF_RELEASE(mScreen);
   NS_IF_RELEASE(mHistory);
@@ -197,6 +197,7 @@ void GlobalWindowImpl::CleanUp()
   NS_IF_RELEASE(mFrames);
   mOpener = nsnull;             // Forces Release
   mControllers = nsnull;        // Forces Release
+  mContext = nsnull;            // Forces Release
 }
 
 //*****************************************************************************
@@ -643,6 +644,18 @@ GlobalWindowImpl::GetGlobalJSObject()
   return mJSObject;
 }
 
+NS_IMETHODIMP
+GlobalWindowImpl::OnFinalize(JSObject *aJSObject)
+{
+  if (aJSObject == mJSObject) {
+    mJSObject = nsnull;
+  } else {
+    NS_ERROR("Huh? XPConnect created more than one wrapper for this global!");
+  }
+
+  return NS_OK;
+}
+
 
 //*****************************************************************************
 // GlobalWindowImpl::nsIScriptObjectPrincipal
@@ -1042,7 +1055,11 @@ NS_IMETHODIMP GlobalWindowImpl::GetOpener(nsIDOMWindowInternal** aOpener)
 
 NS_IMETHODIMP GlobalWindowImpl::SetOpener(nsIDOMWindowInternal* aOpener)
 {
+  // window.opener is only settable to null...
+  NS_ENSURE_TRUE(!aOpener, NS_ERROR_DOM_NOT_SUPPORTED_ERR);
+
   mOpener = aOpener;
+
   return NS_OK;
 }
 
@@ -2833,6 +2850,8 @@ NS_IMETHODIMP GlobalWindowImpl::GetLocation(nsIDOMLocation ** aLocation)
 NS_IMETHODIMP GlobalWindowImpl::GetObjectProperty(const PRUnichar *aProperty,
                                                   nsISupports ** aObject)
 {
+  NS_ENSURE_TRUE(mJSObject, NS_ERROR_NOT_AVAILABLE);
+
   // Get JSContext from stack.
   nsCOMPtr<nsIThreadJSContextStack>
     stack(do_GetService("@mozilla.org/js/xpc/ContextStack;1"));
@@ -3324,7 +3343,7 @@ PRBool GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
   nsresult rv;
   PRUint32 firingDepth = mTimeoutFiringDepth + 1;
 
-  if (nsnull == mContext) {
+  if (!mContext) {
     return PR_TRUE;
   }
 
@@ -3498,7 +3517,7 @@ PRBool GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
       /* Running a timeout can cause another timeout to be deleted,
          so we need to reset the pointer to the following timeout. */
       next = timeout->next;
-      if (nsnull == prev) {
+      if (!prev) {
         mTimeouts = next;
       }
       else {
@@ -3530,7 +3549,7 @@ PRBool GlobalWindowImpl::RunTimeout(nsTimeoutImpl *aTimeout)
   }
 
   /* Take the dummy timeout off the head of the list */
-  if (nsnull == prev) {
+  if (!prev) {
     mTimeouts = dummy_timeout.next;
   }
   else {

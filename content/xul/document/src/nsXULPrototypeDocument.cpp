@@ -78,6 +78,7 @@ public:
                               PRUint32 aFlags,
                               nsEventStatus* aEventStatus);
     NS_IMETHOD_(JSObject *) GetGlobalJSObject();
+    NS_IMETHOD OnFinalize(JSObject *aJSObject);
 
     // nsIScriptObjectPrincipal methods
     NS_IMETHOD GetPrincipal(nsIPrincipal** aPrincipal);
@@ -524,7 +525,7 @@ nsXULPDGlobalObject::HandleDOMEvent(nsIPresContext* aPresContext,
 }
 
 
-JSObject *
+NS_IMETHODIMP_(JSObject *)
 nsXULPDGlobalObject::GetGlobalJSObject()
 {
     // The prototype document has its own special secret script object
@@ -540,6 +541,14 @@ nsXULPDGlobalObject::GetGlobalJSObject()
 
     return ::JS_GetGlobalObject(cx);
 }
+
+
+NS_IMETHODIMP
+nsXULPDGlobalObject::OnFinalize(JSObject *aJSObject)
+{
+    return NS_OK;
+}
+
 
 //----------------------------------------------------------------------
 //
