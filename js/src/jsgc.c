@@ -581,25 +581,27 @@ gc_hash_root(const void *key)
 JS_STATIC_DLL_CALLBACK(intN)
 gc_root_marker(JSHashEntry *he, intN i, void *arg)
 {
-    void **rp = (void **)he->key;
+    jsval *rp = (jsval*)he->key;
+    jsval v = *rp;
 
-    if (*rp) {
+    /* Ignore null object and scalar values. */
+    if (v && JSVAL_IS_GCTHING(v)) {
+        
 #ifdef DEBUG
-	JSArena *a;
-	JSRuntime *rt = (JSRuntime *)arg;
-    JSBool root_points_to_gcArenaPool = JS_FALSE;
-
-    if (rp && *rp) {
+        JSArena *a;
+        JSRuntime *rt = (JSRuntime *)arg;
+        JSBool root_points_to_gcArenaPool = JS_FALSE;
+        
         for (a = rt->gcArenaPool.first.next; a; a = a->next) {
-            if (*rp >= (void *)a->base && *rp <= (void *)a->avail) {
+            if (JSVAL_TO_GCTHING(v) >= (void*)a->base && JSVAL_TO_GCTHING(v) <= (void*)a->avail) {
                 root_points_to_gcArenaPool = JS_TRUE;
                 break;
             }
         }
         JS_ASSERT(root_points_to_gcArenaPool);
-    }
 #endif
-	GC_MARK(arg, *rp, he->value ? he->value : "root", NULL);
+
+        GC_MARK(arg, JSVAL_TO_GCTHING(v), he->value ? he->value : "root", NULL);
     }
     return HT_ENUMERATE_NEXT;
 }
