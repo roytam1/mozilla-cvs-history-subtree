@@ -27,6 +27,8 @@ CPPSRCS			= \
 			  nsHttpUrl.cpp       \
 			  nsStubContext.cpp   \
 			  nsNetStubs.cpp      \
+			  nsNetFE.cpp         \
+			  nsNetIDs.cpp        \
 			  $(NULL)
 
 REQUIRES		= raptor js dbm nspr security pref xpcom util img \
