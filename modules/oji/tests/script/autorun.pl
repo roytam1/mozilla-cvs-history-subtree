@@ -424,6 +424,7 @@ sub RunTestCaseUnix {
 title;
 
 $curdir = cwd();           
+$ret=`mkdir -p $curdir/log`;
 
 # Prepare file names
 $LOGFILE = "$curdir/log/BWTestRun.log";
