@@ -533,6 +533,19 @@ struct GtkLayoutChild {
 // Scroll the bits of a window
 //
 //-------------------------------------------------------------------------
+
+#ifdef USE_SUPERWIN
+
+NS_IMETHODIMP nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
+{
+  if (mSuperWin) {
+    gdk_superwin_scroll(mSuperWin, aDx, aDy);
+  }
+  return NS_OK;
+}
+
+#else
+
 NS_IMETHODIMP nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
 {
 #ifdef OH_I_LOVE_SCROLLING_SMOOTHLY
@@ -685,7 +698,7 @@ NS_IMETHODIMP nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
   return NS_OK;
 }
 
-
+#endif /* USE_SUPERWIN */
 
 NS_IMETHODIMP nsWindow::ScrollRect(nsRect &aSrcRect, PRInt32 aDx, PRInt32 aDy)
 {
@@ -1263,8 +1276,7 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
       aWidth = 1;
       aHeight = 1;
       mIsTooSmall = PR_TRUE;
-      gtk_widget_hide(mWidget);
-      gtk_widget_unmap(mWidget);
+      gdk_window_hide(mSuperWin->shell_window);
     }
   }
   else
