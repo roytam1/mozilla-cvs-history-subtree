@@ -2101,7 +2101,11 @@ lo_update_embedded_object_window(CL_Layer *layer)
 	FE_DisplayFormElement(context, FE_VIEW, &tptr->lo_form);
 	break;
     case LO_EMBED:
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	FE_DisplayEmbed(context, FE_VIEW, &tptr->lo_embed);
+#endif
 	break;
 #ifdef JAVA
     case LO_JAVA:
@@ -2405,7 +2409,11 @@ lo_embed_painter_func(CL_Drawable *drawable, CL_Layer *layer,
     embed = (LO_EmbedStruct*)closure->element;
     
     FE_SetDrawable(closure->context, drawable);
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
     FE_DisplayEmbed(closure->context, FE_VIEW, embed);
+#endif
     FE_SetDrawable(closure->context, NULL);
 }
 

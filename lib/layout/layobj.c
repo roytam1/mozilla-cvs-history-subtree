@@ -174,6 +174,9 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 			 * It's a COM class ID, so make sure we have an
 			 * appropriate plug-in to handle ActiveX controls.
 			 */
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 			if (NPL_FindPluginEnabledForType(APPLICATION_OLEOBJECT) != NULL)
 			{
 				if (type == LO_NONE)
@@ -181,6 +184,7 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 				else if (type != LO_EMBED)
 					type = LO_UNKNOWN;
 			}
+#endif
 		}
 		else if ( (XP_STRNCASECMP(str, "java:", 5) == 0) ||
                   (XP_STRNCASECMP(str, "javaprogram:", 12) == 0) ||
@@ -219,6 +223,9 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 	if (buff != NULL)
 	{
 		PA_LOCK(str, char *, buff);
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 		if (NPL_FindPluginEnabledForType(str) != NULL)
 		{
 			/* It's a plug-in */
@@ -227,7 +234,7 @@ lo_FormatObject(MWContext* context, lo_DocState* state, PA_Tag* tag)
 			else if (type != LO_EMBED)
 				type = LO_UNKNOWN;
 		}
-
+#endif
 		/*  
 			Adding a check for applets that handle mimetypes.
 			The pref is stored based on the particular mimetype.
@@ -970,6 +977,9 @@ LO_NewObjectStream(FO_Present_Types format_out, void* type,
 	
 	if (top != NULL && top->object != NULL)
 	{	
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 		if (NPL_FindPluginEnabledForType(urls->content_type) != NULL)
 		{
 			/* bing: Internal reference to libplug! */
@@ -1002,6 +1012,7 @@ LO_NewObjectStream(FO_Present_Types format_out, void* type,
 
 			lo_ClearObjectBlock(top->context, top->object);
 		}
+#endif
 	}
 	
 	return stream;

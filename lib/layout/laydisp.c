@@ -295,7 +295,11 @@ lo_DisplayEmbed(MWContext *context, LO_EmbedStruct *embed)
 	CL_Layer *layer;
 
 	if (! context->compositor) {
+#ifdef MOZ_NGLAYOUT
+  XP_ASSERT(0);
+#else
 	    FE_DisplayEmbed(context, FE_VIEW, embed);
+#endif
 	    return;
 	}
 

@@ -500,10 +500,14 @@ lo_ScrapeElement(MWContext *context, LO_Element *element)
 			 * and pass it back if/when we come back here.
 			 * Otherwise, save the NULL.
 			 */
+#ifdef MOZ_NGLAYOUT
+      XP_ASSERT(0);
+#else
 			lo_AddEmbedData(context,
 					element->lo_embed.session_data,
 					NPL_DeleteSessionData,
 					element->lo_embed.embed_index);
+#endif
 			element->lo_embed.session_data = NULL;
 			break;
 #ifdef JAVA
