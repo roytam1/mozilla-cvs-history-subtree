@@ -262,11 +262,9 @@ nsComposerCommandsUpdater::CallUpdateCommands(const nsAString& aCommandGroup)
     nsCOMPtr<nsIScriptGlobalObject> scriptGlobalObject;
     theDoc->GetScriptGlobalObject(getter_AddRefs(scriptGlobalObject));
 
-    if (scriptGlobalObject) {
-        nsCOMPtr<nsIDocShell>   docShell;
-        scriptGlobalObject->GetDocShell(getter_AddRefs(docShell));
-        mDocShell = docShell.get();     
-    }
+    nsCOMPtr<nsIDocShell>   docShell;
+    scriptGlobalObject->GetDocShell(getter_AddRefs(docShell));
+    mDocShell = docShell.get();     
   }
 
   if (!mDocShell) return NS_ERROR_FAILURE;
@@ -275,10 +273,6 @@ nsComposerCommandsUpdater::CallUpdateCommands(const nsAString& aCommandGroup)
   nsCOMPtr<nsPICommandUpdater>  commandUpdater = do_QueryInterface(commandManager);
   if (!commandUpdater) return NS_ERROR_FAILURE;
   
-  commandUpdater->CommandStatusChanged("cmd_bold");
-  commandUpdater->CommandStatusChanged("cmd_italic");
-  commandUpdater->CommandStatusChanged("cmd_underline");
-
   // this hardcoded list of commands in temporary. This code should
   // use nsICommandGroup.
   if (aCommandGroup.Equals(NS_LITERAL_STRING("undo")))
@@ -307,7 +301,7 @@ nsComposerCommandsUpdater::CallUpdateCommands(const nsAString& aCommandGroup)
     commandUpdater->CommandStatusChanged("cmd_code");
     commandUpdater->CommandStatusChanged("cmd_samp");
     commandUpdater->CommandStatusChanged("cmd_var");
-
+  
     commandUpdater->CommandStatusChanged("cmd_increaseFont");
     commandUpdater->CommandStatusChanged("cmd_decreaseFont");
 
@@ -321,7 +315,7 @@ nsComposerCommandsUpdater::CallUpdateCommands(const nsAString& aCommandGroup)
   {
     // save commands (none in C++)
   }
-    
+  
   return NS_OK;  
 }
 
