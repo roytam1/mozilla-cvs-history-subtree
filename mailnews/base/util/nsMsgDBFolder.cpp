@@ -1136,9 +1136,9 @@ nsMsgDBFolder::MarkAllMessagesRead(void)
   
   if(NS_SUCCEEDED(rv))
   {
-    EnableNotifications(allMessageCountNotifications, PR_FALSE);
+    EnableNotifications(allMessageCountNotifications, PR_FALSE, PR_TRUE /*dbBatching*/);
     rv = mDatabase->MarkAllRead(nsnull);
-    EnableNotifications(allMessageCountNotifications, PR_TRUE);
+    EnableNotifications(allMessageCountNotifications, PR_TRUE, PR_TRUE /*dbBatching*/);
     mDatabase->SetSummaryValid(PR_TRUE);
     mDatabase->Commit(nsMsgDBCommitType::kLargeCommit);
   }
