@@ -45,7 +45,7 @@ CPPSRCS		= \
 
 EXPORTS		:= $(addprefix $(srcdir)/, $(EXPORTS))
 
-CFLAGS		+= -DUSE_NSREG -D__STDC__
+DEFINES		+= -DUSE_NSREG -D__STDC__ -DTARGET_OS=\"$(TARGET_OS)\"
 
 REQUIRES	= $(MODULE) libxpcom 
 
