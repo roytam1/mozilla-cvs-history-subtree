@@ -39,7 +39,7 @@ static int do_abandon( LDAP *ld, int origid, int msgid,
     LDAPControl **serverctrls, LDAPControl **clientctrls );
 
 /*
- * ldap_abandon - perform an ldap (and X.500) abandon operation. Parameters:
+ * ldap_abandon - perform an ldap abandon operation. Parameters:
  *
  *	ld		LDAP descriptor
  *	msgid		The message id of the operation to abandon
@@ -230,7 +230,8 @@ do_abandon( LDAP *ld, int origid, int msgid, LDAPControl **serverctrls,
 
 	if ( lr != NULL ) {
 		if ( sendabandon ) {
-			nsldapi_free_connection( ld, lr->lr_conn, 0, 1 );
+			nsldapi_free_connection( ld, lr->lr_conn, NULL, NULL,
+			    0, 1 );
 		}
 		if ( origid == msgid ) {
 			nsldapi_free_request( ld, lr, 0 );
