@@ -156,6 +156,9 @@
       <field name="mContextTab">
         null
       </field>
+      <field name="mModalDialogShowing">
+        false
+      </field>
       
       <method name="getBrowserAtIndex">
         <parameter name="aIndex"/>
@@ -1582,6 +1585,9 @@
                 onget="return this.mCurrentBrowser.userTypedValue;"
                 onset="return this.mCurrentBrowser.userTypedValue = val;"/>
 
+      <property name="forceSyncURLBarUpdate"
+                onget="return this.mModalDialogShowing;"/>
+
       <constructor>
         <![CDATA[
           this.mCurrentBrowser = this.getBrowserAtIndex(0);
@@ -1633,6 +1639,32 @@
               break;
             }
           }
+        ]]>
+      </handler>
+      <handler event="DOMWillOpenModalDialog">
+        <![CDATA[
+          if (!event.isTrusted)
+            return;
+
+          // We're about to open a modal dialog, make sure the opening
+          // tab is brought to the front.
+
+          for (var i = 0; i < browsers.length; ++i) {
+            if (this.getBrowserAtIndex(i).contentWindow == event.target) {
+              this.mModalDialogShowing = true;
+              this.selectedTab = this.mTabContainer.childNodes[i];
+
+              break;
+            }
+          }
+        ]]>
+      </handler>
+      <handler event="DOMModalDialogClosed">
+        <![CDATA[
+          if (!event.isTrusted)
+            return;
+
+          this.mModalDialogShowing = false;
         ]]>
       </handler>
     </handlers>
