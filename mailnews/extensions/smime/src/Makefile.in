@@ -64,7 +64,7 @@ REQUIRES	= xpcom \
 		  mimetype \
 		  windowwatcher \
 		  pipnss \
-                  msgcompo \
+                  msgcompose \
 		  $(NULL)
 
 CPPSRCS		= \
@@ -84,3 +84,5 @@ ifeq ($(OS_ARCH), Linux)
 DEFINES		+= -D_BSD_SOURCE
 endif
 
+install:: ./smime-service.js
+	$(INSTALL) $< $(DIST)/bin/components
