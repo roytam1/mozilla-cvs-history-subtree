@@ -203,7 +203,7 @@ MBool String::isEqual(const String& aData) const
   if (mLength != aData.mLength)
     return MB_FALSE;
 
-  return (memcmp(mBuffer, aData.mBuffer[compLoop], mLength) == 0);
+  return (memcmp(mBuffer, aData.mBuffer, mLength) == 0);
 }
 
 MBool String::isEqualIgnoreCase(const String& aData) const
