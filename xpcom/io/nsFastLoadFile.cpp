@@ -602,8 +602,11 @@ nsFastLoadFileReader::Close()
 
         entry->mObject = nsnull;
     }
-    NS_ASSERTION(strongTotal == 0, "failed to deserialize all strong refs!");
-    NS_ASSERTION(weakTotal == 0, "failed to deserialize all weak refs!");
+
+    if (strongTotal != 0)
+        NS_WARNING("failed to deserialize all strong refs from FastLoad file");
+    if (weakTotal != 0)
+        NS_WARNING("failed to deserialize all weak refs from FastLoad file");
 
     return mInputStream->Close();
 }
