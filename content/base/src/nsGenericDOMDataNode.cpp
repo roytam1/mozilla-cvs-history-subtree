@@ -210,6 +210,17 @@ nsGenericDOMDataNode::GetNamespaceURI(nsAWritableString& aNamespaceURI)
   return NS_OK;
 }
 
+NS_IMETHODIMP_(PRBool)
+nsGenericDOMDataNode::IsAnonymous() const
+{
+  return PR_FALSE;
+}
+
+NS_IMETHODIMP_(void)
+nsGenericDOMDataNode::SetAnonymous(PRBool aAnonymous)
+{
+}
+
 nsresult
 nsGenericDOMDataNode::GetPrefix(nsAWritableString& aPrefix)
 {

@@ -146,7 +146,9 @@ struct nsGenericDOMDataNode {
   nsresult SetDocument(nsIDocument* aDocument, PRBool aDeep, PRBool aCompileEventHandlers);
   nsresult GetParent(nsIContent*& aResult) const;
   nsresult SetParent(nsIContent* aParent);
-  nsresult GetNameSpaceID(PRInt32& aID) const {
+  NS_IMETHOD_(PRBool) IsAnonymous() const;
+  NS_IMETHOD_(void) SetAnonymous(PRBool aAnonymous);
+   nsresult GetNameSpaceID(PRInt32& aID) const {
     aID = kNameSpaceID_None;
     return NS_OK;
   }
@@ -423,6 +425,13 @@ struct nsGenericDOMDataNode {
   }                                                                        \
   NS_IMETHOD SetDocument(nsIDocument* aDocument, PRBool aDeep, PRBool aCompileEventHandlers) {           \
     return _g.SetDocument(aDocument, aDeep, aCompileEventHandlers);                               \
+  }                                                                        \
+  NS_IMETHOD_(PRBool) IsAnonymous() const {                                \
+    nsCOMPtr<nsIContent> parent;                                           \
+    GetParent(*getter_AddRefs(parent));                                    \
+    return parent && parent->IsAnonymous();                                \
+  }                                                                        \
+  NS_IMETHOD_(void) SetAnonymous(PRBool aIsAnonymous) {                    \
   }                                                                        \
   NS_IMETHOD GetParent(nsIContent*& aResult) const {                       \
     return _g.GetParent(aResult);                                          \

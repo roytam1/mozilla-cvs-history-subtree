@@ -64,6 +64,7 @@
 #include "nsISecurityCheckedComponent.h"
 #include "nsIPrefBranchInternal.h"
 #include "nsIJSRuntimeService.h"
+#include "nsIContent.h"
 
 static NS_DEFINE_IID(kIIOServiceIID, NS_IIOSERVICE_IID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
@@ -120,6 +121,18 @@ nsScriptSecurityManager::GetCurrentContextQuick()
 /////////////////////////////
 // nsScriptSecurityManager //
 /////////////////////////////
+
+static inline PRBool
+ShouldCheckAnonymous(nsIClassInfo* aClassInfo)
+{
+    if (!aClassInfo)
+        return PR_FALSE;
+
+    PRUint32 classFlags;
+    nsresult rv = aClassInfo->GetFlags(&classFlags);
+
+    return NS_SUCCEEDED(rv) && (classFlags & nsIClassInfo::CHECK_ANONYMOUS);
+}
 
 ////////////////////////////////////
 // Methods implementing ISupports //
@@ -432,7 +445,16 @@ nsScriptSecurityManager::CheckPropertyAccessImpl(PRUint32 aAction,
         rv = NS_ERROR_DOM_SECURITY_ERR;
     }
 
-    if NS_SUCCEEDED(rv)
+    if (NS_SUCCEEDED(rv) && ShouldCheckAnonymous(aClassInfo))
+    {
+        // No access to anonymous content from the web!  (bug 164086)
+        nsCOMPtr<nsIContent> content(do_QueryInterface(aObj));
+        if (content && content->IsAnonymous()) {
+            rv = NS_ERROR_DOM_SECURITY_ERR;
+        }
+    }
+
+    if (NS_SUCCEEDED(rv))
     {
 #ifdef DEBUG_mstoltz
     printf(" GRANTED.\n");

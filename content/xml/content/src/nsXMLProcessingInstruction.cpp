@@ -146,6 +146,11 @@ public:
     UpdateStyleSheet(PR_TRUE, oldDoc);
     return rv;
   }
+  NS_IMETHOD_(PRBool) IsAnonymous() const {
+    return PR_FALSE;
+  }
+  NS_IMETHOD_(void) SetAnonymous(PRBool aIsAnonymous) {
+  }
   NS_IMETHOD GetParent(nsIContent*& aResult) const {
     return mInner.GetParent(aResult);
   }

@@ -62,6 +62,13 @@ public:
   NS_IMETHOD SetDocument(nsIDocument* aDocument, PRBool aDeep, PRBool aCompileEventHandlers) {
     return mInner.SetDocument(aDocument, aDeep, aCompileEventHandlers);
   }
+  NS_IMETHOD_(PRBool) IsAnonymous() const {
+    nsCOMPtr<nsIContent> parent;
+    GetParent(*getter_AddRefs(parent));
+    return parent && parent->IsAnonymous();
+  }
+  NS_IMETHOD_(void) SetAnonymous(PRBool aIsAnonymous) {
+  }
   NS_IMETHOD GetParent(nsIContent*& aResult) const {
     return mInner.GetParent(aResult);
   }
