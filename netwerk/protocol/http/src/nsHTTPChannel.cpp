@@ -68,8 +68,8 @@ static PRTime
 SecondsToPRTime(PRUint32 t_sec)
 {
     PRTime t_usec, usec_per_sec;
-    LL_L2I(t_usec, t_sec);
-    LL_L2I(usec_per_sec, PR_USEC_PER_SEC);
+    LL_I2L(t_usec, t_sec);
+    LL_I2L(usec_per_sec, PR_USEC_PER_SEC);
     LL_MUL(t_usec, t_usec, usec_per_sec);
     return t_usec;
 }
@@ -79,9 +79,9 @@ PRTimeToSeconds(PRTime t_usec)
 {
     PRTime usec_per_sec;
     PRUint32 t_sec;
-    LL_L2I(usec_per_sec, PR_USEC_PER_SEC);
+    LL_I2L(usec_per_sec, PR_USEC_PER_SEC);
     LL_DIV(t_usec, t_usec, usec_per_sec);
-    LL_I2L(t_sec, t_usec);
+    LL_L2I(t_sec, t_usec);
     return t_sec;
 }
 
@@ -97,7 +97,7 @@ SecondsToTimeString(char *buf, PRUint32 bufsize, PRUint32 t_sec)
 static void
 TimeStringToSeconds(const char *str, PRUint32 *t_sec)
 {
-    PRTime t_usec = 0;
+    PRTime t_usec = LL_ZERO;
     PR_ParseTimeString(str, PR_TRUE, &t_usec);
     *t_sec = PRTimeToSeconds(t_usec);
 }
@@ -959,9 +959,8 @@ nsHTTPChannel::ComputeCurrentAge(PRUint32 now,
     if (NS_FAILED(rv)) return rv;
 
     // Compute apparent age
-    LL_SUB(diff, responseTime, dateValue);
-    LL_DIV(diff, diff, 1000000); // convert u-sec to sec
-    LL_L2UI(*result, diff);
+    diff = responseTime - dateValue;
+    *result = diff;
     *result = PR_MAX(0, *result);
 
     // Compute corrected received age
@@ -969,13 +968,10 @@ nsHTTPChannel::ComputeCurrentAge(PRUint32 now,
         *result = PR_MAX(*result, ageValue);
 
     // Compute resident time
-    LL_SUB(diff, now, requestTime);
-    LL_DIV(diff, diff, 1000000); // convert u-sec to sec
+    diff = now - requestTime;
 
     // Compute current age
-    PRUint32 temp;
-    LL_L2UI(temp, diff);
-    *result += temp;
+    *result += diff;
 
     return NS_OK;
 }
@@ -2081,7 +2077,7 @@ nsHTTPChannel::Connect()
     }
     
 #ifdef MOZ_NEW_CACHE
-    SetRequestTime(PR_Now());
+    SetRequestTime(NowInSeconds());
 #endif
 
     mState = HS_WAITING_FOR_RESPONSE;
