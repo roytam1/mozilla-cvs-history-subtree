@@ -28,8 +28,21 @@
 #include "View.h"
 #include "IconGroup.h"
 #include "htrdf.h"
+#include "NavCenterView.h"
+#include "PopupMenu.h"
 
-//#include "PopupMenu.h"
+class XFE_RDFPopupMenu : public XFE_SimplePopupMenu
+{
+public:
+  XFE_RDFPopupMenu(String name, Widget parent,
+                   HT_View view, 
+                   Boolean isWorkspace, Boolean isBackground);
+
+  void PushButtonActivate(Widget w, XtPointer userData);
+
+protected:
+  HT_Pane m_pane;
+};
 
 class XFE_RDFView : public XFE_View
 {
@@ -64,8 +77,10 @@ public:
 private:
   //HT_Pane m_Pane;		// The pane that owns this view
   HT_View m_rdfview;		// The view as registered in the hypertree
-
-  //XFE_PopupMenu *m_popup;
+  Widget  viewName;     // The label that displays the currently open pane
+  Widget  rdfControlsParent; // Parent of the label and the button on top
+  Widget  m_tree;       // The tree widget
+  XFE_RDFPopupMenu *m_popup;
 
   // icons for use in the bookmark window.
   static fe_icon bookmark;
@@ -79,7 +94,7 @@ private:
 
   void add_row(HT_Resource node);
   void add_row(int node);
-  void delete_row(int row);
+  void delete_row(int row, PRBool deleteChildren);
   void add_column(int index, char *name, uint32 width,
                   void *token, uint32 token_type);
 
@@ -89,6 +104,8 @@ private:
   void activate_row(int row);
   void resize(XtPointer);
   void edit_cell(XtPointer);
+  void select_row(int row);
+  void deselect_row(int row);
 
   static void expand_row_cb(Widget, XtPointer, XtPointer);
   static void collapse_row_cb(Widget, XtPointer, XtPointer);
@@ -96,12 +113,15 @@ private:
   static void activate_cb(Widget, XtPointer, XtPointer);
   static void resize_cb(Widget, XtPointer, XtPointer);
   static void edit_cell_cb(Widget, XtPointer, XtPointer);
+  static void deselect_cb(Widget, XtPointer, XtPointer);
+  static void select_cb(Widget, XtPointer, XtPointer);
+  static void popup_cb(Widget, XtPointer, XtPointer);
+  static void closeRdfView_cb(Widget, XtPointer, XtPointer);
 
 #ifdef NOTYET
   void dropfunc(Widget dropw, fe_dnd_Event type, fe_dnd_Source *source, XEvent *event);
   static void drop_func(Widget dropw, void *closure, fe_dnd_Event type,
 			fe_dnd_Source *source, XEvent* event);
-  //void doPopup(XEvent *event);
 
   static fe_icon mailBookmark;
   static fe_icon newsBookmark;

@@ -43,9 +43,11 @@ public:
 
   void setRDFView(HT_View view);
   void addRDFView(HT_View view);
+  Widget  getSelector(void);
 
   static void selector_activate_cb(Widget,XtPointer,XtPointer);
   static void selector_destroy_cb(Widget,XtPointer,XtPointer);
+  
 
 private:
   HT_Pane        m_pane;
@@ -53,6 +55,7 @@ private:
   XFE_HTMLView * m_htmlview;
   XFE_RDFView  * m_rdfview;
   Widget         m_selector;
+  Widget         rdf_parent;
   XP_Bool        m_isStandalone; // as oppposed to embedded in a browser
 };
 

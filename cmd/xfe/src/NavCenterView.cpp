@@ -70,6 +70,7 @@ XFE_NavCenterView::XFE_NavCenterView(XFE_Component *toplevel_component,
                    XmNrightOffset,      0,
                    XmNspacing,          0,
                    XmNshadowThickness,  0,
+                   XmNselectionPolicy, XmTOOL_BAR_SELECT_SINGLE,
                    NULL);
   Widget toolbar;
   XtVaGetValues(m_selector,XmNtoolBar,&toolbar,NULL);
@@ -77,7 +78,7 @@ XFE_NavCenterView::XFE_NavCenterView(XFE_Component *toplevel_component,
                 XmNshadowThickness,      0,
                 NULL);
 
-  Widget rdf_parent = XtVaCreateManagedWidget("rdf_form",
+  rdf_parent = XtVaCreateManagedWidget("rdf_form",
                           xmFormWidgetClass,
                           nav_form,
                           XmNtopAttachment,    XmATTACH_FORM,
@@ -169,9 +170,36 @@ XFE_NavCenterView::notify(HT_Notification ns, HT_Resource n,
                HT_GetNodeName(n)););
       
       HT_View view = HT_GetView(n);
+
+      /* The following block of code is to make sure that the view that is
+       * currently selected appears as selected in the selector bar. This is
+       * primarily useful when the user makes a node in the RDFView as a
+       * workspace. But it is currently broken since for some reason, the
+       * selector bar is not responding to the XfeToolBarSetSelectedButton() 
+       * call
+       */
+
+       // Get the toolbar
+       Widget toolbar;
+       XtVaGetValues(m_selector, XmNtoolBar, &toolbar, NULL);
+   
+       // Get the label of the button
+       char * label = HT_GetViewName(view);
+       Widget button = NULL;
+       // Obtain the widget id from the button's name
+       button = XtNameToWidget(toolbar, label);
+
+       if (toolbar && button)
+         XfeToolBarSetSelectedButton(toolbar, button);
+
+       if ((m_htview != view)  && toolbar && button) {
+          // Set the RDFView
+          setRDFView(view);
+          // Make sure the corresponding button is marked as selected.
+          XfeToolBarSetSelectedButton(toolbar, button);
+
+       }
       
-      if (m_htview != view)
-        setRDFView(view);
     }
     break;
   case HT_EVENT_VIEW_ADDED: 
@@ -246,7 +274,7 @@ XFE_NavCenterView::addRDFView(HT_View view)
   sprintf(widget_name,"button%d", index);
   
   Widget button = 
-	  XtVaCreateManagedWidget(widget_name,
+	  XtVaCreateManagedWidget(label,
 							  xfeButtonWidgetClass,
 							  toolbar,
 							  XmNlabelAlignment, XmALIGNMENT_BEGINNING,
@@ -294,4 +322,11 @@ XFE_NavCenterView::selector_destroy_cb(Widget		w,
   printf("destroy selector cbdata\n");
 
   delete cbdata;
+}
+
+Widget 
+XFE_NavCenterView::getSelector(void)
+{
+  return (m_selector);
+
 }
