@@ -31,15 +31,10 @@ NS_GENERIC_FACTORY_CONSTRUCTOR(nsGIFDecoder2)
 
 static nsModuleComponentInfo components[] =
 {
-  { "GIF Decoder 2",
-     NS_GIFDECODER2_CID,
-     "@mozilla.org/image/decoder;1?type=image/gif",
-     nsGIFDecoder2Constructor, },
-  /*{ "GIF Decoder",
+  { "GIF Decoder",
      NS_GIFDECODER2_CID,
      "@mozilla.org/image/decoder;2?type=image/gif",
      nsGIFDecoder2Constructor, },
-  */
 };
 
 NS_IMPL_NSGETMODULE("nsGIFModule2", components)

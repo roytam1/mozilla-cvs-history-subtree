@@ -33,10 +33,13 @@
 
 #include "GIF2.h"
 
-//1808b950-1dd2-11b2-97fd-9ec6cc3f42cd
 #define NS_GIFDECODER2_CID \
-{ 0x1808b950, 0x1dd2, 0x11b2, \
-{ 0x97, 0xfd, 0x9e, 0xc6, 0xcc, 0x3f, 0x42, 0xcd } }
+{ /* 797bec5a-1dd2-11b2-a7f8-ca397e0179c4 */         \
+     0x797bec5a,                                     \
+     0x1dd2,                                         \
+     0x11b2,                                         \
+    {0xa7, 0xf8, 0xca, 0x39, 0x7e, 0x01, 0x79, 0xc4} \
+}
 
 //////////////////////////////////////////////////////////////////////
 // nsGIFDecoder2 Definition

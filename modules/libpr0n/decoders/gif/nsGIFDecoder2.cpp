@@ -25,7 +25,16 @@
 #include "nsIComponentManager.h"
 #include "nsIImageFrame.h"
 #include "nsMemory.h"
+
+#ifndef XP_MAC
+#define FOO 1
+#endif
+
+#ifdef FOO
+#include "nsRect.h"
+#else
 #include "nsRect2.h"
+#endif
 
 //////////////////////////////////////////////////////////////////////
 // GIF Decoder Implementation
@@ -242,11 +251,13 @@ int BeginGIF(
 #endif
   // XXX do something with transparent and background colors
 
+  return 0;
 }
 
 //******************************************************************************
 int EndGIF()
 {
+  return 0;
 }
 
 //******************************************************************************
@@ -265,6 +276,8 @@ int BeginImageFrame(
   decoder->mGIFStruct.y_offset = aFrameYOffset;
   decoder->mGIFStruct.width = aFrameWidth;
   decoder->mGIFStruct.height = aFrameHeight;
+
+  return 0;
 }
 
 //******************************************************************************
@@ -276,6 +289,8 @@ int EndImageFrame(
                               block.*/
 {
   nsGIFDecoder2* decoder = NS_STATIC_CAST(nsGIFDecoder2*, aClientData);
+
+  return 0;
 }
   
 
@@ -291,7 +306,7 @@ int HaveImageAll(
     decoder->mObserver->OnStopContainer(nsnull, nsnull, decoder->mImageContainer);
     decoder->mObserver->OnStopDecode(nsnull, nsnull, NS_OK, nsnull);
   }
-
+  return 0;
 }
 
 //******************************************************************************
@@ -321,10 +336,10 @@ int HaveDecodedRow(
       //} else {
       //  format = nsIGFXFormat::RGB; 
       //}
-    #ifdef XP_PC
+#ifdef XP_PC
       // XXX this works...
       format += 1; // RGB to BGR
-    #endif
+#endif
 
       // initalize the frame and append it to the container
       decoder->mImageFrame = do_CreateInstance("@mozilla.org/gfx/image/frame;2");
@@ -353,7 +368,11 @@ int HaveDecodedRow(
   decoder->mImageFrame->GetImageData(&bits, &length);
 
   if (aRowBufPtr) {
-    gfx_dimension width;
+#ifdef FOO
+    nscoord width;
+#else
+    gfX_dimension width;
+#endif
     decoder->mImageFrame->GetWidth(&width);
     PRUint32 iwidth = width;
 
@@ -364,29 +383,31 @@ int HaveDecodedRow(
     switch (format) {
     case nsIGFXFormat::RGB:
     case nsIGFXFormat::BGR:
-      // XXX map the data into colors
-      int cmapsize;
-      GIF_RGB* cmap;
-      if(decoder->mGIFStruct.local_colormap) {
-        cmapsize = decoder->mGIFStruct.local_colormap_size;
-        cmap = decoder->mGIFStruct.local_colormap;
-      } else {
-        cmapsize = decoder->mGIFStruct.global_colormap_size;
-        cmap = decoder->mGIFStruct.global_colormap;
-      }
+      {
+        // XXX map the data into colors
+        int cmapsize;
+        GIF_RGB* cmap;
+        if(decoder->mGIFStruct.local_colormap) {
+          cmapsize = decoder->mGIFStruct.local_colormap_size;
+          cmap = decoder->mGIFStruct.local_colormap;
+        } else {
+          cmapsize = decoder->mGIFStruct.global_colormap_size;
+          cmap = decoder->mGIFStruct.global_colormap;
+        }
       
-      PRUint8* rgbRowIndex = aRGBrowBufPtr;
-      PRUint8* rowBufIndex = aRowBufPtr;
+        PRUint8* rgbRowIndex = aRGBrowBufPtr;
+        PRUint8* rowBufIndex = aRowBufPtr;
       
-      while(rowBufIndex != decoder->mGIFStruct.rowend) {
-        *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].blue; //XXX off by one at start, alignment I think
-        *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].red;
-        *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].green;
-        *rgbRowIndex++ = 0;// pad XXX why do I need to pad data that I say is 3 bytes?
-        ++rowBufIndex;
-      }
+        while(rowBufIndex != decoder->mGIFStruct.rowend) {
+          *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].blue; //XXX off by one at start, alignment I think
+          *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].red;
+          *rgbRowIndex++ = cmap[PRUint8(*rowBufIndex)].green;
+          *rgbRowIndex++ = 0;// pad XXX why do I need to pad data that I say is 3 bytes?
+          ++rowBufIndex;
+        }
 
-      decoder->mImageFrame->SetImageData((PRUint8*)aRGBrowBufPtr, bpr, aRowNumber*bpr);
+        decoder->mImageFrame->SetImageData((PRUint8*)aRGBrowBufPtr, bpr, aRowNumber*bpr);
+      }
       break;
     case nsIGFXFormat::RGB_A1:
     case nsIGFXFormat::BGR_A1:
@@ -410,37 +431,49 @@ int HaveDecodedRow(
 
     }
 
+#ifdef FOO
+    nsRect r(0, aRowNumber, width, 1);
+#else
     nsRect2 r(0, aRowNumber, width, 1);
+#endif
     decoder->mObserver->OnDataAvailable(nsnull, nsnull, decoder->mImageFrame, &r);
   }
+
+  return 0;
 }
 
 //******************************************************************************
 int ResetPalette()
 {
+  return 0;
 }
 
 //******************************************************************************
 int SetupColorspaceConverter()
 {
+  return 0;
 }
 
 //******************************************************************************
 int EndImageFrame()
 {
+  return 0;
 }
 
 //******************************************************************************
 int NewPixmap()
 {
+  return 0;
 }
 
 //******************************************************************************
 int InitTransparentPixel()
 {
+  return 0;
 }
 
 //******************************************************************************
 int DestroyTransparentPixel()
 {
+  return 0;
 }

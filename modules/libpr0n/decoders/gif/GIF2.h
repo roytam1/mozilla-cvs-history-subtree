@@ -308,3 +308,4 @@ extern int GIFCallback_HaveDecodedRow();
 extern int GIFCallback_HaveImageAll();
 
 #endif
+
