@@ -98,6 +98,8 @@ public:
 
 private:
     Stack mReturnStack;
+    Stack mEvalContextStack;
+    Stack mIntStack;
     nsStringArray mStringStack;
     txInstruction* mNextInstruction;
     

@@ -51,15 +51,34 @@ txHandlerTable* gTxTopHandler = 0;
 txHandlerTable* gTxTemplateHandler = 0;
 txHandlerTable* gTxTextHandler = 0;
 
-txStylesheetAttr*
-getStyleAttr(txStylesheetAttr* aAttributes,
-             PRInt32 aAttrCount,
-             nsIAtom* aName);
+
 txStylesheetAttr*
 getStyleAttr(txStylesheetAttr* aAttributes,
              PRInt32 aAttrCount,
              PRInt32 aNamespace,
-             nsIAtom* aName);
+             nsIAtom* aName)
+{
+    PRInt32 i;
+    for (i = 0; i < aAttrCount; ++i) {
+        txStylesheetAttr* attr = aAttributes + i;
+        if (attr->mNamespaceID == aNamespace &&
+            attr->mLocalName == aName) {
+
+            return attr;
+        }
+    }
+    
+    return nsnull;
+}
+
+
+txStylesheetAttr*
+getStyleAttr(txStylesheetAttr* aAttributes,
+             PRInt32 aAttrCount,
+             nsIAtom* aName)
+{
+    return getStyleAttr(aAttributes, aAttrCount, kNameSpaceID_None, aName);
+}
 
 #define TX_ENSURE_SUCCESS_OR_FCP(_rv, _state)                               \
     NS_ENSURE_TRUE(NS_SUCCEEDED(_rv) || _state.fcp(), _rv)

@@ -93,6 +93,8 @@ txExecutionState::end()
     return NS_OK;
 }
 
+
+
 nsresult
 txExecutionState::getVariable(PRInt32 aNamespace, txAtom* aLName,
                               ExprResult*& aResult)
@@ -115,6 +117,18 @@ txExecutionState::receiveError(const String& aMsg, nsresult aRes)
 }
 
 nsresult
+txExecutionState::pushEvalContext(txIEvalContext* aContext)
+{
+    return mEvalContextStack.push(aContext);
+}
+
+txIEvalContext*
+txExecutionState::popEvalContext()
+{
+    return (txIEvalContext*)mEvalContextStack.pop();
+}
+
+nsresult
 txExecutionState::pushString(const nsAString& aStr)
 {
     if (!mStringStack.AppendString(aStr)) {
@@ -124,11 +138,22 @@ txExecutionState::pushString(const nsAString& aStr)
     return NS_OK;
 }
 
-
 void
 txExecutionState::popString(nsAString& aStr)
 {
     mStringStack.StringAt(mStringStack.Count() - 1, aStr);
+}
+
+nsresult
+txExecutionState::pushInt(PRInt32 aInt)
+{
+    return mIntStack.push(NS_INT32_TO_PTR(aInt));
+}
+
+PRInt32
+txExecutionState::popInt()
+{
+    return NS_PTR_TO_INT32(mIntStack.pop());
 }
 
 txIEvalContext*
