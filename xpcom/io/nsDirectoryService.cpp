@@ -66,6 +66,7 @@
 #include <Processes.h>
 #include <Gestalt.h>
 #include <CFURL.h>
+#include <InternetConfig.h>
 #endif
 #elif defined(XP_OS2)
 #define MAX_PATH _MAX_PATH
@@ -103,9 +104,9 @@
 // For Windows platform, We are choosing Appdata folder as HOME
 #if defined (XP_WIN)
 #define HOME_DIR NS_WIN_APPDATA_DIR
-#elif defined (XP_MAC)
+#elif defined (XP_MAC) || defined (XP_MACOSX)
 #define HOME_DIR NS_MAC_HOME_DIR
-#elif defined (XP_UNIX) || defined(XP_MACOSX)
+#elif defined (XP_UNIX)
 #define HOME_DIR NS_UNIX_HOME_DIR
 #elif defined (XP_OS2)
 #define HOME_DIR NS_OS2_HOME_DIR
@@ -364,6 +365,9 @@ nsIAtom*  nsDirectoryService::sInternetSearchDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sHomeDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sDefaultDownloadDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sUserLibDirectory = nsnull;
+#elif defined (XP_MACOSX)
+nsIAtom*  nsDirectoryService::sHomeDirectory = nsnull;
+nsIAtom*  nsDirectoryService::sDefaultDownloadDirectory = nsnull;
 #elif defined (XP_WIN) 
 nsIAtom*  nsDirectoryService::sSystemDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sWindowsDirectory = nsnull;
@@ -391,7 +395,7 @@ nsIAtom*  nsDirectoryService::sCommon_Startup = nsnull;
 nsIAtom*  nsDirectoryService::sCommon_Desktopdirectory = nsnull;
 nsIAtom*  nsDirectoryService::sAppdata = nsnull;
 nsIAtom*  nsDirectoryService::sPrinthood = nsnull;
-#elif defined (XP_UNIX) || defined(XP_MACOSX)
+#elif defined (XP_UNIX)
 nsIAtom*  nsDirectoryService::sLocalDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sLibDirectory = nsnull;
 nsIAtom*  nsDirectoryService::sHomeDirectory = nsnull;
@@ -464,6 +468,9 @@ nsDirectoryService::Init()
     nsDirectoryService::sHomeDirectory              = NS_NewAtom(NS_MAC_HOME_DIR);
     nsDirectoryService::sDefaultDownloadDirectory   = NS_NewAtom(NS_MAC_DEFAULT_DOWNLOAD_DIR);
     nsDirectoryService::sUserLibDirectory           = NS_NewAtom(NS_MAC_USER_LIB_DIR);
+#elif defined (XP_MACOSX)
+    nsDirectoryService::sHomeDirectory              = NS_NewAtom(NS_MAC_HOME_DIR);
+    nsDirectoryService::sDefaultDownloadDirectory   = NS_NewAtom(NS_MAC_DEFAULT_DOWNLOAD_DIR);
 #elif defined (XP_WIN) 
     nsDirectoryService::sSystemDirectory            = NS_NewAtom(NS_OS_SYSTEM_DIR);
     nsDirectoryService::sWindowsDirectory           = NS_NewAtom(NS_WIN_WINDOWS_DIR);
@@ -491,7 +498,7 @@ nsDirectoryService::Init()
     nsDirectoryService::sCommon_Desktopdirectory    = NS_NewAtom(NS_WIN_COMMON_DESKTOP_DIRECTORY);
     nsDirectoryService::sAppdata                    = NS_NewAtom(NS_WIN_APPDATA_DIR);
     nsDirectoryService::sPrinthood                  = NS_NewAtom(NS_WIN_PRINTHOOD);
-#elif defined (XP_UNIX) || defined(XP_MACOSX)
+#elif defined (XP_UNIX)
     nsDirectoryService::sLocalDirectory             = NS_NewAtom(NS_UNIX_LOCAL_DIR);
     nsDirectoryService::sLibDirectory               = NS_NewAtom(NS_UNIX_LIB_DIR);
     nsDirectoryService::sHomeDirectory              = NS_NewAtom(NS_UNIX_HOME_DIR);
@@ -551,7 +558,11 @@ nsDirectoryService::~nsDirectoryService()
      NS_IF_RELEASE(nsDirectoryService::sDocumentsDirectory);
      NS_IF_RELEASE(nsDirectoryService::sInternetSearchDirectory);
      NS_IF_RELEASE(nsDirectoryService::sHomeDirectory);
+     NS_IF_RELEASE(nsDirectoryService::sDefaultDownloadDirectory);
      NS_IF_RELEASE(nsDirectoryService::sUserLibDirectory);
+#elif defined (XP_MACOSX)
+     NS_IF_RELEASE(nsDirectoryService::sHomeDirectory);
+     NS_IF_RELEASE(nsDirectoryService::sDefaultDownloadDirectory);
 #elif defined (XP_WIN)
      NS_IF_RELEASE(nsDirectoryService::sSystemDirectory);
      NS_IF_RELEASE(nsDirectoryService::sWindowsDirectory);
@@ -579,7 +590,7 @@ nsDirectoryService::~nsDirectoryService()
      NS_IF_RELEASE(nsDirectoryService::sCommon_Desktopdirectory);
      NS_IF_RELEASE(nsDirectoryService::sAppdata);
      NS_IF_RELEASE(nsDirectoryService::sPrinthood);
-#elif defined (XP_UNIX) || defined(XP_MACOSX)
+#elif defined (XP_UNIX)
      NS_IF_RELEASE(nsDirectoryService::sLocalDirectory);
      NS_IF_RELEASE(nsDirectoryService::sLibDirectory);
      NS_IF_RELEASE(nsDirectoryService::sHomeDirectory);
@@ -919,7 +930,41 @@ nsDirectoryService::GetFile(const char *prop, PRBool *persistent, nsIFile **_ret
     {
         nsSpecialSystemDirectory fileSpec(nsSpecialSystemDirectory::Mac_UserLibDirectory); 
         rv = NS_FileSpecToIFile(&fileSpec, getter_AddRefs(localFile));  
-    }   
+    }
+#elif defined (XP_MACOSX)
+    else if (inAtom == nsDirectoryService::sHomeDirectory)
+    {
+        OSErr err;
+        FSRef fsRef;
+        err = ::FSFindFolder(kUserDomain, kDomainTopLevelFolderType, kCreateFolder, &fsRef);
+        if (err == noErr)
+        {
+            NS_NewLocalFile(nsString(), PR_TRUE, getter_AddRefs(localFile));
+            nsCOMPtr<nsILocalFileMac> localMacFile(do_QueryInterface(localFile));
+            if (localMacFile)
+                rv = localMacFile->InitWithFSRef(&fsRef);
+        }
+    }
+    else if (inAtom == nsDirectoryService::sDefaultDownloadDirectory)
+    {
+        OSErr err;
+        ICInstance icInstance;
+        err = ::ICStart(&icInstance, 'XPCM');
+        if (err == noErr)
+        {
+            ICAttr attrs;
+            ICFileSpec icFileSpec;
+            long size = kICFileSpecHeaderSize;
+            err = ::ICGetPref(icInstance, kICDownloadFolder, &attrs, &icFileSpec, &size);
+            if (err == noErr || (err == icTruncatedErr && size >= kICFileSpecHeaderSize))
+            {
+                NS_NewLocalFile(nsString(), PR_TRUE, getter_AddRefs(localFile));
+                nsCOMPtr<nsILocalFileMac> localMacFile(do_QueryInterface(localFile));
+                rv = localMacFile->InitWithFSSpec(&icFileSpec.fss);
+            }
+            ::ICStop(icInstance);
+        }
+    }
 #elif defined (XP_WIN)
     else if (inAtom == nsDirectoryService::sSystemDirectory)
     {
@@ -1051,7 +1096,7 @@ nsDirectoryService::GetFile(const char *prop, PRBool *persistent, nsIFile **_ret
         nsSpecialSystemDirectory fileSpec(nsSpecialSystemDirectory::Win_Printhood); 
         rv = NS_FileSpecToIFile(&fileSpec, getter_AddRefs(localFile));  
     }
-#elif defined (XP_UNIX) || defined(XP_MACOSX)
+#elif defined (XP_UNIX)
 
     else if (inAtom == nsDirectoryService::sLocalDirectory)
     {

@@ -478,7 +478,7 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
             break;
 #endif
 
-#ifdef XP_UNIX
+#if defined(XP_UNIX) && !defined(XP_MACOSX)
         case UNIX_LOCAL:
             directoryService->Get( NS_UNIX_LOCAL_DIR,
                                    NS_GET_IID(nsIFile),

@@ -243,7 +243,12 @@ CHBrowserService::CreateChromeWindow(nsIWebBrowserChrome *parent,
 NS_IMETHODIMP
 CHBrowserService::Show(nsIHelperAppLauncher* inLauncher, nsISupports* inContext)
 {
+  // Old way - always prompt to save file to disk
   return inLauncher->SaveToDisk(nsnull, PR_FALSE);
+  // New way - just save the file to disk in download folder and invoke the default helper app
+  // XXX fix me. We need to update the downlaod dialog UI to account for this,
+  // and warn if the user is launching an executable.
+  //return inLauncher->LaunchWithApplication(nsnull, PR_FALSE);
 }
 
 NS_IMETHODIMP
