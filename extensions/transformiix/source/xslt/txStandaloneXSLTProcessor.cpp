@@ -72,27 +72,27 @@ private:
 
 nsresult
 txStandaloneHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
-                                              txIOutputXMLEventHandler*& aHandler)
+                                              txIOutputXMLEventHandler** aHandler)
 {
-    aHandler = 0;
+    *aHandler = 0;
     switch (aFormat->mMethod) {
         case eXMLOutput:
-            aHandler = new txXMLOutput(aFormat, mStream);
+            *aHandler = new txXMLOutput(aFormat, mStream);
             break;
 
         case eHTMLOutput:
-            aHandler = new txHTMLOutput(aFormat, mStream);
+            *aHandler = new txHTMLOutput(aFormat, mStream);
             break;
 
         case eTextOutput:
-            aHandler = new txTextOutput(mStream);
+            *aHandler = new txTextOutput(mStream);
             break;
 
         case eMethodNotSet:
-            aHandler = new txUnknownHandler(mPs);
+            *aHandler = new txUnknownHandler(mPs);
             break;
     }
-    NS_ENSURE_TRUE(aHandler, NS_ERROR_OUT_OF_MEMORY);
+    NS_ENSURE_TRUE(*aHandler, NS_ERROR_OUT_OF_MEMORY);
     return NS_OK;
 }
 
@@ -100,9 +100,9 @@ nsresult
 txStandaloneHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
                                               const String& aName,
                                               PRInt32 aNsID,
-                                              txIOutputXMLEventHandler*& aHandler)
+                                              txIOutputXMLEventHandler** aHandler)
 {
-    aHandler = 0;
+    *aHandler = 0;
     NS_ASSERTION(aFormat->mMethod != eMethodNotSet,
                  "How can method not be known when root element is?");
     NS_ENSURE_TRUE(aFormat->mMethod != eMethodNotSet, NS_ERROR_UNEXPECTED);

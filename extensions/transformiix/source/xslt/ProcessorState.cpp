@@ -674,7 +674,8 @@ nsresult ProcessorState::addGlobalVariable(const txExpandedName& aVarName,
     if (var) {
         // we set this parameter twice, we should set it to the same
         // value;
-        return var->mValue == aDefaultValue ? NS_OK : NS_ERROR_UNEXPECTED;
+        NS_ENSURE_TRUE(var->mValue == aDefaultValue, NS_ERROR_UNEXPECTED);
+        return NS_OK;
     }
     var = new GlobalVariableValue(aDefaultValue);
     NS_ENSURE_TRUE(var, NS_ERROR_OUT_OF_MEMORY);
@@ -1204,8 +1205,8 @@ void txPSParseContext::receiveError(const String& aMsg, nsresult aRes)
 
 ProcessorState::GlobalVariableValue::~GlobalVariableValue()
 {
-    if (mFlags) {
-        NS_ASSERTION(mFlags != evaluating, "deleted while evaluating");
+    NS_ASSERTION(mFlags != evaluating, "deleted while evaluating");
+    if (mFlags == owned) {
         delete mValue;
     }
 }

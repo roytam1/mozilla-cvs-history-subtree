@@ -102,26 +102,34 @@ private:
 
 nsresult
 txToDocHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
-                                         txIOutputXMLEventHandler*& aHandler)
+                                         txIOutputXMLEventHandler** aHandler)
 {
-    aHandler = nsnull;
+    *aHandler = nsnull;
     switch (aFormat->mMethod) {
         case eMethodNotSet:
         case eXMLOutput:
-            aHandler = new txUnknownHandler(mPs);
+        {
+            *aHandler = new txUnknownHandler(mPs);
             break;
+        }
 
         case eHTMLOutput:
-            aHandler = new txMozillaXMLOutput(String(), kNameSpaceID_None,
-                                              aFormat, mSourceDocument,
-                                              mResultDocument, mObserver);
+        {
+            *aHandler = new txMozillaXMLOutput(String(), kNameSpaceID_None,
+                                               aFormat, mSourceDocument,
+                                               mResultDocument, mObserver);
             break;
+        }
 
         case eTextOutput:
-            aHandler = new txMozillaTextOutput(mSourceDocument, mResultDocument, mObserver);
+        {
+            *aHandler = new txMozillaTextOutput(mSourceDocument,
+                                                mResultDocument,
+                                                mObserver);
             break;
+        }
     }
-    NS_ENSURE_TRUE(aHandler, NS_ERROR_OUT_OF_MEMORY);
+    NS_ENSURE_TRUE(*aHandler, NS_ERROR_OUT_OF_MEMORY);
     return NS_OK;
 }
 
@@ -129,34 +137,43 @@ nsresult
 txToDocHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
                                          const String& aName,
                                          PRInt32 aNsID,
-                                         txIOutputXMLEventHandler*& aHandler)
+                                         txIOutputXMLEventHandler** aHandler)
 {
-    aHandler = nsnull;
+    *aHandler = nsnull;
     switch (aFormat->mMethod) {
         case eMethodNotSet:
+        {
             NS_ERROR("How can method not be known when root element is?");
             return NS_ERROR_UNEXPECTED;
+        }
 
         case eXMLOutput:
         case eHTMLOutput:
-            aHandler = new txMozillaXMLOutput(aName, aNsID, aFormat,
-                                              mSourceDocument, mResultDocument,
-                                              mObserver);
+        {
+            *aHandler = new txMozillaXMLOutput(aName, aNsID, aFormat,
+                                               mSourceDocument,
+                                               mResultDocument,
+                                               mObserver);
             break;
+        }
 
         case eTextOutput:
-            aHandler = new txMozillaTextOutput(mSourceDocument, mResultDocument, mObserver);
+        {
+            *aHandler = new txMozillaTextOutput(mSourceDocument,
+                                                mResultDocument,
+                                                mObserver);
             break;
+        }
     }
-    NS_ENSURE_TRUE(aHandler, NS_ERROR_OUT_OF_MEMORY);
+    NS_ENSURE_TRUE(*aHandler, NS_ERROR_OUT_OF_MEMORY);
     return NS_OK;
 }
 
 nsresult
 txToFragmentHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
-                                              txIOutputXMLEventHandler*& aHandler)
+                                              txIOutputXMLEventHandler** aHandler)
 {
-    aHandler = nsnull;
+    *aHandler = nsnull;
     switch (aFormat->mMethod) {
         case eMethodNotSet:
         {
@@ -169,20 +186,24 @@ txToFragmentHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
             // we can do for now.
             nsCOMPtr<nsIHTMLDocument> htmldoc = do_QueryInterface(doc);
             format.mMethod = htmldoc ? eHTMLOutput : eXMLOutput;
-            aHandler = new txMozillaXMLOutput(&format, mFragment);
+            *aHandler = new txMozillaXMLOutput(&format, mFragment);
             break;
         }
 
         case eXMLOutput:
         case eHTMLOutput:
-            aHandler = new txMozillaXMLOutput(aFormat, mFragment);
+        {
+            *aHandler = new txMozillaXMLOutput(aFormat, mFragment);
             break;
+        }
 
         case eTextOutput:
-            aHandler = new txMozillaTextOutput(mFragment);
+        {
+            *aHandler = new txMozillaTextOutput(mFragment);
             break;
+        }
     }
-    NS_ENSURE_TRUE(aHandler, NS_ERROR_OUT_OF_MEMORY);
+    NS_ENSURE_TRUE(*aHandler, NS_ERROR_OUT_OF_MEMORY);
     return NS_OK;
 }
 
@@ -190,9 +211,9 @@ nsresult
 txToFragmentHandlerFactory::createHandlerWith(txOutputFormat* aFormat,
                                               const String& aName,
                                               PRInt32 aNsID,
-                                              txIOutputXMLEventHandler*& aHandler)
+                                              txIOutputXMLEventHandler** aHandler)
 {
-    aHandler = nsnull;
+    *aHandler = nsnull;
     NS_ASSERTION(aFormat->mMethod != eMethodNotSet,
                  "How can method not be known when root element is?");
     NS_ENSURE_TRUE(aFormat->mMethod != eMethodNotSet, NS_ERROR_UNEXPECTED);

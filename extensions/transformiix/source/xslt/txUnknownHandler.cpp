@@ -214,7 +214,7 @@ nsresult txUnknownHandler::createHandlerAndFlush(txOutputMethod aMethod,
 
     txIOutputXMLEventHandler* handler = 0;
     rv = mPs->mOutputHandlerFactory->createHandlerWith(format, aName, aNsID,
-                                                       handler);
+                                                       &handler);
     NS_ENSURE_SUCCESS(rv, rv);
 
     mPs->mOutputHandler = handler;

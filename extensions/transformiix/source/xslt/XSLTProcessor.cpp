@@ -1636,7 +1636,7 @@ txXSLTProcessor::transform(ProcessorState* aPs)
 
     txIOutputXMLEventHandler* handler = 0;
     rv = aPs->mOutputHandlerFactory->createHandlerWith(aPs->getOutputFormat(),
-                                                       handler);
+                                                       &handler);
     if (NS_FAILED(rv)) {
         return;
     }

@@ -170,7 +170,7 @@ public:
      */
     virtual nsresult
     createHandlerWith(txOutputFormat* aFormat,
-                      txIOutputXMLEventHandler*& aHandler) = 0;
+                      txIOutputXMLEventHandler** aHandler) = 0;
 
     /**
      * Creates an outputhandler for the specified format, with the specified
@@ -184,15 +184,15 @@ public:
     createHandlerWith(txOutputFormat* aFormat,
                       const String& aName,
                       PRInt32 aNsID,
-                      txIOutputXMLEventHandler*& aHandler) = 0;
+                      txIOutputXMLEventHandler** aHandler) = 0;
 };
 
 #define TX_DECL_TXIOUTPUTHANDLERFACTORY                               \
     nsresult createHandlerWith(txOutputFormat* aFormat,               \
-                               txIOutputXMLEventHandler*& aHandler);  \
+                               txIOutputXMLEventHandler** aHandler);  \
     nsresult createHandlerWith(txOutputFormat* aFormat,               \
                                const String& aName,                   \
                                PRInt32 aNsID,                         \
-                               txIOutputXMLEventHandler*& aHandler)   \
+                               txIOutputXMLEventHandler** aHandler)   \
 
 #endif

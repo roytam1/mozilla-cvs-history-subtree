@@ -46,6 +46,7 @@
 #include "nsIDocumentTransformer.h"
 #include "TxString.h"
 #include "nsNetUtil.h"
+#include "nsIDOMNSDocument.h"
 
 static NS_DEFINE_CID(kXMLDocumentCID, NS_XMLDOCUMENT_CID);
 
@@ -165,6 +166,11 @@ void txMozillaTextOutput::createResultDocument(nsIDOMDocument* aSourceDocument,
     }
 
     NS_ASSERTION(mDocument, "Need document");
+
+    nsCOMPtr<nsIDOMNSDocument> nsDoc = do_QueryInterface(mDocument);
+    if (nsDoc) {
+        nsDoc->SetTitle(NS_LITERAL_STRING(""));
+    }
 
     // Reset and set up document
     nsCOMPtr<nsILoadGroup> loadGroup;

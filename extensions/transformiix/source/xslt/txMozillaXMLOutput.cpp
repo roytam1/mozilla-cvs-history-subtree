@@ -176,7 +176,7 @@ void txMozillaXMLOutput::comment(const String& aData)
 void txMozillaXMLOutput::endDocument()
 {
     closePrevious(eCloseElement | eFlushText);
-    // XXX is this really needed since we reset the document?
+    // This should really be handled by nsIDocument::Reset
     if (mCreatingNewDocument && !mHaveTitleElement) {
         nsCOMPtr<nsIDOMNSDocument> domDoc = do_QueryInterface(mDocument);
         if (domDoc) {
@@ -261,17 +261,19 @@ void txMozillaXMLOutput::getOutputDocument(nsIDOMDocument** aDocument)
 
 void txMozillaXMLOutput::processingInstruction(const String& aTarget, const String& aData)
 {
-    TX_ENSURE_CURRENTNODE;
-
     if (mOutputFormat.mMethod == eHTMLOutput)
         return;
 
     closePrevious(eCloseElement | eFlushText);
 
+    TX_ENSURE_CURRENTNODE;
+
     nsCOMPtr<nsIDOMProcessingInstruction> pi;
     nsresult rv = mDocument->CreateProcessingInstruction(aTarget, aData,
                                                          getter_AddRefs(pi));
     NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create processing instruction");
+    if (NS_FAILED(rv))
+        return;
 
     nsCOMPtr<nsIStyleSheetLinkingElement> ssle;
     if (mCreatingNewDocument) {
@@ -285,6 +287,8 @@ void txMozillaXMLOutput::processingInstruction(const String& aTarget, const Stri
     nsCOMPtr<nsIDOMNode> resultNode;
     rv = mCurrentNode->AppendChild(pi, getter_AddRefs(resultNode));
     NS_ASSERTION(NS_SUCCEEDED(rv), "Can't append processing instruction");
+    if (NS_FAILED(rv))
+        return;
 
     if (ssle) {
         ssle->SetEnableUpdates(PR_TRUE);
@@ -335,6 +339,7 @@ void txMozillaXMLOutput::startElement(const String& aName,
         mNameSpaceManager->GetNameSpaceURI(aNsID, nsURI);
         rv = mDocument->CreateElementNS(nsURI, aName,
                                         getter_AddRefs(element));
+        NS_ASSERTION(NS_SUCCEEDED(rv), "Can't create element");
         if (NS_FAILED(rv)) {
             return;
         }
@@ -345,6 +350,7 @@ void txMozillaXMLOutput::startElement(const String& aName,
 
     if (mCreatingNewDocument) {
         nsCOMPtr<nsIContent> cont = do_QueryInterface(element);
+        NS_ASSERTION(cont, "element doesn't implement nsIContent");
         nsCOMPtr<nsIDocument> doc = do_QueryInterface(mDocument);
         cont->SetDocument(doc, PR_FALSE, PR_TRUE);
     }
@@ -755,7 +761,7 @@ txMozillaXMLOutput::SignalTransformEnd()
         observer->OnTransformDone(NS_OK, mDocument);
     }
     else {
-      // XXX Need better error message and code.
-      observer->OnTransformDone(NS_ERROR_FAILURE, nsnull);
+        // XXX Need better error message and code.
+        observer->OnTransformDone(NS_ERROR_FAILURE, nsnull);
     }
 }
