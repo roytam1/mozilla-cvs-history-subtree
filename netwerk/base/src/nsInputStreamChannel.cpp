@@ -170,13 +170,18 @@ nsStreamIOChannel::Init(nsIURI* uri, nsIStreamIO* io)
     return NS_OK;
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS6(nsStreamIOChannel, 
-                              nsIStreamIOChannel,
-                              nsIChannel,
-                              nsIRequest,
-                              nsIStreamListener,
-                              nsIStreamProvider,
-                              nsIStreamObserver);
+NS_IMPL_THREADSAFE_ADDREF(nsStreamIOChannel)
+NS_IMPL_THREADSAFE_RELEASE(nsStreamIOChannel)
+
+NS_INTERFACE_MAP_BEGIN(nsStreamIOChannel)
+  NS_INTERFACE_MAP_ENTRY(nsIStreamIOChannel)
+  NS_INTERFACE_MAP_ENTRY(nsIChannel)
+  NS_INTERFACE_MAP_ENTRY(nsIRequest)
+  NS_INTERFACE_MAP_ENTRY(nsIStreamListener)
+  NS_INTERFACE_MAP_ENTRY(nsIStreamProvider)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIStreamObserver, nsIStreamListener)
+  NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIStreamListener)
+NS_INTERFACE_MAP_END_THREADSAFE
 
 ////////////////////////////////////////////////////////////////////////////////
 // nsIRequest methods:
