@@ -713,6 +713,7 @@ var gPersistObj;
 //    if (!aSaveCopy && success)
 //      window.editorShell.editor.ResetModificationCount();  // this should cause notification to listeners that document has changed
 
+const webPersist = Components.interfaces.nsIWebBrowserPersist;
 function OutputFileWithPersistAPI(editorDoc, aDestinationLocation, aRelatedFilesParentDir, aMimeType)
 {
   gPersistObj = null;
@@ -722,6 +723,19 @@ function OutputFileWithPersistAPI(editorDoc, aDestinationLocation, aRelatedFiles
       imeEditor.ForceCompositionEnd();
     } catch (e) {}
 
+  var isLocalFile = false;
+  try {
+    var tmp1 = aDestinationLocation.QueryInterface(Components.interfaces.nsIFile);
+    isLocalFile = true;
+  } 
+  catch (e) {
+    try {
+      var tmp = aDestinationLocation.QueryInterface(Components.interfaces.nsIURI);
+      isLocalFile = tmp.schemeIs("file");
+    }
+    catch (e) {}
+  }
+
   try {
     // we should supply a parent directory if/when we turn on functionality to save related documents
     var persistObj = Components.classes["@mozilla.org/embedding/browser/nsWebBrowserPersist;1"].createInstance(Components.interfaces.nsIWebBrowserPersist);
@@ -730,6 +744,18 @@ function OutputFileWithPersistAPI(editorDoc, aDestinationLocation, aRelatedFiles
     var wrapColumn = GetWrapColumn();
     var outputFlags = GetOutputFlags(aMimeType, wrapColumn);
 
+    // for 4.x parity as well as improving readability of file locally on server
+    // this will always send crlf for upload (http/ftp)
+    if (!isLocalFile) // if we aren't saving locally then send both cr and lf
+      outputFlags |= webPersist.ENCODE_FLAGS_CR_LINEBREAKS | webPersist.ENCODE_FLAGS_LF_LINEBREAKS;
+
+    // note: we always want to set the replace existing files flag since we have
+    // already given user the chance to not replace an existing file (file picker)
+    // or the user picked an option where the file is implicitly being replaced (save)
+    persistObj.persistFlags = persistObj.persistFlags 
+                            | webPersist.PERSIST_FLAGS_NO_BASE_TAG_MODIFICATIONS
+                            | webPersist.PERSIST_FLAGS_REPLACE_EXISTING_FILES
+                            | webPersist.PERSIST_FLAGS_FIXUP_ORIGINAL_DOM;
     persistObj.saveDocument(editorDoc, aDestinationLocation, aRelatedFilesParentDir, 
                             aMimeType, outputFlags, wrapColumn);
     gPersistObj = persistObj;
