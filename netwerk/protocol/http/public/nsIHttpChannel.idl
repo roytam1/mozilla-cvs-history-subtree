@@ -83,12 +83,6 @@ interface nsIHttpChannel : nsIChannel
     void   visitResponseHeaders(in nsIHttpHeaderVisitor visitor);
 
     /**
-     * Set the headers that came in the content (HTML really)-- all the
-     * HTTP-EQUIV headers (e.g. Pragma no-cache, etc.)
-     */
-    void setEquivHeader(in string header, in string value);
-
-    /**
      * Get the charset for the response, which may be NULL if not specified
      * by the server (ie. the Content-Type header may not specify a charset).
      */

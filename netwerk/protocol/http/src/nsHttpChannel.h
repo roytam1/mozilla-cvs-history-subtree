@@ -151,7 +151,6 @@ private:
     PRPackedBool                      mTriedCredentialsFromPrehost;
     PRPackedBool                      mFromCacheOnly;
     PRPackedBool                      mCachedContentIsValid;
-	PRPackedBool					  mCheckForCacheReusability;
 };
 
 #endif

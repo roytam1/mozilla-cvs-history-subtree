@@ -1565,6 +1565,7 @@ nsHttpHandler::NewChannel(nsIURI *uri, nsIChannel **result)
     }
     
     rv = NewProxyChannel(uri,
+
                          nsnull,
                          -1,
                          nsnull,

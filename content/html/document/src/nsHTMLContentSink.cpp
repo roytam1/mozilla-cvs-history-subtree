@@ -4513,23 +4513,6 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
               header.ToLowerCase();
               nsCOMPtr<nsIAtom> fieldAtom(dont_AddRef(NS_NewAtom(header)));
               rv=ProcessHeaderData(fieldAtom,result,it); 
-
-              // we also need to report back HTTP-EQUIV headers to the channel
-              // so that it can process things like pragma: no-cache or other
-              // cache-control headers. Ideally this should also be the way for
-              // cookies to be set! But we'll worry about that in the next
-              // iteration
-              nsCOMPtr<nsIChannel>  channel;
-              if (mParser &&
-                  NS_SUCCEEDED(mParser->GetChannel(getter_AddRefs(channel))))
-              {
-                  nsCOMPtr<nsIHttpChannel>
-                      httpchannel(do_QueryInterface(channel));
-                  if (httpchannel)
-                      (void)httpchannel->SetEquivHeader(
-                                 NS_ConvertUCS2toUTF8(header).get(),
-                                 NS_ConvertUCS2toUTF8(result).get());
-              }
             }//if (result.Length() > 0) 
           }//if (header.Length() > 0) 
         }//if (!mFrameset || !mDocument)
@@ -4551,7 +4534,6 @@ HTMLContentSink::ProcessHTTPHeaders(nsIChannel* aChannel) {
       char*  headers[]={"link","default-style","content-base",0}; // add more http headers if you need
       char** name=headers;
       nsXPIDLCString tmp;
-
       while(*name) {
         httpchannel->GetResponseHeader(*name, getter_Copies(tmp));
         if(tmp.get()) {
