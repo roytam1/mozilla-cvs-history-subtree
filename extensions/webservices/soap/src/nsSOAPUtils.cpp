@@ -54,7 +54,7 @@ NS_NAMED_LITERAL_STRING(kPRInt32Type,"#int");
 NS_NAMED_LITERAL_STRING(kPRInt16Type,"#short");
 NS_NAMED_LITERAL_STRING(kCharType,"#byte");
 NS_NAMED_LITERAL_STRING(kArrayType,"#array");
-NS_NAMED_LITERAL_STRING(kJSObjectTypePrefix,"#js#");
+NS_NAMED_LITERAL_STRING(kStructTypePrefix,"#struct#");
 NS_NAMED_LITERAL_STRING(kTypeSeparator,"#");
 NS_NAMED_LITERAL_STRING(kIIDObjectTypePrefix,"#iid#");
 NS_NAMED_LITERAL_STRING(kNullType,"#null");

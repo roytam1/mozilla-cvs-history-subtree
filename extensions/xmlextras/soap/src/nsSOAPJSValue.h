@@ -25,23 +25,25 @@
 
 #include "nsString.h"
 #include "jsapi.h"
-#include "nsISOAPJSValue.h"
 #include "nsISOAPStruct.h"
+#include "nsISOAPJSValue.h"
 #include "nsCOMPtr.h"
 
-class nsSOAPJSValue : public nsISOAPJSValue, public nsISOAPStruct
+class nsSOAPJSValue : public nsISOAPStruct
 {
 public:
   NS_DECL_ISUPPORTS
 
   // nsISOAPJSValue
-  NS_DECL_NSISOAPJSVALUE
+  NS_DECL_NSISOAPSTRUCT
 
   // nsISOAPJSValue
-  NS_DECL_NSISOAPSTRUCT
+  NS_DECL_NSISOAPJSVALUE
 
   nsSOAPJSValue();
   virtual ~nsSOAPJSValue();
+
+  nsresult SetMember(nsISOAPParameter *member);
 
   static JSContext* GetSafeContext();
   static JSContext* GetCurrentContext();

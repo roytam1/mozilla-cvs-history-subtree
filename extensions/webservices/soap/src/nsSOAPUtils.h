@@ -86,7 +86,7 @@ public:
   static const nsString kCharType;
   static const nsString kArrayType;
   static const nsString kTypeSeparator;
-  static const nsString kJSObjectTypePrefix;
+  static const nsString kStructTypePrefix;
   static const nsString kIIDObjectTypePrefix;
   static const nsString kNullType;
   static const nsString kVoidType;

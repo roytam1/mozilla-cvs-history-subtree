@@ -21,6 +21,7 @@
  */
 
 #include "nsSOAPParameter.h"
+#include "nsISOAPJSValue.h"
 #include "nsSOAPJSValue.h"
 #include "nsSOAPUtils.h"
 #include "nsIServiceManager.h"
@@ -30,9 +31,8 @@
 #include "nsISupportsPrimitives.h"
 #include "nsXPIDLString.h"
 #include "nsISupportsArray.h"
-#include "nsISOAPJSValue.h"
 
-NS_IMPL_ISUPPORTS2(nsSOAPJSValue, nsISOAPJSValue, nsISOAPStruct)
+NS_IMPL_ISUPPORTS1(nsSOAPJSValue, nsISOAPStruct)
 
 nsSOAPJSValue::nsSOAPJSValue()
 {
@@ -100,7 +100,7 @@ public:
     virtual ~nsSOAPJSStructEnumerator();
 
 protected:
-  nsCOMPtr<nsISOAPJSValue> mValue;
+  nsCOMPtr<nsSOAPJSValue> mValue;
   nsISOAPStruct* mStruct; // Convenience non-referenced pointer to same value
   JSIdArray *mMembers;
   PRInt32 mCurrent;
@@ -183,7 +183,7 @@ NS_IMETHODIMP nsSOAPJSValue::GetMember(const nsAReadableString& name, nsISOAPPar
     nsCOMPtr<nsISupports>value;
     rv = nsSOAPJSValue::ConvertJSValToValue(mContext, val, getter_AddRefs(value), type);
     if (NS_FAILED(rv)) return rv;
-    rv = newparam->SetAsInterface(NS_GET_IID(nsISOAPJSValue), value);
+    rv = newparam->SetAsInterface(NS_GET_IID(nsISOAPParameter), value);
     if (NS_FAILED(rv)) return rv;
     rv = newparam->SetType(type);
     if (NS_FAILED(rv)) return rv;
@@ -204,7 +204,7 @@ NS_IMETHODIMP nsSOAPJSValue::SetMember(nsISOAPParameter *member)
   nsAutoString type;
   member->GetName(type);
   jsval val;
-  nsresult rv = nsSOAPJSValue::ConvertValueToJSVal(mContext, NS_STATIC_CAST(nsISOAPJSValue*, this), type, &val);
+  nsresult rv = nsSOAPJSValue::ConvertValueToJSVal(mContext, this, type, &val);
   if (NS_FAILED(rv)) return rv;
   return JS_SetProperty(mContext, mObject, NS_ConvertUCS2toUTF8(name).get(), &val);
 }
@@ -373,7 +373,7 @@ nsSOAPJSValue::ConvertValueToJSVal(JSContext* aContext,
 
       *vp = OBJECT_TO_JSVAL(arrayobj);
 
-  } else if (nsAutoString(aType).RFind(nsSOAPUtils::kJSObjectTypePrefix, false, 0) >= 0) {
+  } else if (nsAutoString(aType).RFind(nsSOAPUtils::kStructTypePrefix, false, 0) >= 0) {
       
       nsCOMPtr<nsISOAPJSValue> jsvalue = do_QueryInterface(aValue);
       if (!jsvalue) return NS_ERROR_FAILURE;
@@ -382,6 +382,9 @@ nsSOAPJSValue::ConvertValueToJSVal(JSContext* aContext,
       jsvalue->GetObject(&data);
       
       *vp = OBJECT_TO_JSVAL(data);
+  }
+  else {
+    return NS_ERROR_FAILURE;
   }
   return NS_OK;
 }
@@ -501,7 +504,7 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
           if (NS_FAILED(rc)) 
             return rc;
 
-          param->SetAsInterface(NS_GET_IID(nsISOAPJSValue), xpcval);
+          param->SetAsInterface(NS_GET_IID(nsISOAPParameter), xpcval);
           param->SetType(type);
         }
         value->InsertElementAt(param, index);
@@ -511,7 +514,7 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
       NS_ADDREF(*aValue);
     }
     else {
-      nsCOMPtr<nsISOAPJSValue> value = do_CreateInstance(NS_SOAPJSVALUE_CONTRACTID, &rc);
+      nsCOMPtr<nsSOAPJSValue> value = new nsSOAPJSValue();
       if (NS_FAILED(rc)) return rc;
 
 // Look for a constructor name on the current object or a prototype
@@ -529,7 +532,7 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
             PRUnichar* data = NS_REINTERPRET_CAST(PRUnichar*, 
                                             JS_GetStringChars(jsstr));
             if (data) {
-              aType = nsSOAPUtils::kJSObjectTypePrefix;
+              aType = nsSOAPUtils::kStructTypePrefix;
               aType.Append(data);
               jsobj = nsnull;
               break;
@@ -537,7 +540,7 @@ nsSOAPJSValue::ConvertJSValToValue(JSContext* aContext,
           }
         }
         if (!jsobj) {
-          aType = nsSOAPUtils::kJSObjectTypePrefix;
+          aType = nsSOAPUtils::kStructTypePrefix;
           break;
         }
       }
@@ -583,7 +586,7 @@ nsSOAPJSValue::ConvertJSArgsToValue(JSContext* aContext,
       }
       nsCOMPtr<nsISOAPParameter> newparam = new nsSOAPParameter();
       if (!newparam) return NS_ERROR_OUT_OF_MEMORY;
-      newparam->SetAsInterface(NS_GET_IID(nsISOAPJSValue), newparam);
+      newparam->SetAsInterface(NS_GET_IID(nsISOAPParameter), newparam);
       newparam->SetType(type);
       array->InsertElementAt(newparam, count - argc - 1);
     }

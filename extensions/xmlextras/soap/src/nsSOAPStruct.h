@@ -51,6 +51,8 @@ public:
   // nsISecurityCheckedComponent
   NS_DECL_NSISECURITYCHECKEDCOMPONENT
 
+  nsresult SetMember(nsISOAPParameter *member);
+
 protected:
   nsSupportsHashtable* mMembers;
 

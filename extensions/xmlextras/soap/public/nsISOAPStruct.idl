@@ -46,12 +46,6 @@ interface nsISOAPStruct : nsISupports {
    * @param member parameter structure used to set the member
    */
   nsISOAPParameter getMember(in AString name);
-
-  /**
-   * Set the value of a nsISOAPStruct member
-   * @param member parameter structure used to set the member
-   */
-  void setMember(in nsISOAPParameter member);
 };
 
 %{ C++

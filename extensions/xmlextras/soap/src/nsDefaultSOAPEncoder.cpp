@@ -191,7 +191,7 @@ GetElementNameForType(const nsAReadableString & aType, nsAWritableString & aName
     aName = kByteElementName;
   else if (aType.Equals(nsSOAPUtils::kArrayType))
     aName = kArrayElementName;
-  else if (nsAutoString(aType).RFind(nsSOAPUtils::kJSObjectTypePrefix, false, 0) >= 0)
+  else if (nsAutoString(aType).RFind(nsSOAPUtils::kStructTypePrefix, false, 0) >= 0)
     aName = kStructElementName;
   else
     aName = nsSOAPUtils::kEmpty;
@@ -219,7 +219,7 @@ GetTypeForElementName(const nsAReadableString & aName, nsAWritableString & aType
   else if (aName.Equals(kArrayElementName))
     aType = nsSOAPUtils::kArrayType;
   else if (aName.Equals(kStructElementName))
-    aType = nsSOAPUtils::kJSObjectTypePrefix;
+    aType = nsSOAPUtils::kStructTypePrefix;
   else
     aType = nsSOAPUtils::kNullType;
 }
@@ -275,7 +275,7 @@ GetXSDTypeForType(const nsAReadableString & aType, nsAWritableString & aNamespac
     aNamespace = nsSOAPUtils::kSOAPEncodingURI;
     aLocalName = kSOAPEncArrayAttrName;
   }
-  else if (nsAutoString(aType).RFind(nsSOAPUtils::kJSObjectTypePrefix, false, 0) >= 0) {
+  else if (nsAutoString(aType).RFind(nsSOAPUtils::kStructTypePrefix, false, 0) >= 0) {
     aNamespace = nsSOAPUtils::kXSDURI;
     aLocalName = kXSDStructName;
   }
@@ -306,7 +306,7 @@ GetTypeForXSDType(const nsAReadableString & aNamespace, const nsAReadableString 
     else if (aLocalName.Equals(kXSDByteName))
       aType = nsSOAPUtils::kCharType;
     else if (aLocalName.Equals(kXSDStructName))
-      aType = nsSOAPUtils::kJSObjectTypePrefix;
+      aType = nsSOAPUtils::kStructTypePrefix;
     else if (aLocalName.Equals(kXSDUrTypeName))
       aType = nsSOAPUtils::kUnknownType;
     else
