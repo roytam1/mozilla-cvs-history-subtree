@@ -4850,8 +4850,8 @@ HT_IsNodeDataEditable(HT_Resource node, void *token, uint32 tokenType)
 		    ((token == gNavCenter->RDF_smallIcon) && (!htIsOpLocked(node, gNavCenter->RDF_IconLock))) ||
 		    (token == gWebData->RDF_description) || (token == gNavCenter->RDF_URLShortcut) ||
 		    (token == gNavCenter->RDF_HTMLURL) || (token == gNavCenter->RDF_HTMLHeight) ||
-		    (token == gNavCenter->treeFGColor) || (token == gNavCenter->treeBGColor) ||
-		    (token == gNavCenter->treeBGURL) || (token == gNavCenter->showTreeConnections) ||
+		    (token == gNavCenter->viewFGColor) || (token == gNavCenter->viewBGColor) ||
+		    (token == gNavCenter->viewBGURL) || (token == gNavCenter->showTreeConnections) ||
 		    (token == gNavCenter->treeConnectionFGColor) || (token == gNavCenter->treeOpenTriggerIconURL) ||
 		    (token == gNavCenter->treeClosedTriggerIconURL) || (token == gNavCenter->selectionFGColor) ||
 		    (token == gNavCenter->selectionBGColor) || (token == gNavCenter->columnHeaderFGColor) ||
@@ -5313,9 +5313,9 @@ rdfColorProcDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsign
 
 	if (retVal == PR_FALSE)
 	{
-		freeHtmlElement(gNavCenter->treeFGColor);
-		freeHtmlElement(gNavCenter->treeBGColor);
-		freeHtmlElement(gNavCenter->treeBGURL);
+		freeHtmlElement(gNavCenter->viewFGColor);
+		freeHtmlElement(gNavCenter->viewBGColor);
+		freeHtmlElement(gNavCenter->viewBGURL);
 		freeHtmlElement(gNavCenter->showTreeConnections);
 		freeHtmlElement(gNavCenter->treeConnectionFGColor);
 		freeHtmlElement(gNavCenter->treeOpenTriggerIconURL);
@@ -5478,9 +5478,9 @@ rdfProcDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned in
 		preHTMLdynStr = constructHTMLTagData(preHTMLdynStr, RDF_SETCOLOR_JS, NULL);
 
 		dynStr = constructHTMLTagData(dynStr, RDF_HTML_INFOHEADER_STR, XP_GetString(RDF_TREE_COLORS_TITLE));
-		dynStr = constructHTML(dynStr, node, gNavCenter->treeFGColor, HT_COLUMN_STRING);
-		dynStr = constructHTML(dynStr, node, gNavCenter->treeBGColor, HT_COLUMN_STRING);
-		dynStr = constructHTML(dynStr, node, gNavCenter->treeBGURL, HT_COLUMN_STRING);
+		dynStr = constructHTML(dynStr, node, gNavCenter->viewFGColor, HT_COLUMN_STRING);
+		dynStr = constructHTML(dynStr, node, gNavCenter->viewBGColor, HT_COLUMN_STRING);
+		dynStr = constructHTML(dynStr, node, gNavCenter->viewBGURL, HT_COLUMN_STRING);
 		dynStr = constructHTML(dynStr, node, gNavCenter->showTreeConnections, HT_COLUMN_STRING);
 		dynStr = constructHTML(dynStr, node, gNavCenter->treeConnectionFGColor, HT_COLUMN_STRING);
 		dynStr = constructHTML(dynStr, node, gNavCenter->treeOpenTriggerIconURL, HT_COLUMN_STRING);
@@ -5513,10 +5513,10 @@ rdfProcDialogHandler(XPDialogState *dlgstate, char **argv, int argc, unsigned in
 		dynStr = constructHTML(dynStr, node, gNavCenter->showDivider, HT_COLUMN_STRING);
 		dynStr = constructHTML(dynStr, node, gNavCenter->dividerColor, HT_COLUMN_STRING);
 
-		postHTMLdynStr = constructHTMLTagData(postHTMLdynStr, RDF_COLOR_LAYER, resourceID(gNavCenter->treeFGColor));
-		postHTMLdynStr = constructHTMLTagData(postHTMLdynStr, RDF_DEFAULTCOLOR_JS, resourceID(gNavCenter->treeFGColor));
-		postHTMLdynStr = constructHTMLTagData(postHTMLdynStr, RDF_COLOR_LAYER, resourceID(gNavCenter->treeBGColor));
-		postHTMLdynStr = constructHTMLTagData(postHTMLdynStr, RDF_DEFAULTCOLOR_JS, resourceID(gNavCenter->treeBGColor));
+		postHTMLdynStr = constructHTMLTagData(postHTMLdynStr, RDF_COLOR_LAYER, resourceID(gNavCenter->viewFGColor));
+		postHTMLdynStr = constructHTMLTagData(postHTMLdynStr, RDF_DEFAULTCOLOR_JS, resourceID(gNavCenter->viewFGColor));
+		postHTMLdynStr = constructHTMLTagData(postHTMLdynStr, RDF_COLOR_LAYER, resourceID(gNavCenter->viewBGColor));
+		postHTMLdynStr = constructHTMLTagData(postHTMLdynStr, RDF_DEFAULTCOLOR_JS, resourceID(gNavCenter->viewBGColor));
 		postHTMLdynStr = constructHTMLTagData(postHTMLdynStr, RDF_COLOR_LAYER, resourceID(gNavCenter->treeConnectionFGColor));
 		postHTMLdynStr = constructHTMLTagData(postHTMLdynStr, RDF_DEFAULTCOLOR_JS, resourceID(gNavCenter->treeConnectionFGColor));
 		postHTMLdynStr = constructHTMLTagData(postHTMLdynStr, RDF_COLOR_LAYER, resourceID(gNavCenter->titleBarFGColor));
@@ -5774,7 +5774,7 @@ constructHTML(char *dynStr, HT_Resource node, void *token, uint32 tokenType)
 		{
 			html = XP_GetString(RDF_HTML_STR_5);
 		}
-		else if ((token == gNavCenter->treeFGColor) || (token == gNavCenter->treeBGColor) ||
+		else if ((token == gNavCenter->viewFGColor) || (token == gNavCenter->viewBGColor) ||
 			 (token == gNavCenter->selectionFGColor) || (token == gNavCenter->selectionBGColor) ||
 			 (token == gNavCenter->columnHeaderFGColor) || (token == gNavCenter->columnHeaderBGColor) ||
 			 (token == gNavCenter->sortColumnFGColor) || (token == gNavCenter->sortColumnBGColor) ||
