@@ -25,7 +25,7 @@
 <!ENTITY closeCmd.commandkey "W">
 
 <!ENTITY textEnlarge.commandkey "+">
-<!ENTITY textEnlarge2.commandkey "=">
+<!ENTITY textEnlarge.commandkey2 "=">
 <!ENTITY textReduce.commandkey "-">
 <!ENTITY textReset.commandkey "0">
 
