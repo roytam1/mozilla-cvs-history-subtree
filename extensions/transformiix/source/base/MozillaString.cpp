@@ -71,7 +71,7 @@ void String::replace(const PRUint32 aOffset, const String& aSource)
 
 void String::deleteChars(const PRUint32 aOffset, const PRUint32 aCount)
 {
-  mString.Cut(offset, count);
+  mString.Cut(aOffset, aCount);
 }
 
 UNICODE_CHAR String::charAt(const PRUint32 aIndex) const

@@ -492,3 +492,13 @@ PRUint32 String::unicodeLength(const UNICODE_CHAR* aData)
   }
   return index;
 }
+
+ostream& operator<<(ostream& aOutput, const String& aSource)
+{
+  PRUint32 outputLoop;
+
+  for (outputLoop = 0; outputLoop < aSource.mLength; ++outputLoop) {
+    aOutput << (char)aSource.charAt(outputLoop);
+  }
+  return aOutput;
+}

@@ -155,13 +155,13 @@ private:
     UNICODE_CHAR* toUnicode() const;
     PRUint32 unicodeLength(const UNICODE_CHAR* aData);
     //Translate UNICODE_CHARs to Chars and output to the provided stream
-    friend ostream& operator<<(ostream& output, const String& source);
+    friend ostream& operator<<(ostream& aOutput, const String& aSource);
 #endif
 // XXX DEPRECATED
 };
 
 #ifdef TX_EXE
-ostream& operator<<(ostream& output, const String& source);
+ostream& operator<<(ostream& aOutput, const String& aSource);
 #endif
 
 #endif // txString_h__
