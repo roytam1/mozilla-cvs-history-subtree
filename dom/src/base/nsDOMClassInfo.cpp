@@ -416,7 +416,7 @@ nsDOMClassInfo::Init()
                            DEFAULT_SCRIPTABLE_FLAGS);
 
   // Core classes
-  NS_DEFINE_CLASSINFO_DATA(Document, nsDOMGenericSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(Document, nsDocumentSH::Create,
                            DOCUMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(DocumentType, nsNodeSH::Create,
                            NODE_SCRIPTABLE_FLAGS);
@@ -424,7 +424,7 @@ nsDOMClassInfo::Init()
                            DEFAULT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(DocumentFragment, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
-  NS_DEFINE_CLASSINFO_DATA(Element, nsDOMGenericSH::Create,
+  NS_DEFINE_CLASSINFO_DATA(Element, nsElementSH::Create,
                            ELEMENT_SCRIPTABLE_FLAGS);
   NS_DEFINE_CLASSINFO_DATA(Attr, nsDOMGenericSH::Create,
                            DEFAULT_SCRIPTABLE_FLAGS);
