@@ -431,14 +431,16 @@
   BookmarkItem* parent = nsnull;
   int index = 0;
 
-  if (mDragInsertionPosition == BookmarksService::CHInsertInto) {						// drop onto folder
+  if (mDragInsertionPosition == BookmarksService::CHInsertInto)							// drop onto folder
+  {
     nsCOMPtr<nsIDOMElement> parentElt = [mDragInsertionButton element];
     nsCOMPtr<nsIContent> parentContent(do_QueryInterface(parentElt));
     parent = BookmarksService::GetWrapperFor(parentContent);
     index = 0;
   }
   else if (mDragInsertionPosition == BookmarksService::CHInsertBefore ||
-             mDragInsertionPosition == BookmarksService::CHInsertAfter) {		// drop onto toolbar
+           mDragInsertionPosition == BookmarksService::CHInsertAfter)				// drop onto toolbar
+  {
     nsCOMPtr<nsIDOMElement> rootElt = BookmarksService::gToolbarRoot;
     nsCOMPtr<nsIContent> rootContent(do_QueryInterface(rootElt));
     parent = BookmarksService::GetWrapperFor(rootContent);
@@ -447,34 +449,37 @@
       rootContent->ChildCount(index);
     else if (mDragInsertionPosition == BookmarksService::CHInsertAfter)
       index++;
-    } else {
-      mDragInsertionButton = nil;
-      mDragInsertionPosition = BookmarksService::CHInsertNone;
-      [self setNeedsDisplay:YES];
-      return NO;
-    }
+  }
+  else
+  {
+    mDragInsertionButton = nil;
+    mDragInsertionPosition = BookmarksService::CHInsertNone;
+    [self setNeedsDisplay:YES];
+    return NO;
+  }
 
   BOOL dropHandled = NO;
+  BOOL isCopy = ([sender draggingSourceOperationMask] & NSDragOperationCopy) != 0;
+  
   NSArray	*draggedTypes = [[sender draggingPasteboard] types];
+
+  nsCOMPtr<nsIContent> beforeContent;
+  [parent contentNode]->ChildAt(index, *getter_AddRefs(beforeContent));
+  BookmarkItem* beforeItem = mBookmarks->GetWrapperFor(beforeContent);		// can handle nil content
+
   if ( [draggedTypes containsObject:@"MozBookmarkType"] )
   {
     NSArray *draggedItems = [[sender draggingPasteboard] propertyListForType: @"MozBookmarkType"];
-    dropHandled = BookmarksService::PerformBookmarkDrop(parent, index, draggedItems);
+    dropHandled = BookmarksService::PerformBookmarkDrop(parent, beforeItem, index, draggedItems, isCopy);
   }
   else if ( [draggedTypes containsObject:@"MozURLType"] )
   {
     NSDictionary* proxy = [[sender draggingPasteboard] propertyListForType: @"MozURLType"];
-    nsCOMPtr<nsIContent> beforeContent;
-    [parent contentNode]->ChildAt(index, *getter_AddRefs(beforeContent));
-    BookmarkItem* beforeItem = mBookmarks->GetWrapperFor(beforeContent);		// can handle nil content
     dropHandled = BookmarksService::PerformProxyDrop(parent, beforeItem, proxy);
 	}
   else if ( [draggedTypes containsObject:NSStringPboardType] )
   {
     NSString* draggedText = [[sender draggingPasteboard] stringForType:NSStringPboardType];
-    nsCOMPtr<nsIContent> beforeContent;
-    [parent contentNode]->ChildAt(index, *getter_AddRefs(beforeContent));
-    BookmarkItem* beforeItem = mBookmarks->GetWrapperFor(beforeContent);		// can handle nil content
     // maybe fix URL drags to include the selected text as the title
     dropHandled = BookmarksService::PerformURLDrop(parent, beforeItem, draggedText, draggedText);
   }

@@ -258,9 +258,13 @@
   return mElement;
 }
 
-- (unsigned int)draggingSourceOperationMaskForLocal:(BOOL)flag
+- (unsigned int)draggingSourceOperationMaskForLocal:(BOOL)localFlag
 {
-    return NSDragOperationGeneric;
+  unsigned int result = NSDragOperationGeneric | NSDragOperationCopy;
+  if (localFlag == NO)
+    result &= NSDragOperationDelete;
+
+  return result;
 }
 
 - (void) mouseDragged: (NSEvent*) aEvent

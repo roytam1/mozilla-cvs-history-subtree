@@ -654,24 +654,24 @@
 
 - (BOOL)outlineView:(NSOutlineView*)ov acceptDrop:(id <NSDraggingInfo>)info item:(id)item childIndex:(int)index
 {
-  NSArray *types = [[info draggingPasteboard] types];
+  NSArray*      types  = [[info draggingPasteboard] types];
   BookmarkItem* parent = (item) ? item : BookmarksService::GetRootItem();
-
+  BOOL          isCopy = ([info draggingSourceOperationMask] & NSDragOperationCopy) != 0;
+  
+  BookmarkItem* beforeItem = [self outlineView:ov child:index ofItem:item];
   if ([types containsObject: @"MozBookmarkType"])
   {
     NSArray *draggedItems = [[info draggingPasteboard] propertyListForType: @"MozBookmarkType"];
-    return BookmarksService::PerformBookmarkDrop(parent, index, draggedItems);
+    return BookmarksService::PerformBookmarkDrop(parent, beforeItem, index, draggedItems, isCopy);
   }
   else if ([types containsObject: @"MozURLType"])
   {
     NSDictionary* proxy = [[info draggingPasteboard] propertyListForType: @"MozURLType"];    
-    BookmarkItem* beforeItem = [self outlineView:ov child:index ofItem:item];
     return BookmarksService::PerformProxyDrop(parent, beforeItem, proxy);
   }
   else if ([types containsObject: NSStringPboardType])
   {
     NSString* draggedText = [[info draggingPasteboard] stringForType:NSStringPboardType];
-    BookmarkItem* beforeItem = [self outlineView:ov child:index ofItem:item];
     return BookmarksService::PerformURLDrop(parent, beforeItem, draggedText, draggedText);
   }
   

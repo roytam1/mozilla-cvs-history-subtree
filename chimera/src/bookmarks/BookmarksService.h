@@ -71,7 +71,7 @@ public:
   static void BookmarkChanged(nsIContent* aItem, bool shouldFlush = true);
   static void BookmarkRemoved(nsIContent* aContainer, nsIContent* aChild, bool shouldFlush = true);
 
-  static void AddBookmarkToFolder(nsString& aURL, nsString& aTitle, nsIDOMElement* aFolder, nsIDOMElement* aBeforeElt);
+  static void AddBookmarkToFolder(const nsString& aURL, const nsString& aTitle, nsIDOMElement* aFolder, nsIDOMElement* aBeforeElt);
   static void MoveBookmarkToFolder(nsIDOMElement* aBookmark, nsIDOMElement* aFolder, nsIDOMElement* aBeforeElt);
   static void DeleteBookmark(nsIDOMElement* aBookmark);
   
@@ -101,9 +101,9 @@ public:
   
   static NSString* ResolveKeyword(NSString* aKeyword);
 
-  static BOOL DoAncestorsIncludeNode(BookmarkItem* bookmark, BookmarkItem* searchItem);
+  static bool DoAncestorsIncludeNode(BookmarkItem* bookmark, BookmarkItem* searchItem);
   static bool IsBookmarkDropValid(BookmarkItem* proposedParent, int index, NSArray* draggedIDs);
-  static bool PerformBookmarkDrop(BookmarkItem* parent, int index, NSArray* draggedIDs);
+  static bool PerformBookmarkDrop(BookmarkItem* parent, BookmarkItem* beforeItem, int index, NSArray* draggedIDs, bool doCopy);
   static bool PerformProxyDrop(BookmarkItem* parentItem, BookmarkItem* beforeItem, NSDictionary* data);
   
   static bool PerformURLDrop(BookmarkItem* parentItem, BookmarkItem* beforeItem, NSString* title, NSString* url);

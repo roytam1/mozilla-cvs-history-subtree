@@ -401,7 +401,7 @@ BookmarksService::BookmarkRemoved(nsIContent* aContainer, nsIContent* aChild, bo
 
 
 void
-BookmarksService::AddBookmarkToFolder(nsString& aURL, nsString& aTitle, nsIDOMElement* aFolder, nsIDOMElement* aBeforeElt)
+BookmarksService::AddBookmarkToFolder(const nsString& aURL, const nsString& aTitle, nsIDOMElement* aFolder, nsIDOMElement* aBeforeElt)
 {
   // XXX if no folder provided, default to root folder
   if (!aFolder) return;
@@ -1157,7 +1157,7 @@ BookmarksService::ResolveKeyword(NSString* aKeyword)
 }
 
 // Is searchItem equal to bookmark or bookmark's parent, grandparent, etc?
-BOOL
+bool
 BookmarksService::DoAncestorsIncludeNode(BookmarkItem* bookmark, BookmarkItem* searchItem)
 {
   nsCOMPtr<nsIContent> search = [searchItem contentNode];
@@ -1167,24 +1167,24 @@ BookmarksService::DoAncestorsIncludeNode(BookmarkItem* bookmark, BookmarkItem* s
     
   // If the search item is the root node, return yes immediatly
   if (search == root)
-    return YES;
+    return true;
 
   //  for each ancestor
   while (current) {
     // If this is the root node we can't search farther, and there was no match
     if (current == root)
-      return NO;
+      return false;
     
     // If the two nodes match, then the search term is an ancestor of the given bookmark
     if (search == current)
-      return YES;
+      return true;
 
     // If a match wasn't found, set up the next node to compare
     nsCOMPtr<nsIContent> oldCurrent = current;
     oldCurrent->GetParent(*getter_AddRefs(current));
   }
   
-  return NO;
+  return false;
 }
 
 
@@ -1322,14 +1322,14 @@ BookmarksService::PerformProxyDrop(BookmarkItem* parentItem, BookmarkItem* befor
 
 
 bool
-BookmarksService::PerformBookmarkDrop(BookmarkItem* parent, int index, NSArray* draggedIDs)
+BookmarksService::PerformBookmarkDrop(BookmarkItem* parent, BookmarkItem* beforeItem, int index, NSArray* draggedIDs, bool doCopy)
 {
   NSEnumerator *enumerator = [draggedIDs reverseObjectEnumerator];
   NSNumber *contentID;
   
   //  for each item being dragged
-  while ( (contentID = [enumerator nextObject]) ) {
-  
+  while ( (contentID = [enumerator nextObject]) )
+  {  
     //  get dragged node
     nsCOMPtr<nsIContent> draggedNode = [GetWrapperFor([contentID unsignedIntValue]) contentNode];
     
@@ -1347,21 +1347,37 @@ BookmarksService::PerformBookmarkDrop(BookmarkItem* parent, int index, NSArray* 
     
     //  if the deleted nodes parent and the proposed parents are equal
     //  and if the deleted point is earlier in the list than the inserted point
-    if (proposedParent == draggedParent && existingIndex < index) {
+    if (!doCopy && proposedParent == draggedParent && existingIndex < index)
       index--;  //  if so, move the inserted point up one to compensate
-    }
     
     //  remove it from the tree
     if (draggedNode != proposedParent)		// paranoia. This should never happen
     {
-      if (draggedParent)
-        draggedParent->RemoveChildAt(existingIndex, PR_TRUE);
-      BookmarkRemoved(draggedParent, draggedNode, false);
-      
-      //  insert into new position
-      if (proposedParent)
-        proposedParent->InsertChildAt(draggedNode, index, PR_TRUE, PR_TRUE);
-      BookmarkAdded(proposedParent, draggedNode, false);
+      if (doCopy)
+      {
+        // need to clone
+        nsCOMPtr<nsIDOMElement> srcElement = do_QueryInterface(draggedNode);
+        nsCOMPtr<nsIDOMElement> destParent = do_QueryInterface(proposedParent);
+        
+        nsAutoString title;
+        nsAutoString href;
+        srcElement->GetAttribute(NS_LITERAL_STRING("href"), href);
+        srcElement->GetAttribute(NS_LITERAL_STRING("name"), title);
+
+        nsCOMPtr<nsIDOMElement> beforeElt = do_QueryInterface([beforeItem contentNode]);
+        AddBookmarkToFolder(href, title, destParent, beforeElt);
+      }
+      else
+      {
+        if (draggedParent)
+          draggedParent->RemoveChildAt(existingIndex, PR_TRUE);
+        BookmarkRemoved(draggedParent, draggedNode, false);
+        
+        //  insert into new position
+        if (proposedParent)
+          proposedParent->InsertChildAt(draggedNode, index, PR_TRUE, PR_TRUE);
+        BookmarkAdded(proposedParent, draggedNode, false);
+      }
     }
   }
 
