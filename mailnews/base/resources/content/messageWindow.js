@@ -427,6 +427,7 @@ var MessageWindowController =
 			case "cmd_getNextNMessages":
 			case "cmd_find":
 			case "cmd_findAgain":
+      case "button_mark":
 			case "cmd_markAsRead":
 			case "cmd_markAllRead":
 			case "cmd_markThreadAsRead":
@@ -483,6 +484,7 @@ var MessageWindowController =
 			case "cmd_reload":
 			case "cmd_find":
 			case "cmd_findAgain":
+      case "button_mark":
 			case "cmd_markAsRead":
 			case "cmd_markAllRead":
 			case "cmd_markThreadAsRead":
@@ -591,6 +593,7 @@ var MessageWindowController =
 			case "cmd_findAgain":
 				MsgFindAgain();
 				break;
+      case "button_mark":
 			case "cmd_markAsRead":
 				MsgMarkMsgAsRead(null);
 				return;

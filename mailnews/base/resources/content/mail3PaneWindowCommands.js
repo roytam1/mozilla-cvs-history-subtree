@@ -228,6 +228,7 @@ var DefaultController =
 			case "cmd_getNextNMessages":
 			case "cmd_find":
 			case "cmd_findAgain":
+      case "button_mark":
 			case "cmd_markAsRead":
 			case "cmd_markAllRead":
 			case "cmd_markThreadAsRead":
@@ -320,6 +321,7 @@ var DefaultController =
 			case "cmd_previousUnreadMsg":
 				return MailAreaHasFocus() && IsViewNavigationItemEnabled();
       case "cmd_downloadSelected":
+      case "button_mark":
 			case "cmd_markAsRead":
 				if(!MailAreaHasFocus())
 					return false;
@@ -512,6 +514,7 @@ var DefaultController =
 			case "cmd_findAgain":
 				MsgFindAgain();
 				return;
+      case "button_mark":
 			case "cmd_markAsRead":
 				MsgMarkMsgAsRead(null);
 				return;
