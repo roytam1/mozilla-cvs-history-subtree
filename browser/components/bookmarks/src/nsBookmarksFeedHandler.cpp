@@ -143,6 +143,7 @@ protected:
     // helpers
     NS_METHOD HandleRDFItem (nsIRDFDataSource *aDS, nsIRDFResource *itemResource,
                              nsIRDFResource *aLinkResource, nsIRDFResource *aTitleResource);
+    NS_METHOD FindTextNode (nsIDOMNode *aParentNode, nsIDOMNode **aTextNode);
 
     nsBookmarksService *mBMSVC;
     nsCOMPtr<nsIRDFDataSource> mInnerBMDataSource;
@@ -514,6 +515,43 @@ nsFeedLoadListener::TryParseAsRDF ()
     return NS_OK;
 }
 
+//
+// find the first node below aParentNode that is a TEXT_NODE,
+// and return it
+//
+nsresult
+nsFeedLoadListener::FindTextNode (nsIDOMNode *aParentNode, nsIDOMNode **aTextNode)
+{
+    NS_ENSURE_ARG(aParentNode);
+    NS_ENSURE_ARG(aTextNode);
+
+    nsresult rv;
+
+    *aTextNode = nsnull;
+
+    nsCOMPtr<nsIDOMNode> childNode;
+    rv = aParentNode->GetFirstChild(getter_AddRefs(childNode));
+    if (!childNode) return NS_OK;
+    if (NS_FAILED(rv)) return rv;
+
+    PRUint16 nodeType = 0;
+    do {
+        rv = childNode->GetNodeType(&nodeType);
+        if (nodeType == nsIDOMNode::TEXT_NODE)
+            break;
+
+        rv = childNode->GetNextSibling(getter_AddRefs(childNode));
+        if (NS_FAILED(rv)) return rv;
+    } while (childNode);
+
+    if (nodeType == nsIDOMNode::TEXT_NODE) {
+        *aTextNode = childNode.get();
+        NS_ADDREF(*aTextNode);
+    }
+
+    return NS_OK;
+}
+
 nsresult
 nsFeedLoadListener::HandleRDFItem (nsIRDFDataSource *aDS, nsIRDFResource *aItem,
                                    nsIRDFResource *aLinkResource,
@@ -573,10 +611,12 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
 
     nsCOMPtr<nsIDOMElement> docElement;
     rv = xmldoc->GetDocumentElement(getter_AddRefs(docElement));
+    if (!docElement) return NS_ERROR_UNEXPECTED;
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsIDOMNode> node;
     rv = xmldoc->GetFirstChild(getter_AddRefs(node));
+    if (!node) return NS_ERROR_UNEXPECTED;
     if (NS_FAILED(rv)) return rv;
 
     PRBool lookingForChannel = PR_FALSE;
@@ -598,6 +638,7 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
                 if (nname.Equals(NS_LITERAL_STRING("rss"))) {
                     lookingForChannel = PR_TRUE;
                     rv = node->GetFirstChild(getter_AddRefs(node));
+                    if (!node) return NS_ERROR_UNEXPECTED;
                     if (NS_FAILED(rv)) return rv;
                     continue;
                 }
@@ -615,15 +656,16 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
         }
 
         rv = node->GetNextSibling(getter_AddRefs(node));
+        if (!node) return NS_ERROR_UNEXPECTED;
         if (NS_FAILED(rv)) return rv;
     }
 
+    // we didn't find a rss/feed/channel or whatever
     if (!node)
         return NS_ERROR_FAILURE;
 
     nsCOMPtr<nsIDOMElement> chElement = do_QueryInterface(node);
-    if (!chElement)
-        return NS_ERROR_FAILURE;
+    if (!chElement) return NS_ERROR_UNEXPECTED;
 
     /* Go through the <channel>/<feed> and do what we need
      * with <item> or <entry> nodes
@@ -631,6 +673,7 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
     int numMarksAdded = 0;
 
     rv = chElement->GetFirstChild(getter_AddRefs(node));
+    if (!node) return NS_ERROR_UNEXPECTED;
     if (NS_FAILED(rv)) return rv;
 
     while (node) {
@@ -664,19 +707,9 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
 
                         if (childNname.Equals(NS_LITERAL_STRING("title"))) {
                             nsCOMPtr<nsIDOMNode> textNode;
-                            PRUint16 textNodeType;
-                            rv = childNode->GetFirstChild (getter_AddRefs(textNode));
-                            if (NS_FAILED(rv)) break; // out of while(childNode) loop
 
-                            rv = textNode->GetNodeType (&textNodeType);
-                            while (textNode && textNodeType != nsIDOMNode::TEXT_NODE) {
-                                rv = childNode->GetNextSibling (getter_AddRefs(childNode));
-                                if (NS_FAILED(rv)) break; // out of inner loop
-                                rv = textNode->GetNodeType (&textNodeType);
-                                if (NS_FAILED(rv)) break; // out of inner loop
-                            }
-                            if (NS_FAILED(rv) || textNodeType != nsIDOMNode::TEXT_NODE)
-                                break; // out of while(childNode) loop
+                            rv = FindTextNode (childNode, getter_AddRefs(textNode));
+                            if (!textNode || NS_FAILED(rv)) break;
 
                             nsCOMPtr<nsIDOMCharacterData> charTextNode = do_QueryInterface(textNode);
                             charTextNode->GetData(titleStr);
@@ -684,20 +717,10 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
                             if (!isAtom) {
                                 // in node's TEXT
                                 nsCOMPtr<nsIDOMNode> textNode;
-                                PRUint16 textNodeType;
-                                rv = childNode->GetFirstChild (getter_AddRefs(textNode));
-                                if (NS_FAILED(rv)) break; // out of while(childNode) loop
 
-                                rv = textNode->GetNodeType (&textNodeType);
-                                while (textNode && textNodeType != nsIDOMNode::TEXT_NODE) {
-                                    rv = childNode->GetNextSibling (getter_AddRefs(childNode));
-                                    if (NS_FAILED(rv)) break; // out of inner loop
-                                    rv = textNode->GetNodeType (&textNodeType);
-                                    if (NS_FAILED(rv)) break; // out of inner loop
-                                }
-                                if (NS_FAILED(rv) || textNodeType != nsIDOMNode::TEXT_NODE)
-                                    break; // out of while(childNode) loop
-                                
+                                rv = FindTextNode (childNode, getter_AddRefs(textNode));
+                                if (!textNode || NS_FAILED(rv)) break;
+
                                 nsCOMPtr<nsIDOMCharacterData> charTextNode = do_QueryInterface(textNode);
                                 charTextNode->GetData(linkStr);
                             } else {
@@ -715,7 +738,7 @@ nsFeedLoadListener::TryParseAsSimpleRSS ()
                         break;
 
                     rv = childNode->GetNextSibling(getter_AddRefs(childNode));
-                    if (NS_FAILED(rv)) return rv;
+                    if (!childNode || NS_FAILED(rv)) break;
                 }
 
                 if (!titleStr.IsEmpty() && !linkStr.IsEmpty()) {
