@@ -87,6 +87,15 @@ public:
     {0x81, 0x5b, 0x00, 0x60, 0x08, 0x11, 0x9d, 0x7a} \
 }
 
+// CLSID for the browser's global file utilities manager object.
+#define NS_FILEUTILITIES_CID                         \
+{ /* e6f11b70-5ca1-11d2-8164-006008119d7a */         \
+    0xe6f11b70,                                      \
+    0x5ca1,                                          \
+    0x11d2,                                          \
+    {0x81, 0x64, 0x00, 0x60, 0x08, 0x11, 0x9d, 0x7a} \
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 #endif /* nsIFileUtilities_h___ */

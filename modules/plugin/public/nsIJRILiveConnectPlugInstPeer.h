@@ -93,6 +93,15 @@ public:
     {0x85, 0xb1, 0x00, 0x80, 0x5f, 0x0e, 0x4d, 0xfe} \
 }
 
+// The CLSID used to get per-thread JRIEnvs from the browser.
+#define NS_JRIENV_CID                                \
+{ /* 395948a0-5cd9-11d2-8164-006008119d7a */         \
+    0x395948a0,                                      \
+    0x5cd9,                                          \
+    0x11d2,                                          \
+    {0x81, 0x64, 0x00, 0x60, 0x08, 0x11, 0x9d, 0x7a} \
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 #endif /* nsIJRILiveConnectPluginInstancePeer_h__ */

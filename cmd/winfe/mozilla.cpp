@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
  *
  * The contents of this file are subject to the Netscape Public License
  * Version 1.0 (the "NPL"); you may not use this file except in
@@ -105,7 +105,7 @@ BOOL bIsGold = FALSE;
 #include "nsGfxCIID.h"
 #include "nsViewsCID.h"
 #endif
-
+#include "nsError.h"
 
 #if defined(OJI) || defined(JAVA)
 	// don't include java.h here because the Win16 compiler won't be able to handle this file
@@ -317,6 +317,18 @@ static void InitializeNGLayout() {
 }
 #endif /* MOZ_NGLAYOUT */
 
+extern "C" nsresult np_RegisterPluginMgr(void)
+extern "C" nsresult jvm_RegisterJVMMgr(void);
+
+static void
+InitializePluginStuff(void)
+{
+    nsresult err;
+    err = np_RegisterPluginMgr();
+    ASSERT(err == NS_OK);
+    err = jvm_RegisterJVMMgr();
+    ASSERT(err == NS_OK);
+}
 
 typedef    FARPROC   (*WSASetBlockingHook_t) (FARPROC);
 /////////////////////////////////////////////////////////////////////////////
@@ -1334,12 +1346,13 @@ BOOL CNetscapeApp::InitInstance()
 
 
 #ifdef MOZ_NGLAYOUT
-  InitializeNGLayout();
+    InitializeNGLayout();
 #endif
+    InitializePluginStuff();
 
 	CString strStatus;
 
-  // rhp - Added flag for MAPI startup...
+    // rhp - Added flag for MAPI startup...
 	if (showSplashScreen(csPrintCommand)) {
 		strStatus.LoadString(IDS_LOAD_PREFS);
 		m_splash.DisplayStatus(strStatus);
@@ -1661,12 +1674,7 @@ BOOL CNetscapeApp::InitInstance()
 	if (m_bAccountSetupStartupJava) {
         PRBool started = PR_FALSE;
 #ifdef OJI
-        JRIEnv* ee = NULL;
-        nsJVMMgr* jvmMgr = JVM_GetJVMMgr();
-        if (jvmMgr) {
-            started = jvmMgr->StartupJVM() == nsJVMStatus_Running;
-            jvmMgr->Release();
-        }
+        started = JVM_GetJVMStatus() == nsJVMStatus_Running;
 #else
         JRIEnv * ee = JRI_GetCurrentEnv();
         started = ee != NULL;

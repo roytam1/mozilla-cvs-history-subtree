@@ -516,7 +516,7 @@ char* NPP_GetMIMEDescription(void)
     //fprintf(stderr, "MIME description\n");
     if (thePlugin == NULL) {
         freeFac = 1;
-        NSGetFactory(kIPluginIID, (nsIFactory** )(&thePlugin));
+        NSGetFactory(kIPluginIID, (nsIFactory** )&thePlugin, NULL);
     }
     //fprintf(stderr, "Allocated Plugin 0x%08x\n", thePlugin);
     const char * ret;
@@ -557,7 +557,7 @@ NPP_GetValue(NPP instance, NPPVariable variable, void *value) {
     //fprintf(stderr, "MIME description\n");
     if (thePlugin == NULL) {
         freeFac = 1;
-        if (NSGetFactory(kIPluginIID, (nsIFactory** )(&thePlugin)) != NS_OK)
+        if (NSGetFactory(kIPluginIID, (nsIFactory**)&thePlugin, NULL) != NS_OK)
             return NPERR_GENERIC_ERROR;
     }
     //fprintf(stderr, "Allocated Plugin 0x%08x\n", thePlugin);
@@ -601,10 +601,9 @@ NPP_Initialize(void)
     // On UNIX the plugin might have been created when calling NPP_GetMIMEType.
     if (thePlugin == NULL) {
         // create nsIPlugin factory
-        error = (NPError)NSGetFactory(kIPluginIID, (nsIFactory**) &thePlugin);
+        error = (NPError)NSGetFactory(kIPluginIID, (nsIFactory**)&thePlugin, NULL);
 	    if (error == NS_OK) {
 	    	thePlugin->AddRef();
-	        thePlugin->Initialize(thePluginManager);
 	    }
 	}
 	
@@ -655,9 +654,7 @@ NPP_Shutdown(void)
 {
 //    TRACE("NPP_Shutdown\n");
 
-    if (thePlugin)
-    {
-        thePlugin->Shutdown();
+    if (thePlugin) {
         thePlugin->Release();
         thePlugin = NULL;
     }

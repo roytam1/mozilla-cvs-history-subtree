@@ -32,7 +32,9 @@
 #include "nsCaps.h"
 #ifdef OJI
 #include "jni.h"
-#include "jvmmgr.h"
+#include "nsJVMManager.h"
+#include "nsPluginInputStream.h"
+#include "nsPluginInstancePeer.h"
 #endif
 
 #ifdef ANTHRAX
@@ -2401,8 +2403,10 @@ ET_SetPluginWindow(MWContext *cx, void *instance);
 
 NS_DEFINE_IID(kPluginInstanceIID, NS_IPLUGININSTANCE_IID);
 NS_DEFINE_IID(kLiveConnectPluginIID, NS_ILIVECONNECTPLUGIN_IID);
+#if 0
 #ifdef OJI
 NS_DEFINE_IID(kIJVMPluginIID, NS_IJVMPLUGIN_IID);
+#endif
 #endif
 
 #if defined(XP_MAC) && !defined(powerc)

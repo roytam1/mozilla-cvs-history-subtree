@@ -1783,15 +1783,7 @@ void FEU_OpenNetcaster(void)
 		if (regErr == REGERR_OK) {
             BOOL javaEnabled = FALSE;
 #if defined(OJI)
-            JVMMgr* jvmMgr = JVM_GetJVMMgr();
-            if (jvmMgr) {
-                NPIJVMPlugin* jvm = jvmMgr->GetJVM();
-                if (jvm) {
-                    javaEnabled = jvm->GetJVMEnabled();
-                    jvm->Release();
-                }
-                jvmMgr->Release();
-            }
+            javaEnabled = JVM_GetJVMStatus() == nsJVMStatus_Enabled;
 #elif defined(JAVA)
             javaEnabled = LJ_GetJavaEnabled();
 #endif
