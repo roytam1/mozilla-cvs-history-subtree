@@ -116,6 +116,7 @@ sub BuildMozilla()
 		
 		BuildProject(":mozilla:modules:security:freenav:macbuild:NoSecurity.mcp",			"Security.o");
 		BuildProject(":mozilla:modules:libfont:macbuild:FontBroker.mcp",					"FontBroker$D.o");
+		BuildProject(":mozilla:modules:oji:macbuild:oji.mcp",								"oji$D.o");
 		BuildProject(":mozilla:lib:libmocha:macbuild:LibMocha.mcp",							"LibMocha$D.o");	
 		BuildProject(":mozilla:network:macbuild:network.mcp",								"Network$D.o");
 
@@ -280,6 +281,9 @@ sub DistMozilla()
 		#SUN_JAVA
 		InstallFromManifest(":mozilla:sun-java:stubs:include:MANIFEST",					":mozilla:dist:sun-java:");
 		InstallFromManifest(":mozilla:sun-java:stubs:macjri:MANIFEST",					":mozilla:dist:sun-java:");
+
+		#OJI
+		InstallFromManifest(":mozilla:modules:oji:src:MANIFEST",						":mozilla:dist:oji:");
 	}
 
 1;
