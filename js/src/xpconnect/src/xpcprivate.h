@@ -2242,11 +2242,13 @@ public:
 
     inline void SweepTearOffs();
 
-private:
+    // Make ctor and dtor protected (rather than private) to placate nsCOMPtr.
+protected:
     XPCWrappedNative(nsISupports* aIdentity,
                      XPCWrappedNativeProto* aProto);
     virtual ~XPCWrappedNative();
 
+private:
     JSBool Init(XPCCallContext& ccx, JSObject* parent,
                 const XPCNativeScriptableInfo& scriptableInfo);
 
