@@ -1,38 +1,35 @@
-/* ***** BEGIN LICENSE BLOCK *****
- * Version: MPL 1.1/GPL 2.0/LGPL 2.1
- *
- * The contents of this file are subject to the Mozilla Public License Version
- * 1.1 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- * http://www.mozilla.org/MPL/
- *
- * Software distributed under the License is distributed on an "AS IS" basis,
- * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
- * for the specific language governing rights and limitations under the
- * License.
- *
+/*
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ * 
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ * 
  * The Original Code is the Netscape security libraries.
- *
- * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1994-2000
- * the Initial Developer. All Rights Reserved.
- *
+ * 
+ * The Initial Developer of the Original Code is Netscape
+ * Communications Corporation.  Portions created by Netscape are 
+ * Copyright (C) 1994-2000 Netscape Communications Corporation.  All
+ * Rights Reserved.
+ * 
  * Contributor(s):
- *
- * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or
- * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
- * in which case the provisions of the GPL or the LGPL are applicable instead
- * of those above. If you wish to allow use of your version of this file only
- * under the terms of either the GPL or the LGPL, and not to allow others to
- * use your version of this file under the terms of the MPL, indicate your
- * decision by deleting the provisions above and replace them with the notice
- * and other provisions required by the GPL or the LGPL. If you do not delete
- * the provisions above, a recipient may use your version of this file under
- * the terms of any one of the MPL, the GPL or the LGPL.
- *
- * ***** END LICENSE BLOCK ***** */
+ * 
+ * Alternatively, the contents of this file may be used under the
+ * terms of the GNU General Public License Version 2 or later (the
+ * "GPL"), in which case the provisions of the GPL are applicable 
+ * instead of those above.  If you wish to allow use of your 
+ * version of this file only under the terms of the GPL and not to
+ * allow others to use your version of this file under the MPL,
+ * indicate your decision by deleting the provisions above and
+ * replace them with the notice and other provisions required by
+ * the GPL.  If you do not delete the provisions above, a recipient
+ * may use your version of this file under either the MPL or the
+ * GPL.
+ */
 
 /*
  * Tool for converting builtin CA certs.
@@ -40,17 +37,11 @@
  * $Id$
  */
 
-#include "nssrenam.h"
 #include "nss.h"
 #include "cert.h"
 #include "certdb.h"
 #include "secutil.h"
 #include "pk11func.h"
-
-#if defined(WIN32)
-#include <fcntl.h>
-#include <io.h>
-#endif
 
 void dumpbytes(unsigned char *buf, int len)
 {
@@ -163,9 +154,6 @@ ConvertCertificate(SECItem *sdder, char *nickname, CERTCertTrust *trust)
     printf("CKA_TRUST_KEY_AGREEMENT CK_TRUST CKT_NETSCAPE_TRUSTED_DELEGATOR\n");
     printf("CKA_TRUST_KEY_CERT_SIGN CK_TRUST CKT_NETSCAPE_TRUSTED_DELEGATOR\n");
 #endif
-    printf("CKA_TRUST_STEP_UP_APPROVED CK_BBOOL %s\n",
-                trust->sslFlags & CERTDB_GOVT_APPROVED_CA ? 
-                "CK_TRUE" : "CK_FALSE");
 
 
     PORT_Free(sdder->data);
@@ -276,16 +264,16 @@ printheader() {
 
 static void Usage(char *progName)
 {
-    fprintf(stderr, "%s -n nickname -t trust [-i certfile]\n", progName);
+    fprintf(stderr, "%s -n nickname -t trust\n", progName);
     fprintf(stderr, 
-            "\tRead a der-encoded cert from certfile or stdin, and output\n"
-            "\tit to stdout in a format suitable for the builtin root module.\n"
-            "\tExample: %s -n MyCA -t \"C,C,C\" -i myca.der >> certdata.txt\n"
-            "\t(pipe through atob if the cert is b64-encoded)\n", progName);
-    fprintf(stderr, "%-15s nickname to assign to builtin cert.\n", 
+            "read a der-encoded cert from stdin in, and output\n"
+            "it to stdout in a format suitable for the builtin root module.\n"
+            "example: %s -n MyCA -t \"C,C,C\" < myca.der >> certdata.txt\n"
+            "(pipe through atob if the cert is b64-encoded)\n");
+    fprintf(stderr, "%15s nickname to assign to builtin cert.\n", 
                     "-n nickname");
-    fprintf(stderr, "%-15s trust flags (cCTpPuw).\n", "-t trust");
-    fprintf(stderr, "%-15s file to read (default stdin)\n", "-i certfile");
+    fprintf(stderr, "%15s default trust flags (cCTpPuw).\n",
+                    "-t trust");
     exit(-1);
 }
 
@@ -337,20 +325,6 @@ main(int argc, char **argv)
 	    exit(1);
 	}
     } else {
-#if defined(WIN32)
-	/* If we're going to read binary data from stdin, we must put stdin
-	** into O_BINARY mode or else incoming \r\n's will become \n's,
-	** and latin-1 characters will be altered.
-	*/
-
-	int smrv = _setmode(_fileno(stdin), _O_BINARY);
-	if (smrv == -1) {
-	    fprintf(stderr,
-	    "%s: Cannot change stdin to binary mode. Use -i option instead.\n",
-	            progName);
-	    exit(1);
-	}
-#endif
 	infile = PR_STDIN;
     }
 
