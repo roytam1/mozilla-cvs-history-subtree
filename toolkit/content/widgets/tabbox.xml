@@ -79,6 +79,7 @@
         <![CDATA[
           if (this._tabs)
             this._tabs.selectedIndex = val;
+          this.setAttribute("selectedIndex", val);
           return val;
         ]]>
         </setter>
