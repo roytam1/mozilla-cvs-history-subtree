@@ -1187,6 +1187,8 @@ GlobalWindowImpl::SetTitle(const nsAReadableString& aTitle)
 
 NS_IMETHODIMP GlobalWindowImpl::GetInnerWidth(PRInt32* aInnerWidth)
 {
+  FlushPendingNotifications();
+
   nsCOMPtr<nsIBaseWindow> docShellWin(do_QueryInterface(mDocShell));
   *aInnerWidth = 0;
   if (docShellWin)
