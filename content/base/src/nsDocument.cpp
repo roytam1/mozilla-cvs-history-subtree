@@ -693,11 +693,18 @@ nsDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
 
   ResetToURI(uri, aLoadGroup);
 
-  if (aChannel) {
-    nsCOMPtr<nsISupports> owner;
-    aChannel->GetOwner(getter_AddRefs(owner));
+  if (uri) {
+    // Use the channel owner as our principal if we're loading a
+    // javascript:, data:, or chrome: URI.
+    PRBool useOwner = PR_FALSE;
+    if (NS_FAILED(uri->SchemeIs("javascript", &useOwner)) || useOwner ||
+        NS_FAILED(uri->SchemeIs("data", &useOwner)) || useOwner ||
+        NS_FAILED(uri->SchemeIs("chrome", &useOwner)) || useOwner) {
+      nsCOMPtr<nsISupports> owner;
+      aChannel->GetOwner(getter_AddRefs(owner));
 
-    mPrincipal = do_QueryInterface(owner);
+      mPrincipal = do_QueryInterface(owner);
+    }
   }
 }
 

@@ -741,7 +741,7 @@ nsHTMLFormElement::HandleDOMEvent(nsIPresContext* aPresContext,
             // to forget it and the form element will build a new one
             ForgetPendingSubmission();
           }
-          rv = DoSubmitOrReset(aPresContext, aEvent, aEvent->message);
+          DoSubmitOrReset(aPresContext, aEvent, aEvent->message);
         }
         break;
       }
@@ -848,9 +848,7 @@ nsHTMLFormElement::DoSubmit(nsIPresContext* aPresContext, nsEvent* aEvent)
   // 
   // perform the submission
   //
-  SubmitSubmission(aPresContext, submission); 
-
-  return NS_OK;
+  return SubmitSubmission(aPresContext, submission); 
 }
 
 nsresult
