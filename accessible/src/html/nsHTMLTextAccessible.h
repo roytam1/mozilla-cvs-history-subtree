@@ -35,9 +35,16 @@ public:
   nsHTMLTextAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
   NS_IMETHOD GetAccName(PRUnichar **_retval); 
   NS_IMETHOD GetAccRole(PRUnichar **_retval); 
+  NS_IMETHOD GetAccState(PRUint32 *_retval);
+  NS_IMETHOD GetAccDefaultAction(PRUnichar **_retval);
+  NS_IMETHOD AccDoDefaultAction();
 
-private:
+protected:
   nsCOMPtr<nsIDOMNode> mDomNode;
+  PRBool IsALink();
+  PRBool mIsALinkCached;  // -1 = unknown, 0 = not a link, 1 = is a link
+  nsCOMPtr<nsIContent> mLinkContent;
+  PRBool mIsLinkVisited;
 };
 
 #endif  

@@ -27,6 +27,18 @@
 #include "nsCOMPtr.h"
 #include "nsIWeakReference.h"
 
+#include "nsIContent.h"
+#include "nsITextContent.h"
+#include "nsIDOMComment.h"
+#include "nsIStyleContext.h"
+#include "nsStyleConsts.h"
+#include "nsIDOMHTMLImageElement.h"
+#include "nsIDOMHTMLInputElement.h"
+#include "nsIDOMHTMLBRElement.h"
+#include "nsIAtom.h"
+#include "nsHTMLAtoms.h"
+#include "nsINameSpaceManager.h"
+
 /* Implementation file */
 NS_IMPL_ISUPPORTS1(nsGenericAccessible, nsIAccessible)
 
@@ -300,6 +312,96 @@ NS_IMETHODIMP nsDOMAccessible::AccTakeFocus()
   nsCOMPtr<nsIContent> content = do_QueryInterface(mNode);
   content->SetFocus(context);
   
+  return NS_OK;
+}
+
+
+NS_IMETHODIMP nsDOMAccessible::AppendFlatStringFromContentNode(nsIContent *aContent, nsAWritableString *aFlatString)
+{
+  nsCOMPtr<nsITextContent> textContent(do_QueryInterface(aContent));
+  if (textContent) {
+    nsCOMPtr<nsIDOMComment> commentNode(do_QueryInterface(aContent));
+    if (!commentNode) {
+      PRBool isHTMLBlock = PR_FALSE;
+      nsIFrame *frame;
+      nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+      nsCOMPtr<nsIContent> parentContent;
+      aContent->GetParent(*getter_AddRefs(parentContent));
+      if (parentContent) {
+        nsresult rv = shell->GetPrimaryFrameFor(parentContent, &frame);
+        if (NS_SUCCEEDED(rv)) {
+          // If this text is inside a block level frame (as opposed to span level), we need to add spaces around that 
+          // block's text, so we don't get words jammed together in final name
+          // Extra spaces will be trimmed out later
+          nsCOMPtr<nsIStyleContext> styleContext;
+          frame->GetStyleContext(getter_AddRefs(styleContext));
+          if (styleContext) {
+            const nsStyleDisplay* display = (const nsStyleDisplay*)styleContext->GetStyleData(eStyleStruct_Display);
+            if (display->IsBlockLevel() || display->mDisplay == NS_STYLE_DISPLAY_TABLE_CELL) {
+              isHTMLBlock = PR_TRUE;
+              aFlatString->Append(NS_LITERAL_STRING(" "));
+            }
+          }
+        }
+      }
+      nsAutoString text;
+      textContent->CopyText(text);
+      if (text.Length()>0)
+        aFlatString->Append(text);
+      if (isHTMLBlock)
+        aFlatString->Append(NS_LITERAL_STRING(" "));
+    }
+    return NS_OK;
+  }
+  nsCOMPtr<nsIDOMHTMLBRElement> brElement(do_QueryInterface(aContent));
+  if (brElement) {
+    aFlatString->Append(NS_LITERAL_STRING(" "));
+    return NS_OK;
+  }
+
+  nsCOMPtr<nsIDOMHTMLImageElement> imageContent(do_QueryInterface(aContent));
+  nsCOMPtr<nsIDOMHTMLInputElement> inputContent(do_QueryInterface(aContent));
+  if (imageContent || inputContent) {
+    nsCOMPtr<nsIDOMElement> elt(do_QueryInterface(aContent));
+    nsAutoString textEquivalent;
+    elt->GetAttribute(NS_LITERAL_STRING("alt"), textEquivalent);
+    if (textEquivalent.IsEmpty())
+      elt->GetAttribute(NS_LITERAL_STRING("title"), textEquivalent);
+    if (textEquivalent.IsEmpty())
+      elt->GetAttribute(NS_LITERAL_STRING("name"), textEquivalent);
+    if (textEquivalent.IsEmpty())
+      elt->GetAttribute(NS_LITERAL_STRING("src"), textEquivalent);
+    if (!textEquivalent.IsEmpty()) {
+      aFlatString->Append(NS_LITERAL_STRING(" "));
+      aFlatString->Append(textEquivalent);
+      aFlatString->Append(NS_LITERAL_STRING(" "));
+      return NS_OK;
+    }
+  }
+  return NS_OK;
+}
+
+
+NS_IMETHODIMP nsDOMAccessible::AppendFlatStringFromSubtree(nsIContent *aContent, nsAWritableString *aFlatString)
+{
+  // Depth first search for all text nodes that are decendants of content node.
+  // Append all the text into one flat string
+
+  PRInt32 numChildren = 0;
+
+  aContent->ChildCount(numChildren);
+  if (numChildren == 0) {
+    nsAutoString contentText;
+    AppendFlatStringFromContentNode(aContent, aFlatString);
+    return NS_OK;
+    }
+    
+  nsIContent *contentWalker;
+  PRInt32 index;
+  for (index = 0; index < numChildren; index++) {
+    aContent->ChildAt(index, contentWalker);
+    AppendFlatStringFromSubtree(contentWalker, aFlatString);
+  }
   return NS_OK;
 }
 

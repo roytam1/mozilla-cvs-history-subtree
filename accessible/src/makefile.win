@@ -33,6 +33,8 @@ CPP_OBJS=\
         .\$(OBJDIR)\nsGenericAccessible.obj    \
         .\$(OBJDIR)\nsHTMLFormControlAccessible.obj    \
         .\$(OBJDIR)\nsHTMLTextAccessible.obj    \
+        .\$(OBJDIR)\nsHTMLImageAccessible.obj    \
+        .\$(OBJDIR)\nsHTMLTableAccessible.obj    \
 	$(NULL)
 
 LINCS=                                  \

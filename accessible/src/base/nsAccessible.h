@@ -31,6 +31,7 @@
 #include "nsIPresShell.h"
 #include "nsIPresContext.h"
 #include "nsWeakReference.h"
+#include "nsIFocusController.h"
 #include "nsRect.h"
 #include "nsPoint.h"
 
@@ -99,6 +100,7 @@ protected:
   nsCOMPtr<nsIContent> mContent;
   nsCOMPtr<nsIWeakReference> mPresShell;
   nsCOMPtr<nsIAccessible> mAccessible;
+  nsCOMPtr<nsIFocusController> mFocusController;
 };
 
 /* Special Accessible that knows how to handle hit detection for flowing text */

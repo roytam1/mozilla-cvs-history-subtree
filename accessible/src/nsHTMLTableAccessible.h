@@ -20,31 +20,24 @@
  * Contributor(s): 
  */
 
-#ifndef _nsHTMLTextAccessible_H_
-#define _nsHTMLTextAccessible_H_
+#ifndef _nsHTMLTableAccessible_H_
+#define _nsHTMLTableAccessible_H_
 
 #include "nsGenericAccessible.h"
 
-class nsIWeakReference;
-class nsITextControlFrame;
-
-class nsHTMLTextAccessible : public nsLeafDOMAccessible
+class nsHTMLTableCellAccessible : public nsDOMAccessible
 {
-
 public:
-  nsHTMLTextAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
-  NS_IMETHOD GetAccName(PRUnichar **_retval); 
+  nsHTMLTableCellAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
   NS_IMETHOD GetAccRole(PRUnichar **_retval); 
-  NS_IMETHOD GetAccState(PRUint32 *_retval);
-  NS_IMETHOD GetAccDefaultAction(PRUnichar **_retval);
-  NS_IMETHOD AccDoDefaultAction();
+};
 
-protected:
-  nsCOMPtr<nsIDOMNode> mDomNode;
-  PRBool IsALink();
-  PRBool mIsALinkCached;  // -1 = unknown, 0 = not a link, 1 = is a link
-  nsCOMPtr<nsIContent> mLinkContent;
-  PRBool mIsLinkVisited;
+
+class nsHTMLTableAccessible : public nsDOMAccessible
+{
+public:
+  nsHTMLTableAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
+  NS_IMETHOD GetAccRole(PRUnichar **_retval); 
 };
 
 #endif  

@@ -38,6 +38,8 @@
 #include "nsLayoutAtoms.h"
 #include "nsSelectAccessible.h"
 #include "nsHTMLTextAccessible.h"
+#include "nsHTMLTableAccessible.h"
+#include "nsHTMLImageAccessible.h"
 
 // IFrame
 #include "nsIDocShell.h"
@@ -165,7 +167,7 @@ NS_IMETHODIMP nsAccessibilityService::CreateHTMLCheckboxAccessible(nsISupports *
     return NS_ERROR_OUT_OF_MEMORY;
 }
 
-/* nsIAccessible createHTMLCheckboxAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
+/* nsIAccessible createHTMRadioButtonAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
 NS_IMETHODIMP nsAccessibilityService::CreateHTMLRadioButtonAccessible(nsISupports *aFrame, nsIAccessible **_retval)
 {
   nsIFrame* frame;
@@ -181,7 +183,7 @@ NS_IMETHODIMP nsAccessibilityService::CreateHTMLRadioButtonAccessible(nsISupport
     return NS_ERROR_OUT_OF_MEMORY;
 }
 
-/* nsIAccessible createHTMLCheckboxAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
+/* nsIAccessible createHTMLButtonAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
 NS_IMETHODIMP nsAccessibilityService::CreateHTMLButtonAccessible(nsISupports *aFrame, nsIAccessible **_retval)
 {
   nsIFrame* frame;
@@ -192,6 +194,24 @@ NS_IMETHODIMP nsAccessibilityService::CreateHTMLButtonAccessible(nsISupports *aF
     return rv;
 
   *_retval = new nsHTMLButtonAccessible(shell,node);
+  if (*_retval) {
+    NS_ADDREF(*_retval);
+    return NS_OK;
+  } else 
+    return NS_ERROR_OUT_OF_MEMORY;
+}
+
+/* nsIAccessible createHTML4ButtonAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
+NS_IMETHODIMP nsAccessibilityService::CreateHTML4ButtonAccessible(nsISupports *aFrame, nsIAccessible **_retval)
+{
+  nsIFrame* frame;
+  nsCOMPtr<nsIDOMNode> node;
+  nsCOMPtr<nsIPresShell> shell;
+  nsresult rv = GetInfo(aFrame, &frame, getter_AddRefs(shell), getter_AddRefs(node));
+  if (NS_FAILED(rv))
+    return rv;
+
+  *_retval = new nsHTML4ButtonAccessible(shell,node);
   if (*_retval) {
     NS_ADDREF(*_retval);
     return NS_OK;
@@ -211,6 +231,79 @@ NS_IMETHODIMP nsAccessibilityService::CreateHTMLTextAccessible(nsISupports *aFra
 
   //printf("################################## CreateHTMLTextAccessible\n");
   *_retval = new nsHTMLTextAccessible(shell, node);
+  if (*_retval) {
+    NS_ADDREF(*_retval);
+    return NS_OK;
+  } else 
+    return NS_ERROR_OUT_OF_MEMORY;
+}
+
+
+/* nsIAccessible createHTMLTableAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
+NS_IMETHODIMP nsAccessibilityService::CreateHTMLTableAccessible(nsISupports *aFrame, nsIAccessible **_retval)
+{
+  nsIFrame* frame;
+  nsCOMPtr<nsIDOMNode> node;
+  nsCOMPtr<nsIPresShell> shell;
+  nsresult rv = GetInfo(aFrame, &frame, getter_AddRefs(shell), getter_AddRefs(node));
+  if (NS_FAILED(rv))
+    return rv;
+
+  *_retval = new nsHTMLTableAccessible(shell, node);
+  if (*_retval) {
+    NS_ADDREF(*_retval);
+    return NS_OK;
+  } else 
+    return NS_ERROR_OUT_OF_MEMORY;
+}
+
+/* nsIAccessible createHTMLTableCellAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
+NS_IMETHODIMP nsAccessibilityService::CreateHTMLTableCellAccessible(nsISupports *aFrame, nsIAccessible **_retval)
+{
+  nsIFrame* frame;
+  nsCOMPtr<nsIDOMNode> node;
+  nsCOMPtr<nsIPresShell> shell;
+  nsresult rv = GetInfo(aFrame, &frame, getter_AddRefs(shell), getter_AddRefs(node));
+  if (NS_FAILED(rv))
+    return rv;
+
+  *_retval = new nsHTMLTableCellAccessible(shell, node);
+  if (*_retval) {
+    NS_ADDREF(*_retval);
+    return NS_OK;
+  } else 
+    return NS_ERROR_OUT_OF_MEMORY;
+}
+
+/* nsIAccessible createHTMLImageAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
+NS_IMETHODIMP nsAccessibilityService::CreateHTMLImageAccessible(nsISupports *aFrame, nsIAccessible **_retval)
+{
+  nsIFrame* frame;
+  nsCOMPtr<nsIDOMNode> node;
+  nsCOMPtr<nsIPresShell> shell;
+  nsresult rv = GetInfo(aFrame, &frame, getter_AddRefs(shell), getter_AddRefs(node));
+  if (NS_FAILED(rv))
+    return rv;
+
+  *_retval = new nsHTMLImageAccessible(shell, node);
+  if (*_retval) {
+    NS_ADDREF(*_retval);
+    return NS_OK;
+  } else 
+    return NS_ERROR_OUT_OF_MEMORY;
+}
+
+/* nsIAccessible createHTMLTextFieldAccessible (in nsISupports aPresShell, in nsISupports aFrame); */
+NS_IMETHODIMP nsAccessibilityService::CreateHTMLTextFieldAccessible(nsISupports *aFrame, nsIAccessible **_retval)
+{
+  nsIFrame* frame;
+  nsCOMPtr<nsIDOMNode> node;
+  nsCOMPtr<nsIPresShell> shell;
+  nsresult rv = GetInfo(aFrame, &frame, getter_AddRefs(shell), getter_AddRefs(node));
+  if (NS_FAILED(rv))
+    return rv;
+
+  *_retval = new nsHTMLTextFieldAccessible(shell, node);
   if (*_retval) {
     NS_ADDREF(*_retval);
     return NS_OK;

@@ -17,34 +17,36 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
+ * Author: Eric Vaughan (evaughan@netscape.com)
  * Contributor(s): 
  */
 
-#ifndef _nsHTMLTextAccessible_H_
-#define _nsHTMLTextAccessible_H_
+#include "nsHTMLTableAccessible.h"
+#include "nsWeakReference.h"
+#include "nsReadableUtils.h"
 
-#include "nsGenericAccessible.h"
+nsHTMLTableCellAccessible::nsHTMLTableCellAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode):
+nsDOMAccessible(aShell, aDomNode)
+{ 
+}
 
-class nsIWeakReference;
-class nsITextControlFrame;
-
-class nsHTMLTextAccessible : public nsLeafDOMAccessible
+/* wstring getAccRole (); */
+NS_IMETHODIMP nsHTMLTableCellAccessible::GetAccRole(PRUnichar **_retval)
 {
+  *_retval = ToNewUnicode(NS_LITERAL_STRING("cell"));
+  return NS_OK;
+}
 
-public:
-  nsHTMLTextAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
-  NS_IMETHOD GetAccName(PRUnichar **_retval); 
-  NS_IMETHOD GetAccRole(PRUnichar **_retval); 
-  NS_IMETHOD GetAccState(PRUint32 *_retval);
-  NS_IMETHOD GetAccDefaultAction(PRUnichar **_retval);
-  NS_IMETHOD AccDoDefaultAction();
+nsHTMLTableAccessible::nsHTMLTableAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode):
+nsDOMAccessible(aShell, aDomNode)
+{ 
+}
 
-protected:
-  nsCOMPtr<nsIDOMNode> mDomNode;
-  PRBool IsALink();
-  PRBool mIsALinkCached;  // -1 = unknown, 0 = not a link, 1 = is a link
-  nsCOMPtr<nsIContent> mLinkContent;
-  PRBool mIsLinkVisited;
-};
+/* wstring getAccRole (); */
+NS_IMETHODIMP nsHTMLTableAccessible::GetAccRole(PRUnichar **_retval)
+{
+  *_retval = ToNewUnicode(NS_LITERAL_STRING("table")); 
 
-#endif  
+  return NS_OK;
+}
+

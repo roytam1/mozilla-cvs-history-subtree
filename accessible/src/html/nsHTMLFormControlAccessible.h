@@ -40,6 +40,9 @@ public:
   nsHTMLFormControlAccessible(nsIPresShell* aShell, nsIDOMNode* aNode);
   NS_IMETHOD GetAccName(PRUnichar **_retval); 
   NS_IMETHOD GetAccState(PRUint32 *_retval); 
+
+protected:
+  NS_IMETHODIMP AppendLabelFor(nsIContent *aLookNode, nsAReadableString *aId, nsAWritableString *aLabel);
 };
 
 class nsHTMLCheckboxAccessible : public nsHTMLFormControlAccessible
@@ -71,7 +74,28 @@ public:
   NS_IMETHOD GetAccName(PRUnichar **_retval); 
   NS_IMETHOD GetAccDefaultAction(PRUnichar **_retval); 
   NS_IMETHOD AccDoDefaultAction(void); 
+};
 
+class nsHTML4ButtonAccessible : public nsDOMAccessible
+{
+
+public:
+  nsHTML4ButtonAccessible(nsIPresShell* aShell, nsIDOMNode* aNode);
+  NS_IMETHOD GetAccRole(PRUnichar **_retval); 
+  NS_IMETHOD GetAccName(PRUnichar **_retval); 
+  NS_IMETHOD GetAccState(PRUint32 *_retval);
+  NS_IMETHOD GetAccDefaultAction(PRUnichar **_retval); 
+  NS_IMETHOD AccDoDefaultAction(void); 
+};
+
+
+class nsHTMLTextFieldAccessible : public nsHTMLFormControlAccessible
+{
+public:
+  nsHTMLTextFieldAccessible(nsIPresShell* aShell, nsIDOMNode* aNode);
+  NS_IMETHOD GetAccRole(PRUnichar **_retval); 
+  NS_IMETHOD GetAccValue(PRUnichar **_retval); 
+  NS_IMETHOD GetAccState(PRUint32 *_retval);
 };
 
 #endif  

@@ -25,21 +25,19 @@
 
 #include "OLEIDL.H"
 #include "OLEACC.H"
+#include "winable.h"
+#ifndef WM_GETOBJECT
+#define WM_GETOBJECT 0x03d
+#endif
 
 #include "nsCOMPtr.h"
 #include "nsIAccessible.h"
 #include "nsIAccessibleEventListener.h"
 
 #include "nsString.h"
-#define IS_ACCESSIBLE
 
 class Accessible : public IAccessible
 {
-#ifdef IS_ACCESSIBLE
-
-// accessibility only on Windows2000 and Windows98
-#ifdef OBJID_WINDOW
-
 	public: // construction, destruction
 		Accessible(nsIAccessible*, HWND aWin = 0);
 		virtual ~Accessible();
@@ -163,8 +161,6 @@ class Accessible : public IAccessible
     PRBool InState(const nsString& aStates, const char* aState);
     STDMETHODIMP GetAttribute(const char* aName, VARIANT varChild, BSTR __RPC_FAR *aString);
 
-#endif
-#endif
 };
 
 class nsAccessibleEventMap
@@ -179,11 +175,6 @@ public:
 class RootAccessible: public Accessible,
                       public nsIAccessibleEventListener
 {
-#ifdef IS_ACCESSIBLE
-
-// accessibility only on Windows2000 and Windows98
-#ifdef OBJID_WINDOW
-
 public:
     RootAccessible(nsIAccessible*, HWND aWin = 0);
     virtual ~RootAccessible();
@@ -204,10 +195,6 @@ private:
     PRInt32 mNextId;
     PRInt32 mNextPos;
 
-#endif
-#endif
 };
+#endif
 
-
-
-#endif  

@@ -43,11 +43,6 @@ EXTERN_C GUID CDECL CLSID_Accessible =
  * Class Accessible
  */
 
-#ifdef IS_ACCESSIBLE
-
-// accessibility only on Windows2000 and Windows98
-#ifdef OBJID_WINDOW
-
 
 //-----------------------------------------------------
 // construction 
@@ -274,8 +269,8 @@ STDMETHODIMP Accessible::get_accRole(
       pvarRole->lVal = ROLE_SYSTEM_CELL;
    else if (role.EqualsIgnoreCase("row"))
       pvarRole->lVal = ROLE_SYSTEM_ROW;
-   else if (role.EqualsIgnoreCase("text"))
-      pvarRole->lVal = ROLE_SYSTEM_TEXT;
+   else if (role.EqualsIgnoreCase("link"))
+      pvarRole->lVal = ROLE_SYSTEM_LINK;
    else if (role.EqualsIgnoreCase("combo box"))
       pvarRole->lVal = ROLE_SYSTEM_COMBOBOX;
    else if (role.EqualsIgnoreCase("link"))
@@ -287,7 +282,7 @@ STDMETHODIMP Accessible::get_accRole(
    else if (role.EqualsIgnoreCase("push button"))
       pvarRole->lVal = ROLE_SYSTEM_PUSHBUTTON;
    else if (role.EqualsIgnoreCase("radio button"))
-      pvarRole->lVal = ROLE_SYSTEM_PUSHBUTTON;
+      pvarRole->lVal = ROLE_SYSTEM_RADIOBUTTON;
    else if (role.EqualsIgnoreCase("indicator"))  
       pvarRole->lVal = ROLE_SYSTEM_INDICATOR;
    else if (role.EqualsIgnoreCase("check box"))
@@ -424,6 +419,14 @@ STDMETHODIMP Accessible::accLocation(
   PRInt32 x,y,w,h;
   mAccessible->AccGetBounds(&x,&y,&w,&h);
 
+  POINT cpos;
+  cpos.x = x;
+  cpos.y = y;
+
+//  ::ClientToScreen(mWnd, &cpos);
+
+//  *pxLeft = cpos.x;
+//  *pyTop = cpos.y;
   *pxLeft = x;
   *pyTop = y;
   *pcxWidth = w;
@@ -697,5 +700,3 @@ PRInt32 RootAccessible::GetIdFor(nsIAccessible* aAccessible)
   return mNextId+1;
 }
 
-#endif
-#endif

@@ -17,34 +17,30 @@
  * Copyright (C) 1998 Netscape Communications Corporation. All
  * Rights Reserved.
  *
+ * Author: Eric D Vaughan (evaughan@netscape.com)
  * Contributor(s): 
  */
 
-#ifndef _nsHTMLTextAccessible_H_
-#define _nsHTMLTextAccessible_H_
+#ifndef _nsHTMLImageAccessible_H_
+#define _nsHTMLImageAccessible_H_
 
-#include "nsGenericAccessible.h"
+#include "nsHTMLTextAccessible.h"
 
-class nsIWeakReference;
-class nsITextControlFrame;
-
-class nsHTMLTextAccessible : public nsLeafDOMAccessible
+/* Accessible for supporting images
+ * supports:
+ * - gets name, role
+ * - support basic state
+ */
+class nsHTMLImageAccessible : public nsHTMLTextAccessible
 {
 
 public:
-  nsHTMLTextAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
+  nsHTMLImageAccessible(nsIPresShell* aShell, nsIDOMNode* aDomNode);
   NS_IMETHOD GetAccName(PRUnichar **_retval); 
   NS_IMETHOD GetAccRole(PRUnichar **_retval); 
   NS_IMETHOD GetAccState(PRUint32 *_retval);
   NS_IMETHOD GetAccDefaultAction(PRUnichar **_retval);
   NS_IMETHOD AccDoDefaultAction();
-
-protected:
-  nsCOMPtr<nsIDOMNode> mDomNode;
-  PRBool IsALink();
-  PRBool mIsALinkCached;  // -1 = unknown, 0 = not a link, 1 = is a link
-  nsCOMPtr<nsIContent> mLinkContent;
-  PRBool mIsLinkVisited;
 };
 
 #endif  

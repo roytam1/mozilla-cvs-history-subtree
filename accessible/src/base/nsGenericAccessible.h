@@ -64,6 +64,8 @@ class nsDOMAccessible : public nsGenericAccessible
     NS_IMETHOD AccRemoveSelection(void);
 
   protected:
+    NS_IMETHOD AppendFlatStringFromSubtree(nsIContent *aContent, nsAWritableString *aFlatString);
+    NS_IMETHOD AppendFlatStringFromContentNode(nsIContent *aContent, nsAWritableString *aFlatString);
     nsIWeakReference* mPresShell;
     nsCOMPtr<nsIDOMNode> mNode;
 };

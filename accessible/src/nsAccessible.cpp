@@ -29,7 +29,9 @@
 #include "nsIFrame.h"
 #include "nsIScrollableView.h"
 #include "nsRootAccessible.h"
-
+#include "nsIScriptGlobalObject.h"
+#include "nsPIDOMWindow.h"
+#include "nsIDOMElement.h"
 #include "nsIEventStateManager.h"
 
 // IFrame Helpers
@@ -336,8 +338,24 @@ PRBool nsFrameTreeWalker::IsSameContent(nsIFrame* aFrame1, nsIFrame* aFrame2)
 //-----------------------------------------------------
 nsAccessible::nsAccessible(nsIAccessible* aAccessible, nsIContent* aContent, nsIWeakReference* aShell)
 {
-   NS_INIT_REFCNT();
+  NS_INIT_REFCNT();
 
+  // get frame and node
+  mContent = aContent;
+  mAccessible = aAccessible;
+  mPresShell = aShell;
+     
+  nsCOMPtr<nsIDocument> document;
+  nsCOMPtr<nsIPresShell> shell(do_QueryReferent(mPresShell));
+  if (shell)
+    shell->GetDocument(getter_AddRefs(document));
+  if (document) {
+    nsCOMPtr<nsIScriptGlobalObject> ourGlobal;
+    document->GetScriptGlobalObject(getter_AddRefs(ourGlobal));
+    nsCOMPtr<nsPIDOMWindow> ourWindow(do_QueryInterface(ourGlobal));
+    if(ourWindow) 
+      ourWindow->GetRootFocusController(getter_AddRefs(mFocusController));
+  }
 #ifdef NS_DEBUG_X
    {
      nsCOMPtr<nsIPresShell> shell = do_QueryReferent(aShell);
@@ -394,6 +412,9 @@ nsresult nsAccessible::GetAccParent(nsIPresContext*   aPresContext,
     if (NS_SUCCEEDED(rv))
       return rv;
   }
+
+  nsCOMPtr<nsIPresContext> context;
+  GetPresContext(context);
 
   if (aPresContext) {
     nsFrameTreeWalker walker(aPresContext, this); 
@@ -693,11 +714,21 @@ NS_IMETHODIMP nsAccessible::GetAccRole(PRUnichar * *aAccRole)
   /* readonly attribute wstring accState; */
 NS_IMETHODIMP nsAccessible::GetAccState(PRUint32 *aAccState) 
 { 
+  nsresult rv = NS_OK; 
+  *aAccState = 0;
+
   // delegate
   if (mAccessible) 
-    return mAccessible->GetAccState(aAccState);
+    rv = mAccessible->GetAccState(aAccState);
 
-  return NS_ERROR_NOT_IMPLEMENTED;  
+  if (NS_SUCCEEDED(rv) && mFocusController) {
+    nsCOMPtr<nsIDOMElement> focusedElement, currElement(do_QueryInterface(mContent));
+    mFocusController->GetFocusedElement(getter_AddRefs(focusedElement));
+    if (focusedElement == currElement)
+      *aAccState |= STATE_FOCUSED;
+  }
+
+  return rv;
 }
 
 NS_IMETHODIMP nsAccessible::GetAccExtState(PRUint32 *aAccExtState) 
