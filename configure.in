@@ -748,7 +748,7 @@ case "$host" in
     if test -n "$_WIN32_MSVC"; then
         HOST_CFLAGS="$HOST_CFLAGS -TC -nologo"
     fi
-    HOST_CFLAGS="$HOST_CFLAGS -DXP_PC -DXP_WIN32 -DXP_WIN -DWIN32 -D_WIN32 -DNO_X11"
+    HOST_CFLAGS="$HOST_CFLAGS -DXP_WIN32 -DXP_WIN -DWIN32 -D_WIN32 -DNO_X11"
     HOST_NSPR_MDCPUCFG='\"md/_winnt.cfg\"'
     HOST_OPTIMIZE_FLAGS="${HOST_OPTIMIZE_FLAGS=-O2}"
     ;;
@@ -1046,7 +1046,6 @@ case "$target" in
     AC_DEFINE(_WINDOWS)
     AC_DEFINE(_WIN32)
     AC_DEFINE(WIN32)
-    AC_DEFINE(XP_PC)
     AC_DEFINE(XP_WIN)
     AC_DEFINE(XP_WIN32)
     AC_DEFINE(HW_THREADS)
@@ -1395,6 +1394,24 @@ dnl the qsort routine under solaris is faulty
        AS='/usr/ccs/bin/as'
        ASFLAGS="$ASFLAGS -K PIC -L -P -D_ASM -D__STDC__=0"
        AS_DASH_C_FLAG=''
+        CC_VERSION=`$CC -V 2>&1 | grep '^cc:' 2>/dev/null | $AWK -F\: '{ print $2 }'`
+        CXX_VERSION=`$CXX -V 2>&1 | grep '^CC:' 2>/dev/null | $AWK -F\: '{ print $2 }'`
+        _MAJOR_VERSION_NUMBER=`echo $CC_VERSION | $AWK '{ print $3 }'`
+        _BAD_COMPILER=
+        if test $_MAJOR_VERSION_NUMBER -lt 6; then
+            _BAD_COMPILER=1
+        elif test $_MAJOR_VERSION_NUMBER -eq 6; then
+            _TMP1=`echo $CC_VERSION | sed 's|^Sun WorkShop||' | $AWK '{ print $2 }'`
+            _TMP2=`echo $CC_VERSION | sed 's|^Sun WorkShop||' | $AWK '{ print $3 }'`
+            if test "`echo $_TMP1 | grep -i -c update 2>/dev/null`"; then
+                if test $_TMP2 -lt 2; then
+                    _BAD_COMPILER=1
+                fi
+            fi
+        fi
+        if test -n "$_BAD_COMPILER"; then
+            AC_MSG_ERROR([Forte version WS6U2 or higher is required to build. Your compiler version is $CC_VERSION .])
+        fi
     else
        ASFLAGS="$ASFLAGS -fPIC"
        DSO_LDOPTS='-G -h $@'
@@ -2508,6 +2525,28 @@ AC_CACHE_CHECK(for C++ \"explicit\" keyword,
                                ac_cv_cpp_explicit=no)])
 if test "$ac_cv_cpp_explicit" = yes ; then
    AC_DEFINE(HAVE_CPP_EXPLICIT)
+fi
+
+AC_CACHE_CHECK(for C++ \"typename\" keyword,
+               ac_cv_cpp_typename,
+               [AC_TRY_COMPILE(class param {
+                               public:
+                                   typedef unsigned long num_type;
+                               };
+
+                               template <class T> class tplt {
+                               public:
+                                   typedef typename T::num_type t_num_type;
+                                   t_num_type foo(typename T::num_type num) {
+                                       return num;
+                                   }
+                               };,
+                               tplt<param> A;
+                               A.foo(0);,
+                               ac_cv_cpp_typename=yes,
+                               ac_cv_cpp_typename=no)])
+if test "$ac_cv_cpp_typename" = yes ; then
+   AC_DEFINE(HAVE_CPP_TYPENAME)
 fi
 
 dnl Check for support of modern template specialization syntax
@@ -3830,7 +3869,7 @@ if test ! "$MOZ_OPTIMIZE_FLAGS"; then
 fi
 
 MOZ_ARG_ENABLE_STRING(optimize,
-[  --enable-optimize[=OPT] Enable compiler optimizations (default=-O) ],
+[  --enable-optimize[=OPT] Enable optimizations using compiler flags [OPT=-O]],
 [ if test "$enableval" != "no"; then
     MOZ_OPTIMIZE=1
     if test -n "$enableval" && test "$enableval" != "yes"; then
@@ -3838,6 +3877,21 @@ MOZ_ARG_ENABLE_STRING(optimize,
         MOZ_OPTIMIZE=2
     fi
 fi ])
+
+if test -n "$MOZ_OPTIMIZE"; then
+    AC_MSG_CHECKING([for valid optimization flags])
+    _SAVE_CFLAGS=$CFLAGS
+    CFLAGS="$CFLAGS $MOZ_OPTIMIZE_FLAGS"
+    AC_TRY_COMPILE([#include <stdio.h>], 
+        [printf("Hello World\n");],
+        _results=yes,
+        _results=no)
+    AC_MSG_RESULT([$_results])
+    if test "$_results" = "no"; then
+        AC_MSG_ERROR([These compiler flags are invalid: $MOZ_OPTIMIZE_FLAGS])
+    fi
+    CFLAGS=$_SAVE_CFLAGS
+fi
 
 AC_SUBST(MOZ_OPTIMIZE)
 AC_SUBST(MOZ_OPTIMIZE_FLAGS)
@@ -5080,13 +5134,8 @@ fi # $no_x
 dnl Set various defines and substitutions
 dnl ========================================================
 
-if test "$OS_ARCH" = "OS2"; then
-  AC_DEFINE(XP_PC)
-  if test "$VACPP" = "yes"; then
+if test "$OS_ARCH" = "OS2" -a "$VACPP" = "yes"; then
       LIBS='so32dll.lib tcp32dll.lib'
-  fi
-elif test "$OS_ARCH" = "WINNT"; then
-  AC_DEFINE(XP_PC)
 elif test "$OS_ARCH" = "BeOS"; then
   AC_DEFINE(XP_BEOS)
   MOZ_MOVEMAIL=1
@@ -5098,7 +5147,7 @@ elif test "$OS_ARCH" = "Darwin"; then
 elif test "$OS_ARCH" = "OpenVMS"; then
   AC_DEFINE(XP_UNIX)
   AC_DEFINE(UNIX_ASYNC_DNS)
-else
+elif test "$OS_ARCH" != "WINNT"; then
   AC_DEFINE(XP_UNIX)
   AC_DEFINE(UNIX_ASYNC_DNS)
   MOZ_MOVEMAIL=1
@@ -5199,12 +5248,6 @@ dnl This does not change the $MAKEFILES variable.
 dnl
 dnl OpenVMS gets a line overflow on the long eval command, so use a temp file.
 dnl
-case "$target_os" in
-msvc*|mksnt*|cygwin*|mingw*)
-    MAKEFILES=`echo $MAKEFILES | sed -e 's|/cygdrive/\(.\)/|\1:/|g'`
-    ;;
-*)
-esac
 echo $MAKEFILES | $my_perl $my_srcdir/build/autoconf/acoutput-fast.pl > conftest.sh
 . ./conftest.sh
 rm conftest.sh

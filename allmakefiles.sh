@@ -51,7 +51,6 @@ config/Makefile
 config/autoconf.mk
 config/mkdepend/Makefile
 config/doxygen.cfg
-include/Makefile
 "
 
 if [ "$MOZ_COMPOSER" ]; then
@@ -542,9 +541,6 @@ widget/src/xlib/Makefile
 widget/src/os2/Makefile
 widget/src/os2/tests/Makefile
 widget/src/windows/Makefile
-widget/src/windows/expose/Makefile
-widget/src/windows/expose/ISimpleDOMNode/Makefile
-widget/src/windows/expose/ISimpleDOMDocument/Makefile
 widget/src/xlibxtbin/Makefile
 widget/src/xpwidgets/Makefile
 widget/src/support/Makefile
@@ -750,6 +746,7 @@ embedding/browser/gtk/tests/Makefile
 embedding/browser/photon/Makefile
 embedding/browser/photon/src/Makefile
 embedding/browser/photon/tests/Makefile
+embedding/browser/cocoa/Makefile
 embedding/components/Makefile
 embedding/components/build/Makefile
 embedding/components/windowwatcher/Makefile
@@ -760,6 +757,7 @@ embedding/components/ui/helperAppDlg/Makefile
 embedding/components/ui/progressDlg/Makefile
 embedding/config/Makefile
 embedding/tests/Makefile
+embedding/tests/cocoaEmbed/Makefile
 embedding/tests/winEmbed/Makefile
 embedding/tests/mfcembed/Makefile
 embedding/tests/mfcembed/components/Makefile
@@ -866,6 +864,8 @@ toolkit/components/build/Makefile
 toolkit/components/satchel/Makefile
 toolkit/components/satchel/public/Makefile
 toolkit/components/satchel/src/Makefile
+toolkit/content/mac/Makefile
+toolkit/skin/mac/Makefile
 toolkit/skin/unix/Makefile
 toolkit/skin/win/Makefile
 toolkit/xre/Makefile
@@ -925,12 +925,19 @@ fi
     MAKEFILES_accessible="
        accessible/Makefile
        accessible/public/Makefile
+       accessible/public/msaa/Makefile
+       accessible/public/msaa/ISimpleDOMNode/Makefile
+       accessible/public/msaa/ISimpleDOMDocument/Makefile
        accessible/src/Makefile
        accessible/src/base/Makefile
        accessible/src/html/Makefile
        accessible/src/xul/Makefile
+       accessible/src/msaa/Makefile
+       accessible/src/atk/Makefile
+       accessible/src/mac/Makefile
        accessible/build/Makefile
 "
+
 if [ ! "$SYSTEM_JPEG" ]; then
     MAKEFILES_jpeg="jpeg/Makefile"
 fi
@@ -1146,7 +1153,8 @@ for extension in $MOZ_EXTENSIONS; do
             extensions/universalchardet/tests/Makefile
             " ;;
         venkman ) MAKEFILES_extensions="$MAKEFILES_extensions
-            extensions/venkman/Makefile"
+            extensions/venkman/Makefile
+            extensions/venkman/resources/Makefile"
             ;;
         wallet ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/wallet/Makefile
