@@ -98,8 +98,12 @@ PRLock* _getproto_lock = NULL;
 #if defined(_PR_INET6)
 const struct in6_addr in6addr_any = IN6ADDR_ANY_INIT;
 const struct in6_addr in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
+#define _PR_IN6_IS_ADDR_UNSPECIFIED	IN6_IS_ADDR_UNSPECIFIED
+#define _PR_IN6_IS_ADDR_LOOPBACK	IN6_IS_ADDR_LOOPBACK
 #define _PR_IN6_IS_ADDR_V4MAPPED	IN6_IS_ADDR_V4MAPPED
 #define _PR_IN6_IS_ADDR_V4COMPAT	IN6_IS_ADDR_V4COMPAT
+
+#define _PR_IN6_V4MAPPED_TO_IPADDR(a) ((a)->s6_addr32[3])
 
 #else  /* _PR_INET6 */
 
@@ -107,8 +111,24 @@ const struct in6_addr in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
  * The values at bytes 10 and 11 are compared using pointers to
  * 8-bit fields, and not 32-bit fields, to make the comparison work on
  * both big-endian and little-endian systems
-*/
-#define _PR_IN6_IS_ADDR_V4MAPPED(a)		\
+ */
+
+#define _PR_IN6_IS_ADDR_UNSPECIFIED(a)			\
+				(((a)->_pr_s6_addr32[0] == 0) &&	\
+				((a)->_pr_s6_addr32[1] == 0) &&		\
+				((a)->_pr_s6_addr32[2] == 0) &&		\
+				((a)->_pr_s6_addr32[3] == 0))
+ 
+#define _PR_IN6_IS_ADDR_LOOPBACK(a)				\
+               (((a)->_pr_s6_addr32[0] == 0)	&&	\
+               ((a)->_pr_s6_addr32[1] == 0)		&&	\
+               ((a)->_pr_s6_addr32[2] == 0)		&&	\
+               ((a)->_pr_s6_addr[12] == 0)		&&	\
+               ((a)->_pr_s6_addr[13] == 0)		&&	\
+               ((a)->_pr_s6_addr[14] == 0)		&&	\
+               ((a)->_pr_s6_addr[15] == 0x01))
+ 
+#define _PR_IN6_IS_ADDR_V4MAPPED(a)			\
 		(((a)->_pr_s6_addr32[0] == 0) 	&&	\
 		((a)->_pr_s6_addr32[1] == 0)	&&	\
 		((a)->_pr_s6_addr[8] == 0)		&&	\
@@ -117,9 +137,11 @@ const struct in6_addr in6addr_loopback = IN6ADDR_LOOPBACK_INIT;
 		((a)->_pr_s6_addr[11] == 0xff))
 
 #define _PR_IN6_IS_ADDR_V4COMPAT(a)			\
-		(((a)->_pr_s6_addr32[0] == 0) &&		\
-		((a)->_pr_s6_addr32[1] == 0) &&			\
+		(((a)->_pr_s6_addr32[0] == 0) &&	\
+		((a)->_pr_s6_addr32[1] == 0) &&		\
 		((a)->_pr_s6_addr32[2] == 0))
+
+#define _PR_IN6_V4MAPPED_TO_IPADDR(a) ((a)->_pr_s6_addr32[3])
 
 #endif /* _PR_INET6 */
 
@@ -938,38 +960,28 @@ extern void ConvertToIpv4NetAddr(const PRNetAddr *src_v6addr,
 PR_IMPLEMENT(PRBool)
 PR_IsNetAddrType(const PRNetAddr *addr, PRNetAddrValue val)
 {
-#if defined(_PR_INET6)
     if (addr->raw.family == PR_AF_INET6) {
-        if (val == PR_IpAddrAny
-                && IN6_IS_ADDR_UNSPECIFIED((struct in6_addr*)&addr->ipv6.ip)) {
-            return PR_TRUE;
-        } else if (val == PR_IpAddrLoopback
-                && IN6_IS_ADDR_LOOPBACK((struct in6_addr*)&addr->ipv6.ip)) {
-            return PR_TRUE;
-        } else if (val == PR_IpAddrV4Mapped
-                && IN6_IS_ADDR_V4MAPPED((struct in6_addr*)&addr->ipv6.ip)) {
-            return PR_TRUE;
-        }
-    }
-    else
-#else
-	PRNetAddr tmp_ipv4addr;
-
-    if (addr->raw.family == PR_AF_INET6) {
-		ConvertToIpv4NetAddr(addr, &tmp_ipv4addr);
-		if (val == PR_IpAddrAny && tmp_ipv4addr.inet.ip == htonl(INADDR_ANY)) {
-			return PR_TRUE;
-		} else if (val == PR_IpAddrLoopback
-				&& tmp_ipv4addr.inet.ip == htonl(INADDR_LOOPBACK)) {
-			return PR_TRUE;
+        if (val == PR_IpAddrAny) {
+			if (_PR_IN6_IS_ADDR_UNSPECIFIED((PRIPv6Addr *)&addr->ipv6.ip)) {
+            	return PR_TRUE;
+			} else if (_PR_IN6_IS_ADDR_V4MAPPED((PRIPv6Addr *)&addr->ipv6.ip)
+					&& _PR_IN6_V4MAPPED_TO_IPADDR((PRIPv6Addr *)&addr->ipv6.ip)
+							== htonl(INADDR_ANY)) {
+            	return PR_TRUE;
+			}
+        } else if (val == PR_IpAddrLoopback) {
+            if (_PR_IN6_IS_ADDR_LOOPBACK((PRIPv6Addr *)&addr->ipv6.ip)) {
+            	return PR_TRUE;
+			} else if (_PR_IN6_IS_ADDR_V4MAPPED((PRIPv6Addr *)&addr->ipv6.ip)
+					&& _PR_IN6_V4MAPPED_TO_IPADDR((PRIPv6Addr *)&addr->ipv6.ip)
+							== htonl(INADDR_LOOPBACK)) {
+            	return PR_TRUE;
+			}
         } else if (val == PR_IpAddrV4Mapped
                 && _PR_IN6_IS_ADDR_V4MAPPED((PRIPv6Addr *)&addr->ipv6.ip)) {
             return PR_TRUE;
         }
-    }
-    else
-#endif
-    {
+    } else {
         if (addr->raw.family == AF_INET) {
             if (val == PR_IpAddrAny && addr->inet.ip == htonl(INADDR_ANY)) {
                 return PR_TRUE;

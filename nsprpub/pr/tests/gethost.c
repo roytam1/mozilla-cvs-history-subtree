@@ -126,9 +126,34 @@ int main(int argc, char **argv)
         exit(1);
     }
     PrintHostent(&he);
-
+#ifdef _PR_INET6
     PR_StringToNetAddr("::1", &addr);
+    if (PR_IsNetAddrType(&addr, PR_IpAddrV4Mapped) == PR_TRUE) {
+        fprintf(stderr, "addr should not be ipv4 mapped address\n");
+        exit(1);
+    }
+    if (PR_IsNetAddrType(&addr, PR_IpAddrLoopback) == PR_FALSE) {
+        fprintf(stderr, "addr should be loopback address\n");
+        exit(1);
+    }
+#endif
+
     PR_StringToNetAddr("127.0.0.1", &addr);
+    if (PR_IsNetAddrType(&addr, PR_IpAddrLoopback) == PR_FALSE) {
+        fprintf(stderr, "addr should be loopback address\n");
+        exit(1);
+    }
+#ifdef _PR_INET6
+    PR_StringToNetAddr("::FFFF:127.0.0.1", &addr);
+    if (PR_IsNetAddrType(&addr, PR_IpAddrV4Mapped) == PR_FALSE) {
+        fprintf(stderr, "addr should be ipv4 mapped address\n");
+        exit(1);
+    }
+    if (PR_IsNetAddrType(&addr, PR_IpAddrLoopback) == PR_FALSE) {
+        fprintf(stderr, "addr should be loopback address\n");
+        exit(1);
+    }
+#endif
 
     if (PR_InitializeNetAddr(PR_IpAddrAny, 0, &addr) == PR_FAILURE) {
         fprintf(stderr, "PR_InitializeNetAddr failed\n");
