@@ -1,3 +1,8 @@
+2000-06-24  Wolfram Schmidt  <wschmidt@decefix.iao.fhg.de>
+
+	* Entry.pm (FIRSTKEY): Fix bug for deleting all attributes and calling
+	keys.
+
 2000-05-30  Kevin McCarthy  <kevin@perldap.org>
 
 	* Makefile.PL: Added fix so API.xs compiles under Perl 5.6

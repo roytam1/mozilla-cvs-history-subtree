@@ -184,22 +184,10 @@ sub exists
 #
 sub FIRSTKEY
 {
-  my ($self, $idx) = ($_[$[], 0);
-  my (@attrs, $key);
+  my ($self) = ($_[$[]);
 
-  return unless defined($self->{"_oc_order_"});
-
-  @attrs =  @{$self->{"_oc_order_"}};
-  while ($idx < $self->{"_oc_numattr_"})
-    {
-      $key = $attrs[$idx++];
-      next if ($key =~ /^_.+_$/);
-      next if defined($self->{"_${key}_deleted_"});
-      last;
-    }
-  $self->{"_oc_keyidx_"} = $idx;
-
-  return $key;
+  $self->{"_oc_keyidx_"} = 0;
+  return $self->NEXTKEY();
 }
 
 
