@@ -401,12 +401,11 @@ js_AtomizeDouble(JSContext *cx, jsdouble d, uintN flags)
     JSHashTable *table;
     JSHashEntry *he, **hep;
     JSAtom *atom;
-#define AlignNum (1<<JSVAL_TAGBITS)
-    char alignbuf[2*AlignNum];
-    JSUint32 alignint = (JSUint32)alignbuf;
-    JSUint32 xtra = AlignNum-(alignint%AlignNum);
-    JS_ASSERT(AlignNum >= sizeof(double));
-#undef AlignNum
+#define ALIGNNUM ((1<<JSVAL_TAGBITS) < sizeof(double) ? sizeof(double) : (1<<JSVAL_TAGBITS))
+    char alignbuf[2*ALIGNNUM];
+    jsuword alignint = (jsuword)alignbuf;
+    jsuword xtra = ALIGNNUM-(alignint%ALIGNNUM);
+#undef ALIGNNUM
     dp = (jsdouble *)&alignbuf[xtra];
     *dp = d;
     keyHash = HASH_DOUBLE(dp);
@@ -511,12 +510,11 @@ js_Atomize(JSContext *cx, const char *bytes, size_t length, uintN flags)
     jschar *chars;
     JSString *str;
     JSAtom *atom;
-#define AlignNum (1<<JSVAL_TAGBITS)
-    char alignbuf[2*AlignNum];
-    JSUint32 alignint = (JSUint32)alignbuf;
-    JSUint32 xtra = AlignNum-(alignint%AlignNum);
-    JS_ASSERT(AlignNum >= sizeof(double));
-#undef AlignNum
+#define ALIGNNUM ((1<<JSVAL_TAGBITS) < sizeof(JSString) ? sizeof(JSString) : (1<<JSVAL_TAGBITS))
+    char alignbuf[2*ALIGNNUM];
+    jsuword alignint = (jsuword)alignbuf;
+    jsuword xtra = ALIGNNUM-(alignint%ALIGNNUM);
+#undef ALIGNNUM
     str = (JSString *)&alignbuf[xtra];
     chars = js_InflateString(cx, bytes, length);
     if (!chars)
@@ -533,12 +531,11 @@ JS_FRIEND_API(JSAtom *)
 js_AtomizeChars(JSContext *cx, const jschar *chars, size_t length, uintN flags)
 {
     JSString *str;
-#define AlignNum (1<<JSVAL_TAGBITS)
-    char alignbuf[2*AlignNum];
-    JSUint32 alignint = (JSUint32)alignbuf;
-    JSUint32 xtra = AlignNum-(alignint%AlignNum);
-    JS_ASSERT(AlignNum >= sizeof(double));
-#undef AlignNum
+#define ALIGNNUM ((1<<JSVAL_TAGBITS) < sizeof(JSString) ? sizeof(JSString) : (1<<JSVAL_TAGBITS))
+    char alignbuf[2*ALIGNNUM];
+    jsuword alignint = (jsuword)alignbuf;
+    jsuword xtra = ALIGNNUM-(alignint%ALIGNNUM);
+#undef ALIGNNUM
     str = (JSString *)&alignbuf[xtra];
     str->chars = (jschar *)chars;
     str->length = length;
