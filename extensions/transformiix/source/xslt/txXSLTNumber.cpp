@@ -335,7 +335,7 @@ txXSLTNumber::getCounters(Expr* aGroupSize, Expr* aGroupSeparator,
         ExprResult* sepRes = aGroupSeparator->evaluate(aContext);
         NS_ENSURE_TRUE(sepRes, NS_ERROR_FAILURE);
         
-        sepRes->stringValue(sizeStr);
+        sepRes->stringValue(groupSeparator);
         delete sepRes;
     }
 
