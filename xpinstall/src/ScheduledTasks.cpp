@@ -45,7 +45,7 @@ REGERR DeleteFileLater(nsFileSpec& filename)
             if (REGERR_OK == NR_RegAddKey( reg, ROOTKEY_PRIVATE, REG_DELETE_LIST_KEY, &newkey) )
             {
                 nsPersistentFileDescriptor savethis(filename);
-                char* buffer;
+                char* buffer = nsnull;
                 nsOutputStringStream s(buffer);
                 s << savethis;
 
@@ -90,8 +90,8 @@ REGERR ReplaceFileLater(nsFileSpec& tmpfile, nsFileSpec& target )
                 nsPersistentFileDescriptor tempDesc(tmpfile);
                 nsPersistentFileDescriptor targDesc(target);
             
-                char* tempBuffer;
-                char* targBuffer;
+                char* tempBuffer = nsnull;
+                char* targBuffer = nsnull;
 
                 nsOutputStringStream tempStream(tempBuffer);
                 nsOutputStringStream targStream(targBuffer);
@@ -138,11 +138,12 @@ void DeleteScheduledFiles(void)
 
             while (REGERR_OK == NR_RegEnumEntries(reg, key, &state, buf, sizeof(buf), NULL ))
             {
-                nsFileSpec doomedFile;
-                nsPersistentFileDescriptor doomedDesc(doomedFile);
+                
+                nsPersistentFileDescriptor doomedDesc;
                 nsInputStringStream tempStream(buf);
                 tempStream >> doomedDesc;
-                
+
+                nsFileSpec doomedFile(doomedDesc);
 
                 doomedFile.Delete(PR_FALSE);
                 
@@ -182,10 +183,12 @@ void ReplaceScheduledFiles(void)
             while (REGERR_OK == NR_RegEnumEntries(reg, key, &state, tmpfile, sizeof(tmpfile), NULL ))
             {
 
-                nsFileSpec replaceFile;
-                nsPersistentFileDescriptor doomedDesc(replaceFile);
+                
+                nsPersistentFileDescriptor doomedDesc;
                 nsInputStringStream tempStream(tmpfile);
                 tempStream >> doomedDesc;
+                
+                nsFileSpec replaceFile(doomedDesc);
 
                 if (! replaceFile.Exists() )
                 {
@@ -198,11 +201,12 @@ void ReplaceScheduledFiles(void)
                 }
                 else 
                 {
-                    nsFileSpec targetFile;
-                    nsPersistentFileDescriptor targetDesc(targetFile);
+                    nsPersistentFileDescriptor targetDesc;
                     nsInputStringStream anotherStream(target);
                     anotherStream >> targetDesc;
-
+                    
+                    nsFileSpec targetFile(targetDesc);
+                
                     targetFile.Delete(PR_FALSE);
                 
                     if (!targetFile.Exists())

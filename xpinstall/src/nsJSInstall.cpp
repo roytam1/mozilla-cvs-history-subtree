@@ -24,6 +24,8 @@
 #include "nsString.h"
 #include "nsInstall.h"
 
+#include "nsIDOMInstallVersion.h"
+
 //
 // Install property ids
 //
@@ -142,6 +144,8 @@ SetInstallProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 
 static void PR_CALLBACK FinalizeInstall(JSContext *cx, JSObject *obj)
 {
+    nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
+    delete nativeThis;
 }
 
 void nsCvrtJSValToStr(nsString&  aString,
@@ -243,10 +247,65 @@ InstallAddDirectory(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
     return JS_TRUE;
   }
 
-  if(argc >= 6)
+  if (argc == 1)                             
   {
+    // public int AddDirectory (String jarSourcePath)
+
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+       
+//  if(NS_OK != nativeThis->AddDirectory(b0, &nativeRet))
+//  {
+        return JS_FALSE;
+//  }
+
+  }
+  else if (argc == 4)                             
+  {
+    //  public int AddDirectory ( String registryName,
+    //                            String jarSourcePath,
+    //                            String localDirSpec,
+    //                            String relativeLocalPath); 
+
     nsCvrtJSValToStr(b0, cx, argv[0]);
     nsCvrtJSValToStr(b1, cx, argv[1]);
+    nsCvrtJSValToStr(b2, cx, argv[2]);
+    nsCvrtJSValToStr(b3, cx, argv[3]);
+
+//  if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, &nativeRet))
+//  {
+      return JS_FALSE;
+//  }
+  
+  }
+  else if (argc == 5)                             
+  {
+    //  public int AddDirectory ( String registryName,
+    //                            String version,
+    //                            String jarSourcePath,
+    //                            Object localDirSpec,
+    //                            String relativeLocalPath); 
+
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+    nsCvrtJSValToStr(b1, cx, argv[1]);
+    nsCvrtJSValToStr(b2, cx, argv[2]);
+    nsCvrtJSValToStr(b3, cx, argv[3]);
+    nsCvrtJSValToStr(b4, cx, argv[4]);
+//  if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, b4, &nativeRet))
+//  {
+      return JS_FALSE;
+//  }
+  }
+  else if (argc == 6)
+  {
+     //   public int AddDirectory (  String registryName,
+     //                              String version,        --OR--     VersionInfo version, 
+     //                              String jarSourcePath,
+     //                              Object localDirSpec,
+     //                              String relativeLocalPath,
+     //                              Boolean forceUpdate);  
+
+    nsCvrtJSValToStr(b0, cx, argv[0]);
+
     nsCvrtJSValToStr(b2, cx, argv[2]);
     nsCvrtJSValToStr(b3, cx, argv[3]);
     nsCvrtJSValToStr(b4, cx, argv[4]);
@@ -256,16 +315,34 @@ InstallAddDirectory(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
       return JS_FALSE;
     }
 
-    if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, b4, b5, &nativeRet))
+    if(JSVAL_IS_OBJECT(argv[1]))
     {
-      return JS_FALSE;
-    }
+        JSObject* jsobj = JSVAL_TO_OBJECT(argv[1]);
+        JSClass* jsclass = JS_GetClass(cx, jsobj);
+        if ((nsnull != jsclass) && (jsclass->flags & JSCLASS_HAS_PRIVATE)) 
+        {
+//          nsIDOMInstallVersion* version = (nsIDOMInstallVersion*)JS_GetPrivate(cx, jsobj);
 
+//          if(NS_OK != nativeThis->AddDirectory(b0, version, b2, b3, b4, b5, &nativeRet))
+//          {
+                return JS_FALSE;
+//          }
+        }
+    }
+    else
+    {
+        nsCvrtJSValToStr(b1, cx, argv[1]);
+        if(NS_OK != nativeThis->AddDirectory(b0, b1, b2, b3, b4, b5, &nativeRet))
+        {
+            return JS_FALSE;
+        }
+    }
+        
     *rval = INT_TO_JSVAL(nativeRet);
   }
   else
   {
-    JS_ReportError(cx, "Function AddDirectory requires 6 parameters");
+    JS_ReportError(cx, "Install.AddDirectory() parameters error");
     return JS_FALSE;
   }
 
@@ -652,6 +729,8 @@ InstallGetLastError(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval
   nsInstall *nativeThis = (nsInstall*)JS_GetPrivate(cx, obj);
   JSBool rBool = JS_FALSE;
   PRInt32 nativeRet;
+  nsAutoString b0;
+
 
   *rval = JSVAL_NULL;
 

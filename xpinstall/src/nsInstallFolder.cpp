@@ -111,10 +111,12 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
     if ( aFolderID.EqualsIgnoreCase("User Pick") )
     {
         PickDefaultDirectory();
+        return;
     }
     else if ( aFolderID.EqualsIgnoreCase("Installed") )
     {   
         mUrlPath = new nsFileSpec(aRelativePath, PR_TRUE);  // creates the directories to the relative path.
+        return;
     }
     else
     {
@@ -225,8 +227,21 @@ nsInstallFolder::SetDirectoryPath(const nsString& aFolderID, const nsString& aRe
 
             case -1:
 		    default:
-			    break;
+			   return;
 		}
+
+        if (aRelativePath.Length() > 0)
+        {
+            nsString tempPath(aRelativePath);
+
+            if (aRelativePath.Last() != '/' || aRelativePath.Last() != '\\')
+                tempPath += '/';
+
+            *mUrlPath += tempPath;
+            
+            // make sure that the directory is created.
+            nsFileSpec(mUrlPath->GetCString(), PR_TRUE);
+        }
     }
 }
 

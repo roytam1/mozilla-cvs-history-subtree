@@ -63,6 +63,8 @@ nsInstallFile::nsInstallFile(nsInstall* inInstall,
      mFinalFile = new nsFileSpec(folderSpec);
     *mFinalFile += inPartialPath;
     
+    mReplaceFile            = mFinalFile->Exists();
+
     mForceInstall           = forceInstall;
     
     mVersionRegistryName    = new nsString(inComponentName);
@@ -169,7 +171,7 @@ char* nsInstallFile::toString()
     {
         sprintf( buffer, nsInstallResources::GetInstallFileString(), nsnull);
     }
-    else if (mFinalFile->Exists())
+    else if (mReplaceFile)
     {
         // we are replacing this file.
 

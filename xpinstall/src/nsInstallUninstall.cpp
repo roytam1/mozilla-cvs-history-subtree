@@ -29,8 +29,9 @@
 #include "VerReg.h"
 #include "prmem.h"
 #include "nsFileSpec.h"
+#include "ScheduledTasks.h"
 
-PRInt32 SU_Uninstall(char *regPackageName);
+extern "C" NS_EXPORT PRInt32 SU_Uninstall(char *regPackageName);
 REGERR su_UninstallProcessItem(char *component_path);
 
 
@@ -95,7 +96,7 @@ char* nsInstallUninstall::toString()
 {
     char* buffer = new char[1024];
     
-    sprintf( buffer, nsInstallResources::GetDeleteComponentString(), nsAutoCString(mUIName));
+    sprintf( buffer, nsInstallResources::GetUninstallString(), nsAutoCString(mUIName));
     
     return buffer;
 }
@@ -113,7 +114,7 @@ nsInstallUninstall::RegisterPackageNode()
     return PR_FALSE;
 }
 
-PRInt32 SU_Uninstall(char *regPackageName)
+extern "C" NS_EXPORT PRInt32 SU_Uninstall(char *regPackageName)
 {
     REGERR status = REGERR_FAIL;
     char pathbuf[MAXREGPATHLEN+1] = {0};
@@ -178,16 +179,14 @@ REGERR su_UninstallProcessItem(char *component_path)
             else 
             {
                 err = VR_Remove(component_path);
-                nsFileSpec doomedFile(filepath);
-                doomedFile.Delete(PR_FALSE);
+                DeleteFileLater(nsFileSpec(filepath));
             }
         }
         else
         {
             /* delete node and file */
             err = VR_Remove(component_path);
-            nsFileSpec doomedFile(filepath);
-            doomedFile.Delete(PR_FALSE);
+            DeleteFileLater(nsFileSpec(filepath));
         }
     }
     return err;

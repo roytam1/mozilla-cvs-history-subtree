@@ -52,6 +52,7 @@
 #include "nsInstallDelete.h"
 #include "nsInstallExecute.h"
 #include "nsInstallPatch.h"
+#include "nsInstallUninstall.h"
 
 #ifdef XP_PC
 #define FILESEP "\\"
@@ -280,7 +281,7 @@ nsInstall::AbortInstall()
     {
         nsString time;
         GetTime(time);
-        *mLogStream << "Aborted Installation of \"" << nsAutoCString(mUIName) << "\" at" << nsAutoCString(time) << nsEndl;
+        *mLogStream << "     Aborted Installation at " << nsAutoCString(time) << nsEndl << nsEndl;
     }
     
     nsInstallObject* ie;
@@ -691,9 +692,8 @@ nsInstall::FinalizeInstall(PRInt32* aReturn)
 
     if ( mUninstallPackage )
     {
-        // The Version Registry is not real.  FIX!
-        //
-        //VR_UninstallCreateNode( nsAutoCString(mRegistryPackageName), nsAutoCString(mUIName));
+        VR_UninstallCreateNode( (char*)(const char*) nsAutoCString(mRegistryPackageName), 
+                                (char*)(const char*) nsAutoCString(mUIName));
     }
       
     PRUint32 i=0;
@@ -706,7 +706,7 @@ nsInstall::FinalizeInstall(PRInt32* aReturn)
         char *objString = ie->toString();
         
         if (mLogStream != nsnull)
-            *mLogStream << '\t' << objString << nsEndl;
+            *mLogStream << "     " << objString << nsEndl;
         
         delete [] objString;
     
@@ -726,7 +726,9 @@ nsInstall::FinalizeInstall(PRInt32* aReturn)
     {
         nsString time;
         GetTime(time);
-        *mLogStream << "Finished Installation of \"" << nsAutoCString(mUIName) << "\" at" << nsAutoCString(time) << nsEndl;
+
+        *mLogStream << nsEndl;
+        *mLogStream << "     Finished Installation  " << nsAutoCString(time) << nsEndl << nsEndl;
     }
 
     *aReturn = NS_OK;
@@ -980,8 +982,14 @@ nsInstall::StartInstall(const nsString& aUserPackageName, const nsString& aPacka
     
     nsString time;
     GetTime(time);
-    *mLogStream << "Starting Installation of \"" << nsAutoCString(mUIName) << "\" on" << nsAutoCString(time) << nsEndl;
-
+    
+    *mLogStream << "---------------------------------------------------------------------------" << nsEndl;
+    *mLogStream << nsAutoCString(mUIName) << nsEndl;    
+    *mLogStream << "---------------------------------------------------------------------------" << nsEndl;
+    *mLogStream << nsEndl;
+    *mLogStream << "     Starting Installation at " << nsAutoCString(time) << nsEndl;   
+    *mLogStream << nsEndl;
+         
     return NS_OK;
 }
 
@@ -1003,15 +1011,22 @@ nsInstall::Uninstall(const nsString& aPackageName, PRInt32* aReturn)
         *aReturn = SaveError( BAD_PACKAGE_NAME );
         return NS_OK;
     }
-// Create UNinstall object here FIX
+
+    nsInstallUninstall *ie = new nsInstallUninstall( this,
+                                                     *qualifiedPackageName,
+                                                     &result );
+
+    if (result == nsInstall::SUCCESS) 
+    {
+        result = ScheduleForInstall( ie );
+    }
+    else
+    {
+        delete ie;
+    }    
 
     delete qualifiedPackageName;
     
-    if (result == SUCCESS) 
-    {
-//        result = ScheduleForInstall( ip );
-    }
-        
     *aReturn = SaveError(result);
 
     return NS_OK;
@@ -1279,7 +1294,6 @@ nsInstall::SaveError(PRInt32 errcode)
  * CleanUp
  * call	it when	done with the install
  *
- * XXX: This is a synchronized method. FIX it.
  */
 void 
 nsInstall::CleanUp(void)
@@ -1396,7 +1410,7 @@ nsInstall::ExtractFileFromJar(const nsString& aJarfile, nsFileSpec* aSuggestedNa
         extractHereSpec = new nsFileSpec(*aSuggestedName);
     }
 
-    // FIX:  We will overwrite what is in the way.  is this something that we want to do?  
+    // We will overwrite what is in the way.  is this something that we want to do?  
     extractHereSpec->Delete(PR_FALSE);
 
     result  = ZIP_ExtractFile( mJarFileData, nsAutoCString(aJarfile), nsFilePath(*extractHereSpec) );
