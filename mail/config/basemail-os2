@@ -33,6 +33,12 @@ chrome\icons\default\msgcomposeWindow.ico
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Mail Extensions (smime, etc.)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
+
+
+
 components\offlineStartup.js
 
 components\mdn-service.js
@@ -55,6 +61,7 @@ chrome\en-win.jar
 
 ; default pref files
 defaults\pref\*
+greprefs\*
 defaults\messenger\mailViews.dat
 defaults\profile\localstore.rdf
 defaults\profile\mimeTypes.rdf
@@ -170,6 +177,7 @@ components\imglib2.xpt
 components\access.dll              
 components\accessibility.xpt                 
 
+
 ; caps (JavaScript security)
 components\caps.dll                     
 components\caps.xpt                             
@@ -275,6 +283,7 @@ nssckbi.dll
 regxpcom.exe
 components\appcomps.dll
 components\autocomplete.xpt
+
 components\jsdservice.xpt
 components\find.xpt
 components\chardet.xpt
@@ -296,14 +305,10 @@ components\wlltvwrs.dll
 components\helperAppDlg.xpt
 components\progressDlg.xpt
 components\dom_xpath.xpt
+
 components\lwbrk.xpt
 components\nsCloseAllWindows.js
 
-; extensions
-components\nsExtensionManager.js
-components\nsBackgroundUpdateService.js
-components\extensions.xpt
-components\update.xpt
 
 res\ua.css
 res\html.css
@@ -339,5 +344,20 @@ res\table-remove-column.gif
 res\table-remove-row-active.gif
 res\table-remove-row-hover.gif
 res\table-remove-row.gif
+
+; extensions
+components\nsExtensionManager.js
+components\nsBackgroundUpdateService.js
+components\extensions.xpt
+components\update.xpt
+
+
+
+
+
+
+
+
+
 
 
