@@ -155,7 +155,7 @@
  */
 #if !defined(LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED) && \
 	( defined(AIX) || defined(IRIX) || defined(HPUX) || defined(SUNOS4) \
-	|| defined(SOLARIS) || defined(OSF1))
+	|| defined(SOLARIS) || defined(OSF1) ||defined(freebsd)) 
 #define LDAP_CONNECT_MUST_NOT_BE_INTERRUPTED
 #endif
 
