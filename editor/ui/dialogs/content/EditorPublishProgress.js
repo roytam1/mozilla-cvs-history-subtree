@@ -355,12 +355,6 @@ function RequestCloseDialog()
   // Finish progress messages, settings buttons etc.
   SetProgressFinished(null,0);
 
-  if (!gDialog.KeepOpen.checked)
-  {
-    // Leave window open a minimum amount of time 
-    gTimerID = setTimeout("CloseDialog();", 2000);
-  }
-
   // Set "completed" message if we succeeded
   // (Some image files may have failed,
   //  but we don't abort publishing for that)
@@ -376,6 +370,11 @@ function RequestCloseDialog()
 
       SetStatusMessage(gStatusMessage);
     }
+  }
+  if (!gDialog.KeepOpen.checked)
+  {
+    // Leave window open a minimum amount of time 
+    gTimerID = setTimeout("CloseDialog();", 3000);
   }
 }
 
