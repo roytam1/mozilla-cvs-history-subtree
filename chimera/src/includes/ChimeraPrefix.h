@@ -1,0 +1,1 @@
+// include mozilla/config-defs.h#include "../../../config-defs.h"// undef DARWIN, so that includes of Core Foundation headers after this// don't mess up.#undef DARWIN

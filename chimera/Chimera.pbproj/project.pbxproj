@@ -281,13 +281,14 @@
 			buildSettings = {
 				DEBUGGING_SYMBOLS = NO;
 				FRAMEWORK_SEARCH_PATHS = "";
-				HEADER_SEARCH_PATHS = "../dist/include/exthandler ../dist/include/helperAppDlg ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/ \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\" \"$(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers\"";
+				HEADER_SEARCH_PATHS = "../dist/include/exthandler ../dist/include/helperAppDlg ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/ ../ \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\" \"$(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers\"";
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/Embed/components ../intl/unicharutil/util ../modules/zlib/src";
 				OPTIMIZATION_CFLAGS = "-O2";
-				OTHER_CFLAGS = "-fno-rtti -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -DIBMBIDI";
+				OTHER_CFLAGS = "-fno-rtti -fno-exceptions -fpascal-strings -fshort-wchar -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -DIBMBIDI";
 				OTHER_LDFLAGS = "-lxpcom -lplds4 -lplc4 -lnspr4 -lpthread -lm";
 				PREBINDING = NO;
+				PREFIX_HEADER = src/includes/ChimeraPrefix.h;
 				PRODUCT_NAME = Navigator;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = "-Wno-four-char-constants -Wno-unknown-pragmas -Wall -Wconversion -Wpointer-arith -Wbad-function-cast -Wcast-align -Woverloaded-virtual -Wsynth -Wno-long-long";
@@ -1689,9 +1690,10 @@
 				HEADER_SEARCH_PATHS = "../dist/include/pref ../dist/include/nspr ../dist/include/xpcom";
 				LIBRARY_SEARCH_PATHS = "../dist/Embed ../embedding/base ../string/obsolete ../intl/unicharutil/util ../js/src ../dist/Embed/components";
 				OPTIMIZATION_CFLAGS = "-O2";
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "-bundle";
+				OTHER_CFLAGS = "-fno-rtti -fno-exceptions -fpascal-strings -fshort-wchar -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -DIBMBIDI";
+				OTHER_LDFLAGS = "-bundle -lxpcom -lplds4 -lplc4 -lnspr4 -lpthread -lm";
 				OTHER_REZFLAGS = "";
+				PREFIX_HEADER = src/includes/ChimeraPrefix.h;
 				PRODUCT_NAME = Security;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = "-Wmost -Wno-four-char-constants -Wno-unknown-pragmas";
@@ -1957,9 +1959,10 @@
 				HEADER_SEARCH_PATHS = "../dist/include/pref ../dist/include/nspr ../dist/include/xpcom";
 				LIBRARY_SEARCH_PATHS = "../dist/Embed ../embedding/base ../string/obsolete ../intl/unicharutil/util ../js/src ../dist/Embed/components";
 				OPTIMIZATION_CFLAGS = "-O2";
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "-bundle";
+				OTHER_CFLAGS = "-fno-rtti -fno-exceptions -fpascal-strings -fshort-wchar -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -DIBMBIDI";
+				OTHER_LDFLAGS = "-bundle -lxpcom -lplds4 -lplc4 -lnspr4 -lpthread -lm";
 				OTHER_REZFLAGS = "";
+				PREFIX_HEADER = src/includes/ChimeraPrefix.h;
 				PRODUCT_NAME = WebFeatures;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = "-Wmost -Wno-four-char-constants -Wno-unknown-pragmas";
@@ -2640,6 +2643,7 @@
 				F52627D5027E982201000102,
 				F52627D8027E984501000102,
 				F507A85B0311895401026D5D,
+				F5FCDD5F03A035E501A9666E,
 			);
 			isa = PBXGroup;
 			name = Navigation;
@@ -2661,12 +2665,13 @@
 			);
 			buildSettings = {
 				DEBUGGING_SYMBOLS = NO;
-				HEADER_SEARCH_PATHS = "../dist/include/nkcache ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/xpcom";
+				HEADER_SEARCH_PATHS = "../dist/include/nkcache ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/xpcom \"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon\"";
 				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../intl/unicharutil/util ../modules/zlib/src";
 				OPTIMIZATION_CFLAGS = "-O2";
-				OTHER_CFLAGS = "";
+				OTHER_CFLAGS = "-fno-rtti -fno-exceptions -fpascal-strings -fshort-wchar -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -DIBMBIDI";
 				OTHER_LDFLAGS = "-bundle -lxpcom -lplds4 -lplc4 -lnspr4 -lpthread -lm";
 				OTHER_REZFLAGS = "";
+				PREFIX_HEADER = src/includes/ChimeraPrefix.h;
 				PRODUCT_NAME = Navigation;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = "-Wmost -Wno-four-char-constants -Wno-unknown-pragmas";
@@ -2728,6 +2733,7 @@
 			files = (
 				F52627D9027E984601000102,
 				F507A85C0311895401026D5D,
+				F5FCDD6003A035E501A9666E,
 			);
 			isa = PBXResourcesBuildPhase;
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5411,9 +5417,10 @@
 				HEADER_SEARCH_PATHS = "../dist/include/pref ../dist/include/nspr ../dist/include/cookie ../dist/include/nkcache ../dist/include/string ../dist/include/xpcom";
 				LIBRARY_SEARCH_PATHS = "../dist/Embed ../embedding/base ../string/obsolete ../intl/unicharutil/util ../js/src ../dist/Embed/components";
 				OPTIMIZATION_CFLAGS = "-O2";
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "-bundle";
+				OTHER_CFLAGS = "-fno-rtti -fno-exceptions -fpascal-strings -fshort-wchar -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -DIBMBIDI";
+				OTHER_LDFLAGS = "-bundle -lxpcom -lplds4 -lplc4 -lnspr4 -lpthread -lm";
 				OTHER_REZFLAGS = "";
+				PREFIX_HEADER = src/includes/ChimeraPrefix.h;
 				PRODUCT_NAME = Privacy;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = "-Wmost -Wno-four-char-constants -Wno-unknown-pragmas";
@@ -5752,9 +5759,10 @@
 			buildSettings = {
 				DEBUGGING_SYMBOLS = NO;
 				OPTIMIZATION_CFLAGS = "-O2";
-				OTHER_CFLAGS = "";
+				OTHER_CFLAGS = "-fno-rtti -fno-exceptions -fpascal-strings -fshort-wchar -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -DIBMBIDI";
 				OTHER_LDFLAGS = "-bundle";
 				OTHER_REZFLAGS = "";
+				PREFIX_HEADER = src/includes/ChimeraPrefix.h;
 				PRODUCT_NAME = Personal;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = "-Wmost -Wno-four-char-constants -Wno-unknown-pragmas";
@@ -6534,9 +6542,10 @@
 				HEADER_SEARCH_PATHS = "../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/rdf ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/docshell ../dist/include/profile ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/xpcom";
 				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../intl/unicharutil/util ../modules/zlib/src";
 				OPTIMIZATION_CFLAGS = "-O2";
-				OTHER_CFLAGS = "";
+				OTHER_CFLAGS = "-fno-rtti -fno-exceptions -fpascal-strings -fshort-wchar -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -DIBMBIDI";
 				OTHER_LDFLAGS = "-bundle -lxpcom -lplds4 -lplc4 -lnspr4 -lpthread -lm";
 				OTHER_REZFLAGS = "";
+				PREFIX_HEADER = src/includes/ChimeraPrefix.h;
 				PRODUCT_NAME = Appearance;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = "-Wmost -Wno-four-char-constants -Wno-unknown-pragmas";
@@ -6926,8 +6935,9 @@
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/lib/components ../intl/unicharutil/src ../gfx/src ../js/src/liveconnect ../intl/unicharutil/util";
 				OPTIMIZATION_CFLAGS = "-O2";
-				OTHER_CFLAGS = "-fno-rtti -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -D_BUILD_STATIC_BIN -DIBMBIDI";
+				OTHER_CFLAGS = "-fno-rtti -fno-exceptions -fpascal-strings -fshort-wchar -DOSTYPE=\\\"Darwin1.4\\\" -DOSARCH=\\\"Darwin\\\" -D_BUILD_STATIC_BIN -DIBMBIDI";
 				OTHER_LDFLAGS = "-lxpcom -lplds4 -lplc4 -lnspr4 -lsmime3 -lssl3 -lnss3 -lsoftokn3 -lmozjs -lmozjpeg -ljsj -lmozpng -lmozmng -lpthread -lz -lm";
+				PREFIX_HEADER = src/includes/ChimeraPrefix.h;
 				PRODUCT_NAME = Navigator;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = "-Wno-four-char-constants -Wno-unknown-pragmas -Wall -Wconversion -Wpointer-arith -Wbad-function-cast -Wcast-align -Woverloaded-virtual -Wsynth -Wno-long-long";
@@ -9604,6 +9614,26 @@
 		};
 		F5FB367C0208010801236FF3 = {
 			fileRef = F5F181C90208006F0124611D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		F5FCDD5D03A035E001A9666E = {
+			isa = PBXFileReference;
+			name = Localizable.strings;
+			path = English.lproj/Localizable.strings;
+			refType = 4;
+		};
+		F5FCDD5F03A035E501A9666E = {
+			children = (
+				F5FCDD5D03A035E001A9666E,
+			);
+			isa = PBXVariantGroup;
+			name = Localizable.strings;
+			refType = 4;
+		};
+		F5FCDD6003A035E501A9666E = {
+			fileRef = F5FCDD5F03A035E501A9666E;
 			isa = PBXBuildFile;
 			settings = {
 			};
