@@ -207,6 +207,7 @@ export:: $(JRI_GEN)
 #//
 #//------------------------------------------------------------------------
 $(JNI_GEN):: display_jni_header_msg
+    !echo $(JAVAH) -jni -d _jni $@
     !$(JAVAH) -jni -d _jni $@
 
 !ifdef NSBUILDROOT
