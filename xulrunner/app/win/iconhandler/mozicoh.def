@@ -1,0 +1,6 @@
+LIBRARY     MOZICOH
+DESCRIPTION "Implements a shell icon handler."
+EXPORTS
+  DllMain             @1
+  DllGetClassObject   @2 PRIVATE
+  DllCanUnloadNow     @3 PRIVATE
