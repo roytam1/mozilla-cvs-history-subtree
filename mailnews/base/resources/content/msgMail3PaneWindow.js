@@ -699,7 +699,7 @@ function FolderPaneOnClick(event)
         {
             msgFolder.setFlag(MSG_FOLDER_FLAG_ELIDED);
             var isServer = GetFolderAttribute(folderResource, "IsServer");
-            if (isServer)
+            if (isServer == "true")
             {
                 var server = msgFolder.server;
                 server.PerformExpand(msgWindow);
