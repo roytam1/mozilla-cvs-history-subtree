@@ -68,7 +68,7 @@
 #include "nsIDOMPkcs11.h"
 #include "nsIEventQueueService.h"
 #include "nsIEventStateManager.h"
-#include "nsIHTTPProtocolHandler.h"
+#include "nsIHttpProtocolHandler.h"
 #include "nsIInterfaceRequestor.h"
 #include "nsIJSContextStack.h"
 #include "nsIJSRuntimeService.h"
@@ -113,7 +113,7 @@ static PRInt32              gRefCnt           = 0;
 // CIDs
 static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 static NS_DEFINE_CID(kPrefServiceCID, NS_PREF_CID);
-static NS_DEFINE_CID(kHTTPHandlerCID, NS_IHTTPHANDLER_CID);
+static NS_DEFINE_CID(kHTTPHandlerCID, NS_HTTPPROTOCOLHANDLER_CID);
 static NS_DEFINE_CID(kXULControllersCID, NS_XULCONTROLLERS_CID);
 static NS_DEFINE_CID(kCharsetConverterManagerCID,
                      NS_ICHARSETCONVERTERMANAGER_CID);
@@ -4024,12 +4024,12 @@ void NavigatorImpl::SetDocShell(nsIDocShell *aDocShell)
 NS_IMETHODIMP NavigatorImpl::GetUserAgent(nsAWritableString& aUserAgent)
 {
   nsresult res;
-  nsCOMPtr<nsIHTTPProtocolHandler>
+  nsCOMPtr<nsIHttpProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
   if (NS_SUCCEEDED(res) && (nsnull != service)) {
-    PRUnichar *ua = nsnull;
+    char *ua = nsnull;
     res = service->GetUserAgent(&ua);
-    aUserAgent = ua;
+    aUserAgent = NS_ConvertASCIItoUCS2(ua);
     Recycle(ua);
   }
 
@@ -4039,12 +4039,12 @@ NS_IMETHODIMP NavigatorImpl::GetUserAgent(nsAWritableString& aUserAgent)
 NS_IMETHODIMP NavigatorImpl::GetAppCodeName(nsAWritableString& aAppCodeName)
 {
   nsresult res;
-  nsCOMPtr<nsIHTTPProtocolHandler>
+  nsCOMPtr<nsIHttpProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
   if (NS_SUCCEEDED(res) && (nsnull != service)) {
-    PRUnichar *appName = nsnull;
+    char *appName = nsnull;
     res = service->GetAppName(&appName);
-    aAppCodeName = appName;
+    aAppCodeName = NS_ConvertASCIItoUCS2(appName);
     Recycle(appName);
   }
 
@@ -4054,12 +4054,12 @@ NS_IMETHODIMP NavigatorImpl::GetAppCodeName(nsAWritableString& aAppCodeName)
 NS_IMETHODIMP NavigatorImpl::GetAppVersion(nsAWritableString& aAppVersion)
 {
   nsresult res;
-  nsCOMPtr<nsIHTTPProtocolHandler>
+  nsCOMPtr<nsIHttpProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
   if (NS_SUCCEEDED(res) && (nsnull != service)) {
-    PRUnichar *str = nsnull;
+    char *str = nsnull;
     res = service->GetAppVersion(&str);
-    aAppVersion = str;
+    aAppVersion = NS_ConvertASCIItoUCS2(str);
     Recycle(str);
 
     aAppVersion.Append(NS_LITERAL_STRING(" (")); 
@@ -4067,7 +4067,7 @@ NS_IMETHODIMP NavigatorImpl::GetAppVersion(nsAWritableString& aAppVersion)
     if (NS_FAILED(res))
       return res;
 
-    aAppVersion += str;
+    aAppVersion += NS_ConvertASCIItoUCS2(str);
     Recycle(str);
 
     aAppVersion.Append(NS_LITERAL_STRING("; "));                      
@@ -4075,7 +4075,7 @@ NS_IMETHODIMP NavigatorImpl::GetAppVersion(nsAWritableString& aAppVersion)
     if (NS_FAILED(res))
       return res;
 
-    aAppVersion += str;
+    aAppVersion += NS_ConvertASCIItoUCS2(str);
     Recycle(str);
 
     aAppVersion.Append(PRUnichar(')'));
@@ -4093,12 +4093,12 @@ NS_IMETHODIMP NavigatorImpl::GetAppName(nsAWritableString& aAppName)
 NS_IMETHODIMP NavigatorImpl::GetLanguage(nsAWritableString& aLanguage)
 {
   nsresult res;
-  nsCOMPtr<nsIHTTPProtocolHandler>
+  nsCOMPtr<nsIHttpProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
   if (NS_SUCCEEDED(res) && (nsnull != service)) {
-    PRUnichar *lang = nsnull;
+    char *lang = nsnull;
     res = service->GetLanguage(&lang);
-    aLanguage = lang;
+    aLanguage = NS_ConvertASCIItoUCS2(lang);
     Recycle(lang);
   }
 
@@ -4108,7 +4108,7 @@ NS_IMETHODIMP NavigatorImpl::GetLanguage(nsAWritableString& aLanguage)
 NS_IMETHODIMP NavigatorImpl::GetPlatform(nsAWritableString& aPlatform)
 {
   nsresult res;
-  nsCOMPtr<nsIHTTPProtocolHandler>
+  nsCOMPtr<nsIHttpProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
   if (NS_SUCCEEDED(res) && (nsnull != service)) {
     // sorry for the #if platform ugliness, but Communicator is likewise hardcoded
@@ -4123,9 +4123,9 @@ NS_IMETHODIMP NavigatorImpl::GetPlatform(nsAWritableString& aPlatform)
     // XXX Communicator uses compiled-in build-time string defines
     // to indicate the platform it was compiled *for*, not what it is
     // currently running *on* which is what this does.
-    PRUnichar *plat = nsnull;
+    char *plat = nsnull;
     res = service->GetOscpu(&plat);
-    aPlatform = plat;
+    aPlatform = NS_ConvertASCIItoUCS2(plat);
     Recycle(plat);
 #endif
   }
@@ -4136,12 +4136,12 @@ NS_IMETHODIMP NavigatorImpl::GetPlatform(nsAWritableString& aPlatform)
 NS_IMETHODIMP NavigatorImpl::GetOscpu(nsAWritableString& aOSCPU)
 {
   nsresult res;
-  nsCOMPtr<nsIHTTPProtocolHandler>
+  nsCOMPtr<nsIHttpProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
   if (NS_SUCCEEDED(res) && (nsnull != service)) {
-    PRUnichar *oscpu = nsnull;
+    char *oscpu = nsnull;
     res = service->GetOscpu(&oscpu);
-    aOSCPU = oscpu;
+    aOSCPU = NS_ConvertASCIItoUCS2(oscpu);
     Recycle(oscpu);
   }
 
@@ -4151,12 +4151,12 @@ NS_IMETHODIMP NavigatorImpl::GetOscpu(nsAWritableString& aOSCPU)
 NS_IMETHODIMP NavigatorImpl::GetVendor(nsAWritableString& aVendor)
 {
   nsresult res;
-  nsCOMPtr<nsIHTTPProtocolHandler>
+  nsCOMPtr<nsIHttpProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
   if (NS_SUCCEEDED(res) && (nsnull != service)) {
-    PRUnichar *vendor = nsnull;
+    char *vendor = nsnull;
     res = service->GetVendor(&vendor);
-    aVendor = vendor;
+    aVendor = NS_ConvertASCIItoUCS2(vendor);
     Recycle(vendor);
   }
 
@@ -4167,12 +4167,12 @@ NS_IMETHODIMP NavigatorImpl::GetVendor(nsAWritableString& aVendor)
 NS_IMETHODIMP NavigatorImpl::GetVendorSub(nsAWritableString& aVendorSub)
 {
   nsresult res;
-  nsCOMPtr<nsIHTTPProtocolHandler>
+  nsCOMPtr<nsIHttpProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
   if (NS_SUCCEEDED(res) && (nsnull != service)) {
-    PRUnichar *vendor = nsnull;
+    char *vendor = nsnull;
     res = service->GetVendorSub(&vendor);
-    aVendorSub = vendor;
+    aVendorSub = NS_ConvertASCIItoUCS2(vendor);
     Recycle(vendor);
   }
 
@@ -4182,12 +4182,12 @@ NS_IMETHODIMP NavigatorImpl::GetVendorSub(nsAWritableString& aVendorSub)
 NS_IMETHODIMP NavigatorImpl::GetProduct(nsAWritableString& aProduct)
 {
   nsresult res;
-  nsCOMPtr<nsIHTTPProtocolHandler>
+  nsCOMPtr<nsIHttpProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
   if (NS_SUCCEEDED(res) && (nsnull != service)) {
-    PRUnichar *product = nsnull;
+    char *product = nsnull;
     res = service->GetProduct(&product);
-    aProduct = product;
+    aProduct = NS_ConvertASCIItoUCS2(product);
     Recycle(product);
   }
 
@@ -4197,12 +4197,12 @@ NS_IMETHODIMP NavigatorImpl::GetProduct(nsAWritableString& aProduct)
 NS_IMETHODIMP NavigatorImpl::GetProductSub(nsAWritableString& aProductSub)
 {
   nsresult res;
-  nsCOMPtr<nsIHTTPProtocolHandler>
+  nsCOMPtr<nsIHttpProtocolHandler>
     service(do_GetService(kHTTPHandlerCID, &res));
   if (NS_SUCCEEDED(res) && (nsnull != service)) {
-    PRUnichar *productSub = nsnull;
+    char *productSub = nsnull;
     res = service->GetProductSub(&productSub);
-    aProductSub = productSub;
+    aProductSub = NS_ConvertASCIItoUCS2(productSub);
     Recycle(productSub);
   }
 
