@@ -4005,7 +4005,7 @@ CRDFContentView* CRDFContentView::DisplayRDFTreeFromResource(CWnd* pParent,
 	ns->data = NULL;
 	theApp.m_pRDFCX->TrackRDFWindow(pParent);
 
-	HT_Pane thePane = HT_PaneFromResource(HT_GetRDFResource(node), ns, PR_FALSE);
+	HT_Pane thePane = HT_PaneFromResource(HT_GetRDFResource(node), ns, PR_FALSE, PR_TRUE, PR_TRUE);
 
 	// Now call our helper function
 	return DisplayRDFTreeFromPane(pParent, xPos, yPos, width, height, thePane, pContext);
