@@ -1623,6 +1623,8 @@ ldaptool_parse_ctrl_arg(char *ctrl_arg, char sep,
 	    return (calculate_ctrl_value( s, ctrl_value, vlen ));
 	}
     }
+
+    return( 0 );
 }
 
 
