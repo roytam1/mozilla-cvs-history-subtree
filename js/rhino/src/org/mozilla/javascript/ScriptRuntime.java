@@ -2001,11 +2001,27 @@ public class ScriptRuntime {
         cx.currentActivation = activation;
     }
 
-    private static Class getClassOrNull(String className) {
+    static Class getClassOrNull(String className) {
         try {
             return Class.forName(className);
         } catch  (ClassNotFoundException ex) {
         } catch  (SecurityException ex) {
+        } catch (IllegalArgumentException e) {
+            // Can be thrown if name has characters that a class name
+            // can not contain
+        }
+        return null;
+    }
+
+    static Class getClassOrNull(ClassLoader loader, String className)
+    {
+        try {
+            return loader.loadClass(className);
+        } catch (ClassNotFoundException ex) {
+        } catch (SecurityException ex) {
+        } catch (IllegalArgumentException e) {
+            // Can be thrown if name has characters that a class name
+            // can not contain
         }
         return null;
     }

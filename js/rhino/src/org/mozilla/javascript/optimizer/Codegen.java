@@ -80,7 +80,7 @@ public class Codegen extends Interpreter {
 
         Exception e = null;
         Class result = null;
-        ClassLoader parentLoader = cx.getClass().getClassLoader();
+        ClassLoader parentLoader = cx.getApplicationClassLoader();
         GeneratedClassLoader loader;
         if (securityController == null) {
             loader = cx.createClassLoader(parentLoader);

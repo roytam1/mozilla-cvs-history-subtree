@@ -331,7 +331,7 @@ public class JavaAdapter extends ScriptableObject {
             }
         }
 
-        ClassLoader parentLoader = cx.getClass().getClassLoader();
+        ClassLoader parentLoader = cx.getApplicationClassLoader();
         GeneratedClassLoader loader;
         SecurityController sc = cx.getSecurityController();
         if (sc == null) {
