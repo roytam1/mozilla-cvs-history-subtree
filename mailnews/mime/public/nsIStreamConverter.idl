@@ -22,6 +22,7 @@
 
 interface nsIOutputStream;
 interface nsIURI;
+interface nsIChannel;
 
 %{C++
 // {588595CB-2012-11d3-8EF0-00A024A7D144}
@@ -39,7 +40,7 @@ interface nsIStreamConverter : nsIStreamListener {
 	 * stream listener. As Data is converted, the listener is notified.
      */
 
-	void Init(in nsIURI aURI, in nsIStreamListener outListener); 
+	void Init(in nsIURI aURI, in nsIStreamListener outListener, in nsIChannel aChannel); 
 
 	/* After initializing the converter you can ask for the output content type
 	 * for the converter 
