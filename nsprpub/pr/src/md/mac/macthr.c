@@ -44,6 +44,7 @@
 #include <Multiprocessing.h>
 #include <Gestalt.h>
 
+#include "mdcriticalregion.h"
 
 TimerUPP	gTimerCallbackUPP	= NULL;
 PRThread *	gPrimaryThread		= NULL;
@@ -509,7 +510,7 @@ void _MD_SetIntsOff(PRInt32 ints)
 
 #if MAC_CRITICAL_REGIONS
 
-MPCriticalRegionID  gCriticalRegion;
+MDCriticalRegionID  gCriticalRegion;
 
 void InitCriticalRegion()
 {
@@ -522,7 +523,7 @@ void InitCriticalRegion()
     
     if (!gUseCriticalRegions) return;
     
-    err = MPCreateCriticalRegion(&gCriticalRegion);
+    err = MD_CriticalRegionCreate(&gCriticalRegion);
     PR_ASSERT(err == noErr);
 }
 
@@ -532,7 +533,7 @@ void TermCriticalRegion()
 
     if (!gUseCriticalRegions) return;
 
-    err = MPDeleteCriticalRegion(gCriticalRegion);
+    err = MD_CriticalRegionDelete(gCriticalRegion);
     PR_ASSERT(err == noErr);
 }
 
@@ -545,7 +546,8 @@ void EnterCritialRegion()
 
     PR_ASSERT(gCriticalRegion != kInvalidID);
     
-    err = MPEnterCriticalRegion(gCriticalRegion, kDurationForever /* 10000 * kDurationMillisecond */ );
+    /* Change to a non-infinite timeout for debugging purposes */
+    err = MD_CriticalRegionEnter(gCriticalRegion, kDurationForever /* 10000 * kDurationMillisecond */ );
     PR_ASSERT(err == noErr);
 }
 
@@ -557,7 +559,7 @@ void LeaveCritialRegion()
 
     PR_ASSERT(gCriticalRegion != kInvalidID);
 
-    err = MPExitCriticalRegion(gCriticalRegion);
+    err = MD_CriticalRegionExit(gCriticalRegion);
     PR_ASSERT(err == noErr);
 }
 
