@@ -67,9 +67,9 @@ if (!$ldapsdk_ver)
    }
 }
 
-if ($ldapsdk_ver == "30")
+if ($ldapsdk_ver eq "30")
 {
-   $v3def = "-DLDAPV3";
+   $v3_def = "-DLDAPV3";
 }
    
 if (!$ldapsdk_ssl)
@@ -112,23 +112,57 @@ if ($osname =~ /mswin/i)
    }
 }
 
+opendir(DIR,$lib_ldap);
+@files = grep{/$ldap_lib/} readdir(DIR);
+closedir(DIR);
+
+$lber_lib = "";
+if ($#files < 0)
+{
+   $ldap_lib = "ldap";
+   $lber_lib = "lber";
+}
+
 if ($osname =~ /mswin/i)
 {
    $myextlib = "$lib_ldap\\$ldap_lib.lib";
+   if ($lber_lib)
+   {
+      $myextlib .= " $lib_ldap\\$lber_lib.lib";
+   }
 } else {
    $myextlib = "";
 }
 
+$lib_line = "-L$lib_ldap -l$ldap_lib";
+if ($lber_lib)
+{
+   $lib_line .= " -l$lber_lib";
+}
+
+@extras = ();
+
+push(@extras,
+     CAPI => 'TRUE')
+    if ($] >= 5.005 and $^O eq 'MSWin32'
+        and $Config{archname} =~ /-object\b/i);
+
+push(@extras,
+     ABSTRACT => 'Perl methods for LDAP C API calls',
+     AUTHOR   => 'Netscape Communications Corp., Inc. and Clayton Donley')
+    if ($ExtUtils::MakeMaker::Version >= 5.4301);
 
 WriteMakefile(
 	'NAME'		=> 	'Mozilla::LDAP::API',
+        'DISTNAME'	=>  'PerLDAP',
 	'VERSION_FROM'	=> 	'API.pm',
 	($include_ldap ne "/usr/include" ? (
 	'INC'		=> 	"-I$include_ldap",
 	) : (
 	'INC'		=> 	"",
 	)),
-	'LIBS'		=> 	["-L$lib_ldap -l$ldap_lib"],
+	'LIBS'		=> 	[$lib_line],
 	'MYEXTLIB'	=>	$myextlib,
 	'DEFINE'	=> 	"$v3_def $ssl_def",
+    @extras
 );
