@@ -39,116 +39,78 @@ const kPluginHandlerContractID = "@mozilla.org/content/plugin/document-loader-fa
 const kDisabledPluginTypesPref = "plugin.disable_full_page_plugin_for_types";
 
 var gChangeActionDialog = {
-  _rdf            : null,
-  _itemRes        : null,
-  _helperApps     : null,
-  _ncURI          : null,
-  _handlerPropArc : null,
-  _externalAppArc : null,
-  _fileHandlerArc : null,
-  _handlerRes     : null,
-  _extAppRes      : null,
+  _item     : null,
+  _bundle   : null,
   _lastSelectedModeMode : null,
   _lastSelectedModeSave : null,
 
   init: function ()
   {
-    this._rdf = window.opener.gRDF;
-    this._itemRes = window.arguments[0];
-    
-    this._helperApps = window.opener.gDownloadActionsDialog._helperApps;
-    this._handlerPropArc = this._helperApps._handlerPropArc;
-    this._externalAppArc = this._helperApps._externalAppArc;
-    this._fileHandlerArc = this._helperApps._fileHandlerArc;
-    
-    this._ncURI = window.opener.NC_URI;
+    this._item = window.arguments[0];
+    this._bundle = document.getElementById("bundlePreferences");
+    dump("*** ir = " + this._item.toSource() + "\n");
     
     var typeField = document.getElementById("typeField");
-    typeField.value = this._helperApps.getLiteralValue(this._itemRes.Value, "FileType");
+    typeField.value = this._item.typeName;
     
     var extensionField = document.getElementById("extensionField");
     var bundlePreferences = document.getElementById("bundlePreferences");
-    var ext = "." + this._helperApps.getLiteralValue(this._itemRes.Value, "FileExtension").toLowerCase();
-    var contentType = this._helperApps.getLiteralValue(this._itemRes.Value, "FileMIMEType");
-    extensionField.value = bundlePreferences.getFormattedString("extensionStringFormat", [ext, contentType]);
+    var ext = "." + this._item.extension.toLowerCase();
+    var contentType = this._item.type;
+    extensionField.value = this._bundle.getFormattedString("extensionStringFormat", [ext, contentType]);
     
     var typeIcon = document.getElementById("typeIcon");
-    typeIcon.src = this._helperApps.getLiteralValue(this._itemRes.Value, "LargeFileIcon");
+    typeIcon.src = this._item.bigIcon;
 
+    // Custom App Handler Path - this must be set before we set the selected
+    // radio button because the selection event handler for the radio group
+    // requires the extapp handler field to be non-empty for the extapp radio
+    // button to be selected. 
+    var customApp = document.getElementById("customApp");
+    if (this._item.customHandler) {
+      customApp.file = this._item.customHandler;
+      dump("*** goat = "+ this._item.customHandler.path+"\n");
+      customApp.label = this._getDisplayNameForFile(customApp.file);
+      customApp.image = this._getIconURLForFile(customApp.file);
+    }
+    else {
+      var bundlePreferences = document.getElementById("bundlePreferences");
+      customApp.label = bundlePreferences.getString("downloadHelperNoneSelected");
+    }
+
+    var defaultApp = document.getElementById("defaultApp");
+    defaultApp.label = this._item.mimeInfo.defaultDescription;
+    defaultApp.image = this._getIconURLForFile(this._item.mimeInfo.defaultApplicationHandler); 
+      
+    var pluginName = document.getElementById("pluginName");
+    var foundPlugin = false;
+    for (var i = 0; i < navigator.plugins.length; ++i) {
+      var plugin = navigator.plugins[i];
+      for (var j = 0; j < plugin.length; ++j) {
+        if (contentType == plugin[j].type) {
+          pluginName.label = plugin.name;
+          pluginName.image = "moz-icon://goat.goat?contentType=" + contentType + "&size=16";
+          foundPlugin = true;
+        }
+      }
+    }
+    if (!foundPlugin) {
+      pluginName.label = bundlePreferences.getString("pluginHelperNoneAvailable");
+      document.getElementById("plugin").disabled = true;
+    }
+      
+    // Selected Action Radiogroup
     var handlerGroup = document.getElementById("handlerGroup");
-    
-    var handledByPlugin = this._helperApps.getLiteralValue(this._itemRes.Value, 
-                                                           "FileHandledByPlugin") == "true";
-    this._handlerRes = this._helperApps.GetTarget(this._itemRes, this._handlerPropArc, true);
-    if (this._handlerRes) {
-      this._handlerRes = this._handlerRes.QueryInterface(Components.interfaces.nsIRDFResource);
-
-      // Custom App Handler Path - this must be set before we set the selected
-      // radio button because the selection event handler for the radio group
-      // requires the extapp handler field to be non-empty for the extapp radio
-      // button to be selected. 
-      this._extAppRes = this._helperApps.GetTarget(this._handlerRes, this._externalAppArc, true);
-      if (this._extAppRes) {
-        this._extAppRes = this._extAppRes.QueryInterface(Components.interfaces.nsIRDFResource);
-
-        var path = this._helperApps.getLiteralValue(this._extAppRes.Value, "path");
-        var customApp = document.getElementById("customApp");
-        try {
-          var lf = Components.classes["@mozilla.org/file/local;1"]
-                             .createInstance(Components.interfaces.nsILocalFile);
-          lf.initWithPath(path);
-          customApp.file = lf;
-          customApp.label = this._getDisplayNameForFile(lf);
-          customApp.image = this._getIconURLForFile(lf);
-        }
-        catch (e) {
-          var bundlePreferences = document.getElementById("bundlePreferences");
-          customApp.label = bundlePreferences.getString("downloadHelperNoneSelected");
-        }
-      }
-
-      var defaultApp = document.getElementById("defaultApp");
-      var mimeInfo = this._helperApps.getMIMEInfo(this._itemRes);
-      defaultApp.label = mimeInfo.defaultDescription;
-      defaultApp.image = this._getIconURLForFile(mimeInfo.defaultApplicationHandler); 
-      
-      var pluginName = document.getElementById("pluginName");
-      var foundPlugin = false;
-      for (var i = 0; i < navigator.plugins.length; ++i) {
-        var plugin = navigator.plugins[i];
-        for (var j = 0; j < plugin.length; ++j) {
-          if (contentType == plugin[j].type) {
-            pluginName.label = plugin.name;
-            pluginName.image = "moz-icon://goat.goat?contentType=" + contentType + "&size=16";
-            foundPlugin = true;
-          }
-        }
-      }
-      if (!foundPlugin) {
-        pluginName.label = bundlePreferences.getString("pluginHelperNoneAvailable");
-        document.getElementById("plugin").disabled = true;
-      }
-      
-      // Selected Action Radiogroup
-      if (!handledByPlugin) {
-        var handleInternal = this._helperApps.getLiteralValue(this._handlerRes.Value, "useSystemDefault");
-        var saveToDisk = this._helperApps.getLiteralValue(this._handlerRes.Value, "saveToDisk");
-        if (handleInternal == "true")
-          handlerGroup.selectedItem = document.getElementById("openDefault");
-        else if (saveToDisk == "true")
-          handlerGroup.selectedItem = document.getElementById("saveToDisk");
-        else
-          handlerGroup.selectedItem = document.getElementById("openApplication");
-      }
-    }
-    else if (!handledByPlugin) {
-      // No Handler/ExtApp Resources for this type for some reason
-      handlerGroup.selectedItem = document.getElementById("openDefault");
-    }
-
-    if (handledByPlugin)
+    if (this._item._handleMode == FILEACTION_OPEN_PLUGIN && this._item.pluginEnabled)
       handlerGroup.selectedItem = document.getElementById("plugin");
-    
+    else {
+      if (this._item.handleMode == FILEACTION_OPEN_DEFAULT)
+        handlerGroup.selectedItem = document.getElementById("openDefault");
+      else if (this._item.handleMode == FILEACTION_SAVE_TO_DISK)
+        handlerGroup.selectedItem = document.getElementById("saveToDisk");
+      else
+        handlerGroup.selectedItem = document.getElementById("openApplication");
+    }
     this._lastSelectedMode = handlerGroup.selectedItem;
     
     // Figure out the last selected Save As mode
@@ -179,9 +141,8 @@ var gChangeActionDialog = {
   
   _disableType: function (aContentType)
   {
-    var pluginAvailable = this._helperApps.getLiteralValue(this._itemRes.Value, 
-                                                           "FilePluginAvailable") == "true";
-    if (pluginAvailable) {
+    
+    if (this._item.pluginAvailable) {
       // Since we're disabling the full page plugin for this content type, 
       // we must add it to the disabled list if it's not in there already.
       var prefs = Components.classes["@mozilla.org/preferences-service;1"]
@@ -233,7 +194,6 @@ var gChangeActionDialog = {
   
   onAccept: function ()
   {
-    var bundleUCT = document.getElementById("bundleUCT");
     var oldValue, newValue;
 
     var mimeInfo = this._helperApps.getMIMEInfo(this._itemRes);

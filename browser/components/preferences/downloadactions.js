@@ -41,24 +41,6 @@ const kShowPluginsInList = "browser.download.show_plugins_in_list";
 const kHideTypesWithoutExtensions = "browser.download.hide_plugins_without_extensions";
 const kRootTypePrefix = "urn:mimetype:";
 
-function FileAction ()
-{
-}
-FileAction.prototype = {
-  type        : "",
-  extension   : "",
-  hasExtension: true,
-  smallIcon   : "",
-  bigIcon     : "",
-  typeName    : "",
-  action      : "",
-  id          : "",
-  pluginAvailable     : false,
-  pluginEnabled       : false,
-  handledOnlyByPlugin : false
-};
-
-
 ///////////////////////////////////////////////////////////////////////////////
 // MIME Types Datasource RDF Utils
 function NC_URI(aProperty)
@@ -92,12 +74,14 @@ var gDownloadActionsWindow = {
                             .getService(Components.interfaces.nsIPrefBranch),
   _mimeSvc      : Components.classes["@mozilla.org/uriloader/external-helper-app-service;1"]
                             .getService(Components.interfaces.nsIMIMEService),
-
   _excludingPlugins           : false,
   _excludingMissingExtensions : false,
   
   init: function ()
   {
+    (this._editButton = document.getElementById("editFileHandler")).disabled = true;
+    (this._removeButton = document.getElementById("removeFileHandler")).disabled = true;    
+
     var pbi = this._pref.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
     pbi.addObserver(kShowPluginsInList, this, false);
     pbi.addObserver(kHideTypesWithoutExtensions, this, false);
@@ -117,10 +101,7 @@ var gDownloadActionsWindow = {
     var indexToSelect = parseInt(this._tree.getAttribute("lastSelected"));
     if (indexToSelect < this._tree.view.rowCount)
       this._tree.view.selection.select(indexToSelect);
-    this._tree.focus();
-    
-    (this._editButton = document.getElementById("editFileHandler")).disabled = true;
-    (this._removeButton = document.getElementById("removeFileHandler")).disabled = true;    
+    this._tree.focus();    
   },
   
   uninit: function ()
@@ -190,14 +171,17 @@ var gDownloadActionsWindow = {
         var actionName = this._bundle.getFormattedString("openWith", [plugin.name])
         var type = plugin[j].type;
         var action = this._createAction(type, actionName, true, 
-                                        disabled.indexOf(type) == -1);
+                                        FILEACTION_OPEN_PLUGIN, null,
+                                        true, disabled.indexOf(type) == -1);
         this._plugins[action.type] = action;
         action.handledOnlyByPlugin = true;
       }
     }
   },
 
-  _createAction: function (aMIMEType, aActionName, aPluginAvailable, aPluginEnabled)
+  _createAction: function (aMIMEType, aActionName, 
+                           aIsEditable, aHandleMode, aCustomHandler,
+                           aPluginAvailable, aPluginEnabled)
   {
     var newAction = !(aMIMEType in this._plugins);
     var action = newAction ? new FileAction() : this._plugins[aMIMEType];
@@ -216,11 +200,11 @@ var gDownloadActionsWindow = {
     // Large and Small Icon
     try {
       action.smallIcon = "moz-icon://goat." + info.primaryExtension + "?size=16";
-      action.bigIcon = "moz-icon://goat." + info.primaryExtension;
+      action.bigIcon = "moz-icon://goat." + info.primaryExtension + "?size=32";
     }
     catch (e) {
       action.smallIcon = "moz-icon://goat?size=16&contentType=" + info.MIMEType;
-      action.bigIcon = "moz-icon://goat?contentType=" + info.MIMEType;
+      action.bigIcon = "moz-icon://goat?contentType=" + info.MIMEType + "&size=32";
     }
 
     // Pretty Type Name
@@ -243,6 +227,10 @@ var gDownloadActionsWindow = {
     action.id = MIME_URI(action.type);
     action.pluginAvailable = aPluginAvailable;
     action.pluginEnabled = aPluginEnabled;
+    action.editable = aIsEditable;
+    action.handleMode = aHandleMode;
+    action.customHandler = aCustomHandler;
+    action.mimeInfo = info;
     
     if (newAction)
       this._actions.push(action);
@@ -314,35 +302,45 @@ var gDownloadActionsWindow = {
       var alwaysAsk = this._getLiteralValue(handler, "alwaysAsk") == "true";
       if (alwaysAsk)
         continue;
-      var saveToDisk = this._getLiteralValue(handler, "saveToDisk") == "true";
-      var useSystemDefault = this._getLiteralValue(handler, "useSystemDefault") == "true";
-      var externalApp = this._getChildResource(handler, "externalApplication");
-      var externalAppPath = this._getLiteralValue(externalApp, "path");
+      var saveToDisk        = this._getLiteralValue(handler, "saveToDisk") == "true";
+      var useSystemDefault  = this._getLiteralValue(handler, "useSystemDefault") == "true";
+      var editable          = this._getLiteralValue(handler, "editable") == "true";
+      var handledInternally = this._getLiteralValue(handler, "handleInternal") == "true";
+      var externalApp       = this._getChildResource(handler, "externalApplication");
+      var externalAppPath   = this._getLiteralValue(externalApp, "path");
+      var customHandler = Components.classes["@mozilla.org/file/local;1"]
+                                    .createInstance(Components.interfaces.nsILocalFile);
+      customHandler.initWithPath(externalAppPath);
       
       var mimeType = this._getLiteralValue(type, "value");
       var typeInfo = this._mimeSvc.getFromTypeAndExtension(mimeType, null);
 
       // Determine the pretty name of the associated action.
       var actionName = "";
+      var handleMode = 0;
       if (saveToDisk) {
         // Save the file to disk
         actionName = this._bundle.getString("saveToDisk");
+        handleMode = FILEACTION_SAVE_TO_DISK;
       }
       else if (useSystemDefault) {
         // Use the System Default handler
         actionName = this._bundle.getFormattedString("openWith", [typeInfo.defaultDescription]);
+        handleMode = FILEACTION_OPEN_DEFAULT;
       }
       else {
         // Custom Handler
-        var file = Components.classes["@mozilla.org/file/local;1"]
-                             .createInstance(Components.interfaces.nsILocalFile);
-        file.initWithPath(externalAppPath);
         actionName = this._bundle.getFormattedString("openWith", [this._getDisplayNameForFile(file)]);
+        handleMode = FILEACTION_OPEN_CUSTOM;
       }
+
+      if (handleInternally)
+        handleMode = FILEACTION_OPEN_INTERNALLY;
       
       var pluginAvailable = mimeType in this._plugins && this._plugins[mimeType].pluginAvailable;
       var pluginEnabled = pluginAvailable && this._plugins[mimeType].pluginEnabled;
-      var action = this._createAction(mimeType, actionName, pluginAvailable, pluginEnabled);
+      var action = this._createAction(mimeType, actionName, editable, handleMode, 
+                                      customHandler, pluginAvailable, pluginEnabled);
       action.handledOnlyByPlugin = false;
     }
   },
@@ -366,25 +364,30 @@ var gDownloadActionsWindow = {
                             : this._usingExclusionSet ? this._exclusionSet 
                                                       : gDownloadActionsWindow._actions;
     },
+
+    getItemAtIndex: function (aIndex)
+    {
+      return this.activeCollection[aIndex];
+    },
     
     getCellText: function (aIndex, aColumn)
     {
       switch (aColumn.id) {
       case "fileExtension":
-        return this.activeCollection[aIndex].extension.toUpperCase();
+        return this.getItemAtIndex(aIndex).extension.toUpperCase();
       case "fileType":
-        return this.activeCollection[aIndex].typeName;
+        return this.getItemAtIndex(aIndex).typeName;
       case "fileMIMEType":
-        return this.activeCollection[aIndex].type;
+        return this.getItemAtIndex(aIndex).type;
       case "fileHandler":
-        return this.activeCollection[aIndex].action;
+        return this.getItemAtIndex(aIndex).action;
       }
       return "";
     },
     getImageSrc: function (aIndex, aColumn) 
     {
       if (aColumn.id == "fileExtension") 
-        return this.activeCollection[aIndex].smallIcon;
+        return this.getItemAtIndex(aIndex).smallIcon;
       return "";
     },
     _selection: null, 
@@ -425,15 +428,12 @@ var gDownloadActionsWindow = {
   editFileHandler: function ()
   {
     var selection = this._tree.view.selection; 
-    
-    try {    
-      var cv = this._tree.contentView;
-      var item = cv.getItemAtIndex(selection.currentIndex);
-      var itemResource = gRDF.GetResource(item.id);
-      openDialog("chrome://browser/content/preferences/changeaction.xul", 
-                "_blank", "modal,centerscreen", itemResource);
-    }
-    catch (e) { }
+    if (selection.count != 1)
+      return;
+
+    var item = this._view.getItemAtIndex(selection.currentIndex);
+    openDialog("chrome://browser/content/preferences/changeaction.xul", 
+               "_blank", "modal,centerscreen", item);
   },
   
   onSelectionChanged: function ()
@@ -443,14 +443,12 @@ var gDownloadActionsWindow = {
       
     var selection = this._tree.view.selection; 
     var selected = selection.count;
-    // this._removeButton.disabled = selected == 0;
-    // this._editButton.disabled = selected != 1;
+    this._removeButton.disabled = selected == 0;
+    this._editButton.disabled = selected != 1;
+    this._removeButton.label = this._bundle.getString(selected > 1 ? "removeActions" : "removeAction");
     
     var canRemove = true;
     
-    var cv = this._tree.contentView;
-    if (!cv)
-      return;
     var rangeCount = selection.getRangeCount();
     var min = { }, max = { };
     var setLastSelected = false;
@@ -463,19 +461,16 @@ var gDownloadActionsWindow = {
           this._tree.setAttribute("lastSelected", j);
           setLastSelected = true;
         }
-        /*
-        var editable = this._helperApps.getLiteralValue(item.id, "editable") == "true";
-        var handleInternal = this._helperApps.getLiteralValue(item.id, "handleInternal");
-        
-        if (!editable || handleInternal) 
+
+        var item = this._view.getItemAtIndex(j);
+        if (!item.editable || item.handleMode == FILEACTION_OPEN_INTERNALLY)
           canRemove = false;
-        */
       }
     }
     
     if (!canRemove) {
-      // this._removeButton.disabled = true;
-      // this._editButton.disabled = true;
+      this._removeButton.disabled = true;
+      this._editButton.disabled = true;
     }
   },
   

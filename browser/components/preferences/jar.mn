@@ -1,4 +1,5 @@
 browser.jar:
+*   content/browser/preferences/actionsshared.js
 *   content/browser/preferences/advanced.xul
 *   content/browser/preferences/advanced.js
 *   content/browser/preferences/advancedScript.xul
