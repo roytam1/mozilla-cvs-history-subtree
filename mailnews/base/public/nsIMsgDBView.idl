@@ -218,7 +218,6 @@ interface nsIMsgDBView : nsISupports
     void close();
 
     void init(in nsIMessenger aMessengerInstance, in nsIMsgWindow aMsgWindow, in nsIMsgDBViewCommandUpdater aCommandUpdater);
-    void addKeys(out nsMsgKey pKeys, out long pFlags, in string pLevels, in nsMsgViewSortTypeValue sortType, in long numKeysToAdd);
 
     void sort(in nsMsgViewSortTypeValue sortType, in nsMsgViewSortOrderValue sortOrder);
 
@@ -247,6 +246,7 @@ interface nsIMsgDBView : nsISupports
    
     readonly attribute nsIMsgFolder msgFolder;
 
+    nsMsgKey getKeyAt(in nsMsgViewIndex index);
     nsIMsgFolder getFolderForViewIndex(in nsMsgViewIndex index); // mainly for search
     string getURIForViewIndex(in nsMsgViewIndex index);
 

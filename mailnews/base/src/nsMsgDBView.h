@@ -108,6 +108,7 @@ protected:
   nsresult GetSelectedIndices(nsUInt32Array *selection);
   nsresult GenerateURIForMsgKey(nsMsgKey aMsgKey, nsIMsgFolder *folder, char ** aURI);
 // routines used in building up view
+  virtual nsresult AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char *pLevels, nsMsgViewSortTypeValue sortType, PRInt32 numKeysToAdd);
   virtual PRBool WantsThisThread(nsIMsgThread * thread);
   virtual nsresult	AddHdr(nsIMsgDBHdr *msgHdr);
   PRBool GetShowingIgnored() {return (m_viewFlags & nsMsgViewFlagsType::kShowIgnored) != 0;}
@@ -143,6 +144,7 @@ protected:
 	nsMsgViewIndex	FindViewIndex(nsMsgKey  key) 
 						{return (nsMsgViewIndex) (m_keys.FindIndex(key));}
 	virtual nsMsgViewIndex	FindKey(nsMsgKey key, PRBool expand);
+  virtual nsresult GetDBForViewIndex(nsMsgViewIndex index, nsIMsgDatabase **db);
 
   nsresult	ListIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex viewIndex, PRUint32 *pNumListed);
   nsresult	ListUnreadIdsInThread(nsIMsgThread *threadHdr, nsMsgViewIndex startOfThreadViewIndex, PRUint32 *pNumListed);

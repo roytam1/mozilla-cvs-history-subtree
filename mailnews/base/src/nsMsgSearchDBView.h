@@ -43,6 +43,7 @@ public:
   NS_IMETHOD GetFolderForViewIndex(nsMsgViewIndex index, nsIMsgFolder **folder);
 protected:
   nsresult FetchLocation(nsIMsgDBHdr * aHdr, PRUnichar ** aSizeString);
+  virtual nsresult GetDBForViewIndex(nsMsgViewIndex index, nsIMsgDatabase **db);
 
   nsCOMPtr <nsISupportsArray> m_folders; // maybe we should store ranges, or the actual headers instead.
 };

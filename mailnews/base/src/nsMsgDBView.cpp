@@ -640,6 +640,11 @@ nsresult nsMsgDBView::GetFolderForViewIndex(nsMsgViewIndex index, nsIMsgFolder *
   return NS_OK;
 }
 
+nsresult nsMsgDBView::GetDBForViewIndex(nsMsgViewIndex index, nsIMsgDatabase **db)
+{
+  *db = m_db;
+  return NS_OK;
+}
 NS_IMETHODIMP nsMsgDBView::GetCellText(PRInt32 aRow, const PRUnichar * aColID, PRUnichar ** aValue)
 {
   nsresult rv = NS_OK;
@@ -996,7 +1001,7 @@ NS_IMETHODIMP nsMsgDBView::GetSupressMsgDisplay(PRBool * aSupressDisplay)
   return NS_OK;
 }
 
-NS_IMETHODIMP nsMsgDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char *pLevels, nsMsgViewSortTypeValue sortType, PRInt32 numKeysToAdd)
+nsresult nsMsgDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char *pLevels, nsMsgViewSortTypeValue sortType, PRInt32 numKeysToAdd)
 {
     return NS_ERROR_NOT_IMPLEMENTED;
 }
@@ -1418,7 +1423,11 @@ nsresult nsMsgDBView::SetReadByIndex(nsMsgViewIndex index, PRBool read)
 	else
 		AndExtraFlag(index, ~MSG_FLAG_READ);
 
-	rv = m_db->MarkRead(m_keys[index], read, this);
+  nsCOMPtr <nsIMsgDatabase> dbToUse;
+  rv = GetDBForViewIndex(index, getter_AddRefs(dbToUse));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+	rv = dbToUse->MarkRead(m_keys[index], read, this);
 	NoteChange(index, 1, nsMsgViewNotificationCode::changed);
 	if (m_sortType == nsMsgViewSortType::byThread)
 	{
@@ -1446,12 +1455,16 @@ nsresult nsMsgDBView::SetFlaggedByIndex(nsMsgViewIndex index, PRBool mark)
 	if (!IsValidIndex(index))
 		return NS_MSG_INVALID_DBVIEW_INDEX;
 
+  nsCOMPtr <nsIMsgDatabase> dbToUse;
+  rv = GetDBForViewIndex(index, getter_AddRefs(dbToUse));
+  NS_ENSURE_SUCCESS(rv, rv);
+
 	if (mark)
 		OrExtraFlag(index, MSG_FLAG_MARKED);
 	else
 		AndExtraFlag(index, ~MSG_FLAG_MARKED);
 
-	rv = m_db->MarkMarked(m_keys[index], mark, this);
+	rv = dbToUse->MarkMarked(m_keys[index], mark, this);
 	NoteChange(index, 1, nsMsgViewNotificationCode::changed);
 	return rv;
 }
@@ -1729,7 +1742,6 @@ nsresult nsMsgDBView::GetLongField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sor
   NS_ENSURE_ARG_POINTER(msgHdr);
   NS_ENSURE_ARG_POINTER(result);
 
-  nsMsgKey key;
   PRBool isRead;
   PRUint32 bits;
 
@@ -1753,12 +1765,9 @@ nsresult nsMsgDBView::GetLongField(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sor
         *result = !(bits & MSG_FLAG_MARKED);  //make flagged come out on top.
         break;
     case nsMsgViewSortType::byUnread:
-        rv = msgHdr->GetMessageKey(&key);
-        if (NS_SUCCEEDED(rv)) {
-            isRead = PR_FALSE;
-            rv = m_db->IsRead(key, &isRead);
+        rv = msgHdr->GetIsRead(&isRead);
+        if (NS_SUCCEEDED(rv)) 
             *result = !isRead;
-        }
         break;
     case nsMsgViewSortType::byId:
         // handled by caller, since caller knows the key
@@ -1802,6 +1811,7 @@ nsMsgDBView::GetCollationKey(nsIMsgHdr *msgHdr, nsMsgViewSortTypeValue sortType,
 NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOrderValue sortOrder)
 {
     nsresult rv;
+
 
     // null db is OK.
     nsMsgKeyArray preservedSelection;
@@ -1974,7 +1984,15 @@ NS_IMETHODIMP nsMsgDBView::Sort(nsMsgViewSortTypeValue sortType, nsMsgViewSortOr
     // do the sort
     switch (fieldType) {
         case kCollationKey:
-            NS_QuickSort(pPtrBase, numSoFar, sizeof(IdKey*), FnSortIdKey, m_db);
+          {
+
+            nsCOMPtr <nsIMsgDatabase> dbToUse = m_db;
+
+            if (!dbToUse) // probably search view
+              GetDBForViewIndex(0, getter_AddRefs(dbToUse));
+            if (dbToUse)
+              NS_QuickSort(pPtrBase, numSoFar, sizeof(IdKey*), FnSortIdKey, dbToUse);
+          }
             break;
         case kU32:
             NS_QuickSort(pPtrBase, numSoFar, sizeof(IdDWord*), FnSortIdDWord, nsnull);
@@ -2132,6 +2150,13 @@ nsMsgKey nsMsgDBView::GetKeyOfFirstMsgInThread(nsMsgKey key)
 	// ### dmb UnreadOnly - this is wrong. But didn't seem to matter in 4.x
 	pThread->GetChildKeyAt(0, &firstKeyInThread);
 	return firstKeyInThread;
+}
+
+NS_IMETHODIMP nsMsgDBView::GetKeyAt(nsMsgViewIndex index, nsMsgKey *result)
+{
+  NS_ENSURE_ARG(result);
+  *result = GetAt(index);
+  return NS_OK;
 }
 
 nsMsgKey nsMsgDBView::GetAt(nsMsgViewIndex index) 

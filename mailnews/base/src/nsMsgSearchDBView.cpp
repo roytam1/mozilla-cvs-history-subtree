@@ -102,6 +102,16 @@ NS_IMETHODIMP nsMsgSearchDBView::GetFolderForViewIndex(nsMsgViewIndex index, nsI
   return m_folders->QueryElementAt(index, NS_GET_IID(nsIMsgFolder), (void **) aFolder);
 }
 
+nsresult nsMsgSearchDBView::GetDBForViewIndex(nsMsgViewIndex index, nsIMsgDatabase **db)
+{
+  nsCOMPtr <nsIMsgFolder> aFolder;
+  GetFolderForViewIndex(index, getter_AddRefs(aFolder));
+  if (aFolder)
+    return aFolder->GetMsgDatabase(nsnull, getter_AddRefs(db));
+  else
+    return NS_MSG_INVALID_DBVIEW_INDEX;
+}
+
 NS_IMETHODIMP
 nsMsgSearchDBView::OnSearchHit(nsIMsgDBHdr* aMsgHdr, nsIMsgFolder *folder)
 {

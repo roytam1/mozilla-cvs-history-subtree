@@ -93,7 +93,7 @@ nsresult nsMsgThreadedDBView::InitThreadedView(PRInt32 *pCount)
 	return rv;
 }
 
-NS_IMETHODIMP nsMsgThreadedDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char *pLevels, nsMsgViewSortTypeValue sortType, PRInt32 numKeysToAdd)
+nsresult nsMsgThreadedDBView::AddKeys(nsMsgKey *pKeys, PRInt32 *pFlags, const char *pLevels, nsMsgViewSortTypeValue sortType, PRInt32 numKeysToAdd)
 
 {
 	PRInt32	numAdded = 0;
