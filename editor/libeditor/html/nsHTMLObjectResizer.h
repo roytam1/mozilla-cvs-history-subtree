@@ -83,7 +83,7 @@ public:
 
 protected:
 
-  nsCOMPtr<nsIHTMLEditor> mEditor;
+  nsIHTMLEditor *mEditor;  // A Non-AddRef'd reference to the editor.
 };
 
 // ==================================================================
@@ -109,7 +109,7 @@ public:
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
 
  protected:
-  nsCOMPtr<nsIHTMLEditor> mEditor;
+  nsIHTMLEditor *mEditor;  // A Non-AddRef'd reference to the editor.
 
 };
 
@@ -132,7 +132,7 @@ public:
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
 
  protected:
-  nsCOMPtr<nsIHTMLEditor> mEditor;
+  nsIHTMLEditor *mEditor;  // A Non-AddRef'd reference to the editor.
 
 };
 
@@ -152,7 +152,7 @@ public:
   NS_IMETHOD HandleEvent(nsIDOMEvent* aEvent);
 
  protected:
-  nsCOMPtr<nsIHTMLEditor> mEditor;
+  nsIHTMLEditor *mEditor;  // A Non-AddRef'd reference to the editor.
 
 };
 

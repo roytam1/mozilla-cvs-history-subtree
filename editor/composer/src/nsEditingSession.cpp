@@ -125,6 +125,9 @@ nsEditingSession::Init(nsIDOMWindow *aWindow)
 NS_IMETHODIMP
 nsEditingSession::MakeWindowEditable(nsIDOMWindow *aWindow, const char *aEditorType, PRBool inDoAfterUriLoad)
 {
+  // Always remove existing editor
+  TearDownEditorOnWindow(aWindow);
+
   PRBool htmlController = PR_FALSE;
   mEditorClassString = nsnull;
   mEditorFlags = 0;
