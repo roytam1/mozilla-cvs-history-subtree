@@ -51,6 +51,7 @@
 #include "nsIObjectInputStream.h"
 #include "nsIObjectOutputStream.h"
 #include "nsIPrincipal.h"
+#include "nsIPrincipalObsolete.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIScriptGlobalObjectOwner.h"
 #include "nsIScriptObjectPrincipal.h"
@@ -106,6 +107,7 @@ public:
     virtual void SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts);
 
     // nsIScriptObjectPrincipal methods
+    NS_IMETHOD GetPrincipalObsolete(nsIPrincipalObsolete** aPrincipal);
     NS_IMETHOD GetPrincipal(nsIPrincipal** aPrincipal);
     
 protected:
@@ -969,6 +971,19 @@ nsXULPDGlobalObject::SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts)
 //
 // nsIScriptObjectPrincipal methods
 //
+
+NS_IMETHODIMP
+nsXULPDGlobalObject::GetPrincipalObsolete(nsIPrincipalObsolete** aPrincipal)
+{
+    nsCOMPtr<nsIPrincipal> principal;
+    nsresult rv = nsXULPDGlobalObject::GetPrincipal(getter_AddRefs(principal));
+    if (principal)
+        CallQueryInterface(principal, aPrincipal);
+    else
+        *aPrincipal = nsnull;
+
+    return rv;
+}
 
 NS_IMETHODIMP
 nsXULPDGlobalObject::GetPrincipal(nsIPrincipal** aPrincipal)

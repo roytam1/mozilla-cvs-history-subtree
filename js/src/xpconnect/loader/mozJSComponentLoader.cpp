@@ -65,6 +65,7 @@
 #ifndef XPCONNECT_STANDALONE
 #include "nsIScriptSecurityManager.h"
 #include "nsIScriptObjectPrincipal.h"
+#include "nsIPrincipalObsolete.h"
 #include "nsIURL.h"
 #include "nsIStandardURL.h"
 #include "nsNetUtil.h"
@@ -333,6 +334,10 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIXPCSCRIPTABLE
   
+  NS_IMETHOD GetPrincipalObsolete(nsIPrincipalObsolete **aPrincipal) {
+    return CallQueryInterface(mPrincipal, aPrincipal);
+  }
+
   NS_IMETHOD GetPrincipal(nsIPrincipal **aPrincipal) {
     NS_ADDREF(*aPrincipal = mPrincipal);
     return NS_OK;

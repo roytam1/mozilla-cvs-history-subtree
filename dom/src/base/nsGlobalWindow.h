@@ -149,6 +149,7 @@ public:
   virtual void SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts);
 
   // nsIScriptObjectPrincipal
+  NS_IMETHOD GetPrincipalObsolete(nsIPrincipalObsolete **prin);
   NS_IMETHOD GetPrincipal(nsIPrincipal **prin);
 
   // nsIDOMWindow

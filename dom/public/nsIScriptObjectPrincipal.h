@@ -42,7 +42,7 @@
 #include "nsISupports.h"
 
 class nsIPrincipal;
-
+class nsIPrincipalObsolete;
 
 #define NS_ISCRIPTOBJECTPRINCIPAL_IID \
 { 0x98485f80, 0x9615, 0x11d2,  \
@@ -56,6 +56,7 @@ class nsIScriptObjectPrincipal : public nsISupports
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_ISCRIPTOBJECTPRINCIPAL_IID)
 
+  NS_IMETHOD       GetPrincipalObsolete(nsIPrincipalObsolete **aPrincipal) = 0;
   NS_IMETHOD       GetPrincipal(nsIPrincipal **aPrincipal) = 0;
 };
 

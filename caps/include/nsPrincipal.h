@@ -44,11 +44,13 @@
 #include "nsVoidArray.h"
 #include "nsHashtable.h"
 #include "nsJSPrincipals.h"
+#include "nsIPrincipalObsolete.h"
 
 class nsIObjectInputStream;
 class nsIObjectOutputStream;
 
-class nsPrincipal : public nsIPrincipal
+class nsPrincipal : public nsIPrincipal,
+                    public nsIPrincipalObsolete
 {
 public:
   nsPrincipal();
@@ -64,6 +66,15 @@ public:
 
   NS_DECL_NSIPRINCIPAL
   NS_DECL_NSISERIALIZABLE
+
+  // nsIPrincipalObsolete declarations, written out because some of them
+  // overlap with nsIPrincipal.
+
+  NS_IMETHOD ToString(char **aResult);
+  NS_IMETHOD ToUserVisibleString(char **aResult);
+  NS_IMETHOD Equals(nsIPrincipalObsolete *aOther, PRBool *aResult);
+  NS_IMETHOD HashValue(PRUint32 *aResult);
+  NS_IMETHOD GetJSPrincipals(JSPrincipals **aResult);
 
   // Either Init() or InitFromPersistent() must be called before
   // the principal is in a usable state.

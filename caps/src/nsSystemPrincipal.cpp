@@ -50,9 +50,14 @@
 #include "nsString.h"
 
 
-NS_IMPL_QUERY_INTERFACE2_CI(nsSystemPrincipal,
-                            nsIPrincipal,
-                            nsISerializable)
+NS_INTERFACE_MAP_BEGIN(nsSystemPrincipal)
+    NS_INTERFACE_MAP_ENTRY(nsIPrincipal)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISerializable, nsIPrincipal)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIPrincipal)
+    NS_INTERFACE_MAP_ENTRY(nsIPrincipalObsolete)
+    NS_IMPL_QUERY_CLASSINFO(nsSystemPrincipal)
+NS_INTERFACE_MAP_END
+
 NS_IMPL_CI_INTERFACE_GETTER2(nsSystemPrincipal,
                              nsIPrincipal,
                              nsISerializable)
@@ -232,11 +237,48 @@ nsSystemPrincipal::GetJSPrincipals(JSContext *cx, JSPrincipals **jsprin)
 {
     NS_PRECONDITION(mJSPrincipals.nsIPrincipalPtr, "mJSPrincipals is uninitalized!");
 
-    JSPRINCIPALS_HOLD(cx, &mJSPrincipals);
+    JSPRINCIPALS_HOLD(nsnull, &mJSPrincipals);
     *jsprin = &mJSPrincipals;
     return NS_OK;
 }
 
+///////////////////////////////////////////////
+// Methods implementing nsIPrincipalObsolete //
+///////////////////////////////////////////////
+
+NS_IMETHODIMP
+nsSystemPrincipal::ToString(char **aResult)
+{
+    return nsSystemPrincipal::GetOrigin(aResult);
+}
+
+NS_IMETHODIMP
+nsSystemPrincipal::ToUserVisibleString(char **aResult)
+{
+    return nsSystemPrincipal::GetOrigin(aResult);
+}
+
+NS_IMETHODIMP
+nsSystemPrincipal::Equals(nsIPrincipalObsolete *aOther, PRBool *aResult)
+{
+    *aResult = (aOther == this);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSystemPrincipal::HashValue(PRUint32 *aResult)
+{
+    *aResult = NS_PTR_TO_INT32(this);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSystemPrincipal::GetJSPrincipals(JSPrincipals **aResult)
+{
+    *aResult = &mJSPrincipals;
+    JSPRINCIPALS_HOLD(nsnull, *aResult);
+    return NS_OK;
+}
 
 //////////////////////////////////////////
 // Methods implementing nsISerializable //

@@ -79,6 +79,7 @@
 #include "nsIObserverService.h"
 #include "nsIContent.h"
 #include "nsAutoPtr.h"
+#include "nsIPrincipalObsolete.h"
 
 static NS_DEFINE_CID(kZipReaderCID, NS_ZIPREADER_CID);
 
@@ -414,10 +415,17 @@ DeleteDomainEntry(nsHashKey *aKey, void *aData, void* closure)
 ////////////////////////////////////
 // Methods implementing ISupports //
 ////////////////////////////////////
-NS_IMPL_ISUPPORTS3(nsScriptSecurityManager,
-                   nsIScriptSecurityManager,
-                   nsIXPCSecurityManager,
-                   nsIObserver)
+NS_IMPL_ADDREF(nsScriptSecurityManager)
+NS_IMPL_RELEASE(nsScriptSecurityManager)
+
+NS_INTERFACE_MAP_BEGIN(nsScriptSecurityManager)
+    NS_INTERFACE_MAP_ENTRY(nsIScriptSecurityManager)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsIXPCSecurityManager,
+                                     nsIScriptSecurityManager)
+    NS_INTERFACE_MAP_ENTRY(nsIObserver)
+    NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIScriptSecurityManager)
+    NS_INTERFACE_MAP_ENTRY(nsIScriptSecurityManagerObsolete)
+NS_INTERFACE_MAP_END
 
 ///////////////////////////////////////////////////
 // Methods implementing nsIScriptSecurityManager //
@@ -454,7 +462,7 @@ nsScriptSecurityManager::CheckObjectAccess(JSContext *cx, JSObject *obj,
     // Pass the parent object's class name, as we have no class-info for it.
     nsresult rv =
         ssm->CheckPropertyAccess(cx, target, JS_GetClass(cx, obj)->name, id,
-                                 nsIXPCSecurityManager::ACCESS_GET_PROPERTY);
+                                 nsIScriptSecurityManager::ACCESS_GET_PROPERTY);
 
     if (NS_FAILED(rv))
         return JS_FALSE; // Security check failed (XXX was an error reported?)
@@ -495,7 +503,7 @@ nsScriptSecurityManager::CheckConnect(JSContext* cx,
     if (!propertyName)
         return NS_ERROR_OUT_OF_MEMORY;
 
-    return CheckPropertyAccessImpl(nsIXPCSecurityManager::ACCESS_CALL_METHOD, nsnull,
+    return CheckPropertyAccessImpl(nsIScriptSecurityManager::ACCESS_CALL_METHOD, nsnull,
                                    cx, nsnull, nsnull, aTargetURI,
                                    nsnull, aClassName, STRING_TO_JSVAL(propertyName), nsnull);
 }
@@ -739,17 +747,17 @@ nsScriptSecurityManager::CheckPropertyAccessImpl(PRUint32 aAction,
         {
             switch (aAction)
             {
-            case nsIXPCSecurityManager::ACCESS_GET_PROPERTY:
+            case nsIScriptSecurityManager::ACCESS_GET_PROPERTY:
                 checkedComponent->CanGetProperty(objIID,
                                                  JSValIDToString(cx, aProperty),
                                                  getter_Copies(objectSecurityLevel));
                 break;
-            case nsIXPCSecurityManager::ACCESS_SET_PROPERTY:
+            case nsIScriptSecurityManager::ACCESS_SET_PROPERTY:
                 checkedComponent->CanSetProperty(objIID,
                                                  JSValIDToString(cx, aProperty),
                                                  getter_Copies(objectSecurityLevel));
                 break;
-            case nsIXPCSecurityManager::ACCESS_CALL_METHOD:
+            case nsIScriptSecurityManager::ACCESS_CALL_METHOD:
                 checkedComponent->CanCallMethod(objIID,
                                                 JSValIDToString(cx, aProperty),
                                                 getter_Copies(objectSecurityLevel));
@@ -769,13 +777,13 @@ nsScriptSecurityManager::CheckPropertyAccessImpl(PRUint32 aAction,
         nsAutoString stringName;
         switch(aAction)
         {
-        case nsIXPCSecurityManager::ACCESS_GET_PROPERTY:
+        case nsIScriptSecurityManager::ACCESS_GET_PROPERTY:
             stringName.Assign(NS_LITERAL_STRING("GetPropertyDenied"));
             break;
-        case nsIXPCSecurityManager::ACCESS_SET_PROPERTY:
+        case nsIScriptSecurityManager::ACCESS_SET_PROPERTY:
             stringName.Assign(NS_LITERAL_STRING("SetPropertyDenied"));
             break;
-        case nsIXPCSecurityManager::ACCESS_CALL_METHOD:
+        case nsIScriptSecurityManager::ACCESS_CALL_METHOD:
             stringName.Assign(NS_LITERAL_STRING("CallMethodDenied"));
         }
 
@@ -895,7 +903,7 @@ nsScriptSecurityManager::CheckSameOriginDOMProp(nsIPrincipal* aSubject,
     * Check for that here.
     */
     PRBool capabilityEnabled = PR_FALSE;
-    const char* cap = aAction == nsIXPCSecurityManager::ACCESS_SET_PROPERTY ?
+    const char* cap = aAction == nsIScriptSecurityManager::ACCESS_SET_PROPERTY ?
                       "UniversalBrowserWrite" : "UniversalBrowserRead";
     rv = IsCapabilityEnabled(cap, &capabilityEnabled);
     NS_ENSURE_SUCCESS(rv, rv);
@@ -1055,7 +1063,7 @@ nsScriptSecurityManager::LookupPolicy(nsIPrincipal* aPrincipal,
         return NS_OK;
 
     // Get the correct security level from the property policy
-    if (aAction == nsIXPCSecurityManager::ACCESS_SET_PROPERTY)
+    if (aAction == nsIScriptSecurityManager::ACCESS_SET_PROPERTY)
         *result = ppolicy->mSet;
     else
         *result = ppolicy->mGet;
@@ -1548,7 +1556,7 @@ nsScriptSecurityManager::CanExecuteScripts(JSContext* cx,
 
     SecurityLevel secLevel;
     rv = LookupPolicy(aPrincipal, (char*)jsPrefGroupName, sEnabledID,
-                      nsIXPCSecurityManager::ACCESS_GET_PROPERTY, 
+                      nsIScriptSecurityManager::ACCESS_GET_PROPERTY, 
                       nsnull, &secLevel);
     if (NS_FAILED(rv) || secLevel.level == SCRIPT_SECURITY_NO_ACCESS)
     {
@@ -2498,7 +2506,7 @@ nsScriptSecurityManager::CheckComponentPermissions(JSContext *cx,
 
     SecurityLevel securityLevel;
     rv = LookupPolicy(subjectPrincipal, "ClassID", cidVal,
-                      nsIXPCSecurityManager::ACCESS_CALL_METHOD, 
+                      nsIScriptSecurityManager::ACCESS_CALL_METHOD, 
                       nsnull, &securityLevel);
     if (NS_FAILED(rv))
         return rv;
@@ -2695,6 +2703,122 @@ nsScriptSecurityManager::Observe(nsISupports* aObject, const char* aTopic,
     return rv;
 }
 
+///////////////////////////////////////////////////////////
+// Methods implementing nsIScriptSecurityManagerObsolete //
+///////////////////////////////////////////////////////////
+NS_IMETHODIMP
+nsScriptSecurityManager::CanExecuteScripts(JSContext *aContext,
+                                           nsIPrincipalObsolete *aPrincipal,
+                                           PRBool *aResult)
+{
+    nsCOMPtr<nsIPrincipal> principal = do_QueryInterface(aPrincipal);
+    return nsScriptSecurityManager::CanExecuteScripts(aContext, principal,
+                                                      aResult);
+}
+
+NS_IMETHODIMP
+nsScriptSecurityManager::GetSubjectPrincipal(nsIPrincipalObsolete **aResult)
+{
+    nsCOMPtr<nsIPrincipal> principal;
+    nsresult rv = nsScriptSecurityManager::GetSubjectPrincipal(getter_AddRefs(principal));
+    if (principal)
+        CallQueryInterface(principal, aResult);
+    else
+        *aResult = nsnull;
+
+    return rv;
+}
+
+NS_IMETHODIMP
+nsScriptSecurityManager::GetSystemPrincipal(nsIPrincipalObsolete **aResult)
+{
+    nsCOMPtr<nsIPrincipal> principal;
+    nsresult rv = nsScriptSecurityManager::GetSystemPrincipal(getter_AddRefs(principal));
+    if (principal)
+        CallQueryInterface(principal, aResult);
+    else
+        *aResult = nsnull;
+
+    return rv;
+}
+
+NS_IMETHODIMP
+nsScriptSecurityManager::GetCertificatePrincipal(const char *aCertID,
+                                                 nsIURI *aURI,
+                                                 nsIPrincipalObsolete **aResult)
+{
+    nsCOMPtr<nsIPrincipal> principal;
+    nsresult rv = nsScriptSecurityManager::GetCertificatePrincipal(aCertID, aURI, getter_AddRefs(principal));
+    if (principal)
+        CallQueryInterface(principal, aResult);
+    else
+        *aResult = nsnull;
+
+    return rv;
+}
+
+NS_IMETHODIMP
+nsScriptSecurityManager::GetCodebasePrincipal(nsIURI *aURI,
+                                              nsIPrincipalObsolete **aResult)
+{
+    nsCOMPtr<nsIPrincipal> principal;
+    nsresult rv = nsScriptSecurityManager::GetCodebasePrincipal(aURI, getter_AddRefs(principal));
+    if (principal)
+        CallQueryInterface(principal, aResult);
+    else
+        *aResult = nsnull;
+
+    return rv;
+}
+
+NS_IMETHODIMP
+nsScriptSecurityManager::RequestCapability(nsIPrincipalObsolete *aPrincipal,
+                                           const char *aCapability,
+                                           PRInt16 *aResult)
+{
+    nsCOMPtr<nsIPrincipal> principal = do_QueryInterface(aPrincipal);
+    return nsScriptSecurityManager::RequestCapability(principal, aCapability,
+                                                      aResult);
+}
+
+NS_IMETHODIMP
+nsScriptSecurityManager::GetObjectPrincipal(JSContext *aContext,
+                                            JSObject *aObject,
+                                            nsIPrincipalObsolete **aResult)
+{
+    nsCOMPtr<nsIPrincipal> principal;
+    nsresult rv = nsScriptSecurityManager::GetObjectPrincipal(aContext, aObject, getter_AddRefs(principal));
+    if (principal)
+        CallQueryInterface(principal, aResult);
+    else
+        *aResult = nsnull;
+
+    return rv;
+}
+
+NS_IMETHODIMP
+nsScriptSecurityManager::CheckSameOriginPrincipal(nsIPrincipalObsolete *aSource,
+                                                  nsIPrincipalObsolete *aTarget)
+{
+    nsCOMPtr<nsIPrincipal> source = do_QueryInterface(aSource);
+    nsCOMPtr<nsIPrincipal> target = do_QueryInterface(aTarget);
+    return nsScriptSecurityManager::CheckSameOriginPrincipal(source, target);
+}
+
+NS_IMETHODIMP
+nsScriptSecurityManager::GetPrincipalFromContext(JSContext *aContext,
+                                                 nsIPrincipalObsolete **aResult)
+{
+    nsCOMPtr<nsIPrincipal> principal;
+    nsresult rv = nsScriptSecurityManager::GetPrincipalFromContext(aContext, getter_AddRefs(principal));
+    if (principal)
+        CallQueryInterface(principal, aResult);
+    else
+        *aResult = nsnull;
+
+    return rv;
+}
+
 /////////////////////////////////////////////
 // Constructor, Destructor, Initialization //
 /////////////////////////////////////////////
@@ -2805,8 +2929,8 @@ nsScriptSecurityManager::GetScriptSecurityManager()
             return nsnull;
         }
  
-        rv = sXPConnect->SetDefaultSecurityManager(ssManager,
-                                                   nsIXPCSecurityManager::HOOK_ALL);
+        rv = sXPConnect->SetDefaultSecurityManager(NS_STATIC_CAST(nsIScriptSecurityManager*, ssManager),
+                                                   nsIScriptSecurityManager::HOOK_ALL);
         if (NS_FAILED(rv)) {
             NS_WARNING("Failed to install xpconnect security manager!");
             delete ssManager;

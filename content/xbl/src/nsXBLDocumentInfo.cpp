@@ -49,6 +49,7 @@
 #include "nsIScriptError.h"
 #include "nsIChromeRegistry.h"
 #include "nsIPrincipal.h"
+#include "nsIPrincipalObsolete.h"
 
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 
@@ -84,6 +85,7 @@ public:
   virtual void SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts);
 
   // nsIScriptObjectPrincipal methods
+  NS_IMETHOD GetPrincipalObsolete(nsIPrincipalObsolete** aPrincipal);
   NS_IMETHOD GetPrincipal(nsIPrincipal** aPrincipal);
     
 protected:
@@ -310,6 +312,19 @@ nsXBLDocGlobalObject::SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts)
 //
 // nsIScriptObjectPrincipal methods
 //
+
+NS_IMETHODIMP
+nsXBLDocGlobalObject::GetPrincipalObsolete(nsIPrincipalObsolete** aPrincipal)
+{
+  nsCOMPtr<nsIPrincipal> principal;
+  nsresult rv = nsXBLDocGlobalObject::GetPrincipal(getter_AddRefs(principal));
+  if (principal)
+    CallQueryInterface(principal, aPrincipal);
+  else
+    *aPrincipal = nsnull;
+
+  return rv;
+}
 
 NS_IMETHODIMP
 nsXBLDocGlobalObject::GetPrincipal(nsIPrincipal** aPrincipal)
