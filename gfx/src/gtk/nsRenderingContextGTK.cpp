@@ -1985,75 +1985,24 @@ nsRenderingContextGTK::my_gdk_draw_text (GdkDrawable *drawable,
 
 
 #include "nsIImageContainer.h"
-#include "nsIImageFrame.h"
+#include "nsPIImageContainerXlib.h"
 
 /* [noscript] void drawImage (in nsIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsPoint aDestPoint); */
 NS_IMETHODIMP nsRenderingContextGTK::DrawImage(nsIImageContainer *aImage, const nsRect * aSrcRect, const nsPoint * aDestPoint)
 {
-
-  // XXX there are some rounding problems in this code (or in the image frame)
-
-  nsresult rv;
-
-  nsCOMPtr<nsIImageFrame> img;
-  rv = aImage->GetCurrentFrame(getter_AddRefs(img));
-
-  if (NS_FAILED(rv))
-    return rv;
-
-#if 1
-  // XXX this is ugly.
   nsPoint pt;
   nsRect sr;
 
   pt = *aDestPoint;
-  //printf("{\n %f, %f, %f, %f\n", pt.x, pt.y, aSrcRect->x, aSrcRect->y);
   mTranMatrix->TransformCoord(&pt.x, &pt.y);
 
   sr = *aSrcRect;
-//	mTranMatrix->Transform(&sr.x, &sr.y, &sr.width, &sr.height);
-#endif
+  //	mTranMatrix->Transform(&sr.x, &sr.y, &sr.width, &sr.height);
 
-  PRUint32 len;
-  PRUint8 *bits;
-  rv = img->GetImageData(&bits, &len);
-  if (NS_FAILED(rv))
-    return rv;
+  nsCOMPtr<nsPIImageContainerXlib> cx(do_QueryInterface(aImage));
+  if (!cx) return NS_ERROR_FAILURE;
 
-  PRUint32 bpr;
-  img->GetImageBytesPerRow(&bpr);
-
-  gfx_dimension frHeight;
-  img->GetHeight(&frHeight);
-
-  PRInt32 height = sr.height;
-
-  gfx_dimension frWidth;
-  img->GetWidth(&frWidth);
-  PRInt32 width = frWidth; // XXX round up, down, ???
-
-  PRInt32 x = sr.x;
-  PRInt32 y = sr.y;
-#if 0
-  GdkPixmap *image = gdk_pixmap_new(mSurface->GetDrawable(), width, height, gdk_rgb_get_visual()->depth);
-#endif
-  gdk_draw_rgb_image(mSurface->GetDrawable(), mGC,
-                     pt.x + x, pt.y + y, width, height,
-                     GDK_RGB_DITHER_MAX,
-                     bits + PRInt32(y * bpr), bpr);
-
-#if 0
-  printf(" (%f, %f), (%i, %i), %i, %i\n}\n", pt.x, pt.y, x, y, width, height);
-
-  gdk_window_copy_area(GDK_ROOT_PARENT(), mGC, 0, 0,
-                       image, 0, 0, width, height);
-
-  gdk_window_copy_area(mSurface->GetDrawable(), mGC, pt.x + x, pt.y + y,
-                       image, sr.x, 0, sr.width, height);
-
-  gdk_pixmap_unref(image);
-#endif
-  return NS_OK;
+  return cx->DrawImage(mSurface->GetDrawable(), NS_CONST_CAST(const GdkGC *, mGC), &sr, &pt);
 }
 
 /* [noscript] void drawScaledImage (in nsIImageContainer aImage, [const] in nsRect aSrcRect, [const] in nsRect aDestRect); */
