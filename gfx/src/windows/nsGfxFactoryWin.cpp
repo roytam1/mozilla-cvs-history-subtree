@@ -33,7 +33,6 @@
 #include "nsDeviceContextSpecWin.h"
 #include "nsDeviceContextSpecFactoryW.h"
 #include "nsScriptableRegion.h"
-#include "nsIImageManager.h"
 #include "nsScreenManagerWin.h"
 #include "nsPrintOptionsWin.h"
 #include "nsFontList.h"
@@ -49,7 +48,6 @@ static NS_DEFINE_IID(kCRegion, NS_REGION_CID);
 static NS_DEFINE_IID(kCDeviceContextSpec, NS_DEVICE_CONTEXT_SPEC_CID);
 static NS_DEFINE_IID(kCDeviceContextSpecFactory, NS_DEVICE_CONTEXT_SPEC_FACTORY_CID);
 static NS_DEFINE_IID(kCDrawingSurface, NS_DRAWING_SURFACE_CID);
-static NS_DEFINE_IID(kImageManagerImpl, NS_IMAGEMANAGER_CID);
 static NS_DEFINE_IID(kCScreenManager, NS_SCREENMANAGER_CID);
 static NS_DEFINE_IID(kCPrintOptions, NS_PRINTOPTIONS_CID);
 
@@ -198,15 +196,6 @@ nsresult nsGfxFactoryWin::CreateInstance(nsISupports *aOuter,
     if (rgn != nsnull) {
       nsIScriptableRegion* scriptableRgn = new nsScriptableRegion(rgn);
       inst = (nsISupports *)scriptableRgn;
-    }
-  }
-  else if (mClassID.Equals(kImageManagerImpl)) {
-    nsCOMPtr<nsIImageManager> iManager;
-    res = NS_NewImageManager(getter_AddRefs(iManager));
-    already_addreffed = PR_TRUE;
-    if (NS_SUCCEEDED(res))
-    {
-      res = iManager->QueryInterface(NS_GET_IID(nsISupports), (void**)&inst);
     }
   }
   else if (mClassID.Equals(kCPrintOptions)) {

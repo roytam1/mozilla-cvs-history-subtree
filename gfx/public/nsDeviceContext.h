@@ -25,7 +25,6 @@
 
 #include "nsIDeviceContext.h"
 #include "nsIDeviceContextSpec.h"
-#include "libimg.h"
 #include "nsCOMPtr.h"
 #include "nsIAtom.h"
 #include "nsIStringBundle.h"
@@ -76,8 +75,6 @@ public:
 
   NS_IMETHOD  GetGammaTable(PRUint8 *&aGammaTable);
 
-  NS_IMETHOD LoadIconImage(PRInt32 aId, nsIImage*& aImage);
-
   NS_IMETHOD FirstExistingFont(const nsFont& aFont, nsString& aFaceName);
 
   NS_IMETHOD GetLocalFontName(const nsString& aFaceName, nsString& aLocalName,
@@ -86,10 +83,6 @@ public:
   NS_IMETHOD FlushFontCache(void);
 
   NS_IMETHOD GetDepth(PRUint32& aDepth);
-
-  NS_IMETHOD GetILColorSpace(IL_ColorSpace*& aColorSpace);
-
-  NS_IMETHOD GetPaletteInfo(nsPaletteInfo&);
 
   static nsresult GetLocalizedString(nsIStringBundle* aStrBundle, const char* aKey, nsString& oVal);
   static nsresult GetLocalizedBundle(const char * aPropFileName, nsIStringBundle** aStrBundle);
@@ -117,10 +110,7 @@ protected:
   float             mTextZoom;
   float             mGammaValue;
   PRUint8           *mGammaTable;
-  IL_GroupContext*  mIconImageGroup;
-  nsIImageRequest*  mIcons[NS_NUMBER_OF_ICONS];
   nsHashtable*      mFontAliasTable;
-  IL_ColorSpace*    mColorSpace;
   float             mCPixelScale;
 
 public:

@@ -529,7 +529,8 @@ void nsRenderingContextGTK::UpdateGC()
     gcCache = new nsGCCache();
     if (!gcCache) return;
   }
-  mGC = gcCache->GetGC(mSurface->GetDrawable(), 
+
+  mGC = gcCache->GetGC(mSurface->GetDrawable(),
                        &values,
                        valuesMask,
                        rgn);
