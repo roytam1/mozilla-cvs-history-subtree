@@ -386,6 +386,22 @@ NS_IMETHODIMP MailDataSource::Flush()
     return NS_ERROR_NOT_IMPLEMENTED;
 }
 
+
+NS_IMETHODIMP
+MailDataSource::IsCommandEnabled(const char* aCommand,
+                                 nsIRDFResource* aCommandTarget,
+                                 PRBool* aResult)
+{
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+MailDataSource::DoCommand(const char* aCommand,
+                          nsIRDFResource* aCommandTarget)
+{
+    return NS_OK;
+}
+
 NS_IMETHODIMP
 MailDataSource::GetSources(nsIRDFResource* property,
                            nsIRDFNode* target, PRBool tv,
@@ -430,16 +446,25 @@ NS_IMETHODIMP
 MailDataSource::ArcLabelsOut(nsIRDFResource* source,
                              nsIRDFArcsOutCursor** labels /* out */)
 {
-    nsVoidArray* temp = new nsVoidArray();
-    temp->AppendElement(mResourceChild);
-    temp->AppendElement(mResourceFolder);
-    temp->AppendElement(mResourceName);
-    temp->AppendElement(mResourceSubject);
-    temp->AppendElement(mResourceFrom);
-    temp->AppendElement(mResourceDate);
-    temp->AppendElement(mResourceColumns);
-    *labels = new ArrayMailCursor(source, mResourceChild, temp);
-    return NS_OK;
+    nsIRDFMailMessage* message;
+
+    if (NS_SUCCEEDED(source->QueryInterface(kIRDFMailMessageIID, (void**) &message))) {
+        nsVoidArray* temp = new nsVoidArray();
+        //temp->AppendElement(mResourceFolder);
+        //temp->AppendElement(mResourceName);
+        temp->AppendElement(mResourceSubject);
+        temp->AppendElement(mResourceFrom);
+        temp->AppendElement(mResourceDate);
+        //temp->AppendElement(mResourceColumns);
+        *labels = new ArrayMailCursor(source, mResourceChild, temp);
+        NS_ADDREF(*labels);
+
+        NS_RELEASE(message);
+        return NS_OK;
+    }
+    else {
+        return mMiscMailData->ArcLabelsOut(source, labels);
+    }
 }
 
 nsresult
@@ -459,8 +484,8 @@ MailDataSource::InitAccountList(void)
         if (strchr(de->name, '@')) {
             PR_snprintf(fileurl, sizeof(fileurl), "mailaccount:%s", de->name);
             gRDFService->GetResource(fileurl, (nsIRDFResource**)&account);
-            rdf_Assert(gRDFService, mMiscMailData, account, mResourceName, de->name);
-            rdf_Assert(gRDFService, mMiscMailData, account, mResourceSubject, de->name);
+            rdf_Assert(mMiscMailData, account, mResourceName, de->name);
+            rdf_Assert(mMiscMailData, account, mResourceSubject, de->name);
             AddAccount(account);
         }
     }
@@ -651,9 +676,9 @@ MailAccount::InitMailAccount (const char* url)
             (!endsWith(".snm", de->name)) && (!endsWith("~", de->name))) {
             PR_snprintf(fileurl, sizeof(fileurl), "mailbox://%s/%s/", &url[12], de->name);
             gRDFService->GetResource(fileurl, (nsIRDFResource**)&folder);
-            rdf_Assert(gRDFService, gMailDataSource->mMiscMailData, folder,
+            rdf_Assert(gMailDataSource->mMiscMailData, folder,
                        gMailDataSource->mResourceName, de->name);
-            rdf_Assert(gRDFService, gMailDataSource->mMiscMailData, folder,
+            rdf_Assert(gMailDataSource->mMiscMailData, folder,
                        gMailDataSource->mResourceSubject, de->name);
             AddFolder(folder);
         }
@@ -1091,6 +1116,10 @@ MailMessage::QueryInterface(REFNSIID iid, void** result)
 SingletonMailCursor::SingletonMailCursor(nsIRDFNode* u,
                                          nsIRDFResource* s,
                                          PRBool inversep)
+    : mValueReturnedp(PR_FALSE),
+      mProperty(s),
+      mInversep(inversep),
+      mValue(nsnull)
 {
     if (!inversep) {
         mSource = (nsIRDFResource*)u;
@@ -1100,11 +1129,7 @@ SingletonMailCursor::SingletonMailCursor(nsIRDFNode* u,
         mTarget = u;
     }
     NS_ADDREF(u);
-    mProperty = s;
     NS_ADDREF(mProperty);
-    mValueReturnedp = PR_FALSE;
-    mInversep = inversep;
-    mValue = nsnull;
 }
 
 
@@ -1196,17 +1221,20 @@ SingletonMailCursor::GetTruthValue(PRBool* aTruthValue)
 
 NS_IMPL_ISUPPORTS(SingletonMailCursor, kIRDFAssertionCursorIID);
 
+////////////////////////////////////////////////////////////////////////
+
 ArrayMailCursor::ArrayMailCursor(nsIRDFResource* u, nsIRDFResource* s, nsVoidArray* array)
+    : mSource(u),
+      mProperty(s),
+      mArray(array),
+      mCount(0),
+      mTarget(nsnull),
+      mValue(nsnull)
 {
     //  getsources and gettargets will call this with the array
-    mSource = u;
-    mProperty = s;
-    mArray = array;
+    NS_INIT_REFCNT();
     NS_ADDREF(mProperty);
     NS_ADDREF(u);
-    mCount = 0;
-    mTarget = nsnull;
-    mValue = nsnull;
 }
 
 ArrayMailCursor::~ArrayMailCursor(void)
@@ -1215,6 +1243,7 @@ ArrayMailCursor::~ArrayMailCursor(void)
     NS_IF_RELEASE(mValue);
     NS_IF_RELEASE(mProperty);
     NS_IF_RELEASE(mTarget);
+    delete mArray;
 }
 
 
@@ -1222,7 +1251,9 @@ ArrayMailCursor::~ArrayMailCursor(void)
 NS_IMETHODIMP
 ArrayMailCursor::Advance(void)
 {
-    if (mArray->Count() <= mCount) return  NS_ERROR_RDF_CURSOR_EMPTY;
+    if (mArray->Count() <= mCount)
+        return NS_ERROR_RDF_CURSOR_EMPTY;
+
     NS_IF_RELEASE(mValue);
     mTarget = mValue = (nsIRDFNode*) mArray->ElementAt(mCount++);
     NS_ADDREF(mValue);
@@ -1273,7 +1304,7 @@ ArrayMailCursor::GetObject(nsIRDFNode** aObject)
 NS_IMETHODIMP
 ArrayMailCursor::GetTruthValue(PRBool* aTruthValue)
 {
-    *aTruthValue = 1;
+    *aTruthValue = PR_TRUE;
     return NS_OK;
 }
 

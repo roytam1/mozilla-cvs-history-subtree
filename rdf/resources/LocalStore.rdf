@@ -7,7 +7,8 @@
  -->
 
 <RDF:RDF xmlns:RDF="http://www.w3.org/TR/WD-rdf-syntax#" 
-	 xmlns:nc="http://home.netscape.com/NC-rdf#">
+	 xmlns:nc="http://home.netscape.com/NC-rdf#"
+         xmlns:web="http://home.netscape.com/WEB-rdf#">
 
 <RDF:Description RDF:ID="#root">
   <!-- List out all the columns that we want to appear in the tree control -->

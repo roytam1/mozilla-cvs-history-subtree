@@ -155,6 +155,13 @@ public:
 
     NS_IMETHOD Flush();
 
+    NS_IMETHOD IsCommandEnabled(const char* aCommand,
+                                nsIRDFResource* aCommandTarget,
+                                PRBool* aResult);
+
+    NS_IMETHOD DoCommand(const char* aCommand,
+                         nsIRDFResource* aCommandTarget);
+
     // caching frequently used resources
     nsIRDFResource* mResourceChild;
     nsIRDFResource* mResourceFolder;

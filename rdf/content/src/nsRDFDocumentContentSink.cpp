@@ -46,13 +46,15 @@
 static NS_DEFINE_IID(kICSSParserIID,           NS_ICSS_PARSER_IID); // XXX grr..
 static NS_DEFINE_IID(kIDOMCommentIID,          NS_IDOMCOMMENT_IID);
 static NS_DEFINE_IID(kIRDFContentSinkIID,      NS_IRDFCONTENTSINK_IID);
-static NS_DEFINE_IID(kIScrollableViewIID,      NS_ISCROLLABLEVIEW_IID);
+static NS_DEFINE_IID(kIRDFContentIID,          NS_IRDFCONTENT_IID);
 static NS_DEFINE_IID(kIRDFDocumentIID,         NS_IRDFDOCUMENT_IID);
+static NS_DEFINE_IID(kIScrollableViewIID,      NS_ISCROLLABLEVIEW_IID);
 
 static NS_DEFINE_CID(kCSSParserCID,            NS_CSSPARSER_CID);
 
 
-class nsRDFDocumentContentSink : public nsRDFContentSink {
+class nsRDFDocumentContentSink : public nsRDFContentSink
+{
 public:
     nsRDFDocumentContentSink(void);
     virtual ~nsRDFDocumentContentSink(void);
@@ -67,13 +69,13 @@ public:
     NS_IMETHOD AddProcessingInstruction(const nsIParserNode& aNode);
 
 protected:
-    void StartLayout(void);
-
     virtual nsresult OpenObject(const nsIParserNode& aNode);
 
     // Style sheets
     nsresult LoadStyleSheet(nsIURL* aURL,
                             nsIUnicharInputStream* aUIN);
+
+    nsresult StartLayout(void);
 
     nsIStyleSheet* mStyleSheet;
 
@@ -129,83 +131,6 @@ nsRDFDocumentContentSink::Init(nsIDocument* aDoc,
 }
 
 
-void
-nsRDFDocumentContentSink::StartLayout(void)
-{
-    PRInt32 i, ns = mDocument->GetNumberOfShells();
-    for (i = 0; i < ns; i++) {
-        nsIPresShell* shell = mDocument->GetShellAt(i);
-        if (nsnull != shell) {
-            // Make shell an observer for next time
-            shell->BeginObservingDocument();
-
-            // Resize-reflow this time
-            nsIPresContext* cx = shell->GetPresContext();
-            nsRect r;
-            cx->GetVisibleArea(r);
-            shell->InitialReflow(r.width, r.height);
-            NS_RELEASE(cx);
-
-            // Now trigger a refresh
-            nsIViewManager* vm = shell->GetViewManager();
-            if (nsnull != vm) {
-                vm->EnableRefresh();
-                NS_RELEASE(vm);
-            }
-
-            NS_RELEASE(shell);
-        }
-    }
-
-    // If the document we are loading has a reference or it is a top level
-    // frameset document, disable the scroll bars on the views.
-    const char* ref;
-    (void)mDocumentURL->GetRef(&ref);
-    PRBool topLevelFrameset = PR_FALSE;
-    if (mWebShell) {
-        nsIWebShell* rootWebShell;
-        mWebShell->GetRootWebShell(rootWebShell);
-        if (mWebShell == rootWebShell) {
-            topLevelFrameset = PR_TRUE;
-        }
-        NS_IF_RELEASE(rootWebShell);
-    }
-
-    if ((nsnull != ref) || topLevelFrameset) {
-        // XXX support more than one presentation-shell here
-
-        // Get initial scroll preference and save it away; disable the
-        // scroll bars.
-        PRInt32 i, ns = mDocument->GetNumberOfShells();
-        for (i = 0; i < ns; i++) {
-            nsIPresShell* shell = mDocument->GetShellAt(i);
-            if (nsnull != shell) {
-                nsIViewManager* vm = shell->GetViewManager();
-                if (nsnull != vm) {
-                    nsIView* rootView = nsnull;
-                    vm->GetRootView(rootView);
-                    if (nsnull != rootView) {
-                        nsIScrollableView* sview = nsnull;
-                        rootView->QueryInterface(kIScrollableViewIID, (void**) &sview);
-                        if (nsnull != sview) {
-#if 0
-                            if (topLevelFrameset)
-                                mOriginalScrollPreference = nsScrollPreference_kNeverScroll;
-                            else
-                                sview->GetScrollPreference(mOriginalScrollPreference);
-#endif
-                            sview->SetScrollPreference(nsScrollPreference_kNeverScroll);
-                        }
-                    }
-                    NS_RELEASE(vm);
-                }
-                NS_RELEASE(shell);
-            }
-        }
-    }
-}
-
-
 // XXX Borrowed from HTMLContentSink. Should be shared.
 nsresult
 nsRDFDocumentContentSink::LoadStyleSheet(nsIURL* aURL,
@@ -237,41 +162,53 @@ nsRDFDocumentContentSink::LoadStyleSheet(nsIURL* aURL,
 }
 
 
+nsresult
+nsRDFDocumentContentSink::StartLayout(void)
+{
+    PRInt32 count = mDocument->GetNumberOfShells();
+    for (PRInt32 i = 0; i < count; i++) {
+        nsIPresShell* shell = mDocument->GetShellAt(i);
+        if (nsnull != shell) {
+            // Resize-reflow this time
+            nsIPresContext* cx = shell->GetPresContext();
+            nsRect r;
+            cx->GetVisibleArea(r);
+            shell->InitialReflow(r.width, r.height);
+            NS_RELEASE(cx);
+
+            // Now trigger a refresh
+            nsIViewManager* vm = shell->GetViewManager();
+            if (nsnull != vm) {
+                vm->EnableRefresh();
+                NS_RELEASE(vm);
+            }
+
+            // Start observing the document _after_ we do the initial
+            // reflow. Otherwise, we'll get into an trouble trying to
+            // creat kids before the root frame is established.
+            shell->BeginObservingDocument();
+
+            NS_RELEASE(shell);
+        }
+    }
+    return NS_OK;
+}
+
+
 ////////////////////////////////////////////////////////////////////////
 // nsIContentSink interface
 
 NS_IMETHODIMP 
 nsRDFDocumentContentSink::WillBuildModel(void)
 {
-    // Notify document that the load is beginning
     mDocument->BeginLoad();
-    nsresult result = NS_OK;
-
-    return result;
+    return NS_OK;
 }
 
 NS_IMETHODIMP 
 nsRDFDocumentContentSink::DidBuildModel(PRInt32 aQualityLevel)
 {
-    // XXX this is silly; who cares?
-    PRInt32 i, ns = mDocument->GetNumberOfShells();
-    for (i = 0; i < ns; i++) {
-        nsIPresShell* shell = mDocument->GetShellAt(i);
-        if (nsnull != shell) {
-            nsIViewManager* vm = shell->GetViewManager();
-            if(vm) {
-                vm->SetQuality(nsContentQuality(aQualityLevel));
-            }
-            NS_RELEASE(vm);
-            NS_RELEASE(shell);
-        }
-    }
-
-    StartLayout();
-
-    // XXX Should scroll to ref when that makes sense
-    // ScrollToRef();
-
+    //StartLayout();
     mDocument->EndLoad();
     return NS_OK;
 }
@@ -418,6 +355,10 @@ nsRDFDocumentContentSink::OpenObject(const nsIParserNode& aNode)
         }
 
         NS_RELEASE(resource);
+
+        // Start layout. We need to wait until _now_ to ensure that we
+        // actually have a root document element.
+        StartLayout();
 
         // don't release the rdfElement since we're keeping
         // a reference to it in mRootElement
