@@ -87,7 +87,9 @@ nsFtpProtocolHandler::~nsFtpProtocolHandler() {
     mIOSvc = 0;
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(nsFtpProtocolHandler, nsIProtocolHandler);
+NS_IMPL_THREADSAFE_ISUPPORTS2(nsFtpProtocolHandler,
+                              nsIProtocolHandler,
+                              nsIProxiedProtocolHandler);
 
 nsresult
 nsFtpProtocolHandler::Init() {
@@ -137,9 +139,9 @@ nsFtpProtocolHandler::GetDefaultPort(PRInt32 *result)
 }
 
 NS_IMETHODIMP
-nsFtpProtocolHandler::GetURIType(PRInt16 *result)
+nsFtpProtocolHandler::GetProtocolFlags(PRUint32 *result)
 {
-    *result = URI_STD; 
+    *result = URI_STD | ALLOWS_PROXY | ALLOWS_PROXY_HTTP; 
     return NS_OK;
 }
 
@@ -162,6 +164,12 @@ nsFtpProtocolHandler::NewURI(const char *aSpec, nsIURI *aBaseURI,
 NS_IMETHODIMP
 nsFtpProtocolHandler::NewChannel(nsIURI* url, nsIChannel* *result)
 {
+    return NewProxiedChannel(url, nsnull, result);
+}
+
+NS_IMETHODIMP
+nsFtpProtocolHandler::NewProxiedChannel(nsIURI* url, nsIProxyInfo* proxyInfo, nsIChannel* *result)
+{
     nsresult rv = NS_OK;
 
     nsFTPChannel* channel = nsnull;
@@ -178,7 +186,7 @@ nsFtpProtocolHandler::NewChannel(nsIURI* url, nsIChannel* *result)
     if (mCacheSession)
         rv = mCacheSession->SetDoomEntriesIfExpired(PR_TRUE);
 
-    rv = channel->Init(url, mCacheSession);
+    rv = channel->Init(url, proxyInfo, mCacheSession);
     if (NS_FAILED(rv)) {
         PR_LOG(gFTPLog, PR_LOG_DEBUG, ("nsFtpProtocolHandler::NewChannel() FAILED\n"));
         return rv;

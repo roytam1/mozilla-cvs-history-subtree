@@ -42,6 +42,7 @@
 #include "nsIPrompt.h"
 #include "nsIAuthPrompt.h"
 #include "nsIFTPChannel.h"
+#include "nsIProxyInfo.h"
 
 #include "nsICacheService.h"
 #include "nsICacheEntryDescriptor.h"
@@ -82,7 +83,9 @@ public:
     Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult);
     
     // initializes the channel. 
-    nsresult Init(nsIURI* uri, nsICacheSession* session);
+    nsresult Init(nsIURI* uri,
+                  nsIProxyInfo* proxyInfo,
+                  nsICacheSession* session);
 
     nsresult SetupState();
     nsresult GenerateCacheKey(nsACString &cacheKey);
@@ -125,7 +128,7 @@ protected:
 
     nsCOMPtr<nsICacheSession>         mCacheSession;
     nsCOMPtr<nsICacheEntryDescriptor> mCacheEntry;
-
+    nsCOMPtr<nsIProxyInfo>            mProxyInfo;
 };
 
 #endif /* nsFTPChannel_h___ */

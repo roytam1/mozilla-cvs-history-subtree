@@ -32,8 +32,6 @@
 #include "nsITransport.h"
 #include "nsIProgressEventSink.h"
 
-static NS_DEFINE_CID(kSocketTransportServiceCID, NS_SOCKETTRANSPORTSERVICE_CID);
-
 // nsDateTimeChannel methods
 nsDateTimeChannel::nsDateTimeChannel() {
     NS_INIT_REFCNT();
@@ -51,13 +49,14 @@ NS_IMPL_ISUPPORTS4(nsDateTimeChannel,
                    nsIRequestObserver)
 
 nsresult
-nsDateTimeChannel::Init(nsIURI* uri)
+nsDateTimeChannel::Init(nsIURI* uri, nsIProxyInfo* proxyInfo)
 {
     nsresult rv;
 
     NS_ASSERTION(uri, "no uri");
 
     mUrl = uri;
+    mProxyInfo = proxyInfo;
 
     rv = mUrl->GetPort(&mPort);
     if (NS_FAILED(rv) || mPort < 1)
@@ -162,12 +161,17 @@ nsDateTimeChannel::Open(nsIInputStream **_retval)
     if (NS_FAILED(rv))
       return rv;
 
-    nsCOMPtr<nsISocketTransportService> socketService = 
-             do_GetService(kSocketTransportServiceCID, &rv);
+    nsCOMPtr<nsISocketTransportService> sts = 
+             do_GetService("@mozilla.org/network/socket-transport-service;1", &rv);
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsITransport> transport;
-    rv = socketService->CreateTransport(mHost, mPort, nsnull, -1, 32, 32, getter_AddRefs(transport));
+    rv = sts->CreateTransport(mHost,
+                              mPort,
+                              mProxyInfo,
+                              32,
+                              32,
+                              getter_AddRefs(transport));
     if (NS_FAILED(rv)) return rv;
 
     transport->SetNotificationCallbacks(mCallbacks,
@@ -184,12 +188,17 @@ nsDateTimeChannel::AsyncOpen(nsIStreamListener *aListener, nsISupports *ctxt)
     if (NS_FAILED(rv))
       return rv;
 
-    nsCOMPtr<nsISocketTransportService> socketService = 
-             do_GetService(kSocketTransportServiceCID, &rv);
+    nsCOMPtr<nsISocketTransportService> sts = 
+             do_GetService("@mozilla.org/network/socket-transport-service;1", &rv);
     if (NS_FAILED(rv)) return rv;
 
     nsCOMPtr<nsITransport> transport;
-    rv = socketService->CreateTransport(mHost, mPort, nsnull, -1, 32, 32, getter_AddRefs(transport));
+    rv = sts->CreateTransport(mHost,
+                              mPort,
+                              mProxyInfo,
+                              32,
+                              32,
+                              getter_AddRefs(transport));
     if (NS_FAILED(rv)) return rv;
 
     transport->SetNotificationCallbacks(mCallbacks,
@@ -333,4 +342,3 @@ nsDateTimeChannel::OnDataAvailable(nsIRequest *request, nsISupports* aContext,
     mContentLength = aLength;
     return mListener->OnDataAvailable(this, aContext, aInputStream, aSourceOffset, aLength);
 }
-

@@ -40,11 +40,12 @@
 #include "nsITransport.h"
 #include "nsCOMPtr.h"
 #include "nsXPIDLString.h"
+#include "nsHttpConnection.h"
 
 class nsHttpTransaction;
-class nsHttpConnectionInfo;
 class nsHttpResponseHead;
 class nsIHttpAuthenticator;
+class nsIProxyInfo;
 
 //-----------------------------------------------------------------------------
 // nsHttpChannel
@@ -74,9 +75,7 @@ public:
 
     nsresult Init(nsIURI *uri,
                   PRUint8 capabilities,
-                  const char *proxyHost=0,
-                  PRInt32 proxyPort=-1,
-                  const char *proxyType=0);
+                  nsIProxyInfo* proxyInfo);
 
 private:
     nsresult Connect(PRBool firstTime = PR_TRUE);

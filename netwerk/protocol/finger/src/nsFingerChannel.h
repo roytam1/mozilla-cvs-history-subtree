@@ -34,6 +34,7 @@
 #include "nsFingerHandler.h"
 #include "nsIStreamListener.h"
 #include "nsITransport.h"
+#include "nsIProxyInfo.h"
 
 class nsFingerChannel 
 : public nsIChannel, 
@@ -54,7 +55,7 @@ public:
     static NS_METHOD
     Create(nsISupports* aOuter, const nsIID& aIID, void* *aResult);
     
-    nsresult Init(nsIURI* uri);
+    nsresult Init(nsIURI* uri, nsIProxyInfo* proxyInfo);
 
 protected:
     nsCOMPtr<nsIInterfaceRequestor>     mCallbacks;
@@ -79,6 +80,7 @@ protected:
     nsCOMPtr<nsISupports>               mResponseContext;
     nsCOMPtr<nsITransport>              mTransport;
     nsCOMPtr<nsIRequest>                mTransportRequest;
+    nsCOMPtr<nsIProxyInfo>              mProxyInfo;
     nsresult                            mStatus;
 
 protected:

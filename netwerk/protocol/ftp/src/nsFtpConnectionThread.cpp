@@ -542,7 +542,7 @@ nsFtpState::EstablishControlConnection()
 
             // if we succeed, return.  Otherwise, we need to 
             // create a transport
-            rv = mControlConnection->Connect();
+            rv = mControlConnection->Connect(mProxyInfo);
             if (NS_SUCCEEDED(rv))
                 return rv;
         }
@@ -571,7 +571,7 @@ nsFtpState::EstablishControlConnection()
     // Must do it this way 'cuz the channel intercepts the progress notifications.
     (void) mControlConnection->SetStreamListener(NS_STATIC_CAST(nsIStreamListener*, this));
 
-    return mControlConnection->Connect();
+    return mControlConnection->Connect(mProxyInfo);
 }
 
 void 
@@ -1458,10 +1458,10 @@ nsFtpState::R_pasv() {
 
     // now we know where to connect our data channel
     nsCOMPtr<nsISocketTransportService> sts = do_GetService(kSocketTransportServiceCID, &rv);
-        
+
     rv =  sts->CreateTransport(hostStr, 
                                port, 
-                               nsnull, -1,
+                               mProxyInfo,
                                FTP_DATA_CHANNEL_SEG_SIZE, 
                                FTP_DATA_CHANNEL_MAX_SIZE, 
                                getter_AddRefs(mDPipe)); // the data channel
@@ -1671,7 +1671,8 @@ nsFtpState::Init(nsIFTPChannel* aChannel,
                  nsIPrompt*  aPrompter,
                  nsIAuthPrompt* aAuthPrompter,
                  nsIFTPEventSink* sink,
-                 nsICacheEntryDescriptor* cacheEntry) 
+                 nsICacheEntryDescriptor* cacheEntry,
+                 nsIProxyInfo* proxyInfo) 
 {
     nsresult rv = NS_OK;
 
@@ -1680,6 +1681,7 @@ nsFtpState::Init(nsIFTPChannel* aChannel,
     mFTPEventSink = sink;
     mAuthPrompter = aAuthPrompter;
     mCacheEntry = cacheEntry;
+    mProxyInfo = proxyInfo;
     
     // parameter validation
     NS_ASSERTION(aChannel, "FTP: needs a channel");
@@ -1913,6 +1915,7 @@ nsFtpState::StopProcessing() {
     mPrompter = 0;
     mAuthPrompter = 0;
     mChannel = 0;
+    mProxyInfo = 0;
 
     return NS_OK;
 }
