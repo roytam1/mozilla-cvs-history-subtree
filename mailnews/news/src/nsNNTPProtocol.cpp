@@ -948,8 +948,8 @@ nsresult nsNNTPProtocol::LoadUrl(nsIURI * aURL, nsISupports * aConsumer)
           }
 	  }
 	}
-  else if (PL_strlen((const char *)group))
-	{
+  else if (group.get() && group.get()[0])
+    {
 	  /* news:GROUP
 		 news:/GROUP
 		 news://HOST/GROUP
@@ -1161,7 +1161,7 @@ nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
     // (for quoting, when doing reply) the original spec
     // will not be set.  check the scheme to see if this is a 
     // news_message:/ url.  if so, treat it like one.
-    if (*((const char *)spec) == '\0') {
+    if (spec.get() && spec.get()[0]) {
         nsXPIDLCString scheme;
 	    rv = aURL->GetScheme(getter_Copies(scheme));
         NS_ENSURE_SUCCESS(rv,rv);
@@ -1173,7 +1173,7 @@ nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
     }
 
     // if the spec is non empty, then use it.  
-    if (*((const char *)spec) != '\0') {
+    if (spec.get() && spec.get()[0]) {
         PR_LOG(NNTP,PR_LOG_ALWAYS,("original message spec = %s",(const char *)spec));
 
         nsCOMPtr <nsIMsgFolder> folder;
@@ -1203,7 +1203,7 @@ nsNNTPProtocol::ParseURL(nsIURI * aURL, char ** aGroup, char ** aMessageID,
 
     PR_LOG(NNTP,PR_LOG_ALWAYS,("fullPath = %s",(const char *)fullPath));
 
-	if ((const char *)fullPath && ((*(const char *)fullPath) == '/'))
+	if (fullPath.get() && fullPath.get()[0] == '/')
 		group = PL_strdup((const char *)fullPath+1); 
 	else
 		group = PL_strdup((const char *)fullPath);
@@ -1363,6 +1363,7 @@ PRInt32 nsNNTPProtocol::NewsResponse(nsIInputStream * inputStream, PRUint32 leng
 		/* login failed */
 		AlertError(MK_NNTP_AUTH_FAILED, m_responseText);
 
+        NS_ASSERTION(m_newsFolder, "no newsFolder");
 		/* forget the password & username, since login failed */
 		if (m_newsFolder) {
 			rv = m_newsFolder->ForgetGroupUsername();
@@ -1833,16 +1834,44 @@ PRInt32 nsNNTPProtocol::SendFirstNNTPCommand(nsIURI * url)
 	}
     else if(m_typeWanted == LIST_WANTED)
     {
-	
+	    nsresult rv;
+
 		ClearFlag(NNTP_USE_FANCY_NEWSGROUP);
         PRUint32 last_update;
       	
+        // XXX fix this, so we pass in the nntpServer when we create the protocol instance.
+        // if we don't know the m_nntpServer, go get it
+        NS_ASSERTION(m_nntpServer, "no m_nntpServer");
 		if (!m_nntpServer) {
-			NNTP_LOG_NOTE("m_nntpServer is null, panic!");
-			return -1;
+          nsCOMPtr<nsIMsgMessageUrl> msgUrl = do_QueryInterface(m_runningURL, &rv);
+          NS_ENSURE_SUCCESS(rv,rv);
+          
+          nsXPIDLCString uri;
+          rv = msgUrl->GetUri(getter_Copies(uri));
+          NS_ENSURE_SUCCESS(rv,rv);
+          
+          nsCAutoString serverURI(uri.get());
+          serverURI.Cut(serverURI.Length() - 2, 2);  /* turn news://host/* into news://host */
+          
+          nsCOMPtr <nsINntpService> nntpService = do_GetService(NS_NNTPSERVICE_CONTRACTID, &rv);
+          NS_ENSURE_SUCCESS(rv,rv);
+
+          nsCOMPtr <nsIMsgFolder> folder;
+          nsMsgKey key;
+          rv = nntpService->DecomposeNewsURI(serverURI.get(), getter_AddRefs(folder), &key);
+          NS_ENSURE_SUCCESS(rv,rv);
+
+          nsCOMPtr <nsIMsgNewsFolder> newsFolder = do_QueryInterface(folder, &rv);
+          NS_ENSURE_SUCCESS(rv,rv);
+
+          rv = newsFolder->GetNntpServer(getter_AddRefs(m_nntpServer));
+          NS_ENSURE_SUCCESS(rv,rv);
+
+          NNTP_LOG_NOTE("m_nntpServer is null, panic!");
+          if (!m_nntpServer) return -1;
 		}
-		nsresult rv = m_nntpServer->GetLastUpdatedTime(&last_update);
-        
+
+		rv = m_nntpServer->GetLastUpdatedTime(&last_update); 
         if (NS_SUCCEEDED(rv) && last_update!=0)
 		{
 			m_nextState = DISPLAY_NEWSGROUPS;
@@ -2037,7 +2066,7 @@ PRInt32 nsNNTPProtocol::SendFirstNNTPCommandResponse()
         nsresult rv = NS_OK;
 
         nsXPIDLCString group_name;
-        NS_ASSERTION(m_newsFolder, "yikes");
+        NS_ASSERTION(m_newsFolder, "no newsFolder");
         if (m_newsFolder) {
             rv = m_newsFolder->GetAsciiName(getter_Copies(group_name));
         }
@@ -2147,7 +2176,7 @@ PRInt32 nsNNTPProtocol::SendGroupForArticle()
 
   nsXPIDLCString groupname;
   rv = m_newsFolder->GetAsciiName(getter_Copies(groupname));
-  NS_ASSERTION(NS_SUCCEEDED(rv) && (const char *)groupname && nsCRT::strlen((const char *)groupname), "no group name");
+  NS_ASSERTION(NS_SUCCEEDED(rv) && groupname.get() && groupname.get()[0], "no group name");
 
   char outputBuffer[OUTPUT_BUFFER_SIZE];
   
@@ -2179,7 +2208,7 @@ nsNNTPProtocol::SetCurrentGroup()
   }
 
   rv = m_newsFolder->GetAsciiName(getter_Copies(groupname));
-  NS_ASSERTION(NS_SUCCEEDED(rv) && (const char *)groupname && nsCRT::strlen((const char *)groupname), "no group name");
+  NS_ASSERTION(NS_SUCCEEDED(rv) && groupname.get()[0], "no group name");
   PR_LOG(NNTP,PR_LOG_ALWAYS,("SetCurrentGroup to %s",(const char *)groupname));
   m_currentGroup = (const char *)groupname;
   return NS_OK;
@@ -2556,7 +2585,7 @@ PRInt32 nsNNTPProtocol::BeginAuthorization()
 	PRInt32 status = 0;
 	nsXPIDLCString cachedUsername;
 
-    NS_ASSERTION(m_newsFolder, "yikes");
+    NS_ASSERTION(m_newsFolder, "no m_newsFolder");
     if (m_newsFolder) {
 	    rv = m_newsFolder->GetGroupUsername(getter_Copies(cachedUsername));
     }
@@ -2664,7 +2693,7 @@ PRInt32 nsNNTPProtocol::AuthorizationResponse()
         nsXPIDLCString password;
 	    nsXPIDLCString cachedPassword;
 
-        NS_ASSERTION(m_newsFolder, "yikes");
+        NS_ASSERTION(m_newsFolder, "no newsFolder");
         if (m_newsFolder) {
             rv = m_newsFolder->GetGroupPassword(getter_Copies(cachedPassword));
         }
@@ -2677,6 +2706,7 @@ PRInt32 nsNNTPProtocol::AuthorizationResponse()
             nsXPIDLString passwordPromptTitleText;
             GetNewsStringByName("enterPasswordTitle", getter_Copies(passwordPromptTitleText));
 
+            NS_ASSERTION(m_newsFolder, "no newsFolder");
             if (m_newsFolder) {
                 if (!m_msgWindow) {
                     nsCOMPtr<nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(m_runningURL);
@@ -2731,6 +2761,7 @@ PRInt32 nsNNTPProtocol::AuthorizationResponse()
         /* login failed */
 		AlertError(MK_NNTP_AUTH_FAILED, m_responseText);
 
+        NS_ASSERTION(m_newsFolder, "no newsFolder");
 		if (m_newsFolder) {
 			rv = m_newsFolder->ForgetGroupUsername();
 			rv = m_newsFolder->ForgetGroupPassword();	
@@ -2783,6 +2814,7 @@ PRInt32 nsNNTPProtocol::PasswordResponse()
         /* login failed */
 		AlertError(MK_NNTP_AUTH_FAILED, m_responseText);
 
+        NS_ASSERTION(m_newsFolder, "no newsFolder");
 		if (m_newsFolder) {
 			rv = m_newsFolder->ForgetGroupUsername();
 			rv = m_newsFolder->ForgetGroupPassword();	
@@ -3219,7 +3251,7 @@ PRInt32 nsNNTPProtocol::FigureNextChunk()
 	  return 0;
 	}
 
-    NS_ASSERTION(m_newsgroupList, "yikes");
+    NS_ASSERTION(m_newsgroupList, "no newsgroupList");
     if (!m_newsgroupList) return -1;
         
     PRBool getOldMessages = PR_FALSE;
@@ -3391,7 +3423,7 @@ PRInt32 nsNNTPProtocol::ProcessXover()
     nsresult rv;
 
     /* xover_parse_state stored in MSG_Pane cd->pane */
-    NS_ASSERTION(m_newsgroupList, "yikes");
+    NS_ASSERTION(m_newsgroupList, "no newsgroupList");
     if (!m_newsgroupList) return -1;
 
 	PRInt32 status = 0;
@@ -4590,7 +4622,7 @@ PRInt32 nsNNTPProtocol::SendListGroup()
 	char outputBuffer[OUTPUT_BUFFER_SIZE];
 	PRInt32 status = 0; 
 
-    NS_ASSERTION(m_newsFolder,"yikes");
+    NS_ASSERTION(m_newsFolder,"no newsFolder");
     if (!m_newsFolder) return -1;
     nsXPIDLCString newsgroupName;
 

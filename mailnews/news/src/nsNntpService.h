@@ -83,6 +83,7 @@ protected:
 
   PRBool            mPrintingOperation; // Flag for printing operations
   PRBool			mOpenAttachmentOperation; // Flag for opening attachments
+  PRBool            mCopyingOperation;
 };
 
 #endif /* nsNntpService_h___ */

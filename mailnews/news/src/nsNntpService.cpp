@@ -75,6 +75,7 @@ nsNntpService::nsNntpService()
     NS_INIT_REFCNT();
     mPrintingOperation = PR_FALSE;
 	mOpenAttachmentOperation = PR_FALSE;
+    mCopyingOperation = PR_FALSE;
 }
 
 nsNntpService::~nsNntpService()
@@ -148,7 +149,38 @@ nsNntpService::DisplayMessage(const char* aMessageURI, nsISupports * aDisplayCon
   nsresult rv = NS_OK;
   NS_ENSURE_ARG_POINTER(aMessageURI);
 
-  nsCAutoString uri(aMessageURI);
+
+  nsCOMPtr <nsIMsgFolder> folder;
+  nsMsgKey key = nsMsgKey_None;
+  rv = DecomposeNewsMessageURI(aMessageURI, getter_AddRefs(folder), &key);
+  NS_ENSURE_SUCCESS(rv,rv);
+
+  nsCAutoString uri;
+  // we do all this because...
+  if (mCopyingOperation) {
+    uri = aMessageURI;
+  }
+  else {
+    nsCOMPtr <nsIMsgDBHdr> hdr;
+    rv = folder->GetMessageHeader(key, getter_AddRefs(hdr));
+    NS_ENSURE_SUCCESS(rv,rv);
+    
+    nsXPIDLCString messageID;
+    rv = hdr->GetMessageId(getter_Copies(messageID));
+    NS_ENSURE_SUCCESS(rv,rv);
+    
+    nsCOMPtr <nsIMsgFolder> rootFolder;
+    rv = folder->GetRootFolder(getter_AddRefs(rootFolder));
+    NS_ENSURE_SUCCESS(rv,rv);
+    
+    nsXPIDLCString rootFolderURI;
+    rv = rootFolder->GetURI(getter_Copies(rootFolderURI));
+    NS_ENSURE_SUCCESS(rv,rv);
+
+    uri = rootFolderURI.get();
+    uri += '/';
+    uri += messageID.get();
+  }
 
   // rhp: If we are displaying this message for the purposes of printing, append
   // the magic operand.
@@ -157,11 +189,6 @@ nsNntpService::DisplayMessage(const char* aMessageURI, nsISupports * aDisplayCon
 
   nsCOMPtr<nsIURI> url;
   rv = ConstructNntpUrl(uri.get(), aUrlListener, aMsgWindow, getter_AddRefs(url));
-  NS_ENSURE_SUCCESS(rv,rv);
-
-  nsCOMPtr <nsIMsgFolder> folder;
-  nsMsgKey key = nsMsgKey_None;
-  rv = DecomposeNewsMessageURI(uri.get(), getter_AddRefs(folder), &key);
   NS_ENSURE_SUCCESS(rv,rv);
 
   if (NS_SUCCEEDED(rv))
@@ -404,8 +431,11 @@ nsNntpService::CopyMessage(const char * aSrcMailboxURI, nsIStreamListener * aMai
     nsCOMPtr<nsISupports> streamSupport;
     if (!aSrcMailboxURI || !aMailboxCopyHandler) return rv;
     streamSupport = do_QueryInterface(aMailboxCopyHandler, &rv);
-    if (NS_SUCCEEDED(rv))
+    if (NS_SUCCEEDED(rv)) {
+        mCopyingOperation = PR_TRUE;
         rv = DisplayMessage(aSrcMailboxURI, streamSupport, aMsgWindow, aUrlListener, nsnull, aURL);
+        mCopyingOperation = PR_FALSE;
+    }
 	return rv;
 }
 
