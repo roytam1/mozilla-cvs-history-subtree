@@ -1783,7 +1783,6 @@ install:    \
 	   $(OUTDIR)\spellchk\$(SPELLCHK_DLL)    \
 !ENDIF
 !endif
-!ifdef MOZ_RAPTOR
 !IF EXIST($(DIST)\bin\xpcom$(MOZ_BITS).dll)
 	    $(OUTDIR)\xpcom$(MOZ_BITS).dll    \
 !ENDIF
@@ -1793,7 +1792,6 @@ install:    \
 !IF EXIST($(DIST)\bin\img$(MOZ_BITS)$(VERSION_NUMBER).dll)
 	    $(OUTDIR)\img$(MOZ_BITS)$(VERSION_NUMBER).dll    \
 !ENDIF
-!endif
 !ifdef EDITOR
 !IF EXIST($(SPELLCHK_DATA)\pen4s324.dat)
 	   $(OUTDIR)\spellchk\pen4s324.dat    \
@@ -1946,9 +1944,6 @@ $(OUTDIR)\trackgdi.dll:   $(DIST)\bin\trackgdi.dll
     @IF EXIST $(DIST)\bin\trackgdi.dll copy $(DIST)\bin\trackgdi.dll $(OUTDIR)\trackgdi.dll
 !endif
 
-!endif
-
-!ifdef MOZ_RAPTOR
 $(OUTDIR)\xpcom$(MOZ_BITS).dll:   $(DIST)\bin\xpcom$(MOZ_BITS).dll
     @IF EXIST $(DIST)\bin\xpcom$(MOZ_BITS).dll copy $(DIST)\bin\xpcom$(MOZ_BITS).dll $(OUTDIR)\xpcom$(MOZ_BITS).dll
 
