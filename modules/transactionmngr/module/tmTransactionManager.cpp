@@ -66,6 +66,7 @@ tmTransactionManager::Init() {
 
 void
 tmTransactionManager::HandleTransaction(tmTransaction *aTrans) {
+  printf("TM::HandleTransaction\n");
 
   if (!aTrans)
     return;
@@ -122,6 +123,8 @@ tmTransactionManager::SendTransaction(PRUint32 aDestClientIPCID,
                                       tmTransaction *aTrans) {
   if (aDestClientIPCID < 0 || !aTrans)
     return;
+
+  printf("TM::SendTransaction(to client)\n");
 
   tmIPCModule::SendMsg(aDestClientIPCID, aTrans);
 }

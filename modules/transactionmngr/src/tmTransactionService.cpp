@@ -245,6 +245,7 @@ tmTransactionService::PostTransaction(const nsACString & aQueueName,
 
     if (NS_SUCCEEDED(rv)) {
       if (trans->GetQueueID() == TM_INVALID_ID){
+        printf("PostTransaction - stack and pack\n");
         // stack it and pack it
         waiting_msg *msg = new waiting_msg(); 
         if (!msg)
@@ -255,6 +256,7 @@ tmTransactionService::PostTransaction(const nsACString & aQueueName,
       }
       else {
         // send it
+        printf("PostTransaction - sending it right away\n");
         SendMessage(trans);
         delete trans;
       }
@@ -412,6 +414,7 @@ tmTransactionService::OnPost(tmTransaction *aTrans) {
 
 nsresult
 tmTransactionService::DispatchStoredMessages(queue_mapping *aQMapping) {
+  printf("DispatchStoredMessages\n");
 
   if (!aQMapping)
     return NS_ERROR_INVALID_ARG;

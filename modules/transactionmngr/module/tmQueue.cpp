@@ -191,6 +191,7 @@ tmQueue::PostTransaction(tmTransaction *aTrans) {
     mListeners.Iterate();
     PRUint32 *id = nsnull;
     while(id = (PRUint32 *)mListeners.Next()) {
+      printf("Q::PostTransaction - sending to others\n");
       if (ownerID != *id)
         mTM->SendTransaction(*id, aTrans);
     }
