@@ -2494,7 +2494,7 @@ txFnEndUnknownInstruction(txStylesheetCompilerState& aState)
     aState.popHandlerTable();
 
     if (aState.mSearchingForFallback) {
-        nsAutoPtr<txInstruction> instr = new txErrorInstruction;
+        nsAutoPtr<txInstruction> instr(new txErrorInstruction());
         NS_ENSURE_TRUE(instr, NS_ERROR_OUT_OF_MEMORY);
 
         nsresult rv = aState.addInstruction(instr);

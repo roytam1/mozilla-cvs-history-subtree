@@ -134,7 +134,8 @@ txAttribute::execute(txExecutionState& aEs)
         name.Cut(0, 6);
     }
 
-    txTextHandler* handler = (txTextHandler*)aEs.popResultHandler();
+    txTextHandler* handler =
+        NS_STATIC_CAST(txTextHandler*, aEs.popResultHandler());
     if (!name.IsEmpty()) {
         // add attribute if everything was ok
         aEs.mResultHandler->attribute(name, nsId, handler->mValue);
@@ -171,7 +172,8 @@ txCheckParam::execute(txExecutionState& aEs)
 {
     nsresult rv = NS_OK;
     if (aEs.mTemplateParams) {
-        ExprResult* exprRes = (ExprResult*)aEs.mTemplateParams->get(mName);
+        ExprResult* exprRes =
+            NS_STATIC_CAST(ExprResult*, aEs.mTemplateParams->get(mName));
         if (exprRes) {
             rv = aEs.bindVariable(mName, exprRes, MB_FALSE);
             NS_ENSURE_SUCCESS(rv, rv);
@@ -207,7 +209,8 @@ txConditionalGoto::execute(txExecutionState& aEs)
 nsresult
 txComment::execute(txExecutionState& aEs)
 {
-    txTextHandler* handler = (txTextHandler*)aEs.popResultHandler();
+    txTextHandler* handler =
+        NS_STATIC_CAST(txTextHandler*, aEs.popResultHandler());
     PRUint32 length = handler->mValue.Length();
     PRInt32 pos = 0;
     while ((pos = handler->mValue.FindChar('-', (PRUint32)pos)) != kNotFound) {
@@ -259,7 +262,7 @@ txCopyBase::copyNode(Node* aNode, txExecutionState& aEs)
         }
         case Node::ELEMENT_NODE:
         {
-            Element* element = (Element*)aNode;
+            Element* element = NS_STATIC_CAST(Element*, aNode);
             nsAutoString name;
             element->getNodeName(name);
             PRInt32 nsID = element->getNamespaceID();
@@ -270,7 +273,7 @@ txCopyBase::copyNode(Node* aNode, txExecutionState& aEs)
             if (attList) {
                 PRUint32 i = 0;
                 for (i = 0; i < attList->getLength(); i++) {
-                    Attr* attr = (Attr*)attList->item(i);
+                    Attr* attr = NS_STATIC_CAST(Attr*, attList->item(i));
                     nsAutoString nodeName, nodeValue;
                     attr->getNodeName(nodeName);
                     attr->getNodeValue(nodeValue);
@@ -380,7 +383,7 @@ txCopyOf::execute(txExecutionState& aEs)
     switch (exprRes->getResultType()) {
         case ExprResult::NODESET:
         {
-            NodeSet* nodes = (NodeSet*)exprRes;
+            NodeSet* nodes = NS_STATIC_CAST(NodeSet*, exprRes);
             int i;
             for (i = 0; i < nodes->size(); ++i) {
                 Node* node = nodes->get(i);
@@ -481,7 +484,8 @@ nsresult
 txLoopNodeSet::execute(txExecutionState& aEs)
 {
     aEs.popTemplateRule();
-    txNodeSetContext* context = (txNodeSetContext*)aEs.getEvalContext();
+    txNodeSetContext* context =
+        NS_STATIC_CAST(txNodeSetContext*, aEs.getEvalContext());
     if (!context->hasNext()) {
         delete aEs.popEvalContext();
 
@@ -509,7 +513,7 @@ txLREAttribute::execute(txExecutionState& aEs)
     if (mPrefix) {
         mPrefix->ToString(nodeName);
         nsAutoString localName;
-        nodeName.Append((PRUnichar)':');
+        nodeName.Append(PRUnichar(':'));
         mLocalName->ToString(localName);
         nodeName.Append(localName);
     }
@@ -537,7 +541,8 @@ txMessage::txMessage(PRBool aTerminate)
 nsresult
 txMessage::execute(txExecutionState& aEs)
 {
-    txTextHandler* handler = (txTextHandler*)aEs.popResultHandler();
+    txTextHandler* handler =
+        NS_STATIC_CAST(txTextHandler*, aEs.popResultHandler());
 
     nsCOMPtr<nsIConsoleService> consoleSvc = 
       do_GetService("@mozilla.org/consoleservice;1");
@@ -593,7 +598,8 @@ nsresult
 txProcessingInstruction::execute(txExecutionState& aEs)
 {
     nsresult rv = NS_OK;
-    txTextHandler* handler = (txTextHandler*)aEs.popResultHandler();
+    txTextHandler* handler =
+        NS_STATIC_CAST(txTextHandler*, aEs.popResultHandler());
     XMLUtils::normalizePIValue(handler->mValue);
 
     ExprResult* exprRes = mName->evaluate(aEs.getEvalContext());
@@ -626,7 +632,7 @@ txPushNewContext::~txPushNewContext()
     PRInt32 i;
     for (i = 0; i < mSortKeys.Count(); ++i)
     {
-        delete (SortKey*)mSortKeys[i];
+        delete NS_STATIC_CAST(SortKey*, mSortKeys[i]);
     }
 }
 
@@ -643,7 +649,7 @@ txPushNewContext::execute(txExecutionState& aEs)
         return NS_ERROR_XSLT_NODESET_EXPECTED;
     }
     
-    NodeSet* nodes = (NodeSet*)exprRes;
+    NodeSet* nodes = NS_STATIC_CAST(NodeSet*, exprRes);
     
     if (nodes->isEmpty()) {
         aEs.gotoInstruction(mBailTarget);
@@ -654,7 +660,7 @@ txPushNewContext::execute(txExecutionState& aEs)
     txNodeSorter sorter;
     PRInt32 i, count = mSortKeys.Count();
     for (i = 0; i < count; ++i) {
-        SortKey* sort = (SortKey*)mSortKeys[i];
+        SortKey* sort = NS_STATIC_CAST(SortKey*, mSortKeys[i]);
         rv = sorter.addSortElement(sort->mSelectExpr, sort->mLangExpr,
                                    sort->mDataTypeExpr, sort->mOrderExpr,
                                    sort->mCaseOrderExpr,
@@ -818,7 +824,8 @@ txSetParam::execute(txExecutionState& aEs)
         NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
     }
     else {
-        txRtfHandler* rtfHandler = (txRtfHandler*)aEs.popResultHandler();
+        txRtfHandler* rtfHandler =
+            NS_STATIC_CAST(txRtfHandler*, aEs.popResultHandler());
         exprRes = rtfHandler->createRTF();
         delete rtfHandler;
         NS_ENSURE_TRUE(exprRes, NS_ERROR_OUT_OF_MEMORY);
@@ -848,7 +855,8 @@ txSetVariable::execute(txExecutionState& aEs)
         NS_ENSURE_TRUE(exprRes, NS_ERROR_FAILURE);
     }
     else {
-        txRtfHandler* rtfHandler = (txRtfHandler*)aEs.popResultHandler();
+        txRtfHandler* rtfHandler =
+            NS_STATIC_CAST(txRtfHandler*, aEs.popResultHandler());
         exprRes = rtfHandler->createRTF();
         delete rtfHandler;
         NS_ENSURE_TRUE(exprRes, NS_ERROR_OUT_OF_MEMORY);
