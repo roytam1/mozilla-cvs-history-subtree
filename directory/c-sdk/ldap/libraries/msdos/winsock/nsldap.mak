@@ -59,7 +59,7 @@ MOZ_LDAP_VER=40
 
 !if !defined(LDAP_SRC)
 !if "$(MOZ_BITS)"=="32"
-LDAP_SRC=$(MOZ_SRC)\mozilla\directory\c-sdk
+LDAP_SRC=$(MOZ_SRC:/=\)\mozilla\directory\c-sdk
 !else
 LDAP_SRC=l:
 !endif
@@ -506,7 +506,7 @@ $(OUTDIR)\nsldap.dep: $(BUILDDIR)\\nsldap.mak
         @rem <<$(PROD)$(VERSTR).dep
         $(CINCLUDES) -O $(OUTDIR)\nsldap.dep
 <<
-	$(MOZ_SRC)\mozilla\config\makedep @$(PROD)$(VERSTR).dep -F <<
+	$(MOZ_SRC:/=\)\mozilla\config\makedep @$(PROD)$(VERSTR).dep -F <<
                 $(LIBLDAP)\abandon.c
                 $(LIBLDAP)\add.c
                 $(LIBLDAP)\bind.c
