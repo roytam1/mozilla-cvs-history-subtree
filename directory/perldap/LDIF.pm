@@ -156,18 +156,19 @@ sub pack_LDIF
 		if (not defined $val) {
 		    $str .= continue_line ($max_line, $attr);
 		} else {
+		    my $value;
 		    if (ref $val) {
-			$val = "< $$val";
+			$value = "< $$val";
 		    } elsif ($val eq "") {
-			# output "$attr:"
+			$value = ""; # output "$attr:"
 		    } elsif ((defined $encode) ?
 				$val =~ /$encode/ :
 				$val =~ /$_std_encode/o) {
-			$val = ": " . encode_base64 ($val, "");
+			$value = ": " . encode_base64 ($val, "");
 		    } else {
-			$val = " $val";
+			$value = " $val";
 		    }
-		    $str .= continue_line ($max_line, "$attr:$val");
+		    $str .= continue_line ($max_line, "$attr:$value");
 		}
 		$str .= "\n";
 	    }
