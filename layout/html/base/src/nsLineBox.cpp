@@ -268,11 +268,11 @@ nsLineBox::IndexOf(nsIFrame* aFrame) const
 {
   PRInt32 i, n = GetChildCount();
   nsIFrame* frame = mFirstChild;
-  for (i = 0; i < n; i++) {
+  for (i = 0; i < n; i++, frame->GetNextSibling(&frame)) {
     if (frame == aFrame) {
       return i;
     }
-    frame->GetNextSibling(&frame);
+
   }
   return -1;
 }

@@ -314,6 +314,11 @@ protected:
   /** reflow all lines that have been marked dirty */
   nsresult ReflowDirtyLines(nsBlockReflowState& aState);
 
+  /** reflow all lines that have been marked dirty  and do a bunch of cleanup */
+  nsresult ReflowDirty(nsBlockReflowState& aState,
+                       const nsHTMLReflowState& aReflowState,
+                       nsReflowStatus& aStatus);
+
   //----------------------------------------
   // Methods for line reflow
   /**
