@@ -24,17 +24,19 @@ Rights Reserved.
 <window id="alertNotification"
         xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
         windowtype="alert:alert"
-        width="250"
         height="50"
         onload="onAlertLoad()">
   
   <script type="application/x-javascript" src="chrome://communicator/content/alerts/alert.js"/>
   <hbox class="alertBox" flex="1" align="start">
+
     <image id="alertImage" autostretch="never"/>
+
     <vbox flex="1">
       <label id="alertTitleLabel" class="alertTitle plain">*</label>
       <label id="alertTextLabel" class="alertText plain" flex="1" onclick="onAlertClick();">*</label>
     </vbox>
+
   </hbox>
 
 </window>
