@@ -104,8 +104,8 @@
 #		undef NULL
 #		ifndef XP_WIN
 #			define XP_WIN 1
-#		endif /* __INTEL__ */
-#	endif /* XP_PC */
+#		endif /* XP_WIN */
+#	endif /* __INTEL__ */
 #endif /* __MWERKS__ */
 
 #if defined(XP_MAC) || defined(XP_MACOSX)
