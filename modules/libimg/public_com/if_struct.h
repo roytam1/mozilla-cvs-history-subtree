@@ -202,7 +202,7 @@ struct il_container_struct {
     IL_Pixmap *image;           /* Destination image pixmap structure. */
     IL_Pixmap *mask;            /* Destination mask pixmap structure. */
 
-    intn type;
+    char* type;
     void *ds;                   /* decoder's private data */
 
     il_converter converter;
