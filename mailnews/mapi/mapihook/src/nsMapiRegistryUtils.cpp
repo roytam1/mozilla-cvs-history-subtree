@@ -321,6 +321,13 @@ nsresult CopyMozMapiToWinSysDir()
     filePath.AssignWithConversion(mapiFilePath.get());
     pCurrentMapiFile->InitWithPath(filePath.get());
     rv = pMozMapiFile->CopyToUnicode(pCurrentMapiFile, fileName.get());
+    if (NS_SUCCEEDED(rv)) {
+        filePath.Append("Mapi32_moz_bak.dll");
+        rv = SetRegistryKey(HKEY_LOCAL_MACHINE, 
+                            "Software\\Mozilla\\Desktop", 
+                            "Mapi_backup_dll", 
+                            (char *)filePath.get());
+    }
     return rv;
 }
 
