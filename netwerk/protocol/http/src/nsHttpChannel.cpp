@@ -2464,6 +2464,9 @@ nsHttpChannel::ConfirmAuth(const nsString &bundleKey, PRBool doYesNoPrompt)
     if (!prompt)
         return PR_TRUE;
 
+    // do not prompt again
+    mSuppressDefensiveAuth = PR_TRUE;
+
     PRBool confirmed;
     if (doYesNoPrompt) {
         PRInt32 choice;
