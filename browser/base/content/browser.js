@@ -461,7 +461,24 @@ function onFindBarKeyPress(evt)
   else if (evt.keyCode == KeyEvent.DOM_VK_ESCAPE) {
     closeFindBar();
     evt.preventDefault();
+  } 
+  else if (evt.keyCode == KeyEvent.DOM_VK_PAGE_UP) {
+    window.top._content.scrollByPages(-1);
+    evt.preventDefault();
   }
+  else if (evt.keyCode == KeyEvent.DOM_VK_PAGE_DOWN) {
+    window.top._content.scrollByPages(1);
+    evt.preventDefault();
+  }
+  else if (evt.keyCode == KeyEvent.DOM_VK_UP) {
+    window.top._content.scrollByLines(-1);
+    evt.preventDefault();
+  }
+  else if (evt.keyCode == KeyEvent.DOM_VK_DOWN) {
+    window.top._content.scrollByLines(1);
+    evt.preventDefault();
+  }
+
 } 
 
 function enableFindButtons(aEnable)
