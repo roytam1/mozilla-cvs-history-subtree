@@ -25,6 +25,7 @@
 #include "nsIDOMNSHTMLAnchorElement.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIHTMLContent.h"
+#include "nsIHTMLDocument.h"
 #include "nsGenericHTMLElement.h"
 #include "nsILink.h"
 #include "nsHTMLAtoms.h"
@@ -202,7 +203,6 @@ NS_IMPL_STRING_ATTR(nsHTMLAnchorElement, Rel, rel)
 NS_IMPL_STRING_ATTR(nsHTMLAnchorElement, Rev, rev)
 NS_IMPL_STRING_ATTR(nsHTMLAnchorElement, Shape, shape)
 NS_IMPL_INT_ATTR(nsHTMLAnchorElement, TabIndex, tabindex)
-NS_IMPL_STRING_ATTR(nsHTMLAnchorElement, Target, target)
 NS_IMPL_STRING_ATTR(nsHTMLAnchorElement, Type, type)
 
 
@@ -274,47 +274,19 @@ nsHTMLAnchorElement::SetDocument(nsIDocument* aDocument, PRBool aDeep,
 NS_IMETHODIMP
 nsHTMLAnchorElement::Blur()
 {
-  nsCOMPtr<nsIPresContext> presContext;
-  GetPresContext(this, getter_AddRefs(presContext));
-  return RemoveFocus(presContext);
+  return SetElementFocus(PR_FALSE);
 }
 
 NS_IMETHODIMP
 nsHTMLAnchorElement::Focus()
 {
-  nsCOMPtr<nsIDocument> doc; // Strong
-  nsresult rv = GetDocument(*getter_AddRefs(doc));
-  if (NS_FAILED(rv)) { return rv; }
-  if (!doc) { return NS_ERROR_NULL_POINTER; }
-
-  PRInt32 numShells = doc->GetNumberOfShells();
-  nsCOMPtr<nsIPresContext> context;
-
-  for (PRInt32 i=0; i<numShells; i++) {
-    nsCOMPtr<nsIPresShell> shell = getter_AddRefs(doc->GetShellAt(i));
-    if (!shell) { return NS_ERROR_NULL_POINTER; }
-
-    rv = shell->GetPresContext(getter_AddRefs(context));
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
-
-    if (!context) {
-      return NS_ERROR_NULL_POINTER;
-    }
-
-    rv = SetFocus(context);
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
-  }
-
-  return NS_OK;
+  return SetElementFocus(PR_TRUE);
 }
 
 NS_IMETHODIMP
 nsHTMLAnchorElement::SetFocus(nsIPresContext* aPresContext)
 {
+  NS_ENSURE_ARG_POINTER(aPresContext);
   // don't make the link grab the focus if there is no link handler
   nsCOMPtr<nsILinkHandler> handler;
   nsresult rv = aPresContext->GetLinkHandler(getter_AddRefs(handler));
@@ -351,6 +323,7 @@ nsHTMLAnchorElement::SetFocus(nsIPresContext* aPresContext)
 NS_IMETHODIMP
 nsHTMLAnchorElement::RemoveFocus(nsIPresContext* aPresContext)
 {
+  NS_ENSURE_ARG_POINTER(aPresContext);
   // If we are disabled, we probably shouldn't have focus in the
   // first place, so allow it to be removed.
   nsresult rv = NS_OK;
@@ -383,7 +356,7 @@ nsHTMLAnchorElement::StringToAttribute(nsIAtom* aAttribute,
     }
   }
   else if (aAttribute == nsHTMLAtoms::suppress) {
-    if (nsCRT::strcasecmp(nsPromiseFlatString(aValue).get(),
+    if (nsCRT::strcasecmp(PromiseFlatString(aValue).get(),
                           NS_LITERAL_STRING("true").get())) {
       aResult.SetEmptyValue();  // XXX? shouldn't just leave "true"
       return NS_CONTENT_ATTR_HAS_VALUE;
@@ -430,6 +403,32 @@ nsHTMLAnchorElement::SetHref(const nsAReadableString& aValue)
                                                           aValue, PR_TRUE);
 }
 
+NS_IMETHODIMP
+nsHTMLAnchorElement::GetTarget(nsAWritableString& aValue)
+{
+  aValue.Truncate();
+
+  nsresult rv;
+  rv = NS_STATIC_CAST(nsIContent *, this)->GetAttribute(kNameSpaceID_HTML,
+                                                        nsHTMLAtoms::target,
+                                                        aValue);
+  if (rv == NS_CONTENT_ATTR_NOT_THERE) {
+    nsCOMPtr<nsIHTMLDocument>doc(do_QueryInterface(mDocument));
+    if (doc) {
+      rv = doc->GetBaseTarget(aValue);
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+  }
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsHTMLAnchorElement::SetTarget(const nsAReadableString& aValue)
+{
+  return NS_STATIC_CAST(nsIContent *, this)->SetAttribute(kNameSpaceID_HTML,
+                                                          nsHTMLAtoms::target,
+                                                          aValue, PR_TRUE);
+}
 
 NS_IMETHODIMP
 nsHTMLAnchorElement::SizeOf(nsISizeOfHandler* aSizer, PRUint32* aResult) const

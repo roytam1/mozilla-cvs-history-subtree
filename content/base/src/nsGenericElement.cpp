@@ -1400,11 +1400,17 @@ nsGenericElement::HandleDOMEvent(nsIPresContext* aPresContext,
 {
   nsresult ret = NS_OK;
   PRBool retarget = PR_FALSE;
+  PRBool externalDOMEvent = PR_FALSE;
   nsCOMPtr<nsIDOMEventTarget> oldTarget;
 
   nsIDOMEvent* domEvent = nsnull;
   if (NS_EVENT_FLAG_INIT & aFlags) {
-    if (!aDOMEvent) {
+    if (aDOMEvent) {
+      if (*aDOMEvent) {
+        externalDOMEvent = PR_TRUE;   
+      }
+    }
+    else {
       aDOMEvent = &domEvent;
     }
     aEvent->flags = aFlags;
@@ -1413,7 +1419,15 @@ nsGenericElement::HandleDOMEvent(nsIPresContext* aPresContext,
 
   // Find out if we're anonymous.
   nsCOMPtr<nsIContent> bindingParent;
-  GetBindingParent(getter_AddRefs(bindingParent));
+  if (*aDOMEvent) {
+    (*aDOMEvent)->GetTarget(getter_AddRefs(oldTarget));
+    nsCOMPtr<nsIContent> content(do_QueryInterface(oldTarget));
+    if (content)
+      content->GetBindingParent(getter_AddRefs(bindingParent));
+  }
+  else
+    GetBindingParent(getter_AddRefs(bindingParent));
+
   if (bindingParent) {
     // We're anonymous.  We may potentially need to retarget
     // our event if our parent is in a different scope.
@@ -1425,7 +1439,26 @@ nsGenericElement::HandleDOMEvent(nsIPresContext* aPresContext,
     }
   }
 
-  if (retarget) {
+  // determine the parent:
+  nsCOMPtr<nsIContent> parent;
+  if (mDocument) {
+    nsCOMPtr<nsIBindingManager> bindingManager;
+    mDocument->GetBindingManager(getter_AddRefs(bindingManager));
+    if (bindingManager) {
+      // we have a binding manager -- do we have an anonymous parent?
+      bindingManager->GetInsertionParent(this, getter_AddRefs(parent));
+    }
+  }
+  if (parent) {
+    retarget = PR_FALSE;
+  }
+  else {
+    // if we didn't find an anonymous parent, use the explicit one,
+    // whether it's null or not...
+    parent = mParent;
+  }
+
+  if (retarget || (parent.get() != mParent)) {
     if (!*aDOMEvent) {
       // We haven't made a DOMEvent yet.  Force making one now.
       nsCOMPtr<nsIEventListenerManager> listenerManager;
@@ -1450,20 +1483,21 @@ nsGenericElement::HandleDOMEvent(nsIPresContext* aPresContext,
     PRBool hasOriginal;
     privateEvent->HasOriginalTarget(&hasOriginal);
 
-    if (!hasOriginal) {
+    if (!hasOriginal)
       privateEvent->SetOriginalTarget(oldTarget);
-    }
 
-    nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(mParent);
-    privateEvent->SetTarget(target);
+    if (retarget) {
+      nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(mParent);
+      privateEvent->SetTarget(target);
+    }
   }
 
   PRBool intermediateCapture = PR_FALSE;
   //Capturing stage evaluation
   if (NS_EVENT_FLAG_BUBBLE != aFlags) {
     //Initiate capturing phase.  Special case first call to document
-    if (mParent) {
-      mParent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent, NS_EVENT_FLAG_CAPTURE, aEventStatus);
+    if (parent) {
+      parent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent, NS_EVENT_FLAG_CAPTURE, aEventStatus);
     }
     else if (mDocument != nsnull) {
         ret = mDocument->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
@@ -1499,12 +1533,12 @@ nsGenericElement::HandleDOMEvent(nsIPresContext* aPresContext,
 
   //Bubbling stage
   if (NS_EVENT_FLAG_CAPTURE != aFlags && mDocument) {
-    if (mParent) {
+    if (parent) {
       /*
        * If there's a parent we pass the event to the parent...
        */
-      ret = mParent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
-                                    NS_EVENT_FLAG_BUBBLE, aEventStatus);
+      ret = parent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
+                                   NS_EVENT_FLAG_BUBBLE, aEventStatus);
     } else {
       /*
        * If there's no parent but there is a document (i.e. this is the
@@ -1525,8 +1559,9 @@ nsGenericElement::HandleDOMEvent(nsIPresContext* aPresContext,
 
   if (NS_EVENT_FLAG_INIT & aFlags) {
     // We're leaving the DOM event loop so if we created a DOM event,
-    // release here.
-    if (nsnull != *aDOMEvent) {
+    // release here.  If externalDOMEvent is set the event was passed in
+    // and we don't own it
+    if (*aDOMEvent && !externalDOMEvent) {
       nsrefcnt rc;
       NS_RELEASE2(*aDOMEvent, rc);
       if (0 != rc) {
@@ -1540,8 +1575,8 @@ nsGenericElement::HandleDOMEvent(nsIPresContext* aPresContext,
           NS_RELEASE(privateEvent);
         }
       }
+      aDOMEvent = nsnull;
     }
-    aDOMEvent = nsnull;
   }
 
   return ret;
@@ -2028,10 +2063,8 @@ nsGenericElement::doInsertBefore(nsIDOMNode* aNewChild,
         return res;
       }
 
-      childContent->SetDocument(mDocument, PR_TRUE, PR_TRUE);
-
       // Insert the child and increment the insertion position
-      res = InsertChildAt(childContent, refPos++, PR_TRUE);
+      res = InsertChildAt(childContent, refPos++, PR_TRUE, PR_TRUE);
 
       if (NS_FAILED(res)) {
         return res;
@@ -2093,9 +2126,7 @@ nsGenericElement::doInsertBefore(nsIDOMNode* aNewChild,
       }
     }
 
-    newContent->SetDocument(mDocument, PR_TRUE, PR_TRUE);
-
-    res = InsertChildAt(newContent, refPos, PR_TRUE);
+    res = InsertChildAt(newContent, refPos, PR_TRUE, PR_TRUE);
 
     if (NS_FAILED(res)) {
       return res;
@@ -2221,13 +2252,11 @@ nsGenericElement::doReplaceChild(nsIDOMNode* aNewChild,
         return res;
       }
 
-      childContent->SetDocument(document, PR_TRUE, PR_TRUE);
-
       // Insert the child and increment the insertion position
       if (i) {
-        res = InsertChildAt(childContent, oldPos++, PR_TRUE);
+        res = InsertChildAt(childContent, oldPos++, PR_TRUE, PR_TRUE);
       } else {
-        res = ReplaceChildAt(childContent, oldPos++, PR_TRUE);
+        res = ReplaceChildAt(childContent, oldPos++, PR_TRUE, PR_TRUE);
       }
 
       if (NS_FAILED(res)) {
@@ -2282,9 +2311,7 @@ nsGenericElement::doReplaceChild(nsIDOMNode* aNewChild,
       }
     }
 
-    newContent->SetDocument(document, PR_TRUE, PR_TRUE);
-
-    res = ReplaceChildAt(newContent, oldPos, PR_TRUE);
+    res = ReplaceChildAt(newContent, oldPos, PR_TRUE, PR_TRUE);
 
     if (NS_FAILED(res)) {
       return res;
@@ -2620,7 +2647,7 @@ nsGenericContainerElement::CopyInnerTo(nsIContent* aSrcContent,
             result = newNode->QueryInterface(NS_GET_IID(nsIContent),
                                              (void**)&newContent);
             if (NS_OK == result) {
-              result = aDst->AppendChildTo(newContent, PR_FALSE);
+              result = aDst->AppendChildTo(newContent, PR_FALSE, PR_FALSE);
               NS_RELEASE(newContent);
             }
             NS_RELEASE(newNode);
@@ -2862,8 +2889,7 @@ nsGenericContainerElement::SetAttribute(nsINodeInfo* aNodeInfo,
       mutation.mAttrChange = modification ? nsIDOMMutationEvent::MODIFICATION :
                                              nsIDOMMutationEvent::ADDITION;
       nsEventStatus status = nsEventStatus_eIgnore;
-      nsCOMPtr<nsIDOMEvent> domEvent;
-      HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent),
+      HandleDOMEvent(nsnull, &mutation, nsnull,
                      NS_EVENT_FLAG_INIT, &status);
     }
 
@@ -2974,8 +3000,7 @@ nsGenericContainerElement::UnsetAttribute(PRInt32 aNameSpaceID,
           mutation.mAttrChange = nsIDOMMutationEvent::REMOVAL;
 
           nsEventStatus status = nsEventStatus_eIgnore;
-          nsCOMPtr<nsIDOMEvent> domEvent;
-          this->HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent),
+          this->HandleDOMEvent(nsnull, &mutation, nsnull,
                                NS_EVENT_FLAG_INIT, &status);
         }
 
@@ -3142,7 +3167,8 @@ nsGenericContainerElement::IndexOf(nsIContent* aPossibleChild,
 nsresult
 nsGenericContainerElement::InsertChildAt(nsIContent* aKid,
                                          PRInt32 aIndex,
-                                         PRBool aNotify)
+                                         PRBool aNotify,
+                                         PRBool aDeepSetDocument)
 {
   NS_PRECONDITION(nsnull != aKid, "null ptr");
   nsIDocument* doc = mDocument;
@@ -3155,7 +3181,7 @@ nsGenericContainerElement::InsertChildAt(nsIContent* aKid,
     aKid->SetParent(this);
     nsRange::OwnerChildInserted(this, aIndex);
     if (nsnull != doc) {
-      aKid->SetDocument(doc, PR_FALSE, PR_TRUE);
+      aKid->SetDocument(doc, aDeepSetDocument, PR_TRUE);
       if (aNotify) {
         doc->ContentInserted(this, aKid, aIndex);
       }
@@ -3171,8 +3197,7 @@ nsGenericContainerElement::InsertChildAt(nsIContent* aKid,
         mutation.mRelatedNode = relNode;
 
         nsEventStatus status = nsEventStatus_eIgnore;
-        nsCOMPtr<nsIDOMEvent> domEvent;
-        aKid->HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent),
+        aKid->HandleDOMEvent(nsnull, &mutation, nsnull,
                              NS_EVENT_FLAG_INIT, &status);
       }
     }
@@ -3186,7 +3211,8 @@ nsGenericContainerElement::InsertChildAt(nsIContent* aKid,
 nsresult
 nsGenericContainerElement::ReplaceChildAt(nsIContent* aKid,
                                           PRInt32 aIndex,
-                                          PRBool aNotify)
+                                          PRBool aNotify,
+                                          PRBool aDeepSetDocument)
 {
   NS_PRECONDITION(nsnull != aKid, "null ptr");
   nsIDocument* doc = mDocument;
@@ -3200,7 +3226,7 @@ nsGenericContainerElement::ReplaceChildAt(nsIContent* aKid,
     NS_ADDREF(aKid);
     aKid->SetParent(this);
     if (nsnull != doc) {
-      aKid->SetDocument(doc, PR_FALSE, PR_TRUE);
+      aKid->SetDocument(doc, aDeepSetDocument, PR_TRUE);
       if (aNotify) {
         doc->ContentReplaced(this, oldKid, aKid, aIndex);
       }
@@ -3216,7 +3242,8 @@ nsGenericContainerElement::ReplaceChildAt(nsIContent* aKid,
 }
 
 nsresult
-nsGenericContainerElement::AppendChildTo(nsIContent* aKid, PRBool aNotify)
+nsGenericContainerElement::AppendChildTo(nsIContent* aKid, PRBool aNotify,
+                                         PRBool aDeepSetDocument)
 {
   NS_PRECONDITION(nsnull != aKid, "null ptr");
   nsIDocument* doc = mDocument;
@@ -3229,7 +3256,7 @@ nsGenericContainerElement::AppendChildTo(nsIContent* aKid, PRBool aNotify)
     aKid->SetParent(this);
     // ranges don't need adjustment since new child is at end of list
     if (nsnull != doc) {
-      aKid->SetDocument(doc, PR_FALSE, PR_TRUE);
+      aKid->SetDocument(doc, aDeepSetDocument, PR_TRUE);
       if (aNotify) {
         doc->ContentAppended(this, mChildren.Count() - 1);
       }
@@ -3245,8 +3272,7 @@ nsGenericContainerElement::AppendChildTo(nsIContent* aKid, PRBool aNotify)
         mutation.mRelatedNode = relNode;
 
         nsEventStatus status = nsEventStatus_eIgnore;
-        nsCOMPtr<nsIDOMEvent> domEvent;
-        aKid->HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent),
+        aKid->HandleDOMEvent(nsnull, &mutation, nsnull,
                              NS_EVENT_FLAG_INIT, &status);
       }
     }
@@ -3279,7 +3305,7 @@ nsGenericContainerElement::RemoveChildAt(PRInt32 aIndex, PRBool aNotify)
 
       nsEventStatus status = nsEventStatus_eIgnore;
       nsCOMPtr<nsIDOMEvent> domEvent;
-      oldKid->HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent),
+      oldKid->HandleDOMEvent(nsnull, &mutation, nsnull,
                              NS_EVENT_FLAG_INIT, &status);
     }
 

@@ -383,7 +383,7 @@ ConvertAndWrite(nsAReadableString& aString,
   NS_ENSURE_ARG_POINTER(aEncoder);
   nsresult rv;
   PRInt32 charLength, startCharLength;
-  nsPromiseFlatString flat(aString);
+  const nsPromiseFlatString& flat = PromiseFlatString(aString);
   const PRUnichar* unicodeBuf = flat.get();
   PRInt32 unicodeLength = aString.Length();
   PRInt32 startLength = unicodeLength;
@@ -718,11 +718,11 @@ nsresult
 nsDocumentEncoder::SerializeRangeContextStart(const nsVoidArray& aAncestorArray,
                                               nsAWritableString& aString)
 {
-  PRInt32 i = 0;
+  PRInt32 i = aAncestorArray.Count();
   nsresult rv = NS_OK;
 
-  while (1) {
-    nsIDOMNode *node = (nsIDOMNode *)aAncestorArray.ElementAt(i++);
+  while (i) {
+    nsIDOMNode *node = (nsIDOMNode *)aAncestorArray.ElementAt(--i);
 
     if (!node)
       break;
@@ -742,11 +742,11 @@ nsresult
 nsDocumentEncoder::SerializeRangeContextEnd(const nsVoidArray& aAncestorArray,
                                             nsAWritableString& aString)
 {
-  PRInt32 i = aAncestorArray.Count();
+  PRInt32 i = 0;
   nsresult rv = NS_OK;
 
-  while (i) {
-    nsIDOMNode *node = (nsIDOMNode *)aAncestorArray.ElementAt(--i);
+  while (1) {
+    nsIDOMNode *node = (nsIDOMNode *)aAncestorArray.ElementAt(i++);
 
     if (!node)
       break;

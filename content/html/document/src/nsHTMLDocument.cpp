@@ -106,8 +106,10 @@
 #include "nsIDocumentCharsetInfo.h"
 #include "nsIDocumentEncoder.h" //for outputting selection
 #include "nsIBookmarksService.h"
+#ifdef MOZ_OLD_CACHE
 #include "nsINetDataCacheManager.h"
 #include "nsICachedNetData.h"
+#endif
 #include "nsIXMLContent.h" //for createelementNS
 #include "nsHTMLParts.h" //for createelementNS
 #include "nsIJSContextStack.h"
@@ -115,6 +117,10 @@
 
 #include "nsContentCID.h"
 #include "nsIPrompt.h"
+//AHMED 12-2 
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h"
+#endif
 
 #define DETECTOR_CONTRACTID_MAX 127
 static char g_detector_contractid[DETECTOR_CONTRACTID_MAX + 1];
@@ -417,7 +423,9 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
     }
   }
 
+#ifdef MOZ_OLD_CACHE
   nsCOMPtr<nsICachedNetData> cachedData;
+#endif
   nsresult rv = nsDocument::StartDocumentLoad(aCommand,
                                               aChannel, aLoadGroup,
                                               aContainer,
@@ -520,15 +528,17 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
     }
 
     PRUint32 loadAttr = 0;
-    rv = httpChannel->GetLoadAttributes(&loadAttr);
+    rv = httpChannel->GetLoadFlags(&loadAttr);
     NS_ASSERTION(NS_SUCCEEDED(rv),"cannot get load attribute");
     if(NS_SUCCEEDED(rv)) {
+#ifdef MOZ_OLD_CACHE
       // copy from nsHTTPChannel.cpp
       if(loadAttr & nsIChannel::CACHE_AS_FILE)
         cacheFlags = nsINetDataCacheManager::CACHE_AS_FILE;
-      else if(loadAttr & nsIChannel::INHIBIT_PERSISTENT_CACHING)
+      else if(loadAttr & nsIRequest::INHIBIT_PERSISTENT_CACHING)
         cacheFlags = nsINetDataCacheManager::BYPASS_PERSISTENT_CACHE;
       bTryCache = PR_TRUE;
+#endif
     }
 
     // Don't propogate the result code beyond here, since it
@@ -611,7 +621,15 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
 
   nsCOMPtr<nsIDocumentCharsetInfo> dcInfo;
   docShell->GetDocumentCharsetInfo(getter_AddRefs(dcInfo));  
-
+#ifdef IBMBIDI
+  nsCOMPtr<nsIPresContext> cx;
+  docShell->GetPresContext(getter_AddRefs(cx));
+  if(cx){
+    PRUint32 mBidiOption;
+    cx->GetBidi(&mBidiOption);
+    mTexttype = GET_BIDI_OPTION_TEXTTYPE(mBidiOption);
+  }
+#endif // IBMBIDI
   //
   // The following logic is mirrored in nsWebShell::Embed!
   //
@@ -767,6 +785,7 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
 
     if(bTryCache && urlSpec)
     {
+#ifdef MOZ_OLD_CACHE
        nsCOMPtr<nsINetDataCacheManager> cacheMgr;
        cacheMgr = do_GetService(NS_NETWORK_CACHE_MANAGER_CONTRACTID, &rv);       
        if(NS_SUCCEEDED(rv))
@@ -788,6 +807,7 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
           }
        }
        rv=NS_OK;
+#endif
     }
 
     if (kCharsetFromParentFrame > charsetSource) {
@@ -840,17 +860,25 @@ nsHTMLDocument::StartDocumentLoad(const char* aCommand,
   if (NS_FAILED(rv)) {
     return rv;
   }
+//ahmed
+#ifdef IBMBIDI
+  // Check if 864 but in Implicit mode !
+  if( (mTexttype == IBMBIDI_TEXTTYPE_LOGICAL)&&(charset.EqualsIgnoreCase("ibm864")) )
+    charset.AssignWithConversion("IBM864i");
+#endif // IBMBIDI
 
   rv = this->SetDocumentCharacterSet(charset);
   if (NS_FAILED(rv)) {
     return rv;
   }
 
+#ifdef MOZ_OLD_CACHE
   if(cachedData) {
        rv=cachedData->SetAnnotation("charset",charset.Length()+1,
                                     NS_ConvertUCS2toUTF8(charset).get());
        NS_ASSERTION(NS_SUCCEEDED(rv),"cannot SetAnnotation");
   }
+#endif
 
   // Set the parser as the stream listener for the document loader...
   if (mParser) {
@@ -921,6 +949,9 @@ nsHTMLDocument::SetTitle(const nsAReadableString& aTitle)
 NS_IMETHODIMP
 nsHTMLDocument::AddImageMap(nsIDOMHTMLMapElement* aMap)
 {
+  // XXX We should order the maps based on their order in the document.
+  // XXX Otherwise scripts that add/remove maps with duplicate names 
+  // XXX will cause problems
   NS_PRECONDITION(nsnull != aMap, "null ptr");
   if (nsnull == aMap) {
     return NS_ERROR_NULL_POINTER;
@@ -1210,10 +1241,17 @@ NS_IMETHODIMP
 nsHTMLDocument::ContentAppended(nsIContent* aContainer,
                                 PRInt32 aNewIndexInContainer)
 {
-  nsresult rv = RegisterNamedItems(aContainer);
+  // Register new content. That is the content numbered from
+  // aNewIndexInContainer and upwards.
+  PRInt32 count=0;
+  aContainer->ChildCount(count);
 
-  if (NS_FAILED(rv)) {
-    return rv;
+  PRInt32 i;
+  nsCOMPtr<nsIContent> newChild;
+  for (i = aNewIndexInContainer; i < count; ++i) {
+    aContainer->ChildAt(i, *getter_AddRefs(newChild));
+    if (newChild) 
+      RegisterNamedItems(newChild);
   }
 
   return nsDocument::ContentAppended(aContainer, aNewIndexInContainer);
@@ -2137,9 +2175,67 @@ nsHTMLDocument::OpenCommon(nsIURI* aSourceURL)
       return result;
   }
 
+  // XXX This is a nasty workaround for a scrollbar code bug
+  // (http://bugzilla.mozilla.org/show_bug.cgi?id=55334).
+
+  // Hold on to our root element
+  nsCOMPtr<nsIContent> root(mRootContent);
+
+  if (root) {
+    PRInt32 count;
+    root->ChildCount(count);
+
+    // Remove all the children from the root.
+    while (--count >= 0) {
+      root->RemoveChildAt(count, PR_TRUE);
+    }
+
+    count = 0;
+
+    mRootContent->GetAttributeCount(count);
+
+    // Remove all attributes from the root element
+    while (--count >= 0) {
+      nsCOMPtr<nsIAtom> name, prefix;
+      PRInt32 nsid;
+
+      root->GetAttributeNameAt(count, nsid, *getter_AddRefs(name),
+                               *getter_AddRefs(prefix));
+
+      root->UnsetAttribute(nsid, name, PR_FALSE);
+    }
+
+    // Remove the root from the childlist
+    if (mChildren) {
+      mChildren->RemoveElement(root);
+    }
+
+    mRootContent = nsnull;
+  }
+
+  // Call Reset(), this will now do the full reset, except removing
+  // the root from the document, doing that confuses the scrollbar
+  // code in mozilla since the document in the root element and all
+  // the anonymous content (i.e. scrollbar elements) is set to
+  // null.
+
   result = Reset(channel, group);
   if (NS_FAILED(result))
     return result;
+
+  if (root) {
+    // Tear down the frames for the root element.
+    ContentRemoved(nsnull, root, 0);
+
+    // Put the root element back into the document, we don't notify
+    // the document about this insertion since the sink will do that
+    // for us, the sink will call InitialReflow() and that'll create
+    // frames for the root element and the scrollbars work as expected
+    // (since the document in the root element was never set to null)
+
+    mChildren->AppendElement(root);
+    mRootContent = root;
+  }
 
   result = nsComponentManager::CreateInstance(kCParserCID, nsnull, 
                                               NS_GET_IID(nsIParser), 

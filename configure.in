@@ -13,7 +13,7 @@ dnl The Original Code is this file as it was released upon August 6, 1998.
 dnl
 dnl The Initial Developer of the Original Code is Christopher
 dnl Seawood. Portions created by Christopher Seawood are
-dnl Copyright (C) 1998-2000 Christopher Seawood. All Rights Reserved.
+dnl Copyright (C) 1998-2001 Christopher Seawood. All Rights Reserved.
 dnl
 dnl Contributor(s): Jamie Zawinski <jwz@jwz.org>
 dnl                 gettimeofday args check
@@ -83,8 +83,11 @@ dnl Set the minimum version of toolkit libs used by mozilla
 dnl ========================================================
 GLIB_VERSION=1.2.0
 GTK_VERSION=1.2.0
+GDK_PIXBUF_VERSION=0.8.0
 LIBIDL_VERSION=0.6.3
 PERL_VERSION=5.004
+QT_VERSION=2.2.0
+QT_VERSION_NUM=220
 
 dnl Set various checks
 dnl ========================================================
@@ -963,6 +966,7 @@ alpha*-*-osf*)
     DLL_SUFFIX=".dylib"
     DSO_LDOPTS='-compatibility_version 1 -current_version 1'
     AC_DEFINE(NO_X11)
+    AC_DEFINE(DARWIN)
     AC_DEFINE(RHAPSODY)
     AC_DEFINE(TARGET_CARBON)
     AC_DEFINE(TARGET_API_MAC_CARBON)
@@ -1103,6 +1107,19 @@ then
         $XLIBS $XEXT_LIBS)
     AC_CHECK_HEADER(X11/extensions/Xinerama.h)
 
+    dnl ========================================================
+    dnl =
+    dnl = Check for XIE
+    dnl =
+    dnl ========================================================
+    AC_CHECK_LIB(XIE, XieFloGeometry, [MOZ_XIE_LIBS="-lXIE"],,
+        $XLIBS $XEXT_LIBS)
+    AC_CHECK_HEADER(X11/extensions/XIElib.h)
+
+    if test "$MOZ_XIE_LIBS"; then
+        HAVE_XIE=1
+    fi
+
 	LDFLAGS="$_SAVE_LDFLAGS"
 
 	dnl ========================================================
@@ -1128,6 +1145,28 @@ then
 
 	  [	MOZ_WIDGET_TOOLKIT="gtk" ])
 fi # $no_x
+
+dnl ========================================================
+dnl =
+dnl = If NSPR was not detected in the system, 
+dnl = use the one in the source tree (mozilla/nsprpub)
+dnl =
+dnl ========================================================
+
+AM_PATH_NSPR(4.0.0, [MOZ_NATIVE_NSPR=1], [MOZ_NATIVE_NSPR=])
+
+if test -z "$MOZ_NATIVE_NSPR"; then
+    AC_MSG_WARN(nspr-config not found. building local copy of NSPR)
+    NSPR_CFLAGS='`$(DEPTH)/nsprpub/config/nspr-config --prefix=$(DIST) --cflags`'
+    case "$target" in
+    *-*-os2_vacpp)
+        NSPR_LIBS='$(DIST)/lib/nspr'$NSPR_VERSION'.lib $(DIST)/lib/plc'$NSPR_VERSION'.lib $(DIST)/lib/plds'$NSPR_VERSION'.lib '$_PTHREAD_LDFLAGS''
+        ;;
+    *)
+        NSPR_LIBS='`$(DEPTH)/nsprpub/config/nspr-config --prefix=$(DIST) --libs`'
+        ;;
+    esac
+fi
 
 dnl ========================================================
 dnl =
@@ -1290,10 +1329,23 @@ then
 	])
 fi
 
+HAVE_GDK_PIXBUF=
+MOZ_GDK_PIXBUF_CFLAGS=
+MOZ_GDK_PIXBUF_LIBS=
+
 if test "$MOZ_ENABLE_GTK"
 then
     AM_PATH_GTK($GTK_VERSION,,
       AC_MSG_ERROR(Test for GTK failed.))
+
+
+    AM_PATH_GDK_PIXBUF($GDK_PIXBUF_VERSION,
+      [HAVE_GDK_PIXBUF=1],)
+
+    if test "$HAVE_GDK_PIXBUF"; then
+        MOZ_GDK_PIXBUF_CFLAGS=$GDK_PIXBUF_CFLAGS
+        MOZ_GDK_PIXBUF_LIBS=$GDK_PIXBUF_LIBS
+    fi
 
 dnl ========================================================
 dnl =							   =
@@ -1623,9 +1675,7 @@ then
 	[ QTDIR=$withval],
 	[ QTDIR="/usr"])
 
-	AC_MSG_CHECKING(for Qt insanity)
-
-    QT_CFLAGS="-I${QTDIR}/include/qt"
+    QT_CFLAGS="-I${QTDIR}/include -DQT_GENUINE_STR"
     QT_LIBS="-L/usr/X11R6/lib -L${QTDIR}/lib -lqt -lXext -lX11"
 dnl    AM_PATH_QT($QT_VERSION,,
 dnl      AC_MSG_ERROR(Test for QT failed.))
@@ -1652,6 +1702,31 @@ dnl      AC_MSG_ERROR(Test for QT failed.))
     fi
 
     MOZ_QT_CFLAGS=$QT_CFLAGS
+
+    AC_LANG_CPLUSPLUS
+
+    _SAVE_CXXFLAGS=$CXXFLAGS
+    _SAVE_LIBS=$LIBS
+
+    CXXFLAGS="$CXXFLAGS $QT_CFLAGS"
+    LIBS="$LIBS $QT_LIBS"
+    
+    AC_MSG_CHECKING(Qt - version >= $QT_VERSION)
+    AC_TRY_COMPILE([#include <qglobal.h>],
+    [
+        #if (QT_VERSION < $QT_VERSION_NUM)
+            #error  "QT_VERSION too old"
+        #endif
+    ],result="yes",result="no")
+
+    AC_MSG_RESULT("$result")
+    if test "$result" = "no"; then
+       AC_MSG_ERROR([Qt Mozilla requires at least version $QT_VERSION of Qt])
+    fi
+    CXXFLAGS=$_SAVE_CXXFLAGS
+    LIBS=$_SAVE_LIBS
+
+    AC_LANG_C
 fi
 dnl ========================================================
 dnl = 													   =
@@ -1723,6 +1798,12 @@ AC_SUBST(MOZ_ENABLE_XPRINT)
 AC_SUBST(MOZ_QT_CFLAGS)
 AC_SUBST(MOZ_QT_LDFLAGS)
 AC_SUBST(MOZ_DEFAULT_TOOLKIT)
+
+AC_SUBST(HAVE_GDK_PIXBUF)
+AC_SUBST(MOZ_GDK_PIXBUF_CFLAGS)
+AC_SUBST(MOZ_GDK_PIXBUF_LIBS)
+AC_SUBST(HAVE_XIE)
+AC_SUBST(MOZ_XIE_LIBS)
 
 AC_SUBST(MOZ_XINERAMA_LIBS)
 AC_SUBST(MOZ_ENABLE_XINERAMA)
@@ -1978,8 +2059,14 @@ AC_CACHE_CHECK(for usable wchar_t (2 bytes, unsigned),
                 ac_cv_have_usable_wchar="no",
                 ac_cv_have_usable_wchar="maybe")])
 if test "$ac_cv_have_usable_wchar" = "yes"; then
-    AC_DEFINE(HAVE_CPP_2BYTE_WCHAR_T)
-    HAVE_CPP_2BYTE_WCHAR_T=1
+	case $target in
+	*-aix4.3*)
+		;;
+	*)
+		AC_DEFINE(HAVE_CPP_2BYTE_WCHAR_T)
+		HAVE_CPP_2BYTE_WCHAR_T=1
+		;;
+	esac
 else
 dnl This is really gcc-only
 dnl Do this test using CXX instead of CC since some versions of gcc
@@ -2024,6 +2111,7 @@ os2*)
 esac
 AC_CHECK_HEADERS(sys/byteorder.h compat.h getopt.h)
 AC_CHECK_HEADERS(sys/bittypes.h memory.h unistd.h sys/filio.h)
+AC_CHECK_HEADERS(gnu/libc-version.h nl_types.h)
 
 dnl These are all the places some variant of statfs can be hiding.
 AC_CHECK_HEADERS(sys/statvfs.h sys/statfs.h sys/vfs.h sys/mount.h)
@@ -2051,12 +2139,7 @@ if test ! "$GNU_CXX"; then
 
     case $target in
     *-solaris*)
-	dnl The C++ compiler in Workshop 5.0+ uses standard iostreams by
-	dnl default. -library=iostream will force use of classic iostreams.
-	dnl We need -liostream to be inserted before the standard C++ library
-	dnl (which isn't -lC on Workshop5+, but is dnl a set of libraries).
-	CXX="$CXX -library=iostream"
-	LIBS="-liostream -lCrun $LIBS"
+	LIBS="-lCrun $LIBS"
 	;;
     *-aix*)
 	AC_CHECK_LIB(C_r, demangle)
@@ -2207,126 +2290,6 @@ then
 fi
 
 dnl
-dnl Add the pthread flags to the nspr libs
-dnl ========================================================
-NSPR_LIBS="$NSPR_LIBS $_PTHREAD_LDFLAGS"
-
-dnl Check for NSPR.
-dnl ========================================================
-dnl 
-dnl We always use the system NSPR from now on...this option
-dnl tells where to find NSPR rather than whether to use it.
-dnl ========================================================
-AC_ARG_WITH(nspr,
-[  --with-nspr=PFX         Prefix where NSPR is installed],
-	NSPR_DIR=$withval)
-
-AC_ARG_WITH(nsprlib,
-[  --with-nsprlib=DIR      Directory where NSPR libraries are installed],
-	NSPR_LIBDIR=$withval)
-
-dnl Skip this if cross-compiling, since the checks will fail.
-if test "$_OPENVMS_CROSS_COMPILE"x = x; then
-
-_SAVE_CFLAGS=$CFLAGS
-_SAVE_LDFLAGS=$LDFLAGS
-_SAVE_LIBS=$LIBS
-CFLAGS="$CFLAGS -I${NSPR_DIR}/include"
-if test "$NSPR_LIBDIR"x = x; then
-   LDFLAGS="$LDFLAGS -L${NSPR_DIR}/lib $NSPR_LIBS"
-else
-   LDFLAGS="$LDFLAGS -L${NSPR_LIBDIR} $NSPR_LIBS"
-fi
-
-AC_MSG_CHECKING("for PR_GetCurrentThread in -lnspr$NSPR_VERSION")
-LIBS="-lnspr$NSPR_VERSION $NSPR_LIBS $LIBS"
-AC_TRY_RUN(
-	#include <stdio.h>
-	#include <nspr.h>
-	int main () {
-	    PRThread *dummy = PR_GetCurrentThread();
-	    exit(0);
-	}
-	, [NSPR_LIBS="-lnspr$NSPR_VERSION $NSPR_LIBS" result="yes"],
-	[_NSPR_NEEDS_THREAD_LIB=1 result="no"], 
-	[NSPR_LIBS="-lnspr$NSPR_VERSION $NSPR_LIBS" result="yes"] )
-rm -f core
-AC_MSG_RESULT("$result")
-
-dnl XXX - Is this really the best way to do this check? - cls
-if test "$_NSPR_NEEDS_THREAD_LIB" = 1; then
-
-LIBS=$_SAVE_LIBS
-AC_MSG_CHECKING("for PR_GetCurrentThread in -lnspr$NSPR_VERSION with thread lib")
-    LIBS="-lnspr$NSPR_VERSION $NSPR_LIBS $LIBS"
-    AC_TRY_RUN(
-	#include <stdio.h>
-	#include <nspr.h>
-	int main () {
-	    PRThread *dummy = PR_GetCurrentThread();
-	    exit(0);
-	}
-	, [NSPR_LIBS="-lnspr$NSPR_VERSION $NSPR_LIBS" result="yes"],
-	[MISSING_NSPR="$MISSING_NSPR -lnspr$NSPR_VERSION" result="no"], 
-	[NSPR_LIBS="-lnspr$NSPR_VERSION $NSPR_LIBS" result="yes"] )
-    rm -f core
-AC_MSG_RESULT("$result")
-fi
-
-AC_CHECK_LIB(plc$NSPR_VERSION, PL_CreateOptState, NSPR_LIBS="-lplc$NSPR_VERSION $NSPR_LIBS",
-	[MISSING_NSPR="$MISSING_NSPR -lplc$NSPR_VERSION"], $NSPR_LIBS)
-AC_CHECK_LIB(plds$NSPR_VERSION, PL_NewHashTable, NSPR_LIBS="-lplds$NSPR_VERSION $NSPR_LIBS",
-	[MISSING_NSPR="$MISSING_NSPR -lplds$NSPR_VERSION"], $NSPR_LIBS)
-
-CFLAGS=$_SAVE_CFLAGS
-LDFLAGS=$_SAVE_LDFLAGS
-LIBS=$_SAVE_LIBS
-
-fi # ! CROSS_COMPILE
-
-if test "${NSPR_DIR}" -a -d "${NSPR_DIR}"; then
-    NSPR_INCLUDE_DIR="${NSPR_DIR}/include"
-    NSPR_CFLAGS="-I${NSPR_INCLUDE_DIR}"
-    if test "$NSPR_LIBDIR"x != x; then
-        NSPR_LIBS="-L${NSPR_LIBDIR} ${NSPR_LIBS}"
-    else
-        NSPR_LIBS="-L${NSPR_DIR}/lib ${NSPR_LIBS}"
-    fi
-fi
-
-dnl
-dnl If NSPR was not detected in the system, use the one in the source
-dnl tree (mozilla/nsprpub)
-dnl
-dnl NSPR_INCLUDE_DIR and NSPR_CFLAGS are blank because NSPR built as
-dnl part of the mozilla build, will install its headers and libs in
-dnl the same place as mozilla.
-dnl
-AC_MSG_CHECKING(whether have system NSPR)
-if test "$MISSING_NSPR"; then
-   AC_MSG_RESULT(no (will build it from source))
-   NSPR_INCLUDE_DIR=
-   NSPR_CFLAGS=
-   case "$target" in
-   *-*-os2_vacpp)
-      NSPR_LIBS='$(DIST)/lib/nspr'$NSPR_VERSION'.lib $(DIST)/lib/plc'$NSPR_VERSION'.lib $(DIST)/lib/plds'$NSPR_VERSION'.lib '$_PTHREAD_LDFLAGS''
-      ;;
-   *)
-      NSPR_LIBS="-lplds$NSPR_VERSION -lplc$NSPR_VERSION -lnspr$NSPR_VERSION $_PTHREAD_LDFLAGS"
-      ;;
-   esac
-dnl
-dnl Otherwise, we are using an NSPR installed in the system.
-dnl
-dnl We need to set MOZ_NATIVE_NSPR so that mozilla/nsprpub is not built.
-dnl
-else
-   AC_MSG_RESULT(yes)
-   MOZ_NATIVE_NSPR=1
-fi
-
-
-dnl
 dnl Indicate that platform requires special thread safe 
 dnl locking when starting up the OJI JVM 
 dnl (see mozilla/modules/oji/src/nsJVMManager.cpp)
@@ -2393,6 +2356,27 @@ dnl ========================================================
 AC_PROG_GCC_TRADITIONAL
 AC_FUNC_MEMCMP
 AC_CHECK_FUNCS(random qsort strerror lchown fchmod snprintf localtime_r statvfs memmove usleep rint)
+AC_CHECK_FUNCS(nl_langinfo)
+
+AC_LANG_CPLUSPLUS
+AC_CACHE_CHECK(
+    [for gnu_get_libc_version()],
+    ac_cv_func_gnu_get_libc_version,
+    [AC_TRY_LINK([
+        #ifdef HAVE_GNU_LIBC_VERSION_H
+        #include <gnu/libc-version.h>
+        #endif
+        ],
+        [const char *glibc_version = gnu_get_libc_version();],
+        [ac_cv_func_gnu_get_libc_version=yes],
+        [ac_cv_func_gnu_get_libc_version=no] 
+        )]
+    )
+
+if test "$ac_cv_func_gnu_get_libc_version" = "yes"; then
+    AC_DEFINE(HAVE_GNU_GET_LIBC_VERSION)
+fi
+AC_LANG_C
 
 AC_MSG_CHECKING(how to call gettimeofday)
 AC_CACHE_VAL(ac_cv_gettimeofday_args,
@@ -3006,6 +2990,16 @@ if test "$MOZ_MAIL_NEWS"; then
 fi
 AC_SUBST(MOZ_MAIL_NEWS)
 
+dnl Turn on editor logging by default
+MOZ_EDITOR_API_LOG=1
+MOZ_ARG_DISABLE_BOOL(editor-api-log,
+[  --disable-editor-api-log      Disable editor logging],
+  MOZ_EDITOR_API_LOG= )
+if test "$MOZ_EDITOR_API_LOG"; then
+  AC_DEFINE(MOZ_EDITOR_API_LOG)
+fi
+AC_SUBST(MOZ_EDITOR_API_LOG)
+
 dnl Turn on the new lightweight gfx text control frames
 MOZ_ENDER_LITE=1
 MOZ_ARG_DISABLE_BOOL(ender-lite,
@@ -3347,11 +3341,8 @@ dnl ========================================================
 MOZ_ARG_WITH_STRING(default-mozilla-five-home,
 [  --with-default-mozilla-five-home    Set the default value for MOZILLA_FIVE_HOME],
   [ val=`echo $withval`
-    DSO_LDOPTS="$DSO_LDOPTS -Wl,-rpath=$val"
-    LIBS="$LIBS -Wl,-rpath=$val"
     AC_DEFINE_UNQUOTED(MOZ_DEFAULT_MOZILLA_FIVE_HOME,"$val")
-    MOZ_NSPRENV_OVERRIDE_DSO_LDOPTS="-shared -rpath=$val"
-    AC_SUBST(MOZ_NSPRENV_OVERRIDE_DSO_LDOPTS) ] )
+    ])
 dnl ========================================================
 
 dnl ========================================================
@@ -3397,6 +3388,22 @@ dnl ========================================================
 
 dnl ========================================================
 dnl =
+dnl = --enable-crypto
+dnl =
+dnl = Build Personal Security Manager
+dnl =
+dnl ========================================================
+MOZ_PSM=
+
+MOZ_ARG_ENABLE_BOOL(crypto,
+[  --enable-crypto         Enable crypto (Personal Security Manager)],
+  [if test -z "$MOZ_NSS_AUTOCONF"; then
+    AC_MSG_ERROR(["To use NSS autoconf you must set MOZ_NSS_AUTOCONF=1 in your environment."])
+   fi
+  MOZ_PSM=1] )
+
+dnl ========================================================
+dnl =
 dnl = --with-extensions=extension1,extension2,
 dnl = 
 dnl = Enable compilation of specific extension modules
@@ -3406,7 +3413,7 @@ dnl ========================================================
 dnl Need cookie and wallet to build mozilla, this should
 dnl not be the case, 18352 has been filed.
 dnl http://bugzilla.mozilla.org/show_bug.cgi?id=18352
-MOZ_EXTENSIONS_DEFAULT="cookie wallet xml-rpc xmlextras"
+MOZ_EXTENSIONS_DEFAULT="cookie wallet xml-rpc xmlextras help"
 
 MOZ_ARG_WITH_STRING(extensions,
 [  --with-extensions       Enable extensions (dirs in extensions/)],
@@ -3467,9 +3474,9 @@ MOZ_ARG_DISABLE_BOOL(md,
    fi])
 if test "$_cpp_md_flag"; then
   COMPILER_DEPEND=1
-  MDDEPDIR='.deps'
   _DEPEND_CFLAGS='$(filter-out %/.pp,-Wp,-MD,$(MDDEPDIR)/$(*F).pp)'
 fi
+MDDEPDIR='.deps'
 AC_SUBST(COMPILER_DEPEND)
 AC_SUBST(MDDEPDIR)
 
@@ -3503,33 +3510,49 @@ if test "$_PEDANTIC"; then
     esac
 fi
 
-dnl Bug 65664: gcc (with -pedantic) and HP's aCC (with +p) have
-dnl problems resolving ambiguities with some of the operator== in
-dnl nsCOMPtr.h because they consider the top-level cv-qualifiers in
-dnl overload resolution.
+dnl Autoconf test for gcc 2.7.2.x (and maybe others?) so that we don't
+dnl provide non-const forms of the operator== for comparing nsCOMPtrs to
+dnl raw pointers in nsCOMPtr.h.  (VC++ has the same bug.)
 
 AC_LANG_CPLUSPLUS
 _SAVE_CXXFLAGS=$CXXFLAGS
 CXXFLAGS="$CXXFLAGS ${_WARNINGS_CXXFLAGS}"
 
-AC_CACHE_CHECK(for bug where toplevel cv-qualifiers are used in overload resolution,
-    ac_cv_quals_ambig_bug,
+AC_CACHE_CHECK(for correct overload resolution with const and templates,
+    ac_nscap_nonconst_opeq_bug,
     [AC_TRY_COMPILE([
-                      inline int f(void *p, int *q) { return 1; }
-                      inline int f(int *p, const int *q) { return 0; }
+                      template <class T>
+                      class Pointer
+                        {
+                        public:
+                          T* myPtr;
+                        };
+                      
+                      template <class T, class U>
+                      int operator==(const Pointer<T>& rhs, U* lhs)
+                        {
+                          return rhs.myPtr == lhs;
+                        }
+                      
+                      template <class T, class U>
+                      int operator==(const Pointer<T>& rhs, const U* lhs)
+                        {
+                          return rhs.myPtr == lhs;
+                        }
                     ],
                     [
-                      int *a = 0;
-                      return f(a, a); // should choose int f(int*, const int*)
+                      Pointer<int> foo;
+                      const int* bar;
+                      return foo == bar;
                     ],
-                    ac_cv_quals_ambig_bug="no",
-                    ac_cv_quals_ambig_bug="yes")])
+                    ac_nscap_nonconst_opeq_bug="no",
+                    ac_nscap_nonconst_opeq_bug="yes")])
 
 AC_LANG_C
 CXXFLAGS="$_SAVE_CXXFLAGS"
 
-if test "$ac_cv_quals_ambig_bug" = "yes" ; then
-    AC_DEFINE(CPP_CV_QUALIFIERS_CAUSE_AMBIGUITY)
+if test "$ac_nscap_nonconst_opeq_bug" = "yes" ; then
+    AC_DEFINE(NSCAP_DONT_PROVIDE_NONCONST_OPEQ)
 fi
 
 dnl pass -Wno-long-long to the compiler
@@ -3854,13 +3877,15 @@ if test "$MOZ_NEW_CACHE" = "1"; then
 fi
 AC_SUBST(MOZ_NEW_CACHE)
 
-dnl New image library is not yet enabled by default.  This is a temporary
-dnl option for testing
-MOZ_ARG_ENABLE_BOOL(libpr0n,
-[  --enable-libpr0n        Enable new image library],
-  USE_IMG2=1
-  AC_DEFINE(USE_IMG2))
-
+dnl libpr0n on by default
+USE_IMG2=1
+dnl Turn off the new image library.  Soon to go away.
+MOZ_ARG_DISABLE_BOOL(libpr0n,
+[  --disable-libpr0n       Disable new imagelib],
+   USE_IMG2=)
+if test "$USE_IMG2" = "1"; then
+  AC_DEFINE(USE_IMG2)
+fi
 AC_SUBST(USE_IMG2)
 
 dnl ========================================================
@@ -3975,7 +4000,7 @@ AC_SUBST(MOZ_SVG)
 AC_SUBST(MOZ_XSL)
 AC_SUBST(MOZ_MONOLITHIC_TOOLKIT)
 AC_SUBST(MOZ_JS_LIBS)
-AC_SUBST(MOZ_SECURITY)
+AC_SUBST(MOZ_PSM)
 AC_SUBST(BUILD_MODULES)
 AC_SUBST(MOZ_DEBUG)
 AC_SUBST(MOZ_DEBUG_MODULES)
@@ -4302,7 +4327,6 @@ AC_SUBST(MOZ_PNG_LIBS)
 AC_SUBST(MOZ_MNG_CFLAGS)
 AC_SUBST(MOZ_MNG_LIBS)
 
-AC_SUBST(NSPR_INCLUDE_DIR)
 AC_SUBST(NSPR_CFLAGS)
 AC_SUBST(NSPR_LIBS)
 AC_SUBST(MOZ_NATIVE_NSPR)
@@ -4357,6 +4381,7 @@ AC_SUBST(LIB_SUFFIX)
 AC_SUBST(OBJ_SUFFIX)
 AC_SUBST(BIN_SUFFIX)
 AC_SUBST(USE_N32)
+AC_SUBST(MOZ_NSS_AUTOCONF)
 
 if test "$USING_HCC"; then
    CC='${topsrcdir}/build/hcc'
@@ -4506,9 +4531,25 @@ DLLTOOL=
 unset MAKEFILES
 unset CONFIG_FILES
 
+if test -z "$MOZ_NATIVE_NSPR" || test "$MOZ_LDAP_XPCOM"; then
+    ac_configure_args="$_SUBDIR_CONFIG_ARGS --with-dist-prefix=$MOZ_BUILD_ROOT/dist"
+    AC_OUTPUT_SUBDIRS(nsprpub)
+fi
+
 if test -z "$MOZ_NATIVE_NSPR"; then
-  ac_configure_args="$_SUBDIR_CONFIG_ARGS --prefix=$MOZ_BUILD_ROOT/dist"
-  AC_OUTPUT_SUBDIRS(nsprpub)
+    # Hack to deal with the fact that we use NSPR_CFLAGS everywhere
+    AC_MSG_WARN([Recreating autoconf.mk with updated nspr-config output])
+    case "$target" in
+    *-*-os2_vacpp)
+        ;;
+    *)
+        NSPR_LIBS=`./nsprpub/config/nspr-config --prefix=$MOZ_BUILD_ROOT/dist --exec-prefix=$MOZ_BUILD_ROOT/dist --libs`
+        $PERL -pi.bak -e "s {^NSPR_LIBS\s*=.*} {NSPR_LIBS = $NSPR_LIBS }" config/autoconf.mk
+        ;;
+    esac
+    NSPR_CFLAGS=`./nsprpub/config/nspr-config --prefix=$MOZ_BUILD_ROOT/dist --exec-prefix=$MOZ_BUILD_ROOT/dist --cflags`
+    $PERL -pi.bak -e "s {^NSPR_CFLAGS\s*=.*} {NSPR_CFLAGS = $NSPR_CFLAGS }" config/autoconf.mk
+    rm -f config/autoconf.mk.bak
 fi
 
 # if we're building the LDAP XPCOM component, we need to build 
@@ -4528,4 +4569,12 @@ if test "$MOZ_LDAP_XPCOM"; then
 
   ac_configure_args="$_SUBDIR_CONFIG_ARGS --prefix=$MOZ_BUILD_ROOT/dist"
   AC_OUTPUT_SUBDIRS(directory/c-sdk/ldap)
+fi
+
+if test "$MOZ_PSM"; then
+    if test ! -d security; then
+        rm -rf security; mkdir security
+    fi
+    ac_configure_args="$_SUBDIR_CONFIG_ARGS --with-dist-prefix=$MOZ_BUILD_ROOT/dist --with-mozilla --disable-cmd"
+    AC_OUTPUT_SUBDIRS(security/nss)
 fi

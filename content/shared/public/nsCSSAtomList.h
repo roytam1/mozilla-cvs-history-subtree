@@ -52,10 +52,13 @@ CSS_ATOM(disabledPseudo, ":disabled")
 CSS_ATOM(dragOverPseudo, ":drag-over")
 CSS_ATOM(dragPseudo, ":drag")
 
+CSS_ATOM(emptyPseudo, ":empty")
+
 CSS_ATOM(enabledPseudo, ":enabled")
 
 CSS_ATOM(firstChildPseudo, ":first-child")
 CSS_ATOM(firstNodePseudo, ":first-node")
+CSS_ATOM(lastChildPseudo, ":last-child")
 CSS_ATOM(lastNodePseudo, ":last-node")
 CSS_ATOM(focusPseudo, ":focus")
 
@@ -67,8 +70,6 @@ CSS_ATOM(linkPseudo, ":link")
 CSS_ATOM(menuPseudo, ":menu")
 
 CSS_ATOM(notPseudo, ":not")
-
-CSS_ATOM(outOfDatePseudo, ":out-of-date")
 
 CSS_ATOM(rootPseudo, ":root")
 

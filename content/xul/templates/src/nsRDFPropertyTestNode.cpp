@@ -188,10 +188,11 @@ nsRDFPropertyTestNode::FilterInstantiations(InstantiationSet& aInstantiations, v
 
             if (hasAssertion) {
                 // it's consistent.
-                Element* element = new (mConflictSet.GetPool())
-                    Element(VALUE_TO_IRDFRESOURCE(sourceValue),
-                            mProperty,
-                            VALUE_TO_IRDFNODE(targetValue));
+                Element* element =
+                    nsRDFPropertyTestNode::Element::Create(mConflictSet.GetPool(),
+                                                           VALUE_TO_IRDFRESOURCE(sourceValue),
+                                                           mProperty,
+                                                           VALUE_TO_IRDFNODE(targetValue));
 
                 if (! element)
                     return NS_ERROR_OUT_OF_MEMORY;
@@ -287,10 +288,11 @@ nsRDFPropertyTestNode::FilterInstantiations(InstantiationSet& aInstantiations, v
                 Instantiation newinst = *inst;
                 newinst.AddAssignment(variable, value);
 
-                Element* element = new (mConflictSet.GetPool())
-                    Element(VALUE_TO_IRDFRESOURCE(sourceValue),
-                            mProperty,
-                            VALUE_TO_IRDFNODE(targetValue));
+                Element* element =
+                    nsRDFPropertyTestNode::Element::Create(mConflictSet.GetPool(),
+                                                           VALUE_TO_IRDFRESOURCE(sourceValue),
+                                                           mProperty,
+                                                           VALUE_TO_IRDFNODE(targetValue));
 
                 if (! element)
                     return NS_ERROR_OUT_OF_MEMORY;

@@ -27,11 +27,7 @@ endif
 
 ifndef MOZ_NATIVE_NSPR
 # Do not regenerate Makefile for NSPR
-ifdef USE_NSPR_AUTOCONF
 NSPRPUB_DIR		= nsprpub
-else
-NSPRPUB_DIR		= $(topsrcdir)/nsprpub
-endif
 endif
 
 # BM_DIRS_mod: list of directories to traverse from toplevel Makefile 
@@ -92,14 +88,6 @@ BM_DIRS_transformiix	= extensions/transformiix
 BM_CVS_transformiix     = extensions/transformiix
 
 #
-# psm
-#
-BM_DIRS_psm	= $(BM_DIRS_dbm) $(BM_DIRS_xpcom) security netwerk/base/public netwerk/socket/base dom/public $(BM_DIRS_js) extensions/psm-glue
-BM_DEP_DIRS_psm	= $(BM_DEP_DIRS_dbm) $(BM_DEP_DIRS_xpcom) $(BM_DEP_DIRS_js) intl/locale/idl intl/locale/public intl/strres/public uriloader/base modules/libpref/public profile/public caps/idl netwerk/protocol/http/public gfx/idl gfx/public rdf/base/idl xpfe/appshell/public widget/public docshell/base layout/html/forms/public layout/base/public content/base/public dom/src/base modules/oji/public caps/include netwerk/build
-BM_CVS_psm	= $(BM_CVS_dbm) $(BM_CVS_xpcom) $(BM_CVS_js) security netwerk/base/public netwerk/socket/base dom/public $(BM_CVS_js) extensions/psm-glue
-BM_CVS_NS_psm	= $(BM_CVS_NS_dbm) $(BM_CVS_NS_xpcom) $(BM_CVS_NS_js) intl/locale/idl intl/locale/public intl/strres/public uriloader/base modules/libpref/public profile/public caps/idl netwerk/protocol/http/public gfx/idl gfx/public rdf/base/idl xpfe/appshell/public widget/public docshell/base layout/html/forms/public layout/base/public content/base/public dom/src/base modules/oji/public caps/include netwerk/build
-
-#
 # psm2
 #
 BM_DIRS_psm2	= $(BM_DIRS_dbm) $(BM_DIRS_js) $(BM_DIRS_xpcom) security/manager
@@ -133,6 +121,14 @@ BM_CVS_NS_psm2	= \
 	modules/libpref/public \
 	content/base/public \
 	intl/locale/public
+
+#
+# psm is obsolete.  Make it pull psm2 instead
+#
+BM_DIRS_psm	= $(BM_DIRS_psm2)
+BM_DEP_DIRS_psm = $(BM_DEP_DIRS_psm2)
+BM_CVS_psm	= $(BM_CVS_psm2)
+BM_CVS_NS_psm	= $(BM_CVS_NS_psm2)
 
 #
 # Tally

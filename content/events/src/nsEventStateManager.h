@@ -30,11 +30,19 @@
 #include "nsIObserver.h"
 #include "nsWeakReference.h"
 #include "nsHashtable.h"
+#include "nsITimer.h"
 
 class nsIDocument;
 class nsIScrollableView;
 class nsIPresShell;
 class nsITreeFrame;
+class nsIFrameSelection;
+
+// mac uses click-hold context menus, a holdover from 4.x
+#ifdef XP_MAC
+#define CLICK_HOLD_CONTEXT_MENUS 1
+#endif
+
 
 /*
  * Event listener manager
@@ -103,6 +111,8 @@ public:
   //Method for centralized distribution of new DOM events
   NS_IMETHOD DispatchNewEvent(nsISupports* aTarget, nsIDOMEvent* aEvent);
 
+  NS_IMETHOD MoveFocus(PRBool aDirection, nsIContent* aRoot);
+
 protected:
   void UpdateCursor(nsIPresContext* aPresContext, nsEvent* aEvent, nsIFrame* aTargetFrame, nsEventStatus* aStatus);
   void GenerateMouseEnterExit(nsIPresContext* aPresContext, nsGUIEvent* aEvent);
@@ -110,8 +120,8 @@ protected:
   NS_IMETHOD SetClickCount(nsIPresContext* aPresContext, nsMouseEvent *aEvent, nsEventStatus* aStatus);
   NS_IMETHOD CheckForAndDispatchClick(nsIPresContext* aPresContext, nsMouseEvent *aEvent, nsEventStatus* aStatus);
   PRBool ChangeFocus(nsIContent* aFocus, nsIFrame* aFocusFrame, PRBool aSetFocus);
-  void ShiftFocus(PRBool foward);
-  NS_IMETHOD GetNextTabbableContent(nsIContent* aRootContent, nsIFrame* aFrame, PRBool foward, nsIContent** aResult);
+  void ShiftFocus(PRBool forward, nsIContent* aRoot=nsnull);
+  NS_IMETHOD GetNextTabbableContent(nsIContent* aRootContent, nsIFrame* aFrame, PRBool forward, nsIContent** aResult);
   PRInt32 GetNextTabIndex(nsIContent* aParent, PRBool foward);
   NS_IMETHOD SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aContent);
   PRBool CheckDisabled(nsIContent* aContent);
@@ -137,7 +147,7 @@ protected:
   // end mousewheel functions
 
   // routines for the d&d gesture tracking state machine
-  void BeginTrackingDragGesture ( nsGUIEvent* inDownEvent, nsIFrame* inDownFrame ) ;
+  void BeginTrackingDragGesture ( nsIPresContext* aPresContext, nsGUIEvent* inDownEvent, nsIFrame* inDownFrame ) ;
   void StopTrackingDragGesture ( ) ;
   void GenerateDragGesture ( nsIPresContext* aPresContext, nsGUIEvent *aEvent ) ;
   PRBool IsTrackingDragGesture ( ) const { return mIsTrackingDragGesture; }
@@ -149,6 +159,8 @@ protected:
   nsresult MoveFocusToCaret();
   nsresult MoveCaretToFocus();
   nsresult EnsureCaretVisible(nsIPresShell* aPresShell, nsIContent *aContent);
+
+  void GetSelection ( nsIFrame* inFrame, nsIPresContext* inPresContext, nsIFrameSelection** outSelection ) ;
 
   //Any frames here must be checked for validity in ClearFrameRefs
   nsIFrame* mCurrentTarget;
@@ -203,6 +215,24 @@ protected:
 
   // So we don't have to keep checking accessibility.browsewithcaret pref
   PRBool mBrowseWithCaret;
+  
+#ifdef CLICK_HOLD_CONTEXT_MENUS
+  enum { kClickHoldDelay = 500 } ;        // 500ms == 1/2 second
+
+  void CreateClickHoldTimer ( nsIPresContext* aPresContext, nsGUIEvent* inMouseDownEvent ) ;
+  void KillClickHoldTimer ( ) ;
+  void FireContextClick ( ) ;
+  static void sClickHoldCallback ( nsITimer* aTimer, void* aESM ) ;
+  
+    // stash a bunch of stuff because we're going through a timer and the event
+    // isn't guaranteed to be there later. We don't want to hold strong refs to
+    // things because we're alerted to when they are going away in ClearFrameRefs().
+  nsPoint mEventPoint, mEventRefPoint;
+  nsIWidget* mEventDownWidget;
+  nsIPresContext* mEventPresContext;
+  nsCOMPtr<nsITimer> mClickHoldTimer;
+#endif
+
 };
 
 extern nsresult NS_NewEventStateManager(nsIEventStateManager** aInstancePtrResult);

@@ -98,28 +98,41 @@ public:
 
   nsIContent* mElement;
 
+  static nsXBLAttributeEntry*
+  Create(nsIAtom* aSrcAtom, nsIAtom* aDstAtom, nsIContent* aContent) {
+    void* place = nsXBLPrototypeBinding::kAttrPool->Alloc(sizeof(nsXBLAttributeEntry));
+    return place ? ::new (place) nsXBLAttributeEntry(aSrcAtom, aDstAtom, aContent) : nsnull;
+  }
+
+  static void
+  Destroy(nsXBLAttributeEntry* aSelf) {
+    aSelf->~nsXBLAttributeEntry();
+    nsXBLPrototypeBinding::kAttrPool->Free(aSelf, sizeof(*aSelf));
+  }
+
   nsCOMPtr<nsIAtom> mSrcAttribute;
   nsCOMPtr<nsIAtom> mDstAttribute;
   nsCOMPtr<nsIXBLAttributeEntry> mNext;
 
-  static void* operator new(size_t aSize, nsFixedSizeAllocator& aAllocator) {
-    return aAllocator.Alloc(aSize);
-  }
+  NS_DECL_ISUPPORTS
 
-  static void operator delete(void* aPtr, size_t aSize) {
-    nsFixedSizeAllocator::Free(aPtr, aSize);
-  }
-
+protected:
   nsXBLAttributeEntry(nsIAtom* aSrcAtom, nsIAtom* aDstAtom, nsIContent* aContent) {
     NS_INIT_REFCNT(); mSrcAttribute = aSrcAtom; mDstAttribute = aDstAtom; mElement = aContent;
-  };
+  }
 
-  virtual ~nsXBLAttributeEntry() {};
+  virtual ~nsXBLAttributeEntry() {}
 
-  NS_DECL_ISUPPORTS
+private:
+  // Hide so that only Create() and Destroy() can be used to
+  // allocate and deallocate from the heap
+  static void* operator new(size_t) { return 0; }
+  static void operator delete(void*, size_t) {}
 };
 
-NS_IMPL_ISUPPORTS1(nsXBLAttributeEntry, nsIXBLAttributeEntry)
+NS_IMPL_ADDREF(nsXBLAttributeEntry)
+NS_IMPL_RELEASE_WITH_DESTROY(nsXBLAttributeEntry, nsXBLAttributeEntry::Destroy(this))
+NS_IMPL_QUERY_INTERFACE1(nsXBLAttributeEntry, nsIXBLAttributeEntry)
 
 // nsIXBLInsertionPointEntry and helpers.  This class stores all the necessary
 // info to figure out the position of an insertion point.
@@ -159,27 +172,40 @@ public:
   nsCOMPtr<nsIContent> mInsertionParent;
   nsCOMPtr<nsIContent> mDefaultContent;
   PRUint32 mInsertionIndex;
+
+  static nsXBLInsertionPointEntry*
+  Create(nsIContent* aParent) {
+    void* place = nsXBLPrototypeBinding::kInsPool->Alloc(sizeof(nsXBLInsertionPointEntry));
+    return place ? ::new (place) nsXBLInsertionPointEntry(aParent) : nsnull;
+  }
+
+  static void
+  Destroy(nsXBLInsertionPointEntry* aSelf) {
+    aSelf->~nsXBLInsertionPointEntry();
+    nsXBLPrototypeBinding::kInsPool->Free(aSelf, sizeof(*aSelf));
+  }
   
-  static void* operator new(size_t aSize, nsFixedSizeAllocator& aAllocator) {
-    return aAllocator.Alloc(aSize);
-  }
+  NS_DECL_ISUPPORTS
 
-  static void operator delete(void* aPtr, size_t aSize) {
-    nsFixedSizeAllocator::Free(aPtr, aSize);
-  }
-
+protected:
   nsXBLInsertionPointEntry(nsIContent* aParent) {
     NS_INIT_REFCNT();
     mInsertionIndex = 0;
     mInsertionParent = aParent;
   };
 
-  virtual ~nsXBLInsertionPointEntry() {};
+  virtual ~nsXBLInsertionPointEntry() {}
 
-  NS_DECL_ISUPPORTS
+private:
+  // Hide so that only Create() and Destroy() can be used to
+  // allocate and deallocate from the heap
+  static void* operator new(size_t) { return 0; }
+  static void operator delete(void*, size_t) {}
 };
 
-NS_IMPL_ISUPPORTS1(nsXBLInsertionPointEntry, nsIXBLInsertionPointEntry)
+NS_IMPL_ADDREF(nsXBLInsertionPointEntry)
+NS_IMPL_RELEASE_WITH_DESTROY(nsXBLInsertionPointEntry, nsXBLInsertionPointEntry::Destroy(this))
+NS_IMPL_QUERY_INTERFACE1(nsXBLInsertionPointEntry, nsIXBLInsertionPointEntry)
 
 // =============================================================================
 
@@ -202,8 +228,8 @@ nsIAtom* nsXBLPrototypeBinding::kConstructorAtom = nsnull;
 nsIAtom* nsXBLPrototypeBinding::kDestructorAtom = nsnull;
 nsIAtom* nsXBLPrototypeBinding::kImplementationAtom = nsnull;
 nsIAtom* nsXBLPrototypeBinding::kImplementsAtom = nsnull;
-nsFixedSizeAllocator nsXBLPrototypeBinding::kAttrPool;
-nsFixedSizeAllocator nsXBLPrototypeBinding::kInsPool;
+nsFixedSizeAllocator* nsXBLPrototypeBinding::kAttrPool;
+nsFixedSizeAllocator* nsXBLPrototypeBinding::kInsPool;
 
 static const PRInt32 kNumElements = 128;
 
@@ -233,6 +259,7 @@ nsXBLPrototypeBinding::nsXBLPrototypeBinding(const nsAReadableCString& aID, nsIC
   mInheritStyle(PR_TRUE), 
   mHasBaseProto(PR_TRUE),
   mLoadingResources(PR_FALSE),
+  mInLoadResourcesFunc(PR_FALSE),
   mPendingSheets(0),
   mAttributeTable(nsnull), 
   mInsertionPointTable(nsnull),
@@ -247,8 +274,10 @@ nsXBLPrototypeBinding::nsXBLPrototypeBinding(const nsAReadableCString& aID, nsIC
   //  printf("REF COUNT UP: %d %s\n", gRefCnt, (const char*)mID);
 
   if (gRefCnt == 1) {
-    kAttrPool.Init("XBL Attribute Entries", kAttrBucketSizes, kAttrNumBuckets, kAttrInitialSize);
-    kInsPool.Init("XBL Insertion Point Entries", kInsBucketSizes, kInsNumBuckets, kInsInitialSize);
+    kAttrPool = new nsFixedSizeAllocator();
+    kAttrPool->Init("XBL Attribute Entries", kAttrBucketSizes, kAttrNumBuckets, kAttrInitialSize);
+    kInsPool = new nsFixedSizeAllocator();
+    kInsPool->Init("XBL Insertion Point Entries", kInsBucketSizes, kInsNumBuckets, kInsInitialSize);
 
     kInheritStyleAtom = NS_NewAtom("inheritstyle");
     kHandlersAtom = NS_NewAtom("handlers");
@@ -317,6 +346,9 @@ nsXBLPrototypeBinding::~nsXBLPrototypeBinding(void)
     NS_RELEASE(kDestructorAtom);
     NS_RELEASE(kImplementationAtom);
     NS_RELEASE(kImplementsAtom);
+
+    delete kAttrPool;
+    delete kInsPool;
   }
 }
 
@@ -413,8 +445,11 @@ nsXBLPrototypeBinding::GetAllowScripts(PRBool* aResult)
 NS_IMETHODIMP
 nsXBLPrototypeBinding::LoadResources(PRBool* aResult)
 {
+  mInLoadResourcesFunc = PR_TRUE;
+
   if (mLoadingResources) {
     *aResult = (mPendingSheets == 0);
+    mInLoadResourcesFunc = PR_FALSE;
     return NS_OK;
   }
 
@@ -436,8 +471,10 @@ nsXBLPrototypeBinding::LoadResources(PRBool* aResult)
 
     nsCOMPtr<nsIXBLDocumentInfo> info;
     GetXBLDocumentInfo(nsnull, getter_AddRefs(info));
-    if (!info)
+    if (!info) {
+      mInLoadResourcesFunc = PR_FALSE;
       return NS_ERROR_FAILURE;
+    }
 
     nsCOMPtr<nsIDocument> doc;
     info->GetDocument(getter_AddRefs(doc));
@@ -491,11 +528,12 @@ nsXBLPrototypeBinding::LoadResources(PRBool* aResult)
         PRBool doneLoading;
         nsAutoString empty, media;
         resource->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::media, media);
+        PRInt32 numSheets = doc->GetNumberOfStyleSheets();      
         rv = cssLoader->LoadStyleLink(nsnull, url, empty, media, kNameSpaceID_Unknown,
-                                      doc->GetNumberOfStyleSheets(),
+                                      numSheets,
                                       nsnull,
                                       doneLoading, this);
-        if (NS_SUCCEEDED(rv))
+        if (!doneLoading)
           mPendingSheets++;
       }
     }
@@ -508,6 +546,7 @@ nsXBLPrototypeBinding::LoadResources(PRBool* aResult)
   }
 
   *aResult = (mPendingSheets == 0);
+  mInLoadResourcesFunc = PR_FALSE;
   return NS_OK;
 }
 
@@ -1107,7 +1146,7 @@ nsXBLPrototypeBinding::ConstructAttributeTable(nsIContent* aElement)
       }
       
       // Create an XBL attribute entry.
-      nsXBLAttributeEntry* xblAttr = new (kAttrPool) nsXBLAttributeEntry(atom, attribute, aElement);
+      nsXBLAttributeEntry* xblAttr = nsXBLAttributeEntry::Create(atom, attribute, aElement);
 
       // Now we should see if some element within our anonymous
       // content is already observing this attribute.
@@ -1173,7 +1212,7 @@ nsXBLPrototypeBinding::ConstructInsertionTable(nsIContent* aContent)
       child->GetParent(*getter_AddRefs(parent));
 
       // Create an XBL insertion point entry.
-      nsXBLInsertionPointEntry* xblIns = new (kInsPool) nsXBLInsertionPointEntry(parent);
+      nsXBLInsertionPointEntry* xblIns = nsXBLInsertionPointEntry::Create(parent);
 
       nsAutoString includes;
       child->GetAttribute(kNameSpaceID_None, kIncludesAtom, includes);
@@ -1320,7 +1359,10 @@ nsXBLPrototypeBinding::StyleSheetLoaded(nsICSSStyleSheet* aSheet, PRBool aNotify
     NS_NewISupportsArray(getter_AddRefs(mStyleSheetList));
 
   mStyleSheetList->AppendElement(aSheet);
-  mPendingSheets--;
+
+  if (!mInLoadResourcesFunc)
+    mPendingSheets--;
+  
   if (mPendingSheets == 0) {
     // All stylesheets are loaded.  
     nsCOMPtr<nsIStyleRuleProcessor> prevProcessor;
@@ -1340,7 +1382,8 @@ nsXBLPrototypeBinding::StyleSheetLoaded(nsICSSStyleSheet* aSheet, PRBool aNotify
     }
 
     // XXX Check for mPendingScripts when scripts also come online.
-    NotifyBoundElements();
+    if (!mInLoadResourcesFunc)
+      NotifyBoundElements();
   }
   return NS_OK;
 }

@@ -1368,17 +1368,17 @@ static PRBool IsPseudoClass(const nsIAtom* aAtom)
                 (nsCSSAtoms::dragOverPseudo == aAtom) ||
                 (nsCSSAtoms::dragPseudo == aAtom) ||
                 (nsCSSAtoms::enabledPseudo == aAtom) ||
+                (nsCSSAtoms::emptyPseudo == aAtom) ||
                 (nsCSSAtoms::firstChildPseudo == aAtom) ||
                 (nsCSSAtoms::firstNodePseudo == aAtom) ||
                 (nsCSSAtoms::focusPseudo == aAtom) ||
                 (nsCSSAtoms::hoverPseudo == aAtom) ||
                 (nsCSSAtoms::langPseudo == aAtom) ||
+                (nsCSSAtoms::lastChildPseudo == aAtom) ||
                 (nsCSSAtoms::lastNodePseudo == aAtom) ||
                 (nsCSSAtoms::linkPseudo == aAtom) ||
-                (nsCSSAtoms::outOfDatePseudo == aAtom) ||
                 (nsCSSAtoms::rootPseudo == aAtom) ||
                 (nsCSSAtoms::xblBoundElementPseudo == aAtom) ||
-                (nsCSSAtoms::outOfDatePseudo == aAtom) ||
                 (nsCSSAtoms::visitedPseudo == aAtom));
 }
 
@@ -1908,8 +1908,25 @@ void CSSParserImpl::ParseAttributeSelector(PRInt32&  aDataMask,
           return;
         }
         if (mToken.IsSymbol(']')) {
+          PRBool isCaseSensitive = mCaseSensitive;
+          if (nameSpaceID == kNameSpaceID_None || nameSpaceID == kNameSpaceID_HTML) {
+            static const char* caseSensitiveHTMLAttribute[] = {
+              // list based on http://www.w3.org/TR/REC-html40/index/attributes.html
+              "abbr",          "alt",        "label",
+              "prompt",        "standby",     "summary",
+              "title",         nsnull
+            };
+            short i = 0;
+            const char* htmlAttr;
+            while ((htmlAttr = caseSensitiveHTMLAttribute[i++])) {
+              if (attr.EqualsIgnoreCase(htmlAttr)) {
+                isCaseSensitive = PR_TRUE;
+                break;
+              }
+            }
+          }
           aDataMask |= SEL_MASK_ATTRIB;
-          aSelector.AddAttribute(nameSpaceID, attr, func, value, mCaseSensitive);
+          aSelector.AddAttribute(nameSpaceID, attr, func, value, isCaseSensitive);
         }
         else {
           REPORT_UNEXPECTED_TOKEN(NS_LITERAL_STRING("Expected ']' to terminate attribute selector but found"));
@@ -2347,9 +2364,12 @@ PRBool CSSParserImpl::ParseColorComponent(PRInt32& aErrorCode,
     aComponent = (PRUint8) value;
     return PR_TRUE;
   }
+  PRUnichar stopString[2];
+  stopString[0] = PRUnichar(aStop);
+  stopString[1] = PRUnichar(0);
   REPORT_UNEXPECTED_TOKEN(NS_LITERAL_STRING("Expected ") +
-                           nsLiteralPRUnichar(PRUnichar(aStop)) +
-                           NS_LITERAL_STRING(" but found"));
+                          nsLocalString(stopString, 1) +
+                          NS_LITERAL_STRING(" but found"));
   return PR_FALSE;
 }
 

@@ -19,6 +19,7 @@
  *
  * Contributor(s): 
  *   Chris Waterson <waterson@netscape.com>
+ *   Ben Goodger <ben@netscape.com>
  *
  * Notes
  *
@@ -71,6 +72,8 @@ public:
 
     // nsXULTemplateBuilder
     NS_IMETHOD Rebuild();
+
+    NS_IMETHOD DocumentWillBeDestroyed(nsIDocument *aDocument);
 
 protected:
     friend NS_IMETHODIMP
@@ -249,6 +252,11 @@ protected:
      * The current collation
      */
     nsCOMPtr<nsICollation> mCollation;
+
+    /** 
+     * The builder observers.
+     */
+    nsCOMPtr<nsISupportsArray> mObservers;
 };
 
 //----------------------------------------------------------------------
@@ -318,13 +326,42 @@ nsXULOutlinerBuilder::~nsXULOutlinerBuilder()
 //
 
 NS_IMETHODIMP
-nsXULOutlinerBuilder::GetResourceFor(PRInt32 aRowIndex, nsIRDFResource** aResult)
+nsXULOutlinerBuilder::GetResourceAtIndex(PRInt32 aRowIndex, nsIRDFResource** aResult)
 {
     if (aRowIndex < 0 || aRowIndex >= mRows.Count())
         return NS_ERROR_INVALID_ARG;
 
-    *aResult = GetResourceFor(aRowIndex);
+    NS_IF_ADDREF(*aResult = GetResourceFor(aRowIndex));
     return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXULOutlinerBuilder::GetIndexOfResource(nsIRDFResource* aResource, PRInt32* aResult)
+{
+    nsOutlinerRows::iterator iter = mRows.Find(mConflictSet, aResource);
+    if (iter == mRows.Last())
+        *aResult = -1;
+    else
+        *aResult = iter.GetRowIndex();
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXULOutlinerBuilder::AddObserver(nsIXULOutlinerBuilderObserver* aObserver)
+{
+    nsresult rv;  
+    if (!mObservers) {
+        rv = NS_NewISupportsArray(getter_AddRefs(mObservers));
+        if (NS_FAILED(rv)) return rv;
+    }
+
+    return mObservers->AppendElement(aObserver);
+}
+
+NS_IMETHODIMP
+nsXULOutlinerBuilder::RemoveObserver(nsIXULOutlinerBuilderObserver* aObserver)
+{
+    return mObservers ? mObservers->RemoveElement(aObserver) : NS_ERROR_FAILURE;
 }
 
 //----------------------------------------------------------------------
@@ -509,7 +546,7 @@ nsXULOutlinerBuilder::GetCellText(PRInt32 aRow, const PRUnichar* aColID, PRUnich
     GetTemplateActionCellFor(aRow, aColID, getter_AddRefs(cell));
     if (cell) {
         nsAutoString raw;
-        cell->GetAttribute(kNameSpaceID_None, nsXULAtoms::value, raw);
+        cell->GetAttribute(kNameSpaceID_None, nsXULAtoms::label, raw);
 
         nsAutoString cooked;
         SubstituteText(*(mRows[aRow]->mMatch), raw, cooked);
@@ -559,6 +596,17 @@ nsXULOutlinerBuilder::SetOutliner(nsIOutlinerBoxObject* outliner)
 NS_IMETHODIMP
 nsXULOutlinerBuilder::ToggleOpenState(PRInt32 aIndex)
 {
+    if (mObservers) {
+        PRUint32 count;
+        mObservers->Count(&count);
+        for (PRUint32 i = 0; i < count; ++i) {
+            nsCOMPtr<nsIXULOutlinerBuilderObserver> observer;
+            mObservers->QueryElementAt(i, NS_GET_IID(nsIXULOutlinerBuilderObserver), getter_AddRefs(observer));
+            if (observer)
+                observer->OnToggleOpenState(aIndex);
+        }
+    }
+    
     if (mPersistStateStore) {
         nsIRDFResource* container = GetResourceFor(aIndex);
         if (! container)
@@ -590,6 +638,17 @@ nsXULOutlinerBuilder::ToggleOpenState(PRInt32 aIndex)
 NS_IMETHODIMP
 nsXULOutlinerBuilder::CycleHeader(const PRUnichar* aColID, nsIDOMElement* aElement)
 {
+    if (mObservers) {
+        PRUint32 count;
+        mObservers->Count(&count);
+        for (PRUint32 i = 0; i < count; ++i) {
+            nsCOMPtr<nsIXULOutlinerBuilderObserver> observer;
+            mObservers->QueryElementAt(i, NS_GET_IID(nsIXULOutlinerBuilderObserver), getter_AddRefs(observer));
+            if (observer)
+                observer->OnCycleHeader(aColID, aElement);
+        }
+    }
+
     nsCOMPtr<nsIContent> header = do_QueryInterface(aElement);
     if (! header)
         return NS_ERROR_FAILURE;
@@ -632,47 +691,129 @@ nsXULOutlinerBuilder::CycleHeader(const PRUnichar* aColID, nsIDOMElement* aEleme
 NS_IMETHODIMP
 nsXULOutlinerBuilder::SelectionChanged()
 {
-    // XXX do we care?
+    if (mObservers) {
+        PRUint32 count;
+        mObservers->Count(&count);
+        for (PRUint32 i = 0; i < count; ++i) {
+            nsCOMPtr<nsIXULOutlinerBuilderObserver> observer;
+            mObservers->QueryElementAt(i, NS_GET_IID(nsIXULOutlinerBuilderObserver), getter_AddRefs(observer));
+            if (observer)
+                observer->OnSelectionChanged();
+        }
+    }
+
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXULOutlinerBuilder::CycleCell(PRInt32 row, const PRUnichar* colID)
 {
-    // XXX do we care?
+    if (mObservers) {
+        PRUint32 count;
+        mObservers->Count(&count);
+        for (PRUint32 i = 0; i < count; ++i) {
+            nsCOMPtr<nsIXULOutlinerBuilderObserver> observer;
+            mObservers->QueryElementAt(i, NS_GET_IID(nsIXULOutlinerBuilderObserver), getter_AddRefs(observer));
+            if (observer)
+                observer->OnCycleCell(row, colID);
+        }
+    }
+
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXULOutlinerBuilder::IsEditable(PRInt32 row, const PRUnichar* colID, PRBool* _retval)
 {
-    // XXX Oy. Don't make me do this.
     *_retval = PR_FALSE;
+    if (mObservers) {
+        PRUint32 count;
+        mObservers->Count(&count);
+        for (PRUint32 i = 0; i < count; ++i) {
+            nsCOMPtr<nsIXULOutlinerBuilderObserver> observer;
+            mObservers->QueryElementAt(i, NS_GET_IID(nsIXULOutlinerBuilderObserver), getter_AddRefs(observer));
+            if (observer) {
+                observer->IsEditable(row, colID, _retval);
+                if (*_retval)
+                    // No need to keep asking, show a textfield as at least one client will handle it. 
+                    break;
+            }
+        }
+    }
+
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXULOutlinerBuilder::SetCellText(PRInt32 row, const PRUnichar* colID, const PRUnichar* value)
 {
-    // XXX ...or this.
+    if (mObservers) {
+        PRUint32 count;
+        mObservers->Count(&count);
+        for (PRUint32 i = 0; i < count; ++i) {
+            nsCOMPtr<nsIXULOutlinerBuilderObserver> observer;
+            mObservers->QueryElementAt(i, NS_GET_IID(nsIXULOutlinerBuilderObserver), getter_AddRefs(observer));
+            if (observer) {
+                // If the current observer supports a name change operation, go ahead and invoke it. 
+                PRBool isEditable = PR_FALSE;
+                observer->IsEditable(row, colID, &isEditable);
+                if (isEditable)
+                    observer->OnSetCellText(row, colID, value);
+            }
+        }
+    }
+
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXULOutlinerBuilder::PerformAction(const PRUnichar* action)
 {
+    if (mObservers) {  
+        PRUint32 count;
+        mObservers->Count(&count);
+        for (PRUint32 i = 0; i < count; ++i) {
+            nsCOMPtr<nsIXULOutlinerBuilderObserver> observer;
+            mObservers->QueryElementAt(i, NS_GET_IID(nsIXULOutlinerBuilderObserver), getter_AddRefs(observer));
+            if (observer)
+                observer->OnPerformAction(action);
+        }
+    }
+
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXULOutlinerBuilder::PerformActionOnRow(const PRUnichar* action, PRInt32 row)
 {
+    if (mObservers) {  
+        PRUint32 count;
+        mObservers->Count(&count);
+        for (PRUint32 i = 0; i < count; ++i) {
+            nsCOMPtr<nsIXULOutlinerBuilderObserver> observer;
+            mObservers->QueryElementAt(i, NS_GET_IID(nsIXULOutlinerBuilderObserver), getter_AddRefs(observer));
+            if (observer)
+                observer->OnPerformActionOnRow(action, row);
+        }
+    }
+
     return NS_OK;
 }
 
 NS_IMETHODIMP
 nsXULOutlinerBuilder::PerformActionOnCell(const PRUnichar* action, PRInt32 row, const PRUnichar* colID)
 {
+    if (mObservers) {  
+        PRUint32 count;
+        mObservers->Count(&count);
+        for (PRUint32 i = 0; i < count; ++i) {
+            nsCOMPtr<nsIXULOutlinerBuilderObserver> observer;
+            mObservers->QueryElementAt(i, NS_GET_IID(nsIXULOutlinerBuilderObserver), getter_AddRefs(observer));
+            if (observer)
+                observer->OnPerformActionOnCell(action, row, colID);
+        }
+    }
+
     return NS_OK;
 }
 
@@ -723,6 +864,16 @@ nsXULOutlinerBuilder::Rebuild()
 // nsXULTemplateBuilder abstract methods
 //
 
+NS_IMETHODIMP
+nsXULOutlinerBuilder::DocumentWillBeDestroyed(nsIDocument* aDocument)
+{
+    if (mObservers)
+        mObservers->Clear();
+
+    return nsXULTemplateBuilder::DocumentWillBeDestroyed(aDocument);
+}
+
+ 
 nsresult
 nsXULOutlinerBuilder::ReplaceMatch(nsIRDFResource* aMember,
                                    const nsTemplateMatch* aOldMatch,
@@ -765,7 +916,7 @@ nsXULOutlinerBuilder::ReplaceMatch(nsIRDFResource* aMember,
 
         nsIRDFResource* container = VALUE_TO_IRDFRESOURCE(val);
 
-        PRInt32 row = 0;
+        PRInt32 row = -1;
         nsOutlinerRows::Subtree* parent = nsnull;
 
         if (container != mRows.GetRootResource()) {
@@ -791,7 +942,7 @@ nsXULOutlinerBuilder::ReplaceMatch(nsIRDFResource* aMember,
         }
         else
             parent = mRows.GetRoot();
-
+ 
         if (parent) {
             // By default, place the new element at the end of the container
             PRInt32 index = parent->Count();
@@ -815,7 +966,7 @@ nsXULOutlinerBuilder::ReplaceMatch(nsIRDFResource* aMember,
             }
 
             mRows.InsertRowAt(aNewMatch, parent, index);
-            mBoxObject->RowCountChanged(row + index, +1);
+            mBoxObject->RowCountChanged(row + index + 1, +1);
         }
     }
 
@@ -1079,10 +1230,10 @@ nsXULOutlinerBuilder::TokenizeProperties(const nsAReadableString& aString,
     if (! aProperties)
         return NS_ERROR_NULL_POINTER;
 
-    nsAReadableString::const_iterator end;
+    nsAString::const_iterator end;
     aString.EndReading(end);
 
-    nsAReadableString::const_iterator iter;
+    nsAString::const_iterator iter;
     aString.BeginReading(iter);
 
     do {
@@ -1095,7 +1246,7 @@ nsXULOutlinerBuilder::TokenizeProperties(const nsAReadableString& aString,
             break;
 
         // Note the first non-whitespace character
-        nsAReadableString::const_iterator first = iter;
+        nsAString::const_iterator first = iter;
 
         // Advance to the next whitespace character
         while (iter != end && ! nsCRT::IsAsciiSpace(*iter))
@@ -1106,14 +1257,7 @@ nsXULOutlinerBuilder::TokenizeProperties(const nsAReadableString& aString,
         if (iter == first)
             break;
 
-     
-#if 1 // XXX until bug 55143 is fixed, we need to copy so the string
-      // is zero-terminated
-        nsAutoString s(Substring(first, iter));
-        nsCOMPtr<nsIAtom> atom = dont_AddRef(NS_NewAtom(s));
-#else
         nsCOMPtr<nsIAtom> atom = dont_AddRef(NS_NewAtom(Substring(first, iter)));
-#endif
         aProperties->AppendElement(atom);
     } while (iter != end);
 
@@ -1188,14 +1332,14 @@ nsXULOutlinerBuilder::OpenSubtreeOf(nsOutlinerRows::Subtree* aSubtree,
     // Iterate through newly added keys to determine which rules fired
     nsClusterKeySet::ConstIterator last = newkeys.Last();
     for (nsClusterKeySet::ConstIterator key = newkeys.First(); key != last; ++key) {
-        const nsTemplateMatchSet* matches;
-        mConflictSet.GetMatchesForClusterKey(*key, &matches);
+        nsConflictSet::MatchCluster* matches =
+            mConflictSet.GetMatchesForClusterKey(*key);
 
         if (! matches)
             continue;
 
         nsTemplateMatch* match = 
-            matches->FindMatchWithHighestPriority();
+            mConflictSet.GetMatchWithHighestPriority(matches);
 
         NS_ASSERTION(match != nsnull, "no best match in match set");
         if (! match)
@@ -1205,7 +1349,7 @@ nsXULOutlinerBuilder::OpenSubtreeOf(nsOutlinerRows::Subtree* aSubtree,
         mRows.InsertRowAt(match, aSubtree, count);
 
         // Remember this as the "last" match
-        NS_CONST_CAST(nsTemplateMatchSet*, matches)->SetLastMatch(match);
+        matches->mLastMatch = match;
 
         // If this is open, then remember it so we can recursively add
         // *its* rows to the tree.
@@ -1260,13 +1404,14 @@ nsXULOutlinerBuilder::CloseContainer(PRInt32 aIndex, nsIRDFResource* aContainer)
     if (aIndex < 0 || aIndex >= mRows.Count())
         return NS_ERROR_INVALID_ARG;
 
-    nsTemplateMatchSet firings, retractions;
+    nsTemplateMatchSet firings(mConflictSet.GetPool());
+    nsTemplateMatchSet retractions(mConflictSet.GetPool());
     mConflictSet.Remove(nsOutlinerRowTestNode::Element(aContainer), firings, retractions);
 
     {
         // Clean up the conflict set
-        nsTemplateMatchSet::Iterator last = retractions.Last();
-        nsTemplateMatchSet::Iterator iter;
+        nsTemplateMatchSet::ConstIterator last = retractions.Last();
+        nsTemplateMatchSet::ConstIterator iter;
 
         for (iter = retractions.First(); iter != last; ++iter) {
             Value val;
@@ -1301,11 +1446,12 @@ nsXULOutlinerBuilder::RemoveMatchesFor(nsIRDFResource* aContainer)
     if (! aContainer)
         return NS_ERROR_FAILURE;
 
-    nsTemplateMatchSet firings, retractions;
+    nsTemplateMatchSet firings(mConflictSet.GetPool());
+    nsTemplateMatchSet retractions(mConflictSet.GetPool());
     mConflictSet.Remove(nsOutlinerRowTestNode::Element(aContainer), firings, retractions);
 
-    nsTemplateMatchSet::Iterator last = retractions.Last();
-    nsTemplateMatchSet::Iterator iter;
+    nsTemplateMatchSet::ConstIterator last = retractions.Last();
+    nsTemplateMatchSet::ConstIterator iter;
 
     for (iter = retractions.First(); iter != last; ++iter) {
         Value val;

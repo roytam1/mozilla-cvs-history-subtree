@@ -43,7 +43,8 @@
 #include "nsLayoutAtoms.h"
 #include "nsMutationEvent.h"
 #include "nsContentUtils.h"
-
+#include "nsIDOMKeyEvent.h"
+#include "nsIDOMMutationEvent.h"
 
 static char* mEventNames[] = {
   "mousedown", "mouseup", "click", "dblclick", "mouseover",
@@ -168,6 +169,8 @@ nsDOMEvent::nsDOMEvent(nsIPresContext* aPresContext, nsEvent* aEvent,
   mOriginalTarget = nsnull;
   mText = nsnull;
   mTextRange = nsnull;
+  mButton = -1;
+  mScreenPoint.x = mScreenPoint.y = mClientPoint.x = mClientPoint.y = 0;
 
   if (aEvent && aEvent->eventStructType == NS_TEXT_EVENT) {
 	  //
@@ -231,6 +234,9 @@ nsDOMEvent::~nsDOMEvent()
   NS_IF_RELEASE(mTextRange);
 
   if (mEventIsInternal) {
+    if (mEvent->userType) {
+      delete mEvent->userType;
+    }
     PR_DELETE(mEvent);
   }
 
@@ -266,9 +272,15 @@ NS_METHOD nsDOMEvent::GetType(nsAWritableString& aType)
 {
   const char* mName = GetEventName(mEvent->message);
 
-  if (nsnull != mName) {
+  if (mName) {
     aType.Assign(NS_ConvertASCIItoUCS2(mName));
     return NS_OK;
+  }
+  else {
+    if (mEvent->message == NS_USER_DEFINED_EVENT && mEvent->userType) {
+      aType.Assign(NS_STATIC_CAST(nsStringKey*, mEvent->userType)->GetString());
+      return NS_OK;
+    }
   }
   
   return NS_ERROR_FAILURE;
@@ -547,8 +559,10 @@ NS_METHOD nsDOMEvent::GetScreenX(PRInt32* aScreenX)
     return NS_OK;
   }
 
-  if (!((nsGUIEvent*)mEvent)->widget )
-    return NS_ERROR_FAILURE;
+  if (!((nsGUIEvent*)mEvent)->widget ) {
+    *aScreenX = mScreenPoint.x;
+    return NS_OK;
+  }
     
   nsRect bounds, offset;
   bounds.x = mEvent->refPoint.x;
@@ -567,8 +581,10 @@ NS_METHOD nsDOMEvent::GetScreenY(PRInt32* aScreenY)
     return NS_OK;
   }
 
-  if (!((nsGUIEvent*)mEvent)->widget )
-    return NS_ERROR_FAILURE;
+  if (!((nsGUIEvent*)mEvent)->widget ) {
+    *aScreenY = mScreenPoint.y;    
+    return NS_OK;
+  }
 
   nsRect bounds, offset;
   bounds.y = mEvent->refPoint.y;
@@ -584,6 +600,11 @@ NS_METHOD nsDOMEvent::GetClientX(PRInt32* aClientX)
   if (!mEvent || 
        (mEvent->eventStructType != NS_MOUSE_EVENT && mEvent->eventStructType != NS_DRAGDROP_EVENT) ) {
     *aClientX = 0;
+    return NS_OK;
+  }
+
+  if (!((nsGUIEvent*)mEvent)->widget ) {
+    *aClientX = mClientPoint.x;
     return NS_OK;
   }
 
@@ -624,6 +645,11 @@ NS_METHOD nsDOMEvent::GetClientY(PRInt32* aClientY)
   if (!mEvent || 
        (mEvent->eventStructType != NS_MOUSE_EVENT && mEvent->eventStructType != NS_DRAGDROP_EVENT) ) {
     *aClientY = 0;
+    return NS_OK;
+  }
+
+  if (!((nsGUIEvent*)mEvent)->widget ) {
+    *aClientY = mClientPoint.y;
     return NS_OK;
   }
 
@@ -734,27 +760,33 @@ NS_METHOD nsDOMEvent::GetButton(PRUint16* aButton)
     return NS_OK;
   }
 
-  switch (mEvent->message) {
-  case NS_MOUSE_LEFT_BUTTON_UP:
-  case NS_MOUSE_LEFT_BUTTON_DOWN:
-  case NS_MOUSE_LEFT_CLICK:
-  case NS_MOUSE_LEFT_DOUBLECLICK:
-    *aButton = 0;
-    break;
-  case NS_MOUSE_MIDDLE_BUTTON_UP:
-  case NS_MOUSE_MIDDLE_BUTTON_DOWN:
-  case NS_MOUSE_MIDDLE_CLICK:
-  case NS_MOUSE_MIDDLE_DOUBLECLICK:
-    *aButton = 1;
-    break;
-  case NS_MOUSE_RIGHT_BUTTON_UP:
-  case NS_MOUSE_RIGHT_BUTTON_DOWN:
-  case NS_MOUSE_RIGHT_CLICK:
-  case NS_MOUSE_RIGHT_DOUBLECLICK:
-    *aButton = 2;
-    break;
-  default:
-    break;
+  // If button has been set then use that instead.
+  if (mButton > 0) {
+    *aButton = (PRUint16)mButton;
+  }
+  else {
+    switch (mEvent->message) {
+    case NS_MOUSE_LEFT_BUTTON_UP:
+    case NS_MOUSE_LEFT_BUTTON_DOWN:
+    case NS_MOUSE_LEFT_CLICK:
+    case NS_MOUSE_LEFT_DOUBLECLICK:
+      *aButton = 0;
+      break;
+    case NS_MOUSE_MIDDLE_BUTTON_UP:
+    case NS_MOUSE_MIDDLE_BUTTON_DOWN:
+    case NS_MOUSE_MIDDLE_CLICK:
+    case NS_MOUSE_MIDDLE_DOUBLECLICK:
+      *aButton = 1;
+      break;
+    case NS_MOUSE_RIGHT_BUTTON_UP:
+    case NS_MOUSE_RIGHT_BUTTON_DOWN:
+    case NS_MOUSE_RIGHT_CLICK:
+    case NS_MOUSE_RIGHT_DOUBLECLICK:
+      *aButton = 2;
+      break;
+    default:
+      break;
+    }
   }
   return NS_OK;
 }
@@ -1114,10 +1146,10 @@ nsDOMEvent::SetEventType(const nsAReadableString& aEventTypeArg)
   }
   else if (atom == nsLayoutAtoms::onDOMSubtreeModified && mEvent->eventStructType == NS_MUTATION_EVENT) {
     mEvent->message = NS_MUTATION_SUBTREEMODIFIED;
-  }
- 
+  } 
   else {
-    return NS_ERROR_FAILURE;
+    mEvent->message = NS_USER_DEFINED_EVENT;
+    mEvent->userType = nsStringKey(aEventTypeArg).Clone();
   }
   return NS_OK;
 }
@@ -1133,27 +1165,60 @@ nsDOMEvent::InitEvent(const nsAReadableString& aEventTypeArg, PRBool aCanBubbleA
 }
 
 NS_IMETHODIMP
-nsDOMEvent::InitUIEvent(const nsAReadableString& aTypeArg, PRBool aCanBubbleArg, PRBool aCancelableArg, nsIDOMAbstractView* aViewArg, PRInt32 aDetailArg)
+nsDOMEvent::InitUIEvent(const nsAReadableString& aTypeArg, PRBool aCanBubbleArg, PRBool aCancelableArg, 
+                        nsIDOMAbstractView* aViewArg, PRInt32 aDetailArg)
 {
-    return NS_ERROR_FAILURE;
+  return NS_ERROR_FAILURE;
 }
 
 NS_IMETHODIMP
-nsDOMEvent::InitMouseEvent(const nsAReadableString& aTypeArg, PRBool aCtrlKeyArg, PRBool aAltKeyArg, PRBool aShiftKeyArg, PRBool aMetaKeyArg, PRInt32 aScreenXArg, PRInt32 aScreenYArg, PRInt32 aClientXArg, PRInt32 aClientYArg, PRUint16 aButtonArg, PRUint16 aDetailArg)
+nsDOMEvent::InitMouseEvent(const nsAReadableString& aTypeArg, PRBool aCtrlKeyArg, PRBool aAltKeyArg, 
+                           PRBool aShiftKeyArg, PRBool aMetaKeyArg, PRInt32 aScreenXArg, PRInt32 aScreenYArg, 
+                           PRInt32 aClientXArg, PRInt32 aClientYArg, PRUint16 aButtonArg, PRUint16 aDetailArg)
 {
   NS_ENSURE_SUCCESS(SetEventType(aTypeArg), NS_ERROR_FAILURE);
   //mEvent->flags |= aCanBubbleArg ? NS_EVENT_FLAG_NONE : NS_EVENT_FLAG_CANT_BUBBLE;
   //mEvent->flags |= aCancelableArg ? NS_EVENT_FLAG_NONE : NS_EVENT_FLAG_CANT_CANCEL;
+
+  if (mEvent->eventStructType = NS_MOUSE_EVENT) {
+    nsMouseEvent* mouseEvent = NS_STATIC_CAST(nsMouseEvent*, mEvent);
+    mouseEvent->isControl = aCtrlKeyArg;
+    mouseEvent->isAlt = aAltKeyArg;
+    mouseEvent->isShift = aShiftKeyArg;
+    mouseEvent->isMeta = aMetaKeyArg;
+    mScreenPoint.x = aScreenXArg;
+    mScreenPoint.y = aScreenYArg;
+    mClientPoint.x = aClientXArg;
+    mClientPoint.y = aClientYArg;
+    mButton = aButtonArg;
+    mouseEvent->clickCount = aDetailArg;
+  }
+  //include a way to set view once we have more than one
+
   return NS_OK;
 }
 
 NS_IMETHODIMP
-nsDOMEvent::InitKeyEvent(const nsAReadableString& aTypeArg, PRBool aCanBubbleArg, PRBool aCancelableArg, PRBool aCtrlKeyArg, PRBool aAltKeyArg, PRBool aShiftKeyArg, PRBool aMetaKeyArg, PRUint32 aKeyCodeArg, PRUint32 aCharCodeArg, nsIDOMAbstractView* aViewArg)
+nsDOMEvent::InitKeyEvent(const nsAReadableString& aTypeArg, PRBool aCanBubbleArg, PRBool aCancelableArg, 
+                         PRBool aCtrlKeyArg, PRBool aAltKeyArg, PRBool aShiftKeyArg, PRBool aMetaKeyArg, 
+                         PRUint32 aKeyCodeArg, PRUint32 aCharCodeArg, nsIDOMAbstractView* aViewArg)
 {
   NS_ENSURE_SUCCESS(SetEventType(aTypeArg), NS_ERROR_FAILURE);
   mEvent->flags |= aCanBubbleArg ? NS_EVENT_FLAG_NONE : NS_EVENT_FLAG_CANT_BUBBLE;
   mEvent->flags |= aCancelableArg ? NS_EVENT_FLAG_NONE : NS_EVENT_FLAG_CANT_CANCEL;
   mEvent->internalAppFlags |= NS_APP_EVENT_FLAG_NONE;
+
+  if (mEvent->eventStructType = NS_KEY_EVENT) {
+    nsKeyEvent* keyEvent = NS_STATIC_CAST(nsKeyEvent*, mEvent);
+    keyEvent->isControl = aCtrlKeyArg;
+    keyEvent->isAlt = aAltKeyArg;
+    keyEvent->isShift = aShiftKeyArg;
+    keyEvent->isMeta = aMetaKeyArg;
+    keyEvent->keyCode = aKeyCodeArg;
+    keyEvent->charCode = aCharCodeArg;
+  }
+  //include a way to set view once we have more than one
+
   return NS_OK;
 }
 

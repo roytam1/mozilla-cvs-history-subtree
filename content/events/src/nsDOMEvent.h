@@ -44,7 +44,8 @@ class nsDOMEvent : public nsIDOMKeyEvent,
                    public nsIDOMNSUIEvent, 
                    public nsIPrivateDOMEvent, 
                    public nsIPrivateTextEvent, 
-                   public nsIPrivateCompositionEvent {
+                   public nsIPrivateCompositionEvent
+{
 
 public:
   // Note: this enum must be kept in sync with mEventNames in nsDOMEvent.cpp
@@ -217,6 +218,7 @@ protected:
   nsresult GetScrollInfo(nsIScrollableView** aScrollableView, float* aP2T,
                          float* aT2P);
   nsresult SetEventType(const nsAReadableString& aEventTypeArg);
+  const char* GetEventName(PRUint32 aEventType);
 
   nsEvent* mEvent;
   PRBool mEventIsInternal;
@@ -226,7 +228,13 @@ protected:
   nsIDOMEventTarget* mOriginalTarget;
   nsString*	mText;
   nsIPrivateTextRangeList*	mTextRange;
-  const char* GetEventName(PRUint32 aEventType);
+
+  //These are use for internal data for user created events
+  PRInt16 mButton;
+  nsPoint mScreenPoint;               
+  nsPoint mClientPoint;               
+
+  void* mScriptObject;
 };
 
 #endif // nsDOMEvent_h__

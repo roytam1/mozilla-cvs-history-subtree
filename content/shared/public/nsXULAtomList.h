@@ -74,6 +74,7 @@ XUL_ATOM(outer, "outer") // indicates that a treechildren is the outermost rowgr
 XUL_ATOM(sizemode, "sizemode") // when set, measure strings to determine preferred width
 
 XUL_ATOM(open, "open") // Whether or not a menu, tree, etc. is open
+XUL_ATOM(closed, "closed")
 XUL_ATOM(focus, "focus")
 
 XUL_ATOM(outliner, "outliner")
@@ -150,11 +151,10 @@ XUL_ATOM(titledboxContentPseudo, ":titledbox-content")
 
 XUL_ATOM(stack, "stack")
 XUL_ATOM(deck, "deck")
-XUL_ATOM(tabcontrol, "tabcontrol")
-XUL_ATOM(tab, "tab")
-XUL_ATOM(tabpanel, "tabpanel")
-XUL_ATOM(tabpage, "tabpage")
 XUL_ATOM(tabbox, "tabbox")
+XUL_ATOM(tab, "tab")
+XUL_ATOM(tabpanels, "tabpanels")
+XUL_ATOM(tabpanel, "tabpanel")
 XUL_ATOM(index, "index")
 XUL_ATOM(maxpos, "maxpos")
 XUL_ATOM(curpos, "curpos")
@@ -190,6 +190,7 @@ XUL_ATOM(ddTriggerRepaintRestore, "dd-triggerrepaintrestore")
 XUL_ATOM(ddTriggerRepaint, "dd-triggerrepaint")
 XUL_ATOM(ddNoDropBetweenRows, "dd-nodropbetweenrows")
 XUL_ATOM(container, "container")
+XUL_ATOM(leaf,"leaf")
 XUL_ATOM(ddDragDropArea, "dragdroparea")
 XUL_ATOM(ddDropMarker, ":-moz-drop-marker")
 

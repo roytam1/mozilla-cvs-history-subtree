@@ -514,15 +514,15 @@ nsXULTemplateBuilder::FireNewlyMatchedRules(const nsClusterKeySet& aNewKeys)
     // to track those?
     nsClusterKeySet::ConstIterator last = aNewKeys.Last();
     for (nsClusterKeySet::ConstIterator key = aNewKeys.First(); key != last; ++key) {
-        const nsTemplateMatchSet* matches;
-        mConflictSet.GetMatchesForClusterKey(*key, &matches);
+        nsConflictSet::MatchCluster* matches =
+            mConflictSet.GetMatchesForClusterKey(*key);
 
         NS_ASSERTION(matches != nsnull, "no matched rules for new key");
         if (! matches)
             continue;
 
         nsTemplateMatch* bestmatch =
-            matches->FindMatchWithHighestPriority();
+            mConflictSet.GetMatchWithHighestPriority(matches);
 
         NS_ASSERTION(bestmatch != nsnull, "no matches in match set");
         if (! bestmatch)
@@ -530,12 +530,12 @@ nsXULTemplateBuilder::FireNewlyMatchedRules(const nsClusterKeySet& aNewKeys)
 
         // If the new "bestmatch" is different from the last match,
         // then we need to yank some content out and rebuild it.
-        const nsTemplateMatch* lastmatch = matches->GetLastMatch();
+        const nsTemplateMatch* lastmatch = matches->mLastMatch;
         if (bestmatch != lastmatch) {
             ReplaceMatch(VALUE_TO_IRDFRESOURCE(key->mMemberValue), lastmatch, bestmatch);
 
             // Remember the best match as the new "last" match
-            NS_CONST_CAST(nsTemplateMatchSet*, matches)->SetLastMatch(bestmatch);
+            matches->mLastMatch = bestmatch;
         }
     }
 
@@ -587,13 +587,13 @@ nsXULTemplateBuilder::Retract(nsIRDFResource* aSource,
     for (NodeSet::ConstIterator node = mRDFTests.First(); node != lastnode; ++node) {
         const nsRDFTestNode* rdftestnode = NS_STATIC_CAST(const nsRDFTestNode*, *node);
 
-        nsTemplateMatchSet firings;
-        nsTemplateMatchSet retractions;
+        nsTemplateMatchSet firings(mConflictSet.GetPool());
+        nsTemplateMatchSet retractions(mConflictSet.GetPool());
         rdftestnode->Retract(aSource, aProperty, aTarget, firings, retractions);
 
         {
-            nsTemplateMatchSet::Iterator last = retractions.Last();
-            for (nsTemplateMatchSet::Iterator match = retractions.First(); match != last; ++match) {
+            nsTemplateMatchSet::ConstIterator last = retractions.Last();
+            for (nsTemplateMatchSet::ConstIterator match = retractions.First(); match != last; ++match) {
                 Value memberval;
                 match->mAssignments.GetAssignmentFor(match->mRule->GetMemberVariable(), &memberval);
 
@@ -1000,13 +1000,13 @@ nsXULTemplateBuilder::ParseAttribute(const nsAReadableString& aAttributeValue,
                                      void (*aTextCallback)(nsXULTemplateBuilder*, const nsAReadableString&, void*),
                                      void* aClosure)
 {
-    nsAReadableString::const_iterator done_parsing;
+    nsAString::const_iterator done_parsing;
     aAttributeValue.EndReading(done_parsing);
 
-    nsAReadableString::const_iterator iter;
+    nsAString::const_iterator iter;
     aAttributeValue.BeginReading(iter);
 
-    nsAReadableString::const_iterator mark(iter), backup(iter);
+    nsAString::const_iterator mark(iter), backup(iter);
 
     for (; iter != done_parsing; backup = ++iter) {
         // A variable is either prefixed with '?' (in the extended
@@ -1043,7 +1043,7 @@ nsXULTemplateBuilder::ParseAttribute(const nsAReadableString& aAttributeValue,
         // in the rule's symbol table. The symbol is terminated by a
         // space character, a caret, or the end of the string,
         // whichever comes first.
-        nsAReadableString::const_iterator first(backup);
+        nsAString::const_iterator first(backup);
 
         PRUnichar c = 0;
         while (iter != done_parsing) {
@@ -1054,7 +1054,7 @@ nsXULTemplateBuilder::ParseAttribute(const nsAReadableString& aAttributeValue,
             ++iter;
         }
 
-        nsAReadableString::const_iterator last(iter);
+        nsAString::const_iterator last(iter);
 
         // Back up so we don't consume the terminating character
         // *unless* the terminating character was a caret: the caret
@@ -1140,7 +1140,7 @@ nsXULTemplateBuilder::SubstituteTextReplaceVariable(nsXULTemplateBuilder* aThis,
     if (aVariable == NS_LITERAL_STRING("rdf:*"))
         var = c->match.mRule->GetMemberVariable();
     else
-        var = aThis->mRules.LookupSymbol(nsPromiseFlatString(aVariable).get());
+        var = aThis->mRules.LookupSymbol(PromiseFlatString(aVariable).get());
 
     // No variable; treat as a variable with no substitution. (This
     // shouldn't ever happen, really...)
@@ -1204,7 +1204,7 @@ nsXULTemplateBuilder::IsVarInSet(nsXULTemplateBuilder* aThis,
     IsVarInSetClosure* c = NS_STATIC_CAST(IsVarInSetClosure*, aClosure);
 
     PRInt32 var =
-        aThis->mRules.LookupSymbol(nsPromiseFlatString(aVariable).get());
+        aThis->mRules.LookupSymbol(PromiseFlatString(aVariable).get());
 
     // No variable; treat as a variable with no substitution. (This
     // shouldn't ever happen, really...)
@@ -1243,27 +1243,19 @@ nsXULTemplateBuilder::SynchronizeAll(nsIRDFResource* aSource,
 
     // Get all the matches whose assignments are currently supported
     // by aSource and aProperty: we'll need to recompute them.
-    const nsTemplateMatchSet* matches;
-    mConflictSet.GetMatchesWithBindingDependency(aSource, &matches);
+    const nsTemplateMatchRefSet* matches =
+        mConflictSet.GetMatchesWithBindingDependency(aSource);
+
     if (! matches || matches->Empty())
         return NS_OK;
 
     // Since we'll actually be manipulating the match set as we
     // iterate through it, we need to copy it into our own private
     // area before performing the iteration.
-    static const size_t kBucketSizes[] = { nsTemplateMatchSet::kEntrySize, nsTemplateMatchSet::kIndexSize };
-    static const PRInt32 kNumBuckets = sizeof(kBucketSizes) / sizeof(size_t);
+    nsTemplateMatchRefSet copy = *matches;
 
-    // Per news://news.mozilla.org/39BEC105.5090206%40netscape.com
-    static const PRInt32 kPoolSize = 256;
-
-    nsFixedSizeAllocator pool;
-    pool.Init("nsXULTemplateBuilder::SynchronizeAll", kBucketSizes, kNumBuckets, kPoolSize);
-
-    nsTemplateMatchSet copy;
-    matches->CopyInto(copy, pool);
-
-    for (nsTemplateMatchSet::Iterator match = copy.First(); match != copy.Last(); ++match) {
+    nsTemplateMatchRefSet::ConstIterator last = copy.Last();
+    for (nsTemplateMatchRefSet::ConstIterator match = copy.First(); match != last; ++match) {
         const nsTemplateRule* rule = match->mRule;
 
         // Recompute the assignments. This will replace aOldTarget with
@@ -1303,8 +1295,10 @@ nsXULTemplateBuilder::CheckContainer(nsIRDFResource* aResource, PRBool* aIsConta
             isContainer = PR_TRUE;
 
             // ...should we check if it's empty?
-            if (!aIsEmpty || (mFlags & eDontTestEmpty))
+            if (!aIsEmpty || (mFlags & eDontTestEmpty)) {
+                isEmpty = PR_FALSE;
                 break;
+            }
 
             // Yes: call GetTarget() and see if there's anything on
             // the other side...
@@ -2354,7 +2348,7 @@ nsXULTemplateBuilder::AddBindingsFor(nsXULTemplateBuilder* aThis,
     nsTemplateRule* rule = NS_STATIC_CAST(nsTemplateRule*, aClosure);
 
     // Lookup the variable symbol
-    PRInt32 var = aThis->mRules.LookupSymbol(nsPromiseFlatString(aVariable).get(), PR_TRUE);
+    PRInt32 var = aThis->mRules.LookupSymbol(PromiseFlatString(aVariable).get(), PR_TRUE);
 
     // Strip it down to the raw RDF property by clobbering the "rdf:"
     // prefix

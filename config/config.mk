@@ -407,10 +407,7 @@ ifneq ($(OS_ARCH),WINNT)
 
 ifdef MOZ_NATIVE_MAKEDEPEND
 MKDEPEND_DIR	=
-# Adding the '-w' flag shortens the depend.mk files by allowing
-# more dependencies on one line. It may even speed up makedepend.
-# (Picking 3000 somewhat arbitrarily.)
-MKDEPEND	= $(MOZ_NATIVE_MAKEDEPEND) -Y -w 3000
+MKDEPEND	= $(MOZ_NATIVE_MAKEDEPEND)
 else
 MKDEPEND_DIR	= $(DEPTH)/config/mkdepend
 MKDEPEND	= $(MKDEPEND_DIR)/mkdepend
@@ -429,13 +426,10 @@ endif
 # Now test variables that might have been set or overridden by $(MY_CONFIG).
 
 DEFINES		+= -DOSTYPE=\"$(OS_CONFIG)\"
+DEFINES		+= -DOSARCH=\"$(OS_ARCH)\"
 
 ifdef MOZ_DEBUG
 DEFINES		+= -DMOZ_REFLOW_PERF -DMOZ_REFLOW_PERF_DSP
-endif
-
-ifdef MOZ_SECURITY
-DEFINES		+= -DMOZ_SECURITY
 endif
 
 #

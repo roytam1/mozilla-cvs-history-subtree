@@ -45,13 +45,6 @@ class nsIEventListenerManager : public nsISupports {
 public:
   NS_DEFINE_STATIC_IID_ACCESSOR(NS_IEVENTLISTENERMANAGER_IID)
 
- /**
-  * Retrieves events listeners of all types.
-  * @param
-  */
-  NS_IMETHOD GetEventListeners(nsVoidArray **aListeners,
-                               const nsIID& aIID) = 0;
-
   /**
   * Sets events listeners of all types.
   * @param an event listener

@@ -641,10 +641,6 @@ xpfe/browser/samples/Makefile
 xpfe/browser/samples/sampleimages/Makefile
 xpfe/components/Makefile
 xpfe/components/public/Makefile
-xpfe/components/sample/Makefile
-xpfe/components/sample/public/Makefile
-xpfe/components/sample/src/Makefile
-xpfe/components/sample/resources/Makefile
 xpfe/components/shistory/Makefile
 xpfe/components/shistory/public/Makefile
 xpfe/components/shistory/src/Makefile
@@ -822,6 +818,24 @@ layout/base/public/Makefile
 content/base/public/Makefile
 dom/src/base/Makefile
 modules/oji/public/Makefile
+gfx2/public/Makefile
+embedding/components/windowwatcher/public/Makefile
+"
+
+MAKEFILES_inspector="
+extensions/inspector/base/public/Makefile
+extensions/inspector/base/Makefile
+extensions/inspector/base/src/Makefile
+extensions/inspector/Makefile
+extensions/inspector/build/src/Makefile
+extensions/inspector/build/Makefile
+extensions/inspector/resources/content/Makefile
+extensions/inspector/resources/Makefile
+extensions/inspector/resources/locale/en-US/Makefile
+extensions/inspector/resources/locale/Makefile
+extensions/inspector/resources/skin/classic/Makefile
+extensions/inspector/resources/skin/Makefile
+extensions/inspector/resources/skin/modern/Makefile
 "
 
 MAKEFILES_transformiix="
@@ -1052,6 +1066,14 @@ for extension in $MOZ_EXTENSIONS; do
 	    extensions/xml-rpc/idl/Makefile
 	    extensions/xml-rpc/src/Makefile
             " ;;
+	inspector ) MAKEFILES_extensions="$MAKEFILES_extensions
+	    $MAKEFILES_inspector"
+	    ;;
+ 	help ) MAKEFILES_extensions="$MAKEFILES_extensions
+ 	    extensions/help/resources/Makefile
+	    extensions/help/Makefile
+            " ;;
+ 
     esac
 done
 

@@ -67,6 +67,13 @@
 #include "nsIPref.h"
 
 
+// on win32 and os/2, context menus come up on mouse up. On other platforms,
+// they appear on mouse down. Certain bits of code care about this difference.
+#ifndef XP_PC
+#define NS_CONTEXT_MENU_IS_MOUSEUP 1
+#endif
+
+
 ////////////////////////////////////////////////////////////////////////
 
 static NS_DEFINE_IID(kXULPopupListenerCID,      NS_XULPOPUPLISTENER_CID);
@@ -265,15 +272,10 @@ XULPopupListenerImpl::MouseUp(nsIDOMEvent* aMouseEvent)
 nsresult
 XULPopupListenerImpl::MouseDown(nsIDOMEvent* aMouseEvent)
 {
-// MacOS and Linux bring up context menus on mousedown, Windows on mouseup
-#ifndef XP_PC
-  return PreLaunchPopup(aMouseEvent);
-#else
   if(popupType != eXULPopupType_context)
     return PreLaunchPopup(aMouseEvent);
   else
     return NS_OK;
-#endif
 }
 
 nsresult
@@ -348,23 +350,17 @@ XULPopupListenerImpl::PreLaunchPopup(nsIDOMEvent* aMouseEvent)
       }
       break;
     case eXULPopupType_context:
-      // Check for right mouse button down
-      mouseEvent->GetButton(&button);
-#ifndef XP_PC
-      if (button == 2) {
-        // Time to launch a context menu
-        
-        // If the context menu launches on mousedown,
-        // we have to fire focus on the content we clicked on
-        FireFocusOnTargetContent(targetNode);
+
+    // Time to launch a context menu
+#ifndef NS_CONTEXT_MENU_IS_MOUSEUP
+    // If the context menu launches on mousedown,
+    // we have to fire focus on the content we clicked on
+    FireFocusOnTargetContent(targetNode);
 #endif
-        LaunchPopup(aMouseEvent);
-        aMouseEvent->PreventBubble();
-        aMouseEvent->PreventDefault();
-#ifndef XP_PC
-      }
-#endif
-      break;
+    LaunchPopup(aMouseEvent);
+    aMouseEvent->PreventBubble();
+    aMouseEvent->PreventDefault();
+    break;
     
     case eXULPopupType_tooltip:
       // get rid of the tooltip on a mousedown.

@@ -331,10 +331,9 @@ public:
                              nsIURI** aResult);
 
   // Form Helper Routines
-  static nsIContent* FindFormParentContent(nsIContent* aParent);
+  nsresult FindForm(nsIDOMHTMLFormElement **aForm);
 
-  static nsresult FindAndSetFormParent(nsIContent* aParent,
-                                       nsIFormControl* aControl);
+  nsresult FindAndSetForm(nsIFormControl *aFormControl);
 
   // See if the content object is in a document that has nav-quirks
   // mode enabled.
@@ -348,6 +347,8 @@ public:
   nsIHTMLAttributes* mAttributes;
 
 protected:
+  nsresult SetElementFocus(PRBool aDoFocus);
+
   /*
   nsresult GetPluginInstance(nsIPluginInstance** aPluginInstance);
 
@@ -419,13 +420,16 @@ public:
     aResult = -1;
     return NS_OK;
   }
-  NS_IMETHOD InsertChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify) {
+  NS_IMETHOD InsertChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify,
+                           PRBool aDeepSetDocument) {
     return NS_OK;
   }
-  NS_IMETHOD ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify) {
+  NS_IMETHOD ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify,
+                            PRBool aDeepSetDocument) {
     return NS_OK;
   }
-  NS_IMETHOD AppendChildTo(nsIContent* aKid, PRBool aNotify) {
+  NS_IMETHOD AppendChildTo(nsIContent* aKid, PRBool aNotify,
+                           PRBool aDeepSetDocument) {
     return NS_OK;
   }
   NS_IMETHOD RemoveChildAt(PRInt32 aIndex, PRBool aNotify) {
@@ -476,9 +480,12 @@ public:
   NS_IMETHOD ChildCount(PRInt32& aResult) const;
   NS_IMETHOD ChildAt(PRInt32 aIndex, nsIContent*& aResult) const;
   NS_IMETHOD IndexOf(nsIContent* aPossibleChild, PRInt32& aResult) const;
-  NS_IMETHOD InsertChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify);
-  NS_IMETHOD ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify);
-  NS_IMETHOD AppendChildTo(nsIContent* aKid, PRBool aNotify);
+  NS_IMETHOD InsertChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify,
+                           PRBool aDeepSetDocument);
+  NS_IMETHOD ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify,
+                            PRBool aDeepSetDocument);
+  NS_IMETHOD AppendChildTo(nsIContent* aKid, PRBool aNotify,
+                           PRBool aDeepSetDocument);
   NS_IMETHOD RemoveChildAt(PRInt32 aIndex, PRBool aNotify);
 
   nsCheapVoidArray mChildren;

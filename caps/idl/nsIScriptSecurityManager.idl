@@ -36,28 +36,28 @@ interface nsIURI;
 [scriptable, uuid(58df5780-8006-11d2-bd91-00805f8ae3f4)]
 interface nsIScriptSecurityManager : nsISupports
 {
-	///////////////// Security Checks //////////////////
+    ///////////////// Security Checks //////////////////
     /**
      * This function is obsolete and should no longer be used.
      */
-	[noscript] void checkScriptAccess(in JSContextPtr cx, in voidPtr obj, 
-	                       in long prop, in boolean isWrite);
+    [noscript] void checkScriptAccess(in JSContextPtr cx, in voidPtr obj, 
+                           in long prop, in boolean isWrite);
 
-	/**
-	 * Check that the script currently running in context "cx" can load "uri".
-	 *
-	 * Will return error code NS_ERROR_DOM_BAD_URI if the load request 
-	 * should be denied.
-	 *
-	 * @param cx the JSContext of the script causing the load
-	 * @param uri the URI that is being loaded
-	 */
+    /**
+     * Check that the script currently running in context "cx" can load "uri".
+     *
+     * Will return error code NS_ERROR_DOM_BAD_URI if the load request 
+     * should be denied.
+     *
+     * @param cx the JSContext of the script causing the load
+     * @param uri the URI that is being loaded
+     */
     [noscript] void checkLoadURIFromScript(in JSContextPtr cx, in nsIURI uri);
 
     /** 
      * Default CheckLoadURI permissions
      */
-	// Default permissions
+    // Default permissions
     const unsigned long STANDARD = 0;
 
     // If the source is mail, disallow the load
@@ -66,18 +66,25 @@ interface nsIScriptSecurityManager : nsISupports
     // Allow the loading of chrome URLs by non-chrome URLs
     const unsigned long ALLOW_CHROME = 1 << 1;
 
-	/**
-	 * Check that content from "from" can load "uri".
-	 *
-	 * Will return error code NS_ERROR_DOM_BAD_URI if the load request 
-	 * should be denied.
-	 *
-	 * @param from the URI causing the load
-	 * @param uri the URI that is being loaded
-	 * @param flags the permission set, see above
-	 */
+    /**
+     * Check that content from "from" can load "uri".
+     *
+     * Will return error code NS_ERROR_DOM_BAD_URI if the load request 
+     * should be denied.
+     *
+     * @param from the URI causing the load
+     * @param uri the URI that is being loaded
+     * @param flags the permission set, see above
+     */
     void checkLoadURI(in nsIURI from, in nsIURI uri, 
-	                  in unsigned long flags);
+                      in unsigned long flags);
+
+    /**
+     * Same as CheckLoadURI but takes string arguments for ease of use
+     * by scripts
+     */
+    void checkLoadURIStr(in string from, in string uri, 
+                         in unsigned long flags);
 
     /**
      * Check that the function 'funObj' is allowed to run on 'targetObj'
@@ -92,88 +99,93 @@ interface nsIScriptSecurityManager : nsISupports
     [noscript] void checkFunctionAccess(in JSContextPtr cx, in voidPtr funObj,
                                         in voidPtr targetObj);
 
-	/**
-	 * Return true if content from the given principal is allowed to
-	 * execute scripts.
-	 */
-    [noscript] boolean canExecuteScripts(in JSContextPtr cx, in nsIPrincipal principal);
+    /**
+     * Return true if content from the given principal is allowed to
+     * execute scripts.
+     */
+    [noscript] boolean canExecuteScripts(in JSContextPtr cx,
+                                         in nsIPrincipal principal);
 
-	///////////////// Principals /////////////////////// 
-	/**
-	 * Return the principal of the innermost frame of the currently 
-	 * executing script. Will return null if there is no script 
-	 * currently executing.
-	 */
+    ///////////////// Principals /////////////////////// 
+    /**
+     * Return the principal of the innermost frame of the currently 
+     * executing script. Will return null if there is no script 
+     * currently executing.
+     */
     nsIPrincipal getSubjectPrincipal();
 
-	/**
-	 * Return the all-powerful system principal.
-	 */
+    /**
+     * Return the all-powerful system principal.
+     */
     nsIPrincipal getSystemPrincipal();
 
-	/**
-	 * Return a principal that can be QI'd to nsICertificatePrincipal.
-	 */
+    /**
+     * Return a principal that can be QI'd to nsICertificatePrincipal.
+     */
     nsIPrincipal getCertificatePrincipal(in string CertID);
 
-	/**
-	 * Return a principal that can be QI'd to nsICodebasePrincipal and 
-	 * has the same origin as aURI.
-	 */
+    /**
+     * Return a principal that can be QI'd to nsICodebasePrincipal and 
+     * has the same origin as aURI.
+     */
     nsIPrincipal getCodebasePrincipal(in nsIURI aURI);
 
-	///////////////// Capabilities API /////////////////////
+    ///////////////// Capabilities API /////////////////////
     /**
-     * Request that 'capability' can be enabled by scripts or applets running 
-     * with 'principal'. Will prompt user if necessary. Returns 
-     * nsIPrincipal::ENABLE_GRANTED or nsIPrincipal::ENABLE_DENIED based on user's choice.
+     * Request that 'capability' can be enabled by scripts or applets
+     * running with 'principal'. Will prompt user if
+     * necessary. Returns nsIPrincipal::ENABLE_GRANTED or
+     * nsIPrincipal::ENABLE_DENIED based on user's choice.
      */
-    void requestCapability(in nsIPrincipal principal, in string capability, out short result);
-	
-	/**
-	 * Return true if the currently executing script has 'capability' enabled.
-	 */
+    void requestCapability(in nsIPrincipal principal, in string capability,
+                           out short result);
+    
+    /**
+     * Return true if the currently executing script has 'capability' enabled.
+     */
     boolean IsCapabilityEnabled(in string capability);
-	
-	/**
-	 * Enable 'capability' in the innermost frame of the currently executing
-	 * script.
-	 */
-	void enableCapability(in string capability);
+    
+    /**
+     * Enable 'capability' in the innermost frame of the currently executing
+     * script.
+     */
+    void enableCapability(in string capability);
 
-	/**
-	 * Remove 'capability' from the innermost frame of the currently executing
-	 * script. Any setting of 'capability' from enclosing frames thus comes into
-	 * effect.
-	 */
+    /**
+     * Remove 'capability' from the innermost frame of the currently
+     * executing script. Any setting of 'capability' from enclosing
+     * frames thus comes into effect.
+     */
     void revertCapability(in string capability);
 
-	/**
-	 * Disable 'capability' in the innermost frame of the currently executing
-	 * script.
-	 */
+    /**
+     * Disable 'capability' in the innermost frame of the currently executing
+     * script.
+     */
     void disableCapability(in string capability);
 
     //////////////// Master Certificate Functions ////////////////////
-	/**
-	 * Allow 'certificateID' to enable 'capability.' Can only be performed
+    /**
+     * Allow 'certificateID' to enable 'capability.' Can only be performed
      * by code signed by the system certificate.
-	 */
+     */
     void setCanEnableCapability(in string certificateID, in string capability, 
                                 in short canEnable);    
 
 
-	//////////////// Temporary ///////////////////////////////////////
+    //////////////// Temporary ///////////////////////////////////////
     /**
-     * Checks whether the currently executing script can load the given URL
-     * (special case for XMLHttpRequest)
+     * Checks whether the currently executing script can load the
+     * given URL (special case for XMLHttpRequest)
      *
      * @param cx The current active JavaScript context
      * @param url The url that is being accessed
-     * @param prop The ordinal of the property being accessed (see nsDOMPropEnums.h)
+     * @param prop The ordinal of the property being accessed (see
+     * nsDOMPropEnums.h)
      * @param isWrite True if write access is being attempted
+
      */
-	[noscript] void checkScriptAccessToURL(in JSContextPtr cx, in string url, 
+    [noscript] void checkScriptAccessToURL(in JSContextPtr cx, in string url, 
                                            in long prop, in boolean isWrite);
 };
 

@@ -1217,19 +1217,8 @@ CSSLoaderImpl::LoadSheet(URLKey& aKey, SheetLoadData* aData)
         nsCOMPtr<nsILoadGroup> loadGroup;
         mDocument->GetDocumentLoadGroup(getter_AddRefs(loadGroup));
 
-        PRBool isLocalFile;
-#ifdef INCLUDE_XUL
-        isLocalFile = (IsChromeURI(urlClone) || IsFileURI(urlClone));
-#else
-        isLocalFile = IsFileURI(urlClone);
-#endif
-        nsLoadFlags loadAttributes;
-        if (isLocalFile)
-          loadAttributes = (nsLoadFlags)nsIChannel::LOAD_NORMAL;
-        else
-          loadAttributes = (nsLoadFlags)nsIChannel::FORCE_RELOAD;
         result = NS_NewStreamLoader(&loader, urlClone, aData, nsnull, loadGroup,
-                                      nsnull, loadAttributes);
+                                    nsnull, nsIChannel::LOAD_NORMAL);
 #ifdef NS_DEBUG
         mSyncCallback = PR_FALSE;
 #endif
@@ -1368,7 +1357,9 @@ CSSLoaderImpl::LoadStyleLink(nsIContent* aElement,
       result = sheet->Clone(clone);
       if (NS_SUCCEEDED(result)) {
         PrepareSheet(clone, aTitle, aMedia);
-        if (aParserToUnblock) { // stick it in now, parser is waiting for it
+        if (aParserToUnblock || (0 == mLoadingSheets.Count())) { 
+          // we either have a parser that needs the sheet now, or we aren't currently
+          // busy.  go ahead and put the sheet right into the doc.
           result = InsertSheetInDoc(clone, aDocIndex, aElement, PR_TRUE, aObserver);
         }
         else {  // add to pending list

@@ -33,6 +33,7 @@
 #include "nsINodeInfo.h"
 #include "nsIURL.h"
 #include "nsIIOService.h"
+#include "nsNetCID.h"
 #include "nsIServiceManager.h"
 #include "nsXPIDLString.h"
 #include "nsIDocShell.h"
@@ -433,7 +434,6 @@ nsXMLElement::HandleDOMEvent(nsIPresContext* aPresContext,
                              nsEventStatus* aEventStatus)
 {
   NS_ENSURE_ARG_POINTER(aEventStatus);
-  NS_ENSURE_ARG(aPresContext);
   // Try script event handlers first
   nsresult ret = nsGenericContainerElement::HandleDOMEvent(aPresContext,
                                                            aEvent,

@@ -65,6 +65,8 @@ BUILD_MODULES = all
 #######################################################################
 # Defines
 #
+CVS = cvs
+
 CWD := $(shell pwd)
 
 ifeq "$(CWD)" "/"
@@ -116,7 +118,7 @@ ifneq ($(CVS_ROOT_IN_TREE),$(CVSROOT))
 endif
 endif
 
-CVSCO = $(strip cvs $(CVS_FLAGS) co $(CVS_CO_FLAGS))
+CVSCO = $(strip $(CVS) $(CVS_FLAGS) co $(CVS_CO_FLAGS))
 CVSCO_LOGFILE := $(ROOTDIR)/cvsco.log
 CVSCO_LOGFILE := $(shell echo $(CVSCO_LOGFILE) | sed s%//%/%)
 
@@ -191,22 +193,41 @@ endif
 ####################################
 # CVS defines for PSM
 #
-PSM_CO_MODULE= mozilla/security/psm mozilla/security/manager mozilla/security/Makefile.in
+PSM_CO_MODULE= mozilla/security/manager
+ifndef MOZ_NSS_AUTOCONF
+PSM_CO_MODULE += mozilla/security/psm mozilla/security/Makefile.in
+endif
 PSM_CO_FLAGS := -P -A
 ifdef PSM_CO_TAG
   PSM_CO_FLAGS := $(PSM_CO_FLAGS) -r $(PSM_CO_TAG)
 endif
-CVSCO_PSM = cvs $(CVS_FLAGS) co $(PSM_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(PSM_CO_MODULE)
+CVSCO_PSM = $(CVS) $(CVS_FLAGS) co $(PSM_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(PSM_CO_MODULE)
 
 ####################################
 # CVS defines for NSS
 #
-NSS_CO_MODULE= mozilla/security/nss mozilla/security/coreconf
+NSS_CO_MODULE = mozilla/security/nss \
+		mozilla/security/coreconf \
+		$(NULL)
+
+ifdef MOZ_NSS_AUTOCONF
+NSS_CO_MODULE += \
+		mozilla/security/build \
+		mozilla/security/Makefile.in \
+		mozilla/security/configure \
+		mozilla/security/configure.in \
+		mozilla/security/secmakefiles.sh \
+		mozilla/security/aclocal.m4 \
+		$(NULL)
+
+NSS_CO_TAG = NSS_CLIENT_BRANCH
+endif
+		
 NSS_CO_FLAGS := -P
 ifdef NSS_CO_TAG
    NSS_CO_FLAGS := $(NSS_CO_FLAGS) -r $(NSS_CO_TAG)
 endif
-CVSCO_NSS = cvs $(CVS_FLAGS) co $(NSS_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(NSS_CO_MODULE)
+CVSCO_NSS = $(CVS) $(CVS_FLAGS) co $(NSS_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(NSS_CO_MODULE)
 
 ####################################
 # CVS defines for NSPR
@@ -216,7 +237,7 @@ NSPR_CO_FLAGS := -P
 ifdef NSPR_CO_TAG
   NSPR_CO_FLAGS := $(NSPR_CO_FLAGS) -r $(NSPR_CO_TAG)
 endif
-CVSCO_NSPR = cvs $(CVS_FLAGS) co $(NSPR_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(NSPR_CO_MODULE)
+CVSCO_NSPR = $(CVS) $(CVS_FLAGS) co $(NSPR_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(NSPR_CO_MODULE)
 
 ####################################
 # CVS defines for the C LDAP SDK
@@ -226,7 +247,7 @@ LDAPCSDK_CO_FLAGS := -P
 ifdef LDAPCSDK_CO_TAG
   LDAPCSDK_CO_FLAGS := $(LDAPCSDK_CO_FLAGS) -r $(LDAPCSDK_CO_TAG)
 endif
-CVSCO_LDAPCSDK = cvs $(CVS_FLAGS) co $(LDAPCSDK_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(LDAPCSDK_CO_MODULE)
+CVSCO_LDAPCSDK = $(CVS) $(CVS_FLAGS) co $(LDAPCSDK_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(LDAPCSDK_CO_MODULE)
 
 ####################################
 # CVS defines for the C LDAP SDK
@@ -236,7 +257,7 @@ ACCESSIBLE_CO_FLAGS := -P
 ifdef ACCESSIBLE_CO_TAG
   ACCESSIBLE_CO_FLAGS := $(ACCESSIBLE_CO_FLAGS) -r $(ACCESSIBLE_CO_TAG)
 endif
-CVSCO_ACCESSIBLE = cvs $(CVS_FLAGS) co $(ACCESSIBLE_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(ACCESSIBLE_CO_MODULE)
+CVSCO_ACCESSIBLE = $(CVS) $(CVS_FLAGS) co $(ACCESSIBLE_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(ACCESSIBLE_CO_MODULE)
 
 ####################################
 # CVS defines for gfx2
@@ -246,7 +267,7 @@ GFX2_CO_FLAGS := -P
 ifdef GFX2_CO_TAG
   GFX2_CO_FLAGS := $(GFX2_CO_FLAGS) -r $(GFX2_CO_TAG)
 endif
-CVSCO_GFX2 = cvs $(CVS_FLAGS) co $(GFX2_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(GFX2_CO_MODULE)
+CVSCO_GFX2 = $(CVS) $(CVS_FLAGS) co $(GFX2_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(GFX2_CO_MODULE)
 
 ####################################
 # CVS defines for new image library
@@ -256,7 +277,7 @@ IMGLIB2_CO_FLAGS := -P
 ifdef IMGLIB2_CO_TAG
   IMGLIB2_CO_FLAGS := $(IMGLIB2_CO_FLAGS) -r $(IMGLIB2_CO_TAG)
 endif
-CVSCO_IMGLIB2 = cvs $(CVS_FLAGS) co $(IMGLIB2_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(IMGLIB2_CO_MODULE)
+CVSCO_IMGLIB2 = $(CVS) $(CVS_FLAGS) co $(IMGLIB2_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(IMGLIB2_CO_MODULE)
 
 ####################################
 # CVS defines for standalone modules
@@ -276,8 +297,10 @@ ifeq (,$(filter $(NSPRPUB_DIR), $(BUILD_MODULE_CVS)))
   CVSCO_NSPR :=
 endif
 ifeq (,$(filter security security/manager, $(BUILD_MODULE_CVS)))
+ifndef MOZ_NSS_AUTOCONF
   CVSCO_PSM :=
   CVSCO_NSS :=
+endif
 endif
 ifeq (,$(filter directory/c-sdk, $(BUILD_MODULE_CVS)))
   CVSCO_LDAPCSDK :=
@@ -292,9 +315,11 @@ ifeq (,$(filter modules/libpr0n, $(BUILD_MODULE_CVS)))
   CVSCO_IMGLIB2 :=
 endif
 else
+ifndef MOZ_NSS_AUTOCONF
   # Do not pull PSM/NSS by default
   CVSCO_PSM :=
   CVSCO_NSS :=
+endif
 endif
 
 ####################################

@@ -47,7 +47,6 @@
 #include "nsTextFormatter.h"
 #include "nsIIOService.h"
 #include "nsIStringBundle.h"
-#include "nsINetSupportDialogService.h"
 #include "nsNetUtil.h"
 #include "nsDirectoryService.h"
 #include "nsDirectoryServiceDefs.h"
@@ -61,8 +60,10 @@
 #include "nscore.h"
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
+#include "nsIPrompt.h"
+#include "nsIWindowWatcher.h"
+#include "nsIConsoleService.h"
 
-static NS_DEFINE_CID(kNetSupportDialogCID, NS_NETSUPPORTDIALOG_CID);
 static NS_DEFINE_IID(kIIOServiceIID, NS_IIOSERVICE_IID);
 static NS_DEFINE_CID(kIOServiceCID, NS_IOSERVICE_CID);
 static NS_DEFINE_IID(kIStringBundleServiceIID, NS_ISTRINGBUNDLESERVICE_IID);
@@ -219,12 +220,14 @@ nsScriptSecurityManager::GetSecurityLevel(nsIPrincipal *principal,
                                           PRUint32 aAction,
                                           nsCString &capability)
 {
+    //-- Get the source and target schemes
+    //-- jar URIs can be nested. This loop finds the innermost base URI.
     nsCAutoString prefName;
     if (NS_FAILED(GetPrefName(principal, property, prefName)))
         return SCRIPT_SECURITY_NO_ACCESS;
     PRInt32 secLevel;
     char *secLevelString;
-	nsresult rv;
+       nsresult rv;
     rv = mSecurityPrefs->SecurityGetCharPref(prefName, &secLevelString);
     if (NS_FAILED(rv)) {
         prefName += (aAction == nsIXPCSecurityManager::ACCESS_SET_PROPERTY ? ".set" : ".get");
@@ -473,36 +476,37 @@ nsScriptSecurityManager::CheckLoadURI(nsIURI *aSourceURI, nsIURI *aTargetURI,
         return NS_OK;
     }
 
-    enum Action { AllowProtocol, DenyProtocol, PrefControlled, ChromeProtocol };
+    enum Action { AllowProtocol, DenyProtocol, PrefControlled, ChromeProtocol, AboutProtocol };
     static const struct { 
         const char *name;
         Action action;
     } protocolList[] = {
         //-- Keep the most commonly used protocols at the top of the list
         //   to increase performance
-        { "http",            AllowProtocol },
+        { "http",            AllowProtocol  },
         { "file",            PrefControlled },
-        { "https",           AllowProtocol },
+        { "https",           AllowProtocol  },
         { "chrome",          ChromeProtocol },
-        { "mailbox",         DenyProtocol  },
-        { "pop",             AllowProtocol },
-        { "imap",            DenyProtocol  },
-        { "pop3",            DenyProtocol  },
-        { "news",            AllowProtocol },
-        { "javascript",      AllowProtocol },
-        { "ftp",             AllowProtocol },
-        { "about",           AllowProtocol },
-        { "mailto",          AllowProtocol },
-		{ "aim",          AllowProtocol },
-        { "data",            AllowProtocol },
-        { "keyword",         DenyProtocol  },
-        { "resource",        DenyProtocol  },
-        { "gopher",          AllowProtocol },
-        { "datetime",        DenyProtocol  },
-        { "finger",          AllowProtocol },
-        { "res",             DenyProtocol  }
+        { "mailbox",         DenyProtocol   },
+        { "pop",             AllowProtocol  },
+        { "imap",            DenyProtocol   },
+        { "pop3",            DenyProtocol   },
+        { "news",            AllowProtocol  },
+        { "javascript",      AllowProtocol  },
+        { "ftp",             AllowProtocol  },
+        { "about",           AboutProtocol  },
+        { "mailto",          AllowProtocol  },
+        { "aim",             AllowProtocol  },
+        { "data",            AllowProtocol  },
+        { "keyword",         DenyProtocol   },
+        { "resource",        DenyProtocol   },
+        { "gopher",          AllowProtocol  },
+        { "datetime",        DenyProtocol   },
+        { "finger",          AllowProtocol  },
+        { "res",             DenyProtocol   }
     };
 
+    nsXPIDLCString targetSpec;
     for (unsigned i=0; i < sizeof(protocolList)/sizeof(protocolList[0]); i++) {
         if (nsCRT::strcasecmp(targetScheme, protocolList[i].name) == 0) {
             PRBool doCheck = PR_FALSE;
@@ -513,13 +517,21 @@ nsScriptSecurityManager::CheckLoadURI(nsIURI *aSourceURI, nsIURI *aTargetURI,
             case PrefControlled:
                 // Allow access if pref is false
                 mPrefs->GetBoolPref("security.checkloaduri", &doCheck);
-                return doCheck ? NS_ERROR_DOM_BAD_URI : NS_OK;
+                return doCheck ? ReportErrorToConsole(aTargetURI) : NS_OK;
             case ChromeProtocol:
                 return (aFlags & nsIScriptSecurityManager::ALLOW_CHROME) ?
-                    NS_OK : NS_ERROR_DOM_BAD_URI; 
+                    NS_OK : ReportErrorToConsole(aTargetURI);
+            case AboutProtocol:
+                // Allow loading about:blank, otherwise deny
+                if(NS_FAILED(targetUri->GetSpec(getter_Copies(targetSpec))))
+                    return NS_ERROR_FAILURE;
+                return (PL_strcmp(targetSpec, "about:blank") == 0) || 
+                       (PL_strcmp(targetSpec, "about:") == 0) ||
+                       (PL_strcmp(targetSpec, "about:mozilla") == 0) ?
+                    NS_OK : ReportErrorToConsole(aTargetURI);
             case DenyProtocol:
                 // Deny access
-                return NS_ERROR_DOM_BAD_URI;
+                return ReportErrorToConsole(aTargetURI);
             }
         }
     }
@@ -527,9 +539,58 @@ nsScriptSecurityManager::CheckLoadURI(nsIURI *aSourceURI, nsIURI *aTargetURI,
     // If we reach here, we have an unknown protocol. Warn, but allow.
     // This is risky from a security standpoint, but allows flexibility
     // in installing new protocol handlers after initial ship.
-    NS_WARN_IF_FALSE(PR_FALSE, "unknown protocol");
+    NS_WARN_IF_FALSE(PR_FALSE, "unknown protocol in nsScriptSecurityManager::CheckLoadURI");
 
     return NS_OK;
+}
+
+nsresult 
+nsScriptSecurityManager::ReportErrorToConsole(nsIURI* aTarget)
+{
+    nsXPIDLCString spec;
+    nsresult rv = aTarget->GetSpec(getter_Copies(spec));
+    if (NS_FAILED(rv)) return rv;
+
+    nsAutoString msg;
+    msg.AssignWithConversion("The link to ");
+    msg.AppendWithConversion(spec);
+    msg.AppendWithConversion(" was blocked by the security manager.\nRemote content may not link to local content.");
+    // Report error in JS console
+    nsCOMPtr<nsIConsoleService> console(do_GetService("@mozilla.org/consoleservice;1"));
+    if (console)
+    {
+      PRUnichar* messageUni = msg.ToNewUnicode();
+      if (!messageUni)
+          return NS_ERROR_FAILURE;
+      console->LogStringMessage(messageUni);
+      nsMemory::Free(messageUni);
+    }
+#ifndef DEBUG
+    else // If JS console reporting failed, print to stderr.
+#endif
+    {
+      char* messageCstr = msg.ToNewCString();
+      if (!messageCstr)
+          return NS_ERROR_FAILURE;
+      fprintf(stderr, "%s\n", messageCstr);
+      PR_Free(messageCstr);
+    }
+    //-- Always returns an error
+    return NS_ERROR_DOM_BAD_URI;
+}
+
+
+NS_IMETHODIMP
+nsScriptSecurityManager::CheckLoadURIStr(const char* aSourceURIStr, const char* aTargetURIStr,
+                                         PRUint32 aFlags)
+{
+    nsCOMPtr<nsIURI> source;
+    nsresult rv = NS_NewURI(getter_AddRefs(source), aSourceURIStr, nsnull);
+    NS_ENSURE_SUCCESS(rv, rv);
+    nsCOMPtr<nsIURI> target;
+    rv = NS_NewURI(getter_AddRefs(target), aTargetURIStr, nsnull);
+    NS_ENSURE_SUCCESS(rv, rv);
+    return CheckLoadURI(source, target, aFlags);
 }
 
 NS_IMETHODIMP
@@ -607,7 +668,7 @@ nsScriptSecurityManager::GetRootDocShell(JSContext *cx, nsIDocShell **result)
     nsCOMPtr<nsIDocShell> docshell;
     nsCOMPtr<nsIScriptContext> scriptContext = (nsIScriptContext*)JS_GetContextPrivate(cx);
     if (!scriptContext) return NS_ERROR_FAILURE;
-    nsCOMPtr<nsIScriptGlobalObject> globalObject = scriptContext->GetGlobalObject();
+    nsCOMPtr<nsIScriptGlobalObject> globalObject(dont_AddRef(scriptContext->GetGlobalObject()));
     if (!globalObject)  return NS_ERROR_FAILURE;
     rv = globalObject->GetDocShell(getter_AddRefs(docshell));
     if (NS_FAILED(rv)) return rv;
@@ -621,7 +682,8 @@ nsScriptSecurityManager::GetRootDocShell(JSContext *cx, nsIDocShell **result)
 }
 
 NS_IMETHODIMP
-nsScriptSecurityManager::CanExecuteScripts(JSContext* cx, nsIPrincipal *principal,
+nsScriptSecurityManager::CanExecuteScripts(JSContext* cx,
+                                           nsIPrincipal *principal,
                                            PRBool *result)
 {
     if (principal == mSystemPrincipal) {
@@ -650,7 +712,7 @@ nsScriptSecurityManager::CanExecuteScripts(JSContext* cx, nsIPrincipal *principa
     if ((mIsJavaScriptEnabled != mIsMailJavaScriptEnabled) && docshell)
     {
         // Is this script running from mail?
-		PRUint32 appType;
+               PRUint32 appType;
         rv = docshell->GetAppType(&appType);
         if (NS_FAILED(rv)) return rv;
         if (appType == nsIDocShell::APP_TYPE_MAIL)
@@ -1138,7 +1200,7 @@ CheckConfirmDialog(JSContext* cx, const PRUnichar *szMessage, const PRUnichar *s
     nsCOMPtr<nsIScriptContext> scriptContext = (nsIScriptContext*)JS_GetContextPrivate(cx);
     if (scriptContext)
     {
-        nsCOMPtr<nsIScriptGlobalObject> globalObject = scriptContext->GetGlobalObject();
+        nsCOMPtr<nsIScriptGlobalObject> globalObject(dont_AddRef(scriptContext->GetGlobalObject()));
         NS_ASSERTION(globalObject, "script context has no global object");
         nsCOMPtr<nsIDOMWindowInternal> domWin = do_QueryInterface(globalObject);
         if (domWin)
@@ -1147,14 +1209,15 @@ CheckConfirmDialog(JSContext* cx, const PRUnichar *szMessage, const PRUnichar *s
 
     if (!prompter)
     {
-        //-- Couldn't get prompter from the current window, so get the propmt service.
-        NS_WITH_SERVICE(nsIPrompt, backupPrompter, kNetSupportDialogCID, &res);
-        if (NS_FAILED(res)) 
-        {
-            *checkValue = 0;
-            return PR_FALSE;
-        }
-        prompter = backupPrompter;
+        //-- Couldn't get prompter from the current window, so get the prompt service.
+        nsCOMPtr<nsIWindowWatcher> wwatch(do_GetService("@mozilla.org/embedcomp/window-watcher;1"));
+        if (wwatch)
+          wwatch->GetNewPrompter(0, getter_AddRefs(prompter));
+    }
+    if (!prompter)
+    {
+        *checkValue = 0;
+        return PR_FALSE;
     }
     
     PRInt32 buttonPressed = 1; /* in case user exits dialog by clicking X */

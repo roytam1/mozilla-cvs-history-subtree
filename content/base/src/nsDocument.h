@@ -32,8 +32,10 @@
 #include "nsIDOMNSDocument.h"
 #include "nsIDOMDocumentStyle.h"
 #include "nsIDOMDocumentRange.h"
+#include "nsIDocumentObserver.h"
 #include "nsIDOMEventReceiver.h"
 #include "nsIDiskDocument.h"
+#include "nsIDOMStyleSheetList.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIDOMEventTarget.h"
 #include "nsIContent.h"
@@ -125,6 +127,79 @@ protected:
   nsIDocument* mDocument;
 };
 
+
+class nsDOMStyleSheetList : public nsIDOMStyleSheetList,
+                            public nsIDocumentObserver
+{
+public:
+  nsDOMStyleSheetList(nsIDocument *aDocument);
+  virtual ~nsDOMStyleSheetList();
+
+  NS_DECL_ISUPPORTS
+
+  NS_DECL_NSIDOMSTYLESHEETLIST
+  
+  NS_IMETHOD BeginUpdate(nsIDocument *aDocument) { return NS_OK; }
+  NS_IMETHOD EndUpdate(nsIDocument *aDocument) { return NS_OK; }
+  NS_IMETHOD BeginLoad(nsIDocument *aDocument) { return NS_OK; }
+  NS_IMETHOD EndLoad(nsIDocument *aDocument) { return NS_OK; }
+  NS_IMETHOD BeginReflow(nsIDocument *aDocument,
+                         nsIPresShell* aShell) { return NS_OK; }
+  NS_IMETHOD EndReflow(nsIDocument *aDocument,
+                       nsIPresShell* aShell) { return NS_OK; } 
+  NS_IMETHOD ContentChanged(nsIDocument *aDocument,
+                            nsIContent* aContent,
+                            nsISupports* aSubContent) { return NS_OK; }
+  NS_IMETHOD ContentStatesChanged(nsIDocument* aDocument,
+                                  nsIContent* aContent1,
+                                  nsIContent* aContent2) { return NS_OK; }
+  NS_IMETHOD AttributeChanged(nsIDocument *aDocument,
+                              nsIContent*  aContent,
+                              PRInt32      aNameSpaceID,
+                              nsIAtom*     aAttribute,
+                              PRInt32      aHint) { return NS_OK; }
+  NS_IMETHOD ContentAppended(nsIDocument *aDocument,
+                             nsIContent* aContainer,
+                             PRInt32     aNewIndexInContainer) 
+                             { return NS_OK; }
+  NS_IMETHOD ContentInserted(nsIDocument *aDocument,
+                             nsIContent* aContainer,
+                             nsIContent* aChild,
+                             PRInt32 aIndexInContainer) { return NS_OK; }
+  NS_IMETHOD ContentReplaced(nsIDocument *aDocument,
+                             nsIContent* aContainer,
+                             nsIContent* aOldChild,
+                             nsIContent* aNewChild,
+                             PRInt32 aIndexInContainer) { return NS_OK; }
+  NS_IMETHOD ContentRemoved(nsIDocument *aDocument,
+                            nsIContent* aContainer,
+                            nsIContent* aChild,
+                            PRInt32 aIndexInContainer) { return NS_OK; }
+  NS_IMETHOD StyleSheetAdded(nsIDocument *aDocument,
+                             nsIStyleSheet* aStyleSheet);
+  NS_IMETHOD StyleSheetRemoved(nsIDocument *aDocument,
+                               nsIStyleSheet* aStyleSheet);
+  NS_IMETHOD StyleSheetDisabledStateChanged(nsIDocument *aDocument,
+                                        nsIStyleSheet* aStyleSheet,
+                                        PRBool aDisabled) { return NS_OK; }
+  NS_IMETHOD StyleRuleChanged(nsIDocument *aDocument,
+                              nsIStyleSheet* aStyleSheet,
+                              nsIStyleRule* aStyleRule,
+                              PRInt32 aHint) { return NS_OK; }
+  NS_IMETHOD StyleRuleAdded(nsIDocument *aDocument,
+                            nsIStyleSheet* aStyleSheet,
+                            nsIStyleRule* aStyleRule) { return NS_OK; }
+  NS_IMETHOD StyleRuleRemoved(nsIDocument *aDocument,
+                              nsIStyleSheet* aStyleSheet,
+                              nsIStyleRule* aStyleRule) { return NS_OK; }
+  NS_IMETHOD DocumentWillBeDestroyed(nsIDocument *aDocument);
+
+protected:
+  PRInt32       mLength;
+  nsIDocument*  mDocument;
+  void*         mScriptObject;
+};
+
 // Base class for our document implementations
 class nsDocument : public nsIDocument, 
                    public nsIDOMDocument, 
@@ -208,6 +283,18 @@ public:
    * Remove a charset observer.
    */
   NS_IMETHOD RemoveCharSetObserver(nsIObserver* aObserver);
+
+#ifdef IBMBIDI
+  /**
+   *  Check if the document contains bidi data.
+   *  If so, we have to apply the Unicode Bidi Algorithm.
+   */
+  NS_IMETHOD GetBidiEnabled(PRBool* aBidiEnabled) const;
+  /**
+   *  Indicate the document contains RTL characters.
+   */
+  NS_IMETHOD SetBidiEnabled(PRBool aBidiEnabled);
+#endif // IBMBIDI
 
   /**
    * Return the Line Breaker for the document
@@ -445,7 +532,7 @@ protected:
   nsCOMPtr<nsIScriptGlobalObject> mScriptGlobalObject;
   nsIEventListenerManager* mListenerManager;
   PRBool mInDestructor;
-  nsDOMStyleSheetList *mDOMStyleSheets;
+  nsCOMPtr<nsIDOMStyleSheetList> mDOMStyleSheets;
   nsINameSpaceManager* mNameSpaceManager;
   nsDocHeaderData* mHeaderData;
   nsCOMPtr<nsILineBreaker> mLineBreaker;
@@ -454,6 +541,10 @@ protected:
   // A content ID counter used to give a monotonically increasing ID to the content
   // objects in the document's content model
   PRInt32 mNextContentID;
+
+#ifdef IBMBIDI
+  PRBool        mBidiEnabled;
+#endif // IBMBIDI
 
   // disk file members
   nsCOMPtr<nsIFile>   mFileSpec;
@@ -473,5 +564,7 @@ private:
   nsDocument(const nsDocument& aOther);
   nsDocument& operator=(const nsDocument& aOther);
 };
+
+
 
 #endif /* nsDocument_h___ */

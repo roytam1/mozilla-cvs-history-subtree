@@ -1389,9 +1389,6 @@ SinkContext::OpenContainer(const nsIParserNode& aNode)
   mStack[mStackPos].mInsertionPoint = -1;
   content->SetDocument(mSink->mDocument, PR_FALSE, PR_TRUE);
 
-  nsCOMPtr<nsIScriptGlobalObject> scriptGlobalObject;
-  mSink->mDocument->GetScriptGlobalObject(getter_AddRefs(scriptGlobalObject));
-
   rv = mSink->AddAttributes(aNode, content);
 
   if (mPreAppend) {
@@ -1403,10 +1400,10 @@ SinkContext::OpenContainer(const nsIParserNode& aNode)
     if (mStack[mStackPos-1].mInsertionPoint != -1) {
       parent->InsertChildAt(content, 
                             mStack[mStackPos-1].mInsertionPoint++, 
-                            PR_FALSE);
+                            PR_FALSE, PR_FALSE);
     }
     else {
-      parent->AppendChildTo(content, PR_FALSE);
+      parent->AppendChildTo(content, PR_FALSE, PR_FALSE);
     }
     mStack[mStackPos].mFlags |= APPENDED;
   }
@@ -1489,10 +1486,10 @@ SinkContext::CloseContainer(const nsIParserNode& aNode)
     if (mStack[mStackPos-1].mInsertionPoint != -1) {
       result = parent->InsertChildAt(content, 
                                      mStack[mStackPos-1].mInsertionPoint++, 
-                                     PR_FALSE);
+                                     PR_FALSE, PR_FALSE);
     }
     else {
-      result = parent->AppendChildTo(content, PR_FALSE);
+      result = parent->AppendChildTo(content, PR_FALSE, PR_FALSE);
     }
   }
 
@@ -1648,7 +1645,7 @@ SinkContext::DemoteContainer(const nsIParserNode& aNode)
       // notification (it the container hasn't already been appended)
       else if (!(mStack[stackPos].mFlags & APPENDED)) {
         mSink->mInNotification++;
-        parent->AppendChildTo(container, PR_FALSE);
+        parent->AppendChildTo(container, PR_FALSE, PR_FALSE);
         mSink->mInNotification--;
       }
       
@@ -1692,7 +1689,7 @@ SinkContext::DemoteContainer(const nsIParserNode& aNode)
               // since we already did notifications for all content
               // that's come through with the FlushTags() call so far.
               mSink->mInNotification++;
-              result = parent->AppendChildTo(child, sync);
+              result = parent->AppendChildTo(child, sync, PR_FALSE);
               mSink->mInNotification--;
             }
             NS_RELEASE(child);
@@ -1815,10 +1812,10 @@ SinkContext::AddLeaf(nsIHTMLContent* aContent)
   if (mStack[mStackPos-1].mInsertionPoint != -1) {
     parent->InsertChildAt(aContent, 
                           mStack[mStackPos-1].mInsertionPoint++, 
-                          PR_FALSE);
+                          PR_FALSE, PR_FALSE);
   }
   else {
-    parent->AppendChildTo(aContent, PR_FALSE);
+    parent->AppendChildTo(aContent, PR_FALSE, PR_FALSE);
   }
 
   DidAddContent(aContent, PR_FALSE);
@@ -1867,10 +1864,10 @@ SinkContext::AddComment(const nsIParserNode& aNode)
       if (mStack[mStackPos-1].mInsertionPoint != -1) {
         parent->InsertChildAt(comment, 
                               mStack[mStackPos-1].mInsertionPoint++, 
-                              PR_FALSE);
+                              PR_FALSE, PR_FALSE);
       }
       else {
-        parent->AppendChildTo(comment, PR_FALSE);
+        parent->AppendChildTo(comment, PR_FALSE, PR_FALSE);
       }
       
       DidAddContent(comment, PR_FALSE);
@@ -2001,10 +1998,10 @@ SinkContext::FlushTags(PRBool aNotify)
     if (mStack[mStackPos-1].mInsertionPoint != -1) {
       parent->InsertChildAt(content, 
                             mStack[mStackPos-1].mInsertionPoint++, 
-                            PR_FALSE);
+                            PR_FALSE, PR_FALSE);
     }
     else {
-      parent->AppendChildTo(content, PR_FALSE);
+      parent->AppendChildTo(content, PR_FALSE, PR_FALSE);
     }
     mStack[stackPos].mFlags |= APPENDED;
 
@@ -2134,10 +2131,10 @@ SinkContext::FlushText(PRBool* aDidFlush, PRBool aReleaseLast)
         if (mStack[mStackPos-1].mInsertionPoint != -1) {
           parent->InsertChildAt(content, 
                                 mStack[mStackPos-1].mInsertionPoint++, 
-                                PR_FALSE);
+                                PR_FALSE, PR_FALSE);
         }
         else {
-          parent->AppendChildTo(content, PR_FALSE);
+          parent->AppendChildTo(content, PR_FALSE, PR_FALSE);
         }
 
         mLastTextNode = content;
@@ -2356,14 +2353,25 @@ HTMLContentSink::Init(nsIDocument* aDoc,
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Make root part
-  rv = NS_NewHTMLHtmlElement(&mRoot, nodeInfo);
-  if (NS_OK != rv) {
-    MOZ_TIMER_DEBUGLOG(("Stop: nsHTMLContentSink::Init()\n"));
-    MOZ_TIMER_STOP(mWatch);
-    return rv;
+
+  nsCOMPtr<nsIContent> doc_root(dont_AddRef(mDocument->GetRootContent()));
+
+  if (doc_root) {
+    // If the document already has a root we'll use it. This will
+    // happen when we do document.open()/.write()/.close()...
+
+    CallQueryInterface(doc_root, &mRoot);
+  } else {
+    rv = NS_NewHTMLHtmlElement(&mRoot, nodeInfo);
+    if (NS_OK != rv) {
+      MOZ_TIMER_DEBUGLOG(("Stop: nsHTMLContentSink::Init()\n"));
+      MOZ_TIMER_STOP(mWatch);
+      return rv;
+    }
+
+    mRoot->SetDocument(mDocument, PR_FALSE, PR_TRUE);
+    mDocument->SetRootContent(mRoot);
   }
-  mRoot->SetDocument(mDocument, PR_FALSE, PR_TRUE);
-  mDocument->SetRootContent(mRoot);
 
   // Make head part
   rv = mNodeInfoManager->GetNodeInfo(NS_ConvertASCIItoUCS2("head"),
@@ -2377,18 +2385,20 @@ HTMLContentSink::Init(nsIDocument* aDoc,
     MOZ_TIMER_STOP(mWatch);
     return rv;
   }
-  mRoot->AppendChildTo(mHead, PR_FALSE);
+  mRoot->AppendChildTo(mHead, PR_FALSE, PR_FALSE);
 
   mCurrentContext = new SinkContext(this);
   mCurrentContext->Begin(eHTMLTag_html, mRoot, 0, -1);
   mContextStack.AppendElement(mCurrentContext);
 
+#ifdef NS_DEBUG
   char* spec;
   (void)aURL->GetSpec(&spec);
   SINK_TRACE(SINK_TRACE_CALLS,
              ("HTMLContentSink::Init: this=%p url='%s'",
               this, spec));
   nsCRT::free(spec);
+#endif
 
   MOZ_TIMER_DEBUGLOG(("Stop: nsHTMLContentSink::Init()\n"));
   MOZ_TIMER_STOP(mWatch);
@@ -2443,10 +2453,18 @@ HTMLContentSink::DidBuildModel(PRInt32 aQualityLevel)
 
 
   // Reflow the last batch of content
-  if (nsnull != mBody) {
+  if (mBody) {
     SINK_TRACE(SINK_TRACE_REFLOW,
                ("HTMLContentSink::DidBuildModel: layout final content"));
     mCurrentContext->FlushTags(PR_TRUE);
+  }
+  else if (!mLayoutStarted) {
+    // We never saw the body, and layout never got started. Force
+    // layout *now*, to get an initial reflow.
+    SINK_TRACE(SINK_TRACE_REFLOW,
+               ("HTMLContentSink::DidBuildModel: forcing reflow on empty document"));
+
+    StartLayout();
   }
 
   ScrollToRef();
@@ -2717,11 +2735,11 @@ HTMLContentSink::SetTitle(const nsString& aValue)
         tc->SetData(*mTitle);
         NS_RELEASE(tc);
       }
-      it->AppendChildTo(text, PR_FALSE);
+      it->AppendChildTo(text, PR_FALSE, PR_FALSE);
       text->SetDocument(mDocument, PR_FALSE, PR_TRUE);
       NS_RELEASE(text);
     }
-    mHead->AppendChildTo(it, PR_FALSE);
+    mHead->AppendChildTo(it, PR_FALSE, PR_FALSE);
     NS_RELEASE(it);
   }
 
@@ -3716,7 +3734,7 @@ HTMLContentSink::ProcessAREATag(const nsIParserNode& aNode)
     AddBaseTagInfo(area); // basehref or basetarget. Fix. Bug: 30617
 
     // Add AREA object to the current map
-    mCurrentMap->AppendChildTo(area, PR_FALSE);
+    mCurrentMap->AppendChildTo(area, PR_FALSE, PR_FALSE);
     NS_RELEASE(area);
   }
   return NS_OK;
@@ -3805,7 +3823,7 @@ HTMLContentSink::ProcessBASETag(const nsIParserNode& aNode)
       element->SetDocument(mDocument, PR_FALSE, PR_TRUE);
       result = AddAttributes(aNode, element);
       if (NS_SUCCEEDED(result)) {
-        parent->AppendChildTo(element, PR_FALSE);
+        parent->AppendChildTo(element, PR_FALSE, PR_FALSE);
         if(!mInsideNoXXXTag) {
           nsAutoString value;
           if (NS_CONTENT_ATTR_HAS_VALUE == element->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::href, value)) {
@@ -4123,7 +4141,7 @@ HTMLContentSink::ProcessStyleLink(nsIHTMLContent* aElement,
       */
 
       PRBool doneLoading;
-      result = mCSSLoader->LoadStyleLink(aElement, url, aTitle, aMedia, kNameSpaceID_HTML,
+      result = mCSSLoader->LoadStyleLink(aElement, url, aTitle, aMedia, kNameSpaceID_Unknown,
                                          mStyleSheetCount++, 
                                          ((blockParser) ? mParser : nsnull),
                                          doneLoading, 
@@ -4168,7 +4186,7 @@ HTMLContentSink::ProcessLINKTag(const nsIParserNode& aNode)
         NS_RELEASE(element);
         return result;
       }
-      parent->AppendChildTo(element, PR_FALSE);
+      parent->AppendChildTo(element, PR_FALSE, PR_FALSE);
     }
     else {
       return result;
@@ -4286,7 +4304,7 @@ HTMLContentSink::ProcessMETATag(const nsIParserNode& aNode)
         NS_RELEASE(it);
         return rv;
       }
-      parent->AppendChildTo(it, PR_FALSE);
+      parent->AppendChildTo(it, PR_FALSE, PR_FALSE);
             
       // XXX It's just not sufficient to check if the parent is head. Also check for
       // the preference.
@@ -4969,10 +4987,10 @@ HTMLContentSink::ProcessSCRIPTTag(const nsIParserNode& aNode)
     if (mCurrentContext->mStack[mCurrentContext->mStackPos-1].mInsertionPoint != -1) {
       parent->InsertChildAt(element, 
                             mCurrentContext->mStack[mCurrentContext->mStackPos-1].mInsertionPoint++, 
-                            PR_FALSE);
+                            PR_FALSE, PR_FALSE);
     }
     else {
-      parent->AppendChildTo(element, PR_FALSE);
+      parent->AppendChildTo(element, PR_FALSE, PR_FALSE);
     }
   }
   else {
@@ -4994,7 +5012,7 @@ HTMLContentSink::ProcessSCRIPTTag(const nsIParserNode& aNode)
         tc->SetData(script);
         NS_RELEASE(tc);
       }
-      element->AppendChildTo(text, PR_FALSE);
+      element->AppendChildTo(text, PR_FALSE, PR_FALSE);
       text->SetDocument(mDocument, PR_FALSE, PR_TRUE);
       NS_RELEASE(text);
     }
@@ -5072,7 +5090,7 @@ HTMLContentSink::ProcessSCRIPTTag(const nsIParserNode& aNode)
       nsCOMPtr<nsIInterfaceRequestor> promptcall(do_QueryInterface(mWebShell));
       rv = NS_NewStreamLoader(getter_AddRefs(loader), mScriptURI, this,
                               nsnull, loadGroup, promptcall,
-                              nsIChannel::FORCE_RELOAD);
+                              nsIChannel::LOAD_NORMAL);
       if (NS_OK == rv) {
         rv = NS_ERROR_HTMLPARSER_BLOCK;
       }
@@ -5136,7 +5154,7 @@ HTMLContentSink::ProcessSTYLETag(const nsIParserNode& aNode)
         NS_RELEASE(element);
         return rv;
       }
-      parent->AppendChildTo(element, PR_FALSE);
+      parent->AppendChildTo(element, PR_FALSE, PR_FALSE);
     }
 
     if(!mInsideNoXXXTag && NS_SUCCEEDED(rv)) {
@@ -5202,7 +5220,7 @@ HTMLContentSink::ProcessSTYLETag(const nsIParserNode& aNode)
               tc->SetData(content);
               NS_RELEASE(tc);
             }
-            element->AppendChildTo(text, PR_FALSE);
+            element->AppendChildTo(text, PR_FALSE, PR_FALSE);
             text->SetDocument(mDocument, PR_FALSE, PR_TRUE);
             NS_RELEASE(text);
           }
@@ -5216,7 +5234,7 @@ HTMLContentSink::ProcessSTYLETag(const nsIParserNode& aNode)
 
           // Now that we have a url and a unicode input stream, parse the
           // style sheet.
-          rv = mCSSLoader->LoadInlineStyle(element, uin, title, media, kNameSpaceID_HTML,
+          rv = mCSSLoader->LoadInlineStyle(element, uin, title, media, kNameSpaceID_Unknown,
                                            mStyleSheetCount++, 
                                            ((blockParser) ? mParser : nsnull),
                                            doneLoading, this);
@@ -5234,7 +5252,7 @@ HTMLContentSink::ProcessSTYLETag(const nsIParserNode& aNode)
             return rv;
           }
 
-          rv = mCSSLoader->LoadStyleLink(element, url, title, media, kNameSpaceID_HTML,
+          rv = mCSSLoader->LoadStyleLink(element, url, title, media, kNameSpaceID_Unknown,
                                          mStyleSheetCount++, 
                                          ((blockParser) ? mParser : nsnull), 
                                          doneLoading, this);

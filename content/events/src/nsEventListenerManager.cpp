@@ -70,43 +70,91 @@ static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,
 
 nsEventListenerManager::nsEventListenerManager() 
 {
-  mEventListeners = nsnull;
-  mMouseListeners = nsnull;
-  mMouseMotionListeners = nsnull;
-  mContextMenuListeners = nsnull;
-  mKeyListeners = nsnull;
-  mLoadListeners = nsnull;
-  mFocusListeners = nsnull;
-  mFormListeners = nsnull;
-  mDragListeners = nsnull;
-  mPaintListeners = nsnull;
-  mTextListeners = nsnull;
-  mCompositionListeners = nsnull;
-  mMenuListeners = nsnull;
-  mScrollListeners = nsnull;
-  mMutationListeners = nsnull;
-  mDestroyed = PR_FALSE;
+  mManagerType = NS_ELM_NONE;
+  mSingleListener = nsnull;
+  mSingleListenerType = eEventArrayType_None;
+  mMultiListeners = nsnull;
+  mGenericListeners = nsnull;
+  mListenersRemoved = PR_FALSE;
+
   mTarget = nsnull;
   NS_INIT_REFCNT();
 }
 
+static PRBool PR_CALLBACK
+GenericListenersHashEnum(nsHashKey *aKey, void *aData, void* closure)
+{
+  nsVoidArray* listeners = NS_STATIC_CAST(nsVoidArray*, aData);
+  if (listeners) {
+    PRInt32 i, count = listeners->Count();
+    nsListenerStruct *ls;
+    PRBool* scriptOnly = NS_STATIC_CAST(PRBool*, closure);
+    for (i = 0; i < count; i++) {
+      ls = (nsListenerStruct*)listeners->ElementAt(i);
+      if (ls != nsnull) {
+        if (*scriptOnly) {
+          if (ls->mFlags & NS_PRIV_EVENT_FLAG_SCRIPT) {
+            NS_RELEASE(ls->mListener);
+            listeners->RemoveElement((void*)ls);
+            PR_DELETE(ls);
+          }
+        }
+        else {
+          NS_IF_RELEASE(ls->mListener);
+          PR_DELETE(ls);
+        }
+      }
+    }
+    //Only delete if we were removing all listeners
+    if (!*scriptOnly) {
+      delete listeners;
+    }
+  }
+  return PR_TRUE;
+}
+ 
 nsEventListenerManager::~nsEventListenerManager() 
 {
-  ReleaseListeners(&mEventListeners, PR_FALSE);
-  ReleaseListeners(&mMouseListeners, PR_FALSE);
-  ReleaseListeners(&mMouseMotionListeners, PR_FALSE);
-  ReleaseListeners(&mContextMenuListeners, PR_FALSE);
-  ReleaseListeners(&mKeyListeners, PR_FALSE);
-  ReleaseListeners(&mLoadListeners, PR_FALSE);
-  ReleaseListeners(&mFocusListeners, PR_FALSE);
-  ReleaseListeners(&mFormListeners, PR_FALSE);
-  ReleaseListeners(&mDragListeners, PR_FALSE);
-  ReleaseListeners(&mPaintListeners, PR_FALSE);
-  ReleaseListeners(&mTextListeners, PR_FALSE);
-  ReleaseListeners(&mCompositionListeners, PR_FALSE);
-  ReleaseListeners(&mMenuListeners, PR_FALSE);
-  ReleaseListeners(&mScrollListeners, PR_FALSE);
-  ReleaseListeners(&mMutationListeners, PR_FALSE);
+  RemoveAllListeners(PR_FALSE);
+}
+
+nsresult nsEventListenerManager::RemoveAllListeners(PRBool aScriptOnly)
+{
+  if (!aScriptOnly) {
+    mListenersRemoved = PR_TRUE;
+  }
+
+  ReleaseListeners(&mSingleListener, aScriptOnly);
+  if (!mSingleListener) {
+    mSingleListenerType = eEventArrayType_None;
+    mManagerType &= ~NS_ELM_SINGLE;
+  }
+
+  if (mMultiListeners) {
+    for (int i=0; i<EVENT_ARRAY_TYPE_LENGTH; i++) {
+      nsVoidArray* listeners;
+      listeners = NS_STATIC_CAST(nsVoidArray*, mMultiListeners->ElementAt(i));
+      ReleaseListeners(&listeners, aScriptOnly);
+    }
+    if (!aScriptOnly) {
+      delete mMultiListeners;
+      mMultiListeners = nsnull;
+      mManagerType &= ~NS_ELM_MULTI;
+    }
+  }
+
+  if (mGenericListeners) {
+    PRBool scriptOnly = aScriptOnly;
+    mGenericListeners->Enumerate(GenericListenersHashEnum, &scriptOnly);
+    //hash destructor
+    if (!aScriptOnly) {
+      delete mGenericListeners;
+      mGenericListeners = nsnull;
+      mManagerType &= ~NS_ELM_HASH;
+    }
+  }
+
+  return NS_OK;
 }
 
 NS_IMPL_ADDREF(nsEventListenerManager)
@@ -156,51 +204,125 @@ NS_INTERFACE_MAP_BEGIN(nsEventListenerManager)
 NS_INTERFACE_MAP_END
 #endif
 
-nsVoidArray** nsEventListenerManager::GetListenersByIID(const nsIID& aIID)
+nsVoidArray* nsEventListenerManager::GetListenersByType(EventArrayType aType, 
+                                                        nsHashKey* aKey,
+                                                        PRBool aCreate)
 {
-  if (aIID.Equals(kIDOMMouseListenerIID)) {
-    return &mMouseListeners;
+  //Look for existing listeners
+  if (aType == eEventArrayType_Hash && aKey && (mManagerType & NS_ELM_HASH)) {
+    if (mGenericListeners && mGenericListeners->Exists(aKey)) {
+      nsVoidArray* listeners = NS_STATIC_CAST(nsVoidArray*, mGenericListeners->Get(aKey));
+      return listeners;
+    }
   }
-  else if (aIID.Equals(kIDOMMouseMotionListenerIID)) {
-    return &mMouseMotionListeners;
+  else if (mManagerType & NS_ELM_SINGLE) {
+    if (mSingleListenerType == aType) {
+      return mSingleListener;
+    }
   }
-  else if (aIID.Equals(kIDOMContextMenuListenerIID)) {
-    return &mContextMenuListeners;
+  else if (mManagerType & NS_ELM_MULTI) {
+    if (mMultiListeners) {
+      PRInt32 index = aType;
+      if (index >= 0) {
+        nsVoidArray* listeners;
+        listeners = NS_STATIC_CAST(nsVoidArray*, mMultiListeners->ElementAt(index));
+        if (listeners) {
+          return listeners;
+        }
+      }
+    }
   }
-  else if (aIID.Equals(kIDOMKeyListenerIID)) {
-    return &mKeyListeners;
+
+  //If we've gotten here we didn't find anything.  See if we should create something.
+  if (aCreate) {
+    if (aType == eEventArrayType_Hash && aKey) {
+      if (!mGenericListeners) {
+        mGenericListeners = new nsHashtable();
+        if (!mGenericListeners) {
+          //out of memory
+          return nsnull;
+        }
+      }
+      NS_ASSERTION(!(mGenericListeners->Get(aKey)), "Found existing generic listeners, should be none");
+      nsVoidArray* listeners;
+      listeners = new nsVoidArray();
+      if (!listeners) {
+        //out of memory
+        return nsnull;
+      }
+      mGenericListeners->Put(aKey, listeners);
+      mManagerType |= NS_ELM_HASH;
+      return listeners;
+    }
+    else {
+      if (mManagerType & NS_ELM_SINGLE) {
+        //Change single type into multi, then add new listener with the code for the 
+        //multi type below
+        NS_ASSERTION(!mMultiListeners, "Found existing multi listener array, should be none");
+        mMultiListeners = new nsVoidArray(EVENT_ARRAY_TYPE_LENGTH);
+        if (!mMultiListeners) {
+          //out of memory
+          return nsnull;
+        }
+
+        //Move single listener to multi array
+        mMultiListeners->ReplaceElementAt((void*)mSingleListener, mSingleListenerType);
+        mSingleListener = nsnull;
+
+        mManagerType &= ~NS_ELM_SINGLE;
+        mManagerType |= NS_ELM_MULTI;
+      }
+
+      if (mManagerType & NS_ELM_MULTI) {
+        PRInt32 index = aType;
+        if (index >= 0) {
+          nsVoidArray* listeners;
+          NS_ASSERTION(!mMultiListeners->ElementAt(index), "Found existing listeners, should be none");
+          listeners = new nsVoidArray();
+          if (!listeners) {
+            //out of memory
+            return nsnull;
+          }
+          mMultiListeners->ReplaceElementAt((void*)listeners, index);
+          return listeners;
+        }
+      }
+      else {
+        //We had no pre-existing type.  This is our first non-hash listener.
+        //Create the single listener type
+        NS_ASSERTION(!mSingleListener, "Found existing single listener array, should be none");
+        mSingleListener = new nsVoidArray();
+        if (!mSingleListener) {
+          //out of memory
+          return nsnull;
+        }
+        mSingleListenerType = aType;
+        mManagerType |= NS_ELM_SINGLE;
+        return mSingleListener;
+      }
+    }
   }
-  else if (aIID.Equals(kIDOMLoadListenerIID)) {
-    return &mLoadListeners;
-  }
-  else if (aIID.Equals(kIDOMFocusListenerIID)) {
-    return &mFocusListeners;
-  }
-  else if (aIID.Equals(kIDOMFormListenerIID)) {
-    return &mFormListeners;
-  }
-  else if (aIID.Equals(kIDOMDragListenerIID)) {
-    return &mDragListeners;
-  }
-  else if (aIID.Equals(kIDOMPaintListenerIID)) {
-    return &mPaintListeners;
-  }
-  else if (aIID.Equals(kIDOMTextListenerIID)) {
-  return &mTextListeners;
-  }
-  else if (aIID.Equals(kIDOMCompositionListenerIID)) {
-  return &mCompositionListeners;
-  }
-  else if (aIID.Equals(kIDOMMenuListenerIID)) {
-  return &mMenuListeners;
-  }
-  else if (aIID.Equals(kIDOMScrollListenerIID)) {
-  return &mScrollListeners;
-  }
-  else if (aIID.Equals(kIDOMMutationListenerIID)) {
-    return &mMutationListeners;
-  }
+
   return nsnull;
+}
+
+EventArrayType nsEventListenerManager::GetTypeForIID(const nsIID& aIID)
+{ 
+  if (aIID.Equals(kIDOMMouseListenerIID)) return eEventArrayType_Mouse;
+  if (aIID.Equals(kIDOMMouseMotionListenerIID)) return eEventArrayType_MouseMotion;
+  if (aIID.Equals(kIDOMContextMenuListenerIID)) return eEventArrayType_ContextMenu;
+  if (aIID.Equals(kIDOMKeyListenerIID)) return eEventArrayType_Key;
+  if (aIID.Equals(kIDOMLoadListenerIID)) return eEventArrayType_Load;
+  if (aIID.Equals(kIDOMFocusListenerIID)) return eEventArrayType_Focus;
+  if (aIID.Equals(kIDOMFormListenerIID)) return eEventArrayType_Form;
+  if (aIID.Equals(kIDOMDragListenerIID)) return eEventArrayType_Drag;
+  if (aIID.Equals(kIDOMPaintListenerIID)) return eEventArrayType_Paint;
+  if (aIID.Equals(kIDOMTextListenerIID)) return eEventArrayType_Text;
+  if (aIID.Equals(kIDOMCompositionListenerIID)) return eEventArrayType_Composition;
+  if (aIID.Equals(kIDOMMenuListenerIID)) return eEventArrayType_Menu;
+  if (aIID.Equals(kIDOMScrollListenerIID)) return eEventArrayType_Scroll;
+  if (aIID.Equals(kIDOMMutationListenerIID)) return eEventArrayType_Mutation;
+  return eEventArrayType_None;
 }
 
 void nsEventListenerManager::ReleaseListeners(nsVoidArray** aListeners, PRBool aScriptOnly)
@@ -224,49 +346,38 @@ void nsEventListenerManager::ReleaseListeners(nsVoidArray** aListeners, PRBool a
         }
       }
     }
-    //Only delete if we were removing all listeners or if the script
-    //listener removal brought the count to 0.
-    if (!aScriptOnly || (*aListeners)->Count() == 0) {
+    //Only delete if we were removing all listeners
+    if (!aScriptOnly) {
       delete *aListeners;
       *aListeners = nsnull;
     }
   }
 }
 
-NS_IMETHODIMP
-nsEventListenerManager::GetEventListeners(nsVoidArray **aListeners,
-                                          const nsIID& aIID)
-{
-  nsVoidArray** mListeners = GetListenersByIID(aIID);
-
-  *aListeners = *mListeners;
-
-  return NS_OK;
-}
-
 /**
 * Sets events listeners of all types. 
 * @param an event listener
 */
+
 nsresult
 nsEventListenerManager::AddEventListener(nsIDOMEventListener *aListener, 
-                                         const nsIID& aIID, 
-                                         PRInt32 aFlags,
-                                         PRInt32 aSubType)
+                                         EventArrayType aType, 
+                                         PRInt32 aSubType,
+                                         nsHashKey* aKey,
+                                         PRInt32 aFlags)
 {
-  nsVoidArray** listeners = GetListenersByIID(aIID);
+  nsVoidArray* listeners = GetListenersByType(aType, aKey, PR_TRUE);
 
-  if (nsnull == *listeners) {
-    *listeners = new nsVoidArray();
-  }
-
-  if (nsnull == *listeners) {
+  //We asked the GetListenersByType to create the array if it had to.  If it didn't
+  //then we're out of memory (or a bug was added which passed in an unsupported
+  //event type)
+  if (!listeners) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
   // For mutation listeners, we need to update the global bit on the DOM window.
   // Otherwise we won't actually fire the mutation event.
-  if (aIID.Equals(NS_GET_IID(nsIDOMMutationListener))) {
+  if (aType == eEventArrayType_Mutation) {
     // Go from our target to the nearest enclosing DOM window.
     nsCOMPtr<nsIScriptGlobalObject> global;
     nsCOMPtr<nsIDocument> document;
@@ -288,8 +399,8 @@ nsEventListenerManager::AddEventListener(nsIDOMEventListener *aListener,
   nsresult rv;
   nsCOMPtr<nsIScriptEventListener> sel = do_QueryInterface(aListener, &rv);
   
-  for (int i=0; i<(*listeners)->Count(); i++) {
-    ls = (nsListenerStruct*)(*listeners)->ElementAt(i);
+  for (int i=0; i<listeners->Count(); i++) {
+    ls = (nsListenerStruct*)listeners->ElementAt(i);
     if (ls->mListener == aListener && ls->mFlags == aFlags) {
       ls->mSubType |= aSubType;
       found = PR_TRUE;
@@ -319,7 +430,7 @@ nsEventListenerManager::AddEventListener(nsIDOMEventListener *aListener,
       ls->mSubType = aSubType;
       ls->mSubTypeCapture = NS_EVENT_BITS_NONE;
       ls->mHandlerIsString = 0;
-      (*listeners)->InsertElementAt((void*)ls, (*listeners)->Count());
+      listeners->InsertElementAt((void*)ls, listeners->Count());
       NS_ADDREF(aListener);
     }
 
@@ -342,13 +453,14 @@ nsEventListenerManager::AddEventListener(nsIDOMEventListener *aListener,
 
 nsresult
 nsEventListenerManager::RemoveEventListener(nsIDOMEventListener *aListener, 
-                                            const nsIID& aIID, 
-                                            PRInt32 aFlags,
-                                            PRInt32 aSubType)
+                                            EventArrayType aType, 
+                                            PRInt32 aSubType,
+                                            nsHashKey* aKey,
+                                            PRInt32 aFlags)
 {
-  nsVoidArray** listeners = GetListenersByIID(aIID);
+  nsVoidArray* listeners = GetListenersByType(aType, aKey, PR_FALSE);
 
-  if (nsnull == *listeners) {
+  if (!listeners) {
     return NS_OK;
   }
 
@@ -357,13 +469,13 @@ nsEventListenerManager::RemoveEventListener(nsIDOMEventListener *aListener,
   nsCOMPtr<nsIScriptEventListener> sel = do_QueryInterface(aListener, &rv);
   PRBool listenerRemoved = PR_FALSE;
 
-  for (int i=0; i<(*listeners)->Count(); i++) {
-    ls = (nsListenerStruct*)(*listeners)->ElementAt(i);
+  for (int i=0; i<listeners->Count(); i++) {
+    ls = (nsListenerStruct*)listeners->ElementAt(i);
     if (ls->mListener == aListener && ls->mFlags == aFlags) {
       ls->mSubType &= ~aSubType;
       if (ls->mSubType == NS_EVENT_BITS_NONE) {
         NS_RELEASE(ls->mListener);
-        (*listeners)->RemoveElement((void*)ls);
+        listeners->RemoveElement((void*)ls);
         PR_DELETE(ls);
         listenerRemoved = PR_TRUE;
       }
@@ -378,7 +490,7 @@ nsEventListenerManager::RemoveEventListener(nsIDOMEventListener *aListener,
         if (NS_SUCCEEDED(regSel->CheckIfEqual(sel, &equal)) && equal) {
           if (ls->mFlags & aFlags && ls->mSubType & aSubType) {
             NS_RELEASE(ls->mListener);
-            (*listeners)->RemoveElement((void*)ls);
+            listeners->RemoveElement((void*)ls);
             PR_DELETE(ls);
             listenerRemoved = PR_TRUE;
           }
@@ -406,7 +518,7 @@ nsEventListenerManager::RemoveEventListener(nsIDOMEventListener *aListener,
 nsresult nsEventListenerManager::AddEventListenerByIID(nsIDOMEventListener *aListener, 
                                                        const nsIID& aIID, PRInt32 aFlags)
 {
-  AddEventListener(aListener, aIID, aFlags, NS_EVENT_BITS_NONE);
+  AddEventListener(aListener, GetTypeForIID(aIID), NS_EVENT_BITS_NONE, nsnull, aFlags);
   return NS_OK;
 }
 
@@ -415,199 +527,195 @@ nsEventListenerManager::RemoveEventListenerByIID(nsIDOMEventListener *aListener,
                                                  const nsIID& aIID,
                                                  PRInt32 aFlags)
 {
-  RemoveEventListener(aListener, aIID, aFlags, NS_EVENT_BITS_NONE);
+  RemoveEventListener(aListener, GetTypeForIID(aIID), NS_EVENT_BITS_NONE, nsnull, aFlags);
   return NS_OK;
 }
 
-nsresult nsEventListenerManager::GetIdentifiersForType(nsIAtom* aType, nsIID& aIID, PRInt32* aFlags)
+nsresult nsEventListenerManager::GetIdentifiersForType(nsIAtom* aType, EventArrayType* aArrayType, PRInt32* aFlags)
 {
   if (aType == nsLayoutAtoms::onmousedown) {
-    aIID = kIDOMMouseListenerIID;
+    *aArrayType = eEventArrayType_Mouse;
     *aFlags = NS_EVENT_BITS_MOUSE_MOUSEDOWN;
   }
   else if (aType == nsLayoutAtoms::onmouseup) {
-    aIID = kIDOMMouseListenerIID;
+    *aArrayType = eEventArrayType_Mouse;
     *aFlags = NS_EVENT_BITS_MOUSE_MOUSEUP;
   }
   else if (aType == nsLayoutAtoms::onclick) {
-    aIID = kIDOMMouseListenerIID;
+    *aArrayType = eEventArrayType_Mouse;
     *aFlags = NS_EVENT_BITS_MOUSE_CLICK;
   }
   else if (aType == nsLayoutAtoms::ondblclick) {
-    aIID = kIDOMMouseListenerIID;
+    *aArrayType = eEventArrayType_Mouse;
     *aFlags = NS_EVENT_BITS_MOUSE_DBLCLICK;
   }
   else if (aType == nsLayoutAtoms::onmouseover) {
-    aIID = kIDOMMouseListenerIID;
+    *aArrayType = eEventArrayType_Mouse;
     *aFlags = NS_EVENT_BITS_MOUSE_MOUSEOVER;
   }
   else if (aType == nsLayoutAtoms::onmouseout) {
-    aIID = kIDOMMouseListenerIID;
+    *aArrayType = eEventArrayType_Mouse;
     *aFlags = NS_EVENT_BITS_MOUSE_MOUSEOUT;
   }
   else if (aType == nsLayoutAtoms::onkeydown) {
-    aIID = kIDOMKeyListenerIID;
+    *aArrayType = eEventArrayType_Key;
     *aFlags = NS_EVENT_BITS_KEY_KEYDOWN;
   }
   else if (aType == nsLayoutAtoms::onkeyup) {
-    aIID = kIDOMKeyListenerIID;
+    *aArrayType = eEventArrayType_Key;
     *aFlags = NS_EVENT_BITS_KEY_KEYUP;
   }
   else if (aType == nsLayoutAtoms::onkeypress) {
-    aIID = kIDOMKeyListenerIID;
+    *aArrayType = eEventArrayType_Key;
     *aFlags = NS_EVENT_BITS_KEY_KEYPRESS;
   }
   else if (aType == nsLayoutAtoms::onmousemove) {
-    aIID = kIDOMMouseMotionListenerIID;
+    *aArrayType = eEventArrayType_MouseMotion;
     *aFlags = NS_EVENT_BITS_MOUSEMOTION_MOUSEMOVE;
   }
   else if (aType == nsLayoutAtoms::oncontextmenu) {
-    aIID = kIDOMContextMenuListenerIID;
+    *aArrayType = eEventArrayType_ContextMenu;
     *aFlags = NS_EVENT_BITS_CONTEXTMENU;
   }
   else if (aType == nsLayoutAtoms::onfocus) {
-    aIID = kIDOMFocusListenerIID;
+    *aArrayType = eEventArrayType_Focus;
     *aFlags = NS_EVENT_BITS_FOCUS_FOCUS;
   }
   else if (aType == nsLayoutAtoms::onblur) {
-    aIID = kIDOMFocusListenerIID;
+    *aArrayType = eEventArrayType_Focus;
     *aFlags = NS_EVENT_BITS_FOCUS_BLUR;
   }
   else if (aType == nsLayoutAtoms::onsubmit) {
-    aIID = kIDOMFormListenerIID;
+    *aArrayType = eEventArrayType_Form;
     *aFlags = NS_EVENT_BITS_FORM_SUBMIT;
   }
   else if (aType == nsLayoutAtoms::onreset) {
-    aIID = kIDOMFormListenerIID;
+    *aArrayType = eEventArrayType_Form;
     *aFlags = NS_EVENT_BITS_FORM_RESET;
   }
   else if (aType == nsLayoutAtoms::onchange) {
-    aIID = kIDOMFormListenerIID;
+    *aArrayType = eEventArrayType_Form;
     *aFlags = NS_EVENT_BITS_FORM_CHANGE;
   }
   else if (aType == nsLayoutAtoms::onselect) {
-    aIID = kIDOMFormListenerIID;
+    *aArrayType = eEventArrayType_Form;
     *aFlags = NS_EVENT_BITS_FORM_SELECT;
   }
   else if (aType == nsLayoutAtoms::oninput) {
-    aIID = kIDOMFormListenerIID;
+    *aArrayType = eEventArrayType_Form;
     *aFlags = NS_EVENT_BITS_FORM_INPUT;
   }
   else if (aType == nsLayoutAtoms::onload) {
-    aIID = kIDOMLoadListenerIID;
+    *aArrayType = eEventArrayType_Load;
     *aFlags = NS_EVENT_BITS_LOAD_LOAD;
   }
   else if (aType == nsLayoutAtoms::onunload) {
-    aIID = kIDOMLoadListenerIID;
+    *aArrayType = eEventArrayType_Load;
     *aFlags = NS_EVENT_BITS_LOAD_UNLOAD;
   }
   else if (aType == nsLayoutAtoms::onabort) {
-    aIID = kIDOMLoadListenerIID;
+    *aArrayType = eEventArrayType_Load;
     *aFlags = NS_EVENT_BITS_LOAD_ABORT;
   }
   else if (aType == nsLayoutAtoms::onerror) {
-    aIID = kIDOMLoadListenerIID;
+    *aArrayType = eEventArrayType_Load;
     *aFlags = NS_EVENT_BITS_LOAD_ERROR;
   }
   else if (aType == nsLayoutAtoms::onpaint) {
-    aIID = kIDOMPaintListenerIID;
+    *aArrayType = eEventArrayType_Paint;
     *aFlags = NS_EVENT_BITS_PAINT_PAINT;
   }
   else if (aType == nsLayoutAtoms::onresize) {
-    aIID = kIDOMPaintListenerIID;
+    *aArrayType = eEventArrayType_Paint;
     *aFlags = NS_EVENT_BITS_PAINT_RESIZE;
   }
   else if (aType == nsLayoutAtoms::onscroll) {
-    aIID = kIDOMPaintListenerIID;
+    *aArrayType = eEventArrayType_Paint;
     *aFlags = NS_EVENT_BITS_PAINT_SCROLL;
   } // extened this to handle IME related events
   else if (aType == nsLayoutAtoms::oncreate) {
-    aIID = kIDOMMenuListenerIID; 
+    *aArrayType = eEventArrayType_Menu; 
     *aFlags = NS_EVENT_BITS_MENU_CREATE;
   }
   else if (aType == nsLayoutAtoms::onclose) {
-    aIID = kIDOMMenuListenerIID; 
+    *aArrayType = eEventArrayType_Menu; 
     *aFlags = NS_EVENT_BITS_XUL_CLOSE;
   }
   else if (aType == nsLayoutAtoms::ondestroy) {
-    aIID = kIDOMMenuListenerIID; 
+    *aArrayType = eEventArrayType_Menu; 
     *aFlags = NS_EVENT_BITS_MENU_DESTROY;
   }
   else if (aType == nsLayoutAtoms::oncommand) {
-    aIID = kIDOMMenuListenerIID; 
+    *aArrayType = eEventArrayType_Menu; 
     *aFlags = NS_EVENT_BITS_MENU_ACTION;
   }
   else if (aType == nsLayoutAtoms::onbroadcast) {
-    aIID = kIDOMMenuListenerIID;
+    *aArrayType = eEventArrayType_Menu;
     *aFlags = NS_EVENT_BITS_XUL_BROADCAST;
   }
   else if (aType == nsLayoutAtoms::oncommandupdate) {
-    aIID = kIDOMMenuListenerIID;
+    *aArrayType = eEventArrayType_Menu;
     *aFlags = NS_EVENT_BITS_XUL_COMMAND_UPDATE;
   }
   else if (aType == nsLayoutAtoms::onoverflow) {
-    aIID = kIDOMScrollListenerIID;
+    *aArrayType = eEventArrayType_Scroll;
     *aFlags = NS_EVENT_BITS_SCROLLPORT_OVERFLOW;
   }
   else if (aType == nsLayoutAtoms::onunderflow) {
-    aIID = kIDOMScrollListenerIID;
+    *aArrayType = eEventArrayType_Scroll;
     *aFlags = NS_EVENT_BITS_SCROLLPORT_UNDERFLOW;
   }
   else if (aType == nsLayoutAtoms::onoverflowchanged) {
-    aIID = kIDOMScrollListenerIID;
+    *aArrayType = eEventArrayType_Scroll;
     *aFlags = NS_EVENT_BITS_SCROLLPORT_OVERFLOWCHANGED;
   }
   else if (aType == nsLayoutAtoms::ondragenter) {
-    aIID = NS_GET_IID(nsIDOMDragListener);
+    *aArrayType = eEventArrayType_Drag;
     *aFlags = NS_EVENT_BITS_DRAG_ENTER;
   }
   else if (aType == nsLayoutAtoms::ondragover) {
-    aIID = NS_GET_IID(nsIDOMDragListener); 
+    *aArrayType = eEventArrayType_Drag; 
     *aFlags = NS_EVENT_BITS_DRAG_OVER;
   }
   else if (aType == nsLayoutAtoms::ondragexit) {
-    aIID = NS_GET_IID(nsIDOMDragListener); 
+    *aArrayType = eEventArrayType_Drag; 
     *aFlags = NS_EVENT_BITS_DRAG_EXIT;
   }
   else if (aType == nsLayoutAtoms::ondragdrop) {
-    aIID = NS_GET_IID(nsIDOMDragListener); 
+    *aArrayType = eEventArrayType_Drag; 
     *aFlags = NS_EVENT_BITS_DRAG_DROP;
   }
   else if (aType == nsLayoutAtoms::ondraggesture) {
-    aIID = NS_GET_IID(nsIDOMDragListener); 
+    *aArrayType = eEventArrayType_Drag; 
     *aFlags = NS_EVENT_BITS_DRAG_GESTURE;
   }
   else if (aType == nsLayoutAtoms::onDOMSubtreeModified) {
-    aIID = NS_GET_IID(nsIDOMMutationListener);
+    *aArrayType = eEventArrayType_Mutation;
     *aFlags = NS_EVENT_BITS_MUTATION_SUBTREEMODIFIED;
   }
   else if (aType == nsLayoutAtoms::onDOMNodeInserted) {
-    aIID = NS_GET_IID(nsIDOMMutationListener);
+    *aArrayType = eEventArrayType_Mutation;
     *aFlags = NS_EVENT_BITS_MUTATION_NODEINSERTED;
   }
   else if (aType == nsLayoutAtoms::onDOMNodeRemoved) {
-    aIID = NS_GET_IID(nsIDOMMutationListener);
+    *aArrayType = eEventArrayType_Mutation;
     *aFlags = NS_EVENT_BITS_MUTATION_NODEREMOVED;
   }
   else if (aType == nsLayoutAtoms::onDOMNodeInsertedIntoDocument) {
-    aIID = NS_GET_IID(nsIDOMMutationListener);
+    *aArrayType = eEventArrayType_Mutation;
     *aFlags = NS_EVENT_BITS_MUTATION_NODEINSERTEDINTODOCUMENT;
   }
   else if (aType == nsLayoutAtoms::onDOMNodeRemovedFromDocument) {
-    aIID = NS_GET_IID(nsIDOMMutationListener);
+    *aArrayType = eEventArrayType_Mutation;
     *aFlags = NS_EVENT_BITS_MUTATION_NODEREMOVEDFROMDOCUMENT;
   }
   else if (aType == nsLayoutAtoms::onDOMAttrModified) {
-    aIID = NS_GET_IID(nsIDOMMutationListener);
+    *aArrayType = eEventArrayType_Mutation;
     *aFlags = NS_EVENT_BITS_MUTATION_ATTRMODIFIED;
   }
   else if (aType == nsLayoutAtoms::onDOMCharacterDataModified) {
-    aIID = NS_GET_IID(nsIDOMMutationListener);
+    *aArrayType = eEventArrayType_Mutation;
     *aFlags = NS_EVENT_BITS_MUTATION_CHARACTERDATAMODIFIED;
-  }
-  else if (aType == nsLayoutAtoms::oncontextmenu) {
-    aIID = NS_GET_IID(nsIDOMContextMenuListener);
-    *aFlags = NS_EVENT_BITS_CONTEXT_MENU;
   }
   else {
     return NS_ERROR_FAILURE;
@@ -621,16 +729,21 @@ nsEventListenerManager::AddEventListenerByType(nsIDOMEventListener *aListener,
                                                PRInt32 aFlags)
 {
   PRInt32 subType;
-  nsIID iid;
+  EventArrayType arrayType;
   nsAutoString str; str.AssignWithConversion("on");
   nsIAtom* atom;
 
   str.Append(aType);
   atom = NS_NewAtom(str);
 
-  if (NS_OK == GetIdentifiersForType(atom, iid, &subType)) {
-    AddEventListener(aListener, iid, aFlags, subType);
+  if (NS_OK == GetIdentifiersForType(atom, &arrayType, &subType)) {
+    AddEventListener(aListener, arrayType, subType, nsnull, aFlags);
   }
+  else {
+    nsStringKey key(aType);
+    AddEventListener(aListener, eEventArrayType_Hash, NS_EVENT_BITS_NONE, &key, aFlags);
+  }
+
 
   NS_IF_RELEASE(atom);
 
@@ -643,16 +756,19 @@ nsEventListenerManager::RemoveEventListenerByType(nsIDOMEventListener *aListener
                                                   PRInt32 aFlags)
 {
   PRInt32 subType;
-  nsIID iid;
-
+  EventArrayType arrayType;
   nsAutoString str; str.AssignWithConversion("on");
   nsIAtom* atom;
 
   str.Append(aType);
   atom = NS_NewAtom(str);
 
-  if (NS_OK == GetIdentifiersForType(atom, iid, &subType)) {
-    RemoveEventListener(aListener, iid, aFlags, subType);
+  if (NS_OK == GetIdentifiersForType(atom, &arrayType, &subType)) {
+    RemoveEventListener(aListener, arrayType, subType, nsnull, aFlags);
+  }
+  else {
+    nsStringKey key(aType);
+    RemoveEventListener(aListener, eEventArrayType_Hash, NS_EVENT_BITS_NONE, &key, aFlags);
   }
 
   NS_IF_RELEASE(atom);
@@ -661,20 +777,16 @@ nsEventListenerManager::RemoveEventListenerByType(nsIDOMEventListener *aListener
 }
 
 nsListenerStruct*
-nsEventListenerManager::FindJSEventListener(REFNSIID aIID)
+nsEventListenerManager::FindJSEventListener(EventArrayType aType)
 {
-  nsVoidArray *listeners;
-
-  nsresult result = GetEventListeners(&listeners, aIID);
-  if (NS_SUCCEEDED(result)) {
+  nsVoidArray *listeners = GetListenersByType(aType, nsnull, PR_FALSE);
+  if (listeners) {
     //Run through the listeners for this IID and see if a script listener is registered
-    if (nsnull != listeners) {
-      nsListenerStruct *ls;
-      for (int i=0; i<listeners->Count(); i++) {
-        ls = (nsListenerStruct*)listeners->ElementAt(i);
-        if (ls->mFlags & NS_PRIV_EVENT_FLAG_SCRIPT) {
-          return ls;
-        }
+    nsListenerStruct *ls;
+    for (int i=0; i<listeners->Count(); i++) {
+      ls = (nsListenerStruct*)listeners->ElementAt(i);
+      if (ls->mFlags & NS_PRIV_EVENT_FLAG_SCRIPT) {
+        return ls;
       }
     }
   }
@@ -691,30 +803,28 @@ nsEventListenerManager::SetJSEventListener(nsIScriptContext *aContext,
   nsresult rv = NS_OK;
   nsListenerStruct *ls;
   PRInt32 flags;
-  nsIID iid;
+  EventArrayType arrayType;
 
-  rv = GetIdentifiersForType(aName, iid, &flags);
-  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_SUCCESS(GetIdentifiersForType(aName, &arrayType, &flags),
+                    NS_ERROR_FAILURE);
+  
+  ls = FindJSEventListener(arrayType);
 
-  ls = FindJSEventListener(iid);
-
-  if (!ls) {
+  if (nsnull == ls) {
     //If we didn't find a script listener or no listeners existed
     //create and add a new one.
-    nsCOMPtr<nsIDOMEventListener> scriptListener;
-
     nsCOMPtr<nsIDOMScriptObjectFactory> factory =
       do_GetService(kDOMScriptObjectFactoryCID);
     NS_ENSURE_TRUE(factory, NS_ERROR_FAILURE);
 
+    nsCOMPtr<nsIDOMEventListener> scriptListener;
     rv = factory->NewJSEventListener(aContext, aObject,
                                      getter_AddRefs(scriptListener));
-
     if (NS_SUCCEEDED(rv)) {
-      AddEventListenerByIID(scriptListener, iid,
-                            NS_EVENT_FLAG_BUBBLE | NS_PRIV_EVENT_FLAG_SCRIPT);
+      AddEventListener(scriptListener, arrayType, NS_EVENT_BITS_NONE, nsnull,
+                       NS_EVENT_FLAG_BUBBLE | NS_PRIV_EVENT_FLAG_SCRIPT);
 
-      ls = FindJSEventListener(iid);
+      ls = FindJSEventListener(arrayType);
     }
   }
 
@@ -848,11 +958,11 @@ nsEventListenerManager::CompileScriptEventListener(nsIScriptContext *aContext,
   nsresult result = NS_OK;
   nsListenerStruct *ls;
   PRInt32 subType;
-  nsIID iid;
+  EventArrayType arrayType;
 
-  result = GetIdentifiersForType(aName, iid, &subType);
+  result = GetIdentifiersForType(aName, &arrayType, &subType);
   if (NS_SUCCEEDED(result)) {
-    ls = FindJSEventListener(iid);
+    ls = FindJSEventListener(arrayType);
     if (!ls) {
       //nothing to compile
       return NS_OK;
@@ -1006,6 +1116,9 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
 {
   NS_ENSURE_ARG_POINTER(aEventStatus);
   nsresult ret = NS_OK;
+
+  mListenersRemoved = PR_FALSE;
+
   if (aFlags & NS_EVENT_FLAG_INIT) {
     aFlags |= (NS_EVENT_FLAG_BUBBLE | NS_EVENT_FLAG_CAPTURE);
   }
@@ -1019,8 +1132,26 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
      before we're ready. */
   nsCOMPtr<nsIEventListenerManager> kungFuDeathGrip(this);
   nsAutoString empty;
+  nsVoidArray *listeners;
 
   switch(aEvent->message) {
+    case NS_USER_DEFINED_EVENT:
+      listeners = GetListenersByType(eEventArrayType_Hash, aEvent->userType, PR_FALSE);
+      if (listeners) {
+        if (nsnull == *aDOMEvent) {
+          ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, empty, aEvent);
+        }
+        if (NS_SUCCEEDED(ret)) {
+          for (int i=0; !mListenersRemoved && listeners && i<listeners->Count(); i++) {
+            nsListenerStruct *ls = (nsListenerStruct*)listeners->ElementAt(i);
+            if (ls->mFlags & aFlags) {
+              ret = HandleEventSubType(ls, *aDOMEvent, aCurrentTarget, NS_EVENT_BITS_NONE, aFlags);
+            }
+          }
+        }
+      }
+      break;
+
     case NS_MOUSE_LEFT_BUTTON_DOWN:
     case NS_MOUSE_MIDDLE_BUTTON_DOWN:
     case NS_MOUSE_RIGHT_BUTTON_DOWN:
@@ -1035,20 +1166,17 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
     case NS_MOUSE_RIGHT_DOUBLECLICK:
     case NS_MOUSE_ENTER_SYNTH:
     case NS_MOUSE_EXIT_SYNTH:
-      if (nsnull != mMouseListeners) {
+      listeners = GetListenersByType(eEventArrayType_Mouse, nsnull, PR_FALSE);
+      if (listeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, empty, aEvent);
         }
         if (NS_OK == ret) {
-          for (int i=0; mMouseListeners && i<mMouseListeners->Count(); i++) {
-            nsListenerStruct *ls;
-
-            ls = (nsListenerStruct*)mMouseListeners->ElementAt(i);
+          for (int i=0; !mListenersRemoved && listeners && i<listeners->Count(); i++) {
+            nsListenerStruct *ls = (nsListenerStruct*)listeners->ElementAt(i);
             
             if (ls->mFlags & aFlags) {
-              nsCOMPtr<nsIDOMMouseListener> mouseListener =
-                do_QueryInterface(ls->mListener);
-
+              nsCOMPtr<nsIDOMMouseListener> mouseListener (do_QueryInterface(ls->mListener));
               if (mouseListener) {
                 switch(aEvent->message) {
                   case NS_MOUSE_LEFT_BUTTON_DOWN:
@@ -1143,27 +1271,25 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
       break;
   
     case NS_MOUSE_MOVE:
-      if (nsnull != mMouseMotionListeners) {
+      listeners = GetListenersByType(eEventArrayType_MouseMotion, nsnull, PR_FALSE);
+      if (listeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, empty, aEvent);
         }
         if (NS_OK == ret) {
-          for (int i=0; mMouseMotionListeners && i<mMouseMotionListeners->Count(); i++) {
-            nsListenerStruct *ls;
-            nsIDOMMouseMotionListener *mMouseMotionListener;
-
-            ls = (nsListenerStruct*)mMouseMotionListeners->ElementAt(i);
+          for (int i=0; !mListenersRemoved && listeners && i<listeners->Count(); i++) {
+            nsListenerStruct *ls = (nsListenerStruct*)listeners->ElementAt(i);
 
             if (ls->mFlags & aFlags) {
-              if (NS_OK == ls->mListener->QueryInterface(kIDOMMouseMotionListenerIID, (void**)&mMouseMotionListener)) {
+              nsCOMPtr<nsIDOMMouseMotionListener> mousemlistener (do_QueryInterface(ls->mListener));
+              if (mousemlistener) {
                 switch(aEvent->message) {
                   case NS_MOUSE_MOVE:
-                    ret = mMouseMotionListener->MouseMove(*aDOMEvent);
+                    ret = mousemlistener->MouseMove(*aDOMEvent);
                     break;
                   default:
                     break;
                 }
-                NS_RELEASE(mMouseMotionListener);
               }
               else {
                 PRBool correctSubType = PR_FALSE;
@@ -1189,19 +1315,18 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
       break;
 
     case NS_CONTEXTMENU:
-      if (nsnull != mContextMenuListeners) {
+      listeners = GetListenersByType(eEventArrayType_ContextMenu, nsnull, PR_FALSE);
+      if (listeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, empty, aEvent);
         }
         if (NS_OK == ret) {
-          for (int i=0; mContextMenuListeners && i<mContextMenuListeners->Count(); i++) {
-            nsListenerStruct *ls;
-            nsIDOMContextMenuListener *contextMenuListener;
-
-            ls = (nsListenerStruct*)mContextMenuListeners->ElementAt(i);
+          for (int i=0; !mListenersRemoved && listeners && i<listeners->Count(); i++) {
+            nsListenerStruct *ls = (nsListenerStruct*)listeners->ElementAt(i);
 
             if (ls->mFlags & aFlags) {
-              if (NS_OK == ls->mListener->QueryInterface(kIDOMContextMenuListenerIID, (void**)&contextMenuListener)) {
+              nsCOMPtr<nsIDOMContextMenuListener> contextMenuListener (do_QueryInterface(ls->mListener));
+              if (contextMenuListener) {
                 switch(aEvent->message) {
                   case NS_CONTEXTMENU:
                     ret = contextMenuListener->ContextMenu(*aDOMEvent);
@@ -1209,7 +1334,6 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
                   default:
                     break;
                 }
-                NS_RELEASE(contextMenuListener);
               }
               else {
                 PRBool correctSubType = PR_FALSE;
@@ -1238,35 +1362,34 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
     case NS_COMPOSITION_END:
     case NS_COMPOSITION_QUERY:
     case NS_RECONVERSION_QUERY:
-#if DEBUG_TAGUE
-      printf("DOM: got composition event\n");
-#endif
-      if (nsnull != mCompositionListeners) {
+      listeners = GetListenersByType(eEventArrayType_Composition, nsnull, PR_FALSE);
+      if (listeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent,aPresContext,empty,aEvent);
         }
         if (NS_OK == ret) {
-          for(int i=0; mTextListeners && i<mTextListeners->Count();i++) {
-            nsListenerStruct *ls;
-            nsIDOMCompositionListener* mCompositionListener;
-            ls =(nsListenerStruct*)mCompositionListeners->ElementAt(i);
+          //XXX These were text listeners, seems like they should be composition
+          for(int i=0; !mListenersRemoved && listeners && i<listeners->Count();i++) {
+            nsListenerStruct *ls = (nsListenerStruct*)listeners->ElementAt(i);
 
             if (ls->mFlags & aFlags) {
-              if (NS_OK == ls->mListener->QueryInterface(kIDOMCompositionListenerIID, (void**)&mCompositionListener)) {
-                if (aEvent->message==NS_COMPOSITION_START) {
-                  ret = mCompositionListener->HandleStartComposition(*aDOMEvent);
+              nsCOMPtr<nsIDOMCompositionListener> compositionListener (do_QueryInterface(ls->mListener));
+              if (compositionListener) {
+                switch (aEvent->message) {
+                  case NS_COMPOSITION_START:
+                    ret = compositionListener->HandleStartComposition(*aDOMEvent);
+                    break;
+                  case NS_COMPOSITION_END: 
+                    ret = compositionListener->HandleEndComposition(*aDOMEvent);
+                    break;
+                  case NS_COMPOSITION_QUERY:
+                    ret = compositionListener->HandleQueryComposition(*aDOMEvent);
+                    break;
+                  case NS_RECONVERSION_QUERY:
+                    ret = compositionListener->HandleQueryReconversion(*aDOMEvent);
+                    break;
                 }
-                else if (aEvent->message==NS_COMPOSITION_END) {
-                  ret = mCompositionListener->HandleEndComposition(*aDOMEvent);
-                }
-                else if (aEvent->message==NS_COMPOSITION_QUERY) {
-                  ret = mCompositionListener->HandleQueryComposition(*aDOMEvent);
-                }
-                else if (aEvent->message==NS_RECONVERSION_QUERY) {
-                  ret = mCompositionListener->HandleQueryReconversion(*aDOMEvent);
-				}
               }
-              NS_RELEASE(mCompositionListener);
             }
             else {
               PRBool correctSubType = PR_FALSE;
@@ -1303,24 +1426,19 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
       break;
 
     case NS_TEXT_EVENT:
-#if DEBUG_TAGUE
-      printf("DOM: got text event\n");
-#endif
-      if (nsnull != mTextListeners) {
+      listeners = GetListenersByType(eEventArrayType_Text, nsnull, PR_FALSE);
+      if (listeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent,aPresContext,empty,aEvent);
         }
         if (NS_OK == ret) {
-          for (int i=0; mTextListeners && i<mTextListeners->Count(); i++) {
-            nsListenerStruct *ls;
-            nsIDOMTextListener *mTextListener;
-
-            ls = (nsListenerStruct*)mTextListeners->ElementAt(i);
+          for (int i=0; !mListenersRemoved && listeners && i<listeners->Count(); i++) {
+            nsListenerStruct *ls = (nsListenerStruct*)listeners->ElementAt(i);
 
             if (ls->mFlags & aFlags) {
-              if (NS_OK == ls->mListener->QueryInterface(kIDOMTextListenerIID, (void**)&mTextListener)) {
-                ret = mTextListener->HandleText(*aDOMEvent);
-                NS_RELEASE(mTextListener);
+              nsCOMPtr<nsIDOMTextListener> textListener (do_QueryInterface(ls->mListener));
+              if (textListener) {
+                ret = textListener->HandleText(*aDOMEvent);
               }
               else {
                 PRBool correctSubType = PR_FALSE;
@@ -1341,33 +1459,31 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
     case NS_KEY_UP:
     case NS_KEY_DOWN:
     case NS_KEY_PRESS:
-      if (nsnull != mKeyListeners) {
+      listeners = GetListenersByType(eEventArrayType_Key, nsnull, PR_FALSE);
+      if (listeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, empty, aEvent);
         }
         if (NS_OK == ret) {
-          for (int i=0; mKeyListeners && i<mKeyListeners->Count(); i++) {
-            nsListenerStruct *ls;
-            nsIDOMKeyListener *mKeyListener;
-
-            ls = (nsListenerStruct*)mKeyListeners->ElementAt(i);
+          for (int i=0; !mListenersRemoved && listeners && i<listeners->Count(); i++) {
+            nsListenerStruct *ls = (nsListenerStruct*)listeners->ElementAt(i);
 
             if (ls->mFlags & aFlags) {
-              if (NS_OK == ls->mListener->QueryInterface(kIDOMKeyListenerIID, (void**)&mKeyListener)) {
+              nsCOMPtr<nsIDOMKeyListener> keyListener (do_QueryInterface(ls->mListener));
+              if (keyListener) {
                 switch(aEvent->message) {
                   case NS_KEY_UP:
-                    ret = mKeyListener->KeyUp(*aDOMEvent);
+                    ret = keyListener->KeyUp(*aDOMEvent);
                     break;
                   case NS_KEY_DOWN:
-                    ret = mKeyListener->KeyDown(*aDOMEvent);
+                    ret = keyListener->KeyDown(*aDOMEvent);
                     break;
                   case NS_KEY_PRESS:
-                    ret = mKeyListener->KeyPress(*aDOMEvent);
+                    ret = keyListener->KeyPress(*aDOMEvent);
                     break;
                   default:
                     break;
                 }
-                NS_RELEASE(mKeyListener);
               }
               else {
                 PRBool correctSubType = PR_FALSE;
@@ -1406,30 +1522,28 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
 
     case NS_FOCUS_CONTENT:
     case NS_BLUR_CONTENT:
-      if (nsnull != mFocusListeners) {
+      listeners = GetListenersByType(eEventArrayType_Focus, nsnull, PR_FALSE);
+      if (listeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, empty, aEvent);
         }
         if (NS_OK == ret) {
-          for (int i=0; mFocusListeners && i<mFocusListeners->Count(); i++) {
-            nsListenerStruct *ls;
-            nsIDOMFocusListener *mFocusListener;
-
-            ls = (nsListenerStruct*)mFocusListeners->ElementAt(i);
+          for (int i=0; !mListenersRemoved && listeners && i<listeners->Count(); i++) {
+            nsListenerStruct *ls = (nsListenerStruct*)listeners->ElementAt(i);
 
             if (ls->mFlags & aFlags) {
-              if (NS_OK == ls->mListener->QueryInterface(kIDOMFocusListenerIID, (void**)&mFocusListener)) {
+              nsCOMPtr<nsIDOMFocusListener> focusListener (do_QueryInterface(ls->mListener));
+              if (focusListener) {
                 switch(aEvent->message) {
                   case NS_FOCUS_CONTENT:
-                    ret = mFocusListener->Focus(*aDOMEvent);
+                    ret = focusListener->Focus(*aDOMEvent);
                     break;
                   case NS_BLUR_CONTENT:
-                    ret = mFocusListener->Blur(*aDOMEvent);
+                    ret = focusListener->Blur(*aDOMEvent);
                     break;
                   default:
                     break;
                 }
-                NS_RELEASE(mFocusListener);
               }
               else {
                 PRBool correctSubType = PR_FALSE;
@@ -1465,39 +1579,37 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
     case NS_FORM_CHANGE:
     case NS_FORM_SELECTED:
     case NS_FORM_INPUT:
-      if (nsnull != mFormListeners) {
+      listeners = GetListenersByType(eEventArrayType_Form, nsnull, PR_FALSE);
+      if (listeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, empty, aEvent);
         }
         if (NS_OK == ret) {
-          for (int i=0; mFormListeners && i<mFormListeners->Count(); i++) {
-            nsListenerStruct *ls;
-            nsIDOMFormListener *mFormListener;
-
-            ls = (nsListenerStruct*)mFormListeners->ElementAt(i);
+          for (int i=0; !mListenersRemoved && listeners && i<listeners->Count(); i++) {
+            nsListenerStruct *ls = (nsListenerStruct*)listeners->ElementAt(i);
 
             if (ls->mFlags & aFlags) {
-              if (NS_OK == ls->mListener->QueryInterface(kIDOMFormListenerIID, (void**)&mFormListener)) {
+              nsCOMPtr<nsIDOMFormListener> formListener(do_QueryInterface(ls->mListener));
+              if (formListener) {
                 switch(aEvent->message) {
                   case NS_FORM_SUBMIT:
-                    ret = mFormListener->Submit(*aDOMEvent);
+                    ret = formListener->Submit(*aDOMEvent);
                     break;
                   case NS_FORM_RESET:
-                    ret = mFormListener->Reset(*aDOMEvent);
+                    ret = formListener->Reset(*aDOMEvent);
                     break;
                   case NS_FORM_CHANGE:
-                    ret = mFormListener->Change(*aDOMEvent);
+                    ret = formListener->Change(*aDOMEvent);
                     break;
                   case NS_FORM_SELECTED:
-                    ret = mFormListener->Select(*aDOMEvent);
+                    ret = formListener->Select(*aDOMEvent);
                     break;
                   case NS_FORM_INPUT:
-                    ret = mFormListener->Input(*aDOMEvent);
+                    ret = formListener->Input(*aDOMEvent);
                     break;
                   default:
                     break;
                 }
-                NS_RELEASE(mFormListener);
               }
               else {
                 PRBool correctSubType = PR_FALSE;
@@ -1551,35 +1663,32 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
     case NS_IMAGE_LOAD:
     case NS_IMAGE_ERROR:
     case NS_SCRIPT_ERROR:
-
-      if (nsnull != mLoadListeners) {
+      listeners = GetListenersByType(eEventArrayType_Load, nsnull, PR_FALSE);
+      if (listeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, empty, aEvent);
         }
         if (NS_OK == ret) {
-          for (int i=0; mLoadListeners && i<mLoadListeners->Count(); i++) {
-            nsListenerStruct *ls;
-            nsIDOMLoadListener *mLoadListener;
-
-            ls = (nsListenerStruct*)mLoadListeners->ElementAt(i);
+          for (int i=0; !mListenersRemoved && listeners && i<listeners->Count(); i++) {
+            nsListenerStruct *ls = (nsListenerStruct*)listeners->ElementAt(i);
 
             if (ls->mFlags & aFlags) {
-              if (NS_OK == ls->mListener->QueryInterface(kIDOMLoadListenerIID, (void**)&mLoadListener)) {
+              nsCOMPtr<nsIDOMLoadListener> loadListener(do_QueryInterface(ls->mListener));
+              if (loadListener) {
                 switch(aEvent->message) {
                   case NS_PAGE_LOAD:
                   case NS_IMAGE_LOAD:
-                    ret = mLoadListener->Load(*aDOMEvent);
+                    ret = loadListener->Load(*aDOMEvent);
                     break;
                   case NS_PAGE_UNLOAD:
-                    ret = mLoadListener->Unload(*aDOMEvent);
+                    ret = loadListener->Unload(*aDOMEvent);
                     break;
                   case NS_IMAGE_ERROR:
                   case NS_SCRIPT_ERROR:
-                    ret = mLoadListener->Error(*aDOMEvent);
+                    ret = loadListener->Error(*aDOMEvent);
                   default:
                     break;
                 }
-                NS_RELEASE(mLoadListener);
               }
               else {
                 PRBool correctSubType = PR_FALSE;
@@ -1621,20 +1730,18 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
     case NS_PAINT:
     case NS_RESIZE_EVENT:
     case NS_SCROLL_EVENT:
-      if (nsnull != mPaintListeners) {
+      listeners = GetListenersByType(eEventArrayType_Paint, nsnull, PR_FALSE);
+      if (listeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, empty, aEvent);
         }
         if (NS_OK == ret) {
-          for (int i=0; mPaintListeners && i<mPaintListeners->Count(); i++) {
-            nsListenerStruct *ls;
-            nsIDOMPaintListener *paintListener;
-
-            ls = (nsListenerStruct*)mPaintListeners->ElementAt(i);
+          for (int i=0; !mListenersRemoved && listeners && i<listeners->Count(); i++) {
+            nsListenerStruct *ls = (nsListenerStruct*)listeners->ElementAt(i);
 
             if (ls->mFlags & aFlags) {
-              if (NS_OK == ls->mListener->QueryInterface(kIDOMPaintListenerIID,
-                                                       (void**)&paintListener)) {
+              nsCOMPtr<nsIDOMPaintListener> paintListener(do_QueryInterface(ls->mListener));
+              if (paintListener) {
                 switch(aEvent->message) {
                   case NS_PAINT:
                     ret = paintListener->Paint(*aDOMEvent);
@@ -1648,7 +1755,6 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
                   default:
                     break;
                 }
-                NS_RELEASE(paintListener);
               }
               else {
                 PRBool correctSubType = PR_FALSE;
@@ -1690,16 +1796,15 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
     case NS_DRAGDROP_EXIT_SYNTH:
     case NS_DRAGDROP_DROP:
     case NS_DRAGDROP_GESTURE:
-      if (nsnull != mDragListeners) {
+      listeners = GetListenersByType(eEventArrayType_Drag, nsnull, PR_FALSE);
+      if (listeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, empty, aEvent);
         }
 
         if (NS_OK == ret) {
-          for (int i=0; mDragListeners && i<mDragListeners->Count(); i++) {
-            nsListenerStruct *dragStruct;
-
-            dragStruct = (nsListenerStruct*)mDragListeners->ElementAt(i);
+          for (int i=0; !mListenersRemoved && listeners && i<listeners->Count(); i++) {
+            nsListenerStruct *dragStruct = (nsListenerStruct*)listeners->ElementAt(i);
 
             if (dragStruct->mFlags & aFlags) {
               nsCOMPtr<nsIDOMDragListener> dragListener ( do_QueryInterface(dragStruct->mListener) );
@@ -1765,19 +1870,18 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
     case NS_SCROLLPORT_OVERFLOW:
     case NS_SCROLLPORT_UNDERFLOW:
     case NS_SCROLLPORT_OVERFLOWCHANGED:
-    if (nsnull != mScrollListeners) {
+      listeners = GetListenersByType(eEventArrayType_Scroll, nsnull, PR_FALSE);
+      if (listeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, empty, aEvent);
         }
         if (NS_OK == ret) {
-          for (int i=0; mScrollListeners && i<mScrollListeners->Count(); i++) {
-            nsListenerStruct* ls;
-            nsIDOMScrollListener* scrollListener;
-
-            ls = (nsListenerStruct*)mScrollListeners->ElementAt(i);
+          for (int i=0; !mListenersRemoved && listeners && i<listeners->Count(); i++) {
+            nsListenerStruct* ls = (nsListenerStruct*)listeners->ElementAt(i);
 
             if (ls->mFlags & aFlags) {
-              if (NS_OK == ls->mListener->QueryInterface(kIDOMScrollListenerIID, (void**)&scrollListener)) {
+              nsCOMPtr<nsIDOMScrollListener> scrollListener(do_QueryInterface(ls->mListener));
+              if (scrollListener) {
                 switch(aEvent->message) {
                   case NS_SCROLLPORT_OVERFLOW:
                     ret = scrollListener->Overflow(*aDOMEvent);
@@ -1791,7 +1895,6 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
                   default:
                     break;
                 }
-                NS_RELEASE(scrollListener);
               }
               else {
                 PRBool correctSubType = PR_FALSE;
@@ -1833,42 +1936,40 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
     case NS_MENU_ACTION:
     case NS_XUL_BROADCAST:
     case NS_XUL_COMMAND_UPDATE:
-      if (nsnull != mMenuListeners) {
+      listeners = GetListenersByType(eEventArrayType_Menu, nsnull, PR_FALSE);
+      if (listeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMUIEvent(aDOMEvent, aPresContext, empty, aEvent);
         }
         if (NS_OK == ret) {
-          for (int i=0; mMenuListeners && i<mMenuListeners->Count(); i++) {
-            nsListenerStruct *ls;
-            nsIDOMMenuListener *mMenuListener;
-
-            ls = (nsListenerStruct*)mMenuListeners->ElementAt(i);
+          for (int i=0; !mListenersRemoved && listeners && i<listeners->Count(); i++) {
+            nsListenerStruct *ls = (nsListenerStruct*)listeners->ElementAt(i);
 
             if (ls->mFlags & aFlags) {
-              if (NS_OK == ls->mListener->QueryInterface(kIDOMMenuListenerIID, (void**)&mMenuListener)) {
+              nsCOMPtr<nsIDOMMenuListener> menuListener(do_QueryInterface(ls->mListener));
+              if (menuListener) {
                 switch(aEvent->message) {
                   case NS_MENU_CREATE:
-                    ret = mMenuListener->Create(*aDOMEvent);
+                    ret = menuListener->Create(*aDOMEvent);
                     break;
                   case NS_XUL_CLOSE:
-                    ret = mMenuListener->Close(*aDOMEvent);
+                    ret = menuListener->Close(*aDOMEvent);
                     break;
                   case NS_MENU_DESTROY:
-                    ret = mMenuListener->Destroy(*aDOMEvent);
+                    ret = menuListener->Destroy(*aDOMEvent);
                     break;
                   case NS_MENU_ACTION:
-                    ret = mMenuListener->Action(*aDOMEvent);
+                    ret = menuListener->Action(*aDOMEvent);
                     break;
                   case NS_XUL_BROADCAST:
-                    ret = mMenuListener->Broadcast(*aDOMEvent);
+                    ret = menuListener->Broadcast(*aDOMEvent);
                     break;
                   case NS_XUL_COMMAND_UPDATE:
-                    ret = mMenuListener->CommandUpdate(*aDOMEvent);
+                    ret = menuListener->CommandUpdate(*aDOMEvent);
                     break;
                   default:
                     break;
                 }
-                NS_RELEASE(mMenuListener);
               }
               else {
                 PRBool correctSubType = PR_FALSE;
@@ -1930,19 +2031,17 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
     case NS_MUTATION_NODEREMOVEDFROMDOCUMENT:
     case NS_MUTATION_ATTRMODIFIED:
     case NS_MUTATION_CHARACTERDATAMODIFIED:
-      if (nsnull != mMutationListeners) {
+      listeners = GetListenersByType(eEventArrayType_Mutation, nsnull, PR_FALSE);
+      if (listeners) {
         if (nsnull == *aDOMEvent) {
           ret = NS_NewDOMMutationEvent(aDOMEvent, aPresContext, aEvent);
         }
         if (NS_OK == ret) {
-          for (int i=0; mMutationListeners && i<mMutationListeners->Count(); i++) {
-            nsListenerStruct *ls;
-            nsCOMPtr<nsIDOMMutationListener> mutationListener;
-          
-            ls = (nsListenerStruct*)mMutationListeners->ElementAt(i);
+          for (int i=0; !mListenersRemoved && listeners && i<listeners->Count(); i++) {
+            nsListenerStruct *ls = (nsListenerStruct*)listeners->ElementAt(i);
 
             if (ls->mFlags & aFlags) {
-              mutationListener = do_QueryInterface(ls->mListener);
+              nsCOMPtr<nsIDOMMutationListener> mutationListener = do_QueryInterface(ls->mListener);
               if (mutationListener) {
                 switch(aEvent->message) {
                   case NS_MUTATION_SUBTREEMODIFIED:
@@ -2040,6 +2139,8 @@ nsresult nsEventListenerManager::HandleEvent(nsIPresContext* aPresContext,
     *aEventStatus = nsEventStatus_eConsumeNoDefault;
   }
 
+  mListenersRemoved = PR_FALSE;
+
   return NS_OK;
 }
 
@@ -2055,11 +2156,13 @@ nsEventListenerManager::CreateEvent(nsIPresContext* aPresContext,
 {
   nsAutoString str(aEventType);
   if (!aEvent && !str.EqualsIgnoreCase("MouseEvent") && !str.EqualsIgnoreCase("KeyEvent") &&
-      !str.EqualsIgnoreCase("HTMLEvent") && !str.EqualsIgnoreCase("MutationEvent")) {
-    return NS_ERROR_FAILURE;
+      !str.EqualsIgnoreCase("HTMLEvent") && !str.EqualsIgnoreCase("MutationEvent") &&
+      !str.EqualsIgnoreCase("Event")) {
+    return NS_ERROR_DOM_NOT_SUPPORTED_ERR;
   }
 
-  if (str.EqualsIgnoreCase("MutationEvent"))
+  if ((aEvent && aEvent->eventStructType == NS_MUTATION_EVENT) ||
+      (!aEvent && str.EqualsIgnoreCase("MutationEvent")))
     return NS_NewDOMMutationEvent(aDOMEvent, aPresContext, aEvent);
   return NS_NewDOMUIEvent(aDOMEvent, aPresContext, aEventType, aEvent);
 }
@@ -2088,12 +2191,12 @@ nsEventListenerManager::ReleaseEvent(PRInt32 aEventTypes)
 
 nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aInitCapture)
 {
-  nsIID iid;
+  EventArrayType arrayType;
   nsListenerStruct *ls;
 
   if (aEventTypes & nsIDOMEvent::MOUSEDOWN) {
-    iid = kIDOMMouseListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Mouse;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_MOUSE_MOUSEDOWN; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_MOUSE_MOUSEDOWN;
@@ -2101,8 +2204,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::MOUSEUP) {
-    iid = kIDOMMouseListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Mouse;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_MOUSE_MOUSEUP; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_MOUSE_MOUSEUP;
@@ -2110,8 +2213,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::MOUSEOVER) {
-    iid = kIDOMMouseListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Mouse;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_MOUSE_MOUSEOVER; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_MOUSE_MOUSEOVER;
@@ -2119,8 +2222,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::MOUSEOUT) {
-    iid = kIDOMMouseListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Mouse;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_MOUSE_MOUSEOUT; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_MOUSE_MOUSEOUT;
@@ -2128,8 +2231,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::MOUSEMOVE) {
-    iid = kIDOMMouseMotionListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_MouseMotion;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_MOUSEMOTION_MOUSEMOVE; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_MOUSEMOTION_MOUSEMOVE;
@@ -2137,8 +2240,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::CLICK) {
-    iid = kIDOMMouseListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Mouse;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_MOUSE_CLICK; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_MOUSE_CLICK;
@@ -2146,8 +2249,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::DBLCLICK) {
-    iid = kIDOMMouseListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Mouse;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_MOUSE_DBLCLICK; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_MOUSE_DBLCLICK;
@@ -2155,8 +2258,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::KEYDOWN) {
-    iid = kIDOMKeyListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Key;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_KEY_KEYDOWN; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_KEY_KEYDOWN;
@@ -2164,8 +2267,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::KEYUP) {
-    iid = kIDOMKeyListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Key;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_KEY_KEYUP; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_KEY_KEYUP;
@@ -2173,8 +2276,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::KEYPRESS) {
-    iid = kIDOMKeyListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Key;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_KEY_KEYPRESS; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_KEY_KEYPRESS;
@@ -2182,8 +2285,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::DRAGDROP) {
-    iid = NS_GET_IID(nsIDOMDragListener);
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Drag;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_DRAG_ENTER; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_DRAG_ENTER;
@@ -2191,8 +2294,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   /*if (aEventTypes & nsIDOMEvent::MOUSEDRAG) {
-    iid = kIDOMMouseListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = kIDOMMouseListenerarrayType;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_MOUSE_MOUSEDOWN; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_MOUSE_MOUSEDOWN;
@@ -2200,8 +2303,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }*/
   if (aEventTypes & nsIDOMEvent::FOCUS) {
-    iid = kIDOMFocusListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Focus;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_FOCUS_FOCUS; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_FOCUS_FOCUS;
@@ -2209,8 +2312,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::BLUR) {
-    iid = kIDOMFocusListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Focus;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_FOCUS_BLUR; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_FOCUS_BLUR;
@@ -2218,8 +2321,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::SELECT) {
-    iid = kIDOMFormListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Form;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_FORM_SELECT; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_FORM_SELECT;
@@ -2227,8 +2330,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::CHANGE) {
-    iid = kIDOMFormListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Form;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_FORM_CHANGE; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_FORM_CHANGE;
@@ -2236,8 +2339,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::RESET) {
-    iid = kIDOMFormListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Form;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_FORM_RESET; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_FORM_RESET;
@@ -2245,8 +2348,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::SUBMIT) {
-    iid = kIDOMFormListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Form;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_FORM_SUBMIT; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_FORM_SUBMIT;
@@ -2254,8 +2357,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::LOAD) {
-    iid = kIDOMLoadListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Load;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_LOAD_LOAD; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_LOAD_LOAD;
@@ -2263,8 +2366,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::UNLOAD) {
-    iid = kIDOMLoadListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Load;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_LOAD_UNLOAD; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_LOAD_UNLOAD;
@@ -2272,8 +2375,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::ABORT) {
-    iid = kIDOMLoadListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Load;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_LOAD_ABORT; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_LOAD_ABORT;
@@ -2281,8 +2384,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::ERROR) {
-    iid = kIDOMLoadListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Load;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_LOAD_ERROR; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_LOAD_ERROR;
@@ -2290,8 +2393,8 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::RESIZE) {
-    iid = kIDOMPaintListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Paint;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_PAINT_RESIZE; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_PAINT_RESIZE;
@@ -2299,34 +2402,14 @@ nsresult nsEventListenerManager::FlipCaptureBit(PRInt32 aEventTypes, PRBool aIni
     }
   }
   if (aEventTypes & nsIDOMEvent::SCROLL) {
-    iid = kIDOMPaintListenerIID;
-    ls = FindJSEventListener(iid);
+    arrayType = eEventArrayType_Scroll;
+    ls = FindJSEventListener(arrayType);
     if (ls) {
       if (aInitCapture) ls->mSubTypeCapture |= NS_EVENT_BITS_PAINT_RESIZE; 
       else ls->mSubTypeCapture &= ~NS_EVENT_BITS_PAINT_RESIZE;
       ls->mFlags |= NS_EVENT_FLAG_CAPTURE;
     }
   }
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsEventListenerManager::RemoveAllListeners(PRBool aScriptOnly)
-{
-  ReleaseListeners(&mEventListeners, aScriptOnly);
-  ReleaseListeners(&mMouseListeners, aScriptOnly);
-  ReleaseListeners(&mMouseMotionListeners, aScriptOnly);
-  ReleaseListeners(&mContextMenuListeners, aScriptOnly);
-  ReleaseListeners(&mKeyListeners, aScriptOnly);
-  ReleaseListeners(&mLoadListeners, aScriptOnly);
-  ReleaseListeners(&mFocusListeners, aScriptOnly);
-  ReleaseListeners(&mFormListeners, aScriptOnly);
-  ReleaseListeners(&mDragListeners, aScriptOnly);
-  ReleaseListeners(&mPaintListeners, aScriptOnly);
-  ReleaseListeners(&mTextListeners, aScriptOnly);
-  ReleaseListeners(&mCompositionListeners, aScriptOnly);
-  ReleaseListeners(&mMutationListeners, aScriptOnly);
-  mDestroyed = PR_TRUE;
   return NS_OK;
 }
 

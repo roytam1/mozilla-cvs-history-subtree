@@ -113,6 +113,9 @@ static NS_DEFINE_CID(kPresStateCID,  NS_PRESSTATE_CID);
 
 #include "nsIPref.h" // Used by the temp pref, should be removed!
 
+#include "nsIPluginHost.h"
+#include "nsPIPluginHost.h"
+static NS_DEFINE_IID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
 
 //----------------------------------------------------------------------
 
@@ -1076,46 +1079,60 @@ nsGenericHTMLElement::SetDocument(nsIDocument* aDocument, PRBool aDeep,
   return result;
 }
 
-nsIContent*
-nsGenericHTMLElement::FindFormParentContent(nsIContent* aParent)
+nsresult
+nsGenericHTMLElement::FindForm(nsIDOMHTMLFormElement **aForm)
 {
+  // XXX: Namespaces!!!
+
+  nsCOMPtr<nsIContent> content(this);
   nsCOMPtr<nsIAtom> tag;
-  nsCOMPtr<nsIContent> parent(aParent);
+  PRInt32 nameSpaceID;
 
-  while (parent) {
-    PRInt32 nameSpaceID;
+  *aForm = nsnull;
 
-    parent->GetTag(*getter_AddRefs(tag));
-    parent->GetNameSpaceID(nameSpaceID);
+  while (content) {
+    content->GetTag(*getter_AddRefs(tag));
+    content->GetNameSpaceID(nameSpaceID);
 
-    // If the current ancestor is a form, set it as our form
+    // If the current ancestor is a form, return it as our form
     if ((tag.get() == nsHTMLAtoms::form) &&
         (kNameSpaceID_HTML == nameSpaceID)) {
-      nsIContent * content = parent.get();
-      NS_IF_ADDREF(content);
-      return content;
+      return CallQueryInterface(content, aForm);
     }
 
-    nsIContent *tmp = parent;
-    tmp->GetParent(*getter_AddRefs(parent));
+    nsIContent *tmp = content;
+    tmp->GetParent(*getter_AddRefs(content));
+
+    if (content) {
+      PRInt32 i;
+
+      content->IndexOf(tmp, i);
+
+      if (i < 0) {
+        // This means 'tmp' is anonymous content, form controls in
+        // anonymous content can't refer to the real form, if they do
+        // they end up in form.elements n' such, and that's wrong...
+
+        return NS_OK;
+      }
+    }
   }
 
-  return nsnull;
+  return NS_OK;
 }
 
 nsresult
-nsGenericHTMLElement::FindAndSetFormParent(nsIContent* aParent,
-                                    nsIFormControl* aControl)
+nsGenericHTMLElement::FindAndSetForm(nsIFormControl *aFormControl)
 {
-  nsresult result = NS_OK;
-  nsCOMPtr<nsIContent> formParent(getter_AddRefs(FindFormParentContent(aParent)));
-  if (formParent) {
-    nsCOMPtr<nsIDOMHTMLFormElement> form(do_QueryInterface(formParent));
-    if (form) {
-      result = aControl->SetForm(form);
-    }
+  nsCOMPtr<nsIDOMHTMLFormElement> form;
+
+  FindForm(getter_AddRefs(form));
+
+  if (form) {
+    return aFormControl->SetForm(form);
   }
-  return result;
+
+  return NS_OK;
 }
 
 nsresult
@@ -1473,8 +1490,7 @@ nsGenericHTMLElement::SetAttribute(PRInt32 aNameSpaceID,
       mutation.mAttrChange = modification ? nsIDOMMutationEvent::MODIFICATION :
                                              nsIDOMMutationEvent::ADDITION;
       nsEventStatus status = nsEventStatus_eIgnore;
-      nsCOMPtr<nsIDOMEvent> domEvent;
-      HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent),
+      HandleDOMEvent(nsnull, &mutation, nsnull,
                      NS_EVENT_FLAG_INIT, &status);
     }
 
@@ -1595,8 +1611,7 @@ nsGenericHTMLElement::SetHTMLAttribute(nsIAtom* aAttribute,
         mutation.mNewAttrValue = getter_AddRefs(NS_NewAtom(value));
       mutation.mAttrChange = nsIDOMMutationEvent::MODIFICATION;
       nsEventStatus status = nsEventStatus_eIgnore;
-      nsCOMPtr<nsIDOMEvent> domEvent;
-      HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent),
+      HandleDOMEvent(nsnull, &mutation, nsnull,
                      NS_EVENT_FLAG_INIT, &status);
     }
 
@@ -1681,8 +1696,7 @@ nsGenericHTMLElement::UnsetAttribute(PRInt32 aNameSpaceID, nsIAtom* aAttribute, 
       mutation.mAttrChange = nsIDOMMutationEvent::REMOVAL;
 
       nsEventStatus status = nsEventStatus_eIgnore;
-      nsCOMPtr<nsIDOMEvent> domEvent;
-      HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent),
+      HandleDOMEvent(nsnull, &mutation, nsnull,
                      NS_EVENT_FLAG_INIT, &status);
     }
 
@@ -2178,11 +2192,38 @@ nsGenericHTMLElement::GetMappedAttributeImpact(const nsIAtom* aAttribute,
   return NS_OK;
 }
 
+#ifdef IBMBIDI
+/**
+ * Handle attributes on the BDO element
+ */
+static void
+MapBdoAttributesInto(const nsIHTMLMappedAttributes* aAttributes,
+                     nsIMutableStyleContext* aStyleContext,
+                     nsIPresContext* aPresContext)
+{
+  nsGenericHTMLElement::MapCommonAttributesInto(aAttributes, aStyleContext,
+                                                aPresContext);
+  nsHTMLValue value;
+  // Get dir attribute
+  aAttributes->GetAttribute(nsHTMLAtoms::dir, value);
+  if (eHTMLUnit_Enumerated == value.GetUnit() ) {
+    nsStyleText* text = (nsStyleText*)
+                        aStyleContext->GetMutableStyleData(eStyleStruct_Text);
+    text->mUnicodeBidi = NS_STYLE_UNICODE_BIDI_OVERRIDE;
+  }
+}
+#endif // IBMBIDI
+
 NS_IMETHODIMP
 nsGenericHTMLElement::GetAttributeMappingFunctions(nsMapAttributesFunc& aFontMapFunc,
                                                    nsMapAttributesFunc& aMapFunc) const
 {
   aFontMapFunc = nsnull;
+#ifdef IBMBIDI
+  if (mNodeInfo->Equals(nsHTMLAtoms::bdo) )
+    aMapFunc = &MapBdoAttributesInto;
+  else
+#endif // IBMBIDI
   aMapFunc = &MapCommonAttributesInto;
   return NS_OK;
 }
@@ -2964,6 +3005,13 @@ nsGenericHTMLElement::MapCommonAttributesInto(const nsIHTMLMappedAttributes* aAt
     nsStyleDisplay* display = (nsStyleDisplay*)
       aStyleContext->GetMutableStyleData(eStyleStruct_Display);
     display->mDirection = value.GetIntValue();
+#ifdef IBMBIDI
+    display->mExplicitDirection = display->mDirection;
+
+    if (NS_STYLE_DIRECTION_RTL == display->mDirection) {
+      aPresContext->EnableBidi();
+    }
+#endif // IBMBIDI
   }
   aAttributes->GetAttribute(nsHTMLAtoms::lang, value);
   if (value.GetUnit() == eHTMLUnit_String) {
@@ -3375,7 +3423,7 @@ nsGenericHTMLContainerElement::CopyInnerTo(nsIContent* aSrcContent,
 
             result = newNode->QueryInterface(NS_GET_IID(nsIContent), (void**)&newContent);
             if (NS_OK == result) {
-              result = aDst->AppendChildTo(newContent, PR_FALSE);
+              result = aDst->AppendChildTo(newContent, PR_FALSE, PR_FALSE);
               NS_RELEASE(newContent);
             }
             NS_RELEASE(newNode);
@@ -3493,7 +3541,8 @@ nsGenericHTMLContainerElement::IndexOf(nsIContent* aPossibleChild,
 NS_IMETHODIMP
 nsGenericHTMLContainerElement::InsertChildAt(nsIContent* aKid,
                                              PRInt32 aIndex,
-                                             PRBool aNotify)
+                                             PRBool aNotify,
+                                             PRBool aDeepSetDocument)
 {
   NS_PRECONDITION(nsnull != aKid, "null ptr");
   nsIDocument* doc = mDocument;
@@ -3506,7 +3555,7 @@ nsGenericHTMLContainerElement::InsertChildAt(nsIContent* aKid,
     aKid->SetParent(this);
     nsRange::OwnerChildInserted(this, aIndex);
     if (nsnull != doc) {
-      aKid->SetDocument(doc, PR_FALSE, PR_TRUE);
+      aKid->SetDocument(doc, aDeepSetDocument, PR_TRUE);
       if (aNotify) {
         doc->ContentInserted(this, aKid, aIndex);
       }
@@ -3522,8 +3571,7 @@ nsGenericHTMLContainerElement::InsertChildAt(nsIContent* aKid,
         mutation.mRelatedNode = relNode;
 
         nsEventStatus status = nsEventStatus_eIgnore;
-        nsCOMPtr<nsIDOMEvent> domEvent;
-        aKid->HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent), NS_EVENT_FLAG_INIT, &status);
+        aKid->HandleDOMEvent(nsnull, &mutation, nsnull, NS_EVENT_FLAG_INIT, &status);
       }
     }
   }
@@ -3536,7 +3584,8 @@ nsGenericHTMLContainerElement::InsertChildAt(nsIContent* aKid,
 NS_IMETHODIMP
 nsGenericHTMLContainerElement::ReplaceChildAt(nsIContent* aKid,
                                               PRInt32 aIndex,
-                                              PRBool aNotify)
+                                              PRBool aNotify,
+                                              PRBool aDeepSetDocument)
 {
   NS_PRECONDITION(nsnull != aKid, "null ptr");
   nsIContent* oldKid = (nsIContent *)mChildren.ElementAt(aIndex);
@@ -3550,7 +3599,7 @@ nsGenericHTMLContainerElement::ReplaceChildAt(nsIContent* aKid,
     NS_ADDREF(aKid);
     aKid->SetParent(this);
     if (nsnull != doc) {
-      aKid->SetDocument(doc, PR_FALSE, PR_TRUE);
+      aKid->SetDocument(doc, aDeepSetDocument, PR_TRUE);
       if (aNotify) {
         doc->ContentReplaced(this, oldKid, aKid, aIndex);
       }
@@ -3566,7 +3615,8 @@ nsGenericHTMLContainerElement::ReplaceChildAt(nsIContent* aKid,
 }
 
 NS_IMETHODIMP
-nsGenericHTMLContainerElement::AppendChildTo(nsIContent* aKid, PRBool aNotify)
+nsGenericHTMLContainerElement::AppendChildTo(nsIContent* aKid, PRBool aNotify,
+                                             PRBool aDeepSetDocument)
 {
   NS_PRECONDITION(nsnull != aKid && this != aKid, "null ptr");
   nsIDocument* doc = mDocument;
@@ -3579,7 +3629,7 @@ nsGenericHTMLContainerElement::AppendChildTo(nsIContent* aKid, PRBool aNotify)
     aKid->SetParent(this);
     // ranges don't need adjustment since new child is at end of list
     if (nsnull != doc) {
-      aKid->SetDocument(doc, PR_FALSE, PR_TRUE);
+      aKid->SetDocument(doc, aDeepSetDocument, PR_TRUE);
       if (aNotify) {
         doc->ContentAppended(this, mChildren.Count() - 1);
       }
@@ -3595,8 +3645,7 @@ nsGenericHTMLContainerElement::AppendChildTo(nsIContent* aKid, PRBool aNotify)
         mutation.mRelatedNode = relNode;
 
         nsEventStatus status = nsEventStatus_eIgnore;
-        nsCOMPtr<nsIDOMEvent> domEvent;
-        aKid->HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent), NS_EVENT_FLAG_INIT, &status);
+        aKid->HandleDOMEvent(nsnull, &mutation, nsnull, NS_EVENT_FLAG_INIT, &status);
       }
     }
   }
@@ -3627,8 +3676,7 @@ nsGenericHTMLContainerElement::RemoveChildAt(PRInt32 aIndex, PRBool aNotify)
       mutation.mRelatedNode = relNode;
 
       nsEventStatus status = nsEventStatus_eIgnore;
-      nsCOMPtr<nsIDOMEvent> domEvent;
-      oldKid->HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent),
+      oldKid->HandleDOMEvent(nsnull, &mutation, nsnull,
                              NS_EVENT_FLAG_INIT, &status);
     }
 
@@ -3765,7 +3813,7 @@ nsGenericHTMLContainerFormElement::SetParent(nsIContent* aParent)
     // search. In this case, someone (possibly the content sink) has
     // already set the form for us.
 
-    rv = FindAndSetFormParent(aParent, this);
+    rv = FindAndSetForm(this);
   }
 
   if (NS_SUCCEEDED(rv)) {
@@ -3783,14 +3831,7 @@ nsGenericHTMLContainerFormElement::SetDocument(nsIDocument* aDocument,
   nsresult rv = NS_OK;
 
   if (aDocument && mParent && !mForm) {
-    // XXX Do this check since anonymous frame content was also being
-    // added to the form. To make sure that the form control isn't
-    // anonymous, we ask the parent if it knows about it.
-    PRInt32 index;
-    mParent->IndexOf(this, index);
-    if (-1 != index) {
-      rv = FindAndSetFormParent(mParent, this);
-    }
+    rv = FindAndSetForm(this);
   }
 
   if (NS_SUCCEEDED(rv)) {
@@ -3975,15 +4016,6 @@ nsGenericHTMLLeafFormElement::GetForm(nsIDOMHTMLFormElement** aForm)
   NS_ENSURE_ARG_POINTER(aForm);
   *aForm = nsnull;
 
-  // This is here because radios can be created via script
-  // and depending on how the content in the script is constructed
-  // none of the code paths that set up the mForm may get called
-  // So this is a last stab effort to get the form before somebody 
-  // uses the radiobutton. Bug 62799
-  if (mForm == nsnull) {
-    FindAndSetFormParent(mParent, this); // ignore returned result
-  }
-
   if (mForm) {
     mForm->QueryInterface(NS_GET_IID(nsIDOMHTMLFormElement), (void**)aForm);
   }
@@ -3996,6 +4028,12 @@ nsGenericHTMLLeafFormElement::SetParent(nsIContent* aParent)
 {
   nsresult rv = NS_OK;
 
+  PRBool old_parent = (PRBool)mParent;
+
+  if (NS_SUCCEEDED(rv)) {
+    rv = nsGenericElement::SetParent(aParent);
+  }
+
   if (!aParent && mForm) {
     SetForm(nsnull);
   }
@@ -4004,12 +4042,8 @@ nsGenericHTMLLeafFormElement::SetParent(nsIContent* aParent)
   // have an old parent, but we do have a form, we shouldn't do the
   // search. In this case, someone (possibly the content sink) has
   // already set the form for us.
-  else if (mDocument && aParent && (mParent || !mForm)) {
-    rv = FindAndSetFormParent(aParent, this);
-  }
-
-  if (NS_SUCCEEDED(rv)) {
-    rv = nsGenericElement::SetParent(aParent);
+  else if (mDocument && aParent && (old_parent || !mForm)) {
+    rv = FindAndSetForm(this);
   }
 
   return rv;
@@ -4023,14 +4057,7 @@ nsGenericHTMLLeafFormElement::SetDocument(nsIDocument* aDocument,
   nsresult rv = NS_OK;
 
   if (aDocument && mParent && !mForm) {
-    // XXX Do this check since anonymous frame content was also being
-    // added to the form. To make sure that the form control isn't
-    // anonymous, we ask the parent if it knows about it.
-    PRInt32 index;
-    mParent->IndexOf(this, index);
-    if (-1 != index) {
-      rv = FindAndSetFormParent(mParent, this);
-    }
+    rv = FindAndSetForm(this);
   }
 
   if (NS_SUCCEEDED(rv)) {
@@ -4049,6 +4076,23 @@ nsGenericHTMLLeafFormElement::SetAttribute(PRInt32 aNameSpaceID,
 {
   return SetFormControlAttribute(mForm, aNameSpaceID, aName, aValue, aNotify);
 }
+
+nsresult
+nsGenericHTMLElement::SetElementFocus(PRBool aDoFocus)
+{
+  nsCOMPtr<nsIPresContext> presContext;
+  GetPresContext(this, getter_AddRefs(presContext));
+  if (!presContext) {
+    return NS_OK;
+  }
+
+  if (aDoFocus) {
+    return SetFocus(presContext);
+  }
+
+  return RemoveFocus(presContext);
+}
+
 
 #if 0 // XXX
 nsresult
@@ -4175,6 +4219,16 @@ nsGenericHTMLElement::GetPluginScriptObject(nsIScriptContext* aContext,
     *aScriptObject = elementObject;
 
     return NS_OK;
+  }
+
+  // notify the PluginManager that this one is scriptable -- 
+  // it will need some special treatment later
+  nsCOMPtr<nsIPluginHost> pluginManager = do_GetService(kCPluginManagerCID, &rv);
+  if(NS_SUCCEEDED(rv) && pluginManager) {
+    nsCOMPtr<nsPIPluginHost> pluginHost = do_QueryInterface(pluginManager, &rv);
+    if(NS_SUCCEEDED(rv) && pluginHost) {
+      pluginHost->SetIsScriptableInstance(pi, PR_TRUE);
+    }
   }
 
   // Wrap it.

@@ -20,6 +20,7 @@
  * Contributor(s): 
  *   L. David Baron <dbaron@fas.harvard.edu>
  *   Pierre Phaneuf <pp@ludusdesign.com>
+ *   Pete Collins   <petejc@collab.net>
  */
 #include "plstr.h"
 
@@ -32,7 +33,6 @@
 #include "nsIChannel.h"
 #include "nsString.h"
 #include "nsIContent.h"
-#include "nsIDocumentObserver.h"
 #include "nsIStyleSet.h"
 #include "nsIStyleSheet.h"
 #include "nsIPresShell.h"
@@ -51,7 +51,6 @@
 #include "nsIDOMEventListener.h"
 
 #include "nsIDOMStyleSheet.h"
-#include "nsIDOMStyleSheetList.h"
 #include "nsDOMAttribute.h"
 #include "nsDOMCID.h"
 #include "nsIDOMDOMImplementation.h"
@@ -105,6 +104,10 @@
 #include "nsPIBoxObject.h"
 #include "nsXULAtoms.h"
 
+#ifdef IBMBIDI
+#include "nsIUBidiUtils.h"
+#endif
+
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
 static NS_DEFINE_CID(kPresShellCID, NS_PRESSHELL_CID);
 static NS_DEFINE_CID(kCParserCID, NS_PARSER_CID);
@@ -115,75 +118,6 @@ static NS_DEFINE_CID(kCParserCID, NS_PARSER_CID);
 
 #include "nsIHTMLDocument.h"
 
-class nsDOMStyleSheetList : public nsIDOMStyleSheetList,
-                            public nsIDocumentObserver
-{
-public:
-  nsDOMStyleSheetList(nsIDocument *aDocument);
-  virtual ~nsDOMStyleSheetList();
-
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSIDOMSTYLESHEETLIST
-  
-  NS_IMETHOD BeginUpdate(nsIDocument *aDocument) { return NS_OK; }
-  NS_IMETHOD EndUpdate(nsIDocument *aDocument) { return NS_OK; }
-  NS_IMETHOD BeginLoad(nsIDocument *aDocument) { return NS_OK; }
-  NS_IMETHOD EndLoad(nsIDocument *aDocument) { return NS_OK; }
-  NS_IMETHOD BeginReflow(nsIDocument *aDocument,
-			                   nsIPresShell* aShell) { return NS_OK; }
-  NS_IMETHOD EndReflow(nsIDocument *aDocument,
-		                   nsIPresShell* aShell) { return NS_OK; } 
-  NS_IMETHOD ContentChanged(nsIDocument *aDocument,
-			                      nsIContent* aContent,
-                            nsISupports* aSubContent) { return NS_OK; }
-  NS_IMETHOD ContentStatesChanged(nsIDocument* aDocument,
-                                  nsIContent* aContent1,
-                                  nsIContent* aContent2) { return NS_OK; }
-  NS_IMETHOD AttributeChanged(nsIDocument *aDocument,
-                              nsIContent*  aContent,
-                              PRInt32      aNameSpaceID,
-                              nsIAtom*     aAttribute,
-                              PRInt32      aHint) { return NS_OK; }
-  NS_IMETHOD ContentAppended(nsIDocument *aDocument,
-			                       nsIContent* aContainer,
-                             PRInt32     aNewIndexInContainer) 
-                             { return NS_OK; }
-  NS_IMETHOD ContentInserted(nsIDocument *aDocument,
-			                       nsIContent* aContainer,
-                             nsIContent* aChild,
-                             PRInt32 aIndexInContainer) { return NS_OK; }
-  NS_IMETHOD ContentReplaced(nsIDocument *aDocument,
-			                       nsIContent* aContainer,
-                             nsIContent* aOldChild,
-                             nsIContent* aNewChild,
-                             PRInt32 aIndexInContainer) { return NS_OK; }
-  NS_IMETHOD ContentRemoved(nsIDocument *aDocument,
-                            nsIContent* aContainer,
-                            nsIContent* aChild,
-                            PRInt32 aIndexInContainer) { return NS_OK; }
-  NS_IMETHOD StyleSheetAdded(nsIDocument *aDocument,
-                             nsIStyleSheet* aStyleSheet);
-  NS_IMETHOD StyleSheetRemoved(nsIDocument *aDocument,
-                               nsIStyleSheet* aStyleSheet);
-  NS_IMETHOD StyleSheetDisabledStateChanged(nsIDocument *aDocument,
-                                        nsIStyleSheet* aStyleSheet,
-                                        PRBool aDisabled) { return NS_OK; }
-  NS_IMETHOD StyleRuleChanged(nsIDocument *aDocument,
-                              nsIStyleSheet* aStyleSheet,
-                              nsIStyleRule* aStyleRule,
-                              PRInt32 aHint) { return NS_OK; }
-  NS_IMETHOD StyleRuleAdded(nsIDocument *aDocument,
-                            nsIStyleSheet* aStyleSheet,
-                            nsIStyleRule* aStyleRule) { return NS_OK; }
-  NS_IMETHOD StyleRuleRemoved(nsIDocument *aDocument,
-                              nsIStyleSheet* aStyleSheet,
-                              nsIStyleRule* aStyleRule) { return NS_OK; }
-  NS_IMETHOD DocumentWillBeDestroyed(nsIDocument *aDocument);
-
-protected:
-  PRInt32       mLength;
-  nsIDocument*  mDocument;
-};
 
 nsDOMStyleSheetList::nsDOMStyleSheetList(nsIDocument *aDocument)
 {
@@ -508,7 +442,6 @@ nsDocument::nsDocument()
   mRootContent = nsnull;
   mListenerManager = nsnull;
   mInDestructor = PR_FALSE;
-  mDOMStyleSheets = nsnull;
   mNameSpaceManager = nsnull;
   mHeaderData = nsnull;
   mChildNodes = nsnull;
@@ -518,6 +451,9 @@ nsDocument::nsDocument()
   mDTD = 0;
   mBoxObjectTable = nsnull;
   mNumCapturers = 0;
+#ifdef IBMBIDI
+  mBidiEnabled = PR_FALSE;
+#endif // IBMBIDI
 
   // Force initialization.
   mBindingManager = do_CreateInstance("@mozilla.org/xbl/binding-manager;1");
@@ -536,12 +472,12 @@ nsDocument::~nsDocument()
   // This notification will occur only after the reference has
   // been dropped.
   mInDestructor = PR_TRUE;
-  PRInt32 index;
-  for (index = 0; index < mObservers.Count(); index++) {
-    nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(index);
+  PRInt32 indx;
+  for (indx = 0; indx < mObservers.Count(); indx++) {
+    nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(indx);
     observer->DocumentWillBeDestroyed(this);
-    if (observer != (nsIDocumentObserver*)mObservers.ElementAt(index)) {
-      index--;
+    if (observer != (nsIDocumentObserver*)mObservers.ElementAt(indx)) {
+      indx--;
     }
   }
 
@@ -552,9 +488,9 @@ nsDocument::~nsDocument()
   mParentDocument = nsnull;
 
   // Delete references to sub-documents
-  index = mSubDocuments.Count();
-  while (--index >= 0) {
-    nsIDocument* subdoc = (nsIDocument*) mSubDocuments.ElementAt(index);
+  indx = mSubDocuments.Count();
+  while (--indx >= 0) {
+    nsIDocument* subdoc = (nsIDocument*) mSubDocuments.ElementAt(indx);
     NS_RELEASE(subdoc);
   }
 
@@ -562,9 +498,9 @@ nsDocument::~nsDocument()
   mChildren->Clear();
 
   // Delete references to style sheets
-  index = mStyleSheets.Count();
-  while (--index >= 0) {
-    nsIStyleSheet* sheet = (nsIStyleSheet*) mStyleSheets.ElementAt(index);
+  indx = mStyleSheets.Count();
+  while (--indx >= 0) {
+    nsIStyleSheet* sheet = (nsIStyleSheet*) mStyleSheets.ElementAt(indx);
     sheet->SetOwningDocument(nsnull);
     NS_RELEASE(sheet);
   }
@@ -575,16 +511,23 @@ nsDocument::~nsDocument()
   }
 
   NS_IF_RELEASE(mArena);
-  NS_IF_RELEASE(mListenerManager);
-  NS_IF_RELEASE(mDOMStyleSheets);
+
+  if (mListenerManager != nsnull) {
+    mListenerManager->SetListenerTarget(nsnull);
+    NS_RELEASE(mListenerManager);
+  }
+
   NS_IF_RELEASE(mNameSpaceManager);
+
+  mDOMStyleSheets = nsnull; // Release the stylesheets list.
+
   if (nsnull != mHeaderData) {
     delete mHeaderData;
     mHeaderData = nsnull;
   }
 
   NS_IF_RELEASE(mDTD);
-  	
+    
   delete mBoxObjectTable;
 }
 
@@ -655,9 +598,9 @@ nsDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
   mDocumentLoadGroup = null_nsCOMPtr();
 
   // Delete references to sub-documents
-  PRInt32 index = mSubDocuments.Count();
-  while (--index >= 0) {
-    nsIDocument* subdoc = (nsIDocument*) mSubDocuments.ElementAt(index);
+  PRInt32 indx = mSubDocuments.Count();
+  while (--indx >= 0) {
+    nsIDocument* subdoc = (nsIDocument*) mSubDocuments.ElementAt(indx);
     NS_RELEASE(subdoc);
   }
 
@@ -667,14 +610,14 @@ nsDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
   for (i = 0; i < count; i++) {
     nsCOMPtr<nsIContent> content(dont_AddRef(NS_STATIC_CAST(nsIContent*,mChildren->ElementAt(i))));
     content->SetDocument(nsnull, PR_TRUE, PR_TRUE);
-    ContentRemoved(nsnull, content, index);
+    ContentRemoved(nsnull, content, indx);
   }
   mChildren->Clear();
 
   // Delete references to style sheets
-  index = mStyleSheets.Count();
-  while (--index >= 0) {
-    nsIStyleSheet* sheet = (nsIStyleSheet*) mStyleSheets.ElementAt(index);
+  indx = mStyleSheets.Count();
+  while (--indx >= 0) {
+    nsIStyleSheet* sheet = (nsIStyleSheet*) mStyleSheets.ElementAt(indx);
     sheet->SetOwningDocument(nsnull);
 
     PRInt32 pscount = mPresShells.Count();
@@ -696,9 +639,11 @@ nsDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
   mStyleSheets.Clear();
 
   NS_IF_RELEASE(mListenerManager);
-  NS_IF_RELEASE(mDOMStyleSheets);
 
   NS_IF_RELEASE(mNameSpaceManager);
+
+  mDOMStyleSheets = nsnull; // Release the stylesheets list.
+
 
   if (aChannel) {
 
@@ -854,7 +799,7 @@ NS_IMETHODIMP nsDocument::SetDocumentCharacterSet(const nsAReadableString& aChar
     for (PRInt32 i = 0; i < n; i++) {
       nsIObserver* observer = (nsIObserver*) mCharSetObservers.ElementAt(i);
       observer->Observe((nsIDocument*) this, NS_LITERAL_STRING("charset").get(),
-                        nsPromiseFlatString(aCharSetID).get());
+                        PromiseFlatString(aCharSetID).get());
     }
   }
   return NS_OK;
@@ -1070,11 +1015,11 @@ nsIContent* nsDocument::GetRootContent()
 void nsDocument::SetRootContent(nsIContent* aRoot)
 {
   if (mRootContent) {
-    PRInt32 index = mChildren->IndexOf(mRootContent);
+    PRInt32 indx = mChildren->IndexOf(mRootContent);
     if (aRoot) {
-      mChildren->ReplaceElementAt(aRoot, index);
+      mChildren->ReplaceElementAt(aRoot, indx);
     } else {
-      mChildren->RemoveElementAt(index);
+      mChildren->RemoveElementAt(indx);
     }
   } else if (aRoot) {
     mChildren->AppendElement(aRoot);
@@ -1132,9 +1077,9 @@ void nsDocument::InternalAddStyleSheet(nsIStyleSheet* aSheet)  // subclass hook 
 void nsDocument::AddStyleSheetToStyleSets(nsIStyleSheet* aSheet)
 {
   PRInt32 count = mPresShells.Count();
-  PRInt32 index;
-  for (index = 0; index < count; index++) {
-    nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(index);
+  PRInt32 indx;
+  for (indx = 0; indx < count; indx++) {
+    nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(indx);
     nsCOMPtr<nsIStyleSet> set;
     if (NS_SUCCEEDED(shell->GetStyleSet(getter_AddRefs(set)))) {
       if (set) {
@@ -1158,11 +1103,11 @@ void nsDocument::AddStyleSheet(nsIStyleSheet* aSheet)
     AddStyleSheetToStyleSets(aSheet);
 
     // XXX should observers be notified for disabled sheets??? I think not, but I could be wrong
-    for (PRInt32 index = 0; index < mObservers.Count(); index++) {
-      nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(index);
+    for (PRInt32 indx = 0; indx < mObservers.Count(); indx++) {
+      nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(indx);
       observer->StyleSheetAdded(this, aSheet);
-      if (observer != (nsIDocumentObserver*)mObservers.ElementAt(index)) {
-        index--;
+      if (observer != (nsIDocumentObserver*)mObservers.ElementAt(indx)) {
+        indx--;
       }
     }
   }
@@ -1171,9 +1116,9 @@ void nsDocument::AddStyleSheet(nsIStyleSheet* aSheet)
 void nsDocument::RemoveStyleSheetFromStyleSets(nsIStyleSheet* aSheet)
 {
   PRInt32 count = mPresShells.Count();
-  PRInt32 index;
-  for (index = 0; index < count; index++) {
-    nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(index);
+  PRInt32 indx;
+  for (indx = 0; indx < count; indx++) {
+    nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(indx);
     nsCOMPtr<nsIStyleSet> set;
     if (NS_SUCCEEDED(shell->GetStyleSet(getter_AddRefs(set)))) {
       if (set) {
@@ -1195,11 +1140,11 @@ void nsDocument::RemoveStyleSheet(nsIStyleSheet* aSheet)
     RemoveStyleSheetFromStyleSets(aSheet);
 
     // XXX should observers be notified for disabled sheets??? I think not, but I could be wrong
-    for (PRInt32 index = 0; index < mObservers.Count(); index++) {
-      nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(index);
+    for (PRInt32 indx = 0; indx < mObservers.Count(); indx++) {
+      nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(indx);
       observer->StyleSheetRemoved(this, aSheet);
-      if (observer != (nsIDocumentObserver*)mObservers.ElementAt(index)) {
-        index--;
+      if (observer != (nsIDocumentObserver*)mObservers.ElementAt(indx)) {
+        indx--;
       }
     }
   }
@@ -1254,11 +1199,11 @@ nsDocument::UpdateStyleSheets(nsISupportsArray* aOldSheets, nsISupportsArray* aN
     }
   }
 
-  for (PRInt32 index = 0; index < mObservers.Count(); index++) {
-    nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(index);
+  for (PRInt32 indx = 0; indx < mObservers.Count(); indx++) {
+    nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(indx);
     observer->StyleSheetRemoved(this, sheet);
-    if (observer != (nsIDocumentObserver*)mObservers.ElementAt(index)) {
-      index--;
+    if (observer != (nsIDocumentObserver*)mObservers.ElementAt(indx)) {
+      indx--;
     }
   }
 
@@ -1285,11 +1230,11 @@ nsDocument::InsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex, PRBool aNo
   aSheet->GetEnabled(enabled);
 
   PRInt32 count;
-  PRInt32 index;
+  PRInt32 indx;
   if (enabled) {
     count = mPresShells.Count();
-    for (index = 0; index < count; index++) {
-      nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(index);
+    for (indx = 0; indx < count; indx++) {
+      nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(indx);
       nsCOMPtr<nsIStyleSet> set;
       shell->GetStyleSet(getter_AddRefs(set));
       if (set) {
@@ -1298,11 +1243,11 @@ nsDocument::InsertStyleSheetAt(nsIStyleSheet* aSheet, PRInt32 aIndex, PRBool aNo
     }
   }
   if (aNotify) {  // notify here even if disabled, there may have been others that weren't notified
-    for (index = 0; index < mObservers.Count(); index++) {
-      nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(index);
+    for (indx = 0; indx < mObservers.Count(); indx++) {
+      nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(indx);
       observer->StyleSheetAdded(this, aSheet);
-      if (observer != (nsIDocumentObserver*)mObservers.ElementAt(index)) {
-        index--;
+      if (observer != (nsIDocumentObserver*)mObservers.ElementAt(indx)) {
+        indx--;
       }
     }
   }
@@ -1314,13 +1259,13 @@ void nsDocument::SetStyleSheetDisabledState(nsIStyleSheet* aSheet,
                                             PRBool aDisabled)
 {
   NS_PRECONDITION(nsnull != aSheet, "null arg");
-  PRInt32 index = mStyleSheets.IndexOf((void *)aSheet);
+  PRInt32 indx = mStyleSheets.IndexOf((void *)aSheet);
   PRInt32 count;
   // If we're actually in the document style sheet list
-  if (-1 != index) {
+  if (-1 != indx) {
     count = mPresShells.Count();
-    for (index = 0; index < count; index++) {
-      nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(index);
+    for (indx = 0; indx < count; indx++) {
+      nsIPresShell* shell = (nsIPresShell*)mPresShells.ElementAt(indx);
       nsCOMPtr<nsIStyleSet> set;
       if (NS_SUCCEEDED(shell->GetStyleSet(getter_AddRefs(set)))) {
         if (set) {
@@ -1335,11 +1280,11 @@ void nsDocument::SetStyleSheetDisabledState(nsIStyleSheet* aSheet,
     }
   }  
 
-  for (index = 0; index < mObservers.Count(); index++) {
-    nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(index);
+  for (indx = 0; indx < mObservers.Count(); indx++) {
+    nsIDocumentObserver*  observer = (nsIDocumentObserver*)mObservers.ElementAt(indx);
     observer->StyleSheetDisabledStateChanged(this, aSheet, aDisabled);
-    if (observer != (nsIDocumentObserver*)mObservers.ElementAt(index)) {
-      index--;
+    if (observer != (nsIDocumentObserver*)mObservers.ElementAt(indx)) {
+      indx--;
     }
   }
 }
@@ -1363,10 +1308,10 @@ nsDocument::SetScriptGlobalObject(nsIScriptGlobalObject *aScriptGlobalObject)
   // actually set the script context owner to null so that the
   // content elements can remove references to their script objects.
   if (!aScriptGlobalObject) {
-    PRUint32 ucount, index;
+    PRUint32 ucount, indx;
     mChildren->Count(&ucount);
-    for (index = 0; index < ucount; index++) {
-      nsCOMPtr<nsIContent> content(dont_AddRef(NS_STATIC_CAST(nsIContent*,mChildren->ElementAt(index))));
+    for (indx = 0; indx < ucount; indx++) {
+      nsCOMPtr<nsIContent> content(dont_AddRef(NS_STATIC_CAST(nsIContent*,mChildren->ElementAt(indx))));
       content->SetDocument(nsnull, PR_TRUE, PR_TRUE);
     }
 
@@ -1950,16 +1895,15 @@ nsDocument::GetElementById(const nsAReadableString & elementId,
 NS_IMETHODIMP    
 nsDocument::GetStyleSheets(nsIDOMStyleSheetList** aStyleSheets)
 {
-  if (nsnull == mDOMStyleSheets) {
+  if (!mDOMStyleSheets) {
     mDOMStyleSheets = new nsDOMStyleSheetList(this);
-    if (nsnull == mDOMStyleSheets) {
+    if (!mDOMStyleSheets) {
       return NS_ERROR_OUT_OF_MEMORY;
     }
-    NS_ADDREF(mDOMStyleSheets);
   }
 
   *aStyleSheets = mDOMStyleSheets;
-  NS_ADDREF(mDOMStyleSheets);
+  NS_ADDREF(*aStyleSheets);
 
   return NS_OK;
 }
@@ -2234,7 +2178,7 @@ nsDocument::SetTitle(const nsAReadableString& aTitle)
     if(!docShellWin)
       continue;
 
-    rv = docShellWin->SetTitle(nsPromiseFlatString(aTitle).get());
+    rv = docShellWin->SetTitle(PromiseFlatString(aTitle).get());
     NS_ENSURE_SUCCESS(rv, rv);
   }
 
@@ -2334,17 +2278,76 @@ nsDocument::SetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject* aBoxObject)
   return NS_OK;
 }
 
+#ifdef IBMBIDI
+struct DirTable {
+  const char* mName;
+  PRUint8     mValue;
+};
+static const DirTable dirAttributes[] = {
+  {"ltr", IBMBIDI_TEXTDIRECTION_LTR},
+  {"rtl", IBMBIDI_TEXTDIRECTION_RTL},
+  {0}
+};
+#endif // IBMBIDI
+
+/**
+ *  Retrieve the "direction" property of the document.
+ *
+ *  @lina 01/09/2001
+ */
 NS_IMETHODIMP
 nsDocument::GetDir(nsAWritableString& aDirection)
 {
+#ifdef IBMBIDI
+  nsIPresShell* shell = (nsIPresShell*) mPresShells.ElementAt(0);
+  if (shell) {
+    nsCOMPtr<nsIPresContext> context;
+    shell->GetPresContext(getter_AddRefs(context) );
+    if (context) {
+      PRUint32 options;
+      context->GetBidi(&options);
+      for (const DirTable* elt = dirAttributes; elt->mName; elt++) {
+        if (GET_BIDI_OPTION_DIRECTION(options) == elt->mValue) {
+          aDirection.Assign(NS_ConvertASCIItoUCS2(elt->mName) );
+          break;
+        }
+      }
+    }
+  }
+#else
   aDirection.Assign(NS_LITERAL_STRING("ltr"));
-
+#endif // IBMBIDI
   return NS_OK;
 }
 
+/**
+ *  Set the "direction" property of the document.
+ *
+ *  @lina 01/09/2001
+ */
 NS_IMETHODIMP
 nsDocument::SetDir(const nsAReadableString& aDirection)
 {
+#ifdef IBMBIDI
+  nsIPresShell* shell = (nsIPresShell*) mPresShells.ElementAt(0);
+  if (shell) {
+    nsCOMPtr<nsIPresContext> context;
+    shell->GetPresContext(getter_AddRefs(context) );
+    if (context) {
+      PRUint32 options;
+      context->GetBidi(&options);
+      for (const DirTable* elt = dirAttributes; elt->mName; elt++) {
+        if (aDirection == NS_ConvertASCIItoUCS2(elt->mName) ) {
+          if (GET_BIDI_OPTION_DIRECTION(options) != elt->mValue) {
+            SET_BIDI_OPTION_DIRECTION(options, elt->mValue);
+            context->SetBidi(options, PR_TRUE);
+          }
+          break;
+        }
+      } // for
+    }
+  }
+#endif // IBMBIDI 
   return NS_OK;
 }
 
@@ -2509,7 +2512,7 @@ nsDocument::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild,
                          nsIDOMNode** aReturn)
 {
   NS_ASSERTION(nsnull != aNewChild, "null ptr");
-  PRInt32 index;
+  PRInt32 indx;
   PRUint16 nodeType;
 
   *aReturn = nsnull; // Do we need to do this?
@@ -2539,7 +2542,7 @@ nsDocument::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild,
   if (!aRefChild) {
     PRUint32 count;
     mChildren->Count(&count);
-    index = count;
+    indx = count;
     mChildren->AppendElement(content);
   }
   else {
@@ -2549,9 +2552,9 @@ nsDocument::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild,
       return NS_ERROR_DOM_NOT_FOUND_ERR;
     }
 
-    index = mChildren->IndexOf(refContent);
-    if (index != -1) {
-      mChildren->InsertElementAt(content, index);
+    indx = mChildren->IndexOf(refContent);
+    if (indx != -1) {
+      mChildren->InsertElementAt(content, indx);
     } else {
       // couldn't find refChild
       return NS_ERROR_DOM_NOT_FOUND_ERR;
@@ -2562,7 +2565,7 @@ nsDocument::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild,
   // index-th spot in mChildren.
   if (ELEMENT_NODE == nodeType)
     mRootContent = content;
-  ContentInserted(nsnull, content, index);
+  ContentInserted(nsnull, content, indx);
 
   content->SetDocument(this, PR_TRUE, PR_TRUE);
   *aReturn = aNewChild;
@@ -2576,7 +2579,7 @@ nsDocument::ReplaceChild(nsIDOMNode* aNewChild, nsIDOMNode* aOldChild, nsIDOMNod
 {
   NS_ASSERTION(((nsnull != aNewChild) && (nsnull != aOldChild)), "null ptr");
   nsresult result = NS_OK;
-  PRInt32 index;
+  PRInt32 indx;
   PRUint16 nodeType;
   
   *aReturn = nsnull; // is this necessary?
@@ -2609,21 +2612,21 @@ nsDocument::ReplaceChild(nsIDOMNode* aNewChild, nsIDOMNode* aOldChild, nsIDOMNod
     return NS_ERROR_DOM_HIERARCHY_REQUEST_ERR;
   }
   
-  index = mChildren->IndexOf(refContent);
-  if (-1 == index) {
+  indx = mChildren->IndexOf(refContent);
+  if (-1 == indx) {
     // The reference child is not a child of the document.
     return NS_ERROR_DOM_NOT_FOUND_ERR;
   }
 
   refContent->SetDocument(nsnull, PR_TRUE, PR_TRUE);
-  ContentRemoved(nsnull, refContent, index);
+  ContentRemoved(nsnull, refContent, indx);
 
-  mChildren->ReplaceElementAt(content, index);
+  mChildren->ReplaceElementAt(content, indx);
   // This is OK because we checked above.
   if (ELEMENT_NODE == nodeType)
     mRootContent = content;
 
-  ContentInserted(nsnull, content, index);
+  ContentInserted(nsnull, content, indx);
   content->SetDocument(this, PR_TRUE, PR_TRUE);
   *aReturn = aOldChild;
   NS_ADDREF(aOldChild);
@@ -2647,14 +2650,14 @@ nsDocument::RemoveChild(nsIDOMNode* aOldChild, nsIDOMNode** aReturn)
     return NS_ERROR_DOM_HIERARCHY_REQUEST_ERR;
   }
 
-  PRInt32 index = mChildren->IndexOf(content);
-  if (-1 == index) {
+  PRInt32 indx = mChildren->IndexOf(content);
+  if (-1 == indx) {
     return NS_ERROR_DOM_NOT_FOUND_ERR;
   }
 
-  ContentRemoved(nsnull, content, index);
+  ContentRemoved(nsnull, content, indx);
 
-  mChildren->RemoveElementAt(index);
+  mChildren->RemoveElementAt(indx);
   if (content.get() == mRootContent)
     mRootContent = nsnull;
 
@@ -2732,6 +2735,7 @@ nsresult nsDocument::GetListenerManager(nsIEventListenerManager **aInstancePtrRe
   if (NS_OK == GetNewListenerManager(aInstancePtrResult)) {
     mListenerManager = *aInstancePtrResult;
     NS_ADDREF(mListenerManager);
+    mListenerManager->SetListenerTarget(NS_STATIC_CAST(nsIDocument*,this));
     return NS_OK;
   }
   return NS_ERROR_FAILURE;
@@ -2754,11 +2758,17 @@ nsresult nsDocument::HandleDOMEvent(nsIPresContext* aPresContext,
                                     nsEventStatus* aEventStatus)
 {
   nsresult mRet = NS_OK;
+  PRBool externalDOMEvent = PR_FALSE;
 
   nsIDOMEvent* domEvent = nsnull;
 
   if (NS_EVENT_FLAG_INIT & aFlags) {
-    if (!aDOMEvent) {
+    if (aDOMEvent) {
+      if (*aDOMEvent) {
+        externalDOMEvent = PR_TRUE;   
+      }
+    }
+    else {
       aDOMEvent = &domEvent;
     }
     aEvent->flags = aFlags;
@@ -2785,7 +2795,7 @@ nsresult nsDocument::HandleDOMEvent(nsIPresContext* aPresContext,
 
   if (NS_EVENT_FLAG_INIT & aFlags) {
     // We're leaving the DOM event loop so if we created a DOM event, release here.
-    if (nsnull != *aDOMEvent) {
+    if (*aDOMEvent && !externalDOMEvent) {
       nsrefcnt rc;
       NS_RELEASE2(*aDOMEvent, rc);
       if (0 != rc) {
@@ -2797,8 +2807,8 @@ nsresult nsDocument::HandleDOMEvent(nsIPresContext* aPresContext,
           NS_RELEASE(mPrivateEvent);
         }
       }
+      aDOMEvent = nsnull;
     }
-    aDOMEvent = nsnull;
   }
 
   return mRet;
@@ -3018,7 +3028,7 @@ nsDocument::InitDiskDocument(nsIFile *aFile)
   }
   
   mModCount = 0;
-	return NS_OK;
+  return NS_OK;
 }
 
 
@@ -3045,7 +3055,7 @@ nsDocument::SaveFile( nsIFile*          aFile,
   if (NS_FAILED(rv)) return rv;
   
   if (!aReplaceExisting && fileExists)
-    return NS_ERROR_FAILURE;				// where are the file I/O errors?
+    return NS_ERROR_FAILURE;        // where are the file I/O errors?
   
   
   nsCOMPtr<nsIFileOutputStream> outputStream(do_CreateInstance(NS_LOCALFILEOUTPUTSTREAM_CONTRACTID, &rv));
@@ -3073,10 +3083,10 @@ nsDocument::SaveFile( nsIFile*          aFile,
   nsAutoString charsetStr(aFileCharset);
   if (charsetStr.Length() == 0)
   {
-	  rv = GetDocumentCharacterSet(charsetStr);
-	  if(NS_FAILED(rv)) {
-	     charsetStr.AssignWithConversion("ISO-8859-1"); 
-	  }
+    rv = GetDocumentCharacterSet(charsetStr);
+    if(NS_FAILED(rv)) {
+       charsetStr.AssignWithConversion("ISO-8859-1"); 
+    }
   }
   encoder->SetCharset(charsetStr);
 
@@ -3153,8 +3163,8 @@ NS_IMETHODIMP
 nsDocument::GetModificationCount(PRInt32 *outModCount)
 {
   if (!outModCount)
-  	return NS_ERROR_NULL_POINTER;
-  	
+    return NS_ERROR_NULL_POINTER;
+    
  *outModCount = mModCount;
  return NS_OK;
 }
@@ -3242,4 +3252,33 @@ nsDocument::GetDTD(nsIDTD** aDTD) const
   return NS_OK;
 }
 
+#ifdef IBMBIDI
+/**
+ *  Check if bidi enabled (set depending on the presence of RTL
+ *  characters). If enabled, we should apply the Unicode Bidi Algorithm
+ *
+ *  @lina 07/12/2000
+ */
+NS_IMETHODIMP
+nsDocument::GetBidiEnabled(PRBool* aBidiEnabled) const
+{
+  NS_ENSURE_ARG_POINTER(aBidiEnabled);
+  *aBidiEnabled = mBidiEnabled;
+  return NS_OK;
+}
 
+/**
+ *  Indicate the document contains RTL characters.
+ *
+ *  @lina 07/12/2000
+ */
+NS_IMETHODIMP
+nsDocument::SetBidiEnabled(PRBool aBidiEnabled)
+{
+  NS_ASSERTION(aBidiEnabled, "cannot disable bidi once enabled");
+  if (aBidiEnabled) {
+    mBidiEnabled = PR_TRUE;
+  }
+  return NS_OK;
+}
+#endif // IBMBIDI

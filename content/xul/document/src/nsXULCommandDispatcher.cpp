@@ -169,6 +169,33 @@ nsXULCommandDispatcher::SetFocusedWindow(nsIDOMWindow* aWindow)
 }
 
 NS_IMETHODIMP
+nsXULCommandDispatcher::AdvanceFocus()
+{
+  EnsureFocusController();
+  if (mFocusController)
+    return mFocusController->MoveFocus(PR_TRUE, nsnull);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXULCommandDispatcher::RewindFocus()
+{
+  EnsureFocusController();
+  if (mFocusController)
+    return mFocusController->MoveFocus(PR_FALSE, nsnull);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXULCommandDispatcher::AdvanceFocusIntoSubtree(nsIDOMElement* aElt)
+{
+  EnsureFocusController();
+  if (mFocusController)
+    return mFocusController->MoveFocus(PR_TRUE, aElt);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
 nsXULCommandDispatcher::AddCommandUpdater(nsIDOMElement* aElement,
                                           const nsAReadableString& aEvents,
                                           const nsAReadableString& aTargets)
@@ -351,7 +378,7 @@ nsXULCommandDispatcher::Matches(const nsString& aList,
   if (aList.Equals(NS_LITERAL_STRING("*")))
     return PR_TRUE; // match _everything_!
 
-  PRInt32 indx = aList.Find((const PRUnichar *)nsPromiseFlatString(aElement).get());
+  PRInt32 indx = aList.Find((const PRUnichar *)PromiseFlatString(aElement).get());
   if (indx == -1)
     return PR_FALSE; // not in the list at all
 

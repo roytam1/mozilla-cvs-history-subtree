@@ -41,6 +41,7 @@
 #include "nsIDOMHTMLObjectElement.h"
 #include "nsIDOMHTMLImageElement.h"
 #include "nsIDOMHTMLMapElement.h"
+#include "nsImageMapUtils.h"
 #include "nsIHTMLDocument.h"
 #include "nsINameSpaceManager.h"  // for kNameSpaceID_HTML
 #include "nsIWebShell.h"
@@ -51,7 +52,6 @@
 #include "nsIDeviceContext.h"
 #include "nsIScriptGlobalObject.h"
 #include "nsIPrivateDOMEvent.h"
-#include "nsIGfxTextControlFrame.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsPIDOMWindow.h"
 #include "nsIEnumerator.h"
@@ -83,7 +83,13 @@
 
 #include "nsIFrameTraversal.h"
 #include "nsLayoutCID.h"
+#include "nsHTMLAtoms.h"
+#include "nsXULAtoms.h"
+#include "nsIDOMHTMLFormElement.h"
+
+
 static NS_DEFINE_CID(kFrameTraversalCID, NS_FRAMETRAVERSAL_CID);
+
 
 //we will use key binding by default now. this wil lbreak viewer for now
 #define NON_KEYBINDING 0
@@ -141,6 +147,10 @@ nsEventStateManager::nsEventStateManager()
   mBrowseWithCaret = PR_FALSE;
   hHover = PR_FALSE;
   NS_INIT_REFCNT();
+
+#ifdef CLICK_HOLD_CONTEXT_MENUS
+  mEventDownWidget = nsnull;
+#endif
   
   ++mInstanceCount;
 }
@@ -288,7 +298,7 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
 
   switch (aEvent->message) {
   case NS_MOUSE_LEFT_BUTTON_DOWN:
-    BeginTrackingDragGesture ( (nsGUIEvent*)aEvent, aTargetFrame );
+    BeginTrackingDragGesture ( aPresContext, (nsGUIEvent*)aEvent, aTargetFrame );
     mLClickCount = ((nsMouseEvent*)aEvent)->clickCount;
     SetClickCount(aPresContext, (nsMouseEvent*)aEvent, aStatus);
     break;
@@ -301,6 +311,9 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
     SetClickCount(aPresContext, (nsMouseEvent*)aEvent, aStatus);
     break;
   case NS_MOUSE_LEFT_BUTTON_UP:
+#ifdef CLICK_HOLD_CONTEXT_MENUS
+    KillClickHoldTimer();
+#endif
     StopTrackingDragGesture();
   case NS_MOUSE_MIDDLE_BUTTON_UP:
   case NS_MOUSE_RIGHT_BUTTON_UP:
@@ -363,7 +376,7 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
             if(ourWindow) {
               ourWindow->GetRootFocusController(getter_AddRefs(focusController));
               if (focusController)
-                focusController->SetSuppressFocus(PR_TRUE);
+                focusController->SetSuppressFocus(PR_TRUE, "NS_GOTFOCUS ESM Suppression");
             }
             
             gLastFocusedDocument->HandleDOMEvent(gLastFocusedPresContext, &blurevent, nsnull, NS_EVENT_FLAG_INIT, &blurstatus);
@@ -372,7 +385,7 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
               
 
             if (focusController) {
-              focusController->SetSuppressFocus(PR_FALSE);
+              focusController->SetSuppressFocus(PR_FALSE, "NS_GOTFOCUS ESM Suppression");
             }
           }
         }
@@ -429,7 +442,9 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
       // focused element in its focus memory, then restore the focus to those
       // objects.
       EnsureDocument(aPresContext);
-
+#ifdef DEBUG_hyatt
+      printf("ESM: GOT ACTIVATE.\n");
+#endif
       nsCOMPtr<nsIFocusController> focusController;
       nsCOMPtr<nsIDOMElement> focusedElement;
       nsCOMPtr<nsIDOMWindowInternal> focusedWindow;
@@ -446,6 +461,7 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
         focusController->GetFocusedElement(getter_AddRefs(focusedElement));
 
         focusController->SetSuppressFocusScroll(PR_TRUE);
+        focusController->SetActive(PR_TRUE);
       }
 
 	    if (!focusedWindow) {
@@ -476,12 +492,10 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
       }
 
       if (focusController) {
-        focusController->SetActive(PR_TRUE);
-        
         PRBool isSuppressed;
         focusController->GetSuppressFocus(&isSuppressed);
         while(isSuppressed){
-          focusController->SetSuppressFocus(PR_FALSE); // Unsuppress and let the command dispatcher listen again.
+          focusController->SetSuppressFocus(PR_FALSE, "Activation Suppression"); // Unsuppress and let the command dispatcher listen again.
           focusController->GetSuppressFocus(&isSuppressed);
         }
         focusController->SetSuppressFocusScroll(PR_FALSE);
@@ -520,7 +534,7 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
         ourWindow->GetRootFocusController(getter_AddRefs(focusController));
         if (focusController) {
           // Suppress the command dispatcher.
-          focusController->SetSuppressFocus(PR_TRUE);
+          focusController->SetSuppressFocus(PR_TRUE, "Deactivate Suppression");
         }
       }
 
@@ -574,7 +588,7 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
 
       if (focusController) {
         focusController->SetActive(PR_FALSE);
-        //focusController->SetSuppressFocus(PR_FALSE);
+        focusController->SetSuppressFocus(PR_FALSE, "Deactivate Suppression");
       }
     } 
     
@@ -642,18 +656,196 @@ nsEventStateManager::PreHandleEvent(nsIPresContext* aPresContext,
 }
 
 
+#ifdef CLICK_HOLD_CONTEXT_MENUS
+
+
+//
+// CreateClickHoldTimer
+//
+// Fire off a timer for determining if the user wants click-hold. This timer
+// is a one-shot that will be cancelled when the user moves enough to fire
+// a drag.
+//
+void
+nsEventStateManager :: CreateClickHoldTimer ( nsIPresContext* inPresContext, nsGUIEvent* inMouseDownEvent )
+{
+  // just to be anal (er, safe)
+  if ( mClickHoldTimer ) {
+    mClickHoldTimer->Cancel();
+    mClickHoldTimer = nsnull;
+  }
+  
+  mClickHoldTimer = do_CreateInstance("@mozilla.org/timer;1");
+  if ( mClickHoldTimer )
+    mClickHoldTimer->Init(sClickHoldCallback, this, kClickHoldDelay, NS_PRIORITY_HIGH);
+
+  mEventPoint = inMouseDownEvent->point;
+  mEventRefPoint = inMouseDownEvent->refPoint;
+  mEventDownWidget = inMouseDownEvent->widget;
+  
+  mEventPresContext = inPresContext;
+  
+} // CreateClickHoldTimer
+
+
+//
+// KillClickHoldTimer
+//
+// Stop the timer that would show the context menu dead in its tracks
+//
+void
+nsEventStateManager :: KillClickHoldTimer ( )
+{
+  if ( mClickHoldTimer ) {
+    mClickHoldTimer->Cancel();
+    mClickHoldTimer = nsnull;
+  }
+
+  mEventDownWidget = nsnull;
+  mEventPresContext = nsnull;
+
+} // KillTooltipTimer
+
+
+//
+// sClickHoldCallback
+//
+// This fires after the mouse has been down for a certain length of time. 
+//
+void
+nsEventStateManager :: sClickHoldCallback ( nsITimer *aTimer, void* aESM )
+{
+  nsEventStateManager* self = NS_STATIC_CAST(nsEventStateManager*, aESM);
+  if ( self )
+    self->FireContextClick();
+
+  // NOTE: |aTimer| and |self->mAutoHideTimer| are invalid after calling ClosePopup();
+  
+} // sAutoHideCallback
+
+
+//
+// FireContextClick
+//
+// If we're this far, our timer has fired, which means the mouse has been down
+// for a certain period of time and has not moved enough to generate a dragGesture.
+// We can be certain the user wants a context-click at this stage, so generate
+// a dom event and fire it in.
+//
+// After the event fires, check if PreventDefault() has been set on the event which
+// means that someone either ate the event or put up a context menu. This is our cue
+// to stop tracking the drag gesture. If we always did this, draggable items w/out
+// a context menu wouldn't be draggable after a certain length of time, which is
+// _not_ what we want.
+//
+void
+nsEventStateManager :: FireContextClick ( )
+{
+  if ( !mEventDownWidget || !mEventPresContext )
+    return;
+
+  nsEventStatus status = nsEventStatus_eIgnore;
+  nsMouseEvent event;
+  event.eventStructType = NS_MOUSE_EVENT;
+  event.message = NS_CONTEXTMENU;
+  event.widget = mEventDownWidget;
+  event.clickCount = 1;
+  event.point = mEventPoint;
+  event.refPoint = mEventRefPoint;
+  event.isShift = PR_FALSE;
+  event.isControl = PR_FALSE;
+  event.isAlt = PR_FALSE;
+  event.isMeta = PR_FALSE;
+
+  // Dispatch to the DOM. We have to fake out the ESM and tell it that the
+  // current target frame is actually where the mouseDown occurred, otherwise it
+  // will use the frame the mouse is currently over which may or may not be
+  // the same. (Note: saari and I have decided that we don't have to reset |mCurrentTarget|
+  // when we're through because no one else is doing anything more with this
+  // event and it will get reset on the very next event to the correct frame).
+  mCurrentTarget = mGestureDownFrame;
+  nsCOMPtr<nsIContent> lastContent;
+  if ( mGestureDownFrame ) {
+    mGestureDownFrame->GetContent(getter_AddRefs(lastContent));
+    
+    if ( lastContent ) {
+      // before dispatching, check that we're not on something that doesn't get a context menu
+      PRBool allowedToDispatch = PR_TRUE;
+
+      nsCOMPtr<nsIAtom> tag;
+      lastContent->GetTag ( *getter_AddRefs(tag) );
+      nsCOMPtr<nsIDOMHTMLInputElement> inputElm ( do_QueryInterface(lastContent) );
+      nsCOMPtr<nsIFormControl> formControl ( do_QueryInterface(lastContent) );
+      if ( inputElm ) {
+        // of all input elements, only ones dealing with text are allowed to have context menus
+        if ( tag == nsHTMLAtoms::input ) {
+          nsAutoString type;
+          lastContent->GetAttribute(kNameSpaceID_None, nsHTMLAtoms::type, type);
+          if ( type != NS_LITERAL_STRING("") && type != NS_LITERAL_STRING("text") &&
+                type != NS_LITERAL_STRING("password") && type != NS_LITERAL_STRING("file") )
+            allowedToDispatch = PR_FALSE;
+        }
+      }
+      else if ( formControl )           // catches combo-boxes
+        allowedToDispatch = PR_FALSE;
+      else if ( tag == nsXULAtoms::scrollbar || tag == nsXULAtoms::scrollbarbutton || tag == nsXULAtoms::button )
+        allowedToDispatch = PR_FALSE;
+    
+      if ( allowedToDispatch ) {
+        // stop selection tracking, we're in control now
+        nsCOMPtr<nsIFrameSelection> frameSel;
+        GetSelection ( mGestureDownFrame, mEventPresContext, getter_AddRefs(frameSel) );
+        if ( frameSel ) {
+          PRBool mouseDownState = PR_TRUE;
+          frameSel->GetMouseDownState(&mouseDownState);
+          if (mouseDownState)
+            frameSel->SetMouseDownState(PR_FALSE);
+        }
+        
+        // dispatch to DOM
+        lastContent->HandleDOMEvent(mEventPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
+        
+        // dispatch to the frame
+        mGestureDownFrame->HandleEvent(mEventPresContext, &event, &status);   
+      }
+    }
+  }
+  
+  // now check if the event has been handled. If so, stop tracking a drag
+  if ( status == nsEventStatus_eConsumeNoDefault )
+    StopTrackingDragGesture();
+
+  KillClickHoldTimer();
+  
+} // FireContextClick
+
+#endif
+
+
 // 
 // BeginTrackingDragGesture
 //
 // Record that the mouse has gone down and that we should move to TRACKING state
 // of d&d gesture tracker.
 //
+// We also use this to track click-hold context menus on mac. When the mouse goes down,
+// fire off a short timer. If the timer goes off and we have yet to fire the
+// drag gesture (ie, the mouse hasn't moved a certain distance), then we can
+// assume the user wants a click-hold, so fire a context-click event. We only
+// want to cancel the drag gesture if the context-click event is handled.
+//
 void
-nsEventStateManager :: BeginTrackingDragGesture ( nsGUIEvent* inDownEvent, nsIFrame* inDownFrame )
+nsEventStateManager :: BeginTrackingDragGesture ( nsIPresContext* aPresContext, nsGUIEvent* inDownEvent, nsIFrame* inDownFrame )
 {
   mIsTrackingDragGesture = PR_TRUE;
   mGestureDownPoint = inDownEvent->point;
   mGestureDownFrame = inDownFrame;
+  
+#ifdef CLICK_HOLD_CONTEXT_MENUS
+  // fire off a timer to track click-hold
+  CreateClickHoldTimer ( aPresContext, inDownEvent );
+#endif
+
 }
 
 
@@ -670,6 +862,41 @@ nsEventStateManager :: StopTrackingDragGesture ( )
   mGestureDownPoint = nsPoint(0,0);
   mGestureDownFrame = nsnull;
 }
+
+
+//
+// GetSelection
+//
+// Helper routine to get an nsIFrameSelection from the given frame
+//
+void
+nsEventStateManager :: GetSelection ( nsIFrame* inFrame, nsIPresContext* inPresContext, nsIFrameSelection** outSelection )
+{
+  *outSelection = nsnull;
+  
+  if (inFrame) {
+    nsCOMPtr<nsISelectionController> selCon;
+    nsresult rv = inFrame->GetSelectionController(inPresContext, getter_AddRefs(selCon));
+
+    if (NS_SUCCEEDED(rv) && selCon) {
+      nsCOMPtr<nsIFrameSelection> frameSel;
+
+      frameSel = do_QueryInterface(selCon);
+
+      if (! frameSel) {
+        nsCOMPtr<nsIPresShell> shell;
+        rv = inPresContext->GetShell(getter_AddRefs(shell));
+
+        if (NS_SUCCEEDED(rv) && shell)
+          rv = shell->GetFrameSelection(getter_AddRefs(frameSel));
+      }
+      
+      *outSelection = frameSel.get();
+      NS_IF_ADDREF(*outSelection);
+    }
+  }
+
+} // GetSelection
 
 
 //
@@ -694,32 +921,14 @@ nsEventStateManager :: GenerateDragGesture ( nsIPresContext* aPresContext, nsGUI
 
     // Check if selection is tracking drag gestures, if so
     // don't interfere!
-
-    if (mGestureDownFrame) {
-      nsCOMPtr<nsISelectionController> selCon;
-      nsresult rv = mGestureDownFrame->GetSelectionController(aPresContext, getter_AddRefs(selCon));
-
-      if (NS_SUCCEEDED(rv) && selCon) {
-        nsCOMPtr<nsIFrameSelection> frameSel;
-
-        frameSel = do_QueryInterface(selCon);
-
-        if (! frameSel) {
-          nsCOMPtr<nsIPresShell> shell;
-          rv = aPresContext->GetShell(getter_AddRefs(shell));
-
-          if (NS_SUCCEEDED(rv) && shell)
-            rv = shell->GetFrameSelection(getter_AddRefs(frameSel));
-        }
-
-        if (NS_SUCCEEDED(rv) && frameSel) {
-          PRBool mouseDownState = PR_TRUE;
-          frameSel->GetMouseDownState(&mouseDownState);
-          if (mouseDownState) {
-            StopTrackingDragGesture();
-            return;
-          }
-        }
+    nsCOMPtr<nsIFrameSelection> frameSel;
+    GetSelection ( mGestureDownFrame, aPresContext, getter_AddRefs(frameSel) );
+    if ( frameSel ) {
+      PRBool mouseDownState = PR_TRUE;
+      frameSel->GetMouseDownState(&mouseDownState);
+      if (mouseDownState) {
+        StopTrackingDragGesture();
+        return;
       }
     }
 
@@ -739,6 +948,12 @@ nsEventStateManager :: GenerateDragGesture ( nsIPresContext* aPresContext, nsGUI
     // fire drag gesture if mouse has moved enough
     if ( abs(aEvent->point.x - mGestureDownPoint.x) > twipDeltaToStartDrag ||
           abs(aEvent->point.y - mGestureDownPoint.y) > twipDeltaToStartDrag ) {
+#ifdef CLICK_HOLD_CONTEXT_MENUS
+      // stop the click-hold before we fire off the drag gesture, in case
+      // it takes a long time
+      KillClickHoldTimer();
+#endif
+
       nsEventStatus status = nsEventStatus_eIgnore;
       nsMouseEvent event;
       event.eventStructType = NS_DRAGDROP_EVENT;
@@ -1173,9 +1388,8 @@ nsEventStateManager::PostHandleEvent(nsIPresContext* aPresContext,
   case NS_MOUSE_MIDDLE_BUTTON_UP:
   case NS_MOUSE_RIGHT_BUTTON_UP:
     {
-      ret = CheckForAndDispatchClick(aPresContext, (nsMouseEvent*)aEvent, aStatus);
-
       SetContentState(nsnull, NS_EVENT_STATE_ACTIVE);
+      ret = CheckForAndDispatchClick(aPresContext, (nsMouseEvent*)aEvent, aStatus);
       nsCOMPtr<nsIPresShell> shell;
       nsresult rv = aPresContext->GetShell(getter_AddRefs(shell));
       if (NS_SUCCEEDED(rv) && shell){
@@ -1432,14 +1646,21 @@ nsEventStateManager::ClearFrameRefs(nsIFrame* aFrame)
     mLastMouseOverFrame = nsnull;
   if (aFrame == mLastDragOverFrame)
     mLastDragOverFrame = nsnull;
-  if (aFrame == mGestureDownFrame)
+  if (aFrame == mGestureDownFrame) {
     mGestureDownFrame = nsnull;
+ #if CLICK_HOLD_CONTEXT_MENUS
+    mEventDownWidget = nsnull;
+    mEventPresContext = nsnull;
+#endif
+  }
   if (aFrame == mCurrentTarget) {
     if (aFrame) {
       aFrame->GetContent(&mCurrentTargetContent);
     }
     mCurrentTarget = nsnull;
   }
+  
+
   return NS_OK;
 }
 
@@ -2111,8 +2332,15 @@ nsEventStateManager::ChangeFocus(nsIContent* aFocusContent, nsIFrame* aTargetFra
   return PR_FALSE;
 }
 
+NS_IMETHODIMP
+nsEventStateManager::MoveFocus(PRBool aDirection, nsIContent* aRoot)
+{
+  ShiftFocus(aDirection, aRoot);
+  return NS_OK;
+}
+
 void
-nsEventStateManager::ShiftFocus(PRBool forward)
+nsEventStateManager::ShiftFocus(PRBool forward, nsIContent* aRoot)
 {
   PRBool topOfDoc = PR_FALSE;
 
@@ -2125,7 +2353,13 @@ nsEventStateManager::ShiftFocus(PRBool forward)
     return;
   }
   
-  if (nsnull == mCurrentFocus) {
+  if (aRoot) {
+    NS_IF_RELEASE(mCurrentFocus);
+    mCurrentFocus = aRoot;
+    NS_ADDREF(mCurrentFocus);
+    mCurrentTabIndex = forward ? 1 : 0;
+  }
+  else if (nsnull == mCurrentFocus) {
     mCurrentFocus = mDocument->GetRootContent();
     if (nsnull == mCurrentFocus) {
       return;
@@ -2157,12 +2391,26 @@ nsEventStateManager::ShiftFocus(PRBool forward)
 
   nsCOMPtr<nsIContent> next;
   //Get the next tab item.  This takes tabIndex into account
-  GetNextTabbableContent(rootContent, primaryFrame, forward, getter_AddRefs(next));
-
+  if (!topOfDoc)
+    GetNextTabbableContent(rootContent, primaryFrame, forward, getter_AddRefs(next));
+  
   //Either no tabbable items or the end of the document
   if (!next) {
-    PRBool focusTaken = PR_FALSE;
 
+    // If we've reached the end of the content in this document, we
+    // focus the document itself before leaving.
+    if (!topOfDoc) {
+      nsCOMPtr<nsIScriptGlobalObject> sgo;
+      mDocument->GetScriptGlobalObject(getter_AddRefs(sgo));
+      nsCOMPtr<nsIDOMWindowInternal> domwin(do_QueryInterface(sgo));
+      if (domwin) {
+        SetContentState(nsnull, NS_EVENT_STATE_FOCUS);
+        if (NS_SUCCEEDED(domwin->Focus()))
+          return;
+      }
+    }
+
+    PRBool focusTaken = PR_FALSE;
     SetContentState(nsnull, NS_EVENT_STATE_FOCUS);
 
     //Offer focus upwards to allow shifting focus to UI controls
@@ -2361,59 +2609,47 @@ nsEventStateManager::GetNextTabbableContent(nsIContent* aRootContent, nsIFrame* 
           nsCOMPtr<nsIDOMHTMLImageElement> nextImage(do_QueryInterface(child));
           nsAutoString usemap;
           if (nextImage) {
-            nextImage->GetAttribute(NS_ConvertASCIItoUCS2("usemap"), usemap);
-            if (usemap.Length()) {
-              //Image is an imagemap.  We need to get its maps and walk its children.
-              usemap.StripWhitespace();
-
-              nsCOMPtr<nsIDocument> doc;
-              if (NS_SUCCEEDED(child->GetDocument(*getter_AddRefs(doc))) && doc) {
-                if (usemap.First() == '#') {
-                  usemap.Cut(0, 1);
-                }
-
-                nsCOMPtr<nsIHTMLDocument> hdoc(do_QueryInterface(doc));
-                if (hdoc) {
-                  nsCOMPtr<nsIDOMHTMLMapElement> hmap;
-                  if (NS_SUCCEEDED(hdoc->GetImageMap(usemap, getter_AddRefs(hmap))) && hmap) {
-                    nsCOMPtr<nsIContent> map(do_QueryInterface(hmap));
-                    if (map) {
-                      nsCOMPtr<nsIContent> childArea;
-                      PRInt32 count, index;
-                      map->ChildCount(count);
-                      //First see if mCurrentFocus is in this map
-                      for (index = 0; index < count; index++) {
-                        map->ChildAt(index, *getter_AddRefs(childArea));
-                        if (childArea.get() == mCurrentFocus) {
-                          nsAutoString tabIndexStr;
-                          childArea->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::tabindex, tabIndexStr);
-                          PRInt32 ec, val = tabIndexStr.ToInteger(&ec);
-                          if (NS_OK == ec && mCurrentTabIndex == val) {
-                            //mCurrentFocus is in this map so we must start iterating past it.
-                            //We skip the case where mCurrentFocus has the same tab index
-                            //as mCurrentTabIndex since the next tab ordered element might
-                            //be before it (or after for backwards) in the child list.
-                            break;
-                          }
-                        }
+            nsCOMPtr<nsIDocument> doc;
+            if (NS_SUCCEEDED(child->GetDocument(*getter_AddRefs(doc))) && doc) {
+              nextImage->GetAttribute(NS_LITERAL_STRING("usemap"), usemap);
+              nsCOMPtr<nsIDOMHTMLMapElement> imageMap;
+              if (NS_SUCCEEDED(nsImageMapUtils::FindImageMap(doc,usemap,getter_AddRefs(imageMap))) && imageMap) {
+                nsCOMPtr<nsIContent> map(do_QueryInterface(imageMap));
+                if (map) {
+                  nsCOMPtr<nsIContent> childArea;
+                  PRInt32 count, index;
+                  map->ChildCount(count);
+                  //First see if mCurrentFocus is in this map
+                  for (index = 0; index < count; index++) {
+                    map->ChildAt(index, *getter_AddRefs(childArea));
+                    if (childArea.get() == mCurrentFocus) {
+                      nsAutoString tabIndexStr;
+                      childArea->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::tabindex, tabIndexStr);
+                      PRInt32 ec, val = tabIndexStr.ToInteger(&ec);
+                      if (NS_OK == ec && mCurrentTabIndex == val) {
+                        //mCurrentFocus is in this map so we must start iterating past it.
+                        //We skip the case where mCurrentFocus has the same tab index
+                        //as mCurrentTabIndex since the next tab ordered element might
+                        //be before it (or after for backwards) in the child list.
+                        break;
                       }
-                      PRInt32 increment = forward ? 1 : - 1;
-                      PRInt32 start = index < count ? index + increment : (forward ? 0 : count - 1);
-                      for (index = start; index < count && index >= 0; index += increment) {
-                        //Iterate over the children.
-                        map->ChildAt(index, *getter_AddRefs(childArea));
+                    }
+                  }
+                  PRInt32 increment = forward ? 1 : - 1;
+                  PRInt32 start = index < count ? index + increment : (forward ? 0 : count - 1);
+                  for (index = start; index < count && index >= 0; index += increment) {
+                    //Iterate over the children.
+                    map->ChildAt(index, *getter_AddRefs(childArea));
 
-                        //Got the map area, check its tabindex.
-                        nsAutoString tabIndexStr;
-                        childArea->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::tabindex, tabIndexStr);
-                        PRInt32 ec, val = tabIndexStr.ToInteger(&ec);
-                        if (NS_OK == ec && mCurrentTabIndex == val) {
-                          //tabindex == the current one, use it.
-                          *aResult = childArea;
-                          NS_IF_ADDREF(*aResult);
-                          return NS_OK;
-                        }
-                      }
+                    //Got the map area, check its tabindex.
+                    nsAutoString tabIndexStr;
+                    childArea->GetAttribute(kNameSpaceID_HTML, nsHTMLAtoms::tabindex, tabIndexStr);
+                    PRInt32 ec, val = tabIndexStr.ToInteger(&ec);
+                    if (NS_OK == ec && mCurrentTabIndex == val) {
+                      //tabindex == the current one, use it.
+                      *aResult = childArea;
+                      NS_IF_ADDREF(*aResult);
+                      return NS_OK;
                     }
                   }
                 }
@@ -2937,7 +3173,7 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aCo
             if(oldWindow)
 			  oldWindow->GetRootFocusController(getter_AddRefs(oldFocusController));
             if(oldFocusController && oldFocusController != newFocusController)
-              oldFocusController->SetSuppressFocus(PR_TRUE);
+              oldFocusController->SetSuppressFocus(PR_TRUE, "SendFocusBlur Window Switch");
           }
           
           nsCOMPtr<nsIEventStateManager> esm;
@@ -2986,7 +3222,7 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aCo
 		    newWindow->GetRootFocusController(getter_AddRefs(newFocusController));
 		    oldWindow->GetRootFocusController(getter_AddRefs(oldFocusController));
             if(oldFocusController && oldFocusController != newFocusController)
-			  oldFocusController->SetSuppressFocus(PR_TRUE);
+			  oldFocusController->SetSuppressFocus(PR_TRUE, "SendFocusBlur Window Switch #2");
 		  }
 
       nsCOMPtr<nsIEventStateManager> esm;
@@ -3048,13 +3284,7 @@ nsEventStateManager::SendFocusBlur(nsIPresContext* aPresContext, nsIContent *aCo
 
   // Find the window that this frame is in and
   // make sure it has focus
-  // GFX Text Control frames handle their own focus
-  // and must be special-cased.
-  nsCOMPtr<nsIGfxTextControlFrame> gfxFrame = do_QueryInterface(currentFocusFrame);
-  if (gfxFrame) {
-    gfxFrame->SetInnerFocus();
-  } 
-  else if (currentFocusFrame) {
+  if (currentFocusFrame) {
     nsIFrame * parentFrame;
     currentFocusFrame->GetParentWithView(aPresContext, &parentFrame);
     if (nsnull != parentFrame) {

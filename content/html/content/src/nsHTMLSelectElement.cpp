@@ -123,9 +123,12 @@ public:
   // nsIDOMNSHTMLSelectElement
   NS_DECL_NSIDOMNSHTMLSELECTELEMENT
 
-  NS_IMETHOD InsertChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify);
-  NS_IMETHOD ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify);
-  NS_IMETHOD AppendChildTo(nsIContent* aKid, PRBool aNotify);
+  NS_IMETHOD InsertChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify, 
+                           PRBool aDeepSetDocument);
+  NS_IMETHOD ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify,
+                            PRBool aDeepSetDocument);
+  NS_IMETHOD AppendChildTo(nsIContent* aKid, PRBool aNotify,
+                           PRBool aDeepSetDocument);
   NS_IMETHOD RemoveChildAt(PRInt32 aIndex, PRBool aNotify);
 
   NS_IMETHOD HandleDOMEvent(nsIPresContext* aPresContext,
@@ -285,10 +288,12 @@ nsHTMLSelectElement::GetForm(nsIDOMHTMLFormElement** aForm)
 
 // nsIContent
 NS_IMETHODIMP
-nsHTMLSelectElement::AppendChildTo(nsIContent* aKid, PRBool aNotify) 
+nsHTMLSelectElement::AppendChildTo(nsIContent* aKid, PRBool aNotify,
+                                   PRBool aDeepSetDocument) 
 {
   nsresult res = nsGenericHTMLContainerFormElement::AppendChildTo(aKid,
-                                                                  aNotify);
+                                                                  aNotify,
+                                                                  aDeepSetDocument);
   if (NS_SUCCEEDED(res)) {
     AddOption(aKid);
   }
@@ -298,10 +303,11 @@ nsHTMLSelectElement::AppendChildTo(nsIContent* aKid, PRBool aNotify)
 
 NS_IMETHODIMP
 nsHTMLSelectElement::InsertChildAt(nsIContent* aKid, PRInt32 aIndex,
-                                   PRBool aNotify) 
+                                   PRBool aNotify, PRBool aDeepSetDocument) 
 {
   nsresult res = nsGenericHTMLContainerFormElement::InsertChildAt(aKid, aIndex,
-                                                                  aNotify);
+                                                                  aNotify,
+                                                                  aDeepSetDocument);
   if (NS_SUCCEEDED(res)) {
     // No index is necessary
     // It dirties list and the list automatically 
@@ -314,7 +320,7 @@ nsHTMLSelectElement::InsertChildAt(nsIContent* aKid, PRInt32 aIndex,
 
 NS_IMETHODIMP
 nsHTMLSelectElement::ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex,
-                                    PRBool aNotify) 
+                                    PRBool aNotify, PRBool aDeepSetDocument) 
 {
   nsCOMPtr<nsIContent> content;
   if (NS_SUCCEEDED(ChildAt(aIndex, *getter_AddRefs(content)))) {
@@ -323,7 +329,8 @@ nsHTMLSelectElement::ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex,
 
   nsresult res = nsGenericHTMLContainerFormElement::ReplaceChildAt(aKid,
                                                                    aIndex,
-                                                                   aNotify);
+                                                                   aNotify,
+                                                                   aDeepSetDocument);
 
   if (NS_SUCCEEDED(res)) {
     AddOption(aKid);
@@ -477,7 +484,7 @@ nsHTMLSelectElement::SetLength(PRUint32 aLength)
     rv = NS_NewTextNode(getter_AddRefs(text));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    rv = element->AppendChildTo(text, PR_FALSE);
+    rv = element->AppendChildTo(text, PR_FALSE, PR_FALSE);
     NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIDOMNode> node(do_QueryInterface(element));
@@ -1006,26 +1013,19 @@ NS_IMPL_INT_ATTR(nsHTMLSelectElement, TabIndex, tabindex)
 NS_IMETHODIMP
 nsHTMLSelectElement::Blur()
 {
-  nsCOMPtr<nsIPresContext> presContext;
-
-  GetPresContext(this, getter_AddRefs(presContext));
-
-  return RemoveFocus(presContext);
+  return SetElementFocus(PR_FALSE);
 }
 
 NS_IMETHODIMP
 nsHTMLSelectElement::Focus()
 {
-  nsCOMPtr<nsIPresContext> presContext;
-
-  GetPresContext(this, getter_AddRefs(presContext));
-
-  return SetFocus(presContext);
+  return SetElementFocus(PR_TRUE);
 }
 
 NS_IMETHODIMP
 nsHTMLSelectElement::SetFocus(nsIPresContext* aPresContext)
 {
+  NS_ENSURE_ARG_POINTER(aPresContext);
   // first see if we are disabled or not. If disabled then do nothing.
   nsAutoString disabled;
 
@@ -1061,6 +1061,7 @@ nsHTMLSelectElement::SetFocus(nsIPresContext* aPresContext)
 NS_IMETHODIMP
 nsHTMLSelectElement::RemoveFocus(nsIPresContext* aPresContext)
 {
+  NS_ENSURE_ARG_POINTER(aPresContext);
   // If we are disabled, we probably shouldn't have focus in the
   // first place, so allow it to be removed.
   nsresult rv = NS_OK;

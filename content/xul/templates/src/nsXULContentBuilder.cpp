@@ -694,7 +694,8 @@ nsXULContentBuilder::BuildContentFromTemplate(nsIContent *aTemplateNode,
                 rv = content->SetText(value.GetUnicode(), value.Length(), PR_FALSE);
                 if (NS_FAILED(rv)) return rv;
 
-                rv = aRealNode->AppendChildTo(nsCOMPtr<nsIContent>( do_QueryInterface(content) ), aNotify);
+                rv = aRealNode->AppendChildTo(nsCOMPtr<nsIContent>( do_QueryInterface(content) ),
+                                              aNotify, PR_FALSE);
                 if (NS_FAILED(rv)) return rv;
 
                 // XXX Don't bother remembering text nodes as the
@@ -828,7 +829,7 @@ nsXULContentBuilder::BuildContentFromTemplate(nsIContent *aTemplateNode,
                 }
 
                 if (NS_FAILED(rv)) {
-                    rv = aRealNode->AppendChildTo(realKid, aNotify);
+                    rv = aRealNode->AppendChildTo(realKid, aNotify, PR_FALSE);
                     NS_ASSERTION(NS_SUCCEEDED(rv), "unable to insert element");
                 }
             }
@@ -1262,14 +1263,14 @@ nsXULContentBuilder::CreateContainerContents(nsIContent* aElement,
     // Iterate through newly added keys to determine which rules fired
     nsClusterKeySet::ConstIterator last = newkeys.Last();
     for (nsClusterKeySet::ConstIterator key = newkeys.First(); key != last; ++key) {
-        const nsTemplateMatchSet* matches;
-        mConflictSet.GetMatchesForClusterKey(*key, &matches);
+        nsConflictSet::MatchCluster* matches =
+            mConflictSet.GetMatchesForClusterKey(*key);
 
         if (! matches)
             continue;
 
         nsTemplateMatch* match = 
-            matches->FindMatchWithHighestPriority();
+            mConflictSet.GetMatchWithHighestPriority(matches);
 
         NS_ASSERTION(match != nsnull, "no best match in match set");
         if (! match)
@@ -1285,7 +1286,7 @@ nsXULContentBuilder::CreateContainerContents(nsIContent* aElement,
                                  aContainer, aNewIndexInContainer);
 
         // Remember this as the "last" match
-        NS_CONST_CAST(nsTemplateMatchSet*, matches)->SetLastMatch(match);
+        matches->mLastMatch = match;
     }
 
     return NS_OK;
@@ -1368,7 +1369,7 @@ nsXULContentBuilder::EnsureElementHasGenericChild(nsIContent* parent,
         if (NS_FAILED(rv)) return rv;
 
         // XXX Note that the notification ensures we won't batch insertions! This could be bad! - Dave
-        rv = parent->AppendChildTo(element, aNotify);
+        rv = parent->AppendChildTo(element, aNotify, PR_FALSE);
         if (NS_FAILED(rv)) return rv;
 
         *result = element;
@@ -1469,7 +1470,8 @@ nsXULContentBuilder::RemoveGeneratedContent(nsIContent* aElement)
 
             // Remove element from the conflict set.
             // XXXwaterson should this be moved into NoteGeneratedSubtreeRemoved?
-            nsTemplateMatchSet firings, retractions;
+            nsTemplateMatchSet firings(mConflictSet.GetPool());
+            nsTemplateMatchSet retractions(mConflictSet.GetPool());
             mConflictSet.Remove(nsContentTestNode::Element(child), firings, retractions);
 
             // Remove this and any children from the content support map.
@@ -2086,7 +2088,8 @@ nsXULContentBuilder::CloseContainer(nsIContent* aElement)
 
         // Remove any instantiations involving this element from the
         // conflict set.
-        nsTemplateMatchSet firings, retractions;
+        nsTemplateMatchSet firings(mConflictSet.GetPool());
+        nsTemplateMatchSet retractions(mConflictSet.GetPool());
         mConflictSet.Remove(nsContentTestNode::Element(aElement), firings, retractions);
     }
 

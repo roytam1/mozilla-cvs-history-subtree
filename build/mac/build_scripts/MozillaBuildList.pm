@@ -119,11 +119,22 @@ sub InstallDefaultsFiles()
 
     InstallResources(":mozilla:profile:defaults:MANIFEST",                             "$default_profile_dir", 1);
 
+    my($default_profile_chrome_dir) = "$default_profile_dir"."chrome:";
+    mkdir($default_profile_chrome_dir, 0);
+
+    InstallResources(":mozilla:profile:defaults:chrome:MANIFEST",                             "$default_profile_chrome_dir", 1);
+
     # make a dup in en-US
     my($default_profile_dir_US) = "$default_profile_dir"."US:";
     mkdir($default_profile_dir_US, 0);
 
     InstallResources(":mozilla:profile:defaults:MANIFEST",                             "$default_profile_dir_US", 1);
+
+    my($default_profile_chrome_dir_US) = "$default_profile_dir_US"."chrome:";
+    mkdir($default_profile_chrome_dir_US, 0);
+
+    InstallResources(":mozilla:profile:defaults:chrome:MANIFEST",                             "$default_profile_chrome_dir_US", 1);
+
     }
     
     # Default _pref_ directory stuff
@@ -186,6 +197,7 @@ sub InstallNonChromeResources()
     MakeAlias(":mozilla:layout:html:document:src:html.css",                            "$resource_dir");
     MakeAlias(":mozilla:layout:html:document:src:forms.css",                           "$resource_dir");
     MakeAlias(":mozilla:layout:html:document:src:quirk.css",                           "$resource_dir");
+    MakeAlias(":mozilla:layout:html:document:src:viewsource.css",                      "$resource_dir");
     MakeAlias(":mozilla:layout:html:document:src:arrow.gif",                           "$resource_dir"); 
     MakeAlias(":mozilla:webshell:tests:viewer:resources:viewer.properties",            "$resource_dir");
     MakeAlias(":mozilla:intl:uconv:src:charsetalias.properties",                       "$resource_dir");
@@ -293,6 +305,7 @@ sub ProcessJarManifests()
     {
       CreateJarFromManifest(":mozilla:extensions:irc:jar.mn", $chrome_dir, \%jars);
       CreateJarFromManifest(":mozilla:extensions:cview:resources:jar.mn", $chrome_dir, \%jars);
+      CreateJarFromManifest(":mozilla:extensions:help:resources:jar.mn", $chrome_dir, \%jars);
       if ($main::options{vixen})
       {
         CreateJarFromManifest(":mozilla:extensions:vixen:resources:jar.mn", $chrome_dir, \%jars);
@@ -321,7 +334,6 @@ sub ProcessJarManifests()
     CreateJarFromManifest(":mozilla:netwerk:resources:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:profile:pref-migrator:resources:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:profile:resources:jar.mn", $chrome_dir, \%jars);
-    CreateJarFromManifest(":mozilla:themes:blue:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:themes:classic:communicator:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:themes:classic:communicator:search:mac:jar.mn", $chrome_dir, \%jars);
     CreateJarFromManifest(":mozilla:themes:classic:communicator:sidebar:mac:jar.mn", $chrome_dir, \%jars);
@@ -549,6 +561,7 @@ sub BuildClientDist()
     
     #XPCONNECT  
     InstallFromManifest(":mozilla:js:src:xpconnect:idl:MANIFEST",                  "$distdirectory:idl:");
+    InstallFromManifest(":mozilla:js:src:xpconnect:public:MANIFEST",               "$distdirectory:xpconnect:");
 
     #CAPS
     InstallFromManifest(":mozilla:caps:include:MANIFEST",                          "$distdirectory:caps:");
@@ -582,8 +595,10 @@ sub BuildClientDist()
     #PLUGIN
     InstallFromManifest(":mozilla:modules:plugin:nglsrc:MANIFEST",                 "$distdirectory:plugin:");
     InstallFromManifest(":mozilla:modules:plugin:public:MANIFEST",                 "$distdirectory:plugin:");
+    InstallFromManifest(":mozilla:modules:plugin:public:MANIFEST_IDL",             "$distdirectory:idl:");
     InstallFromManifest(":mozilla:modules:oji:src:MANIFEST",                       "$distdirectory:oji:");
     InstallFromManifest(":mozilla:modules:oji:public:MANIFEST",                    "$distdirectory:oji:");
+    InstallFromManifest(":mozilla:modules:oji:public:MANIFEST_IDL",                "$distdirectory:idl:");
     
     #DB
     InstallFromManifest(":mozilla:db:mdb:public:MANIFEST",                         "$distdirectory:db:");
@@ -600,6 +615,7 @@ sub BuildClientDist()
     InstallFromManifest(":mozilla:netwerk:build:MANIFEST",                         "$distdirectory:netwerk:");
     InstallFromManifest(":mozilla:netwerk:base:public:MANIFEST",                   "$distdirectory:netwerk:");
     InstallFromManifest(":mozilla:netwerk:base:public:MANIFEST_IDL",               "$distdirectory:idl:");
+    InstallFromManifest(":mozilla:netwerk:base:src:MANIFEST_COMPONENTS",           "${dist_dir}Components:");
     InstallFromManifest(":mozilla:netwerk:socket:base:MANIFEST_IDL",               "$distdirectory:idl:");
     InstallFromManifest(":mozilla:netwerk:protocol:about:public:MANIFEST_IDL",     "$distdirectory:idl:");
     InstallFromManifest(":mozilla:netwerk:protocol:data:public:MANIFEST_IDL",      "$distdirectory:idl:");
@@ -676,21 +692,20 @@ sub BuildClientDist()
     #DOM
     InstallFromManifest(":mozilla:dom:public:MANIFEST",                            "$distdirectory:dom:");
     InstallFromManifest(":mozilla:dom:public:MANIFEST_IDL",                        "$distdirectory:idl:");
-    InstallFromManifest(":mozilla:dom:public:idl:base:MANIFEST_IDL",               "$distdirectory:idl:");
-    InstallFromManifest(":mozilla:dom:public:idl:core:MANIFEST_IDL",               "$distdirectory:idl:");
-    InstallFromManifest(":mozilla:dom:public:idl:css:MANIFEST_IDL",                "$distdirectory:idl:");
-    InstallFromManifest(":mozilla:dom:public:idl:events:MANIFEST_IDL",             "$distdirectory:idl:");
-    InstallFromManifest(":mozilla:dom:public:idl:html:MANIFEST_IDL",               "$distdirectory:idl:");
-    InstallFromManifest(":mozilla:dom:public:idl:range:MANIFEST_IDL",              "$distdirectory:idl:");
-    InstallFromManifest(":mozilla:dom:public:idl:stylesheets:MANIFEST_IDL",        "$distdirectory:idl:");
-    InstallFromManifest(":mozilla:dom:public:idl:views:MANIFEST_IDL",              "$distdirectory:idl:");
-    InstallFromManifest(":mozilla:dom:public:idl:xbl:MANIFEST_IDL",                "$distdirectory:idl:");
-    InstallFromManifest(":mozilla:dom:public:idl:xul:MANIFEST_IDL",                "$distdirectory:idl:");
     InstallFromManifest(":mozilla:dom:public:base:MANIFEST",                       "$distdirectory:dom:");
+    InstallFromManifest(":mozilla:dom:public:coreDom:MANIFEST",                    "$distdirectory:dom:");
     InstallFromManifest(":mozilla:dom:public:coreEvents:MANIFEST",                 "$distdirectory:dom:");
+    InstallFromManifest(":mozilla:dom:public:events:MANIFEST",                     "$distdirectory:dom:");
+    InstallFromManifest(":mozilla:dom:public:range:MANIFEST",                      "$distdirectory:dom:");
+    InstallFromManifest(":mozilla:dom:public:html:MANIFEST",                       "$distdirectory:dom:");
+    InstallFromManifest(":mozilla:dom:public:css:MANIFEST",                        "$distdirectory:dom:");
+    InstallFromManifest(":mozilla:dom:public:xul:MANIFEST",                        "$distdirectory:dom:");
     InstallFromManifest(":mozilla:dom:src:jsurl:MANIFEST",                         "$distdirectory:dom:");
     InstallFromManifest(":mozilla:dom:src:base:MANIFEST",                          "$distdirectory:dom:");
 
+    #ACCESSIBLE
+    InstallFromManifest(":mozilla:accessible:public:MANIFEST",                     "$distdirectory:accessible:");
+    
     #JSURL
     InstallFromManifest(":mozilla:dom:src:jsurl:MANIFEST_IDL",                     "$distdirectory:idl:");
 
@@ -829,6 +844,8 @@ sub BuildClientDist()
     if ($main::options{inspector})
     {
         InstallFromManifest(":mozilla:extensions:inspector:base:public:MANIFEST_IDL", "$distdirectory:idl:");
+        InstallFromManifest(":mozilla:extensions:inspector:resources:content:prefs:MANIFEST", "$distdirectory:defaults:pref");
+        InstallFromManifest(":mozilla:extensions:inspector:resources:content:res:MANIFEST", "$distdirectory:res:inspector");
     }
 
     print("--- Client Dist export complete ----\n");
@@ -949,7 +966,8 @@ sub BuildXPIDLCompiler()
     }
 
 	# xpt_link MPW tool, needed for merging xpt files (release build)
-    if ($main::options{xptlink})
+	# but not when targeting Carbon as Pro 6 doesn't have a MSL C.PPC MPW(NL).Lib, or project to build it
+    if ($main::options{xptlink}  && !$main::options{carbon} )
     {
         my($codewarrior_msl) = GetCodeWarriorRelativePath("MSL:MSL_C:MSL_MacOS:");
     	if ( ! -e $codewarrior_msl . "Lib:PPC:MSL C.PPC MPW(NL).Lib") {
@@ -1007,16 +1025,6 @@ sub BuildIDLProjects()
     BuildIDLProject(":mozilla:modules:oji:macbuild:ojiIDL.mcp",                     "oji");
     BuildIDLProject(":mozilla:js:macbuild:XPConnectIDL.mcp",                        "xpconnect");
     BuildIDLProject(":mozilla:dom:macbuild:domIDL.mcp",                             "dom");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_baseIDL.mcp",                        "dom_base");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_coreIDL.mcp",                        "dom_core");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_cssIDL.mcp",                         "dom_css");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_eventsIDL.mcp",                      "dom_events");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_htmlIDL.mcp",                        "dom_html");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_rangeIDL.mcp",                       "dom_range");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_stylesheetsIDL.mcp",                 "dom_stylesheets");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_viewsIDL.mcp",                       "dom_views");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_xblIDL.mcp",                         "dom_xbl");
-    BuildIDLProject(":mozilla:dom:macbuild:dom_xulIDL.mcp",                         "dom_xul");
 
     BuildIDLProject(":mozilla:dom:src:jsurl:macbuild:JSUrlDL.mcp",                  "jsurl");
     
@@ -1031,6 +1039,8 @@ sub BuildIDLProjects()
     BuildIDLProject(":mozilla:content:macbuild:contentIDL.mcp",                       "content");
 
     BuildIDLProject(":mozilla:layout:macbuild:layoutIDL.mcp",                       "layout");
+
+    BuildIDLProject(":mozilla:accessible:macbuild:accessibleIDL.mcp",               "accessible"); 
 
     BuildIDLProject(":mozilla:rdf:macbuild:RDFIDL.mcp",                             "rdf");
 
@@ -1526,10 +1536,29 @@ sub BuildLayoutProjects()
     if (!($main::PROFILE)) {
         BuildOneProject(":mozilla:xpinstall:wizard:mac:macbuild:MIW.mcp",           "Mozilla Installer$D", 0, 0, 0);
     }
-
+    
     EndBuildModule("nglayout");
 }
 
+#//--------------------------------------------------------------------------------------------------
+#// Build Accessiblity Projects
+#//--------------------------------------------------------------------------------------------------
+sub BuildAccessiblityProjects()
+{
+    unless( $main::build{accessiblity} ) { return; }
+
+    # $D becomes a suffix to target names for selecting either the debug or non-debug target of a project
+    my($D) = $main::DEBUG ? "Debug" : "";
+
+    StartBuildModule("accessiblity");    
+    
+    if ($main::options{accessible})
+    {
+      BuildOneProject(":mozilla:accessible:macbuild:accessible.mcp",   "accessible$D.shlb", 1, $main::ALIAS_SYM_FILES, 1);
+    }
+    
+    EndBuildModule("accessiblity");
+} # imglib2
 
 #//--------------------------------------------------------------------------------------------------
 #// Build Editor Projects
@@ -1924,6 +1953,7 @@ sub BuildProjects()
     BuildBrowserUtilsProjects();        
     BuildInternationalProjects();
     BuildLayoutProjects();
+    BuildAccessiblityProjects();
     BuildEditorProjects();
     BuildEmbeddingProjects();
     BuildViewerProjects();

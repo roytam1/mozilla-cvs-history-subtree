@@ -20,7 +20,8 @@
  * Original Author(s):
  *   Chris Waterson <waterson@netscape.com>
  *
- * Contributor(s): 
+ * Contributor(s):
+ *   Dan Rosen <dr@netscape.com>
  */
 
 #ifndef nsXULDocument_h__
@@ -34,9 +35,11 @@
 #include "nsIContent.h"
 #include "nsIDOMEventCapturer.h"
 #include "nsIDOMNSDocument.h"
+#include "nsIDOMDocumentStyle.h"
 #include "nsIDOMDocumentView.h"
 #include "nsIDOMDocumentXBL.h"
 #include "nsIDOMDocumentRange.h"
+#include "nsIDOMStyleSheetList.h"
 #include "nsISelection.h"
 #include "nsIDOMXULCommandDispatcher.h"
 #include "nsIDOMXULDocument.h"
@@ -66,10 +69,10 @@
 #include "nsIBindingManager.h"
 #include "nsINodeInfo.h"
 #include "nsIDOMDocumentEvent.h"
+#include "nsIFocusController.h"
 
 class nsIAtom;
 class nsIElementFactory;
-class nsIDOMStyleSheetList;
 class nsILoadGroup;
 class nsIRDFResource;
 class nsIRDFService;
@@ -97,6 +100,7 @@ class nsXULDocument : public nsIDocument,
                       public nsIDOMDocumentRange,
                       public nsIDOMNSDocument,
                       public nsIDOM3Node,
+                      public nsIDOMDocumentStyle,
                       public nsIDOMEventCapturer,
                       public nsIHTMLContentContainer,
                       public nsIStreamLoaderObserver,
@@ -138,9 +142,20 @@ public:
 
     NS_IMETHOD GetBaseURL(nsIURI*& aURL) const;
 
+    NS_IMETHOD GetStyleSheets(nsIDOMStyleSheetList** aStyleSheets);
+
     NS_IMETHOD GetDocumentCharacterSet(nsAWritableString& oCharSetID);
 
     NS_IMETHOD SetDocumentCharacterSet(const nsAReadableString& aCharSetID);
+
+#ifdef IBMBIDI
+    /**
+     *  Retrieve and get bidi state of the document 
+     *  (set depending on presence of bidi data).
+     */
+    NS_IMETHOD GetBidiEnabled(PRBool* aBidiEnabled) const;
+    NS_IMETHOD SetBidiEnabled(PRBool aBidiEnabled);
+#endif // IBMBIDI
 
     NS_IMETHOD AddCharSetObserver(nsIObserver* aObserver);
     NS_IMETHOD RemoveCharSetObserver(nsIObserver* aObserver);
@@ -466,6 +481,7 @@ protected:
     nsCOMPtr<nsIPrincipal>     mDocumentPrincipal;  // [OWNER]
     nsCOMPtr<nsIContent>       mRootContent;        // [OWNER]
     nsIDocument*               mParentDocument;     // [WEAK]
+    nsCOMPtr<nsIDOMStyleSheetList>          mDOMStyleSheets;      // [OWNER]
     nsIScriptGlobalObject*     mScriptGlobalObject; // [WEAK]
     nsXULDocument*             mNextSrcLoadWaiter;  // [OWNER] but not COMPtr
     nsString                   mCharSetID;
@@ -500,15 +516,27 @@ protected:
     PRInt32 mNextContentID;
     PRInt32 mNumCapturers; //Number of capturing event handlers in doc.  Used to optimize event delivery.
 
-    // The following are pointers into the content model which provide access to
-    // the objects triggering either a popup or a tooltip. These are marked as
-    // [OWNER] only because someone could, through DOM calls, delete the object from the
-    // content model while the popup/tooltip was visible. If we didn't have a reference
-    // to it, the object would go away and we'd be left pointing to garbage. This
-    // does not introduce cycles into the ownership model because this is still
-    // parent/child ownership. Just wanted the reader to know hyatt and I had thought about
-    // this (pinkerton).
-    nsCOMPtr<nsIDOMNode>    mPopupNode;            // [OWNER] element triggering the popup
+#ifdef IBMBIDI
+    PRBool mBidiEnabled;
+#endif // IBMBIDI
+
+    /*
+     * XXX dr
+     * ------
+     * We used to have two pointers into the content model: mPopupNode and
+     * mTooltipNode, which were used to retrieve the objects triggering a
+     * popup or tooltip. You need that access because your reference has
+     * disappeared by the time you click on a popup item or do whatever
+     * with a tooltip. These were owning references (no cycles, as pinkerton
+     * pointed out, since we're still parent-child).
+     *
+     * We still have mTooltipNode, but mPopupNode has moved to the
+     * FocusController. The APIs (IDL attributes popupNode and tooltipNode)
+     * are still here for compatibility and ease of use, but we should
+     * probably move the mTooltipNode over to FocusController at some point
+     * as well, for consistency.
+     */
+
     nsCOMPtr<nsIDOMNode>    mTooltipNode;          // [OWNER] element triggering the tooltip
     nsCOMPtr<nsINodeInfoManager> mNodeInfoManager; // [OWNER] list of names in the document
 
@@ -732,14 +760,14 @@ protected:
         CachedChromeStreamListener(nsXULDocument* aDocument);
 
         NS_DECL_ISUPPORTS
-        NS_DECL_NSISTREAMOBSERVER
+        NS_DECL_NSIREQUESTOBSERVER
         NS_DECL_NSISTREAMLISTENER
     };
 
     friend class CachedChromeStreamListener;
 
 
-    class ParserObserver : public nsIStreamObserver {
+    class ParserObserver : public nsIRequestObserver {
     protected:
         nsXULDocument* mDocument;
         virtual ~ParserObserver();
@@ -748,13 +776,18 @@ protected:
         ParserObserver(nsXULDocument* aDocument);
 
         NS_DECL_ISUPPORTS
-        NS_DECL_NSISTREAMOBSERVER
+        NS_DECL_NSIREQUESTOBSERVER
     };
 
     friend class ParserObserver;
 
-
     nsSupportsHashtable mContentWrapperHash;
+
+private:
+    // helpers
+
+    nsresult GetFocusController(nsIFocusController** aController);
+
 };
 
 

@@ -1112,15 +1112,9 @@ nsXULElement::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild,
         if (NS_FAILED(rv)) return rv;
 
         if (pos >= 0) {
-            // Because InsertChildAt() only does a "shallow"
-            // SetDocument(), we need to ensure that a "deep" one is
-            // done now. We do it -before- inserting into the content
-            // model, because some frames assume that the document
-            // will have been set.
-            rv = newcontent->SetDocument(mDocument, PR_TRUE, PR_TRUE);
-            if (NS_FAILED(rv)) return rv;
-
-            rv = InsertChildAt(newcontent, pos, PR_TRUE);
+            // Some frames assume that the document will have been set,
+            // so pass in PR_TRUE for aDeepSetDocument here.
+            rv = InsertChildAt(newcontent, pos, PR_TRUE, PR_TRUE);
             NS_ASSERTION(NS_SUCCEEDED(rv), "unable to insert aNewChild");
             if (NS_FAILED(rv)) return rv;
         }
@@ -1131,15 +1125,9 @@ nsXULElement::InsertBefore(nsIDOMNode* aNewChild, nsIDOMNode* aRefChild,
         // just append it?
     }
     else {
-        // Because AppendChildTo() only does a "shallow"
-        // SetDocument(), we need to ensure that a "deep" one is done
-        // now. We do it -before- appending to the content model,
-        // because some frames assume that they can get to the
-        // document right away.
-        rv = newcontent->SetDocument(mDocument, PR_TRUE, PR_TRUE);
-        if (NS_FAILED(rv)) return rv;
-
-        rv = AppendChildTo(newcontent, PR_TRUE);
+        // Some frames assume that the document will have been set,
+        // so pass in PR_TRUE for aDeepSetDocument here.
+        rv = AppendChildTo(newcontent, PR_TRUE, PR_TRUE);
         NS_ASSERTION(NS_SUCCEEDED(rv), "unable to append a aNewChild");
         if (NS_FAILED(rv)) return rv;
     }
@@ -1177,15 +1165,9 @@ nsXULElement::ReplaceChild(nsIDOMNode* aNewChild, nsIDOMNode* aOldChild,
             NS_ASSERTION(newelement != nsnull, "not an nsIContent");
 
             if (newelement) {
-                // Because ReplaceChildAt() only does a "shallow"
-                // SetDocument(), we need to ensure that a "deep" one
-                // is done now. We do it -before- replacing the nodein
-                // the content model, because some frames assume that
-                // the document will have been set.
-                rv = newelement->SetDocument(mDocument, PR_TRUE, PR_TRUE);
-                if (NS_FAILED(rv)) return rv;
-
-                rv = ReplaceChildAt(newelement, pos, PR_TRUE);
+                // Some frames assume that the document will have been set,
+                // so pass in PR_TRUE for aDeepSetDocument here.
+                rv = ReplaceChildAt(newelement, pos, PR_TRUE, PR_TRUE);
                 NS_ASSERTION(NS_SUCCEEDED(rv), "unable to replace old child");
             }
         }
@@ -1344,7 +1326,7 @@ nsXULElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
             if (! newchild)
                 return NS_ERROR_UNEXPECTED;
 
-            rv = result->AppendChildTo(newchild, PR_FALSE);
+            rv = result->AppendChildTo(newchild, PR_FALSE, PR_FALSE);
             if (NS_FAILED(rv)) return rv;
         }
     }
@@ -1894,7 +1876,9 @@ nsXULElement::AddScriptEventListener(nsIAtom* aName,
         if (NS_FAILED(rv)) return rv;
     }
 
-    if (NodeInfo()->Equals(nsXULAtoms::window)) {
+    nsCOMPtr<nsIContent> root(getter_AddRefs(mDocument->GetRootContent()));
+    nsCOMPtr<nsIContent> content(do_QueryInterface(NS_STATIC_CAST(nsIStyledContent*, this)));
+    if ((!root || root == content) && !NodeInfo()->Equals(nsXULAtoms::overlay)) {
         nsCOMPtr<nsIDOMEventReceiver> receiver = do_QueryInterface(global);
         if (! receiver)
             return NS_ERROR_UNEXPECTED;
@@ -2558,7 +2542,8 @@ nsXULElement::IndexOf(nsIContent* aPossibleChild, PRInt32& aResult) const
 }
 
 NS_IMETHODIMP
-nsXULElement::InsertChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify)
+nsXULElement::InsertChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify,
+                            PRBool aDeepSetDocument)
 {
     nsresult rv;
     if (NS_FAILED(rv = EnsureContentsGenerated()))
@@ -2577,8 +2562,7 @@ nsXULElement::InsertChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify)
         aKid->SetParent(NS_STATIC_CAST(nsIStyledContent*, this));
         //nsRange::OwnerChildInserted(this, aIndex);
 
-        // N.B. that this is "shallow"!
-        aKid->SetDocument(mDocument, PR_FALSE, PR_TRUE);
+        aKid->SetDocument(mDocument, aDeepSetDocument, PR_TRUE);
 
         if (mDocument && HasMutationListeners(NS_STATIC_CAST(nsIStyledContent*,this), 
                                               NS_EVENT_BITS_MUTATION_NODEINSERTED)) {
@@ -2592,19 +2576,19 @@ nsXULElement::InsertChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify)
           mutation.mRelatedNode = relNode;
 
           nsEventStatus status = nsEventStatus_eIgnore;
-          nsCOMPtr<nsIDOMEvent> domEvent;
-          aKid->HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent), NS_EVENT_FLAG_INIT, &status);
+          aKid->HandleDOMEvent(nsnull, &mutation, nsnull, NS_EVENT_FLAG_INIT, &status);
         }
 
         if (aNotify && mDocument) {
-                mDocument->ContentInserted(NS_STATIC_CAST(nsIStyledContent*, this), aKid, aIndex);
+          mDocument->ContentInserted(NS_STATIC_CAST(nsIStyledContent*, this), aKid, aIndex);
         }
     }
     return NS_OK;
 }
 
 NS_IMETHODIMP
-nsXULElement::ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify)
+nsXULElement::ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify,
+                             PRBool aDeepSetDocument)
 {
     nsresult rv;
     if (NS_FAILED(rv = EnsureContentsGenerated()))
@@ -2628,9 +2612,7 @@ nsXULElement::ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify)
         aKid->SetParent(NS_STATIC_CAST(nsIStyledContent*, this));
         //nsRange::OwnerChildReplaced(this, aIndex, oldKid);
 
-        // N.B. that we only do a "shallow" SetDocument()
-        // here. Callers beware!
-        aKid->SetDocument(mDocument, PR_FALSE, PR_TRUE);
+        aKid->SetDocument(mDocument, aDeepSetDocument, PR_TRUE);
 
         if (aNotify && mDocument) {
             mDocument->ContentReplaced(NS_STATIC_CAST(nsIStyledContent*, this), oldKid, aKid, aIndex);
@@ -2648,7 +2630,7 @@ nsXULElement::ReplaceChildAt(nsIContent* aKid, PRInt32 aIndex, PRBool aNotify)
 }
 
 NS_IMETHODIMP
-nsXULElement::AppendChildTo(nsIContent* aKid, PRBool aNotify)
+nsXULElement::AppendChildTo(nsIContent* aKid, PRBool aNotify, PRBool aDeepSetDocument)
 {
     nsresult rv;
     if (NS_FAILED(rv = EnsureContentsGenerated()))
@@ -2662,8 +2644,7 @@ nsXULElement::AppendChildTo(nsIContent* aKid, PRBool aNotify)
         aKid->SetParent(NS_STATIC_CAST(nsIStyledContent*, this));
         // ranges don't need adjustment since new child is at end of list
 
-        // N.B. that this is only "shallow". Callers beware!
-        aKid->SetDocument(mDocument, PR_FALSE, PR_TRUE);
+        aKid->SetDocument(mDocument, aDeepSetDocument, PR_TRUE);
 
         if (mDocument && HasMutationListeners(NS_STATIC_CAST(nsIStyledContent*,this), 
                                               NS_EVENT_BITS_MUTATION_NODEINSERTED)) {
@@ -2677,8 +2658,7 @@ nsXULElement::AppendChildTo(nsIContent* aKid, PRBool aNotify)
           mutation.mRelatedNode = relNode;
 
           nsEventStatus status = nsEventStatus_eIgnore;
-          nsCOMPtr<nsIDOMEvent> domEvent;
-          aKid->HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent), NS_EVENT_FLAG_INIT, &status);
+          aKid->HandleDOMEvent(nsnull, &mutation, nsnull, NS_EVENT_FLAG_INIT, &status);
         }
 
         if (aNotify && mDocument) {
@@ -2710,8 +2690,7 @@ nsXULElement::RemoveChildAt(PRInt32 aIndex, PRBool aNotify)
       mutation.mRelatedNode = relNode;
 
       nsEventStatus status = nsEventStatus_eIgnore;
-      nsCOMPtr<nsIDOMEvent> domEvent;
-      oldKid->HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent), NS_EVENT_FLAG_INIT, &status);
+      oldKid->HandleDOMEvent(nsnull, &mutation, nsnull, NS_EVENT_FLAG_INIT, &status);
     }
 
     // On the removal of a <treeitem>, <treechildren>, or <treecell> element,
@@ -3070,8 +3049,7 @@ nsXULElement::SetAttribute(nsINodeInfo* aNodeInfo,
         mutation.mAttrChange = modification ? nsIDOMMutationEvent::MODIFICATION : 
                                                nsIDOMMutationEvent::ADDITION;
         nsEventStatus status = nsEventStatus_eIgnore;
-        nsCOMPtr<nsIDOMEvent> domEvent;
-        HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent), NS_EVENT_FLAG_INIT, &status);
+        HandleDOMEvent(nsnull, &mutation, nsnull, NS_EVENT_FLAG_INIT, &status);
       }
 
       if (aNotify) {
@@ -3265,8 +3243,7 @@ nsXULElement::UnsetAttribute(PRInt32 aNameSpaceID,
                     mutation.mPrevAttrValue = getter_AddRefs(NS_NewAtom(oldValue));
                   mutation.mAttrChange = nsIDOMMutationEvent::REMOVAL;
                   nsEventStatus status = nsEventStatus_eIgnore;
-                  nsCOMPtr<nsIDOMEvent> domEvent;
-                  HandleDOMEvent(nsnull, &mutation, getter_AddRefs(domEvent), NS_EVENT_FLAG_INIT, &status);
+                  HandleDOMEvent(nsnull, &mutation, nsnull, NS_EVENT_FLAG_INIT, &status);
                 }
 
                 Attributes()->RemoveElementAt(i);
@@ -3561,19 +3538,46 @@ nsXULElement::HandleDOMEvent(nsIPresContext* aPresContext,
     
     // Find out if we're anonymous.
     nsCOMPtr<nsIContent> bindingParent;
-    GetBindingParent(getter_AddRefs(bindingParent));
-    if (bindingParent) {
-      // We're anonymous.  We may potentially need to retarget
-      // our event if our parent is in a different scope.
-      if (mParent) {
-        nsCOMPtr<nsIContent> parentScope;
-        mParent->GetBindingParent(getter_AddRefs(parentScope));
-        if (parentScope != bindingParent)
-          retarget = PR_TRUE;
-      }
+    if (*aDOMEvent) {
+        (*aDOMEvent)->GetTarget(getter_AddRefs(oldTarget));
+        nsCOMPtr<nsIContent> content(do_QueryInterface(oldTarget));
+        if (content)
+            content->GetBindingParent(getter_AddRefs(bindingParent));
     }
-   
-    if (retarget) {
+    else
+        GetBindingParent(getter_AddRefs(bindingParent));
+
+    if (bindingParent) {
+        // We're anonymous.  We may potentially need to retarget
+        // our event if our parent is in a different scope.
+        if (mParent) {
+            nsCOMPtr<nsIContent> parentScope;
+            mParent->GetBindingParent(getter_AddRefs(parentScope));
+            if (parentScope != bindingParent)
+                retarget = PR_TRUE;
+        }
+    }
+
+    // determine the parent:
+    nsCOMPtr<nsIContent> parent;
+    if (mDocument) {
+        nsCOMPtr<nsIBindingManager> bindingManager;
+        mDocument->GetBindingManager(getter_AddRefs(bindingManager));
+        if (bindingManager) {
+            // we have a binding manager -- do we have an anonymous parent?
+            bindingManager->GetInsertionParent(this, getter_AddRefs(parent));
+        }
+    }
+    if (parent) {
+        retarget = PR_FALSE;
+    }
+    else {
+        // if we didn't find an anonymous parent, use the explicit one,
+        // whether it's null or not...
+        parent = mParent;
+    }
+
+    if (retarget || (parent.get() != mParent)) {
       if (!*aDOMEvent) {
         // We haven't made a DOMEvent yet.  Force making one now.
         nsCOMPtr<nsIEventListenerManager> listenerManager;
@@ -3601,15 +3605,17 @@ nsXULElement::HandleDOMEvent(nsIPresContext* aPresContext,
       if (!hasOriginal)
         privateEvent->SetOriginalTarget(oldTarget);
 
-      nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(mParent);
-      privateEvent->SetTarget(target);
+      if (retarget) {
+          nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(mParent);
+          privateEvent->SetTarget(target);
+      }
     }
   
     //Capturing stage evaluation
     if (NS_EVENT_FLAG_BUBBLE != aFlags) {
       //Initiate capturing phase.  Special case first call to document
-      if (mParent) {
-        mParent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent, NS_EVENT_FLAG_CAPTURE, aEventStatus);
+      if (parent) {
+        parent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent, NS_EVENT_FLAG_CAPTURE, aEventStatus);
       }
       else if (mDocument != nsnull) {
           ret = mDocument->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
@@ -3644,9 +3650,9 @@ nsXULElement::HandleDOMEvent(nsIPresContext* aPresContext,
 
     //Bubbling stage
     if (NS_EVENT_FLAG_CAPTURE != aFlags) {
-        if (mParent != nsnull) {
+        if (parent != nsnull) {
             // We have a parent. Let them field the event.
-            ret = mParent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
+            ret = parent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
                                           NS_EVENT_FLAG_BUBBLE, aEventStatus);
       }
         else if (mDocument != nsnull) {
