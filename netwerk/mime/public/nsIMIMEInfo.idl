@@ -54,7 +54,7 @@ interface nsIUTF8StringEnumerator;
 
 typedef long nsMIMEInfoHandleAction;
 
-[scriptable, uuid(1448b42f-cf0d-466e-9a15-64e876ebe857)]
+[scriptable, uuid(5d5f22ab-8689-4d93-a423-ce56f2a3ceea)]
 interface nsIMIMEInfo : nsISupports {
     /**
      * Gives you an array of file types associated with this type.
@@ -143,6 +143,12 @@ interface nsIMIMEInfo : nsISupports {
      * usable if hasDefaultHandler is true.
      */
     readonly attribute AString defaultDescription;
+
+    /** 
+     * Returns a nsIFile that points to the application the system has
+     * determined is the default handler for this content type. 
+     */
+    readonly attribute nsIFile defaultApplicationHandler;
 
     /**
      * Launches the application with the specified file, in a way that

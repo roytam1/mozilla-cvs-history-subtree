@@ -104,6 +104,8 @@
                             onset="this.setAttribute('type', val); return val;"/>
       <property name="inverted" onget="return this.getAttribute('inverted') == 'true';"
                                 onset="this.setAttribute('inverted', val); return val;"/>
+      <property name="readonly" onget="return this.getAttribute('readonly') == 'true';"
+                                onset="this.setAttribute('readonly', val); return val;"/>
 
       <field name="_value">null</field>
       <method name="_setValue">
@@ -222,7 +224,7 @@
         </getter>
         <setter>
         <![CDATA[
-          if (this.valueFromPreferences == val)
+          if (this.readonly || this.valueFromPreferences == val)
             return val;
             
           dump("*** writing " + this.name +" = " + this.value + "\n");

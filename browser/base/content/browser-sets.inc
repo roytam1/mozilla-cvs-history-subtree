@@ -156,6 +156,8 @@
                                                                 'chrome,dialog=no,resizable');"/>
     <command id="Tools:Extensions" oncommand="BrowserOpenExtensions('extensions');"/>
     <command id="Tools:Themes" oncommand="BrowserOpenExtensions('themes');"/>
+
+    <command id="Tools:Sanitize" oncommand="BrowserSanitize();"/>
     
 #ifdef XP_MACOSX
     <command id="minimizeWindow" label="&minimizeWindow.label;" oncommand="window.minimize();" />
@@ -321,6 +323,7 @@
 #ifdef XP_MACOSX
     <key id="key_minimizeWindow" command="minimizeWindow" key="&minimizeWindow.key;" modifiers="accel"/>
 #endif
-
+    
+    <key id="key_sanitize" command="Tools:Sanitize" keycode="VK_DELETE" modifiers="accel,shift"/>
   </keyset>
 

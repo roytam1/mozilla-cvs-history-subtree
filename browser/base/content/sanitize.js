@@ -47,11 +47,18 @@ Sanitizer.prototype = {
     return this.items[aItemName].canClear;
   },
   
+  _prefDomain: "privacy.item.",
+  getNameFromPreference: function (aPreferenceName)
+  {
+    dump("*** " + aPreferenceName + ", i = " + this._prefDomain.length + ", sub = " + aPreferenceName.substr(this._prefDomain.length, -1) + "\n");
+    return aPreferenceName.substr(this._prefDomain.length);
+  },
+  
   sanitize: function ()
   {
     var psvc = Components.classes["@mozilla.org/preferences-service;1"]
                          .getService(Components.interfaces.nsIPrefService);
-    var branch = psvc.getBranch("privacy.item.");
+    var branch = psvc.getBranch(this._prefDomain);
     for (var itemName in this.items) {
       var item = this.items[itemName];
       if ("clear" in item && item.canClear && branch.getBoolPref(itemName)) 
@@ -106,8 +113,11 @@ Sanitizer.prototype = {
                                       .getService(Components.interfaces.nsIBrowserHistory);
         globalHistory.removeAllPages();
         
-        var os = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
-        os.notifyObservers(null, "browser:purge-session-history", "");
+        try {
+          var os = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+          os.notifyObservers(null, "browser:purge-session-history", "");
+        }
+        catch (e) { }
       },
       
       get canClear()
@@ -155,7 +165,7 @@ Sanitizer.prototype = {
       {
         var pwmgr = Components.classes["@mozilla.org/passwordmanager;1"]
                               .getService(Components.interfaces.nsIPasswordManager);
-        var e = passwdMgr.enumerator;
+        var e = pwmgr.enumerator;
         var passwds = [];
         while (e.hasMoreElements()) {
           var passwd = e.getNext().QueryInterface(Components.interfaces.nsIPassword);

@@ -89,6 +89,8 @@ var gContextMenu = null;
 
 var gChromeState = null; // chrome state before we went into print preview
 
+var gSanitizePrefListener = null;
+
 var gFormFillPrefListener = null;
 var gFormHistory = null;
 var gFormFillEnabled = true;
@@ -769,6 +771,9 @@ function delayedStartup()
   var toolbox = document.getElementById("navigator-toolbox");
   toolbox.customizeDone = BrowserToolboxCustomizeDone;
 
+  // Set up Sanitize Item
+  gSanitizePrefListener = new SanitizePrefListener();
+
   // Enable/Disable Form Fill
   gFormFillPrefListener = new FormFillPrefListener();
   var pbi = gPrefService.QueryInterface(Components.interfaces.nsIPrefBranchInternal);
@@ -1029,6 +1034,35 @@ URLBarAutoFillPrefListener.prototype =
       gURLBar.removeAttribute("completedefaultindex");
   }
 }
+
+function SanitizePrefListener()
+{
+  this._setSanitizeItem();
+}
+
+SanitizePrefListener.prototype =
+{
+  domain: "privacy.sanitize.promptOnSanitize",
+  observe: function (aSubject, aTopic, aPrefName)
+  {
+    if (aTopic != "nsPref:changed" || aPrefName != this.domain)
+      return;
+    
+    this._setSanitizeItem();
+  },
+  
+  _setSanitizeItem: function ()
+  {
+    var shouldPrompt = gPrefService.getBoolPref(this.domain);
+    var sanitizeItem = document.getElementById("sanitizeItem");
+    var bundleBrowser = document.getElementById("bundle_browser");
+    var bundleBrand = document.getElementById("bundle_brand");
+    var brandShortName = bundleBrand.getString("brandShortName");
+    sanitizeItem.label = bundleBrowser.getFormattedString("sanitizeWithPromptLabel", 
+                                                          [brandShortName]);
+  },
+}
+
 
 function ctrlNumberTabSelection(event)
 {  
@@ -3493,7 +3527,16 @@ function asyncFocusSearchBox(event)
   var searchBox = sidebar.contentDocument.getElementById("search-box");
   searchBox.focus();
   sidebar.removeEventListener("load", asyncFocusSearchBox, true);
- }
+}
+
+function BrowserSanitize()
+{
+  var promptOnSanitize = gPrefService.getBoolPref("privacy.sanitize.promptOnSanitize");
+  if (promptOnSanitize)
+    openDialog("chrome://browser/content/sanitize.xul", "Sanitize", "chrome,titlebar,centerscreen,modal");
+  else
+    (new Sanitizer()).sanitize();
+}
 
 function openPreferences()
 {

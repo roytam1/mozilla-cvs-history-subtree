@@ -21,10 +21,14 @@
 <!ENTITY  setMasterPassword.label     "Master Password">
 <!ENTITY  viewPasswords.label         "View Saved Passwords">
 
-<!ENTITY  itemDownloads.label         "Download History">
-<!ENTITY  downloadManager.intro       "The Downloads window keeps track of recently downloaded files.">
-<!ENTITY  viewDownloads.label         "View Download History">
-<!ENTITY  clearDownloads.label        "Clear Download History Now">
+<!ENTITY  itemDownloads.label               "Download History">
+<!ENTITY  downloadManager.intro             "The Downloads window keeps track of recently downloaded files.">
+<!ENTITY  downloadsRetentionPolicy.label    "Remove files from the Download Manager:">
+<!ENTITY  downloadsRemoveImmediately.label  "Upon successful download">
+<!ENTITY  downloadsRemoveExit.label         "When &brandShortName; exits">
+<!ENTITY  downloadsRemoveManually.label     "Manually">
+<!ENTITY  viewDownloads.label               "View Download History">
+<!ENTITY  clearDownloads.label              "Clear Download History Now">
 
 <!ENTITY  itemCookies.label           "Cookies">
 <!ENTITY  cookies.intro               "Cookies are pieces of information stored by sites on your computer. They are used to remember login information and other data.">

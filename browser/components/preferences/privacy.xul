@@ -38,8 +38,8 @@
 
 <!DOCTYPE overlay [
 <!ENTITY % brandDTD SYSTEM "chrome://global/locale/brand.dtd">
-%brandDTD;
 <!ENTITY % privacyDTD SYSTEM "chrome://browser/locale/preferences/privacy.dtd">
+%brandDTD;
 %privacyDTD;
 ]>
 
@@ -51,6 +51,7 @@
       <preference id="browser.history_expire_days"        name="browser.history_expire_days"        type="int"/>
       <preference id="browser.formfill.enable"            name="browser.formfill.enable"            type="bool"/>
       <preference id="signon.rememberSignons"             name="signon.rememberSignons"             type="bool"/>
+      <preference id="browser.download.manager.retention" name="browser.download.manager.retention" type="int"/>
       <preference id="network.cookie.cookieBehavior"      name="network.cookie.cookieBehavior"      type="int" onchange="gPrivacyPane.enableCookiesChanged();"/>
       <preference id="network.cookie.denyRemovedCookies"  name="network.cookie.denyRemovedCookies"  type="bool"/>
       <preference id="network.cookie.lifetimePolicy"      name="network.cookie.lifetimePolicy"      type="int"/>
@@ -117,6 +118,17 @@
         <groupbox orient="vertical" flex="1">
           <caption label="&itemDownloads.label;"/>
           <description>&downloadManager.intro;</description>
+          <description control="downloadsRetentionPolicy">&downloadsRetentionPolicy.label;</description> 
+          <hbox>
+            <menulist id="downloadsRetentionPolicy" 
+                      preference="browser.download.manager.retention">
+              <menupopup>
+                <menuitem value="0" label="&downloadsRemoveImmediately.label;"/>
+                <menuitem value="1" label="&downloadsRemoveExit.label;"/>
+                <menuitem value="2" label="&downloadsRemoveManually.label;"/>
+              </menupopup>
+            </menulist>
+          </hbox>
           <separator flex="1"/>
           <hbox>
             <button label="&viewDownloads.label;" oncommand="gPrivacyPane.viewDownloads();"/>
