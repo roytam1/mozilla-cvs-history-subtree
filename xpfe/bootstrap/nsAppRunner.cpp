@@ -1774,7 +1774,11 @@ int main(int argc, char* argv[])
   // Note: this object is not released here.  It is passed to main1 which
   //       has responsibility to release it.
   nsISplashScreen *splash = 0;
+#ifdef MAIL_ONLY
+  PRBool dosplash = PR_FALSE;
+#else
   PRBool dosplash = GetWantSplashScreen(argc, argv);
+#endif /* MAIL_ONLY */
 
   if (dosplash && !nativeApp) {
     // If showing splash screen and platform doesn't implement
