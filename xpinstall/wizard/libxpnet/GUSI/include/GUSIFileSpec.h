@@ -4,9 +4,12 @@
 // % Author	:	Matthias Neeracher                                           
 // % Language	:	C++                                                        
 // %                                                                       
-// % $Log$                                             
+// % $Log$
+// % Revision 1.1  2001/03/11 22:35:07  sgehani%netscape.com
+// % First Checked In.
+// %                                             
 // % Revision 1.15  2001/01/17 08:46:45  neeri                             
-// % Get rid of excess directory seperators when name is empty             
+// % Get rid of excess directory separators when name is empty             
 // %                                                                       
 // % Revision 1.14  2000/12/23 06:10:17  neeri                             
 // % Add GUSIFSpTouchFolder, GUSIFSpGetCatInfo; copy error in copy constructor

@@ -69,7 +69,7 @@ public void CreateEMWindow()
 {
   System.out.println("Creating new WCRandom window");
   EMWindow aEMWindow ;
-  aEMWindow = new EMWindow("EmbeddedMozila#" + (int)(count+1),
+  aEMWindow = new EMWindow("EmbeddedMozilla#" + (int)(count+1),
                                  binDir, url, count, this);
   BrowserControl b = aEMWindow.getBrowserControl();
   try {
